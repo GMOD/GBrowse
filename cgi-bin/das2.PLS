@@ -44,12 +44,12 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das2.PLS,v 1.1 2004-09-02 21:51:42 allenday Exp $
+#$Id: das2.PLS,v 1.2 2004-09-02 22:41:50 allenday Exp $
 
 use strict;
 use Bio::DB::GFF 1.02;
 use File::Basename 'basename';
-use CGI qw/header path_info param url request_method escapeHTML/ ;
+use CGI qw/server_name header path_info param url request_method escapeHTML/ ;
 use Carp;
 use Log::Log4perl;
 Log::Log4perl::init('/etc/log4perl.conf');
@@ -62,38 +62,50 @@ use vars qw($DB $DSN $HEADER %ERRCODES $CONFIG
             $VERSION $DAS_VERSION $CONF_DIR 
             %CACHED_TYPES);
 
-#$Id: das2.PLS,v 1.1 2004-09-02 21:51:42 allenday Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
+#$Id: das2.PLS,v 1.2 2004-09-02 22:41:50 allenday Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
 
 # minimal DAS annotation/reference server
-$DAS_VERSION = 'DAS/1.50';
-use constant CAPABILITIES => join '; ',qw(error-segment/1.0 unknown-segment/1.0 unknown-feature/1.0
-					  feature-by-id/1.0 group-by-id/1.0 component/1.0 
-					  supercomponent/1.0
-                                          dna/1.0 features/1.0 stylesheet/1.0 types/1.0
-                                          entry_points/1.0 dsn/1.0 sequence/1.0
+$DAS_VERSION = 'DAS/2.0';
+use constant CAPABILITIES => join '; ',qw(
+  error-segment/1.0
+  unknown-segment/1.0
+  unknown-feature/1.0
+  feature-by-id/1.0
+  group-by-id/1.0
+  component/1.0
+  supercomponent/1.0
+  dna/1.0
+  features/1.0
+  stylesheet/1.0
+  type/1.0
+  entry_points/1.0
+  dsn/1.0
+  sequence/1.0
                                           );
 
 (my $BASENAME = url(-absolute=>1)) =~ s!http://[^/]+/!!;
 %ERRCODES = (
-	     200 => 'OK',
-	     400 => 'Bad command',
+	     200 => 'OK, data follows',
+	     400 => 'Bad namespace',
 	     401 => 'Bad data source',
-	     402 => 'Bad command arguments',
-	     403 => 'Bad reference object',
-	     404 => 'Bad stylesheet',
-	     405 => 'Coordinate error',
-	     500 => 'Internal server error (oops)',
+	     402 => 'Bad data format',
+	     403 => 'Unknown region landmark',
+	     404 => '(reserved)',
+	     405 => 'Region coordinate error',
+         406 => 'Lock timed out',
+	     500 => 'Server error, not otherwise specified',
 	     501 => 'Unimplemented feature',
 	     );
 $CONFIG = open_config($CONF_DIR) or error_header('Could not read config files'=> 500);
 $HEADER = 0;
 
+my $SERVER_NAME = server_name();
 my ($junk,$dsn,$operation) = split '/',path_info();
 $DSN = $dsn;
 $operation ||= '';
 my %sources = map {$_=>1} $CONFIG->sources;
 
-do { error_header('invalid request',400); exit 0 } unless $DSN;
+do { error_header('Bad namespace',400); exit 0 } unless $DSN;
 do { list_dsns();   exit 0 } if $dsn eq 'dsn' or $operation eq 'dsn';
 do { error_header('invalid data source, use the dsn command to get list',401); exit 0 } 
       unless $sources{$DSN};
@@ -103,12 +115,12 @@ do { error_header('Could not open database',500); exit 0 }
      unless $DB = open_database();
 
 do { entry_points(); exit 0 }      if $operation eq 'entry_points';
-do { types();        exit 0 }      if $operation eq 'types';
+do { type();         exit 0 }      if $operation eq 'type';
 do { features();     exit 0 }      if $operation eq 'features';
 do { stylesheet();   exit 0 }      if $operation eq 'stylesheet';
 do { dna();          exit 0 }      if $operation eq 'dna';
 
-error_header('invalid request',400);
+error_header('invalid request',404);
 exit 0;
 
 # -----------------------------------------------------------------
@@ -609,7 +621,7 @@ END
   }
 }
 
-sub types {
+sub type {
   return all_types() unless param('ref') or param('segment');
 
   my $summary = param('summary');
@@ -671,30 +683,27 @@ sub all_types {
   ok_header();
   my $url = get_url();
   print <<END;
-<?xml version="1.0" standalone="yes"?>
-<!DOCTYPE DASTYPES SYSTEM "http://www.biodas.org/dtd/dastypes.dtd">
-<DASTYPES>
-<GFF version="1.2" summary="yes" href="$url">
-<SEGMENT>
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE DASTYPES SYSTEM "http://www.biodas.org/dtd/das2types.dtd">
+<TYPES
+  xmlns="http://www.biodas.org/ns/das/2.00"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xml:base="http://$SERVER_NAME$BASENAME/$dsn/1/type/"
+  so="http://song.sourceforge.net/ontologies/sofa">
+>
 END
-    ;
-
 
   for my $id (@$types) {
     my $category = transmute($id,$type2category);
     my $typeobj      = Bio::DB::GFF::Typename->new($id);
     my $method   = $typeobj->method;
     my $source   = $typeobj->source;
-    print qq(\t<TYPE id="$id" category="$category" method="$method" source="$source" />\n);
+    print qq(  <TYPE id="$id" source="$source"/>\n);
   }
 
-  print <<END
-</SEGMENT>
-</GFF>
-</DASTYPES>
+print <<END;
+</TYPES>
 END
-    ;
-
 }
 
 sub describe_component {
@@ -802,21 +811,21 @@ sub seq2version {
 sub error_header {
   my ($message,$code) = @_;
   $code ||= 500;
-  print header(-type          =>'text/plain',
-	       -X_DAS_Version => $DAS_VERSION,
-	       -X_DAS_Status  => $code,
-	       -X_DAS_Capabilities => CAPABILITIES,
-	      ) unless $HEADER++;
+  print header('-type'               =>'text/plain',
+	           '-X-DAS-Version'      => $DAS_VERSION,
+	           '-X-DAS-Status'       => $code,
+	           '-X-DAS-Capabilities' => CAPABILITIES,
+	          ) unless $HEADER++;
   return if request_method() eq 'HEAD';
   print $message;
 }
 
 sub ok_header {
-  print header(-type          =>'text/plain',
-	       -X_DAS_Version => $VERSION,
-	       -X_DAS_Status  => "200",
-	       -X_DAS_Capabilities => CAPABILITIES,
-	      ) unless $HEADER++;
+  print header('-type'               =>'text/plain',
+	           '-X-DAS-Version'      => $DAS_VERSION,
+	           '-X-DAS-Status'       => "200",
+	           '-X-DAS-Capabilities' => CAPABILITIES,
+	          ) unless $HEADER++;
 }
 
 # phony dtd

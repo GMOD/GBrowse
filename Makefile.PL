@@ -39,16 +39,13 @@ the arguments above, provide the arguments NONROOT=1,
 LIB=/path/to/perl/libs and BIN=/path/to/scripts
 
 For example:
-    perl Makefile.PL APACHE=~/gbrowse \\
+    perl Makefile.PL APACHE=~/gbrowse/www \\
 		     LIB=~/gbrowse/lib \\
 		     BIN=~/gbrowse/bin \\
 		     NONROOT=1
 
 will perform a non-privileged installation that places all gbrowse
 components (including perl libraries) in the path ~/gbrowse.
-
-In the above example, before running 'make install', create the
-directories ~/gbrowse/html, ~gbrowse/cgi-bin and ~/gbrowse/conf
 
 To make the CGI scipts aware of the custom library location, you can
 either ask someone with root privileges to edit the apache

@@ -508,7 +508,7 @@ will be displayed below the feature, and can also be searched.
 You can place descriptions, notes and other comments into the ninth
 column of the GFF load file.  The example file <a
 href="data_files/volvox2.gff">volvox2.gff</a> shows how this is done.
-An expert from the top of the file looks like this:
+An excerpt from the top of the file looks like this:
 
 <blockquote class="example"><pre>
 ctgA   example   motif   11911   15561   .   +   .   Motif m11 ; Note "kinase"
@@ -1189,11 +1189,10 @@ the following section:
 [TransChip]
 feature        = tprofile
 glyph          = xyplot
-graph_type     = boxes
+graph_type     = line
 height         = 50
 min_score      = 0
 max_score      = 1000
-graph_type     = line
 scale          = right
 key            = Transcriptional Profile
 </pre></blockquote>
@@ -1272,7 +1271,7 @@ file, change the <tt>db_args</tt> section to look like this:
 
 <pre>
 db_args       = -adaptor memory
-		-dir     /usr/local/apache/htdocs/gbrowse/databases/volvox
+		-dir     '$HTDOCS/gbrowse/databases/volvox'
 </pre>
 
 <p>
@@ -2638,6 +2637,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Sun Feb 22 10:03:16 SAST 2004
+Last modified: Mon Feb 23 16:15:03 SAST 2004
 <!-- hhmts end -->
 </body> </html>

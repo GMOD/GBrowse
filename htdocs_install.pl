@@ -1,15 +1,16 @@
 #!/usr/bin/perl -w
 use strict;
 use File::Copy;
-use Config;
+use Bio::Root::IO;
 
 my $ht_target = $ARGV[0]; #target directory
 
-my $delim = '/';
-if ($Config{'osname'} =~ /win/i && $Config{'osname'} !~ /darwin/i ) {
-    $ht_target =~ s!\/!\\!g;
-    $delim = '\\';
-}
+# use Bio::Root::IO instead
+#my $delim = '/';
+#if ($Config{'osname'} =~ /win/i && $Config{'osname'} !~ /darwin/i ) {
+#    $ht_target =~ s!\/!\\!g;
+#    $delim = '\\';
+#}
 
 
 
@@ -21,15 +22,19 @@ if (! (-e $ht_target) ) {
 
 opendir HTDOCS, "htdocs" or die "unable to opendir htdocs\n";
 while (my $file = readdir(HTDOCS) ) {
-    if (-f "htdocs/$file") {
-        copy("htdocs" . $delim . $file, $ht_target . $delim . $file) or die "unable to copy to $ht_target/$file\n";
+    my $localfile = Bio::Root::IO->catfile('htdocs', $file);
+    if (-f $localfile) {
+        my $installfile = Bio::Root::IO->catfile($ht_target, $file);
+        copy($localfile, $installfile)
+           or die "unable to copy to $installfile\n";
     }
 }
 closedir HTDOCS; 
 
-my $imagedir  = $ht_target . $delim . "images" ;
-my $buttondir = $ht_target . $delim . "images" . $delim . "buttons";
+my $imagedir  = Bio::Root::IO->catfile($ht_target, "images");
+my $buttondir = Bio::Root::IO->catfile($imagedir, "buttons");
 if (! (-e $imagedir) ) {
+    print "Making $imagedir...\n";
     mkdir($imagedir,0777) or die "unable to make $imagedir\n";
 }
 if (! (-e $buttondir) ) {
@@ -39,14 +44,16 @@ if (! (-e $buttondir) ) {
 
 opendir BUTTONS, "htdocs/images/buttons" or die "unable to open ./htdocs/images/buttons\n";
 while (my $file = readdir(BUTTONS) ) {
-    if (-f "./htdocs/images/buttons/$file") {
-        copy("htdocs".$delim."images".$delim."buttons".$delim.$file, $buttondir.$delim.$file) 
-            or die "unable to copy to $ht_target/images/buttons/$file\n"; 
+    my $localfile = Bio::Root::IO->catfile('htdocs/images/buttons',$file);
+    if (-f $localfile) {
+        my $installfile = Bio::Root::IO->catfile($buttondir, $file);
+        copy($localfile, $installfile) 
+            or die "unable to copy to $installfile\n"; 
     }
 }
 closedir BUTTONS;
 
-my $helpdir = $ht_target . $delim . "images" . $delim . "help";
+my $helpdir = Bio::Root::IO->catfile($imagedir, "help");
 if (! (-e $helpdir) ) {
     print "Making $helpdir...\n";
     mkdir($helpdir,0777) or die "unable to make $helpdir\n";
@@ -54,19 +61,22 @@ if (! (-e $helpdir) ) {
 
 opendir HELP, "htdocs/images/help" or die "unable to open htdocs/images/help\n";
 while (my $file = readdir(HELP) ) {
+    my $localfile = Bio::Root::IO->catfile('htdocs/images/help', $file);
     if (-f "./htdocs/images/help/$file") {
-        copy("htdocs".$delim."images".$delim."help".$delim.$file, $helpdir.$delim.$file) 
-            or die "unable to copy to $ht_target/images/help/$file\n";
+        my $installfile = Bio::Root::IO->catfile($helpdir, $file);
+        copy($localfile, $installfile) 
+            or die "unable to copy to $installfile\n";
     }
 }
 closedir HELP;
 
-my $tmpdir = $ht_target . $delim . "tmp";
+my $tmpdir = Bio::Root::IO->catfile($ht_target, "tmp");
 if (! (-e $tmpdir) ) {
     print "Making $tmpdir...\n";
     mkdir($tmpdir,0777) or die "unable to make $tmpdir\n";
-    my $mode = 0777;
-    chmod $mode, $tmpdir or die "unable to make $tmpdir world writable\n";
+#  this appears irrelevent now
+#    my $mode = 0777;
+#    chmod $mode, $tmpdir or die "unable to make $tmpdir world writable\n";
 }
 
 

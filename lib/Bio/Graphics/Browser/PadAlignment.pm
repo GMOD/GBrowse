@@ -11,9 +11,9 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 =head1 VERSION (CVS-info)
 
  $RCSfile: PadAlignment.pm,v $
- $Revision: 1.2 $
+ $Revision: 1.3 $
  $Author: lstein $
- $Date: 2003-04-22 17:36:57 $
+ $Date: 2003-04-22 19:41:45 $
 
 =head1 SYNOPSIS
 
@@ -243,7 +243,7 @@ sub padded_sequences {
 
   # place where DNA[$i] left off
   my @last_end;
-  my @added = (length $dnas[0]-1);
+  my @added = (length($dnas[0])-1);
 
   # alignments must be sorted according to target
   foreach (sort {$a->[0] cmp $b->[0]
@@ -285,7 +285,7 @@ sub padded_sequences {
     # insert the aligned bit now
     for (my $pos = $start; $pos <= $end; $pos++) {
       my $gap_pos = $gap_map[$pos];
-      substr($lines[$targ],$gap_pos,1) = substr($dnas[$targ],$tstart++,1);
+      substr($lines[$targ],$gap_pos,1) = eval{substr($dnas[$targ],$tstart++,1)} || '-';
     }
 
     $last_end[$targ][$src]  = $end;
@@ -385,14 +385,11 @@ sub alignment {
   }
 
   my $result;
-
-  warn "longest_line = $longest_line\n";
-
   for (my $i = 0; $i < @padded; $i++) {
 
     for (my $j = 0; $j < @{$padded[$i]}; $j++) {
       next unless $padded[$i][$j];
-      my $origin  = $origins->{$names{$j}};
+      my $origin = $origins->{$names{$j}};
       my $offset = $padded[$i][$j] =~ tr/. -/. -/;
       my $skipit = $offset == length($padded[$i][$j]);
 

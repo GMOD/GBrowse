@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.35 2003-10-05 02:02:07 lstein Exp $
+# $Id: gbrowse.PLS,v 1.36 2003-10-05 02:38:38 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2134,7 +2134,9 @@ sub build_link_image_page {
   my $settings = shift;
   my $segment  = shift;
   my $source = $CONFIG->source;
-  my $url    = "../gbrowse_img/".escape($source);
+  my $url = url(-base=>1);
+  $url   .= url(-absolute=>1);
+  $url    = dirname($url) . "/gbrowse_img/".escape($source);
   my $width  = $CONFIG->width;
   my $name   = $settings->{name} || "$settings->{ref}:$settings->{start}..$settings->{stop}";
   my $type   = join '+',map{escape($_)} grep {$settings->{features}{$_}{visible}} @{$settings->{tracks}};

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::OligoFinder;
-# $Id: OligoFinder.pm,v 1.3 2002-12-06 21:43:59 lstein Exp $
+# $Id: OligoFinder.pm,v 1.4 2003-05-13 22:06:33 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -8,7 +8,7 @@ use DBI;
 use CGI qw(:standard *table);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.10';
+$VERSION = '0.11';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -110,7 +110,9 @@ sub auto_find {
 						   -name  => $name,
 						   -start => $offset+$p+1,
 						   -score => '100%',
-						   -end   => $offset+$p+length($oligo))
+						   -end   => $offset+$p+length($oligo),
+						   -factory=> $db,
+						  )
       }
     }
   }

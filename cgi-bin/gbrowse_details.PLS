@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.27 2004-08-18 21:42:14 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.28 2004-12-20 16:40:25 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -278,14 +278,15 @@ sub PrintMultiple {
     $LINK = "$first : (<a href='$LINK'>Aligned Sequence</a>)";
   }
 
-  $first =~ s/(\S{60})/$1 /g;  # wrap way long lines
+  $first =~ s/([^<>\s]{60})/$1 /g;  # wrap way long lines
+
 
   my $string = join '',TR({-valign=>'top',-class=>'databody'},
                           th({-align=>'LEFT',-valign=>'top',-class=>'datatitle'},length $label>0 ? "$label: " : ''),
                           td($options, $LINK?$LINK:$first)
                          );
   for my $obj (@a) {
-    $obj =~ s/(\S{60})/$1 /g;  # wrap way long lines
+    $obj =~ s/([^<>\s]{60})/$1 /g;  # wrap way long lines
     $string .= join '', TR({-class=>'databody'},
 			   th({-align=>'RIGHT',-class=>'datatitle'},'&nbsp;'),
 			   td($options,$obj)

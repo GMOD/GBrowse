@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.51.2.4 2003-06-16 18:14:06 pedlefsen Exp $
+# $Id: Browser.pm,v 1.51.2.5 2003-06-25 17:25:19 pedlefsen Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -74,6 +74,8 @@ use File::Basename 'basename';
 use CGI::Carp;
 use CGI qw( :standard escape escapeHTML center expires *table *dl *TR *td );
 use Cwd;
+## TODO: REMOVE?  Testing normalizer.
+use Bio::DB::LocusLinkHugoNormalizer;
 use vars qw( $SOURCES $DEFAULT_SOURCE );
 
 ## TODO: Document this.  Why?
@@ -344,7 +346,7 @@ sub source {
   my $self = shift;
   my $new_value = shift;
   my $old_value = $self->{ '_source' };
-  if( defined( $new_value ) ) {
+  if( defined( $new_value ) && ( $new_value ne $old_value ) ) {
     unless( $SOURCES->{ $new_value } ) {
       carp( "invalid source: $new_value" );
       return $old_value;
@@ -352,17 +354,24 @@ sub source {
     $self->{ '_source' } = $new_value;
     unless( ref( $SOURCES->{ $new_value } ) ) {
       # If the config hasn't yet been instantiated, do it.
+      ## TODO: REMOVE
+      print STDERR "Reading config for new source $new_value.." if DEBUG;
+      flush STDERR;
       $SOURCES->{ $new_value } =
         Bio::Graphics::Browser::ConfigIO->new(
           '-file'=>$SOURCES->{ $new_value },
           '-safe'=>1
         )->read_config();
+      ## TODO: REMOVE
+      print STDERR "..done\n" if DEBUG;
     }
     # If the new config specifies a default width, use it.
     $self->width( $self->setting( 'default_width' ) ) if
       $self->setting( 'default_width' );
 
     # If the new config specifies a default language, use it.
+    ## TODO: REMOVE
+    warn "Getting language options" if DEBUG;
     my $default_language = $SOURCES->{ $new_value }->get( 'language' );
     my @languages        =
       ( http( 'Accept-language' ) =~ /([a-z]{2}-?[a-z]*)/ig );
@@ -371,6 +380,9 @@ sub source {
     if( @languages ) {
       $self->{ '_babelfish' }->language( @languages );
     }
+
+    ## If the new config specifies any plugins to load, load 'em.
+    $self->_initialize_plugins( $CONF_DIR );
   }
   return $old_value;
 } # source(..)
@@ -397,11 +409,16 @@ sub config {
     return;
   }
   # If the config hasn't yet been instantiated, do it.
+  ## TODO: REMOVE
+  print STDERR "Loading config file for source $source.." if DEBUG;
+  flush STDERR;
   $config =
     Bio::Graphics::Browser::ConfigIO->new(
       '-file'=>$SOURCES->{ $source },
       '-safe'=>1
     )->read_config();
+  ## TODO: REMOVE
+  print STDERR "..done.\n" if DEBUG;
   $SOURCES->{ $source } = $config;
   return $config;
 } # config(..)
@@ -597,6 +614,9 @@ sub gbrowse {
   my $self = shift;
   my ( $out_fh, $source, $old_source, $arg_page_settings ) = @_;
 
+  unless( defined $source ) {
+    $source = $DEFAULT_SOURCE;
+  }
   $self->source( $source );
   my $source_changed =
     ( defined( $old_source ) && ( $source ne $old_source ) );
@@ -818,18 +838,15 @@ sub _initialize_browser {
   my $self = shift;
 
   # Create the babelfish.
+  ## TODO: REMOVE
+  warn "Creating babelfish.." if DEBUG;
   $self->{ '_babelfish' } =
     Bio::Graphics::Browser::I18n->new( "$CONF_DIR/languages" );
   # Note that the babelfish will get some languages when the source is set.
 
-  # This will load the Config file:
-  $self->source( $DEFAULT_SOURCE );
-
   # Give it a unique name..
   # The basetime modulo 100 times the pid should do the trick.
   $self->unique_id( $^T % ( $$ * 100 ) );
-
-  $self->_initialize_plugins( $CONF_DIR );
 } # _initialize_browser()
 
 sub _get_page_settings {
@@ -1295,7 +1312,7 @@ sub _get_detail_panel_html {
   if( $segment->length() <= $max_segment ) {
 
     ## TODO: REMOVE
-    warn "_html_main_display 2" if DEBUG;
+    warn "_get_detail_panel_html 2" if DEBUG;
 
     $self->_load_plugin_annotations(
       $settings,
@@ -1334,7 +1351,7 @@ sub _get_detail_panel_html {
     my $default_segment = $self->setting( 'default_segment' );
 
     ## TODO: REMOVE
-    warn "_html_main_display 2: The segment is too big." if DEBUG;
+    warn "_get_detail_panel_html 2: The segment is too big." if DEBUG;
 
     $cell .=
       i(
@@ -2353,6 +2370,30 @@ sub _get_segments {
     $settings->{ 'end' }   = ( $new_end / $divisor );
 
   } # End foreach $segment, resize if below $min_seg_size.
+
+  ## TODO: REMOVE.  Testing.
+  ## I think that ultimately we'll want to put the normalizer in the SegmentProviderI so that names can be normalized as the features are retrieved from the db, and perhaps also allow them to be attatched to SegmentIs also, to normalize as features are returned by the features() method.
+  # Test normalization:
+  if( @segments ) {
+    #my $normalizer = Bio::DB::LocusLinkHugoNormalizer->new();
+    #my @features = $segments[ 0 ]->features();
+    #foreach my $feature ( @features ) {
+    #  $normalizer->normalize( $feature );
+    #  ## TODO: REMOVE
+    #  print STDERR "The feature's normalized name is ".$feature->display_name()."\n";
+    #}
+    #my $iterator = $segments[ 0 ]->features( '-iterator' => 1 );
+    ### TODO: REMOVE
+    #warn "Bouts to normalize ".$segments[ 0 ]->feature_count()." features.";
+    #warn "\$iterator->{ '_features' } = [ ".join( ', ', @{ $iterator->{ '_features' } } )." ]";
+    #while( $iterator->has_more_features() ) {
+    #  my $seq_feature = $iterator->next_feature();
+    #  $normalizer->normalize( $seq_feature );
+    #  ## TODO: REMOVE
+    #  print STDERR "The feature's normalized name is ".$seq_feature->display_name()."\n";
+    #}
+  }
+
   return @segments;
 } # _get_segments(..)
 
@@ -3674,7 +3715,7 @@ sub _initialize_plugins {
   my $path = shift;
 
   my $plugin_dir = "$path/plugins";
-  warn "initializing plugins..." if DEBUG_PLUGINS;
+  warn "initializing plugins..." if DEBUG;
   my @plugin_classes = shellwords( $self->setting( 'plugins' ) );
 
   my %plugins = ();

@@ -1,7 +1,7 @@
 # This is -*-Perl-*- code
 ## Bioperl Test Harness Script for Modules
 ##
-# $Id: GraphicsBrowser.t,v 1.1.2.1 2003-05-23 16:38:06 pedlefsen Exp $
+# $Id: GraphicsBrowser.t,v 1.1.2.2 2003-06-25 17:25:19 pedlefsen Exp $
 
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl test.t'
@@ -15,9 +15,9 @@ $VERBOSE  = 1;
 ## All files ending in .conf in the directory $CONF_DIR will be made
 ## available to the Browser being tested, but only the first
 ## (alphabetically) will be used.
-$CONF_DIR = 'conf';
+#$CONF_DIR = 'conf';
 ## TODO: REMOVE
-#$CONF_DIR = 't/gbrowse.conf';
+$CONF_DIR = 't/gbrowse.conf';
 
 #use lib '..','.','./blib/lib';
 ## TODO: REMOVE
@@ -107,6 +107,6 @@ ok( $session_id );
 #$browser->gbrowse( \*STDOUT, 'sample', undef, { 'name' => 'B0511' } );
 #$browser->gbrowse( \*STDOUT, 'sample', undef, { 'name' => 'Contig41' } );
 #$browser->gbrowse( \*STDOUT, 'sample', undef, { 'name' => 'II' } );
-#$browser->gbrowse( \*STDOUT, 'blast', undef, { 'name' => 'test_first_protein_in_IPI' } );
+$browser->gbrowse( \*STDOUT, 'blast', undef, { 'name' => 'test_first_protein_in_IPI' } );
 #$browser->gbrowse( \*STDOUT, 'rakari', undef, { 'name' => 'Genome' } );
-$browser->gbrowse( \*STDOUT, 'jdrf', undef, { 'name' => '1:226676216-226891134' } );
+#$browser->gbrowse( \*STDOUT, 'jdrf', undef, { 'name' => '1:226676216-226891134' } );

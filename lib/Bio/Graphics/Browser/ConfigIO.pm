@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::ConfigIO;
 
-# $Id: ConfigIO.pm,v 1.1.2.1 2003-05-23 16:38:06 pedlefsen Exp $
+# $Id: ConfigIO.pm,v 1.1.2.2 2003-06-25 17:25:19 pedlefsen Exp $
 # This package parses a simple tab-delimited format for features into
 # a Config object.  It is simpler than GFF, but still has a lot of
 # expressive power.
@@ -304,20 +304,46 @@ sub read_config {
   # Create a new configurator
   my $config = new Bio::Graphics::Browser::Config( '-safe' => $self->safe() );
 
+  if( Bio::Graphics::Browser::DEBUG ) {
+    select STDERR;
+    my $old_autoflush = $|;
+    $| = 1; # Autoflush ON.
+    ## TODO: REMOVE
+    print STDERR "Initializing ConfigIO parse..";
+  }
+
   my $parse_state = $self->_init_parse( $config );
+  ## TODO: REMOVE
+  print STDERR "..done\n" if Bio::Graphics::Browser::DEBUG;
   if ( my $text = $self->text() ) {
+    ## TODO: REMOVE
+    print STDERR "Parsing from text" if Bio::Graphics::Browser::DEBUG;
     foreach ( split /\r?\n|\r\n?/, $text ) {
       $self->_parse_line( $parse_state, $_ );
+      ## TODO: REMOVE
+      print STDERR "." if Bio::Graphics::Browser::DEBUG;
     }
+    ## TODO: REMOVE
+    print STDERR "done\n" if Bio::Graphics::Browser::DEBUG;
   } elsif( defined ( my $fh = $self->_fh() ) ) {
+    ## TODO: REMOVE
+    print STDERR "Parsing from file" if Bio::Graphics::Browser::DEBUG;
     while( <$fh> ) {
       chomp;
       $self->_parse_line( $parse_state, $_ );
+      ## TODO: REMOVE
+      print STDERR "." if Bio::Graphics::Browser::DEBUG;
     }
+    ## TODO: REMOVE
+    print STDERR "done\n" if Bio::Graphics::Browser::DEBUG;
   } else {
     $self->throw( "Ack! ConfigIO::read_config() - I do not have any datasources to read from!" );
   }
+  ## TODO: REMOVE
+  print STDERR "Finalizing parse.." if Bio::Graphics::Browser::DEBUG;
   $self->_finish_parse( $parse_state );
+  ## TODO: REMOVE
+  print STDERR "..done\n" if Bio::Graphics::Browser::DEBUG;
 
   return $config;
 } # read_config(..)

@@ -2,12 +2,10 @@
 
 The .gff and .fasta files located in the files download area of the
 GMOD web site correspond to feature and dna information for the model
-organism systems drosophila, C. elegans, yeast and human.  They are
+organism systems drosophila, C. elegans, and yeast.  They are
 designed to be loaded into the Generic Genome Browser (GBrowse) for
 browsing.  You can think of them as a starter's kit for your own
-genome browser.  Because of the size of the human genome, there is no
-human.fa.gz file available.  You will have to create your own
-following the instructions below.
+genome browser. 
 
 These files are *not* necessarily kept up to date, but are imported
 from the model organism databases at irregular intervals.  You are
@@ -21,7 +19,6 @@ databases into .gff format.  These are:
   process_wormbase.pl	   Import C. elegans annotations from WormBase
   process_sgd.pl           Import S. cerevisiae annotations from SGD
   process_gadfly.pl        Import D. melanogaster annotations from Flybase
-  process_ncbi_human.pl    Import H. sapiens annotations from NCBI
 
 Here is a brief description of the process for importing these files:
 
@@ -158,46 +155,6 @@ Run the following script to put the FASTA files into a loadable format:
 Run the GFF loader
 
   fast_load_gff.pl -d yeast -f yeast.fa yeast.gff
-
-=back
-
-=item 4. NCBI (human)
-
-=over
-
-=item a)
-
-Go to ftp://ftp.ncbi.nih.gov/genomes/H_sapiens/maps/mapview/chromosome_order/
-and download the *sequence.gz files found in each CHR*
-subdirectory.  For example chr01_sequence.gz.  
-These are annotations on the current human assembly.
-
-=item b)
-
-Go to ftp://ftp.ncbi.nih.gov/refseq/LocusLink/ and download the file
-LL.out.hs.gz.  This contains LocusLink names for gene predictions.
-
-=item c)
-
-Go to ftp://ftp.ensembl.org/pub/human-X.XX/data/golden_path/ and download
-the .fa.gz files that you find there.  Use the version of the assembly
-that matches the version of the assembly that you downloaded from NCBI.
-
-=item d)
-
-Run the process_ncbi_human.pl script:
-
-   process_ncbi_human.pl --locuslink LL.out.hs.gz chr*sequence.gz > human.gff
-
-=item e)
-
-Put all the .fa.gz files into a single directory named human_fasta
-
-=item f)
-
-Run the loader:
-
-   fast_load_gff.pl -d human -f human_fasta human.gff
 
 =back
 

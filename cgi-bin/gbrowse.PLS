@@ -369,7 +369,7 @@ sub main_display {
     # if a plugin passes us back a Feature, rather than a Segment, turn it into a segment
     # (this shouldn't happen - hah!)
     $segment = open_database()->segment($segment->seq_id,
-							 $segment->start,$segment->end)
+				        $segment->start,$segment->end)
       unless $segment->can('features');
     print overview_panel($segment,$page_settings);
     print detail_panel($segment,$page_settings,$feature_files);
@@ -412,9 +412,6 @@ sub detail_panel {
   my $cell = '';
 
   if ($segment->length <= $MAX_SEGMENT) {
-
-    # add plugin annotators, but only if the length is reasonable!
-    load_plugin_annotations($segment,$feature_files,$page_settings);
 
     $CONFIG->width($page_settings->{width});
     my @tracks_to_show = grep {$page_settings->{features}{$_}{visible}} @{$page_settings->{tracks}};
@@ -1553,7 +1550,10 @@ sub load_external_sources {
 
   my %feature_file = map {(ref($_) ? $_->name: $_) => $_} @feature_file;
   warn join "\n",%feature_file if DEBUG;
-  \%feature_file;
+  my $f = \%feature_file;
+
+  load_plugin_annotations($segment,$f,$page_settings) if $segment->length <= $MAX_SEGMENT;
+  return $f;
 }
 
 sub load_uploaded_files {
@@ -2258,13 +2258,12 @@ sub do_plugin_dump {
   my $segment  = shift;
   my $settings = shift;
   my $p        = $PLUGINS->{$plugin} or return;
-  my @extra_features;
+  my @additional_feature_sets;
   if ($segment && $settings && $segment->length <= $MAX_SEGMENT) {
      my $feature_files = load_external_sources($segment,$settings);
-     load_plugin_annotations($segment,$feature_files,$settings);
-     @extra_features = values %{$feature_files};
+     @additional_feature_sets = values %{$feature_files};
   }
-  $p->dump($segment,@extra_features);
+  $p->dump($segment,@additional_feature_sets);
   return 1;
 }
 

@@ -53,6 +53,7 @@ psql shell grant select permissions:
   GRANT SELECT ON featureloc           TO nobody;
   GRANT SELECT ON cvterm               TO nobody;
   GRANT SELECT ON feature_relationship TO nobody;
+  GRANT SELECT ON cv                   TO nobody;
 
 If you encounter any bugs or problems with this chado adaptor, please
 let me know.

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.40 2004-04-13 17:15:51 scottcain Exp $
+# $Id: Chado.pm,v 1.41 2004-04-15 15:38:12 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -276,13 +276,17 @@ Otherwise, the method must throw a "multiple segment exception".
 
 sub segment {
   my $self = shift;
-  my ($name,$base_start,$end,$class,$version,$db_id) = $self->_rearrange([qw(NAME
+  my ($name,$base_start,$stop,$end,$class,$version,$db_id) 
+                                         = $self->_rearrange([qw(NAME
 								 START
+                                                                 STOP
 								 END
 								 CLASS
 								 VERSION
                                                                  DB_ID)],@_);
   # lets the Segment class handle all the lifting.
+
+  $end ||= $stop;
   return $self->_segclass->new($name,$self,$base_start,$end,$db_id);
 }
 
@@ -692,7 +696,7 @@ sub default_class {return 'Sequence' }
 
 sub _segclass { return SEGCLASS }
 
-sub absolute {return 1}
+sub absolute {return}
 
 #this sub doesn't work and just causes annoying warnings
 #sub DESTROY {

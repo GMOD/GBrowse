@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.54 2004-04-13 17:15:52 scottcain Exp $
+# $Id: Segment.pm,v 1.55 2004-04-15 15:38:12 scottcain Exp $
 
 =head1 NAME
 
@@ -91,7 +91,7 @@ use strict;
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
-use constant DEBUG => 0;
+use constant DEBUG => 1;
 
 use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI Bio::DB::Das::Chado);
@@ -222,6 +222,8 @@ sub new {
         $end    = $end ? int($end) : $length;
         $length = $end - $interbase_start;
 
+        warn "base_start:$base_start, end:$end, length:$length" if DEBUG;
+
         return bless {
             factory       => $factory,
             start         => $base_start,
@@ -349,7 +351,12 @@ to low() for Gadfly compatibility.
 
 =cut
 
-sub start { shift->{start} } 
+sub start {
+  my $self = shift;
+  return $self->{'start'} = shift if @_;
+  return $self->{'start'};
+
+} 
 *low = \&start;
 
 =head2 end
@@ -366,7 +373,12 @@ high() for Gadfly compatibility.
 
 =cut
 
-sub end   { shift->{end} } 
+sub end {
+  my $self = shift;
+  return $self->{'end'} = shift if @_;
+  return $self->{'end'};
+}
+
 *high = \&end;
 *stop = \&end;
 
@@ -505,7 +517,7 @@ sub features {
     $sql_types .= ") and ";
   }
 
-  $self->{factory}->{dbh}->trace(1) if DEBUG;
+#  $self->{factory}->{dbh}->trace(1) if DEBUG;
 
   my $srcfeature_id = $self->{srcfeature_id};
 
@@ -556,7 +568,7 @@ sub features {
                        $base_start,$stop,
                        $self->factory->t2n($$hashref{type_id}),
                        $$hashref{strand},
-                       $$hashref{locgroup},
+                       $$hashref{name},
                        $$hashref{uniquename},$$hashref{feature_id});  
 
     push @features, $feat;

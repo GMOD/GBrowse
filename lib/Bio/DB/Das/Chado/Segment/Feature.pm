@@ -75,7 +75,7 @@ sub new {
       $start,$end,
       $type,
       $strand,
-      $group,       # featureloc.locgroup, NOT to be confused with GFF group
+      $group,       
       $uniquename,
       $feature_id) = @_;
 
@@ -128,21 +128,6 @@ class.
 
 =cut
 
-sub start {
-  my $self = shift;
-  return $self->{'start'} = shift if @_;
-  return $self->{'start'};
-}
-
-sub end {
-    my $self = shift;
-    return $self->{'end'} = shift if @_;
-    return $self->{'end'};
-}
-
-*stop = &end;
-
-
 sub feature_id {
   my $self = shift;
 
@@ -154,25 +139,20 @@ sub feature_id {
 
   Title   : group
   Usage   : $group = $f->group([$new_group]);
-  Function: Store the feature's location group (featureloc.locgroup).
-            This method gets or sets the feature group.  The group is
-            NOT a hold over from GFF and is NOT synonymous with name;
-            it is featureloc.locgroup.  If you want the feature's
-            name, use uniquename().
+  Function: Returns a feature name--this is here to maintain backward 
+            compatibility with GFF and gbrowse.
   Returns : value of group (a scalar)
   Args    : on set, new value (a scalar or undef, optional)
 
 
 =cut
 
-*group = &name;
+sub group {
+  my $self = shift;
 
-#sub group {
-#  my $self = shift;
-
-#  return $self->{'group'} = shift if @_;
-#  return $self->{'group'};
-#}
+  return $self->{'group'} = shift if @_;
+  return $self->{'group'};
+}
 
 =head2 srcfeature_id()
 
@@ -285,7 +265,7 @@ sub attach_seq {
 
 =cut
 
-*display_name = \&uniquename;
+*display_name = \&group;
 
 =head2 entire_seq()
 
@@ -581,11 +561,11 @@ sub length {
 =head2 name()
 
   Title   : name
-  Function: aliased to uniquename for backward compatibility
+  Function: aliased to group for backward compatibility
 
 =cut
 
-*name = \&uniquename;
+*name = \&group;
 
 =head2 parent()
 
@@ -741,8 +721,6 @@ sub sub_SeqFeature {
   #first call, cache subfeatures
   if(!$self->subfeatures ){
 
-    warn "no cached subfeatures";
-
     my $parent_id = $self->feature_id();
 
     my $typewhere = '';
@@ -796,7 +774,7 @@ sub sub_SeqFeature {
       my $interbase_start = $$hashref{fmin};
       my $base_start = $interbase_start +1;
 
-      warn "creating new subfeat, $$hashref{name}, $base_start, $stop";
+     # warn "creating new subfeat, $$hashref{name}, $base_start, $stop";
 
       my $feat = Bio::DB::Das::Chado::Segment::Feature->new (
                     $self->factory,
@@ -822,7 +800,7 @@ sub sub_SeqFeature {
 
   my @subfeatures = @{$self->subfeatures()};
 
-    warn "subfeature array:@subfeatures\n";
+   # warn "subfeature array:@subfeatures\n";
 
   return  @subfeatures;
 }
@@ -845,7 +823,7 @@ sub add_subfeature {
   my $self    = shift;
   my $subfeature = shift;
 
-     warn "in add_subfeat:$subfeature";
+   #  warn "in add_subfeat:$subfeature";
 
   return undef unless ref($subfeature);
   return undef unless $subfeature->isa('Bio::DB::Das::Chado::Segment::Feature');

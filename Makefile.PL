@@ -1,0 +1,127 @@
+use ExtUtils::MakeMaker;
+use FindBin '$Bin';
+require 5.005003;
+
+my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN);
+my $OPTIONS = join ('|',@OPTIONS);
+my %OPTIONS;
+
+my @argv = @ARGV;
+@ARGV = ();
+
+foreach (@argv) {
+  if (/($OPTIONS)=(.+)/g) {
+    $OPTIONS{$1} = $2;
+  } else {
+    push @ARGV,$_;
+  }
+}
+
+# set hard-coded values
+$OPTIONS{APACHE} ||= '/usr/local/apache';
+unless ($OPTIONS{CONF}) {
+  $OPTIONS{CONF} = "$OPTIONS{APACHE}/conf";
+  warn "NOTE: Setting location of browser configuration files to $OPTIONS{CONF}\n";
+}
+unless ($OPTIONS{HTDOCS}) {
+  $OPTIONS{HTDOCS} = "$OPTIONS{APACHE}/htdocs";
+  warn "NOTE: Setting location of browser static files to $OPTIONS{HTDOCS}\n";
+}
+unless ($OPTIONS{CGIBIN}) {
+  $OPTIONS{CGIBIN} = "$OPTIONS{APACHE}/cgi-bin";
+  warn "NOTE: Setting location of browser static files to $OPTIONS{CGIBIN}\n";
+}
+
+open F,">$Bin/GGB.def" or die "Can't open $Bin/GGB.def for writing: $!";
+print F "# This hints file contains configuration information used by the generic browser\n\n";
+foreach (keys %OPTIONS) {
+  print F "$_=$OPTIONS{$_}\n";
+}
+close F;
+
+# See lib/ExtUtils/MakeMaker.pm for details of how to influence
+# the contents of the Makefile that is written.
+WriteMakefile(
+	      'NAME'	     => 'Generic-Genome-Browser',
+	      'VERSION'      => '1.00',
+	      'PREREQ_PM'    => {
+				 Bio::Graphics => 0.92,
+				 Bio::DB::GFF  => 0.51,
+				}, # e.g., Module::Name => 1.1
+	      PL_FILES       => {
+				 'bin/process_sgd.PLS' => 'bin/process_sgd.pl',
+				 'bin/process_gadfly.PLS' => 'bin/process_gadfly.pl',
+				 'bin/process_wormbase.PLS' => 'bin/process_wormbase.pl',
+				 'gbrowse.PLS'  => 'gbrowse',
+				 },
+	      EXE_FILES      => [
+				 'bin/process_wormbase.pl',
+				 'bin/process_sgd.pl',
+				 'bin/process_gadfly.pl',
+				],
+	      'LIBS'	     => [''], # e.g., '-lm'
+	      'DEFINE'	     => '',
+	      'INC'	     => '', # e.g., '-I/usr/include/other'
+);
+
+sub MY::clean {
+  package MY;
+  my $inherited = shift->SUPER::clean(@_);
+  $inherited .= "\t-rm -f gbrowse\n";
+  $inherited .= "\t-rm GGB.def\n";
+  $inherited;
+}
+
+sub MY::processPL {
+  package MY;
+  my $inherited = shift->SUPER::processPL(@_);
+  $inherited =~ s/:: gbrowse\.PLS/:: gbrowse.PLS GGB.def/;
+  $inherited;
+}
+
+sub MY::install {
+  package MY;
+  my $inherited = shift->SUPER::install(@_);
+  $inherited =~ s/doc_install/doc_install conf_install htdocs_install cgi_install/;
+  $inherited;
+}
+
+sub MY::postamble {
+qq{
+conf_install ::
+	\@echo "Installing sample configuration files..."
+	\@dir=$OPTIONS{CONF}/gbrowse.conf; \\
+	mkdir -p \$\$dir; \\
+	cd $Bin/conf; \\
+	for i in *.conf; do \\
+		if [ -e "\$\$dir/\$\$i" ]; then \\
+			echo "   Found \$\$i in \$\$dir. Skipping..."; \\
+		else \\
+			cp \$\$i \$\$dir; \\
+		fi \\
+	done
+
+htdocs_install ::
+	\@echo "Installing stylesheet and images..."
+	\@dir=$OPTIONS{HTDOCS}/gbrowse; \\
+	mkdir -p \$\$dir; \\
+	cd $Bin/htdocs; \\
+	for i in *; do \\
+		if [ -e "\$\$dir/\$\$i" ]; then \\
+			echo "   Found \$\$i in \$\$dir. Skipping..."; \\
+		else \\
+			cp -pr \$\$i \$\$dir; \\
+		fi \\
+	done; \\
+	echo "Making \$\$dir/tmp world writable..."; \\
+	chmod ugo+rwx \$\$dir/tmp
+
+cgi_install :: gbrowse
+	\@echo "Installing gbrowse CGI script..."
+	\@dir=$OPTIONS{CGIBIN}; \\
+	mkdir -p \$\$dir; \\
+	cp $Bin/gbrowse \$\$dir; \\
+	chmod +x \$\$dir/gbrowse
+
+};
+}

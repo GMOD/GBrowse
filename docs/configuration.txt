@@ -1,0 +1,867 @@
+This document provides information on configuring the Generic Genome
+Browser (GGB), part of the Generic Model Organism Systems Database
+Project (GMOD; http://www.gmod.org).
+
+* Table of Contents
+
+  A. CREATING NEW DATABASES FROM SCRATCH
+     A1. The GFF file format
+     A2. Creating a GFF table
+     A3. Identifying the reference sequence
+     A4. Sequence alignments
+     A5. Aggregators
+  B. ADDING A NEW DATABASE TO THE BROWSER
+     B1. The [GENERAL] Section
+     B2. Track Sections
+     B3. Glyphs and Glyph options
+     B4. Computed Options
+  C. INSTALLING FASTA FILES FOR DNA
+  D. CHANGING THE LOCATION OF THE CONFIGURATION FILES
+  E. FURTHER INFORMATION
+
+A. CREATING NEW DATABASES FROM SCRATCH
+
+This section describes how to create new annotation databases from
+scratch.
+
+A1. The GFF file format
+
+GGB is based around the GFF file format, which stands for "Gene
+Finding Format" and was invented at the Sanger Centre. The GFF format
+is a flat tab-delimited file, each line of which corresponds to an
+annotation, or feature.  Each line has nine columns and looks like
+this:
+
+ Chr1  curated  CDS 365647  365963  .  +  1  Transcript "R119.7"
+
+The 9 columns are as follows:
+
+  1. reference sequence
+
+  This is the ID of the sequence that is used to establish the
+  coordinate system of the annotation.  In the example above, the
+  reference sequence is "Chr1".
+
+  2. source
+
+  The source of the annotation.  This field describes how the
+  annotation was derived.  In the example above, the source is
+  "curated" to indicate that the feature is the result of human
+  curation.  The names and versions of software programs are often
+  used for the source field, as in "tRNAScan-SE/1.2".
+
+  3. method
+
+  The annotation method.  This field describes the type of the
+  annotation, such as "CDS".  Together the method and source describe
+  the annotation type.
+
+  4. start position
+
+  The start of the annotation relative to the reference sequence.
+
+  5. stop position
+
+  The stop of the annotation relative to the reference sequence.
+  Start is always less than or equal to stop.
+
+  6. score
+
+  For annotations that are associated with a numeric score (for
+  example, a sequence similarity), this field describes the score.
+  The score units are completely unspecified, but for sequence
+  similarities, it is typically percent identity.  Annotations that
+  don't have a score can use "."
+
+  7. strand
+
+  For those annotations which are strand-specific, this field is the
+  strand on which the annotation resides.  It is "+" for the forward
+  strand, "-" for the reverse strand, or "." for annotations that are
+  not stranded.
+
+  8. phase
+
+  For annotations that are linked to proteins, this field describes
+  the phase of the annotation on the codons.  It is a number from 0 to
+  2, or "." for features that have no phase.
+
+  9. group
+
+  GFF provides a simple way of generating annotation hierarchies ("is
+  composed of" relationships) by providing a group field.  The group
+  field contains the class and ID of an annotation which is the
+  logical parent of the current one.  In the example given above, the
+  group is the Transcript named "R119.7".
+
+  The group field is also used to store information about the target
+  of sequence similarity hits, and miscellaneous notes.  See the next
+  section for a description of how to describe similarity targets.
+
+The sequences used to establish the coordinate system for annotations
+can correspond to sequenced clones, clone fragments, contigs or
+super-contigs.
+
+In addition to a group ID, the GFF format allows annotations to have a
+group class.  This makes sure that all groups are unique even if they
+happen to share the same name.  For example, you can have a GenBank
+accession named AP001234 and a clone named AP001234 and distinguish
+between them by giving the first one a class of Accession and the
+second a class of Clone.
+
+You should use double-quotes around the group name or class if it
+contains white space.
+
+----
+
+A2. Creating a GFF table
+
+The first 8 fields of the GFF format are easy to understand.  The
+group field is a challenge.  It is used in three distinct ways:
+
+  a. to group together a single sequence feature that spans a
+     discontinuous range, such as a gapped alignment.
+
+  b. to name a feature, allowing it to be retrieved by name.
+
+  c. to add one or more notes to the annotation.
+
+For a feature that spans a single continuous range, choose a name and
+class for the object and give it a line in the GFF file that refers to
+its start and stop positions.
+
+ Chr3	giemsa heterochromatin	4500000 6000000	. . .   Band 3q12.1
+
+For discontinuous segments such as the exons in a transcript, choose a
+name and class for the object.  Give each segment a separate line in
+the GFF file but use the same name for each line.  For example:
+
+ IV	curated	exon	5506900	5506996	. + .   Transcript B0273.1
+ IV	curated	exon	5506026	5506382	. + .   Transcript B0273.1
+ IV	curated	exon	5506558	5506660	. + .   Transcript B0273.1
+ IV	curated	exon	5506738	5506852	. + .   Transcript B0273.1
+
+These four lines refer to a biological object of class "Transcript"
+and name B0273.1.  Each of its parts uses the method "exon", source
+"curated".  Once loaded, the user will be able to search the genome
+for this object by asking the browser to retrieve
+"Transcript:B0273.1".  The browser can also be configured to allow the
+Transcript: prefix to be omitted.
+
+You can extend the idiom for objects that have heterogeneous parts,
+such as a transcript that has 5' and 3' UTRs
+
+ IV	genewise 5'UTR	5506800	5508999	. + .   Transcript B0273.1
+ IV	curated	 exon	5506900	5506996	. + .   Transcript B0273.1
+ IV	curated	 exon	5506026	5506382	. + .   Transcript B0273.1
+ IV	curated	 exon	5506558	5506660	. + .   Transcript B0273.1
+ IV	curated	 exon	5506738	5506852	. + .   Transcript B0273.1
+ IV	genewise 3'UTR	5506852 5508917	. + .   Transcript B0273.1
+
+
+Some annotations do not need to be individually named.  For example,
+it is probably not useful to assign a unique name to each ALU repeat
+in a vertebrate genome.  For these, just leave the Group field empty.
+
+The group field can be used to add one or more notes to an annotation.
+To do this, place a semicolon after the group name and add a Note
+field:
+
+ Chr3 giemsa heterochromatin 4500000 6000000 . . . Band 3q12.1 ; Note "Marfan's syndrome"
+
+You can add multiple Notes.  Just separate them by semicolons:
+
+  Band 3q12.1 ; Note "Marfan's syndrome" ; Note "dystrophic dysplasia"
+
+----
+
+A3. Identifying the reference sequence
+
+Each reference sequence in the GFF table must itself have an entry.
+This is necessary so that the length of the reference sequence is
+known.
+
+For example, if "Chr1" is used as a reference sequence, then the GFF
+file should have an entry for it similar to this one:
+
+ Chr1 assembly chromosome 1 14972282 . + . Sequence Chr1
+
+This indicates that the reference sequence named "Chr1" has length
+14972282 bp, method "chromosome" and source "assembly".  In addition,
+as indicated by the group field, Chr1 has class "Sequence" and name
+"Chr".
+
+It is suggested that you use "Sequence" as the class name for all
+reference sequences, since this is the default class used by the
+Bio::DB::GFF module when no more specific class is requested.
+
+----
+
+A4. Sequence alignments
+
+There are several cases in which an annotation indicates the
+relationship between two sequences.  One common one is a similarity
+hit, where the annotation indicates an alignment.  A second common
+case is a map assembly, in which the annotation indicates that a
+portion of a larger sequence is built up from one or more smaller
+ones.
+
+Both cases are indicated by using the Target tag in the group field.
+For example, a typical similarity hit will look like this:
+
+ Chr1 BLASTX similarity 76953 77108 132 + 0 Target Protein:SW:ABL_DROME 493 544
+
+Here, the group field contains the Target tag, followed by an
+identifier for the biological object.  The GFF format uses the
+notation Class:Name for the biological object, and even though this is
+stylistically inconsistent, that's the way it's done.  The object
+identifier is followed by two integers indicating the start and stop
+of the alignment on the target sequence.
+
+Unlike the main start and stop columns, it is possible for the target
+start to be greater than the target end.  The previous example
+indicates that the the section of Chr1 from 76,953 to 77,108 aligns to
+the protein SW:ABL_DROME starting at position 493 and extending to
+position 544.
+
+A similar notation is used for sequence assembly information as shown
+in this example:
+
+ Chr1        assembly Link   10922906 11177731 . . . Target Sequence:LINK_H06O01 1 254826
+ LINK_H06O01 assembly Cosmid 32386    64122    . . . Target Sequence:F49B2       6 31742
+
+This indicates that the region between bases 10922906 and 11177731 of
+Chr1 are composed of LINK_H06O01 from bp 1 to bp 254826.  The region
+of LINK_H0601 between 32386 and 64122 is, in turn, composed of the
+bases 5 to 31742 of cosmid F49B2.
+
+----
+
+A5. Aggregators
+
+The Bio::DB::GFF module has a feature known as "aggregators".  These
+are small software packages that recognize certain common feature
+types and convert them into complex biological objects.  These
+aggregators make it possible to develop intelligent graphical
+representations of annotations, such as a gene that draws confirmed
+exons differently from predicted ones.
+
+An aggregator typically creates a new composite feature with a
+different method than any of its components.  For example, the
+standard "alignment" aggregator takes multiple alignments of method
+"similarity", groups them by their name, and returns a single feature
+of method "alignment".
+
+The various aggregators are described in detail in the Bio::DB::GFF
+manual page, and it is easy to write new ones.  It is suggested that
+you use the sample GFF files from the yeast, drosophila and C. elegans
+projects to see what methods to use to achieve the desired results.
+
+----------------------------------------------------------------------
+
+B. ADDING A NEW DATABASE TO THE BROWSER
+
+Each data source has a corresponding configuration file in the
+directory gbrowse.conf.  Once you've created and loaded a new
+database, you should make a copy of one of the existing configuration
+files and modify it to meet your needs.  The name of the new
+configuration file must follow the form:
+
+  sourcename.conf
+
+where "sourcename" is a short word that describes the data source.
+You can use this name to select the data source when linking to the
+browser.  Just provide a source=<sourcename> CGI argument, as in:
+
+  http://your.site.org/cgi-bin/gbrowse?source=sourcename
+
+It is suggested that you use the same name as the database, although
+this isn't a requirement.
+
+The configuration file is divided into a number of sections, each one
+introduced by a [SECTION TITLE].  The [GENERAL] section contains
+settings that are applicable to the entire application.  Other
+sections define tracks to display.
+
+---
+
+B1. The [GENERAL] Section
+
+The [GENERAL] section consists of a series of name=value options.  For
+example, the beginning of the yeast.conf sample configuration file
+looks like this:
+
+ [GENERAL]
+ description = S. cerevisae (via SGD Nov 2001)
+ adaptor     = dbi::mysqlopt
+ database    = dbi:mysql:database=yeast;host=localhost
+ # fasta_files = 
+ aggregators = transcript alignment
+ user        =
+ passwd      =
+
+Each option is a single word or phrase, usually in lower case.  This
+is followed by an equals sign and the value of the option.  You can
+add whitespace around the equals sign in order to increase
+readability.  If a value is very long, you can continue it on
+additional lines provided that you put a tab or other whitespace on
+the continuation lines.  For example:
+
+ description = S. cerevisiae annotations via SGD Nov 2001, and
+	     converted using the process_sgd.pl script
+
+Any lines that begin with a pound sign (#) are considered comments and
+ignored.
+
+During this discussion, you might want to follow along with one of the
+example configuration files.
+
+The following [GENERAL] options are recognized:
+
+  a) description
+
+   The description of the database.  This will appear in the popup
+   menu that allows users to select the data source and in the 
+   header of the page.  Don't make it as long as the previous example!
+   (You will want to change this.)
+
+  b) adaptor
+
+  Tells Bio::DB::GFF what database schema to use when accessing the
+  database.  See the Bio::DB::GFF module for information on this
+  value.  (You will not want to change this unless you know what
+  you are doing).
+
+  c) database
+
+  The location of the database using Perl DBI notation.  The general
+  format for MySQL databases is:
+   
+     database = dbi:mysql:database=<db_name>;host=<host_name>
+
+  (You will want to change this).
+
+  d) fasta_files
+
+  The location of the FASTA files to refer to when dumping out the 
+  DNA for a displayed region.  Comment this option out to disable
+  the feature.  (You will want to change this).
+
+  e) aggregators
+
+  Aggregators to use for complex features.  Comment this out to use
+  the default aggregators.  (You will probably not want to change
+  this).
+
+  f) user
+  
+  User name for the gbrowse script to log in under if you are not
+  using "nobody".  (You might need to change this.)
+
+  g) passwd
+
+  Password to use if the database is password protected.  (You might
+  need to change this.)
+
+  h) stylesheet
+
+  Location of the stylesheet used to create the GGB look and feel.
+  (You probably will not need to change this.)
+
+  i) buttons
+
+  URL in which the various graphical buttons used by GGB are located.
+  (You will probably not need to change this.)
+
+  j) tmpimages
+
+  URL of a writable directory in which GGB can write its temporary
+  images.    (You will probably not need to change this.)
+
+  k) glyph
+     height
+     bgcolor
+     fgcolor
+     strand_arrow
+
+   These options control the default graphical settings for any
+   annotation types that are not explicitly specified.  See the
+   section below on controlling the settings.  Likewise, any other
+   graphical options found in the [GENERAL] sections are treated as
+   defaults.
+
+   l) label density
+
+   When there are too many annotations on the screen GGB automatically
+   disables the printing of identifying labels next to the feature.
+   "label density" controls where the cutoff occurs.  The value in the
+   example files is 25, meaning that labels will be turned off when
+   there are more than 25 annotations of a particular type on display
+   at once.
+
+   m) bump density
+
+   When there are too many annotations on the screen GGB automatically
+   disables collision control.  The "bump density" option controls
+   where the cutoff occurs.  The value in the example files is 100,
+   meaning that when there more than 100 annotations of the same type
+   on the display, the browser will stop shifting them verticially to
+   prevent them from colliding, but will instead allow them to
+   overlap.
+
+
+   n) link
+
+   The link option creates a default rule for creating outgoing links 
+   from the GGB display.  When the user clicks on a feature of
+   interest, he will be taken to the corresponding URL.
+
+   The link option's value should be a URL containing one or more
+   variables.  Variables begin with a dollar sign ($), and are
+   replaced at run time with the information relating to the selected
+   annotation.  Recognized variables include:
+
+     $name    The feature's name (group name)
+     $class   The feature's class (group class)
+     $method  The feature's method
+     $source  The feature's source
+
+   For example, the wormbase.conf file uses this link rule:
+
+     link = http://www.wormbase.org/db/get?name=$name;class=$class
+
+   At run time, if the user clicks on an EST named yk1234.5, this
+   will generate the URL
+
+   http://www.wormbase.org/db/get?name=yk1234.5;class=EST
+
+   It is possible to override the global link rule on a
+   feature-by-feature basis.  See the next section for details on
+   this.  It is also possible to declare a subroutine to compute the
+   proper URL dynamically.  See COMPUTED OPTIONS for details.
+
+   o) image widths
+
+   The image widths option controls the set of image sizes to offer
+   the user.  Its value is a space-delimited list of pixel widths.
+   The default is probably fine.  Note that the height of the image
+   depends on the number of tracks and features, and cannot be
+   controlled.
+
+   p) default width
+
+   The default width is the image width to start off with when the
+   user invokes the browser for the first time.  The default is 800.
+
+   q) default features
+
+   The default features option is a space-delimited list of tracks
+   to turn on by default.  You will probably need to change this.
+   For example:
+
+      default features = Genes ORFs tRNAs
+
+    r) max segment
+
+    The max segment option sets an upper bound on the maximum size DNA
+    segment that will be displayed on the detailed view.  Its value is
+    in base pairs.  Above this limit, the user will be prompted to
+    select a smaller region on the birds-eye view.  You will probably
+    want to adjust this.
+
+    s) default segment
+
+    The default segment option sets the width of the segment (bp) that
+    will be displayed when the user clicks on the birds-eye view
+    without previously having set a desired magnification.  You may
+    want to adjust this value.
+
+    t) zoom levels
+
+    The GGB allows exactly eight levels of zoom.  This option selects
+    the width of each level, in bp.  For example:
+
+      zoom levels = 1000 2000 5000 10000 20000 40000 100000 200000
+
+    u) overview units
+
+    This option controls the units that will be used on the scale for
+    the birds-eye view display.  Possible values are "bp" (base
+    pairs), "K" (kilobases), "M" (megabases), and "G" (gigabases).
+    If this option is omitted, the browser will guess the most
+    appropriate unit.
+
+
+    v) overview bgcolor
+
+    This is the color for the background of the birds-eye view.
+
+    w) detailed bgcolor
+
+    This is the color for the background of the detailed view.
+
+    x) header
+
+    This is a header to print at the top of the browser page.  It is
+    any valid HTML, and can span multiple lines provided that the
+    continuation lines begin with white space.
+
+    It is also possible to place an anonymous Perl subroutine here.
+    The code will be invoked during preparation of the page and must
+    return a string value to use as the header.  See COMPUTED OPTIONS
+    for details.
+
+    Example:
+
+    header = <h1>Welcome to the Volvox Sequence Page</h1>
+
+    x) footer
+
+    This is a footer to print at the top of the browser page.  It is
+    any valid HTML, and can span multiple lines provided that the
+    continuation lines begin with white space.
+
+    It is also possible to place an anonymous Perl subroutine here.
+    The code will be invoked during preparation of the page and must
+    return a string value to use as the header.  See COMPUTED OPTIONS
+    for details.
+
+    Example:
+
+    footer = <hr>
+	<table width="100%">
+	<TR>
+	<TD align="LEFT" class="databody">
+	For the source code for this browser, see the <a href="http://www.gmod.org">
+	Generic Model Organism Database Project.</a>  For other questions, send
+	mail to <a href="mailto:lstein@cshl.org">lstein@cshl.org</a>.
+	</TD>
+	</TR>
+	</table>
+
+     y) examples
+
+     You can provide GGB with some canned examples of "interesting
+     regions" for the user to click on.  The examples option, if
+     present, provides a space-delimited list of interesting regions.
+     For example:
+
+       examples = II  NPY1 NAB2 Orf:YGL123W
+
+
+     z) automatic classes
+
+     When the user types in a search string that is not qualified by a
+     class (as in EST:yk1234.5), GGB will automatically search for a
+     matching feature of class "Sequence".  You can have it search for
+     the name in other classes as well by defining the "automatic
+     classes" option.  
+
+     Example:
+
+	automatic classes = Symbol Gene Clone
+ 
+     When the user types in "hb3", the browser will search first for a
+     Sequence feature of class hb3, followed in turn by matching
+     features in Symbol, Gene and Clone.  The search stops when the
+     first match is found.  Otherwise, the browser will proceed to a
+     full text search of all the comment fields.
+
+---
+
+B2. Track Sections
+
+Any other [Section] in the configuration file is treated as a
+declaration of a track.  The order of track sections will become the
+default order of tracks on the display (the user can change this
+later).  Here is a typical track declaration from yeast.conf:
+
+ [Genes]
+ feature      = gene:sgd
+ glyph        = generic
+ bgcolor      = yellow
+ forwardcolor = yellow
+ reversecolor = turquoise
+ strand_arrow = 1
+ height       = 6
+ description  = 1
+ key          = Named gene
+
+The track is named "Genes".  This is the name that will appear in the
+checkbox group that the end-user uses to select the tracks he wishes
+to display.  As in the general configuration section, the track
+declaration contains multiple name=value option pairs.
+
+Valid options are as follows:
+
+  a) feature
+
+  This relates the track to one or more feature types as they appear
+  in the database.  Recall that each feature has a method and source.
+  This is represented in the form method:source.  So, for example, a
+  feature of type "gene:sgd" has the method "gene" and the source
+  "sgd".  
+
+  It is possible to omit the source.  A feature of type "gene" will
+  include all features whose methods are "gene", regardless of the
+  source field.  It is not possible to omit the method.
+
+  It is possible to have several feature types displayed on a single
+  track.  Simply provide the feature option with a space-delimited
+  list of the features you want to include.  For example:
+
+    feature = gene:sgd stRNA:sgd
+
+  This will include features of type "gene:sgd" and "stRNA:sgd" in the
+  same track and display them in a similar fashion.
+
+  b) glyph
+
+  This controls the glyph (graphical icon) that is used to represent
+  the feature.  The list of glyphs and glyph-specific options are
+  listed in the section GLYPHS AND GLYPH OPTIONS.  The "generic" glyph
+  is the default.
+
+  c) bgcolor
+
+  This controls the background color of the glyph.  The format of
+  colors is explained in GLYPHS AND GLYPH OPTIONS.
+
+  d) fgcolor
+
+  This controls the foreground color (outline color) of the glyph.
+  The format of colors is explained in GLYPHS AND GLYPH OPTIONS.
+
+  e) height
+
+  This option sets the height of the glyph.  It is expressed in
+  pixels.
+
+  f) strand_arrow
+
+  This is a true or false value, where true is 1 and false is 0.
+  If this option is set to true, then the glyph will indicate the
+  strandedness of the feature, usually by drawing an arrow of some
+  sort.  Some glyphs are inherently stranded, or inherently
+  non-stranded and simply ignore this option.
+
+  g) label
+
+  This is a true or false value, where true is 1 and false is 0.  If
+  the option is set to true, then the name of the feature (i.e. its
+  group name) is printed above the feature, space allowing.
+
+  h) description
+
+  This is a true or false value, where true is 1 and false is 0.  If
+  the option is set to true, then the description of the feature (any
+  Note fields) is printed below the feature, space allowing.
+
+  i) key
+
+  This option controls the descriptive key that is drawn in the key
+  area at the bottom of the image.  If not specified, it defaults to
+  the track name.
+
+  j) citation
+
+  If present, this option creates a human-readable descriptive
+  paragraph describing the feature and how it was derived.  This is
+  the text information that is displayed when the user clicks on the
+  track name in the checkbox group.  The value can either be a URL, in
+  which case clicking on the track name invokes the corresponding URL,
+  or a text paragraph, in which case clicking on the track name
+  generates a page containing the text description.  Long paragraphs
+  can be continued across multiple lines, provided that continuation
+  lines begin with whitespace.
+
+  l) link
+
+  This option is identical to the link option in the [GENERAL]
+  section, but changes the link rule for the individual feature.  It
+  can be used to override the global link rule.  To force a track not
+  to contain any links, use a blank value.
+
+A large number of glyph-specific options are also recognized.  These
+are described in the next section.
+
+---
+
+B3. Glyphs and Glyph Options
+
+A large variety of glyphs are available, and more are being added as
+the Bio::Graphics module grows.
+
+A list of the common glyphs and their options is provided by the GGB
+itself.  Click on the "[Help]" link in the section labeled "Upload
+your own annotations".  This page also lists the valid foreground and
+background colors.  The most popular glyph types are:
+
+  Glyph			Description
+  -----                 -----------
+
+  generic		a rectangle
+  arrow			an arrow
+  diamond		a point-like feature represented as a triangle
+  segments		a multi-segmented feature such as an alignment
+  triangle		a point-like feature represented as a diamond
+  transcript		a gene model
+  transcript2		a slightly different representation of a gene model
+  wormbase_transcript	yet another gene model	
+
+A more definitive list of glyph options can be found in the
+Bio::Graphics manual pages.  Consult the manual pages for the
+following modules:
+
+  Glyph				Manual Page
+  -----                         -----------
+
+  generic			Bio::Graphics::Glyph
+  arrow				Bio::Graphics::Glyph::arrow
+  crossbox			Bio::Graphics::Glyph::crossbox
+  diamond			Bio::Graphics::Glyph::diamond
+  graded_segments		Bio::Graphics::Glyph::graded_segments
+  line				Bio::Graphics::Glyph::line
+  primers			Bio::Graphics::Glyph::primers
+  rndrect			Bio::Graphics::Glyph::rndrect
+  segments			Bio::Graphics::Glyph::segments
+  transcript			Bio::Graphics::Glyph::transcript
+  transcript2			Bio::Graphics::Glyph::transcript2
+  triangle			Bio::Graphics::Glyph::triangle
+  wormbase_transcript		Bio::Graphics::Glyph::wormbase_transcript
+
+The "perldoc" command is handy for reading the documentation from the
+Unix command line.  For example:
+
+   perldoc Bio::Graphics::Glyph::primers
+
+This will provide you with a summary of the options that apply to the
+"primers" glyph.
+
+In the manual pages, the glyph options are presented the way they are
+called from Perl.  For example, the documentation will tell you to use
+the -connect_color option to set the color to use when drawing the
+line that connects the two inward pointing arrows in the primer pair
+glyph.  This translates to the configuration file as an option named
+"connect_color".  For example:
+
+ [PCR Products]
+ glyph = primer
+ connect_color = blue
+
+B4. Computed Options
+
+Some options can be computed at run time by using Perl subroutines as
+their values.  Currently this is limited to the values of the "link",
+"header" and "footer" options, but may be made more general in the
+future.
+
+You need to know the Perl programming language to take advantage of
+this.  The general format of this type of option is:
+
+  option name = sub {
+	      some perl code;
+	      some more perl code;
+	      even more perl code;
+	      }
+
+The value must begin with the sequence "sub {"in order to be
+recognized as a subroutine declaration.  After this, you can have one
+or more lines of Perl code followed by a closing brace.  Continuation
+lines must begin with whitespace.
+
+When the browser first encounters an option like this one, it will
+attempt to compile it into Perl runtime code.  If successful, the
+compiled code will be stored for later use and invoked whenever the
+value of the option is needed. (Otherwise, an error message will
+appear in your server error log).
+
+For options of type "footer" and "header", the subroutine is passed no
+arguments.  It is expected to produce some HTML and return it as a
+string value.
+
+For the "link" option, the subroutine will be called with a single
+argument consisting of a Bio::DB::GFF::Feature object.  The subroutine
+should examine this object to determine what URL to link to and return
+the value of the URL as a string, or undef if no link should be made.
+See the manual page for Bio::DB::GFF::Feature for information on how
+to interrogate the feature object.
+
+----------------------------------------------------------------------
+
+C. INSTALLING FASTA FILES FOR DNA
+
+The GGB can dump the current segment under display as FASTA files.  To
+do this, designate a directory to contain FASTA file(s) of the genomic
+sequence.  There must be a single DNA entry for each reference point
+that is used by the corresponding GFF file.  For example, if the GFF
+file uses chromosome coordinates, and the chromosomes are named
+"Chr1", "Chr2" and so forth, then the FASTA files must have entries of
+the form:
+
+ >Chr1
+ ggaggtcaaa....
+ ..............
+ >Chr2
+ ccttgaggccca..
+ ..............
+
+You may put all entries into a single FASTA file, or spread them out
+among multiple files.  The files must have one of the extensions
+".fa", ".fasta", ".fast", or ".dna".
+
+Tell GGB where to find the FASTA files by setting the fasta_files
+option to the directory that contains them:
+
+ fasta_files = /usr/local/share/fasta/yeast
+
+The last step is to make the directory that contains the fasta files
+writable by the web server user.  This is because the first time the
+web server accesses the files it generates an index of the DNA entries
+and stores the index to disk.  This makes subsequent accesses to
+the DNA data very fast.
+
+----------------------------------------------------------------------
+
+D. CHANGING THE LOCATION OF THE CONFIGURATION FILES
+
+If you wish to change the location of the gbrowse.conf configuration
+file directory, you must manually edit the gbrowse CGI script.  Open
+the script in a text editor, and find this section:
+
+ ###################################################################
+ # Non-modperl users should change this variable if needed to point
+ # to the directory in which the configuration files are stored.
+ #
+ use constant CONF_DIR => '/usr/local/apache/conf/gbrowse.conf';
+ #
+ ###################################################################
+
+Change the definition of CONF_DIR to the desired location of the
+configuration files.
+
+An alternative, for users of mod_perl only, is to add the GBrowseConf
+per-directory variable to the configuration for the directory in which
+the gbrowse script lives.  This variable overrides the CONF_DIR value.
+For example:
+
+ <Directory /usr/local/apache/cgi-perl>
+   SetHandler      perl-script
+   PerlHandler     Apache::Registry
+   PerlSendHeader  On
+   Options         +ExecCGI
+   PerlSetVar      GBrowseConf /etc/gbrowse.conf
+ </Directory>
+
+----------------------------------------------------------------------
+
+E. FURTHER INFORMATION
+
+For further information, bug reports, etc, please consult the mailing
+lists and discussion forums at www.gmod.org.
+
+Have fun!
+
+Lincoln Stein & the GMOD development team
+lstein@cshl.org
+January 2, 2001

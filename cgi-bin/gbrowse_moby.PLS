@@ -47,7 +47,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 print OUT <<'!NO!SUBS!';
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.37 2004-12-16 15:01:27 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.38 2004-12-16 15:09:26 markwilkinson Exp $
 ###########################################################
 
 use MOBY::Client::Central;
@@ -578,7 +578,7 @@ sub execute {
 
 sub printIt {
     my ($this) = @_;
-    my $thisdatatype = $this->getTagName;
+    my $thisdatatype = $this->nodeName;
     my $imgdir = $CONFIG->setting('tmpimages');
     my $renderer;
     my @rtypes = keys %RENDERERS;
@@ -595,9 +595,9 @@ sub printIt {
     die "Can't render this information\n" unless $renderer;
     
     # first parse the object to get all of the CrossReference objects out of it.
-    foreach my $subnode($this->getChildNodes){
-        next unless ($subnode->getNodeType == ELEMENT_NODE);
-        if (($subnode->getTagName =~ /(moby:)?CrossReference/) || ($subnode->getTagName =~ /(moby:)?Xref/)){  # if it is one of the two types of Xrefs, then pass it to the Xref parser
+    foreach my $subnode($this->childNodes){
+        next unless ($subnode->nodeType == ELEMENT_NODE);
+        if (($subnode->nodeName =~ /(moby:)?CrossReference/) || ($subnode->nodeName =~ /(moby:)?Xref/)){  # if it is one of the two types of Xrefs, then pass it to the Xref parser
             &processXrefs($subnode);
             last;
         }
@@ -605,7 +605,7 @@ sub printIt {
 
     my $done=0;  # this is a boolean that indicates whether the renderer handles ALL sub-objects, or if it handles only the top-level content of an object and requires that the sub-nodes (objects) be parsed and rendered
     my $article = $this->getAttributeNode('articleName');  # get the article name
-    $article = $article?($article->getValue):"";
+    $article = $article?($article->nodeValue):"";
     no strict 'refs';
     my $content;
     ($content, $done) = &{$renderer."::render"}($this, $HTML_DIR, $imgdir);  # if the renderer handles everything, then $done is set and we can stop parsing this object
@@ -618,9 +618,9 @@ sub printIt {
     
     return if $done;  # if the renderer said that it handled the entire object, then quit
 
-    foreach my $subnode($this->getChildNodes){  # otherwise, we need to now start unpacking the object and rendering its subcomponents
-        next unless ($subnode->getNodeType == ELEMENT_NODE);
-        next if ($subnode->getTagName eq "CrossReference"); 
+    foreach my $subnode($this->childNodes){  # otherwise, we need to now start unpacking the object and rendering its subcomponents
+        next unless ($subnode->nodeType == ELEMENT_NODE);
+        next if ($subnode->nodeName eq "CrossReference"); 
         &printIt($subnode);
     }
 }

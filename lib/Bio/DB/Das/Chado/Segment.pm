@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.69 2004-06-25 02:57:18 scottcain Exp $
+# $Id: Segment.pm,v 1.70 2004-07-21 16:09:18 scottcain Exp $
 
 =head1 NAME
 
@@ -658,7 +658,7 @@ sub features {
     $srcfeature_id = $self->{srcfeature_id};
 
   }
-  my $select_part = "select distinct f.name,fl.fmin,fl.fmax,fl.strand,"
+  my $select_part = "select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.phase,"
                    ."fl.locgroup,fl.srcfeature_id,f.type_id,f.uniquename,"
                    ."f.feature_id,fd.dbxref_id ";
 
@@ -737,6 +737,7 @@ sub features {
                        $base_start,$stop,
                        $type,
                        $$hashref{strand},
+                       $$hashref{phase},
                        $$hashref{name},
                        $$hashref{uniquename},$$hashref{feature_id});
 

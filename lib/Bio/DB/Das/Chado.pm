@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.53 2004-06-23 19:17:52 scottcain Exp $
+# $Id: Chado.pm,v 1.54 2004-07-21 16:09:17 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -519,6 +519,7 @@ sub get_feature_by_name {
                       $base_start,$$hashref{'fmax'},
                       $self->term2name($$hashref{'type_id'}),
                       $$hashref{'strand'},
+                      $$hashref{'phase'},
                       $$hashref{'name'},
                       $$hashref{'uniquename'},
                       $$hashref{'feature_id'}

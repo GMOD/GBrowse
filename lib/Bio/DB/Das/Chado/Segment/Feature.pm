@@ -48,7 +48,7 @@ use overload '""' => 'asString';
 This method is called by Bio::DB::Das::Chado::Segment to create a new
 feature using information obtained from the chado database.
 
-The 10 arguments are positional:
+The 11 arguments are positional:
 
   $factory      a Bio::DB::Das::Chado adaptor object (or descendent)
   $parent       the parent feature object (if it exists)
@@ -58,6 +58,8 @@ The 10 arguments are positional:
   $type         this feature's type (gene, arm, exon, etc)
   $strand       this feature's strand (relative to the source
                 sequence, which has its own strandedness!)
+  $phase        this feature's phase (often with respect to the 
+                previous feature in a group of related features)
   $group        this feature's featureloc.locgroup (NOT a GFF holdover)
   $uniquename   this feature's internal unique database
                      name (feature.uniquename)
@@ -76,6 +78,7 @@ sub new {
       $start,$end,
       $type,
       $strand,
+      $phase,
       $group,
       $uniquename,
       $feature_id) = @_;
@@ -91,6 +94,7 @@ sub new {
   $self->start($start);
   $self->end($end);
   $self->strand($strand);
+  $self->phase($phase);
 
   $self->type($type);
   $self->group($group);
@@ -201,6 +205,36 @@ sub strand {
   return $self->{'strand'} = shift if @_;
   return $self->{'strand'} || 0;
 }
+
+=head2 phase
+
+=over
+
+=item Usage
+
+  $obj->phase()        #get existing value
+  $obj->phase($newval) #set new value
+
+=item Function
+
+=item Returns
+
+value of phase (a scalar)
+
+=item Arguments
+
+new value of phase (to set)
+
+=back
+
+=cut
+
+sub phase {
+    my $self = shift;
+    return $self->{'phase'} = shift if defined(@_);
+    return $self->{'phase'};
+}
+
 
 =head2 type()
 
@@ -877,6 +911,7 @@ sub sub_SeqFeature {
                     $base_start,$stop,
                     $self->factory->term2name($$hashref{type_id}),
                     $$hashref{strand},
+                    $$hashref{phase},
                     $$hashref{name},
                     $$hashref{uniquename},
                     $$hashref{feature_id}

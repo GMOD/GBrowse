@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.17 2003-11-15 19:05:58 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.18 2004-02-13 15:03:23 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -86,14 +86,17 @@ print_top("GBrowse Details: $class:$name");
 print $CONFIG->header || h1("$class:$name Details");
 
 my $db = open_database();
-my @args     = (-class=>$class,-name=>$name);
-push @args,(-ref=>$ref)     if defined $ref;
-push @args,(-start=>$start) if defined $start;
-push @args,(-end=>$end)     if defined $end;
-my @features = sort {$b->length<=>$a->length} $db->get_feature_by_name(@args);
+
+my @features = sort {$b->length<=>$a->length} $CONFIG->_feature_get($db,$name,$class);
+@features    = sort {$b->length<=>$a->length} $CONFIG->_feature_get($db,$ref,$class,$start,$end,1)
+  unless @features;
 
 warn "features = @features" if DEBUG;
-print print_features(\@features);
+if (@features) {
+  print print_features(\@features);
+} else {
+  print p({-class=>'error'},'Requested feature not found in database.');
+}
 
 # footer
 print_bottom($VERSION);

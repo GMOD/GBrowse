@@ -259,6 +259,7 @@ lib/Bio/Graphics/Glyph/ideogram.pm
 lib/Bio/Graphics/Glyph/insertion_chromosome.pm
 lib/Bio/Graphics/Glyph/phased_exons.pm
 lib/Bio/Graphics/Glyph/wormbase_transcript.pm
+lib/Bio/Graphics/Glyph/pairwise_plot.pm
 libalign/CAlign.pm
 libalign/CAlign.xs
 libalign/MANIFEST

@@ -1,0 +1,68 @@
+SELECT fref,
+       IF(ISNULL(gclass),'Sequence',gclass),
+       min(fstart),
+       max(fstop),
+       fstrand,
+       gname
+  FROM fdata,fgroup
+  WHERE fgroup.gname='V'		
+    AND fgroup.gclass='Sequence' 
+    AND fgroup.gid=fdata.gid    
+    GROUP BY fref,fstrand,gname 
+
+
+takes about 8 clock sec with no index...
+select min(fmin),max(fmax) from feature
+where feature_id in
+  ( select feature_id from feature 
+     where source_feature_id in
+       (select feature_id from feature
+          where type_id=6 and 
+                name = 'chromosome_11'))
+
+---------------------------------------------------------------------------------------------------
+SELECT  fref,fstart,fstop,fsource,fmethod,fscore,fstrand,fphase,gclass,gname,ftarget_start,ftarget_stop,fdata.fid,fdata.gid
+ FROM fdata,ftype,fgroup
+ WHERE   fgroup.gid = fdata.gid
+  AND ftype.ftypeid = fdata.ftypeid
+ AND fdata.fref='V'
+        AND (fbin='100000000.000000'
+         OR fbin='10000000.000000'
+         OR fbin='1000000.000000'
+         OR fbin between '100000.000003' and '100000.000004'
+         OR fbin between '10000.000039' and '10000.000040'
+         OR fbin between '1000.000395' and '1000.000400')
+        AND fdata.fstop>='395537' AND fdata.fstart<='400024'
+        AND  ((fmethod = 'gene' AND fsource = 'sgd') OR (fmethod = 'coding' AND fsource = 'sgd') OR (fmethod = 'tRNA' AND fsource = 'sgd') OR (fmethod = 'ORF' AND fsource = 'sgd'))
+ ORDER BY fgroup.gname
+
+select f.name,f.fmin,f.fmax,f.fstrand,f.residues,f.type_id,f.source_feature_id,cv.termname
+from feature f, cvterm cv
+where f.type_id=cv.cvterm_id and
+      f.source_feature_id in
+        (select feature_id from feature
+          where type_id=6 and   
+                name = 'chromosome_3') and
+      f.type_id in 
+        (select cvterm_id from cvterm 
+          where termname like '%gene%' or termname like '%rna%' or termname like '%exon%') and
+      f.fmax >= 70000 and
+      f.fmin <= 90000
+order by f.fmin
+
+
+
+Contains: where fmin >= {query_interval_fmin} and fmax <= {query_interval_fmax}
+Overlaps: where fmin <= {query_interval_fmax} and fmax >= {query_interval_fmin}
+
+
+--------------------------------------------------------------------------------------
+CREATE INDEX gbrowse_feature_idx ON feature (source_feature_id, fmin, fmax)
+
+--------------------------------------------------------------------------
+select dbx.accession,f.name,f.feature_id  
+from dbxref dbx, feature f, feature_dbxref fd
+where f.type_id =6 and 
+      f.feature_id = fd.feature_id and
+      fd.dbxref_id = dbx.dbxref_id
+

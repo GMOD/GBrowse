@@ -4,6 +4,20 @@ Installation currently has only been tested on Windows 2000.  If you install
 on another platform successfully, please let me know so I can add it to the
 list.
 
+The CVS version of GBrowse can be checked out in Windows using a Windows CVS
+client.  Here are directions for checking out anonymously using WinCVS
+(http://www.wincvs.org/) (for directions for doing it as a developer,
+see the documentation on SourceForge).  Note that when you checkout
+anonymously, there is no way to commit.  After obtaining and installing WinCVS,
+under the 'Admin' menu, select 'Preferences' and set cvsroot exactly as it
+appears on the line below:
+
+:pserver:anonymous@cvs.gmod.sourceforge.net:/cvsroot/gmod
+
+Then, under 'Create' menu, select 'Checkout module', and enter
+'Generic-Genome-Browser' and select a local folder for it to be
+checked out to.
+
 Obtain the prerequisite software listed in the INSTALL document.  I advise
 using precomiled binaries where available, including Apache, Activestate Perl,
 and MySQL.  For installing Perl modules, I recommend using Activestate's 
@@ -22,9 +36,9 @@ NMAKE.ERR should be in the System32 folder to work properly.
 
 The installation goes mostly as described in the INSTALL document.  In order
 for the Makefile to work correctly, when making the Makefile with Makefile.PL,
-supply directories with forward slashes (/) as delimiters instead of
-backslashes (\) which are usually used in Windows operating systems.  Also, I
-recommend using short file names for paths, as the longer filenames have
+directories delimiters can either be forward slashes (/) or backslashes (\)
+which are usually used in Windows operating systems.  Also, I recommend
+using short file names for paths, as the longer filenames have
 spaces in them that sometimes cause problems, therefore, the installation
 procedure may look something like this:
 
@@ -53,5 +67,5 @@ variable (set in the System control panel) points to a writable directory.
 
 Scott Cain
 cain@cshl.org
-1/3/2003
+1/8/2003
 

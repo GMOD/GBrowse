@@ -74,7 +74,15 @@ Generic Genome Browser Installation
     At the end of the install, the automatic installation script will ask
     you to confirm the locations of your Apache conf (configuration), htdocs
     (document root) and cgi-bin (CGI executable) directories. Usually it
-    will guess right, but if it doesn't, just type in the correct path.
+    will guess right, but if it doesn't, just type in the correct path. If
+    you find that after installing GBrowse, you get errors saying "The
+    landmark named XXXX is not recognized...", try uninstalling and
+    reinstalling GBrowse and give the "short" filenames for directory paths.
+    For example,
+
+      ** Please indicate the location of the following Web Server directories:
+            "conf" directory ([q]uit) [C:/Program Files/Apache Group/Apache2/conf]
+            c:/progra~1/apache~1/apache2/conf
 
     When this is done, go to step (4) below.
 
@@ -259,8 +267,9 @@ Generic Genome Browser Installation
         fresh schema, deleting anything that was there before. It will then
         load the file. Only suitable for use the very first time you create
         a database, or when you want to start from scratch! The bulk loader
-        is as much as 10x faster than bp_load_gff.pl, but does not work in the
-        situation in which the MySQL database is running on a remote host.
+        is as much as 10x faster than bp_load_gff.pl, but does not work in
+        the situation in which the MySQL database is running on a remote
+        host.
 
     3 bp_fast_load_gff.pl
         This will incrementally load a database. On UNIX systems, it will
@@ -371,9 +380,9 @@ Generic Genome Browser Installation
     the annotations. The DNA must be formatted as a series of one or more
     FASTA-format files in which each entry in the file corresponds to a
     top-level sequence such as a chromosome pseudomolecule. You can then run
-    the bp_load_gff.pl or bp_bulk_load_gff.pl script using the -fasta argument.
-    For example, if the yeast genome is contained in a FASTA file named
-    yeast.fa, you would run the command:
+    the bp_load_gff.pl or bp_bulk_load_gff.pl script using the -fasta
+    argument. For example, if the yeast genome is contained in a FASTA file
+    named yeast.fa, you would run the command:
 
       bp_bulk_load_gff.pl -d yeast -fasta yeast.fa sample/yeast_data.gff
 
@@ -385,11 +394,11 @@ Generic Genome Browser Installation
 
     Run "bp_bulk_load_gff.pl -h" to see usage instructions.
 
-    Newer versions of GFF (the so-called "GFF2.5" and "GFF3" formats) include
-    the DNA at the bottom of the file, following the sequence annotations.
-    If you are loading one of these GFF files, the DNA will be recognized
-    automatically and loaded by any of the loaders.
-   
+    Newer versions of GFF (the so-called "GFF2.5" and "GFF3" formats)
+    include the DNA at the bottom of the file, following the sequence
+    annotations. If you are loading one of these GFF files, the DNA will be
+    recognized automatically and loaded by any of the loaders.
+
   8. CREATING YOUR OWN GENOME DATABASE
 
     See the file doc/configuration.txt for information on how to create new
@@ -562,26 +571,29 @@ Generic Genome Browser Installation
       make install
 
   16. REMOVING OUT-OF-DATE IMAGE FILES
-    As GBrowse runs, it creates temporary image files in the gbrowse tmp
-    directory (typically /usr/local/apache/htdocs/gbrowse/tmp).  These
-    image files are relatively small, but if you run GBrowse for a long
-    time they may begin consuming significant amounts of disk space.
-    The following Unix shell commands will remove old image files:
-       
-       cd /usr/local/apache/htdocs/gbrowse/tmp
-       find . -type f -atime +20 -print -exec rm {} \;
 
-    You might want to run this command under cron, but be aware that
-    since the image files are owned by user "nobody", you must install
-    this command in the cron script for "nobody" or "root."
+    As GBrowse runs, it creates temporary image files in the gbrowse tmp
+    directory (typically /usr/local/apache/htdocs/gbrowse/tmp). These image
+    files are relatively small, but if you run GBrowse for a long time they
+    may begin consuming significant amounts of disk space. The following
+    Unix shell commands will remove old image files:
+
+      cd /usr/local/apache/htdocs/gbrowse/tmp
+      find . -type f -atime +20 -print -exec rm {} \;
+
+    You might want to run this command under cron, but be aware that since
+    the image files are owned by user "nobody", you must install this
+    command in the cron script for "nobody" or "root."
 
   17. KNOWN BUGS
+
     Currently there is one known bug. The navigation buttons do not operate
     properly when the client is using Internet Explorer 5.1 on a Macintosh
     and accessing gbrowse running on a MacOS X server running Apache. Other
     combinations of clients and servers work properly.
 
   18. FEATURE WISH LIST (updated December, 2003)
+
       - Better DAS support.
       - Configure data sources on a track-by-track basis.
       - A configurable synteny viewer.
@@ -589,7 +601,7 @@ Generic Genome Browser Installation
     If you are interested in working on any of these features, please
     contact the developers at the address given in the next section.
 
-  18. SUPPORT AND BUG REPORTS
+  19. SUPPORT AND BUG REPORTS
 
     Please send requests for help to gmod-gbrowse@lists.sourceforge.net.
     There is also a formal bug tracking and feature request system in place

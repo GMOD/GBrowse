@@ -12,7 +12,7 @@ find({wanted => \&wanted, no_chdir=>1}, '.');
 sub wanted {
   if (/\.pod$/) {
     if ('INSTALL.pod' eq basename($File::Find::name)) {
-      system('pod2text','-l',$File::Find::name,'INSTALL');
+      system('pod2text','-l',$File::Find::name,'INSTALL.txt');
     } else {
       my ($basename,undef,undef) = fileparse($File::Find::name,"\.pod");
       if (uc($basename) eq $basename) {

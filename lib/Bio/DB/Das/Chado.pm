@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.15 2003-02-17 21:26:59 scottcain Exp $
+# $Id: Chado.pm,v 1.16 2003-02-19 15:19:25 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -106,12 +106,9 @@ $VERSION = 0.02;
 
  Title   : new
  Usage   : $db    = Bio::DB::Das::Chado(
-				    driver    => 'Pg',
-				    dbname    => 'chado',
-				    host      => 'localhost',
-				    user      => 'jimbo',
-				    pass      => 'supersecret',
-				    port      => 3306,
+                            -dsn  => 'dbi:Pg:dbname=gadfly;host=lajolla'
+			    -user => 'jimbo',
+			    -pass => 'supersecret',
                                        );
 
  Function: Open up a Bio::DB::DasI interface to a Chado database
@@ -124,10 +121,13 @@ $VERSION = 0.02;
 # create new database accessor object
 # takes all the same args as a Bio::DB::BioDB class
 sub new {
-  my $class = shift;
-  my $self  = $class->SUPER::new(@_);
+  my $self = shift;
 
-  my ($dsn,undef,$username,undef,$password) = @_;
+  my %arg =  @_;
+
+  my $dsn      = $arg{-dsn};
+  my $username = $arg{-user};
+  my $password = $arg{-pass};
 
   my $dbh = DBI->connect( $dsn, $username, $password )
     or $self->throw("unable to open db handle");

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.78 2004-04-22 01:58:41 lstein Exp $
+# $Id: gbrowse.PLS,v 1.79 2004-04-23 14:49:09 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1704,7 +1704,14 @@ sub open_uploaded_file {
 
 sub load_external_sources {
   my ($segments,$page_settings) = @_;
-  return if $segments && @$segments > 1;
+  
+  unless ($segments && ref $segments eq 'ARRAY') {
+    $segments = [open_database()->segment($segment)];
+  }
+  elsif ($segments) {
+    return if @$segments > 1;
+  }
+
   my $segment = $segments->[0] if $segments;
 
   my @feature_file = load_uploaded_files($segment,$page_settings);

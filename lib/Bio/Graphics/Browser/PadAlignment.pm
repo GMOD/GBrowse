@@ -11,9 +11,9 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 =head1 VERSION (CVS-info)
 
  $RCSfile: PadAlignment.pm,v $
- $Revision: 1.13 $
+ $Revision: 1.14 $
  $Author: lstein $
- $Date: 2003-07-23 16:42:17 $
+ $Date: 2003-09-05 13:04:41 $
 
 =head1 SYNOPSIS
 
@@ -533,6 +533,8 @@ sub alignment {
 
           push(@markup,['mismatch',$r => $r+1])
             if (lc($source) ne lc($targ)) && ($show_mismatches);
+          push(@markup,[$aa_type{$targ}, $r => $r+1])
+            if $color_code_proteins && exists $aa_type{$targ};
         }
         $length[$i][$j] = length $padded[$i][$j];        
         $markup->markup(\$padded[$i][$j],\@markup);

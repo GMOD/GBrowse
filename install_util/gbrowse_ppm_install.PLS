@@ -51,6 +51,10 @@ use constant SUPPORT_FILES  => 'gbrowse_ppm_support_files-$OPTIONS{VERSION}.tar.
 print OUT <<'!NO!SUBS!';
 use constant PPM_REPOSITORY => 'http://stein.cshl.org/ppm';
 
+my $startperl = $Config{startperl} ne '#!perl'
+  ? $Config{startperl}
+  : "#!$Config{perlpath}";
+
 # fetch the support files
 print "Fetching GBrowse support files...\n";
 my $file = SUPPORT_FILES;
@@ -63,27 +67,41 @@ if (is_error($rc)) {
 
 # unpack them
 print "Unpacking support files...\n";
-$rc = Archive::Tar->extract_archive($file);
-unless ($rc) {
-  die "Sorry, couldn't unpack $file: ",Archive::Tar->error,"\n";
+my $a     = PPM::Archive->new($file);
+my @files = $a->list_files;
+foreach (@files) {
+  $a->extract($_);
 }
+undef $a;
 
 die "Unexpected error.  There should be an install_util directory here, but there isn't!\n" unless -d "install_util";
 
-# now we get to prompt the user endlessly for the pathnames
-my $prefix  = $^O =~ /mswin/ ? 'C:/Program Files/Apache Group/Apache2' : '/usr/local/apache';
+eval <<'END'
+  use lib './install_util';
+  use GuessDirectories;
+END
+;
 
-my $conf    = prompt_for_directory('web server conf',   "$prefix/conf");
+# now we get to prompt the user endlessly for the pathnames
+print STDERR "\n** Installing GBrowse CGI and config files **\n";
+print STDERR "** Please indicate the location of the following Web Server directories:\n";
+my $prefix  = $^O =~ /mswin/i ? 'C:/Program Files/Apache Group/Apache2'
+                              : '/usr/local/apache';
+
+my $conf    = prompt_for_directory('conf',   GuessDirectories->conf || "$prefix/conf");
 $prefix     = dirname($conf); # update
 
-my $htdocs  = prompt_for_directory('web server htdocs', "$prefix/htdocs");
-my $cgibin  = prompt_for_directory('web server cgi-bin',"$prefix/cgi-bin");
+my $htdocs  = prompt_for_directory('htdocs', GuessDirectories->htdocs || "$prefix/htdocs");
+my $cgibin  = prompt_for_directory('cgi-bin',GuessDirectories->cgibin || "$prefix/cgi-bin");
+
+fixup($_,"$conf/gbrowse.conf") foreach @files;
 
 system("perl","install_util/htdocs_install.pl","$htdocs/gbrowse");
 system("perl","install_util/conf_install.pl","$conf/gbrowse.conf");
 system("perl","install_util/cgi_install.pl",$cgibin);
 
-print STDERR "** Installation should be complete.  Now go to http://your.server/gbrowse for further setup instructions. **\n";
+print STDERR "\n** GBrowse installation complete.\n";
+print STDERR "** Now go to http://your.server/gbrowse for further setup instructions.\n\n";
 
 exit 0;
 
@@ -91,8 +109,11 @@ sub prompt_for_directory {
   my ($prompt,$default) = @_;
   my $dir;
   while (!$dir) {
-    $dir = prompt("Where is your $prompt directory located ('q' to quit)",$default);
-    exit 0 if $dir eq 'q';
+    $dir = prompt("\t\"$prompt\" directory ([q]uit)",$default);
+    if ($dir eq 'q') {
+      print STDERR "ABORTED: your installation is NOT complete\n\n";
+      exit 0;
+    } 
     $dir = interpolate($dir);
     if (!-d $dir) {
       print STDERR "$dir doesn't exist.  Please try again.\n";
@@ -118,6 +139,25 @@ sub interpolate {
     $path =~ s!^~[^/]*!$homedir!;
   };
   return $path;
+}
+
+# horrible -- fix line endings for proper architecture
+sub fixup {
+  my $file = shift;
+  my $conf = shift;
+  return unless -f $file;
+  local $/ = "\012";
+  open F,$file or die "Can't open $file: $!";
+  open OUT,">$file.new" or die "Can't open $file.new: $!";
+  while (<F>) {
+    chomp;
+    s/^\#!.+/$startperl -w/;
+    s/^\$CONF_DIR\s*=\s*\'.+/\$CONF_DIR = '$conf';/;
+    print OUT $_,"\n";
+  }
+  close F;
+  close OUT;
+  rename "$file.new",$file;
 }
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

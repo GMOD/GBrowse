@@ -1,4 +1,8 @@
+#!/usr/bin/perl
+
+use lib './install_util';
 use ExtUtils::MakeMaker;
+use GuessDirectories;
 use FindBin '$Bin';
 require 5.005003;
 
@@ -60,13 +64,13 @@ if (-e 'GGB.def' && !%OPTIONS) {
 # set hard-coded values
 $OPTIONS{PREFIX} ||= '/usr/local/apache';
 unless ($OPTIONS{CONF}) {
-  $OPTIONS{CONF} = "$OPTIONS{PREFIX}/conf";
+  $OPTIONS{CONF} = GuessDirectories->conf || "$OPTIONS{PREFIX}/conf";
 }
 unless ($OPTIONS{HTDOCS}) {
-  $OPTIONS{HTDOCS} = "$OPTIONS{PREFIX}/htdocs";
+  $OPTIONS{HTDOCS} = GuessDirectories->htdocs || "$OPTIONS{PREFIX}/htdocs";
 }
 unless ($OPTIONS{CGIBIN}) {
-  $OPTIONS{CGIBIN} = "$OPTIONS{PREFIX}/cgi-bin";
+  $OPTIONS{CGIBIN} = GuessDirectories->cgibin || "$OPTIONS{PREFIX}/cgi-bin";
 }
 
 open F,">$Bin/GGB.def" or die "Can't open $Bin/GGB.def for writing: $!";
@@ -195,11 +199,12 @@ sub MY::ppd {
 
 	\@echo "creating Generic-Genome-Browser.ppd"
 	\@echo "creating gbrowse_ppm_support_files-$VERSION.tar.gz"
-	\@\$(TAR) cf gbrowse_ppm_support_files-$VERSION.tar.gz --exclude CVS --exclude '*~' --exclude '*.PLS' --exclude '.*' --exclude README --exclude '#*' htdocs conf cgi-bin install_util
+	\@\$(TAR) zcf gbrowse_ppm_support_files-$VERSION.tar.gz --exclude CVS --exclude '*~' --exclude '*.PLS' --exclude '.*' --exclude README --exclude '#*' htdocs conf cgi-bin install_util
 	\@echo "creating gbrowse_ppm-$VERSION.tar.gz"
-	\@\$(TAR) cf gbrowse_ppm-$VERSION.tar.gz blib
+	\@\$(TAR) zcf gbrowse_ppm-$VERSION.tar.gz --exclude man1 blib
 	\@perl -pi -e 's!HREF=""!HREF="$repository/gbrowse_ppm-$VERSION.tar.gz"!' Generic-Genome-Browser.ppd
 	\@perl -pi -e 's!(\\s*</IMPLEMENTATION>)!\\t\\t<INSTALL HREF="$repository/gbrowse_ppm_install.pl" EXEC="PPM_PERL" />\\n\\1!' Generic-Genome-Browser.ppd
+	\@perl -pi -e 's!Bio-Perl!bioperl!' Generic-Genome-Browser.ppd
 END
 ;
 }

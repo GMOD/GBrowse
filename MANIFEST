@@ -1,4 +1,4 @@
-ChangeLog
+Changes
 DISCLAIMER
 History
 INSTALL
@@ -136,6 +136,7 @@ install_util/conf_install.pl
 install_util/gbrowse_ppm_install.PLS
 install_util/htdocs_install.pl
 install_util/make_clean_add.pl
+install_util/GuessDirectories.pm
 lib/Bio/DB/Das/BioSQL.pm
 lib/Bio/DB/Das/BioSQL/Segment.pm
 lib/Bio/DB/Das/BioSQL/Segment/Feature.pm

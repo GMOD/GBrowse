@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.16 2003-11-14 13:25:39 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.17 2003-11-15 19:05:58 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -200,10 +200,8 @@ sub print_matches {
   my $sdir  = $src->abs_strand || +1;
 
   my $m = max(length($top_label),length($bot_label));
-  my $p = max(length($src_x),length($tgt_x));
-  my $t = $m+$p;
-  my $sp = "%${t}s %s";
-  my $l  = ' ' x ($m+$p+1);  # adjusting for HTML
+  my $p = max(length($src_x),length($src->abs_end),length($tgt_x),length($tgt->abs_end));
+  my $l  = ' ' x ($m+$p+2);  # adjusting for HTML
 
   my $string;
   my @top    = $top    =~ /(.{1,60})/g;
@@ -214,10 +212,10 @@ sub print_matches {
     my $src_delta = $sdir * (length($top[$i]) - $top[$i]=~tr/-/-/);
     my $tgt_delta = $tdir * (length($bottom[$i]) - $bottom[$i]=~tr/-/-/);
 
-    $string .= sprintf("$sp %d\n$l%s\n$sp %d\n\n",
-		       "$top_label $src_x",$top[$i],$src_x + $src_delta - $sdir,
+    $string .= sprintf("%${m}s %${p}d %s %d\n$l%s\n%${m}s %${p}d %s %d\n\n",
+		       $top_label,$src_x,$top[$i],$src_x + $src_delta - $sdir,
 		       $middle[$i],
-		       "$bot_label $tgt_x",$bottom[$i],$tgt_x + $tgt_delta - $tdir);
+		       $bot_label,$tgt_x,$bottom[$i],$tgt_x + $tgt_delta - $tdir);
 
     $src_x  += $src_delta;
     $tgt_x  += $tgt_delta;
@@ -226,7 +224,13 @@ sub print_matches {
   return pre($string);
 }
 
-sub max { return $_[0] > $_[1] ? $_[0] : $_[1] }
+sub max {
+  if (@_ == 2) {
+    return $_[0] > $_[1] ? $_[0] : $_[1];
+  } else {
+    return (sort {$b<=>$a} @_)[0];
+  }
+}
 
 sub PrintMultiple {
   local $^W = 0;  # get rid of uninit variable warnings
@@ -239,19 +243,19 @@ sub PrintMultiple {
   my $first = shift @a;
   my $LINK = "";
   if ($URLS{$label}){
-        $LINK = $URLS{$label};
-        $LINK =~ s/\$tag/$label/;
-        $LINK=~ s/\$value/$first/;
-        $LINK = "<a href='$LINK'>$first</a>";
+    $LINK = $URLS{$label};
+    $LINK =~ s/\$tag/$label/;
+    $LINK=~ s/\$value/$first/;
+    $LINK = "<a href='$LINK'>$first</a>";
   }
 
-    # for EST alignment features, create a link to get the orignal EST sequence   
-    if (($label eq "Type") && ($URLS{'alignment'}) && ($first =~ /alignment/i)){
-            my $name = shift @a;
-            $LINK = $URLS{'alignment'};
-            $LINK=~ s/\$value/$name/;
-            $LINK = "$first : (<a href='$LINK'>Aligned Sequence</a>)";
-    }
+  # for EST alignment features, create a link to get the orignal EST sequence   
+  if (($label eq "Type") && ($URLS{'alignment'}) && ($first =~ /alignment/i)){
+    my $name = shift @a;
+    $LINK = $URLS{'alignment'};
+    $LINK=~ s/\$value/$name/;
+    $LINK = "$first : (<a href='$LINK'>Aligned Sequence</a>)";
+  }
 
   my $string = join '',TR({-valign=>'top',-class=>'databody'},
                           th({-align=>'LEFT',-valign=>'top',-class=>'datatitle'},length $label>0 ? "$label: " : ''),

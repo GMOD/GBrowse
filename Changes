@@ -1,4 +1,5 @@
 1.57	Sat Oct  4 21:59:19 EDT 2003
+	* Fixed formatting errors in gbrowse_details alignments.
 	* Fixed bug in generation of interspersed HTML that prevented one from
 	providing a code reference for the html1 option.
 	* New idiogram glyph for putting images of Giemsa-stained chromosomes
@@ -31,6 +32,7 @@
 	a selectable option)
 	* Support for a "highlight" plugin class which will highlight features
 	based on matching attributes or other queries.
+
 1.54	Thu Aug 28 12:08:15 EDT 2003
         * Really fixed the security hole that was only partially fixed in 1.53.
 	* Fixed the config file associated with the tutorial.

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.5 2003-01-13 17:48:45 scottcain Exp $
+# $Id: Chado.pm,v 1.6 2003-01-13 22:11:57 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -327,10 +327,35 @@ attributes depend on implementation) and returns a list of
 $description is a human-readable description such as a locus line, and
 $score is the match strength.
 
-THIS METHOD CURRENTLY RETURNS EMPTY BECAUSE I CAN'T GET FETCH_BY_QUERY()
-TO WORK.
-
 =cut
+
+sub search_notes {
+  my $self = shift;
+  my ($search_string,$limit) = @_;
+  my $limit_str;
+  if (defined $limit) {
+    $limit_str = "     LIMIT $limit ";
+  } else {
+    $limit_str = "";
+  } 
+
+
+  my $sth = $self->{dbh}->prepare("
+     select type_id, name, 0
+     from feature
+     where name is not null
+     $limit_str
+    ");
+
+  my @results;
+  while (my ($type_id, $name, $score) = $sth->fetchrow_array) {
+    $score = sprintf("%.2f",$score);
+    my $termname = $self->{cvtermname}->{$type_id});
+    push @results, [$termname, $name, $score];
+  }
+  @results;
+}
+
 
 =head2 _segclass
 

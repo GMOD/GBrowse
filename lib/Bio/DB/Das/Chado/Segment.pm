@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.5 2003-01-13 17:48:46 scottcain Exp $
+# $Id: Segment.pm,v 1.6 2003-01-13 22:12:03 scottcain Exp $
 
 =head1 NAME
 
@@ -373,37 +373,37 @@ sub features {
 
   my $srcfeature_id = $self->{srcfeature_id};
   my $sth = $self->{dbadaptor}->{dbh}->prepare("
-select f.name,fl.nbeg,fl.nend,fl.strand,f.type_id
-from feature f, featureloc fl
-where
-    $sql_types 
-    fl.srcfeature_id = $srcfeature_id and
-    f.feature_id  = fl.feature_id and
-    $sql_range
-order by fl.nbeg
+    select f.name,fl.nbeg,fl.nend,fl.strand,f.type_id
+    from feature f, featureloc fl
+    where
+      $sql_types 
+      fl.srcfeature_id = $srcfeature_id and
+      f.feature_id  = fl.feature_id and
+      $sql_range
+    order by fl.nbeg
        ");
    $sth->execute or $self->throw("feature query failed"); 
 
 #take these results and create a list of Bio::SeqFeatureI objects
 
-  my %termname = %{$self->{dbadpator}->{cvtermname}};
-  while (my $hash_ref = $sth->fetchrow_hashref) {
+  my %termname = %{$self->{dbadaptor}->{cvtermname}};
+  while (my $hashref = $sth->fetchrow_hashref) {
 
     my ($start,$end);
-    if ($$hash_ref{nbeg} > $$hash_ref{nend}) {
-      $start = $$hash_ref{nend};
-      $end   = $$hash_ref{nbeg};
+    if ($$hashref{nbeg} > $$hashref{nend}) {
+      $start = $$hashref{nend};
+      $end   = $$hashref{nbeg};
     } else {
-      $end   = $$hash_ref{nend};
-      $start = $$hash_ref{nbeg};
+      $end   = $$hashref{nend};
+      $start = $$hashref{nbeg};
     }
 
     $feat = Bio::SeqFeature::Generic->new (
                        -start      => $start,
                        -end        => $end,
-                       -strand     => 1, 
-                       -seq_id     => $$hash_ref{name},
-                       -annotation => $$hash_ref{name},
+                       -strand     => $$hashref{strand}, 
+                       -seq_id     => $$hashref{name},
+                       -annotation => $$hashref{name},
                        -group      => $termname{$$hashref{type_id}},
                        -type       => $termname{$$hashref{type_id}},
                        -primary    => $termname{$$hashref{type_id}} );
@@ -412,7 +412,7 @@ order by fl.nbeg
  
     my $fstart = $feat->start() if DEBUG;
     my $fend   = $feat->end()   if DEBUG;  
-    warn "$feat->{annotation}, $$hash_ref{nbeg}, $fstart, $$hash_ref{nend}, $fend\n" if DEBUG;
+  #  warn "$feat->{annotation}, $$hashref{nbeg}, $fstart, $$hashref{nend}, $fend\n" if DEBUG;
   }
 
   if ($iterator) {

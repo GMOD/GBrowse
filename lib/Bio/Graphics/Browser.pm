@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.114 2004-02-02 16:00:56 marclogghe Exp $
+# $Id: Browser.pm,v 1.115 2004-02-02 20:27:51 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1363,24 +1363,13 @@ sub name2segments {
   # user wanted multiple locations, so user gets them
   return @segments if $name =~ /\*/;
 
-  # Otherwise we try to merge segments that are adjacent if we can!
-
-  # This tricky bit is called when we retrieve multiple segments or when
-  # there is an unusually large feature to display.  In this case, we attempt
-  # to split the feature into its components and offer the user different
-  # portions to look at, invoking merge() to select the regions.
-  my $max_length = 0;
-  foreach (@segments) {
-    $max_length = $_->length if defined $_->length && $_->length > $max_length;
-  }
-  if (@segments > 1 || $max_length > $max_segment) {
-    my @s     = map {my @ss = $_->sub_SeqFeature(); @ss ? @ss : $_} @segments;
-    @segments = sort {$a->start<=>$b->start} @s;
-
-# see what happens if we don't merge
-#    @segments     = $self->merge($db,\@s,($self->get_ranges())[-1])
-#      if @s > 1 && @s < TOO_MANY_SEGMENTS;
-  }
+  # do a split/merge operation to handle very large features
+  @segments = map {
+    return $_ if $_->length <= $max_segment;
+    my @subtypes = $_->get_SeqFeatures;
+    return $_ unless @subtypes;
+    return $self->merge($db,\@subtypes,($self->get_ranges())[-1]);
+  } @segments;
 
   # expand by a bit if padding is requested
   if ($extra_padding > 0 && !($start || $stop)) {
@@ -1411,33 +1400,28 @@ sub _feature_get {
   }
   return unless @segments;
 
-  # horrible hack because Bio::DB::GFF data model doesn't distinguish between
-  # the identity of a feature and its parent.  This code splits up features
-  # that happen to have same name but don't actually belong together.
-  my (@nonoverlapping);
-  foreach (@segments) {$_->absolute(1)}
-  my @s = sort {$a->ref cmp $b->ref || $a->strand <=> $b->strand ||
-		  $a->abs_start <=> $b->abs_start || $b->length <=> $a->length} 
-    @segments;
-  my $last = shift @s;
-  for my $s (@s) {
-    if ($last->ref eq $s->ref
-	&& $last->abs_end > $s->abs_start
-	&& $last->strand == $s->strand) {
-      $last = $s if $last->length < $s->length;
-    } else {
-      push @nonoverlapping,$last;
-      $last = $s
-    }
-  }
-  push @nonoverlapping,$last;
-  return @nonoverlapping;
+  # Deal with multiple hits.  Winnow down to just those that
+  # were mentioned in the config file.
+  return @segments if @segments == 1;
+  my $types = $self->_all_types();
+  return grep {
+    my $type   = $_->type;
+    my $method = $_->method;
+    $types->{$type} || $types->{$method}
+  } @segments;
 }
 
 sub get_ranges {
   my $self      = shift;
   my @ranges	= split /\s+/,$self->setting('zoom levels') || DEFAULT_RANGES;
   @ranges;
+}
+
+sub _all_types {
+  my $self  = shift;
+  return $self->{_all_types} if exists $self->{_all_types}; # memoize
+  my %types = map {$_=>1} map {$self->label2type($_)} $self->labels;
+  return $self->{_all_types} = \%types;
 }
 
 # Handle types that are hidden by aggregators so that
@@ -1834,6 +1818,7 @@ sub make_link {
   my $link     = $self->code_setting($label,'link');
   $link        = $self->code_setting('TRACK DEFAULTS'=>'link') unless defined $link;
   $link        = $self->code_setting(general=>'link')          unless defined $link;
+
   return unless $link;
   if (ref($link) eq 'CODE') {
     my $val = eval {$link->($feature,$panel)};

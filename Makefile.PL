@@ -113,6 +113,7 @@ WriteMakefile(
 				 'bin/process_wormbase.PLS' => 'bin/process_wormbase.pl',
 				 'bin/process_ncbi_human.PLS' => 'bin/process_ncbi_human.pl',
 				 'gbrowse.PLS'  => 'gbrowse',
+				 'gbrowse_syn.PLS'  => 'gbrowse',
 				 'gbrowse_img.PLS'  => 'gbrowse_img',
 				 'gbrowse_details.PLS'  => 'gbrowse_details',
 				 },

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.52 2004-01-21 22:44:51 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.53 2004-01-21 22:48:37 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -845,9 +845,9 @@ sub slidertable {
   push @lines,hidden(-name=>'prevname',-value=>scalar(param('name')),-override=>1);
   push @lines,
     (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>"left $full",
-		  -border=>0,-title=>"left $full"),
+		  -border=>0,-title=>"left $full_title"),
      image_button(-src=>"$buttonsDir/green_l1.gif",-name=>"left $half",
-		  -border=>0,-title=>"left $half"),
+		  -border=>0,-title=>"left $half_title"),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/minus.gif",-name=>"zoom out $fine_zoom",
 		  -border=>0,-title=>"zoom out $fine_zoom"),
@@ -858,9 +858,9 @@ sub slidertable {
 		  -border=>0,-title=>"zoom in $fine_zoom"),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/green_r1.gif",-name=>"right $half",
-		  -border=>0,-title=>"right $half"),
+		  -border=>0,-title=>"right $half_title"),
      image_button(-src=>"$buttonsDir/green_r2.gif",-name=>"right $full",
-		  -border=>0,-title=>"right $full"),
+		  -border=>0,-title=>"right $full_title"),
     );
 
   #  print end_form;

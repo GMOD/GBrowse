@@ -1,10 +1,11 @@
-=head1 Oracle and BioSQL
+=head1 Oracle, PostgreSQL, and BioSQL
 
 Support for various databases and database schemas are coming.  Right
 now, there is full support for the Bio::DB::GFF schema running on
 MySQL, preliminary support for the Bio::DB::GFF schema running on top
-of Oracle, and preliminary support for the BioSQL schema running on
-top of MySQL.  There is also support for the GadFly schema running on
+of Oracle,  preliminary support for the Bio::DB::GFF schema running
+on top of PostgreSQL, and preliminary support for the BioSQL schema running
+on top of MySQL.  There is also support for the GadFly schema running on
 top of MySQL and PostgreSQL, but this uses an earlier (forked) version
 of GBrowse.  See README-berkeley-gadfly for more details.
 
@@ -52,6 +53,36 @@ db_args:
 
 Replace <service>, <host>, <username> and <password> with the values
 appropriate for your system.
+
+=head2 PostgreSQL
+
+In order to use Bio::DB::GFF with PostgreSQL (Pg), the Pg adaptor is
+required.  Pg version 7.3 or greater is required to use with this
+adaptor.  The adaptor is part of BioPerl but is not released yet;
+it will be part of the 1.3 release.  Until it is released, you can
+obtain a tarball of bioperl-live using this link: 
+
+   http://cvs.bioperl.org/cgi-bin/viewcvs/viewcvs.cgi/bioperl-live/bioperl-live.tar.gz?tarball=1&cvsroot=bioperl 
+
+It is suggested that during the make process for BioPerl that you 
+run `make test` for the Pg adaptor.
+
+After successful installation of BioPerl, there are a few configuration
+items in Pg.  Before loading the data, the database must be created.
+The database can either be created from within psql or from the command 
+line:
+
+   % createdb --owner <username> <dbname>
+
+To load the data, two options are available:
+
+=over
+
+=item bp_load_gff.pl
+
+=item bp_pg_bulk_load_gff.pl
+
+=back
 
 =head2 BioSQL on MySQL
 

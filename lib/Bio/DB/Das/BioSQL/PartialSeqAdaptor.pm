@@ -12,6 +12,12 @@ This is a custom driver class for sequence objects retrieved from BioDB.
 We don't want to retrieve all the features at initialization time, because
 it may be slow. Thus, they are fetched by calling slow_attach_children if necessary.
 
+=head1 CHANGES
+
+=head2 Mon Mar 15 10:21:17 EST 2004
+
+=item Fixed slow_attach_children() to retrieve partially overlapping features.
+
 =head1 AUTHOR - Vsevolod (Simon) Ilyushchenko
 
 Email simonf@cshl.edu
@@ -64,8 +70,12 @@ sub slow_attach_children
     my $values = [$obj->primary_key];
     if ($start && $end)
     {
-        push @$where, ("t2.start > ? ", "t2.end < ?");
-        push @$values, ($start-1, $end+1);
+        push @$where, (["OR",
+                              ["AND",
+                                     "t2.start > ?", "t2.start < ?"],
+                              ["AND",
+                                     "t2.end > ?", "t2.end < ?"]]);
+        push @$values, ($start-1, $end+1, $start-1, $end+1);
     }
     my $query = Bio::DB::Query::BioQuery->new(
         -datacollections => ["Bio::SeqFeatureI t1", "Bio::LocationI t2", "Bio::SeqFeatureI=>Bio::LocationI"],

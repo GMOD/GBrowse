@@ -80,8 +80,6 @@ my $tmpdir = Bio::Root::IO->catfile($ht_target, "tmp");
 if (! (-e $tmpdir) ) {
     print "Making $tmpdir...\n";
     mkdir($tmpdir,0777) or die "unable to make $tmpdir\n";
-#  this appears irrelevent now
-#    my $mode = 0777;
-#    chmod $mode, $tmpdir or die "unable to make $tmpdir world writable\n";
+    chmod 0777, $tmpdir or die "unable to make $tmpdir world writable\n";
 }
 

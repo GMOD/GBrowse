@@ -1,5 +1,8 @@
 # do not remove the { } from the top and bottom of this page!!!
 {
+
+ CHARSET =>   'ISO-8859-1',
+
    #----------
    # MAIN PAGE
    #----------
@@ -14,8 +17,7 @@ END
 
    NAVIGATION_INSTRUCTIONS => <<END,
 To center on a location, click the ruler. Use the Scroll/Zoom buttons
-to change magnification and position. To save this view,
-<a href="%s">bookmark this link.</a>
+to change magnification and position.
 END
 
    EDIT_INSTRUCTIONS => <<END,
@@ -27,11 +29,52 @@ END
 
    SHOWING_FROM_TO => 'Showing %s from %s, positions %s to %s',
 
+   INSTRUCTIONS      => 'Instructions',
+
+   HIDE              => 'Hide',
+
+   SHOW              => 'Show',
+
+   SHOW_INSTRUCTIONS => 'Show instructions',
+
+   HIDE_INSTRUCTIONS => 'Hide instructions',
+
+   SHOW_HEADER       => 'Show banner',
+
+   HIDE_HEADER       => 'Hide banner',
+
    LANDMARK => 'Landmark or Region',
+
+   BOOKMARK => 'Bookmark this view',
+
+   IMAGE_LINK => 'Link to an image of this view',
+
+   IMAGE_DESCRIPTION => <<END,
+<p>
+To create an embedded image of this view, cut and paste this
+URL into an HTML page:
+</p>
+<pre>
+&lt;IMAGE src="%s" /&gt;
+</pre>
+<p>
+The image will look like this:
+</p>
+<p>
+<img src="%s" />
+</p>
+
+<p>
+If only the overview (chromosome or contig view) is showing, try
+reducing the size of the region.
+</p>
+END
 
    GO       => 'Go',
 
    FIND     => 'Find',
+
+   SEARCH   => 'Search',
 
    DUMP     => 'Dump',
 
@@ -75,6 +118,10 @@ END
 
    IMAGE_WIDTH => 'Image Width',
 
+   BETWEEN     => 'Between',
+
+   BENEATH     => 'Beneath',
+
    SET_OPTIONS => 'Set Track Options...',
 
    UPDATE      => 'Update Image',
@@ -86,6 +133,8 @@ END
    UPLOAD_TITLE=> 'Upload your own annotations',
 
    UPLOAD_FILE => 'Upload a file',
+
+   KEY_POSITION => 'Key position',
 
    BROWSE      => 'Browse...',
 
@@ -115,6 +164,8 @@ END
    #----------------------
 
    HIT_COUNT      => 'The following %d regions match your request.',
+
+   POSSIBLE_TRUNCATION  => 'Search results are limited to %d hits; list may be incomplete.',
 
    MATCHES_ON_REF => 'Matches on %s',
 

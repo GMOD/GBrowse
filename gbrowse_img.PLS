@@ -41,7 +41,7 @@ $Config{startperl} -w
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbrowse_img.PLS,v 1.8 2002-08-30 17:02:08 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.8.2.1 2003-03-14 20:10:46 pedlefsen Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1);
@@ -50,6 +50,7 @@ use Bio::Graphics;
 use Bio::Graphics::Browser;
 use Text::Shellwords;
 use vars qw($CONFIG $VERSION $CONF_DIR %DB);
+use constant MAX_SEGMENT     => 1_000_000;
 
 # call with following arguments:
 # source    database source
@@ -114,12 +115,22 @@ my $feature_list = external_features(\@labels,$segment) if param('add');
 # get the options
 my %options = map {split /[+\s]/} param('options');
 
-my $img = $CONFIG->image_and_map(segment       => $segment,
-				 tracks        => \@labels,
-				 options       => \%options,
-				 feature_files => $feature_list||undef,
-				 label_scale   => 1,
-				);
+my $img;
+
+if ($segment->length > ($CONFIG->setting('max segment') || MAX_SEGMENT)) {
+  ($img,undef) = $CONFIG->overview($segment);
+}
+
+else {
+
+  $img = $CONFIG->image_and_map(segment       => $segment,
+				tracks        => \@labels,
+				options       => \%options,
+				feature_files => $feature_list||undef,
+				label_scale   => 1,
+			       );
+}
+
 if ($img->can('png')) {
   print header('image/png');
   print $img->png;
@@ -455,7 +466,6 @@ For additional help, see <a href="http://www.gmod.org">The GMOD Project</a> page
 END
 ;
 }
-
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

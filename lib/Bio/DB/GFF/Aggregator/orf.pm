@@ -42,7 +42,7 @@ $VERSION = '1.00';
  Title   : method
  Usage   : $aggregator->method
  Function: return the method for the composite object
- Returns : the string "coding"
+ Returns : the string "orf"
  Args    : none
  Status  : Public
 
@@ -57,7 +57,7 @@ sub method { 'orf' }
  Title   : part_names
  Usage   : $aggregator->part_names
  Function: return the methods for the sub-parts
- Returns : the list "CDS"
+ Returns : the list "ORF"
  Args    : none
  Status  : Public
 

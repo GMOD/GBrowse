@@ -20,8 +20,11 @@ sub render {
     }
 
     $content =~ s/(\S{100})/$1\<br\>/g;
-    return ("<pre>$content</pre>",0);# the 0 indicates that we have only rendered the top-level XML of this object
-
+    if ($content =~ /\S/){
+        return ("<pre>$content</pre>",0);# the 0 indicates that we have only rendered the top-level XML of this object
+    } else {
+        return (" ", 0);
+    }
 }
 
 1;

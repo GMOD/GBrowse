@@ -50,7 +50,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.22 2004-01-02 17:16:17 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.23 2004-01-02 19:43:53 markwilkinson Exp $
 ###########################################################
 
 use MOBY::Client::Central;
@@ -493,12 +493,9 @@ sub printIt {
     # chose the parent object type of $thisdatatype that is closest
     # in our list of known object types.
     my ($renderer_term, $renderer_lsid) = &whichDeepestParentObject($Central, $thisdatatype, \@rtypes); 
+    $renderer_term ||='text-formatted';
+    $renderer = $RENDERERS{$renderer_term};
 
-    unless ($renderer_term){
-        $renderer = $RENDERERS{'text-formatted'} # default to formatted text to at least render the XML in a sensible way
-    } else {
-        $renderer = $RENDERERS{$renderer_term}  # but preferably pick the best module ($renderer) to render this object
-    }
     die "Can't render this information\n" unless $renderer;
     
     # first parse the object to get all of the CrossReference objects out of it.
@@ -517,9 +514,11 @@ sub printIt {
     my $content;
     ($content, $done) = &{$renderer."::render"}($this, $HTML_DIR, $imgdir);  # if the renderer handles everything, then $done is set and we can stop parsing this object
     use strict;
-    print TR({-valign=>'top', -class=>'databody'}, # print the HTML content that you got back from the renderer
-        th({-align => 'left', -valign=>'top', -class=>'datatitle'},"$article "),
-        td("$content"));
+    if ($article || ($content =~ /\S/)){ # if we have an articlename or any textual content then we want to print this information no matter what came back from the renderer
+        print TR({-valign=>'top', -class=>'databody'}, # print the HTML content that you got back from the renderer
+            th({-align => 'left', -valign=>'top', -class=>'datatitle'},"$article "),
+            td("$content"));
+    }  # if we have no article name or no textual content, then this is almost certainly a blank node, and we can ignore it
     
     return if $done;  # if the renderer said that it handled the entire object, then quit
 

@@ -3,6 +3,7 @@ package Bio::Graphics::Browser::PadAlignment;
 use strict;
 use Bio::Graphics::Browser::Markup;
 use constant DEBUG=>0;
+use Data::Dumper;
 
 =head1 NAME
 
@@ -11,9 +12,9 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 =head1 VERSION (CVS-info)
 
  $RCSfile: PadAlignment.pm,v $
- $Revision: 1.18 $
+ $Revision: 1.19 $
  $Author: lstein $
- $Date: 2004-08-17 20:29:08 $
+ $Date: 2004-09-06 21:05:35 $
 
 =head1 SYNOPSIS
 
@@ -172,6 +173,7 @@ An optional second argument, if present, contains a hash reference to
 a set of option=>value pairs.  Three options are recognized:
 
    show_mismatches      0|1      if true, highlight mismatches in pink
+   show_matches		0|1	 if true, hightligt matches in yellow
    color_code_proteins  0|1      if true, highlight amino acids thus:
                                         Acidic amino acids in red
                                         Basic amino acids in blue
@@ -430,6 +432,8 @@ sub alignment {
   my $options         = shift || {};
 
   my $show_mismatches = $options->{show_mismatches};
+  my $show_matches = $options->{show_matches};
+  my $show_similarities = $options->{show_similarities};
   my $color_code_proteins = $options->{color_code_proteins};
   warn "color code = $color_code_proteins" if DEBUG;
   my $flip            = $options->{flip};
@@ -453,7 +457,8 @@ sub alignment {
   my $longest_line = 0;
   for (my $i=0; $i<@lines; $i++) {
     my $offset    = abs($origins->{$names{$i}});
-    $longest_line = length($self->{dnas}[$i])+$offset if (length($self->{dnas}[$i])+$offset > $longest_line);
+    $longest_line = length($self->{dnas}[$i])+$offset 
+       if (length($self->{dnas}[$i])+$offset > $longest_line);
   }
 
   $longest_line = length $longest_line;  # looks like an error but isn't
@@ -473,6 +478,8 @@ sub alignment {
   $markup->add_style(space    => ' ');
   $markup->add_style(newline  => "\n");
   $markup->add_style(mismatch => "BGCOLOR pink");
+  $markup->add_style(match => "BGCOLOR darkorange");
+  $markup->add_style(conserved => "BGCOLOR tan");
 
   # Styles for printing protein alignments
   $markup->add_style(acidic_aa => "BGCOLOR lightgreen");
@@ -492,24 +499,24 @@ sub alignment {
     $markup->markup($pad,\@markup);
   }
 
-  my (@padded,@labels);
+  my (@padded, @labels, @fixed);
 
   for (my $i = 0; $i < @lines; $i++) {
     my @segments = split "\n",$lines[$i];
     for (my $j = 0; $j < @segments; $j++) {
       $padded[$j][$i] = $segments[$j];
+      $fixed[$j][$i] = $segments[$j];
     }
     my $origin  = $origins->{$names{$i}};
     $labels[$i] = $origin                                      if $origin >= 0;
     $labels[$i] = length($self->{dnas}[$i]) + abs($origin) - 1 if $origin <  0;
   }
 
-  warn Dumper(\@padded) if DEBUG;
   my $result;
   my @length;
 
   #$i: number of blocks; $j: number of sequences
-  for (my $i = 0; $i < @padded; $i++) {				
+  for (my $i = 0; $i < @padded; $i++) {
     for (my $j = 0; $j < @{$padded[$i]}; $j++) {
       next unless $padded[$i][$j];
       my $origin = $origins->{$names{$j}};
@@ -517,33 +524,137 @@ sub alignment {
       my $skipit = $offset == length($padded[$i][$j]);                  
       #warn "Block ", $i, "\tsequence ", $j, "\t", $origin, "\t", $offset, "\t", $skipit, "\n";
 
-      if ($j==0 && $color_code_proteins) {                            # colouring reference seq
-        my @refMarkup;
-        for(my $q=0; $q<length $padded[$i][$j]; $q++) {
-          my $refPos = substr($padded[$i][$j],$q,1);
-          next if $refPos =~ /^[.\s-]$/;                               # move on if not amino acid
-          push(@refMarkup,[$aa_type{$refPos},$q=>$q+1]);
-        } # end for
+      if ($color_code_proteins){
+        if ($j==0) {                            # colouring reference seq
+          my @refMarkup;
+          for(my $q=0; $q<length $padded[$i][$j]; $q++) {
+            my $refPos = substr($padded[$i][$j],$q,1);
+            next if $refPos =~ /^[.\s-]$/;                               # move on if not amino acid
+            push(@refMarkup,[$aa_type{$refPos},$q=>$q+1]);
+          } # end for
 
-        $length[$i][$j] = length $padded[$i][$j];
-        $markup->markup(\$padded[$i][0],\@refMarkup);
-      }elsif ($j>0 && ($show_mismatches || $color_code_proteins)) {     
+          $length[$i][$j] = length $padded[$i][$j];
+          $markup->markup(\$padded[$i][0],\@refMarkup);
+        }elsif ($j>0) {
+          my @markup;
+          for (my $r=0; $r<length $padded[$i][$j]; $r++) {
+            my $targ = substr($padded[$i][$j],$r,1);
+            next if $targ =~  /^[.\s-]$/;
+            push(@markup,[$aa_type{$targ}, $r => $r+1]);
+          }
+       
+          $length[$i][$j] = length $padded[$i][$j];        
+          $markup->markup(\$padded[$i][$j],\@markup);
+        }
+      }elsif($show_mismatches){
+        if ($j>0){
+          my @markup;
+          for (my $r=0; $r<length $padded[$i][$j]; $r++) {
+            my $targ = substr($padded[$i][$j],$r,1);
+            next if $targ =~  /^[.\s-]$/;
+            my $source = substr($padded[$i][0],$r,1);
+            next if $source=~ /^[.\s-]$/;
+
+            push(@markup,['mismatch',$r => $r+1])
+              if (lc($source) ne lc($targ)); 
+
+          }
+          $length[$i][$j] = length $padded[$i][$j];        
+          $markup->markup(\$padded[$i][$j],\@markup);
+        }
+      }elsif($show_matches){
         my @markup;
         for (my $r=0; $r<length $padded[$i][$j]; $r++) {
+
           my $targ = substr($padded[$i][$j],$r,1);
-          next if $targ =~  /^[.\s-]$/;
-          #push(@markup,[$aa_type{$targ}, $r => $r+1])
-          #  if $color_code_proteins;
+          my $identical = 1;
+          my $conserved = 1;
 
-          my $source = substr($padded[$i][0],$r,1);
-          next if $source=~ /^[.\s-]$/;
+          for (my $m=0; $m<@{$fixed[$i]}; $m++){
+            my $source = substr($fixed[$i][$m],$r,1);
+          
+            if(($source =~ /[.\s-]/)||($targ =~ /[.\s-]/)){
+              $identical = undef;
+            } elsif (lc($source) ne lc($targ)){
+              $identical = undef;
+            }
 
-          push(@markup,['mismatch',$r => $r+1])
-            if (lc($source) ne lc($targ)) && ($show_mismatches);
+            if(($source =~ /[.\s-]/)||($targ =~ /[.\s-]/)){
+              $conserved = undef;
+            }elsif (($aa_type{$source}) ne ($aa_type{$targ})){
+              $conserved = undef;
+            }
+          }
+          push(@markup,['match',$r => $r+1]) if ($identical);
+          push(@markup,['conserved',$r => $r+1]) if ($conserved);
         }
         $length[$i][$j] = length $padded[$i][$j];        
         $markup->markup(\$padded[$i][$j],\@markup);
-      } else {
+      }elsif($show_similarities){ #highligt resides same to the reference protein
+        #do things here
+        if ($j ==0){
+          my @markup;
+          for (my $r=0; $r<length $padded[$i][$j]; $r++) {
+            my $identical = undef;
+            my $conserved = undef;
+
+            my $targ = substr($padded[$i][$j],$r,1);
+            next if ($targ =~ /^[.\-]$/);
+
+            for (my $m=1; $m<@{$fixed[$i]}; $m++){
+              my $source = substr($fixed[$i][$m],$r,1);
+              next if ($source =~ /^[.\-]$/);
+          
+              if (($source !~ /^[.\s-]$/) && ($targ !~ /^[.\s-]$/) && (lc($source) eq lc($targ))){
+                $identical = 1;
+              }
+
+              if (($source !~ /^[.\s-]$/) && ($targ !~ /^[.\s-]$/) && 
+                  (lc($aa_type{$source}) eq lc($aa_type{$targ})) &&
+                  (lc($source) ne lc($targ))
+                 ){
+                $conserved = 1;
+              }
+            }
+            push(@markup,['conserved',$r => $r+1]) if ($conserved);
+            push(@markup,['match',$r => $r+1]) if ($identical);
+          }
+          $length[$i][$j] = length $padded[$i][$j];        
+          $markup->markup(\$padded[$i][$j],\@markup);
+        }elsif ($j >0){
+          my @markup;
+          for (my $r=0; $r<length $padded[$i][$j]; $r++) {
+
+            my $targ = substr($padded[$i][$j],$r,1);
+            my $identical = undef;
+            my $conserved = undef;
+
+            my $source = substr($fixed[$i][0],$r,1);
+            next if ($source =~ /^[.\-]$/);
+          
+            if (($source !~ /[.\s-]/) && (lc($source) eq lc($targ))){
+              $identical = 1;
+            }
+
+            #if (($source !~ /[.\s-]/) && (lc($aa_type{$source}) eq lc($aa_type{$targ}))){
+            #  $conserved = 1;
+            #}
+
+            if (($source !~ /^[.\s-]$/) && ($targ !~ /^[.\s-]$/) && 
+                (lc($aa_type{$source}) eq lc($aa_type{$targ})) &&
+                (lc($source) ne lc($targ))
+               ){
+              $conserved = 1;
+            }
+
+            push(@markup,['conserved',$r => $r+1]) if ($conserved);
+            push(@markup,['match',$r => $r+1]) if ($identical);
+          }
+          $length[$i][$j] = length $padded[$i][$j];        
+          $markup->markup(\$padded[$i][$j],\@markup);
+        }
+        ###
+      }else {
         $length[$i][$j] = length $padded[$i][$j];
       }
 

@@ -927,7 +927,7 @@ sub sub_SeqFeature {
 #    return grep { $ok{ $_->type } } $self->subfeatures();
 #  }
 
-  my @subfeatures = @{$self->subfeatures()};
+  my @subfeatures = @{$self->subfeatures()} if defined($self->subfeatures());
 
    # warn "subfeature array:@subfeatures\n";
 

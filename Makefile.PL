@@ -43,10 +43,10 @@ close F;
 # the contents of the Makefile that is written.
 WriteMakefile(
 	      'NAME'	     => 'Generic-Genome-Browser',
-	      'VERSION'      => '1.00',
+	      'VERSION'      => '1.02',
 	      'PREREQ_PM'    => {
 				 Bio::Graphics => 0.92,
-				 Bio::DB::GFF  => 0.51,
+				 Bio::DB::GFF  => 1.01,
 				}, # e.g., Module::Name => 1.1
 	      PL_FILES       => {
 				 'bin/process_sgd.PLS' => 'bin/process_sgd.pl',
@@ -113,6 +113,8 @@ htdocs_install ::
 			cp -pr \$\$i \$\$dir; \\
 		fi \\
 	done; \\
+	echo "Making \$\$dir/tmp..."; \\
+	mkdir \$\$dir/tmp; \\
 	echo "Making \$\$dir/tmp world writable..."; \\
 	chmod ugo+rwx \$\$dir/tmp
 

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.99 2003-10-06 13:21:48 scottcain Exp $
+# $Id: Browser.pm,v 1.100 2003-10-06 17:52:35 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -737,16 +737,19 @@ sub make_map {
 
   my $flip = $panel->flip;
 
-  # use the scale as a centering mechanism
-#  my $ruler = shift @$boxes;
-#  $map .= $self->make_centering_map($ruler) if $centering_map;
+  my $did_map;
 
   foreach (@$boxes){
     next unless $_->[0]->can('primary_tag');
-    if ($_->[0]->primary_tag eq 'DasSegment') {
+
+    # use the scale as a centering mechanism
+    # potential fragility here: we are depending on the arrow being
+    # the very first box that is returned to us.
+    if ($centering_map && !$did_map++) {
       $map .= $self->make_centering_map($_,$flip) if $centering_map;
       next;
     }
+
     my $href   = $self->make_href($_->[0],$panel) or next;
     my $alt    = unescape($self->make_title($_->[0],$panel));
     my $target = $self->config->make_link_target($_->[0],$panel);

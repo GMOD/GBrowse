@@ -6,6 +6,10 @@ Generic Model Organism Systems Database project (GMOD).
 
  - To install on your own system, please see the INSTALL file.
 
+ - To learn how to use the system, please see docs/tutorial.  After
+   installing on your system, the tutorial will also be available at
+   http://localhost/gbrowse/tutorial.
+
  - To load your own data and configure GBrowse to display it, please
    see the file docs/CONFIGURE_HOWTO.txt.
 

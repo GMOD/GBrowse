@@ -344,7 +344,8 @@ looks like this:
  [GENERAL]
  description = S. cerevisae (via SGD Nov 2001)
  db_adaptor  = Bio::DB::GFF
- db_args     = -dsn dbi:mysql:database=yeast;host=localhost
+ db_args     = -adaptor dbi::mysql
+               -dsn     dbi:mysql:database=yeast;host=localhost
  aggregators = transcript alignment
  user        =
  passwd      =
@@ -388,16 +389,18 @@ The following [GENERAL] options are recognized:
   For Bio::DB::GFF running on top of a MySQL database use
   a db_args like the following:
 
-    db_args = -dsn dbi:mysql:database=<db_name>;host=<db_host>
+    db_args = -adaptor dbi::mysql
+              -dsn     dbi:mysql:database=<db_name>;host=<db_host>
 
   replacing <db_name> and <db_host> with the database and database
-  host of your choice.
+  host of your choice.  For MySQL databases running on the localhost, 
+  you can shorten this to just "db_name".
 
   If the database requires you to log in with a user name and
   password, use the following db_adaptor:
 
-    db_args = -dsn     dbi:mysql:database=<db_name>;host=<db_host>
-              -adaptor dbi::Oracle
+    db_args = -adaptor dbi::mysql
+              -dsn     dbi:mysql:database=<db_name>;host=<db_host>
               -user    <username>
               -pass    <password>
 
@@ -409,7 +412,7 @@ The following [GENERAL] options are recognized:
 
   To use the Oracle version of Bio::DB::GFF, use these arguments:
 
-    db_args = -adaptor oracle
+    db_args = -adaptor dbi::oracle
               -dsn dbi:oracle:database=db_service
 
   Where db_description should be replaced with the name of the desired
@@ -420,11 +423,10 @@ The following [GENERAL] options are recognized:
   To use the in-memory version of Bio::DB::GFF, use these arguments:
 
   db_args = -adaptor memory
-            -file  /path/to/gff_file.gff
-            -fasta /path/to/fasta_file.fa
+            -dir   /path/to/directory
   
-  Where gff_file.gff and fasta_file.fa correspond to the locations of
-  GFF and FASTA files containing the features and DNA, respectively.
+  The indicated directory should contain one or more GFF and FASTA files,
+  distinguished by the filename extensions .gff and .fa respectively.
 
   * aggregators
 

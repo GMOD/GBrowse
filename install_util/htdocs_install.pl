@@ -1,6 +1,5 @@
 #!/usr/bin/perl -w
 use strict;
-use File::Copy;
 use File::Basename 'basename';
 use Carp 'croak';
 use IO::Dir;
@@ -29,7 +28,7 @@ while (my $file = readdir(HTDOCS) ) {
     if (-f $localfile) {
         my $installfile = Bio::Root::IO->catfile($ht_target, $file);
 	chmod (0666, $installfile);
-        copy($localfile, $installfile)
+        copy_with_substitutions($localfile, $installfile)
            or die "unable to copy to $installfile\n";
 	chmod (0444, $installfile);
     }
@@ -53,7 +52,7 @@ while (my $file = readdir(BUTTONS) ) {
     if (-f $localfile) {
         my $installfile = Bio::Root::IO->catfile($buttondir, $file);
 	chmod (0666, $installfile);
-        copy($localfile, $installfile) 
+        copy_with_substitutions($localfile, $installfile) 
             or die "unable to copy to $installfile\n"; 
 	chmod (0444, $installfile);
     }
@@ -72,7 +71,7 @@ while (my $file = readdir(HELP) ) {
     if (-f "./htdocs/images/help/$file") {
         my $installfile = Bio::Root::IO->catfile($helpdir, $file);
 	chmod (0666, $installfile);
-        copy($localfile, $installfile) 
+        copy_with_substitutions($localfile, $installfile) 
             or die "unable to copy to $installfile\n";
 	chmod (0444, $installfile);
     }
@@ -89,16 +88,19 @@ if (! (-e $tmpdir) ) {
 }
 
 print "Installing documentation...\n";
-for my $localfile (qw(./INSTALL ./docs/CONFIGURE_HOWTO.txt 
+for my $localfile (qw(./INSTALL ./docs/CONFIGURE_HOWTO.txt ./DISCLAIMER
 		      ./docs/README-gff-files ./docs/PLUGINS_HOWTO.txt
 		      ./docs/ORACLE_AND_BIOSQL.txt)) {
   my $installfile = Bio::Root::IO->catfile($ht_target,basename($localfile));
-  copy($localfile,$installfile);
+  copy_with_substitutions($localfile,$installfile);
   chmod(0444,$installfile);
 }
 
 print "Installing tutorial...\n";
 copy_tree('./docs/tutorial',$ht_target);
+
+print "Installing sample_data...\n";
+copy_tree('./sample_data',$ht_target);
 
 print "Installing contrib...\n";
 copy_tree('./contrib',$ht_target);
@@ -117,9 +119,10 @@ exit 0;
 sub copy_tree {
   my ($src,$dest) = @_;
   if (-f $src) {
-    copy($src,$dest) or die "copy($src,$dest): $!";
+    copy_with_substitutions($src,$dest) or die "copy_with_substitutions($src,$dest): $!";
     return 1;
   }
+  croak "$src doesn't exist" unless -e $src;
   croak "Usage: copy_tree(\$src,\$dest).  Can't copy a directory into a file or vice versa" 
     unless -d $src && -d $dest;
   croak "Can't read from $src" unless -r $src;
@@ -137,10 +140,30 @@ sub copy_tree {
     next if $item =~ /~$/;
     next if $item =~ /^\#/;
     if (-f "$src/$item") {
-      copy("$src/$item","$dest/$tgt") or die "copy('$src/$item','$dest/$tgt'): $!";
+      copy_with_substitutions("$src/$item","$dest/$tgt") or die "copy_with_substitutions('$src/$item','$dest/$tgt'): $!";
     } elsif (-d "$src/$item") {
       copy_tree("$src/$item","$dest/$tgt");
     }
   }
   1;
+}
+
+sub copy_with_substitutions {
+  my ($localfile,$install_file) = @_;
+  open (IN,$localfile) or die "Couldn't open $localfile: $!";
+  my $basename = basename($localfile);
+  my $dest = -d $install_file ? "$install_file/$basename" : $install_file;
+  open (OUT,">$dest") or die "Couldn't open $install_file for writing: $!";
+  if (-T IN) {
+    while (<IN>) {
+      s/\$(\w+)/$options{$1}||"\$$1"/eg;
+      print OUT;
+    }
+  }
+  else {
+    my $buffer;
+    print OUT $buffer while read(IN,$buffer,5000);
+  }
+  close OUT;
+  close IN;
 }

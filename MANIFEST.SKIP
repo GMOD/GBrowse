@@ -13,5 +13,15 @@ Makefile
 ^\.
 GGB\.def
 tmp
+^align/
+^benchmarking/
+\.cvsignore
+^test
+foo
+^bin/.+\.pl$
+\.bs$
+\.o$
+pm_to_blib
+
 
 

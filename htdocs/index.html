@@ -7,13 +7,47 @@
 <body>
 <h1>Generic Genome Browser</h1>
 
-<a href="http://www.gmod.org/"><img src="http://www.gmod.org/images/gmod_cog.jpeg" border="0"></a>
+<a href="http://www.gmod.org/"><img src="gmod_cog.jpeg" border="0" align="RIGHT"></a>
 
 <p>
 
-Welcome to the Generic Genome Browser.  An example in-memory database
-from yeast chromosome 1 has been installed for you.  Try it at this
-URL:
+Welcome to the Generic Genome Browser!
+For future reference, here is
+where you've installed its various components:
+
+<dl>
+  <dt>GBrowse documentation, stylesheets and in-memory databases.
+  <dd><b>$HTDOCS/gbrowse</b> (also available for browsing at
+      <a href="http://localhost/gbrowse">http://localhost/gbrowse</a>)
+      <p>
+  <dt>GBrowse configuration files
+  <dd><b>$CONF/gbrowse.conf</b>
+      <p>
+  <dt>GBrowse CGI (web) scripts
+  <dd><b>$CGIBIN/gbrowse</b>, <i>$CGIBIN/gbrowse_img</i>,<i>$CGIBIN/gbrowse_details</i>
+      <p>
+  <dt>Online tutorial
+  <dd><b>$HTDOCS/gbrowse/tutorial</b> (available for browsing at <a href="http://localhost/gbrowse/tutorial/tutorial.html">http://localhost/gbrowse/tutorial/tutorial.html</a>).
+      <p>
+  <dt>Reference manual
+  <dd><b>$HTDOCS/gbrowse/CONFIGURE_HOWTO.txt</b> (available for browsing at <a href="http://localhost/gbrowse/CONFIGURE_HOWTO.txt">http://localhost/gbrowse/CONFIGURE_HOWTO.txt</a>).
+      <p>
+  <dt>Sample data
+  <dd><b>$HTDOCS/gbrowse/sample_data.txt</b>
+      <p>
+  <dt>Contributed modules and utilities
+  <dd><b>$HTDOCS/gbrowse/contrib</b>
+      <p>
+</dl>
+
+<p>
+
+<h2>Example Database</h2>
+
+<p>
+
+An example in-memory database from yeast chromosome 1 has been
+installed for you.  Try it at this URL:
 
 <blockquote>
 <a href="/cgi-bin/gbrowse?source=yeast_chr1">http://localhost/cgi-bin/gbrowse?source=yeast_chr1</a>
@@ -22,12 +56,12 @@ URL:
 
 <p>
 
-To load larger data sets you must create a MySQL database.  Sample
-data from yeast is located in the gbrowse distribution in the
-directory <i>sample_data</i>.  Instructions for loading this data is
-in <a href="INSTALL">INSTALL</a>.  You will most likely want to use
-the script <i>bp_bulk_load_gff.pl</i> which should have been installed
-when you installed BioPerl.
+To load larger data sets it is suggested that you create a MySQL
+database.  Sample data from yeast is located in the gbrowse
+distribution in the directory <i>sample_data</i>.  Instructions for
+loading this data is in <a href="INSTALL">INSTALL</a>.  You will most
+likely want to use the script <i>bp_bulk_load_gff.pl</i> which should
+have been installed when you installed BioPerl.
 
 <p>
 
@@ -69,6 +103,6 @@ To find out more about Gbrowse, try the:
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Thu Jun 26 20:22:26 EDT 2003
+Last modified: Sun Jun 29 14:17:07 PDT 2003
 <!-- hhmts end -->
 </body> </html>

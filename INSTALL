@@ -34,8 +34,8 @@ already.
 	Digest::MD5
 	Text::Shellwords
 
-  F) Bioperl version 1.3 or higher -- http://www.bioperl.org
-     (Note: Use anonymous CVS to get Bioperl 1.3 if it isn't
+  F) Bioperl version 1.2.2 or higher -- http://www.bioperl.org
+     (Note: Use anonymous CVS to get Bioperl 1.2.2 if it isn't
             yet released).
 
 Optional modules:
@@ -63,7 +63,7 @@ Brief synopsis:
 	ppm> install DBD::mysql
 	ppm> install Generic-Genome-Browser
 
-Binary distributions of GBrowse and the 1.3 version of Bioperl live at
+Binary distributions of GBrowse and the 1.2.2 version of Bioperl live at
 http://stein.cshl.org/ppm.  Add this repository to the list of active
 repositories, and then move the repository to the top to ensure that
 you get the most up to date versions of the modules.
@@ -466,10 +466,11 @@ This will affect all mod_perl scripts globally.
 10. BIOPERL VERSIONS
 
 GBrowse is evolving quickly, and some of its features are dependent on
-new features in Bioperl 1.3.  If you are having trouble making GBrowse
-run, make sure you are using Bioperl 1.3!  If Bioperl 1.3 is not
-released by the time you read this, you'll need to use Anonymous CVS
-to obtain it.  Full instructions are given at http://www.bioperl.org
+new features in Bioperl 1.2.2.  If you are having trouble making
+GBrowse run, make sure you are using Bioperl 1.2.2!  If Bioperl 1.2.2
+is not released by the time you read this, you'll need to use
+Anonymous CVS to obtain it.  Full instructions are given at
+http://www.bioperl.org
 
 11. THE GBROWSE_IMG SCRIPT
 

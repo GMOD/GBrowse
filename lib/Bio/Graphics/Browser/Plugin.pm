@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.12.4.2 2005-03-16 21:07:38 lstein Exp $
+# $Id: Plugin.pm,v 1.12.4.3 2005-03-17 17:20:55 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME
@@ -747,7 +747,7 @@ sub new_feature_list {
 }
 
 # return a configuration cookie
-sub cookie {
+sub make_cookie {
   my $self = shift;
   my @cookies;
   my $name = $self->name;

@@ -2,7 +2,7 @@ package CGI::Toggle;
 
 use strict;
 use base 'Exporter';
-use CGI 'div','span','img';
+use CGI 'div','span','img','url';
 use CGI::Util;
 
 use vars '$next_id';
@@ -150,6 +150,7 @@ sub start_html {
   if (defined $state) {
     my $cookie = CGI::cookie(-name=>$cookie_name,
 			     -value=>$state,
+			     -path=>url(-path_info=>1,-absolute=>1),
 			     -expires=>'+7d');
     $args{-head}         = CGI::meta({-http_equiv=>'Set-Cookie',
 				      -content => $cookie});

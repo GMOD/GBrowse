@@ -173,7 +173,7 @@ sub cookies {
   my $plugins = $self->plugins;
   my @cookies;
   for my $plugin (values %$plugins) {
-    push @cookies,$plugin->cookie();
+    push @cookies,$plugin->make_cookie();
   }
   @cookies;
 }

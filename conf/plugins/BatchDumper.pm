@@ -30,7 +30,7 @@ my @ORDER = grep {
   warn "trying to load $module\n" if DEBUG;
   eval "require $module; 1";
 }
-  map { $FORMATS[2*$_] } (0..@FORMATS/2-1);
+ grep { ! /gff/i }  map { $FORMATS[2*$_] } (0..@FORMATS/2-1);
 
 unshift @ORDER,'gff';
 

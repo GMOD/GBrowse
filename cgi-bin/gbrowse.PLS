@@ -45,7 +45,7 @@ $startperl -w
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.10 2003-07-18 16:49:04 lstein Exp $
+# $Id: gbrowse.PLS,v 1.11 2003-07-21 16:52:31 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -346,8 +346,12 @@ sub main_display {
   }
 
   # force flipping
-  my $flip = $segment && $segment->stop < $segment->start;
-  param('flip'=>'on') if $flip;
+  if ($segment && $segment->stop < $segment->start) {
+      $segment = $segment->factory->segment(-name  => $segment->seq_id,
+					    -start => $segment->stop,
+					    -stop  => $segment->start);
+      $page_settings->{flip} = 1;
+  }
 
   # print the top of the form, with navigation bar, etc
   my $self = url(-relative=>1,-path_info=>1) . "?source=$page_settings->{source}";

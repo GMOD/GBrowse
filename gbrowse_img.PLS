@@ -41,7 +41,7 @@ $Config{startperl} -w
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbrowse_img.PLS,v 1.3 2002-05-07 18:07:14 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.4 2002-05-08 04:17:52 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1);
@@ -60,6 +60,7 @@ use vars qw($CONFIG $VERSION $CONF_DIR %DB);
 # add       a feature to superimpose on top of the image
 #             in format: reference+type+name+start..stop,start..stop,start..stop
 #           multiple "add" arguments are allowed
+# style     stylesheet for added features
 
 BEGIN {
     # here's a patch for a fix in Bio::DB::GFF that didn't get into BioPerl 1.0
@@ -97,6 +98,8 @@ my $segment_id = param('name') or message("Must provide a 'name' parameter to sp
 
 # get the segment
 my $segment = get_segment($segment_id) or message("Segment $segment_id not found.");
+$segment->absolute(1) if param('abs');
+
 
 # set the image width
 $CONFIG->width(param('width'))                              if param('width');
@@ -106,7 +109,7 @@ my @labels = map {split /[+\s]/} param('type');
 @labels    = $CONFIG->default_labels unless @labels;
 
 # add external features
-my $feature_list = external_features(\@labels,$segment,param('add')) if param('add');
+my $feature_list = external_features(\@labels,$segment) if param('add');
 
 # get the options
 my %options = map {split /[+\s]/} param('options');
@@ -140,7 +143,6 @@ sub get_segment {
   my $db   = open_database();
   my @segments = $CONFIG->name2segments($name,$db);
   return unless @segments;
-  $segments[0]->absolute(1) if param('abs');
   $segments[0];
 }
 
@@ -162,7 +164,8 @@ sub open_database {
 sub external_features {
   my $labels   = shift;
   my $segment  = shift;
-  my @features = @_;
+  my @features = param('add');
+  my @styles   = param('style');
 
   my $rel2abs = coordinate_mapper($segment) if $segment;
   my $feature_list = Bio::Graphics::FeatureFile->new(-smart_features  => 1);
@@ -174,21 +177,30 @@ sub external_features {
 					      -ref      => $ref||'',
 					      -type     => $type||'',
 					      -name     => $name||'',
-					      -segments => \@parts,
+					      -segments => \@parts
 					     );
     $feature_list->add_feature($feature);
   }
   push @$labels,'add' unless grep {$_ eq 'add'} @$labels;
+
+  foreach (@styles) {
+    my ($type,@options) = shellwords($_);
+    my %options = map {split /=/} @options;
+    $feature_list->add_type($type=>\%options);
+  }
   return {add => $feature_list};
 }
-
 
 sub coordinate_mapper {
   my $current_segment = shift;
   my $db              = open_database();
 
-  my ($ref,$start,$stop) = ($current_segment->ref,$current_segment->start,$current_segment->stop);
-  my $current_segment    = $db->segment($current_segment->ref);
+  my $absolute = $current_segment->absolute;
+
+  my ($absref,$ref,$start,$stop) = ($current_segment->abs_ref,
+				    $current_segment->ref,
+				    $current_segment->start,$current_segment->stop);
+  $current_segment    = $db->segment(-name=>$current_segment->ref);
   my %segments;
 
   my $closure = sub {
@@ -202,6 +214,8 @@ sub coordinate_mapper {
     my $mapper   = $segments{$refname};
     my $ref      = $current_segment->ref;
     my @abs_segs = map {[$mapper->rel2abs($_->[0],$_->[1])]} @ranges;
+    return ($mapper->abs_ref,@abs_segs) if $absolute;
+
     my @rel_segs = map {[$current_segment->abs2rel($_->[0],$_->[1])]} @abs_segs;
 
     # this inhibits mapping outside the displayed region
@@ -244,7 +258,7 @@ sub print_usage {
   &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=mec-3;width=400"&gt;
 <blockquote>
   <i>Will generate this picture:</i>
- <img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=mec-3;width=400">
+ <img src="http://localhost/perl/gbrowse_img?source=wormbase;name=mec-3;width=400">
 </blockquote>
 
   &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img?list=sources"&gt;list&lt;/a&gt;
@@ -316,6 +330,7 @@ separated by semicolons (preferred) or by ampersands.
 <tr> <td>width</td>   <td>desired width of image</td></tr>
 <tr> <td>options</td> <td>list of track options (compact, labeled, etc)</td></tr>
 <tr> <td>add</td>     <td>additional features to superimpose on image</td></tr>
+<tr> <td>stle</td>    <td>stylesheet for additional features</td></tr>
 <tr> <td>abs</td>     <td>display position in absolute coordinates</td></tr>
 </table>
 
@@ -404,11 +419,24 @@ separated by semicolons (preferred) or by ampersands.
       add=III+%22Blast%20Hit%22+%22Your%20Sequence%22+20000..21000,21550..22000
       </pre>
       Multiple <i>add=</i> arguments are allowed.
+  <dt><b>style</b>
+  <dd>The style argument can be used to control the rendering of additional features added
+      with "add".  It is a flattened version of the style configuration sections described
+      in <a href="http://www.wormbase.org/db/seq/gbrowse?help=annotation">this document</a>
+      For example, if you have added a "Blast Hit" annotation, then you can tell the
+      renderer to use a red arrow for this glyph in this way:
+      style=%22Blast%20Hit%22+glyph=arrow+fgcolor=red
   <dt><b>abs</b>
   <dd>Use absolute (chromosome) coordinates when displaying the image.  An argument of
       <i>abs=1</i> will turn on absolute coordinate addressing.  An argument of
       <i>abs=0</i> will use relative coordinate addressing (this is the default).
 </dl>
+<p>
+Putting it all together, here's a working (very long) URL:
+<pre>
+http://www.wormbase.org/db/seq/gbrowse_img?name=B0001;source=wormbase;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1
+</pre>
+
 
 <h2>AUTHOR</h2>
 
@@ -425,7 +453,6 @@ For additional help, see <a href="http://www.gmod.org">The GMOD Project</a> page
 END
 ;
 }
-
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

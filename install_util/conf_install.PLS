@@ -24,7 +24,6 @@ use FindBin '$Bin';
 
 use lib 'install_util';
 use InstallUtil;
-use vars qw(%options);
 
 my $origdir = cwd;
 my $homedir = "$Bin/..";
@@ -49,7 +48,7 @@ if (! (-e $dir)) {
 }
 
 move("conf","gbrowse.conf");
-copy_tree( source => "gbrowse.conf" , target => "$dir");
+copy_tree( source => "gbrowse.conf" , target => $dir, substitute => 1, options => \%options);
 move("gbrowse.conf","conf");
 
 chdir $origdir or die "couldn't cd to $origdir: $!\n";

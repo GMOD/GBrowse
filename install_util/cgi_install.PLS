@@ -24,7 +24,6 @@ use FindBin '$Bin';
 
 use lib 'install_util';
 use InstallUtil;
-use vars qw(%options);
 
 my $origdir = cwd;
 my $homedir = "$Bin/..";
@@ -46,7 +45,8 @@ if (! (-e $cgi_target) ) {
 
 copy_tree(
           source => './cgi-bin',
-          target => $cgi_target
+          target => $cgi_target,
+          options => \%options,
          );
 
 chdir $origdir or die "couldn't cd to $origdir: $!\n";

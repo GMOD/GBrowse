@@ -15,6 +15,8 @@ use vars qw(@EXPORT %options);
 @EXPORT = qw(copy_tree copy_with_substitutions);
 $InstallUtil::options = {};
 
+my %options;
+
 sub copy_tree {
   my(%arg) = @_;
   my ($src,$dest,$indent) = @_;
@@ -23,6 +25,12 @@ sub copy_tree {
   my $dest         = $arg{target};
   my $indent       = $arg{indent} || 2;
   my $substitute   = $arg{substitute};
+
+  warn join ' ', caller();
+
+  %options = %{ $arg{options} };
+
+warn '********************************************'.join ' ', keys %options;
 
   $indent ||= 2;
 
@@ -60,6 +68,7 @@ sub copy_tree {
                 target => "$dest/$tgt",
                 indent => $indent + 2,
                 substitute => $substitute,
+                options => \%options,
                );
     }
   }
@@ -96,7 +105,7 @@ sub copy_without_substitutions {
   my ($localfile,$install_file,$indent) = @_;
   $indent ||= 2;
 
-  print colored((" " x $indent)."[sub file] $localfile -> $install_file","blue"),"\n";
+  print colored((" " x $indent)."[cpy file] $localfile -> $install_file","blue"),"\n";
 
   open (IN,$localfile) or cluck colored("Couldn't open $localfile: $!","orange");
   my $basename = basename($localfile);

@@ -26,7 +26,6 @@ use FindBin '$Bin';
 
 use lib 'install_util';
 use InstallUtil;
-use vars qw(%options);
 
 my $origdir = cwd;
 my $homedir = "$Bin/..";
@@ -54,16 +53,16 @@ if (! (-e $tmpdir) ) {
 }
 
 print "Installing htdocs...\n";
-copy_tree(source => "./htdocs", target => $ht_target, substitute => 1);
+copy_tree(source => "./htdocs", target => $ht_target, substitute => 1, options => \%options);
 
 print "Installing sample_data...\n";
-copy_tree(source => "./sample_data", target => $ht_target, substitute => 1);
+copy_tree(source => "./sample_data", target => $ht_target, substitute => 1, options => \%options);
 
 print "Installing contrib...\n";
-copy_tree(source => "./contrib", target => $ht_target, substitute => 1);
+copy_tree(source => "./contrib", target => $ht_target, substitute => 1, options => \%options);
 
 print "Installing tutorial...\n";
-copy_tree(source => "./docs/tutorial", target => $ht_target, substitute => 1);
+copy_tree(source => "./docs/tutorial", target => $ht_target, substitute => 1, options => \%options);
 
 print "Installing documentation...\n";
 
@@ -71,6 +70,7 @@ print "Installing documentation...\n";
 #  a pod2html dohicky (it can create the html in the htdocs dir directly)
 #  a wanted subroutine to do File::Find's work
 #  also need to modify gbrowse/index.html
+###FIXME this is broken because copy_with_substitutions doesn't have access to %options
 copy_with_substitutions('./DISCLAIMER',$ht_target);
 
 #installing pod docs

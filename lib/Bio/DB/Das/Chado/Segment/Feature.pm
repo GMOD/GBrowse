@@ -47,7 +47,7 @@ my %CONSTANT_TAGS = ();
  Status  : Internal
 
 This method is called by Bio::DB::Das::Chado::Segment to create a new feature using
-information obtained from the chado database.  
+information obtained from the chado database.
 
 The 10 arguments are positional:
 
@@ -84,7 +84,7 @@ sub new {
   #check that this is what you want!
   #($start,$end) = ($end,$start) if defined($strand) and $strand == -1;
 
-  @{$self}{qw(factory parent sourceseq start end strand )} =
+  @{$self}{qw(factory parent seq_id start end strand )} =
     ($factory,$parent,$srcseq,$base_start,$end,$strand);
 
   @{$self}{qw(type group db_id absolute)} =
@@ -96,117 +96,281 @@ sub new {
   $self;
 }
 
-sub length {
-  my $self = shift;
-  my $len = $self->end - $self->start +1;
-  #return $self->end - $self->start +1 ;
-  return $len;
-}
 
-sub db_id { shift->{db_id} }
 
-sub uniquename { shift->{db_id} }
 
-sub type {shift->{type}}
+###############################################################
+# get/setters and their composites, alphabetical
+###############################################################
 
-sub feature_id { shift->{feature_id} }
+=head2 abs_strand
 
-sub seq_id { shift->{sourceseq} }
-
-*info = \&display_name; #for compatability with broken generic glyphs
-
-sub target { return }
-#sub target {
-#  my $self = shift;
-#  my $group = $self->group or return;
-#  return unless $group->can('start');
-#  $group;
-#}
-
-sub factory { shift->{factory} }
-
-=head2 group
-
- Title   : group
- Usage   : $group = $f->group([$new_group])
- Function: get or set the feature group
- Returns : featureloc.locgroup
- Args    : a new group (optional)
- Status  : Public
-
-This method gets or sets the feature group.  The group is NOT 
-a hold over from GFF and is NOT synonymous with name; it is
-featureloc.locgroup.  If you want the feature's name, use
-uniquename().
+  Title   : abs_strand
+  Usage   : $obj->abs_strand($newval)
+  Function: aliased to strand() for backward compatibility
 
 =cut
 
-sub group  { 
+*abs_strand = \&strand;
+
+=head2 class
+
+  Title   : class
+  Function: aliased to type()for backward compatibility
+
+=cut
+
+*class = \&type;
+
+=head2 db_id
+
+  Title   : db_id
+  Function: aliased to uniquename() for backward compatibility
+
+=cut
+
+*db_id = \&uniquename;
+
+=head2 factory
+
+  Title   : factory
+  Usage   : $obj->factory($newval)
+  Function: ???
+  Returns : value of factory (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub factory {
   my $self = shift;
-  my $d    = $self->{group};
-  $self->{group} = shift if @_;
-  $d;
+
+  return $self->{'factory'} = shift if @_;
+  return $self->{'factory'};
 }
 
+=head2 feature_id
+
+  Title   : feature_id
+  Usage   : $obj->feature_id($newval)
+  Function: holds feature.feature_id
+  Returns : value of feature_id (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub feature_id {
+  my $self = shift;
+
+  return $self->{'feature_id'} = shift if @_;
+  return $self->{'feature_id'};
+}
+
+=head2 group
+
+  Title   : group
+  Usage   : $group = $f->group([$new_group]);
+  Function: Store the feature's location group (featureloc.locgroup).
+            This method gets or sets the feature group.  The group is
+            NOT a hold over from GFF and is NOT synonymous with name;
+            it is featureloc.locgroup.  If you want the feature's
+            name, use uniquename().
+  Returns : value of group (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub group {
+  my $self = shift;
+
+  return $self->{'group'} = shift if @_;
+  return $self->{'group'};
+}
+
+=head2 id
+
+  Title   : id
+  Function: aliased to uniquename() for backward compatibility
+
+=cut
+
+*id  = \&uniquename;
+
+=head2 info
+
+  Title   : info
+  Function: aliased to uniquename() for backward compatibility
+            with broken generic glyphs primarily
+
+=cut
+
+*info = \&uniquename;
+
+=head2 length
+
+  Title   : length
+  Usage   : $obj->length()
+  Function: convenience for end - start + 1
+  Returns : length of feature in basepairs
+  Args    : none
+
+=cut
+
+sub length {
+  my ($self) = @_;
+  my $len = $self->end - $self->start +1;
+  return $len;
+}
 
 =head2 method
 
  Title   : method
- Usage   : $method = $f->method([$newmethod])
- Function: get or set the feature method
- Returns : a string
- Args    : a new method (optional)
- Status  : Public
-
-This method gets the feature type (analogous to method, like in GFF). 
+ Function: aliased to uniquename for backward compatibility
 
 =cut
 
-sub method { 
+*method = \&type;
+
+=head2 name
+
+  Title   : name
+  Function: aliased to uniquename for backward compatibility
+
+=cut
+
+*name = \&uniquename
+
+=head2 score
+
+  Title   : score
+  Usage   : $obj->score($newval)
+  Function: holds the (alignment?) feature's score
+  Returns : value of score (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub score {
   my $self = shift;
-  return $self->{type}
+
+  return $self->{'score'} = shift if @_;
+  return $self->{'score'};
 }
 
+=head2 seq_id
+
+  Title   : seq_id
+  Usage   : $obj->seq_id($newval)
+  Function: ???
+  Returns : value of seq_id (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub seq_id {
+  my $self = shift;
+
+  return $self->{'seq_id'} = shift if @_;
+  return $self->{'seq_id'};
+}
+
+=head2 _strand
+
+  Title   : _strand
+  Usage   : $obj->_strand($newval)
+  Function: internal method; sets the feature strand, see strand()
+  Returns : value of _strand (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub _strand {
+  my $self = shift;
+
+  return $self->{'strand'} = shift if @_;
+  return $self->{'strand'};
+}
 
 =head2 strand
 
- Title   : strand
- Usage   : $strand = $f->strand
- Function: get the feature strand
- Returns : +1, 0 -1
- Args    : none
- Status  : Public
+  Title   : strand
+  Usage   : $obj->strand()
+  Function: Returns the strand of the feature.  Unlike the other
+            methods, the strand cannot be changed once the object is
+            created (due to coordinate considerations).
+  Returns : -1, 0, or 1
+  Args    : none, readonly.
 
-Returns the strand of the feature.  Unlike the other methods, the
-strand cannot be changed once the object is created (due to coordinate
-considerations).
 
 =cut
 
-sub strand { 
+sub strand {
   my $self = shift;
-  return 0 unless $self->{strand};
-  return $self->{strand};
+  return $self->{'strand'} || 0;
 }
-*abs_strand = \&strand;
 
-=head2 display_id
+=head2 target
 
- Title   : display_id
- Usage   : $display_id = $f->display_id([$display_id])
- Function: get or set the feature display id
- Returns : a string (the feature name)
- Status  : Public
-
-This method is an alias for group().  It is provided for
-Bio::SeqFeatureI compatibility.
+  Title   : target
+  Usage   : unimplemented
+  Function: ???
+  Returns : undef
+  Args    :
 
 =cut
 
-sub display_name  { 
-  my $self = shift;
-  return $self->{uniquename}
+sub target {
+  my ($self,%arg) = @_;
+
+  #my $group = $self->group or return;
+  #return unless $group->can('start');
+  #$group;
+
+  return;
 }
+
+=head2 type
+
+  Title   : type
+  Usage   : $obj->type($newval)
+  Function: holds feature.type (Sequence Ontology feature type)
+  Returns : value of type (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+=cut
+
+sub type {
+  my $self = shift;
+
+  return $self->{'type'} = shift if @_;
+  return $self->{'type'};
+}
+
+=head2 uniquename
+
+  Title   : uniquename
+  Usage   : $obj->uniquename($newval)
+  Function: holds feature.uniquename
+  Returns : value of uniquename (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+=cut
+
+sub uniquename {
+  my $self = shift;
+
+  return $self->{'uniquename'} = shift if @_;
+  return $self->{'uniquename'};
+}
+
+##############################################################
+# end of get/setters and their composites
+##############################################################
 
 =head2 sub_SeqFeature
 
@@ -477,17 +641,27 @@ is equivalent to this call:
 
 =cut
 
-=head2 SeqFeatureI methods
-
-The following Bio::SeqFeatureI methods are implemented:
-
-primary_tag(), source_tag(), all_tags(), has_tag(), each_tag_value().
+=head1 SeqFeatureI methods
 
 =cut
 
-sub primary_tag { 
-   shift->{type};
-}
+=head2 display_name
+
+  Title   : display_name
+  Function: aliased to uniquename() for Bio::SeqFeatureI compatibility
+
+=cut
+
+*display_name = \&uniquename;
+
+=head2 primary_tag
+
+  Title   : primary_tag
+  Function: aliased to type() for Bio::SeqFeatureI compatibility
+
+=cut
+
+*primary_tag = \&type;
 
 sub source_tag  { 
   # returns source (manual curation, computation method, etc
@@ -652,40 +826,12 @@ sub asString {
 #  return join '/',$id,$type,$self->SUPER::asString;
 }
 
-sub name { 
-  my $self =shift;
-  return $self->uniquename;
-}
-
-=head2 score
-
- Title   : score
- Usage   : $score = $f->score([$newscore])
- Function: get or set the feature score
- Returns : a string
- Args    : a new score (optional)
- Status  : Public
-
-This method gets or sets the feature score.
-
-=cut
-
-sub score  {
-  my $self = shift;
-  my $d    = $self->{score};
-  $self->{score} = shift if @_;
-  $d;
-}
-
 sub attributes {
   my $self = shift;
   my $factory = $self->factory;
   defined(my $id = $self->id) or return;
   $factory->attributes($id,@_)
 }
-
-*id  = \&uniquename;
-sub class     {return shift->{type} }
 
 sub synonyms {
   #returns an array with synonyms

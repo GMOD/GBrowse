@@ -6,7 +6,7 @@ use Bio::Graphics::Browser::Plugin;
 use Bio::SeqIO;
 use Bio::Seq;
 use CGI qw(:standard *pre);
-
+use POSIX;
 use vars qw($VERSION @ISA);
 use constant DEBUG => 0;
 $VERSION = 1.0;
@@ -55,33 +55,99 @@ sub dump {
 
   my $browser = $self->browser_config;
   my $config  = $self->configuration;
+  my $wantsorted = $config->{'wantsorted'}; 
 
   my @segments = map { ( $browser->name2segments($_,$self->database) ) } split /\s+/m, $config->{sequence_IDs};
   # take the original segment if no segments were found/entered via the sequence_IDs textarea field
   @segments = ($segment) unless (@segments); 
-
+  my @filter    = $self->selected_features;
+      
+  foreach my $segment ( @segments ) {
+      my $seq  = new Bio::Seq::RichSeq(-display_id       => $segment->display_id,
+				       -desc             => $segment->desc,
+				       -accession_number => $segment->accession_number,
+				       
+				       -alphabet         => $segment->alphabet || 'dna',
+				       );
+      $seq->add_date(strftime("%d-%b-%Y",localtime));
+      $seq->primary_seq($segment->primary_seq);
+      $segment->absolute(1);
+      my $offset     = $segment->start - 1;
+      my $segmentend = $segment->length;
+      $seq->add_SeqFeature( map {       
+	  my $nf = new Bio::SeqFeature::Generic(-primary_tag => $_->primary_tag,
+						-source_tag  => $_->source_tag,
+						-phase       => $_->phase,
+						-score       => $_->score,
+						);
+	  for my $tag ( $_->get_all_tags ) {
+	      my %seen;
+	      $nf->add_tag_value($tag, grep { ! $seen{$_}++ } 
+				 grep { defined } $_->get_tag_values($tag));
+	  }
+	  my $loc = $_->location;
+	  my @locs = $loc->each_Location;
+	  for my $sl (@locs ) {
+	      $sl->start($sl->start() - $offset);
+	      $sl->end  ($sl->end() - $offset );
+	      my ($startstr,$endstr);
+	      
+	  if( $sl->start() < 1) {
+	      $startstr = "<1";
+	      $endstr   = $sl->end;
+	  }
+	      
+	      if( $sl->end() > $segmentend) {
+		  $endstr = ">$segmentend";
+		  $startstr = $sl->start unless defined $startstr;
+	      }
+	      if( defined $startstr || defined $endstr ) {
+		  $sl = Bio::Location::Fuzzy->new(-start         => $startstr,
+						  -end           => $endstr,
+						  -strand        => $sl->strand,
+						  -location_type => '..');
+		  warn $sl->to_FTstring();
+	      }
+	  }
+	  if( @locs > 1 ) { 
+	      # let's insure they are sorted
+	      if( $wantsorted ) {  # for VectorNTI
+		  @locs = sort { $a->start <=> $b->start } @locs;
+	      }
+	      $nf->location( new Bio::Location::Split(-locations => \@locs,
+						      -seq_id    =>
+						      $segment->display_id));
+	  } else { 
+	      $nf->location(shift @locs);
+	  }
+      $nf;
+      } $segment->features(-types => \@filter) );
+      $segment = $seq;
+  }
+  
   # special case for GFF dumping
   if ($config->{fileformat} eq 'gff') {
-    $self->gff_dump(@segments);
-    return;
+      $self->gff_dump(@segments);
+      return;
   }
-
+  
   # for the external viewer (like VNTI) the best import format is genbank (?)
   $config->{'fileformat'} = 'Genbank' if ($config->{'format'} eq 'external_viewer');
 
+  
   my $out = new Bio::SeqIO(-format => $config->{'fileformat'});
   my $mime_type = $self->mime_type;
   if ($mime_type =~ /html/) {
-    print start_html($segment);
-    foreach my $segment (@segments) {
-      print h1($segment),"\n",
-            start_pre,"\n";
-      $out->write_seq($segment);
-      print end_pre(),"\n";
-    }
-    print end_html;
+      print start_html($segment);
+      foreach my $segment (@segments) {
+	  print h1($segment),"\n",
+	  start_pre,"\n";
+	  $out->write_seq($segment);
+	  print end_pre(),"\n";
+      }
+      print end_html;
   } else {
-    $out->write_seq($_) for @segments;
+      $out->write_seq($_) for @segments;
   }
   undef $out;
 }
@@ -102,6 +168,7 @@ sub config_defaults {
   my $self = shift;
   return { format           => 'html',
 	   fileformat       => 'fasta',
+	   wantsorted       => 0,
        };
 }
 
@@ -138,14 +205,21 @@ sub configure_form {
 					 '-default'=> $current_config->{'fileformat'} ))));
 
 
-
+  push @choices, TR({-class => 'searchtitle'}, 
+		    th({-align=>'RIGHT',-width=>'25%'},
+		       "Sorted SubLocations (for VectorNTI input of GenBank)",
+		       td(popup_menu('-name'   => $self->config_name('wantsorted'),
+				     '-values' => [qw(0 1)],
+				     '-labels' => { '0' => 'No',
+						    '1' => 'Yes'},
+				     '-default'=> $current_config->{'wantsorted'} ))));
+  
   push @choices, TR({-class=>'searchtitle'},
 			th({-align=>'RIGHT',-width=>'25%'},'Sequence IDs','<p><i>(Entry overrides chosen segment)</i></p>',
 			   td(textarea(-name=>$self->config_name('sequence_IDs'),
                            	       -rows=>20,
                               	       -columns=>20,
-                                      ))));
-
+				       ))));
 
   my $html= table(@choices);
   $html;

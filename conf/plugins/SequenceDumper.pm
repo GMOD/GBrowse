@@ -1,4 +1,4 @@
-# $Id: SequenceDumper.pm,v 1.14 2003-09-17 20:59:52 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.15 2003-09-17 21:08:48 stajich Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::SequenceDumper
 #
@@ -50,7 +50,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::SequenceDumper;
-# $Id: SequenceDumper.pm,v 1.14 2003-09-17 20:59:52 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.15 2003-09-17 21:08:48 stajich Exp $
 # Sequence Dumper plugin
 
 use strict;
@@ -108,7 +108,7 @@ sub dump {
   
   my $config  = $self->configuration;  
   my $wantsorted = $config->{'wantsorted'} || 0; 
- my $browser = $self->browser_config();
+  my $browser = $self->browser_config();
   my @markup;
   my %markuptype;
 

@@ -4,11 +4,6 @@ This is a quick synopsis of the steps needed to initialize a GBrowse
 database from a genbank record.  For the purposes of illustration, we
 will use the RefSeq record for M. bovis, accession NC_002945.
 
-Since the features described here are very new, you will have to
-obtain and install the development version of Bioperl, which is only
-available via CVS.  See http://cvs.bioperl.org/ for details.  This
-HOWTO was written for the 8 September 2003 version of Bioperl.
-
 =head1 Using the GBrowse in-memory database 
 
 =head2 1. Convert from Genbank format into GFF format
@@ -39,7 +34,7 @@ described in the tutorial.  We will assume
 
   mkdir /usr/local/apache/htdocs/gbrowse/databases/mbovis
   chmod o+rwx /usr/local/apache/htdocs/gbrowse/databases/mbovis
-  cp mtb.gff /usr/local/apache/htdocs/gbrowse/databases/mbovis
+  cp mbovis.gff /usr/local/apache/htdocs/gbrowse/databases/mbovis
 
 =head2 3. Set up the configuration file
 

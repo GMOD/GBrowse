@@ -251,6 +251,7 @@ lib/Bio/Graphics/Browser/Constants.pm
 lib/Bio/Graphics/Browser/GFFhelper.pm
 lib/Bio/Graphics/Browser/I18n.pm
 lib/Bio/Graphics/Browser/Markup.pm
+lib/Bio/Graphics/Browser/Options.pm
 lib/Bio/Graphics/Browser/PadAlignment.pm
 lib/Bio/Graphics/Browser/Plugin.pm
 lib/Bio/Graphics/Browser/Realign.pm

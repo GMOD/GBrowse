@@ -19,23 +19,27 @@ $Config{startperl}
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-if ($ARGV[0]=~/^-?-h/i) {
+if ($ARGV[0]=~/^-?-h/ || @ARGV < 1) {
 die <<'USAGE';
 
-This script massages the RELEASE 3 Flybase/Gadfly GFF file located at
-http://www.fruitfly.org/sequence/sequence_db/whole-genome_annotation-feature-region_dmel_RELEASE3.GFF
-into the "correct" version of the GFF format.
+This script massages the RELEASE 3 Flybase/Gadfly GFF files located at
+http://www.fruitfly.org/sequence/sequence_db into the "correct"
+version of the GFF format.
 
-To use this script, download the Gadfly GFF file and save it to disk.
-Then run this script on the file:
+To use this script, download the whole genome FASTA file and save it
+to disk.  (The downloaded file will be called something like
+"na_whole-genome_genomic_dmel_RELEASE3.FASTA", but the link on the
+HTML page doesn't give the filename.)  Do the same for the whole
+genome GFF annotation file (the saved file will be called something
+like "whole-genome_annotation-feature-region_dmel_RELEASE3.GFF".)  If
+you wish you can download the ZIP compressed versions of these files.
 
- % process_gadfly.pl whole-genome_annotation-feature-region_dmel_RELEASE3.GFF > fly.gff
+Next run this script on the two files, indicating the name of the
+downloaded FASTA file first, followed by the gff file:
 
-To load the fly DNA, download the FASTA format file for the
-corresponding release in chromosome arm format
-(e.g. http://www.fruitfly.org/sequence/sequence_db/na_whole-genome_genomic_dmel_RELEASE3.FASTA).
+ % process_gadfly.pl na_whole-genome_genomic_dmel_RELEASE3.FASTA whole-genome_annotation-feature-region_dmel_RELEASE3.GFF > fly.gff
 
-The gadfly.gff file and the fasta fiile can now be loaded into a Bio::DB::GFF database
+The gadfly.gff file and the fasta file can now be loaded into a Bio::DB::GFF database
 using the following command:
 
   % bulk_load_gff.pl -d fly -fasta na_whole-genome_genomic_dmel_RELEASE3.FASTA fly.gff 
@@ -71,6 +75,16 @@ USAGE
 
 use strict;
 
+foreach (@ARGV) {
+  $_ = "gunzip -c $_ |" if /\.gz$/;
+}
+
+if ($ARGV[0] =~ /fasta/i) {
+  process_fasta();
+} else {
+  die "call as process_gadfly.pl \"release3_dna.FASTA\" \"release3_features.GFF\"";
+}
+
 while (<>) {
   next if /^\#/;
   chomp;
@@ -105,6 +119,25 @@ sub dump_symbol {
   print join("\t",$ref,$csource,$cmethod,$start,$stop,$cscore,$strand,$cphase,qq(Symbol "$symbol")),"\n";
 }
 
+sub process_fasta {
+  my $file = shift @ARGV;
+  open F,$file or die "Can't open $file: $!";
+  print STDERR "Reading big FASTA file, please be patient...\n";
+  my ($current_id,%lengths);
+  while (<F>) {
+    if (/^>(\S+)/) {
+      $current_id = $1;
+      next;
+    }
+    die "this doesn't look like a fasta file to me" unless $current_id;
+    chomp;
+    $lengths{$current_id} += length;
+  }
+  foreach (sort keys %lengths) {
+    print join("\t",$_,'arm','Component',1,$lengths{$_},'.','+','.',qq(Sequence "$_")),"\n";
+  }
+}
+
 __END__
 
 =head1 NAME
@@ -117,20 +150,24 @@ process_gadfly.pl - Massage Gadfly/FlyBase GFF files into a version suitable for
 
 =head1 DESCRIPTION
 
-This script massages the RELEASE 3 Flybase/Gadfly GFF file located at
-http://www.fruitfly.org/sequence/sequence_db/whole-genome_annotation-feature-region_dmel_RELEASE3.GFF
-into the "correct" version of the GFF format.
+This script massages the RELEASE 3 Flybase/Gadfly GFF files located at
+http://www.fruitfly.org/sequence/sequence_db into the "correct"
+version of the GFF format.
 
-To use this script, download the Gadfly GFF file and save it to disk.
-Then run this script on the file:
+To use this script, download the whole genome FASTA file and save it
+to disk.  (The downloaded file will be called something like
+"na_whole-genome_genomic_dmel_RELEASE3.FASTA", but the link on the
+HTML page doesn't give the filename.)  Do the same for the whole
+genome GFF annotation file (the saved file will be called something
+like "whole-genome_annotation-feature-region_dmel_RELEASE3.GFF".)  If
+you wish you can download the ZIP compressed versions of these files.
 
- % process_gadfly.pl whole-genome_annotation-feature-region_dmel_RELEASE3.GFF > fly.gff
+Next run this script on the two files, indicating the name of the
+downloaded FASTA file first, followed by the gff file:
 
-To load the fly DNA, download the FASTA format file for the
-corresponding release in chromosome arm format
-(e.g. http://www.fruitfly.org/sequence/sequence_db/na_whole-genome_genomic_dmel_RELEASE3.FASTA).
+ % process_gadfly.pl na_whole-genome_genomic_dmel_RELEASE3.FASTA whole-genome_annotation-feature-region_dmel_RELEASE3.GFF > fly.gff
 
-The gadfly.gff file and the fasta fiile can now be loaded into a Bio::DB::GFF database
+The gadfly.gff file and the fasta file can now be loaded into a Bio::DB::GFF database
 using the following command:
 
   % bulk_load_gff.pl -d fly -fasta na_whole-genome_genomic_dmel_RELEASE3.FASTA fly.gff 
@@ -175,7 +212,6 @@ it under the same terms as Perl itself.  See DISCLAIMER.txt for
 disclaimers of warranty.
 
 =cut
-
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

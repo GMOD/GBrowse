@@ -1,4 +1,4 @@
-# $Id: Chado_pf.pm,v 1.7 2002-12-06 23:44:45 scottcain Exp $
+# $Id: Chado_pf.pm,v 1.8 2002-12-09 18:29:48 scottcain Exp $
 # Das adaptor for Chado_pf
 
 =head1 NAME
@@ -134,15 +134,12 @@ $VERSION = 0.01;
 # create new database accessor object
 # takes all the same args as a Bio::DB::BioDB class
 sub new {
+  my $self = shift;
+  my ($dsn,$username,$password) = @_;
 
-  my ($driver, $dbname, $host, $username, $password, $port) =
-      #from somewhere (the config file originally)
+  print "$dsn, $username, $password\n";
 
-  my $self = DBI->connect(  "DBI:$self->$driver:"
-                         . "dbname=$self->$dbname;"
-                         . "host=$self->$host" ,
-                           $self->$username,
-                           $self->$password );
+  my $dbh = DBI->connect( $dsn, $username, $password );
 
   $self;
 }

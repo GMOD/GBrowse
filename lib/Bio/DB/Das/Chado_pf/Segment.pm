@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.8 2002-12-06 23:44:46 scottcain Exp $
+# $Id: Segment.pm,v 1.9 2002-12-09 18:29:48 scottcain Exp $
 
 =head1 NAME
 
@@ -99,7 +99,7 @@ package Bio::DB::Das::Chado_pf::Segment;
 use strict;
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
-use Bio::SeqFeatureGeneric;
+use Bio::SeqFeature::Generic;
 use constant DEBUG => 1;
 
 use vars '@ISA','$VERSION';
@@ -183,19 +183,19 @@ Returns the length of the segment.  Always a positive number.
 =cut
 
 sub length {
-
+  my $self = shift;
   if ($self->length) {
     return $self->length;
   } else {
-    my $quoted_name = $dbadaptor->quote($self->$name);
-    my $sth = $dbadaptor->prepare ("
+    my $quoted_name = $self->dbadaptor->quote($self->name);
+    my $sth = $self->dbadaptor->prepare ("
      select seqlen from feature where feature_id in  
        (select f.feature_id
         from dbxref dbx, feature f, feature_dbxref fd
         where f.type_id = 6 and
            f.feature_id = fd.feature_id and
            fd.dbxref_id = dbx.dbxref_id and
-           dbx.accession = $name) ");
+           dbx.accession = $quoted_name ) ");
     $sth->execute or return;
 
     my $hash_ref = $sth->fetchrow_hashref;
@@ -286,7 +286,7 @@ sub features {
   my $rstart = $self->start;
   my $rend   = $self->end;
   my $sql_range;
-  if ($rangetupe eq 'overlaps') {
+  if ($rangetype eq 'overlaps') {
     $sql_range = " fmin <= $rend and fmax >= $rstart ";
   } elsif ($rangetype eq 'contains') {
     $sql_range = " fmin <= $rstart and fmax >= $rend ";
@@ -318,18 +318,12 @@ sub features {
 
   my @features;
   while (my $hash_ref = $sth->fetchrow_hashref) {
-    my $fstart     = $$hash_ref{fmin}; 
-    my $fend       = $$hash_ref{fmax};
-    my $fstrand    = $$hash_ref{fstrand};
-    my $seq_id     = $name;
-    my $annotation = $$hash_ref{name};
-    my $primary    = $$hash_ref{termname};
 
-    my $feat = Bio::SeqFeatureGeneric->new (
+    my $feat = Bio::SeqFeature::Generic->new (
                        -start      => $$hash_ref{fmin},
                        -end        => $$hash_ref{fmax},
                        -strand     => $$hash_ref{fstrand}, 
-                       -seq_id     => $name,
+                       -seq_id     => $self->name,
                        -annotation => $$hash_ref{name},
                        -primary    => $$hash_ref{termname} );
     push @features, $feat;

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.44 2004-04-30 22:18:54 allenday Exp $
+# $Id: Chado.pm,v 1.45 2004-05-03 19:15:50 allenday Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -310,7 +310,7 @@ their type
 
 Arguments are -option=E<gt>value pairs as follows:
 
-  -types     List of feature types to return.  Argument is an array
+  -type      List of feature types to return.  Argument is an array
              of Bio::Das::FeatureTypeI objects or a set of strings
              that can be converted into FeatureTypeI objects.
 
@@ -336,13 +336,14 @@ interrupted.  When a callback is provided, the method returns undef.
 
 sub features {
   my $self = shift;
-  my ($types,$callback,$attributes,$iterator) = 
-       $self->_rearrange([qw(TYPES CALLBACK ATTRIBUTES ITERATOR)],
+  my ($type,$callback,$attributes,$iterator) = 
+       $self->_rearrange([qw(TYPE CALLBACK ATTRIBUTES ITERATOR)],
 			@_);
 
 
-    warn "Chado,features: $types\n" if DEBUG;
-  my @features = $self->_segclass->features(-types => $types,
+  warn "Chado,features: $type\n" if DEBUG;
+warn $self->_segclass;
+  my @features = $self->_segclass->features(-type => $type,
                                             -attributes => $attributes,
                                             -callback => $callback,
                                             -iterator => $iterator );

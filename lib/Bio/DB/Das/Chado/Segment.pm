@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.61 2004-04-30 22:18:54 allenday Exp $
+# $Id: Segment.pm,v 1.62 2004-05-03 19:15:50 allenday Exp $
 
 =head1 NAME
 
@@ -88,6 +88,7 @@ methods. Internal methods are usually preceded with a _
 package Bio::DB::Das::Chado::Segment;
 
 use strict;
+use Carp qw(carp croak cluck);
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
@@ -545,7 +546,7 @@ is defined, then -callback is ignored.
 sub features {
   my $self = shift;
 
-    warn "Segment->features() args:@_\n" if DEBUG;
+  warn "Segment->features() args:@_\n" if DEBUG;
 
   my ($types,$attributes,$rangetype,$iterator,$callback);
   if ($_[0] and $_[0] =~ /^-/) {
@@ -558,7 +559,7 @@ sub features {
 
   warn "@$types\n" if (defined $types and DEBUG);
 
-  my $feat     = Bio::DB::Das::Chado::Segment::Feature->new ();
+  my $feat     = Bio::DB::Das::Chado::Segment::Feature->new();
   my @features;
   $rangetype ||='overlaps';
 

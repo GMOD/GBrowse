@@ -1,4 +1,4 @@
-# $Id: Chado_pf.pm,v 1.3 2002-11-26 21:55:07 scottcain Exp $
+# $Id: Chado_pf.pm,v 1.4 2002-11-26 22:26:41 scottcain Exp $
 # Das adaptor for Chado_pf
 
 =head1 NAME
@@ -238,7 +238,9 @@ sub get_Seq_by_acc {
   return if ($sth->rows != 1);
 
   my $hash_ref = $sth->fetchrow_hashref or return;
-  return $$hash_ref{'residues'};
+  my $bioseq = Bio::PrimarySeq->new ( -seq => $$hash_ref{'residues'}
+                                      -accession_number => $name    );
+  return $bioseq;
 }
 
 

@@ -21,6 +21,8 @@ use Bio::SeqFeatureI;
 use Bio::Root::Root;
 use Bio::LocationI;
 
+use constant DEBUG => 0;
+
 use vars qw($VERSION @ISA $AUTOLOAD);
 @ISA = qw(Bio::DB::Das::Chado::Segment Bio::SeqFeatureI 
 	  Bio::Root::Root);
@@ -215,25 +217,27 @@ sub sub_SeqFeature {
 #  print "$parent_id\n";
 #  print "$handle\n";
 
-#  $self->{factory}->{dbh}->trace(2);
+  $self->{factory}->{dbh}->trace(2) if DEBUG;
 
   my $sth = $self->{factory}->{dbh}->prepare("
-    select child.feature_id, child.name, child.type_id, parent.name as pname,
+ select child.feature_id, child.name, child.type_id, parent.name as pname,
            childloc.min, childloc.max, childloc.strand, childloc.phase
     from feature as parent
     inner join
       feature_relationship as fr0 on
-        (parent.feature_id = fr0.subjfeature_id)
+        (parent.feature_id = fr0.objfeature_id)
     inner join
       feature as child on
-        (child.feature_id = fr0.objfeature_id)
+        (child.feature_id = fr0.subjfeature_id)
     inner join
       featureloc as childloc on
         (child.feature_id = childloc.feature_id)
     where parent.feature_id = $parent_id
-          $typewhere;
+          $typewhere
     ");
   $sth->execute or $self->throw("subfeature query failed"); 
+
+  $self->{factory}->{dbh}->trace(0) if DEBUG;
 
   my @features;
   my %termname = %{$self->{factory}->{cvtermname}};

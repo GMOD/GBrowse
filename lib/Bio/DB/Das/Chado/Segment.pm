@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.25 2003-03-07 20:36:10 scottcain Exp $
+# $Id: Segment.pm,v 1.26 2003-03-13 22:09:14 scottcain Exp $
 
 =head1 NAME
 
@@ -407,7 +407,7 @@ sub features {
     $sql_types .= ") and ";
   }
 
-#$self->{factory}->{dbh}->trace(1);
+$self->{factory}->{dbh}->trace(1);
 
   my $srcfeature_id = $self->{srcfeature_id};
 
@@ -420,20 +420,22 @@ sub features {
       fl.srcfeature_id = $srcfeature_id and
       f.feature_id  = fl.feature_id and
       $sql_range
+    order by type_id
        ");
    $sth->execute or $self->throw("feature query failed"); 
    $self->{factory}->{dbh}->do("set enable_seqscan=1");
 
-#$self->{factory}->{dbh}->trace(0);
+$self->{factory}->{dbh}->trace(0);
 #take these results and create a list of Bio::SeqFeatureI objects
+#
+#check if the type id is 'alignment hsp' and find/create the parent
+#'alignment hit' object; otherwise do normal stuff
 
   my %termname = %{$self->{factory}->{cvtermname}};
   while (my $hashref = $sth->fetchrow_hashref) {
 
     my $stop  = $$hashref{max};
     my $start = $$hashref{min};
-
-#    warn "-->$$hashref{name}<--\n";
 
     $feat = Bio::DB::Das::Chado::Segment::Feature->new (
                        $self->{factory},
@@ -456,7 +458,7 @@ sub features {
    warn "using Bio::DB::Das::ChadoIterator\n" if DEBUG;
     return Bio::DB::Das::ChadoIterator->new(\@features);
   } else {
-    return @features;
+    return \@features;
   }
 }
 =head2 seq
@@ -475,7 +477,7 @@ Returns the sequence for this segment as a simple string.
 sub seq {
   my $self = shift;
 
-#$self->{factory}->{dbh}->trace(1);
+$self->{factory}->{dbh}->trace(1);
 
   my $feat_id = $self->{srcfeature_id};
   my $sth = $self->{factory}->{dbh}->prepare("
@@ -483,7 +485,7 @@ sub seq {
      where feature_id = $feat_id ");
   $sth->execute or $self->throw("seq query failed");
 
-#$self->{factory}->{dbh}->trace(0);
+$self->{factory}->{dbh}->trace(0);
 
   my $hash_ref = $sth->fetchrow_hashref;
   return $$hash_ref{'residues'};
@@ -518,11 +520,12 @@ sub desc {shift->{name} }
 sub get_feature_stream {
   my $self = shift;
   my @args = @_;
-  my @features = $self->features(@args);
+  my $features = $self->features(@args);
     warn "get_feature_stream args: @_\n" if DEBUG;
     warn "using get_feature_stream\n" if DEBUG;
-    warn "feature array: @features\n" if DEBUG;
-  return Bio::DB::Das::ChadoIterator->new(\@features);
+    warn "feature array: $features\n" if DEBUG;
+    warn "first feature: $$features[0]\n" if DEBUG;
+  return Bio::DB::Das::ChadoIterator->new($features);
 }
 
 =head2 clone

@@ -1,3 +1,4 @@
+# translation from: Franck Aniere <aniere@genoscope.cns.fr>
 # do not remove the { } from the top and bottom of this page!!!
 {
    #----------

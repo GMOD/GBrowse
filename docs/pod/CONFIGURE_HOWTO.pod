@@ -658,7 +658,7 @@ language translator to insert language-specific HTML.  Here's an
 example provided by Marc Logghe:
 
     html2 = sub {
-        my $go = $main::LANG->tr('Go');
+        my $go = $main::CONFIG->tr('Go');
         return
         qq(
         <table width="800" border="0">

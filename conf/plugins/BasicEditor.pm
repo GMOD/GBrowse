@@ -1,4 +1,4 @@
-# $Id: BasicEditor.pm,v 1.14 2003-11-06 02:23:20 stajich Exp $
+# $Id: BasicEditor.pm,v 1.15 2003-11-06 06:50:52 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -64,7 +64,6 @@ $ROLLBACK = '/tmp/';
 # Adding an IP address will turn security on
 ####################################################################
 my $ips = <<END;
-192.168.1.10
 END
 ####################################################################
 
@@ -137,17 +136,7 @@ sub build_form {
     my $form = '';
     my $feat_count = 0;
     
-    my @feats = ();
-   
-   # list all of the features to be deleted
-   # must be inside of the range 
-   for ( $segment->features ) {
-	next if $_->start < $segment->start ||
-                # source feature off by one error?
-	        $_->stop  > $segment->stop + 1;
-
-	push @feats, $_;
-    }
+    my @feats = $segment->contained_features;
 
     # try to put the features in a sensible order 
     # this is biased toward gene containment hierarchies
@@ -254,13 +243,10 @@ sub annotate {
 	$gff  = $self->build_gff || return 0;
     }
 
-    for ( $segment->features ) {
-	next if $_->end > $segment->end + 1;
-	next if $_->start < $segment->start;
-	next if $_->method =~ /component/i;
-	$db->delete_features($_); 
+    my @killme = $segment->contained_features;
+    for ( @killme ) {
+	$db->delete_features($_) unless $_->primary_tag =~ /Component/i; 
     }
-
     my $fh = IO::String->new($gff);
     my $result = $db->load_gff($fh);
 

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.81 2004-05-11 16:52:47 lstein Exp $
+# $Id: gbrowse.PLS,v 1.82 2004-05-11 17:54:41 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -376,7 +376,7 @@ sub main_display {
 
   # first of all, if there are no segments, then try a keyword search and store the results
   if (@$segments == 0 && (my $n = $page_settings->{name})) {
-      error($CONFIG->tr('NOT_FOUND',$n));
+      error($CONFIG->tr('NOT_FOUND',escapeHTML($n)));
   }
 
   # if there's a single segment, then print a message and store the segment into a scalar

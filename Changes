@@ -1,3 +1,6 @@
+1.63	
+	* Patch from Eric Just to eliminate unecessary URL arguments.
+	* Fixes from Jack Chen to get colors in multiple alignments "just right."
 1.62    Mon Apr  5 09:43:25 EDT 2004
 	* Added request timeout option for very long requests.
 	* Added additional padding to prevent scales of xyplot glyph from being
@@ -22,11 +25,6 @@
 	paired blast scores, and other pairwise feature data.
 	* Use can now turn on and off the overview tracks.
         * Fixed chado adaptor to properly render the gbrowse_details page.
-        * Patch from Eric Just to eliminate unecessary URL arguments.
-        * Fixes from Jack Chen to get colors in multiple alignments "just right."
-        * Several fixes, improvements to the chado adaptor.
-        * added code to the chado adaptor to allow it to generate
-        URLs to corresponding cmap features
 
 1.61    Wed Mar 17 21:59:16 EST 2004
         * Moved the BioSQL adaptor to 'experimental'.  It is not guaranteed

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.46 2003-12-06 00:00:36 lstein Exp $
+# $Id: gbrowse.PLS,v 1.47 2003-12-15 14:04:13 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -90,7 +90,8 @@ use constant GBROWSE_HELP         => '/gbrowse';
 use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceDumper';
 
 # if true, turn on surrounding rectangles for debugging the image map
-use constant DEBUG => 0;
+use constant DEBUG          => 0;
+use constant DEBUG_EXTERNAL => 0;
 use constant DEBUG_PLUGINS => 0;
 use constant DEBUGGING_RECTANGLES => 0;
 
@@ -703,6 +704,7 @@ sub adjust_settings {
   if (my @external = param('eurl')) {
     my %external = map {$_=>1} @external;
     foreach (@external) {
+      warn "eurl = $_" if DEBUG_EXTERNAL;
       next if exists $settings->{features}{$_};
       $settings->{features}{$_} = {visible=>1,options=>0,limit=>0};
       push @{$settings->{tracks}},$_;
@@ -1094,6 +1096,7 @@ sub external_table {
   }
 
   for my $filename (@{$settings->{tracks}}) {
+    warn "filename = $filename" if DEBUG_EXTERNAL;
     next unless $filename =~ /^(ftp|http):/ && $feature_files->{$filename};
     warn "external_table(): filename = $filename" if DEBUG;
     push @rows,th({-align=>'right',-valign=>'TOP'},"URL",++$count).
@@ -1614,13 +1617,15 @@ sub open_uploaded_file {
 sub load_external_sources {
   my ($segment,$page_settings) = @_;
   my @feature_file = load_uploaded_files($segment,$page_settings);
-  warn "uploaded feature_file = @feature_file" if DEBUG;
+  warn "uploaded feature_file = @feature_file" if DEBUG_EXTERNAL;
 
   my @external = load_remote_sources($segment,$page_settings);
   push @feature_file,@external if @external;
 
+  warn "feature_file = @feature_file" if DEBUG_EXTERNAL;
+
   my %feature_file = map {(ref($_) ? $_->name: $_) => $_} @feature_file;
-  warn join "\n",%feature_file if DEBUG;
+  warn join "\n",%feature_file if DEBUG_EXTERNAL;
   my $f = \%feature_file;
 
   load_plugin_annotations($segment,$f,$page_settings) if $segment && $segment->length <= $MAX_SEGMENT;
@@ -1716,7 +1721,12 @@ sub get_remote_feature_data {
       return;
     }
     my $das      =  Bio::Das->new(-source=>$1,-dsn=>$2);
-    return $das;
+    return unless $das;
+    my $segment = $das->segment($settings->{ref},$settings->{start},$settings->{stop});
+    # the next step gives the current segment the same name as the DAS source
+    # and ensures that the DAS source appears in the list of external sources in the UI
+    $segment->name($url);
+    return $segment;
   }
 
   unless ($UA) {

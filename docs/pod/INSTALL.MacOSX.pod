@@ -3,7 +3,7 @@
 # ===============================================
 # Author: Todd Harris (harris@cshl.org)
 # gbrowse_on_osx.pod
-# Revision $Id: INSTALL.MacOSX.pod,v 1.1 2003-11-19 01:53:46 tharris Exp $
+# Revision $Id: INSTALL.MacOSX.pod,v 1.2 2003-11-24 14:06:39 tharris Exp $
 # Copyright @ 2003 Cold Spring Harbor Laboratory
 # ===============================================
 
@@ -25,12 +25,13 @@ the Generic Genome Browser (GBrowse) on a stock Mac OS X system.
 
 =head2 2. Installation options
 
-You have two (2!) options for installing GBrowse on OS X.
+You have three (3!) options for installing GBrowse on OS X.
 
        1. As a downloadable package
-       2. Manually, by following the steps in this document
+       2. Using the build scripts located in the contrib directory
+       3. Manually, by following the steps in this document
 
-=head2 3. Installing GBrowse using the package installer
+=head2 Installing GBrowse using the package installer
 
 GBrowse is a large and complicated set of software components.  Have a
 look at the software requirements listed below.  There are many
@@ -52,6 +53,19 @@ the MySQL database.
 
 Once installed, you may wish to read the sections on "Populating the
 database" below.
+
+=head2 Installing GBrowse using the build scripts
+
+GBrowse is distributed with scripts that automate the fetching and
+building of GBrowse and all of its software dependencies.  These
+scripts are locate in contrib/install_macosx.
+
+   For example, to build GBrowse on Mac OS X,
+    % cd contrib/install_macosx
+    % make libraries  (wait and wait and wait)
+    % make gbrowse
+
+See the README in contrib/macosx_install for additional details.
 
 =head2 4. Installing GBrowse manually
 
@@ -328,7 +342,7 @@ library for interacting with little gd.
   % curl -O http://www.libpng.org/pub/png/src/libpng-1.2.5.tar.gz
   % gnutar -xzf libpng-1.2.5.tar.gz 
   % pushd libpng-1.2.5/
-  % cp scripts/makefile.macosx ./Makefile
+  % cp scripts/makefile.darwin makefile
   % make ZLIBINC="/usr/lib" ZLIBLIB="/usr/lib"
   % sudo make install
   % sudo ranlib /usr/local/lib/libpng.a
@@ -533,7 +547,7 @@ Material in this document is copyright 2001-2003 by the Cold Spring
 Harbor Laboratory. This information is provided "AS-IS" without any
 warranty, expressed or implied.
 
-$Id: INSTALL.MacOSX.pod,v 1.1 2003-11-19 01:53:46 tharris Exp $
+$Id: INSTALL.MacOSX.pod,v 1.2 2003-11-24 14:06:39 tharris Exp $
 
 =cut
 

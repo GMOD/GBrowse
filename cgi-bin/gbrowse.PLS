@@ -45,10 +45,11 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.109.2.4 2004-09-18 05:41:14 allenday Exp $
+# $Id: gbrowse.PLS,v 1.109.2.5 2004-10-03 18:24:10 lstein Exp $
 
 use strict;
 use Bio::Graphics;
+use Bio::Graphics::GBrowse_run;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;
 use Data::Dumper;
@@ -64,7 +65,9 @@ use Template;
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $CONF_DIR
 	    $PLUGINS $PRESETS
-	    %OBJECT_TYPES %PLUGIN_NAME2LABEL );
+	    %OBJECT_TYPES %PLUGIN_NAME2LABEL
+            $BROWSER
+);
 
 my $template = Template->new({
                 INCLUDE_PATH => "$CONF_DIR/templates/gbrowse",
@@ -178,6 +181,13 @@ redirect_legacy_url($source);
 
 $CONFIG->source($source);
 my $page_settings = get_settings($source);
+
+
+#############################
+# THIS SINGLETON OBJECT WILL EVENTUALLY HAVE ALL THE FUNCTIONALITY
+# OF THE REST OF THIS CGI SCRIPT
+$BROWSER = Bio::Graphics::GBrowse_run->new($CONFIG,$page_settings);
+#############################
 
 $MAX_SEGMENT     = $CONFIG->get_max_segment;
 $DEFAULT_SEGMENT = $CONFIG->get_default_segment;
@@ -813,6 +823,7 @@ sub navigation_table {
 
   my $param =
   {
+   browser         => $BROWSER,
     htmlfrag3      => html_frag('html3',$segment,$page_settings),
     htmlfrag4      => html_frag('html4',$segment,$page_settings),
     htmlfrag5      => html_frag('html5',$segment,$page_settings),
@@ -825,7 +836,8 @@ sub navigation_table {
     settings_table => settings_table($page_settings),
 
 
-    tr_instructions            => $CONFIG->tr('instructions') || $CONFIG->tr('INSTRUCTIONS')                       || '',
+#    tr_instructions            => $CONFIG->tr('instructions') || $CONFIG->tr('INSTRUCTIONS')   || '',
+#    tr_instructions            => $BROWSER->translate('INSTRUCTIONS'),
     tr_search_instructions     => $CONFIG->tr('search_instructions') || $CONFIG->tr('SEARCH_INSTRUCTIONS',$oligo)  || '',
     tr_navigation_instructions => $CONFIG->tr('navigation_instructions') || $CONFIG->tr('NAVIGATION_INSTRUCTIONS') || '',
     tr_examples                => show_examples() || '',

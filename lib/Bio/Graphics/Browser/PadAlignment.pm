@@ -11,9 +11,9 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 =head1 VERSION (CVS-info)
 
  $RCSfile: PadAlignment.pm,v $
- $Revision: 1.10 $
+ $Revision: 1.11 $
  $Author: lstein $
- $Date: 2003-06-27 15:41:08 $
+ $Date: 2003-07-02 00:55:42 $
 
 =head1 SYNOPSIS
 
@@ -484,7 +484,7 @@ sub alignment {
 	$length[$i][$j] = length $padded[$i][$j];
       }
 
-      my $l = $origin<0 ? $longest_name+2 : $longest_name;
+      my $l = $longest_name;
       $result .= $skipit ? ""
                          : sprintf ("\%${l}s \%${longest_line}d %s\n",
 				    $origin < 0 ? "($names{$j})"

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.37 2003-10-05 06:22:04 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.38 2003-10-06 02:53:55 stajich Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1464,7 +1464,7 @@ sub show_examples {
   my @examples = shellwords($examples);
   return unless @examples;
   my $source = $CONFIG->source;
-  my @urls = map { a({-href=>"?source=$source;name=".escape($_)},$_) } @examples;
+  my @urls = map { a({-href=>"?name=".escape($_)},$_) } @examples;
   return b($CONFIG->tr('Examples')).': '.join(', ',@urls).". ";
 }
 

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.97 2003-10-06 02:45:53 stajich Exp $
+# $Id: Browser.pm,v 1.98 2003-10-06 02:53:55 stajich Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1395,7 +1395,7 @@ sub _hits_to_html {
   my ($ref,$gd,$boxes) = @_;
   my $source   = $self->source;
   my $self_url = url(-relative=>1);
-  $self_url   .= "?source=$source";
+  # $self_url   .= "?source=$source";
 
   my $signature = md5_hex(rand().rand()); # just a big random number
   my ($width,$height) = $gd->getBounds;
@@ -1420,13 +1420,13 @@ sub _hits_to_html {
     my $y = $x + $width;
     my $start = int($length * $i);
     my $stop  = int($start + $length);
-    my $href      = $self_url . ";ref=$ref;start=$start;stop=$stop";
+    my $href      = $self_url . "?ref=$ref;start=$start;stop=$stop";
     $html .= qq(<area shape="rect" coords="$x,$ruler->[2],$y,$ruler->[4]" href="$href" alt="ruler" />\n);
   }
 
   foreach (@$boxes){
     my ($start,$stop) = ($_->[0]->start,$_->[0]->end);
-    my $href      = $self_url . ";ref=$ref;start=$start;stop=$stop";
+    my $href      = $self_url . "?ref=$ref;start=$start;stop=$stop";
     $html .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href" alt="ruler" />\n);
   }
   $html .= "</map>\n";

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.48 2004-01-28 02:18:45 allenday Exp $
+# $Id: Segment.pm,v 1.49 2004-01-30 03:12:46 allenday Exp $
 
 =head1 NAME
 
@@ -664,25 +664,25 @@ sub seq {
   my ($ref,$class,$base_start,$stop,$strand)
     = @{$self}{qw(sourceseq class start end strand)};
 
-  if($arg{self}){
-    my $r_id    = $self->{feature_id};
-    my $r_start = $self->{_requested_start};
-    my $r_end   = $self->{_requested_end};
-    my $r_len   = $r_end-$r_start+1;
+#  if($arg{self}){
+#    my $r_id    = $self->{feature_id};
+#    my $r_start = $self->{_requested_start};
+#    my $r_end   = $self->{_requested_end};
+#    my $r_len   = $r_end-$r_start+1;
 
-    $self->warn("FIXME: incomplete implementation of alternate sequence selection");
+#    $self->warn("FIXME: incomplete implementation of alternate sequence selection");
 
-    my $sth = $self->{factory}->{dbh}->prepare("
-     select substring(residues from $r_start for $r_len) from feature
-     where feature_id = $r_id ");
+#    my $sth = $self->{factory}->{dbh}->prepare("
+#     select substring(residues from $r_start for $r_len) from feature
+#     where feature_id = $r_id ");
 
-    $sth->execute or $self->throw("seq query failed");
+#    $sth->execute or $self->throw("seq query failed");
 
-    my $array_ref = $sth->fetchrow_arrayref;
-    my $seq = $$array_ref[0]; 
+#    my $array_ref = $sth->fetchrow_arrayref;
+#    my $seq = $$array_ref[0]; 
 
-    return $seq;
-  }
+#    return $seq;
+#  }
 
   my $feat_id = $self->{srcfeature_id};
 
@@ -694,23 +694,6 @@ sub seq {
     $reversed++;
     ($base_start,$stop) = ($stop,$base_start);
   } elsif ($strand < 0 ) {
-    $reversed++;
-  }
-
-  my ( $ref, $class, $base_start, $stop, $strand ) =
-    @{$self}{qw(sourceseq class start end strand)};
-
-  my $feat_id = $self->{srcfeature_id};
-
-  my $has_start = defined $base_start;
-  my $has_stop  = defined $stop;
-
-  my $reversed;
-  if ( $has_start && $has_stop && $base_start > $stop ) {
-    $reversed++;
-    ( $base_start, $stop ) = ( $stop, $base_start );
-  }
-  elsif ( $strand < 0 ) {
     $reversed++;
   }
 

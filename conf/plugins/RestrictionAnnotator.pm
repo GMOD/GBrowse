@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::RestrictionAnnotator;
-# $Id: RestrictionAnnotator.pm,v 1.6 2002-06-26 05:31:50 lstein Exp $
+# $Id: RestrictionAnnotator.pm,v 1.7 2002-06-26 06:13:41 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -71,6 +71,7 @@ sub annotate {
   my $segment = shift;
   my $config  = $self->configuration;
   configure_enzymes() unless %SITES;
+  return unless %SITES;
   return unless %$config;
   return unless $config->{on};
 
@@ -84,6 +85,7 @@ sub annotate {
   my $i = 0;
   for my $type (keys %$config) {
     next if $type eq 'on';
+    next unless $SITES{$type};
     my ($pattern,$offset) = @{$SITES{$type}};
     $feature_list->add_type($type=>{glyph   => 'generic',
 				    key     => "$type restriction site",

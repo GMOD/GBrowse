@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.38 2002-06-26 05:31:50 lstein Exp $
+# $Id: gbrowse.PLS,v 1.39 2002-06-26 06:13:41 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -328,13 +328,14 @@ sub main_display {
     # get the third party features
     $feature_files = load_external_sources($segment,$page_settings);
 
-    # add plugin annotators
-    load_plugin_annotations($segment,$feature_files,$page_settings);
-
     my ($img,$map);
     my $cell = overview($segment,$page_settings).br();
 
     if ($segment->length <= $MAX_SEGMENT) {
+
+      # add plugin annotators, but only if the length is reasonable!
+      load_plugin_annotations($segment,$feature_files,$page_settings);
+
       $CONFIG->width($page_settings->{width});
       my @tracks_to_show = grep {$page_settings->{features}{$_}{visible}} @{$page_settings->{tracks}};
       my %options = map {$_=>$page_settings->{features}{$_}{options}} @tracks_to_show;
@@ -567,7 +568,7 @@ sub adjust_settings {
     my %external = map {$_=>1} @external;
     foreach (@external) {
       next if exists $settings->{features}{$_};
-      $settings->{features}{$_} = {visible=>1,options=>0};
+      $settings->{features}{$_} = {visible=>1,options=>0,limit=>0};
       push @{$settings->{tracks}},$_;
     }
     # remove any URLs that aren't on the list
@@ -1148,7 +1149,7 @@ sub handle_upload {
   my (undef,$url) = name_uploaded_file($settings,$filename);
   warn "url = $url" if DEBUG;
   push @{$settings->{tracks}},$url;
-  $settings->{features}{$url} = {visible=>1,options=>0};
+  $settings->{features}{$url} = {visible=>1,options=>0,limit=>0};
 }
 
 sub handle_edit {

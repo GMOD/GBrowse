@@ -2,8 +2,8 @@ diff -Naur bioperl-1.0/Bio/DB/Biblio/soap.pm bioperl-1.01/Bio/DB/Biblio/soap.pm
 --- bioperl-1.0/Bio/DB/Biblio/soap.pm	Thu Feb 28 04:22:23 2002
 +++ bioperl-1.01/Bio/DB/Biblio/soap.pm	Fri Apr 12 00:10:14 2002
 @@ -1,4 +1,4 @@
--# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  #
  # BioPerl module Bio::DB::Biblio::soap.pm
  #
@@ -11,10 +11,10 @@ diff -Naur bioperl-1.0/Bio/DB/Biblio/soap.pm bioperl-1.01/Bio/DB/Biblio/soap.pm
  
  BEGIN { 
      # set the version for version checking
--    $VERSION = do { my @r = (q$Revision: 1.3 $ =~ /\d+/g); sprintf "%d.%-02d", @r };
--    $Revision = q$Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $;
-+    $VERSION = do { my @r = (q$Revision: 1.3 $ =~ /\d+/g); sprintf "%d.%-02d", @r };
-+    $Revision = q$Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $;
+-    $VERSION = do { my @r = (q$Revision: 1.4 $ =~ /\d+/g); sprintf "%d.%-02d", @r };
+-    $Revision = q$Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $;
++    $VERSION = do { my @r = (q$Revision: 1.4 $ =~ /\d+/g); sprintf "%d.%-02d", @r };
++    $Revision = q$Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $;
  
      # where to go...
      $DEFAULT_SERVICE = 'http://industry.ebi.ac.uk/soap/openBQS';
@@ -225,7 +225,7 @@ diff -Naur bioperl-1.0/Bio/DB/GFF/Adaptor/memory.pm bioperl-1.01/Bio/DB/GFF/Adap
 @@ -1,14 +1,27 @@
  package Bio::DB::GFF::Adaptor::memory;
  use strict;
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
 +# AUTHOR: Shulamit Avraham
 +# This module needs to be cleaned up and documented
 +
@@ -888,7 +888,7 @@ diff -Naur bioperl-1.0/Bio/DB/GFF/Adaptor/memory_iterator.pm bioperl-1.01/Bio/DB
 @@ -0,0 +1,51 @@
 +package Bio::DB::GFF::Adaptor::memory_iterator;
 +use strict;
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
 +# this module needs to be cleaned up and documented
 +
 +#use constant STH         => 0;
@@ -1228,9 +1228,9 @@ diff -Naur bioperl-1.0/Bio/DB/GFF.pm bioperl-1.01/Bio/DB/GFF.pm
 +++ bioperl-1.01/Bio/DB/GFF.pm	Sun Mar 31 16:25:03 2002
 @@ -1,6 +1,4 @@
 -package Bio::DB::GFF;
--# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
 -
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  =head1 NAME
  
  Bio::DB::GFF -- Storage and retrieval of sequence annotation data
@@ -1338,8 +1338,8 @@ diff -Naur bioperl-1.0/Bio/DasI.pm bioperl-1.01/Bio/DasI.pm
 --- bioperl-1.0/Bio/DasI.pm	Mon Mar  4 17:16:22 2002
 +++ bioperl-1.01/Bio/DasI.pm	Fri Apr 12 00:10:13 2002
 @@ -1,4 +1,4 @@
--# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  #
  # BioPerl module for Bio::DasI
  #
@@ -1359,7 +1359,7 @@ diff -Naur bioperl-1.0/Bio/DasI.pm bioperl-1.01/Bio/DasI.pm
  
 diff -Naur bioperl-1.0/Bio/Graphics/Feature.pm bioperl-1.01/Bio/Graphics/Feature.pm
 --- bioperl-1.0/Bio/Graphics/Feature.pm	Fri Mar 15 09:40:02 2002
-+++ bioperl-1.01/Bio/Graphics/Feature.pm	Fri Apr 12 07:53:36 2002
++++ bioperl-1.01/Bio/Graphics/Feature.pm	Fri Apr 12 19:31:16 2002
 @@ -1,15 +1,18 @@
  package Bio::Graphics::Feature;
  use strict;
@@ -1605,12 +1605,12 @@ diff -Naur bioperl-1.0/Bio/Graphics/Feature.pm bioperl-1.01/Bio/Graphics/Feature
  
 diff -Naur bioperl-1.0/Bio/Graphics/FeatureFile.pm bioperl-1.01/Bio/Graphics/FeatureFile.pm
 --- bioperl-1.0/Bio/Graphics/FeatureFile.pm	Fri Mar 15 09:40:02 2002
-+++ bioperl-1.01/Bio/Graphics/FeatureFile.pm	Fri Apr 12 07:56:25 2002
++++ bioperl-1.01/Bio/Graphics/FeatureFile.pm	Fri Apr 12 19:34:04 2002
 @@ -1,5 +1,6 @@
  package Bio::Graphics::FeatureFile;
--# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
 +
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  
  # This package parses and renders a simple tab-delimited format for features.
  # It is simpler than GFF, but still has a lot of expressive power.
@@ -1725,7 +1725,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/FeatureFile.pm bioperl-1.01/Bio/Graphics/Fea
  sub size  { shift->{stat}->[7];  }
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph/Factory.pm bioperl-1.01/Bio/Graphics/Glyph/Factory.pm
 --- bioperl-1.0/Bio/Graphics/Glyph/Factory.pm	Tue Mar  5 14:20:29 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph/Factory.pm	Fri Apr 12 07:53:43 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/Factory.pm	Fri Apr 12 19:31:26 2002
 @@ -61,7 +61,8 @@
  
  # create a glyph
@@ -1736,7 +1736,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/Factory.pm bioperl-1.01/Bio/Graphics/G
    my @result;
    my $panel = $self->panel;
    my ($leftmost,$rightmost) = ($panel->left,$panel->right);
-@@ -78,7 +79,8 @@
+@@ -78,12 +79,14 @@
  	unless (eval "require $glyphclass");
      }
      my $glyph = $glyphclass->new(-feature  => $f,
@@ -1746,7 +1746,14 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/Factory.pm bioperl-1.01/Bio/Graphics/G
  
      # this is removing glyphs that are not onscreen at all.
      # But never remove tracks!
-@@ -123,7 +125,7 @@
+     push @result,$glyph if $type eq 'track'
+-      || ($glyph->{left} + $glyph->{width} > $leftmost && $glyph->{left} < $rightmost);
++	|| ($glyph->{left} + $glyph->{width} > $leftmost && $glyph->{left} < $rightmost);
++
+   }
+   return wantarray ? @result : $result[0];
+ }
+@@ -123,7 +126,7 @@
        my $feature = $glyph->feature;
        return $value unless ref $value eq 'CODE';
        return unless $feature->isa('Bio::SeqFeatureI');
@@ -1757,7 +1764,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/Factory.pm bioperl-1.01/Bio/Graphics/G
    }
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph/anchored_arrow.pm bioperl-1.01/Bio/Graphics/Glyph/anchored_arrow.pm
 --- bioperl-1.0/Bio/Graphics/Glyph/anchored_arrow.pm	Fri Mar 15 09:40:03 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph/anchored_arrow.pm	Fri Apr 12 07:53:43 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/anchored_arrow.pm	Fri Apr 12 19:31:26 2002
 @@ -50,10 +50,10 @@
    my $pstart  = $self->panel->left;
    my $pend    = $self->panel->right-1;
@@ -1773,7 +1780,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/anchored_arrow.pm bioperl-1.01/Bio/Gra
    return ($sw,$ne,!$sw,!$ne);
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph/diamond.pm bioperl-1.01/Bio/Graphics/Glyph/diamond.pm
 --- bioperl-1.0/Bio/Graphics/Glyph/diamond.pm	Fri Mar 15 09:40:03 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph/diamond.pm	Fri Apr 12 07:53:44 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/diamond.pm	Fri Apr 12 19:31:26 2002
 @@ -16,12 +16,20 @@
    my $ymid = ($y1+$y2)/2;
  
@@ -1800,7 +1807,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/diamond.pm bioperl-1.01/Bio/Graphics/G
    $gd->line($x2,$ymid,$xmid,$y2,$fg);
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph/group.pm bioperl-1.01/Bio/Graphics/Glyph/group.pm
 --- bioperl-1.0/Bio/Graphics/Glyph/group.pm	Fri Mar 15 09:40:03 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph/group.pm	Fri Apr 12 07:53:44 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/group.pm	Fri Apr 12 19:31:26 2002
 @@ -16,6 +16,15 @@
  # we don't label group (yet)
  sub label { 0 }
@@ -1819,19 +1826,27 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/group.pm bioperl-1.01/Bio/Graphics/Gly
  #  my @parts = $self->parts or return $self->SUPER::layout_width;
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph/segmented_keyglyph.pm bioperl-1.01/Bio/Graphics/Glyph/segmented_keyglyph.pm
 --- bioperl-1.0/Bio/Graphics/Glyph/segmented_keyglyph.pm	Fri Mar 15 09:40:03 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph/segmented_keyglyph.pm	Fri Apr 12 07:56:26 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/segmented_keyglyph.pm	Fri Apr 12 19:34:04 2002
 @@ -1,6 +1,6 @@
  package Bio::Graphics::Glyph::segmented_keyglyph;
  
--# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  # Don't use this package.  It's just for inheriting the segmented glyph in the panel key.
  
  use strict;
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph/segments.pm bioperl-1.01/Bio/Graphics/Glyph/segments.pm
 --- bioperl-1.0/Bio/Graphics/Glyph/segments.pm	Fri Mar 15 09:40:03 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph/segments.pm	Fri Apr 12 07:53:44 2002
-@@ -8,19 +8,13 @@
++++ bioperl-1.01/Bio/Graphics/Glyph/segments.pm	Fri Apr 12 19:31:26 2002
+@@ -1,6 +1,7 @@
+ package Bio::Graphics::Glyph::segments;
+ 
+ use strict;
++use Bio::Location::Simple;
+ use Bio::Graphics::Glyph::generic;
+ use Bio::Graphics::Glyph::segmented_keyglyph;
+ use vars '@ISA';
+@@ -8,19 +9,13 @@
  	   Bio::Graphics::Glyph::generic
  	 );
  
@@ -1852,7 +1867,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/segments.pm bioperl-1.01/Bio/Graphics/
  sub bump {
    my $self = shift;
    return $self->SUPER::bump(@_) if $self->all_callbacks;
-@@ -28,15 +22,33 @@
+@@ -28,15 +23,33 @@
  }
  sub label {
    my $self = shift;
@@ -1892,7 +1907,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/segments.pm bioperl-1.01/Bio/Graphics/
  1;
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph/track.pm bioperl-1.01/Bio/Graphics/Glyph/track.pm
 --- bioperl-1.0/Bio/Graphics/Glyph/track.pm	Fri Mar 15 09:40:03 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph/track.pm	Fri Apr 12 07:53:44 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/track.pm	Fri Apr 12 19:31:26 2002
 @@ -12,11 +12,14 @@
    return 'none';
  }
@@ -1915,16 +1930,15 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/track.pm bioperl-1.01/Bio/Graphics/Gly
  # sub draw_component { }
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph/transcript.pm bioperl-1.01/Bio/Graphics/Glyph/transcript.pm
 --- bioperl-1.0/Bio/Graphics/Glyph/transcript.pm	Fri Mar 15 09:40:03 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph/transcript.pm	Fri Apr 12 07:56:26 2002
-@@ -1,16 +1,16 @@
++++ bioperl-1.01/Bio/Graphics/Glyph/transcript.pm	Fri Apr 12 19:34:04 2002
+@@ -1,16 +1,15 @@
  package Bio::Graphics::Glyph::transcript;
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  
  use strict;
 -use Bio::Graphics::Glyph::generic;
 -use Bio::Graphics::Glyph::segmented_keyglyph;
 +use Bio::Graphics::Glyph::segments;
-+use Bio::Location::Simple;
  use vars '@ISA';
 -@ISA = qw( Bio::Graphics::Glyph::segmented_keyglyph
 -	   Bio::Graphics::Glyph::generic
@@ -1938,7 +1952,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/transcript.pm bioperl-1.01/Bio/Graphic
    return $pad unless $self->feature->strand < 0;
    return $self->arrow_length > $pad ? $self->arrow_length : $pad;
  }
-@@ -18,17 +18,32 @@
+@@ -18,17 +17,32 @@
  sub pad_right {
    my $self = shift;
    my $pad  = $self->SUPER::pad_right;
@@ -1972,7 +1986,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/transcript.pm bioperl-1.01/Bio/Graphic
    if ($self->feature->strand >= 0) {
      my($x1,$y1,$x2,$y2) = $parts[-1]->bounds(@_);
      my $center = ($y2+$y1)/2;
-@@ -52,25 +67,6 @@
+@@ -52,25 +66,6 @@
    return 'hat';
  }
  
@@ -2000,11 +2014,11 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/transcript.pm bioperl-1.01/Bio/Graphic
  
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph/transcript2.pm bioperl-1.01/Bio/Graphics/Glyph/transcript2.pm
 --- bioperl-1.0/Bio/Graphics/Glyph/transcript2.pm	Fri Mar 15 09:40:03 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph/transcript2.pm	Fri Apr 12 07:56:26 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/transcript2.pm	Fri Apr 12 19:34:04 2002
 @@ -1,9 +1,12 @@
  package Bio::Graphics::Glyph::transcript2;
  
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
 +
  use strict;
  use Bio::Graphics::Glyph::transcript;
@@ -2098,7 +2112,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/transcript2.pm bioperl-1.01/Bio/Graphi
      $self->SUPER::draw_connectors(@_);
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph.pm bioperl-1.01/Bio/Graphics/Glyph.pm
 --- bioperl-1.0/Bio/Graphics/Glyph.pm	Fri Mar 15 09:40:02 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph.pm	Fri Apr 12 07:53:36 2002
++++ bioperl-1.01/Bio/Graphics/Glyph.pm	Fri Apr 12 19:31:16 2002
 @@ -4,6 +4,8 @@
  use strict;
  use Carp 'croak';
@@ -2309,7 +2323,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph.pm bioperl-1.01/Bio/Graphics/Glyph.pm
  
 diff -Naur bioperl-1.0/Bio/Graphics/Panel.pm bioperl-1.01/Bio/Graphics/Panel.pm
 --- bioperl-1.0/Bio/Graphics/Panel.pm	Fri Mar 15 09:40:03 2002
-+++ bioperl-1.01/Bio/Graphics/Panel.pm	Fri Apr 12 07:53:36 2002
++++ bioperl-1.01/Bio/Graphics/Panel.pm	Fri Apr 12 19:31:16 2002
 @@ -7,7 +7,7 @@
  use GD;
  use vars '$VERSION';
@@ -2615,8 +2629,8 @@ diff -Naur bioperl-1.0/Bio/Index/GenBank.pm bioperl-1.01/Bio/Index/GenBank.pm
 @@ -1,6 +1,5 @@
 -
  #
--# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  #
  # BioPerl module for Bio::Index::Abstract
  #
@@ -2668,8 +2682,8 @@ diff -Naur bioperl-1.0/Bio/Root/Exception.pm bioperl-1.01/Bio/Root/Exception.pm
 +++ bioperl-1.01/Bio/Root/Exception.pm	Fri Apr 12 00:10:14 2002
 @@ -1,5 +1,5 @@
  #-----------------------------------------------------------------
--# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  #
  # BioPerl module Bio::Root::Exception
  #
@@ -2687,8 +2701,8 @@ diff -Naur bioperl-1.0/Bio/Search/Hit/BlastHit.pm bioperl-1.01/Bio/Search/Hit/Bl
 +++ bioperl-1.01/Bio/Search/Hit/BlastHit.pm	Fri Apr 12 00:10:14 2002
 @@ -1,5 +1,5 @@
  #-----------------------------------------------------------------
--# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  #
  # BioPerl module Bio::Search::Hit::BlastHit
  #
@@ -2696,8 +2710,8 @@ diff -Naur bioperl-1.0/Bio/Search/Hit/BlastHit.pm bioperl-1.01/Bio/Search/Hit/Bl
  
  @ISA = qw( Bio::Root::Root Bio::Search::Hit::HitI );
  
--$Revision = '$Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $';  #'
-+$Revision = '$Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $';  #'
+-$Revision = '$Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $';  #'
++$Revision = '$Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $';  #'
  
  
  =head2 new
@@ -2795,8 +2809,8 @@ diff -Naur bioperl-1.0/Bio/SearchIO/blast.pm bioperl-1.01/Bio/SearchIO/blast.pm
 --- bioperl-1.0/Bio/SearchIO/blast.pm	Fri Mar  8 15:22:16 2002
 +++ bioperl-1.01/Bio/SearchIO/blast.pm	Sun Mar 31 16:30:02 2002
 @@ -1,4 +1,4 @@
--# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  #
  # BioPerl module for Bio::SearchIO::blast
  #
@@ -2826,13 +2840,13 @@ diff -Naur bioperl-1.0/Bio/Structure/StructureI.pm bioperl-1.01/Bio/Structure/St
 --- bioperl-1.0/Bio/Structure/StructureI.pm	Wed Feb 13 10:34:52 2002
 +++ bioperl-1.01/Bio/Structure/StructureI.pm	Fri Apr 12 00:10:15 2002
 @@ -1,9 +1,9 @@
--# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
 -# placeholder for Bio::StructureI
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
 +# placeholder for Bio::Structure::StructureI
  
--# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  #
 -# BioPerl module for Bio::StructureI
 +# BioPerl module for Bio::Structure::StructureI
@@ -2862,7 +2876,7 @@ diff -Naur bioperl-1.0/Bio/Tools/SeqWords.pm bioperl-1.01/Bio/Tools/SeqWords.pm
 --- bioperl-1.0/Bio/Tools/SeqWords.pm	Mon Nov 19 21:09:40 2001
 +++ bioperl-1.01/Bio/Tools/SeqWords.pm	Fri Apr 12 00:10:15 2002
 @@ -1,3 +1,4 @@
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  
  #---------------------------------------------------------------------------
  # PACKAGE    : SeqWords.pm
@@ -2989,8 +3003,8 @@ diff -Naur bioperl-1.0/Bio/Variation/AAChange.pm bioperl-1.01/Bio/Variation/AACh
 --- bioperl-1.0/Bio/Variation/AAChange.pm	Mon Feb 18 12:17:25 2002
 +++ bioperl-1.01/Bio/Variation/AAChange.pm	Wed Mar 20 08:08:24 2002
 @@ -1,4 +1,4 @@
--# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  #
  # BioPerl module for Bio::Variation::AAChange
  #
@@ -3067,8 +3081,8 @@ diff -Naur bioperl-1.0/Bio/Variation/AAReverseMutate.pm bioperl-1.01/Bio/Variati
 --- bioperl-1.0/Bio/Variation/AAReverseMutate.pm	Mon Nov 19 21:09:45 2001
 +++ bioperl-1.01/Bio/Variation/AAReverseMutate.pm	Wed Mar 20 08:08:24 2002
 @@ -1,4 +1,4 @@
--# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  #
  # BioPerl module for Bio::Variation::AAReverseMutate
  #
@@ -3087,8 +3101,8 @@ diff -Naur bioperl-1.0/Bio/Variation/Allele.pm bioperl-1.01/Bio/Variation/Allele
 --- bioperl-1.0/Bio/Variation/Allele.pm	Mon Feb 18 12:17:25 2002
 +++ bioperl-1.01/Bio/Variation/Allele.pm	Wed Mar 20 08:08:24 2002
 @@ -1,4 +1,4 @@
--# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  #
  # BioPerl module for Bio::Variation::Allele
  #
@@ -3143,8 +3157,8 @@ diff -Naur bioperl-1.0/Bio/Variation/DNAMutation.pm bioperl-1.01/Bio/Variation/D
 --- bioperl-1.0/Bio/Variation/DNAMutation.pm	Mon Feb 18 12:17:25 2002
 +++ bioperl-1.01/Bio/Variation/DNAMutation.pm	Wed Mar 20 08:08:24 2002
 @@ -1,4 +1,4 @@
--# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  #
  # BioPerl module for Bio::Variation::DNAMutation
  #
@@ -3220,8 +3234,8 @@ diff -Naur bioperl-1.0/Bio/Variation/RNAChange.pm bioperl-1.01/Bio/Variation/RNA
 --- bioperl-1.0/Bio/Variation/RNAChange.pm	Mon Feb 18 12:17:25 2002
 +++ bioperl-1.01/Bio/Variation/RNAChange.pm	Wed Mar 20 08:08:24 2002
 @@ -1,4 +1,4 @@
--# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  #
  # BioPerl module for Bio::Variation::RNAChange
  #
@@ -3321,8 +3335,8 @@ diff -Naur bioperl-1.0/Bio/Variation/SeqDiff.pm bioperl-1.01/Bio/Variation/SeqDi
 --- bioperl-1.0/Bio/Variation/SeqDiff.pm	Mon Feb 18 12:17:25 2002
 +++ bioperl-1.01/Bio/Variation/SeqDiff.pm	Wed Mar 20 08:08:24 2002
 @@ -1,4 +1,4 @@
--# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  # bioperl module for Bio::Variation::SeqDiff
  #
  # Cared for by Heikki Lehvaslaiho <heikki@ebi.ac.uk>
@@ -3383,8 +3397,8 @@ diff -Naur bioperl-1.0/Makefile.PL bioperl-1.01/Makefile.PL
 @@ -1,6 +1,6 @@
  ## --Makefile.PL for Bioperl core module distribution--##
  ## ----------------------------------------------------##
--## $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+## $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-## $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++## $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  ##----------------------------------------------------
  
  #
@@ -3552,7 +3566,7 @@ diff -Naur bioperl-1.0/bioperl.lisp bioperl-1.01/bioperl.lisp
 -(defun bioperl-object-start (perl-object-name perl-caretaker-name caretaker-email)
 -  "Places standard bioperl object notation headers and footers"
 -  (interactive "sName of Object: \nsName of caretaker: \nsEmail: ")
--  (insert "# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $\n#\n# BioPerl module for " perl-object-name "\n#\n# Cared for by " perl-caretaker-name " <" caretaker-email ">\n#\n# Copyright " perl-caretaker-name "\n#\n# You may distribute this module under the same terms as perl itself\n\n")
+-  (insert "# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $\n#\n# BioPerl module for " perl-object-name "\n#\n# Cared for by " perl-caretaker-name " <" caretaker-email ">\n#\n# Copyright " perl-caretaker-name "\n#\n# You may distribute this module under the same terms as perl itself\n\n")
 -  (insert "# POD documentation - main docs before the code\n\n")
 -  (insert "=head1 NAME\n\n" perl-object-name " - DESCRIPTION of Object\n\n")
 -  (insert "=head1 SYNOPSIS\n\nGive standard usage here\n\n")
@@ -3584,7 +3598,7 @@ diff -Naur bioperl-1.0/bioperl.lisp bioperl-1.01/bioperl.lisp
 -						 caretaker-email)
 -  "Places standard bioperl object notation headers and footers"
 -  (interactive "sName of Object: \nsName of caretaker: \nsEmail: ")
--  (insert "# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $\n#\n# BioPerl module for " perl-object-name "\n#\n# Cared for by " perl-caretaker-name " <" caretaker-email ">\n#\n# Copyright " perl-caretaker-name "\n#\n# You may distribute this module under the same terms as perl itself\n\n")
+-  (insert "# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $\n#\n# BioPerl module for " perl-object-name "\n#\n# Cared for by " perl-caretaker-name " <" caretaker-email ">\n#\n# Copyright " perl-caretaker-name "\n#\n# You may distribute this module under the same terms as perl itself\n\n")
 -  (insert "# POD documentation - main docs before the code\n\n")
 -  (insert "=head1 NAME\n\n" perl-object-name " - DESCRIPTION of Interface\n\n")
 -  (insert "=head1 SYNOPSIS\n\nGive standard usage here\n\n")
@@ -3666,8 +3680,8 @@ diff -Naur bioperl-1.0/examples/biblio.pl bioperl-1.01/examples/biblio.pl
  #   senger@ebi.ac.uk
  #   February 2002
  #
--#   $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+#   $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-#   $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++#   $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  #-----------------------------------------------------------------------------
  
  use strict;
@@ -3926,8 +3940,8 @@ diff -Naur bioperl-1.0/t/DNAMutation.t bioperl-1.01/t/DNAMutation.t
 @@ -1,6 +1,6 @@
  # -*-Perl-*-
  ## Bioperl Test Harness Script for Modules
--## $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+## $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-## $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++## $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  
  # Before `make install' is performed this script should be runnable with
  # `make test'. After `make install' it should work as `perl test.t'
@@ -3971,8 +3985,8 @@ diff -Naur bioperl-1.0/t/SearchIO.t bioperl-1.01/t/SearchIO.t
 @@ -1,6 +1,6 @@
  # -*-Perl-*-
  ## Bioperl Test Harness Script for Modules
--## $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+## $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-## $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++## $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  
  # Before `make install' is performed this script should be runnable with
  # `make test'. After `make install' it should work as `perl test.t'
@@ -3991,8 +4005,8 @@ diff -Naur bioperl-1.0/t/TCoffee.t bioperl-1.01/t/TCoffee.t
 @@ -1,6 +1,6 @@
  # -*-Perl-*-
  ## Bioperl Test Harness Script for Modules
--## $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+## $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-## $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++## $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  
  use strict;
  use vars qw($NUMTESTS);
@@ -4012,8 +4026,8 @@ diff -Naur bioperl-1.0/t/flat.t bioperl-1.01/t/flat.t
  # This is -*-Perl-*- code
  ## Bioperl Test Harness Script for Modules
  ##
--# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.4 2002-04-13 00:46:48 lstein Exp $
  
  # Before `make install' is performed this script should be runnable with
  # `make test'. After `make install' it should work as `perl test.t'

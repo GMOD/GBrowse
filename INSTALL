@@ -3,8 +3,9 @@ This document describes how to install the Generic Genome Browser.
 1. PREREQUISITES
 
 GBrowse runs on top of several software packages.  These must be
-installed and configured before you can run it.  Most preconfigured
-Linux systems will have some of these packages installed already.
+installed and configured before you can run GBrowse.  Most
+preconfigured Linux systems will have some of these packages installed
+already.
 
   A) MySQL -- http://www.mysql.com
 	The MySQL database is a fast open source relational database
@@ -17,7 +18,6 @@ Linux systems will have some of these packages installed already.
   C) Perl 5.005 -- http://www.cpan.org
 	The Perl language is widely used for web applications.
 	Version 5.6 is preferred, but 5.00503 or higher will work.
-	
 
   D) Standard Perl modules -- http://www.cpan.org
 	The following Perl modules must be installed for GBrowse to work.
@@ -249,37 +249,53 @@ under mod_perl and it is suggested that you disable Apache::DBI.
 
 8. BIOPERL VERSIONS
 
-GBrowse will work with Bioperl version 1.00. However, one useful
-feature -- the ability to use wildcards in the search field --
-requires Bioperl version 1.01 or higher. At the time this was written,
-version 1.01 was not available and could only be obtained using
-anonymous CVS.  Here is the magic incantation:
+GBrowse works with Bioperl version 1.0. However, one useful feature --
+the ability to use wildcards in the search field -- requires Bioperl
+version 1.01 or higher. In addition, there are a number of subtle
+display problems present in Bioperl 1.0 that have since been fixed.
 
- cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl \
-	checkout -r branch-1-0-0 bioperl-live
 
-When prompted, the password is "cvs".  For more details, see
-http://cvs.bioperl.org.
+At the time this was written, Bioperl 1.01 had not been officially
+released.  There are two ways to get it:
 
-Another alternative is to unpack a virgin Bioperl-1.0 distribution and
-patch it to 1.01 using the patch file "bioperl-1.0.patch", which
-you'll find in the "extras" directory of the GBrowse distribution.
-The steps to follow are these:
+  a. The Patch method
 
- 1. unpack bioperl-1.0.tar.gz
-    gunzip -c bioperl-1.0.tar.gz | tar xvf -
+  This distribution contains a patch file named "bioperl-1.0.patch"
+  located in the "extras" subdirectory. Applying it to a virgin
+  Bioperl-1.0 distribution will generate a version 1.01 distribution.
+  The steps to follow are these:
 
- 2. enter bioperl-1.0
-    cd bioperl-1.0
+  a1. unpack bioperl-1.0.tar.gz:
+      gunzip -c bioperl-1.0.tar.gz | tar xvf -
 
- 3. apply the patch
-    patch -p1 < ../Generic-Genome-Browser-1.38/extras/bioperl-1.0.patch
+  a2. enter bioperl-1.0:
+      cd bioperl-1.0
 
-Modify the last command for the actual location of the patch file.
+  a3. apply the patch:
+      patch -p1 < ../Generic-Genome-Browser-1.XX/extras/bioperl-1.0.patch
+
+  The last command will need to be modified to indicate the actual
+  location of the patch file.
+
+  b. By anonymous CVS.  
+
+  You can get Bioperl 1.01 by anonymous CVS using this incantation:
+
+   cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl \
+	  checkout -r branch-1-0-0 bioperl-live
+
+   When prompted, the password is "cvs".  For more details, see
+   http://cvs.bioperl.org.
+
+9. SUPPORT AND BUG REPORTS
+
+Please send requests for help to gmod-devel@lists.sourceforge.net.
+There is also a formal bug tracking and feature request system in
+place at http://sourceforge.net/projects/gmod/
 
 
 Have fun!
 
 Lincoln Stein & the GMOD team
 lstein@cshl.org
-April 8, 2002
+April 12, 2002

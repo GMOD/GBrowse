@@ -84,6 +84,10 @@ unless ($OPTIONS{HTDOCS}) {
 unless ($OPTIONS{CGIBIN}) {
   $OPTIONS{CGIBIN} = GuessDirectories->cgibin || "$OPTIONS{PREFIX}/cgi-bin";
 }
+unless (defined $OPTIONS{DO_XS}) {
+  $OPTIONS{DO_XS}  = $^O =~ /^(MSWin|dos)/i ? '' : 1;
+}
+
 
 open F,">$Bin/GGB.def" or die "Can't open $Bin/GGB.def for writing: $!";
 print F "# This hints file contains configuration information used by the generic browser\n\n";
@@ -117,8 +121,8 @@ WriteMakefile(
 	      'NAME'	     => 'Generic-Genome-Browser',
 	      'VERSION'      => $VERSION,
 	      'PREREQ_PM'    => {
-				 Bio::Perl     => 0,
-				 GD            => 0,
+				 Bio::Perl     => 1.02,
+				 GD            => 2.08,
 				 IO::String    => 0,
 				 Text::Shellwords  => 1.0,
 				}, # e.g., Module::Name => 1.1

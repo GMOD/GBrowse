@@ -524,6 +524,9 @@ Generic Genome Browser Installation
     indicated entries and load them into a MySQL database. You can also load
     flat files in Genbank or EMBL format.
 
+    For human gene models, we suggest you use the ucsc_genes2gff.pl script,
+    which operates on the files downloadable from the UCSC genome browser.
+
     The sample configuration file 08.genbank.conf (located in
     contrib/conf_files) is appropriate for data loaded with load_genbank.pl.
 

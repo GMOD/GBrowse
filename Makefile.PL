@@ -73,6 +73,7 @@ WriteMakefile(
 	      'PREREQ_PM'    => {
 				 Bio::Graphics => 0.92,
 				 Bio::DB::GFF  => 1.01,
+				 Text::Shellwords  => 1.0,
 				}, # e.g., Module::Name => 1.1
 	      PL_FILES       => {
 				 'bin/process_sgd.PLS' => 'bin/process_sgd.pl',

@@ -304,7 +304,7 @@ CREATE TABLE fmeta (
 );
 
 REVOKE ALL ON TABLE fmeta FROM PUBLIC;
-GRANT ALL ON TABLE fmeta TO $webowner;
+GRANT SELECT ON TABLE fmeta TO $webowner;
 
 DROP TABLE fgroup;
 CREATE TABLE fgroup (
@@ -314,7 +314,7 @@ CREATE TABLE fgroup (
 );
 
 REVOKE ALL ON TABLE fgroup FROM PUBLIC;
-GRANT ALL ON TABLE fgroup TO $webowner;
+GRANT SELECT ON TABLE fgroup TO $webowner;
 
 DROP TABLE fdata;
 CREATE TABLE fdata (
@@ -335,7 +335,7 @@ CREATE TABLE fdata (
 );
 
 REVOKE ALL ON TABLE fdata FROM PUBLIC;
-GRANT ALL ON TABLE fdata TO $webowner;
+GRANT SELECT ON TABLE fdata TO $webowner;
 
 DROP TABLE fattribute_to_feature;
 CREATE TABLE fattribute_to_feature (
@@ -345,7 +345,7 @@ CREATE TABLE fattribute_to_feature (
 );
 
 REVOKE ALL ON TABLE fattribute_to_feature FROM PUBLIC;
-GRANT ALL ON TABLE fattribute_to_feature TO $webowner;
+GRANT SELECT ON TABLE fattribute_to_feature TO $webowner;
 
 DROP TABLE fdna;
 CREATE TABLE fdna (
@@ -355,7 +355,7 @@ CREATE TABLE fdna (
 );
 
 REVOKE ALL ON TABLE fdna FROM PUBLIC;
-GRANT ALL ON TABLE fdna TO $webowner;
+GRANT SELECT ON TABLE fdna TO $webowner;
 
 DROP TABLE  fattribute;
 CREATE TABLE fattribute (
@@ -364,7 +364,7 @@ CREATE TABLE fattribute (
 );
 
 REVOKE ALL ON TABLE fattribute FROM PUBLIC;
-GRANT ALL ON TABLE fattribute TO $webowner;
+GRANT SELECT ON TABLE fattribute TO $webowner;
 
 DROP TABLE ftype;
 CREATE TABLE ftype (
@@ -374,7 +374,7 @@ CREATE TABLE ftype (
 );
 
 REVOKE ALL ON TABLE ftype FROM PUBLIC;
-GRANT ALL ON TABLE ftype TO $webowner;
+GRANT SELECT ON TABLE ftype TO $webowner;
 
 END
 ;

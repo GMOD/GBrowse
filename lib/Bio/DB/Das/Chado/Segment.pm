@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.4 2003-01-10 22:09:23 scottcain Exp $
+# $Id: Segment.pm,v 1.5 2003-01-13 17:48:46 scottcain Exp $
 
 =head1 NAME
 
@@ -160,7 +160,6 @@ sub new {
                 end           => $end,
                 length        => $length,
                 srcfeature_id => $srcfeature_id,
-                cvterm_id     => $cvterm_id,
                 name          => $name }, ref $self || $self;
 }
 
@@ -338,13 +337,12 @@ sub features {
 
 # set type variable (hard coded to 'gene' right now)
 
-  my %termhash = %{$self->{cvterm_id}};
+  my %termhash = %{$self->{dbadaptor}->{cvterm_id}};
 
   my @keys;
   foreach my $type (@$types) {
     my @tempkeys = grep(/\E$type\Q/i , keys %termhash );
     push @keys, @tempkeys;
-    warn "@tempkeys\n";
   }
 
   my $sql_types;
@@ -388,6 +386,7 @@ order by fl.nbeg
 
 #take these results and create a list of Bio::SeqFeatureI objects
 
+  my %termname = %{$self->{dbadpator}->{cvtermname}};
   while (my $hash_ref = $sth->fetchrow_hashref) {
 
     my ($start,$end);
@@ -405,9 +404,9 @@ order by fl.nbeg
                        -strand     => 1, 
                        -seq_id     => $$hash_ref{name},
                        -annotation => $$hash_ref{name},
-                       -group      => "gene",
-                       -type       => "gene:sgd",
-                       -primary    => "gene" );
+                       -group      => $termname{$$hashref{type_id}},
+                       -type       => $termname{$$hashref{type_id}},
+                       -primary    => $termname{$$hashref{type_id}} );
 
     push @features, $feat;
  

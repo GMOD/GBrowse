@@ -1,29 +1,44 @@
 package Bio::Graphics::Browser::Plugin::FastaDumper;
-# $Id: FastaDumper.pm,v 1.5 2002-06-26 05:31:50 lstein Exp $
+# $Id: FastaDumper.pm,v 1.6 2002-07-07 03:13:36 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser::Markup;
 
 use CGI qw(:standard );
+
+use constant DEBUG => 1;
 
 use vars qw($VERSION @ISA @MARKUPS %LABELS 
 	    $BACKGROUNDUPPER %COLORNAMES $PANEL);
 
+my @COLORS = sort qw(red green blue yellow orange
+		     cyan magenta
+		     chartreuse maroon lime deeppink
+		     orchid salmon brown crimon aqua
+		     silver tan teal tomato thistle
+		     lightgrey grey darkgrey
+		    );
+
 BEGIN {
     $BACKGROUNDUPPER = 'YELLOW';
     @MARKUPS = ( undef,  # none
-		 "background-color: %s",  # for uppercase
-		 'font-weight: bold',
-		 'text-decoration: underline',
-		 'font-style: italic',
-		 'color: %s');
+		 "UPPERCASE",  # for uppercase
+		 'Font-weight: bold',
+		 'Text-decoration: underline',
+		 'Font-style: italic',
+		 'FGCOLOR %s',
+		 'BGCOLOR %s',
+	       );
 
     %LABELS =  ( 0 => 'None',
-		 1 => 'Upper/Lower Case',
+		 1 => 'Uppercase',
 		 2 => 'Bold',
 		 3 => 'Underline',
 		 4 => 'Italics',
-		 5 => 'Color');
+		 5 => 'Text',
+		 6 => 'Background',
+	       );
 }
 
 $VERSION = '0.11';
@@ -43,85 +58,88 @@ sub dump {
     my $config  = $self->configuration;
     my $dna = lc $segment->dna;
     my $browser = $self->browser_config();
-    my @markup;
-    my %markuptype;
-#    warn("====== beginning dump =====\n");
+    warn("====== beginning dump =====\n") if DEBUG;
     my $objtype = $self->objtype();
     $objtype .= ".";
-    my %colors;
+
+    my %types;
+    my @regions_to_markup;
+
+    my $markup = Bio::Graphics::Browser::Markup->new;
+
 
     while( my ($type,$val) = each %{$config} ) {
-	# skip val when it is 0 anyways and undef
-	next unless( defined $val && length($val) && 
-		     $val && $type =~ s/^\Q$objtype// &&
-		     $type !~ /format$/ );
-	if( $type =~ /(\S+)\.color$/ ) {
-	    my $t = $1;
-	    my $typev = $browser->setting($t,'feature');
-	    unless (defined $typev) {  next } 
-	    if( $val =~ /^\#([A-F0-9]{6})/ ) { $val = '#'.$1 } 
-	    ($typev) = ( $typev =~ /^(\S+)\:/);
-	    $colors{$typev} = $val if defined $typev;
-	} else {
-	    my $typev = $browser->setting($type,'feature');	    
-	    if( defined $typev ) {
-		push @{ $markuptype{$val} }, ( split(/\s+/,$typev));
-	    } else { 		
-#		warn("undefined typev for $type\n"); 
-	    }
-	}
-    }
-    my @ornament;
-#    warn("segment length is ".$segment->length()."\n");
-    foreach my $formattype ( keys %markuptype ) { 
-	warn("types are ".join(' ', @{ $markuptype{$formattype} } ) . "\n");
-	my $iterator = $segment->get_seq_stream(-types=>$markuptype{$formattype},
-						-automerge=>1);
-	warn("segment is ".$segment->start ."..". $segment->end."\n");
-	next unless $iterator;
-	while (my $markupregion = $iterator->next_seq) {
 
-	  # handle both sub seqfeatures and split locations...
-	  my @parts = eval { $markupregion->sub_SeqFeature } ;
-	  @parts = eval { my $id   = $markupregion->location->seq_id;
-			  my @subs = $markupregion->location->sub_Location;
-			  grep {$id eq $_->seq_id} @subs } unless @parts;
-	  @parts = ($markupregion) unless @parts;
 
-	  for my $p (@parts) {
-	    my $start = $p->start - $segment->start;
-	    my $end   = $start + $p->length;
-	    warn "annotating $start..$end";
-	    $start = 0 if( $start < 0);
+      next unless $val;
+      next if $type =~ /\.(f|b)gcolor$/i;
+      next if $type =~ /format$/;
 
-	    #	    warn("$p ". $p->location->to_FTstring() . " type is ".$p->primary_tag);
+      warn "configuring $type => $val\n";
 
-	    my $fontadj = $formattype;
-
-	    # capitalization is a special case
-	    if( $formattype == 1  ) {
-	      #		warn("capitalization for $start - $end");
-	      substr($dna,$start,$end - $start) =~ tr/a-z/A-Z/;
-	      $fontadj = "$formattype;COLOR=$BACKGROUNDUPPER";
-	    } elsif( $formattype == 5 ) {
-	      $fontadj = "$formattype;COLOR=".$colors{$p->primary_tag};
-	    }
-	    if( $config->{format} eq 'html') {
-	      # for HTML formatting		
-#		warn("$fontadj $start - $end\n");
-		push @ornament,[$fontadj,$start,$end];
-	      }
-	  }
-	}
+      my $style = $MARKUPS[$val];
+      if ($style =~ /^(F|B)GCOLOR/) {
+	$style = sprintf($style,$config->{"$type.\L$1\Egcolor"});
       }
+
+      (my $feature_type = $type) =~ s/^[^.]+\.//;
+      my @types = $browser->label2type($feature_type) or next;  # there may be several feature types defined for each track
+      for my $t (@types) {
+	$markup->add_style($t => $style);
+	warn "adding style $t => $style\n" if DEBUG
+      }
+
+      foreach (@types) { $types{$_}++ };
+    }
+
+    warn("segment length is ".$segment->length()."\n") if DEBUG;
+    my $iterator = $segment->get_seq_stream(-types=>[keys %types],
+					    -automerge=>1) or return;
+    while (my $markupregion = $iterator->next_seq) {
+
+      warn "got feature $markupregion\n" if DEBUG;
+
+      # handle both sub seqfeatures and split locations...
+      # somebody rescue me from this insanity!
+      my @parts = eval { $markupregion->sub_SeqFeature } ;
+      @parts = eval { my $id   = $markupregion->location->seq_id;
+		      my @subs = $markupregion->location->sub_Location;
+		      grep {$id eq $_->seq_id} @subs } unless @parts;
+      @parts = ($markupregion) unless @parts;
+
+      for my $p (@parts) {
+	my $start = $p->start - $segment->start;
+	my $end   = $start + $p->length;
+
+	warn "annotating $p $start..$end" if DEBUG;
+	$start = 0             if $start < 0;  # this can happen
+	$end   = $segment->end if $end > $segment->end;
+
+	warn("$p ". $p->location->to_FTstring() . " type is ".$p->primary_tag) if DEBUG;
+
+	my $style_symbol;
+	foreach ($p->type,$p->method,$markupregion->type,$markupregion->method) {
+	  $style_symbol ||= $markup->valid_symbol($_) ? $_ : undef;
+	}
+	warn "style symbol for $p is $style_symbol\n" if DEBUG;
+	next unless $style_symbol;
+
+	push @regions_to_markup,[$style_symbol,$start,$end];
+      }
+    }
+
+    # add a newline every 60 positions
+    $markup->add_style('newline',"\n");
+    push @regions_to_markup,map {['newline',60*$_]} (1..length($dna)/60);
+
     # HTML formatting
     if ($config->{format} eq 'html') {
+      $markup->markup(\$dna,\@regions_to_markup);
 	
-	ornament(\$dna,[sort {$a->[1] <=> $b->[1]} @ornament], [map {[($_+1)*60,"\n"]} (0..int(length($dna)/60))]);
-	print header('text/html');
-	print start_html($segment),h1($segment);
-	print pre(">$segment\n$dna");
-	print end_html;
+      print header('text/html');
+      print start_html($segment),h1($segment);
+      print pre(">$segment\n$dna");
+      print end_html;
     }
 
     # text/plain formatting
@@ -131,7 +149,7 @@ sub dump {
 	print ">$segment\n";
 	print $dna;
     }
-#    warn("====== end of dump =====\n");
+    warn("====== end of dump =====\n") if DEBUG;
 }
 
 sub config_defaults {
@@ -140,15 +158,15 @@ sub config_defaults {
 }
 
 sub reconfigure {
-    my $self = shift;
-    my $current_config = $self->configuration;
+  my $self = shift;
+  my $current_config = $self->configuration;
 
-    my $objtype = $self->objtype();
-    foreach my $p ( param() ) {
-	if( $p =~ /^$objtype\./) {
-	    $current_config->{$p} = param($p);
-	}
+  my $objtype = $self->objtype();
+  foreach my $p ( param() ) {
+    if( $p =~ /^$objtype\./) {
+      $current_config->{$p} = param($p);
     }
+  }
 }
 
 sub configure_form {
@@ -167,150 +185,36 @@ sub configure_form {
     foreach ( $browser->labels() ) {
 	push @labels, $_ unless ! defined $browser->setting($_,'feature');
     }
-    
+
     foreach my $featuretype ( @labels ) {
 	my $realtext = $browser->setting($featuretype,'key') || $featuretype;
 	push @choices, TR({-class => 'searchtitle'}, 
 			  th({-align=>'RIGHT',-width=>'25%'}, $realtext,
-			     td(radio_group('-name'   => "$objtype.$featuretype",
-					    '-values' => [ keys %LABELS ], 
-					    '-labels' => \%LABELS,
-					    '-default'=> $current_config->{"$objtype.$featuretype"} || 0),
-				textfield('-name' => "$objtype.$featuretype.color",
-					  '-size' => 10,
-					  '-default' => $current_config->{"$objtype.$featuretype.color"} || '000000'),
-				))); 
+			     td(join ('&nbsp;',
+				      radio_group(-name     => "$objtype.$featuretype",
+						  -values   => [ (sort keys %LABELS)[0..4] ],
+						  -labels   => \%LABELS,
+						  -default  => $current_config->{"$objtype.$featuretype"} || 0),
+				      radio_group(-name     => "$objtype.$featuretype",
+						  -values   => 5,
+						  -labels   => \%LABELS,
+						  -default  => $current_config->{"$objtype.$featuretype"} || 0),
+				      popup_menu(-name      => "$objtype.$featuretype.fgcolor",
+						 -values    => \@COLORS),
+				      radio_group(-name     => "$objtype.$featuretype",
+						  -values   => 6,
+						  -labels   => \%LABELS,
+						  -default  => $current_config->{"$objtype.$featuretype"} || 0),
+				      popup_menu(-name      => "$objtype.$featuretype.bgcolor",
+						 -values    => \@COLORS),
+				     ))));
     }
     my $html= table(@choices);
     $html;
-}
-
-###### utilities
-
-# insert HTML tags into a string without disturbing order
-sub markup {
-    my $string = shift;
-    my $markups = shift;
-    for my $m (sort by_position @$markups) { #insert later tags first so position remains correct
-	my ($position,$markup) = @$m;
-	next unless $position <= length $$string;
-	substr($$string,$position,0) = $markup;
-    }
-}
-
-sub by_position {
-    return $b->[0]<=>$a->[0] || $b->[1] cmp $a->[1];
 }
 
 # get the <<unique name>> for the COOKIES (may not actually be unique but good 
 # enough for our purposes) of the module
 sub objtype { ( split(/::/,ref(shift)))[-1]; }
 
-
-# annotation structure is:
-# @ann = ( ['LABEL',$start,$end], ['LABEL',$start,$end],...)
-sub ornament {
-  my $string       = shift;
-  my $markups      = shift;
-  my $extra        = shift;
-  # linearize markups into a set of start,/end tags, sorted by position
-  
-  my @markups = sort {  $a->[1]<=>$b->[1] } map { ([ @{$_}[0,1] ],
-						  ["/$_->[0]",$_->[2]]) } @$markups;
-  
-  my (@stack,@tags);
-  for my $m ( @markups ) {
-      my ($type,$pos) = @{$m};
-#      warn("$type -> $pos\n");
-      my $last = pop @stack;
-      if( $type !~ m!^/! ) { # a start tag then
-	  # we need to stop the current tag first
-	  # and build a combo tag
-	  push @stack, $type;
-	  if( $last ) {
-	      my $st = aggregate_styles(split(/\s+/,$last),$type);
-	      push @stack, $st;
-	      
-	      # chuck this start/end pair if they have the exact same
-	      # start and end
-	      if( $pos == $tags[-1]->[0] ) {
-		  pop @tags;
-	      } else {
-		  push @tags, [ $pos, "END-$last"];
-	      }
-	      push @tags, [ $pos, "START-$st"];
-	  } else { 
-	      push @tags, [ $pos, "START-$type"];
-	  }
-      } else {
-	  # omit the cases where we have start/end at the same spot
-	  if( $tags[-1]->[0] == $pos ) { 
-	      pop @tags;
-	  } else {
-	      push @tags, [ $pos, "END-$last"];
-	  }
-	  my $last = pop @stack;
-	  if( $last) {
-	      push @tags, [ $pos, "START-$last"];
-	      push @stack, $last;
-	  }
-      }
-  }
-  # this is done we don't have this redundant <start></end> at the 
-  # same position, so only the last declared start will be counted
-  # we could probably detect this in the above loop but I *know* 
-  # this will work
-
-  my (%endpos,%startpos);
-  
-  # process each tag grouping
-  my @ret ;
-
-  for ( sort { $a->[0] <=> $b->[0] } @tags ) {
-      my ($p,$v) = @{$_};
-      if( $v =~ /^END-/ ) { 
-	  next unless $p > 0;
-	  $v = q(</font>);
-      } else { 
-	  my ($styles) = ($v =~ /START\-(.+)/);
-	  my (@styles,%colors);
-	  foreach my $s ( split( /\s+/,$styles) ) {
-	      if( $s =~ /^(\d+);COLOR=(\S+)/)  {
-		  push @{$colors{$1}},$2; 
-	      } else { 
-		  push @styles, $MARKUPS[$s];
-	      }   
-	  }
-	  # handle background and font colors by separating
-	  # into color regions and doing the aggregation
-	  while( my ($colorregion,$colorvals) = each %colors ) {
-	      push @styles, sprintf($MARKUPS[$colorregion],
-				    color_aggregator(@$colorvals));
-	  }
-	  
-	  $v = sprintf('<font style="%s">',
-		       join('; ', @styles));
-      }
-      push @ret, [$p,$v];
-  }
-  foreach my $t ( @ret )  {
-      warn(join(" ", @$t), "\n");
-  }
-  markup($string,[ @ret, @$extra]);
-}
-
-sub aggregate_styles {
-    my %seen;
-    map { $seen{$_}++ } @_;
-    return join(' ', keys %seen);
-}
-
-sub color_aggregator {
-    my (@colors) = @_;
-    my $c = shift @colors;
-    foreach ( @colors ) {
-	$c |= $_;
-    }
-    return $c;
-}
 1;

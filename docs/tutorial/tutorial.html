@@ -1693,6 +1693,7 @@ glyph        = segments
 height       = 6
 draw_target   = 1
 show_mismatch = 1
+canonical_strand = 1
 bgcolor      = sub {
 		my $feature = shift;
 		my $name    = $feature->display_name;
@@ -1708,12 +1709,14 @@ key          = ESTs
 
 <p>
 
-The key addition to this track configuration is the "draw_target" and
-"show_mismatch" options.  Both options are true/false flags, where 0
-means false and 1 means true.  draw_target tells the segments glyph to
-draw the DNA sequence of the target ESTs when the magnification
-allows.  show_mismatch instructs the glyph to highlight mismatches
-between the genome and the EST in pink.
+The key addition to this track configuration is the "draw_target",
+"show_mismatch" and "canonical_strand" options.  All options are
+true/false flags, where 0 means false and 1 means true.  draw_target
+tells the segments glyph to draw the DNA sequence of the target ESTs
+when the magnification allows.  show_mismatch instructs the glyph to
+highlight mismatches between the genome and the EST in pink.
+canonical_strand instructs the glyph to display the plus strand
+sequence even when the EST matches the minus strand.
 
 <p>
 
@@ -2541,6 +2544,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Tue Aug 26 19:19:38 EDT 2003
+Last modified: Wed Nov 12 16:28:11 EST 2003
 <!-- hhmts end -->
 </body> </html>

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.140 2004-05-11 16:52:48 lstein Exp $
+# $Id: Browser.pm,v 1.141 2004-05-13 10:27:20 marclogghe Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1260,7 +1260,7 @@ sub hits_on_overview {
   my $class      = eval{$hits->[0]->factory->default_class} || 'Sequence';
   my ($padl,$padr)  = $self->overview_pad([$self->config->overview_tracks],'Matches');
 
-  # sort hits out by reference
+  # sort hits out by reference and version
   my (%refs);
   for my $hit (@$hits) {
     if (ref($hit) eq 'ARRAY') {
@@ -1269,7 +1269,9 @@ sub hits_on_overview {
 						      -end=>$stop,
 						      -name=>$name||'');
     } elsif (UNIVERSAL::can($hit,'ref')) {
-      my $ref  = $hit->seq_id;
+      my $ref  = my $id = $hit->seq_id;
+      my $version = eval {$hit->version};
+      $ref .= " version $version" if defined $version;
       my $name = $hit->can('seq_name') ? $hit->seq_name : $hit->name;
       my($start,$end) = ($hit->start,$hit->end);
       $name =~ s/\:\d+,\d+$//;  # remove coordinates if they're there
@@ -1294,7 +1296,8 @@ sub hits_on_overview {
   eval "use $image_class";
 
   for my $ref (sort keys %refs) {
-    my $segment = ($db->segment(-class=>$class,-name=>$ref))[0] or next;
+    my ($name, $version) = split /\sversion\s/i, $ref; 
+    my $segment = ($db->segment(-class=>$class,-name=>$name, defined $version ? (-version => $version):()))[0] or next;
     my $panel = Bio::Graphics::Panel->new(-segment => $segment,
 					  -width   => $width,
 					  -bgcolor => $self->setting('overview bgcolor') || 'wheat',
@@ -1459,7 +1462,7 @@ sub _feature_get {
   # and take the largest one.
   my %longest;
   foreach (@filtered) {
-    my $n = $_->display_name.$_->abs_ref;
+    my $n = eval{$_->display_name.$_->abs_ref.$_->version};
     $longest{$n} = $_ if !defined($longest{$n}) || $_->length > $longest{$n}->length;
   }
   values %longest;
@@ -1540,6 +1543,7 @@ sub _load_aggregator_types {
 sub _hits_to_html {
   my $self = shift;
   my ($ref,$gd,$boxes) = @_;
+  my ($name, $version) = split /\sversion\s/i, $ref; 
   my $source   = $self->source;
   my $self_url = '';   #url(-relative=>1);
   # $self_url   .= "?source=$source";
@@ -1568,13 +1572,13 @@ sub _hits_to_html {
     my $y = $x + $width;
     my $start = int($length * $i);
     my $stop  = int($start + $length);
-    my $href      = $self_url . "?ref=$ref;start=$start;stop=$stop";
+    my $href      = $self_url . "?ref=$name;start=$start;stop=$stop;version=$version";
     $html .= qq(<area shape="rect" coords="$x,$ruler->[2],$y,$ruler->[4]" href="$href" alt="ruler" />\n);
   }
 
   foreach (@$boxes){
     my ($start,$stop) = ($_->[0]->start,$_->[0]->end);
-    my $href      = $self_url . "?ref=$ref;start=$start;stop=$stop";
+    my $href      = $self_url . "?ref=$name;start=$start;stop=$stop;version=$version";
     $html .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href" alt="ruler" />\n);
   }
   $html .= "</map>\n";

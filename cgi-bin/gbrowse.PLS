@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.83 2004-05-12 20:36:22 marclogghe Exp $
+# $Id: gbrowse.PLS,v 1.84 2004-05-13 10:27:19 marclogghe Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1297,10 +1297,12 @@ sub features2segments {
   my $refclass = $CONFIG->setting('reference class') || 'Sequence';
   my $db = open_database();
   my @segments = map {
+    my $version = eval {$_->version};
     $db->segment(-class => $refclass,
 		 -name  => $_->ref,
 		 -start => $_->start,
-		 -stop  => $_->end)} @$features;
+ 		 -stop  => $_->end,
+                  defined $version ? (-version => $version) : ())} @$features;
   warn "segments = @segments\n" if DEBUG;
   \@segments;
 }
@@ -1329,7 +1331,7 @@ sub lookup_features_from_db {
   my ($db,$settings) = @_;
   my @segments;
 
-  warn "name = $settings->{name}, ref = $settings->{ref}, start = $settings->{start}, stop = $settings->{stop}\n" if DEBUG;
+  warn "name = $settings->{name}, ref = $settings->{ref}, start = $settings->{start}, stop = $settings->{stop}, version = $settings->{version}\n" if DEBUG;
 
   $db->debug(0);
   my $divisor = $CONFIG->setting(general=>'unit_divider') || 1;
@@ -1458,10 +1460,12 @@ sub multiple_choices {
   my $name = $settings->{name};
   my $regexp = join '|',($name =~ /(\w+)/g);
 
-  # sort into bins by reference
+  # sort into bins by reference and version
   my %refs;
   foreach (@$results) {
+    my $version = eval {$_->version};
     my $ref = $_->seq_id;
+    $ref .= " version $version" if defined $version;    
     push @{$refs{$ref}},$_;
   }
 
@@ -1480,6 +1484,7 @@ sub multiple_choices {
 
   local $^W = 0;  # get rid of non-numeric warnings coming out of by_score_and_position
   for my $ref(sort keys %refs) {
+    my ($id) = split /\s/, $ref; 
     my @results = @{$refs{$ref}};
     print TR(th({-class=>'databody',-colspan=>4,-align=>'center'},$CONFIG->tr('Matches_on_ref',$ref),br,
 		$overviews->{$ref}));
@@ -1505,8 +1510,7 @@ sub multiple_choices {
       $description =~ s/($regexp)/<b class="keyword">$1<\/b>/ig;
 
       my $objref     = $class ? "?name=$c:$n" : "?name=$n";
-      my $posref     = "?ref=$ref;start=$padstart;stop=$padstop";
-      $posref        .= ";version=$version" if $version < 100;
+      my $posref     = "?ref=$id;start=$padstart;stop=$padstop;version=$version";
       my $position = format_segment($r);
       print TR({-class=>'databody',-valign=>'TOP'},
 	       th({-align=>'right'},ref($name) ? a({-href=>$objref},$name):tt($name)),

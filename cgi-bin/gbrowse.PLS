@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.73 2004-04-08 01:25:53 lstein Exp $
+# $Id: gbrowse.PLS,v 1.74 2004-04-08 01:35:42 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2544,7 +2544,7 @@ sub do_plugin_find {
   my $plugin_name = $p->name;
 
   my $results = $p->can('auto_find') && defined $search_string
-    ? $p->auto_find($search_string) : $p->find($segments);
+    ? $p->auto_find($search_string) : $p->find($features);
   return unless $results;  # reconfigure message
 
   @$features = @$results;

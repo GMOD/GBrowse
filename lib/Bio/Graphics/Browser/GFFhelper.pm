@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.19 2004-02-27 19:34:32 sheldon_mckay Exp $
+# $Id: GFFhelper.pm,v 1.20 2004-03-12 15:29:10 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -407,8 +407,13 @@ sub save_state {
     $cache->{$key}->{timestamp} = time;
     $cache->{$key}->{gff} = [];
 
-    for ( $segment->contained_features ) {
-	next if $_->method eq 'Component';
+    my @feats = grep {
+	$_->start >= $segment->start - 1 &&
+	$_->end   <= $segment->end + 1  &&
+	lc $_->method ne 'component';
+    } $segment->features;
+
+    for ( @feats ) {
 	push @{$cache->{$key}->{gff}}, $_->gff3_string;
     }
 

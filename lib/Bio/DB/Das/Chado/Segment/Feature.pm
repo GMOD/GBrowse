@@ -128,6 +128,21 @@ class.
 
 =cut
 
+sub start {
+  my $self = shift;
+  return $self->{'start'} = shift if @_;
+  return $self->{'start'};
+}
+
+sub end {
+    my $self = shift;
+    return $self->{'end'} = shift if @_;
+    return $self->{'end'};
+}
+
+*stop = &end;
+
+
 sub feature_id {
   my $self = shift;
 

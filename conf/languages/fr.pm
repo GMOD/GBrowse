@@ -121,6 +121,8 @@ END
 
    EXTERNAL_TRACKS => '(Pistes externes en italique)',
 
+   OVERVIEW_TRACKS => '<sup>*</sup>Piste d\'aperçu';
+
    EXAMPLES => 'Exemples',
 
    HELP     => 'Aide',

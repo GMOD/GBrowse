@@ -2,7 +2,7 @@
 {
 
    # Translated by Toshiaki Katayama <k@bioruby.org>
-   # Sun Apr 11 00:43:26 JST 2004
+   # Sat Jun 12 23:11:24 JST 2004
 
    CHARSET => 'euc-jp',
 
@@ -106,6 +106,13 @@ END
 </p>
 END
 
+   TIMEOUT           => <<'END',
+処理がタイムアウトしました。
+選択した領域が一度に表示するには広すぎた可能性があります。
+表示領域を狭めるか不要な項目を表示しないようにしてみてください。
+タイムアウトが続く場合は赤色の「リセット」ボタンをクリックしてください。
+END
+
    GO                => '実行',
 
    FIND              => '探す',
@@ -161,6 +168,10 @@ END
    BETWEEN     	     => '項目の間',
 
    BENEATH     	     => '下にまとめて',
+
+   LEFT              => '左',
+
+   RIGHT             => '右',
 
    TRACK_NAMES 	     => '項目名リスト',
 

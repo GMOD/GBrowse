@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.5 2002-07-07 21:31:48 lstein Exp $
+# $Id: Plugin.pm,v 1.5.4.1 2003-05-23 16:38:06 pedlefsen Exp $
 # base class for plugins for the Generic Genome Browser
 
 use strict;
@@ -17,7 +17,7 @@ $VERSION = '0.11';
 
 sub new {
   my $class = shift;
-  return bless {},$class;
+  return bless {}, ref($class)||$class; 
 }
 
 # initialize other globals
@@ -70,40 +70,6 @@ sub reconfigure {
   # do nothing
 }
 
-# get/store database
-sub database {
-  my $self = shift;
-  my $d = $self->{g_database};
-  $self->{g_database} = shift if @_;
-  $d;
-}
-
-# get/store configuration file
-# it's a Bio::Graphics::Browser file
-sub browser_config {
-  my $self = shift;
-  my $d = $self->{g_config_file};
-  $self->{g_config_file} = shift if @_;
-  $d;
-}
-
-# get/store page settings
-# it's a big hash as described in the notes of the gbrowse executable
-sub page_settings {
-  my $self = shift;
-  my $d = $self->{g_page_settings};
-  $self->{g_page_settings} = shift if @_;
-  $d;
-}
-
-# get/store configuration directory path
-sub config_path {
-  my $self = shift;
-  my $d = $self->{g_config_path};
-  $self->{g_config_path} = shift if @_;
-  $d;
-}
-
 # just dump out the name of the thing
 sub dump {
   my $self    = shift;
@@ -127,6 +93,22 @@ sub annotate {
   return;
 }
 
+# get/store Browser object representing this plugin's session.
+sub browser_config {
+  my $self = shift;
+  my $d = $self->{ g_browser_config };
+  $self->{ g_browser_config } = shift if @_;
+  $d;
+}
+
+# get/store page settings
+# it's a big hash as described in the notes of the gbrowse executable
+sub page_settings {
+  my $self = shift;
+  my $d = $self->{g_page_settings};
+  $self->{g_page_settings} = shift if @_;
+  $d;
+}
 
 1;
 

@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.32 2002-05-23 19:17:02 lstein Exp $
+# $Id: gbrowse.PLS,v 1.33 2002-05-23 19:31:59 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -570,7 +570,7 @@ sub adjust_settings {
     }
   }
 
-  if (param('Revert to Defaults')) {
+  if (param('Revert to Defaults') || param('Reset')) {
     warn "resetting defaults..." if DEBUG;
     set_default_tracks($settings);
   }
@@ -592,13 +592,13 @@ sub navigation_table {
 
   $table .= table({-border=>0, -width=>$settings->{width}},
 		  TR({-class=>'searchbody'},
-		     td({-align=>'left', -colspan=>2},
+		     td({-align=>'left', -colspan=>3},
 			"Search using a sequence name, gene name, locus${oligo} or other landmark.",
 			'The wildcard character "*" is allowed.',
 			show_examples()
 		    )),
 		  TR({-class=>'searchbody'},
-		     td({-align=>'left', -colspan=>2},
+		     td({-align=>'left', -colspan=>3},
 			'To center on a location, click the ruler.  User the Scroll/Zoom buttons to',
 			'change magnification and position.',
 			'To save this view,',a({-href=>bookmark_link($settings)},'bookmark this link.')
@@ -610,6 +610,7 @@ sub navigation_table {
 		     td({-align=>'LEFT'},
 			$segment ? ('Scroll/Zoom: ',slidertable($segment,$buttonsDir)) : ''
 		       ),
+		     td(submit(-name=>'Reset'))
 		    ));
 }
 

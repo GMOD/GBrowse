@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.48 2002-12-22 19:57:34 lstein Exp $
+# $Id: Browser.pm,v 1.49 2002-12-23 03:41:12 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -58,7 +58,7 @@ use strict;
 use File::Basename 'basename';
 use Bio::Graphics;
 use Carp qw(carp croak);
-use GD 'gdMediumBoldFont';
+use GD 'gdMediumBoldFont','gdLargeFont';
 use CGI qw(img param escape url);
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
@@ -553,6 +553,8 @@ The arguments are a series of tag=>value pairs, where tags are:
                         center the image by clicking on the scale.  It defaults
                         to false, and has no effect unless do_map is also true.
 
+  title               Add specified title to the top of the image.
+
 =cut
 
 sub render_html {
@@ -567,6 +569,7 @@ sub render_html {
   my $do_centering_map= $args{do_centering_map};
   my $limit           = $args{limit};
   my $lang            = $args{lang};
+  my $title           = $args{title};
 
   return unless $segment;
 
@@ -737,6 +740,7 @@ sub image_and_map {
   my $limit         = $config{limit}         || {};
   my $lang          = $config{lang};
   my $keystyle      = $config{keystyle};
+  my $title         = $config{title};
 
   # these are natively configured tracks
   my @labels = $self->labels;
@@ -756,8 +760,8 @@ sub image_and_map {
 	      -bgcolor   => $self->setting('detail bgcolor')  || 'white',
 	      -grid      => 1,
 	      -key_style => $keystyle || $conf->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
-	      -empty_tracks => $conf->setting(general=>'empty_tracks')
-	      || DEFAULT_EMPTYTRACKS
+	      -empty_tracks => $conf->setting(general=>'empty_tracks') 	      || DEFAULT_EMPTYTRACKS,
+	      -pad_top   => $title ? gdMediumBoldFont->height : 0,
 	     );
   my $panel = Bio::Graphics::Panel->new(@argv);
   $panel->add_track($segment   => 'arrow',
@@ -892,6 +896,10 @@ sub image_and_map {
   }
 
   my $gd       = $panel->gd;
+  if ($title) {
+    my $x = ($width - length($title) * gdMediumBoldFont->width)/2;
+    $gd->string(gdMediumBoldFont,$x,0,$title,$panel->translate_color('black'));
+  }
   return $gd   unless wantarray;
 
   my $boxes    = $panel->boxes;

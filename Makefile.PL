@@ -2,7 +2,7 @@ use ExtUtils::MakeMaker;
 use FindBin '$Bin';
 require 5.005003;
 
-my $VERSION = 1.39;
+my $VERSION = '1.40';
 
 my @OPTIONS = qw(PREFIX CONF HTDOCS CGIBIN);
 my $OPTIONS = join ('|',@OPTIONS);

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.1.1.1 2002-01-03 13:34:19 lstein Exp $
+# $Id: Browser.pm,v 1.2 2002-01-31 06:29:39 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
@@ -12,10 +12,7 @@ $VERSION = '1.00';
 
 sub new {
   my $class    = shift;
-  my $conf_dir = shift;
-  my $self = bless { },$class;
-  $self->{conf}  = $self->read_configuration($conf_dir);
-  $self->{width} = DEFAULT_WIDTH;
+  my $self = bless { },ref($class) || $class;
   $self;
 }
 
@@ -54,14 +51,14 @@ sub citation {
 sub description {
   my $self = shift;
   my $source = shift;
-  my $c = $self->{conf}{$source} or return;
+  my $c = $self->{conf}{$source}{data} or return;
   return $c->setting('general','description');
 }
 
 sub config {
   my $self = shift;
   my $source = $self->source;
-  $self->{conf}{$source};
+  $self->{conf}{$source}{data};
 }
 
 sub default_labels {
@@ -291,12 +288,14 @@ sub overview {
 }
 
 sub read_configuration {
-  my $self = shift;
-  my $conf_dir = shift;
+  my $self        = shift;
+  my $conf_dir    = shift;
+  $self->{conf} ||= {};
+
   die "$conf_dir: not a directory" unless -d $conf_dir;
 
   opendir(D,$conf_dir) or die "Couldn't open $conf_dir: $!";
-  my @conf_files = map { "$conf_dir/$_" }readdir(D);
+  my @conf_files = map { "$conf_dir/$_" } grep {/\.conf$/} readdir(D);
   close D;
 
   # try to work around a bug in Apache/mod_perl which appears when
@@ -305,15 +304,21 @@ sub read_configuration {
     @conf_files = glob("$conf_dir/*.conf");
   }
 
-  my %config;
-  foreach (sort {$b cmp $a} @conf_files) {
-    next unless /\.conf$/;
-    my $basename = basename($_,'.conf');
-    my $config = Bio::Graphics::BrowserConfig->new(-file => $_) or next;
-    $config{$basename} = $config;
+  # get modification times
+  my %mtimes     = map { $_ => (stat($_))[9] } @conf_files;
+
+  for my $file (sort {$b cmp $a} @conf_files) {
+    my $basename = basename($file,'.conf');
+    next if $self->{conf}{$basename}
+      && $self->{conf}{$basename}{mtime} >= $mtimes{$_};
+
+    my $config = Bio::Graphics::BrowserConfig->new(-file => $file) or next;
+    $self->{conf}{$basename}{data}  = $config;
+    $self->{conf}{$basename}{mtime} = $mtimes{$file};
     $self->{source} = $basename;
   }
-  return \%config;
+  $self->{width} = DEFAULT_WIDTH;
+  1;
 }
 
 sub merge {

@@ -40,6 +40,7 @@ htdocs/images/buttons/red8.gif
 lib/Bio/DB/GFF/Aggregator/waba_alignment.pm
 lib/Bio/Graphics/Browser.pm
 lib/Bio/Graphics/Glyph/heterogeneous_segments.pm
+lib/Bio/Graphics/Glyph/phased_exons.pm
 sample_data/yeast_data.gff
 t/01yeast.t
 t/Test.pm

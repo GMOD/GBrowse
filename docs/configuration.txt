@@ -632,12 +632,24 @@ Valid options are as follows:
   This controls the foreground color (outline color) of the glyph.
   The format of colors is explained in GLYPHS AND GLYPH OPTIONS.
 
-  e) height
+  e) fontcolor
+
+  This controls the color of the primary font of text drawn in the
+  glyph.  This is the font used for the features labels drawn at the
+  top of the glyph.
+
+  f) font2color
+
+  This controls the color of the secondary font of text drawn in
+  the glyph.  This is the font used for the longish feature descriptions
+  drawn at the bottom of the glyphs.
+
+  g) height
 
   This option sets the height of the glyph.  It is expressed in
   pixels.
 
-  f) strand_arrow
+  h) strand_arrow
 
   This is a true or false value, where true is 1 and false is 0.
   If this option is set to true, then the glyph will indicate the
@@ -645,25 +657,25 @@ Valid options are as follows:
   sort.  Some glyphs are inherently stranded, or inherently
   non-stranded and simply ignore this option.
 
-  g) label
+  i) label
 
   This is a true or false value, where true is 1 and false is 0.  If
   the option is set to true, then the name of the feature (i.e. its
   group name) is printed above the feature, space allowing.
 
-  h) description
+  j) description
 
   This is a true or false value, where true is 1 and false is 0.  If
   the option is set to true, then the description of the feature (any
   Note fields) is printed below the feature, space allowing.
 
-  i) key
+  k) key
 
   This option controls the descriptive key that is drawn in the key
   area at the bottom of the image.  If not specified, it defaults to
   the track name.
 
-  j) citation
+  l) citation
 
   If present, this option creates a human-readable descriptive
   paragraph describing the feature and how it was derived.  This is
@@ -675,7 +687,7 @@ Valid options are as follows:
   can be continued across multiple lines, provided that continuation
   lines begin with whitespace.
 
-  l) link
+  m) link
 
   This option is identical to the link option in the [GENERAL]
   section, but changes the link rule for the individual feature.  It
@@ -748,6 +760,20 @@ glyph.  This translates to the configuration file as an option named
  [PCR Products]
  glyph = primer
  connect_color = blue
+
+When referring to colors, you can use a variety of color names such as
+"blue" and "green".  To get the full list, cut and paste the following
+magic incantation into the command line:
+
+ perl -MBio::Graphics::Panel -e 'print join "\n",Bio::Graphics::Panel->color_names'
+
+or see this URL:
+
+  http://www.wormbase.org/db/seq/gbrowse?help=annotation
+
+Alternatively, you can use the #RRGGBB notation to specify the red,
+green and blue components of the color.  Refer to any book on HTML for
+the details on using the notation.
 
 B4. Computed Options
 

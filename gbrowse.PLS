@@ -33,7 +33,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.7 2002-01-24 20:45:36 lstein Exp $
+# $Id: gbrowse.PLS,v 1.8 2002-01-31 06:29:39 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -126,9 +126,10 @@ if ($ENV{MOD_PERL}) {
 }
 $CONF_DIR ||= CONF_DIR;
 
-# preliminaries -- set up some globals
-$CONFIG         = Bio::Graphics::Browser->new($CONF_DIR)
+# preliminaries -- read and/or refresh the configuration directory
+$CONFIG  ||= Bio::Graphics::Browser->new($CONF_DIR)
   or die "Couldn't open configuration directory: $!";
+$CONFIG->read_configuration($CONF_DIR) or die "Can't read configuration files: $!";
 
 ## PAGE SETTINGS ##############################################################################
 #
@@ -839,7 +840,7 @@ sub name2segments {
   push @argv,(-class => $class) if defined $class;
   push @argv,(-start => $start) if defined $start;
   push @argv,(-stop  => $stop)  if defined $stop;
-  @segments = $db->segments(@argv);
+  @segments = $db->segment(@argv);
 
   # Here starts the heuristic part.  Try various abbreviations that
   # people tend to use for chromosomal addressing.
@@ -851,7 +852,7 @@ sub name2segments {
       push @argv,(-class => $class) if defined $class;
       push @argv,(-start => $start) if defined $start;
       push @argv,(-stop  => $stop)  if defined $stop;
-      @segments = defined($start) ? $db->segment(@argv) : $db->segments(@argv) unless @segments;
+      @segments = defined($start) ? $db->segment(@argv) : $db->segment(@argv) unless @segments;
     }
   }
 
@@ -865,13 +866,13 @@ sub name2segments {
   if (!@segments && !$class && 
       (my @automatic = split /\s+/,$CONFIG->setting('automatic classes') || '')) {
     foreach $class (@automatic) {
-      @segments = $db->segments($class => $name);
+      @segments = $db->segment($class => $name);
       last if @segments;
     }
   }
 
   # This tricky bit is called when we retrieve multiple segments or when
-  # there is an unusually large feature on display.  In this case, we attempt
+  # there is an unusually large feature to display.  In this case, we attempt
   # to split the feature into its components and offer the user different
   # portions to look at, invoking merge() to select the regions.
   my $max_length = 0;
@@ -879,8 +880,10 @@ sub name2segments {
     $max_length = $_->length if $_->length > $max_length;
   }
   if (@segments > 1 || $max_length > $MAX_SEGMENT) {
-    @segments = $db->fetch_feature($segments[0]->ref);
-    @segments = $CONFIG->merge(\@segments,(get_ranges())[-1])
+    @segments     = $db->fetch_feature_by_name(-class => $segments[0]->class,
+					       -name  => $segments[0]->ref,
+					       -automerge=>0);
+    @segments     = $CONFIG->merge(\@segments,(get_ranges())[-1])
       if @segments > 1 && @segments < TOO_MANY_SEGMENTS;
   }
   @segments;

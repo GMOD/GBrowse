@@ -45,3 +45,13 @@ More notes here, as I figure them out.
 Scott Cain
 cain@cshl.org
 12/27/2002
+
+
+
+> > in Bio/Graphics/Browser.pm
+> >
+> > had to put in "binmode" line in sub generate_image
+> >
+> > after opeing file handle F, insert this line:
+> >
+> > binmode F;

@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.106 2004-09-05 04:36:00 allenday Exp $
+# $Id: gbrowse.PLS,v 1.107 2004-09-05 18:58:59 allenday Exp $
 
 use strict;
 use Bio::Graphics;
@@ -899,35 +899,6 @@ sub make_hilite_callback {
     return unless $feature->display_name && $feature->display_name eq $settings->{h_feat};
     'yellow';
   }
-}
-
-# This generates the navigation bar with the arrows
-sub slider {
-  my ($segment,$buttonsDir) = @_;
-
-  my %seen; #used to keep track of available ranges for display
-
-  my $param =
-  {
-    segment    => $segment,
-    prevname   => scalar(param('name')),
-    halftitle  => unit_label(int($segment->length/2)),
-    fulltitle  => unit_label($segment->length),
-    half       => int($segment->length/2),
-    full       => $segment->length,
-    finezoom   => get_zoomincrement(),
-    ranges     => [ grep {!$seen{$_}++} sort {$b<=>$a} $segment->length,get_ranges() ],
-    buttonsdir => $buttonsDir,
-
-  };
-
-  my $show = $CONFIG->tr('Show');
-  my %range_labels = map {$_=>$show.' '.unit_label($_)} @{ $param->{ranges} };
-  $param->{range_labels} = \%range_labels;
-
-  my $output = undef;
-  $template->process('slider.tt2',$param,\$output);
-  return $output;
 }
 
 # convert bp into nice Mb/Kb units

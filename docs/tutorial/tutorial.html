@@ -113,7 +113,7 @@ in more detail later.
 Now we will need a gbrowse config file to tell gbrowse how to render
 this data set.  In the subdirectory conf_files/, you will find a
 sample configuration file named <a
-href="conf_files/volvox1.conf">volvox1.conf</a>.  Copy this into your
+href="conf_files/volvox.conf">volvox.conf</a>.  Copy this into your
 gbrowse configuration directory
 (e.g. /usr/local/apache/conf/gbrowse.conf on Unix systems, C:\Program
 Files\Apache Group\Apache2\conf\gbrowse.conf on Windows systems).  If
@@ -135,7 +135,7 @@ in the search box.  The result is shown in Figure 1.
 <p>
 <blockquote>
 <img src="figures/figure1.gif"><br>
-<i>Figure 1: volvox1.gff data with volvox1.conf config file.
+<i>Figure 1: volvox1.gff data with volvox.conf config file.
 </blockquote>
 
 <hr>
@@ -244,7 +244,7 @@ Now we'll look at the configuration file in more detail.  Using a text
 editor, open the volvox.conf file from its location in the
 gbrowse.conf configuraton directory.  (If you mess up, you can always
 copy a fresh version from <a
-href="conf_files/volvox1.conf">volvox1.conf</a> in the tutorial
+href="conf_files/volvox.conf">volvox.conf</a> in the tutorial
 directory).
 
 <p>
@@ -827,7 +827,7 @@ glyph        = processed_transcript
 bgcolor      = peachpuff
 description  = 1
 key          = Protein-coding genes
-/pre></blockquote>
+</pre></blockquote>
 
 <p>
 
@@ -1523,9 +1523,9 @@ EST DNA.
 
 <p>
 
-The fasta file ests.fa provides the DNA sequences for the six EST
-reads.  The GFF load file <a
-href="data_files/volvox8.gff">volvox8.gff</a> contains the revised
+The fasta file <href="data_files/ests.fa">ests.fa</a> provides the DNA
+sequences for the six EST reads.  The GFF load file
+<a href="data_files/volvox8.gff">volvox8.gff</a> contains the revised
 coordinates.  If you look at this file you'll see that it is
 dissimilar to previous load files:
 

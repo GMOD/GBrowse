@@ -1,8 +1,12 @@
-1.03	Thu Jan 24 12:01:52 EST 2002
+1.31	Thu Jan 24 15:44:40 EST 2002
+	* Fixed GFF and FASTA dumping problems.
+	* Version number is now printed at bottom of page.
+	
+1.30	Thu Jan 24 12:01:52 EST 2002
 	* Clarified the method for installing in non-standard locations
 	and gave an example for RedHat.
 	
-1.02	Mon Jan 21 17:43:06 EST 2002
+1.20	Mon Jan 21 17:43:06 EST 2002
 	* Fixed a bug that appeared with newer versions of Bio::DB::GFF
 	in which features with multiple locations showed up with the
 	same location repeated.

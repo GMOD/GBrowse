@@ -2,6 +2,8 @@ use ExtUtils::MakeMaker;
 use FindBin '$Bin';
 require 5.005003;
 
+my $VERSION = 1.31;
+
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN);
 my $OPTIONS = join ('|',@OPTIONS);
 my %OPTIONS;
@@ -37,13 +39,14 @@ print F "# This hints file contains configuration information used by the generi
 foreach (keys %OPTIONS) {
   print F "$_=$OPTIONS{$_}\n";
 }
+print F "VERSION=$VERSION\n";
 close F;
 
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
 WriteMakefile(
 	      'NAME'	     => 'Generic-Genome-Browser',
-	      'VERSION'      => '1.03',
+	      'VERSION'      => $VERSION,
 	      'PREREQ_PM'    => {
 				 Bio::Graphics => 0.92,
 				 Bio::DB::GFF  => 1.01,

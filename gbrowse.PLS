@@ -25,6 +25,7 @@ print "Extracting $file (with variable substitutions)\n";
 
 print OUT <<"!GROK!THIS!";
 $Config{startperl} -w
+\$VERSION = $OPTIONS{VERSION};
 !GROK!THIS!
 
 # In the following, perl variables are not expanded during extraction.
@@ -32,7 +33,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.6 2002-01-22 04:03:58 lstein Exp $
+# $Id: gbrowse.PLS,v 1.7 2002-01-24 20:45:36 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -44,7 +45,7 @@ use Text::Tabs;
 use Text::Shellwords;
 use Carp;
 use CGI qw(:standard escape center *table *dl *TR *td);
-use vars qw($CONFIG %DB $MAX_SEGMENT $DEFAULT_SEGMENT $HEADER $HTML $UA);
+use vars qw($CONFIG $VERSION %DB $MAX_SEGMENT $DEFAULT_SEGMENT $HEADER $HTML $UA);
 
 # if you change the zoom/nav icons, you must change this as well.
 use constant MAG_ICON_HEIGHT => 20;
@@ -157,18 +158,22 @@ my @segments  = get_segment($page_settings);
 ## DUMPS ######################################################################################
 if ( (my $dump = param('dump')) && @segments == 1) {
   if ($dump eq 'FastA') {
-    print header(-attachment   => "$segments[0].fa",
-		 -type         => 'text/plain');
+    print header(-type         => 'text/plain',
+		 #-attachment   => "$segments[0].fa",
+		);
     dump_fasta($segments[0],$page_settings);
   }
 
   elsif($dump eq 'GFF') {
-    print header(-attachment   => "$segments[0].gff",
-		 -type         => 'text/plain');
+    print header(-type         => 'text/plain',
+		 #-attachment   => "$segments[0].gff",
+		 );
+		 
     dump_gff($segments[0],$page_settings);
   }
   exit 0;
 }
+
 ###############################################################################################
 
 # This gets called if the user wants to download his annotation data
@@ -244,8 +249,9 @@ sub footer {
     $CONFIG->footer || '',
       p(i(font({-size=>'small'},
 	       'Note: This page uses cookie to save and restore preference information.',
-	       'No information is shared.'))),
-		 end_html;
+	       'No information is shared.')),br,
+	tt("Generic genome browser version $VERSION")),
+      end_html;
 }
 
 #--------------------------------- lots of subroutines --------------------------

@@ -2,7 +2,6 @@ package Bio::Graphics::Browser::PadAlignment;
 
 use strict;
 use Bio::Graphics::Browser::Markup;
-use Carp 'croak';
 use constant DEBUG=>0;
 
 =head1 NAME
@@ -12,9 +11,9 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 =head1 VERSION (CVS-info)
 
  $RCSfile: PadAlignment.pm,v $
- $Revision: 1.16 $
+ $Revision: 1.17 $
  $Author: lstein $
- $Date: 2004-06-25 17:26:15 $
+ $Date: 2004-07-18 18:56:11 $
 
 =head1 SYNOPSIS
 
@@ -81,12 +80,12 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 
 This is a utility module for pretty-printing the type of alignment
 that comes out of gbrowse, namely a multiple alignment in which each
-target is aligned to a reference genome without explicit pads or other
-spaces.  An option allows it to output marked-up HTML in which
-mismatches and/or amino acid residues are marked up in color.
+target is aligned to a reference genome without explicit pads or
+other spaces.
 
-The module can use either Bio::SimpleAlignment objects, or raw strings
-and alignment data structures.
+For speed and ease of use, the module does not use form Bio::SeqI
+objects, but raw strings and alignment data structures.  This may
+change.
 
 This module does B<not> perform multiple alignments!  It merely
 pretty-prints them!
@@ -97,16 +96,11 @@ This section describes the methods used by this class.
 
 =over 4
 
-=item $aligner = Bio::Graphics::Browser::PadAlignment->new($bio_simplealign)
-
 =item $aligner = Bio::Graphics::Browser::PadAlignment->new(\@sequences,\@alignments)
 
-Create a new aligner.  You can initialize the object with a simple
-argument containing a L<Bio::SimpleAlign> object, or with two
-arguments giving the raw alignment data.  In the latter case, the
-first argument is \@sequences, an array ref to the list of sequences
-to be aligned, and \@alignments, an array ref describing how the
-sequences are to be aligned.
+Create a new aligner.  The two arguments are \@sequences, an array ref
+to the list of sequences to be aligned, and \@alignments, an array ref
+describing how the sequences are to be aligned.
 
 \@sequences should have the following structure:
 
@@ -163,19 +157,16 @@ gap maps for each of the targets (at the cost of speed and memory
 efficiency) see the section after __END__ in the source file for this
 module.
 
-=item $align_string = $aligner->alignment([\%origins [,\%options]])
+=item $align_string = $aligner->alignment(\%origins [,\%options])
 
 This method returns a pretty-printed string of the aligned sequences.
-If you created the alignment using a Bio::SimpleAlign object, the
-%origins hash is not needed. However, if you created the alignment
-using raw data, you will probably want to provide alignment() with a
-hashref of sequence origins in order to control the numbers printed
-next to each line of the alignment.  The keys of the %origins hashref
-are the names of the sequences, and the values are the coordinate to
-be assigned to the first base of the sequence.  Use a negative number
-if you wish to indicate that the sequence has been reverse
-complemented (the negative number should indicate the coordinate of
-the first base in the provided sequence).
+You may provide a hashref of sequence origins in order to control the
+numbers printed next to each line of the alignment.  The keys of the
+%origins hashref are the names of the sequences, and the values are
+the coordinate to be assigned to the first base of the sequence.  Use
+a negative number if you wish to indicate that the sequence has been
+reverse complemented (the negative number should indicate the
+coordinate of the first base in the provided sequence).
 
 An optional second argument, if present, contains a hash reference to
 a set of option=>value pairs.  Three options are recognized:
@@ -187,12 +178,6 @@ a set of option=>value pairs.  Three options are recognized:
                                         Hydrophobic amino acids in grey
                                         Polar amino acids in yellow
    flip                 0|1      if true, reverse complement the whole alignment
-
-For Bio::Graphics::Browser::PadAlignment objects created using a
-Bio::SimpleAlignment, you will want to call alignment like this:
-
- my $options       = {show_mismatches=>1,flip=>1}; # or whatever options you want
- $alignment_string = $aligner->alignment({},\%options);
 
 =back
 
@@ -230,6 +215,7 @@ disclaimers of warranty.
 # sequence in the alignment
 
 # define the types of amino acids -- this was done by an undergrad and is subject to change
+# modified according to: http://www.ann.com.au/MedSci/amino.htm, method 1
 
 my %aa_type = (
 	       K=> "basic_aa",
@@ -239,33 +225,29 @@ my %aa_type = (
 	       T=> "polar_aa",
 	       N=> "polar_aa",
 	       Q=> "polar_aa",
+	       C=> "polar_aa",
+	       Y=> "polar_aa",
 	       D=> "acidic_aa",
 	       E=> "acidic_aa",
-	       A=> "hphobic_aa",
-	       V=> "hphobic_aa",
-	       I=> "hphobic_aa",
-	       L=> "hphobic_aa",
-	       M=> "hphobic_aa",
-	       F=> "hphobic_aa",
-	       Y=> "hphobic_aa",
-	       W=> "hphobic_aa",
-	       C=> "special_aa",
-	       G=> "special_aa",
-	       P=> "special_aa",
+	       G=> "npolar_aa",
+	       A=> "npolar_aa",
+	       V=> "npolar_aa",
+	       L=> "npolar_aa",
+	       I=> "npolar_aa",
+	       P=> "npolar_aa",
+	       M=> "npolar_aa",
+	       F=> "npolar_aa",
+	       C=> "npolar_aa",
+	       W=> "npolar_aa",
 	       X=> "special_aa",
 	       "*" => "special_aa"
 	      );
 
 sub new {
   my $class = shift;
-  my ($dnas,$aligns,$origins);
-  if (@_ == 1 && $_[0]->isa('Bio::SimpleAlign')) {
-    ($dnas,$aligns,$origins) = $class->_get_simple_align_data($_[0]);
-  } else {
-    $dnas   = shift;  # array ref of DNAs in the order in which they will be printed
+  my $dnas   = shift;  # array ref of DNAs in the order in which they will be printed
                        # in format [ [name1=>dna1],[name2=>dna2]...]
-    $aligns = shift;  # array ref of alignments in format [ [targetname,srcstart,srcend,targetstart,targetend] ]
-  }
+  my $aligns = shift;  # array ref of alignments in format [ [targetname,srcstart,srcend,targetstart,targetend] ]
 
   # remap data structures
   my $count = 0;
@@ -275,10 +257,9 @@ sub new {
     push @dnas,$dna;
   }
   return bless {
-		names   => \%dnas,
-		dnas    => \@dnas,
-		aligns  => $aligns,
-		origins => $origins || {},
+		names  => \%dnas,
+		dnas   => \@dnas,
+		aligns => $aligns
 		};
 }
 
@@ -450,15 +431,13 @@ sub alignment {
 
   my $show_mismatches = $options->{show_mismatches};
   my $color_code_proteins = $options->{color_code_proteins};
+  warn "color code = $color_code_proteins" if DEBUG;
   my $flip            = $options->{flip};
 
   my @lines = $self->padded_sequences;
   my %names = reverse %{$self->{names}};  # index to name
-  $origins ||= {};
 
-  # origins ends up being the preparsed origins from the Bio::SimpleAlign object
-  # possibly overridden by origins provided on argument list
-  $origins = {%{$self->{origins}},%{$origins}};
+  $origins ||= {};
 
   foreach (values %names) {
     $origins->{$_} = 1 unless defined $origins->{$_};
@@ -474,8 +453,9 @@ sub alignment {
   my $longest_line = 0;
   for (my $i=0; $i<@lines; $i++) {
     my $offset    = abs($origins->{$names{$i}});
-    $longest_line = length($self->{dnas}[$i])+$offset if length($self->{dnas}[$i])+$offset > $longest_line;
+    $longest_line = length($self->{dnas}[$i])+$offset if (length($self->{dnas}[$i])+$offset > $longest_line);
   }
+
   $longest_line = length $longest_line;  # looks like an error but isn't
 
   # if flip is set, then we do amazing things to reorganize the display!
@@ -488,22 +468,23 @@ sub alignment {
     }
   }
   
- # use markup to insert word and line breaks
+  # use markup to insert word and line breaks
   my $markup = Bio::Graphics::Browser::Markup->new;
   $markup->add_style(space    => ' ');
   $markup->add_style(newline  => "\n");
   $markup->add_style(mismatch => "BGCOLOR pink");
 
   # Styles for printing protein alignments
-  $markup->add_style(acidic_aa => "BGCOLOR red");
+  $markup->add_style(acidic_aa => "BGCOLOR lightgreen");
   $markup->add_style(basic_aa => "BGCOLOR lightskyblue");
-  $markup->add_style(hphobic_aa => "BGCOLOR lightgrey");
-  $markup->add_style(polar_aa => "BGCOLOR yellow");
-  $markup->add_style(special_aa => '');
+  $markup->add_style(npolar_aa => "BGCOLOR lightgrey");
+  $markup->add_style(polar_aa => "BGCOLOR burlywood");
+  $markup->add_style(special_aa => "BGCOLOR red");
+
+  # add word and line breaks
   for (my $i=0; $i < @lines; $i++) {
     my $pad = \$lines[$i];
     my @markup;
-    # add word and line breaks
     for (my $j=0; $j < length $$pad; $j += 10) {
       push (@markup,[$j % 80 ? 'space':'newline',
                      $j => $j]);
@@ -512,6 +493,7 @@ sub alignment {
   }
 
   my (@padded,@labels);
+
   for (my $i = 0; $i < @lines; $i++) {
     my @segments = split "\n",$lines[$i];
     for (my $j = 0; $j < @segments; $j++) {
@@ -522,28 +504,30 @@ sub alignment {
     $labels[$i] = length($self->{dnas}[$i]) + abs($origin) - 1 if $origin <  0;
   }
 
+  warn Dumper(\@padded) if DEBUG;
   my $result;
   my @length;
 
-  for (my $i = 0; $i < @padded; $i++) {					# ---------------------------> MAJOR CHANGE BEGINS HERE - Shraddha
+  #$i: number of blocks; $j: number of sequences
+  for (my $i = 0; $i < @padded; $i++) {				
     for (my $j = 0; $j < @{$padded[$i]}; $j++) {
       next unless $padded[$i][$j];
       my $origin = $origins->{$names{$j}};
       my $offset = $padded[$i][$j] =~ tr/. -/. -/;
-      my $skipit = $offset == length($padded[$i][$j]);                  # all gaps or emptiness
+      my $skipit = $offset == length($padded[$i][$j]);                  
+      #warn "Block ", $i, "\tsequence ", $j, "\t", $origin, "\t", $offset, "\t", $skipit, "\n";
 
-        if ($j==0 && $color_code_proteins) {                            # colouring reference seq
+      if ($j==0 && $color_code_proteins) {                            # colouring reference seq
         my @refMarkup;
         for(my $q=0; $q<length $padded[$i][$j]; $q++) {
-           my $refPos = substr($padded[$i][$j],$q,1);
-           next if $refPos =~ /^[.\s-]$/;                               # move on if not amino acid
-           push(@refMarkup,[$aa_type{$refPos},$q=>$q+1]);
-        } # end FOR
+          my $refPos = substr($padded[$i][$j],$q,1);
+          next if $refPos =~ /^[.\s-]$/;                               # move on if not amino acid
+          push(@refMarkup,[$aa_type{$refPos},$q=>$q+1]);
+        } # end for
 
         $length[$i][$j] = length $padded[$i][$j];
         $markup->markup(\$padded[$i][0],\@refMarkup);
-        }
-      elsif ($j>0 && ($show_mismatches || $color_code_proteins)) {      # non-ref-seqs: highlight mismatches/colour code proteins
+      }elsif ($j>0 && ($show_mismatches || $color_code_proteins)) {     
         my @markup;
         for (my $r=0; $r<length $padded[$i][$j]; $r++) {
           my $targ = substr($padded[$i][$j],$r,1);
@@ -556,45 +540,27 @@ sub alignment {
 
           push(@markup,['mismatch',$r => $r+1])
             if (lc($source) ne lc($targ)) && ($show_mismatches);
-          push(@markup,[$aa_type{$targ}, $r => $r+1])
-            if $color_code_proteins && exists $aa_type{$targ};
         }
         $length[$i][$j] = length $padded[$i][$j];        
         $markup->markup(\$padded[$i][$j],\@markup);
-      }
-      else {
+      } else {
         $length[$i][$j] = length $padded[$i][$j];
       }
 
       #      my $l = $origin<0 ? $longest_name+2 : $longest_name;
       my $l = $longest_name;
       $result .= $skipit ? ""
-                         : sprintf ("\%${l}s \%${longest_line}d %s\n",
-                                    $origin < 0 ? "($names{$j})"
+                       : sprintf ("\%${l}s \%${longest_line}d %s\n",
+                                  $origin < 0 ? "($names{$j})"
                                                 : $names{$j},
                                     $labels[$j],$padded[$i][$j]);
-
+                                    
       $labels[$j] += $length[$i][$j] - $offset  if $origin >= 0;
       $labels[$j] -= $length[$i][$j] - $offset  if $origin < 0;
     }
-
     $result .= "\n";
-  }	# ---------------------------> MAJOR CHANGE ENDS HERE - Shraddha
-
+  }	
   return $result;
-}
-
-sub _get_simple_align_data {
-  my $class  = shift;
-  my $algn   = shift;
-  $algn->is_flush or croak "The alignment isn't flush (all sequences same length) - sorry";
-  my $src_length = $algn->length - 1;
-
-  my @seqs       = $algn->each_seq;
-  my @dnas       = map {$_->display_id,$_->seq} @seqs;
-  my @aligns     = map {[$_->display_id,0=>$src_length,0=>$src_length]} @seqs[1..$#seqs];
-  my %origins    = map {$_->display_id,$_->strand < 0 ? -$_->start : $_->start} @seqs;
-  (\@dnas,\@aligns,\%origins);
 }
 
 1;
@@ -718,7 +684,7 @@ foreach (sort {$a->[TARG][REF] <=> $b->[TARG][REF]
 
   $added[$targ] = $tend;
 
-  print join("\n",@lines),"\n\n";
+  #print join("\n",@lines),"\n\n";
 }
 
 # take care of the extra stuff at the end

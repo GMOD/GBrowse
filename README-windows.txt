@@ -42,17 +42,14 @@ system halts.  Also be sure to add MySQL's bin directory to your PATH
 environment variable.  Typically, it is C:\mysql\bin.
 
 Bulk upload notes:
-Be sure that the modules you need (DBI, DBD::Mysql) are actually installed in
-your Activestate Perl.  I found the PPM 'thought' that they were installed,
-but really there was a package list and nothing else.  I had to use PPM to
-remove the modules and install them again and then they worked.  Also make
-sure that your system's TMP environment variable (set in the System control
-panel) points to a writable directory.
-
-More notes here, as I figure them out.
+Be sure that the modules you need are actually installed in your Activestate
+Perl.  I found the PPM 'thought' that they were installed, but really there
+was a package list and nothing else.  I found this to be the case with both
+DBI and DBD::Mysql.  I had to use PPM to remove the modules and install them
+again and then they worked.  Also make sure that your system's TMP environment
+variable (set in the System control panel) points to a writable directory.
 
 Scott Cain
 cain@cshl.org
 12/27/2002
 
-Check temp directory usage in bulk_load_gff.pl

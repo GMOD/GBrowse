@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.34 2002-08-30 21:17:36 lstein Exp $
+# $Id: Browser.pm,v 1.35 2002-08-31 00:44:55 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -479,17 +479,19 @@ sub default_label_indexes {
 
 =head2 make_link()
 
-  $url = $browser->make_link($feature)
+  $url = $browser->make_link($feature,$panel)
 
 Given a Bio::SeqFeatureI object, turn it into a URL suitable for use
-in a hypertext link.
+in a hypertext link.  For convenience, the Bio::Graphics panel is also
+provided.
 
 =cut
 
 sub make_link {
   my $self = shift;
   my $feature = shift;
-  return $self->config->make_link($feature);
+  my $panel   = shift;
+  return $self->config->make_link($feature,$panel);
 }
 
 =head2 render_html()
@@ -549,12 +551,12 @@ sub render_html {
 
   return unless $segment;
 
-  my($image,$map) = $self->image_and_map(segment       => $segment,
-					 feature_files => $feature_files,
-					 options       => $options,
-					 tracks        => $tracks,
-					 limit         => $limit,
-					);
+  my($image,$map,$panel) = $self->image_and_map(segment       => $segment,
+						feature_files => $feature_files,
+						options       => $options,
+						tracks        => $tracks,
+						limit         => $limit,
+					       );
 
 
   my ($width,$height) = $image->getBounds;
@@ -564,7 +566,7 @@ sub render_html {
   my $img_map;
   if ($do_map) {
     $self->_load_aggregator_types($segment);
-    $img_map = $self->make_map($map,$do_centering_map) 
+    $img_map = $self->make_map($map,$do_centering_map,$panel)
   }
   return wantarray ? ($img,$img_map) : join "<br>",$img,$img_map;
 }
@@ -627,8 +629,7 @@ sub tmpdir {
 
 sub make_map {
   my $self = shift;
-  my $boxes = shift;
-  my $centering_map = shift;
+  my ($boxes,$centering_map,$panel) = @_;
   my $map = qq(<map name="hmap">\n);
 
   # use the scale as a centering mechanism
@@ -641,8 +642,8 @@ sub make_map {
       $map .= $self->make_centering_map($_) if $centering_map;
       next;
     }
-    my $href  = $self->make_href($_->[0]) or next;
-    my $alt   = $self->make_title($_->[0]);
+    my $href  = $self->make_href($_->[0],$panel) or next;
+    my $alt   = $self->make_title($_->[0],$panel);
     $map .= qq(<area shape="RECT" coords="$_->[1],$_->[2],$_->[3],$_->[4]"
 	       href="$href" title="$alt">\n);
   }
@@ -687,20 +688,20 @@ sub make_centering_map {
 
 sub make_href {
   my $self = shift;
-  my $feature = shift;
+  my ($feature,$panel)   = @_;
 
   if ($feature->can('make_link')) {
     return $feature->make_link;
   } else {
-    return $self->make_link($feature);
+    return $self->make_link($feature,$panel);
   }
 }
 
 sub make_title {
-  my $self    = shift;
-  my $feature = shift;
+  my $self             = shift;
+  my ($feature,$panel) = @_;
   return $feature->make_title if $feature->can('make_title');
-  return $self->config->make_title($feature);
+  return $self->config->make_title($feature,$panel);
 }
 
 # Generate the image and the box list, and return as a two-element list.
@@ -868,7 +869,7 @@ sub image_and_map {
   return $gd   unless wantarray;
 
   my $boxes    = $panel->boxes;
-  return ($gd,$boxes);
+  return ($gd,$boxes,$panel);
 }
 
 =head2 overview()
@@ -1462,19 +1463,19 @@ sub summary_mode {
 # override make_link to allow for code references
 sub make_link {
   my $self     = shift;
-  my $feature  = shift;
-  my $label    = $self->feature2label($feature) or return;
+  my ($feature,$panel)  = @_;
+  my $label    = $self->feature2label($feature,$panel) or return;
   my $link     = $self->code_setting($label,'link');
   $link        = $self->code_setting(general=>'link') unless defined $link;
   return unless $link;
-  return $link->($feature) if ref($link) eq 'CODE';
+  return $link->($feature,$panel) if ref($link) eq 'CODE';
   return $self->link_pattern($link,$feature);
 }
 
 # make the title for an object on a clickable imagemap
 sub make_title {
   my $self = shift;
-  my $feature = shift;
+  my ($feature,$panel) = @_;
   my ($title,$key) = ('','');
  TRY: {
     my $label    = $self->feature2label($feature) or last TRY;
@@ -1482,7 +1483,7 @@ sub make_title {
     $key         =~ s/s$//;
     my $link     = $self->code_setting($label,'title') || $self->code_setting(general=>'title');
     $link or last TRY;
-    $title       = $link->($feature) if ref($link) eq 'CODE';
+    $title       = $link->($feature,$panel) if ref($link) eq 'CODE';
     $title     ||= $self->link_pattern($link,$feature);
   }
   return $title if $title;

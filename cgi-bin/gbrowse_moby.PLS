@@ -46,7 +46,7 @@ print OUT <<'!NO!SUBS!';
 
 
 
- $Id: gbrowse_moby.PLS,v 1.7 2003-12-26 23:15:23 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.8 2003-12-26 23:29:40 markwilkinson Exp $
 
 
 # use lib "/usr/local/GB/GMOD_LIBS/moby-live/Perl";

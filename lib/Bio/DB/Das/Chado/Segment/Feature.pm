@@ -721,7 +721,7 @@ sub subfeatures {
 =cut
 
 sub sub_SeqFeature {
-  my($self,$types) = @_;
+  my($self,$type) = @_;
 
   #first call, cache subfeatures
   if(!$self->subfeatures ){
@@ -731,9 +731,9 @@ sub sub_SeqFeature {
     my $parent_id = $self->feature_id();
 
     my $typewhere = '';
-    if ($types) {
-      $types = lc $types;
-      $typewhere = " and child.type_id = ".$self->factory->n2t($types) ;
+    if ($type) {
+      $type = lc $type;
+      $typewhere = " and child.type_id = ".$self->factory->n2t($type) ;
     }
 
     my $handle = $self->factory->dbh();
@@ -768,6 +768,9 @@ sub sub_SeqFeature {
 
     #$self->{factory}->{dbh}->trace(0) if DEBUG;
 
+    my $rows = $sth->rows;
+    return if ($rows<1);    #nothing retrieve during query
+
     while (my $hashref = $sth->fetchrow_hashref) {
 
 #this problem can't be solved this way--group really needs to return 'name'
@@ -795,18 +798,18 @@ sub sub_SeqFeature {
     }
   }
 
-  if($types){
-    my %oktypes;
-    my %ok = map {$oktypes{$_} => 1} @$types;
-    return grep { $ok{ $_->type } } $self->subfeatures();
-  }
+#this shouldn't be necessary, as filtering took place via the query
+#  if($types){
+#    my %oktypes;
+#    my %ok = map {$oktypes{$_} => 1} @$types;
+#    return grep { $ok{ $_->type } } $self->subfeatures();
+#  }
 
-  my @subfeatures = $self->subfeatures();
+  my @subfeatures = @{$self->subfeatures()};
 
     warn "subfeature array:@subfeatures\n";
 
-  return  @subfeatures if @subfeatures;
-  return;
+  return  @subfeatures;
 }
 
 =head2 add_subfeature()
@@ -826,6 +829,8 @@ sub sub_SeqFeature {
 sub add_subfeature {
   my $self    = shift;
   my $subfeature = shift;
+
+     warn "in add_subfeat:$subfeature";
 
   return undef unless ref($subfeature);
   return undef unless $subfeature->isa('Bio::DB::Das::Chado::Segment::Feature');

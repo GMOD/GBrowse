@@ -483,5 +483,8 @@ sub location {return shift}
 sub is_circular {return shift->bioseq->is_circular}
 sub annotation {return shift->bioseq->annotation}
 sub species {return shift->bioseq->species}
+sub version {return shift->bioseq->version}
 
+# compatibility with Bio::DB::GFF::RelSegment
+*abs_ref = \&accession_number;
 1;

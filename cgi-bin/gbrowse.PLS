@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.82 2004-05-11 17:54:41 lstein Exp $
+# $Id: gbrowse.PLS,v 1.83 2004-05-12 20:36:22 marclogghe Exp $
 
 use strict;
 use Bio::Graphics;
@@ -586,7 +586,7 @@ sub get_settings {
 sub default_settings {
   my $settings = shift;
   warn "Setting default settings" if DEBUG;
-  @$settings{'name','ref','start','stop','flip'} = ('','','','','');
+  @$settings{'name','ref','start','stop','flip','version'} = ('','','','','',100);
   $settings->{width}   = $CONFIG->setting('default width');
   $settings->{source}  = $CONFIG->source;
   $settings->{id}      = md5_hex(rand);  # new identity
@@ -712,6 +712,7 @@ sub adjust_settings {
 	|| grep {/zoom|nav|overview/} param())
      )
     {
+      $settings->{version}   = param('version');
       $settings->{ref}   = param('ref');
       $settings->{start} = param('start') if param('start') =~ /^[\d-]+/;
       $settings->{stop}  = param('stop')  if param('stop')  =~ /^[\d-]+/;
@@ -1280,6 +1281,8 @@ sub get_features {
     fatal_error("ERROR: Unable to open database",$CONFIG->setting('description'),pre($@));
   }
 
+  eval {$db->biosql->version($settings->{version})};
+
   my @features = lookup_features_from_db($db,$settings);
 
   # h'mmm.  Couldn't find the feature.  See if it is in an uploaded file.
@@ -1359,7 +1362,7 @@ sub lookup_features_from_db {
   # Filter out redundant segments; this can happen when the same basic feature is
   # present under several names, such as "genes" and "frameworks"
   my %seenit;
-  @segments = grep {!$seenit{$_->seq_id,$_->start,$_->end}++} @segments;
+  @segments = grep {!$seenit{$_->seq_id,$_->start,$_->end,eval{$_->version}}++} @segments;
   return @segments if @segments > 1;
 
   # this prevents any confusion over (ref,start,stop) and (name) addressing.
@@ -1484,6 +1487,7 @@ sub multiple_choices {
     my $padding = $CONFIG->setting(general=>'landmark_padding') || 0;
 
     for my $r (sort by_score_and_position @results) {
+      my $version     = eval {$r->version};
       my $name        = eval {$r->name}  || $r->primary_tag;
       my $class       = eval {$r->class} || $CONFIG->tr('Sequence');
       my $score       = eval {$r->score} || $CONFIG->tr('NOT_APPLICABLE');
@@ -1502,6 +1506,7 @@ sub multiple_choices {
 
       my $objref     = $class ? "?name=$c:$n" : "?name=$n";
       my $posref     = "?ref=$ref;start=$padstart;stop=$padstop";
+      $posref        .= ";version=$version" if $version < 100;
       my $position = format_segment($r);
       print TR({-class=>'databody',-valign=>'TOP'},
 	       th({-align=>'right'},ref($name) ? a({-href=>$objref},$name):tt($name)),

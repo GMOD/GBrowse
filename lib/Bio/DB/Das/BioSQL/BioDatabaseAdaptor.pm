@@ -56,7 +56,7 @@ package Bio::DB::Das::BioSQL::BioDatabaseAdaptor;
 use strict;
 
 use Bio::DB::BioDB;
-
+use Bio::DB::Query::BioQuery;
 
 =head2 new_from_registry
 
@@ -108,26 +108,23 @@ sub new_from_registry{
 
 =cut
 
-sub fetch_Seq_by_accession{
-    my ($self,$acc) = @_;
+sub fetch_Seq_by_accession
+{
+  my ( $self, $acc ) = @_;
+  my $namespace = $self->namespace;
+  my $version   = $self->version;
+  my $query = Bio::DB::Query::BioQuery->new(
+       -datacollections =>
+         [ "Bio::SeqI seq", "Bio::DB::Persistent::BioNamespace=>Bio::SeqI db" ],
+       -where => [ "db.namespace ='$namespace'", "seq.accession_number = '$acc'", $version < 100 ? ("seq.version = '$version'") : () ]
+  );
 
-    use Bio::Seq::SeqFactory;
-    use Bio::Seq;
-    
-    my $seq;
-    
-    #The difference between using Bio::Seq an Bio::PrimarySeq would have been that the latter
-    #will not pull in all the features and thus slow down the retrieval.
-    #However, using PartialSeqAdaptor helps to delay loading features even for Bio::Seq.
-    
-    $seq = Bio::Seq->new(-namespace => $self->namespace, -accession_number => $acc, version => $self->version);
-#    $seq = Bio::PrimarySeq->new(-namespace => $self->namespace, -accession_number => $acc, version => $self->version);
-    
-    my $adp = $self->db->get_object_adaptor($seq);
-    my $result = $adp->find_by_unique_key($seq);
-    
-    return $result;
+  my $adp     = $self->db->get_object_adaptor("Bio::Seq");
+  my @results = @{$adp->find_by_query($query)->each_Object};
+
+  return  wantarray ? @results : $results[0];
 }
+
 
 #sub top_SeqFeatures{
 #    my ($self,$segment) = @_;

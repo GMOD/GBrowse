@@ -548,6 +548,12 @@ This is the color for the background of the birds-eye view.
 
 This is the color for the background of the detailed view.
 
+=item * head
+
+This is content to insert into the HTML <head></head> section.  It is
+the appropriate place to stick JavaScript code, etc.  It can be a code
+reference if you wish.
+
 =item * header
 
 This is a header to print at the top of the browser page.  It is

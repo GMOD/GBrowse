@@ -154,8 +154,10 @@ sub print_top {
   my $title = shift;
   local $^W = 0;  # to avoid a warning from CGI.pm
   print_header(-expires=>'+1m');
-  print start_html(-title => $title,
-		   -style  => {src=>$CONFIG->setting('stylesheet')}) unless $HTML++;
+  my @args = (-title => $title,
+	      -style  => {src=>$CONFIG->setting('stylesheet')});
+  push @args,(-head=>$CONFIG->setting('head')) if $CONFIG->setting('head');
+  print start_html(@args) unless $HTML++;
 }
 
 sub print_bottom {

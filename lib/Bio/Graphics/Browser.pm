@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.6 2002-02-20 16:44:16 lstein Exp $
+# $Id: Browser.pm,v 1.7 2002-02-20 22:12:15 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
@@ -365,9 +365,8 @@ sub read_configuration {
   my $conf_dir    = shift;
   $self->{conf} ||= {};
 
-  die "$conf_dir: not a directory" unless -d $conf_dir;
-
-  opendir(D,$conf_dir) or die "Couldn't open $conf_dir: $!";
+  croak("$conf_dir: not a directory") unless -d $conf_dir;
+  opendir(D,$conf_dir) or croak "Couldn't open $conf_dir: $!";
   my @conf_files = map { "$conf_dir/$_" } grep {/\.conf$/} readdir(D);
   close D;
 

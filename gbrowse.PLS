@@ -25,7 +25,16 @@ print "Extracting $file (with variable substitutions)\n";
 
 print OUT <<"!GROK!THIS!";
 $Config{startperl} -w
-\$VERSION = $OPTIONS{VERSION};
+
+###################################################################
+# Non-modperl users should change this variable if needed to point
+# to the directory in which the configuration files are stored.
+#
+\$CONF_DIR  = '$OPTIONS{CONF}/gbrowse.conf';
+#
+###################################################################
+\$VERSION   = $OPTIONS{VERSION};
+
 !GROK!THIS!
 
 # In the following, perl variables are not expanded during extraction.
@@ -33,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.11 2002-02-20 16:44:16 lstein Exp $
+# $Id: gbrowse.PLS,v 1.12 2002-02-20 22:12:15 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -45,7 +54,7 @@ use Text::Tabs;
 use Text::Shellwords;
 use Carp;
 use CGI qw(:standard escape center *table *dl *TR *td);
-use vars qw($CONFIG %DB $MAX_SEGMENT $DEFAULT_SEGMENT $HEADER $HTML $UA $VERSION);
+use vars qw($CONFIG %DB $MAX_SEGMENT $DEFAULT_SEGMENT $HEADER $HTML $UA $VERSION $CONF_DIR);
 
 # if you change the zoom/nav icons, you must change this as well.
 use constant MAG_ICON_HEIGHT => 20;
@@ -65,14 +74,6 @@ use constant DEFAULT_FINE_ZOOM    => '10%';
 # if true, turn on surrounding rectangles for debugging the image map
 use constant DEBUG => 0;
 use constant DEBUGGING_RECTANGLES => 0;
-
-###################################################################
-# Non-modperl users should change this variable if needed to point
-# to the directory in which the configuration files are stored.
-#
-use constant CONF_DIR => '/usr/local/apache/conf/gbrowse.conf';
-#
-###################################################################
 
 # IMPORTANT DATA STRUCTURES
 
@@ -121,12 +122,10 @@ END
 $HEADER=0;
 $HTML=0;
 
-my $CONF_DIR;
 if ($ENV{MOD_PERL}) {
     my $conf  = Apache->request->dir_config('GBrowseConf');
     $CONF_DIR = Apache->server_root_relative($conf) if $conf;
 }
-$CONF_DIR ||= CONF_DIR;
 
 # preliminaries -- read and/or refresh the configuration directory
 $CONFIG  ||= Bio::Graphics::Browser->new;
@@ -1065,9 +1064,11 @@ sub tmpdir {
   $tmpuri .= "/$path" if $path;
   my $tmpdir;
   if ($ENV{MOD_PERL}) {
-    my $r = Apache->request;
-    my $subr   = $r->lookup_uri($tmpuri);
-    $tmpdir = $subr->filename;
+    my $r          = Apache->request;
+    my $subr       = $r->lookup_uri($tmpuri);
+    $tmpdir        = $subr->filename;
+    my $path_info  = $subr->path_info;
+    $tmpdir       .= $path_info if $path_info;
   } else {
     $tmpdir = "$ENV{DOCUMENT_ROOT}/$tmpuri";
   }
@@ -1313,7 +1314,7 @@ sub open_uploaded_file {
     return;
   }
 
-  my $result = open (F,$mode,$file);
+  my $result = open (F,"${mode}${file}");
 
   unless ($result) {
     warn "Can't open the file named $settings->{'uploaded_file'}.  Perhaps it has been purged? (error: $!)";
@@ -1395,7 +1396,7 @@ sub get_remote_feature_data {
     error("Could not fetch $url: ",$response->message);
     return;
   }
-  open (F,"<","$tmpdir/$id") or return;
+  open (F,"<$tmpdir/$id") or return;
   my $feature_file = Bio::Graphics::FeatureFile->new(-file           => \*F,
 						     -map_coords     => $rel2abs,
 						     -smart_features =>1);

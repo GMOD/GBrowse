@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.56 2002-09-09 03:27:03 lstein Exp $
+# $Id: gbrowse.PLS,v 1.57 2002-09-11 11:43:34 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2153,7 +2153,7 @@ sub tableize {
 sub set_language {
   my ($config,$lang) = @_;
   my $default_language   = $config->setting('language');
-  my @http_languages     = split /,\s*/,http('Accept-language');
+  my @http_languages     = split /,\s+/,http('Accept-language');
   my $preferred_language = $http_languages[0] || $default_language;
   return unless $preferred_language;
   $lang->language($preferred_language);

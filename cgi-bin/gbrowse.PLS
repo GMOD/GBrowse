@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.60 2004-02-13 12:56:52 lstein Exp $
+# $Id: gbrowse.PLS,v 1.61 2004-02-15 09:54:13 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -297,9 +297,22 @@ my $description = $CONFIG->setting('description');
 my $segment;
 
 ## STARTING THE PAGE ############################################################################
-my $title = @segments == 1 ?
-  "$description: ".$segments[0]->seq_id.":".$segments[0]->start.'..'.$segments[0]->end 
-  : $description;
+my $divisor = $CONFIG->setting(general=>'unit_divider') || 1;
+my $title;
+if ($divisor == 1) {
+  $title = @segments == 1 ?
+    "$description: ".$segments[0]->seq_id.":".$segments[0]->start.'..'.$segments[0]->end 
+    : $description;
+} else {
+  if (@segments == 1) {
+  my $seg_start = unit_label($segments[0]->start);
+  my $seg_end   = unit_label($segments[0]->end);
+  $title = "$description: ".$segments[0]->seq_id.":".$seg_start.'..'.$seg_end;
+  } else {
+  $title = $description;
+  }
+}
+
 
 print_top($title);
 
@@ -362,11 +375,17 @@ sub main_display {
     $segment = $segments->[0];
     # $segment = truncated_segment($segment) if $segment->length < 4;
     my $divider = $CONFIG->setting(general=>'unit_divider') || 1;
+    my $seg_start = $segment->start;
+    my $seg_end   = $segment->end;
+    if ($divider != 1 ) {
+       $seg_start = unit_label($seg_start);
+       $seg_end   = unit_label($seg_end);
+    }
     print h2($CONFIG->tr('SHOWING_FROM_TO',
 		       unit_label($segment->length),
 		       $segment->seq_id,
-		       commas($segment->start/$divider),
-		       commas($segment->end/$divider)));
+		       commas($seg_start),
+		       commas($seg_end)));
   }
 
   # force flipping
@@ -464,7 +483,7 @@ sub detail_panel {
   }
 
   else {
-    $cell .= i($CONFIG->tr('TOO_BIG',commas($MAX_SEGMENT),commas($DEFAULT_SEGMENT)));
+    $cell .= i($CONFIG->tr('TOO_BIG',unit_label($MAX_SEGMENT),unit_label($DEFAULT_SEGMENT)));
   }
   $cell .= "\n";
   my $table = table({-border=>0,-width=>'100%'},
@@ -824,8 +843,10 @@ sub make_hilite_callback {
 sub slidertable {
   my ($segment,$buttonsDir) = @_;
   my $span      = $segment->length;
-  my $half      = unit_label(int $span/2);
-  my $full      = unit_label($span);
+  my $half_title      = unit_label(int $span/2);
+  my $full_title      = unit_label($span);
+  my $half      = int $span/2;
+  my $full      = $span;
   my $fine_zoom = get_zoomincrement();
 
   my @lines;
@@ -835,9 +856,9 @@ sub slidertable {
   push @lines,hidden(-name=>'prevname',-value=>scalar(param('name')),-override=>1);
   push @lines,
     (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>"left $full",
-		  -border=>0,-title=>"left $full"),
+		  -border=>0,-title=>"left $full_title"),
      image_button(-src=>"$buttonsDir/green_l1.gif",-name=>"left $half",
-		  -border=>0,-title=>"left $half"),
+		  -border=>0,-title=>"left $half_title"),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/minus.gif",-name=>"zoom out $fine_zoom",
 		  -border=>0,-title=>"zoom out $fine_zoom"),
@@ -848,9 +869,9 @@ sub slidertable {
 		  -border=>0,-title=>"zoom in $fine_zoom"),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/green_r1.gif",-name=>"right $half",
-		  -border=>0,-title=>"right $half"),
+		  -border=>0,-title=>"right $half_title"),
      image_button(-src=>"$buttonsDir/green_r2.gif",-name=>"right $full",
-		  -border=>0,-title=>"right $full"),
+		  -border=>0,-title=>"right $full_title"),
     );
 
   #  print end_form;
@@ -881,13 +902,14 @@ sub unit_label {
   my $value = shift;
   my $unit     = $CONFIG->setting('units')        || 'bp';
   my $divider  = $CONFIG->setting('unit_divider') || 1;
+  return 0 if ($value == 1 and $divider > 1);
   $value /= $divider;
 
   my $label;
   $label = $value >= 1e9  ? sprintf("%.4g G%s",$value/1e9,$unit)
          : $value >= 1e6  ? sprintf("%.4g M%s",$value/1e6,$unit)
          : $value >= 1e3  ? sprintf("%.4g k%s",$value/1e3,$unit)
-	 : $value >= 1    ? $value." $unit"
+	 : $value >= 1    ? sprintf("%.4g %s", $value,    $unit)
 	 : $value >= 1e-2 ? sprintf("%.4g c%s",$value*100,$unit)
 	 : $value >= 1e-3 ? sprintf("%.4g m%s",$value*1e3,$unit)
 	 : $value >= 1e-6 ? sprintf("%.4g u%s",$value*1e6,$unit)
@@ -2292,6 +2314,7 @@ sub configure_plugins {
     $p->database($db);
     $p->browser_config($conf);
     $p->config_path($conf_dir);
+  my $sources = $CONFIG->sources > 1;
     $p->page_settings($settings);
     $p->init();  # other initialization
 
@@ -2299,12 +2322,14 @@ sub configure_plugins {
     my $config = retrieve_plugin_config($p);
     # and tell the plugin about it
     $p->configuration($config);
+    $p->filter if ($p->type eq 'filter');
 
     # if there are any CGI parameters from the
     # plugin's configuration screen, set it here
     my @params = grep {/^$name\./} param();
     next unless @params;
     $p->reconfigure unless param('plugin_action') eq $CONFIG->tr('Cancel');
+    $p->filter if ($p->type eq 'filter');    
 
     # turn the plugin on
     my $setting_name = 'plugin:'.$p->name;
@@ -2312,8 +2337,8 @@ sub configure_plugins {
   }
 }
 
-sub plugin_menu {
-  my ($settings,$plugins) = @_;
+sub plugin_adjust_labels {
+  my $plugins = shift;
 
   my %verbs = (dumper       => $CONFIG->tr('Dump'),
 	       finder       => $CONFIG->tr('Find'),
@@ -2333,20 +2358,31 @@ sub plugin_menu {
     # default verb
     else {
       $labels{$_} = $verbs{$plugins->{$_}->type} ||
-        $plugins->{$_}->type;
+        ucfirst $plugins->{$_}->type;
     }
-    $labels{$_} .= ' ' . $plugins->{$_}->name;
+    my $name = $plugins->{$_}->type eq 'filter' ?  
+               $CONFIG->setting($plugins->{$_}->name => 'key') : 
+               $plugins->{$_}->name;
+    $labels{$_} .= " $name";
     $labels{$_} =~ s/^\s+//;
+  }
+  return \%labels;
 }
 
 
-  my @plugins = sort {$labels{$a} cmp $labels{$b}} keys %labels;
+sub plugin_menu {
+  my ($settings,$plugins) = @_;
+  my $sources = $CONFIG->sources > 1;
+
+  my $labels = plugin_adjust_labels($plugins);  
+
+  my @plugins = sort {$labels->{$a} cmp $labels->{$b}} keys %$labels;
   return unless @plugins;
   return join('',
 	      b($CONFIG->tr('Dumps').':'),br,
 	      popup_menu(-name=>'plugin',
 			 -values=>\@plugins,
-			 -labels=>\%labels,
+			 -labels=> $labels,
 			 -default => $settings->{plugin},
 			),'&nbsp;',
 	      submit(-name=>'plugin_action',-value=>$CONFIG->tr('About')),'&nbsp;',
@@ -2359,7 +2395,6 @@ sub source_menu {
   my $settings = shift;
   my @sources = $CONFIG->sources;
   my $sources = @sources > 1;
-
   return b($CONFIG->tr('DATA_SOURCE')).br.
     ( $sources ?
       popup_menu(-name   => 'source',
@@ -2400,7 +2435,9 @@ sub do_plugin_dump {
 sub do_plugin_about {
   my $plugin = shift;
   my $p = $PLUGINS->{$plugin};
-  print h1($CONFIG->tr('About_plugin',$p->name));
+  my $type  = ( split ( /::/, ref($p) ) )[-1];
+  my $labels = plugin_adjust_labels($PLUGINS);
+  print h1($CONFIG->tr('About_plugin',$labels->{$type}));
   print $p->description;
   print start_form(),submit($CONFIG->tr('Back_to_Browser')),hidden('plugin'),end_form();
 }
@@ -2429,7 +2466,7 @@ sub do_plugin_configure {
   my $type = $p->type;
   my @action_labels = ($CONFIG->tr('Cancel'),$CONFIG->tr('Configure_plugin'));
   push @action_labels,$CONFIG->tr('Find') if $type eq 'finder';
-  push @action_labels,$CONFIG->tr('Go')   if $type eq 'dumper';
+  push @action_labels,$CONFIG->tr('Go')   if ($type eq 'dumper' or $type eq 'filter');
   my @buttons = map {submit(-name=>'plugin_action',-value=>$_)} @action_labels;
 
   print h1($p->type eq 'finder' ? $CONFIG->tr('Find') : $CONFIG->tr('Configure'),$p->name);

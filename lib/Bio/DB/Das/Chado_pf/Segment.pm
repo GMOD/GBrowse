@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.14 2002-12-11 19:53:13 scottcain Exp $
+# $Id: Segment.pm,v 1.15 2002-12-13 15:48:06 scottcain Exp $
 
 =head1 NAME
 
@@ -115,9 +115,9 @@ sub new {
 
   my ($name,$dbadaptor,$start,$end) = @_;
 
-print "$name,$dbadaptor\n";
+warn "start = $start, end = $end\n";
 
-  throw("start value less than 1\n") if (defined $start && $start < 1);
+  $self->throw("start value less than 1\n") if (defined $start && $start < 1);
   $start ||= 1;
 
 #moved length determination to constructor, now it will be there from
@@ -125,8 +125,8 @@ print "$name,$dbadaptor\n";
 
   my $quoted_name = $dbadaptor->{dbh}->quote($name);
 
-print "$quoted_name\n";
-$dbadaptor->{dbh}->trace(4);
+warn "$quoted_name\n";
+#$dbadaptor->{dbh}->trace(4);
 
   my $sth = $dbadaptor->{dbh}->prepare ("
 select f.seqlen from dbxref dbx, feature f, feature_dbxref fd
@@ -135,18 +135,18 @@ select f.seqlen from dbxref dbx, feature f, feature_dbxref fd
          fd.dbxref_id = dbx.dbxref_id and
          dbx.accession = $quoted_name  ");
 
-print "prepared:$sth\n" ;
+warn "prepared:$sth\n" ;
 
-  $sth->execute or die; #throw("unable to validate name/length");
+  $sth->execute or $self->throw("unable to validate name/length");
 
-print "executed\n";
+warn "executed\n";
 
   my $hash_ref = $sth->fetchrow_hashref;
   my $length =  $$hash_ref{'seqlen'};
 
-  print "$length\n";
+  warn "$length\n";
 
-  throw("end value greater than length\n") if (defined $end && $end >= $length);
+  $self->throw("end value greater than length\n") if (defined $end && $end > $length);
   $end ||= $length;
 
   $length = $end - $start +1;
@@ -302,18 +302,18 @@ sub features {
   my $rstart = $self->start;
   my $rend   = $self->end;
   my $sql_range;
-  if ($rangetype eq 'overlaps') {
-    $sql_range = " fmin <= $rend and fmax >= $rstart ";
-  } elsif ($rangetype eq 'contains') {
+  if ($rangetype eq 'contains') {
     $sql_range = " fmin <= $rstart and fmax >= $rend ";
   } elsif ($rangetype eq 'contained_in') {
     $sql_range = " fmin => $rstart and fmax <= $rend ";
-  } else {
-    return;
+  } else { #overlaps is the default
+    $sql_range = " fmin <= $rend and fmax >= $rstart ";
   }
 
-  my $quoted_name = $self->dbadaptor->quote($self->name);
-  my $sth = $self->dbadaptor->prepare("
+#$self->{dbadaptor}->{dbh}->trace(2);
+
+  my $quoted_name = $self->{dbadaptor}->{dbh}->quote($self->{name});
+  my $sth = $self->{dbadaptor}->{dbh}->prepare("
       select f.name,f.fmin,f.fmax,f.fstrand,cv.termname
       from feature f, cvterm cv, dbxref dbx, feature_dbxref fd
       where
@@ -323,12 +323,10 @@ sub features {
          f.type_id=cv.cvterm_id and
          f.type_id in
             (select cvterm_id from cvterm
-             where termname like '%gene%'
-                or termname like '%rna%'
-                or termname like '%exon%') and
+             where termname like \'%gene%\') and
          $sql_range  
       order by f.fmin ");
-   $sth->execute or return; 
+   $sth->execute or $self->throw("feature query failed"); 
 
 #take these results and create a list of Bio::SeqFeatureI objects
 
@@ -336,16 +334,20 @@ sub features {
   while (my $hash_ref = $sth->fetchrow_hashref) {
 
     my $feat = Bio::SeqFeature::Generic->new (
+                       -ref        => $self->{name},
                        -start      => $$hash_ref{fmin},
-                       -end        => $$hash_ref{fmax},
+                       -stop       => $$hash_ref{fmax},
                        -strand     => $$hash_ref{fstrand}, 
-                       -seq_id     => $self->name,
+                       -seq_id     => $self->{name},
                        -annotation => $$hash_ref{name},
-                       -primary    => $$hash_ref{termname} );
+                       -type       => "gene:gene",
+                       -primary    => "gene" );
     push @features, $feat;
+  warn "$feat->{annotation}\n";
   }
 
   if ($iterator) {
+   warn "using Bio::DB::Das::Chado_pfIterator\n";
     return Bio::DB::Das::Chado_pfIterator->new(\@features);
   } else {
     return @features;
@@ -367,8 +369,8 @@ Returns the sequence for this segment as a simple string.
 sub seq {
   my $self = shift;
 
-  my $quoted_name = $self->dbadaptor->quote($self->name);
-  my $sth = $self->dbadaptor->prepare("
+  my $quoted_name = $self->{dbadaptor}->{dbh}->quote($self->name);
+  my $sth = $self->{dbadaptor}->{dbh}->prepare("
      select residues from feature where feature_id in
        (select f.feature_id
         from dbxref dbx, feature f, feature_dbxref fd
@@ -376,7 +378,7 @@ sub seq {
            f.feature_id = fd.feature_id and
            fd.dbxref_id = dbx.dbxref_id and
            dbx.accession = $quoted_name ) ");
-  $sth->execute or return;
+  $sth->execute or $self->throw("seq query failed");
 
   my $hash_ref = $sth->fetchrow_hashref;
   return $$hash_ref{'residues'};

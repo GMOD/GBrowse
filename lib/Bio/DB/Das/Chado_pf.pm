@@ -1,4 +1,4 @@
-# $Id: Chado_pf.pm,v 1.11 2002-12-11 00:14:35 scottcain Exp $
+# $Id: Chado_pf.pm,v 1.12 2002-12-13 15:48:05 scottcain Exp $
 # Das adaptor for Chado_pf
 
 =head1 NAME
@@ -142,7 +142,6 @@ sub new {
   my $dbh = DBI->connect( $dsn, $username, $password )
     or warn "unable to open db handle";
 
-  $self->{dbh} = $dbh;
   return bless {dbh  => $dbh}, ref $self ||$self;
 }
 
@@ -242,14 +241,16 @@ interrupted.  When a callback is provided, the method returns undef.
 
 sub features {
   my $self = shift;
-  my ($types,$callback,$attributes) = 
-       $self->_rearrange([qw(TYPES CALLBACK ATTRIBUTES)],
+  my ($types,$callback,$attributes,$iterator) = 
+       $self->_rearrange([qw(TYPES CALLBACK ATTRIBUTES ITERATOR)],
 			@_);
 
 
+warn "Chado,features: $iterator\n";
   my @features = $self->_segclass->features(-types => $types,
                                             -attributes => $attributes,
-                                            -callback => $callback );
+                                            -callback => $callback,
+                                            -iterator => $iterator );
 
 
   @features;

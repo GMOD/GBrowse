@@ -3,7 +3,7 @@
 # ===============================================
 # Author: Todd Harris (harris@cshl.org)
 # gbrowse_on_osx.pod
-# Revision $Id: INSTALL.MacOSX.pod,v 1.2 2003-11-24 14:06:39 tharris Exp $
+# Revision $Id: INSTALL.MacOSX.pod,v 1.3 2003-12-01 18:15:08 scottcain Exp $
 # Copyright @ 2003 Cold Spring Harbor Laboratory
 # ===============================================
 
@@ -16,7 +16,7 @@ the Generic Genome Browser (GBrowse) on a stock Mac OS X system.
 
 =head2 1. Hardware requirements
 
- The minimum suggested hardware is:
+The minimum suggested hardware is:
 
     Mac OS X.2 (Jaguar or above)
     500 Mhz G4 or higher
@@ -44,7 +44,8 @@ To install the Package, simply double click on it and follow the
 included documentation.  The package also includes an installer for
 the MySQL database.
 
-  The package installer will:
+The package installer will:
+
      1. Install all required libraries
      2. (Optionally) install the MySQL database
      3. Install GBrowse
@@ -60,7 +61,8 @@ GBrowse is distributed with scripts that automate the fetching and
 building of GBrowse and all of its software dependencies.  These
 scripts are locate in contrib/install_macosx.
 
-   For example, to build GBrowse on Mac OS X,
+For example, to build GBrowse on Mac OS X,
+
     % cd contrib/install_macosx
     % make libraries  (wait and wait and wait)
     % make gbrowse
@@ -124,7 +126,8 @@ widely used for web applications.
 
 =item 4. Perl, version 5.005 or higher
 
-  Preinstalled on MacOS X.
+Preinstalled on MacOS X.
+
   http://www.perl.org
 
 =item 5. Perl modules
@@ -137,17 +140,18 @@ widely used for web applications.
     6. Text::Shellwords
     7. IO::String
 
-    The following are optional
+The following are optional
+
     1. XML::Twig 3.04 or higher
     2. XML::Dom 1.34 or higher
     3. XML::Writer 0.4 or higher
     4. XML::Parser 2.30 or higher
     5. LWP 5.53 or higher
 
-  If these modules are present, the "Sequence Dumper" plugin will be
-  able to produce GAME and BSML output.  They can be downloaded from
-  CPAN. The LWP module enables loading of remote 3rd party
-  annotations.
+If these modules are present, the "Sequence Dumper" plugin will be
+able to produce GAME and BSML output.  They can be downloaded from
+CPAN. The LWP module enables loading of remote 3rd party
+annotations.
 
 =item 6. Libraries
 
@@ -200,7 +204,7 @@ fastest and easiest way to install X.
 
 NOTE: X11 will come preinstalled with OS X.3 and greater.
 
-1. Fetch the Apple X11 and X11 SDK installer packages.
+Fetch the Apple X11 and X11 SDK installer packages.
 
   http://www.apple.com/macosx/x11/download
 
@@ -211,7 +215,7 @@ instructions.
 
 =item 2. Creating users for MySQL
 
-Since we are going to be installing, MySQL, it's appropriate to create
+Since we are going to be installing MySQL, it's appropriate to create
 specific users and groups for the database.
 
 User and group management under Mac OS X is handled by the NetInfo
@@ -227,7 +231,8 @@ accordingly if they are.
                  uid     gid
 	mysql    2001    2001
 
-   The mysql user:
+The mysql user:
+
    $ niutil -create / /users/mysql	
    $ niutil -createprop / /users/mysql uid 2001
    $ niutil -createprop / /users/mysql gid 2001
@@ -239,31 +244,36 @@ accordingly if they are.
    $ niutil -createprop / /users/mysql home /usr/local/mysql
    $ niutil -createprop / /users/mysql shell /dev/null
 
-  The mysql group:
+The mysql group:
+
    $ niutil -create / /groups/mysql
    $ niutil -createprop / /groups/mysql gid 2001
    $ niutil -createprop / /groups/mysql passwd *
 
-  Note that the mysql user's home directory was set to
-  /usr/local/mysql, a directory that will be created during the
-  installation of MySQL.
+Note that the mysql user's home directory was set to
+/usr/local/mysql, a directory that will be created during the
+installation of MySQL.
 
 =item 3. MySQL
 
-  MySQL can be installed on Mac OS X as a precompiled package,
-  compiled directly from source, or through the fink package manager
-  as either source or binary. Installation from a precompiled binary
-  is the fastest and most sure-fire way to get a working installation.
-  However, I've found that a source install, although a little slower,
-  more closely mirrors mysql installations on unix systems.
+MySQL can be installed on Mac OS X as a precompiled package,
+compiled directly from source, or through the fink package manager
+as either source or binary. Installation from a precompiled binary
+is the fastest and most sure-fire way to get a working installation.
+However, I've found that a source install, although a little slower,
+more closely mirrors mysql installations on unix systems.
 
-=item 3a. Installing MySQL from source
+=over 4
 
-  1. Download the source tarball from mysql.com
+=item Installing MySQL from source
+
+=over 4
+
+=item 1. Download the source tarball from mysql.com
 
     % curl -O ftp://ftp.orst.edu/pub/mysql/Downloads/MySQL-4.0/mysql-4.0.13.tar.gz
 
-  2. Unpack and install the distribution
+=item 2. Unpack and install the distribution
 
     % gnutar -zxf mysql-4.0.12.tar.gz
     % cd mysql-4.0.12
@@ -275,46 +285,59 @@ accordingly if they are.
     % sudo make install
     % sudo mkdir /usr/local/mysql/run
 
-  1. Configure the installation
+=item 3. Configure the installation
 
     % sudo /usr/local/mysql/bin/mysql_install_db --force # create var/ for DBs
     % sudo chown -R mysql /usr/local/mysql/var /usr/local/mysql/run
     % sudo chgrp -R mysql /usr/local/mysql
 
-=item 3b. Installing MySQL from a precompiled package
+=back
 
-  1. Download the package from mysql.com
+=item Installing MySQL from a precompiled package
+
+=over 4
+
+=item 1. Download the package from mysql.com
 
     http://www.mysql.com/downloads/
 
-    Find the "standard" release in pkg/dmg form and download it from a
-    nearby mirror.  Double click the .dmg file and follow the typical
-    installer instructions.  The package places everything in standard
-    paths (ie the mysql.sock is found in /etc/).
+Find the "standard" release in pkg/dmg form and download it from a
+nearby mirror.  Double click the .dmg file and follow the typical
+installer instructions.  The package places everything in standard
+paths (ie the mysql.sock is found in /etc/).
 
-    2. Configure the installation
+=item 2. Configure the installation
 
     % sudo chown -R mysql /usr/local/mysql/data
     % sudo chgrp -R mysql /usr/local/mysql
     % cd /usr/local/mysql
     % sudo ./configure # installs the appropriate databases
 
+=back
+
+=back
+
 =item 4. Starting MySQL
 
-  1. Start the mysql database daemon
+=over 4
+
+=item 1. Start the mysql database daemon
 
     % sudo /usr/local/mysql/bin/mysqld_safe --user=mysql &
          OR (for Fink installs):
     % sudo /sw/bin/mysqld_safe &
 
-  2. Set a root user for the MySQL installation
+=item 2. Set a root user for the MySQL installation
    
     % mysqladmin -u root password 'new_password'
 
-  3. Finally, be sure to add the mysql/bin directory to your path.
+=item 3. Finally, be sure to add the mysql/bin directory to your path.
 
-  4. You will also probably want to create a mysql user and group.
-     See the MySQL documentation for more information.
+=item  4. You will also probably want to create a mysql user and group.
+
+See the MySQL documentation for more information.  
+
+=back
 
 =item 5. Installing libjpeg, libpng, gd, and GD
 
@@ -324,7 +347,7 @@ fink, there are path and versioning difficulties that have yet to be
 worked out.  In addition to <little> gd, there is <big> GD, a perl
 library for interacting with little gd.
   
-  Install jpegsrc and libpng
+Install jpegsrc and libpng
 
   % curl -O  ftp://ftp.uu.net/graphics/jpeg/jpegsrc.v6b.tar.gz
   % gnutar -xzf jpegsrc.v6b.tar.gz
@@ -336,8 +359,8 @@ library for interacting with little gd.
   % sudo ranlib /usr/local/lib/libjpeg.a
   % popd
 
-  Now you need to compile the libpng code. This allows you to
-  manipulate PNG files.
+Now you need to compile the libpng code. This allows you to
+manipulate PNG files.
 
   % curl -O http://www.libpng.org/pub/png/src/libpng-1.2.5.tar.gz
   % gnutar -xzf libpng-1.2.5.tar.gz 
@@ -417,7 +440,7 @@ files.
 DBD::mysql looks for libmysqlclient.dylib in /usr/local/mysql/lib dyld
 looks for it in /usr/local/mysql/lib/mysql/.
 
-  We remedy this conflict in the Makefile
+We remedy this conflict in the Makefile
 
   # Fetch DBD-mysql-2.9002 from CPAN
   % gnutar xvfz  DBD-mysql-2.9002
@@ -491,8 +514,8 @@ install it in the default locations for Apache.
   % make
   % sudo make install
 
-  Here I am using the default Sites folder to store the
-  gbrowse-specific files.
+Here I am using the default Sites folder to store the
+gbrowse-specific files.
 
 =head2 --- Populating the database
 
@@ -506,7 +529,7 @@ need to let Apache know where they are. Specifically, this may
 required modifying the DocumentRoot, adding a ScriptAlias, or creating
 a VirtualHost. See the Apache documentation for more information.
 
-  You can start Apache by:
+You can start Apache by:
   
   % sudo /usr/sbin/apachectl start
 
@@ -547,7 +570,7 @@ Material in this document is copyright 2001-2003 by the Cold Spring
 Harbor Laboratory. This information is provided "AS-IS" without any
 warranty, expressed or implied.
 
-$Id: INSTALL.MacOSX.pod,v 1.2 2003-11-24 14:06:39 tharris Exp $
+$Id: INSTALL.MacOSX.pod,v 1.3 2003-12-01 18:15:08 scottcain Exp $
 
 =cut
 

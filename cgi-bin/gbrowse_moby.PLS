@@ -44,9 +44,10 @@ $startperl -w
 
 print OUT <<'!NO!SUBS!';
 
+#=======================================================================
 
 
-#$Id: gbrowse_moby.PLS,v 1.11 2003-12-27 14:26:38 markwilkinson Exp $
+$Id: gbrowse_moby.PLS,v 1.12 2003-12-29 15:16:58 markwilkinson Exp $
 
 
 # use lib "/usr/local/GB/GMOD_LIBS/moby-live/Perl";
@@ -61,7 +62,21 @@ use Carp;
 use Bio::Graphics::Browser::Util;
 use CGI qw(:standard *table *TR);
 use strict;
-use vars qw($Central $CONFIG $VERSION $CONF_DIR $HTML_DIR);
+use vars qw($Central %RENDERERS $CONFIG $VERSION $CONF_DIR $HTML_DIR);
+
+# get ready to use the renderers
+opendir (DIR, "$CONF_DIR/MobyServices") || die "Can't open directory $CONF_DIR/MobyServices for directory parsing $!\n";
+my @files = readdir DIR;
+
+foreach my $file(@files){
+    no strict 'refs';
+    next if (-d $_);
+    next unless ($_ =~ /(.*)_renderer\.pm/);
+    require "MobyServices::$_";
+    my $type = &{'MobyServices::'.$_.'_renderer::type'};
+    $RENDERERS{$1} =   "MobyServices::$1_renderer";
+    use strict;
+}
 
 =head1 NAME
 
@@ -455,68 +470,22 @@ sub execute {
     print end_table;
     print_bottom("of the gbrowse_moby executable written by the <a href='http://www.biomoby.org'>BioMOBY project</a> (http://www.biomoby.org)");    
 }
-sub renderGIF {
-        # these renderers should probably exist in their own modules to be more flexible... think about that in the next iteration
-        my ($data, $htmldir,$imgdir) = @_;
-        my $bindata = decode_base64($data);
-        my ($fh, $filename) = tempfile( DIR => "$htmldir/$imgdir/", SUFFIX=> ".gif" );
-        $filename =~ /(\w+\.jpg)$/;
-        $filename = $1;
-        binmode($fh);
-        print $fh $bindata;
-        close $fh;
-        return "<img src='$imgdir/$filename'>";
-}
-sub renderJPEG {
-        # these renderers should probably exist in their own modules to be more flexible... think about that in the next iteration
-        my ($data, $htmldir,$imgdir) = @_;
-        my $bindata = decode_base64($data);
-        my ($fh, $filename) = tempfile( DIR => "$htmldir/$imgdir/", SUFFIX=> ".jpg" );
-        $filename =~ /(\w+\.jpg)$/;
-        $filename = $1;
-        binmode($fh);
-        print $fh $bindata;
-        close $fh;
-        return "<img src='$imgdir/$filename'>";
-}
-
-sub renderPlainText {
-        # these renderers should probably exist in their own modules to be more flexible... think about that in the next iteration
-        my ($data, $htmldir,$imgdir) = @_;
-        return "$data";
-}
-
-sub renderFormattedText {
-        my ($data, $htmldir,$imgdir) = @_;
-        $data =~ s/(\S{100})/$1\<br\>/g;
-        return "<pre>$data</pre>";
-}
-
-sub renderHTML {
-        my ($data, $htmldir,$imgdir) = @_;
-        $data =~ s/(\S{100})/$1\<br\>/g;
-        return "$data";
-}
 
 sub printIt {
     my ($this) = @_;
-    my $datatype = $this->getTagName;
+    my $thisdatatype = $this->getTagName;
     my $imgdir = $CONFIG->setting('tmpimages');
     my $renderer;
 
-    if ($Central->ISA($datatype, 'b64_encoded_gif')){
-        $renderer = \&renderGIF;
-    } elsif ($Central->ISA($datatype, 'b64_encoded_jpeg')){
-        $renderer = \&renderJPEG;
-    } elsif ($Central->ISA($datatype, 'text-formatted')){
-        $renderer = \&renderFormattedText;
-    } elsif ($Central->ISA($datatype, 'text-html')){
-        $renderer = \&renderHTML;
-    } elsif ($Central->ISA($datatype, 'text-plain')){
-        $renderer = \&renderPlainText;
+    my ($renderer_term, $renderer_lsid) = &whichDeepestParentObject($Central, $thisdatatype, keys(%RENDERERS));
+
+    unless ($renderer_term){
+        $renderer = $RENDERERS{'text-formatted'}
     } else {
-        $renderer = \&renderFormattedText;
-    } 
+        $renderer = $RENDERERS{$renderer_term}
+    }
+    die "Can render this information\n" unless $renderer;
+    
     foreach my $subnode($this->getChildNodes){
         next unless ($subnode->getNodeType == ELEMENT_NODE);
         if ($subnode->getTagName eq "CrossReference"){
@@ -563,6 +532,9 @@ sub processXrefs {
             td("<a href=".($CGI->url)."?namespace=$ns&id=$id>$ns:$id</a>"));        
     }
 }
+
+
+=================================================
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

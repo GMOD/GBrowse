@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.132 2004-03-18 22:09:49 lstein Exp $
+# $Id: Browser.pm,v 1.133 2004-03-19 14:36:18 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -758,6 +758,8 @@ sub make_map {
   my $flip = $panel->flip;
 
   my $did_map;
+
+  local $^W = 0; # avoid uninit variable warnings due to poor coderefs
 
   foreach (@$boxes){
     next unless $_->[0]->can('primary_tag');

@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Plugin::GeneFinder;
 
-# $Id: GeneFinder.pm,v 1.1 2003-04-15 20:30:35 lstein Exp $
+# $Id: GeneFinder.pm,v 1.2 2004-03-19 14:36:18 lstein Exp $
 # test plugin
 use strict;
 use File::Temp 'tempfile';
@@ -10,7 +10,7 @@ use Bio::SeqFeature::Generic;
 use CGI qw(:standard *table);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.1';
+$VERSION = '0.2';
 
 use constant GENEFINDER => 'gfcode';   # must be in the path somewhere
 use constant GFTABLES   => 'gftables'; # must be in the gbrowse.conf directory
@@ -49,7 +49,6 @@ sub annotate {
   my $self    = shift;
   my $segment = shift;
   my $dna     = $segment->seq;
-
   my $abs_start = $segment->start;
 
   # write DNA out into a tempfile
@@ -126,7 +125,9 @@ sub annotate {
 					 bgcolor      => 'yellow'});
 
   while (<F>) {
+    next if /^\#/;
     my (undef,$source,$method,$start,$end,$score,$strand) = split "\t";
+    next unless defined $method;
     my $type = $method =~ /splice/ ? 'splice'
              : $method eq 'atg'    && $strand eq '+' ? 'startplus'
              : $method eq 'atg'    && $strand eq '-' ? 'startminus'

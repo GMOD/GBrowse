@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.8 2002-02-21 13:13:51 lstein Exp $
+# $Id: Browser.pm,v 1.9 2002-02-21 23:28:34 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
@@ -164,7 +164,7 @@ sub render_html {
   my($image,$map) = $self->image_and_map(segment       => $segment,
 					 feature_files => $feature_files,
 					 show          => $show,
-					 order         => $tracks,
+					 order         => $order,
 					 options       => $options,
 					 tracks        => $tracks,
 					);

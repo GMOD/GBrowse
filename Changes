@@ -2,13 +2,15 @@
         * Fixed memory leak when used with mod_perl
         * Fixed bug with link URL when the same feature type occurred in more
         than one track
-        * Added SVG "Publication quality image" option
+        * Added SVG "Publication quality image" option; as a result, GD 2.07
+        is the minimum version of GD required.
         * Added the ability to modify html display via callbacks utilizing
         segment and page setting objects.
         * Fixed alignment problems in gbrowse_details
         * Fixed several items with the chado/gmod adaptor
         * Added documentation for installing on MacOSX
         * Added a simple MOBY browser (see CONFIGURE_HOWTO for configuring it).
+        * Fixed a long pathname bug with the Windows PPM install.
 
 1.57	Sat Oct  4 21:59:19 EDT 2003
 	* Fixed formatting errors in gbrowse_details alignments.

@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.12 2003-11-03 17:59:56 sheldon_mckay Exp $
+# $Id: GFFhelper.pm,v 1.13 2003-11-06 06:56:50 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -136,7 +136,7 @@ sub read_gff {
     }
 
     # dump fasta header and assemble the sequence
-    shift @seq if $seq[0] =~ />/;
+    shift @seq if @seq && $seq[0] =~ />/;
     $self->seq(join '', @seq);
 
     # make sure the sequence name and range are defined
@@ -248,10 +248,10 @@ sub gff_header {
     my $self  = shift;
     my $ver   = 3;
     my $date  = localtime;
-    my $start = $self->start; 
+    my $start = $self->start || 0; 
     my $end   = $self->end;
     my $ref   = $self->refseq;
-    my $seq   = $self->seq;
+    my $seq   = $self->seq || '';
     $start = 1 if $start > 1;
     $end   = (length $seq) + 1 if $end < length $seq;
 
@@ -271,7 +271,7 @@ sub origin {
     
     my $group = "ID=Accession:$ref";
     $group .= ';Note=' . _escape($desc) if $desc;
-    $gff . join ("\t", $ref, $src, 'origin', $start, $end, undef, '.', '.', $group);
+    $gff . join ("\t", $ref, $src, 'origin', $start, $end, '.', '.', '.', $group);
 }
 
 # add a reference component for new sequences

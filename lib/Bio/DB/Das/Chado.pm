@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.67 2004-11-23 20:33:08 scottcain Exp $
+# $Id: Chado.pm,v 1.68 2004-12-03 15:08:15 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -421,6 +421,11 @@ sub get_feature_by_name {
 
    warn "name:$name in get_feature_by_name" if DEBUG;
 
+  $name =~ s/_/\\_/g;  # escape underscores in name
+  $name =~ s/\%/\\%/g; # ditto for percent signs
+
+   warn "name after protecting _ and % in the string:$name\n" if DEBUG;
+
   my (@features,$sth);
   
   if ($name =~ /^\s*\S+\s*$/) {
@@ -444,6 +449,8 @@ sub get_feature_by_name {
     }
 
     my $query = $select_part . $from_part . $where_part;
+
+    warn "first get_feature_by_name query:$query" if DEBUG;
 
     $sth = $self->dbh->prepare($query);
     $sth->execute($name) or $self->throw("getting the feature_ids failed");
@@ -560,13 +567,15 @@ sub _complex_search {
     my $class= shift;
 
     warn "name before wildcard subs:$name\n" if DEBUG;
-                                                                                                                          
+
+    
+
     $name =~ s/\*/%/g;
     $name = "\%$name" unless (0 == index($name, "%"));
     $name = "$name%"  unless (0 == index(reverse($name), "%"));
-                                                                                                                          
+
     warn "name after wildcard subs:$name\n" if DEBUG;
-                                                                                                                          
+
     my $select_part = "select ga.feature_id ";
     my $from_part   = "from gffatts ga ";
     my $where_part  = "where ga.attribute ilike ? ";

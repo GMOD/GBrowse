@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.81 2004-12-02 17:47:14 scottcain Exp $
+# $Id: Segment.pm,v 1.82 2004-12-03 15:08:17 scottcain Exp $
 
 =head1 NAME
 
@@ -675,12 +675,18 @@ sub features {
   if ($feature_id) {
     $from_part    = "from (feature f join featureloc fl using (feature_id)) "
                    ."left join feature_dbxref fd using (feature_id) "
+                   . "join dbxref dbx on "
+                   .    "(dbx.dbxref_id = fd.dbxref_id and "
+                   .     "dbx.db_id = ".$factory->gff_source_db_id.") "
                    ."left join analysisfeature af using (feature_id)";
 
     $where_part   = "where f.feature_id = $feature_id and fl.rank=0 ";
   } else {
     $from_part   = "from (feature f join featureslice($interbase_start, $rend) fl using (feature_id)) "
                   ."left join feature_dbxref fd using (feature_id) "
+                  . "join dbxref dbx on "
+                   .    "(dbx.dbxref_id = fd.dbxref_id and "
+                   .     "dbx.db_id = ".$factory->gff_source_db_id.") "
                   ."left join analysisfeature af using (feature_id)";
 
     $where_part  = "where $sql_types "

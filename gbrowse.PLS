@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.22 2002-04-03 02:02:01 lstein Exp $
+# $Id: gbrowse.PLS,v 1.23 2002-04-03 04:11:39 lstein Exp $
 
 use strict;
 use lib '/home/lstein/projects/Generic-Genome-Browser/lib/';
@@ -315,6 +315,11 @@ sub main_display {
 
   if ($segment) {
 
+      # if a plugin passes us back a Feature, rather than a Segment, turn it into a segment
+      # (this shouldn't happen - hah!)
+    $segment = open_database()->segment($segment->ref,$segment->start,$segment->end)
+	unless $segment->can('features');
+
     # get the third party features
     $feature_files = load_external_sources($segment,$page_settings);
 
@@ -381,6 +386,7 @@ sub get_source {
 # if not, set  from defaults
 sub get_settings {
   my $source   = shift;
+  open_database() or croak "Can't open database defined by source $source";
   my %settings = cookie("gbrowse_$source");
 
   my $ok = 1;
@@ -1159,7 +1165,7 @@ sub open_database {
   return $DB{$source} if $DB{$source};
   my @argv = eval{$CONFIG->dbgff_settings};
   unless (@argv) {
-    warn "trying to reload config: source = $source: $@";
+    warn "gbrowse: trying to reload config, cache must be stale";
     $CONFIG = Bio::Graphics::Browser->new;
     $CONFIG->read_configuration($CONF_DIR) or die "Can't read configuration files: $!";
     $CONFIG->source($source);
@@ -1606,7 +1612,9 @@ sub adjust_track_order {
 
   my %seen_it_already;
   foreach (grep {/^track\./} param()) {
-    my ($track) = /(\d+)/;
+    warn "$_ =>",param($_) if DEBUG;
+    next unless /^track\.(\d+)/;
+    my $track = $1;
     my $label   = param($_);
     next unless length $label > 0;
     next if $seen_it_already{$label}++;

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::RestrictionAnnotator;
-# $Id: RestrictionAnnotator.pm,v 1.1 2002-03-31 21:41:49 lstein Exp $
+# $Id: RestrictionAnnotator.pm,v 1.2 2002-04-03 04:11:39 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -73,6 +73,12 @@ sub annotate {
   return unless %$config;
   return unless $config->{on};
 
+  my ($max_label,$max_bump) = (10,50);
+  if (my $browser_config = $self->browser_config) {
+      $max_label  = $browser_config->setting(general=>'label density');
+      $max_bump   = $browser_config->setting(general=>'bump density');
+  }
+
   my $ref        = $segment->ref;
   my $abs_start  = $segment->start;
   my $dna        = $segment->dna;
@@ -80,7 +86,8 @@ sub annotate {
   my $feature_list   = Bio::Graphics::FeatureFile->new;
 
   # find restriction sites
-  my $i = 0;
+  my $i     = 0;
+  my $count = 0;
   for my $type (keys %$config) {
     next if $type eq 'on';
     my ($pattern,$offset) = @{$SITES{$type}};
@@ -88,8 +95,6 @@ sub annotate {
 				    key     => "$type restriction site",
 				    fgcolor => $COLORS[$i % @COLORS],
 				    bgcolor => $COLORS[$i % @COLORS],
-				    bump    => 1,
-				    label   => 1,
 				    point   => 0,
 				    orient  => 'N',
 				   });
@@ -98,7 +103,12 @@ sub annotate {
       my $pos = $abs_start + pos($dna) - length($pattern) + $offset;
       my $feature = Bio::Graphics::Feature->new(-start=>$pos,-stop=>$pos,-ref=>$ref,-name=>$type);
       $feature_list->add_feature($feature,$type);
+      $count++;
     }
+  
+    # turn off bumping and labeling at high densities
+    $feature_list->set($type,bump  => $count < $max_bump);
+    $feature_list->set($type,label => $count < $max_label);
   }
 
   return $feature_list;

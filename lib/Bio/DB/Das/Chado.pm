@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.8 2003-01-26 20:15:16 scottcain Exp $
+# $Id: Chado.pm,v 1.9 2003-01-26 22:39:43 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -329,7 +329,8 @@ $score is the match strength.
 
 =cut
 
-=commentout code
+=head2
+
 search_notes is the sub to support keyword wildcard searching
 
 

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.9 2003-01-26 20:15:17 scottcain Exp $
+# $Id: Segment.pm,v 1.10 2003-01-26 22:39:43 scottcain Exp $
 
 =head1 NAME
 
@@ -92,11 +92,11 @@ use Bio::Root::Root;
 use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
 use constant DEBUG => 1;
-use constant ASSEMBLY_TYPE=>'arm';
 
-use vars '@ISA','$VERSION';
+use vars '@ISA','$VERSION','$ASSEMBLY_TYPE';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI);
 $VERSION = 0.01;
+$ASSEMBLY_TYPE = 'arm';
 
 # construct a virtual segment that works in a lazy way
 sub new {
@@ -127,7 +127,7 @@ sub new {
 
   my $sth = $dbadaptor->{dbh}->prepare ("
              select feature_id,seqlen from gbrowse_assembly
-             where type_id = ". $$cvterm_id{ASSEMBLY_TYPE} . " and
+             where type_id = ". $$cvterm_id{$ASSEMBLY_TYPE} . " and
                    name = $quoted_name  ");
 
     warn "prepared:$sth\n" if DEBUG ;
@@ -365,7 +365,7 @@ sub features {
 
   my $srcfeature_id = $self->{srcfeature_id};
   my $sth = $self->{dbadaptor}->{dbh}->prepare("
-    select f.name,fl.nbeg,fl.nend,fl.strand,f.type_id
+    select f.name,fl.nbeg,fl.nend,fl.strand,f.type_id,f.feature_id
     from feature f, featureloc fl
     where
       $sql_types 
@@ -397,7 +397,7 @@ sub features {
                        $termname{$$hashref{type_id}},
                        $$hashref{strand},
                        $self->{name},
-                       $$hashref{name});  
+                       $$hashref{name},$$hashref{feature_id});  
 
     push @features, $feat;
  

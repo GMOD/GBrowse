@@ -16,13 +16,13 @@ package Bio::DB::Das::Chado::Segment::Feature;
 
 use strict;
 
-use Bio::DB::Chado::Segment;
+use Bio::DB::Das::Chado::Segment;
 use Bio::SeqFeatureI;
 use Bio::Root::Root;
 use Bio::LocationI;
 
 use vars qw($VERSION @ISA $AUTOLOAD);
-@ISA = qw(Bio::DB::Chado::Segment Bio::SeqFeatureI 
+@ISA = qw(Bio::DB::Das::Chado::Segment Bio::SeqFeatureI 
 	  Bio::Root::Root);
 
 $VERSION = '0.01';
@@ -67,7 +67,7 @@ sub new {
       $type,
       $strand,
       $group,       # ie, gene name  (GFF legacy)
-      $db_id) = @_;
+      $db_id,$feature_id) = @_;
 
   my $self = bless { },$package;
 
@@ -79,8 +79,32 @@ sub new {
   @{$self}{qw(type group db_id absolute)} =
     ($type,$group,$db_id,$factory->{absolute});
 
+  @{$self}{qw(feature_id)} = ($feature_id);
+
   $self;
 }
+
+=head2 group
+
+ Title   : group
+ Usage   : $group = $f->group([$new_group])
+ Function: get or set the feature group
+ Returns : A string (feature name)
+ Args    : a new group (optional)
+ Status  : Public
+
+This method gets or sets the feature group.  The group is a
+hold over from GFF and is mostly synonymous with name.
+
+=cut
+
+sub group  {
+  my $self = shift;
+  my $d    = $self->{group};
+  $self->{group} = shift if @_;
+  $d;
+}
+
 
 =head2 method
 
@@ -96,6 +120,7 @@ This method gets the feature type (analogous to method, like in GFF).
 =cut
 
 sub method {
+  my $self = shift;
   return $self->{type}
 }
 
@@ -126,8 +151,7 @@ sub strand {
  Title   : display_id
  Usage   : $display_id = $f->display_id([$display_id])
  Function: get or set the feature display id
- Returns : a Bio::DB::GFF::Featname object
- Args    : a new display_id (optional)
+ Returns : a string (the feature name)
  Status  : Public
 
 This method is an alias for group().  It is provided for
@@ -136,6 +160,7 @@ Bio::SeqFeatureI compatibility.
 =cut
 
 sub display_name  {
+  my $self = shift;
   return $self->{group}
 }
 
@@ -162,16 +187,23 @@ sub sub_SeqFeature {
   my $self = shift;
   my $type = shift;
 
-  my $parent_id = $self->{srcfeature_id};
+  my $parent_id = $self->{feature_id};
 
   my $typewhere = '';
   if ($type) {
     $type = lc $type;
-    my %termhash = %{$self->{dbadaptor}->{cvterm_id}};
+    my %termhash = %{$self->{factory}->{cvterm_id}};
     $typewhere = " and child.type_id = $termhash{$type} ";
   }
 
-  my $sth = $self->{dbadaptor}->{dbh}->prepare("
+  my $handle = $self->{factory}->{dbh};
+
+  print "$parent_id\n";
+  print "$handle\n";
+
+  $self->{factory}->{dbh}->trace(2);
+
+  my $sth = $self->{factory}->{dbh}->prepare("
     select child.feature_id, child.name, child.type_id,
            childloc.nbeg, childloc.nend, childloc.strand, childloc.phase
     from feature as parent
@@ -184,13 +216,13 @@ sub sub_SeqFeature {
     inner join
       featureloc as childloc on
         (child.feature_id = childloc.feature_id)
-    where parent.feature_id = $feature_id
+    where parent.feature_id = $parent_id
           $typewhere;
     ");
   $sth->execute or $self->throw("subfeature query failed"); 
 
   my @features;
-  my %termname = %{$self->{dbadaptor}->{cvtermname}};
+  my %termname = %{$self->{factory}->{cvtermname}};
   while (my $hashref = $sth->fetchrow_hashref) {
 
     my ($start,$stop);
@@ -203,13 +235,13 @@ sub sub_SeqFeature {
     }
 
     my $feat = Bio::DB::Das::Chado::Segment::Feature->new (
-                       $self->{dbadaptor},
+                       $self->{factory},
                        '',
                        $start,$stop,
                        $termname{$$hashref{type_id}},
                        $$hashref{strand},
                        $self->{name},
-                       $$hashref{name}); 
+                       $$hashref{name}, $$hashref{feature_id}); 
 
     push @features, $feat;
 
@@ -470,6 +502,7 @@ primary_tag(), source_tag(), all_tags(), has_tag(), each_tag_value().
 =cut
 
 sub primary_tag {
+   my $self = shift;
    return $self->{type};
 }
 
@@ -565,7 +598,7 @@ sub adjust_bounds {
 #	} else {
 #	  $g->{start} = $start if !defined($g->{start}) || $start > $g->{start};
 #	  $g->{stop}  = $stop  if !defined($g->{stop})  || $stop  < $g->{stop};
-	}
+#	}
       }
     }
   }

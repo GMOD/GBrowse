@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.97 2003-05-29 21:27:52 lstein Exp $
+# $Id: gbrowse.PLS,v 1.98 2003-06-06 17:00:49 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2093,7 +2093,7 @@ sub initialize_plugins {
   my %plugin_list = ();
 
   warn "initializing plugins..." if DEBUG_PLUGINS;
-  my @plugins = shellwords($CONFIG->setting('plugins') || DEFAULT_PLUGINS);
+  my @plugins = shellwords($CONFIG->setting('plugins')); # || DEFAULT_PLUGINS);
 
  PLUGIN:
   for my $plugin (@plugins) {
@@ -2156,6 +2156,7 @@ sub plugin_menu {
     keys %$plugins;
 
   my @plugins = sort {$labels{$a} cmp $labels{$b}} keys %labels;
+  return unless @plugins;
   return join('',
 	      b($CONFIG->tr('Dumps').':'),br,
 	      popup_menu(-name=>'plugin',
@@ -2326,7 +2327,6 @@ sub tableize {
   }
   $html .= "</table>\n";
 }
-
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

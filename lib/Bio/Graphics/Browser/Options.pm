@@ -2,6 +2,7 @@ package Bio::Graphics::Browser::Options;
 
 use strict;
 use Bio::Graphics::Browser::Util;
+#use Bio::Graphics::Browser::Options::navigation;
 
 sub new {
   my($class, %arg) = @_;
@@ -144,6 +145,16 @@ sub remove_feature {
   }
 }
 
+=head2 end()
+
+aliased to stop()
+
+=cut
+
+sub end {
+  return shift->stop(@_);
+}
+
 
 =head2 flip()
 
@@ -273,7 +284,6 @@ sub display_instructions {
  Returns : value of ks (a scalar)
  Args    : on set, new value (a scalar or undef, optional)
 
-
 =cut
 
 sub ks {
@@ -281,6 +291,24 @@ sub ks {
   $self->{'ks'} = $val if defined($val);
   return $self->{'ks'};
 }
+
+=head2 label()
+
+ Usage   : $obj->label($newval)
+ Function: this is somehow related to slider.tt2, i don't know what it does
+ Example : 
+ Returns : value of label (a scalar)
+ Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub label {
+  my($self,$val) = @_;
+  $self->{'label'} = $val if defined($val);
+  return $self->{'label'};
+}
+
 
 =head2 name()
 
@@ -290,7 +318,6 @@ sub ks {
  Returns : value of name (a scalar)
  Args    : on set, new value (a scalar or undef, optional)
 
-
 =cut
 
 sub name {
@@ -298,6 +325,39 @@ sub name {
   $self->{'name'} = $val if defined($val);
   return $self->{'name'};
 }
+
+=head2 navleft()
+
+ Usage   : $obj->navleft($newval)
+ Function: used by slider.tt2 to scroll left
+ Example : 
+ Returns : value of navleft (a scalar)
+ Args    : on set, new value (a scalar or undef, optional)
+
+=cut
+
+sub navleft {
+  my($self,$val) = @_;
+  $self->{'navleft'} = $val if defined($val);
+  return $self->{'navleft'};
+}
+
+=head2 navright()
+
+ Usage   : $obj->navright($newval)
+ Function: used by slider.tt2 to scroll right
+ Example : 
+ Returns : value of navright (a scalar)
+ Args    : on set, new value (a scalar or undef, optional)
+
+=cut
+
+sub navright {
+  my($self,$val) = @_;
+  $self->{'navright'} = $val if defined($val);
+  return $self->{'navright'};
+}
+
 
 =head2 plugin()
 
@@ -307,7 +367,6 @@ sub name {
  Returns : value of plugin (a scalar)
  Args    : on set, new value (a scalar or undef, optional)
 
-
 =cut
 
 sub plugin {
@@ -315,6 +374,23 @@ sub plugin {
   $self->{'plugin'} = $val if defined($val);
   return $self->{'plugin'};
 }
+
+=head2 prevname()
+
+ Usage   : $obj->prevname($newval)
+ Function: this is somehow related to slider.tt2, i don't know what it does
+ Example : 
+ Returns : value of prevname (a scalar)
+ Args    : on set, new value (a scalar or undef, optional)
+
+=cut
+
+sub prevname {
+  my($self,$val) = @_;
+  $self->{'prevname'} = $val if defined($val);
+  return $self->{'prevname'};
+}
+
 
 =head2 q()
 
@@ -350,6 +426,24 @@ sub ref {
   return $self->{'ref'};
 }
 
+=head2 seg_length()
+
+ Usage   : $obj->seg_length($newval)
+ Function: this is somehow related to slider.tt2, i don't know what it does
+ Example : 
+ Returns : value of seg_length (a scalar)
+ Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub seg_length {
+  my($self,$val) = @_;
+  $self->{'seg_length'} = $val if defined($val);
+  return $self->{'seg_length'};
+}
+
+
 =head2 sk()
 
  Usage   : $obj->sk($newval)
@@ -382,6 +476,23 @@ sub source {
   my($self,$val) = @_;
   $self->{'source'} = $val if defined($val);
   return $self->{'source'};
+}
+
+=head2 span()
+
+ Usage   : $obj->span($newval)
+ Function: span of segment being viewed, stop - start
+ Example : 
+ Returns : value of span (a scalar)
+ Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub span {
+  my($self,$val) = @_;
+  $self->{'span'} = $val if defined($val);
+  return $self->{'span'};
 }
 
 =head2 start()
@@ -434,6 +545,24 @@ sub display_tracks {
   $self->{'display_tracks'} = $val if defined($val);
   return $self->{'display_tracks'};
 }
+
+=head2 track()
+
+ Usage   : $obj->track($newval)
+ Function: don't know what this is for
+ Example : 
+ Returns : value of track (a scalar)
+ Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub track {
+  my($self,$val) = @_;
+  $self->{'track'} = $val if defined($val);
+  return $self->{'track'};
+}
+
 
 =head2 tracks()
 
@@ -522,6 +651,23 @@ sub unset {
     $self->{$slot} = undef;
     return undef;
   }
+}
+
+=head2 zoom()
+
+ Usage   : $obj->zoom($newval)
+ Function: zoom parameter from slider.tt2 controls span (stop - start) of displayed segment
+ Example : 
+ Returns : value of zoom (a scalar)
+ Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub zoom {
+  my($self,$val) = @_;
+  $self->{'zoom'} = $val if defined($val);
+  return $self->{'zoom'};
 }
 
 

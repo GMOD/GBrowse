@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.124 2005-01-20 06:04:26 allenday Exp $
+# $Id: gbrowse.PLS,v 1.125 2005-01-21 09:45:34 allenday Exp $
 
 use strict;
 use Bio::Graphics;
@@ -417,19 +417,6 @@ sub unit_label {
   return $label;
 }
 
-# convert Mb/Kb back into bp... or a ratio
-sub unit_to_value {
-  my $string = shift;
-  my $sign           = $string =~ /out|left/ ? '-' : '+';
-  my ($value,$units) = $string =~ /([\d.]+) ?(\S+)/;
-  return unless defined $value;
-  $value /= 100   if $units eq '%';  # percentage;
-  $value *= 1000  if $units =~ /kb/i;
-  $value *= 1e6   if $units =~ /mb/i;
-  $value *= 1e9   if $units =~ /gb/i;
-  return "$sign$value";
-}
-
 sub labels {
   my $settings = shift;
   my @labels = $BROWSER->config->labels;
@@ -558,88 +545,6 @@ sub get_external_presets() {
   my %presets;
   @presets{@urls} = @labels;
   return \%presets;
-}
-
-# computes the new values for start and stop when the user made use of the zooming bar or navigation bar
-sub zoomnav {
-  my $settings = shift;
-  return unless $BROWSER->options->ref();
-  my $start = $BROWSER->options->start();
-  my $stop  = $BROWSER->options->stop();
-  my $span  = $stop - $start + 1;
-
-  warn "before adjusting, start = $start, stop = $stop, span=$span" if DEBUG;
-
-  my $flip  = $BROWSER->options->flip() ? -1 : 1;
-
-  # get zoom parameters
-  my $selected_span  = param('span');
-  my ($zoom)         = grep {/^zoom (out|in) \S+/} param();
-  my ($nav)          = grep {/^(left|right) \S+/}  param();
-  my $overview_x     = param('overview.x');
-  my $segment_length = param('seg_length');
-
-  my $zoomlevel = unit_to_value($1) if $zoom && $zoom =~ /((?:out|in) .+)\.[xy]/;
-  my $navlevel  = unit_to_value($1) if $nav  && $nav  =~ /((?:left|right) .+)/;
-
-  if (defined $zoomlevel) {
-    warn "zoom = $zoom, zoomlevel = $zoomlevel" if DEBUG;
-    my $center	    = int($span / 2) + $start;
-    my $range	    = int($span * (1-$zoomlevel)/2);
-    $range          = 2 if $range < 2;
-    ($start, $stop) = ($center - $range , $center + $range - 1);
-  }
-
-  elsif (defined $navlevel){
-    $start += $flip * $navlevel;
-    $stop  += $flip * $navlevel;
-  }
-
-  elsif (defined $overview_x && defined $segment_length) {
-    my @overview_tracks = grep {$BROWSER->options->{features}{$_}{visible}} 
-         $BROWSER->config->config->overview_tracks;
-    my ($padl,$padr) = $BROWSER->config->overview_pad(\@overview_tracks);
-
-    my $overview_width = ($BROWSER->options->width() * OVERVIEW_RATIO);
-
-    # adjust for padding in pre 1.6 versions of bioperl
-    $overview_width -= ($padl+$padr) unless Bio::Graphics::Panel->can('auto_pad');
-    my $click_position = $segment_length * ($overview_x-$padl)/$overview_width;
-
-    $span = $DEFAULT_SEGMENT if $span > $MAX_SEGMENT;
-    $start = int($click_position - $span/2);
-    $stop  = $start + $span - 1;
-  }
-  elsif ($selected_span) {
-    warn "selected_span = $selected_span" if DEBUG;
-    my $center	    = int(($span / 2)) + $start;
-    my $range	    = int(($selected_span)/2);
-    $start          = $center - $range;
-    $stop           = $start + $selected_span - 1;
-  }
-
-  warn "after adjusting for navlevel, start = $start, stop = $stop, span=$span" if DEBUG;
-
-  # to prevent from going off left end
-  if ($start < 1) {
-    warn "adjusting left because $start < 1" if DEBUG;
-    ($start,$stop) = (1,$stop-$start+1);
-  }
-
-  # to prevent from going off right end
-  if (defined $segment_length && $stop > $segment_length) {
-    warn "adjusting right because $stop > $segment_length" if DEBUG;
-    ($start,$stop) = ($segment_length-($stop-$start),$segment_length);
-  }
-
-  # to prevent divide-by-zero errors when zoomed down to a region < 2 bp
-  $stop  = $start + ($span > 4 ? $span - 1 : 4) if $stop <= $start+2;
-
-  warn "start = $start, stop = $stop\n" if DEBUG;
-
-  my $divisor = $BROWSER->config->setting(general=>'unit_divider') || 1;
-  $BROWSER->options->start($start/$divisor);
-  $BROWSER->options->stop($stop/$divisor);
 }
 
 # The get_features() call fetches the genome segments specified in the
@@ -2001,6 +1906,8 @@ sub main {
   # This may cause a redirect and exit 0 at this point!
   redirect_legacy_url($source);
 
+
+  ###FIXME remove instances of these vars -- just get them from the obj when you need them
   $MAX_SEGMENT     = $BROWSER->config->get_max_segment;
   $DEFAULT_SEGMENT = $BROWSER->config->get_default_segment;
 

@@ -7,6 +7,7 @@ use Bio::Graphics::Browser::Constants;
 use Bio::Graphics::Browser::Options;
 use Bio::Graphics::Browser::Util;
 use CGI qw(Delete_all cookie param url);
+use CGI::ParamComposite;
 use Carp qw(croak cluck);
 use Data::Dumper;
 use Digest::MD5 qw(md5_hex);
@@ -158,7 +159,6 @@ sub read_cookie {
           warn "found option $k in cookie, can't handle it yet";
         }
       }
-
 
       $ok &&= defined $cookie{width} && $cookie{width} > 100 && $cookie{width} < 5000;
       $self->options->width($cookie{width});
@@ -312,46 +312,47 @@ sub read_params {
     }
   }
 
-  foreach my $k ( CGI::param() ) {
-    if( $self->options->can($k) ){
-#      warn "set $k to ".CGI::param($k);
-      $self->options->$k(CGI::param($k));
-    } else {
-      warn "found option $k in GET or POST params, can't handle it yet";
-    }
-  }
-
   #
-  # these are designed to have a universal set of parameters for file, track, and plugin
+  # action_* parameters are designed to have a universal set of parameters for file, track, and plugin
   # manipulation.  the base param name (file,track,plugin) indicates the target of the operation,
   # while the action_ param name indicates the action to be performed on the target
   #
-  $options->action_file(  CGI::param('action_file'))   if CGI::param('action_file');
-  $options->action_track( CGI::param('action_track'))  if CGI::param('action_track');
-  $options->action_plugin(CGI::param('action_plugin')) if CGI::param('action_plugin');
-  $options->file(  CGI::param('file'))   if CGI::param('file');
-  $options->track( CGI::param('track'))  if CGI::param('track');
-  $options->plugin(CGI::param('plugin')) if CGI::param('plugin');
 
+  foreach my $k ( CGI::param() ) {
+    my($section,$slot) = split /\./, $k;
 
-  $options->width(CGI::param('width')) if CGI::param('width');
-  $options->id(CGI::param('id'))       if CGI::param('id');
+    #warn "section: *$section*";
+    #warn "slot   : *$slot*";
 
-  local $^W = 0;  # kill uninitialized variable warning
-  if ( CGI::param('ref') && (CGI::param('name') eq CGI::param('prevname') || grep {/zoom|nav|overview/} CGI::param()) ) {
-    $options->version(CGI::param('version') || '') unless $options->version();
-    $options->ref(CGI::param('ref'));
-    $options->start(CGI::param('start')) if CGI::param('start') =~ /^[\d-]+/;
-    $options->stop(CGI::param('stop'))   if CGI::param('stop')  =~ /^[\d-]+/;
-    $options->stop(CGI::param('end'))    if CGI::param('end')   =~ /^[\d-]+/ && !defined($options->stop());
-    $options->flip(CGI::param('flip'));
-
-#FIXME    zoomnav($settings);
-    $options->name(sprintf("%s:%s..%s",$options->ref(),$options->start,$options->stop));
+    ###FIXME not implemented yet, let's port old functionality before cleaning this up.
+    #new style namespaced parameters
+    #if ( defined($section) && defined($slot) ) {
+    #  warn $self->options->can($section);
+    #  warn $self->options->$section->can($slot);
+    #  if( $self->options->can($section) && $self->options->$section->can($slot) ){
+    #    warn "newstyle param set $k to ".CGI::param($k);
+    #    $self->options->$section->$slot(CGI::param($k));
+    #  } else {
+    #    warn "found option $k in GET or POST params, can't handle it yet";
+    #  }
+    #}
+    #old style non-namespaced parameters
+    #else {
+      if( $self->options->can($k) ){
+        warn "oldstyle param set $k to ".CGI::param($k);
+        $self->options->$k(CGI::param($k));
+      } else {
+        warn "found option $k ( value: '".CGI::param($k)."' )in GET or POST params, can't handle it yet";
+      }
+    #}
   }
 
-  foreach (qw(name source plugin stp head ks sk version h_feat h_type)) {
-    $options->$_(CGI::param($_)) if defined CGI::param($_);
+  local $^W = 0;  # kill uninitialized variable warning
+  if ( $options->ref() && ( $options->name() eq $options->prevname() || grep {/zoom|nav|overview/} CGI::param() ) ) {
+    $options->version(CGI::param('version') || '') unless $options->version();
+    $options->flip(CGI::param('flip'));
+    $self->zoomnav();
+    $options->name(sprintf("%s:%s..%s",$options->ref(),$options->start,$options->stop));
   }
 
   #strip leading/trailing whitespace
@@ -411,6 +412,144 @@ sub read_view {
   }
 }
 
+=head2 zoomnavfactor()
+
+ Usage   :
+ Function: convert Mb/Kb back into bp... or a ratio, used by L</zoomnav()>
+ Example :
+ Returns : 
+ Args    :
+
+
+=cut
+
+sub zoomnavfactor {
+  my $self = shift;
+  my $string = shift;
+
+  my ($value,$units) = $string =~ /(-?[\d.]+) ?(\S+)/;
+
+  return unless defined $value;
+
+  $value /= 100   if $units eq '%';  # percentage;
+  $value *= 1000  if $units =~ /kb/i;
+  $value *= 1e6   if $units =~ /mb/i;
+  $value *= 1e9   if $units =~ /gb/i;
+
+  return $value;
+}
+
+
+=head2 zoomnav()
+
+ Usage   :
+ Function: computes the new values for start and stop when the user made use
+           of slider.tt2 and navigationtable.tt2
+ Example :
+ Returns :
+ Args    :
+
+=cut
+
+sub zoomnav {
+  my $self = shift;
+  my $options = $self->options();
+  return undef unless $options->ref();
+
+  my $start          = $options->start();
+  my $stop           = $options->stop();
+  my $span           = $stop - $start + 1;
+  my $flip           = $options->flip() ? -1 : 1;
+  my $segment_length = $options->seg_length();
+
+  warn "before adjusting, start = $start, stop = $stop, span=$span" if DEBUG;
+
+  # get zoom parameters
+
+  #clicked zoom +/- button
+  if ( $options->zoom() && CGI::param('zoom.x') ) {
+    my $zoom = $options->zoom();
+    my $zoomlevel = $self->zoomnavfactor( $options->zoom() );
+    warn "zoom = $zoom, zoomlevel = $zoomlevel" if DEBUG;
+    my $center	    = int($span / 2) + $start;
+    my $range	    = int($span * (1 - $zoomlevel)/2);
+    $range          = 2 if $range < 2;
+    ($start, $stop) = ($center - $range , $center + $range - 1);
+  }
+
+  #clicked overview image
+  elsif ( defined($segment_length) && CGI::param('overview.x') ) {
+###FIXME not ported yet b/c of overview tracks options datastructure
+#    my @overview_tracks = grep {$options->{features}{$_}{visible}} 
+#         $self->config->overview_tracks;
+#    my ($padl,$padr) = $self->config->overview_pad(\@overview_tracks);
+#
+#    my $overview_width = ($options->width() * OVERVIEW_RATIO);
+#
+#    # adjust for padding in pre 1.6 versions of bioperl
+#    $overview_width -= ($padl+$padr) unless Bio::Graphics::Panel->can('auto_pad');
+#    my $click_position = $segment_length * ( CGI::param('overview.x') - $padl ) / $overview_width;
+#
+#    $span = $self->config->get_default_segment() if $span > $self->config->get_max_segment();
+#    $start = int( $click_position - ($span / 2) );
+#    $stop  = $start + $span - 1;
+  }
+
+  #scrolled left
+  elsif ( $options->navleft() && CGI::param('navleft.x') ) {
+    my $navlevel = $self->zoomnavfactor( $options->navleft() );
+    $start += $flip * $navlevel;
+    $stop  += $flip * $navlevel;
+  }
+
+  #scrolled right
+  elsif ( $options->navright() && CGI::param('navright.x') ) {
+    my $navlevel = $self->zoomnavfactor( $options->navright() );
+    $start += $flip * $navlevel;
+    $stop  += $flip * $navlevel;
+  }
+
+  #selection from dropdown menu
+  elsif ( $options->span() ) {
+    warn "selected_span = ".$options->span() if DEBUG;
+    my $center	    = int(($span / 2)) + $start;
+    my $range	    = int(($options->span())/2);
+    $start          = $center - $range;
+    $stop           = $center + $range - 1;
+  }
+
+
+
+#  warn "after adjusting for navlevel, start = $start, stop = $stop, span=$span" if DEBUG;
+#
+#  # to prevent from going off left end
+#  if ($start < 1) {
+#    warn "adjusting left because $start < 1" if DEBUG;
+#    ($start,$stop) = (1,$stop-$start+1);
+#  }
+#
+#  # to prevent from going off right end
+#  if (defined $segment_length && $stop > $segment_length) {
+#    warn "adjusting right because $stop > $segment_length" if DEBUG;
+#    ($start,$stop) = ($segment_length-($stop-$start),$segment_length);
+#  }
+#
+#  # to prevent divide-by-zero errors when zoomed down to a region < 2 bp
+#  $stop  = $start + ($span > 4 ? $span - 1 : 4) if $stop <= $start+2;
+#
+#  warn "start = $start, stop = $stop\n" if DEBUG;
+#
+#  my $divisor = $self->config->setting(general=>'unit_divider') || 1;
+  my $divisor = 1;
+  $options->start($start/$divisor);
+  $options->stop($stop/$divisor);
+}
+
+
+
+################################################################
+## TODO port these functions
+################################################################
 
 #NOT YET PORTED OUT OF gbrowse.PLS
 # # reorder @labels based on settings in the 'track.XXX' parameters
@@ -468,5 +607,8 @@ sub read_view {
 #     $BROWSER->options->{features}{$_}{visible} = 1;
 #   }
 # }
+
+
+
 
 1;

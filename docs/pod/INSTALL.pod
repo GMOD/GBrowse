@@ -62,6 +62,10 @@ downloaded from CPAN.
 
 To load remote 3d party annotations.
 
+=item H) MOBY
+
+Needed by gbrowse_moby to fetch and display data from MOBY providers.
+
 =back
 
 =head2 2. INSTALLING THE BROWSER WITH ACTIVESTATE'S PPM TOOL

@@ -58,7 +58,7 @@ if (! (-e $plugindir)) {
     mkdir($plugindir,0777) or die "unable to mkdir $plugindir\n";
 }
 
-my $localplugindir = $working_dir . "/conf/plugins";
+my $localplugindir = $working_dir . "conf/plugins";
 opendir PLUGINS, $localplugindir or die "unable to opendir $localplugindir\n";
 while (my $pluginfile = readdir(PLUGINS) ) {
     my $localfile = Bio::Root::IO->catfile($localplugindir,$pluginfile);
@@ -77,7 +77,7 @@ if (! (-e $langdir)) {
     mkdir($langdir,0777) or die "unable to mkdir $langdir\n";
 }
 
-my $locallangdir = $working_dir . "/conf/languages";
+my $locallangdir = $working_dir . "conf/languages";
 opendir LANGS, $locallangdir or die "unable to opendir $locallangdir\n";
 while (my $langfile = readdir(LANGS)) {
     my $localfile = Bio::Root::IO->catfile($locallangdir, $langfile);

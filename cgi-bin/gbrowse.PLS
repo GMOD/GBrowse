@@ -1129,6 +1129,14 @@ sub zoomnav {
     ($start,$stop) = ($segment_length-($stop-$start),$segment_length);
   }
 
+  # the previous two calls can still result in an invalid value for $start,
+  # since that is calculated in the previous if statement, therefore it
+  # needs to be re-tested
+  if ($start < 1) {
+    warn "adjusting left because $start < 1.  Sequence is smaller than the requested segment span on both ends" if DEBUG;
+    $start = 1;
+  }
+
   # to prevent divide-by-zero errors when zoomed down to a region < 2 bp
   $stop  = $start + ($span > 4 ? $span - 1 : 4) if $stop <= $start+2;
 

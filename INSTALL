@@ -124,6 +124,7 @@ Generic Genome Browser Installation
       CGIBIN          CGI script directory
       INSTALLSITELIB  Perl site-specific modules directory
       PREFIX          Base directory for conf, htdocs and cgibin
+      DO_XS           Compile fast alignment algorithm (XS C extension)
 
     For example, if you are on a RedHat system, where the default Apache
     installation uses /var/www/html for HTML files, /var/www/cgi-bin for CGI
@@ -156,6 +157,11 @@ Generic Genome Browser Installation
     so be careful to copy the new copies somewhere safe if you have modified
     them.
 
+    The DO_XS flag, if true (perl Makefile.PL DO_XS=1), will compile a
+    small C subroutine for nucleotide alignments.  This will vastly improve
+    the performance of the gbrowse_details script when displaying alignments.
+    To use this feature, you will need a C compiler.
+
     You can always manually move the files around after install. See
     CONFIGURE_HOWTO for details.
 
@@ -169,7 +175,7 @@ Generic Genome Browser Installation
 
     The first time you run Makefile.PL, a file named GGB.def will be created
     your file path settings. When Makefile.PL is run again, it will ask you
-    whether you wish to use the
+    whether you wish to reuse the settings stored in the file.
 
   4. TRY THE BROWSER OUT
     The installation procedure will create a small in-memory database of

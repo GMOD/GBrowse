@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.3 2003-10-07 06:16:16 sheldon_mckay Exp $
+# $Id: GFFhelper.pm,v 1.4 2003-10-12 17:04:56 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -6,37 +6,70 @@ Bio::Graphics::Browser::GFFhelper -- Helps gbrowse feature editors/loaders handl
 
 =head1 SYNOPSIS
   
-  use Bio::Graphics::Browser::Plugin::Group;
-  
-  my $refseq = 'L16622';
- 
-  # get a database handle
-  my $db = $self->database;
-  my $segment = $db->segment($refseq) || '';
+  package Bio::Graphics::Browser::Plugin::MyPlugin;
 
-  # get a gff string from somewhere
-  open GFF, "</path/to/gff_file";
-  my $gff = join '', (<GFF>);
-  close GFF;  
+  use Bio::Graphics::Browser::Plugin::GFFhelper;
+  use Bio::Graphics::Browser::Plugin;    
+  use vars qw/@ISA $ROLLBACK/;
 
-  my $loader = Bio::Graphics::Browser::GFFhelper->new( refseq => $refseq, 
-			                               gff    => $gff,
-			                               header => 1 );
+  @ISA = qw/ Bio::Graphics::Browser::Plugin Bio::Graphics::Browser::GFFhelper /;
+  $ROLLBACK = '/tmp/';
+
+
+  # etc ...  
+  # get a segment 
+  my $segment = ...
+
+  if ( $ROLLBACK ) {
+      $self->{rb_loc} = $ROLLBACK;
+      $self->save_state($segment);
+  }
+
+  sub gff {
+    my $self = shift;
+    my $conf = $self->configuration;
+
+    # get a gff string from somewhere
+    open GFF, "</path/to/gff_file";
+    my $gff = join '', (<GFF>);
+    close GFF;  
+
+    # set a flag to add a header to the GFF (if req'd)
+    $self->{header} = 1;
+
+    # set sequence name in case the GFF does not have it
+    $self->refseq('L16622');
   
-  # parse the GFF 
-  my ($gff_string, $dna) = $loader->read_gff 
-    || die $loader->error;
+    # massage and return the gff and sequence
+    return $self->read_gff($gff); 
+  }
   
 =head1 DESCRIPTION
 
-This modules helps massage GFF before loading into the database.  
+This modules helps process GFF prior to loading into the database and provides
+rollback capability for feature editors/loaders
 
-It is not designed for external use.
+=head2 Group Assignments
 
-Attribute order may not be consistent in GFF from various sources
-but Bio::DB::GFF wants the first key-value pair in column 9 to be class => name.  To avoid 
-spurious group assignments, this module goes through each feature's attributes and tries to guess 
-the appropriate group to preserve feature containment hierarchies (eg gene->mRNA->CDS).
+Attribute order may not be consistent in GFF from various sources. To avoid 
+spurious group assignments, this module goes through each feature's attributes 
+and tries to guess the appropriate group to preserve feature containment 
+hierarchies (eg gene->mRNA->CDS), then places the class:name key value pair in 
+the first slot of column 9.  It also adds a header and Component:reference feature
+to the GFF if required.
+
+=head2 Sequence Extraction
+
+If DNA is appended to the GFF, it will be extracted.  The read_gff method returns a 
+string containing processed GFF and a sequence string
+
+=head2 Rollbacks
+
+The state of a segment can be captured and saved in case the user wishes to rollback 
+to an earlier version of the segment.  The last five states are saved in a round robin 
+rotation.  The $ROLLBACK variable must be defined with a string containing the path
+to a directory where the web user ('apache', 'nobody', 'etc') has write access.  if 
+$ROLLBACK is undefined, the rollback functionality is disabled.
 
 =head1 FEEDBACK
 
@@ -53,70 +86,59 @@ package Bio::Graphics::Browser::GFFhelper;
 use strict;
 use Bio::Root::Root;
 use Bio::Tools::GFF;
-use CGI ':standard';
 use IO::String;
+use CGI ':standard';
+use Data::Dumper;
 
-use vars qw/$VERSION @ISA/;
+use vars qw/@ISA/;
 
-$VERSION = '0.01';
 @ISA = qw/ Bio::Root::Root /;
 
 
-sub new {
-    my $caller = shift;
-    my %args = @_;
-    my $self = \%args;
-    return bless $self, $caller;
-}
-
 sub read_gff {
     my $self  = shift;
-    my $seqid = $self->{refseq} || '';
-    my $text  = $self->{gff} || shift;
+    my $seqid = $self->refseq || '';
+    my $text  = shift;
     $self->throw("No GFF to parse") unless $text;
 
     my (@seq, $gff) = ();
 
-    $self->throw("This does not look like GFF to me")
+    # give up if the GFF is not correctly formatted
+    $self->throw("This does not look like GFF to me\n$text")
 	if $text !~ /^(\S+\s+){7}\S+/m || $text =~ /^LOCUS|^FT/m;
     
     for ( split "\n", $text ) {
 	# save the sequence
-	push @seq, $_ if />/ || !/\S\s+\S/;
+	push @seq, $_ and next if />/ || !/\S\s+\S/;
 	
 	# interpret the header
 	if ( /##sequence-region\s+(\S+)\s+(-?\d+)\s+(-?\d+)/ ) {
-	     $self->{refseq} = $1;
-	     $self->{start}  = $2;
-	     $self->{end}    = $3;
+	     $self->refseq($1);
+	     $self->start($2);
+	     $self->end($3);
 	}
         
-        # no point going on with no sequence ID
-	if ( !/##/ && !$self->{refseq} && !$seqid ) {
-	     if ( /^(\S+)/ && $1 !~ /\.|SEQ/ ) {
-		 $self->{refseq} = $1;
-	     }
-	     else {
-		 $self->throw("A Sequence ID is required for this GFF file");
-	     }
-	}
-
         # save the GFF
 	$gff .= $_ . "\n" if /\S\s+\S/ && !/>|##/;
     }
 
-    $self->{refseq} ||= $seqid;
-    
     # dump fasta header and assemble the sequence
     shift @seq if $seq[0] =~ />/;
-    $self->{seq} = join '', @seq;
+    $self->seq(join '', @seq);
 
-    # massage the GFF
-    $gff =~ s/^\./$self->{refseq}/gm;
-    $self->{gff} = $self->fix_gff($gff);
-    return $self->{seq} ? ($self->{gff}, $self->{seq}) : $self->{gff};
+    # make sure the sequence name and range are defined
+    unless ( $self->start && $self->end && $self->refseq) {
+        $self->get_range($gff);
+    }
+
+    # fix Artemis-style GFF
+    my $refseq = $self->refseq;
+    $gff =~ s/^\./$refseq/gm;
+    
+    return $self->fix_gff($gff);
 }
 
+# use Bio::Tools::GFF to create a list of Bio::SeqI compliant objects
 sub parse_gff {
     my ($self, $gff) = @_;
     my $fh = IO::String->new($gff);
@@ -128,47 +150,53 @@ sub parse_gff {
     return @feats;
 }
 
+# rework the GFF feature attributes
 sub new_gff_string {
     my ($self, $f) = @_;
     my ($class, $name) = $self->guess_name($f);
+    my $source = $self->{source} || '';
 
     $name =~ s/\"//g if $name !~ /\s+/;
     $name = qq("$name") if $name =~ /\s+/;
     
+    # strip away attributes
     my $gff = $f->gff_string;
     my @gff = split "\t", $gff; 
     @gff = @gff[0..7];
     $gff = join "\t", @gff;
-    $gff =~ s/^SEQ/$self->{refseq}/gm;    
+
+    # fix column 1
+    my $refseq = $self->refseq;
+    $gff =~ s/^SEQ/$refseq/gm;    
     
+    # manipulate attributes
     my @att;
     for ( $f->all_tags ) {
         my ($v) = $f->get_tag_values($_);        
+        
+        # skip the class attribute
         next if $_ eq $class && $v eq $name;
+
         $v = qq("$v") if $v =~ /\s/ && $v !~ /\"/;
         push @att, "$_ $v"
     }
 
-    $gff .= "\t$class $name";
-    $gff .= ' ; ' . (join ' ; ', @att) if @att;
-
+    # add the group assignment
+    $gff .= $class && $name ? "\t$class $name ; " : "\t";
+    $gff .= (join ' ; ', @att) if @att;
+    $gff =~ s/ ; $//;
+    
+    # fix the source field
+    if ( $source ) {
+	my $gff_src = (split /\s+/, $gff)[1];
+	$gff =~ s/$gff_src/$source/;
+    }		
+    
     $gff;
 }
 
 sub fix_gff {
     my ($self, $gff) = @_;
-
-    # find the sequence range if is was not defined
-    unless ( $self->{start} && $self->{end} ) {
-	my @nums = ();
-	for ( split /\n/, $gff ) {
-	    my @fields = split /\t/, $_;
-	    push @nums, @fields[3..4];
-	}
-        @nums = sort { $a <=> $b } @nums;
-        $self->{start} = $nums[0];
-	$self->{end}   = $nums[-1];
-    }
 
     # convert the GFF lines to Bio::SeqFeature objects
     my @feats = $self->parse_gff($gff);
@@ -176,34 +204,42 @@ sub fix_gff {
     # rebuild the GFF
     my @gff = map { $self->new_gff_string($_) } @feats;    
     
-   # add a header if required
-    unshift @gff, $self->gff_header unless $gff[0] =~ /^##/;
-    
+    # add a header if required
+    unshift @gff, $self->gff_header if $self->{header};
     return join "\n", @gff;
 }
 
+# add a GFF header if required
 sub gff_header {
     my $self = shift;
     my $date = localtime; 
     
-    return '' unless $self->{header};    
     my $header = 
     "##gff-version 2\n" .
     "##date $date\n" .
     "##sequence-region " . 
-    (join ' ', ($self->{refseq}, $self->{start}, $self->{end})) . "\n";
+    (join ' ', ($self->refseq, $self->start, $self->end));
     
-    return $header if $self->{segment};
-    my @row = ($self->{refseq}, 'Reference', 'component', $self->{start}); 
-    push @row, ($self->{end}, '.', '.', '.', 'Accession ' . $self->{refseq});
+    return $self->database->segment($self->refseq) 
+	? $header : $self->component($header); 
+}
+
+
+# add a reference component for new sequences
+sub component {
+    my ($self, $header) = @_;
+    my @row = ($self->refseq, 'reference', 'Component', $self->start); 
+    push @row, ($self->end, '.', '.', '.', 'Sequence ' . $self->refseq);
     $header .= join "\t", @row;
     $header;
 }
 
+# handle group assignments
 sub guess_name {
     my ($self, $f) = @_;
     my ($class, $name);
 
+    # is the feature part of a gene?
     for ( qw/ Gene gene Locus_tag locus_tag Standard_name standard_name / ) {
         if ( $f->has_tag($_) && !$f->has_tag($f->primary_tag) ) {
             next if $class && $name;
@@ -211,19 +247,155 @@ sub guess_name {
             ($name) = $f->get_tag_values($_);
         }
     }
+
+    # is it a scaffold or source feature?
     if ( $f->primary_tag =~ /source|origin|component/i ) {
 	$class = 'Sequence';
 	$name  = $self->{refseq};
     }
+
+    # is the class name the same as the feature name?
     if ( !$name && $f->has_tag($f->primary_tag) ) {
         $class = $f->primary_tag;
         ($name) = $f->get_tag_values($f->primary_tag);
     }
-    # kind of nasty but we have to call it something!
-    if ( !$name ) {
-        $class = $name = $f->primary_tag;
-    }
+
     ($class, $name);
 }
 
+
+####################################
+# Sequence attribute getter/setters 
+####################################
+sub refseq {
+    my ($self, $id) = @_;
+    $self->{seq}->{id} ||= $id;
+    $self->{seq}->{id};    
+}
+
+sub start {
+    my ($self, $start) = @_;
+    $self->{seq}->{start} ||= $start;
+    $self->{seq}->{start};
+}
+
+sub end {
+    my ($self, $end) = @_;
+    $self->{seq}->{end} ||= $end;
+    $self->{seq}->{end};
+}
+
+sub seq {
+    my ($self, $seq) = @_;
+    $self->{seq}->{seq} ||= $seq;
+    $self->{seq}->{seq};
+}
+
+sub get_range {
+    my ($self, $gff) = @_;
+    my @nums = ();
+
+
+    for ( split "\n", $gff ) {
+	my @word = split "\t", $_;
+        $self->{seq}->{id} ||= $word[0] if $word[0] !~ /\.|SEQ/;
+	push @nums, @word[3,4];
+    }
+
+    # give up if the sequence has no name
+    $self->throw("A Sequence ID is required for this GFF file")
+	unless $self->{seq}->{id};
+    
+    my @sorted = sort { $a <=> $b } @nums;
+    $self->start($sorted[0]);
+    $self->end($sorted[-1]);
+}
+####################################
+
+
+sub save_state {
+    my ($self, $segment) = @_;
+    my $conf = $self->configuration;
+    my $loc  = $self->{rb_loc};
+    my $outfile = $loc . 'rollback_' . time;
+    my $date = localtime;
+
+    # save the rollback info 
+    open OUT, ">$outfile"
+        || $self->throw("Unable to save state; Does the web user " .
+                        "have write permission for the rollback location?");
+
+    print OUT "##$outfile \"$date\" $segment\n";
+    print OUT map { $_->gff_string, "\n" } $segment->features;
+    close OUT;
+    
+    my $rbfiles = $loc . 'rollback_*';
+    
+    # not cross-platform
+    my $list = `echo $rbfiles`;
+    my @list = sort split /\s+/, $list;
+
+    if ( @list > 5 ) {
+	my $file  = shift @list;
+	unlink $file || $self->throw("file not deleted", $!);
+    }
+}
+
+
+sub rollback {
+    my ($self, $file) = @_;
+    my $loc = $self->{rb_loc};
+    my $conf = $self->configuration;
+
+    if ( $file ) {
+	$self->throw("Rollback file not found") unless -e $file;        
+	# not cross-platform
+	my @gff = `cat $file`;
+        
+	shift @gff;
+        my $gff = join '', @gff;
+        $self->get_range($gff);
+        return $self->fix_gff($gff);
+    }
+    else {
+	my @file = `cat ${loc}rollback_* | grep '##'`;
+	
+	my $rb = {};
+	for ( @file ) {
+	    my ($file, $time, $segment) = /^\#\#(\S+)\s+"(.+)"\s+(\S+)/;
+	    $rb->{$file}->{time} = $time;
+	    $rb->{$file}->{segment} = $segment;
+	}
+
+	return $rb;
+    }
+}
+
+sub rollback_form {
+    my $self = shift;
+    my $rb   = $self->rollback;
+    my $name = $self->config_name('rb_id');
+
+    return 0 unless $rb;    
+
+    my @out;
+    for ( sort keys %{$rb} ) {
+        my $seg  = $rb->{$_}->{segment};
+        my $date = $rb->{$_}->{time};
+        push @out, "<option value=$_>$seg $date</option>\n";
+    }
+
+    my $help =  '<a onclick="alert(\'selecting rollback will override ' .
+		'file upload or NCBI/EBI accession retrieval\')">[?]</a>';
+
+
+    return  "\n<table>\n<tr class=searchtitle><td><font color=black><b>" .
+	    "Restore saved features</td></tr>\n<tr><td class=" .
+	    "searchbody>\n<h3><select name=$name>\n" .
+	    "<option value=''> -- Roll back to saved features -- </option>\n" .
+	    (join '', @out) . "</select> $help</h3>\n</td></tr></table>\n";
+}
+
 1;
+
+

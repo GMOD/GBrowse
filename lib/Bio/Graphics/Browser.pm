@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.3 2005-02-13 00:40:59 marclogghe Exp $
+# $Id: Browser.pm,v 1.167.4.4 2005-02-18 22:08:43 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1658,6 +1658,8 @@ sub _feature_get {
   }
   return unless @segments;
 
+  warn "\@segments=@segments";
+
   # Deal with multiple hits.  Winnow down to just those that
   # were mentioned in the config file.
   my $types = $self->_all_types($db);
@@ -2122,10 +2124,12 @@ sub feature2label {
   push @label,$self->type2label($basetype,$length);
 
   @label    = ($type) unless @label;
-  
+
   # remove duplicate labels
   my %seen;
   @label = grep {! $seen{$_}++ } @label; 
+
+  warn "feature2label(\$feature=$feature; \@label=@label)";
   wantarray ? @label : $label[0];
 }
 

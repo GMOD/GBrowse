@@ -154,7 +154,7 @@ END
 
    REDISPLAY   => 'Redisplay',
 
-   CONFIGURE   => 'Configure...',
+   CONFIGURE   => 'Configure tracks...',
 
    EDIT       => 'Edit File...',
 
@@ -185,6 +185,8 @@ END
    DUMPS       => 'Reports &amp; Analysis',
 
    DATA_SOURCE => 'Data Source',
+
+   UPLOAD_TRACKS=>'Add your own tracks',
 
    UPLOAD_TITLE=> 'Upload your own annotations',
 
@@ -292,6 +294,20 @@ END
    HYPEREXPAND_LABEL =>'Hyperexpand & label',
 
    NO_LIMIT    => 'No limit',
+
+   OVERVIEW    => 'Overview',
+
+   EXTERNAL    => 'External',
+
+   ANALYSIS    => 'Analysis',
+
+   GENERAL     => 'General',
+
+   DETAILS     => 'Details',
+
+   ALL_ON      => 'All on',
+
+   ALL_OFF     => 'All off',
 
    #--------------
    # HELP PAGES

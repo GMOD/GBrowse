@@ -45,8 +45,6 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.2 2005-02-17 21:47:13 lstein Exp $
-
 use strict;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
@@ -440,6 +438,7 @@ sub main_display {
 
   print html_frag('html3',$segment,$page_settings);
   print html_frag('html4',$segment,$page_settings);
+  print hr();
   print tracks_table($page_settings,$feature_files);
   print html_frag('html5',$segment,$page_settings);
   print br(),settings_table($page_settings);
@@ -463,7 +462,7 @@ sub overview_panel {
   my ($segment,$page_settings) = @_;
   my $image = overview($segment,$page_settings).br();
   return toggle_section({on=>1},
-			b('Overview'),
+			b($CONFIG->tr('Overview')),
 			table({-border=>0,-width=>'100%'},
 			      TR({-class=>'databody'},
 				 td({-align=>'center'},$image)
@@ -534,8 +533,8 @@ sub detail_panel {
   $table .= $map if $map;
   $table .= join '',unique(hidden('ref')),unique(hidden('start')),unique(hidden('stop'));
   return div(toggle_section({on=>1},
-			  b('Details'),
-			  $table));
+			    b($CONFIG->tr('Details')),
+			    $table));
 }
 
 ###############################################################################################
@@ -684,8 +683,11 @@ sub auto_open {
   my ($settings,$features) = @_;
   my $tracks = $settings->{features};
   for my $feature (@$features) {
+    warn "feature = $feature";
     my $desired_label = $CONFIG->feature2label($feature) or next;
+    warn "desired_label = $desired_label";
     if (exists $tracks->{$desired_label}) {
+      warn "here I am";
       $tracks->{$desired_label}{visible} = 1;
       $settings->{h_feat}  = $feature->display_name;
       $settings->{h_type}  = $feature->type;
@@ -845,29 +847,36 @@ sub navigation_table {
 			  a({-href=>svg_link($settings),-target=>'_blank'},'['.$CONFIG->tr('SVG_LINK').']'),
 			 ) : (),
 			 $help)
-		     ),
-
-		   TR({-class=>'searchbody'},
-		      td({-align=>'left', -colspan=>2},
-			 html_frag('html1',$segment,$settings)||''
-			)
-		     ),
-		  TR({-class=>'searchbody', -align=>'left'},
-		     td({-align=>'left'}, b($CONFIG->tr('Landmark')),br,
-			textfield(-name=>'name',-size=>25),
-			submit(-name=>$CONFIG->tr('Search')).'&nbsp;'.
-			submit(-name=>'reset', -label=>$CONFIG->tr('Reset'),-class=>'reset_button').'&nbsp;'.
-			checkbox(-name=>'flip',-checked=>$settings->{flip},-value=>1,-label=>$CONFIG->tr('Flip'),-override=>1)
-		       ),
-		     td({-colspan=>1,-align=>'left'},b($CONFIG->tr('Dumps')),br,
-			plugin_menu($settings,$PLUGINS))
-		    ),
-		  TR(
-		     td({-class=>'searchbody',-align=>'center',-colspan=>2},
-			$segment ? (b($CONFIG->tr('Scroll').': '),br,slidertable($segment,$buttonsDir)) : ''
-		       ),
-		    ),
+		     )
 		 );
+  $table .= toggle_section({on=>1},
+			   b($CONFIG->tr('SEARCH')),
+			   table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
+				 TR({-class=>'searchbody'},
+				    td({-align=>'left', -colspan=>2},
+				       html_frag('html1',$segment,$settings)||''
+				      )
+				   ),
+				 
+				 TR({-class=>'searchbody'},
+				    td({-align=>'left'}, 
+				       b($CONFIG->tr('Landmark')),br,
+				       textfield(-name=>'name',-size=>25),
+				       submit(-name=>$CONFIG->tr('Search')).'&nbsp;'.
+				       submit(-name=>'reset', -label=>$CONFIG->tr('Reset'),-class=>'reset_button').'&nbsp;'.
+				       checkbox(-name=>'flip',-checked=>$settings->{flip},-value=>1,-label=>$CONFIG->tr('Flip'),-override=>1)
+				      ),
+				    td({-colspan=>1,-align=>'left'},b($CONFIG->tr('Dumps')),br,
+				       plugin_menu($settings,$PLUGINS))
+				   ),
+				 TR(
+				    td({-class=>'searchbody',-align=>'center',-colspan=>2},
+				       $segment ? (b($CONFIG->tr('Scroll').': '),br,slidertable($segment,$buttonsDir)) : ''
+				      ),
+				   ),
+				)
+			  );
+  return $table;
 }
 
 # this generates the callback for highlighting "interesting" features
@@ -991,21 +1000,6 @@ sub labels {
   @labels;
 }
 
-sub plugins_table {
-  my $settings = shift;
-  return toggle_section({on=>1},b('Source and Display Settings'),
-			table({-border=>0, -width=>'100%',-cellspacing=>0},
-			      TR({-class=>'settingsbody',-align=>'left'},
-				 td({-align=>'left'},
-				    source_menu($settings),
-				   ),
-				 td({-align=>'left'},
-				    plugin_menu($settings,$PLUGINS)),
-				)
-			     )
-		       );
-}
-
 # This subroutine is invoked to draw the checkbox group underneath the main display.
 # It creates a hyperlinked set of feature names.
 sub tracks_table {
@@ -1037,6 +1031,9 @@ sub tracks_table {
   my @user_keys = grep {!/^(overview|external|analysis)$/} sort keys %track_groups;
   my $id = "c00000";
 
+  my $all_on  = $CONFIG->tr('ALL_ON');
+  my $all_off = $CONFIG->tr('ALL_OFF');
+
   foreach my $category ('overview','analysis',@user_keys,'external') {
     next unless exists $track_groups{$category};
     my @track_labels = sort {lc $labels{$a} cmp lc $labels{$b}} @{$track_groups{$category}} or next;
@@ -1053,9 +1050,9 @@ sub tracks_table {
 					  b(ucfirst $category),div({-style=>'padding-left:1em'},$table));
     $control .=   '&nbsp;'.i({-class=>'nojs'},
 			     checkbox(-id=>"${id}_a",-name=>"${id}_a",
-				      -label=>'All on',-onClick=>"gbCheck('$id',1)"),
+				      -label=>$all_on,-onClick=>"gbCheck(this,1)"),
 			     checkbox(-id=>"${id}_n",-name=>"${id}_n",
-				      -label=>'All off',onClick=>"gbCheck('$id',0)")
+				      -label=>$all_off,onClick=>"gbCheck(this,0)")
 			    ).
 			      br();
     push @sections,$control.span({-id=>$id},$section);
@@ -1067,6 +1064,7 @@ sub tracks_table {
 			div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
 			table({-width=>'100%',-class=>"searchbody"},
 			      TR(td{-align=>'right'},
+				 submit(-name => $CONFIG->tr('CONFIGURE')),
 				 b(submit(-name => $CONFIG->tr('Update'))
 				  )
 				)
@@ -1075,10 +1073,16 @@ sub tracks_table {
 
 sub categorize_track {
   my $label = shift;
-  return 'overview' if $label =~ /:overview$/;
-  return 'external' if $label =~ /^(http|ftp|file):/;
-  return 'analysis' if $label =~ /^plugin:/;
-  return $CONFIG->setting($label=>'category') || 'general';
+  return $CONFIG->tr('OVERVIEW') if $label =~ /:overview$/;
+  return $CONFIG->tr('EXTERNAL') if $label =~ /^(http|ftp|file):/;
+  return $CONFIG->tr('ANALYSIS') if $label =~ /^plugin:/;
+
+  my $category;
+  for my $l ($CONFIG->language->language) {
+    $category      ||= $CONFIG->setting($label=>"category:$l");
+  }
+  $category        ||= $CONFIG->setting($label => 'category');
+  return $category ||= $CONFIG->tr('GENERAL');
 }
 
 
@@ -1135,7 +1139,7 @@ sub settings_table {
 	    ),
 	 );
   return toggle_section({on=>1},
-			b('Settings'),$content);
+			b($CONFIG->tr('display_settings')),$content);
 }
 
 sub annotation_help {
@@ -1151,7 +1155,7 @@ sub external_table {
   my $upload_table = upload_table($settings,$feature_files);
   my $das_table    = das_table($settings,$feature_files);
   toggle_section({on=>0},
-		 b('Add your own tracks'),
+		 b($CONFIG->tr('UPLOAD_TRACKS')),
 		 table({-width=>'100%',-class=>'searchbody'},
 		       TR(td($upload_table,$das_table))));
 }
@@ -2829,6 +2833,7 @@ sub unique {
   my %seenit;
   return grep {!$seenit{$_}++} @list;
 }
+
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

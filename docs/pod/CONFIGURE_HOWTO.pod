@@ -1725,10 +1725,10 @@ GBrowse will still use the end-user's preferred language in preference
 to the default if the preferred language is available.
 
 Although GBrowse automatically changes the text and button language,
-it can't automatically translate the track labels, obviously.  If you
-would like the track labels to localize, you will have to provide your
-own translations in the "key" and "citation" options.  The syntax is
-similar to that used for semantic zooming:
+it can't automatically translate the track labels.  If you would like
+the track labels to localize, you will have to provide your own
+translations in the "key", "citation" and "category" options.  The
+syntax is similar to that used for semantic zooming:
 
   [gene]
   glyph   = transcript
@@ -1738,6 +1738,8 @@ similar to that used for semantic zooming:
   key:fr  = Gènes Nommés
   key:it  = I Geni dati un nome a
   key:sp  = Los Genes denominados
+  category = Genes
+  category:fr = Gènes
 
 The option is followed by a colon and the two-letter language name to
 indicate that when the page is being displayed with this language, to

@@ -112,7 +112,9 @@ function gbTurnOff (a) {
   if (document.getElementById(a+"_a")) { document.getElementById(a+"_a").checked='' };
   if (document.getElementById(a+"_n")) { document.getElementById(a+"_n").checked='' };
 }
-function gbCheck (a,state) {
+function gbCheck (button,state) {
+  var a         = button.id;
+  a             = a.substring(0,a.indexOf("_"));
   var container = document.getElementById(a);
   if (!container) { return false; }
   var checkboxes = container.getElementsByTagName('input');
@@ -120,7 +122,7 @@ function gbCheck (a,state) {
   for (var i=0; i<checkboxes.length; i++)
      checkboxes[i].checked=state;
   gbTurnOff(a);
-  event.srcElement.checked="on";
+  button.checked="on";
   return false;
 }
 END

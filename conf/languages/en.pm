@@ -154,7 +154,7 @@ END
 
    REDISPLAY   => 'Redisplay',
 
-   CONFIGURE   => 'Configure...',
+   CONFIGURE   => 'Configure tracks...',
 
    EDIT       => 'Edit File...',
 
@@ -185,6 +185,8 @@ END
    DUMPS       => 'Reports &amp; Analysis',
 
    DATA_SOURCE => 'Data Source',
+
+   UPLOAD_TRACKS=>'Add your own tracks',
 
    UPLOAD_TITLE=> 'Upload your own annotations',
 
@@ -293,6 +295,20 @@ END
 
    NO_LIMIT    => 'No limit',
 
+   OVERVIEW    => 'Overview',
+
+   EXTERNAL    => 'External',
+
+   ANALYSIS    => 'Analysis',
+
+   GENERAL     => 'General',
+
+   DETAILS     => 'Details',
+
+   ALL_ON      => 'All on',
+
+   ALL_OFF     => 'All off',
+
    #--------------
    # HELP PAGES
    #--------------
@@ -344,5 +360,7 @@ END
  TOO_MANY_LANDMARKS => '%d landmarks.  Too many to list.',
 
  SMALL_INTERVAL    => 'Resizing small interval to %s bp',
+
+ NO_SOURCES        => 'There are no readable data sources configured.  Perhaps you do not have permission to view them.',
 
 };

@@ -205,7 +205,7 @@ END
 
    HIT_COUNT      => '以下區域 %d 符合你的要求.',
 
-   POSSIBLE_TRUNCATION  => '搜尋結果限於 %d 次。一些結果會能不全'﹐
+   POSSIBLE_TRUNCATION  => '搜尋結果限於 %d 次。一些結果會能不全',
 
    MATCHES_ON_REF => '符合于 %s',
 

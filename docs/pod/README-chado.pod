@@ -38,6 +38,22 @@ Since chado uses the Sequence Ontology for its controlled vocabulary, it
 is quite likely that this configuration file should work for any
 instance of chado once the database-specific parameters are set.
 
+After the tables are created, the user that is running Apache must
+be granted privileges to select on several tables.  Usually that
+user is 'nobody', although on RedHat systems using RPM installed Apache
+the user is 'apache'.  First create that user in Postgres, then in the
+psql shell grant select permissions:
+
+  CREATE USER nobody;
+  GRANT SELECT ON feature_synonym      TO nobody;
+  GRANT SELECT ON synonym              TO nobody;
+  GRANT SELECT ON feature_dbxref       TO nobody;
+  GRANT SELECT ON dbxref               TO nobody;
+  GRANT SELECT ON feature              TO nobody;
+  GRANT SELECT ON featureloc           TO nobody;
+  GRANT SELECT ON cvterm               TO nobody;
+  GRANT SELECT ON feature_relationship TO nobody;
+
 If you encounter any bugs or problems with this chado adaptor, please
 let me know.
 

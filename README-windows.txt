@@ -42,7 +42,7 @@ system halts.  Also be sure to add MySQL's bin directory to your PATH
 environment variable.  Typically, it is C:\mysql\bin.
 
 Bulk upload notes:
-* Note that you must use the --force option to use bulk_load_gff.pl. 
+* Note that you must use the --create option to use bulk_load_gff.pl. 
 
 * Be sure that the modules you need are actually installed in your Activestate
 Perl.  I found the PPM 'thought' that they were installed, but really there

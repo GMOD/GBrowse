@@ -1600,7 +1600,7 @@ sub load_external_sources {
   warn join "\n",%feature_file if DEBUG;
   my $f = \%feature_file;
 
-  load_plugin_annotations($segment,$f,$page_settings) if $segment && $segment->length <= $MAX_SEGMENT;
+  load_plugin_annotations($segment,$f,$page_settings) if defined($segment) && $segment->length <= $MAX_SEGMENT;
   return $f;
 }
 

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.93 2003-09-26 15:35:59 lstein Exp $
+# $Id: Browser.pm,v 1.94 2003-09-30 16:21:15 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1303,7 +1303,7 @@ sub name2segments {
   # portions to look at, invoking merge() to select the regions.
   my $max_length = 0;
   foreach (@segments) {
-    $max_length = $_->length if $_->length > $max_length;
+    $max_length = $_->length if defined $_->length && $_->length > $max_length;
   }
   if (@segments > 1 || $max_length > $max_segment) {
     my @s     = $db->fetch_feature_by_name(-class => $segments[0]->class,
@@ -1336,13 +1336,12 @@ sub _feature_get {
   @segments  = $db->segment(@argv)             if !@segments && $name !~ /[*?]/;
 
   # uniquify
-  my %seenit;
+  my %largest;
   foreach (@segments) {
     my $name = $_->display_name;
-    $seenit{$name} = $_ if !exists $seenit{$name} 
-      or $seenit{$name}->length < $_->length;
+    $largest{$name} = $_->length if !exists $largest{$name} or $largest{$name} < $_->length;
   }
-  values %seenit;
+  grep {$largest{$_->display_name} <= $_->length} @segments;
 }
 
 sub get_ranges {

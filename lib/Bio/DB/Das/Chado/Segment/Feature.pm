@@ -96,7 +96,9 @@ sub new {
 
 sub length {
   my $self = shift;
-  return $self->end - $self->start +1 ;
+  my $len = $self->end - $self->start +1;
+  #return $self->end - $self->start +1 ;
+  return $len;
 }
 
 sub type {shift->{type}}
@@ -105,14 +107,13 @@ sub seq_id { shift->{sourceseq} }
 
 *info = \&display_name; #for compatability with broken generic glyphs
 
-sub target {
-  my $self = shift;
-  if ($self->type =~ /alignment/i) {
-    return $self->display_name;
-  } else {
-    return;
-  }
-}
+sub target { return }
+#sub target {
+#  my $self = shift;
+#  my $group = $self->group or return;
+#  return unless $group->can('start');
+#  $group;
+#}
 
 sub factory { shift->{factory} }
 
@@ -733,5 +734,35 @@ sub attributes {
 
 *id  = \&group;
 sub class     {return shift->{type} }
+
+sub low {
+  my $self = shift;
+  my $ref  = shift;
+
+  my $low;
+  if (defined $ref) {
+    my $absstart = $ref->start;
+    $low = $self->start - $absstart;
+  } else {
+    $low = $self->start;
+  }
+  return $low; 
+}
+
+sub high {
+  my $self = shift;
+  my $ref  = shift;
+
+  my $high;
+  if (defined $ref) {
+    my $absstart = $ref->start;
+    $high = $self->end - $absstart;
+  } else {
+    $high = $self->end; 
+  }
+
+  return $high;
+}
+
 
 1;

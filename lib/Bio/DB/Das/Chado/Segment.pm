@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.30 2003-05-30 03:35:36 scottcain Exp $
+# $Id: Segment.pm,v 1.31 2003-05-30 20:47:55 scottcain Exp $
 
 =head1 NAME
 
@@ -491,10 +491,15 @@ Returns the sequence for this segment as a simple string.
 
 sub seq {
   my $self = shift;
+  my ($ref,$class,$start,$stop)
+    = @{$self}{qw(sourceseq class start end)};
 
 #$self->{factory}->{dbh}->trace(1);
 
   my $feat_id = $self->{srcfeature_id};
+
+    warn "src_id:$feat_id, start $start stop $stop\n" if DEBUG;
+
   my $sth = $self->{factory}->{dbh}->prepare("
      select residues from feature 
      where feature_id = $feat_id ");
@@ -503,10 +508,39 @@ sub seq {
 #$self->{factory}->{dbh}->trace(0);
 
   my $hash_ref = $sth->fetchrow_hashref;
-  return $$hash_ref{'residues'};
+  my $seq = $$hash_ref{'residues'};
+ 
+  my $has_start = defined $start;
+  my $has_stop  = defined $stop;
+
+  my $reversed;
+  if ($has_start && $has_stop && $start > $stop) {
+    $reversed++;
+    ($start,$stop) = ($stop,$start);
+  }
+
+  $start -= 1;
+  $stop -= 1;
+
+  if (!$has_start and !$has_stop) {
+    #do nothing, I already have the full sequence
+  } elsif (!$has_start) {
+    $seq = substr($seq,0,$stop);    
+  } elsif (!$has_stop) {
+    $seq = substr($seq,$start);
+  } else { #has both start and stop
+    $seq = substr($seq,$start, ($stop-$start+1));
+  }
+
+  if ($reversed) {
+    $seq = reverse $seq;
+    $seq =~ tr/gatcGATC/ctagCTAG/;
+  }
+
+  return $seq;
 }
 
-*dna = \&seq;
+*protein = *dna = \&seq;
 
 =head2 factory
 

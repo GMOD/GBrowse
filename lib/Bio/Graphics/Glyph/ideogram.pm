@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.2 2003-10-27 15:40:35 mummi Exp $
+# $Id: ideogram.pm,v 1.3 2004-02-02 09:34:11 lstein Exp $
 # Glyph to draw chromosome ideograms for the overview display
 
 use strict;
@@ -212,6 +212,9 @@ bgcolor       = gneg:white gpos25:silver gpos50:gray gpos:gray gpos75:darkgray g
 arcradius     = 6
 height        = 25
 
+A small script to convert NCBI format into GFF format can be found at
+the end of this documentation.
+
 =head2 OPTIONS
 
 The following options are standard among all Glyphs.  See
@@ -242,6 +245,44 @@ L<Bio::Graphics::Glyph> for a full explanation.
   -label        Whether to draw a label	       0 (false)
 
   -description  Whether to draw a description  0 (false)
+
+=head1 NCBI TO GFF CONVERSION SCRIPT
+
+The following short script can be used to convert NCBI ideogram format
+into GFF format.  If you have the lynx web-browser installed you can
+call it like this in order to download and convert the data in a
+single operation:
+
+  fetchideogram.pl ftp://ftp.ncbi.nih.gov/genomes/H_sapiens/maps/mapview/BUILD.33/ISCN800_abc.gz
+
+Otherwise you will need to download the file first.
+
+ #!/usr/bin/perl
+
+ use strict;
+
+ foreach (@ARGV) {
+   if (/^(ftp|http|https):/) {
+     $_ = "lynx --dump $_ |";
+   } elsif (/\.gz$/) {
+     $_ = "gunzip -c $_ |";
+   }
+ }
+
+ while (<>) {
+   chomp;
+   next unless /^[\dXY]+/;
+   my ($chrom,$arm,$band,undef,undef,$start,$end,$stain) = split /\s+/;
+   print join("\t",
+	      "Chr$chrom",
+	      'NCBI','cytoband',
+	      $start,
+	      $end,
+	      '.',
+	      '+',
+	      '.',
+	      "CytoBand $chrom$arm$band; Stain $stain"),"\n";
+ }
 
 =head1 BUGS
 

@@ -52,7 +52,7 @@ use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use Text::Tabs;
 use Text::Shellwords;
-use File::Basename 'basename';
+use File::Basename 'basename','dirname';
 use File::Spec;
 use Carp qw(:DEFAULT croak);
 use CGI qw(:standard escape escapeHTML center *table *dl *TR *td);
@@ -2125,7 +2125,7 @@ sub build_link_image_page {
   my $segment  = shift;
   my $url = url(-base=>1);
   $url   .= url(-absolute=>1);
-  $url =~ s/gbrowse/gbrowse_img/;
+  $url   = dirname($url) . "/gbrowse_img";
   my $source = $CONFIG->source;
   my $width  = $CONFIG->width;
   my $name   = $settings->{name} || "$settings->{ref}:$settings->{start}..$settings->{stop}";

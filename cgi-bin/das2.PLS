@@ -44,16 +44,22 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das2.PLS,v 1.2 2004-09-02 22:41:50 allenday Exp $
+#$Id: das2.PLS,v 1.3 2004-09-05 04:36:00 allenday Exp $
 
 use strict;
 use Bio::DB::GFF 1.02;
 use File::Basename 'basename';
 use CGI qw/server_name header path_info param url request_method escapeHTML/ ;
 use Carp;
+use Data::Dumper;
 use Log::Log4perl;
-Log::Log4perl::init('/etc/log4perl.conf');
-my $log = Log::Log4perl->get_logger('das');
+
+use Template;
+my $template = Template->new({
+                INCLUDE_PATH => "/etc/httpd/conf/gbrowse.conf/templates/das2",
+                ABSOLUTE     => 1,
+                EVAL_PERL    => 1,
+                }) || error_header("couldn't create template: $!", 500);
 
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;
@@ -62,7 +68,11 @@ use vars qw($DB $DSN $HEADER %ERRCODES $CONFIG
             $VERSION $DAS_VERSION $CONF_DIR 
             %CACHED_TYPES);
 
-#$Id: das2.PLS,v 1.2 2004-09-02 22:41:50 allenday Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
+Log::Log4perl::init($CONF_DIR.'/log4perl.conf');
+my $log = Log::Log4perl->get_logger('das');
+$CONFIG = open_config($CONF_DIR) or error_header('Could not read config files'=> 500);
+
+#$Id: das2.PLS,v 1.3 2004-09-05 04:36:00 allenday Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/2.0';
@@ -81,7 +91,7 @@ use constant CAPABILITIES => join '; ',qw(
   entry_points/1.0
   dsn/1.0
   sequence/1.0
-                                          );
+);
 
 (my $BASENAME = url(-absolute=>1)) =~ s!http://[^/]+/!!;
 %ERRCODES = (
@@ -96,10 +106,10 @@ use constant CAPABILITIES => join '; ',qw(
 	     500 => 'Server error, not otherwise specified',
 	     501 => 'Unimplemented feature',
 	     );
-$CONFIG = open_config($CONF_DIR) or error_header('Could not read config files'=> 500);
+
 $HEADER = 0;
 
-my $SERVER_NAME = server_name();
+my $SERVERNAME = server_name();
 my ($junk,$dsn,$operation) = split '/',path_info();
 $DSN = $dsn;
 $operation ||= '';
@@ -125,6 +135,31 @@ exit 0;
 
 # -----------------------------------------------------------------
 sub list_dsns {
+
+  my $param = {
+                servername => $SERVERNAME,
+                format     => param('format') || 'das2xml',
+              };
+
+  foreach my $source ( $CONFIG->sources() ){
+
+    my $description = $CONFIG->description($source);
+    my $version = $CONFIG->version($source);
+
+    #DOCUMENT don't accept a datasource w/o a version, we can't construct a DAS/2 link for it.
+    if($version){
+      $param->{sources}{$source}{version}{$version}{description}   = $description;
+      $param->{sources}{$source}{description}           ||= $description;
+      $param->{sources}{$source}{id}                    ||= $source;
+    }
+  }
+
+  my $output;
+  $template->process('das.tt2' , $param , \$output);
+  ok_header();
+  print $output;
+  return;
+
   my $j = ' 'x3;
   ok_header();
   print qq(<?xml version="1.0" standalone="yes"?>\n<!DOCTYPE DASDSN SYSTEM "http://www.biodas.org/dtd/dasdsn.dtd">\n);
@@ -680,6 +715,11 @@ END
 # list of all the types
 sub all_types {
   my ($category2type,$type2category,$types) = categories($CONFIG);
+
+#warn Dumper($CONFIG);
+my @segments = get_segments();
+warn join ' ', @segments;
+
   ok_header();
   my $url = get_url();
   print <<END;
@@ -688,7 +728,7 @@ sub all_types {
 <TYPES
   xmlns="http://www.biodas.org/ns/das/2.00"
   xmlns:xlink="http://www.w3.org/1999/xlink"
-  xml:base="http://$SERVER_NAME$BASENAME/$dsn/1/type/"
+  xml:base="http://$SERVERNAME$BASENAME/$dsn/1/type/"
   so="http://song.sourceforge.net/ontologies/sofa">
 >
 END

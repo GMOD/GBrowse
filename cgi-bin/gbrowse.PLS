@@ -45,12 +45,13 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.105 2004-09-01 15:10:37 lstein Exp $
+# $Id: gbrowse.PLS,v 1.106 2004-09-05 04:36:00 allenday Exp $
 
 use strict;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;
+use Data::Dumper;
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use Text::Tabs;
@@ -59,10 +60,17 @@ use File::Basename 'basename','dirname';
 use File::Spec;
 use Carp qw(:DEFAULT croak);
 use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td);
+use Template;
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $CONF_DIR
 	    $PLUGINS $PRESETS
 	    %OBJECT_TYPES %PLUGIN_NAME2LABEL );
+
+my $template = Template->new({
+                INCLUDE_PATH => "$CONF_DIR/templates/gbrowse",
+                ABSOLUTE     => 1,
+                EVAL_PERL    => 1,
+                }) || die("couldn't create template: $!");
 
 # if you change the zoom/nav icons, you must change this as well.
 use constant MAG_ICON_HEIGHT => 20;
@@ -811,63 +819,63 @@ sub adjust_settings {
 sub navigation_table {
   my $segment = shift;
   my $settings = shift;
-  my $buttonsDir    = $CONFIG->setting('buttons');
-  my $table = '';
   my $oligo = $PLUGINS->{'OligoFinder'} ? ', oligonucleotide (15 bp minimum)' : '';
-  my $help  =  a({-href=>general_help(),-target=>'help'},'['.$CONFIG->tr('Help').']');
-  my $rand  = substr(md5_hex(rand),0,5);
 
-  $table .= table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
-		  $settings->{ins} ?
-		  (
-		   TR(
-		      td({-align=>'left', -colspan=>2},
-			 b($CONFIG->setting('instructions') 
-			   || $CONFIG->tr('INSTRUCTIONS').': '),
-			 $CONFIG->setting('search_instructions')   
-			   || $CONFIG->tr('SEARCH_INSTRUCTIONS',$oligo),
-			 $CONFIG->setting('navigation_instructions') 
-			   || $CONFIG->tr('NAVIGATION_INSTRUCTIONS'),
-			)),
-		   TR(
-		      td({-align=>'left', -colspan=>2},
-			 show_examples(),
-			 p(),
-			)),
-		  ) : (),
+  my %seen; #used to keep track of available ranges for display
 
-		  TR(
-		     th({-align=>'left', -colspan=>2},
-			a({-href=>"?rand=$rand;head=".((!$settings->{head})||0)},
-			  '['.$CONFIG->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
-			a({-href=>"?rand=$rand;ins=".((!$settings->{ins})||0)},
-			  '['.$CONFIG->tr($settings->{ins}? 'HIDE_INSTRUCTIONS':'SHOW_INSTRUCTIONS').']'),
-			 $settings->{name} || $settings->{ref} ?
-			 (
-			  a({-href=>bookmark_link($settings)},'['.$CONFIG->tr('BOOKMARK').']'),
-			  a({-href=>image_link($settings),-target=>'_blank'},'['.$CONFIG->tr('IMAGE_LINK').']'),
-			  a({-href=>svg_link($settings),-target=>'_blank'},'['.$CONFIG->tr('SVG_LINK').']'),
-			 ) : (),
-			 $help)
-		     ),
+  my $param =
+  {
+    tr_instructions            => $CONFIG->tr('instructions') || $CONFIG->tr('INSTRUCTIONS')                       || '',
+    tr_search_instructions     => $CONFIG->tr('search_instructions') || $CONFIG->tr('SEARCH_INSTRUCTIONS',$oligo)  || '',
+    tr_navigation_instructions => $CONFIG->tr('navigation_instructions') || $CONFIG->tr('NAVIGATION_INSTRUCTIONS') || '',
+    tr_examples                => show_examples() || '',
 
-		   TR({-class=>'searchbody'},
-		      td({-align=>'left', -colspan=>2},
-			 html_frag('html1',$segment,$settings)||''
-			)
-		     ),
-		  TR({-class=>'searchbody', -align=>'left'},
-		     td({-align=>'left'}, b($CONFIG->tr('Landmark')),br,
-			textfield(-name=>'name',-size=>25),
-			submit(-name=>$CONFIG->tr('Search')).'&nbsp;'.
-			submit(-name=>'reset', -label=>$CONFIG->tr('Reset'),-class=>'reset_button').'&nbsp;'.
-			checkbox(-name=>'flip',-checked=>$settings->{flip},-value=>1,-label=>$CONFIG->tr('Flip'),-override=>1)
-		       ),
-		     td({-class=>'searchbody',-align=>'left'},
-			$segment ? (b($CONFIG->tr('Scroll').': '),br,slidertable($segment,$buttonsDir)) : ''
-		       ),
-		    ),
-		 );
+    tr_landmark                => $CONFIG->tr('Landmark') || '',
+    tr_search                  => $CONFIG->tr('Search')   || '',
+    tr_reset                   => $CONFIG->tr('Reset')    || '',
+    tr_scroll                  => $CONFIG->tr('Scroll')   || '',
+    tr_flip                    => $CONFIG->tr('Flip')     || '',
+    tr_toggle_head             => $CONFIG->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER') || '',
+    tr_toggle_instructions     => $CONFIG->tr($settings->{ins}  ? 'HIDE_INSTRUCTIONS' : 'SHOW_INSTRUCTIONS') || '',
+
+    tr_link_bookmark           => $CONFIG->tr('BOOKMARK')   || '',
+    tr_link_image              => $CONFIG->tr('IMAGE_LINK') || '',
+    tr_link_svg                => $CONFIG->tr('SVG_LINK')   || '',
+    tr_help                    => $CONFIG->tr('Help')       || '',
+
+    link_bookmark              => bookmark_link($settings),
+    link_image                 => image_link($settings),
+    link_svg                   => svg_link($settings),
+    link_help                  => general_help(),
+
+    flip       => $settings->{flip} || 0,
+    head       => $settings->{head} || 0,
+    hide_ins   => !($settings->{ins})  || 0,
+    name       => $settings->{name} || '',
+    ref        => $settings->{ref}  || '',
+    rand       => substr(md5_hex(rand),0,5),
+
+    segment    => $segment,
+    prevname   => scalar(param('name')),
+    halftitle  => unit_label(int($segment->length/2)),
+    fulltitle  => unit_label($segment->length),
+    half       => int($segment->length/2),
+    full       => $segment->length,
+    finezoom   => get_zoomincrement(),
+    ranges     => [ grep {!$seen{$_}++} sort {$b<=>$a} $segment->length,get_ranges() ],
+    buttonsdir => $CONFIG->setting('buttons'),
+
+    htmlfrag1  => html_frag('html1',$segment,$settings) || '',
+  };
+
+  my $show = $CONFIG->tr('Show');
+  my %range_labels = map {$_=>$show.' '.unit_label($_)} @{ $param->{ranges} };
+  $param->{range_labels} = \%range_labels;
+
+  my $table = undef;
+  $template->process('navigationtable.tt2',$param,\$table);
+
+  return $table;
 }
 
 # this generates the callback for highlighting "interesting" features
@@ -894,61 +902,32 @@ sub make_hilite_callback {
 }
 
 # This generates the navigation bar with the arrows
-sub slidertable {
+sub slider {
   my ($segment,$buttonsDir) = @_;
-  my $span      = $segment->length;
-  my $half_title      = unit_label(int $span/2);
-  my $full_title      = unit_label($span);
-  my $half      = int $span/2;
-  my $full      = $span;
-  my $fine_zoom = get_zoomincrement();
 
-  my @lines;
-  push @lines,hidden(-name=>'start',-value=>$segment->start,-override=>1);
-  push @lines,hidden(-name=>'stop',-value=>$segment->end,-override=>1);
-  push @lines,hidden(-name=>'ref',-value=>$segment->seq_id,-override=>1);
-  push @lines,hidden(-name=>'prevname',-value=>scalar(param('name')),-override=>1);
-  push @lines,
-    (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>"left $full",
-		  -border=>0,-title=>"left $full_title"),
-     image_button(-src=>"$buttonsDir/green_l1.gif",-name=>"left $half",
-		  -border=>0,-title=>"left $half_title"),
-     '&nbsp;',
-     image_button(-src=>"$buttonsDir/minus.gif",-name=>"zoom out $fine_zoom",
-		  -border=>0,-title=>"zoom out $fine_zoom"),
-     '&nbsp;',
-     zoomBar($segment,$buttonsDir),
-     '&nbsp;',
-     image_button(-src=>"$buttonsDir/plus.gif",-name=>"zoom in $fine_zoom",
-		  -border=>0,-title=>"zoom in $fine_zoom"),
-     '&nbsp;',
-     image_button(-src=>"$buttonsDir/green_r1.gif",-name=>"right $half",
-		  -border=>0,-title=>"right $half_title"),
-     image_button(-src=>"$buttonsDir/green_r2.gif",-name=>"right $full",
-		  -border=>0,-title=>"right $full_title"),
-    );
+  my %seen; #used to keep track of available ranges for display
 
-  #  print end_form;
-  my $str	= join('', @lines);
-  return $str;
-}
+  my $param =
+  {
+    segment    => $segment,
+    prevname   => scalar(param('name')),
+    halftitle  => unit_label(int($segment->length/2)),
+    fulltitle  => unit_label($segment->length),
+    half       => int($segment->length/2),
+    full       => $segment->length,
+    finezoom   => get_zoomincrement(),
+    ranges     => [ grep {!$seen{$_}++} sort {$b<=>$a} $segment->length,get_ranges() ],
+    buttonsdir => $buttonsDir,
 
-# this generates the popup zoom menu with the window sizes
-sub zoomBar {
-  my ($segment,$buttonsDir) = @_;
+  };
+
   my $show = $CONFIG->tr('Show');
+  my %range_labels = map {$_=>$show.' '.unit_label($_)} @{ $param->{ranges} };
+  $param->{range_labels} = \%range_labels;
 
-  my %seen;
-  my @ranges	= grep {!$seen{$_}++} sort {$b<=>$a} $segment->length,get_ranges();
-  my %labels    = map {$_=>$show.' '.unit_label($_)} @ranges;
-  return popup_menu(-class   => 'searchtitle',
-	       -name    => 'span',
-	       -values  => \@ranges,
-	       -labels  => \%labels,
-	       -default => $segment->length,
-	       -force   => 1,
-	       -onChange => 'document.mainform.submit()',
-	      );
+  my $output = undef;
+  $template->process('slider.tt2',$param,\$output);
+  return $output;
 }
 
 # convert bp into nice Mb/Kb units

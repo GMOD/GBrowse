@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.159 2004-08-17 20:26:20 lstein Exp $
+# $Id: Browser.pm,v 1.160 2004-09-05 04:36:03 allenday Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -128,7 +128,7 @@ sub read_configuration {
 
   croak("$conf_dir: not a directory") unless -d $conf_dir;
   opendir(D,$conf_dir) or croak "Couldn't open $conf_dir: $!";
-  my @conf_files = map { "$conf_dir/$_" } grep {/\.$suffix$/} readdir(D);
+  my @conf_files = map { "$conf_dir/$_" } grep {/\.$suffix$/} grep {$_ !~ /log4perl/} readdir(D);
   close D;
 
   # try to work around a bug in Apache/mod_perl which appears when
@@ -356,6 +356,23 @@ sub db_settings {
   }
 
   ($adaptor,@argv);
+}
+
+=head2 version()
+
+  $version = $browser->version
+
+This is a shortcut method that returns the value of the "version"
+option in the general section.  The value returned is the version
+of the data source.
+
+=cut
+
+sub version {
+  my $self = shift;
+  my $source = shift;
+  my $c = $self->{conf}{$source}{data} or return;
+  return $c->setting('general','version');
 }
 
 =head2 description()

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.61 2004-09-02 21:51:42 allenday Exp $
+# $Id: Chado.pm,v 1.62 2004-09-05 04:36:01 allenday Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -88,6 +88,7 @@ package Bio::DB::Das::Chado;
 use strict;
 
 use Bio::DB::Das::Chado::Segment;
+use Bio::Graphics::Browser::Util;
 use Bio::Root::Root;
 use Bio::DasI;
 use Bio::PrimarySeq;
@@ -95,8 +96,6 @@ use DBI;
 
 use Carp qw(longmess);
 use Log::Log4perl;
-Log::Log4perl::init('/etc/log4perl.conf');
-my $log = Log::Log4perl->get_instance('Bio.DB.Das.Chado');
 
 use vars qw($VERSION @ISA);
 
@@ -105,6 +104,34 @@ use constant DEBUG => 0;
 
 $VERSION = 0.11;
 use base qw(Bio::DasI Bio::Root::Root);
+
+
+=head2 log
+
+ Title   : log
+ Usage   : $obj->log($newval)
+ Function: holds a Log::Log4perl logging instance
+           corresponding to the object's class
+ Example :
+ Returns : value of log (a scalar)
+ Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub log{
+    my $self = shift;
+warn caller();
+    if(!$self->{'log'}){
+      Log::Log4perl::init(conf_dir().'/log4perl.conf');
+      my $pack = ref($self);
+      $pack =~ s/::/./g;
+      my $log = Log::Log4perl->get_logger($pack);
+      $self->{'log'} = $log;
+    }
+
+    return $self->{'log'};
+}
 
 =head2 new
 

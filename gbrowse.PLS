@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.40 2002-06-26 12:08:40 lstein Exp $
+# $Id: gbrowse.PLS,v 1.41 2002-06-30 20:29:26 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -1008,7 +1008,7 @@ sub do_keyword_search {
   my @results;
   for my $r (@matches) {
     my ($name,$description,$score) = @$r;
-    my $seg = $db->segment($name) or next;
+    my ($seg) = $db->segment($name) or next;
     push @results,Bio::Graphics::Feature->new(-name   => $name,
 					      -class  => $name->class,
 					      -type   => $description,

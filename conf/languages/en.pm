@@ -53,28 +53,34 @@ END
 
    SVG_DESCRIPTION => <<END,
 <p>
-The following link will generate this image in Scalable Vector Graphic
-(SVG) format.  Unlike raster-based images such as jpeg or png, svg
-images are vector-based and can be resized with no loss in
-resolution. Furthermore, SVG images can be easily edited
-feature-by-feature in common vector-based applications such as Adobe
-Illustrator. SVG can be directly converted to eps for submission for
-publication.</p>
+The following link will generate this image in Scalable Vector
+Graphic (SVG) format.  SVG images offer several advantages over
+raster based images such as jpeg or png.
+</p>
+<ul>
+<li>fully resizable with no loss in resolution
+<li>editable feature-by-feature in common vector-based graphics applications
+<li>if necessary, can be converted to EPS for publication submission
+</ul>
 <p>
-In order to view SVG images, you will need an SVG capable browser, the
-Adobe SVG browser plugin, or an SVG-capable editing application such
-as Adobe Illustrator.</p>
-<P>
+To view SVG images, you will need an SVG capable browser, the
+Adobe SVG browser plugin, or an SVG viewing or editing application such
+as Adobe Illustrator.
+</p>
+<p>   
 Adobe's SVG browser plugin: <a
 href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Macintosh">Macintosh</a>
-| <a href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Windows">Windows</a>
+| <a
+href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Windows">Windows</a>
+<br />
+Linux users may wish to explore the <a href="http://xml.apache.org/batik/">Batik SVG Viewer</a>.
 </p>
-
-<p><a href="%s" target="_blank">View SVG image in new browser window</a></p>
-
+<p>
+<a href="%s" target="_blank">View SVG image in a new browser window</a></p>
+<p>
 To save this image to your disk, control-click (Macintosh) or
 right-click (Windows) and select the option to save link to disk.
-
+</p>
 END
 
    IMAGE_DESCRIPTION => <<END,

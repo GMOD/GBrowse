@@ -41,7 +41,7 @@ $Config{startperl} -w
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.52 2002-08-23 17:57:27 lstein Exp $
+# $Id: gbrowse.PLS,v 1.53 2002-08-28 14:54:34 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1034,6 +1034,9 @@ sub do_keyword_search {
   my $segments = shift;
   my $searchterm = $settings->{name};
 
+  # if they wanted something specific, don't give them non-specific results.
+  return if $searchterm =~ /^[\w._-]+:/;
+
   # Need to untaint the searchterm.  We are very lenient about
   # what is accepted here because we wil be quote-metaing it later.
   $searchterm =~ /([\w .,~!@#$%^&*()-+=<>?\/]+)/;
@@ -1099,8 +1102,13 @@ sub multiple_choices {
       my $class       = eval {$r->class} || $LANG->tr('Sequence');
       my $score       = eval {$r->score} || $LANG->tr('NOT_APPLICABLE');
       my ($start,$stop) = ($r->start,$r->end);
-      my $description = escapeHTML(eval{$r->notes}||eval{$r->method}||eval{$r->source_tag}||$r->{ref});
-      my $n           = escape($name);
+      my %attributes;
+      my $description = escapeHTML(eval{join ' ',$r->attributes('Note')}
+				   ||eval{$r->method}||eval{$r->source_tag}||$r->{ref});
+      if (my @aliases = $r->attributes('Alias')) {
+	$description .= escapeHTML " [@aliases]";
+      }
+      my $n           = escape("$name");
       my $c           = escape($class);
       $description =~ s/($regexp)/<b class="keyword">$1<\/b>/ig;
 

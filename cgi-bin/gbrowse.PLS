@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.58 2004-02-03 22:44:02 marclogghe Exp $
+# $Id: gbrowse.PLS,v 1.59 2004-02-04 10:32:11 marclogghe Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2336,9 +2336,8 @@ sub configure_plugins {
   }
 }
 
-sub plugin_menu {
-  my ($settings,$plugins) = @_;
-  my $sources = $CONFIG->sources > 1;
+sub plugin_adjust_labels {
+  my $plugins = shift;
 
   my %verbs = (dumper       => $CONFIG->tr('Dump'),
 	       finder       => $CONFIG->tr('Find'),
@@ -2365,16 +2364,24 @@ sub plugin_menu {
                $plugins->{$_}->name;
     $labels{$_} .= " $name";
     $labels{$_} =~ s/^\s+//;
+  }
+  return \%labels;
 }
 
 
-  my @plugins = sort {$labels{$a} cmp $labels{$b}} keys %labels;
+sub plugin_menu {
+  my ($settings,$plugins) = @_;
+  my $sources = $CONFIG->sources > 1;
+
+  my $labels = plugin_adjust_labels($plugins);  
+
+  my @plugins = sort {$labels->{$a} cmp $labels->{$b}} keys %$labels;
   return unless @plugins;
   return join('',
 	      b($CONFIG->tr('Dumps').':'),br,
 	      popup_menu(-name=>'plugin',
 			 -values=>\@plugins,
-			 -labels=>\%labels,
+			 -labels=> $labels,
 			 -default => $settings->{plugin},
 			),'&nbsp;',
 	      submit(-name=>'plugin_action',-value=>$CONFIG->tr('About')),'&nbsp;',
@@ -2426,7 +2433,9 @@ sub do_plugin_dump {
 sub do_plugin_about {
   my $plugin = shift;
   my $p = $PLUGINS->{$plugin};
-  print h1($CONFIG->tr('About_plugin',$p->name));
+  my $type  = ( split ( /::/, ref($p) ) )[-1];
+  my $labels = plugin_adjust_labels($PLUGINS);
+  print h1($CONFIG->tr('About_plugin',$labels->{$type}));
   print $p->description;
   print start_form(),submit($CONFIG->tr('Back_to_Browser')),hidden('plugin'),end_form();
 }

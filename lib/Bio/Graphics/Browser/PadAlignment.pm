@@ -11,9 +11,9 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 =head1 VERSION (CVS-info)
 
  $RCSfile: PadAlignment.pm,v $
- $Revision: 1.1 $
+ $Revision: 1.2 $
  $Author: lstein $
- $Date: 2003-04-22 13:57:47 $
+ $Date: 2003-04-22 17:36:57 $
 
 =head1 SYNOPSIS
 
@@ -380,8 +380,8 @@ sub alignment {
       $padded[$j][$i] = $segments[$j];
     }
     my $origin  = $origins->{$names{$i}};
-    $labels[$i] = $origin                             if $origin >= 0;
-    $labels[$i] = length($self->{dnas}[$i]) + $origin if $origin <  0;
+    $labels[$i] = $origin                                      if $origin >= 0;
+    $labels[$i] = length($self->{dnas}[$i]) + abs($origin) - 1 if $origin <  0;
   }
 
   my $result;

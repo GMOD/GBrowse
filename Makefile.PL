@@ -125,6 +125,7 @@ WriteMakefile(
 				 'bin/process_gadfly.PLS' => 'bin/process_gadfly.pl',
 				 'bin/process_wormbase.PLS' => 'bin/process_wormbase.pl',
 				 'bin/process_ncbi_human.PLS' => 'bin/process_ncbi_human.pl',
+				 'bin/ucsc_genes2gff.PLS' => 'bin/ucsc_genes2gff.pl',
 				 'bin/load_genbank.PLS' => 'bin/load_genbank.pl',
 				 'install_util/gbrowse_ppm_install.PLS' => 'install_util/gbrowse_ppm_install.pl',
 				 'cgi-bin/gbrowse.PLS'  => 'cgi-bin/gbrowse',

@@ -16,6 +16,7 @@ bin/process_gadfly.PLS
 bin/process_ncbi_human.PLS
 bin/process_sgd.PLS
 bin/process_wormbase.PLS
+bin/ucsc_genes2gff.PLS
 cgi-bin/README
 cgi-bin/gbrowse.PLS
 cgi-bin/gbrowse_details.PLS

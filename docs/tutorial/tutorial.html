@@ -3344,7 +3344,7 @@ again using UCSC DAS server's URL with the hg16 release number
 appended to the end:
 
 <blockquote><pre>
-% <b>make_das_conf.pl http://genome.cse.ucsc.edu/cgi-bin/das</b>
+% <b>make_das_conf.pl http://genome.cse.ucsc.edu/cgi-bin/das/hg16</b>
 [GENERAL]
 description   = Human July 2003 Genome at UCSC
 db_adaptor    = Bio::Das
@@ -3377,16 +3377,13 @@ time <b>redirect</b> its output into a new configuration file named
 "ucsc_hg16.conf":
 
 <blockquote><pre>
-% <b>make_das_conf.pl http://genome.cse.ucsc.edu/cgi-bin/das &gt;$CONF/gbrowse.conf/ucsc_hg16.conf</b>
+% <b>make_das_conf.pl http://genome.cse.ucsc.edu/cgi-bin/das/hg16 &gt;$CONF/gbrowse.conf/ucsc_hg16.conf</b>
 </pre></blockquote>
 
 That should be all you need to do!  Try browsing the new data source
 by requesting <a
 href="http://localhost/cgi-bin/gbrowse/ucsc_hg16.conf"
-target="_new">http://localhost/cgi-bin/gbrowse/ucsc_hg16.conf</a>.
-Request URL <a
-href="http://localhost/cgi-bin/gbrowse/ucsc_hg16?name="10:500000..600000;label=ALL_STS_PRIMER-FIRSTEF-GENEID-GENSCAN"
-target="_new">http://localhost/cgi-bin/gbrowse/ucsc_hg16</a>, and you
+target="_new">http://localhost/cgi-bin/gbrowse/ucsc_hg16.conf</a>, and you
 should be able to browse through a rudimentary version of the Human
 genome display.
 

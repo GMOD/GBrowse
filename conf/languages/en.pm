@@ -72,7 +72,7 @@ href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Mac
 
 <p><a href="%s" target="_blank">View SVG image in new browser window</a></p>
 
-To save this image to your disk, command-click (Macintosh) or
+To save this image to your disk, control-click (Macintosh) or
 right-click (Windows) and select the option to save link to disk.
 
 END

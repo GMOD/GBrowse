@@ -39,13 +39,16 @@ the arguments above, provide the arguments NONROOT=1,
 LIB=/path/to/perl/libs and BIN=/path/to/scripts
 
 For example:
-    perl Makefile.PL APACHE=~/gbrowse/www \\
+    perl Makefile.PL APACHE=~/gbrowse \\
 		     LIB=~/gbrowse/lib \\
 		     BIN=~/gbrowse/bin \\
 		     NONROOT=1
 
 will perform a non-privileged installation that places all gbrowse
 components (including perl libraries) in the path ~/gbrowse.
+
+In the above example, before running 'make install', create the
+directories ~/gbrowse/html, ~/gbrowse/cgi-bin and ~/gbrowse/conf
 
 To make the CGI scipts aware of the custom library location, you can
 either ask someone with root privileges to edit the apache
@@ -161,6 +164,8 @@ WriteMakefile(
 				 GD                => 2.07,
 				 IO::String        => 0,
 				 Text::Shellwords  => 1.0,
+				 Template          => 2.0,
+				 Log::Log4perl     => 0, 
 				}, # e.g., Module::Name => 1.1
 	      PL_FILES       => {
                                  'install_util/htdocs_install.PLS' => 'install_util/htdocs_install.pl',
@@ -182,6 +187,7 @@ WriteMakefile(
 				 'cgi-bin/gbrowse_moby.PLS'  => 'cgi-bin/gbrowse_moby',
 				 'cgi-bin/moby_server.PLS'  => 'cgi-bin/moby_server',
 				 'cgi-bin/das.PLS'          => 'cgi-bin/das',
+				 'cgi-bin/das2.PLS'          => 'cgi-bin/das2',
 				 'conf/MobyServices/GbrowseServices.PMS'  => 'conf/MobyServices/GbrowseServices.pm',
 				 },
 	      EXE_FILES      => [

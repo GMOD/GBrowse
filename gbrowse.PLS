@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.30 2002-05-07 00:07:11 lstein Exp $
+# $Id: gbrowse.PLS,v 1.31 2002-05-21 22:12:25 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -1238,6 +1238,7 @@ sub open_uploaded_file {
 
   unless ($result) {
     warn "Can't open the file named $filename.  Perhaps it has been purged? (error: $!)";
+    clear_uploaded_file($settings,$filename);
     return;
   }
 

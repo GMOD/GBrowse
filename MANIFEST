@@ -254,6 +254,7 @@ lib/Bio/Graphics/Browser/Util.pm
 lib/Bio/Graphics/Glyph/allele_tower.pm
 lib/Bio/Graphics/Glyph/connector.pm
 lib/Bio/Graphics/Glyph/drosophila_arrow.pm
+lib/Bio/Graphics/Glyph/genscan_transcript.pm
 lib/Bio/Graphics/Glyph/ideogram.pm
 lib/Bio/Graphics/Glyph/insertion_chromosome.pm
 lib/Bio/Graphics/Glyph/phased_exons.pm

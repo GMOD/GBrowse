@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.92 2004-06-08 20:09:45 lstein Exp $
+# $Id: gbrowse.PLS,v 1.93 2004-06-08 22:04:14 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1242,20 +1242,20 @@ sub zoomnav {
   }
 
   elsif (defined $overview_x && defined $segment_length) {
-    my ($padl,$padr) = $CONFIG->overview_pad;
+    my @overview_tracks = grep {$settings->{features}{$_}{visible}} 
+         $CONFIG->config->overview_tracks;
+    my ($padl,$padr) = $CONFIG->overview_pad(\@overview_tracks);
 
-    my $overview_width = ($settings->{width} * OVERVIEW_RATIO);# - ($padl+$padr);
+    my $overview_width = ($settings->{width} * OVERVIEW_RATIO);
 
     # adjust for padding in pre 1.6 versions of bioperl
     $overview_width -= ($padl+$padr) unless Bio::Graphics::Panel->can('auto_pad');
-
     my $click_position = $segment_length * ($overview_x-$padl)/$overview_width;
 
     $span = $DEFAULT_SEGMENT if $span > $MAX_SEGMENT;
     $start = int($click_position - $span/2);
     $stop  = $start + $span - 1;
   }
-
   elsif ($selected_span) {
     warn "selected_span = $selected_span" if DEBUG;
     my $center	    = int(($span / 2)) + $start;

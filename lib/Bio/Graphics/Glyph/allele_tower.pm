@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::allele_tower;
 
-# $Id: allele_tower.pm,v 1.3 2004-06-08 20:09:49 lstein Exp $
+# $Id: allele_tower.pm,v 1.4 2004-06-08 22:04:15 lstein Exp $
 # Glyph for drawing each allele found at a SNP position in a column.
 
 use strict;
@@ -36,7 +36,7 @@ sub draw_component {
 
   my $feature = $self->feature;
   my @alleles = $feature->attributes('Alleles');
-  @alleles    = split /\//,$self->option('alleles') unless @alleles;
+  @alleles    = split /\//,$self->option('alleles') unless @alleles == 2;
 
   if (@alleles) {
     # If it is on the minus strand

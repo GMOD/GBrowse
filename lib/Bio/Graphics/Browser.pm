@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.117 2004-02-13 12:56:52 lstein Exp $
+# $Id: Browser.pm,v 1.118 2004-02-13 13:52:17 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1395,6 +1395,7 @@ sub name2segments {
 sub _feature_get {
   my $self = shift;
   my ($db,$name,$class,$start,$stop,$segments_have_priority) = @_;
+  my $refclass = $self->setting('reference class') || 'Sequence';
 
   my @argv = (-name  => $name);
   push @argv,(-class => $class) if defined $class;
@@ -1417,11 +1418,12 @@ sub _feature_get {
   my @filtered = grep {
     my $type   = $_->type;
     my $method = eval {$_->method} || '';
-    $types->{$type} || $types->{$method}
+    my $class  = eval {$_->class}  || '';
+    $types->{$type} || $types->{$method} || $class eq $refclass;
   } @segments;
 
-  # always return something rather than nothing
-  return @filtered ? @filtered : @segments;
+  # Return appropriately filtered features
+  return @filtered;
 }
 
 sub get_ranges {
@@ -1626,7 +1628,8 @@ sub labels {
 }
 
 sub overview_tracks {
-  grep { $_ eq 'overview' || /:overview$/ } shift->configured_types;
+  my $self = shift;
+  grep { ($_ eq 'overview' || /:overview$/) && $self->authorized($_) } $self->configured_types;
 }
 
 # implement the "restrict" option
@@ -1684,6 +1687,7 @@ sub authorized {
                       : 'deny,allow' ? !match_host(\@deny,$host,$addr) ||  match_host(\@allow,$host,$addr)
 		      : croak "$mode is not a valid authorization mode";
   return $allow unless %users;
+  $satisfy = 'any'  if !@allow && !@deny;  # no host restrictions
   return $satisfy eq 'any' ? $allow || $users{$user}
                            : $allow && $users{$user};
 }

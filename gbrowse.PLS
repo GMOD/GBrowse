@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.26 2002-04-09 01:24:35 lstein Exp $
+# $Id: gbrowse.PLS,v 1.27 2002-04-29 15:54:14 lstein Exp $
 
 use strict;
 use lib '/home/lstein/projects/Generic-Genome-Browser/lib/';
@@ -1072,7 +1072,7 @@ sub do_keyword_search {
 
   my $match_sub = 'sub {';
   foreach (split /\s+/,$searchterm) {
-    $match_sub .= "return unless \$_[0] =~ /\Q$_\E/; ";
+    $match_sub .= "return unless \$_[0] =~ /\Q$_\E/i; ";
   }
   $match_sub .= "};";
   my $match = eval $match_sub;

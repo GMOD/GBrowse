@@ -26,7 +26,7 @@ Generic Genome Browser Installation
         They can be found on the Comprehensive Perl Archive Network (CPAN):
 
                 CGI              (2.56 or higher)
-                GD               (2.08 or higher)
+                GD               (2.07 or higher)
                 DBI              (any version)
                 DBD::mysql       (any version)
                 Digest::MD5      (any version)

@@ -1,7 +1,0 @@
-This directory contains CGI scripts that are installed when you "make
-install".  To install manually, execute the .PLS files, eg,
-
-  % perl gbrowse.PLS 
-
-then copy the resulting files into your Web server's CGI-BIN directory.
-

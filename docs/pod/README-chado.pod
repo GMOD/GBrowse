@@ -41,6 +41,9 @@ A sample chado configuration file is included in contrib/conf_files/.
 Since chado uses the Sequence Ontology for its controlled vocabulary, it
 is quite likely that this configuration file should work for any
 instance of chado once the database-specific parameters are set.
+Also, depending on what the "reference type" is (usually something
+like 'chromosome' or 'contig'), the line in the configuration for 
+reference class will need to be modified to agree with your data.
 
 After the tables are created, the user that is running Apache must
 be granted privileges to select on several tables.  Usually that

@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.51.2.13 2003-07-05 18:00:44 pedlefsen Exp $
+# $Id: Browser.pm,v 1.51.2.14 2003-07-06 00:49:28 pedlefsen Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -4203,7 +4203,11 @@ sub _get_map_title {
   my( $section, $feature, $panel ) = @_;
 
   ## TODO: What feature class can make_title()?  What about toString()?
-  return $feature->make_title() if $feature->can( 'make_title' );
+  #return $feature->make_title() if $feature->can( 'make_title' );
+
+  if( $feature->has_tag( 'description' ) ) {
+    return join( "; ", $feature->get_tag_values( 'description' ) );
+  }
 
   ## TODO: REMOVE?
   return unless( defined $section );
@@ -5272,9 +5276,11 @@ sub _name2segments {
   @segments = $self->config()->segment( @argv );
 
   ## TODO: REMOVE
-  warn "_name2segments: Got " . scalar( @segments ) . " segments." if DEBUG;
+  warn "_name2segments: First attempt got " . scalar( @segments ) . " segments." if DEBUG;
   if( @segments ) {
     warn "_name2segments: The first segment, ".$segments[ 0 ].", has " . $segments[ 0 ]->feature_count() . " features." if DEBUG;
+  } else {
+    warn "_name2segments: Didn't find it as-is.." if DEBUG;
   }
 
   # Here starts the heuristic part.  Try various abbreviations that
@@ -5282,6 +5288,8 @@ sub _name2segments {
   if( !@segments && ( $name =~ /^([\dIVXA-F]+)$/ ) ) {
     my $id = $1;
     foreach ( qw( CHROMOSOME_ Chr chr ) ) {
+      ## TODO: REMOVE
+      warn "Trying with a leading string of $_" if DEBUG;
       my $n = "${_}${id}";
       @argv = ( '-name'  => $n );
       push( @argv, ( '-class' => $class ) ) if defined $class;
@@ -5295,10 +5303,19 @@ sub _name2segments {
       @segments = $self->config()->segment( @argv );
       last if @segments;
     }
+    if( @segments ) {
+      ## TODO: REMOVE
+      warn "_name2segments: Got " . scalar( @segments ) . " segments." if DEBUG;
+      warn "_name2segments: The first segment, ".$segments[ 0 ].", has " . $segments[ 0 ]->feature_count() . " features." if DEBUG;
+    } else {
+      warn "_name2segments: Didn't find it that way.." if DEBUG;
+    }
   }
 
   # try to remove the chr CHROMOSOME_I
   if( !@segments && ( $name =~ /^(chromosome_?|chr)/i ) ) {
+    ## TODO: REMOVE
+    warn "Trying without the leading string" if DEBUG;
       ( my $chr = $name ) =~ s/^(chromosome_?|chr)//i;
       @argv = ( '-name'  => $chr );
       push( @argv, ( '-class' => $class ) ) if defined $class;
@@ -5310,6 +5327,13 @@ sub _name2segments {
                             ) ) );
       }
     @segments = $self->config()->segment( @argv );
+    if( @segments ) {
+      ## TODO: REMOVE
+      warn "_name2segments: Got " . scalar( @segments ) . " segments." if DEBUG;
+      warn "_name2segments: The first segment, ".$segments[ 0 ].", has " . $segments[ 0 ]->feature_count() . " features." if DEBUG;
+    } else {
+      warn "_name2segments: Didn't find it that way either.." if DEBUG;
+    }
   }
 
   # try the wildcard version, but only if the name is of significant length

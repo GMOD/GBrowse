@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.143 2004-05-15 23:02:37 lstein Exp $
+# $Id: Browser.pm,v 1.144 2004-05-17 04:28:38 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1446,7 +1446,7 @@ sub do_bump {
 
   my $maxed_out = $count <= $maxb;
   my $conf_bump = $conf->code_setting($track_name => 'bump');
-
+  $option ||= 0;
   return defined $conf_bump ? $conf_bump
       :  $option == 0 ? $maxed_out
       :  $option == 1 ? 0
@@ -1470,6 +1470,7 @@ sub do_label {
   my $conf_label        = $conf->semantic_setting($track_name => 'label',$length);
   $conf_label           = 1 unless defined $conf_label;
 
+  $option ||= 0;
   return  $option == 0 ? $maxed_out && $conf_label
         : $option == 3 ? $conf_label || 1
 	: $option == 5 ? $conf_label || 1
@@ -1488,6 +1489,7 @@ sub do_description {
 
   my $conf_description  = $conf->semantic_setting($track_name => 'description',$length);
   $conf_description     = 0 unless defined $conf_description;
+  $option ||= 0;
   return  $option == 0 ? $maxed_out && $conf_description
         : $option == 3 ? $conf_description || 1
         : $option == 5 ? $conf_description || 1
@@ -1726,13 +1728,15 @@ sub _hits_to_html {
     my $y = $x + $width;
     my $start = int($length * $i);
     my $stop  = int($start + $length);
-    my $href      = $self_url . "?ref=$name;start=$start;stop=$stop;version=$version";
+    my $href      = $self_url . "?ref=$name;start=$start;stop=$stop";
+    $href        .= ";version=$version" if defined $version;
     $html .= qq(<area shape="rect" coords="$x,$ruler->[2],$y,$ruler->[4]" href="$href" alt="ruler" />\n);
   }
 
   foreach (@$boxes){
     my ($start,$stop) = ($_->[0]->start,$_->[0]->end);
-    my $href      = $self_url . "?ref=$name;start=$start;stop=$stop;version=$version";
+    my $href      = $self_url . "?ref=$name;start=$start;stop=$stop";
+    $href        .= ";version=$version" if defined $version;
     $html .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href" alt="ruler" />\n);
   }
   $html .= "</map>\n";

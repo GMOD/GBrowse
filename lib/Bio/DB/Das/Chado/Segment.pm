@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.71 2004-08-09 20:04:30 scottcain Exp $
+# $Id: Segment.pm,v 1.72 2004-08-19 04:31:18 allenday Exp $
 
 =head1 NAME
 
@@ -107,7 +107,7 @@ sub new {
 
     my $self = shift;
 
-    my ( $name, $factory, $base_start, $end, $db_id ) = @_;
+    my ( $name, $factory, $base_start, $end, $db_id, $type0 ) = @_;
 
     warn "$name, $factory\n"                      if DEBUG;
     warn "base_start = $base_start, end = $end\n" if DEBUG;
@@ -140,12 +140,13 @@ sub new {
          " );
 
     my $fetch_uniquename_query = $factory->dbh->prepare( "
-       select f.name,fl.fmin,fl.fmax,f.uniquename from feature f, featureloc fl
-       where f.feature_id = ? and
-             f.feature_id = fl.feature_id 
-         ");
+       select o.feature_id,o.name,o.seqlen,o.fmin,o.fmax,o.uniquename from
+       (select f.feature_id,f.name,f.seqlen,fl.fmin,fl.fmax,f.uniquename from
+        feature f LEFT JOIN featureloc fl ON (f.feature_id = fl.feature_id)
+       ) as o where o.feature_id = ?
+         "); #must do it this way. reference sequences have no featureloc entries
 
-    my $ref = _search_by_name( $factory, $quoted_name, $db_id );
+    my $ref = _search_by_name( $factory, $quoted_name, $db_id, $type0 );
 
     #returns either a feature_id scalar (if there is only one result)
     #or an arrayref (of feature_ids) if there is more than one result
@@ -156,13 +157,12 @@ sub new {
         my @segments;
 
         foreach my $feature_id (@$ref) {
-
             $fetch_uniquename_query->execute($feature_id )
               or Bio::Root::Root->throw("fetching uniquename from feature_id failed") ;
 
             my $hashref = $fetch_uniquename_query->fetchrow_hashref;
-            $base_start = $$hashref{fmin} + 1;
-            $end        = $$hashref{fmax};
+            $base_start = ($$hashref{fmin} || 0) + 1;
+            $end        = $$hashref{fmax} || $$hashref{seqlen};
             $db_id      = $$hashref{uniquename};
 
             push @segments, $factory->segment(-name=>$name,-start=>$base_start,-end=>$end,-db_id=>$db_id);
@@ -175,11 +175,11 @@ sub new {
             return @segments;
         }
         else {
-            warn "The query for $name returned multiple segments\nPlease call in a list context to get them all";
+            $self->warn("The query for $name returned multiple segments\nPlease call in a list context to get them all");
             Bio::Root::Root->throw("multiple segment exception") ;
         }
     }
-    elsif ( ref $ref eq 'SCALAR' ) {    #one result returned
+    elsif ( ref($ref) eq 'SCALAR' ) {    #one result returned
 
         my $landmark_feature_id = $$ref;
 
@@ -276,18 +276,31 @@ sub name {
 =cut
 
 sub _search_by_name {
-  my ($factory,$quoted_name,$db_id) = @_;
+  my ($factory,$quoted_name,$db_id,$type) = @_;
+
+  my $type_qualifier = '';
+  if($type){
+    $type_qualifier = "and type_id = (select cvterm_id from cvterm where name in (".join(',', map { $factory->dbh->quote($_) } @$type)."))";
+  }
 
   my $sth; 
   if ($db_id) {
     $sth = $factory->dbh->prepare ("
              select name,feature_id,seqlen from feature
-             where uniquename = \'$db_id\'  ");
+             where uniquename = \'$db_id\' $type_qualifier");
 
-  } else {
+  } elsif ($quoted_name ne "''") {
     $sth = $factory->dbh->prepare ("
              select name,feature_id,seqlen from feature
-             where lower(name) = $quoted_name  ");
+             where lower(name) = $quoted_name $type_qualifier");
+  } elsif ($type) {
+    $type_qualifier =~ s/^and //;
+    $sth = $factory->dbh->prepare ("
+             select name,feature_id,seqlen from feature
+             where $type_qualifier");
+  } else {
+    warn "dunno what you want.  db_id: '$db_id', quoted_name: '$quoted_name', type: '$type'";
+    return undef;
   }
  
   $sth->execute or Bio::Root::Root->throw("unable to validate name/length");
@@ -555,25 +568,37 @@ is defined, then -callback is ignored.
 
 sub features {
   my $self = shift;
+  my %arg  = @_;
+
+  if(!ref($self)){ #this allows the factory to make feature requests without
+                   #without instantiating a segment! -allen
+    my @selves = $self->new(undef,$arg{-factory},undef,undef,undef,$arg{-type});
+    warn join ' ', @selves;
+
+    return @selves; #ridiculous
+  }
 
   warn "Segment->features() args:@_\n" if DEBUG;
 
-  my ($types,$attributes,$rangetype,$iterator,$callback,$feature_id,$factory);
+  my ($type,$types,$attributes,$rangetype,$iterator,$callback,$feature_id,$factory);
   if ($_[0] and $_[0] =~ /^-/) {
-    ($types,$attributes,$rangetype,$iterator,$callback,$feature_id,$factory) =
-      $self->_rearrange([qw(TYPE 
+    ($type,$types,$attributes,$rangetype,$iterator,$callback,$feature_id,$factory) =
+      $self->_rearrange([qw(TYPE TYPES
                             ATTRIBUTES 
                             RANGETYPE 
                             ITERATOR 
                             CALLBACK 
                             FEATURE_ID
                             FACTORY)],@_);
+
+    $types ||= $type; #GRRR
+
   #  warn "$types\n";
   } else {
     $types = \@_;
   }
 
-  warn "@$types\n" if (defined $types and DEBUG);
+#  warn "@$types\n" if (defined $types and DEBUG);
 
   $factory ||=$self->factory();
   my $feat     = Bio::DB::Das::Chado::Segment::Feature->new();
@@ -609,7 +634,7 @@ sub features {
     $sql_types = '';
 
     my $valid_type = undef;
-    if (scalar @$types != 0) {
+    if (ref($types) eq 'ARRAY' && scalar @$types != 0) {
 
       warn "first type:$$types[0]\n" if DEBUG;
 

@@ -1,4 +1,4 @@
-# $Id: BasicEditor.pm,v 1.16 2004-01-21 19:17:54 sheldon_mckay Exp $
+# $Id: BasicEditor.pm,v 1.17 2004-02-19 17:55:02 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -17,12 +17,11 @@ The database user specified in the configuration file must have
 sufficient privileges to delete and insert data.  See the gbrowse
 tutorial for information on how to set this up.
 
-The features contained in the current segment are dumped as GFF2.5
-(generic GFF2 with free text wrapped in quotes and controlled
-vocabulary for similarity features such as BLAST hits) into a form
-where the fields can be edited directly (except the reference sequence
-field).  The edited features are then loaded into the database after
-all features in the segment's coordinate range are removed
+The features contained in the current segment are dumped as GFF3
+into a form where the fields can be edited directly (except the 
+reference sequence field).  The edited features are then loaded 
+into the database after all features in the segment's coordinate 
+range are removed
 
 =head1 FEEDBACK
 
@@ -39,7 +38,7 @@ Email smckay@bcgsc.bc.ca
 package Bio::Graphics::Browser::Plugin::BasicEditor;
 
 use strict;
-use CGI qw/:standard *table/;
+use CGI qw/:standard *table unescape /;
 use CGI::Carp qw/fatalsToBrowser/;
 use Bio::Graphics::Browser::Plugin;
 use Bio::Graphics::Browser::GFFhelper;
@@ -68,7 +67,7 @@ END
 ####################################################################
 
 sub name { 
-    'Edit Features (Gbrowse)'
+    'Edit Features'
 }
 
 sub description {
@@ -77,7 +76,7 @@ sub description {
 }
 
 sub type {     
-     'annotator'
+     'dumper'
 }
 
 sub mime_type {
@@ -88,7 +87,6 @@ sub mime_type {
 sub verb {
     ' '
 }
-
 
 # no persistent paramaters to be saved between sessions
 #sub reconfigure {
@@ -114,12 +112,14 @@ sub configure_form {
 	$self->{rb_loc} ||= $ROLLBACK;
 	my $msg = "Selecting a rollback will override feature editing and " . 
 	          "restore an archived feature set";
+
         $html = $self->rollback_form($msg, $segment->ref);
-        my $button = qq(\n<input type="submit" name="plugin_action" value="Configure">\n);
+        
+	my $button = qq(\n<input type="submit" name="plugin_action" value="Go">\n);
         $html =~ s|</a>|$& $button|m; 
         $html .= br . "\n";
     }    
-
+    
     $html .= start_table() .
 	     Tr( {-class => 'searchtitle'}, 
 		th( { -colspan => 9 }, 
@@ -129,14 +129,19 @@ sub configure_form {
 		      u( "GFF3 specification)" ) ) ) ) . 
 	       $self->build_form($segment) .
 	       end_table();
+
+    # ensure that this page is loaded before the database update
+    # can be performed
+    $html .= hidden( -name    => $self->config_name('configured'),
+		     -value   => 1 );
+
 }
 
 sub build_form {
     my ($self, $segment) = @_;
     my $form = '';
     my $feat_count = 0;
-    
-    my @feats = $segment->contained_features;
+    my @feats = _contained_feats($segment); 
 
     # try to put the features in a sensible order 
     # this is biased toward gene containment hierarchies
@@ -151,13 +156,16 @@ sub build_form {
     $row .= th( [ qw/Delete Source Feature Start Stop Scr Str Phs Attribute/ ] ); 
 
     for ( @feats ) {
-	next if $_->method =~ /component/i;
+	#next if $_->method =~ /component/i;
 	$feat_count++;
 
         # use GFF3 dialect
 	$_->version(3);
 	my $cellcount = 0;
 	my @cell = split /\t/, $_->gff_string;
+	
+        # human-readable attributes
+	$cell[8] = unescape($cell[8]);
 
         # a bit of containment hierarchy tweaking...
 	if ( $_->primary_tag ne 'mRNA' && $cell[-1] =~ /ID=mRNA:/ ||
@@ -174,6 +182,7 @@ sub build_form {
 	
 	for my $cell ( @cell  ) {
             next if ++$cellcount == 1;
+	    $cell =~ s/\"\"/\"/g;
 	    $row .= td( textfield( -name  => 'BasicEditor.feature' . $feat_count,
 				   -value => $cell,
 				   -size  => $size{$cellcount} + 1 )) . "\n";
@@ -192,13 +201,11 @@ sub build_form {
                                    -size  => $size{$cell} + 1 )) . "\n";
         }
     }
-
     $row;
 }
 
 sub set_cell_size {
     my ($self, @feats) = @_;
-    
     my %max = ();
     
     for my $f ( @feats ) {
@@ -218,21 +225,26 @@ sub set_cell_size {
 }
 
 
-sub annotate {
+sub dump {
     my ($self, $segment ) = @_;
     return unless $segment;
     my $db = $self->database;
     my $rollback;
+
+    # go to editor if the 'Dump' button was hit by mistake
+    unless ( $self->config_param('configured') ) {
+        print h2( font( { -color => 'slateblue' }, 
+		  'One moment; redirecting to feature editor...') );
+        $self->load_page;
+    }
+
 
     # look for a rollback request. We do not want this to persist,
     # so the rb_id parameter is not saved in the configuration
     if ( $ROLLBACK ) {
 	$rollback = $self->config_param('rb_id');
 	$self->{rb_loc} = $ROLLBACK;
-        my $wholeseg = $db->segment( Accession => $segment->ref ) ||
-	               $db->segment( Sequence  => $segment->ref );
-	$self->save_state($wholeseg);
-        $segment = $wholeseg if $rollback;
+ 	$self->save_state($segment);
     }
 
     if ( forbid() ) {
@@ -252,10 +264,12 @@ sub annotate {
 
     $gff = $self->gff_header(3,1) . "\n$gff";
 
-    my @killme = $segment->contained_features;
+    my @killme = _contained_feats($segment);
+
     for ( @killme ) {
 	$db->delete_features($_) unless $_->primary_tag =~ /Component/i; 
     }
+
     my $fh = IO::String->new($gff);
     my $result = $db->load_gff($fh);
 
@@ -264,8 +278,36 @@ sub annotate {
         exit;
     }
     
+    $self->load_page($gff);    
+
     return 0;
 }
+
+sub load_page {
+    my ($self, $gff) = @_;
+    my $conf = $self->configuration;
+    my @params;
+    my $url = self_url();
+    
+    unless ( $gff ) {
+        $url =~ s/plugin_action=Go/plugin_action=Configure.../;
+	print body( { -onLoad => "window.location='$url'" } );
+        return 0;
+    }
+    
+    $self->get_range($gff);
+    my $name = $self->refseq. ':';
+    $name .= $self->start . '..' . $self->end;
+    $url =~ s/\?.+$//g;
+
+    print start_form( -name   => 'f1',
+                      -method => 'POST',
+                      -action => $url );
+
+    print qq(<input type=hidden name=name value="$name">);
+    print body( { -onLoad => "document.f1.submit()" } );
+}
+
 
 sub build_gff {
     my $self = shift;
@@ -276,6 +318,7 @@ sub build_gff {
         my ($num) = /feature(\d+)/;
         next if $self->config_param('delete' . $num) || !param($_);
         my @text = param($_);
+        $text[8] = $self->_escape($text[8]);
         
         # is it valid gff?
         if ( !$self->check_gff(\@text) ) {
@@ -313,6 +356,15 @@ sub forbid {
 
     return $ips =~ /$host/m ? 0 : 1;
 
+}
+
+# deals with segment edge-effects
+sub _contained_feats {
+    my $segment = shift;
+    grep {
+        $_->start >= $segment->start - 1 &&
+        $_->end   <= $segment->end   + 1
+    } $segment->features;
 }
 
 1;

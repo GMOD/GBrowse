@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.6 2003-01-13 22:12:03 scottcain Exp $
+# $Id: Segment.pm,v 1.7 2003-01-22 22:47:13 scottcain Exp $
 
 =head1 NAME
 
@@ -99,7 +99,7 @@ package Bio::DB::Das::Chado::Segment;
 use strict;
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
-use Bio::SeqFeature::Generic;
+use Bio::DB::Das::Chado::Segment::Feature;
 use constant DEBUG => 1;
 
 use vars '@ISA','$VERSION';
@@ -309,7 +309,7 @@ sub features {
 
   warn "@$types\n" if (defined $types and DEBUG);
 
-  my $feat     = Bio::SeqFeature::Generic->new ();
+  my $feat     = Bio::DB::Das::Chado::Segment::Feature->new ();
   my @features;
   $rangetype ||='overlaps';
 
@@ -398,7 +398,7 @@ sub features {
       $start = $$hashref{nbeg};
     }
 
-    $feat = Bio::SeqFeature::Generic->new (
+    $feat = Bio::DB::Das::Chado::Segment::Feature->new (
                        -start      => $start,
                        -end        => $end,
                        -strand     => $$hashref{strand}, 

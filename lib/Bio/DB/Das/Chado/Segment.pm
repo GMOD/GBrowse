@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.65 2004-06-22 18:04:54 scottcain Exp $
+# $Id: Segment.pm,v 1.66 2004-06-22 21:10:21 scottcain Exp $
 
 =head1 NAME
 
@@ -138,8 +138,9 @@ sub new {
          " );
 
     my $fetch_uniquename_query = $factory->dbh->prepare( "
-       select name,fmin,fmax,uniquename from feature
-       where feature_id = ?
+       select f.name,fl.fmin,fl.fmax,f.uniquename from feature f, featureloc fl
+       where f.feature_id = ? and
+             f.feature_id = fl.feature_id 
          ");
 
     my $ref = _search_by_name( $factory, $quoted_name, $db_id );
@@ -162,7 +163,7 @@ sub new {
             $end        = $$hashref{fmax};
             $db_id      = $$hashref{uniquename};
 
-            push @segments, $factory->segment($name,$factory,$base_start,$end,$db_id);
+            push @segments, $factory->segment(-name=>$name,-start=>$base_start,-end=>$end,-db_id=>$db_id);
         }
 
         if (@segments < 2) {
@@ -588,7 +589,6 @@ sub features {
   my $sql_types = '';
 
   my $valid_type = undef;
-  my $need_source= 0;
   if (scalar @$types != 0) {
 
     warn "first type:$$types[0]\n" if DEBUG;
@@ -598,7 +598,6 @@ sub features {
     if ($$types[0] =~ /(.*):(.*)/) {
         $temp_type   = $1;
         $temp_source = $2;
-        $need_source = 1;
     }
 
     $valid_type = $self->factory->name2term($temp_type);
@@ -619,8 +618,6 @@ sub features {
         if ($$types[$i] =~ /(.*):(.*)/) {
             $temp_type = $1;
             $temp_source = $2;
-            $need_source = 1;
-
         }
         warn "more types:$$types[$i]\n" if DEBUG; 
 
@@ -642,16 +639,10 @@ sub features {
 
   my $srcfeature_id = $self->{srcfeature_id};
 
-  my $select_part = "select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.locgroup,fl.srcfeature_id,f.type_id,f.uniquename,f.feature_id ";
-  my $from_part   = "from feature f, featureslice($interbase_start, $rend) fl ";
-  my $where_part  = "where $sql_types fl.srcfeature_id = $srcfeature_id and f.feature_id  = fl.feature_id ";
+  my $select_part = "select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.locgroup,fl.srcfeature_id,f.type_id,f.uniquename,f.feature_id,fd.dbxref_id ";
+  my $from_part   = "from feature f, featureslice($interbase_start, $rend) fl, feature_dbxref fd ";
+  my $where_part  = "where $sql_types fl.srcfeature_id = $srcfeature_id and f.feature_id  = fl.feature_id and fd.feature_id=f.feature_id ";
   my $order_by    = "order by f.type_id,fl.fmin ";
-
-  if ($need_source) {
-      $select_part .= ",fd.dbxref_id";
-      $from_part   .= ", feature_dbxref fd";
-      $where_part  .= "and fd.feature_id=f.feature_id";
-  }
 
   my $query       = "$select_part\n$from_part\n$where_part\n$order_by\n";
 

@@ -1,3 +1,8 @@
+1.02	Mon Jan 21 17:43:06 EST 2002
+	* Fixed a bug that appeared with newer versions of Bio::DB::GFF
+	in which features with multiple locations showed up with the
+	same location repeated.
+	
 1.01 	Fri Jan 11 13:12:36 EST 2002 Lincoln Stein  <lstein@cshl.org>
 	* Better error reporting for when a database can't be opened
 	for whatever reason.

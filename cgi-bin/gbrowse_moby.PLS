@@ -4,7 +4,6 @@ use File::Basename qw(&basename &dirname);
 use File::Spec;
 use FindBin '$Bin';
 use Cwd;
-use MOBY::MobyXMLConstants;
 my %OPTIONS;
 if (open F,"$Bin/../GGB.def") {
   while (<F>) {
@@ -47,12 +46,13 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 print OUT <<'!NO!SUBS!';
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.38 2004-12-16 15:09:26 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.39 2004-12-18 17:39:21 markwilkinson Exp $
 ###########################################################
 
 use MOBY::Client::Central;
 use MOBY::Client::Service;
 use MOBY::CommonSubs qw(:all);
+use MOBY::MobyXMLConstants;
 use XML::DOM;
 use File::Temp qw/ tempfile /;
 use MIME::Base64;

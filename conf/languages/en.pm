@@ -104,6 +104,12 @@ reducing the size of the region.
 </p>
 END
 
+   TIMEOUT  => <<'END',
+Your request timed out.  You may have selected a region that is too large to display.
+Either turn off some tracks or try a smaller region.  If you are experiencing persistent
+timeouts, please press the red "Reset" button.
+END
+
    GO       => 'Go',
 
    FIND     => 'Find',

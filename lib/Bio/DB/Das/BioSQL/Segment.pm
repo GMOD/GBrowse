@@ -335,7 +335,7 @@ sub top_SeqFeatures
     
     my @result = $self->bioseq->get_SeqFeatures();
     
-    if ($self->absolute)
+    unless ($self->absolute)
     {
         foreach my $feat (@result)
         {

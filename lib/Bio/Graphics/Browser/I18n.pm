@@ -1,7 +1,10 @@
 package Bio::Graphics::Browser::I18n;
 
-# $Id: I18n.pm,v 1.5 2002-09-12 01:58:43 lstein Exp $
+# $Id: I18n.pm,v 1.6 2002-09-25 04:39:21 lstein Exp $
 # $Log: not supported by cvs2svn $
+# Revision 1.5  2002/09/12 01:58:43  lstein
+# added undocumented support for non-bp units and fixed language handling
+#
 # Revision 1.4  2002/09/11 11:42:23  lstein
 # fixed language handling
 #
@@ -52,7 +55,7 @@ sub tr_table {
   my @languages = @_;
   my $table;
   for my $lang (@languages) {
-    $self->{tr}{$lang} = $self->read_table($lang) 
+    $self->{tr}{$lang} = $self->read_table($lang)
       unless exists $self->{tr}{$lang};
     next unless $self->{tr}{$lang};
     return $self->{tr}{$lang};

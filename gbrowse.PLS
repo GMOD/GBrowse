@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.58 2002-09-12 01:58:43 lstein Exp $
+# $Id: gbrowse.PLS,v 1.59 2002-09-25 04:39:21 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -253,7 +253,11 @@ warn "ADJUSTED TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 ## UPDATING THE PERSISTENT SETTINGS##############################################################
 my $cookies = settings2cookie($page_settings);
 push @$cookies,plugins2cookies($PLUGINS);
-print header(-cookie => $cookies) unless $HEADER++;
+print header(-cookie => $cookies,
+	     -charset=>$LANG->tr('CHARSET'),
+	    ) unless $HEADER++;
+
+if (request_method eq 'HEAD') {exit 0}
 
 my $description = $CONFIG->setting('description');
 my $segment;
@@ -421,37 +425,42 @@ sub get_settings {
   my $ok = 1;
 
   if (%settings) {  # if cookie is there, then validate it
-    $ok &&= defined $settings{width} && $settings{width} > 100 && $settings{width} < 5000;
-    warn "ok 1 = $ok" if DEBUG;
+  BLOCK: {
+      $ok &&= $settings{v} == $VERSION;
+      warn "ok 0 = $ok" if DEBUG;
+      last unless $ok;
 
-    my %ok_sources = map {$_=>1} $CONFIG->sources;
-    $ok &&= $ok_sources{$settings{source}};
-    warn "ok 2 = $ok" if DEBUG;
+      $ok &&= defined $settings{width} && $settings{width} > 100 && $settings{width} < 5000;
+      warn "ok 1 = $ok" if DEBUG;
 
-    # the single "tracks" key of the cookie gets mapped to the
-    # "track" and "features" key of the page settings
-    my @features = split $;,$settings{tracks} if $ok && defined $settings{tracks};
-    $settings{tracks}    = [];  # make sure these are clean
-    $settings{features}  = {};
-    foreach (@features) {
-      warn "feature = $_" if DEBUG;
-      my ($label,$visible,$option,$limit) = m!^(.+)/(\d+)/(\d+)/(\d+)$!;
-      warn "label = $label, visible = $visible, option = $option, limit = $limit" if DEBUG;
-      unless ($label) {   # corrupt cookie; purge it.
-	undef $ok;
-	last;
+      my %ok_sources = map {$_=>1} $CONFIG->sources;
+      $ok &&= $ok_sources{$settings{source}};
+      warn "ok 2 = $ok" if DEBUG;
+
+      # the single "tracks" key of the cookie gets mapped to the
+      # "track" and "features" key of the page settings
+      my @features = split $;,$settings{tracks} if $ok && defined $settings{tracks};
+      $settings{tracks}    = [];  # make sure these are clean
+      $settings{features}  = {};
+      foreach (@features) {
+	warn "feature = $_" if DEBUG;
+	my ($label,$visible,$option,$limit) = m!^(.+)/(\d+)/(\d+)/(\d+)$!;
+	warn "label = $label, visible = $visible, option = $option, limit = $limit" if DEBUG;
+	unless ($label) {   # corrupt cookie; purge it.
+	  undef $ok;
+	  last;
+	}
+	push @{$settings{tracks}},$label;
+	$settings{features}{$label}{visible} = $visible;
+	$settings{features}{$label}{options} = $option;
+	$settings{features}{$label}{limit}   = $limit;
       }
-      push @{$settings{tracks}},$label;
-      $settings{features}{$label}{visible} = $visible;
-      $settings{features}{$label}{options} = $option;
-      $settings{features}{$label}{limit}   = $limit;
+      warn "ok 3 = $ok" if DEBUG;
+
+      $ok &&= ref($settings{tracks}) && @{$settings{tracks}} > 0;
+      warn "ok 4 = $ok" if DEBUG;
     }
-    warn "ok 3 = $ok" if DEBUG;
   }
-
-  $ok &&= ref($settings{tracks}) && @{$settings{tracks}} > 0;
-
-  warn "ok 4 = $ok" if DEBUG;
 
   if ($ok && %settings) {
     adjust_tracks(\%settings);
@@ -480,6 +489,9 @@ sub default_settings {
   $settings->{width}   = $CONFIG->setting('default width');
   $settings->{source}  = $CONFIG->source;
   $settings->{id}      = md5_hex(rand);  # new identity
+  $settings->{v}       = $VERSION;
+  $settings->{stp}     = 1;
+  $settings->{ins}     = 1;
   set_default_tracks($settings);
 }
 
@@ -557,6 +569,7 @@ sub settings2cookie {
   push @cookies,cookie(-name   => 'gbrowse_source',
 		       -value  => $source,
 		       -expires => '+3M');
+  warn "cookies = @cookies" if DEBUG;
   return \@cookies;
 }
 
@@ -587,6 +600,8 @@ sub adjust_settings {
   $settings->{name}   = param('name')                       if param('name');
   $settings->{source} = param('source')                     if param('source');
   $settings->{plugin} = param('plugin')                     if param('plugin');
+  $settings->{stp}    = param('stp')                        if defined param('stp');
+  $settings->{ins}    = param('ins')                        if defined param('ins');
 
   if (my @external = param('eurl')) {
     my %external = map {$_=>1} @external;
@@ -619,19 +634,31 @@ sub navigation_table {
   my $segment = shift;
   my $settings = shift;
   my $buttonsDir    = $CONFIG->setting('buttons');
+  my $self  = url(-relative=>1,-path_info=>1);
   my $table = '';
   my $oligo = $PLUGINS->{'OligoFinder'} ? ', oligonucleotide (15 bp minimum)' : '';
 
   $table .= table({-border=>0, -width=>$settings->{width}},
-		  TR({-class=>'searchbody'},
-		     td({-align=>'left', -colspan=>3},
-			$LANG->tr('SEARCH_INSTRUCTIONS',$oligo),
-			show_examples()
-		    )),
-		  TR({-class=>'searchbody'},
-		     td({-align=>'left', -colspan=>3},
-			$LANG->tr('NAVIGATION_INSTRUCTIONS',bookmark_link($settings))
-		       )),
+		  $settings->{ins} ?
+		  (
+		   TR({-class=>'searchbody'},
+		      td({-align=>'left', -colspan=>3},
+			 a({-href=>"$self?ins=0"},"[Hide instructions]"),
+			 $LANG->tr('SEARCH_INSTRUCTIONS',$oligo),
+			 show_examples()
+			)),
+		   TR({-class=>'searchbody'},
+		      td({-align=>'left', -colspan=>3},
+			 $LANG->tr('NAVIGATION_INSTRUCTIONS',bookmark_link($settings))
+			)),
+		  ) : 
+		  (
+		   TR({-class=>'searchbody'},
+		      td({-align=>'left', -colspan=>3},
+			 a({-href=>"$self?ins=1"},"[Show instructions]"),
+			 a({-href=>bookmark_link($settings)},'[bookmark this view]'))
+		     ),
+		  ),
 		  TR({-class=>'searchtitle', -align=>'left'},
 		     td({-class=>'searchtitle'}, b($LANG->tr('Landmark')),
 			textfield(-name=>'name',-size=>30),
@@ -767,8 +794,11 @@ sub settings_table {
 		  TR(
 		     th({-class=>'searchtitle', -colspan=>3, -align=>'left'},$LANG->tr('Display_Settings').':')
 		     ),
-		  TR(	td({-class=>'searchbody', -valign=>'top',-align=>'right'},
-			   b($LANG->tr('Tracks')),
+		  # row
+		  $settings->{stp} ?
+		  (
+		   TR(	td({-class=>'searchbody', -valign=>'top',-align=>'right'},
+			   b($LANG->tr('Tracks'),a({-href=>"$self?stp=0"},'[Hide]')),
 			   p(i($LANG->tr('External_tracks')))),
 			td({-class=>'searchbody',-colspan=>2,-width=>'85%'},
 			   checkbox_group(-name=>'label',
@@ -780,7 +810,10 @@ sub settings_table {
 					  -cols     => 3,
 					  -override => 1,
 					 ))),
-
+		  ) :
+		  TR(td({-class=>'searchbody',-colspan=>3},
+			b($LANG->tr('Tracks'),a({-href=>"$self?stp=1"},'[Show]')))
+		    ),
 		  # row
 		  TR({-class=>'searchbody'},
 		     th({align=>'RIGHT'},$LANG->tr('Image_width')),
@@ -2185,7 +2218,6 @@ sub footer {
        tt(font({-size=>'small'},$LANG->tr('Footer_2',$VERSION)))),
        end_html;
 }
-
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

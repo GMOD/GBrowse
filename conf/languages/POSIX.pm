@@ -1,5 +1,8 @@
 # do not remove the { } from the top and bottom of this page!!!
 {
+
+ CHARSET =>   'us-ascii',
+
    #----------
    # MAIN PAGE
    #----------

@@ -20,15 +20,15 @@ if (! (-e $ht_target) ) {
     mkdir($ht_target,0777) or die "unable to make $ht_target directory\n";
 }
 
-fixreadonly($ht_target) if $^O =~ /win32/i;
-
 opendir HTDOCS, "htdocs" or die "unable to opendir htdocs\n";
 while (my $file = readdir(HTDOCS) ) {
     my $localfile = Bio::Root::IO->catfile('htdocs', $file);
     if (-f $localfile) {
         my $installfile = Bio::Root::IO->catfile($ht_target, $file);
+	chmod (0666, $installfile);
         copy($localfile, $installfile)
            or die "unable to copy to $installfile\n";
+	chmod (0644, $installfile);
     }
 }
 closedir HTDOCS; 
@@ -44,15 +44,15 @@ if (! (-e $buttondir) ) {
     mkdir($buttondir,0777) or die "unable to make $buttondir\n";
 }
 
-fixreadonly($buttondir) if $^O =~ /win32/i;
-
 opendir BUTTONS, "htdocs/images/buttons" or die "unable to open ./htdocs/images/buttons\n";
 while (my $file = readdir(BUTTONS) ) {
     my $localfile = Bio::Root::IO->catfile('htdocs/images/buttons',$file);
     if (-f $localfile) {
         my $installfile = Bio::Root::IO->catfile($buttondir, $file);
+	chmod (0666, $installfile);
         copy($localfile, $installfile) 
             or die "unable to copy to $installfile\n"; 
+	chmod (0644, $installfile);
     }
 }
 closedir BUTTONS;
@@ -63,15 +63,15 @@ if (! (-e $helpdir) ) {
     mkdir($helpdir,0777) or die "unable to make $helpdir\n";
 }
 
-fixreadonly($helpdir) if $^O =~ /win32/i;
-
 opendir HELP, "htdocs/images/help" or die "unable to open htdocs/images/help\n";
 while (my $file = readdir(HELP) ) {
     my $localfile = Bio::Root::IO->catfile('htdocs/images/help', $file);
     if (-f "./htdocs/images/help/$file") {
         my $installfile = Bio::Root::IO->catfile($helpdir, $file);
+	chmod (0666, $installfile);
         copy($localfile, $installfile) 
             or die "unable to copy to $installfile\n";
+	chmod (0644, $installfile);
     }
 }
 closedir HELP;
@@ -85,8 +85,3 @@ if (! (-e $tmpdir) ) {
 #    chmod $mode, $tmpdir or die "unable to make $tmpdir world writable\n";
 }
 
-sub fixreadonly {
-  my $dir = shift;
-  my $unsetreadonly = Bio::Root::IO->catfile( $dir, "*.*");
-  system("attrib -r /s $unsetreadonly");
-}

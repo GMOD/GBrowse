@@ -43,16 +43,16 @@ if (! (-e $plugindir)) {
     mkdir($plugindir,0777) or die "unable to mkdir $plugindir\n";
 }
 
-# need to remove read-only flag from files to allow File::Copy to work
-fixreadonly($plugindir) if $^O =~ /win32/i;
 
 opendir PLUGINS, "conf/plugins" or die "unable to opendir ./conf/plugins\n";
 while (my $pluginfile = readdir(PLUGINS) ) {
     my $localfile = Bio::Root::IO->catfile('conf/plugins',$pluginfile);
     if (-f $localfile) {
         my $installfile = Bio::Root::IO->catfile($plugindir, $pluginfile);
+	chmod (0666, $installfile);
         copy($localfile, $installfile) 
             or die "$localfile unable to copy to $installfile : $!\n";
+	chmod (0644, $installfile);
     } 
 }
 closedir PLUGINS;
@@ -62,22 +62,17 @@ if (! (-e $langdir)) {
     mkdir($langdir,0777) or die "unable to mkdir $langdir\n";
 }
 
-fixreadonly($langdir) if $^O =~ /win32/i;
-
 opendir LANGS, "conf/languages" or die "unable to opendir ./conf/languages\n";
 while (my $langfile = readdir(LANGS)) {
     my $localfile = Bio::Root::IO->catfile("conf/languages", $langfile);
     if (-f $localfile) {
         my $installfile = Bio::Root::IO->catfile($langdir, $langfile);
+        chmod (0666, $installfile);
         copy($localfile, $installfile) 
             or die "unable to copy to $installfile\n";
+        chmod (0644, $installfile);
     }
 }
 closedir LANGS;
 
-sub fixreadonly {
-  my $dir = shift;
-  my $unsetreadonly = Bio::Root::IO->catfile( $dir, "*.*");
-  system("attrib -r /s $unsetreadonly");
-}
 

@@ -42,7 +42,7 @@ $startperl -w
 !GROK!THIS!
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_moby.PLS,v 1.3 2003-10-20 20:51:49 markwilkinson Exp $
+# $Id: gbrowse_moby.PLS,v 1.4 2003-12-15 22:00:23 markwilkinson Exp $
 
 
 # use lib "/usr/local/GB/GMOD_LIBS/moby-live/Perl";
@@ -102,7 +102,7 @@ Generally speaking, namespaces in Gbrowse will have to be
 mapped to a namespace in the MOBY namespace ontology (which
 is derived from the Gene Ontology Database Cross-Reference
 Abbreviations list).  Currently, this requires editing of the
-askMOBY code, where a hash named source2namespace will
+gbrowse_moby code, where a hash named source2namespace will
 map the GFF source (column 2) value into a MOBY namespace
 
 =head1 REQUIRED LIBRARIES
@@ -120,7 +120,7 @@ points to moby-live/Perl/
 
 =head1 USAGE
 
-askMOBY understands the following variables passed by GET:
+gbrowse_moby understands the following variables passed by GET:
 
  source      - converted into a MOBY namespace by %source2namespace
  namespace   - used verbatim as a valid MOBY namespace
@@ -149,7 +149,7 @@ You would set your configuration file as follows:
      link         = http://yoursite.com/cgi-bin/gbrowse_moby?source=$source&name=$name&class=$class
      feature      = origin:Genbank
 
-and you would edit the askMOBY script as follows:
+and you would edit the gbrowse_moby script as follows:
 
       my %source2namespace = (
          #   GFF-source           MOBY-namespace
@@ -181,7 +181,7 @@ the foreign namespace into a MOBY namespace)
 
 then to handle the mapping of Locus to YDB_Locus as well
 as the Genbank GFF source tag you would
-edit the source2namespace hash in askMOBY to read:
+edit the source2namespace hash in gbrowse_moby to read:
 
       my %source2namespace = (
          #   GFF-source           MOBY-namespace
@@ -439,7 +439,7 @@ sub execute {
         }
     }
     print end_table;
-    print_bottom("of the askMOBY executable written by the <a href='http://www.biomoby.org'>BioMOBY project</a> (http://www.biomoby.org)");    
+    print_bottom("of the gbrowse_moby executable written by the <a href='http://www.biomoby.org'>BioMOBY project</a> (http://www.biomoby.org)");    
 }
 
 sub printIt {

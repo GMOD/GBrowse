@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.76 2004-04-08 20:06:32 lstein Exp $
+# $Id: gbrowse.PLS,v 1.77 2004-04-10 13:23:11 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -811,7 +811,7 @@ sub navigation_table {
 		     ),
 		  TR({-class=>'searchbody', -align=>'left'},
 		     td({-align=>'left'}, b($CONFIG->tr('Landmark')),br,
-			textfield(-name=>'name',-size=>40),
+			textfield(-name=>'name',-size=>25),
 			submit(-name=>$CONFIG->tr('Search')).'&nbsp;'.
 			submit(-name=>'reset', -label=>$CONFIG->tr('Reset'),-class=>'reset_button').'&nbsp;'.
 			checkbox(-name=>'flip',-checked=>$settings->{flip},-value=>1,-label=>$CONFIG->tr('Flip'),-override=>1)

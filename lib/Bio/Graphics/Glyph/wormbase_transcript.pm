@@ -6,12 +6,12 @@ use vars '@ISA','$VERSION';
 @ISA = 'Bio::Graphics::Glyph::transcript2';
 $VERSION = '1.00';
 
-use constant DEFAULT_UTR_COLOR => 'lightslategray';
+use constant DEFAULT_UTR_COLOR => '#D0D0D0';
 
 sub bgcolor {
   my $self = shift;
   my $feature = $self->feature;
-  if ($feature->primary_tag =~ /UTR/) {
+  if ($feature->can('primary_tag') && $feature->primary_tag =~ /UTR/) {
     return $self->color('utr_color') if $self->option('utr_color');
     return $self->color(DEFAULT_UTR_COLOR);
   }
@@ -20,6 +20,13 @@ sub bgcolor {
   } else {
     return $self->color('reversecolor');
   }
+}
+
+sub draw_component {
+  my $self = shift;
+  my $feature = $self->feature;
+  return if $feature->can('primary_tag') && $feature->primary_tag eq 'exon';
+  $self->SUPER::draw_component(@_);
 }
 
 sub get_description {
@@ -46,10 +53,12 @@ sub get_description {
 sub _subseq {
   my $class   = shift;
   my $feature = shift;
-  return $feature->segments if $feature->can('segments');
+  if ($feature->can('segments')) {
+    my @a = $feature->segments;
+    return @a;
+  }
   return $class->SUPER::_subseq($feature);
 }
-
 
 1;
 

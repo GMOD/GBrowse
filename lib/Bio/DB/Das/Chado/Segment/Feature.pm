@@ -60,7 +60,7 @@ The 10 arguments are positional:
                       sequence, which has its own strandedness!)
   $group        this feature's group (a GFF holdover)
   $db_id        this feature's internal database ID (feature.feature_id)
-  $feature_id   the parents feature_id (srcfeature_id)
+  $feature_id   the feature's feature_id
 
 =cut
 
@@ -75,7 +75,8 @@ sub new {
       $type,
       $strand,
       $group,       # ie, gene name  (GFF legacy)
-      $db_id,$feature_id) = @_;
+      $db_id,
+      $feature_id) = @_;
 
   my $self = bless { },$package;
 
@@ -100,6 +101,8 @@ sub length {
   #return $self->end - $self->start +1 ;
   return $len;
 }
+
+sub uniquename { shift->{db_id} }
 
 sub type {shift->{type}}
 
@@ -240,7 +243,7 @@ sub sub_SeqFeature {
 #  $self->{factory}->{dbh}->trace(2);# if DEBUG;
 
   my $sth = $self->{factory}->{dbh}->prepare("
- select child.feature_id, child.name, child.type_id, parent.name as pname,
+ select child.feature_id, child.name, child.type_id, child.uniquename, parent.name as pname,
            childloc.fmin, childloc.fmax, childloc.strand, childloc.phase
     from feature as parent
     inner join
@@ -275,7 +278,7 @@ sub sub_SeqFeature {
                        $termname{$$hashref{type_id}},
                        $$hashref{strand},
                        $$hashref{name},
-                       $$hashref{name}, $$hashref{feature_id}); 
+                       $$hashref{uniquename}, $$hashref{feature_id}); 
 
     push @features, $feat;
 
@@ -383,73 +386,7 @@ sub entire_seq {
     $self->SUPER::seq();
 }
 
-=head2 merged_segments
-
- Title   : merged_segments
- Usage   : @segs = $feature->merged_segments([$method])
- Function: get merged subfeatures
- Returns : a list of Bio::DB::Das::Chado::Segment::Feature objects
- Args    : a feature method (optional)
- Status  : Public
-
-This method acts like sub_SeqFeature, except that it merges
-overlapping segments of the same time into contiguous features.  For
-those features that contain heterogeneous subfeatures, you can
-retrieve a subset of the subfeatures by providing a method name to
-filter on.
-
-A side-effect of this method is that the features are returned in
-sorted order by their start tposition.
-
-=cut
-
-#'
-
-sub merged_segments {
-  my $self = shift;
-  my $type = shift;
-  $type ||= '';    # prevent uninitialized variable warnings
-
-  my $truename = overload::StrVal($self);
-
-  return @{$self->{merged_segs}{$type}} if exists $self->{merged_segs}{$type};
-  my @segs = map  { $_->[0] } 
-             sort { $a->[1] <=> $b->[1] ||
-		    $a->[2] cmp $b->[2] }
-             map  { [$_, $_->start, $_->type] } $self->sub_SeqFeature($type);
-
-  # attempt to merge overlapping segments
-  my @merged = ();
-  for my $s (@segs) {
-    my $previous = $merged[-1] if @merged;
-    my ($pscore,$score) = (eval{$previous->score}||0,eval{$s->score}||0);
-    if (defined($previous) 
-	&& $previous->stop+1 >= $s->start
-	&& $previous->score == $s->score
-       ) {
-      if ($self->absolute && $self->strand < 0) {
-	$previous->{start} = $s->{start};
-      } else {
-	$previous->{stop} = $s->{stop};
-      }
-      # fix up the target too
-   #   my $g = $previous->{group};
-   #   if ( ref($g) &&  $g->isa('Bio::DB::GFF::Homol')) { # always false here
-   #     my $cg = $s->{group};
-   #     $g->{stop} = $cg->{stop};
-   #   }
-    } elsif (defined($previous) 
-	     && $previous->start == $s->start 
-	     && $previous->stop == $s->stop) {
-      next;
-    } else {
-      my $copy = $s->clone;
-      push @merged,$copy;
-    }
-  }
-  $self->{merged_segs}{$type} = \@merged;
-  @merged;
-}
+*merged_segments = \&segments;
 
 =head2 clone
 

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.40 2003-11-11 03:22:19 scottcain Exp $
+# $Id: Segment.pm,v 1.41 2003-11-12 20:03:34 scottcain Exp $
 
 =head1 NAME
 
@@ -464,7 +464,7 @@ sub features {
 #  $self->{factory}->{dbh}->do("set enable_hashjoin=0");
 
   my $sth = $self->{factory}->{dbh}->prepare("
-    select distinct f.name,fl.fmin,fl.fmax,fl.strand,f.type_id,f.feature_id
+    select distinct f.name,fl.fmin,fl.fmax,fl.strand,f.type_id,f.uniquename,f.feature_id
     from feature f, featureslice($interbase_start, $rend) fl
     where
       $sql_types
@@ -511,7 +511,7 @@ sub features {
                        $termname{$$hashref{type_id}},
                        $$hashref{strand},
                        $$hashref{name},
-                       $$hashref{name},$$hashref{feature_id});  
+                       $$hashref{uniquename},$$hashref{feature_id});  
 
     push @features, $feat;
  

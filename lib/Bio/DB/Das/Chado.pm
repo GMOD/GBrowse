@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.30 2003-11-11 03:22:19 scottcain Exp $
+# $Id: Chado.pm,v 1.31 2003-11-12 20:03:33 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -367,7 +367,7 @@ sub get_feature_by_name {
 
      # prepare sql queries for use in while loops
   my $isth =  $self->{dbh}->prepare("
-       select f.feature_id, f.name, f.type_id,
+       select f.feature_id, f.name, f.type_id,f.uniquename,
               fl.fmin,fl.fmax,fl.strand,fl.phase, fl.srcfeature_id
        from feature f, featureloc fl
        where
@@ -412,7 +412,8 @@ sub get_feature_by_name {
                       $name{$$hashref{'type_id'}},
                       $$hashref{'strand'},
                       $$hashref{'name'},
-                      $$hashref{'name'},$$hashref{'feature_id'}
+                      $$hashref{'uniquename'},
+                      $$hashref{'feature_id'}
         );
       push @features, $feat;
     }

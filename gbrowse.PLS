@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.31 2002-05-21 22:12:25 lstein Exp $
+# $Id: gbrowse.PLS,v 1.32 2002-05-23 19:17:02 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -1950,6 +1950,7 @@ sub plugins2cookies {
 
 sub tableize {
   my $array = shift;
+  return unless @$array;
   my $rows    = int(sqrt(@$array));
   my $columns = int(0.99+@$array/$rows);
   my $html = qq(<table border="1">);

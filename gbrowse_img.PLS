@@ -41,7 +41,7 @@ $Config{startperl} -w
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbrowse_img.PLS,v 1.5 2002-05-08 04:23:39 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.6 2002-05-23 19:17:02 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1);
@@ -200,7 +200,9 @@ sub coordinate_mapper {
   my ($absref,$ref,$start,$stop) = ($current_segment->abs_ref,
 				    $current_segment->ref,
 				    $current_segment->start,$current_segment->stop);
-  $current_segment    = $db->segment(-name=>$current_segment->ref);
+  my $class = $absolute ? $current_segment->factory->refclass : $current_segment->class;
+  $current_segment    = $db->segment(-name=>$current_segment->ref,
+				     -class=>$class);
   my %segments;
 
   my $closure = sub {
@@ -258,7 +260,7 @@ sub print_usage {
   &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=mec-3;width=400"&gt;
 <blockquote>
   <i>Will generate this picture:</i>
- <img src="http://localhost/perl/gbrowse_img?source=wormbase;name=mec-3;width=400">
+ <img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=mec-3;width=400">
 </blockquote>
 
   &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img?list=sources"&gt;list&lt;/a&gt;

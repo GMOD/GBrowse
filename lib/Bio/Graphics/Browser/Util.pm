@@ -226,12 +226,14 @@ sub patch_old_versions_of_bioperl {
     eval <<'END' unless defined &Bio::DB::GFF::Segment::is_circular;
 sub Bio::DB::GFF::Segment::is_circular { 0; }
 END
-    warn $@ if $@;
 
+    warn $@ if $@;
 
     # patch problems on Windows platforms with memory adaptor
     # (having to do with broken glob() in perl 5.8)
-    eval <<'END';# if $^O =~ /^MSWin/ && $Bio::DB::GFF::VERSION <= 1.4;
+  if ($^O =~ /^MSWin/ && $Bio::DB::GFF::VERSION <= 1.4) {
+
+    eval <<'END';
 sub Bio::DB::GFF::setup_argv {
   my $self = shift;
   my $file_or_directory = shift;
@@ -265,8 +267,50 @@ sub Bio::DB::GFF::setup_argv {
   @argv;
 }
 END
-    warn $@ if $@;
+   warn $@ if $@;
+
+   eval <<'END';
+sub Bio::DB::Fasta::new {
+  my $class = shift;
+  my $path  = shift;
+  my %opts  = @_;
+
+  my $self = bless { debug      => $opts{-debug},
+		     makeid     => $opts{-makeid},
+		     glob       => $opts{-glob}    || '*.{fa,fasta,FA,FASTA,fast,FAST,dna,fsa}',
+		     maxopen    => $opts{-maxfh}   || 32,
+		     dbmargs    => $opts{-dbmargs} || undef,
+		     fhcache    => {},
+		     cacheseq   => {},
+		     curopen    => 0,
+		     openseq    => 1,
+		     dirname    => undef,
+		     offsets    => undef,
+		   }, $class;
+  my ($offsets,$dirname);
+
+  if (-d $path) {
+    # Because Win32 glob() is broken with respect to 
+    # long file names that contain spaces
+    $path = Win32::GetShortPathName($path)
+      if $^O =~ /^MSWin/i && eval 'use Win32; 1';
+    $offsets = $self->index_dir($path,$opts{-reindex});
+    $dirname = $path;
+  } elsif (-f _) {
+    $offsets = $self->index_file($path,$opts{-reindex});
+    $dirname = dirname($path);
+  } else {
+    $self->throw( "$path: Invalid file or dirname");
+  }
+  @{$self}{qw(dirname offsets)} = ($dirname,$offsets);
+
+  $self;
 }
+END
+    ;
+    warn $@ if $@;
+    }
+  }
 }
 
 sub redirect_legacy_url {

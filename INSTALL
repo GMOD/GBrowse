@@ -311,7 +311,22 @@ instructions. A copy of these instructions in HTML form will be
 generated when gbrowse_img is called without any arguments.  Type
 http://your.host/cgi-bin/gbrowse_img into your favorite web browser.
 
-10. SUPPORT AND BUG REPORTS
+10. UPDATING THE BROWSER WITHOUT REENTERING YOUR DIRECTORY SETTINGS
+
+When updating GBrowse to a new version of the software, you can
+configure it using your preferred directory settings by making a
+backup copy of the file GGB.def that was generated the first time you
+installed GBrowse and using `cat GGB.def` as the argument to
+Makefile.PL.  Here is the recipe:
+
+  cp Generic-Genome-Browser-1.40/GGB.def Generic-Genome-Browser-1.41/GGB.def
+  cd Generic-Genome-Browser-1.41/
+  perl Makefile.PL `cat GGB.def`
+  make
+  make install
+
+
+11. SUPPORT AND BUG REPORTS
 
 Please send requests for help to gmod-devel@lists.sourceforge.net.
 There is also a formal bug tracking and feature request system in

@@ -2,7 +2,7 @@ use ExtUtils::MakeMaker;
 use FindBin '$Bin';
 require 5.005003;
 
-my $VERSION = '1.41';
+my $VERSION = '1.42';
 
 my @OPTIONS = qw(PREFIX CONF HTDOCS CGIBIN);
 my $OPTIONS = join ('|',@OPTIONS);
@@ -42,6 +42,7 @@ unless ($OPTIONS{CGIBIN}) {
 
 open F,">$Bin/GGB.def" or die "Can't open $Bin/GGB.def for writing: $!";
 print F "# This hints file contains configuration information used by the generic browser\n\n";
+print F "# To reconfigure, run perl Makefile.PL `cat GGB.def`\n\n";
 foreach (keys %OPTIONS) {
   print F "$_=$OPTIONS{$_}\n";
 }

@@ -50,7 +50,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.28 2004-03-29 18:23:25 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.29 2004-04-29 23:26:33 markwilkinson Exp $
 ###########################################################
 
 use MOBY::Client::Central;
@@ -105,7 +105,8 @@ installation script.
 gbrowse_moby understands the following sub-set of gbrowse configuration
 parameters, and you will want to edit the following lines in the
 configuration file:
-    
+
+http_proxy = http://whatever.your.proxy/is    
 stylesheet  = /gbrowse/moby.css
 tmpimages   = /gbrowse/tmp
 head = ... what goes between the HEAD HTML tags...
@@ -434,7 +435,10 @@ sub init {
 sub getObjectDescription {
     my $ob = shift;
     return unless $ob;
+    my $proxy = $CONFIG->setting('http_proxy');
     my $ua = LWP::UserAgent->new;
+    $proxy && $ua->proxy(['http'],$proxy);
+
     my $req = HTTP::Request->new(GET => "http://mobycentral.cbr.nrc.ca/cgi-bin/types/Objects?lsid_name=$ob");
     my $res = $ua->request($req);
     return unless $res->is_success;

@@ -14,6 +14,12 @@ if (open F,"$Bin/../GGB.def") {
   }
   close F;
 }
+
+if($OPTIONS{PREFIXSTRIP}){
+  $OPTIONS{CONF} =~ s/^$OPTIONS{PREFIX}//;
+  $OPTIONS{LIB}  =~ s/^$OPTIONS{PREFIX}//;
+}
+
 $OPTIONS{CONF} ||= '/usr/local/apache/conf';
 
 my $dir = dirname($0);
@@ -44,7 +50,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.6 2004-08-30 02:11:58 allenday Exp $
+#$Id: das.PLS,v 1.7 2005-02-01 00:30:21 allenday Exp $
 
 use strict;
 use Bio::DB::GFF 1.02;
@@ -58,7 +64,7 @@ use vars qw($DB $DSN $HEADER %ERRCODES $CONFIG
             $VERSION $DAS_VERSION $CONF_DIR 
             %CACHED_TYPES);
 
-#$Id: das.PLS,v 1.6 2004-08-30 02:11:58 allenday Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
+#$Id: das.PLS,v 1.7 2005-02-01 00:30:21 allenday Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';

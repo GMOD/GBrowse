@@ -14,6 +14,12 @@ if (open F,"$Bin/../GGB.def") {
   }
   close F;
 }
+
+if($OPTIONS{PREFIXSTRIP}){
+  $OPTIONS{CONF} =~ s/^$OPTIONS{PREFIX}//;
+  $OPTIONS{LIB}  =~ s/^$OPTIONS{PREFIX}//;
+}
+
 $OPTIONS{CONF} ||= '/usr/local/apache/conf';
 
 my $dir = dirname($0);
@@ -47,7 +53,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 print OUT <<'!NO!SUBS!';
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.41 2005-01-18 18:41:51 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.42 2005-02-01 00:30:23 allenday Exp $
 ###########################################################
 
 use MOBY::Client::Central;

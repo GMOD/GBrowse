@@ -14,6 +14,12 @@ if (open F,"$Bin/../GGB.def") {
   }
   close F;
 }
+
+if($OPTIONS{PREFIXSTRIP}){
+  $OPTIONS{CONF} =~ s/^$OPTIONS{PREFIX}//;
+  $OPTIONS{LIB}  =~ s/^$OPTIONS{PREFIX}//;
+}
+
 $OPTIONS{CONF} ||= '/usr/local/apache/conf';
 
 my $dir = dirname($0);
@@ -45,7 +51,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.28 2005-01-11 22:34:04 allenday Exp $
+# $Id: gbrowse_img.PLS,v 1.29 2005-02-01 00:30:23 allenday Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1 path_info escape);

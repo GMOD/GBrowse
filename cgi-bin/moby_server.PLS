@@ -14,6 +14,12 @@ if (open F,"$Bin/../GGB.def") {
   }
   close F;
 }
+
+if($OPTIONS{PREFIXSTRIP}){
+  $OPTIONS{CONF} =~ s/^$OPTIONS{PREFIX}//;
+  $OPTIONS{LIB}  =~ s/^$OPTIONS{PREFIX}//;
+}
+
 $OPTIONS{CONF} ||= '/usr/local/apache/conf';
 
 my $dir = dirname($0);
@@ -38,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: moby_server.PLS,v 1.6 2004-08-09 14:46:18 sheldon_mckay Exp $
+#$Id: moby_server.PLS,v 1.7 2005-02-01 00:30:24 allenday Exp $
 use SOAP::Transport::HTTP;
 use MobyServices::GbrowseServices;
 use strict;

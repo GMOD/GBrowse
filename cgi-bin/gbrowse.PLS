@@ -14,6 +14,12 @@ if (open F,"$Bin/../GGB.def") {
   }
   close F;
 }
+
+if($OPTIONS{PREFIXSTRIP}){
+  $OPTIONS{CONF} =~ s/^$OPTIONS{PREFIX}//;
+  $OPTIONS{LIB}  =~ s/^$OPTIONS{PREFIX}//;
+}
+
 $OPTIONS{CONF} ||= '/usr/local/apache/conf';
 
 my $dir = dirname($0);
@@ -45,7 +51,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.128 2005-01-22 22:22:36 allenday Exp $
+# $Id: gbrowse.PLS,v 1.129 2005-02-01 00:30:22 allenday Exp $
 
 use strict;
 use Bio::Graphics;

@@ -4,48 +4,92 @@ use lib './install_util';
 use ExtUtils::MakeMaker;
 use GuessDirectories;
 use FindBin '$Bin';
+use Config;
 use Cwd;
 require 5.005003;
 
 my $VERSION = '1.64';
 my $working_dir = cwd;
 
-my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN
-		 LIB BIN
-		 DO_XS NONROOT
-		 PREFIX prefix
-		 INSTALLSITEMAN1DIR INSTALLSITEMAN3DIR
-		);
+my @OPTIONS = qw(
+                 APACHE
+                 CONF HTDOCS CGIBIN
+                 LIB
+                 DO_XS NONROOT
+                 PREFIX PREFIXSTRIP
+                 INSTALLMAN1DIR INSTALLMAN3DIR
+                );
 my $OPTIONS = join ('|',@OPTIONS);
 my %OPTIONS;
 
 my @argv = @ARGV;
 @ARGV = ();
 
+#
+# SET DEFAULT OPTIONS
+#
+$OPTIONS{INSTALLMAN1DIR} = $Config{installman1dir};
+$OPTIONS{INSTALLMAN3DIR} = $Config{installman3dir};
+$OPTIONS{INSTALLSCRIPT}  = $Config{installscript};
+$OPTIONS{CONF}           = GuessDirectories->conf()   || "$Config{prefix}/etc/httpd/conf";
+$OPTIONS{HTDOCS}         = GuessDirectories->htdocs() || "$Config{prefix}/var/www/html";
+$OPTIONS{CGIBIN}         = GuessDirectories->cgibin() || "$Config{prefix}/var/www/cgi-bin";
+$OPTIONS{DO_XS}          = $^O =~ /^(MSWin|dos)/i ? '' : 1;
+
 foreach (@argv) {
   if (/^--?h/i) {
     die <<END;
+
+LOW-LEVEL OPTIONS:
+
+  INSTALLMAN1DIR  Install manpages here, default: $OPTIONS{INSTALLMAN1DIR}
+  INSTALLMAN3DIR  Install manpages here, default: $OPTIONS{INSTALLMAN3DIR}
+  INSTALLSCRIPT   Install Non-CGI scripts here.  default: $OPTIONS{INSTALLSCRIPT}
+  CONF            Install CGI configuration files here.  default: $OPTIONS{CONF}
+  HTDOCS          Install Documents to be served over HTTP here.  default: $OPTIONS{HTDOCS}
+  CGIBIN          Install CGI scripts here.  default: $OPTIONS{CGIBIN}
+  PREFIXSTRIP     Remove leading string from the value of PREFIX for PL_FILES and EXE_FILES
+
+HIGH-LEVEL OPTIONS:
+
+  APACHE          Prefix CONF, HTDOCS, and CGIBIN with this string
+  PREFIX          Prefix CONF, HTDOCS, CGIBIN, INSTALLMAN1DIR, INSTALLMAN3DIR, and
+                  INSTALLSCRIPT with this string.  Occurs after APACHE prefixing
+  NONROOT         Set to 1 to suppress manpage installation.
+
 To customize install locations, provide one or more of the options
 APACHE, CONF, HTDOCS, or CGIBIN, as in CONF=/usr/local/apache/conf.
 
-For RedHat Linux, you will want to use:
-    perl Makefile.PL CONF=/etc/httpd/conf \\
-                     HTDOCS=/var/www/html \\
-                     CGIBIN=/var/www/cgi-bin
+EXAMPLES:
 
-For most versions of Apache built from source code, use:
-    perl Makefile.PL APACHE=/usr/local/apache
+Install to /tmp/gbrowse:
+  /usr/bin/perl Makefile.PL \\
+    PREFIX=/tmp/gbrowse \\
+    INSTALLMAN1DIR=/usr/share/man/man1 \\
+    INSTALLMAN3DIR=/usr/share/man/man3 \\
+    LIB=`/usr/bin/perl -MConfig -e 'print $Config{sitelib}'`
 
+Install to /usr/src/redhat/gbrowse, but keep PREFIX out of generated scripts:
+  /usr/bin/perl Makefile.PL \\
+    PREFIX=/tmp/gbrowse \\
+    INSTALLMAN1DIR=/usr/share/man/man1 \\
+    INSTALLMAN3DIR=/usr/share/man/man3 \\
+    LIB=`/usr/bin/perl -MConfig -e 'print $Config{sitelib}'` \\
+    PREFIXSTRIP=1
 
-To install as a user without root privileges, in addition to 
-the arguments above, provide the arguments NONROOT=1,
-LIB=/path/to/perl/libs and BIN=/path/to/scripts
+Install to default locations on a RPM-based RedHat/Fedora system:
+    /usr/bin/perl Makefile.PL
 
-For example:
-    perl Makefile.PL APACHE=~/gbrowse \\
-		     LIB=~/gbrowse/lib \\
-		     BIN=~/gbrowse/bin \\
-		     NONROOT=1
+Install to default locations for Apache built from source:
+  /usr/bin/perl Makefile.PL \\
+    APACHE=/usr/local/apache
+
+Install under ~/gbrowse without requiring root privileges:
+  /usr/bin/perl Makefile.PL \\
+    APACHE=~/gbrowse \\
+    LIB=~/gbrowse/lib \\
+    INSTALLSCRIPT=~/gbrowse/bin \\
+    NONROOT=1
 
 will perform a non-privileged installation that places all gbrowse
 components (including perl libraries) in the path ~/gbrowse.
@@ -79,16 +123,6 @@ END
   }
 }
 
-#
-# HARDCODE REDHAT SETTINGS FOR RPM
-#
-$OPTIONS{prefix} ||= $OPTIONS{PREFIX};
-@ARGV = ("PREFIX=$OPTIONS{prefix} INSTALLSITEMAN1DIR=$OPTIONS{INSTALLSITEMAN1DIR} INSTALLSITEMAN3DIR=$OPTIONS{INSTALLSITEMAN3DIR}");
-$OPTIONS{CONF} =   $OPTIONS{prefix}.'/etc/httpd/conf';
-$OPTIONS{HTDOCS} = $OPTIONS{prefix}.'/var/www/html';
-$OPTIONS{CGIBIN} = $OPTIONS{prefix}.'/var/www/cgi-bin';
-
-
 if (-e 'GGB.def' && !%OPTIONS) {
   print STDERR "\nShould I use your previous settings to set the file paths and options (y/n) [y]? ";
   chomp (my $line = <>);
@@ -104,39 +138,34 @@ if (-e 'GGB.def' && !%OPTIONS) {
     close F;
   }
 }
-$OPTIONS{APACHE} ||= $OPTIONS{PREFIX}        if exists $OPTIONS{PREFIX};
-$OPTIONS{BIN}    ||= $OPTIONS{INSTALLSCRIPT} if exists $OPTIONS{INSTALLSCRIPT};
 
-if ($OPTIONS{APACHE} && !(defined $OPTIONS{CONF})) {
-  $OPTIONS{CONF} = "$OPTIONS{APACHE}/conf";
+if (defined $OPTIONS{APACHE}) {
+  $OPTIONS{CONF}   = $OPTIONS{APACHE} . $OPTIONS{CONF};
+  $OPTIONS{HTDOCS} = $OPTIONS{APACHE} . $OPTIONS{HTDOCS};
+  $OPTIONS{CGIBIN} = $OPTIONS{APACHE} . $OPTIONS{CGIBIN};
 }
-if ($OPTIONS{APACHE} && !(defined $OPTIONS{HTDOCS})) {
-  $OPTIONS{HTDOCS} = "$OPTIONS{APACHE}/htdocs";
-}
-if ($OPTIONS{APACHE} && !(defined $OPTIONS{CGIBIN})) {
-  $OPTIONS{CGIBIN} = "$OPTIONS{APACHE}/cgi-bin";
-}
-
-# set hard-coded values
-$OPTIONS{APACHE} ||= '/usr/local/apache';
-unless ($OPTIONS{CONF}) {
-  $OPTIONS{CONF} = GuessDirectories->conf || "$OPTIONS{APACHE}/conf";
-}
-unless ($OPTIONS{HTDOCS}) {
-  $OPTIONS{HTDOCS} = GuessDirectories->htdocs || "$OPTIONS{APACHE}/htdocs";
-}
-unless ($OPTIONS{CGIBIN}) {
-  $OPTIONS{CGIBIN} = GuessDirectories->cgibin || "$OPTIONS{APACHE}/cgi-bin";
-}
-unless (defined $OPTIONS{DO_XS}) {
-  $OPTIONS{DO_XS}  = $^O =~ /^(MSWin|dos)/i ? '' : 1;
+if (defined($OPTIONS{PREFIX})) {
+  foreach my $k (keys %OPTIONS) {
+    next if $k =~ /^PREFIX/; #skip PREFIX and PREFIXSTRIP
+    next if $k eq 'DO_XS';
+    next if $k eq 'NONROOT';
+    $OPTIONS{$k} = $OPTIONS{PREFIX} . $OPTIONS{$k};
+  }
 }
 
-# look for non-root installation 
+# look for non-root installation
 if (defined $OPTIONS{NONROOT}) {
-  $OPTIONS{INSTALLSITEMAN3DIR} = 'none';
-  $OPTIONS{INSTALLSITEMAN1DIR} = 'none';
+  $OPTIONS{INSTALLMAN1DIR} = 'none';
+  $OPTIONS{INSTALLMAN3DIR} = 'none';
 }
+
+push @ARGV, "LIB=$OPTIONS{LIB}" if $OPTIONS{LIB};
+
+#different perl versions use INSTALLSITE vs INSTALL
+push @ARGV, "INSTALLMAN1DIR=$OPTIONS{INSTALLMAN1DIR}" if $OPTIONS{INSTALLMAN1DIR};
+push @ARGV, "INSTALLMAN3DIR=$OPTIONS{INSTALLMAN3DIR}" if $OPTIONS{INSTALLMAN3DIR};
+push @ARGV, "INSTALLSITEMAN1DIR=$OPTIONS{INSTALLMAN1DIR}" if $OPTIONS{INSTALLMAN1DIR};
+push @ARGV, "INSTALLSITEMAN3DIR=$OPTIONS{INSTALLMAN3DIR}" if $OPTIONS{INSTALLMAN3DIR};
 
 # workaround for known bug in FindBin library
 $Bin = "." if -f './Makefile.PL' && -T './Makefile.PL';
@@ -157,7 +186,7 @@ print STDERR <<END;
 END
 ;
 foreach (@OPTIONS) {
-  printf STDERR "%7s %s\n",$_,$OPTIONS{$_};
+  printf STDERR "%15s %s\n",$_,$OPTIONS{$_};
 }
 print STDERR <<END;
 
@@ -181,35 +210,35 @@ WriteMakefile(
 				 Log::Log4perl     => 0, 
 				}, # e.g., Module::Name => 1.1
 	      PL_FILES       => {
-                                 'install_util/htdocs_install.PLS' => 'install_util/htdocs_install.pl',
-                                 'install_util/cgi_install.PLS' => 'install_util/cgi_install.pl',
-                                 'install_util/conf_install.PLS' => 'install_util/conf_install.pl',
-				 'bin/make_das_conf.PLS' => 'bin/make_das_conf.pl',
-				 'bin/process_sgd.PLS' => 'bin/process_sgd.pl',
-				 'bin/process_gadfly.PLS' => 'bin/process_gadfly.pl',
-				 'bin/process_wormbase.PLS' => 'bin/process_wormbase.pl',
-				 'bin/ucsc_genes2gff.PLS' => 'bin/ucsc_genes2gff.pl',
-				 'bin/load_genbank.PLS' => 'bin/load_genbank.pl',
-				 'bin/register_moby_services.PLS' => 'bin/register_moby_services.pl',
-				 'install_util/gbrowse_ppm_install.PLS' => 'gbrowse_ppm_install.pl',
-				 'cgi-bin/gbrowse.PLS'  => 'cgi-bin/gbrowse',
-				 'cgi-bin/gbrowse_syn.PLS'  => 'cgi-bin/gbrowse_syn',
-				 'cgi-bin/gbrowse_img.PLS'  => 'cgi-bin/gbrowse_img',
-				 'cgi-bin/gbrowse_details.PLS'  => 'cgi-bin/gbrowse_details',
-				 'cgi-bin/gbrowse_est.PLS'  => 'cgi-bin/gbrowse_est',
-				 'cgi-bin/gbrowse_moby.PLS'  => 'cgi-bin/gbrowse_moby',
-				 'cgi-bin/moby_server.PLS'  => 'cgi-bin/moby_server',
-				 'cgi-bin/das.PLS'          => 'cgi-bin/das',
-				 'conf/MobyServices/GbrowseServices.PMS'  => 'conf/MobyServices/GbrowseServices.pm',
+                             'install_util/htdocs_install.PLS' => 'install_util/htdocs_install.pl',
+                             'install_util/cgi_install.PLS' => 'install_util/cgi_install.pl',
+                             'install_util/conf_install.PLS' => 'install_util/conf_install.pl',
+                             'bin/make_das_conf.PLS' => 'bin/make_das_conf.pl',
+                             'bin/process_sgd.PLS' => 'bin/process_sgd.pl',
+                             'bin/process_gadfly.PLS' => 'bin/process_gadfly.pl',
+                             'bin/process_wormbase.PLS' => 'bin/process_wormbase.pl',
+                             'bin/ucsc_genes2gff.PLS' => 'bin/ucsc_genes2gff.pl',
+                             'bin/load_genbank.PLS' => 'bin/load_genbank.pl',
+                             'bin/register_moby_services.PLS' => 'bin/register_moby_services.pl',
+                             'install_util/gbrowse_ppm_install.PLS' => 'gbrowse_ppm_install.pl',
+                             'cgi-bin/gbrowse.PLS'  => 'cgi-bin/gbrowse',
+                             'cgi-bin/gbrowse_syn.PLS'  => 'cgi-bin/gbrowse_syn',
+                             'cgi-bin/gbrowse_img.PLS'  => 'cgi-bin/gbrowse_img',
+                             'cgi-bin/gbrowse_details.PLS'  => 'cgi-bin/gbrowse_details',
+                             'cgi-bin/gbrowse_est.PLS'  => 'cgi-bin/gbrowse_est',
+                             'cgi-bin/gbrowse_moby.PLS'  => 'cgi-bin/gbrowse_moby',
+                             'cgi-bin/moby_server.PLS'  => 'cgi-bin/moby_server',
+                             'cgi-bin/das.PLS'          => 'cgi-bin/das',
+                             'conf/MobyServices/GbrowseServices.PMS'  => 'conf/MobyServices/GbrowseServices.pm',
 				 },
 	      EXE_FILES      => [
-				 'bin/register_moby_services.pl',
-				 'bin/make_das_conf.pl',
-				 'bin/process_wormbase.pl',
-				 'bin/process_sgd.pl',
-				 'bin/process_gadfly.pl',
-                                 'bin/load_genbank.pl',
-				],
+                             'bin/register_moby_services.pl',
+                             'bin/make_das_conf.pl',
+                             'bin/process_wormbase.pl',
+                             'bin/process_sgd.pl',
+                             'bin/process_gadfly.pl',
+                             'bin/load_genbank.pl',
+                            ],
 	      'LIBS'	     => [''], # e.g., '-lm'
 	      'LIB'          => $OPTIONS{LIB}, # custom location for perl modules
 	      'DIR'          => $OPTIONS{DO_XS} ? ['libalign'] : [],
@@ -219,9 +248,9 @@ WriteMakefile(
                   'AUTHOR'   => 'Lincoln Stein (lstein@cshl.org)',
                   'ABSTRACT' => 'A CGI-driven browser for genomic annotations.',
                                 ) : (),
-              'INSTALLSITEMAN1DIR' => $OPTIONS{INSTALLSITEMAN1DIR}, # don't install man pages for 
+              'INSTALLSITEMAN1DIR' => $OPTIONS{INSTALLSITEMAN1DIR}, # don't install man pages for
               'INSTALLSITEMAN3DIR' => $OPTIONS{INSTALLSITEMAN3DIR}, # non-root user
-	      'INSTALLSCRIPT'      => $OPTIONS{BIN} || $OPTIONS{INSTALLSCRIPT}
+              'INSTALLSCRIPT'      => $OPTIONS{INSTALLSCRIPT}
 );
 
 sub interpolate {
@@ -271,9 +300,9 @@ sub MY::install {
 
 sub MY::postamble {
   my $paths;
-  my $prefix = $OPTIONS{prefix} || ''; #this is for RPM
+  my $prefix = $OPTIONS{PREFIX} || '';
   for my $key (keys %OPTIONS) {
-    $paths .= qq('$key=$prefix$OPTIONS{$key}' ) if defined $OPTIONS{$key};
+    $paths .= qq('$key=$OPTIONS{$key}' ) if defined $OPTIONS{$key};
   }
 qq{
 conf_install ::

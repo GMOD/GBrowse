@@ -1,4 +1,4 @@
-=head1 CONFIGURE-HOWTO
+head1 CONFIGURE-HOWTO
 
 This document provides information on configuring the Generic Genome
 Browser (GBrowse), part of the Generic Model Organism Systems Database
@@ -746,6 +746,18 @@ no features in it.  Possible values are:
 
 The default value is "key."
 
+=item * das mapmaster
+
+This option, which should appear somewhere in the [GENERAL] section,
+indicates that the database should be made available as a DAS source.
+The value of the option corresponds to the URL of the DAS reference
+server for this data source, or "SELF" if this database is its own
+reference server.  (See http://www.biodas.org/ for an explanation of
+what reference servers are.)
+
+Please see L<DAS_HOWTO> for more information on using DAS with
+GBrowse.
+
 =back
 
 =head2 B2. The [TRACK DEFAULTS] section
@@ -1028,6 +1040,11 @@ GROUPING FEATURES for details.
 This option allows you to restrict who is allowed to view the current
 track by host name, IP address or username/password.  See
 AUTHENTICATION AND AUTHORIZATION for details.
+
+=item 18 das category, das landmark, das subparts, das superparts
+
+All these options pertain to exporting the GBrowse database as a DAS
+data source.  Please see L<DAS_HOWTO> for more information.
 
 =back
 
@@ -2080,7 +2097,6 @@ searches for papers about that organism.
 
 =cut
 
-
 =head1 J. FURTHER INFORMATION
 
 For further information, bug reports, etc, please consult the mailing
@@ -2090,4 +2106,4 @@ gmod-gbrowse@lists.sourceforge.net.
 Have fun!
 
 Lincoln Stein & the GMOD development team
-lstein@cshl.org
+lstein@cshl.edu

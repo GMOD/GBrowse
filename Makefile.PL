@@ -152,6 +152,8 @@ WriteMakefile(
 				 'conf/MobyServices/GbrowseServices.PMS'  => 'conf/MobyServices/GbrowseServices.pm',
 				 },
 	      EXE_FILES      => [
+				 'bin/register_moby_services.pl',
+				 'bin/make_das_conf.pl',
 				 'bin/process_wormbase.pl',
 				 'bin/process_sgd.pl',
 				 'bin/process_gadfly.pl',

@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.104 2004-08-23 15:56:30 lstein Exp $
+# $Id: gbrowse.PLS,v 1.105 2004-09-01 15:10:37 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -93,7 +93,7 @@ use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceD
 # if true, turn on surrounding rectangles for debugging the image map
 use constant DEBUG          => 0;
 use constant DEBUG_EXTERNAL => 0;
-use constant DEBUG_PLUGINS => 0;
+use constant DEBUG_PLUGINS  => 0;
 
 # amount of time to remember persistent settings
 use constant REMEMBER_SETTINGS_TIME => '+7d';  # 7 days
@@ -131,6 +131,7 @@ local $CGI::USE_PARAM_SEMICOLONS = 1;
 #   head        Show header and footer
 #   h_feat      Search term for hiliting
 #   h_type      Search type for hiliting
+#   q           A search term passed in the URL -- there may be multiple ones
 # $CONFIG
 # This is a global Bio::Graphics::Browser object.  It contains information on
 # all the configuration files for this browser and provides access to the various
@@ -199,7 +200,6 @@ warn "plugin_action = $plugin_action" if DEBUG_PLUGINS;
 if (param('plugin_do')) {
   $plugin_action = $CONFIG->tr(param('plugin_do')) || $CONFIG->tr('Go');
 }
-
 
 ## GETTING THE SEGMENT ######################################################
 my $features = get_features($page_settings);
@@ -289,8 +289,8 @@ elsif ($data = param('auto') or $data = param('add')) {
 clear_uploaded_file($page_settings,$file) if $file_action && param($file_action) eq 'Delete File';
 
 warn "TRACKS = @{$page_settings->{tracks}}" if DEBUG;
-
 load_plugin_annotators($page_settings);
+warn "ANNOTATOR TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 adjust_tracks($page_settings);
 auto_open($page_settings,$features) if @$features;
 
@@ -592,10 +592,14 @@ sub get_settings {
     }
   }
 
-  if ($ok && %settings) {
-    adjust_tracks(\%settings);
-  }
-  else {
+#  if ($ok && %settings) {
+#    adjust_tracks(\%settings);
+#  }
+#  else {
+#    %settings = ();
+#    default_settings(\%settings);
+#  }
+  if (!$ok) {
     %settings = ();
     default_settings(\%settings);
   }
@@ -651,6 +655,8 @@ sub adjust_tracks {
   my $settings = shift;
   my %configured_labels = map {$_=>1} $CONFIG->labels;
 
+  # tracks added to the config file recently that are not contained in
+  # user's stored settings.
   foreach (grep {!$settings->{features}{$_}} keys %configured_labels) {
     $settings->{features}{$_}{visible} = 0;  # not visible
     $settings->{features}{$_}{options} = 0;  # automatic
@@ -775,6 +781,12 @@ sub adjust_settings {
       next unless /^(http|ftp):/;
       delete $settings->{features}{$_} unless exists $external{$_};
     }
+  }
+
+  # the "q" request overrides name, ref, h_feat and h_type
+  if (my @q = param('q')) {
+    delete $settings->{$_} foreach qw(name ref h_feat h_type);
+    $settings->{q} = [map {split /[+-]/} @q];
   }
 
   if (param('revert')) {
@@ -1387,6 +1399,12 @@ sub lookup_features_from_db {
     @segments = $CONFIG->name2segments($name,$db,TOO_MANY_SEGMENTS);
   }
 
+  elsif (my $names = $settings->{q}) {
+    warn "q = $names" if DEBUG;
+    my $max = TOO_MANY_SEGMENTS/@$names;
+    @segments = map {$CONFIG->name2segments($_,$db,$max)} @$names;
+  }
+
   elsif (my $ref = $settings->{ref}) {
     my @argv = (-name  => $ref);
     push @argv,(-start => $settings->{start}*$divisor) if defined $settings->{start};
@@ -1861,6 +1879,10 @@ sub load_plugin_annotations {
 
 sub load_plugin_annotators {
   my ($settings) = @_;
+
+  my %default_plugin = map {$_=>1} map {s/^plugin:// && $_} 
+    grep {/^plugin:/} $CONFIG->default_labels;
+
   for my $p (keys %$PLUGINS) {
     next unless $PLUGINS->{$p}->type eq 'annotator';
     my $name = $PLUGINS->{$p}->name;
@@ -1868,7 +1890,7 @@ sub load_plugin_annotators {
     $PLUGIN_NAME2LABEL{$name} = $p;
     unless ($settings->{features}{$name}) {
       push @{$settings->{tracks}},$name;
-      $settings->{features}{$name} = {visible=>0,options=>0,limit=>0};
+      $settings->{features}{$name} = {visible=>$default_plugin{$p}||0,options=>0,limit=>0};
     }
   }
 }
@@ -2485,11 +2507,13 @@ sub initialize_plugins {
     }
     warn $@ if !$plugin_list{$plugin} && $@ =~ /^Can\'t locate/;
   }
+
   return \%plugin_list;
 }
 
 sub configure_plugins {
   my ($plugins,$settings,$db,$conf,$conf_dir) = @_;
+
   for my $name (keys %$plugins) {
     my $p = $plugins->{$name};
     $p->database($db);
@@ -2509,11 +2533,12 @@ sub configure_plugins {
     my @params = grep {/^$name\./} param();
     next unless @params;
     $p->reconfigure unless param('plugin_action') eq $CONFIG->tr('Cancel');
-    $p->filter if ($p->type eq 'filter');    
+    $p->filter if ($p->type eq 'filter');
 
     # turn the plugin on
     my $setting_name = 'plugin:'.$p->name;
     $settings->{features}{$setting_name}{visible} = 1;
+    warn "\$settings->{features}{$setting_name}{visible} = 1"
   }
 }
 

@@ -26,11 +26,13 @@ Project (L<http://www.gmod.org/>).
 
 =item I. THE BioMOBY BROWSER
 
-=item J. BioMOBY Services
+=item J. BIOMOBY SERVICES
 
 =item K. FILTERING SEARCH RESULTS
 
-=item L. FURTHER INFORMATION
+=item L. INVOKING GBROWSE URLs
+
+=item M. FURTHER INFORMATION
 
 =back
 
@@ -521,7 +523,12 @@ The default features option is a space-delimited list of tracks
 to turn on by default.  You will probably need to change this.
 For example:
 
-      default features = Genes ORFs tRNAs
+     default features = Genes ORFs tRNAs
+
+To activate an annotation plugin track by default, preface the
+plugin's name with "plugin:":
+
+     default features = Genes ORFs tRNAs plugin:RestrictionAnnotator
 
 =item * reference class
 
@@ -2297,8 +2304,65 @@ features is done based on the primary_tag
   key          = RefSeq Signal Peptide
 
 
+=head1 L. INVOKING GBROWSE URLs (under construction)
 
-=head1 L. FURTHER INFORMATION
+This section describes the public CGI parameters recognized by
+GBrowse.  By setting the parameters in the URL, you can get gbrowse to
+do various useful things:
+
+=over 4
+
+=item The source argument
+
+The last component of the gbrowse path is the symbolic name of the
+data source.  For example:
+
+   http://www.your.site/cgi-bin/gbrowse/volvox
+   http://www.your.site/cgi-bin/gbrowse/yeast
+   http://www.your.site/cgi-bin/gbrowse/my_testing_database
+
+These will correspond to config files named volvox.pm, yeast.pm and
+my_testing_database.pm respectively.
+
+As noted earlier, you can place numbers in front of the configuration
+file names in order to adjust the order in which they appear in the
+data source menu.
+
+=item q
+
+The argument "q" will set the landmark or search string:
+
+    http://www.your.site/cgi-bin/gbrowse/yeast?q=NAB2
+
+This will have the same effect as typing "NAB2" into the gbrowse
+search box.
+
+To go immediately to the multiple hits page (which shows hits on
+several overview panels), use multiple q arguments:
+
+   http://www.your.site/cgi-bin/gbrowse/yeast?q=NAB2;q=NPY1
+
+Alternatively, you can use a single q parameter and separate each
+landmark name with a dash:
+
+   http://www.your.site/cgi-bin/gbrowse/yeast?q=NAB2-NPY1
+
+The rules for specifying relative offsets and object classes are the
+same as in the main search field:
+
+   http://www.your.site/cgi-bin/gbrowse/yeast?q=Gene:NAB2:1..5000
+
+=item ref, start, end
+
+[To come]
+
+=item label
+
+[To come]
+
+=back
+
+=head1 M. FURTHER INFORMATION
 
 For further information, bug reports, etc, please consult the mailing
 lists at www.gmod.org.  The main mailing list for gbrowse support is

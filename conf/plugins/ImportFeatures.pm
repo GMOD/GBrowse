@@ -1,4 +1,4 @@
-# $Id: ImportFeatures.pm,v 1.10 2003-11-09 20:12:31 sheldon_mckay Exp $
+# $Id: ImportFeatures.pm,v 1.11 2003-11-10 05:36:55 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -12,8 +12,8 @@ This modules is not used directly
 =head1 DESCRIPTION
 
 ImportFeatures.pm processes external features and loads them 
-into the GFF database.  It will accept a flat files in GenBank, 
-EMBL or GFF2 format or download and accession from NCBI/EBI.  
+into the GFF database.  It will accept flat files in GenBank, 
+EMBL or GFF2 format or can download accessions from NCBI/EBI.  
 
 =head2 Loading new sequences
 
@@ -38,27 +38,29 @@ deletion and editing of features can also be done from gbrowse
 
 =head2  Using Artemis as an External Editor
 
- 1) use the GFFDumper plugin to dump artemis flavor GFF from 
-    gbrowse to a file (or directly to Artemis as a 
+  NOTE: GFF editing via artemis will not be supported in the 
+        next release and in the current version (version 5)
+        GFF handling is broken.  Trying to save a GFF default 
+        entry in Artemis results is an unusable GFF/EMBL hybrid.
+        For best results, use the native Artemis format (EMBL) 
+        dumped by the ExportFeatures plugin.  This format is supported
+        by version 5 and the development releases.
+
+ 1) use the ExportFeatures plugin to dump an EMBL 
+    feature table to a file (or directly to Artemis as a 
     helper application configured in the browser)
 
  2) edit your features 
 
- 3) use "Save as" to create a new GFF file (see below)
+ 3) Save the default record in Artemis, then exit
 
- 4) load the file via this plugin.  
+ 4) load the file via this plugin.  This can be automated 
+    with a perl wrapper using HTTP::Request::Common and
+    LWP::UserAgent   
 
-Attempting to save the record directly or convert between 
-formats in Artemis (version 5) may yield unexpected results.  
-For best results, use GFF.  Make sure to enable direct 
-editing in the Artemis configuration file 'options.txt'.  
-See the Artemis documentation for more information on 
-setup options.
-
-The production release of Artemis (version 5) supports 
-editing/saving of GFF2 features.  Post-v5 development 
-snapshots no longer support editing of GFF features, 
-so stick to version 5. 
+Make sure to enable direct editing in the Artemis configuration 
+file 'options.txt'.  See the Artemis documentation for more 
+information on setup options.
 
 You can also use Artemis to help import features from 
 other sources.  Artemis saves features as a tab files, 
@@ -71,8 +73,9 @@ sequence is provided with the file.
 
 If the DNA is included in a new file/accession, it
 will be loaded into the database along with the features.
-However, if this the sequence for the segment is not
+However, if this the sequence for the segment is
 already in the database, it will not be reloaded.
+Editing/Changing the sequence is not currently supported.
 
 
 =head2  Loading Features
@@ -88,7 +91,14 @@ genomes, so it expects to be given the entire sequence,
 rather than the slice contained in the Bio::DB::GFF::RelSegment 
 object.  Artemis uses the sequence itself to define 
 the coordinates, so the entire chromosome (or other 
-reference sequence) is dumped by GFFDumper.
+reference sequence) is dumped by GFFDumper and ExportFeatures.
+
+NOTE: the exception to this is if the incoming feature file 
+has features with the 'database_id' attribute.  In this case,
+the file is treated as a selected feature file.  Only the 
+features with the corresponding IDs in the database will be 
+deleted. The database_id attributes are added automatically 
+by ExportFeatures.pm if the dump mode is set to 'selected'
 
 
 =head2  Basic Feature Editing
@@ -196,10 +206,6 @@ sub mime_type {
 sub config_defaults {
     { 
 	format => 'GFF',
-        text   => undef,
-        file   => undef,
-        acc    => undef,
-        debug  => undef,
         reload => 1
     }
 }
@@ -360,7 +366,7 @@ sub dump {
 	    exit;
 	}
 
-        $killed += $db->delete_features(@killme2);
+        $killed += $db->delete_features(@killme2) if @killme2;
 
 	print h2("I removed $killed features from the database"), pre(join "\n", @killme) 
 	    if $conf->{debug}; 
@@ -377,11 +383,8 @@ sub dump {
 
     print h2($result, " new features loaded into the database");
 
-    my $source = $conf->{acc} ? "Sequence " . $conf->{acc}
-                              : $conf->{format} . ' file ' . $conf->{file};
-    
     unless ( $result ) {
-	print h2("Features from $source not loaded correctly");
+	print h2("Features from not loaded correctly");
         exit;
     }
 
@@ -435,9 +438,6 @@ sub gff {
     }
     else {
 	while ( <$file> ) {
-	    # Artemis mangles uppercase /Note=... qualifiers, 
-            # switch back
-            s/note=/Note=/;
 	    $text .= $_;
 	}
     }
@@ -559,7 +559,6 @@ sub seq2GFF {
     my @feats = $seq->all_SeqFeatures;
 
     # save the description
-    print $seq->desc, br;
     $self->{desc} = $seq->desc;
     
     for ( @feats ) {

@@ -1,4 +1,4 @@
-# $Id: ExportFeatures.pm,v 1.6 2003-11-09 23:08:07 sheldon_mckay Exp $
+# $Id: ExportFeatures.pm,v 1.7 2003-11-10 05:36:55 sheldon_mckay Exp $
 =head1 NAME
 
 Bio::Graphics::Browser::Plugin::ExportFeatures -- a plugin to export 
@@ -23,10 +23,20 @@ ImportFeatures plugin.
 This plugin is specific to EMBL format but should be extensible
 to other formats/editors if required
 
+=head1 NOTE 'Selected' vs. 'All' features
+
+If 'Selected' is chosen in the popup menu, only the currently displayed
+features (and any child features) will be dumped for editing.
+A 'database_id' attribute is automatically added to each feature.
+After editing, this attribute will be intercepted and removed by the
+ImportFeatures plugin.  Features in the database with the corresponding IDs
+will be deleted prior to reloading the selected features.
+
+
 =head1 NOTE
 
 The entire annotated sequence is dumped by this plugin, regardless 
-of the segment's coordinate range.  
+of the segment's coordinate range.  This may be revised in a future version.y
 
 
 =head1 FEEDBACK

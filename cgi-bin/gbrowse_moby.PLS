@@ -44,10 +44,11 @@ $startperl -w
 
 print OUT <<'!NO!SUBS!';
 
+
+
+
 #=======================================================================
-
-
-#$Id: gbrowse_moby.PLS,v 1.14 2003-12-30 17:13:05 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.15 2003-12-30 17:27:40 markwilkinson Exp $
 
 
 # use lib "/usr/local/GB/GMOD_LIBS/moby-live/Perl";
@@ -288,6 +289,7 @@ sub init {
         print_top("MOBY Call failed");
         print $CONFIG->header || h1("MOBY Call Failed");
         print h1("MOBY Call Failed"),"Both a namespace and an id must be passed";
+        &INITIALIZE;
         return;
     }
 
@@ -533,8 +535,33 @@ sub processXrefs {
     }
 }
 
+sub INITIALIZE {	
+    my $Central = MOBY::Client::Central->new();
+    my $NameSpaces = $Central->retrieveNamespaces;
+    my @Namespaces = sort keys(%{$NameSpaces});
+    print h1('MOBY-S Client Initialization'),
+    start_form,
+    "<h2>Select a namespace: ";
+    print popup_menu(-name => 'namespace',
+        '-values' => ["select", @Namespaces],
+        '-default' => 'NCBI_gi',
+    );
+
+    print p,
+    "Which ID(s) within this namespace? (one per line)</h2>",
+    p,
+    textarea(-name => 'id', -rows => 10, -cols => 20, -value =>
+"163483
+192542",);
+    print p,
+    submit("Initialize with this seed data"),
+    end_form;
+}
+
 
 #=================================================
+
+
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

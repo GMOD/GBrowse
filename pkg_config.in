@@ -1,5 +1,34 @@
 [option dir]
-INSTALL_CONF   = /etc/httpd/conf
-INSTALL_HTDOCS = /var/www/html
-INSTALL_CGIBIN = /var/www/cgi-bin
+#Where is Apache installed?  Setting this option overrides responses to all
+#subsequent options, so you can just hit <enter> on them.
+APACHE             =
 
+#Where should CGI scripts be installed?
+CGIBIN             = /var/www/cgi-bin
+
+#Where should configuration files be installed?  For RedHat or Fedora systems,
+#you probably want /etc/httpd/conf (the default).
+CONF               = /etc/httpd/conf
+
+#Where should HTML, CSS, and image documents be installed?
+HTDOCS             = /var/www/html
+
+###FIXME What is this for?
+INSTALLSCRIPT      =
+
+###FIXME Where should the Perl library files be installed?
+LIB                =
+
+###FIXME What is this for?
+PREFIX             = 
+
+###FIXME Where should perldoc manpages be installed?
+INSTALLSITEMAN3DIR = 
+
+
+[option integer]
+###FIXME What is this for?
+DO_XS              = 1
+
+###FIXME What is this for?
+NONROOT            = 1

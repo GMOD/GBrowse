@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.51 2004-06-22 20:09:44 scottcain Exp $
+# $Id: Chado.pm,v 1.52 2004-06-23 15:43:00 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -519,6 +519,27 @@ sub get_feature_by_name {
 }
 
 *fetch_feature_by_name = \&get_feature_by_name; 
+
+=head2 srcfeature2name
+
+returns a srcfeature name given a srcfeature_id
+
+=cut
+
+sub srcfeature2name {
+    my $self = shift;
+    my $id   = shift;
+
+    return $self->{'srcfeature_id'}->{$id} if $self->{'srcfeature_id'}->{$id};
+
+    my $sth = $self->dbh->prepare("select name from feature "
+                                 ."where feature_id = ?");
+    $sth->execute($id);
+
+    my $hashref = $sth->fetchrow_hashref;
+    $self->{'srcfeature_id'}->{$id} = $$hashref{'name'};
+    return $self->{'srcfeature_id'}->{$id};
+}
 
 =head2 gff_source_db_id
 

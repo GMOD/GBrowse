@@ -86,7 +86,7 @@ sub new {
   #($start,$end) = ($end,$start) if defined($strand) and $strand == -1;
 
   $self->factory($factory);
-  $self->parent($parent);
+  $self->parent($parent) if $parent;
   $self->seq_id($srcseq);
   $self->start($start);
   $self->end($end);
@@ -99,6 +99,14 @@ sub new {
   $self->absolute(1);
 
   $self->feature_id($feature_id);
+
+  if ($srcseq && !$parent) {
+    $parent = $factory->segment( -name => $srcseq,
+                                 -start=> $start,
+                                 -stop => $end,
+                               ); 
+  }
+
   $self->srcfeature_id($parent->srcfeature_id() ) 
            if (defined $parent && $parent->can('srcfeature_id'));
   $self->score(0);

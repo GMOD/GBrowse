@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.67 2004-06-23 13:54:13 scottcain Exp $
+# $Id: Segment.pm,v 1.68 2004-06-23 15:43:02 scottcain Exp $
 
 =head1 NAME
 
@@ -107,7 +107,6 @@ sub new {
 
     my ( $name, $factory, $base_start, $end, $db_id ) = @_;
 
-    warn "$db_id\n";
     warn "$name, $factory\n"                      if DEBUG;
     warn "base_start = $base_start, end = $end\n" if DEBUG;
 
@@ -199,48 +198,47 @@ sub new {
               or Bio::Root::Root->throw("something else failed");
             $hash_ref = $landmark_is_src_query->fetchrow_hashref;
 
+            $name = $$hash_ref{'name'};
+
+            my $length = $$hash_ref{'seqlen'};
+            my $type   = $factory->term2name( $$hash_ref{'type_id'} );
+
+            if ( $$hash_ref{'fmin'} ) {
+                $interbase_start = $$hash_ref{'fmin'};
+                $base_start      = $interbase_start + 1;
+                $end             = $$hash_ref{'fmax'};
+            }
+
+            warn "base_start:$base_start, end:$end, length:$length" if DEBUG;
+
+            if( defined($end) and $end > $length ){
+                $self->warn("end value ($end) greater than length ($length),"
+                           ." truncating to $length");
+                $end = $length;
+            }
+            $end    = $end ? int($end) : $length;
+            $length = $end - $interbase_start;
+
+            warn "base_start:$base_start, end:$end, length:$length" if DEBUG;
+
+            return bless {
+                factory       => $factory,
+                start         => $base_start,
+                end           => $end,
+                length        => $length,
+                srcfeature_id => $srcfeature_id,
+                class         => $type,
+                name          => $name,
+              },
+              ref $self || $self;
         }
-        else {
 
-            $feature_query->execute($landmark_feature_id,$srcfeature_id)
-              or Bio::Root::Root->throw("something else failed");
-            $hash_ref = $feature_query->fetchrow_hashref;
-
+        else { #return a Feature object for the feature_id
+            my ($feat) = $self->features(
+                          -feature_id => $landmark_feature_id,
+                          -factory    => $factory);
+            return $feat;
         }
-
-        $name = $$hash_ref{'name'};
-
-        my $length = $$hash_ref{'seqlen'};
-        my $type   = $factory->term2name( $$hash_ref{'type_id'} );
-
-        if ( $$hash_ref{'fmin'} ) {
-            $interbase_start = $$hash_ref{'fmin'};
-            $base_start      = $interbase_start + 1;
-            $end             = $$hash_ref{'fmax'};
-        }
-
-        warn "base_start:$base_start, end:$end, length:$length" if DEBUG;
-
-        if( defined($end) and $end > $length ){
-          $self->warn("end value ($end) greater than length ($length), truncating to $length");
-          $end = $length;
-        }
-        $end    = $end ? int($end) : $length;
-        $length = $end - $interbase_start;
-
-        warn "base_start:$base_start, end:$end, length:$length" if DEBUG;
-
-        return bless {
-            factory       => $factory,
-            start         => $base_start,
-            end           => $end,
-            length        => $length,
-            srcfeature_id => $srcfeature_id,
-            class         => $type,
-            name          => $name,
-          },
-          ref $self || $self;
-
     }
     else {
         warn "no segment found" if DEBUG;
@@ -558,10 +556,16 @@ sub features {
 
   warn "Segment->features() args:@_\n" if DEBUG;
 
-  my ($types,$attributes,$rangetype,$iterator,$callback);
+  my ($types,$attributes,$rangetype,$iterator,$callback,$feature_id,$factory);
   if ($_[0] and $_[0] =~ /^-/) {
-    ($types,$attributes,$rangetype,$iterator,$callback) =
-      $self->_rearrange([qw(TYPE ATTRIBUTES RANGETYPE ITERATOR CALLBACK RARE)],@_);
+    ($types,$attributes,$rangetype,$iterator,$callback,$feature_id,$factory) =
+      $self->_rearrange([qw(TYPE 
+                            ATTRIBUTES 
+                            RANGETYPE 
+                            ITERATOR 
+                            CALLBACK 
+                            FEATURE_ID
+                            FACTORY)],@_);
   #  warn "$types\n";
   } else {
     $types = \@_;
@@ -569,102 +573,130 @@ sub features {
 
   warn "@$types\n" if (defined $types and DEBUG);
 
+  $factory ||=$self->factory();
   my $feat     = Bio::DB::Das::Chado::Segment::Feature->new();
   my @features;
-  $rangetype ||='overlaps';
+
+
+  my ($interbase_start,$rend,$srcfeature_id,$sql_types);
+  unless ($feature_id) {
+    $rangetype ||='overlaps';
 
 # set range variable 
 
-  my $base_start = $self->start;
-  my $interbase_start = $base_start -1;
-  my $rend       = $self->end;
-  my $sql_range;
-  if ($rangetype eq 'contains') {
+    my $base_start = $self->start;
+    $interbase_start = $base_start -1;
+    $rend       = $self->end;
+    my $sql_range;
+    if ($rangetype eq 'contains') {
 
-    $sql_range = " fl.fmin >= $interbase_start and fl.fmax <= $rend ";
+      $sql_range = " fl.fmin >= $interbase_start and fl.fmax <= $rend ";
 
-  } elsif ($rangetype eq 'contained_in') {
+    } elsif ($rangetype eq 'contained_in') {
 
-    $sql_range = " fl.fmin <= $interbase_start and fl.fmax >= $rend ";
+      $sql_range = " fl.fmin <= $interbase_start and fl.fmax >= $rend ";
 
-  } else { #overlaps is the default
+    } else { #overlaps is the default
 
-    $sql_range = " fl.fmin <= $rend and fl.fmax >= $interbase_start ";
+      $sql_range = " fl.fmin <= $rend and fl.fmax >= $interbase_start ";
 
-  }
+    }
 
 # set type variable 
 
-  my $sql_types = '';
+    $sql_types = '';
 
-  my $valid_type = undef;
-  if (scalar @$types != 0) {
+    my $valid_type = undef;
+    if (scalar @$types != 0) {
 
-    warn "first type:$$types[0]\n" if DEBUG;
+      warn "first type:$$types[0]\n" if DEBUG;
 
-    my $temp_type = $$types[0];
-    my $temp_source = '';
-    if ($$types[0] =~ /(.*):(.*)/) {
-        $temp_type   = $1;
-        $temp_source = $2;
-    }
+      my $temp_type = $$types[0];
+      my $temp_source = '';
+      if ($$types[0] =~ /(.*):(.*)/) {
+          $temp_type   = $1;
+          $temp_source = $2;
+      }
 
-    $valid_type = $self->factory->name2term($temp_type);
-    $self->throw("feature type: '$temp_type' is not recognized") unless $valid_type;
+      $valid_type = $factory->name2term($temp_type);
+      $self->throw("feature type: '$temp_type' is not recognized") unless $valid_type;
 
-    my $temp_dbxref = $self->factory->source2dbxref($temp_source);
-    if ($temp_source && $temp_dbxref) {
-        $sql_types .= "((f.type_id = $valid_type and fd.dbxref_id = $temp_dbxref)"; 
-    } else {
-        $sql_types  .= "((f.type_id = $valid_type)";
-    }
+      my $temp_dbxref = $factory->source2dbxref($temp_source);
+      if ($temp_source && $temp_dbxref) {
+          $sql_types .= "((f.type_id = $valid_type and fd.dbxref_id = $temp_dbxref)"; 
+      } else {
+          $sql_types  .= "((f.type_id = $valid_type)";
+      }
 
-    if (scalar @$types > 1) {
-      for(my $i=1;$i<(scalar @$types);$i++) {
+      if (scalar @$types > 1) {
+        for(my $i=1;$i<(scalar @$types);$i++) {
       
-        $temp_type   = $$types[$i]; 
-        $temp_source = '';
-        if ($$types[$i] =~ /(.*):(.*)/) {
-            $temp_type = $1;
-            $temp_source = $2;
-        }
-        warn "more types:$$types[$i]\n" if DEBUG; 
+          $temp_type   = $$types[$i]; 
+          $temp_source = '';
+          if ($$types[$i] =~ /(.*):(.*)/) {
+              $temp_type = $1;
+              $temp_source = $2;
+          }
+          warn "more types:$$types[$i]\n" if DEBUG; 
 
-        $valid_type = $self->factory->name2term($temp_type);
-        $self->throw("feature type: '$temp_type' is not recognized") unless $valid_type;
+          $valid_type = $factory->name2term($temp_type);
+          $self->throw("feature type: '$temp_type' is not recognized") unless $valid_type;
 
-        $temp_dbxref=$self->factory->source2dbxref($temp_source);
-        if ($temp_source && $temp_dbxref) {
-            $sql_types .= " OR \n     (f.type_id = $valid_type and fd.dbxref_id = $temp_dbxref)";
-        } else {
-            $sql_types .= " OR \n     (f.type_id = $valid_type)";
+          $temp_dbxref=$factory->source2dbxref($temp_source);
+          if ($temp_source && $temp_dbxref) {
+              $sql_types .= " OR \n     (f.type_id = $valid_type and fd.dbxref_id = $temp_dbxref)";
+          } else {
+              $sql_types .= " OR \n     (f.type_id = $valid_type)";
+          }
         }
       }
+      $sql_types .= ") and ";
     }
-    $sql_types .= ") and ";
+
+#  $factory->dbh->trace(1) if DEBUG;
+
+    $srcfeature_id = $self->{srcfeature_id};
+
   }
+  my $select_part = "select distinct f.name,fl.fmin,fl.fmax,fl.strand,"
+                   ."fl.locgroup,fl.srcfeature_id,f.type_id,f.uniquename,"
+                   ."f.feature_id,fd.dbxref_id ";
 
-#  $self->factory->dbh->trace(1) if DEBUG;
-
-  my $srcfeature_id = $self->{srcfeature_id};
-
-  my $select_part = "select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.locgroup,fl.srcfeature_id,f.type_id,f.uniquename,f.feature_id,fd.dbxref_id ";
-  my $from_part   = "from feature f, featureslice($interbase_start, $rend) fl, feature_dbxref fd ";
-  my $where_part  = "where $sql_types fl.srcfeature_id = $srcfeature_id and f.feature_id  = fl.feature_id and fd.feature_id=f.feature_id ";
   my $order_by    = "order by f.type_id,fl.fmin ";
+
+  my $where_part;
+  my $from_part;
+  if ($feature_id) {
+    $from_part    = "from feature f, "
+                   ."featureloc fl, "
+                   ."feature_dbxref fd ";
+
+    $where_part   = "where f.feature_id = $feature_id and "
+                   ."f.feature_id = fl.feature_id and "
+                   ."fd.feature_id=f.feature_id ";
+  } else {
+    $from_part   = "from feature f, "
+                  ."featureslice($interbase_start, $rend) fl, "
+                  ."feature_dbxref fd ";
+
+    $where_part  = "where $sql_types "
+                  ."fl.srcfeature_id = $srcfeature_id and "
+                  ."f.feature_id  = fl.feature_id and "
+                  ."fd.feature_id=f.feature_id ";
+  }
 
   my $query       = "$select_part\n$from_part\n$where_part\n$order_by\n";
 
-  $self->factory->dbh->do("set enable_seqscan=0");
-#  $self->factory->dbh->do("set enable_hashjoin=0");
+  $factory->dbh->do("set enable_seqscan=0");
+#  $factory->dbh->do("set enable_hashjoin=0");
 
   warn "Segement->features query:$query" if DEBUG;
 
-  my $sth = $self->factory->dbh->prepare($query);
+  my $sth = $factory->dbh->prepare($query);
 
    $sth->execute or $self->throw("feature query failed"); 
-#   $self->factory->dbh->do("set enable_hashjoin=1");
-   $self->factory->dbh->do("set enable_seqscan=1");
+#   $factory->dbh->do("set enable_hashjoin=1");
+   $factory->dbh->do("set enable_seqscan=1");
 
 # Old query (doesn't use RTree index):
 #
@@ -680,7 +712,7 @@ sub features {
 
 
 
-#$self->factory->dbh->trace(0);
+#$factory->dbh->trace(0);
 #take these results and create a list of Bio::SeqFeatureI objects
 #
 
@@ -693,13 +725,19 @@ sub features {
     my $interbase_start = $$hashref{fmin};
     my $base_start      = $interbase_start +1;
 
-    my $source = $self->factory->dbxref2source($$hashref{dbxref_id}) if $$hashref{dbxref_id};
-    my $type   = $self->factory->term2name($$hashref{type_id}). ":$source";
+    my $source = $factory->dbxref2source($$hashref{dbxref_id}) if $$hashref{dbxref_id};
+    my $type   = $factory->term2name($$hashref{type_id}). ":$source";
 
     $feat = Bio::DB::Das::Chado::Segment::Feature->new(
-                       $self->factory,
-                       $self,
-                       $self->seq_id,
+                       $factory,
+                       $feature_id? undef :$self, #only give the segment as the
+                                            # parent if the feature_id wasn't 
+                                            # provided
+                                 
+                       $feature_id ?
+                           $factory->srcfeature2name($$hashref{'srcfeature_id'})
+                          :$self->seq_id,
+
                        $base_start,$stop,
                        $type,
                        $$hashref{strand},
@@ -812,7 +850,7 @@ sub seq {
   }
 
   $sth->execute or $self->throw("seq query failed");
-                                                                                                     
+
   my $array_ref = $sth->fetchrow_arrayref;
   my $seq = $$array_ref[0]; 
 

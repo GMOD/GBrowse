@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.120 2005-01-11 22:32:22 allenday Exp $
+# $Id: gbrowse.PLS,v 1.121 2005-01-16 19:03:28 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -69,14 +69,8 @@ use vars qw($MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $CONF_DIR
 	    $PLUGINS $PRESETS
 	    %OBJECT_TYPES %PLUGIN_NAME2LABEL
-        $BROWSER
+	    $BROWSER $TEMPLATE
 );
-
-my $template = Template->new({
-                INCLUDE_PATH => "$CONF_DIR/templates/gbrowse",
-                ABSOLUTE     => 1,
-                EVAL_PERL    => 1,
-                }) || die("couldn't create template: $!");
 
 local $CGI::USE_PARAM_SEMICOLONS = 1;
 
@@ -109,6 +103,19 @@ $BROWSER = Bio::Graphics::GBrowse_run->new(config => open_config($CONF_DIR));
 my($source) = get_source();
 $BROWSER->config->source($source);
 #############################
+
+# User can change template include directory within the config file
+my $template_dir = $BROWSER->config->setting(general => 'templates') || 'default';
+$template_dir    = "$CONF_DIR/templates/$template_dir" unless $template_dir =~ m!^/!;
+
+# this has got to be a global in order to avoid mod_perl closure issues
+$TEMPLATE = Template->new({
+			   INCLUDE_PATH => $template_dir,
+			   ABSOLUTE     => 1,
+			   EVAL_PERL    => 1,
+			  }) || die("couldn't create template: $!");
+
+
 
 main(); #at the bottom
 exit 0;
@@ -225,7 +232,7 @@ sub main_display($$) {
 #  $template->process('navigationtable.tt2',$param,\$table);
 
 
-  $template->process('main.tt2',$param,\$table) or warn $template->error();
+  $TEMPLATE->process('main.tt2',$param,\$table) or warn $TEMPLATE->error();
   print $table;
 
 ################################
@@ -2209,6 +2216,7 @@ sub main {
 
   print_bottom($VERSION);
 }
+
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

@@ -7,7 +7,7 @@ use FindBin '$Bin';
 use Cwd;
 require 5.005003;
 
-my $VERSION = '1.62';
+my $VERSION = '1.64';
 my $working_dir = cwd;
 
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN
@@ -160,7 +160,7 @@ WriteMakefile(
 	      'NAME'	     => 'Generic-Genome-Browser',
 	      'VERSION'      => $VERSION,
 	      'PREREQ_PM'    => {
-				 Bio::Perl         => 1.02,
+				 Bio::Perl         => 1.5,
 				 GD                => 2.07,
 				 IO::String        => 0,
 				 Text::Shellwords  => 1.0,

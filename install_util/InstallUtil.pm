@@ -25,6 +25,7 @@ sub copy_tree {
   my $dest         = $arg{target};
   my $indent       = $arg{indent} || 2;
   my $substitute   = $arg{substitute};
+  my $flatten      = $arg{flatten};
 
   #warn join ' ', caller();
 
@@ -41,7 +42,7 @@ sub copy_tree {
     unless -d $src && -d $dest;
   croak colored("Can't read from $src","red") unless -r $src;
   croak colored("Can't write to $dest","red") unless -w $dest;
-  my $tgt = basename($src);
+  my $tgt = $flatten ? '.' : basename($src);
 
   # create the dest if it doesn't exist
   mkdir ("$dest/$tgt",0755) or croak colored("mkdir($dest/$tgt): $!","red") unless -d "$dest/$tgt";

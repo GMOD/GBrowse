@@ -1,7 +1,13 @@
-1.63	
+1.64	Sun Jan 16 08:54:10 PST 2005
+	* Big merge of Allen Day's template toolkit and Log::Log4Perl improvements
+	* Bio::Perl 1.5 now required
+
+1.63	Wed Nov 17 18:06:09 EST 2004
 	* Patch from Eric Just to eliminate unecessary URL arguments.
 	* Fixes from Jack Chen to get colors in multiple alignments "just right."
+
 1.62    Mon Apr  5 09:43:25 EDT 2004
+        * added support for HTTP/FTP proxies for remote annotations
 	* Added request timeout option for very long requests.
 	* Added additional padding to prevent scales of xyplot glyph from being
 	cut off.

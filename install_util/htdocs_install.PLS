@@ -24,7 +24,7 @@ use Bio::Root::IO;
 use Cwd;
 use FindBin '$Bin';
 
-use lib 'install_util';
+use lib $Bin;
 use InstallUtil;
 
 my $origdir = cwd;
@@ -53,7 +53,7 @@ if (! (-e $tmpdir) ) {
 }
 
 print "Installing htdocs...\n";
-copy_tree(source => "./htdocs", target => $ht_target, substitute => 1, options => \%options);
+copy_tree(source => "./htdocs", target => $ht_target, substitute => 1, flatten => 1, options => \%options);
 
 print "Installing sample_data...\n";
 copy_tree(source => "./sample_data", target => $ht_target, substitute => 1, options => \%options);

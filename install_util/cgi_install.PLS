@@ -22,7 +22,7 @@ use File::Path 'mkpath';
 use Cwd;
 use FindBin '$Bin';
 
-use lib 'install_util';
+use lib $Bin;
 use InstallUtil;
 
 my $origdir = cwd;

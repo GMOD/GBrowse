@@ -205,6 +205,7 @@ for ($i=0;$i < scalar @data_sets;$i++) {
   my $set = $data_sets[$i];
   if ($set % 2 == 0) {
     warn "Importing of fasta without gff is not permitted from this interface\n";
+    unlink "$tmpdir/$keys[$set].$$";"$tmpdir/$keys[$set].$$";
     next;
   }   
   

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.68 2004-06-23 15:43:02 scottcain Exp $
+# $Id: Segment.pm,v 1.69 2004-06-25 02:57:18 scottcain Exp $
 
 =head1 NAME
 
@@ -667,22 +667,16 @@ sub features {
   my $where_part;
   my $from_part;
   if ($feature_id) {
-    $from_part    = "from feature f, "
-                   ."featureloc fl, "
-                   ."feature_dbxref fd ";
+    $from_part    = "from (feature f join featureloc fl using (feature_id)) "
+                   ."left join feature_dbxref fd using (feature_id) ";
 
-    $where_part   = "where f.feature_id = $feature_id and "
-                   ."f.feature_id = fl.feature_id and "
-                   ."fd.feature_id=f.feature_id ";
+    $where_part   = "where f.feature_id = $feature_id ";
   } else {
-    $from_part   = "from feature f, "
-                  ."featureslice($interbase_start, $rend) fl, "
-                  ."feature_dbxref fd ";
+    $from_part   = "from (feature f join featureslice($interbase_start, $rend) fl using (feature_id)) "
+                  ."left join feature_dbxref fd using (feature_id) ";
 
     $where_part  = "where $sql_types "
-                  ."fl.srcfeature_id = $srcfeature_id and "
-                  ."f.feature_id  = fl.feature_id and "
-                  ."fd.feature_id=f.feature_id ";
+                  ."fl.srcfeature_id = $srcfeature_id ";
   }
 
   my $query       = "$select_part\n$from_part\n$where_part\n$order_by\n";
@@ -725,7 +719,9 @@ sub features {
     my $interbase_start = $$hashref{fmin};
     my $base_start      = $interbase_start +1;
 
-    my $source = $factory->dbxref2source($$hashref{dbxref_id}) if $$hashref{dbxref_id};
+    my $source = $$hashref{dbxref_id} ?
+                 $factory->dbxref2source($$hashref{dbxref_id}) 
+               : ".";
     my $type   = $factory->term2name($$hashref{type_id}). ":$source";
 
     $feat = Bio::DB::Das::Chado::Segment::Feature->new(

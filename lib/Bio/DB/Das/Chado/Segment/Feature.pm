@@ -751,10 +751,8 @@ sub source {
     $sth->execute($self->feature_id)
          or $self->throw("getting source query failed");
 
-    return if ($sth->rows != 1);
-
     my $hashref = $sth->fetchrow_hashref(); 
-    $self->{'source'} = $$hashref{'accession'};
+    $self->{'source'} = $$hashref{'accession'} || '.';
     return $self->{'source'};
 }
 

@@ -1,9 +1,10 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.10 2003-09-27 20:39:18 lstein Exp $
+# $Id: GFFDumper.pm,v 1.11 2003-10-12 16:58:50 sheldon_mckay Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use CGI qw(:standard super);
+use Data::Dumper;
 
 use vars '$VERSION','@ISA';
 $VERSION = '0.60';
@@ -89,56 +90,109 @@ sub dump {
   my $config        = $self->configuration;
   my $version       = $config->{version} || 2;
   my $mode          = $config->{mode}    || 'selected';
+  $mode             = 'all' if $version == 2.5;  
 
   my $date = localtime;
   print "##gff-version $version\n";
   print "##date $date\n";
   print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
   print "##source gbrowse GFFDumper plugin\n";
-    print $mode eq 'selected' ? "##NOTE: Selected features dumped.\n"
-                              : "##NOTE: All features dumped.\n";
+  print $mode eq 'selected' ? "##NOTE: Selected features dumped.\n"
+                            : "##NOTE: All features dumped.\n";
 
   my @args;
   if ($mode eq 'selected') {
     my @feature_types = $self->selected_features;
     @args = (-types => \@feature_types);
   }
-  my $iterator = $segment->get_seq_stream(@args);
-  do_dump($iterator,$version);
+  
+  my @feats = ();
+
+  if ( $version == 2.5 ) {
+    # don't want aggregate features
+    map { push @feats, $_ unless /component/i } $segment->contained_features;  
+  }
+  else {
+    my $iterator = $segment->get_seq_stream(@args);
+    while ( my $f = $iterator->next_seq ) {
+      push @feats, $f;
+    }  
+  }
+
+  do_dump(\@feats, $version);
 
   for my $set (@more_feature_sets) {
-    do_dump($set->get_seq_stream,$version)  if $set->can('get_seq_stream');
+    if ( $set->can('get_seq_stream') ) {
+      my @feats = ();
+      my $iterator = $set->get_seq_stream;
+      while ( my $f = $iterator->next_seq ) {
+        push @feats, $f;
+      }
+      do_dump(\@feats, $version); 
+    }  
+  }
+
+  if ( $version == 2.5 ) {
+    my $db = $self->database;
+    my $whole_segment = $db->segment($segment->ref);
+    my $seq = $whole_segment->seq;
+    $seq ||= ('N' x $whole_segment->length);
+    $seq =~ s/\S{60}/$&\n/g;
+    print $seq, "\n";
   }
 }
 
 sub do_dump {
-  my $iterator    = shift;
+  my $feats       = shift;
   my $gff_version = shift;
-
-  while (my $f = $iterator->next_seq) {
-    my $s =  $gff_version < 3 ? $f->gff_string : $f->gff3_string(1);  # flag means recurse automatically
-    chomp $s;
-
-    # Artemis hack
-    $s =~ s/Target \"([^\"]+)\" (\d+) (\d+)/Target "$1" ; tstart $2 ; tend $3/
-      if $gff_version == 2.5;
-
-    print $s,"\n";
-
+  my @gff;
+  
+  for my $f ( @$feats ) {
+    
+    push @gff, $gff_version == 3 ? $f->gff3_string(1) :  # flag means recurse automatically
+	       $gff_version == 2 ? $f->gff_string     : gff25_string($f);
+ 
     next if $gff_version >= 3; # gff3 recurses automatically
 
     for my $ss ($f->sub_SeqFeature) {
-      my $s = $gff_version < 3 ? $ss->gff_string : $f->gff3_string;
-      chomp $s;
-
-      # Artemis hack
-      $s =~ s/Target \"([^\"]+)\" (\d+) (\d+)/Target "$1" ; tstart $2 ; tend $3/
-	if $gff_version == 2.5;
-
-      print $s,"\n";
+      push @gff, $gff_version == 2 ? $ss->gff_string : gff25_string($f);
     }
-
   }
+
+  do_gff(@gff);
+}
+
+sub do_gff {
+    my @gff = @_;
+    chomp @gff;
+    print join "\n", 
+      map  { $_->[3] }
+      sort { $a->[0] <=> $b->[0] or
+             $b->[1] <=> $a->[1] or
+             lc $a->[2] cmp lc $b->[2] }
+      map  { [ (split)[3], (split)[4], (split)[2], $_ ] } @gff;
+    print "\n";
+}
+
+# handle embedded semicolons and target attributes CV
+sub gff25_string {
+    my $f      = shift;
+    my $gff    = $f->gff_string;
+    return 0 if $gff =~ /component/i;
+
+    $gff =~ s/^((\S+\s+){8})/$1/;
+    my %att = $f->attributes;
+    my @atts = ();
+    
+    while ( my ($k, $v) = each %att ) {
+	$v =~ s/;/,/g;
+	push @atts, "$k $v";
+    }
+    
+    $gff .= join ' ; ', @atts if @atts;
+    
+    $gff =~ s/Target \"([^\"]+)\" (\d+) (\d+)/Target "$1" ; tstart $2 ; tend $3/;
+    $gff;
 }
 
 

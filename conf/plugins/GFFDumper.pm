@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.21 2004-02-22 20:28:57 lstein Exp $
+# $Id: GFFDumper.pm,v 1.22 2004-03-02 07:10:26 sheldon_mckay Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -50,7 +50,7 @@ sub configure_form {
 	       popup_menu(-name   => $self->config_name('version'),
 			  -values => [2,2.5,3],
 			  -labels => { 2   => '2',
-				       2.5 => '2 (Artemis)*',
+                                       2.5 => '2.5*',
 				       3   => '3'},
 			  -default => $current_config->{version},
 			  -override => 1));
@@ -75,13 +75,21 @@ sub configure_form {
 				 }
 			));
   autoEscape(1);
-  $html .= p(sup('*'),
-	     "Note: Artemis GFF will contain the ENTIRE annotated sequence. Do NOT run this on whole chromosomes!") .
-		 p(sup('**'),
-		   "To edit, install a helper application for MIME type",
-		   cite('application/x-gff2'),'or',
-		   cite('application/x-gff3')
-		   );
+
+  my $href = a( {-href => 'javascript:void(0)', -onclick => "alert('" .
+		"\\'Target\\' syntax in the group field:\\n" .
+                "GFF2:   Target class:name start stop\\n" .
+		"GFF2.5: Target class:name ; tstart start ; tstop stop\\n')"},
+		"similarity target" );
+
+  $html .= p(sup('*'), 
+              "GFF2.5 is GFF2 with a special syntax for $href"
+              ) .
+           p(sup('**'),
+	      "To edit, install a helper application for MIME type",
+	      cite('application/x-gff2'),'or',
+	      cite('application/x-gff3')
+	      );
   $html;
 }
 
@@ -110,8 +118,6 @@ sub dump {
   my $whole_segment = $db->segment(Accession => $segment->ref) ||
                       $db->segment($segment->ref);
   my $coords        = $config->{coords};
-  $mode             = 'all'      if $version == 2.5;
-  $coords           = 'absolute' if $version == 2.5;
 
   $segment->refseq($segment) if $coords eq 'relative';
 
@@ -131,32 +137,20 @@ sub dump {
   
   my @feats = ();
 
-  if ( $version == 2.5 ) {
-    # don't want aggregate features
-    @feats = $whole_segment->features;
-    $self->mangle_and_dump(\@feats,$whole_segment);
-    my $seq = $whole_segment->seq;
-    $seq  ||= ('N' x $whole_segment->length);
-    $seq    =~ s/\S{60}/$&\n/g;
-    print $seq, "\n";
-  }
-  else {
-    my $iterator = $segment->get_seq_stream(@args);
-    while ( my $f = $iterator->next_seq ) {
-      $self->print_feature($f,$version);
-    }
-  }
+  my $iterator = $segment->get_seq_stream(@args);
+  while ( my $f = $iterator->next_seq ) {
+    $self->print_feature($f,$version);
 
-  for my $set (@more_feature_sets) {
-    if ( $set->can('get_seq_stream') ) {
-      my @feats = ();
-      my $iterator = $set->get_seq_stream;
-      while ( my $f = $iterator->next_seq ) {
-	$self->print_feature($f);
+    for my $set (@more_feature_sets) {
+      if ( $set->can('get_seq_stream') ) {
+        my @feats = ();
+        my $iterator = $set->get_seq_stream;
+        while ( my $f = $iterator->next_seq ) {
+	  $self->print_feature($f);
+        }
       }
     }
   }
-
 }
 
 sub print_feature {
@@ -173,53 +167,5 @@ sub print_feature {
     print $s,"\n";
   }
 }
-
-# used only for Artemis GFF 2.5
-sub mangle_and_dump {
-  my ($feats,$segment) = @_;
-  my (@gff,%seen);
-  for my $f ( @$feats ) {
-    $f->version(2.5);
-    my $s = $f->gff_string(1); # the flag is for GFF3 subfeature recursion
-    chomp $s;
-    push @gff, $s;
-    for my $ss ($f->sub_SeqFeature) {
-      # next if $ss eq $f;
-      my $s = $ss->gff_string;
-      push @gff, $s;
-    }
-  }
-
-  # out of range features break Artemis (some kind of off by one error?)
-  my $len = $segment->length - 1;
-  for ( @gff ) {
-    my $num = (split)[4];
-    s/$num/$len/ if $num > $len;
-  }
-
-  # sigh... Artemis mangles uppercase 'Note' attributes
-  @gff = grep { s/Note/note/g; chomp($_); $_; } @gff;
-  print join "\n", 
-    map  { $_->[3] }
-      # sort first asc. by start, then desc. by stop, then ascibetically 
-      sort { $a->[0] <=> $b->[0] or
-	       $b->[1] <=> $a->[1] or
-		 lc $a->[2] cmp lc $b->[2] }
-	map  { [ (split)[3], (split)[4], (split)[2], $_ ] } @gff;
-  print "\n";
-}
-
-sub gff25_string {
-    my ($self, $f)  = @_;
-    return 0 if $f->primary_tag =~ /component/i;
-    
-    $f->{version} = 2.5;
-    my $gff = $f->gff_string;
-    
-    # convert embedded ';' to ',' 
-    $gff =~ s/\"([^\"]);([^\"])\"/$1,$2/g;
-    $gff;
-}
-
 
 1;

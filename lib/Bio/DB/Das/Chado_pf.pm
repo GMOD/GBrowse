@@ -1,4 +1,4 @@
-# $Id: Chado_pf.pm,v 1.12 2002-12-13 15:48:05 scottcain Exp $
+# $Id: Chado_pf.pm,v 1.13 2002-12-16 02:16:49 scottcain Exp $
 # Das adaptor for Chado_pf
 
 =head1 NAME
@@ -107,6 +107,7 @@ use DBD::Pg;
 use vars qw($VERSION @ISA);
 
 use constant SEGCLASS      => 'Bio::DB::Das::Chado_pf::Segment';
+use constant DEBUG =>1;
 #use constant ADAPTOR_CLASS => 'Bio::DB::Chado_pf::BioDatabaseAdaptor';
 
 $VERSION = 0.01;
@@ -141,6 +142,8 @@ sub new {
 
   my $dbh = DBI->connect( $dsn, $username, $password )
     or warn "unable to open db handle";
+
+    warn "$dbh\n" if DEBUG;
 
   return bless {dbh  => $dbh}, ref $self ||$self;
 }
@@ -246,7 +249,7 @@ sub features {
 			@_);
 
 
-warn "Chado,features: $iterator\n";
+    warn "Chado,features: $iterator\n" if DEBUG;
   my @features = $self->_segclass->features(-types => $types,
                                             -attributes => $attributes,
                                             -callback => $callback,

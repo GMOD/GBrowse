@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.16 2002-12-13 21:39:40 scottcain Exp $
+# $Id: Segment.pm,v 1.17 2002-12-16 02:16:49 scottcain Exp $
 
 =head1 NAME
 
@@ -100,7 +100,7 @@ use strict;
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
 use Bio::SeqFeature::Generic;
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI);
@@ -115,7 +115,8 @@ sub new {
 
   my ($name,$dbadaptor,$start,$end) = @_;
 
-warn "start = $start, end = $end\n";
+    warn "$name, $dbadaptor\n" if DEBUG;
+    warn "start = $start, end = $end\n" if DEBUG;
 
   $self->throw("start value less than 1\n") if (defined $start && $start < 1);
   $start ||= 1;
@@ -123,10 +124,12 @@ warn "start = $start, end = $end\n";
 #moved length determination to constructor, now it will be there from
 # 'the beginning'.
 
+#    $dbadaptor->{dbh}->trace(4) if DEBUG;
+
   my $quoted_name = $dbadaptor->{dbh}->quote($name);
 
-warn "$quoted_name\n";
-#$dbadaptor->{dbh}->trace(4);
+    warn "$quoted_name\n" if DEBUG;
+#    $dbadaptor->{dbh}->trace(4) if DEBUG;
 
   my $sth = $dbadaptor->{dbh}->prepare ("
 select f.seqlen from dbxref dbx, feature f, feature_dbxref fd
@@ -135,16 +138,16 @@ select f.seqlen from dbxref dbx, feature f, feature_dbxref fd
          fd.dbxref_id = dbx.dbxref_id and
          dbx.accession = $quoted_name  ");
 
-warn "prepared:$sth\n" ;
+    warn "prepared:$sth\n" if DEBUG ;
 
   $sth->execute or $self->throw("unable to validate name/length");
 
-warn "executed\n";
+    warn "executed\n" if DEBUG;
 
   my $hash_ref = $sth->fetchrow_hashref;
   my $length =  $$hash_ref{'seqlen'};
 
-  warn "$length\n";
+    warn "$length\n" if DEBUG;
 
   $self->throw("end value greater than length\n") if (defined $end && $end > $length);
   $end ||= $length;
@@ -291,13 +294,31 @@ the SQL layer.
 
 sub features {
   my $self = shift;
-  my ($types,$attributes,$rangetype,$iterator,$callback);
+
+    warn "@_\n" if DEBUG;
+
+  my ($types,$attributes,$rangetype,$iterator,$callback,$rare);
   if ($_[0] =~ /^-/) {
-    ($types,$attributes,$rangetype,$iterator,$callback) =
-      $self->_rearrange([qw(TYPES ATTRIBUTES RANGETYPE ITERATOR CALLBACK)],@_);
+    ($types,$attributes,$rangetype,$iterator,$callback,$rare) =
+      $self->_rearrange([qw(TYPES ATTRIBUTES RANGETYPE ITERATOR CALLBACK RARE)],@_);
   } else {
     $types = \@_;
   }
+
+  my $feat     = Bio::SeqFeature::Generic->new ();
+  my @features;
+ 
+
+#return an empty feature array if -rare is defined 
+  if ($rare and $iterator) {
+    push @features, $feat;
+   warn "rare: using Bio::DB::Das::Chado_pfIterator\n" if DEBUG;
+    return Bio::DB::Das::Chado_pfIterator->new(\@features);
+  } elsif ($rare) {
+    push @features, $feat;
+    return @features;
+  }
+
 
   my $rstart = $self->start;
   my $rend   = $self->end;
@@ -310,7 +331,7 @@ sub features {
     $sql_range = " fmin <= $rend and fmax >= $rstart ";
   }
 
-$self->{dbadaptor}->{dbh}->trace(2);
+#$self->{dbadaptor}->{dbh}->trace(2);
 
   my $quoted_name = $self->{dbadaptor}->{dbh}->quote($self->{name});
   my $sth = $self->{dbadaptor}->{dbh}->prepare("
@@ -330,10 +351,9 @@ $self->{dbadaptor}->{dbh}->trace(2);
 
 #take these results and create a list of Bio::SeqFeatureI objects
 
-  my @features;
   while (my $hash_ref = $sth->fetchrow_hashref) {
 
-    my $feat = Bio::SeqFeature::Generic->new (
+    $feat = Bio::SeqFeature::Generic->new (
                        -start      => $$hash_ref{fmin},
                        -end        => $$hash_ref{fmax},
                        -strand     => $$hash_ref{fstrand}, 
@@ -343,11 +363,11 @@ $self->{dbadaptor}->{dbh}->trace(2);
                        -type       => "gene:sgd",
                        -primary    => "gene" );
     push @features, $feat;
-  warn "$feat->{annotation}, $$hash_ref{fmin}, $feat->{start}, $$hash_ref{fmax}, $feat->{stop}\n";
+  warn "$feat->{annotation}, $$hash_ref{fmin}, $feat->{start}, $$hash_ref{fmax}, $feat->{stop}\n" if DEBUG;
   }
 
   if ($iterator) {
-   warn "using Bio::DB::Das::Chado_pfIterator\n";
+   warn "using Bio::DB::Das::Chado_pfIterator\n" if DEBUG;
     return Bio::DB::Das::Chado_pfIterator->new(\@features);
   } else {
     return @features;
@@ -413,8 +433,8 @@ sub desc {shift->{name} }
 sub get_feature_stream {
   my $self = shift;
   my @features = $self->features;
-warn "using get_feature_stream\n";
-warn "feature array: @features\n";
+    warn "using get_feature_stream\n" if DEBUG;
+    warn "feature array: @features\n" if DEBUG;
   return Bio::DB::Das::Chado_pfIterator->new(\@features);
 }
 

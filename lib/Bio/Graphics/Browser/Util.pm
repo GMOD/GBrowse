@@ -141,7 +141,7 @@ sub open_database {
   ################################################
 
   $DB{$source} = eval {$adaptor->new(@argv)} or warn $@;
-  fatal_error(pre($@)) unless $DB{$source};
+  fatal_error('Could not open database.',pre("$@")) unless $DB{$source};
 
   if (my $refclass = $config->setting('reference class')) {
     eval {$DB{$source}->default_class($refclass)};
@@ -267,6 +267,13 @@ sub Bio::DB::GFF::setup_argv {
   @argv;
 }
 END
+   warn $@ if $@;
+   eval <<'END';
+sub Bio::Graphics::Feature attributes {
+  return;
+}
+END
+;
    warn $@ if $@;
 
    eval <<'END';

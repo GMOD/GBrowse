@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.112 2004-01-23 16:38:35 scottcain Exp $
+# $Id: Browser.pm,v 1.113 2004-02-02 14:33:44 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1298,7 +1298,8 @@ sub name2segments {
   my ($name,$db,$toomany,$extra_padding,$segments_have_priority) = @_;
   $extra_padding ||= 0;
   $toomany ||= TOO_MANY_SEGMENTS;
-  my $max_segment = $self->config('max_segment') || MAX_SEGMENT;
+
+  my $max_segment   = $self->setting('max_segment') || MAX_SEGMENT;
 
   my (@segments,$class,$start,$stop);
   if ($name =~ /([\w._\/-]+):(-?[-e\d.]+),(-?[-e\d.]+)$/ or
@@ -1371,11 +1372,12 @@ sub name2segments {
     $max_length = $_->length if defined $_->length && $_->length > $max_length;
   }
   if (@segments > 1 || $max_length > $max_segment) {
-    my @s     = $db->get_feature_by_name(-class => $segments[0]->class,
-					 -name  => $segments[0]->seq_id,
-					 -automerge=>0);
-    @segments     = $self->merge($db,\@s,($self->get_ranges())[-1])
-      if @s > 1 && @s < TOO_MANY_SEGMENTS;
+    my @s     = map {my @ss = $_->sub_SeqFeature(); @ss ? @ss : $_} @segments;
+    @segments = sort {$a->start<=>$b->start} @s;
+
+# see what happens if we don't merge
+#    @segments     = $self->merge($db,\@s,($self->get_ranges())[-1])
+#      if @s > 1 && @s < TOO_MANY_SEGMENTS;
   }
 
   # expand by a bit if padding is requested
@@ -1405,14 +1407,29 @@ sub _feature_get {
     @segments  = grep {$_->length} $db->get_feature_by_name(@argv) if !defined($start) && !defined($stop);
     @segments  = grep {$_->length} $db->segment(@argv)             if !@segments && $name !~ /[*?]/;
   }
+  return unless @segments;
 
-  # uniquify
-  my %largest;
-  foreach (@segments) {
-    my $name = $_->display_name;
-    $largest{$name} = $_->length if !exists $largest{$name} or $largest{$name} < $_->length;
+  # horrible hack because Bio::DB::GFF data model doesn't distinguish between
+  # the identity of a feature and its parent.  This code splits up features
+  # that happen to have same name but don't actually belong together.
+  my (@nonoverlapping);
+  foreach (@segments) {$_->absolute(1)}
+  my @s = sort {$a->ref cmp $b->ref || $a->strand <=> $b->strand ||
+		  $a->abs_start <=> $b->abs_start || $b->length <=> $a->length} 
+    @segments;
+  my $last = shift @s;
+  for my $s (@s) {
+    if ($last->ref eq $s->ref
+	&& $last->abs_end > $s->abs_start
+	&& $last->strand == $s->strand) {
+      $last = $s if $last->length < $s->length;
+    } else {
+      push @nonoverlapping,$last;
+      $last = $s
+    }
   }
-  grep {$largest{$_->display_name} <= $_->length} @segments;
+  push @nonoverlapping,$last;
+  return @nonoverlapping;
 }
 
 sub get_ranges {

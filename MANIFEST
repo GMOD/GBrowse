@@ -92,7 +92,7 @@ docs/tutorial/bin/random_dna.pl
 docs/tutorial/bin/random_feature.pl
 docs/tutorial/bin/random_segments.pl
 docs/tutorial/bin/reformat.pl
-docs/tutorial/conf_files/volvox1.conf
+docs/tutorial/conf_files/volvox.conf
 docs/tutorial/conf_files/volvox2.conf
 docs/tutorial/conf_files/volvox3.conf
 docs/tutorial/conf_files/volvox4.conf

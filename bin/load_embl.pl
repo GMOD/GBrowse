@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 use strict;
+use lib '/home/lstein/projects/bioperl-live';
 use lib '../blib/lib';
 use Bio::DB::GFF;
 use Getopt::Long;

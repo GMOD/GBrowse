@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.56 2004-01-27 18:38:27 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.57 2004-02-02 16:00:56 marclogghe Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2321,12 +2321,14 @@ sub configure_plugins {
     my $config = retrieve_plugin_config($p);
     # and tell the plugin about it
     $p->configuration($config);
+    $p->filter if ($p->type eq 'filter');
 
     # if there are any CGI parameters from the
     # plugin's configuration screen, set it here
     my @params = grep {/^$name\./} param();
     next unless @params;
     $p->reconfigure unless param('plugin_action') eq $CONFIG->tr('Cancel');
+    $p->filter if ($p->type eq 'Filter');    
 
     # turn the plugin on
     my $setting_name = 'plugin:'.$p->name;
@@ -2450,7 +2452,7 @@ sub do_plugin_configure {
   my $type = $p->type;
   my @action_labels = ($CONFIG->tr('Cancel'),$CONFIG->tr('Configure_plugin'));
   push @action_labels,$CONFIG->tr('Find') if $type eq 'finder';
-  push @action_labels,$CONFIG->tr('Go')   if $type eq 'dumper';
+  push @action_labels,$CONFIG->tr('Go')   if ($type eq 'dumper' or $type eq 'Filter');
   my @buttons = map {submit(-name=>'plugin_action',-value=>$_)} @action_labels;
 
   print h1($p->type eq 'finder' ? $CONFIG->tr('Find') : $CONFIG->tr('Configure'),$p->name);

@@ -52,6 +52,7 @@ conf/plugins/RandomGene.pm
 conf/plugins/RestrictionAnnotator.pm
 conf/plugins/SequenceDumper.pm
 conf/plugins/test.pm
+conf/plugins/FilterTest.pm
 conf/yeast_chr1.conf
 contrib/Coverage/INSTALL
 contrib/Coverage/README

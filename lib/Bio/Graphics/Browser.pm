@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.113 2004-02-02 14:33:44 lstein Exp $
+# $Id: Browser.pm,v 1.114 2004-02-02 16:00:56 marclogghe Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -867,6 +867,7 @@ sub image_and_map {
   my $length         = $segment->length;
 
   my @feature_types = map { $conf->label2type($_,$length) } @$tracks;
+  my %filters = map {my %conf =  $conf->style($_); eval {$conf{'-filter'}} ? ($_ => $conf{'-filter'}) : ($_ => sub {1}) } @$tracks;
 
   # Create the tracks that we will need
   my ($seg_start,$seg_stop ) = ($segment->start,$segment->end);
@@ -941,6 +942,7 @@ sub image_and_map {
       # allow a single feature to live in multiple tracks
       for my $label ($self->feature2label($feature,$length)) {
 	my $track = $tracks{$label} or next;
+	$filters{$label}->($feature) or next;
 
 	warn "feature = $feature, label = $label, track = $track\n" if DEBUG;
 

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.115 2004-02-02 20:27:51 lstein Exp $
+# $Id: Browser.pm,v 1.116 2004-02-04 13:07:09 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -207,7 +207,7 @@ sub source {
     my $source = shift;
     unless ($self->{conf}{$source}) {
       carp("invalid source: $source");
-      return $d;
+      return;
     }
     $self->{source} = $source;
   }

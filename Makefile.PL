@@ -123,8 +123,9 @@ htdocs_install ::
 		fi \\
 	done; \\
 	cd $Bin/htdocs/images; \\
+	mkdir -p \$\$dir/images; \\
 	for i in *; do \\
-		cp -pr \$\$i \$\$dir; \\
+		cp -pr \$\$i \$\$dir/images; \\
 	done; \\
 	echo "Making \$\$dir/tmp..."; \\
 	mkdir -p \$\$dir/tmp; \\

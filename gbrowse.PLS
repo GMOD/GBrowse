@@ -32,7 +32,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.3 2002-01-11 22:01:43 lstein Exp $
+# $Id: gbrowse.PLS,v 1.4 2002-01-20 20:10:08 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -44,7 +44,7 @@ use Text::Tabs;
 use Text::Shellwords;
 use Carp;
 use CGI qw(:standard escape center *table *dl *TR *td);
-use vars qw($CONFIG %DB $MAX_SEGMENT $DEFAULT_SEGMENT $HEADER $HTML $UA $tabstop);
+use vars qw($CONFIG %DB $MAX_SEGMENT $DEFAULT_SEGMENT $HEADER $HTML $UA);
 
 # if you change the zoom/nav icons, you must change this as well.
 use constant MAG_ICON_HEIGHT => 20;
@@ -70,6 +70,40 @@ use constant DEBUGGING_RECTANGLES => 0;
 use constant CONF_DIR => '/usr/local/apache/conf/gbrowse.conf';
 #
 ###################################################################
+
+# IMPORTANT DATA STRUCTURES
+
+# $SETTINGS (also called $page_settings): hash reference containing state information
+# keys:
+#   name      name of a landmark to search for (e.g. keyword search)
+#   ref       sequence landmark reference ID (once found)
+#   start     start of range relative to ref
+#   stop      stop of range relative to ref
+#   source    symbolic name of database/configuration to use
+#   eurl      array of external URLs to load
+#   id        unique cookie-based ID for this user
+#   track     array ref which has one element for each track on the
+#               display.  The value of each element indicates what
+#               track to display in that position.  For example:
+#               [3,1,2] means display tracks 3, 1, and 2 in that
+#               order.  Tracks are numbered from zero, and default
+#               to their order in the configuration file.  Uploaded feature
+#               data is track N, where N is the number of tracks defined
+#               in the configuration file.  External URL tracks are N+1, N+2,
+#               and so on.
+#   labels    array ref which has one element for each track on the
+#               display.  A true value indicates that the track should
+#               be shown.  (NOTE: this key is poorly named; originally,
+#               the field was an array of track labels)
+#   options   array ref which has one element for each track on the
+#               display.  Values control the display options for the
+#               track, where 0=automatic, 1=force bump, and 2=force bump & label
+
+# $CONFIG
+# This is a global Bio::Graphics::Browser object.  It contains information on
+# all the configuration files for this browser and provides access to the various
+# settings within the configuration file.
+
 
 BEGIN {
     eval "use Apache"; 
@@ -353,14 +387,19 @@ sub get_settings {
 
   if (!$ok || !%settings) {
     %settings = ();
-    @settings{'name','ref','start','stop'} = ('','','','');
-    $settings{width}   = $CONFIG->setting('default width');
-    $settings{source}  = $CONFIG->source;
-    $settings{eurl}    = [];
-    $settings{id}      = md5_hex(rand);  # new identity
-    set_default_tracks(\%settings);
+    default_settings(\%settings);
   }
   \%settings;
+}
+
+sub default_settings {
+  my $settings = shift;
+  @$settings{'name','ref','start','stop'} = ('','','','');
+  $settings->{width}   = $CONFIG->setting('default width');
+  $settings->{source}  = $CONFIG->source;
+  $settings->{eurl}    = [];
+  $settings->{id}      = md5_hex(rand);  # new identity
+  set_default_tracks($settings);
 }
 
 sub set_default_tracks {
@@ -493,8 +532,6 @@ sub zoomBar {
 				-name   => "zoom${i}",
 				-alt    => $altText,
 				-border => ,
-#				-height => ($i+1)*$pixels_per_range,
-#				-width  => MAG_ICON_WIDTH,
 				-title  => $titleText);
   }
 
@@ -525,8 +562,7 @@ sub settings_table {
   my $source   = $CONFIG->source;
   my $self     = url(-relative=>1,-path_info=>1);
   my @dumps    = (['GFF'  ,"$self?dump=GFF;start=$start;stop=$stop;ref=$ref;source=$source"]);
-  unshift @dumps,['FastA',"$self?dump=FastA;start=$start;stop=$stop;ref=$ref;source=$source"]
-    if $CONFIG->setting('fasta_files');
+  unshift @dumps,['FastA',"$self?dump=FastA;start=$start;stop=$stop;ref=$ref;source=$source"];
 
   my $ds        = join(', ', (map{a({-href=>"@$_->[1]"},"@$_->[0]")} @dumps));
 
@@ -764,7 +800,8 @@ sub name2segments {
   my $db   = shift || open_database();
 
   my (@segments,$class,$start,$stop);
-  if ($name =~ /(\w+):([\d,-]+)(?:-|\.\.)?([\d,-]+)$/) {
+  if ($name =~ /([\w._-]+):(-?\d+),(-?\d+)$/ or
+      $name =~ /([\w._-]+):(-?[\d,]+)(?:-|\.\.)?(-?[\d,]+)$/) {
     $name = $1;
     $start = $2;
     $stop = $3;
@@ -906,8 +943,8 @@ sub image_and_map {
   $CONFIG->width($settings->{width});
 
   # get the current track order
-  my $labels = $settings->{labels},
-  my $tracks = $settings->{track};
+  my $labels  = $settings->{labels},
+  my $tracks  = $settings->{track};
   my $options = $settings->{options};
 
   my($image,$map) = $CONFIG->image_and_map($segment,
@@ -1024,8 +1061,7 @@ sub make_centering_map {
   for my $i (0..19) {
     my $x1 = $portion * $i;
     my $x2 = $portion * ($i+1);
-    # put the middle of the sequence range into
-    # the middle of the picture
+    # put the middle of the sequence range into the middle of the picture
     my $middle = $offset + $scale * ($x1+$x2)/2;
     my $start  = int($middle - $ruler->[0]->length/2);
     my $stop   = int($start + $ruler->[0]->length - 1);
@@ -1072,14 +1108,21 @@ sub dump_fasta {
 sub dump_gff {
   my $segment = shift;
   my $page_settings = shift;
-  my $labels = $page_settings->{labels} or return;
+
+  my $selected_labels = $page_settings->{labels} or return;
+  my @labels   = labels($page_settings);
+  my @selected = grep {$selected_labels->[$_]} 0..@labels;
+  @selected = @labels[@selected];
+
   my $date = localtime;
   print "##gff-version 2\n";
   print "##date $date\n";
   print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
 
   my $conf = $CONFIG->config;
-  my @feature_types = map {$conf->label2type($_)} @$labels;
+  my @feature_types = map {$conf->label2type($_)} @selected;
+
+  warn "dumping @feature_types" if DEBUG;
 
   my $iterator = $segment->features(-types=>\@feature_types,-iterator=>1) or return;
   while (my $f = $iterator->next_feature) {
@@ -1426,10 +1469,12 @@ sub bookmark_link {
 sub adjust_tracks {
   my $settings = shift;
 
-  # safety/sanity check for broken cookies
-  unless (ref $settings->{track} eq 'ARRAY' && ref $settings->{labels} eq 'ARRAY') {
-    set_default_tracks($settings);
-    return;
+  # sanity check as a defense against invalid cookies
+  foreach (qw(track options labels)) {
+    unless (ref $settings->{$_} eq 'ARRAY') {
+       set_default_tracks($settings);
+       return;
+    }
   }
 
   my $old_count     = @{$settings->{track}};
@@ -1698,7 +1743,6 @@ sub make_citation_link {
     return $labels->[$label_index];
   }
 }
-
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

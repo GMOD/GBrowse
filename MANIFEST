@@ -4,6 +4,7 @@ INSTALL
 MANIFEST
 Makefile.PL
 README
+README-1.02
 bin/process_gadfly.PLS
 bin/process_sgd.PLS
 bin/process_wormbase.PLS

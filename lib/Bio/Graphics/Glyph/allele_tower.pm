@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::allele_tower;
 
-# $Id: allele_tower.pm,v 1.2 2004-02-18 23:49:24 fc215 Exp $
+# $Id: allele_tower.pm,v 1.3 2004-06-08 20:09:49 lstein Exp $
 # Glyph for drawing each allele found at a SNP position in a column.
 
 use strict;
@@ -34,9 +34,11 @@ sub draw_component {
   # find the center and vertices
   my ($x1,$y1,$x2,$y2) = $self->calculate_boundaries(@_);
 
-  if (my $d = $self->option('alleles')) {
-    my @alleles = split /\//, $d;
+  my $feature = $self->feature;
+  my @alleles = $feature->attributes('Alleles');
+  @alleles    = split /\//,$self->option('alleles') unless @alleles;
 
+  if (@alleles) {
     # If it is on the minus strand
     if (my $strand = $self->option('ref_strand') <0){
       foreach (@alleles) {
@@ -106,17 +108,29 @@ This glyph draws a letter for each allele found at a SNP position, one above the
 
 See also http://www.hapmap.org/cgi-perl/gbrowse/gbrowse 'genotyped SNPs' for an example.
 
-The common options are available (except height which is calculated based on the number of alleles).  In addition, if you give the glyph the minor allele frequency (MAF) and indicate which is the minor allele, the glyph will display these differences.
+The common options are available (except height which is calculated
+based on the number of alleles).  In addition, if you give the glyph
+the minor allele frequency (MAF) and indicate which is the minor
+allele, the glyph will display these differences.
 
 
 =head2 GETTING THE ALLELES
 
-To specify the alleles, load these as an attribute in the last column of the GFF, and then use the  'alleles' option to return the alleles e.g.
+To specify the alleles, create an "Alleles" attribute for the feature.
+There should be two such attributes.  For example, for a T/G
+polymorphism, the GFF load file should look like:
+
+ Chr3  .  SNP   12345 12345 . . . SNP ABC123; Alleles T ; Alleles G
+
+Alternatively, you can pass an "alleles" callback to the appropriate
+section of the config file.  This option should return the two alleles
+in any way it wishes.
 
   alleles = sub {
 	my $snp = shift;
-	return $snp->attributes('Alleles');
-	}
+	my $d   = $snp->attributes('AllelePair');
+	return split m!/!,$d;
+    }
 
 =head2 OPTIONS
 

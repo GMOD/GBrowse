@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.91 2004-06-08 01:26:12 lstein Exp $
+# $Id: gbrowse.PLS,v 1.92 2004-06-08 20:09:45 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -743,7 +743,8 @@ sub adjust_settings {
       param(name => $settings->{name});
     }
 
-  foreach (qw(name source plugin stp ins head ks sk version)) {
+  foreach (qw(name source plugin stp ins head
+              ks sk version h_feat h_type)) {
     $settings->{$_} = param($_) if defined param($_);
   }
   $settings->{name} =~ s/^\s+//; # strip leading
@@ -1322,6 +1323,7 @@ sub features2segments {
 		 -name  => $_->ref,
 		 -start => $_->start,
  		 -stop  => $_->end,
+		 -absolute => 1,
                   defined $version ? (-version => $version) : ())} @$features;
   warn "segments = @segments\n" if DEBUG;
   \@segments;

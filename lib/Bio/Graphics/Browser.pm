@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.144 2004-05-17 04:28:38 lstein Exp $
+# $Id: Browser.pm,v 1.145 2004-06-08 20:09:45 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -912,7 +912,6 @@ sub make_centering_map {
     my $start  = int($middle - $length/2);
     my $stop   = int($start  + $length - 1);
     my $url = "?ref=$ref;start=$start;stop=$stop;nav4=1;plugin=$plugin";
-#    my $url = "?ref=$ref;start=$start;stop=$stop;source=$source;nav4=1;plugin=$plugin";
     $url .= ";flip=1" if $flip;
     push @lines,
       qq(<area shape="rect" coords="$x1,$ruler->[2],$x2,$ruler->[4]" href="$url" title="recenter" alt="recenter" />\n);
@@ -1062,13 +1061,15 @@ sub image_and_map {
 
 
   if (@feature_types) {  # don't do anything unless we have features to fetch!
+
     my $iterator = $segment->get_feature_stream(-type=>\@feature_types);
     warn "feature types = @feature_types\n" if DEBUG;
     my (%groups,%feature_count,%group_pattern);
 
     while (my $feature = $iterator->next_seq) {
 
-      warn "next feature = $feature, type = ",$feature->type,' method = ',$feature->method,"\n" if DEBUG;
+      warn "next feature = $feature, type = ",$feature->type,' method = ',$feature->method,
+	' start = ',$feature->start,' end = ',$feature->end,"\n" if DEBUG;
 
       # allow a single feature to live in multiple tracks
       for my $label ($self->feature2label($feature,$length)) {
@@ -1266,6 +1267,7 @@ sub add_overview_landmarks {
     push @feature_types,@types;
   }
   return unless @feature_types;
+
   my $iterator = $segment->features(-type=>\@feature_types,-iterator=>1,-rare=>1);
 
   my %count;
@@ -1576,7 +1578,6 @@ sub name2segments {
        $_;
      }
    } @segments unless $segments_have_priority;
-
   @segments;
 }
 
@@ -1862,7 +1863,6 @@ sub labels {
   # filter out all configured types that correspond to the overview, overview details
   # plugins, or other name:value types
   my @labels =  grep {
-#    !($_ eq 'TRACK DEFAULTS' || $_ eq 'overview' || /:(\d+|overview|plugin|DETAILS)$/)
     !($_ eq 'TRACK DEFAULTS' || /:(\d+|plugin|DETAILS)$/)
        } $self->configured_types;
   # apply restriction rules

@@ -27,6 +27,7 @@
   [% PROCESS "navigationtable.tt2" %]
 
 
+
 <div class="target" id="target1">
   <h1>[% browser.config.setting('description') %]</h1>
   <!-- FIXME need to fix formatting on string below -->

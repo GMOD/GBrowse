@@ -20,8 +20,8 @@
   <div class="controller" id="controller2">[[% browser.translate( label ) %]]</div>
 
   <!-- FIXME we need a better translation for "hide tracks" instead of just "hide", also uncapitalize tracks -->
-  <div class="controller" id="controller3">[[% browser.translate('hide') %] [% browser.translate('tracks') %]]</div>
-  <div class="controller" id="controller4">[[% browser.translate('hide') %] image]</div>
+  <div class="controller" id="controller3" style="float: left;">[[% browser.translate('hide') %] [% browser.translate('tracks') %]]</div>
+  <div class="controller" id="controller4" style="float: left;">[[% browser.translate('hide') %] image]</div>
 
   [% IF browser.options.name OR browser.options.ref %]
   <div style="text-align: right;">
@@ -35,9 +35,11 @@
   <div class="searchbody">
     [% htmlfrag1 %]
   </div>
-
-  <div class="searchbody" style="float: left; width: 50%;">[% PROCESS "searchbox.tt2" %]</div>
-  <div class="searchbody" style="margin-left: 50%; width: 50%;">[% IF segment %]<b>[% browser.translate('scroll') %]</b><br/>[% PROCESS "slider.tt2" %][% END %]</div>
+&nbsp;
+  <div class="searchbody" style="height: 4em;">
+    <div class="searchbody" style="float: left; width: 50%;">[% PROCESS "searchbox.tt2" %]</div>
+    <div class="searchbody" style="margin-left: 50%; width: 50%;">[% IF segment %]<b>[% browser.translate('scroll') %]</b><br/>[% PROCESS "slider.tt2" %][% END %]</div>
+  </div>
 
 </div>
 
@@ -52,3 +54,4 @@
   <br/>
   <br/>
 </div>
+

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.87 2003-08-27 00:13:28 lstein Exp $
+# $Id: Browser.pm,v 1.88 2003-09-10 17:00:31 markwilkinson Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1259,8 +1259,10 @@ sub name2segments {
   push @argv,(-class => $class) if defined $class;
   push @argv,(-start => $start) if defined $start;
   push @argv,(-end   => $stop)  if defined $stop;
-  @segments = $name =~ /[*?]/ ? $db->get_feature_by_name(@argv) 
-                              : $db->segment(@argv);
+  
+  @segments = $db->get_feature_by_name(@argv);
+  #@segments = $name =~ /[*?]/ ? $db->get_feature_by_name(@argv) 
+  #                            : $db->segment(@argv);
 
   # Here starts the heuristic part.  Try various abbreviations that
   # people tend to use for chromosomal addressing.

@@ -1115,18 +1115,30 @@ sub zoomnav {
     ($start, $stop) = ($center - $range , $center + $range -1);
   }
 
+#=======================================
+  # the functions below no longer work
+  # because the value of $segment_length is not anymore the length
+  # of the reference sequence (as it used to be in earlier versions)
+  # it is now the length of the displayed
+  # segment (i.e. is identical with $selected_span).  Since it is
+  # impossible to scroll without going beyond the boundaries of 
+  # the currently selected span, you always end up triggering this
+  # to put you back exactly where you currently are => scrolling doesn't work.
+  
   # to prevent from going off left end
-  if ($start < 1) {
-    warn "adjusting left because $start < 1" if DEBUG;
-    ($start,$stop) = (1,$stop-$start+1);
-  }
+  #if ($start < 1) {
+  #  warn "adjusting left because $start < 1" if DEBUG;
+  #  ($start,$stop) = (1,$stop-$start+1);
+  #}
 
   # to prevent from going off right end
-  if (defined $segment_length && $stop > $segment_length) {
-    warn "adjusting right because $stop > $segment_length" if DEBUG;
-    ($start,$stop) = ($segment_length-($stop-$start),$segment_length);
-  }
-
+  #if (defined $segment_length && $stop > $segment_length) {
+  #  warn "adjusting right because $stop > $segment_length" if DEBUG;
+  #  ($start,$stop) = ($segment_length-($stop-$start),$segment_length);
+  #}
+#===========================================
+  
+  
   # to prevent divide-by-zero errors when zoomed down to a region < 2 bp
   $stop  = $start + ($span > 4 ? $span - 1 : 4) if $stop <= $start+2;
 

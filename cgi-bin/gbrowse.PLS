@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.80 2004-04-27 21:38:34 lstein Exp $
+# $Id: gbrowse.PLS,v 1.81 2004-05-11 16:52:47 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -237,6 +237,7 @@ if (@segments && $plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper'
   do_plugin_header(param('plugin'),$page_settings);
   do_plugin_dump(param('plugin'),$segments[0],$page_settings) && exit 0
 }
+
 # The ImportFeatures plugin is a dumper plugin but does not require a segment.
 # it will be invoked here if no segment is defined
 elsif ($plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper' &&
@@ -977,7 +978,10 @@ sub tracks_table {
   my @defaults = grep {$settings->{features}{$_}{visible}  } @labels;
 
   autoEscape(0);
-  my $sTable 	= hidden(-name=>'label',-value=>'_',-override=>1);  # dummy, just to keep param() happy.
+  my $sTable 	= $settings->{stp} 
+    ? hidden(-name=>'label',-value=>'_',-override=>1) 
+    : '';  # dummy, just to keep param() happy.
+
   $sTable.= table({-border=>0,-width=>'100%'},
 		  # row
 		  $settings->{stp} ?
@@ -1715,9 +1719,9 @@ sub open_uploaded_file {
 
 sub load_external_sources {
   my ($segments,$page_settings) = @_;
-  
+
   unless ($segments && ref $segments eq 'ARRAY') {
-    $segments = [open_database()->segment($segment)];
+    $segments = [open_database()->segment($segments->[0])];
   }
   elsif ($segments) {
     return if @$segments > 1;

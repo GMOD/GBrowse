@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.139 2004-04-27 21:38:35 lstein Exp $
+# $Id: Browser.pm,v 1.140 2004-05-11 16:52:48 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1455,10 +1455,11 @@ sub _feature_get {
 	    || $fclass eq $class;
   } @segments;
 
-  # consolidate features that have same name and take the largest one
+  # consolidate features that have same name and same reference sequence
+  # and take the largest one.
   my %longest;
   foreach (@filtered) {
-    my $n = $_->display_name;
+    my $n = $_->display_name.$_->abs_ref;
     $longest{$n} = $_ if !defined($longest{$n}) || $_->length > $longest{$n}->length;
   }
   values %longest;

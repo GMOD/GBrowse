@@ -11,6 +11,10 @@
 	segment length was an odd number.
 	* Fixed problem of gbrowse_img consuming all available memory
 	when displaying 3d party features in absolute coordinates.
+	* Fixed problem of only one feature being found during wildcard search
+	and identically-named matches are on different reference sequences.
+	* Fixed problem of track settings disappearing when "update image" is
+	pressed when the track checkboxes are hidden.
 1.61    Wed Mar 17 21:59:16 EST 2004
         * Moved the BioSQL adaptor to 'experimental'.  It is not guaranteed
         to work.

@@ -1,4 +1,4 @@
-# $Id: BasicEditor.pm,v 1.8 2003-10-16 07:29:14 sheldon_mckay Exp $
+# $Id: BasicEditor.pm,v 1.9 2003-10-24 21:13:56 markwilkinson Exp $
 
 =head1 NAME
 
@@ -179,10 +179,11 @@ sub build_form {
         $row .= td( "<input type=checkbox name=$del_name>" ) . "\n";	
 	
 	for my $cell ( @cell  ) {
-            next if ++$cellcount == 1;
-	    $row .= td( textfield( -name  => 'BasicEditor.feature' . $feat_count,
-				   -value => $cell,
-				   -size  => $size{$cellcount} + 1 )) . "\n";
+        next if ++$cellcount == 1;
+        $row .= td( textfield(
+            -name  => 'BasicEditor.feature' . $feat_count,
+            -value => $cell,
+            -size  => $size{$cellcount} + 1 )) . "\n";
 	}
         
         $row .= "</tr>\n";
@@ -214,7 +215,7 @@ sub set_cell_size {
 	for my $c ( @cells ) {
 	    $count++;
 	    my $len = length $c;
-	    $max{$count} = $len if $len > $max{$count};
+	    $max{$count} = $len if ($max{$count} && $len > $max{$count});
 	}
     }
 
@@ -285,10 +286,10 @@ sub gff_builder {
         
         # is it valid gff?
         if ( !$self->check_gff(\@text) ) {
-	    print h1("Error: bad GFF format:"),
-	          b( pre( join "\t", @text ) );
-	    exit;
-	} 
+            print h1("Error: bad GFF format:"),
+            b( pre( join "\t", @text ) );
+    	    exit;
+        }
 
         unshift @text, $self->{ref};
         $gff .= ( join "\t", @text ) . "\n";

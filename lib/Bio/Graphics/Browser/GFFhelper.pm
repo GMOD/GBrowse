@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.11 2003-10-27 15:29:08 sheldon_mckay Exp $
+# $Id: GFFhelper.pm,v 1.12 2003-11-03 17:59:56 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -102,6 +102,8 @@ use strict;
 use Bio::Root::Root;
 use Bio::SeqFeature::Generic;
 use IO::String;
+use Bio::DB::GFF::Homol;
+use Data::Dumper;
 
 use vars qw/ @ISA /;
 
@@ -120,8 +122,8 @@ sub read_gff {
     
     for ( split "\n", $text ) {
 	# save the sequence
-	push @seq, $_ and next if />/ || !/\S\s+\S/;
-	
+	push @seq, $_ and next if /^>/ || !/\S\s+\S/;
+
 	# interpret the header
 	if ( /\#\#sequence-region\s+(\S+)\s+(-?\d+)\s+(-?\d+)/ ) {
 	     $self->refseq($1);
@@ -130,7 +132,7 @@ sub read_gff {
 	}
         
         # save the GFF
-	$gff .= $_ . "\n" if /\S\s+\S/ && !/>|##/;
+	$gff .= $_ . "\n" if /\S\s+\S/ && !/^(>|##)/;
     }
 
     # dump fasta header and assemble the sequence
@@ -146,7 +148,7 @@ sub read_gff {
 }
 
 # Create a list of pseudo Bio::DB::GFF::Feature objects
-# the attributes will be saved as a hash element rather
+# the attributes will be saved as a hash rather
 # than a canned database query
 sub parse_gff {
     my ($self, $gff) = @_;
@@ -160,31 +162,39 @@ sub parse_gff {
 
 sub parse_gff_line {
     my ($self, $gff_line) = @_;
-    $gff_line =~ s/\"//g;
+    my $groupobj;
+    my $seqid = $self->refseq;
     my $db = $self->database;
+    $gff_line =~ s/\"//g;
+
     my ( $ref, $source, $method, $start, $stop, 
          $score, $strand, $phase, $group) = split "\t", $gff_line;
     next unless defined($ref) && defined($method) && defined($start) && defined($stop);
     foreach (\$score,\$strand,\$phase) {
 	undef $$_ if $$_ eq '.';
     }
+    
+    $seqid ||= $ref;
+
     my ($gclass,$gname,$tstart,$tstop,$attributes) = $db->split_group($group);
-  
+    
     # create a group or target object
     if ( $tstart && $tstop ) {
-	$group = Bio::DB::GFF::Segment->new(undef,$gclass,$gname,$tstart,$tstop);
+	$groupobj = FakeHomol->new($gclass,$gname,$tstart,$tstop);
     }
     elsif ( $gname && $gclass ) {
-	$group = Bio::DB::GFF::Featname->new($gclass,$gname);
+	$groupobj = Bio::DB::GFF::Featname->new($gclass,$gname);
     }
 
+
     # create a Bio::DB::GFF::Feature
-    my @args = ( undef, $ref, $start, $stop, $method );
+    my @args = ( undef, $seqid, $start, $stop, $method );
     push @args, ($source, $score, $strand, $phase, undef );
     
     my $f = Bio::DB::GFF::Feature->new(@args);
-    $f->group($group);
-
+    
+    $f->group($groupobj) if $groupobj;
+    
     # save the attributes!
     $f->{attributes} = $attributes;
     $f;
@@ -231,28 +241,41 @@ sub fix_gff {
     
     # add a header if required
     unshift @gff, $self->gff_header(3) if $self->{header};
-    return ( join "\n", @gff ) . "\n";
+    return (join "\n", @gff) . "\n";
 }
 
 sub gff_header {
     my $self  = shift;
-    my $ver   = shift || 2;
+    my $ver   = 3;
     my $date  = localtime;
     my $start = $self->start; 
     my $end   = $self->end;
     my $ref   = $self->refseq;
     my $seq   = $self->seq;
     $start = 1 if $start > 1;
-    $end   = length $seq if $end < length $seq;
+    $end   = (length $seq) + 1 if $end < length $seq;
 
     "##gff-version $ver\n" .
     "##date $date\n" .
     "##sequence-region $ref $start $end\n" .
-    "##source Bio::Graphics::Browser::GFFhelper.pm"; 
+    "##source Bio::Graphics::Browser::GFFhelper.pm";
 }
 
+sub origin {
+    my ($self, $gff) = @_;
+    my $desc  = $self->{desc};
+    my $start = 1;
+    my $end   = length $self->seq;
+    my $ref   = $self->refseq;
+    my $src   = $self->{source};
+    
+    my $group = "ID=Accession:$ref";
+    $group .= ';Note=' . _escape($desc) if $desc;
+    $gff . join ("\t", $ref, $src, 'origin', $start, $end, undef, '.', '.', $group);
+}
 
 # add a reference component for new sequences
+# not currently used, will probably be deprecated
 sub component {
     my ($self, $gff) = @_;
     chomp $gff;
@@ -261,13 +284,16 @@ sub component {
     my $end   = length $seq;
 
     my @row = ($self->refseq, 'reference', 'Component', $start); 
-    push @row, ($end, '.', '.', '.', 'Sequence ' . $self->refseq);
+    push @row, ($end, '.', '.', '.', 'ID=Sequence:' . $self->refseq);
     
-    $gff .= "\n" . join "\t", @row;
+    #$gff .= "\n" . join "\t", @row;
+    my $row = join "\t", @row;
+    my $ref = $self->refseq;
+    $gff =~ s/^($ref.+)/$row\n$1/m;
     $gff;
 }
 
-# convert the feature segemtn into a Bio::SeqFeature::Generic object
+# convert the feature segment into a Bio::SeqFeature::Generic object
 sub gff2Generic {
     my ($self, $f) = @_;
 
@@ -284,11 +310,21 @@ sub gff2Generic {
 
 sub process_attributes {
     my ($self, $f) = @_;
-    my $class = $f->group ? $f->class : ' ';
-    my $name  = $f->group ? $f->name  : ' ';
     my %att = $f->attributes;
-    $att{$class} = $name;
-
+    
+    # handle GFF2.5 targets
+    if ( my $t = $f->target ) {
+	my $tclass = $t->class;
+	my $tname  = $t->name;
+	$att{Target} = "$tclass:$tname";
+	$att{tstart} = $t->start;
+	$att{tend}   = $t->end;
+    }
+    elsif ( $f->group )  {
+	my $class = $f->class;
+	my $name  = $f->name;
+	$att{$class} = $name if $class && $name;
+    }
     for ( keys %att ) { 
 	$att{$_} =~ s/;/,/g;
 	$att{$_} =~ s/\"|\s+$//g;
@@ -357,6 +393,7 @@ sub get_range {
 
 sub save_state {
     my ($self, $segment) = @_;
+    return unless $segment;
     my $conf = $self->configuration;
     my $loc  = $self->{rb_loc};
     my $outfile = $loc . 'rollback_' . time;
@@ -370,7 +407,7 @@ sub save_state {
     print OUT "##$outfile \"$date\" $segment\n";
     for ( $segment->features ) {
 	$_->version(2.5);
-	print OUT $_->gff_string, "\n";
+	print OUT $_->gff_string, "\n" unless $_->method =~ /Component/i;
     }
     close OUT;
     
@@ -460,3 +497,41 @@ sub _escape {
 1;
 
 
+package FakeHomol;
+
+sub new {
+    my $caller = shift;
+    my ( $class, $name, $start, $stop ) = @_;
+    my $self   = { class => $class,
+                   name  => $name,
+	           start => $start,
+                   stop  => $stop };
+    return bless $self;
+}
+
+sub start {
+    my ($self, $start) = @_;
+    $self->{start} ||= $start;
+    $self->{start};
+}
+
+*stop = *end;
+sub end {
+    my ($self, $end) = @_;
+    $self->{stop} ||= $end;
+    $self->{stop};
+}
+
+sub class {
+    my ($self, $class) = @_;
+    $self->{class} ||= $class;
+    $self->{class};
+}
+
+sub name {
+    my ($self, $name) = @_;
+    $self->{name} ||= $name;
+    $self->{name};
+}
+
+1;

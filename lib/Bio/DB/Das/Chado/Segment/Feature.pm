@@ -736,4 +736,33 @@ sub attributes {
 *id  = \&group;
 sub class     {return shift->{type} }
 
+sub synonyms {
+  #returns an array with synonyms
+  my $self = shift;
+  my $dbh = $self->{factory}->{dbh};
+                                                                                
+$self->{factory}->{dbh}->trace(1);
+                                                                                
+  my $sth = $dbh->prepare("
+    select s.name from synonym s, feature_synonym fs
+    where ? = fs.feature_id and
+          fs.synonym_id = s.synonym_id
+  ");
+  $sth->execute($self->{feature_id}) or $self->throw("synonym query failed");
+                                                                                
+$self->{factory}->{dbh}->trace(0);
+ 
+  my $name = $self->display_name;
+  my @synonyms;
+  while (my $hashref = $sth->fetchrow_hashref) {
+   # warn "stuff:$$hashref{name}\n";
+    push @synonyms, $$hashref{name} if ($$hashref{name} ne $name);
+  }
+
+ # warn "syns:@synonyms\n";
+                                                
+  return @synonyms;
+}
+
+
 1;

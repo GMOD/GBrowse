@@ -1,6 +1,7 @@
 #!perl
 use Config;
 use File::Basename qw(&basename &dirname);
+use File::Spec;
 use FindBin '$Bin';
 use Cwd;
 
@@ -15,9 +16,8 @@ if (open F,"$Bin/GGB.def") {
 }
 $OPTIONS{CONF} ||= '/usr/local/apache/conf';
 
-$origdir = cwd;
-chdir dirname($0);
-$file = shift || basename($0, '.PL','.PLS');
+my $dir = dirname($0);
+$file   = shift || File::Spec->catfile($dir,basename($0, '.PL','.PLS'));
 
 open OUT,">$file" or die "Can't create $file: $!";
 
@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.1 2003-06-08 18:49:48 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.2 2003-06-08 21:01:43 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR);
@@ -246,4 +246,3 @@ sub position {
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
 exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
-chdir $origdir;

@@ -2,7 +2,7 @@ use ExtUtils::MakeMaker;
 use FindBin '$Bin';
 require 5.005003;
 
-my $VERSION = '1.51';
+my $VERSION = '1.52';
 
 my @OPTIONS = qw(PREFIX CONF HTDOCS CGIBIN DO_XS);
 my $OPTIONS = join ('|',@OPTIONS);
@@ -101,8 +101,7 @@ WriteMakefile(
 	      'NAME'	     => 'Generic-Genome-Browser',
 	      'VERSION'      => $VERSION,
 	      'PREREQ_PM'    => {
-				 Bio::Graphics => 0.92,
-				 Bio::DB::GFF  => 1.01,
+				 Bio::Perl     => 1.3,
 				 GD            => 0,
 				 IO::String    => 0,
 				 Text::Shellwords  => 1.0,
@@ -112,6 +111,7 @@ WriteMakefile(
 				 'bin/process_gadfly.PLS' => 'bin/process_gadfly.pl',
 				 'bin/process_wormbase.PLS' => 'bin/process_wormbase.pl',
 				 'bin/process_ncbi_human.PLS' => 'bin/process_ncbi_human.pl',
+				 'install_util/gbrowse_ppm_install.PLS' => 'install_util/gbrowse_ppm_install.pl',
 				 'cgi-bin/gbrowse.PLS'  => 'cgi-bin/gbrowse',
 				 'cgi-bin/gbrowse_syn.PLS'  => 'cgi-bin/gbrowse_syn',
 				 'cgi-bin/gbrowse_img.PLS'  => 'cgi-bin/gbrowse_img',
@@ -189,9 +189,17 @@ cgi_install :: gbrowse
 
 sub MY::ppd {
   package MY;
+  my $repository = 'http://stein.cshl.org/ppm';
   my $inherited = shift->SUPER::ppd(@_);
   $inherited .= <<END;
-	-tar cvf support_files.tar.gz --exclude CVS htdocs conf cgi-bin install_util
+
+	\@echo "creating Generic-Genome-Browser.ppd"
+	\@echo "creating gbrowse_ppm_support_files-$VERSION.tar.gz"
+	\@\$(TAR) cf gbrowse_ppm_support_files-$VERSION.tar.gz --exclude CVS --exclude '*~' --exclude '*.PLS' --exclude '.*' --exclude README --exclude '#*' htdocs conf cgi-bin install_util
+	\@echo "creating gbrowse_ppm-$VERSION.tar.gz"
+	\@\$(TAR) cf gbrowse_ppm-$VERSION.tar.gz blib
+	\@perl -pi -e 's!HREF=""!HREF="$repository/gbrowse_ppm-$VERSION.tar.gz"!' Generic-Genome-Browser.ppd
+	\@perl -pi -e 's!(\\s*</IMPLEMENTATION>)!\\t\\t<INSTALL HREF="$repository/gbrowse_ppm_install.pl" EXEC="PPM_PERL" />\\n\\1!' Generic-Genome-Browser.ppd
 END
 ;
 }

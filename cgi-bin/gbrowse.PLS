@@ -1,11 +1,12 @@
 #!perl
 use Config;
 use File::Basename qw(&basename &dirname);
+use File::Spec;
 use FindBin '$Bin';
 use Cwd;
 
 my %OPTIONS;
-if (open F,"$Bin/GGB.def") {
+if (open F,"$Bin/../GGB.def") {
   while (<F>) {
     next if /^\#/;
     chomp;
@@ -15,9 +16,8 @@ if (open F,"$Bin/GGB.def") {
 }
 $OPTIONS{CONF} ||= '/usr/local/apache/conf';
 
-$origdir = cwd;
-chdir dirname($0);
-$file = shift || basename($0, '.PL','.PLS');
+my $dir = dirname($0);
+$file   = shift || File::Spec->catfile($dir,basename($0, '.PL','.PLS'));
 
 open OUT,">$file" or die "Can't create $file: $!";
 
@@ -45,7 +45,7 @@ $startperl -w
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.1 2003-06-08 18:49:48 lstein Exp $
+# $Id: gbrowse.PLS,v 1.2 2003-06-08 21:01:42 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2338,4 +2338,3 @@ sub tableize {
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
 exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
-chdir $origdir;

@@ -1,6 +1,7 @@
 #!perl
 use Config;
 use File::Basename qw(&basename &dirname);
+use File::Spec;
 use FindBin '$Bin';
 use Cwd;
 
@@ -15,9 +16,8 @@ if (open F,"$Bin/GGB.def") {
 }
 $OPTIONS{CONF} ||= '/usr/local/apache/conf';
 
-$origdir = cwd;
-chdir dirname($0);
-$file = shift || basename($0, '.PL','.PLS');
+my $dir = dirname($0);
+$file   = shift || File::Spec->catfile($dir,basename($0, '.PL','.PLS'));
 
 open OUT,">$file" or die "Can't create $file: $!";
 
@@ -97,4 +97,3 @@ sub make_cookie {
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
 exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
-chdir $origdir;

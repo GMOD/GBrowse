@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.123 2005-01-17 04:33:22 allenday Exp $
+# $Id: gbrowse.PLS,v 1.124 2005-01-20 06:04:26 allenday Exp $
 
 use strict;
 use Bio::Graphics;
@@ -207,9 +207,6 @@ sub main_display($$) {
     prevname   => scalar(param('name')),
     finezoom   => get_zoomincrement(),
 
-    toggle_instructions => defined(param('toggle_instructions')) ? param('toggle_instructions') : 1,
-
-
 #FIXME    multiple_segments => multiple_choices($features),
     detailpanel      => detail_panel_with_timeout($segment,$feature_files),
   };
@@ -251,10 +248,12 @@ sub detail_panel_with_timeout {
     };
     alarm(0);
     if ($@ =~ /^timeout/) {
-      return p(b(font({-size=>'+2'},$BROWSER->translate('TIMEOUT'))));
+return "A";
+#FIXME return p(b(font({-size=>'+2'},$BROWSER->translate('TIMEOUT'))));
     } else {
       return $data;
     }
+return "C";
 }
 
 sub detail_panel($$) {
@@ -270,9 +269,19 @@ sub detail_panel($$) {
     # this is invoked to force small segments to be larger than the minimum size that can
     # easily be displayed.  Avoids zooming into 1 bp features like SNPs.
     resize(\$segment);
-    $BROWSER->config->width($BROWSER->options->{width});
+
+    if($BROWSER->options->{width}){
+      $BROWSER->config->width($BROWSER->options->{width});
+    }
+
     my @tracks_to_show = grep {$BROWSER->options->{features}{$_}{visible} && !/:overview$/ }
-                               @{$BROWSER->options->{tracks}};
+      @{$BROWSER->options->{tracks}};
+
+#warn Dumper($BROWSER->options->{tracks});
+#warn Dumper($BROWSER->options->{features});
+@tracks_to_show = @{ $BROWSER->options->{tracks} };
+warn Dumper(\@tracks_to_show);
+
     my %options = map {$_=>$BROWSER->options->{features}{$_}{options}} @tracks_to_show;
     my %limit   = map {$_=>$BROWSER->options->{features}{$_}{limit}}   @tracks_to_show;
     my $h_callback = make_hilite_callback();
@@ -289,22 +298,23 @@ sub detail_panel($$) {
 				       flip          => $BROWSER->options->flip(),
 				       hilite_callback => $h_callback,
 				      );
+return $img;
     $cell .= $img;
   }
 
-  else {
-    $cell .= i($BROWSER->translate('TOO_BIG',unit_label($MAX_SEGMENT),unit_label($DEFAULT_SEGMENT)));
-  }
-  $cell .= "\n";
-  my $table = table({-border=>0,-width=>'100%'},
-		    TR({-class=>'databody'},
-		       td({-align=>'center'},$cell)
-		      )
-		   );
-  $table .= "\n";
-  $table .= $map if $map;
-  $table .= join '',hidden('ref'),hidden('start'),hidden('stop');
-  return $table;
+#  else {
+#    $cell .= i($BROWSER->translate('TOO_BIG',unit_label($MAX_SEGMENT),unit_label($DEFAULT_SEGMENT)));
+#  }
+#  $cell .= "\n";
+#  my $table = table({-border=>0,-width=>'100%'},
+#		    TR({-class=>'databody'},
+#		       td({-align=>'center'},$cell)
+#		      )
+#		   );
+#  $table .= "\n";
+#  $table .= $map if $map;
+#  $table .= join '',hidden('ref'),hidden('start'),hidden('stop');
+#  return $table;
 }
 
 ###############################################################################################
@@ -1747,7 +1757,8 @@ sub make_citation_link {
   my @args = (-href=>$link,-target=>'citation');
   push @args,-style=>'Font-style: italic' if $label =~ /^(http|ftp|file):/;
   push @args,-style=>"background: $overview_color" if $label =~ /:overview$/;
-  return a({@args},$key);
+#FIXME return a({@args},$key);
+  return qq(<a href="$link" target="citation">$key</a>);
 }
 
 sub label2key {
@@ -2111,12 +2122,14 @@ sub main {
   warn "ADJUSTED TRACKS = ".$BROWSER->options->tracks() if DEBUG;
 
   ## UPDATING THE PERSISTENT SETTINGS##############################################################
-  #FIXMEmy $cookies = settings2cookie(); #FIXME moved to GBrowse_run
+  my $cookies = $BROWSER->cookie(); #settings2cookie(); #FIXME moved to GBrowse_run
+
+  #warn Dumper($cookies);
   #FIXMEpush @$cookies,plugins2cookies($PLUGINS);
-  #FIXME
-  #FIXMEprint_header(-cookie => $cookies,
-  #FIXME             -charset=>$BROWSER->translate('CHARSET'),
-  #FIXME            );
+
+  print_header(-cookie => $cookies,
+               -charset=>$BROWSER->translate('CHARSET'),
+              );
 
   if (request_method eq 'HEAD') {exit 0}
 
@@ -2176,7 +2189,7 @@ sub main {
   else {
     my $header = $BROWSER->config->header;
     if ($BROWSER->options->head()) {
-      print $header ? $header : h1($description);
+#FIXME      print $header ? $header : h1($description);
     }
     main_display($segments,$features);
   }

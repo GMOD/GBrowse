@@ -1,4 +1,4 @@
-# $Id: Type.pm,v 1.1.2.1 2004-09-18 05:41:15 allenday Exp $
+# $Id: Type.pm,v 1.1.2.2 2004-10-06 05:46:32 allenday Exp $
 #
 # BioPerl module for Bio::DB::Das::Chado::Type
 #
@@ -280,5 +280,23 @@ sub cvterm_id{
     return $self->{'cvterm_id'};
 }
 
+=head2 ontology
+
+ Title   : ontology
+ Usage   : $obj->ontology($newval)
+ Function: PK for this object in cvterm table
+ Example : 
+ Returns : value of ontology (a scalar)
+ Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub ontology{
+    my $self = shift;
+
+    return $self->{'ontology'} = shift if @_;
+    return $self->{'ontology'};
+}
 
 1;

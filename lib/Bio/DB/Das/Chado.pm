@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.62.2.1 2004-09-18 05:41:15 allenday Exp $
+# $Id: Chado.pm,v 1.62.2.2 2004-10-06 05:46:32 allenday Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -401,8 +401,8 @@ reference) in which the keys are the stringified versions of
 Bio::Das::FeatureTypeI and the values are the number of times each
 feature appears in the database.
 
-NOTE: This currently raises a "not-implemented" exception, as the
-BioSQL API does not appear to provide this functionality.
+NONO NOTE: This currently raises a "not-implemented" exception, as the
+NONO BioSQL API does not appear to provide this functionality.
 
 =cut
 
@@ -416,6 +416,43 @@ sub types {
   }
 
 
+  #FIXME this code is almost identical to that in map2type.  we need a refactor here
+  if(!$self->{'types'}){
+    my $dbh = $self->dbh();
+
+    my $cvterm_query = qq(
+    SELECT c.*, dbxref.accession
+      FROM
+        (SELECT cv.name AS cv, cvterm.name AS term, cvterm.definition AS definition, cvterm.dbxref_id
+          FROM
+            cv, cvterm
+          WHERE
+            cvterm.cv_id = cv.cv_id
+              AND
+            cv.name IN ('Sequence Ontology','Relationship Ontology')
+        ) AS c
+      LEFT JOIN
+        dbxref
+      ON
+        (c.dbxref_id = dbxref.dbxref_id)
+      ORDER BY cv,term
+    );
+
+    my $sth = $dbh->prepare($cvterm_query) or warn "unable to prepare select cvterms";
+    $sth->execute or $self->throw("unable to select cvterms");
+
+    while (my $row = $sth->fetchrow_hashref) {
+      my $type = Bio::DB::Das::Chado::Type->new();
+      $type->name( $row->{'term'} );
+      $type->definition( $row->{'definition'} );
+      $type->accession( $row->{'accession'} );
+      $type->ontology( $row->{'cv'} );
+
+      push @{ $self->{'types'} }, $type;
+    }
+  }
+
+  return @{ $self->{'types'} };
 }
 
 =head2 get_feature_by_name

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.22 2003-02-26 20:47:29 scottcain Exp $
+# $Id: Segment.pm,v 1.23 2003-02-28 15:38:20 scottcain Exp $
 
 =head1 NAME
 
@@ -291,7 +291,7 @@ sub length { shift->{length} }
  Status  : Public
 
 Note: There is a hack in this method to increase speed that may or 
-may not work well with a give instance of postgres/chado.  For the
+may not work well with a given instance of postgres/chado.  For the
 query to find features, Seq Scans (same as Table Scans in some other
 database) have been disabled, in order to force the use of an index.
 

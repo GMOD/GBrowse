@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.102 2003-11-21 22:53:48 tharris Exp $
+# $Id: Browser.pm,v 1.103 2003-11-23 12:50:49 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -866,6 +866,7 @@ sub image_and_map {
   }
   my @argv = (-start     => $seg_start,
 	      -end       => $seg_stop,
+	      -stop      => $seg_stop,  #backward compatibility with old bioperl
 	      -width     => $width,
 	      -key_color => $self->setting('key bgcolor')     || 'moccasin',
 	      -bgcolor   => $self->setting('detail bgcolor')  || 'white',
@@ -879,6 +880,7 @@ sub image_and_map {
   push @argv, -flip => 1 if $flip;
 
   my $panel = Bio::Graphics::Panel->new(@argv);
+
   $panel->add_track($segment   => 'arrow',
 		    -double    => 1,
 		    -tick      => 2,
@@ -1061,6 +1063,7 @@ sub overview {
   my $class   = eval {$partial_segment->seq_id->class} || $factory->refclass;
   my ($segment) = $factory->segment(-class=>$class,
 				    -name=>$partial_segment->seq_id);
+  warn "factory = $factory, segment = $segment";
   $segment   ||= $partial_segment;  # paranoia
 
   # Temporary kludge until I can figure out a more
@@ -1353,9 +1356,9 @@ sub name2segments {
     $max_length = $_->length if defined $_->length && $_->length > $max_length;
   }
   if (@segments > 1 || $max_length > $max_segment) {
-    my @s     = $db->fetch_feature_by_name(-class => $segments[0]->class,
-					   -name  => $segments[0]->seq_id,
-					   -automerge=>0);
+    my @s     = $db->get_feature_by_name(-class => $segments[0]->class,
+					 -name  => $segments[0]->seq_id,
+					 -automerge=>0);
     @segments     = $self->merge($db,\@s,($self->get_ranges())[-1])
       if @s > 1 && @s < TOO_MANY_SEGMENTS;
   }

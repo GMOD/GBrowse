@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.40 2003-10-06 16:04:06 lstein Exp $
+# $Id: gbrowse.PLS,v 1.41 2003-10-07 06:21:34 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -207,6 +207,11 @@ if ($plugin_action eq $CONFIG->tr('Find') && param('plugin')) {
   do_plugin_autofind($page_settings,\@segments) unless @segments;  # last resort
 }
 
+# tell the plugins which segments are in play
+for my $k ( keys %$PLUGINS ) {
+    $PLUGINS->{$k}->segments( \@segments );
+}
+
 
 ###############################################################################################
 
@@ -314,9 +319,9 @@ elsif ($plugin_action eq $CONFIG->tr('About')) {
 
 ## HANDLE PLUGIN CONFIGURATION####################################################
 elsif ($plugin_action eq $CONFIG->tr('Configure')) {
-  do_plugin_configure(param('plugin'),\@segments);
+  do_plugin_configure(param('plugin'));
 } elsif ($plugin_action eq $CONFIG->tr('Go') && $plugin_type=~/^(finder|annotator|highlighter)$/i) {
-  do_plugin_configure(param('plugin'),\@segments);
+  do_plugin_configure(param('plugin'));
 }
 
 ## MAIN DISPLAY
@@ -2270,20 +2275,18 @@ sub plugin_menu {
   for ( keys %{$plugins} ) {
     
     # plugin-defined verb
-    if ( $plugins->{$_}->can('verb') ) {
+    if ( $plugins->{$_}->verb ) {
       $labels{$_} = $CONFIG->tr($plugins->{$_}->verb) ||
         ucfirst $plugins->{$_}->verb;
     }
-    
     # default verb
     else {
       $labels{$_} = $verbs{$plugins->{$_}->type} ||
         $plugins->{$_}->type;
     }
-
-    $labels{$_} .= $labels{$_} ? ' ' : '';
-    $labels{$_} .= $plugins->{$_}->name;
-  }
+    $labels{$_} .= ' ' . $plugins->{$_}->name;
+    $labels{$_} =~ s/^\s+//;
+}
 
 
   my @plugins = sort {$labels{$a} cmp $labels{$b}} keys %labels;
@@ -2369,8 +2372,6 @@ sub do_plugin_find {
 
 sub do_plugin_configure {
   my $plugin   = shift;
-  my $segments  = shift;
-
   my $p = $PLUGINS->{$plugin} or return;
   my $type = $p->type;
   my @action_labels = ($CONFIG->tr('Cancel'),$CONFIG->tr('Configure_plugin'));
@@ -2379,7 +2380,7 @@ sub do_plugin_configure {
   my @buttons = map {submit(-name=>'plugin_action',-value=>$_)} @action_labels;
 
   print h1($p->type eq 'finder' ? $CONFIG->tr('Find') : $CONFIG->tr('Configure'),$p->name);
-  my $config_html = $p->configure_form($segments->[0]);
+  my $config_html = $p->configure_form;
 
   print start_multipart_form(),
     $config_html ? (

@@ -30,7 +30,7 @@ already.
 	Digest::MD5
 	Text::Shellwords
 
-  F) Bioperl version 1.02 or higher -- http://www.bioperl.org
+  F) Bioperl version 1.2 or higher -- http://www.bioperl.org
 
 Optional modules:
 
@@ -276,9 +276,23 @@ browser to dump the DNA from the region currently under display.
 
 7. MAKING THE BROWSER RUN FASTER
 
-If you have mod_perl (http://perl.apache.org), you can install the
-gbrowse script as an Apache::Registry script.  This will increase the
-performance of the script noticeably.  
+Three factors are major contributors to the length of time it takes to
+load a gbrowse page:
+
+  1) loading the Perl interpreter and parsing BioPerl and all the 
+     other Perl libraries that gbrowse uses.
+
+  2) query speed on the database
+
+  3) the conversion at the Perl layer of database data into BioPerl
+  objects for rendering.
+
+To improve (1), I recommend that you install the mod_perl module for
+Apache. (http://perl.apache.org).  By configuring an Apache::Registry
+directory and placing gbrowse inside it (rather than in the default
+cgi-bin directory). The overhead for loading Perl and its libraries
+are eliminated, thereby increasing the performance of the script
+noticeably.
 
 Be aware that there is a bad interaction between the Apache::DBI
 module (often used to speed up database accesses) and Bio::DB::GFF.
@@ -287,6 +301,25 @@ does not need Apache::DBI to achieve performance increases under
 mod_perl and it is suggested that you disable Apache::DBI.  If you
 cannot do this, then you should remove the file GFFDumper.pm from the
 gbrowse.conf/plugins directory.
+
+Database query performance (2) is also a major factor.  If you are
+using MySQL as the backend, you will see dramatic performance
+increases by increasing the amount of memory available to the key
+buffer, sort buffer, table cache and other in-memory data structures.
+I suggest that you replace the default MySQL configuration file
+(usually stored in /etc/my.cnf) with one of the large-memory sample
+configuration files provided in the support-files subdirectory of the
+MySQL distribution.  Of course, if you tell MySQL to use more memory
+than you have, then performance will degrade again.
+
+Finally, there is a slowdown when gbrowse converts the results of
+database SQL queries into renderable biological objects.  This becomes
+particularly noticeable when there are lots of multi-segment objects
+to be displayed.  You can work around this slowdown by using semantic
+zooming (see docs/CONFIGURE_HOWTO.txt).  Otherwise, there's not much
+that can be done about this short of buying a faster machine.
+The GMOD team is working hard to reduce this performance hit.
+
 
 8. MAKING THE BROWSER RUN SAFER
 
@@ -320,47 +353,7 @@ This will affect all mod_perl scripts globally.
 Some of GBrowse's advanced features (the use of histograms in semantic
 zooming; labeling of the tracks in the overview) require features of
 the Bioperl Bio::Graphics and Bio::DB::GFF libraries that are only
-available in Bioperl version 1.1. At the time this was written
-(August, 2002), version 1.1 was still in development and was expected
-to be released in the fall of 2002. Should version 1.1 not be
-available at the time you read this, there are two ways to obtain it:
-
-  a. The Patch method
-
-  This distribution contains a patch file named "bioperl-102-1.1.patch"
-  located in the "extras" subdirectory. Applying it to a virgin
-  Bioperl-1.0.2 distribution will generate a version that contains the
-  changes needed to run the advanced features.
-  
-  The steps to follow are these:
-
-  a1. unpack bioperl-1.0.2.tar.gz
-      gunzip -c bioperl-1.0.2.tar.gz | tar xvf -
-
-  a2. enter bioperl-1.0.2
-      cd bioperl-1.0.2
-
-  a3. apply the patch
-      patch -p1 < ../Generic-Genome-Browser-1.46/extras/bioperl-102-1.1.patch
-
-  Modify the last command to point to the actual location of the patch
-  file.  Note that this will give you a version of Bioperl that includes
-  the changes required to run GBrowse, but will not include any experimental
-  features affecting other parts of the Bioperl distribution.
-
-  b. By anonymous CVS.  
-
-  You can get the most recent version of Bioperl using anonymous CVS.
-  Here is the incantation:
-
-   cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl \
-	  checkout bioperl-live
-
-   When prompted, the password is "cvs".  For more details, see
-   http://cvs.bioperl.org.  This will give you the entire development
-   version of Bioperl, including incomplete or experimental features.  
-   While the core features of Bioperl are quite stable, there is no 
-   guarantee that the experimental features will work as advertised.
+available in Bioperl version 1.2.
 
 9. THE GBROWSE_IMG SCRIPT
 

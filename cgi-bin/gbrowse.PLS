@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.90 2004-06-08 01:21:25 lstein Exp $
+# $Id: gbrowse.PLS,v 1.91 2004-06-08 01:26:12 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1569,7 +1569,7 @@ sub overview {
   return unless $segment;
   $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
 
-  my ($image,$length) = $CONFIG->overview($segment,$page_settings->{features}) or return;
+  my ($image,$length) = $CONFIG->overview($segment,$settings->{features}) or return;
   my ($width,$height) = $image->getBounds;
   my $url             = $CONFIG->generate_image($image);
   return image_button(-name=>'overview',

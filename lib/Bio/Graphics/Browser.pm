@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.133 2004-03-19 14:36:18 lstein Exp $
+# $Id: Browser.pm,v 1.134 2004-03-30 15:41:18 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1382,10 +1382,13 @@ sub name2segments {
 
   # do a split/merge operation to handle very large features
   @segments = map {
-    return $_ if $_->length <= $max_segment;
-    my @subtypes = $_->get_SeqFeatures;
-    return $_ unless @subtypes;
-    return $self->merge($db,\@subtypes,($self->get_ranges())[-1]);
+    if ($_->length <= $max_segment) {
+      $_;
+    } elsif (my @subtypes = $_->get_SeqFeatures) {
+      $self->merge($db,\@subtypes,($self->get_ranges())[-1]);
+    } else {
+      $_;
+    }
   } @segments;
 
   # expand by a bit if padding is requested
@@ -1432,8 +1435,13 @@ sub _feature_get {
 	    || $fclass eq $class;
   } @segments;
 
-  # Return appropriately filtered features
-  return @filtered;
+  # consolidate features that have same name and take the largest one
+  my %longest;
+  foreach (@filtered) {
+    my $n = $_->display_name;
+    $longest{$n} = $_ if !defined($longest{$n}) || $_->length > $longest{$n}->length;
+  }
+  values %longest;
 }
 
 sub get_ranges {

@@ -225,7 +225,11 @@ while (<>) {
   } else {
     ($ref,$source,$method,$start,$stop,$score,$strand,$phase,$group) = split "\t";
   }
-  next unless defined $ref;
+
+  if (length ($ref) == 0) {
+    warn "\$ref is null.  source = $source, method = $method, group = $group\n";
+    next;
+  }
   $FEATURES++;
 
   $source = '\N' unless defined $source;

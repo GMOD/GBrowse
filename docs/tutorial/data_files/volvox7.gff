@@ -1,13 +1,21 @@
-ctgA	example	Sequence	27046	35831	.	+	.	Transcript abc-1 ; Note "Example gene"
-ctgA	example	UTR	27046	27250	.	+	.	Transcript abc-1
-ctgA	example	CDS	27251	27396	.	+	.	Transcript abc-1
-ctgA	example	CDS	27772	27917	.	+	.	Transcript abc-1
-ctgA	example	CDS	28311	28448	.	+	.	Transcript abc-1
-ctgA	example	CDS	28851	28999	.	+	.	Transcript abc-1
-ctgA	example	CDS	29134	29298	.	+	.	Transcript abc-1
-ctgA	example	CDS	29514	29890	.	+	.	Transcript abc-1
-ctgA	example	CDS	29980	29990	.	+	.	Transcript abc-1
-ctgA	example	CDS	30138	30377	.	+	.	Transcript abc-1
-ctgA	example	CDS	30548	30602	.	+	.	Transcript abc-1
-ctgA	example	CDS	30823	31267	.	+	.	Transcript abc-1
-ctgA	example	UTR	31268	35831	.	+	.	Transcript abc-1
+ctgA	est	match	1050	3202	.	+	.	EST agt830.5
+ctgA	est	HSP	1050	1500	.	+	.	EST agt830.5
+ctgA	est	HSP	3000	3202	.	+	.	EST agt830.5
+
+ctgA	est	match	5410	7503	.	-	.	EST agt830.3
+ctgA	est	HSP	5410	5500	.	-	.	EST agt830.3
+ctgA	est	HSP	7000	7503	.	-	.	EST agt830.3
+
+ctgA	est	match	1050	7200	.	+	.	EST agt221.5
+ctgA	est	HSP	1050	1500	.	+	.	EST agt221.5
+ctgA	est	HSP	5000	5500	.	+	.	EST agt221.5
+ctgA	est	HSP	7000	7300	.	+	.	EST agt221.5	
+ctgA	est	match	7500	8000	.	-	.	EST agt221.3
+ctgA	est	HSP	7500	8000	.	-	.	EST agt221.3
+
+ctgA	est	match	1150	7200	.	+	.	EST agt767.5
+ctgA	est	HSP	1150	1500	.	+	.	EST agt767.5
+ctgA	est	HSP	5000	5500	.	+	.	EST agt767.5
+ctgA	est	HSP	7000	7200	.	+	.	EST agt767.5	
+ctgA	est	match	8000	9000	.	-	.	EST agt767.3
+ctgA	est	HSP	8000	9000	.	-	.	EST agt767.3

@@ -1,6 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 <html> <head>
 <title>GBrowse Tutorial</title>
+<link rel="stylesheet" href="tutorial.css">
 </head>
 
 <body>
@@ -9,6 +10,7 @@
 <h2>Author: Lincoln Stein, June 16, 2003</h2>
 
 <p>
+
 This is a quick tutorial to take you through the main features and
 gotchas of gbrowse.  This tutorial assumes that you have successfully
 setup MySQL, Perl, GD, BioPerl and the other gbrowse dependencies, and
@@ -21,18 +23,30 @@ We will be working with simulated Volvox genome annotation data.  The
 database will be named "volvox" and gbrowse will be invoked with this
 URL:
 
-<blockquote><pre>http://your.host/cgi-bin/gbrowse?source=volvox</pre></blockquote>
+<blockquote
+class="example"><pre>http://your.host/cgi-bin/gbrowse?source=volvox</pre></blockquote>
+
+<p>
+
+These directories contain data files used during the tutorial:
+
+<dl>
+  <dt><a href="data_files/">data_files</a>
+  <dd>DNA and features files to load into the local database.
+      <p>
+  <dt><a href="conf_files/">conf_files</a>
+  <dd>Gbrowse configuration files for you to take and modify.
+</dl>
 
 <h2><a name="basics">1. The Basics</a></h2>
 
 <p>
 
-
 The first step is to set up a new database named "volvox."  Using the
 mysql tool, create the database, grant yourself read/write privileges,
 and grant the "nobody" user read privileges:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 % <b>mysqladmin -uroot -p create volvox</b>
 Enter password: *********
 
@@ -57,14 +71,15 @@ output of programs is rendered in normal text.)
 
 <p>
 
-In the "data_files" subdirectory of this tutorial you will find the
-file volvox1.gff.  Load this file into the newly-created database
-using the <i>bp_load_gff.pl</i> tool; the <b>-d</b> switch sets the
-database to "volvox", and the <b>-c</b> switch tells the loader to
-reinitialize (create) the database, overwriting whatever was there
-before.
+In the <a href="data_files/">data_files</a> subdirectory of this
+tutorial you will find the file <a
+href="data_files/volvox1.gff">volvox1.gff</a>.  Load this file into
+the newly-created database using the <i>bp_load_gff.pl</i> tool; the
+<b>-d</b> switch sets the database to "volvox", and the <b>-c</b>
+switch tells the loader to reinitialize (create) the database,
+overwriting whatever was there before.
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 % <b>bp_load_gff.pl -d volvox -c volvox1.gff </b>
 volvox1.gff: loading...
 volvox1.gff: 16 records loaded
@@ -75,7 +90,7 @@ volvox1.gff: 16 records loaded
 If you look at the contents of this file, you will see that it
 contains a series of 15 simulated features that look like this:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 ctgA   example   contig       1      50000   .   .   .   Contig ctgA
 ctgA   example   my_feature   1659   1984    .   +   .   My_feature f07
 ctgA   example   my_feature   3014   6130    .   +   .   My_feature f06
@@ -97,7 +112,8 @@ in more detail later.
 
 Now we will need a gbrowse config file to tell gbrowse how to render
 this data set.  In the subdirectory conf_files/, you will find a
-sample configuration file named "volvox1.conf."  Copy this into your
+sample configuration file named <a
+href="conf_files/volvox1.conf">volvox1.conf</a>.  Copy this into your
 gbrowse configuration directory
 (e.g. /usr/local/apache/conf/gbrowse.conf on Unix systems, C:\Program
 Files\Apache Group\Apache2\conf\gbrowse.conf on Windows systems).  If
@@ -106,7 +122,7 @@ you didn't follow the tutorial instructions to the letter!) you will
 need to customize this config file by adding the appropriate password
 to the line that reads:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 pass    =    *put password here*
 </pre></blockquote>
 
@@ -143,8 +159,7 @@ The 9 columns are as follows:
       coordinate system for the annotation.  This is usually the name of
       a chromosome, a clone, or a contig.  In our example, the
       reference sequence is "ctgA".  A single GFF file can refer to
-      multiple reference sequences, but each named feature must be located
-      on one reference sequence only!</li><br>
+      multiple reference sequences.</li><br>
   <li><b>source</b><br>
       The source of the annotation.  This field describes how the
       feature was derived.  In the example, the source is
@@ -228,7 +243,9 @@ The 9 columns are as follows:
 Now we'll look at the configuration file in more detail.  Using a text
 editor, open the volvox.conf file from its location in the
 gbrowse.conf configuraton directory.  (If you mess up, you can always
-copy a fresh version from volvox1.conf in the tutorial directory).
+copy a fresh version from <a
+href="conf_files/volvox1.conf">volvox1.conf</a> in the tutorial
+directory).
 
 <p>
 
@@ -236,7 +253,7 @@ Ignore all the stuff in the top 90% of the file, and focus on the last
 little bit, which starts with the line: <code>### TRACK CONFIGURATION
 ###</code>:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 [ExampleFeatures]
 feature      = my_feature
 glyph        = generic
@@ -310,7 +327,7 @@ the file CONFIGURE_HOWTO.txt, located in the docs/ subdirectory of the
 gbrowse distribution.  Or for the gory and bleeding edge details, run
 the command:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
  % <b>perldoc Bio::Graphics::Panel</b>
 </pre></blockquote>
 
@@ -327,7 +344,8 @@ be able to deduce the gbrowse equivalents.
 <p>
 
 Now we'll look at the interaction between feature names and gbrowse's
-search box.  If you look through the volvox1.gff data file, you'll see
+search box.  If you look through the <a
+href="data_files/volvox1.gff">volvox1.gff</a> data file, you'll see
 that all the example features are named, and that their class is
 "My_feature."
 
@@ -355,7 +373,7 @@ search for them.  To do this with our example database, open up the
 volvox.conf config file, find the option named "automatic classes",
 and change it to read:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 automatic classes = My_feature
 </pre></blockquote>
 
@@ -367,7 +385,7 @@ type "f07" directly into the search field and gbrowse will find and
 display it.  If you wish, you may list several (or many!) automatic classes on
 this line.  Just separate them by spaces:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 automatic classes = My_feature Gene Transcript Contig Chromosome
 </pre></blockquote>
 
@@ -397,11 +415,11 @@ will be displayed below the feature, and can also be searched.
 <p>
 
 You can place descriptions, notes and other comments into the ninth
-column of the GFF load file.  The example file data_files/volvox2.gff
-shows how this is done.  An expert from the top of the file looks like
-this:
+column of the GFF load file.  The example file <a
+href="data_files/volvox2.gff">volvox2.gff</a> shows how this is done.
+An expert from the top of the file looks like this:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 ctgA   example   motif   11911   15561   .   +   .   Motif m11 ; Note "kinase"
 ctgA   example   motif   13801   14007   .   -   .   Motif m05 ; Note "helix loop helix"
 ctgA   example   motif   14731   17239   .   -   .   Motif m14 ; Note "kinase"
@@ -426,12 +444,13 @@ above.
 We will see later how to take advantage of different types of
 attributes.  For now, it is only important to know that an attribute
 named <i>Note</i> is automatically displayed and made searchable.  To
-see this work, load volvox2.gff into the volvox database, using
-<i>bp_load_gff.pl</i> without the <b>-c</b> (create) switch:
+see this work, load <a href="data_files/volvox2.gff">volvox2.gff</a>
+into the volvox database, using <i>bp_load_gff.pl</i> without the
+<b>-c</b> (create) switch:
 
 <p>
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 % <b>bp_load_gff.pl -d volvox volvox2.gff</b>
 volvox2.gff: loading...
 volvox2.gff: 15 records loaded
@@ -439,7 +458,7 @@ volvox2.gff: 15 records loaded
 
 <p>
 
-<blockquote>
+<blockquote class="example">
 <i>HINT: If at any point you mess up a database load and want to start
 fresh, just run this command from within the tutorials data_files directory:</i>
 <pre>bp_load_gff.pl -c -d volvox volvox1.gff volvox2.gff ...</pre>
@@ -453,7 +472,7 @@ files listed in the command.
 To display this newly-loaded data set, open up volvox.conf and add the
 following new stanza to the config file:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 [Motifs]
 feature      = motif
 glyph        = span
@@ -484,7 +503,7 @@ The result is shown in figure 4.
 <p>
 
 A copy of this config file is also available for you to use in
-volvox2.conf.
+<a href="conf_files/volvox2.conf">volvox2.conf</a>.
 
 <p>
 
@@ -505,24 +524,25 @@ easily provided that you take a little care in setting them up.
 
 <p>
 
-The data file volvox3.gff contains a simulated data set of a series of
-gapped nucleotide alignments.  An excerpt from the file is here:
+The data file <a href="data_files/volvox3.gff">volvox3.gff</a>
+contains a simulated data set of a series of gapped nucleotide
+alignments.  An excerpt from the file is here:
 
-<blockquote><pre>
-ctgA   example   match        6885   8999   .   -   .   Match seg03
-ctgA   example   similarity   6885   7241   .   -   .   Match seg03
-ctgA   example   similarity   7410   7737   .   -   .   Match seg03
-ctgA   example   similarity   8055   8080   .   -   .   Match seg03
-ctgA   example   similarity   8306   8999   .   -   .   Match seg03
-ctgA   example   match        5233   9825   .   -   .   Match seg04
-ctgA   example   similarity   5233   5302   .   -   .   Match seg04
-ctgA   example   similarity   5800   6101   .   -   .   Match seg04
-ctgA   example   similarity   6442   6854   .   -   .   Match seg04
-ctgA   example   similarity   7106   7211   .   -   .   Match seg04
-ctgA   example   similarity   7695   8177   .   -   .   Match seg04
-ctgA   example   similarity   8545   8783   .   -   .   Match seg04
-ctgA   example   similarity   8869   8935   .   -   .   Match seg04
-ctgA   example   similarity   9404   9825   .   -   .   Match seg04
+<blockquote class="example"><pre>
+ctgA   example   match 6885   8999   .   -   .   Match seg03
+ctgA   example   HSP   6885   7241   .   -   .   Match seg03
+ctgA   example   HSP   7410   7737   .   -   .   Match seg03
+ctgA   example   HSP   8055   8080   .   -   .   Match seg03
+ctgA   example   HSP   8306   8999   .   -   .   Match seg03
+ctgA   example   match 5233   9825   .   -   .   Match seg04
+ctgA   example   HSP   5233   5302   .   -   .   Match seg04
+ctgA   example   HSP   5800   6101   .   -   .   Match seg04
+ctgA   example   HSP   6442   6854   .   -   .   Match seg04
+ctgA   example   HSP   7106   7211   .   -   .   Match seg04
+ctgA   example   HSP   7695   8177   .   -   .   Match seg04
+ctgA   example   HSP   8545   8783   .   -   .   Match seg04
+ctgA   example   HSP   8869   8935   .   -   .   Match seg04
+ctgA   example   HSP   9404   9825   .   -   .   Match seg04
 </pre></blockquote>
 
 <p>
@@ -531,9 +551,9 @@ Each segmented feature is represented by several lines in the GFF file
 that share the same feature name.  Each feature has a single GFF line
 of type "match" whose start and end coordinates correspond to the full
 length of the alignment.  Following this are one or more lines of type
-"similarity" with start and end coordinates indicating a section of
-the match.  The relationship is the same as between a BLAST hit and
-its HSPs.
+"HSP" with start and end coordinates indicating a section of the
+match.  You will recognize this terminology from the standard BLAST
+report.
 
 <p>
 
@@ -543,20 +563,20 @@ and so forth.
 
 <p>
 
-The types "match" and "similarity" are not arbitrary, but are needed
-to tell the gbrowse database what the relationship between the
-full-length feature and its subparts are.  The specific type names
-expected are mediated by a series of "aggregators" -- code modules
-that are loaded when gbrowse starts up.  We will see later in this
-section how to manipulate these aggregators and to define custom ones.
+The types "match" and "HSP" are not arbitrary, but are needed to tell
+the gbrowse database what the relationship between the full-length
+feature and its subparts are.  The specific type names expected are
+mediated by a series of "aggregators" -- code modules that are loaded
+when gbrowse starts up.  We will see later in this section how to
+manipulate these aggregators and to define custom ones.
 
 <p>
 
-Load volvox3.gff into the volvox database using
-<i>bp_load_gff.pl</i>.  Now edit volvox.conf to add the following
-track definition:
+Load <a href="data_files/volvox3.gff">volvox3.gff</a> into the volvox
+database using <i>bp_load_gff.pl</i>.  Now edit volvox.conf to add the
+following track definition:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 [Alignments]
 feature      = match
 glyph        = segments
@@ -592,7 +612,7 @@ aggregator named "match."  Reopen the volvox.conf configuration file,
 and find the option line near the top of the file that reads
 "aggregators = ".  Change this to read as follows:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 aggregators = match
 </pre></blockquote>
 
@@ -655,6 +675,12 @@ summarizes the most useful ones:
     <td>CDS, UTR, 5'-UTR, 3'-UTR transcription_start_site, polyA_site</td>
     <td>the canonical spliced gene</td>
   </tr>
+  <tr>
+    <th>transcript</th>
+    <td>transcript</td>
+    <td>exon TSS PolyA</td>
+    <td>a spliced transcript that expects exon features</td>
+  </tr>
 </table>
 
 <p>
@@ -681,12 +707,13 @@ To use any of these aggregators, follow this recipe:
 Gbrowse can display protein-coding genes in various shapes and styles.
 The easiest way to set this up is to use the "processed_transcript"
 aggregator and its companion glyph also called "processed_transcript."
-Take a look at the file volvox5.gff, which defines a gene named EDEN,
-and its three spliced forms named EDEN.1, EDEN.2 and EDEN.3.  Here is
-the top part of the file:
+Take a look at the file <a
+href="data_files/volvox5.gff">volvox5.gff</a>, which defines a gene
+named EDEN, and its three spliced forms named EDEN.1, EDEN.2 and
+EDEN.3.  Here is the top part of the file:
 
-<blockquote><pre>
-ctgA   example   gene     1000   9000   .   +   .   Gene EDEN ; Note "protein kinase"
+<blockquote class="example"><pre>
+ctgA   example   gene     1050   9000   .   +   .   Gene EDEN ; Note "protein kinase"
 
 ctgA   example   mRNA     1050   9000   .   +   .   mRNA EDEN.1 ; Gene EDEN
 ctgA   example   5'-UTR   1050   1200   .   +   .   mRNA EDEN.1
@@ -704,7 +731,7 @@ ctgA   example   5'-UTR   1050   1200   .   +   .   mRNA EDEN.2
 <p>
 
 The first line of the file defines the gene as a whole, starting at
-position 1000 of ctgA and extending to position 9000.  Following this,
+position 1050 of ctgA and extending to position 9000.  Following this,
 there are three sets of lines that define the structure of the spliced
 forms EDEN.1, EDEN.2, and EDEN.3, only the first of which is shown in
 its entirety here.  By convention, the whole transcript is represented
@@ -727,7 +754,7 @@ transcript belongs to when he or she clicks on it for details.
 
 <p>
 
-<blockquote><i>HINT: If you prefer not to distinguish between 5' and
+<blockquote class="example"><i>HINT: If you prefer not to distinguish between 5' and
 3' UTRs, you can simply use "UTR" as the type.  If you don't know
 where the UTRs are, just leave them blank.  If you'd rather think in
 terms of exons and introns, then check out the "transcript" aggregator
@@ -742,9 +769,8 @@ the following changes to volvox.conf:
 
 <ol>
   <li>Change the aggregators line to read as follows:
-      <blockquote><pre>
+      <blockquote class="example"><pre>
 aggregators = match
-	BAC{left_end_read,right_end_read/BAC}
 	processed_transcript
       </pre></blockquote>
   <li>Add the following new stanza to the bottom of the file:
@@ -766,7 +792,13 @@ form a spliced transcript.  The new Transcripts track associates
 aggregated processed_transcript features with the like-named glyph,
 sets its background color to peachpuff (yes, there really is a color
 by this name!), turns on the description lines, and sets the human
-readable track name to "Protein-coding genes."
+readable track name to "Protein-coding genes."  <p>
+
+<blockquote class="example"><pre>
+<i>The aggregators option demonstrates that gbrowse config file
+options can continue across multiple lines
+provided that each additional line is indented.</i>
+</blockquote>
 
 <p>
 
@@ -774,8 +806,8 @@ Upon reloading the page, turning on the new "Protein-coding genes"
 track, and viewing the region around 1..10K, you'll see this:
 
 <blockquote>
-<img src="figures/figure8.gif"><br>
-<i>Figure 8: The canonical processed_transcript glyph</i>
+<img src="figures/figure7.gif"><br>
+<i>Figure 7: The canonical processed_transcript glyph</i>
 </blockquote>
 
 <p>
@@ -788,7 +820,7 @@ features of type "gene" as well as those of type
 "processed_transcript".  Modify volvox.conf so the last stanza looks
 like this:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 [Transcripts]
 feature      = processed_transcript gene
 glyph        = processed_transcript
@@ -805,8 +837,8 @@ gbrowse to place both feature types in the same track.  If we reload
 the page, it now looks like this:
 
 <blockquote>
-<img src="figures/figure9.gif">
-<i>Figure 9: Showing the gene as well as its transcripts</i>
+<img src="figures/figure8.gif">
+<i>Figure 8: Showing the gene as well as its transcripts</i>
 </blockquote>
 
 <p>
@@ -841,9 +873,9 @@ use to customize its appearance:
 <p>
 
 Using these options, we can make the track look like the UCSC Genome
-Browser (Figure 10).
+Browser (Figure 9).
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 [Transcripts]
 feature      = processed_transcript gene
 glyph        = processed_transcript
@@ -859,8 +891,8 @@ key          = Protein-coding genes
 <p>
 
 <blockquote>
-<img src="figures/figure10.gif"><br>
-<i>Figure 10: A UCSC Genome Browser lookalike</i>
+<img src="figures/figure9.gif"><br>
+<i>Figure 9: A UCSC Genome Browser lookalike</i>
 </blockquote>
 
 
@@ -880,9 +912,8 @@ display that will visualize each CDS's reading frame.
 To see this work, add the predefined "coding" aggregator to the list
 of aggregators:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 aggregators = match
-              BAC{left_end_read,right_end_read/BAC}
 	      processed_transcript
 	      coding
 </pre></blockquote>
@@ -899,7 +930,7 @@ historical reasons, the glyph is called "cds" rather than "coding.")
 Now add the following short stanza to the bottom of the configuration
 file:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 [CDS]
 feature      = coding
 glyph        = cds
@@ -909,11 +940,11 @@ key          = Frame usage
 <p>
 
 When you reload the page and turn this track on, you'll see a "musical
-staff" representation of the frame usage (Figure 11).
+staff" representation of the frame usage (Figure 10).
 
 <blockquote>
-<img src="figures/figure11.gif"><br>
-<i>Figure 11:  The "cds" glyph shows the reading frame using a musical
+<img src="figures/figure10.gif"><br>
+<i>Figure 10:  The "cds" glyph shows the reading frame using a musical
 staff notation</i>
 </blockquote>
 
@@ -928,7 +959,7 @@ display a feature of type "BAC", whose subparts are of type
 "left_end_read" and "right_end_read" (possibly corresponding to a BAC
 clone mapping experiment).  Here is a GFF representation of this:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 ctgA   example   BAC              1000   20000   .   .   .   BAC b101.2 ; Note "Fingerprinted BAC with end reads"
 ctgA   example   left_end_read    1000   1500    .   +   .   BAC b101.2
 ctgA   example   right_end_read   19500  20000   .   -   .   BAC b101.2
@@ -936,8 +967,9 @@ ctgA   example   right_end_read   19500  20000   .   -   .   BAC b101.2
 
 <p>
 
-This is the contents of volvox4.gff.  Go ahead and load this into the
-database now.  To visualize this you will:
+This is the contents of <a
+href="data_files/volvox4.gff">volvox4.gff</a>.  Go ahead and load this
+into the database now.  To visualize this you will:
 
 <ol>
   <li>Create a custom aggregator that explains the relationship
@@ -951,8 +983,11 @@ database now.  To visualize this you will:
 To define the custom aggregator, open volvox.conf and add the
 following to the aggregators line:
 
-<blockquote><pre>
-aggregators = BAC{left_end_read,right_end_read/BAC}
+<blockquote class="example"><pre>
+aggregators = match
+	      processed_transcript
+	      coding
+              BAC{left_end_read,right_end_read/BAC}
 </pre></blockquote>
 
 <p>
@@ -968,29 +1003,9 @@ feature type and the aggregator, it's often convenient to do so.
 
 <p>
 
-If you want to continue using the predefined "match" aggregator in
-addition to the new "BAC" one, just add them both to the aggregators
-line separated by whitespace, like this:
-
-<blockquote><pre>
-aggregators = BAC{left_end_read,right_end_read/BAC} match
-</pre></blockquote>
-
-or, for improved readability, like this:
-
-<blockquote><pre>
-aggregators = BAC{left_end_read,right_end_read/BAC}
-              match
-</pre>
-<i>gbrowse config file options can continue across multiple lines
-provided that each additional line is indented.</i>
-</blockquote>
-
-<p>
-
 Now add the appropriate stanza to the bottom of volvox.conf:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 [Clones]
 feature      = BAC
 glyph        = segments
@@ -1004,18 +1019,133 @@ key          = Fingerprinted BACs
 
 With this new track turned on, look at ctgA:1..24200.  It will show
 that gbrowse has correctly picked up and rendered the relationship
-between the whole BAC and its two end reads (Figure 7).
+between the whole BAC and its two end reads (Figure 11).
 
 <blockquote>
-<img src="figures/figure7.gif"><br>
-<i>Figure 7: The glyph produced by a custom BAC aggregator</i>
+<img src="figures/figure11.gif"><br>
+<i>Figure 11: The glyph produced by a custom BAC aggregator</i>
 </blockquote>
 
 <p>
 
 For your convenience, the configuration file with all the
 modifications made up through this point of the tutorial can be found
-in conf_files/volvox3.conf.
+in <a href="conf_files/volvox3.conf">volvox3.conf</a>.
+
+<hr>
+
+<h2><a name="graph">11. Showing Quantitative Data</a></h2>
+
+<p>
+
+Gbrowse can plot quantitative data such as alignment scores,
+confidence scores from gene prediction programs, and microarray
+intensity data.  The data can be displayed either with glyphs that
+change color to indicate score levels (see the
+"heterogeneous_segments", "graded_segments" and "redgreen_box"
+glyphs), or using a general-purpose XY-plot glyph.
+
+<p>
+
+Congratulations, Affymetrix has built a transcriptional profiling chip
+for Volvox!  There's now a transcriptional profile for volvox, with an
+intensity reading every 100 bp across all of ctgA.  The simulated data
+for this is in the file <a
+href="data_files/volvox6.gff">volvox6.gff</a>, an excerpt of which is
+shown here:
+
+<blockquote class="example"><pre>
+ctgA   affy   tlevel   1     100   281   .   .   Affy Expt1
+ctgA   affy   tlevel   101   200   183   .   .   Affy Expt1
+ctgA   affy   tlevel   201   300   213   .   .   Affy Expt1
+ctgA   affy   tlevel   301   400   191   .   .   Affy Expt1
+ctgA   affy   tlevel   401   500   288   .   .	 Affy Expt1
+...
+</pre></blockquote>
+
+<p>
+
+The file contains 500 features, each of which is exactly 100 bp long.
+The features are of type "tlevel" ("transcriptional level") and of
+source "affy."  Each one has a score (column 6) between 0 and 1000,
+where higher scores means more transcriptional activity.  This is the
+first time we've used the score column.
+
+<p>
+
+All of the 500 features share the same group (column 9) of "Affy
+Expt1."  They are grouped in this way because the entire set of 500
+features represents a single transcriptional profiling experiment.  If
+we had multiple experiments to show, they would be named Expt1, Expt2
+and so on.
+
+<p>
+
+We would like to generate a line graph that shows the transcriptional
+profile level across the current region.  To do this, we will first
+create an aggregator that will bring all the individual tlevel
+features together into a single feature named "tprofile."  This is
+done as described in the previous section.  Modify the configuration
+file's aggregators option to read as follows:
+
+<blockquote class="example"><pre>
+aggregators = match
+	      BAC{left_end_read,right_end_read/BAC}
+	      processed_transcript
+	      coding
+	      tprofile{tlevel}
+</pre></blockquote>
+
+The last line is declaring an aggregated feature named "tprofile"
+whose parts consist of individual "tlevel" features.  This is simlar
+to the <a href="#custom_aggregators">BAC aggregator</a>, except that
+in this case there is no top-level feature that goes from end to end,
+so we just leave out the <i>/main_type</i> part of the aggregator
+definition.
+
+<p>
+
+We now need to use this aggregated feature in a track stanza.  Create
+the following section:
+
+<blockquote class="example"><pre>
+[TransChip]
+feature        = tprofile
+glyph          = xyplot
+graph_type     = boxes
+height         = 50
+min_score      = 0
+max_score      = 1000
+graph_type     = line
+scale          = right
+key            = Transcriptional Profile
+</pre></blockquote>
+
+<p>
+
+The options shown here create a track named TransChip to display the
+tprofile feature with the xyplot glyph.  The "graph_type", "height",
+"scale", "min_score", and "max_score" options all configure various
+aspects of the xyplot glyph's appearance.
+
+<blockquote class="example"><i>You can read all about xyplot's options using
+<b>perldoc Bio::Graphics::Glyph::xyplot</b></i></blockquote>
+
+<p>
+
+When you reload the page and turn on the Transcriptional Profile
+track, you should see something like that shown in Figure 12.
+
+<blockquote>
+<img src="figures/figure12.gif"><br>
+<i>Figure 12: A transcriptonal profile rendered with the xyplot glyph</i>
+</blockquote>
+
+<p>
+
+<blockquote class="example"> <i>Using the info that perldoc provides, play around with
+the xyplot options a bit.  For example, see what happens when you
+change graph_type to "boxes."</i> </blockquote>
 
 <hr>
 
@@ -1044,7 +1174,7 @@ rebuild the database, this time loading in a simulated DNA file in
 fasta format.  From inside the tutorial data_files directory, type
 this command:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 % <b>bp_load_gff.pl -c -d volvox -f volvox.fa volvox1.gff volvox2.gff volvox3.gff volvox4.gff volvox5.gff</b>
 volvox1.gff: loading...
 volvox1.gff: 16 records loaded
@@ -1065,7 +1195,7 @@ volvox.fa: 1 records loaded
 The DNA is now loaded.  To see that it worked, add two new stanzas to
 the volvox.conf configuration file:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 [DNA]
 glyph          = dna
 global feature = 1
@@ -1114,24 +1244,1042 @@ and whether to generate a 3frame or 6frame translation.
 
 <p>
 
-Figures 7a and 7b show the browser at low and high magnification, with
+Figures 13a and 13b show the browser at low and high magnification, with
 both tracks activated.  Notice that the coding track ("cds" glyph)
 notices that the DNA is available and generates the transcripts'
 protein translations automatically!
 
 <blockquote>
-<b>(7A)</b><br>
-<img src="figures/figure7a.gif">
-<br><b>(7B)</b><br>
-<img src="figures/figure7b.gif"><br>
-<i>Figure 7: Viewing DNA/GC content and 6-frame translation. (a) low
+<b>(13A)</b><br>
+<img src="figures/figure13a.gif">
+<br><br><b>(13B)</b><br>
+<img src="figures/figure13b.gif"><br>
+<i>Figure 13: Viewing DNA/GC content and 6-frame translation. (a) low
 magnification; (b) high magnification</i>
 </blockquote>
+
+<hr>
+
+<h2><a name="multiple_alignments">12. Displaying ESTs and Other
+Alignments</a></h2>
+
+<p>
+
+This section will lead you through creating a plausible EST track, and
+show you how grouping of 5' and 3' EST reads works.
+
+<p>
+
+We'll start with a simple data set containing information on three
+pairs of EST reads.  You'll find this data set in <a
+href="data_files/volvox7.gff">volvox7.gff</a>.  Here is the first pair
+described in the data file:
+
+<blockquote class="example"><pre>
+ctgA   est   match 1050   3202   .   +   .   EST agt830.5
+ctgA   est   HSP   1050   1500   .   +   .   EST agt830.5
+ctgA   est   HSP   3000   3202   .   +   .   EST agt830.5
+ctgA   est   match 5410   7503   .   -   .   EST agt830.3
+ctgA   est   HSP   5410   5500   .   -   .   EST agt830.3
+ctgA   est   HSP   7000   7503   .   -   .   EST agt830.3
+...
+</pre></blockquote>
+
+<p>
+
+What's going on here is the same as the alignments shown in <a
+href="data_files/volvox3.gff">volvox3.gff</a>.  There are two EST
+reads named agt830.5 (the 5' read) and agt830.3 (the 3' read).  Each
+of them matches the ctgA genome in two discontinuous regions because,
+presumably, they cross a splice site.  As in the earlier example, we
+represent each EST as a single "match" feature that spans the entire
+region, plus a series of "HSP" features that correspond to the aligned
+regions.  The last column is used to group the match and HSP features
+together using the class and name of the feature, where the class is
+arbitrarily chosen to be "EST."
+
+<p>
+
+There are two other things to notice.  One is that the source field
+(column 2) is "est".  All previous examples used "example" here.  This
+is because we need to distinguish this set of alignments from the
+generic alignments in <a
+href="data_files/volvox3.gff">volvox3.gff</a>.  The second item of
+interest is that the strand field (column 7) is + for the 5' EST and -
+for the 3' EST, indicating that the 3' EST aligned to the reverse
+complement of ctgA.
+
+<p>
+
+Go ahead and load this file now, and add the following to the
+configuration file:
+
+<blockquote class="example"><pre>
+[EST]
+feature      = match:est
+glyph        = segments
+bgcolor      = orange
+key          = ESTs
+</pre></blockquote>
+
+<p>
+
+This will give a display similar to that shown in Figure 14.
+
+<blockquote>
+<img src="figures/figure14.gif"><br>
+<i>Figure 14:  A simple representation of EST matches.</i>
+</blockquote>
+
+<p>
+
+Notice that the feature option reads "match:est" rather than simply
+"match."  This is to distinguish the EST matches from the example
+matches that we loaded previously.  When needed, you can use the
+source field (column 2) to distinguish different features of the same
+type, using the format "type:source".  You can use this equally well
+with ordinary types (e.g. "my_feature:example") or with aggregated
+types ("processed_transcript:genscan").
+
+<p>
+
+This display is OK, but it could be better.  One problem is that the
+relationship between the 5' and 3' EST read pairs is not shown.  We'd
+like to place the two members of the pair together on the same line,
+and connect them with a dotted line to show that they are the two ends
+of the same cDNA clone.  Recall that we did something similar to this
+with the custom <a name="custom_aggregators>BAC aggregator</a>.
+Unfortunately, there's a problem with the ESTs because we are already
+using the "match" aggregator to perform one level of grouping, and the
+GFF load format only allows one level of grouping at a time (this is
+changing in a proposed new version of the format).
+
+<p>
+
+For the time being, we can work around this problem using a "hack."
+Change the [EST] track configuration to look like this:
+
+<blockquote class="example"><pre>
+[EST]
+feature       = match:est
+glyph         = segments
+bgcolor       = orange
+group_pattern = /\.[53]$/
+key           = ESTs
+</pre></blockquote>
+
+<p>
+
+The new group_pattern option tells gbrowse to use a Perl regular
+expression pattern matching operation to find and group related EST
+matches based on their names.  It helps to understand how Perl regular
+expressions work, but basically the pattern match breaks down this
+way:
+
+<blockquote class="example"><pre>
+  /            begin the pattern match
+  \.           match a dot
+  [53]         match either the numbers 5 or 3
+  $            match the end of the string
+  /            end the pattern match
+</pre></blockquote>
+
+<p>
+
+What this is saying is to look for pairs of EST names that are similar
+except for the terminal .5 or .3, and pair them.  When we reload the
+page, we get Figure 15.
+
+<blockquote>
+<img src="figures/figure15.gif"><br>
+<i>Figure 15: The group_pattern option allows EST pairs to be grouped</i>
+</blockquote>
+
+<p>
+
+Here are regular expressions that will work for other common EST
+pairing schemes:
+
+<table border="1">
+  <tr>
+    <th>5' EST</th>
+    <th>3' EST</th>
+    <th>group_pattern</th>
+  </tr>
+  <tr>
+    <td>agt123f</td>
+    <td>agt123r</td>
+    <td>/[fr]$/</td>
+  </tr>
+  <tr>
+    <td>agt123p</td>
+    <td>agt123q</td>
+    <td>/[pq]$/</td>
+  </tr>
+  <tr>
+    <td>f.agt123</td>
+    <td>r.agt123</td>
+    <td>/^[fr]\./</td>
+  </tr>
+  <tr>
+    <td>5.agt123</td>
+    <td>3.agt123</td>
+    <td>/^[53]\./</td>
+  </tr>
+  <tr>
+    <td>agt123.for</td>
+    <td>agt123.rev</td>
+    <td>/\.(for|rev)$/</td>
+  </tr>
+</table>
+
+<p>
+
+Another nice enhancement would be to give the 5' and 3' ESTs different
+colors so as to distinguish one from another.  This can be
+accomplished using a Perl <i>callback</i>.  Open up volvox.conf once
+more, and find the bgcolor option in the [EST] track.  Replace it with
+this (you may want to cut and paste from here in order to avoid
+introducing any typos):
+
+<blockquote class="example"><pre>
+bgcolor      = sub {
+		my $feature = shift;
+		my $name    = $feature->display_name;
+		if ($name =~ /\.5$/) {
+		   return 'red';
+		} else {
+		   return 'orange';
+		}
+	}
+</pre></blockquote>
+
+<p>
+
+You'll need to know the basics of the Perl programming language in
+order to do this type of thing yourself.  Suffice to say that instead
+of hard-coding the color "orange" into the bgcolor option, we are
+asking gbrowse to run a Perl subroutine each time it needs to render
+an EST.  The subroutine is passed the feature that is about to be
+drawn.  It asks the feature for its human-readable name (display_name)
+and assigns that name to a variable named $name.  It then performs a
+pattern match on the name to see if it ends in a "5".  If the name
+matches, the subroutine returns the color "red" to gbrowse.  Otherwise
+it returns the color "orange."
+
+<p>
+
+The effect is shown in Figure 16.
+
+<blockquote>
+<img src="figures/figure16.gif"><br>
+<i>Figure 16: Using a callback to distinguish 5' and 3' ESTs</i>
+</blockquote>
+
+<hr>
+
+<h2><a name="adding_dna_to_alignments">13. Adding DNA to Alignments</a></h2>
+
+<p>
+
+The last thing we'll do with the EST data set is to add DNA to the
+ESTs so that at high magnification gbrowse will show the multiple
+alignment.  This information is also used by the "dump alignments"
+plugin to generate a text-based multiple alignment.
+
+<blockquote class="example"> <i> NOTE: Currently only nucleotide to nucleotide
+alignments can be displayed at the level of individual nucleotides
+(e.g. BLASTN, BLAT, Exonerate).  Protein to nucleotide alignments,
+such as those produced by Genewise or BLASTX, are not supported at the
+residue level</i>
+</blockquote>
+
+<p>
+
+To make this work, we need to add two additional pieces of information
+to the EST alignment data:
+
+<ol>
+  <li>The DNA sequences of the volvox ESTs.
+  <li>The alignment positions in EST coordinates.
+</ol>
+
+In case the need for item (2) isn't immediately clear, consider this
+blow-up of an alignment:
+
+<blockquote class="example"><pre>
+ctgA      1050 gattgccattgaccttggccattggccaagctgaa 1086
+               |||||||||| ||||||| ||||||||||||||||
+agt830.5     1 gattgccattcaccttgggcattggccaagctgaa 135
+</pre></blockquote>
+
+<p>
+
+What we currently have in the GFF file are the <b>source</b> genomic
+positions of the alignments (in ctgA-relative coordinates).  We need
+to add the <b>target</b> positions in agt830.5-relative coordinates in
+order for gbrowse to fetch and display the appropriate segments of the
+EST DNA.
+
+<p>
+
+The fasta file ests.fa provides the DNA sequences for the six EST
+reads.  The GFF load file <a
+href="data_files/volvox8.gff">volvox8.gff</a> contains the revised
+coordinates.  If you look at this file you'll see that it is
+dissimilar to previous load files:
+
+<blockquote class="example"><pre>
+ctgA	est	match	1050	3202	.	+	.	Target EST:agt830.5 1 554
+ctgA	est	HSP	1050	1500	.	+	.	Target EST:agt830.5 1 451
+ctgA	est	HSP	3000	3202	.	+	.	Target EST:agt830.5 452 654
+ctgA	est	match	5410	7503	.	-	.	Target EST:agt830.3 595 1
+ctgA	est	HSP	5410	5500	.	-	.	Target EST:agt830.3 596 505
+ctgA	est	HSP	7000	7503	.	-	.	Target EST:agt830.3 504 1
+</pre></blockquote>
+
+<p>
+
+The first eight columns are identical to what we've been using before,
+but the ninth column follows a new convention used for nucleotide to
+nucleotide and protein to nucleotide alignments.  There is now a
+special class name, "Target", that tells gbrowse that the group field
+represents the combination of a target sequence and its coordinates.
+Following Target is the name EST:agt830.5, which is a composite of the
+"real" class name ("EST") and the name of the EST.  The two are
+separated by a colon in the format "class:name".  Following this are
+two numbers indicating the start and end of the alignment in EST
+coordinates.
+
+<p>
+
+There are a couple of subtleties to notice here.  First of all, notice
+that the "match" features extend all the way across the matched area
+of the genome (1050 to 3202 in the case of agt830.5), and all the way
+across the matched area of the target (1 to 554). Because one or both
+of the matched regions may contain gaps, the source and target regions
+do not have to be the same length.  On the other hand, each HSP covers
+an ungapped contiguous region: the first HSP covers 1050..1500 in
+genome coordinates and 1..451 in target (EST) coordinates; the second
+covers 3000..3202 in genome coordinates and 452..654 in target
+coordinates.  The HSPs should have the same alignment length in both
+genome and target coordinates, or at least very close lengths.  If the
+lengths are close but not identical, gbrowse will realign the
+segments, introducing small gaps where necessary.
+
+<blockquote class="example"> <i>NOTE: gbrowse uses a simple but slow segment
+realigner.  If there are numerous gaps, it is better to break them
+into a set of smaller colinear HSPs than to rely on the realigner to
+do it for you.</i> </blockquote>
+
+<p>
+
+The second subtlety to notice is that for the minus strand ESTs, the
+target coordinates are <b>backwards</b>, and show a start position
+greater than the end position.  For example, for the first agt830.3
+HSP, we are told that genomic region 5410..5500 aligns to EST region
+596..505.  Although this is arguably redundant with the strand field,
+this is historically the way reverse strand targets have been depicted
+in GFF and is required by gbrowse.
+
+<blockquote class="example"><i>In the proposed revision of GFF, the representation of
+multiple alignments has been rewritten to be more intuitive and
+internally consistent.</i></blockquote>
+
+<p>
+
+This is the last data load of the tutorial.  For your convenience, all
+the .fa and .gff files through volvox8.gff (excepting volvox7.gff
+which contains the same data as volvox8 but without the Target tag)
+have been merged into two load files, <a
+href="data_files/volvox_all.fa">volvox_all.fa</a> and <a
+href="data_files/volvox_all.gff">volvox_all.gff</a>.  Rather than
+loading the individual files, I suggest you rebuild the entire
+database from these two files:
+
+<blockquote class="example"><pre>
+% <b>bp_load_gff.pl -c -d volvox -f volvox_all.fa volvox_all.gff</b>
+volvox_all.gff: loading...
+volvox_all.gff: 238 records loaded
+Loading fasta file volvox_all.fa
+volvox_all.fa: 7 records loaded
+</pre></blockquote>
+
+<p>
+
+We're not done with making configuration file changes, but <a
+href="conf_files/volvox4.conf">volvox4.conf</a> contains all
+configuration file enhancements up to this point.  If you like, you
+can copy it over the live volvox.conf.  It contains the following
+version of the [EST] track:
+
+<blockquote class="example"><pre>
+[EST]
+feature      = match:est
+glyph        = segments
+height       = 6
+draw_target   = 1
+show_mismatch = 1
+bgcolor      = sub {
+		my $feature = shift;
+		my $name    = $feature->display_name;
+		if ($name =~ /\.5$/) {
+		   return 'red';
+		} else {
+		   return 'orange';
+		}
+	}
+group_pattern = /\.[53]$/
+key          = ESTs
+</pre></blockquote>
+
+<p>
+
+The key addition to this track configuration is the "draw_target" and
+"show_mismatch" options.  Both options are true/false flags, where 0
+means false and 1 means true.  draw_target tells the segments glyph to
+draw the DNA sequence of the target ESTs when the magnification
+allows.  show_mismatch instructs the glyph to highlight mismatches
+between the genome and the EST in pink.
+
+<p>
+
+To see this work, reload the page, turn on the EST track and search
+for region "ctgA:1065..1165".  This will show the aligned 5' ends of
+agt221.5, agt830.5 and agt767.5 (Figure 17).  Notice that one of the
+T's towards the beginning of agt830.5 is highlighted in red, to show
+that it doesn't match the corresponding genomic base.
+
+<blockquote>
+<img src="figures/figure17.gif"><br>
+<i>Figure 17: Multiple alignments at the DNA level</i>
+</blockquote>
+
+<hr>
+
+<h2><a name="plugins">14. Plugins</a></h2>
+
+<p>
+
+Is all the effort to load the genomic and EST DNAs worth it?  Yes, if
+you want to take advantage of two popular plugins,
+<i>RestrictionAnnotator</i> and <i>Aligner</i>.  The first generates a
+track of restriction sites.  The second dumps a text-based multiple
+alignment of the current region on view.
+
+<p>
+
+To see these plugins at work, find the option "plugins=" at the top of
+volvox.conf, and modify it to activate the Aligner and
+RestrictionAnnotator plugins:
+
+<blockquote class="example"><pre>
+plugins = Aligner RestrictionAnnotator
+</pre></blockquote>
+
+<p>
+
+When you reload the page, you will see a new popup menu appear under
+the image labeled "Dumps, searches and other operations."  You will
+also see an automatic track labeled "plugin:Restriction Sites" appear
+in the track list.  When you turn on this track, you will be presented
+with a restriction map (Figure 18).  You can then adjust which
+restriction sites are shown by selecting "Annotate Restriction Sites"
+from the popup menu and pressing the "Configure" button.
+
+<blockquote>
+<img src="figures/figure18.gif"><br>
+<i>Figure 18: The RestrictionAnnotator Plugin</i>
+</blockquote>
+
+<p>
+
+To see the Aligner at work, center your view on a region that contains
+the EST alignments (for example, ctgA:1000..5000), select "Dump
+Alignments" from the plugin popup menu, and press "Go".  This will
+return a text-based multiple alignment of the genome and the EST
+tracks.
+
+<p>
+
+The Aligner plugin has some additional configuration that you can
+perform.  We'll look at this now as an example of how to configure
+plugins.
+
+<p>
+
+Open up volvox.conf and add the following configuration section:
+
+<blockquote class="example"><pre>
+########################
+# Plugin configuration
+########################
+
+[Aligner:plugin]
+alignable_tracks   = EST
+upcase_tracks      = CDS Motifs
+upcase_default     = CDS
+</pre></blockquote>
+
+<p>
+
+It doesn't matter where the section goes, but it is probably a good
+idea to place this towards the middle of the file after the [GENERAL]
+section (at the top) and before the [TRACK DEFAULTS] section.
+Otherwise it is easy for you or someone else maintaining the
+configuration file to mistake this for some sort of track
+configuration.
+
+<p>
+
+Plugin configuration sections are distinguished from track
+configuration by having names of the format
+<b><i>PluginName</i>:plugin</b>.  In this case, the three
+configuration options are applied to the Aligner plugin.  For the
+Aligner plugin, the configuration options are:
+
+<table border="1">
+  <tr>
+    <th>Option</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>alignable_tracks</td>
+    <td>Space-delimited list of tracks to include in the multiple
+	alignment.  The genome is always included.  If this option is
+	not present, then gbrowse will automatically include any track
+	that has the "draw_target" option set.
+    </td>
+  </tr>
+  <tr>
+    <td>upcase_tracks</td>
+    <td>Space-delimited list of tracks that will be used to UPCASE the
+	genomic DNA.  This is very useful if you want to embed the
+	positions of coding regions or other features inside the
+	multiple alignment.  Uppercasing will not be turned on by
+	default.  The user must press the "Configure" button, and
+	select which of the uppercase tracks are to be activated  from
+	a list of checkboxes.
+    </td>
+  </tr>
+  <tr>
+    <td>upcase_default</td>
+    <td>A space-delimited list of tracks that will be uppercased by
+	default unless the user turns them off during configuration.
+    </td>
+  </tr>
+  <tr>
+    <td>ragged_default</td>
+    <td>A small integer indicating that the aligner should include
+	some unaligned bases from the end of each sequence.  This is
+	useful for seeing the sequencing primer or cloning site in ESTs.
+    </td>
+  </tr>
+</table>
+
+<p>
+
+With the changes in place, select the aligner from the popup menu and
+press Configure.  Turn on uppercasing of the coding region track and
+see how it affects the display (Figure 19).
+
+<blockquote>
+<img src="figures/figure19.gif"><br>
+<i>Figure 19: The Aligner plugin produces multiple alignments.</i>
+</blockquote>
+
+<p>
+
+Only a few of the plugins are currently well-documented, but this
+situation is being rectified.  To view their documentation, if any,
+find the plugin file, which usually lives under gbrowse.conf/plugins,
+and run the perldoc command with the -F ("file") option:
+
+<blockquote class="example"><pre>
+% <b>perldoc -F Aligner.pm</b>
+</pre></blockquote>
+
+<p>
+
+Here's the list of plugins that come with the standard distribution:
+
+<table border="1">
+  <tr>
+    <th>Plugin</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>Aligner</td>
+    <td>Dump multiple alignments</td>
+  </tr>
+  <tr>
+    <td>BatchDumper</td>
+    <td>Allows the user to cut and paste a series of landmarks on the
+	genome and dumps out all overlapping features using a variety
+	of formats (e.g. GenBank format)
+    </td>
+  </tr>
+  <tr>
+    <td>FastaDumper</td>
+    <td>Produce pretty-printed FASTA dumps of the current region, with
+	selected features highlighted with colors or font styles.
+    </td>
+  </tr>
+  <tr>
+    <td>GFFDumper</td>
+    <td>Dump out the current region in GFF format (redundant with BatchDumper).</td>
+  </tr>
+  <tr>
+    <td>OligoFinder</td>
+    <td>Lets the user search for landmarks on the basis of unique
+	11-mers or greater.</td>
+  </tr>
+  <tr>
+    <td>RestrictionAnnotator</td>
+    <td>Creates restriction maps.</td>
+  </tr>
+  <tr>
+    <td>SequenceDumper</td>
+    <td>The same functionality as BatchDumper, but just shows features
+	that overlap the current region on view.</td>
+  </tr>
+</table>
+
+<hr>
+
+<h2><a name="reference_sequence">15. More about the Reference Sequence</a></h2>
+
+<p>
+
+Although the example that we've been working with only has a single
+reference sequence (the infamous "ctgA"), many projects will have
+multiple references.  Reference sequences can be anything that acts as
+a convenient landmark: sequenced clones, contigs, scaffolds, golden
+path segments, or whole chomosomes.
+
+<p>
+
+There are just a few rules to be aware of when setting up the load
+files:
+
+<ol>
+  <li>All reference sequences must share the same <b>class</b> name.  In our
+      example, the class for the reference sequence was <i>Contig</i>.
+  <li>Each reference sequence must have its own feature entry in the GFF load
+      file.  This feature entry must use itself as the reference
+      sequence, start at position 1, and extend the length of the
+      sequence. The source and type for the feature are arbitrary, and
+      do not have to be the same across all reference sequences.
+  <li>The class chosen for reference sequences must be noted in the
+      configuration file under the general option "reference class."
+</ol>
+
+<p>
+
+Let us review these three criteria for the volvox example.  If you
+look at the top of the initial load file, <a
+href="data_files/volvox1.gff">volvox1.gff</a>, you'll see the very
+first line is:
+
+<blockquote class="example">
+<pre>
+ctgA   example   contig       1      50000   .   .   .   Contig ctgA
+</pre>
+</blockquote>
+
+<p>
+
+1. The class for the name "ctgA" is <i>Contig</i>.  If we were using
+other reference sequences as landmarks, then they too would have to be
+identified as Contigs.
+
+<p>
+
+2. This line describes "ctgA" as a feature relative to itself.  The
+feature starts at position 1 (it has to!) and ends at position 50,000.
+The source is "example" and the type is "contig."  If there are other
+reference sequences in the database, they do <b>not</b> have to share
+the "contig" type.  This allows you refer to other types of landmarks,
+such as clones.
+
+<p>
+
+3. If you examine the top few lines of the volvox.conf configuration
+file, you'll see this line:
+
+<blockquote class="example"><pre>
+reference class  = Contig
+</pre></blockquote>
+
+<p>
+
+This line is required for gbrowse to effectively find and render with
+features located on the reference sequence.
+
+<p>
+
+If you find this confusing, it might help to choose "Reference" as the
+class.  Then you can write GFF load files like this:
+
+<blockquote class="example">
+<pre>
+ctgA   example   contig       1      50000   .   .   .   Reference ctgA
+chr22  example   chromosome   1    1150000   .   .   .   Reference chr22
+5p3.2  example   band         1     830000   .   .   .   Reference 5p3.2
+</pre>
+</blockquote>
+
+<blockquote class="example"><i>Don't forget to update "reference class" in the config
+file!</i>
+</blockquote>
+
+<p>
+
+Alternatively, you can use the word "Sequence" as the class name for
+reference sequences.  For historical reasons, "Sequence" is recognized
+as the default classname.  This means you don't have to have a
+"reference class" option in the config file at all.
+
+<hr>
+
+<h2><a name="semantic_zooming">16. Semantic Zooming</a></h2>
+
+<p>
+
+One of the cooler features of gbrowse is its ability to support
+semantic zooming.  Semantic zooming is a feature in which objects show
+different levels of detail depending on the level of magnification.
+We've already seen this behavior in the "dna" and "segments" glyphs,
+which show the DNA sequence only when there's sufficient room to
+display it.
+
+<p>
+
+GBrowse has several types of semantic zooming:
+
+<dl>
+  <dt>glyph-based, automatic
+  <dd>The dna and segments glyphs, and others that support semantic
+      zooming out of the box.  This happens automatically and can't
+      be modified.
+  <dt>semantic labeling
+  <dd>When there's sufficient room, gbrowse will print the label and
+      descriptions next to the glyphs.  The threshold at which this
+      happens is under your control.
+  <dt>semantic bumping
+  <dd>When there's sufficient room, gbrowse will "bump" features to
+      prevent them from colliding on the screen.  When this would
+      cause the display to become to high, bumping is suppressed.
+      This threshold is also under your control.
+  <dt>semantic options
+  <dd>You can set track configuration sections up so that when a
+      preset size threshold is exceeded, one configuration replaces
+      another.
+</dl>
+
+<p>
+
+The thresholds for labeling and bumping are set by configuration
+options named "label density" and "bump density" respectively.  The
+standard values can be found in the defaults track named [TRACK
+DEFAULTS].  They are originally set so that labels are suppressed when
+there are more than 25 features per track, and bumping is suppressed
+when there are more than 100 features per track.  You can these values
+globally by editing their values in [TRACK DEFAULTS], or you can add
+"label density" and/or "bump density" options to individual track
+configuration sections in order to override the settings for specific
+tracks.
+
+<p>
+
+The process of setting up semantic options is a bit more interesting.
+To illustrate, we will create semantic zooming for the [Alignments]
+track ("Example Alignments").  We would like the track to shift from
+showing the individual segments to showing solid rectangles when the
+user is zoomed out to 30K and beyond, and turn bumping off when the
+user is zoomed out to 45K and beyond.  The process is simple.  Beneath
+the [Alignments] stanza, we add a stanza qualified for zoomlevels of
+>= 30,000 and another stanza qualified for zoomlevels of >= 45,000:
+
+<blockquote class="example"><pre>
+[Alignments]
+feature      = match
+glyph        = segments
+key          = Example alignments
+
+[Alignments:30000]
+glyph        = box
+
+[Alignments:45000]
+glyph        = box
+bump         = 0
+</pre></blockquote>
+
+<p>
+
+The format for semantic options is [<i>Trackname:distance</i>], where
+<i>Trackname</i> must be the same as the non-qualified track, and
+<i>distance</i> is the length of the region at which the semantic
+options will kick in.  Only options that are different from the
+non-qualified track need to be listed.  According to the configuration
+given above, when the user is looking at a region 30,000 bp or longer,
+the glyph option will change to "box," which is a solid rectangle that
+doesn't show any internal details.  All other options, such as feature
+and key, will be inherited from the [Alignments] track.
+
+<p>
+
+At 45,000 bp, the glyph is again set to box, and in addition the
+"bump" option is set to zero, turning off collision control.  Notice
+that options are inherited from the unqualified track stanza, and not
+from the previous semantic zoom level.  If we had neglected to specify
+the glyph option in [Alignments:45000], the glyph would have reverted
+to "segments."
+
+<p>
+
+Make these changes to volvox.conf, turn on the "Example Alignments"
+track, and view the contig at 20K, 40K and 50K.  At 40K, you'll see
+the alignments lose their internal structure and be replaced by solid
+boxes (Figure 20).  At 50K they'll begin to overlap.
+
+<blockquote>
+<img src="figures/figure20.gif"><br>
+<i>Figure 20: Semantically zoomed alignments at 40K</i>
+</blockquote>
+
+<hr>
+
+<h2><a name="overview">17. Putting Features into the Overview</a></h2>
+
+<p>
+
+The overview is the scale that appears at the top of the detailed
+image.  In addition to acting as a reference point and navigation
+tool, you can place tracks in it.  These tracks will always be
+displayed, and can serve as reference points for well-known genes,
+cytogenetic bands, or genetic markers.
+
+<p>
+
+We will illustrate how to do this by placing a copy of the Motifs
+track into the overview.  Add the following to the bottom of the
+volvox.conf configuration file:
+
+<blockquote class="example"><pre>
+[Motifs:overview]
+feature      = motif
+glyph        = span
+height       = 5
+description  = 0
+label        = 1
+key          = Motifs
+</pre></blockquote>
+
+<p>
+
+This stanza is identical to the [Motifs] track that we created
+earlier, except that its name is qualified with ":overview".  This
+tells gbrowse that this is not an ordinary track to be placed in the
+detail image, but one that should be placed in the overview.
+
+<p>
+
+Reload the page.  Viol&aacute;!  See Figure 21.
+
+<blockquote>
+<img src="figures/figure21.gif"><br>
+<i>Figure 21:</i> Any number of tracks can be placed in the overview
+</blockquote>
+
+<p>
+
+You can add as many tracks to the overview as you like.  The main
+warning is that if you add lots of features to the overview it can get
+pretty crowded in there.  Performance can also suffer, since each
+feature must be fetched and rendered each time the overview is
+displayed.
+
+<hr>
+
+<h2><a name="linking">18. Linking</a></h2>
+
+<p>
+
+The last topic we'll cover in this tutorial is configuring gbrowse's
+outgoing links.  When the user clicks on a glyph in the details image,
+he will be taken to another page by following a URL.  The URL to
+follow is generated from the <code>link</code> option.  The default
+link option is located in the [TRACK DEFAULTS] section of the config
+file; you can specify track-specific links by placing a
+<code>link</code> option in one or more of the individual track
+stanzas.
+
+<p>
+
+The volvox.conf track defaults looks like this:
+
+<blockquote class="example"><pre>
+[TRACK DEFAULTS]
+glyph         = generic
+height        = 10
+bgcolor       = lightgrey
+fgcolor       = black
+font2color    = blue
+label density = 25
+bump density  = 100
+# where to link to when user clicks in detailed view
+link          = AUTO
+</pre></blockquote>
+
+<p>
+
+In this case, we've been using a special link URL of "AUTO."  This
+generates an automatic link to a helper script named
+"gbrowse_details."  If you click on some of the features in the
+current volvox page you'll get an idea of what this script displays.
+Try clicking on a motif, a spliced transcript, the EDEN gene, and an
+EST.  When you click on the spliced transcript, notice that the
+content of the "Gene" attribute is displayed.  By adding attributes
+like this one, you can build up a very modest web-browsable database
+of facts about your features.
+
+<p>
+
+We're going to override the default link rule for the motif track.
+There's nothing sensible to link to, so we'll link to Google using
+first the motif's name, and then the motif's description.
+
+<p>
+
+Go to the [Motifs] stanza in the volvox.conf config file and modify it
+so that it looks like this:
+
+<blockquote class="example"><pre>
+[Motifs]
+feature      = motif
+glyph        = span
+height       = 5
+description  = 1
+link         = http://www.google.com/search?q=$name
+key          = Example motifs
+</pre></blockquote>
+
+<p>
+
+The only change we've made is to add a "link" option to the stanza,
+where the value is a Google search URL.  "$name" is a Perl variable.
+Gbrowse will fill in this variable with the name of the motif.  Reload
+the page and click on a motif to see that this works as advertised
+("m01," "m02" and the other example motifs are similar to the names
+for galactic clusters, so be prepared for some astronomy hits).
+
+<p>
+
+It would be more sensible to link to the description of the motif, for
+example "helix loop helix."  Fortunately we can do that too.  Just
+change the link option to:
+
+<blockquote class="example"><pre>
+link         = http://www.google.com/search?q=$description
+</pre></blockquote>
+
+<p>
+
+There are a large number of possible variables that you can use inside
+link rules.  See the CONFIGURE_HOWTO document in the gbrowse
+distribution for the full list.  You can also construct links using
+Perl callbacks as described in the section on <a
+href="#multiple_alignments">displaying ESTs</a>.  This gives you the
+ability to generate any arbitrary URL.
+
+<p>
+
+If you want nothing to happen when the user clicks on a feature, just
+set link to empty ("link = ").
+
+<p>
+
+The last thing we'll do is to change the behavior of the [Motif] track
+so that:
+
+<ol>
+  <li>a new window pops up with the google search rather than
+      replacing the contents of the current window
+  <li>when the user mouses over a motif, a hints box will appear
+      telling him that clicking there will initiate a google search
+</ol>
+
+<p>
+
+These changes are easy:
+
+<blockquote class="example"><pre>
+[Motifs]
+feature      = motif
+glyph        = span
+height       = 5
+description  = 1
+link         = http://www.google.com/search?q=$description
+link_target  = _blank
+title        = Search Google for $description.
+key          = Example motifs
+</pre></blockquote>
+
+<p>
+
+There's now a <code>link_target</code> option.  This contains the name
+of a browser window in which to load the content when the user clicks
+on the feature.  If there's no window of that name, the browser will
+create a new window and give it the desired name.  Choose an ordinary
+name like "Google" if you want the Google content to be loaded into
+the same window each time, or choose "_blank" as we've done here in
+order to pop up a new fresh window each time the user clicks.
+
+<p>
+
+The <code>title</code> option contains a bit of text that will be
+displayed whenever the user hovers the mouse over the feature for a
+second or two.  The same variable substitution rules apply, so when
+the user mouses over feature "m06", a hints window will pop up that
+says "Search Google for SUSHI repeat."  Give it a try!
+
+<p>
+
+<blockquote>
+<i>The file <a href="conf_files/volvox_final.conf">volvox_final.conf</a>
+contains the final configuration file with all the modifications we've
+made during the course of this tutorial.</i>
+</blockquote>
+
+<hr>
+
+<h2><a name="conclusion">19. Conclusion</a></h2>
+
+<p>
+
+This is just a short introduction to the many things that you can do
+with Gbrowse.  Major features not discussed were:
+
+<ul>
+  <li>multi-language support
+  <li>third-party feature loading
+  <li>the ability to view GenBank, chado, and biosql feature databases
+  <li>advanced callbacks
+</ul>
+
+All this information, and more can be found in CONFIGURE_HOWTO.txt,
+and in the documentation for Bio::DB::GFF and Bio::Graphics in the
+bioperl distribution.
+
+<p>
+
+Have fun!
 
 <hr>
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Sat Jun 21 21:46:29 EDT 2003
+Last modified: Sun Jun 22 20:55:42 EDT 2003
 <!-- hhmts end -->
 </body> </html>

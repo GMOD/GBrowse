@@ -1,0 +1,244 @@
+# file: volvox1.gff
+ctgA	example	contig	1	50000	.	.	.	Contig ctgA
+ctgA	example	my_feature	1659	1984	.	+	.	My_Feature f07
+ctgA	example	my_feature	3014	6130	.	+	.	My_Feature f06
+ctgA	example	my_feature	4715	5968	.	-	.	My_Feature f05
+ctgA	example	my_feature	13280	16394	.	+	.	My_Feature f08
+ctgA	example	my_feature	15329	15533	.	+	.	My_Feature f10
+ctgA	example	my_feature	19157	22915	.	-	.	My_Feature f13
+ctgA	example	my_feature	22132	24633	.	+	.	My_Feature f15
+ctgA	example	my_feature	23072	23185	.	+	.	My_Feature f14
+ctgA	example	my_feature	24562	28338	.	+	.	My_Feature f02
+ctgA	example	my_feature	36034	38167	.	+	.	My_Feature f09
+ctgA	example	my_feature	36649	40440	.	-	.	My_Feature f03
+ctgA	example	my_feature	37242	38653	.	+	.	My_Feature f04
+ctgA	example	my_feature	44705	47713	.	-	.	My_Feature f01
+ctgA	example	my_feature	46990	48410	.	-	.	My_Feature f11
+ctgA	example	my_feature	49758	50000	.	-	.	My_Feature f12
+ctgA	example	motif	11911	15561	.	+	.	Motif m11 ; Note "kinase"
+ctgA	example	motif	13801	14007	.	-	.	Motif m05 ; Note "helix loop helix"
+ctgA	example	motif	14731	17239	.	-	.	Motif m14 ; Note "kinase"
+ctgA	example	motif	15396	16159	.	+	.	Motif m03 ; Note "zinc finger"
+ctgA	example	motif	17023	17675	.	+	.	Motif m08 ; Note "7-transmembrane"
+ctgA	example	motif	17667	17690	.	+	.	Motif m13 ; Note "DEAD box"
+ctgA	example	motif	18048	18552	.	-	.	Motif m07 ; Note "7-transmembrane"
+ctgA	example	motif	21748	25612	.	+	.	Motif m12 ; Note "kinase"
+ctgA	example	motif	28332	30033	.	-	.	Motif m02 ; Note "HOX"
+ctgA	example	motif	28342	28447	.	-	.	Motif m10 ; Note "DEAD box"
+ctgA	example	motif	30578	31748	.	+	.	Motif m06 ; Note "SUSHI repeat"
+ctgA	example	motif	33325	35791	.	+	.	Motif m04 ; Note "Ig-like"
+ctgA	example	motif	37497	40559	.	-	.	Motif m15 ; Note "7-transmembrane"
+ctgA	example	motif	46012	48851	.	+	.	Motif m09 ; Note "kinase"
+ctgA	example	motif	48253	48366	.	+	.	Motif m01 ; Note "WD40"
+ctgA	example	match	31785	32359	.	+	.	Match seg01
+ctgA	example	similarity	31785	31939	.	+	.	Match seg01
+ctgA	example	similarity	32329	32359	.	+	.	Match seg01
+ctgA	example	match	26122	34466	.	+	.	Match seg02
+ctgA	example	similarity	26122	26126	.	+	.	Match seg02
+ctgA	example	similarity	26497	26869	.	+	.	Match seg02
+ctgA	example	similarity	27201	27325	.	+	.	Match seg02
+ctgA	example	similarity	27372	27433	.	+	.	Match seg02
+ctgA	example	similarity	27565	27565	.	+	.	Match seg02
+ctgA	example	similarity	27813	28091	.	+	.	Match seg02
+ctgA	example	similarity	28093	28201	.	+	.	Match seg02
+ctgA	example	similarity	28329	28377	.	+	.	Match seg02
+ctgA	example	similarity	28829	29194	.	+	.	Match seg02
+ctgA	example	similarity	29517	29702	.	+	.	Match seg02
+ctgA	example	similarity	29713	30061	.	+	.	Match seg02
+ctgA	example	similarity	30329	30774	.	+	.	Match seg02
+ctgA	example	similarity	30808	31306	.	+	.	Match seg02
+ctgA	example	similarity	31516	31729	.	+	.	Match seg02
+ctgA	example	similarity	31753	32154	.	+	.	Match seg02
+ctgA	example	similarity	32595	32696	.	+	.	Match seg02
+ctgA	example	similarity	32892	32901	.	+	.	Match seg02
+ctgA	example	similarity	33127	33388	.	+	.	Match seg02
+ctgA	example	similarity	33439	33443	.	+	.	Match seg02
+ctgA	example	similarity	33759	34209	.	+	.	Match seg02
+ctgA	example	similarity	34401	34466	.	+	.	Match seg02
+ctgA	example	match	6885	8999	.	-	.	Match seg03
+ctgA	example	similarity	6885	7241	.	-	.	Match seg03
+ctgA	example	similarity	7410	7737	.	-	.	Match seg03
+ctgA	example	similarity	8055	8080	.	-	.	Match seg03
+ctgA	example	similarity	8306	8999	.	-	.	Match seg03
+ctgA	example	match	5233	9825	.	-	.	Match seg04
+ctgA	example	similarity	5233	5302	.	-	.	Match seg04
+ctgA	example	similarity	5800	6101	.	-	.	Match seg04
+ctgA	example	similarity	6442	6854	.	-	.	Match seg04
+ctgA	example	similarity	7106	7211	.	-	.	Match seg04
+ctgA	example	similarity	7695	8177	.	-	.	Match seg04
+ctgA	example	similarity	8545	8783	.	-	.	Match seg04
+ctgA	example	similarity	8869	8935	.	-	.	Match seg04
+ctgA	example	similarity	9404	9825	.	-	.	Match seg04
+ctgA	example	match	26503	35904	.	-	.	Match seg05
+ctgA	example	similarity	26503	26799	.	-	.	Match seg05
+ctgA	example	similarity	27172	27185	.	-	.	Match seg05
+ctgA	example	similarity	27448	27860	.	-	.	Match seg05
+ctgA	example	similarity	27887	28076	.	-	.	Match seg05
+ctgA	example	similarity	28225	28316	.	-	.	Match seg05
+ctgA	example	similarity	28777	29058	.	-	.	Match seg05
+ctgA	example	similarity	29513	29647	.	-	.	Match seg05
+ctgA	example	similarity	30108	30216	.	-	.	Match seg05
+ctgA	example	similarity	30465	30798	.	-	.	Match seg05
+ctgA	example	similarity	31232	31236	.	-	.	Match seg05
+ctgA	example	similarity	31421	31817	.	-	.	Match seg05
+ctgA	example	similarity	32010	32057	.	-	.	Match seg05
+ctgA	example	similarity	32208	32680	.	-	.	Match seg05
+ctgA	example	similarity	33053	33325	.	-	.	Match seg05
+ctgA	example	similarity	33438	33868	.	-	.	Match seg05
+ctgA	example	similarity	34244	34313	.	-	.	Match seg05
+ctgA	example	similarity	34605	34983	.	-	.	Match seg05
+ctgA	example	similarity	35333	35507	.	-	.	Match seg05
+ctgA	example	similarity	35642	35904	.	-	.	Match seg05
+ctgA	example	match	19249	23427	.	+	.	Match seg06
+ctgA	example	similarity	19249	19559	.	+	.	Match seg06
+ctgA	example	similarity	19975	20260	.	+	.	Match seg06
+ctgA	example	similarity	20379	20491	.	+	.	Match seg06
+ctgA	example	similarity	20533	21005	.	+	.	Match seg06
+ctgA	example	similarity	21122	21331	.	+	.	Match seg06
+ctgA	example	similarity	21682	22176	.	+	.	Match seg06
+ctgA	example	similarity	22374	22570	.	+	.	Match seg06
+ctgA	example	similarity	23025	23427	.	+	.	Match seg06
+ctgA	example	match	44191	50000	.	-	.	Match seg07
+ctgA	example	similarity	44191	44514	.	-	.	Match seg07
+ctgA	example	similarity	44552	45043	.	-	.	Match seg07
+ctgA	example	similarity	45373	45600	.	-	.	Match seg07
+ctgA	example	similarity	45897	46315	.	-	.	Match seg07
+ctgA	example	similarity	46491	46890	.	-	.	Match seg07
+ctgA	example	similarity	47126	47297	.	-	.	Match seg07
+ctgA	example	similarity	47735	47983	.	-	.	Match seg07
+ctgA	example	similarity	48447	48709	.	-	.	Match seg07
+ctgA	example	similarity	48931	49186	.	-	.	Match seg07
+ctgA	example	similarity	49472	49699	.	-	.	Match seg07
+ctgA	example	similarity	49957	50000	.	-	.	Match seg07
+ctgA	example	match	18509	25367	.	+	.	Match seg08
+ctgA	example	similarity	18509	18985	.	+	.	Match seg08
+ctgA	example	similarity	18989	19388	.	+	.	Match seg08
+ctgA	example	similarity	19496	19962	.	+	.	Match seg08
+ctgA	example	similarity	20093	20580	.	+	.	Match seg08
+ctgA	example	similarity	20970	21052	.	+	.	Match seg08
+ctgA	example	similarity	21270	21277	.	+	.	Match seg08
+ctgA	example	similarity	21685	22168	.	+	.	Match seg08
+ctgA	example	similarity	22564	22869	.	+	.	Match seg08
+ctgA	example	similarity	22958	23298	.	+	.	Match seg08
+ctgA	example	similarity	23412	23469	.	+	.	Match seg08
+ctgA	example	similarity	23932	23932	.	+	.	Match seg08
+ctgA	example	similarity	24328	24787	.	+	.	Match seg08
+ctgA	example	similarity	25228	25367	.	+	.	Match seg08
+ctgA	example	match	36616	37227	.	-	.	Match seg09
+ctgA	example	similarity	36616	37057	.	-	.	Match seg09
+ctgA	example	similarity	37208	37227	.	-	.	Match seg09
+ctgA	example	match	29771	32937	.	+	.	Match seg10
+ctgA	example	similarity	29771	29942	.	+	.	Match seg10
+ctgA	example	similarity	30042	30340	.	+	.	Match seg10
+ctgA	example	similarity	30810	31307	.	+	.	Match seg10
+ctgA	example	similarity	31761	31984	.	+	.	Match seg10
+ctgA	example	similarity	32374	32937	.	+	.	Match seg10
+ctgA	example	match	24228	30738	.	+	.	Match seg11
+ctgA	example	similarity	24228	24510	.	+	.	Match seg11
+ctgA	example	similarity	24868	25012	.	+	.	Match seg11
+ctgA	example	similarity	25212	25426	.	+	.	Match seg11
+ctgA	example	similarity	25794	25874	.	+	.	Match seg11
+ctgA	example	similarity	26075	26519	.	+	.	Match seg11
+ctgA	example	similarity	26930	26940	.	+	.	Match seg11
+ctgA	example	similarity	26975	27063	.	+	.	Match seg11
+ctgA	example	similarity	27415	27799	.	+	.	Match seg11
+ctgA	example	similarity	27880	27943	.	+	.	Match seg11
+ctgA	example	similarity	28225	28346	.	+	.	Match seg11
+ctgA	example	similarity	28375	28570	.	+	.	Match seg11
+ctgA	example	similarity	28758	29041	.	+	.	Match seg11
+ctgA	example	similarity	29101	29302	.	+	.	Match seg11
+ctgA	example	similarity	29604	29702	.	+	.	Match seg11
+ctgA	example	similarity	29867	29885	.	+	.	Match seg11
+ctgA	example	similarity	30241	30246	.	+	.	Match seg11
+ctgA	example	similarity	30575	30738	.	+	.	Match seg11
+ctgA	example	match	12531	15870	.	+	.	Match seg12
+ctgA	example	similarity	12531	12895	.	+	.	Match seg12
+ctgA	example	similarity	13122	13449	.	+	.	Match seg12
+ctgA	example	similarity	13452	13745	.	+	.	Match seg12
+ctgA	example	similarity	13908	13965	.	+	.	Match seg12
+ctgA	example	similarity	13998	14488	.	+	.	Match seg12
+ctgA	example	similarity	14564	14899	.	+	.	Match seg12
+ctgA	example	similarity	15185	15276	.	+	.	Match seg12
+ctgA	example	similarity	15639	15736	.	+	.	Match seg12
+ctgA	example	similarity	15745	15870	.	+	.	Match seg12
+ctgA	example	match	49406	50000	.	+	.	Match seg13
+ctgA	example	similarity	49406	49476	.	+	.	Match seg13
+ctgA	example	similarity	49762	50000	.	+	.	Match seg13
+ctgA	example	match	41137	47829	.	-	.	Match seg14
+ctgA	example	similarity	41137	41318	.	-	.	Match seg14
+ctgA	example	similarity	41754	41948	.	-	.	Match seg14
+ctgA	example	similarity	42057	42474	.	-	.	Match seg14
+ctgA	example	similarity	42890	43270	.	-	.	Match seg14
+ctgA	example	similarity	43395	43811	.	-	.	Match seg14
+ctgA	example	similarity	44065	44556	.	-	.	Match seg14
+ctgA	example	similarity	44763	45030	.	-	.	Match seg14
+ctgA	example	similarity	45231	45488	.	-	.	Match seg14
+ctgA	example	similarity	45790	46022	.	-	.	Match seg14
+ctgA	example	similarity	46092	46318	.	-	.	Match seg14
+ctgA	example	similarity	46816	46992	.	-	.	Match seg14
+ctgA	example	similarity	47449	47829	.	-	.	Match seg14
+ctgA	example	match	39265	48453	.	-	.	Match seg15
+ctgA	example	similarity	39265	39361	.	-	.	Match seg15
+ctgA	example	similarity	39753	40034	.	-	.	Match seg15
+ctgA	example	similarity	40515	40954	.	-	.	Match seg15
+ctgA	example	similarity	41252	41365	.	-	.	Match seg15
+ctgA	example	similarity	41492	41504	.	-	.	Match seg15
+ctgA	example	similarity	41941	42377	.	-	.	Match seg15
+ctgA	example	similarity	42748	42954	.	-	.	Match seg15
+ctgA	example	similarity	43401	43897	.	-	.	Match seg15
+ctgA	example	similarity	44043	44113	.	-	.	Match seg15
+ctgA	example	similarity	44399	44888	.	-	.	Match seg15
+ctgA	example	similarity	45281	45375	.	-	.	Match seg15
+ctgA	example	similarity	45711	46041	.	-	.	Match seg15
+ctgA	example	similarity	46425	46564	.	-	.	Match seg15
+ctgA	example	similarity	46738	47087	.	-	.	Match seg15
+ctgA	example	similarity	47329	47595	.	-	.	Match seg15
+ctgA	example	similarity	47858	47979	.	-	.	Match seg15
+ctgA	example	similarity	48169	48453	.	-	.	Match seg15
+ctgA	example	BAC	1000	20000	.	.	.	BAC b101.2 ; Note "Fingerprinted BAC with end reads"
+ctgA	example	left_end_read	1000	1500	.	+	.	BAC b101.2
+ctgA	example	right_end_read	19500	20000	.	-	.	BAC b101.2
+ctgA	example	gene	1000	9000	.	+	.	Gene EDEN ; Note "protein kinase"
+
+ctgA	example	mRNA	1050	9000	.	+	.	mRNA EDEN.1 ; Gene EDEN
+ctgA	example	5'-UTR	1050	1200	.	+	.	mRNA EDEN.1
+ctgA	example	CDS	1201	1500	.	+	0	mRNA EDEN.1
+ctgA	example	CDS	3000	3902	.	+	0	mRNA EDEN.1
+ctgA	example	CDS	5000	5500	.	+	0	mRNA EDEN.1
+ctgA	example	CDS	7000	7608	.	+	0	mRNA EDEN.1
+ctgA	example	3'-UTR	7609	9000	.	+	.	mRNA EDEN.1
+
+ctgA	example	mRNA	1050	9000	.	+	.	mRNA EDEN.2 ; Gene EDEN
+ctgA	example	5'-UTR	1050	1200	.	+	.	mRNA EDEN.2
+ctgA	example	CDS	1201	1500	.	+	0	mRNA EDEN.2
+ctgA	example	CDS	5000	5500	.	+	0	mRNA EDEN.2
+ctgA	example	CDS	7000	7608	.	+	0	mRNA EDEN.2
+ctgA	example	3'-UTR	7609	9000	.	+	.	mRNA EDEN.2
+
+ctgA	example	mRNA	1300	9000	.	+	.	mRNA EDEN.3 ; Gene EDEN
+ctgA	example	5'-UTR	1300	1500	.	+	.	mRNA EDEN.3
+ctgA	example	5'-UTR	3000	3300	.	+	.	mRNA EDEN.3
+ctgA	example	CDS	3301	3902	.	+	0	mRNA EDEN.3
+ctgA	example	CDS	5000	5500	.	+	1	mRNA EDEN.3
+ctgA	example	CDS	7000	7600	.	+	1	mRNA EDEN.3
+ctgA	example	3'-UTR	7601	9000	.	+	.	mRNA EDEN.3
+ctgA	est	match	1050	3202	.	+	.	Target EST:agt830.5 1 554
+ctgA	est	HSP	1050	1500	.	+	.	Target EST:agt830.5 1 451
+ctgA	est	HSP	3000	3202	.	+	.	Target EST:agt830.5 452 654
+ctgA	est	match	5410	7503	.	-	.	Target EST:agt830.3 595 1
+ctgA	est	HSP	5410	5500	.	-	.	Target EST:agt830.3 596 505
+ctgA	est	HSP	7000	7503	.	-	.	Target EST:agt830.3 504 1
+
+ctgA	est	match	1050	7200	.	+	.	Target EST:agt221.5 1 1253
+ctgA	est	HSP	1050	1500	.	+	.	Target EST:agt221.5 1 451
+ctgA	est	HSP	5000	5500	.	+	.	Target EST:agt221.5 452 952
+ctgA	est	HSP	7000	7300	.	+	.	Target EST:agt221.5 953 1253
+ctgA	est	match	7500	8000	.	-	.	Target EST:agt221.3 501 1
+ctgA	est	HSP	7500	8000	.	-	.	Target EST:agt221.3 501 1
+
+ctgA	est	match	1150	7200	.	+	.	Target EST:agt767.5 1 1153
+ctgA	est	HSP	1150	1500	.	+	.	Target EST:agt767.5 1 351
+ctgA	est	HSP	5000	5500	.	+	.	Target EST:agt767.5 352 852
+ctgA	est	HSP	7000	7200	.	+	.	Target EST:agt767.5 853 1153
+ctgA	est	match	8000	9000	.	-	.	Target EST:agt767.3 1001 1
+ctgA	est	HSP	8000	9000	.	-	.	Target EST:agt767.3 1001 1

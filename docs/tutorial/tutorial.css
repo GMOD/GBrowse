@@ -1,0 +1,36 @@
+BODY {
+   background-color: #FFFFFF;
+}
+TD.code {
+   font-family: fixed;
+   background: rgb(220,220,220);
+}
+INPUT {
+    background-color: #FFFFFF
+}
+BLOCKQUOTE.example { 
+   background-color: rgb(200,255,255)
+} 
+TH {
+    font-family: sans-serif;
+    background-color: rgb(200,255,255);
+    padding: 0;
+    margin: 0;
+}
+TD {
+    font-family: sans-serif;
+    padding: 0;
+    margin: 0;
+}
+TD.pre {
+    font-family: fixed;
+}
+.caption {
+    color: red;
+}
+.code {
+	font-family: fixed;
+}
+I.code {
+   font-family: sans-serif;
+}

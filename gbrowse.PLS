@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.79 2003-03-06 22:29:50 lstein Exp $
+# $Id: gbrowse.PLS,v 1.80 2003-03-07 02:50:48 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -305,9 +305,9 @@ elsif ($plugin_action eq $LANG->tr('Configure')) {
 
 ## MAIN DISPLAY
 else {
+  my $header = $CONFIG->header;
   if ($page_settings->{head}) {
-    my $header = $CONFIG->header;
-    print $header ? $header:h1($description);
+    print $header ? $header : h1($description);
   }
   main_display(\@segments,$page_settings);
 }
@@ -672,6 +672,7 @@ sub navigation_table {
   my $table = '';
   my $oligo = $PLUGINS->{'OligoFinder'} ? ', oligonucleotide (15 bp minimum)' : '';
   my $help  =  a({-href=>general_help(),-target=>'help'},'['.$LANG->tr('Help').']');
+  my $rand  = substr(md5_hex(rand),0,5);
 
   $table .= table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
 		  $settings->{ins} ?
@@ -691,9 +692,9 @@ sub navigation_table {
 
 		  TR(
 		     th({-align=>'left', -colspan=>3},
-			a({-href=>"$self?head=".((!$settings->{head})||0)},
+			a({-href=>"$self?rand=$rand;head=".((!$settings->{head})||0)},
 			  '['.$LANG->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
-			a({-href=>"$self?ins=".((!$settings->{ins})||0)},
+			a({-href=>"$self?rand=$rand;ins=".((!$settings->{ins})||0)},
 			  '['.$LANG->tr($settings->{ins}? 'HIDE_INSTRUCTIONS':'SHOW_INSTRUCTIONS').']'),
 			 $settings->{name} || $settings->{ref} ?
 			 (

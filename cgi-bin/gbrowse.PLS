@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.89 2004-05-21 19:01:00 marclogghe Exp $
+# $Id: gbrowse.PLS,v 1.90 2004-06-08 01:21:25 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -98,6 +98,8 @@ use constant DEBUGGING_RECTANGLES => 0;
 # amount of time to remember persistent settings
 use constant REMEMBER_SETTINGS_TIME => '+7d';  # 7 days
 use constant REMEMBER_SOURCE_TIME   => '+3M';  # 3 months
+
+use constant GLOBAL_TIMEOUT => 60;  # 60 seconds to failure unless overridden in config
 
 local $CGI::USE_PARAM_SEMICOLONS = 1;
 
@@ -426,7 +428,7 @@ sub main_display {
 				        $segment->start,$segment->end)
       unless $segment->can('features');
     print overview_panel($segment,$page_settings);
-    print detail_panel($segment,$page_settings,$feature_files);
+    print detail_panel_with_timeout($segment,$page_settings,$feature_files);
   }
 
   print html_frag('html3',$segment,$page_settings);
@@ -457,6 +459,22 @@ sub overview_panel {
 		  td({-align=>'center'},$image)
 		 )
 	      );
+}
+
+sub detail_panel_with_timeout {
+    my @args    = @_;
+    my $timeout = $CONFIG->setting('request timeout') || GLOBAL_TIMEOUT;
+    local $SIG{ALRM} = sub { die "timeout\n" };
+    my $data = eval {
+      alarm($timeout);
+      detail_panel(@args);
+    };
+    alarm(0);
+    if ($@ =~ /^timeout/) {
+      return p(b(font({-size=>'+2'},$CONFIG->tr('TIMEOUT'))));
+    } else {
+      return $data;
+    }
 }
 
 sub detail_panel {
@@ -845,7 +863,7 @@ sub make_hilite_callback {
 
     # if we get here, we select the search term for highlighting
     # return unless $feature->type         eq $settings->{h_type};
-    return unless $feature->display_name eq $settings->{h_feat};
+    return unless $feature->display_name && $feature->display_name eq $settings->{h_feat};
     'yellow';
   }
 }

@@ -214,8 +214,29 @@ cgi_install ::
 
 sub MY::ppd {
   package MY;
-  my $repository = 'http://stein.cshl.org/ppm';
+  my $repository = 'http://www.gmod.org/ggb/ppm';
+  my $arch       = 'MSWin32-x86-multi-thread';
   my $inherited = shift->SUPER::ppd(@_);
+
+  my $implementation;
+  my $newimp;
+  warn "$inherited\n";
+  if ($inherited =~ /qq\{(<S.*R>\\n)\}.*qq\{(\\t<I.*\/>\\n)\}.*qq\{(\\t\\t<O.*G>\\n)\}/sg){
+    my $xml = $1.$2.$3;
+    warn "$xml\n";
+    $inherited =~ s/qq\{.*>>/qq{$xml}" >/s;
+  }
+
+  if ($inherited =~ /(\<IMPLEMENTATION\>.*\<\/IMPLEMENTATION\>)/m) {
+    $implementation = $newimp = $1;
+    $newimp      =~ s/i386\-linux\-thread\-multi/$arch/;
+    $newimp      =~ s/\$\(OSNAME\)/MSWin32/;
+    my $impl58   = $newimp;
+    $impl58      =~ s/\Q$arch\E/$arch\-5\.8/;
+    $newimp      .= "\\n\\t\\t$impl58";
+    $inherited   =~ s/\Q$implementation\E/$newimp/;
+  } 
+
   $inherited .= <<END;
 
 	\@echo "creating Generic-Genome-Browser.ppd"

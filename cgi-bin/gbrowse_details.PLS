@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.22 2004-03-16 16:15:14 scottcain Exp $
+# $Id: gbrowse_details.PLS,v 1.23 2004-06-08 20:31:26 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -91,6 +91,9 @@ my @features = sort {$b->length<=>$a->length} $CONFIG->_feature_get($db,$name,$c
   unless @features;
 
 warn "features = @features" if DEBUG;
+
+warn "segments = ",join ' ',$features[0]->segments if @features;
+
 if (@features) {
   print print_features(\@features);
 } else {
@@ -115,13 +118,9 @@ sub print_features {
     $string .= start_table();
     unless ($subf) {
       $string .= PrintMultiple($options,'Name',b($f->name));
-      $string .= PrintMultiple($options,,'Class',$f->class);
+      $string .= PrintMultiple($options,'Class',$f->class);
     }
-    my %attributes = $f->attributes;
-    for my $a (sort keys %attributes) {
-      $string .= PrintMultiple($options,$a,$f->attributes($a));
-    }
-    $string .= PrintMultiple($options,'Type',  $f->method, $f->name); # sending name here for the sake of alignment features, that need to make a link from it
+    $string .= PrintMultiple($options,'Type',$f->method);
     $string .= PrintMultiple($options,'Source',$f->source) if $f->source;
     $string .= PrintMultiple($options,"Position",position($f));
     $string .= PrintMultiple($options,"Length",$f->length);
@@ -129,12 +128,18 @@ sub print_features {
       # try to correct for common GFF2 error of indicating a -/- alignment
       # using a (-) src strand and a target_start > target_end
       my $bug = $f->abs_strand < 0 && $f->target->abs_strand < 0;
+      $string .= PrintMultiple($options,'Target',$f->target);
       $string .= PrintMultiple($options,"Matches",position($f->target,undef,$bug));
       $string .= PrintMultiple($options,'',print_matches($f,$f->target,$bug)) if $subf;
 
     }
     $string .= PrintMultiple($options,"Score",$f->score) if defined $f->score;
-    my @subfeatures = $f->merged_segments;
+    my %attributes = $f->attributes;
+    for my $a (sort keys %attributes) {
+      $string .= PrintMultiple($options,$a,$f->attributes($a));
+    }
+#    my @subfeatures = $f->merged_segments;  # broken with old bioperl
+    my @subfeatures = $f->segments;          # works with old bioperl
     $string .= PrintMultiple($options,'Parts',print_features(\@subfeatures,1)) if @subfeatures;
     $string .= end_table();
 
@@ -157,6 +162,7 @@ sub print_dna {
     warn "f = $f" if DEBUG;
     my $method = $f->method;
     warn "$method => $COLORS{$method}" if DEBUG;
+    next if $COLORS{$f->method} eq 'none';
     $markup->add_style($method => "BGCOLOR $COLORS{$method}");
   }
   # add a newline every 80 positions
@@ -264,8 +270,8 @@ sub PrintMultiple {
     $LINK = "<a href='$LINK'>$first</a>";
   }
 
-  # for EST alignment features, create a link to get the orignal EST sequence   
-  if (($label eq "Type") && ($URLS{'alignment'}) && ($first =~ /alignment/i)){
+  # for EST alignment features, create a link to get the orignal EST sequence
+  if (($label eq 'Target') && ($URLS{'alignment'}) && ($first =~ /alignment/i)){
     my $name = shift @a;
     $LINK = $URLS{'alignment'};
     $LINK=~ s/\$value/$name/;

@@ -112,10 +112,10 @@ WriteMakefile(
 				 'bin/process_gadfly.PLS' => 'bin/process_gadfly.pl',
 				 'bin/process_wormbase.PLS' => 'bin/process_wormbase.pl',
 				 'bin/process_ncbi_human.PLS' => 'bin/process_ncbi_human.pl',
-				 'gbrowse.PLS'  => 'gbrowse',
-				 'gbrowse_syn.PLS'  => 'gbrowse',
-				 'gbrowse_img.PLS'  => 'gbrowse_img',
-				 'gbrowse_details.PLS'  => 'gbrowse_details',
+				 'cgi-bin/gbrowse.PLS'  => 'cgi-bin/gbrowse',
+				 'cgi-bin/gbrowse_syn.PLS'  => 'cgi-bin/gbrowse_syn',
+				 'cgi-bin/gbrowse_img.PLS'  => 'cgi-bin/gbrowse_img',
+				 'cgi-bin/gbrowse_details.PLS'  => 'cgi-bin/gbrowse_details',
 				 },
 	      EXE_FILES      => [
 				 'bin/process_wormbase.pl',
@@ -185,6 +185,15 @@ cgi_install :: gbrowse
 	\$(PERL) install_util/cgi_install.pl $OPTIONS{CGIBIN}
 
 };
+}
+
+sub MY::ppd {
+  package MY;
+  my $inherited = shift->SUPER::ppd(@_);
+  $inherited .= <<END;
+	-tar cvf support_files.tar.gz --exclude CVS htdocs conf cgi-bin install_util
+END
+;
 }
 
 

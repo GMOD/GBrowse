@@ -48,7 +48,7 @@ will perform a non-privileged installation that places all gbrowse
 components (including perl libraries) in the path ~/gbrowse.
 
 In the above example, before running 'make install', create the
-directories ~/gbrowse/html, ~/gbrowse/cgi-bin and ~/gbrowse/conf
+directories ~/gbrowse/html, ~gbrowse/cgi-bin and ~/gbrowse/conf
 
 To make the CGI scipts aware of the custom library location, you can
 either ask someone with root privileges to edit the apache
@@ -187,7 +187,6 @@ WriteMakefile(
 				 'cgi-bin/gbrowse_moby.PLS'  => 'cgi-bin/gbrowse_moby',
 				 'cgi-bin/moby_server.PLS'  => 'cgi-bin/moby_server',
 				 'cgi-bin/das.PLS'          => 'cgi-bin/das',
-				 'cgi-bin/das2.PLS'          => 'cgi-bin/das2',
 				 'conf/MobyServices/GbrowseServices.PMS'  => 'conf/MobyServices/GbrowseServices.pm',
 				 },
 	      EXE_FILES      => [

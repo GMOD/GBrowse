@@ -2,7 +2,7 @@ use ExtUtils::MakeMaker;
 use FindBin '$Bin';
 require 5.005003;
 
-my $VERSION = '1.46';
+my $VERSION = 1.39;
 
 my @OPTIONS = qw(PREFIX CONF HTDOCS CGIBIN);
 my $OPTIONS = join ('|',@OPTIONS);
@@ -16,28 +16,12 @@ foreach (@argv) {
     die "To customize install locations, provide one or more of the options PREFIX, CONF, HTDOCS, or CGIBIN, as in CONF=/usr/local/apache/conf\n";
   }
 
-  elsif (/($OPTIONS)=(.+)/og) {
+  elsif (/($OPTIONS)=(.+)/g) {
     $OPTIONS{$1} = $2;
   }
 
   else {
     push @ARGV,$_;
-  }
-}
-
-if (-e 'GGB.def' && !%OPTIONS) {
-  print STDERR "You have installed gbrowse before.  Should I use the previous settings to set the file paths (y/n) [y]? ";
-  chomp (my $line = <>);
-  if (!$line || $line =~ /^[yY]/) {
-    print STDERR "Using previous settings for file paths.\n";
-    open F,'GGB.def' or die "GGB.def: $!";
-    while (<F>) {
-      chomp;
-      next if /^\#/;
-      next unless /^($OPTIONS)=(.+)/o;
-      $OPTIONS{$1} = $2;
-    }
-    close F;
   }
 }
 
@@ -58,7 +42,6 @@ unless ($OPTIONS{CGIBIN}) {
 
 open F,">$Bin/GGB.def" or die "Can't open $Bin/GGB.def for writing: $!";
 print F "# This hints file contains configuration information used by the generic browser\n\n";
-print F "# To reconfigure, run perl Makefile.PL `cat GGB.def`\n\n";
 foreach (keys %OPTIONS) {
   print F "$_=$OPTIONS{$_}\n";
 }
@@ -78,9 +61,7 @@ WriteMakefile(
 				 'bin/process_sgd.PLS' => 'bin/process_sgd.pl',
 				 'bin/process_gadfly.PLS' => 'bin/process_gadfly.pl',
 				 'bin/process_wormbase.PLS' => 'bin/process_wormbase.pl',
-				 'bin/process_ncbi_human.PLS' => 'bin/process_ncbi_human.pl',
 				 'gbrowse.PLS'  => 'gbrowse',
-				 'gbrowse_img.PLS'  => 'gbrowse_img',
 				 },
 	      EXE_FILES      => [
 				 'bin/process_wormbase.pl',
@@ -104,7 +85,6 @@ sub MY::processPL {
   package MY;
   my $inherited = shift->SUPER::processPL(@_);
   $inherited =~ s/:: gbrowse\.PLS/:: gbrowse.PLS GGB.def/;
-  $inherited =~ s/:: gbrowse_img\.PLS/:: gbrowse_img.PLS GGB.def/;
   $inherited;
 }
 
@@ -121,7 +101,7 @@ conf_install ::
 	\@echo "Installing sample configuration files..."
 	\@dir=$OPTIONS{CONF}/gbrowse.conf; \\
 	mkdir -p \$\$dir; \\
-	for i in $Bin/conf/*.*; do \\
+	for i in $Bin/conf/*.conf; do \\
 	  j=`basename \$\$i`; \\
 		if [ -f "\$\$dir/\$\$j" ]; then \\
 			echo "   Found \$\$j in \$\$dir. Skipping..."; \\
@@ -132,7 +112,11 @@ conf_install ::
 	mkdir -p \$\$dir/plugins; \\
 	for i in $Bin/conf/plugins/*.pm; do \\
 	  j=`basename \$\$i`; \\
-		cp \$\$i \$\$dir/plugins; \\
+		if [ -f "\$\$dir/plugins/\$\$j" ]; then \\
+			echo "   Found \$\$j in \$\$dir/plugins. Skipping..."; \\
+		else \\
+			cp \$\$i \$\$dir/plugins; \\
+		fi \\
 	done; \\
 
 
@@ -168,9 +152,7 @@ cgi_install :: gbrowse
 	\@dir=$OPTIONS{CGIBIN}; \\
 	mkdir -p \$\$dir; \\
 	cp $Bin/gbrowse \$\$dir; \\
-	chmod +x \$\$dir/gbrowse; \\
-	cp $Bin/gbrowse_img \$\$dir; \\
-	chmod +x \$\$dir/gbrowse_img
+	chmod +x \$\$dir/gbrowse
 
 };
 }

@@ -1,0 +1,4028 @@
+diff -Naur bioperl-1.0/Bio/DB/Biblio/soap.pm bioperl-1.01/Bio/DB/Biblio/soap.pm
+--- bioperl-1.0/Bio/DB/Biblio/soap.pm	Thu Feb 28 04:22:23 2002
++++ bioperl-1.01/Bio/DB/Biblio/soap.pm	Fri Apr 12 00:10:14 2002
+@@ -1,4 +1,4 @@
+-# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ #
+ # BioPerl module Bio::DB::Biblio::soap.pm
+ #
+@@ -124,8 +124,8 @@
+ 
+ BEGIN { 
+     # set the version for version checking
+-    $VERSION = do { my @r = (q$Revision: 1.3 $ =~ /\d+/g); sprintf "%d.%-02d", @r };
+-    $Revision = q$Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $;
++    $VERSION = do { my @r = (q$Revision: 1.3 $ =~ /\d+/g); sprintf "%d.%-02d", @r };
++    $Revision = q$Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $;
+ 
+     # where to go...
+     $DEFAULT_SERVICE = 'http://industry.ebi.ac.uk/soap/openBQS';
+@@ -187,6 +187,11 @@
+                 See the code for attributes of the default SOAP::Lite
+                 object.
+ 
++              -httpproxy => 'http://server:port'
++                 In addition to the 'location' parameter, you may need
++                 to specify also a location/URL of a HTTP proxy server
++                 (if your site requires one).
++
+ 	   Additionally, the main module Bio::Biblio recognises
+ 	   also:
+              -access => '...'
+@@ -228,10 +233,18 @@
+     $self->{'_location'} = $DEFAULT_SERVICE unless $self->{'_location'};
+     $self->{'_namespace'} = $DEFAULT_NAMESPACE unless $self->{'_namespace'};
+     $self->{'_destroy_on_exit'} = 1 unless defined $self->{'_destroy_on_exit'};
+-    $self->{'_soap'} = SOAP::Lite
+-	                  -> uri ($self->{'_namespace'})
+-	                  -> proxy ($self->{'_location'}) unless $self->{'_soap'};
+-
++    unless ($self->{'_soap'}) {
++	if (defined $self->{'_httpproxy'}) {
++	    $self->{'_soap'} = SOAP::Lite
++	                          -> uri ($self->{'_namespace'})
++		                  -> proxy ($self->{'_location'},
++				            proxy => ['http' => $self->{'_httpproxy'}]);
++	} else {
++	    $self->{'_soap'} = SOAP::Lite
++	                          -> uri ($self->{'_namespace'})
++				  -> proxy ($self->{'_location'});
++	}
++    }
+ }
+ 
+ # -----------------------------------------------------------------------------
+@@ -420,7 +433,9 @@
+    my $soap = $self->{'_soap'};
+    my ($collection_id) = $self->{'_collection_id'};
+    $self->throw ($self->_no_id_msg) unless $collection_id;
+-   $soap->getNext (SOAP::Data->type (string => $collection_id))->result;
++   my $ra = $soap->getNext (SOAP::Data->type (string => $collection_id))->result;
++   $self->{'_collection_id'} = shift @{ $ra };
++   shift @{ $ra };
+ }
+ 
+ sub get_more {
+@@ -438,8 +453,10 @@
+        $how_many = 1;
+    }
+ 
+-   $soap->getMore (SOAP::Data->type (string => $collection_id),
+-		   SOAP::Data->type (int    => $how_many))->result;
++   my $ra = $soap->getMore (SOAP::Data->type (string => $collection_id),
++			    SOAP::Data->type (int    => $how_many))->result;
++   $self->{'_collection_id'} = shift @{ $ra };
++   $ra;
+ }
+ 
+ sub reset_retrieval {
+@@ -447,7 +464,7 @@
+    my $soap = $self->{'_soap'};
+    my ($collection_id) = $self->{'_collection_id'};
+    $self->throw ($self->_no_id_msg) unless $collection_id;
+-   $soap->resetRetrieval (SOAP::Data->type (string => $collection_id));
++   $self->{'_collection_id'} = $soap->resetRetrieval (SOAP::Data->type (string => $collection_id))->result;
+ }
+ 
+ sub exists {
+diff -Naur bioperl-1.0/Bio/DB/GFF/Adaptor/dbi/mysql.pm bioperl-1.01/Bio/DB/GFF/Adaptor/dbi/mysql.pm
+--- bioperl-1.0/Bio/DB/GFF/Adaptor/dbi/mysql.pm	Sat Feb 16 04:42:28 2002
++++ bioperl-1.01/Bio/DB/GFF/Adaptor/dbi/mysql.pm	Sun Mar 31 16:27:36 2002
+@@ -16,7 +16,7 @@
+ use Bio::DB::GFF::Util::Rearrange; # for rearrange()
+ use vars qw($VERSION @ISA);
+ @ISA = qw(Bio::DB::GFF::Adaptor::dbi);
+-$VERSION = '0.30';
++$VERSION = '0.50';
+ 
+ use constant MAX_SEGMENT => 100_000_000;  # the largest a segment can get
+ use constant DEFAULT_CHUNK => 2000;
+@@ -334,8 +334,13 @@
+ sub make_abscoord_query {
+   my $self = shift;
+   my ($name,$class,$refseq) = @_;
++  my $query = GETSEQCOORDS;
++  if ($name =~ /\*/) {
++    $name =~ tr/*/%/;
++    $query =~ s/gname=\?/gname LIKE ?/;
++  }
+   defined $refseq ? $self->dbh->do_query(GETFORCEDSEQCOORDS,$name,$class,$refseq) 
+-    : $self->dbh->do_query(GETSEQCOORDS,$name,$class);
++    : $self->dbh->do_query($query,$name,$class);
+ }
+ 
+ # override parent
+@@ -374,7 +379,12 @@
+ sub make_features_by_name_where_part {
+   my $self = shift;
+   my ($class,$name) = @_;
+-  return ("fgroup.gclass=? AND fgroup.gname=?",$class,$name);
++  if ($name =~ /\*/) {
++    $name =~ s/\*/%/g;
++    return ("fgroup.gclass=? AND fgroup.gname LIKE ?",$class,$name);
++  } else {
++    return ("fgroup.gclass=? AND fgroup.gname=?",$class,$name);
++  }
+ }
+ 
+ sub make_features_by_attribute_where_part {
+@@ -940,6 +950,24 @@
+ }
+ 
+ 
++=head2 make_classes_query
++
++ Title   : make_classes_query
++ Usage   : ($query,@args) = $db->make_classes_query
++ Function: return query fragment for generating list of reference classes
++ Returns : a query and args
++ Args    : none
++ Status  : public
++
++=cut
++
++sub make_classes_query {
++  my $self = shift;
++  return 'SELECT DISTINCT gclass FROM fgroup WHERE NOT ISNULL(gclass)';
++}
++
++
++# why is this here?
+ sub get_features_iterator {
+   my $self = shift;
+   $self->SUPER::get_features_iterator(@_);
+diff -Naur bioperl-1.0/Bio/DB/GFF/Adaptor/dbi.pm bioperl-1.01/Bio/DB/GFF/Adaptor/dbi.pm
+--- bioperl-1.0/Bio/DB/GFF/Adaptor/dbi.pm	Mon Feb 25 07:18:07 2002
++++ bioperl-1.01/Bio/DB/GFF/Adaptor/dbi.pm	Sun Mar 31 16:27:29 2002
+@@ -238,6 +238,52 @@
+   return $count;
+ }
+ 
++=head2 classes
++
++ Title   : classes
++ Usage   : $db->classes
++ Function: return list of landmark classes in database
++ Returns : a list of classes
++ Args    : none
++ Status  : public
++
++This routine returns the list of reference classes known to the
++database, or empty if classes are not used by the database.  Classes
++are distinct from types, being essentially qualifiers on the reference
++namespaces.
++
++NOTE: In the current mysql-based schema, this query takes a while to
++run due to the classes not being normalized.
++
++=cut
++
++sub classes {
++  my $self = shift;
++  my ($query,@args) = $self->make_classes_query or return;
++  my $sth           = $self->dbh->do_query($query,@args);
++  my @classes;
++  while (my ($c) = $sth->fetchrow_array) {
++     push @classes,$c;
++  }
++  @classes;
++}
++
++=head2 make_classes_query
++
++ Title   : make_classes_query
++ Usage   : ($query,@args) = $db->make_classes_query
++ Function: return query fragment for generating list of reference classes
++ Returns : a query and args
++ Args    : none
++ Status  : public
++
++=cut
++
++sub make_classes_query {
++  my $self = shift;
++  return;
++}
++
+ =head2 _feature_by_name
+ 
+  Title   : _feature_by_name
+@@ -915,8 +961,8 @@
+ 
+ =head2 make_features_by_name_where_part
+ 
+- Title   : make_features_byname_where_part
+- Usage   : $db->make_features_byname_where_part($class,$name)
++ Title   : make_features_by_name_where_part
++ Usage   : $db->make_features_by_name_where_part($class,$name)
+  Function: create the SQL fragment needed to select a feature by its group name & class
+  Returns : a SQL fragment and bind arguments
+  Args    : class and name of the feature group
+diff -Naur bioperl-1.0/Bio/DB/GFF/Adaptor/memory.pm bioperl-1.01/Bio/DB/GFF/Adaptor/memory.pm
+--- bioperl-1.0/Bio/DB/GFF/Adaptor/memory.pm	Wed Jan 23 14:06:12 2002
++++ bioperl-1.01/Bio/DB/GFF/Adaptor/memory.pm	Sun Mar 31 16:25:03 2002
+@@ -1,14 +1,27 @@
+ package Bio::DB::GFF::Adaptor::memory;
+ use strict;
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# AUTHOR: Shulamit Avraham
++# This module needs to be cleaned up and documented
++
++# Bio::DB::GFF::Adaptor::memory --  in-memory db adaptor
++# implements the low level handling of data which stored in memory.
++# This adaptor implements a specific in memory schema that is compatible with Bio::DB::GFF.
++# Inherits from Bio::DB::GFF.
+ 
++
++#use lib './blib/lib';
++#use lib '/u/swiss/shuly/bioperl-live';
++# use lib '/a/swiss/export/home/shuly/bioperl-live';
+ use Bio::DB::GFF;
+ use Bio::DB::GFF::Util::Rearrange; # for rearrange()
++use Bio::DB::GFF::Adaptor::memory_iterator;
+ use vars qw($VERSION @ISA);
+ 
+ use constant MAX_SEGMENT => 100_000_000;  # the largest a segment can get
+ 
+ @ISA =  qw(Bio::DB::GFF);
+-$VERSION = '0.01';
++$VERSION = '0.02';
+ 
+ sub new {
+   my $class = shift ;
+@@ -22,12 +35,18 @@
+   return $self;
+ }
+ 
++
++
+ sub insert_sequence {
+   my $self = shift;
+   my($id,$offset,$seq) = @_;
+   $self->{dna}{$id} .= $seq;
+ }
+ 
++
++
++# low-level fetch of a DNA substring given its
++# name, class and the desired range.
+ sub get_dna {
+   my $self = shift;
+   my ($id,$start,$stop,$class) = @_;
+@@ -45,34 +64,76 @@
+   $dna;
+ }
+ 
++
++# this method loads the feature as a hash into memory -
++# keeps an array of features-hashes as an in-memory db
+ sub load_gff_line {
+   my $self = shift;
+   my $feature_hash  = shift;
+-  $feature_hash->{strand} = '+' if $feature_hash->{strand} eq '.'; 
+-  $feature_hash->{phase} = '+' if $feature_hash->{phase} eq '.';
++  $feature_hash->{strand} = '' if $feature_hash->{strand} eq '.'; 
++  $feature_hash->{phase} = '' if $feature_hash->{phase} eq '.';
++  #$feature_hash->{strand} = '+' if $feature_hash->{strand} eq '.'; 
++  #$feature_hash->{phase} = '+' if $feature_hash->{phase} eq '.';
+   push @{$self->{data}},$feature_hash;
+ }
+ 
++
++# given sequence name, return (reference,start,stop,strand)
+ sub get_abscoords {
+   my $self = shift;
+   my ($name,$class,$refseq) = @_;
+   my %refs;
+ 
+   # Find all features that have the requested name and class.
+-  #for my $type (@$typelist) {
+-  #	my ($method,$source) = @$type;
+-  #	if defined $method && length $method {
+-  #	  next unless $feature_method ;
+-  #	}
+-  #} 
+   # Sort them by reference point.
+   for my $feature (@{$self->{data}}) {
+-    next unless $feature->{gname} eq $name;
+-    next unless $feature->{gclass} eq $class;
++    #next unless $feature->{gname} eq $name;
++    #next unless $feature->{gclass} eq $class;
++    
++    my $no_match_class_name;
++    my $empty_class_name;
++    if ($feature->{gname} and $feature->{gclass}){
++      $no_match_class_name = 1 
++	if ($feature->{gname} ne $name || $feature->{gclass} ne $class);
++    }
++    else{
++      $empty_class_name = 1;
++    }
++
++    if ($no_match_class_name || $empty_class_name){
++    #if ($feature->{gname} ne $name || $feature->{gclass} ne $class){
++
++      my $feature_attributes = $feature->{attributes};
++      my $attributes = {Alias => $name};
++      if (!_matching_attributes($feature_attributes,$attributes)){
++         next;
++      }
++    
++    }
++    
+     push @{$refs{$feature->{ref}}},$feature;
+   }
+ 
+   # find out how many reference points we recovered
++
++  if (! %refs) {
++    $self->error("$name not found in database");
++    return;
++  } elsif (keys %refs > 1) {
++    $self->error("$name has more than one reference sequence in database");
++    return;
++  }
++
++  # compute min and max
++  my ($ref) = keys %refs;
++  my @found = @{$refs{$ref}};
++  my ($strand,$start,$stop);
++  foreach (@found) {
++    $strand ||= $_->{strand};
++    $strand = '+' if $strand eq '.'; 
++    $start  = $_->{start} if !defined($start) || $start > $_->{start};
++    $stop   = $_->{stop}  if !defined($stop)  || $stop  < $_->{stop};
++
+   my @found_segments;
+   foreach my $ref (keys %refs) {
+     next if defined($refseq) and $ref ne $refseq;
+@@ -85,146 +146,229 @@
+       $stop   = $_->{stop}  if !defined($stop)  || $stop  < $_->{stop};
+     }
+     push @found_segments,[$ref,$class,$start,$stop,$strand];
++
+   }
+   return \@found_segments;
+ }
+ 
+ 
+-#sub get_features{
+-#  my $self = shift;
+-#  my ($search,$options,$callback) = @_;
+-#  my @found_features;
+-#  my (%result,%obj);
+-
+-#  for my $feature (@{$self->{data}}) {
+-#    my $feature_start = $feature->{start};
+-#    my $feature_stop  = $feature->{stop};
+-#    my $feature_ref   = $feature->{ref};
+-#    next unless $feature_ref eq $search->{refseq};
+-
+-#    my $rangetype = $search->{rangetype};
+-#    if ($rangetype eq 'overlap') {
+-#      next unless $feature_stop >= $search->{start} && $feature_start <= $search->{stop};
+-#    } elsif ($rangetype eq 'contains') {
+-#      next unless $feature_start >= $search->{start} && $feature_stop <= $search->{stop};
+-#    } elsif ($rangetype eq 'contained_in') {
+-#      next unless $feature_start <= $search->{start} && $feature_stop >= $search->{stop};
+-#    } else {
+-#      next unless $feature_start == $search->{start} && $feature_stop == $search->{stop};
+-#    }
+-
+-#    my $feature_source = $feature->{source};
+-#    my $feature_method = $feature->{method};
+-    
+-#    foreach (@{$search->{types}}) {
+-#      my ($search_method,$search_source) = @$_;
+-#      next if $search_method ne $feature_method;
+-#      next if defined($search_source) && $search_source ne $feature_source;
+-#    }
++# attributes -
+ 
+-    # if we get here, then we have a feature that meets the criteria.
+-    # If we were asked to sort by group, then we just push onto an array
+-    # of found features and continue.  Otherwise we call the callback
+-    # immediately.
+-#    if ($options->{sort_by_group}) {
+-#      push @found_features,$feature;
+-#      next;
+-#    } else {
+-#      $callback->($feature_ref,
+-#		  $feature_start,
+-#		  $feature_stop,
+-#		  $feature_source,
+-#		  $feature_method,
+-#		  $feature->{score},
+-#		  $feature->{strand},
+-#		  $feature->{phase},
+-#		  $feature->{gclass},
+-#		  $feature->{gname},
+-#		  $feature->{tstart},
+-#		  $feature->{tstop}
+-#		 );
+-#    }
+-#  }
+-
+-#  for my $feature (sort
+-#		   {"$a->{gclass}:$a->{gname}" cmp "$b->{gclass}:$b->{gname}"
+-#		  } @found_features) {  # only true if the sort by group option was specified
+- #   $callback->(
+-#		@{$feature}{qw(ref start stop source method score strand phase gclass gname tstart tstop)}
+-#	       );
+-#  }
+-#}
+- 
++# Some GFF version 2 files use the groups column to store a series of
++# attribute/value pairs.  In this interpretation of GFF, the first such
++# pair is treated as the primary group for the feature; subsequent pairs
++# are treated as attributes.  Two attributes have special meaning:
++# "Note" is for backward compatibility and is used for unstructured text
++# remarks.  "Alias" is considered as a synonym for the feature name.
++# If no name is provided, then attributes() returns a flattened hash, of
++# attribute=>value pairs.
+ 
+-sub get_features{
++sub do_attributes{
+   my $self = shift;
+-  my ($rangetype,$refseq,$class,$start,$stop,$types,$sparse,$callback,$order_by_group) = @_;
+-  my @found_features;
+-  my (%result,%obj);
++  my ($feature_id,$tag) = @_;
++  my $attr ;
+ 
+-  for my $feature (@{$self->{data}}) {
+-    my $feature_start = $feature->{start};
+-    my $feature_stop  = $feature->{stop};
+-    my $feature_ref   = $feature->{ref};
+-    next unless $feature_ref eq $refseq;
++  my $feature = ${$self->{data}}[$feature_id];
++  
++  my @result;
++  for my $attr (@{$feature->{attributes}}) {
++    my ($attr_name,$attr_value) = @$attr ;
++    if (defined($tag) && $attr_name eq $tag){push @result,$attr_value;}
++    elsif (!defined($tag)) {push @result,($attr_name,$attr_value);}
++  }
++  return @result;
++}
+ 
+ 
+-     if (defined $start or defined $stop) {
+-      $start = 0               unless defined($start);
+-      $stop  = MAX_SEGMENT     unless defined($stop);
+-    
+-      if ($rangetype eq 'overlaps') {
+-	next unless $feature_stop >= $start && $feature_start <= $stop;
+-      } elsif ($rangetype eq 'contains') {
+-	next unless $feature_start >= $start && $feature_stop <= $stop;
+-      } elsif ($rangetype eq 'contained_in') {
+-	next unless $feature_start <= $start && $feature_stop >= $stop;
+-      } else {
+-	next unless $feature_start == $start && $feature_stop == $stop;
+-      }
+-
+-    }
+-    
+-    my $feature_source = $feature->{source};
+-    my $feature_method = $feature->{method};
++#sub get_feature_by_attribute{
++sub _feature_by_attribute{
++  my $self = shift;
++  my ($attributes,$callback) = @_;
++  $callback || $self->throw('must provide a callback argument');
++  
++  my $count = 0;
++  my $feature_id = -1;
++  my $feature_group_id = undef;
+ 
+-    if (defined $types && @$types){
+-      next unless _matching_typelist($feature_method,$feature_source,$types);
+-    } 
++  for my $feature (@{$self->{data}}) {
+ 
+-    # if we get here, then we have a feature that meets the criteria.
+-    # If we were asked to sort by group, then we just push onto an array
+-    # of found features and continue.  Otherwise we call the callback
+-    # immediately.
+-    if ($order_by_group) {
+-      push @found_features,$feature;
+-      next;
+-    } else {
+-      $callback->($feature_ref,
+-		  $feature_start,
+-		  $feature_stop,
+-		  $feature_source,
+-		  $feature_method,
+-		  $feature->{score},
+-		  $feature->{strand},
+-		  $feature->{phase},
+-		  $feature->{gclass},
+-		  $feature->{gname},
+-		  $feature->{tstart},
+-		  $feature->{tstop}
+-		 );
++    $feature_id++;
++    for my $attr (@{$feature->{attributes}}) {
++      my ($attr_name,$attr_value) = @$attr ;
++      
++      #there could be more than one set of attributes......
++      foreach (keys %$attributes) {
++	if ($_ eq $attr_name && $attributes->{$_} eq $attr_value){
++	   
++           $callback->($feature->{ref},
++	        $feature->{start},
++	        $feature->{stop},
++	        $feature->{source},
++	        $feature->{method},
++	        $feature->{score},
++	        $feature->{strand},
++	        $feature->{phase},
++	        $feature->{gclass},
++	        $feature->{gname},
++		$feature->{tstart},
++		$feature->{tstop},
++	        $feature_id,
++		$feature_group_id);
++	   $count++;						    
++        }						       
++      }
+     }
+   }
+ 
+-  for my $feature (sort
+-		   {"$a->{gclass}:$a->{gname}" cmp "$b->{gclass}:$b->{gname}"
+-		  } @found_features) {  # only true if the sort by group option was specified
++}
++
++
++
++# This is the low-level method that is called to retrieve GFF lines from
++# the database.  It is responsible for retrieving features that satisfy
++# range and feature type criteria, and passing the GFF fields to a
++# callback subroutine.
++
++sub get_features{
++  my $self = shift;
++  my $count = 0;
++  
++  my ($search,$options,$callback) = @_;				       
++  my $data = \@{$self->{data}};
++
++  my $found_features;
++
++  $found_features = _get_features_by_search_options($data,$search,$options);
++  
++  # only true if the sort by group option was specified
++  @{$found_features} = sort {"$a->{gclass}:$a->{gname}" cmp "$b->{gclass}:$b->{gname}"} 
++    @{$found_features} if $options->{sort_by_group} ;
++  
++  for my $feature (@{$found_features}) {  # only true if the sort by group option was specified
++    $count++;
+     $callback->(
+-		@{$feature}{qw(ref start stop source method score strand phase gclass gname tstart tstop)}
++		@{$feature}{qw(ref start stop source method score strand phase gclass gname tstart tstop feature_id feature_group_id)}
++	       );
++  }
++
++  return $count;
++}
++
++
++# Low level implementation of fetching a named feature.
++# GFF annotations are named using the group class and name fields.
++# May return zero, one, or several Bio::DB::GFF::Feature objects.
++
++=head2 _feature_by_name
++
++ Title   : _feature_by_name
++ Usage   : $db->get_features_by_name($name,$class,$callback)
++ Function: get a list of features by name and class
++ Returns : count of number of features retrieved
++ Args    : name of feature, class of feature, and a callback
++ Status  : protected
++
++This method is used internally.  The callback arguments are those used
++by make_feature().
++
++=cut
++
++sub _feature_by_name {
++  my $self = shift;
++  my ($class,$name,$callback) = @_;
++  $callback || $self->throw('must provide a callback argument');
++  my $count = 0;
++  my $id    = -1;
++
++  for my $feature (@{$self->{data}}) {
++    $id++;
++    next unless $feature->{gname} eq $name;
++    next unless $feature->{gclass} eq $class;
++    $count++;
++    $callback->(@{$feature}{qw(
++			       ref
++			       start
++			       stop
++			       source
++			       method
++			       score
++			       strand
++			       phase
++			       gclass
++			       gname
++			       tstart
++			       tstop
++			      )},$id,0
+ 	       );
+   }
++  return $count;
+ }
+ 
++# Low level implementation of fetching a feature by it's id. 
++# The id of the feature as implemented in the in-memory db, is the location of the 
++# feature in the features hash array.
++sub _feature_by_id{
++  my $self = shift;
++  my ($ids,$type,$callback) = @_;
++  $callback || $self->throw('must provide a callback argument');
++
++  my $feature_group_id = undef;
++
++  my $count = 0;
++  if ($type eq 'feature'){
++    for my $feature_id (@$ids){
++       my $feature = ${$self->{data}}[$feature_id];
++       
++       $callback->($feature->{ref},
++	        $feature->{start},
++	        $feature->{stop},
++	        $feature->{source},
++	        $feature->{method},
++	        $feature->{score},
++	        $feature->{strand},
++	        $feature->{phase},
++	        $feature->{gclass},
++	        $feature->{gname},
++		$feature->{tstart},
++		$feature->{tstop},
++	        $feature_id,
++		$feature_group_id);
++	   $count++;			
++    
++    }
++  }
++}
++
++
++# This method is similar to get_features(), except that it returns an
++# iterator across the query.  
++# See Bio::DB::GFF::Adaptor::memory_iterator.
++
++sub get_features_iterator {
++  my $self = shift;
++  my ($search,$options,$callback) = @_;
++  $callback || $self->throw('must provide a callback argument');
++
++  my $data = \@{$self->{data}};
++  my $results = _get_features_by_search_options($data,$search,$options);
++  my $results_array = _convert_feature_hash_to_array($results);
++
++  return Bio::DB::GFF::Adaptor::memory_iterator->new($results_array,$callback);
++}
++
++
++
++
++# This method is responsible for fetching the list of feature type names.
++# The query may be limited to a particular range, in
++# which case the range is indicated by a landmark sequence name and
++# class and its subrange, if any.  These arguments may be undef if it is
++# desired to retrieve all feature types.
++
++# If the count flag is false, the method returns a simple list of
++# Bio::DB::GFF::Typename objects.  If $count is true, the method returns
++# a list of $name=>$count pairs, where $count indicates the number of
++# times this feature occurs in the range.
+ 
+ sub get_types {
+   my $self = shift;
+@@ -268,23 +412,172 @@
+  
+ }
+ 
+-sub _matching_typelist{
++
++
++
++# Internal method that performs a search on the features array, 
++# sequentialy retrieves the features, and performs a check on each feature
++# according to the search options.
++ 
++sub _get_features_by_search_options{
++ 
++  my $count = 0;
+   
+-  my ($feature_method,$feature_source,$typelist) = @_; 
++  my ($data,$search,$options) = @_;
++  my ($rangetype,$refseq,$class,$start,$stop,$types,$sparse,$order_by_group,$attributes) = 
++    (@{$search}{qw(rangetype refseq refclass start stop types)},
++    @{$options}{qw(sparse sort_by_group ATTRIBUTES)}) ;
++					       
++  my @found_features;
++
++  my $feature_id = -1 ;
++  my $feature_group_id = undef;
++
++  for my $feature (@{$data}) {
++
++    $feature_id++;
++    
++    my $feature_start = $feature->{start};
++    my $feature_stop  = $feature->{stop};
++    my $feature_ref   = $feature->{ref};
++    
++    if (defined $refseq){
++      next unless $feature_ref eq $refseq;
++    }
++
++     if (defined $start or defined $stop) {
++      $start = 0               unless defined($start);
++      $stop  = MAX_SEGMENT     unless defined($stop);
++    
++      if ($rangetype eq 'overlaps') {
++	next unless $feature_stop >= $start && $feature_start <= $stop;
++      } elsif ($rangetype eq 'contains') {
++	next unless $feature_start >= $start && $feature_stop <= $stop;
++      } elsif ($rangetype eq 'contained_in') {
++	next unless $feature_start <= $start && $feature_stop >= $stop;
++      } else {
++	next unless $feature_start == $start && $feature_stop == $stop;
++      }
+ 
++    }
++    
++    my $feature_source = $feature->{source};
++    my $feature_method = $feature->{method};
++
++    if (defined $types && @$types){
++      next unless _matching_typelist($feature_method,$feature_source,$types);
++    } 
++
++    my $feature_attributes = $feature->{attributes};
++    if (defined $attributes){
++      next unless _matching_attributes($feature_attributes,$attributes);
++    } 
++    
++    # if we get here, then we have a feature that meets the criteria.
++    # Then we just push onto an array
++    # of found features and continue. 
++   
++    my $found_feature = $feature ;
++    $found_feature->{feature_id} = $feature_id;
++    $found_feature->{group_id} = $feature_group_id;
++    push @found_features,$found_feature;
++   
++  }
++
++  return \@found_features; 
++}
++
++
++
++
++
++# this subroutine is needed for convertion of the feature from hash to array in order to 
++# pass it to the callback subroutine
++sub _convert_feature_hash_to_array{
++  my @features_hash_array = @_;
++
++  use constant FREF    => 0;
++  use constant FSTART  => 1;
++  use constant FSTOP   => 2;
++  use constant FSOURCE => 3;
++  use constant FMETHOD => 4;
++  use constant FSCORE  => 5;
++  use constant FSTRAND => 6;
++  use constant FPHASE  => 7;
++  use constant GCLASS  => 8;
++  use constant GNAME   => 9;
++  use constant TSTART  => 10;
++  use constant TSTOP   => 11;
++  use constant FID     => 12;
++  use constant GID     => 13;
++
++  my @features_array_array;
++  my $feature_count = 0;
++   
++  for my $feature_hash (@{$features_hash_array[0]}){
++    my @feature_array;
++
++    $feature_array[FREF]    = $feature_hash->{ref};
++    $feature_array[FSTART]  = $feature_hash->{start};
++    $feature_array[FSTOP]   = $feature_hash->{stop};  
++    $feature_array[FSOURCE] = $feature_hash->{source};
++    $feature_array[FMETHOD] = $feature_hash->{method};
++    $feature_array[FSCORE]  = $feature_hash->{score};
++    $feature_array[FSTRAND] = $feature_hash->{strand};  
++    $feature_array[FPHASE ] = $feature_hash->{phase};
++    $feature_array[GCLASS]  = $feature_hash->{gclass};  
++    $feature_array[GNAME]   = $feature_hash->{gname};
++    $feature_array[TSTART]  = $feature_hash->{tstart};
++    $feature_array[TSTOP]   = $feature_hash->{tstop};
++    $feature_array[FID]     = $feature_hash->{feature_id};  
++    $feature_array[GID]     = $feature_hash->{group_id};
++
++    $features_array_array[$feature_count] = \@feature_array;
++    $feature_count++;
++  }
++  return \@features_array_array;
++}
++
++
++
++
++
++sub _matching_typelist{ 
++  my ($feature_method,$feature_source,$typelist) = @_; 
+   foreach (@$typelist) {
+ 	 my ($search_method,$search_source) = @$_;
+ 	 next if $search_method ne $feature_method;
+ 	 next if defined($search_source) && $search_source ne $feature_source;
+ 	 return 1;
+   }
+- 
+   return 0;
+ }
+ 
++sub _matching_attributes{
++  my ($feature_attributes,$attributes) = @_ ;
++  foreach (keys %$attributes) {
++    return 0 if !_match_all_attr_in_feature($_,$attributes->{$_},$feature_attributes)
++   
++  }
++  return 1;
++}
++
++sub _match_all_attr_in_feature{
++  my ($attr_name,$attr_value,$feature_attributes) = @_;
++  for my $attr (@$feature_attributes) {
++      my ($feature_attr_name,$feature_attr_value) = @$attr ;
++      next if ($attr_name ne $feature_attr_name || $attr_value ne $feature_attr_value);
++      return 1;
++  }
++  return 0;
++}
++
++
+ sub do_initialize { 1; }
+ sub setup_load { }
+ sub finish_load { 1; }
++sub get_feature_by_group_id{ 1; }
+ 
+ 1;
+ 
++}
+diff -Naur bioperl-1.0/Bio/DB/GFF/Adaptor/memory_iterator.pm bioperl-1.01/Bio/DB/GFF/Adaptor/memory_iterator.pm
+--- bioperl-1.0/Bio/DB/GFF/Adaptor/memory_iterator.pm	Wed Dec 31 19:00:00 1969
++++ bioperl-1.01/Bio/DB/GFF/Adaptor/memory_iterator.pm	Sun Mar 31 16:25:03 2002
+@@ -0,0 +1,51 @@
++package Bio::DB::GFF::Adaptor::memory_iterator;
++use strict;
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# this module needs to be cleaned up and documented
++
++#use constant STH         => 0;
++#use constant CALLBACK    => 1;
++#use constant CACHE       => 2;
++
++*next_seq = \&next_feature;
++
++sub new {
++  my $class = shift;
++  my ($data,$callback) = @_;
++  my $pos = 0;
++  return bless {data     => $data,
++		pos      => $pos,
++		callback => $callback,
++                cache    => []},$class;
++  #return bless [$sth,$callback,[]],$class;
++}
++
++sub next_feature {
++  my $self = shift;
++  return shift @{$self->{cache}} if @{$self->{cache}};
++  my $data = $self->{data} or return;
++  my $next_feature_pos = $self->{pos}; 
++  my $callback = $self->{callback};
++
++  my $features;
++  while (1) {
++    #if (my $feature = $self->{data}[$next_feature_pos]) {
++    if ($next_feature_pos < @{$self->{data}}){
++      my $feature = $self->{data}[$next_feature_pos];
++      $features = $callback->(@{$feature});
++      $self->{pos}++;
++      last if $features;
++    } else {
++      undef $self->{pos};
++      undef $self->{data};
++      $features = $callback->();
++      #last;
++      return;
++    }
++  }
++  #return $features;
++  $self->{cache} = $features or return;
++  shift @{$self->{cache}}; 
++}
++
++1;
+diff -Naur bioperl-1.0/Bio/DB/GFF/Aggregator/alignment.pm bioperl-1.01/Bio/DB/GFF/Aggregator/alignment.pm
+--- bioperl-1.0/Bio/DB/GFF/Aggregator/alignment.pm	Mon Nov  5 08:19:04 2001
++++ bioperl-1.01/Bio/DB/GFF/Aggregator/alignment.pm	Fri Apr 12 07:54:32 2002
+@@ -88,6 +88,7 @@
+   warn "running aligner adjuster" if $factory->debug;
+   for my $alignment (values %alignments) {
+     $alignment->adjust_bounds;
++    $alignment->compound(1);
+     push @result,$alignment;
+   }
+   warn "aligner done" if $factory->debug;
+diff -Naur bioperl-1.0/Bio/DB/GFF/Aggregator/wormbase_gene.pm bioperl-1.01/Bio/DB/GFF/Aggregator/wormbase_gene.pm
+--- bioperl-1.0/Bio/DB/GFF/Aggregator/wormbase_gene.pm	Fri Jan 11 13:00:41 2002
++++ bioperl-1.01/Bio/DB/GFF/Aggregator/wormbase_gene.pm	Wed Dec 31 19:00:00 1969
+@@ -1,105 +0,0 @@
+-=head1 NAME
+-
+-Bio::DB::GFF::Aggregator::wormbase_gene -- Wormbase gene aggregator
+-
+-=head1 SYNOPSIS
+-
+-  use Bio::DB::GFF;
+-
+-  # Open the sequence database
+-  my $db      = Bio::DB::GFF->new( -adaptor => 'dbi:mysql',
+-                                   -dsn     => 'dbi:mysql:elegans42',
+-				   -aggregator => ['wormbase_gene','clone'],
+-				 );
+-
+-
+-=head1 DESCRIPTION
+-
+-Bio::DB::GFF::Aggregator::wormbase_gene is one of the default
+-aggregators, and was written to be compatible with the C elegans GFF
+-files.  It aggregates raw ""exon", "CDS", "5'UTR", "3'UTR", "polyA"
+-and "TSS" features into "transcript" features.  For compatibility with
+-the idiosyncrasies of the Sanger GFF format, it expects that the full
+-range of the transcript is contained in a main feature of type
+-"Sequence".
+-
+-=cut
+-
+-package Bio::DB::GFF::Aggregator::wormbase_gene;
+-
+-use strict;
+-use Bio::DB::GFF::Aggregator;
+-
+-use vars qw($VERSION @ISA);
+-@ISA = qw(Bio::DB::GFF::Aggregator);
+-
+-$VERSION = '0.10';
+-
+-=head2 method
+-
+- Title   : method
+- Usage   : $aggregator->method
+- Function: return the method for the composite object
+- Returns : the string "transcript"
+- Args    : none
+- Status  : Public
+-
+-=cut
+-
+-sub method { 'transcript' }
+-
+-sub require_whole_object { 1; }
+-
+-=head2 part_names
+-
+- Title   : part_names
+- Usage   : $aggregator->part_names
+- Function: return the methods for the sub-parts
+- Returns : the list "exon", "CDS", "5'UTR", "3'UTR", "TSS", "PolyA"
+- Args    : none
+- Status  : Public
+-
+-=cut
+-
+-sub part_names {
+-  return qw(exon CDS 5'UTR 3'UTR TSS PolyA);
+-}
+-
+-=head2 main_name
+-
+- Title   : main_name
+- Usage   : $aggregator->main_name
+- Function: return the method for the main component
+- Returns : the string "Sequence"
+- Args    : none
+- Status  : Public
+-
+-=cut
+-
+-sub main_name {
+-  return 'Sequence';
+-}
+-
+-1;
+-__END__
+-
+-=head1 BUGS
+-
+-None reported.
+-
+-
+-=head1 SEE ALSO
+-
+-L<Bio::DB::GFF>, L<Bio::DB::GFF::Aggregator>
+-
+-=head1 AUTHOR
+-
+-Lincoln Stein E<lt>lstein@cshl.orgE<gt>.
+-
+-Copyright (c) 2001 Cold Spring Harbor Laboratory.
+-
+-This library is free software; you can redistribute it and/or modify
+-it under the same terms as Perl itself.
+-
+-=cut
+-
+diff -Naur bioperl-1.0/Bio/DB/GFF/Aggregator.pm bioperl-1.01/Bio/DB/GFF/Aggregator.pm
+--- bioperl-1.0/Bio/DB/GFF/Aggregator.pm	Wed Feb 13 06:02:45 2002
++++ bioperl-1.01/Bio/DB/GFF/Aggregator.pm	Fri Apr 12 07:54:03 2002
+@@ -325,6 +325,7 @@
+     $base->method($pseudo_method);
+     $base->add_subfeature($_) foreach @{$aggregates{$_}{subparts}};
+     $base->adjust_bounds;
++    $base->compound(1);  # set the compound flag
+     push @result,$base;
+   }
+   @$features = @result;
+diff -Naur bioperl-1.0/Bio/DB/GFF/Feature.pm bioperl-1.01/Bio/DB/GFF/Feature.pm
+--- bioperl-1.0/Bio/DB/GFF/Feature.pm	Mon Feb 25 07:18:07 2002
++++ bioperl-1.01/Bio/DB/GFF/Feature.pm	Fri Apr 12 08:00:17 2002
+@@ -12,8 +12,9 @@
+ single annotation in a GFF database.  It inherits from
+ Bio::DB::GFF::RelSegment, and so has all the support for relative
+ addressing of this class and its ancestors.  It also inherits from
+-Bio::SeqFeatureI, and so has the familiar start(), stop(),
+-and primary_tag() methods.
++Bio::SeqFeatureI and so has the familiar start(), stop(),
++primary_tag() and location() methods (it implements Bio::LocationI
++too, if needed).
+ 
+ Bio::DB::GFF::Feature adds new methods to retrieve the annotation's
+ type, group, and other GFF attributes.  Annotation types are
+@@ -71,11 +72,12 @@
+ use Bio::DB::GFF::Homol;
+ use Bio::SeqFeatureI;
+ use Bio::Root::Root;
++use Bio::LocationI;
+ 
+ use vars qw($VERSION @ISA $AUTOLOAD);
+-@ISA = qw(Bio::DB::GFF::RelSegment Bio::SeqFeatureI Bio::Root::Root);
++@ISA = qw(Bio::DB::GFF::RelSegment Bio::SeqFeatureI Bio::LocationI Bio::Root::Root);
+ 
+-$VERSION = '0.40';
++$VERSION = '0.60';
+ #' 
+ 
+ *segments = \&sub_SeqFeature;
+@@ -488,6 +490,26 @@
+   $clone;
+ }
+ 
++=head2 compound
++
++ Title   : compound
++ Usage   : $flag = $f->compound([$newflag])
++ Function: get or set the compound flag
++ Returns : a boolean
++ Args    : a new flag (optional)
++ Status  : Public
++
++This method gets or sets a flag indicated that the feature is not a
++primary one from the database, but the result of aggregation.
++
++=cut
++
++sub compound  {
++  my $self = shift;
++  my $d    = $self->{compound};
++  $self->{compound} = shift if @_;
++  $d;
++}
+ 
+ =head2 sub_SeqFeature
+ 
+@@ -543,6 +565,50 @@
+   push @{$subfeat},$feature;
+ }
+ 
++=head2 location
++
++ Title   : location
++ Usage   : my $location = $seqfeature->location()
++ Function: returns a location object suitable for identifying location 
++	   of feature on sequence or parent feature  
++ Returns : Bio::LocationI object
++ Args    : none
++
++=cut
++
++sub location {
++   my $self = shift;
++   require Bio::Location::Split unless Bio::Location::Split->can('new');
++   my $location;
++   if (my @segments = $self->segments) {
++       $location = Bio::Location::Split->new();
++       foreach (@segments) {
++          $location->add_sub_Location($_);
++       }
++   } else {
++       $location = $self;
++   }
++   $location;
++}
++
++sub coordinate_policy {
++   require Bio::Location::WidestCoordPolicy unless Bio::Location::WidestCoordPolicy->can('new');
++   return Bio::Location::WidestCoordPolicy->new();
++}
++
++sub min_start { shift->low }
++sub max_start { shift->low }
++sub min_end   { shift->high }
++sub max_end   { shift->high}
++sub start_pos_type { 'EXACT' }
++sub end_pos_type   { 'EXACT' }
++sub to_FTstring {
++  my $self = shift;
++  my $low  = $self->min_start;
++  my $high = $self->max_end;
++  return "$low..$high";
++}
++
+ =head2 merged_segments
+ 
+  Title   : merged_segments
+@@ -823,13 +889,6 @@
+   ($self->{start},$self->{stop},$self->strand);
+ }
+ 
+-sub aggregated {
+-  my $self = shift;
+-  my $d = $self->{aggregated};
+-  $self->{aggregated} = shift if @_;
+-  $d;
+-}
+-
+ =head2 sort_features
+ 
+  Title   : sort_features
+@@ -888,7 +947,6 @@
+ sub name {
+   my $self =shift;
+   return $self->group || $self->SUPER::name;
+-  
+ }
+ 
+ sub gff_string {
+diff -Naur bioperl-1.0/Bio/DB/GFF/Segment.pm bioperl-1.01/Bio/DB/GFF/Segment.pm
+--- bioperl-1.0/Bio/DB/GFF/Segment.pm	Wed Feb 20 23:02:27 2002
++++ bioperl-1.01/Bio/DB/GFF/Segment.pm	Sun Mar 31 16:27:19 2002
+@@ -505,6 +505,21 @@
+ 
+ sub ref { shift->refseq(@_) }
+ 
++=head2 seq_id
++
++ Title   : seq_id
++ Usage   : $ref = $s->seq_id
++ Function: get the reference sequence in a LocationI-compatible way
++ Returns : a string
++ Args    : none
++ Status  : Public
++
++An alias for refseq() but only allows reading.
++
++=cut
++
++sub seq_id { shift->ref }
++
+ =head2 truncated
+ 
+  Title   : truncated
+diff -Naur bioperl-1.0/Bio/DB/GFF.pm bioperl-1.01/Bio/DB/GFF.pm
+--- bioperl-1.0/Bio/DB/GFF.pm	Mon Feb 25 07:18:07 2002
++++ bioperl-1.01/Bio/DB/GFF.pm	Sun Mar 31 16:25:03 2002
+@@ -1,6 +1,4 @@
+-package Bio::DB::GFF;
+-# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ =head1 NAME
+ 
+ Bio::DB::GFF -- Storage and retrieval of sequence annotation data
+@@ -440,6 +438,8 @@
+ 
+ =cut
+ 
++package Bio::DB::GFF;
++
+ use strict;
+ 
+ use Bio::DB::GFF::Util::Rearrange;
+@@ -451,7 +451,7 @@
+ use vars qw($VERSION @ISA);
+ @ISA = qw(Bio::Root::Root);
+ 
+-$VERSION = '1.02';
++$VERSION = '1.03';
+ my %valid_range_types = (overlaps     => 1,
+ 			 contains     => 1,
+ 			 contained_in => 1);
+@@ -622,6 +622,27 @@
+   $self->get_types($refseq,$refclass,$start,$stop,$enumerate,$types);
+ }
+ 
++=head2 classes
++
++ Title   : classes
++ Usage   : $db->classes
++ Function: return list of landmark classes in database
++ Returns : a list of classes
++ Args    : none
++ Status  : public
++
++This routine returns the list of reference classes known to the
++database, or empty if classes are not used by the database.  Classes
++are distinct from types, being essentially qualifiers on the reference
++namespaces.
++
++=cut
++
++sub classes {
++  my $self = shift;
++  return ();
++}
++
+ =head2 segment
+ 
+  Title   : segment
+@@ -755,8 +776,9 @@
+   } elsif (wantarray) { # more than one reference sequence
+     return @segments;
+   } else {
+-    $self->error($segments[0]->name," has more than one reference sequence in database.  Please call in a list context to retrieve them all.");
+-    croak('multiple segment exception');
++    $self->error($segments[0]->name,
++		 " has more than one reference sequence in database.  Please call in a list context to retrieve them all.");
++    $self->throw('multiple segment exception');
+     return;
+   }
+ }
+@@ -1847,8 +1869,10 @@
+     next unless defined($ref) && defined($method) && defined($start) && defined($stop);
+ 
+     # handle group parsing
+-    $group =~ s/\\;/$;/g;  # protect embedded semicolons in the group; this probably breaks
+-    $group =~ s/( \"[^\"]*);([^\"]*\")/$1$;$2/g;
++    # protect embedded semicolons in the group; there must be faster/more elegant way
++    # to do this.
++    $group =~ s/\\;/$;/g;
++    while ($group =~ s/( \"[^\"]*);([^\"]*\")/$1$;$2/) { 1 }
+     my @groups = split(/\s*;\s*/,$group);
+     foreach (@groups) { s/$;/;/g }
+ 
+@@ -2711,10 +2735,9 @@
+ sub _features {
+   my $self = shift;
+   my ($search,$options,$parent) = @_;
+-
+   (@{$search}{qw(start stop)}) = (@{$search}{qw(stop start)})
+     if defined($search->{start}) && $search->{start} > $search->{stop};
+-
++  
+   my $types = $self->parse_types($search->{types});  # parse out list of types
+   my @aggregated_types = @$types;         # keep a copy
+ 
+diff -Naur bioperl-1.0/Bio/DB/Makefile.PL bioperl-1.01/Bio/DB/Makefile.PL
+--- bioperl-1.0/Bio/DB/Makefile.PL	Tue Jul 17 18:35:11 2001
++++ bioperl-1.01/Bio/DB/Makefile.PL	Wed Dec 31 19:00:00 1969
+@@ -1,13 +0,0 @@
+-use ExtUtils::MakeMaker;
+-# See lib/ExtUtils/MakeMaker.pm for details of how to influence
+-# the contents of the Makefile that is written.
+-WriteMakefile(
+-    'NAME'		=> 'Bio::DB::GFF',
+-    'VERSION_FROM'	=> 'GFF.pm', # finds $VERSION
+-    'PREREQ_PM'		=> { 'DBI'            => 1.0,
+-			     'Bio::DB::Fasta' => 1.0,
+-			   }, # e.g., Module::Name => 1.1
+-    'LIBS'		=> [''], # e.g., '-lm'
+-    'DEFINE'		=> '', # e.g., '-DHAVE_SOMETHING'
+-    'INC'		=> '', # e.g., '-I/usr/include/other'
+-);
+diff -Naur bioperl-1.0/Bio/DasI.pm bioperl-1.01/Bio/DasI.pm
+--- bioperl-1.0/Bio/DasI.pm	Mon Mar  4 17:16:22 2002
++++ bioperl-1.01/Bio/DasI.pm	Fri Apr 12 00:10:13 2002
+@@ -1,4 +1,4 @@
+-# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ #
+ # BioPerl module for Bio::DasI
+ #
+@@ -104,11 +104,10 @@
+ use strict;
+ 
+ use vars qw(@ISA);
+-use Bio::Root;
+-use Carp;
++use Bio::Root::RootI;
+ 
+ # Object preamble - inherits from Bio::Root;
+-@ISA = qw(Bio::Root);
++@ISA = qw(Bio::Root::RootI);
+ 
+ =head2 types
+ 
+diff -Naur bioperl-1.0/Bio/Graphics/Feature.pm bioperl-1.01/Bio/Graphics/Feature.pm
+--- bioperl-1.0/Bio/Graphics/Feature.pm	Fri Mar 15 09:40:02 2002
++++ bioperl-1.01/Bio/Graphics/Feature.pm	Fri Apr 12 07:53:36 2002
+@@ -1,15 +1,18 @@
+ package Bio::Graphics::Feature;
+ use strict;
++use Bio::SeqFeatureI;
++use Bio::LocationI;
+ 
+-use vars '$VERSION';
+-$VERSION = 1.2;
++use vars '$VERSION','@ISA';
++$VERSION = '1.40';
++@ISA  = qw(Bio::SeqFeatureI Bio::LocationI);
+ 
+ *stop        = \&end;
+ *info        = \&name;
+ *seqname     = \&name;
+ *type        = \&primary_tag;
+ *exons       = *sub_SeqFeature = *merged_segments = \&segments;
+-*class       = *method = \&type;
++*method      = \&type;
+ *source      = \&source_tag;
+ 
+ # usage:
+@@ -29,16 +32,17 @@
+   my $self = bless {},$class;
+ 
+   $arg{-strand} ||= 0;
+-  $self->{strand}  = $arg{-strand} >= 0 ? +1 : -1;
++  $self->{strand}  = $arg{-strand} ? ($arg{-strand} >= 0 ? +1 : -1) : 0;
+   $self->{name}    = $arg{-name};
+   $self->{type}    = $arg{-type}   || 'feature';
+   $self->{subtype} = $arg{-subtype} if exists $arg{-subtype};
+   $self->{source}  = $arg{-source} || $arg{-source_tag} || '';
+-  $self->{score}   = $arg{-score}  || 0;
++  $self->{score}   = $arg{-score}   if exists $arg{-score};
+   $self->{start}   = $arg{-start};
+   $self->{stop}    = $arg{-end} || $arg{-stop};
+   $self->{ref}     = $arg{-ref};
+-  $self->{url}     = $arg{-url} if $arg{-url};
++  $self->{class}   = $arg{-class} if exists $arg{-class};
++  $self->{url}     = $arg{-url}   if exists $arg{-url};
+ 
+   # fix start, stop
+   if (defined $self->{stop} && defined $self->{start}
+@@ -71,10 +75,10 @@
+ 	($start,$stop) = ($stop,$start);
+ 	$strand *= -1;
+       }
+-      push @segments,$self->new(-start=>$start,
+-				-stop=>$stop,
+-				-strand=>$strand,
+-				-type  => $type);
++      push @segments,$self->new(-start  => $start,
++				-stop   => $stop,
++				-strand => $strand,
++				-type   => $type);
+     } else {
+       push @segments,$seg;
+     }
+@@ -86,26 +90,6 @@
+   }
+ }
+ 
+-sub location {
+-  my $self = shift;
+-
+-  require Bio::Location::Split;
+-  my @segments = $self->segments;
+-  if (@segments) {
+-    my $split = Bio::Location::Split->new;
+-    foreach (@segments) {
+-      $split->add_sub_Location(Bio::Location::Simple->new(-start  => $_->start,
+-							  -end    => $_->end,
+-							  -strand => $_->strand
+-							 ));
+-    }
+-    return $split;
+-  }
+-  return Bio::Location::Simple->new(-start  => $self->start,
+-				    -end    => $self->end,
+-				    -strand => $self->strand);
+-}
+-
+ sub segments {
+   my $self = shift;
+   my $s = $self->{segments} or return wantarray ? () : 0;
+@@ -118,7 +102,13 @@
+   $d;
+ }
+ sub primary_tag     { shift->{type}        }
+-sub name            { shift->{name}        }
++sub name            {
++  my $self = shift;
++  my $d    = $self->{name};
++  $self->{name} = shift if @_;
++  $d;
++}
++sub seq_id          { shift->ref()         }
+ sub ref {
+   my $self = shift;
+   my $d = $self->{ref};
+@@ -137,7 +127,7 @@
+   $self->{stop} = shift if @_;
+   $d;
+ }
+-sub strand { 
++sub strand {
+   my $self = shift;
+   my $d = $self->{strand};
+   $self->{strand} = shift if @_;
+@@ -154,7 +144,92 @@
+ }
+ *dna = \&seq;
+ 
+-sub source_tag { 
++sub low {
++  my $self = shift;
++  return $self->start < $self->end ? $self->start : $self->end;
++}
++
++sub high {
++  my $self = shift;
++  return $self->start > $self->end ? $self->start : $self->end;
++}
++
++=head2 location
++
++ Title   : location
++ Usage   : my $location = $seqfeature->location()
++ Function: returns a location object suitable for identifying location 
++	   of feature on sequence or parent feature  
++ Returns : Bio::LocationI object
++ Args    : none
++
++=cut
++
++sub location {
++   my $self = shift;
++   require Bio::Location::Split unless Bio::Location::Split->can('new');
++   my $location;
++   if (my @segments = $self->segments) {
++       $location = Bio::Location::Split->new();
++       foreach (@segments) {
++          $location->add_sub_Location($_);
++       }
++   } else {
++       $location = $self;
++   }
++   $location;
++}
++
++sub coordinate_policy {
++   require Bio::Location::WidestCoordPolicy unless Bio::Location::WidestCoordPolicy->can('new');
++   return Bio::Location::WidestCoordPolicy->new();
++}
++
++sub min_start { shift->low }
++sub max_start { shift->low }
++sub min_end   { shift->high }
++sub max_end   { shift->high}
++sub start_pos_type { 'EXACT' }
++sub end_pos_type   { 'EXACT' }
++sub to_FTstring {
++  my $self = shift;
++  my $low  = $self->min_start;
++  my $high = $self->max_end;
++  return "$low..$high";
++}
++sub phase { undef }
++sub class {
++  my $self = shift;
++  my $d = $self->{class};
++  $self->{class} = shift if @_;
++  return defined($d) ? $d : ucfirst $self->method;
++}
++
++sub gff_string {
++  my $self = shift;
++  my $name  = $self->name;
++  my $class = $self->class;
++  my $group = "$class $name" if $name;
++  my $string;
++  $string .= join("\t",$self->ref,$self->source||'.',$self->method||'.',
++                       $self->start,$self->stop,
++                       $self->score||'.',$self->strand||'.',$self->phase||'.',
++                       $group);
++  $string .= "\n";
++  foreach ($self->sub_SeqFeature) {
++    # add missing data if we need it
++    $_->ref($self->ref)     unless defined $_->ref;
++    $_->name($self->name);
++    $_->class($self->class);
++    $string .= $_->gff_string;
++  }
++  $string;
++}
++
++
++sub db { return }
++
++sub source_tag {
+   my $self = shift;
+   my $d = $self->{source};
+   $self->{source} = shift if @_;
+@@ -168,6 +243,8 @@
+   return;
+ }
+ 
++sub has_tag { }
++
+ # get/set the configurator (Bio::Graphics::FeatureFile) for this feature
+ sub configurator {
+   my $self = shift;
+@@ -200,6 +277,7 @@
+   }
+ }
+ 
++sub DESTROY { }
+ 
+ 1;
+ 
+@@ -281,11 +359,11 @@
+ 
+ =item segments()
+ 
+-An alias for sub_SeqFeatures().
++An alias for sub_SeqFeature().
+ 
+ =item merged_segments()
+ 
+-Another alias for sub_SeqFeatures().
++Another alias for sub_SeqFeature().
+ 
+ =item stop()
+ 
+@@ -297,7 +375,7 @@
+ 
+ =item exons()
+ 
+-An alias for sub_SeqFeatures() (you don't want to know why!)
++An alias for sub_SeqFeature() (you don't want to know why!)
+ 
+ =back
+ 
+diff -Naur bioperl-1.0/Bio/Graphics/FeatureFile.pm bioperl-1.01/Bio/Graphics/FeatureFile.pm
+--- bioperl-1.0/Bio/Graphics/FeatureFile.pm	Fri Mar 15 09:40:02 2002
++++ bioperl-1.01/Bio/Graphics/FeatureFile.pm	Fri Apr 12 07:56:25 2002
+@@ -1,5 +1,6 @@
+ package Bio::Graphics::FeatureFile;
+-# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ 
+ # This package parses and renders a simple tab-delimited format for features.
+ # It is simpler than GFF, but still has a lot of expressive power.
+@@ -61,7 +62,7 @@
+   } elsif (my $text = $args{-text}) {
+     $self->parse_text($text);
+   }
+-  $fh->close or warn "Error closing file: $!" if $fh;
++  close($fh) or warn "Error closing file: $!" if $fh;
+   $self;
+ }
+ 
+@@ -222,24 +223,62 @@
+   if (my $feature = $self->{seenit}{$type,$name}) {
+     $feature->add_segment(@parts);
+   } else {
+-    $feature = $self->{seenit}{$type,$name} = Bio::Graphics::Feature->new(-name     => $name,
+-									  -type     => $type,
+-									  $strand ? (-strand   => make_strand($strand))
+-                                                                                  : (),
+-									  -segments => \@parts,
+-									  -source   => $description,
+-									  -ref      => $ref,
+-									  -url      => $url,
+-									 );
++    $feature = $self->{seenit}{$type,$name} = 
++      Bio::Graphics::Feature->new(-name     => $name,
++				  -type     => $type,
++				  $strand ? (-strand   => make_strand($strand)) : (),
++				  -segments => \@parts,
++				  -source   => $description,
++				  -ref      => $ref,
++				  -url      => $url,
++				 );
+     $feature->configurator($self) if $self->smart_features;
+     if ($self->{grouptype}) {
+       push @{$self->{groups}{$self->{grouptype}}{$self->{groupname}}},$feature;
+     } else {
+-      push @{$self->{features}{$type}},$feature;
++      push @{$self->{features}{$type}},$feature;  # for speed; should use add_feature() instead
++    }
++  }
++}
++
++# add a feature of given type to our list
++# we use the primary_tag() method
++sub add_feature {
++  my $self = shift;
++  my ($feature,$type) = @_;
++  $type = $feature->primary_tag unless defined $type;
++  push @{$self->{features}{$type}},$feature;
++}
++
++# Add a type to the list.  Hash values are used for key/value pairs
++# in the configuration.  Call as add_type($type,$configuration) where
++# $configuration is a hashref.
++sub add_type {
++  my $self = shift;
++  my ($type,$type_configuration) = @_;
++  my $cc = $type =~ /^(general|default)$/i ? 'general' : $type;  # normalize
++  push @{$self->{types}},$cc unless $cc eq 'general' or $self->{config}{$cc};
++  if (defined $type_configuration) {
++    for my $tag (keys %$type_configuration) {
++      $self->{config}{$cc}{lc $tag} = $type_configuration->{$tag};
+     }
+   }
+ }
+ 
++# change configuration of a type.  Call as set($type,$tag,$value)
++# $type will be added if not already there.
++sub set {
++  my $self = shift;
++  croak("Usage: \$featurefile->set(\$type,\$tag,\$value\n")
++    unless @_ == 3;
++  my ($type,$tag,$value) = @_;
++  unless ($self->{config}{$type}) {
++    return $self->add_type($type,{$tag=>$value});
++  } else {
++    $self->{config}{$type}{lc $tag} = $value;
++  }
++}
++
+ # break circular references
+ sub destroy {
+   my $self = shift;
+@@ -247,9 +286,11 @@
+ }
+ 
+ # return configuration information
++# arguments are ($type) => returns tags for type
++#               ($type=>$tag) => returns values of tag on type
+ sub setting {
+   my $self = shift;
+-  my $config = $self->{config} or return; 
++  my $config = $self->{config} or return;
+   return keys %{$config} unless @_;
+   return keys %{$config->{$_[0]}} if @_ == 1;
+   return $config->{$_[0]}{$_[1]}  if @_ > 1;
+@@ -472,7 +513,12 @@
+   $self->{stat} = [stat($fh)];
+ }
+ 
+-sub mtime { shift->{stat}->[9];  }
++sub mtime {
++  my $self = shift;
++  my $d = $self->{m_time} || $self->{stat}->[9];
++  $self->{m_time} = shift if @_;
++  $d;
++}
+ sub atime { shift->{stat}->[8];  }
+ sub ctime { shift->{stat}->[10]; }
+ sub size  { shift->{stat}->[7];  }
+diff -Naur bioperl-1.0/Bio/Graphics/Glyph/Factory.pm bioperl-1.01/Bio/Graphics/Glyph/Factory.pm
+--- bioperl-1.0/Bio/Graphics/Glyph/Factory.pm	Tue Mar  5 14:20:29 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/Factory.pm	Fri Apr 12 07:53:43 2002
+@@ -61,7 +61,8 @@
+ 
+ # create a glyph
+ sub make_glyph {
+-  my $self = shift;
++  my $self  = shift;
++  my $level = shift;
+   my @result;
+   my $panel = $self->panel;
+   my ($leftmost,$rightmost) = ($panel->left,$panel->right);
+@@ -78,7 +79,8 @@
+ 	unless (eval "require $glyphclass");
+     }
+     my $glyph = $glyphclass->new(-feature  => $f,
+-				 -factory  => $self);
++				 -factory  => $self,
++				 -level    => $level);
+ 
+     # this is removing glyphs that are not onscreen at all.
+     # But never remove tracks!
+@@ -123,7 +125,7 @@
+       my $feature = $glyph->feature;
+       return $value unless ref $value eq 'CODE';
+       return unless $feature->isa('Bio::SeqFeatureI');
+-      my $val = $value->($feature,$option_name,$partno,$total_parts);
++      my $val = $value->($feature,$option_name,$partno,$total_parts,$glyph);
+       return defined $val && $val eq '*default*' ? $GENERIC_OPTIONS{$option_name} : $val;
+     }
+   }
+diff -Naur bioperl-1.0/Bio/Graphics/Glyph/anchored_arrow.pm bioperl-1.01/Bio/Graphics/Glyph/anchored_arrow.pm
+--- bioperl-1.0/Bio/Graphics/Glyph/anchored_arrow.pm	Fri Mar 15 09:40:03 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/anchored_arrow.pm	Fri Apr 12 07:53:43 2002
+@@ -50,10 +50,10 @@
+   my $pstart  = $self->panel->left;
+   my $pend    = $self->panel->right-1;
+ 
+-  if ($gstart < $pstart) {  # off left end
++  if ($gstart <= $pstart) {  # off left end
+     $sw = 1;
+   }
+-  if ($gend > $pend) { # off right end
++  if ($gend >= $pend) { # off right end
+     $ne = 1;
+   }
+   return ($sw,$ne,!$sw,!$ne);
+diff -Naur bioperl-1.0/Bio/Graphics/Glyph/diamond.pm bioperl-1.01/Bio/Graphics/Glyph/diamond.pm
+--- bioperl-1.0/Bio/Graphics/Glyph/diamond.pm	Fri Mar 15 09:40:03 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/diamond.pm	Fri Apr 12 07:53:44 2002
+@@ -16,12 +16,20 @@
+   my $ymid = ($y1+$y2)/2;
+ 
+   my $h = $self->option('height')/2;
+-  $x1 = $xmid - $h;
+-  $x2 = $xmid + $h;
+   $y1 = $ymid - $h;
+   $y2 = $ymid + $h;
+ 
+-  # now draw the diamond
++  # if it's a point-like feature, then draw symmetrically
++  # around the midpoing
++  if ($self->option('point') || $x2 - $x1 < $h*2) {
++    $x1 = $xmid - $h;
++    $x2 = $xmid + $h;
++  }
++
++  elsif ($self->option('fallback_to_rectangle')) {
++    return $self->SUPER::draw_component($gd,@_);
++  }
++
+   $gd->line($x1,$ymid,$xmid,$y1,$fg);
+   $gd->line($xmid,$y1,$x2,$ymid,$fg);
+   $gd->line($x2,$ymid,$xmid,$y2,$fg);
+diff -Naur bioperl-1.0/Bio/Graphics/Glyph/group.pm bioperl-1.01/Bio/Graphics/Glyph/group.pm
+--- bioperl-1.0/Bio/Graphics/Glyph/group.pm	Fri Mar 15 09:40:03 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/group.pm	Fri Apr 12 07:53:44 2002
+@@ -16,6 +16,15 @@
+ # we don't label group (yet)
+ sub label { 0 }
+ 
++sub new {
++  my $self = shift->SUPER::new(@_);
++  # reset our parts to level zero
++  foreach (@{$self->{parts}}) {
++    $_->{level} = 0;
++  }
++  $self;
++}
++
+ #sub layout_width {
+ #  my $self = shift;
+ #  my @parts = $self->parts or return $self->SUPER::layout_width;
+diff -Naur bioperl-1.0/Bio/Graphics/Glyph/segmented_keyglyph.pm bioperl-1.01/Bio/Graphics/Glyph/segmented_keyglyph.pm
+--- bioperl-1.0/Bio/Graphics/Glyph/segmented_keyglyph.pm	Fri Mar 15 09:40:03 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/segmented_keyglyph.pm	Fri Apr 12 07:56:26 2002
+@@ -1,6 +1,6 @@
+ package Bio::Graphics::Glyph::segmented_keyglyph;
+ 
+-# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ # Don't use this package.  It's just for inheriting the segmented glyph in the panel key.
+ 
+ use strict;
+diff -Naur bioperl-1.0/Bio/Graphics/Glyph/segments.pm bioperl-1.01/Bio/Graphics/Glyph/segments.pm
+--- bioperl-1.0/Bio/Graphics/Glyph/segments.pm	Fri Mar 15 09:40:03 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/segments.pm	Fri Apr 12 07:53:44 2002
+@@ -8,19 +8,13 @@
+ 	   Bio::Graphics::Glyph::generic
+ 	 );
+ 
+-#sub pad_right {
+-#  my $self = shift;
+-#  my @parts = $self->parts or return $self->SUPER::pad_right;
+-#  $parts[-1]->pad_right;
+-#}
+-
+ # group sets connector to 'solid'
+ sub connector {
+   my $self = shift;
+   return $self->SUPER::connector(@_) if $self->all_callbacks;
+   return $self->SUPER::connector(@_) || 'solid';
+ }
+-# group sets connector to 'solid'
++# never allow our components to bump
+ sub bump {
+   my $self = shift;
+   return $self->SUPER::bump(@_) if $self->all_callbacks;
+@@ -28,15 +22,33 @@
+ }
+ sub label {
+   my $self = shift;
+-  return $self->SUPER::label(@_) if $self->all_callbacks || !$self->is_recursive;
+-  return unless $self->subseq($self->feature);
++  return $self->SUPER::label(@_) if $self->all_callbacks;
++  return unless $self->{level} == 0;
+   return $self->SUPER::label(@_);
+ }
+ sub description {
+   my $self = shift;
+-  return $self->SUPER::description(@_) if $self->all_callbacks || !$self->is_recursive;
+-  return unless $self->subseq($self->feature);
++  return $self->SUPER::description(@_) if $self->all_callbacks;
++  return unless $self->{level} == 0;
+   return $self->SUPER::description(@_);
++}
++
++# Override _subseq() method to make it appear that a top-level feature that
++# has no subfeatures appears as a feature that has a single subfeature.
++# Otherwise at high mags gaps will be drawn as components rather than
++# as connectors.  Because of differing representations of split features
++# in Bio::DB::GFF::Feature and Bio::SeqFeature::Generic, there is
++# some breakage of encapsulation here.
++sub _subseq {
++  my $self    = shift;
++  my $feature = shift;
++  my @subseq  = $self->SUPER::_subseq($feature);
++  return @subseq if @subseq;
++  if ($self->level == 0 && !@subseq && !eval{$feature->compound}) {
++    return Bio::Location::Simple->new(-start=>$feature->start,-end=>$feature->end);
++  } else {
++    return;
++  }
+ }
+ 
+ 1;
+diff -Naur bioperl-1.0/Bio/Graphics/Glyph/track.pm bioperl-1.01/Bio/Graphics/Glyph/track.pm
+--- bioperl-1.0/Bio/Graphics/Glyph/track.pm	Fri Mar 15 09:40:03 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/track.pm	Fri Apr 12 07:53:44 2002
+@@ -12,11 +12,14 @@
+   return 'none';
+ }
+ 
+-#sub draw {
+-#  my $self = shift;
+-#  my ($gd,$left,$top,$partno,$total_parts) = @_;
+-#  $self->SUPER::draw(@_);
+-#}
++sub draw {
++  my $self = shift;
++  my ($gd,$left,$top,$partno,$total_parts) = @_;
++  my @parts = $self->parts;
++  for (my $i=0; $i<@parts; $i++) {
++    $parts[$i]->draw($gd,$left,$top,0,1);
++  }
++}
+ 
+ # do nothing for components
+ # sub draw_component { }
+diff -Naur bioperl-1.0/Bio/Graphics/Glyph/transcript.pm bioperl-1.01/Bio/Graphics/Glyph/transcript.pm
+--- bioperl-1.0/Bio/Graphics/Glyph/transcript.pm	Fri Mar 15 09:40:03 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/transcript.pm	Fri Apr 12 07:56:26 2002
+@@ -1,16 +1,16 @@
+ package Bio::Graphics::Glyph::transcript;
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ 
+ use strict;
+-use Bio::Graphics::Glyph::generic;
+-use Bio::Graphics::Glyph::segmented_keyglyph;
++use Bio::Graphics::Glyph::segments;
++use Bio::Location::Simple;
+ use vars '@ISA';
+-@ISA = qw( Bio::Graphics::Glyph::segmented_keyglyph
+-	   Bio::Graphics::Glyph::generic
+-	 );
++@ISA = qw( Bio::Graphics::Glyph::segments);
+ 
+ sub pad_left  {
+   my $self = shift;
+   my $pad  = $self->SUPER::pad_left;
++  return $pad if $self->{level} > 0;
+   return $pad unless $self->feature->strand < 0;
+   return $self->arrow_length > $pad ? $self->arrow_length : $pad;
+ }
+@@ -18,17 +18,32 @@
+ sub pad_right {
+   my $self = shift;
+   my $pad  = $self->SUPER::pad_right;
++  return $pad if $self->{level} > 0;
+   return $pad unless $self->feature->strand > 0;
+   return $self->arrow_length > $pad ? $self->arrow_length : $pad;
+ }
+ 
++sub draw_component {
++  my $self = shift;
++  return unless $self->level > 0;
++  $self->SUPER::draw_component(@_);
++}
++
+ sub draw_connectors {
+   my $self = shift;
+   my $gd = shift;
+   my ($left,$top) = @_;
+   $self->SUPER::draw_connectors($gd,$left,$top);
+   my @parts = $self->parts;
+-  @parts = $self unless @parts;
++
++  # H'mmm.  No parts.  Must be in an intron, so draw intron
++  # spanning entire range
++  if (!@parts) {
++    my($x1,$y1,$x2,$y2) = $self->bounds(0,0);
++    $self->_connector($gd,$left,$top,$x1,$y1,$x1,$y2,$x2,$y1,$x2,$y2);
++    @parts = $self;
++  }
++
+   if ($self->feature->strand >= 0) {
+     my($x1,$y1,$x2,$y2) = $parts[-1]->bounds(@_);
+     my $center = ($y2+$y1)/2;
+@@ -52,25 +67,6 @@
+   return 'hat';
+ }
+ 
+-sub bump {
+-  my $self = shift;
+-  return $self->SUPER::bump(@_) if $self->all_callbacks;
+-  return 0;  # never allow our components to bump
+-}
+-
+-sub label {
+-  my $self = shift;
+-  return $self->SUPER::label(@_) if $self->all_callbacks || !$self->is_recursive;
+-  return unless $self->subseq($self->feature);
+-  return $self->SUPER::label(@_);
+-}
+-
+-sub description {
+-  my $self = shift;
+-  return $self->SUPER::description(@_) if $self->all_callbacks || !$self->is_recursive;
+-  return unless $self->subseq($self->feature);
+-  return $self->SUPER::description(@_);
+-}
+ 
+ 1;
+ 
+diff -Naur bioperl-1.0/Bio/Graphics/Glyph/transcript2.pm bioperl-1.01/Bio/Graphics/Glyph/transcript2.pm
+--- bioperl-1.0/Bio/Graphics/Glyph/transcript2.pm	Fri Mar 15 09:40:03 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/transcript2.pm	Fri Apr 12 07:56:26 2002
+@@ -1,9 +1,12 @@
+ package Bio::Graphics::Glyph::transcript2;
+ 
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++
+ use strict;
+ use Bio::Graphics::Glyph::transcript;
+-use vars '@ISA';
++use vars '@ISA','$VERSION';
+ @ISA = 'Bio::Graphics::Glyph::transcript';
++$VERSION = '1.2';
+ 
+ use constant MIN_WIDTH_FOR_ARROW => 8;
+ 
+@@ -11,25 +14,28 @@
+   my $self = shift;
+   my $pad = $self->Bio::Graphics::Glyph::generic::pad_left;
+   return $pad unless $self->feature->strand < 0;
+-  my $first = ($self->parts)[0] or return $pad;
++  my $first = ($self->parts)[0] || $self;
+   my @rect  = $first->bounds();
+   my $width = abs($rect[2] - $rect[0]);
+   return $self->SUPER::pad_left if $width < MIN_WIDTH_FOR_ARROW;
+-  return 0;
++  return $pad;
+ }
+ 
+ sub pad_right  {
+   my $self = shift;
+   my $pad = $self->Bio::Graphics::Glyph::generic::pad_right;
+-  my $last = ($self->parts)[-1] or return $pad;
++  return $pad if $self->{level} > 0;
++  my $last = ($self->parts)[-1] || $self;
+   my @rect  = $last->bounds();
+   my $width = abs($rect[2] - $rect[0]);
+   return $self->SUPER::pad_right if $width < MIN_WIDTH_FOR_ARROW;
+-  return $pad;
++  return $pad
+ }
+ 
+ sub draw_component {
+   my $self = shift;
++  return unless $self->level > 0;
++
+   my $gd = shift;
+   my ($left,$top) = @_;
+   my @rect = $self->bounds(@_);
+@@ -40,16 +46,14 @@
+   if ($filled) {
+     my $f = $self->feature;
+ 
+-    if ($f->strand < 0 
+-	&& (!$self->is_recursive
+-	 || $self->{partno} == 0)) { # first exon, minus strand transcript
++    if ($f->strand < 0
++	&& 
++	$self->{partno} == 0) { # first exon, minus strand transcript
+       $self->filled_arrow($gd,-1,@rect);
+-      $self->{filled}++;
+-    } elsif ($f->strand >= 0 
+-	     && (!$self->is_recursive
+-		 || $self->{partno} == $self->{total_parts}-1)) { # last exon, plus strand
++    } elsif ($f->strand >= 0
++	     &&
++	     $self->{partno} == $self->{total_parts}-1) { # last exon, plus strand
+       $self->filled_arrow($gd,+1,@rect);
+-      $self->{filled}++;
+     } else {
+       $self->SUPER::draw_component($gd,@_);
+     }
+@@ -68,8 +72,22 @@
+ 
+ sub draw_connectors {
+   my $self = shift;
+-  my @parts = $self->parts;
+-  if ($self->{filled} || $parts[0]->{filled} || $parts[-1]->{filled}) {
++  my ($gd,$dx,$dy) = @_;
++
++  my $part;
++  if (my @parts  = $self->parts) {
++    $part   = $self->feature->strand > 0 ? $parts[-1] : $parts[0];
++  } else {
++    # no parts -- so draw an intron spanning whole thing
++    my($x1,$y1,$x2,$y2) = $self->bounds(0,0);
++    $self->_connector($gd,$dx,$dy,$x1,$y1,$x1,$y2,$x2,$y1,$x2,$y2);
++    $part = $self;
++  }
++  my @rect   = $part->bounds();
++  my $width  = abs($rect[2] - $rect[0]);
++  my $filled = $width >= MIN_WIDTH_FOR_ARROW;
++
++  if ($filled) {
+     $self->Bio::Graphics::Glyph::generic::draw_connectors(@_);
+   } else {
+     $self->SUPER::draw_connectors(@_);
+diff -Naur bioperl-1.0/Bio/Graphics/Glyph.pm bioperl-1.01/Bio/Graphics/Glyph.pm
+--- bioperl-1.0/Bio/Graphics/Glyph.pm	Fri Mar 15 09:40:02 2002
++++ bioperl-1.01/Bio/Graphics/Glyph.pm	Fri Apr 12 07:53:36 2002
+@@ -4,6 +4,8 @@
+ use strict;
+ use Carp 'croak';
+ use constant BUMP_SPACING => 2; # vertical distance between bumped glyphs
++use vars '$VERSION';
++$VERSION = '1.00';
+ 
+ my %LAYOUT_COUNT;
+ 
+@@ -19,10 +21,12 @@
+ 
+   my $feature = $arg{-feature} or die "No feature";
+   my $factory = $arg{-factory} || $class->default_factory;
++  my $level   = $arg{-level} || 0;
+ 
+   my $self = bless {},$class;
+   $self->{feature} = $feature;
+   $self->{factory} = $factory;
++  $self->{level}   = $level;
+   $self->{top} = 0;
+ 
+   my @subglyphs;
+@@ -31,7 +35,7 @@
+   if (@subfeatures) {
+ 
+     # dynamic glyph resolution
+-    @subglyphs = sort { $a->left  <=> $b->left }  $factory->make_glyph(@subfeatures);
++    @subglyphs = sort { $a->left  <=> $b->left }  $factory->make_glyph($level+1,@subfeatures);
+ 
+     $self->{parts}   = \@subglyphs;
+   }
+@@ -112,7 +116,7 @@
+     if (ref $feature eq 'ARRAY') {
+       $self->add_group(@$feature);
+     } else {
+-      push @{$self->{parts}},$factory->make_glyph($feature);
++      push @{$self->{parts}},$factory->make_glyph(0,$feature);
+     }
+   }
+ }
+@@ -443,6 +447,7 @@
+   if (my @parts = $self->parts) {
+     my $x = $left;
+     my $y = $top  + $self->top + $self->pad_top;
++    $self->draw_connectors($gd,$x,$y) if $connector && $connector ne 'none';
+ 
+     my $last_x;
+     for (my $i=0; $i<@parts; $i++) {
+@@ -453,16 +458,21 @@
+       $parts[$i]->draw($gd,$fake_x,$y,$i,scalar(@parts));
+       $last_x = $parts[$i]->right;
+     }
+-    $self->draw_connectors($gd,$x,$y) if $connector && $connector ne 'none';
+   }
+ 
+   else {  # no part
+-    $self->draw_component($gd,$left,$top);
+     $self->draw_connectors($gd,$left,$top)
+-      if $connector && $connector ne 'none' && !$self->is_recursive;
++      if $connector && $connector ne 'none' && $self->{level} == 0;
++    $self->draw_component($gd,$left,$top);
+   }
+ }
+ 
++# the "level" is the level of testing of the glyph
++# groups are level -1, top level glyphs are level 0, subcomponents are level 1 and so forth.
++sub level {
++  shift->{level};
++}
++
+ sub draw_connectors {
+   my $self = shift;
+   my $gd = shift;
+@@ -473,7 +483,7 @@
+   }
+ 
+   # extra connectors going off ends
+-  if (@parts>1) {
++  if (@parts) {
+     my($x1,$y1,$x2,$y2) = $self->bounds(0,0);
+     my($xl,$xt,$xr,$xb) = $parts[0]->bounds;
+     $self->_connector($gd,$dx,$dy,$x1,$xt,$x1,$xb,$xl,$xt,$xr,$xb);
+@@ -485,19 +495,24 @@
+ 
+ sub _connector {
+   my $self = shift;
+-  my ($gd,$dx,$dy,$xl,$xt,$xr,$xb,$yl,$yt,$yr,$yb) = @_;
+-    my $left   = $dx + $xr;
+-    my $right  = $dx + $yl;
+-    my $top1     = $dy + $xt;
+-    my $bottom1  = $dy + $xb;
+-    my $top2     = $dy + $yt;
+-    my $bottom2  = $dy + $yb;
+-    return unless $right-$left > 1;
+-
+-    $self->draw_connector($gd,
+-			  $top1,$bottom1,$left,
+-			  $top2,$bottom2,$right,
+-			 );
++  my ($gd,
++      $dx,$dy,
++      $xl,$xt,$xr,$xb,
++      $yl,$yt,$yr,$yb) = @_;
++  my $left   = $dx + $xr;
++  my $right  = $dx + $yl;
++  my $top1     = $dy + $xt;
++  my $bottom1  = $dy + $xb;
++  my $top2     = $dy + $yt;
++  my $bottom2  = $dy + $yb;
++  # restore this comment if you don't like the group dash working
++  # its way backwards.
++  #    return unless $right-$left > 1;
++
++  $self->draw_connector($gd,
++			$top1,$bottom1,$left,
++			$top2,$bottom2,$right,
++		       );
+ }
+ 
+ sub draw_connector {
+@@ -506,6 +521,7 @@
+ 
+   my $color          = $self->connector_color;
+   my $connector_type = $self->connector or return;
++
+   if ($connector_type eq 'hat') {
+     $self->draw_hat_connector($gd,$color,@_);
+   } elsif ($connector_type eq 'solid') {
+@@ -653,16 +669,16 @@
+     $gd->line($x2,($y2+$y1)/2,$x2-$indent,$y2,$fg);
+     $gd->line($x2-$indent,$y2,$x1,$y2,$fg);
+     $gd->line($x1,$y2,$x1,$y1,$fg);
+-    $gd->fillToBorder($x1+1,($y1+$y2)/2,$fg,$self->bgcolor);
++    my $left = $self->panel->left > $x1 ? $self->panel->left : $x1;
++    $gd->fillToBorder($left+1,($y1+$y2)/2,$fg,$self->bgcolor);
+   } else {
+     $gd->line($x1,($y2+$y1)/2,$x1+$indent,$y1,$fg);
+     $gd->line($x1+$indent,$y1,$x2,$y1,$fg);
+     $gd->line($x2,$y2,$x1+$indent,$y2,$fg);
+     $gd->line($x1+$indent,$y2,$x1,($y1+$y2)/2,$fg);
+     $gd->line($x2,$y1,$x2,$y2,$fg);
+-    if ($x2 > 0 && $x2<=$self->panel->right) {
+-       $gd->fillToBorder($x2-1,($y1+$y2)/2,$fg,$self->bgcolor);
+-    }
++    my $right = $self->panel->right < $x2 ? $self->panel->right : $x2;
++    $gd->fillToBorder($right-1,($y1+$y2)/2,$fg,$self->bgcolor);
+   }
+ }
+ 
+@@ -723,9 +739,9 @@
+   my $feature = shift;
+   return $feature->merged_segments         if $feature->can('merged_segments');
+   return $feature->segments                if $feature->can('segments');
+-  my @split = eval { my $id = $feature->location->seq_id;
++  my @split = eval { my $id   = $feature->location->seq_id;
+ 		     my @subs = $feature->location->sub_Location;
+-		     grep {$id eq $_->seq_id} $feature->location->sub_Location};
++		     grep {$id eq $_->seq_id} @subs};
+   return @split if @split;
+   return $feature->sub_SeqFeature          if $feature->can('sub_SeqFeature');
+   return;
+@@ -739,7 +755,7 @@
+   $factory->set_option(label => 1);
+   $factory->set_option(bump  => 0);
+   $factory->set_option(connector  => 'solid');
+-  return $factory->make_glyph($feature);
++  return $factory->make_glyph(0,$feature);
+ }
+ 
+ # synthesize a key glyph
+@@ -764,23 +780,13 @@
+   my $self = shift;
+   my $track_level = $self->option('all_callbacks');
+   return $track_level if defined $track_level;
+-  return $self->panel->all_callbacks; 
++  return $self->panel->all_callbacks;
+ }
+ 
+ sub default_factory {
+   croak "no default factory implemented";
+ }
+ 
+-# This returns true if the underlying feature is fully recursive, like Bio::DB::GFF or
+-# Gadfly, false if the underlying feature has split locations, like Bio::Seq::RichSeq.
+-# Play with this if you start getting labels appearing on each element of a segmented
+-# glyph.
+-sub is_recursive {
+-  my $self = shift;
+-  return $self->{_recursive} if exists $self->{_recursive};
+-  return $self->{_recursive} = !$self->feature->isa('Bio::SeqFeature::Generic');
+-}
+-
+ 1;
+ 
+ __END__
+@@ -920,6 +926,12 @@
+ =item $index = $glyph-E<gt>color($color)
+ 
+ Given a symbolic or #RRGGBB-form color name, returns its GD index.
++
++=item $level = $glyph-E<gt>level
++
++The "level" is the nesting level of the glyph.
++Groups are level -1, top level glyphs are level 0,
++subparts (e.g. exons) are level 1 and so forth.
+ 
+ =back
+ 
+diff -Naur bioperl-1.0/Bio/Graphics/Panel.pm bioperl-1.01/Bio/Graphics/Panel.pm
+--- bioperl-1.0/Bio/Graphics/Panel.pm	Fri Mar 15 09:40:03 2002
++++ bioperl-1.01/Bio/Graphics/Panel.pm	Fri Apr 12 07:53:36 2002
+@@ -7,7 +7,7 @@
+ use GD;
+ use vars '$VERSION';
+ 
+-$VERSION = '0.99';
++$VERSION = '1.01';
+ 
+ use constant KEYLABELFONT => gdMediumBoldFont;
+ use constant KEYSPACING   => 5; # extra space between key columns
+@@ -221,15 +221,15 @@
+   my $panel_map = ref($map) eq 'CODE'
+     ?  sub {
+           my $feature = shift;
+-	  return 'track' if eval { $feature->primary_tag } eq 'track';
+-	  return 'group' if eval { $feature->primary_tag } eq 'group';
++	  return 'track' if eval { $feature->primary_tag  eq 'track' };
++	  return 'group' if eval { $feature->primary_tag  eq 'group' };
+ 	  return $map->($feature);
+ 	}
+       :
+ 	sub {
+ 	  my $feature = shift;
+-	  return 'track' if eval { $feature->primary_tag } eq 'track';
+-	  return 'group' if eval { $feature->primary_tag } eq 'group';
++	  return 'track' if eval { $feature->primary_tag  eq 'track' };
++	  return 'group' if eval { $feature->primary_tag  eq 'group' };
+ 	  return $glyph_name;
+ 	};
+ 
+@@ -261,7 +261,7 @@
+ 					   );
+ 
+   my $factory = Bio::Graphics::Glyph::Factory->new($self,@options);
+-  my $track   = $factory->make_glyph($feature);
++  my $track   = $factory->make_glyph(-1,$feature);
+ 
+   splice(@{$self->{tracks}},$position,0,$track);
+   return $track;
+@@ -404,7 +404,7 @@
+ 	my $t = Bio::Graphics::Feature->new(-segments=>
+ 					    [Bio::Graphics::Feature->new(-start => $self->offset,
+ 									 -stop  => $self->offset+$self->length)]);
+-	my $g = $track->factory->make_glyph($t);
++	my $g = $track->factory->make_glyph(0,$t);
+ 	$glyph = $g->keyglyph;
+       }
+       next unless $glyph;
+@@ -729,35 +729,88 @@
+ 
+ =head1 SYNOPSIS
+ 
+-  use Ace::Sequence;  # or any Bio::Seq factory
+-  use Bio::Graphics::Panel;
++=head1 NAME
++
++Bio::Graphics - Generate GD images of Bio::Seq objects
++
++=head1 SYNOPSIS
+ 
+-  my $db     = Ace->connect(-host=>'brie2.cshl.org',-port=>2005) or die;
+-  my $cosmid = Ace::Sequence->new(-seq=>'Y16B4A',
+-				  -db=>$db,-start=>-15000,-end=>15000) or die;
++  use Bio::Graphics;
++  use Bio::DB::BioFetch;  # or some other Bio::SeqI generator
+ 
+-  my @transcripts = $cosmid->transcripts;
++  # get a Bio::SeqI object somehow
++  my $bf     = Bio::DB::BioFetch->new;
++  my $cosmid = $bf->getSeq_by_id('CEF58D5');
++
++  my @features = $seq->all_SeqFeatures;
++  my @CDS      = grep {$_->primary_tag eq 'CDS'}  @features;
++  my @gene     = grep {$_->primary_tag eq 'gene'} @features;
++  my @tRNAs    = grep {$_->primary_tag eq 'tRNA'} @features;
+ 
++  # let the drawing begin...
+   my $panel = Bio::Graphics::Panel->new(
+ 				      -segment => $cosmid,
+ 				      -width  => 800
+ 				     );
+ 
+-
+   $panel->add_track(arrow => $cosmid,
+- 		  -bump => 0,
+- 		  -tick=>2);
+-
+-  $panel->add_track(transcript => \@transcripts,
+- 		    -bgcolor   =>  'wheat',
+- 		    -fgcolor   =>  'black',
+-                    -key       => 'Curated Genes',
+- 		    -bump      =>  +1,
+- 		    -height    =>  10,
+- 		    -label     =>  1);
++	  	   -bump => 0,
++		   -double=>1,
++		   -tick => 2);
++
++  $panel->add_track(transcript  => \@gene,
++		   -bgcolor    =>  'blue',
++		   -fgcolor    =>  'black',
++		   -key        => 'Genes',
++		   -bump       =>  +1,
++		   -height     =>  10,
++		   -label      => 1,
++		   -description=> 1
++		 ) ;
++
++  $panel->add_track(transcript2  => \@CDS,
++		    -bgcolor    =>  'cyan',
++		    -fgcolor    =>  'black',
++		    -key        => 'CDS',
++		    -bump       =>  +1,
++		    -height     =>  10,
++		    -label      => \&cds_label,
++		    -description=> \&cds_description,
++		 );
++
++  $panel->add_track(generic    => \@tRNAs,
++		    -bgcolor   =>  'red',
++		    -fgcolor   =>  'black',
++		    -key       => 'tRNAs',
++		    -bump      =>  +1,
++		    -height    =>  8,
++		    -label      => 1,
++		   );
++
++  my $gd = $panel->gd;
++  print $gd->can('png') ? $gd->png : $gd->gif;
++
++  # these are callbacks used to generate nice labels and descriptions for
++  # the features...
++  sub cds_label {
++    my $feature = shift;
++    my @notes;
++    foreach (qw(product gene)) {
++      next unless $feature->has_tag($_);
++      @notes = $feature->each_tag_value($_);
++      last;
++    }
++    $notes[0];
++  }
+ 
+-  my $boxes = $panel->boxes;
+-  print $panel->png;
++  sub cds_description {
++    my $feature = shift;
++    my @notes = $feature->each_tag_value('notes')
++                if $feature->has_tag('notes');
++    return unless @notes;
++    substr($notes[0],30) = '...' if length $notes[0] > 30;
++    $notes[0];
++  }
+ 
+ =head1 DESCRIPTION
+ 
+@@ -1196,19 +1249,19 @@
+ three arguments like this:
+ 
+    sub callback {
+-      my ($feature,$option_name,$part_no,$total_parts) = @_;
++      my ($feature,$option_name,$part_no,$total_parts,$glyph) = @_;
+       # do something which results in $option_value being set
+       return $option_value;
+    }
+ 
+-The three arguments are C<$feature>, a reference to the
+-IO::SeqFeatureI object, C<$option_name>, the name of the option to
+-configure, C<$part_no>, an integer index indicating which subpart of
+-the feature is being drawn, and C<$total_parts>, an integer indicating
+-the total number of subfeatures in the feature.  The latter fields are
+-useful in the common case of treating the first or last subfeature
+-differently, such as using a different color for the terminal exon of
+-a gene.
++The five arguments are C<$feature>, a reference to the IO::SeqFeatureI
++object, C<$option_name>, the name of the option to configure,
++C<$part_no>, an integer index indicating which subpart of the feature
++is being drawn, C<$total_parts>, an integer indicating the total
++number of subfeatures in the feature, and finally C<$glyph>, the Glyph
++object itself.  The latter fields are useful in the common case of
++treating the first or last subfeature differently, such as using a
++different color for the terminal exon of a gene.
+ 
+ The callback should return a string indicating the desired value of
+ the option.  To tell the panel to use the default value for this
+diff -Naur bioperl-1.0/Bio/Graphics.pm bioperl-1.01/Bio/Graphics.pm
+--- bioperl-1.0/Bio/Graphics.pm	Sat Mar 16 14:26:09 2002
++++ bioperl-1.01/Bio/Graphics.pm	Fri Apr 12 07:53:30 2002
+@@ -4,7 +4,7 @@
+ use strict;
+ 
+ use vars '$VERSION';
+-$VERSION = '0.98';
++$VERSION = '1.04';
+ 
+ 1;
+ 
+@@ -15,32 +15,79 @@
+ =head1 SYNOPSIS
+ 
+   use Bio::Graphics;
+-  use Ace::Sequence; # or any other way to create a Bio::Seq object
+-
+-  # get a set of Bio::SeqFeature objects ... somehow
+-  my $db     = Ace->connect(-host=>'brie2.cshl.org',-port=>2005) or die;
+-  my $cosmid = Ace::Sequence->new(-seq=>'Y16B4A',
+-				  -db=>$db,-start=>-15000,-end=>15000) or die;
+-  my @transcripts = $cosmid->transcripts;
+-
++  use Bio::DB::BioFetch;  # or some other Bio::SeqI generator
++  # get a Bio::SeqI object somehow
++  my $bf     = Bio::DB::BioFetch->new;
++  my $cosmid = $bf->getSeq_by_id('CEF58D5');
++
++  my @features = $seq->all_SeqFeatures;
++  my @CDS      = grep {$_->primary_tag eq 'CDS'}  @features;
++  my @gene     = grep {$_->primary_tag eq 'gene'} @features;
++  my @tRNAs    = grep {$_->primary_tag eq 'tRNA'} @features;
+   # let the drawing begin...
+-  my $panel = Bio::Graphics::Panel->new( -segment => $cosmid,
+-				         -width   => 800  );
++  my $panel = Bio::Graphics::Panel->new(
++				      -segment => $cosmid,
++				      -width  => 800
++				     );
+ 
+   $panel->add_track(arrow => $cosmid,
+- 		    -bump => 0,
+- 		    -tick =>2);
+-
+-  $panel->add_track(transcript => \@transcripts,
+- 		    -bgcolor   =>  'wheat',
+- 		    -fgcolor   =>  'black',
+-                    -key       => 'Curated Genes',
+- 		    -bump      =>  +1,
+- 		    -height    =>  10,
+- 		    -label     =>  1);
+-
+-  my $boxes = $panel->boxes;
+-  print $panel->png;
++	  	   -bump => 0,
++		   -double=>1,
++		   -tick => 2);
++
++  $panel->add_track(transcript  => \@gene,
++		   -bgcolor    =>  'blue',
++		   -fgcolor    =>  'black',
++		   -key        => 'Genes',
++		   -bump       =>  +1,
++		   -height     =>  10,
++		   -label      => 1,
++		   -description=> 1
++		 ) ;
++
++  $panel->add_track(transcript2  => \@CDS,
++		    -bgcolor    =>  'cyan',
++		    -fgcolor    =>  'black',
++		    -key        => 'CDS',
++		    -bump       =>  +1,
++		    -height     =>  10,
++		    -label      => \&cds_label,
++		    -description=> \&cds_description,
++		 );
++
++  $panel->add_track(generic    => \@tRNAs,
++		    -bgcolor   =>  'red',
++		    -fgcolor   =>  'black',
++		    -key       => 'tRNAs',
++		    -bump      =>  +1,
++		    -height    =>  8,
++		    -label      => 1,
++		   );
++
++  my $gd = $panel->gd;
++  print $gd->can('png') ? $gd->png : $gd->gif;
++
++  # these are callbacks used to generate nice labels and descriptions for
++  # the features...
++  sub cds_label {
++    my $feature = shift;
++    my @notes;
++    foreach (qw(product gene)) {
++      next unless $feature->has_tag($_);
++      @notes = $feature->each_tag_value($_);
++      last;
++    }
++    $notes[0];
++  }
++
++  sub cds_description {
++    my $feature = shift;
++    my @notes = $feature->each_tag_value('notes')
++                if $feature->has_tag('notes');
++    return unless @notes;
++    substr($notes[0],30) = '...' if length $notes[0] > 30;
++    $notes[0];
++  }
+ 
+ =head1 DESCRIPTION
+ 
+diff -Naur bioperl-1.0/Bio/Index/GenBank.pm bioperl-1.01/Bio/Index/GenBank.pm
+--- bioperl-1.0/Bio/Index/GenBank.pm	Thu Dec 13 18:09:00 2001
++++ bioperl-1.01/Bio/Index/GenBank.pm	Sun Mar 31 16:30:01 2002
+@@ -1,6 +1,5 @@
+-
+ #
+-# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ #
+ # BioPerl module for Bio::Index::Abstract
+ #
+@@ -29,13 +28,13 @@
+     # Print out several sequences present in the index
+     # in gcg format
+     use Bio::Index::GenBank;
+-
++    use Bio::SeqIO;
+     my $Index_File_Name = shift;
+     my $inx = Bio::Index::GenBank->new('-filename' => $Index_File_Name);
+-
++    my $seqio = new Bio::SeqIO(-format => 'gcg');
+     foreach my $id (@ARGV) {
+         my $seq = $inx->fetch($id); # Returns Bio::Seq object
+-        print $seq->layout('GCG');
++        $seqio->write_seq($seq);
+     }
+ 
+     # alternatively
+@@ -72,7 +71,7 @@
+ 
+ =head1 AUTHOR - Ewan Birney
+ 
+-Email - birney@sanger.ac.uk
++Email - birney@ebi.ac.uk
+ 
+ =head1 APPENDIX
+ 
+@@ -202,16 +201,4 @@
+    return 'GenBank';
+ }
+ 
+-
+-
+ 1;
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+diff -Naur bioperl-1.0/Bio/Root/Exception.pm bioperl-1.01/Bio/Root/Exception.pm
+--- bioperl-1.0/Bio/Root/Exception.pm	Wed Feb 13 06:02:46 2002
++++ bioperl-1.01/Bio/Root/Exception.pm	Fri Apr 12 00:10:14 2002
+@@ -1,5 +1,5 @@
+ #-----------------------------------------------------------------
+-# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ #
+ # BioPerl module Bio::Root::Exception
+ #
+@@ -268,7 +268,7 @@
+     my $self = shift;
+     my $msg = $self->text;
+     my $stack = $self->stacktrace();
+-    $stack =~ s/$msg//;
++    $stack =~ s/\Q$msg//;
+     my @stack = split( /\n/, $stack);
+     my @new_stack = ();
+     my ($method, $file, $linenum, $prev_file, $prev_linenum);
+diff -Naur bioperl-1.0/Bio/Search/Hit/BlastHit.pm bioperl-1.01/Bio/Search/Hit/BlastHit.pm
+--- bioperl-1.0/Bio/Search/Hit/BlastHit.pm	Wed Jan 23 06:30:25 2002
++++ bioperl-1.01/Bio/Search/Hit/BlastHit.pm	Fri Apr 12 00:10:14 2002
+@@ -1,5 +1,5 @@
+ #-----------------------------------------------------------------
+-# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ #
+ # BioPerl module Bio::Search::Hit::BlastHit
+ #
+@@ -211,7 +211,7 @@
+ 
+ @ISA = qw( Bio::Root::Root Bio::Search::Hit::HitI );
+ 
+-$Revision = '$Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $';  #'
++$Revision = '$Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $';  #'
+ 
+ 
+ =head2 new
+@@ -273,6 +273,7 @@
+ 			      SCORE
+ 			      FOUND_AGAIN )], @args );
+ 
++    # TODO: Handle this in parser. Just pass in name parameter.
+     $self->_set_id( $raw_data->[0] );
+ 
+     if($is_pval) {
+@@ -323,12 +324,14 @@
+ 
+  Usage     : $hit->name([string]);
+  Purpose   : Set/Get a string to identify the hit.
+-             This is parsed out of the "Query=" line as the first chunk of 
+-             non-whitespace text. If you want the rest of the line, use
+-             $hit->description().
+  Example   : $name = $hit->name;
+            : $hit->name('M81707');
+  Returns   : String consisting of the hit's name or undef if not set.
++ Comments  : The name is parsed out of the "Query=" line as the first chunk of 
++             non-whitespace text. If you want the rest of the line, use
++             $hit->description().
++
++See Also: L<accession()|accession>
+ 
+ =cut
+ 
+@@ -371,6 +374,29 @@
+     return substr( $self->{'_description'}, 0 ,$len ); 
+ }
+ 
++=head2 accession
++
++ Title   : accession
++ Usage   : $acc = $hit->accession();
++ Function: Retrieve the accession (if available) for the hit
++ Returns : a scalar string (empty string if not set)
++ Args    : none
++ Comments: Accession numbers are extracted based on the assumption that they
++           are delimited by | characters (NCBI-style). If this is not the case,
++           use the name() method and parse it as necessary.
++
++See Also: L<name()|name>
++
++=cut
++
++#--------------------
++sub accession {
++#--------------------
++    my $self = shift;
++    if(@_) { $self->{'_accession'} = shift; }
++    $self->{'_accession'} || '';
++}
++
+ =head2 raw_score
+ 
+  Usage     : $hit_object->raw_score();
+@@ -684,7 +710,7 @@
+ #           : or first line of an alignment section (with or without the leading '>').
+ # Throws    : Warning if cannot locate sequence ID.
+ #
+-#See Also   : L<new()|new>
++#See Also   : L<new()|new>, L<accession()|accession>
+ #
+ #=cut
+ 
+@@ -694,15 +720,21 @@
+     my( $self, $desc ) = @_;
+ 
+     # New strategy: Assume only that the ID is the first white space
+-    # delimited chunk. Not attempting to extract database name.
++    # delimited chunk. Not attempting to extract accession & database name.
+     # Clients will have to interpret it as necessary.
+     if($desc =~ /^>?(\S+)\s*(.*)/) {
+-        $self->name($1);
+-        $self->{'_description'} = $2;
++        my ($name, $desc) = ($1, $2);
++        $self->name($name);
++        $self->{'_description'} = $desc;
+ 	# Note that this description comes from the summary section of the
+ 	# BLAST report and so may be truncated. The full description will be
+ 	# set from the alignment section. We're setting description here in case
+ 	# the alignment section isn't being parsed.
++
++        # Assuming accession is delimited with | symbols (NCBI-style)
++        my @pieces = split(/\|/,$name);
++        my $acc = pop @pieces;
++        $self->accession( $acc );
+     }
+     else {
+         $self->warn("Can't locate sequence identifier in summary line.", "Line = $desc");
+diff -Naur bioperl-1.0/Bio/SearchIO/blast.pm bioperl-1.01/Bio/SearchIO/blast.pm
+--- bioperl-1.0/Bio/SearchIO/blast.pm	Fri Mar  8 15:22:16 2002
++++ bioperl-1.01/Bio/SearchIO/blast.pm	Sun Mar 31 16:30:02 2002
+@@ -1,4 +1,4 @@
+-# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ #
+ # BioPerl module for Bio::SearchIO::blast
+ #
+@@ -310,8 +310,10 @@
+        } elsif(  /Length\s*=\s*([\d,]+)/ ) {
+ 	   $self->element({ 'Name' => 'Hit_len',
+ 			    'Data' => $1 });
+-       } elsif( ($self->in_element('hit') || $self->in_element('hsp')) && # wublast
+-		/Score\s*=\s*(\d+)\s*\(([\d\.]+)\s*bits\),\s*Expect\s*=\s*([^,\s]+),\s*P\s*=\s*([^,\s]+)/ ) {
++       } elsif( ($self->in_element('hit') || 
++		 $self->in_element('hsp')) && # wublast
++	       /Score\s*=\s*(\d+)\s*\(([\d\.]+)\s*bits\),\s*Expect\s*=\s*([^,\s]+),\s*(Sum)?\s*P(\(\d+\))\s*=\s*([^,\s]+)/ 
++		  ) {
+ 	   $self->in_element('hsp') && $self->end_element({'Name' => 'Hsp'});
+ 	   $self->start_element({'Name' => 'Hsp'});
+        	   $self->element( { 'Name' => 'Hsp_score',
+@@ -321,7 +323,7 @@
+ 	   $self->element( { 'Name' => 'Hsp_evalue',
+ 			     'Data' => $3});
+ 	   $self->element( {'Name'  => 'Hsp_pvalue',
+-			    'Data'  =>$4});
++			    'Data'  =>$6});
+        } elsif( ($self->in_element('hit') || $self->in_element('hsp')) && # ncbi blast
+ 		/Score\s*=\s*(\S+)\s*bits\s*\((\d+)\),\s*Expect(\(\d+\))?\s*=\s*(\S+)/) {
+ 	   $self->in_element('hsp') && $self->end_element({ 'Name' => 'Hsp'});
+diff -Naur bioperl-1.0/Bio/Structure/StructureI.pm bioperl-1.01/Bio/Structure/StructureI.pm
+--- bioperl-1.0/Bio/Structure/StructureI.pm	Wed Feb 13 10:34:52 2002
++++ bioperl-1.01/Bio/Structure/StructureI.pm	Fri Apr 12 00:10:15 2002
+@@ -1,9 +1,9 @@
+-# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+-# placeholder for Bio::StructureI
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# placeholder for Bio::Structure::StructureI
+ 
+-# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ #
+-# BioPerl module for Bio::StructureI
++# BioPerl module for Bio::Structure::StructureI
+ #
+ # Cared for by Kris Boulez <kris.boulez@algonomics.com>
+ #
+@@ -15,7 +15,7 @@
+ 
+ =head1 NAME
+ 
+-Bio::StructureI - Abstract Interface for a Structure objects
++Bio::Structure::StructureI - Abstract Interface for a Structure objects
+ 
+ =head1 SYNOPSIS
+ 
+@@ -66,7 +66,8 @@
+ # Let the code begin...
+ 
+ 
+-package Bio::StructureI;
++package Bio::Structure::StructureI;
++use Bio::Root::RootI;
+ use vars qw(@ISA);
+ use strict;
+ 
+diff -Naur bioperl-1.0/Bio/Tools/SeqWords.pm bioperl-1.01/Bio/Tools/SeqWords.pm
+--- bioperl-1.0/Bio/Tools/SeqWords.pm	Mon Nov 19 21:09:40 2001
++++ bioperl-1.01/Bio/Tools/SeqWords.pm	Fri Apr 12 00:10:15 2002
+@@ -1,3 +1,4 @@
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ 
+ #---------------------------------------------------------------------------
+ # PACKAGE    : SeqWords.pm
+@@ -22,45 +23,45 @@
+ 
+ =head1 SYNOPSIS
+ 
+-Take a sequence object from eg, an inputstream, and creates an object 
++Take a sequence object from eg, an inputstream, and creates an object
+ for the purposes of holding n-mer word statistics about that sequence.
+-The sequence can be nucleic acid or protein, but the module is probably
+-most relevant for DNA.  The words are counted in a non-overlapping manner,
+-ie. in the style of a codon table, but with any word length.
+-For overlapping word counts, a sequence can be 'shifted' to remove the first
+-character and then the count repeated.  For counts on opposite strand
+-(DNA/RNA),
+-a reverse complement method should be performed, and then the count
+-repeated.
++The sequence can be nucleic acid or protein, but the module is
++probably most relevant for DNA.  The words are counted in a
++non-overlapping manner, ie. in the style of a codon table, but with
++any word length.  For overlapping word counts, a sequence can be
++'shifted' to remove the first character and then the count repeated.
++For counts on opposite strand (DNA/RNA), a reverse complement method
++should be performed, and then the count repeated.
+ 
+ Creating the SeqWords object, eg:
+ 
+-	my $inputstream = Bio::SeqIO->new( -file => "seqfile", -format =>
+-'Fasta');
+-	my $seqobj = $inputstream->next_seq();
+-	my $seq_word = Bio::Tools::SeqWords->new(-seq => $seqobj);
++  my $inputstream = Bio::SeqIO->new( -file => "seqfile", 
++	                             -format => 'Fasta');
++  my $seqobj = $inputstream->next_seq();
++  my $seq_word = Bio::Tools::SeqWords->new(-seq => $seqobj);
+ 
+ or:
+ 
+-	my $seqobj = Bio::PrimarySeq->new(-seq=>'[cut and paste a sequence here]', 
+-                                          -alphabet = 'dna', -id = 'test');
+-	my $seq_word  =  Bio::Tools::SeqWords->new(-seq => $seqobj);
++  my $seqobj = Bio::PrimarySeq->new(-seq=>'[cut and paste a sequence here]', 
++                                    -alphabet => 'dna', 
++                                    -id => 'test');
++  my $seq_word  =  Bio::Tools::SeqWords->new(-seq => $seqobj);
+ 
+ obtain a hash of word counts, eg:
+ 
+-	my $hash_ref = $seq_stats->count_words($word_length);
++  my $hash_ref = $seq_stats->count_words($word_length);
+ 
+ display hash table, eg:
+ 
+-	my %hash = %$hash_ref;
+-	foreach my $key(sort keys %hash)
+-	{
+-		print "\n$key\t$hash{$key}";
+-	}
++  my %hash = %$hash_ref;
++  foreach my $key(sort keys %hash)
++  {
++    print "\n$key\t$hash{$key}";
++  }
+ 
+ or	
+ 
+-	my $hash_ref = Bio::SeqWords->count_words($seqobj,$word_length);
++  my $hash_ref = Bio::SeqWords->count_words($seqobj,$word_length);
+ 
+ 
+ =head1 DESCRIPTION
+@@ -91,7 +92,7 @@
+ Your participation is much appreciated.
+ 
+   bioperl-l@bioperl.org                 - General discussion
+-  http://bio.perl.org/MailList.html             - About the mailing lists
++  http://bio.perl.org/MailList.html     - About the mailing lists
+ 
+ =head2 Reporting Bugs
+ 
+@@ -159,11 +160,10 @@
+ 	 : will give the hash
+ 	 : ACCG 1, TCCG 1
+  Returns : Reference to a hash in which keys are words (any length) of the
+-alphabet
+-         : used and values are number of occurrences of the word in the
+-sequence.
++         : alphabet used and values are number of occurrences of the word 
++         : in the sequence.
+  Args    : Word length as scalar and, reference to sequence object if
+-required
++         : required
+ 
+   Throws an exception word length is not a positive integer
+   or if word length is longer than the sequence.
+@@ -188,11 +188,13 @@
+ 
+ 	if($word_length eq "" || $word_length =~ /[a-z]/i)
+ 	{
+-		$self->throw("SeqWords cannot accept non-numeric characters or a null value in the \$word_length variable\n");
++	    $self->throw("SeqWords cannot accept non-numeric characters".
++                         " or a null value in the \$word_length variable\n");
+ 	}
+ 	elsif ($word_length <1 || ($word_length - int($word_length)) >0)
+ 	{
+-		$self->throw("SeqWords requires the word length to be a positive integer\n");
++	    $self->throw("SeqWords requires the word length to be a ".
++                         "positive integer\n");
+     	}
+ 	
+ 	if(! defined($seqobj)) {
+@@ -202,7 +204,8 @@
+ 
+ 	if($word_length > length($seqstring))
+ 	{
+-	    $self->throw("die in count words, \$word_length is bigger than sequence length\n");
++	    $self->throw("die in count words, \$word_length is bigger ".
++                         "than sequence length\n");
+ 	}
+ 	
+ 	my %codon = ();
+diff -Naur bioperl-1.0/Bio/Variation/AAChange.pm bioperl-1.01/Bio/Variation/AAChange.pm
+--- bioperl-1.0/Bio/Variation/AAChange.pm	Mon Feb 18 12:17:25 2002
++++ bioperl-1.01/Bio/Variation/AAChange.pm	Wed Mar 20 08:08:24 2002
+@@ -1,4 +1,4 @@
+-# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ #
+ # BioPerl module for Bio::Variation::AAChange
+ #
+@@ -160,9 +160,7 @@
+ 
+ sub new {
+     my($class,@args) = @_;
+-    my $self;
+-    $self = {};
+-    bless $self, $class;
++    my $self = $class->SUPER::new(@args);
+ 
+     my ($start, $end, $length, $strand, $primary, $source, 
+ 	$frame, $score, $gff_string,
+@@ -195,34 +193,34 @@
+ 				  ISMUTATION
+ 				  )],@args);
+     
+-    $self->SUPER::primary_tag("Variation");
++    $self->primary_tag("Variation");
+ 
+     $self->{ 'alleles' } = [];
+ 
+-    $start && $self->SUPER::start($start);
+-    $end   && $self->SUPER::end($end);
+-    $length && $self->SUPER::length($length);
+-    $strand && $self->SUPER::strand($strand);
+-    $primary && $self->SUPER::primary_tag($primary);
+-    $source  && $self->SUPER::source_tag($source);
+-    $frame   && $self->SUPER::frame($frame);
+-    $score   && $self->SUPER::score($score);
+-    $gff_string && $self->SUPER::_from_gff_string($gff_string);
+-
+-    $allele_ori && $self->SUPER::allele_ori($allele_ori);
+-    $allele_mut  && $self->SUPER::allele_mut($allele_mut);
+-    $upstreamseq  && $self->SUPER::upstreamseq($upstreamseq);
+-    $dnstreamseq  && $self->SUPER::dnstreamseq($dnstreamseq);
++    $start && $self->start($start);
++    $end   && $self->end($end);
++    $length && $self->length($length);
++    $strand && $self->strand($strand);
++    $primary && $self->primary_tag($primary);
++    $source  && $self->source_tag($source);
++    $frame   && $self->frame($frame);
++    $score   && $self->score($score);
++    $gff_string && $self->_from_gff_string($gff_string);
++
++    $allele_ori && $self->allele_ori($allele_ori);
++    $allele_mut  && $self->allele_mut($allele_mut);
++    $upstreamseq  && $self->upstreamseq($upstreamseq);
++    $dnstreamseq  && $self->dnstreamseq($dnstreamseq);
+ 
+     $label  && $self->label($label);
+-    $status  && $self->SUPER::status($status);
+-    $proof && $self->SUPER::proof($proof);
+-    $region  && $self->SUPER::region($region);
+-    $region_value  && $self->SUPER::region_value($region_value);
+-    $region_dist  && $self->SUPER::region_dist($region_dist);
+-    $numbering && $self->SUPER::numbering($numbering);
+-    $mut_number && $self->SUPER::mut_number($mut_number);
+-    $ismutation && $self->SUPER::isMutation($ismutation);
++    $status  && $self->status($status);
++    $proof && $self->proof($proof);
++    $region  && $self->region($region);
++    $region_value  && $self->region_value($region_value);
++    $region_dist  && $self->region_dist($region_dist);
++    $numbering && $self->numbering($numbering);
++    $mut_number && $self->mut_number($mut_number);
++    $ismutation && $self->isMutation($ismutation);
+ 
+     return $self; # success - we hope!
+ }
+diff -Naur bioperl-1.0/Bio/Variation/AAReverseMutate.pm bioperl-1.01/Bio/Variation/AAReverseMutate.pm
+--- bioperl-1.0/Bio/Variation/AAReverseMutate.pm	Mon Nov 19 21:09:45 2001
++++ bioperl-1.01/Bio/Variation/AAReverseMutate.pm	Wed Mar 20 08:08:24 2002
+@@ -1,4 +1,4 @@
+-# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ #
+ # BioPerl module for Bio::Variation::AAReverseMutate
+ #
+@@ -101,9 +101,7 @@
+ 
+ sub new {
+     my($class,@args) = @_;
+-    my $self;
+-    $self = {};
+-    bless $self, $class;
++    my $self = $class->SUPER::new(@args);
+ 
+   my ($aa_ori, $aa_mut, $codon_ori, $codon_table) =
+       $self->_rearrange([qw(AA_ORI
+diff -Naur bioperl-1.0/Bio/Variation/Allele.pm bioperl-1.01/Bio/Variation/Allele.pm
+--- bioperl-1.0/Bio/Variation/Allele.pm	Mon Feb 18 12:17:25 2002
++++ bioperl-1.01/Bio/Variation/Allele.pm	Wed Mar 20 08:08:24 2002
+@@ -1,4 +1,4 @@
+-# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ #
+ # BioPerl module for Bio::Variation::Allele
+ #
+@@ -91,40 +91,22 @@
+ 
+ @ISA = qw( Bio::PrimarySeq Bio::DBLinkContainerI );
+ 
+-sub _initialize {
+-    my($self, @args) = @_;
++sub new {
++    my($class, @args) = @_;
++    my $self = $class->SUPER::new(@args);
+ 
+-    my($seq,$id,$acc,$pid,$desc,$alphabet,$given_id, 
+-       $is_reference, $repeat_unit, $repeat_count) =
+-	   $self->_rearrange([qw(SEQ
+-				 DISPLAY_ID
+-				 ACCESSION_NUMBER
+-				 PRIMARY_ID
+-				 DESC
+-				 ALPHABET
+-				 ID
+-				 IS_REFERENCE
++    my($is_reference, $repeat_unit, $repeat_count) =
++	   $self->_rearrange([qw(IS_REFERENCE
+ 				 REPEAT_UNIT
+ 				 REPEAT_COUNT
+ 				 )],
+ 			     @args);
+ 
+-    my $make = $self->SUPER::_initialize(@args);
+-
+-    if( defined $given_id ) { $id = $given_id; }
+-
+-    $seq     && $self->SUPER::seq($seq);
+-    $id      && $self->SUPER::display_id($id);
+-    $acc     && $self->SUPER::accession_number($acc);
+-    $pid     && $self->SUPER::primary_id($pid);
+-    $desc    && $self->SUPER::desc($desc);
+-    $alphabet && $self->SUPER::alphabet($alphabet);
+-
+     $is_reference && $self->is_reference($is_reference);
+     $repeat_unit && $self->repeat_unit($repeat_unit);
+     $repeat_count && $self->repeat_count($repeat_count);
+ 
+-    return $make; # success - we hope!
++    return $self; # success - we hope!
+ }
+ 
+ 
+diff -Naur bioperl-1.0/Bio/Variation/DNAMutation.pm bioperl-1.01/Bio/Variation/DNAMutation.pm
+--- bioperl-1.0/Bio/Variation/DNAMutation.pm	Mon Feb 18 12:17:25 2002
++++ bioperl-1.01/Bio/Variation/DNAMutation.pm	Wed Mar 20 08:08:24 2002
+@@ -1,4 +1,4 @@
+-# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ #
+ # BioPerl module for Bio::Variation::DNAMutation
+ #
+@@ -102,9 +102,7 @@
+ 
+ sub new {
+     my($class,@args) = @_;
+-    my $self;
+-    $self = {};
+-    bless $self, $class;
++    my $self = $class->SUPER::new(@args);
+     
+     my ($start, $end, $length, $strand, $primary, $source, 
+ 	$frame, $score, $gff_string,
+@@ -137,34 +135,34 @@
+ 				  )],
+ 			      @args);
+ 
+-    $self->SUPER::primary_tag("Variation");
++    $self->primary_tag("Variation");
+ 
+     $self->{ 'alleles' } = [];
+ 
+-    $start && $self->SUPER::start($start);
+-    $end   && $self->SUPER::end($end);
+-    $length && $self->SUPER::length($length);
+-    $strand && $self->SUPER::strand($strand);
+-    $primary && $self->SUPER::primary_tag($primary);
+-    $source  && $self->SUPER::source_tag($source);
+-    $frame   && $self->SUPER::frame($frame);
+-    $score   && $self->SUPER::score($score);
+-    $gff_string && $self->SUPER::_from_gff_string($gff_string);
++    $start && $self->start($start);
++    $end   && $self->end($end);
++    $length && $self->length($length);
++    $strand && $self->strand($strand);
++    $primary && $self->primary_tag($primary);
++    $source  && $self->source_tag($source);
++    $frame   && $self->frame($frame);
++    $score   && $self->score($score);
++    $gff_string && $self->_from_gff_string($gff_string);
+     
+-    $allele_ori && $self->SUPER::allele_ori($allele_ori);
+-    $allele_mut  && $self->SUPER::allele_mut($allele_mut);
+-    $upstreamseq  && $self->SUPER::upStreamSeq($upstreamseq);
+-    $dnstreamseq  && $self->SUPER::dnStreamSeq($dnstreamseq);
++    $allele_ori && $self->allele_ori($allele_ori);
++    $allele_mut  && $self->allele_mut($allele_mut);
++    $upstreamseq  && $self->upStreamSeq($upstreamseq);
++    $dnstreamseq  && $self->dnStreamSeq($dnstreamseq);
+     
+     $label  && $self->label($label);
+-    $status  && $self->SUPER::status($status);
+-    $proof && $self->SUPER::proof($proof);
+-    $region  && $self->SUPER::region($region);
+-    $region_value  && $self->SUPER::region_value($region_value);
+-    $region_dist  && $self->SUPER::region_dist($region_dist);
+-    $numbering && $self->SUPER::numbering($numbering);
+-    $mut_number && $self->SUPER::mut_number($mut_number);
+-    $ismutation && $self->SUPER::isMutation($ismutation);
++    $status  && $self->status($status);
++    $proof && $self->proof($proof);
++    $region  && $self->region($region);
++    $region_value  && $self->region_value($region_value);
++    $region_dist  && $self->region_dist($region_dist);
++    $numbering && $self->numbering($numbering);
++    $mut_number && $self->mut_number($mut_number);
++    $ismutation && $self->isMutation($ismutation);
+ 
+     $cpg && $self->CpG($cpg);
+     
+diff -Naur bioperl-1.0/Bio/Variation/RNAChange.pm bioperl-1.01/Bio/Variation/RNAChange.pm
+--- bioperl-1.0/Bio/Variation/RNAChange.pm	Mon Feb 18 12:17:25 2002
++++ bioperl-1.01/Bio/Variation/RNAChange.pm	Wed Mar 20 08:08:24 2002
+@@ -1,4 +1,4 @@
+-# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ #
+ # BioPerl module for Bio::Variation::RNAChange
+ #
+@@ -115,13 +115,11 @@
+ 
+ sub new {
+     my($class,@args) = @_;
+-    my $self;
+-    $self = {};
+-    bless $self, $class;
+-
+-    my ($start, $end, $length, $strand, $primary, $source, 
+-	$frame, $score, $gff_string,
+-	$allele_ori,  $allele_mut,  $upstreamseq,  $dnstreamseq,  
++    my $self = $class->SUPER::new(@args);
++
++    my ($start, $end, $length, $strand, $primary, $source,
++        $frame, $score, $gff_string,
++        $allele_ori,  $allele_mut,  $upstreamseq,  $dnstreamseq,
+ 	$label,  $status,  $proof,  $region,  $region_value, $region_dist, $numbering,
+ 	$mut_number,  $isMutation,
+ 	$codon_ori, $codon_mut, $codon_pos, $codon_table, $cds_end) =
+@@ -158,30 +156,30 @@
+     
+     $self->{ 'alleles' } = [];
+     
+-    $start && $self->SUPER::start($start);
+-    $end   && $self->SUPER::end($end);
+-    $length && $self->SUPER::length($length);
+-    $strand && $self->SUPER::strand($strand);
+-    $primary && $self->SUPER::primary_tag($primary);
+-    $source  && $self->SUPER::source_tag($source);
+-    $frame   && $self->SUPER::frame($frame);
+-    $score   && $self->SUPER::score($score);
+-    $gff_string && $self->SUPER::_from_gff_string($gff_string);
++    $start && $self->start($start);
++    $end   && $self->end($end);
++    $length && $self->length($length);
++    $strand && $self->strand($strand);
++    $primary && $self->primary_tag($primary);
++    $source  && $self->source_tag($source);
++    $frame   && $self->frame($frame);
++    $score   && $self->score($score);
++    $gff_string && $self->_from_gff_string($gff_string);
+     
+-    $allele_ori && $self->SUPER::allele_ori($allele_ori);
+-    $allele_mut  && $self->SUPER::allele_mut($allele_mut);
+-    $upstreamseq  && $self->SUPER::upStreamSeq($upstreamseq);
+-    $dnstreamseq  && $self->SUPER::dnStreamSeq($dnstreamseq);
++    $allele_ori && $self->allele_ori($allele_ori);
++    $allele_mut  && $self->allele_mut($allele_mut);
++    $upstreamseq  && $self->upStreamSeq($upstreamseq);
++    $dnstreamseq  && $self->dnStreamSeq($dnstreamseq);
+     
+     $label  && $self->label($label);
+-    $status  && $self->SUPER::status($status);
+-    $proof && $self->SUPER::proof($proof);
++    $status  && $self->status($status);
++    $proof && $self->proof($proof);
+     $region  && $self->region($region);
+-    $region_value  && $self->SUPER::region_value($region_value);
+-    $region_dist  && $self->SUPER::region_dist($region_dist);
+-    $numbering && $self->SUPER::numbering($numbering);
+-    $mut_number && $self->SUPER::mut_number($mut_number);
+-    $isMutation && $self->SUPER::isMutation($isMutation);
++    $region_value  && $self->region_value($region_value);
++    $region_dist  && $self->region_dist($region_dist);
++    $numbering && $self->numbering($numbering);
++    $mut_number && $self->mut_number($mut_number);
++    $isMutation && $self->isMutation($isMutation);
+     
+     $codon_ori  && $self->codon_ori($codon_ori);
+     $codon_mut  && $self->codon_mut($codon_mut);
+@@ -220,7 +218,7 @@
+     elsif (! $self->{'codon_ori'}) {
+ 	my $codon_ori = '';
+ 
+-	if ($self->region eq 'coding' and $self->start >= 1) {
++	if ($self->region eq 'coding' && $self->start && $self->start  >= 1) {
+ 	    
+ 	    $self->warn('Codon position is not defined') 
+ 		if not defined $self->codon_pos;
+@@ -469,10 +467,10 @@
+ 	    if not defined $self->cds_end and $self->verbose;
+ 	
+ 	$self->region('coding');
+-	if ($self->end < 0 ){
++	if ($self->end && $self->end < 0 ){
+ 	    $self->region('5\'UTR');
+ 	}
+-	elsif ($self->cds_end and $self->start > $self->cds_end ) {
++	elsif ($self->start && $self->cds_end && $self->start > $self->cds_end ) {
+ 	    $self->region('3\'UTR');
+ 	}
+     }
+diff -Naur bioperl-1.0/Bio/Variation/SeqDiff.pm bioperl-1.01/Bio/Variation/SeqDiff.pm
+--- bioperl-1.0/Bio/Variation/SeqDiff.pm	Mon Feb 18 12:17:25 2002
++++ bioperl-1.01/Bio/Variation/SeqDiff.pm	Wed Mar 20 08:08:24 2002
+@@ -1,4 +1,4 @@
+-# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ # bioperl module for Bio::Variation::SeqDiff
+ #
+ # Cared for by Heikki Lehvaslaiho <heikki@ebi.ac.uk>
+@@ -116,9 +116,7 @@
+ 
+ sub new {
+     my($class,@args) = @_;
+-    my $self;
+-    $self = {};
+-    bless $self, $class;
++    my $self = $class->SUPER::new(@args);
+ 
+     my($id, $sysname, $trivname, $chr, $gene_symbol, 
+        $desc, $alphabet, $numbering, $offset, $rna_offset, $rna_id, $cds_end,
+diff -Naur bioperl-1.0/MANIFEST bioperl-1.01/MANIFEST
+--- bioperl-1.0/MANIFEST	Sat Mar 16 19:03:32 2002
++++ bioperl-1.01/MANIFEST	Fri Apr 12 00:06:47 2002
+@@ -81,12 +81,12 @@
+ Bio/DB/GFF/Adaptor/dbi/mysql.pm
+ Bio/DB/GFF/Adaptor/dbi/mysqlopt.pm
+ Bio/DB/GFF/Adaptor/memory.pm
++Bio/DB/GFF/Adaptor/memory_iterator.pm
+ Bio/DB/GFF/Aggregator.pm
+ Bio/DB/GFF/Aggregator/alignment.pm
+ Bio/DB/GFF/Aggregator/clone.pm
+ Bio/DB/GFF/Aggregator/none.pm
+ Bio/DB/GFF/Aggregator/transcript.pm
+-Bio/DB/GFF/Aggregator/wormbase_gene.pm
+ Bio/DB/GFF/Featname.pm
+ Bio/DB/GFF/Feature.pm
+ Bio/DB/GFF/Homol.pm
+@@ -406,6 +406,7 @@
+ FAQ
+ INSTALL
+ LICENSE
++Makefile.PL
+ MANIFEST
+ PLATFORMS
+ README
+diff -Naur bioperl-1.0/MANIFEST.SKIP bioperl-1.01/MANIFEST.SKIP
+--- bioperl-1.0/MANIFEST.SKIP	Fri Jun 15 18:00:56 2001
++++ bioperl-1.01/MANIFEST.SKIP	Wed Dec 31 19:00:00 1969
+@@ -1,10 +0,0 @@
+-\bCVS\b
+-^MANIFEST\.
+-^blib/
+-\.html$
+-\.old$
+-\.bak$
+-\.dist$
+-^pm_to_blib
+-bioperl.lisp
+-Makefile
+\ No newline at end of file
+diff -Naur bioperl-1.0/Makefile.PL bioperl-1.01/Makefile.PL
+--- bioperl-1.0/Makefile.PL	Sat Mar 16 19:00:47 2002
++++ bioperl-1.01/Makefile.PL	Fri Apr 12 00:11:59 2002
+@@ -1,6 +1,6 @@
+ ## --Makefile.PL for Bioperl core module distribution--##
+ ## ----------------------------------------------------##
+-## $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++## $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ ##----------------------------------------------------
+ 
+ #
+@@ -23,11 +23,11 @@
+ 	     'XML::Writer'              => '0.0/Parsing + writing of XML documents/Bio::Variation code, GAME parser/Bio::SeqIO::game,Bio::Variation::*',
+ 	     'XML::Parser::PerlSAX'              => '0.0/Parsing of XML documents/Bio::Variation code, GAME parser/Bio::SeqIO::game,Bio::Variation::*',
+ 	     'XML::Twig'         	=> '0.0/Available on CPAN/parsing of XML documents/Module Bio::Variation::IO::xml.pm',
+-	     'File::Temp'               => '0.0/Temporary File creation/Bio::DB::WebDBSeqI, Bio::Seq::LargePrimarySeq',
++	     'File::Temp'               => '0.0/Temporary File creation/Bio::Root::IO uses if present/Bio::DB::WebDBSeqI, Bio::Seq::LargePrimarySeq',
+ 	     'SOAP::Lite'               => '0.0/SOAP protocol/XEMBL Services (also Bibliographic queries in Biblio::) /Bio::DB::XEMBLService',
+-	     'HTML::Parser'             => '0.0/HTML parsing of GDB page/Bio::DB::GDB',
++	     'HTML::Parser'             => '0.0/HTML parsing/HTML parsing of GDB page/Bio::DB::GDB',
+ 	     'DBD::mysql'               => '0.0/Mysql driver/loading and querying of Mysql-based GFF feature databases/Bio::DB::GFF',
+-	     'GD'                       => '1.3/Graphical Drawing Toolkit/Rendering Sequences and Features/Bio::Graphics',
++	     'GD'                       => '1.19/Graphical Drawing Toolkit/Rendering Sequences and Features/Bio::Graphics',
+ 	     'Storable'                 => '0.0/Persistent object storage and retrieval/Storing sequence objects in local file cache/Bio::DB::FileCache',
+ # rare function let's not scare people
+ # 	     'srsperl.pm'               => '0.0/Sequence Retrieval System (SRS) perl API/alternative way of retrieving sequences/Bio::LiveSeq::IO::SRS.pm'
+@@ -78,15 +78,22 @@
+ # Prompt user for BioGFFDB stuff
+ #
+ 
+-if(  eval { require DBI } ) {
+-    my $proceed = user_prompt("Do you want to run the BioGFFDB tests (requires mysql) y/n",'n');
+-    if( $proceed eq 'y' ) {
+-	system("touch t/do_biodbgff.tests");
+-    } else { 
+-	if( -e "t/do_biodbgff.tests" ) {
+-	    unlink "t/do_biodbgff.tests";
+-	}
++if(  eval { require DBI } && grep {/mysql/} DBI->available_drivers) {
++  my $proceed = user_prompt("Do you want to run the BioGFFDB tests (requires a mysql database) y/n",'n');
++  if( $proceed =~ /^[yY]/) {
++    my $cfg = {dbd_driver => 'mysql'};
++    GFFQueryDb($cfg,{'prompt'=>1,'verbose'=>1});
++    if (open T,">t/do_biodbgff.tests") {
++      foreach (keys %$cfg) {
++	print T $_,"\t",$cfg->{$_},"\n";
++      }
++      close T;
+     }
++  } else {
++    if( -e "t/do_biodbgff.tests" ) {
++      unlink "t/do_biodbgff.tests";
++    }
++  }
+ }
+ 
+ sub user_prompt ($;$) {
+@@ -101,6 +108,79 @@
+     return ($ans ne '') ? $ans : $def;
+ }
+ 
++############################################################################
++#
++#   Name:    GFFQueryDb
++#
++#   Purpose: Query user for settings for running the Bio::DB::GFF test suite
++#
++#   Inputs:  $cfg - Config hash ref
++#
++#   Returns: Nothing; creates
++#            $cfg->{$driver}->{test_(db|host|dsn|user|pass)}
++#
++############################################################################
++
++sub GFFQueryDb {
++  my $cfg     = shift;
++  my $options = shift || {};
++  my $db     = $cfg->{'description'} || $cfg->{'dbd_driver'};
++  my $driver = $cfg->{'dbd_driver'};
++
++  my $d = lc $driver;
++  my $prompt = $options->{'prompt'};
++
++  my $test_db =  exists($options->{"$d-test-db"}) ?
++    $options->{"$d-test-db"} : ($cfg->{'test_db'} || 'test');
++  $test_db = user_prompt
++    ("Which database should I use for testing the $db drivers?",
++     $test_db) if $prompt;
++
++  my $test_host = exists($options->{"$d-test-host"}) ?
++    $options->{"$d-test-host"} : ($cfg->{'test_host'} || 'localhost');
++  $test_host = user_prompt
++    ("On which host is database $test_db running (hostname, ip address or host:port)", $test_host) if $prompt;
++
++  my($test_user, $test_pass);
++
++  $test_user = exists($options->{"$d-test-user"}) ?
++    $options->{"$d-test-user"} : ($cfg->{'test_user'} || "undef");
++  $test_user = user_prompt
++    ("User name for connecting to database $test_db?", $test_user)
++      if $prompt;
++  $test_user = undef if $test_user eq 'undef';
++
++  $test_pass = exists($options->{"$d-test-pass"}) ?
++    $options->{"$d-test-pass"} : ($cfg->{'test_pass'} || "undef");
++  $test_pass = user_prompt
++    ("Password for connecting to database $test_db?", $test_pass)
++      if $prompt;
++  $test_pass = undef if $test_pass eq 'undef';
++
++  $cfg->{'test_db'}   = $test_db;
++  $cfg->{'test_host'} = $test_host;
++  $cfg->{'test_user'} = $test_user;
++  $cfg->{'test_pass'} = $test_pass;
++  if ($test_host eq 'undef'  ||  $test_host eq 'localhost') {
++    $test_host = '';
++  }
++  my $test_dsn = "DBI:$driver:database=$test_db";
++  $cfg->{test_dsn} = $test_dsn;
++  if ($test_host) {
++    $cfg->{'test_dsn'} .= ";host=$test_host";
++  }
++
++
++  if ($options->{'verbose'}) {
++    local $^W=0;  # some uninitialized variable warning coming through
++    print("Driver $driver is using the following settings for tests:\n",
++	  "    Database $test_db\n",
++	  "    Host     $test_host\n",
++	  "    DSN      $test_dsn\n",
++	  "    User     $test_user\n",
++	  "    Password $test_pass\n");
++  }
++}
+ 
+ 				           
+ #
+@@ -115,13 +195,11 @@
+ $do_autoload_finesse = 0;
+ $NAME     = 'Bio';
+ $DISTNAME = "bioperl";
+-$VERSION  = "1.00";
++$VERSION  = "1.01";
+ 
+ if( $do_autoload_finesse == 1 ) {
+     fatal("Autoload finessing does not work at the moment!");
+ }
+-
+-
+ 
+ @BACKUP_FILES = qw(./Seq.pm.bak);
+ 
+diff -Naur bioperl-1.0/bioperl.lisp bioperl-1.01/bioperl.lisp
+--- bioperl-1.0/bioperl.lisp	Mon Jan 28 15:14:14 2002
++++ bioperl-1.01/bioperl.lisp	Wed Dec 31 19:00:00 1969
+@@ -1,126 +0,0 @@
+-
+-;; Perl mode set up
+-
+-(assoc "\\.pl$" auto-mode-alist)
+-(setq auto-mode-alist (cons '("\\.pl$" . perl-mode) auto-mode-alist))
+-
+-(assoc "\\.pm$" auto-mode-alist)
+-(setq auto-mode-alist (cons '("\\.pm$" . perl-mode) auto-mode-alist))
+-
+-(defun perl-insert-start ()
+-  "Places #!..perl at the start of the script"
+-  (interactive)
+-  (goto-char (point-min))
+-  (insert "#!/usr/local/bin/perl\n"))
+-
+-
+-(defun bioperl-object-start (perl-object-name perl-caretaker-name caretaker-email)
+-  "Places standard bioperl object notation headers and footers"
+-  (interactive "sName of Object: \nsName of caretaker: \nsEmail: ")
+-  (insert "# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $\n#\n# BioPerl module for " perl-object-name "\n#\n# Cared for by " perl-caretaker-name " <" caretaker-email ">\n#\n# Copyright " perl-caretaker-name "\n#\n# You may distribute this module under the same terms as perl itself\n\n")
+-  (insert "# POD documentation - main docs before the code\n\n")
+-  (insert "=head1 NAME\n\n" perl-object-name " - DESCRIPTION of Object\n\n")
+-  (insert "=head1 SYNOPSIS\n\nGive standard usage here\n\n")
+-  (insert "=head1 DESCRIPTION\n\nDescribe the object here\n\n")
+-  (insert "=head1 FEEDBACK\n\n=head2 Mailing Lists\n\n")
+-  (insert "User feedback is an integral part of the evolution of this and other\nBioperl modules. Send your comments and suggestions preferably to\nthe Bioperl mailing list.  Your participation is much appreciated.\n\n")
+-  (insert "  bioperl-l@bioperl.org              - General discussion\n  http://bioperl.org/MailList.shtml  - About the mailing lists\n\n")
+-  (insert "=head2 Reporting Bugs\n\nReport bugs to the Bioperl bug tracking system to help us keep track\nof the bugs and their resolution. Bug reports can be submitted via\nemail or the web:\n\n")
+-  (insert "  bioperl-bugs@bioperl.org\n  http://bioperl.org/bioperl-bugs/\n\n")
+-  (insert "=head1 AUTHOR - " perl-caretaker-name "\n\nEmail " caretaker-email "\n\nDescribe contact details here\n\n")
+-  (insert "=head1 CONTRIBUTORS\n\nAdditional contributors names and emails here\n\n")
+-  (insert "=head1 APPENDIX\n\nThe rest of the documentation details each of the object methods.\nInternal methods are usually preceded with a _\n\n=cut\n\n")
+-  (insert "\n# Let the code begin...\n\n")
+-  (insert "\npackage " perl-object-name ";\n")
+-  (insert "use vars qw(@ISA);\n")
+-  (insert "use strict;\n")
+-  (insert "\n# Object preamble - inherits from Bio::Root::Root\n")
+-  (insert "\nuse Bio::Root::Root;\n\n")
+-  (insert "\n@ISA = qw(Bio::Root::Root );\n\n")
+-  (insert "=head2 new\n\n Title   : new\n Usage   : my $obj = new "
+-	  perl-object-name "();\n Function: Builds a new "
+-	  perl-object-name " object \n Returns : "
+-	  perl-object-name "\n Args    :\n\n\n=cut\n\n")
+-  (insert "sub new {\n  my($class,@args) = @_;\n\n  my $self = $class->SUPER::new(@args);\n\n}\n")
+-  (insert "\n\n1;")
+-  )
+-
+-(defun bioperl-interface-start (perl-object-name perl-caretaker-name
+-						 caretaker-email)
+-  "Places standard bioperl object notation headers and footers"
+-  (interactive "sName of Object: \nsName of caretaker: \nsEmail: ")
+-  (insert "# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $\n#\n# BioPerl module for " perl-object-name "\n#\n# Cared for by " perl-caretaker-name " <" caretaker-email ">\n#\n# Copyright " perl-caretaker-name "\n#\n# You may distribute this module under the same terms as perl itself\n\n")
+-  (insert "# POD documentation - main docs before the code\n\n")
+-  (insert "=head1 NAME\n\n" perl-object-name " - DESCRIPTION of Interface\n\n")
+-  (insert "=head1 SYNOPSIS\n\nGive standard usage here\n\n")
+-  (insert "=head1 DESCRIPTION\n\nDescribe the interface here\n\n")
+-  (insert "=head1 FEEDBACK\n\n=head2 Mailing Lists\n\n")
+-  (insert "User feedback is an integral part of the evolution of this and other\nBioperl modules. Send your comments and suggestions preferably to\nthe Bioperl mailing list.  Your participation is much appreciated.\n\n")
+-  (insert "  bioperl-l@bioperl.org              - General discussion\n  http://bioperl.org/MailList.shtml  - About the mailing lists\n\n")
+-  (insert "=head2 Reporting Bugs\n\nReport bugs to the Bioperl bug tracking system to help us keep track\nof the bugs and their resolution. Bug reports can be submitted via\nemail or the web:\n\n")
+-  (insert "  bioperl-bugs@bioperl.org\n  http://bioperl.org/bioperl-bugs/\n\n")
+-  (insert "=head1 AUTHOR - " perl-caretaker-name "\n\nEmail " caretaker-email "\n\nDescribe contact details here\n\n")
+-  (insert "=head1 CONTRIBUTORS\n\nAdditional contributors names and emails here\n\n")
+-  (insert "=head1 APPENDIX\n\nThe rest of the documentation details each of the object methods.\nInternal methods are usually preceded with a _\n\n=cut\n\n")
+-  (insert "\n# Let the code begin...\n\n")
+-  (insert "\npackage " perl-object-name ";\n")
+-  (insert "use vars qw(@ISA);\n")
+-  (insert "use strict;\nuse Carp;\nuse Bio::Root::Root;\n\n")
+-  (insert "@ISA = qw( Bio::Root::Root );")
+-  )
+-
+-
+-(defun bioperl-method (method-name)
+-  "puts in a bioperl method complete with pod boiler-plate"
+-  (interactive "smethod name:")
+-  (insert "=head2 " method-name "\n\n Title   : " method-name "\n Usage   :\n Function:\n Example :\n Returns : \n Args    :\n\n\n=cut\n\n")
+-  (insert "sub " method-name "{\n   my ($self,@args) = @_;\n")
+-  (save-excursion 
+-    (insert "\n\n}\n"))
+-  )
+-
+-
+-(defun bioperl-getset (field-name)
+-  "puts in a bioperl method for a get/set method complete with pod boiler-plate"
+-  (interactive "sfield name:")
+-  (insert "=head2 " field-name "\n\n Title   : " field-name "\n Usage   : $obj->" field-name "($newval)\n Function: \n Example : \n Returns : value of " field-name "\n Args    : newvalue (optional)\n\n\n=cut\n\n")
+-  (insert "sub " field-name "{\n   my ($self,$value) = @_;\n   if( defined $value) {\n      $self->{'" field-name "'} = $value;\n    }\n    return $self->{'" field-name "'};\n")
+-  (insert "\n}\n"))
+-
+-
+-(defun bioperl-abstract-method (method-name)
+-  "puts in a bioperl abstract method for interface classes"
+-  (interactive "smethod-name:")
+-  (save-excursion 
+-  (insert "=head2 " method-name "\n\n Title   : " method-name "\n Usage   :\n Function:\n Example :\n Returns : \n Args    :\n\n\n=cut\n\n")
+-  (insert "sub " method-name "{\n   my ($self) = @_;\n\n    $self->throw(\"Abstract method " method-name " implementing class did not provide method\");\n")
+-    (insert "\n\n}\n")
+-    )
+-  )
+-
+-
+-
+-(setq perl-mode-hook 
+-      '(lambda ()
+-	 (define-key perl-mode-map "\C-c\C-h" 'perl-insert-start)
+-	 (define-key perl-mode-map "\C-c\C-b" 'bioperl-object-start)
+-	 (define-key perl-mode-map "\C-c\C-i" 'bioperl-interface-start)
+-	 (define-key perl-mode-map "\C-c\C-v" 'bioperl-getset)
+-	 (define-key perl-mode-map "\C-c\C-b" 'bioperl-method)
+-	 (define-key perl-mode-map "\C-c\C-z" 'compile)
+-	 (define-key perl-mode-map [menu-bar] (make-sparse-keymap))
+-	 (define-key perl-mode-map [menu-bar p]
+-	   (cons "BioPerl" (make-sparse-keymap "BioPerl")))
+-	 (define-key perl-mode-map [menu-bar p perl-script-start]
+-	   '("Insert script template" . perl-script-start))
+-	 (define-key perl-mode-map [menu-bar p bioperl-object-start]
+-	   '("bioperl object template" . bioperl-object-start))
+-	 (define-key perl-mode-map [menu-bar p bioperl-interface-start]
+-	   '("bioperl interface template" . bioperl-interface-start))
+-
+-	 (define-key perl-mode-map [menu-bar p bioperl-getset]
+-	   '("bioperl field func" . bioperl-getset))
+-	 (define-key perl-mode-map [menu-bar p bioperl-method]
+-	   '("bioperl method" . bioperl-method))
+-	 ))
+-
+diff -Naur bioperl-1.0/examples/biblio.pl bioperl-1.01/examples/biblio.pl
+--- bioperl-1.0/examples/biblio.pl	Thu Mar  7 12:53:47 2002
++++ bioperl-1.01/examples/biblio.pl	Fri Apr 12 00:10:20 2002
+@@ -16,7 +16,7 @@
+ #   senger@ebi.ac.uk
+ #   February 2002
+ #
+-#   $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++#   $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ #-----------------------------------------------------------------------------
+ 
+ use strict;
+@@ -162,6 +162,14 @@
+       ./biblio.pl -f a_file.xml -Oo   ... to Perl objects
+       ./biblio.pl -f a_file.xml -Or   ... as a raw hash
+ 
++Environment variables:
++   HTTPPROXY = <HTTP proxy server>
++      Use this if you use this script on a machine which
++      needs to access remote HTTP targets via a proxy server.
++      For example:
++         export HTTPPROXY=http://128.243.220.41:3128
++         ./biblio.pl -c
++
+ END_OF_USAGE
+ }
+ 
+@@ -220,10 +228,14 @@
+ #      -namespace => '...' (not set-able here, a default value will be used)
+ #      -soap               (not set-able here)
+ #
++#      Additionally, it uses env. variable HTTPPROXY to create parameter
++#      '-httpproxy'.
++#
+ my @location   = ('-location', $opt_l) if defined $opt_l;
+ my @collection = ('-collection_id', $opt_i) if defined $opt_i;
+ my @destroy    = ('-destroy_on_exit', 0) if $opt_k or $opt_p or $opt_i;
+-my $biblio = new Bio::Biblio (@location, @collection, @destroy);
++my @httpproxy  = ('-httpproxy', $ENV{'HTTPPROXY'}) if defined $ENV{'HTTPPROXY'};
++my $biblio = new Bio::Biblio (@location, @collection, @destroy, @httpproxy);
+ 
+ die "Stopped. No success in accessing the bibliographic repository.\n" unless $biblio;
+ 
+diff -Naur bioperl-1.0/examples/use_registry.pl bioperl-1.01/examples/use_registry.pl
+--- bioperl-1.0/examples/use_registry.pl	Sun Mar 17 18:10:01 2002
++++ bioperl-1.01/examples/use_registry.pl	Wed Dec 31 19:00:00 1969
+@@ -1,14 +0,0 @@
+-#!/usr/bin/perl -w
+-use strict;
+-
+-use Bio::DB::Registry;
+-use Bio::SeqIO;
+-use strict;
+-
+-my $registry = new Bio::DB::Registry();
+-
+-print "services are ", join(',', $registry->services), "\n";
+-my $db = $registry->get_database("embl");
+-my $seq = $db->get_Seq_by_id("J02231");
+-my $out = new Bio::SeqIO;
+-$out->write_seq($seq);
+diff -Naur bioperl-1.0/scripts/render_sequence.pl bioperl-1.01/scripts/render_sequence.pl
+--- bioperl-1.0/scripts/render_sequence.pl	Sat Mar 16 20:33:44 2002
++++ bioperl-1.01/scripts/render_sequence.pl	Sat Mar 23 13:09:04 2002
+@@ -41,6 +41,7 @@
+ 			    -keep =>1)
+   : Bio::DB::BioFetch->new(-db=>$db);
+ 
++warn "fetching...\n";
+ my $seq = $bf->get_Seq_by_id($accession);
+ 
+ my @features = $seq->all_SeqFeatures;
+diff -Naur bioperl-1.0/t/BioDBGFF.t bioperl-1.01/t/BioDBGFF.t
+--- bioperl-1.0/t/BioDBGFF.t	Fri Mar  8 09:45:41 2002
++++ bioperl-1.01/t/BioDBGFF.t	Sat Mar 23 14:02:51 2002
+@@ -7,7 +7,7 @@
+ use strict;
+ use ExtUtils::MakeMaker;
+ use Bio::Root::IO;
+-use constant TEST_COUNT => 116;
++use constant TEST_COUNT => 115;
+ use constant FASTA_FILES => Bio::Root::IO->catfile('t','data','dbfa');
+ use constant GFF_FILE    => Bio::Root::IO->catfile('t','data',
+ 						   'biodbgff','test.gff');
+@@ -24,32 +24,27 @@
+     plan test => TEST_COUNT;
+ }
+ 
+-
+ sub bail ($;$);
+ sub user_prompt ($;$);
+ sub fail ($);
+ use lib './blib/lib';
+ use Bio::DB::GFF;
+ 
+-my %EXCLUDE_DRIVERS    = ('ExampleP' =>1, 'Multiplex'=>1, 'Proxy'=>1);
+-my @PREFERRED_DRIVERS  = qw(mysql Pg Oracle Sybase mSQL Solid Informix Illustra CSV);
+-my $idx = 1;
+-my %PREFERRED_DRIVERS  = map {$_=>$idx++} @PREFERRED_DRIVERS;
+-
+-my $adaptor = shift || 'dbi::mysqlopt';
++my $adaptor = -e 't/do_biodbgff.tests' ? 'dbi::mysqlopt' : 'memory';
+ my @args;
+ 
+-if( ! -e 't/do_biodbgff.tests' ) {
+-  bail(TEST_COUNT,'Skipped by user');
+-}
+-
+ if ($adaptor =~ /^dbi/) {
+-  eval { require DBI } or bail(TEST_COUNT,'DBI driver is missing');
+-  my $cfg = ChooseDrivers() or bail(TEST_COUNT,'Skipped by user');
+-  QueryDb($cfg,{'prompt'=>1,'verbose'=>1});
++
++  open T,"t/do_biodbgff.tests" or bail(TEST_COUNT,"Couldn't read configuration");
++  my $cfg = {};
++  while (<T>) {
++    chomp;
++    my ($key,$value) = split "\t";
++    $cfg->{$key}     = $value;
++  }
+   @args = ( '-adaptor'  => $adaptor,
+-	     '-dsn'     => $cfg->{test_dsn},
+-	     );
++	    '-dsn'     => $cfg->{test_dsn},
++	  );
+   push @args,('-user' => $cfg->{test_user}) if $cfg->{test_user};
+   push @args,('-pass' => $cfg->{test_pass}) if $cfg->{test_pass};
+ } else {
+@@ -296,12 +291,17 @@
+ # testing feature id and group_id
+ my $tf = $overlap[0];
+ ok(defined $tf->id);
+-ok(defined $tf->group_id);
+ my $t1 = $db->fetch_feature_by_id($tf->id);
+ ok($t1->id,$tf->id);
+-my $t2 = $db->fetch_feature_by_gid($tf->group_id);
+-ok($t2->group_id,$tf->group_id);
+-ok($t2->group_id,$t1->group_id);
++
++if (defined $tf->group_id) {
++  my $t2 = $db->fetch_feature_by_gid($tf->group_id);
++  ok($t2->group_id,$tf->group_id);
++  ok($t2->group_id,$t1->group_id);
++} else {
++  skip("fetch_feature_by_gid() not implemented by this adaptor",1);
++  skip("fetch_feature_by_gid() not implemented by this adaptor",1);
++}
+ 
+ $segment1 = $db->segment('-class' => 'Transcript',
+ 			 '-name'  => 'trans-4',
+@@ -363,110 +363,6 @@
+ 
+ END {
+   unlink FASTA_FILES."/directory.index";
+-}
+-
+-############################################################################
+-#
+-#   Name:    ChooseDrivers
+-#
+-#   Purpose: Choose drivers for test suite
+-#
+-#   Inputs:  none
+-#
+-#   Returns: configuration hash
+-#
+-############################################################################
+-sub ChooseDrivers {
+-  my $cfg = shift || {};
+-  my @drivers = grep {!$EXCLUDE_DRIVERS{$_}} DBI->available_drivers;
+-  my @preferred_drivers = sort {($PREFERRED_DRIVERS{$a}||99) <=> ($PREFERRED_DRIVERS{$b}||99)} @drivers;
+-  print STDERR <<END;
+-
+-*** Bio::DB::GFF TEST SETUP ***
+-    Bio::DB::GFF requires a running database server (preferably MySQL).
+-    To run this test suite you must provide the name and host of a test database
+-    for which you have insert privileges.
+-END
+-;
+-  my $proceed = user_prompt("Do you want to run the tests? y/n",'n');
+-  return unless $proceed =~/^[yY]/;
+-  my $choice = user_prompt("Which database driver do you wish to use (@preferred_drivers)",$preferred_drivers[0]);
+-  $cfg->{dbd_driver} = $choice;
+-  $cfg;
+-}
+-
+-############################################################################
+-#
+-#   Name:    QueryDb
+-#
+-#   Purpose: Query settings for running the test suite
+-#
+-#   Inputs:  $cfg - Config hash ref
+-#
+-#   Returns: Nothing; creates
+-#            $cfg->{$driver}->{test_(db|host|dsn|user|pass)}
+-#
+-############################################################################
+-
+-sub QueryDb {
+-  my $cfg     = shift;
+-  my $options = shift || {};
+-  my $db     = $cfg->{'description'} || $cfg->{'dbd_driver'};
+-  my $driver = $cfg->{'dbd_driver'};
+-
+-  my $d = lc $driver;
+-  my $prompt = $options->{'prompt'};
+-
+-  my $test_db =  exists($options->{"$d-test-db"}) ?
+-    $options->{"$d-test-db"} : ($cfg->{'test_db'} || 'test');
+-  $test_db = user_prompt
+-    ("Which database should I use for testing the $db drivers?",
+-     $test_db) if $prompt;
+-
+-  my $test_host = exists($options->{"$d-test-host"}) ?
+-    $options->{"$d-test-host"} : ($cfg->{'test_host'} || 'localhost');
+-  $test_host = user_prompt
+-    ("On which host is database $test_db running (hostname, ip address or host:port)", $test_host) if $prompt;
+-
+-  my($test_user, $test_pass);
+-
+-  $test_user = exists($options->{"$d-test-user"}) ?
+-    $options->{"$d-test-user"} : ($cfg->{'test_user'} || "undef");
+-  $test_user = user_prompt
+-    ("User name for connecting to database $test_db?", $test_user)
+-      if $prompt;
+-  $test_user = undef if $test_user eq 'undef';
+-
+-  $test_pass = exists($options->{"$d-test-pass"}) ?
+-    $options->{"$d-test-pass"} : ($cfg->{'test_pass'} || "undef");
+-  $test_pass = user_prompt
+-    ("Password for connecting to database $test_db?", $test_pass)
+-      if $prompt;
+-  $test_pass = undef if $test_pass eq 'undef';
+-
+-  $cfg->{'test_db'}   = $test_db;
+-  $cfg->{'test_host'} = $test_host;
+-  $cfg->{'test_user'} = $test_user;
+-  $cfg->{'test_pass'} = $test_pass;
+-  if ($test_host eq 'undef'  ||  $test_host eq 'localhost') {
+-    $test_host = '';
+-  }
+-  my $test_dsn = "DBI:$driver:database=$test_db";
+-  $cfg->{test_dsn} = $test_dsn;
+-  if ($test_host) {
+-    $cfg->{'test_dsn'} .= ";host=$test_host";
+-  }
+-
+-
+-  if ($options->{'verbose'}) {
+-    local $^W=0;  # some uninitialized variable warning coming through
+-    print("Driver $driver is using the following settings for tests:\n",
+-	  "    Database $test_db\n",
+-	  "    Host     $test_host\n",
+-	  "    DSN      $test_dsn\n",
+-	  "    User     $test_user\n",
+-	  "    Password $test_pass\n");
+-  }
+ }
+ 
+ sub bail ($;$) {
+diff -Naur bioperl-1.0/t/DNAMutation.t bioperl-1.01/t/DNAMutation.t
+--- bioperl-1.0/t/DNAMutation.t	Sun Apr  1 13:54:59 2001
++++ bioperl-1.01/t/DNAMutation.t	Wed Mar 20 08:08:24 2002
+@@ -1,6 +1,6 @@
+ # -*-Perl-*-
+ ## Bioperl Test Harness Script for Modules
+-## $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++## $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ 
+ # Before `make install' is performed this script should be runnable with
+ # `make test'. After `make install' it should work as `perl test.t'
+@@ -16,7 +16,7 @@
+     }
+     use Test;
+ 
+-    plan tests => 28 }
++    plan tests => 36 }
+ 
+ use Bio::Variation::DNAMutation;
+ use Bio::Variation::Allele;
+@@ -123,3 +123,24 @@
+ $obj->add_Allele($a2);
+ 
+ ok scalar ($obj->each_Allele), 2;
++
++
++$obj = Bio::Variation::DNAMutation->new
++    ('-start'         => 23,
++     '-end'           => 24,
++     '-length'        => 2,
++     '-upStreamSeq'   => 'gt',
++     '-dnStreamSeq'   => 'at',
++     '-proof'         => 'experimental',
++     '-isMutation'    => 1,
++     '-mut_number'    => 2
++     );
++
++ok $obj->start(), 23;
++ok $obj->end(), 24;
++ok $obj->length(), 2;
++ok $obj->upStreamSeq(), 'gt';
++ok $obj->dnStreamSeq(), 'at';
++ok $obj->proof(), 'experimental';
++ok $obj->mut_number(), 2;
++ok $obj->isMutation;
+diff -Naur bioperl-1.0/t/SearchIO.t bioperl-1.01/t/SearchIO.t
+--- bioperl-1.0/t/SearchIO.t	Thu Mar 14 17:48:51 2002
++++ bioperl-1.01/t/SearchIO.t	Fri Apr 12 00:12:01 2002
+@@ -1,6 +1,6 @@
+ # -*-Perl-*-
+ ## Bioperl Test Harness Script for Modules
+-## $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++## $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ 
+ # Before `make install' is performed this script should be runnable with
+ # `make test'. After `make install' it should work as `perl test.t'
+@@ -20,7 +20,7 @@
+ 	use lib 't';
+     }
+     use vars qw($NTESTS);
+-    $NTESTS = 390;
++    $NTESTS = 377;
+     $LASTXMLTEST = 49;
+     $error = 0;
+ 
+diff -Naur bioperl-1.0/t/TCoffee.t bioperl-1.01/t/TCoffee.t
+--- bioperl-1.0/t/TCoffee.t	Mon Mar 18 09:50:34 2002
++++ bioperl-1.01/t/TCoffee.t	Fri Mar 22 15:29:36 2002
+@@ -1,6 +1,6 @@
+ # -*-Perl-*-
+ ## Bioperl Test Harness Script for Modules
+-## $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++## $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ 
+ use strict;
+ use vars qw($NUMTESTS);
+@@ -107,7 +107,7 @@
+ $aln = $factory->profile_align($aln1,$seq);
+ ok( $aln->no_sequences, 4);
+ if( $version <= 1.22 ) {
+-    ok( int($aln->overall_percentage_identity), 18);    
++    ok( $aln->overall_percentage_identity > 18);    
+     ok( int($aln->average_percentage_identity), 44);
+ } else {
+     ok( int($aln->overall_percentage_identity), 21);
+diff -Naur bioperl-1.0/t/flat.t bioperl-1.01/t/flat.t
+--- bioperl-1.0/t/flat.t	Mon Mar 18 11:32:18 2002
++++ bioperl-1.01/t/flat.t	Tue Mar 19 22:10:23 2002
+@@ -1,7 +1,7 @@
+ # This is -*-Perl-*- code
+ ## Bioperl Test Harness Script for Modules
+ ##
+-# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.3 2002-04-12 12:18:02 lstein Exp $
+ 
+ # Before `make install' is performed this script should be runnable with
+ # `make test'. After `make install' it should work as `perl test.t'
+@@ -88,7 +88,7 @@
+ 
+ 
+ sub maketmpdir {
+-    mkdir $tmpdir;
++    mkdir ($tmpdir,0777);
+ }
+ sub cleanup {    
+     eval { 

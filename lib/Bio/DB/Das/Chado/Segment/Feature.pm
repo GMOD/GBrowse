@@ -735,34 +735,4 @@ sub attributes {
 *id  = \&group;
 sub class     {return shift->{type} }
 
-sub low {
-  my $self = shift;
-  my $ref  = shift;
-
-  my $low;
-  if (defined $ref) {
-    my $absstart = $ref->start;
-    $low = $self->start - $absstart;
-  } else {
-    $low = $self->start;
-  }
-  return $low; 
-}
-
-sub high {
-  my $self = shift;
-  my $ref  = shift;
-
-  my $high;
-  if (defined $ref) {
-    my $absstart = $ref->start;
-    $high = $self->end - $absstart;
-  } else {
-    $high = $self->end; 
-  }
-
-  return $high;
-}
-
-
 1;

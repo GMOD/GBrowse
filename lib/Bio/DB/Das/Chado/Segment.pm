@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.31 2003-05-30 20:47:55 scottcain Exp $
+# $Id: Segment.pm,v 1.32 2003-06-02 15:08:34 scottcain Exp $
 
 =head1 NAME
 
@@ -263,6 +263,7 @@ to low() for Gadfly compatibility.
 =cut
 
 sub start { shift->{start} } 
+*low = \&start;
 
 =head2 end
 
@@ -279,6 +280,8 @@ high() for Gadfly compatibility.
 =cut
 
 sub end   { shift->{end} } 
+*high = \&end;
+*stop = \&end;
 
 =head2 length
 

@@ -36,6 +36,7 @@ $startperl -w
 #
 \$CONF_DIR  = '$OPTIONS{CONF}/gbrowse.conf';
 \$HTML_DIR  = '$OPTIONS{HTDOCS}';
+use lib "$OPTIONS{CONF}/gbrowse.conf";
 #
 ###################################################################
 \$VERSION   = $OPTIONS{VERSION};
@@ -48,10 +49,8 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.15 2003-12-30 17:27:40 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.16 2003-12-30 17:51:36 markwilkinson Exp $
 
-
-# use lib "/usr/local/GB/GMOD_LIBS/moby-live/Perl";
 use MOBY::Client::Central;
 use MOBY::Client::Service;
 use MOBY::CommonSubs qw(:all);
@@ -71,11 +70,11 @@ my @files = readdir DIR;
 
 foreach my $file(@files){
     no strict 'refs';
-    next if (-d $_);
-    next unless ($_ =~ /(.*)_renderer\.pm/);
-    require "MobyServices::$_";
-    my $type = &{'MobyServices::'.$_.'_renderer::type'};
-    $RENDERERS{$1} =   "MobyServices::$1_renderer";
+    next if (-d $file);
+    next unless ($file =~ /(.*)_renderer\.pm/);
+    require "MobyServices::".$file;
+    my $type = &{'MobyServices::'.$file.'_renderer::type'};
+    $RENDERERS{$1} =   "MobyServices::".$file."_renderer";
     use strict;
 }
 
@@ -287,8 +286,8 @@ sub init {
 
     unless ($namespace && $id){
         print_top("MOBY Call failed");
-        print $CONFIG->header || h1("MOBY Call Failed");
-        print h1("MOBY Call Failed"),"Both a namespace and an id must be passed";
+        print $CONFIG->header || h1("Initialization failure");
+        print h2("Both Namespace and ID must be passed to the MOBY-S browser");
         &INITIALIZE;
         return;
     }
@@ -548,11 +547,9 @@ sub INITIALIZE {
     );
 
     print p,
-    "Which ID(s) within this namespace? (one per line)</h2>",
+    "Which ID within this namespace? (one per line)</h2>",
     p,
-    textarea(-name => 'id', -rows => 10, -cols => 20, -value =>
-"163483
-192542",);
+    textfield(-name => 'id',-width=>'15', -value => "163483",);
     print p,
     submit("Initialize with this seed data"),
     end_form;

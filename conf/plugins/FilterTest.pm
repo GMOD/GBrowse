@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Plugin::FilterTest;
 
-# $Id: FilterTest.pm,v 1.1 2004-02-02 16:00:55 marclogghe Exp $
+# $Id: FilterTest.pm,v 1.2 2004-02-03 22:40:35 marclogghe Exp $
 # Filter plugin to filter features from the ORFs track
 
 use strict;
@@ -19,7 +19,13 @@ my @FILTERS = (
         'Only ORFs on Watson strand', q{ $_[0]->name =~ /w$/i}
     ],
     [
-        'Only ORFs on Crick strand', q{  $_[0]->name =~ /c$/i}
+        'Only ORFs on Crick strand', q{ $_[0]->name =~ /c$/i}
+    ],
+    [
+        'ORF length < ', q{ $_[0]->length < $value }
+    ],
+    [
+        'ORF length >= ', q{ $_[0]->length >= $value }
     ],
 );
 my %LABELS = map { $_ => $FILTERS[$_][0] } ( 0 .. $#FILTERS );
@@ -37,8 +43,9 @@ sub name
 
 sub type
 {
-    'Filter';
+    'filter';
 }
+
 
 sub description
 {

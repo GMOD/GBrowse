@@ -11,9 +11,9 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 =head1 VERSION (CVS-info)
 
  $RCSfile: PadAlignment.pm,v $
- $Revision: 1.8 $
+ $Revision: 1.9 $
  $Author: lstein $
- $Date: 2003-06-19 21:07:05 $
+ $Date: 2003-06-26 21:40:37 $
 
 =head1 SYNOPSIS
 
@@ -326,10 +326,10 @@ sub padded_sequences {
 
   # take care of the extra unaligned stuff at the beginning
   my $max = 0;
-  for (my $i=1; $i < @dnas; $i++) {
+  for (my $i=0; $i < @dnas; $i++) {
     next unless $leader[$i];
     my ($leading_gaps) = $lines[$i] =~ /^(-+)/;
-    my $leading_pads   = length($leading_gaps);
+    my $leading_pads   = length($leading_gaps||'');
 
     my $insert_length = $leading_pads >= $leader[$i] ? $leader[$i] : $leading_pads;
     my $append_length = $leading_pads >= $leader[$i] ? 0           : $leader[$i]-$leading_pads;
@@ -349,7 +349,10 @@ sub padded_sequences {
   warn "\n" if DEBUG;
   warn join("\n",@lines),"\n\n" if DEBUG;
 
+  warn "finished adding stuff for everything but reference sequence\n" if DEBUG;
+
   for (my $i=0; $i<@dnas; $i++) {
+    warn "i = $i, max = $max, leader = $leader[$i]\n" if DEBUG;
     my $delta = $max - $leader[$i];
     next unless $delta > 0;
     substr($lines[$i],0,0) = '-'x$delta;

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.155 2004-07-12 17:43:27 lstein Exp $
+# $Id: Browser.pm,v 1.156 2004-07-17 18:45:20 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -771,7 +771,6 @@ sub gd_cache_path {
   my $self = shift;
   my ($cache_name,@keys) = @_;
   return unless $self->config->setting(general=>$cache_name);
-  warn "got here and cache_name = $cache_name";
   my $signature = md5_hex(@keys);
   my ($uri,$path) = $self->tmpdir($self->source.'/cache_overview');
   my $extension   = 'gd';
@@ -1910,7 +1909,9 @@ sub overview_tracks {
 sub authorized {
   my $self  = shift;
   my $label = shift;
-  my $restrict = $self->code_setting($label=>'restrict') or return 1;
+  my $restrict = $self->code_setting($label=>'restrict')
+    or $self->code_setting('TRACK DEFAULTS' => 'restrict')
+			   or return 1;
   my $host     = CGI->remote_host;
   my $user     = CGI->remote_user;
   my $addr     = CGI->remote_addr;

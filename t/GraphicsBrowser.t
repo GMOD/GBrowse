@@ -1,7 +1,7 @@
 # This is -*-Perl-*- code
 ## Bioperl Test Harness Script for Modules
 ##
-# $Id: GraphicsBrowser.t,v 1.1.2.4 2003-07-05 20:00:17 pedlefsen Exp $
+# $Id: GraphicsBrowser.t,v 1.1.2.5 2003-07-05 20:53:55 pedlefsen Exp $
 
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl test.t'
@@ -115,20 +115,13 @@ ok( $session_id );
 #$browser->gbrowse( \*STDOUT, 'lodtest', undef, { 'name' => '11:67338436-68338435' } );
 
 # str_id 6 full:
-$browser->gbrowse( \*STDOUT, 'lodtest', undef, { 'name' => 'chr11:65695316,70981556' } );
+#$browser->gbrowse( \*STDOUT, 'lodtest', undef, { 'name' => 'chr11:65695316,70981556' } );
 
-# No strat id or loc id (shouldn't there be a loc id at least?!?)
-#$browser->gbrowse( \*STDOUT, 'lodtest', undef, { 'name' => 'chr11:3200000,4200000' } );
+# str_id 6 in between markers:
+$browser->gbrowse( \*STDOUT, 'lodtest', undef, { 'name' => 'chr11:70276149-70625771' } );
 
-# No strat id or loc id (shouldn't there be a loc id at least?!?)
-#$browser->gbrowse( \*STDOUT, 'lodtest', undef, { 'name' => 'chr15:92500000,94000000' } );
-
-
-# No strat id or loc id (shouldn't there be a loc id at least?!?)
+# No strat id
 #$browser->gbrowse( \*STDOUT, 'lodtest', undef, { 'name' => 'chr6:32000000,33000000' } );
-
-# No strat id or loc id (shouldn't there be a loc id at least?!?)
-#$browser->gbrowse( \*STDOUT, 'lodtest', undef, { 'name' => 'chr6:151690000,151990000' } );
 
 #foreach my $region qw( chr6:32000000,33000000
 #           chr11:1200000,4200000

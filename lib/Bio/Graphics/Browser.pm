@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.110 2003-12-29 22:27:29 lstein Exp $
+# $Id: Browser.pm,v 1.111 2004-01-21 16:54:59 scottcain Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1489,7 +1489,7 @@ sub _hits_to_html {
 # I know there must be a more elegant way to insert commas into a long number...
 sub commas {
   my $i = shift;
-  return $i if $i=~ /\./;
+  return $i if $i=~ /\D/;
   $i = reverse $i;
   $i =~ s/(\d{3})/$1,/g;
   chop $i if $i=~/,$/;

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.50 2004-01-21 16:23:43 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.51 2004-01-21 16:54:59 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -362,11 +362,19 @@ sub main_display {
     $segment = $segments->[0];
     # $segment = truncated_segment($segment) if $segment->length < 4;
     my $divider = $CONFIG->setting(general=>'unit_divider') || 1;
+    my ($seg_start,$seg_end);
+    if ($divider == 1 ) {
+       $seg_start = $segment->start;
+       $seg_end   = $segment->end;
+    } else {
+       $seg_start = unit_label($segment->start);
+       $seg_end   = unit_label($segment->end);
+    }
     print h2($CONFIG->tr('SHOWING_FROM_TO',
 		       unit_label($segment->length),
 		       $segment->seq_id,
-		       commas($segment->start/$divider),
-		       commas($segment->end/$divider)));
+		       commas($seg_start),
+		       commas($seg_end)));
   }
 
   # force flipping

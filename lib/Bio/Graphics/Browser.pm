@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.75 2003-06-16 20:22:14 lstein Exp $
+# $Id: Browser.pm,v 1.76 2003-06-22 02:52:42 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -825,8 +825,8 @@ sub image_and_map {
 
   my $width = $self->width;
   my $conf  = $self->config;
-  my $max_labels     = $conf->setting(general=>'label density') || 10;
-  my $max_bump       = $conf->setting(general=>'bump density')  || 50;
+  my $max_labels     = $conf->setting(general=>'label density') || $conf->setting(Default=>'label density') || 10;
+  my $max_bump       = $conf->setting(general=>'bump density')  || $conf->setting(Default=>'bump density')  || 50;
   my $length         = $segment->length;
 
   my @feature_types = map { $conf->label2type($_,$length) } @$tracks;
@@ -869,13 +869,14 @@ sub image_and_map {
     # is marked as being a "global feature", then we apply the glyph to the entire segment
     if ($conf->setting($label=>'global feature')) {
       $panel->add_track($segment,
+			$conf->default_style,
 			$conf->i18n_style($label,$lang),
 			);
     }
 
     else {
       my $track = $panel->add_track(-glyph => 'generic',
-				    # -key   => $label,
+				    $conf->default_style,
 				    $conf->i18n_style($label,$lang,$length),
 				   );
       $tracks{$label}  = $track;
@@ -947,7 +948,6 @@ sub image_and_map {
 
       my $maxl              = $conf->code_setting($label => 'label density');
       $maxl                 = $max_labels unless defined $maxl;
-      
 
       my $count = $feature_count{$label};
       $count    = $limit->{$label} if $limit->{$label} && $limit->{$label} < $count;
@@ -1507,7 +1507,7 @@ use vars '@ISA';
 @ISA = 'Bio::Graphics::FeatureFile';
 
 sub labels {
-  grep { !($_ eq 'overview' || /:(\d+|overview|plugin)$/) } shift->configured_types;
+  grep { !($_ eq 'TRACK DEFAULTS' || $_ eq 'overview' || /:(\d+|overview|plugin)$/) } shift->configured_types;
 }
 
 sub overview_tracks {
@@ -1623,7 +1623,8 @@ sub make_link {
   my ($feature,$panel,$source)  = @_;
   my $label    = $self->feature2label($feature) or return;
   my $link     = $self->code_setting($label,'link');
-  $link        = $self->code_setting(general=>'link') unless defined $link;
+  $link        = $self->code_setting('TRACK DEFAULTS'=>'link') unless defined $link;
+  $link        = $self->code_setting(general=>'link')          unless defined $link;
   return unless $link;
   if (ref($link) eq 'CODE') {
     my $val = eval {$link->($feature,$panel)};
@@ -1655,15 +1656,16 @@ sub make_title {
     my $label    = $self->feature2label($feature) or last TRY;
     $key         = $self->setting($label,'key') || $label;
     $key         =~ s/s$//;
-    my $link     = $self->code_setting($label,'title')       || $self->code_setting(general=>'title');
-    $link or last TRY;
-    if (ref($link) eq 'CODE') {
+    my $link     = $self->code_setting($label,'title')
+      || $self->code_setting('TRACK DEFAULTS'=>'title')
+      || $self->code_setting(general=>'title');
+    if (defined $link && ref($link) eq 'CODE') {
       $title       = eval {$link->($feature,$panel)};
       warn $@ if $@;
+      return $title if defined $title;
     }
-    $title     = $self->link_pattern($link,$feature) unless defined $title;
+    return $self->link_pattern($link,$feature) if $link && $link ne 'AUTO';
   }
-  return $title if $title;
 
   # otherwise, try it ourselves
   $title = eval {
@@ -1693,10 +1695,17 @@ sub make_link_target {
   my $self = shift;
   my ($feature,$panel) = @_;
   my $label    = $self->feature2label($feature) or return;
-  my $link_target = $self->code_setting($label,'link_target') || $self->code_setting(general=>'link_target');
+  my $link_target = $self->code_setting($label,'link_target')
+    || $self->code_setting('LINK DEFAULTS' => 'link_target')
+    || $self->code_setting(general => 'link_target');
   $link_target = eval {$link_target->($feature,$panel)} if ref($link_target) eq 'CODE';
   warn $@ if $@;
   return $link_target;
+}
+
+sub default_style {
+  my $self = shift;
+  return $self->SUPER::style('TRACK DEFAULTS');
 }
 
 # return language-specific options

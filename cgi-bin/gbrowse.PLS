@@ -45,7 +45,7 @@ $startperl -w
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.4 2003-06-16 20:22:14 lstein Exp $
+# $Id: gbrowse.PLS,v 1.5 2003-06-22 02:52:41 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -965,7 +965,7 @@ sub upload_table {
   # start the table.
   my $cTable = start_table({-border=>0,-width=>'100%'})
     . TR(
-	 th({-class=>'uploadtitle', -colspan=>3, -align=>'left'},
+	 th({-class=>'uploadtitle', -colspan=>4, -align=>'left'},
 	    $CONFIG->tr('Upload_title').':',
 	    a({-href=>annotation_help(),-target=>'help'},'['.$CONFIG->tr('HELP').']'))
 	);

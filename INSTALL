@@ -40,6 +40,10 @@ Optional modules:
    will be able to produce GAME and BSML output.  They can be
    downloaded from CPAN.
 
+  H) LWP
+
+  To load remote 3d party annotations.
+
 2. INSTALLING THE BROWSER
 
 Brief synopsis:

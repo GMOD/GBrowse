@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.1 2005-03-17 20:50:57 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.2 2005-03-28 21:13:29 scottcain Exp $
 
 =head1 NAME
 
@@ -165,6 +165,9 @@ sub new {
             $stop       = $$hashref{fmax};
             $db_id      = $$hashref{uniquename};
 
+            next if (!defined ($base_start) or !defined($stop) or !defined($db_id));
+
+            warn "calling factory->segment with name:$name, start:$base_start, stop:$stop, db_id:$db_id\n" if DEBUG;
             push @segments, $factory->segment(-name=>$name,-start=>$base_start,-stop=>$stop,-db_id=>$db_id);
         }
 

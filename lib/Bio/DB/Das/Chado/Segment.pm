@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.47 2004-01-28 02:10:21 allenday Exp $
+# $Id: Segment.pm,v 1.48 2004-01-28 02:18:45 allenday Exp $
 
 =head1 NAME
 
@@ -697,7 +697,6 @@ sub seq {
     $reversed++;
   }
 
-  my $self = shift;
   my ( $ref, $class, $base_start, $stop, $strand ) =
     @{$self}{qw(sourceseq class start end strand)};
 

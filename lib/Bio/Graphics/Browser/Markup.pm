@@ -11,9 +11,9 @@ Bio::Graphics::Browser::Markup - Markup routines for sequences in text form
 =head1 VERSION (CVS-info)
 
  $RCSfile: Markup.pm,v $
- $Revision: 1.2 $
- $Author: lstein $
- $Date: 2002-07-07 21:31:48 $
+ $Revision: 1.3 $
+ $Author: markwilkinson $
+ $Date: 2003-08-27 17:50:21 $
 
 =head1 SYNOPSIS
 
@@ -568,7 +568,9 @@ sub _add_markup {
   my $markups = shift;
   for my $m (sort {$b->[1]<=>$a->[1] || $b->[2]<=>$a->[2]} @$markups) {
     my ($thing,$position) = @$m;
+    next if $position > length($$string);
     substr($$string,$position,0) = $thing;
+
   }
 }
 

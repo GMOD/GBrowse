@@ -1,4 +1,4 @@
-# $Id: SequenceDumper.pm,v 1.6 2003-05-19 17:25:44 lstein Exp $
+# $Id: SequenceDumper.pm,v 1.7 2003-08-01 16:44:53 stajich Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::SequenceDumper
 #
@@ -50,7 +50,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::SequenceDumper;
-# $Id: SequenceDumper.pm,v 1.6 2003-05-19 17:25:44 lstein Exp $
+# $Id: SequenceDumper.pm,v 1.7 2003-08-01 16:44:53 stajich Exp $
 # Sequence Dumper plugin
 
 use strict;
@@ -149,7 +149,6 @@ sub reconfigure {
   my $self = shift;
   my $current_config = $self->configuration;
 
-  my $objtype = $self->objtype();
   foreach my $param ( $self->config_param() ) {
       $current_config->{$param} = $self->config_param($param);
   }

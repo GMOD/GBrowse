@@ -23,8 +23,8 @@ if ($ARGV[0]=~/^-?-h/ || @ARGV < 1) {
 die <<'USAGE';
 
 This script massages the RELEASE 3 Flybase/Gadfly GFF files located at
-http://www.fruitfly.org/sequence/sequence_db into the "correct"
-version of the GFF format.
+http://www.fruitfly.org/sequence/release3download.shtml into the
+"correct" version of the GFF format.
 
 To use this script, download the whole genome FASTA file and save it
 to disk.  (The downloaded file will be called something like
@@ -151,7 +151,7 @@ process_gadfly.pl - Massage Gadfly/FlyBase GFF files into a version suitable for
 =head1 DESCRIPTION
 
 This script massages the RELEASE 3 Flybase/Gadfly GFF files located at
-http://www.fruitfly.org/sequence/sequence_db into the "correct"
+http://www.fruitfly.org/sequence/release3download.shtml into the "correct"
 version of the GFF format.
 
 To use this script, download the whole genome FASTA file and save it

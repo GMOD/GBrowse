@@ -198,7 +198,7 @@ sub copy_tree {
 
 sub copy_with_substitutions {
   my ($localfile,$install_file) = @_;
-  open (IN,$localfile) or die "Couldn't open $localfile: $!";
+  open (IN,$localfile) or warn "Couldn't open $localfile: $!";
   my $basename = basename($localfile);
   my $dest = -d $install_file ? "$install_file/$basename" : $install_file;
   open (OUT,">$dest") or die "Couldn't open $install_file for writing: $!";

@@ -37,7 +37,8 @@ if (! (-e $cgi_target) ) {
     mkdir($cgi_target,0777) or die "unable to create $cgi_target directory\n";
 }
 
-chdir 'cgi-bin';
+my $cgidir = $working_dir . "cgi-bin";
+chdir $cgidir;
 foreach (glob('*')) {
   next if /README/;
   next if /CVS/;

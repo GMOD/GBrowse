@@ -95,7 +95,7 @@ use constant DEBUG => 0;
 
 sub conf_dir {
   my $default = shift;
-  if ($ENV{MOD_PERL}) {
+  if ($ENV{MOD_PERL} && Apache->can('request')) {
     my $conf  = Apache->request->dir_config('GBrowseConf');
     return Apache->server_root_relative($conf) if $conf;
   }

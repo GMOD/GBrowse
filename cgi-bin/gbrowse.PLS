@@ -2137,8 +2137,8 @@ sub build_link_image_page {
 sub url2file {
   my $url = shift;
   for my $l ((map {"$url.$_"} $CONFIG->language->language), $url) {
-    my $file = $ENV{MOD_PERL} ? Apache->request->lookup_uri($l)->filename
-                              : "$ENV{DOCUMENT_ROOT}/$l";
+    my $file = $ENV{MOD_PERL} && Apache->can('request') ? Apache->request->lookup_uri($l)->filename
+                                                        : "$ENV{DOCUMENT_ROOT}/$l";
     return $file if -e $file;
   }
   return;

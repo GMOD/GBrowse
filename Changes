@@ -6,7 +6,7 @@
         * Updated ImportFeatures.pm and ExportFeatures.pm to better support
           GFF3 and fascilitate Apollo import and export
         * Added support for 3rd party DAS anotations
-        * Added a MOBY server ( 
+        * Added a MOBY server 
         * Added a proof-of-concept filter module
         * added allele_tower glyph
 

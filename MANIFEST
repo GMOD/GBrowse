@@ -216,7 +216,6 @@ lib/Bio/DB/Das/BioSQL/DBAdaptor.pm
 lib/Bio/DB/Das/BioSQL/Iterator.pm
 lib/Bio/DB/Das/BioSQL/PartialSeqAdaptor.pm
 lib/Bio/DB/Das/BioSQL/Segment.pm
-lib/Bio/DB/Das/BioSQL/Segment/Feature.pm
 lib/Bio/DB/Das/Chado.pm
 lib/Bio/DB/Das/Chado/Segment.pm
 lib/Bio/DB/Das/Chado/Segment/Feature.pm

@@ -1,7 +1,6 @@
 package MobyServices::text_formatted_renderer;
 use strict;
-use XML::LibXML;
-use MOBY::MobyXMLConstants;
+use XML::DOM;
 our @ISA = qw(Exporter);
 #our @EXPORT = qw(render type);
 our @EXPORT_OK = qw(render type);
@@ -14,10 +13,10 @@ sub type {
 sub render {
     my ($DOM, $htmldir,$imgdir) = @_;
     my $content;
-    foreach my $subnode($DOM->childNodes){
-        next unless  (($subnode->nodeType == TEXT_NODE) || ($subnode->nodeType == CDATA_SECTION_NODE));
+    foreach my $subnode($DOM->getChildNodes){
+        next unless  (($subnode->getNodeType == TEXT_NODE) || ($subnode->getNodeType == CDATA_SECTION_NODE));
         no strict 'refs';
-        $content .=$subnode->textContent;
+        $content .=$subnode->toString;
     }
 
     $content =~ s/(\S{100})/$1\<br\>/g;

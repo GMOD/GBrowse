@@ -4,6 +4,7 @@ use File::Basename qw(&basename &dirname);
 use File::Spec;
 use FindBin '$Bin';
 use Cwd;
+
 my %OPTIONS;
 if (open F,"$Bin/../GGB.def") {
   while (<F>) {
@@ -39,20 +40,19 @@ use lib "$OPTIONS{CONF}/gbrowse.conf";
 #
 ###################################################################
 \$VERSION   = $OPTIONS{VERSION};
+print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 !GROK!THIS!
 
-print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 print OUT <<'!NO!SUBS!';
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.39 2004-12-18 17:39:21 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.34 2004-08-09 14:46:18 sheldon_mckay Exp $
 ###########################################################
 
 use MOBY::Client::Central;
 use MOBY::Client::Service;
 use MOBY::CommonSubs qw(:all);
-use MOBY::MobyXMLConstants;
 use XML::DOM;
 use File::Temp qw/ tempfile /;
 use MIME::Base64;
@@ -355,7 +355,6 @@ sub init {
     my $output = param('output');
     my $serviceType = param('serviceType');
     my $expandObjects = param('expandObjects');
-    $authority = $authority?$authority:param('authURI');
     
     $Central = MOBY::Client::Central->new();  # CENTRAL is a global variable
 
@@ -542,7 +541,7 @@ sub execute {
     my @colls = @{$collections};  # flatten the list of lists
     foreach my $objlist($objects, @colls){  # we just treat collections as simples here.
         foreach (@{$objlist}){
-            my $MOBYClass = $_->nodeName;
+            my $MOBYClass = $_->getTagName;
             my $namespace = $_->getAttributeNode('namespace');
             $namespace = $namespace?($namespace->getValue):"";
             my $short_namespace = $namespace =~ /urn:lsid:biomoby.org:namespacetype:(\S+)/?$1:$namespace; # namespaces may or may not be fully qualified LSID's.  if they are, and if they are MOBY ID's, then we can just take the last field, otherwise we should take the whole thing
@@ -578,7 +577,7 @@ sub execute {
 
 sub printIt {
     my ($this) = @_;
-    my $thisdatatype = $this->nodeName;
+    my $thisdatatype = $this->getTagName;
     my $imgdir = $CONFIG->setting('tmpimages');
     my $renderer;
     my @rtypes = keys %RENDERERS;
@@ -595,9 +594,9 @@ sub printIt {
     die "Can't render this information\n" unless $renderer;
     
     # first parse the object to get all of the CrossReference objects out of it.
-    foreach my $subnode($this->childNodes){
-        next unless ($subnode->nodeType == ELEMENT_NODE);
-        if (($subnode->nodeName =~ /(moby:)?CrossReference/) || ($subnode->nodeName =~ /(moby:)?Xref/)){  # if it is one of the two types of Xrefs, then pass it to the Xref parser
+    foreach my $subnode($this->getChildNodes){
+        next unless ($subnode->getNodeType == ELEMENT_NODE);
+        if (($subnode->getTagName =~ /(moby:)?CrossReference/) || ($subnode->getTagName =~ /(moby:)?Xref/)){  # if it is one of the two types of Xrefs, then pass it to the Xref parser
             &processXrefs($subnode);
             last;
         }
@@ -605,7 +604,7 @@ sub printIt {
 
     my $done=0;  # this is a boolean that indicates whether the renderer handles ALL sub-objects, or if it handles only the top-level content of an object and requires that the sub-nodes (objects) be parsed and rendered
     my $article = $this->getAttributeNode('articleName');  # get the article name
-    $article = $article?($article->nodeValue):"";
+    $article = $article?($article->getValue):"";
     no strict 'refs';
     my $content;
     ($content, $done) = &{$renderer."::render"}($this, $HTML_DIR, $imgdir);  # if the renderer handles everything, then $done is set and we can stop parsing this object
@@ -618,17 +617,17 @@ sub printIt {
     
     return if $done;  # if the renderer said that it handled the entire object, then quit
 
-    foreach my $subnode($this->childNodes){  # otherwise, we need to now start unpacking the object and rendering its subcomponents
-        next unless ($subnode->nodeType == ELEMENT_NODE);
-        next if ($subnode->nodeName eq "CrossReference"); 
+    foreach my $subnode($this->getChildNodes){  # otherwise, we need to now start unpacking the object and rendering its subcomponents
+        next unless ($subnode->getNodeType == ELEMENT_NODE);
+        next if ($subnode->getTagName eq "CrossReference"); 
         &printIt($subnode);
     }
 }
 
 sub processXrefs {
     my ($XrefBlock) = @_;
-    foreach my $xref ($XrefBlock->childNodes()){
-        next unless $xref->nodeType == ELEMENT_NODE;
+    foreach my $xref ($XrefBlock->getChildNodes()){
+        next unless $xref->getNodeType == ELEMENT_NODE;
         my $ns = $xref->getAttributeNode("namespace");
         next unless $ns;
         $ns = $ns->getValue();

@@ -72,10 +72,6 @@ When this is done, go to step (5) below.
 
 =head2 2. MACINTOSH OS X INSTALL
 
-NOTE: The MacOSX installer sited below is quite out of date.  Until it
-is brought up to date, please use the SOURCE CODE INSTALL section below
-for Macs.
-
 Go to the following URL:
 
     ftp://dev.wormbase.org/pub/people/tharris/macosx/packages
@@ -129,16 +125,12 @@ They can be found on the Comprehensive Perl Archive Network
 	Digest::MD5          (any version)
 	Text::Shellwords     (any version)
 
-=item E) Bioperl version 1.5 or higher -- L<http://www.bioperl.org>
+=item E) Bioperl version 1.4 or higher -- L<http://www.bioperl.org>
 
-GBrowse requires functionality that exists in bioperl-live (in the cvs
-repository).  Please either use bioperl-live or Bioperl 1.5 when
-it comes out.  Until then, there is a release candidate of Bioperl 1.5
-that is thought to be stable with regard to GBrowse.  It can
-be found at L<http://bioperl.org/DIST/bioperl-1.5.0-RC1.tar.gz>. 
-Other release candidates and the official 1.5 release of Bioperl can
-also be found in the L<http://bioperl.org/DIST/> directory when they
-are available.
+While the basic functionality of GBrowse will work with Bioperl 1.4, 
+bioperl-live (in the cvs repository) contains fixes for certain features. 
+If you find that a particular feature is not working as expected, upgrade
+to bioperl-live (or Bioperl 1.5 when it is released).
 
 =back
 

@@ -1,5 +1,6 @@
 1.45	Sun Jul  7 17:32:08 EDT 2002
 	* Major feature release.
+	* Added conversion script for human genome annotations from NCBI.
 	* New CDS/reading frame glyph.
 	* New 3-frame translation glyph.
 	* FASTA dumper now dumps out decorated FASTA files.

@@ -5,50 +5,63 @@ use File::Copy;
 
 my $ht_target = $ARGV[0]; #target directory
 
+my $delim = '/';
+if ($Config{'osname'} =~ /win/i) {
+    $ht_target =~ s!\/!\\!g;
+    $delim = '\\';
+}
+
+
+
 print "Installing stylesheet and images...\n";
 
 if (! (-e $ht_target) ) {
     mkdir $ht_target or die "unable to make $ht_target directory\n";
 }
 
-opendir HTDOCS, "./htdocs" or die "unable to opendir ./htdocs\n";
+opendir HTDOCS, "htdocs" or die "unable to opendir htdocs\n";
 while (my $file = readdir(HTDOCS) ) {
-    if (-f "./htdocs/$file") {
-        copy("./htdocs/$file", "$ht_target/$file") or die "unable to copy to $ht_target/$file\n";
+    if (-f "htdocs/$file") {
+        copy("htdocs" . $delim . $file, $ht_target . $delim . $file) or die "unable to copy to $ht_target/$file\n";
     }
 }
 closedir HTDOCS; 
 
-if (! (-e "$ht_target/images/buttons") ) {
-    print "Making $ht_target/images/buttons...\n";
-    mkdir "$ht_target/images/buttons" or die "unable to make $ht_target/images/buttons directory\n";
+my $buttondir = $ht_target . $delim . "images" . $delim . "buttons";
+if (! (-e $buttondir) ) {
+    print "Making $buttondir...\n";
+    mkdir $buttondir or die "unable to make $buttondir\n";
 }
 
-opendir BUTTONS, "./htdocs/images/buttons" or die "unable to open ./htdocs/images/buttons\n";
+opendir BUTTONS, "htdocs/images/buttons" or die "unable to open ./htdocs/images/buttons\n";
 while (my $file = readdir(BUTTONS) ) {
     if (-f "./htdocs/images/buttons/$file") {
-        copy("./htdocs/images/buttons/$file", "$ht_target/images/buttons/$file") or die "unable to copy to $ht_target/images/buttons/$file\n"; 
+        copy("htdocs".$delim."images".$delim."buttons".$delim.$file, $buttondir.$delim.$file) 
+            or die "unable to copy to $ht_target/images/buttons/$file\n"; 
     }
 }
 closedir BUTTONS;
 
-if (! (-e "$ht_target/images/help") ) {
-    print "Making $ht_target/images/help...\n";
-    mkdir "$ht_target/images/help" or die "unable to make $ht_target/images/help directory\n";
+my $helpdir = $ht_target . $delim . "images" . $delim . "help";
+if (! (-e $helpdir) ) {
+    print "Making $helpdir...\n";
+    mkdir $helpdir or die "unable to make $helpdir\n";
 }
 
-opendir HELP, "./htdocs/images/help" or die "unable to open ./htdocs/images/help\n";
+opendir HELP, "htdocs/images/help" or die "unable to open htdocs/images/help\n";
 while (my $file = readdir(HELP) ) {
     if (-f "./htdocs/images/help/$file") {
-        copy("./htdocs/images/help/$file", "$ht_target/images/help/$file") or die "unable to copy to $ht_target/images/help/$file\n";
+        copy("htdocs".$delim."images".$delim."help".$delim.$file, $helpdir.$delim.$file) 
+            or die "unable to copy to $ht_target/images/help/$file\n";
     }
 }
 closedir HELP;
 
-if (! (-e "$ht_target/tmp") ) {
-    print "Making $ht_target/tmp...\n";
-    mkdir "$ht_target/tmp" or die "unable to make $ht_target/tmp directory\n";
+my $tmpdir = $ht_target . $delim . "tmp";
+if (! (-e $tmpdir) ) {
+    print "Making $tmpdir...\n";
+    mkdir $tmpdir or die "unable to make $tmpdir\n";
     my $mode = 0777;
-    chmod $mode, "$ht_target/tmp" or die "unable to make $ht_target/tmp world writable\n";
+    chmod $mode, $tmpdir or die "unable to make $tmpdir world writable\n";
 }
 

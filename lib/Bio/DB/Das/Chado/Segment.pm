@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.20 2003-02-25 18:02:52 scottcain Exp $
+# $Id: Segment.pm,v 1.21 2003-02-26 20:25:13 scottcain Exp $
 
 =head1 NAME
 
@@ -421,6 +421,8 @@ sub features {
 #$self->{factory}->{dbh}->trace(1);
 
   my $srcfeature_id = $self->{srcfeature_id};
+
+  $self->{factory}->{dbh}->do("set enable_seqscan=0");
   my $sth = $self->{factory}->{dbh}->prepare("
     select distinct f.name,fl.min,fl.max,fl.strand,f.type_id,f.feature_id
     from feature f, featureloc fl
@@ -431,7 +433,9 @@ sub features {
       $sql_range
        ");
    $sth->execute or $self->throw("feature query failed"); 
+   $self->{factory}->{dbh}->do("set enable_seqscan=1");
 
+#$self->{factory}->{dbh}->trace(0);
 #take these results and create a list of Bio::SeqFeatureI objects
 
   my %termname = %{$self->{factory}->{cvtermname}};

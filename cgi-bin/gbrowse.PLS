@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.109 2004-09-06 21:25:42 lstein Exp $
+# $Id: gbrowse.PLS,v 1.110 2004-09-06 22:21:11 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2598,7 +2598,9 @@ sub plugin_menu {
 sub source_menu {
   my $settings = shift;
   my @sources = $CONFIG->sources;
-  my $sources = @sources > 1;
+  my $show_sources = $CONFIG->setting('show sources');
+  $show_sources    = 1 unless defined $show_sources;   # default to true
+  my $sources = $show_sources && @sources > 1;
   return b($CONFIG->tr('DATA_SOURCE')).br.
     ( $sources ?
       popup_menu(-name   => 'source',

@@ -109,6 +109,8 @@ sub open_config {
   $CONFIG ||= Bio::Graphics::Browser->new;
   $CONFIG->read_configuration($dir,$suffix) or die "Can't read configuration files: $!";
   $LANG    ||= Bio::Graphics::Browser::I18n->new("$dir/languages");
+  $CONFIG->source or early_error($LANG,'NO_SOURCES');
+
   set_language($CONFIG,$LANG);
   $CONFIG->language($LANG);
   $CONFIG->dir($dir);
@@ -199,6 +201,22 @@ sub fatal_error {
      : 'maintainer';
   print p("Please contact this site's $webmaster for assistance.");
   print_bottom($CONFIG);
+  exit 0;
+}
+
+
+sub early_error {
+  my $lang = shift;
+  my $msg  = shift;
+  $msg     = $lang->tr($msg);
+  warn "@_" if DEBUG;
+  local $^W = 0;  # to avoid a warning from CGI.pm
+  print_header(-expires=>'+1m');
+  my @args = (-title  => 'GBrowse Error');
+  push @args,(-lang=>$lang->language);
+  print start_html();
+  print b($msg);
+  print end_html;
   exit 0;
 }
 

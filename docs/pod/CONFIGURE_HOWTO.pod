@@ -571,6 +571,16 @@ width of each level, in bp.  For example:
 
       zoom levels = 1000 2000 5000 10000 20000 40000 100000 200000
 
+=item * show sources
+
+A 0 (false) or 1 (true) value which controls whether or not to show
+the popup menu displaying the defined data sources.  Set this to 0 if
+you wish for the names of the data sources to be hidden.  If not
+present, this option defaults to 1 (true).  
+
+Note that all data sources will need to have this option defined in
+order for it to take effect across all databases.
+
 =item * default varying
 
 The track selection table will be sorted alphabetically, by default;

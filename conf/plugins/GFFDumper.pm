@@ -1,15 +1,15 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.13 2003-10-13 18:58:51 sheldon_mckay Exp $
+# $Id: GFFDumper.pm,v 1.14 2003-10-16 07:29:14 sheldon_mckay Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser::GFFhelper;
 use CGI qw(:standard super);
-use Data::Dumper;
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.60';
+$VERSION = '0.70';
 
-@ISA = qw(Bio::Graphics::Browser::Plugin);
+@ISA = qw/ Bio::Graphics::Browser::Plugin Bio::Graphics::Browser::GFFhelper /;
 
 sub name { "GFF File" }
 sub description {
@@ -49,7 +49,7 @@ sub configure_form {
 	       popup_menu(-name   => $self->config_name('version'),
 			  -values => [2,2.5,3],
 			  -labels => { 2   => '2',
-				       2.5 => '2 (Artemis)',
+				       2.5 => '2 (Artemis)*',
 				       3   => '3'},
 			  -default => $current_config->{version},
 			  -override => 1));
@@ -59,13 +59,15 @@ sub configure_form {
 			 -values => ['view','save','edit'],
 			 -labels => {view => 'View',
 				     save => 'Save to File',
-				     edit => 'Edit'.super('*')}
+				     edit => 'Edit'.super('**')}
 			));
   autoEscape(1);
-  $html .= p(super('*'),"To edit, install a helper application for MIME type",
+  $html .= p(super('*'),"Note: Artemis GFF will contain the entire annotated sequence") .
+           p(super('**'),"To edit, install a helper application for MIME type",
 	     cite('application/x-gff2'),'or',
 	     cite('application/x-gff3')
-	    );
+	     );
+
   $html;
 }
 
@@ -84,12 +86,14 @@ sub mime_type {
 
 sub dump {
   my $self = shift;
-  my ($segment,@more_feature_sets) = @_;
+  my ($segment, @more_feature_sets) = @_;
   my $page_settings = $self->page_settings;
   my $conf          = $self->browser_config;
   my $config        = $self->configuration;
   my $version       = $config->{version} || 2;
   my $mode          = $config->{mode}    || 'selected';
+  my $db            = $self->database;
+  my $whole_segment = $db->segment($segment->sourceseq);
   $mode             = 'all' if $version == 2.5;  
 
   my $date = localtime;
@@ -110,7 +114,7 @@ sub dump {
 
   if ( $version == 2.5 ) {
     # don't want aggregate features
-    map { push @feats, $_ unless /component/i } $segment->contained_features;  
+    @feats = $whole_segment->features;
   }
   else {
     my $iterator = $segment->get_seq_stream(@args);
@@ -119,7 +123,7 @@ sub dump {
     }  
   }
 
-  do_dump(\@feats, $version);
+  $self->do_dump(\@feats, $version);
 
   for my $set (@more_feature_sets) {
     if ( $set->can('get_seq_stream') ) {
@@ -133,39 +137,37 @@ sub dump {
   }
 
   if ( $version == 2.5 ) {
-    my $db = $self->database;
-    my $whole_segment = $db->segment($segment->ref);
     my $seq = $whole_segment->seq;
-    $seq ||= ('N' x $whole_segment->length);
-    $seq =~ s/\S{60}/$&\n/g;
+    $seq  ||= ('N' x $whole_segment->length);
+    $seq    =~ s/\S{60}/$&\n/g;
     print $seq, "\n";
   }
 }
 
 sub do_dump {
-  my $feats       = shift;
-  my $gff_version = shift;
+  my ($self, $feats, $gff_version) = @_;
   my @gff;
   
   for my $f ( @$feats ) {
     
     my $s = $gff_version == 3 ? $f->gff3_string(1) :  # flag means recurse automatically
-	    $gff_version == 2 ? $f->gff_string     : gff25_string($f);
+	    $gff_version == 2 ? $f->gff_string     : $self->gff25_string($f);
  
     push @gff, $s if $s;
  
     next if $gff_version >= 3; # gff3 recurses automatically
 
     for my $ss ($f->sub_SeqFeature) {
-      my $s = $gff_version == 2 ? $ss->gff_string : gff25_string($f);
+      my $s = $gff_version == 2 ? $ss->gff_string : $self->gff25_string($f);
       push @gff, $s if $s;
     }
   }
   
-  do_gff(@gff);
+  $self->do_gff(@gff);
 }
 
 sub do_gff {
+    my $self = shift;
     my @gff = @_;
     chomp @gff;
     print join "\n", 
@@ -178,21 +180,12 @@ sub do_gff {
 }
 
 sub gff25_string {
-    my $f  = shift;
+    my ($self, $f)  = @_;
     return 0 if $f->primary_tag =~ /component/i;
-    my $gff = $f->gff_string;    
-
-    # remove embedded semicolons
-    my %r;
-    for ( $f->get_all_tags ) {
-	my ($v) = $f->get_tag_values($_); 
-	
-	if ( $v =~ /;/ ) {
-	    ( my $V = $v ) =~ s/;/,/g;
-	    $gff =~ s/$v/$V/;
-	}
-    }    
-
+    
+    # get exhaustive list of attributes via GFFhelper
+    my $gff = $self->new_gff_string($f);
+    
     # controlled vocabulary for Target
     $gff =~ s/Target \"?([^\"]+)\"? (\d+) (\d+)/Target "$1" ; tstart $2 ; tend $3/;
 

@@ -1,4 +1,4 @@
-# $Id: ImportFeatures.pm,v 1.2 2003-10-13 18:58:51 sheldon_mckay Exp $
+# $Id: ImportFeatures.pm,v 1.3 2003-10-16 07:29:14 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -78,7 +78,7 @@ already in the database, it will not be reloaded.
 =head2  Loading Features
 
 Overwriting features is not supported with all SQL 
-databases, so features within the entire coordinate 
+databases, so features within the entire sequence 
 range from the input GFF will be deleted from the database 
 prior to loading the imported GFF.  This means that any 
 feature deleted in the external editor or otherwise 
@@ -90,78 +90,6 @@ object.  Artemis uses the sequence itself to define
 the coordinates, so the entire chromosome (or other 
 reference sequence) is dumped by GFFDumper.
 
-
-BE WARNED: Unless you are working on a sequence that is 
-not already in the database, make sure you are editing 
-a complete feature dump for the segment. Any features 
-contained within the sequence coordinate range of the 
-features in the uploaded file will vanish from the 
-database even if they are not present among the uploaded 
-features.  If you create new features that fall outside 
-of the focus region (the range of features that was dumped 
-from gbrowse), any features in the database that are inside 
-the coordinate range of the new features will be removed 
-whether they were in the originally dumped GFF region or not.
-
-For example: Suppose we have a segment spanning part of Chromosome I:
-
- |------------------------------------------| Chromosome I 
-
-              |--------------| Segment
-    <-->feat 1     <--> feat2
-                     <--> feat3
-          <-------> feat4                <-> feat5
-  
-The GFF dumper plugin (for Artemis) will dump all features 
-*contained* by the segment (feat3, feat4) but not those that 
-span the ends of the segment or fall outside of the segment 
-(feat1, feat4).  
-
-So what Artemis gets is:
-
-  |------------------------------------------| Chromosome I
-
-                <--> feat2
-                    <--> feat3
-
-
-Now suppose we were to create two new features in our editor, 
-one that spans the segment boundary and one that is entirely 
-outside of the segment's coordinate range.
-
-  |------------------------------------------| Chromosome I
-
-                <--> feat2
-                    <--> feat3
-                                 <--> featB
-        <-------> featA
-        |---------------------------| *new coordinate range*
-
-If the new feature table were then loaded via this plugin, 
-all features that span the new feature coordinate range 
-would be removed before the new feature table would be loaded.
-
-  Now the database would contain:
-
-  |------------------------------------------| Chromosome I
-
-              <--> feat2
-                  <--> feat3
-                                 <--> featB
-      <-------> featA                     <-> feat5
-
-
-   Note that feat1 and feat4 are gone!
-
-There a few simple ways to work around this, however.  
-
- 1) dump all features on the sequence as GFF 
-
- 2) take care not to create new features outside of 
-    or spanning the segment boundaries 
-
- 3) use the basic feature editor for non-destructive, 
-    in-place creation of new features in gbrowse
 
 =head2  Basic Feature Editing
 
@@ -216,6 +144,8 @@ use CGI ':standard';
 use CGI::Carp 'fatalsToBrowser';
 use IO::String;
 use Bio::SeqIO;
+use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser::GFFhelper;
 
 use vars qw /@ISA $ROLLBACK/;
 
@@ -269,7 +199,8 @@ sub config_defaults {
         acc    => undef,
         debug  => undef,
         reload => 1,
-        rb_id  => undef
+        rb_id  => undef,
+        seq_id => undef
     }
 }
 
@@ -348,16 +279,21 @@ sub dump {
     my $conf = $self->configuration;
     my $db   = $self->database;
     my $rollback = $conf->{rb_id};
+    $self->refseq($conf->{seqid}) if $conf->{seqid};
     
+    # set the parser type to Bio::DB::GFF
+    $self->{parser} = 'Bio::DB::GFF';
+
     my $gff = $rollback ? $self->rollback($rollback) : $self->gff;
-    
+
     if ( $conf->{debug} ) {
 	print h2("Rolling back to previous state...", br )
           if $rollback;
 	print h2("The input features:"), pre($gff);
     }
 
-    my $segment = $db->segment( $self->refseq, $self->start, $self->end );
+
+    my $segment  = $db->segment( $self->refseq );
 
     if ( $segment ) {
 	# save the state of the segment in case we want to roll back later 
@@ -366,15 +302,16 @@ sub dump {
 	    $self->save_state($segment);
 	}
 
-	my @killme = $segment->contained_features;
-	my $killed = $db->delete_features( @killme );
+	my @killme = $segment->features;
+	my $killed;
 
+        my $killed = $db->delete( $segment->ref );
+	
         print h2("I removed $killed features from the database"), pre(join "\n", @killme) 
 	    if $conf->{debug}; 
     }
-    else {
-	print h2("This is a new sequence; no features to remove") if $conf->{debug}
-    }
+	
+    # $gff = $self->component($gff);
 
     # don't try loading sequence if the sequence is already in
     # the database
@@ -400,20 +337,28 @@ sub dump {
         sleep 10;
     }
 
-    $self->load_page() if $conf->{reload};
+    $self->load_page();
 }
 
+# relaod gbrowse or make a reload button
 sub load_page {
     my $self = shift;
+    my $conf = $self->configuration;
     my $url = self_url();
     $url =~ s/\?.+$//g;
-    $url .= '?name=' . $self->refseq;
-    
-    if ( $self->end > 0 ) {
-	$url .= ':' . $self->start . '..' . $self->end;
-    }
+    my $name = $self->refseq . ':';
+    $name .= $self->start . '..' . $self->end;
+    print start_form( -name   => 'f1', 
+		      -method => 'POST',
+		      -action => $url );
+    print hidden( name => $name );
 
-    print body( { -onLoad => "javascript:location='$url'" } );
+    if ( $conf->{reload} ) {
+	print body( { -onLoad => "document.f1.submit()" } );
+    }
+    else {
+	print submit( -name => 'Return to Browser' );
+    }
 }
 
 sub gff {
@@ -425,7 +370,8 @@ sub gff {
     $self->{header} = 1;
 
     if ( $conf->{acc} ) {
-        return $self->get_embl($conf->{acc});
+        $self->refseq($conf->{acc});
+	return $self->get_embl($conf->{acc});
     }    
 
     unless ( $file ) {
@@ -531,6 +477,9 @@ sub read_embl {
         $text = "ID   $seqid\nFH   Key             Location/Qualifiers\n" . $text;
 	$conf->{file} = '';
     }
+    elsif ( $text =~ /^ID\s+(\S+)/ ) {
+	$self->refseq($1);
+    }
 
     my $in = Bio::SeqIO->new( -fh => IO::String->new($text), -format => 'embl')
 	|| $self->parsefail(Bio::SeqIO->error);
@@ -543,11 +492,25 @@ sub read_embl {
 
 sub seq2GFF {
     my ($self, $seq) = @_;
+    my $conf = $self->configuration;
 
     my @feats = $seq->all_SeqFeatures;
 
-    my $seqid = $self->configuration->{seqid} || 
-                $seq->id || $seq->display_name; 
+    
+    # make the 'Note' key lowercase and
+    # crush evil embedded semicolons
+    for ( @feats ) {
+        for my $t ( $_->all_tags ) {
+	    my @v = $_->remove_tag($t);
+	    
+	    for my $v ( @v ) {
+		$v =~ s/;/,/g;
+		$_->add_tag_value( $t => $v );
+	    }
+	}
+    }
+
+    my $seqid = $self->refseq || $conf->{seqid};
   
     my $gff;
     

@@ -1,4 +1,4 @@
-# $Id: BasicEditor.pm,v 1.7 2003-10-13 18:58:51 sheldon_mckay Exp $
+# $Id: BasicEditor.pm,v 1.8 2003-10-16 07:29:14 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -45,7 +45,7 @@ use Bio::Graphics::Browser::Plugin;
 use Bio::Graphics::Browser::GFFhelper;
 
 use vars qw/ $VERSION @ISA $ROLLBACK /;
-$VERSION = '0.2';
+$VERSION = '0.3';
 
 @ISA = qw / Bio::Graphics::Browser::Plugin 
             Bio::Graphics::Browser::GFFhelper /;
@@ -55,7 +55,7 @@ $VERSION = '0.2';
 # Edit this line to specify the rollback file location
 # Comment it out to turn off rollbacks
 ####################################################################
-# $ROLLBACK = '/tmp/';
+#$ROLLBACK = '/tmp/';
 ####################################################################
 
 
@@ -166,7 +166,7 @@ sub build_form {
 	next if $_->method =~ /component/i;
 	$feat_count++;
 	my $cellcount = 0;
-	my @cell = split /\t/, $_->gff_string;
+	my @cell = split /\t/, $self->new_gff_string($_);
 
         # controlled vocabulary for Target
 	$cell[8]  =~ s/Target \"?([^\"]+)\"? (\d+) (\d+)/Target "$1" ; tstart $2 ; tend $3/;
@@ -244,19 +244,21 @@ sub annotate {
     else {
 	$self->{ref} = $segment->ref;
 	my $gff_in = $self->gff_builder || return 0;
-	$gff = $self->read_gff($gff_in);
-    }    
+	
+	# Bio::DB::GFF->specific parsing
+	$self->{parser} = 'Bio::DB::GFF';
 
-    my @killme = ();
-    
-    # delete contained feature (except the reference component)
-    for ( $segment->features ) {
-        next if $_->start < $segment->start;
-	next if $_->stop  > ($segment->stop + 1);
-	next if $_->method =~ /component/i;
-	push @killme, $_;
+	$gff = $self->read_gff($gff_in);
     }
-    my $killed = $db->delete_features(@killme);
+
+    my @killme = $segment->features;
+
+    for ( @killme ) {
+	next if $_->end > $segment->end + 1;
+	next if $_->start < $segment->start;
+	next if $_->method =~ /component/i;
+	$db->delete_features($_); 
+    }
 
     my $fh = IO::String->new($gff);
     my $result = $db->load_gff($fh);

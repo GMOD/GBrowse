@@ -99,6 +99,14 @@ These plugins receive each feature in turn before it is rendered and
 can return a color name in order to highlight the background of the
 feature with that color.
 
+=item 5. filters
+
+These plugins take filtering options from the user and are converted into
+a filter closure. Every feature from the track is passed to this closure.
+All features for which a true value is returned by the filter closure show
+up in the track.  
+ 
+
 =back
 
 All plug-ins inherit from Bio::Graphics::Browser::Plugin, which defines
@@ -142,6 +150,12 @@ restriction site selected.
 An example annotator that generates random gene-like structures in
 the currently displayed region of the genome. It's intended as a
 template for front-ends to gene prediction programs.
+
+=item FilterTest.pm
+
+An example filter that filters the features from the 'ORFs' track (yeast example database).
+The user can pass options to filter the ORFs based on strand or length.
+Only those ORFs meeting the passed criteria are displayed.
 
 =back
 
@@ -448,6 +462,29 @@ See Bio::Graphics::Panel for a list of valid color names.
 See the AttributeHiliter plugin for an example.
 
 =back
+
+=head1 METHODS TO BE IMPLEMENTED IN FILTERS
+
+All filter plugins will need to override/implement the method described in this
+section.
+
+=over
+
+=item     $stanza = $plugin->name
+
+The name() method must return the name (stanza) of the track which
+should be filtered.
+
+=item     $plugin->filter
+
+This method is invoked by gbrowse in order to set the filter option.
+If desired, at the same time the 'key' option can be changed so that 
+filtering (or failing) is clearly indicated.
+
+See the FilterTest plugin for an example.
+
+=back
+
 
 =head1 PERSISTENT CONFIGURATION METHODS
 

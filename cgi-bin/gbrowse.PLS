@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.61 2004-02-15 09:54:13 lstein Exp $
+# $Id: gbrowse.PLS,v 1.62 2004-02-17 16:09:31 marclogghe Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2372,7 +2372,6 @@ sub plugin_adjust_labels {
 
 sub plugin_menu {
   my ($settings,$plugins) = @_;
-  my $sources = $CONFIG->sources > 1;
 
   my $labels = plugin_adjust_labels($plugins);  
 

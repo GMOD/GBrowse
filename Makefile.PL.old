@@ -133,13 +133,64 @@ sub MY::install {
 sub MY::postamble {
 qq{
 conf_install ::
-        \$(PERL) conf_install.pl $OPTIONS{CONF}/gbrowse.conf
+	\@echo "Installing sample configuration files..."
+	\@dir=$OPTIONS{CONF}/gbrowse.conf; \\
+	mkdir -p \$\$dir; \\
+	for i in $Bin/conf/*.*; do \\
+	  j=`basename \$\$i`; \\
+		if [ -f "\$\$dir/\$\$j" ]; then \\
+			echo "   Found \$\$j in \$\$dir. Skipping..."; \\
+		else \\
+			cp \$\$i \$\$dir; \\
+		fi \\
+	done; \\
+	mkdir -p \$\$dir/plugins; \\
+	for i in $Bin/conf/plugins/*.pm; do \\
+	  j=`basename \$\$i`; \\
+		cp \$\$i \$\$dir/plugins; \\
+	done; \\
+	mkdir -p \$\$dir/languages; \\
+	for i in $Bin/conf/languages/*.pm; do \\
+	  j=`basename \$\$i`; \\
+		cp \$\$i \$\$dir/languages; \\
+	done; \\
+
 
 htdocs_install ::
-        \$(PERL) htdocs_install.pl $OPTIONS{HTDOCS}/gbrowse
+	\@echo "Installing stylesheet and images..."
+	\@dir=$OPTIONS{HTDOCS}/gbrowse; \\
+	mkdir -p \$\$dir; \\
+	for i in $Bin/htdocs/*.css $Bin/htdocs/*.html; do \\
+	  j=`basename \$\$i`; \\
+		if [ -f "\$\$dir/\$\$j" ]; then \\
+			echo "   Found \$\$j in \$\$dir. Skipping..."; \\
+		else \\
+			cp \$\$i \$\$dir; \\
+		fi \\
+	done; \\
+	echo "Making \$\$dir/images/buttons..."; \\
+	mkdir -p \$\$dir/images/buttons; \\
+	for i in $Bin/htdocs/images/buttons/*.gif; do \\
+		cp -p \$\$i \$\$dir/images/buttons; \\
+	done; \\
+	echo "Making \$\$dir/images/help..."; \\
+	mkdir -p \$\$dir/images/help; \\
+	for i in $Bin/htdocs/images/help/*.gif; do \\
+		cp -p \$\$i \$\$dir/images/help; \\
+	done; \\
+	echo "Making \$\$dir/tmp..."; \\
+	mkdir -p \$\$dir/tmp; \\
+	echo "Making \$\$dir/tmp world writable..."; \\
+	chmod ugo+rwx \$\$dir/tmp
 
 cgi_install :: gbrowse
-        \$(PERL) cgi_install.pl $OPTIONS{CGIBIN}
+	\@echo "Installing gbrowse CGI script..."
+	\@dir=$OPTIONS{CGIBIN}; \\
+	mkdir -p \$\$dir; \\
+	cp $Bin/gbrowse \$\$dir; \\
+	chmod +x \$\$dir/gbrowse; \\
+	cp $Bin/gbrowse_img \$\$dir; \\
+	chmod +x \$\$dir/gbrowse_img
 
 };
 }

@@ -9,6 +9,8 @@
 	* Added a 'nascent' synteny browser.
 	* Added gbrowse_details, a CGI that gives skeletal details on each feature
 	* Added an optional 'flip mode' to flip the orientation of the display
+        * Added a multiple alignment plugin
+	* Added a GeneFinder plugin
 	* Added support for the chado database schema
         * Added support for the PostgreSQL database server
 	* Added a script for converting UCSC genome data to GFF3

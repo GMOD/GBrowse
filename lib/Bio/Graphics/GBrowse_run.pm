@@ -6,7 +6,7 @@ use Bio::Graphics::Browser::Constants;
 use Bio::Graphics::Browser::Options;
 use Bio::Graphics::Browser::Util;
 use CGI qw(Delete_all cookie param url);
-use CGI::ParamComposite;
+#use CGI::ParamComposite;
 use Carp qw(croak cluck);
 use Data::Dumper;
 use Digest::MD5 qw(md5_hex);

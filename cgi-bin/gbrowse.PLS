@@ -45,7 +45,7 @@ print OUT "use libs '$OPTIONS{LIB}'\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.98 2004-07-17 16:51:35 lstein Exp $
+# $Id: gbrowse.PLS,v 1.99 2004-07-18 15:46:56 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -728,7 +728,10 @@ sub adjust_settings {
     $settings->{features}{$_}{visible} = 0 foreach keys %{$settings->{features}};
     $settings->{features}{$_}{visible} = 1 foreach @selected;
   }
+
   $settings->{width}  = param('width')   if param('width');
+  # support programmatic upload
+  $settings->{id} = param('id')          if param('id');
 
   local $^W = 0;  # kill uninitialized variable warning
   if (param('ref') &&

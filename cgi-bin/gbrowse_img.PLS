@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.10 2003-12-24 15:26:14 tharris Exp $
+# $Id: gbrowse_img.PLS,v 1.11 2003-12-24 15:34:26 tharris Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1 path_info escape);
@@ -442,31 +442,7 @@ separated by semicolons (preferred) or by ampersands.
 <p>
 Putting it all together, here's a working (very long) URL:
 <pre>
-<a href="http://www.wormbase.org/db/seq/gbrowse_img?name=B0001;source=wormbase;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcri
-
-
-
-
-
-
-
-
-
-
-
-pt2+bgcolor=orange;abs=1">http://www.wormbase.org/db/seq/gbrowse_img?name=B0001;source=wormbase;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%
-
-
-
-
-
-
-
-
-
-
-
-22+glyph=transcript2+bgcolor=orange;abs=1</a>
+<a href="http://www.wormbase.org/db/seq/gbrowse_img?name=B0001;source=wormbase;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/db/seq/gbrowse_img?name=B0001;source=wormbase;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
 </pre>
 
 

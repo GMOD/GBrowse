@@ -1,3 +1,5 @@
+1.49	Thu Feb 13 17:25:20 EST 2003
+	* Version 1.48 was missing some .pl files needed to successfully install.
 1.48	Sun Feb  9 12:55:48 EST 2003
 	* Added ability to group related features with dotted lines.
 	* Added ability to pop up a new window when following links.

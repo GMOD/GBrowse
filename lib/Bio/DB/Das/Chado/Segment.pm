@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.44 2004-01-20 19:18:32 scottcain Exp $
+# $Id: Segment.pm,v 1.45 2004-01-20 20:48:09 scottcain Exp $
 
 =head1 NAME
 
@@ -105,7 +105,7 @@ sub new {
 
     my $self = shift;
 
-    my ( $name, $factory, $base_start, $end ) = @_;
+    my ( $name, $factory, $base_start, $end, $db_id ) = @_;
 
     warn "$name, $factory\n"                      if DEBUG;
     warn "base_start = $base_start, end = $end\n" if DEBUG;
@@ -137,16 +137,44 @@ sub new {
              ? = f.feature_id
          " );
 
+    my $fetch_uniquename_query = $factory->{dbh}->prepare( "
+       select name,fmin,fmax,uniquename from feature
+       where feature_id = ?
+         ");
 
-    my $ref = _search_by_name( $factory, $quoted_name );
+    my $ref = _search_by_name( $factory, $quoted_name, $db_id );
 
     #returns either a feature_id scalar (if there is only one result)
     #or an arrayref (of feature_ids) if there is more than one result
     #or nothing if there is no result
 
     if ( ref $ref eq 'ARRAY' ) {    #more than one result returned
-        warn "multiple segments--deal with it!";
-        return;
+
+        my @segments;
+
+        foreach my $feature_id (@$ref) {
+
+            $fetch_uniquename_query->execute($feature_id )
+              or Bio::Root::Root->throw("fetching uniquename from feature_id failed") ;
+
+            my $hashref = $fetch_uniquename_query->fetchrow_hashref;
+            $base_start = $$hashref{fmin} + 1;
+            $end        = $$hashref{fmax};
+            $db_id      = $$hashref{uniquename};            
+
+            push @segments, $factory->segment($name,$factory,$base_start,$end,$db_id);
+        }
+
+        if (@segments < 2) {
+            return $segments[0]; #I don't think this should ever happen
+        }
+        elsif (wantarray) {
+            return @segments;
+        }
+        else {
+            warn "The query for $name returned multiple segments\nPlease call in a list context to get them all";
+            Bio::Root::Root->throw("multiple segment exception") ;
+        }
     }
     elsif ( ref $ref eq 'SCALAR' ) {    #one result returned
 
@@ -218,7 +246,20 @@ sub new {
 =cut
 
 sub _search_by_name {
-    my ( $factory, $quoted_name ) = @_;
+    my ( $factory, $quoted_name, $db_id ) = @_;
+
+      # if there is a db_id sent, short circuit the search
+    if ($db_id) {
+        my $sth = $factory->{dbh}->prepare( "
+       select feature_id from feature where uniquename = ?"); 
+
+        $sth->execute($db_id) 
+            or Bio::Root::Root->throw("getting feature_id from uniquename failed");
+
+        my $hashref = $sth->fetchrow_hashref;
+        my $feature_id = $$hashref{'feature_id'};
+        return \$feature_id;
+    }
 
     my $sth = $factory->{dbh}->prepare( "
              select name,feature_id,seqlen from feature

@@ -47,7 +47,7 @@ print OUT "use libs '$OPTIONS{LIB}'\n" if defined $OPTIONS{LIB};
 print OUT <<'!NO!SUBS!';
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.32 2004-06-24 18:13:26 lstein Exp $
+#$Id: gbrowse_moby.PLS,v 1.33 2004-06-29 16:06:52 markwilkinson Exp $
 ###########################################################
 
 use MOBY::Client::Central;
@@ -343,9 +343,15 @@ sub init {
         return;
     }
 
+    my $authority = param('authority');
+    my $servicename = param('servicename');
 
+    if ($authority && $servicename){
+      &execute();
+      return;
+    }
+    
     my $keyword = param('keyword');
-    my $authority = param('authURI');
     my $output = param('output');
     my $serviceType = param('serviceType');
     my $expandObjects = param('expandObjects');

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.108 2003-12-12 17:28:49 lstein Exp $
+# $Id: Browser.pm,v 1.109 2003-12-13 17:22:10 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -660,6 +660,7 @@ sub render_html {
     $self->_load_aggregator_types($segment);
     $img_map = $self->make_map($map,$do_centering_map,$panel,$tracks)
   }
+  eval {$panel->finished};  # should quash memory leaks when used in conjunction with bioperl 1.4
   return wantarray ? ($img,$img_map) : join "<br>",$img,$img_map;
 }
 
@@ -1046,6 +1047,7 @@ sub image_and_map {
   return $gd   unless wantarray;
 
   my $boxes    = $panel->boxes;
+
   return ($gd,$boxes,$panel,\%tracks);
 }
 
@@ -1116,6 +1118,7 @@ sub overview {
   $x2 = $panel->right-1 if $x2 >= $panel->right;
   $gd->rectangle($x1,$y1,$x2,$y2,$red);
 
+  eval {$panel->finished};  # should quash memory leaks when used in conjunction with bioperl 1.4
   return ($gd,$segment->length);
 }
 

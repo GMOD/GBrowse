@@ -22,7 +22,7 @@ additional views and functions.  These are found in two files in the
 chado CVS or in a gmod distribution.  These are:
 
   schema/chado/modules/sequence/gff-bridge/sequence-gff-views.sql
-  schema/chado/modules/sequence/gff-bridge/sequence-gff-funcs.pgsql
+  schema/chado/modules/sequence/gff-bridge/sequence-gff-funcs.plpgsql
 
 The easiest way to get these into the chado schema is include them when 
 building the chado schema from a gmod release during `perl Makefile.PL`.
@@ -67,9 +67,42 @@ psql shell grant select permissions:
   GRANT SELECT ON feature_pub          TO nobody;
   GRANT SELECT ON db                   TO nobody;
 
+=head1 Creating a configuration file
+
+The GBrowse configuration file for a chado database is the same format
+as for any other data source, but there are a few notes specific to
+chado for GBrowse configuration files.  A sample configuration file
+called 07.chado.conf is included in the contrib/conf_files directory
+of this distribution, and is installed in $HTDOCS/gbrowse/contrib/conf_files.
+
+Two items specific to chado that must go into the configuration file:
+
+=over
+
+=item Reference class
+
+The reference class in configuration file must be the Sequence Ontology-
+Feature Annotation (SOFA) type that is the feature type in chado that
+is the foundation type, like 'chromosome', 'region' or 'contig', the 
+the other features in the database are on.
+
+=item Aggregators
+
+Aggregators must not be used with the chado adaptor, as they aren't needed
+and don't make sense in this context.  They are used in Bio::DB::GFF
+to construct complex biological objects out of the flat data in
+GFF files, for example, attaching exons to their mRNA.  In chado, this
+isn't necessary since the relationship between features is clearly
+defined in the feature_relationship table, and that information
+is automatically obtained by the chado adaptor.
+
+=back
+
+=head2 Bugs
+
 If you encounter any bugs or problems with this chado adaptor, please
 let me know.
 
 Scott Cain
-cain@cshl.org
-2003/08/20
+cain@cshl.edu
+2005/03/10

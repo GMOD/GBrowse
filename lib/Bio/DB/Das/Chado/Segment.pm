@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.23 2003-02-28 15:38:20 scottcain Exp $
+# $Id: Segment.pm,v 1.24 2003-03-05 21:11:29 scottcain Exp $
 
 =head1 NAME
 
@@ -290,7 +290,7 @@ sub length { shift->{length} }
  Args    : see below
  Status  : Public
 
-Note: There is a hack in this method to increase speed that may or 
+Note: There is a hack in this method to increase speed that may or
 may not work well with a given instance of postgres/chado.  For the
 query to find features, Seq Scans (same as Table Scans in some other
 database) have been disabled, in order to force the use of an index.
@@ -359,7 +359,7 @@ sub features {
   my ($types,$attributes,$rangetype,$iterator,$callback);
   if ($_[0] =~ /^-/) {
     ($types,$attributes,$rangetype,$iterator,$callback) =
-      $self->_rearrange([qw(TYPES ATTRIBUTES RANGETYPE ITERATOR CALLBACK RARE)],@_);
+      $self->_rearrange([qw(TYPE ATTRIBUTES RANGETYPE ITERATOR CALLBACK RARE)],@_);
   } else {
     $types = \@_;
   }
@@ -395,24 +395,13 @@ sub features {
 
   my @keys;
   foreach my $type (@$types) {
-    my @tempkeys = grep(/\Q$type\E/i , keys %termhash );
+    my @tempkeys = grep(/\b\Q$type\E\b/i , keys %termhash );
     push @keys, @tempkeys;
   }
 
   my $sql_types = '';
 
-  if (scalar @keys == 0) {
-    # return an empty feature list
-#    warn "No types were specified in $self->features!\n";
-#    push @features, $feat;
-#    if ($iterator) {
-#      warn "using Bio::DB::Das::ChadoIterator\n" if DEBUG;
-#      return Bio::DB::Das::ChadoIterator->new(\@features);
-#    } else {
-#      return @features;
-#    }
-  } else {
-    
+  if (scalar @keys != 0) {
     $sql_types .= "(f.type_id = ".$termhash{$keys[0]};
 
     if (scalar @keys > 1) {
@@ -529,7 +518,9 @@ sub desc {shift->{name} }
 
 sub get_feature_stream {
   my $self = shift;
-  my @features = $self->features;
+  my @args = @_;
+  my @features = $self->features(@args);
+    warn "get_feature_stream args: @_\n" if DEBUG;
     warn "using get_feature_stream\n" if DEBUG;
     warn "feature array: @features\n" if DEBUG;
   return Bio::DB::Das::ChadoIterator->new(\@features);

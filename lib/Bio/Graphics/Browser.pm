@@ -1,14 +1,15 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.5 2002-02-19 04:18:15 lstein Exp $
+# $Id: Browser.pm,v 1.6 2002-02-20 16:44:16 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
-use Carp 'carp';
+use Bio::Graphics;
+use Carp qw(carp croak);
 use GD 'gdMediumBoldFont';
 
 use constant DEFAULT_WIDTH => 800;
 use vars '$VERSION';
-$VERSION = '1.01';
+$VERSION = '1.10';
 
 sub new {
   my $class    = shift;
@@ -35,6 +36,29 @@ sub source {
     $self->{source} = $source;
   }
   $d;
+}
+
+# get Bio::DB::GFF settings
+sub dbgff_settings {
+  my $self = shift;
+
+  my $dsn     = $self->setting('database') or croak "No database defined in ",$self->source;
+  my $adaptor = $self->setting('adaptor') || 'dbi::mysqlopt';
+  my @argv = (-adaptor => $adaptor,
+	      -dsn     => $dsn);
+  if (my $fasta = $self->setting('fasta_files')) {
+    push @argv,(-fasta=>$fasta);
+  }
+  if (my $user = $self->setting('user')) {
+    push @argv,(-user=>$user);
+  }
+  if (my $pass = $self->setting('pass')) {
+    push @argv,(-pass=>$pass);
+  }
+  if (my @aggregators = split /\s+/,$self->setting('aggregators')) {
+    push @argv,(-aggregator => \@aggregators);
+  }
+  @argv;
 }
 
 sub setting {
@@ -116,17 +140,47 @@ sub footer {
 }
 
 # Generate the image and the box list, and return as a two-element list.
-# arguments:
-# $segment       A feature iterator that responds to next_seq() methods
-# $feature_files A list of Bio::Graphics::FeatureFile objects containing 3d party features
-# $show          An array of booleans indicating which labels should be shown
-# $options       An array of options, where 0=auto, 1=force bump, 2=force label
-# $order         An array of label indexes indicating order of tracks
+# arguments: a key=>value list
+#    'segment'       A feature iterator that responds to next_seq() methods
+#    'feature_files' A list of Bio::Graphics::FeatureFile objects containing 3d party features
+#    'options'       An array of options, where 0=auto, 1=force bump, 2=force label
+# and either:
+#    'tracks'        List of named tracks, in the order in which they are to be shown
+# or:
+#    'show'          An array of booleans indicating which labels should be shown
+#    'order'         An array of label indexes indicating order of tracks
 sub image_and_map {
-  my $self = shift;
-  my ($segment,$feature_files,$show,$order,$options) = @_;
+  my $self    = shift;
+  my %config  = @_;
+
+  my $segment       = $config{segment};
+  my $feature_files = $config{feature_files};
 
   my @labels = $self->labels;
+
+  # The labels to be shown are given by two arrays, one
+  # listing the labels that should be shown, and the other listing the
+  # order in which they should be shown.
+  my $show  = $config{show};
+  my $order = $config{order};
+  my $options       = $config{options};
+  $options ||= [0 x @labels];
+
+  # If the 'tracks' array is provided, then this forces certain labels on.
+  # We merge this into the \@show and \@order arrays as described below.
+  if (my $to_show = $config{tracks}) {
+    my $i       = 0;
+    my %to_show = map {$_=>1}    @$to_show; # map to_show to index
+    $show       ||= [];
+    for (my $i=0;$i<@labels;$i++) {
+      $show->[$i] = 1 if $to_show{$labels[$i]};
+    }
+    unless ($order) {
+      my %labels  = map {$_=>$i++} @labels;   # map labels to index
+      $order      = [ map {$labels{$_}} @$to_show ];
+    }
+  }
+
 
   my $width = $self->width;
   my $conf  = $self->config;
@@ -245,8 +299,10 @@ sub image_and_map {
     $offset += $inserted;
   }
 
-  my $boxes    = $panel->boxes;
   my $gd       = $panel->gd;
+  return $gd   unless wantarray;
+
+  my $boxes    = $panel->boxes;
   return ($gd,$boxes);
 }
 

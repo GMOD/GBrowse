@@ -33,7 +33,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.10 2002-02-19 19:23:26 lstein Exp $
+# $Id: gbrowse.PLS,v 1.11 2002-02-20 16:44:16 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -129,8 +129,7 @@ if ($ENV{MOD_PERL}) {
 $CONF_DIR ||= CONF_DIR;
 
 # preliminaries -- read and/or refresh the configuration directory
-$CONFIG  ||= Bio::Graphics::Browser->new($CONF_DIR)
-  or die "Couldn't open configuration directory: $!";
+$CONFIG  ||= Bio::Graphics::Browser->new;
 $CONFIG->read_configuration($CONF_DIR) or die "Can't read configuration files: $!";
 
 ## PAGE SETTINGS ##############################################################################
@@ -987,23 +986,7 @@ sub format_segment {
 sub open_database {
   my $source  = $CONFIG->source;
   return $DB{$source} if $DB{$source};
-
-  my $dsn     = $CONFIG->setting('database') or die "No database defined in $source";
-  my $adaptor = $CONFIG->setting('adaptor') || 'dbi::mysqlopt';
-  my @argv = (-adaptor => $adaptor,
-	      -dsn     => $dsn);
-  if (my $fasta = $CONFIG->setting('fasta_files')) {
-    push @argv,(-fasta=>$fasta);
-  }
-  if (my $user = $CONFIG->setting('user')) {
-    push @argv,(-user=>$user);
-  }
-  if (my $pass = $CONFIG->setting('pass')) {
-    push @argv,(-pass=>$pass);
-  }
-  if (my @aggregators = split /\s+/,$CONFIG->setting('aggregators')) {
-    push @argv,(-aggregator => \@aggregators);
-  }
+  my @argv = $CONFIG->dbgff_settings;
   $DB{$source} = eval {Bio::DB::GFF->new(@argv)} or warn $@;
   return $DB{$source};
 }
@@ -1019,11 +1002,12 @@ sub image_and_map {
   my $tracks  = $settings->{track};
   my $options = $settings->{options};
 
-  my($image,$map) = $CONFIG->image_and_map($segment,
-					   $additional_features,
-					   $labels,
-					   $tracks,
-					   $options);
+  my($image,$map) = $CONFIG->image_and_map(segment       => $segment,
+					   feature_files => $additional_features,
+					   show          => $labels,
+					   order         => $tracks,
+					   options       => $options,
+                                          );
   if (DEBUGGING_RECTANGLES) { debugging_rectangles($image,$map) }
 
   my ($width,$height) = $image->getBounds;

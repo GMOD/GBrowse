@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.11 2002-02-27 06:38:35 lstein Exp $
+# $Id: Browser.pm,v 1.12 2002-03-19 02:04:31 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
@@ -71,7 +71,8 @@ sub dbgff_settings {
 
 sub setting {
   my $self = shift;
-  $self->config->setting('general',@_);
+  unshift @_,'general' if @_ == 1;
+  $self->config->setting(@_);
 }
 
 sub citation {
@@ -305,7 +306,7 @@ sub make_alt {
 # arguments: a key=>value list
 #    'segment'       A feature iterator that responds to next_seq() methods
 #    'feature_files' A list of Bio::Graphics::FeatureFile objects containing 3d party features
-#    'options'       An array of options, where 0=auto, 1=force bump, 2=force label
+#    'options'       An array of options, where 0=auto, 1=force no bump, 2=force bump, 3=force label
 # and either:
 #    'tracks'        List of named tracks, in the order in which they are to be shown
 # or:
@@ -436,8 +437,13 @@ sub image_and_map {
     for my $label (keys %tracks) {
       next unless $feature_count{$label};
       $options{$label} ||= 0;
-      my $do_bump  = $options{$label} >= 1 || $feature_count{$label} <= $max_bump;
-      my $do_label = $options{$label} >= 2 || $feature_count{$label} <= $max_labels;
+      my $do_bump  =   $options{$label} == 0 ? $feature_count{$label} <= $max_bump
+	             : $options{$label} == 1 ? 0
+                     : $options{$label} >= 2 ? 1
+		     : 0;
+      my $do_label =   $options{$label} == 0 ? $feature_count{$label} <= $max_labels
+	             : $options{$label} == 3 ? 1
+		     : 0;
       $tracks{$label}->configure(-bump  => $do_bump,
 				 -label => $do_label,
 				 -description => $do_label && $tracks{$label}->option('description'),

@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.15 2002-03-12 22:35:03 lstein Exp $
+# $Id: gbrowse.PLS,v 1.16 2002-03-19 02:04:31 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -457,6 +457,7 @@ sub adjust_settings {
   $settings->{width}  = param('width')   if param('width');
 
   #  if (param('ref') && (request_method() eq 'GET' || grep {/zoom|nav|overview|span/} param()) ) {
+  local $^W = 0;  # kill uninitialized variable warning
   if (param('ref') &&
       ( request_method() eq 'GET'
 	|| param('name') eq param('prevname')
@@ -908,17 +909,29 @@ sub name2segments {
     @segments = $db->segment($chr);
   }
 
-  # try any "automatic" classes that have been defined in the config file
-  if (!@segments && !$class && 
-      (my @automatic = split /\s+/,$CONFIG->setting('automatic classes') || '')) {
-    @argv = (-name=>$name);
+  # try the wildcard  version, but only if the name is of significant length
+  if (!@segments && length $name > 3) {
+    @argv = (-name => "$name*");
     push @argv,(-start => $start) if defined $start;
     push @argv,(-stop  => $stop)  if defined $stop;
-    foreach $class (@automatic) {
-      @segments = $db->segment(-class=>$class,@argv);
-      last if @segments;
+    @segments = $db->segment(-class=>$class,@argv);
+  }
+
+  # try any "automatic" classes that have been defined in the config file
+  if (!@segments && !$class &&
+      (my @automatic = split /\s+/,$CONFIG->setting('automatic classes') || '')) {
+    my @names = length $name > 3 ? ($name,"$name*") : $name;  # possibly add a wildcard
+    for my $n (@names) {
+      @argv = (-name=>$n);
+      push @argv,(-start => $start) if defined $start;
+      push @argv,(-stop  => $stop)  if defined $stop;
+      foreach $class (@automatic) {
+	@segments = $db->segment(-class=>$class,@argv);
+	last if @segments;
+      }
     }
   }
+
 
   # This tricky bit is called when we retrieve multiple segments or when
   # there is an unusually large feature to display.  In this case, we attempt

@@ -1,4 +1,4 @@
-# $Id: SequenceDumper.pm,v 1.15 2003-09-17 21:08:48 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.16 2003-10-13 12:01:29 stajich Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::SequenceDumper
 #
@@ -50,7 +50,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::SequenceDumper;
-# $Id: SequenceDumper.pm,v 1.15 2003-09-17 21:08:48 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.16 2003-10-13 12:01:29 stajich Exp $
 # Sequence Dumper plugin
 
 use strict;
@@ -161,7 +161,7 @@ sub dump {
 					      -end           => $endstr,
 					      -strand        => $sl->strand,
 					      -location_type => '..');
-	      warn $sl->to_FTstring();
+	      # warn $sl->to_FTstring();
 	  }
       }
       if( @locs > 1 ) { 

@@ -1,6 +1,50 @@
 [% PROCESS "helperfunctions.tt2" %]
+
+<form name="mainform" action="[% action %]" method="POST">
+
+<!-- navigation table -->
 [% PROCESS "navigationtable.tt2" %]
+
+[% htmlfrag2 %]
+
+<!-- genome browser images -->
+[% IF segments && segments.size() > 1 %]
+  [% multiple_segments %]
+[% ELSE %]
+  [% overview_panel %]
+  [% detail_panel   %]                                                    
+[% END %]
+
+[% htmlfrag3 %]
+
+<!-- plugins_table -->
+[% PROCESS "pluginstable.tt2" %]
+<table border="0" width="100%" cellspacing="0">
+  <tr class="settingsbody" align="left">
+    <td align="left">[% PROCESS "sourcemenu.tt2" %]</td>
+    <td align="left">[% PROCESS "pluginmenu.tt2" %]</td>
+  </tr>
+</table>
+
+[% htmlfrag4 %]
+
+<!-- tracks_table -->
+[% PROCESS "trackstable.tt2" %]
+
+[% htmlfrag5 %]
+
+<!-- settings_table -->
+[% PROCESS "optionstable.tt2" %]
+
+[% htmlfrag6 %]
+</form>
+
+
 <form name="externalform" encoding="multipart/form-data"><p/>
+
+<!-- upload table -->
 [% PROCESS "uploadtable.tt2"     %]<p/>
+
+<!-- external table -->
 [% #PROCESS "externaltable.tt2"   %]
 </form>

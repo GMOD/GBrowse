@@ -1,8 +1,5 @@
-<form name="mainform" action="[% action %]" method="POST">
-
 <table border="0" width="100%" cellspacing="0" class="searchtitle">
-
-[% IF !hide_ins %]
+  [% IF !hide_ins %]
   <tr><td align="left" colspan="2">
     <b>[% browser.translate('instructions') %]</b><br/>
     [% browser.translate('search_instructions') %]
@@ -17,60 +14,27 @@
     [% END %]
     <br/>
   </td></tr>
-[% END %]
+  [% END %]
 
-<tr>
-  <th align="left" colspan="2">
-    <a href="?rand=[% rand %];head=[% browser.options.head || 0 %]">[[% tr_toggle_head %]]</a>
-    <a href="?rand=[% rand %];ins=[% hide_ins ? 0 : 1 %]">[[% tr_toggle_instructions %]]</a>
-    [% IF name OR ref %]
+  <tr>
+    <th align="left" colspan="2">
+      <a href="?rand=[% rand %];head=[% browser.options.head || 0 %]">[[% tr_toggle_head %]]</a>
+      <a href="?rand=[% rand %];ins=[% hide_ins ? 0 : 1 %]">[[% tr_toggle_instructions %]]</a>
+      [% IF name OR ref %]
       <a href="[% link_bookmark %]">[[% browser.translate('bookmark') %]]</a>
       <a href="[% link_image    %]" target="_blank">[[% browser.translate('image_link') %]]</a>
       <a href="[% link_svg      %]" target="_blank">[[% browser.translate('svg_link')   %]]</a>
       <a href="[% link_help     %]" target="help">[[% browser.translate('help') %]]</a>
-    [% END %]
-  </th>
-</tr>
+      [% END %]
+    </th>
+  </tr>
 
-<tr class="searchbody">
-  <td align="left" colspan="2">[% htmlfrag1 %]</td>
-</tr>
+  <tr class="searchbody">
+    <td align="left" colspan="2">[% htmlfrag1 %]</td>
+  </tr>
 
-<tr class="searchbody">
-  <td align="left">[% PROCESS "searchbox.tt2" %]</td>
-  <td align="left">[% IF segment %]<b>[% browser.translate('scroll') %]</b><br/>[% PROCESS "slider.tt2" %][% END %]</td>
-</tr>
-
-</table>
-
-[% htmlfrag2 %]
-
-[% IF segments && segments.size() > 1 %]
-  [% multiple_segments %]
-[% ELSE %]
-  [% overview_panel %]
-  [% detail_panel   %]
-[% END %]
-
-[% htmlfrag3 %]
-
-<!-- plugins_table -->
-<table border="0" width="100%" cellspacing="0">
-  <tr class="settingsbody" align="left">
-    <td align="left">[% PROCESS "sourcemenu.tt2" %]</td>
-    <td align="left">[% PROCESS "pluginmenu.tt2" %]</td>
+  <tr class="searchbody">
+    <td align="left">[% PROCESS "searchbox.tt2" %]</td>
+    <td align="left">[% IF segment %]<b>[% browser.translate('scroll') %]</b><br/>[% PROCESS "slider.tt2" %][% END %]</td>
   </tr>
 </table>
-
-[% htmlfrag4 %]
-
-<!-- tracks_table -->
-[% PROCESS "trackstable.tt2" %]
-
-[% htmlfrag5 %]
-
-<!-- settings_table -->
-[% PROCESS "optionstable.tt2" %]
-
-[% htmlfrag6 %]
-</form>

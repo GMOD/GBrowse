@@ -257,7 +257,7 @@ sub MY::install {
 sub MY::postamble {
   my $paths;
   for my $key (keys %OPTIONS) {
-    $paths .= qq('$key=$OPTIONS{$key}' );
+    $paths .= qq('$key=$OPTIONS{$key}' ) if defined $OPTIONS{$key};
   }
 qq{
 conf_install ::

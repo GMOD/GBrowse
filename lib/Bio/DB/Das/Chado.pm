@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.45 2004-05-03 19:15:50 allenday Exp $
+# $Id: Chado.pm,v 1.46 2004-05-06 19:37:36 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -630,10 +630,11 @@ sub search_notes {
 This method is intended as a "work-alike" to Bio::DB::GFF's 
 attributes method, which has the following returns:
 
-If called in a scalar context, it returns the first value of
-the attribute if an attribute name is provided, otherwise it
-returns a hash reference in which the keys are attribute
-names and the values are anonymous arrays containing the values.
+Called in list context, it returns a list.  If called in a
+scalar context, it returns the first value of the attribute
+if an attribute name is provided, otherwise it returns a
+hash reference in which the keys are attribute names
+and the values are anonymous arrays containing the values.
 
 =cut
 

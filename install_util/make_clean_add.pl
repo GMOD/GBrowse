@@ -1,6 +1,8 @@
 #!/usr/bin/perl -w
 use strict;
 
-unlink 'gbrowse';
 unlink 'GGB.def';
-unlink 'gbrowse_img';
+unlink 'cgi-bin/gbrowse';
+unlink 'cgi-bin/gbrowse_img';
+unlink 'cgi-bin/gbrowse_details';
+unlink 'cgi-bin/gbrowse_syn';

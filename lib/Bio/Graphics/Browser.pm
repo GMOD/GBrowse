@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.51.2.12 2003-07-03 22:06:06 pedlefsen Exp $
+# $Id: Browser.pm,v 1.51.2.13 2003-07-05 18:00:44 pedlefsen Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -5226,13 +5226,16 @@ sub _name2segments {
     $start =~ s/,\.//g; # get rid of commas
     $end  =~ s/,\.//g;
     if( $start =~ /[kKmM]/ ) {
-      my ( $millions, $rest ) = ( $start =~ /^(\d+)[Mm](.+)$/ );
+      my ( $millions, $rest ) = ( $start =~ /^(\d+)[Mm](.*)$/ );
       unless( defined $millions ) {
         $rest = $start;
       }
       my ( $thousands, $ones ) = ( $rest =~ /^(\d+)[Kk](\d*)$/ );
       $start = ( $millions * 1000000 ) + ( $thousands * 1000 ) + $ones;
     }
+    ## Hey, you.  Pssst.  C'mere.  Yeah, you!
+    ## The above code and the below should be exactly the same except
+    ## s/start/end/g;
     if( $end =~ /[kKmM]/ ) {
       my ( $millions, $rest ) = ( $end =~ /^(\d+)[Mm](.*)$/ );
       unless( defined $millions ) {

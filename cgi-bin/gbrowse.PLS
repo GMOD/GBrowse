@@ -45,7 +45,7 @@ print OUT "use libs '$OPTIONS{LIB}'\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.99 2004-07-18 15:46:56 lstein Exp $
+# $Id: gbrowse.PLS,v 1.100 2004-07-20 12:45:05 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -374,7 +374,9 @@ print_bottom($VERSION);
 
 exit 0;
 
+#################################################################################
 #--------------------------------- lots of subroutines --------------------------
+#################################################################################
 
 sub main_display {
   my ($segments,$features,$page_settings) = @_;
@@ -412,7 +414,8 @@ sub main_display {
   }
 
   # print the top of the form, with navigation bar, etc
-  my $action = $source ? url()."/$source" : url();
+  my $src    = $CONFIG->source;
+  my $action = $src ? url()."/$src" : url();
   print start_form(-name   => 'mainform',
                    -action => $action,
 		   -method => 'POST');
@@ -1321,8 +1324,8 @@ sub get_features {
   my @features = lookup_features_from_db($db,$settings);
 
   # sort of hacky way to force keyword search on wildcards
-  if (defined $settings->{name} && $page_settings->{name} =~ /[*?]/) {
-    (my $searchterm = $page_settings->{name}) =~ tr/*?//d;
+  if (defined $settings->{name} && $settings->{name} =~ /[*?]/) {
+    (my $searchterm = $settings->{name}) =~ tr/*?//d;
     push @features,do_keyword_search($searchterm);
   }
 

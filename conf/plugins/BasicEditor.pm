@@ -1,4 +1,4 @@
-# $Id: BasicEditor.pm,v 1.13 2003-11-03 17:56:38 sheldon_mckay Exp $
+# $Id: BasicEditor.pm,v 1.14 2003-11-06 02:23:20 stajich Exp $
 
 =head1 NAME
 
@@ -13,15 +13,16 @@ This modules is not used directly
 This plugin allows basic editing of features in the GFF database. 
 
 
-The database user specified in the configuration file must have sufficient 
-privileges to delete and insert data.  See the gbrowse tutorial
-for information on how to set this up.
+The database user specified in the configuration file must have
+sufficient privileges to delete and insert data.  See the gbrowse
+tutorial for information on how to set this up.
 
-The features contained in the current segment are dumped as GFF2.5 (generic GFF2
-with free text wrapped in quotes and controlled vocabulary for similarity features 
-such as BLAST hits) into a form where the fields can be edited directly 
-(except the reference sequence field).  The edited features are then loaded into 
-the database after all features in the segment's coordinate range are removed 
+The features contained in the current segment are dumped as GFF2.5
+(generic GFF2 with free text wrapped in quotes and controlled
+vocabulary for similarity features such as BLAST hits) into a form
+where the fields can be edited directly (except the reference sequence
+field).  The edited features are then loaded into the database after
+all features in the segment's coordinate range are removed
 
 =head1 FEEDBACK
 
@@ -38,7 +39,7 @@ Email smckay@bcgsc.bc.ca
 package Bio::Graphics::Browser::Plugin::BasicEditor;
 
 use strict;
-use CGI qw/:standard/;
+use CGI qw/:standard *table/;
 use CGI::Carp qw/fatalsToBrowser/;
 use Bio::Graphics::Browser::Plugin;
 use Bio::Graphics::Browser::GFFhelper;
@@ -63,6 +64,7 @@ $ROLLBACK = '/tmp/';
 # Adding an IP address will turn security on
 ####################################################################
 my $ips = <<END;
+192.168.1.10
 END
 ####################################################################
 
@@ -243,7 +245,6 @@ sub annotate {
     }
 
     my $gff;
-    my $db = $self->database;
 
     if ( $rollback ) {
 	$gff = $self->rollback($rollback);

@@ -241,11 +241,13 @@ lib/Bio/DB/Das/BioSQL/Segment.pm
 lib/Bio/DB/Das/Chado.pm
 lib/Bio/DB/Das/Chado/Segment.pm
 lib/Bio/DB/Das/Chado/Segment/Feature.pm
+lib/Bio/DB/Das/Chado/Type.pm
 lib/Bio/DB/GFF/Aggregator/orf.pm
 lib/Bio/DB/GFF/Aggregator/reftranscript.pm
 lib/Bio/DB/GFF/Aggregator/waba_alignment.pm
 lib/Bio/DB/GFF/Aggregator/wormbase_gene.pm
 lib/Bio/Graphics/Browser.pm
+lib/Bio/Graphics/Browser/Constants.pm
 lib/Bio/Graphics/Browser/GFFhelper.pm
 lib/Bio/Graphics/Browser/I18n.pm
 lib/Bio/Graphics/Browser/Markup.pm
@@ -253,6 +255,7 @@ lib/Bio/Graphics/Browser/PadAlignment.pm
 lib/Bio/Graphics/Browser/Plugin.pm
 lib/Bio/Graphics/Browser/Realign.pm
 lib/Bio/Graphics/Browser/Util.pm
+lib/Bio/Graphics/GBrowse_run.pm
 lib/Bio/Graphics/Glyph/allele_tower.pm
 lib/Bio/Graphics/Glyph/connector.pm
 lib/Bio/Graphics/Glyph/drosophila_arrow.pm

@@ -99,6 +99,7 @@ sub annotate {
 
   for my $p (@plugins) {
     next unless $p->type eq 'annotator';
+    my $name = "plugin:".$p->name;
     next unless $page_settings->{features}{$name}{visible};
     my $features = $p->annotate($segment) or next;
     $features->name($name);

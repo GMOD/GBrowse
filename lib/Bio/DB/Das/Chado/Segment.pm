@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.83 2004-12-03 17:00:03 scottcain Exp $
+# $Id: Segment.pm,v 1.84 2004-12-03 19:29:15 scottcain Exp $
 
 =head1 NAME
 
@@ -733,7 +733,7 @@ sub features {
       $stop = $$hashref{fmax};
     }
     if ($feature_id && defined($base_start)) {
-      my $interbase_start = $$hashref{fmin} + $base_start;
+      my $interbase_start = $$hashref{fmin} + $base_start - 1;
       $base_start = $interbase_start + 1;
     } else {
       my $interbase_start = $$hashref{fmin};

@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use File::Copy;
+use Config;
 
 my $ht_target = $ARGV[0]; #target directory
 
@@ -27,7 +28,11 @@ while (my $file = readdir(HTDOCS) ) {
 }
 closedir HTDOCS; 
 
+my $imagedir  = $ht_target . $delim . "images" ;
 my $buttondir = $ht_target . $delim . "images" . $delim . "buttons";
+if (! (-e $imagedir) ) {
+    mkdir $imagedir or die "unable to make $imagedir\n";
+}
 if (! (-e $buttondir) ) {
     print "Making $buttondir...\n";
     mkdir $buttondir or die "unable to make $buttondir\n";
@@ -64,4 +69,5 @@ if (! (-e $tmpdir) ) {
     my $mode = 0777;
     chmod $mode, $tmpdir or die "unable to make $tmpdir world writable\n";
 }
+
 

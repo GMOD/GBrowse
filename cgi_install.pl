@@ -2,15 +2,14 @@
 use strict;
 use warnings;
 use File::Copy;
+use Config;
 
 my $cgi_target = $ARGV[0];
 
 my $delim = '/';
-my $platform = 'linux';
 if ($Config{'osname'} =~ /win/i) {
     $cgi_target =~ s!\/!\\!g;
     $delim = '\\';
-    $platform = 'windows';
 }
 
 print "Installing gbrowse CGI script...\n";

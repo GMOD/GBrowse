@@ -36,7 +36,7 @@ use lib '$OPTIONS{CONF}/gbrowse.conf/';
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: moby_server.PLS,v 1.2 2003-12-15 15:49:36 markwilkinson Exp $
+#$Id: moby_server.PLS,v 1.3 2003-12-24 21:46:08 markwilkinson Exp $
 use SOAP::Transport::HTTP;
 use MobyServices::GbrowseServices;
 use strict;
@@ -46,6 +46,8 @@ my $x = new SOAP::Transport::HTTP::CGI;
 $x->dispatch_with({
     'http://biomoby.org/#GbrowseGetReferenceSeqObj' =>  'MobyServices::GbrowseServices',
     'http://biomoby.org/#GbrowseGetReferenceFasta' =>  'MobyServices::GbrowseServices',
+    'http://biomoby.org/#GbrowseGetReferenceGFF2' =>  'MobyServices::GbrowseServices',
+    'http://biomoby.org/#GbrowseGetReferenceGFF3' =>  'MobyServices::GbrowseServices',
     });
 $x->handle;
 

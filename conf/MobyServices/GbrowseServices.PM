@@ -1,49 +1,49 @@
-#!perl
-use Config;
-use File::Basename qw(&basename &dirname);
-use File::Spec;
-use FindBin '$Bin';
-use Cwd;
-
-my %OPTIONS;
-if (open F,"$Bin/../../GGB.def") {
-  while (<F>) {
-    next if /^\#/;
-    chomp;
-    $OPTIONS{$1} = $2 if /^(\w+)\s*=\s*(.+)/;
-  }
-  close F;
-}
-$OPTIONS{CONF} ||= '/usr/local/apache/conf';
-
-my $dir = dirname($0);
-$file   = shift || File::Spec->catfile($dir,basename($0, '.PM'));
-
-open OUT,">$file" or die "Can't create $file: $!";
-
-print "Extracting $file (with variable substitutions)\n";
-
-my $startperl = $Config{startperl} ne '#!perl' 
-  ? $Config{startperl}
-  : "#!$Config{perlpath}";
-
-print OUT <<"!GROK!THIS!";
-$startperl -w
-package MobyServices::GbrowseServices;
-
-###################################################################
-# Non-modperl users should change this variable if needed to point
-# to the directory in which the configuration files are stored.
+##!perl
+#use Config;
+#use File::Basename qw(&basename &dirname);
+#use File::Spec;
+#use FindBin '$Bin';
+#use Cwd;
 #
-\$CONF_DIR  = '$OPTIONS{CONF}/gbrowse.conf';
+#my %OPTIONS;
+#if (open F,"$Bin/../../GGB.def") {
+#  while (<F>) {
+#    next if /^\#/;
+#    chomp;
+#    $OPTIONS{$1} = $2 if /^(\w+)\s*=\s*(.+)/;
+#  }
+#  close F;
+#}
+#$OPTIONS{CONF} ||= '/usr/local/apache/conf';
 #
-###################################################################
-
-!GROK!THIS!
-
-# In the following, perl variables are not expanded during extraction.
-
-print OUT <<'!NO!SUBS!';
+#my $dir = dirname($0);
+#$file   = shift || File::Spec->catfile($dir,basename($0, '.PM'));
+#
+#open OUT,">$file" or die "Can't create $file: $!";
+#
+#print "Extracting $file (with variable substitutions)\n";
+#
+#my $startperl = $Config{startperl} ne '#!perl' 
+#  ? $Config{startperl}
+#  : "#!$Config{perlpath}";
+#
+#print OUT <<"!GROK!THIS!";
+#$startperl -w
+#package MobyServices::GbrowseServices;
+#
+####################################################################
+## Non-modperl users should change this variable if needed to point
+## to the directory in which the configuration files are stored.
+##
+#\$CONF_DIR  = '$OPTIONS{CONF}/gbrowse.conf';
+##
+####################################################################
+#
+#!GROK!THIS!
+#
+## In the following, perl variables are not expanded during extraction.
+#
+#print OUT <<'!NO!SUBS!';
 
 
 
@@ -51,7 +51,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #====================================================================
-#$Id: GbrowseServices.PM,v 1.6 2003-12-22 19:51:01 markwilkinson Exp $
+#$Id: GbrowseServices.PM,v 1.7 2003-12-24 21:46:08 markwilkinson Exp $
 
 use strict;
 use Text::Shellwords;
@@ -135,6 +135,68 @@ sub GbrowseGetReferenceGFF2 {
     #print STDERR (responseHeader($authURI) . $MOBY_RESPONSE . responseFooter);
     return SOAP::Data->type('base64' => (responseHeader($authURI) . $MOBY_RESPONSE . responseFooter));    
 }
+
+
+sub GbrowseGetReferenceDNASequenceWithFeatures {
+    my ($caller, $data) = @_;
+    _settings();
+    my ($authURI, $validNSs) = _doValidationStuff();
+
+    my $MOBY_RESPONSE = "";
+    foreach my $source($CONFIG->sources){
+        $CONFIG->source($source); # set the current source
+        next unless (my $db = $dbh{$source});  # get the database object
+        my (@inputs)= genericServiceInputParser($data); # ([SIMPLE, $queryID, $simple],...)
+        next unless (scalar(@inputs));
+        foreach (@inputs){
+            my ($articleType, $qID, $input) = @{$_};
+            unless (($articleType == SIMPLE) && ($input)){
+                $MOBY_RESPONSE .= simpleResponse("", "", $qID) ;
+                next;
+            } else {
+                my $namespace = getSimpleArticleNamespaceURI($input);
+                (($MOBY_RESPONSE .= simpleResponse("", "", $qID)) && next) unless validateThisNamespace($namespace, @{$validNSs});
+                my ($identifier) = getSimpleArticleIDs($input);  # note array output!
+                my $seg = $db->segment(-name => $identifier);
+                (($MOBY_RESPONSE .= simpleResponse("", "", $qID)) && next) unless $seg;
+                my $seq = $seg->seq; $seq =~ s/\S//g;
+                my $length = $seg->length; # DNASequenceWithGFFFeatures
+                my $mobyresp = "<moby:DNASequenceWithGFFFeatures moby:namespace='$namespace' moby:id='$identifier'>
+                <moby:String moby:namespace='' moby:id=''>$seq</moby:String>
+                <moby:Integer moby:namespace='' moby:id=''>$length</moby:Integer>
+                ";
+                foreach my $feat($seg->get_SeqFeatures){$mobyresp .="
+                    <moby:BasicGFFSequenceFeature namespace='' id=''>
+                        <String namespace='' id='' articleName='reference'></String>
+                        <String namespace='' id='' articleName='source'></String>
+                        <String namespace='' id='' articleName='method'></String>
+                        <Integer namespace='' id='' articleName='start'></Integer>
+                        <Integer namespace='' id='' articleName='stop'></Integer>
+                        <Float namespace='' id='' articleName='score'></Float>
+                        <String namespace='' id='' articleName='strand'></String>
+                        <String namespace='' id='' articleName='frame'></String>
+                        <String namespace='' id='' articleName='phase'></String>"
+                        
+                }
+                my $gff = join "\n", map {$_->gff_string} ($seg->get_SeqFeatures);
+                $MOBY_RESPONSE .= simpleResponse("<moby:GFF2 moby:namespace='$namespace' moby:id='$identifier'>\n$gff\n</moby:GFF2>", "", $qID);
+            }
+        }
+    }
+    #print STDERR (responseHeader($authURI) . $MOBY_RESPONSE . responseFooter);
+    return SOAP::Data->type('base64' => (responseHeader($authURI) . $MOBY_RESPONSE . responseFooter));    
+}
+
+#BasicGFFSequenceFeature	urn:lsid:biomoby.org:objectrelation:hasa	String(reference)	An object containing all components necessary to represent a simple GFF-compliant sequence feature (the content is NOT validated against the GFF specification)
+#BasicGFFSequenceFeature	urn:lsid:biomoby.org:objectrelation:hasa	String(source)	An object containing all components necessary to represent a simple GFF-compliant sequence feature (the content is NOT validated against the GFF specification)
+#BasicGFFSequenceFeature	urn:lsid:biomoby.org:objectrelation:hasa	String(method)	An object containing all components necessary to represent a simple GFF-compliant sequence feature (the content is NOT validated against the GFF specification)
+#BasicGFFSequenceFeature	urn:lsid:biomoby.org:objectrelation:hasa	Integer(start)	An object containing all components necessary to represent a simple GFF-compliant sequence feature (the content is NOT validated against the GFF specification)
+#BasicGFFSequenceFeature	urn:lsid:biomoby.org:objectrelation:hasa	Integer(stop)	An object containing all components necessary to represent a simple GFF-compliant sequence feature (the content is NOT validated against the GFF specification)
+#BasicGFFSequenceFeature	urn:lsid:biomoby.org:objectrelation:hasa	Float(score)	An object containing all components necessary to represent a simple GFF-compliant sequence feature (the content is NOT validated against the GFF specification)
+#BasicGFFSequenceFeature	urn:lsid:biomoby.org:objectrelation:hasa	String(strand)	An object containing all components necessary to represent a simple GFF-compliant sequence feature (the content is NOT validated against the GFF specification)
+#BasicGFFSequenceFeature	urn:lsid:biomoby.org:objectrelation:hasa	String(frame)	An object containing all components necessary to represent a simple GFF-compliant sequence feature (the content is NOT validated against the GFF specification)
+#BasicGFFSequenceFeature	urn:lsid:biomoby.org:objectrelation:hasa	String(phase)	An object containing all components necessary to represent a simple GFF-compliant sequence feature (the content is NOT validated against the GFF specification)
+#BasicGFFSequenceFeature	urn:lsid:biomoby.org:objectrelation:has	multi_key_value_pair(column9_tag_value)	An object containing all components necessary to represent a simple GFF-compliant sequence feature (the content is NOT validated against the GFF specification)
 
 sub GbrowseGetReferenceGFF3 {
     my ($caller, $data) = @_;
@@ -252,7 +314,7 @@ sub GbrowseGetReferenceSeqObj {
 
 #===========================================
 
-!NO!SUBS!
-close OUT or die "Can't close $file: $!";
-chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
-exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
+#!NO!SUBS!
+#close OUT or die "Can't close $file: $!";
+#chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
+#exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';

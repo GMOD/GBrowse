@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.36 2003-07-11 18:00:36 scottcain Exp $
+# $Id: Segment.pm,v 1.37 2003-07-23 20:49:54 scottcain Exp $
 
 =head1 NAME
 
@@ -434,21 +434,34 @@ sub features {
   my $srcfeature_id = $self->{srcfeature_id};
 
   $self->{factory}->{dbh}->do("set enable_seqscan=0");
-  $self->{factory}->{dbh}->do("set enable_hashjoin=0");
+#  $self->{factory}->{dbh}->do("set enable_hashjoin=0");
 
   my $sth = $self->{factory}->{dbh}->prepare("
     select distinct f.name,fl.fmin,fl.fmax,fl.strand,f.type_id,f.feature_id
-    from feature f, featureloc fl
+    from feature f, featureslice($interbase_start, $rend) fl
     where
-      $sql_types 
+      $sql_types
       fl.srcfeature_id = $srcfeature_id and
-      f.feature_id  = fl.feature_id and
-      $sql_range
+      f.feature_id  = fl.feature_id
     order by type_id
        ");
    $sth->execute or $self->throw("feature query failed"); 
-   $self->{factory}->{dbh}->do("set enable_hashjoin=1");
+#   $self->{factory}->{dbh}->do("set enable_hashjoin=1");
    $self->{factory}->{dbh}->do("set enable_seqscan=1");
+
+# Old query (doesn't use RTree index):
+#
+#    select distinct f.name,fl.fmin,fl.fmax,fl.strand,f.type_id,f.feature_id
+#    from feature f, featureloc fl
+#    where
+#      $sql_types
+#      fl.srcfeature_id = $srcfeature_id and
+#      f.feature_id  = fl.feature_id and
+#      $sql_range
+#    order by type_id
+
+
+
 
 #$self->{factory}->{dbh}->trace(0);
 #take these results and create a list of Bio::SeqFeatureI objects

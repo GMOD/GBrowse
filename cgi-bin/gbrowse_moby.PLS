@@ -1,0 +1,490 @@
+#!perl
+use Config;
+use File::Basename qw(&basename &dirname);
+use File::Spec;
+use FindBin '$Bin';
+use Cwd;
+
+my %OPTIONS;
+if (open F,"$Bin/../GGB.def") {
+  while (<F>) {
+    next if /^\#/;
+    chomp;
+    $OPTIONS{$1} = $2 if /^(\w+)\s*=\s*(.+)/;
+  }
+  close F;
+}
+$OPTIONS{CONF} ||= '/usr/local/apache/conf';
+
+my $dir = dirname($0);
+$file   = shift || File::Spec->catfile($dir,basename($0, '.PL','.PLS'));
+
+open OUT,">$file" or die "Can't create $file: $!";
+
+print "Extracting $file (with variable substitutions)\n";
+
+my $startperl = $Config{startperl} ne '#!perl' 
+  ? $Config{startperl}
+  : "#!$Config{perlpath}";
+
+print OUT <<"!GROK!THIS!";
+$startperl -w
+
+###################################################################
+# Non-modperl users should change this variable if needed to point
+# to the directory in which the configuration files are stored.
+#
+\$CONF_DIR  = '$OPTIONS{CONF}/gbrowse.conf';
+#
+###################################################################
+\$VERSION   = $OPTIONS{VERSION};
+
+!GROK!THIS!
+
+print OUT <<'!NO!SUBS!';
+# $Id: gbrowse_moby.PLS,v 1.1 2003-10-13 17:10:26 markwilkinson Exp $
+
+
+# use lib "/usr/local/GB/GMOD_LIBS/moby-live/Perl";
+use MOBY::Client::Central;
+use MOBY::Client::Service;
+use MOBY::CommonSubs qw(:all);
+use XML::DOM;
+use LWP;
+use Carp;
+use Bio::Graphics::Browser::Util;
+use CGI qw(:standard *table *TR);
+use strict;
+
+=head1 NAME
+
+askMOBY -- a Gbrowse accessory that enables browsing of MOBY data
+
+=head1 SYNOPSIS
+
+In 0X.organism.conf:
+     
+ [ORIGIN]
+ link         = http://yoursite.com/cgi-bin/askMOBY?source=$source&name=$name&class=$class&method=$method&ref=$ref&description=$description
+ feature      = origin:Genbank
+ glyph        = anchored_arrow
+ fgcolor      = orange
+ font2color   = red
+ linewidth    = 2
+ height       = 10
+ description  = 1
+ key          = Definition line
+ link_target  = _MOBY
+
+
+AND/OR
+
+
+ [db_xref:DETAILS]
+ URL = http://brie4.cshl.org:9320/cgi-bin/askMOBY?namespace=$tag;id=$value
+
+
+=head1 DESCRIPTION
+
+This script will take information passed from a click on
+a Gbrowse feature, or a click on a configured DETAILS GFF
+attribute type, and initiate a MOBY browsing session with
+information from that link.  Most information is discarded.
+The only useful information to MOBY is a "namespace" and an
+id number within that namespace.
+
+Generally speaking, namespaces in Gbrowse will have to be
+mapped to a namespace in the MOBY namespace ontology (which
+is derived from the Gene Ontology Database Cross-Reference
+Abbreviations list).  Currently, this requires editing of the
+askMOBY code, where a hash named source2namespace will
+map the GFF source (column 2) value into a MOBY namespace
+
+=head1 REQUIRED LIBRARIES
+
+This script requires libraries from the BioMOBY project.  Currently
+these are only available from the CVS.  Anonymous checkout of the
+BioMOBY project can be accomplished as follows:
+    
+cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/moby login
+cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/moby co moby-live
+
+You will then need to add a "use lib" line in this script that
+points to moby-live/Perl/
+
+
+=head1 USAGE
+
+askMOBY understands the following variables passed by GET:
+
+ source      - converted into a MOBY namespace by %source2namespace
+ namespace   - used verbatim as a valid MOBY namespace
+ name        - used verbatim as a MOBY id interpreted in the namespace
+ id          - used verbatim as a MOBY id interpreted in the namespace
+ class       - this is the GFF column 9 class; used for the page title
+ objectclass - this should be a MOBY Class ontology term
+               (becomes 'Object' by default)
+ object      - contains the XML of a valid MOBY object 
+
+Note that you MUST at least pass a namespace-type variable (source/namespace)
+and an id-type variable (name/id) in order to have a successful MOBY
+call.
+
+=head1 EXAMPLES
+
+=head2 Simple GFF
+
+If your GFF were:
+
+      A22344  Genbank  origin  1000  2000  87  +  .
+ 
+You would set your configuration file as follows:
+ 
+     [ORIGIN]
+     link         = http://yoursite.com/cgi-bin/askMOBY?source=$source&name=$name&class=$class
+     feature      = origin:Genbank
+
+and you would edit the askMOBY script as follows:
+
+      my %source2namespace = (
+         #   GFF-source           MOBY-namespace
+            'Genbank'       =>      'NCBI_Acc',
+      );
+
+this maps the GFF source tag "Genbank" to the MOBY namespace "NCBI_Acc"
+
+=cut
+
+=head2 GFF With non-MOBY Attributes
+
+If your GFF were:
+
+      A22344  Genbank origin  1000  2000 87 + . Locus CDC23
+
+You would set your configuration file as follows:
+ 
+     [ORIGIN]
+     link         = http://yoursite.com/cgi-bin/askMOBY?source=$source&name=$name&class=$class
+     feature      = origin:Genbank
+
+and you might also set a DETAILS call to handle the Locus Xref:
+(notice that we use the 'source' tag to force a translation of
+the foreign namespace into a MOBY namespace)
+
+     [db_xref:DETAILS]
+     URL = http://brie4.cshl.org:9320/cgi-bin/askMOBY?source=$tag;id=$value
+
+then to handle the mapping of Locus to YDB_Locus as well
+as the Genbank GFF source tag you would
+edit the source2namespace hash in askMOBY to read:
+
+      my %source2namespace = (
+         #   GFF-source           MOBY-namespace
+            'Genbank'       =>      'NCBI_Acc',
+            'Locus'         =>      'YDB_Locus',
+      );
+
+=cut
+
+=head2 GFF With MOBY Attributes
+
+If your GFF were (NCBI_gi is a valid MOBY namespace):
+
+      A22344  Genbank origin  1000  2000 87 + . NCBI_gi 118746
+
+You would set your configuration file as follows:
+ 
+     [ORIGIN]
+     link         = http://yoursite.com/cgi-bin/askMOBY?source=$source&name=$name&class=$class
+     feature      = origin:Genbank
+
+and you might also set a DETAILS call to handle the NCBI_gi Xref:
+(notice that we now use the 'namespace' tag to indicate that
+the tag is already a valid MOBY namespace)
+
+     [db_xref:DETAILS]
+     URL = http://brie4.cshl.org:9320/cgi-bin/askMOBY?namespace=$tag;id=$value
+
+Since there is no need to map the namespace portion, we now
+only need to handle the Genbank GFF source as before:
+
+      my %source2namespace = (
+         #   GFF-source           MOBY-namespace
+            'Genbank'       =>      'NCBI_Acc',
+      );
+
+=head1 HINTS
+
+-The full listing of valid MOBY namespaces is available at:
+    http://mobycentral.cbr.nrc.ca/cgi-bin/types/Namespaces
+
+-A useful mapping to make is to put the organism name into the
+Global_Keyword namespace.  This will trigger discovery of MedLine
+searches for papers about that organism.
+
+
+
+=cut
+
+
+my $conf_dir  = conf_dir($CONF_DIR);  # conf_dir() is exported from Util.pm
+my $config = open_config($CONF_DIR);  # open_config() is exported from Util.pm
+
+my %source2namespace = (
+#   GFF-source      MOBY-namespace
+    'Genbank'       =>      'NCBI_Acc',
+
+                    );
+
+param('action')?&execute:&init;
+
+
+sub init {
+    # Gbrowse    MOBY
+    # source   = namespace
+    # name     = id
+    my $class = param('class');  # this is a Gbrowse variable, (the GFF column 9 class)
+    $class ||=param('namespace');  # for MOBY calls, we will need to use the namespace rather than the GFF class
+    $class ||=param('source');  # failsafe
+    
+    my $namespace = param('source');  # this is a Gbrowse variable (GFF Column 2)
+    $namespace ||= param('namespace');  # if this is a MOBY call, the $source variable will still be undef, so take the namespace as the "source"
+
+    my $id = param('name');  # name is a Gbrowse variable    
+    $id ||= param('id'); # for MOBY calls we call it "id" not "name", but they are ~the same thing
+
+    unless ($namespace && $id){
+        print_top("MOBY Call failed");
+        print $config->header || h1("MOBY Call Failed");
+        print h1("MOBY Call Failed"),"Both a namespace and an id must be passed";
+        return;
+    }
+        
+    my $objectclass =param('objectclass');  # for MOBY calls we may have a data class (e.g. VirtualSequence)
+    $objectclass ||="Object";  # by default, the base object class is "Object"
+    my $XML_Object = param('object');  # a recursive MOBY call may pass the current MOBY Object (XML) as a hidden field
+    
+    print_top("BioMOBY Details: $objectclass - $class:$id");
+    print $config->header || h1("$objectclass - $class:$id Details");
+    print p;
+    
+    # okay, prepare the list of list's input structure for the MOBY::Central->findService call
+    my @namespace;
+    if (param('namespace')){  # if this is already a MOBY call (i.e. we are calling it 'namespace')
+        push @namespace, $namespace;  # then use it as-is
+    } else {  # otherwise we are using the namespace of Gbrowse, which is not consistent with the MOBY namespace ontology
+        push @namespace, $source2namespace{$namespace};  # so do a translation from Gbrowse -> MOBY namespace
+    }
+
+    Delete_all();  # reset all CGI parameters
+    my @Services = &findService($objectclass, \@namespace);
+    return unless scalar(@Services);
+
+    print start_table();
+    foreach my $SERVICE(@Services){
+        
+            my $form= join "", (start_form(),
+            hidden('namespace',$namespace[0]),
+            hidden('id',$id),
+            hidden('servicename',$SERVICE->name),
+            hidden('authority',$SERVICE->authority),
+            hidden('object', $XML_Object),
+            hidden('action',"execute"),
+            submit("Execute This Service"),
+            end_form());
+            my @outtypes;
+            my $collection = 0;
+            if ($SERVICE->output->[0]->isCollection){
+                $collection = 1;
+                my $simples = $SERVICE->output->[0]->Simples;
+                foreach (@{$simples}){
+                    #print STDERR "\n\nfound simple article\n\n";
+                    my $ob = $_->objectType;
+                    $ob =~ s/.*\:(\S+)/$1/;
+                    my $link = getObjectDescription($ob);
+                    push @outtypes, $link;
+                }
+            } else {
+                my $ob = $SERVICE->output->[0]->objectType;
+                $ob =~ s/.*\:(\S+)/$1/;
+                my $link = getObjectDescription($ob);
+                push @outtypes, $link;
+            }
+            print TR({-valign=>'top', -class=>'databody'},
+            th({-align => 'left', -valign=>'top', -class=>'datatitle'},"Service Name: "),
+            td($SERVICE->name, "provided by: ".($SERVICE->authority),"")),
+
+            TR({-valign=>'top', -class=>'databody'},
+            th({-align => 'left', -valign=>'top', -class=>'datatitle'},"Service Type: "),
+            td(b($SERVICE->type))),
+               
+            TR({-valign=>'top', -class=>'databody'},
+            th({-align => 'left', -valign=>'top', -class=>'datatitle'},"Provides: "),
+            td(b($collection?"Collection of ":"", (join ",", @outtypes)))),
+            
+            TR({-valign=>'top', -class=>'databody'},
+            th({-align => 'left', -valign=>'top', -class=>'datatitle'},"Description: "),
+            td(b(i($SERVICE->description)))),
+
+            TR({-valign=>'top', -class=>'databody'},
+            th({-align => 'left', -valign=>'top', -class=>'datatitle'},"Execute: "),
+            td($form)),
+
+            TR({-valign=>'top', -class=>'databody'},
+            th({-colspan=>3,-align => 'left', -valign=>'top', -class=>'datatitle'},"")),
+    }
+    print end_table();
+    print_bottom($config,"BioMOBY project:  http://www.biomoby.org");
+}
+
+sub getObjectDescription {
+    my $ob = shift;
+    return unless $ob;
+    my $ua = LWP::UserAgent->new;
+    my $req = HTTP::Request->new(GET => "http://mobycentral.cbr.nrc.ca/cgi-bin/types/Objects?lsid_name=$ob");
+    my $res = $ua->request($req);
+    return unless $res->is_success;
+    my $content = $res->content;
+    return unless $content =~ /\S+\t\S+\t\S+\t(.*)/;
+    $content = $1;
+    $content =~ s/\'//g;
+    $content =~ s/\"//g;
+    return "<a href='http://mobycentral.cbr.nrc.ca/cgi-bin/types/Objects?lsid_name=$ob' alt='$content' title='$content'/>$ob</a>";
+}
+
+sub findService {
+    my ($class, $namespace) = @_;  # class is scalar, $namespace is listref    
+
+    # put together a simple article query
+    my @simpleArticle = ($class, $namespace);
+    my @input = (\@simpleArticle);
+
+    my $Central = MOBY::Client::Central->new();
+    my ($Services, $REG) = $Central->findService(input => \@input, expandObjects => 1, expandServices => 1);
+    unless ($Services){
+            print h2("Service discovery failed with the following errror: ").i($REG->message).p;
+            return
+    }
+    unless (scalar @{$Services}){
+            print h2("No BioMOBY Services were discovered that could operate on @$namespace[0] type data").p;
+            return
+    }
+    return @$Services
+}
+
+sub execute {
+    
+    my $namespace = param('namespace');
+    my $id = param('id');
+    my $service = param('servicename');
+    my $auth = param('authority');
+    my $OBJECT = param('object');  # this is XML
+    $OBJECT ||= "<Object namespace='$namespace' id='$id'/>";  # this should never happen, but just in case... make a default base object
+
+    print_top("BioMOBY Details: $namespace:$id");
+    print $config->header || h1("$namespace:$id Details");
+    print p;
+    
+    my $MOBY = MOBY::Client::Central->new();
+    my ($SI, $reg) = $MOBY->findService(authURI => $auth,
+                       serviceName => $service);
+    $SI = $$SI[0]; # there can only be one, since authURI/serviceName is a unique index
+
+    my $WSDL = $MOBY->retrieveService($SI); # get the WSDL
+    my $SERVICE = MOBY::Client::Service->new(service => $WSDL);  # prepare the connection stubs
+    
+    print h2("\nBioMOBY Service: ".($SI->name)),i($SI->description),hr,h2("\nResult for $namespace:$id\n");
+    my $result = $SERVICE->execute(XMLinputlist => [['', $OBJECT]]); # execute the service with the given input data; this *assumes* that the arguments are not named!!!
+
+    unless ($result){
+        print h3("Service returned no response");
+        exit 0;
+    }
+    my ($collections, $objects) = extractResponseArticles($result);
+    unless (scalar @$objects || scalar @$collections){
+        print h3("Service Response contained no data: \n<br><pre>".(escapeHTML($result))."</pre>\n");
+        exit 0;
+    }
+    #print h3("<pre>".(escapeHTML($result))."</pre>\n");
+    Delete_all();  # reset all CGI parameters so we don't conflict
+    print start_table;
+    my @colls = @{$collections};  # flatten the list of lists
+    foreach my $objlist($objects, @colls){  # we just treat collections as simples here.
+        foreach (@{$objlist}){
+            my $MOBYClass = $_->getTagName;
+            my $namespace = $_->getAttributeNode('namespace');
+            $namespace = $namespace?($namespace->getValue):"";
+            my $id = $_->getAttributeNode('id');
+            $id = $id ?($id->getValue):"";
+            print TR({-valign=>'top', -class=>'databody'},
+                th({-align => 'left', -valign=>'top', -class=>'datatitle'},"ID: "),
+                td(b($namespace.":".$id),
+                   "  ",
+                   start_form,
+                   hidden("object", $_->toString),
+                   hidden("namespace", $namespace),
+                   hidden("id",$id),
+                   hidden("objectclass",$MOBYClass),
+                   submit("Re-query MOBY with This Data"),end_form                   
+                   ));
+            print TR({-valign=>'top', -class=>'databody'},
+                th({-align => 'left', -valign=>'top', -class=>'datatitle'},"Data Type: "),
+                td($MOBYClass));
+            &printIt($_);    
+        }
+    }
+    print end_table;
+    print_bottom("of the askMOBY executable written by the <a href='http://www.biomoby.org'>BioMOBY project</a> (http://www.biomoby.org)");    
+}
+
+sub printIt {
+    my ($this) = @_;
+    foreach my $subnode($this->getChildNodes){
+        next unless ($subnode->getNodeType == ELEMENT_NODE);
+        if ($subnode->getTagName eq "CrossReference"){
+            &processXrefs($subnode);
+            last;
+        }
+    }
+    foreach my $subnode($this->getChildNodes){
+        next unless  (($subnode->getNodeType == TEXT_NODE) || ($subnode->getNodeType == CDATA_SECTION_NODE));
+        my $article = $this->getAttributeNode('articleName');
+        $article = $article?($article->getValue):"";
+        my $content = $subnode->toString;
+        $content =~ s/(\S{100})/$1\<br\>/g;
+        next unless ($content =~ /\S/);  # meaningless whitespace is removed
+        print TR({-valign=>'top', -class=>'databody'},
+            th({-align => 'left', -valign=>'top', -class=>'datatitle'},"$article "),
+            td("<pre>$content</pre>"));
+    }
+    foreach my $subnode($this->getChildNodes){
+        next unless ($subnode->getNodeType == ELEMENT_NODE);
+        next if ($subnode->getTagName eq "CrossReference"); 
+        &printIt($subnode);
+    }
+}
+
+sub processXrefs {
+    my ($XrefBlock) = @_;
+    foreach my $xref ($XrefBlock->getChildNodes()){
+        next unless $xref->getNodeType == ELEMENT_NODE;
+        my $ns = $xref->getAttributeNode("namespace");
+        next unless $ns;
+        $ns = $ns->getValue();
+        next unless $ns;
+        my $id = $xref->getAttributeNode("id");
+        next unless $id;
+        $id = $id->getValue();        
+        next unless $id;
+        my $CGI = CGI->new();
+        $CGI->delete_all;
+        print TR({-valign=>'top', -class=>'databody'},
+            th({-align => 'left', -valign=>'top', -class=>'datatitle'},"CrossReference "),
+            td("<a href=".($CGI->url)."?namespace=$ns&id=$id>$ns:$id</a>"));        
+    }
+}
+
+!NO!SUBS!
+close OUT or die "Can't close $file: $!";
+chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
+exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';

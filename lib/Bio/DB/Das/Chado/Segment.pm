@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.37 2003-07-23 20:49:54 scottcain Exp $
+# $Id: Segment.pm,v 1.38 2003-07-31 18:51:28 scottcain Exp $
 
 =head1 NAME
 
@@ -518,22 +518,8 @@ sub seq {
   my ($ref,$class,$base_start,$stop,$strand)
     = @{$self}{qw(sourceseq class start end strand)};
 
-#$self->{factory}->{dbh}->trace(1);
-
   my $feat_id = $self->{srcfeature_id};
 
-    warn "src_id:$feat_id, base_start $base_start stop $stop\n" if DEBUG;
-
-  my $sth = $self->{factory}->{dbh}->prepare("
-     select residues from feature 
-     where feature_id = $feat_id ");
-  $sth->execute or $self->throw("seq query failed");
-
-#$self->{factory}->{dbh}->trace(0);
-
-  my $hash_ref = $sth->fetchrow_hashref;
-  my $seq = $$hash_ref{'residues'};
- 
   my $has_start = defined $base_start;
   my $has_stop  = defined $stop;
 
@@ -545,18 +531,30 @@ sub seq {
     $reversed++;
   }
 
-  $base_start -= 1;
-  $stop -= 1;
-
+  my $sth;
   if (!$has_start and !$has_stop) {
-    #do nothing, I already have the full sequence
+    $sth = $self->{factory}->{dbh}->prepare("
+     select residues from feature
+     where feature_id = $feat_id ");
   } elsif (!$has_start) {
-    $seq = substr($seq,0,$stop);    
+    $sth = $self->{factory}->{dbh}->prepare("
+     select substring(residues for $stop) from feature
+     where feature_id = $feat_id ");
   } elsif (!$has_stop) {
-    $seq = substr($seq,$base_start);
+    $sth = $self->{factory}->{dbh}->prepare("
+     select substring(residues from $base_start) from feature
+     where feature_id = $feat_id ");
   } else { #has both start and stop
-    $seq = substr($seq,$base_start, ($stop-$base_start+1));
+    my $sslen = $stop-$base_start+1;
+    $sth = $self->{factory}->{dbh}->prepare("
+     select substring(residues from $base_start for $sslen) from feature
+     where feature_id = $feat_id ");
   }
+
+  $sth->execute or $self->throw("seq query failed");
+                                                                                                     
+  my $array_ref = $sth->fetchrow_arrayref;
+  my $seq = $$array_ref[0]; 
 
   if ($reversed) {
     $seq = reverse $seq;

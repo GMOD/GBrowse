@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.25 2003-07-08 03:36:36 scottcain Exp $
+# $Id: Chado.pm,v 1.26 2003-07-31 18:51:28 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -323,7 +323,7 @@ sub get_feature_by_name {
        where fs.synonym_id = s.synonym_id and
        s.synonym_sgml ilike $quoted_name
        ");
-    $sth->execute or throw("getting the feature_ids failed");
+    $sth->execute or $self->throw("getting the feature_ids failed");
 
 
     # prepare sql queries for use in while loops

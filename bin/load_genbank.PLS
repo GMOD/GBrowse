@@ -19,6 +19,7 @@ $Config{startperl}
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
+# $Id: load_genbank.PLS,v 1.2 2003-06-30 20:56:54 lstein Exp $
 use strict;
 use Bio::DB::GFF;
 use Getopt::Long;
@@ -56,6 +57,7 @@ e.g. -d instead of --database.
    --proxy     <proxy>       Proxy server to use for remote access
    --file                    Arguments that follow are Genbank/EMBL file names (default)
    --accession               Arguments that follow are genbank accession numbers
+   --stdout                  Write converted GFF file to stdout rather than loading
 
 =head1 SEE ALSO
 
@@ -73,8 +75,73 @@ disclaimers of warranty.
 
 =cut
 
+package Bio::DB::GFF::Adaptor::biofetch_to_stdout;
+use CGI 'escape';
+use Bio::DB::GFF::Util::Rearrange;
+use Bio::DB::GFF::Adaptor::biofetch;
+use vars '@ISA';
+@ISA = 'Bio::DB::GFF::Adaptor::biofetch';
 
-my ($DSN,$ADAPTOR,$CREATE,$USER,$PASSWORD,$FASTA,$ACC,$FILE,$PROXY);
+sub new {
+  my $class = shift;
+  my $self  = bless {},$class;
+  my ($proxy) = rearrange(['PROXY'],@_);
+  if ($proxy) {
+    my @args = ref($proxy) ? @$proxy : eval $proxy;
+    $self->{_proxy} = \@args if @args;
+  }
+  $self;
+}
+
+sub load_gff_line {
+  my ($self,$options) = @_;
+  # synthesize GFF3-compatible line
+  my @attributes;
+  if (my $parent = $options->{gname}) {
+     push @attributes,"Parent=".escape($parent) unless $options->{method} =~ /^(mRNA|gene)$/;
+     push @attributes,"ID=".escape($parent);
+  }
+  if (my $tstart = $options->{tstart}) {
+    my $tstop    = $options->{tstop};
+    my $target   = escape($options->{gname});
+    push @attributes,"Target=$target+$tstart+$tstop";
+  }
+  my %a;
+  if (my $attributes = $options->{attributes}) {
+    for my $a (@$attributes) {
+      my ($tag,$value) = @$a;
+      push @{$a{escape($tag)}},escape($value);
+    }
+    for my $a (keys %a) {
+       push @attributes,"$a=".join(',',@{$a{$a}});
+    }
+  }
+  my $last_column = join ';',@attributes;
+  if ($options->{method} eq 'origin') {
+     print "##sequence-region $options->{gname} $options->{start} $options->{stop}\n";
+  }
+  print join("\t",@{$options}{qw(ref source method start stop score strand phase)},$last_column),"\n";
+}
+
+sub load_sequence_string {
+  my $self = shift;
+  my ($acc,$seq)  = @_;
+  $seq =~ s/(.{1,60})/$1\n/g;
+  print ">$acc\n\L$seq\U\n";
+}
+
+sub setup_load {
+   my $self = shift;
+   print "##gff-version 3\n";
+}
+
+sub finish_load { }
+
+1;
+
+package main;
+
+my ($DSN,$ADAPTOR,$CREATE,$USER,$PASSWORD,$FASTA,$ACC,$FILE,$PROXY,$STDOUT);
 
 GetOptions ('dsn:s'       => \$DSN,
 	    'user:s'      => \$USER,
@@ -82,6 +149,7 @@ GetOptions ('dsn:s'       => \$DSN,
             'accession'   => \$ACC,
             'file'        => \$FILE,
             'proxy:s'     => \$PROXY,
+            stdout        => \$STDOUT,
 	    create        => \$CREATE) or die <<USAGE;
 Usage: $0 [options] <gff file 1> <gff file 2> ...
 Load a Bio::DB::GFF database from GFF files.
@@ -110,7 +178,7 @@ USAGE
 
 # some local defaults
 $DSN     ||= 'dbi:mysql:test';
-$ADAPTOR = 'biofetch';
+$ADAPTOR = $STDOUT ? 'biofetch_to_stdout' : 'biofetch';
 
 my @auth;
 push @auth,(-user=>$USER)     if defined $USER;
@@ -140,7 +208,6 @@ if ($ACC && !$FILE) {
     print STDERR $result ? "ok\n" : "failed\n";
   }
 }
-
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

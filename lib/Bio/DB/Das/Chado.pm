@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.35 2004-01-28 06:26:41 allenday Exp $
+# $Id: Chado.pm,v 1.36 2004-03-11 00:33:26 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -135,7 +135,8 @@ sub new {
   my $sth = $dbh->prepare("select ct.cvterm_id,ct.name
                            from cvterm ct, cv c 
                            where ct.cv_id=c.cv_id and
-                           c.name IN ('SO','Sequence Ontology','relationship type','Relationship Ontology')")
+                           c.name IN ('SO','Sequence Ontology',
+                               'relationship type','Relationship Ontology')")
     or warn "unable to prepare select cvterms";
   $sth->execute or $self->throw("unable to select cvterms");
 
@@ -311,6 +312,8 @@ sub get_feature_by_name {
   my ($name, $class, $ref, $base_start, $stop) 
        = $self->_rearrange([qw(NAME CLASS REF START END)],@_);
 
+   warn "name:$name in get_feature_by_name" if DEBUG;
+
   my (@features,$sth);
   
   if ($class && $class eq 'GO') {
@@ -320,8 +323,9 @@ sub get_feature_by_name {
     my @GO_names=qw('GO'
                     'cellular_component'
                     'molecular_function'
-                    'biological_process');
-    push @GO_names, "'Gene Ontology'";
+                    'biological_process'
+                    'Gene Ontology'
+                      );
 
     my $GO_names = join ',', @GO_names;
     $sth = $self->{dbh}->prepare("
@@ -385,8 +389,38 @@ sub get_feature_by_name {
     $isth->execute($$feature_id_ref{'feature_id'})
              or $self->throw("getting feature info failed");
 
+    if ($isth->rows == 0) { #this might be a srcfeature
+
+      warn "$name might be a srcfeature" if DEBUG;
+
+      my $is_srcfeature_query = $self->{dbh}->prepare("
+         select srcfeature_id from featureloc where srcfeature_id=? limit 1
+      ");
+      $is_srcfeature_query->execute($$feature_id_ref{'feature_id'})
+             or $self->throw("checking if feature is a srcfeature failed");
+
+      if ($is_srcfeature_query->rows == 1) {#yep, its a srcfeature
+          #build a feature out of the srcfeature:
+          warn "Yep, $name is a srcfeature" if DEBUG;
+
+          my @args = ($name) ;
+          push @args, $base_start if $base_start;
+          push @args, $stop if $stop;
+
+            warn "srcfeature args:$args[0]" if DEBUG;
+
+          my @seg = ($self->segment(@args));           
+          return @seg;
+      }
+      else {
+          return; #I got nothing!
+      }
+
+    }
+
+
       #getting chromosome info
-    my $old_srcfeature_id=0;
+    my $old_srcfeature_id=-1;
     my $parent_segment;
     while (my $hashref = $isth->fetchrow_hashref) {
 

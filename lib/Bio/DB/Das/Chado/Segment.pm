@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.74 2004-08-24 03:01:51 scottcain Exp $
+# $Id: Segment.pm,v 1.75 2004-09-02 21:51:42 allenday Exp $
 
 =head1 NAME
 
@@ -88,7 +88,12 @@ methods. Internal methods are usually preceded with a _
 package Bio::DB::Das::Chado::Segment;
 
 use strict;
-use Carp qw(carp croak cluck);
+
+use Carp qw(carp croak cluck longmess);
+use Log::Log4perl;
+Log::Log4perl::init('/etc/log4perl.conf');
+my $log = Log::Log4perl->get_logger('Bio.DB.Das.Chado.Segment');
+
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
@@ -406,6 +411,7 @@ sub class {
 
 sub start {
   my $self = shift;
+
   return $self->{'start'} = shift if @_;
   return $self->{'start'};
 
@@ -556,26 +562,28 @@ is defined, then -callback is ignored.
 sub features {
   my $self = shift;
 
-  warn "Segment->features() args:@_\n" if DEBUG;
+  $log->debug("Segment->features() args:@_");
 
-  my ($types,$attributes,$rangetype,$iterator,$callback,$feature_id,$factory);
+  my ($type,$types,$attributes,$rangetype,$iterator,$callback,$feature_id,$factory);
   if ($_[0] and $_[0] =~ /^-/) {
-    ($types,$attributes,$rangetype,$iterator,$callback,$feature_id,$factory) =
+    ($type,$types,$attributes,$rangetype,$iterator,$callback,$feature_id,$factory) =
       $self->_rearrange([qw(TYPE 
+                            TYPES
                             ATTRIBUTES 
                             RANGETYPE 
                             ITERATOR 
                             CALLBACK 
                             FEATURE_ID
                             FACTORY)],@_);
-  #  warn "$types\n";
+    $types ||= $type; #grr
+    $log->debug("$types");
   } else {
     $types = \@_;
   }
 
-  warn "@$types\n" if (defined $types and DEBUG);
+  $log->debug("@$types") if defined($types);
 
-  $factory ||=$self->factory();
+  $factory   ||= $self->factory();
   my $feat     = Bio::DB::Das::Chado::Segment::Feature->new();
   my @features;
 
@@ -586,6 +594,7 @@ sub features {
 
 # set range variable 
 
+#$log->debug("AA $self");
     my $base_start = $self->start;
     $interbase_start = $base_start -1;
     $rend       = $self->end;
@@ -747,6 +756,7 @@ sub features {
 
     push @features, $feat;
 
+#$log->debug('BB');
     my $fstart = $feat->start() if DEBUG;
     my $fend   = $feat->end()   if DEBUG;  
   #  warn "$feat->{annotation}, $$hashref{nbeg}, $fstart, $$hashref{nend}, $fend\n" if DEBUG;
@@ -1034,24 +1044,24 @@ Alias of sourceseq for backward compatibility
 *abs_end   = \&end;
 
 =head2 asString
-                                                                                
+
  Title   : asString
  Usage   : $s->asString
  Function: human-readable string for segment
  Returns : a string
  Args    : none
  Status  : Public
-                                                                                
-Returns a human-readable string representing this sequence.  Format
-is:
-                                                                                
+
+Returns a human-readable string representing this sequence.  Format is:
+
    sourceseq:start,stop
-                                                                                
+
 =cut
-                                                                                
+
 sub asString {
   my $self = shift;
   my $label = $self->refseq;
+#$log->debug('CC');
   my $start = $self->start;
   my $stop  = $self->stop;
   return "$label:$start,$stop";

@@ -185,6 +185,7 @@ WriteMakefile(
 				 'cgi-bin/gbrowse_moby.PLS'  => 'cgi-bin/gbrowse_moby',
 				 'cgi-bin/moby_server.PLS'  => 'cgi-bin/moby_server',
 				 'cgi-bin/das.PLS'          => 'cgi-bin/das',
+				 'cgi-bin/das2.PLS'          => 'cgi-bin/das2',
 				 'conf/MobyServices/GbrowseServices.PMS'  => 'conf/MobyServices/GbrowseServices.pm',
 				 },
 	      EXE_FILES      => [

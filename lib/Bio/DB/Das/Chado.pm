@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.60 2004-09-01 19:19:51 scottcain Exp $
+# $Id: Chado.pm,v 1.61 2004-09-02 21:51:42 allenday Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -92,14 +92,19 @@ use Bio::Root::Root;
 use Bio::DasI;
 use Bio::PrimarySeq;
 use DBI;
+
 use Carp qw(longmess);
+use Log::Log4perl;
+Log::Log4perl::init('/etc/log4perl.conf');
+my $log = Log::Log4perl->get_instance('Bio.DB.Das.Chado');
+
 use vars qw($VERSION @ISA);
 
 use constant SEGCLASS => 'Bio::DB::Das::Chado::Segment';
 use constant DEBUG => 0;
 
 $VERSION = 0.11;
-@ISA = qw(Bio::Root::Root Bio::DasI);
+use base qw(Bio::DasI Bio::Root::Root);
 
 =head2 new
 

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.56 2003-03-06 16:56:14 lstein Exp $
+# $Id: Browser.pm,v 1.57 2003-03-06 18:40:01 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -940,7 +940,7 @@ sub overview {
   my ($partial_segment) = @_;
 
   my $factory = $partial_segment->factory;
-  my $class   = eval {$partial_segment->class} || $factory->refclass;
+  my $class   = eval {$partial_segment->seq_id->class} || $factory->refclass;
   my $segment = $factory->segment(-class=>$class,
 				  -name=>$partial_segment->seq_id);
   $segment   ||= $partial_segment;  # paranoia

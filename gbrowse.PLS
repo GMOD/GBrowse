@@ -40,9 +40,6 @@ $Config{startperl}
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.77 2003-03-06 16:56:11 lstein Exp $
-
 use strict;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
@@ -262,7 +259,9 @@ my $description = $CONFIG->setting('description');
 my $segment;
 
 ## STARTING THE PAGE ############################################################################
-my $title = @segments == 1 ? "$description: $segments[0]" : $description;
+my $title = @segments == 1 ?
+  "$description: ".$segments[0]->seq_id.":".$segments[0]->start.'..'.$segments[0]->end 
+  : $description;
 
 print
   start_html(-title  => $title,

@@ -17,7 +17,8 @@ Bio::DB::GFF::Aggregator::waba_alignment -- A WABA alignment
  -------------------------------------------------------------------------------------
  Aggregator method: waba_alignment
  Main method:       -none
- Sub methods:       similarity:waba_weak similarity:waba_strong similarity:waba_coding
+ Sub methods:       nucleotide_match:waba_weak nucleotide_match:waba_strong 
+                    nucleotide_match::waba_coding
  -------------------------------------------------------------------------------------
 
 =head1 DESCRIPTION
@@ -27,9 +28,9 @@ alignments produced by Jim Kent's WABA program, and was written to be
 compatible with the C elegans GFF files.  It aggregates the following
 feature types into an aggregate type of "waba_alignment":
 
-   similarity:waba_weak
-   similarity:waba_strong
-   similarity:waba_coding
+   nucleotide_match:waba_weak
+   nucleotide_match:waba_strong
+   nucleotide_match:waba_coding
 
 =cut
 
@@ -62,7 +63,7 @@ sub method { 'waba_alignment' }
  Title   : part_names
  Usage   : $aggregator->part_names
  Function: return the methods for the sub-parts
- Returns : the list "similarity:waba_weak", "similarity:waba_strong" and "similarity:waba_coding"
+ Returns : the list "nucleotide_match:waba_weak", "nucleotide_match:waba_strong" and "nucleotide_match:waba_coding"
  Args    : none
  Status  : Public
 
@@ -70,9 +71,9 @@ sub method { 'waba_alignment' }
 
 sub part_names {
   return qw(
-	  similarity:waba_weak
-	  similarity:waba_strong
-	  similarity:waba_coding
+	  nucleotide_match:waba_weak
+	  nucleotide_match:waba_strong
+	  nucleotide_match:waba_coding
 	   );
 }
 

@@ -124,7 +124,9 @@ for my $localfile ( qw(./docs/pod/CONFIGURE_HOWTO.pod
                         "--podpath=./docs/pod",
                         "--title=$name");
 }
-
+#get rid of pod2html junk
+unlink './pod2htmi.x~~';
+unlink './pod2htmd.x~~';
 
 print "Installing tutorial...\n";
 copy_tree('./docs/tutorial',$ht_target);
@@ -141,7 +143,7 @@ chmod 0777,glob("$ht_target/databases/*");
 
 print "\n\n#############################################################################\n";
 print "GBrowse is now installed.  Read INSTALL for further setup instructions.\n";
-print "Go to http://your.host/gbrowse/ for the online tutorial and reference manual.\n";
+print "Go to http://localhost/gbrowse/ for the online tutorial and reference manual.\n";
 print "#############################################################################\n";
 
 exit 0;

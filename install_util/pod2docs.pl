@@ -1,13 +1,12 @@
 #!/usr/bin/perl -w
 use strict;
 use File::Find;
+use File::Basename;
+
 
 #the point here is to generate text documents from pod
 #it is really a tool for us (Lincoln and Scott) for generating
 #text documentation that will go into a software release
-
-#anywhere there is a pod file, create a text file in the same dir.
-#start with current dir and recurse.
 
 #the appending of '.txt' to the file name is temporary for testing,
 #after this method of generating text documentation is finalized,
@@ -15,9 +14,16 @@ use File::Find;
 
 find({wanted => \&wanted, no_chdir=>1}, '.');
 
+unlink './pod2htmd.x~~';
+unlink './pod2htmi.x~~';
+
 sub wanted {
   if (/\.pod$/) {
-    system('pod2text','-l',$File::Find::name,$File::Find::name.'.txt'); 
-    warn "textifying $File::Find::name\n";
+    if ('INSTALL.pod' eq basename($File::Find::name)) {
+      system('pod2text','-l',$File::Find::name,'INSTALL.txt');
+    } else {
+      my $basename = basename($File::Find::name);
+      system('pod2text','-l',$File::Find::name,"./docs/$basename.txt"); 
+    }
   }
 }

@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.109.2.7 2004-10-06 03:24:09 allenday Exp $
+# $Id: gbrowse.PLS,v 1.109.2.8 2004-10-06 17:07:48 allenday Exp $
 
 use strict;
 use Bio::Graphics;
@@ -189,7 +189,9 @@ sub main_display($$) {
 
 #FIXME    tracks_table   => tracks_table($feature_files),
 
-    tr_examples                => show_examples() || '',
+    examples                   => [shellwords($BROWSER->config->setting('examples'))],
+
+    citation_link              => \&make_citation_link,
 
     tr_toggle_head             => $BROWSER->translate($BROWSER->options->head() ? 'HIDE_HEADER' : 'SHOW_HEADER') || '',
     tr_toggle_instructions     => $BROWSER->translate($BROWSER->options->ins()  ? 'HIDE_INSTRUCTIONS' : 'SHOW_INSTRUCTIONS') || '',
@@ -982,15 +984,6 @@ sub segment2link {
   return qq(<a href="?ref=$ref;start=$start;stop=$stop">$label</a>);
 }
 
-
-sub show_examples {
-  my $examples = $BROWSER->config->setting('examples') or return;;
-  my @examples = shellwords($examples);
-  return unless @examples;
-  my $source = $BROWSER->config->source;
-  my @urls = map { '<a href="?name='.uri_escape($_).'">'.$_.'</a>' } @examples;
-  return '<b>'.$BROWSER->translate('Examples').':</b> '.join(', ',@urls).". ";
-}
 
 ########## upload stuff ########
 sub new_upload() {
@@ -2021,8 +2014,6 @@ sub tableize {
 }
 
 sub main {
-
-warn 1;
   ## PAGE SETTINGS #################################################
   #
   # Recover a hashref which contains page-specific settings
@@ -2033,11 +2024,9 @@ warn 1;
   # Migrate from 1.56 way of specifying source to 1.57 way
   # This may cause a redirect and exit 0 at this point!
   redirect_legacy_url($source);
-warn 2;
 
   $MAX_SEGMENT     = $BROWSER->config->get_max_segment;
   $DEFAULT_SEGMENT = $BROWSER->config->get_default_segment;
-warn 3;
 
   # Now adjust those settings based on submitted CGI parameters
   # With the exception that we ignore parameter changes if the source has changed.
@@ -2046,13 +2035,11 @@ warn 3;
   } else {
     #FIXMEadjust_settings($page_settings);        # set settings from CGI parameters
   }
-warn 4;
 
   ### PLUGINS #################################################################
   my @plugin_path = "$CONF_DIR/plugins";
   unshift @plugin_path,shellwords($BROWSER->config->setting('plugin_path'))
     if $BROWSER->config->setting('plugin_path');
-warn 5;
 
   $PLUGINS = initialize_plugins(@plugin_path) unless defined $PLUGINS;
   configure_plugins($PLUGINS,
@@ -2062,17 +2049,14 @@ warn 5;
     if param('plugin') && $PLUGINS->{param('plugin')};
   my $plugin_action = param('plugin_action') || '';
   warn "plugin_action = $plugin_action" if DEBUG_PLUGINS;
-warn 6;
 
   # for activating the plugin by URL
   if (param('plugin_do')) {
     $plugin_action = $BROWSER->translate(param('plugin_do')) || $BROWSER->translate('Go');
   }
-warn 7;
 
   ## GETTING THE SEGMENT ######################################################
   my $features = get_features();
-warn 8;
 
   if ($plugin_action eq $BROWSER->translate('Find') && param('plugin')) {
     do_plugin_find(
@@ -2085,24 +2069,20 @@ warn 8;
     @$features = do_plugin_autofind($BROWSER->options->{name})
       if !@$features;  # last resort
   }
-warn 10;
 
   my $segments = features2segments($features);
   my @segments = @$segments;
-warn 11;
 
   # tell the plugins which segments are in play
   for my $k ( keys %$PLUGINS ) {
     $PLUGINS->{$k}->segments( \@segments );
   }
-warn 12;
 
   ###############################################################################################
 
   # SETTINGS FOR UPLOADED FILES
   my ($file_action) = grep {/^modify\./} param();
   (my $file = $file_action) =~ s/^modify\.// if $file_action;
-warn 13;
 
   ###############################################################################################
   ## DUMPS ######################################################################################
@@ -2122,7 +2102,6 @@ warn 13;
     do_plugin_header(param('plugin'));
     do_plugin_dump(param('plugin'),$segments[0]) && exit 0
   }
-warn 14;
 
   ###############################################################################################
   ## HANDLING FILE DOWNLOADS ######################################################################
@@ -2136,7 +2115,6 @@ warn 14;
     print_uploaded_file_features($to_download);
     exit 0;
   }
-warn 15;
 
   ## HANDLING FILE UPLOADS ######################################################################
   if (param('Upload') && (my $f = param('upload_annotations'))) {
@@ -2156,7 +2134,6 @@ warn 15;
   elsif ($data = param('auto') or $data = param('add')) {
     handle_quickie($data);
   }
-warn 16;
 
   clear_uploaded_file($file) if $file_action && param($file_action) eq 'Delete File';
 
@@ -2167,7 +2144,6 @@ warn 16;
   auto_open($features) if @$features;
 
   warn "ADJUSTED TRACKS = ".$BROWSER->options->tracks() if DEBUG;
-warn 17;
 
   ## UPDATING THE PERSISTENT SETTINGS##############################################################
   #FIXMEmy $cookies = settings2cookie(); #FIXME moved to GBrowse_run
@@ -2198,15 +2174,10 @@ warn 17;
       $title = $description;
     }
   }
-warn 18;
-
   print_top($title);
-
-warn '18a';
 
   ## HANDLE UPLOADED FILE EDITS ##################################################################
   if ($file_action && param($file_action) eq $BROWSER->translate('Edit')) {
-warn '18b';
     edit_uploaded_file($file);
   }
 
@@ -2214,48 +2185,36 @@ warn '18b';
   elsif ((param($BROWSER->translate('Set_options')) || param('revert'))
          && !param($BROWSER->translate('Cancel'))
          && !param($BROWSER->translate('Redisplay'))) {
-warn '18c';
     set_track_options();
   }
 
   ## HANDLE HELP PAGE   #######################################################
   elsif (param('help')) {
-warn '18d';
     help(param('help'),$BROWSER->config->setting('help')||GBROWSE_HELP);
   }
 
   ## HANDLE PLUGIN ABOUT PAGE #####################################################
   elsif ($plugin_action eq $BROWSER->translate('About')) {
-warn '18e';
     do_plugin_about(param('plugin'));
   }
 
   ## HANDLE PLUGIN CONFIGURATION####################################################
   elsif ($plugin_action eq $BROWSER->translate('Configure')) {
-warn '18f';
     do_plugin_configure(param('plugin'));
   }
 
   elsif ($plugin_action eq $BROWSER->translate('Go') && $plugin_type=~/^(finder|annotator|highlighter)$/i) {
-warn '18g';
     do_plugin_configure(param('plugin'));
   }
 
   ## MAIN DISPLAY
   else {
-warn '18h';
     my $header = $BROWSER->config->header;
-warn '18i';
     if ($BROWSER->options->head()) {
-warn '18j';
       print $header ? $header : h1($description);
-warn '18k';
     }
-warn '18l';
     main_display($segments,$features);
-warn '18m';
   }
-warn 19;
 
   print_bottom($VERSION);
 }

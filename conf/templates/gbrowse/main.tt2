@@ -1,3 +1,4 @@
+[% PROCESS "helperfunctions.tt2" %]
 [% PROCESS "navigationtable.tt2" %]
 <form name="externalform" encoding="multipart/form-data"><p/>
 [% PROCESS "uploadtable.tt2"     %]<p/>

@@ -3,16 +3,26 @@
 <table border="0" width="100%" cellspacing="0" class="searchtitle">
 
 [% IF !hide_ins %]
-  <tr><td align="left" colspan="2"><b>[% browser.translate('instructions') %]</b></td></tr>
-  <tr><td align="left" colspan="2">   [% browser.translate('search_instructions') %]</td></tr>
-  <tr><td align="left" colspan="2">   [% browser.translate('navigation_instructions') %]</td></tr>
-  <tr><td align="left" colspan="2">   [% browser.translate('examples') %]<p/>           </td></tr>
+  <tr><td align="left" colspan="2">
+    <b>[% browser.translate('instructions') %]</b><br/>
+    [% browser.translate('search_instructions') %]
+  </td></tr>
+  <tr><td align="left" colspan="2">
+    [% browser.translate('navigation_instructions') %]
+  </td></tr>
+  <tr><td align="left" colspan="2">
+    <b>[% browser.translate('examples') %]</b><br/>
+    [% FOREACH example = examples %]
+      <a href="?name=[% example | uri %]">[% example %]</a>[% UNLESS loop.last ; ', ' ; END %]
+    [% END %]
+    <br/>
+  </td></tr>
 [% END %]
 
 <tr>
   <th align="left" colspan="2">
     <a href="?rand=[% rand %];head=[% browser.options.head || 0 %]">[[% tr_toggle_head %]]</a>
-    <a href="?rand=[% rand %];ins=[% hide_ins %]">[[% tr_toggle_instructions %]]</a>
+    <a href="?rand=[% rand %];ins=[% hide_ins ? 0 : 1 %]">[[% tr_toggle_instructions %]]</a>
     [% IF name OR ref %]
       <a href="[% link_bookmark %]">[[% browser.translate('bookmark') %]]</a>
       <a href="[% link_image    %]" target="_blank">[[% browser.translate('image_link') %]]</a>
@@ -55,7 +65,7 @@
 [% htmlfrag4 %]
 
 <!-- tracks_table -->
-[% tracks_table %]
+[% PROCESS "trackstable.tt2" %]
 
 [% htmlfrag5 %]
 

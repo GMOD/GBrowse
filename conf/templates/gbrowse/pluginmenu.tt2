@@ -18,7 +18,7 @@
   [% ELSE %]
     [% name = plugins.${plugin}.name %]
   [% END %]
-  [% label = label _ name %]
+  [% label = label _ ' ' _ name %]
   [% label = label | replace('^\s+',,'') %]
 
   <option value="[% plugin %]" [% IF(plugin == browser.options.plugin) ; 'selected="selected"' ; END %]>[% label %]</option>

@@ -51,6 +51,7 @@ use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;
 use Bio::Graphics::Browser::PluginSet;
 use Bio::Graphics::Browser::UploadSet;
+use Bio::Graphics::Browser::RemoteSet;
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use Text::Tabs;
@@ -205,6 +206,7 @@ if (param('plugin_do')) {
 
 # For uploaded files
 $UPLOADED_SOURCES = Bio::Graphics::Browser::UploadSet->new($CONFIG,$page_settings);
+$REMOTE_SOURCES   = Bio::Graphics::Browser::RemoteSet->new($CONFIG,$page_settings);
 
 ## GETTING THE SEGMENT ######################################################
 my $features = get_features($page_settings);
@@ -226,6 +228,7 @@ my @segments = @$segments;
 
 # tell the plugins which segments are in play
 $PLUGINS->set_segments(\@segments);
+$REMOTE_SOURCES->set_sources([param('eurl')]) if param('eurl');
 
 
 ###############################################################################################
@@ -1014,24 +1017,46 @@ sub tracks_table {
 
   autoEscape(0);
   my @sections;
-  my @user_keys = grep {!/^(overview|external|analysis)$/} sort keys %track_groups;
+
+  my %exclude = map {$_=>1} map {$CONFIG->tr($_)} qw(OVERVIEW ANALYSIS EXTERNAL);
+
+  my @user_keys = grep {!$exclude{$_}} sort keys %track_groups;
   my $id = "c00000";
 
   my $all_on  = $CONFIG->tr('ALL_ON');
   my $all_off = $CONFIG->tr('ALL_OFF');
 
-  foreach my $category ('overview','analysis',@user_keys,'external') {
-    next unless exists $track_groups{$category};
-    my @track_labels = sort {lc $labels{$a} cmp lc $labels{$b}} @{$track_groups{$category}} or next;
-    my @checkboxes = checkbox_group(-name=>'label',
-				    -values     => \@track_labels,
-				    -labels     => \%labels,
-				    -defaults   => \@defaults,
-				    -onClick    => "gbTurnOff('$id')",
-				    -override   => 1,
-				   );
-    my $table = tableize(\@checkboxes);
-    $table =~ s/<tr>/<tr class="searchtitle">/g;
+  # this funny little thing ensures that the dynamic list of tracks
+  # falls into ID space *after* all the other sections.  Otherwise the
+  # toggles get confused as the tracks grow and expand to accomodate
+  # uploaded & third party features.
+  local $CGI::Toggle::next_id = $CGI::Toggle::next_id;
+  for (1..10) { $CGI::Toggle::next_id++ }
+
+  my %seenit;
+  foreach my $category ($CONFIG->tr('OVERVIEW'),
+			$CONFIG->tr('ANALYSIS'),
+			@user_keys,
+			$CONFIG->tr('EXTERNAL'),
+		       ) {
+    next if $seenit{$category}++;
+    my $table;
+    if  (exists $track_groups{$category}) {
+      my @track_labels = sort {lc $labels{$a} cmp lc $labels{$b}} @{$track_groups{$category}};
+      my @checkboxes = checkbox_group(-name=>'label',
+				      -values     => \@track_labels,
+				      -labels     => \%labels,
+				      -defaults   => \@defaults,
+				      -onClick    => "gbTurnOff('$id')",
+				      -override   => 1,
+				     );
+      $table = tableize(\@checkboxes);
+      $table =~ s/<tr>/<tr class="searchtitle">/g;
+    }
+    else {
+      $table = table(TR({-class=>'searchtitle',-width=>'100%'},td($CONFIG->tr('NO_TRACKS'))));
+    }
+
     my ($control,$section)=toggle_section({on=>1},
 					  b(ucfirst $category),div({-style=>'padding-left:1em'},$table));
     $control .=   '&nbsp;'.i({-class=>'nojs'},
@@ -1198,17 +1223,17 @@ sub das_table {
   my $segment = "$settings->{ref}:$settings->{start},$settings->{stop}";
 
   local $^W = 0;
-  for my $filename (@{$settings->{tracks}}) {
+  for my $url ($REMOTE_SOURCES->sources) {
 
-    (my $f = $filename) =~ s!(http:.+/das/\w+)(?:\?(.+))?$!$1/features?segment=$segment;$2!;
+    (my $f = $url) =~ s!(http:.+/das/\w+)(?:\?(.+))?$!$1/features?segment=$segment;$2!;
 
-    warn "filename = $filename" if DEBUG_EXTERNAL;
-    next unless $filename =~ /^(ftp|http):/ && $feature_files->{$filename};
-    warn "external_table(): filename = $filename" if DEBUG;
+    warn "url = $url" if DEBUG_EXTERNAL;
+    # next unless $url =~ /^(ftp|http):/ && $feature_files->{$url};
+    warn "external_table(): url = $url" if DEBUG;
     push @rows,th({-align=>'right',-valign=>'TOP'},"URL",++$count).
-      td(textfield(-name=>'eurl',-size=>50,-value=>$filename,-override=>1),br,
+      td(textfield(-name=>'eurl',-size=>50,-value=>$url,-override=>1),br,
 	 a({-href=>$f,-target=>'help'},'['.$CONFIG->tr('Download').']'),
-	 get_uploaded_file_info($settings->{features}{$filename}{visible} && $feature_files->{$filename})
+	 get_uploaded_file_info($settings->{features}{$url}{visible} && $feature_files->{$url})
 	);
   }
   push @rows,th({-align=>'right'},
@@ -1790,9 +1815,9 @@ sub load_external_sources {
   my $f       = {};
   if ($segment && $segment->length <= $MAX_SEGMENT) {
     my $rel2abs = coordinate_mapper($segment);
-    $UPLOADED_SOURCES->annotate($segment,$f,$rel2abs);
-    # $REMOTE_SOURCES->annotate($segment,$f,$rel2abs);
-    $PLUGINS->annotate($segment,$f,$rel2abs);
+    for my $featureset ($PLUGINS,$UPLOADED_SOURCES,$REMOTE_SOURCES) {
+      $featureset->annotate($segment,$f,$rel2abs);
+    }
   }
   return $f;
 }
@@ -1802,23 +1827,6 @@ sub line_end {
    return "\r"   if $agent =~ /Mac/;
    return "\r\n" if $agent =~ /Win/;
    return "\n";
-}
-
-sub load_remote_sources {
-  my ($segment,$settings) = @_;
-  my @uploads = grep {/^(http|ftp):/} @{$settings->{tracks}};
-  my $rel2abs = coordinate_mapper($segment) if $segment;
-  my @result;
-  for my $file (@uploads) {
-    warn "load_remote_sources(): loading $file" if DEBUG;
-    if (!$settings->{features}{$file}{visible}) { # turned off
-      push @result,$file;
-      next;
-    }
-    my $feature_file = get_remote_feature_data($file,$rel2abs,$settings) or next;
-    push @result,$feature_file;
-  }
-  return @result;
 }
 
 sub load_plugin_annotators {
@@ -1837,82 +1845,6 @@ sub load_plugin_annotators {
       $settings->{features}{$name} = {visible=>$default_plugin{$p}||0,options=>0,limit=>0};
     }
   }
-}
-
-
-sub get_remote_feature_data {
-  my ($url,$rel2abs,$settings) = @_;
-  warn "get_remote_feature_data(): fetching $url" if DEBUG;
-  my $proxy           = $CONFIG->setting('proxy') || '';
-  my $http_proxy      = $CONFIG->setting('http proxy') || $proxy || '';
-  my $ftp_proxy       = $CONFIG->setting('ftp proxy')  || $proxy || '';
-
-  if ($url =~ m!^(http://.+/das)/([^/?]+)(?:\?(.+))?$!) { # DAS source!
-    unless (eval "require Bio::Das; 1;") {
-      error($CONFIG->tr('NO_DAS'));
-      return;
-    }
-
-    my ($src,$dsn,$cgi_args) = ($1,$2,$3);
-    my @aggregators = shellwords($CONFIG->setting('aggregators') ||'');
-    my (@types,@categories);
-
-    if ($cgi_args) {
-      my @a = split /[;&]/,$cgi_args;
-      foreach (@a) {
-	my ($arg,$val) = split /=/;
-	push @types,unescape($val)      if $arg eq 'type';
-	push @categories,unescape($val) if $arg eq 'category';
-      }
-    }
-    my @args = (-source     => $src,
-		-dsn        => $dsn,
-		-aggregators=> \@aggregators);
-    push @args,(-types => \@types)           if @types;
-    push @args,(-categories => \@categories) if @categories;
-    my $das      =  Bio::Das->new(@args);
-
-    return unless $das;
-
-    # set up proxy
-    $das->proxy($http_proxy) if $http_proxy && $http_proxy ne 'none';
-
-    my $segment = $das->segment($settings->{ref},$settings->{start},$settings->{stop});
-    # the next step gives the current segment the same name as the DAS source
-    # and ensures that the DAS source appears in the list of external sources in the UI
-    $segment->name($url);
-    return $segment;
-  }
-
-  unless ($UA) {
-    unless (eval "require LWP") {
-      error($CONFIG->tr('NO_LWP'));
-      return;
-    }
-    $UA = LWP::UserAgent->new(agent    => "Generic-Genome-Browser/$VERSION",
-			      timeout  => URL_FETCH_TIMEOUT,
-			      max_size => URL_FETCH_MAX_SIZE,
-			     );
-    $UA->proxy(http => $http_proxy) if $http_proxy && $http_proxy ne 'none';
-    $UA->proxy(ftp => $http_proxy)  if $ftp_proxy  && $ftp_proxy  ne 'none';
-  }
-  my $id = md5_hex($url);     # turn into a filename
-  $id =~ /^([0-9a-fA-F]+)$/;  # untaint operation
-  $id = $1;
-
-  my (undef,$tmpdir) = $CONFIG->tmpdir($CONFIG->source.'/external');
-  my $response = $UA->mirror($url,"$tmpdir/$id");
-  if ($response->is_error) {
-    error($CONFIG->tr('Fetch_failed',$url,$response->message));
-    return;
-  }
-  open (F,"<$tmpdir/$id") or return;
-  my $feature_file = Bio::Graphics::FeatureFile->new(-file           => \*F,
-						     -map_coords     => $rel2abs,
-						     -smart_features =>1);
-  $feature_file->name($url);
-  warn "get_remote_feature_data(): got $feature_file" if DEBUG;
-  return $feature_file;
 }
 
 sub print_uploaded_file_features {
@@ -1948,16 +1880,6 @@ sub get_uploaded_file_info {
   }
   warn "get_uploaded_file_info(): modified = $modified, landmarks = $landmarks" if DEBUG;
   return i($CONFIG->tr('File_info',$modified,$landmarks||''));
-}
-
-sub clear_uploaded_file {
-  my ($settings,$file) = @_;
-  warn "clear_uploaded_file(): file = $file" if DEBUG;
-  my $path = name_uploaded_file($settings,$file) or return;
-  unlink $path;
-  delete $settings->{features}{"file:$file"};
-  warn "clear_uploaded_file(): deleting file = file:$file" if DEBUG;
-  $settings->{tracks} = [grep {$_ ne "file:$file"} @{$settings->{tracks}}];
 }
 
 sub edit_uploaded_file {
@@ -2374,6 +2296,7 @@ sub build_svg_image_page {
   my $settings = shift;
   my $segment  = shift;
   my $source = $CONFIG->source;
+  my $id     = $settings->{id};
   my $url = url(-base=>1);
   $url   .= url(-absolute=>1);
   $url    = dirname($url) . "/gbrowse_img/".escape($source);
@@ -2386,7 +2309,7 @@ sub build_svg_image_page {
 			       grep {
 				 $settings->{features}{$_}{options}
 			       } @$tracks;
-  my $img_url = "$url?name=$name;type=$type;width=$width;format=GD::SVG";
+  my $img_url = "$url?name=$name;type=$type;width=$width;id=$id;format=GD::SVG";
   $img_url   .= ";options=$options" if $options;
   print $CONFIG->tr('SVG_DESCRIPTION',$img_url,$img_url);
 }

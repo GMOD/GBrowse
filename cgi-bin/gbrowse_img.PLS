@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.1 2005-03-14 14:12:42 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.2 2005-03-16 22:58:48 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -55,8 +55,10 @@ use Bio::Graphics;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;
 use Bio::Graphics::Browser::PluginSet;
+use Bio::Graphics::Browser::UploadSet;
+use Bio::Graphics::Browser::RemoteSet;
 use Text::Shellwords;
-use vars qw($CONFIG $VERSION $CONF_DIR $PLUGINS);
+use vars qw($CONFIG $VERSION $CONF_DIR $PLUGINS $UPLOADS $REMOTES);
 use constant MAX_SEGMENT     => 1_000_000;
 use constant TOO_MANY_SEGMENTS => 500;
 use constant PANEL_GAP         => 3;
@@ -118,6 +120,7 @@ my $keystyle        = param('keystyle')    || param('k') || 'between';
 my $embed           = param('embed')|| param('e');          # embedded in a frame
 my $flip            = param('flip') || param('f');          # right<->left
 my $hitkey          = param('key');			    # key for hit track
+my $id              = param('id');
 
 my $db              = open_database($CONFIG);
 
@@ -131,13 +134,19 @@ $CONFIG->width($width) if $width;
 
 # get options and visibility hash
 my ($options,$labels,$visible) = get_options(\@options,\@track_types);
+
 my $max_segment = $CONFIG->setting('max segment') || MAX_SEGMENT;
+my $page_settings = {features=>$visible,tracks=>$labels,id=>$id};
 
 # plugin initialization - should be easier
 my @plugin_path = "$CONF_DIR/plugins";
 unshift @plugin_path,shellwords($CONFIG->setting('plugin_path')) if $CONFIG->setting('plugin_path');
-$PLUGINS = Bio::Graphics::Browser::PluginSet->new($CONFIG,{features=>$visible},@plugin_path) unless defined $PLUGINS;
+$PLUGINS = Bio::Graphics::Browser::PluginSet->new($CONFIG,$page_settings,@plugin_path) unless defined $PLUGINS;
 $PLUGINS->configure($db);
+
+# uploaded files
+$UPLOADS = Bio::Graphics::Browser::UploadSet->new($CONFIG,$page_settings);
+$REMOTES = Bio::Graphics::Browser::RemoteSet->new($CONFIG,$page_settings);
 
 my ($img,$boxes,$panel,$tracks,$detailed_view);
 
@@ -147,7 +156,7 @@ if (@segments > 1 or $show_overview or
   foreach (@segments) { $_->absolute(0) }
 
   if (@add_features) {
-    my $list = external_features($labels,undef,\@add_features,\@add_style);
+    my $list = add_features($labels,undef,\@add_features,\@add_style);
     @segments = $list->{add}->features;
   }
 
@@ -158,8 +167,9 @@ if (@segments > 1 or $show_overview or
 else {  # detailed view
   my $segment = $segments[0];
   my $feature_list = {};
-  external_features($labels,$segment,\@add_features,\@add_style,$feature_list) if @add_features;
-  plugin_features($segment,$feature_list);
+
+  add_features($labels,$segment,\@add_features,\@add_style,$feature_list) if @add_features;
+  external_features($segment,$feature_list);
 
   ($img,$boxes,$panel,$tracks)
     = $CONFIG->image_and_map(segment       => $segment,
@@ -277,12 +287,16 @@ sub get_segments {
   @segments;
 }
 
-sub plugin_features {
-  my ($segment,$feature_file) = @_;
-  $PLUGINS->annotate($segment,$feature_file);
+sub external_features {
+  my ($segment,$feature_file_list) = @_;
+  my $rel2abs = coordinate_mapper($segment);
+  #  $DAS_SOURCES->annotate($segment,$feature_file,$rel2abs);
+  for my $featureset ($PLUGINS,$UPLOADS,$REMOTES) {
+    $featureset->annotate($segment,$feature_file_list,$rel2abs);
+  }
 }
 
-sub external_features {
+sub add_features {
   my ($labels,$master_segment,$features,$styles,$feature_hash) = @_;
   my @features = @$features;
   my @styles   = @$styles;

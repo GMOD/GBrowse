@@ -5,6 +5,8 @@ use base 'Exporter';
 use CGI 'div','span','img';
 use CGI::Util;
 
+use vars '$next_id';
+
 our @EXPORT = ('toggle_section',
 	       'start_html');
 
@@ -15,7 +17,6 @@ use constant EXPIRES => CGI::Util::expires('+7d');
 
 my $cookie_name = __PACKAGE__;
 $cookie_name    =~ s/:/_/g;
-my $next_id;
 
 my $jscript = <<"END";
 function turnOn (a) {

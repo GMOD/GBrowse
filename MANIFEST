@@ -6,7 +6,7 @@ cgi_install.pl
 ChangeLog
 conf/01.yeast.conf
 conf/011.yeast1.conf
-conf/012.yeast1.conf
+conf/012.yeast1w.conf
 conf/02.wormbase.conf
 conf/03.fly.conf
 conf/04.human.conf

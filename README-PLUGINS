@@ -18,8 +18,11 @@ There are three types of plugins:
 	 return a list of features which are overlayed on top 
 	 of the detailed view.  Example: restriction site annotator.
 	
-All plug-ins inherit from Bio::Graphics::Browser::Plugin.  The
-following methods are implemented by them all:
+All plug-ins inherit from Bio::Graphics::Browser::Plugin.  It defines
+reasonable defaults for each of the methods.  Specific behavior is
+then implemented by selectively overriding certain methods:
+
+METHODS COMMON TO ALL PLUGINS - YOU SHOULD OVERRIDE THESE
 
 $string = $plugin->name();
   Return a short name for the plugin.  This will be displayed to
@@ -42,6 +45,46 @@ $settings = $plugin->config_defaults();
   between sessions in a cookie.  Because of limited serialization
   and cookie space restraints, the values of the settings hash
   must be scalars or array refs.
+
+METHODS TO BE IMPLEMENTED IN DUMPERS
+
+$plugin->dump($segment);
+  Dump out the data (dumpers only).  Must generate an HTTP header 
+  with MIME type.
+
+See the FastaDumper.pm and GFFDumper.pm modules for examples of how
+this works.
+
+METHODS TO BE IMPLEMENTED IN FINDERS
+
+$segments = $plugin->find($segment); 
+  Do a find (finders only) and return an arrayref of triplets of form
+  [ref,start,stop].  If further configuration is needed return undef
+  -- gbrowse will invoke configure_form() and try again.  If
+  nothing is found, return empty list.
+  NOTE: You can ignore the segment and do the find on the whole 
+  database if that's more appropriate.  If you need auxiliary files
+  like BLAST files, you can store that information in the .conf
+  file or handle your own conf files.
+
+$segments = $plugin->auto_find($search_string);
+  If a finder plugin has a auto_find() method defined, then in the
+  event that the user types a search string into the gbrowse
+  search box that isn't recognized by the default search mechanism, 
+  then the search string will be passed to the auto_find() method.
+
+See the OligoFinder.pm example module for how this works.
+
+METHODS TO BE IMPLEMENTED IN ANNOTATORS
+
+$feature_file = $plugin->annotate($segment)
+  Annotate the segment and return a Bio::Graphics::FeatureFile
+  object containing the annotations.  This is then plugged into
+  the detailed view and track configurator.
+
+See the RestrictionAnnotator.pm module for how this works.
+	
+METHODS WITH REASONABLE DEFAULTS THAT YOU MIGHT WANT TO OVERRIDE
 
 $plugin->configuration($current_settings);
   Get/set current settings.  This will be called before 
@@ -76,24 +119,3 @@ $plugin->config_path($path)
 $plugin->page_settings($settings)
   A chance to store the current settings on the GBrowse page.
 
-$plugin->dump($segment);
-  Dump out the data (dumpers only).  Must generate an HTTP header 
-  with MIME type.
-
-$segments = $plugin->find($segment); 
-  Do a find (finders only) and return an arrayref of triplets of form
-  [ref,start,stop].  If further configuration is needed return undef
-  -- gbrowse will invoke configure_form() and try again.  If
-  nothing is found, return empty list.
-  NOTE: You can ignore the segment and do the find on the whole 
-  database if that's more appropriate.  If you need auxiliary files
-  like BLAST files, you can store that information in the .conf
-  file or handle your own conf files.
-
-$feature_file = $plugin->annotate($segment)
-  Annotate the segment and return a Bio::Graphics::FeatureFile
-  object containing the annotations.  This is then plugged into
-  the detailed view and track configurator.
-  NOTE: Bio::Graphics::FeatureFile is going to need a little work
-  to make it easier to generate tracks dynamically.
-	

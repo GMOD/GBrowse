@@ -42,7 +42,7 @@ $startperl -w
 !GROK!THIS!
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_moby.PLS,v 1.4 2003-12-15 22:00:23 markwilkinson Exp $
+# $Id: gbrowse_moby.PLS,v 1.5 2003-12-15 22:01:11 markwilkinson Exp $
 
 
 # use lib "/usr/local/GB/GMOD_LIBS/moby-live/Perl";
@@ -86,7 +86,7 @@ AND/OR
 
 
  [db_xref:DETAILS]
- URL = http://brie4.cshl.org:9320/cgi-bin/gbrowse_moby?namespace=$tag;id=$value
+ URL = http://yoursite.com/cgi-bin/gbrowse_moby?namespace=$tag;id=$value
 
 
 =head1 DESCRIPTION

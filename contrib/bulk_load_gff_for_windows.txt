@@ -1,0 +1,38 @@
+lines 74-78
+No dev/tty, use STDIN instead.
+
+replace:
+
+  open (TTY,"/dev/tty") or die "/dev/tty: $!\n";
+  print STDERR "This operation will delete all existing data in database $DSN.  Continue? ";
+  my $f = <TTY>;
+  die "Aborted\n" unless $f =~ /^[yY]/;
+  close TTY;
+
+with:
+
+ # open (TTY,"/dev/tty") or die "/dev/tty: $!\n";
+  print STDERR "This operation will delete all existing data in database $DSN.  Continue? ";
+  my $f = <STDIN>;
+  die "Aborted\n" unless $f =~ /^[yY]/;
+#  close TTY;
+
+
+Line 104
+For some reason, my tempdir environment variable didn't work (i think this has to do with
+long directory names.  I kludged it with a hard code of a temp dir
+
+replace:
+my $tmpdir = $ENV{TMPDIR} || $ENV{TMP} || '/usr/tmp';
+
+with:
+my $tmpdir = 'c:/tmp';
+
+
+line 186
+Mysql expects unix style line breaks 
+replace:
+-e "lock tables $_ write; delete from $_; load data infile '$tmpdir/$_.$$' replace into table $_; unlock tables"
+
+with:
+-e "lock tables $_ write; delete from $_; load data infile '$tmpdir/$_.$$' replace into table $_  LINES TERMINATED BY '\r\l'; unlock tables"

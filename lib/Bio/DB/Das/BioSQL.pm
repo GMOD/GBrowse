@@ -204,13 +204,13 @@ sub get_feature_by_name
 
 sub segment {
   my $self = shift;
-  my ($name,$start,$end,$class,$version, $absolute) =
-    $self->_rearrange([qw(NAME START END CLASS VERSION ABSOLUTE)],@_);
+  my ($name,$start,$end,$class,$version, $absolute, $stop) =
+    $self->_rearrange([qw(NAME START END CLASS VERSION ABSOLUTE STOP)],@_);
 
   my @seq = $self->biosql->fetch_Seq_by_accession($name);
   
   return unless @seq;
-  return map {$self->_segclass->new(-bioseq => $_, -dbadaptor => $self, -start => $start, -end => $end, -absolute => $absolute)} @seq;
+  return map {$self->_segclass->new(-bioseq => $_, -dbadaptor => $self, -start => $start, -end => $end || $stop, -absolute => $absolute)} @seq;
 }
 
 

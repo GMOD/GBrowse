@@ -23,8 +23,12 @@ open OUT,">$file" or die "Can't create $file: $!";
 
 print "Extracting $file (with variable substitutions)\n";
 
+my $startperl = $Config{startperl} ne '#!perl' 
+  ? $Config{startperl}
+  : "#!$Config{perlpath}";
+
 print OUT <<"!GROK!THIS!";
-$Config{startperl}
+$startperl -w
 
 ###################################################################
 # Non-modperl users should change this variable if needed to point

@@ -70,8 +70,6 @@ docs/MAKE_IMAGES_HOWTO.txt
 docs/ORACLE_AND_BIOSQL.txt
 docs/PLUGINS_HOWTO.txt
 docs/README-gff-files
-docs/tutorial/bin/random_feature.pl
-docs/tutorial/bin/random_segments.pl
 docs/tutorial/conf_files/volvox.conf
 docs/tutorial/data_files/volvox.fa
 docs/tutorial/data_files/volvox1.gff
@@ -91,7 +89,6 @@ gbrowse_details.PLS
 gbrowse_img.PLS
 htdocs/gbrowse.css
 htdocs/general_help.html.zh
-htdocs/images/buttons/.cvsignore
 htdocs/images/buttons/green.gif
 htdocs/images/buttons/green1.gif
 htdocs/images/buttons/green2.gif
@@ -132,17 +129,12 @@ install_util/cgi_install.pl
 install_util/conf_install.pl
 install_util/htdocs_install.pl
 install_util/make_clean_add.pl
-libalign/CAlign.bs
-libalign/CAlign.c
-libalign/CAlign.o
 libalign/CAlign.pm
 libalign/CAlign.xs
 libalign/Changes
 libalign/MANIFEST
 libalign/README
-libalign/pm_to_blib
 libalign/realign.h
-libalign/test.pl
 sample_data/yeast1.fa
 sample_data/yeast1.gff
 sample_data/yeast_data.gff

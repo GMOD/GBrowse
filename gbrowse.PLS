@@ -23,8 +23,12 @@ open OUT,">$file" or die "Can't create $file: $!";
 
 print "Extracting $file (with variable substitutions)\n";
 
+my $startperl = $Config{startperl} ne '#!perl' 
+  ? $Config{startperl}
+  : "#!$Config{perlpath}";
+
 print OUT <<"!GROK!THIS!";
-$Config{startperl}
+$startperl -w
 
 ###################################################################
 # Non-modperl users should change this variable if needed to point
@@ -41,7 +45,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.99 2003-06-06 17:09:20 lstein Exp $
+# $Id: gbrowse.PLS,v 1.100 2003-06-07 03:32:41 lstein Exp $
 
 use strict;
 use Bio::Graphics;

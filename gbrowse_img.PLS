@@ -22,9 +22,13 @@ $file = basename($0, '.PL','.PLS');
 open OUT,">$file" or die "Can't create $file: $!";
 
 print "Extracting $file (with variable substitutions)\n";
+my $startperl = $Config{startperl} ne '#!perl' 
+  ? $Config{startperl}
+  : "#!$Config{perlpath}";
+
 
 print OUT <<"!GROK!THIS!";
-$Config{startperl} -w
+$startperl -w
 
 ###################################################################
 # Non-modperl users should change this variable if needed to point
@@ -40,7 +44,7 @@ $Config{startperl} -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.11 2003-05-09 03:56:23 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.12 2003-06-07 03:32:41 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1);

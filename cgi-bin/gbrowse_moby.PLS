@@ -46,7 +46,7 @@ print OUT <<'!NO!SUBS!';
 
 
 
-#$Id: gbrowse_moby.PLS,v 1.8 2003-12-26 23:29:40 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.9 2003-12-26 23:47:16 markwilkinson Exp $
 
 
 # use lib "/usr/local/GB/GMOD_LIBS/moby-live/Perl";
@@ -513,7 +513,9 @@ sub printIt {
         $renderer = \&renderHTML;
     } elsif ($Central->ISA($datatype, 'text-plain')){
         $renderer = \&renderPlainText;
-    }
+    } else {
+        $renderer = \&renderFormattedText;
+    } 
     foreach my $subnode($this->getChildNodes){
         next unless ($subnode->getNodeType == ELEMENT_NODE);
         if ($subnode->getTagName eq "CrossReference"){

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.4 2003-05-13 01:08:38 lstein Exp $
+# $Id: GFFDumper.pm,v 1.5 2003-08-25 19:03:05 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -19,7 +19,7 @@ sub description {
 
 sub dump {
   my $self = shift;
-  my $segment       = shift;
+  my ($segment,@more_feature_sets) = @_;
   my $page_settings = $self->page_settings;
   my $conf          = $self->browser_config;
 
@@ -31,9 +31,19 @@ sub dump {
   my @feature_types = $self->selected_features;
   my $iterator = $segment->get_seq_stream(-types=>\@feature_types) or return;
   while (my $f = $iterator->next_seq) {
-    print $f->gff_string,"\n";
-    for my $s ($f->sub_SeqFeature) {
-      print $s->gff_string,"\n";
+      print $f->gff_string,"\n";
+      for my $s ($f->sub_SeqFeature) {
+	print $s->gff_string,"\n";
+    }
+  }
+
+  # now dump out the additional features
+  for my $set (@more_feature_sets) {
+    for my $f ($set->features) {
+      print $f->gff_string,"\n";
+      for my $s ($f->sub_SeqFeature) {
+	print $s->gff_string,"\n";
+      }
     }
   }
 }

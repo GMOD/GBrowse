@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.84 2003-07-22 18:15:40 lstein Exp $
+# $Id: Browser.pm,v 1.85 2003-08-25 19:03:05 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -607,7 +607,7 @@ The arguments are a series of tag=>value pairs, where tags are:
                         Bio::Graphics::FeatureFile objects to be
                         rendered onto the display (optional).  The keys
                         are labels assigned to the 3d party
-                        features.  These labels must apepar in the
+                        features.  These labels must appear in the
                         tracks arrayref in order for render_html() to
                         determine the order in which to render them.
 

@@ -212,7 +212,7 @@ my ($file_action) = grep {/^modify\./} param();
 # NOTE THE EXIT 0 HERE IF THE DUMP IS SUCCESSFUL!
 if (@segments && $plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper') {
   do_plugin_header(param('plugin'),$page_settings);
-  do_plugin_dump(param('plugin'),$segments[0]) && exit 0
+  do_plugin_dump(param('plugin'),$segments[0],$page_settings) && exit 0
 }
 
 
@@ -2254,10 +2254,17 @@ sub do_plugin_header {
 }
 
 sub do_plugin_dump {
-  my $plugin  = shift;
-  my $segment = shift;
-  my $p = $PLUGINS->{$plugin} or return;
-  $p->dump($segment);
+  my $plugin   = shift;
+  my $segment  = shift;
+  my $settings = shift;
+  my $p        = $PLUGINS->{$plugin} or return;
+  my @extra_features;
+  if ($segment && $settings && $segment->length <= $MAX_SEGMENT) {
+     my $feature_files = load_external_sources($segment,$settings);
+     load_plugin_annotations($segment,$feature_files,$settings);
+     @extra_features = values %{$feature_files};
+  }
+  $p->dump($segment,@extra_features);
   return 1;
 }
 

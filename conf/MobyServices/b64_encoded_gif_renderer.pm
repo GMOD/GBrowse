@@ -1,7 +1,6 @@
 package MobyServices::b64_encoded_gif_renderer;
 use strict;
-use XML::LibXML;
-use MOBY::MobyXMLConstants;
+use XML::DOM;
 our @ISA = qw(Exporter);
 use File::Temp qw/ tempfile /;
 #our @EXPORT = qw(render type);
@@ -15,14 +14,14 @@ sub type {
 sub render {
     my ($DOM, $htmldir,$imgdir) = @_;
     my $content;
-    foreach my $subnode($DOM->childNodes){
-        next unless  (($subnode->nodeType == TEXT_NODE) || ($subnode->nodeType == CDATA_SECTION_NODE));
-        $content .=$subnode->textContent;
+    foreach my $subnode($DOM->getChildNodes){
+        next unless  (($subnode->getNodeType == TEXT_NODE) || ($subnode->getNodeType == CDATA_SECTION_NODE));
+        $content .=$subnode->toString;
     }
     $content =~ s/^\s+//; $content =~ s/\s+$//;
     my $bindata = decode_base64($content);
     my ($fh, $filename) = tempfile( DIR => "$htmldir/$imgdir/", SUFFIX=> ".gif" );
-    $filename =~ /(\w+\.gif)$/;
+    $filename =~ /(\w+\.jpg)$/;
     $filename = $1;
     binmode($fh);
     print $fh $bindata;

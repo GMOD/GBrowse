@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.23 2004-10-01 13:44:33 sheldon_mckay Exp $
+# $Id: GFFDumper.pm,v 1.24 2005-01-11 21:58:02 allenday Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -31,7 +31,7 @@ sub config_defaults {
 sub reconfigure {
   my $self = shift;
   my $current_config = $self->configuration;
-  delete $current_config->{embed};
+
   foreach my $p ( $self->config_param() ) {
     $current_config->{$p} = $self->config_param($p);
   }
@@ -74,11 +74,6 @@ sub configure_form {
 				     edit => 'Edit'.sup('**'),
 				 }
 			));
-  $html .= p(
-	     checkbox(-name=>$self->config_name('embed'),
-		      -checked=>0,
-		      -label=>'Embed DNA sequence in the GFF file')
-		      );      
   autoEscape(1);
 
   my $href = a( {-href => 'javascript:void(0)', -onclick => "alert('" .
@@ -123,7 +118,6 @@ sub dump {
   my $whole_segment = $db->segment(Accession => $segment->ref) ||
                       $db->segment($segment->ref);
   my $coords        = $config->{coords};
-  my $embed         = $config->{embed};
 
   $segment->refseq($segment) if $coords eq 'relative';
 
@@ -157,13 +151,6 @@ sub dump {
       }
     }
   }
-
-  if ( $embed ) {
-    my $dna = $segment->dna;
-    $dna =~ s/(\S{60})/$1\n/g;
-    print ">$segment\n$dna\n" if $dna;
-  }
-  
 }
 
 sub print_feature {

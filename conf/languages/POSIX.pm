@@ -345,6 +345,4 @@ END
 
  SMALL_INTERVAL    => 'Resizing small interval to %s bp',
 
- NO_SOURCES        => 'There are no readable data sources configured.  Perhaps you do not have permission to view them.',
-
 };

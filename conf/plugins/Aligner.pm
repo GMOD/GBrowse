@@ -1,6 +1,5 @@
 package Bio::Graphics::Browser::Plugin::Aligner;
-# $Id: Aligner.pm,v 1.6 2004-09-30 19:04:04 lstein Exp $
-
+# $Id: Aligner.pm,v 1.7 2005-01-11 21:58:01 allenday Exp $
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use CGI qw(table a TR td th p popup_menu radio_group checkbox checkbox_group h1 h2 pre);
@@ -105,7 +104,6 @@ sub reconfigure {
   $current->{align}  = \@align;
   $current->{upcase} = $upcase eq 'none' ? undef : $upcase;
   $current->{ragged} = $self->config_param('ragged');
-  $current->{flip} = $self->config_param('flip');
 }
 
 sub mime_type { 'text/html' }
@@ -118,7 +116,7 @@ sub dump {
   my $browser       = $self->browser_config;
   my $configuration = $self->configuration;
 
-#  $configuration->{flip} = $self->page_settings->{flip};
+  $configuration->{flip} = $self->page_settings->{flip};
 
   my $flipped = $configuration->{flip} ? " (reverse complemented)" :'';
   print h1("Alignments for $segment$flipped");
@@ -289,7 +287,6 @@ sub dump {
   print pre($align->alignment(\%offsets,{show_mismatches => 1,
 					 flip            => $configuration->{flip}}
 			     ));
-  				 
 }
 
 sub realign {

@@ -104,6 +104,7 @@ lib/Bio/Graphics/Browser/I18n.pm
 lib/Bio/Graphics/Browser/Markup.pm
 lib/Bio/Graphics/Browser/PadAlignment.pm
 lib/Bio/Graphics/Browser/Plugin.pm
+lib/Bio/Graphics/Browser/Util.pm
 lib/Bio/Graphics/Browser.pm
 lib/Bio/Graphics/Glyph/connector.pm
 lib/Bio/Graphics/Glyph/drosophila_arrow.pm

@@ -40,30 +40,24 @@ $Config{startperl} -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.1 2003-05-08 05:06:38 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.2 2003-05-09 03:56:23 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR);
 use Bio::DB::GFF;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Markup;
+use Bio::Graphics::Browser::Util;
+use Bio::Graphics::Browser::Realign 'align';
 use vars qw($CONFIG $VERSION $CONF_DIR $LANG @COLORS $INDEX %strands %COLORS);
 
 use constant DEBUG=>0;
 
 @COLORS = qw(none lightgrey yellow pink orange brown
 	     tan teal cyan lime green blue gray);
-# allow sharing with a global configuration variable
-*CONFIG = *GBrowse::CONFIG;
 
-if ($ENV{MOD_PERL}) {
-  my $conf  = Apache->request->dir_config('GBrowseConf');
-  $CONF_DIR = Apache->server_root_relative($conf) if $conf;
-}
-$CONFIG  ||= Bio::Graphics::Browser->new;
-$CONFIG->read_configuration($CONF_DIR) or message("Can't read configuration files: $!");
-$LANG    ||= Bio::Graphics::Browser::I18n->new("$CONF_DIR/languages");
-set_language($CONFIG,$LANG);
+$CONF_DIR  = conf_dir($CONF_DIR);  # conf_dir() is exported from Util.pm
+$CONFIG = open_config($CONF_DIR);  # open_config() is exported from Util.pm
 
 $INDEX  = 0;
 %COLORS = ();
@@ -71,31 +65,27 @@ $INDEX  = 0;
 my $src   = param('src');
 my $name  = param('name');
 my $class = param('class');
+my $ref   = param('ref');
+my $start = param('start');
+my $end   = param('end');
 
 $CONFIG->source($src || cookie('gbrowse_source'));
 
-print header();
-
-# header
-print
-  start_html(-title  => "GBrowse Details: $class:$name",
-	     -style  => {src=>$CONFIG->setting('stylesheet')},
-	    );
+print_top("GBrowse Details: $class:$name");
 print $CONFIG->header || h1("$class:$name Details");
 
 my $db = open_database();
-my @features = $db->get_feature_by_name($class=>$name);
+my @args     = (-class=>$class,-name=>$name);
+push @args,(-ref=>$ref)     if defined $ref;
+push @args,(-start=>$start) if defined $start;
+push @args,(-end=>$end)     if defined $end;
+my @features = sort {$b->length<=>$a->length} $db->get_feature_by_name(@args);
 
 warn "features = @features" if DEBUG;
 print print_features(\@features);
 
 # footer
-print $CONFIG->footer || '',
-  p(i(font({-size=>'small'},
-	   $LANG->tr('Footer_1'))),br,
-    tt(font({-size=>'small'},$LANG->tr('Footer_2',$VERSION)))),
-  end_html;
-
+print_bottom($VERSION);
 exit 0;
 
 ######################
@@ -114,25 +104,34 @@ sub print_features {
       $string .= PrintMultiple($options,'Name',b($f->name));
       $string .= PrintMultiple($options,,'Class',$f->class);
     }
-    $string .= PrintMultiple($options,'Type',$f->method);
+    $string .= PrintMultiple($options,'Type',  $f->method);
+    $string .= PrintMultiple($options,'Source',$f->source);
     $string .= PrintMultiple($options,"Position",position($f));
+    if ($f->target) {
+      $string .= PrintMultiple($options,"Matches",position($f->target));
+      $string .= PrintMultiple($options,'',print_matches($f,$f->target)) if $subf;
+
+    }
     $string .= PrintMultiple($options,"Score",$f->score) if defined $f->score;
     my %attributes = $f->attributes;
     for my $a (sort keys %attributes) {
       $string .= PrintMultiple($options,$a,$f->attributes($a));
     }
     my @subfeatures = $f->merged_segments;
-    $string .= PrintMultiple($options,'SubFeatures',print_features(\@subfeatures,1)) if @subfeatures;
+    $string .= PrintMultiple($options,'Parts',print_features(\@subfeatures,1)) if @subfeatures;
     $string .= end_table();
-    my $dna = $f->dna;
-    $string .= print_dna($f->name,$dna,$f->abs_start,\@subfeatures) 
-      if $dna && !$subf;
+
+    if (!$subf) {
+      my $dna = $f->dna;
+      $string .= print_dna($f,$dna,$f->abs_start,\@subfeatures) if $dna;
+    }
+
   }
   $string;
 }
 
 sub print_dna {
-  my ($name,$dna,$start,$features) = @_;
+  my ($feature,$dna,$start,$features) = @_;
   my %seenit;
   warn "dna=$dna" if DEBUG;
 
@@ -155,50 +154,48 @@ sub print_dna {
   }
   push @markup,map {['newline',80*$_]} (1..length($dna)/80);
   $markup->markup(\$dna,\@markup);
-  return pre(">$name\n".$dna);
+  my $position = position($feature);
+  my $name     = $feature->name;
+  return pre(">$name|$position\n".$dna);
 }
 
-sub open_database {
-  my $source  = $CONFIG->source;
-  return $GBrowse::DB{$source} if $GBrowse::DB{$source};
-  my ($adaptor,@argv) = eval{$CONFIG->db_settings};
-  unless ($adaptor) {
-    warn "gbrowse: trying to reload config, cache must be stale" if DEBUG;
-    $CONFIG = Bio::Graphics::Browser->new;
-    $CONFIG->read_configuration($CONF_DIR) or fatal_error("Can't read configuration files: $!");
-    $CONFIG->source($source);
-    ($adaptor,@argv) = $CONFIG->db_settings;
+sub print_matches {
+  my ($src,$tgt) = @_;
+  my $sdna = $src->dna or return;
+  my $tdna = $tgt->dna or return;
+  my ($top,$middle,$bottom) = align($sdna,$tdna);
+  my $top_label = b($src->abs_ref);
+  my $bot_label = b($tgt->abs_ref);
+
+  my $src_x = $src->abs_start;
+  my $tgt_x = $tgt->abs_start;
+  my $dir   = $tgt->abs_strand || +1;
+
+  my $m = length($top_label) > length($bot_label) ? length($top_label) : length($bot_label);
+  my $p = length($src_x) > length($tgt_x) ? length($src_x) : length($tgt_x);
+  my $t = $m+$p-2;
+  my $sp = "%${t}s %s";
+  my $l  = ' ' x ($m+$p-8);  # adjusting for HTML
+
+  my $string;
+  my @top    = $top    =~ /(.{1,60})/g;
+  my @middle = $middle =~ /(.{1,60})/g;
+  my @bottom = $bottom =~ /(.{1,60})/g;
+
+  for (my $i=0; $i<@top; $i++) {
+    my $src_delta = length($top[$i]) - $top[$i]=~tr/-/-/;
+    my $tgt_delta = $dir * (length($bottom[$i]) - $bottom[$i]=~tr/-/-/);
+
+    $string .= sprintf("$sp %d\n$l%s\n$sp %d\n\n",
+		       "$top_label $src_x",$top[$i],$src_x + $src_delta - 1,
+		       $middle[$i],
+		       "$bot_label $tgt_x",$bottom[$i],$tgt_x + $tgt_delta - $dir);
+
+    $src_x  += $src_delta;
+    $tgt_x  += $tgt_delta;
+
   }
-  $GBrowse::DB{$source} = eval {$adaptor->new(@argv)} or warn $@;
-  fatal_error(pre($@)) unless $GBrowse::DB{$source};
-  if (my $refclass = $CONFIG->setting('reference class')) {
-    eval {$GBrowse::DB{$source}->default_class($refclass)};
-  }
-  return $GBrowse::DB{$source};
-}
-
-sub set_language {
-  my ($config,$lang) = @_;
-  my $default_language   = $config->setting('language');
-  my @languages     = http('Accept-language') =~ /([a-z]{2}-?[a-z]*)/ig;
-  push @languages,$default_language if $default_language;
-  warn "languages = ",join(',',@languages) if DEBUG;
-  return unless @languages;
-  $lang->language(@languages);
-}
-
-sub fatal_error {
-  my @msg = @_;
-  warn "@_" if DEBUG;
-  maybe_print_top();
-  print h2('An internal error has occurred');
-  print p({-class=>'error'},@msg);
-  my $webmaster = $ENV{SERVER_ADMIN} ?
-   "maintainer (".a({-href=>"mailto:$ENV{SERVER_ADMIN}"},$ENV{SERVER_ADMIN}).')'
-     : 'maintainer';
-  print p("Please contact this site's $webmaster for assistance.");
-  print footer();
-  exit 0;
+  return pre($string);
 }
 
 sub PrintMultiple {
@@ -224,10 +221,15 @@ sub PrintMultiple {
 }
 
 sub position {
-  my $f = shift;
+  my $f      = shift;
+  my $simple = shift;
   my $ref = $f->abs_ref;
   my $start = $f->abs_start;
   my $end   = $f->abs_end;
+  if ($simple) {
+    ($start,$end) = ($end,$start) if $f->strand < 0;
+    return "<b>$ref</b> $start..$end";
+  }
   my $strand = $f->abs_strand > 0 ? '+' : $f->abs_strand < 0 ? '-' : '';
   my $url = "gbrowse?name=$ref:$start..$end;src=".$CONFIG->source;
   return a({-href=>$url},$strand ? "$ref:$start..$end ($strand strand)" : "$ref:$start..$end");

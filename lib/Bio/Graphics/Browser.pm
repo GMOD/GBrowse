@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.63 2003-05-08 05:06:39 lstein Exp $
+# $Id: Browser.pm,v 1.64 2003-05-09 03:56:23 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -141,7 +141,18 @@ sub read_configuration {
     $self->{source} ||= $basename;
   }
   $self->{width} = DEFAULT_WIDTH;
+  $self->{dir}   = $conf_dir;
   1;
+}
+
+=head2 $conf_dir = dir()
+
+Returns the directory path that this config is attached to.
+
+=cut
+
+sub dir {
+  shift->{dir};
 }
 
 =head2 sources()
@@ -310,6 +321,32 @@ sub description {
   my $source = shift;
   my $c = $self->{conf}{$source}{data} or return;
   return $c->setting('general','description');
+}
+
+=head2 $language = $browser->language([$new_language])
+
+Get/set an associated Bio::Graphics::Browser::I18n language translation object.
+
+=cut
+
+sub language {
+  my $self = shift;
+  my $d    = $self->{language};
+  $self->{language} = shift if @_;
+  $d;
+}
+
+=head2 $french = $browser->tr($english)
+
+Translate message into currently-set language, with fallback to POSIX,
+via associated Bio::Graphics::Browser::I18n language translation object.
+
+=cut
+
+sub tr {
+  my $self = shift;
+  my $lang = $self->language or return @_;
+  $lang->tr(@_);
 }
 
 =head2 labels()
@@ -1569,8 +1606,11 @@ sub make_link {
   elsif (!$link || $link eq 'AUTO') {
     my $name  = CGI::escape($feature->name);
     my $class = CGI::escape($feature->class);
+    my $ref   = CGI::escape($feature->abs_ref);
+    my $start = CGI::escape($feature->abs_start);
+    my $end   = CGI::escape($feature->abs_end);
     my $src   = CGI::escape($source);
-    return "gbrowse_details?src=$src;name=$name;class=$class";
+    return "gbrowse_details?src=$src;name=$name;class=$class;ref=$ref;start=$start;end=$end";
   }
   return $self->link_pattern($link,$feature,$panel);
 }

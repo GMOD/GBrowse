@@ -40,13 +40,14 @@ $Config{startperl} -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.10 2003-05-08 05:06:39 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.11 2003-05-09 03:56:23 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1);
 use Bio::DB::GFF;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
+use Bio::Graphics::Browser::Util;
 use Text::Shellwords;
 use vars qw($CONFIG $VERSION $CONF_DIR);
 use constant MAX_SEGMENT     => 1_000_000;
@@ -62,23 +63,8 @@ use constant MAX_SEGMENT     => 1_000_000;
 #           multiple "add" arguments are allowed
 # style     stylesheet for added features
 
-BEGIN {
-    # here's a patch for a fix in Bio::DB::GFF that didn't get into BioPerl 1.0
-    unless (Bio::DB::GFF::Segment->can('seq_id')) {
-      *Bio::DB::GFF::Segment::seq_id  = sub { shift->ref };
-      *Bio::Graphics::Feature::seq_id = sub { shift->ref };
-    }
-};
-
-# allow sharing with a global configuration variable
-*CONFIG = *GBrowse::CONFIG;
-
-if ($ENV{MOD_PERL}) {
-  my $conf  = Apache->request->dir_config('GBrowseConf');
-  $CONF_DIR = Apache->server_root_relative($conf) if $conf;
-}
-$CONFIG  ||= Bio::Graphics::Browser->new;
-$CONFIG->read_configuration($CONF_DIR) or message("Can't read configuration files: $!");
+$CONF_DIR = conf_dir($CONF_DIR);
+$CONFIG = open_config($CONF_DIR);  # open_config() is exported from Util.pm
 
 unless (param()) {
   print header;
@@ -87,7 +73,8 @@ unless (param()) {
 }
 
 # set the database source
-$CONFIG->source(param('source'))               if param('source');
+my $src = param('src') || param('source');
+$CONFIG->source($src)     if $src;
 
 # self-documentation feature: dump out tab-delimited list of mnemonics and keys
 if (param('list')) {
@@ -153,25 +140,10 @@ sub message {
 
 sub get_segment {
   my $name = shift;
-  my $db   = open_database();
+  my $db   = open_database($CONFIG);
   my @segments = $CONFIG->name2segments($name,$db);
   return unless @segments;
   $segments[0];
-}
-
-sub open_database {
-  my $source  = $CONFIG->source;
-  return $GBrowse::{$source} if $GBrowse::{$source};
-  my ($adaptor,@argv) = eval{$CONFIG->db_settings};
-  unless (@argv) {
-    warn "gbrowse: trying to reload config, cache must be stale";
-    $CONFIG = Bio::Graphics::Browser->new;
-    $CONFIG->read_configuration($CONF_DIR) or message("Can't read configuration files: $!");
-    $CONFIG->source($source);
-    ($adaptor,@argv) = $CONFIG->db_settings;
-  }
-  $GBrowse::{$source} = eval {$adaptor->new(@argv)} or warn $@;
-  return $GBrowse::{$source};
 }
 
 sub external_features {

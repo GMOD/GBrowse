@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.55 2004-04-15 15:38:12 scottcain Exp $
+# $Id: Segment.pm,v 1.56 2004-04-17 01:52:18 allenday Exp $
 
 =head1 NAME
 
@@ -114,29 +114,29 @@ sub new {
     $base_start = $base_start ? int($base_start) : 1;
     my $interbase_start = $base_start - 1;
 
-    my $quoted_name = $factory->{dbh}->quote( lc $name );
+    my $quoted_name = $factory->dbh->quote( lc $name );
 
     warn "quoted name:$quoted_name\n" if DEBUG;
 
-    my $srcfeature_query = $factory->{dbh}->prepare( "
+    my $srcfeature_query = $factory->dbh->prepare( "
        select srcfeature_id from featureloc
        where feature_id = ?
          " );
 
-    my $landmark_is_src_query = $factory->{dbh}->prepare( "
+    my $landmark_is_src_query = $factory->dbh->prepare( "
        select f.name,f.feature_id,f.seqlen,f.type_id
        from feature f
        where f.feature_id = ?
          " );
 
-    my $feature_query = $factory->{dbh}->prepare( "
+    my $feature_query = $factory->dbh->prepare( "
        select f.name,f.feature_id,f.seqlen,f.type_id,fl.fmin,fl.fmax
        from feature f, featureloc fl
        where fl.feature_id = ? and
              ? = f.feature_id
          " );
 
-    my $fetch_uniquename_query = $factory->{dbh}->prepare( "
+    my $fetch_uniquename_query = $factory->dbh->prepare( "
        select name,fmin,fmax,uniquename from feature
        where feature_id = ?
          ");
@@ -254,7 +254,7 @@ sub name {
 sub _search_by_name {
   my ($factory,$quoted_name) = @_;
 
-  my $sth = $factory->{dbh}->prepare ("
+  my $sth = $factory->dbh->prepare ("
              select name,feature_id,seqlen from feature
              where lower(name) = $quoted_name  ");
                                                                                                               
@@ -262,7 +262,7 @@ sub _search_by_name {
                                                                                                               
   my $rows_returned = $sth->rows;
   if ($rows_returned == 0) { #look in synonym for an exact match
-    my $isth = $factory->{dbh}->prepare ("
+    my $isth = $factory->dbh->prepare ("
        select fs.feature_id from feature_synonym fs, synonym s
        where fs.synonym_id = s.synonym_id and
        lower(s.synonym_sgml) = $quoted_name
@@ -271,7 +271,7 @@ sub _search_by_name {
     $rows_returned = $isth->rows;
                                                                                                               
     if ($rows_returned == 0) { #look in dbxref for accession number match
-      $isth = $factory->{dbh}->prepare ("
+      $isth = $factory->dbh->prepare ("
          select feature_id from feature_dbxref fd, dbxref d
          where fd.dbxref_id = d.dbxref_id and
                lower(d.accession) = $quoted_name ");
@@ -506,25 +506,32 @@ sub features {
 
   my $sql_types = '';
 
+  my $valid_type = undef;
   if (scalar @$types != 0) {
-    $sql_types .= "(f.type_id = ".$self->factory->n2t($$types[0]);
+    $valid_type = $self->factory->n2t($$types[0]);
+    $self->throw("feature type: '$$types[0]' is not recognized") unless $valid_type;
+    $sql_types .= "(f.type_id = $valid_type";
 
     if (scalar @$types > 1) {
       for(my $i=1;$i<(scalar @$types);$i++) {
-        $sql_types .= " OR \n     f.type_id = ".$self->factory->n2t($$types[$i]);
+       $valid_type = $self->factory->n2t($$types[$i]);
+        $self->throw("feature type: '$$types[$i]' is not recognized") unless $valid_type;
+        $sql_types .= " OR \n     f.type_id = $valid_type";
       }
     }
     $sql_types .= ") and ";
   }
 
-#  $self->{factory}->{dbh}->trace(1) if DEBUG;
+#  $self->factory->dbh->trace(1) if DEBUG;
 
   my $srcfeature_id = $self->{srcfeature_id};
 
-  $self->{factory}->{dbh}->do("set enable_seqscan=0");
-#  $self->{factory}->{dbh}->do("set enable_hashjoin=0");
+  $self->factory->dbh->do("set enable_seqscan=0");
+#  $self->factory->dbh->do("set enable_hashjoin=0");
 
-  my $sth = $self->{factory}->{dbh}->prepare("
+  warn "select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.locgroup,f.type_id,f.uniquename,f.feature_id from feature f, featureslice($interbase_start, $rend) fl where $sql_types fl.srcfeature_id = $srcfeature_id and f.feature_id  = fl.feature_id order by type_id,fmin;" if DEBUG;
+
+  my $sth = $self->factory->dbh->prepare("
     select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.locgroup,f.type_id,f.uniquename,f.feature_id
     from feature f, featureslice($interbase_start, $rend) fl
     where
@@ -533,9 +540,11 @@ sub features {
       f.feature_id  = fl.feature_id
     order by type_id,fmin;
        ");
+
+
    $sth->execute or $self->throw("feature query failed"); 
-#   $self->{factory}->{dbh}->do("set enable_hashjoin=1");
-   $self->{factory}->{dbh}->do("set enable_seqscan=1");
+#   $self->factory->dbh->do("set enable_hashjoin=1");
+   $self->factory->dbh->do("set enable_seqscan=1");
 
 # Old query (doesn't use RTree index):
 #
@@ -551,7 +560,7 @@ sub features {
 
 
 
-#$self->{factory}->{dbh}->trace(0);
+#$self->factory->dbh->trace(0);
 #take these results and create a list of Bio::SeqFeatureI objects
 #
 
@@ -562,7 +571,7 @@ sub features {
     my $base_start      = $interbase_start +1;
 
     $feat = Bio::DB::Das::Chado::Segment::Feature->new (
-                       $self->{factory},
+                       $self->factory,
                        $self,
                        $self->seq_id,
                        $base_start,$stop,
@@ -624,20 +633,20 @@ sub seq {
 
   my $sth;
   if (!$has_start and !$has_stop) {
-    $sth = $self->{factory}->{dbh}->prepare("
+    $sth = $self->factory->dbh->prepare("
      select residues from feature
      where feature_id = $feat_id ");
   } elsif (!$has_start) {
-    $sth = $self->{factory}->{dbh}->prepare("
+    $sth = $self->factory->dbh->prepare("
      select substring(residues for $stop) from feature
      where feature_id = $feat_id ");
   } elsif (!$has_stop) {
-    $sth = $self->{factory}->{dbh}->prepare("
+    $sth = $self->factory->dbh->prepare("
      select substring(residues from $base_start) from feature
      where feature_id = $feat_id ");
   } else { #has both start and stop
     my $sslen = $stop-$base_start+1;
-    $sth = $self->{factory}->{dbh}->prepare("
+    $sth = $self->factory->dbh->prepare("
      select substring(residues from $base_start for $sslen) from feature
      where feature_id = $feat_id ");
   }

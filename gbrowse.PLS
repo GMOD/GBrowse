@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.20 2002-03-31 21:15:51 lstein Exp $
+# $Id: gbrowse.PLS,v 1.21 2002-04-01 04:08:44 lstein Exp $
 
 use strict;
 use lib '/home/lstein/projects/Generic-Genome-Browser/lib/';
@@ -271,7 +271,7 @@ elsif ($plugin_action eq 'About...') {
 ## HANDLE PLUGIN CONFIGURATION####################################################
 elsif ($plugin_action eq 'Configure...') {
   do_plugin_configure(param('plugin'));
-} elsif ($plugin_action eq 'Go!' && $plugin_type eq 'finder') {
+} elsif ($plugin_action eq 'Go!' && $plugin_type=~/^(finder|annotator)$/i) {
   do_plugin_configure(param('plugin'));
 }
 
@@ -353,8 +353,9 @@ sub main_display {
     print $map,"\n" if $map;
   }
   print hidden('ref'),hidden('start'),hidden('stop');
-  print plugin_table($page_settings,$PLUGINS);
   print settings_table($page_settings,$feature_files);
+  print plugin_table($page_settings,$PLUGINS);
+  print data_source_table($page_settings);
   print p(),upload_table($page_settings,$feature_files);
   print p(),external_table($page_settings,$feature_files);
   print end_form();
@@ -576,11 +577,13 @@ sub navigation_table {
   my $settings = shift;
   my $buttonsDir    = $CONFIG->setting('buttons');
   my $table = '';
+  my $oligo = $PLUGINS->{'OligoFinder'} ? ', oligonucleotide (15 bp minimum)' : '';
 
   $table .= table({-border=>0, -width=>$settings->{width}},
 		  TR({-class=>'searchbody'},
 		     td({-align=>'left', -colspan=>2},
-			'Search using a sequence name, gene name, locus, or other landmark.',
+			"Search using a sequence name, gene name, locus${oligo} or other landmark.",
+			'The wildcard character "*" is allowed.',
 			show_examples()
 		    )),
 		  TR({-class=>'searchbody'},
@@ -742,22 +745,23 @@ sub settings_table {
 			b(submit(-name => 'Update Image'))
 		       )
 		    ),
-
-		  # row
-		  $CONFIG->sources > 1 ?
-		  (TR({-class=>'searchbody'},
-		      td('Data Source:'),
-		      td({-colspan=>2},
-			 popup_menu(-name   => 'source',
-				    -values => [sort $CONFIG->sources],
-				    -labels => { map {$_ => $CONFIG->description($_)} $CONFIG->sources},
-				    -default => $CONFIG->source
-				   )))
-		   ) : '',
-
 		 );
   autoEscape(1);
   return $sTable;
+}
+
+sub data_source_table {
+  my $settings = shift;
+  return unless $CONFIG->sources > 1;
+  return table({-border=>0,-width=>$settings->{width}},
+	       TR({-class=>'searchtitle'},
+		  th('Data Source:'),
+		  td({-colspan=>2},
+		     popup_menu(-name   => 'source',
+				-values => [sort $CONFIG->sources],
+				-labels => { map {$_ => $CONFIG->description($_)} $CONFIG->sources},
+				-default => $CONFIG->source
+			       ))));
 }
 
 sub annotation_help {

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::AlignTwoSequences;
-# $Id: AlignTwoSequences.pm,v 1.1 2003-08-05 22:21:05 markwilkinson Exp $
+# $Id: AlignTwoSequences.pm,v 1.2 2003-08-27 21:17:46 markwilkinson Exp $
 
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -9,8 +9,7 @@ use vars '$VERSION','@ISA','$blast_executable';
 
 =head1 NAME
 
-Bio::Graphics::Browser::Plugin::AlignTwoSequences -- an 'annotator' plugin that executes NCBI's bl2seq and 
-displays the results on the current view
+Bio::Graphics::Browser::Plugin::AlignTwoSequences -- a plugin that executes NCBI's bl2seq on the current view
 
 =head1 SYNOPSIS
 
@@ -136,12 +135,13 @@ sub annotate {
     my $abs_start  = $segment->start;
     my $dna        = $segment->seq;
     my $conf = $self->configuration;
-    my $feature_list   = Bio::Graphics::FeatureFile->new;
+    my $feature_list   = Bio::Graphics::FeatureFile->new(-smart_features => 1);
     $feature_list->add_type(bl2seq=>{glyph   => 'alignment',
                     key     => "BLAST alignment",
                     fgcolor => 'brown',
                     bgcolor => 'brown',
                     point   => 0,
+                    'link' => 'AUTO',
                     orient  => 'N',
                    });
     #  I should add a "link" section to the feature
@@ -157,7 +157,16 @@ sub annotate {
            while( my $hsp = $hit->next_hsp ) {
                 my $start = $abs_start + $hsp->start;
                 my $stop = $abs_start + $hsp->end;
-                my $feature = Bio::Graphics::Feature->new(-start=>$start,-stop=>$stop,-ref=>$ref,-name=>'bl2seq');
+                my $feature = Bio::Graphics::Feature->new(
+                    -start=>$start,
+                    -type => "bl2seq",
+                    -subtype => "similarity",
+                    -desc => "Blast alignment",
+                    -source => "NCBI_Blast",
+                    -strand => "0",
+                    -stop=>$stop,
+                    -ref=>$ref,
+                    -name=>'bl2seq');
                 $feature_list->add_feature($feature,'bl2seq');
            }
        }

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.26 2003-03-13 22:09:14 scottcain Exp $
+# $Id: Segment.pm,v 1.27 2003-03-19 21:39:39 scottcain Exp $
 
 =head1 NAME
 
@@ -41,18 +41,6 @@ Segment.pm may need to create a segment out of something else.
                                        );
 
 =head1 DESCRIPTION
-
-Note that there is currently a hack in Segment.pm to make it work with
-chado/gadfly: the search space for names of segments is in a small
-table named gbrowse_assembly, which contains only chromosome arms,
-as extracted directly from the feature table.  This is done because
-gbrowse generally only creates segments out of a large reference
-sequence (like an arm), and there is no good, fast way to look up
-arm names in chado: the feature table is too big (affecting performance
-of a common command), and the synonym tables does not contain arm
-names.  In order for Segment.pm to be a general chado tool, this 
-will have to be addressed, as it is possible that another use of 
-Segment.pm may need to create a segment out of something else.
 
 Bio::DB::Das::Chado::Segment is a simplified alternative interface to
 sequence annotation databases used by the distributed annotation
@@ -115,14 +103,11 @@ use strict;
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
-use constant DEBUG => 0;
+use constant DEBUG => 1;
 
-use vars '@ISA','$VERSION','$ASSEMBLY_TYPE';
+use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI);
 $VERSION = 0.02;
-$ASSEMBLY_TYPE = 'arm'; #this should really be set in a config file
-                        # well, it shouldn't really need to be anywhere, 
-                        # it is just a speed hack
 
 # construct a virtual segment that works in a lazy way
 sub new {
@@ -142,16 +127,13 @@ sub new {
 #moved length determination to constructor, now it will be there from
 # 'the beginning'.
 
-  my $quoted_name = $factory->{dbh}->quote($name);
+  my $quoted_name = $factory->{dbh}->quote(lc $name);
 
   warn "$quoted_name\n" if DEBUG;
 
-  my $cvterm_id = $factory->{cvterm_id};
-
   my $sth = $factory->{dbh}->prepare ("
              select name,feature_id,seqlen from gbrowse_assembly
-             where type_id = ". $$cvterm_id{$ASSEMBLY_TYPE} ." and
-                   name ilike $quoted_name  ");
+             where lower(name) = $quoted_name  ");
 
     warn "prepared:$sth\n" if DEBUG ;
 
@@ -159,6 +141,7 @@ sub new {
 
     warn "executed\n" if DEBUG;
 
+  $quoted_name = $factory->{dbh}->quote($name);
   my $hash_ref = {};
   my $length;
   my $rows_returned = $sth->rows;
@@ -355,6 +338,7 @@ sub features {
   if ($_[0] =~ /^-/) {
     ($types,$attributes,$rangetype,$iterator,$callback) =
       $self->_rearrange([qw(TYPE ATTRIBUTES RANGETYPE ITERATOR CALLBACK RARE)],@_);
+    warn "$types\n";
   } else {
     $types = \@_;
   }

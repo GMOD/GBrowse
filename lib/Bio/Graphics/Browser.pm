@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.35 2002-08-31 00:44:55 lstein Exp $
+# $Id: Browser.pm,v 1.36 2002-09-09 03:27:03 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -67,7 +67,7 @@ use Text::Shellwords;
 require Exporter;
 
 use vars '$VERSION','@ISA','@EXPORT';
-$VERSION = '1.14';
+$VERSION = '1.15';
 
 @ISA    = 'Exporter';
 @EXPORT = 'commas';
@@ -638,7 +638,7 @@ sub make_map {
 
   foreach (@$boxes){
     next unless $_->[0]->can('primary_tag');
-    if ($_->[0]->primary_tag eq 'Segment') {
+    if ($_->[0]->primary_tag eq 'DasSegment') {
       $map .= $self->make_centering_map($_) if $centering_map;
       next;
     }
@@ -784,7 +784,7 @@ sub image_and_map {
 
 
   if (@feature_types) {  # don't do anything unless we have features to fetch!
-    my $iterator = $segment->get_seq_stream(-type=>\@feature_types);
+    my $iterator = $segment->get_feature_stream(-type=>\@feature_types);
     warn "feature types = @feature_types\n" if DEBUG;
     my (%similarity,%feature_count);
 
@@ -799,7 +799,7 @@ sub image_and_map {
 
       # special case to handle paired EST reads
       # WARNING: HARD-CODED RELIANCE ON METHOD NAMES similarity AND alignment.
-      if ($feature->method =~ /^(similarity|alignment)$/i) {
+      if ($feature->primary_tag =~ /^(similarity|alignment)$/i) {
 	push @{$similarity{$label}},$feature;
 	next;
       }
@@ -835,20 +835,35 @@ sub image_and_map {
       }
 
       $options->{$label} ||= 0;
-      my $do_bump  =   $options->{$label} == 0 ? $feature_count{$label} <= $max_bump
+      my $conf_label        = $conf->code_setting($label => 'label');
+      $conf_label           = 1 unless defined $conf_label;
+
+      my $conf_bump         = $conf->code_setting($label => 'bump');
+      $conf_bump            = 1 unless defined $conf_bump;
+
+      my $conf_description  = $conf->code_setting($label => 'description');
+      $conf_description     = 0 unless defined $conf_description;
+      my $do_bump  = $options->{$label} == 0 
+                     ? $feature_count{$label} <= $max_bump && $conf_bump
 	             : $options->{$label} == 1 ? 0
                      : $options->{$label} == 2 ? 1
                      : $options->{$label} == 3 ? 1
                      : $options->{$label} == 4 ? 2
                      : $options->{$label} == 5 ? 2
 		     : 0;
-      my $do_label =   $options->{$label} == 0 ? $feature_count{$label} <= $max_labels
-	             : $options->{$label} == 3 ? 1
-	             : $options->{$label} == 5 ? 1
+      my $do_label = $options->{$label} == 0 
+                     ? $feature_count{$label} <= $max_labels && $conf_label
+	             : $options->{$label} == 3 ? $conf_label || 1
+	             : $options->{$label} == 5 ? $conf_label || 1
 		     : 0;
-      $tracks{$label}->configure(-bump        => $do_bump,
-				 -label       => $do_label,
-				 -description => ($do_label && $self->setting($label=>'description')),
+      my $do_description = $options->{$label} == 0
+                     ? $feature_count{$label} <= $max_labels && $conf_description
+	             : $options->{$label} == 3 ? $conf_description || 1
+	             : $options->{$label} == 5 ? $conf_description || 1
+		     : 0;
+      $tracks{$label}->configure(-bump  => $do_bump,
+				 -label => $do_label,
+				 -description => $do_description,
 				);
       $tracks{$label}->configure(-connector  => 'none') if !$do_bump;
     }
@@ -958,7 +973,7 @@ sub add_overview_landmarks {
 
   my %count;
   while (my $feature = $iterator->next_seq) {
-    my $track_name = $type2track{$feature->type} || $type2track{$feature->method} || next;
+    my $track_name = eval{$type2track{$feature->type}} || $type2track{$feature->primary_tag} || next;
     my $track = $track{$track_name} or next;
     $track->add_feature($feature);
     $count{$track_name}++;
@@ -969,16 +984,15 @@ sub add_overview_landmarks {
 
   for my $track_name (keys %count) {
     my $track = $track{$track_name};
-    my $bump  = defined $conf->setting($track_name => 'bump')
-              ? $conf->setting($track_name=>'bump')    : $count{$track_name} <= $max_bump;
-    my $label = defined $conf->setting($track_name  => 'label')
-              ? $conf->setting($track_name => 'label') : $count{$track_name} <= $max_label;
+    my $bump  = defined $conf->code_setting($track_name => 'bump')
+      ? $conf->code_setting($track_name=>'bump')    : $count{$track_name} <= $max_bump;
+    my $label = defined $conf->code_setting($track_name  => 'label')
+      ? $conf->code_setting($track_name => 'label') : $count{$track_name} <= $max_label;
     $track->configure(-bump  => $bump,
 		      -label => $label,
 		     );
   }
   return \%track;
-  $panel;
 }
 
 =head2 hits_on_overview()
@@ -1027,7 +1041,7 @@ sub hits_on_overview {
     if (ref($hit) eq 'ARRAY') {
       my ($ref,$start,$stop,$name) = @$hit;
       push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$start,
-						      -stop=>$stop,
+						      -end=>$stop,
 						      -name=>$name||'');
     } elsif (UNIVERSAL::can($hit,'ref')) {
       my $ref  = $hit->seq_id;
@@ -1036,14 +1050,14 @@ sub hits_on_overview {
       $name =~ s/\:\d+,\d+$//;  # remove coordinates if they're there
       $name = substr($name,0,7).'...' if length $name > 10;
       push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$start,
-						      -stop=>$end,
+						      -end=>$end,
 						      -name=>$name);
     } elsif (UNIVERSAL::can($hit,'location')) {
       my $location = $hit->location;
       my ($ref,$start,$stop,$name) = ($location->seq_id,$location->start,
 				      $location->end,$location->primary_tag);
       push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$start,
-						      -stop=>$stop,
+						      -end=>$stop,
 						      -name=>$name||'');
     }
   }
@@ -1117,7 +1131,7 @@ sub name2segments {
   my @argv = (-name  => $name);
   push @argv,(-class => $class) if defined $class;
   push @argv,(-start => $start) if defined $start;
-  push @argv,(-stop  => $stop)  if defined $stop;
+  push @argv,(-end   => $stop)  if defined $stop;
   @segments = $name =~ /[*?]/ ? $db->get_feature_by_name(@argv) 
                               : $db->segment(@argv);
 
@@ -1130,7 +1144,7 @@ sub name2segments {
       my @argv = (-name  => $n);
       push @argv,(-class => $class) if defined $class;
       push @argv,(-start => $start) if defined $start;
-      push @argv,(-stop  => $stop)  if defined $stop;
+      push @argv,(-end   => $stop)  if defined $stop;
       @segments = $name =~ /\*/ ? $db->get_feature_by_name(@argv) 
                                 : $db->segment(@argv);
       last if @segments;
@@ -1147,7 +1161,7 @@ sub name2segments {
   if (!@segments && length $name > 3) {
     @argv = (-name => "$name*");
     push @argv,(-start => $start) if defined $start;
-    push @argv,(-stop  => $stop)  if defined $stop;
+    push @argv,(-end   => $stop)  if defined $stop;
     @segments = $name =~ /\*/ ? $db->get_feature_by_name(@argv)
                               : $db->segment(@argv);
   }
@@ -1162,7 +1176,7 @@ sub name2segments {
 	for my $n (@names) {
 	  @argv = (-name=>$n);
 	  push @argv,(-start => $start) if defined $start;
-	  push @argv,(-stop  => $stop)  if defined $stop;
+	  push @argv,(-end   => $stop)  if defined $stop;
 	  # we are deliberately doing something different in the case that the user
 	  # typed in a wildcard vs an automatic wildcard being added
 	  @segments = $name =~ /\*/ ? $db->get_feature_by_name(-class=>$class,@argv)
@@ -1335,7 +1349,7 @@ sub _low_merge {
   }
   my $class = $features[0]->factory->refclass;
   push @spans,$db ? $db->segment(-name=>$ref,-class=>$class,-start=>$previous_start,-end=>$previous_stop)
-                  : Bio::Graphics::Feature->new(-start=>$previous_start,-stop=>$previous_stop,-ref=>$ref);
+                  : Bio::Graphics::Feature->new(-start=>$previous_start,-end=>$previous_stop,-ref=>$ref);
   return @spans;
 }
 
@@ -1476,6 +1490,8 @@ sub make_link {
 sub make_title {
   my $self = shift;
   my ($feature,$panel) = @_;
+  local $^W = 0;  # tired of uninitialized variable warnings
+
   my ($title,$key) = ('','');
  TRY: {
     my $label    = $self->feature2label($feature) or last TRY;
@@ -1501,7 +1517,8 @@ sub make_title {
       join(' ',
 	   "$key:",
 	   $feature->can('display_id') ? $feature->display_id : $feature->info,
-	   $feature->seq_id .":".
+	   ($feature->can('seq_id') ? $feature->seq_id : $feature->location->seq_id)
+	   .":".
 	   ($feature->start||'?')."..".($feature->end||'?')
 	  );
     }

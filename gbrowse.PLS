@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.55 2002-09-05 19:22:58 lstein Exp $
+# $Id: gbrowse.PLS,v 1.56 2002-09-09 03:27:03 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -579,6 +579,7 @@ sub adjust_settings {
       $settings->{ref}   = param('ref');
       $settings->{start} = param('start') if param('start') =~ /^[\d-]+/;
       $settings->{stop}  = param('stop')  if param('stop')  =~ /^[\d-]+/;
+      $settings->{stop}||= param('end')   if param('end')   =~ /^[\d-]+/;
       zoomnav($settings);
       $settings->{name} = "$settings->{ref}:$settings->{start}..$settings->{stop}";
       param(name => $settings->{name});
@@ -954,8 +955,21 @@ sub zoomnav {
   }
 
   # to prevent from going off left end
-  $start = 1 if $start < 1;
+  if ($start < 1) {
+    warn "adjusting left because $start < 1" if DEBUG;
+    ($start,$stop) = (1,$stop-$start+1);
+  }
+
+  # to prevent from going off right end
+  if (defined $segment_length && $stop > $segment_length) {
+    warn "adjusting right because $stop > $segment_length" if DEBUG;
+    ($start,$stop) = ($segment_length-($stop-$start),$segment_length);
+  }
+
+  # to prevent divide-by-zero errors when zoomed down to a region < 2 bp
   $stop  = $start + ($span > 4 ? $span - 1 : 4) if $stop <= $start+2;
+
+  warn "start = $start, stop = $stop\n" if DEBUG;
 
   $settings->{start} = $start;
   $settings->{stop}  = $stop;
@@ -1006,7 +1020,7 @@ sub lookup_segments {
   elsif (my $ref = $settings->{ref}) {
     my @argv = (-name  => $ref);
     push @argv,(-start => $settings->{start}) if defined $settings->{start};
-    push @argv,(-stop  => $settings->{stop})  if defined $settings->{stop};
+    push @argv,(-end   => $settings->{stop})  if defined $settings->{stop};
     @segments = $db->segment(@argv);
   }
 
@@ -1018,14 +1032,14 @@ sub lookup_segments {
   # Filter out redundant segments; this can happen when the same basic feature is
   # present under several names, such as "genes" and "frameworks"
   my %seenit;
-  @segments = grep {!$seenit{$_->name,$_->seq_id,$_->start,$_->end}++} @segments;
+  @segments = grep {!$seenit{$_->seq_id,$_->seq_id,$_->start,$_->end}++} @segments;
   return @segments if @segments > 1;
 
   # set CGI name parameter to match segment.
   # this prevents any confusion over (ref,start,stop) and (name) addressing.
   $settings->{ref}   = $segments[0]->seq_id;
   $settings->{start} = $segments[0]->start;
-  $settings->{stop}  = $segments[0]->stop;
+  $settings->{stop}  = $segments[0]->end;
 
   return $segments[0];
 }
@@ -1037,8 +1051,8 @@ sub truncated_segment {
   my $ref   = $seg->seq_id;
   my $db    = open_database();
   my $whole = $db->segment($ref);
-  return $db->segment(-name=>$ref,-start=>$whole->stop-4,-stop=>$whole->stop) if $trunc_right;
-  return $db->segment(-name=>$ref,-start=>1,-stop=>4)                         if $trunc_left;
+  return $db->segment(-name=>$ref,-start=>$whole->stop-4,-end=>$whole->stop) if $trunc_right;
+  return $db->segment(-name=>$ref,-start=>1,-end=>4)                         if $trunc_left;
 }
 
 ################ perform keyword search ###############
@@ -1075,7 +1089,7 @@ sub do_keyword_search {
 					      -score  => $score,
 					      -ref    => $seg->abs_ref,
 					      -start  => $seg->abs_start,
-					      -stop   => $seg->abs_stop);
+					      -end    => $seg->abs_stop);
 
   }
   @$segments = @results;
@@ -1283,7 +1297,7 @@ sub handle_quickie {
   my ($settings,$data) = @_;
   return unless $data;
 
-  # format of quickie data is reference+type+name+start-stop,start-stop,start-stop
+  # format of quickie data is reference+type+name+start-end,start-end,start-end
   my ($reference,$type,$name,@position) = shellwords($data||'');
   my @segments = map { [/(-?\d+)(?:-|\.\.)(-?\d+)/]} map {split /,/} @position;
   my $feature = Bio::Graphics::Feature->new(
@@ -1319,7 +1333,7 @@ sub write_auto {
   }
   close $out;
   my (undef,$url) = name_uploaded_file($settings,$file);
-  push @{$settings->{tracks}},$url;
+  unshift @{$settings->{tracks}},$url;
   $settings->{features}{$url} = {visible=>1,options=>0,limit=>0};
 }
 

@@ -23,7 +23,7 @@ END
 
    NAVIGATION_INSTRUCTIONS => <<END,
 Klik op het lineaal om de figuur op de aangeduide plaats te centreren. 
-Maak gebruik van de Scroll/Zoom knoppen om de vergroting of de positie te veranderen. 
+Maak gebruik van de 'Scrollen/Inzoomen' knoppen om de vergroting of de positie te veranderen. 
 Om de huidige pagina te bewaren, 
 <a href="%s">voeg deze koppeling toe aan uw favorieten.</a>  
 END
@@ -141,7 +141,7 @@ END
 
    ANNOTATE     => 'Annoteren',
 
-   SCROLL   => 'Scroll/Zoom',
+   SCROLL   => 'Scrollen/Inzoomen',
 
    RESET    => 'Reset',
 
@@ -214,6 +214,25 @@ Er wordt geen informatie gedeeld.
 END
 
    FOOTER_2    => 'Generic genome browser versie %s',
+
+   ALL_OFF => 'Alles uit',
+
+   ALL_ON => 'Alles aan',
+
+   ANALYSIS => 'Analyse',
+
+   DETAILS => 'Details',
+
+   GENERAL => 'Algemeen',
+
+   NO_SOURCES => 'Geen gegevensbronnen',
+
+   OVERVIEW => 'Overzicht',
+
+   OVERVIEW_TRACKS => 'Overzichtsbanen',
+
+   UPLOAD_TRACKS => 'Upload banen',
+
 
    #----------------------
    # MULTIPLE MATCHES PAGE

@@ -1,0 +1,7 @@
+=head1 USING GBROWSE AS A DAS SERVER
+
+The Distributed Annotation System (DAS; www.biodas.org) is a simple
+protocol for sharing and integrating genomic annotations.  GBrowse can
+act both as a DAS front end for visualization and as a DAS server for
+sharing your annotations.
+

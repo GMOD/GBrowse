@@ -231,7 +231,7 @@ new value of phase (to set)
 
 sub phase {
     my $self = shift;
-    return $self->{'phase'} = shift if defined(@_);
+    return $self->{'phase'} = shift if defined($_[0]);
     return $self->{'phase'};
 }
 

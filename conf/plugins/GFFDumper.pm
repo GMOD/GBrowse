@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.18 2003-11-06 01:53:17 stajich Exp $
+# $Id: GFFDumper.pm,v 1.19 2003-11-06 02:12:05 stajich Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -121,11 +121,11 @@ sub dump {
   }
   else {
       $segment->absolute(0);
-    my $iterator = $segment->get_seq_stream(@args);
-    while ( my $f = $iterator->next_seq ) {
-	push @feats, $f;
-    }  
-  }
+      my $iterator = $segment->get_seq_stream(@args);
+      while ( my $f = $iterator->next_seq ) {
+	  push @feats, $f;
+      }  
+  } 
 
   $self->do_dump(\@feats, $version, $whole_segment);
 
@@ -149,33 +149,33 @@ sub dump {
 }
 
 sub do_dump {
-  my ($self, $feats, $gff_version, $segment) = @_;
-  my @gff;
-  
-  for my $f ( @$feats ) {
-    $f->version($gff_version);
-    my $s = $f->gff_string(1); # the flag is for GFF3 subfeature recursion
-    push @gff, $s if defined $s;
- 
-    next if $gff_version >= 3; # gff3 recurses automatically
+    my ($self, $feats, $gff_version, $segment) = @_;
+    my (@gff,%seen);
+    for my $f ( @$feats ) {
+	$f->version($gff_version);
+	my $s = $f->gff_string(1); # the flag is for GFF3 subfeature recursion
+	push @gff, $s if defined $s && ! $seen{$s}++;
 
-    for my $ss ($f->sub_SeqFeature) {
-	my $s = $ss->gff_string;
-	push @gff, $s if $s;
+	next if $gff_version >= 3; # gff3 recurses automatically
+	for my $ss ($f->get_SeqFeatures) {
+	    next if $ss eq $f;
+	    my $s = $ss->gff_string;
+
+	    push @gff, $s if defined $s && ! $seen{$s}++;
+	}
     }
-}
 
-  # out of range features break Artemis (some kind of off by one error?)
-  if ( $gff_version == 2.5 ) {
-      my $len = $segment->length - 1;
-      for ( @gff ) {
-	  my $num = (split)[4];
-	  s/$num/$len/ if $num > $len;
-      }
-  }   
-  if( @gff ) {
-      $self->do_gff(@gff);
-  }
+    # out of range features break Artemis (some kind of off by one error?)
+    if ( $gff_version == 2.5 ) {
+	my $len = $segment->length - 1;
+	for ( @gff ) {
+	    my $num = (split)[4];
+	    s/$num/$len/ if $num > $len;
+	}
+    }   
+    if( @gff ) {
+	$self->do_gff(@gff);
+    }
 }
 
 sub do_gff {
@@ -183,8 +183,6 @@ sub do_gff {
     my @gff = @_;
     # sigh... Artemis mangles uppercase 'Note' attributes
     @gff = grep { s/Note/note/g; chomp($_); $_; } @gff;
-    chomp @gff;
-    
     print join "\n", 
       map  { $_->[3] }
       # sort first asc. by start, then desc. by stop, then ascibetically 

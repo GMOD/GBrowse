@@ -137,7 +137,7 @@ Synopsis:
   mysql -uroot -p password -e 'create database yeast'
 
   mysql -uroot -p password -e 'grant all privileges on yeast.* to me@localhost'
-  mysql -uroot -p password -e 'grant file on *.* to yeast@localhost'
+  mysql -uroot -p password -e 'grant file on *.* to me@localhost'
   mysql -uroot -p password -e 'grant select on yeast.* to nobody@localhost'
 
   bulk_load_gff.pl -d yeast sample_data/yeast_data.gff

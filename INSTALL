@@ -152,6 +152,7 @@ Generic Genome Browser Installation
 
             perl Makefile.PL
             make
+            make test (optional)
             make install
 
     This will install the software in the default location under
@@ -380,7 +381,6 @@ Generic Genome Browser Installation
       mysql -uroot -p password -e 'grant select on yeast.* to nobody@localhost'
 
       bp_bulk_load_gff.pl -d yeast sample_data/yeast_data.gff
-      make test
 
     Details:
 

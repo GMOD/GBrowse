@@ -1,4 +1,4 @@
-# $Id: Chado_pf.pm,v 1.5 2002-12-02 18:00:25 scottcain Exp $
+# $Id: Chado_pf.pm,v 1.6 2002-12-02 22:25:21 scottcain Exp $
 # Das adaptor for Chado_pf
 
 =head1 NAME
@@ -12,7 +12,7 @@ NOTES:  required methods:
         segment
         features
         types
-        get_seq_stream
+        get_seq_stream  NEEDED?  conv w/Lincoln on 12/2 leads me to "No"
 
 
 
@@ -40,10 +40,6 @@ NOTES:  required methods:
                 -callback => sub { ... }
 		);
 
-  $stream   = $db->get_seq_stream(-type=>['type1','type2','type3']);
-  while (my $feature = $stream->next_seq) {
-     # each feature is a Bio::SeqFeatureI-compliant object
-  }
 
   # get all feature types
   @types   = $db->types;
@@ -138,14 +134,16 @@ $VERSION = 0.01;
 # create new database accessor object
 # takes all the same args as a Bio::DB::BioDB class
 sub new {
-  my $class = shift;
-  my $self  = $class->SUPER::new(@_);
 
-  # may throw an exception on new_from_registry()
-  # this must return the dbh
-  my $chado_pf   = $self ->_adaptorclass->new_from_registry(@_);
+  my ($driver, $dbname, $host, $username, $password, $port) =
+      #from somewhere (the config file originally)
 
-  $self->biosql($biosql);
+  my $self = DBI->connect(  "DBI:$self->$driver:"
+                         . "dbname=$self->$dbname;"
+                         . "host=$self->$host" ,
+                           $self->$username,
+                           $self->$password );
+
   $self;
 }
 
@@ -200,51 +198,9 @@ sub segment {
 								 END
 								 CLASS
 								 VERSION)],@_);
-  #my $seq = eval{$self->biosql->get_Seq_by_acc($name)};
-  my $seq = eval{$self->get_Seq_by_acc($name)}; # this needs to return a
-                                                # Bio::Das::SegmentI object
-						# OK, now I don't think so,
-						# it is just getting the seq
-  if (!$seq && $name =~ s/\.\d+$//) {  # workaround version ?bug in
-                                       # get_Seq_by_acc
-    $seq = eval{$self->get_Seq_by_acc($name)}; # shouldn't be necessary in my
-                                               # code, but keep
-  }
-  return unless $seq;
-  return $self->_segclass->new($seq,$self,$start,$end);
+  # lets the Segment class handle all the lifting.
+  return $self->_segclass->new($name,$self,$start,$end);
 }
-
-=head2 get_Seq_by_acc
-
-=cut
-
-sub get_Seq_by_acc {
-  my $name = shift;
-  my $dbh = DBI->connect(  "DBI:$self->$driver:"
-                         . "dbname=$self->$dbname;"
-                         . "host=$self->$host" ,
-                           $self->$username,
-                           $self->$password );
-  
-  $quoted_name = $dbh->quote($name);
-  my $sth = prepare (" select seqlen from feature where feature_id in
-                         (select f.feature_id
-                          from dbxref dbx, feature f, feature_dbxref fd
-                          where f.type_id = 6 and
-                                f.feature_id = fd.feature_id and
-                                fd.dbxref_id = dbx.dbxref_id and
-                                dbx.accession = $quoted_name )");
-  $sth->execute or return;
-
-  return if ($sth->rows != 1);
-
-  my $hash_ref = $sth->fetchrow_hashref or return;
-  my $bioseq = Bio::Seq->new ( -alphabet         => 'dna'
-                               -length           => $$hash_ref{'seqlen'},
-                               -accession_number => $name    );
-  return $bioseq;
-}
-
 
 =head2 features
 
@@ -290,15 +246,11 @@ sub features {
   my ($types,$callback,$attributes) = 
        $self->_rearrange([qw(TYPES CALLBACK ATTRIBUTES)],
 			@_);
-  #my @features = $self->_segclass->_filter([$self->biosql->top_SeqFeatures],
-  #					   {types => $types},
-  #					   $callback);
 
 
-  #top_SeqFeatures -- a Bio::Root::Root or Bio::DasI method?
-  my @features = $self->_segclass->_filter([$self->top_SeqFeatures],
-                                          {types => $types},
-                                          $callback);
+  my @features = $self->_segclass->features(-types => $types,
+                                            -attributes => $attributes,
+                                            -callback => $callback );
 
 
   @features;
@@ -359,65 +311,6 @@ TO WORK.
 
 =cut
 
-
-=head2 get_seq_stream
-
- Title   : get_seq_stream
- Usage   : my $seqio = $self->get_seq_stream(@args)
- Function: Performs a query and returns an iterator over it
- Returns : a Bio::SeqIO stream capable of returning Bio::Das::SegmentI objects
- Args    : As in features()
- Status  : public
-
-This routine takes the same arguments as features(), but returns a
-Bio::SeqIO::Stream-compliant object.  Use it like this:
-
-  $stream = $db->get_seq_stream('exon');
-  while (my $exon = $stream->next_seq) {
-     print $exon,"\n";
-  }
-
-CURRENT LIMITATION: All features are read into memory first and then
-returned one at a time.  Therefore this method offers no advantage
-over features().
-
-NOTE: In the interface this method is aliased to get_feature_stream(),
-as the name is more descriptive.
-
-=cut
-
-sub get_seq_stream {
-  my @features = shift->features(@_);
-  return Bio::DB::Das::Chado_pfIterator->new(\@features);
-}
-
-sub get_Seq_by_acc {
-# Lincoln says this need not be implemented
-#to take the place of biosql->get_Seq_by_acc($name)
-  my $self = shift;
-  my $id = shift;
-  $self->throw_not_implemented;
-#  my $stream = $self->get_Stream_by_accession($id);
-#  return $stream->next_seq;
-}
-
-=head2 biosql
-
- Title   : biosql
- Usage   : $biosql  = $db->biosql([$biosql])
- Function: Get/set the underlying Bio::DB::BioSQL::BioDatabaseAdaptor
- Returns : An Bio::DB::BioSQL::BioDatabaseAdaptor
- Args    : A new Bio::DB::BioSQL::BioDatabaseAdaptor (optional)
-
-=cut
-
-#sub biosql {
-#  my $self = shift;
-#  my $d    = $self->{biosql};
-#  $self->{biosql} = shift if @_;
-#  $d;
-#}
-
 =head2 _segclass
 
  Title   : _segclass
@@ -442,23 +335,7 @@ sub _segclass { return SEGCLASS }
 
 =cut
 
-#sub _adaptorclass { return ADAPTOR_CLASS }
 
-
-package Bio::DB::Das::Chado_pfIterator;
-
-sub new {
-  my $package  = shift;
-  my $features = shift;
-  return bless $features,$package;
-}
-
-sub next_seq {
-  my $self = shift;
-  return unless @$self;
-  return shift @$self;
-}
 
 1;
-
 

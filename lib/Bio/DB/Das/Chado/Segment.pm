@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.60 2004-04-30 20:32:26 scottcain Exp $
+# $Id: Segment.pm,v 1.61 2004-04-30 22:18:54 allenday Exp $
 
 =head1 NAME
 
@@ -218,8 +218,10 @@ sub new {
 
         warn "base_start:$base_start, end:$end, length:$length" if DEBUG;
 
-        $self->Bio::Root::Root::throw("end value greater than length\n")
-          if ( defined $end && $end > $length );
+        if( defined($end) and $end > $length ){
+          $self->warn("end value ($end) greater than length ($length), truncating to $length");
+          $end = $length;
+        }
         $end    = $end ? int($end) : $length;
         $length = $end - $interbase_start;
 
@@ -656,10 +658,10 @@ sub features {
                        $self->factory->term2name($$hashref{type_id}),
                        $$hashref{strand},
                        $$hashref{name},
-                       $$hashref{uniquename},$$hashref{feature_id});  
+                       $$hashref{uniquename},$$hashref{feature_id});
 
     push @features, $feat;
- 
+
     my $fstart = $feat->start() if DEBUG;
     my $fend   = $feat->end()   if DEBUG;  
   #  warn "$feat->{annotation}, $$hashref{nbeg}, $fstart, $$hashref{nend}, $fend\n" if DEBUG;
@@ -712,7 +714,7 @@ sub seq {
   if($arg{self}){
     my $r_id    = $self->feature_id;
   	 
-    $self->warn("FIXME: incomplete implementation of alternate sequence selection");
+    $self->warn("FIXME: incomplete implementation of alternate sequence selection") if $self->verbose;
   	 
     my $sth = $self->factory->dbh->prepare("
       select residues from feature

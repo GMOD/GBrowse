@@ -23,6 +23,7 @@ use Bio::SeqFeatureI;
 use Bio::Root::Root;
 use Bio::LocationI;
 use Data::Dumper;
+use URI::Escape;
 
 use constant DEBUG => 0;
 
@@ -351,10 +352,64 @@ sub get_tagset_values {
 =cut
 
 sub gff_string {
-  my ($self,%arg) = @_;
+  my $self = shift;
+  my ($recurse,$parent) = @_;
+  my ($start,$stop) = ($self->start,$self->stop);
 
-  $self->throw_not_implemented();
+  # the defined() tests prevent uninitialized variable warnings, when dealing with clone objects
+  # whose endpoints may be undefined
+  ($start,$stop) = ($stop,$start) if defined($start) && defined($stop) && $start > $stop;
+
+  my $strand = ('-','.','+')[$self->strand+1];
+  my $ref = $self->refseq;
+  my $n   = ref($ref) ? $ref->name : $ref;
+  my $phase = $self->phase;
+  $phase = '.' unless defined $phase;
+
+  my ($class,$name) = ('','');
+  my @group;
+  if (my $g = $self->group) {
+    $class = $g->can('class') && $g->class ? $g->class : '';
+    $name  = $g->can('name')  && $g->name  ? $g->name  : '';
+    $name  = "$class:$name" if length($class) and length($name);
+    push @group,[ID =>  $name] if !defined($parent) || $name ne $parent;
+  }
+
+  push @group,[Parent => $parent] if defined $parent && $parent ne '';
+
+  if (my $t = $self->target) {
+    $strand = '-' if $t->stop < $t->start;
+    push @group, $self->flatten_target($t,3);
+  }
+
+  my @attributes = $self->attributes;
+  while (@attributes) {
+    push @group,[shift(@attributes),shift(@attributes)]
+  }
+  my $group_field = join ';',map {join '=',uri_escape($_->[0]),uri_escape($_->[1])} grep {$_->[0] =~ /\S/ and $_->[1] =~ /\S/} @group;
+  my $string = join("\t",$n,$self->source||'.',$self->method||'.',$start||'.',$stop||'.',
+                    $self->score||'.',$strand||'.',$phase,$group_field);
+  $string .= "\n";
+  if ($recurse) {
+    foreach ($self->sub_SeqFeature) {
+      $string .= $_->gff_string(1,$name);
+    }
+  }
+  $string;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 =head2 has_tag()
 
@@ -671,14 +726,19 @@ sub source {
     my $dbh  = $self->factory->dbh();
 
     my $source_type = $self->factory->name2term('GFF_source');
+
+    #this is a backward compatibility patch.
+    return undef unless $source_type;
+
     my $sth  = $dbh->prepare("
         select value from featureprop
         where type_id = $source_type
           and feature_id = ?
        ");
+
     $sth->execute($self->feature_id)
          or $self->throw("getting source query failed");
-   
+
     return if ($sth->rows != 1);
 
     my $hashref = $sth->fetchrow_hashref(); 
@@ -1103,7 +1163,7 @@ sub attributes {
   my $self = shift;
   my $factory = $self->factory;
   defined(my $id = $self->id) or return;
-  $factory->attributes($id,@_)
+  $factory->attributes($id,@_);
 }
 
 sub synonyms {

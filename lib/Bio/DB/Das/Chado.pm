@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.43 2004-04-30 14:34:13 scottcain Exp $
+# $Id: Chado.pm,v 1.44 2004-04-30 22:18:54 allenday Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -621,7 +621,7 @@ sub search_notes {
 
  Title   : attributes
  Usage   : @attributes = $db->attributes($id,$name)
- Function: get the "attributres" on a particular feature
+ Function: get the "attributes" on a particular feature
  Returns : an array of string
  Args    : feature ID [, attribute name]
  Status  : public
@@ -641,7 +641,7 @@ sub attributes {
   my ($id,$tag) = @_;
 
   #get feature_id
-  
+
   my $sth = $self->dbh->prepare("select feature_id from feature where name = ?");
   $sth->execute($id) or $self->throw("failed to get feature_id in attributes"); 
   my $hashref = $sth->fetchrow_hashref;
@@ -658,7 +658,7 @@ sub attributes {
   }
 
   my $arrayref = $sth->fetchall_arrayref;
- 
+
   my @array = @$arrayref;
   return () if scalar @array == 0;
 

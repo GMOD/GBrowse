@@ -1041,6 +1041,7 @@ The most popular glyph types are:
   -----                 -----------
 
   generic		a rectangle
+  allele_tower          allele found at a SNP position
   arrow			an arrow
   anchored_arrow        a span with vertical bases |---------|.  If one
                         or the other end of the feature is off-screen, the
@@ -1079,6 +1080,7 @@ following modules:
   -----                         -----------
 
   (common options for all)      Bio::Graphics::Glyph
+  allele_tower                  Bio::Graphics::Glyph::allele_tower
   arrow				Bio::Graphics::Glyph::arrow
   anchored_arrow                Bio::Graphics::Glyph::anchored_arrow
   box                           Bio::Graphics::Glyph::box

@@ -120,6 +120,7 @@ sub overlapping_features {
   my @features;
 
   if ($all_types or @gene_types) {
+    # to_bioperl_feature() requires new code from Chris
     push @features,map {$_->to_bioperl_feature} $self->_get_genes($segment,\@gene_types);
   }
   if ($all_types or @scaffold_types) {
@@ -183,6 +184,7 @@ sub _get_scaffolds {
 
 sub _get_analyses {
   # lazy:
+  # (this requires a new version from Chris....)
   # @analyses = $gx->lget_ResultSet({constraints...,analysis_types=>['types'...]})
   # non-lazy
   # $all_analyses = $as->analysis_list()
@@ -199,6 +201,7 @@ sub _range {
   my $self = shift;
   return "$self->{name}:$self->{start}..$self->{end}"
 }
+
 
 1;
 

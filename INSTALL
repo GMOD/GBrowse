@@ -134,8 +134,7 @@ Generic Genome Browser Installation
 
     H) Bio::Das
         To display remote annotations using the Distributed Annotation
-        System. The current version is available at
-        http://www.biodas.org/download/Bio::Das/Bio-Das-0.92.tar.gz
+        System. The current version can be obtained from CPAN.
 
     I) MOBY
         Needed by gbrowse_moby to fetch and display data from MOBY

@@ -159,8 +159,7 @@ To load remote 3d party annotations. Available from CPAN.
 =item H) Bio::Das
 
 To display remote annotations using the Distributed Annotation
-System.  The current version is available at
-http://www.biodas.org/download/Bio::Das/Bio-Das-0.92.tar.gz
+System.  The current version can be obtained from CPAN.
 
 =item I) MOBY
 

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167 2004-11-23 20:33:21 scottcain Exp $
+# $Id: Browser.pm,v 1.168 2005-01-25 22:09:01 marclogghe Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1679,7 +1679,7 @@ sub _feature_get {
     # try the second line from Scott.  If multi-hit searches start coming up with too many 
     # identical hits, try the first one again.
     # my $n = $_->display_name.$_->abs_ref.(eval{$_->version}||''); # avoiding uninit warnings
-    my $n = $_->display_name.$_->abs_ref.(eval{$_->version}||'').$_->class;
+    my $n = $_->display_name.$_->abs_ref.(eval{$_->version}||'').(eval{$_->class}||'');
     $longest{$n} = $_ if !defined($longest{$n}) || $_->length > $longest{$n}->length;
   }
   values %longest;

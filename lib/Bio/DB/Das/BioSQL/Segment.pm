@@ -449,16 +449,9 @@ Currently the format is:
 
 sub asString {
   my $self = shift;
-  return $self->SUPER::asString if $self->absolute;
   my $label = $self->display_name;
   my $start = $self->start || '';
   my $stop  = $self->stop  || '';
-  
-  if ($self->absolute)
-  {
-    $stop = $self->abs_stop;
-    $start= $self->abs_start;
-  }
   
   return "$label:$start,$stop";
 }

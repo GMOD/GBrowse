@@ -501,9 +501,10 @@ automatically and loaded by any of the loaders.
 
 =head2 8. CREATING YOUR OWN GENOME DATABASE
 
-See the file doc/configuration.txt for information on how to create
-new databases from scratch, add new browser tracks, and how to get the
-browser to dump the DNA from the region currently under display.
+See the file doc/pod/CONFIGURE_HOWTO.pod for information on how to
+create new databases from scratch, add new browser tracks, and how to
+get the browser to dump the DNA from the region currently under
+display.
 
 =head2 9. MAKING THE BROWSER RUN FASTER
 
@@ -720,9 +721,8 @@ operate properly when the client is using Internet Explorer 5.1 on a
 Macintosh and accessing gbrowse running on a MacOS X server running
 Apache.  Other combinations of clients and servers work properly.
 
-=head2 18. FEATURE WISH LIST (updated December, 2003)
+=head2 18. FEATURE WISH LIST (updated April, 2004)
 
-  - Better DAS support.
   - Configure data sources on a track-by-track basis.
   - A configurable synteny viewer.
 

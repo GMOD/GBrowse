@@ -236,6 +236,13 @@ sub MY::clean {
   $inherited;
 }
 
+sub MY::dist_dir {
+  package MY;
+  my $inherited = shift->SUPER::dist_dir(@_);
+  $inherited =~ s!^(\s+.+)!\tpod2text docs/pod/INSTALL.pod > INSTALL\n$1!m;
+  $inherited;
+}
+
 sub MY::processPL {
   package MY;
   my $inherited = shift->SUPER::processPL(@_);

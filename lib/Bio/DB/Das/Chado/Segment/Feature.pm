@@ -243,10 +243,10 @@ sub sub_SeqFeature {
     from feature as parent
     inner join
       feature_relationship as fr0 on
-        (parent.feature_id = fr0.objfeature_id)
+        (parent.feature_id = fr0.object_id)
     inner join
       feature as child on
-        (child.feature_id = fr0.subjfeature_id)
+        (child.feature_id = fr0.subject_id)
     inner join
       featureloc as childloc on
         (child.feature_id = childloc.feature_id)

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.34 2003-06-30 18:37:39 scottcain Exp $
+# $Id: Segment.pm,v 1.35 2003-07-08 03:36:36 scottcain Exp $
 
 =head1 NAME
 
@@ -412,7 +412,7 @@ sub features {
 
   my @keys;
   foreach my $type (@$types) {
-    my @tempkeys = grep(/\b\Q$type\E\b/i , keys %termhash );
+    my @tempkeys = grep(/^\Q$type\E\s*$/i , keys %termhash );
     push @keys, @tempkeys;
   }
 

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.24 2003-06-30 18:45:18 scottcain Exp $
+# $Id: Chado.pm,v 1.25 2003-07-08 03:36:36 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -132,7 +132,10 @@ sub new {
 
 # get the cvterm relationships here and save for later use
 
-  my $sth = $dbh->prepare("select cvterm_id,name from cvterm where cv_id=1")
+  my $sth = $dbh->prepare("select ct.cvterm_id,ct.name
+                           from cvterm ct, cv c 
+                           where ct.cv_id=c.cv_id and
+                                 c.name = 'SO'")
     or warn "unable to prepare select cvterms";
   $sth->execute or $self->throw("unable to select cvterms");
 

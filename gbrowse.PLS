@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.87 2003-05-09 03:56:23 lstein Exp $
+# $Id: gbrowse.PLS,v 1.88 2003-05-13 01:03:38 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1108,11 +1108,12 @@ sub get_segments {
 
   my @segments = lookup_segments($db,$settings);
   # resize any segments that are below MIN_SEG_SIZE
+  my $done_resize = 0;
   for my $s (@segments) {
     next unless $s->length < MIN_SEG_SIZE;
     my $resize = $s->length <= TINY_SEG_SIZE ? EXPAND_SEG_SIZE : MIN_SEG_SIZE;
     # resize
-    error($CONFIG->tr('Small_interval',$resize)); # error message
+    error($CONFIG->tr('Small_interval',$resize)) unless $done_resize++; # error message
     my $middle = int(($s->start + $s->end)/2);
     $s = $s->factory->segment(-name  => $s->seq_id,
 			      -start => $middle - int($resize/2),

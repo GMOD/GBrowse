@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.57 2004-08-24 00:25:08 allenday Exp $
+# $Id: Chado.pm,v 1.58 2004-08-26 23:16:25 allenday Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -92,6 +92,7 @@ use Bio::Root::Root;
 use Bio::DasI;
 use Bio::PrimarySeq;
 use DBI;
+use Carp qw(longmess);
 use vars qw($VERSION @ISA);
 
 use constant SEGCLASS => 'Bio::DB::Das::Chado::Segment';
@@ -150,7 +151,25 @@ sub new {
 
   while (my $hashref = $sth->fetchrow_hashref) {
     $term2name{ $hashref->{cvterm_id} } = $hashref->{name};
-    $name2term{ $hashref->{name} }      = $hashref->{cvterm_id};
+
+    #this addresses a bug in gmod_load_gff3 (Scott!), which creates a 'part_of'
+    #term in addition to the OBO_REL one that already exists!  this will also
+    #help with names that exist in both GO and SO, like 'protein'.
+    if(defined($name2term{ $hashref->{name} })){ #already seen this name
+
+      if(ref($name2term{ $hashref->{name} }) ne 'ARRAY'){ #already array-converted
+
+        $name2term{ $hashref->{name} } = [ $name2term{ $hashref->{name} } ];
+
+      }
+
+      push @{ $name2term{ $hashref->{name} } }, $hashref->{cvterm_id};
+
+    } else {
+
+      $name2term{ $hashref->{name} }      = $hashref->{cvterm_id};
+
+    }
   }
 
   $self->term2name(\%term2name);
@@ -614,6 +633,8 @@ sub source2dbxref {
     my $self   = shift;
     my $source = shift;
 
+    return 'fake' unless defined($self->gff_source_db_id);
+
     return $self->{'source_dbxref'}->{$source}
         if $self->{'source_dbxref'}->{$source};
 
@@ -630,6 +651,7 @@ sub source2dbxref {
     } 
 
     return $self->{'source_dbxref'}->{$source}; 
+
 }
 
 =head2 dbxref2source
@@ -642,12 +664,14 @@ sub dbxref2source {
     my $self   = shift;
     my $dbxref = shift;
 
+    return 'fake' unless defined($self->gff_source_db_id);
+
     warn "d2s:dbxref:$dbxref\n" if DEBUG;
 
     return $self->{'dbxref_source'}->{$dbxref}
         if $self->{'dbxref_source'}->{$dbxref};
 
-        my $sth = $self->dbh->prepare("
+    my $sth = $self->dbh->prepare("
         select dbxref_id,accession from dbxref where db_id=".$self->gff_source_db_id
     );
     $sth->execute();
@@ -660,6 +684,7 @@ sub dbxref2source {
     }
                                                                                                                                                                        
     return $self->{'dbxref_source'}->{$dbxref}; 
+
 }
 
 =head2 search_notes

@@ -843,6 +843,8 @@ sub subfeatures {
 sub sub_SeqFeature {
   my($self,$type) = @_;
 
+warn "sub_SeqFeature";
+
   #first call, cache subfeatures
   if(!$self->subfeatures ){
 
@@ -860,11 +862,11 @@ sub sub_SeqFeature {
 
     my $partof =  $self->factory->name2term('part_of');
     $self->throw("part_of cvterm wasn't found.  is DB sane?") unless $partof;
+    $partof = join ',', @$partof if ref($partof) eq 'ARRAY';
 
     warn "partof = $partof" if DEBUG;
 
-    my $sth = $self->factory->dbh->prepare("
-
+    my $sql = "
     select child.feature_id, child.name, child.type_id, child.uniquename, parent.name as pname,
       childloc.fmin, childloc.fmax, childloc.strand, childloc.locgroup, childloc.phase,
       childloc.srcfeature_id
@@ -879,10 +881,13 @@ sub sub_SeqFeature {
       featureloc as childloc on
         (child.feature_id = childloc.feature_id)
     where parent.feature_id = $parent_id
-          and fr0.type_id = $partof
+          and fr0.type_id in ($partof)
           $typewhere
+    ";
 
-    ");
+    $sql =~ s/\s+/ /gs;
+
+    my $sth = $self->factory->dbh->prepare($sql);
     $sth->execute or $self->throw("subfeature query failed");
 
     #$self->factory->dbh->trace(0) if DEBUG;
@@ -902,7 +907,7 @@ sub sub_SeqFeature {
       my $interbase_start = $$hashref{fmin};
       my $base_start = $interbase_start +1;
 
-     # warn "creating new subfeat, $$hashref{name}, $base_start, $stop";
+      warn "creating new subfeat, $$hashref{name}, $base_start, $stop" ;#if DEBUG;
 
       my $feat = Bio::DB::Das::Chado::Segment::Feature->new (
                     $self->factory,
@@ -927,7 +932,7 @@ sub sub_SeqFeature {
 #    return grep { $ok{ $_->type } } $self->subfeatures();
 #  }
 
-  my @subfeatures = @{$self->subfeatures()} if defined($self->subfeatures());
+  my @subfeatures = @{$self->subfeatures()};
 
    # warn "subfeature array:@subfeatures\n";
 

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.80 2004-12-02 16:45:30 scottcain Exp $
+# $Id: Segment.pm,v 1.81 2004-12-02 17:47:14 scottcain Exp $
 
 =head1 NAME
 
@@ -8,9 +8,9 @@ Bio::DB::Das::Chado::Segment - DAS-style access to a chado database
 
   # Get a Bio::Das::SegmentI object from a Bio::DB::Das::Chado database...
 
-  $segment = $das->segment(-name=>'Landmark',
-                           -start=>$start,
-                           -end => $end);
+  $segment = $das->segment(-name => 'Landmark',
+                           -start=> $start,
+                           -stop => $stop);
 
   @features = $segment->overlapping_features(-type=>['type1','type2']);
   # each feature is a Bio::SeqFeatureI-compliant object
@@ -107,10 +107,10 @@ sub new {
 
     my $self = shift;
 
-    my ( $name, $factory, $base_start, $end, $db_id ) = @_;
+    my ( $name, $factory, $base_start, $stop, $db_id ) = @_;
 
     warn "$name, $factory\n"                      if DEBUG;
-    warn "base_start = $base_start, end = $end\n" if DEBUG;
+    warn "base_start = $base_start, stop = $stop\n" if DEBUG;
 
 #    $self->Bio::Root::Root->throw("start value less than 1\n")
 #      if ( defined $base_start && $base_start < 1 );
@@ -162,10 +162,10 @@ sub new {
 
             my $hashref = $fetch_uniquename_query->fetchrow_hashref;
             $base_start = $$hashref{fmin} + 1;
-            $end        = $$hashref{fmax};
+            $stop       = $$hashref{fmax};
             $db_id      = $$hashref{uniquename};
 
-            push @segments, $factory->segment(-name=>$name,-start=>$base_start,-end=>$end,-db_id=>$db_id);
+            push @segments, $factory->segment(-name=>$name,-start=>$base_start,-stop=>$stop,-db_id=>$db_id);
         }
 
         if (@segments < 2) {
@@ -208,25 +208,25 @@ sub new {
             if ( $$hash_ref{'fmin'} ) {
                 $interbase_start = $$hash_ref{'fmin'};
                 $base_start      = $interbase_start + 1;
-                $end             = $$hash_ref{'fmax'};
+                $stop            = $$hash_ref{'fmax'};
             }
 
-            warn "base_start:$base_start, end:$end, length:$length" if DEBUG;
+            warn "base_start:$base_start, stop:$stop, length:$length" if DEBUG;
 
-            if( defined($end) and $end > $length ){
-                $self->warn("end value ($end) greater than length ($length),"
+            if( defined($stop) and $stop > $length ){
+                $self->warn("end value ($stop) greater than length ($length),"
                            ." truncating to $length");
-                $end = $length;
+                $stop = $length;
             }
-            $end    = $end ? int($end) : $length;
-            $length = $end - $interbase_start;
+            $stop    = $stop ? int($stop) : $length;
+            $length  = $stop - $interbase_start;
 
-            warn "base_start:$base_start, end:$end, length:$length" if DEBUG;
+            warn "base_start:$base_start, stop:$stop, length:$length" if DEBUG;
 
             return bless {
                 factory       => $factory,
                 start         => $base_start,
-                end           => $end,
+                end           => $stop,
                 length        => $length,
                 srcfeature_id => $srcfeature_id,
                 class         => $type,
@@ -240,7 +240,7 @@ sub new {
                           -feature_id => $landmark_feature_id,
                           -factory    => $factory,
                           -start      => $base_start,
-                          -end        => $end, );
+                          -stop       => $stop, );
             return $feat;
         }
     }
@@ -560,16 +560,16 @@ sub features {
 
   warn "Segment->features() args:@_\n" if DEBUG;
 
-  my ($types,$attributes,$rangetype,$iterator,$callback,$base_start,$end,$feature_id,$factory);
+  my ($types,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,$feature_id,$factory);
   if ($_[0] and $_[0] =~ /^-/) {
-    ($types,$attributes,$rangetype,$iterator,$callback,$base_start,$end,$feature_id,$factory) =
+    ($types,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,$feature_id,$factory) =
       $self->_rearrange([qw(TYPE 
                             ATTRIBUTES 
                             RANGETYPE 
                             ITERATOR 
                             CALLBACK 
                             START
-                            END
+                            STOP
                             FEATURE_ID
                             FACTORY)],@_);
   #  warn "$types\n";
@@ -723,10 +723,10 @@ sub features {
 
   while (my $hashref = $sth->fetchrow_hashref) {
 
-    if ($feature_id && defined($end)) {
-      $end = $$hashref{fmin} + $end + 1;  
+    if ($feature_id && defined($stop)) {
+      $stop = $$hashref{fmin} + $stop + 1;  
     } else {
-      $end = $$hashref{fmax};
+      $stop = $$hashref{fmax};
     }
     if ($feature_id && defined($base_start)) {
       my $interbase_start = $$hashref{fmin} + $base_start;
@@ -749,7 +749,7 @@ sub features {
                            $factory->srcfeature2name($$hashref{'srcfeature_id'})
                           :$self->seq_id,
 
-                       $base_start,$end,
+                       $base_start,$stop,
                        $type,
                        $$hashref{score},
                        $$hashref{strand},

@@ -721,18 +721,22 @@ sub all_tags {
 sub source {
     my $self = shift;
 
+    warn "in Feature->source()\n\n" if DEBUG;
+
+    return $self->{'source'} = $_[0] if defined $_[0];
     return $self->{'source'} if defined $self->{'source'};
 
     my $dbh  = $self->factory->dbh();
 
-    my $source_type = $self->factory->name2term('GFF_source');
+    my $source_db_id = $self->factory->gff_source_db_id();
 
     #this is a backward compatibility patch.
-    return undef unless $source_type;
+    return undef unless $source_db_id;
 
     my $sth  = $dbh->prepare("
-        select value from featureprop
-        where type_id = $source_type
+        select dx.accession from dbxref dx, feature_dbxref fd
+        where dx.db_id = $source_db_id
+          and dx.dbxref_id = fd.dbxref_id 
           and feature_id = ?
        ");
 
@@ -742,7 +746,7 @@ sub source {
     return if ($sth->rows != 1);
 
     my $hashref = $sth->fetchrow_hashref(); 
-    $self->{'source'} = $$hashref{'value'};
+    $self->{'source'} = $$hashref{'accession'};
     return $self->{'source'};
 }
 

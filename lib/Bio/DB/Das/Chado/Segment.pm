@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.63 2004-05-04 19:47:49 allenday Exp $
+# $Id: Segment.pm,v 1.64 2004-06-21 20:55:07 scottcain Exp $
 
 =head1 NAME
 
@@ -92,7 +92,7 @@ use Carp qw(carp croak cluck);
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
-use constant DEBUG => 0;
+use constant DEBUG => 1;
 
 use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI Bio::DB::Das::Chado);
@@ -588,16 +588,51 @@ sub features {
   my $sql_types = '';
 
   my $valid_type = undef;
+  my $need_source= 0;
   if (scalar @$types != 0) {
-    $valid_type = $self->factory->name2term($$types[0]);
-    $self->throw("feature type: '$$types[0]' is not recognized") unless $valid_type;
-    $sql_types .= "(f.type_id = $valid_type";
+
+    warn "first type:$$types[0]\n" if DEBUG;
+
+    my $temp_type = $$types[0];
+    my $temp_source = '';
+    if ($$types[0] =~ /(.*):(.*)/) {
+        $temp_type   = $1;
+        $temp_source = $2;
+        $need_source = 1;
+    }
+
+    $valid_type = $self->factory->name2term($temp_type);
+    $self->throw("feature type: '$temp_type' is not recognized") unless $valid_type;
+
+    my $temp_dbxref = $self->factory->source2dbxref($temp_source);
+    if ($temp_source && $temp_dbxref) {
+        $sql_types .= "((f.type_id = $valid_type and fd.dbxref_id = $temp_dbxref)"; 
+    } else {
+        $sql_types  .= "((f.type_id = $valid_type)";
+    }
 
     if (scalar @$types > 1) {
       for(my $i=1;$i<(scalar @$types);$i++) {
-       $valid_type = $self->factory->name2term($$types[$i]);
-        $self->throw("feature type: '$$types[$i]' is not recognized") unless $valid_type;
-        $sql_types .= " OR \n     f.type_id = $valid_type";
+      
+        $temp_type   = $$types[$i]; 
+        $temp_source = '';
+        if ($$types[$i] =~ /(.*):(.*)/) {
+            $temp_type = $1;
+            $temp_source = $2;
+            $need_source = 1;
+
+        }
+        warn "more types:$$types[$i]\n" if DEBUG; 
+
+        $valid_type = $self->factory->name2term($temp_type);
+        $self->throw("feature type: '$temp_type' is not recognized") unless $valid_type;
+
+        $temp_dbxref=$self->factory->source2dbxref($temp_source);
+        if ($temp_source && $temp_dbxref) {
+            $sql_types .= " OR \n     (f.type_id = $valid_type and fd.dbxref_id = $temp_dbxref)";
+        } else {
+            $sql_types .= " OR \n     (f.type_id = $valid_type)";
+        }
       }
     }
     $sql_types .= ") and ";
@@ -607,21 +642,25 @@ sub features {
 
   my $srcfeature_id = $self->{srcfeature_id};
 
+  my $select_part = "select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.locgroup,fl.srcfeature_id,f.type_id,f.uniquename,f.feature_id ";
+  my $from_part   = "from feature f, featureslice($interbase_start, $rend) fl ";
+  my $where_part  = "where $sql_types fl.srcfeature_id = $srcfeature_id and f.feature_id  = fl.feature_id ";
+  my $order_by    = "order by f.type_id,fl.fmin ";
+
+  if ($need_source) {
+      $select_part .= ",fd.dbxref_id";
+      $from_part   .= ", feature_dbxref fd";
+      $where_part  .= "and fd.feature_id=f.feature_id";
+  }
+
+  my $query       = "$select_part\n$from_part\n$where_part\n$order_by\n";
+
   $self->factory->dbh->do("set enable_seqscan=0");
 #  $self->factory->dbh->do("set enable_hashjoin=0");
 
-  warn "select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.locgroup,fl.srcfeature_id,f.type_id,f.uniquename,f.feature_id from feature f, featureslice($interbase_start, $rend) fl where $sql_types fl.srcfeature_id = $srcfeature_id and f.feature_id  = fl.feature_id order by type_id,fmin;" if DEBUG;
+  warn "Segement->features query:$query" if DEBUG;
 
-  my $sth = $self->factory->dbh->prepare("
-    select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.locgroup,fl.srcfeature_id,f.type_id,f.uniquename,f.feature_id
-    from feature f, featureslice($interbase_start, $rend) fl
-    where
-      $sql_types
-      fl.srcfeature_id = $srcfeature_id and
-      f.feature_id  = fl.feature_id
-    order by type_id,fmin;
-       ");
-
+  my $sth = $self->factory->dbh->prepare($query);
 
    $sth->execute or $self->throw("feature query failed"); 
 #   $self->factory->dbh->do("set enable_hashjoin=1");
@@ -663,6 +702,11 @@ sub features {
                        $$hashref{strand},
                        $$hashref{name},
                        $$hashref{uniquename},$$hashref{feature_id});
+
+    my $source = $self->factory->dbxref2source($$hashref{dbxref_id}) if $$hashref{dbxref_id};
+    if ($source) { #set source if present
+        $feat->source($source); 
+    }
 
     push @features, $feat;
 

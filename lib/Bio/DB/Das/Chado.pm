@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.49 2004-06-16 03:25:23 scottcain Exp $
+# $Id: Chado.pm,v 1.50 2004-06-21 20:55:06 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -95,7 +95,7 @@ use DBI;
 use vars qw($VERSION @ISA);
 
 use constant SEGCLASS => 'Bio::DB::Das::Chado::Segment';
-use constant DEBUG => 0;
+use constant DEBUG => 1;
 
 $VERSION = 0.11;
 @ISA     = qw(Bio::Root::Root Bio::DasI);
@@ -519,6 +519,85 @@ sub get_feature_by_name {
 }
 
 *fetch_feature_by_name = \&get_feature_by_name; 
+
+=head2 gff_source_db_id
+
+  Title   : gff_source_db_id
+  Function: caches the chado db_id from the chado db table
+
+=cut
+
+sub gff_source_db_id {
+    my $self = shift;
+    return $self->{'gff_source_db_id'} if $self->{'gff_source_db_id'};
+
+    my $sth = $self->dbh->prepare("
+       select db_id from db
+       where name = 'GFF_source'");
+    $sth->execute();
+
+    my $hashref = $sth->fetchrow_hashref;
+    $self->{'gff_source_db_id'} = $$hashref{'db_id'}; 
+    return $self->{'gff_source_db_id'};
+}
+
+=head2 gff_source_dbxref_id
+
+Gets dbxref_id for features that have a gff source associated
+
+=cut
+
+sub source2dbxref {
+    my $self   = shift;
+    my $source = shift;
+
+    return $self->{'source_dbxref'}->{$source}
+        if $self->{'source_dbxref'}->{$source};
+
+    my $sth = $self->dbh->prepare("
+        select dbxref_id,accession from dbxref where db_id=".$self->gff_source_db_id
+    );
+    $sth->execute();
+
+    while (my $hashref = $sth->fetchrow_hashref) {
+        warn "s2d:accession:$$hashref{accession}, dbxref_id:$$hashref{dbxref_id}\n" if DEBUG;
+
+        $self->{'source_dbxref'}->{$$hashref{accession}} = $$hashref{dbxref_id};
+        $self->{'dbxref_source'}->{$$hashref{dbxref_id}} = $$hashref{accession};
+    } 
+
+    return $self->{'source_dbxref'}->{$source}; 
+}
+
+=head2 dbxref2source
+
+returns the source (string) when given a dbxref_id
+
+=cut
+
+sub dbxref2source {
+    my $self   = shift;
+    my $dbxref = shift;
+
+    warn "d2s:dbxref:$dbxref\n" if DEBUG;
+
+    return $self->{'dbxref_source'}->{$dbxref}
+        if $self->{'dbxref_source'}->{$dbxref};
+
+        my $sth = $self->dbh->prepare("
+        select dbxref_id,accession from dbxref where db_id=".$self->gff_source_db_id
+    );
+    $sth->execute();
+                                                                                                                                                                       
+    while (my $hashref = $sth->fetchrow_hashref) {
+        warn "d2s:accession:$$hashref{accession}, dbxref_id:$$hashref{dbxref_id}\n" if DEBUG;
+                                                                                                                                                                       
+        $self->{'source_dbxref'}->{$$hashref{accession}} = $$hashref{dbxref_id};
+        $self->{'dbxref_source'}->{$$hashref{dbxref_id}} = $$hashref{accession};
+    }
+                                                                                                                                                                       
+    return $self->{'dbxref_source'}->{$dbxref}; 
+}
 
 =head2 search_notes
 

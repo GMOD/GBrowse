@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.81 2003-03-18 18:52:53 lstein Exp $
+# $Id: gbrowse.PLS,v 1.82 2003-03-24 18:32:18 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -627,7 +627,7 @@ sub adjust_settings {
       param(name => $settings->{name});
     }
 
-  foreach (qw(name source plugin stp ins head keystyle)) {
+  foreach (qw(name source plugin stp ins head ks)) {
     $settings->{$_} = param($_) if defined param($_);
   }
   $settings->{name} =~ s/^\s+//; # strip leading
@@ -895,7 +895,7 @@ sub settings_table {
 		    ),
 		  td(
 		     b($LANG->tr('KEY_POSITION')),br,
-		     radio_group( -name=>'keystyle',
+		     radio_group( -name=>'ks',
 				  -values=>['between','bottom'],
 				  -labels=>{between=>$LANG->tr('BETWEEN'),
 					    bottom =>$LANG->tr('BENEATH')},

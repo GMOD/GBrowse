@@ -101,6 +101,7 @@ lib/Bio/Graphics/Browser/I18n.pm
 lib/Bio/Graphics/Browser/Markup.pm
 lib/Bio/Graphics/Browser/Plugin.pm
 lib/Bio/Graphics/Browser.pm
+lib/Bio/Graphics/Glyph/connector.pm
 lib/Bio/Graphics/Glyph/drosophila_arrow.pm
 lib/Bio/Graphics/Glyph/phased_exons.pm
 lib/Bio/Graphics/Glyph/wormbase_transcript.pm

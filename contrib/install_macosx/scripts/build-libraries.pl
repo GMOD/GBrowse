@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: build-libraries.pl,v 1.1 2003-11-19 01:49:18 tharris Exp $
+# $Id: build-libraries.pl,v 1.2 2005-01-28 00:43:11 allenday Exp $
 
 =pod
 
@@ -55,7 +55,7 @@ Finally, the backup directories are restored to their original name.
 =head1 AUTHOR
 
   Todd Harris (harris@cshl.org)
-  Version: $Id: build-libraries.pl,v 1.1 2003-11-19 01:49:18 tharris Exp $
+  Version: $Id: build-libraries.pl,v 1.2 2005-01-28 00:43:11 allenday Exp $
   Copyright @ 2003 Cold Spring Harbor Laboratory
   $Z<>Revision$
 
@@ -63,7 +63,7 @@ Finally, the backup directories are restored to their original name.
 
 #'
 
-use CPANPLUS::backend;
+use CPANPLUS::Backend;
 use CPANPLUS::Configure;
 use Getopt::Long;
 use Pod::Usage;

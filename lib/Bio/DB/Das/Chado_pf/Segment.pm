@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.12 2002-12-11 00:14:35 scottcain Exp $
+# $Id: Segment.pm,v 1.13 2002-12-11 19:00:04 scottcain Exp $
 
 =head1 NAME
 
@@ -150,6 +150,8 @@ print "executed\n";
   throw("end value greater than length\n") if (defined $end && $end >= $length);
   $end ||= $length;
 
+  $length = $end - $start +1;
+
   return bless {dbadaptor => $dbadaptor,
                 start     => $start,
                 end       => $end,
@@ -216,7 +218,7 @@ Returns the length of the segment.  Always a positive number.
 
 =cut
 
-sub length { shift->{end} }
+sub length { shift->{length} }
 
 =head2 features
 

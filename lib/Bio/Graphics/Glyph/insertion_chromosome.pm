@@ -79,7 +79,7 @@ sub draw_component {
               from fdata, fgroup
               where fdata.gid = fgroup.gid 
                     and fdata.fref = '$seq_id' 
-                    and fgroup.gclass='Seq' and gname not like 'T-DNA_LB.SALK%'"; 
+                    and fgroup.gclass='Seq'"; 
   my $sth1 = $dbh->prepare($qry1);
   $sth1->execute();
   my ($chr_start, $chr_stop); 

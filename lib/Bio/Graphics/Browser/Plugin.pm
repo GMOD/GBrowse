@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.5 2002-07-07 21:31:48 lstein Exp $
+# $Id: Plugin.pm,v 1.3 2002-03-31 21:15:51 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 use strict;
@@ -7,7 +7,7 @@ use Bio::Graphics::Browser;
 use CGI qw(param url header p);
 
 use vars '$VERSION','@ISA','@EXPORT';
-$VERSION = '0.11';
+$VERSION = '0.10';
 
 # currently doesn't inherit
 @ISA = ();
@@ -18,12 +18,6 @@ $VERSION = '0.11';
 sub new {
   my $class = shift;
   return bless {},$class;
-}
-
-# initialize other globals
-sub init {
-  my $self = shift;
-  # do nothing
 }
 
 sub name {
@@ -41,10 +35,6 @@ sub description {
 sub type {
   my $self = shift;
   return 'dumper';
-}
-
-sub mime_type {
-  return 'text/plain';
 }
 
 sub config_defaults {

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.13 2003-10-20 19:58:36 markwilkinson Exp $
+# $Id: gbrowse_details.PLS,v 1.14 2003-11-12 20:01:55 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -119,7 +119,7 @@ sub print_features {
     for my $a (sort keys %attributes) {
       $string .= PrintMultiple($options,$a,$f->attributes($a));
     }
-    $string .= PrintMultiple($options,'Type',  $f->method, $f->name); # sending name here for the sake of alignment features, that need to make a link from it
+    $string .= PrintMultiple($options,'Type',  $f->method);
     $string .= PrintMultiple($options,'Source',$f->source);
     $string .= PrintMultiple($options,"Position",position($f));
     $string .= PrintMultiple($options,"Length",$f->length);
@@ -190,19 +190,20 @@ sub print_matches {
   my ($src,$tgt) = @_;
   my $sdna = $src->dna or return;
   my $tdna = $tgt->dna or return;
+  $tdna = reversec($tdna) if $tgt->abs_strand < 0;
   my ($top,$middle,$bottom) = align($sdna,$tdna);
-  my $top_label = $src->abs_ref;
-  my $bot_label = $tgt->abs_ref;
+  my $top_label = b($src->abs_ref);
+  my $bot_label = b($tgt->abs_ref);
 
   my $src_x = $src->abs_start;
   my $tgt_x = $tgt->abs_start;
   my $dir   = $tgt->abs_strand || +1;
 
-  my $m = length($top_label) > length($bot_label) ? length($top_label) : length($bot_label);
-  my $p = length($src_x) > length($tgt_x) ? length($src_x) : length($tgt_x);
+  my $m = max(length($top_label),length($bot_label));
+  my $p = max(length($src_x),length($tgt_x));
   my $t = $m+$p;
   my $sp = "%${t}s %s";
-  my $l  = ' ' x ($m+$p+1);  # adjusting for HTML
+  my $l  = ' ' x ($m+$p-6);  # adjusting for HTML
 
   my $string;
   my @top    = $top    =~ /(.{1,60})/g;
@@ -217,12 +218,18 @@ sub print_matches {
 		       "$top_label $src_x",$top[$i],$src_x + $src_delta - 1,
 		       $middle[$i],
 		       "$bot_label $tgt_x",$bottom[$i],$tgt_x + $tgt_delta - $dir);
-
     $src_x  += $src_delta;
     $tgt_x  += $tgt_delta;
 
   }
   return pre($string);
+}
+
+sub max { return $_[0] > $_[1] ? $_[0] : $_[1] }
+sub reversec {
+  my $dna = shift;
+  $dna =~ tr/gatcGATC/ctagCTAG/;
+  return scalar reverse $dna;
 }
 
 sub PrintMultiple {
@@ -241,14 +248,6 @@ sub PrintMultiple {
         $LINK=~ s/\$value/$first/;
         $LINK = "<a href='$LINK'>$first</a>";
   }
-
-    # for EST alignment features, create a link to get the orignal EST sequence   
-    if (($label eq "Type") && ($URLS{'alignment'}) && ($first =~ /alignment/i)){
-            my $name = shift @a;
-            $LINK = $URLS{'alignment'};
-            $LINK=~ s/\$value/$name/;
-            $LINK = "$first : (<a href='$LINK'>Aligned Sequence</a>)";
-    }
 
   my $string = join '',TR({-valign=>'top',-class=>'databody'},
                           th({-align=>'LEFT',-valign=>'top',-class=>'datatitle'},length $label>0 ? "$label: " : ''),

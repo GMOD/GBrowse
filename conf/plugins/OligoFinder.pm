@@ -1,14 +1,15 @@
 package Bio::Graphics::Browser::Plugin::OligoFinder;
-# $Id: OligoFinder.pm,v 1.6 2003-05-21 13:45:12 lstein Exp $
+# $Id: OligoFinder.pm,v 1.7 2003-07-01 02:12:36 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use Bio::Graphics::Feature;
+use Text::Shellwords;
 use DBI;
 use CGI qw(:standard *table);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.11';
+$VERSION = '0.15';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -142,10 +143,16 @@ sub get_chroms {
   my $self = shift;
   my $db   = shift;
   my $dbi  = $db->features_db;
-
   my $source = $self->browser_config()->source;
-  return @{$self->{chroms}{$source}} if ref($self->{chroms}{$source});
-  my $chroms = $dbi->selectcol_arrayref('select fref from fdna group by fref having count(fref)>10');
+  my $chroms;
+  my @chroms = shellwords($self->browser_config->plugin_setting('search_segments'));
+  if (@chroms) {
+    $chroms = \@chroms;
+  }
+  else {
+    return @{$self->{chroms}{$source}} if ref($self->{chroms}{$source});
+    $chroms = $dbi->selectcol_arrayref('select fref from fdna group by fref having count(fref)>10');
+  }
   $self->{chroms}{$source} = $chroms;
   return @$chroms;
 }

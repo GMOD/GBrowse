@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.6 2002-12-05 04:15:28 scottcain Exp $
+# $Id: Segment.pm,v 1.7 2002-12-05 22:01:17 scottcain Exp $
 
 =head1 NAME
 
@@ -296,8 +296,25 @@ sub features {
     return;
   }
 
+  my $quoted_name = $self->quote($self->name);
+  my $sth = $self->prepare("
+      select f.name,f.fmin,f.fmax,f.fstrand,cv.termname
+      from feature f, cvterm cv, dbxref dbx, feature_dbxref fd
+      where
+         f.source_feature_id = fd.feature_id and
+         fd.feature_id = dbx.dbxref_id and
+         dbx.accession = 'NC_004328' and
+         f.type_id=cv.cvterm_id and
+         f.type_id in
+            (select cvterm_id from cvterm
+             where termname like '%gene%'
+                or termname like '%rna%'
+                or termname like '%exon%') and
+         $sql_range  
+      order by f.fmin ");
+   $sth->execute or return; 
 
-#put sql here to select features
+#take these results and create feature objects
 
   if ($iterator) {
     return Bio::DB::Das::Chado_pfIterator->new(\@filtered_features);

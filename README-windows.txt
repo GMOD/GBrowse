@@ -19,7 +19,7 @@ Then, under 'Create' menu, select 'Checkout module', and enter
 checked out to.
 
 Obtain the prerequisite software listed in the INSTALL document.  I advise
-using precomiled binaries where available, including Apache, Activestate Perl,
+using precompiled binaries where available, including Apache, Activestate Perl,
 and MySQL.  For installing Perl modules, I recommend using Activestate's 
 PPM tool, including for installing BioPerl.  See the INSTALL.WIN document in
 BioPerl's top directory for an excellent guide to installing both Perl and
@@ -57,6 +57,11 @@ environment variable.  Typically, it is C:\mysql\bin.
 
 Bulk upload notes:
 * Note that you must use the --create option to use bulk_load_gff.pl. 
+
+* You must use a reasonably recent version of bulk_load_gff.pl.  The current
+cvs version should be fine, but the version in BioPerl 1.0.2 is not.  For your
+convenience, I have left a working copy of bulk_load_gff.pl in the contrib/
+directory.
 
 * Be sure that the modules you need are actually installed in your Activestate
 Perl.  I found the PPM 'thought' that they were installed, but really there

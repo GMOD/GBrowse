@@ -19,7 +19,7 @@ $Config{startperl}
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: load_genbank.PLS,v 1.2 2003-06-30 20:56:54 lstein Exp $
+# $Id: load_genbank.PLS,v 1.3 2003-07-17 18:47:57 scottcain Exp $
 use strict;
 use Bio::DB::GFF;
 use Getopt::Long;
@@ -96,6 +96,9 @@ sub new {
 sub load_gff_line {
   my ($self,$options) = @_;
   # synthesize GFF3-compatible line
+
+  $options->{score} = '.' unless $options->{score};
+
   my @attributes;
   if (my $parent = $options->{gname}) {
      push @attributes,"Parent=".escape($parent) unless $options->{method} =~ /^(mRNA|gene)$/;

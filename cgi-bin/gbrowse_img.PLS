@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.19 2004-08-09 14:46:18 sheldon_mckay Exp $
+# $Id: gbrowse_img.PLS,v 1.20 2004-08-18 10:02:16 scottcain Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1 path_info escape);
@@ -130,27 +130,6 @@ else {
                                 image_class   => $image_class,
                                 do_map        => 1,
        );
-}
-
-# A hack for image maps. This allows you to get a basic image image map for 
-# a gbrowse_img. You can give it a base url so clicks on the resulting
-# image in a html page can redirect to the site your're browsing aka a very,
-# very simple gbrowse like navigator embedded in a web page. Baseurl handling
-# could be done better.
-if(param('img_map')) {
-  my ($skin,$baseurl,$baseurl_param);
-  if(param('skin')) { $skin="skin=".param('skin'); }
-  if(param('baseurl')) {
-    $baseurl=param('baseurl');
-    $baseurl_param="baseurl=$baseurl";
-  }
-  print header('text/plain');
-  print qq!<map name="hmap" id="hmap">\n!;
-  foreach my $entry (@{$img_map}) {
-	print qq!  <area shape="rect" coords="$entry->[1],$entry->[2],$entry->[3],$entry->[4]" href="http://$baseurl/$entry->[0]->{feature_id}?$skin&$baseurl_param" title="$entry->[0]" alt="$entry->[0]" />\n!
-  }
-  print qq!</map>\n!;
-  exit(0);
 }
 
 if ($image_class eq 'GD::SVG') {

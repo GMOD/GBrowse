@@ -33,6 +33,9 @@ conf/plugins/RandomGene.pm
 conf/plugins/RestrictionAnnotator.pm
 conf/plugins/SequenceDumper.pm
 conf/plugins/CreateBlastDB.pm
+conf/plugins/ImportFeatures.pm
+conf/plugins/ExportFeatures.pm
+conf/plugins/BasicEditor.pm
 conf/plugins/test.pm
 conf/yeast_chr1.conf
 contrib/bulk_load_gff_win.pl
@@ -210,6 +213,7 @@ lib/Bio/Graphics/Browser/I18n.pm
 lib/Bio/Graphics/Browser/Markup.pm
 lib/Bio/Graphics/Browser/PadAlignment.pm
 lib/Bio/Graphics/Browser/Plugin.pm
+lib/Bio/Graphics/Browser/GFFhelper.pm
 lib/Bio/Graphics/Browser/Realign.pm
 lib/Bio/Graphics/Browser/Util.pm
 lib/Bio/Graphics/Glyph/connector.pm

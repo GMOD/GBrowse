@@ -137,8 +137,10 @@ WriteMakefile(
 				 'cgi-bin/gbrowse_syn.PLS'  => 'cgi-bin/gbrowse_syn',
 				 'cgi-bin/gbrowse_img.PLS'  => 'cgi-bin/gbrowse_img',
 				 'cgi-bin/gbrowse_details.PLS'  => 'cgi-bin/gbrowse_details',
-				 'cgi-bin/gbrowse_moby.PLS'  => 'cgi-bin/gbrowse_moby',
 				 'cgi-bin/gbrowse_est.PLS'  => 'cgi-bin/gbrowse_est',
+				 'cgi-bin/gbrowse_moby.PLS'  => 'cgi-bin/gbrowse_moby',
+				 'cgi-bin/moby_server.PLS'  => 'cgi-bin/moby_server',
+				 'conf/MobyServices/GbrowseServices.PM'  => 'conf/MobyServices/GbrowseServices.pm',
 				 },
 	      EXE_FILES      => [
 				 'bin/process_wormbase.pl',

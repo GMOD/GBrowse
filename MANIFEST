@@ -8,8 +8,9 @@ cgi-bin/gbrowse.PLS
 cgi-bin/gbrowse_details.PLS
 cgi-bin/gbrowse_img.PLS
 cgi-bin/gbrowse_syn.PLS
-cgi-bin/gbrowse_moby.PLS
 cgi-bin/gbrowse_est.PLS
+cgi-bin/gbrowse_moby.PLS
+cgi-bin/moby_server.PLS
 cgi-bin/README
 Changes
 conf/enzymes.txt
@@ -38,6 +39,7 @@ conf/plugins/ExportFeatures.pm
 conf/plugins/BasicEditor.pm
 conf/plugins/test.pm
 conf/yeast_chr1.conf
+conf/MobyServices/GbrowseServices.PM
 contrib/bulk_load_gff_win.pl
 contrib/conf_files/01.yeast.conf
 contrib/conf_files/02.wormbase.conf

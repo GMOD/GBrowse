@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.96 2003-10-05 20:11:06 lstein Exp $
+# $Id: Browser.pm,v 1.97 2003-10-06 02:45:53 stajich Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -785,7 +785,8 @@ sub make_centering_map {
     my $middle = $flip ? $end - $scale * ($x1+$x2)/2 : $offset + $scale * ($x1+$x2)/2;
     my $start  = int($middle - $length/2);
     my $stop   = int($start  + $length - 1);
-    my $url = "?ref=$ref;start=$start;stop=$stop;source=$source;nav4=1;plugin=$plugin";
+    my $url = "?ref=$ref;start=$start;stop=$stop;nav4=1;plugin=$plugin";
+#    my $url = "?ref=$ref;start=$start;stop=$stop;source=$source;nav4=1;plugin=$plugin";
     $url .= ";flip=1" if $flip;
     push @lines,
       qq(<area shape="rect" coords="$x1,$ruler->[2],$x2,$ruler->[4]" href="$url" title="recenter" alt="recenter" />\n);

@@ -243,4 +243,3 @@ libalign/test.pl
 sample_data/yeast_data.gff
 t/01yeast.t
 t/Test.pm
-META.yml                                 Module meta-data (added by MakeMaker)

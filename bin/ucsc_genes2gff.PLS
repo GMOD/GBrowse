@@ -97,7 +97,7 @@ while (<>) {
       }
 
       if ($utr_start && !$utr_end) { # half in half out on 5' end
-	$utr_end   = $cdsEnd - 1;
+	$utr_end   = $cdsStart - 1;
 	$cds_start = $cdsStart;
 	$cds_end   = $exon_end;
       }

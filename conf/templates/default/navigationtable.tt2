@@ -1,5 +1,5 @@
 <table border="0" width="100%" cellspacing="0" class="searchtitle">
-  [% IF !hide_ins %]
+  [% IF toggle_instructions == 1 %]
   <tr><td align="left" colspan="2">
     <b>[% browser.translate('instructions') %]</b><br/>
     [% browser.translate('search_instructions') %]
@@ -18,13 +18,29 @@
 
   <tr>
     <th align="left" colspan="2">
-      <a href="?rand=[% rand %];head=[% browser.options.head || 0 %]">[[% tr_toggle_head %]]</a>
-      <a href="?rand=[% rand %];ins=[% hide_ins ? 0 : 1 %]">[[% tr_toggle_instructions %]]</a>
+      [% IF toggle_head == 1 ;
+           label = 'hide_header';
+           toggle_head = 0;
+         ELSE ;
+           label = 'show_header';
+           toggle_head = 1;
+         END
+      %]
+      <a href="?rand=[% rand %];head=[% browser.options.head || 0 %]">[[% browser.translate( label ) %]]</a>
+      [% IF toggle_instructions == 1 ;
+           label = 'hide_instructions';
+           toggle_instructions = 0;
+         ELSE ;
+           label = 'show_instructions';
+           toggle_instructions = 1;
+         END
+      %]
+      <a href="?rand=[% rand %];toggle_instructions=[% toggle_instructions %]">[[% browser.translate( label ) %]]</a>
       [% IF name OR ref %]
-      <a href="[% link_bookmark %]">[[% browser.translate('bookmark') %]]</a>
-      <a href="[% link_image    %]" target="_blank">[[% browser.translate('image_link') %]]</a>
-      <a href="[% link_svg      %]" target="_blank">[[% browser.translate('svg_link')   %]]</a>
-      <a href="[% link_help     %]" target="help">[[% browser.translate('help') %]]</a>
+        <a href="[% link_bookmark %]">[[% browser.translate('bookmark') %]]</a>
+        <a href="[% link_image    %]" target="_blank">[[% browser.translate('image_link') %]]</a>
+        <a href="[% link_svg      %]" target="_blank">[[% browser.translate('svg_link')   %]]</a>
+        <a href="[% link_help     %]" target="help">[[% browser.translate('help') %]]</a>
       [% END %]
     </th>
   </tr>

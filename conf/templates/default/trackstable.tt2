@@ -20,7 +20,7 @@
     </td>
   [% ELSE %]
     <td class="searchbody" colspan="3">
-      <b>[% browser.translate('tracks') %]</b> <a href="?stp=1">[[% browser.trasnslate('show') %]]</a>
+      <b>[% browser.translate('tracks') %]</b> <a href="?stp=1">[[% browser.translate('show') %]]</a>
     </td>
   [% END %]
   </tr>    

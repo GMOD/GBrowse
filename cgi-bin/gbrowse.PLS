@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.121 2005-01-16 19:03:28 lstein Exp $
+# $Id: gbrowse.PLS,v 1.122 2005-01-16 21:45:12 allenday Exp $
 
 use strict;
 use Bio::Graphics;
@@ -144,11 +144,11 @@ sub main_display($$) {
        $seg_start = unit_label($seg_start);
        $seg_end   = unit_label($seg_end);
     }
-    print h2($BROWSER->translate('SHOWING_FROM_TO',
-		       unit_label($segment->length),
-		       $segment->seq_id,
-		       commas($seg_start),
-		       commas($seg_end)));
+#FIXME    print h2($BROWSER->translate('SHOWING_FROM_TO',
+#		       unit_label($segment->length),
+#		       $segment->seq_id,
+#		       commas($seg_start),
+#		       commas($seg_end)));
   }
 
   # force flipping
@@ -169,10 +169,6 @@ sub main_display($$) {
 				        $segment->start,$segment->end)
       unless $segment->can('features');
   }
-
-  # print the top of the form, with navigation bar, etc
-  print navigation_table($segment,$segments,$features);
-
 
 ################################
 
@@ -211,8 +207,10 @@ sub main_display($$) {
     prevname   => scalar(param('name')),
     finezoom   => get_zoomincrement(),
 
+    toggle_instructions => defined(param('toggle_instructions')) ? param('toggle_instructions') : 1,
+
+
 #FIXME    multiple_segments => multiple_choices($features),
-#FIXME    overview_panel    => overview_panel($segment),
 #FIXME    detail_panel      => detail_panel_with_timeout($segment,$feature_files),
   };
 
@@ -241,16 +239,6 @@ sub main_display($$) {
   foreach (values %$feature_files) {
     $_ && ref($_) && eval{$_->finished};
   }
-}
-
-sub overview_panel($) {
-  my ($segment) = @_;
-  my $image = overview($segment).br();
-  return table({-border=>0,-width=>'100%'},
-	       TR({-class=>'databody'},
-		  td({-align=>'center'},$image)
-		 )
-	      );
 }
 
 sub detail_panel_with_timeout {
@@ -374,10 +362,6 @@ sub auto_open($) {
       $BROWSER->options->h_type($feature->type);
     }
   }
-}
-
-# prints the zooming and navigation bar
-sub navigation_table($$$) {
 }
 
 # this generates the callback for highlighting "interesting" features
@@ -939,23 +923,6 @@ sub format_segment {
   my $start = commas($s->start);
   my $stop  = commas($s->end);
   return "<b>$ref</b>:$start..$stop";
-}
-
-sub overview($) {
-  my ($segment) = @_;
-  return unless $segment;
-  $BROWSER->config->width($BROWSER->options->width()*OVERVIEW_RATIO);
-
-  my ($image,$length) = $BROWSER->config->overview($segment,$BROWSER->options->{features}) or return;
-  my ($width,$height) = $image->getBounds;
-  my $url             = $BROWSER->config->generate_image($image);
-  return image_button(-name=>'overview',
-		      -src=>$url,
-		      -width=>$width,
-		      -height=>$height,
-		      -border=>0,
-		      -align=>'middle')
-    .hidden(-name=>'seg_length',-value=>$length,-override=>1);
 }
 
 sub get_ranges {
@@ -1652,7 +1619,7 @@ sub build_citation_page() {
   my $external_features = load_external_sources(undef);
   my (@citations);
 
-  print h2($BROWSER->translate('Track_descriptions'));
+#FIXME  print h2($BROWSER->translate('Track_descriptions'));
 
   # build native features
   print h3($BROWSER->translate('Built_in'));

@@ -1,0 +1,17 @@
+[% IF segment %]
+  [% ii = browser.config.overview( segment , browser.options.features ) ; image = ii.0 ; length = ii.1 %]
+  [% ii = image.getBounds ; width = ii.0 ; length = ii.1 %]
+  [% url = browser.config.generate_image(image) %]
+  <input
+    type="image"
+    name="overview"
+    width="[% width %]"
+    height="[% height %]"
+    border="0"
+    align="middle"
+    src="[% browser.config.generate_image(image) %]"
+  />
+  <input type="hidden" name="seg_length" value="[% length %]" override="1"/>
+[% ELSE %]
+no segment
+[% END %]

@@ -5,7 +5,7 @@
 <input type="hidden" name="prevname" value="[% prevname %]"/>
 <input type="image" name="left [% full %]" src="[% browser.config.setting('buttons') %]/green_l2.gif" title="left [% full_title %]" border="0"/>
 <input type="image" name="left [% half %]" src="[% browser.config.setting('buttons') %]/green_l1.gif" title="left [% half_title %]" border="0"/>
-<input type="image" name="zoom out [% finezoom %]" src="[% buttonsdir %]/minus.gif" title="zoom out [% finezoom %]" border="0" />
+<input type="image" name="zoom out [% finezoom %]" src="[% browser.config.setting('buttons') %]/minus.gif" title="zoom out [% finezoom %]" border="0" />
 <select name="span" onchange="document.mainform.submit()" class="searchtitle">
   [% FOREACH range IN ranges %]
     <option value="[% range %]" [% IF(range == segment.length) ; 'selected="selected"' ; END %]>[% range_labels.${range} %]</option>

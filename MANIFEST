@@ -89,7 +89,6 @@ docs/tutorial/conf_files/volvox4.conf
 docs/tutorial/conf_files/volvox_final.conf
 docs/tutorial/data_files/ests.fa
 docs/tutorial/data_files/volvox.fa
-docs/tutorial/data_files/volvox.fa.index
 docs/tutorial/data_files/volvox1.gff
 docs/tutorial/data_files/volvox2.gff
 docs/tutorial/data_files/volvox3.gff

@@ -100,7 +100,7 @@ END
 
    TRACKS            => '項目',
 
-   EXTERNAL_TRACKS   => '(外部の項目は車体表示)',
+   EXTERNAL_TRACKS   => '(外部の項目は斜体表示)',
 
    EXAMPLES          => '例',
 

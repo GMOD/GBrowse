@@ -216,7 +216,7 @@ Generic Genome Browser Installation
       mysql -uroot -p password -e 'grant file on *.* to me@localhost'
       mysql -uroot -p password -e 'grant select on yeast.* to nobody@localhost'
 
-      bulk_load_gff.pl -d yeast sample_data/yeast_data.gff
+      bp_bulk_load_gff.pl -d yeast sample_data/yeast_data.gff
       make test
 
     Details:
@@ -249,20 +249,20 @@ Generic Genome Browser Installation
     annotations in GFF format. The Bioperl distribution comes with three
     tools for loading Bio::DB::GFF databases:
 
-    1 load_gff.pl
+    1 bp_load_gff.pl
         This will incrementally load a database, optionally initializing it
         if it does not already exist. This script will work correctly even
         if the MySQL server is located on another host.
 
-    2 bulk_load_gff.pl
+    2 bp_bulk_load_gff.pl
         This Perl script will initialize a new Bio::DB::GFF database with a
         fresh schema, deleting anything that was there before. It will then
         load the file. Only suitable for use the very first time you create
         a database, or when you want to start from scratch! The bulk loader
-        is as much as 10x faster than load_gff.pl, but does not work in the
+        is as much as 10x faster than bp_load_gff.pl, but does not work in the
         situation in which the MySQL database is running on a remote host.
 
-    3 fast_load_gff.pl
+    3 bp_fast_load_gff.pl
         This will incrementally load a database. On UNIX systems, it will
         activate a fast loader that makes the speed almost the same as the
         bulk loader. Be careful, though, because this is an experimental
@@ -291,11 +291,11 @@ Generic Genome Browser Installation
 
     Load the file with this command:
 
-      load_gff.pl -d yeast -fasta yeast.fasta.gz </dev/null
+      bp_load_gff.pl -d yeast -fasta yeast.fasta.gz </dev/null
 
     (or, if you are on a windows system:
 
-      load_gff.pl -d yeast -fasta yeast.fasta.gz
+      bp_load_gff.pl -d yeast -fasta yeast.fasta.gz
 
     and hit ^Z when the script pauses.)
 
@@ -371,11 +371,11 @@ Generic Genome Browser Installation
     the annotations. The DNA must be formatted as a series of one or more
     FASTA-format files in which each entry in the file corresponds to a
     top-level sequence such as a chromosome pseudomolecule. You can then run
-    the load_gff.pl or bulk_load_gff.pl script using the -fasta argument.
+    the bp_load_gff.pl or bp_bulk_load_gff.pl script using the -fasta argument.
     For example, if the yeast genome is contained in a FASTA file named
     yeast.fa, you would run the command:
 
-      bulk_load_gff.pl -d yeast -fasta yeast.fa sample/yeast_data.gff
+      bp_bulk_load_gff.pl -d yeast -fasta yeast.fa sample/yeast_data.gff
 
     Alternatively, you may put several FASTA files into a directory, and
     provide the directory name as the argument to -fasta.
@@ -383,8 +383,13 @@ Generic Genome Browser Installation
     (The yeast DNA is too large to be included in this distribution, but you
     can get a copy of it from ftp://genome-ftp.stanford.edu/pub/yeast/)
 
-    Run "bulk_load_gff.pl -h" to see usage instructions.
+    Run "bp_bulk_load_gff.pl -h" to see usage instructions.
 
+    Newer versions of GFF (the so-called "GFF2.5" and "GFF3" formats) include
+    the DNA at the bottom of the file, following the sequence annotations.
+    If you are loading one of these GFF files, the DNA will be recognized
+    automatically and loaded by any of the loaders.
+   
   8. CREATING YOUR OWN GENOME DATABASE
 
     See the file doc/configuration.txt for information on how to create new
@@ -466,8 +471,8 @@ Generic Genome Browser Installation
   11. BIOPERL VERSIONS
 
     GBrowse is evolving quickly, and some of its features are dependent on
-    new features in Bioperl 1.2.2. If you are having trouble making GBrowse
-    run, make sure you are using Bioperl 1.2.2!
+    new features in Bioperl 1.4.0. If you are having trouble making GBrowse
+    run, make sure you are using Bioperl 1.4.0!
 
   12. THE GBROWSE_IMG SCRIPT
 
@@ -531,7 +536,7 @@ Generic Genome Browser Installation
 
     4   Initialize the database for use with this command:
 
-          % load_gff.pl -c -d embl </dev/null
+          % bp_load_gff.pl -c -d embl </dev/null
 
         (if you are on a windows system, just leave out the </dev/null)
 
@@ -556,17 +561,30 @@ Generic Genome Browser Installation
       make
       make install
 
-  16. KNOWN BUGS
+  16. REMOVING OUT-OF-DATE IMAGE FILES
+    As GBrowse runs, it creates temporary image files in the gbrowse tmp
+    directory (typically /usr/local/apache/htdocs/gbrowse/tmp).  These
+    image files are relatively small, but if you run GBrowse for a long
+    time they may begin consuming significant amounts of disk space.
+    The following Unix shell commands will remove old image files:
+       
+       cd /usr/local/apache/htdocs/gbrowse/tmp
+       find . -type f -atime +20 -print -exec rm {} \;
 
+    You might want to run this command under cron, but be aware that
+    since the image files are owned by user "nobody", you must install
+    this command in the cron script for "nobody" or "root."
+
+  17. KNOWN BUGS
     Currently there is one known bug. The navigation buttons do not operate
     properly when the client is using Internet Explorer 5.1 on a Macintosh
     and accessing gbrowse running on a MacOS X server running Apache. Other
     combinations of clients and servers work properly.
 
-  17. FEATURE WISH LIST (updated June 6, 2003)
-
-     - Full DAS support.
-     - A glyph for representing cytogenetic maps.
+  18. FEATURE WISH LIST (updated December, 2003)
+      - Better DAS support.
+      - Configure data sources on a track-by-track basis.
+      - A configurable synteny viewer.
 
     If you are interested in working on any of these features, please
     contact the developers at the address given in the next section.

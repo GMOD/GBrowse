@@ -118,12 +118,18 @@ Linux gebruikers kunnen eventueel de <a href="http://xml.apache.org/batik/">Bati
 <p>
 <a href="%s" target="_blank">Bekijk het SVG beeld in een nieuw venster</a></p>
 <p>
-Om dit plaatje op schijf te bewaren, CTRL-klik (Macintish) of
+Om dit plaatje op schijf te bewaren, CTRL-klik (Macintosh) of
 rechts-klik (Windows) en selecteer de optie om op schijf bewaren.
 </p>   
 END
 
    SVG_LINK   => 'Beeld van Publicatiekwaliteit',
+
+   TIMEOUT   => <<'END',
+Uw vraag heeft de ingestelde blokkeertijd overschreden. Misschien heeft u een gebied geselecteerd dat te groot is om afgebeeld te worden.
+Probeer opnieuw na het deselecteren van een aantal banen of beperk uw selectie tot een kleiner gebied.
+Indien dergelijke blokkeringen zich hardnekkig blijven manifesteren, gelieve op de rode "Reset" knop te drukken.
+END
 
    GO       => 'Doorgaan',
 

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.59 2003-04-15 20:30:43 lstein Exp $
+# $Id: Browser.pm,v 1.60 2003-04-15 22:15:21 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -863,15 +863,22 @@ sub image_and_map {
       my $conf_label        = $conf->code_setting($label => 'label');
       $conf_label           = 1 unless defined $conf_label;
 
-      my $conf_bump         = $conf->code_setting($label => 'bump');
-      $conf_bump            = 1 unless defined $conf_bump;
-
       my $conf_description  = $conf->code_setting($label => 'description');
       $conf_description     = 0 unless defined $conf_description;
+
+      my $conf_bump         = $conf->code_setting($label => 'bump');
+
+      my $maxb              = $conf->code_setting($label => 'bump density');
+      $maxb                 = $max_bump unless defined $maxb;
+
+      my $maxl              = $conf->code_setting($label => 'label density');
+      $maxl                 = $max_labels unless defined $maxl;
+      
+
       my $count = $feature_count{$label};
       $count    = $limit->{$label} if $limit->{$label} && $limit->{$label} < $count;
-      my $do_bump  = $options->{$label} == 0 
-                     ? $count <= $max_bump && $conf_bump
+      my $do_bump  = defined $conf_bump ? $conf_bump
+                     : $options->{$label} == 0 ? $count <= $maxb
 	             : $options->{$label} == 1 ? 0
                      : $options->{$label} == 2 ? 1
                      : $options->{$label} == 3 ? 1
@@ -879,12 +886,12 @@ sub image_and_map {
                      : $options->{$label} == 5 ? 2
 		     : 0;
       my $do_label = $options->{$label} == 0 
-                     ? $feature_count{$label} <= $max_labels && $conf_label
+                     ? $feature_count{$label} <= $maxl && $conf_label
 	             : $options->{$label} == 3 ? $conf_label || 1
 	             : $options->{$label} == 5 ? $conf_label || 1
 		     : 0;
       my $do_description = $options->{$label} == 0
-                     ? $feature_count{$label} <= $max_labels && $conf_description
+                     ? $feature_count{$label} <= $maxl && $conf_description
 	             : $options->{$label} == 3 ? $conf_description || 1
 	             : $options->{$label} == 5 ? $conf_description || 1
 		     : 0;

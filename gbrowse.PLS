@@ -40,6 +40,9 @@ $Config{startperl}
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
+# Bio::Graphics-based annotation browser
+# $Id: gbrowse.PLS,v 1.79 2003-03-06 22:29:50 lstein Exp $
+
 use strict;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
@@ -111,6 +114,8 @@ use constant DEBUGGING_RECTANGLES => 0;
 #               A true value in {visible} indicates that the feature is active.
 #               The values of {options} are integers with the following meaning:
 #               0=auto, 1=force no bump, 2=force bump, 3=force label.
+#   ins         Show instructions
+#   head        Show header and footer
 # $CONFIG
 # This is a global Bio::Graphics::Browser object.  It contains information on
 # all the configuration files for this browser and provides access to the various
@@ -300,9 +305,10 @@ elsif ($plugin_action eq $LANG->tr('Configure')) {
 
 ## MAIN DISPLAY
 else {
-  my $header = $CONFIG->header;
-  print $header;
-  print h1($description) unless $header;
+  if ($page_settings->{head}) {
+    my $header = $CONFIG->header;
+    print $header ? $header:h1($description);
+  }
   main_display(\@segments,$page_settings);
 }
 
@@ -513,6 +519,7 @@ sub default_settings {
   $settings->{v}       = $VERSION;
   $settings->{stp}     = 1;
   $settings->{ins}     = 1;
+  $settings->{head}    = 1;
   $settings->{ks}      = 'between';
   set_default_tracks($settings);
 }
@@ -619,12 +626,10 @@ sub adjust_settings {
       $settings->{name} = "$settings->{ref}:$settings->{start}..$settings->{stop}";
       param(name => $settings->{name});
     }
-  $settings->{name}   = param('name')                       if param('name');
-  $settings->{source} = param('source')                     if param('source');
-  $settings->{plugin} = param('plugin')                     if param('plugin');
-  $settings->{stp}    = param('stp')                        if defined param('stp');
-  $settings->{ins}    = param('ins')                        if defined param('ins');
-  $settings->{ks}     = param('keystyle')                   if defined param('keystyle');
+
+  foreach (qw(name source plugin stp ins head keystyle)) {
+    $settings->{$_} = param($_) if defined param($_);
+  }
 
   if (my @external = param('eurl')) {
     my %external = map {$_=>1} @external;
@@ -666,31 +671,38 @@ sub navigation_table {
   my $self  = url(-relative=>1,-path_info=>1);
   my $table = '';
   my $oligo = $PLUGINS->{'OligoFinder'} ? ', oligonucleotide (15 bp minimum)' : '';
-  my $help  =  a({-href=>general_help(),-target=>'help'},b('['.$LANG->tr('Help').']'));
+  my $help  =  a({-href=>general_help(),-target=>'help'},'['.$LANG->tr('Help').']');
 
   $table .= table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
 		  $settings->{ins} ?
 		  (
 		   TR(
 		      td({-align=>'left', -colspan=>3},
-			 b($LANG->tr('INSTRUCTIONS').' '),
-			 '['.a({-href=>"$self?ins=0"},$LANG->tr('HIDE')).']: ',
+			 b($LANG->tr('INSTRUCTIONS').': '),
 			 $LANG->tr('SEARCH_INSTRUCTIONS',$oligo),
+			 $LANG->tr('NAVIGATION_INSTRUCTIONS'),
+			)),
+		   TR(
+		      td({-align=>'left', -colspan=>3},
 			 show_examples(),
-			 $help
+			 p(),
 			)),
-		   TR(
-		      td({-align=>'left', -colspan=>3},
-			 $LANG->tr('NAVIGATION_INSTRUCTIONS',bookmark_link($settings))
-			)),
-		  ) :
-		  (
-		   TR(
-		      td({-align=>'left', -colspan=>3},
-			 a({-href=>"$self?ins=1"},'['.$LANG->tr('SHOW_INSTRUCTIONS').']'),
-			 a({-href=>bookmark_link($settings)},'['.$LANG->tr('BOOKMARK').']'),$help)
+		  ) : (),
+
+		  TR(
+		     th({-align=>'left', -colspan=>3},
+			a({-href=>"$self?head=".((!$settings->{head})||0)},
+			  '['.$LANG->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
+			a({-href=>"$self?ins=".((!$settings->{ins})||0)},
+			  '['.$LANG->tr($settings->{ins}? 'HIDE_INSTRUCTIONS':'SHOW_INSTRUCTIONS').']'),
+			 $settings->{name} || $settings->{ref} ?
+			 (
+			  a({-href=>bookmark_link($settings)},'['.$LANG->tr('BOOKMARK').']'),
+			  a({-href=>image_link($settings),-target=>'_blank'},'['.$LANG->tr('IMAGE_LINK').']'),
+			 ) : (),
+			 $help)
 		     ),
-		  ),
+
 		   TR({-class=>'searchbody'},
 		      td({-align=>'left', -colspan=>3},
 			 $CONFIG->setting('html1')||''
@@ -1770,6 +1782,12 @@ sub bookmark_link {
   return $q->url(-relative=>1,-path_info=>1,-query=>1);
 }
 
+sub image_link {
+  my $settings = shift;
+  my $rand = md5_hex(rand);
+  return url(-relative=>1,-path_info=>1) ."?help=link_image;rand=$rand";
+}
+
 # reorder @labels based on settings in the 'track.XXX' parameters
 sub adjust_track_order {
   my $settings = shift;
@@ -1924,7 +1942,13 @@ sub help {
   print div({-align=>'right'},$do_close);
   if ($help_type eq 'citations') {
     build_citation_page($settings);
-  } else {
+  }
+
+  elsif ($help_type eq 'link_image') {
+    build_link_image_page($settings);
+  }
+
+  else {
     build_help_page("$conf_dir/${help_type}_help.html");
   }
   print div({-align=>'right'},$do_close);
@@ -2001,10 +2025,23 @@ sub build_help_page {
   while (<F>) { # fix up relative addressing of images
     s/(href|src)=\"([^\"\#\$]+)\"/$1=\"$root\/$2\"/g;
     s/<!--\s*\#include-classes\s*-->/object_classes_for_help()/e;
-#    s/href=\"\$GBROWSE/href=\"$url/g;
     print;
   }
   close F;
+}
+
+sub build_link_image_page {
+  my $settings = shift;
+  my $segment  = shift;
+  my $url = url(-base=>1);
+  $url   .= url(-absolute=>1);
+  $url =~ s/gbrowse/gbrowse_img/;
+  my $source = $CONFIG->source;
+  my $width  = $CONFIG->width;
+  my $name   = $settings->{name} || "$settings->{ref}:$settings->{start}..$settings->{stop}";
+  my $type   = join '+',map{escape($_)} grep {$settings->{features}{$_}{visible}} @{$settings->{tracks}};
+  my $img_url = "$url?source=$source;name=$name;type=$type;width=$width";
+  print $LANG->tr('IMAGE_DESCRIPTION',$img_url,$img_url);
 }
 
 sub url2file {

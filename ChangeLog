@@ -3,6 +3,9 @@
 	* Made it possible for same feature to belong to multiple tracks.
 	* Fixed HTML title so that Perl memory location of segment object won't
 	sometimes appear.
+	* Added new link to gbrowse_img, so that people can embed images of a region
+	in other HTML pages.
+	* Added option to hide the whole banner for those who prefer a minimal interface.
 1.50	Thu Feb 27 09:05:37 EST 2003
 	* Added Dutch language support.
 	* Added missing POXIX.pm file that was causing bizarre behavior for some browsers.

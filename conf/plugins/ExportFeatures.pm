@@ -1,4 +1,4 @@
-# $Id: ExportFeatures.pm,v 1.5 2003-11-09 20:12:31 sheldon_mckay Exp $
+# $Id: ExportFeatures.pm,v 1.6 2003-11-09 23:08:07 sheldon_mckay Exp $
 =head1 NAME
 
 Bio::Graphics::Browser::Plugin::ExportFeatures -- a plugin to export 
@@ -119,10 +119,21 @@ sub dump {
     # don't use an iterator here because we don't want aggregate features
     my $feats = join '', $self->selected_features;
     my @feats;
+
     if ( $mode eq 'selected' ) {
-        for ( $segment->features ) {
-            my $type = $_->primary_tag;
-	    push @feats, $_ if $feats =~ /$type/;
+        for my $f ( $segment->features ) {
+            my $type = $f->primary_tag;
+	    if ($feats =~ /$type/) {
+		push @feats, $f;
+		$self->{seen}->{$f->id}++;
+		my $name  = $f->name;
+                # get all gene parts
+		push @feats, grep { 
+		    $_->class eq $f->class && 
+                    $_->name =~ /$name/ && # may be alt-spliced
+                    ! $self->{seen}->{$_->id}++;
+		} $f->contained_features;
+	    }
 	}
     }
     else {
@@ -142,7 +153,7 @@ sub dump {
 
     for ( split "\n", $ft ) {
 	# strip away junk
-	next if /^[^DFIS\s]/ || /^FH/;
+	next if /^[^FIS\s]/;
 	s/(ID\s+\S+).+/$1/;
         s/Note/note/;
 	print $_, "\n";

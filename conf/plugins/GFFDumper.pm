@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.3 2002-07-07 21:31:48 lstein Exp $
+# $Id: GFFDumper.pm,v 1.1 2002-03-25 05:31:45 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -16,7 +16,6 @@ sub description {
     a({-href=>'http://www.sanger.ac.uk/Software/formats/GFF/'},'Gene Finding Format.')).
   p("This plugin was written by Lincoln Stein.");
 }
-
 sub dump {
   my $self = shift;
   my $segment       = shift;

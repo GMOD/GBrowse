@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27 2004-10-18 13:59:55 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.1 2005-03-14 14:12:42 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -54,8 +54,9 @@ use Bio::DB::GFF;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;
+use Bio::Graphics::Browser::PluginSet;
 use Text::Shellwords;
-use vars qw($CONFIG $VERSION $CONF_DIR);
+use vars qw($CONFIG $VERSION $CONF_DIR $PLUGINS);
 use constant MAX_SEGMENT     => 1_000_000;
 use constant TOO_MANY_SEGMENTS => 500;
 use constant PANEL_GAP         => 3;
@@ -132,6 +133,12 @@ $CONFIG->width($width) if $width;
 my ($options,$labels,$visible) = get_options(\@options,\@track_types);
 my $max_segment = $CONFIG->setting('max segment') || MAX_SEGMENT;
 
+# plugin initialization - should be easier
+my @plugin_path = "$CONF_DIR/plugins";
+unshift @plugin_path,shellwords($CONFIG->setting('plugin_path')) if $CONFIG->setting('plugin_path');
+$PLUGINS = Bio::Graphics::Browser::PluginSet->new($CONFIG,{features=>$visible},@plugin_path) unless defined $PLUGINS;
+$PLUGINS->configure($db);
+
 my ($img,$boxes,$panel,$tracks,$detailed_view);
 
 if (@segments > 1 or $show_overview or
@@ -150,7 +157,9 @@ if (@segments > 1 or $show_overview or
 
 else {  # detailed view
   my $segment = $segments[0];
-  my $feature_list = external_features($labels,$segment,\@add_features,\@add_style) if @add_features;
+  my $feature_list = {};
+  external_features($labels,$segment,\@add_features,\@add_style,$feature_list) if @add_features;
+  plugin_features($segment,$feature_list);
 
   ($img,$boxes,$panel,$tracks)
     = $CONFIG->image_and_map(segment       => $segment,
@@ -231,11 +240,14 @@ sub get_options {
   my ($options,$track_types) = @_;
 
   # get the options
-  my %options = map {split /[+\s]/} @$options;
+  my %options = shellwords(@$options);
 
   # set the track types to display.
-  my @labels  = map {split /[+\s]/} @$track_types;
+  my @labels  = shellwords(@$track_types);
+
   @labels     = $CONFIG->default_labels unless @labels;
+  # remove overview tracks
+  @labels     = grep {!/:overview$/} @labels;
   my %visible = map {$_ => {visible=>1}} @labels;
 
   return (\%options,\@labels,\%visible);
@@ -265,8 +277,13 @@ sub get_segments {
   @segments;
 }
 
+sub plugin_features {
+  my ($segment,$feature_file) = @_;
+  $PLUGINS->annotate($segment,$feature_file);
+}
+
 sub external_features {
-  my ($labels,$master_segment,$features,$styles) = @_;
+  my ($labels,$master_segment,$features,$styles,$feature_hash) = @_;
   my @features = @$features;
   my @styles   = @$styles;
   my %mappers;
@@ -307,7 +324,7 @@ sub external_features {
     my %options = map {split /=/} @options;
     $feature_list->add_type($type=>\%options);
   }
-  return {add => $feature_list};
+  $feature_hash->{add} = $feature_list
 }
 
 sub consolidate_images {
@@ -583,7 +600,7 @@ lengths.
       <p>
   <dt><b>type</b> (Alias: <b>t</b>)
   <dd>This argument lists the feature types to display.  The value of this argument is
-      a list of mnemonics separated by spaces ("+" characters when URL-escaped).  For example:
+      a list of track names separated by spaces ("+" characters when URL-escaped).  For example:
       <p>
       <pre>
       &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;
@@ -591,6 +608,11 @@ lengths.
       </pre>
       Multiple <i>type=</i> arguments will be combined to form a single space-delimited list.
       The alias "t" can be used to shorten the length of the URL.
+      <p>
+      If the track name has a space in it, put quotes around the name:
+      <pre>
+            type="microbe tRNA"+NG+WABA+CG+ESTB
+      </pre>
       <p>
   <dt><b>width</b> (Alias: <b>w</b>)
   <dd>Width of the desired image, in pixels.

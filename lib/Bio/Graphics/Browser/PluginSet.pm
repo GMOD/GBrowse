@@ -1,0 +1,198 @@
+package Bio::Graphics::Browser::PluginSet;
+# API for using plugins
+
+use strict;
+use Bio::Graphics::Browser;
+use CGI 'cookie','param';
+use Text::Shellwords;
+use constant DEBUG=>0;
+
+sub new {
+  my $package = shift;
+  my $config        = shift;
+  my $page_settings = shift;
+  my @search_path    = @_;
+  my %plugin_list = ();
+
+  warn "initializing plugins..." if DEBUG;
+  my @plugins = shellwords($config->setting('plugins')||''); # || DEFAULT_PLUGINS);
+
+ PLUGIN:
+  for my $plugin (@plugins) {
+    my $class = "Bio\:\:Graphics\:\:Browser\:\:Plugin\:\:$plugin";
+    for my $search_path (@search_path) {
+      my $plugin_with_path = "$search_path/$plugin.pm";
+      if (eval {require $plugin_with_path}) {
+	warn "plugin $plugin loaded successfully" if DEBUG;
+	my $obj = $class->new;
+	warn "plugin name = ",$obj->name," base = $plugin" if DEBUG;
+	$plugin_list{$plugin} = $obj;
+	next PLUGIN;
+      } else {
+	warn $@ if $@ and $@ !~ /^Can\'t locate/;
+      }
+    }
+    warn $@ if !$plugin_list{$plugin} && $@ =~ /^Can\'t locate/;
+  }
+
+  return bless {
+		config        => $config,
+		page_settings => $page_settings,
+		plugins       => \%plugin_list
+	       },ref $package || $package;
+}
+
+sub config        { shift->{config}         }
+sub page_settings { shift->{page_settings}  }
+sub plugins       {
+  my $self = shift;
+  return wantarray ? values %{$self->{plugins}} : $self->{plugins};
+}
+sub plugin        {
+  my $self = shift;
+  my $plugin_name = shift;
+  $self->plugins->{$plugin_name};
+}
+
+sub configure {
+  my $self     = shift;
+  my $database = shift;
+  my $conf     = $self->config;
+  my $plugins  = $self->plugins;
+  my $settings = $self->page_settings;
+  my $conf_dir = $conf->dir;
+
+  for my $name (keys %$plugins) {
+    my $p = $plugins->{$name};
+    $p->database($database);
+    $p->browser_config($conf);
+    $p->config_path($conf_dir);
+    $p->page_settings($settings);
+    $p->init();  # other initialization
+
+    # retrieve persistent configuration
+    my $config = _retrieve_plugin_config($p);
+    # and tell the plugin about it
+    $p->configuration($config);
+    $p->filter if ($p->type eq 'filter');
+
+    # if there are any CGI parameters from the
+    # plugin's configuration screen, set it here
+    my @params = grep {/^$name\./} param();
+    next unless @params;
+    $p->reconfigure unless param('plugin_action') eq $conf->tr('Cancel');
+    $p->filter if ($p->type eq 'filter');
+
+    # turn the plugin on
+    my $setting_name = 'plugin:'.$p->name;
+    $settings->{features}{$setting_name}{visible} = 1;
+  }
+}
+
+sub annotate {
+  my $self = shift;
+  my $segment       = shift;
+  my $feature_files = shift || {};
+
+  my @plugins = $self->plugins;
+  my $page_settings = $self->page_settings;
+
+  for my $p (@plugins) {
+    next unless $p->type eq 'annotator';
+    next unless $page_settings->{features}{$name}{visible};
+    my $features = $p->annotate($segment) or next;
+    $features->name($name);
+    $feature_files->{$name} = $features;
+  }
+}
+
+sub set_segments {
+  my $self = shift;
+  my $segments = shift;
+
+  my $plugins = $self->plugins;
+  for my $k ( values %$plugins ) {
+    $k->segments($segments);
+  }
+}
+
+sub _retrieve_plugin_config {
+  my $plugin = shift;
+  my $name   = $plugin->name;
+  my %settings = cookie("${name}_config");
+  return $plugin->config_defaults unless %settings;
+  foreach (keys %settings) {
+    # need better serialization than this...
+    if ($settings{$_} =~ /$;/) {
+      my @settings = split $;,$settings{$_};
+      pop @settings unless defined $settings[-1];
+      $settings{$_} = \@settings;
+    }
+  }
+  \%settings;
+}
+
+sub menu_labels {
+  my $self = shift;
+  my $plugins = $self->plugins;
+  my $config  = $self->config;
+
+  my %verbs = (dumper       => $config->tr('Dump'),
+	       finder       => $config->tr('Find'),
+	       highlighter  => $config->tr('Highlight'),
+	       annotator    => $config->tr('Annotate'));
+  my %labels = ();
+
+  # Adjust plugin menu labels
+  for ( keys %{$plugins} ) {
+
+    # plugin-defined verb
+    if ( $plugins->{$_}->verb ) {
+      $labels{$_} = $config->tr($plugins->{$_}->verb) ||
+        ucfirst $plugins->{$_}->verb;
+    }
+    # default verb
+    else {
+      $labels{$_} = $verbs{$plugins->{$_}->type} ||
+        ucfirst $plugins->{$_}->type;
+    }
+    my $name = $plugins->{$_}->type eq 'filter' ?  
+               $config->setting($plugins->{$_}->name => 'key') : 
+               $plugins->{$_}->name;
+    $labels{$_} .= " $name";
+    $labels{$_} =~ s/^\s+//;
+  }
+  return \%labels;
+}
+
+sub cookies {
+  my $self    = shift;
+  my $plugins = $self->plugins;
+  my @cookies;
+  for my $plugin (values %$plugins) {
+    push @cookies,$plugin->cookie;
+  }
+  @cookies;
+}
+
+1;
+
+__END__
+
+=over 4
+
+=item $plugin_set = Bio::Graphics::Browser::PluginSet->new($config,$page_settings,@search_path)
+
+Initialize plugins according to the configuration, page settings and
+the plugin search path.  Returns an object.
+
+=item $plugin_set->configure($database)
+
+Configure the plugins given the database.
+
+=item $plugin_set->annotate($segment,$feature_files)
+
+Run plugin annotations on the $segment, adding the resulting feature
+files to the hash ref in $feature_files ({track_name=>$feature_list}).
+
+=back

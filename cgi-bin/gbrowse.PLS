@@ -49,6 +49,7 @@ use strict;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;
+use Bio::Graphics::Browser::PluginSet;
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use Text::Tabs;
@@ -60,7 +61,7 @@ use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td);
 use CGI::Toggle;
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $CONF_DIR
-	    $PLUGINS $PRESETS
+	    $PLUGINS $PRESETS $HAVE_SVG
 	    %OBJECT_TYPES %PLUGIN_NAME2LABEL );
 
 # if you change the zoom/nav icons, you must change this as well.
@@ -101,6 +102,7 @@ use constant REMEMBER_SOURCE_TIME   => '+3M';  # 3 months
 use constant GLOBAL_TIMEOUT => 60;  # 60 seconds to failure unless overridden in config
 
 local $CGI::USE_PARAM_SEMICOLONS = 1;
+$HAVE_SVG = eval {require GD::SVG; 1};
 
 # IMPORTANT DATA STRUCTURES
 
@@ -186,12 +188,11 @@ my @plugin_path = "$CONF_DIR/plugins";
 unshift @plugin_path,shellwords($CONFIG->setting('plugin_path'))
   if $CONFIG->setting('plugin_path');
 
-$PLUGINS = initialize_plugins(@plugin_path) unless defined $PLUGINS;
-configure_plugins($PLUGINS,$page_settings,
-		  open_database(),
-		  $CONFIG,$CONF_DIR);
+$PLUGINS = Bio::Graphics::Browser::PluginSet->new($CONFIG,$page_settings,@plugin_path) unless defined $PLUGINS;
+$PLUGINS->configure(open_database());
+
 my $plugin_type   = '';                          # avoid uninit variable warning
-$plugin_type = $PLUGINS->{param('plugin')}->type if param('plugin') && $PLUGINS->{param('plugin')};
+$plugin_type = $PLUGINS->plugin(param('plugin'))->type if param('plugin') && $PLUGINS->plugin(param('plugin'));
 my $plugin_action = param('plugin_action') || '';
 warn "plugin_action = $plugin_action" if DEBUG_PLUGINS;
 
@@ -219,9 +220,7 @@ my $segments = features2segments($features);
 my @segments = @$segments;
 
 # tell the plugins which segments are in play
-for my $k ( keys %$PLUGINS ) {
-    $PLUGINS->{$k}->segments( \@segments );
-}
+$PLUGINS->set_segments(\@segments);
 
 
 ###############################################################################################
@@ -246,7 +245,7 @@ if ((@segments||param('plugin_config'))
 # The ImportFeatures plugin is a dumper plugin but does not require a segment.
 # it will be invoked here if no segment is defined
 elsif ($plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper' &&
-       $PLUGINS->{param('plugin')}->verb eq ($CONFIG->tr('Import')||'Import') ) {
+       $PLUGINS->plugin(param('plugin'))->verb eq ($CONFIG->tr('Import')||'Import') ) {
     do_plugin_header(param('plugin'),$page_settings);
     do_plugin_dump(param('plugin'),$segments[0],$page_settings) && exit 0
 }
@@ -298,7 +297,7 @@ warn "ADJUSTED TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 
 ## UPDATING THE PERSISTENT SETTINGS##############################################################
 my $cookies = settings2cookie($page_settings);
-push @$cookies,plugins2cookies($PLUGINS);
+push @$cookies,$PLUGINS->cookies;
 
 print_header(-cookie => $cookies,
 	     -charset=>$CONFIG->tr('CHARSET'),
@@ -817,7 +816,7 @@ sub navigation_table {
   my $settings = shift;
   my $buttonsDir    = $CONFIG->setting('buttons');
   my $table = '';
-  my $oligo = $PLUGINS->{'OligoFinder'} ? ', oligonucleotide (15 bp minimum)' : '';
+  my $oligo = $PLUGINS->plugin('OligoFinder') ? ', oligonucleotide (15 bp minimum)' : '';
   my $help  =  a({-href=>general_help(),-target=>'help'},'['.$CONFIG->tr('Help').']');
   my $instructions = 'Instructions';
   my $rand         =   substr(md5_hex(rand),0,5);
@@ -842,7 +841,7 @@ sub navigation_table {
 			    '['.$CONFIG->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
 			  a({-href=>bookmark_link($settings)},'['.$CONFIG->tr('BOOKMARK').']'),
 			  a({-href=>image_link($settings),-target=>'_blank'},'['.$CONFIG->tr('IMAGE_LINK').']'),
-			  a({-href=>svg_link($settings),-target=>'_blank'},'['.$CONFIG->tr('SVG_LINK').']'),
+			  $HAVE_SVG? a({-href=>svg_link($settings),-target=>'_blank'},'['.$CONFIG->tr('SVG_LINK').']'):'',
 			 ) : (),
 			 $help)
 		     )
@@ -884,7 +883,7 @@ sub navigation_table {
 # this generates the callback for highlighting "interesting" features
 sub make_hilite_callback {
   my $settings = shift;
-  my @hiliters = grep {$_->type eq 'highlighter'} values %$PLUGINS;
+  my @hiliters = grep {$_->type eq 'highlighter'} $PLUGINS->plugins;
   return unless @hiliters or ($settings->{h_feat} && $settings->{h_type});
   return sub {
     my $feature = shift;
@@ -1833,7 +1832,7 @@ sub load_external_sources {
   warn join "\n",%feature_file if DEBUG_EXTERNAL;
   my $f = \%feature_file;
 
-  load_plugin_annotations($segment,$f,$page_settings) if $segment && $segment->length <= $MAX_SEGMENT;
+  $PLUGINS->annotate($segment,$f) if $segment && $segment->length <= $MAX_SEGMENT;
   return $f;
 }
 
@@ -1892,29 +1891,17 @@ sub load_remote_sources {
   return @result;
 }
 
-sub load_plugin_annotations {
-  my ($segment,$feature_files,$settings) = @_;
-  for my $p (keys %$PLUGINS) {
-    next unless $PLUGINS->{$p}->type eq 'annotator';
-    my $name = "plugin:".$PLUGINS->{$p}->name;
-    next unless $settings->{features}{$name}{visible};
-    my $features = $PLUGINS->{$p}->annotate($segment) or next;
-    $features->name($name);
-    $feature_files->{$name} = $features;
-  }
-}
-
 sub load_plugin_annotators {
   my ($settings) = @_;
 
   my %default_plugin = map {$_=>1} map {s/^plugin:// && $_} 
     grep {/^plugin:/} $CONFIG->default_labels;
 
-  for my $p (keys %$PLUGINS) {
-    next unless $PLUGINS->{$p}->type eq 'annotator';
-    my $name = $PLUGINS->{$p}->name;
+  for my $p ($PLUGINS->plugins) {
+    next unless $p->type eq 'annotator';
+    my $name = $p->name;
     $name = "plugin:$name";
-    $PLUGIN_NAME2LABEL{$name} = $p;
+    $PLUGIN_NAME2LABEL{$name} = $p->name;
     unless ($settings->{features}{$name}) {
       push @{$settings->{tracks}},$name;
       $settings->{features}{$name} = {visible=>$default_plugin{$p}||0,options=>0,limit=>0};
@@ -2438,11 +2425,12 @@ sub build_link_image_page {
   my $tracks = $settings->{tracks};
   my $width  = $CONFIG->width;
   my $name   = $settings->{name} || "$settings->{ref}:$settings->{start}..$settings->{stop}";
-  my $type   = join '+',map{escape($_)} grep {$settings->{features}{$_}{visible}} @$tracks;
-  my $options =  join '+',map { join '+', escape($_),$settings->{features}{$_}{options}
-                              } grep {
-                                      $settings->{features}{$_}{options}
-                                     } @$tracks;
+  my $type    = join '+',map{escape($_)} map {/\s/?qq("$_"):$_} grep {$settings->{features}{$_}{visible}} @$tracks;
+  my $options = join '+',map { join '+', escape($_),$settings->{features}{$_}{options}
+			     } map {/\s/?"$_":$_}
+			       grep {
+				 $settings->{features}{$_}{options}
+			       } @$tracks;
   my $img_url = "$url?name=$name;type=$type;width=$width";
   $img_url   .= ";options=$options" if $options;
   print $CONFIG->tr('IMAGE_DESCRIPTION',$img_url,$img_url);
@@ -2458,11 +2446,12 @@ sub build_svg_image_page {
   my $tracks = $settings->{tracks};
   my $width  = $CONFIG->width;
   my $name   = $settings->{name} || "$settings->{ref}:$settings->{start}..$settings->{stop}";
-  my $type   = join '+',map{escape($_)} grep {$settings->{features}{$_}{visible}} @$tracks;
-  my $options =  join '+',map { join '+', escape($_),$settings->{features}{$_}{options}
-                              } grep {
-                                      $settings->{features}{$_}{options}
-                                     } @$tracks;
+  my $type    = join '+',map{escape($_)} map {/\s/?qq("$_"):$_} grep {$settings->{features}{$_}{visible}} @$tracks;
+  my $options = join '+',map { join '+', escape($_),$settings->{features}{$_}{options}
+			     } map {/\s/?"$_":$_}
+			       grep {
+				 $settings->{features}{$_}{options}
+			       } @$tracks;
   my $img_url = "$url?name=$name;type=$type;width=$width;format=GD::SVG";
   $img_url   .= ";options=$options" if $options;
   print $CONFIG->tr('SVG_DESCRIPTION',$img_url,$img_url);
@@ -2532,100 +2521,11 @@ sub label2key {
 
 ### PLUGINS ###################################################################################
 ###############################################################################################
-sub initialize_plugins {
-  my @path = @_;
-  my %plugin_list = ();
-
-  warn "initializing plugins..." if DEBUG_PLUGINS;
-  my @plugins = shellwords($CONFIG->setting('plugins')||''); # || DEFAULT_PLUGINS);
-
- PLUGIN:
-  for my $plugin (@plugins) {
-    my $class = "Bio\:\:Graphics\:\:Browser\:\:Plugin\:\:$plugin";
-    for my $path (@path) {
-      my $plugin_with_path = "$path/$plugin.pm";
-      if (eval {require $plugin_with_path}) {
-	warn "plugin $plugin loaded successfully" if DEBUG_PLUGINS;
-	my $obj = $class->new;
-	warn "plugin name = ",$obj->name," base = $plugin" if DEBUG_PLUGINS;
-	$plugin_list{$plugin} = $obj;
-	next PLUGIN;
-      } else {
-	warn $@ if $@ and $@ !~ /^Can\'t locate/;
-      }
-    }
-    warn $@ if !$plugin_list{$plugin} && $@ =~ /^Can\'t locate/;
-  }
-
-  return \%plugin_list;
-}
-
-sub configure_plugins {
-  my ($plugins,$settings,$db,$conf,$conf_dir) = @_;
-
-  for my $name (keys %$plugins) {
-    my $p = $plugins->{$name};
-    $p->database($db);
-    $p->browser_config($conf);
-    $p->config_path($conf_dir);
-    $p->page_settings($settings);
-    $p->init();  # other initialization
-
-    # retrieve persistent configuration
-    my $config = retrieve_plugin_config($p);
-    # and tell the plugin about it
-    $p->configuration($config);
-    $p->filter if ($p->type eq 'filter');
-
-    # if there are any CGI parameters from the
-    # plugin's configuration screen, set it here
-    my @params = grep {/^$name\./} param();
-    next unless @params;
-    $p->reconfigure unless param('plugin_action') eq $CONFIG->tr('Cancel');
-    $p->filter if ($p->type eq 'filter');
-
-    # turn the plugin on
-    my $setting_name = 'plugin:'.$p->name;
-    $settings->{features}{$setting_name}{visible} = 1;
-  }
-}
-
-sub plugin_adjust_labels {
-  my $plugins = shift;
-
-  my %verbs = (dumper       => $CONFIG->tr('Dump'),
-	       finder       => $CONFIG->tr('Find'),
-	       highlighter  => $CONFIG->tr('Highlight'),
-	       annotator    => $CONFIG->tr('Annotate'));
-  my %labels = ();
-
-  # Adjust plugin menu labels
-  for ( keys %{$plugins} ) {
-
-    # plugin-defined verb
-    if ( $plugins->{$_}->verb ) {
-      $labels{$_} = $CONFIG->tr($plugins->{$_}->verb) ||
-        ucfirst $plugins->{$_}->verb;
-    }
-    # default verb
-    else {
-      $labels{$_} = $verbs{$plugins->{$_}->type} ||
-        ucfirst $plugins->{$_}->type;
-    }
-    my $name = $plugins->{$_}->type eq 'filter' ?  
-               $CONFIG->setting($plugins->{$_}->name => 'key') : 
-               $plugins->{$_}->name;
-    $labels{$_} .= " $name";
-    $labels{$_} =~ s/^\s+//;
-  }
-  return \%labels;
-}
-
 
 sub plugin_menu {
   my ($settings,$plugins) = @_;
 
-  my $labels = plugin_adjust_labels($plugins);  
+  my $labels = $plugins->menu_labels;
 
   my @plugins = sort {$labels->{$a} cmp $labels->{$b}} keys %$labels;
   return unless @plugins;
@@ -2662,8 +2562,8 @@ sub source_menu {
 sub do_plugin_header {
   my $plugin        = shift;
   my $page_settings = shift;
-  my ($mime_type,$attachment)     = $PLUGINS->{$plugin}->mime_type;
-  my @cookies                     = plugins2cookies({$plugin => $PLUGINS->{$plugin}});
+  my ($mime_type,$attachment)     = $PLUGINS->plugin($plugin)->mime_type;
+  my @cookies                     = $PLUGINS->plugin($plugin)->cookie;
   print_header(-cookie => \@cookies,
 	       -type=>$mime_type,
 	       $attachment ? (-attachment=>$attachment) : (),
@@ -2674,7 +2574,7 @@ sub do_plugin_dump {
   my $plugin   = shift;
   my $segment  = shift;
   my $settings = shift;
-  my $p        = $PLUGINS->{$plugin} or return;
+  my $p        = $PLUGINS->plugin($plugin) or return;
   my @additional_feature_sets;
   if ($segment && $settings && $segment->length <= $MAX_SEGMENT) {
      my $feature_files = load_external_sources($segment,$settings);
@@ -2686,9 +2586,9 @@ sub do_plugin_dump {
 
 sub do_plugin_about {
   my $plugin = shift;
-  my $p = $PLUGINS->{$plugin};
+  my $p = $PLUGINS->plugin($plugin);
   my $type  = ( split ( /::/, ref($p) ) )[-1];
-  my $labels = plugin_adjust_labels($PLUGINS);
+  my $labels = $PLUGINS->menu_labels;
   print h1($CONFIG->tr('About_plugin',$labels->{$type}));
   print $p->description;
   print start_form(),submit($CONFIG->tr('Back_to_Browser')),hidden('plugin'),end_form();
@@ -2697,7 +2597,7 @@ sub do_plugin_about {
 sub do_plugin_find {
   my ($settings,$plugin,$features,$search_string) = @_;
 
-  my $p = $PLUGINS->{$plugin} or return;
+  my $p = $PLUGINS->plugin($plugin) or return;
   my $plugin_name = $p->name;
 
   my $results = $p->can('auto_find') && defined $search_string
@@ -2716,7 +2616,7 @@ sub do_plugin_find {
 
 sub do_plugin_configure {
   my $plugin   = shift;
-  my $p = $PLUGINS->{$plugin} or return;
+  my $p = $PLUGINS->plugin($plugin) or return;
   my $type = $p->type;
   my @action_labels = ($CONFIG->tr('Cancel'),$CONFIG->tr('Configure_plugin'));
   push @action_labels,$CONFIG->tr('Find') if $type eq 'finder';
@@ -2750,53 +2650,14 @@ sub do_plugin_autofind {
   my ($settings,$searchterm) = @_;
   my $segments = [];
 
-  for my $p (keys %$PLUGINS) {
-    next unless $PLUGINS->{$p}->type eq 'finder' && $PLUGINS->{$p}->can('auto_find');
+  for my $p ($PLUGINS->plugins) {
+    next unless $p->type eq 'finder' && $p->can('auto_find');
     do_plugin_find($settings,$p,$segments,$searchterm);
     last if @$segments;
   }
   return @$segments;
 }
 
-sub retrieve_plugin_config {
-  my $plugin = shift;
-  my $name   = $plugin->name;
-  my %settings = cookie("${name}_config");
-  return $plugin->config_defaults unless %settings;
-  foreach (keys %settings) {
-    # need better serialization than this...
-    if ($settings{$_} =~ /$;/) {
-      my @settings = split $;,$settings{$_};
-      pop @settings unless defined $settings[-1];
-      $settings{$_} = \@settings;
-    }
-  }
-  \%settings;
-}
-
-sub plugins2cookies {
-  my $plugins = shift;
-  my @cookies;
-  for my $plugin (values %$plugins) {
-    my $name = $plugin->name;
-    warn "plugins2cookies for $plugin\n" if DEBUG_PLUGINS;
-    my $conf = $plugin->configuration or next;
-    my %conf = %$conf;
-
-    # we need a better serialization than this...
-    for my $key (keys %conf) {
-      if (ref $conf{$key} eq 'ARRAY') {
-	$conf{$key}  = join $;,@{$conf{$key}};
-	$conf{$key} .= $; unless $conf{$key} =~ /$;/;
-      }
-    }
-    push @cookies,cookie(-name    => "${name}_config",
-			 -value   => \%conf,
-			 -expires => '+3M');
-  }
-  warn "plugin cookies = @cookies" if DEBUG_PLUGINS;
-  @cookies;
-}
 
 sub tableize {
   my $array = shift;

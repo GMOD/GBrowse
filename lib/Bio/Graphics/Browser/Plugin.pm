@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.12 2004-09-09 12:04:03 stajich Exp $
+# $Id: Plugin.pm,v 1.12.4.1 2005-03-14 14:12:42 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME
@@ -735,6 +735,26 @@ sub new_feature_list {
   my $self     = shift;
   return Bio::Graphics::FeatureFile->new(-smart_features=>1,
 					 -safe => 1);
+}
+
+# return a configuration cookie
+sub cookie {
+  my $self = shift;
+  my @cookies;
+  my $name = $self->name;
+  my $conf = $self->configuration or next;
+  my %conf = %$conf;
+
+  # we need a better serialization than this...
+  for my $key (keys %conf) {
+    if (ref $conf{$key} eq 'ARRAY') {
+      $conf{$key}  = join $;,@{$conf{$key}};
+      $conf{$key} .= $; unless $conf{$key} =~ /$;/;
+    }
+  }
+  return CGI::cookie(-name    => "${name}_config",
+		     -value   => \%conf,
+		     -expires => '+3M');
 }
 
 1;

@@ -795,22 +795,33 @@ aggregator and its companion glyph also called "processed_transcript."
 Take a look at the file <a
 href="data_files/volvox4.gff">volvox4.gff</a>, which defines a gene
 named EDEN, and its three spliced forms named EDEN.1, EDEN.2 and
-EDEN.3.  Here is the top part of the file:
+EDEN.3.  Here is the contents of the file:
 
 <blockquote class="example"><pre>
-ctgA   example   gene     1050   9000   .   +   .   Gene EDEN ; Note "protein kinase"
-
-ctgA   example   mRNA     1050   9000   .   +   .   mRNA EDEN.1 ; Gene EDEN
-ctgA   example   5'-UTR   1050   1200   .   +   .   mRNA EDEN.1
-ctgA   example   CDS      1201   1500   .   +   0   mRNA EDEN.1
-ctgA   example   CDS      3000   3902   .   +   0   mRNA EDEN.1
-ctgA   example   CDS      5000   5500   .   +   0   mRNA EDEN.1
-ctgA   example   CDS      7000   7610   .   +   0   mRNA EDEN.1
-ctgA   example   3'-UTR   7611   9000   .   +   .   mRNA EDEN.1
-
-ctgA   example   mRNA     1050   9000   .   +   .   mRNA EDEN.2 ; Gene EDEN
-ctgA   example   5'-UTR   1050   1200   .   +   .   mRNA EDEN.2
-...
+ctgA    example gene    1050    9000    .       +       .       Gene EDEN ; Note "protein kinase"
+                                          
+ctgA    example mRNA    1050    9000    .       +       .       mRNA EDEN.1 ; Gene EDEN
+ctgA    example 5'-UTR  1050    1200    .       +       .       mRNA EDEN.1
+ctgA    example CDS     1201    1500    .       +       0       mRNA EDEN.1
+ctgA    example CDS     3000    3902    .       +       0       mRNA EDEN.1
+ctgA    example CDS     5000    5500    .       +       0       mRNA EDEN.1
+ctgA    example CDS     7000    7608    .       +       0       mRNA EDEN.1
+ctgA    example 3'-UTR  7609    9000    .       +       .       mRNA EDEN.1
+                                                           
+ctgA    example mRNA    1050    9000    .       +       .       mRNA EDEN.2 ; Gene EDEN
+ctgA    example 5'-UTR  1050    1200    .       +       .       mRNA EDEN.2
+ctgA    example CDS     1201    1500    .       +       0       mRNA EDEN.2
+ctgA    example CDS     5000    5500    .       +       0       mRNA EDEN.2
+ctgA    example CDS     7000    7608    .       +       0       mRNA EDEN.2
+ctgA    example 3'-UTR  7609    9000    .       +       .       mRNA EDEN.2
+                                            
+ctgA    example mRNA    1300    9000    .       +       .       mRNA EDEN.3 ; Gene EDEN
+ctgA    example 5'-UTR  1300    1500    .       +       .       mRNA EDEN.3
+ctgA    example 5'-UTR  3000    3300    .       +       .       mRNA EDEN.3
+ctgA    example CDS     3301    3902    .       +       0       mRNA EDEN.3
+ctgA    example CDS     5000    5500    .       +       1       mRNA EDEN.3
+ctgA    example CDS     7000    7600    .       +       1       mRNA EDEN.3
+ctgA    example 3'-UTR  7601    9000    .       +       .       mRNA EDEN.3
 </pre></blockquote>
 
 <p>
@@ -818,8 +829,7 @@ ctgA   example   5'-UTR   1050   1200   .   +   .   mRNA EDEN.2
 The first line of the file defines the gene as a whole, starting at
 position 1050 of ctgA and extending to position 9000.  Following this,
 there are three sets of lines that define the structure of the spliced
-forms EDEN.1, EDEN.2, and EDEN.3, only the first of which is shown in
-its entirety here.  By convention, the whole transcript is represented
+forms EDEN.1, EDEN.2, and EDEN.3.  By convention, the whole transcript is represented
 as type "mRNA".  It has subparts named "5'-UTR", CDS, and "3'-UTR",
 where the UTR features are the 5' and 3' untranslated regions,
 respectively, and CDS is the coding region.  Note how the CDS is split

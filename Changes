@@ -1,3 +1,6 @@
+1.61    Wed Mar 17 21:59:16 EST 2004
+        * Really fixed the landmark problem (the 1.60 release was premature)
+
 1.60	Tue Mar 16 16:36:45 EST 2004
 	* Fixed problem of some landmarks not being recognized using 
 	the Class:Name syntax.

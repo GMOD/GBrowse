@@ -50,7 +50,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.24 2004-01-18 15:34:55 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.25 2004-02-29 17:15:50 markwilkinson Exp $
 ###########################################################
 
 use MOBY::Client::Central;
@@ -92,6 +92,43 @@ Please report all bugs to Mark Wilkinson (markw at illuminae.com)
 
 =head1 SYNOPSIS
 
+=head2 Standalone Installation
+
+gbrowse_moby may be used "standalone" without a complete installation of
+Gbrowse.  It relies on the gbrowse configuration file, which should be
+in the folder $HTTPD_CONF/gbrowse.conf/ where $HTTPD_CONF is the
+/conf/ directory for your webserver (e.g. /usr/local/apache/conf).  The
+config filename must end in .conf (e.g. default.conf).  If you are
+installing Gbrowse, all of this will be done for you by the gbrowse
+installation script.
+
+gbrowse_moby understands the following sub-set of gbrowse configuration
+parameters, and you will want to edit the following lines in the
+configuration file:
+    
+stylesheet  = /gbrowse/moby.css
+tmpimages   = /gbrowse/tmp
+head = ... what goes between the HEAD HTML tags...
+header = ...you header HTML here...
+footer = ...you footer HTML here...
+
+Other lines in the configuration file are ignored by the gbrowse_moby
+script, though they may be required by gbrowse itself.
+
+The renderers for MOBY Objects received from MOBY Services live in the
+$HTTPD_CONF/gbrowse.conf/MobyServices folder.  These generally do not
+need to be edited; please see the documentation of the individual
+renderers for information on how to write your own.
+
+Calling this script in your browser will open an initialization
+screen allowing you to initiate a MOBY browsing session independent
+of any parameters from Gbrowse.  See also the USAGE section
+for information about calling this browser with a GET string containing
+initialization parameters.
+
+
+=head2 Installation as a Gbrowse Accessory
+
 In 0X.organism.conf:
      
  [ORIGIN]
@@ -114,22 +151,6 @@ AND/OR
  URL = http://yoursite.com/cgi-bin/gbrowse_moby?namespace=$tag;id=$value
 
 
-=head1 DESCRIPTION
-
-This script will take information passed from a click on
-a Gbrowse feature, or a click on a configured DETAILS GFF
-attribute type, and initiate a MOBY browsing session with
-information from that link.  Most information is discarded.
-The only useful information to MOBY is a "namespace" and an
-id number within that namespace.
-
-Generally speaking, namespaces in Gbrowse will have to be
-mapped to a namespace in the MOBY namespace ontology (which
-is derived from the Gene Ontology Database Cross-Reference
-Abbreviations list).  Currently, this requires editing of the
-gbrowse_moby code, where a hash named source2namespace will
-map the GFF source (column 2) value into a MOBY namespace
-
 =head1 REQUIRED LIBRARIES
 
 This script requires libraries from the BioMOBY project.  Currently
@@ -144,6 +165,23 @@ You will then either need to enter the moby-live/Perl folder and run
 the Makefile and install the MOBY libraries into your system, or 
 alternately you can add "use lib './moby-live/Perl'" to this script 
 such that the libraries can be found at run-time.
+
+
+=head1 DESCRIPTION (using gbrowse_moby as a Gbrowse accessory)
+
+This script will take information passed from a click on
+a Gbrowse feature, or a click on a configured DETAILS GFF
+attribute type, and initiate a MOBY browsing session with
+information from that link.  Most information is discarded.
+The only useful information to MOBY is a "namespace" and an
+id number within that namespace.
+
+Generally speaking, namespaces in Gbrowse will have to be
+mapped to a namespace in the MOBY namespace ontology (which
+is derived from the Gene Ontology Database Cross-Reference
+Abbreviations list).  Currently, this requires editing of the
+gbrowse_moby code, where a hash named source2namespace will
+map the GFF source (column 2) value into a MOBY namespace
 
 
 =head1 USAGE

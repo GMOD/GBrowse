@@ -11,9 +11,9 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 =head1 VERSION (CVS-info)
 
  $RCSfile: PadAlignment.pm,v $
- $Revision: 1.4 $
+ $Revision: 1.5 $
  $Author: lstein $
- $Date: 2003-04-27 15:27:45 $
+ $Date: 2003-05-21 13:45:12 $
 
 =head1 SYNOPSIS
 
@@ -166,7 +166,7 @@ numbers printed next to each line of the alignment.  The keys of the
 the coordinate to be assigned to the first base of the sequence.  Use
 a negative number if you wish to indicate that the sequence has been
 reverse complemented (the negative number should indicate the
-coordinate of the LAST base in the provided sequence).
+coordinate of the first base in the provided sequence).
 
 =back
 
@@ -245,6 +245,9 @@ sub padded_sequences {
   my @last_end;
   my @added = (length($dnas[0])-1);
 
+  # leader sequence to add back after gapping
+  my @leader;
+
   # alignments must be sorted according to target
   foreach (sort {$a->[0] cmp $b->[0]
 		   || $a->[1] <=> $b->[1]
@@ -262,29 +265,40 @@ sub padded_sequences {
     # position in target coordinates where we last stopped
     my $last_target = $last_end[$targ][$targ] ||= -1;
 
-    # This section adds the unaligned region between the last place that
-    # we stopped and the current alignment
-    my $gap       = 0;
-    for (my $targ_pos=$tstart-1, my $j=$start-1; $targ_pos > $last_target; $targ_pos--, $j--) {
-      if ($j > $last_src) { # still room
-	my $pos = $gap_map[$j];
-	eval {substr($lines[$targ],$pos,1) = substr($dnas[$targ],$targ_pos,1)};
-      }
-      else {  # we've overrun -- start gapping above
-	my $pos = $gap_map[$start];
-	for (my $i=0; $i<@lines; $i++) {
-	  eval {substr($lines[$i],$pos,0) = '-'} unless $i==$targ;  # gap all segments
+    if ($last_src >= 0) {
+      # This section adds the unaligned region between the last place that
+      # we stopped and the current alignment
+      my $gap       = 0;
+      for (my $targ_pos=$tstart-1, my $j=$start-1; $targ_pos > $last_target; $targ_pos--, $j--) {
+	if ($j > $last_src) { # still room
+	  my $pos = $gap_map[$j];
+	  eval {substr($lines[$targ],$pos,1) = substr($dnas[$targ],$targ_pos,1)};
 	}
-	eval {substr($lines[$targ],$pos+$gap++,0) = substr($dnas[$targ],$targ_pos,1) };
+	else {  # we've overrun -- start gapping above
+	  my $pos = $gap_map[$start];
+	  for (my $i=0; $i<@lines; $i++) {
+	    eval {substr($lines[$i],$pos,0) = '-'} unless $i==$targ;  # gap all segments
+	  }
+	  eval {substr($lines[$targ],$pos,0) = substr($dnas[$targ],$targ_pos,1) };
+	  $gap++;
+	}
       }
+      if ($gap > 0) {
+	# for (@gap_map[$start..$#gap_map]) { $_ += $gap }  # update gap map
+	@gap_map[$start..$#gap_map] = map {$_+$gap} @gap_map[$start..$#gap_map];
+      }
+
     }
-    if ($gap > 0) {
-      for (@gap_map[$start..$#gap_map]) { $_ += $gap }  # update gap map
+
+    else {  # remember to add the extra stuff at beginning
+      $leader[$src]  = $start  if !defined $leader[$src]  || $start < $leader[$src];
+      $leader[$targ] = $tstart if !defined $leader[$targ] || $tstart< $leader[$targ];
     }
 
     # insert the aligned bit now
     for (my $pos = $start; $pos <= $end; $pos++) {
       my $gap_pos = $gap_map[$pos];
+      defined $gap_pos or next;
       eval {substr($lines[$targ],$gap_pos,1) = substr($dnas[$targ],$tstart++,1) };
     }
 
@@ -299,9 +313,43 @@ sub padded_sequences {
   # take care of the extra stuff at the end
   for (my $i=1; $i < @dnas; $i++) {
     my $last_bit = length($dnas[$i]) - $added[$i];
+    next unless defined $gap_map[$last_end[$i][0]];
     eval {substr($lines[$i],$gap_map[$last_end[$i][0]]+1,$last_bit)
 	    = substr($dnas[$i],$added[$i]+1,$last_bit) };
   }
+
+  # take care of the extra unaligned stuff at the beginning
+  my $max = 0;
+  for (my $i=1; $i < @dnas; $i++) {
+    next unless $leader[$i];
+    my ($leading_gaps) = $lines[$i] =~ /^(-+)/;
+    my $leading_pads   = length($leading_gaps);
+
+    my $insert_length = $leading_pads >= $leader[$i] ? $leader[$i] : $leading_pads;
+    my $append_length = $leading_pads >= $leader[$i] ? 0           : $leader[$i]-$leading_pads;
+    warn "insert length = $insert_length, append_length=$append_length\n" if DEBUG;
+
+    if ($insert_length > 0) {
+      substr($lines[$i],$leading_pads-$insert_length,$insert_length) =
+	substr($dnas[$i],$leader[$i]-$insert_length,$insert_length);
+      $leader[$i] -= $insert_length;
+    }
+    if ($append_length > 0) {
+      substr($lines[$i],0,0) = substr($dnas[$i],0,$append_length);
+    }
+
+    $max = $append_length if $append_length > $max;
+  }
+  warn "\n" if DEBUG;
+  warn join("\n",@lines),"\n\n" if DEBUG;
+
+  for (my $i=0; $i<@dnas; $i++) {
+    my $delta = $max - $leader[$i];
+    next unless $delta > 0;
+    substr($lines[$i],0,0) = '-'x$delta;
+  }
+
+  warn join("\n",@lines),"\n\n" if DEBUG;
 
   # change starts and ends to . characters
   my $max = 0;
@@ -332,9 +380,12 @@ sub gap_map {
 }
 
 sub alignment {
-  my $self    = shift;
+  my $self            = shift;
   my $origins         = shift;
-  my $show_mismatches = shift;
+  my $options         = shift || {};
+
+  my $show_mismatches = $options->{show_mismatches};
+  my $flip            = $options->{flip};
 
   my @lines = $self->padded_sequences;
   my %names = reverse %{$self->{names}};  # index to name
@@ -358,6 +409,16 @@ sub alignment {
     $longest_line = length($self->{dnas}[$i])+$offset if length($self->{dnas}[$i])+$offset > $longest_line;
   }
   $longest_line = length $longest_line;  # looks like an error but isn't
+
+  # if flip is set, then we do amazing things to reorganize the display!
+  if ($flip) {
+    for (my $i = 0; $i < @lines; $i++) {
+      $lines[$i] = reverse $lines[$i];
+      $lines[$i] =~ tr/gatcGATC/ctagCTAG/;
+      my $name   = $names{$i};
+      $origins->{$name} *= -1;
+    }
+  }
 
   # use markup to insert word and line breaks
   my $markup = Bio::Graphics::Browser::Markup->new;
@@ -387,6 +448,7 @@ sub alignment {
   }
 
   my $result;
+  my @length;
   for (my $i = 0; $i < @padded; $i++) {
 
     for (my $j = 0; $j < @{$padded[$i]}; $j++) {
@@ -405,7 +467,10 @@ sub alignment {
 	  push(@markup,['mismatch',$r => $r+1])
 	    if lc($source) ne lc($targ);
 	}
+	$length[$i][$j] = length $padded[$i][$j];
 	$markup->markup(\$padded[$i][$j],\@markup);
+      } else {
+	$length[$i][$j] = length $padded[$i][$j];
       }
 
       $result .= $skipit ? ""
@@ -413,8 +478,8 @@ sub alignment {
 				    $origin < 0 ? "($names{$j})"
                                                 : $names{$j},
 				    $labels[$j],$padded[$i][$j]);
-      $labels[$j] += length($padded[$i][$j]) - $offset  if $origin >= 0;
-      $labels[$j] -= length($padded[$i][$j]) - $offset  if $origin < 0;
+      $labels[$j] += $length[$i][$j] - $offset  if $origin >= 0;
+      $labels[$j] -= $length[$i][$j] - $offset  if $origin < 0;
     }
 
     $result .= "\n";

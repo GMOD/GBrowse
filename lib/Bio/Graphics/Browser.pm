@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.67 2003-05-13 22:06:34 lstein Exp $
+# $Id: Browser.pm,v 1.68 2003-05-21 13:45:12 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -274,11 +274,10 @@ $browser->plugin_setting('foo') to return value "bar".
 
 sub plugin_setting {
   my $self           = shift;
-  my $option         = shift;
   my $caller_package = caller();
   my ($last_name)    = $caller_package =~ /(\w+)$/;
-  my $option_name    = "$caller_package:plugin";
-  $self->config->setting($option_name=>@_);
+  my $option_name    = "${last_name}:plugin";
+  $self->setting($option_name => @_);
 }
 
 =head2 dbgff_settings()
@@ -1629,11 +1628,11 @@ sub make_link {
     return $val;
   }
   elsif (!$link || $link eq 'AUTO') {
-    my $name  = CGI::escape($feature->name);
-    my $class = CGI::escape($feature->class);
-    my $ref   = CGI::escape($feature->abs_ref);
-    my $start = CGI::escape($feature->abs_start);
-    my $end   = CGI::escape($feature->abs_end);
+    my $name  = CGI::escape($feature->display_name);
+    my $class = eval {CGI::escape($feature->class)};
+    my $ref   = CGI::escape($feature->seq_id);
+    my $start = CGI::escape($feature->start);
+    my $end   = CGI::escape($feature->end);
     my $src   = CGI::escape($source);
     return "gbrowse_details?src=$src;name=$name;class=$class;ref=$ref;start=$start;end=$end";
   }

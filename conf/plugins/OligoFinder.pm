@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::OligoFinder;
-# $Id: OligoFinder.pm,v 1.5 2003-05-19 17:25:44 lstein Exp $
+# $Id: OligoFinder.pm,v 1.6 2003-05-21 13:45:12 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -100,7 +100,7 @@ sub auto_find {
     # truncate all but the last length(oligo)-1 bases
     substr($dna,0,length($dna)-$bit_to_keep) = '';
     $offset  = $off - length($dna);
-    $dna    .= $d;
+    $dna    .= lc $d;
 
     my @forward = $self->exact_matches($dna,$oligo);
     my @reverse = $self->exact_matches($dna,$reversec);

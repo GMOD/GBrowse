@@ -1,49 +1,49 @@
-##!perl
-#use Config;
-#use File::Basename qw(&basename &dirname);
-#use File::Spec;
-#use FindBin '$Bin';
-#use Cwd;
+#!perl
+use Config;
+use File::Basename qw(&basename &dirname);
+use File::Spec;
+use FindBin '$Bin';
+use Cwd;
+
+my %OPTIONS;
+if (open F,"$Bin/../../GGB.def") {
+  while (<F>) {
+    next if /^\#/;
+    chomp;
+    $OPTIONS{$1} = $2 if /^(\w+)\s*=\s*(.+)/;
+  }
+  close F;
+}
+$OPTIONS{CONF} ||= '/usr/local/apache/conf';
+
+my $dir = dirname($0);
+$file   = shift || File::Spec->catfile($dir,basename($0, '.PMS'));
+
+open OUT,">$file" or die "Can't create $file: $!";
+
+print "Extracting $file (with variable substitutions)\n";
+
+my $startperl = $Config{startperl} ne '#!perl' 
+  ? $Config{startperl}
+  : "#!$Config{perlpath}";
+
+print OUT <<"!GROK!THIS!";
+$startperl -w
+package MobyServices::GbrowseServices;
+
+###################################################################
+# Non-modperl users should change this variable if needed to point
+# to the directory in which the configuration files are stored.
 #
-#my %OPTIONS;
-#if (open F,"$Bin/../../GGB.def") {
-#  while (<F>) {
-#    next if /^\#/;
-#    chomp;
-#    $OPTIONS{$1} = $2 if /^(\w+)\s*=\s*(.+)/;
-#  }
-#  close F;
-#}
-#$OPTIONS{CONF} ||= '/usr/local/apache/conf';
+\$CONF_DIR  = '$OPTIONS{CONF}/gbrowse.conf';
 #
-#my $dir = dirname($0);
-#$file   = shift || File::Spec->catfile($dir,basename($0, '.PM'));
-#
-#open OUT,">$file" or die "Can't create $file: $!";
-#
-#print "Extracting $file (with variable substitutions)\n";
-#
-#my $startperl = $Config{startperl} ne '#!perl' 
-#  ? $Config{startperl}
-#  : "#!$Config{perlpath}";
-#
-#print OUT <<"!GROK!THIS!";
-#$startperl -w
-#package MobyServices::GbrowseServices;
-#
-####################################################################
-## Non-modperl users should change this variable if needed to point
-## to the directory in which the configuration files are stored.
-##
-#\$CONF_DIR  = '$OPTIONS{CONF}/gbrowse.conf';
-##
-####################################################################
-#
-#!GROK!THIS!
-#
-## In the following, perl variables are not expanded during extraction.
-#
-#print OUT <<'!NO!SUBS!';
+###################################################################
+
+!GROK!THIS!
+
+# In the following, perl variables are not expanded during extraction.
+
+print OUT <<'!NO!SUBS!';
 
 
 
@@ -51,7 +51,7 @@
 
 
 #====================================================================
-#$Id: GbrowseServices.PM,v 1.7 2003-12-24 21:46:08 markwilkinson Exp $
+#$Id: GbrowseServices.PMS,v 1.1 2003-12-29 15:33:58 markwilkinson Exp $
 
 use strict;
 use Text::Shellwords;
@@ -314,7 +314,7 @@ sub GbrowseGetReferenceSeqObj {
 
 #===========================================
 
-#!NO!SUBS!
-#close OUT or die "Can't close $file: $!";
-#chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
-#exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
+!NO!SUBS!
+close OUT or die "Can't close $file: $!";
+chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
+exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';

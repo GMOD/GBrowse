@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.16 2003-01-30 21:08:28 scottcain Exp $
+# $Id: Segment.pm,v 1.17 2003-02-06 18:20:11 scottcain Exp $
 
 =head1 NAME
 
@@ -111,7 +111,7 @@ sub new {
     warn "start = $start, end = $end\n" if DEBUG;
 
   $self->throw("start value less than 1\n") if (defined $start && $start < 1);
-  $start ||= 1;
+  $start = $start ? int($start) : 1; 
 
 #moved length determination to constructor, now it will be there from
 # 'the beginning'.
@@ -174,8 +174,7 @@ sub new {
     warn "length:$length, srcfeature_id:$srcfeature_id\n" if DEBUG;
 
   $self->throw("end value greater than length\n") if (defined $end && $end > $length);
-  $end ||= $length;
-
+  $end = $end ? int($end) : $length;
   $length = $end - $start +1;
 
   return bless {factory       => $factory,

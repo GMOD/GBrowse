@@ -1,4 +1,4 @@
-# $Id: BasicEditor.pm,v 1.11 2003-10-24 21:37:25 markwilkinson Exp $
+# $Id: BasicEditor.pm,v 1.12 2003-10-27 15:26:22 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -19,7 +19,7 @@ The database user specified in the configuration file must have sufficient
 privileges to delete and insert data.  See the gbrowse tutorial
 for information on how to set this up.
 
-The features contained in the current segment are dumped as GFF2 into a form
+The features contained in the current segment are dumped as GFF2.5 into a form
 where the fields can be edited directly (except the reference sequence field).
 The edited features are then loaded into the database after all features in the
 segment's coordinate range are removed (except the reference component if one exists).
@@ -43,6 +43,7 @@ use CGI qw/:standard/;
 use CGI::Carp qw/fatalsToBrowser/;
 use Bio::Graphics::Browser::Plugin;
 use Bio::Graphics::Browser::GFFhelper;
+use Data::Dumper;
 
 use vars qw/ $VERSION @ISA $ROLLBACK /;
 $VERSION = '0.3';
@@ -55,7 +56,7 @@ $VERSION = '0.3';
 # Edit this line to specify the rollback file location
 # Comment it out to turn off rollbacks
 ####################################################################
-#$ROLLBACK = '/tmp/';
+$ROLLBACK = '/tmp/';
 ####################################################################
 
 
@@ -90,15 +91,11 @@ sub verb {
 }
 
 
-sub reconfigure {
-    my $self = shift;
-    my $conf = $self->configuration;
-    $conf->{rb_id} = $self->config_param('rb_id');
-}
-
-sub config_defaults {
-    { rb_id => undef }
-}
+# no persistent paramaters to be saved between sessions
+#sub reconfigure {
+#}
+#sub config_defaults {
+#}
 
 sub configure_form {
     my $self = shift;
@@ -117,10 +114,12 @@ sub configure_form {
     if ( $ROLLBACK ) {
 	$self->{rb_loc} ||= $ROLLBACK;
 	my $msg = "Selecting a rollback will override feature editing and " . 
-	          "restore a previous state for segment $segment";
-        $html = $self->rollback_form($msg) . 
-	        '<input type="submit" name="plugin_action" value="Configure" />' . 
-                br . br . "\n";
+	          "restore an archived feature set\\n\\nNote: restoring a feature " .
+                  "from a different segment will not affect $segment";
+        $html = $self->rollback_form($msg, $segment->ref);
+        my $button = qq(\n<input type="submit" name="plugin_action" value="Configure">\n);
+        $html =~ s|</a>|</a> $button|m; 
+        $html .= br . "\n";
     }    
 
     $html .= start_table() .
@@ -165,11 +164,11 @@ sub build_form {
     for ( @feats ) {
 	next if $_->method =~ /component/i;
 	$feat_count++;
-	my $cellcount = 0;
-	my @cell = split /\t/, $self->new_gff_string($_);
 
-        # controlled vocabulary for Target
-	$cell[8]  =~ s/Target \"?([^\"]+)\"? (\d+) (\d+)/Target "$1" ; tstart $2 ; tend $3/;
+        # use GFF2.5 dialect
+	$_->version(2.5);
+	my $cellcount = 0;
+	my @cell = split /\t/, $_->gff_string;
 
         # column 9 must be defined
         $cell[8] ||= ' ';
@@ -179,12 +178,10 @@ sub build_form {
         $row .= td( "<input type=checkbox name=$del_name>" ) . "\n";	
 	
 	for my $cell ( @cell  ) {
-        next if ++$cellcount == 1;
-        $size{$cellcount} ||=0;
-        $row .= td( textfield(
-            -name  => 'BasicEditor.feature' . $feat_count,
-            -value => $cell,
-            -size  => $size{$cellcount} + 1 )) . "\n";
+            next if ++$cellcount == 1;
+	    $row .= td( textfield( -name  => 'BasicEditor.feature' . $feat_count,
+				   -value => $cell,
+				   -size  => $size{$cellcount} + 1 )) . "\n";
 	}
         
         $row .= "</tr>\n";
@@ -196,7 +193,6 @@ sub build_form {
         $row .= "\n<tr class=searchdata valign=top>\n" . 
                 td( font( { -color => 'red' }, 'New' ) ) . "\n";
         for my $cell ( 2..9 ) {
-            $size{$cell}  ||=0;
             $row .= td( textfield( -name  => 'BasicEditor.feature' . $feat_count,
                                    -size  => $size{$cell} + 1 )) . "\n";
         }
@@ -216,8 +212,9 @@ sub set_cell_size {
 	
 	for my $c ( @cells ) {
 	    $count++;
-	    my $len = length $c;
-	    $max{$count} = $len if ($max{$count} && $len > $max{$count});
+	    $max{$count} ||= 1;
+	    my $len = length $c || 1;
+	    $max{$count} = $len if $len > $max{$count};
 	}
     }
 
@@ -229,7 +226,15 @@ sub set_cell_size {
 sub annotate {
     my ($self, $segment ) = @_;
     my $conf = $self->configuration;
-    my $rollback = $conf->{rb_id};
+    my $rollback;
+
+    # look for a rollback request. We do not want this to persist,
+    # so the rb_id parameter is not saved in the configuration
+    if ( $ROLLBACK ) {
+	$rollback = $self->config_param('rb_id');
+	$self->{rb_loc} = $ROLLBACK;
+	$self->save_state($segment);
+    }
 
     if ( forbid() ) {
 	print h1("Access not allowed from your location");
@@ -240,23 +245,14 @@ sub annotate {
     my $db = $self->database;
 
     if ( $rollback ) {
-	$self->{rb_loc} ||= $ROLLBACK;
-	$self->save_state($segment) if $ROLLBACK;
 	$gff = $self->rollback($rollback);
     }
     else {
 	$self->{ref} = $segment->ref;
-	my $gff_in = $self->gff_builder || return 0;
-	
-	# Bio::DB::GFF->specific parsing
-	$self->{parser} = 'Bio::DB::GFF';
-
-	$gff = $self->read_gff($gff_in);
+	$gff  = $self->build_gff || return 0;
     }
 
-    my @killme = $segment->features;
-
-    for ( @killme ) {
+    for ( $segment->contained_features ) {
 	next if $_->end > $segment->end + 1;
 	next if $_->start < $segment->start;
 	next if $_->method =~ /component/i;
@@ -267,31 +263,29 @@ sub annotate {
     my $result = $db->load_gff($fh);
 
     unless ( $result ) {
-        print h1("Problem loading features for $segment"),
-	      h1(pre($gff));
+        print h1("Problem loading features for $segment"), pre($gff);
         exit;
     }
     
     return 0;
-
 }
 
-sub gff_builder {
+sub build_gff {
     my $self = shift;
     my $gff;
     
-    for (param()) {
+    for ( param() ) {
         next unless /feature/;
         my ($num) = /feature(\d+)/;
-        next if param('BasicEditor.delete' . $num) || !param($_);
+        next if $self->config_param('delete' . $num) || !param($_);
         my @text = param($_);
         
         # is it valid gff?
         if ( !$self->check_gff(\@text) ) {
-            print h1("Error: bad GFF format:"),
-            b( pre( join "\t", @text ) );
-    	    exit;
-        }
+	    print h1("Error: bad GFF format:"),
+	          b( pre( join "\t", @text ) );
+	    exit;
+	} 
 
         unshift @text, $self->{ref};
         $gff .= ( join "\t", @text ) . "\n";
@@ -305,7 +299,7 @@ sub check_gff {
     # user gets a pass on empty score, strand and phase fields
     for ( 4..6 ) { $gff->[$_] ||= '.' }
 
-    # bet we have to draw the line somewhere...
+    # but we have to draw the line somewhere...
     return 0 if $gff->[0] !~ /\w+/     || $gff->[1] !~ /\w+/;
     return 0 if $gff->[2] !~ /^-?\d+$/ || $gff->[3] !~ /^-?\d+$/;
     return 0 if $gff->[4] !~ /\d+|\.+/ || $gff->[6] !~ /\d|\./;

@@ -1,4 +1,4 @@
-# $Id: ImportFeatures.pm,v 1.5 2003-10-17 15:34:49 markwilkinson Exp $
+# $Id: ImportFeatures.pm,v 1.6 2003-10-27 15:26:22 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -149,7 +149,8 @@ use Bio::Graphics::Browser::GFFhelper;
 
 use vars qw /@ISA $ROLLBACK/;
 
-@ISA = qw/Bio::Graphics::Browser::Plugin Bio::Graphics::Browser::GFFhelper/;
+@ISA = qw/ Bio::Graphics::Browser::Plugin 
+           Bio::Graphics::Browser::GFFhelper /;
 
 
 ####################################################################
@@ -198,9 +199,7 @@ sub config_defaults {
         file   => undef,
         acc    => undef,
         debug  => undef,
-        reload => 1,
-        rb_id  => undef,
-        seq_id => undef
+        reload => 1
     }
 }
 
@@ -214,7 +213,6 @@ sub reconfigure {
     $conf->{acc}    = $self->config_param('acc');
     $conf->{debug}  = $self->config_param('debug');
     $conf->{reload} = $self->config_param('reload');
-    $conf->{rb_id}  = $self->config_param('rb_id');
     $conf;
 }
 
@@ -260,7 +258,7 @@ sub configure_form {
     # add a rollback table if required
     my $msg = "Selecting rollback will override loading of files or accessions";
     $html .= "\n" . h3(' - OR - ') . "\n" . $self->rollback_form($msg) if $ROLLBACK;
-
+    $html =~ s|searchbody>(.+)</td>|searchbody><h3>$1</h3></td>|sm;
     $html .= h4(checkbox ( -name    => $self->config_name('debug'),
 			   -value   => 'debug',
 			   -label   => '' ), 'debug ',
@@ -278,12 +276,11 @@ sub dump {
     my $self = shift;
     my $conf = $self->configuration;
     my $db   = $self->database;
-    my $rollback = $conf->{rb_id};
     $self->refseq($conf->{seqid}) if $conf->{seqid};
     
-    # set the parser type to Bio::DB::GFF
-    $self->{parser} = 'Bio::DB::GFF';
-
+    # look for a rollback request
+    my $rollback = $self->config_param('rb_id');
+    
     my $gff = $rollback ? $self->rollback($rollback) : $self->gff;
 
     if ( $conf->{debug} ) {
@@ -292,13 +289,12 @@ sub dump {
 	print h2("The input features:"), pre($gff);
     }
 
-
     my $segment  = $db->segment( $self->refseq );
     my $nodna = 0;
     
     if ( $segment ) {
-	# make sure we know not to try to add sequencelater
-	$nodna++;
+	# make sure we know not to try to add sequence later
+	$nodna++ if $segment->seq;
         
         # save the state of the segment in case we want to roll back later 
         if ( $ROLLBACK ) {
@@ -309,10 +305,10 @@ sub dump {
 	my @killme = $segment->features;
 	my $killed;
 
-    $killed = $db->delete( $segment->ref );
+        my $killed = $db->delete( $segment->ref );
 	
-    print h2("I removed $killed features from the database"), pre(join "\n", @killme) 
-	if $conf->{debug}; 
+        print h2("I removed $killed features from the database"), pre(join "\n", @killme) 
+	    if $conf->{debug}; 
     }
 	
     # $gff = $self->component($gff);
@@ -514,12 +510,12 @@ sub seq2GFF {
 	}
     }
 
-    my $seqid = $self->refseq || $conf->{seqid};
-  
+    my $seqid = $self->refseq || $conf->{seqid} || $seq->id; 
+    $self->refseq($seqid);
+    $self->seq( $seq->seq );  
     my $gff;
     
     for ( @feats ) {
-	
 	if ( ref $_->location eq 'Bio::Location::Split' ) {
 	    $gff .= $self->unflatten($_);
 	}
@@ -527,12 +523,6 @@ sub seq2GFF {
 	    $gff .= $_->gff_string . "\n";
 	}
     }    
-    
-    $gff          =~ s|SEQ|$seqid|gm;
-
-    $self->seq( $seq->seq );
-    $self->refseq( $seqid );
-    
 
     for my $gene ( @{$self->{unflattened}} ) {
 	$gff =~ s/(CDS.+$gene\b)/${1}a/gm;
@@ -563,7 +553,14 @@ sub unflatten {
     $self->{unflattened} ||= [];
     my $newname = '';
 
-    my ($class, $name) = $self->guess_name($feat);
+    my ($class, $name);
+    for ( qw/standard_name gene locus_tag/ ) {
+	if ( $feat->has_tag($_) ) {
+	    $class  = 'gene';
+	    ($name) = $feat->get_tag_values($_); 
+	}
+	last if $class && $name;
+    }
     
     if ( $self->{seen}->{$class}->{$name} && $feat->primary_tag =~ /mRNA|CDS/i ) {
 	my $lett = shift @{$self->{alpha}};
@@ -577,7 +574,11 @@ sub unflatten {
     my @segments = map { [$_->start, $_->end] }
         $location->can('sub_Location') ? $location->sub_Location : $location;
 
-    $feat->primary_tag('mRNA') if $feat->primary_tag eq 'CDS';
+    if ( $feat->primary_tag eq 'CDS' ) {
+	$feat->primary_tag('mRNA');
+	#$feat->add_tag_value( mRNA => $name ); 
+    }
+    
     my $parttype;
     
     if ( $feat->primary_tag eq 'gene' ) {
@@ -590,7 +591,7 @@ sub unflatten {
 	$parttype = $feat->primary_tag;
     }
  
-    $gff = $self->new_gff_string($feat) . "\n";
+    $gff = $feat->gff_string . "\n";
     
     $name  = $newname if $newname;
     

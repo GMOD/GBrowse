@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.14 2003-10-16 07:29:14 sheldon_mckay Exp $
+# $Id: GFFDumper.pm,v 1.15 2003-10-27 15:26:22 sheldon_mckay Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -149,16 +149,14 @@ sub do_dump {
   my @gff;
   
   for my $f ( @$feats ) {
-    
-    my $s = $gff_version == 3 ? $f->gff3_string(1) :  # flag means recurse automatically
-	    $gff_version == 2 ? $f->gff_string     : $self->gff25_string($f);
- 
+    $f->version($gff_version);
+    my $s = $f->gff_string(1); # the flag is for GFF3 subfeature recursion
     push @gff, $s if $s;
  
     next if $gff_version >= 3; # gff3 recurses automatically
 
     for my $ss ($f->sub_SeqFeature) {
-      my $s = $gff_version == 2 ? $ss->gff_string : $self->gff25_string($f);
+      my $s = $ss->gff_string;
       push @gff, $s if $s;
     }
   }
@@ -172,6 +170,7 @@ sub do_gff {
     chomp @gff;
     print join "\n", 
       map  { $_->[3] }
+      # sort first asc. by start, then desc. by stop, then ascibetically 
       sort { $a->[0] <=> $b->[0] or
              $b->[1] <=> $a->[1] or
              lc $a->[2] cmp lc $b->[2] }
@@ -183,12 +182,11 @@ sub gff25_string {
     my ($self, $f)  = @_;
     return 0 if $f->primary_tag =~ /component/i;
     
-    # get exhaustive list of attributes via GFFhelper
-    my $gff = $self->new_gff_string($f);
+    $f->{version} = 2.5;
+    my $gff = $f->gff_string;
     
-    # controlled vocabulary for Target
-    $gff =~ s/Target \"?([^\"]+)\"? (\d+) (\d+)/Target "$1" ; tstart $2 ; tend $3/;
-
+    # convert embedded ';' to ',' 
+    $gff =~ s/\"([^\"]);([^\"])\"/$1,$2/g;
     $gff;
 }
 

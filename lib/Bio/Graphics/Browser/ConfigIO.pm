@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::ConfigIO;
 
-# $Id: ConfigIO.pm,v 1.1.2.4 2003-06-27 18:27:43 pedlefsen Exp $
+# $Id: ConfigIO.pm,v 1.1.2.5 2003-07-02 22:33:43 pedlefsen Exp $
 # This package parses a simple tab-delimited format for features into
 # a Config object.  It is simpler than GFF, but still has a lot of
 # expressive power.
@@ -417,6 +417,7 @@ sub _parse_line {
 
   my $config = $parse_state->config();
   my $current_section = $parse_state->current_section() || 'general';
+  my $current_segment_provider = $parse_state->current_segment_provider();
   my $current_tag = $parse_state->current_tag();
   if( /^\s+(.+)/ && $current_tag ) { # Continuation line
     ## TODO: REMOVE
@@ -441,6 +442,45 @@ sub _parse_line {
     return;
   } # End if this is a continuation line
 
+  if( ( $current_section eq 'general' ) &&
+      ( my ( $label ) = ( $_ =~ /^\s*\<([^\>]+)\>/ ) ) ) {
+    # New segment provider
+    $label =~ s/\s/_/g; # No whitespace allowed.
+    ## TODO: REMOVE
+    #warn "NEW SEGMENT PROVIDER DEFINITION: $label\n" if Bio::Graphics::Browser::DEBUG;
+  
+    # normalize
+    $current_segment_provider =
+      ( ( $label =~ /^(general|default)$/i ) ? 'undef' : $label );
+    # Keep a list of all the providers (except 'undef') at '#segment_providers'
+    unless( $current_segment_provider eq 'undef' ) {
+      $config->set(
+        '#segment_providers',
+        $config->get( '#segment_providers' ) . ' ' . $current_segment_provider
+      );
+    }
+    $parse_state->current_segment_provider( $current_section );
+    return;
+  } # End if this is the beginning of a new segment provider definition
+
+  if( ( $current_section eq 'general' ) &&
+      ( my ( $label ) = ( $_ =~ /^\s*\<\/([^\>]+)\>/ ) ) ) {
+    # End of a new segment provider definition
+    my $label = $1;
+    $label =~ s/\s/_/g; # No whitespace allowed.
+    ## TODO: REMOVE
+    #warn "ENDING SEGMENT PROVIDER DEFINITION: $label\n" if Bio::Graphics::Browser::DEBUG;
+  
+    # normalize
+    unless( $current_segment_provider ==
+            ( ( $label =~ /^(general|default)$/i ) ? 'default' : $label ) ) {
+      ## Bad.  Ending the wrong segment provider.
+      warn "Wrong segment provider is being ended: $label instead of $current_segment_provider";
+    }
+    $parse_state->current_segment_provider( 'undef' );
+    return;
+  } # End if this is the end a new segment provider definition
+
   if( /^\s*\[([^\]]+)\]/ ) { # New section
     ## TODO: REMOVE
     #warn "NEW SECTION: $1\n" if Bio::Graphics::Browser::DEBUG;
@@ -459,6 +499,9 @@ sub _parse_line {
     #warn "KEY/VALUE: '$1' = '$2'\n" if Bio::Graphics::Browser::DEBUG;
 
     $current_tag = lc $1;
+    if( $current_segment_provider ) {
+      $current_tag = $current_segment_provider.'#'.$current_tag;
+    }
     my $tag_value = ( ( defined $2 ) ? $2 : '' );
     if( $current_section ne 'general' ) {
       $config->set( $current_section, $current_tag, $tag_value );
@@ -757,6 +800,9 @@ sub _finish_parse {
   my $self = shift;
   my $parse_state = shift;
 
+  ## TODO: REMOVE
+  #warn "finishing parse!";
+
   # Convert all code-type tag values into CODE (from strings)
   my $config = $parse_state->config();
   foreach my $section ( undef, $config->get_sections() ) {
@@ -796,8 +842,14 @@ sub _finish_parse {
   # Make sure that the Config object has all of the features.
   $config->insert_or_update_collection( $parse_state );
 
+  ## TODO: REMOVE
+  #warn "initializing segment providers";
+
   # If the config specifies any other data sources, get those set up.
   $config->initialize_segment_providers();
+
+  ## TODO: REMOVE
+  #warn "done initializing segment providers";
 
   # Now reset the parse state, just for sanity.
   $parse_state->reset();
@@ -942,6 +994,7 @@ sub reset {
 
   $self->config( 'undef' );
   $self->current_section( 'undef' );
+  $self->current_segment_provider( 'undef' );
   $self->current_tag( 'undef' );
   $self->group_feature( 'undef' );
   $self->group_name( 'undef' );
@@ -978,6 +1031,20 @@ sub current_section {
   }
   return $old_value;
 } # current_section(..)
+
+sub current_segment_provider {
+  my $self = shift;
+  my $new_value = shift;
+  my $old_value = $self->{ '_cips_current_segment_provider' };
+  if( defined( $new_value ) ) {
+    if( $new_value eq 'undef' ) {
+      undef $self->{ '_cips_current_segment_provider' };
+    } else {
+      $self->{ '_cips_current_segment_provider' } = $new_value;
+    }
+  }
+  return $old_value;
+} # current_segment_provider(..)
 
 sub current_tag {
   my $self = shift;

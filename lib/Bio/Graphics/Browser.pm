@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.51.2.8 2003-06-30 23:16:19 pedlefsen Exp $
+# $Id: Browser.pm,v 1.51.2.9 2003-07-02 22:33:42 pedlefsen Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -861,9 +861,12 @@ sub _get_page_settings {
     $self->_default_page_settings( $page_settings );
   }
 
-  unless( $source_changed ) {
-    ## TODO: REMOVE
-    warn "Source did not change, so we're using the CGI settings." if DEBUG;
+  if( !$source_changed || ( request_method() eq 'GET' ) ) {
+    if( !$source_changed ) {
+      warn "Source did not change, so we're using the CGI settings." if DEBUG;
+    } else {
+      warn "Using GET mode, so we're using the CGI settings." if DEBUG;
+    }
     $self->_CGI_page_settings( $page_settings );
   } else {
     ## TODO: REMOVE
@@ -1837,7 +1840,12 @@ sub _get_tracks_table_html {
 
   my @labels = @{ $settings->{ 'track_order' } };
   if( $self->setting( 'sort tracks' ) ) {
+    ## TODO: REMOVE
+    #warn "Sorting tracks";
     @labels = sort { lc( $self->setting( $a, 'key' ) ) cmp lc( $self->setting( $b, 'key' ) ) } @labels;
+  } else {
+    ## TODO: REMOVE
+    #warn "NOT sorting tracks";
   }
   my %labels =
     map { $_ =>
@@ -4106,17 +4114,20 @@ sub _get_link {
   #warn "doing _get_link for feature $feature.";
 
   my $link;
-  if( $feature->can( 'make_link' ) ) {
+  if( !$self->setting( $section, 'always use config link' ) &&
+      $feature->can( 'make_link' ) ) {
     $link = $feature->make_link();
-  } else {
-    ### TODO: REMOVE
-    #warn "The feature, a ".ref( $feature ).", can't make_link().";
   }
   unless( defined $link ) {
     $link = $self->code_setting( $section, 'link' );
   }
   unless( defined $link ) {
     $link = $self->code_setting( 'link' );
+  }
+  if( !defined( $link ) &&
+      $self->setting( $section, 'always use config link' ) &&
+      $feature->can( 'make_link' ) ) {
+    $link = $feature->make_link();
   }
   unless( defined $link ) {
     # Give up.
@@ -4242,6 +4253,7 @@ sub _get_map_title {
   $type      $feature->method() || $feature->primary_tag()
   $method    $feature->method() || $feature->primary_tag()
   $source    $feature->source() || $feature->primary_tag()
+  $alias     shift @{ $feature->get_tag_values( 'alias' ) } || $feature->display_name()
   $start     $feature->start()
   $end       $feature->end()
   $segstart  $panel->start()
@@ -4268,6 +4280,8 @@ sub _replace_vars_with_vals {
       : $1 eq 'end'       ? $feature->end()
       : $1 eq 'segstart'  ? $panel->start()
       : $1 eq 'segend'    ? $panel->end()
+      : $1 eq 'alias'     ? ( $feature->get_tag_values( 'alias' ) ||
+                              $feature->display_name() )
       : $1
        /exg;
   return $pattern;

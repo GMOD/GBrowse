@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Config;
 
-# $Id: Config.pm,v 1.1.2.3 2003-06-30 20:24:59 pedlefsen Exp $
+# $Id: Config.pm,v 1.1.2.4 2003-07-02 22:33:43 pedlefsen Exp $
 # Configuration data for gbrowse.
 
 =head1 NAME
@@ -395,47 +395,9 @@ sub remove_config {
 sub initialize_segment_providers {
   my $self = shift;
 
-  ## TODO: Make this better...
-  my $db_adaptor = $self->get_and_eval( 'db_adaptor' ) || 'Bio::DB::GFF';
-  my $db_args    = $self->get_and_eval( 'db_args' );
-  my $db_user    = $self->get_and_eval( 'user' );
-  my $db_pass    = $self->get_and_eval( 'pass' );
-
-  return unless $db_args;
-
-  unless( eval "require $db_adaptor; 1" ) {
-    warn $@;
-    return;
-  }
-  my @argv =
-    ( ( ref $db_args eq 'CODE' ) ?
-      $db_args->() :
-      shellwords( $db_args || '' ) );
-
-  # for compatibility with older versions of the browser, we'll
-  # hard-code some arguments
-  if( my $adaptor = $self->get( 'adaptor' ) ) {
-    push( @argv, ( '-adaptor' => $adaptor ) );
-  }
-  if( my $dsn = $self->get( 'database' ) ) {
-    push( @argv, ( '-dsn' => $dsn ) );
-  }
-
-  if( my $fasta = $self->get( 'fasta_files' ) ) {
-    push( @argv, ( '-fasta' => $fasta ) );
-  }
-
-  if( $db_user ) {
-    push( @argv, ( '-user' => $db_user ) );
-  }
-
-  if( $db_pass ) {
-    push( @argv, ( '-pass' => $db_pass ) );
-  }
-
   ## TODO: Here is where we should add the special aggregators for the
   ## per-section "group pattern" entries.
-
+  
   my @aggregators = shellwords( $self->get( 'aggregators' ) || '' );
   if( my @auto_aggregator_factory_classes =
       $self->get( 'auto_aggregators' ) ) {
@@ -465,20 +427,67 @@ sub initialize_segment_providers {
       }
     }
   }
-  if( @aggregators ) {
-    ## TODO: REMOVE
-    #warn "The aggregators are ( ".join( ', ', @aggregators )." )";
-    push( @argv, ( '-aggregator' => \@aggregators ) );
-  }
+  my ( $db_adaptor, $db_args, $db_user, $db_pass );
+  foreach my $provider ( undef, shellwords( $self->get( '#segment_providers' ) || '' ) ) {
+    if( defined $provider ) {
+      ## TODO: REMOVE
+      #warn "Instantiating provider $provider";
+      $provider .= '#';
+    } else {
+      ## TODO: REMOVE
+      #warn "Instantiating default provider";
+    }
+    $db_adaptor = $self->get_and_eval( $provider.'db_adaptor' ) || 'Bio::DB::GFF';
+    $db_args    = $self->get_and_eval( $provider.'db_args' );
+    $db_user    = $self->get_and_eval( $provider.'user' );
+    $db_pass    = $self->get_and_eval( $provider.'pass' );
+    next unless $db_args;
+    
+    unless( eval "require $db_adaptor; 1" ) {
+      warn $@;
+      next;
+    }
+    my @argv =
+      ( ( ref $db_args eq 'CODE' ) ?
+        $db_args->() :
+        shellwords( $db_args || '' ) );
+    
+    # for compatibility with older versions of the browser, we'll
+    # hard-code some arguments
+    unless( defined $provider ) {
+      if( my $adaptor = $self->get( 'adaptor' ) ) {
+        push( @argv, ( '-adaptor' => $adaptor ) );
+      }
+      if( my $dsn = $self->get( 'database' ) ) {
+        push( @argv, ( '-dsn' => $dsn ) );
+      }
+      
+      if( my $fasta = $self->get( 'fasta_files' ) ) {
+        push( @argv, ( '-fasta' => $fasta ) );
+      }
+    }
 
-  my $segment_provider = eval{ $db_adaptor->new( @argv ) };
-  if( $@ ) {
-    warn $@;
-    return;
-  }
-  ## TODO: REMOVE
-  #warn "Adding segment provider $segment_provider.\n";
-  $self->add_next_provider( $segment_provider );
+    if( $db_user ) {
+      push( @argv, ( '-user' => $db_user ) );
+    }
+    if( $db_pass ) {
+      push( @argv, ( '-pass' => $db_pass ) );
+    }
+    if( @aggregators ) {
+      ## TODO: REMOVE
+      #warn "The aggregators are ( ".join( ', ', @aggregators )." )";
+      push( @argv, ( '-aggregator' => \@aggregators ) );
+    }
+    
+    my $segment_provider = eval{ $db_adaptor->new( @argv ) };
+    if( $@ ) {
+      warn $@;
+      next;
+    }
+    ## TODO: REMOVE
+    warn "Adding segment provider $segment_provider.\n";
+    $self->add_next_provider( $segment_provider );
+  } # End foreach provider, construct it and add it.
 } # initialize_segment_providers(..)
 
 ## TODO: Everything should delegate.  These are just reminders...

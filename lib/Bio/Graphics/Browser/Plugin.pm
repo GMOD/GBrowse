@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.7 2003-05-19 17:25:46 lstein Exp $
+# $Id: Plugin.pm,v 1.8 2003-10-07 06:15:14 sheldon_mckay Exp $
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME
@@ -15,6 +15,9 @@ Bio::Graphics::Browser::Plugin -- Base class for gbrowse plugins.
 
  # called by gbrowse to return name of plugin for popup menu
  sub name        { 'Example Plugin' }
+
+ # called by gbrowse to return the descriptive verb for popup menu
+ sub verb        { 'Demonstrate' }
 
  # called by gbrowse to return description of plugin
  sub description { 'This is an example plugin' }
@@ -93,9 +96,10 @@ and allows the user to select among them. Example: BLAST search.
 
 =item 3) annotators 
 
-These plugins receive the genomic segment object and return a list of
-features which are overlayed on top of the detailed view.  Example:
-restriction site annotator.
+These plugins receive the genomic segment object and either 1) return a list 
+of features which are overlayed on top of the detailed view (Example: restriction 
+site annotator) or 2) update the database with new or modified features 
+and return nothing (Example: basic editor)
 
 =back
 	
@@ -165,6 +169,7 @@ displayed to the user in a menu using one of the following forms:
     Dump <name>
     Find <name>
     Annotate <name>
+    plugin_defined_verb <name>
 
 =item $description = $self->description()
 
@@ -173,10 +178,17 @@ contain HTML tags, and should describe what the plugin does and who
 wrote it.  This text is displayed when the user presses the "About..."
 button.
 
+=item $verb = $self->verb
+
+This method returns a verb to be used in the plugin popup menu
+in cases where the main three don't fit.  This method should
+be set return whitespace (not undefined) if you do not want a 
+descriptive verb for the menu
+
 =item $type = $self->type()
 
 This tells gbrowse what the plugin's type is.  It must return one of
-the scripts "dumper," "finder," or "annotator" as described in the
+the scripts "dumper," "finder,", "annotator" as described in the
 introduction to this documentation.  If the method is not overridden,
 type() will return "dumper."
 
@@ -268,6 +280,19 @@ following idiom:
 This facility is intended to be used for any settings that should not
 be changed by the end user.  Persistent user preferences should be
 stored in the hash returned by configuration().
+
+
+=item $segments = $self->segments 
+
+This method returns the current segments in use by gbrowse.  The active
+segments are set from within gbrowse
+
+ $plugin->segments(\@segments);
+
+The active segments can then be retrieved from within the plugin.  This is 
+useful in cases where segment-specific information is required by plugin methods
+that are not passed a segment object.
+
 
 =item $config_path   = $self->config_path
 
@@ -531,6 +556,13 @@ sub name {
   return "generic";
 }
 
+sub verb {
+  my $self = shift;
+  # do nothing
+}
+
+
+
 sub description {
   my $self = shift;
   return p("This is the base class for all GBrowse plugins.",
@@ -601,6 +633,14 @@ sub config_path {
   my $self = shift;
   my $d = $self->{g_config_path};
   $self->{g_config_path} = shift if @_;
+  $d;
+}
+
+# get/store the current segments
+sub segments {
+  my $self = shift;
+  my $d = $self->{segments};
+  $self->{segments} = shift if @_;
   $d;
 }
 

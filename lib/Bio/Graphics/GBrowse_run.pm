@@ -6,12 +6,15 @@ use Term::ANSIColor;
 use Bio::Graphics::Browser::Constants;
 use Bio::Graphics::Browser::Options;
 use Bio::Graphics::Browser::Util;
-use CGI qw(Delete_all cookie param);
+use CGI qw(Delete_all cookie param url);
 use Carp qw(croak cluck);
+use Data::Dumper;
 use Digest::MD5 qw(md5_hex);
 use vars qw($VERSION @EXPORT_OK); #temporary
 
 @EXPORT_OK = qw(param); #this is a temporary scaffold to clean param() calls from gbrowse.PLS
+
+no warnings 'redefine';
 sub param { print(STDERR (caller())[0]."+".(caller())[2]." called param() with: ".join(' ',map {"'$_'"} @_)."\n"); return CGI::param(@_) } #temporary
 
 my $singleton = undef;
@@ -39,9 +42,29 @@ sub init {
   }
 
   open_database() or croak "Can't open database defined by source ".$self->config->source;
+
   $self->options(Bio::Graphics::Browser::Options->new());
+
+  #read VIEW section of config file first
+warn "***** read view";
+  $self->read_view();
+warn "***** display instructions: ".$self->options->display_instructions();
+warn "***** display tracks      : ".$self->options->display_tracks();
+  #then mask with cookie
+warn "***** read cookie";
   $self->read_cookie();
+warn "***** display instructions: ".$self->options->display_instructions();
+warn "***** display tracks      : ".$self->options->display_tracks();
+  #then mask with GET/POST parameters
+warn "***** read params";
   $self->read_params();
+warn "***** display instructions: ".$self->options->display_instructions();
+warn "***** display tracks      : ".$self->options->display_tracks();
+
+  #now store the masked results to the cookie for next time.
+  #this will be available via the ->cookie() accessor.
+warn "***** make cookie";
+  $self->make_cookie();
 }
 
 =head2 config()
@@ -61,12 +84,30 @@ sub config {
   return $self->{'config'};
 }
 
+=head2 cookie()
+
+ Usage   : $obj->cookie($newval)
+ Function: 
+ Example : 
+ Returns : value of cookie (a scalar)
+ Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub cookie {
+  my($self,$val) = @_;
+  $self->{'cookie'} = $val if defined($val);
+  return $self->{'cookie'};
+}
+
+
 =head2 options()
 
  Usage   : $obj->options($newval)
  Function: 
  Example : 
- Returns : value of options (a scalar)
+ Returns : A Bio::Graphics::Browser::Options object
  Args    : on set, new value (a scalar or undef, optional)
 
 
@@ -99,13 +140,24 @@ sub translate {
 sub read_cookie {
   my ($self) = @_;
 
-  my %cookie = cookie("gbrowse_".$self->config->source());
+  my %cookie = CGI::cookie("gbrowse_".$self->config->source());
+  #warn Dumper(%cookie);
+
   my $ok = 1;
   if(%cookie){
   BLOCK: {
       $ok &&= $cookie{v} == $VERSION;
       warn "ok 0 = $ok" if DEBUG;
       last unless $ok;
+
+      foreach my $k (keys %cookie){
+        if( $self->options->can($k) ){
+          $self->options->$k($cookie{$k});
+        } else {
+          warn "found option $k in cookie, can't handle it yet";
+        }
+      }
+
 
       $ok &&= defined $cookie{width} && $cookie{width} > 100 && $cookie{width} < 5000;
       $self->options->width($cookie{width});
@@ -142,14 +194,6 @@ sub read_cookie {
       $ok &&= scalar(@tracks) > 0;
       $self->options->tracks(@tracks);
       warn "ok 4 = $ok" if DEBUG;
-
-      foreach my $k (keys %cookie){
-        if($self->options->can($k) and !defined($self->options->$k)){
-          $self->options->$k($cookie{$k});
-        } else {
-          warn "found option $k in cookie, can't handle it yet";
-        }
-      }
     }
   }
 
@@ -158,8 +202,6 @@ sub read_cookie {
     $self->options->version(100);
     $self->options->width($self->config->setting('default width'));
     $self->options->source($self->config->source);
-    $self->options->stp(1);
-    $self->options->ins(1);
     $self->options->head(1);
     $self->options->ks('between');
     $self->options->sk('sorted');
@@ -176,7 +218,7 @@ sub read_cookie {
   }
 }
 
-=head2 write_cookie()
+=head2 make_cookie()
 
  Usage   :
  Function:
@@ -187,47 +229,50 @@ sub read_cookie {
 
 =cut
 
-sub write_cookie {
-  my ($self,@args) = @_;
+sub make_cookie {
+  my ($self) = @_;
 
-# # this is called to flatten the settings into an HTTP cookie
-# sub settings2cookie {
-#   my $settings = shift;
+#I guess this is ->options() ??
 #   my %settings = %$settings;
-#   local $^W = 0;
-#   for my $key (keys %settings) {
-#     next if $key =~ /^(tracks|features)$/;  # handled specially
-#     if (ref($settings{$key}) eq 'ARRAY') {
-#       $settings{$key} = join $;,@{$settings{$key}};
-#     }
-#   }
 
-#   # the "features" and "track" key map to a single array
-#   # contained in the "tracks" key of the settings
-#   my @array = map {join("/",
-# 			$_,
-# 			$settings{features}{$_}{visible},
-# 			$settings{features}{$_}{options},
-# 			$settings{features}{$_}{limit})} @{$settings{tracks}};
-#   $settings{tracks} = join $;,@array;
-#   delete $settings{features};
-#   delete $settings{flip};  # obnoxious for this to persist
+  my %settings = %{ $self->options() };
+  $settings{v} = $VERSION;
 
-#   warn "cookie => ",join ' ',%settings,"\n" if DEBUG;
+  local $^W = 0;
 
-#   my @cookies;
-#   my $source = $CONFIG->source;
-#   push @cookies,cookie(-name    => "gbrowse_$source",
-# 		       -value   => \%settings,
-# 		       -path    => url(-absolute=>1,-path=>1),
-# 		       -expires => REMEMBER_SETTINGS_TIME);
-#   push @cookies,cookie(-name    => 'gbrowse_source',
-# 		       -value   => $source,
-# 		       -expires => REMEMBER_SOURCE_TIME);
-#   warn "cookies = @cookies" if DEBUG;
-#   return \@cookies;
-# }
+  for my $key (keys %settings) {
+    next if $key =~ /^(tracks|features)$/;  # handled specially
+    if (ref($settings{$key}) eq 'ARRAY') {
+      $settings{$key} = join $;,@{$settings{$key}};
+    }
+  }
 
+  # the "features" and "track" key map to a single array
+  # contained in the "tracks" key of the settings
+  my @array = map {join("/",
+			$_,
+			$settings{features}{$_}{visible},
+			$settings{features}{$_}{options},
+			$settings{features}{$_}{limit})} @{$settings{tracks}};
+  $settings{tracks} = join $;,@array;
+  delete $settings{features};
+  delete $settings{flip};  # obnoxious for this to persist
+
+  warn "cookie => ",join ' ',%settings,"\n" if DEBUG;
+
+  my @cookies;
+  my $source = $self->config->source;
+  push @cookies,CGI::cookie(-name    => "gbrowse_$source",
+                            -value   => \%settings,
+                            -path    => url(-absolute=>1,-path=>1),
+                            -expires => REMEMBER_SETTINGS_TIME,
+                           );
+  push @cookies,CGI::cookie(-name    => 'gbrowse_source',
+		       -value   => $source,
+		       -expires => REMEMBER_SOURCE_TIME);
+
+  warn "cookies = @cookies" if DEBUG;
+  $self->cookie(\@cookies);
 }
 
 
@@ -251,8 +296,28 @@ sub read_params {
   if ( CGI::param('label') ) {
     my @selected = map {/^(http|ftp|das)/ ? $_ : split /[+-]/} CGI::param('label');
 
-    $options->feature($_)->{visible} = 0 foreach $options->feature();
-    $options->feature($_)->{visible} = 1 foreach @selected;
+    #set all visibility to zero (off)
+    foreach my $featuretag ($options->feature()){
+      my $feature = $options->feature($featuretag);
+      $feature->{visible} = 0;
+      $options->feature($featuretag,$feature);
+    }
+
+    #make selected on (visible)
+    foreach my $featuretag (@selected){
+      my $feature = $options->feature($featuretag);
+      $feature->{visible} = 1;
+      $options->feature($featuretag,$feature);
+    }
+  }
+
+  foreach my $k ( CGI::param() ) {
+    if( $self->options->can($k) ){
+#      warn "set $k to ".CGI::param($k);
+      $self->options->$k(CGI::param($k));
+    } else {
+      warn "found option $k in GET or POST params, can't handle it yet";
+    }
   }
 
   #
@@ -284,7 +349,7 @@ sub read_params {
     $options->name(sprintf("%s:%s..%s",$options->ref(),$options->start,$options->stop));
   }
 
-  foreach (qw(name source plugin stp ins head ks sk version h_feat h_type)) {
+  foreach (qw(name source plugin stp head ks sk version h_feat h_type)) {
     $options->$_(CGI::param($_)) if defined CGI::param($_);
   }
 
@@ -324,6 +389,24 @@ sub read_params {
   } elsif (CGI::param($self->translate('adjust_order')) && !CGI::param($self->translate('cancel'))) {
     #FIXME adjust_track_options($settings);
     #FIXME adjust_track_order($settings);
+  }
+}
+
+sub read_view {
+  my($self) = shift;
+
+  ###FIXME there is certainly a better way to get this data, but i'm in a hurry right now.
+  if( $self->config()->{conf}{$self->config()->source()}{data}{config}{VIEW} ){
+    my %o = %{ $self->config()->{conf}{$self->config()->source()}{data}{config}{VIEW} };
+    #foreach potential view parameter
+    foreach my $k (keys %o){
+      if( $self->options->can($k) ) {
+#        warn "setting view option $k to $o{$k}";
+        $self->options->$k($o{$k});
+      } else {
+        warn "found option $k in config file VIEW section, can't handle it yet";
+      }
+    }
   }
 }
 

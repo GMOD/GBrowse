@@ -1,8 +1,8 @@
 <table border="0" width="100%">
   <tr>
-  [% IF browser.options.stp %]
+  [% IF browser.options.display_tracks == 1 %]
     <td class="searchbody" valign="top" align="left">
-      <b>[% browser.translate('tracks') %]</b><a href="?stp=0">[[% browser.translate('hide') %]]</a>
+      <b>[% browser.translate('tracks') %]</b><a href="?display_tracks=0">[[% browser.translate('hide') %]]</a>
       <p>
         <i>[% browser.translate('external_tracks') %]</i>
         <div style="background: [% browser.config.setting('overview bgcolor') %]">[% browser.translate('overview_tracks') %]</div>
@@ -20,7 +20,7 @@
     </td>
   [% ELSE %]
     <td class="searchbody" colspan="3">
-      <b>[% browser.translate('tracks') %]</b> <a href="?stp=1">[[% browser.translate('show') %]]</a>
+      <b>[% browser.translate('tracks') %]</b> <a href="?display_tracks=1">[[% browser.translate('show') %]]</a>
     </td>
   [% END %]
   </tr>    

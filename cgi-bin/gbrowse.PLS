@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.122 2005-01-16 21:45:12 allenday Exp $
+# $Id: gbrowse.PLS,v 1.123 2005-01-17 04:33:22 allenday Exp $
 
 use strict;
 use Bio::Graphics;
@@ -211,7 +211,7 @@ sub main_display($$) {
 
 
 #FIXME    multiple_segments => multiple_choices($features),
-#FIXME    detail_panel      => detail_panel_with_timeout($segment,$feature_files),
+    detailpanel      => detail_panel_with_timeout($segment,$feature_files),
   };
 
   if($segment){
@@ -2102,7 +2102,7 @@ sub main {
 
   clear_uploaded_file($file) if $file_action && param($file_action) eq 'Delete File';
 
-  warn "TRACKS = @{$BROWSER->options->{tracks}}" if DEBUG;
+#  warn "TRACKS = @{$BROWSER->options->{tracks}}" if DEBUG;
   load_plugin_annotators();
   warn "ANNOTATOR TRACKS = ".$BROWSER->options->tracks() if DEBUG;
   adjust_tracks();

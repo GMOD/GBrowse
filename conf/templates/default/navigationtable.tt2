@@ -1,5 +1,5 @@
 <table border="0" width="100%" cellspacing="0" class="searchtitle">
-  [% IF toggle_instructions == 1 %]
+  [% IF browser.options.display_instructions == 1 %]
   <tr><td align="left" colspan="2">
     <b>[% browser.translate('instructions') %]</b><br/>
     [% browser.translate('search_instructions') %]
@@ -27,15 +27,15 @@
          END
       %]
       <a href="?rand=[% rand %];head=[% browser.options.head || 0 %]">[[% browser.translate( label ) %]]</a>
-      [% IF toggle_instructions == 1 ;
+      [% IF browser.options.display_instructions == 1 ;
            label = 'hide_instructions';
-           toggle_instructions = 0;
+           display_instructions = 0;
          ELSE ;
            label = 'show_instructions';
-           toggle_instructions = 1;
+           display_instructions = 1;
          END
       %]
-      <a href="?rand=[% rand %];toggle_instructions=[% toggle_instructions %]">[[% browser.translate( label ) %]]</a>
+      <a href="?rand=[% rand %];display_instructions=[% display_instructions %]">[[% browser.translate( label ) %]]</a>
       [% IF name OR ref %]
         <a href="[% link_bookmark %]">[[% browser.translate('bookmark') %]]</a>
         <a href="[% link_image    %]" target="_blank">[[% browser.translate('image_link') %]]</a>

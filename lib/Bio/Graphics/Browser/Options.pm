@@ -248,9 +248,9 @@ sub id {
   return $self->{'id'};
 }
 
-=head2 ins()
+=head2 display_instructions()
 
- Usage   : $obj->ins($newval)
+ Usage   : $obj->display_instructions($newval)
  Function: show instructions
  Example : 
  Returns : value of ins (a scalar)
@@ -259,10 +259,10 @@ sub id {
 
 =cut
 
-sub ins {
+sub display_instructions {
   my($self,$val) = @_;
-  $self->{'ins'} = $val if defined($val);
-  return $self->{'ins'};
+  $self->{'display_instructions'} = $val if defined($val);
+  return $self->{'display_instructions'};
 }
 
 =head2 ks()
@@ -418,21 +418,21 @@ sub stop {
   return $self->{'stop'};
 }
 
-=head2 stp()
+=head2 display_tracks()
 
- Usage   : $obj->stp($newval)
+ Usage   : $obj->display_tracks($newval)
  Function: 
  Example : 
- Returns : value of stp (a scalar)
+ Returns : value of display_tracks (a scalar)
  Args    : on set, new value (a scalar or undef, optional)
 
 
 =cut
 
-sub stp {
+sub display_tracks {
   my($self,$val) = @_;
-  $self->{'stp'} = $val if defined($val);
-  return $self->{'stp'};
+  $self->{'display_tracks'} = $val if defined($val);
+  return $self->{'display_tracks'};
 }
 
 =head2 tracks()

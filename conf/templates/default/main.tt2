@@ -11,6 +11,7 @@
   [% ELSE %]
     [% PROCESS "overviewpanel.tt2" %]
     [% #PROCESS "detailpanel.tt2"   %]
+    [% detailpanel   %]
   [% END %]
 
   [% htmlfrag3 %]

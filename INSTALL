@@ -217,7 +217,10 @@ suitable for loading:
 You will find the scripts, along with information on downloading the
 current model organism files, in the bin subdirectory of this package.
 The scripts will also have been copied into your system binaries
-directory when you made "install".
+directory when you made "install".  Run the script with the -h option
+to get some data-specific help:
+
+  % process_gadfly.pl -h
 
 The process_wormbase.pl script requires the AcePerl package, which is
 available from CPAN.  It is not strictly necessary to run this script

@@ -28,20 +28,30 @@ This script massages the Flybase/Gadfly GFF files located at
 ftp://ftp.fruitfly.org/pub/genomic/gadfly/ into the "correct" version
 of the GFF format.
 
-To use this script, get the Gadfly GFF distribution archive which is
-organized by GenBank accession unit (e.g. "RELEASE2GFF.tar.gz").
-Unpacking it will yield a directory named after the release,
-e.g. RELEASE2.
+To use this script, download the Gadfly GFF distribution archive which
+are organized by chromosome arm (e.g. "RELEASE2GFF.2L.tar.gz").
+Unpack them will yield a directory named after the release,
+e.g. RELEASE2, containing a directory named after the chromosome arm.
+Do this repeatedly in order to create a directory that contains each
+of the chromosome arms, i.e.:
 
-Give that directory as the argument to this script, and capture the
-script's output to a file:
+   RELEASE2/gff/X
+   RELEASE2/gff/2L
+   RELEASE2/gff/2R
+   ...
 
-  % process_gadfly.pl ./RELEASE2 > gadfly.gff
+Give the release directory as the argument to this script, and capture
+the script's output to a file:
+
+  % process_gadfly.pl ./RELEASE2 > fly.gff
 
 The gadfly.gff file can then be loaded into a Bio::DB::GFF database
 using the following command:
 
-  % bulk_load_gff.pl -d <databasename> gadfly.gff
+  % bulk_load_gff.pl -d fly fly.gff
+
+(Where "fly" is the name of the database.  Change it as appropriate.
+The database must already exist and be writable by you!)
 
 The resulting database will have the following feature types
 (represented as "method:source"):
@@ -62,12 +72,29 @@ The resulting database will have the following feature types
   similarity:groupest        EST->genome using GROUPEST
   similarity:repeatmasker    A repeat
 
+NOTE: Loading the DNA:
+
+To load the fly DNA, download the FASTA format file for the
+corresponding release in chromosome arm format
+(e.g. ftp://ftp.fruitfly.org/pub/genomic/fasta/na_arms.dros.RELEASE2.Z),
+and uncompress the file with the "uncompress" command.  This file will
+also need to be converted to fix the names of the chromosome arms.
+Use the following Perl command to do this:
+
+ % perl -pi -e 's/^>Chromosome_arm_(\S+)/>$1/' na_arms.dros.RELEASE2
+
+Now use bulk_load_gff.pl with the -fasta option in order to load the
+DNA as well as the GFF data:
+
+  % bulk_load_gff.pl -d fly -fasta na_arms.dros.RELEASE2 fly.gff
+
 USAGE
 ;
 }
 
 use strict;
-my $dir = shift || './RELEASE2/gff';
+my $dir = shift || './RELEASE2';
+$dir   .= "/gff";
 my $map = read_map($dir) || die;
 for my $scaffold (sort {
                        $map->{$a}[0] cmp $map->{$b}[0]
@@ -80,7 +107,7 @@ for my $scaffold (sort {
 
 sub read_map {
   my $dir = shift;
-  my ($segments) = <$dir/SEGMENTS*.gff>;
+  my ($segments) = <$dir/*/SEGMENTS*.gff>;
   my %arms;
   $segments or die "Can't find SEGMENTS file";
   open (F,$segments) or die "Can't open $segments: $!";
@@ -103,7 +130,7 @@ sub read_map {
 sub convert_scaffold {
   my ($dir,$scaffold,$pos) = @_;
   my ($ref,$rstart,$rstop,$rstrand) = @$pos;
-  my ($file) = <$dir/$scaffold*.gff>;
+  my ($file) = <$dir/*/$scaffold*.gff>;
   unless ($file && -r $file) {
     warn "$scaffold: Can't find corresponding GFF file.  Skipping.\n";
     return;

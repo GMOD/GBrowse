@@ -24,7 +24,7 @@ Project (L<http://www.gmod.org/>).
 
 =item H. USING DAS (DISTRIBUTED ANNOTATION SYSTEM) DATABASES
 
--item I. THE BioMOBY BROWSER
+=item I. THE BioMOBY BROWSER
 
 =item J. FURTHER INFORMATION
 
@@ -1885,9 +1885,9 @@ in detail below:
 
 =over
 
-=item 1
+=item 1 SYNOPSIS 
 
-SYNOPSIS:  In 0X.organism.conf, for example:
+In 0X.organism.conf, for example:
      
  [ORIGIN]
  link         = http://yoursite.com/cgi-bin/gbrowse_moby?source=$source&name=$name&class=$class&method=$method&ref=$ref&description=$description
@@ -1931,17 +1931,15 @@ maps the GFF source (column 2) to a MOBY namespace:
   $source2namespace{$source} = moby_namespace
 
 
-=item 2
-
-REQUIRED LIBRARIES
+=item 2 REQUIRED LIBRARIES
 
 This script requires libraries from the BioMOBY project.  Currently
 these are only available from the CVS.  Anonymous checkout of the
 BioMOBY project can be accomplished as follows:
     
-cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/moby login
-cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/moby co moby-live
-cvs update -dP
+  cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/moby login
+  cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/moby co moby-live
+  cvs update -dP
 
 You will then either need to enter the moby-live/Perl folder and run 
 the Makefile to install the MOBY libraries into your system, or 
@@ -1949,9 +1947,7 @@ alternately you can add "use lib './moby-live/Perl'" to this script
 such that the libraries can be found at run-time.
 
 
-=item 3
-
-USAGE
+=item 3 USAGE
 
 gbrowse_moby understands the following variables, some of
 which (*) may be passed from Gbrowse through a mouse-click
@@ -1974,15 +1970,11 @@ Note that you MUST at least pass a namespace-type variable (source/namespace)
 and an id-type variable (name/id) in order to have a successful MOBY
 call.
 
-=item 4
-
-EXAMPLES
+=item 4 EXAMPLES 
 
 =over
 
-=item
-
-Simple GFF
+=item Simple GFF
 
 If your GFF were:
 
@@ -2004,9 +1996,7 @@ and you would edit the gbrowse_moby script as follows:
 this maps the GFF source tag "Genbank" to the MOBY namespace "NCBI_Acc"
 
 
-=item
-
-GFF With non-MOBY Attributes
+=item GFF With non-MOBY Attributes
 
 If your GFF were:
 
@@ -2036,9 +2026,7 @@ edit the source2namespace hash in gbrowse_moby to read:
       );
 
 
-=item
-
-GFF With MOBY Attributes
+=item GFF With MOBY Attributes
 
 If your GFF were (NCBI_gi is a valid MOBY namespace):
 
@@ -2067,11 +2055,10 @@ only need to handle the Genbank GFF source as before:
 
 =back
 
-=item 5
-
-HINTS
+=item 5 HINTS
 
 -The full listing of valid MOBY namespaces is available at:
+
     http://mobycentral.cbr.nrc.ca/cgi-bin/types/Namespaces
 
 -A useful mapping to make is to put the organism name into the

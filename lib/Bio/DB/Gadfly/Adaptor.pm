@@ -113,6 +113,29 @@ sub segment {
   return;
 }
 
+# things that user could ask for (ss = "search string")
+# WARNING WARNING WARNING: gadfly is interbase coordinates
+# 1. gene
+#      name  ("CG" name)
+#      symbol (fruitfly nomenclature official name)
+#      synonym (may return multiple results)
+# SOLUTION: fetch object via lget_Gene with constraint name|symbol|synonym=>ss
+#           get start, end, and seq_object and throw out rest
+# 2. primary sequence
+#      BUT, what user really wants is alignment of this primary sequence
+#            to genome (via a resultset)
+# SOLUTION: fetch object via lget_ResultSet with constraint subject_seq=>ss
+#           get start, end and seq_object and throw out rest
+# 3. chromosome arm
+# SOLUTION: fetch primary seq from database
+#           get start, end and seq_object and throw out rest
+#
+# 4. cytological range
+# just feed into CytoRange object
+# SOLUTION: if range given construct a CytoRange object (BioModel::CytoRange->new(-range_string=>$string)
+#           call start_band() and end_band() to give band objects.
+#           get_CytoBand({name=>$range->start_band()->name}) this will give coordinates
+
 =head2 @classes = $db->classes;
 
 Return the namespaces known to the database.
@@ -121,8 +144,19 @@ Return the namespaces known to the database.
 
 # hard-coded classes
 sub classes {
-  return qw(name symbol);
+  return qw(name symbol synonym sequence arm);
 }
+
+# this is not very useful and shouldn't be using SQL
+# useful:
+
+# object      constraint
+# ------      ----------
+# gene        comment
+#             transcript_comment
+#             term
+#             dbxref
+# primary_seq description
 
 =head2 @result = $db->search_notes('search string')
 

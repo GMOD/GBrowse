@@ -1,3 +1,8 @@
+1.51	Thu Mar  6 13:40:09 EST 2003
+	* Number of search results returned by keyword search now configurable.
+	* Made it possible for same feature to belong to multiple tracks.
+	* Fixed HTML title so that Perl memory location of segment object won't
+	sometimes appear.
 1.50	Thu Feb 27 09:05:37 EST 2003
 	* Added Dutch language support.
 	* Added missing POXIX.pm file that was causing bizarre behavior for some browsers.

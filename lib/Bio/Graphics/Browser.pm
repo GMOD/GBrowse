@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.64 2003-05-09 03:56:23 lstein Exp $
+# $Id: Browser.pm,v 1.65 2003-05-13 01:08:38 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -254,6 +254,31 @@ sub setting {
       if $args[0] ne 'general' && lc($args[0]) eq 'general';  # buglet
   }
   $self->config->setting(@args);
+}
+
+=head2 plugin_setting()
+
+   $value = = $browser->plugin_setting("option_name");
+
+When called in the context of a plugin, returns the setting for the
+requested option.  The option must be placed in a [PluginName:plugin]
+configuration file section:
+
+  [MyPlugin:plugin]
+  foo = bar
+
+Now within the MyPlugin.pm plugin, you may call
+$browser->plugin_setting('foo') to return value "bar".
+
+=cut
+
+sub plugin_setting {
+  my $self           = shift;
+  my $option         = shift;
+  my $caller_package = caller();
+  my ($last_name)    = $caller_package =~ /(\w+)$/;
+  my $option_name    = "$caller_package:plugin";
+  $self->config->setting($option_name=>@_);
 }
 
 =head2 dbgff_settings()
@@ -1481,7 +1506,7 @@ use vars '@ISA';
 @ISA = 'Bio::Graphics::FeatureFile';
 
 sub labels {
-  grep { !($_ eq 'overview' || /:(\d+|overview)$/) } shift->configured_types;
+  grep { !($_ eq 'overview' || /:(\d+|overview|plugin)$/) } shift->configured_types;
 }
 
 sub overview_tracks {

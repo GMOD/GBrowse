@@ -1,12 +1,12 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.3 2002-07-07 21:31:48 lstein Exp $
+# $Id: GFFDumper.pm,v 1.4 2003-05-13 01:08:38 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use CGI qw(param url header p a);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.10';
+$VERSION = '0.20';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -23,14 +23,12 @@ sub dump {
   my $page_settings = $self->page_settings;
   my $conf          = $self->browser_config;
 
-  my @labels   = @{$page_settings->{tracks}};
-
   my $date = localtime;
   print "##gff-version 2\n";
   print "##date $date\n";
   print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
 
-  my @feature_types = map {$conf->config->label2type($_)} @labels;
+  my @feature_types = $self->selected_features;
   my $iterator = $segment->get_seq_stream(-types=>\@feature_types) or return;
   while (my $f = $iterator->next_seq) {
     print $f->gff_string,"\n";

@@ -40,7 +40,7 @@ $Config{startperl} -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.3 2003-05-09 04:17:20 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.4 2003-05-13 01:08:37 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR);
@@ -104,6 +104,10 @@ sub print_features {
       $string .= PrintMultiple($options,'Name',b($f->name));
       $string .= PrintMultiple($options,,'Class',$f->class);
     }
+    my %attributes = $f->attributes;
+    for my $a (sort keys %attributes) {
+      $string .= PrintMultiple($options,$a,$f->attributes($a));
+    }
     $string .= PrintMultiple($options,'Type',  $f->method);
     $string .= PrintMultiple($options,'Source',$f->source);
     $string .= PrintMultiple($options,"Position",position($f));
@@ -114,10 +118,6 @@ sub print_features {
 
     }
     $string .= PrintMultiple($options,"Score",$f->score) if defined $f->score;
-    my %attributes = $f->attributes;
-    for my $a (sort keys %attributes) {
-      $string .= PrintMultiple($options,i($a),$f->attributes($a));
-    }
     my @subfeatures = $f->merged_segments;
     $string .= PrintMultiple($options,'Parts',print_features(\@subfeatures,1)) if @subfeatures;
     $string .= end_table();
@@ -159,7 +159,8 @@ sub print_dna {
   $markup->markup(\$dna,\@markup);
   my $position = position($feature);
   my $name     = $feature->name;
-  return pre(">$name|$position\n".$dna);
+  my $class    = $feature->class;
+  return pre(">$name class=$class position=$position\n".$dna);
 }
 
 sub print_matches {

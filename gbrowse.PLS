@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.88 2003-05-13 01:03:38 lstein Exp $
+# $Id: gbrowse.PLS,v 1.89 2003-05-13 01:08:37 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -515,6 +515,7 @@ sub default_settings {
   $settings->{ins}     = 1;
   $settings->{head}    = 1;
   $settings->{ks}      = 'between';
+  $settings->{sk}      = 'sorted';
   set_default_tracks($settings);
 }
 
@@ -621,7 +622,7 @@ sub adjust_settings {
       param(name => $settings->{name});
     }
 
-  foreach (qw(name source plugin stp ins head ks)) {
+  foreach (qw(name source plugin stp ins head ks sk)) {
     $settings->{$_} = param($_) if defined param($_);
   }
   $settings->{name} =~ s/^\s+//; # strip leading
@@ -674,20 +675,20 @@ sub navigation_table {
 		  $settings->{ins} ?
 		  (
 		   TR(
-		      td({-align=>'left', -colspan=>3},
+		      td({-align=>'left', -colspan=>2},
 			 b($CONFIG->tr('INSTRUCTIONS').': '),
 			 $CONFIG->tr('SEARCH_INSTRUCTIONS',$oligo),
 			 $CONFIG->tr('NAVIGATION_INSTRUCTIONS'),
 			)),
 		   TR(
-		      td({-align=>'left', -colspan=>3},
+		      td({-align=>'left', -colspan=>2},
 			 show_examples(),
 			 p(),
 			)),
 		  ) : (),
 
 		  TR(
-		     th({-align=>'left', -colspan=>3},
+		     th({-align=>'left', -colspan=>2},
 			a({-href=>"$self?rand=$rand;head=".((!$settings->{head})||0)},
 			  '['.$CONFIG->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
 			a({-href=>"$self?rand=$rand;ins=".((!$settings->{ins})||0)},
@@ -701,7 +702,7 @@ sub navigation_table {
 		     ),
 
 		   TR({-class=>'searchbody'},
-		      td({-align=>'left', -colspan=>3},
+		      td({-align=>'left', -colspan=>2},
 			 $CONFIG->setting('html1')||''
 			)
 		     ),
@@ -840,6 +841,10 @@ sub tracks_table {
 
   my @labels = @{$settings->{tracks}};
   my %labels = map {$_ => make_citation_link($_,$self_url) } @labels;
+  if ($settings->{sk} eq 'sorted') {
+    my %keys = map {$_=>label2key($_)} @labels;
+    @labels    = sort { lc($keys{$a}) cmp lc($keys{$b})} @labels;
+  }
   my @defaults = grep {$settings->{features}{$_}{visible}  } @labels;
 
   autoEscape(0);
@@ -894,6 +899,16 @@ sub settings_table {
 				  -labels=>{between=>$CONFIG->tr('BETWEEN'),
 					    bottom =>$CONFIG->tr('BENEATH')},
 				  -default=>$settings->{ks},
+				  -override=>1
+				),
+		    ),
+		  td(
+		     b($CONFIG->tr('TRACK_NAMES')),br,
+		     radio_group( -name=>'sk',
+				  -values=>['sorted','unsorted'],
+				  -labels=>{sorted   =>$CONFIG->tr('ALPHABETIC'),
+					    unsorted =>$CONFIG->tr('VARYING')},
+				  -default=>$settings->{sk},
 				  -override=>1
 				),
 		    ),
@@ -2292,6 +2307,7 @@ sub tableize {
   }
   $html .= "</table>\n";
 }
+
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

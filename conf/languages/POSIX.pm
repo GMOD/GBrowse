@@ -122,6 +122,12 @@ END
 
    BENEATH     => 'Beneath',
 
+   TRACK_NAMES => 'Track Name Table',
+
+   ALPHABETIC  => 'Alphabetic',
+
+   VARYING     => 'Varying',
+
    SET_OPTIONS => 'Set Track Options...',
 
    UPDATE      => 'Update Image',

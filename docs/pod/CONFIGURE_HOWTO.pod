@@ -635,8 +635,6 @@ These options allow you to insert HTML into the GBrowse page at
 strategic places.  Eventually this will be replaced with an HTML
 template system, but for now, this is the best we have.
 
-=begin html
-
  <table>
  <tr><th>Option</th><th>Where it goes</th></tr>
  <tr><td>header</td><td>between the top and the instructions</td></tr>
@@ -648,8 +646,6 @@ template system, but for now, this is the best we have.
  <tr><td>html6 </td><td>between the track list and the annotation upload</td></tr>
  <tr><td>footer</td><td>between the annotation upload and the bottom</td></tr>
  </table>
-
-=end html
 
 These can be code references.  One useful thing to do is to use the
 language translator to insert language-specific HTML.  Here's an
@@ -820,6 +816,8 @@ also assumed if the title option is missing or blank.
 
 The landmark_padding option will add the indicated number of base pairs
 to the right and left of all landmarks that are searched for by name.
+
+=back
 
 =head2 B3. Track Sections
 

@@ -47,9 +47,9 @@ using short file names for paths, as the longer filenames have
 spaces in them that sometimes cause problems, therefore, the installation
 procedure may look something like this:
 
-C:\GENERI~1.47> perl Makefile.PL PREFIX=C:/PROGRA~1/APACHE~1/APACHE
-C:\GENERI~1.47> nmake
-C:\GENERI~1.47> nmake install
+  C:\GENERI~1.47> perl Makefile.PL PREFIX=C:/PROGRA~1/APACHE~1/APACHE
+  C:\GENERI~1.47> nmake
+  C:\GENERI~1.47> nmake install
 
 This will copy the GBrowse configuration, html, and cgi files to the correct
 directories in the Apache directory.

@@ -1,3 +1,5 @@
+=head1 Oracle and BioSQL
+
 Support for various databases and database schemas are coming.  Right
 now, there is full support for the Bio::DB::GFF schema running on
 MySQL, preliminary support for the Bio::DB::GFF schema running on top
@@ -6,8 +8,7 @@ top of MySQL.  There is also support for the GadFly schema running on
 top of MySQL and PostgreSQL, but this uses an earlier (forked) version
 of GBrowse.  See README-berkeley-gadfly for more details.
 
-Bio::DB::GFF on Oracle
-----------------------
+=head2 Bio::DB::GFF on Oracle
 
 To run GBrowse on top of Oracle, you will need a recent version of
 BioPerl that contains Shuly Avraham's
@@ -43,7 +44,6 @@ The final step is to tell GBrowse to use the Oracle database.  In the
 [GENERAL] section, enter the following values for db_adaptor and
 db_args:
 
-
     db_adaptor = Bio::DB::GFF
     db_args = -dsn     dbi:Oracle:sid=<service>;host=<host>
               -adaptor dbi::oracleopt
@@ -53,8 +53,7 @@ db_args:
 Replace <service>, <host>, <username> and <password> with the values
 appropriate for your system.
 
-BioSQL on MySQL
----------------
+=head2 BioSQL on MySQL
 
 To run GBrowse on top of BioSQL, you will need a recent version of
 BioPerl that has the DAS (distributed annotation system) interface
@@ -75,8 +74,8 @@ anonymous checkout):
 Use the following db_adaptor and db_args options as templates for your
 GBrowse configuration file:
 
-db_adaptor  = Bio::DB::Das::BioSQL
-db_args     = driver    mysql
+  db_adaptor  = Bio::DB::Das::BioSQL
+  db_args     = driver    mysql
 	      dbname    <dbname>
 	      biodbname <biodbname>
 	      host      <hostname>

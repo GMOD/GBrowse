@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 use strict;
-use File::Basename 'basename';
+use File::Basename qw( basename fileparse );
 use Carp 'croak';
 use IO::Dir;
 use Bio::Root::IO;
@@ -88,13 +88,43 @@ if (! (-e $tmpdir) ) {
 }
 
 print "Installing documentation...\n";
-for my $localfile (qw(./INSTALL ./docs/CONFIGURE_HOWTO.txt ./DISCLAIMER
-		      ./docs/README-gff-files ./docs/PLUGINS_HOWTO.txt
-		      ./docs/ORACLE_AND_BIOSQL.txt)) {
+#this need to be replaced with:
+#  a pod2html dohicky (it can create the html in the htdocs dir directly)
+#  a wanted subroutine to do File::Find's work
+#  also need to modify gbrowse/index.html
+for my $localfile (qw(./DISCLAIMER
+		      ./docs/README-gff-files ./docs/PLUGINS_HOWTO.txt)) {
   my $installfile = Bio::Root::IO->catfile($ht_target,basename($localfile));
   copy_with_substitutions($localfile,$installfile);
   chmod(0444,$installfile);
 }
+
+#installing pod docs
+my $docdir = Bio::Root::IO->catfile($ht_target, "docs");
+if (! (-e $docdir) ) {
+    mkdir($docdir,0777) or die "unable to make $docdir\n";
+}
+my $poddir = Bio::Root::IO->catfile($docdir, "pod");
+if (! (-e $poddir) ) {
+    mkdir($poddir,0777) or die "unable to make $poddir\n";
+}
+
+for my $localfile ( qw(./docs/pod/CONFIGURE_HOWTO.pod
+                       ./docs/pod/ORACLE_AND_BIOSQL.pod
+                       ./docs/pod/README-windows.pod
+                       ./docs/pod/README-berkeley-gadfly.pod
+                       ./docs/pod/INSTALL.pod ) ) {
+     my ($name,undef,undef) = fileparse($localfile, "\.pod");
+     my $installfile = Bio::Root::IO->catfile("$ht_target/docs/pod","$name.html"); 
+     system("pod2html", "--infile=$localfile",
+                        "--outfile=$installfile",
+                       # "--outfile=$name.html",
+                        "--htmlroot=/gbrowse",
+                        "--htmldir=$ht_target ",
+                        "--podpath=./docs/pod",
+                        "--title=$name");
+}
+
 
 print "Installing tutorial...\n";
 copy_tree('./docs/tutorial',$ht_target);

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.164 2004-09-07 02:22:23 lstein Exp $
+# $Id: Browser.pm,v 1.165 2004-09-07 11:51:40 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1790,11 +1790,11 @@ sub _hits_to_html {
   # use the scale as a centering mechanism
   my $ruler   = shift @$boxes;
   return unless $ruler->[0];  # don't know why....
-  my $pl = $ruler->[-1]->panel->pad_left;
+
   my $length  = $ruler->[0]->length/RULER_INTERVALS;
   $width   = ($ruler->[3]-$ruler->[1])/RULER_INTERVALS;
   for my $i (0..RULER_INTERVALS-1) {
-    my $x = $pl + $ruler->[1] + $i * $width;
+    my $x = $ruler->[1] + $i * $width;
     my $y = $x + $width;
     my $start = int($length * $i);
     my $stop  = int($start + $length);

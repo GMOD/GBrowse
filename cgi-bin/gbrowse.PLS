@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119 2004-11-17 23:06:44 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.1 2005-02-15 20:52:01 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -59,6 +59,7 @@ use File::Basename 'basename','dirname';
 use File::Spec;
 use Carp qw(:DEFAULT croak);
 use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td);
+use CGI::Toggle;
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $CONF_DIR
 	    $PLUGINS $PRESETS
@@ -364,9 +365,7 @@ elsif ($plugin_action eq $CONFIG->tr('Go') && $plugin_type=~/^(finder|annotator|
 ## MAIN DISPLAY
 else {
   my $header = $CONFIG->header;
-  if ($page_settings->{head}) {
-    print $header ? $header : h1($description);
-  }
+  print $header || h1($description) if $page_settings->{head};
   main_display($segments,$features,$page_settings);
 }
 
@@ -440,17 +439,21 @@ sub main_display {
   }
 
   print html_frag('html3',$segment,$page_settings);
-  print plugins_table($page_settings);
-  print html_frag('html4',$segment,$page_settings);
   print tracks_table($page_settings,$feature_files);
+  print html_frag('html4',$segment,$page_settings);
+  print dumps_table($page_settings);
   print html_frag('html5',$segment,$page_settings);
-  print settings_table($page_settings);
-  print html_frag('html6',$segment,$page_settings);
   print end_form();
 
   print start_multipart_form(-name=>'externalform');
-  print p(),upload_table($page_settings,$feature_files);
-  print p(),external_table($page_settings,$feature_files);
+  print external_table($page_settings,$feature_files);
+  print end_form();
+
+  print start_form(-name   => 'settingsform',
+                   -action => $action,
+		   -method => 'POST');
+  print settings_table($page_settings);
+  print html_frag('html6',$segment,$page_settings);
   print end_form();
 
   # clean us up
@@ -463,11 +466,14 @@ sub main_display {
 sub overview_panel {
   my ($segment,$page_settings) = @_;
   my $image = overview($segment,$page_settings).br();
-  return table({-border=>0,-width=>'100%'},
-	       TR({-class=>'databody'},
-		  td({-align=>'center'},$image)
-		 )
-	      );
+  return toggle_section({on=>1},
+			b('Overview'),
+			table({-border=>0,-width=>'100%'},
+			      TR({-class=>'databody'},
+				 td({-align=>'center'},$image)
+				)
+			     )
+		       );
 }
 
 sub detail_panel_with_timeout {
@@ -531,7 +537,9 @@ sub detail_panel {
   $table .= "\n";
   $table .= $map if $map;
   $table .= join '',hidden('ref'),hidden('start'),hidden('stop');
-  return $table;
+  return div(toggle_section({on=>1},
+			  b('Details'),
+			  $table));
 }
 
 ###############################################################################################
@@ -814,35 +822,28 @@ sub navigation_table {
   my $table = '';
   my $oligo = $PLUGINS->{'OligoFinder'} ? ', oligonucleotide (15 bp minimum)' : '';
   my $help  =  a({-href=>general_help(),-target=>'help'},'['.$CONFIG->tr('Help').']');
-  my $rand  = substr(md5_hex(rand),0,5);
+  my $instructions = 'Instructions';
+  my $rand         =   substr(md5_hex(rand),0,5);
 
   $table .= table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
-		  $settings->{ins} ?
-		  (
-		   TR(
-		      td({-align=>'left', -colspan=>2},
-			 b($CONFIG->setting('instructions') 
-			   || $CONFIG->tr('INSTRUCTIONS').': '),
-			 $CONFIG->setting('search_instructions')   
-			   || $CONFIG->tr('SEARCH_INSTRUCTIONS',$oligo),
-			 $CONFIG->setting('navigation_instructions') 
-			   || $CONFIG->tr('NAVIGATION_INSTRUCTIONS'),
-			)),
-		   TR(
-		      td({-align=>'left', -colspan=>2},
-			 show_examples(),
-			 p(),
-			)),
-		  ) : (),
-
+		  TR(
+		     td({-align=>'left', -colspan=>2},
+		     toggle_section(
+				    {on=>1},
+				    b($CONFIG->setting('instructions')
+				      || $CONFIG->tr('INSTRUCTIONS').': '),
+				    $CONFIG->setting('search_instructions')
+				    || $CONFIG->tr('SEARCH_INSTRUCTIONS',$oligo),
+				    $CONFIG->setting('navigation_instructions') 
+				    || $CONFIG->tr('NAVIGATION_INSTRUCTIONS'),
+				    p(show_examples()))),
+		    ),
 		  TR(
 		     th({-align=>'left', -colspan=>2},
-			a({-href=>"?rand=$rand;head=".((!$settings->{head})||0)},
-			  '['.$CONFIG->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
-			a({-href=>"?rand=$rand;ins=".((!$settings->{ins})||0)},
-			  '['.$CONFIG->tr($settings->{ins}? 'HIDE_INSTRUCTIONS':'SHOW_INSTRUCTIONS').']'),
 			 $settings->{name} || $settings->{ref} ?
 			 (
+			  a({-href=>"?rand=$rand;head=".((!$settings->{head})||0)},
+			    '['.$CONFIG->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
 			  a({-href=>bookmark_link($settings)},'['.$CONFIG->tr('BOOKMARK').']'),
 			  a({-href=>image_link($settings),-target=>'_blank'},'['.$CONFIG->tr('IMAGE_LINK').']'),
 			  a({-href=>svg_link($settings),-target=>'_blank'},'['.$CONFIG->tr('SVG_LINK').']'),
@@ -992,15 +993,17 @@ sub labels {
 
 sub plugins_table {
   my $settings = shift;
-  return table({-border=>0, -width=>'100%',-cellspacing=>0},
-	      TR({-class=>'settingsbody',-align=>'left'},
-		 td({-align=>'left'},
-			     source_menu($settings),
-		   ),
-		 td({-align=>'left'},
-		    plugin_menu($settings,$PLUGINS)),
-		)
-	     );
+  return toggle_section({on=>1},b('Source and Display Settings'),
+			table({-border=>0, -width=>'100%',-cellspacing=>0},
+			      TR({-class=>'settingsbody',-align=>'left'},
+				 td({-align=>'left'},
+				    source_menu($settings),
+				   ),
+				 td({-align=>'left'},
+				    plugin_menu($settings,$PLUGINS)),
+				)
+			     )
+		       );
 }
 
 # This subroutine is invoked to draw the checkbox group underneath the main display.
@@ -1015,7 +1018,7 @@ sub tracks_table {
   my $self_url = "?help=citations";
 
   my @labels = @{$settings->{tracks}};
-  my %labels          = map {$_ => make_citation_link($_,$self_url) } @labels;
+  my %labels = map {$_ => make_citation_link($_,$self_url) } @labels;
 
   if ($settings->{sk} eq 'sorted') {
     my %keys = map {$_=>label2key($_)} @labels;
@@ -1023,39 +1026,49 @@ sub tracks_table {
   }
   my @defaults = grep {$settings->{features}{$_}{visible}  } @labels;
 
-  autoEscape(0);
-  my $sTable 	= $settings->{stp} 
-    ? hidden(-name=>'label',-value=>'_',-override=>1) 
-    : '';  # dummy, just to keep param() happy.
-
   my $overview_color = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR(); # imported from Browser.pm
 
-  $sTable.= table({-border=>0,-width=>'100%'},
-		  # row
-		  $settings->{stp} ?
-		  (
-		   TR(	td({-class=>'searchbody', -valign=>'top',-align=>'left'},
-			   b($CONFIG->tr('Tracks')),a({-href=>"?stp=0"},'['.$CONFIG->tr('HIDE').']'),
-			   p(i($CONFIG->tr('External_tracks')),
-			     div({-style=>"background: $overview_color"},$CONFIG->tr('Overview_tracks'))
-			    )),
-			td({-class=>'searchbody',-colspan=>3,-width=>'85%'},
-			   checkbox_group(-name=>'label',
-					  # use the track ordering to adjust the order of the checkboxes
-					  # this is an array slice
-					  -values     => \@labels,
-					  -labels     => \%labels,
-					  -defaults   => \@defaults,
-					  -cols       => 3,
-					  -override   => 1,
-					 ))),
-		  ) :
-		  TR(td({-class=>'searchbody',-colspan=>3},
-			b($CONFIG->tr('Tracks')),a({-href=>"?stp=1"},'['.$CONFIG->tr('SHOW').']'))
-		    )
-		 );
+  autoEscape(0);
+  my $sTable = toggle_section({on=>1},
+			      b($CONFIG->tr('Tracks')),
+			      table({-border=>0,-width=>'100%'},
+				    TR(	td({-class=>'searchbody', -valign=>'top',-align=>'left'},
+					   p(i($CONFIG->tr('External_tracks')),
+					     div({-style=>"background: $overview_color"},$CONFIG->tr('Overview_tracks'))
+					    )),
+					td({-class=>'searchbody',-colspan=>3,-width=>'85%'},
+					   checkbox_group(-name=>'label',
+							  -values     => \@labels,
+							  -labels     => \%labels,
+							  -defaults   => \@defaults,
+							  -cols       => 3,
+							  -override   => 1,
+							 ))),
+				    TR({-class=>'searchbody'},
+				       td('&nbsp;'),
+				       th({-align=>'right',-colspan=>1},
+					  submit(-name => $CONFIG->tr('Set_options')),
+					  submit(-name => $CONFIG->tr('Update')),
+
+					 ),
+				      )
+				   )
+			     );
   autoEscape(1);
-  return $sTable;
+  return br(),$sTable;
+}
+
+
+sub dumps_table {
+  my $settings = shift;
+  return
+    p(
+      toggle_section({on=>1},b($CONFIG->tr('Dumps').':'),
+		     table({-border=>0,-width=>'100%',-class=>'settingsbody'},
+			   TR(td(plugin_menu($settings,$PLUGINS))),
+			  )
+		    )
+      );
 }
 
 sub settings_table {
@@ -1065,48 +1078,53 @@ sub settings_table {
   @widths = (640,800,1024) unless @widths;
   my @key_positions   = qw(between bottom);
   push @key_positions,qw(left right) if Bio::Graphics::Panel->can('auto_pad');
-
-  return table({-border=>0,-width=>'100%',-class=>'settingsbody'},
-	       # row
-	       TR(
-		  td(
-		     b($CONFIG->tr('Image_width')),br,
-		     radio_group( -name=>'width',
-				  -values=>\@widths,
-				  -default=>$settings->{width},
-				  -override=>1
-				),
-		    ),
-		  td(
-		     b($CONFIG->tr('KEY_POSITION')),br,
-		     radio_group( -name=>'ks',
-				  -values=>\@key_positions,
-				  -labels=>{between=>$CONFIG->tr('BETWEEN'),
-					    bottom =>$CONFIG->tr('BENEATH'),
- 					    left   =>$CONFIG->tr('LEFT'),
- 					    right  =>$CONFIG->tr('RIGHT'),
-					   },
-				  -default=>$settings->{ks},
-				  -override=>1
-				),
-		    ),
-		  td(
-		     b($CONFIG->tr('TRACK_NAMES')),br,
-		     radio_group( -name=>'sk',
-				  -values=>['sorted','unsorted'],
-				  -labels=>{sorted   =>$CONFIG->tr('ALPHABETIC'),
-					    unsorted =>$CONFIG->tr('VARYING')},
-				  -default=>$settings->{sk},
-				  -override=>1
-				),
-		    ),
-		  td({-align=>'right'},
-		     submit(-name => $CONFIG->tr('Set_options'))
-		     .'&nbsp;'.
-		     b(submit(-name => $CONFIG->tr('Update')))
-		    )
-		 ),
-	      );
+  my $content =
+    table(
+	  TR(
+	     td({-align=>'left'},
+		source_menu($settings),
+	       ),
+	     td(
+		b($CONFIG->tr('Image_width')),br,
+		radio_group( -name=>'width',
+			     -values=>\@widths,
+			     -default=>$settings->{width},
+			     -override=>1,
+			   ),
+	       )
+	    ),
+	  # row
+	  TR(
+	     td(
+		b($CONFIG->tr('KEY_POSITION')),br,
+		radio_group( -name=>'ks',
+			     -values=>\@key_positions,
+			     -labels=>{between=>$CONFIG->tr('BETWEEN'),
+				       bottom =>$CONFIG->tr('BENEATH'),
+				       left   =>$CONFIG->tr('LEFT'),
+				       right  =>$CONFIG->tr('RIGHT'),
+				      },
+			     -default=>$settings->{ks},
+			     -override=>1
+			   ),
+	       ),
+	     td(
+		b($CONFIG->tr('TRACK_NAMES')),br,
+		radio_group( -name=>'sk',
+			     -values=>['sorted','unsorted'],
+			     -labels=>{sorted   =>$CONFIG->tr('ALPHABETIC'),
+				       unsorted =>$CONFIG->tr('VARYING')},
+			     -default=>$settings->{sk},
+			     -override=>1
+			   ),
+	       ),
+	     td(
+		b(submit(-name => $CONFIG->tr('Update')))
+	       )
+	    ),
+	 );
+  return toggle_section({on=>1},
+			b('Settings'),$content);
 }
 
 sub annotation_help {
@@ -1115,6 +1133,16 @@ sub annotation_help {
 
 sub general_help {
   return "?help=general";
+}
+
+sub external_table {
+  my ($settings,$feature_files) = @_;
+  my $upload_table = upload_table($settings,$feature_files);
+  my $das_table    = das_table($settings,$feature_files);
+  toggle_section({on=>0},
+		 b('Add your own tracks'),
+		 table({-width=>'100%',-class=>'searchbody'},
+		       TR(td($upload_table,$das_table))));
 }
 
 sub upload_table {
@@ -1163,7 +1191,7 @@ sub upload_table {
 }
 
 # URLs for external annotations
-sub external_table {
+sub das_table {
   my $settings      = shift;
   my $feature_files = shift;
   my (@rows,$count);
@@ -2568,12 +2596,11 @@ sub plugin_adjust_labels {
 	       finder       => $CONFIG->tr('Find'),
 	       highlighter  => $CONFIG->tr('Highlight'),
 	       annotator    => $CONFIG->tr('Annotate'));
-  
   my %labels = ();
 
   # Adjust plugin menu labels
   for ( keys %{$plugins} ) {
-    
+
     # plugin-defined verb
     if ( $plugins->{$_}->verb ) {
       $labels{$_} = $CONFIG->tr($plugins->{$_}->verb) ||
@@ -2602,7 +2629,6 @@ sub plugin_menu {
   my @plugins = sort {$labels->{$a} cmp $labels->{$b}} keys %$labels;
   return unless @plugins;
   return join('',
-	      b($CONFIG->tr('Dumps').':'),br,
 	      popup_menu(-name=>'plugin',
 			 -values=>\@plugins,
 			 -labels=> $labels,
@@ -2626,7 +2652,7 @@ sub source_menu {
 		 -values => \@sources,
 		 -labels => { map {$_ => $CONFIG->description($_)} $CONFIG->sources},
 		 -default => $CONFIG->source,
-		 -onChange => 'document.mainform.submit()',
+		 -onChange => 'document.settingsform.submit()',
 		)
 	: $CONFIG->description($CONFIG->source)
       );

@@ -93,6 +93,7 @@ use strict;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::I18n;
 use CGI qw(:standard);
+use CGI::Toggle;
 use Text::Shellwords;
 
 use vars qw(@ISA @EXPORT $CONFIG $LANG %DB $HEADER $HTML $ADDED_FEATURES);

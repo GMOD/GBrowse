@@ -203,8 +203,10 @@ htdocs/images/buttons/green_l2.gif
 htdocs/images/buttons/green_r1.gif
 htdocs/images/buttons/green_r2.gif
 htdocs/images/buttons/minus.gif
+htdocs/images/buttons/minus.png
 htdocs/images/buttons/mplus.gif
 htdocs/images/buttons/plus.gif
+htdocs/images/buttons/plus.png
 htdocs/images/buttons/red.gif
 htdocs/images/buttons/red1.gif
 htdocs/images/buttons/red2.gif
@@ -262,6 +264,7 @@ lib/Bio/Graphics/Glyph/insertion_chromosome.pm
 lib/Bio/Graphics/Glyph/phased_exons.pm
 lib/Bio/Graphics/Glyph/wormbase_transcript.pm
 lib/Bio/Graphics/Glyph/pairwise_plot.pm
+lib/CGI/Toggle.pm
 libalign/CAlign.pm
 libalign/CAlign.xs
 libalign/MANIFEST

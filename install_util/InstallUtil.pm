@@ -26,11 +26,9 @@ sub copy_tree {
   my $indent       = $arg{indent} || 2;
   my $substitute   = $arg{substitute};
 
-  warn join ' ', caller();
+  #warn join ' ', caller();
 
   %options = %{ $arg{options} };
-
-warn '********************************************'.join ' ', keys %options;
 
   $indent ||= 2;
 

@@ -114,8 +114,7 @@ WriteMakefile(
 sub MY::clean {
   package MY;
   my $inherited = shift->SUPER::clean(@_);
-  $inherited .= "\t-rm -f gbrowse\n";
-  $inherited .= "\t-rm GGB.def\n";
+  $inherited .= "\t-\$(PERL) make_clean_add.pl\n";
   $inherited;
 }
 

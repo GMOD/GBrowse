@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.157 2004-07-19 22:22:16 lstein Exp $
+# $Id: Browser.pm,v 1.158 2004-07-20 17:45:34 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1909,8 +1909,8 @@ sub overview_tracks {
 sub authorized {
   my $self  = shift;
   my $label = shift;
-  my $restrict = $self->code_setting($label=>'restrict') 
-    || $self->code_setting('TRACK DEFAULTS' => 'restrict');
+  my $restrict = $self->code_setting($label=>'restrict')
+    || ($label ne 'general' && $self->code_setting('TRACK DEFAULTS' => 'restrict'));
   return 1 unless $restrict;
   my $host     = CGI->remote_host;
   my $user     = CGI->remote_user;

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.6 2003-10-16 23:11:43 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.7 2003-11-21 22:50:42 tharris Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1 path_info escape);
@@ -112,24 +112,27 @@ my $feature_list = external_features(\@labels,$segment) if param('add');
 
 # get the options
 my %options = map {split /[+\s]/} param('options');
+my $image_class = (param('image_class')) ? 'GD::' . param('image_class') : 'GD';
 
 my $img;
-
 if ($segment->length > ($CONFIG->setting('max segment') || MAX_SEGMENT)) {
   ($img,undef) = $CONFIG->overview($segment);
 }
 
 else {
-
   $img = $CONFIG->image_and_map(segment       => $segment,
 				tracks        => \@labels,
 				options       => \%options,
 				feature_files => $feature_list||undef,
 				label_scale   => 1,
-			       );
+                                image_class   => $image_class,
+       );
 }
 
-if ($img->can('png')) {
+if ($image_class eq 'GD::SVG') {
+  print header('image/svg-xml');
+  print $img->svg;
+} elsif ($img->can('png')) {
   print header('image/png');
   print $img->png;
 } else {

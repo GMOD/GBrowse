@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.51.2.7 2003-06-30 20:24:59 pedlefsen Exp $
+# $Id: Browser.pm,v 1.51.2.8 2003-06-30 23:16:19 pedlefsen Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1836,6 +1836,9 @@ sub _get_tracks_table_html {
   my $self_url      = url( '-relative' => 1, '-path_info' => 1 );
 
   my @labels = @{ $settings->{ 'track_order' } };
+  if( $self->setting( 'sort tracks' ) ) {
+    @labels = sort { lc( $self->setting( $a, 'key' ) ) cmp lc( $self->setting( $b, 'key' ) ) } @labels;
+  }
   my %labels =
     map { $_ =>
             $self->_get_citation_html(
@@ -1849,8 +1852,10 @@ sub _get_tracks_table_html {
     grep { $settings->{ 'track_options' }{ $_ }{ 'visible' } } @labels;
 
   ## TODO: REMOVE
-  my %visibility = map { $_ => $settings->{ 'track_options' }{ $_ }{ 'visible' } } @labels;
-  warn "_get_tracks_table_html(..): \%visibility is ".Dumper( \%visibility )."." if DEBUG;
+  if( DEBUG ) {
+    my %visibility = map { $_ => $settings->{ 'track_options' }{ $_ }{ 'visible' } } @labels;
+    warn "_get_tracks_table_html(..): \%visibility is ".Dumper( \%visibility ).".";
+  }
 
   autoEscape( 0 );
   my $s_table =

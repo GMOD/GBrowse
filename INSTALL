@@ -62,7 +62,8 @@ This will install the software in the default location under
 To further configure GBrowse, see docs/CONFIGURE_HOWTO.txt.  To run
 GBrowse on top of Oracle and BioSQL databases see
 docs/ORACLE_AND_BIOSQL.txt.  To run GBrowse on top of Gadfly, see
-README-berkeley-gadfly.
+README-berkeley-gadfly. To install on Microsoft Windows platforms, see
+README-windows.txt.
 
 Details:
 

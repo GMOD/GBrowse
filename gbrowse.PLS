@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.65 2002-10-07 00:22:01 lstein Exp $
+# $Id: gbrowse.PLS,v 1.66 2002-10-08 20:23:08 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1098,9 +1098,7 @@ sub get_segments {
 
   my $db = open_database();
   unless ($db) {
-    error("ERROR: Unable to open database",$CONFIG->setting('description'),pre($@));
-    footer();
-    exit 0;
+    fatal_error("ERROR: Unable to open database",$CONFIG->setting('description'),pre($@));
   }
 
   my @segments = lookup_segments($db,$settings);
@@ -1293,11 +1291,12 @@ sub open_database {
   unless ($adaptor) {
     warn "gbrowse: trying to reload config, cache must be stale";
     $CONFIG = Bio::Graphics::Browser->new;
-    $CONFIG->read_configuration($CONF_DIR) or die "Can't read configuration files: $!";
+    $CONFIG->read_configuration($CONF_DIR) or fatal_error("Can't read configuration files: $!");
     $CONFIG->source($source);
     ($adaptor,@argv) = $CONFIG->db_settings;
   }
   $DB{$source} = eval {$adaptor->new(@argv)} or warn $@;
+  fatal_error(pre($@)) unless $DB{$source};
   return $DB{$source};
 }
 
@@ -1570,7 +1569,7 @@ sub load_plugin_annotators {
     $PLUGIN_NAME2LABEL{$name} = $p;
     unless ($settings->{features}{$name}) {
       push @{$settings->{tracks}},$name;
-      $settings->{features}{$name} = {visible=>1,options=>0,limit=>0};
+      $settings->{features}{$name} = {visible=>0,options=>0,limit=>0};
     }
   }
 }
@@ -1728,12 +1727,31 @@ sub coordinate_mapper {
   return $closure;
 }
 
-sub error {
-  warn "@_" if DEBUG;
+sub maybe_print_top {
   print header() unless $HEADER++;
   print start_html(-title => $LANG->tr('Page_title'),
 		   -style  => {src=>$CONFIG->setting('stylesheet')}) unless $HTML++;
-  print h2({-class=>'error'},@_);
+}
+
+sub error {
+  my @msg = @_;
+  warn "@_" if DEBUG;
+  maybe_print_top();
+  print h2({-class=>'error'},@msg);
+}
+
+sub fatal_error {
+  my @msg = @_;
+  warn "@_" if DEBUG;
+  maybe_print_top();
+  print h2('An internal error has occurred');
+  print p({-class=>'error'},@msg);
+  my $webmaster = $ENV{SERVER_ADMIN} ?
+   "maintainer (".a({-href=>"mailto:$ENV{SERVER_ADMIN}"},$ENV{SERVER_ADMIN}).')'
+     : 'maintainer';
+  print p("Please contact this site's $webmaster for assistance.");
+  print footer();
+  exit 0;
 }
 
 sub bookmark_link {
@@ -2094,6 +2112,10 @@ sub configure_plugins {
     my @params = grep {/^$name\./} param();
     next unless @params;
     $p->reconfigure unless param('plugin_action') eq $LANG->tr('Cancel');
+
+    # turn the plugin on
+    my $setting_name = 'plugin:'.$p->name;
+    $settings->{features}{$setting_name}{visible} = 1;
   }
 }
 
@@ -2183,7 +2205,7 @@ sub do_plugin_find {
 }
 
 sub do_plugin_configure {
-  my $plugin = shift;
+  my $plugin   = shift;
   my $p = $PLUGINS->{$plugin} or return;
   my $type = $p->type;
   my @action_labels = ($LANG->tr('Cancel'),$LANG->tr('Configure_plugin'));

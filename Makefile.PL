@@ -13,7 +13,19 @@ my @argv = @ARGV;
 
 foreach (@argv) {
   if (/^--?h/i) {
-    die "To customize install locations, provide one or more of the options PREFIX, CONF, HTDOCS, or CGIBIN, as in CONF=/usr/local/apache/conf\n";
+    die <<END;
+To customize install locations, provide one or more of the options
+PREFIX, CONF, HTDOCS, or CGIBIN, as in CONF=/usr/local/apache/conf.
+
+For RedHat Linux, you will want to use:
+    perl Makefile.PL CONF=/etc/httpd/conf \
+                     HTDOCS=/var/www/html \
+                     CGIBIN=/var/www/cgi-bin
+
+For most versions of Apache built from source code, use:
+    perl Makefile.PL PREFIX=/usr/local/apache
+END
+;
   }
 
   elsif (/($OPTIONS)=(.+)/og) {

@@ -408,17 +408,16 @@ The following [GENERAL] options are recognized:
   Aggregators" for details.  This option is only valid when used with
   Bio::DB::GFF adaptors.
 
-  e) user (deprecated)
+  e) user
   
   The user name for the gbrowse script to log in under if you are not
   using "nobody".  This is exactly the same as providing the -user
-  option to db_args, which should be used instead. 
+  option to db_args.
 
-  f) passwd (deprecated)
+  f) pass
 
   The password to use if the database is password protected.  This is
-  the same as providing the -pass option to db_args, which should be
-  used instead.
+  the same as providing the -pass option to db_args.
 
   g) stylesheet
 
@@ -715,7 +714,7 @@ The following [GENERAL] options are recognized:
        empty_tracks = dashed
        Draw a dashed line across the track.
 
-    The default value is "suppress."
+    The default value is "key."
 
 B2. Track Sections
 

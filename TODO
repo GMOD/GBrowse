@@ -1,3 +1,7 @@
-Variable height glyph for GC content, BLAST hits, etc
+* Full DAS support
+* Synteny display
+* More internationalization
+* More plugins
 
-DNA sequence glyph
+$Id: TODO,v 1.2 2002-10-08 20:23:08 lstein Exp $
+

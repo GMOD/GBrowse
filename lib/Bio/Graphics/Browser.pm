@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.41 2002-10-07 00:22:01 lstein Exp $
+# $Id: Browser.pm,v 1.42 2002-10-08 20:23:08 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -76,7 +76,7 @@ $VERSION = '1.15';
 use constant DEFAULT_WIDTH => 800;
 use constant DEFAULT_DB_ADAPTOR  => 'Bio::DB::GFF';
 use constant DEFAULT_KEYSTYLE    => 'bottom';
-use constant DEFAULT_EMPTYTRACKS => 'suppress';
+use constant DEFAULT_EMPTYTRACKS => 'key';
 use constant RULER_INTERVALS     => 20;  # fineness of the centering map on the ruler
 use constant TOO_MANY_SEGMENTS   => 5_000;
 use constant MAX_SEGMENT         => 1_000_000;
@@ -130,7 +130,7 @@ sub read_configuration {
   # get modification times
   my %mtimes     = map { $_ => (stat($_))[9] } @conf_files;
 
-  for my $file (sort {$b cmp $a} @conf_files) {
+  for my $file (sort {$a cmp $b} @conf_files) {
     my $basename = basename($file,'.conf');
     $basename =~ s/^\d+\.//;
     next if defined($self->{conf}{$basename}{mtime})

@@ -1,3 +1,11 @@
+1.47 	Tue Oct  8 14:44:44 EDT 2002
+	* Bug fix release.
+	* Fixed source sorting so that lowest alphabetically-sorted
+	  configuration file is accepted by default.  Otherwise,
+	  the default is BioSQL, which is not installed on most
+	  machines and causes an internal server error.
+	* Fixed the plugins so that they are not turned on by default.
+	* Changed the default empty track style from "suppress" to "key."
 1.46	Sun Oct  6 18:25:05 EDT 2002
 	* Major feature release.
 	* Internationalization support: French, Italian, Japanese, English.

@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.9 2003-10-24 18:13:09 markwilkinson Exp $
+# $Id: GFFhelper.pm,v 1.10 2003-10-24 20:55:27 markwilkinson Exp $
 
 =head1 NAME
 
@@ -200,7 +200,7 @@ sub new_gff_string {
 	(my $v = $1) =~ s/;/,/;
 	$gff[8] =~ s/$1/$v/;
     }
-    if ( $self->{parser} eq 'Bio::DB::GFF' ) {
+    if ( $self->{parser} && ($self->{parser} eq 'Bio::DB::GFF') ) {
 	$gff[8] =~ s/\"//g;
     }
     else {

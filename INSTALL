@@ -34,7 +34,9 @@ already.
 	Digest::MD5
 	Text::Shellwords
 
-  F) Bioperl version 1.2 or higher -- http://www.bioperl.org
+  F) Bioperl version 1.3 or higher -- http://www.bioperl.org
+     (Note: Use anonymous CVS to get Bioperl 1.3 if it isn't
+            yet released).
 
 Optional modules:
 
@@ -48,7 +50,36 @@ Optional modules:
 
   To load remote 3d party annotations.
 
-2. INSTALLING THE BROWSER
+2. INSTALLING THE BROWSER WITH ACTIVESTATE'S PPM TOOL
+
+Make sure that Apache and a database (MySQL, Oracle or PostgreSQL) are
+installed before you start.
+
+Brief synopsis:
+
+	ppm> rep add gmod http://stein.cshl.org/ppm
+	ppm> rep up gmod
+	ppm> rep up gmod
+	ppm> install DBD::mysql
+	ppm> install Generic-Genome-Browser
+
+Binary distributions of GBrowse and the 1.3 version of Bioperl live at
+http://stein.cshl.org/ppm.  Add this repository to the list of active
+repositories, and then move the repository to the top to ensure that
+you get the most up to date versions of the modules.
+
+If you wish to use a MySQL database, install DBD::mysql if you have
+not already done so.  Then install Generic-Genome-Browser.
+
+At the end of the install, the automatic installation script will ask
+you to confirm the locations of your Apache conf (configuration),
+htdocs (document root) and cgi-bin (CGI executable)
+directories. Usually it will guess right, but if it doesn't, just type
+in the correct path.
+
+When this is done, go to step (4) below.
+
+3. INSTALLING THE BROWSER FROM SOURCE
 
 Brief synopsis:
 
@@ -146,7 +177,7 @@ The first time you run Makefile.PL, a file named GGB.def will be
 created your file path settings.  When Makefile.PL is run again, it
 will ask you whether you wish to use the 
 
-3. POPULATING THE DATABASE (MySQL)
+4. POPULATING THE DATABASE (MySQL)
 
 You can skip this step if you use the in-memory database for small
 projects (see section 5).
@@ -159,7 +190,7 @@ Synopsis:
   mysql -uroot -p password -e 'grant file on *.* to me@localhost'
   mysql -uroot -p password -e 'grant select on yeast.* to nobody@localhost'
 
-  bulk_load_gff.pl -d yeast sample_data/yeast_data.gff
+  bp_bulk_load_gff.pl -d yeast sample_data/yeast_data.gff
   make test
 
 Details:
@@ -189,21 +220,21 @@ by loading the database from a tab-delimited file containing the
 genomic annotations in GFF format.  The Bioperl distribution comes
 with three tools for loading Bio::DB::GFF databases:
 
-  1) load_gff.pl
+  1) bp_load_gff.pl
      This will incrementally load a database, optionally initializing
      it if it does not already exist.  This script will work correctly
      even if the MySQL server is located on another host.
 
-  2) bulk_load_gff.pl
+  2) bp_bulk_load_gff.pl
      This Perl script will initialize a new Bio::DB::GFF database with
      a fresh schema, deleting anything that was there before.  It will
      then load the file.  Only suitable for use the very first time
      you create a database, or when you want to start from scratch!
-     The bulk loader is as much as 10x faster than load_gff.pl, but
+     The bulk loader is as much as 10x faster than bp_load_gff.pl, but
      does not work in the situation in which the MySQL database
      is running on a remote host.
 
-  3) fast_load_gff.pl
+  3) bp_fast_load_gff.pl
      This will incrementally load a database.  On UNIX systems, it will
      activate a fast loader that makes the speed almost the same as
      the bulk loader.  Be careful, though, because this is an experimental
@@ -233,15 +264,15 @@ distributed separately and can be downloaded from:
 
 Load the file with this command:
 
-  load_gff.pl -d yeast -fasta yeast.fasta.gz </dev/null
+  bp_load_gff.pl -d yeast -fasta yeast.fasta.gz </dev/null
 
 (or, if you are on a windows system:
 
-  load_gff.pl -d yeast -fasta yeast.fasta.gz
+  bp_load_gff.pl -d yeast -fasta yeast.fasta.gz
 
  and hit ^Z when the script pauses.)
 
-4. TESTING THE BROWSER (MySQL DATABASE)
+5. TESTING THE BROWSER (MySQL DATABASE)
 
 You should now be able to browse the yeast genome.  Type the following
 URL into your favorite browser:
@@ -283,7 +314,6 @@ C:\Windows\Temp, and ask for this URL:
 
   http://name.of.your.host/cgi-bin/gbrowse?source=yeast1w
 
-
 6. LOADING OTHER DATA SETS
 
 Each model organism database has its own flat file format for
@@ -316,11 +346,11 @@ as the three-frame translation, you will need to load the DNA as well
 as the annotations.  The DNA must be formatted as a series of one or
 more FASTA-format files in which each entry in the file corresponds to
 a top-level sequence such as a chromosome pseudomolecule.  You can
-then run the load_gff.pl or bulk_load_gff.pl script using the -fasta
+then run the bp_load_gff.pl or bp_bulk_load_gff.pl script using the -fasta
 argument.  For example, if the yeast genome is contained in a FASTA
 file named yeast.fa, you would run the command:
 
-  bulk_load_gff.pl -d yeast -fasta yeast.fa sample/yeast_data.gff
+  bp_bulk_load_gff.pl -d yeast -fasta yeast.fa sample/yeast_data.gff
 
 Alternatively, you may put several FASTA files into a directory, and
 provide the directory name as the argument to -fasta.
@@ -329,7 +359,7 @@ provide the directory name as the argument to -fasta.
 you can get a copy of it from
 ftp://genome-ftp.stanford.edu/pub/yeast/)
 
-Run "bulk_load_gff.pl -h" to see usage instructions.
+Run "bp_bulk_load_gff.pl -h" to see usage instructions.
 
 7. CREATING YOUR OWN GENOME DATABASE
 
@@ -509,12 +539,10 @@ operate properly when the client is using Internet Explorer 5.1 on a
 Macintosh and accessing gbrowse running on a MacOS X server running
 Apache.  Other combinations of clients and servers work properly.
 
-16. FEATURE WISH LIST (updated April 4, 2003)
+16. FEATURE WISH LIST (updated June 6, 2003)
 
  - Full DAS support.
  - A glyph for representing cytogenetic maps.
- - A percent identity (PIP) glyph.
- - Support for PostgreSQL databases.
 
 If you are interested in working on any of these features, please
 contact the developers at the address given in the next section.

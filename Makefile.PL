@@ -26,7 +26,7 @@ foreach (@argv) {
 }
 
 if (-e 'GGB.def' && !%OPTIONS) {
-  print STDERR "I see an existing GGB.def file.  Should I use it to set defaults? ";
+  print STDERR "You have installed gbrowse before.  Should I use the previous settings to set the file paths? ";
   chomp (my $line = <>);
   if ($line =~ /^[yY]/) {
     open F,'GGB.def' or die "GGB.def: $!";

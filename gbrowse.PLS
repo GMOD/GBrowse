@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.39 2002-06-26 06:13:41 lstein Exp $
+# $Id: gbrowse.PLS,v 1.40 2002-06-26 12:08:40 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -613,7 +613,7 @@ sub navigation_table {
 		       )),
 		  TR({-class=>'searchtitle', -align=>'left'},
 		     td({-class=>'searchtitle'}, b('Landmark or Region'),
-			textfield(-name=>'name',-size=>28),
+			textfield(-name=>'name',-size=>20),
 			submit(-name=>'Go')),
 		     td({-align=>'LEFT'},
 			$segment ? ('Scroll/Zoom: ',slidertable($segment,$buttonsDir)) : ''
@@ -822,6 +822,23 @@ sub external_table {
   my $settings      = shift;
   my $feature_files = shift;
   my (@rows,$count);
+
+  my ($preset_labels,$preset_urls) = get_external_presets($settings);  # (arrayref,arrayref)
+  my $presets = '&nbsp;';
+  if ($preset_labels && @$preset_labels) {  # defined AND non-empty
+    my %presets;
+    @presets{@$preset_urls} = @$preset_labels;
+    unshift @$preset_urls,'';
+    $presets{''} = '--Choose Preset URL--';
+    $presets = popup_menu(-name   => 'eurl',
+			  -values => $preset_urls,
+			  -labels => \%presets,
+			  -override => 1,
+			  -default  => '',
+			  -onChange => 'document.mainform.submit()'
+			 );
+  }
+
   for my $filename (@{$settings->{tracks}}) {
     next unless $filename =~ /^(ftp|http):/ && $feature_files->{$filename};
     warn "external_table(): filename = $filename" if DEBUG;
@@ -833,7 +850,8 @@ sub external_table {
   }
   push @rows,th({-align=>'RIGHT'},
 		"Enter Remote Annotation URL").
-		  td(textfield(-name=>'eurl',-size=>50,-value=>'',-override=>1));
+		  td(textfield(-name=>'eurl',-size=>40,-value=>'',-override=>1),
+		     $presets);
 
   return table({-border=>0,-width=>$settings->{width}},
 	       TR({-class=>'datatitle'},
@@ -841,9 +859,24 @@ sub external_table {
 		     'Add Remote Annotations:',a({-href=>annotation_help().'#remote',-target=>'help'},'[Help]'))),
 	       TR({-class=>'databody'},\@rows),
 	       TR({-class=>'databody'},
-		  th({-align=>'RIGHT',-colspan=>2},
-		     submit('Update URLs')))
+		  th('&nbsp;'),
+		  th({-align=>'LEFT'},submit('Update URLs')))
 	      );
+}
+
+sub get_external_presets {
+  my $settings = shift;
+  my $presets  = $CONFIG->setting('remote sources') or return;
+  my @presets  = shellwords($presets);
+  my (@labels,@urls);
+  while (@presets) {
+    my ($label,$url) = splice(@presets,0,2);
+    next unless $url && $url =~ /^(http|ftp)/;
+    push @labels,$label;
+    push @urls,$url;
+  }
+  return unless @labels;
+  (\@labels,\@urls);
 }
 
 # computes the new values for start and stop when the user made use of the zooming bar or navigation bar
@@ -1493,14 +1526,20 @@ sub error {
 sub bookmark_link {
   my $settings = shift;
   my $q = new CGI('');
-  my @keys = $settings->{name} ? qw(name source width eurl)
-                               : qw(start stop ref source width eurl);
+  my @keys = $settings->{name} ? qw(name source width)
+                               : qw(start stop ref source width);
   foreach (@keys) {
     $q->param(-name=>$_,-value=>$settings->{$_});
   }
+
   # handle selected features slightly differently
-  my @selected = grep {$settings->{features}{$_}{visible}} @{$settings->{tracks}};
+  my @selected = grep {$settings->{features}{$_}{visible} && !/^(file|ftp|http):/} @{$settings->{tracks}};
   $q->param(-name=>'label',-value=>join('-',@selected));
+
+  # handle external urls
+  my @url = grep {/^(ftp|http):/} @{$settings->{tracks}};
+  $q->param(-name=>'eurl',-value=>\@url);
+
   return $q->url(-relative=>1,-path_info=>1,-query=>1);
 }
 

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.95 2004-06-22 20:42:41 lstein Exp $
+# $Id: gbrowse.PLS,v 1.96 2004-06-22 22:32:12 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -93,7 +93,6 @@ use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceD
 use constant DEBUG          => 0;
 use constant DEBUG_EXTERNAL => 0;
 use constant DEBUG_PLUGINS => 0;
-use constant DEBUGGING_RECTANGLES => 0;
 
 # amount of time to remember persistent settings
 use constant REMEMBER_SETTINGS_TIME => '+7d';  # 7 days
@@ -449,8 +448,9 @@ sub main_display {
   print end_form();
 
   # clean us up
-  foreach (keys %$feature_files) {
-    $_ && ref($_) && $_->destroy;
+  # clean us up
+  foreach (values %$feature_files) {
+    $_ && ref($_) && eval{$_->finished};
   }
 }
 
@@ -1628,15 +1628,6 @@ sub show_examples {
   my $source = $CONFIG->source;
   my @urls = map { a({-href=>"?name=".escape($_)},$_) } @examples;
   return b($CONFIG->tr('Examples')).': '.join(', ',@urls).". ";
-}
-
-sub debugging_rectangles {
-  my ($image,$boxes) = @_;
-  my $black = $image->colorClosest(0,0,0);
-  foreach (@$boxes) {
-    my @rect = @{$_}[1,2,3,4];
-    $image->rectangle(@{$_}[1,2,3,4],$black);
-  }
 }
 
 ########## upload stuff ########

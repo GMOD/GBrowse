@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.9 2003-10-07 14:21:19 sheldon_mckay Exp $
+# $Id: Plugin.pm,v 1.10 2004-06-22 22:32:14 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME
@@ -57,10 +57,19 @@ Bio::Graphics::Browser::Plugin -- Base class for gbrowse plugins.
     my $self     = shift;
     my $segment  = shift;
     my $config   = $self->configuration;
+    my $feature_list = $self->new_feature_list;
+    $feature_list->add_type('my_type' => {glyph => 'generic',
+					  key   => 'my type',
+					  bgcolor => 'green',
+					  link    => 'http://www.google.com/search?q=$name'
+					 }
+			   );
     # do something with the sequence segment
     my @features = do_something();
-    return \@features;
+    $feature_list->add_feature($_ => 'my_type') foreach @features;
+    return $feature_list;
  }
+
 
 =head1 DESCRIPTION
 
@@ -301,6 +310,18 @@ its configuration files.  This is very useful for storing
 plugin-specific configuration files.  See the sourcecode of
 RestrictionAnnotator for an exmaple of this.
 
+=item $feature_file  = $self->new_feature_file
+
+This method creates a new Bio::Graphics::FeatureFile for use by
+annotators.  The annotate() method must invoke this method, configure
+the resulting feature file, and then add one or more
+Bio::Graphics::Feature objects to it.
+
+This method is equivalent to calling
+Bio::Graphics::FeatureFile->new(-smart_features=>1), where the
+-smart_features argument allows features to be turned into imagemap
+links.
+
 =back
 
 =head2 METHODS TO BE IMPLEMENTED IN DUMPERS
@@ -434,10 +455,11 @@ this section.
 
 The annotate() method will be invoked with a Bio::Das::SegmentI
 segment representing the region of the genome currently on view in the
-gbrowse detail panel.  The method should create one or more
-Bio::Graphics::Feature objects and add them to a
-Bio::Graphics::FeatureFile feature set.  The latter acts as a
-container for a set of sequence features.  
+gbrowse detail panel.  The method should first call its own
+new_feature_list() to create a Bio::Graphics::FeatureFile feature set
+object, and define one or more feature types to added to the feature
+set.  The method should then create one or more Bio::Graphics::Feature
+objects and add them to the feature set using add_feature.
 
 The reason that annotate() returns a Bio::Graphics::FeatureFile rather
 than an array of features the way that find() does is because
@@ -706,6 +728,12 @@ sub selected_features {
   my $conf   = $self->browser_config;
   my @tracks = $self->selected_tracks;
   return map {$conf->config->label2type($_)} @tracks;
+}
+
+# called by annotators when they need to create a new list of features
+sub new_feature_list {
+  my $self     = shift;
+  return Bio::Graphics::FeatureFile->new(-smart_features=>1);
 }
 
 1;

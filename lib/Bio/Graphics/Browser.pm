@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.150 2004-06-22 20:42:42 lstein Exp $
+# $Id: Browser.pm,v 1.151 2004-06-22 22:32:13 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -699,6 +699,7 @@ sub render_html {
 
   my($image,$map,$panel,$tracks) = $self->image_and_map(%args);
 
+  $self->debugging_rectangles($image,$map) if DEBUG;
 
   my ($width,$height) = $image->getBounds;
   my $url     = $self->generate_image($image);
@@ -1864,6 +1865,17 @@ sub overview_pad {
 
 sub true { 1 }
 
+sub debugging_rectangles {
+  my $self = shift;
+  my ($image,$boxes) = @_;
+  my $black = $image->colorClosest(0,0,0);
+  foreach (@$boxes) {
+    my @rect = @{$_}[1,2,3,4];
+    $image->rectangle(@{$_}[1,2,3,4],$black);
+  }
+}
+
+
 package Bio::Graphics::BrowserConfig;
 use strict;
 use Bio::Graphics::FeatureFile;
@@ -2097,7 +2109,7 @@ sub make_link {
   $panel ||= 'Bio::Graphics::Panel';
   $label     ||= $self->feature2label($feature);
 
-  my $link      = $self->code_setting($label,'link');
+  my $link     = $self->code_setting($label,'link');
   $link        = $self->code_setting('TRACK DEFAULTS'=>'link') unless defined $link;
   $link        = $self->code_setting(general=>'link')          unless defined $link;
 

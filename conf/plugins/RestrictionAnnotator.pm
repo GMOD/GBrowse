@@ -1,12 +1,12 @@
 package Bio::Graphics::Browser::Plugin::RestrictionAnnotator;
-# $Id: RestrictionAnnotator.pm,v 1.11 2003-07-21 20:32:44 lstein Exp $
+# $Id: RestrictionAnnotator.pm,v 1.12 2004-06-22 22:32:13 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use CGI qw(:standard *table);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.21';
+$VERSION = '0.22';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -79,7 +79,7 @@ sub annotate {
   my $abs_start  = $segment->start;
   my $dna        = $segment->seq;
 
-  my $feature_list   = Bio::Graphics::FeatureFile->new;
+  my $feature_list = $self->new_feature_list;
 
   # find restriction sites
   my $i = 0;
@@ -93,11 +93,13 @@ sub annotate {
 				    bgcolor => $COLORS[$i % @COLORS],
 				    point   => 0,
 				    orient  => 'N',
+				    link    => 'http://www.google.com/search?q=$name',
 				   });
     $i++;
     while ($dna =~ /($pattern)/ig) {
       my $pos = $abs_start + pos($dna) - length($1) + $offset;
-      my $feature = Bio::Graphics::Feature->new(-start=>$pos,-stop=>$pos,-ref=>$ref,-name=>$type,-type=>$type);
+      my $feature = Bio::Graphics::Feature->new(-start=>$pos,-stop=>$pos,
+						-ref=>$ref,-name=>$type,-type=>$type);
       $feature_list->add_feature($feature,$type);
     }
   }

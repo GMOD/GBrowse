@@ -22,7 +22,7 @@ END
    NAVIGATION_INSTRUCTIONS => <<END,
 위치를 가운데로 맞추기 위해서는 눈금을 클릭하세요. 스크롤/줌 버튼을
 사용하면 확대 정도와 위치를 바꿀 수 있습니다. 현재의 화면을 
-저장하고 싶으시면 <a href="%s">이 링크</a>를 즐겨찾기에 추가히세요.
+저장하고 싶으시면 <a href="%s">이 링크</a>를 즐겨찾기에 추가하세요.
 END
 
    EDIT_INSTRUCTIONS => <<END,
@@ -70,7 +70,7 @@ END
 
    TRACKS   => '표시 정보',
 
-   EXTERNAL_TRACKS => '(외부 정보는 기울여서 표시됩니다)',
+   EXTERNAL_TRACKS => '(외부 정보는 이텔릭으로 표시됩니다)',
 
    EXAMPLES => '예제',
 
@@ -94,9 +94,9 @@ END
 
    IMAGE_WIDTH => '이미지 넓이',
 
-   BETWEEN     => '사이',
+   BETWEEN     => '중간에 표시',
 
-   BENEATH     => '아래',
+   BENEATH     => '밑에 표시',
 
    SET_OPTIONS => '표시 정보 설정...',
 
@@ -110,7 +110,7 @@ END
 
    UPLOAD_FILE => '파일 올리기',
 
-   KEY_POSITION => 'Key position',
+   KEY_POSITION => '정보 출력 위치',
 
    BROWSE      => '검색...',
 
@@ -130,7 +130,7 @@ END
 
    FOOTER_1     => <<END,
 알림: 이 페이지는 사용자 설정을 저장하고 읽어들이기 위해 cookie를 
-사용합니다. 다른 정보는 공유되지 않습니다.
+사용합니다. 설정 이외의 다른 정보는 공유되지 않습니다.
 END
 
    FOOTER_2    => 'Generic genome browser 버전 %s',
@@ -204,7 +204,7 @@ END
 
    EXPAND => '확장',
 
-   EXPAND_LABEL => "확장 및 이름 표시",
+   EXPAND_LABEL => '확장 및 이름 표시',
 
    HYPEREXPAND => '추가확장',
 
@@ -252,7 +252,7 @@ END
 
  NOT_FOUND => '<i>%s</i> 표지 정보를 찾을 수 없습니다. 도움말 정보를 참고하시기 바랍니다.',
 
- TOO_BIG   => "자세히 보기는 %s 개의 염기까지 적용할 수 있습니다. %s 영역을 보다 넓게 보시려면 전체보기를 클릭하세요.",
+ TOO_BIG   => '자세히 보기는 %s 개의 염기까지 적용할 수 있습니다. %s 영역을 보다 넓게 보시려면 전체보기를 클릭하세요.',
 
  PURGED    => "%s 파일을 찾을 수 없습니다.",
 

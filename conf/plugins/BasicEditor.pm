@@ -1,4 +1,4 @@
-# $Id: BasicEditor.pm,v 1.15 2003-11-06 06:50:52 sheldon_mckay Exp $
+# $Id: BasicEditor.pm,v 1.16 2004-01-21 19:17:54 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -124,9 +124,9 @@ sub configure_form {
 	     Tr( {-class => 'searchtitle'}, 
 		th( { -colspan => 9 }, 
 		   "Features in $segment (based on the " . 
-		      a( { -href => "http://www.sanger.ac.uk/Software/formats/GFF/GFF_Spec.shtml",
+		      a( { -href => "http://song.sourceforge.net/gff3.shtml",
 			   -target => '_NEW' },
-		      u( "GFF2 specification)" ) ) ) ) . 
+		      u( "GFF3 specification)" ) ) ) ) . 
 	       $self->build_form($segment) .
 	       end_table();
 }
@@ -141,8 +141,9 @@ sub build_form {
     # try to put the features in a sensible order 
     # this is biased toward gene containment hierarchies
     @feats = sort { $a->start <=> $b->start or
-		    $b->stop  <=> $a->stop  or
-                    $a->gff_string cmp $b->gff_string } @feats;
+    		    $b->stop  <=> $a->stop  or
+                    $a->name  cmp $b->name  or
+		    $a->gff_string cmp $b->gff_string } @feats;
 
     my %size = $self->set_cell_size(@feats);
     
@@ -153,10 +154,16 @@ sub build_form {
 	next if $_->method =~ /component/i;
 	$feat_count++;
 
-        # use GFF2.5 dialect
-	$_->version(2.5);
+        # use GFF3 dialect
+	$_->version(3);
 	my $cellcount = 0;
 	my @cell = split /\t/, $_->gff_string;
+
+        # a bit of containment hierarchy tweaking...
+	if ( $_->primary_tag ne 'mRNA' && $cell[-1] =~ /ID=mRNA:/ ||
+             $_->primary_tag ne 'gene' && $cell[-1] =~ /ID=gene:/ ) {
+	    $cell[-1] =~ s/ID/Parent/;
+	}
 
         # column 9 must be defined
         $cell[8] ||= ' ';
@@ -242,6 +249,8 @@ sub annotate {
 	$self->{ref} = $segment->ref;
 	$gff  = $self->build_gff || return 0;
     }
+
+    $gff = $self->gff_header(3,1) . "\n$gff";
 
     my @killme = $segment->contained_features;
     for ( @killme ) {

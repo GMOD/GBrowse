@@ -1,4 +1,4 @@
-# $Id: ImportFeatures.pm,v 1.12 2003-11-13 14:55:47 sheldon_mckay Exp $
+# $Id: ImportFeatures.pm,v 1.13 2004-01-21 19:17:54 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -20,25 +20,23 @@ EMBL or GFF2 format or can download accessions from NCBI/EBI.
 This plugin can be used to download accessions from GenBank 
 or EMBL and load them into the GFF database.  Segmented features 
 in the Genbank or EMBL file or accession (example mRNA or CDS) 
-will be unflattened and the resulting containment hierarchies 
-can be used to display aggregate features.  For example, an 
-aggregate transcript feature can be assembled using mRNA and 
-CDS features.  See the gbrowse tutorial for more information 
-on aggregators.
+will be unflattened via Bio::SeqFEature::Tools::Unflattener and
+loaded as containment hierarchies via GFF3.
 
 =head2 Editing Features in an External Editor
 
 This plugin can be used to load externally edited features, 
 as long as the editor is capable of exporting GenBank, EMBL 
-or GFF2. The currently available options are manually editing 
-GFF or using Artemis.  Support for Apollo awaits completion 
-of a suitable data adapter.  Note that in-place creation, 
+or GAME-XML. GFF2 is not recommended.  The currently available
+options are manually editing GFF, Artemis.  Support for Apollo 
+is still experimental pending further testing/debugging of the
+Bio::SeqIO::game modules.  Note that in-place creation, 
 deletion and editing of features can also be done from gbrowse
 (using the BasicEditor plugin).
 
 =head2  Using Artemis as an External Editor
 
-  NOTE: GFF editing via artemis will not be supported in the 
+  NOTE: GFF2 editing via artemis will not be supported in the 
         next release and in the current version (version 5)
         GFF handling is broken.  Trying to save a GFF default 
         entry in Artemis results is an unusable GFF/EMBL hybrid.
@@ -56,7 +54,8 @@ deletion and editing of features can also be done from gbrowse
 
  4) load the file via this plugin.  This can be automated 
     with a perl wrapper using HTTP::Request::Common and
-    LWP::UserAgent   
+    LWP::UserAgent (see the helper script included in the
+    Artemis/Apollo plugin)   
 
 Make sure to enable direct editing in the Artemis configuration 
 file 'options.txt'.  See the Artemis documentation for more 
@@ -106,20 +105,17 @@ by ExportFeatures.pm if the dump mode is set to 'selected'
 For simple in-place feature editing, deletion, or addition, 
 consider using the the BasicEditor plugin from within gbrowse
 
-
 =head2 Rollbacks
 
-In the highly improbable event that a user regrets editing 
-or deleting features, this plugin can be used to roll back 
-to an earlier state.  If the rollback functionality is enabled, 
-the state of the segment will be saved to a file before 
-each database update.  The last five pre-update states will 
-be saved in a round-robin rotation and can be accessed via 
-the configuration form.
+This plugin can be used to roll back to an earlier state.  
+If the rollback functionality is enabled, the state of the 
+segment will be saved to a file before each database update.  
+The last five pre-update states will be saved in a round-robin 
+rotation and can be accessed via the configuration form.
 
-To enable rollback capability, define the $ROLLBACK scalar with
-a string containing the path to location where the web user 
-('apache', 'nobody', etc) has read/write access.
+To enable rollback capability, define the $ROLLBACK scalar 
+variable with a string containing the path to location where 
+the web user ('apache', 'nobody', etc) has read/write access.
 
 =head1 FEEDBACK
 
@@ -131,6 +127,7 @@ Email smckay@bcgsc.bc.ca
 
 =head1 CONTRIBUTORS
 
+Scott Cain (cain@cshl.org)
 Mark Wilkinson (markw@illuminae.com)
 
 =head1 SEE ALSO
@@ -146,23 +143,21 @@ Artemis (http://www.sanger.ac.uk/Software/Artemis)
 package Bio::Graphics::Browser::Plugin::ImportFeatures;
 
 use strict;
-use Bio::DB::GenBank;
-use Bio::DB::EMBL;
-use Bio::DB::GFF::Feature;
-use Bio::Tools::GFF;
-use CGI ':standard';
-use CGI::Carp 'fatalsToBrowser';
-use IO::String;
 use Bio::SeqIO;
+use Bio::DB::EMBL;
+use Bio::Tools::GFF;
+use Bio::DB::GenBank;
+use Bio::DB::GFF::Feature;
+use CGI qw/:standard escape/;
+use CGI::Carp 'fatalsToBrowser';
 use Bio::Graphics::Browser::Plugin;
 use Bio::Graphics::Browser::GFFhelper;
-use Data::Dumper;
+use Bio::SeqFeature::Tools::Unflattener;
 
 use vars qw /@ISA $ROLLBACK/;
 
 @ISA = qw/ Bio::Graphics::Browser::Plugin 
            Bio::Graphics::Browser::GFFhelper /;
-
 
 ####################################################################
 # Edit this list IP addresses of trusted hosts for database access
@@ -220,6 +215,7 @@ sub reconfigure {
     $conf->{acc}    = $self->config_param('acc');
     $conf->{debug}  = $self->config_param('debug');
     $conf->{reload} = $self->config_param('reload');
+    $conf->{erase}  = $self->config_param('erase');
     $conf;
 }
 
@@ -235,27 +231,13 @@ sub configure_form {
     
     my $f = "<font color=black><b>";
 
-    # web browsers won't let us force a filename in a filefield
-    # give the user some text to cut and paste of this information is
-    # passed in via the URL
-    my $sorry = '';
-    if ( my $filename = $self->config_param('file') ) {
-	my $len = (length $filename) + 20;
-        $filename = "<input name=null value='$filename' size=$len>";
-	$sorry = br . br ."<font size=-1>This browser does not support direct file " .
-                          "loading from an external editor. <br>Please copy and paste " .
-                          "the following text into the file upload field " . br .
-                          "or use the 'Browse' button to navigate to the saved annotation file" .
-                 br . $filename; 
-    }                         
-
     my $html = join ( "\n", 
 	"<table>\n" ,
 	Tr( { -class => 'searchtitle' }, td( $f, 'Upload External Annotations' ) ) ,
         "<tr><td class='searchbody'>" ,
         h3('Format: ',
 	   radio_group( -name    => $self->config_name('format'),
-			-values  => [ qw/GFF GENBANK EMBL/ ],
+			-values  => [ qw/GFF GENBANK EMBL GAME/ ],
 			-default => $conf->{format} || $self->config_param('format'))),
 	h3('Sequence ID: ', 
             textfield( -name  => $self->config_name('seqid'),
@@ -265,7 +247,7 @@ sub configure_form {
 	h3('Name of file to upload: ',
             filefield( -name    =>  $self->config_name('file'),
 		       -size    => 40,
-		       -default => $conf->{file} || $self->config_param('file') ), $sorry),
+		       -default => $conf->{file} )),
         "</td></tr></table>" );
     unless ( $self->config_param('filesource') && $self->config_param('filesource') eq 'external' ) {
         $html =~ s/External Annotations/a GenBank\/EMBL\/GFF File/m;
@@ -286,13 +268,18 @@ sub configure_form {
     }
     $html .= h4(checkbox ( -name    => $self->config_name('debug'),
 			   -value   => 'debug',
-			   -label   => '' ), 'debug ',
+			   -label   => '' ), 'Verbose Reporting',
 	     a( {-onclick => 'alert("Report on database loading progress;\\n' .
-		             'provides debugging information")' }, '[?]'), '&nbsp;&nbsp;',
-	     checkbox ( -name    => $self->config_name('reload'),
+		             'provides debugging information")' }, '[?]')) . 
+	     h4(checkbox ( -name    => $self->config_name('reload'),
 			-value   => 'reload',
 			-label   => '',
-			-checked => 1 ), 'reload browser after database update') . "\n";
+			-checked => 1 ) . 'Reload browser after database update') .
+             h4(checkbox ( -name    => $self->config_name('erase'),
+                        -value   => 'erase',
+                        -label   => '',
+			   -checked => 0 ) . 'Erase all features in this range before reloading');
+
     
     $html;
 }
@@ -302,19 +289,19 @@ sub dump {
     my $conf = $self->configuration;
     my $db   = $self->database;
     $self->refseq($conf->{seqid}) if $conf->{seqid};
-    
+
     # look for a rollback request
     my $rollback = $self->config_param('rb_id');
     
     my $gff = $rollback ? $self->rollback($rollback) : $self->gff;
-    
-    # add an origin feature if req'd
-    $gff = $self->origin($gff) if $self->{source} && 
-                                  $gff !~ /\torigin\t/i &&
-				  !$self->{database_ids};
-    
+
+    # make sure we know our sequence name and range
+    unless ( $self->refseq && $self->start && $self->end ) {
+	$self->get_range($gff);
+    }
+
     # Oracle is case sensitive for attributes
-    $gff =~ s/note=/Note=/gm;    
+    $gff =~ s/note=/Note=/gm if ref($db) =~ /Oracle/i;    
 
     if ( $conf->{debug} ) {
 	print h2("Rolling back to previous state...", br )
@@ -337,39 +324,22 @@ sub dump {
  	    $self->save_state($segment);
 	}
 
-        my (@killme, @killme2);
-
-        if ( $self->{database_ids} ) {
-	    # kill features by database id
-	    @killme = @{$self->{database_ids}};
-	    
-	    # remove any full length Component:reference features
-	    # (GFF.pm will add a new one)
-	    my $iterator = $segment->get_seq_stream('Component');
-	    while ( my $comp = $iterator->next_seq ) {
-		if ( $comp->length == $segment->length ) {
-		    push @killme2, $comp;
-		}
-	    }
+	my @killme;
+        if ( $conf->{erase} ) {
+            # wipe the segment clean
+            $self->_print("Removing all features from $segment");
+	    @killme = $segment->features; 
 	}
 	else {
-	    @killme = $segment->features;
-	}
-	
-        my $killed = $db->delete_features( @killme );
-	
-	# look out for stale database ids
-	if ( $killed && $killed == 0 ) {
-	    print h3("Problem deleting features by database ID" . br .
-		     "The IDs may be stale. 'Selected' feature edits must " .
-		     "be loaded immediately upon completion");
-	    exit;
-	}
+            # just remove colliding features
+	    $self->_print("Removing selected features from $segment");
+	    @killme = $self->kill_list($gff, $segment);
+	}        
 
-        $killed += $db->delete_features(@killme2) if @killme2;
+	my $killed = $db->delete_features( @killme ) || 'No';
+	$self->_print("I removed $killed features from the database" . 
+                      pre(join "\n", @killme) ); 
 
-	print h2("I removed $killed features from the database"), pre(join "\n", @killme) 
-	    if $conf->{debug}; 
     }
 	
     # don't try loading sequence if the sequence is already in
@@ -378,31 +348,35 @@ sub dump {
 	$gff .= "\n>" . $self->refseq . "\n" . $self->seq;
     }
 
+    # load tge GFF into the database
     my $gff_fh  = IO::String->new($gff);
-    my $result = $db->load_gff($gff_fh);
+    my $result  = $db->load_gff($gff_fh) || 'No';
+    my $remark = $result =~ /No/ ? br ."This can't be good..." : ''; 
 
-    print h2($result, " new features loaded into the database");
+    print h2("$result features were loaded into the database.$remark");
 
-    unless ( $result ) {
-	print h2("Features from not loaded correctly");
+    unless ( $result =~ /^\d+$/ ) {
+	print h2("Features (below) not loaded correctly") . pre($gff);
         exit;
     }
 
-    if ( $conf->{debug} && $conf->{reload} ) {
-        print h2("This browser will be reloaded with the new sequence in 10 seconds...");
+    if ( $conf->{reload} ) {
+        $self->_print(h2("The Browser in 10 seconds..."));
         sleep 10;
     }
 
-    $self->load_page();
+    $self->load_page($gff);
 }
 
 # reload gbrowse or make a reload button
 sub load_page {
-    my $self = shift;
+    my ($self, $gff) = @_;
     my $conf = $self->configuration;
+    $self->get_range($gff);
+
     my $url = self_url();
     $url =~ s/\?.+$//g;
-    my $name = $self->refseq . ':';
+    my $name = $self->refseq. ':';
     $name .= $self->start . '..' . $self->end;
     print start_form( -name   => 'f1', 
 		      -method => 'POST',
@@ -414,7 +388,7 @@ sub load_page {
 	print body( { -onLoad => "document.f1.submit()" } );
     }
     else {
-	print submit( -name => 'Return to Browser' );
+	print submit( -name => "Return to Browser($name)" );
     }
 }
 
@@ -423,6 +397,7 @@ sub gff {
     my $conf = $self->configuration;
     my $format = $conf->{format};
     my $file = $conf->{file};
+    print h1($file);
     my $text = '';
     $self->{header} = 1;
 
@@ -432,8 +407,8 @@ sub gff {
     }    
 
     unless ( $file ) {
-        # we don't the text ending up as a cookie, so not plugin prefix
-        # for the text parameter
+        # we don't the text ending up as a cookie (will break gbrowse), 
+        # so no plugin prefix for the text parameter
         $text = param('text');
     }
     else {
@@ -441,11 +416,14 @@ sub gff {
 	    $text .= $_;
 	}
     }
-
+    
     # do we have some data?
-    $self->bad_format("Error: no text to parse") unless $text || $file;
+    $self->bad_format("Error: no text to parse") unless $text;
 
-    $self->{database_ids} = []if $text =~ /database_id/m;    
+    # beware of DOS line endings!
+    $text =~ s/\r//gm;
+
+    $self->{database_ids} = [] if $text =~ /database_id/m;    
 
     if ( $format eq 'GENBANK' ) {
 	$self->{source} = 'GenBank';
@@ -456,7 +434,10 @@ sub gff {
 	return $self->read_embl($text);
     }
     elsif ( $format eq 'GFF' ) {
-        return $self->read_gff($text);
+        return $text =~ /\#gff-version 3/m ? $text : $self->read_gff($text);
+    }
+    elsif ( $format eq 'GAME' ) {
+	return $self->read_game($text);
     }
     else {
 	$self->bad_format("Unrecognized format $format:", $text);
@@ -492,6 +473,20 @@ sub get_embl {
     return $self->seq2GFF($seqobj);
 }
 
+sub read_game {
+    my ($self, $text) = @_;
+    my $conf  = $self->configuration;
+    $self->{source} = 'Apollo';
+
+    my $in = Bio::SeqIO->new( -fh => IO::String->new($text), -format => 'game')
+	    || $self->parsefail(Bio::SeqIO->error);
+    my $seqobj    = $in->next_seq || $self->parsefail($in->error);
+
+    $seqobj || $self->bad_format("Problem reading GenBank:", $text);
+
+    return $self->seq2GFF($seqobj);
+}
+
 sub read_genbank {
     my ($self, $text) = @_;
     my $conf  = $self->configuration;
@@ -499,7 +494,7 @@ sub read_genbank {
     $self->{source} = 'GenBank';    
     
     $self->bad_format("This does not look like GenBank to me:", $text)
-	if $text !~/^BASE COUNT/m;
+	if $text !~/^ORIGIN/m;
 
     unless ( $text =~ /^LOCUS/ ) {
 	unless ( $seqid ) {
@@ -559,44 +554,242 @@ sub read_embl {
 sub seq2GFF {
     my ($self, $seq) = @_;
     my $conf = $self->configuration;
-    my @feats = $seq->all_SeqFeatures;
-
-    # save the description
+    my $gff  = "##gff-version 3\n";
+    my $unflattener = Bio::SeqFeature::Tools::Unflattener->new;
+    $self->{idcount} = 0;
+    my $acc = $conf->{seqid} || $seq->accession || $seq->display_name;
+    $self->refseq($acc);
+    $self->seq( $seq->seq );
     $self->{desc} = $seq->desc;
     
-    for ( @feats ) {
-        for my $t ( $_->all_tags ) {
-            my @v = $_->remove_tag($t);
-	    if ($t eq 'database_id') {
-		push @{$self->{database_ids}}, $v[0];
-		next;
-	    }
-	    for my $v ( @v ) {
-		$v =~ s/;/,/g;
-		$_->add_tag_value( $t => $v );
+    $self->{SOFA} = [
+                     'region',
+                     'gene',
+                     'mRNA',
+                     'exon',
+                     'CDS',
+                     'chromosome_variation',
+                     'computed_feature_by_similarity',
+                     'repeat_region',
+                     'STS',
+                     'rRNA',
+                     'tRNA',
+                     'RNA',
+                     'SNP'
+                     ];
+
+    # get top level unflattended SeqFeatureI objects
+    $self->{text} ||= '';
+    my @sfs = eval {
+	$unflattener->unflatten_seq( -seq => $seq, -use_magic => 1)
+    } or $self->_print("Error: The features did not unflatten properly\n"
+                       ."Please check your annotation file \n\n", $self->{text}) and exit;
+    
+    my @skipped_lines;
+
+    my $gene_count;
+    for my $sf (@sfs) {
+        $sf->seq_id($acc);
+        $sf->source_tag($self->{source});
+        $sf->gff_format( Bio::Tools::GFF->new( -gff_version => 3 ) );
+
+        if ( $sf->primary_tag eq 'source' && !$sf->has_tag('ID') ) {
+	    $sf->add_tag_value( 'ID', "Sequence:$acc" );
+            $sf->primary_tag('region');
+            $self->_print("Setting source type as 'region', which is a more generic");
+        }
+
+        next if $sf->primary_tag eq 'CONTIG';
+
+        if ( $sf->primary_tag eq 'misc_feature' ) {
+            my $new_primary_tag;
+            if ($sf->has_tag('note')) {
+                my @values = $sf->get_tag_values('note');
+                foreach my $value (@values) {
+                    if ($value =~ /similar/) {
+                        $new_primary_tag = 'computed_feature_by_similarity';
+                    }
+                } 
+            }
+            if ($new_primary_tag) {
+                $sf->primary_tag($new_primary_tag);
+		$self->_print( "Converting misc_feature to 'computed_feature_by_similarity'\n" .
+                               "which will result in this gff line:\n" . $sf->gff_string );
+            } 
+	    #else {
+            #    $self->_print("skipping misc_feature line\n");
+            #    push @skipped_lines, $sf->gff_string . "\n";
+            #    next;
+            #}
+        }
+
+        if ( $sf->primary_tag =~ /misc.*rna/i ) {
+            $sf->primary_tag('RNA');
+        }
+
+	if ( $sf->primary_tag eq 'gene' ) {
+            my ($gene_name) = $sf->has_tag('gene') 
+                  ? $sf->get_tag_values('gene')
+                  : $sf->get_tag_values('locus_tag');
+            
+	    # some non-word characters causing mischief here
+	    # convert to hex escape code
+	    $gene_name = escape($gene_name);
+
+	    $sf->add_tag_value( 'ID', "gene:$gene_name" );
+            
+        }
+
+        if ( $sf->primary_tag eq 'variation' and $sf->length == 1 ) {
+            $sf->primary_tag('SNP');
+        } elsif ($sf->primary_tag eq 'variation') {
+            $sf->primary_tag('chromosome_variation');
+        }
+
+        unless ( $sf->has_tag('ID') ) {
+	    my @tags = $sf->all_tags;
+	    if ( @tags == 1 ) {
+		my ($v) = $sf->get_tag_values($tags[0]);
+                $sf->add_tag_value( ID => "$tags[0]:$v" );
 	    }
 	}
+
+	
+	$self->validate_tag($sf);
+	$self->validate_ID($sf, $acc);
+        $self->clean_up_tags($sf);
+
+	$gff .= $sf->gff_string . "\n";
+
+        my $localgeneid = 1;
+        foreach my $sf2 ( $sf->get_SeqFeatures ) {
+            $sf2->seq_id($acc);
+            $sf2->gff_format( Bio::Tools::GFF->new( -gff_version => 3 ) );
+
+            if ( $sf->has_tag('ID') && !$sf2->has_tag('Parent') ) {
+                if ( $sf->has_tag('Name') ) {
+		    $sf2->add_tag_value( 'Name', $sf->get_tag_values('Name') );
+		}
+		$sf2->add_tag_value( 'Parent', $sf->get_tag_values('ID') );
+            }
+
+            if ( $sf2->primary_tag eq 'variation' and $sf2->length == 1 ) {
+                $sf2->primary_tag('SNP');
+            } elsif ($sf2->primary_tag eq 'variation') {
+                $sf2->primary_tag('chromosome_variation');
+            }
+
+            if ( $sf2->primary_tag() =~ /misc.*rna/i ) {
+                $sf2->primary_tag('RNA');
+            }
+
+            if ( $sf2->primary_tag eq 'misc_feature' ) {
+                my $new_primary_tag;
+                if ($sf2->has_tag('note')) {
+                    my @values = $sf2->get_tag_values('note');
+                    foreach my $value (@values) {
+                        if ($value =~ /similar/) {
+                            $new_primary_tag = 'computed_feature_by_similarity';
+                        }
+                    }
+                }
+                if ($new_primary_tag) {
+                    $sf2->primary_tag($new_primary_tag);
+                    $self->_print( "Converting misc_feature to 'computed_feature_by_similarity'\n" .
+				   "which will result in this gff line:\n" . $sf2->gff_string );
+                } 
+		#else {
+                    #$self->_print("skipping misc_feature line");
+                    #push @skipped_lines, $sf2->gff_string . "\n";
+                    #next;
+                #}
+            }
+
+            $sf2->source_tag( $self->{source} );
+            my @subfeats = $sf2->get_SeqFeatures;
+
+	    my ($sn, $parentID);
+	    if (@subfeats > 0) {
+                $sn = $self->_sname(@subfeats);
+                unless ($sf2->has_tag('ID')) {
+                    ($parentID) = $sf->get_tag_values('ID');
+                    my $ft = $sf2->primary_tag;
+		    unless ( $sn ) {
+			$parentID =~ s/(\w+:)/${ft}:/;
+			$parentID .= "_$localgeneid";
+		    }
+                    $parentID =~ s/.+:/$ft\:/;
+                    my $id = $sn ? "$ft:$sn" : $parentID;
+		    $sf2->add_tag_value( 'ID', $id );
+                    $localgeneid++;
+                } 
+
+		unless ( $sf2->has_tag('standard_name') ) {
+		    $sf2->add_tag_value( standard_name => $sn );
+		}
+	    }
+            
+	    $self->validate_tag($sf2);
+	    $self->validate_ID($sf2, $acc);
+            $self->clean_up_tags($sf2);
+
+            $gff .= $sf2->gff_string . "\n";
+
+            my ($subf_count);
+	    foreach my $sf3 ( @subfeats ) {
+                $sf3->seq_id($acc);
+                $sf3->gff_format( Bio::Tools::GFF->new( -gff_version => 3 ) );
+		my ($parentID) = $sf2->get_tag_values('ID');
+
+		# Huh?? Shared exons in alternative splice variants point to
+                # the same Bio::SeqFeature object.  We have to recycle.
+                $sf3->remove_tag('Parent') if $sf3->has_tag('Parent');
+		$sf3->add_tag_value( 'Parent', $parentID );
+                $sf3->source_tag( $self->{source} );
+                
+		if ( $sf3->primary_tag eq 'CDS' && !$sf3->has_tag('standard_name') ) {
+		    $sf3->add_tag_value( standard_name => $sn );
+		}
+
+		$self->validate_tag($sf3);
+		$self->validate_ID($sf3, $acc);
+		$self->clean_up_tags($sf3);
+
+		$gff .= $sf3->gff_string . "\n";
+            }
+        }
     }
 
-    my $seqid = $self->refseq || $conf->{seqid} || $seq->id; 
-    $self->refseq($seqid);
-    $self->seq( $seq->seq );  
-    my $gff;
-    
-    for ( @feats ) {
-	if ( ref $_->location eq 'Bio::Location::Split' ) {
-	    $gff .= $self->unflatten($_);
-	}
-	else {
-	    $gff .= $_->gff_string . "\n";
-	}
-    }    
+    $self->seq($seq->seq);
+    $self->start(1);
+    $self->end(length $seq->seq);
 
-    for my $gene ( @{$self->{unflattened}} ) {
-	$gff =~ s/(CDS.+$gene\b)/${1}a/gm;
+    if (@skipped_lines) {
+        $self->_print( ('-' x 72) . "skipped lines:");
+        foreach my $line (@skipped_lines) {
+            $self->_print($line);
+        }
     }
-    
-    return $self->read_gff($gff);
+
+    $gff;
+}
+
+sub validate_tag {
+    my ($self,$sf) = @_;
+    my $tag = $sf->primary_tag;
+    if (! ( grep( /^\Q$tag\E$/, @{$self->{SOFA}}))) {
+        $self->_print("$tag is an uncommon (and possibly illegal) feature type\n" .
+                      "It will result in a gff line like this:\n" . $sf->gff_string);
+    }
+}
+
+sub _print {
+    my ($self, @text) = @_;
+    my $text = join '', @text;
+    chomp $text;
+    my $conf = $self->configuration;
+    return 0 unless $conf->{debug};
+    print $text =~ /\n/ ? b(pre($text)) : h2($text);
 }
 
 sub parsefail {
@@ -606,74 +799,6 @@ sub parsefail {
     exit;
 }
 
-sub unflatten {
-    my ($self, $feat) = @_;
-    my $conf = $self->configuration;
-
-    print h3("Unflattening ", $feat->primary_tag, ':', 
-             $feat->start, '..', $feat->end) if $conf->{debug}; 
-
-    my $gff = '';    
-    my $location = $feat->location;
-    my $str = $feat->strand;
-    $str = $str > 0 ? '+' : $str < 0 ? '-' : '.';
-    $self->{unflattened} ||= [];
-    my $newname = '';
-
-    my ($class, $name);
-    for ( qw/standard_name gene locus_tag/ ) {
-	if ( $feat->has_tag($_) ) {
-	    $class  = 'gene';
-	    ($name) = $feat->get_tag_values($_); 
-	}
-	last if $class && $name;
-    }
-    
-    if ( $self->{seen}->{$class}->{$name} && $feat->primary_tag =~ /mRNA|CDS/i ) {
-	my $lett = shift @{$self->{alpha}};
-        $newname = $name . $lett;
-    }
-    
-    $self->{seen}->{$class}->{$name}++;
-    $self->{alpha} = [ 'b'..'z' ] if $self->{seen}->{$class}->{$name} == 1;
-    push @{$self->{unflattened}}, $name if $self->{seen}->{$class}->{$name} == 2;    
-
-    my @segments = map { [$_->start, $_->end] }
-        $location->can('sub_Location') ? $location->sub_Location : $location;
-
-    if ( $feat->primary_tag eq 'CDS' ) {
-	$feat->primary_tag('mRNA');
-    }
-    
-    my $parttype;
-    
-    if ( $feat->primary_tag eq 'gene' ) {
-	$parttype = 'exon';
-    }
-    elsif ( $feat->primary_tag eq 'mRNA' ) {
-	$parttype = 'CDS';
-    }
-    else {
-	$parttype = $feat->primary_tag;
-    }
- 
-    $gff = $feat->gff_string . "\n";
-    
-    $name  = $newname if $newname;
-    
-    for my $segment (@segments) {
-        my $start = $segment->[0];
-	my $stop  = $segment->[1];
-	$gff .= join "\t", 
-	    ($self->refseq,  $self->{source}, $parttype, $start, $stop, '.', $str, '.');
-        
-	$gff .= "\t$class $name\n";
-    }
-
-    $gff;
-
-}
-
 sub forbid {
     my $self = shift;
     $ips || return 0;
@@ -681,7 +806,95 @@ sub forbid {
     my $host = remote_addr();
 
     return $ips =~ /$host/m ? 0 : 1;
-
 }
 
+sub clean_up_tags {
+    my ($self, $f) = @_;
+    for ( qw/ID Parent/ ) {
+	if ( $f->has_tag($_) ) {
+	    my ($id) = $f->get_tag_values($_);
+	    my ($tag) = $id =~ /^(.+):/;
+	    
+	    if ( $tag && $f->has_tag($tag) ) {
+		$f->remove_tag($tag);
+	    }
+	}
+    }
+
+    # AARRGGHH!! I have to find where duplicate 
+    # qualifiers are coming from (somewhere in SeqIO::game)
+    my %seen;
+    for my $tag ( $f->all_tags ) {
+        my @v = $f->get_tag_values($tag);
+        $f->remove_tag($tag);
+	for my $v ( @v ) {
+	    next if ++$seen{$tag . $v} > 1;
+	    $f->add_tag_value( $tag => $v );
+	}
+    }
+}
+
+sub _sname {
+    my ($self, @feats) = @_;
+    my $sn;
+    for ( @feats ) {
+        if ( $_->has_tag('standard_name') ) {
+	    ($sn) = $_->get_tag_values('standard_name');
+	    last;
+	}
+    }
+    $sn;
+}
+
+sub validate_ID {
+    my ($self, $sf, $acc) = @_;
+    unless ( ($sf->has_tag('ID') || $sf->has_tag('Parent')) ) {
+        $sf->add_tag_value( 'ID', "GFF_internal_id_$acc-" . ++$self->{idcount} );
+    }
+}
+
+
+sub kill_list {
+    my ($self, $gff, $segment) = @_;
+    my $db = $self->database;
+    my @killme;
+
+    for ( split "\n", $gff ) {
+	next if /\#/;
+        push @killme,  _is_match($_, $segment);
+    }
+    @killme;
+}
+
+
+sub _is_match {
+    my ($gff, $segment) = @_;
+    chomp $gff;
+    my @gff = split "\t", $gff;
+    my @killme;
+    my ($pclass,$pname,$iclass,$iname) = ('','','','');
+    my ($src, $type, $start, $end, $grp) = @gff[1..4,8];
+    my ($igrp) = grep { /ID=/ } split ';', $grp;
+    my ($pgrp) = grep { /Parent=/ } split ';', $grp;
+    $pgrp =~ s/^\S+=// if $pgrp;
+    $igrp =~ s/^\S+=// if $igrp;
+    ($pclass,$pname) = split ':', $pgrp if $pgrp;
+    ($iclass,$iname) = split ':', $igrp if $igrp;
+        
+   
+    return grep {
+          ( ( $_->class eq $pclass || $_->class eq $iclass) && 
+            ( $_->name  eq $pname  || $_->name  eq $iname ) ) ||
+          ( $_->start eq $start && $_->end eq $end )
+    } $segment->features( -types => ["$type:EMBL", "$type:GenBank", "$type:Apollo"] );
+}
+
+
 1;
+
+
+
+
+
+
+

@@ -45,7 +45,7 @@ $startperl -w
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.3 2003-06-09 01:50:46 lstein Exp $
+# $Id: gbrowse.PLS,v 1.4 2003-06-16 20:22:14 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -94,6 +94,8 @@ use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceD
 use constant DEBUG => 0;
 use constant DEBUG_PLUGINS => 0;
 use constant DEBUGGING_RECTANGLES => 0;
+
+local $CGI::USE_PARAM_SEMICOLONS = 1;
 
 # IMPORTANT DATA STRUCTURES
 
@@ -168,7 +170,7 @@ if (defined($old_source) && $source ne $old_source) {
 }
 
 ### PLUGINS #################################################################
-my @plugin_path = ("$CONF_DIR/plugins",shellwords($CONFIG->setting('plugin_path')));
+my @plugin_path = ("$CONF_DIR/plugins",shellwords($CONFIG->setting('plugin_path')||''));
 $PLUGINS = initialize_plugins(@plugin_path) unless defined $PLUGINS;
 configure_plugins($PLUGINS,$page_settings,
 		  open_database(),
@@ -348,7 +350,8 @@ sub main_display {
   param('flip'=>'on') if $flip;
 
   # print the top of the form, with navigation bar, etc
-  print start_multipart_form(-name=>'mainform',-action=>url(-relative=>1,-path_info=>1));
+  my $self = url(-relative=>1,-path_info=>1) . "?source=$page_settings->{source}";
+  print start_form(-name=>'mainform',-method=>'POST',-action=>$self);
   print navigation_table($segment,$page_settings);
   print html_frag('html2');
 
@@ -377,6 +380,9 @@ sub main_display {
   print html_frag('html5');
   print settings_table($page_settings);
   print html_frag('html6');
+  print end_form();
+
+  print start_multipart_form(-name=>'externalform',-action=>url(-relative=>1,-path_info=>1));
   print p(),upload_table($page_settings,$feature_files);
   print p(),external_table($page_settings,$feature_files);
   print end_form();
@@ -625,8 +631,9 @@ sub adjust_settings {
 
   local $^W = 0;  # kill uninitialized variable warning
   if (param('ref') &&
-      ( request_method() eq 'GET'
-	|| param('name') eq param('prevname')
+      ( #request_method() eq 'GET'
+	# || 
+       param('name') eq param('prevname')
 	|| grep {/zoom|nav|overview/} param())
      )
     {
@@ -1046,7 +1053,7 @@ sub external_table {
 sub get_external_presets {
   my $settings = shift;
   my $presets  = $CONFIG->setting('remote sources') or return;
-  my @presets  = shellwords($presets);
+  my @presets  = shellwords($presets||'');
   my (@labels,@urls);
   while (@presets) {
     my ($label,$url) = splice(@presets,0,2);
@@ -2090,7 +2097,8 @@ sub label2key {
     $key     ||= $CONFIG->setting($label=>"key:$l");
   }
   $key     ||= $CONFIG->setting($label => 'key');
-  $key     ||= $PRESETS->{$key} || $label;
+  $key     ||= $PRESETS->{$key} if defined $key;
+  $key     ||= $label;
   $key;
 }
 
@@ -2101,7 +2109,7 @@ sub initialize_plugins {
   my %plugin_list = ();
 
   warn "initializing plugins..." if DEBUG_PLUGINS;
-  my @plugins = shellwords($CONFIG->setting('plugins')); # || DEFAULT_PLUGINS);
+  my @plugins = shellwords($CONFIG->setting('plugins')||''); # || DEFAULT_PLUGINS);
 
  PLUGIN:
   for my $plugin (@plugins) {

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.74 2003-06-12 16:21:28 scottcain Exp $
+# $Id: Browser.pm,v 1.75 2003-06-16 20:22:14 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -325,7 +325,7 @@ sub db_settings {
   }
 
   if (defined (my $a = $self->setting('aggregators'))) {
-    my @aggregators = shellwords($a);
+    my @aggregators = shellwords($a||'');
     push @argv,(-aggregator => \@aggregators);
   }
 
@@ -1547,6 +1547,7 @@ sub semantic_label {
 sub type2label {
   my $self           = shift;
   my ($type,$length) = @_;
+  $type   ||= '';
   $length ||= 0;
 
   my @labels;
@@ -1721,10 +1722,9 @@ sub i18n_style {
 
   my %options  = $self->style($label,$length);
   my %lang_options = map { $_->[1] => $options{$_->[0]} }
-  sort { $b->[2]<=>$a->[2] }
-  map { my ($option,undef,$lang) = /^(-[^:]+)(:(\w+))?$/; [$_ => $option, $priority{$lang}||99] }
-  keys %options;
-
+    sort { $b->[2]<=>$a->[2] }
+     map { my ($option,undef,$lang) = /^(-[^:]+)(:(\w+))?$/; [$_ => $option, $priority{$lang||''}||99] }
+       keys %options;
   %lang_options;
 }
 

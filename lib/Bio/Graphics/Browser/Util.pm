@@ -144,7 +144,8 @@ sub print_header {
 
 sub print_top {
   my $title = shift;
-  print_header();
+  local $^W = 0;  # to avoid a warning from CGI.pm
+  print_header(-expires=>'+1m');
   print start_html(-title => $title,
 		   -style  => {src=>$CONFIG->setting('stylesheet')}) unless $HTML++;
 }
@@ -194,7 +195,7 @@ sub html_frag {
   my $fragname = shift;
   my $a = $CONFIG->config->code_setting(general => $fragname);
   return $a->(@_) if ref $a eq 'CODE';
-  return $a;
+  return $a || '';
 }
 
 1;

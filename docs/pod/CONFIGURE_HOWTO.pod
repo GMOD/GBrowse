@@ -1865,8 +1865,6 @@ The gbrowse_details script does not provide useful information because
 the DAS/1 protocol does not provide a way to retrieve attribute
 information on a named feature.
 
-
-
 =head1 I. THE BioMOBY BROWSER
 
 The BioMOBY project aims to design and deploy platforms that
@@ -2071,9 +2069,6 @@ searches for papers about that organism.
 =back
 
 =cut
-
-
-
 
 
 =head1 J. FURTHER INFORMATION

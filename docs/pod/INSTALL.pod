@@ -502,7 +502,7 @@ zooming (see L<CONFIGURE_HOWTO>).  Otherwise, there's not much
 that can be done about this short of buying a faster machine.
 The GMOD team is working hard to reduce this performance hit.
 
-=head2 10. MAKING THE BROWSER RUN SAFER
+=head2 10. MAKING THE SERVER RUN SAFER
 
 Whenever you are running a server-side Web script using information
 provided by a web client, there is a risk that maliciously-formatted

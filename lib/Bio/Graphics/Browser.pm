@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.119 2004-02-13 14:11:36 lstein Exp $
+# $Id: Browser.pm,v 1.120 2004-02-15 15:28:31 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -702,7 +702,7 @@ sub generate_image {
   my $imagefile   = sprintf("%s/%s.%s",$path,$signature,$extension);
   open (F,">$imagefile") || die("Can't open image file $imagefile for writing: $!\n");
   binmode(F);
-  print F $image->can('png') ? $image->png : $image->gif;
+  print F $data;
   close F;
   return $url;
 }
@@ -731,7 +731,7 @@ sub tmpdir {
   my $tmpuri = $self->setting('tmpimages') or die "no tmpimages option defined, can't generate a picture";
   $tmpuri .= "/$path" if $path;
   my $tmpdir;
-  if ($ENV{MOD_PERL} ) {      
+  if ($ENV{MOD_PERL} ) {
       my $r          = Apache->request;
       my $subr       = $r->lookup_uri($tmpuri);
       $tmpdir        = $subr->filename;

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.17 2003-02-25 18:02:51 scottcain Exp $
+# $Id: Chado.pm,v 1.18 2003-03-07 20:36:08 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -317,7 +317,7 @@ sub get_feature_by_name {
     my $sth = $self->{dbh}->prepare("
        select fs.feature_id from feature_synonym fs, synonym s
        where fs.synonym_id = s.synonym_id and
-       synonym ilike $quoted_name
+       s.synonym_sgml ilike $quoted_name
        ");
     $sth->execute or throw("getting the feature_ids failed");
 
@@ -437,9 +437,10 @@ sub search_notes {
 
   my $sth = $self->{dbh}->prepare("
      select dbx.accession,f.name,0 
-     from feature f, dbxref dbx
+     from feature f, dbxref dbx, feature_dbxref fd
      where
-        f.dbxrefstr = dbx.dbxrefstr and 
+        f.feature_id = fd.feature_id and
+        fd.dbxref_id = dbx.dbxref_id and 
         $like_str 
      $limit_str
     ");

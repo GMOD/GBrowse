@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.24 2003-03-05 21:11:29 scottcain Exp $
+# $Id: Segment.pm,v 1.25 2003-03-07 20:36:10 scottcain Exp $
 
 =head1 NAME
 
@@ -166,7 +166,7 @@ sub new {
     my $isth = $factory->{dbh}->prepare ("
        select fs.feature_id from feature_synonym fs, synonym s
        where fs.synonym_id = s.synonym_id and
-       synonym ilike $quoted_name
+       s.synonym_sgml ilike $quoted_name
         "); 
     $isth->execute or $self->throw("query for name failed"); 
     $rows_returned = $isth->rows;
@@ -174,7 +174,7 @@ sub new {
     if ($rows_returned != 1) { #look in dbxref for accession number match
       $isth = $factory->{dbh}->prepare ("
          select feature_id from feature_dbxref fd, dbxref d
-         where fd.dbxrefstr = d.dbxrefstr and
+         where fd.dbxref_id = d.dbxref_id and
                d.accession ilike $quoted_name ");
       $isth->execute or $self->throw("query for accession failed");
       $rows_returned = $isth->rows;
@@ -289,11 +289,6 @@ sub length { shift->{length} }
  Returns : a list of Bio::SeqFeatureI objects
  Args    : see below
  Status  : Public
-
-Note: There is a hack in this method to increase speed that may or
-may not work well with a given instance of postgres/chado.  For the
-query to find features, Seq Scans (same as Table Scans in some other
-database) have been disabled, in order to force the use of an index.
 
 This method will find all features that intersect the segment in a
 variety of ways and return a list of Bio::SeqFeatureI objects.  The
@@ -480,11 +475,15 @@ Returns the sequence for this segment as a simple string.
 sub seq {
   my $self = shift;
 
+#$self->{factory}->{dbh}->trace(1);
+
   my $feat_id = $self->{srcfeature_id};
   my $sth = $self->{factory}->{dbh}->prepare("
      select residues from feature 
      where feature_id = $feat_id ");
   $sth->execute or $self->throw("seq query failed");
+
+#$self->{factory}->{dbh}->trace(0);
 
   my $hash_ref = $sth->fetchrow_hashref;
   return $$hash_ref{'residues'};

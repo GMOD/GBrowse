@@ -217,3 +217,7 @@ CREATE INDEX gbrowse_srcfeature_idx ON featureloc (srcfeature_id, nbeg, nend)
 
 -------------------------------
 CREATE TABLE gbrowse_assembly AS select * from feature where type_id=7;
+
+
+---------------------------------------------------------------
+create index dbxref_accession on dbxref (accession);

@@ -45,7 +45,7 @@ $startperl -w
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbrowse_est.PLS,v 1.2 2003-10-20 19:58:36 markwilkinson Exp $
+# $Id: gbrowse_est.PLS,v 1.3 2003-10-20 19:59:57 markwilkinson Exp $
 
 
 =head1 NAME
@@ -89,15 +89,9 @@ to the Type: line, that will call on the link you have configured.
  Type:  alignment  (Aligned Sequence)
  
 Click on 'Aligned Sequence' to view the original EST sequence.
- 
- 
+
+
 =cut
-
-
-
-
-
-
 
 use strict;
 use CGI qw(:standard *table *TR escape);

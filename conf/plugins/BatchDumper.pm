@@ -18,6 +18,7 @@ my @FORMATS = ( 'fasta'   => ['Fasta',        undef],
 		'raw'     => ['Raw sequence', undef],
 		'game'    => ['GAME (XML)',   'xml'],
 		'bsml'    => ['BSML (XML)',   'xml'],
+		'gff'     => ['GFF',          undef],
 	      );
 
 # initialize @ORDER using the even-numbered elements of the array
@@ -30,11 +31,13 @@ my @ORDER = grep {
 }
   map { $FORMATS[2*$_] } (0..@FORMATS/2-1);
 
+unshift @ORDER,'gff';
+
 # initialize %FORMATS and %LABELS from @FORMATS
 my %FORMATS = @FORMATS;
 my %LABELS  = map { $_ => $FORMATS{$_}[0] } keys %FORMATS;
 
-$VERSION = '0.12';
+$VERSION = '0.13';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -56,20 +59,24 @@ sub dump {
   # take the original segment if no segments were found/entered via the sequence_IDs textarea field
   @segments = ($segment) unless (@segments); 
 
+  # special case for GFF dumping
+  if ($config->{fileformat} eq 'gff') {
+    $self->gff_dump(@segments);
+    return;
+  }
+
   # for the external viewer (like VNTI) the best import format is genbank (?)
   $config->{'fileformat'} = 'Genbank' if ($config->{'format'} eq 'external_viewer');
 
   my $out = new Bio::SeqIO(-format => $config->{'fileformat'});
-  if ($FORMATS{$config->{fileformat}}[1]) {  # is xml
-    $out->write_seq($_) for @segments;
-  }
-  elsif ($config->{'format'} eq 'html') {
-    print start_html();
-    foreach my $segment (@segments)
-    {
-      print h1($segment), start_pre;
+  my $mime_type = $self->mime_type;
+  if ($mime_type =~ /html/) {
+    print start_html($segment);
+    foreach my $segment (@segments) {
+      print h1($segment),"\n",
+            start_pre,"\n";
       $out->write_seq($segment);
-      print end_pre();
+      print end_pre(),"\n";
     }
     print end_html;
   } else {
@@ -81,10 +88,13 @@ sub dump {
 sub mime_type {
   my $self = shift;
   my $config = $self->configuration;
-  return 'text/xml'  if $FORMATS{$config->{fileformat}}[1]; # this flag indicates xml
-  return 'text/html' if $config->{format} eq 'html';
-  return 'application/chemical-na' if $config->{format} eq 'external_viewer';
-  return 'text/plain';
+  return 'text/plain' if $config->{format} eq 'text';
+  return 'text/xml'   if $config->{format} eq 'html' && $FORMATS{$config->{fileformat}}[1]; # this flag indicates xml
+  return 'text/html'  if $config->{format} eq 'html';
+  return 'application/chemical-na'  if $config->{format} eq 'external_viewer';
+  return wantarray ? ('application/octet-stream','dumped_region') : 'application/octet-stream'
+    if $config->{format} eq 'todisk';
+  return 'text/plain';  # default
 }
 
 sub config_defaults {
@@ -113,8 +123,12 @@ sub configure_form {
   my @choices = TR({-class => 'searchtitle'},
 			th({-align=>'RIGHT',-width=>'25%'},"Output",
 			   td(radio_group('-name'   => "$objtype.format",
-					  '-values' => [qw(text html external_viewer)],
+					  '-values' => [qw(text html external_viewer todisk)],
 					  '-default'=> $current_config->{'format'},
+					  -labels   => {'html' => 'html/xml',
+							'external_viewer' => 'GenBank Helper Application',
+							'todisk' => 'Save to Disk',
+						       },
 					  '-override' => 1))));
   my $browser = $self->browser_config();
   # this to be fixed as more general
@@ -141,8 +155,38 @@ sub configure_form {
   $html;
 }
 
+sub gff_dump {
+  my $self          = shift;
+  my @segments      = @_;
+  my $page_settings = $self->page_settings;
+  my $conf          = $self->browser_config;
+  my $date = localtime;
+
+  my $mime_type = $self->mime_type;
+  my $html      = $mime_type =~ /html/;
+  print start_html($segments[0]) if $html;
+  
+  for my $segment (@segments) {
+    print h1($segment),start_pre() if $html;
+    print "##gff-version 2\n";
+    print "##date $date\n";
+    print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
+
+    my $iterator = $segment->get_seq_stream() or return;
+    while (my $f = $iterator->next_seq) {
+      print $f->gff_string,"\n";
+      for my $s ($f->sub_SeqFeature) {
+	print $s->gff_string,"\n";
+      }
+    }
+    print end_pre() if $html;
+  }
+  print end_html() if $html;
+}
+
 sub objtype { 
     ( split(/::/,ref(shift)))[-1];
 }
 
 1;
+

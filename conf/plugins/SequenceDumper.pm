@@ -1,4 +1,4 @@
-# $Id: SequenceDumper.pm,v 1.4 2002-07-07 21:31:48 lstein Exp $
+# $Id: SequenceDumper.pm,v 1.5 2003-04-17 14:26:13 lstein Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::SequenceDumper
 #
@@ -50,7 +50,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::SequenceDumper;
-# $Id: SequenceDumper.pm,v 1.4 2002-07-07 21:31:48 lstein Exp $
+# $Id: SequenceDumper.pm,v 1.5 2003-04-17 14:26:13 lstein Exp $
 # Sequence Dumper plugin
 
 use strict;
@@ -70,6 +70,7 @@ my @FORMATS = ( 'fasta'   => ['Fasta',        undef],
 		'raw'     => ['Raw sequence', undef],
 		'game'    => ['GAME (XML)',   'xml'],
 		'bsml'    => ['BSML (XML)',   'xml'],
+		'gff'     => ['GFF',          undef],
 	      );
 
 # initialize @ORDER using the even-numbered elements of the array
@@ -81,6 +82,8 @@ my @ORDER = grep {
   eval "require $module; 1";
 }
   map { $FORMATS[2*$_] } (0..@FORMATS/2-1);
+
+unshift @ORDER,'gff';
 
 # initialize %FORMATS and %LABELS from @FORMATS
 my %FORMATS = @FORMATS;
@@ -105,11 +108,15 @@ sub dump {
   my $browser = $self->browser_config();
   my @markup;
   my %markuptype;
-  my $out = new Bio::SeqIO(-format => $config->{'fileformat'});
-  if ($FORMATS{$config->{fileformat}}[1]) {  # is xml
-    $out->write_seq($segment);
+
+  # special case for GFF dumping
+  if ($config->{fileformat} eq 'gff') {
+    $self->gff_dump($segment);
+    return;
   }
-  elsif ($config->{'format'} eq 'html') {
+  my $out = new Bio::SeqIO(-format => $config->{fileformat});
+  my $mime_type = $self->mime_type;
+  if ($mime_type =~ /html/) {
     print start_html($segment),h1($segment), start_pre;
     $out->write_seq($segment);
     print end_pre();
@@ -123,8 +130,11 @@ sub dump {
 sub mime_type {
   my $self = shift;
   my $config = $self->configuration;
-  return 'text/xml'  if $FORMATS{$config->{fileformat}}[1]; # this flag indicates xml
-  return 'text/html' if $config->{format} eq 'html';
+  return 'text/plain' if $config->{format} eq 'text';
+  return 'text/xml'   if $config->{format} eq 'html' && $FORMATS{$config->{fileformat}}[1]; # this flag indicates xml
+  return 'text/html'  if $config->{format} eq 'html';
+  return wantarray ? ('application/octet-stream','dumped_region') : 'application/octet-stream'
+    if $config->{format} eq 'todisk';
   return 'text/plain';
 }
 
@@ -153,10 +163,13 @@ sub configure_form {
   my $objtype = $self->objtype();
   my @choices = TR({-class => 'searchtitle'},
 			th({-align=>'RIGHT',-width=>'25%'},"Output",
-			   td(radio_group('-name'   => "$objtype.format",
-					  '-values' => [qw(text html)],
-					  '-default'=> $current_config->{'format'},
-					  '-override' => 1))));
+			   td(radio_group(-name     => "$objtype.format",
+					  -values   => [qw(text html todisk)],
+					  -default  => $current_config->{'format'},
+					  -labels   => {html => 'html/xml',
+							'todisk' => 'Save to Disk',
+						       },
+					  -override => 1))));
   my $browser = $self->browser_config();
   # this to be fixed as more general
 
@@ -168,6 +181,33 @@ sub configure_form {
 					 '-default'=> $current_config->{'fileformat'} ))));
   my $html= table(@choices);
   $html;
+}
+
+sub gff_dump {
+  my $self          = shift;
+  my $segment       = shift;
+  my $page_settings = $self->page_settings;
+  my $conf          = $self->browser_config;
+  my $date = localtime;
+
+  my $mime_type = $self->mime_type;
+  my $html      = $mime_type =~ /html/;
+  print start_html($segment) if $html;
+  
+  print h1($segment),start_pre() if $html;
+  print "##gff-version 2\n";
+  print "##date $date\n";
+  print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
+  
+  my $iterator = $segment->get_seq_stream() or return;
+  while (my $f = $iterator->next_seq) {
+    print $f->gff_string,"\n";
+    for my $s ($f->sub_SeqFeature) {
+      print $s->gff_string,"\n";
+    }
+  }
+  print end_pre() if $html;
+  print end_html() if $html;
 }
 
 sub objtype { 

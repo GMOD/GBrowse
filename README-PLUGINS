@@ -94,6 +94,11 @@ example "text/html".  Plugins that generate more than one format may
 select the mime type dynamically based on their current configuration.
 The default MIME type is "text/plain."
 
+If you wish the plugin to return a file to be downloaded to disk, you
+may return a two element list in which the first element is the mime
+type and the second element is the proposed name for the downloaded
+file.
+
 $plugin->dump($segment);
   Dump out the data (dumpers only).
 

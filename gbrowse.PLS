@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.83 2003-04-10 12:07:44 lstein Exp $
+# $Id: gbrowse.PLS,v 1.84 2003-04-17 14:26:10 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2200,9 +2200,12 @@ sub source_menu {
 sub do_plugin_header {
   my $plugin        = shift;
   my $page_settings = shift;
-  my $mime_type     = $PLUGINS->{$plugin}->mime_type;
-  my @cookies       = plugins2cookies({$plugin => $PLUGINS->{$plugin}});
-  print header(-cookie => \@cookies,-type=>$mime_type) unless $HEADER++;
+  my ($mime_type,$attachment)     = $PLUGINS->{$plugin}->mime_type;
+  my @cookies                     = plugins2cookies({$plugin => $PLUGINS->{$plugin}});
+  print header(-cookie => \@cookies,
+	       -type=>$mime_type,
+	       $attachment ? (-attachment=>$attachment) : (),
+	      ) unless $HEADER++;
 }
 
 sub do_plugin_dump {

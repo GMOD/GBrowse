@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.51.2.10 2003-07-03 16:17:31 pedlefsen Exp $
+# $Id: Browser.pm,v 1.51.2.11 2003-07-03 18:31:30 pedlefsen Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -85,7 +85,7 @@ my $normalizer = Bio::DB::LocusLinkHugoNormalizer->new();
 ## TODO: Document this.  Why?
 #$ENV{ 'PATH' } = '/bin:/usr/bin:/usr/local/bin';
 
-use constant DEBUG                => 1;
+use constant DEBUG                => 0;
 use constant DEBUG_PLUGINS        => 0;
 
 # if true, turn on surrounding rectangles for debugging the image map

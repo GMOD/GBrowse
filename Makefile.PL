@@ -174,7 +174,6 @@ WriteMakefile(
 				 'bin/process_sgd.PLS' => 'bin/process_sgd.pl',
 				 'bin/process_gadfly.PLS' => 'bin/process_gadfly.pl',
 				 'bin/process_wormbase.PLS' => 'bin/process_wormbase.pl',
-				 'bin/process_ncbi_human.PLS' => 'bin/process_ncbi_human.pl',
 				 'bin/ucsc_genes2gff.PLS' => 'bin/ucsc_genes2gff.pl',
 				 'bin/load_genbank.PLS' => 'bin/load_genbank.pl',
 				 'bin/register_moby_services.PLS' => 'bin/register_moby_services.pl',

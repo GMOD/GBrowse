@@ -31,7 +31,7 @@ sub draw {
     $part->{partcolor} = $self->{source2color}{$s};
   }
   
-  $self->SUPER::draw(@_);
+  $self->Bio::Graphics::Glyph::generic::draw(@_);
 }
 
 

@@ -22,9 +22,9 @@ alignments produced by Jim Kent's WABA program, and was written to be
 compatible with the C elegans GFF files.  It aggregates the following
 feature types into an aggregate type of "waba_alignment":
 
-   similarity:WABA_weak
-   similarity:WABA_strong
-   similarity:WABA_coding
+   similarity:waba_weak
+   similarity:waba_strong
+   similarity:waba_coding
 
 =cut
 
@@ -56,7 +56,7 @@ sub method { 'waba_alignment' }
  Title   : part_names
  Usage   : $aggregator->part_names
  Function: return the methods for the sub-parts
- Returns : the list "similarity:WABA_weak", "similarity:WABA_strong" and "similarity:WABA_coding"
+ Returns : the list "similarity:waba_weak", "similarity:waba_strong" and "similarity:waba_coding"
  Args    : none
  Status  : Public
 
@@ -76,7 +76,7 @@ sub aggregate {
   my $method = $self->method;
   $self->SUPER::aggregate($features,$factory);
   foreach (@$features) {
-    $_->source('WABA') if $_->method eq $method;
+    $_->source('waba') if $_->method eq $method;
   }
 }
 

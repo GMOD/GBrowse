@@ -1,4 +1,4 @@
-# $Id: BasicEditor.pm,v 1.10 2003-10-24 21:35:12 markwilkinson Exp $
+# $Id: BasicEditor.pm,v 1.11 2003-10-24 21:37:25 markwilkinson Exp $
 
 =head1 NAME
 
@@ -180,6 +180,7 @@ sub build_form {
 	
 	for my $cell ( @cell  ) {
         next if ++$cellcount == 1;
+        $size{$cellcount} ||=0;
         $row .= td( textfield(
             -name  => 'BasicEditor.feature' . $feat_count,
             -value => $cell,

@@ -1059,7 +1059,7 @@ sub tracks_table {
     $id++;
   }
   autoEscape(1);
-  return toggle_section({on=>1},
+  return toggle_section({on=>0},
 			b($CONFIG->tr('Tracks')),
 			div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
 			table({-width=>'100%',-class=>"searchbody"},
@@ -1138,7 +1138,7 @@ sub settings_table {
 	       )
 	    ),
 	 );
-  return toggle_section({on=>1},
+  return toggle_section({on=>0},
 			b($CONFIG->tr('display_settings')),$content);
 }
 

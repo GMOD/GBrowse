@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.28 2003-04-24 20:15:47 scottcain Exp $
+# $Id: Segment.pm,v 1.29 2003-05-28 18:29:32 scottcain Exp $
 
 =head1 NAME
 
@@ -10,18 +10,6 @@ Bio::DB::Das::Chado::Segment - DAS-style access to a chado database
 
   $segment = $das->segment(-name=>'Landmark',
                            -start=>$start,
-te that there is currently a hack in Segment.pm to make it work with
-chado/gadfly: the search space for names of segments is in a small
-table named gbrowse_assembly, which contains only chromosome arms,
-as extracted directly from the feature table.  This is done because
-gbrowse generally only creates segments out of a large reference
-sequence (like an arm), and there is no good, fast way to look up
-arm names in chado: the feature table is too big (affecting performance
-of a common command), and the synonym tables does not contain arm
-names.  In order for Segment.pm to be a general chado tool, this
-will have to be addressed, as it is possible that another use of
-Segment.pm may need to create a segment out of something else.
-
                            -end => $end);
 
   @features = $segment->overlapping_features(-type=>['type1','type2']);
@@ -41,18 +29,6 @@ Segment.pm may need to create a segment out of something else.
                                        );
 
 =head1 DESCRIPTION
-
-Note that there is currently a hack in Segment.pm to make it work with
-chado/gadfly: the search space for names of segments is in a small
-table named gbrowse_assembly, which contains only chromosome arms,
-as extracted directly from the feature table.  This is done because
-gbrowse generally only creates segments out of a large reference
-sequence (like an arm), and there is no good, fast way to look up
-arm names in chado: the feature table is too big (affecting performance
-of a common command), and the synonym tables does not contain arm
-names.  In order for Segment.pm to be a general chado tool, this 
-will have to be addressed, as it is possible that another use of 
-Segment.pm may need to create a segment out of something else.
 
 Bio::DB::Das::Chado::Segment is a simplified alternative interface to
 sequence annotation databases used by the distributed annotation
@@ -115,14 +91,11 @@ use strict;
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
-use vars '@ISA','$VERSION','$ASSEMBLY_TYPE';
+use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI);
-$VERSION = 0.02;
-$ASSEMBLY_TYPE = 'arm'; #this should really be set in a config file
-                        # well, it shouldn't really need to be anywhere, 
-                        # it is just a speed hack
+$VERSION = 0.1;
 
 # construct a virtual segment that works in a lazy way
 sub new {
@@ -149,32 +122,29 @@ sub new {
   my $cvterm_id = $factory->{cvterm_id};
 
   my $sth = $factory->{dbh}->prepare ("
-             select name,feature_id,seqlen from gbrowse_assembly
+             select name,feature_id,seqlen from feature 
              where lower(name) = $quoted_name  ");
-
-    warn "prepared:$sth\n" if DEBUG ;
 
   $sth->execute or $self->throw("unable to validate name/length");
 
-    warn "executed\n" if DEBUG;
-
   my $hash_ref = {};
   my $length;
+  my $srcfeature_id;
   my $rows_returned = $sth->rows;
   if ($rows_returned != 1) { #look in synonym for an exact match
     my $isth = $factory->{dbh}->prepare ("
        select fs.feature_id from feature_synonym fs, synonym s
        where fs.synonym_id = s.synonym_id and
-       s.synonym_sgml ilike $quoted_name
+       lower(s.synonym_sgml) = $quoted_name
         "); 
-    $isth->execute or $self->throw("query for name failed"); 
+    $isth->execute or $self->throw("query for name in synonym failed"); 
     $rows_returned = $isth->rows;
 
     if ($rows_returned != 1) { #look in dbxref for accession number match
       $isth = $factory->{dbh}->prepare ("
          select feature_id from feature_dbxref fd, dbxref d
          where fd.dbxref_id = d.dbxref_id and
-               d.accession ilike $quoted_name ");
+               lower(d.accession) = $quoted_name ");
       $isth->execute or $self->throw("query for accession failed");
       $rows_returned = $isth->rows;
 
@@ -185,19 +155,64 @@ sub new {
 
     my $landmark_feature_id = $$hash_ref{'feature_id'};
 
+    #find srcfeature_id
+    # this assumes only one level of feature->srcfeature relationship
+    $isth = $factory->{dbh}->prepare ("
+       select srcfeature_id from featureloc
+       where feature_id = $landmark_feature_id
+         ");
+    $isth->execute or $self->throw("finding srcfeature_id failed");
+   
+    $hash_ref = $isth->fetchrow_hashref;
+
+    $srcfeature_id = $$hash_ref{'srcfeature_id'} ? $$hash_ref{'srcfeature_id'} 
+                                                 : $landmark_feature_id;    
+
     $sth = $factory->{dbh}->prepare ("
        select ga.name,ga.feature_id,ga.seqlen,fl.fmin,fl.fmax
-       from gbrowse_assembly ga, featureloc fl
+       from feature ga, featureloc fl
        where fl.feature_id = $landmark_feature_id and
-             fl.srcfeature_id = ga.feature_id
+             $srcfeature_id = ga.feature_id
          ");
     $sth->execute or throw("synonym to assembly query failed");
+
+    $hash_ref = $sth->fetchrow_hashref;
     
+  } else { # the first query returned one result; now find related data
+    $hash_ref = $sth->fetchrow_hashref; #note this is the statement handle from
+                                        # just above this if structure
+    my $landmark_feature_id = $$hash_ref{'feature_id'};
+
+    #find srcfeature_id
+    # this assumes only one level of feature->srcfeature relationship
+    my $isth = $factory->{dbh}->prepare ("
+       select srcfeature_id from featureloc
+       where feature_id = $landmark_feature_id
+         ");
+    $isth->execute or $self->throw("finding srcfeature_id failed");
+
+    my $ihash_ref = $isth->fetchrow_hashref;
+
+    if ($$ihash_ref{'srcfeature_id'}) {
+      $srcfeature_id = $$ihash_ref{'srcfeature_id'};
+      $sth = $factory->{dbh}->prepare ("
+       select ga.name,ga.feature_id,ga.seqlen,fl.fmin,fl.fmax
+       from feature ga, featureloc fl
+       where fl.feature_id = $landmark_feature_id and
+             $srcfeature_id = ga.feature_id
+         ");
+      $sth->execute or throw("synonym to assembly query failed");
+
+      $hash_ref = $sth->fetchrow_hashref;
+
+    } else {
+      $srcfeature_id = $landmark_feature_id;
+    }
+
   }
 
-  $hash_ref = $sth->fetchrow_hashref;
   $length =  $$hash_ref{'seqlen'};
-  my $srcfeature_id = $$hash_ref{'feature_id'};
+  #my $srcfeature_id = $$hash_ref{'feature_id'};
   $name = $$hash_ref{'name'};
 
   if ($$hash_ref{'fmin'}) {
@@ -354,7 +369,7 @@ sub features {
   if ($_[0] =~ /^-/) {
     ($types,$attributes,$rangetype,$iterator,$callback) =
       $self->_rearrange([qw(TYPE ATTRIBUTES RANGETYPE ITERATOR CALLBACK RARE)],@_);
-    warn "$types\n";
+  #  warn "$types\n";
   } else {
     $types = \@_;
   }
@@ -407,7 +422,7 @@ sub features {
     $sql_types .= ") and ";
   }
 
-$self->{factory}->{dbh}->trace(1);
+#$self->{factory}->{dbh}->trace(1);
 
   my $srcfeature_id = $self->{srcfeature_id};
 
@@ -425,7 +440,7 @@ $self->{factory}->{dbh}->trace(1);
    $sth->execute or $self->throw("feature query failed"); 
    $self->{factory}->{dbh}->do("set enable_seqscan=1");
 
-$self->{factory}->{dbh}->trace(0);
+#$self->{factory}->{dbh}->trace(0);
 #take these results and create a list of Bio::SeqFeatureI objects
 #
 #check if the type id is 'alignment hsp' and find/create the parent
@@ -433,10 +448,6 @@ $self->{factory}->{dbh}->trace(0);
 
   my %termname = %{$self->{factory}->{cvname}};
   while (my $hashref = $sth->fetchrow_hashref) {
-
-    foreach my $key (keys %$hashref) {
-      warn "keys:$key, $$hashref{$key}\n";
-    }
 
     my $stop  = $$hashref{fmax};
     my $start = $$hashref{fmin};
@@ -481,7 +492,7 @@ Returns the sequence for this segment as a simple string.
 sub seq {
   my $self = shift;
 
-$self->{factory}->{dbh}->trace(1);
+#$self->{factory}->{dbh}->trace(1);
 
   my $feat_id = $self->{srcfeature_id};
   my $sth = $self->{factory}->{dbh}->prepare("
@@ -489,7 +500,7 @@ $self->{factory}->{dbh}->trace(1);
      where feature_id = $feat_id ");
   $sth->execute or $self->throw("seq query failed");
 
-$self->{factory}->{dbh}->trace(0);
+#$self->{factory}->{dbh}->trace(0);
 
   my $hash_ref = $sth->fetchrow_hashref;
   return $$hash_ref{'residues'};

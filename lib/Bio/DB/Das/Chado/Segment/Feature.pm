@@ -21,13 +21,13 @@ use Bio::SeqFeatureI;
 use Bio::Root::Root;
 use Bio::LocationI;
 
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 use vars qw($VERSION @ISA $AUTOLOAD);
 @ISA = qw(Bio::DB::Das::Chado::Segment Bio::SeqFeatureI 
 	  Bio::Root::Root);
 
-$VERSION = '0.02';
+$VERSION = '0.1';
 #' 
 
 *segments = \&sub_SeqFeature;
@@ -217,7 +217,7 @@ sub sub_SeqFeature {
 #  print "$parent_id\n";
 #  print "$handle\n";
 
-  $self->{factory}->{dbh}->trace(2);# if DEBUG;
+#  $self->{factory}->{dbh}->trace(2);# if DEBUG;
 
   my $sth = $self->{factory}->{dbh}->prepare("
  select child.feature_id, child.name, child.type_id, parent.name as pname,
@@ -237,7 +237,7 @@ sub sub_SeqFeature {
     ");
   $sth->execute or $self->throw("subfeature query failed"); 
 
-  $self->{factory}->{dbh}->trace(0);# if DEBUG;
+#  $self->{factory}->{dbh}->trace(0);# if DEBUG;
 
   my @features;
   my %termname = %{$self->{factory}->{cvname}};

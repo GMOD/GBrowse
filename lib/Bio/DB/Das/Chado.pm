@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.20 2003-04-24 20:15:46 scottcain Exp $
+# $Id: Chado.pm,v 1.21 2003-05-28 18:29:32 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -90,13 +90,12 @@ use Bio::Root::Root;
 use Bio::DasI;
 use Bio::PrimarySeq;
 use DBI;
-use DBD::Pg;
 use vars qw($VERSION @ISA);
 
 use constant SEGCLASS      => 'Bio::DB::Das::Chado::Segment';
 use constant DEBUG =>0;
 
-$VERSION = 0.02;
+$VERSION = 0.1;
 @ISA     = qw(Bio::Root::Root Bio::DasI);
 
 =head2 new
@@ -334,7 +333,7 @@ sub get_feature_by_name {
        order by fl.srcfeature_id
         ");
 
-    my $jsth = $self->{dbh}->prepare("select name from gbrowse_assembly
+    my $jsth = $self->{dbh}->prepare("select name from feature 
                                       where feature_id = ?");
 
     # getting feature info    
@@ -468,6 +467,8 @@ sub search_notes {
 
 =cut
 
+sub default_class {return 'Sequence' }
+
 sub _segclass { return SEGCLASS }
 
 sub absolute {return}
@@ -490,7 +491,6 @@ sub next_seq {
   my $self = shift;
   return unless @$self;
     my $next_feature = shift @$self;
-    warn "next feature:$next_feature\n";
   return $next_feature;
 }
 

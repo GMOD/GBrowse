@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.55 2004-01-26 13:44:02 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.56 2004-01-27 18:38:27 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -304,11 +304,13 @@ if ($divisor == 1) {
     "$description: ".$segments[0]->seq_id.":".$segments[0]->start.'..'.$segments[0]->end 
     : $description;
 } else {
+  if (@segments == 1) {
   my $seg_start = unit_label($segments[0]->start);
   my $seg_end   = unit_label($segments[0]->end);
-  $title = @segments == 1 ?
-    "$description: ".$segments[0]->seq_id.":".$seg_start.'..'.$seg_end
-    : $description;
+  $title = "$description: ".$segments[0]->seq_id.":".$seg_start.'..'.$seg_end;
+  } else {
+  $title = $description;
+  }
 }
 
 

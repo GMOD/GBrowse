@@ -13,10 +13,13 @@
 	authentication/authorization techniques.
 	* Default time for cookie expiration reduced to 7 days.  This will avoid
 	issues arising from previous change.
-	* Added mechanisms to restrict individual tracks by username and password
+	* Added mechanisms to restrict individual tracks by username and
+        password
 	or by host, domain, or IP address.
         * Fixed ppm install utility script
         * Updated documentation to reflect the new GET syntax
+        * Fixed sequence alignments in gbrowse_details when there are minus
+        strand sequences.
 
 1.55
         * Removed hard coded paths in install scripts

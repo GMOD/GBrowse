@@ -82,7 +82,7 @@ END
 
    IMAGE_LINK => 'Koppeling Beeld',
 
-   POSSIBLE_TRUNCATION => 'Mogelijks Afgebroken', 
+   POSSIBLE_TRUNCATION => 'Aantal resultaten is beperkt tot %d hits; lijst is mogelijks onvolledig', 
 
    SHOW_HEADER => 'Koptekst Tonen',
 

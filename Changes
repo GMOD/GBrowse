@@ -6,8 +6,8 @@
 	features.  You will need to CVS update bioperl-live to get this feature.
 	* Fixed problem of external annotation files disappearing.
 	* Fixed the problem of three-frame translation glyph showing wrong
-	translation.  HOWEVER, for the [x]flip feature to work properly, you will
-	need to CVS update bioperl-live.
+	translation.  HOWEVER, for the [x]flip feature to work properly,
+        you will need to CVS update bioperl-live.
 	* Fixed the problem of segments shrinking by 1 bp when the starting
 	segment length was an odd number.
 	* Fixed problem of gbrowse_img consuming all available memory
@@ -21,6 +21,8 @@
 	* Added a pairwise_plot glyph for showing linkage disequilibrium,
 	paired blast scores, and other pairwise feature data.
 	* Use can now turn on and off the overview tracks.
+        * Fixed chado adaptor to properly render the gbrowse_details page.
+
 1.61    Wed Mar 17 21:59:16 EST 2004
         * Moved the BioSQL adaptor to 'experimental'.  It is not guaranteed
         to work.

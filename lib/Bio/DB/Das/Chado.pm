@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.48 2004-06-01 03:41:57 scottcain Exp $
+# $Id: Chado.pm,v 1.49 2004-06-16 03:25:23 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -403,53 +403,29 @@ sub get_feature_by_name {
 
   my (@features,$sth);
   
-  if ($class && $class eq 'GO') {
-    $name =~ s/[?*]\s*$//;
-    $name = '%'.$name.'%'; #put wildcards at beginning and end
-
-    my @GO_names=qw('GO'
-                    'cellular_component'
-                    'molecular_function'
-                    'biological_process'
-                    'Gene Ontology'
-                      );
-
-    my $GO_names = join ',', @GO_names;
-    $sth = $self->dbh->prepare("
-          select fc.feature_id from feature_cvterm fc, cvterm c, cv
-          where fc.cvterm_id = c.cvterm_id and
-                cv.cv_id  = c.cv_id and
-                cv.name in ($GO_names) and
-                c.name ilike ?
-          limit 100
-      "); 
-
-     $sth->execute($name) or $self->throw("GO query failed"); 
-
-  } elsif ($class && $class eq 'Prop') {
-
-    $name =~ s/[?*]\s*$//;
-    $name = '%'.$name.'%'; #put wildcards at beginning and end
-
-    $sth = $self->dbh->prepare("
-          select feature_id from featureprop
-          where value ilike ?
-      "); 
-
-    $sth->execute($name) or $self->throw("featureprop query failed");
-
-  } elsif ($name =~ /^\s*\S+\s*$/) {
+  if ($name =~ /^\s*\S+\s*$/) {
     # get feature_id
     # foreach feature_id, get the feature info
     # then get src_feature stuff (chromosome info) and create a parent feature,
 
     $name =~ s/[?*]\s*$/%/;
 
-    $sth = $self->dbh->prepare("
-       select fs.feature_id from feature_synonym fs, synonym s
-       where fs.synonym_id = s.synonym_id and
-       s.synonym_sgml ilike ? 
-       ");
+    my $select_part = "select fs.feature_id \n";
+    my $from_part   = "from feature_synonym fs, synonym s ";
+    my $where_part  = "where fs.synonym_id = s.synonym_id and\n"
+                    . "s.synonym_sgml ilike ?";
+                    #this ilike should probably be replace with a 'lower' index
+    if ($class) {
+        my $type = $self->name2term($class);
+        return unless $type;
+        $from_part .= ", feature f \n";
+        $where_part.= "\nand fs.feature_id = f.feature_id and\n"
+                    . "f.type_id = $type";
+    }
+
+    my $query = $select_part . $from_part . $where_part;
+
+    $sth = $self->dbh->prepare($query);
     $sth->execute($name) or $self->throw("getting the feature_ids failed");
 
   } else {

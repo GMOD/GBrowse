@@ -165,7 +165,7 @@ WriteMakefile(
 				 IO::String        => 0,
 				 Text::Shellwords  => 1.0,
 				 Template          => 2.0,
-				 Log::Log4perl     => 0,
+				 Log::Log4perl     => 0, 
 				}, # e.g., Module::Name => 1.1
 	      PL_FILES       => {
                                  'install_util/htdocs_install.PLS' => 'install_util/htdocs_install.pl',

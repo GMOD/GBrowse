@@ -256,7 +256,7 @@ warn "TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 
 load_plugin_annotators($page_settings);
 adjust_tracks($page_settings);
-auto_open($page_settings,$segments[0]) if @segments;
+auto_open($page_settings,\@segments) if @segments;
 
 warn "ADJUSTED TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 
@@ -592,15 +592,15 @@ sub adjust_tracks {
 
 # auto-open any tracks that match the search term
 sub auto_open {
-  my ($settings,$feature) = @_;
+  my ($settings,$features) = @_;
   my $tracks = $settings->{features};
-  my $desired_label = $CONFIG->feature2label($feature) or return;
-  delete $settings->{h_feat};
-  delete $settings->{h_type};
-  if (exists $tracks->{$desired_label}) {
-    $tracks->{$desired_label}{visible} = 1;
-    $settings->{h_feat}  = $feature->display_name;
-    $settings->{h_type}  = $feature->type;
+  for my $feature (@$features) {
+    my $desired_label = $CONFIG->feature2label($feature) or next;
+    if (exists $tracks->{$desired_label}) {
+      $tracks->{$desired_label}{visible} = 1;
+      $settings->{h_feat}  = $feature->display_name;
+      $settings->{h_type}  = $feature->type;
+    }
   }
 }
 
@@ -786,7 +786,7 @@ sub make_hilite_callback {
     return $color if $color;
 
     # if we get here, we select the search term for highlighting
-    return unless $feature->type eq $settings->{h_type};
+    # return unless $feature->type         eq $settings->{h_type};
     return unless $feature->display_name eq $settings->{h_feat};
     'yellow';
   }
@@ -1600,7 +1600,7 @@ sub load_external_sources {
   warn join "\n",%feature_file if DEBUG;
   my $f = \%feature_file;
 
-  load_plugin_annotations($segment,$f,$page_settings) if $segment->length <= $MAX_SEGMENT;
+  load_plugin_annotations($segment,$f,$page_settings) if $segment && $segment->length <= $MAX_SEGMENT;
   return $f;
 }
 
@@ -2255,7 +2255,7 @@ sub plugin_menu {
   my %verbs = (dumper       => $CONFIG->tr('Dump'),
 	       finder       => $CONFIG->tr('Find'),
 	       highlighter  => $CONFIG->tr('Highlight'),
-	       annotator => $CONFIG->tr('Annotate'));
+	       annotator    => $CONFIG->tr('Annotate'));
   my %labels = map {$_=> ($verbs{$plugins->{$_}->type}
 			  ||
 			  $plugins->{$_}->type)

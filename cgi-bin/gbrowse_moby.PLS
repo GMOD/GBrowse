@@ -50,7 +50,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.26 2004-03-18 23:25:01 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.27 2004-03-19 00:09:20 markwilkinson Exp $
 ###########################################################
 
 use MOBY::Client::Central;
@@ -483,6 +483,16 @@ sub execute {
         print h3("Service Response contained no data.  Message body contained the following: \n<br><pre>".(escapeHTML($result))."</pre>\n");
         exit 0;
     }
+    my $service_notes = getServiceNotes($result);
+
+    if ($service_notes){
+        print start_table,
+        TR({-valign=>'top', -class=>'databody'},
+        th({-align => 'left', -valign=>'top', -class=>'datatitle'},"Notes from Service Provider:"),
+        td($service_notes));
+        print end_table;
+    }
+
     Delete_all();  # reset all CGI parameters so we don't conflict
     print start_table;
     my @colls = @{$collections};  # flatten the list of lists

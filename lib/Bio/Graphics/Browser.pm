@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.141 2004-05-13 10:27:20 marclogghe Exp $
+# $Id: Browser.pm,v 1.142 2004-05-13 15:45:55 marclogghe Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1270,7 +1270,7 @@ sub hits_on_overview {
 						      -name=>$name||'');
     } elsif (UNIVERSAL::can($hit,'ref')) {
       my $ref  = my $id = $hit->seq_id;
-      my $version = eval {$hit->version};
+      my $version = eval {$hit->isa('Bio::SeqFeatureI') ? undef : $hit->version};
       $ref .= " version $version" if defined $version;
       my $name = $hit->can('seq_name') ? $hit->seq_name : $hit->name;
       my($start,$end) = ($hit->start,$hit->end);

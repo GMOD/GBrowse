@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.85 2004-05-13 13:41:49 marclogghe Exp $
+# $Id: gbrowse.PLS,v 1.86 2004-05-13 15:44:17 marclogghe Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1297,7 +1297,7 @@ sub features2segments {
   my $refclass = $CONFIG->setting('reference class') || 'Sequence';
   my $db = open_database();
   my @segments = map {
-    my $version = eval {$_->version};
+    my $version = eval {$_->isa('Bio::SeqFeatureI') ? undef : $_->version};
     $db->segment(-class => $refclass,
 		 -name  => $_->ref,
 		 -start => $_->start,
@@ -1364,7 +1364,7 @@ sub lookup_features_from_db {
   # Filter out redundant segments; this can happen when the same basic feature is
   # present under several names, such as "genes" and "frameworks"
   my %seenit;
-  my $version = eval{$_->version} || '';
+  my $version = eval {$_->isa('Bio::SeqFeatureI') ? undef : $_->version};
   @segments = grep {!$seenit{$_->seq_id,$_->start,$_->end,$version}++} @segments;
   return @segments if @segments > 1;
 
@@ -1464,7 +1464,7 @@ sub multiple_choices {
   # sort into bins by reference and version
   my %refs;
   foreach (@$results) {
-    my $version = eval {$_->version};
+    my $version = eval {$_->isa('Bio::SeqFeatureI') ? undef : $_->version};
     my $ref = $_->seq_id;
     $ref .= " version $version" if defined $version;    
     push @{$refs{$ref}},$_;
@@ -1493,7 +1493,7 @@ sub multiple_choices {
     my $padding = $CONFIG->setting(general=>'landmark_padding') || 0;
 
     for my $r (sort by_score_and_position @results) {
-      my $version     = eval {$r->version};
+      my $version = eval {$r->isa('Bio::SeqFeatureI') ? undef : $r->version};
       my $name        = eval {$r->name}  || $r->primary_tag;
       my $class       = eval {$r->class} || $CONFIG->tr('Sequence');
       my $score       = eval {$r->score} || $CONFIG->tr('NOT_APPLICABLE');

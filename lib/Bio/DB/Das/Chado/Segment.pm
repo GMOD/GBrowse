@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.79 2004-11-23 20:33:19 scottcain Exp $
+# $Id: Segment.pm,v 1.80 2004-12-02 16:45:30 scottcain Exp $
 
 =head1 NAME
 
@@ -112,8 +112,8 @@ sub new {
     warn "$name, $factory\n"                      if DEBUG;
     warn "base_start = $base_start, end = $end\n" if DEBUG;
 
-    $self->Bio::Root::Root->throw("start value less than 1\n")
-      if ( defined $base_start && $base_start < 1 );
+#    $self->Bio::Root::Root->throw("start value less than 1\n")
+#      if ( defined $base_start && $base_start < 1 );
     $base_start = $base_start ? int($base_start) : 1;
     my $interbase_start = $base_start - 1;
 
@@ -238,7 +238,9 @@ sub new {
         else { #return a Feature object for the feature_id
             my ($feat) = $self->features(
                           -feature_id => $landmark_feature_id,
-                          -factory    => $factory);
+                          -factory    => $factory,
+                          -start      => $base_start,
+                          -end        => $end, );
             return $feat;
         }
     }
@@ -558,14 +560,16 @@ sub features {
 
   warn "Segment->features() args:@_\n" if DEBUG;
 
-  my ($types,$attributes,$rangetype,$iterator,$callback,$feature_id,$factory);
+  my ($types,$attributes,$rangetype,$iterator,$callback,$base_start,$end,$feature_id,$factory);
   if ($_[0] and $_[0] =~ /^-/) {
-    ($types,$attributes,$rangetype,$iterator,$callback,$feature_id,$factory) =
+    ($types,$attributes,$rangetype,$iterator,$callback,$base_start,$end,$feature_id,$factory) =
       $self->_rearrange([qw(TYPE 
                             ATTRIBUTES 
                             RANGETYPE 
                             ITERATOR 
                             CALLBACK 
+                            START
+                            END
                             FEATURE_ID
                             FACTORY)],@_);
   #  warn "$types\n";
@@ -719,9 +723,18 @@ sub features {
 
   while (my $hashref = $sth->fetchrow_hashref) {
 
-    my $stop            = $$hashref{fmax};
-    my $interbase_start = $$hashref{fmin};
-    my $base_start      = $interbase_start +1;
+    if ($feature_id && defined($end)) {
+      $end = $$hashref{fmin} + $end + 1;  
+    } else {
+      $end = $$hashref{fmax};
+    }
+    if ($feature_id && defined($base_start)) {
+      my $interbase_start = $$hashref{fmin} + $base_start;
+      $base_start = $interbase_start + 1;
+    } else {
+      my $interbase_start = $$hashref{fmin};
+      $base_start         = $interbase_start +1;
+    }
 
     my $source = $factory->dbxref2source($$hashref{dbxref_id}) || "" ;
     my $type   = $factory->term2name($$hashref{type_id}). ":$source";
@@ -736,7 +749,7 @@ sub features {
                            $factory->srcfeature2name($$hashref{'srcfeature_id'})
                           :$self->seq_id,
 
-                       $base_start,$stop,
+                       $base_start,$end,
                        $type,
                        $$hashref{score},
                        $$hashref{strand},

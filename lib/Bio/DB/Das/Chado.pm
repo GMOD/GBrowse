@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.2 2003-01-03 20:23:47 scottcain Exp $
+# $Id: Chado.pm,v 1.3 2003-01-03 22:33:03 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -151,14 +151,16 @@ sub new {
     or warn "unable to prepare select cvterms";
   $sth->execute or $self->throw("unable to select cvterms");
 
-  my %cvterm_id;
-  while (my $hashref = $sth->fetch_hashref) {
-    $cvterm_id{$$hashref{termname}} = $$hashref{cvterm_id};
-    warn "$$hashref{termname} -> $$hashref{cvterm_id}" if DEBUG;
+  my $cvterm_id;
+  while (my $hashref = $sth->fetchrow_hashref) {
+    $$cvterm_id{$$hashref{termname}} = $$hashref{cvterm_id};
+#    warn "$$hashref{termname} -> $$hashref{cvterm_id}" if DEBUG;
   }
 
-  return bless {dbh  => $dbh
-                cvterm_id => %cvterm_id}, ref $self ||$self;
+  warn "in chado.pm: $cvterm_id\n" if DEBUG;
+
+  return bless {dbh  => $dbh,
+                cvterm_id => $cvterm_id}, ref $self ||$self;
 }
 
 =head2 segment

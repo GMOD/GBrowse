@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.2 2003-01-03 20:23:48 scottcain Exp $
+# $Id: Segment.pm,v 1.3 2003-01-03 22:33:03 scottcain Exp $
 
 =head1 NAME
 
@@ -100,7 +100,7 @@ use strict;
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
 use Bio::SeqFeature::Generic;
-use constant DEBUG => 0;
+use constant DEBUG => 1;
 
 use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI);
@@ -332,12 +332,16 @@ sub features {
 
 # set type variable (hard coded to 'gene' right now)
 
-  my @keys = grep(/\sgene/i , keys $self->{dbadaptor}->{cvterm_id} );
+  my %termhash = %{$self->{dbadaptor}->{cvterm_id}};
+
+  my @keys = grep(/\sgene/i , keys %termhash );
   my $sql_types = "(";
-  $sql_types .= "f.type_id = $self->{dbadaptor}->{cvterm_id}->{$keys[0]}";
+
+  $sql_types .= "f.type_id = ".$termhash{$keys[0]};
+
   if (scalar @keys > 1) {
     for(my $i=1;$i<(scalar @keys);$i++) {
-      $sql_types .= "     or \nf.type_id = $self->{dbadaptor}->{cvterm_id}->{$keys[$i]}";
+      $sql_types .= " or \n     f.type_id = ".$termhash{$keys[$i]};
     }
   }
   $sql_types .= ")";
@@ -393,7 +397,10 @@ order by fl.nbeg
     }
 
     push @features, $feat;
-  warn "$feat->{annotation}, $$hash_ref{nbeg}, $feat->{start}, $$hash_ref{nend}, $feat->{stop}\n" if DEBUG;
+ 
+    my $fstart = $feat->start() if DEBUG;
+    my $fend   = $feat->end()   if DEBUG;  
+    warn "$feat->{annotation}, $$hash_ref{nbeg}, $fstart, $$hash_ref{nend}, $fend\n" if DEBUG;
   }
 
   if ($iterator) {

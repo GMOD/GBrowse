@@ -64,9 +64,9 @@ sub method { 'waba_alignment' }
 
 sub part_names {
   return qw(
-   similarity:WABA_weak
-   similarity:WABA_strong
-   similarity:WABA_coding
+   similarity:waba_weak
+   similarity:waba_strong
+   similarity:waba_coding
 );
 }
 

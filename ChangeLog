@@ -1,3 +1,11 @@
+1.48	Sun Feb  9 12:55:48 EST 2003
+	* Added ability to group related features with dotted lines.
+	* Added ability to pop up a new window when following links.
+	* Preliminary Chado database support.
+	* Added information on optimizing performance at SQL layer
+	(see INSTALL).
+	* Internationalization support: added Korean, Spanish, Chinese.
+	* Flybase/Gadfly conversion script now works on Release 3 data format.
 1.47 	Tue Oct  8 14:44:44 EDT 2002
 	* Bug fix release.
 	* Fixed source sorting so that lowest alphabetically-sorted

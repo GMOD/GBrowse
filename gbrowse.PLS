@@ -41,11 +41,30 @@ $Config{startperl} -w
 
 print OUT <<'!NO!SUBS!';
 
-# Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.46 2002-07-31 03:06:14 lstein Exp $
+###################################################################
+# Non-modperl users should change this variable if needed to point
+# to the directory in which the configuration files are stored.
+#
+$CONF_DIR  = '/usr/local/apache/conf/gbrowse.conf';
+#
+###################################################################
+$VERSION   = 1.46;
+
+
+###################################################################
+# Non-modperl users should change this variable if needed to point
+# to the directory in which the configuration files are stored.
+#
+$CONF_DIR  = '/usr/local/apache/conf/gbrowse.conf';
+#
+###################################################################
+$VERSION   = 1.46;
+
+
+# Bio::Graphics-based annotation browser
+# $Id: gbrowse.PLS,v 1.47 2002-08-02 22:48:35 lstein Exp $
 
 use strict;
-use Bio::DB::GFF;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
 use Digest::MD5 'md5_hex';
@@ -1103,15 +1122,15 @@ sub format_segment {
 sub open_database {
   my $source  = $CONFIG->source;
   return $DB{$source} if $DB{$source};
-  my @argv = eval{$CONFIG->dbgff_settings};
-  unless (@argv) {
+  my ($adaptor,@argv) = eval{$CONFIG->db_settings};
+  unless ($adaptor) {
     warn "gbrowse: trying to reload config, cache must be stale";
     $CONFIG = Bio::Graphics::Browser->new;
     $CONFIG->read_configuration($CONF_DIR) or die "Can't read configuration files: $!";
     $CONFIG->source($source);
-    @argv = $CONFIG->dbgff_settings;
+    ($adaptor,@argv) = $CONFIG->db_settings;
   }
-  $DB{$source} = eval {Bio::DB::GFF->new(@argv)} or warn $@;
+  $DB{$source} = eval {$adaptor->new(@argv)} or warn $@;
   return $DB{$source};
 }
 
@@ -2085,7 +2104,6 @@ sub footer {
        tt(font({-size=>'small'},"Generic genome browser version $VERSION"))),
        end_html;
 }
-
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

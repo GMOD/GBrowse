@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.29 2002-07-31 03:06:14 lstein Exp $
+# $Id: Browser.pm,v 1.30 2002-08-02 22:48:35 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -73,6 +73,7 @@ $VERSION = '1.14';
 @EXPORT = 'commas';
 
 use constant DEFAULT_WIDTH => 800;
+use constant DEFAULT_DB_ADAPTOR => 'Bio::DB::GFF';
 use constant RULER_INTERVALS   => 20;  # fineness of the centering map on the ruler
 use constant TOO_MANY_SEGMENTS => 5_000;
 use constant MAX_SEGMENT       => 1_000_000;
@@ -251,28 +252,43 @@ can be used this way:
 
 =cut
 
-# get Bio::DB::GFF settings
-sub dbgff_settings {
+# get database adaptor name and arguments
+sub db_settings {
   my $self = shift;
 
-  my $dsn     = $self->setting('database') or croak "No database defined in ",$self->source;
-  my $adaptor = $self->setting('adaptor') || 'dbi::mysqlopt';
-  my @argv = (-adaptor => $adaptor,
-	      -dsn     => $dsn);
+  my $adaptor = $self->setting('db_adaptor') || DEFAULT_DB_ADAPTOR;
+  eval "require $adaptor; 1" or die $@;
+  my $args    = $self->config->code_setting(general => 'db_args');
+  my @argv = ref $args eq 'CODE'
+        ? $args->()
+	: shellwords($args||'');
+
+  # for compatibility with older versions of the browser, we'll hard-code some arguments
+  if (my $adaptor = $self->setting('adaptor')) {
+    push @argv,(-adaptor => $adaptor);
+  }
+
+  if (my $dsn = $self->setting('database')) {
+    push @argv,(-dsn => $dsn);
+  }
+
   if (my $fasta = $self->setting('fasta_files')) {
     push @argv,(-fasta=>$fasta);
   }
+
   if (my $user = $self->setting('user')) {
     push @argv,(-user=>$user);
   }
+
   if (my $pass = $self->setting('pass')) {
     push @argv,(-pass=>$pass);
   }
-  if (my @aggregators = shellwords($self->setting('aggregators'))) {
-    my $agg = $self->make_aggregators(@aggregators);
-    push @argv,(-aggregator => $agg);
+
+  if (my @aggregators = shellwords($self->setting('aggregators')||'')) {
+    push @argv,(-aggregator => \@aggregators);
   }
-  @argv;
+
+  ($adaptor,@argv);
 }
 
 =head2 description()
@@ -1296,41 +1312,6 @@ sub Bio::Graphics::Feature::high {
 END
 }
 
-=head2 make_aggregators()
-
-  @agg = $browser->make_aggregators(@string);
-
-This interprets the aggregators option, returning a list of strings or
-Aggregator objects.  Items with simple names like "alignment" are
-passed as-is to DBGFF.  Items using the syntax:
-
-   aggregate_name{subpart1,subpart2,subpart3/mainpart}
-
-are turned into a Bio::DB::GFF::Aggregator object.
-
-=cut
-
-sub make_aggregators {
-  my $self = shift;
-  my @agg  = @_;
-  require Bio::DB::GFF::Aggregator;
-
-  my @result;
-  foreach (@agg) {
-    my($agg_name,$subparts,$mainpart) = /^(\w+)\{([^\/\}]+)\/?(.*)\}$/;
-    unless ($agg_name) {
-      push @result,$_;
-      next;
-    }
-    my @subparts = split /,\s*/,$subparts;
-    my @args = (-method    => $agg_name,
-		-sub_parts => \@subparts);
-    push @args,(-main_method => $mainpart) if $mainpart;
-    warn "making an aggregator with (@args), subparts = @subparts" if DEBUG;
-    push @result,Bio::DB::GFF::Aggregator->new(@args);
-  }
-  \@result;
-}
 
 sub overview_pad {
   my $self   = shift;

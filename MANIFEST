@@ -6,6 +6,8 @@ Makefile.PL
 README
 README-1.02
 README-PLUGINS
+README-BioGraphics
+README-berkeley-gadfly
 TODO
 bin/process_gadfly.PLS
 bin/process_ncbi_human.PLS
@@ -23,8 +25,8 @@ conf/plugins/OligoFinder.pm
 conf/plugins/RestrictionAnnotator.pm
 conf/plugins/SequenceDumper.pm
 conf/plugins/test.pm
-docs/configuration.txt
-docs/gbrowse_img.txt
+docs/CONFIGURE_HOWTO.txt
+docs/MAKE_IMAGES_HOWTO.txt
 extras/README
 extras/bioperl-101-102.patch
 gbrowse.PLS

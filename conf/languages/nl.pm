@@ -45,6 +45,80 @@ END
  
    BENEATH   => 'Onder',
 
+   TRACK_NAMES => 'Lijst Baannamen',
+
+   ALPHABETIC  => 'Alfabetisch',
+
+   VARYING     => 'Willekeurig',
+
+   FLIP      => 'Omkeren',
+
+   HIDE_HEADER => 'Koptekst Verbergen',
+
+   HIDE_INSTRUCTIONS => 'Instructies Verbergen',
+
+   HIGHLIGHT => 'Markeren',
+
+   IMAGE_DESCRIPTION => <<END,
+<p>
+Om een ingebed plaatje van dit beeld te bekomen, knip en plak de
+volgende URL in een HTML pagina:
+</p>
+<pre>
+&lt;IMAGE src="%s" /&gt;
+</pre>
+<p>
+Het plaatje zal er dan als volgt uitzien:
+</p>
+<p>
+<img src="%s" />
+</p>
+
+<p>
+Indien enkel het overzicht (chromosoom of contig) zichtbaar is, probeer
+dan de regio te verkleinen
+</p>
+END
+
+   IMAGE_LINK => 'Koppeling Beeld',
+
+   POSSIBLE_TRUNCATION => 'Mogelijks Afgebroken', 
+
+   SHOW_HEADER => 'Koptekst Tonen',
+
+   SVG_DESCRIPTION => <<END,
+<p>
+Deze koppeling zal een beeldje genereren in het 'Scalable Vector Graphic'
+(SVG) formaat. SVG beelden hebben verschillende voordelen in vergelijking met
+rasterbeelden zoals jpeg of png.
+</p>
+<ul>
+<li>grootte kan vrij aangepast worden zonder resolutieverlies
+<li>elk individueel onderdeel kan opgemaakt worden in vector georiënteerde grafische applicaties
+<li>kan, indien nodig, omgezet geworden in EPS formaat ter indiening van een publicatie
+</ul>
+<p>
+Om SVG beelden te bekijken moet, ofwel je browser SVG ondersteunen, 
+ofwel moet de Adobe SVG browser plugin, of andere SVG applicatie zoals Adobe Illustrator, geïnstalleerd zijn. 
+</p>
+<p>
+Adobe's SVG browser plugin: <a
+href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Macintosh">Macintosh</a>
+| <a
+href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Windows">Windows</a>
+<br />
+Linux gebruikers kunnen eventueel de <a href="http://xml.apache.org/batik/">Batik SVG Viewer</a> uitproberen.
+</p>
+<p>
+<a href="%s" target="_blank">Bekijk het SVG beeld in een nieuw venster</a></p>
+<p>
+Om dit plaatje op schijf te bewaren, CTRL-klik (Macintish) of
+rechts-klik (Windows) en selecteer de optie om op schijf bewaren.
+</p>   
+END
+
+   SVG_LINK   => 'Beeld van Publicatiekwaliteit',
+
    GO       => 'Doorgaan',
 
    FIND     => 'Vinden',

@@ -6,7 +6,7 @@ use vars '@ISA','$VERSION';
 use GD 'gdTinyFont';
 
 @ISA = 'Bio::Graphics::Glyph::segments';
-$VERSION = '1.02';
+$VERSION = '1.03';
 
 use constant DEFAULT_POINT_RADIUS=>1;
 
@@ -61,7 +61,8 @@ sub draw {
 
   # now seed all the parts with the information they need to draw their positions
   foreach (@parts) {
-    my $s = eval {$_->feature->score} or next;
+    my $s = eval {$_->feature->score};
+    next unless defined $s;
     my $position      = ($s-$min_score) * $scale;
     $_->{_y_position} = $bottom - $position;
   }
@@ -79,7 +80,8 @@ sub draw {
 
 sub log10 { log(shift)/log(10) }
 sub max10 {
-  my $a = shift; 
+  my $a = shift;
+  $a = 1 if $a <= 0;
   my $l=int(log10($a)); 
   $l = 10**$l; 
   my $r = $a/$l; 
@@ -87,7 +89,8 @@ sub max10 {
   return $l*int(($a+$l)/$l);
 }
 sub min10 {
-  my $a = shift; 
+  my $a = shift;
+  $a = 1 if $a <= 0;
   my $l=int(log10($a));
   $l = 10**$l; 
   my $r = $a/$l; 

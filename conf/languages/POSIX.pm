@@ -234,4 +234,6 @@ END
 
  TOO_MANY_LANDMARKS => '%d landmarks.  Too many to list.',
 
+ SMALL_INTERVAL    => 'Resizing small interval to %s bp',
+
 };

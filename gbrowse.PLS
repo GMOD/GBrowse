@@ -40,9 +40,8 @@ $Config{startperl} -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.50 2002-08-08 12:13:48 lstein Exp $
+# $Id: gbrowse.PLS,v 1.51 2002-08-16 02:59:32 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -63,11 +62,18 @@ use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 # if you change the zoom/nav icons, you must change this as well.
 use constant MAG_ICON_HEIGHT => 20;
 use constant MAG_ICON_WIDTH  => 8;
+
+# had-coded values for segment sizes
+# many of these can be overridden by configuration file entries
 use constant MAX_SEGMENT     => 1_000_000;
+use constant MIN_SEG_SIZE         => 50;
+use constant TINY_SEG_SIZE        => 2;
+use constant EXPAND_SEG_SIZE      => 5000;
 use constant TOO_MANY_SEGMENTS => 5_000;
 use constant TOO_MANY_FEATURES => 100;
 use constant TOO_MANY_REFS     => 30;
 use constant DEFAULT_SEGMENT => 100_000;
+
 use constant OVERVIEW_RATIO  => 0.9;
 use constant ANNOTATION_EDIT_ROWS => 25;
 use constant ANNOTATION_EDIT_COLS => 100;
@@ -942,11 +948,14 @@ sub zoomnav {
   $settings->{stop}  = $stop;
 }
 
-
-# interesting heuristic way of fetching sequence segments based on educated guesses
+# The get_segments() call fetches the genome segments specified in the
+# current settings.  It is really just a front end to lookup_segments()
+# which does the real work.  The main work in get_segments() is to
+# identify any segments that are below MIN_SEG_SIZE in length, and to
+# recenter on a window MIN_SEG_SIZE wide.  This prevents the browser
+# from getting brain damaged when fetching 1bp features like SNPs.
 sub get_segments {
   my $settings = shift;
-  my @segments;
 
   my $db = open_database();
   unless ($db) {
@@ -954,6 +963,26 @@ sub get_segments {
     footer();
     exit 0;
   }
+
+  my @segments = lookup_segments($db,$settings);
+  # resize any segments that are below MIN_SEG_SIZE
+  for my $s (@segments) {
+    next unless $s->length < MIN_SEG_SIZE;
+    my $resize = $s->length <= TINY_SEG_SIZE ? EXPAND_SEG_SIZE : MIN_SEG_SIZE;
+    # resize
+    error($LANG->tr('Small_interval',$resize)); # error message
+    my $middle = int(($s->start + $s->end)/2);
+    $s = $s->factory->segment(-name  => $s->seq_id,
+			      -start => $middle - int($resize/2),
+			      -end   => $middle + int($resize/2)-1);
+  }
+  @segments;
+}
+
+# interesting heuristic way of fetching sequence segments based on educated guesses
+sub lookup_segments {
+  my ($db,$settings) = @_;
+  my @segments;
 
   $db->debug(0);
 

@@ -197,7 +197,8 @@ Will produce this output:
 sub pads {
     my ($align,$src,$tgt) = @{shift()}{'alignment','src','target'};
     my ($ps,$pt,$last);
-    $ps = '-' x $align->[0];  # pad up the source
+    $align->[0] ||= 0;   # bug upstream somewhere
+    $ps = '-' x ($align->[0]);  # pad up the source
     $pt = substr($tgt,0,$align->[0]);
     $last = $align->[0];
     for (my $i=0;$i<@$align;$i++) {

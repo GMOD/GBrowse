@@ -1,7 +1,7 @@
 # This is -*-Perl-*- code
 ## Bioperl Test Harness Script for Modules
 ##
-# $Id: GraphicsBrowser.t,v 1.1.2.3 2003-07-02 22:33:43 pedlefsen Exp $
+# $Id: GraphicsBrowser.t,v 1.1.2.4 2003-07-05 20:00:17 pedlefsen Exp $
 
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl test.t'
@@ -55,7 +55,7 @@ my %defaults =
 
  # hard-coded values for segment sizes
  # many of these can be overridden by configuration file entries
- 'max_segment'          => 1_000_000,
+ 'max_segment'          => 25_000_000,
  'min_seg_size'         => 50,
  'tiny_seg_size'        => 2,
  'expand_seg_size'      => 5000,
@@ -81,7 +81,6 @@ my %defaults =
  'empty_tracks'         => 'key',
  'ruler_intervals'      => 20,  # fineness of the centering map on the ruler
  'too_many_segments'    => 5_000,
- 'max_segment'          => 1_000_000,
  'default_ranges'       => q(100 500 1000 5000 10000 25000 100000 200000 400000),
  'min_overview_pad'     => 25,
  'pad_overview_bottom'  => 3,
@@ -109,4 +108,51 @@ ok( $session_id );
 #$browser->gbrowse( \*STDOUT, 'sample', undef, { 'name' => 'II' } );
 #$browser->gbrowse( \*STDOUT, 'blast', undef, { 'name' => 'test_first_protein_in_IPI' } );
 #$browser->gbrowse( \*STDOUT, 'rakari', undef, { 'name' => 'Genome' } );
-$browser->gbrowse( \*STDOUT, 'jdrf', undef, { 'name' => 'chr1:228150000,228650000' } );
+#$browser->gbrowse( \*STDOUT, 'jdrf', undef, { 'name' => 'chr1:228150000,228650000' } )
+
+
+# str_id 6 partial:
+#$browser->gbrowse( \*STDOUT, 'lodtest', undef, { 'name' => '11:67338436-68338435' } );
+
+# str_id 6 full:
+$browser->gbrowse( \*STDOUT, 'lodtest', undef, { 'name' => 'chr11:65695316,70981556' } );
+
+# No strat id or loc id (shouldn't there be a loc id at least?!?)
+#$browser->gbrowse( \*STDOUT, 'lodtest', undef, { 'name' => 'chr11:3200000,4200000' } );
+
+# No strat id or loc id (shouldn't there be a loc id at least?!?)
+#$browser->gbrowse( \*STDOUT, 'lodtest', undef, { 'name' => 'chr15:92500000,94000000' } );
+
+
+# No strat id or loc id (shouldn't there be a loc id at least?!?)
+#$browser->gbrowse( \*STDOUT, 'lodtest', undef, { 'name' => 'chr6:32000000,33000000' } );
+
+# No strat id or loc id (shouldn't there be a loc id at least?!?)
+#$browser->gbrowse( \*STDOUT, 'lodtest', undef, { 'name' => 'chr6:151690000,151990000' } );
+
+#foreach my $region qw( chr6:32000000,33000000
+#           chr11:1200000,4200000
+#           chr15:92500000,94000000
+#           chr11:65695316,70981556
+#           chr6:151690000,151990000
+#           chr18:34080000,61230000
+#           chr2:184000000,184350000
+#           chr6:166060000,169750000
+#           chr3:126140000,127900000
+#           chr10:21640000,53880000
+#           chr14:83890000,91290000
+#           chr2:202980000,213140000
+#           chr2:220000000,221250000
+#           chr6:114100000,114500000
+#           chr10:109010000,116960000
+#           chr16:82510000,87650000
+#           chr1:228150000,229170000
+#           chr1:59180000,63520000
+#           chr1:69370000,78000000
+#           chr4:86510000,133950000
+#           chr4:134520000,145320000
+#           chr4:145930000,146970000
+#                     chr5:135890000,169640000 ) {
+#  warn "Trying region $region";
+#  $browser->gbrowse( \*STDOUT, 'lodtest', undef, { 'name' => $region } );
+#}

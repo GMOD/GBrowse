@@ -33,6 +33,7 @@ $VERSION = '0.11';
 use overload
   '""'   => 'asString';
 
+*get_SeqFeatures = \&sub_SeqFeature;
 *segments = \&sub_SeqFeature;
 my %CONSTANT_TAGS = ();
 

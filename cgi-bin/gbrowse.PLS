@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.75 2004-04-08 13:06:44 lstein Exp $
+# $Id: gbrowse.PLS,v 1.76 2004-04-08 20:06:32 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1670,10 +1670,11 @@ sub name_uploaded_file {
   warn "name_uploaded_file(): filename = $filename" if DEBUG;
   # keep last non-[/\:] part of name
   my ($name) = $filename =~ /([^:\\\/]+)$/;
+  $name =~ tr/-/_/;
   my $id = $settings->{id} or return;
   my (undef,$tmpdir) = $CONFIG->tmpdir($CONFIG->source."/uploaded_file/$id");
-  my $physical = "$tmpdir/$filename";
-  my $url      = "file:$filename";
+  my $physical = "$tmpdir/$name";
+  my $url      = "file:$name";
   return wantarray ? ($physical,$url) : $physical;
 }
 

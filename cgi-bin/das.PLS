@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.4 2004-02-25 17:15:49 lstein Exp $
+#$Id: das.PLS,v 1.5 2004-02-27 13:17:36 lstein Exp $
 
 use strict;
 use Bio::DB::GFF 1.02;
@@ -58,7 +58,7 @@ use vars qw($DB $DSN $HEADER %ERRCODES $CONFIG
             $VERSION $DAS_VERSION $CONF_DIR 
             %CACHED_TYPES);
 
-#$Id: das.PLS,v 1.4 2004-02-25 17:15:49 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
+#$Id: das.PLS,v 1.5 2004-02-27 13:17:36 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';
@@ -87,11 +87,13 @@ $HEADER = 0;
 my ($junk,$dsn,$operation) = split '/',path_info();
 $DSN = $dsn;
 $operation ||= '';
+my %sources = map {$_=>1} $CONFIG->sources;
 
 do { error_header('invalid request',400); exit 0 } unless $DSN;
 do { list_dsns();   exit 0 } if $dsn eq 'dsn' or $operation eq 'dsn';
 do { error_header('invalid data source, use the dsn command to get list',401); exit 0 } 
-  unless $CONFIG->source($dsn);
+      unless $sources{$DSN};
+$CONFIG->source($DSN);
 
 do { error_header('Could not open database',500); exit 0 }
      unless $DB = open_database();
@@ -308,7 +310,7 @@ sub dump_segment {
   }
   print qq(<SEGMENT id="$r" start="$s" stop="$e" version="$version">\n);
 
-  my %agg_map = map {$_->get_method => $_->main_name} $DB->aggregators;
+  my %agg_map = map {($_->get_method||'') => ($_->main_name||'')} $DB->aggregators;
 
   my $iterator = $seq->features(-types=>$filter,-merge=>1,-iterator=>1);
   while (my $f = $iterator->next_seq) {

@@ -388,7 +388,7 @@ sub gff_string {
   }
   my $group_field = join ';',map {join '=',uri_escape($_->[0]),uri_escape($_->[1])} grep {$_->[0] =~ /\S/ and $_->[1] =~ /\S/} @group;
   my $string = join("\t",$n,$self->source||'.',$self->method||'.',$start||'.',$stop||'.',
-                    $self->score||'.',$strand||'.',$phase,$group_field);
+                    $self->score||'.',$strand||'.',$phase||'.',$group_field);
   $string .= "\n";
   if ($recurse) {
     foreach ($self->sub_SeqFeature) {

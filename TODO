@@ -1,8 +1,10 @@
 NEXT VERSION:
-$Id: TODO,v 1.5 2005-01-25 02:54:22 allenday Exp $
+$Id: TODO,v 1.6 2005-01-25 02:55:08 allenday Exp $
 
 Feature               PRE-PORT   POST-PORT
 ===============================================================================
+logging               n/a        convert "warn $foo if DEBUG" to Log::Log4perl calls
+
 localization          done       need new translation of "toggle", lowercase of "tracks"
 
 show/hide

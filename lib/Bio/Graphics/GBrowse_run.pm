@@ -1,7 +1,6 @@
 package Bio::Graphics::GBrowse_run;
 
 use strict;
-use base qw(Exporter); #temporary
 use Term::ANSIColor;
 use Bio::Graphics::Browser::Constants;
 use Bio::Graphics::Browser::Options;
@@ -17,6 +16,7 @@ no warnings 'redefine';
 
 @EXPORT_OK = qw(param); #this is a temporary scaffold to clean param() calls from gbrowse.PLS
 
+# LS to AD - Do we *really* need this ugliness?
 sub param { print(STDERR (caller())[0]."+".(caller())[2]." called param() with: ".join(' ',map {"'$_'"} @_)."\n"); return CGI::param(@_) } #temporary
 
 my $singleton = undef;

@@ -2,7 +2,7 @@
   [% IF browser.options.display_instructions == 1 %]
   <tr><td align="left" colspan="2">
     <b>[% browser.translate('instructions') %]</b><br/>
-    [% browser.translate('search_instructions') %]
+    [% browser.translate('search_instructions','') %]
   </td></tr>
   <tr><td align="left" colspan="2">
     [% browser.translate('navigation_instructions') %]

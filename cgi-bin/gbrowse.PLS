@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.125 2005-01-21 09:45:34 allenday Exp $
+# $Id: gbrowse.PLS,v 1.126 2005-01-21 22:26:08 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1000,7 +1000,7 @@ sub load_external_sources($) {
 
   my $segment = $segments->[0] if $segments;
 
-  return undef unless ref($segment) || $segment =~ /\S/;
+  return undef unless defined $segment && (ref($segment) || $segment =~ /\S/);
 
   my @feature_file = load_uploaded_files($segment);
   warn "uploaded feature_file = @feature_file" if DEBUG_EXTERNAL;

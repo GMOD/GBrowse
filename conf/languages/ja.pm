@@ -2,7 +2,7 @@
 {
 
    # Translated by Toshiaki Katayama <k@bioruby.org>
-   # Tue Sep 30 18:38:30 JST 2003
+   # Sun Apr 11 00:43:26 JST 2004
 
    CHARSET => 'euc-jp',
 
@@ -51,6 +51,40 @@ END
    BOOKMARK          => 'この表示をブックマーク',
 
    IMAGE_LINK        => 'この表示の画像へのリンク',
+
+   SVG_LINK          => '印刷用の高品質SVG画像',
+
+   SVG_DESCRIPTION => <<END,
+<p>
+→ <a href="%s" target="_blank">SVG 画像を新しいウィンドウで表示</a></p>
+<p>
+このリンクをクリックすると SVG (Scalable Vector Graphic) フォーマットの画像が
+生成されます。SVG 画像には jpeg や png などのラスタ画像と比較して
+次のような利点があります。
+</p>
+<ul>
+<li>解像度を犠牲にせず、自由にサイズを変更できる
+<li>一般的な画像処理ソフトを利用して、フィーチャーごとに自由な編集ができる
+<li>論文投稿用など、必要に応じて EPS フォーマットに変換できる
+</ul>
+<p>
+SVG 画像を見るためには、Adobe SVG browser プラグインなどの SVG 対応
+ブラウザが、編集するためには、Adobe Illustrator などのソフトウェアが
+必要になります。
+</p>
+<ul>
+<li> Adobe の SVG browser プラグイン: <a
+href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Macintosh">Macintosh用</a>
+| <a
+href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Windows">Windows用</a>
+<li> Linux ユーザは <a href="http://xml.apache.org/batik/">Batik SVG Viewer</a>を試すとよいでしょう。
+</ul>
+<p>
+SVG 画像を保存するには、上記のリンクを Macintosh の場合コントロールキーを
+押しながらクリック、Windows の場合右クリックして、リンク先をディスクに保存する
+オプションを選びます。
+</p>
+END
 
    IMAGE_DESCRIPTION => <<END,
 <p>
@@ -291,7 +325,7 @@ END
 
    NOT_FOUND         => '<i>%s</i> というランドマークは認識できませんでした。ヘルプページを参照してください。',
 
-   TOO_BIG           => '詳細ビューは %s 塩基までです。オーバービューをクリックして %s bp の領域を選んでください。',
+   TOO_BIG           => '詳細ビューは %s までです。オーバービューをクリックして %s の領域を選んでください。',
 
    PURGED            => '%s という名前のファイルは見あたりません。すでに消されてしまった可能性があります。',
 

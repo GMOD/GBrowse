@@ -1,10 +1,30 @@
-#!/usr/bin/perl -w
+#!perl
+use Config;
+use File::Basename qw(&basename &dirname);
+use Cwd;
+                                                                                
+$origdir = cwd;
+chdir dirname($0);
+$file = basename($0, '.PL','.PLS');
+$file .= $^O eq 'VMS' ? '.com' : '.pl';
+                                                                                
+open OUT,">$file" or die "Can't create $file: $!";
+                                                                                
+print "Extracting $file (with variable substitutions)\n";
+                                                                                
+print OUT <<"!GROK!THIS!";
+$Config{startperl}
 use strict;
 use File::Basename qw( basename fileparse );
 use Carp 'croak';
 use IO::Dir;
 use Bio::Root::IO;
 
+my \$working_dir = \'$origdir\/\';
+                                                                                
+!GROK!THIS!
+
+print OUT <<'!NO!SUBS!';
 foreach (@ARGV) {
   $_ =~ s/^\'(.*)\'$/$1/;
 }
@@ -12,23 +32,16 @@ foreach (@ARGV) {
 my %options = map {split /=/} @ARGV;
 my $ht_target = "$options{HTDOCS}/gbrowse";
 
-# use Bio::Root::IO instead
-#my $delim = '/';
-#if ($Config{'osname'} =~ /win/i && $Config{'osname'} !~ /darwin/i ) {
-#    $ht_target =~ s!\/!\\!g;
-#    $delim = '\\';
-#}
-
-
 print "Installing stylesheet and images...\n";
 
 if (! (-e $ht_target) ) {
     mkdir($ht_target,0777) or die "unable to make $ht_target directory\n";
 }
 
-opendir HTDOCS, "htdocs" or die "unable to opendir htdocs\n";
+my $localhtdocsdir = $working_dir . "htdocs";
+opendir HTDOCS, $localhtdocsdir or die "unable to opendir $localhtdocsdir\n";
 while (my $file = readdir(HTDOCS) ) {
-    my $localfile = Bio::Root::IO->catfile('htdocs', $file);
+    my $localfile = Bio::Root::IO->catfile($localhtdocsdir, $file);
     if (-f $localfile) {
         my $installfile = Bio::Root::IO->catfile($ht_target, $file);
 	chmod (0666, $installfile);
@@ -50,9 +63,10 @@ if (! (-e $buttondir) ) {
     mkdir($buttondir,0777) or die "unable to make $buttondir\n";
 }
 
-opendir BUTTONS, "htdocs/images/buttons" or die "unable to open ./htdocs/images/buttons\n";
+my $localbuttondir = $working_dir . "htdocs/images/buttons";
+opendir BUTTONS, $localbuttondir or die "unable to open $localbuttondir\n";
 while (my $file = readdir(BUTTONS) ) {
-    my $localfile = Bio::Root::IO->catfile('htdocs/images/buttons',$file);
+    my $localfile = Bio::Root::IO->catfile($localbuttondir,$file);
     if (-f $localfile) {
         my $installfile = Bio::Root::IO->catfile($buttondir, $file);
 	chmod (0666, $installfile);
@@ -69,9 +83,10 @@ if (! (-e $helpdir) ) {
     mkdir($helpdir,0777) or die "unable to make $helpdir\n";
 }
 
-opendir HELP, "htdocs/images/help" or die "unable to open htdocs/images/help\n";
+my $localhelpdir = $working_dir . "htdocs/images/help";
+opendir HELP, $localhelpdir or die "unable to open $localhelpdir\n";
 while (my $file = readdir(HELP) ) {
-    my $localfile = Bio::Root::IO->catfile('htdocs/images/help', $file);
+    my $localfile = Bio::Root::IO->catfile($localhelpdir, $file);
     if (-f "./htdocs/images/help/$file") {
         my $installfile = Bio::Root::IO->catfile($helpdir, $file);
 	chmod (0666, $installfile);
@@ -96,7 +111,7 @@ print "Installing documentation...\n";
 #  a pod2html dohicky (it can create the html in the htdocs dir directly)
 #  a wanted subroutine to do File::Find's work
 #  also need to modify gbrowse/index.html
-for my $localfile (qw(./DISCLAIMER)) {
+for my $localfile ($working_dir. "DISCLAIMER") {
   my $installfile = Bio::Root::IO->catfile($ht_target,basename($localfile));
   chmod (0666, $installfile);
   copy_with_substitutions($localfile,$installfile);
@@ -113,22 +128,25 @@ if (! (-e $poddir) ) {
     mkdir($poddir,0777) or die "unable to make $poddir\n";
 }
 
-for my $localfile ( qw(./docs/pod/CONFIGURE_HOWTO.pod
-                       ./docs/pod/ORACLE_AND_BIOSQL.pod
-                       ./docs/pod/README-berkeley-gadfly.pod
-                       ./docs/pod/PLUGINS_HOWTO.pod
-                       ./docs/pod/README-gff-files.pod
-                       ./docs/pod/README-chado.pod
-                       ./docs/pod/MAKE_IMAGES_HOWTO.pod
-                       ./docs/pod/GENBANK_HOWTO.pod
-                       ./docs/pod/INSTALL.pod ) ) {
+my $localpoddir = $working_dir . "docs/pod/";
+my @localpodfiles = qw(CONFIGURE_HOWTO.pod
+                       ORACLE_AND_BIOSQL.pod
+                       README-berkeley-gadfly.pod
+                       PLUGINS_HOWTO.pod
+                       README-gff-files.pod
+                       README-chado.pod
+                       MAKE_IMAGES_HOWTO.pod
+                       GENBANK_HOWTO.pod
+                       INSTALL.pod );
+@localpodfiles = map ($localpoddir . $_ , @localpodfiles);
+for my $localfile ( @localpodfiles ) {
      my ($name,undef,undef) = fileparse($localfile, "\.pod");
      my $installfile = Bio::Root::IO->catfile("$ht_target/docs/pod","$name.html"); 
      system("pod2html", "--infile=$localfile",
                         "--outfile=$installfile",
                         "--htmlroot=/gbrowse",
                         "--htmldir=$ht_target ",
-                        "--podpath=./docs/pod",
+                        "--podpath=$localpoddir",
                         "--title=$name");
 }
 #get rid of pod2html junk
@@ -136,16 +154,16 @@ unlink './pod2htmi.x~~';
 unlink './pod2htmd.x~~';
 
 print "Installing tutorial...\n";
-copy_tree('./docs/tutorial',$ht_target);
+copy_tree("$working_dir/docs/tutorial",$ht_target);
 
 print "Installing sample_data...\n";
-copy_tree('./sample_data',$ht_target);
+copy_tree("$working_dir/sample_data",$ht_target);
 
 print "Installing contrib...\n";
-copy_tree('./contrib',$ht_target);
+copy_tree("$working_dir/contrib",$ht_target);
 
 print "Installing sample data files...\n";
-copy_tree('./htdocs/databases',"$ht_target");
+copy_tree("$working_dir/htdocs/databases","$ht_target");
 chmod 0777,glob("$ht_target/databases/*");
 
 print "\n\n#############################################################################\n";
@@ -206,3 +224,9 @@ sub copy_with_substitutions {
   close OUT;
   close IN;
 }
+!NO!SUBS!
+close OUT or die "Can't close $file: $!";
+chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
+exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
+chdir $origdir;
+

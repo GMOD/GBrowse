@@ -123,6 +123,7 @@ WriteMakefile(
 				 Text::Shellwords  => 1.0,
 				}, # e.g., Module::Name => 1.1
 	      PL_FILES       => {
+                                 'install_util/htdocs_install.PLS' => 'install_util/htdocs_install.pl',
                                  'install_util/cgi_install.PLS' => 'install_util/cgi_install.pl',
                                  'install_util/conf_install.PLS' => 'install_util/conf_install.pl',
 				 'bin/process_sgd.PLS' => 'bin/process_sgd.pl',

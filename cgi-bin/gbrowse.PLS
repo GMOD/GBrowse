@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.44 2003-11-03 18:02:06 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.45 2003-11-21 21:56:12 tharris Exp $
 
 use strict;
 use Bio::Graphics;
@@ -771,6 +771,7 @@ sub navigation_table {
 			 (
 			  a({-href=>bookmark_link($settings)},'['.$CONFIG->tr('BOOKMARK').']'),
 			  a({-href=>image_link($settings),-target=>'_blank'},'['.$CONFIG->tr('IMAGE_LINK').']'),
+			  a({-href=>svg_link($settings),-target=>'_blank'},'['.$CONFIG->tr('SVG_LINK').']'),
 			 ) : (),
 			 $help)
 		     ),
@@ -1894,6 +1895,12 @@ sub image_link {
   return "?help=link_image;rand=$rand";
 }
 
+sub svg_link {
+  my $settings = shift;
+  my $rand = md5_hex(rand);
+  return "?help=svg_image;rand=$rand";
+}
+
 # reorder @labels based on settings in the 'track.XXX' parameters
 sub adjust_track_order {
   my $settings = shift;
@@ -2052,6 +2059,8 @@ sub help {
 
   elsif ($help_type eq 'link_image') {
     build_link_image_page($settings);
+  } elsif ($help_type eq 'svg_image') {
+    build_svg_image_page($settings);
   }
 
   else {
@@ -2153,6 +2162,21 @@ sub build_link_image_page {
   my $img_url = "$url?name=$name;type=$type;width=$width";
   print $CONFIG->tr('IMAGE_DESCRIPTION',$img_url,$img_url);
 }
+
+sub build_svg_image_page {
+  my $settings = shift;
+  my $segment  = shift;
+  my $source = $CONFIG->source;
+  my $url = url(-base=>1);
+  $url   .= url(-absolute=>1);
+  $url    = dirname($url) . "/gbrowse_img/".escape($source);
+  my $width  = $CONFIG->width;
+  my $name   = $settings->{name} || "$settings->{ref}:$settings->{start}..$settings->{stop}";
+  my $type   = join '+',map{escape($_)} grep {$settings->{features}{$_}{visible}} @{$settings->{tracks}};
+  my $img_url = "$url?name=$name;type=$type;width=$width;image_class=SVG";
+  print $CONFIG->tr('SVG_DESCRIPTION',$img_url,$img_url);
+}
+
 
 sub url2file {
   my $url = shift;

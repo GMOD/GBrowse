@@ -15,7 +15,7 @@ Bio::DB::GFF::Aggregator::wormbase_gene -- Wormbase gene aggregator
  -------------------------------------------------------------------------------------
  Aggregator method: transcript
  Main method:       Sequence
- Sub methods:       CDS 5'UTR 3'UTR TSS PolyA
+ Sub methods:       CDS UTR TSS PolyA
  -------------------------------------------------------------------------------------
 
 =head1 DESCRIPTION
@@ -60,14 +60,14 @@ sub method { 'transcript' }
  Title   : part_names
  Usage   : $aggregator->part_names
  Function: return the methods for the sub-parts
- Returns : the list "CDS", "5'UTR", "3'UTR", "TSS", "PolyA"
+ Returns : the list "CDS", "UTR", "TSS", "PolyA"
  Args    : none
  Status  : Public
 
 =cut
 
 sub part_names {
-  return qw(CDS 5'UTR 3'UTR TSS PolyA);
+  return qw(CDS UTR TSS PolyA);
 }
 
 =head2 main_name

@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.63 2002-10-06 18:25:34 lstein Exp $
+# $Id: gbrowse.PLS,v 1.64 2002-10-06 19:09:14 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -240,8 +240,6 @@ elsif ($data = param('auto') or $data = param('add')) {
   handle_quickie($page_settings,$data);
 }
 
-warn "file again = $file" if DEBUG;
-
 clear_uploaded_file($page_settings,$file) if $file_action && param($file_action) eq 'Delete File';
 
 warn "TRACKS = @{$page_settings->{tracks}}" if DEBUG;
@@ -303,7 +301,7 @@ elsif ($plugin_action eq $LANG->tr('Configure')) {
 
 ## MAIN DISPLAY
 else {
-  my $header = html_frag('header');
+  my $header = $CONFIG->header;
   print $header;
   print h1($description) unless $header;
   main_display(\@segments,$page_settings);

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.105 2003-12-02 21:31:53 stajich Exp $
+# $Id: Browser.pm,v 1.106 2003-12-06 00:00:38 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -571,19 +571,20 @@ sub default_label_indexes {
 
 =head2 make_link()
 
-  $url = $browser->make_link($feature,$panel)
+  $url = $browser->make_link($feature,$panel,$label)
 
 Given a Bio::SeqFeatureI object, turn it into a URL suitable for use
 in a hypertext link.  For convenience, the Bio::Graphics panel is also
-provided.
+provided.  If $label is provided, then its link overrides the type of
+the feature.
 
 =cut
 
 sub make_link {
   my $self = shift;
-  my $feature = shift;
-  my $panel   = shift;
-  return $self->config->make_link($feature,$panel,$self->source);
+  my ($feature,$panel,$label) = @_;
+  my @results = $self->config->make_link($feature,$panel,$self->source,$label);
+  return wantarray ? @results : $results[0];
 }
 
 =head2 render_html()
@@ -647,7 +648,7 @@ sub render_html {
 
   return unless $segment;
 
-  my($image,$map,$panel) = $self->image_and_map(%args);
+  my($image,$map,$panel,$tracks) = $self->image_and_map(%args);
 
 
   my ($width,$height) = $image->getBounds;
@@ -657,7 +658,7 @@ sub render_html {
   my $img_map = '';
   if ($do_map) {
     $self->_load_aggregator_types($segment);
-    $img_map = $self->make_map($map,$do_centering_map,$panel)
+    $img_map = $self->make_map($map,$do_centering_map,$panel,$tracks)
   }
   return wantarray ? ($img,$img_map) : join "<br>",$img,$img_map;
 }
@@ -738,7 +739,8 @@ sub tmpdir {
 
 sub make_map {
   my $self = shift;
-  my ($boxes,$centering_map,$panel) = @_;
+  my ($boxes,$centering_map,$panel,$tracks) = @_;
+  my %track2label = reverse %$tracks;
   my $map = qq(<map name="hmap" id="hmap">\n);
 
   my $flip = $panel->flip;
@@ -756,9 +758,10 @@ sub make_map {
       next;
     }
 
-    my $href   = $self->make_href($_->[0],$panel) or next;
-    my $alt    = unescape($self->make_title($_->[0],$panel));
-    my $target = $self->config->make_link_target($_->[0],$panel);
+    my $label  = $track2label{$_->[5]};
+    my $href   = $self->make_href($_->[0],$panel,$label) or next;
+    my $alt    = unescape($self->make_title($_->[0],$panel,$label));
+    my $target = $self->config->make_link_target($_->[0],$panel,$label);
     my $t      = defined($target) ? qq(target="$target") : '';
     $map .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href" title="$alt" alt="$alt" $t/>\n);
   }
@@ -805,20 +808,20 @@ sub make_centering_map {
 
 sub make_href {
   my $self = shift;
-  my ($feature,$panel)   = @_;
+  my ($feature,$panel,$label)   = @_;
 
   if ($feature->can('make_link')) {
     return $feature->make_link;
   } else {
-    return $self->make_link($feature,$panel);
+    return $self->make_link($feature,$panel,$label);
   }
 }
 
 sub make_title {
   my $self             = shift;
-  my ($feature,$panel) = @_;
+  my ($feature,$panel,$label) = @_;
   return $feature->make_title if $feature->can('make_title');
-  return $self->config->make_title($feature,$panel);
+  return $self->config->make_title($feature,$panel,$label);
 }
 
 # Generate the image and the box list, and return as a two-element list.
@@ -1043,7 +1046,7 @@ sub image_and_map {
   return $gd   unless wantarray;
 
   my $boxes    = $panel->boxes;
-  return ($gd,$boxes,$panel);
+  return ($gd,$boxes,$panel,\%tracks);
 }
 
 =head2 overview()
@@ -1070,7 +1073,6 @@ sub overview {
   my ($segment) = $factory->segment(-class=>$class,
 				    -name=>$partial_segment->seq_id);
   warn "factory = $factory, segment = $segment" if DEBUG;
-
   $segment   ||= $partial_segment;  # paranoia
 
   # Temporary kludge until I can figure out a more
@@ -1082,7 +1084,7 @@ sub overview {
   my $width          = $self->width;
   my @tracks         = $self->config->overview_tracks;
   my ($padl,$padr)   = $self->overview_pad(\@tracks);
-  
+
   my $panel = Bio::Graphics::Panel->new(-segment => $segment,
 					-width   => $width,
 					-bgcolor => $self->setting('overview bgcolor')
@@ -1143,7 +1145,10 @@ sub add_overview_landmarks {
 
   my %count;
   while (my $feature = $iterator->next_seq) {
-    my $track_name = eval{$type2track{$feature->type}} || $type2track{$feature->primary_tag} || next;
+    my $track_name = eval{$type2track{$feature->type}}
+      || $type2track{$feature->primary_tag}
+	|| eval{$type2track{$feature->method}}
+	  || next;
     my $track = $track{$track_name} or next;
     $track->add_feature($feature);
     $count{$track_name}++;
@@ -1800,8 +1805,9 @@ sub summary_mode {
 # override make_link to allow for code references
 sub make_link {
   my $self     = shift;
-  my ($feature,$panel,$source)  = @_;
-  my $label    = $self->feature2label($feature) or return;
+  my ($feature,$panel,$source,$label)  = @_;
+  $label     ||= $self->feature2label($label);
+
   my $link     = $self->code_setting($label,'link');
   $link        = $self->code_setting('TRACK DEFAULTS'=>'link') unless defined $link;
   $link        = $self->code_setting(general=>'link')          unless defined $link;
@@ -1815,7 +1821,7 @@ sub make_link {
     my $n     = $feature->display_name;
     my $c     = $feature->seq_id;
     my $name  = CGI::escape("$n");  # workaround CGI.pm bug
-    my $class = eval {CGI::escape($feature->class)};
+    my $class = eval {CGI::escape($feature->class)}||'';
     my $ref   = CGI::escape("$c");  # workaround again
     my $start = CGI::escape($feature->start);
     my $end   = CGI::escape($feature->end);
@@ -1828,12 +1834,12 @@ sub make_link {
 # make the title for an object on a clickable imagemap
 sub make_title {
   my $self = shift;
-  my ($feature,$panel) = @_;
+  my ($feature,$panel,$label) = @_;
   local $^W = 0;  # tired of uninitialized variable warnings
 
   my ($title,$key) = ('','');
  TRY: {
-    my $label    = $self->feature2label($feature) or last TRY;
+    $label     ||= $self->feature2label($feature) or last TRY;
     $key         = $self->setting($label,'key') || $label;
     $key         =~ s/s$//;
     my $link     = $self->code_setting($label,'title')
@@ -1873,8 +1879,8 @@ sub make_title {
 
 sub make_link_target {
   my $self = shift;
-  my ($feature,$panel) = @_;
-  my $label    = $self->feature2label($feature) or return;
+  my ($feature,$panel,$label) = @_;
+  $label    ||= $self->feature2label($feature) or return;
   my $link_target = $self->code_setting($label,'link_target')
     || $self->code_setting('LINK DEFAULTS' => 'link_target')
     || $self->code_setting(general => 'link_target');

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.45 2003-11-21 21:56:12 tharris Exp $
+# $Id: gbrowse.PLS,v 1.46 2003-12-06 00:00:36 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1673,7 +1673,7 @@ sub load_remote_sources {
       push @result,$file;
       next;
     }
-    my $feature_file = get_remote_feature_data($file,$rel2abs) or next;
+    my $feature_file = get_remote_feature_data($file,$rel2abs,$settings) or next;
     push @result,$feature_file;
   }
   return @result;
@@ -1707,8 +1707,17 @@ sub load_plugin_annotators {
 
 
 sub get_remote_feature_data {
-  my ($url,$rel2abs) = @_;
+  my ($url,$rel2abs,$settings) = @_;
   warn "get_remote_feature_data(): fetching $url" if DEBUG;
+
+  if ($url =~ m!^(http://.+/das)/([^/]+)$!) { # DAS source!
+    unless (eval "require Bio::Das") {
+      error($CONFIG->tr('NO_DAS'));
+      return;
+    }
+    my $das      =  Bio::Das->new(-source=>$1,-dsn=>$2);
+    return $das;
+  }
 
   unless ($UA) {
     unless (eval "require LWP") {

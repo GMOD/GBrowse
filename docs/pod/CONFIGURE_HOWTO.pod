@@ -22,7 +22,9 @@ Project (L<http://www.gmod.org/>).
 
 =item G. CHANGING THE LOCATION OF THE CONFIGURATION FILES
 
-=item H. FURTHER INFORMATION
+=item H. USING DAS (DISTRIBUTED ANNOTATION SYSTEM) DATABASES
+
+=item I. FURTHER INFORMATION
 
 =back
 
@@ -1816,7 +1818,50 @@ For example:
    PerlSetVar      GBrowseConf /etc/gbrowse.conf
  </Directory>
 
-=head1 H. FURTHER INFORMATION
+=head1 H. USING DAS (DISTRIBUTED ANNOTATION SYSTEM) DATABASES
+
+GBrowse has limited DAS support, allowing it to visualize data from a
+single DAS source.  To get this support, you must use Bio::Das version
+0.90 or higher, available from http://www.biodas.org (look for the
+"Bio-Das2" library).
+
+A sample [GENERAL] configuration section looks like this:
+
+ [GENERAL]
+ description   = Das Example Database (dicty)
+ db_adaptor    = Bio::Das
+ db_args       = -source http://www.biodas.org/cgi-bin/das 
+	         -dsn    dicty
+
+The db_adaptor option must be set to "Bio::Das".  The db_args option
+must contain a -source pointing to the base of the remote DAS server,
+and a -dsn pointing to the name of the annotation database.
+
+The remainder of the configuration file should be configured as
+described earlier.  The following short script will return a list of
+the feature types known to the remote DAS server.  You can use the
+output of this script as the basis for the tracks to configure.
+
+ #!/usr/bin/perl
+
+ use strict;
+
+ use Bio::Das;
+ my $db = Bio::Das->new('http://localhost/cgi-bin/das'=>'dicty');
+ print join "\n",$db->types;
+
+Limitations: 
+
+The DAS implementation does not descend into subcomponents.  For
+example, if the user requests features on a chromosome, but the remote
+DAS server has annotated genes using contig coordinates, then the
+genes will not appear on the chromosome.
+
+The gbrowse_details script does not provide useful information because
+the DAS/1 protocol does not provide a way to retrieve attribute
+information on a named feature.
+
+=head1 I. FURTHER INFORMATION
 
 For further information, bug reports, etc, please consult the mailing
 lists at www.gmod.org.  The main mailing list for gbrowse support is

@@ -54,9 +54,9 @@ use Text::Tabs;
 use Text::Shellwords;
 use File::Basename 'basename';
 use File::Spec;
-#use Carp qw(:DEFAULT croak);
+use Carp qw(:DEFAULT croak);
 use CGI qw(:standard escape escapeHTML center *table *dl *TR *td);
-use CGI::Carp 'fatalsToBrowser';
+# use CGI::Carp 'fatalsToBrowser';
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $CONF_DIR
 	    $PLUGINS $PRESETS

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.73 2004-08-19 14:19:40 scottcain Exp $
+# $Id: Segment.pm,v 1.74 2004-08-24 03:01:51 scottcain Exp $
 
 =head1 NAME
 
@@ -721,9 +721,7 @@ sub features {
     my $interbase_start = $$hashref{fmin};
     my $base_start      = $interbase_start +1;
 
-    my $source = $$hashref{dbxref_id} ?
-                 $factory->dbxref2source($$hashref{dbxref_id}) 
-               : ".";
+    my $source = $factory->dbxref2source($$hashref{dbxref_id}) || "" ;
     my $type   = $factory->term2name($$hashref{type_id}). ":$source";
 
     $feat = Bio::DB::Das::Chado::Segment::Feature->new(

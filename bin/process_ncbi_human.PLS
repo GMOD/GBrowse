@@ -22,19 +22,19 @@ print OUT <<'!NO!SUBS!';
 
 =head1 NAME
 
-process_ncbi_human.pl - Massage NCBI chromosome annotation into GFF-format suitable for Bio::DB::GFF
+ncbi_2_gff.pl - Massage NCBI chromosome annotation into GFF-format suitable for Bio::DB::GFF
 
 =head1 VERSION (CVS-info)
 
  $RCSfile: process_ncbi_human.PLS,v $
- $Revision: 1.1 $
+ $Revision: 1.2 $
  $Author: lstein $
- $Date: 2002-07-05 13:08:29 $
+ $Date: 2002-08-13 12:19:48 $
 
 
 =head2 SYNOPSIS
 
-   perl process_ncbi_human.pl [options] /path/to/gzipped/datafile(s)
+   perl ncbi_to_gff.pl [options] /path/to/gzipped/datafile(s)
 
 =head2 DESCRIPTION
 
@@ -46,21 +46,24 @@ into the GFF-format recognized by Bio::DB::GFF. If the resulting
 GFF-files are loaded into a Bio::DB:GFF database using the utilities
 described below, the annotation can be viewed in the Generic Genome
 Browser (http://www.gmod.org/ggb/) and interfaced with using the
-Bio::DB:GFF libraries.  (NB these NCBI-datafiles are dumps from their
-own mapviewer database backend, according to their READMEs)
+Bio::DB:GFF libraries.
+
+  (NB these NCBI-datafiles are dumps from their own mapviewer database
+  backend, according to their READMEs)
 
 To produce the GFF-files, download all the chr*sequence.gz files from
 the FTP-directory above. While in that same directory, run the
 following example command (see also help clause by running script with
 no arguments):
 
-process_ncbi_human.pl --locuslink [path to LL.out_hs.gz] chr*sequence.gz This
+ncbi_to_gff.pl --locuslink [path to LL.out_hs.gz] chr*sequence.gz This
 will unzip all the files on the fly and open an output file with the
 name chrom[$chrom]_ncbiannotation.gff for each, read the LocusLink
 records into an in-memory hash and then read through the NCBI feature
 lines, lookup 'locus' features in the LocusLink hash for details on
-'locus' features and print to the proper GFF files.  LL.out_hs.gz is
-accessible here at the time of writing:
+'locus' features and print to the proper GFF files.  
+
+LL.out_hs.gz is accessible here at the time of writing:
 
   ftp://ftp.ncbi.nih.gov/refseq/LocusLink/LL.out_hs.gz
 
@@ -73,7 +76,10 @@ to add or remove features, but if you add then you will have to add
 handling for those new features.
 
 To bulk-import the GFF-files into a Bio::DB::GFF database, use the
-bulk_load_gff.pl utility provided with Bio::DB::GFF
+bulk_load_gff.pl or load_gff.pl utilities provided with Bio::DB::GFF.
+
+Note that this utility contains some code that is specific for the TSC
+database at CSHL.  This code can safely be ignored.
 
 =head2 AUTHOR
 
@@ -89,6 +95,7 @@ Copyright (c) 2002 Cold Spring Harbor Laboratory
 use strict;
 use Getopt::Long;
 use IO::File;
+use Bio::DB::GFF::Util::Binning 'bin';
 use File::Basename;
 
 my $self = basename($0);
@@ -99,12 +106,14 @@ my $opt = &GetOptions ('locuslink=s'  => \$doLocuslink,
 die <<USAGE if(!defined($opt) || @ARGV == 0);
 Usage: $self [options] <GFF filename or wildcard pattern>
 
-Massage NCBI chromosome annotation datafiles into GFF-format suitable
-for importing into Bio::DB::GFF database. Note that the program
-handles both unzipped datafiles and gzipped, bzipped or compressed
-ones, so do not bother with unzipping big downloads before running.
+  Massage NCBI chromosome annotation datafiles into GFF-format
+  suitable for importing into Bio::DB::GFF database. Note that the
+  program handles both unzipped datafiles and gzipped, bzipped or
+  compressed ones, so do not bother with unzipping big downloads
+  before running.
 
   See 'perldoc $self' for more info
+
 Options:
    --locuslink Path to zipped LocusLink file, currently located at
                ftp://ftp.ncbi.nih.gov/refseq/LocusLink/LL.out_hs.gz
@@ -112,22 +121,64 @@ Options:
    --tscsnp    DSN string to TSC MySQL database to use for auxiliary
                SNP feature attributes (CSHL internal use)
 
-  Options can be abbreviated.  For example, you can use -l for --locuslink.
+  Options can be abbreviated.  For example, you can use -l for
+  --locuslink.
 
 Author: Gudmundur Arni Thorisson <mummi\@cshl.org>
 
-Copyright (c) 2002 Cold Spring Harbor Laboratory
-       This library is free software; you can redistribute it
-       and/or modify it under the same terms as Perl itself.
+Copyright (c) 2002 Cold Spring Harbor Laboratory This library is free
+software; you can redistribute it and/or modify it under the same
+terms as Perl itself.
 
 USAGE
 ;
 
-#If TSC SNP processing is to be performed, connect to db
+#Prepare decompression streams for input files, if necessary
+my %FH;
+print "\nPreparing input and output streams:\n";
+foreach (@ARGV) {
+    my ($chrom) = /0?([0-9,XYxy]{1,2})/;
+    unless($chrom)
+    {
+	print "can't get chrom name from filename '$_', SKIPPING";
+	next;
+    }
+    $FH{'Chr'.$chrom} = IO::File->new("chrom$chrom\_ncbiannotation.gff",">") or die $_,": $!";
+    $_ = "gunzip -c $_ |" if /\.gz$/;
+    $_ = "uncompress -c $_ |" if /\.Z$/;
+    $_ = "bunzip2 -c $_ |" if /\.bz2$/;
+}
+
+#If TSC SNP processing is to be performed, connect to db and prepare query
 my $dbh;
+my $tsc_sth;
 if($doTSCSNP)
 {
-    $dbh = &dbConnect($doTSCSNP); #using the given dsn-string
+    #Is this an argstring or file with the string in it?
+    my $dbistring = -f $doTSCSNP ? `cat $doTSCSNP` : $doTSCSNP;
+    $dbh = &dbConnect($dbistring);
+    print "Connecting to TSC database using '$dbistring'\n";
+    my $query = qq/
+SELECT ta.snp_id,
+       ta.variation,
+       tr.locus_id,
+       tr.gene_symbol,
+       tr.fxn_class,
+       tf.institute_code as lab,
+       tf.pop_type,
+       tf.outcome,
+       tf.pooled_data,
+       tf.num_people_typed,
+       tf.allele_a_freq as A,
+       tf.allele_c_freq as C,
+       tf.allele_g_freq as G,
+       tf.allele_t_freq as T
+FROM tbl_dbsnp_2_tsc dbsnp
+LEFT JOIN tbl_refsnp_gene_fxn tr on tr.refsnp_id=dbsnp.rs_id
+LEFT JOIN tbl_allele_freq tf on tf.dbsnp_id=dbsnp.ss_id
+LEFT JOIN TBL_SNP_ALL ta on ta.snp_id = dbsnp.tsc_id
+WHERE dbsnp.rs_id = ? limit 1/;
+    $tsc_sth = $dbh->prepare($query);
 }
 
 #If Locuslink-processing is to be performed, Read 
@@ -149,33 +200,26 @@ if($doLocuslink)
 	my ($id,$osym,$isym,$mim,$chrom,$loc,$desc,$taxid,$db) = split /\t/;
 	my $name = $osym || $isym;
 	#print "  Loading in Locuslink id='$id',osym='$osym',isym='$isym',name='$name',desc='$desc'\n";
-	$llData->{$name}->{id} = $id;
-	$llData->{$name}->{isym} = $isym;
-	$llData->{$name}->{mim}  = $mim;
-	$llData->{$name}->{chrom}= $chrom;
-	$llData->{$name}->{loc}  = $loc;
-	$llData->{$name}->{desc} = $desc;
-	$llData->{$name}->{taxid}= $taxid;
-	$llData->{$name}->{db}   = $db;
+	$llData->{$id}->{name} = $name;
+	$llData->{$id}->{isym} = $isym;
+	$llData->{$id}->{mim}  = $mim;
+	$llData->{$id}->{chrom}= $chrom;
+	$llData->{$id}->{loc}  = $loc;
+	$llData->{$id}->{desc} = $desc;
+	$llData->{$id}->{taxid}= $taxid;
+	$llData->{$id}->{db}   = $db;
     }
     close LL;
 }
 
-my %methods = (EST_Human  => 'similarity',
-	       EST_Mouse  => 'similarity',
-	       EST_       => 'similarity',
-	       );
 
-
-my %DBs     = (snp        => 'dbSNP',
-	       sts        => 'dbSTS',
-	       locus      => 'LocusLink',
-	       transcript => 'RefSeq',
-	       component  => 'Genbank',
-	       contig     => 'RefSeq',
-	       GS_TRAN    => 'GS_TRAN',
-	       clone      => 'CloneRegistry',
-	       );
+my %sources     = (snp        => 'dbSNP',
+		   sts        => 'UniSTS',
+		   locus      => 'LocusLink',
+		   transcript => 'RefSeq',
+		   component  => 'Genbank',
+		   contig     => 'RefSeq',
+		   );
 my %classes = (component    => 'Sequence',
 	       sts          => 'STS',
 	       snp          => 'SNP',
@@ -190,73 +234,69 @@ my %subcomponents = (transcript => 'exon',
 		     component  => 'subcomponent',
 		     );
 
-my %groups = ();
-my $max = 0;
-
-#Prepare decompression streams for input files, if necessary
-my %FH;
-print "Preparing input and output streams:\n";
-foreach (@ARGV) {
-    my ($chrom) = /chr0?(\w+)\_sequence/;
-    $FH{'Chr'.$chrom} = IO::File->new("chrom$chrom\_ncbiannotation.gff",">") or die $_,": $!";
-    $_ = "gunzip -c $_ |" if /\.gz$/;
-    $_ = "uncompress -c $_ |" if /\.Z$/;
-    $_ = "bunzip2 -c $_ |" if /\.bz2$/;
-}
 
 #And now process all incoming data streams
 my $i = 0;
 my %maxCoords;
-my $SKIP = q/^EST|^TAG|^GS_TRAN/;
+my $SKIP = q/^EST|^TAG|^GS_TRAN|component|clone/;
+my %groups   = (); #aggregate parent features
+my %density  = ();
+my $binSize  = 100000;
+my $max = 0;
 while(<>)
 {
     chomp;
-    next if /^\#/;      
-    my ($type,$objId,$name,$chromctg,$start,$stop,$strand) = split "\t";
+    next if /^\#/;
+    my ($type,$objId,$name,$chrom,$start,$stop,$strand) = split "\t";
+    my $score = '.';
     next if $type =~ /$SKIP/;
     $i++;
-    my ($chrom,$ctg) = split /\|/,$chromctg;
+    #my ($chrom,$ctg) = split /\|/,$chromctg;
+    next if $chrom =~ /NT/; #ambigously placed NT-contig at start of chrom
     $chrom = "Chr$chrom";
     $max = $stop if $stop > $max;
-    my $source = 'NCBI';
     my $class;
     unless($class  = $classes{$type})
     {
 	print "need class for type '$type': '$_' (OR add type to \$SKIP pattern\n";
 	next;
     }
-    my $method = $methods{$type} || $type;
-    my $db = $DBs{$type};
-    my $attributes = qq/$class "$name"; Name "$name"/;
-
+    my $method = $type;
+    my $source = $sources{$type} || die "ERROR: need source for type '$type'";
+    $objId = $name if $type =~ /transcript|snp|contig/;
+    my $attributes = qq/$class $objId; Name $name/;
+    my $bin = &bin($start,$stop,$binSize);
+    $bin =~ s/^[10]+\.[0]+//;
+    $bin ||= 0;
+    #print "\$bin='$bin' ($start=>$stop)\n";
+    $density{$chrom}->{$method.'_dens:'.$source}->{$bin}++;
+    
     #Deduce start/stop for certain parent features to be printed
     #to output file AFTER we've processed everything. This is 
     #necessary because NCBI only gives start/stop values for the child
     #features, like exons in a gene, but not the whole parent feature
     if($type =~ /transcript|locus/)
     {
-	$groups{$type}->{$name}->{$chrom}->{start} ||= 9999999999999;
-	$groups{$type}->{$name}->{$chrom}->{stop} ||= 0;
-	$groups{$type}->{$name}->{$chrom}->{start} = $start 
-	    if  $start < $groups{$type}->{$name}->{$chrom}->{start};
-	$groups{$type}->{$name}->{$chrom}->{stop} = $stop 
-	    if $stop > $groups{$type}->{$name}->{$chrom}->{stop}; 
-	$groups{$type}->{$name}->{$chrom}->{source} = $source;
-	$groups{$type}->{$name}->{$chrom}->{strand} = $strand;
-	$groups{$type}->{$name}->{$chrom}->{method} = $method;
-	$groups{$type}->{$name}->{$chrom}->{db} = $db;
-	$groups{$type}->{$name}->{$chrom}->{class} = $class;
+	$groups{$type}->{$objId}->{$chrom}->{name} = $name;
+	$groups{$type}->{$objId}->{$chrom}->{start} ||= 9999999999999;
+	$groups{$type}->{$objId}->{$chrom}->{stop} ||= 0;
+	$groups{$type}->{$objId}->{$chrom}->{start} = $start 
+	    if  $start < $groups{$type}->{$objId}->{$chrom}->{start};
+	$groups{$type}->{$objId}->{$chrom}->{stop} = $stop 
+	    if $stop > $groups{$type}->{$objId}->{$chrom}->{stop}; 
+	$groups{$type}->{$objId}->{$chrom}->{source} = $source;
+	$groups{$type}->{$objId}->{$chrom}->{strand} = $strand;
+	$groups{$type}->{$objId}->{$chrom}->{method} = $method;
+	$groups{$type}->{$objId}->{$chrom}->{class} = $class;
 	$method  = $subcomponents{$type};
 	next if  $type eq 'locus';
     }
     #This is for internal CSHL usage
     elsif($type =~ /snp/ && $doTSCSNP)
     {
-	#print "  -got refSNP ID: $name, let's do TSC lookup\n";
 	if(my $tscAttributes = &queryTSCdb($dbh,$name))
 	{
-	    $attributes .= qq/; IsTSC "1"/;
-	    $FH{$chrom}->print(qq/$chrom\tTSC\tsnp\t$start\t$stop\t.\t$strand\t.\t$tscAttributes\n/);
+	    $attributes .= $tscAttributes;
 	}
     }
 
@@ -267,7 +307,7 @@ while(<>)
     }
 
     #And finally print to the proper output stream
-    $FH{$chrom}->print(qq/$chrom\t$source\t$method\t$start\t$stop\t.\t$strand\t.\t$attributes\n/);
+    $FH{$chrom}->print(qq/$chrom\t$source\t$method\t$start\t$stop\t.\t$strand\t$score\t$attributes\n/);
 
     #Collect max coordinates, to deduce chromosome sizes
     $maxCoords{$chrom} ||= 0;
@@ -284,34 +324,57 @@ while(<>)
 
 #Print out group features like transcripts and genes that 
 #were collected before and print to the proper output streams
+print "\nPrinting out collected aggregate features\n";
 foreach my $type(keys %groups)
 {
-    foreach my $name (keys %{$groups{$type}})
+    foreach my $objId (keys %{$groups{$type}})
     {
 	#print "\$name='$name'\n";
-	foreach my $chrom(keys %{$groups{$type}->{$name}})
+	foreach my $chrom(keys %{$groups{$type}->{$objId}})
 	{
-	    my $start   = $groups{$type}->{$name}->{$chrom}->{start};
-	    my $stop    = $groups{$type}->{$name}->{$chrom}->{stop};
-	    my $db      = $groups{$type}->{$name}->{$chrom}->{db};
-	    my $strand  = $groups{$type}->{$name}->{$chrom}->{strand};
-	    my $method  = $groups{$type}->{$name}->{$chrom}->{method};
-	    my $class   = $groups{$type}->{$name}->{$chrom}->{class};
-	    my $source  = $groups{$type}->{$name}->{$chrom}->{source};
+	    my $name    = $groups{$type}->{$objId}->{$chrom}->{name};
+	    my $start   = $groups{$type}->{$objId}->{$chrom}->{start};
+	    my $stop    = $groups{$type}->{$objId}->{$chrom}->{stop};
+	    my $strand  = $groups{$type}->{$objId}->{$chrom}->{strand};
+	    my $method  = $groups{$type}->{$objId}->{$chrom}->{method};
+	    my $class   = $groups{$type}->{$objId}->{$chrom}->{class};
+	    my $source  = $groups{$type}->{$objId}->{$chrom}->{source};
 	    if($type eq 'locus' && $doLocuslink)
 	    {
 		my $llInfo = '';
-		my $ll = $llData->{$name};
+		my $ll    = $llData->{$objId};
 		my $id    = $ll->{id};
-		my $note  = $ll->{desc} ? qq/Note "$ll->{desc}"/ : ' ';
+		my $note  = $ll->{desc} ? qq/Note "$name:$ll->{desc}"/ : ' ';
 		$note =~ s/;/\\;/g;
-		$FH{$chrom}->print( qq/$chrom\t$source\t$method\t$start\t$stop\t.\t$strand\t.\tLocus "$name"; Name "$name"; $note\n/);
+		$FH{$chrom}->print( qq/$chrom\t$source\t$method\t$start\t$stop\t.\t$strand\t.\tLocus $objId; Name $name; Alias $name; $note\n/);
 	    }
 	    else
 	    {
-		$FH{$chrom}->print(qq/$chrom\t$source\t$method\t$start\t$stop\t.\t$strand\t.\t$class "$name"; Name "$name"\n/);
+		$FH{$chrom}->print(qq/$chrom\t$source\t$method\t$start\t$stop\t.\t$strand\t.\t$class $name; Name $name\n/);
 	    }
 	}
+    }
+}
+
+#   	$density{$method.'_dens:'.$source}->{$bin}++;
+#Print out the collected binned density stats
+print "Printing out density stats\n";
+
+foreach my $chrom(sort keys %density)
+{
+    foreach my $meth(sort keys %{$density{$chrom}})
+    {
+	my $bc = 0;
+	foreach my $bin(sort {$a<=>$b}keys %{$density{$chrom}->{$meth}})
+	{
+	    $bc++;
+	    my $count = $density{$chrom}->{$meth}->{$bin};
+	    my $binstart = $bin*$binSize;
+	    my $binstop  = $binstart+$binSize;
+	    print "  \$bin=$bin,\$binstart=$binstart,\$count=$count\n";
+	    $FH{$chrom}->print(qq/$chrom\tNCBI\t$meth\t$binstart\t$binstop\t$count\t.\t.\t\n/);
+	}
+	print " $bc bins for method $meth\n";
     }
 }
 
@@ -321,9 +384,7 @@ while(my ($chrom,$max) = each %maxCoords)
     $FH{$chrom}->print(qq/$chrom\tassembly\tchromosome\t1\t$max\t.\t+\t.\tSequence \"$chrom\"\n/);
 }
 
-print "DONE. $i features parsed\n\n";
-
-exit 0;
+print "\nDONE. $i features parsed\n\n";
 
 #------------------------------------------------
 # Subroutines
@@ -337,18 +398,34 @@ sub queryTSCdb
     my $rs_id = shift;
     my $attributes;
     $rs_id  =~ s/rs//;
-    my $query = qq/SELECT td.*,a.snp_id,a.variation,a.institute_id,a.dbsnp_id,af.pop_type,i.institute_code from TBL_SNP_ALL a, tbl_tscid_2_dbsnpids td,TBL_INSTITUTE_INFO i  LEFT JOIN tbl_allele_freq af on af.snp_id=a.snp_id WHERE a.snp_id = td.tsc_id and td.rs_id=$rs_id and i.institute_id=a.institute_id limit 1/;
-    my $tscInfo = $dbh->selectrow_hashref($query) || return undef;
-    my $tsc_id = sprintf("TSC%7.7d", $tscInfo->{snp_id});
-    my $var = $tscInfo->{variation};
-    my $lab = $tscInfo->{institute_code};
-    my $dbsnp_id = $tscInfo->{dbsnp_id};
-    $attributes .= qq/SNP "$tsc_id"; Name "$tsc_id"/;
-    $attributes .= qq/; Variation "$var"/ if $var;
-    $attributes .= qq/; Laboratory "$lab"/ if $lab;
-    $attributes .= qq/; DBSNP_ID "$dbsnp_id"/ if $dbsnp_id;
-    $attributes .= qq/; IsAFP "1"/ if $tscInfo->{pop_type};
-    #while(my($key,$val) = each %$tscInfo){print "  $key=>'$val'\n";}
+
+    #Baeat vid herna, na i classification string fra dbSNP
+    my ($tsc_id,$var,$lab,$dbsnp_id,$class,$gene_symbol,$locus_id,$freq);
+    $tsc_sth->execute($rs_id) || die $@;
+    my $tscInfo = $tsc_sth->fetchrow_hashref() || return undef;
+    do{
+	#while(my($k,$v) = each %$tscInfo){print "  '$k'=>'$v'\n";}
+	#dbSNP stuff, may apply to more than just TSC snps
+	$locus_id = $tscInfo->{locus_id};
+	$class = $tscInfo->{fxn_class};
+	$gene_symbol = $tscInfo->{gene_symbol};
+ 	$attributes .= qq/; SNPClass $class/ if $class;
+
+	#TSC specific stuff
+	$tsc_id = $tscInfo->{snp_id} || return $attributes;
+	$tsc_id = sprintf("TSC%7.7d", $tsc_id);
+	$var = lc $tscInfo->{variation};
+	$lab = $tscInfo->{institute_code};
+	$dbsnp_id = $tscInfo->{dbsnp_id};
+	$freq = 1 if $tscInfo->{pop_type} && $tscInfo->{outcome} eq 'S';
+	$attributes .= qq/; Alias $tsc_id/;
+	#$attributes .= qq/; Alias ss$dbsnp_id/ if $dbsnp_id;
+	#$attributes .= qq/; TSCName $tsc_id/;
+	#$attributes .= qq/; Note $tsc_id($var)/;
+	$attributes .= qq/; Variation $var/ if $var;
+	$attributes .= qq/; AllFreq 1/ if $freq;
+    }while($tscInfo = $tsc_sth->fetchrow_hashref());
+    $rs_id = $dbh=$tsc_id=$var=$lab=$dbsnp_id=$class=$gene_symbol=$locus_id= $tscInfo=$freq= undef;
     return  $attributes;
 }
 

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.87 2004-05-15 23:02:34 lstein Exp $
+# $Id: gbrowse.PLS,v 1.88 2004-05-19 15:27:37 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -472,7 +472,8 @@ sub detail_panel {
     resize(\$segment);
 
     $CONFIG->width($page_settings->{width});
-    my @tracks_to_show = grep {$page_settings->{features}{$_}{visible}} @{$page_settings->{tracks}};
+    my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} && !/:overview$/ }
+                               @{$page_settings->{tracks}};
     my %options = map {$_=>$page_settings->{features}{$_}{options}} @tracks_to_show;
     my %limit   = map {$_=>$page_settings->{features}{$_}{limit}}   @tracks_to_show;
     my $h_callback = make_hilite_callback($page_settings);

@@ -2,6 +2,7 @@ package Bio::Graphics::Browser::PadAlignment;
 
 use strict;
 use Bio::Graphics::Browser::Markup;
+use Carp 'croak';
 use constant DEBUG=>0;
 
 =head1 NAME
@@ -11,9 +12,9 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 =head1 VERSION (CVS-info)
 
  $RCSfile: PadAlignment.pm,v $
- $Revision: 1.15 $
+ $Revision: 1.16 $
  $Author: lstein $
- $Date: 2003-10-01 17:40:47 $
+ $Date: 2004-06-25 17:26:15 $
 
 =head1 SYNOPSIS
 
@@ -80,12 +81,12 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 
 This is a utility module for pretty-printing the type of alignment
 that comes out of gbrowse, namely a multiple alignment in which each
-target is aligned to a reference genome without explicit pads or
-other spaces.
+target is aligned to a reference genome without explicit pads or other
+spaces.  An option allows it to output marked-up HTML in which
+mismatches and/or amino acid residues are marked up in color.
 
-For speed and ease of use, the module does not use form Bio::SeqI
-objects, but raw strings and alignment data structures.  This may
-change.
+The module can use either Bio::SimpleAlignment objects, or raw strings
+and alignment data structures.
 
 This module does B<not> perform multiple alignments!  It merely
 pretty-prints them!
@@ -96,11 +97,16 @@ This section describes the methods used by this class.
 
 =over 4
 
+=item $aligner = Bio::Graphics::Browser::PadAlignment->new($bio_simplealign)
+
 =item $aligner = Bio::Graphics::Browser::PadAlignment->new(\@sequences,\@alignments)
 
-Create a new aligner.  The two arguments are \@sequences, an array ref
-to the list of sequences to be aligned, and \@alignments, an array ref
-describing how the sequences are to be aligned.
+Create a new aligner.  You can initialize the object with a simple
+argument containing a L<Bio::SimpleAlign> object, or with two
+arguments giving the raw alignment data.  In the latter case, the
+first argument is \@sequences, an array ref to the list of sequences
+to be aligned, and \@alignments, an array ref describing how the
+sequences are to be aligned.
 
 \@sequences should have the following structure:
 
@@ -157,16 +163,19 @@ gap maps for each of the targets (at the cost of speed and memory
 efficiency) see the section after __END__ in the source file for this
 module.
 
-=item $align_string = $aligner->alignment(\%origins [,\%options])
+=item $align_string = $aligner->alignment([\%origins [,\%options]])
 
 This method returns a pretty-printed string of the aligned sequences.
-You may provide a hashref of sequence origins in order to control the
-numbers printed next to each line of the alignment.  The keys of the
-%origins hashref are the names of the sequences, and the values are
-the coordinate to be assigned to the first base of the sequence.  Use
-a negative number if you wish to indicate that the sequence has been
-reverse complemented (the negative number should indicate the
-coordinate of the first base in the provided sequence).
+If you created the alignment using a Bio::SimpleAlign object, the
+%origins hash is not needed. However, if you created the alignment
+using raw data, you will probably want to provide alignment() with a
+hashref of sequence origins in order to control the numbers printed
+next to each line of the alignment.  The keys of the %origins hashref
+are the names of the sequences, and the values are the coordinate to
+be assigned to the first base of the sequence.  Use a negative number
+if you wish to indicate that the sequence has been reverse
+complemented (the negative number should indicate the coordinate of
+the first base in the provided sequence).
 
 An optional second argument, if present, contains a hash reference to
 a set of option=>value pairs.  Three options are recognized:
@@ -178,6 +187,12 @@ a set of option=>value pairs.  Three options are recognized:
                                         Hydrophobic amino acids in grey
                                         Polar amino acids in yellow
    flip                 0|1      if true, reverse complement the whole alignment
+
+For Bio::Graphics::Browser::PadAlignment objects created using a
+Bio::SimpleAlignment, you will want to call alignment like this:
+
+ my $options       = {show_mismatches=>1,flip=>1}; # or whatever options you want
+ $alignment_string = $aligner->alignment({},\%options);
 
 =back
 
@@ -243,9 +258,14 @@ my %aa_type = (
 
 sub new {
   my $class = shift;
-  my $dnas   = shift;  # array ref of DNAs in the order in which they will be printed
+  my ($dnas,$aligns,$origins);
+  if (@_ == 1 && $_[0]->isa('Bio::SimpleAlign')) {
+    ($dnas,$aligns,$origins) = $class->_get_simple_align_data($_[0]);
+  } else {
+    $dnas   = shift;  # array ref of DNAs in the order in which they will be printed
                        # in format [ [name1=>dna1],[name2=>dna2]...]
-  my $aligns = shift;  # array ref of alignments in format [ [targetname,srcstart,srcend,targetstart,targetend] ]
+    $aligns = shift;  # array ref of alignments in format [ [targetname,srcstart,srcend,targetstart,targetend] ]
+  }
 
   # remap data structures
   my $count = 0;
@@ -255,9 +275,10 @@ sub new {
     push @dnas,$dna;
   }
   return bless {
-		names  => \%dnas,
-		dnas   => \@dnas,
-		aligns => $aligns
+		names   => \%dnas,
+		dnas    => \@dnas,
+		aligns  => $aligns,
+		origins => $origins || {},
 		};
 }
 
@@ -429,13 +450,15 @@ sub alignment {
 
   my $show_mismatches = $options->{show_mismatches};
   my $color_code_proteins = $options->{color_code_proteins};
-  warn "color code = $color_code_proteins";
   my $flip            = $options->{flip};
 
   my @lines = $self->padded_sequences;
   my %names = reverse %{$self->{names}};  # index to name
-
   $origins ||= {};
+
+  # origins ends up being the preparsed origins from the Bio::SimpleAlign object
+  # possibly overridden by origins provided on argument list
+  $origins = {%{$self->{origins}},%{$origins}};
 
   foreach (values %names) {
     $origins->{$_} = 1 unless defined $origins->{$_};
@@ -550,7 +573,7 @@ sub alignment {
                                     $origin < 0 ? "($names{$j})"
                                                 : $names{$j},
                                     $labels[$j],$padded[$i][$j]);
-                                    
+
       $labels[$j] += $length[$i][$j] - $offset  if $origin >= 0;
       $labels[$j] -= $length[$i][$j] - $offset  if $origin < 0;
     }
@@ -559,6 +582,19 @@ sub alignment {
   }	# ---------------------------> MAJOR CHANGE ENDS HERE - Shraddha
 
   return $result;
+}
+
+sub _get_simple_align_data {
+  my $class  = shift;
+  my $algn   = shift;
+  $algn->is_flush or croak "The alignment isn't flush (all sequences same length) - sorry";
+  my $src_length = $algn->length - 1;
+
+  my @seqs       = $algn->each_seq;
+  my @dnas       = map {$_->display_id,$_->seq} @seqs;
+  my @aligns     = map {[$_->display_id,0=>$src_length,0=>$src_length]} @seqs[1..$#seqs];
+  my %origins    = map {$_->display_id,$_->strand < 0 ? -$_->start : $_->start} @seqs;
+  (\@dnas,\@aligns,\%origins);
 }
 
 1;

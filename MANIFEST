@@ -20,6 +20,7 @@ conf/languages/it.pm
 conf/languages/ja.pm
 conf/languages/ko.pm
 conf/languages/nl.pm
+conf/languages/POSIX.pm
 conf/languages/zh.pm
 conf/plugins/BatchDumper.pm
 conf/plugins/FastaDumper.pm

@@ -1,4 +1,6 @@
 1.62    Mon Apr  5 09:43:25 EDT 2004
+	* Added additional padding to prevent scales of xyplot glyph from being
+	cut off.
 	* Added ability to search within external annotation files for uploaded
 	features.  You will need to CVS update bioperl-live to get this feature.
 	* Fixed problem of external annotation files disappearing.

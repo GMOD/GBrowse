@@ -884,6 +884,14 @@ also assumed if the title option is missing or blank.
 The landmark_padding option will add the indicated number of base pairs
 to the right and left of all landmarks that are searched for by name.
 
+=item * image_padding = 25
+
+The image_padding option will add the indicated amount of whitespace
+(in pixels) to the right and left of the detail panel.  The default is
+25 pixels. You may need to adjust this if you are using the xyplot glyph
+and finding that the scale (which is printed outside the graph area) is
+being cut off.
+
 =back
 
 =head2 B3. Track Sections

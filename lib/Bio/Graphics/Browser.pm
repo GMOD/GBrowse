@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.137 2004-04-08 13:06:44 lstein Exp $
+# $Id: Browser.pm,v 1.138 2004-04-13 23:44:29 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -83,7 +83,8 @@ use constant MAX_SEGMENT         => 1_000_000;
 use constant DEFAULT_SEGMENT     => 100_000;
 use constant DEFAULT_RANGES      => q(100 500 1000 5000 10000 25000 100000 200000 400000);
 use constant MIN_OVERVIEW_PAD    => 25;
-use constant PAD_OVERVIEW_BOTTOM => 3;
+use constant PAD_OVERVIEW_BOTTOM => 5;
+use constant PAD_DETAIL_SIDES    => 25;
 
 use constant DEBUG => 0;
 
@@ -647,6 +648,9 @@ The arguments are a series of tag=>value pairs, where tags are:
 
   hilite_callback     Callback for performing hilighting
 
+Any arguments names that begin with an initial - (hyphen) are passed
+through to Bio::Graphics::Panel->new() directly
+
 =cut
 
 sub render_html {
@@ -850,6 +854,9 @@ sub make_title {
 #    'title'         A title for the image
 #    'noscale'       Suppress scale entirely
 #    'image_class'   Optional image class for generating SVG output (by passing GD::SVG)
+#
+# any arguments that begin with an initial - (hyphen) are passed through to Panel->new
+# directly
 sub image_and_map {
   my $self    = shift;
   my %config  = @_;
@@ -884,7 +891,10 @@ sub image_and_map {
   my $length         = $segment->length;
 
   my @feature_types = map { $conf->label2type($_,$length) } @$tracks;
-  my %filters = map {my %conf =  $conf->style($_); eval {$conf{'-filter'}} ? ($_ => $conf{'-filter'}) : ($_ => sub {1}) } @$tracks;
+  my %filters = map { my %conf =  $conf->style($_); 
+		      $conf{'-filter'} ? ($_ => $conf{'-filter'})
+			               : ($_ => \&true)
+		      } @$tracks;
 
   # Create the tracks that we will need
   my ($seg_start,$seg_stop ) = ($segment->start,$segment->end);
@@ -892,20 +902,27 @@ sub image_and_map {
     ($seg_start,$seg_stop)     = ($seg_stop,$seg_start);
     $flip = 1;
   }
-  my @argv = (-start     => $seg_start,
+
+   my @pass_thru_args = map {/^-/ ? ($_=>$config{$_}) : ()} keys %config;
+  my @argv = (
+	      @pass_thru_args,
+	      -start     => $seg_start,
 	      -end       => $seg_stop,
 	      -stop      => $seg_stop,  #backward compatibility with old bioperl
-	      -width     => $width,
 	      -key_color => $self->setting('key bgcolor')     || 'moccasin',
 	      -bgcolor   => $self->setting('detail bgcolor')  || 'white',
+	      -width     => $width,
 	      -grid      => 1,
-	      -key_style => $keystyle || $conf->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
+	      -key_style    => $keystyle || $conf->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
 	      -empty_tracks => $conf->setting(general=>'empty_tracks') 	      || DEFAULT_EMPTYTRACKS,
-	      -pad_top   => $title ? $image_class->gdMediumBoldFont->height : 0,
-	      -image_class => $image_class,
+	      -pad_top      => $title ? $image_class->gdMediumBoldFont->height : 0,
+	      -image_class  => $image_class,
 	     );
 
   push @argv, -flip => 1 if $flip;
+  my $p = defined $conf->setting(general=>'image_padding') ? $conf->setting(general=>'image_padding') 
+                                                           : PAD_DETAIL_SIDES;
+  push @argv,(-pad_left =>$p, -pad_right=>$p) if $p;
 
   my $panel = Bio::Graphics::Panel->new(@argv);
 
@@ -1653,6 +1670,8 @@ sub overview_pad {
   return (MIN_OVERVIEW_PAD,MIN_OVERVIEW_PAD) unless $max;
   return ($max * $image_class->gdMediumBoldFont->width + 3,MIN_OVERVIEW_PAD);
 }
+
+sub true { 1 }
 
 package Bio::Graphics::BrowserConfig;
 use strict;

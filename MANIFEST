@@ -33,7 +33,6 @@ conf/MobyServices/text_html_renderer.pm
 conf/MobyServices/text_plain_renderer.pm
 conf/enzymes.txt
 conf/languages/POSIX.pm
-conf/languages/de.pm
 conf/languages/en.pm
 conf/languages/es.pm
 conf/languages/fr.pm

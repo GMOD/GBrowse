@@ -12,9 +12,10 @@ use Data::Dumper;
 use Digest::MD5 qw(md5_hex);
 use vars qw($VERSION @EXPORT_OK); #temporary
 
+no warnings 'redefine';
+
 @EXPORT_OK = qw(param); #this is a temporary scaffold to clean param() calls from gbrowse.PLS
 
-no warnings 'redefine';
 sub param { print(STDERR (caller())[0]."+".(caller())[2]." called param() with: ".join(' ',map {"'$_'"} @_)."\n"); return CGI::param(@_) } #temporary
 
 my $singleton = undef;

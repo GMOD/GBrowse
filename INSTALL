@@ -31,8 +31,7 @@ Generic Genome Browser Installation
         Go to http://dev.mysql.com/downloads/mysql . Select and download the
         most recent version of the Windows package. Once the package is
         downloaded, you will need to unpack it with the WinZip program. Then
-        launch the installer. Note that there have been problems reported
-        with MySQL 4.1, therefore I suggest the newest release of 4.0.
+        launch the installer.
 
     Install GBrowse
         Apache and ActiveState Perl must be installed before you try this
@@ -64,10 +63,6 @@ Generic Genome Browser Installation
 
   2. MACINTOSH OS X INSTALL
 
-    NOTE: The MacOSX installer sited below is quite out of date. Until it is
-    brought up to date, please use the SOURCE CODE INSTALL section below for
-    Macs.
-
     Go to the following URL:
 
         ftp://dev.wormbase.org/pub/people/tharris/macosx/packages
@@ -89,9 +84,7 @@ Generic Genome Browser Installation
         widely used for web applications. It is required for most real-live
         genome annotation projects. For small projects (a few thousands of
         annotated features), you can skip installing MySQL and use an
-        in-memory database instead. Note that there have been problems
-        reported with MySQL 4.1, therefore I suggest the newest release of
-        4.0.
+        in-memory database instead.
 
     B) Apache Web Server -- <http://www.apache.org>
         The Apache web server is the industry standard open source web
@@ -112,15 +105,11 @@ Generic Genome Browser Installation
                 Digest::MD5          (any version)
                 Text::Shellwords     (any version)
 
-    E) Bioperl version 1.5 or higher -- <http://www.bioperl.org>
-        GBrowse requires functionality that exists in bioperl-live (in the
-        cvs repository). Please either use bioperl-live or Bioperl 1.5 when
-        it comes out. Until then, there is a release candidate of Bioperl
-        1.5 that is thought to be stable with regard to GBrowse. It can be
-        found at <http://bioperl.org/DIST/bioperl-1.5.0-RC1.tar.gz>. Other
-        release candidates and the official 1.5 release of Bioperl can also
-        be found in the <http://bioperl.org/DIST/> directory when they are
-        available.
+    E) Bioperl version 1.2.3 or higher -- <http://www.bioperl.org>
+        While the basic functionality of GBrowse will work with Bioperl
+        1.2.3, Bioperl 1.4 contains fixes for certain features. If you find
+        that a particular feature is not working as expected, upgrade to
+        Bioperl 1.4.
 
     Optional modules:
 
@@ -134,7 +123,8 @@ Generic Genome Browser Installation
 
     H) Bio::Das
         To display remote annotations using the Distributed Annotation
-        System. The current version can be obtained from CPAN.
+        System. The current version is available at
+        http://www.biodas.org/download/Bio::Das/Bio-Das-0.92.tar.gz
 
     I) MOBY
         Needed by gbrowse_moby to fetch and display data from MOBY

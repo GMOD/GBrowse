@@ -50,7 +50,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.29 2004-04-29 23:26:33 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.30 2004-05-14 17:56:29 markwilkinson Exp $
 ###########################################################
 
 use MOBY::Client::Central;
@@ -313,7 +313,7 @@ searches for papers about that organism.
 my $conf_dir  = conf_dir($CONF_DIR);  # conf_dir() is exported from Util.pm
 $CONFIG = open_config($CONF_DIR);  # open_config() is exported from Util.pm
 
-my %source2namespace = (
+our %source2namespace = (
 #   GFF-source      MOBY-namespace
     'Genbank'       =>      'NCBI_Acc',
 
@@ -562,7 +562,8 @@ sub printIt {
     # chose the parent object type of $thisdatatype that is closest
     # in our list of known object types.
     my ($renderer_term, $renderer_lsid) = &whichDeepestParentObject($Central, $thisdatatype, \@rtypes); 
-    $renderer_term ||='text-formatted';
+    # $renderer_term ||='text-formatted'; # personal preference
+    $renderer_term ||='text-plain';
     $renderer = $RENDERERS{$renderer_term};
 
     die "Can't render this information\n" unless $renderer;

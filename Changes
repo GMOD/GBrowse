@@ -1,3 +1,13 @@
+1.58    Mon Dec 15 15:49:14 EST 2003
+        * Fixed memory leak when used with mod_perl
+        * Fixed bug with link URL when the same feature type occurred in more
+        than one track
+        * Added SVG "Publication quality image" option
+        * Added the ability to modify html display via callbacks utilizing
+        segment and page setting objects.
+        * Fixed alignment problems in gbrowse_details
+        * Fixed several items with the chado/gmod adaptor
+
 1.57	Sat Oct  4 21:59:19 EDT 2003
 	* Fixed formatting errors in gbrowse_details alignments.
 	* Fixed bug in generation of interspersed HTML that prevented one from

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.71 2004-04-05 13:32:11 lstein Exp $
+# $Id: gbrowse.PLS,v 1.72 2004-04-05 15:50:26 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -200,16 +200,19 @@ if (param('plugin_do')) {
 
 
 ## GETTING THE SEGMENT ######################################################
-my @segments = get_segments($page_settings);
+my $features = get_features($page_settings);
 
 if ($plugin_action eq $CONFIG->tr('Find') && param('plugin')) {
   do_plugin_find($page_settings,
 		 param('plugin'),
-		 \@segments) or ($plugin_action = 'Configure'); #reconfigure
-} elsif (!@segments && $page_settings->{name}) {
-  do_keyword_search($page_settings,\@segments);
-  do_plugin_autofind($page_settings,\@segments) unless @segments;  # last resort
+		 $features) or ($plugin_action = 'Configure'); #reconfigure
+} elsif (!@$features && $page_settings->{name}) {
+  do_keyword_search($page_settings,$features);
+  do_plugin_autofind($page_settings,$features) unless @$features;  # last resort
 }
+
+my $segments = features2segments($features);
+my @segments = @$segments;
 
 # tell the plugins which segments are in play
 for my $k ( keys %$PLUGINS ) {
@@ -283,7 +286,7 @@ warn "TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 
 load_plugin_annotators($page_settings);
 adjust_tracks($page_settings);
-auto_open($page_settings,\@segments) if @segments;
+auto_open($page_settings,$features) if @$features;
 
 warn "ADJUSTED TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 
@@ -355,7 +358,7 @@ else {
   if ($page_settings->{head}) {
     print $header ? $header : h1($description);
   }
-  main_display(\@segments,$page_settings);
+  main_display($segments,$features,$page_settings);
 }
 
 print_bottom($VERSION);
@@ -365,7 +368,7 @@ exit 0;
 #--------------------------------- lots of subroutines --------------------------
 
 sub main_display {
-  my ($segments,$page_settings) = @_;
+  my ($segments,$features,$page_settings) = @_;
   my ($segment);
 
   # first of all, if there are no segments, then try a keyword search and store the results
@@ -409,7 +412,7 @@ sub main_display {
 
   # if more than one segment, then list them all
   if (@$segments > 1) {
-    multiple_choices($page_settings,$segments);
+    multiple_choices($page_settings,$features);
   }
 
   elsif ($segment) {
@@ -1248,13 +1251,13 @@ sub zoomnav {
   $settings->{stop}  = $stop/$divisor;
 }
 
-# The get_segments() call fetches the genome segments specified in the
+# The get_features() call fetches the genome segments specified in the
 # current settings.  It is really just a front end to lookup_segments()
 # which does the real work.  The main work in get_segments() is to
 # identify any segments that are below MIN_SEG_SIZE in length, and to
 # recenter on a window MIN_SEG_SIZE wide.  This prevents the browser
 # from getting brain damaged when fetching 1bp features like SNPs.
-sub get_segments {
+sub get_features {
   my $settings = shift;
 
   my $db = open_database();
@@ -1262,11 +1265,23 @@ sub get_segments {
     fatal_error("ERROR: Unable to open database",$CONFIG->setting('description'),pre($@));
   }
 
-  my @segments = lookup_segments($db,$settings);
-  warn "segments = @segments\n" if DEBUG;
-
-  @segments;
+  my @features = lookup_features($db,$settings);
+  return \@features;
 }
+
+sub features2segments {
+  my $features = shift;
+  my $refclass = $CONFIG->setting('reference class') || 'Sequence';
+  my $db = open_database();
+  my @segments = map {
+    $db->segment(-class => $refclass,
+		 -name  => $_->ref,
+		 -start => $_->start,
+		 -stop  => $_->end)} @$features;
+  warn "segments = @segments\n" if DEBUG;
+  \@segments;
+}
+
 
 # sort of un-perlish -- we pass a reference to the handle that holds the segment
 sub resize {
@@ -1287,7 +1302,7 @@ sub resize {
 }
 
 # interesting heuristic way of fetching sequence segments based on educated guesses
-sub lookup_segments {
+sub lookup_features {
   my ($db,$settings) = @_;
   my @segments;
 
@@ -1349,7 +1364,7 @@ sub lookup_segments {
 ################ perform keyword search ###############
 sub do_keyword_search {
   my $settings = shift;
-  my $segments = shift;
+  my $features = shift;
   my $searchterm = $settings->{name};
   
   # if they wanted something specific, don't give them non-specific results.
@@ -1386,7 +1401,7 @@ sub do_keyword_search {
 					      -factory=> $db);
 
   }
-  @$segments = @results;
+  @$features = @results;
 }
 
 ################ format keyword search ###################
@@ -2486,7 +2501,7 @@ sub do_plugin_about {
 }
 
 sub do_plugin_find {
-  my ($settings,$plugin,$segments,$search_string) = @_;
+  my ($settings,$plugin,$features,$search_string) = @_;
 
   my $p = $PLUGINS->{$plugin} or return;
   my $plugin_name = $p->name;
@@ -2495,7 +2510,7 @@ sub do_plugin_find {
     ? $p->auto_find($search_string) : $p->find($segments);
   return unless $results;  # reconfigure message
 
-  @$segments = @$results;
+  @$features = @$results;
   $settings->{name} = defined($search_string) ? $CONFIG->tr('Plugin_search_1',$search_string,$plugin_name)
                                               : $CONFIG->tr('Plugin_search_2',$plugin_name);
   # remember the search
@@ -2535,13 +2550,14 @@ sub do_plugin_configure {
 
 # invoke any finder plugins that define the auto_find() method
 sub do_plugin_autofind {
-  my ($settings,$segments) = @_;
+  my ($settings,$segments,$features) = @_;
 
   for my $p (keys %$PLUGINS) {
     next unless $PLUGINS->{$p}->type eq 'finder' && $PLUGINS->{$p}->can('auto_find');
     do_plugin_find($settings,$p,$segments,$settings->{name});
     last if @$segments;
   }
+  @$features = @$segments;
 }
 
 sub retrieve_plugin_config {

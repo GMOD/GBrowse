@@ -318,6 +318,24 @@ END
     warn $@ if $@;
     }
   }
+
+   # patch versions of Bio::Graphics::FeatureFile that don't have the "make_link"
+   # method
+   unless (Bio::Graphics::FeatureFile->can('make_link')) {
+   eval <<'END';
+sub Bio::Graphics::FeatureFile::make_link {
+  my $self             = shift;
+  my ($feature,$panel) = @_;
+
+  for my $label ($self->feature2label($feature)) {
+    my $linkrule     = $self->setting($label,'link');
+    $linkrule        = $self->setting(general=>'link') unless defined $linkrule;
+    return $self->link_pattern($linkrule,$feature,$panel);
+  }
+}
+END
+  warn $@ if $@;
+}
 }
 
 sub redirect_legacy_url {

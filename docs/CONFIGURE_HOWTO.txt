@@ -1164,6 +1164,58 @@ More subroutine arguments are available to the glyph-specific
 subroutines.  See the Bio::Graphics::Panel manual page for the full
 details.
 
+Named Subroutine References
+---------------------------
+
+If you use a version of BioPerl after April 15, 2003, you can also use
+references to named subroutines as option arguments.  To use named
+subroutines, add an init_code section to the [GENERAL] section of the
+configuration file.  init_code should contain nothing but subroutine
+definitions and other initialization routines.  For example:
+
+  init_code = sub score_color {
+	        my $feature = shift;
+	        if ($feature->score > 50) { 
+		  return 'red';
+	        } else {
+		  return 'green';
+	        }
+	      }
+	      sub score_height {
+	        my $feature = shift;
+	        if ($feature->score > 50) { 
+		  return 10;
+	        } else {
+		  return 5;
+	        }
+	      }
+
+Then simply refer to these subroutines using the \&name syntax:
+
+    [EST_ALIGNMENTS]
+    glyph = generic
+    bgcolor = \&score_color
+    height  = \&score_height
+
+You can declare global variables in the init_code subroutine if you
+use "no strict 'vars';" at the top of the section:
+
+    init_code = no strict 'vars';
+                $HEIGHT = 10;
+	        sub score_height {
+	          my $feature = shift;
+		  $HEIGHT++;
+	          if ($feature->score > 50) { 
+		    return $HEIGHT*2;
+	          } else {
+		    return $HEIGHT;
+	          }
+	        }
+
+Due to the way the configuration file is parsed, there must be no
+empty lines in the init_code section.  Either use comments to
+introduce white space, or "use" a .pm file to do anything fancy.
+
 ---
 
 B7. Declaring New Aggregators

@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.18 2004-02-19 17:57:20 sheldon_mckay Exp $
+# $Id: GFFhelper.pm,v 1.19 2004-02-27 19:34:32 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -291,7 +291,8 @@ sub gff2Generic {
 
     my $att = $self->process_attributes($f);
     for my $t ( keys %$att ) {
-	for my $v ( @{$att->{$t}} ) {
+        my @v = (ref $att->{$t}) ? @{$att->{$t}} : ($att->{$t});
+	for my $v ( @v ) {
 	    $feat->add_tag_value( $t => $v );
 	}
     }
@@ -338,34 +339,37 @@ sub process_attributes {
 *ref = *refseq;
 sub refseq {
     my ($self, $id) = @_;
-    $self->{seq}->{id} ||= $id;
+    return $self->{seq}->{id} unless $id;
+    $self->{seq}->{id} = $id;
     $self->{seq}->{id};    
 }
 
 sub start {
     my ($self, $start) = @_;
-    $self->{seq}->{start} ||= $start;
+    return $self->{seq}->{start} unless $start;
+    $self->{seq}->{start} = $start;
     $self->{seq}->{start};
 }
 
 sub end {
     my ($self, $end) = @_;
-    $self->{seq}->{end} ||= $end;
+    return $self->{seq}->{end} unless $end;
+    $self->{seq}->{end} = $end;
     $self->{seq}->{end};
 }
 
 sub seq {
     my ($self, $seq) = @_;
-    $self->{seq}->{seq} ||= $seq;
+    return $self->{seq}->{seq} unless $seq;
+    $self->{seq}->{seq} = $seq;
     $self->{seq}->{seq};
 }
 
 # we need to get the sequence name and range if it was not specified
 # elsewhere
 sub get_range {
-    my ($self, $gff) = @_;
+    my ($self, $gff ) = @_;
     my @nums = ();
-
 
     for ( split "\n", $gff ) {
         next if /\#/;
@@ -437,7 +441,6 @@ sub rollback {
     $path .= '/' unless $path =~ /\/$/;
     my $file = $path . 'rollback';
     -e $file || return '';
-
     my $cache = retrieve( $file );
 
     if ( $key ) {

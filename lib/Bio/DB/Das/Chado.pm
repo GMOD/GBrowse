@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.27 2003-10-15 22:27:16 allenday Exp $
+# $Id: Chado.pm,v 1.28 2003-11-06 20:24:58 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -302,71 +302,123 @@ sub types {
 
 =head2 get_feature_by_name
 
+This method handles wild card searches, at the moment it only searches
+the synonym table, however in the future, we may want to include
+searches of featureprop (for notes) and feature_cvterm (for GO terms).
+Assuming we do that, we have to descide how we want to do it.
+Since these will be wild card searches, they are not going to 
+generally be able to take advantage of indexes (right?), so
+for speed, we may want to do one search, if there is a result, 
+quit and return it, if not continue to the next one.  Unfortunately, 
+that may result in unfindable things.  Perhaps we could use a method
+like Bio::DB::GFF uses:  one could search for "cellular_component::cytosol"
+and jump to searching the cellular component section of GO.  That would
+be cool.
+
 =cut
 
 sub get_feature_by_name {
+  warn "get_feature_by_name:@_";
   my $self = shift;
 
-  my ($name, $class, $ref, $base_start, $stop) = $self->_rearrange([qw(NAME CLASS REF START END)],@_);
+  my ($name, $class, $ref, $base_start, $stop) 
+       = $self->_rearrange([qw(NAME CLASS REF START END)],@_);
 
-  my @features;
-  if ($name =~ /^\s*\S+\s*$/) {
+  my (@features,$sth);
+  
+  if ($class eq 'GO') {
+    $name =~ s/[?*]\s*$//;
+    $name = '%'.$name.'%'; #put wildcards at beginning and end
+
+    my @GO_names=qw('GO'
+                    'cellular_component'
+                    'molecular_function'
+                    'biological_process');
+    push @GO_names, "'Gene Ontology'";
+
+    my $GO_names = join ',', @GO_names;
+    $sth = $self->{dbh}->prepare("
+          select fc.feature_id from feature_cvterm fc, cvterm c, cv
+          where fc.cvterm_id = c.cvterm_id and
+                cv.cv_id  = c.cv_id and
+                cv.name in ($GO_names) and
+                c.name ilike ?
+          limit 100
+      "); 
+
+     $sth->execute($name) or $self->throw("GO query failed"); 
+
+  } elsif ($class eq 'Prop') {
+
+    $name =~ s/[?*]\s*$//;
+    $name = '%'.$name.'%'; #put wildcards at beginning and end
+
+    $sth = $self->{dbh}->prepare("
+          select feature_id from featureprop
+          where value ilike ?
+      "); 
+
+    $sth->execute($name) or $self->throw("featureprop query failed");
+
+  } elsif ($name =~ /^\s*\S+\s*$/) {
     # get feature_id
     # foreach feature_id, get the feature info
     # then get src_feature stuff (chromosome info) and create a parent feature,
 
     $name =~ s/[?*]\s*$/%/;
 
-    my $quoted_name = $self->{dbh}->quote($name);
-    my $sth = $self->{dbh}->prepare("
+    $sth = $self->{dbh}->prepare("
        select fs.feature_id from feature_synonym fs, synonym s
        where fs.synonym_id = s.synonym_id and
-       s.synonym_sgml ilike $quoted_name
+       s.synonym_sgml ilike ? 
        ");
-    $sth->execute or $self->throw("getting the feature_ids failed");
+    $sth->execute($name) or $self->throw("getting the feature_ids failed");
 
+  } else {
+    $self->throw("multiword searching not supported yet");
+    return;
+  }
 
-    # prepare sql queries for use in while loops
-    my $isth =  $self->{dbh}->prepare("
-       select f.feature_id, f.name, f.type_id, 
+     # prepare sql queries for use in while loops
+  my $isth =  $self->{dbh}->prepare("
+       select f.feature_id, f.name, f.type_id,
               fl.fmin,fl.fmax,fl.strand,fl.phase, fl.srcfeature_id
-       from feature f, featureloc fl 
+       from feature f, featureloc fl
        where
          f.feature_id = ? and
-         fl.feature_id = f.feature_id and
          f.feature_id = fl.feature_id
        order by fl.srcfeature_id
         ");
 
-    my $jsth = $self->{dbh}->prepare("select name from feature 
+  my $jsth = $self->{dbh}->prepare("select name from feature
                                       where feature_id = ?");
 
-    # getting feature info    
-    while (my $feature_id_ref = $sth->fetchrow_hashref) {
-      $isth->execute($$feature_id_ref{'feature_id'}) 
+    # getting feature info
+  while (my $feature_id_ref = $sth->fetchrow_hashref) {
+    $isth->execute($$feature_id_ref{'feature_id'})
              or $self->throw("getting feature info failed");
-   
-      #getting chromosome info 
-      my $old_srcfeature_id=0;
-      my $parent_segment;
-      while (my $hashref = $isth->fetchrow_hashref) {
 
-        if ($$hashref{'srcfeature_id'} != $old_srcfeature_id) {
-          $jsth->execute($$hashref{'srcfeature_id'})
+      #getting chromosome info
+    my $old_srcfeature_id=0;
+    my $parent_segment;
+    while (my $hashref = $isth->fetchrow_hashref) {
+
+      if ($$hashref{'srcfeature_id'} != $old_srcfeature_id) {
+        $jsth->execute($$hashref{'srcfeature_id'})
                  or die ("getting assembly info failed");
-          my $src_name = $jsth->fetchrow_hashref;
-          $parent_segment =
+        my $src_name = $jsth->fetchrow_hashref;
+        $parent_segment =
              Bio::DB::Das::Chado::Segment->new($$src_name{'name'},$self);
-          $old_srcfeature_id=$$hashref{'srcfeature_id'};
-        }
+        $old_srcfeature_id=$$hashref{'srcfeature_id'};
+      }
         #now build the feature
 
-        my %name = %{$self->{cvname}};
+      my %name = %{$self->{cvname}};
 
-        my $interbase_start = $$hashref{'fmin'};
-        $base_start = $interbase_start +1; 
+      my $interbase_start = $$hashref{'fmin'};
+      $base_start = $interbase_start +1;
 
-        my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
+      my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                       $self,
                       $parent_segment,
                       $parent_segment->seq_id,
@@ -375,13 +427,9 @@ sub get_feature_by_name {
                       $$hashref{'strand'},
                       $$hashref{'name'},
                       $$hashref{'name'},$$hashref{'feature_id'}
-        ); 
-        push @features, $feat;
-      } 
- 
-    } 
-  } else {
-    $self->throw("multiword searching not supported yet");
+        );
+      push @features, $feat;
+    }
   }
 
   @features;

@@ -26,11 +26,12 @@ use Data::Dumper;
 
 use constant DEBUG => 0;
 
-use vars qw($VERSION @ISA $AUTOLOAD);
+use vars qw($VERSION @ISA $AUTOLOAD %CONSTANT_TAGS);
 @ISA = qw(Bio::DB::Das::Chado::Segment Bio::SeqFeatureI
           Bio::Root::Root);
 
 $VERSION = '0.12';
+%CONSTANT_TAGS = ();
 
 use overload '""' => 'asString';
 
@@ -43,8 +44,8 @@ use overload '""' => 'asString';
  Args    : see below
  Status  : Internal
 
-This method is called by Bio::DB::Das::Chado::Segment to create a new feature using
-information obtained from the chado database.
+This method is called by Bio::DB::Das::Chado::Segment to create a new
+feature using information obtained from the chado database.
 
 The 10 arguments are positional:
 
@@ -57,7 +58,8 @@ The 10 arguments are positional:
   $strand       this feature's strand (relative to the source
                 sequence, which has its own strandedness!)
   $group        this feature's featureloc.locgroup (NOT a GFF holdover)
-  $uniquename   this feature's internal unique database name (feature.uniquename)
+  $uniquename   this feature's internal unique database
+                     name (feature.uniquename)
   $feature_id   the feature's feature_id
 
 This is called when creating a feature from scratch.  It does not have
@@ -564,7 +566,7 @@ sub length {
 
 =cut
 
-*name = \&uniquename
+*name = \&uniquename;
 
 =head2 parent()
 
@@ -717,18 +719,19 @@ sub subfeatures {
 sub sub_SeqFeature {
   my($self,$types) = @_;
 
+  my %n2t = %{ $self->factory->name2term() };
+  my %t2n = %{ $self->factory->term2name() };
+
+
   #first call, cache subfeatures
   if(!$self->subfeatures ){
 
     my $parent_id = $self->feature_id();
 
-    my %n2t = %{ $self->factory->name2term() };
-    my %t2n = %{ $self->factory->term2name() };
-
     my $typewhere = '';
-    if ($type) {
-      $type = lc $type;
-      $typewhere = " and child.type_id = $n2t{$type} ";
+    if ($types) {
+      $types = lc $types;
+      $typewhere = " and child.type_id = $n2t{$types} ";
     }
 
     my $handle = $self->factory->dbh();

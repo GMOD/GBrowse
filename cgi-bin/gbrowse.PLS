@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.109.2.1 2004-09-06 21:31:21 lstein Exp $
+# $Id: gbrowse.PLS,v 1.109.2.2 2004-09-18 01:12:36 allenday Exp $
 
 use strict;
 use Bio::Graphics;
@@ -809,7 +809,6 @@ sub navigation_table {
 
   my $param =
   {
-
     htmlfrag3      => html_frag('html3',$segment,$page_settings),
     htmlfrag4      => html_frag('html4',$segment,$page_settings),
     htmlfrag5      => html_frag('html5',$segment,$page_settings),
@@ -856,12 +855,7 @@ sub navigation_table {
 
     segment    => $segment,
     prevname   => scalar(param('name')),
-    halftitle  => unit_label(int($segment->length/2)),
-    fulltitle  => unit_label($segment->length),
-    half       => int($segment->length/2),
-    full       => $segment->length,
     finezoom   => get_zoomincrement(),
-    ranges     => [ grep {!$seen{$_}++} sort {$b<=>$a} $segment->length,get_ranges() ],
     buttonsdir => $CONFIG->setting('buttons'),
 
     htmlfrag1  => html_frag('html1',$segment,$settings) || '',
@@ -870,9 +864,15 @@ sub navigation_table {
     multiple_segments => multiple_choices($settings,$features),
     overview_panel    => overview_panel($segment,$settings),
     detail_panel      => detail_panel_with_timeout($segment,$settings,$feature_files),
-
-
   };
+
+  if($segment){
+    $param->{ranges}     = [ grep {!$seen{$_}++} sort {$b<=>$a} $segment->length,get_ranges() ];
+    $param->{halftitle}  = unit_label(int($segment->length/2));
+    $param->{fulltitle}  = unit_label($segment->length);
+    $param->{half}       = int($segment->length/2);
+    $param->{full}       = $segment->length;
+  }
 
   my $show = $CONFIG->tr('Show');
   my %range_labels = map {$_=>$show.' '.unit_label($_)} @{ $param->{ranges} };

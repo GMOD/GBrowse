@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.33 2002-05-23 19:31:59 lstein Exp $
+# $Id: gbrowse.PLS,v 1.34 2002-05-24 00:38:58 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -322,7 +322,7 @@ sub main_display {
 
       # if a plugin passes us back a Feature, rather than a Segment, turn it into a segment
       # (this shouldn't happen - hah!)
-    $segment = open_database()->segment($segment->ref,$segment->start,$segment->end)
+    $segment = open_database()->segment($segment->seq_id,$segment->start,$segment->end)
 	unless $segment->can('features');
 
     # get the third party features
@@ -1113,7 +1113,7 @@ sub segment2link {
   my $source = $CONFIG->source;
   return  a({-href=>"$base?source=$source;name=$segment"},$segment) unless ref $segment;
 
-  my ($start,$stop) = ($segment->start,$segment->stop);
+  my ($start,$stop) = ($segment->start,$segment->end);
   my $ref = $segment->seq_id;
   my $bp = $stop - $start;
   my $s = commas($start);

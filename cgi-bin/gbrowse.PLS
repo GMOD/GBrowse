@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.68 2004-02-26 15:48:47 lstein Exp $
+# $Id: gbrowse.PLS,v 1.69 2004-04-01 17:13:19 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1293,7 +1293,7 @@ sub lookup_segments {
 
   if (my $name = $settings->{name}) {
     warn "name = $name" if DEBUG;
-    @segments = $CONFIG->name2segments($name,$db,TOO_MANY_SEGMENTS,$padding);
+    @segments = $CONFIG->name2segments($name,$db,TOO_MANY_SEGMENTS);
   }
 
   elsif (my $ref = $settings->{ref}) {
@@ -1303,6 +1303,12 @@ sub lookup_segments {
     warn "looking up @argv" if DEBUG;
     @segments = $db->segment(@argv);
   }
+
+   # expand by a bit if padding is requested
+   # THIS CURRENTLY ISN'T WORKING PROPERLY
+   if (@segments == 1 && $padding > 0 && !$settings->{name}) {
+     $segments[0] = $segments[0]->subseq(-$padding,$segments[0]->length+$padding);
+   }
 
   # some segments are not going to support the absolute() method
   # if they come out of BioPerl

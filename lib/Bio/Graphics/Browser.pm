@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.134 2004-03-30 15:41:18 lstein Exp $
+# $Id: Browser.pm,v 1.135 2004-04-01 17:13:20 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1313,8 +1313,7 @@ sub hits_on_overview {
 # (this used to be in gbrowse executable itself)
 sub name2segments {
   my $self = shift;
-  my ($name,$db,$toomany,$extra_padding,$segments_have_priority) = @_;
-  $extra_padding ||= 0;
+  my ($name,$db,$toomany,$segments_have_priority) = @_;
   $toomany ||= TOO_MANY_SEGMENTS;
 
   my $max_segment   = $self->get_max_segment;
@@ -1390,13 +1389,6 @@ sub name2segments {
       $_;
     }
   } @segments;
-
-  # expand by a bit if padding is requested
-  if ($extra_padding > 0 && !($start || $stop)) {
-    foreach (@segments) {
-      $_ = $_->subseq($_->start-$extra_padding,$_->end+$extra_padding);
-    }
-  }
 
   @segments;
 }

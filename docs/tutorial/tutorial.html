@@ -58,18 +58,37 @@ contain the configuration file "yeast_chr1.conf."
 
 <p>
 
-Look around inside the databases directory.  There should be
-subdirectories named "yeast_chr1" and "volvox."  The yeast
-subdirectory is where the example yeast chromosome 1 data set is
-stored.  The volvox subdirectory will start out empty; you'll be
-filling it with data files as this tutorial progresses.
+Now you will change the permissions of the database and configuration
+directories so that you can write to them without root privileges.
+This is only an issue on Unix systems, and Windows users can safely
+ignore this step.
+
+<blockquote class="example"><pre>
+% <b>su</b>
+Password: <b>*********</b>
+# <b>chown my_user_name $HTDOCS/gbrowse/databases</b>
+# <b>chown my_user_name $CONF/gbrowse.conf</b>
+# <b>exit</b>
+%
+</pre></blockquote>
 
 <p>
 
-If the volvox subdirectory doesn't exist for some reason, create it
-and make it world writable.  On Unix systems:
+(Be sure to replace "my_user_name" with your login name!)
+
+<p>
+
+Now look around inside the databases directory.  There should be a
+single subdirectory named "yeast_chr1." The yeast subdirectory is
+where the example yeast chromosome 1 data set is stored.
+
+<p>
+
+You will create an empty volvox subdirectory, and make it world
+writable.  On Unix systems:
 
 <blockquote class="example"><pre>
+% <b>cd $HTDOCS/gbrowse/databases</b>
 % <b>mkdir volvox</b>
 % <b>chmod go+rwx volvox</b>
 </pre></blockquote>
@@ -135,29 +154,28 @@ and type in "ctgA" in the search box.  The result is shown in Figure
 <i>Figure 1: volvox1.gff data with volvox.conf config file.</i>
 </blockquote>
 
+<h3>If You are Having Problems...</h3>
+
 <p>
 
-If for some reason you get a blank page or an
-"Internal server error," there are a couple of things to check.
-First, open the file volvox.conf with a text editor ("Notepad" on
-Windows systems, emacs, pico or vi on Unix systems) and confirm that
-the path to the volvox database directory in this section is correct:
+If for some reason you get a blank page or an "Internal server error,"
+there are a couple of things to check.  First, open the file
+volvox.conf with a text editor ("Notepad" on Windows systems, emacs,
+pico or vi on Unix systems) and confirm that the path to the volvox
+database directory in this section is correct:
 
 <pre>
 db_args       = -adaptor memory
-		-gff     /usr/local/apache/htdocs/gbrowse/databases/volvox
+		-gff     $HTDOCS/gbrowse/databases/volvox
 </pre>
 
 <p>
 
 Next check that the volvox1.gff file does exist inside the volvox
 database directory and that it is readable by all users on your
-system.
-
-<p>
-
-Next check that the volvox.conf file is in the same directory as
-yeast_chr1.conf, and that it is readable by all users on your system.
+system.  Similarly, check that the volvox.conf configuration file is
+in the same directory as yeast_chr1.conf, and that it is readable by
+all users on your system.
 
 <p>
 
@@ -171,13 +189,10 @@ direction.
 
 <p>
 
-<blockquote><i> If you're still having no luck, sorry!  Stop the
+<blockquote>
+If you're still having no luck, sorry!  Stop the
 tutorial and send an e-mail to gbrowse support at <a
 href="mailto:gmod-gbrowse@lists.sourceforge.net">gmod-gbrowse@lists.sourceforge.net</a>
-</i></blockquote>
-
-
-</i>
 </blockquote>
 
 <hr>
@@ -189,9 +204,10 @@ href="mailto:gmod-gbrowse@lists.sourceforge.net">gmod-gbrowse@lists.sourceforge.
 <p>
 
 
-Let's look at the data file we loaded in detail now.  If you open this
-file in a text editor, you will see that it contains a series of 15
-genome "features" that look like this:
+Let's look at the data file we loaded in detail now.  If you open the
+<a href="data_files/volvox1.gff">volvox1.gff</a> file in a text
+editor, you will see that it contains a series of 15 genome "features"
+that look like this:
 
 <blockquote class="example"><pre>
 ctgA   example   contig       1      50000   .   .   .   Contig ctgA
@@ -461,11 +477,11 @@ automatic classes = My_feature Gene Transcript Contig Chromosome
 For fun, try searching for the following:
 
 <ul>
-  <li>f1* <sup>(1)</sup>
+  <li>f1*
   <li>f07:-5000..5000
-  <li>*3 <sup>(1)</sup>
+  <li>*3
 </ul>
-<small><sup>(1)</sup>Note that these searches may not work as expected
+<small><sup>Note</sup>These searches may not work as expected
 when using the memory adaptor due to a bug in bioperl 1.2.3.  It is fixed in 
 bioperl 1.4.</small>
 
@@ -515,7 +531,7 @@ We will see later how to take advantage of different types of
 attributes.  For now, it is only important to know that an attribute
 named <i>Note</i> is automatically displayed and made searchable.  To
 see this work, add <a href="data_files/volvox2.gff">volvox2.gff</a>
-into the volvox database.  You can do this just by copying the file
+to the volvox database.  You can do this just by copying the file
 into <b>$HTDOCS/gbrowse/databases/volvox</b> so that the directory
 contains both the original volvox1.gff and the new volvox2.gff files.
 
@@ -545,7 +561,9 @@ means true.
 
 <p>
 
-The result is shown in figure 4.
+After updating the configuration file, you will need to reload the
+browser page and turn on the "Example motifs" checkbox below the main
+image. The result is shown in figure 4.
 
 <blockquote>
 <img src="figures/figure4.gif"><br>
@@ -2547,6 +2565,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Thu Nov 13 18:36:04 EST 2003
+Last modified: Tue Dec 23 16:51:13 EST 2003
 <!-- hhmts end -->
 </body> </html>

@@ -1,7 +1,7 @@
-# $Id: ExportFeatures.pm,v 1.1 2003-10-16 07:33:57 sheldon_mckay Exp $
+# $Id: ExportFeatures.pm,v 1.2 2003-10-16 07:36:57 sheldon_mckay Exp $
 =head1 NAME
 
-Bio::Graphics::Browser::Plugin::ArtemisDumper -- a plugin to export 
+Bio::Graphics::Browser::Plugin::ExportFeatures -- a plugin to export 
 annotated sequence to Artemis
 
 =head1 SYNOPSIS
@@ -10,19 +10,18 @@ This modules is not used directly
 
 =head1 DESCRIPTION
 
-This plugin dumps an specially formatted EMBL annotations 
+This plugin dumps specially formatted EMBL annotations 
 (an unflattened EMBL feature table) to a file or directly 
 to the editor if the browser is configures to launch 
-Artemis as a helper application to deal with the 
-mime-type 'application/artemis'
+Artemis as a helper application for mime-type 'application/artemis'
 
 Artemis will no longer support direct editing of GFF2 in its
 next production release but EMBL feature tables can be edited directly.
-After editing, the file can be reloaded into the database
-using the ImportFeatures plugin.
+After editing, the file can be reloaded into the database using the 
+ImportFeatures plugin.
 
 This plugin is specific to EMBL format but should be extensible
-to other formats/editors when required
+to other formats/editors if required
 
 =head1 NOTE
 

@@ -23,8 +23,8 @@ print OUT <<'!NO!SUBS!';
 use strict;
 use Ace;
 
-my $db = Ace->connect(-host=>'www.wormbase.org',
-		      -port=>2007) or die "Can't open ace database:",Ace->error;
+my $db = Ace->connect(-host=>'aceserver.cshl.org',
+		      -port=>2005) or die "Can't open ace database:",Ace->error;
 
 my @framework = qw(mex-3 spe-15 lin-17 unc-11 dhc-1 unc-40 smg-5
 		   unc-13 unc-29 eat-16 lin-11 spe-9 par-6 unc-59 unc-54 mab-9 lin-42

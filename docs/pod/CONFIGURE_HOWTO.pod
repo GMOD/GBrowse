@@ -777,6 +777,7 @@ replaced at run time with the information relating to the selected
 annotation.  Recognized variables include:
 
      $name        The feature's name (group name)
+     $id          The feature's id (eg, PK from a database)
      $class       The feature's class (group class)
      $method      The feature's method
      $source      The feature's source

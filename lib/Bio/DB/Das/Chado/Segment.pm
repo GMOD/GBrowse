@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.10 2003-01-26 22:39:43 scottcain Exp $
+# $Id: Segment.pm,v 1.11 2003-01-27 04:39:51 scottcain Exp $
 
 =head1 NAME
 
@@ -91,7 +91,7 @@ use strict;
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 use vars '@ISA','$VERSION','$ASSEMBLY_TYPE';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI);

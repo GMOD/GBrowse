@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.9 2003-01-26 22:39:43 scottcain Exp $
+# $Id: Chado.pm,v 1.10 2003-01-27 04:39:51 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -107,7 +107,7 @@ use DBD::Pg;
 use vars qw($VERSION @ISA);
 
 use constant SEGCLASS      => 'Bio::DB::Das::Chado::Segment';
-use constant DEBUG =>1;
+use constant DEBUG =>0;
 #use constant ADAPTOR_CLASS => 'Bio::DB::Chado::BioDatabaseAdaptor';
 
 $VERSION = 0.01;
@@ -310,6 +310,47 @@ sub types {
   my ($enumerate) =  $self->_rearrange([qw(ENUMERATE)],@_);
   $self->throw_not_implemented;
   #if lincoln didn't need to implement it, neither do I!
+}
+
+=head2 get_feature_by_name
+
+=cut
+
+sub get_feature_by_name {
+  my $self = shift;
+
+  my ($name, $start, $stop) = $self->_rearrange([qw(NAME START END)],@_);
+
+  if ($name =~ s/[?*]\s*$/%/) {
+    # get feature_id
+    # foreach feature_id, get the feature info
+    # then get src_feature stuff (chromosome info) (and do what with it?)
+
+    my $quoted_name = $self->{dbh}->quote($name);
+    my $sth = $self->{dbh}->prepare("
+       select fs.feature_id from feature_synonym fs, synonym s
+       where fs.synonym_id = s.synonym_id and
+       synonym ilike $quoted_name
+       ");
+    $sth->execute or throw("getting the feature_ids failed");
+    
+    while (my $feature_id_ref = $sth->fetchrow_hashref) {
+      my $isth = $self->{dbh}->prepare("
+       select f.feature_id, f.name, f.type_id, 
+              fl.nbeg,fl.nend,fl.strand,fl.phase, fl.srcfeature_id
+       from feature f, featureloc fl 
+       where
+         f.feature_id = $$feature_id_ref{'feature_id'} and
+         fl.feature_id = f.feature_id and
+         f.feature_id = fl.feature_id
+        ");
+
+      
+    } 
+  } else {
+    $self->throw("multiword searching not supported yet");
+  }
+
 }
 
 =head2 search_notes

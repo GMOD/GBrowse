@@ -198,10 +198,10 @@ sub sub_SeqFeature {
 
   my $handle = $self->{factory}->{dbh};
 
-  print "$parent_id\n";
-  print "$handle\n";
+#  print "$parent_id\n";
+#  print "$handle\n";
 
-  $self->{factory}->{dbh}->trace(2);
+#  $self->{factory}->{dbh}->trace(2);
 
   my $sth = $self->{factory}->{dbh}->prepare("
     select child.feature_id, child.name, child.type_id,
@@ -276,10 +276,11 @@ internally by aggregators, but is available for public use as well.
 
 sub add_subfeature {
   my $self    = shift;
-  my $feature = shift;
-  my $type = $feature->method;
-  my $subfeat = $self->{subfeatures}{lc $type} ||= [];
-  push @{$subfeat},$feature;
+#  my $feature = shift;
+#  my $type = $feature->method;
+#  my $subfeat = $self->{subfeatures}{lc $type} ||= [];
+#  push @{$subfeat},$feature;
+  $self->throw("not implemented");
 }
 
 =head2 attach_seq
@@ -345,7 +346,7 @@ sub location {
 
 sub entire_seq {
     my $self = shift;
-    $self->factory->segment($self->sourceseq);
+    $self->SUPER::seq();
 }
 
 =head2 merged_segments
@@ -502,8 +503,7 @@ primary_tag(), source_tag(), all_tags(), has_tag(), each_tag_value().
 =cut
 
 sub primary_tag {
-   my $self = shift;
-   return $self->{type};
+   shift->{type};
 }
 
 sub source_tag  {
@@ -671,3 +671,6 @@ sub name {
   my $self =shift;
   return $self->group || $self->SUPER::name;
 }
+
+
+1;

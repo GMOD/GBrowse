@@ -201,3 +201,18 @@ CREATE INDEX gbrowse_srcfeature_idx ON featureloc (srcfeature_id, nbeg, nend)
  (child.feature_id = childloc.feature_id)
  where parent.feature_id = 29214;
  
+---------------------------------
+
+       select fs.feature_id from feature_synonym fs, synonym s
+       where fs.synonym_id = s.synonym_id and
+       synonym ilike 'cal%';
+
+       select f.feature_id, f.name, f.type_id, 
+              fl.nbeg,fl.nend,fl.strand,fl.phase, fl.srcfeature_id
+       from feature f, featureloc fl 
+       where
+         f.feature_id =  1145933 and
+         fl.feature_id = f.feature_id and
+         f.feature_id = fl.feature_id;
+
+

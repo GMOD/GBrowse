@@ -47,7 +47,7 @@ print OUT <<'!NO!SUBS!';
 #=======================================================================
 
 
-#$Id: gbrowse_moby.PLS,v 1.13 2003-12-30 17:08:26 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.14 2003-12-30 17:13:05 markwilkinson Exp $
 
 
 # use lib "/usr/local/GB/GMOD_LIBS/moby-live/Perl";
@@ -534,7 +534,7 @@ sub processXrefs {
 }
 
 
-=================================================
+#=================================================
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

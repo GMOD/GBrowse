@@ -52,7 +52,7 @@ while (my $pluginfile = readdir(PLUGINS) ) {
 	chmod (0666, $installfile);
         copy($localfile, $installfile) 
             or die "$localfile unable to copy to $installfile : $!\n";
-	chmod (0644, $installfile);
+	chmod (0444, $installfile);
     } 
 }
 closedir PLUGINS;
@@ -70,7 +70,7 @@ while (my $langfile = readdir(LANGS)) {
         chmod (0666, $installfile);
         copy($localfile, $installfile) 
             or die "unable to copy to $installfile\n";
-        chmod (0644, $installfile);
+        chmod (0444, $installfile);
     }
 }
 closedir LANGS;

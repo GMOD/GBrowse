@@ -28,7 +28,7 @@ while (my $file = readdir(HTDOCS) ) {
 	chmod (0666, $installfile);
         copy($localfile, $installfile)
            or die "unable to copy to $installfile\n";
-	chmod (0644, $installfile);
+	chmod (0444, $installfile);
     }
 }
 closedir HTDOCS; 
@@ -52,7 +52,7 @@ while (my $file = readdir(BUTTONS) ) {
 	chmod (0666, $installfile);
         copy($localfile, $installfile) 
             or die "unable to copy to $installfile\n"; 
-	chmod (0644, $installfile);
+	chmod (0444, $installfile);
     }
 }
 closedir BUTTONS;
@@ -71,7 +71,7 @@ while (my $file = readdir(HELP) ) {
 	chmod (0666, $installfile);
         copy($localfile, $installfile) 
             or die "unable to copy to $installfile\n";
-	chmod (0644, $installfile);
+	chmod (0444, $installfile);
     }
 }
 closedir HELP;

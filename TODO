@@ -1,5 +1,9 @@
 * Synteny display
 * More internationalization
+* Limit search results to user-set max
+* Group SVG elements by feature ID
+* Allow annotator plugins to be turned on by default
+* Convert to use a templating system?
 
-$Id: TODO,v 1.3 2004-02-26 16:45:47 lstein Exp $
+$Id: TODO,v 1.4 2004-08-23 15:39:59 lstein Exp $
 

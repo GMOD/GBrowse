@@ -7,7 +7,7 @@
 <body>
 <h1>Generic Genome Browser: A Tutorial</h1>
 
-<h2>Author: Lincoln Stein, June 16, 2003</h2>
+<h2>Author: Lincoln Stein, June 16, 2003 (<i>revised 20 February 2004</i>)</h2>
 
 <p>
 
@@ -2561,6 +2561,57 @@ see the following perldoc manual pages:
 
 <hr>
 
+<h2><a name="third-party">20. Adding Third Party Features</a></h2>
+
+<p>
+
+It is often useful to have independent annotation data sets that can
+be visualized together but updated separately.  For example, you may
+be working on a genome that has a core set of stable annotations that
+everyone shares, such as the set of protein-coding genes, and
+independent sets of annotations that change frequently, such as
+promoter predictions and experimental data.
+
+<p>
+
+GBrowse provides several mechanisms for making this type of modular
+annotation possible.  You can:
+
+<ol>
+  <li>Upload one or more files of annotations temporarily, and view them in the
+      context of the core annotations.  These annotations will be private to the
+      user who uploads the annotations; others cannot see the data.
+  <li>Put one or more GFF files in a web-accessible location, such as
+      an FTP or Web site, and point GBrowse at it.  These annotations
+      will be accessible to anyone who knows the correct URLs.
+  <li>Point one GBrowse at another GBrowse.  All the tracks in the second
+      instance of GBrowse will be available to the first GBrowse.
+      This method uses the Distributed Annotation System (DAS) and can
+      handle very large data sets.
+</ol>
+
+<p>
+
+To watch this in action, we will use some real genome annotations from
+the <i>C. elegans</i> genome project.  This is a region around
+<i>C. elegans</i> cosmid C01F4.  The core data that we'll be using is
+contained in <a href="data_files/elegans.gff3">elegans.gff3</a>.  The
+.gff3 suffix indicates that it is using version 3 of the GFF format,
+which conveniently enough allows both the DNA and the annotation data
+to be stored in one place.
+
+<p>
+
+Refer back to the <a href="#basics">beginning of the tutorial</a> now
+and create a GBrowse database directory named "elegans_core".  Then
+copy <a href="data_files/elegans.gff3">elegans.gff3</a> into it.
+
+<p>
+
+
+
+<hr>
+
 <h2><a name="conclusion">20. Conclusion</a></h2>
 
 <p>
@@ -2587,6 +2638,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Thu Jan 22 10:48:55 SAST 2004
+Last modified: Sun Feb 22 10:03:16 SAST 2004
 <!-- hhmts end -->
 </body> </html>

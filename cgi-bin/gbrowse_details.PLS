@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.19 2004-02-20 14:16:02 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.20 2004-02-22 09:24:57 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -212,7 +212,7 @@ sub print_matches {
     $tdna =~ tr/gatcGATC/ctagCTAG/;
     $tdna = reverse $tdna;
   }
-  warn ("sdir = $sdir, $src_x -> $src_y / $tgt_x -> $tgt_y");
+  warn ("sdir = $sdir, $src_x -> $src_y / $tgt_x -> $tgt_y") if DEBUG;
   my ($top,$middle,$bottom) = align($sdna,$tdna);
 
   my $m = max(length($top_label),length($bot_label));

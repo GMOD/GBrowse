@@ -12,7 +12,7 @@ README-berkeley-gadfly
 README-windows.txt
 TODO
 bin/auto_install_databases.pl
-bin/load_embl.PLS
+bin/load_embl.pl
 bin/process_gadfly.PLS
 bin/process_ncbi_human.PLS
 bin/process_sgd.PLS

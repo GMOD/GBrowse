@@ -136,6 +136,7 @@ WriteMakefile(
 				 'bin/process_sgd.pl',
 				 'bin/process_gadfly.pl',
 				 'bin/process_ncbi_human.pl',
+                                 'bin/load_embl.pl',
 				],
 	      'LIBS'	     => [''], # e.g., '-lm'
 	      'DIR'          => $OPTIONS{DO_XS} ? ['libalign'] : [],

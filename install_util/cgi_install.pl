@@ -17,6 +17,7 @@ foreach (glob('*')) {
   next if /CVS/;
   next if /^[.\#]/;
   next if /~$/;
+  next if /\.PLS$/;
   my $installfile = Bio::Root::IO->catfile($cgi_target, $_);
   warn "copying $_ to $installfile";
   copy($_, $installfile ) or die "unable to copy to $installfile\n";

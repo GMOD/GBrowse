@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.39 2003-10-30 21:02:48 scottcain Exp $
+# $Id: Segment.pm,v 1.40 2003-11-11 03:22:19 scottcain Exp $
 
 =head1 NAME
 
@@ -117,8 +117,6 @@ sub new {
 
   warn "quoted name:$quoted_name\n" if DEBUG;
 
-  my $cvterm_id = $factory->{cvterm_id};
-
   my $ref = _search_by_name($factory, $quoted_name);
      #returns either a feature_id scalar (if there is only one result)
      #or an arrayref (of feature_ids) if there is more than one result
@@ -146,13 +144,13 @@ sub new {
 
     if ($landmark_feature_id == $srcfeature_id) {
       $sth = $factory->{dbh}->prepare ("
-       select f.name,f.feature_id,f.seqlen
+       select f.name,f.feature_id,f.seqlen,f.type_id
        from feature f
        where f.feature_id = $landmark_feature_id
          ");
     } else {
       $sth = $factory->{dbh}->prepare ("
-       select f.name,f.feature_id,f.seqlen,fl.fmin,fl.fmax
+       select f.name,f.feature_id,f.seqlen,f.type_id,fl.fmin,fl.fmax
        from feature f, featureloc fl
        where fl.feature_id = $landmark_feature_id and
              $srcfeature_id = f.feature_id
@@ -164,6 +162,7 @@ sub new {
 
     $name      = $$hash_ref{'name'};
     my $length = $$hash_ref{'seqlen'};
+    my $type   = $factory->{cvname}{$$hash_ref{'type_id'}};
 
     if ($$hash_ref{'fmin'}) {
       $interbase_start = $$hash_ref{'fmin'};
@@ -182,9 +181,11 @@ sub new {
                   end           => $end,
                   length        => $length,
                   srcfeature_id => $srcfeature_id,
+                  class         => $type,
                   name          => $name }, ref $self || $self;
 
   } else {
+    warn "no segment found" if DEBUG;
     return; #nothing returned
   }
 }
@@ -259,6 +260,10 @@ sub _search_by_name {
   }
 }
 
+sub class {
+  my $self = shift;
+  return $self->{class};
+}
 
 =head2 seq_id
 

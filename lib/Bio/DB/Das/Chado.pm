@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.29 2003-11-06 20:30:12 scottcain Exp $
+# $Id: Chado.pm,v 1.30 2003-11-11 03:22:19 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -420,6 +420,8 @@ sub get_feature_by_name {
 
   @features;
 }
+
+*fetch_feature_by_name = \&get_feature_by_name; 
 
 =head2 search_notes
 

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.50 2004-01-30 03:13:39 allenday Exp $
+# $Id: Segment.pm,v 1.51 2004-03-08 17:26:24 scottcain Exp $
 
 =head1 NAME
 
@@ -93,55 +93,23 @@ use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
 use constant DEBUG => 0;
 
-use vars '@ISA', '$VERSION';
-@ISA     = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI Bio::DB::Das::Chado);
+use vars '@ISA','$VERSION';
+@ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI Bio::DB::Das::Chado);
 $VERSION = 0.11;
 
 # construct a virtual segment that works in a lazy way
 sub new {
+ #validate that the name/accession is valid, and start and end are valid,
+ #then return a new segment
 
-  my $class  = shift;
-  my ( $name, $factory, $base_start, $end, $db_id ) = @_;
+    my $self = shift;
 
-  #validate that the name/accession is valid, and start and end are valid,
-  #then return a new segment
+    my ( $name, $factory, $base_start, $end, $db_id ) = @_;
 
-  my $r_start = $base_start;
-  my $r_end   = $end;
+    warn "$name, $factory\n"                      if DEBUG;
+    warn "base_start = $base_start, end = $end\n" if DEBUG;
 
-  warn "$name, $factory\n" if DEBUG;
-
-
-  warn "$name, $factory\n"                      if DEBUG;
-  warn "base_start = $base_start, end = $end\n" if DEBUG;
-
-  $class->Bio::Root::Root->throw("start value less than 1\n") if (defined $base_start && $base_start < 1);
-  $base_start = $base_start ? int($base_start) : 1; 
-  my $interbase_start = $base_start -1;
-
-  my $quoted_name = $factory->{dbh}->quote(lc $name);
-
-  warn "quoted name:$quoted_name\n" if DEBUG;
-
-  my $ref = _search_by_name($factory, $quoted_name);
-     #returns either a feature_id scalar (if there is only one result)
-     #or an arrayref (of feature_ids) if there is more than one result
-     #or nothing if there is no result
-
-  if (ref $ref eq 'ARRAY') { #more than one result returned
-    warn "multiple segments--deal with it!";
-    return undef;
-  } elsif (ref $ref eq 'SCALAR') { #one result returned
-
-    my $landmark_feature_id = $$ref;
-
-    my $sth = $factory->{dbh}->prepare ("
-       select srcfeature_id from featureloc
-       where feature_id = $landmark_feature_id
-         ");
-    $sth->execute or Bio::Root::Root->throw("finding srcfeature_id failed");
-
-    $class->Bio::Root::Root->throw("start value less than 1\n")
+    $self->Bio::Root::Root->throw("start value less than 1\n")
       if ( defined $base_start && $base_start < 1 );
     $base_start = $base_start ? int($base_start) : 1;
     my $interbase_start = $base_start - 1;
@@ -181,100 +149,95 @@ sub new {
 
     if ( ref $ref eq 'ARRAY' ) {    #more than one result returned
 
-      my @segments;
+        my @segments;
 
-      foreach my $feature_id (@$ref) {
+        foreach my $feature_id (@$ref) {
 
-        $fetch_uniquename_query->execute($feature_id )
-          or Bio::Root::Root->throw("fetching uniquename from feature_id failed") ;
+            $fetch_uniquename_query->execute($feature_id )
+              or Bio::Root::Root->throw("fetching uniquename from feature_id failed") ;
 
-        my $hashref = $fetch_uniquename_query->fetchrow_hashref;
-        $base_start = $$hashref{fmin} + 1;
-        $end        = $$hashref{fmax};
-        $db_id      = $$hashref{uniquename};
+            my $hashref = $fetch_uniquename_query->fetchrow_hashref;
+            $base_start = $$hashref{fmin} + 1;
+            $end        = $$hashref{fmax};
+            $db_id      = $$hashref{uniquename};            
 
-        push @segments, $factory->segment($name,$factory,$base_start,$end,$db_id);
-      }
+            push @segments, $factory->segment($name,$factory,$base_start,$end,$db_id);
+        }
 
-      if    (@segments == 0) {
-        return;              #I don't think this should ever happen here
-      }
-      elsif (@segments == 1) {
-        return $segments[0]; #nor this
-      }
-      elsif (wantarray) {
-        return @segments;
-      }
-      else {
-        warn "The query for $name returned multiple segments\nPlease call in a list context to get them all";
-        Bio::Root::Root->throw("multiple segment exception") ;
-      }
+        if (@segments < 2) {
+            return $segments[0]; #I don't think this should ever happen
+        }
+        elsif (wantarray) {
+            return @segments;
+        }
+        else {
+            warn "The query for $name returned multiple segments\nPlease call in a list context to get them all";
+            Bio::Root::Root->throw("multiple segment exception") ;
+        }
     }
     elsif ( ref $ref eq 'SCALAR' ) {    #one result returned
 
-      my $landmark_feature_id = $$ref;
+        my $landmark_feature_id = $$ref;
 
-      $srcfeature_query->execute($landmark_feature_id)
-        or Bio::Root::Root->throw("finding srcfeature_id failed");
+        $srcfeature_query->execute($landmark_feature_id)
+           or Bio::Root::Root->throw("finding srcfeature_id failed");
 
-      my $hash_ref      = $srcfeature_query->fetchrow_hashref;
-      my $srcfeature_id =
-        $$hash_ref{'srcfeature_id'}
-        ? $$hash_ref{'srcfeature_id'}
-        : $landmark_feature_id;
+        my $hash_ref      = $srcfeature_query->fetchrow_hashref;
+        my $srcfeature_id =
+            $$hash_ref{'srcfeature_id'}
+          ? $$hash_ref{'srcfeature_id'}
+          : $landmark_feature_id;
 
-      warn "srcfeature_id:$srcfeature_id" if DEBUG;
+        warn "srcfeature_id:$srcfeature_id" if DEBUG;
  
-      if ( $landmark_feature_id == $srcfeature_id ) {
+        if ( $landmark_feature_id == $srcfeature_id ) {
 
-        $landmark_is_src_query->execute($landmark_feature_id)
-          or Bio::Root::Root->throw("something else failed");
-        $hash_ref = $landmark_is_src_query->fetchrow_hashref;
+            $landmark_is_src_query->execute($landmark_feature_id)
+              or Bio::Root::Root->throw("something else failed");
+            $hash_ref = $landmark_is_src_query->fetchrow_hashref;
 
-      }
-      else {
+        }
+        else {
 
-        $feature_query->execute($landmark_feature_id,$srcfeature_id)
-          or Bio::Root::Root->throw("something else failed");
-        $hash_ref = $feature_query->fetchrow_hashref;
+            $feature_query->execute($landmark_feature_id,$srcfeature_id)
+              or Bio::Root::Root->throw("something else failed");
+            $hash_ref = $feature_query->fetchrow_hashref;
  
-      }
+        }
 
-      $name = $$hash_ref{'name'};
-      my $length = $$hash_ref{'seqlen'};
-      my $type   = $factory->{cvname}{ $$hash_ref{'type_id'} };
+        $name = $$hash_ref{'name'};
+        my $length = $$hash_ref{'seqlen'};
+        my $type   = $factory->{cvname}{ $$hash_ref{'type_id'} };
 
-      if ( $$hash_ref{'fmin'} ) {
-        $interbase_start = $$hash_ref{'fmin'};
-        $base_start      = $interbase_start + 1;
-        $end             = $$hash_ref{'fmax'};
-      }
+        if ( $$hash_ref{'fmin'} ) {
+            $interbase_start = $$hash_ref{'fmin'};
+            $base_start      = $interbase_start + 1;
+            $end             = $$hash_ref{'fmax'};
+        }
 
-      $class->Bio::Root::Root::throw("end value greater than length\n") if (defined $end && $end > $length);
-      $end = $end ? int($end) : $length;
-      $length = $end - $interbase_start ;
-      warn "base_start:$base_start, end:$end, length:$length" if DEBUG;
+        warn "base_start:$base_start, end:$end, length:$length" if DEBUG;
 
-      my $self = bless {factory       => $factory,
-                        start         => $base_start,
-                        end           => $end,
-                        length        => $length,
-                        feature_id    => $landmark_feature_id,
-                        srcfeature_id => $srcfeature_id,
-                        class         => $type,
-                        name          => $name }, ref $class || $class;
+        $self->Bio::Root::Root::throw("end value greater than length\n")
+          if ( defined $end && $end > $length );
+        $end    = $end ? int($end) : $length;
+        $length = $end - $interbase_start;
 
-      $self->{'_requested_start'} = $r_start;
-      $self->{'_requested_end'}   = $r_end;
-
-      return $self;
+        return bless {
+            factory       => $factory,
+            start         => $base_start,
+            end           => $end,
+            length        => $length,
+            srcfeature_id => $srcfeature_id,
+            class         => $type,
+            name          => $name
+          },
+          ref $self || $self;
 
     }
     else {
-      warn "no segment found" if DEBUG;
-      return;    #nothing returned
+        warn "no segment found" if DEBUG;
+        return;    #nothing returned
     }
-  }
 }
 
 =head2 _search_by_name
@@ -282,95 +245,77 @@ sub new {
 =cut
 
 sub _search_by_name {
-    my ( $factory, $quoted_name, $db_id ) = @_;
+  my ($factory,$quoted_name) = @_;
 
-      # if there is a db_id sent, short circuit the search
-    if ($db_id) {
-        my $sth = $factory->{dbh}->prepare( "
-       select feature_id from feature where uniquename = ?"); 
-
-        $sth->execute($db_id) 
-            or Bio::Root::Root->throw("getting feature_id from uniquename failed");
-
-        my $hashref = $sth->fetchrow_hashref;
-        my $feature_id = $$hashref{'feature_id'};
-        return \$feature_id;
-    }
-
-    my $sth = $factory->{dbh}->prepare( "
+  my $sth = $factory->{dbh}->prepare ("
              select name,feature_id,seqlen from feature
-             where lower(name) = $quoted_name  " );
-
-    $sth->execute or Bio::Root::Root->throw("unable to validate name/length");
-
-    my $rows_returned = $sth->rows;
-    if ( $rows_returned == 0 ) {    #look in synonym for an exact match
-        my $isth = $factory->{dbh}->prepare( "
+             where lower(name) = $quoted_name  ");
+                                                                                                              
+  $sth->execute or Bio::Root::Root->throw("unable to validate name/length");
+                                                                                                              
+  my $rows_returned = $sth->rows;
+  if ($rows_returned == 0) { #look in synonym for an exact match
+    my $isth = $factory->{dbh}->prepare ("
        select fs.feature_id from feature_synonym fs, synonym s
        where fs.synonym_id = s.synonym_id and
        lower(s.synonym_sgml) = $quoted_name
-        " );
-        $isth->execute
-          or Bio::Root::Root->throw("query for name in synonym failed");
-        $rows_returned = $isth->rows;
-
-        if ( $rows_returned == 0 ) {  #look in dbxref for accession number match
-            $isth = $factory->{dbh}->prepare( "
+        ");
+    $isth->execute or Bio::Root::Root->throw("query for name in synonym failed");
+    $rows_returned = $isth->rows;
+                                                                                                              
+    if ($rows_returned == 0) { #look in dbxref for accession number match
+      $isth = $factory->{dbh}->prepare ("
          select feature_id from feature_dbxref fd, dbxref d
          where fd.dbxref_id = d.dbxref_id and
-               lower(d.accession) = $quoted_name " );
-            $isth->execute
-              or Bio::Root::Root->throw("query for accession failed");
-            $rows_returned = $isth->rows;
+               lower(d.accession) = $quoted_name ");
+      $isth->execute or Bio::Root::Root->throw("query for accession failed");
+      $rows_returned = $isth->rows;
+                                                                                                              
+      return if $rows_returned == 0;
 
-            return if $rows_returned == 0;
-
-            if ( $rows_returned == 1 ) {
-                my $hashref    = $isth->fetchrow_hashref;
-                my $feature_id = $$hashref{'feature_id'};
-                return \$feature_id;
-            }
-            else {
-                my @feature_ids;
-                while ( my $hashref = $isth->fetchrow_hashref ) {
-                    push @feature_ids, $$hashref{'feature_id'};
-                }
-                return \@feature_ids;
-            }
-
-        }
-        elsif ( $rows_returned == 1 ) {
-            my $hashref    = $isth->fetchrow_hashref;
-            my $feature_id = $$hashref{'feature_id'};
-            return \$feature_id;
-        }
-        else {
-            my @feature_ids;
-            while ( my $hashref = $isth->fetchrow_hashref ) {
-                push @feature_ids, $$hashref{'feature_id'};
-            }
-            return \@feature_ids;
-        }
-
-    }
-    elsif ( $rows_returned == 1 ) {
-        my $hashref    = $sth->fetchrow_hashref;
+      if ($rows_returned == 1) {
+        my $hashref = $isth->fetchrow_hashref;
         my $feature_id = $$hashref{'feature_id'};
         return \$feature_id;
-    }
-    else {
+      } else {
         my @feature_ids;
-        while ( my $hashref = $sth->fetchrow_hashref ) {
-            push @feature_ids, $$hashref{'feature_id'};
+        while (my $hashref = $isth->fetchrow_hashref) {
+          push @feature_ids, $$hashref{'feature_id'};
         }
-        return \@feature_ids;
+        return \@feature_ids; 
+      }
+
+    } elsif ($rows_returned == 1) {
+      my $hashref = $isth->fetchrow_hashref;
+      my $feature_id = $$hashref{'feature_id'};
+      return \$feature_id;
+    } else {
+       my @feature_ids;
+       while (my $hashref = $isth->fetchrow_hashref) {
+         push @feature_ids, $$hashref{'feature_id'};
+       }
+       return \@feature_ids;
     }
+
+  } elsif ($rows_returned == 1) {
+    my $hashref = $sth->fetchrow_hashref;
+    my $feature_id = $$hashref{'feature_id'};
+    return \$feature_id;
+  } else {
+     my @feature_ids;
+     while (my $hashref = $sth->fetchrow_hashref) {
+       push @feature_ids, $$hashref{'feature_id'};
+     }
+     return \@feature_ids;
+  }
 }
 
 sub class {
-    my $self = shift;
-    return $self->{class};
+  my $self = shift;
+  return $self->{class};
 }
+
+*type = \&class;
 
 =head2 seq_id
 
@@ -383,7 +328,7 @@ sub class {
 
 =cut
 
-sub seq_id { shift->{name} }
+sub seq_id {  shift->{name} } 
 
 =head2 start
 
@@ -399,7 +344,7 @@ to low() for Gadfly compatibility.
 
 =cut
 
-sub start { shift->{start} }
+sub start { shift->{start} } 
 *low = \&start;
 
 =head2 end
@@ -416,7 +361,7 @@ high() for Gadfly compatibility.
 
 =cut
 
-sub end { shift->{end} }
+sub end   { shift->{end} } 
 *high = \&end;
 *stop = \&end;
 
@@ -433,7 +378,7 @@ Returns the length of the segment.  Always a positive number.
 
 =cut
 
-sub length { shift->{length} }
+sub length { shift->{length} } 
 
 =head2 features
 
@@ -501,83 +446,76 @@ is defined, then -callback is ignored.
 =cut
 
 sub features {
-    my $self = shift;
+  my $self = shift;
 
     warn "Segment->features() args:@_\n" if DEBUG;
 
-    my ( $types, $attributes, $rangetype, $iterator, $callback );
-    if ( $_[0] =~ /^-/ ) {
-        ( $types, $attributes, $rangetype, $iterator, $callback ) =
-          $self->_rearrange(
-            [qw(TYPE ATTRIBUTES RANGETYPE ITERATOR CALLBACK RARE)], @_ );
+  my ($types,$attributes,$rangetype,$iterator,$callback);
+  if ($_[0] =~ /^-/) {
+    ($types,$attributes,$rangetype,$iterator,$callback) =
+      $self->_rearrange([qw(TYPE ATTRIBUTES RANGETYPE ITERATOR CALLBACK RARE)],@_);
+  #  warn "$types\n";
+  } else {
+    $types = \@_;
+  }
 
-        #  warn "$types\n";
+  warn "@$types\n" if (defined $types and DEBUG);
+
+  my $feat     = Bio::DB::Das::Chado::Segment::Feature->new ();
+  my @features;
+  $rangetype ||='overlaps';
+
+# set range variable 
+
+  my $base_start = $self->start;
+  my $interbase_start = $base_start -1;
+  my $rend       = $self->end;
+  my $sql_range;
+  if ($rangetype eq 'contains') {
+
+    $sql_range = " fl.fmin >= $interbase_start and fl.fmax <= $rend ";
+
+  } elsif ($rangetype eq 'contained_in') {
+
+    $sql_range = " fl.fmin <= $interbase_start and fl.fmax >= $rend ";
+
+  } else { #overlaps is the default
+
+    $sql_range = " fl.fmin <= $rend and fl.fmax >= $interbase_start ";
+
+  }
+
+# set type variable 
+
+  my %termhash = %{$self->{factory}->{cvterm_id}};
+
+  my @keys;
+  foreach my $type (@$types) {
+    my @tempkeys = grep(/^\Q$type\E\s*$/i , keys %termhash );
+    push @keys, @tempkeys;
+  }
+
+  my $sql_types = '';
+
+  if (scalar @keys != 0) {
+    $sql_types .= "(f.type_id = ".$termhash{$keys[0]};
+
+    if (scalar @keys > 1) {
+      for(my $i=1;$i<(scalar @keys);$i++) {
+        $sql_types .= " OR \n     f.type_id = ".$termhash{$keys[$i]};
+      }
     }
-    else {
-        $types = \@_;
-    }
+    $sql_types .= ") and ";
+  }
 
-    warn "@$types\n" if ( defined $types and DEBUG );
+#$self->{factory}->{dbh}->trace(1);
 
-    my $feat = Bio::DB::Das::Chado::Segment::Feature->new();
-    my @features;
-    $rangetype ||= 'overlaps';
+  my $srcfeature_id = $self->{srcfeature_id};
 
-    # set range variable
+  $self->{factory}->{dbh}->do("set enable_seqscan=0");
+#  $self->{factory}->{dbh}->do("set enable_hashjoin=0");
 
-    my $base_start      = $self->start;
-    my $interbase_start = $base_start - 1;
-    my $rend            = $self->end;
-    my $sql_range;
-    if ( $rangetype eq 'contains' ) {
-
-        $sql_range = " fl.fmin >= $interbase_start and fl.fmax <= $rend ";
-
-    }
-    elsif ( $rangetype eq 'contained_in' ) {
-
-        $sql_range = " fl.fmin <= $interbase_start and fl.fmax >= $rend ";
-
-    }
-    else {    #overlaps is the default
-
-        $sql_range = " fl.fmin <= $rend and fl.fmax >= $interbase_start ";
-
-    }
-
-    # set type variable
-
-    my %termhash = %{ $self->{factory}->{cvterm_id} };
-
-    my @keys;
-    foreach my $type (@$types) {
-        my @tempkeys = grep( /^\Q$type\E\s*$/i, keys %termhash );
-        push @keys, @tempkeys;
-    }
-
-    my $sql_types = '';
-
-    if ( scalar @keys != 0 ) {
-        $sql_types .= "(f.type_id = " . $termhash{ $keys[0] };
-
-        if ( scalar @keys > 1 ) {
-            for ( my $i = 1 ; $i < ( scalar @keys ) ; $i++ ) {
-                $sql_types .=
-                  " OR \n     f.type_id = " . $termhash{ $keys[$i] };
-            }
-        }
-        $sql_types .= ") and ";
-    }
-
-    #$self->{factory}->{dbh}->trace(1);
-
-    my $srcfeature_id = $self->{srcfeature_id};
-
-    $self->{factory}->{dbh}->do("set enable_seqscan=0");
-
-    #  $self->{factory}->{dbh}->do("set enable_hashjoin=0");
-
-    my $sth = $self->{factory}->{dbh}->prepare( "
+  my $sth = $self->{factory}->{dbh}->prepare("
     select distinct f.name,fl.fmin,fl.fmax,fl.strand,f.type_id,f.uniquename,f.feature_id
     from feature f, featureslice($interbase_start, $rend) fl
     where
@@ -585,72 +523,69 @@ sub features {
       fl.srcfeature_id = $srcfeature_id and
       f.feature_id  = fl.feature_id
     order by type_id,fmin
-       " );
-    $sth->execute or $self->throw("feature query failed");
+       ");
+   $sth->execute or $self->throw("feature query failed"); 
+#   $self->{factory}->{dbh}->do("set enable_hashjoin=1");
+   $self->{factory}->{dbh}->do("set enable_seqscan=1");
 
-    #   $self->{factory}->{dbh}->do("set enable_hashjoin=1");
-    $self->{factory}->{dbh}->do("set enable_seqscan=1");
+# Old query (doesn't use RTree index):
+#
+#    select distinct f.name,fl.fmin,fl.fmax,fl.strand,f.type_id,f.feature_id
+#    from feature f, featureloc fl
+#    where
+#      $sql_types
+#      fl.srcfeature_id = $srcfeature_id and
+#      f.feature_id  = fl.feature_id and
+#      $sql_range
+#    order by type_id
 
-    # Old query (doesn't use RTree index):
-    #
-    #    select distinct f.name,fl.fmin,fl.fmax,fl.strand,f.type_id,f.feature_id
-    #    from feature f, featureloc fl
-    #    where
-    #      $sql_types
-    #      fl.srcfeature_id = $srcfeature_id and
-    #      f.feature_id  = fl.feature_id and
-    #      $sql_range
-    #    order by type_id
 
-    #$self->{factory}->{dbh}->trace(0);
-    #take these results and create a list of Bio::SeqFeatureI objects
-    #
-    #check if the type id is 'alignment hsp' and find/create the parent
-    #'alignment hit' object; otherwise do normal stuff
 
-    my %termname = %{ $self->{factory}->{cvname} };
-    while ( my $hashref = $sth->fetchrow_hashref ) {
 
-        my $stop            = $$hashref{fmax};
-        my $interbase_start = $$hashref{fmin};
-        my $base_start      = $interbase_start + 1;
+#$self->{factory}->{dbh}->trace(0);
+#take these results and create a list of Bio::SeqFeatureI objects
+#
+#check if the type id is 'alignment hsp' and find/create the parent
+#'alignment hit' object; otherwise do normal stuff
 
-        $feat = Bio::DB::Das::Chado::Segment::Feature->new(
-            $self->{factory},      $self,
-            $self->seq_id,         $base_start,
-            $stop,                 $termname{ $$hashref{type_id} },
-            $$hashref{strand},     $$hashref{name},
-            $$hashref{uniquename}, $$hashref{feature_id}
-        );
+  my %termname = %{$self->{factory}->{cvname}};
+  while (my $hashref = $sth->fetchrow_hashref) {
 
-        push @features, $feat;
+    my $stop            = $$hashref{fmax};
+    my $interbase_start = $$hashref{fmin};
+    my $base_start      = $interbase_start +1;
 
-        my $fstart = $feat->start() if DEBUG;
-        my $fend   = $feat->end()   if DEBUG;
+    $feat = Bio::DB::Das::Chado::Segment::Feature->new (
+                       $self->{factory},
+                       $self,
+                       $self->seq_id,
+                       $base_start,$stop,
+                       $termname{$$hashref{type_id}},
+                       $$hashref{strand},
+                       $$hashref{name},
+                       $$hashref{uniquename},$$hashref{feature_id});  
 
-#  warn "$feat->{annotation}, $$hashref{nbeg}, $fstart, $$hashref{nend}, $fend\n" if DEBUG;
-    }
+    push @features, $feat;
+ 
+    my $fstart = $feat->start() if DEBUG;
+    my $fend   = $feat->end()   if DEBUG;  
+  #  warn "$feat->{annotation}, $$hashref{nbeg}, $fstart, $$hashref{nend}, $fend\n" if DEBUG;
+  }
 
-    if ($iterator) {
-        warn "using Bio::DB::Das::ChadoIterator\n" if DEBUG;
-        return Bio::DB::Das::ChadoIterator->new( \@features );
-    }
-    else {
-        return \@features;
-    }
+  if ($iterator) {
+   warn "using Bio::DB::Das::ChadoIterator\n" if DEBUG;
+    return Bio::DB::Das::ChadoIterator->new(\@features);
+  } else {
+    return \@features;
+  }
 }
-
 =head2 seq
 
  Title   : seq
  Usage   : $s->seq
  Function: get the sequence string for this segment
  Returns : a string
- Args    : key/value pairs:
-             self (optional): if true, draw sequence from
-             from its own residues field, rather than from
-             source feature (srcfeature_id). false by
-             default.
+ Args    : none
  Status  : Public
 
 Returns the sequence for this segment as a simple string.
@@ -659,30 +594,8 @@ Returns the sequence for this segment as a simple string.
 
 sub seq {
   my $self = shift;
-  my %arg = @_;
-
   my ($ref,$class,$base_start,$stop,$strand)
     = @{$self}{qw(sourceseq class start end strand)};
-
-  if($arg{self}){
-    my $r_id    = $self->{feature_id};
-    my $r_start = $self->{_requested_start};
-    my $r_end   = $self->{_requested_end};
-    my $r_len   = $r_end-$r_start+1;
-
-    $self->warn("FIXME: incomplete implementation of alternate sequence selection");
-
-    my $sth = $self->{factory}->{dbh}->prepare("
-     select substring(residues from $r_start for $r_len) from feature
-     where feature_id = $r_id ");
-
-    $sth->execute or $self->throw("seq query failed");
-
-    my $array_ref = $sth->fetchrow_arrayref;
-    my $seq = $$array_ref[0]; 
-
-    return $seq;
-  }
 
   my $feat_id = $self->{srcfeature_id};
 
@@ -701,29 +614,26 @@ sub seq {
   if (!$has_start and !$has_stop) {
     $sth = $self->{factory}->{dbh}->prepare("
      select residues from feature
-     where feature_id = $feat_id " );
-  }
-  elsif ( !$has_start ) {
-    $sth = $self->{factory}->{dbh}->prepare( "
+     where feature_id = $feat_id ");
+  } elsif (!$has_start) {
+    $sth = $self->{factory}->{dbh}->prepare("
      select substring(residues for $stop) from feature
-     where feature_id = $feat_id " );
-  }
-  elsif ( !$has_stop ) {
-    $sth = $self->{factory}->{dbh}->prepare( "
+     where feature_id = $feat_id ");
+  } elsif (!$has_stop) {
+    $sth = $self->{factory}->{dbh}->prepare("
      select substring(residues from $base_start) from feature
-     where feature_id = $feat_id " );
-  }
-  else {    #has both start and stop
-    my $sslen = $stop - $base_start + 1;
-    $sth = $self->{factory}->{dbh}->prepare( "
+     where feature_id = $feat_id ");
+  } else { #has both start and stop
+    my $sslen = $stop-$base_start+1;
+    $sth = $self->{factory}->{dbh}->prepare("
      select substring(residues from $base_start for $sslen) from feature
-     where feature_id = $feat_id " );
+     where feature_id = $feat_id ");
   }
 
   $sth->execute or $self->throw("seq query failed");
-
+                                                                                                     
   my $array_ref = $sth->fetchrow_arrayref;
-  my $seq       = $$array_ref[0];
+  my $seq = $$array_ref[0]; 
 
   if ($reversed) {
     $seq = reverse $seq;
@@ -752,22 +662,23 @@ the segment was originally generated.
 
 #'
 
-sub factory          { shift->{factory} }
-sub alphabet         { return 'dna'; }
-sub display_id       { shift->{name} }
-sub display_name     { shift->{name} }
-sub accession_number { shift->{name} }
-sub desc             { shift->{name} }
+sub factory {shift->{factory} } 
+sub alphabet {return 'dna'; } 
+sub display_id {shift->{name} };
+sub display_name {shift->{name} } 
+sub accession_number {shift->{name} } 
+sub desc {shift->{name} } 
+
 
 sub get_feature_stream {
-    my $self     = shift;
-    my @args     = @_;
-    my $features = $self->features(@args);
-    warn "get_feature_stream args: @_\n"  if DEBUG;
-    warn "using get_feature_stream\n"     if DEBUG;
-    warn "feature array: $features\n"     if DEBUG;
+  my $self = shift;
+  my @args = @_;
+  my $features = $self->features(@args);
+    warn "get_feature_stream args: @_\n" if DEBUG;
+    warn "using get_feature_stream\n" if DEBUG;
+    warn "feature array: $features\n" if DEBUG;
     warn "first feature: $$features[0]\n" if DEBUG;
-    return Bio::DB::Das::ChadoIterator->new($features);
+  return Bio::DB::Das::ChadoIterator->new($features);
 }
 
 =head2 clone
@@ -785,13 +696,13 @@ This method creates a copy of the segment and returns it.
 
 # deep copy of the thing
 sub clone {
-    my $self = shift;
-    my %h    = %$self;
-    return bless \%h, ref($self);
+  my $self = shift;
+  my %h = %$self;
+  return bless \%h,ref($self);
 }
 
 sub sourceseq { shift->{sourceseq} }
-*abs_ref   = \&sourceseq;
+*abs_ref  =  \&sourceseq;
 *abs_start = \&start;
 *abs_end   = \&end;
 

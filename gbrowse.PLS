@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.84 2003-04-17 14:26:10 lstein Exp $
+# $Id: gbrowse.PLS,v 1.85 2003-05-07 15:40:17 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1214,7 +1214,8 @@ sub do_keyword_search {
 					      -score  => $score,
 					      -ref    => $seg->abs_ref,
 					      -start  => $seg->abs_start,
-					      -end    => $seg->abs_stop);
+					      -end    => $seg->abs_stop,
+					      -factory=> $db);
 
   }
   @$segments = @results;
@@ -1314,6 +1315,9 @@ sub open_database {
   }
   $DB{$source} = eval {$adaptor->new(@argv)} or warn $@;
   fatal_error(pre($@)) unless $DB{$source};
+  if (my $refclass = $CONFIG->setting('reference class')) {
+    eval {$DB{$source}->default_class($refclass)};
+  }
   return $DB{$source};
 }
 

@@ -18,19 +18,48 @@ require Exporter;
 # gap.  A nucleotide mismatch has a penalty of -1, and a match has a
 # positive score of +1.  An ambiguous nucleotide ("N")  can match
 # anything with no penalty.
-use constant DEFAULT_MATRIX => { 'N' => 0,
-				 'MATCH' => 1,
-				 'MISMATCH' => -1,
-				 'GAP' => -1,
-				 'GAP_EXTEND' => 0
+use constant DEFAULT_MATRIX => { 'wildcard_match'  => 0,
+				 'match'           => 1,
+				 'mismatch'        => -1,
+				 'gap'             => -1,
+				 'gap_extend'      => 0,
+				 'wildcard'        => 'N',
 				 };
+
+use constant SCORE => 0;
+use constant EVENT => 1;
+use constant EXTEND => 0;
+use constant GAP_SRC => 1;
+use constant GAP_TGT => 2;
+
+my @EVENTS = qw(extend gap_src gap_tgt);
+
+# Construct a new alignment object.  May be time consuming.
+sub new {
+    my ($class,$src,$tgt,$matrix) = @_;
+    croak 'Usage: CAlign->new($src,$tgt [,\%matrix])'
+      unless $src && $tgt;
+    my $self = bless {
+		      src    => $src,
+		      target => $tgt,
+		      matrix => $matrix || {},
+		      },$class;
+    my $implementor = $class;
+    if (eval {require Bio::Graphics::Browser::CAlign}) {
+      $implementor = 'Bio::Graphics::Browser::CAlign';
+    }
+    my ($score,$alignment) = $implementor->_do_alignment($src,$tgt,$self->{matrix});
+    $self->{score}     = $score;
+    $self->{alignment} = $alignment;
+    return $self;
+}
 
 # take two sequences as strings, align them and return
 # a three element array consisting of gapped seq1, match string, and
 # gapped seq2.
 sub align {
-  my ($seq1,$seq2) = @_;
-  my $align = __PACKAGE__->new(src=>$seq1,target=>$seq2);
+  my ($seq1,$seq2,$matrix) = @_;
+  my $align = __PACKAGE__->new($seq1,$seq2,$matrix);
   return $align->pads;
 }
 
@@ -49,7 +78,7 @@ sub align_segs {
     }
     push @maps,\@map;
   }
-  
+
   my @result;
   while ($align =~ /(\S+)/g) {
     my $align_end   = pos($align) - 1;
@@ -58,17 +87,6 @@ sub align_segs {
 		  @{$maps[1]}[$align_start,$align_end]];
   }
   return @result;
-}
-
-# Construct a new alignment object.  May be time consuming.
-sub new {
-    my ($class,%args) = @_;
-    $args{'matrix'} = { %{DEFAULT_MATRIX()},$args{'matrix'} ? %{$args{'matrix'}}:()};
-    croak 'new() requires parameters of "src" and "target"'
-	unless $args{'src'} && $args{'target'};
-    my $self =  bless \%args,$class;
-    $self->_do_alignment;
-    return $self;
 }
 
 # return the score of the aligned region
@@ -118,56 +136,66 @@ sub pads {
 }
 
 sub _do_alignment {
-    my $self = shift;
+    my $class = shift;
     local $^W = 0;
-    my($src,$tgt) = @{$self}{'src','target'};
+    my($src,$tgt,$custom_matrix) = @_;
     my @alignment;
+    $custom_matrix ||= {};
+    my %matrix = (%{DEFAULT_MATRIX()},%$custom_matrix);
 
-    my $score = $self->{'matrix'};
     my ($max_score,$max_row,$max_col);
-    my $scores = [(0)x(length($tgt)+1)];
+    my $scores = [([0,EXTEND])x(length($tgt)+1)];
 
     print join(' ',map {sprintf("%-4s",$_)} (' ',split('',$tgt))),"\n" if DEBUG;
+    my $wildcard = $matrix{wildcard};
     for (my $row=0;$row<length($src);$row++) {
       my $s = uc substr($src,$row,1);
-      my @row = (0);
+      my @row = ([0,EXTEND]);
       for (my $col=0;$col<length($tgt);$col++) {
 	my $t = uc substr($tgt,$col,1);
 
 	# what happens if we extend the both strands one character?
-	my $extend = $scores->[$col];
-	$extend += ($t eq 'N' || $s eq 'N') ? $score->{N} :
-	           ($t eq $s)               ? $score->{MATCH} :
-                                              $score->{MISMATCH};
+	my $extend = $scores->[$col][SCORE];
+	$extend += ($t eq $wildcard || $s eq $wildcard) ? $matrix{wildcard_match} :
+	           ($t eq $s)               ? $matrix{match} :
+                                              $matrix{mismatch};
 
         # what happens if we extend the src strand one character, gapping the tgt?
-	my $gap_tgt  = $row[$#row] + (($row[$#row]!~/gap/) ? $score->{GAP} 
-	                                                  : $score->{GAP_EXTEND});
+	my $gap_tgt  = $row[$#row][SCORE] + (($row[$#row][EVENT]>EXTEND) ? $matrix{gap_extend}
+	                                                                 : $matrix{gap});
 
         # what happens if we extend the tgt strand one character, gapping the src?
-	my $gap_src  = $scores->[$col+1] + (($scores->[$col+1]!~/gap/) ? $score->{GAP} 
-	                                                     : $score->{GAP_EXTEND});
+	my $gap_src  = $scores->[$col+1][SCORE] + (($scores->[$col+1][EVENT] > EXTEND) ? $matrix{gap_extend}
+	                                                                               : $matrix{gap});
 
 	# find the best score among the possibilities
 	my $score;
 	if ($extend >= $gap_src && $extend >= $gap_tgt) {
-	    $score = "$extend extend";
+	    $score = [$extend,EXTEND];
 	} elsif ($gap_src >= $gap_tgt) {
-	    $score = "$gap_src gap_src";
+	    $score = [$gap_src,GAP_SRC];
 	} else {
-	    $score = "$gap_tgt gap_tgt";
+	    $score = [$gap_tgt,GAP_TGT];
 	}
 
 	# save it for posterity
 	push(@row,$score);
-	($max_score,$max_row,$max_col) = ($score+=0,$row,$col) if $score >= $max_score;
+	($max_score,$max_row,$max_col) = ($score->[SCORE],$row,$col) if $score->[SCORE] >= $max_score;
       }
-      print join(' ',($s,map {sprintf("%4d",$_)} @row[1..$#row])),"\n" if DEBUG;
+      print join(' ',($s,map {sprintf("%4d",$_->[SCORE])} @row[1..$#row])),"\n" if DEBUG;
       $scores = \@row;
       push(@alignment,[@row[1..$#row]]);
     }
-    $self->{'score'}     = $max_score;
-    $self->{'alignment'} = $self->_trace_back($max_row,$max_col,\@alignment);
+    my $alignment = $class->_trace_back($max_row,$max_col,\@alignment);
+    if (DEBUG) {
+      for (my $i=0;$i<@$alignment;$i++) {
+	printf STDERR ("%3d %1s %3d %1s\n",
+		       $i,substr($src,$i,1),
+		       $alignment->[$i],defined $alignment->[$i] ? substr($tgt,$alignment->[$i],1):'');
+      }
+    }
+
+    return ($max_score,$alignment);
 }
 
 sub _trace_back {
@@ -175,11 +203,12 @@ sub _trace_back {
     my ($row,$col,$m) = @_;
     my @alignment;
     while ($row >= 0 && $col >= 0) {
+      printf STDERR "row=%d, col=%d score=%d event=%s\n",$row,$col,$m->[$row][$col][SCORE],$EVENTS[$m->[$row][$col][EVENT]] if DEBUG;
 	$alignment[$row] = $col;
 	my $score = $m->[$row][$col];
-	$row--,$col--,next if $score =~ /extend/;
-	$col--,       next if $score =~ /tgt/;
-	undef($alignment[$row]),$row--,next if $score =~ /src/;
+	$row--,$col--,next if $score->[EVENT] == EXTEND;
+	$col--,       next if $score->[EVENT] == GAP_TGT;
+	undef($alignment[$row]),$row--,next if $score->[EVENT] == GAP_SRC;
     }
     return \@alignment;
 }

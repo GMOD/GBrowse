@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.61 2003-04-27 15:27:44 lstein Exp $
+# $Id: Browser.pm,v 1.62 2003-05-07 15:40:18 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1085,8 +1085,8 @@ sub hits_on_overview {
   my $width = $self->width;
   my $units = $self->setting('overview units');
   my $max_label  = $conf->setting(general=>'label density') || 10;
-  my $max_bump   = $conf->setting(general=>'bump density') || 50;
-  my $class      = $hits->[0]->can('factory') ? $hits->[0]->factory->refclass : 'Sequence';
+  my $max_bump   = $conf->setting(general=>'bump density')  || 50;
+  my $class      = $hits->[0]->can('factory') ? $hits->[0]->factory->default_class : 'Sequence';
   my ($padl,$padr)  = $self->overview_pad([$self->config->overview_tracks],'Matches');
 
   # sort hits out by reference

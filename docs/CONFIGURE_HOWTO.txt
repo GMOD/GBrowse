@@ -591,6 +591,15 @@ The following [GENERAL] options are recognized:
 
       default features = Genes ORFs tRNAs
 
+   * reference class
+
+   gbrowse needs to know the class of the reference sequences that other
+   features are placed on.  The default is Sequence.  If you want to use
+   another class, such as Contig, please indicate the class here (if you
+   don't, certain features such as the keyword search will fail):
+
+      reference class = contig
+
    * max segment
 
    The max segment option sets an upper bound on the maximum size DNA

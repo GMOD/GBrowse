@@ -2,7 +2,6 @@ bin/process_gadfly.PLS
 bin/process_ncbi_human.PLS
 bin/process_sgd.PLS
 bin/process_wormbase.PLS
-cgi_install.pl
 ChangeLog
 conf/01.yeast.conf
 conf/011.yeast1.conf
@@ -14,7 +13,6 @@ conf/05.embl.conf
 conf/06.biosql.conf
 conf/07.chado.conf
 conf/enzymes.txt
-conf_install.pl
 conf/languages/en.pm
 conf/languages/es.pm
 conf/languages/fr.pm
@@ -83,8 +81,10 @@ htdocs/images/help/track+settings.gif
 htdocs/images/help/upload+edit.gif
 htdocs/images/help/upload.gif
 htdocs/images/help/upload+remote.gif
-htdocs_install.pl
 INSTALL
+install_util/cgi_install.pl
+install_util/conf_install.pl
+install_util/htdocs_install.pl
 lib/Bio/DB/Das/BioSQL.pm
 lib/Bio/DB/Das/BioSQL/Segment/Feature.pm
 lib/Bio/DB/Das/BioSQL/Segment.pm

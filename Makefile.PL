@@ -4,7 +4,7 @@ require 5.005003;
 
 my $VERSION = '1.51';
 
-my @OPTIONS = qw(PREFIX CONF HTDOCS CGIBIN);
+my @OPTIONS = qw(PREFIX CONF HTDOCS CGIBIN DO_XS);
 my $OPTIONS = join ('|',@OPTIONS);
 my %OPTIONS;
 
@@ -24,6 +24,10 @@ For RedHat Linux, you will want to use:
 
 For most versions of Apache built from source code, use:
     perl Makefile.PL PREFIX=/usr/local/apache
+
+If you have a C compiler and wish to compile the XS extensions, set
+DO_XS=1.  Currently all this does is to speed up (slightly) the
+multiple alignment plugin.
 END
 ;
   }
@@ -38,10 +42,10 @@ END
 }
 
 if (-e 'GGB.def' && !%OPTIONS) {
-  print STDERR "You have installed gbrowse before.  Should I use the previous settings to set the file paths (y/n) [y]? ";
+  print STDERR "Should I use your previous settings to set the file paths and options (y/n) [y]? ";
   chomp (my $line = <>);
   if (!$line || $line =~ /^[yY]/) {
-    print STDERR "Using previous settings for file paths.\n";
+    print STDERR "Using previous settings for file paths and options.\n";
     open F,'GGB.def' or die "GGB.def: $!";
     while (<F>) {
       chomp;
@@ -80,7 +84,7 @@ print STDERR <<END;
 
 END
 ;
-foreach (qw(PREFIX CONF HTDOCS CGIBIN)) {
+foreach (@OPTIONS) {
   printf STDERR "%7s %s\n",$_,$OPTIONS{$_};
 }
 print STDERR <<END;
@@ -168,13 +172,15 @@ sub MY::install {
 sub MY::postamble {
 qq{
 conf_install ::
-	\$(PERL) conf_install.pl $OPTIONS{CONF}/gbrowse.conf
+	\$(PERL) install_util/conf_install.pl $OPTIONS{CONF}/gbrowse.conf
 
 htdocs_install ::
-	\$(PERL) htdocs_install.pl $OPTIONS{HTDOCS}/gbrowse
+	\$(PERL) install_util/htdocs_install.pl $OPTIONS{HTDOCS}/gbrowse
 
 cgi_install :: gbrowse
-	\$(PERL) cgi_install.pl $OPTIONS{CGIBIN}
+	\$(PERL) install_util/cgi_install.pl $OPTIONS{CGIBIN}
 
 };
 }
+
+

@@ -18,8 +18,11 @@ Project (GMOD; http://www.gmod.org).
      B5. Semantic Zooming
      B6. Computed Options
      B7. Declaring New Aggregators
-  C. CHANGING THE LOCATION OF THE CONFIGURATION FILES
-  D. FURTHER INFORMATION
+  C. ADDING HISTOGRAMS
+  D. INTERNATIONALIZATION
+  E. DISPLAYING GENETIC AND RH MAPS
+  F. CHANGING THE LOCATION OF THE CONFIGURATION FILES
+  G. FURTHER INFORMATION
 
 A. CREATING NEW DATABASES FROM SCRATCH
 
@@ -150,6 +153,11 @@ for this object by asking the browser to retrieve
 "Transcript:B0273.1".  The browser can also be configured to allow the
 Transcript: prefix to be omitted.
 
+*NOTE* The subparts of a feature are in absolute (chromosomal or
+contig) coordinates.  It is not currently possible to define a feature
+in absolute coordinates and then to load its subparts using
+coordinates that are relative to the start of the feature.
+
 You can extend the idiom for objects that have heterogeneous parts,
 such as a transcript that has 5' and 3' UTRs
 
@@ -159,7 +167,6 @@ such as a transcript that has 5' and 3' UTRs
  IV	curated	 exon	5506558	5506660	. + .   Transcript B0273.1
  IV	curated	 exon	5506738	5506852	. + .   Transcript B0273.1
  IV	genewise 3'UTR	5506852 5508917	. + .   Transcript B0273.1
-
 
 Some annotations do not need to be individually named.  For example,
 it is probably not useful to assign a unique name to each ALU repeat
@@ -236,6 +243,22 @@ This indicates that the region between bases 10922906 and 11177731 of
 Chr1 are composed of LINK_H06O01 from bp 1 to bp 254826.  The region
 of LINK_H0601 between 32386 and 64122 is, in turn, composed of the
 bases 5 to 31742 of cosmid F49B2.
+
+----
+
+A6. Loading the GFF file into the database
+
+Use the BioPerl script utilities bulk_load_gff.pl, load_gff.pl or (if
+you are brave) fast_load_gff.pl to load the GFF file into the
+database.  For example, if your database is a MySQL database on the
+local host named "dicty", you can load it into an empty database using
+bulk_load_gff.pl like this:
+
+  bulk_load_gff.pl -c -d dicty my_data.gff
+
+To update existing databases, use either load_gff.pl or
+fast_load_gff.pl.  The latter is somewhat experimental, so use with
+care.
 
 ----
 
@@ -353,23 +376,29 @@ The following [GENERAL] options are recognized:
   replacing <db_name> and <db_host> with the database and database
   host of your choice.
 
-  To use the Oracle version of Bio::DB::GFF, use these arguments:
+  If the database requires you to log in with a user name and
+  password, use the following db_adaptor:
 
+    db_args = -dsn     dbi:mysql:database=<db_name>;host=<db_host>
+              -adaptor dbi::Oracle
+              -user    <username>
+              -pass    <password>
+
+  replacing <username> and <password> with the appropriate values.
+  In the example configuration files, we use a username of "nobody"
+  and an empty password.  This is appropriate if the database is
+  configured to allow "nobody" to log in from the local machine
+  without using a password.
+
+  To use the Oracle version of Bio::DB::GFF, use these arguments:
 
     db_args = -adaptor oracle
               -dsn dbi:oracle:database=db_service
 
   Where db_description should be replaced with the name of the desired
-  database service.
-
-  If the database requires you to log in with a user name and
-  password, use the following db_args:
-
-    db_args = -dsn  dbi:mysql:database=<db_name>;host=<db_host>
-              -user <username>
-              -pass <password>
-
-  replacing <username> and <password> with the appropriate values.
+  database service definition.  See the documentation for the Perl
+  dbd::Oracle database driver for more information about the -dsn
+  format.
 
   d) aggregators
 
@@ -642,6 +671,52 @@ The following [GENERAL] options are recognized:
       remote sources = "Menu Label 1" http://url1.host.com/etc/etc
 		       "Menu Label 2" http://url2.host.com/etc/etc
 
+    ae) html1, html2, html3, html4, html5, html6
+
+    These options allow you to insert HTML into the GBrowse page at
+    strategic places.  Eventually this will be replaced with an HTML
+    template system, but for now, this is the best we have.
+
+    Option       Where it goes
+    ------       -------------
+    header	 between the top and the instructions
+    html1	 between the instructions and the navigation bar
+    html2	 between the navigation bar and the overview
+    html3	 between the overview and the detail view
+    html4	 between the detail view and the data source panel
+    html5	 between the data source panel and the track list
+    html6	 between the track list and the annotation upload
+    footer	 between the annotation upload and the bottom
+
+    af) keystyle, empty_tracks
+
+    These two general options control the appearance of the keys
+    printed on the detailed view.  keystyle takes one of two values
+    "between" or "beneath".
+
+       keystyle = between
+       Print the track labels between the tracks themselves.
+
+       keystyle = beneath
+       Print the track labels at the bottom of the detailed view.
+
+    The "empty_tracks" option controls what to do when a track has
+    no features in it.  Possible values are:
+
+       empty_tracks = key
+       Print just the key (the track label).
+
+       empty_tracks = suppress
+       Suppress the track completely.
+
+       empty_tracks = line
+       Draw a solid line across the track.
+
+       empty_tracks = dashed
+       Draw a dashed line across the track.
+
+    The default value is "suppress."
+
 B2. Track Sections
 
 Any other [Section] in the configuration file is treated as a
@@ -904,6 +979,7 @@ source "framework":
  glyph         = generic
  bgcolor       = lavender
  height        = 5
+ key           = Mapped Genes
 
 ---
 
@@ -1109,7 +1185,227 @@ command "perldoc Bio::DB::GFF::Aggregator::aggregator_name", where
 
 ----------------------------------------------------------------------
 
-C. CHANGING THE LOCATION OF THE CONFIGURATION FILES
+C. GENERATING HISTOGRAMS
+
+With a little bit of additional effort, you can set one or more tracks
+up to display a density histogram of the features contained within the
+track.  For example, the human data source in GBrowse demo
+(http://www.wormbase.org/db/seq/gbrowse?source=human) uses density
+histograms in the chromosomal overview.  In addition, when the
+features in the SNP track become too dense to view, this track
+converts into a histogram.  To see this in action, turn on the SNP
+track and then zoom out beyond 150K.
+
+There are four steps for making histograms:
+
+   1) generate the density data using the generate_histogram.pl
+   script.
+
+   2) load the density data using load_gff.pl or fast_load_gff.pl.
+
+   3) declare a density aggregator to the gbrowse configuration file
+
+   4) add the density aggregator to the appropriate track in the
+   configuration file.
+
+The first step is to generate the density data.  Currently this is
+done by generating a GFF file containing a set of "bin" feature
+types.  Use the generate_histogram.pl script to do this.  You will
+find it in bioperl under the scripts/Bio-DB-GFF directory.
+
+Assuming that your database is named "dicty", you have a feature named
+SNP, and you wish to generate a density distribution across 10,000 bp
+bins, here is the command you would use:
+
+  generate_histogram.pl -merge -d dicty -bin 10000 SNP >snp_density.gff
+
+This is saying to use the "dicty" database (-d) option, to use 10,000
+bp bins (the -bin option) and to count the occurrences of the SNP
+feature throughout the database.  In addition, the -merge option says
+to merge all types of SNPs into a single bin.  Otherwise they will be
+stratified by their source.  The resulting GFF file contains a series
+of entries like these ones:
+
+  Chr1	SNP bin 1     10000 49 + . bin Chr1:SNP
+  Chr1	SNP bin	10001 20000 29 + . bin Chr1:SNP
+
+What this is saying is that there are now a series of pseudo-features
+of type "bin:SNP" that occupy successive 10,000 bp regions of the
+genome.  The score field contains the number of times a SNP was seen
+in that bin.
+
+You'll now load this file using load_gff.pl or fast_load_gff.pl:
+
+  load_gff.pl -d dicty snp_density.gff
+
+The next step is to tell GBrowse how to use this information.  You do
+this by creating a new aggregator for the SNP density information.
+Open the GBrowse configuration file and find the aggregators option.
+Add a new aggregator that looks like this:
+
+  aggregators = snp_density{bin:SNP}
+
+This is declaring a new feature named "snp_density" that is composed
+of subparts of type bin:SNP.
+
+The last step is to declare a track for the density information.  You
+will use the "xyplot" glyph, which can draw a number of graphs,
+including histograms.  To add the SNP density information as a static
+track in the overview, create a section like this one:
+
+ [SNP:overview]
+ feature       = snp_density
+ glyph         = xyplot
+ graph_type    = boxes
+ scale         = right
+ bgcolor       = red
+ fgcolor       = red
+ height        = 20
+ key           = SNP Density
+
+This is declaring a new constant track in the overview named "SNP
+Density."  The feature is "snp_density", corresponding to the
+aggregator declared earlier.  The glyph is "xyplot" using the graph
+type of "boxes" to generate a column graph.
+
+To set up a track so that the histogram appears when the user zooms
+out beyond 100,000 bp but shows the detailed information at higher
+magnifications, generate two track sections like these:
+
+  [SNPs]
+  feature       = snp
+  glyph         = triangle
+  point         = 1
+  orient        = N
+  height        = 6
+  bgcolor       = blue
+  fgcolor       = blue
+  key           = SNPs
+
+  [SNPs:100000]
+  feature       = snp_density
+  glyph         = xyplot
+  graph_type    = boxes
+  scale         = right
+
+The first track section sets up the defaults for the SNP track.  SNPs
+are represented as blue triangles pointing North.  The second track
+declaration declares that when the user zooms out to over 100K base
+pairs, GBrowse should display the snp_density feature using the xyplot
+glyph.
+
+----------------------------------------------------------------------
+
+D. INTERNATIONALIZATION
+
+GBrowse is partially internationalized.  End-users whose browsers are
+set to request a non-English language will see the GBrowse main and
+secondary screens in their preferred language, provided that GBrowse
+has the appropriate translation file.
+
+Translation files are located in gbrowse.conf/languages/ and use the
+standard two-letter language abbreviations, such as "fr" for French,
+as well as the regional abbregiations, such as fr-CA for Canadian
+French.  Currently there are translation files for French, Italian,
+and Japanese.  If your favorite language isn't supported, you are
+encouraged to create a new translation file and contribute it to the
+GBrowse development effort.  Please contact Lincoln Stein
+(lstein@cshl.org) for help in doing this.
+
+If the end user does not specify a preferred language, GBrowse will
+default to "en" (English).  You can change this by placing a
+"language" option in the configuration file somewhere inside the
+[GENERAL] section.  For example, to make Japanese the default, create
+this entry:
+
+  language = ja
+
+GBrowse will still use the end-user's preferred language in preference
+to the default if the preferred language is available.
+
+Although GBrowse automatically changes the text and button language,
+it can't automatically translate the track labels, obviously.  If you
+would like the track labels to localize, you will have to provide your
+own translations in the "key" and "citation" options.  The syntax is
+similar to that used for semantic zooming:
+
+  [gene]
+  glyph   = transcript
+  feature = transcript:curated
+  height  = 10
+  key     = Named Gene
+  key:fr  = Gènes Nommés
+  key:it  = I Geni dati un nome a
+  key:sp  = Los Genes denominados
+
+The option is followed by a colon and the two-letter language name to
+indicate that when the page is being displayed with this language, to
+use the indicated value of the option.  The option without the colon
+is the default.  You may enter accented and umlauted characters
+directly, as shown, or use the HTML entities.  Non-English character
+sets, such as Japanese, should also work correctly, provided that the
+translation file indicates the correct character set to use.
+
+HELP FILES:
+
+The GBrowse help files are in English.  Although there is support for
+internationalizing the hep files, no one has done this yet.  If you
+are industrious and wish to translate the help files into your
+favorite language, find the two help files where they are located in
+htdocs/gbrowse/.  One is named general_help.html, while the other is
+named annotation_help.html.  Translate them, and create new files with
+the language prefix appended to the end.  For example, the French
+translation of annotation_help.html would be annotation_help.html.fr.
+
+LIMITATIONS:
+
+- There is no localization support. For example, GBrowse will print
+large numbers using commas (e.g. 1,234,567) instead of periods, even
+when talking to a European browser.
+
+- Although the HTML frame around the GBrowse genome image will use the
+appropriate character set, the overview and detail images themselves
+are limited to Latin alphabets.  This is because of limited native
+character support in the GD library used by GBrowse.  When a non-Latin
+character set is called for, such as Japanese, GBrowse will use
+Japanese for the frame, but English for the image.
+
+- The rate at which the GBrowse team adds new features to the browser
+often outstrips the ability of volunteers to update the translationf
+files.  This means that new buttons and fields may be displayed in
+English on an otherwise correctly internationalized page.
+
+----------------------------------------------------------------------
+
+E. DISPLAYING GENETIC AND RH MAPS
+
+GBrowse can be tweaked to make it more suitable for displaying genetic
+and radiation hybrid maps.  
+
+The main issue is that the Bio::DB::GFF database expects coordinates
+to be positive integers, not fractions, but genetic and RH maps use
+floating point numbers.  Working around this is a bit of an ugly hack.
+Before loading your data you must multiply all your coordinates by a
+constant power of 10 in order to convert them into integers.  For
+example, if a genetic map uses Morgan units ranging from 0 to 1.80,
+you would multiple by 100 to create a map in ranging from 0 to 180.
+
+Create a GFF file containing the markers in modified coordinates and
+load it as usual.  Now you must tell GBrowse to reverse these changes.
+Enter the following options into the [GENERAL] section of the
+configuration file:
+
+ units = M
+ unit_divider = 100
+
+These two options tell GBrowse to use "M" (Morgan) units, and to
+divide all coordinates by 100.  GBrowse will automatically display the
+scale using the most appropriate units, so the displayed map will
+typically be drawn using cM units.
+
+----------------------------------------------------------------------
+
+F. CHANGING THE LOCATION OF THE CONFIGURATION FILES
 
 If you wish to change the location of the gbrowse.conf configuration
 file directory, you must manually edit the gbrowse CGI script.  Open
@@ -1141,7 +1437,7 @@ For example:
 
 ----------------------------------------------------------------------
 
-D. FURTHER INFORMATION
+G. FURTHER INFORMATION
 
 For further information, bug reports, etc, please consult the mailing
 lists and discussion forums at www.gmod.org.
@@ -1150,4 +1446,3 @@ Have fun!
 
 Lincoln Stein & the GMOD development team
 lstein@cshl.org
-March 22, 2002

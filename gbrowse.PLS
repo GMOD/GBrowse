@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.64 2002-10-06 19:09:14 lstein Exp $
+# $Id: gbrowse.PLS,v 1.65 2002-10-07 00:22:01 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1259,7 +1259,7 @@ sub multiple_choices {
       print TR({-class=>'databody',-valign=>'TOP'},
 	       th({-align=>'RIGHT'},ref($name) ? a({-href=>$objref},$name):tt($name)),
 	       td($description),
-	       td(a({-href=>$posref},$position . ' ('.($stop-$start+1).' '.$LANG->tr('bp'))),
+	       td(a({-href=>$posref},$position . ' ('.($stop-$start+1).' '.$LANG->tr('bp').')')),
 	       td($LANG->tr('SCORE',$score)));
     }
   }

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.40 2002-10-06 18:25:34 lstein Exp $
+# $Id: Browser.pm,v 1.41 2002-10-07 00:22:01 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -868,7 +868,8 @@ sub image_and_map {
 				 -description => $do_description,
 				);
       $tracks{$label}->configure(-connector  => 'none') if !$do_bump;
-      $tracks{$label}->configure(-bump_limit => $limit->{$label}) if $limit->{$label} > 0;
+      $tracks{$label}->configure(-bump_limit => $limit->{$label}) 
+	if $limit->{$label} && $limit->{$label} > 0;
     }
   }
 
@@ -1541,10 +1542,13 @@ sub make_title {
 sub i18n_style {
   my $self      = shift;
   my ($label,$lang,$length) = @_;
+  return $self->style($label,$length) unless $lang;
+
   my $charset   = $lang->tr('CHARSET');
 
   # GD can't handle non-ASCII/LATIN scripts transparently
-  return $self->style($label,$length) if $charset && $charset !~ /^(us-ascii|iso-8859)/i;
+  return $self->style($label,$length) 
+    if $charset && $charset !~ /^(us-ascii|iso-8859)/i;
 
   my @languages = $lang->language;
 

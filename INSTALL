@@ -55,6 +55,11 @@ you can run it.
 This will install the software in the default location under
 /usr/local/apache. See "Details" to change this.
 
+To further configure GBrowse, see docs/CONFIGURE_HOWTO.txt.  To run
+GBrowse on top of Oracle and BioSQL databases see
+docs/ORACLE_AND_BIOSQL.txt.  To run GBrowse on top of Gadfly, see
+README-berkeley-gadfly.
+
 Details:
 
 The browser consists of a CGI script named "gbrowse", a Perl module
@@ -165,7 +170,7 @@ different account.
 The next step is to load the database with data.  This is accomplished
 by loading the database from a tab-delimited file containing the
 genomic annotations in GFF format.  The Bioperl distribution comes
-with two tools for loading Bio::DB::GFF databases:
+with three tools for loading Bio::DB::GFF databases:
 
   1) bulk_load_gff.pl
      This Perl script will initialize a new Bio::DB::GFF database with
@@ -177,6 +182,12 @@ with two tools for loading Bio::DB::GFF databases:
      This will incrementally load a database, optionally initializing
      it if it does not already exist.  This script is slower, but it
      allows incremental loading.
+
+  3) fast_load_gff.pl
+     This will incrementally load a database.  On UNIX systems, it will
+     activate a fast loader that makes the speed almost the same as
+     the bulk loader.  Be careful, though, because this is an experimental
+     piece of software.
 
 You will find these scripts in the Bioperl distribution, in the
 subdirectory scripts/Bio-DB-GFF.  Earlier versions of the
@@ -304,16 +315,17 @@ This will affect all mod_perl scripts globally.
 Some of GBrowse's advanced features (the use of histograms in semantic
 zooming; labeling of the tracks in the overview) require features of
 the Bioperl Bio::Graphics and Bio::DB::GFF libraries that are only
-available in Bioperl version 1.20. At the time this was written
-(August, 2002), version 1.20 was still in development and was expected
-to be released in the fall of 2002. Should version 1.20 not be
+available in Bioperl version 1.1. At the time this was written
+(August, 2002), version 1.1 was still in development and was expected
+to be released in the fall of 2002. Should version 1.1 not be
 available at the time you read this, there are two ways to obtain it:
 
   a. The Patch method
 
-  This distribution contains a patch file named "bioperl-102-120.patch"
+  This distribution contains a patch file named "bioperl-102-1.1.patch"
   located in the "extras" subdirectory. Applying it to a virgin
   Bioperl-1.0.2 distribution will generate a version that contains the
+  changes needed to run the advanced features.
   
   The steps to follow are these:
 
@@ -324,7 +336,7 @@ available at the time you read this, there are two ways to obtain it:
       cd bioperl-1.0.2
 
   a3. apply the patch
-      patch -p1 < ../Generic-Genome-Browser-1.45/extras/bioperl-102-120.patch
+      patch -p1 < ../Generic-Genome-Browser-1.46/extras/bioperl-102-1.1.patch
 
   Modify the last command to point to the actual location of the patch
   file.  Note that this will give you a version of Bioperl that includes
@@ -447,4 +459,3 @@ Have fun!
 
 Lincoln Stein & the GMOD team
 lstein@cshl.org
-July 7, 2002

@@ -1,0 +1,66 @@
+Support for various databases and database schemas are coming.  Right
+now, there is full support for the Bio::DB::GFF schema running on
+MySQL, preliminary support for the Bio::DB::GFF schema running on top
+of Oracle, and preliminary support for the BioSQL schema running on
+top of MySQL.  There is also support for the GadFly schema running on
+top of MySQL and PostgreSQL, but this uses an earlier (forked) version
+of GBrowse.  See README-berkeley-gadfly for more details.
+
+Bio::DB::GFF on Oracle
+----------------------
+
+To run GBrowse on top of Oracle, you will need a recent version of
+BioPerl that contains Shuly Avraham's
+Bio::DB::GFF::Adaptor::dbi::Oracle adaptor.  Create the database, name
+it, and set access permissions.  Then run the load_gff.pl script to
+initialize and load it with the GFF data:
+
+ load_gff.pl -c -adaptor dbi::Oracle -dsn dbi:oracle:database=<db_service> file.gff
+
+Replace <db_service> with the service definition for your database.
+You will probably also have to provide the -user and -pass options.
+
+The next step is to tell GBrowse to use the Oracle database.  In the
+[GENERAL] section, enter the following values for db_adaptor and
+db_args:
+
+
+    db_adaptor = Bio::DB::GFF
+    db_args = -dsn     dbi:mysql:database=<service_name>;host=<host>
+              -adaptor dbi::Oracle
+              -user    <username>
+              -pass    <password>
+
+Replace <service_name>, <host>, <username> and <password> with the
+values appropriate for your system.
+
+BioSQL on MySQL
+---------------
+
+To run GBrowse on top of BioSQL, you will need a recent version of
+BioPerl that has the DAS (distributed annotation system) interface
+files.  Initialize and load your BioSQL database according to the
+directions in the biosql-schema and bioperl-db distributions.
+
+Use the following db_adaptor and db_args options as templates for your
+GBrowse configuration file:
+
+db_adaptor  = Bio::DB::Das::BioSQL
+db_args     = driver    mysql
+	      dbname    <dbname>
+	      biodbname <biodbname>
+	      host      <hostname>
+	      user      <username>
+              password  <password>
+
+Replace the values in angle brackets with the appropriate values.  A
+working configuration file can be found in conf/06.biosql.conf
+
+NOTE:
+
+These GBrowse adaptors are really experimental.  Don't expect them to
+work right off.  Please contact Lincoln Stein if you have any
+questions or problems.
+
+Lincoln Stein
+<lstein@cshl.org>

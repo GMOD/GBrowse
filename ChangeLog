@@ -1,3 +1,14 @@
+1.46	Sun Oct  6 18:25:05 EDT 2002
+	* Major feature release.
+	* Internationalization support: French, Italian, Japanese, English.
+	* Some features need BioPerl 1.1; see patch file
+	* Flexible support for semantic zooming.
+	* Histograms in the overview and detailed views.
+	* Multiple labeled features in overview.
+	* Preliminary Oracle and BioSQL support.
+	* Revamped and simplified stylesheet.
+	* Hooks for adding HTML to display.
+	* Track labels can now be between tracks.
 1.45	Sun Jul  7 17:32:08 EDT 2002
 	* Major feature release.
 	* Added conversion script for human genome annotations from NCBI.

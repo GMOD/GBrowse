@@ -16,6 +16,10 @@ install_macosx
             and its dependencies on Mac OS X. Contributed by Todd
             Harris.
 
+import_ncbi_mv_hs.pl
+	    Scott Saccone's script for importing NCBI gene builds
+	    into GFF format.
+
 conf_files  Configuration files for:
  01.yeast.conf		yeast data
  02.wormbase.conf	c. elegans data

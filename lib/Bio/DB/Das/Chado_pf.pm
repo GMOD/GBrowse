@@ -1,4 +1,4 @@
-# $Id: Chado_pf.pm,v 1.8 2002-12-09 18:29:48 scottcain Exp $
+# $Id: Chado_pf.pm,v 1.9 2002-12-09 22:05:04 scottcain Exp $
 # Das adaptor for Chado_pf
 
 =head1 NAME
@@ -136,8 +136,6 @@ $VERSION = 0.01;
 sub new {
   my $self = shift;
   my ($dsn,$username,$password) = @_;
-
-  print "$dsn, $username, $password\n";
 
   my $dbh = DBI->connect( $dsn, $username, $password );
 

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.9 2002-12-09 18:29:48 scottcain Exp $
+# $Id: Segment.pm,v 1.10 2002-12-09 22:05:04 scottcain Exp $
 
 =head1 NAME
 
@@ -184,23 +184,20 @@ Returns the length of the segment.  Always a positive number.
 
 sub length {
   my $self = shift;
-  if ($self->length) {
-    return $self->length;
-  } else {
-    my $quoted_name = $self->dbadaptor->quote($self->name);
-    my $sth = $self->dbadaptor->prepare ("
-     select seqlen from feature where feature_id in  
-       (select f.feature_id
-        from dbxref dbx, feature f, feature_dbxref fd
-        where f.type_id = 6 and
-           f.feature_id = fd.feature_id and
-           fd.dbxref_id = dbx.dbxref_id and
-           dbx.accession = $quoted_name ) ");
-    $sth->execute or return;
+  my $quoted_name = $self->dbadaptor->quote($self->name);
+  my $sth = $self->dbadaptor->prepare ("
+   select seqlen from feature where feature_id in  
+     (select f.feature_id
+      from dbxref dbx, feature f, feature_dbxref fd
+      where f.type_id = 6 and
+         f.feature_id = fd.feature_id and
+         fd.dbxref_id = dbx.dbxref_id and
+         dbx.accession = $quoted_name ) ");
+  $sth->execute or return;
 
-    my $hash_ref = $sth->fetchrow_hashref;
-    return $$hash_ref{'seqlen'};
-  }
+  my $hash_ref = $sth->fetchrow_hashref;
+  return $$hash_ref{'seqlen'};
+  
 }
 
 =head2 features

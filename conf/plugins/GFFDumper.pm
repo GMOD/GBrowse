@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.1 2002-03-25 05:31:45 lstein Exp $
+# $Id: GFFDumper.pm,v 1.2 2002-04-01 00:02:28 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -25,6 +25,7 @@ sub dump {
   my @labels   = @{$page_settings->{tracks}};
 
   my $date = localtime;
+  print header('text/plain');
   print "##gff-version 2\n";
   print "##date $date\n";
   print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";

@@ -132,10 +132,17 @@ htdocs_install ::
 			cp \$\$i \$\$dir; \\
 		fi \\
 	done; \\
-	cd $Bin/htdocs/images; \\
-	mkdir -p \$\$dir/images; \\
-	for i in *; do \\
-		cp -pr \$\$i \$\$dir/images; \\
+	cd $Bin/htdocs/images/buttons; \\
+	echo "Making \$\$dir/images/buttons..."; \\
+	mkdir -p \$\$dir/images/buttons; \\
+	for i in *.gif; do \\
+		cp -p \$\$i \$\$dir/images/buttons; \\
+	done; \\
+	cd $Bin/htdocs/images/help; \\
+	echo "Making \$\$dir/images/help..."; \\
+	mkdir -p \$\$dir/images/help; \\
+	for i in *.gif; do \\
+		cp -p \$\$i \$\$dir/images/help; \\
 	done; \\
 	echo "Making \$\$dir/tmp..."; \\
 	mkdir -p \$\$dir/tmp; \\

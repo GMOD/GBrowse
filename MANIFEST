@@ -26,7 +26,6 @@ gbrowse.PLS
 htdocs/annotation_help.html
 htdocs/gbrowse.css
 htdocs/general_help.html
-htdocs/images/buttons/.cvsignore
 htdocs/images/buttons/green.gif
 htdocs/images/buttons/green1.gif
 htdocs/images/buttons/green2.gif
@@ -41,7 +40,6 @@ htdocs/images/buttons/green_l2.gif
 htdocs/images/buttons/green_r1.gif
 htdocs/images/buttons/green_r2.gif
 htdocs/images/buttons/minus.gif
-htdocs/images/buttons/mplus.gif
 htdocs/images/buttons/plus.gif
 htdocs/images/buttons/red.gif
 htdocs/images/buttons/red1.gif
@@ -66,7 +64,6 @@ htdocs/images/help/upload.gif
 lib/Bio/DB/GFF/Aggregator/waba_alignment.pm
 lib/Bio/Graphics/Browser.pm
 lib/Bio/Graphics/Browser/Plugin.pm
-lib/Bio/Graphics/Glyph/annloraine_transcript.pm
 lib/Bio/Graphics/Glyph/drosophila_arrow.pm
 lib/Bio/Graphics/Glyph/heterogeneous_segments.pm
 lib/Bio/Graphics/Glyph/phased_exons.pm

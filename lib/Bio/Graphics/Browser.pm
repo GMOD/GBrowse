@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.51.2.17 2003-07-07 22:57:08 pedlefsen Exp $
+# $Id: Browser.pm,v 1.51.2.18 2003-08-12 00:30:27 ccavnor Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1225,18 +1225,7 @@ sub _html_main_display {
       $segment = $self->_truncated_segment( $segment );
     }
     my $divider = $self->setting( 'unit_divider' ) || 1;
-    print $out_fh
-      h2( ## TODO: REMOVE.  HACK.
-          '<a href=http://gbrowsedev.systemsbiology.net/cgi-bin/gbrowse?source=jdrf&RevertQuick=1">[Reset]</a>',
-          $babelfish->tr(
-            'SHOWING_FROM_TO',
-            $self->_unit_label( $segment->length() ),
-            ( '' . $segment->seq_id() ),
-            commas( $segment->start() / $divider ),
-            commas( $segment->end() / $divider )
-          )
-      );
-  } # End if size of @segments is 0 or 1.
+      } # End if size of @segments is 0 or 1.
 
   ## TODO: REMOVE
   warn "_html_main_display 2" if DEBUG;

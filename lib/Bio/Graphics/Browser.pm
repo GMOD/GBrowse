@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.50 2002-12-30 20:40:25 lstein Exp $
+# $Id: Browser.pm,v 1.51 2002-12-31 19:26:05 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -582,7 +582,7 @@ sub render_html {
   my $url     = $self->generate_image($image);
   my $img     = img({-src=>$url,-align=>'middle',-usemap=>'#hmap',-width=>$width,
 		     -height=>$height,-border=>0,-name=>'detailedView',-alt=>'detailed view'});
-  my $img_map;
+  my $img_map = '';
   if ($do_map) {
     $self->_load_aggregator_types($segment);
     $img_map = $self->make_map($map,$do_centering_map,$panel)

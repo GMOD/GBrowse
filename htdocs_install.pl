@@ -20,6 +20,8 @@ if (! (-e $ht_target) ) {
     mkdir($ht_target,0777) or die "unable to make $ht_target directory\n";
 }
 
+fixreadonly($ht_target) if $^O =~ /win32/i;
+
 opendir HTDOCS, "htdocs" or die "unable to opendir htdocs\n";
 while (my $file = readdir(HTDOCS) ) {
     my $localfile = Bio::Root::IO->catfile('htdocs', $file);
@@ -42,6 +44,8 @@ if (! (-e $buttondir) ) {
     mkdir($buttondir,0777) or die "unable to make $buttondir\n";
 }
 
+fixreadonly($buttondir) if $^O =~ /win32/i;
+
 opendir BUTTONS, "htdocs/images/buttons" or die "unable to open ./htdocs/images/buttons\n";
 while (my $file = readdir(BUTTONS) ) {
     my $localfile = Bio::Root::IO->catfile('htdocs/images/buttons',$file);
@@ -58,6 +62,8 @@ if (! (-e $helpdir) ) {
     print "Making $helpdir...\n";
     mkdir($helpdir,0777) or die "unable to make $helpdir\n";
 }
+
+fixreadonly($helpdir) if $^O =~ /win32/i;
 
 opendir HELP, "htdocs/images/help" or die "unable to open htdocs/images/help\n";
 while (my $file = readdir(HELP) ) {
@@ -79,4 +85,8 @@ if (! (-e $tmpdir) ) {
 #    chmod $mode, $tmpdir or die "unable to make $tmpdir world writable\n";
 }
 
-
+sub fixreadonly {
+  my $dir = shift;
+  my $unsetreadonly = Bio::Root::IO->catfile( $dir, "*.*");
+  system("attrib -r /s $unsetreadonly");
+}

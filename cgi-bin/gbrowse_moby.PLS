@@ -42,7 +42,7 @@ $startperl -w
 !GROK!THIS!
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_moby.PLS,v 1.2 2003-10-20 19:58:36 markwilkinson Exp $
+# $Id: gbrowse_moby.PLS,v 1.3 2003-10-20 20:51:49 markwilkinson Exp $
 
 
 # use lib "/usr/local/GB/GMOD_LIBS/moby-live/Perl";
@@ -55,6 +55,7 @@ use Carp;
 use Bio::Graphics::Browser::Util;
 use CGI qw(:standard *table *TR);
 use strict;
+use vars qw($CONFIG $VERSION $CONF_DIR $LANG @COLORS $INDEX %strands %COLORS %URLS);
 
 =head1 NAME
 

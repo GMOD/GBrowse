@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.51.2.14 2003-07-06 00:49:28 pedlefsen Exp $
+# $Id: Browser.pm,v 1.51.2.15 2003-07-07 20:41:45 pedlefsen Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -4598,32 +4598,47 @@ sub _get_detail_image {
       }
     } else {                                   # 'auto'
       $bump = $conf->get_and_eval( $section, 'bump' );
-      if( $bump || !defined( $bump ) ) {
-        $feature_count = $collection->feature_count();
-        if( $limit->{ $section } && $feature_count > $limit->{ $section } ) {
-          $feature_count = $limit->{ $section };
-        }
-        $bump = ( $feature_count <= $max_bump );
-      }
+
+      ## TODO: Put back.  This is a temporary hack; never look at the
+      ## bump limits for now..
+
+      #if( $bump || !defined( $bump ) ) {
+      #  $feature_count = $collection->feature_count();
+      #  if( $limit->{ $section } && $feature_count > $limit->{ $section } ) {
+      #    $feature_count = $limit->{ $section };
+      #  }
+      #  $bump = ( $feature_count <= $max_bump );
+      #}
+      unless( defined $bump ) { $bump = 1; }
       $label = $conf->get_and_eval( $section, 'label' );
       if( $label || !defined( $label ) ) {
-        unless( defined $feature_count ) {
-          $feature_count = $collection->feature_count();
-          if( $limit->{ $section } && $feature_count > $limit->{ $section } ) {
-            $feature_count = $limit->{ $section };
-          }
-        }
-        $label = ( $feature_count <= $max_labels );
+
+        ## TODO: Put back.  This is a temporary hack; never look at the
+        ## label limits for now..
+
+        #unless( defined $feature_count ) {
+        #  $feature_count = $collection->feature_count();
+        #  if( $limit->{ $section } && $feature_count > $limit->{ $section } ) {
+        #    $feature_count = $limit->{ $section };
+        #  }
+        #}
+        #$label = ( $feature_count <= $max_labels );
+        unless( defined $label ) { $label = 1; }
       }
       $description = $conf->get_and_eval( $section, 'description' );
       if( $description ) {
-        unless( defined $feature_count ) {
-          $feature_count = $collection->feature_count();
-          if( $limit->{ $section } && $feature_count > $limit->{ $section } ) {
-            $feature_count = $limit->{ $section };
-          }
-        }
-        $description = ( $feature_count <= $max_labels );
+
+        ## TODO: Put back.  This is a temporary hack; never look at the
+        ## description limits for now..
+
+        #unless( defined $feature_count ) {
+        #  $feature_count = $collection->feature_count();
+        #  if( $limit->{ $section } && $feature_count > $limit->{ $section } ) {
+        #    $feature_count = $limit->{ $section };
+        #  }
+        #}
+        #$description = ( $feature_count <= $max_labels );
+        $description = 1;
       }
     }
     $tracks{ $section }->configure(
@@ -4634,9 +4649,9 @@ sub _get_detail_image {
     unless( $bump ) {
       $tracks{ $section }->configure( '-connector' => 'none' );
     }
-    if( $limit->{ $section } > 0 ) {
-      $tracks{ $section }->configure( '-bump_limit' => $limit->{ $section } );
-    } 
+    #if( $limit->{ $section } > 0 ) {
+    #  $tracks{ $section }->configure( '-bump_limit' => $limit->{ $section } );
+    #} 
   } # End foreach $section in @$tracks, build the corresponding track.
 
   ## This was removed, but for the TODO I'm keeping it here.. #################

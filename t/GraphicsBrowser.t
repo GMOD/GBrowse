@@ -1,7 +1,7 @@
 # This is -*-Perl-*- code
 ## Bioperl Test Harness Script for Modules
 ##
-# $Id: GraphicsBrowser.t,v 1.1.2.6 2003-07-06 00:49:29 pedlefsen Exp $
+# $Id: GraphicsBrowser.t,v 1.1.2.7 2003-07-07 20:41:45 pedlefsen Exp $
 
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl test.t'
@@ -110,7 +110,10 @@ ok( $session_id );
 #$browser->gbrowse( \*STDOUT, 'rakari', undef, { 'name' => 'Genome' } );
 #$browser->gbrowse( \*STDOUT, 'jdrf3', undef, { 'name' => 'chr1:228150000,228650000' } );
 #$browser->gbrowse( \*STDOUT, 'jdrf3', undef, { 'name' => 'chr6:32000000,33000000' } );
-$browser->gbrowse( \*STDOUT, 'jdrf3', undef, { 'name' => 'chr11:65695316,70981556' } );
+# Gustavo's data is in this region:
+#$browser->gbrowse( \*STDOUT, 'jdrf4', undef, { 'name' => 'chr10:13006404,16697399' } );
+# The scored snp data is in this region:
+$browser->gbrowse( \*STDOUT, 'jdrf4', undef, { 'name' => '10:115324524-113312690' } );
 
 # str_id 6 partial:
 #$browser->gbrowse( \*STDOUT, 'lodtest', undef, { 'name' => '11:67338436-68338435' } );

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.70 2004-07-21 16:09:18 scottcain Exp $
+# $Id: Segment.pm,v 1.71 2004-08-09 20:04:30 scottcain Exp $
 
 =head1 NAME
 
@@ -97,6 +97,8 @@ use constant DEBUG => 0;
 use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI Bio::DB::Das::Chado);
 $VERSION = 0.11;
+
+use overload '""' => 'asString';
 
 # construct a virtual segment that works in a lazy way
 sub new {
@@ -1032,5 +1034,30 @@ Alias of sourceseq for backward compatibility
 =cut
 
 *abs_end   = \&end;
+
+=head2 asString
+                                                                                
+ Title   : asString
+ Usage   : $s->asString
+ Function: human-readable string for segment
+ Returns : a string
+ Args    : none
+ Status  : Public
+                                                                                
+Returns a human-readable string representing this sequence.  Format
+is:
+                                                                                
+   sourceseq:start,stop
+                                                                                
+=cut
+                                                                                
+sub asString {
+  my $self = shift;
+  my $label = $self->refseq;
+  my $start = $self->start;
+  my $stop  = $self->stop;
+  return "$label:$start,$stop";
+}
+
 
 1;

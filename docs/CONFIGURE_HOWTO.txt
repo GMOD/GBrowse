@@ -730,6 +730,26 @@ The following [GENERAL] options are recognized:
     html6	 between the track list and the annotation upload
     footer	 between the annotation upload and the bottom
 
+    These can be code references.  One useful thing to do is to use the
+    language translator to insert language-specific HTML.  Here's an
+    example provided by Marc Logghe:
+
+    html2 = sub {
+        my $go = $main::LANG->tr('Go');
+        return
+        qq(
+        <table width="800" border="0">
+        <tr class="searchbody">
+        <td align="left" colspan="3" />
+        <b>Dump:</b><input type="button" value="Assembly" onclick="window.open('gbrowse?plugin=AssemblyDumper;plugin_action=$go');">
+        <input type="button" value="Reads" onclick="window.open('gbrowse?plugin=ReadDumper;plugin_action=$go');">
+        </td>
+        </tr>
+        </table>
+        );
+       }
+
+
     * keystyle, empty_tracks
 
     These two general options control the appearance of the keys

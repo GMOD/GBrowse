@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.74 2003-01-19 19:55:22 lstein Exp $
+# $Id: gbrowse.PLS,v 1.75 2003-02-25 15:41:38 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2305,7 +2305,8 @@ sub set_language {
 
 sub html_frag {
   my $fragname = shift;
-  my $a = $CONFIG->setting($fragname);
+  my $a = $CONFIG->config->code_setting(general => $fragname);
+  return $a->(@_) if ref $a eq 'CODE';
   return $a;
 }
 

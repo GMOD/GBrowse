@@ -694,6 +694,11 @@ example provided by Marc Logghe:
         );
        }
 
+If you use a coderef for the html options, the subroutine is passed
+two arguments.  The first argument is a Bio::Das::SegmentI object (see
+the manual page for Bio::DB::GFF::RelSegment for details).  The second
+argument is a hashref containing the user's settings for the current page.
+
 
 =item * keystyle, empty_tracks
 

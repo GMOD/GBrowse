@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.42 2003-10-27 16:20:03 lstein Exp $
+# $Id: gbrowse.PLS,v 1.43 2003-10-29 16:19:58 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -372,7 +372,7 @@ sub main_display {
   print start_form(-name=>'mainform',
 		   -method=>'POST');
   print navigation_table($segment,$page_settings);
-  print html_frag('html2');
+  print html_frag('html2',$segment,$page_settings);
 
   my $feature_files;
 
@@ -392,13 +392,13 @@ sub main_display {
     print detail_panel($segment,$page_settings,$feature_files);
   }
 
-  print html_frag('html3');
+  print html_frag('html3',$segment,$page_settings);
   print plugins_table($page_settings);
-  print html_frag('html4');
+  print html_frag('html4',$segment,$page_settings);
   print tracks_table($page_settings,$feature_files);
-  print html_frag('html5');
+  print html_frag('html5',$segment,$page_settings);
   print settings_table($page_settings);
-  print html_frag('html6');
+  print html_frag('html6',$segment,$page_settings);
   print end_form();
 
   print start_multipart_form(-name=>'externalform');
@@ -769,7 +769,7 @@ sub navigation_table {
 
 		   TR({-class=>'searchbody'},
 		      td({-align=>'left', -colspan=>2},
-			 html_frag('html1')||''
+			 html_frag('html1',$segment,$settings)||''
 			)
 		     ),
 		  TR({-class=>'searchbody', -align=>'left'},

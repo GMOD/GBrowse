@@ -137,6 +137,7 @@ my @localpodfiles = qw(CONFIGURE_HOWTO.pod
                        README-chado.pod
                        MAKE_IMAGES_HOWTO.pod
                        GENBANK_HOWTO.pod
+                       INSTALL.MacOSX.pod
                        INSTALL.pod );
 @localpodfiles = map ($localpoddir . $_ , @localpodfiles);
 for my $localfile ( @localpodfiles ) {

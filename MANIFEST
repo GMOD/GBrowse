@@ -47,6 +47,12 @@ contrib/conf_files/wormbase.syn
 contrib/Coverage/INSTALL
 contrib/Coverage/plugin/Coverage.pm
 contrib/Coverage/README
+contrib/install_macosx/BuildConfig.pm
+contrib/install_macosx/Makefile
+contrib/install_macosx/README.html
+contrib/install_macosx/README.pod
+contrib/install_macosx/scripts/build-gbrowse.pl
+contrib/install_macosx/scripts/build-libraries.pl
 contrib/gdump
 contrib/GeneFinder/genefinder/gfcode.c
 contrib/GeneFinder/genefinder/README
@@ -72,6 +78,7 @@ contrib/TextDumper/TextDumper.pm
 DISCLAIMER
 docs/pod/CONFIGURE_HOWTO.pod
 docs/pod/GENBANK_HOWTO.pod
+docs/pod/INSTALL.MacOSX.pod
 docs/pod/INSTALL.pod
 docs/pod/MAKE_IMAGES_HOWTO.pod
 docs/pod/ORACLE_AND_BIOSQL.pod

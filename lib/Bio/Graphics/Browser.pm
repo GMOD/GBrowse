@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.37 2002-09-12 01:58:43 lstein Exp $
+# $Id: Browser.pm,v 1.38 2002-09-12 02:09:11 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -750,7 +750,7 @@ sub image_and_map {
 		    -double    => 1,
 		    -tick      => 2,
 		    -label     => $config{label_scale} ? $segment->seq_id : 0,
-		    -units     => $conf->setting(general=>'units'),
+		    -units     => $conf->setting(general=>'units') || '',
 		    -unit_divider => $conf->setting(general=>'unit_divider') || 1,
 		   );
 
@@ -934,7 +934,7 @@ sub overview {
 		    -label     => "Overview of ".$segment->seq_id,
 		    -labelfont => gdMediumBoldFont,
 		    -tick      => 2,
-		    -units     => $conf->setting(general=>'units'),
+		    -units     => $conf->setting(general=>'units') ||'',
 		    -unit_divider => $conf->setting(general=>'unit_divider') || 1,
 		   );
 

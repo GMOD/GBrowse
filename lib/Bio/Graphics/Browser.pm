@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.69 2003-05-26 21:05:10 lstein Exp $
+# $Id: Browser.pm,v 1.70 2003-05-29 21:27:52 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -114,24 +114,25 @@ successful.
 sub read_configuration {
   my $self        = shift;
   my $conf_dir    = shift;
+  my $suffix      = shift || 'conf';
   $self->{conf} ||= {};
 
   croak("$conf_dir: not a directory") unless -d $conf_dir;
   opendir(D,$conf_dir) or croak "Couldn't open $conf_dir: $!";
-  my @conf_files = map { "$conf_dir/$_" } grep {/\.conf$/} readdir(D);
+  my @conf_files = map { "$conf_dir/$_" } grep {/\.$suffix$/} readdir(D);
   close D;
 
   # try to work around a bug in Apache/mod_perl which appears when
   # running under linux/glibc 2.2.1
   unless (@conf_files) {
-    @conf_files = glob("$conf_dir/*.conf");
+    @conf_files = glob("$conf_dir/*.$suffix");
   }
 
   # get modification times
   my %mtimes     = map { $_ => (stat($_))[9] } @conf_files;
 
   for my $file (sort {$a cmp $b} @conf_files) {
-    my $basename = basename($file,'.conf');
+    my $basename = basename($file,".$suffix");
     $basename =~ s/^\d+\.//;
     next if defined($self->{conf}{$basename}{mtime})
       && ($self->{conf}{$basename}{mtime} >= $mtimes{$file});
@@ -1659,7 +1660,7 @@ sub make_title {
     }
     $title     = $self->link_pattern($link,$feature) unless defined $title;
   }
-  return $title if defined $title;
+  return $title if $title;
 
   # otherwise, try it ourselves
   $title = eval {

@@ -103,9 +103,10 @@ sub conf_dir {
 }
 
 sub open_config {
-  my $dir = shift;
+  my $dir    = shift;
+  my $suffix = shift;
   $CONFIG ||= Bio::Graphics::Browser->new;
-  $CONFIG->read_configuration($dir) or die "Can't read configuration files: $!";
+  $CONFIG->read_configuration($dir,$suffix) or die "Can't read configuration files: $!";
   $LANG    ||= Bio::Graphics::Browser::I18n->new("$dir/languages");
   set_language($CONFIG,$LANG);
   $CONFIG->language($LANG);

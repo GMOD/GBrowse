@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.96 2003-05-28 20:44:14 lstein Exp $
+# $Id: gbrowse.PLS,v 1.97 2003-05-29 21:27:52 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -440,7 +440,7 @@ sub detail_panel {
 
 sub get_source {
   my $new_source = param('source') || param('src');
-  my $old_source = cookie('gbrowse_source') unless param('source') && request_method() eq 'GET';
+  my $old_source = cookie('gbrowse_source') unless $new_source && request_method() eq 'GET';
 
   my $source   = $new_source || $old_source;
   $source ||= $CONFIG->source;  # the default, whatever it is

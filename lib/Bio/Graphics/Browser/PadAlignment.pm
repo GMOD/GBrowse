@@ -11,9 +11,9 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 =head1 VERSION (CVS-info)
 
  $RCSfile: PadAlignment.pm,v $
- $Revision: 1.6 $
+ $Revision: 1.7 $
  $Author: lstein $
- $Date: 2003-05-28 20:44:16 $
+ $Date: 2003-05-29 21:27:53 $
 
 =head1 SYNOPSIS
 
@@ -352,7 +352,7 @@ sub padded_sequences {
   warn join("\n",@lines),"\n\n" if DEBUG;
 
   # change starts and ends to . characters
-  my $max = 0;
+  $max = 0;
   foreach (@lines) {
     $max = length if $max < length;
   }

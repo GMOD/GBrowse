@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.153 2004-06-24 19:56:20 lstein Exp $
+# $Id: Browser.pm,v 1.154 2004-06-24 19:56:56 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1986,7 +1986,6 @@ sub match_host {
       $host      = ".$host"      unless $host      =~ /^\./;
       $ok ||= $host =~ /\Q$candidate\E$/;
     }
-    warn "ok = $ok";
     return 1 if $ok;
   }
   $ok;

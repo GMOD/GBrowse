@@ -220,21 +220,65 @@ sub MY::ppd {
 
   my $implementation;
   my $newimp;
+  my $oldMM =0;
+
+    warn "$inherited\n";
+
+#VERY irritating--different versions of ExtUtils::MakeMaker has
+#different ways of generating the ppd file.
   if ($inherited =~ /qq\{(<S.*R>\\n)\}.*qq\{(\\t<I.*\/>\\n)\}.*qq\{(\\t\\t<O.*G>\\n)\}/sg){
+    $oldMM=1;
     my $xml = $1.$2.$3;
     warn "$xml\n";
     $inherited =~ s/qq\{.*>>/qq{$xml}" >/s;
+  } elsif ($inherited =~ /NOECHO/) {
+    my @la = split /\n/, $inherited;
+    my $grab = 0;
+    for (@la) {
+      $grab++ if (m!<IMPLEMENTATION>!); 
+      if ($grab and $_ =~ /\'(.*)\'/) {
+        $implementation .= "$1\n";
+      }
+      $grab = 0 if (m!</IMPLEMENTATION>!);
+    } 
   }
 
-  if ($inherited =~ /(\<IMPLEMENTATION\>.*\<\/IMPLEMENTATION\>)/m) {
+  if ($oldMM and $inherited =~ /(\s*\<IMPLEMENTATION\>.*\<\/IMPLEMENTATION\>)/m) {
     $implementation = $newimp = $1;
-    $newimp      =~ s/i386\-linux\-thread\-multi/$arch/;
+    $newimp      =~ s/ARCHITECTURE NAME="\S+"/ARCHITECTURE NAME="$arch"/;
     $newimp      =~ s/\$\(OSNAME\)/MSWin32/;
     my $impl58   = $newimp;
     $impl58      =~ s/\Q$arch\E/$arch\-5\.8/;
     $newimp      .= "\\n\\t\\t$impl58";
     $inherited   =~ s/\Q$implementation\E/$newimp/;
-  } 
+  } elsif (!$oldMM and $implementation) {
+    $newimp      = $implementation;
+    $newimp      =~ s/ARCHITECTURE NAME="\S+"/ARCHITECTURE NAME="$arch"/;
+    $newimp      =~ s/\$\(OSNAME\)/MSWin32/;
+    my $impl58   = $newimp;
+    $impl58      =~ s/\Q$arch\E/$arch\-5\.8/;
+    $newimp      .= $impl58;
+    my @la       = split /\n/, $newimp;
+    for my $line (@la) {
+      $line = qq{\t\$(NOECHO) \$(ECHO) '$line' >> \$(DISTNAME).ppd}; 
+    }
+
+    my @inherit_array = split /\n/, $inherited;
+    my @newinherit;
+    $inherited = '';
+    for (@inherit_array) {
+      if (/<IMPLEMENTATION>/) {
+        push @newinherit, @la;
+        last;
+      } else {
+        push @newinherit, $_; 
+      }
+    }
+    push @newinherit, qq{\t\$(NOECHO) \$(ECHO) '</SOFTPKG>' >> \$(DISTNAME).ppd\n};
+    $inherited = join "\n", @newinherit;
+  }
+
+  warn "$inherited\n";
 
   $inherited .= <<END;
 

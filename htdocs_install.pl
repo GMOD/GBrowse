@@ -6,7 +6,7 @@ use Config;
 my $ht_target = $ARGV[0]; #target directory
 
 my $delim = '/';
-if ($Config{'osname'} =~ /win/i) {
+if ($Config{'osname'} =~ /win/i && $Config{'osname'} !~ /darwin/i ) {
     $ht_target =~ s!\/!\\!g;
     $delim = '\\';
 }

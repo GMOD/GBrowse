@@ -10,7 +10,7 @@ use Config;
 my $dir = $ARGV[0];
 
 my $delim = '/';
-if ($Config{'osname'} =~ /win/i) {
+if ($Config{'osname'} =~ /win/i && $Config{'osname'} !~ /darwin/i ) {
     $dir =~ s!\/!\\!g;
     $delim = '\\';    
 }

@@ -6,7 +6,7 @@ use Config;
 my $cgi_target = $ARGV[0];
 
 my $delim = '/';
-if ($Config{'osname'} =~ /win/i) {
+if ($Config{'osname'} =~ /win/i && $Config{'osname'} !~ /darwin/i ) {
     $cgi_target =~ s!\/!\\!g;
     $delim = '\\';
 }

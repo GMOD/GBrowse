@@ -95,7 +95,8 @@ sub length {
 
 sub type {shift->{type}}
 sub seq_id { shift->{sourceseq} }
-sub info { shift->{group} }
+*info = \&display_name; #for compatability with broken generic glyphs
+
 =head2 group
 
  Title   : group

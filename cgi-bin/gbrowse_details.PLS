@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.18 2004-02-13 15:03:23 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.19 2004-02-20 14:16:02 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -127,8 +127,11 @@ sub print_features {
     $string .= PrintMultiple($options,"Position",position($f));
     $string .= PrintMultiple($options,"Length",$f->length);
     if ($f->target) {
-      $string .= PrintMultiple($options,"Matches",position($f->target));
-      $string .= PrintMultiple($options,'',print_matches($f,$f->target)) if $subf;
+      # try to correct for common GFF2 error of indicating a -/- alignment
+      # using a (-) src strand and a target_start > target_end
+      my $bug = $f->abs_strand < 0 && $f->target->abs_strand < 0;
+      $string .= PrintMultiple($options,"Matches",position($f->target,undef,$bug));
+      $string .= PrintMultiple($options,'',print_matches($f,$f->target,$bug)) if $subf;
 
     }
     $string .= PrintMultiple($options,"Score",$f->score) if defined $f->score;
@@ -190,20 +193,30 @@ sub print_dna {
 }
 
 sub print_matches {
-  my ($src,$tgt) = @_;
+  my ($src,$tgt,$bug) = @_;
   my $sdna = $src->dna or return;
   my $tdna = $tgt->dna or return;
-  my ($top,$middle,$bottom) = align($sdna,$tdna);
   my $top_label = $src->abs_ref;
   my $bot_label = $tgt->abs_ref;
 
   my $src_x = $src->abs_start;
+  my $src_y = $src->abs_end;
   my $tgt_x = $tgt->abs_start;
+  my $tgt_y = $tgt->abs_end;
   my $tdir  = $tgt->abs_strand || +1;
   my $sdir  = $src->abs_strand || +1;
 
+  if ($bug) { # correct for buggy data files that show -/- alignments; really -/+
+    $tdir = +1;
+    ($tgt_x,$tgt_y) = ($tgt_y,$tgt_x);
+    $tdna =~ tr/gatcGATC/ctagCTAG/;
+    $tdna = reverse $tdna;
+  }
+  warn ("sdir = $sdir, $src_x -> $src_y / $tgt_x -> $tgt_y");
+  my ($top,$middle,$bottom) = align($sdna,$tdna);
+
   my $m = max(length($top_label),length($bot_label));
-  my $p = max(length($src_x),length($src->abs_end),length($tgt_x),length($tgt->abs_end));
+  my $p = max(length($src_x),length($src_y),length($tgt_x),length($tgt_y));
   my $l  = ' ' x ($m+$p+2);  # adjusting for HTML
 
   my $string;
@@ -276,6 +289,8 @@ sub PrintMultiple {
 sub position {
   my $f      = shift;
   my $simple = shift;
+  my $bug    = shift; # for (-) (-) alignments
+
   my $ref = $f->abs_ref;
   my $start = $f->abs_start;
   my $end   = $f->abs_end;
@@ -283,7 +298,13 @@ sub position {
     ($start,$end) = ($end,$start) if $f->strand < 0;
     return "<b>$ref</b> $start..$end";
   }
-  my $strand = $f->abs_strand > 0 ? '+' : $f->abs_strand < 0 ? '-' : '';
+  my $s = $f->abs_strand;
+  if ($bug) {  # data bug
+    ($start,$end) = ($end,$start);
+    $s *= -1;
+  }
+  my $strand = $s > 0 ? '+' : $s < 0 ? '-' : '';
+
   my $src = escape($CONFIG->source);
   my $url = "../gbrowse/$src?name=$ref:$start..$end";
   return a({-href=>$url},$strand ? "$ref:$start..$end ($strand strand)" : "$ref:$start..$end");

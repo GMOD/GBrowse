@@ -134,6 +134,11 @@ conf_install ::
 	  j=`basename \$\$i`; \\
 		cp \$\$i \$\$dir/plugins; \\
 	done; \\
+	mkdir -p \$\$dir/languages; \\
+	for i in $Bin/conf/languages/*.pm; do \\
+	  j=`basename \$\$i`; \\
+		cp \$\$i \$\$dir/languages; \\
+	done; \\
 
 
 htdocs_install ::

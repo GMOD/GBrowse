@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.48 2002-08-07 12:10:25 lstein Exp $
+# $Id: gbrowse.PLS,v 1.49 2002-08-08 01:15:52 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -216,7 +216,7 @@ elsif (defined(my $data = param('a_data'))) {
   handle_edit($page_settings,$data);
 }
 
-elsif ($data = param('auto')) {
+elsif ($data = param('auto') or $data = param('add')) {
   handle_quickie($page_settings,$data);
 }
 
@@ -1210,8 +1210,8 @@ sub handle_quickie {
   return unless $data;
 
   # format of quickie data is reference+type+name+start-stop,start-stop,start-stop
-  my ($reference,$type,$name,$position) = shellwords($data||'');
-  my @segments = map { [/(-?\d+)(?:-|\.\.)(-?\d+)/]} split /,/,$position;
+  my ($reference,$type,$name,@position) = shellwords($data||'');
+  my @segments = map { [/(-?\d+)(?:-|\.\.)(-?\d+)/]} map {split /,/} @position;
   my $feature = Bio::Graphics::Feature->new(
 					    -ref      => $reference||'',
 					    -type     => $type||'',

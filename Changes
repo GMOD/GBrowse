@@ -1,4 +1,5 @@
 1.55
+        * Removed hard coded paths in install scripts
 	* Auto-open tracks that contain matches to the search term.  This avoids
 	nasty behavior in which someone searches for "collagen" and never sees
 	what it was that matched.

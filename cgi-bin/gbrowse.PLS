@@ -44,12 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.65 2004-02-21 22:12:05 lstein Exp $
-
-use lib
-  '/home/lstein/projects/bioperl-live',
-  '/home/lstein/projects/Bio-Das2',
-  '/home/lstein/projects/Generic-Genome-Browser/lib';
+# $Id: gbrowse.PLS,v 1.66 2004-02-22 20:28:39 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -185,7 +180,10 @@ if (defined($old_source) && $source ne $old_source) {
 }
 
 ### PLUGINS #################################################################
-my @plugin_path = ("$CONF_DIR/plugins",shellwords($CONFIG->setting('plugin_path')||''));
+my @plugin_path = "$CONF_DIR/plugins";
+unshift @plugin_path,shellwords($CONFIG->setting('plugin_path'))
+  if $CONFIG->setting('plugin_path');
+
 $PLUGINS = initialize_plugins(@plugin_path) unless defined $PLUGINS;
 configure_plugins($PLUGINS,$page_settings,
 		  open_database(),

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.20 2003-11-09 19:51:02 sheldon_mckay Exp $
+# $Id: GFFDumper.pm,v 1.21 2004-02-22 20:28:57 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -7,7 +7,7 @@ use Bio::Graphics::Browser::GFFhelper;
 use CGI qw(:standard *sup);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.70';
+$VERSION = '0.80';
 
 @ISA = qw/ Bio::Graphics::Browser::Plugin /;
 
@@ -15,7 +15,7 @@ sub name { "GFF File" }
 sub description {
   p("The GFF dumper plugin dumps out the currently selected features in",
     a({-href=>'http://www.sanger.ac.uk/Software/formats/GFF/'},'Gene Finding Format.')).
-  p("This plugin was written by Lincoln Stein.");
+  p("This plugin was written by Lincoln Stein &amp; Sheldon McKay.");
 }
 
 sub config_defaults {
@@ -23,7 +23,8 @@ sub config_defaults {
   return { 
 	  version     => 2,
 	  mode        => 'selected',
-	  disposition => 'view'
+	  disposition => 'view',
+	  coords      => 'absolute',
 	 };
 }
 
@@ -53,6 +54,17 @@ sub configure_form {
 				       3   => '3'},
 			  -default => $current_config->{version},
 			  -override => 1));
+  $html .= p(
+	     'Coordinates',
+	     radio_group(-name   => $self->config_name('coords'),
+			 -values => ['absolute','relative'],
+			 -labels => { absolute => 'relative to chromosome/contig/clone',
+				      relative => 'relative to dumped segment (start at 1)'
+				    },
+			 -default => $current_config->{coords},
+			 -override => 1
+			 )
+	    );
   autoEscape(0);
   $html .= p(
 	     radio_group(-name=>$self->config_name('disposition'),
@@ -64,7 +76,7 @@ sub configure_form {
 			));
   autoEscape(1);
   $html .= p(sup('*'),
-	     "Note: Artemis GFF will contain the entire annotated sequence") .
+	     "Note: Artemis GFF will contain the ENTIRE annotated sequence. Do NOT run this on whole chromosomes!") .
 		 p(sup('**'),
 		   "To edit, install a helper application for MIME type",
 		   cite('application/x-gff2'),'or',
@@ -97,7 +109,11 @@ sub dump {
   my $db            = $self->database;
   my $whole_segment = $db->segment(Accession => $segment->ref) ||
                       $db->segment($segment->ref);
-  $mode             = 'all' if $version == 2.5;  
+  my $coords        = $config->{coords};
+  $mode             = 'all'      if $version == 2.5;
+  $coords           = 'absolute' if $version == 2.5;
+
+  $segment->refseq($segment) if $coords eq 'relative';
 
   my $date = localtime;
   print "##gff-version $version\n";
@@ -116,81 +132,81 @@ sub dump {
   my @feats = ();
 
   if ( $version == 2.5 ) {
-      # don't want aggregate features
-      @feats = $whole_segment->features;
+    # don't want aggregate features
+    @feats = $whole_segment->features;
+    $self->mangle_and_dump(\@feats,$whole_segment);
+    my $seq = $whole_segment->seq;
+    $seq  ||= ('N' x $whole_segment->length);
+    $seq    =~ s/\S{60}/$&\n/g;
+    print $seq, "\n";
   }
   else {
-      $segment->absolute(0);
-      my $iterator = $segment->get_seq_stream(@args);
-      while ( my $f = $iterator->next_seq ) {
-	  push @feats, $f;
-      }  
-  } 
-
-  $self->do_dump(\@feats, $version, $whole_segment);
+    my $iterator = $segment->get_seq_stream(@args);
+    while ( my $f = $iterator->next_seq ) {
+      $self->print_feature($f,$version);
+    }
+  }
 
   for my $set (@more_feature_sets) {
     if ( $set->can('get_seq_stream') ) {
       my @feats = ();
       my $iterator = $set->get_seq_stream;
       while ( my $f = $iterator->next_seq ) {
-        push @feats, $f;
+	$self->print_feature($f);
       }
-      $self->do_dump(\@feats, $version, $whole_segment); 
-    }  
+    }
   }
 
-  if ( $version == 2.5 ) {
-    my $seq = $whole_segment->seq;
-    $seq  ||= ('N' x $whole_segment->length);
-    $seq    =~ s/\S{60}/$&\n/g;
-    print $seq, "\n";
+}
+
+sub print_feature {
+  my $self = shift;
+  my ($f,$version) = @_;
+  $f->version($version);
+  my $s = $f->gff_string(1); # the flag is for GFF3 subfeature recursion
+  chomp $s;
+  print $s,"\n";
+  return if $version >= 3; # gff3 recurses automatically
+  for my $ss ($f->sub_SeqFeature) {
+    # next if $ss eq $f;
+    my $s = $ss->gff_string;
+    print $s,"\n";
   }
 }
 
-sub do_dump {
-    my ($self, $feats, $gff_version, $segment) = @_;
-    my (@gff,%seen);
-    for my $f ( @$feats ) {
-	$f->version($gff_version);
-	my $s = $f->gff_string(1); # the flag is for GFF3 subfeature recursion
-	push @gff, $s if defined $s && ! $seen{$s}++;
-
-	next if $gff_version >= 3; # gff3 recurses automatically
-	for my $ss ($f->sub_SeqFeature) {
-	    next if $ss eq $f;
-	    my $s = $ss->gff_string;
-
-	    push @gff, $s if defined $s && ! $seen{$s}++;
-	}
+# used only for Artemis GFF 2.5
+sub mangle_and_dump {
+  my ($feats,$segment) = @_;
+  my (@gff,%seen);
+  for my $f ( @$feats ) {
+    $f->version(2.5);
+    my $s = $f->gff_string(1); # the flag is for GFF3 subfeature recursion
+    chomp $s;
+    push @gff, $s;
+    for my $ss ($f->sub_SeqFeature) {
+      # next if $ss eq $f;
+      my $s = $ss->gff_string;
+      push @gff, $s;
     }
+  }
 
-    # out of range features break Artemis (some kind of off by one error?)
-    if ( $gff_version == 2.5 ) {
-	my $len = $segment->length - 1;
-	for ( @gff ) {
-	    my $num = (split)[4];
-	    s/$num/$len/ if $num > $len;
-	}
-    }   
-    if( @gff ) {
-	$self->do_gff(@gff);
-    }
-}
+  # out of range features break Artemis (some kind of off by one error?)
+  my $len = $segment->length - 1;
+  for ( @gff ) {
+    my $num = (split)[4];
+    s/$num/$len/ if $num > $len;
+  }
 
-sub do_gff {
-    my $self = shift;
-    my @gff = @_;
-    # sigh... Artemis mangles uppercase 'Note' attributes
-    @gff = grep { s/Note/note/g; chomp($_); $_; } @gff;
-    print join "\n", 
-      map  { $_->[3] }
+  # sigh... Artemis mangles uppercase 'Note' attributes
+  @gff = grep { s/Note/note/g; chomp($_); $_; } @gff;
+  print join "\n", 
+    map  { $_->[3] }
       # sort first asc. by start, then desc. by stop, then ascibetically 
       sort { $a->[0] <=> $b->[0] or
-             $b->[1] <=> $a->[1] or
-             lc $a->[2] cmp lc $b->[2] }
-      map  { [ (split)[3], (split)[4], (split)[2], $_ ] } @gff;
-    print "\n";
+	       $b->[1] <=> $a->[1] or
+		 lc $a->[2] cmp lc $b->[2] }
+	map  { [ (split)[3], (split)[4], (split)[2], $_ ] } @gff;
+  print "\n";
 }
 
 sub gff25_string {

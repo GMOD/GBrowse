@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.91 2003-05-13 02:44:28 lstein Exp $
+# $Id: gbrowse.PLS,v 1.92 2003-05-13 21:29:52 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -66,9 +66,9 @@ use constant MAG_ICON_WIDTH  => 8;
 # had-coded values for segment sizes
 # many of these can be overridden by configuration file entries
 use constant MAX_SEGMENT     => 1_000_000;
-use constant MIN_SEG_SIZE         => 50;
+use constant MIN_SEG_SIZE         => 10;
 use constant TINY_SEG_SIZE        => 2;
-use constant EXPAND_SEG_SIZE      => 5000;
+use constant EXPAND_SEG_SIZE      => 100;
 use constant TOO_MANY_SEGMENTS => 5_000;
 use constant TOO_MANY_FEATURES => 100;
 use constant TOO_MANY_REFS     => TOO_MANY_FEATURES;
@@ -1132,6 +1132,12 @@ sub get_segments {
   }
 
   my @segments = lookup_segments($db,$settings);
+  return resize_segments(@segments) if @segments == 1;
+  return @segments;
+}
+
+sub resize_segments {
+  my @segments = @_;
   # resize any segments that are below MIN_SEG_SIZE
   my $done_resize = 0;
   for my $s (@segments) {
@@ -1291,6 +1297,11 @@ sub multiple_choices {
 
       my $objref     = $class ? "$url?name=$c:$n" : "$url?name=$n";
       my $posref     = "$url?ref=$ref;start=$start;stop=$stop";
+      if ((my $length = abs($stop - $start)) < MIN_SEG_SIZE) {
+	my $half     = int((EXPAND_SEG_SIZE-$length)/2);
+	$posref      = "$url?ref=$ref;start=".($start-$half).";stop=".($stop+$half);
+      }
+
       my $position = format_segment($r);
       print TR({-class=>'databody',-valign=>'TOP'},
 	       th({-align=>'right'},ref($name) ? a({-href=>$objref},$name):tt($name)),

@@ -34,19 +34,19 @@ already.
 	Digest::MD5
 	Text::Shellwords
 
-  F) Bioperl version 1.2.2 or higher -- http://www.bioperl.org
+  E) Bioperl version 1.2.2 or higher -- http://www.bioperl.org
      (Note: Use anonymous CVS to get Bioperl 1.2.2 if it isn't
             yet released).
 
 Optional modules:
 
-  G) XML::Parser, XML::Writer, XML::Twig, XML::DOM
+  F) XML::Parser, XML::Writer, XML::Twig, XML::DOM
 
    If these modules are present, the "Sequence Dumper" plugin
    will be able to produce GAME and BSML output.  They can be
    downloaded from CPAN.
 
-  H) LWP
+  G) LWP
 
   To load remote 3d party annotations.
 

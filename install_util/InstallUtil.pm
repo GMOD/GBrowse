@@ -49,7 +49,7 @@ sub copy_tree {
   my $d = IO::Dir->new($src) or croak colored("opendir($src): $!","red");
   while (my $item = $d->read) {
     # bunches of things to skip
-    next if $item eq 'CVS';
+    next if $item =~ /CVS$/;
     next if $item =~ /\.PLS$/;
     next if $item =~ /^\./;
     next if $item =~ /~$/;

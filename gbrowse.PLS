@@ -41,7 +41,7 @@ $Config{startperl} -w
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.51 2002-08-16 02:59:32 lstein Exp $
+# $Id: gbrowse.PLS,v 1.52 2002-08-23 17:57:27 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1220,10 +1220,12 @@ sub handle_upload {
   my ($settings,$fh) = @_;
   warn "handle_upload($settings,$fh)" if DEBUG;
   # $fh is a CGI string/filehandle object, so be careful
-  my $filename = "$fh";
+  my ($filename) = "$fh" =~ /([^\/\\:]+)$/;
   my $fh_out = open_uploaded_file($settings,$filename,'>') or return;
-  while (<$fh>) {
-    print $fh_out $_;
+  my $buffer;
+  while (read($fh,$buffer,1024)) {
+     $buffer =~ s/\r\n?/\n/g;
+     print $fh_out $buffer;
   }
   close $fh_out;
   my (undef,$url) = name_uploaded_file($settings,$filename);
@@ -1352,13 +1354,6 @@ sub load_uploaded_files {
 
     my $fh = open_uploaded_file($settings,$file,"<") or return;
 
-    # nasty little bit in which we handle differing line-endings for the various
-    # types of operating systems...
-    my $agent  = CGI->user_agent();
-    local $/ = $/;
-    $/ = "\r"    if $agent =~ /Mac/;
-    $/ = "\r\n"  if $agent =~ /Win/;
-
     my $feature_file = Bio::Graphics::FeatureFile->new(-file           => $fh,
 						       -map_coords     => $rel2abs,
 						       -smart_features =>1);
@@ -1368,6 +1363,13 @@ sub load_uploaded_files {
     push @result,$feature_file;
   }
   @result;
+}
+
+sub line_end {
+   my $agent  = CGI->user_agent();
+   return "\r"   if $agent =~ /Mac/;
+   return "\r\n" if $agent =~ /Win/;
+   return "\n";
 }
 
 sub load_remote_sources {
@@ -1449,9 +1451,11 @@ sub get_remote_feature_data {
 
 sub print_uploaded_file_features {
   my ($settings,$file) = @_;
+  my $line_end = line_end();
   if (my $fh = open_uploaded_file($settings,$file)) {
     while (<$fh>) {
-      print;
+      chomp;
+      print $_,$line_end;
     }
   }
 }

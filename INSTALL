@@ -291,11 +291,11 @@ distributed separately and can be downloaded from:
 
 Load the file with this command:
 
-  bp_load_gff.pl -d yeast -fasta yeast.fasta.gz </dev/null
+  load_gff.pl -d yeast -fasta yeast.fasta.gz </dev/null
 
 (or, if you are on a windows system:
 
-  bp_load_gff.pl -d yeast -fasta yeast.fasta.gz
+  load_gff.pl -d yeast -fasta yeast.fasta.gz
 
  and hit ^Z when the script pauses.)
 
@@ -333,10 +333,13 @@ scripts/Bio-DB-GFF directory if you didn't install them directly.
 
 They are:
 
-  bp_process_gadfly.pl     For FlyBase D. melanogaster flat files
-  bp_process_ncbi_human.pl For human annotations from NCBI
-  bp_process_sgd.pl        For SGD S. cerevisiae flat files
-  bp_process_wormbase.pl   For WormBase C. elegans flat files
+  process_gadfly.pl     For FlyBase D. melanogaster flat files
+  process_ncbi_human.pl For human annotations from NCBI
+  process_sgd.pl        For SGD S. cerevisiae flat files
+  process_wormbase.pl   For WormBase C. elegans flat files
+
+In Bioperl 1.3, these scripts are named bp_process_gadfly.pl, and so
+forth.
 
 Run the script with the -h option to get some data-specific help:
 

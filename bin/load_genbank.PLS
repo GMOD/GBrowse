@@ -19,7 +19,7 @@ $Config{startperl}
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: load_genbank.PLS,v 1.3 2003-07-17 18:47:57 scottcain Exp $
+# $Id: load_genbank.PLS,v 1.4 2003-07-28 17:06:12 lstein Exp $
 use strict;
 use Bio::DB::GFF;
 use Getopt::Long;
@@ -32,6 +32,9 @@ load_genbank.pl - Load a Bio::DB::GFF database from GENBANK files.
 
   % load_genbank.pl -d genbank -f localfile.gb
   % load_genbank.pl -d genbank -a AP003256
+
+NOTE: The script bp_genbank2gff.pl in the BioPerl distribution is the
+same as this script.
 
 =head1 DESCRIPTION
 
@@ -67,6 +70,8 @@ L<Bio::DB::GFF>, L<bulk_load_gff.pl>, L<load_gff.pl>
 
 Scott Cain, cain@cshl.org
 
+Lincoln Stein, lstein@cshl.org
+
 Copyright (c) 2003 Cold Spring Harbor Laboratory
 
 This library is free software; you can redistribute it and/or modify
@@ -96,9 +101,6 @@ sub new {
 sub load_gff_line {
   my ($self,$options) = @_;
   # synthesize GFF3-compatible line
-
-  $options->{score} = '.' unless $options->{score};
-
   my @attributes;
   if (my $parent = $options->{gname}) {
      push @attributes,"Parent=".escape($parent) unless $options->{method} =~ /^(mRNA|gene)$/;

@@ -1,4 +1,4 @@
-# $Id: ImportFeatures.pm,v 1.8 2003-11-03 17:56:38 sheldon_mckay Exp $
+# $Id: ImportFeatures.pm,v 1.9 2003-11-06 06:52:05 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -260,7 +260,7 @@ sub configure_form {
 		       -size    => 40,
 		       -default => $conf->{file} || $self->config_param('file') ), $sorry),
         "</td></tr></table>" );
-    unless ( $self->config_param('filesource') eq 'external' ) {
+    unless ( $self->config_param('filesource') && $self->config_param('filesource') eq 'external' ) {
         $html =~ s/External Annotations/a GenBank\/EMBL\/GFF File/m;
 	$html .= join ( "\n", h3(' - OR - '), "<table>\n" ,
 	         Tr( { -class => 'searchtitle' }, td( $f, 'Direct Download from NCBI/EBI' ) ),
@@ -575,8 +575,7 @@ sub unflatten {
     my $gff = '';    
     my $location = $feat->location;
     my $str = $feat->strand;
-    $str = '+' if $str  > 0;
-    $str = '-' if $str  < 0;
+    $str = $str > 0 ? '+' : $str < 0 ? '-' : '.';
     $self->{unflattened} ||= [];
     my $newname = '';
 

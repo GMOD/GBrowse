@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.142 2004-05-13 15:45:55 marclogghe Exp $
+# $Id: Browser.pm,v 1.143 2004-05-15 23:02:37 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -576,6 +576,36 @@ sub config {
   $self->{conf}{$source}{data};
 }
 
+=head2 mtime()
+
+  $time = $browser->mtime()
+
+This method returns the modification time of the config file for the
+current source.
+
+=cut
+
+sub mtime {
+  my $self = shift;
+  my $source = $self->source;
+  $self->{conf}{$source}{mtime};
+}
+
+=head2 path()
+
+  $path = $browser->path()
+
+This method returns the file path of the config file for the
+current source.
+
+=cut
+
+sub path {
+  my $self = shift;
+  my $source = $self->source;
+  $self->{conf}{$source}{path};
+}
+
 sub default_label_indexes {
   my $self = shift;
   $self->config->default_label_indexes;
@@ -713,6 +743,68 @@ sub generate_image {
   print F $data;
   close F;
   return $url;
+}
+
+=head2 gd_cache_path()
+
+ my $path = $browser->gd_cache_path($cache_name,@keys)
+
+Return path to a GD cache file.  $cache_name is a cache expiration
+option in the config file (currently only 'cache_overview'), and @keys
+are settings that make the file unique, such as the list of tracks
+that are activated.
+
+=cut
+
+sub gd_cache_path {
+  my $self = shift;
+  my ($cache_name,@keys) = @_;
+  return unless $self->config->setting(general=>$cache_name);
+  my $signature = md5_hex(@keys);
+  my ($uri,$path) = $self->tmpdir($self->source.'/cache_overview');
+  my $extension   = 'gd';
+  return "$path/$signature.$extension";
+}
+
+=head2 gd_cache_check()
+
+ my $gd = $browser->gd_cache_check($cache_name,$path)
+
+Returns a GD file if its cached version is still valid.
+
+=cut
+
+sub gd_cache_check {
+  my $self = shift;
+  my ($cache_name,$path) = @_;
+  return if param('nocache');
+  my $cache_file_mtime   = (stat($path))[9] || 0;
+  my $conf_file_mtime    = $self->mtime;
+  my $cache_expiry       = $self->config->setting(general=>$cache_name) * 60*60;  # express expiry time as seconds
+  if ($cache_file_mtime && ($cache_file_mtime > $conf_file_mtime) && (time() - $cache_file_mtime < $cache_expiry)) {
+    my $gd = GD::Image->newFromGd($path);
+    return $gd;
+  }
+  else {
+    return;
+  }
+}
+
+=head2 gd_cache_write()
+
+ my $gd = $browser->gd_cache_write($cache_path,$gd)
+
+Write a GD file into the indicated path.
+
+=cut
+
+sub gd_cache_write {
+  my $self = shift;
+  my $path = shift or return;
+  my $gd   = shift;
+  my $file = IO::File->new(">$path") or return;
+  print $file $gd->gd;
+  close $file;
 }
 
 =head2 clear_cache()
@@ -889,10 +981,8 @@ sub image_and_map {
 
   my $width = $self->width;
   my $conf  = $self->config;
-  my $max_labels     = $conf->setting(general=>'label density')
-    || $conf->setting('TRACK DEFAULTS'=>'label density') || 10;
-  my $max_bump       = $conf->setting(general=>'bump density')
-    || $conf->setting('TRACK DEFAULTS'=>'bump density')  || 50;
+  my $max_labels     = $self->label_density;
+  my $max_bump       = $self->bump_density;
   my $length         = $segment->length;
 
   my @feature_types = map { $conf->label2type($_,$length) } @$tracks;
@@ -1024,42 +1114,14 @@ sub image_and_map {
       next unless $feature_count{$label};
 
       $options->{$label} ||= 0;
-      my $conf_label        = $conf->semantic_setting($label => 'label',$length);
-      $conf_label           = 1 unless defined $conf_label;
-
-      my $conf_description  = $conf->semantic_setting($label => 'description',$length);
-      $conf_description     = 0 unless defined $conf_description;
-
-      my $conf_bump         = $conf->semantic_setting($label => 'bump',$length);
-
-      # I don't think it makes sense for the max bump and max label settings to be
-      # under the control of semantic zooming, so we call non-semantic code_setting() here.
-      my $maxb              = $conf->code_setting($label => 'bump density');
-      $maxb                 = $max_bump unless defined $maxb;
-
-      my $maxl              = $conf->code_setting($label => 'label density');
-      $maxl                 = $max_labels unless defined $maxl;
 
       my $count = $feature_count{$label};
       $count    = $limit->{$label} if $limit->{$label} && $limit->{$label} < $count;
-      my $do_bump  = defined $conf_bump ? $conf_bump
-                     : $options->{$label} == 0 ? $count <= $maxb
-	             : $options->{$label} == 1 ? 0
-                     : $options->{$label} == 2 ? 1
-                     : $options->{$label} == 3 ? 1
-                     : $options->{$label} == 4 ? 2
-                     : $options->{$label} == 5 ? 2
-		     : 0;
-      my $do_label = $options->{$label} == 0 
-                     ? $feature_count{$label} <= $maxl && $conf_label
-	             : $options->{$label} == 3 ? $conf_label || 1
-	             : $options->{$label} == 5 ? $conf_label || 1
-		     : 0;
-      my $do_description = $options->{$label} == 0
-                     ? $feature_count{$label} <= $maxl && $conf_description
-	             : $options->{$label} == 3 ? $conf_description || 1
-	             : $options->{$label} == 5 ? $conf_description || 1
-		     : 0;
+
+      my $do_bump  = $self->do_bump($label, $options->{$label},$count,$max_bump);
+      my $do_label = $self->do_label($label,$options->{$label},$count,$max_labels,$length);
+      my $do_description = $self->do_description($label,$options->{$label},$count,$max_labels,$length);
+
       $tracks{$label}->configure(-bump  => $do_bump,
 				 -label => $do_label,
 				 -description => $do_description,
@@ -1111,8 +1173,9 @@ will be added to the overview panel.
 # generate the overview, if requested, and return it as a GD
 sub overview {
   my $self = shift;
-  my ($partial_segment) = @_;
+  my ($partial_segment,$track_options) = @_;
 
+  # turn requests for a piece of a segment into the whole segment9
   my $factory = $partial_segment->factory;
   my $class   = eval {$partial_segment->seq_id->class} || $factory->refclass;
   my ($segment) = $factory->segment(-class=>$class,
@@ -1126,13 +1189,13 @@ sub overview {
 
   my $conf           = $self->config;
   my $width          = $self->width;
-  my @tracks         = $self->config->overview_tracks;
+  my @tracks         = grep {$track_options->{$_}{visible}} $conf->overview_tracks;
   my ($padl,$padr)   = $self->overview_pad(\@tracks);
 
   my $panel = Bio::Graphics::Panel->new(-segment => $segment,
 					-width   => $width,
 					-bgcolor => $self->setting('overview bgcolor')
-					            || 'wheat',
+					|| 'wheat',
 					-key_style => 'left',
 					-pad_left  => $padl,
 					-pad_right => $padr,
@@ -1141,36 +1204,49 @@ sub overview {
 					-auto_pad   => 0,
 				       );
 
-  my $units = $self->setting('overview units');
-  $panel->add_track($segment,
-		    -glyph     => 'arrow',
-		    -double    => 1,
-		    -label     => "Overview of ".$segment->seq_id,
-		    -labelfont => $image_class->gdMediumBoldFont,
-		    -tick      => 2,
-		    -units     => $conf->setting(general=>'units') ||'',
-		    -unit_divider => $conf->setting(general=>'unit_divider') || 1,
-		   );
+  # cache check so that we can cache the overview images
+  my $cache_path = $self->gd_cache_path('cache_overview',$segment,
+					@tracks,$width,
+					map {@{$track_options->{$_}}{'options','limit'}} @tracks);
+  my $gd         = $self->gd_cache_check('cache_overview',$cache_path) if $cache_path;
 
-  $self->add_overview_landmarks($panel,$segment,\@tracks,$padl);
+  # no cached data, so do it ourselves
+  unless ($gd) {
 
-  my $gd = $panel->gd;
+    my $units = $self->setting('overview units');
+    $panel->add_track($segment,
+		      -glyph     => 'arrow',
+		      -double    => 1,
+		      -label     => "Overview of ".$segment->seq_id,
+		      -labelfont => $image_class->gdMediumBoldFont,
+		      -tick      => 2,
+		      -units     => $conf->setting(general=>'units') ||'',
+		      -unit_divider => $conf->setting(general=>'unit_divider') || 1,
+		     );
+
+    $self->add_overview_landmarks($panel,$segment,\@tracks,$padl,$track_options);
+    $gd = $panel->gd;
+    $self->gd_cache_write($cache_path,$gd) if $cache_path;
+  }
+
   my $red = $gd->colorClosest(255,0,0);
   my ($x1,$x2) = $panel->map_pt($partial_segment->start,$partial_segment->end);
-  my ($y1,$y2) = (0,$panel->height-1);
+  my ($y1,$y2) = (0,($gd->getBounds)[1]);
   $x2 = $panel->right-1 if $x2 >= $panel->right;
   my $pl = $panel->can('auto_pad') ? $panel->pad_left : 0;
+
   $gd->rectangle($pl+$x1,$y1,
 		 $pl+$x2,$y2,
 		 $red);
 
   eval {$panel->finished};  # should quash memory leaks when used in conjunction with bioperl 1.4
+
   return ($gd,$segment->length);
 }
 
 sub add_overview_landmarks {
   my $self = shift;
-  my ($panel,$segment,$tracks,$pad) = @_;
+  my ($panel,$segment,$tracks,$pad,$options) = @_;
   my $conf = $self->config;
 
   my (@feature_types,%type2track,%track);
@@ -1203,17 +1279,21 @@ sub add_overview_landmarks {
     $count{$track_name}++;
   }
 
-  my $max_label  = $conf->setting(general=>'label density') || 10;
-  my $max_bump   = $conf->setting(general=>'bump density') || 50;
+  my $max_bump   = $self->bump_density;
+  my $max_label  = $self->label_density;
 
   for my $track_name (keys %count) {
     my $track = $track{$track_name};
-    my $bump  = defined $conf->code_setting($track_name => 'bump')
-      ? $conf->code_setting($track_name=>'bump')    : $count{$track_name} <= $max_bump;
-    my $label = defined $conf->code_setting($track_name  => 'label')
-      ? $conf->code_setting($track_name => 'label') : $count{$track_name} <= $max_label;
+
+    my $bump  = $self->do_bump($track_name,$options->{$track_name}{options},$count{$track_name},$max_bump);
+    my $label = $self->do_label($track_name,$options->{$track_name}{options},$count{$track_name},
+				$max_label,$segment->length);
+    my $description = $self->do_description($track_name,$options->{$track_name}{options},$count{$track_name},
+				$max_label,$segment->length);
+
     $track->configure(-bump  => $bump,
 		      -label => $label,
+		      -description => $description,
 		     );
   }
   return \%track;
@@ -1255,8 +1335,8 @@ sub hits_on_overview {
   my $conf  = $self->config;
   my $width = $self->width;
   my $units = $self->setting('overview units');
-  my $max_label  = $conf->setting(general=>'label density') || 10;
-  my $max_bump   = $conf->setting(general=>'bump density')  || 50;
+  my $max_label  = $self->label_density;
+  my $max_bump   = $self->bump_density;
   my $class      = eval{$hits->[0]->factory->default_class} || 'Sequence';
   my ($padl,$padr)  = $self->overview_pad([$self->config->overview_tracks],'Matches');
 
@@ -1338,6 +1418,80 @@ sub hits_on_overview {
     $html{$ref} = $self->_hits_to_html($ref,$gd,$boxes);
   }
   return \%html;
+}
+
+sub bump_density {
+  my $self = shift;
+  my $conf = $self->config;
+  return $conf->setting(general=>'bump density')
+      || $conf->setting('TRACK DEFAULTS' =>'bump density')
+      || 50;
+}
+
+sub label_density {
+  my $self = shift;
+  my $conf = $self->config;
+  return $conf->setting(general=>'label density')
+      || $conf->setting('TRACK DEFAULTS' =>'label density')
+      || 10;
+}
+
+sub do_bump {
+  my $self = shift;
+  my ($track_name,$option,$count,$max) = @_;
+
+  my $conf              = $self->config;
+  my $maxb              = $conf->code_setting($track_name => 'bump density');
+  $maxb                 = $max unless defined $maxb;
+
+  my $maxed_out = $count <= $maxb;
+  my $conf_bump = $conf->code_setting($track_name => 'bump');
+
+  return defined $conf_bump ? $conf_bump
+      :  $option == 0 ? $maxed_out
+      :  $option == 1 ? 0
+      :  $option == 2 ? 1
+      :  $option == 3 ? 1
+      :  $option == 4 ? 2
+      :  $option == 5 ? 2
+      :  0;
+}
+
+sub do_label {
+  my $self = shift;
+  my ($track_name,$option,$count,$max_labels,$length) = @_;
+
+  my $conf = $self->config;
+
+  my $maxl              = $conf->code_setting($track_name => 'label density');
+  $maxl                 = $max_labels unless defined $maxl;
+  my $maxed_out = $count <= $maxl;
+
+  my $conf_label        = $conf->semantic_setting($track_name => 'label',$length);
+  $conf_label           = 1 unless defined $conf_label;
+
+  return  $option == 0 ? $maxed_out && $conf_label
+        : $option == 3 ? $conf_label || 1
+	: $option == 5 ? $conf_label || 1
+        : 0;
+}
+
+sub do_description {
+  my $self = shift;
+  my ($track_name,$option,$count,$max_labels,$length) = @_;
+
+  my $conf              = $self->config;
+
+  my $maxl              = $conf->code_setting($track_name => 'label density');
+  $maxl                 = $max_labels unless defined $maxl;
+  my $maxed_out = $count <= $maxl;
+
+  my $conf_description  = $conf->semantic_setting($track_name => 'description',$length);
+  $conf_description     = 0 unless defined $conf_description;
+  return  $option == 0 ? $maxed_out && $conf_description
+        : $option == 3 ? $conf_description || 1
+        : $option == 5 ? $conf_description || 1
+        : 0;
 }
 
 # fetch a list of Segment objects given a name or range
@@ -1462,7 +1616,7 @@ sub _feature_get {
   # and take the largest one.
   my %longest;
   foreach (@filtered) {
-    my $n = eval{$_->display_name.$_->abs_ref.$_->version};
+    my $n = $_->display_name.$_->abs_ref.(eval{$_->version}||''); # avoiding uninit warnings
     $longest{$n} = $_ if !defined($longest{$n}) || $_->length > $longest{$n}->length;
   }
   values %longest;
@@ -1704,7 +1858,8 @@ sub labels {
   # filter out all configured types that correspond to the overview, overview details
   # plugins, or other name:value types
   my @labels =  grep {
-    !($_ eq 'TRACK DEFAULTS' || $_ eq 'overview' || /:(\d+|overview|plugin|DETAILS)$/)
+#    !($_ eq 'TRACK DEFAULTS' || $_ eq 'overview' || /:(\d+|overview|plugin|DETAILS)$/)
+    !($_ eq 'TRACK DEFAULTS' || /:(\d+|plugin|DETAILS)$/)
        } $self->configured_types;
   # apply restriction rules
   return grep { $self->authorized($_)} @labels;

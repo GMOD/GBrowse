@@ -587,6 +587,18 @@ unit.
 
 This is the color for the background of the birds-eye view.
 
+=item * cache_overview
+
+This option will cause the overview images to be cached on disk for a
+period of time.  This may improve performance if you are placing many
+complex tracks into the overview.  The value is the number of hours to
+keep the cached copy of the overview image before refreshing it
+(default = don't cache).
+
+You can freshen the cache and force cached copies to be ignored by
+touching the configuration file or by calling gbrowse with the CGI
+option nocache=1.
+
 =item * detailed bgcolor
 
 This is the color for the background of the detailed view.

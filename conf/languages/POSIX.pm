@@ -132,7 +132,7 @@ END
 
    TRACKS   => 'Tracks',
 
-   EXTERNAL_TRACKS => '(External tracks italicized)',
+   EXTERNAL_TRACKS => "(External tracks italicized)<br><sup>*</sup>Overview track",
 
    EXAMPLES => 'Examples',
 

@@ -63,11 +63,11 @@ raster based images such as jpeg or png.
 <li>if necessary, can be converted to EPS for publication submission
 </ul>
 <p>
-To view SVG images, you will need an SVG capable browser, the
+To view SVG images, you will need an SVG capable browser, the 
 Adobe SVG browser plugin, or an SVG viewing or editing application such
 as Adobe Illustrator.
 </p>
-<p>   
+<p>
 Adobe's SVG browser plugin: <a
 href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Macintosh">Macintosh</a>
 | <a
@@ -80,7 +80,7 @@ Linux users may wish to explore the <a href="http://xml.apache.org/batik/">Batik
 <p>
 To save this image to your disk, control-click (Macintosh) or
 right-click (Windows) and select the option to save link to disk.
-</p>
+</p>   
 END
 
    IMAGE_DESCRIPTION => <<END,
@@ -132,7 +132,7 @@ END
 
    TRACKS   => 'Tracks',
 
-   EXTERNAL_TRACKS => '(External tracks italicized)',
+   EXTERNAL_TRACKS => "(External tracks italicized)<br><sup>*</sup>Overview track",
 
    EXAMPLES => 'Examples',
 
@@ -159,6 +159,10 @@ END
    BETWEEN     => 'Between',
 
    BENEATH     => 'Beneath',
+
+   LEFT        => 'Left',
+
+   RIGHT       => 'Right',
 
    TRACK_NAMES => 'Track Name Table',
 

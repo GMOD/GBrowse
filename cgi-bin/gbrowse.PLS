@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.86 2004-05-13 15:44:17 marclogghe Exp $
+# $Id: gbrowse.PLS,v 1.87 2004-05-15 23:02:34 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -294,6 +294,7 @@ warn "ADJUSTED TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 ## UPDATING THE PERSISTENT SETTINGS##############################################################
 my $cookies = settings2cookie($page_settings);
 push @$cookies,plugins2cookies($PLUGINS);
+
 print_header(-cookie => $cookies,
 	     -charset=>$CONFIG->tr('CHARSET'),
 	    );
@@ -712,7 +713,7 @@ sub adjust_settings {
 	|| grep {/zoom|nav|overview/} param())
      )
     {
-      $settings->{version}   = param('version');
+      $settings->{version}   = param('version')||'';
       $settings->{ref}   = param('ref');
       $settings->{start} = param('start') if param('start') =~ /^[\d-]+/;
       $settings->{stop}  = param('stop')  if param('stop')  =~ /^[\d-]+/;
@@ -1365,6 +1366,7 @@ sub lookup_features_from_db {
   # present under several names, such as "genes" and "frameworks"
   my %seenit;
   my $version = eval {$_->isa('Bio::SeqFeatureI') ? undef : $_->version};
+  $version ||= 0;
   @segments = grep {!$seenit{$_->seq_id,$_->start,$_->end,$version}++} @segments;
   return @segments if @segments > 1;
 
@@ -1548,7 +1550,7 @@ sub overview {
   return unless $segment;
   $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
 
-  my ($image,$length) = $CONFIG->overview($segment) or return;
+  my ($image,$length) = $CONFIG->overview($segment,$page_settings->{features}) or return;
   my ($width,$height) = $image->getBounds;
   my $url             = $CONFIG->generate_image($image);
   return image_button(-name=>'overview',
@@ -2129,7 +2131,7 @@ sub adjust_track_options {
 sub set_track_options {
   my $settings = shift;
 
-  my @labels = @{$settings->{tracks}};
+  my @labels =  @{$settings->{tracks}};
 
   my %keys            = map {$_ => $CONFIG->setting($_=>'key') || $_} @labels;
   my @sorted_labels   = ('',sort {lc $keys{$a} cmp lc $keys{$b}} @labels);
@@ -2139,7 +2141,7 @@ sub set_track_options {
     my $label = $labels[$track];
     push @rows,
       th({-align=>'left',-class=>'searchtitle'},$CONFIG->tr("Track"),$track+1).
-      th({-align=>'left',-class=>'searchbody'},$keys{$label}).
+      th({-align=>'left',-class=>'searchbody'},$label=~/:overview$/ ? "$keys{$label}<sup>*</sup>":$keys{$label}).
       td({-align=>'center',-class=>'searchbody'},
 	     checkbox(-name     => 'track.label',
 		      -value    => $label,
@@ -2209,6 +2211,7 @@ sub set_track_options {
 	      hidden(-name=>$CONFIG->tr('Set_options'), -value=>1,-override=>1),
 	      hidden(-name=>$CONFIG->tr('Adjust_order'),-value=>1,-override=>1),
 	     );
+    print $CONFIG->tr('EXTERNAL_TRACKS');
     print end_form();
 }
 
@@ -2407,6 +2410,7 @@ sub label2key {
   $key     ||= $CONFIG->setting($label => 'key');
   $key     ||= $PRESETS->{$key} if defined $key;
   $key     ||= $label;
+  $key     .= '*' if $label =~ /:overview$/;
   $key;
 }
 

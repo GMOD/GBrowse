@@ -65,7 +65,7 @@ $plugin->database($database)
   A chance to store a copy of the Bio::DB::GFF or Gadfly
   database handle.
 
-$plugin->config_file($bio_graphics_browser)
+$plugin->browser_config($bio_graphics_browser)
   A chance to store a copy of the Bio::Graphics::Browser
   interface to the current configuration file.
 
@@ -80,10 +80,10 @@ $plugin->dump($segment);
   Dump out the data (dumpers only).  Must generate an HTTP header 
   with MIME type.
 
-@segments = $plugin->find($segment); 
-  Do a find (finders only) and return a set of triplets of form
+$segments = $plugin->find($segment); 
+  Do a find (finders only) and return an arrayref of triplets of form
   [ref,start,stop].  If further configuration is needed return undef
-  -- gbrowse will invoke change_configuration() and try again.  If
+  -- gbrowse will invoke configure_form() and try again.  If
   nothing is found, return empty list.
   NOTE: You can ignore the segment and do the find on the whole 
   database if that's more appropriate.  If you need auxiliary files

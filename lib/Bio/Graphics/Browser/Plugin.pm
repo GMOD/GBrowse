@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.2 2002-03-25 05:31:45 lstein Exp $
+# $Id: Plugin.pm,v 1.3 2002-03-31 21:15:51 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 use strict;
@@ -45,7 +45,9 @@ sub config_defaults {
 sub configuration {
   my $self = shift;
   my $d = $self->{g_config};
-  $self->{g_config} = shift if @_;
+  if (@_) {
+    $self->{g_config} = shift;
+  }
   $d;
 }
 

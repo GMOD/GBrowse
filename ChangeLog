@@ -1,3 +1,11 @@
+1.37	Sun Mar 31 16:10:11 EST 2002
+	* Plugin architecture completed see README-PLUGINS
+	* Sample plugins provided:
+		Restriction site annotator
+		Find regions by searching for oligos
+		GFF dumper
+		FASTA dumper
+	
 1.36	Sat Mar 23 23:28:10 EST 2002
 	* Completely reworked the way that track options are stored.
 	* Allow multiple files to be uploaded.

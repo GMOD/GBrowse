@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::FastaDumper;
-# $Id: FastaDumper.pm,v 1.1 2002-03-25 05:31:45 lstein Exp $
+# $Id: FastaDumper.pm,v 1.2 2002-03-31 21:15:51 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -24,18 +24,18 @@ sub dump {
   my $dna = $segment->dna;
 
   my @markup;
-  if ($config->{capitalize_exons}) {
-    my $iterator = $segment->get_seq_stream(-types=>'exon',
+  if ($config->{capitalize_codings}) {
+    my $iterator = $segment->get_seq_stream(-types=>[qw(CDS ORF)],
 					    -automerge=>0);
-    while (my $exon = $iterator->next_seq) {
-      my $start = $exon->start-$segment->start;
+    while (my $coding = $iterator->next_seq) {
+      my $start = $coding->start-$segment->start;
 
       # for Text formatting
-      substr($dna,$start,$exon->length) =~ tr/a-z/A-Z/;
+      substr($dna,$start,$coding->length) =~ tr/a-z/A-Z/;
 
       # for HTML formatting
       push @markup,([$start,q(<font style="background-color: yellow">)],
-		    [$start+$exon->length,q(</font>)]);
+		    [$start+$coding->length,q(</font>)]);
     }
   }
 
@@ -61,7 +61,7 @@ sub dump {
 sub config_defaults {
   my $self = shift;
   return { format           => 'html',
-	   capitalize_exons => 0,
+	   capitalize_codings => 0,
 	 };
 }
 
@@ -70,7 +70,7 @@ sub reconfigure {
   my $current_config = $self->configuration;
   warn "fasta reconfigure()";
   $current_config->{format} = param('FastaDumper.output');
-  $current_config->{capitalize_exons} = param('FastaDumper.capitalize_exons');
+  $current_config->{capitalize_codings} = param('FastaDumper.capitalize_codings');
 }
 
 sub configure_form {
@@ -84,11 +84,11 @@ sub configure_form {
 				    -default => $current_config->{format},
 				    -override => 1))),
 		  TR({-class=>'searchtitle'},
-		     th({-align=>'RIGHT',-width=>'25%'},'Capitalize/Hilight Exons'),
-		     td(radio_group(-name=>'FastaDumper.capitalize_exons',
+		     th({-align=>'RIGHT',-width=>'25%'},'Capitalize/Hilight Coding Regions'),
+		     td(radio_group(-name=>'FastaDumper.capitalize_codings',
 				    -values=>[0,1],
 				    -labels=> {0=>'no',1=>'yes'},
-				    -default=>$current_config->{capitalize_exons},
+				    -default=>$current_config->{capitalize_codings},
 				    -override=>1))));
   $html;
 }

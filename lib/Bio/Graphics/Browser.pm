@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.15 2002-03-25 05:31:45 lstein Exp $
+# $Id: Browser.pm,v 1.16 2002-03-31 21:15:51 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
@@ -18,6 +18,8 @@ $VERSION = '1.12';
 
 @ISA    = 'Exporter';
 @EXPORT = 'commas';
+
+use constant RULER_INTERVALS => 20;  # fineness of the centering map on the ruler
 
 sub new {
   my $class    = shift;
@@ -168,26 +170,18 @@ sub render_html {
 					);
 
   my ($width,$height) = $image->getBounds;
-  my @mtimes = map {ref($_) && $_->mtime} values %$feature_files;
-
-  local $^W = 0;
-  my $signature = md5_hex($segment,
-			  (map {$_||0} @{$tracks||[]}),
-			  $self->{width},
-			  $self->source || '',
-			  @mtimes,
-			  ref($options) && %{$options}
-			 );
-  my $url     = $self->generate_image($image,$signature);
+  my $url     = $self->generate_image($image);
   my $img     = img({-src=>$url,-align=>'CENTER',-usemap=>'#hmap',-width => $width,-height => $height,-border=>0});
   my $img_map = $self->make_map($map,$do_centering_map) if $do_map;
   return wantarray ? ($img,$img_map) : join "<br>",$img,$img_map;
 }
 
 sub generate_image {
-  my $self = shift;
-  my ($image,$signature) = @_;
+  my $self  = shift;
+  my $image = shift;
   my $extension = $image->can('png') ? 'png' : 'gif';
+  my $data      = $image->can('png') ? $image->png : $image->gif;
+  my $signature = md5_hex($data);
   my ($uri,$path) = $self->tmpdir($self->source.'/img');
   my $url         = sprintf("%s/%s.%s",$uri,$signature,$extension);
   my $imagefile   = sprintf("%s/%s.%s",$path,$signature,$extension);
@@ -239,29 +233,32 @@ sub make_map {
   $map;
 }
 
-# this one is scary because it messes with CGI parameters
+# this creates image map for rulers and scales, where clicking on the scale
+# should center the image on the scale.
 sub make_centering_map {
-  my $self = shift;
-  my $ruler = shift;
+  my $self   = shift;
+  my $ruler  = shift;
+
   return if $ruler->[3]-$ruler->[1] == 0;
 
+  my $length = $ruler->[0]->length;
   my $offset = $ruler->[0]->start;
-  my $scale  = $ruler->[0]->length/($ruler->[3]-$ruler->[1]);
+  my $scale  = $length/($ruler->[3]-$ruler->[1]);
 
-  # divide into ten intervals
-  my $portion = ($ruler->[3]-$ruler->[1])/10;
+  # divide into RULER_INTERVAL intervals
+  my $portion = ($ruler->[3]-$ruler->[1])/RULER_INTERVALS;
   my $ref    = $ruler->[0]->ref;
   my $source =  $self->source;
-  my $plugin = escape(param('plugin'));
+  my $plugin = escape(param('plugin')||'');
 
   my @lines;
-  for my $i (0..19) {
+  for my $i (0..RULER_INTERVALS-1) {
     my $x1 = $portion * $i;
     my $x2 = $portion * ($i+1);
     # put the middle of the sequence range into the middle of the picture
     my $middle = $offset + $scale * ($x1+$x2)/2;
-    my $start  = int($middle - $ruler->[0]->length/2);
-    my $stop   = int($start + $ruler->[0]->length - 1);
+    my $start  = int($middle - $length/2);
+    my $stop   = int($start  + $length - 1);
     my $url = url(-relative=>1,-path_info=>1);
     $url .= "?ref=$ref;start=$start;stop=$stop;source=$source;nav4=1;plugin=$plugin";
     push @lines,
@@ -507,15 +504,16 @@ sub hits_on_overview {
   my $max_bump   = $conf->setting(general=>'bump density') || 50;
 
   # sort hits out by reference
-  my (%refs,%seenit);
+  my (%refs);
   for my $hit (@$hits) {
-    if (UNIVERSAL::can($hit,'abs_ref')) {
-      my $ref = $hit->abs_ref;
-      my $name = $hit->name;
-      next if $seenit{$name}++;
+    if (UNIVERSAL::can($hit,'ref')) {
+      my $ref  = $hit->ref;
+      my $name = $hit->can('seqname') ? $hit->seqname : $hit->name;
+      my($start,$end) = ($hit->start,$hit->end);
       $name =~ s/\:\d+,\d+$//;  # remove coordinates if they're there
-      push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$hit->abs_start,
-						      -stop=>$hit->abs_stop,
+      $name = substr($name,0,7).'...' if length $name > 10;
+      push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$start,
+						      -stop=>$end,
 						      -name=>$name);
     } else {
       my ($ref,$start,$stop,$name) = @$hit;
@@ -571,6 +569,7 @@ sub hits_on_overview {
 			-height    => 6,
 			-fgcolor   => 'red',
 			-bgcolor   => 'red',
+			-fallback_to_rectangle => 1,
 			-bump      => @{$refs{$ref}} <= $max_bump,
 			-label     => @{$refs{$ref}} <= $max_bump,  # deliberate
 		       );
@@ -604,8 +603,17 @@ sub _hits_to_html {
   $html   .= qq(<br><map name="$ref">\n);
 
   # use the scale as a centering mechanism
-  my $ruler = shift @$boxes;
-  $html    .= $self->make_centering_map($ruler);
+  my $ruler   = shift @$boxes;
+  my $length  = $ruler->[0]->length/RULER_INTERVALS;
+  $width   = ($ruler->[3]-$ruler->[1])/RULER_INTERVALS;
+  for my $i (0..RULER_INTERVALS-1) {
+    my $x = $ruler->[1] + $i * $width;
+    my $y = $x + $width;
+    my $start = int($length * $i);
+    my $stop  = int($start + $length);
+    my $href      = $self_url . ";ref=$ref;start=$start;stop=$stop";
+    $html .= qq(<AREA SHAPE="RECT" COORDS="$x,$ruler->[2],$y,$ruler->[4]" HREF="$href">\n);
+  }
 
   foreach (@$boxes){
     my ($start,$stop) = ($_->[0]->start,$_->[0]->end);
@@ -661,20 +669,19 @@ sub read_configuration {
 
 sub merge {
   my $self = shift;
-  my ($features,$max_range) = @_;
+  my ($db,$features,$max_range) = @_;
   $max_range ||= 100_000;
 
   my (%segs,@merged_segs);
   push @{$segs{$_->ref}},$_ foreach @$features;
   foreach (keys %segs) {
-    push @merged_segs,_low_merge($segs{$_},$max_range);
+    push @merged_segs,_low_merge($db,$segs{$_},$max_range);
   }
   return @merged_segs;
 }
 
 sub _low_merge {
-  my ($features,$max_range) = @_;
-  my $db = eval{$features->[0]->factory};
+  my ($db,$features,$max_range) = @_;
 
   my ($previous_start,$previous_stop,$statistical_cutoff,@spans);
   patch_biographics() unless $features->[0]->can('low');
@@ -758,8 +765,8 @@ sub labels {
 
 sub label2type {
   my ($self,$label,$lowres) = @_;
-  return ($lowres ? shellwords($self->setting($label,'feature_low')||$self->setting($label,'feature'))
-                  : shellwords($self->setting($label,'feature')));
+  return ($lowres ? shellwords($self->setting($label,'feature_low')||$self->setting($label,'feature')||'')
+                  : shellwords($self->setting($label,'feature')||''));
 }
 
 # override inherited in order to be case insensitive

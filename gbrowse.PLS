@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.19 2002-03-25 05:31:45 lstein Exp $
+# $Id: gbrowse.PLS,v 1.20 2002-03-31 21:15:51 lstein Exp $
 
 use strict;
 use lib '/home/lstein/projects/Generic-Genome-Browser/lib/';
@@ -65,6 +65,7 @@ use constant MAG_ICON_HEIGHT => 20;
 use constant MAG_ICON_WIDTH  => 8;
 use constant MAX_SEGMENT     => 1_000_000;
 use constant TOO_MANY_SEGMENTS => 5_000;
+use constant TOO_MANY_FEATURES => 100;
 use constant TOO_MANY_REFS     => 30;
 use constant DEFAULT_SEGMENT => 100_000;
 use constant OVERVIEW_RATIO  => 0.9;
@@ -127,6 +128,7 @@ if ($ENV{MOD_PERL}) {
     $CONF_DIR = Apache->server_root_relative($conf) if $conf;
 }
 
+## CONFIGURATION & INITIALIZATION #############################################################
 # preliminaries -- read and/or refresh the configuration directory
 $CONFIG  ||= Bio::Graphics::Browser->new;
 $CONFIG->read_configuration($CONF_DIR) or die "Can't read configuration files: $!";
@@ -153,19 +155,28 @@ if (defined($old_source) && $source ne $old_source) {
 ### PLUGINS ###################################################################################
 $PLUGINS = initialize_plugins($CONF_DIR) unless defined $PLUGINS;
 configure_plugins($PLUGINS,$page_settings,open_database(),$CONFIG,$CONF_DIR);
+my $plugin_type   = $PLUGINS->{param('plugin')}->type if param('plugin') && $PLUGINS->{param('plugin')};
 my $plugin_action = param('plugin_action') || '';
-
+warn "plugin_action = $plugin_action" if DEBUG_PLUGINS;
 
 ## GETTING THE SEGMENT ########################################################################
-my @segments  = get_segment($page_settings);
+my @segments = get_segments($page_settings);
+
+if ($plugin_action eq 'Find' && param('plugin')) {
+  do_plugin_find($page_settings,
+		 param('plugin'),
+		 \@segments) or ($plugin_action='Configure...'); #reconfigure
+} elsif (!@segments && $page_settings->{name}) {
+  do_keyword_search($page_settings,\@segments);
+  do_plugin_autofind($page_settings,\@segments) unless @segments;  # last resort
+}
+
+
 ###############################################################################################
-
-
 
 # SETTINGS FOR UPLOADED FILES
 my ($file_action) = grep {/^modify\./} param();
 (my $file = $file_action) =~ s/^modify\.// if $file_action;
-
 
 
 ###############################################################################################
@@ -174,17 +185,9 @@ my ($file_action) = grep {/^modify\./} param();
 # Check to see whether one of the plugin dumpers was invoked.  We have to do this first
 # before printing the header because the plugins are responsible for generating the header.
 # NOTE THE EXIT 0 HERE IF THE DUMP IS SUCCESSFUL!
-if (@segments && $plugin_action eq 'Go!'
-    &&
-    $PLUGINS->{param('plugin')}
-    &&
-    $PLUGINS->{param('plugin')}->type eq 'dumper') {
-  warn "plugin_action = $plugin_action!" if DEBUG_PLUGINS;
+if (@segments && $plugin_action eq 'Go!'&& $plugin_type eq 'dumper') {
   do_plugin_dump(param('plugin'),$segments[0]) && exit 0
 }
-
-
-
 
 
 ###############################################################################################
@@ -218,6 +221,7 @@ clear_uploaded_file($page_settings,$file) if $file_action && param($file_action)
 
 warn "TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 
+load_plugin_annotators($page_settings);
 adjust_tracks($page_settings);
 
 warn "ADJUSTED TRACKS = @{$page_settings->{tracks}}" if DEBUG;
@@ -231,9 +235,10 @@ my $description = $CONFIG->setting('description');
 my $segment;
 
 ## STARTING THE PAGE ############################################################################
+my $title = @segments == 1 ? "$description: $segments[0]" : $description;
 
 print
-  start_html(-title => 'Genome browser',
+  start_html(-title  => $title,
 	     -style  => {src=>$CONFIG->setting('stylesheet')},
 	    ) unless $HTML++;
 
@@ -245,22 +250,28 @@ if ($file_action && param($file_action) eq 'Edit File...') {
   edit_uploaded_file($page_settings,$file);
 }
 
-## AND THE ABILITY TO CHANGE DISPLAY ORDER#######################################################
+## HANDLE TRACK SETTINGS   #######################################################
 elsif ((param('Set Track Options...') || param('Revert fo Defaults..'))
        && !param('Cancel')
        && !param('Redisplay')) {
   set_track_options($page_settings);
 }
 
+## HANDLE HELP PAGE   #######################################################
+
 elsif (param('help')) {
   help(param('help'),$CONFIG->setting('help')||GBROWSE_HELP,$page_settings);
 }
 
+## HANDLE PLUGIN ABOUT PAGE #####################################################
 elsif ($plugin_action eq 'About...') {
   do_plugin_about(param('plugin'));
 }
 
+## HANDLE PLUGIN CONFIGURATION####################################################
 elsif ($plugin_action eq 'Configure...') {
+  do_plugin_configure(param('plugin'));
+} elsif ($plugin_action eq 'Go!' && $plugin_type eq 'finder') {
   do_plugin_configure(param('plugin'));
 }
 
@@ -272,44 +283,23 @@ else {
 
 footer();
 
-sub footer {
-  ## FOOTER
-  print
-    $CONFIG->footer || '',
-      p(i(font({-size=>'small'},
-	       'Note: This page uses cookie to save and restore preference information.',
-	       'No information is shared.')),br,
-       tt(font({-size=>'small'},"Generic genome browser version $VERSION"))),
-       end_html;
-}
-
 #--------------------------------- lots of subroutines --------------------------
 
 sub main_display {
   my ($segments,$page_settings) = @_;
   my ($segment,@keyword_search_results);
 
-  # a bit confusing here, because of the way I want the formatting to work
-
-  # first of all, if there are no segments, then try a keyword search and
-  # store the results
+  # first of all, if there are no segments, then try a keyword search and store the results
   if (@$segments == 0 && (my $n = $page_settings->{name})) {
-
-    # if that doesn't work, then we print a big error at the top
-    unless (@keyword_search_results = do_keyword_search($n)) {
-      error("The landmark named",i($n),"is not recognized.",
-	    "You may need to qualify it with the type, as in",i("PCR_Product:$n"));
-    }
-
+      error("The landmark named",i($n),"is not recognized. See the help pages for suggestions.");
   }
 
-  # if there's a single segment, then print a message and store the segment
-  # into a scalar
+  # if there's a single segment, then print a message and store the segment into a scalar
   elsif (@$segments == 1) {
     $segment = $segments->[0];
     $segment = truncated_segment($segment) if $segment->length < 4;
     print h2("Showing",unit_label($segment->length)," from",
-	     $segment->ref.", positions ".commas($segment->start)." to ".commas($segment->stop));
+	     $segment->seq_id.", positions ".commas($segment->start)." to ".commas($segment->stop));
   }
 
   # print the top of the form, with navigation bar, etc
@@ -318,20 +308,22 @@ sub main_display {
 
   # if more than one segment, then list them all
   if (@$segments > 1) {
-    multiple_choices($segments,$page_settings);
+    multiple_choices($page_settings,$segments);
   }
 
-  # if there are keyword search results, then print those as well
-  elsif (@keyword_search_results) {
-    format_keyword_search($page_settings,$page_settings->{name},\@keyword_search_results);
-  }
-
-  # get the third party features
-  my $feature_files = load_external_sources($segment,$page_settings);
+  my $feature_files;
 
   if ($segment) {
+
+    # get the third party features
+    $feature_files = load_external_sources($segment,$page_settings);
+
+    # add plugin annotators
+    load_plugin_annotations($segment,$feature_files,$page_settings);
+
     my ($img,$map);
     my $cell = overview($segment,$page_settings).br();
+
     if ($segment->length <= $MAX_SEGMENT) {
       $CONFIG->width($page_settings->{width});
       my @tracks_to_show = grep {$page_settings->{features}{$_}{visible}} @{$page_settings->{tracks}};
@@ -344,7 +336,9 @@ sub main_display {
 					 do_centering_map => 1,
 					);
       $cell .= $img;
-    } else {
+    }
+
+    else {
       $cell .= i(
 		 "Detailed view is limited to",
 		 commas($MAX_SEGMENT),"bases.",
@@ -481,7 +475,7 @@ sub adjust_tracks {
   # Remove any features that are not mentioned in the
   # config file, excepting Uploaded and remote URL features.
   # This may happen if a stanza is removed from the config file.
-  my %extra = map {$_=>1} grep {!/^(http|ftp|das|file):/
+  my %extra = map {$_=>1} grep {!/^(http|ftp|das|file|plugin):/
 				    && !$configured_labels{$_}} keys %{$settings->{features}};
   # remove extra from tracks && options
   if (%extra) {
@@ -550,7 +544,6 @@ sub adjust_settings {
   $settings->{name}   = param('name')                       if param('name');
   $settings->{source} = param('source')                     if param('source');
 
-  # XXX INSPECT THIS
   if (my @external = param('eurl')) {
     my %external = map {$_=>1} @external;
     foreach (@external) {
@@ -617,7 +610,7 @@ sub slidertable {
   my @lines;
   push @lines,hidden(-name=>'start',-value=>$segment->start,-override=>1);
   push @lines,hidden(-name=>'stop',-value=>$segment->end,-override=>1);
-  push @lines,hidden(-name=>'ref',-value=>$segment->ref,-override=>1);
+  push @lines,hidden(-name=>'ref',-value=>$segment->seq_id,-override=>1);
   push @lines,hidden(-name=>'prevname',-value=>scalar(param('name')),-override=>1);
   push @lines,
     (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>"left $full",
@@ -763,9 +756,9 @@ sub settings_table {
 		   ) : '',
 
 		 );
+  autoEscape(1);
   return $sTable;
 }
-autoEscape(1);
 
 sub annotation_help {
   return url(-relative=>1,-path_info=>1) . "?help=annotation";
@@ -898,7 +891,7 @@ sub zoomnav {
 
 
 # interesting heuristic way of fetching sequence segments based on educated guesses
-sub get_segment {
+sub get_segments {
   my $settings = shift;
   my @segments;
 
@@ -927,11 +920,15 @@ sub get_segment {
   eval {$_->absolute(1)} foreach @segments;
 
   return unless @segments;
+  # Filter out redundant segments; this can happen when the same basic feature is
+  # present under several names, such as "genes" and "frameworks"
+  my %seenit;
+  @segments = grep {!$seenit{$_->name,$_->ref,$_->start,$_->end}++} @segments;
   return @segments if @segments > 1;
 
   # set CGI name parameter to match segment.
   # this prevents any confusion over (ref,start,stop) and (name) addressing.
-  $settings->{ref}   = $segments[0]->ref;
+  $settings->{ref}   = $segments[0]->seq_id;
   $settings->{start} = $segments[0]->start;
   $settings->{stop}  = $segments[0]->stop;
 
@@ -942,7 +939,7 @@ sub get_segment {
 sub truncated_segment {
   my $seg   = shift;
   my ($trunc_left,$trunc_right) = @{$seg->truncated} if $seg->truncated;
-  my $ref   = $seg->ref;
+  my $ref   = $seg->seq_id;
   my $db    = open_database();
   my $whole = $db->segment($ref);
   return $db->segment(-name=>$ref,-start=>$whole->stop-4,-stop=>$whole->stop) if $trunc_right;
@@ -974,8 +971,8 @@ sub name2segments {
   push @argv,(-class => $class) if defined $class;
   push @argv,(-start => $start) if defined $start;
   push @argv,(-stop  => $stop)  if defined $stop;
-  @segments = $class && $name =~ /\*/ ? $db->get_feature_by_name(@argv) 
-                                      : $db->segment(@argv);
+  @segments = $name =~ /\*/ ? $db->get_feature_by_name(@argv) 
+                            : $db->segment(@argv);
 
   # Here starts the heuristic part.  Try various abbreviations that
   # people tend to use for chromosomal addressing.
@@ -987,7 +984,9 @@ sub name2segments {
       push @argv,(-class => $class) if defined $class;
       push @argv,(-start => $start) if defined $start;
       push @argv,(-stop  => $stop)  if defined $stop;
-      @segments = defined($start) ? $db->segment(@argv) : $db->segment(@argv) unless @segments;
+      @segments = $name =~ /\*/ ? $db->get_feature_by_name(@argv) 
+                                : $db->segment(@argv);
+      last if @segments;
     }
   }
 
@@ -1002,25 +1001,28 @@ sub name2segments {
     @argv = (-name => "$name*");
     push @argv,(-start => $start) if defined $start;
     push @argv,(-stop  => $stop)  if defined $stop;
-    @segments = $db->segment(-class=>$class,@argv);
+    @segments = $name =~ /\*/ ? $db->get_feature_by_name(@argv) 
+                              : $db->segment(@argv);
   }
 
   # try any "automatic" classes that have been defined in the config file
   if (!@segments && !$class &&
       (my @automatic = split /\s+/,$CONFIG->setting('automatic classes') || '')) {
-    my @names = length($name) > 3 && $name !~ /\*/ ? ($name,"$name*") : $name;  # possibly add a wildcard
-    for my $n (@names) {
-      @argv = (-name=>$n);
-      push @argv,(-start => $start) if defined $start;
-      push @argv,(-stop  => $stop)  if defined $stop;
+    my @names = length($name) > 3 && 
+      $name !~ /\*/ ? ($name,"$name*") : $name;  # possibly add a wildcard
+  NAME:
       foreach $class (@automatic) {
-	# we are deliberabely doing something different in the case that the user
-	# typed in a wildcard vs an automatic wildcard being added
- 	@segments = $name =~ /\*/ ? $db->get_feature_by_name(-class=>$class,@argv)
-                                  : $db->segment(-class=>$class,@argv);
-	last if @segments;
+	for my $n (@names) {
+	  @argv = (-name=>$n);
+	  push @argv,(-start => $start) if defined $start;
+	  push @argv,(-stop  => $stop)  if defined $stop;
+	  # we are deliberately doing something different in the case that the user
+	  # typed in a wildcard vs an automatic wildcard being added
+	  @segments = $name =~ /\*/ ? $db->get_feature_by_name(-class=>$class,@argv)
+	                            : $db->segment(-class=>$class,@argv);
+	  last NAME if @segments;
+	}
       }
-    }
   }
 
   # user wanted multiple locations, so user gets them
@@ -1037,18 +1039,21 @@ sub name2segments {
     $max_length = $_->length if $_->length > $max_length;
   }
   if (@segments > 1 || $max_length > $MAX_SEGMENT) {
-    @segments     = $db->fetch_feature_by_name(-class => $segments[0]->class,
-					       -name  => $segments[0]->ref,
-					       -automerge=>0);
-    @segments     = $CONFIG->merge(\@segments,(get_ranges())[-1])
-      if @segments > 1 && @segments < TOO_MANY_SEGMENTS;
+    my @s     = $db->fetch_feature_by_name(-class => $segments[0]->class,
+					   -name  => $segments[0]->seq_id,
+					   -automerge=>0);
+    @segments     = $CONFIG->merge($db,\@s,(get_ranges())[-1])
+      if @s > 1 && @s < TOO_MANY_SEGMENTS;
   }
   @segments;
 }
 
 ################ perform keyword search ###############
 sub do_keyword_search {
-  my $searchterm = shift;
+  my $settings = shift;
+  my $segments = shift;
+  my $searchterm = $settings->{name};
+
   my $match_sub = 'sub {';
   foreach (split /\s+/,$searchterm) {
     $match_sub .= "return unless \$_[0] =~ /\Q$_\E/; ";
@@ -1057,52 +1062,69 @@ sub do_keyword_search {
   my $match = eval $match_sub;
 
   my $db = open_database();
-  my @results = grep { $match->($_->[1]) }
+  my @matches = grep { $match->($_->[1]) }
     $db->search_notes($searchterm,MAX_KEYWORD_RESULTS);
-  return @results;
+  my @results;
+  for my $r (@matches) {
+    my ($name,$description,$score) = @$r;
+    my $seg = $db->segment($name) or next;
+    push @results,Bio::Graphics::Feature->new(-name   => $name,
+					      -class  => $name->class,
+					      -type   => $description,
+					      -score  => $score,
+					      -ref    => $seg->abs_ref,
+					      -start  => $seg->abs_start,
+					      -stop   => $seg->abs_stop);
+
+  }
+  @$segments = @results;
 }
 
 ################ format keyword search ###################
-sub format_keyword_search {
-  my ($settings,$name,$results) = @_;
-  my $db = open_database();
+sub multiple_choices {
+  my ($settings,$results) = @_;
+  my $db   = open_database();
+  my $name = $settings->{name};
   my $regexp = join '|',($name =~ /(\w+)/g);
 
-  my %position = map { overload::StrVal($_->[0]) => $db->segment($_->[0]) } @$results;
   # sort into bins by reference
   my %refs;
   foreach (@$results) {
-    my $pos = $position{overload::StrVal($_->[0])};
-    my $abs_ref = $pos->abs_ref;
-    push @{$refs{$abs_ref}},$_;
+    my $ref = $_->seq_id;
+    push @{$refs{$ref}},$_;
   }
 
   $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
-  my $overviews = $CONFIG->hits_on_overview($db,[values %position]);
+  my $overviews = $CONFIG->hits_on_overview($db,$results);
 
   print start_table();
   print TR({-class=>'datatitle'},th({-colspan=>4},
-	      "No landmark named $name is found, but the following landmarks may be related."));
+	      "The following regions match your request."));
   my $url = url(-relative=>1,-path_info=>1);
 
+  local $^W = 0;  # get rid of non-numeric warnings coming out of by_score_and_position
   for my $ref(sort keys %refs) {
     my @results = @{$refs{$ref}};
     print TR(th({-class=>'databody',-colspan=>4,-align=>'CENTER'},"Matches on $ref",br,
 		$overviews->{$ref}));
-    for my $r (sort {by_score_and_position(\%position)} @results) {
-      my $name  = escape($r->[0]->name);
-      my $class    = escape($r->[0]->class);
-      my $description = escapeHTML($r->[1]);
+    for my $r (sort by_score_and_position @results) {
+      my $name        = eval {$r->name}  || $r->primary_tag;
+      my $class       = eval {$r->class} || 'Sequence';
+      my $score       = eval {$r->score} || 'n/a';
+      my ($start,$stop) = ($r->start,$r->end);
+      my $description = escapeHTML(eval{$r->notes}||eval{$r->method}||eval{$r->source_tag}||$r->{ref});
+      my $n           = escape($name);
+      my $c           = escape($class);
       $description =~ s/($regexp)/<b class="keyword">$1<\/b>/ig;
 
-      my $href     = "$url?name=$class:$name";
-      my $seg      = $position{overload::StrVal($r->[0])};
-      my $position = format_segment($seg);
+      my $objref     = $class ? "$url?name=$c:$n" : "$url?name=$n";
+      my $posref     = "$url?ref=$ref;start=$start;stop=$stop";
+      my $position = format_segment($r);
       print TR({-class=>'databody',-valign=>'TOP'},
-	       th({-align=>'RIGHT'},a({-href=>$href},$r->[0])),
+	       th({-align=>'RIGHT'},ref($name) ? a({-href=>$objref},$name):tt($name)),
 	       td($description),
-	       td(a({-href=>$href},$position)),
-	       td("score=$r->[2]"));
+	       td(a({-href=>$posref},$position . ' ('.($stop-$start).' bp)')),
+	       td("score=$score"));
     }
   }
   print end_table;
@@ -1110,23 +1132,21 @@ sub format_keyword_search {
 }
 
 sub by_score_and_position {
-  my $position = shift;
-  my $result = $b->[2] <=> $a->[2];
+  my $result = eval{$b->score <=> $a->score};
   return $result unless $result == 0;
-  my $apos = $position->{overload::StrVal($a->[0])};
-  my $bpos =$position->{overload::StrVal($b->[0])};
-  return $apos->abs_ref cmp $bpos->abs_ref
+
+  return $a->seq_id cmp $b->seq_id
     ||
-      $apos->abs_start<=>$bpos->abs_start
+      $a->start<=>$b->start
 	||
-	  $apos->abs_stop<=>$bpos->abs_stop;
+	  $a->end<=>$b->end;
 }
 
 sub format_segment {
   my $s = shift or return 'n/a';
-  my $ref = $s->abs_ref;
-  my $start = commas($s->abs_start);
-  my $stop  = commas($s->abs_stop);
+  my $ref = $s->seq_id;
+  my $start = commas($s->start);
+  my $stop  = commas($s->end);
   return "<b>$ref</b>:$start..$stop";
 }
 
@@ -1145,8 +1165,7 @@ sub overview {
 
   my ($image,$length) = $CONFIG->overview($segment) or return;
   my ($width,$height) = $image->getBounds;
-  my $signature = md5_hex($segment,$width);
-  my $url = $CONFIG->generate_image($image,$signature);
+  my $url             = $CONFIG->generate_image($image);
   return image_button(-name=>'overview',
 		      -src=>$url,
 		      -width=>$width,
@@ -1166,52 +1185,6 @@ sub get_zoomincrement {
   $zoom;
 }
 
-sub multiple_choices {
-  my $segments = shift;
-  my $settings = shift;
-
-  my $message = "The landmark named ".$settings->{name}." exists in multiple locations";
-  $message   .= @$segments > TOO_MANY_SEGMENTS ?  ", but there are too many to choose from (".@$segments.")."
-                                                 ." Please try a different landmark."
-                                               : ". Please choose one.";
-
-  $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
-  my $overviews =  $CONFIG->hits_on_overview(open_database(),$segments);
-
-  print start_table();
-  print TR(th({-colspan=>2,-class=>'datatitle'},$message));
-  if (@$segments <= TOO_MANY_SEGMENTS) {
-
-    # aggregate segments by reference and then split on gaps of > 1 M
-    my %segs;
-    push @{$segs{$_->ref}},$_ foreach @$segments;
-
-    my $url = url(-relative=>1,-path_info=>1);
-    my $source = $CONFIG->source;
-
-    print start_dl;
-    for my $ref (sort keys %segs) {
-      print TR(th({-colspan=>2,-class=>'databody',-align=>'CENTER'},"Matches on $ref",br,
-		  $overviews->{$ref}));
-      my $overview = $overviews->{$ref};
-      my @spans  = sort {$a->start <=> $b->start} @{$segs{$ref}};
-      my %seen;
-      foreach (@spans) {
-	next if $seen{$_->name}++;
-	# consider using segment2link() here
-	my ($start,$stop) = ($_->start,$_->stop);
-	my $bp = $stop - $start;
-	my $s = commas($start);
-	my $e = commas($stop);
-	print TR({-class=>'databody',-valign=>'TOP'},
-		 th({-align=>'RIGHT',-width=>'50%'},$_->class.':'.' '.$_->name),
-		 td(a({-href=>"$url?source=$source;ref=$ref;start=$start;stop=$stop"},"$s..$e ($bp bp)"))),"\n";
-      }
-    }
-  }
-  print end_table;
-}
-
 sub segment2link {
   my ($base,$segment) = @_;
 
@@ -1219,7 +1192,7 @@ sub segment2link {
   return  a({-href=>"$base?source=$source;name=$segment"},$segment) unless ref $segment;
 
   my ($start,$stop) = ($segment->start,$segment->stop);
-  my $ref = $segment->ref;
+  my $ref = $segment->seq_id;
   my $bp = $stop - $start;
   my $s = commas($start);
   my $e = commas($stop);
@@ -1277,14 +1250,39 @@ sub handle_edit {
 sub handle_quickie {
   my ($settings,$data) = @_;
   return unless $data;
+
   # format of quickie data is reference+type+name+start-stop,start-stop,start-stop
-  my $file = 'auto';
+  my ($reference,$type,$name,$position) = shellwords($data||'');
+  my @segments = map { [/(-?\d+)(?:-|\.\.)(-?\d+)/]} split /,/,$position;
+  my $feature = Bio::Graphics::Feature->new(
+					    -ref      => $reference||'',
+					    -type     => $type||'',
+					    -name     => $name||'',
+					    -segments => \@segments,
+					    );
+  write_auto($settings,[$feature]);
+}
+
+sub write_auto {
+  my ($settings,$features) = @_;
+
+  my $file = 'search_results';
   clear_uploaded_file($settings,$file);
-  my ($reference,$type,$name,$position) = shellwords($data);
+  return unless @$features;
+
+  my %seenit;
+
   my $out = open_uploaded_file($settings,$file,">>") or return;
-  print $out "\nreference=$reference\n";
-  $type .= " " . localtime;
-  print $out join ("\t",qq("$type"),$name,$position),"\n";
+  for my $f (@$features) {
+    my $reference = $f->can('seq_id') ? $f->seq_id : $f->seq_id;
+    my $type      = $f->primary_tag;
+    my $name      = $f->seqname;
+    my $position  = $f->sub_SeqFeature ? join (',',map {$_->start.'..'.$_->end} $f->sub_SeqFeature)
+                                       : $f->start.'..'.$f->end;
+    $name .= "($seenit{$name})" if $seenit{$name}++;
+    print $out "\nreference=$reference\n";
+    print $out join ("\t",qq("$type"),qq("$name"),$position),"\n";
+  }
   close $out;
   my (undef,$url) = name_uploaded_file($settings,$file);
   push @{$settings->{tracks}},$url;
@@ -1366,6 +1364,7 @@ sub load_uploaded_files {
 						       -map_coords     => $rel2abs,
 						       -smart_features =>1);
     close $fh;
+    next unless $feature_file;
     $feature_file->name($file);
     push @result,$feature_file;
   }
@@ -1383,11 +1382,36 @@ sub load_remote_sources {
       push @result,$file;
       next;
     }
-    my $feature_file = get_remote_feature_data($file,$rel2abs);
+    my $feature_file = get_remote_feature_data($file,$rel2abs) or next;
     push @result,$feature_file;
   }
   return @result;
 }
+
+sub load_plugin_annotations {
+  my ($segment,$feature_files,$settings) = @_;
+  for my $p (keys %$PLUGINS) {
+    next unless $PLUGINS->{$p}->type eq 'annotator';
+    my $name = "plugin:".$PLUGINS->{$p}->name;
+    next unless $settings->{features}{$name}{visible};
+    my $features = $PLUGINS->{$p}->annotate($segment) or next;
+    $feature_files->{$name} = $features;
+  }
+}
+
+sub load_plugin_annotators {
+  my ($settings) = @_;
+  for my $p (keys %$PLUGINS) {
+    next unless $PLUGINS->{$p}->type eq 'annotator';
+    my $name = $PLUGINS->{$p}->name;
+    $name = "plugin:$name";
+    unless ($settings->{features}{$name}) {
+      push @{$settings->{tracks}},$name;
+      $settings->{features}{$name} = {visible=>1,options=>0};
+    }
+  }
+}
+
 
 sub get_remote_feature_data {
   my ($url,$rel2abs) = @_;
@@ -1434,8 +1458,9 @@ sub get_uploaded_file_info {
 
   my $modified = localtime($feature_file->mtime);
   my @refs      = $feature_file->refs;
+  my $db        = open_database();
 
-  my $landmarks;
+  my ($landmarks,@landmarks);
   my $url      = url(-relative=>1,-path_info=>1);
 
   if (@refs > TOO_MANY_REFS) {
@@ -1443,13 +1468,14 @@ sub get_uploaded_file_info {
   } else {
     for my $r (sort @refs) {
       my $features = $feature_file->features;
-      my @features = grep {$_->ref eq $r} map {@$_} values %{$feature_file->features};
-      my @merged   = $CONFIG->merge(\@features);
-      my @links = map {segment2link($url,$_)} @merged;
-      @links = segment2link($url,$r) unless @links;
-      $landmarks .= @links ? "@links " : "$r (not on current map) ";
+      my @features = grep {$_->seq_id && ($_->seq_id eq $r)} map {@$_} values %{$features};
+      my @merged   = @features > TOO_MANY_FEATURES ? $CONFIG->merge($db,\@features) : @features;
+      my @links    = map {segment2link($url,$_)} @merged;
+      @links       = segment2link($url,$r) unless @links;
+      push @landmarks,@links;
     }
   }
+  $landmarks = tableize(\@landmarks);
   warn "get_uploaded_file_info(): modified = $modified, landmarks = $landmarks" if DEBUG;
   return i("Last modified $modified.  Annotated landmarks:"),$landmarks;
 }
@@ -1510,9 +1536,9 @@ sub edit_uploaded_file {
 
 sub coordinate_mapper {
   my $current_segment = shift;
-  my $db              = $current_segment->factory;
+  my $db              = open_database();
 
-  my ($ref,$start,$stop) = ($current_segment->ref,$current_segment->start,$current_segment->stop);
+  my ($ref,$start,$stop) = ($current_segment->seq_id,$current_segment->start,$current_segment->stop);
   my %segments;
 
   my $closure = sub {
@@ -1528,7 +1554,11 @@ sub coordinate_mapper {
     my $mapper   = $segments{$refname};
     my $absref   = $mapper->abs_ref;
     my @abs_segs = map {[$mapper->rel2abs($_->[0],$_->[1])]} @ranges;
-    return unless grep { $_->[0] <= $stop && $_->[1] >= $start } @abs_segs;
+
+    # this inhibits mapping outside the displayed region - uncomment it
+    # if performance is poor.
+    # return unless grep { $_->[0] <= $stop && $_->[1] >= $start } @abs_segs;
+
     return ($absref,@abs_segs);
   };
   return $closure;
@@ -1853,8 +1883,9 @@ sub configure_plugins {
 
     # if there are any CGI parameters from the
     # plugin's configuration screen, set it here
-    warn "param($name) = ",join ' ',param() if DEBUG_PLUGINS;
-    $p->reconfigure if grep {/^$name\./} param();
+    my @params = grep {/^$name\./} param();
+    next unless @params;
+    $p->reconfigure;
   }
 }
 
@@ -1901,23 +1932,57 @@ sub do_plugin_about {
   print start_form(),submit('Back to Browser'),hidden('plugin'),end_form();
 }
 
+sub do_plugin_find {
+  my ($settings,$plugin,$segments,$search_string) = @_;
+
+  my $p = $PLUGINS->{$plugin} or return;
+  my $plugin_name = $p->name;
+
+  my $results = $p->can('auto_find') && defined $search_string
+    ? $p->auto_find($search_string) : $p->find($segments);
+  return unless $results;  # reconfigure message
+
+  @$segments = @$results;
+  $settings->{name} = defined($search_string) ? "$search_string (via $plugin_name search)"
+                                              : "&lt;$plugin_name search&gt;";
+  # remember the search
+  write_auto($settings,$results);
+  1; # return a true result to indicate that we don't need further configuration
+}
+
 sub do_plugin_configure {
   my $plugin = shift;
-  my $p = $PLUGINS->{$plugin};
-  print h1("Configure",$p->name);
+  my $p = $PLUGINS->{$plugin} or return;
+  my $action_label = $p->type eq 'finder' ? 'Find' : 'Configure';
+
+  print h1($action_label,$p->name);
   my $config_html = $p->configure_form;
 
   print start_form(),
     $config_html ? (
 		    $config_html,p(),
-		    submit('Cancel'),'&nbsp;',
-		    b(submit(-name=>'plugin_action',-value=>'Configure'))
+		    submit(-name=>'plugin_action',-value=>'Cancel'),'&nbsp;',
+		    b(submit(-name=>'plugin_action',-value=>$action_label)),
+		    # This is an insurance policy in case user hits return in text field
+		    # in which case the plugin_action is not going to be defined
+		    hidden(-name=>'plugin_action',-value=>$action_label,-override=>1),
 		   )
                  : ( p('This plugin has no extra configuration settings.'),
 		     b(submit('Back to Browser'))
 		   ),
      hidden('plugin'),
      end_form();
+}
+
+# invoke any finder plugins that define the auto_find() method
+sub do_plugin_autofind {
+  my ($settings,$segments) = @_;
+
+  for my $p (keys %$PLUGINS) {
+    next unless $PLUGINS->{$p}->type eq 'finder' && $PLUGINS->{$p}->can('auto_find');
+    do_plugin_find($settings,$p,$segments,$settings->{name});
+    last if @$segments;
+  }
 }
 
 sub retrieve_plugin_config {
@@ -1957,6 +2022,33 @@ sub plugins2cookies {
   }
   warn "plugin cookies = @cookies" if DEBUG_PLUGINS;
   @cookies;
+}
+
+sub tableize {
+  my $array = shift;
+  my $rows    = int(sqrt(@$array));
+  my $columns = int(0.99+@$array/$rows);
+  my $html = qq(<table border="1">);
+  for (my $row=0;$row<$rows;$row++) {
+    $html .= "<tr>";
+    for (my $column=0;$column<$columns;$column++) {
+      $html .= "<td>" . $array->[$column*$rows + $row] . "</td>"
+	if defined($array->[$column*$rows + $row]);
+    }
+    $html .= "</tr>\n";
+  }
+  $html .= "</table>\n";
+}
+
+sub footer {
+  ## FOOTER
+  print
+    $CONFIG->footer || '',
+      p(i(font({-size=>'small'},
+	       'Note: This page uses cookie to save and restore preference information.',
+	       'No information is shared.')),br,
+       tt(font({-size=>'small'},"Generic genome browser version $VERSION"))),
+       end_html;
 }
 
 !NO!SUBS!

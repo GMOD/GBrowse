@@ -53,6 +53,7 @@ use File::Path 'mkpath';
 use Text::Tabs;
 use Text::Shellwords;
 use File::Basename 'basename';
+use File::Spec;
 #use Carp qw(:DEFAULT croak);
 use CGI qw(:standard escape escapeHTML center *table *dl *TR *td);
 use CGI::Carp 'fatalsToBrowser';
@@ -1985,7 +1986,10 @@ sub help {
   }
 
   else {
-    return if (${help_type} =~ /^\.\./); #don't allow ../../../../ etc attack
+    my @components = File::Spec->splitdir($help_type);
+    my $updir      = File::Spec->updir;
+    my $bad        = grep { /^$updir$/ } @components;
+    return         if $bad;
     build_help_page("$conf_dir/${help_type}_help.html");
   }
   print div({-align=>'right'},$do_close);

@@ -1,4 +1,4 @@
-# $Id: SequenceDumper.pm,v 1.9 2003-09-04 17:55:45 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.10 2003-09-05 19:03:41 stajich Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::SequenceDumper
 #
@@ -50,7 +50,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::SequenceDumper;
-# $Id: SequenceDumper.pm,v 1.9 2003-09-04 17:55:45 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.10 2003-09-05 19:03:41 stajich Exp $
 # Sequence Dumper plugin
 
 use strict;
@@ -114,15 +114,25 @@ sub dump {
     $self->gff_dump($segment);
     return;
   }
+  my @filter    = $self->selected_features;
+  $segment->absolute(1);
+  my $seq  = new Bio::Seq(-display_id   => $segment->display_id,
+			  -desc         => $segment->desc,
+			  -accession_number => $segment->accession_number,
+			  -alphabet     => $segment->alphabet,
+			  );
+  $seq->primary_seq($segment->primary_seq);
+  $seq->add_SeqFeature( $segment->features(-types => \@filter) );
+
   my $out = new Bio::SeqIO(-format => $config->{fileformat});
   my $mime_type = $self->mime_type;
   if ($mime_type =~ /html/) {
     print start_html($segment),h1($segment), start_pre;
-    $out->write_seq($segment);
+    $out->write_seq($seq);
     print end_pre();
     print end_html;
   } else {
-    $out->write_seq($segment);
+    $out->write_seq($seq);
   }
   undef $out;
 }
@@ -194,8 +204,9 @@ sub gff_dump {
   print "##gff-version 2\n";
   print "##date $date\n";
   print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
-  
-  my $iterator = $segment->get_seq_stream() or return;
+  my @feature_types = $self->selected_features;
+  $segment->absolute(1);
+  my $iterator = $segment->get_seq_stream(-types => \@feature_types) or return;
   while (my $f = $iterator->next_seq) {
     print $f->gff_string,"\n";
     for my $s ($f->sub_SeqFeature) {

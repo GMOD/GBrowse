@@ -703,7 +703,7 @@ summarizes the most useful ones:
     <td>mRNA</td>
     <td>CDS</td>
     <td>Used in concert with the "cds" glyph to display the reading
-	frame used by the coding portion of each edon.</td>
+	frame used by the coding portion of each exon.</td>
   </tr>
   <tr>
     <th>clone</th>
@@ -1146,7 +1146,7 @@ aggregators = match
 </pre></blockquote>
 
 The last line is declaring an aggregated feature named "tprofile"
-whose parts consist of individual "tlevel" features.  This is simlar
+whose parts consist of individual "tlevel" features.  This is similar
 to the <a href="#custom_aggregators">BAC aggregator</a>, except that
 in this case there is no top-level feature that goes from end to end,
 so we just leave out the <i>/main_type</i> part of the aggregator
@@ -1187,7 +1187,7 @@ track, you should see something like that shown in Figure 12.
 
 <blockquote>
 <img src="figures/figure12.gif"><br>
-<i>Figure 12: A transcriptonal profile rendered with the xyplot glyph</i>
+<i>Figure 12: A transcriptional profile rendered with the xyplot glyph</i>
 </blockquote>
 
 <p>
@@ -1207,7 +1207,7 @@ Gbrowse can take advantage of DNA sequence data in several ways:
 <ol>
   <li>It can display a GC content graph of the reference sequence at
       low magnifications and the DNA sequence itself at higher
-      magnfications.
+      magnifications.
   <li>It can display three and six-frame translations of the reference
       sequence DNA.
   <li>It can display the protein translation of coding regions.
@@ -1928,7 +1928,7 @@ Although the example that we've been working with only has a single
 reference sequence (the infamous "ctgA"), many projects will have
 multiple references.  Reference sequences can be anything that acts as
 a convenient landmark: sequenced clones, contigs, scaffolds, golden
-path segments, or whole chomosomes.
+path segments, or whole chromosomes.
 
 <p>
 
@@ -2340,7 +2340,7 @@ memory).  For larger data sets, however, you'll want to use a database
 management system.  GBrowse handles a number of DBMS through its
 "database adaptor" system.  In this section, you'll learn to use one
 of them, the Bio::DB::GFF MySQL adaptor that comes for free when you
-install Bioperl.
+install BioPerl.
 
 <p>
 
@@ -2412,7 +2412,7 @@ database.  There are actually two steps needed.  The first is to
 "initialize" the database with all the data definitions needed to hold
 genomic feature data, and the second is to actually load the data.
 Fortunately, both these steps are handled by the same command-line
-tool, <i>bp_load_gff.pl</i>, which is part of the Bioperl suite.
+tool, <i>bp_load_gff.pl</i>, which is part of the BioPerl suite.
 
 <p>
 
@@ -2471,7 +2471,7 @@ pass          =
 <p>
 
 The <b>-adaptor</b> argument is telling GBrowse to use the
-"dbi::mysql" database adaptor, which is the Bioperl interface to
+"dbi::mysql" database adaptor, which is the BioPerl interface to
 MySQL databases.  The <b>-dsn</b> argument tells GBrowse to use the
 <b>d</b>ata <b>s</b>source <b>n</b>ame "volvox".
 

@@ -82,3 +82,99 @@ select residues from feature where feature_id in
          fd.dbxref_id = dbx.dbxref_id and
          dbx.accession = 'NC_004328')
 
+ ----------------------------------------------------------------------------
+Chado_ag notes
+
+chado_ag=> \d feature
+                                           Table "feature"
+   Column    |           Type           |  odifiers                          
+ feature_id  | integer                  | 
+ dbxrefstr   | character varying(255)   | 
+ name        | character varying(255)   | 
+ residues    | text                     | 
+ seqlen      | integer                  | 
+ md5checksum | character(32)            | 
+ type_id     | integer                  | 
+
+chado_ag=> \d feature_cvterm
+                                               Table "feature_cvterm"
+      Column       |           Type           |Modifiers                  
+ feature_cvterm_id | integer                  | 
+ feature_id        | integer                  | not null
+ cvterm_id         | integer                  | not null
+ pub_id            | integer                  | not null
+
+chado_ag=> \d featureloc
+                                              Table "featureloc"
+     Column      |           Type           |Modifiers                        
+ featureloc_id   | integer                  | not null default nextval
+ feature_id      | integer                  | not null
+ srcfeature_id   | integer                  | 
+ nbeg            | integer                  | 
+ is_nbeg_partial | boolean                  | not null default 'false'
+ nend            | integer                  | 
+ is_nend_partial | boolean                  | not null default 'false'
+ strand          | smallint                 | 
+ phase           | integer                  | 
+ residue_info    | text                     | 
+ locgroup        | integer                  | not null default 0
+ rank            | integer                  | not null default 0
+
+chado_ag=> \d cvterm
+                                             Table "cvterm"
+     Column     |           Type           | Modifiers                          
+ cvterm_id      | integer                  | not null default nextval
+ termname       | character varying(255)   | not null
+ termdefinition | text                     | 
+ termtype_id    | integer                  | 
+
+chado_ag=> \d dbxref
+                                               Table "dbxref"
+      Column       |           Type           |Modifiers                    
+ dbxref_id         | integer                  | not null default nextval
+ dbxrefstr         | character varying(255)   | not null
+ dbname            | character varying(255)   | not null
+ accession         | character varying(255)   | not null
+ version           | character varying(255)   | not null default ''
+ dbxrefdescription | text                     | 
+
+chado_ag=> \d feature_dbxref
+                                               Table "feature_dbxref"
+      Column       |           Type           | Modifiers                 
+ feature_dbxref_id | integer                  | not null default nextval
+ feature_id        | integer                  | 
+ dbxrefstr         | character varying(255)   | 
+
+
+
+common key between feature and dbxref is dbxrefstr
+
+for testing, use dbxrefstr = 'ENSEMBL_Ag:CRA_x54KRFTDC6T'
+feature_id=101348;
+
+------------------------------------------------
+     select f.residues 
+     from dbxref dbx, feature f
+     where f.dbxrefstr =  dbx.dbxrefstr and
+           dbx.accession = 'CRA_x54KRFTDC6T' ;
+
+------------------------------------------------
+
+select f.seqlen from dbxref dbx, feature f
+   where f.dbxrefstr =  dbx.dbxrefstr and
+         dbx.accession = 'CRA_x54KRFTDC6T' ;  
+
+-----------------------------------------------
+
+      select f.name,f.fmin,f.fmax,f.fstrand,cv.termname
+      from feature f, cvterm cv, dbxref dbx, featureloc fl
+      where
+         fl.srcfeature_id   =  dbx.dbxrefstr and                #this is to get src
+         dbx.accession = 'CRA_x54KRFTDC6T' and
+         f.type_id=cv.cvterm_id and
+         f.type_id in
+            (select cvterm_id from cvterm
+             where termname like \'%gene%\') and
+         $sql_range  
+      order by f.fmin ");
+

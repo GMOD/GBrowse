@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.12 2002-03-19 02:04:31 lstein Exp $
+# $Id: Browser.pm,v 1.13 2002-03-24 04:29:44 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
@@ -154,8 +154,6 @@ sub render_html {
 
   my $segment         = $args{segment};
   my $feature_files   = $args{feature_files};
-  my $show            = $args{show};
-  my $order           = $args{order};
   my $options         = $args{options};
   my $tracks          = $args{tracks};
   my $do_map          = $args{do_map};
@@ -165,23 +163,20 @@ sub render_html {
 
   my($image,$map) = $self->image_and_map(segment       => $segment,
 					 feature_files => $feature_files,
-					 show          => $show,
-					 order         => $order,
 					 options       => $options,
 					 tracks        => $tracks,
 					);
 
   my ($width,$height) = $image->getBounds;
-  my @mtimes = map {ref($_) && $_->mtime} @$feature_files;
+  my @mtimes = map {ref($_) && $_->mtime} values %$feature_files;
 
   local $^W = 0;
   my $signature = md5_hex($segment,
-			  (map {$_||0} @{$show||$tracks||[]}),
+			  (map {$_||0} @{$tracks||[]}),
 			  $self->{width},
 			  $self->source || '',
 			  @mtimes,
-			  ref($order) && @{$order},
-			  ref($options) && @{$options}
+			  ref($options) && %{$options}
 			 );
   my $url     = $self->generate_image($image,$signature);
   my $img     = img({-src=>$url,-align=>'CENTER',-usemap=>'#hmap',-width => $width,-height => $height,-border=>0});
@@ -305,52 +300,28 @@ sub make_alt {
 # Generate the image and the box list, and return as a two-element list.
 # arguments: a key=>value list
 #    'segment'       A feature iterator that responds to next_seq() methods
-#    'feature_files' A list of Bio::Graphics::FeatureFile objects containing 3d party features
-#    'options'       An array of options, where 0=auto, 1=force no bump, 2=force bump, 3=force label
-# and either:
+#    'feature_files' A hash of Bio::Graphics::FeatureFile objects containing 3d party features
+#    'options'       An hashref of options, where 0=auto, 1=force no bump, 2=force bump, 3=force label
 #    'tracks'        List of named tracks, in the order in which they are to be shown
-# or:
-#    'show'          An array of booleans indicating which labels should be shown
-#    'order'         An array of label indexes indicating order of tracks
 sub image_and_map {
   my $self    = shift;
   my %config  = @_;
 
   my $segment       = $config{segment};
-  my $feature_files = $config{feature_files};
+  my $feature_files = $config{feature_files} || {};
+  my $tracks        = $config{tracks}        || [];
+  my $options       = $config{options}       || {};
 
+  # these are natively configured tracks
   my @labels = $self->labels;
-
-  # The labels to be shown are given by two arrays, one
-  # listing the labels that should be shown, and the other listing the
-  # order in which they should be shown.
-  my $show  = $config{show};
-  my $order = $config{order};
-  my $options       = $config{options};
-  $options ||= [0 x @labels];
-
-  # If the 'tracks' array is provided, then this forces certain labels on.
-  # We merge this into the \@show and \@order arrays as described below.
-  if (my $to_show = $config{tracks}) {
-    my $i       = 0;
-    my %to_show = map {$_=>1}    @$to_show; # map to_show to index
-    $show       ||= [];
-    for (my $i=0;$i<@labels;$i++) {
-      $show->[$i] = 1 if $to_show{$labels[$i]};
-    }
-    unless ($order) {
-      my %labels  = map {$_=>$i++} @labels;   # map labels to index
-      $order      = [ map {$labels{$_}} @$to_show ];
-    }
-  }
-
 
   my $width = $self->width;
   my $conf  = $self->config;
   my $max_labels = $conf->setting(general=>'label density') || 10;
   my $max_bump   = $conf->setting(general=>'bump density')  || 50;
+  my $lowres     = ($conf->setting(general=>'low res')||0) <= $segment->length;
 
-  my @feature_types = map {$conf->label2type($labels[$_])} grep {$show->[$_]} (0..@labels-1);
+  my @feature_types = map {$conf->label2type($_,$lowres)} @$tracks;
 
   # Create the tracks that we will need
   my $panel = Bio::Graphics::Panel->new(-segment => $segment,
@@ -363,18 +334,14 @@ sub image_and_map {
 		    -tick=>2,
 		   );
 
-  my (%tracks,%options,@blank_tracks);
-  $order ||= [0..$self->labels-1];
+  my (%tracks,@blank_tracks);
 
-  for (my $i = 0; $i < @$order; $i++) {
-    my $l        = $order->[$i];
-    my $label    = $labels[$l];
+  for (my $i= 0; $i < @$tracks; $i++) {
 
-    # skip this if it isn't in the @$show array
-    next unless $show->[$l];
+    my $label = $tracks->[$i];
 
-    # if we don't have a configured label, then it is a third party annotation
-    unless ($label) {
+    # if we don't have a built-in label, then this is a third party annotation
+    if (my $ff = $feature_files->{$label}) {
       push @blank_tracks,$i;
       next;
     }
@@ -395,7 +362,6 @@ sub image_and_map {
 				    $conf->style($label),
 				   );
       $tracks{$label}  = $track;
-      $options{$label} = $options->[$l];
     }
 
   }
@@ -412,7 +378,7 @@ sub image_and_map {
       $feature_count{$label}++;
 
       # special case to handle paired EST reads
-      if ($feature->method =~ /^(similarity|alignment)$/) {
+      if (!$lowres && $feature->method =~ /^(similarity|alignment)$/) {
 	push @{$similarity{$label}},$feature;
 	next;
       }
@@ -436,13 +402,13 @@ sub image_and_map {
     # configure the tracks based on their counts
     for my $label (keys %tracks) {
       next unless $feature_count{$label};
-      $options{$label} ||= 0;
-      my $do_bump  =   $options{$label} == 0 ? $feature_count{$label} <= $max_bump
-	             : $options{$label} == 1 ? 0
-                     : $options{$label} >= 2 ? 1
+      $options->{$label} ||= 0;
+      my $do_bump  =   $options->{$label} == 0 ? $feature_count{$label} <= $max_bump
+	             : $options->{$label} == 1 ? 0
+                     : $options->{$label} >= 2 ? 1
 		     : 0;
-      my $do_label =   $options{$label} == 0 ? $feature_count{$label} <= $max_labels
-	             : $options{$label} == 3 ? 1
+      my $do_label =   $options->{$label} == 0 ? $feature_count{$label} <= $max_labels
+	             : $options->{$label} == 3 ? 1
 		     : 0;
       $tracks{$label}->configure(-bump  => $do_bump,
 				 -label => $do_label,
@@ -453,17 +419,12 @@ sub image_and_map {
   }
 
   # add additional features, if any
-  $feature_files ||= [];
   my $offset = 0;
   for my $track (@blank_tracks) {
-    my $feature = $order->[$track];
-
-    # Implicitly, the third party features begin at the end of our internal
-    # feature label list.
-    my $file    = $feature_files->[$feature - @labels];
-    next unless $file && ref($file);
+    my $file = $feature_files->{$tracks->[$track]} or next;
+    ref $file or next;
     $track += $offset + 1;
-    my $inserted = $file->render($panel,$track,$options->[$feature]);
+    my $inserted = $file->render($panel,$track,$options->{$file});
     $offset += $inserted;
   }
 
@@ -559,12 +520,13 @@ sub read_configuration {
 
   for my $file (sort {$b cmp $a} @conf_files) {
     my $basename = basename($file,'.conf');
+    $basename =~ s/^\d+\.//;
     next if defined($self->{conf}{$basename}{mtime})
       && ($self->{conf}{$basename}{mtime} >= $mtimes{$file});
     my $config = Bio::Graphics::BrowserConfig->new(-file => $file) or next;
     $self->{conf}{$basename}{data}  = $config;
     $self->{conf}{$basename}{mtime} = $mtimes{$file};
-    $self->{source} = $basename;
+    $self->{source} ||= $basename;
   }
   $self->{width} = DEFAULT_WIDTH;
   1;
@@ -585,9 +547,10 @@ sub merge {
 
 sub _low_merge {
   my ($features,$max_range) = @_;
-  my $db = $features->[0]->factory;
+  my $db = eval{$features->[0]->factory};
 
   my ($previous_start,$previous_stop,$statistical_cutoff,@spans);
+  patch_biographics() unless $features->[0]->can('low');
 
   my @features = sort {$a->low<=>$b->low} @$features;
 
@@ -631,8 +594,25 @@ sub _low_merge {
     }
 
   }
-  push @spans,$db->segment($ref,$previous_start,$previous_stop);
+  push @spans,$db ? $db->segment($ref,$previous_start,$previous_stop)
+                  : Bio::Graphics::Feature->new(-start=>$previous_start,-stop=>$previous_stop,-ref=>$ref);
   return @spans;
+}
+
+# THESE SHOULD BE MIGRATED INTO BIO::GRAPHICS::FEATURE
+# These fix inheritance problems in Bio::Graphics::Feature
+sub patch_biographics {
+  eval << 'END';
+sub Bio::Graphics::Feature::low {
+  my $self = shift;
+  return $self->start < $self->end ? $self->start : $self->end;
+}
+
+sub Bio::Graphics::Feature::high {
+  my $self = shift;
+  return $self->start > $self->end ? $self->start : $self->end;
+}
+END
 }
 
 
@@ -650,9 +630,16 @@ sub labels {
 }
 
 sub label2type {
+  my ($self,$label,$lowres) = @_;
+  return ($lowres ? shellwords($self->setting($label,'feature_low')||$self->setting($label,'feature'))
+                  : shellwords($self->setting($label,'feature')));
+}
+
+# override inherited in order to be case insensitive
+sub type2label {
   my $self = shift;
-  my $label = shift or return;
-  return shellwords($self->setting($label,'feature')||'');
+  my $type = shift;
+  $self->SUPER::type2label(lc $type);
 }
 
 sub label2index {
@@ -671,9 +658,11 @@ sub invert_types {
   my %inverted;
   for my $label (keys %{$config}) {
     next if $label eq 'overview';   # special case
-    my $feature = $config->{$label}{feature} or next;
-    foreach (shellwords($feature||'')) {
-      $inverted{$_} = $label;
+    for my $f (qw(feature feature_low)) {
+      my $feature = $config->{$label}{$f} or next;
+      foreach (shellwords($feature||'')) {
+	$inverted{lc $_} = $label;
+      }
     }
   }
   \%inverted;

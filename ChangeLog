@@ -1,3 +1,9 @@
+1.36	Sat Mar 23 23:28:10 EST 2002
+	* Completely reworked the way that track options are stored.
+	* Allow multiple files to be uploaded.
+	* Added online help documentation.
+	* Preparation for plug-in architecture.
+	
 1.35	Tue Mar  5 23:32:14 EST 2002
 	* Fixed mkpath bug in Browser.pm (wouldn't run without mods)
 	* Fixed typos in sample .conf files.

@@ -2,7 +2,7 @@ use ExtUtils::MakeMaker;
 use FindBin '$Bin';
 require 5.005003;
 
-my $VERSION = 1.36;
+my $VERSION = 1.37;
 
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN);
 my $OPTIONS = join ('|',@OPTIONS);
@@ -102,7 +102,7 @@ conf_install ::
 	\@dir=$OPTIONS{CONF}/gbrowse.conf; \\
 	mkdir -p \$\$dir; \\
 	cd $Bin/conf; \\
-	for i in *.{conf,html}; do \\
+	for i in *.conf; do \\
 		if [ -e "\$\$dir/\$\$i" ]; then \\
 			echo "   Found \$\$i in \$\$dir. Skipping..."; \\
 		else \\
@@ -115,7 +115,7 @@ htdocs_install ::
 	\@dir=$OPTIONS{HTDOCS}/gbrowse; \\
 	mkdir -p \$\$dir; \\
 	cd $Bin/htdocs; \\
-	for i in *.css; do \\
+	for i in *.{css,html}; do \\
 		if [ -e "\$\$dir/\$\$i" ]; then \\
 			echo "   Found \$\$i in \$\$dir. Skipping..."; \\
 		else \\

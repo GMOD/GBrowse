@@ -42,9 +42,10 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.16 2002-03-19 02:04:31 lstein Exp $
+# $Id: gbrowse.PLS,v 1.17 2002-03-24 04:29:44 lstein Exp $
 
 use strict;
+use lib '/home/lstein/projects/Generic-Genome-Browser/lib/';
 use Bio::DB::GFF;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
@@ -54,13 +55,15 @@ use Text::Tabs;
 use Text::Shellwords;
 use Carp;
 use CGI qw(:standard escape escapeHTML center *table *dl *TR *td);
-use vars qw($CONFIG %DB $MAX_SEGMENT $DEFAULT_SEGMENT $HEADER $HTML $UA $VERSION $CONF_DIR);
+use vars qw($CONFIG %DB $MAX_SEGMENT $DEFAULT_SEGMENT 
+	    $HEADER $HTML $UA $VERSION $CONF_DIR %OBJECT_TYPES);
 
 # if you change the zoom/nav icons, you must change this as well.
 use constant MAG_ICON_HEIGHT => 20;
 use constant MAG_ICON_WIDTH  => 8;
 use constant MAX_SEGMENT     => 1_000_000;
 use constant TOO_MANY_SEGMENTS => 5_000;
+use constant TOO_MANY_REFS     => 30;
 use constant DEFAULT_SEGMENT => 100_000;
 use constant OVERVIEW_RATIO  => 0.9;
 use constant ANNOTATION_EDIT_ROWS => 25;
@@ -70,6 +73,7 @@ use constant URL_FETCH_MAX_SIZE   => 1_000_000;  # don't accept any files larger
 use constant MAX_KEYWORD_RESULTS  => 50;  # max number of results from keyword search
 use constant DEFAULT_RANGES       => q(100 500 1000 5000 10000 25000 100000 200000 400000);
 use constant DEFAULT_FINE_ZOOM    => '10%';
+use constant GBROWSE_HELP         => '/gbrowse';
 
 # if true, turn on surrounding rectangles for debugging the image map
 use constant DEBUG => 0;
@@ -84,30 +88,23 @@ use constant DEBUGGING_RECTANGLES => 0;
 #   start     start of range relative to ref
 #   stop      stop of range relative to ref
 #   source    symbolic name of database/configuration to use
-#   eurl      array of external URLs to load
 #   id        unique cookie-based ID for this user
-#   track     array ref which has one element for each track on the
+#   tracks    array ref which has one element for each track on the
 #               display.  The value of each element indicates what
-#               track to display in that position.  For example:
-#               [3,1,2] means display tracks 3, 1, and 2 in that
-#               order.  Tracks are numbered from zero, and default
-#               to their order in the configuration file.  Uploaded feature
-#               data is track N, where N is the number of tracks defined
-#               in the configuration file.  External URL tracks are N+1, N+2,
-#               and so on.
-#   labels    array ref which has one element for each track on the
-#               display.  A true value indicates that the track should
-#               be shown.  (NOTE: this key is poorly named; originally,
-#               the field was an array of track labels)
-#   options   array ref which has one element for each track on the
-#               display.  Values control the display options for the
-#               track, where 0=automatic, 1=force bump, and 2=force bump & label
-
+#               track to display in that position using the configuration
+#               key code.  For example: [HMM,BAB,GB]
+#               means display the "HMM", "BAB" and "GB" features in that
+#               order.  Uploaded feature data is named "UPLOAD",
+#               External URL tracks are indicated using the URL of the data.
+#   features    hash ref which has one element for each feature type.
+#               Its values are hashrefs with subkeys {visible} and {options}.
+#               A true value in {visible} indicates that the feature is active.
+#               The values of {options} are integers with the following meaning:
+#               0=auto, 1=force no bump, 2=force bump, 3=force label.
 # $CONFIG
 # This is a global Bio::Graphics::Browser object.  It contains information on
 # all the configuration files for this browser and provides access to the various
 # settings within the configuration file.
-
 
 BEGIN {
     eval "use Apache"; 
@@ -155,7 +152,13 @@ if (defined($old_source) && $source ne $old_source) {
 my @segments  = get_segment($page_settings);
 ###############################################################################################
 
+# SETTINGS FOR UPLOADED FILES
+my ($file_action) = grep {/^modify\./} param();
+(my $file = $file_action) =~ s/^modify\.// if $file_action;
+
+###############################################################################################
 ## DUMPS ######################################################################################
+###############################################################################################
 if ( (my $dump = param('dump')) && @segments == 1) {
   if ($dump eq 'FastA') {
     print header(-type         => 'text/plain',
@@ -172,13 +175,17 @@ if ( (my $dump = param('dump')) && @segments == 1) {
   }
   exit 0;
 }
+
 ###############################################################################################
+## HANDLING FILE DOWNLOADS ######################################################################
 
 # This gets called if the user wants to download his annotation data
-if(param('Download Data') && $page_settings->{'uploaded_file'}) {
-  print header(-attachment   =>  $page_settings->{uploaded_file},
+if (my $to_download = (param('Download File') ||
+		       ($file_action && param($file_action) eq 'Download File') && $file)) {
+  warn "FILE DOWNLOAD, download = $to_download" if DEBUG;
+  print header(-attachment   =>  $to_download,
 	       -type         => 'application/octet-stream');
-  print_uploaded_file_features($page_settings);
+  print_uploaded_file_features($page_settings,$to_download);
   exit 0;
 }
 
@@ -192,12 +199,17 @@ elsif (defined(my $data = param('a_data'))) {
   handle_edit($page_settings,$data);
 }
 
-elsif ($data = param('quickie')) {
+elsif ($data = param('auto')) {
   handle_quickie($page_settings,$data);
 }
 
-clear_uploaded_file($page_settings) if param('Delete Data');
+clear_uploaded_file($page_settings,$file) if $file_action && param($file_action) eq 'Delete File';
+
+warn "TRACKS = @{$page_settings->{tracks}}" if DEBUG;
+
 adjust_tracks($page_settings);
+
+warn "ADJUSTED TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 
 ## UPDATING THE PERSISTENT SETTINGS##############################################################
 print header(-cookie => settings2cookie($page_settings)) unless $HEADER++;
@@ -215,22 +227,20 @@ print
 my $header = $CONFIG->header();
 print $header if $header;
 
-## HANDLE UPLOADED PARTY EDITS ##################################################################
-if (param('Edit Data...')) {
-  edit_uploaded_file($page_settings);
+## HANDLE UPLOADED FILE EDITS ##################################################################
+if ($file_action && param($file_action) eq 'Edit File...') {
+  edit_uploaded_file($page_settings,$file);
 }
 
 ## AND THE ABILITY TO CHANGE DISPLAY ORDER#######################################################
-elsif (param('Set Track Options...') ||
-       param('Update')) {
+elsif ((param('Set Track Options...') || param('Revert fo Defaults..'))
+       && !param('Cancel')
+       && !param('Redisplay')) {
   set_track_options($page_settings);
 }
 
-elsif (param('Revert to Defaults')) {
-  set_default_tracks($page_settings);
-  set_track_options($page_settings);
-} elsif (param('help')) {
-  help(param('help'),$CONF_DIR,$page_settings);
+elsif (param('help')) {
+  help(param('help'),$CONFIG->setting('help')||GBROWSE_HELP,$page_settings);
 }
 
 ## MAIN DISPLAY
@@ -296,18 +306,19 @@ sub main_display {
   }
 
   # get the third party features
-  my @feature_file = load_external_sources($segment,$page_settings);
+  my $feature_files = load_external_sources($segment,$page_settings);
 
   if ($segment) {
     my ($img,$map);
     my $cell = overview($segment,$page_settings).br();
     if ($segment->length <= $MAX_SEGMENT) {
       $CONFIG->width($page_settings->{width});
+      my @tracks_to_show = grep {$page_settings->{features}{$_}{visible}} @{$page_settings->{tracks}};
+      my %options = map {$_=>$page_settings->{features}{$_}{options}} @tracks_to_show;
       ($img,$map) = $CONFIG->render_html(segment       => $segment,
-					 feature_files => \@feature_file,
-					 show          => $page_settings->{labels},
-					 order         => $page_settings->{track},
-					 options       => $page_settings->{options},
+					 feature_files => $feature_files,
+					 tracks        => \@tracks_to_show,
+					 options       => \%options,
 					 do_map        => 1,
 					 do_centering_map => 1,
 					);
@@ -327,13 +338,13 @@ sub main_display {
     print $map,"\n" if $map;
   }
   print hidden('ref'),hidden('start'),hidden('stop');
-  print settings_table($page_settings,\@feature_file);
-  print p(),upload_table($page_settings,\@feature_file);
-  print p(),external_table($page_settings,\@feature_file);
+  print settings_table($page_settings,$feature_files);
+  print p(),upload_table($page_settings,$feature_files);
+  print p(),external_table($page_settings,$feature_files);
   print end_form();
 
   # clean us up
-  foreach (@feature_file) {
+  foreach (keys %$feature_files) {
     $_ && ref($_) && $_->destroy;
   }
 }
@@ -356,7 +367,7 @@ sub get_settings {
   my %settings = cookie("gbrowse_$source");
 
   my $ok = 1;
-  my @labels = $CONFIG->labels;
+
   if (%settings) {  # if cookie is there, then validate it
     $ok &&= defined $settings{width} && $settings{width} > 100 && $settings{width} < 5000;
     warn "ok 1 = $ok" if DEBUG;
@@ -365,45 +376,46 @@ sub get_settings {
     $ok &&= $ok_sources{$settings{source}};
     warn "ok 2 = $ok" if DEBUG;
 
-    my @labels   = split $;,$settings{labels} if defined $settings{labels};
-    $settings{labels} = \@labels if @labels && $ok;
-
+    # the single "tracks" key of the cookie gets mapped to the
+    # "track" and "features" key of the page settings
+    my @features = split $;,$settings{tracks} if $ok && defined $settings{tracks};
+    $settings{tracks}    = [];  # make sure these are clean
+    $settings{features}  = {};
+    foreach (@features) {
+      my ($label,$visible,$option) = m!^(.+)/(\d+)/(\d+)$!;
+      warn "label = $label, visible = $visible, option = $option" if DEBUG;
+      unless ($label) {   # corrupt cookie; purge it.
+	undef $ok;
+	last;
+      }
+      push @{$settings{tracks}},$label;
+      $settings{features}{$label}{visible} = $visible;
+      $settings{features}{$label}{options} = $option;
+    }
     warn "ok 3 = $ok" if DEBUG;
-
-    my @external = grep {m!^(\w+)://!} split $;,$settings{eurl};
-    $settings{eurl} = \@external;
-
-    warn "ok 4 = $ok" if DEBUG;
-    $ok &&= $settings{id} =~ /^[a-z0-9]+$/;
-
-    # track order definitions
-    my %seen;
-    my @track_order     = split $;,$settings{track} if defined $settings{track};
-    foreach (@track_order) {
-      $ok &&= /^\d+$/;
-      $seen{$_}++;
-    }
-    $ok &&= keys %seen == @track_order;
-    $settings{track} =  \@track_order     if $ok && @track_order;
-    warn "ok 5 = $ok" if DEBUG;
-
-    # label options
-    my @track_options       = split $;,$settings{options} if defined $settings{options};
-
-    $ok &&= @track_options >= $CONFIG->labels;
-
-    for (my $i=0; $i < @track_options; $i++) {
-      warn "track_options = $track_options[$i]" if DEBUG;
-      $ok &&= ($track_options[$i]=~ /^[\d-]+$/ && $track_options[$i] >= -1 && $track_options[$i] <= 2);
-    }
-    $settings{options} = \@track_options   if $ok && @track_options;
-    warn "ok 6 = $ok" if DEBUG;
   }
 
-  if (!$ok || !%settings) {
+  $ok &&= ref($settings{tracks}) && @{$settings{tracks}} > 0;
+
+  warn "ok 4 = $ok" if DEBUG;
+
+  if ($ok && %settings) {
+    adjust_tracks(\%settings);
+  }
+  else {
     %settings = ();
     default_settings(\%settings);
   }
+
+  warn "order = @{$settings{tracks}}" if $settings{tracks} && DEBUG;
+
+  if (DEBUG) {
+    foreach (@{$settings{tracks}}) {
+      my $s = $settings{features}{$_};
+      warn "$_: ",$CONFIG->setting($_=>'key')," vis=$s->{visible}, opt=$s->{options}\n";
+    }
+  }
+
   \%settings;
 }
 
@@ -412,7 +424,6 @@ sub default_settings {
   @$settings{'name','ref','start','stop'} = ('','','','');
   $settings->{width}   = $CONFIG->setting('default width');
   $settings->{source}  = $CONFIG->source;
-  $settings->{eurl}    = [];
   $settings->{id}      = md5_hex(rand);  # new identity
   set_default_tracks($settings);
 }
@@ -420,23 +431,66 @@ sub default_settings {
 sub set_default_tracks {
   my $settings = shift;
   my @labels = labels($settings);
-  $settings->{track}   = [0 .. @labels-1];
-  $settings->{labels}  = [(0) x (scalar @labels)];
-  $settings->{options} = [(0) x (scalar @labels)];
-  foreach ($CONFIG->default_label_indexes) {
-    $settings->{labels}[$_] = 1;
+  $settings->{tracks}   = \@labels;
+  warn "order = @labels" if DEBUG;
+  foreach (@labels) {
+    $settings->{features}{$_} = {visible=>0,options=>0};
+  }
+  foreach ($CONFIG->default_labels) {
+    $settings->{features}{$_}{visible} = 1;
   }
 }
 
+# This is called to check that the list of feature types given
+# in the configuration file are consistent with the features
+# given in the user's cookie.  If not, the settings are adjusted
+# as best we can. The attempt here is to allow
+# the administrator to add new feature stanzas
+# without invalidating users' old settings.
+sub adjust_tracks {
+  my $settings = shift;
+  my %configured_labels = map {$_=>1} $CONFIG->labels;
+
+  foreach (grep {!$settings->{features}{$_}} keys %configured_labels) {
+    $settings->{features}{$_}{visible} = 0;  # not visible
+    $settings->{features}{$_}{options} = 0;  # automatic
+    push @{$settings->{tracks}},$_;           # at the end
+  }
+  # Remove any features that are not mentioned in the
+  # config file, excepting Uploaded and remote URL features.
+  # This may happen if a stanza is removed from the config file.
+  my %extra = map {$_=>1} grep {!/^(http|ftp|das|file):/
+				    && !$configured_labels{$_}} keys %{$settings->{features}};
+  # remove extra from tracks && options
+  if (%extra) {
+    delete $settings->{features}{$_} foreach keys %extra;
+  }
+
+  # make sure that tracks are completely consistent with options
+  $settings->{tracks} = [grep {exists $settings->{features}{$_}} @{$settings->{tracks}}];
+}
+
+# this is called to flatten the settings into an HTTP cookie
 sub settings2cookie {
   my $settings = shift;
   my %settings = %$settings;
   local $^W = 0;
   for my $key (keys %settings) {
+    next if $key =~ /^(tracks|features)$/;  # handled specially
     if (ref($settings{$key}) eq 'ARRAY') {
       $settings{$key} = join $;,@{$settings{$key}};
     }
   }
+
+  # the "features" and "track" key map to a single array
+  # contained in the "tracks" key of the settings
+  my @array = map {join("/",
+			$_,
+			$settings{features}{$_}{visible},
+			$settings{features}{$_}{options})} @{$settings{tracks}};
+  $settings{tracks} = join $;,@array;
+  delete $settings{features};
+
   my @cookies;
   my $source = $CONFIG->source;
   push @cookies,cookie(-name    => "gbrowse_$source",
@@ -448,15 +502,15 @@ sub settings2cookie {
   return \@cookies;
 }
 
+# This is called to change the values of the settings
 sub adjust_settings {
   my $settings = shift;
-  if (my @selected = map {split '-'} param('label')) {
-    $settings->{labels} = [];
-    $settings->{labels}[$_] = 1 foreach @selected;
+  if (my @selected = map {split /\+/} param('label')) {
+    $settings->{features}{$_}{visible} = 0 foreach keys %{$settings->{features}};
+    $settings->{features}{$_}{visible} = 1 foreach @selected;
   }
   $settings->{width}  = param('width')   if param('width');
 
-  #  if (param('ref') && (request_method() eq 'GET' || grep {/zoom|nav|overview|span/} param()) ) {
   local $^W = 0;  # kill uninitialized variable warning
   if (param('ref') &&
       ( request_method() eq 'GET'
@@ -473,13 +527,30 @@ sub adjust_settings {
     }
   $settings->{name}   = param('name')                       if param('name');
   $settings->{source} = param('source')                     if param('source');
-  $settings->{eurl}   = [grep {m!^([\w.-]+)://!} param('eurl')] if defined param('eurl');
 
-  if (defined(param('track')) && (param('Submit Changes...') || param('Update'))) {
-    my $tracks           = adjust_track_order($settings);
-    $settings->{track}   = $tracks;
-    my $options          = adjust_track_options($settings);
-    $settings->{options} = $options;
+  # XXX INSPECT THIS
+  if (my @external = param('eurl')) {
+    my %external = map {$_=>1} @external;
+    foreach (@external) {
+      next if exists $settings->{features}{$_};
+      $settings->{features}{$_} = {visible=>1,options=>0};
+      push @{$settings->{tracks}},$_;
+    }
+    # remove any URLs that aren't on the list
+    foreach (keys %{$settings->{features}}) {
+      next unless /^(http|ftp):/;
+      delete $settings->{features}{$_} unless exists $external{$_};
+    }
+  }
+
+  if (param('Revert to Defaults')) {
+    warn "resetting defaults..." if DEBUG;
+    set_default_tracks($settings);
+  }
+
+  elsif (param('Adjust Order') && !param('Cancel')) {
+    adjust_track_options($settings);
+    adjust_track_order($settings);
   }
 
 }
@@ -513,6 +584,7 @@ sub navigation_table {
 		    ));
 }
 
+# This generates the navigation bar with the arrows
 sub slidertable {
   my ($segment,$buttonsDir) = @_;
   my $span      = $segment->length;
@@ -526,17 +598,23 @@ sub slidertable {
   push @lines,hidden(-name=>'ref',-value=>$segment->ref,-override=>1);
   push @lines,hidden(-name=>'prevname',-value=>scalar(param('name')),-override=>1);
   push @lines,
-    (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>"left $full",-border=>0,-title=>"left $full"),
-     image_button(-src=>"$buttonsDir/green_l1.gif",-name=>"left $half",-border=>0,-title=>"left $half"),
+    (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>"left $full",
+		  -border=>0,-title=>"left $full"),
+     image_button(-src=>"$buttonsDir/green_l1.gif",-name=>"left $half",
+		  -border=>0,-title=>"left $half"),
      '&nbsp;',
-     image_button(-src=>"$buttonsDir/minus.gif",-name=>"zoom out $fine_zoom",-border=>0,-title=>"zoom out $fine_zoom"),
+     image_button(-src=>"$buttonsDir/minus.gif",-name=>"zoom out $fine_zoom",
+		  -border=>0,-title=>"zoom out $fine_zoom"),
      '&nbsp;',
      zoomBar($segment,$buttonsDir),
      '&nbsp;',
-     image_button(-src=>"$buttonsDir/plus.gif",-name=>"zoom in $fine_zoom",-border=>0,-title=>"zoom in $fine_zoom"),
+     image_button(-src=>"$buttonsDir/plus.gif",-name=>"zoom in $fine_zoom",
+		  -border=>0,-title=>"zoom in $fine_zoom"),
      '&nbsp;',
-     image_button(-src=>"$buttonsDir/green_r1.gif",-name=>"right $half",-border=>0,-title=>"right $half"),
-     image_button(-src=>"$buttonsDir/green_r2.gif",-name=>"right $full",-border=>0,-title=>"right $full"),
+     image_button(-src=>"$buttonsDir/green_r1.gif",-name=>"right $half",
+		  -border=>0,-title=>"right $half"),
+     image_button(-src=>"$buttonsDir/green_r2.gif",-name=>"right $full",
+		  -border=>0,-title=>"right $full"),
     );
 
   #  print end_form;
@@ -544,6 +622,7 @@ sub slidertable {
   return $str;
 }
 
+# this generates the popup zoom menu with the window sizes
 sub zoomBar {
   my ($segment,$buttonsDir) = @_;
 
@@ -587,9 +666,10 @@ sub unit_to_value {
 sub labels {
   my $settings = shift;
   my @labels = $CONFIG->labels;
-  push @labels,$settings->{'uploaded_file'} ? "$settings->{uploaded_file} (Uploaded)"
-                                            : '(Uploaded Annotations)';
-  push @labels,@{$settings->{eurl}}   if $settings->{eurl};
+#  push @labels,$settings->{'uploaded_file'} ? "$settings->{uploaded_file} (Uploaded)"
+#                                            : '(Uploaded Annotations)';
+# this needs to be fixed
+#  push @labels,@{$settings->{eurl}}   if $settings->{eurl};
   @labels;
 }
 
@@ -613,18 +693,10 @@ sub settings_table {
   my $ds        = join(', ', (map{a({-href=>"@$_->[1]"},"@$_->[0]")} @dumps));
 
   my $self_url = url(-relative=>1,-path_info=>1)."?help=citations";
-  my @labels = labels($settings);
-  my $native_labels = $CONFIG->labels;
-  my %labels = map {$_ => make_citation_link($_,
-					     $self_url,
-					     \@labels,
-					     $additional_features,
-					     $native_labels) } (0..@labels-1);
 
-  my @defaults;
-  for (my $i = 0; $i < @labels; $i++) {
-    push @defaults,$i if $settings->{labels}[$i];
-  }
+  my @labels = @{$settings->{tracks}};
+  my %labels = map {$_ => make_citation_link($_,$self_url) } @labels;
+  my @defaults = grep {$settings->{features}{$_}{visible}} @labels;
 
   autoEscape(0);
   my $sTable 	= '';
@@ -641,7 +713,7 @@ sub settings_table {
 			   checkbox_group(-name=>'label',
 					  # use the track ordering to adjust the order of the checkboxes
 					  # this is an array slice
-					  -values   => [@{$settings->{track}}[0..@labels-1]],
+					  -values   => \@labels,
 					  -labels   => \%labels,
 					  -defaults => \@defaults,
 					  -cols     => 3,
@@ -654,7 +726,7 @@ sub settings_table {
 		      td('Data Source:'),
 		      td({-colspan=>2},
 			 popup_menu(-name   => 'source',
-				    -values => [$CONFIG->sources],
+				    -values => [sort $CONFIG->sources],
 				    -labels => { map {$_ => $CONFIG->description($_)} $CONFIG->sources},
 				    -default => $CONFIG->source
 				   )))
@@ -694,36 +766,38 @@ sub upload_table {
   my $settings      = shift;
   my $feature_files = shift;
 
-  my @info =   (a({-href=>url(-relative=>1,-path_info=>1)."?Download+Data=1"},
-		  "[".$settings->{'uploaded_file'}."]"),
-		get_uploaded_file_info($settings->{labels}[scalar $CONFIG->labels] && $feature_files->[0]))
-    if $settings->{'uploaded_file'};
+  # start the table.
+  my $cTable = start_table({-border=>0,-width=>$settings->{width}})
+    . TR(
+	 th({-class=>'datatitle', -colspan=>3, -align=>'left'},
+	    'Upload your own annotations:',
+	    a({-href=>annotation_help(),-target=>'help'},'[Help]'))
+	);
 
-  my $cTable= table({-border=>0,-width=>$settings->{width}},
-		  # row
-		  TR(
-		     th({-class=>'datatitle', -colspan=>3, -align=>'left'},
-			'Upload your own annotations:',
-			a({-href=>annotation_help(),-target=>'help'},'[Help]'))
-		    ),
+  # now add existing files
+  for my $filename (@{$settings->{tracks}}) {
+    next unless $filename =~ /^file:/ && $feature_files->{$filename};
+    (my $file = $filename) =~ s/^file://;
+    my $name = escape($file);
+    my $link = a({-href=>url(-relative=>1,-path_info=>1)."?Download+File=$name"},"[$name]");
+    my @info =  get_uploaded_file_info($settings->{features}{$filename}{visible}
+					 && $feature_files->{$filename});
+    $cTable .=  TR({-class=>'databody'},
+		   th($link),
+		   td({-colspan=>2},
+		      submit(-name=>"modify.$file",-value=>'Edit File...').'&nbsp;'.
+		      submit(-name=>"modify.$file",-value=>'Download File').'&nbsp;'.
+		      submit(-name=>"modify.$file",-value=>'Delete File')));
+    $cTable .= TR({-class=>'databody'},td('&nbsp;'),td({-colspan=>2},@info));
+  }
 
-		  # row
-		  TR({-class=>'databody'},
-		     td('Upload a File: '),
-		     td({-colspan=>2},
-			filefield(-size=>40,-name=>'upload_annotations'),
-			submit(-name=>'Upload'),br,@info
-		       )
-		    ),
-
-		  # row
-		  TR({-class=>'databody'},
-		     td('Create or Modify:'),
-		     td({-colspan=>2},
-			submit(-name=>'Edit Data...').'&nbsp;'.
-			submit(-name=>'Download Data').'&nbsp;'.
-			submit(-name=>'Delete Data'))),
-		 );
+  # end the table.
+  $cTable .= TR({-class=>'databody'},
+		th({-align=>'RIGHT'},'Upload a File'),
+		td({-colspan=>2},
+		   filefield(-size=>40,-name=>'upload_annotations'),
+		   submit(-name=>'Upload')));
+  $cTable .= end_table;
   $cTable;
 }
 
@@ -731,15 +805,15 @@ sub upload_table {
 sub external_table {
   my $settings      = shift;
   my $feature_files = shift;
-  my @rows;
-  if (my $urls     = $settings->{eurl}) {
-    for (my $i=0;$i<@$urls;$i++) {
-      push @rows,th({-align=>'RIGHT'},"URL",$i+1).
-	td(textfield(-name=>'eurl',-size=>50,-value=>$urls->[$i],-override=>1),br,
-	   a({-href=>$urls->[$i],-target=>'help'},'[download]'),
-	   get_uploaded_file_info($settings->{labels}[$CONFIG->labels+$i+1] && $feature_files->[$i+1])
-	  );
-    }
+  my (@rows,$count);
+  for my $filename (@{$settings->{tracks}}) {
+    next unless $filename =~ /^(ftp|http):/ && $feature_files->{$filename};
+    warn "external_table(): filename = $filename" if DEBUG;
+    push @rows,th({-align=>'RIGHT'},"URL",++$count).
+      td(textfield(-name=>'eurl',-size=>50,-value=>$filename,-override=>1),br,
+	 a({-href=>$filename,-target=>'help'},'[download]'),
+	 get_uploaded_file_info($settings->{features}{$filename}{visible} && $feature_files->{$filename})
+	);
   }
   push @rows,th({-align=>'RIGHT'},
 		"Enter Remote Annotation URL").
@@ -752,8 +826,8 @@ sub external_table {
 	       TR({-class=>'databody'},\@rows),
 	       TR({-class=>'databody'},
 		  th({-align=>'RIGHT',-colspan=>2},
-		     submit(-name=>'eurl',-value=>'Update URLs')))
-	      ).hidden(-name=>'eurl',-value=>1,-override=>1);  # dummy variable
+		     submit('Update URLs')))
+	      );
 }
 
 # computes the new values for start and stop when the user made use of the zooming bar or navigation bar
@@ -1110,6 +1184,7 @@ sub multiple_choices {
       my @spans  = sort {$a->start <=> $b->start} @{$segs{$ref}};
       print dt(b($ref)),"\n";
       foreach (@spans) {
+	# consider using segment2link() here
 	my ($start,$stop) = ($_->start,$_->stop);
 	my $bp = $stop - $start;
 	my $s = commas($start);
@@ -1121,6 +1196,20 @@ sub multiple_choices {
     print end_dl,end_td,end_TR;
   }
   print end_table;
+}
+
+sub segment2link {
+  my ($base,$segment) = @_;
+
+  my $source = $CONFIG->source;
+  return  a({-href=>"$base?source=$source;name=$segment"},$segment) unless ref $segment;
+
+  my ($start,$stop) = ($segment->start,$segment->stop);
+  my $ref = $segment->ref;
+  my $bp = $stop - $start;
+  my $s = commas($start);
+  my $e = commas($stop);
+  return a({-href=>"$base?source=$source;ref=$ref;start=$start;stop=$stop"},"$ref:$s..$e");
 }
 
 
@@ -1146,59 +1235,76 @@ sub debugging_rectangles {
 ########## upload stuff ########
 sub handle_upload {
   my ($settings,$fh) = @_;
-  $settings->{'uploaded_file'} = "$fh";
-  my $fh_out = open_uploaded_file($settings,'>') or return;
+  warn "handle_upload($settings,$fh)" if DEBUG;
+  # $fh is a CGI string/filehandle object, so be careful
+  my $filename = "$fh";
+  my $fh_out = open_uploaded_file($settings,$filename,'>') or return;
   while (<$fh>) {
     print $fh_out $_;
   }
   close $fh_out;
+  my (undef,$url) = name_uploaded_file($settings,$filename);
+  warn "url = $url" if DEBUG;
+  push @{$settings->{tracks}},$url;
+  $settings->{features}{$url} = {visible=>1,options=>0};
 }
 
 sub handle_edit {
   my ($settings,$data) = @_;
+  my $file = param('edited file') or return;
   my @lines = unexpand(split /\r?\n|\r\n?/,$data);
   $data = join "\n",@lines;
   $data .= "\n";
-  my $fh = open_uploaded_file($settings,'>');
+  my $fh = open_uploaded_file($settings,$file,'>');
   print $fh $data;
   close $fh;
-  $settings->{'uploaded_file'} ||= 'auto';
 }
 
 sub handle_quickie {
   my ($settings,$data) = @_;
   return unless $data;
   # format of quickie data is reference+type+name+start-stop,start-stop,start-stop
+  my $file = 'auto';
+  clear_uploaded_file($settings,$file);
   my ($reference,$type,$name,$position) = shellwords($data);
-  my $out = open_uploaded_file($settings,">>") or return;
+  my $out = open_uploaded_file($settings,$file,">>") or return;
   print $out "\nreference=$reference\n";
   $type .= " " . localtime;
   print $out join ("\t",qq("$type"),$name,$position),"\n";
   close $out;
-  $settings->{'uploaded_file'} = 'auto';
+  my (undef,$url) = name_uploaded_file($settings,$file);
+  push @{$settings->{tracks}},$url;
+  $settings->{features}{$url} = {visible=>1,options=>0};
 }
 
 sub name_uploaded_file {
-  my $settings = shift;
+  my ($settings,$filename) = @_;
+  warn "name_uploaded_file(): filename = $filename" if DEBUG;
+  # keep last non-[/\:] part of name
+  my ($name) = $filename =~ /([^:\\\/]+)$/;
   my $id = $settings->{id} or return;
   my (undef,$tmpdir) = $CONFIG->tmpdir($CONFIG->source."/uploaded_file/$id");
-  $settings->{'uploaded_file'} ||= 'auto';
-  return "$tmpdir/$settings->{'uploaded_file'}";
+  my $physical = "$tmpdir/$filename";
+  my $url      = "file:$filename";
+  return wantarray ? ($physical,$url) : $physical;
 }
 
 sub open_uploaded_file {
-  my $settings = shift;
-  my $mode     = shift || '<';
-  my $file = name_uploaded_file($settings);
+  my ($settings,$filename,$mode) = @_;
+  $filename =~ s/^file://;
+
+  my $file = name_uploaded_file($settings,$filename);
+  warn "file = $file" if DEBUG;
   unless ($file) {
-    error("Can't find the file named $settings->{'uploaded_file'}.  Perhaps it has been purged?");
+    error("Can't find the file named $filename.  Perhaps it has been purged?");
+    clear_uploaded_file($settings,$filename);
     return;
   }
 
   my $result = open (F,"${mode}${file}");
 
   unless ($result) {
-    warn "Can't open the file named $settings->{'uploaded_file'}.  Perhaps it has been purged? (error: $!)";
+    warn "Can't open the file named $filename.  Perhaps it has been purged? (error: $!)";
     return;
   }
 
@@ -1207,65 +1313,78 @@ sub open_uploaded_file {
 
 sub load_external_sources {
   my ($segment,$page_settings) = @_;
-  my @feature_file = load_uploaded_file($segment,$page_settings) || (undef);
-  push @feature_file,load_remote_sources($segment,$page_settings);
-  @feature_file;
+  my @feature_file = load_uploaded_files($segment,$page_settings);
+  warn "uploaded feature_file = @feature_file" if DEBUG;
+
+  my @external = load_remote_sources($segment,$page_settings);
+  push @feature_file,@external if @external;
+
+  my %feature_file = map {(ref($_) ? $_->name: $_) => $_} @feature_file;
+  warn join "\n",%feature_file if DEBUG;
+  \%feature_file;
 }
 
-sub load_uploaded_file{
+sub load_uploaded_files {
   my ($segment,$settings) = @_;
-  $settings->{'uploaded_file'} or return;
-  $settings->{labels}[$CONFIG->labels] or return $settings->{'uploaded_file'};
-
+  my @files;
   my $width = $settings->{width} or return;
-  my $fh = open_uploaded_file($settings,"<") or return;
-
   my $rel2abs = coordinate_mapper($segment) if $segment;
 
-  # nasty little bit in which we handle differing line-endings for the various
-  # types of operating systems...
-  my $agent  = CGI->user_agent();
-  local $/ = $/;
-  $/ = "\r"    if $agent =~ /Mac/;
-  $/ = "\r\n"  if $agent =~ /Win/;
+  my @uploads = grep {/^file:/} @{$settings->{tracks}};
+  my @result;
+  for my $file (@uploads) {
+    warn "loading $file" if DEBUG;
+    if (!$settings->{features}{$file}{visible}) { # turned off
+      push @result,$file;
+      next;
+    }
 
-  my $feature_file = Bio::Graphics::FeatureFile->new(-file           => $fh,
-						     -map_coords     => $rel2abs,
-						     -smart_features =>1);
-  close $fh;
-  $feature_file->name($settings->{uploaded_file});
-  return $feature_file;
+    my $fh = open_uploaded_file($settings,$file,"<") or return;
+
+    # nasty little bit in which we handle differing line-endings for the various
+    # types of operating systems...
+    my $agent  = CGI->user_agent();
+    local $/ = $/;
+    $/ = "\r"    if $agent =~ /Mac/;
+    $/ = "\r\n"  if $agent =~ /Win/;
+
+    my $feature_file = Bio::Graphics::FeatureFile->new(-file           => $fh,
+						       -map_coords     => $rel2abs,
+						       -smart_features =>1);
+    close $fh;
+    $feature_file->name($file);
+    push @result,$feature_file;
+  }
+  @result;
 }
 
 sub load_remote_sources {
   my ($segment,$settings) = @_;
-  return unless $settings->{eurl};
+  my @uploads = grep {/^(http|ftp):/} @{$settings->{tracks}};
   my $rel2abs = coordinate_mapper($segment) if $segment;
-  my @files;
-  for (my $i = 0; $i < @{$settings->{eurl}}; $i++) {
-    my $data;
-    my $label_index = $CONFIG->labels+$i+1;
-    if ($settings->{labels}[$label_index]) { # show it
-      $data = get_remote_feature_data($settings->{eurl}[$i],$rel2abs);
-      $data->name($settings->{eurl}[$i]);
-    } else {
-      $data = $settings->{eurl}[$i];
+  my @result;
+  for my $file (@uploads) {
+    warn "load_remote_sources(): loading $file" if DEBUG;
+    if (!$settings->{features}{$file}{visible}) { # turned off
+      push @result,$file;
+      next;
     }
-    push @files,$data;
+    my $feature_file = get_remote_feature_data($file,$rel2abs);
+    push @result,$feature_file;
   }
-  return @files;
+  return @result;
 }
 
 sub get_remote_feature_data {
-  my $url = shift;
-  my $rel2abs = shift;
+  my ($url,$rel2abs) = @_;
+  warn "get_remote_feature_data(): fetching $url" if DEBUG;
 
   unless ($UA) {
     unless (eval "require LWP") {
       error('This browser is not configured to fetch external URLs');
       return;
     }
-    $UA = LWP::UserAgent->new(agent   => 'GenericGenomeBrowser/1.0',
+    $UA = LWP::UserAgent->new(agent   => "Generic-Genome-Browser/$VERSION",
 			      timeout => URL_FETCH_TIMEOUT,
 			      max_size => URL_FETCH_MAX_SIZE,
 			     );
@@ -1281,12 +1400,14 @@ sub get_remote_feature_data {
   my $feature_file = Bio::Graphics::FeatureFile->new(-file           => \*F,
 						     -map_coords     => $rel2abs,
 						     -smart_features =>1);
+  $feature_file->name($url);
+  warn "get_remote_feature_data(): got $feature_file" if DEBUG;
   return $feature_file;
 }
 
 sub print_uploaded_file_features {
-  my $settings = shift;
-  if (my $fh = open_uploaded_file($settings)) {
+  my ($settings,$file) = @_;
+  if (my $fh = open_uploaded_file($settings,$file)) {
     while (<$fh>) {
       print;
     }
@@ -1295,29 +1416,47 @@ sub print_uploaded_file_features {
 
 sub get_uploaded_file_info {
   my $feature_file = shift or return i("Display off");
+  warn "get_uploaded_file_info(): feature_file = $feature_file" if DEBUG;
+
   my $modified = localtime($feature_file->mtime);
   my @refs      = $feature_file->refs;
+
+  my $landmarks;
   my $url      = url(-relative=>1,-path_info=>1);
-  my $landmarks = @refs < 20 ? b(map {a({-href=>"$url?name=$_"},$_)} sort @refs)
-                             : b(@refs." landmarks.  Too many to list.");
+
+  if (@refs > TOO_MANY_REFS) {
+    $landmarks = b(@refs." landmarks.  Too many to list.");
+  } else {
+    for my $r (sort @refs) {
+      my $features = $feature_file->features;
+      my @features = grep {$_->ref eq $r} map {@$_} values %{$feature_file->features};
+      my @merged   = $CONFIG->merge(\@features);
+      my @links = map {segment2link($url,$_)} @merged;
+      @links = segment2link($url,$r) unless @links;
+      $landmarks .= @links ? "@links " : "$r (not on current map) ";
+    }
+  }
+  warn "get_uploaded_file_info(): modified = $modified, landmarks = $landmarks" if DEBUG;
   return i("Last modified $modified.  Annotated landmarks:"),$landmarks;
 }
 
 sub clear_uploaded_file {
-  my $settings = shift;
-  my $file = name_uploaded_file($settings) or return;
-  unlink $file;
-  delete $settings->{'uploaded_file'};
+  my ($settings,$file) = @_;
+  warn "clear_uploaded_file(): file = $file" if DEBUG;
+  my $path = name_uploaded_file($settings,$file) or return;
+  unlink $path;
+  delete $settings->{features}{"file:$file"};
+  warn "clear_uploaded_file(): deleting file = file:$file" if DEBUG;
+  $settings->{tracks} = [grep {$_ ne "file:$file"} @{$settings->{tracks}}];
 }
 
 sub edit_uploaded_file {
-  my $settings = shift;
+  my ($settings,$file) = @_;
+  warn "edit_uploaded_file(): file = $file" if DEBUG;
   print start_form();
   my $data;
-  if ($settings->{'uploaded_file'} && 
-      (my $fh = open_uploaded_file($settings))) {
-    $data = join '',expand(<$fh>);
-  }
+  my $fh = open_uploaded_file($settings,$file) or return;
+  $data = join '',expand(<$fh>);
   print table({-width=>'100%'},
 	      TR({-class=>'searchbody'},
 		 td('Edit your uploaded annotation data here.',
@@ -1351,6 +1490,7 @@ sub edit_uploaded_file {
 		    submit('Cancel').'&nbsp;'.
 		    b(submit('Submit Changes...'))))
 	     );
+  print hidden(-name=>'edited file',-value=>$file);
   print end_form();
 }
 
@@ -1397,146 +1537,112 @@ sub bookmark_link {
     $q->param(-name=>$_,-value=>$settings->{$_});
   }
   # handle selected features slightly differently
-  my @selected;
-  my @labels = labels($settings);
-  for (my $i=0; $i<@labels; $i++) {
-    push @selected,$i if $settings->{labels}[$i];
-  }
+  my @selected = grep {$settings->{features}{$_}{visible}} @{$settings->{tracks}};
   $q->param(-name=>'label',-value=>join('-',@selected));
   return $q->url(-relative=>1,-path_info=>1,-query=>1);
 }
 
-# fix up tracks to adjust for an increase or decrease in their number
-sub adjust_tracks {
-  my $settings = shift;
-
-  # sanity check as a defense against invalid cookies
-  foreach (qw(track options labels)) {
-    unless (ref $settings->{$_} eq 'ARRAY') {
-       set_default_tracks($settings);
-       return;
-    }
-  }
-
-  my $old_count     = @{$settings->{track}};
-  my $new_count     = labels($settings);
-
-  if ($old_count < $new_count) {  # grew
-    for ($old_count .. $new_count-1) {
-      $settings->{track}[$_]     = $_;
-      $settings->{options}[$_]   = 0;
-      $settings->{labels}[$_]    = 1;
-    }
-  }
-
-  elsif ($old_count > $new_count) { # shrank
-    $settings->{labels} = [grep {defined($_) && $_ < $new_count} @{$settings->{labels}}];
-    $settings->{track}  = [grep {defined($_) && $_ < $new_count} @{$settings->{track}}];
-    splice(@{$settings->{options}},$old_count-$new_count,$new_count);
-  }
-
-}
-
+# reorder @labels based on settings in the 'track.XXX' parameters
 sub adjust_track_order {
   my $settings = shift;
 
-  my @labels = labels($settings);
-
-  # tracks[track] => feature
-  my @tracks;
-  if (param('track')) {
-    @tracks = param('track');
-  } elsif (my $t = $settings->{track}) {
-    @tracks = @$t;
-  } else {
-    @tracks   = (0..@labels-1);
-  }
-
-
-  # features[feature] => track
-  my @features;
-  for (my $track=0; $track < @tracks; $track++ ) {
-    $features[$tracks[$track]] = $track;
-  }
+  my @labels  = @{$settings->{tracks}};
+  warn "adjust_track_order(): labels = @labels" if DEBUG;
 
   my %seen_it_already;
   foreach (grep {/^track\./} param()) {
     my ($track) = /(\d+)/;
-    my $feature   = param($_);
-    next if $feature < 0;
-    next if $seen_it_already{$feature}++;
+    my $label   = param($_);
+    next unless length $label > 0;
+    next if $seen_it_already{$label}++;
+    warn "$label => track $track" if DEBUG;
+
+    # figure out where features currently are
+    my $i = 0;
+    my %order = map {$_=>$i++} @labels;
 
     # remove feature from wherever it is now
-    my $current_position = $features[$feature];
-    splice(@tracks,$current_position,1);
+    my $current_position = $order{$label};
+    warn "current position of $label = $current_position" if DEBUG;
+    splice(@labels,$current_position,1);
 
+    warn "new position of $label = $track" if DEBUG;
     # insert feature into desired position
-    splice(@tracks,$track,0,$feature);
-
-    # and fix up the @features array
-    for (my $track=0; $track < @tracks; $track++ ) {
-      $features[$tracks[$track]] = $track;
-    }
+    splice(@labels,$track,0,$label);
   }
-
-  return \@tracks;
+  $settings->{tracks} = \@labels;
 }
 
 sub adjust_track_options {
   my $settings = shift;
-  my @option = @{$settings->{options}};
   foreach (grep {/^option\./} param()) {
-    my ($feature) = /(\d+)/;
+    my ($track)   = /(\d+)/;
+    my $feature   = $settings->{tracks}[$track];
     my $option    = param($_);
-    $option[$feature] = $option;
+    $settings->{features}{$feature}{options} = $option;
   }
-  \@option;
+  foreach (@{$settings->{tracks}}) {
+    $settings->{features}{$_}{visible} = 0;
+  }
+
+  foreach (param('track.label')) {
+    $settings->{features}{$_}{visible} = 1;
+  }
 }
 
+# this controls the "adjust track options" screen
 sub set_track_options {
   my $settings = shift;
 
-  my $tracks = adjust_track_order($settings);
-  my @labels = labels($settings);
+  my @labels = @{$settings->{tracks}};
 
-  my @t      = sort { $labels[$a] cmp $labels[$b] } (0..@labels-1);
-  my %labels = map { $_ => $labels[$_] } @t;
-  unshift @t,-1;
-  $labels{-1} = '';
+  my %keys            = map {$_ => $CONFIG->setting($_=>'key') || $_} @labels;
+  my @sorted_labels   = ('',sort {lc $keys{$a} cmp lc $keys{$b}} @labels);
 
   my @rows;
   for (my $track = 0; $track < @labels; $track++) {
-    my $feature = $tracks->[$track];
-    my $label   = $labels[$feature];
+    my $label = $labels[$track];
     push @rows,
       th({-align=>'LEFT',-class=>'searchtitle'},"Track",$track+1).
-	th({-align=>'LEFT',-class=>'searchbody'},$label).
-	  td({-align=>'CENTER',-class=>'searchbody'},
-	     checkbox(-name  => 'label',
-		      -value => $feature,
+      th({-align=>'LEFT',-class=>'searchbody'},$keys{$label}).
+      td({-align=>'CENTER',-class=>'searchbody'},
+	     checkbox(-name     => 'track.label',
+		      -value    => $label,
 		      -override => 1,
-		      -checked  => $settings->{labels}[$feature],
+		      -checked  => $settings->{features}{$label}{visible},
 		      -label => '')
 	    ).
-          td({-align=>'CENTER',-class=>'searchbody'},
-	     radio_group(-name     => "option.$feature",
-			 -values   => [0,1,2],
+      td({-align=>'CENTER',-class=>'searchbody'},
+	     popup_menu( -name     => "option.$track",
+			 -values   => [0,1,2,3],
 			 -override => 1,
-			 -default  => $settings->{options}[$feature],
-			 -labels   => {0=>'Auto',1=>'Bump',2=>'Bump & Label'}
-			)
-	    ).
-	  td({-align=>'CENTER',-class=>'searchbody'},
-	     popup_menu(-name    => "track.$track",
-			-values  => \@t,
-			-labels  => \%labels,
-			-override => 1,
-			-default => -1));
+			 -default  => $settings->{features}{$label}{options},
+			 -labels   => {0=>'Auto',1=>'Compact',2=>'Expand',3=>'Expand & Label'}
+			).
+	td({-align=>'CENTER',-class=>'searchbody'},
+	   popup_menu(-name    => "track.$track",
+		      -values  => \@sorted_labels,
+		      -labels  => \%keys,
+		      -override => 1,
+		      -onChange => 'document.settings.submit()',
+		      -default => ''))
+	    );
   }
+  my $controls = TR({-class=>'searchtitle'},
+		    td({-colspan=>3,-align=>'CENTER'},
+		       reset('Undo Changes').'&nbsp;'.
+		       submit('Revert to Defaults').'&nbsp;'.
+		       submit('Refresh').'&nbsp;'
+		      ),
+		    td({-align=>'CENTER',-colspan=>2},
+		       submit(-name=>'Cancel',-value=>'Cancel Changes and Return...').'&nbsp;'.
+		       b(submit(-name=>'Redisplay',-value=>'Accept Changes and Return...'))
+		      ));
 
   print h1({-align=>'CENTER'},'Settings for ',$CONFIG->setting('description'));
   print start_form(-name=>'settings');
   print table({-width=>'100%',-border=>0},
+	      $controls,
 	      TR({-class=>'searchtitle'},
 		 th({-colspan=>5},'Track Options')),
 	      TR({-class=>'searchbody'},
@@ -1552,23 +1658,15 @@ sub set_track_options {
 		),
 	      TR({-class=>'searchtitle'},
 		 th('Track'),
-		 th('Annotation Type'),
+		 th('Track Type'),
 		 th('Show'),
 		 th('Format'),
-		 th('Change Track Order')
+		 th('Change Track Order'),
 		),
 	      TR(\@rows),
-	      TR({-class=>'searchtitle'},
-		 td({-colspan=>3,-align=>'CENTER'},
-		    reset('Undo Changes').'&nbsp;'.
-		    submit('Revert to Defaults').'&nbsp;'.
-		    submit('Cancel').'&nbsp;'
-		   ),
-		 td({-align=>'CENTER',-colspan=>2},
-		    submit('Update').'&nbsp;'.
-		    b(submit('Submit Changes...'))
-		   )),
-	      hidden(-name=>'track',-value=>$tracks,-override=>1),
+	      $controls,
+	      hidden(-name=>'Set Track Options...',-value=>1,-override=>1),
+	      hidden(-name=>'Adjust Order',-value=>1,-override=>1),
 	     );
     print end_form();
 }
@@ -1596,7 +1694,7 @@ sub build_citation_page {
   my @labels   = labels($settings);
 
   my @features = $CONFIG->labels;
-  my @external_features = load_external_sources(undef,$settings);
+  my $external_features = load_external_sources(undef,$settings);
   my (@citations);
 
   print h2('Track Descriptions & Citations');
@@ -1609,25 +1707,25 @@ sub build_citation_page {
   print blockquote(dl(@citations));
 
   # build external features
-  if (@external_features) {
+  if (%$external_features) {
     print hr,h3('External Annotation Tracks');
     @citations = ();
-    for my $file (@external_features) {
-      next unless defined $file;
-      my $name   = ref($file) ? $file->name : $file;
+    for my $file (keys %$external_features) {
+      my $f = escape($file);
+      my $name   = $file;
       my $is_url = $name =~ m!^(http|ftp)://!;
-      my $link   = $is_url  ? $name  : url(-relative=>1,-path_info=>1)."?Download+Data=1";
-      my $anchor = $is_url  ? $name  : "$name (Uploaded)";
+      my $link   = $is_url  ? $name  : url(-relative=>1,-path_info=>1)."?Download+Data=1;file=$f";
+      my $anchor = $name;
       $anchor =~ tr/ /-/;
 
-      unless (ref $file) {
+      unless (ref $external_features->{$file}) {
 	print h3(a{-name=>$anchor,-href=>$link},$name);
 	print blockquote('Please activate this track in order to view its information');
 	next;
       }
       print h4(a{-name=>$anchor,-href=>$link},$name);
-      for my $feature ($file->types) {
-	push @citations,make_citation($file,$feature);
+      for my $feature ($external_features->{$file}->types) {
+	push @citations,make_citation($external_features->{$file},$feature);
       }
       print blockquote(dl(@citations));
     }
@@ -1652,9 +1750,27 @@ sub make_citation {
 
 sub build_help_page {
   my $helpfile = shift or return;
-  open(F,$helpfile) or return;
-  print while <F>;
+  my $file = $ENV{MOD_PERL} ? Apache->request->lookup_uri($helpfile)->filename
+                            : "$ENV{DOCUMENT_ROOT}/$helpfile";
+  my $root = $CONFIG->setting('help') || GBROWSE_HELP;
+  my $url  = url(-relative=>1);
+  open(F,$file) or return;
+  while (<F>) { # fix up relative addressing of images
+    s/(src|href)=\"([^\"\#\$]+)\"/$1=\"$root\/$2\"/g;
+    s/<!--\s*\#include-classes\s*-->/object_classes_for_help()/e;
+    s/href=\"\$GBROWSE/href=\"$url/g;
+    print;
+  }
   close F;
+}
+
+# get list of object types for help pages
+sub object_classes_for_help {
+  return $OBJECT_TYPES{$CONFIG->source} if exists $OBJECT_TYPES{$CONFIG->source};
+  my $db = open_database();
+  my @classes = eval {$db->classes};
+  return $OBJECT_TYPES{$CONFIG->source} = undef unless @classes;
+  return $OBJECT_TYPES{$CONFIG->source} = ul(li(\@classes));
 }
 
 # Create a link to a citation.  It will point to an external URL if the
@@ -1665,24 +1781,11 @@ sub build_help_page {
 # feature-by-feature basis, while the uploaded/external ones are cited as
 # a group.  This makes for ugly logic branches.
 sub make_citation_link {
-  my ($label_index,$self_url,$labels,$extra_labels,$label_count)   = @_;
-  my $label = $labels->[$label_index];
-  my $is_external = $label_index < $label_count;
-
-  my $config = $is_external ? $CONFIG
-                            : $extra_labels->[$label_index-$label_count];
-
-  if ($config && ref($config)) {
-    my $citation = $config->citation($is_external ? $label : ());
-    (my $anchor  = $label) =~ tr/ /-/;
-    my $link = $citation && $citation =~ m!^(http|ftp)://! ? $citation
-                                                           : $self_url.'#'.escapeHTML($anchor);
-    return a({-href=>$link,-target=>'citation'},$labels->[$label_index]);
-  }
-
-  else {
-    return $labels->[$label_index];
-  }
+  my ($label,$self_url)   = @_;
+  my $key      = $CONFIG->setting($label=>'key') || $label;
+  (my $anchor  = $label) =~ tr/ /-/;
+  my $link = $self_url.'#'.escapeHTML($anchor);
+  return a({-href=>$link,-target=>'citation'},$key);
 }
 
 !NO!SUBS!

@@ -1,5 +1,5 @@
 This document provides information on configuring the Generic Genome
-Browser (GGB), part of the Generic Model Organism Systems Database
+Browser (GBrowse), part of the Generic Model Organism Systems Database
 Project (GMOD; http://www.gmod.org).
 
 * Table of Contents
@@ -26,7 +26,7 @@ scratch.
 
 A1. The GFF file format
 
-GGB is based around the GFF file format, which stands for "Gene
+GBrowse is based around the GFF file format, which stands for "Gene
 Finding Format" and was invented at the Sanger Centre. The GFF format
 is a flat tab-delimited file, each line of which corresponds to an
 annotation, or feature.  Each line has nine columns and looks like
@@ -276,12 +276,18 @@ browser.  Just provide a source=<sourcename> CGI argument, as in:
   http://your.site.org/cgi-bin/gbrowse?source=sourcename
 
 It is suggested that you use the same name as the database, although
-this isn't a requirement.
+this isn't a requirement.  (If no "source=" argument is given, gbrowse
+picks the first configuration file that occurs alphabetically; you can
+control this by placing numbers in front of the configuration file, as
+in "01.yeast.conf".)
 
 The configuration file is divided into a number of sections, each one
 introduced by a [SECTION TITLE].  The [GENERAL] section contains
 settings that are applicable to the entire application.  Other
 sections define tracks to display.
+
+I suggest that you begin with one of the example configuration files
+provided with the distribution and modify it to suit your needs.
 
 ---
 
@@ -365,17 +371,17 @@ The following [GENERAL] options are recognized:
 
   h) stylesheet
 
-  Location of the stylesheet used to create the GGB look and feel.
+  Location of the stylesheet used to create the GBrowse look and feel.
   (You probably will not need to change this.)
 
   i) buttons
 
-  URL in which the various graphical buttons used by GGB are located.
+  URL in which the various graphical buttons used by GBrowse are located.
   (You will probably not need to change this.)
 
   j) tmpimages
 
-  URL of a writable directory in which GGB can write its temporary
+  URL of a writable directory in which GBrowse can write its temporary
   images.    (You will probably not need to change this.)
 
   k) glyph
@@ -392,7 +398,7 @@ The following [GENERAL] options are recognized:
 
    l) label density
 
-   When there are too many annotations on the screen GGB automatically
+   When there are too many annotations on the screen GBrowse automatically
    disables the printing of identifying labels next to the feature.
    "label density" controls where the cutoff occurs.  The value in the
    example files is 25, meaning that labels will be turned off when
@@ -401,7 +407,7 @@ The following [GENERAL] options are recognized:
 
    m) bump density
 
-   When there are too many annotations on the screen GGB automatically
+   When there are too many annotations on the screen GBrowse automatically
    disables collision control.  The "bump density" option controls
    where the cutoff occurs.  The value in the example files is 100,
    meaning that when there more than 100 annotations of the same type
@@ -413,7 +419,7 @@ The following [GENERAL] options are recognized:
    n) link
 
    The link option creates a default rule for creating outgoing links 
-   from the GGB display.  When the user clicks on a feature of
+   from the GBrowse display.  When the user clicks on a feature of
    interest, he will be taken to the corresponding URL.
 
    The link option's value should be a URL containing one or more
@@ -478,12 +484,28 @@ The following [GENERAL] options are recognized:
 
     t) zoom levels
 
-    The GGB allows exactly eight levels of zoom.  This option selects
+    GBrowse allows unlimited zoom levels.  This option selects
     the width of each level, in bp.  For example:
 
       zoom levels = 1000 2000 5000 10000 20000 40000 100000 200000
 
-    u) overview units
+    u) low res
+
+    GBrowse currently supports limited semantic zooming in which the
+    appearance of certain glyphs changes as the magnification increases.
+    The "low res" option specifies the point at which the detailed view
+    switches from high resolution to low resolution, and is measured in 
+    base pairs.
+
+    For example, this option
+
+       low res = 100000
+
+    tells GBrowse to switch into low resolution mode when the number
+    of base pairs shown on the detailed screen is equal to or greater than
+    100,000 bp.
+
+    v) overview units
 
     This option controls the units that will be used on the scale for
     the birds-eye view display.  Possible values are "bp" (base
@@ -492,15 +514,15 @@ The following [GENERAL] options are recognized:
     appropriate unit.
 
 
-    v) overview bgcolor
+    w) overview bgcolor
 
     This is the color for the background of the birds-eye view.
 
-    w) detailed bgcolor
+    x) detailed bgcolor
 
     This is the color for the background of the detailed view.
 
-    x) header
+    y) header
 
     This is a header to print at the top of the browser page.  It is
     any valid HTML, and can span multiple lines provided that the
@@ -515,7 +537,7 @@ The following [GENERAL] options are recognized:
 
     header = <h1>Welcome to the Volvox Sequence Page</h1>
 
-    x) footer
+    z) footer
 
     This is a footer to print at the top of the browser page.  It is
     any valid HTML, and can span multiple lines provided that the
@@ -539,9 +561,9 @@ The following [GENERAL] options are recognized:
 	</TR>
 	</table>
 
-     y) examples
+     aa) examples
 
-     You can provide GGB with some canned examples of "interesting
+     You can provide GBrowse with some canned examples of "interesting
      regions" for the user to click on.  The examples option, if
      present, provides a space-delimited list of interesting regions.
      For example:
@@ -549,10 +571,10 @@ The following [GENERAL] options are recognized:
        examples = II  NPY1 NAB2 Orf:YGL123W
 
 
-     z) automatic classes
+     bb) automatic classes
 
      When the user types in a search string that is not qualified by a
-     class (as in EST:yk1234.5), GGB will automatically search for a
+     class (as in EST:yk1234.5), GBrowse will automatically search for a
      matching feature of class "Sequence".  You can have it search for
      the name in other classes as well by defining the "automatic
      classes" option.  
@@ -587,9 +609,8 @@ later).  Here is a typical track declaration from yeast.conf:
  description  = 1
  key          = Named gene
 
-The track is named "Genes".  This is the name that will appear in the
-checkbox group that the end-user uses to select the tracks he wishes
-to display.  As in the general configuration section, the track
+The track is named "Genes".  You may use a short mnemonic if you
+prefer.  As in the general configuration section, the track
 declaration contains multiple name=value option pairs.
 
 Valid options are as follows:
@@ -672,7 +693,8 @@ Valid options are as follows:
   k) key
 
   This option controls the descriptive key that is drawn in the key
-  area at the bottom of the image.  If not specified, it defaults to
+  area at the bottom of the image.  It also appears in the checkboxes
+  that the end user uses to switch tracks on and off. If not specified, it defaults to
   the track name.
 
   l) citation
@@ -694,6 +716,15 @@ Valid options are as follows:
   can be used to override the global link rule.  To force a track not
   to contain any links, use a blank value.
 
+  n) feature_low
+
+  If this option is present, GBrowse will use the list of feature types
+  listed here at resolution views.  (This is one of the ways that
+  semantic zooming is implemented.)  This allows you, for example,
+  to switch off detailed exon, UTR, promoters and other within-the-gene
+  features, and just show the start and stop of the transcription
+  unit.
+
 A large number of glyph-specific options are also recognized.  These
 are described in the next section.
 
@@ -704,7 +735,7 @@ B3. Glyphs and Glyph Options
 A large variety of glyphs are available, and more are being added as
 the Bio::Graphics module grows.
 
-A list of the common glyphs and their options is provided by the GGB
+A list of the common glyphs and their options is provided by the GBrowse
 itself.  Click on the "[Help]" link in the section labeled "Upload
 your own annotations".  This page also lists the valid foreground and
 background colors.  The most popular glyph types are:
@@ -817,7 +848,7 @@ to interrogate the feature object.
 
 C. INSTALLING FASTA FILES FOR DNA
 
-The GGB can dump the current segment under display as FASTA files.  To
+The GBrowse can dump the current segment under display as FASTA files.  To
 do this, designate a directory to contain FASTA file(s) of the genomic
 sequence.  There must be a single DNA entry for each reference point
 that is used by the corresponding GFF file.  For example, if the GFF
@@ -836,7 +867,7 @@ You may put all entries into a single FASTA file, or spread them out
 among multiple files.  The files must have one of the extensions
 ".fa", ".fasta", ".fast", or ".dna".
 
-Tell GGB where to find the FASTA files by setting the fasta_files
+Tell GBrowse where to find the FASTA files by setting the fasta_files
 option to the directory that contains them:
 
  fasta_files = /usr/local/share/fasta/yeast
@@ -890,4 +921,4 @@ Have fun!
 
 Lincoln Stein & the GMOD development team
 lstein@cshl.org
-January 2, 2001
+March 22, 2002

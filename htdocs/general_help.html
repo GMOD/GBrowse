@@ -1,17 +1,27 @@
 
 <p>
 
+<table width="100%">
+  <tr class="searchtitle">
+    <th><a href="#selecting">Selecting Regions</a></th>
+    <th><a href="#navigation">Overview Panel</a></th>
+    <th><a href="#detail">Detail Panel</a></th>
+    <th><a href="#upload">Adding Annotations</a></th>
+  </tr>
+</table>
+
+
 <h1>Generic Genome Browser: General Help</h1>
 
 These are general instructions for using the Generic Genome Browser.
 This page should be customized by the administrator of this resource
 to describe site-specific features.
 
-<h2>Selecting a Region of the Genome</h2>
+<h2><a name="selecting">Selecting a Region of the Genome</a></h2>
 
 <p>
 
-<img src="landmark.gif" align="RIGHT">
+<img src="images/help/landmark.gif" align="RIGHT">
 
 To select a region of the genome to view, enter its name in the text
 field labeled "Landmark or Region".  Recognized types of names are
@@ -56,7 +66,7 @@ graphical panels:
 <p>
 
 <center>
-<img src="overview+detail.gif" align="CENTER">
+<img src="images/help/overview+detail.gif" align="CENTER">
 </center>
 
 <p>
@@ -103,7 +113,7 @@ mean.
 
 <p>
 
-<!-- #include-types -->
+<!-- #include-classes -->
 
 <h3>Viewing a Precise Region around a Landmark</h3>
 
@@ -152,9 +162,9 @@ the "Landmark or Region" box.
 
 <hr>
 
-<h2>Navigation</h2>
+<h2><a name="navigation">Navigation</a></h2>
 
-<img src="navbar.gif" align="RIGHT">
+<img src="images/help/navbar.gif" align="RIGHT">
 
 <p>
 
@@ -183,7 +193,7 @@ ways:
       by small increments (usually 10-20%, depending on how the
       browser is configured).
       <p>
-  <dt><img src="detail_scale.gif" align="RIGHT">
+  <dt><img src="images/help/detail_scale.gif" align="RIGHT">
       <b>Recenter the detail panel by clicking on its scale</b>
   <dd>The scale at the top of the detail panel is live.  Clicking on
       it will recenter the detail panel around the location you
@@ -195,7 +205,7 @@ ways:
       that displays more information about it. This could be a page on
       the browser's web site, or a page on an external web site.
       <p>
-  <dt><img src="overview.gif" align="RIGHT">
+  <dt><img src="images/help/overview.gif" align="RIGHT">
       <b>Jump to a new region by clicking on the overview panel</b>
   <dd>Click on the overview panel to immediately jump
       to the corresponding region of the genome.
@@ -205,7 +215,7 @@ ways:
 
 <hr>
 
-<h2>The Detail Panel</h2>
+<h2><a name="detail">The Detail Panel</a></h2>
 
 <p>
 
@@ -217,7 +227,7 @@ distinguished by a distinctive graphical shape and color.
 <p>
 
 <center>
-<img src="detail.gif" align="CENTER">
+<img src="images/help/detail.gif" align="CENTER">
 </center>
 
 <p>
@@ -234,7 +244,7 @@ You can customize the detailed display in a number of ways:
 
 <dl>
   <dt><b>Turn tracks on and off using the "Search Settings" area</b>
-  <dd><img src="search+settings.gif" border="1"><p>
+  <dd><img src="images/help/search+settings.gif" border="1"><p>
       The panel labeled "Search Settings" contains a series of
       checkboxes.  Each checkbox corresponds to a track type.  Selecting
       the checkbox activates its type.  Select the label to the
@@ -243,20 +253,108 @@ You can customize the detailed display in a number of ways:
       generate it, its author, or citations.
       <p>
   <dt><b>Change the properties of the tracks using the "Set Track Options" button</b>
-  <dd><img src="track+settings.gif" border="1"><p>
+  <dd><img src="images/help/track+settings.gif" border="1"><p>
       This will bring up a window that has detailed settings for each of the tracks.
       Toggle the checkbox in the "Show" column to turn the track on
       and off (this is the same as changing the checkbox in the Search
-      Settings area).
+      Settings area). Change the popup menu in the "Format" column to
+      alter the appearance of the corresponding track.  Options include:
+      <i>Compact</i> which forces all items in the track onto a single overlapping line without
+      labels or descriptions; <i>Expand</i>, which causes items to bump each other so that
+      they don't collide; and <i>Expand &amp; Label</i>, which causes items to be labeled
+      with their names and a brief description.  The default, <i>Auto</i> will choose compact
+      mode if there are too many features on the track, or one of the expanded modes if there
+      is sufficient room.  Any changes you make are remembered the next time you visit the browser.
+      Press <b>Accept Changes and Return...</b> when you are satisfied with the current options.
+      <p>
+  <dt><b>Change the order of tracks using the "Set Track Options" button</b>
+  <dd>The last column of the track options window allows you to change the order of the
+      tracks.  The popup menu lists all possible feature types in alphabetic order.  Select
+      the feature type you wish to assign to the track.  The window should refresh with the
+      adjusted order automatically, but if it doesn't, select the "Refresh" button to see the
+      new order.
       
 </dl>
 
+<hr>
 
+<h2><a name="upload">Uploading Your Own and 3d Party Annotations</a></h2>
+
+<p>
+
+This browser supports third party annotations, both your own private
+annotations and published annotations contributed by third parties.
+
+<h3>Uploading Your Own Annotations</h3>
+
+<img src="images/help/upload.gif">
+
+<p>
+
+To view your own annotations on the displayed genome, go to the bottom
+of the screen and click on the <b>Browse...</b> button in the file
+upload area.  This will prompt you for a text file containing your
+annotations. See the <a href="$GBROWSE?help=annotation"
+target="_new">annotation format help</a> document for information on
+how to create this file.
+
+<p>
+
+Once loaded, tracks containing these annotations will appear on the
+detailed display and you can control them just like any of the
+built-in tracks.  In addition new <b>Edit</b>, <b>Delete</b> and
+<b>Download</b> buttons will appear in the file upload area.  As their
+names imply, these buttons allow you to edit the uploaded file,
+download it, or delete it completely.
+
+<p>
+
+<img src="images/help/upload+edit.gif">
+
+<p>
+
+The date at which the uploaded file was created or last modified is
+printed next to its name.  If there are a manageable number of
+annotated areas, GBrowse will create links that allow you to jump
+directly to them.
+
+<p>
+
+You may upload as many files as you wish, but be advised that the
+performance of the browser may decrease if there are many large
+uploads to process.
+
+<h3>Viewing 3d Party Annotations</h3>>
+
+<p>
+
+To view 3d party annotations, the annotations must be published on a
+reachable web server and you must know the annotation file's URL.
+<p>
+
+<img src="images/help/upload+remote.gif">
+
+<p>
+
+At the bottom of the browser window is a text box labeled "Enter
+Remote Annotation URL".  Type in the URL and then press "Update URLs".
+The system will attempt to upload the indicated URL.  If successful,
+the data will appear as one or more new tracks.  Otherwise you will
+be alerted with an error message.
+
+<p>
+
+You may add as many remote URLs as you wish.  To delete one, simply
+erase it and press "Update URLs" again.
 
 <hr>
 
-<H2><A NAME="bugs">BUGS IN THIS SOFTWARE</A></H2>
-<P>Please report them to the author.</P>
+<H2><A NAME="bugs">Software Bugs</A></H2>
+
+<P>As always, this software may contain bugs.  Please report any that
+you suspect to the author, along with whatever information that you can
+provide as to what you were doing when the bug appeared.</P>
+
 <P>
 <HR>
 <H1><A NAME="author">AUTHOR</A></H1>

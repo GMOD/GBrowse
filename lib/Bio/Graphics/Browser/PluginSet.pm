@@ -63,6 +63,7 @@ sub configure {
   my $conf_dir = $conf->dir;
 
   for my $name (keys %$plugins) {
+
     my $p = $plugins->{$name};
     $p->database($database);
     $p->browser_config($conf);
@@ -78,14 +79,14 @@ sub configure {
 
     # if there are any CGI parameters from the
     # plugin's configuration screen, set it here
-    my @params = grep {/^$name\./} param();
-    next unless @params;
+    my @params = grep {/^$name\./} param() or next;
     $p->reconfigure unless param('plugin_action') eq $conf->tr('Cancel');
     $p->filter if ($p->type eq 'filter');
 
     # turn the plugin on
     my $setting_name = 'plugin:'.$p->name;
     $settings->{features}{$setting_name}{visible} = 1;
+
   }
 }
 
@@ -93,6 +94,7 @@ sub annotate {
   my $self = shift;
   my $segment       = shift;
   my $feature_files = shift || {};
+  my $coordinate_mapper = shift;
 
   my @plugins = $self->plugins;
   my $page_settings = $self->page_settings;
@@ -101,7 +103,7 @@ sub annotate {
     next unless $p->type eq 'annotator';
     my $name = "plugin:".$p->name;
     next unless $page_settings->{features}{$name}{visible};
-    my $features = $p->annotate($segment) or next;
+    my $features = $p->annotate($segment,$coordinate_mapper) or next;
     $features->name($name);
     $feature_files->{$name} = $features;
   }
@@ -171,7 +173,7 @@ sub cookies {
   my $plugins = $self->plugins;
   my @cookies;
   for my $plugin (values %$plugins) {
-    push @cookies,$plugin->cookie;
+    push @cookies,$plugin->cookie();
   }
   @cookies;
 }
@@ -179,6 +181,16 @@ sub cookies {
 1;
 
 __END__
+
+=head1 NAME
+
+Bio::Graphics::Browser::PluginSet -- A set of plugins
+
+=head1 SYNOPSIS
+
+None.  Used internally by gbrowse & gbrowse_img.
+
+=head1 METHODS
 
 =over 4
 
@@ -191,9 +203,28 @@ the plugin search path.  Returns an object.
 
 Configure the plugins given the database.
 
-=item $plugin_set->annotate($segment,$feature_files)
+=item $plugin_set->annotate($segment,$feature_files,$rel2abs)
 
 Run plugin annotations on the $segment, adding the resulting feature
 files to the hash ref in $feature_files ({track_name=>$feature_list}).
+The $rel2abs argument holds a coordinate mapper callback, but is
+currently unused.
 
 =back
+
+=head1 SEE ALSO
+
+L<Bio::Graphics::Browser>
+
+=head1 AUTHOR
+
+Lincoln Stein E<lt>lstein@cshl.orgE<gt>.
+
+Copyright (c) 2005 Cold Spring Harbor Laboratory
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.  See DISCLAIMER.txt for
+disclaimers of warranty.
+
+=cut
+

@@ -50,6 +50,7 @@ use Bio::Graphics;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;
 use Bio::Graphics::Browser::PluginSet;
+use Bio::Graphics::Browser::UploadSet;
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use Text::Tabs;
@@ -61,7 +62,8 @@ use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td);
 use CGI::Toggle;
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $CONF_DIR
-	    $PLUGINS $PRESETS $HAVE_SVG
+	    $PLUGINS $UPLOADED_SOURCES $REMOTE_SOURCES
+	    $PRESETS $HAVE_SVG
 	    %OBJECT_TYPES %PLUGIN_NAME2LABEL );
 
 # if you change the zoom/nav icons, you must change this as well.
@@ -201,6 +203,9 @@ if (param('plugin_do')) {
   $plugin_action = $CONFIG->tr(param('plugin_do')) || $CONFIG->tr('Go');
 }
 
+# For uploaded files
+$UPLOADED_SOURCES = Bio::Graphics::Browser::UploadSet->new($CONFIG,$page_settings);
+
 ## GETTING THE SEGMENT ######################################################
 my $features = get_features($page_settings);
 
@@ -265,35 +270,18 @@ if (my $to_download = (param($CONFIG->tr('Download_file')) ||
   exit 0;
 }
 
-
-## HANDLING FILE UPLOADS ######################################################################
-if (param('Upload') && (my $f = param('upload_annotations'))) {
-  handle_upload($page_settings,$f);
-}
-
-elsif (param('new_upload')) {
-  $file = new_upload($page_settings);  # global
-  $file_action = "modify.$file";       # global
-  param(-name=>"modify.$file",-value=>$CONFIG->tr('Edit'));
-}
-
-elsif (defined(my $data = param('a_data'))) {
-  handle_edit($page_settings,$data);
-}
-
-elsif ($data = param('auto') or $data = param('add')) {
-  handle_quickie($page_settings,$data);
-}
-
-clear_uploaded_file($page_settings,$file) if $file_action && param($file_action) eq 'Delete File';
-
 warn "TRACKS = @{$page_settings->{tracks}}" if DEBUG;
+
 load_plugin_annotators($page_settings);
 warn "ANNOTATOR TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 adjust_tracks($page_settings);
 auto_open($page_settings,$features) if @$features;
 
 warn "ADJUSTED TRACKS = @{$page_settings->{tracks}}" if DEBUG;
+
+# NOTE: we may exit out on the next statement if the user wants to download a previously-
+# uploaded file
+handle_uploads($page_settings) || exit 0;
 
 ## UPDATING THE PERSISTENT SETTINGS##############################################################
 my $cookies = settings2cookie($page_settings);
@@ -328,13 +316,8 @@ if ($divisor == 1) {
 
 print_top($title);
 
-## HANDLE UPLOADED FILE EDITS ##################################################################
-if ($file_action && param($file_action) eq $CONFIG->tr('Edit')) {
-  edit_uploaded_file($page_settings,$file);
-}
-
 ## HANDLE TRACK SETTINGS   #######################################################
-elsif ((param($CONFIG->tr('Set_options')) || param('revert'))
+if ((param($CONFIG->tr('Set_options')) || param('revert'))
        && !param($CONFIG->tr('Cancel'))
        && !param($CONFIG->tr('Redisplay'))) {
   set_track_options($page_settings);
@@ -419,6 +402,8 @@ sub main_display {
   print navigation_table($segment,$page_settings);
   print html_frag('html2',$segment,$page_settings);
 
+  # NOTE: we may exit out on the next statement if the user wants to download a previously-
+  # uploaded file
   my $feature_files = load_external_sources($segments,$page_settings);
 
   # if more than one segment, then list them all
@@ -1158,14 +1143,13 @@ sub upload_table {
 	);
 
   # now add existing files
-  for my $filename (@{$settings->{tracks}}) {
-    next unless $filename =~ /^file:/ && $feature_files->{$filename};
-    (my $file = $filename) =~ s/^file://;
-    my $name = escape($file);
+  for my $file ($UPLOADED_SOURCES->files) {
+    (my $name = $file) =~ s/^file://;
+    $name = escape($name);
     my $download = escape($CONFIG->tr('Download_file'));
-    my $link = a({-href=>"?$download=$name"},"[$name]");
-    my @info =  get_uploaded_file_info($settings->{features}{$filename}{visible}
-					 && $feature_files->{$filename});
+    my $link = a({-href=>"?$download=$file"},"[$name]");
+    my @info =  get_uploaded_file_info($settings->{features}{$file}{visible}
+				       && $feature_files->{$file});
     $cTable .=  TR({-class=>'uploadbody'},
 		   th($link),
 		   td({-colspan=>3},
@@ -1473,7 +1457,9 @@ sub lookup_features_from_db {
 sub lookup_features_from_external_sources {
   my ($settings,$searchterm) = @_;
 
-  my @uploaded_files = load_uploaded_files(undef,$settings) or return;
+  my @uploaded_files = map {$UPLOADED_SOURCES->feature_file($_)}
+    grep {$settings->{features}{$_}{visible}}
+      $UPLOADED_SOURCES->files;
   for my $file (@uploaded_files) {
     next unless $file->can('get_feature_by_name');
     my @features = $file->get_feature_by_name($searchterm);
@@ -1499,7 +1485,6 @@ sub lookup_features_from_external_sources {
 
   return;
 }
-
 
 ################ perform keyword search ###############
 sub do_keyword_search {
@@ -1686,35 +1671,52 @@ sub show_examples {
 }
 
 ########## upload stuff ########
-sub new_upload {
+## HANDLING FILE UPLOADS ######################################################################
+sub handle_uploads {
   my $page_settings = shift;
-  my $rand = int(1000*rand);
-  my $file = "upload.$rand";
-  my $fh_out = open_uploaded_file($page_settings,$file,'>');
-  close $fh_out;
-  my (undef,$url) = name_uploaded_file($page_settings,$file);
-  warn "url = $url" if DEBUG;
-  push @{$page_settings->{tracks}},$url;
-  $page_settings->{features}{$url} = {visible=>1,options=>0,limit=>0};
-  return $file;
-}
 
-sub handle_upload {
-  my ($settings,$fh) = @_;
-  warn "handle_upload($settings,$fh)" if DEBUG;
-  # $fh is a CGI string/filehandle object, so be careful
-  my ($filename) = "$fh" =~ /([^\/\\:]+)$/;
-  my $fh_out = open_uploaded_file($settings,$filename,'>') or return;
-  my $buffer;
-  while (read($fh,$buffer,1024)) {
-     $buffer =~ s/\r\n?/\n/g;
-     print $fh_out $buffer;
+  my ($file_action)         = grep {/^modify\./} param();
+  (my $file = $file_action) =~ s/^modify\.// if $file_action;
+
+  # This gets called if the user wants to download his annotation data
+  if (my $to_download = (param($CONFIG->tr('Download_file')) ||
+			 ($file_action && param($file_action) eq $CONFIG->tr('Download_file')) && $file)) {
+    warn "FILE DOWNLOAD, download = $to_download" if DEBUG;
+    print_header(-attachment   =>  $to_download,
+		 -type         => 'application/octet-stream');
+    print_uploaded_file_features($page_settings,$to_download);
+    return 0;  # this will cause an exit from the script
   }
-  close $fh_out;
-  my (undef,$url) = name_uploaded_file($settings,$filename);
-  warn "url = $url" if DEBUG;
-  push @{$settings->{tracks}},$url;
-  $settings->{features}{$url} = {visible=>1,options=>0,limit=>0};
+
+  if (param('Upload') && (my $f = param('upload_annotations'))) {
+    $UPLOADED_SOURCES->upload_file($f);
+  }
+
+  elsif (param('new_upload')) {
+    $file = $UPLOADED_SOURCES->new_file();
+    $UPLOADED_SOURCES->open_file($file,">");# empty, truncated file
+    $file_action = "modify.$file";
+    param(-name=>"modify.$file",-value=>$CONFIG->tr('Edit'));
+  }
+
+  elsif (defined(my $data = param('a_data'))) {
+    handle_edit($page_settings,$data);
+  }
+
+  elsif ($data = param('auto') or $data = param('add')) {
+    handle_quickie($page_settings,$data);
+  }
+
+  if ($file_action && param($file_action) eq 'Delete File') {
+    $UPLOADED_SOURCES->clear_file($file);
+  }
+
+  if ($file_action && param($file_action) eq $CONFIG->tr('Edit')) {
+    edit_uploaded_file($page_settings,$file);
+    return 0;   # this will cause it to exit
+  }
+
+  1;
 }
 
 sub handle_edit {
@@ -1723,7 +1725,8 @@ sub handle_edit {
   my @lines = unexpand(split /\r?\n|\r\n?/,$data);
   $data = join "\n",@lines;
   $data .= "\n";
-  my $fh = open_uploaded_file($settings,$file,'>');
+  $UPLOADED_SOURCES->new_file($file);  # register it
+  my $fh = $UPLOADED_SOURCES->open_file($file,'>') or return;
   print $fh $data;
   close $fh;
 }
@@ -1732,7 +1735,7 @@ sub handle_quickie {
   my ($settings,$data) = @_;
   return unless $data;
 
-  # format of quickie data is reference+type+name+start-end,start-end,start-end
+  # format of quickie data is reference+type+name+start..end,start..end,start..end
   my ($reference,$type,$name,@segments) = parse_feature_str($data);
   my $feature = Bio::Graphics::Feature->new(
 					    -ref      => $reference||'',
@@ -1745,16 +1748,18 @@ sub handle_quickie {
 
 sub write_auto {
   my ($settings,$features) = @_;
-
-  my $file = 'search_results';
-  clear_uploaded_file($settings,$file);
   return unless @$features;
+
+  my $basename = 'search_results';
+  $UPLOADED_SOURCES->clear_file("file:${basename}");  # in case it's already there
+  my $file = $UPLOADED_SOURCES->new_file($basename);
 
   my %seenit;
 
   warn "opening $file...\n" if DEBUG;
-  my $out = open_uploaded_file($settings,$file,">>") or return;
+  my $out = $UPLOADED_SOURCES->open_file($file,">>") or return;
   warn "writing $file...\n" if DEBUG;
+
   for my $f (@$features) {
     my $reference = $f->can('seq_id') ? $f->seq_id : $f->seq_id;
     my $type      = $f->primary_tag;
@@ -1766,46 +1771,6 @@ sub write_auto {
     print $out join ("\t",qq("$type"),qq("$name"),$position),"\n";
   }
   close $out;
-  my (undef,$url) = name_uploaded_file($settings,$file);
-  unshift @{$settings->{tracks}},$url;
-  $settings->{features}{$url} = {visible=>1,options=>0,limit=>0};
-}
-
-sub name_uploaded_file {
-  my ($settings,$filename) = @_;
-  warn "name_uploaded_file(): filename = $filename" if DEBUG;
-  # keep last non-[/\:] part of name
-  my ($name) = $filename =~ /([^:\\\/]+)$/;
-  $name =~ tr/-/_/;
-  my $id = $settings->{id} or return;
-  my (undef,$tmpdir) = $CONFIG->tmpdir($CONFIG->source."/uploaded_file/$id");
-  my $physical = "$tmpdir/$name";
-  my $url      = "file:$name";
-  return wantarray ? ($physical,$url) : $physical;
-}
-
-sub open_uploaded_file {
-  my ($settings,$filename,$mode) = @_;
-  $filename =~ s/^file://;
-  $mode ||= "<";
-
-  my $file = name_uploaded_file($settings,$filename);
-  warn "file = $file" if DEBUG;
-  unless ($file) {
-    error($CONFIG->tr('Purged',$filename));
-    clear_uploaded_file($settings,$filename);
-    return;
-  }
-
-  my $result = open (F,"${mode}${file}");
-
-  unless ($result) {
-    warn "Can't open the file named $filename.  Perhaps it has been purged? (error: $!)";
-    clear_uploaded_file($settings,$filename);
-    return;
-  }
-
-  return \*F;
 }
 
 sub load_external_sources {
@@ -1820,51 +1785,16 @@ sub load_external_sources {
 
   my $segment = $segments->[0] if $segments;
 
-  my @feature_file = load_uploaded_files($segment,$page_settings);
-  warn "uploaded feature_file = @feature_file" if DEBUG_EXTERNAL;
-
-  my @external = load_remote_sources($segment,$page_settings);
-  push @feature_file,@external if @external;
-
-  warn "feature_file = @feature_file" if DEBUG_EXTERNAL;
-
-  my %feature_file = map {(ref($_) ? $_->name: $_) => $_} @feature_file;
-  warn join "\n",%feature_file if DEBUG_EXTERNAL;
-  my $f = \%feature_file;
-
-  $PLUGINS->annotate($segment,$f) if $segment && $segment->length <= $MAX_SEGMENT;
-  return $f;
-}
-
-sub load_uploaded_files {
-  my ($segment,$settings) = @_;
-  my @files;
-  my $width = $settings->{width} or return;
-  my $rel2abs = coordinate_mapper($segment) if $segment;
-
-  my @uploads = grep {/^file:/} @{$settings->{tracks}};
-  my @result;
-  for my $file (@uploads) {
-    warn "loading $file" if DEBUG;
-    if (!$settings->{features}{$file}{visible}) { # turned off
-      push @result,$file;
-      next;
-    }
-
-    my $fh = open_uploaded_file($settings,$file,"<") or return;
-
-    my @coord_mapper = $rel2abs ? (-map_coords=>$rel2abs) : ();
-
-    my $feature_file = Bio::Graphics::FeatureFile->new(-file           => $fh,
-						       -smart_features =>1,
-						       @coord_mapper,
-						       );
-    close $fh;
-    next unless $feature_file;
-    $feature_file->name($file);
-    push @result,$feature_file;
+  # $f will hold a feature file hash in which keys are human-readable names of
+  # feature files and values are FeatureFile objects.
+  my $f       = {};
+  if ($segment && $segment->length <= $MAX_SEGMENT) {
+    my $rel2abs = coordinate_mapper($segment);
+    $UPLOADED_SOURCES->annotate($segment,$f,$rel2abs);
+    # $REMOTE_SOURCES->annotate($segment,$f,$rel2abs);
+    $PLUGINS->annotate($segment,$f,$rel2abs);
   }
-  @result;
+  return $f;
 }
 
 sub line_end {
@@ -1988,7 +1918,7 @@ sub get_remote_feature_data {
 sub print_uploaded_file_features {
   my ($settings,$file) = @_;
   my $line_end = line_end();
-  if (my $fh = open_uploaded_file($settings,$file)) {
+  if (my $fh = $UPLOADED_SOURCES->open_file($file)) {
     while (<$fh>) {
       chomp;
       print $_,$line_end;
@@ -2033,9 +1963,10 @@ sub clear_uploaded_file {
 sub edit_uploaded_file {
   my ($settings,$file) = @_;
   warn "edit_uploaded_file(): file = $file" if DEBUG;
+  print_top("Editing $file");
   print start_form();
   my $data;
-  my $fh = open_uploaded_file($settings,$file) or return;
+  my $fh = $UPLOADED_SOURCES->open_file($file) or return;
   $data = join '',expand(<$fh>);
   print table({-width=>'100%'},
 	      TR({-class=>'searchbody'},
@@ -2068,7 +1999,9 @@ sub edit_uploaded_file {
 	     );
   print hidden(-name=>'edited file',-value=>$file);
   print end_form();
+  print_bottom($VERSION);
 }
+
 
 sub coordinate_mapper {
   my $current_segment = shift;
@@ -2419,6 +2352,7 @@ sub build_link_image_page {
   my $settings = shift;
   my $segment  = shift;
   my $source = $CONFIG->source;
+  my $id     = $settings->{id};
   my $url = url(-base=>1);
   $url   .= url(-absolute=>1);
   $url    = dirname($url) . "/gbrowse_img/".escape($source);
@@ -2431,7 +2365,7 @@ sub build_link_image_page {
 			       grep {
 				 $settings->{features}{$_}{options}
 			       } @$tracks;
-  my $img_url = "$url?name=$name;type=$type;width=$width";
+  my $img_url = "$url?name=$name;type=$type;width=$width;id=$id";
   $img_url   .= ";options=$options" if $options;
   print $CONFIG->tr('IMAGE_DESCRIPTION',$img_url,$img_url);
 }

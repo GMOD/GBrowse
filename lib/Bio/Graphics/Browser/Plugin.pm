@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.12.4.1 2005-03-14 14:12:42 lstein Exp $
+# $Id: Plugin.pm,v 1.12.4.2 2005-03-16 21:07:38 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME
@@ -55,7 +55,7 @@ Bio::Graphics::Browser::Plugin -- Base class for gbrowse plugins.
  # called by gbrowse to annotate the DNA, returning features
  sub annotate {
     my $self     = shift;
-    my $segment  = shift;
+    my ($segment,$coordinate_mapper)  = @_;
     my $config   = $self->configuration;
     my $feature_list = $self->new_feature_list;
     $feature_list->add_type('my_type' => {glyph => 'generic',
@@ -451,7 +451,7 @@ this section.
 
 =over 4
 
-=item $feature_file = $plugin->annotate($segment)
+=item $feature_file = $plugin->annotate($segment[,$coordinate_mapper])
 
 The annotate() method will be invoked with a Bio::Das::SegmentI
 segment representing the region of the genome currently on view in the
@@ -467,6 +467,14 @@ Bio::Graphics::FeatureFile also allows you to set up how the features
 will be rendered; you can define tracks, assign different feature
 types to different tracks, and assign each feature type a glyph,
 color, and other options.
+
+The annotate() function will also be passed a coordinate_mapper
+variable.  This is a code ref to a function that will transform
+coordinates from relative to absolute coordinates.  The function takes
+a reference sequence name and a list of [$start,$end] coordinate
+pairs, and returns a similar function result, except that the sequence
+name and coordinates are all in absolute coordinate space.  Currently
+there are no plugins that make use of this facility.
 
 See L<Bio::Graphics::FeatureFile> for details, and the
 RestrictionAnnotator.pm plugin for an example.
@@ -685,6 +693,7 @@ sub find {
 sub annotate {
   my $self = shift;
   my $segment = shift;
+  my $coordinate_mapper = shift;
   # do nothing
   return;
 }
@@ -742,7 +751,7 @@ sub cookie {
   my $self = shift;
   my @cookies;
   my $name = $self->name;
-  my $conf = $self->configuration or next;
+  my $conf = $self->configuration or return;
   my %conf = %$conf;
 
   # we need a better serialization than this...

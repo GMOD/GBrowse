@@ -247,7 +247,7 @@ sub MY::ppd {
 
   if ($oldMM and $inherited =~ /(\s*\<IMPLEMENTATION\>.*\<\/IMPLEMENTATION\>)/m) {
     $implementation = $newimp = $1;
-    $newimp      =~ s/ARCHITECTURE NAME="\S+"/ARCHITECTURE NAME="$arch"/;
+    $newimp      =~ s/ARCHITECTURE NAME=\\"\S+\\"/ARCHITECTURE NAME=\\"$arch\\"/;
     $newimp      =~ s/\$\(OSNAME\)/MSWin32/;
     my $impl58   = $newimp;
     $impl58      =~ s/\Q$arch\E/$arch\-5\.8/;

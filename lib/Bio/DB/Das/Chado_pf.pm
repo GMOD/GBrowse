@@ -1,4 +1,4 @@
-# $Id: Chado_pf.pm,v 1.6 2002-12-02 22:25:21 scottcain Exp $
+# $Id: Chado_pf.pm,v 1.7 2002-12-06 23:44:45 scottcain Exp $
 # Das adaptor for Chado_pf
 
 =head1 NAME
@@ -324,16 +324,20 @@ TO WORK.
 
 sub _segclass { return SEGCLASS }
 
-=head2 _adaptorclass
 
- Title   : _adaptorclass
- Usage   : $class = $db->_adaptorclass
- Function: returns the perl class that we use as a BioSQL database adaptor
- Returns : a string containing the segment class
- Args    : none
- Status  : reserved for subclass use
+package Bio::DB::Das::Chado_pfIterator;
 
-=cut
+sub new {
+  my $package  = shift;
+  my $features = shift;
+  return bless $features,$package;
+}
+
+sub next_seq {
+  my $self = shift;
+  return unless @$self;
+  return shift @$self;
+}
 
 
 

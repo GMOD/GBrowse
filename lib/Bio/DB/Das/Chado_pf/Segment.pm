@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.7 2002-12-05 22:01:17 scottcain Exp $
+# $Id: Segment.pm,v 1.8 2002-12-06 23:44:46 scottcain Exp $
 
 =head1 NAME
 
@@ -99,6 +99,7 @@ package Bio::DB::Das::Chado_pf::Segment;
 use strict;
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
+use Bio::SeqFeatureGeneric;
 use constant DEBUG => 1;
 
 use vars '@ISA','$VERSION';
@@ -115,7 +116,6 @@ sub new {
   throw("start value less than 1\n") if (defined $start && $start < 1);
   $start ||= 1;
 
-#can I cache this value?
   my $length = $self->length;
   throw("end value greater than length\n") if (defined $end && $end >= $length);
   $end ||= $length;
@@ -303,7 +303,7 @@ sub features {
       where
          f.source_feature_id = fd.feature_id and
          fd.feature_id = dbx.dbxref_id and
-         dbx.accession = 'NC_004328' and
+         dbx.accession = $quoted_name and
          f.type_id=cv.cvterm_id and
          f.type_id in
             (select cvterm_id from cvterm
@@ -314,12 +314,31 @@ sub features {
       order by f.fmin ");
    $sth->execute or return; 
 
-#take these results and create feature objects
+#take these results and create a list of Bio::SeqFeatureI objects
+
+  my @features;
+  while (my $hash_ref = $sth->fetchrow_hashref) {
+    my $fstart     = $$hash_ref{fmin}; 
+    my $fend       = $$hash_ref{fmax};
+    my $fstrand    = $$hash_ref{fstrand};
+    my $seq_id     = $name;
+    my $annotation = $$hash_ref{name};
+    my $primary    = $$hash_ref{termname};
+
+    my $feat = Bio::SeqFeatureGeneric->new (
+                       -start      => $$hash_ref{fmin},
+                       -end        => $$hash_ref{fmax},
+                       -strand     => $$hash_ref{fstrand}, 
+                       -seq_id     => $name,
+                       -annotation => $$hash_ref{name},
+                       -primary    => $$hash_ref{termname} );
+    push @features, $feat;
+  }
 
   if ($iterator) {
-    return Bio::DB::Das::Chado_pfIterator->new(\@filtered_features);
+    return Bio::DB::Das::Chado_pfIterator->new(\@features);
   } else {
-    return @filtered_features;
+    return @features;
   }
 }
 =head2 seq
@@ -372,92 +391,5 @@ the segment was originally generated.
 #'
 
 sub factory {shift->{dbadaptor}}
-
-=head2 bioseq
-
- Title   : bioseq
- Usage   : $bioseq = $s->bioseq
- Function: return the underlying Bio::Seq object
-  Returns : a Bio::Seq object
- Args    : none
- Status  : Public
-
-=cut
-
-sub bioseq { shift->{bioseq} }
-
-=head2 _filter
-
- Title   : _filter
- Usage   : @filtered = $s->_filter($features,$filter_args,$callback);
- Function: filter a list of Bio::SeqFeatureI features
- Returns : a list of features filtered as specified
- Args    :
-  $features      an arrayref of Bio::SeqFeatureI features
-  $filter_args   a hashref specifying the filtering
-  $callback      a coderef to be invoked on each filtered feature
-
-  The keys to the filtering hashref are
-    'rangetype'  one of "overlaps", "contains", and "contained_in"
-    'range'      an arrayref containing start and endpoints
-    'types'      an arrayref containing list of feature types to filter on
-
- Status  : for internal use
-
-=cut
-
-sub _filter {
-  my $self = shift;
-  my ($features,$args,$callback) = @_;
-
-  my @filter = "sub {";
-  push @filter,"my \$feature = shift;";
-
-  if (my $range = $args->{range}) {
-    my $rangetype = $args->{rangetype};
-    my ($rstart,$rend) = @$range;
-    push @filter,"my(\$start,\$end) = (\$feature->location->start,\$feature->location->end);";
-    if ($rangetype eq 'overlaps') {
-      push @filter,"return unless $rstart <= \$end;";
-      push @filter,"return unless $rend   >= \$start;";
-    } elsif ($rangetype eq 'contains') {
-      push @filter,"return unless $rstart <= \$start;";
-      push @filter,"return unless $rend   >= \$end;";
-    } elsif ($rangetype eq 'contained_in') {
-      push @filter,"return unless $rstart >= \$start;";
-      push @filter,"return unless $rend   <= \$end;";
-    }
-  }
-
-  if (my $types = $args->{types}) {
-    my $l = join '|',map {quotemeta($_)} @$types;
-    my $regexp = "^($l)\$";
-    push @filter,"my \$type = \$feature->primary_tag;";
-    push @filter,"return unless \$type =~ /$regexp/;";
-  }
-
-  push @filter,"return 1;";
-  push @filter,"}";
-
-  my $filter = join "\n",@filter;  # to make it easier to see
-  warn $filter,"\n" if DEBUG;
-  my $code = eval $filter or $self->throw("Couldn't create filter, compile error = @_");
-
-  if ($callback) {
-    foreach my $f (grep {$code->($_)} @$features) {
-      last unless $callback->($f,$self);
-    }
-    return;
-  }
-
-  grep {$code->($_)} @$features;
-
-}
-
-sub alphabet   { shift->bioseq->alphabet(@_) }
-sub display_id { shift->bioseq->display_id(@_) }
-sub accession_number { shift->bioseq->display_id(@_) }
-sub desc       { shift->bioseq->desc(@_) }
-
 
 1;

@@ -36,16 +36,18 @@ SELECT  fref,fstart,fstop,fsource,fmethod,fscore,fstrand,fphase,gclass,gname,fta
         AND  ((fmethod = 'gene' AND fsource = 'sgd') OR (fmethod = 'coding' AND fsource = 'sgd') OR (fmethod = 'tRNA' AND fsource = 'sgd') OR (fmethod = 'ORF' AND fsource = 'sgd'))
  ORDER BY fgroup.gname
 
-select f.name,f.fmin,f.fmax,f.fstrand,f.residues,f.type_id,f.source_feature_id,cv.termname
-from feature f, cvterm cv
-where f.type_id=cv.cvterm_id and
-      f.source_feature_id in
-        (select feature_id from feature
-          where type_id=6 and   
-                name = 'chromosome_3') and
+select f.name,f.fmin,f.fmax,f.fstrand,cv.termname
+from feature f, cvterm cv, dbxref dbx, feature_dbxref fd 
+where 
+      f.source_feature_id = fd.feature_id and
+      fd.feature_id = dbx.dbxref_id and
+      dbx.accession = 'NC_004328' and
+      f.type_id=cv.cvterm_id and
       f.type_id in 
         (select cvterm_id from cvterm 
-          where termname like '%gene%' or termname like '%rna%' or termname like '%exon%') and
+          where termname like '%gene%'
+             or termname like '%rna%'
+             or termname like '%exon%') and
       f.fmax >= 70000 and
       f.fmin <= 90000
 order by f.fmin

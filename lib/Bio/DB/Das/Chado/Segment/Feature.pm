@@ -94,8 +94,8 @@ sub length {
 }
 
 sub type {shift->{type}}
-sub seq_id { shift->{group} }
-
+sub seq_id { shift->{sourceseq} }
+sub info { shift->{group} }
 =head2 group
 
  Title   : group
@@ -249,7 +249,7 @@ sub sub_SeqFeature {
     my $feat = Bio::DB::Das::Chado::Segment::Feature->new (
                        $self->{factory},
                        $self,
-                       $$hashref{pname},
+                       $self->ref,
                        $start,$stop,
                        $termname{$$hashref{type_id}},
                        $$hashref{strand},

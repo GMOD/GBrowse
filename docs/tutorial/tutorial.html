@@ -3383,7 +3383,22 @@ That should be all you need to do!  Try browsing the new data source
 by requesting <a
 href="http://localhost/cgi-bin/gbrowse/ucsc_hg16.conf"
 target="_new">http://localhost/cgi-bin/gbrowse/ucsc_hg16.conf</a>.
-Request 
+Request URL <a
+href="http://localhost/cgi-bin/gbrowse/ucsc_hg16?name="10:500000..600000;label=ALL_STS_PRIMER-FIRSTEF-GENEID-GENSCAN"
+target="_new">http://localhost/cgi-bin/gbrowse/ucsc_hg16</a>, and you
+should be able to browse through a rudimentary version of the Human
+genome display.
+
+<p>
+
+Once you have a basic configuration file for a remote DAS source, you
+can pretty it up by changing track styles, key names, and so
+forth. Bear in mind that the make_das_conf.pl does its best to guess
+about the right landmarks to use in the list of examples in the
+instructions, which feature types should be made the defaults for
+searching, and how to aggregate multi-part features together.  You
+will almost certainly need to customize these options to meet your
+needs.
 
 <hr>
 
@@ -3413,6 +3428,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Thu Feb 26 17:17:18 SAST 2004
+Last modified: Thu Feb 26 18:30:18 SAST 2004
 <!-- hhmts end -->
 </body> </html>

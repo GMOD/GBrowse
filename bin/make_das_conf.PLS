@@ -19,13 +19,19 @@ $Config{startperl}
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: make_das_conf.PLS,v 1.1 2004-02-23 16:00:34 lstein Exp $
+# $Id: make_das_conf.PLS,v 1.2 2004-02-26 16:45:47 lstein Exp $
 
 use strict;
 use Bio::Das 0.96;
 
 my @COLORS = qw(cyan blue red yellow green wheat turquoise orange);  # default colors
 my $color = 0;      # position in color cycle
+my %known_aggregators = map {$_=>1} qw(clone match processed_transcript wormbase_gene
+                                       orf reftranscript waba_alignment
+                                       coding cds alignment transcript
+                                       ucsc_assembly ucsc_ensgene ucsc_refgene
+                                       ucsc_sanger22 ucsc_sanger22pseudo
+                                       ucsc_softberry ucsc_twinscan ucsc_unigene);
 
 my $url = shift;
 $url or usage_statement();
@@ -76,8 +82,9 @@ sub generate_config_file {
 
   my %seenit;
   my @aggregators = grep {!$seenit{$_}++} 
-                      map { my ($method,$source) = split ':';
-			    "$method\{$method\}"
+                      map {
+                            my ($method,$source) = split ':';
+                            $known_aggregators{$method} ? $method : "$method\{$method\}"
 			  } @types;
   my $aggregators = join "\n       ",@aggregators;
 

@@ -39,8 +39,6 @@ described in the tutorial.  We will assume
   chmod o+rwx /usr/local/apache/htdocs/gbrowse/databases/mbovis
   cp mtb.gff /usr/local/apache/htdocs/gbrowse/databases/mbovis
 
-Also make sure that this 
-
 (3) Set up the configuration file
 
 Use the configuration file 08.genbank.conf as your starting template.

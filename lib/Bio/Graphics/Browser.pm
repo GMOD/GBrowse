@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.51.2.16 2003-07-07 20:45:40 pedlefsen Exp $
+# $Id: Browser.pm,v 1.51.2.17 2003-07-07 22:57:08 pedlefsen Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -874,7 +874,8 @@ sub _get_page_settings {
     $self->_default_page_settings( $page_settings );
   }
 
-  if( !$source_changed || ( request_method() eq 'GET' ) ) {
+  if( !$source_changed ||
+      ( request_method() eq 'GET' ) ) {
     if( !$source_changed ) {
       warn "Source did not change, so we're using the CGI settings." if DEBUG;
     } else {
@@ -1050,7 +1051,8 @@ sub _CGI_page_settings {
   }
 
   # Do any requested actions.  Note the elsifs.
-  if( param( $babelfish->tr( 'Revert' ) ) ) {
+  if( param( $babelfish->tr( 'Revert' ) ) ||
+      param( $babelfish->tr( 'RevertQuick' ) ) ) {
     warn "resetting defaults..." if DEBUG;
     $self->_default_page_settings_tracks( $settings );
   } elsif( param( $babelfish->tr( 'Reset' ) ) ) {
@@ -1224,7 +1226,9 @@ sub _html_main_display {
     }
     my $divider = $self->setting( 'unit_divider' ) || 1;
     print $out_fh
-      h2( $babelfish->tr(
+      h2( ## TODO: REMOVE.  HACK.
+          '<a href=http://gbrowsedev.systemsbiology.net/cgi-bin/gbrowse?source=jdrf&RevertQuick=1">[Reset]</a>',
+          $babelfish->tr(
             'SHOWING_FROM_TO',
             $self->_unit_label( $segment->length() ),
             ( '' . $segment->seq_id() ),

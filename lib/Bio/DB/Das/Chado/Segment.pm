@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.1 2003-01-02 14:20:53 scottcain Exp $
+# $Id: Segment.pm,v 1.2 2003-01-03 20:23:48 scottcain Exp $
 
 =head1 NAME
 
@@ -132,10 +132,8 @@ sub new {
 #    $dbadaptor->{dbh}->trace(4) if DEBUG;
 
   my $sth = $dbadaptor->{dbh}->prepare ("
-select f.seqlen from dbxref dbx, feature f, feature_dbxref fd
-   where f.type_id = 6 and
-         f.feature_id = fd.feature_id and
-         fd.dbxref_id = dbx.dbxref_id and
+select f.feature_id,f.seqlen from dbxref dbx, feature f
+   where f.dbxrefstr = dbx.dbxrefstr and
          dbx.accession = $quoted_name  ");
 
     warn "prepared:$sth\n" if DEBUG ;
@@ -146,19 +144,21 @@ select f.seqlen from dbxref dbx, feature f, feature_dbxref fd
 
   my $hash_ref = $sth->fetchrow_hashref;
   my $length =  $$hash_ref{'seqlen'};
+  my $srcfeature_id = $$hash_ref{'feature_id'};
 
-    warn "$length\n" if DEBUG;
+    warn "length:$length, srcfeature_id:$srcfeature_id\n" if DEBUG;
 
   $self->throw("end value greater than length\n") if (defined $end && $end > $length);
   $end ||= $length;
 
   $length = $end - $start +1;
 
-  return bless {dbadaptor => $dbadaptor,
-                start     => $start,
-                end       => $end,
-                length    => $length,
-                name      => $name }, ref $self || $self;
+  return bless {dbadaptor     => $dbadaptor,
+                start         => $start,
+                end           => $end,
+                length        => $length,
+                srcfeature_id => $srcfeature_id,
+                name          => $name }, ref $self || $self;
 }
 
 
@@ -307,52 +307,93 @@ sub features {
 
   my $feat     = Bio::SeqFeature::Generic->new ();
   my @features;
- 
+
+# set range variable 
 
   my $rstart = $self->start;
   my $rend   = $self->end;
   my $sql_range;
   if ($rangetype eq 'contains') {
-    $sql_range = " fmin <= $rstart and fmax >= $rend ";
+
+    $sql_range = " ((fl.strand=1  and fl.nbeg <= $rstart and fl.nend >= $rend) OR "
+               . "  (fl.strand=-1 and fl.nend <= $rstart and fl.nbeg >= $rend)) ";
+
   } elsif ($rangetype eq 'contained_in') {
-    $sql_range = " fmin => $rstart and fmax <= $rend ";
+
+    $sql_range = " ((fl.strand=1  and fl.nbeg => $rstart and fl.nend <= $rend) OR "
+               . "  (fl.strand=-1 and fl.nend => $rstart and fl.nbeg <= $rend)) ";
+
   } else { #overlaps is the default
-    $sql_range = " fmin <= $rend and fmax >= $rstart ";
+
+    $sql_range = " ((fl.strand=1  and fl.nbeg <= $rend and fl.nend >= $rstart) OR "
+               . "  (fl.strand=-1 and fl.nend <= $rend and fl.nbeg >= $rstart)) ";
+
   }
+
+# set type variable (hard coded to 'gene' right now)
+
+  my @keys = grep(/\sgene/i , keys $self->{dbadaptor}->{cvterm_id} );
+  my $sql_types = "(";
+  $sql_types .= "f.type_id = $self->{dbadaptor}->{cvterm_id}->{$keys[0]}";
+  if (scalar @keys > 1) {
+    for(my $i=1;$i<(scalar @keys);$i++) {
+      $sql_types .= "     or \nf.type_id = $self->{dbadaptor}->{cvterm_id}->{$keys[$i]}";
+    }
+  }
+  $sql_types .= ")";
 
 #$self->{dbadaptor}->{dbh}->trace(2);
 
-  my $quoted_name = $self->{dbadaptor}->{dbh}->quote($self->{name});
+  my $srcfeature_id = $self->{srcfeature_id};
   my $sth = $self->{dbadaptor}->{dbh}->prepare("
-      select f.name,f.fmin,f.fmax,f.fstrand,cv.termname
-      from feature f, cvterm cv, dbxref dbx, feature_dbxref fd
-      where
-         f.source_feature_id = fd.feature_id and
-         fd.feature_id = dbx.dbxref_id and
-         dbx.accession = $quoted_name and
-         f.type_id=cv.cvterm_id and
-         f.type_id in
-            (select cvterm_id from cvterm
-             where termname like \'%gene%\') and
-         $sql_range  
-      order by f.fmin ");
+select f.name,fl.nbeg,fl.nend,fl.strand,f.type_id
+from feature f, featureloc fl
+where
+    $sql_types and
+    fl.srcfeature_id = $srcfeature_id and
+    f.feature_id  = fl.feature_id and
+    $sql_range
+order by fl.nbeg
+       ");
    $sth->execute or $self->throw("feature query failed"); 
 
 #take these results and create a list of Bio::SeqFeatureI objects
 
   while (my $hash_ref = $sth->fetchrow_hashref) {
 
-    $feat = Bio::SeqFeature::Generic->new (
-                       -start      => $$hash_ref{fmin},
-                       -end        => $$hash_ref{fmax},
-                       -strand     => $$hash_ref{fstrand}, 
+    if ($$hash_ref{strand} == 1) {
+      $feat = Bio::SeqFeature::Generic->new (
+                       -start      => $$hash_ref{nbeg},
+                       -end        => $$hash_ref{nend},
+                       -strand     => 1, 
                        -seq_id     => $$hash_ref{name},
                        -annotation => $$hash_ref{name},
                        -group      => "gene",
                        -type       => "gene:sgd",
                        -primary    => "gene" );
+    } elsif ($$hash_ref{strand} == -1) {
+      $feat = Bio::SeqFeature::Generic->new (
+                       -start      => $$hash_ref{nend},
+                       -end        => $$hash_ref{nbeg},
+                       -strand     => -1, 
+                       -seq_id     => $$hash_ref{name},
+                       -annotation => $$hash_ref{name},
+                       -group      => "gene",
+                       -type       => "gene:sgd",
+                       -primary    => "gene" );
+    } else {
+      $feat = Bio::SeqFeature::Generic->new (
+                       -start      => $$hash_ref{nbeg},
+                       -end        => $$hash_ref{nend},
+                       -seq_id     => $$hash_ref{name},
+                       -annotation => $$hash_ref{name},
+                       -group      => "gene",
+                       -type       => "gene:sgd",
+                       -primary    => "gene" );
+    }
+
     push @features, $feat;
-  warn "$feat->{annotation}, $$hash_ref{fmin}, $feat->{start}, $$hash_ref{fmax}, $feat->{stop}\n" if DEBUG;
+  warn "$feat->{annotation}, $$hash_ref{nbeg}, $feat->{start}, $$hash_ref{nend}, $feat->{stop}\n" if DEBUG;
   }
 
   if ($iterator) {
@@ -378,15 +419,10 @@ Returns the sequence for this segment as a simple string.
 sub seq {
   my $self = shift;
 
-  my $quoted_name = $self->{dbadaptor}->{dbh}->quote($self->{name});
+  my $feat_id = $self->{srcfeature_id};
   my $sth = $self->{dbadaptor}->{dbh}->prepare("
-     select residues from feature where feature_id in
-       (select f.feature_id
-        from dbxref dbx, feature f, feature_dbxref fd
-        where f.type_id = 6 and
-           f.feature_id = fd.feature_id and
-           fd.dbxref_id = dbx.dbxref_id and
-           dbx.accession = $quoted_name ) ");
+     select residues from feature 
+     where feature_id = $feat_id ");
   $sth->execute or $self->throw("seq query failed");
 
   my $hash_ref = $sth->fetchrow_hashref;

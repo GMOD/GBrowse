@@ -166,15 +166,21 @@ select f.seqlen from dbxref dbx, feature f
 
 -----------------------------------------------
 
-      select f.name,f.fmin,f.fmax,f.fstrand,cv.termname
-      from feature f, cvterm cv, dbxref dbx, featureloc fl
-      where
-         fl.srcfeature_id   =  dbx.dbxrefstr and                #this is to get src
-         dbx.accession = 'CRA_x54KRFTDC6T' and
-         f.type_id=cv.cvterm_id and
-         f.type_id in
-            (select cvterm_id from cvterm
-             where termname like \'%gene%\') and
-         $sql_range  
-      order by f.fmin ");
+select f.name,fl.nbeg,fl.nend,fl.strand,f.type_id
+from feature f, featureloc fl
+where
+    (f.type_id=14 or f.type_id=17) and
+    fl.srcfeature_id = 101348 and
+    f.feature_id  = fl.feature_id and 
+    ((fl.strand =  1 and fl.nbeg < 400000 and fl.nend > 0) OR
+     (fl.strand = -1 and fl.nbeg > 0 and      fl.nend < 400000))
+order by fl.nbeg
 
+(strand = 1 and f1.nbeg < 400000 and f1.nend > 0) OR
+  (strand = -1 and f1.nbeg > 0 and f1.nend < 400000)
+
+ dbxrefstr='GB_nuc:AAAB01008987.1'
+
+---------------------------------------------------
+
+CREATE INDEX gbrowse_srcfeature_idx ON featureloc (srcfeature_id, nbeg, nend)

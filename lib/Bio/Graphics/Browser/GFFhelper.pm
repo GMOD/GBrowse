@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.7 2003-10-17 15:34:49 markwilkinson Exp $
+# $Id: GFFhelper.pm,v 1.8 2003-10-21 14:50:14 stajich Exp $
 
 =head1 NAME
 
@@ -63,25 +63,29 @@ rollback capability for feature editors/loaders
 
 =head2 GFF help
 
-This module attepts to deal with the different kinds of GFF parsers and
-GFF flavors (Bio::DB::GFF, Bio::Tools::GFF, Artemis) and changes format 
-to avoid breaking them.  It also helps deal with converting Bio::DB::GFF::Feature
-objects to Bio::SeqFeature::Generic objects, which is required for consistent
-feature and attribute handling across different input/output formats.
+This module attepts to deal with the different kinds of GFF parsers
+and GFF flavors (Bio::DB::GFF, Bio::Tools::GFF, Artemis) and changes
+format to avoid breaking them.  It also helps deal with converting
+Bio::DB::GFF::Feature objects to Bio::SeqFeature::Generic objects,
+which is required for consistent feature and attribute handling across
+different input/output formats.
 
 =head2 Sequence Extraction
 
-If DNA is appended to the GFF, it will be extracted.  The read_gff method returns a 
-string containing processed GFF and also a sequence string
+If DNA is appended to the GFF, it will be extracted.  The read_gff
+method returns a string containing processed GFF and also a sequence
+string
 
 =head2 Rollbacks
 
-The state of a segment can be captured and saved in case the user wishes to reload 
-to an earlier version of the segment after editing/deleting features.  The last 
-five states are saved in a round-robin rotation.  In plugins that inherit methods from
-this module, the $ROLLBACK variable must be defined with a string containing the 
-path to a directory where the web user ('apache', 'nobody', 'etc') has write access.  
-If $ROLLBACK is undefined, the rollback functionality is disabled.
+The state of a segment can be captured and saved in case the user
+wishes to reload to an earlier version of the segment after
+editing/deleting features.  The last five states are saved in a
+round-robin rotation.  In plugins that inherit methods from this
+module, the $ROLLBACK variable must be defined with a string
+containing the path to a directory where the web user ('apache',
+'nobody', 'etc') has write access.  If $ROLLBACK is undefined, the
+rollback functionality is disabled.
 
 =head1 FEEDBACK
 
@@ -293,14 +297,12 @@ sub gff2Generic {
 				   -tag         => $self->process_attributes($f) );
 }
 
-
 sub process_attributes {
     my ($self, $f) = @_;
     my $group = $f->group;
-    my ($class, $name);
     my %att = $f->attributes;
-    $class = $group->class;
-    $name = $group->name;
+    my $class = $group->class;
+    my $nm = $group->name;
     
     $att{$class} = $name;
 
@@ -459,5 +461,4 @@ sub rollback_form {
 ###################################################
 
 1;
-
 

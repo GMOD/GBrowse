@@ -1,4 +1,4 @@
-# $Id: ImportFeatures.pm,v 1.11 2003-11-10 05:36:55 sheldon_mckay Exp $
+# $Id: ImportFeatures.pm,v 1.12 2003-11-13 14:55:47 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -441,6 +441,9 @@ sub gff {
 	    $text .= $_;
 	}
     }
+
+    # do we have some data?
+    $self->bad_format("Error: no text to parse") unless $text || $file;
 
     $self->{database_ids} = []if $text =~ /database_id/m;    
 

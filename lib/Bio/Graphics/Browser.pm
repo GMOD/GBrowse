@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.151 2004-06-22 22:32:13 lstein Exp $
+# $Id: Browser.pm,v 1.152 2004-06-24 19:53:57 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -189,14 +189,17 @@ sub sources {
   my $conf        = $self->{conf} or return;
   my @sources = keys %$conf;
 
+  # don't let unauthorized individuals see the source at all
+  my @authorized = grep {$conf->{$_}{data}->authorized('general')} @sources;
+
   # alternative: sort by the config file name
-  # return sort {$conf->{$a}{path} cmp $conf->{$b}{path}} @sources;
+  # return sort {$conf->{$a}{path} cmp $conf->{$b}{path}} @authorized;
 
   # alternative: sort by description
-  return sort {lc $self->description($a) cmp lc $self->description($b)} @sources;
+  return sort {lc $self->description($a) cmp lc $self->description($b)} @authorized;
 
   # alternative: sort by base name
-  # return sort {$a cmp $b} @sources;
+  # return sort {$a cmp $b} @authorized;
 }
 
 =head2 source()
@@ -1913,8 +1916,8 @@ sub authorized {
   my $addr     = CGI->remote_addr;
   undef $host if $host eq $addr;
   return $restrict->($host,$addr,$user) if ref $restrict eq 'CODE';
-  my @tokens = split /\s*(satisfy|order|allow from|deny from|require user|require group)\s+/i,$restrict;
-  shift @tokens;
+  my @tokens = split /\s*(satisfy|order|allow from|deny from|require user|require group|require valid-user)\s+/i,$restrict;
+  shift @tokens unless $tokens[0] =~ /\S/;
   my $mode    = 'allow,deny';
   my $satisfy = 'all';
   my (@allow,@deny,%users);
@@ -1949,6 +1952,9 @@ sub authorized {
       }
       next;
     }
+    if ($directive eq 'require valid-user') {
+      $users{$user}++;
+    }
     if ($directive eq 'require group') {
       croak "Sorry, but gbrowse does not support the require group limit.  Use a subroutine to implement role-based authentication.";
     }
@@ -1980,6 +1986,7 @@ sub match_host {
       $host      = ".$host"      unless $host      =~ /^\./;
       $ok ||= $host =~ /\Q$candidate\E$/;
     }
+    warn "ok = $ok";
     return 1 if $ok;
   }
   $ok;

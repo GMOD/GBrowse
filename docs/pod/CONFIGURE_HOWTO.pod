@@ -1792,12 +1792,13 @@ off-limits:
 
 The value of the restrict option is identical to the Apache
 authorization directives and can include any of the directives
-"Order," "Satisfy," "deny from," "allow from," or "require user."  The
-only difference is that the "require group" directive is not
-supported, since the location of Apache's group file is not passed to
-CGI scripts.  Note that username/password authentication must be
-turned on in httpd.conf and the user must have successfully
-authenticated himself in order for the username to be available.
+"Order," "Satisfy," "deny from," "allow from," "require valid-user" or
+"require user."  The only difference is that the "require group"
+directive is not supported, since the location of Apache's group file
+is not passed to CGI scripts.  Note that username/password
+authentication must be turned on in httpd.conf and the user must have
+successfully authenticated himself in order for the username to be
+available.
 
 As with other gbrowse options, restrict can be a code subroutine.  The
 subroutine will be called with three arguments consisting of the host,
@@ -1829,6 +1830,20 @@ of code:
 
 Note that this may slow down the response time of gbrowse noticeably
 if you have a slow DNS name server.
+
+Another thing to be aware of when restricting access to an entire
+database is that that even though the database itself will not be
+accessible to unauthorized users, the name of the database will still
+be available from the popup "Data Source" menu.  If you wish even the
+name to be suppressed from view by unauthorized users, add the
+following line to the [GENERAL] section of the configuration file of
+the database you wish to suppress:
+
+    restrict = require valid-user
+
+The syntax described earlier for restricting access to tracks by
+hostname, IP address or username holds true for restricting the
+visibility of the database on the Data Source popup menu.
 
 =head1 F. DISPLAYING GENETIC AND RH MAPS
 

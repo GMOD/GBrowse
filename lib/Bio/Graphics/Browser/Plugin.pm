@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.4 2002-06-11 18:57:12 lstein Exp $
+# $Id: Plugin.pm,v 1.5 2002-07-07 21:31:48 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 use strict;
@@ -41,6 +41,10 @@ sub description {
 sub type {
   my $self = shift;
   return 'dumper';
+}
+
+sub mime_type {
+  return 'text/plain';
 }
 
 sub config_defaults {

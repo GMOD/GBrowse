@@ -1,4 +1,4 @@
-# $Id: SequenceDumper.pm,v 1.3 2002-07-05 13:53:10 lstein Exp $
+# $Id: SequenceDumper.pm,v 1.4 2002-07-07 21:31:48 lstein Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::SequenceDumper
 #
@@ -50,7 +50,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::SequenceDumper;
-# $Id: SequenceDumper.pm,v 1.3 2002-07-05 13:53:10 lstein Exp $
+# $Id: SequenceDumper.pm,v 1.4 2002-07-07 21:31:48 lstein Exp $
 # Sequence Dumper plugin
 
 use strict;
@@ -86,7 +86,7 @@ my @ORDER = grep {
 my %FORMATS = @FORMATS;
 my %LABELS  = map { $_ => $FORMATS{$_}[0] } keys %FORMATS;
 
-$VERSION = '0.11';
+$VERSION = '0.12';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -106,22 +106,26 @@ sub dump {
   my @markup;
   my %markuptype;
   my $out = new Bio::SeqIO(-format => $config->{'fileformat'});
-  if ($config->{'format'} eq 'html') {
-    if ($FORMATS{$config->{'fileformat'}}[1]) {  # is xml
-      print header('text/xml');
-      $out->write_seq($segment);
-    } else {
-      print header('text/html');
-      print start_html($segment),h1($segment), start_pre;
-      $out->write_seq($segment);
-      print end_pre();
-      print end_html;
-    }
-  } else { 
-    print header('text/plain');
+  if ($FORMATS{$config->{fileformat}}[1]) {  # is xml
+    $out->write_seq($segment);
+  }
+  elsif ($config->{'format'} eq 'html') {
+    print start_html($segment),h1($segment), start_pre;
+    $out->write_seq($segment);
+    print end_pre();
+    print end_html;
+  } else {
     $out->write_seq($segment);
   }
   undef $out;
+}
+
+sub mime_type {
+  my $self = shift;
+  my $config = $self->configuration;
+  return 'text/xml'  if $FORMATS{$config->{fileformat}}[1]; # this flag indicates xml
+  return 'text/html' if $config->{format} eq 'html';
+  return 'text/plain';
 }
 
 sub config_defaults {

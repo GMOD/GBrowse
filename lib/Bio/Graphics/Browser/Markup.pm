@@ -11,9 +11,9 @@ Bio::Graphics::Browser::Markup - Markup routines for sequences in text form
 =head1 VERSION (CVS-info)
 
  $RCSfile: Markup.pm,v $
- $Revision: 1.1 $
+ $Revision: 1.2 $
  $Author: lstein $
- $Date: 2002-07-07 03:13:36 $
+ $Date: 2002-07-07 21:31:48 $
 
 =head1 SYNOPSIS
 
@@ -146,10 +146,24 @@ sub add_style {
 }
 
 
+=head2 $style = $annotator->style($symbolic_name)
+
+Get the style corresponding to symbolic name, or undef if the name is
+unrecognized.
+
+=cut
+
+sub style {
+  my $self     = shift;
+  my $symbolic = shift;
+  return $self->{symbols}{$symbolic}[1];
+}
+
 =head2 $style = $annotator->get_style($symbolic_name)
 
-Get the style corresponding to symbolic name.  Will die if the name is
-not recognized or does not correspond to an entry of type "style".
+Get a list of CSS/2 styles corresponding to symbolic name.  Will die
+if the name is not recognized or does not correspond to an entry of
+type "style".
 
 =cut
 
@@ -279,18 +293,17 @@ sub _add_colors {
   for my $e (@$events) {
     my ($event,$symbol,$position) = @$e;
     my $rgb   = $self->{symbols}{$symbol}[1] or croak "unknown color style";
+    my $cc = join '',@$current_color;
 
     if ($event eq 'start') {
-
       push @events,[$self->_color_symbol($style_tag,$current_color),$current_position,$position]
-	if defined $current_position;
-
+	if defined $current_position && $cc != 0;
       $current_color    = $self->_add_color($current_color,$rgb);
     }
 
     else { # event eq 'end'
       push @events,[$self->_color_symbol($style_tag,$current_color),$current_position,$position]
-	if defined $current_position;
+	if defined $current_position && $cc != 0;
       $current_color = $self->_subtract_color($current_color,$rgb);
     }
     $current_position = $position;

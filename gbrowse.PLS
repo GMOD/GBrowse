@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.42 2002-07-04 15:49:43 lstein Exp $
+# $Id: gbrowse.PLS,v 1.43 2002-07-07 21:31:48 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -57,7 +57,7 @@ use Carp qw(:DEFAULT croak);
 use CGI qw(:standard escape escapeHTML center *table *dl *TR *td);
 use vars qw($CONFIG %DB $MAX_SEGMENT $DEFAULT_SEGMENT 
 	    $HEADER $HTML $UA $VERSION $CONF_DIR %OBJECT_TYPES
-	    $PLUGINS);
+	    $PLUGINS %PLUGIN_NAME2LABEL $PRESETS);
 
 # if you change the zoom/nav icons, you must change this as well.
 use constant MAG_ICON_HEIGHT => 20;
@@ -92,6 +92,7 @@ use constant DEBUGGING_RECTANGLES => 0;
 #   stop      stop of range relative to ref
 #   source    symbolic name of database/configuration to use
 #   id        unique cookie-based ID for this user
+#   plugin    last accessed plugin
 #   tracks    array ref which has one element for each track on the
 #               display.  The value of each element indicates what
 #               track to display in that position using the configuration
@@ -191,6 +192,7 @@ my ($file_action) = grep {/^modify\./} param();
 # before printing the header because the plugins are responsible for generating the header.
 # NOTE THE EXIT 0 HERE IF THE DUMP IS SUCCESSFUL!
 if (@segments && $plugin_action eq 'Go!'&& $plugin_type eq 'dumper') {
+  do_plugin_header(param('plugin'),$page_settings);
   do_plugin_dump(param('plugin'),$segments[0]) && exit 0
 }
 
@@ -563,6 +565,7 @@ sub adjust_settings {
     }
   $settings->{name}   = param('name')                       if param('name');
   $settings->{source} = param('source')                     if param('source');
+  $settings->{plugin} = param('plugin')                     if param('plugin');
 
   if (my @external = param('eurl')) {
     my %external = map {$_=>1} @external;
@@ -737,7 +740,8 @@ sub settings_table {
 		  # row
 		  TR(
 		     th({-class=>'searchtitle', -colspan=>3, -align=>'left'},'Display Settings:')),
-		  TR(	td({-class=>'searchbody', -valign=>'top'}, 'Show features: '),
+		  TR(	td({-class=>'searchbody', -valign=>'top',-align=>'right'}, 
+			   '<b>Tracks<b><p><i>(External tracks italicized)</i></p>'),
 			td({-class=>'searchbody',-colspan=>2,-width=>'85%'},
 			   checkbox_group(-name=>'label',
 					  # use the track ordering to adjust the order of the checkboxes
@@ -757,7 +761,7 @@ sub settings_table {
 				     -values=>\@widths,
 				     -default=>$settings->{width},
 				     -override=>1
-				   )
+				   ),
 		       ),
 		     td({-align=>'RIGHT'},
 			submit(-name => 'Set Track Options...')
@@ -876,7 +880,10 @@ sub get_external_presets {
     push @urls,$url;
   }
   return unless @labels;
-  (\@labels,\@urls);
+  return (\@labels,\@urls) if wantarray;
+  my %presets;
+  @presets{@urls} = @labels;
+  return \%presets;
 }
 
 # computes the new values for start and stop when the user made use of the zooming bar or navigation bar
@@ -1221,7 +1228,9 @@ sub write_auto {
 
   my %seenit;
 
+  warn "opening $file...\n" if DEBUG;
   my $out = open_uploaded_file($settings,$file,">>") or return;
+  warn "writing $file...\n" if DEBUG;
   for my $f (@$features) {
     my $reference = $f->can('seq_id') ? $f->seq_id : $f->seq_id;
     my $type      = $f->primary_tag;
@@ -1235,7 +1244,7 @@ sub write_auto {
   close $out;
   my (undef,$url) = name_uploaded_file($settings,$file);
   push @{$settings->{tracks}},$url;
-  $settings->{features}{$url} = {visible=>1,options=>0};
+  $settings->{features}{$url} = {visible=>1,options=>0,limit=>0};
 }
 
 sub name_uploaded_file {
@@ -1356,6 +1365,7 @@ sub load_plugin_annotators {
     next unless $PLUGINS->{$p}->type eq 'annotator';
     my $name = $PLUGINS->{$p}->name;
     $name = "plugin:$name";
+    $PLUGIN_NAME2LABEL{$name} = $p;
     unless ($settings->{features}{$name}) {
       push @{$settings->{tracks}},$name;
       $settings->{features}{$name} = {visible=>1,options=>0,limit=>0};
@@ -1806,10 +1816,18 @@ sub object_classes_for_help {
 # a group.  This makes for ugly logic branches.
 sub make_citation_link {
   my ($label,$self_url)   = @_;
-  my $key      = $CONFIG->setting($label=>'key') || $label;
-  (my $anchor  = $label) =~ tr/ /-/;
-  my $link = $self_url.'#'.escapeHTML($anchor);
-  return a({-href=>$link,-target=>'citation'},$key);
+  my $key = $label;
+  my $link;
+  if ($label =~ /^plugin:/) {
+    $link = url(-relative=>1) . "?plugin_action=About...;plugin=$PLUGIN_NAME2LABEL{$label}";
+  } else {
+    $PRESETS ||= get_external_presets || {};
+    $key      = $CONFIG->setting($label=>'key') || $PRESETS->{$key} || $label;
+    (my $anchor  = $label) =~ tr/ /-/;
+    $link = $self_url.'#'.escapeHTML($anchor);
+  }
+  my $style = $label =~ /^(http|ftp|file):/ ? 'Font-style: italic' : '';
+  return a({-href=>$link,-target=>'citation',-style=>$style},$key);
 }
 
 ### PLUGINS ###################################################################################
@@ -1866,7 +1884,7 @@ sub configure_plugins {
     # plugin's configuration screen, set it here
     my @params = grep {/^$name\./} param();
     next unless @params;
-    $p->reconfigure;
+    $p->reconfigure unless param('plugin_action') eq 'Cancel';
   }
 }
 
@@ -1895,6 +1913,7 @@ sub plugin_and_data_source_table {
 			  popup_menu(-name=>'plugin',
 				     -values=>\@plugins,
 				     -labels=>\%labels,
+				     -default => $settings->{plugin},
 				    ),'&nbsp;',
 			  submit(-name=>'plugin_action',-value=>'About...'),'&nbsp;',
 			  submit(-name=>'plugin_action',-value=>'Configure...'),'&nbsp;',
@@ -1914,6 +1933,14 @@ sub plugin_and_data_source_table {
   $table;
 }
 
+sub do_plugin_header {
+  my $plugin        = shift;
+  my $page_settings = shift;
+  my $mime_type     = $PLUGINS->{$plugin}->mime_type;
+  my @cookies       = plugins2cookies({$plugin => $PLUGINS->{$plugin}});
+  print header(-cookie => \@cookies,-type=>$mime_type) unless $HEADER++;
+}
+
 sub do_plugin_dump {
   my $plugin  = shift;
   my $segment = shift;
@@ -1924,6 +1951,7 @@ sub do_plugin_dump {
 
 sub do_plugin_about {
   my $plugin = shift;
+  warn "plugin = $plugin, but PLUGINS = ",join ' ',keys %$PLUGINS;
   my $p = $PLUGINS->{$plugin};
   print h1("About",$p->name);
   print $p->description;
@@ -1951,9 +1979,11 @@ sub do_plugin_find {
 sub do_plugin_configure {
   my $plugin = shift;
   my $p = $PLUGINS->{$plugin} or return;
-  my $action_label = $p->type eq 'finder' ? 'Find'
-    : $p->type eq 'annotator' ? 'Configure'
-    : 'Go!';
+  my $type = $p->type;
+  my @action_labels = ('Cancel','Configure');
+  push @action_labels,'Find' if $type eq 'finder';
+  push @action_labels,'Go!'  if $type eq 'dumper';
+  my @buttons = map {submit(-name=>'plugin_action',-value=>$_)} @action_labels;
 
   print h1($p->type eq 'finder' ? 'Find' : 'Configure',$p->name);
   my $config_html = $p->configure_form;
@@ -1961,11 +1991,13 @@ sub do_plugin_configure {
   print start_form(),
     $config_html ? (
 		    $config_html,p(),
-		    submit(-name=>'plugin_action',-value=>'Cancel'),'&nbsp;',
-		    b(submit(-name=>'plugin_action',-value=>$action_label)),
+		    join ('&nbsp;',
+			  @buttons[0..@buttons-2],
+			  b($buttons[-1]),
+			  ),
 		    # This is an insurance policy in case user hits return in text field
 		    # in which case the plugin_action is not going to be defined
-		    hidden(-name=>'plugin_action',-value=>$action_label,-override=>1),
+		    hidden(-name=>'plugin_action',-value=>$action_labels[-1],-override=>1),
 		   )
                  : ( p('This plugin has no extra configuration settings.'),
 		     b(submit('Back to Browser'))
@@ -2006,6 +2038,7 @@ sub plugins2cookies {
   my @cookies;
   for my $plugin (values %$plugins) {
     my $name = $plugin->name;
+    warn "plugins2cookies for $plugin\n" if DEBUG_PLUGINS;
     my $conf = $plugin->configuration or next;
     my %conf = %$conf;
 
@@ -2051,6 +2084,7 @@ sub footer {
        tt(font({-size=>'small'},"Generic genome browser version $VERSION"))),
        end_html;
 }
+
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

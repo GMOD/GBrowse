@@ -1,4 +1,4 @@
-# $Id: SequenceDumper.pm,v 1.10 2003-09-05 19:03:41 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.11 2003-09-08 15:20:04 stajich Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::SequenceDumper
 #
@@ -50,15 +50,16 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::SequenceDumper;
-# $Id: SequenceDumper.pm,v 1.10 2003-09-05 19:03:41 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.11 2003-09-08 15:20:04 stajich Exp $
 # Sequence Dumper plugin
 
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use Bio::SeqIO;
 use Bio::Seq;
+use Bio::Location::Fuzzy;
 use CGI qw(:standard *pre);
-
+use Bio::SeqFeature::Generic;
 use vars qw($VERSION @ISA);
 use constant DEBUG => 0;
 
@@ -115,14 +116,56 @@ sub dump {
     return;
   }
   my @filter    = $self->selected_features;
-  $segment->absolute(1);
   my $seq  = new Bio::Seq(-display_id   => $segment->display_id,
 			  -desc         => $segment->desc,
 			  -accession_number => $segment->accession_number,
 			  -alphabet     => $segment->alphabet,
 			  );
   $seq->primary_seq($segment->primary_seq);
-  $seq->add_SeqFeature( $segment->features(-types => \@filter) );
+  my $offset = $segment->start;
+  my $segmentend = $segment->end;
+  $seq->add_SeqFeature( map {       
+      my $nf = new Bio::SeqFeature::Generic(-primary_tag => $_->primary_tag,
+					    -source_tag  => $_->source_tag,
+					    -phase       => $_->phase,
+					    -score       => $_->score,
+					    );
+      for my $tag ( $_->get_all_tags ) {
+	  my %seen;
+	  $nf->add_tag_value($tag, grep { ! $seen{$_}++ } 
+			     grep { defined } $_->get_tag_values($tag));
+      }
+      my $loc = $_->location;
+      my @locs = $loc->each_Location;
+      for my $sl (@locs ) {
+	  $sl->start($sl->start() - $offset);
+	  $sl->end  ($sl->end() - $offset);
+	  my ($startstr,$endstr);
+
+	  if( $sl->start() < 1) {
+	      $startstr = "<1";
+	      $endstr   = $sl->end;
+	  }
+	  
+	  if( $sl->end() > $segmentend) {
+	      $endstr = ">$segmentend";
+	      $startstr = $sl->start unless defined $startstr;
+	  }
+	  if( defined $startstr || defined $endstr ) {
+	      $sl = Bio::Location::Fuzzy->new(-start         => $startstr,
+					      -end           => $endstr,
+					      -location_type => '..');
+	      warn $sl->to_FTstring();
+	  }
+      }
+      if( @locs > 1 ) { 
+	  $nf->location( new Bio::Location::Split(-locations => \@locs,
+						  -seq_id    => $segment->display_id));
+      } else { 
+	  $nf->location(shift @locs);
+      }
+      $nf;
+  } $segment->features(-types => \@filter) );
 
   my $out = new Bio::SeqIO(-format => $config->{fileformat});
   my $mime_type = $self->mime_type;
@@ -205,7 +248,7 @@ sub gff_dump {
   print "##date $date\n";
   print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
   my @feature_types = $self->selected_features;
-  $segment->absolute(1);
+  $segment->absolute(0);
   my $iterator = $segment->get_seq_stream(-types => \@feature_types) or return;
   while (my $f = $iterator->next_seq) {
     print $f->gff_string,"\n";

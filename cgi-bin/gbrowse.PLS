@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.102 2004-08-17 20:26:20 lstein Exp $
+# $Id: gbrowse.PLS,v 1.103 2004-08-18 21:42:14 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1540,12 +1540,12 @@ sub multiple_choices {
     for my $r (sort by_score_and_position @results) {
       my $version = eval {$r->isa('Bio::SeqFeatureI') ? undef : $r->version};
       my $name        = eval {$r->name}  || $r->primary_tag;
+
       my $class       = eval {$r->class} || $CONFIG->tr('Sequence');
       my $score       = eval {$r->score} || $CONFIG->tr('NOT_APPLICABLE');
       my ($start,$stop) = ($r->start,$r->end);
       my $padstart = $start - $padding;
       my $padstop  = $stop  + $padding;
-      my %attributes;
       my $description = escapeHTML(eval{join ' ',$r->attributes('Note')}
 				   ||eval{$r->method}||eval{$r->source_tag}||$r->{ref});
       if (my @aliases = eval{$r->attributes('Alias')}) {
@@ -1554,6 +1554,7 @@ sub multiple_choices {
       my $n           = escape("$name");
       my $c           = escape($class);
       $description =~ s/($regexp)/<b class="keyword">$1<\/b>/ig;
+      $description =~ s/(\S{60})/$1 /g;  # wrap way long lines
 
       my $objref     = $class ? "?name=$c:$n" : "?name=$n";
       my $posref     = "?ref=$id;start=$padstart;stop=$padstop;version=$version";

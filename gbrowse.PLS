@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.73 2003-01-02 03:46:02 lstein Exp $
+# $Id: gbrowse.PLS,v 1.74 2003-01-19 19:55:22 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1057,8 +1057,8 @@ sub zoomnav {
   }
 
   elsif ($selected_span) {
-    my $center	    = int($span / 2) + $start;
-    my $range	    = int(($selected_span)/2);
+    my $center	    = ($span / 2) + $start;
+    my $range	    = ($selected_span)/2;
     ($start, $stop) = ($center - $range , $center + $range -1);
   }
 

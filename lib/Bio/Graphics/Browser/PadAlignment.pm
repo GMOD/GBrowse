@@ -11,9 +11,9 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 =head1 VERSION (CVS-info)
 
  $RCSfile: PadAlignment.pm,v $
- $Revision: 1.12 $
+ $Revision: 1.13 $
  $Author: lstein $
- $Date: 2003-07-18 18:23:35 $
+ $Date: 2003-07-23 16:42:17 $
 
 =head1 SYNOPSIS
 
@@ -237,6 +237,7 @@ my %aa_type = (
 	       C=> "special_aa",
 	       G=> "special_aa",
 	       P=> "special_aa",
+	       X=> "special_aa",
 	       "*" => "special_aa"
 	      );
 
@@ -428,6 +429,7 @@ sub alignment {
 
   my $show_mismatches = $options->{show_mismatches};
   my $color_code_proteins = $options->{color_code_proteins};
+  warn "color code = $color_code_proteins";
   my $flip            = $options->{flip};
 
   my @lines = $self->padded_sequences;
@@ -462,8 +464,8 @@ sub alignment {
       $origins->{$name} *= -1;
     }
   }
-
-  # use markup to insert word and line breaks
+  
+ # use markup to insert word and line breaks
   my $markup = Bio::Graphics::Browser::Markup->new;
   $markup->add_style(space    => ' ');
   $markup->add_style(newline  => "\n");
@@ -500,42 +502,42 @@ sub alignment {
   my $result;
   my @length;
 
-  for (my $i = 0; $i < @padded; $i++) {
-
-     if ($color_code_proteins) {
-        next unless $padded[$i][0];
-        my @refMarkup;
-        for(my $r=0; $r<length $padded[$i][0]; $r++) {
-           my $refPos = substr($padded[$i][0],$r,1);
-           next if $refPos =~ /[.\s-]/;         # move on if not amino acid
-           push(@refMarkup,[$aa_type{$refPos},$r=>$r+1]);
-        }
-        $markup->markup(\$padded[$i][0],\@refMarkup);
-    }
-
+  for (my $i = 0; $i < @padded; $i++) {					# ---------------------------> MAJOR CHANGE BEGINS HERE - Shraddha
     for (my $j = 0; $j < @{$padded[$i]}; $j++) {
       next unless $padded[$i][$j];
       my $origin = $origins->{$names{$j}};
       my $offset = $padded[$i][$j] =~ tr/. -/. -/;
-      my $skipit = $offset == length($padded[$i][$j]);
+      my $skipit = $offset == length($padded[$i][$j]);                  # all gaps or emptiness
 
+        if ($j==0 && $color_code_proteins) {                            # colouring reference seq
+        my @refMarkup;
+        for(my $q=0; $q<length $padded[$i][$j]; $q++) {
+           my $refPos = substr($padded[$i][$j],$q,1);
+           next if $refPos =~ /^[.\s-]$/;                               # move on if not amino acid
+           push(@refMarkup,[$aa_type{$refPos},$q=>$q+1]);
+        } # end FOR
 
-      if ($j>0 && ($show_mismatches || $color_code_proteins)) {
+        $length[$i][$j] = length $padded[$i][$j];
+        $markup->markup(\$padded[$i][0],\@refMarkup);
+        }
+      elsif ($j>0 && ($show_mismatches || $color_code_proteins)) {      # non-ref-seqs: highlight mismatches/colour code proteins
         my @markup;
         for (my $r=0; $r<length $padded[$i][$j]; $r++) {
-          my $source = substr($padded[$i][0],$r,1);
-          next if $source=~ /^[.\s-]$/;
           my $targ = substr($padded[$i][$j],$r,1);
           next if $targ =~  /^[.\s-]$/;
+          push(@markup,[$aa_type{$targ}, $r => $r+1])
+            if $color_code_proteins;
+
+          my $source = substr($padded[$i][0],$r,1);
+          next if $source=~ /^[.\s-]$/;
 
           push(@markup,['mismatch',$r => $r+1])
             if (lc($source) ne lc($targ)) && ($show_mismatches);
-          push(@markup,[$aa_type{$targ}, $r => $r+1])
-            if $color_code_proteins;
         }
-        $length[$i][$j] = length $padded[$i][$j];
+        $length[$i][$j] = length $padded[$i][$j];        
         $markup->markup(\$padded[$i][$j],\@markup);
-      } else {
+      }
+      else {
         $length[$i][$j] = length $padded[$i][$j];
       }
 
@@ -545,12 +547,13 @@ sub alignment {
                                     $origin < 0 ? "($names{$j})"
                                                 : $names{$j},
                                     $labels[$j],$padded[$i][$j]);
+                                    
       $labels[$j] += $length[$i][$j] - $offset  if $origin >= 0;
       $labels[$j] -= $length[$i][$j] - $offset  if $origin < 0;
     }
 
     $result .= "\n";
-  }
+  }	# ---------------------------> MAJOR CHANGE ENDS HERE - Shraddha
 
   return $result;
 }

@@ -1,3 +1,8 @@
+1.62    Mon Apr  5 09:43:25 EDT 2004
+	* Fixed the problem of segments shrinking by 1 bp when the starting
+	segment length was an odd number.
+	* Fixed problem of gbrowse_img consuming all available memory
+	when displaying 3d party features in absolute coordinates.
 1.61    Wed Mar 17 21:59:16 EST 2004
         * Moved the BioSQL adaptor to 'experimental'.  It is not guaranteed
         to work.

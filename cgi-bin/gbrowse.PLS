@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.70 2004-04-01 20:17:38 lstein Exp $
+# $Id: gbrowse.PLS,v 1.71 2004-04-05 13:32:11 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1180,6 +1180,8 @@ sub zoomnav {
   my $stop  = $settings->{stop};
   my $span  = $stop - $start + 1;
 
+  warn "before adjusting, start = $start, stop = $stop, span=$span" if DEBUG;
+
   my $flip  = $settings->{flip} ? -1 : 1;
 
   # get zoom parameters
@@ -1197,7 +1199,7 @@ sub zoomnav {
     my $center	    = int($span / 2) + $start;
     my $range	    = int($span * (1-$zoomlevel)/2);
     $range          = 2 if $range < 2;
-    ($start, $stop) = ($center - $range , $center + $range -1);
+    ($start, $stop) = ($center - $range , $center + $range - 1);
   }
 
   elsif (defined $navlevel){
@@ -1215,10 +1217,14 @@ sub zoomnav {
   }
 
   elsif ($selected_span) {
+    warn "selected_span = $selected_span" if DEBUG;
     my $center	    = int(($span / 2)) + $start;
     my $range	    = int(($selected_span)/2);
-    ($start, $stop) = ($center - $range , $center + $range -1);
+    $start          = $center - $range;
+    $stop           = $start + $selected_span - 1;
   }
+
+  warn "after adjusting for navlevel, start = $start, stop = $stop, span=$span" if DEBUG;
 
   # to prevent from going off left end
   if ($start < 1) {

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.84 2004-05-13 10:27:19 marclogghe Exp $
+# $Id: gbrowse.PLS,v 1.85 2004-05-13 13:41:49 marclogghe Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1364,7 +1364,8 @@ sub lookup_features_from_db {
   # Filter out redundant segments; this can happen when the same basic feature is
   # present under several names, such as "genes" and "frameworks"
   my %seenit;
-  @segments = grep {!$seenit{$_->seq_id,$_->start,$_->end,eval{$_->version}}++} @segments;
+  my $version = eval{$_->version} || '';
+  @segments = grep {!$seenit{$_->seq_id,$_->start,$_->end,$version}++} @segments;
   return @segments if @segments > 1;
 
   # this prevents any confusion over (ref,start,stop) and (name) addressing.
@@ -1730,7 +1731,7 @@ sub load_external_sources {
   my ($segments,$page_settings) = @_;
 
   unless ($segments && ref $segments eq 'ARRAY') {
-    $segments = [open_database()->segment($segments->[0])];
+    $segments = [open_database()->segment($segments)];
   }
   elsif ($segments) {
     return if @$segments > 1;

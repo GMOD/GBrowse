@@ -1,4 +1,3 @@
-# $Id: BioSQL.pm,v 1.1 2002-09-09 03:27:03 lstein Exp $
 # Das adaptor for BioSQL
 
 =head1 NAME
@@ -7,7 +6,7 @@ Bio::DB::Das::BioSQL - DAS-style access to a BioSQL database
 
 =head1 SYNOPSIS
 
-  # Open up a feature database
+ # Open up a feature database
  $db = Bio::DB::Das::BioSQL->new(
 				 driver   => 'mysql',
 				 dbname => 'biosql',
@@ -16,6 +15,8 @@ Bio::DB::Das::BioSQL - DAS-style access to a BioSQL database
 				 user   => 'lstein',
 				 pass   => undef,
 				 port   => undef,
+				 namespace   => 'namespace',
+				 version   => version_number,
 				) or die;
 
   @segments = $db->segment(-name  => 'NT_29921.4',
@@ -25,12 +26,7 @@ Bio::DB::Das::BioSQL - DAS-style access to a BioSQL database
   # segments are Bio::Das::SegmentI - compliant objects
 
   # fetch a list of features
-  @features = $db->features(-type=>['type1','type2','type3']);
-
-  # invoke a callback over features
-  $db->features(-type=>['type1','type2','type3'],
-                -callback => sub { ... }
-		);
+  @features = $db->features(-segment=>$segment, -type=>['type1','type2','type3']);
 
   $stream   = $db->get_seq_stream(-type=>['type1','type2','type3']);
   while (my $feature = $stream->next_seq) {
@@ -69,13 +65,6 @@ L<Bio::Das::FeatureTypeI>). Bio::DB::Das::BioSQL provides methods for
 interrogating the database for the types it contains and the counts of
 each type.
 
-=head2 CAVEATS
-
-The current implementation is truly awful.  Features are filtered in
-memory, rather than at the SQL level.  This makes it impractical for
-use for anything but trivially small GenBank entries (less than a
-megabase).
-
 =head1 FEEDBACK
 
 =head2 Mailing Lists
@@ -95,9 +84,9 @@ or the web:
   bioperl-bugs@bio.perl.org
   http://bio.perl.org/bioperl-bugs/
 
-=head1 AUTHOR - Lincoln Stein
+=head1 AUTHORS - Lincoln Stein, Vsevolod (Simon) Ilyushchenko
 
-Email lstein@cshl.org
+Email lstein@cshl.edu, simonf@cshl.edu
 
 =head1 APPENDIX
 
@@ -111,16 +100,16 @@ methods. Internal methods are usually preceded with a _
 package Bio::DB::Das::BioSQL;
 use strict;
 
-use Bio::DB::BioSQL::BioDatabaseAdaptor;
+use Bio::DB::Das::BioSQL::BioDatabaseAdaptor;
 use Bio::DB::Das::BioSQL::Segment;
 use Bio::Root::Root;
 use Bio::DasI;
 use vars qw($VERSION @ISA);
 
 use constant SEGCLASS => 'Bio::DB::Das::BioSQL::Segment';
-use constant ADAPTOR_CLASS => 'Bio::DB::BioSQL::BioDatabaseAdaptor';
+use constant ADAPTOR_CLASS => 'Bio::DB::Das::BioSQL::BioDatabaseAdaptor';
 
-$VERSION = 0.01;
+$VERSION = 0.02;
 @ISA     = qw(Bio::Root::Root Bio::DasI);
 
 =head2 new
@@ -138,7 +127,7 @@ $VERSION = 0.01;
 
  Function: Open up a Bio::DB::DasI interface to a BioSQL database
  Returns : a new Bio::DB::Das::BioSQL object
- Args    : See L<Bio::DB::BioSQL::BioDatabaseAdaptor->new_from_registry()
+ Args    : See L<Bio::DB::Das::BioSQL::BioDatabaseAdaptor->new_from_registry()
            The new() method takes the same arguments exactly.
 
 =cut
@@ -148,7 +137,7 @@ $VERSION = 0.01;
 sub new {
   my $class = shift;
   my $self  = $class->SUPER::new(@_);
-
+  
   # may throw an exception on new_from_registry()
   my $biosql   = $self ->_adaptorclass->new_from_registry(@_);
 
@@ -200,19 +189,28 @@ Otherwise, the method must throw a "multiple segment exception".
 
 =cut
 
-sub segment {
-  my $self = shift;
+sub get_feature_by_name
+{
+  my ($self) = shift;
   my ($name,$start,$end,$class,$version) = $self->_rearrange([qw(NAME
 								 START
 								 END
 								 CLASS
 								 VERSION)],@_);
-  my $seq = eval{$self->biosql->get_Seq_by_acc($name)};
-  if (!$seq && $name =~ s/\.\d+$//) {  # workaround version ?bug in get_Seq_by_acc
-    $seq = eval{$self->biosql->get_Seq_by_acc($name)};
-  }
+  my $seq = $self->biosql->fetch_Seq_by_accession($name);
   return unless $seq;
-  return $self->_segclass->new($seq,$self,$start,$end);
+  return $self->_segclass->new(-bioseq => $seq, -dbadaptor => $self);
+}
+
+sub segment {
+  my $self = shift;
+  my ($name,$start,$end,$class,$version, $absolute) =
+    $self->_rearrange([qw(NAME START END CLASS VERSION ABSOLUTE)],@_);
+
+  my $seq = $self->biosql->fetch_Seq_by_accession($name);
+  
+  return unless $seq;
+  return $self->_segclass->new(-bioseq => $seq, -dbadaptor => $self, -start => $start, -end => $end, -absolute => $absolute);
 }
 
 
@@ -256,14 +254,12 @@ interrupted.  When a callback is provided, the method returns undef.
 =cut
 
 sub features {
-  my $self = shift;
-  my ($types,$callback,$attributes) = 
-       $self->_rearrange([qw(TYPES CALLBACK ATTRIBUTES)],
+    my $self = shift;
+    my ($types,$callback,$attributes, $segment) = 
+       $self->_rearrange([qw(TYPES CALLBACK ATTRIBUTES SEGMENT)],
 			@_);
-  my @features = $self->_segclass->_filter([$self->biosql->top_SeqFeatures],
-					   {types => $types},
-					   $callback);
-  @features;
+    my @features = $segment->top_SeqFeatures();
+    return @features;
 }
 
 =head2 types
@@ -321,52 +317,22 @@ TO WORK.
 =cut
 
 
-=head2 get_seq_stream
-
- Title   : get_seq_stream
- Usage   : my $seqio = $self->get_seq_stream(@args)
- Function: Performs a query and returns an iterator over it
- Returns : a Bio::SeqIO stream capable of returning Bio::Das::SegmentI objects
- Args    : As in features()
- Status  : public
-
-This routine takes the same arguments as features(), but returns a
-Bio::SeqIO::Stream-compliant object.  Use it like this:
-
-  $stream = $db->get_seq_stream('exon');
-  while (my $exon = $stream->next_seq) {
-     print $exon,"\n";
-  }
-
-CURRENT LIMITATION: All features are read into memory first and then
-returned one at a time.  Therefore this method offers no advantage
-over features().
-
-NOTE: In the interface this method is aliased to get_feature_stream(),
-as the name is more descriptive.
-
-=cut
-
-sub get_seq_stream {
-  my @features = shift->features(@_);
-  return Bio::DB::Das::BioSQLIterator->new(\@features);
-}
 
 =head2 biosql
 
  Title   : biosql
  Usage   : $biosql  = $db->biosql([$biosql])
- Function: Get/set the underlying Bio::DB::BioSQL::BioDatabaseAdaptor
- Returns : An Bio::DB::BioSQL::BioDatabaseAdaptor
- Args    : A new Bio::DB::BioSQL::BioDatabaseAdaptor (optional)
+ Function: Get/set the underlying Bio::DB::Das::BioSQL::BioDatabaseAdaptor
+ Returns : An Bio::DB::Das::BioSQL::BioDatabaseAdaptor
+ Args    : A new Bio::DB::Das::BioSQL::BioDatabaseAdaptor (optional)
 
 =cut
 
-sub biosql {
-  my $self = shift;
-  my $d    = $self->{biosql};
-  $self->{biosql} = shift if @_;
-  $d;
+sub biosql
+{
+    my $self = shift;
+    if (@_) {$self->{biosql} = shift;}
+    return $self->{biosql};
 }
 
 =head2 _segclass
@@ -396,19 +362,6 @@ sub _segclass { return SEGCLASS }
 sub _adaptorclass { return ADAPTOR_CLASS }
 
 
-package Bio::DB::Das::BioSQLIterator;
-
-sub new {
-  my $package  = shift;
-  my $features = shift;
-  return bless $features,$package;
-}
-
-sub next_seq {
-  my $self = shift;
-  return unless @$self;
-  return shift @$self;
-}
 
 1;
 

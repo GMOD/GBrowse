@@ -1,4 +1,3 @@
-# $Id: Segment.pm,v 1.1 2002-09-09 03:27:03 lstein Exp $
 
 =head1 NAME
 
@@ -8,10 +7,8 @@ Bio::DB::Das::BioSQL::Segment - DAS-style access to a BioSQL database
 
   # Get a Bio::Das::SegmentI object from a Bio::DB::Das::BioSQL database...
 
-  $segment = $das->segment(-name=>'Landmark',
-                           -start=>$start,
-                           -end => $end);
-
+  #Should be created through Bio::DB::Das::BioSQL.
+  
   @features = $segment->overlapping_features(-type=>['type1','type2']);
   # each feature is a Bio::SeqFeatureI-compliant object
 
@@ -24,36 +21,24 @@ Bio::DB::Das::BioSQL::Segment - DAS-style access to a BioSQL database
      # do something with feature
   }
 
-  $count = $segment->features_callback(-type=>['type1','type2','type3'],
-                                       -callback => sub { ... { }
-                                       );
 
 =head1 DESCRIPTION
 
-Bio::DB::Das::Segment is a simplified alternative interface to
+Bio::DB::Das::BioSQL::Segment is a simplified alternative interface to
 sequence annotation databases used by the distributed annotation
 system. In this scheme, the genome is represented as a series of
-landmarks.  Each Bio::DB::Das::Segment object ("segment") corresponds
+landmarks.  Each Bio::DB::Das::BioSQL::Segment object ("segment") corresponds
 to a genomic region defined by a landmark and a start and end position
-relative to that landmark.  A segment is created using the Bio::DasI
+relative to that landmark.  A segment is created using the Bio::DB::Das::BioSQL
 segment() method.
 
-Features can be filtered by the following attributes:
+The segment will load its features only when the features() method is called.
+If start and end are not specified and features are requested, all the features
+for the current segment will be retrieved, which may be slow.
 
-  1) their location relative to the segment (whether overlapping,
-          contained within, or completely containing)
-
-  2) their type
-
-  3) other attributes using tag/value semantics
-
-Access to the feature list uses three distinct APIs:
-
-  1) fetching entire list of features at a time
-
-  2) fetching an iterator across features
-
-  3) a callback
+Segment can be created as relative or absolute. If it's absolute ,all locations are given
+beginning from segment's start, that is, they are between  [1 .. (end-start)].
+Otherwise, they are given relative to the true start of the segment, irregardless of the start value.
 
 =head1 FEEDBACK
 
@@ -74,9 +59,9 @@ or the web:
   bioperl-bugs@bio.perl.org
   http://bio.perl.org/bioperl-bugs/
 
-=head1 AUTHOR - Lincoln Stein
+=head1 AUTHORS - Lincoln Stein, Vsevolod (Simon) Ilyushchenko
 
-Email lstein@cshl.org
+Email lstein@cshl.edu, simonf@cshl.edu
 
 =head1 APPENDIX
 
@@ -90,22 +75,34 @@ package Bio::DB::Das::BioSQL::Segment;
 use strict;
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
+  use Bio::DB::Das::BioSQL::Iterator;
 use constant DEBUG => 1;
+
+use overload '""' => 'asString';
 
 use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI);
-$VERSION = 0.01;
+$VERSION = 0.02;
 
-# construct a virtual segment that works in a lazy way
+#Construct a virtual segment.
 sub new {
   my $self = shift;
-  my ($bioseq,$dbadaptor,$start,$end) = @_;
+  my ($bioseq, $dbadaptor, $start, $end, $absolute) =
+       $self->_rearrange([qw(BIOSEQ DBADAPTOR START END ABSOLUTE)],
+			@_);
+       
   $start = 1 unless defined $start;
   $end   = $bioseq->length unless defined $end;
+  
+  #I'd like to do that. However, this means that $end will be greater than length,
+  #and biosql code does not like it.
+  #$bioseq->seq(substr($bioseq->seq, $start-1, ($end-$start)));
+  
   return bless {bioseq    =>  $bioseq,
 		dbadaptor =>  $dbadaptor,
 		start  =>  $start,
-		end    =>  $end},ref $self || $self;
+		end    =>  $end,
+		absolute => $absolute},ref $self || $self;
 }
 
 =head2 seq_id
@@ -119,7 +116,7 @@ sub new {
 
 =cut
 
-sub seq_id {  shift->{bioseq}->accession; }
+sub seq_id {  shift->{bioseq}->accession_number; }
 
 =head2 start
 
@@ -130,8 +127,7 @@ sub seq_id {  shift->{bioseq}->accession; }
  Args    : none
  Status  : Public
 
-This is a read-only accessor for the start of the segment.  Alias
-to low() for Gadfly compatibility.
+This is a read-only accessor for the start of the segment. 
 
 =cut
 
@@ -146,13 +142,49 @@ sub start { shift->{start} }
  Args    : none
  Status  : Public
 
-This is a read-only accessor for the end of the segment. Alias to
-high() for Gadfly compatibility.
+This is a read-only accessor for the end of the segment.
 
 =cut
 
 sub end   { shift->{end} }
 
+
+=head2 abs_start
+
+ Title   : abs_start
+ Usage   : $s->abs_start
+ Function: start of segment
+ Returns : integer
+ Args    : none
+ Status  : Public
+
+Return the absolute start of the segment
+
+=cut
+
+sub abs_start
+{
+    return 1;
+}
+
+=head2 abs_end
+
+ Title   : abs_end
+ Usage   : $s->abs_end
+ Function: end of segment
+ Returns : integer
+ Args    : none
+ Status  : Public
+
+Return the absolute end of the segment
+
+=cut
+
+sub abs_end
+{
+    my ($self) = @_;
+    return $self->end - $self->start + 1;
+}
 =head2 length
 
  Title   : length
@@ -170,6 +202,24 @@ sub length {
   my ($start,$end) = @{shift()}{'start','end'};
   $end - $start + 1;
 }
+
+
+=head2 absolute
+
+ Title   : absolute
+ Usage   : $s->absolute
+ Function: whether the positions are counted from the true start of the segment
+            or from the start value
+ Returns : boolean
+ Args    : none
+ Status  : Public
+
+This is a read-only accessor.
+
+=cut
+
+sub absolute   { shift->{absolute} }
+
 
 =head2 features
 
@@ -244,24 +294,86 @@ the SQL layer.
 sub features {
   my $self = shift;
   my ($types,$attributes,$rangetype,$iterator,$callback);
+
   if ($_[0] =~ /^-/) {
     ($types,$attributes,$rangetype,$iterator,$callback) =
       $self->_rearrange([qw(TYPES ATTRIBUTES RANGETYPE ITERATOR CALLBACK)],@_);
   } else {
     $types = \@_;
   }
-  my %filter_args;
-  $filter_args{rangetype} = $rangetype || 'overlaps';
-  $filter_args{range}     = [$self->start,$self->end];
-  $filter_args{types}     = $types if $types && ref $types eq 'ARRAY' && @$types;
+  
+  my @features = $self->top_SeqFeatures();
 
-  my @features          = $self->bioseq->top_SeqFeatures;
-  my @filtered_features = $self->_filter(\@features,\%filter_args,$callback);
   if ($iterator) {
-    return Bio::DB::Das::BioSQLIterator->new(\@filtered_features);
+    return Bio::DB::Das::BioSQL::Iterator->new(\@features);
   } else {
-    return @filtered_features;
+    return @features;
   }
+}
+
+=head2 seq
+
+ Title   : top_SeqFeatures
+ Usage   : $s->top_SeqFeatures
+ Function: retrieve an array of features from the underlying BioDB object.
+ Returns : an array
+ Args    : none
+ Status  : Private
+
+First, make the adaptor retrieve the feature objects from the database.
+Then, get the actual objects and adjust the features' locations if necessary.
+
+=cut
+sub top_SeqFeatures
+{
+    my ($self) = @_;
+
+    $self->bioseq->adaptor->slow_attach_children($self->bioseq, $self->start, $self->end);
+    
+    my @result = $self->bioseq->get_SeqFeatures();
+    
+    if ($self->absolute)
+    {
+        foreach my $feat (@result)
+        {
+            #$feat->start($feat->start - $self->start);
+            foreach my $loc ($feat->location->each_Location)
+            {
+                $loc->start($loc->start - $self->start + 1);
+                $loc->end($loc->end - $self->start + 1);
+            }
+        }
+    }
+    return @result;
+    
+}
+
+
+=head2 get_seq_stream
+
+ Title   : get_seq_stream
+ Usage   : my $seqio = $self->get_seq_stream(@args)
+ Function: Performs a query and returns an iterator over it
+ Returns : a Bio::SeqIO stream capable of returning Bio::Das::SegmentI objects
+ Args    : As in features()
+ Status  : public
+
+This routine takes the same arguments as features(), but returns a
+Bio::SeqIO::Stream-compliant object.  Use it like this:
+
+  $stream = $db->get_seq_stream('exon');
+  while (my $exon = $stream->next_seq) {
+     print $exon,"\n";
+  }
+
+NOTE: In the interface this method is aliased to get_feature_stream(),
+as the name is more descriptive.
+
+=cut
+
+sub get_seq_stream {
+  my @features = shift->features(@_);
+  return Bio::DB::Das::BioSQL::Iterator->new(\@features);
 }
 
 =head2 seq
@@ -313,79 +425,60 @@ sub factory {shift->{dbadaptor}}
 =cut
 
 sub bioseq { shift->{bioseq} }
+  
+=head2 asString
 
-=head2 _filter
+ Title   : asString
+ Usage   : $s->asString
+ Function: human-readable representation of the segment
+ Returns : a string
+ Args    : none
+ Status  : Public
 
- Title   : _filter
- Usage   : @filtered = $s->_filter($features,$filter_args,$callback);
- Function: filter a list of Bio::SeqFeatureI features
- Returns : a list of features filtered as specified
- Args    :
-  $features      an arrayref of Bio::SeqFeatureI features
-  $filter_args   a hashref specifying the filtering
-  $callback      a coderef to be invoked on each filtered feature
+This method will return a human-readable representation of the
+segment.  It is the overloaded method call for the "" operator.
 
-  The keys to the filtering hashref are
-    'rangetype'  one of "overlaps", "contains", and "contained_in"
-    'range'      an arrayref containing start and endpoints
-    'types'      an arrayref containing list of feature types to filter on
+Currently the format is:
 
- Status  : for internal use
+  refseq:start,stop
 
 =cut
 
-sub _filter {
+sub asString {
   my $self = shift;
-  my ($features,$args,$callback) = @_;
-
-  my @filter = "sub {";
-  push @filter,"my \$feature = shift;";
-
-  if (my $range = $args->{range}) {
-    my $rangetype = $args->{rangetype};
-    my ($rstart,$rend) = @$range;
-    push @filter,"my(\$start,\$end) = (\$feature->location->start,\$feature->location->end);";
-    if ($rangetype eq 'overlaps') {
-      push @filter,"return unless $rstart <= \$end;";
-      push @filter,"return unless $rend   >= \$start;";
-    } elsif ($rangetype eq 'contains') {
-      push @filter,"return unless $rstart <= \$start;";
-      push @filter,"return unless $rend   >= \$end;";
-    } elsif ($rangetype eq 'contained_in') {
-      push @filter,"return unless $rstart >= \$start;";
-      push @filter,"return unless $rend   <= \$end;";
-    }
+  return $self->SUPER::asString if $self->absolute;
+  my $label = $self->display_name;
+  my $start = $self->start || '';
+  my $stop  = $self->stop  || '';
+  
+  if ($self->absolute)
+  {
+    $stop = $self->abs_stop;
+    $start= $self->abs_start;
   }
-
-  if (my $types = $args->{types}) {
-    my $l = join '|',map {quotemeta($_)} @$types;
-    my $regexp = "^($l)\$";
-    push @filter,"my \$type = \$feature->primary_tag;";
-    push @filter,"return unless \$type =~ /$regexp/;";
-  }
-
-  push @filter,"return 1;";
-  push @filter,"}";
-
-  my $filter = join "\n",@filter;  # to make it easier to see
-  warn $filter,"\n" if DEBUG;
-  my $code = eval $filter or $self->throw("Couldn't create filter, compile error = @_");
-
-  if ($callback) {
-    foreach my $f (grep {$code->($_)} @$features) {
-      last unless $callback->($f,$self);
-    }
-    return;
-  }
-
-  grep {$code->($_)} @$features;
-
+  
+  return "$label:$start,$stop";
 }
 
+sub name { shift->asString }
+
+#Have to return bioseq->obj, not the wrapper around it (bioseq),
+#because some classes check for the exact class name.
+sub primary_seq {return shift->bioseq->obj}
+sub dna {return shift->seq}
+
+#Forwarding various access methods to the underlying objects.
 sub alphabet   { shift->bioseq->alphabet(@_) }
 sub display_id { shift->bioseq->display_id(@_) }
 sub accession_number { shift->bioseq->display_id(@_) }
 sub desc       { shift->bioseq->desc(@_) }
+
+sub display_name {shift->bioseq->display_id(@_)}
+sub location {return shift}
+
+sub is_circular {return shift->bioseq->is_circular}
+sub annotation {return shift->bioseq->annotation}
+sub species {return shift->bioseq->species}
 
 
 1;

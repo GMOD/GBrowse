@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.93 2004-06-08 22:04:14 lstein Exp $
+# $Id: gbrowse.PLS,v 1.94 2004-06-16 14:54:16 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -615,7 +615,7 @@ sub default_settings {
   $settings->{ins}     = 1;
   $settings->{head}    = 1;
   $settings->{ks}      = 'between';
-  $settings->{sk}      = 'sorted';
+  $settings->{sk}      = $CONFIG->setting('default varying') ? 'unsorted' : 'sorted';
   set_default_tracks($settings);
 }
 

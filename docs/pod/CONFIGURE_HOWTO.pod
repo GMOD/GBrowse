@@ -564,6 +564,11 @@ width of each level, in bp.  For example:
 
       zoom levels = 1000 2000 5000 10000 20000 40000 100000 200000
 
+=item * default varying
+
+The track selection table will be sorted alphabetically, by default;
+setting this variable to true will cause the tracks to appear in the
+same order as they appear in the configuration file.
 
 =item * keyword search max
 

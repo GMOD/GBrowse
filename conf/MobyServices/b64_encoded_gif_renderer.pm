@@ -17,7 +17,7 @@ sub render {
     my $content;
     foreach my $subnode($DOM->childNodes){
         next unless  (($subnode->nodeType == TEXT_NODE) || ($subnode->nodeType == CDATA_SECTION_NODE));
-        $content .=$subnode->toString;
+        $content .=$subnode->textContent;
     }
     $content =~ s/^\s+//; $content =~ s/\s+$//;
     my $bindata = decode_base64($content);

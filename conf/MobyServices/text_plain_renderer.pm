@@ -16,7 +16,7 @@ sub render {
     my $content;
     foreach my $subnode($DOM->childNodes){
         next unless  (($subnode->nodeType == TEXT_NODE) || ($subnode->nodeType == CDATA_SECTION_NODE));
-        $content .=$subnode->toString;
+        $content .=$subnode->textContent;
     }
     $content =~ s/^\s+//; $content =~ s/\s$//;  # get rid of leading and trailing spaces since they are meaningless in a plaintext object
     return ("$content",0);# the 0 indicates that we have only rendered the top-level XML of this object

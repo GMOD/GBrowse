@@ -17,7 +17,7 @@ sub render {
     foreach my $subnode($DOM->childNodes){
         next unless  (($subnode->nodeType == TEXT_NODE) || ($subnode->nodeType == CDATA_SECTION_NODE));
         no strict 'refs';
-        $content .=$subnode->toString;
+        $content .=$subnode->textContent;
     }
 
     $content =~ s/(\S{100})/$1\<br\>/g;

@@ -195,7 +195,10 @@ columns, delimited by tabs or spaces:
   <dt><b>Column 4, Description</b> [optional]
   <dd>The fourth column, if present, is treated as a description.  The description will be printed at the
       bottom of the feature.  If there is no description, either leave blank, or use empty quotes.  If there
-      is whitespace in the description, surround it with quotes.
+      is whitespace in the description, surround it with quotes.  You can also enter <i>attribute=value</i>
+      information here for processing by certain glyphs.  The only combination you are likely to use currently
+      is <i>score=XXXXX</i> where <i>XXXX</i> is some numeric value.  This is used by the <i>xyplot</i>
+      glyph to chart numeric data on the genome, such as microarray intensity values.
       <p>
   <dt><b>Column 5, URL</b> [optional]
   <dd>The last column contains a URL to link to when the user clicks on the feature.
@@ -586,6 +589,16 @@ following glyphs are implemented:</P>
 <tr class="searchbody"> <th>triangle</th> <td>A triangle, used to
 represent point features like SNPs, or deletions and insertions.  May
 be oriented north, south, east or west.<td> </tr>
+
+<tr class="searchbody"> <th>xyplot</th> <td>A histogram, line plot or column chart,
+used for graphic numeric features such as microarray intensity values. To indicate
+the value you wish to chart, add a score=XXXX note to the description section:
+<blockquote><pre>
+    Intensity    spot1    15569-15724    score=192
+    Intensity    spot2    17451-17597    score=1071
+    </pre></blockquote>
+<td> </tr>
+
 </table>
 
 <p>
@@ -682,7 +695,32 @@ The following glyph-specific options are recognized:
     </td>
 </tr>
 
-    
+  <tr class="searchbody">
+  <th class="searchtitle">xyplot</th>
+  <td>graphtype</td>
+  <td>Type of graph
+      (histogram, boxes, line, points, linepoints)
+  </td>
+</tr>
+
+<tr class="searchbody">
+  <th class="searchtitle">&nbsp;</th>
+  <td>min_score</td>
+  <td>Minimum score for feature (will be level 0 on graph)  </td>
+</tr>
+
+<tr class="searchbody">
+  <th class="searchtitle">&nbsp;</th>
+  <td>max_score</td>
+  <td>Maximum score for feature (will be level 0 on graph)  </td>
+</tr>
+
+<tr class="searchbody">
+  <th class="searchtitle">&nbsp;</th>
+  <td>scale</td>
+  <td>Where to draw the Y axis scale, if any (left, right, both, none)</td>
+</tr>
+
 </table>
 
 <hr>

@@ -1016,10 +1016,13 @@ are described in the next section.
 A large variety of glyphs are available, and more are being added as
 the Bio::Graphics module grows.
 
-A list of the common glyphs and their options is provided by the GBrowse
-itself.  Click on the "[Help]" link in the section labeled "Upload
-your own annotations".  This page also lists the valid foreground and
-background colors.  The most popular glyph types are:
+A list of the common glyphs and their options is provided by the
+GBrowse itself.  Click on the "[Help]" link in the section labeled
+"Upload your own annotations".  This page also lists the valid
+foreground and background colors.  Most of the glyphs are found in the
+BioPerl distribution, but a few are distributed directly with GBrowse.
+
+The most popular glyph types are:
 
   Glyph			Description
   -----                 -----------
@@ -1037,6 +1040,8 @@ background colors.  The most popular glyph types are:
   heterogeneous_segments a multi-segmented feature in which each segment can
                         have a distinctive color.  For Jim Kent's WABA features,
                         this works with the waba_alignment aggregator.
+  idiogram              this takes specially-formatted feature data and turns it
+			into an idiogram of a Giemsa-stained metaphase chromosome
   processed_transcript  multi-purpose representation of a spliced mRNA, including
                         positions of UTRs
   segments		a multi-segmented feature such as an alignment
@@ -1074,6 +1079,7 @@ following modules:
   generic			Bio::Graphics::Glyph::generic
   graded_segments		Bio::Graphics::Glyph::graded_segments
   heterogeneous_segments	Bio::Graphics::Glyph::heterogeneous_segments
+  idiogram			Bio::Graphics::Glyph::idiogram
   line				Bio::Graphics::Glyph::line
   primers			Bio::Graphics::Glyph::primers
   processed_transcript          Bio::Graphics::Glyph::processed_transcript

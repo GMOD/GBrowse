@@ -1,4 +1,8 @@
 1.57	Sat Oct  4 21:59:19 EDT 2003
+	* New idiogram glyph for putting images of Giemsa-stained chromosomes
+	in the overview.
+	* Added Icelandic translation
+	* Updated French translation
 	* GET syntax for invoking gbrowse now changed from 
 	http://localhost/cgi-bin/gbrowse?source=yeast
 	to 
@@ -10,7 +14,6 @@
 	* Added mechanisms to restrict individual tracks by username and password
 	or by host, domain, or IP address.
         * Fixed ppm install utility script
-
 1.55
         * Removed hard coded paths in install scripts
 	* Auto-open tracks that contain matches to the search term.  This avoids

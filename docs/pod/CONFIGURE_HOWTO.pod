@@ -28,7 +28,9 @@ Project (L<http://www.gmod.org/>).
 
 =item J. BioMOBY Services
 
-=item K. FURTHER INFORMATION
+=item K. FILTERING SEARCH RESULTS
+
+=item L. FURTHER INFORMATION
 
 =back
 
@@ -2202,7 +2204,53 @@ script.
 
 =cut
 
-=head1 K. FURTHER INFORMATION
+=head1 K. FILTERING SEARCH RESULTS 
+
+GBrowse provides a method to filter the contents of individual tracks based
+on information that can be obtained from feature attributes.  For example,
+suppose you have performed a blast and added all hits as similarity features
+on an entry. In gbrowse, all those features can get a little crowdy.
+The administrator can decide to show only the top 5 of the blast hits.
+This can easily be accomplished by adding the filter option in the conf file.
+It might look like this:
+
+  [BLAST]
+  feature       = blast
+  glyph         = segments
+  filter = sub {
+                 my $feat = shift;
+                 (my $rank) = $feat->get_tag_values('rank'); # persistent Bio::SeqFeature::Generic features
+                 #(my $rank) = $feat->attributes('rank'); # Bio::DB::GFF::Feature
+                 $rank < 6;
+               }
+
+Another useful example is to show features coming from a plain genbank file.
+When loaded into BioSQL the source becomes 'EMBL/Genbank/SwissProt'.
+Using the Bio::DB::Das::BioSQL adaptor you have to pass the source to the
+feature option. It can be rather difficult to distinguish all the features
+when they all have the same source string. This problem can be solved using
+the filter option. In the following example the difference between the
+features is done based on the primary_tag
+
+  [REGION]
+  feature      = EMBL/GenBank/SwissProt
+  filter       = sub {
+                  my $feat = shift;
+                  $feat->primary_tag =~ /region/i;
+                 }
+  key          = RefSeq Protein Domains
+                                                                                
+  [SIGPEPTIDE]
+  feature      = EMBL/GenBank/SwissProt
+  filter       = sub {
+                  my $feat = shift;
+                  $feat->primary_tag =~ /sig_peptide/i;
+                 }
+  key          = RefSeq Signal Peptide
+
+
+
+=head1 L. FURTHER INFORMATION
 
 For further information, bug reports, etc, please consult the mailing
 lists at www.gmod.org.  The main mailing list for gbrowse support is

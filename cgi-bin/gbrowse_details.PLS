@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.7 2003-09-22 20:26:56 markwilkinson Exp $
+# $Id: gbrowse_details.PLS,v 1.8 2003-09-23 23:36:47 markwilkinson Exp $
 
 use strict;
 use CGI qw(:standard *table *TR);
@@ -195,9 +195,9 @@ sub print_matches {
 
   my $m = length($top_label) > length($bot_label) ? length($top_label) : length($bot_label);
   my $p = length($src_x) > length($tgt_x) ? length($src_x) : length($tgt_x);
-  my $t = $m+$p-2;
+  my $t = $m+$p;
   my $sp = "%${t}s %s";
-  my $l  = ' ' x ($m+$p-8);  # adjusting for HTML
+  my $l  = ' ' x ($m+$p+1);  # adjusting for HTML
 
   my $string;
   my @top    = $top    =~ /(.{1,60})/g;

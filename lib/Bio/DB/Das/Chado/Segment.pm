@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.15 2003-01-30 20:10:15 scottcain Exp $
+# $Id: Segment.pm,v 1.16 2003-01-30 21:08:28 scottcain Exp $
 
 =head1 NAME
 
@@ -124,7 +124,7 @@ sub new {
 
   my $sth = $factory->{dbh}->prepare ("
              select name,feature_id,seqlen from gbrowse_assembly
-             where type_id = ." $$cvterm_id{$ASSEMBLY_TYPE} ." and
+             where type_id = ". $$cvterm_id{$ASSEMBLY_TYPE} ." and
                    name ilike $quoted_name  ");
 
     warn "prepared:$sth\n" if DEBUG ;
@@ -387,11 +387,11 @@ sub features {
     $sql_types .= ") and ";
   }
 
-#$self->{factory}->{dbh}->trace(2);
+#$self->{factory}->{dbh}->trace(1);
 
   my $srcfeature_id = $self->{srcfeature_id};
   my $sth = $self->{factory}->{dbh}->prepare("
-    select f.name,fl.nbeg,fl.nend,fl.strand,f.type_id,f.feature_id
+    select distinct f.name,fl.nbeg,fl.nend,fl.strand,f.type_id,f.feature_id
     from feature f, featureloc fl
     where
       $sql_types 
@@ -416,6 +416,8 @@ sub features {
       $start = $$hashref{nbeg};
     }
 
+#    warn "-->$$hashref{name}<--\n";
+
     $feat = Bio::DB::Das::Chado::Segment::Feature->new (
                        $self->{factory},
                        $self,
@@ -423,7 +425,7 @@ sub features {
                        $start,$stop,
                        $termname{$$hashref{type_id}},
                        $$hashref{strand},
-                       $self->{name},
+                       $$hashref{name},
                        $$hashref{name},$$hashref{feature_id});  
 
     push @features, $feat;
@@ -499,5 +501,26 @@ sub get_feature_stream {
     warn "feature array: @features\n" if DEBUG;
   return Bio::DB::Das::ChadoIterator->new(\@features);
 }
+
+=head2 clone
+
+ Title   : clone
+ Usage   : $copy = $s->clone
+ Function: make a copy of this segment
+ Returns : a Bio::DB::GFF::Segment object
+ Args    : none
+ Status  : Public
+
+This method creates a copy of the segment and returns it.
+
+=cut
+
+# deep copy of the thing
+sub clone {
+  my $self = shift;
+  my %h = %$self;
+  return bless \%h,ref($self);
+}
+
 
 1;

@@ -82,8 +82,8 @@ sub new {
   @{$self}{qw(type group db_id absolute)} =
     ($type,$group,$db_id,$factory->{absolute});
 
-  @{$self}{qw(feature_id srcfeature_id )} = 
-    ($feature_id,$parent->{srcfeature_id});
+  @{$self}{qw(feature_id srcfeature_id score ) } = 
+    ($feature_id,$parent->{srcfeature_id},0);
 
   $self;
 }
@@ -93,8 +93,8 @@ sub length {
   return $self->end - $self->start +1 ;
 }
 
-
-sub seq_id { shift->{sourceseq} }
+sub type {shift->{type}}
+sub seq_id { shift->{group} }
 
 =head2 group
 
@@ -253,7 +253,7 @@ sub sub_SeqFeature {
                        $start,$stop,
                        $termname{$$hashref{type_id}},
                        $$hashref{strand},
-                       $self->{name},
+                       $$hashref{name},
                        $$hashref{name}, $$hashref{feature_id}); 
 
     push @features, $feat;
@@ -685,5 +685,24 @@ sub name {
   return $self->group || $self->SUPER::name;
 }
 
+=head2 score
+
+ Title   : score
+ Usage   : $score = $f->score([$newscore])
+ Function: get or set the feature score
+ Returns : a string
+ Args    : a new score (optional)
+ Status  : Public
+
+This method gets or sets the feature score.
+
+=cut
+
+sub score  {
+  my $self = shift;
+  my $d    = $self->{score};
+  $self->{score} = shift if @_;
+  $d;
+}
 
 1;

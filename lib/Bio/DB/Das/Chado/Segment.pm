@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.35 2003-07-08 03:36:36 scottcain Exp $
+# $Id: Segment.pm,v 1.36 2003-07-11 18:00:36 scottcain Exp $
 
 =head1 NAME
 
@@ -434,6 +434,8 @@ sub features {
   my $srcfeature_id = $self->{srcfeature_id};
 
   $self->{factory}->{dbh}->do("set enable_seqscan=0");
+  $self->{factory}->{dbh}->do("set enable_hashjoin=0");
+
   my $sth = $self->{factory}->{dbh}->prepare("
     select distinct f.name,fl.fmin,fl.fmax,fl.strand,f.type_id,f.feature_id
     from feature f, featureloc fl
@@ -445,6 +447,7 @@ sub features {
     order by type_id
        ");
    $sth->execute or $self->throw("feature query failed"); 
+   $self->{factory}->{dbh}->do("set enable_hashjoin=1");
    $self->{factory}->{dbh}->do("set enable_seqscan=1");
 
 #$self->{factory}->{dbh}->trace(0);

@@ -2,6 +2,7 @@
 {
 
 #Icelandic translation done by Gudmundur A. Thorisson <mummi@cshl.edu>
+#$Id: is.pm,v 1.3 2004-08-17 15:30:51 mummi Exp $
 
  CHARSET =>   'ISO-8859-1',
 
@@ -44,6 +45,35 @@ END
    BOOKMARK => 'Vista sem bókamerki',
 
    IMAGE_LINK => 'Fá vefslóð á mynd',
+
+   SVG_LINK   => 'Mynd sem hentar til birtingar',
+
+   SVG_DESCRIPTION => <<END,
+<p>
+Eftirfarandi slóð mynd býr til þessa sömu mynd á Scalable Vector Graphic (SVG) sniði. SVG býður upp á nokkra umfram "raster"-byggðar myndir eins og jpeg eða png.
+</p>
+<ul>
+<li>hægt að breyta stærð án þess að tapa upplausn
+<li>hægt að vinna með myndirnar í myndvinnsluforritum sem höndla vector-grafík, til dæmis færa til annoteringar ef vill
+<li>ef nauðsyn krefur er hægt að breyta yfir í EPS-snið til að senda til birtingar í vísindaritum
+</ul>
+<p>
+Til að skoða SVG-myndir þarftu að hafa vafra sem styður SVG-sniðið, td. Adobe "plugin" fyrir vefvafra, eða Adobe Illustrator myndvinnsluforritið.
+</p>
+<p>
+Adobe "plugin": <a
+href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Macintosh">Macintosh</a>
+| <a
+href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Windows">Windows</a>
+<br />
+Linuxnotendur geta skoðað þennan hér: <a href="http://xml.apache.org/batik/">Batik SVG Viewer</a>.
+</p>
+<p>
+<a href="%s" target="_blank">Skoða SVG-mynd í nýjum vafraglugga</a></p>
+<p>
+Til að vista þessa mynd á harða diskinn hjá þér, Ctrl-klikkaðu (Macintosh) eða hægri-klikkaðu (Windows) og veldu "Save link to disk".
+</p>   
+END
 
    IMAGE_DESCRIPTION => <<END,
 <p>
@@ -91,7 +121,9 @@ END
 
    TRACKS   => 'Brautir',
 
-   EXTERNAL_TRACKS => '(Utanaðkomandi brautir skáletraðar)',
+   EXTERNAL_TRACKS => "(Utanaðkomandi brautir skáletraðar)<br><sup>*</sup>Yfirlitsbraut",
+
+   OVERVIEW_TRACKS => '<sup>*</sup>Yfirlitsbraut',
 
    EXAMPLES => 'Dæmi',
 
@@ -118,6 +150,10 @@ END
    BETWEEN     => 'Milli',
 
    BENEATH     => 'Undir',
+
+   LEFT        => 'Vinstri',
+
+   RIGHT       => 'Hægri',
 
    TRACK_NAMES => 'Tafla yfir nöfn á brautum',
 

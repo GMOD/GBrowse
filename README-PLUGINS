@@ -87,6 +87,9 @@ See the RestrictionAnnotator.pm module for how this works.
 	
 METHODS WITH REASONABLE DEFAULTS THAT YOU MIGHT WANT TO OVERRIDE
 
+$plugin->database($database)
+  Get/set a copy of the Bio::DB::GFF or Gadfly database handle.
+
 $plugin->browser_config($bio_graphics_browser)
   Get.set a copy of the Bio::Graphics::Browser
   object.  This object provides access to values in the
@@ -103,9 +106,20 @@ $plugin->config_path($path)
   this within a plugin method to retrieve the path to any
   configuration files the plugin might depend on.
 
+$plugin->page_settings($settings)
+  Get/set the GBrowse page settings. This is a big hash whose
+  structure is described in the source code for the gbrowse
+  executable.
+
+$plugin->init
+  This is a chance to do other configuration.  It is called
+  *after* calling database(), browser_config(), config_path() and
+  page_settings() to set the like-named instance variables.  The
+  default init() method does nothing.
+
 $plugin->configuration($current_settings);
   Get/set current settings.  This will be called before 
-  change_configuration().  The settings are a hash reference
+  configure_form().  The settings are a hash reference
   containing anything you want.
 
 $plugin->configure_form();
@@ -126,11 +140,4 @@ $plugin->reconfigure
   if param() returns at least one parameter name that begins
   with the plugin's name.
 
-$plugin->database($database)
-  Get/set a copy of the Bio::DB::GFF or Gadfly database handle.
-
-$plugin->page_settings($settings)
-  Get/set the GBrowse page settings. This is a big hash whose
-  structure is described in the source code for the gbrowse
-  executable.
 

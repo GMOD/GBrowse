@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.35 2002-05-24 03:00:22 lstein Exp $
+# $Id: gbrowse.PLS,v 1.36 2002-06-11 18:57:12 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -1800,6 +1800,7 @@ sub configure_plugins {
     $p->browser_config($conf);
     $p->config_path($conf_dir);
     $p->page_settings($settings);
+    $p->init();  # other initialization
 
     # retrieve persistent configuration
     my $config = retrieve_plugin_config($p);

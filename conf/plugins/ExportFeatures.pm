@@ -1,4 +1,4 @@
-#$Id: ExportFeatures.pm,v 1.11 2004-03-12 15:18:18 sheldon_mckay Exp $
+#$Id: ExportFeatures.pm,v 1.12 2004-03-16 13:37:42 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -10,10 +10,10 @@ This modules is not used directly
 
 =head1 DESCRIPTION
 
-This plugin dumps specially formatted annotations
-to the Artemis and Apollo genome annotation browser/editors.
-It works best for smaller segments derived from GenBank/EMBL-style
-annotations and is happiest when SO-compliant gene containment
+This plugin dumps annotations to the Artemis and Apollo 
+genome annotation browser/editors. It works best for smaller 
+segments derived from GenBank/EMBL-style annotations 
+and is happiest when SO-compliant gene containment
 hierarchies are employed.  Although it is possible in theory to
 dump whole chromosomes, etc, this plugin is best suited for
 on-the-fly export of smaller chunks.
@@ -24,32 +24,31 @@ Artemis accepts features in a few formats but its native format
 is EMBL, which is what is produced by this plugin.  Artemis is fairly 
 flexible with respect to what kind of features it will accept, 
 although it always throws a non-fatal warning when 'illegal' feature 
-types or qualifiers are encountered on loading.  These can be 
-legitimized by editing the external Artemis configuration 
-files (options or options.txt).  Artemis offers flexible feature 
-creation and editing but is best suited for small and/or 
-simple genomes.  Feature display options are highly configurable via
-external configuration files.
+types or qualifiers are encountered on loading.  Features and/or 
+qualifiers that Artemis complains about can be legitimized by editing 
+the external Artemis configuration files (options or options.txt).  
+Artemis offers flexible feature creation and editing but is best 
+suited for small and/or simple genomes.  Feature display options 
+are highly configurable via external configuration files.
 
 =head1 APOLLO
 
 Apollo supports import of features via GAME-XML.  It can cope 
-with very large annotated sequences but has a more constrained 
-suite of annotation-based editing capabilities.
-As with Artemis, feature display options are highly configurable 
-via external configuration files.  
-
+with very large annotated sequences. Feature display options 
+are highly configurable via external configuration files.  
 The version of GAME-XML produced by this plugin is somewhat crippled 
 in that it lacks the Computational_Analysis tree that is used in 
-full-featured GAME-XML. This may be added if there is a demand
-for it. Gene containment hierarchies must be unflattened into 
-rigidly formatted annotation trees to make GAME-XML.  This is 
-facilitated by using a SO-compliant transcript aggregator and
-mildly controlled attribute vocabulary in the Data loading
-plugin 'ImportFeatures.pm', which is designed to work with this
-module to aid round-tripping.  This works for simple feature
-editing in Apollo but more robust interoperability will require 
-further testing and feedback from the user community. 
+full-featured GAME-XML. This may be added later if there is a demand
+for it. 
+
+Gene containment hierarchies must be unflattened into 
+rigidly formatted annotation trees to make properly formatted GAME-XML.
+This is facilitated by using a transcript aggregator and 
+mildly controlled attribute vocabulary in the data 
+loading plugin 'ImportFeatures.pm', which is designed 
+to work with this module.  This works for simple feature editing 
+in Apollo but more robust interoperability will require further 
+testing and feedback from the user community. 
 
 =head1 THE 'id_holder' FEATURE
 
@@ -63,11 +62,11 @@ feature is not recommended.
 
 =head1 RELATIVE COORDINATES
 
-The sequence coordinates are always 1-based, relative to the 
-segment start.  This is mandatory to avoid killing Artemis with out 
-of range features.  Dumping to Apollo with absolute coordinates may 
+The sequence coordinates are always 1-indexed, relative to the 
+segment start.  This is mandatory to avoid killing Artemis with 
+out-of-range features.  Dumping to Apollo with absolute coordinates may 
 be supported later if anyone asks for it.  The segment's offset 
-it saved in the id_holder, so that features are re-mapped to 
+is saved in the id_holder, so that features are re-mapped to 
 the reference sequence on the return trip.
 
 =head1 DATABASE IDS
@@ -75,47 +74,43 @@ the reference sequence on the return trip.
 The database IDs of all features dumped into the annotated 
 sequence file are saved in the id_holder.  This will make 
 it possible to selectively delete features by ID on the 
-round-trip.  This way, deletion of selectively dumped features 
-in an external editor will be reflected when the database is 
-updated on the return trip.  If the IDS go stale or are not 
-supported, then colliding features (same type, strand and 
-coordinates as the incoming features) will be deleted. There 
-is also a user-specified option to delete all in-range features for 
-the segment.  -- Caveat emptor --
+return trip.  Deletion of selectively dumped features 
+in an external editor will be reflected when the database 
+is updated.  If the IDS go stale or are not supported, 
+colliding features (same type, strand and coordinates 
+as the incoming features) will be deleted. There 
+is also a user-specified option to delete all in-range 
+features for the segment.  -- Caveat emptor --
 
 =head1 GENES ARE TREATED DIFFERENTLY
 
-There is a bias towards gene-based annotations, which are what
-the genome annotation editors are focused on, especially Apollo.
-Nevertheless, any features can be dumped as a generic annotations.  
-Gene-based features are collected via a SO-compliant aggregator to 
-facilitate unflattenening into segmented transcripts and CDSs.  
-Other features can be selected for dumping as desired but gene 
-components are mandatory.  The aggregation can be disabled 
-(EMBL/Artemis only).  The result is a GFF_like EMBL feature 
-table that has each gene component as a stand-alone feature. The
-feature importer is made aware of disaggregated features via the 
-id_holder
+There is a bias towards gene-based annotations, but any features 
+can be dumped as a generic annotations.  Gene-based features 
+are collected via an aggregator to facilitate unflattenening 
+into segmented transcripts and CDSs.  Aggregation can be disabled 
+via the configuration form or the configuration file (EMBL/Artemis 
+only).  The result is a GFF-like EMBL feature table that has 
+each gene component as a stand-alone feature. The feature 
+importing plugin ImportFeatures.pm  is made aware of disaggregated 
+features via the id_holder
 
 =head1 CONTROLLING DUMPING BEHAVIOR VIA THE CONFIGURATION FILE
 
 Two optional controls can be accessed by placing a stanza 
-in the config file:
+in the configuration file:
 
   [ExportFeatures:plugin]
   editor     = [Artemis|Apollo]
   aggregator = off
 
-Defining an editor (Apollo or Artemis) will set the default
-export format and editor.  There are cases where one editor
-is better suited to a database.  
+In cases where a particular annotation editor is preferred, 
+defining it in this stanza will set the both default
+export format and editor for the plugin.  
 
 Setting the aggregator to 'off' will turn off transcript
-aggregation.  This will result in the features being dumped
-as stand-alone flattened features rather than in containment
-hierarchies.
+aggregation (Artemis only).
 
-For a simple viral or prokayotic genome, the optimal setting would be
+For a simple viral or prokaryotic genome, the optimal setting would be
   
   [ExportFeatures:plugin]
   editor     = Artemis
@@ -123,17 +118,16 @@ For a simple viral or prokayotic genome, the optimal setting would be
 
 This will configure the dumper to have a default EMBL format
 and export only to Artemis.  An Apollo-only dumper can be configured
-like so:
+as follows:
 
   [ExportFeatures:plugin]
   editor = Apollo
 
 Note that aggregation is required for dumping GAME-XML, so aggregation
-can not be disabled in Apollo is selected as the editor.
+can not be disabled if Apollo is selected as the editor.
 
-The default is to offer a choice of Editors and have aggregation 
-switched on.  Note that an option to disable aggregation is
-also available in the configuration form. 
+The default behavior of the plugin is to offer a choice of Editors 
+and have aggregation switched on.  
 
 =head1 TO-DO
 
@@ -148,7 +142,10 @@ See the GMOD website for information on bug submission http://www.gmod.org.
 
 Email smckay@bcgsc.bc.ca
 
-=head1 CONTRIBUTORS
+=head1 SEE ALSO
+
+Apollo (http://www.fruitfly.org/annot/apollo/)
+Artemis (http://www.sanger.ac.uk/Software/Artemis)
 
 =cut
 
@@ -665,7 +662,7 @@ sub dump {
 	$id_holder->add_tag_value( unflattened => 1 );
     }
 
-    my $seq  = Bio::Seq::RichSeq->new( -id  => $id );
+    my $seq  = Bio::Seq::RichSeq->new;
     $seq->seq( $segment->seq ) if $segment->seq;
     $seq->id($id);
     $seq->accession($id);

@@ -1,4 +1,4 @@
-# $Id: ImportFeatures.pm,v 1.16 2004-03-12 15:16:24 sheldon_mckay Exp $
+# $Id: ImportFeatures.pm,v 1.17 2004-03-16 13:37:42 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -12,16 +12,15 @@ This modules is not used directly
 
 ImportFeatures.pm processes external features and loads them 
 into the GFF database.  It will accept flat files in GenBank, 
-EMBL, GFF2/3 or GAME-XML formats and can download accessions 
-directly from NCBI/EBI.  
+EMBL, GFF2/3 or GAME-XML.
 
 =head2 Loading new sequences
 
-This plugin can be used to download accessions from GenBank 
-or EMBL and load them into the GFF database.  Segmented features 
+This plugin can be used to download accessions from directly from
+GenBank or EMBL and load them into the GFF database.  Segmented features 
 in the Genbank or EMBL file or accession (example mRNA or CDS) 
 will be unflattened via Bio::SeqFeature::Tools::Unflattener and
-loaded as containment hierarchies via GFF3.
+loaded as GFF3.
 
 =head2 Editing Features in an External Editor
 
@@ -38,7 +37,7 @@ can also be done from gbrowse (using the BasicEditor plugin).
 
  1) use the ExportFeatures plugin to dump an EMBL 
     feature table or GAME-XML to a file (or directly 
-    to the editor as a helper application 
+    to the editor as a helper application, 
     configured in the browser)
 
  2) edit your features 
@@ -57,7 +56,7 @@ for more information on setup options.
 =head2 Apollo
 
 Apollo curently supports GAME-XML as its interchange format.
-The round trip is still a bit tempermental but it is possible
+The round trip is still a bit temperamental but it is possible
 to export gene and other features in GAME-XML and browse them,
 do simple edit operation, then upload the changes via this
 plugin.
@@ -87,14 +86,14 @@ has features with the 'database_id' attribute.  In this case,
 the file is treated as a selected feature file.  Only the 
 features with the corresponding IDs in the database will be 
 deleted. The database_id attributes are added automatically 
-by ExportFeatures.pm if the dump mode is set to 'selected'
+by ExportFeatures.pm.
 
 
 =head2 Partial Segments and relative coordinates
-The segment offset wi;; be retrieved from a special
+
+The segment offset will be retrieved from a special
 id_holder feature and used to remap the feature coordinates 
 back to the absolute coordinates for the reference sequence.
-
 
 =head2  Basic Feature Editing
 
@@ -105,7 +104,7 @@ consider using the the BasicEditor plugin from within gbrowse
 
 This plugin can be used to roll back to an earlier state.  
 If the rollback functionality is enabled, the state of the 
-segment will be saved to a file before each database update.  
+segment will be cached before each database update.  
 The last 10 pre-update states will be saved in a round-robin 
 rotation and can be accessed via the configuration form.
 
@@ -124,6 +123,7 @@ Email smckay@bcgsc.bc.ca
 =head1 CONTRIBUTORS
 
 Scott Cain (cain@cshl.org)
+
 Mark Wilkinson (markw@illuminae.com)
 
 =head1 SEE ALSO
@@ -133,6 +133,8 @@ Bio::Graphics::Browser::Plugin::GFFDumper
 Bio::Graphics::Browser::Plugin::BasicEditor
 
 Artemis (http://www.sanger.ac.uk/Software/Artemis)
+
+Apollo (http://www.fruitfly.org/annot/apollo/)
 
 =cut
 

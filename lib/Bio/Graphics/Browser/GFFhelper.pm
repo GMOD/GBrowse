@@ -1,8 +1,8 @@
-# $Id: GFFhelper.pm,v 1.17 2004-01-24 16:57:58 sheldon_mckay Exp $
+# $Id: GFFhelper.pm,v 1.18 2004-02-19 17:57:20 sheldon_mckay Exp $
 
 =head1 NAME
 
-Bio::Graphics::Browser::GFFhelper -- Helps gbrowse feature editors/loaders handle GFF
+Bio::Graphics::Browser::GFFhelper -- Helps gbrowse plugins handle GFF
 
 =head1 SYNOPSIS
   
@@ -39,15 +39,10 @@ Bio::Graphics::Browser::GFFhelper -- Helps gbrowse feature editors/loaders handl
     $gff;
   }
 
-  sub gff_from_file {
+  # read GFF2 dialects
+  sub gff {
     my $self = shift;
-    my $conf = $self->configuration;
-    my $filename = $conf->{file};
-
-    # get a gff string file
-    open GFF, "<$filename";
-    my $gff = join '', (<GFF>);
-    close GFF;  
+    my $gff  = shift;
 
     # set a flag to add a header to the GFF
     $self->{header} = 1;
@@ -67,8 +62,8 @@ rollback capability for feature editors/loaders
 
 =head2 GFF help
 
-This module deals with the different GFF dialects and changes the, to GFF3 format 
-to avoid breaking the Bio::DB::GFF parser.  It also allows conversion of Bio::DB::GFF::Feature 
+This module deals with the different GFF2 dialects and changes 
+them to GFF3 format. It also allows conversion of Bio::DB::GFF::Feature 
 objects to Bio::SeqFeature::Generic objects, which is required for consistent
 feature and attribute handling across different input/output formats.
 
@@ -79,12 +74,12 @@ string containing processed GFF and also a sequence string
 
 =head2 Rollbacks
 
-The state of a segment can be captured and saved in case the user wishes to reload 
+The state of a segment can be captured and saved in case the user wishes to revert 
 to an earlier version of the segment after editing/deleting features.  The last 
-five states are saved in a round-robin rotation.  In plugins that inherit methods from
-this module, the $ROLLBACK variable must be defined with a string containing the 
-path to a directory where the web user ('apache', 'nobody', etc.) has write access.  
-If $ROLLBACK is undefined, the rollback functionality is disabled.
+10 modified segments are saved in a round-robin rotation.  In plugins that inherit 
+methods from this module, the $ROLLBACK variable must be defined with a string 
+containing the path to a directory where the web user ('apache', 'nobody', etc.) 
+has write access.  If $ROLLBACK is undefined, the rollback functionality is disabled.
 
 =head1 FEEDBACK
 
@@ -99,10 +94,14 @@ Email smckay@bcgsc.bc.ca
 package Bio::Graphics::Browser::GFFhelper;
 
 use strict;
-use Bio::Root::Root;
-use Bio::SeqFeature::Generic;
 use IO::String;
+use Bio::Root::Root;
+use CGI qw/:standard/;
 use Bio::DB::GFF::Homol;
+use Bio::SeqFeature::Generic;
+use Storable qw/store retrieve/;
+
+use Data::Dumper;
 
 use vars qw/ @ISA /;
 
@@ -176,6 +175,7 @@ sub parse_gff_line {
     
     $seqid ||= $ref;
 
+    $db->preferred_groups(['gene', 'mRNA']);
     my ($gclass,$gname,$tstart,$tstop,$attributes) = $db->split_group($group);
     
     # create a group or target object
@@ -249,7 +249,7 @@ sub gff_header {
     my $exists = shift;
     my $date  = localtime;
     my $start = $self->start || 0; 
-    my $end   = $self->end;
+    my $end   = $self->end || 0;
     my $ref   = $self->refseq;
     my $seq   = $self->seq || '';
     $start = 1 if $start > 1;
@@ -277,31 +277,12 @@ sub origin {
     $gff . join ("\t", $ref, $src, 'origin', $start, $end, '.', '.', '.', $group);
 }
 
-# add a reference component for new sequences
-# not currently used, will probably be deprecated
-sub component {
-    my ($self, $gff) = @_;
-    chomp $gff;
-    my $seq   = $self->seq;
-    my $start = 1;
-    my $end   = length $seq;
-
-    my @row = ($self->refseq, 'reference', 'Component', $start); 
-    push @row, ($end, '.', '.', '.', 'ID=Sequence:' . $self->refseq);
-    
-    #$gff .= "\n" . join "\t", @row;
-    my $row = join "\t", @row;
-    my $ref = $self->refseq;
-    $gff =~ s/^($ref.+)/$row\n$1/m;
-    $gff;
-}
-
-# convert the feature segment into a Bio::SeqFeature::Generic object
+# convert the feature into a Bio::SeqFeature::Generic object
 sub gff2Generic {
     my ($self, $f) = @_;
 
     my $feat = Bio::SeqFeature::Generic->new( -primary_tag => $f->primary_tag,
-					      -source_tag  => $f->source_tag,
+					      -source_tag  => $f->source,
 					      -phase       => $f->phase,
 					      -score       => $f->score,
 					      -start       => $f->start,
@@ -322,11 +303,8 @@ sub gff2Generic {
 sub process_attributes {
     my ($self, $f) = @_;
     my $mode = $self->configuration->{mode};
-    my $att = $f->attributes;
+    my $att = $f->attributes || $self->{missing_attributes};
 
-    # add database identifiers for select mode
-    $att->{database_id} = [$f->id] if $mode eq 'selected';
-    
     # handle GFF2.5 targets
     if ( my $t = $f->target ) {
 	my $tclass = $t->class;
@@ -340,8 +318,11 @@ sub process_attributes {
 	my $name  = $f->name;
 	push @{$att->{$class}}, $name if $class && $name;
     }
-    for ( keys %$att ) { 
-	for my $v ( @{$att->{$_}} ) {
+    for ( keys %$att ) {
+        # make sure the value is an array ref
+	my $V = $att->{$_};
+	$V = [$V] unless ref $V; 
+	for my $v ( @{$V} ) {
 	    $v =~ s/;/,/g;
 	    $v =~ s/\"|\s+$//g;
 	}
@@ -412,96 +393,94 @@ sub get_range {
 
 sub save_state {
     my ($self, $segment) = @_;
-    return unless $segment;
-    my $conf = $self->configuration;
-    my $loc  = $self->{rb_loc};
-    my $outfile = $loc . 'rollback_' . time;
-    my $date = localtime;
+    $segment || $self->throw('No segment');
+    my $path = $self->{rb_loc};
+    $path .= '/' unless $path =~ /\/$/;
+    my $file = $path . 'rollback';
+    my $key  = $segment . ' ' . localtime;
 
-    # save the rollback info 
-    open OUT, ">$outfile"
-        || $self->throw("Unable to save state; Does the web user " .
-                        "have write permission for the rollback location?");
+    my $cache  = -e $file ? retrieve( $file ) : {}; 
+    $cache->{$key}->{timestamp} = time;
+    $cache->{$key}->{gff} = [];
 
-    print OUT "##$outfile \"$date\" $segment\n";
-    for ( $segment->features ) {
-	$_->version(3);
-	print OUT $_->gff_string unless $_->method =~ /Component/i;
+    for ( $segment->contained_features ) {
+	next if $_->method eq 'Component';
+	push @{$cache->{$key}->{gff}}, $_->gff3_string;
     }
-    close OUT;
-    
-    my $rbfiles = $loc . 'rollback_*';
-    my $lister = $^O !~ /win32/i ? '\ls' : 'dir /B';
-    my @list = sort `$lister $rbfiles`;
 
-    if ( @list > 5 ) {
-	my $file  = shift @list;
-	unlink $file || $self->throw("file not deleted", $!);
+    # limit the number of saved segments to 10
+    my @keys = _keys_by_date($cache);
+    if ( @keys > 10 ) {
+	my $count;
+	for ( @keys ) {
+            next unless ++$count > 9;
+	    delete $cache->{$_};   
+	}
     }
+
+    store $cache, $file;
 }
 
+# return a list of keys, newest first
+sub _keys_by_date {
+    my $h = shift;
+    return map  { $_->[1] } 
+           sort { $b->[0] <=> $a->[0] }
+           map  { [$h->{$_}->{timestamp}, $_] } 
+           keys %$h;
+}
 
+# retrieves a cached segment or a list of saved segments
 sub rollback {
-    my ($self, $file) = @_;
-    my $loc = $self->{rb_loc};
-    my $conf = $self->configuration;
+    my ($self, $key) = @_;
+    my $path = $self->{rb_loc};
+    $path .= '/' unless $path =~ /\/$/;
+    my $file = $path . 'rollback';
+    -e $file || return '';
 
-    if ( $file ) {
-	$self->throw("Rollback file '$file' not found") unless -e $file;
+    my $cache = retrieve( $file );
 
-	open FILE, "<$file";
-	my @gff = <FILE>;
-        close FILE;
-        
-	shift @gff;
-	my $gff = join '', @gff;
-	$self->get_range($gff);
-        $gff =  $self->gff_header(3,1) . "\n$gff"; # 1 flag means no sequence region line
-	return $gff;
+    if ( $key ) {
+        my @gff = @{$cache->{$key}->{gff}};
+	return $self->gff_header(3,1) . "\n" . join '', @gff;
     }
     else {
-	my $rbfiles = $loc . 'rollback_*';
-	my $typer = $^O !~ /win32/i ? 'cat' : 'type';
-	my @list = sort `$typer $rbfiles`;
-
-	my @file = `cat ${loc}rollback_* | grep '##' |grep rollback`;
-	
-	my $rb = {};
-	for ( @file ) {
-	    my ($file, $time, $segment) = /^\#\#(\S+)\s+"(.+)"\s+(\S+)/;
-	    $rb->{$file}->{time} = $time;
-	    $rb->{$file}->{segment} = $segment;
-	}
-
-	return $rb;
+	return _keys_by_date($cache);
     }
 }
 
 
 # called by configure_form methods if req'd
-sub rollback_form {
+sub rollback_form { 
     my ($self, $msg, $filter) = @_;
-    my $rb   = $self->rollback;
-    my $name = $self->config_name('rb_id');
 
-    return 0 unless $rb;    
+    # make sure we only get what we want to see
+    my @keys = $filter ? grep { /$filter/ } $self->rollback 
+                       : $self->rollback;
+    @keys || return '';
 
-    my @out;
-    for ( sort {$b cmp $a} keys %{$rb} ) {
-        my $seg  = $rb->{$_}->{segment};
-        # just get relevent segments if the filter it defined
-        next if $filter && $seg !~ /$filter/i;
-	my $date = $rb->{$_}->{time};
-        push @out, "<option value=$_>$seg $date</option>\n";
-    }
+    my $rb   = $self->config_name('rb_id');
 
-    my $help =  qq(<a onclick="alert('$msg')" href="javascript:void(0)">[?]</a>);
+    # first menu item empty
+    unshift @keys, '';
 
-    return  "\n<table>\n<tr class=searchtitle><td><font color=black><b>" .
-	    "Restore saved features</td></tr>\n<tr><td class=" .
-	    "searchbody>\n<select name=$name>\n<option value=''> -- Roll " .
-            "back to saved features -- </option>\n" .
-	    (join '', @out) . "</select> $help\n</td></tr></table>\n";
+    my $help = a( { -onclick => "alert('$msg')",
+		    -href    => "javascript:void(0)",
+		    -title   => "help" }, ' [?]' );
+
+    return table( 
+		  [
+		   Tr( { -class => 'searchtitle' },
+		       [
+			td( font( { -color => 'black' }, 
+			    b('Restore saved segment') )),
+			td( { -class => 'searchbody' },
+			    h3( popup_menu ( -name   => $rb,
+					     -values => \@keys ), $help))
+		       ]
+		     )
+		   ]
+		  );
 }
 
 ###################################################
@@ -509,7 +488,8 @@ sub rollback_form {
 # internal method stolen from Bio::DB::GFF
 # GFF3-ify our attributes
 sub _escape {
-    my $toencode = shift;
+    my $self = shift;
+    my $toencode = shift || $self;
     $toencode    =~ s/([^a-zA-Z0-9_. :?^*\(\)\[\]@!-])/uc sprintf("%%%02x",ord($1))/eg;
     $toencode    =~ tr/ /+/;
     $toencode;

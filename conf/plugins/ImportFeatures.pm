@@ -1,4 +1,4 @@
-# $Id: ImportFeatures.pm,v 1.3 2003-10-16 07:29:14 sheldon_mckay Exp $
+# $Id: ImportFeatures.pm,v 1.4 2003-10-16 12:48:19 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -294,9 +294,13 @@ sub dump {
 
 
     my $segment  = $db->segment( $self->refseq );
-
+    my $nodna = 0;
+    
     if ( $segment ) {
-	# save the state of the segment in case we want to roll back later 
+	# make sure we know not to try to add sequencelater
+	$nodna++;
+        
+        # save the state of the segment in case we want to roll back later 
         if ( $ROLLBACK ) {
 	    $self->{rb_loc} ||= $ROLLBACK;
 	    $self->save_state($segment);
@@ -315,7 +319,7 @@ sub dump {
 
     # don't try loading sequence if the sequence is already in
     # the database
-    if ( $self->seq && !( $segment && $segment->seq ) ) {
+    if ( $self->seq && !$nodna ) {
 	$gff .= "\n>" . $self->refseq . "\n" . $self->seq;
     }
 

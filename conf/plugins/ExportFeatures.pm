@@ -1,4 +1,4 @@
-# $Id: ExportFeatures.pm,v 1.2 2003-10-16 07:36:57 sheldon_mckay Exp $
+# $Id: ExportFeatures.pm,v 1.3 2003-10-16 12:48:19 sheldon_mckay Exp $
 =head1 NAME
 
 Bio::Graphics::Browser::Plugin::ExportFeatures -- a plugin to export 
@@ -139,7 +139,11 @@ sub write_ft {
     my $seq  = Bio::Seq::RichSeq->new( -id  => $segment->refseq,
 				       -seq => $segment->seq );
 
-    $seq->add_SeqFeature( map { $self->gff2Generic($_) } @feats );
+    for ( @feats ) {
+	next if $_->primary_tag =~ /component/i;
+	$seq->add_SeqFeature( $self->gff2Generic($_) );
+    }
+    
     my $out = Bio::SeqIO->new( -format => 'embl' );
     my $io = IO::String->new($table);
     tie *STDOUT, $io;

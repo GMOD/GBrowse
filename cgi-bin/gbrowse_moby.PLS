@@ -4,7 +4,7 @@ use File::Basename qw(&basename &dirname);
 use File::Spec;
 use FindBin '$Bin';
 use Cwd;
-
+use MOBY::MobyXMLConstants;
 my %OPTIONS;
 if (open F,"$Bin/../GGB.def") {
   while (<F>) {
@@ -47,7 +47,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 print OUT <<'!NO!SUBS!';
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.34 2004-08-09 14:46:18 sheldon_mckay Exp $
+#$Id: gbrowse_moby.PLS,v 1.35 2004-12-16 14:45:39 markwilkinson Exp $
 ###########################################################
 
 use MOBY::Client::Central;
@@ -541,7 +541,7 @@ sub execute {
     my @colls = @{$collections};  # flatten the list of lists
     foreach my $objlist($objects, @colls){  # we just treat collections as simples here.
         foreach (@{$objlist}){
-            my $MOBYClass = $_->getTagName;
+            my $MOBYClass = $_->nodeName;
             my $namespace = $_->getAttributeNode('namespace');
             $namespace = $namespace?($namespace->getValue):"";
             my $short_namespace = $namespace =~ /urn:lsid:biomoby.org:namespacetype:(\S+)/?$1:$namespace; # namespaces may or may not be fully qualified LSID's.  if they are, and if they are MOBY ID's, then we can just take the last field, otherwise we should take the whole thing
@@ -626,8 +626,8 @@ sub printIt {
 
 sub processXrefs {
     my ($XrefBlock) = @_;
-    foreach my $xref ($XrefBlock->getChildNodes()){
-        next unless $xref->getNodeType == ELEMENT_NODE;
+    foreach my $xref ($XrefBlock->childNodes()){
+        next unless $xref->nodeType == ELEMENT_NODE;
         my $ns = $xref->getAttributeNode("namespace");
         next unless $ns;
         $ns = $ns->getValue();

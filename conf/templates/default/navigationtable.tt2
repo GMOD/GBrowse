@@ -18,15 +18,15 @@
 
   <tr>
     <th align="left" colspan="2">
-      [% IF toggle_head == 1 ;
+      [% IF browser.options.display_banner == 1 ;
            label = 'hide_header';
-           toggle_head = 0;
+           toggle_banner = 0;
          ELSE ;
            label = 'show_header';
-           toggle_head = 1;
+           toggle_banner = 1;
          END
       %]
-      <a href="?rand=[% rand %];head=[% browser.options.head || 0 %]">[[% browser.translate( label ) %]]</a>
+      <a href="?rand=[% rand %];display_banner=[% toggle_banner %]">[[% browser.translate( label ) %]]</a>
       [% IF browser.options.display_instructions == 1 ;
            label = 'hide_instructions';
            display_instructions = 0;

@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.126 2005-01-21 22:26:08 lstein Exp $
+# $Id: gbrowse.PLS,v 1.127 2005-01-22 21:47:43 allenday Exp $
 
 use strict;
 use Bio::Graphics;
@@ -69,7 +69,7 @@ use vars qw($MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $CONF_DIR
 	    $PLUGINS $PRESETS
 	    %OBJECT_TYPES %PLUGIN_NAME2LABEL
-	    $BROWSER $TEMPLATE
+	    $BROWSER
 );
 
 local $CGI::USE_PARAM_SEMICOLONS = 1;
@@ -99,23 +99,12 @@ $ENV{PATH} = '/bin:/usr/bin:/usr/local/bin';
 # THIS SINGLETON OBJECT WILL EVENTUALLY HAVE ALL THE FUNCTIONALITY
 # OF THE REST OF THIS CGI SCRIPT
 $CONF_DIR  = conf_dir($CONF_DIR);  # conf_dir() is exported from Util.pm
-$BROWSER = Bio::Graphics::GBrowse_run->new(config => open_config($CONF_DIR));
+$BROWSER = Bio::Graphics::GBrowse_run->new(config     => open_config($CONF_DIR),
+                                           config_dir => $CONF_DIR
+                                          );
 my($source) = get_source();
 $BROWSER->config->source($source);
 #############################
-
-# User can change template include directory within the config file
-my $template_dir = $BROWSER->config->setting(general => 'templates') || 'default';
-$template_dir    = "$CONF_DIR/templates/$template_dir" unless $template_dir =~ m!^/!;
-
-# this has got to be a global in order to avoid mod_perl closure issues
-$TEMPLATE = Template->new({
-			   INCLUDE_PATH => $template_dir,
-			   ABSOLUTE     => 1,
-			   EVAL_PERL    => 1,
-			  }) || die("couldn't create template: $!");
-
-
 
 main(); #at the bottom
 exit 0;
@@ -130,25 +119,12 @@ sub main_display($$) {
 
   # first of all, if there are no segments, then try a keyword search and store the results
   if (@$segments == 0 && (my $n = $BROWSER->options->name())) {
-      error($BROWSER->translate('NOT_FOUND',escapeHTML($n)));
+    error($BROWSER->translate('NOT_FOUND',escapeHTML($n)));
   }
 
   # if there's a single segment, then print a message and store the segment into a scalar
   elsif (@$segments == 1) {
     $segment = $segments->[0];
-    # $segment = truncated_segment($segment) if $segment->length < 4;
-    my $divider = $BROWSER->config->setting(general=>'unit_divider') || 1;
-    my $seg_start = $segment->start;
-    my $seg_end   = $segment->end;
-    if ($divider != 1 ) {
-       $seg_start = unit_label($seg_start);
-       $seg_end   = unit_label($seg_end);
-    }
-#FIXME    print h2($BROWSER->translate('SHOWING_FROM_TO',
-#		       unit_label($segment->length),
-#		       $segment->seq_id,
-#		       commas($seg_start),
-#		       commas($seg_end)));
   }
 
   # force flipping
@@ -213,8 +189,6 @@ sub main_display($$) {
 
   if($segment){
     $param->{ranges}     = [ grep {!$seen{$_}++} sort {$b<=>$a} $segment->length,get_ranges() ];
-    $param->{halftitle}  = unit_label(int($segment->length/2));
-    $param->{fulltitle}  = unit_label($segment->length);
     $param->{half}       = int($segment->length/2);
     $param->{full}       = $segment->length;
   }
@@ -224,10 +198,7 @@ sub main_display($$) {
   $param->{range_labels} = \%range_labels;
 
   my $table = undef;
-#  $template->process('navigationtable.tt2',$param,\$table);
-
-
-  $TEMPLATE->process('main.tt2',$param,\$table) or warn $TEMPLATE->error();
+  $BROWSER->template->process('main.tt2',$param,\$table) or warn $BROWSER->template->error();
   print $table;
 
 ################################
@@ -2028,62 +1999,42 @@ sub main {
 
   warn "ADJUSTED TRACKS = ".$BROWSER->options->tracks() if DEBUG;
 
-  ## UPDATING THE PERSISTENT SETTINGS##############################################################
-  my $cookies = $BROWSER->cookie(); #settings2cookie(); #FIXME moved to GBrowse_run
+  ## UPDATING THE PERSISTENT SETTINGS ##############################################################
+  my $cookies = $BROWSER->cookie();
 
-  #warn Dumper($cookies);
   #FIXMEpush @$cookies,plugins2cookies($PLUGINS);
 
-  print_header(-cookie => $cookies,
-               -charset=>$BROWSER->translate('CHARSET'),
+  ## STARTING THE PAGE #############################################################################
+  print_header(
+               -expires => '+1m',
+               -cookie  => $cookies,
+               -charset => $BROWSER->translate('CHARSET'),
               );
-
   if (request_method eq 'HEAD') {exit 0}
 
-  my $description = $BROWSER->config->setting('description');
-  my $segment;
-
-  ## STARTING THE PAGE ############################################################################
-  my $divisor = $BROWSER->config->setting(general=>'unit_divider') || 1;
-  my $title;
-  if ($divisor == 1) {
-    $title = @segments == 1 ?
-      "$description: ".$segments[0]->seq_id.":".$segments[0]->start.'..'.$segments[0]->end 
-        : $description;
-  } else {
-    if (@segments == 1) {
-      my $seg_start = unit_label($segments[0]->start);
-      my $seg_end   = unit_label($segments[0]->end);
-      $title = "$description: ".$segments[0]->seq_id.":".$seg_start.'..'.$seg_end;
-    } else {
-      $title = $description;
-    }
-  }
-  print_top($title);
-
-  ## HANDLE UPLOADED FILE EDITS ##################################################################
+  ## HANDLE UPLOADED FILE EDITS ####################################################################
   if ($file_action && param($file_action) eq $BROWSER->translate('Edit')) {
     edit_uploaded_file($file);
   }
 
-  ## HANDLE TRACK SETTINGS   #######################################################
+  ## HANDLE TRACK SETTINGS #########################################################################
   elsif ((param($BROWSER->translate('Set_options')) || param('revert'))
          && !param($BROWSER->translate('Cancel'))
          && !param($BROWSER->translate('Redisplay'))) {
     set_track_options();
   }
 
-  ## HANDLE HELP PAGE   #######################################################
+  ## HANDLE HELP PAGE ##############################################################################
   elsif (param('help')) {
     help(param('help'),$BROWSER->config->setting('help')||GBROWSE_HELP);
   }
 
-  ## HANDLE PLUGIN ABOUT PAGE #####################################################
+  ## HANDLE PLUGIN ABOUT PAGE ######################################################################
   elsif ($plugin_action eq $BROWSER->translate('About')) {
     do_plugin_about(param('plugin'));
   }
 
-  ## HANDLE PLUGIN CONFIGURATION####################################################
+  ## HANDLE PLUGIN CONFIGURATION ###################################################################
   elsif ($plugin_action eq $BROWSER->translate('Configure')) {
     do_plugin_configure(param('plugin'));
   }
@@ -2092,16 +2043,10 @@ sub main {
     do_plugin_configure(param('plugin'));
   }
 
-  ## MAIN DISPLAY
+  ## MAIN DISPLAY ##################################################################################
   else {
-    my $header = $BROWSER->config->header;
-    if ($BROWSER->options->head()) {
-#FIXME      print $header ? $header : h1($description);
-    }
     main_display($segments,$features);
   }
-
-  print_bottom($VERSION);
 }
 
 !NO!SUBS!

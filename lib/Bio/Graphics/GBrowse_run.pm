@@ -30,7 +30,6 @@ sub get_instance {
 
   if(!$singleton){
     $singleton = bless {}, $class;
-
     $singleton->init(%arg);
   }
 
@@ -85,6 +84,24 @@ sub config {
   $self->{'config'} = $val if defined($val);
   return $self->{'config'};
 }
+
+=head2 config_dir()
+
+ Usage   : $obj->config_dir($newval)
+ Function: 
+ Example : 
+ Returns : value of config_dir (a scalar)
+ Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub config_dir {
+  my($self,$val) = @_;
+  $self->{'config_dir'} = $val if defined($val);
+  return $self->{'config_dir'};
+}
+
 
 =head2 cookie()
 
@@ -203,7 +220,7 @@ sub read_cookie {
     $self->options->version(100);
     $self->options->width($self->config->setting('default width'));
     $self->options->source($self->config->source);
-    $self->options->head(1);
+    $self->options->display_banner(1);
     $self->options->ks('between');
     $self->options->sk('sorted');
     $self->options->id(md5_hex(rand)); # new identity
@@ -412,33 +429,32 @@ sub read_view {
   }
 }
 
-=head2 zoomnavfactor()
+=head2 template()
 
- Usage   :
- Function: convert Mb/Kb back into bp... or a ratio, used by L</zoomnav()>
- Example :
- Returns : 
- Args    :
-
+ Usage   : $obj->template($newval)
+ Function: holds a Template Toolkit instance
+ Example : 
+ Returns : value of template (a scalar)
+ Args    : on set, new value (a scalar or undef, optional)
 
 =cut
 
-sub zoomnavfactor {
-  my $self = shift;
-  my $string = shift;
+sub template {
+  my($self) = @_;
+  if ( ! $self->{'template'} ) {
+    # User can change template include directory within the config file
+    my $template_dir    = $self->config->setting(general => 'templates') || 'default';
+    #FIXME this should really be File::Spec::Functions / catfile()
+    $template_dir       = $self->config_dir()."/templates/$template_dir" unless $template_dir =~ m!^/!;
+    $self->{'template'} = Template->new({
+                                         INCLUDE_PATH => $template_dir,
+                                         ABSOLUTE     => 1,
+                                         EVAL_PERL    => 1,
+                                        }) || die("couldn't create template: $!");
 
-  my ($value,$units) = $string =~ /(-?[\d.]+) ?(\S+)/;
-
-  return unless defined $value;
-
-  $value /= 100   if $units eq '%';  # percentage;
-  $value *= 1000  if $units =~ /kb/i;
-  $value *= 1e6   if $units =~ /mb/i;
-  $value *= 1e9   if $units =~ /gb/i;
-
-  return $value;
+  }
+  return $self->{'template'};
 }
-
 
 =head2 zoomnav()
 
@@ -545,6 +561,31 @@ sub zoomnav {
   $options->stop($stop/$divisor);
 }
 
+=head2 zoomnavfactor()
+
+ Usage   :
+ Function: convert Mb/Kb back into bp... or a ratio, used by L</zoomnav()>
+ Example :
+ Returns : 
+ Args    :
+
+=cut
+
+sub zoomnavfactor {
+  my $self = shift;
+  my $string = shift;
+
+  my ($value,$units) = $string =~ /(-?[\d.]+) ?(\S+)/;
+
+  return unless defined $value;
+
+  $value /= 100   if $units eq '%';  # percentage;
+  $value *= 1000  if $units =~ /kb/i;
+  $value *= 1e6   if $units =~ /mb/i;
+  $value *= 1e9   if $units =~ /gb/i;
+
+  return $value;
+}
 
 
 ################################################################

@@ -16,8 +16,6 @@ Bio::Graphics::Browser::Util -- Exported utilities
   $db       = open_database($config,$dir);
   $string   = html_frag('page_part');
   print_header(@args);
-  print_top($config,$title);
-  print_bottom($config,$version);
   error(@msgs);
   fatal_error(@msgs);
 
@@ -50,14 +48,6 @@ feature type, name and a list of segments in [start,end] format.
 
 The type defaults to 'Your features' and the name defaults to "Feature
 XX" where XX is the number of features parsed so far.
-
-=item print_top($config,$title);
-
-Print the top of the page.
-
-=item print_bottom($config);
-
-Print the bottom of the page.
 
 =item error(@msg)
 
@@ -92,19 +82,18 @@ disclaimers of warranty.
 use strict;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::I18n;
+use Bio::Graphics::Browser::Constants;
 use CGI qw(:standard);
 use Text::Shellwords;
 
-use vars qw(@ISA @EXPORT $CONFIG $LANG %DB $HEADER $HTML $ADDED_FEATURES);
+use vars qw(@ISA @EXPORT $BROWSER $CONFIG $LANG %DB $HEADER $HTML $ADDED_FEATURES);
 require Exporter;
 @ISA = 'Exporter';
 @EXPORT = qw(conf_dir open_config open_database
-	     print_header print_top print_bottom html_frag
+	     print_header html_frag
 	     error fatal_error redirect_legacy_url
 	     parse_feature_str
 	    );
-
-use constant DEBUG => 0;
 
 sub conf_dir {
   my $default = shift;
@@ -121,7 +110,10 @@ sub open_config {
   $CONFIG ||= Bio::Graphics::Browser->new;
   $CONFIG->read_configuration($dir,$suffix) or die "Can't read configuration files: $!";
   $LANG    ||= Bio::Graphics::Browser::I18n->new("$dir/languages");
-  $CONFIG->source or early_error($LANG,'NO_SOURCES');
+
+  if ( ! $CONFIG->source ) {
+    fatal_error($LANG->tr('NO_SOURCES'));
+  }
 
   set_language($CONFIG,$LANG);
   $CONFIG->language($LANG);
@@ -193,63 +185,25 @@ sub parse_added_feature {
   ($reference,$type,$name,@segments);
 }
 
-sub print_top {
-  my $title = shift;
-  local $^W = 0;  # to avoid a warning from CGI.pm
-  print_header(-expires=>'+1m');
-  my @args = (-title => $title,
-	      -style  => {src=>$CONFIG->setting('stylesheet')},
-              -charset=>$CONFIG->tr('CHARSET')
-	     );
-  push @args,(-head=>$CONFIG->setting('head'))   if $CONFIG->setting('head');
-  push @args,(-lang=>$CONFIG->language_code)     if $CONFIG->language_code;
-  print start_html(@args) unless $HTML++;
-}
-
-sub print_bottom {
-  my ($version) = @_;
-  print
-    $CONFIG->footer || '',
-      p(i(font({-size=>'small'},
-	       $CONFIG->tr('Footer_1'))),br,
-	tt(font({-size=>'small'},$CONFIG->tr('Footer_2',$version)))),
-	  end_html;
-}
-
 sub error {
-  my @msg = @_;
-  warn "@_" if DEBUG;
-  print_top();
-  print h2({-class=>'error'},@msg);
+  ###FIXME this should be made more graceful by making a header.tt2
+  return fatal_error(@_);
+#  my @msg = @_;
+#  warn "@_" if DEBUG;
+#  print_top();
+#  print h2({-class=>'error'},@msg);
 }
 
 sub fatal_error {
   my @msg = @_;
-  warn "@_" if DEBUG;
-  print_top($CONFIG,'GBrowse Error');
-  print h2('An internal error has occurred');
-  print p({-class=>'error'},@msg);
-  my $webmaster = $ENV{SERVER_ADMIN} ?
-   "maintainer (".a({-href=>"mailto:$ENV{SERVER_ADMIN}"},$ENV{SERVER_ADMIN}).')'
-     : 'maintainer';
-  print p("Please contact this site's $webmaster for assistance.");
-  print_bottom($CONFIG);
-  exit 0;
-}
-
-
-sub early_error {
-  my $lang = shift;
-  my $msg  = shift;
-  $msg     = $lang->tr($msg);
-  warn "@_" if DEBUG;
-  local $^W = 0;  # to avoid a warning from CGI.pm
   print_header(-expires=>'+1m');
-  my @args = (-title  => 'GBrowse Error');
-  push @args,(-lang=>$lang->language);
-  print start_html();
-  print b($msg);
-  print end_html;
+  $BROWSER->template->process(
+                              'error.tt2',
+                              {
+                               server_admin  => $ENV{SERVER_ADMIN},
+                               error_message => join("\n",@msg),
+                              }
+                             ) or warn $BROWSER->template->error();
   exit 0;
 }
 

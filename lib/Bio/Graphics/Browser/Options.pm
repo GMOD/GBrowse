@@ -207,23 +207,6 @@ sub h_type {
   return $self->{'h_type'};
 }
 
-=head2 head()
-
- Usage   : $obj->head($newval)
- Function: show header and footer
- Example : 
- Returns : value of head (a scalar)
- Args    : on set, new value (a scalar or undef, optional)
-
-
-=cut
-
-sub head {
-  my($self,$val) = @_;
-  $self->{'head'} = $val if defined($val);
-  return $self->{'head'};
-}
-
 =head2 help()
 
  Usage   : $obj->help($newval)
@@ -257,6 +240,23 @@ sub id {
   my($self,$val) = @_;
   $self->{'id'} = $val if defined($val);
   return $self->{'id'};
+}
+
+=head2 display_banner()
+
+ Usage   : $obj->display_banner($newval)
+ Function: show <h1/> title at top of page
+ Example : 
+ Returns : value of display (a scalar)
+ Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub display_banner {
+  my($self,$val) = @_;
+  $self->{'display_banner'} = $val if defined($val);
+  return $self->{'display_banner'};
 }
 
 =head2 display_instructions()

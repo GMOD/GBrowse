@@ -1,4 +1,37 @@
+<?xml version="1.0" encoding="[% browser.translate('CHARSET') %]"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!-- FIXME is EN a language code above? -->
 [% PROCESS "helperfunctions.tt2" %]
+<html>
+<head>
+  <title>
+  [% IF browser.config.setting('unit_divider') == 1 %]
+    [% browser.config.setting('description') %][% IF (segment) %]: [% segment.seq_id %]:[% segment.start %]..[% segment.end %][% END %]
+  [% ELSE %]
+    [% browser.config.setting('description') %][% IF (segment) %]: [% segment.seq_id %]:[% unit_label(segment.start) %]..[% unit_label(segment.end) %][% END %]
+  [% END %]
+  </title>
+  <link rel="stylesheet" type="text/css" href="[% browser.config.setting('stylesheet') %]"/>
+</head>
+<!-- FIXME language_code not working -->
+<body en="[% browser.config.setting('language_code') %]" charset="[% browser.translate('CHARSET') %]">
+
+<!-- datasource description and current position -->
+[% IF(browser.options.display_banner) %]
+  <h1>[% browser.config.setting('description') %]</h1>
+  <!-- FIXME need to fix formatting on string below -->
+  <h2>[%-
+         browser.translate('SHOWING_FROM_TO',
+                           unit_label( segment.length ),
+                           segment.seq_id,
+                           unit_label( segment.start  ),
+                           unit_label( segment.end    )
+                          );
+  -%]</h2>
+[%END %]
+
+
+
 <form name="mainform" action="[% action %]" method="POST">
   <!-- navigation table -->
   [% PROCESS "navigationtable.tt2" %]
@@ -39,5 +72,15 @@
   <p/>
 
   <!-- external table -->
-  [% #PROCESS "externaltable.tt2" %]
+  [% #FIXME PROCESS "externaltable.tt2" %]
 </form>
+
+[% browser.config.footer %]
+<p>
+  <i><font size="small">[% brower.translate('FOOTER_1') %]</font></i>
+  <br/>
+  <!-- FIXME version number needs to be passed with FOOTER_2 -->
+  <tt><font size="small">[% browser.translate('FOOTER_2') %]</font></tt>
+</p>
+</body>
+</html>

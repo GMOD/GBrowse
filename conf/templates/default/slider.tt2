@@ -3,8 +3,8 @@
 <input type="hidden" name="stop"     value="[% segment.end %]"/>
 <input type="hidden" name="ref"      value="[% segment.seq_id %]"/>
 <input type="hidden" name="prevname" value="[% prevname %]"/>
-<input type="image" name="navleft" value="[% full %]" src="[% browser.config.setting('buttons') %]/green_l2.gif" title="left [% fulltitle %]" border="0"/>
-<input type="image" name="navleft" value="[% half %]" src="[% browser.config.setting('buttons') %]/green_l1.gif" title="left [% halftitle %]" border="0"/>
+<input type="image" name="navleft" value="[% full %]" src="[% browser.config.setting('buttons') %]/green_l2.gif" title="left [% unit_label( full ) %]" border="0"/>
+<input type="image" name="navleft" value="[% half %]" src="[% browser.config.setting('buttons') %]/green_l1.gif" title="left [% unit_label( half ) %]" border="0"/>
 <input type="image" name="zoom" value="-[% finezoom %]" src="[% browser.config.setting('buttons') %]/minus.gif" title="zoom out [% finezoom %]" border="0" />
 <select name="span" onchange="document.mainform.submit()" class="searchtitle">
   [% FOREACH range IN ranges %]
@@ -12,6 +12,6 @@
   [% END %]
 </select>
 <input type="image" name="zoom" value="[% finezoom %]" src="[% browser.config.setting('buttons') %]/plus.gif"     title="zoom in [% finezoom %]"   border="0"/>
-<input type="image" name="navright" value="[% half %]" src="[% browser.config.setting('buttons') %]/green_r1.gif" title="right [% halftitle %]" border="0"/>
-<input type="image" name="navright" value="[% full %]" src="[% browser.config.setting('buttons') %]/green_r2.gif" title="right [% fulltitle %]" border="0"/>
+<input type="image" name="navright" value="[% half %]" src="[% browser.config.setting('buttons') %]/green_r1.gif" title="right [%- unit_label(half) -%]" border="0"/>
+<input type="image" name="navright" value="[% full %]" src="[% browser.config.setting('buttons') %]/green_r2.gif" title="right [%- unit_label(full) -%]" border="0"/>
 [% END %]

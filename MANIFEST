@@ -98,6 +98,7 @@ contrib/conf_files/index.html
 contrib/conf_files/wormbase.syn
 contrib/gdump
 contrib/index.txt
+contrib/blast2gff.pl
 contrib/install_macosx/BuildConfig.pm
 contrib/install_macosx/README.html
 contrib/install_macosx/README.pod

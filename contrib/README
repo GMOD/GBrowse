@@ -20,6 +20,10 @@ import_ncbi_mv_hs.pl
 	    Scott Saccone's script for importing NCBI gene builds
 	    into GFF format.
 
+blast2gff.pl
+	    Justin Reese's script for formatting BLAST output into
+	    loadable GFF files.
+
 conf_files  Configuration files for:
  01.yeast.conf		yeast data
  02.wormbase.conf	c. elegans data

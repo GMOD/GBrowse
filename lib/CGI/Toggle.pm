@@ -131,9 +131,12 @@ sub start_html {
     $args{-script} = [$args{-script}]          if ref $args{-script} && ref $args{-script} ne 'ARRAY';
   }
 
+  my $cookie = CGI::cookie(COOKIE_NAME) || CGI::cookie(-name=>COOKIE_NAME,-value=>255);
   push @{$args{-script}},{code=>$jscript};
   $args{-noscript}     = $noscript;
   $args{-onLoad}       = "startPage()";
+  $args{-cookie}     ||= [];
+  push @{$args{-cookie}},$cookie;
   CGI::start_html(%args);
 }
 

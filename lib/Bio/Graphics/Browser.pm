@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.51.2.5 2003-06-25 17:25:19 pedlefsen Exp $
+# $Id: Browser.pm,v 1.51.2.6 2003-06-26 00:33:19 pedlefsen Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -81,7 +81,7 @@ use vars qw( $SOURCES $DEFAULT_SOURCE );
 ## TODO: Document this.  Why?
 #$ENV{ 'PATH' } = '/bin:/usr/bin:/usr/local/bin';
 
-use constant DEBUG                => 1;
+use constant DEBUG                => 0;#1;
 use constant DEBUG_PLUGINS        => 0;
 
 # if true, turn on surrounding rectangles for debugging the image map
@@ -2222,13 +2222,13 @@ sub _zoomnav {
   if( $zoom && ( $zoom =~ /((?:out|in) .+)\.[xy]/ ) ) {
     $zoomlevel = $self->_unit_to_value( $1 );
     ## TODO: REMOVE
-    warn "zoomlevel is $zoomlevel";
+    #warn "zoomlevel is $zoomlevel";
   } elsif( $nav && ( $nav  =~ /((?:left|right) .+)/ ) ) {
     $navlevel  = $self->_unit_to_value( $1 );
     ## TODO: REMOVE
-    warn "navlevel is $navlevel";
+    #warn "navlevel is $navlevel";
     ## TODO: REMOVE
-    warn "start is $start, end is $end, span is $span, segment length is $segment_length";
+    #warn "start is $start, end is $end, span is $span, segment length is $segment_length";
   }
 
   if( defined $zoomlevel ) {
@@ -4116,9 +4116,15 @@ sub _get_link {
   my $self     = shift;
   my ( $section, $feature, $panel )  = @_;
 
+  ## TODO: REMOVE
+  #warn "doing _get_link for feature $feature.";
+
   my $link;
   if( $feature->can( 'make_link' ) ) {
     $link = $feature->make_link();
+  } else {
+    ### TODO: REMOVE
+    #warn "The feature, a ".ref( $feature ).", can't make_link().";
   }
   unless( defined $link ) {
     $link = $self->code_setting( $section, 'link' );
@@ -4724,7 +4730,7 @@ sub _get_map_html {
     ( $feature, $x1, $y1, $x2, $y2, $section ) = @$box_ref;
     ## TODO: REMOVE?  What feature can't do primary_tag?
     unless( $feature->can( 'primary_tag' ) ) {
-      warn "Unexpected: The feature $feature, a ".ref( $feature )." can't do primary_tag().";
+      warn "Unexpected: The feature $feature, a ".ref( $feature )." can't do primary_tag()." if DEBUG;
       next;
     }
     ## TODO: What is so special about DasSegment?  This seems to

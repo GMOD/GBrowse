@@ -50,7 +50,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.30 2004-05-14 17:56:29 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.31 2004-05-28 21:50:16 markwilkinson Exp $
 ###########################################################
 
 use MOBY::Client::Central;
@@ -326,12 +326,6 @@ sub init {
     # Gbrowse    MOBY
     # source   = namespace
     # name     = id
-    
-    if ((param('servicename')) && (param('authority'))){
-        &execute;
-        return;
-    }
-
     my $class = param('class');  # this is a Gbrowse variable, (the GFF column 9 class)
     $class ||=param('namespace');  # for MOBY calls, we will need to use the namespace rather than the GFF class
     $class ||=param('source');  # failsafe
@@ -342,7 +336,7 @@ sub init {
     my $id = param('name');  # name is a Gbrowse variable    
     $id ||= param('id'); # for MOBY calls we call it "id" not "name", but they are ~the same thing
 
-    unless ($namespace && $id){
+    unless (defined($namespace) && defined($id)){
         print_top("MOBY-S Client Initialization");
         print $CONFIG->header || h1("MOBY-S Client Initialization");
         print h1("Initialization Required");
@@ -353,6 +347,12 @@ sub init {
     }
 
 
+    my $keyword = param('keyword');
+    my $authority = param('authURI');
+    my $output = param('output');
+    my $serviceType = param('serviceType');
+    my $expandObjects = param('expandObjects');
+    
     $Central = MOBY::Client::Central->new();  # CENTRAL is a global variable
 
     my $objectclass =param('objectclass');  # for MOBY calls we may have a data class (e.g. VirtualSequence)
@@ -372,7 +372,7 @@ sub init {
     }
 
     Delete_all();  # reset all CGI parameters
-    my @Services = &findService($objectclass, \@namespace);
+    my @Services = &findService($objectclass, \@namespace, $keyword, $authority, $output, $serviceType, $expandObjects);
     return unless scalar(@Services);
 
     print start_table();
@@ -387,6 +387,7 @@ sub init {
             hidden('action',"execute"),
             submit("Execute This Service"),
             end_form());
+            my $email = $SERVICE->contactEmail;
             my @outtypes;
             my $collection = 0;
             if ($SERVICE->output->[0]->isCollection){
@@ -407,7 +408,7 @@ sub init {
             }
             print TR({-valign=>'top', -class=>'databody'},
             th({-align => 'left', -valign=>'top', -class=>'datatitle'},"Service Name: "),
-            td($SERVICE->name, "provided by: ".($SERVICE->authority),"")),
+            td($SERVICE->name, "provided by: ".($SERVICE->authority)," (<a href='mailto:$email'>contact</a>)")),
 
             TR({-valign=>'top', -class=>'databody'},
             th({-align => 'left', -valign=>'top', -class=>'datatitle'},"Service Type: "),
@@ -438,8 +439,9 @@ sub getObjectDescription {
     my $proxy = $CONFIG->setting('http_proxy');
     my $ua = LWP::UserAgent->new;
     $proxy && $ua->proxy(['http'],$proxy);
-
+    
     my $req = HTTP::Request->new(GET => "http://mobycentral.cbr.nrc.ca/cgi-bin/types/Objects?lsid_name=$ob");
+    
     my $res = $ua->request($req);
     return unless $res->is_success;
     my $content = $res->content;
@@ -451,19 +453,38 @@ sub getObjectDescription {
 }
 
 sub findService {
-    my ($class, $namespace) = @_;  # class is scalar, $namespace is listref    
+    my ($class, $namespace, $keyword, $authority, $output, $serviceType, $expandObjects) = @_;  # class is scalar, $namespace is listref    
 
     # put together a simple article query
     my @simpleArticle = ($class, $namespace);
     my @input = (\@simpleArticle);
 
-    my ($Services, $REG) = $Central->findService(input => \@input, expandObjects => 1, expandServices => 1);
+    my @outputs = split ",", $output;
+    my @output;
+    if (scalar(@outputs) > 1){
+        @output = [[@outputs],undef];
+    } else {
+        @output = [(shift @outputs), undef];
+    }
+
+    my %args;
+    $args{input} = \@input;
+    $output && ($args{output} = \@output);
+    $args{expandObjects} = 0;
+    $expandObjects && ($args{expandObjects} = 1);
+    $args{expandServices} = 1;
+    $authority && ($args{authURI} = $authority);
+    $serviceType && ($args{serviceType} = $serviceType);
+    $keyword && ($args{keywords} = [split ",", $keyword]);
+    
+    print STDERR keys %args,"\n";
+    my ($Services, $REG) = $Central->findService(%args);
     unless ($Services){
             print h2("Service discovery failed with the following errror: ").i($REG->message).p;
             return
     }
     unless (scalar @{$Services}){
-            print h2("No BioMOBY Services were discovered that could operate on @$namespace[0] type data").p;
+            print h2("No BioMOBY Services were discovered that could operate on $class data ", @$namespace[0]?"in the @$namespace[0] namespace.  Try switching 'Decompose Objects' on...":"").p;
             return
     }
     return @$Services
@@ -532,7 +553,9 @@ sub execute {
                    hidden("namespace", $namespace),
                    hidden("id",$id),
                    hidden("objectclass",$MOBYClass),
-                   submit("Re-query MOBY with This Data"),end_form                   
+                   submit("Re-query MOBY with This Data"),
+                   &setupFilters,
+                   end_form                   
                    ));
             print TR({-valign=>'top', -class=>'databody'},
                 th({-align => 'left', -valign=>'top', -class=>'datatitle'},"Data Type: "),
@@ -562,8 +585,7 @@ sub printIt {
     # chose the parent object type of $thisdatatype that is closest
     # in our list of known object types.
     my ($renderer_term, $renderer_lsid) = &whichDeepestParentObject($Central, $thisdatatype, \@rtypes); 
-    # $renderer_term ||='text-formatted'; # personal preference
-    $renderer_term ||='text-plain';
+    $renderer_term ||='text-formatted';
     $renderer = $RENDERERS{$renderer_term};
 
     die "Can't render this information\n" unless $renderer;
@@ -619,21 +641,40 @@ sub processXrefs {
     }
 }
 
+sub setupFilters {
+#<SPAN title=" description here " class="popup">text</SPAN>
+    return "<table border=1><tr><td>",checkbox_group(-name => 'expandObjects', -values => ['?'], -checked=>"ON"),
+    "  <SPAN title=' When this box is checked, your input object will be decomposed into its ISA parentage and services that operate on any parent class will also be discovered. ' class='popup' cursor='help'>Decompose Objects?</span> ",
+    "<td>","  <SPAN title=' Enter a comma-delimited list of keywords that should appear in the service description. ' class='popup' cursor='help'>Keywords:</span> ", textfield(-name => 'keyword', -size => 20),"</td>",
+    "<td>","  <SPAN title=' Enter the full URI for the authority (service provider) that you want to restrict your search to.  e.g. sgn.cornell.edu ' class='popup' cursor='help'>Authority:</span> ",textfield(-name => 'authURI', -size => 20),"</td>",
+    "<td>","  <SPAN title=' Enter a valid term from the Service Type Ontology. ' class='popup' cursor='help'>Service Type:</span> ", textfield(-name => "serviceType", -size => 10),"</td>",
+    "<td>","  <SPAN title=' Your search will be restricted to only those services that output this Object.  The ontology is NOT traversed. ' class='popup' cursor='help'>Output Object:</span> ", textfield(-name => "output", -size => 10),"</td>",
+    "</tr></table>"
+
+}
+
 sub INITIALIZE {	
     my $Central = MOBY::Client::Central->new();
     my $NameSpaces = $Central->retrieveNamespaces;
     my @Namespaces = sort keys(%{$NameSpaces});
     print start_form(-action => url(-full)),
-    "<h2>Select a namespace: ";
+    "<table border=1><tr><td>",
+    "<h2>Select a namespace: </h2>",
+    "</td>",
+    "<td>";
     print popup_menu(-name => 'namespace',
         '-values' => ["select", @Namespaces],
         '-default' => 'NCBI_gi',
     );
+    print "</td></tr>";
 
-    print p,
-    "Which ID within this namespace?: ",   
-    textfield(-name => 'id',-width=>'15', -value => "431260",);
-    print "</h2>",p,
+    print "<tr>",
+    "<td>",
+    "<h2>Which ID within this namespace?: </h2>",   
+    "</td><td>",textfield(-name => 'id',-width=>'15', -value => "431260",),
+    "</td></tr>",
+    "</table>";
+    print "</h2>",p, &setupFilters,p,
     submit("Initialize with this seed data"),
     end_form;
 

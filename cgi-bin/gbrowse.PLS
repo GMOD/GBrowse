@@ -336,7 +336,7 @@ sub main_display {
   # if there's a single segment, then print a message and store the segment into a scalar
   elsif (@$segments == 1) {
     $segment = $segments->[0];
-    $segment = truncated_segment($segment) if $segment->length < 4;
+    # $segment = truncated_segment($segment) if $segment->length < 4;
     my $divider = $CONFIG->setting(general=>'unit_divider') || 1;
     print h2($CONFIG->tr('SHOWING_FROM_TO',
 		       unit_label($segment->length),
@@ -1264,15 +1264,15 @@ sub lookup_segments {
 }
 
 # this gets called when -- for whatever reason -- we got a truncated segment
-sub truncated_segment {
-  my $seg   = shift;
-  my ($trunc_left,$trunc_right) = @{$seg->truncated} if $seg->truncated;
-  my $ref   = $seg->seq_id;
-  my $db    = open_database();
-  my $whole = $db->segment($ref);
-  return $db->segment(-name=>$ref,-start=>$whole->end-4,-end=>$whole->end) if $trunc_right;
-  return $db->segment(-name=>$ref,-start=>1,-end=>4)                         if $trunc_left;
-}
+#sub truncated_segment {
+#  my $seg   = shift;
+#  my ($trunc_left,$trunc_right) = @{$seg->truncated} if $seg->truncated;
+#  my $ref   = $seg->seq_id;
+#  my $db    = open_database();
+#  my $whole = $db->segment($ref);
+#  return $db->segment(-name=>$ref,-start=>$whole->end-4,-end=>$whole->end) if $trunc_right;
+#  return $db->segment(-name=>$ref,-start=>1,-end=>4)                         if $trunc_left;
+#}
 
 ################ perform keyword search ###############
 sub do_keyword_search {
@@ -1600,7 +1600,7 @@ sub load_external_sources {
   warn join "\n",%feature_file if DEBUG;
   my $f = \%feature_file;
 
-  load_plugin_annotations($segment,$f,$page_settings) if defined($segment) && $segment->length <= $MAX_SEGMENT;
+  load_plugin_annotations($segment,$f,$page_settings) if $segment->length <= $MAX_SEGMENT;
   return $f;
 }
 

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.76 2004-09-05 04:36:02 allenday Exp $
+# $Id: Segment.pm,v 1.77 2004-09-09 19:40:45 scottcain Exp $
 
 =head1 NAME
 
@@ -90,15 +90,16 @@ package Bio::DB::Das::Chado::Segment;
 use strict;
 
 use Carp qw(carp croak cluck longmess);
+use Log::Log4perl;
+Log::Log4perl::init('/etc/log4perl.conf');
+my $log = Log::Log4perl->get_logger('Bio.DB.Das.Chado.Segment');
 
 use Bio::Root::Root;
-use Bio::Graphics::Browser::Util;
 use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
 use constant DEBUG => 0;
 
-use vars qw($VERSION @ISA);
-
+use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI Bio::DB::Das::Chado);
 $VERSION = 0.11;
 
@@ -227,7 +228,7 @@ sub new {
 
             warn "base_start:$base_start, end:$end, length:$length" if DEBUG;
 
-            $self = bless {
+            return bless {
                 factory       => $factory,
                 start         => $base_start,
                 end           => $end,
@@ -237,16 +238,12 @@ sub new {
                 name          => $name,
               },
               ref $self || $self;
-
-            $self->log();
-            return $self;
         }
 
         else { #return a Feature object for the feature_id
             my ($feat) = $self->features(
                           -feature_id => $landmark_feature_id,
                           -factory    => $factory);
-            $feat->log();
             return $feat;
         }
     }
@@ -565,7 +562,7 @@ is defined, then -callback is ignored.
 sub features {
   my $self = shift;
 
-#  $log->debug("Segment->features() args:@_");
+  $log->debug("Segment->features() args:@_");
 
   my ($type,$types,$attributes,$rangetype,$iterator,$callback,$feature_id,$factory);
   if ($_[0] and $_[0] =~ /^-/) {
@@ -579,12 +576,12 @@ sub features {
                             FEATURE_ID
                             FACTORY)],@_);
     $types ||= $type; #grr
-#    $log->debug("$types");
+    $log->debug("$types");
   } else {
     $types = \@_;
   }
 
-#  $log->debug("@$types") if defined($types);
+  $log->debug("@$types") if defined($types);
 
   $factory   ||= $self->factory();
   my $feat     = Bio::DB::Das::Chado::Segment::Feature->new();
@@ -1072,3 +1069,4 @@ sub asString {
 
 
 1;
+

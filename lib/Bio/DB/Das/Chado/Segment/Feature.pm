@@ -19,7 +19,6 @@ package Bio::DB::Das::Chado::Segment::Feature;
 use strict;
 
 use Bio::DB::Das::Chado::Segment;
-use Bio::Graphics::Browser::Util;
 use Bio::SeqFeatureI;
 use Bio::Root::Root;
 use Bio::LocationI;

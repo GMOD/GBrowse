@@ -32,7 +32,33 @@ END
 
    LANDMARK => 'Référentiel ou Région',
 
-   GO       => 'Aller à',
+   BOOKMARK => 'Ajouter cet affichage à vos favoris',
+
+   IMAGE_LINK => 'Lien vers une image de cet affichage',
+
+   IMAGE_DESCRIPTION => <<END,
+<p>
+Pour créer une image incrustée de cet affichage, il faut copier et coller
+cette URL dans une page HTML :
+</p>
+<pre>
+&lt;IMAGE src="%s" /&gt;
+</pre>
+<p>
+L'image ressemblera à ceci :
+</p>
+<p>
+<img src="%s" />
+</p>
+
+<p>
+Si seul l'aperçu (affichage d'un chromosome ou contig) est visible, il
+faut essayer de réduire la taille de la région.
+</p>
+END
+
+
+   GO       => 'Lancer',
 
    FIND     => 'Trouver',
 
@@ -43,6 +69,8 @@ END
    SCROLL   => 'Défil./Zoom',
 
    RESET    => 'Remise à zéro',
+
+   FLIP     => 'Inversion',
 
    DOWNLOAD_FILE    => 'Télécharger un fichier',
 
@@ -84,13 +112,25 @@ END
 
  SHOW_INSTRUCTIONS => 'Montrer les instructions',
 
+ HIDE_INSTRUCTIONS => 'Cacher les instructions',
+
+ SHOW_HEADER => 'Montrer l\'en-tête',
+
+ HIDE_HEADER => 'Cacher l\'en-tête',
+
  SEARCH  => 'Chercher',
 
- KEY_POSITION => 'Position clef',
+ KEY_POSITION => 'Position des légendes',
 
- BETWEEN     => 'Entre',
+ BETWEEN     => 'Entre les pistes',
 
- BENEATH     => 'Après',
+ BENEATH     => 'Sous l\'affichage',
+
+ TRACK_NAMES => 'Tableau des pistes',
+ 
+ ALPHABETIC => 'Tri alphabétique',
+
+ VARYING => 'Pas de tri',
 
    IMAGE_WIDTH => 'Largeur d\'image',
 
@@ -134,6 +174,8 @@ END
    #----------------------
 
    HIT_COUNT      => 'Les  %d régions suivantes correspondent à votre requête.',
+
+   POSSIBLE_TRUNCATION => 'Les résultats de la recherche sont limités à %d hits ; la liste risque d\'être incomplète.',
 
    MATCHES_ON_REF => 'Correspondance avec %s',
 

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.55 2004-08-19 04:31:18 allenday Exp $
+# $Id: Chado.pm,v 1.56 2004-08-19 14:19:40 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -98,7 +98,7 @@ use constant SEGCLASS => 'Bio::DB::Das::Chado::Segment';
 use constant DEBUG => 0;
 
 $VERSION = 0.11;
-@ISA = qw(Bio::Root::Root Bio::DasI);
+@ISA     = qw(Bio::Root::Root Bio::DasI);
 
 =head2 new
 
@@ -338,20 +338,20 @@ interrupted.  When a callback is provided, the method returns undef.
 
 sub features {
   my $self = shift;
-  my ($type,$types,$callback,$attributes,$iterator) = 
-       $self->_rearrange([qw(TYPE TYPES CALLBACK ATTRIBUTES ITERATOR)],
+  my ($type,$callback,$attributes,$iterator) = 
+       $self->_rearrange([qw(TYPE CALLBACK ATTRIBUTES ITERATOR)],
 			@_);
 
-  $type ||= $types; #GRRR
 
   warn "Chado,features: $type\n" if DEBUG;
+warn $self->_segclass;
   my @features = $self->_segclass->features(-type => $type,
                                             -attributes => $attributes,
                                             -callback => $callback,
-                                            -iterator => $iterator,
-                                            -factory  => $self
-                                           );
-  return @features;
+                                            -iterator => $iterator );
+
+
+  @features;
 }
 
 =head2 types
@@ -830,20 +830,6 @@ sub absolute {return}
 #        return;
 #}
 
-=head1 LEFTOVERS FROM BIO::DB::GFF NEEDED FOR DAS
-
-these methods should probably be declared in an interface class
-that Bio::DB::GFF implements.  for instance, the aggregator methods
-could be described in Bio::SeqFeature::AggregatorI
-
-=cut
-
-sub aggregators { return(); }
-
-=head1 END LEFTOVERS
-
-=cut
-
 package Bio::DB::Das::ChadoIterator;
 
 sub new {
@@ -858,6 +844,7 @@ sub next_seq {
     my $next_feature = shift @$self;
   return $next_feature;
 }
+
 
 1;
 

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.94 2004-06-16 14:54:16 lstein Exp $
+# $Id: gbrowse.PLS,v 1.95 2004-06-22 20:42:41 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -208,9 +208,12 @@ if ($plugin_action eq $CONFIG->tr('Find') && param('plugin')) {
   do_plugin_find($page_settings,
 		 param('plugin'),
 		 $features) or ($plugin_action = 'Configure'); #reconfigure
-} elsif (!@$features && $page_settings->{name}) {
-  do_keyword_search($page_settings,$features);
-  do_plugin_autofind($page_settings,$features) unless @$features;  # last resort
+}
+
+elsif (!@$features && $page_settings->{name}) {
+  @$features = do_keyword_search($page_settings->{name});
+  @$features = do_plugin_autofind($page_settings,$page_settings->{name})
+    if !@$features;  # last resort
 }
 
 my $segments = features2segments($features);
@@ -615,7 +618,7 @@ sub default_settings {
   $settings->{ins}     = 1;
   $settings->{head}    = 1;
   $settings->{ks}      = 'between';
-  $settings->{sk}      = $CONFIG->setting('default varying') ? 'unsorted' : 'sorted';
+  $settings->{sk}      = 'sorted';
   set_default_tracks($settings);
 }
 
@@ -732,7 +735,7 @@ sub adjust_settings {
 	|| grep {/zoom|nav|overview/} param())
      )
     {
-      $settings->{version} ||= param('version');
+      $settings->{version} ||= param('version') || '';
       $settings->{ref}   = param('ref');
       $settings->{start} = param('start') if param('start') =~ /^[\d-]+/;
       $settings->{stop}  = param('stop')  if param('stop')  =~ /^[\d-]+/;
@@ -992,7 +995,8 @@ sub tracks_table {
   my $self_url = "?help=citations";
 
   my @labels = @{$settings->{tracks}};
-  my %labels = map {$_ => make_citation_link($_,$self_url) } @labels;
+  my %labels          = map {$_ => make_citation_link($_,$self_url) } @labels;
+
   if ($settings->{sk} eq 'sorted') {
     my %keys = map {$_=>label2key($_)} @labels;
     @labels    = sort { lc($keys{$a}) cmp lc($keys{$b})} @labels;
@@ -1004,22 +1008,26 @@ sub tracks_table {
     ? hidden(-name=>'label',-value=>'_',-override=>1) 
     : '';  # dummy, just to keep param() happy.
 
+  my $overview_color = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR;
+
   $sTable.= table({-border=>0,-width=>'100%'},
 		  # row
 		  $settings->{stp} ?
 		  (
-		   TR(	td({-class=>'searchbody', -valign=>'top',-align=>'right'},
+		   TR(	td({-class=>'searchbody', -valign=>'top',-align=>'left'},
 			   b($CONFIG->tr('Tracks')),a({-href=>"?stp=0"},'['.$CONFIG->tr('HIDE').']'),
-			   p(i($CONFIG->tr('External_tracks')))),
+			   p(i($CONFIG->tr('External_tracks')),
+			     div({-style=>"background: $overview_color"},$CONFIG->tr('Overview_tracks'))
+			    )),
 			td({-class=>'searchbody',-colspan=>3,-width=>'85%'},
 			   checkbox_group(-name=>'label',
 					  # use the track ordering to adjust the order of the checkboxes
 					  # this is an array slice
-					  -values   => \@labels,
-					  -labels   => \%labels,
-					  -defaults => \@defaults,
-					  -cols     => 3,
-					  -override => 1,
+					  -values     => \@labels,
+					  -labels     => \%labels,
+					  -defaults   => \@defaults,
+					  -cols       => 3,
+					  -override   => 1,
 					 ))),
 		  ) :
 		  TR(td({-class=>'searchbody',-colspan=>3},
@@ -1306,6 +1314,12 @@ sub get_features {
 
   my @features = lookup_features_from_db($db,$settings);
 
+  # sort of hacky way to force keyword search on wildcards
+  if (defined $settings->{name} && $page_settings->{name} =~ /[*?]/) {
+    (my $searchterm = $page_settings->{name}) =~ tr/*?//d;
+    push @features,do_keyword_search($searchterm);
+  }
+
   # h'mmm.  Couldn't find the feature.  See if it is in an uploaded file.
   @features    = lookup_features_from_external_sources($settings,$settings->{name},undef)
     unless @features;
@@ -1435,13 +1449,11 @@ sub lookup_features_from_external_sources {
 
 ################ perform keyword search ###############
 sub do_keyword_search {
-  my $settings = shift;
-  my $features = shift;
-  my $searchterm = $settings->{name};
-  
+  my $searchterm = shift;
+
   # if they wanted something specific, don't give them non-specific results.
   return if $searchterm =~ /^[\w._-]+:/;
-  
+
   # Need to untaint the searchterm.  We are very lenient about
   # what is accepted here because we wil be quote-metaing it later.
   $searchterm =~ /([\w .,~!@\#$%^&*()-+=<>?\/]+)/;
@@ -1474,12 +1486,13 @@ sub do_keyword_search {
 					      -factory=> $db);
 
   }
-  @$features = @results;
+  return @results;
 }
 
 ################ format keyword search ###################
 sub multiple_choices {
   my ($settings,$results) = @_;
+
   my $db   = open_database();
   my $name = $settings->{name};
   my $regexp = join '|',($name =~ /(\w+)/g);
@@ -1494,7 +1507,7 @@ sub multiple_choices {
   }
 
   $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
-  my $overviews = $CONFIG->hits_on_overview($db,$results);
+  my $overviews = $CONFIG->hits_on_overview($db,$results,$settings->{features});
   my $count = @$results;
 
   print start_table();
@@ -2157,12 +2170,16 @@ sub set_track_options {
   my %keys            = map {$_ => $CONFIG->setting($_=>'key') || $_} @labels;
   my @sorted_labels   = ('',sort {lc $keys{$a} cmp lc $keys{$b}} @labels);
 
+  my $oc = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR;
+
   my @rows;
   for (my $track = 0; $track < @labels; $track++) {
     my $label = $labels[$track];
     push @rows,
       th({-align=>'left',-class=>'searchtitle'},$CONFIG->tr("Track"),$track+1).
-      th({-align=>'left',-class=>'searchbody'},$label=~/:overview$/ ? "$keys{$label}<sup>*</sup>":$keys{$label}).
+      th({-align=>'left',-class=>'searchbody'},$label=~/:overview$/ ? div({-style=>"background: $oc"},
+									  "$keys{$label}<sup>*</sup>")
+	                                                            :$keys{$label}).
       td({-align=>'center',-class=>'searchbody'},
 	     checkbox(-name     => 'track.label',
 		      -value    => $label,
@@ -2232,8 +2249,12 @@ sub set_track_options {
 	      hidden(-name=>$CONFIG->tr('Set_options'), -value=>1,-override=>1),
 	      hidden(-name=>$CONFIG->tr('Adjust_order'),-value=>1,-override=>1),
 	     );
-    print $CONFIG->tr('EXTERNAL_TRACKS');
-    print end_form();
+  print $CONFIG->tr('EXTERNAL_TRACKS'),
+    br,
+      div({-style=>"background: $oc"},
+	  $CONFIG->tr('OVERVIEW_TRACKS')
+	  );
+  print end_form();
 }
 
 sub help {
@@ -2416,8 +2437,10 @@ sub make_citation_link {
     (my $anchor  = $label) =~ tr/ /-/;
     $link = $self_url.'#'.escapeHTML($anchor);
   }
+  my $overview_color = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR;
   my @args = (-href=>$link,-target=>'citation');
   push @args,-style=>'Font-style: italic' if $label =~ /^(http|ftp|file):/;
+  push @args,-style=>"background: $overview_color" if $label =~ /:overview$/;
   return a({@args},$key);
 }
 
@@ -2647,14 +2670,15 @@ sub do_plugin_configure {
 
 # invoke any finder plugins that define the auto_find() method
 sub do_plugin_autofind {
-  my ($settings,$segments,$features) = @_;
+  my ($settings,$searchterm) = @_;
+  my $segments = [];
 
   for my $p (keys %$PLUGINS) {
     next unless $PLUGINS->{$p}->type eq 'finder' && $PLUGINS->{$p}->can('auto_find');
-    do_plugin_find($settings,$p,$segments,$settings->{name});
+    do_plugin_find($settings,$p,$segments,$searchterm);
     last if @$segments;
   }
-  @$features = @$segments;
+  return @$segments;
 }
 
 sub retrieve_plugin_config {

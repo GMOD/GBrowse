@@ -138,7 +138,9 @@ END
 
    TRACKS   => 'Tracks',
 
-   EXTERNAL_TRACKS => "(External tracks italicized)<br><sup>*</sup>Overview track",
+   EXTERNAL_TRACKS => '<i>External tracks italicized</i>',
+
+   OVERVIEW_TRACKS => '<sup>*</sup>Overview track',
 
    EXAMPLES => 'Examples',
 

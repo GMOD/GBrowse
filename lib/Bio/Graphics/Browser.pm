@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.149 2004-06-11 15:11:42 scottcain Exp $
+# $Id: Browser.pm,v 1.150 2004-06-22 20:42:42 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -20,7 +20,7 @@ Bio::Graphics::Browser -- Utility methods for the Generic Genome Browser
   my @default_tracks = $b->default_labels;
   my $track_label    = $b->feature2label;
 
-  # warning: commas() is exported
+  # warning: commas() and DEFAULT_OVERVIEW_BGCOLOR is exported
   my $big_number_with_commas = commas($big_number_without_commas);
 
 =head1 DESCRIPTION
@@ -71,7 +71,7 @@ use vars '$VERSION','@ISA','@EXPORT';
 $VERSION = '1.17';
 
 @ISA    = 'Exporter';
-@EXPORT = 'commas';
+@EXPORT = ('commas','DEFAULT_OVERVIEW_BGCOLOR');
 
 use constant DEFAULT_WIDTH => 800;
 use constant DEFAULT_DB_ADAPTOR  => 'Bio::DB::GFF';
@@ -85,6 +85,7 @@ use constant DEFAULT_RANGES      => q(100 500 1000 5000 10000 25000 100000 20000
 use constant MIN_OVERVIEW_PAD    => 25;
 use constant PAD_OVERVIEW_BOTTOM => 5;
 use constant PAD_DETAIL_SIDES    => 25;
+use constant DEFAULT_OVERVIEW_BGCOLOR => 'wheat';
 
 use constant DEBUG => 0;
 
@@ -1235,7 +1236,7 @@ sub overview {
 		      -unit_divider => $conf->setting(general=>'unit_divider') || 1,
 		     );
 
-    $self->add_overview_landmarks($panel,$segment,\@tracks,$padl,$track_options);
+    $self->add_overview_landmarks($panel,$segment,$track_options);
     $gd = $panel->gd;
     $self->gd_cache_write($cache_path,$gd) if $cache_path;
   }
@@ -1257,12 +1258,13 @@ sub overview {
 
 sub add_overview_landmarks {
   my $self = shift;
-  my ($panel,$segment,$tracks,$pad,$options) = @_;
+  my ($panel,$segment,$options) = @_;
   my $conf = $self->config;
+  my @tracks = grep {$options->{$_}{visible}} $conf->overview_tracks;
 
   my (@feature_types,%type2track,%track);
 
-  for my $overview_track (@$tracks) {
+  for my $overview_track (@tracks) {
     my @types = $conf->label2type($overview_track);
     my $track = $panel->add_track(-glyph  => 'generic',
 				  -height  => 3,
@@ -1340,7 +1342,7 @@ reference sequence names and the values are HTML to be emitted.
 # a list of arrayrefs in the form [ref,start,stop,[name]]
 sub hits_on_overview {
   my $self = shift;
-  my ($db,$hits) = @_;
+  my ($db,$hits,$options) = @_;
 
   my %html; # results are a hashref sorted by chromosome
 
@@ -1350,7 +1352,9 @@ sub hits_on_overview {
   my $max_label  = $self->label_density;
   my $max_bump   = $self->bump_density;
   my $class      = eval{$hits->[0]->factory->default_class} || 'Sequence';
-  my ($padl,$padr)  = $self->overview_pad([$self->config->overview_tracks],'Matches');
+  my ($padl,$padr)  = $self->overview_pad([grep { $options->{$_}{visible}} 
+					   $self->config->overview_tracks],
+					  'Matches');
 
   # sort hits out by reference and version
   my (%refs);
@@ -1389,7 +1393,8 @@ sub hits_on_overview {
 
   for my $ref (sort keys %refs) {
     my ($name, $version) = split /\sversion\s/i, $ref; 
-    my $segment = ($db->segment(-class=>$class,-name=>$name, defined $version ? (-version => $version):()))[0] or next;
+    my $segment = ($db->segment(-class=>$class,-name=>$name, 
+				defined $version ? (-version => $version):()))[0] or next;
     my $panel = Bio::Graphics::Panel->new(-segment => $segment,
 					  -width   => $width,
 					  -bgcolor => $self->setting('overview bgcolor') || 'wheat',
@@ -1411,7 +1416,7 @@ sub hits_on_overview {
 		     );
 
     # add the landmarks
-    $self->add_overview_landmarks($panel,$segment,[$self->config->overview_tracks]);
+    $self->add_overview_landmarks($panel,$segment,$options);
 
     # add the hits
     $panel->add_track($refs{$ref},
@@ -1429,6 +1434,7 @@ sub hits_on_overview {
     my $boxes = $panel->boxes;
     $html{$ref} = $self->_hits_to_html($ref,$gd,$boxes);
   }
+
   return \%html;
 }
 
@@ -1536,42 +1542,39 @@ sub name2segments {
   $start *= $divisor if defined $start;
   $stop  *= $divisor if defined $stop;
 
-  @segments  = $self->_feature_get($db,$name,$class,$start,$stop,$segments_have_priority);
+ SEARCHING: {
+    # non-heuristic fetch
+    @segments  = $self->_feature_get($db,$name,$class,$start,$stop,$segments_have_priority);
+    last SEARCHING if @segments;
 
-  # Here starts the heuristic part.  Try various abbreviations that
-  # people tend to use for chromosomal addressing.
-  if (!@segments && $name =~ /^([\dIVXA-F]+)$/) {
-    my $id = $1;
-    foreach (qw(CHROMOSOME_ Chr chr)) {
-      my $n = "${_}${id}";
-      @segments = $self->_feature_get($db,$n,$class,$start,$stop,$segments_have_priority);
-      last if @segments;
-    }
-  }
-
-  # try to remove the chr CHROMOSOME_I
-  if (!@segments && $name =~ /^(chromosome_?|chr)/i) {
-    (my $chr = $name) =~ s/^(chromosome_?|chr)//i;
-    @segments = $db->segment($chr);
-  }
-
-  # try the wildcard  version, but only if the name is of significant length
-  if (!@segments && length $name > 3) {
-    @segments = $self->_feature_get($db,"$name*",$class,$start,$stop,$segments_have_priority);
-  }
-
-  # try any "automatic" classes that have been defined in the config file
-  if (!@segments && !$class &&
-      (my @automatic = split /\s+/,$self->setting('automatic classes') || '')) {
-    my @names = length($name) > 3 && 
-      $name !~ /\*/ ? ($name,"$name*") : $name;  # possibly add a wildcard
-  NAME:
-      foreach $class (@automatic) {
-	for my $n (@names) {
-	  @segments = $self->_feature_get($db,$n,$class,$start,$stop,$segments_have_priority);
-	  last NAME if @segments;
-	}
+    # heuristic fetch. Try various abbreviations and wildcards
+    my @sloppy_names = $name;
+    if ($name =~ /^([\dIVXA-F]+)$/) {
+      my $id = $1;
+      foreach (qw(CHROMOSOME_ Chr chr)) {
+	my $n = "${_}${id}";
+	push @sloppy_names,$n;
       }
+    }
+
+    # try to remove the chr CHROMOSOME_I
+    if ($name =~ /^(chromosome_?|chr)/i) {
+      (my $chr = $name) =~ s/^(chromosome_?|chr)//i;
+      push @sloppy_names,$chr;
+    }
+
+    # try the wildcard  version, but only if the name is of significant length
+    push @sloppy_names,"*$name*" if length $name > 3;
+
+    # automatic classes to try
+    my @classes = $class ? ($class) : (split /\s+/,$self->setting('automatic classes'));
+
+    for my $n (@sloppy_names) {
+      for my $c (@classes) {
+	@segments = $self->_feature_get($db,$n,$c,$start,$stop,$segments_have_priority);
+	last SEARCHING if @segments;
+      }
+    }
   }
 
   # user wanted multiple locations, so user gets them
@@ -1595,12 +1598,13 @@ sub _feature_get {
   my $self = shift;
   my ($db,$name,$class,$start,$stop,$segments_have_priority) = @_;
   my $refclass = $self->setting('reference class') || 'Sequence';
+  $class ||= $refclass;
 
   my @argv = (-name  => $name);
   push @argv,(-class => $class) if defined $class;
   push @argv,(-start => $start) if defined $start;
   push @argv,(-end   => $stop)  if defined $stop;
-  warn "\@argv = @argv\n" if DEBUG;
+  warn "\@argv = @argv" if DEBUG;
   my @segments;
   if ($segments_have_priority) {
     @segments  = grep {$_->length} $db->segment(@argv);

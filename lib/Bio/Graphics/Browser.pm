@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.2 2002-01-31 06:29:39 lstein Exp $
+# $Id: Browser.pm,v 1.3 2002-01-31 18:47:17 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
@@ -309,9 +309,8 @@ sub read_configuration {
 
   for my $file (sort {$b cmp $a} @conf_files) {
     my $basename = basename($file,'.conf');
-    next if $self->{conf}{$basename}
-      && $self->{conf}{$basename}{mtime} >= $mtimes{$_};
-
+    next if defined($self->{conf}{$basename}{mtime})
+      && ($self->{conf}{$basename}{mtime} >= $mtimes{$file});
     my $config = Bio::Graphics::BrowserConfig->new(-file => $file) or next;
     $self->{conf}{$basename}{data}  = $config;
     $self->{conf}{$basename}{mtime} = $mtimes{$file};

@@ -55,6 +55,7 @@ The 11 arguments are positional:
                       sequence, which has its own strandedness!)
   $group        this feature's group (a GFF holdover)
   $db_id        this feature's internal database ID (feature.feature_id)
+  $feature_id	an internal chado database id
 
 =cut
 

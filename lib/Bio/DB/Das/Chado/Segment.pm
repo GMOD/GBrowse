@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.12 2003-01-27 18:05:00 scottcain Exp $
+# $Id: Segment.pm,v 1.13 2003-01-27 20:45:17 scottcain Exp $
 
 =head1 NAME
 
@@ -30,10 +30,10 @@ Bio::DB::Das::Chado::Segment - DAS-style access to a chado database
 
 =head1 DESCRIPTION
 
-Bio::DB::Das::Segment is a simplified alternative interface to
+Bio::DB::Das::Chado::Segment is a simplified alternative interface to
 sequence annotation databases used by the distributed annotation
 system. In this scheme, the genome is represented as a series of
-landmarks.  Each Bio::DB::Das::Segment object ("segment") corresponds
+landmarks.  Each Bio::DB::Das::Chado::Segment object ("segment") corresponds
 to a genomic region defined by a landmark and a start and end position
 relative to that landmark.  A segment is created using the Bio::DasI
 segment() method.
@@ -96,7 +96,7 @@ use constant DEBUG => 0;
 use vars '@ISA','$VERSION','$ASSEMBLY_TYPE';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI);
 $VERSION = 0.01;
-$ASSEMBLY_TYPE = 'arm';
+$ASSEMBLY_TYPE = 'arm'; #this should really be gotten from a config file
 
 # construct a virtual segment that works in a lazy way
 sub new {

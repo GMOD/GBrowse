@@ -113,6 +113,8 @@ htdocs_install ::
 			cp -pr \$\$i \$\$dir; \\
 		fi \\
 	done; \\
+	echo "Making \$\$dir/tmp..."; \\
+	mkdir \$\$dir/tmp; \\
 	echo "Making \$\$dir/tmp world writable..."; \\
 	chmod ugo+rwx \$\$dir/tmp
 

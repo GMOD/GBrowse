@@ -6,7 +6,7 @@ use FindBin '$Bin';
 use Cwd;
 
 my %OPTIONS;
-if (open F,"$Bin/GGB.def") {
+if (open F,"$Bin/../GGB.def") {
   while (<F>) {
     next if /^\#/;
     chomp;
@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.2 2003-06-08 21:01:43 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.3 2003-06-12 23:46:39 scottcain Exp $
 
 use strict;
 use CGI qw(:standard *table *TR);

@@ -50,13 +50,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.19 2003-12-30 22:37:26 markwilkinson Exp $
-# for some reason I am unable to dynamically load these??
-use MobyServices::b64_encoded_gif_renderer;
-use MobyServices::b64_encoded_jpeg_renderer;
-use MobyServices::text_formatted_renderer;
-use MobyServices::text_html_renderer;
-use MobyServices::text_plain_renderer;
+#$Id: gbrowse_moby.PLS,v 1.20 2003-12-31 15:21:21 markwilkinson Exp $
 ###########################################################
 
 use MOBY::Client::Central;
@@ -76,15 +70,17 @@ use vars qw($Central %RENDERERS $CONFIG $VERSION $CONF_DIR $HTML_DIR);
 opendir (DIR, "$CONF_DIR/MobyServices") || die "Can't open directory $CONF_DIR/MobyServices for directory parsing $!\n";
 my @files = readdir DIR;
 
-foreach my $file(@files){
+foreach my $file(@files){ 
     no strict 'refs';
     next if (-d $file);
-    next unless ($file =~ /(.*_renderer)\.pm/);
-#    require "MobyServices::".$1;  # this is the line that always fails.  I don't really know why?!?
-    my $type = &{'MobyServices::'.$1.'::type'};
-    $RENDERERS{$type} =   "MobyServices::".$1."";
+    next unless ($file =~ /(.*_renderer)\.pm/);  # find all renderers in the config folder
+    my $rendererclass = "MobyServices::$1";   # create the module name
+    eval "require $rendererclass";          # load it
+    my $type = &{$rendererclass."::type"};  # invoke the sub type {} routine to get the object type rendered
+    $RENDERERS{$type} =   $rendererclass;  # assign this renderer by its object type
     use strict;
 }
+
 
 =head1 NAME
 
@@ -298,6 +294,7 @@ sub init {
         print h1("Initialization Required");
         print h2("This browsing session must be primed with a Namespace and ID:");
         &INITIALIZE;
+        print $CONFIG->footer;
         return;
     }
 

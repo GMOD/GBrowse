@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.19 2003-11-06 02:12:05 stajich Exp $
+# $Id: GFFDumper.pm,v 1.20 2003-11-09 19:51:02 sheldon_mckay Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -9,7 +9,7 @@ use CGI qw(:standard *sup);
 use vars '$VERSION','@ISA';
 $VERSION = '0.70';
 
-@ISA = qw/ Bio::Graphics::Browser::Plugin Bio::Graphics::Browser::GFFhelper /;
+@ISA = qw/ Bio::Graphics::Browser::Plugin /;
 
 sub name { "GFF File" }
 sub description {
@@ -157,7 +157,7 @@ sub do_dump {
 	push @gff, $s if defined $s && ! $seen{$s}++;
 
 	next if $gff_version >= 3; # gff3 recurses automatically
-	for my $ss ($f->get_SeqFeatures) {
+	for my $ss ($f->sub_SeqFeature) {
 	    next if $ss eq $f;
 	    my $s = $ss->gff_string;
 

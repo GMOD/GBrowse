@@ -6,6 +6,10 @@ use strict;
 use File::Copy;
 use Bio::Root::IO;
 
+foreach (@ARGV) {
+  $_ =~ s/^\'(.*)\'$/$1/;
+}
+
 # get configuration stuff from command line
 my %options = map {split /=/} @ARGV;
 my $dir = "$options{CONF}/gbrowse.conf";

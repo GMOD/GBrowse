@@ -5,6 +5,10 @@ use Carp 'croak';
 use IO::Dir;
 use Bio::Root::IO;
 
+foreach (@ARGV) {
+  $_ =~ s/^\'(.*)\'$/$1/;
+}
+
 my %options = map {split /=/} @ARGV;
 my $ht_target = "$options{HTDOCS}/gbrowse";
 
@@ -94,6 +98,7 @@ print "Installing documentation...\n";
 #  also need to modify gbrowse/index.html
 for my $localfile (qw(./DISCLAIMER)) {
   my $installfile = Bio::Root::IO->catfile($ht_target,basename($localfile));
+  chmod (0666, $installfile);
   copy_with_substitutions($localfile,$installfile);
   chmod(0444,$installfile);
 }

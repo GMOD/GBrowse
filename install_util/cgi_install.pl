@@ -3,6 +3,10 @@ use strict;
 use File::Copy;
 use Bio::Root::IO;
 
+foreach (@ARGV) {
+  $_ =~ s/^\'(.*)\'$/$1/;
+}
+
 my %options = map {split /=/} @ARGV;
 my $cgi_target = $options{CGIBIN};
 

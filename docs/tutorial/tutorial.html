@@ -3297,9 +3297,13 @@ shown here, or located on one or more remote web sites.
 If you wish, you can even run GBrowse off a remote DAS server entirely
 and keep no data locally (or just maintain private annotation tracks).
 This works by replacing the Bio::DB::GFF database adaptor that we have
-been using up to now with an adaptor named "Bio::Das".  To watch this
-in action, we will run GBrowse off the UCSC genome browser, which
-exports its data in DAS format.
+been using up to now with an adaptor named "Bio::Das". However,
+because of a poorly characterized interaction between the Bio::Das
+module and Perl 5.6, it is recommended that you use Perl 5.8.1 or
+higher for this. Otherwise you may experience out of memory errors.
+
+<p>To watch this in action, we will run GBrowse off the UCSC genome
+browser, which exports its data in DAS format.
 
 <p>
 
@@ -3441,6 +3445,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Wed Feb  2 14:48:48 EST 2005
+Last modified: Mon Mar  7 10:54:17 EST 2005
 <!-- hhmts end -->
 </body> </html>

@@ -97,9 +97,16 @@ be avoided for now.
 
 =head2 CONFIGURING GBROWSE TO BE A DAS CLIENT
 
-You can use GBrowse as a DAS client just by typing in the URL of a DAS
-server in the "Add remote annotations" section of the GBrowse main web
-page.  The syntax of the URL is simple:
+GBrowse can run as a DAS client as well, either on a track-by-track
+basis, or by configuring GBrowse to run entirely off a DAS
+source. However, because of a poorly characterized interaction between
+the Bio::Das module and Perl 5.6, it is recommended that you use Perl
+5.8.1 or higher for this. Otherwise you may experience out of memory
+errors.
+
+You can display individual DAS tracks in GBrowse just by typing in the
+URL of a DAS server in the "Add remote annotations" section of the
+GBrowse main web page.  The syntax of the URL is simple:
 
 =over 4
 

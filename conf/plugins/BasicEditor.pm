@@ -1,4 +1,4 @@
-# $Id: BasicEditor.pm,v 1.1 2003-10-05 06:09:06 sheldon_mckay Exp $
+# $Id: BasicEditor.pm,v 1.2 2003-10-05 14:44:07 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -10,7 +10,14 @@ This modules is not used directly
 
 =head1 DESCRIPTION
 
-This plugin allows basic editing of features in the GFF database.  
+This plugin allows basic editing of features in the GFF database. It is just for 
+demonstration purposes until it is properly secured against unauthorized 
+database access.  Edit the list of allowed hosts in this module to
+specify who is allowed to edit features
+
+The database user specified in the configuration file must have sufficient 
+privileges to delete and insert data.  See the gbrowse tutorial
+for information on how to set this up.
 
 =head1 FEEDBACK
 
@@ -35,6 +42,17 @@ use vars '$VERSION','@ISA';
 $VERSION = '0.01';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
+
+
+
+####################################################################
+# Edit this list IP addresses of trusted hosts for database access
+# We will need better security than this
+####################################################################
+my $ips = <<END;
+127.0.0.1
+END
+####################################################################
 
 sub name { 
     'Basic Feature Editor'
@@ -67,7 +85,13 @@ sub verb {
 
 sub configure_form {
     my ($self, $segment) = @_;
-    return '' unless $segment;
+    
+    # is this a trusted host?
+    if ( forbid() ) {
+	return h1("Sorry, access to the database is not allowed from your location");
+    }
+
+    return 0 unless $segment;
     my $html = start_table() .
                Tr( {-class => 'searchtitle'}, 
 		   th( { -colspan => 9 }, 
@@ -98,7 +122,7 @@ sub build_form {
     }
 
     # try to put the features in a sensible order 
-    # this is biased toward gene containment hierachies
+    # this is biased toward gene containment hierarchies
     @feats = sort { $a->start <=> $b->start or
 		    $b->stop  <=> $a->stop  or
                     $a->gff_string cmp $b->gff_string } @feats;
@@ -181,6 +205,12 @@ sub set_cell_size {
 
 sub annotate {
     my ($self, $segment ) = @_;
+
+    if ( forbid() ) {
+	print h1("Access not allowed from your location");
+        exit;
+    }
+
     $self->{ref} = $segment->ref;
     my $db = $self->database;    
 
@@ -189,13 +219,13 @@ sub annotate {
     
     my @killme = ();
     
+    # delete contained feature (except the reference component)
     for ( $segment->features ) {
         next if $_->start < $segment->start;
 	next if $_->stop  > ($segment->stop + 1);
 	next if $_->method =~ /component/i;
 	push @killme, $_;
     }
-    
     my $killed = $db->delete_features(@killme);
 
     my $fh = IO::String->new($gff);
@@ -253,6 +283,16 @@ sub check_gff {
     return 0 if $gff->[5] !~ /^(\+|-|0|\.)+$/;
 
     1;
+}
+
+sub forbid {
+    my $self = shift;
+    $ips || return 0;
+    my $fatal = shift;
+    my $host = remote_addr();
+
+    return $ips =~ /$host/m ? 0 : 1;
+
 }
 
 1;

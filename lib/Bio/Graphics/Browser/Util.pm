@@ -107,6 +107,24 @@ require Exporter;
 
 use constant DEBUG => 0;
 
+use constant JS => <<'END';
+function gbTurnOff (a) {
+  if (document.getElementById(a+"_a")) { document.getElementById(a+"_a").checked='' };
+  if (document.getElementById(a+"_n")) { document.getElementById(a+"_n").checked='' };
+}
+function gbCheck (a,state) {
+  var container = document.getElementById(a);
+  if (!container) { return false; }
+  var checkboxes = container.getElementsByTagName('input');
+  if (!checkboxes) { return false; }
+  for (var i=0; i<checkboxes.length; i++)
+     checkboxes[i].checked=state;
+  gbTurnOff(a);
+  event.srcElement.checked="on";
+  return false;
+}
+END
+
 sub conf_dir {
   my $default = shift;
   if ($ENV{MOD_PERL} && Apache->can('request')) {
@@ -202,8 +220,9 @@ sub print_top {
 	      -style  => {src=>$CONFIG->setting('stylesheet')},
               -charset=>$CONFIG->tr('CHARSET')
 	     );
-  push @args,(-head=>$CONFIG->setting('head'))   if $CONFIG->setting('head');
-  push @args,(-lang=>$CONFIG->language_code)     if $CONFIG->language_code;
+  push @args,(-head=>$CONFIG->setting('head'))    if $CONFIG->setting('head');
+  push @args,(-lang=>($CONFIG->language_code)[0]) if $CONFIG->language_code;
+  push @args,(-script=>{code=>JS});
   print start_html(@args) unless $HTML++;
 }
 

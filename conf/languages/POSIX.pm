@@ -182,7 +182,7 @@ END
 
    UPDATE      => 'Update Image',
 
-   DUMPS       => 'Dumps, Searches and other Operations',
+   DUMPS       => 'Reports &amp; Analysis',
 
    DATA_SOURCE => 'Data Source',
 

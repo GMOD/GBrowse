@@ -10,6 +10,7 @@ our @EXPORT = ('toggle_section',
 
 use constant PLUS    => '/gbrowse/images/buttons/plus.png';
 use constant MINUS   => '/gbrowse/images/buttons/minus.png';
+use constant JS      => '/gbrowse/js/toggle.js';
 use constant EXPIRES => CGI::Util::expires('+7d');
 use constant COOKIE_NAME => __PACKAGE__;
 
@@ -93,7 +94,6 @@ function startPage() {
     }
  }
 }
-
 END
 
 my $style = <<'END';
@@ -101,30 +101,37 @@ my $style = <<'END';
 .el_visible {display:block}
 .ctl_hidden {
              cursor:hand;
-             text-decoration:underline;
              display:none;
             }
 .ctl_visible {
              cursor:hand;
-             text-decoration:underline;
              display:inline;
             }
+.tctl      {  text-decoration:underline; }
 END
 
 my $noscript = <<'END';
 <style>
 .el_hidden { display:block }
+.nojs      { display:none }
 </style>
 END
 
 
 sub start_html {
   my %args = @_ == 1 ? (-title=>shift) : @_;
-  if ($args{-style} && !ref $args{-style}) {
-    $args{-style}= {src => $args{-style}};
+  if ($args{-style}) {
+    $args{-style}= [{src => $args{-style}}] if !ref $args{-style};
+    $args{-style}= [$args{-style}]          if ref $args{-style} && ref $args{-style} ne 'ARRAY';
   }
-  $args{-style}{code} = $style;
-  $args{-script}       = $jscript;
+  push @{$args{-style}},{code=>$style};
+
+  if ($args{-script}) {
+    $args{-script} = [{src => $args{-script}}] if !ref $args{-script};
+    $args{-script} = [$args{-script}]          if ref $args{-script} && ref $args{-script} ne 'ARRAY';
+  }
+
+  push @{$args{-script}},{code=>$jscript};
   $args{-noscript}     = $noscript;
   $args{-onLoad}       = "startPage()";
   CGI::start_html(%args);
@@ -147,11 +154,11 @@ sub toggle_section {
   my $show_ctl = span({-id=>"${id}_show",
 		       -class=>$config{on} ? "ctl_hidden" : "ctl_visible",
 		       -onClick=>"visibility('$id','on')"},
-		      img({-src=>$plus}).$section_title);
+		      img({-src=>$plus}).'&nbsp;'.span({-class=>'tctl'},$section_title));
   my $hide_ctl = span({-id=>"${id}_hide",
 		       -class=>$config{on} ? "ctl_visible" : "ctl_hidden",
 		       -onClick=>"visibility('$id','off')"},
-		      img({-src=>$minus}).$section_title);
+		      img({-src=>$minus}).'&nbsp;'.span({-class=>'tctl'},$section_title));
   my $content  = div({-id    => $id,
 		      -class => $config{on} ? 'el_visible' : 'el_hidden'},
 		     @section_body);
@@ -173,7 +180,7 @@ use CGI ':standard';
 use CGI::Toggle
 
 print header(),
-  start_html('Toggle Test),
+  start_html('Toggle Test'),
   h1("Toggle Test"),
   toggle_section({on=>1},p('This section is on by default'),
   toggle_section({on=>0},p('This section is off by default'),

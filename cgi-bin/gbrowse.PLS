@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.1 2005-02-15 20:52:01 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.2 2005-02-17 21:47:13 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -439,22 +439,18 @@ sub main_display {
   }
 
   print html_frag('html3',$segment,$page_settings);
-  print tracks_table($page_settings,$feature_files);
   print html_frag('html4',$segment,$page_settings);
-  print dumps_table($page_settings);
+  print tracks_table($page_settings,$feature_files);
   print html_frag('html5',$segment,$page_settings);
-  print end_form();
+  print br(),settings_table($page_settings);
+  print html_frag('html6',$segment,$page_settings);
 
   print start_multipart_form(-name=>'externalform');
-  print external_table($page_settings,$feature_files);
+  print br(),external_table($page_settings,$feature_files);
   print end_form();
 
-  print start_form(-name   => 'settingsform',
-                   -action => $action,
-		   -method => 'POST');
-  print settings_table($page_settings);
-  print html_frag('html6',$segment,$page_settings);
   print end_form();
+
 
   # clean us up
   # clean us up
@@ -536,7 +532,7 @@ sub detail_panel {
 		   );
   $table .= "\n";
   $table .= $map if $map;
-  $table .= join '',hidden('ref'),hidden('start'),hidden('stop');
+  $table .= join '',unique(hidden('ref')),unique(hidden('start')),unique(hidden('stop'));
   return div(toggle_section({on=>1},
 			  b('Details'),
 			  $table));
@@ -863,7 +859,11 @@ sub navigation_table {
 			submit(-name=>'reset', -label=>$CONFIG->tr('Reset'),-class=>'reset_button').'&nbsp;'.
 			checkbox(-name=>'flip',-checked=>$settings->{flip},-value=>1,-label=>$CONFIG->tr('Flip'),-override=>1)
 		       ),
-		     td({-class=>'searchbody',-align=>'left'},
+		     td({-colspan=>1,-align=>'left'},b($CONFIG->tr('Dumps')),br,
+			plugin_menu($settings,$PLUGINS))
+		    ),
+		  TR(
+		     td({-class=>'searchbody',-align=>'center',-colspan=>2},
 			$segment ? (b($CONFIG->tr('Scroll').': '),br,slidertable($segment,$buttonsDir)) : ''
 		       ),
 		    ),
@@ -1019,57 +1019,68 @@ sub tracks_table {
 
   my @labels = @{$settings->{tracks}};
   my %labels = map {$_ => make_citation_link($_,$self_url) } @labels;
-
-  if ($settings->{sk} eq 'sorted') {
-    my %keys = map {$_=>label2key($_)} @labels;
-    @labels    = sort { lc($keys{$a}) cmp lc($keys{$b})} @labels;
-  }
   my @defaults = grep {$settings->{features}{$_}{visible}  } @labels;
 
-  my $overview_color = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR(); # imported from Browser.pm
+  # Sort the tracks into categories:
+  # Overview tracks
+  # Regular tracks (which may be further categorized by user)
+  # Plugin tracks
+  # External tracks
+  my %track_groups;
+  foreach (@labels) {
+    my $category = categorize_track($_);
+    push @{$track_groups{$category}},$_;
+  }
 
   autoEscape(0);
-  my $sTable = toggle_section({on=>1},
-			      b($CONFIG->tr('Tracks')),
-			      table({-border=>0,-width=>'100%'},
-				    TR(	td({-class=>'searchbody', -valign=>'top',-align=>'left'},
-					   p(i($CONFIG->tr('External_tracks')),
-					     div({-style=>"background: $overview_color"},$CONFIG->tr('Overview_tracks'))
-					    )),
-					td({-class=>'searchbody',-colspan=>3,-width=>'85%'},
-					   checkbox_group(-name=>'label',
-							  -values     => \@labels,
-							  -labels     => \%labels,
-							  -defaults   => \@defaults,
-							  -cols       => 3,
-							  -override   => 1,
-							 ))),
-				    TR({-class=>'searchbody'},
-				       td('&nbsp;'),
-				       th({-align=>'right',-colspan=>1},
-					  submit(-name => $CONFIG->tr('Set_options')),
-					  submit(-name => $CONFIG->tr('Update')),
+  my @sections;
+  my @user_keys = grep {!/^(overview|external|analysis)$/} sort keys %track_groups;
+  my $id = "c00000";
 
-					 ),
-				      )
-				   )
-			     );
+  foreach my $category ('overview','analysis',@user_keys,'external') {
+    next unless exists $track_groups{$category};
+    my @track_labels = sort {lc $labels{$a} cmp lc $labels{$b}} @{$track_groups{$category}} or next;
+    my @checkboxes = checkbox_group(-name=>'label',
+				    -values     => \@track_labels,
+				    -labels     => \%labels,
+				    -defaults   => \@defaults,
+				    -onClick    => "gbTurnOff('$id')",
+				    -override   => 1,
+				   );
+    my $table = tableize(\@checkboxes);
+    $table =~ s/<tr>/<tr class="searchtitle">/g;
+    my ($control,$section)=toggle_section({on=>1},
+					  b(ucfirst $category),div({-style=>'padding-left:1em'},$table));
+    $control .=   '&nbsp;'.i({-class=>'nojs'},
+			     checkbox(-id=>"${id}_a",-name=>"${id}_a",
+				      -label=>'All on',-onClick=>"gbCheck('$id',1)"),
+			     checkbox(-id=>"${id}_n",-name=>"${id}_n",
+				      -label=>'All off',onClick=>"gbCheck('$id',0)")
+			    ).
+			      br();
+    push @sections,$control.span({-id=>$id},$section);
+    $id++;
+  }
   autoEscape(1);
-  return br(),$sTable;
+  return toggle_section({on=>1},
+			b($CONFIG->tr('Tracks')),
+			div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
+			table({-width=>'100%',-class=>"searchbody"},
+			      TR(td{-align=>'right'},
+				 b(submit(-name => $CONFIG->tr('Update'))
+				  )
+				)
+			     ));
 }
 
-
-sub dumps_table {
-  my $settings = shift;
-  return
-    p(
-      toggle_section({on=>1},b($CONFIG->tr('Dumps').':'),
-		     table({-border=>0,-width=>'100%',-class=>'settingsbody'},
-			   TR(td(plugin_menu($settings,$PLUGINS))),
-			  )
-		    )
-      );
+sub categorize_track {
+  my $label = shift;
+  return 'overview' if $label =~ /:overview$/;
+  return 'external' if $label =~ /^(http|ftp|file):/;
+  return 'analysis' if $label =~ /^plugin:/;
+  return $CONFIG->setting($label=>'category') || 'general';
 }
+
 
 sub settings_table {
   my $settings = shift;
@@ -1079,7 +1090,7 @@ sub settings_table {
   my @key_positions   = qw(between bottom);
   push @key_positions,qw(left right) if Bio::Graphics::Panel->can('auto_pad');
   my $content =
-    table(
+    table({-class=>'searchbody'},
 	  TR(
 	     td({-align=>'left'},
 		source_menu($settings),
@@ -2511,7 +2522,7 @@ sub make_citation_link {
   my $overview_color = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR();
   my @args = (-href=>$link,-target=>'citation');
   push @args,-style=>'Font-style: italic' if $label =~ /^(http|ftp|file):/;
-  push @args,-style=>"background: $overview_color" if $label =~ /:overview$/;
+  # push @args,-style=>"background: $overview_color" if $label =~ /:overview$/;
   return a({@args},$key);
 }
 
@@ -2525,7 +2536,7 @@ sub label2key {
   $key     ||= $CONFIG->setting($label => 'key');
   $key     ||= $PRESETS->{$key} if defined $key;
   $key     ||= $label;
-  $key     .= '*' if $label =~ /:overview$/;
+  # $key     .= '*' if $label =~ /:overview$/;
   $key;
 }
 
@@ -2634,9 +2645,9 @@ sub plugin_menu {
 			 -labels=> $labels,
 			 -default => $settings->{plugin},
 			),'&nbsp;',
-	      submit(-name=>'plugin_action',-value=>$CONFIG->tr('About')),'&nbsp;',
+	      # submit(-name=>'plugin_action',-value=>$CONFIG->tr('About')),'&nbsp;',
 	      submit(-name=>'plugin_action',-value=>$CONFIG->tr('Configure')),'&nbsp;',
-	      submit(-name=>'plugin_action',-value=>$CONFIG->tr('Go'))
+	      b(submit(-name=>'plugin_action',-value=>$CONFIG->tr('Go')))
 	      );
 }
 
@@ -2813,6 +2824,11 @@ sub tableize {
   $html .= "</table>\n";
 }
 
+sub unique {
+  my @list = shift;
+  my %seenit;
+  return grep {!$seenit{$_}++} @list;
+}
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

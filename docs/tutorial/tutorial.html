@@ -2961,6 +2961,11 @@ uses the same core annotations. You can also use this mechanism within
 your laboratory or department to share annotation sets without having
 to give everyone write access to the web server's $HTDOCS directory.
 
+<p>
+
+To remove a URL from the list of loaded URLs, just delete it from its
+text field and reload.
+
 <hr>
 
 <h2><a name="DAS">21. Using GBrowse as a DAS Server</a></h2>
@@ -2975,6 +2980,32 @@ except that it is designed to support large data sets.  When a client
 application needs to fetch just a subset of the data, such as a small
 piece of a chromosomal arm, the DAS protocol allows only the relevant
 annotations to be retrieved, rather than the whole data set.
+
+<p>
+
+To take advantage of DAS functionality, you will have to install the
+Perl Bio::Das module.  This is available from CPAN (the Comprehensive
+Perl Archive Network (<a href="http://www.cpan.org"
+target="_new">http://www.cpan.org</a>) or from the GMOD PPM
+repository.  Unix users can install Bio::Das with this command:
+
+<blockquote><pre>
+% <b>perl -MCPAN -e 'install Bio::Das'
+</pre></blockquote>
+
+<p>
+
+Windows users can use the PPM tool:
+
+<blockquote><pre>
+C:\Windows&gt; <b>ppm</b>
+ppm&gt; <b>install Bio::Das</b>
+ppm&gt; <b>quit</b>
+</pre></blockquote>
+
+You may need to issue the command "rep add gmod
+http://www.gmod.org/ggb/ppm" if PPM complains that it cannot find
+Bio::Das.
 
 <p>
 
@@ -3019,16 +3050,46 @@ href="http://www.biodas.org"><http://www.biodas.org/a>.
 The next step is to go through the configured tracks and add a "das
 category" to each of them.  DAS uses the idea of the "category" of a
 feature in order to filter sets of features by their purpose.
-Categories include "transcription", for features that have to do with
-RNA transcription, "translation," for features that have to do with
-protein translation, "variation," for features that have to do with
-mutations or polymorphisms, "structural," for contigs, clones, STS
-primers and other features having to do with the assembly,
-"similarity" for nucleotide and protein alignments, "repeat" for
-features having to do with repetitive elements, and "miscellaneous"
-for anything else.  It is not vital to assign each track a DAS
-category, but it is helpful to the end users.  Any track that doesn't
-have a category will be hidden from the DAS transmission.
+Categories include:
+
+<table border="1">
+  <tr>
+    <th>transcription</th>
+    <td>features that have to do with
+	RNA transcription</td>
+  </tr>
+  <tr>
+    <th>tranlation</th>
+    <td>features that have to do with
+	protein translation and function</td>
+  </tr>
+  <tr>
+    <th>variation</th>
+    <td>mutations, deletions, polymorphisms</td>
+  </tr>
+
+  <tr>
+    <th>structural</th>
+    <td>contigs, clones, reads, PCR primers</td>
+  </tr>
+
+  <tr>
+    <th>repeat</th>
+    <td>repetitive elements</td>
+  </tr>
+
+  <tr>
+    <th>experimental</th>
+    <td>a catch-all for experimental data</td>
+  </tr>
+
+  <tr>
+    <th>miscellaneous</th>
+    <td>anything that doesn't fit in one fo the other categories</td>
+  </tr>
+
+
+</table>
 
 <p>
 
@@ -3092,7 +3153,237 @@ The final test that the DAS server is performing correctly is to
 browse to the <a href="http://localhost/cgi-bin/gbrowse/elegans_core"
 target="_new>elegans_core</a> database and to <b>turn off</b> all the
 tracks except for DNA/GC content.  This should give you an empty
-details panel.
+details panel.  Now scroll down to the first empty URL entry field and
+type in <b>http://localhost-cgi-bin/gbrowse/elegans_core</b> and press
+"Update URLs."  The page should now reload and display the gene models
+and the EST alignments.  However, the data is now not coming directly
+from the local database, but from the database via the DAS protocol.
+
+<h3>Combining Databases with DAS</h3>
+
+We can now use DAS to integrate the core gene model and EST alignment
+annotations with the STSs, expression data, trans-splice acceptors and
+other third party annotations.  To do this, we will create a GBrowse
+database that contains the third party annotations, but not the core
+data.  This new database will be used as a DAS source.
+
+<p>
+
+Create a new database directory called elegans_extra in the
+"$HTDOCS/gbrowse/databases" directory, and add to it a copy of the
+file <a href="data_files/elegans_extra.gff">elegans_extra.gff</a>.
+This GFF file is simply the result of concatenating together the
+individual annotation files we looked at earlier (elegans_sts.gff,
+etc), and removing the redundant comment lines from the top of the
+file.  Now copy the configuration file <a
+href="conf_files/elegans_extra.conf">elegans_extra.conf</a> into the
+$CONF/gbrowse.conf/ directory.  Have a look at this config file, and
+note that it contains the appropriate "das mapmaster" and "das
+category" configuration objects.
+
+<p>
+
+Once the config file is installed, confirm that you can browse the
+extra annotations by fetching <a
+href="http://localhost/cgi-bin/gbrowse/elegans_extra"
+target="_new">http://localhost/cgi-bin/gbrowse/elegans_extra</a>.
+
+<p>
+
+Now we're ready to layer the extra annotations onto the core
+annotations using DAS.  Open up a browser window on the <a
+href="http://localhost/cgi-bin/gbrowse/elegans_core"
+target="_new">http://localhost/cgi-bin/gbrowse/elegans_core</a>
+database.  Delete any URLs that are already listed in the "Add remote
+annotations" area, and add the URL
+"http://localhost/cgi-bin/das/elegans_extra."  When you reload, the
+core annotations will be shown on top, and the annotations from the
+elegans_extra database will be shown in four tracks at the bottom of
+the display.
+
+<p>
+
+Please realize that the power of this feature is that we can use it
+across the Internet to integrate databases that are independently
+maintained.  For example, try adding the DAS URL
+http://dev.wormbase.org/db/das/elegans_even_more, and see what
+appears.
+
+<p>
+
+By default, when you enter a DAS URL, the system will load all the
+feature types that the DAS server makes available.  If this is not
+desirable, you can limit the tracks by type and/or category.  To find
+out what feature types a DAS server supports, retrieve a URL like the
+following: <a
+href="http://localhost/cgi-bin/das/elegans_extra/types">http://localhost/cgi-bin/das/elegans_extra/types</a>.
+This will provide a list of feature type names and their functional
+categories.  From this we can see that the elegans_extra database
+exports types of "repeat", "trans-splice_acceptor," "Deletion_allele,"
+and "Expression."  Of course, we already knew this since we set the
+database up ourselves!
+
+<p>
+
+Using this information, you can now limit the number of tracks
+retrieved from the DAS server to just those that are of interest to
+us. In the "Add remote annotations" text field, replace the current
+DAS URL with this one:
+http://localhost/cgi-bin/das/elegans_extra?type=repeat.  When you
+reload, you will see only the repeat track and not the other three.
+
+<p>
+
+What if we want to see two of the four tracks?  We just add additional
+type= sections, separated by semicolons.  To see both the repeat and
+Deletion_allele tracks, we could request
+http://localhost/cgi-bin/das/elegans_extra?type=repeat;type=Deletion_allele
+(Figure 27).
+
+<blockquote>
+<img src="figures/figure27.gif"><br> <i>Figure 27:</i>
+The <i>C. elegans</i> core annotations database with the "repeat" and
+"Deletion_allele" tracks  superimposed on it using DAS.
+</blockquote>
+
+<p>
+
+To fetch features that match a particular category, we can add the
+category= option to the URL.  For example, to fetch only features that
+have to do with RNA transcription, you can request
+http://localhost/cgi-bin/das/elegans_extra?category=transcription.
+
+<p>
+
+We can take advantage of this feature to add a menu of external DAS
+annotations to the browser.  Open
+"$CONF/gbrowse.conf/elegans_core.conf" and insert the following
+section right after the "plugins =" line:
+
+<blockquote><pre>
+# remote DAS data to make available for optional loading
+remote sources =
+   "DAS mRNA features"      http://localhost/cgi-bin/das/elegans_extra?category=transcription
+   "DAS protein features"   http://localhost/cgi-bin/das/elegans_extra?category=translation
+   "DAS repeat features"    http://localhost/cgi-bin/das/elegans_extra?category=repeat
+   "DAS variation features" http://localhost/cgi-bin/das/elegans_extra?category=variation
+   "DAS experimental features" http://localhost/cgi-bin/das/elegans_extra?category=experimental
+</pre></blockquote>
+
+When you reload, the page will now show a popup menu of pre-defined
+DAS sources that users can choose.  The DAS sources can be local, as
+shown here, or located on one or more remote web sites.
+
+<h3>Running GBrowse off DAS Entirely</h3>
+
+<p>
+
+If you wish, you can even run GBrowse off a remote DAS server entirely
+and keep no data locally (or just maintain private annotation tracks).
+This works by replacing the Bio::DB::GFF database adaptor that we have
+been using up to now with an adaptor named "Bio::Das".  To watch this
+in action, we will run GBrowse off the UCSC genome browser, which
+exports its data in DAS format.
+
+<p>
+
+We will need a configuration file to do this.  DAS-based configuration
+files are almost identical to the ones we have been using up to now
+for local databases.  The main change is to replace the "db_adaptor" and
+"db_args" options with ones appropriate for the DAS data source.  For
+example, for the "hg16" human genome database maintained at UCSC, the
+appropriate options will be:
+
+<blockquote><pre>
+[GENERAL]
+description   = Human July 2003 Genome at UCSC
+db_adaptor    = Bio::Das
+db_args       = -source http://genome.cse.ucsc.edu/cgi-bin/das
+	        -dsn    hg16
+</pre></blockquote>
+
+Conveniently enough, recent versions of the GBrowse distribution
+include a utility called "make_das_conf.pl" that will build a basic
+DAS browser configuration file for you.  This utility was installed
+for you when you installed GBrowse. To run it, you will need to know
+the base URL of the DAS server you're going to display.  For our
+example, we'll use the UCSC DAS server at
+http://genome.cse.ucsc.edu/cgi-bin/das.
+
+<p>
+
+This is a command-line utility.  To find out the databases served by
+UCSC, type in the following command at the Unix or Windows command
+line:
+
+<blockquote><pre>
+% <b>make_das_conf.pl http://genome.cse.ucsc.edu/cgi-bin/das</b>
+The following DAS URLs are available at this server.  Please call the script again
+using one of the following URLs:
+
+http://genome.cse.ucsc.edu/cgi-bin/das/dm1
+	Fruitfly Jan. 2003 Genome at UCSC
+
+http://genome.cse.ucsc.edu/cgi-bin/das/hg13
+	Human Nov. 2002 Genome at UCSC
+
+http://genome.cse.ucsc.edu/cgi-bin/das/hg15
+	Human April 2003 Genome at UCSC
+
+http://genome.cse.ucsc.edu/cgi-bin/das/hg16
+	Human July 2003 Genome at UCSC
+
+http://genome.cse.ucsc.edu/cgi-bin/das/rn3
+	Rat Jun 2003 Genome at UCSC
+[... many many more ...]
+</pre></blockquote>
+
+We're looking for the hg16 release, so we reissue make_das_conf.pl
+again using UCSC DAS server's URL with the hg16 release number
+appended to the end:
+
+<blockquote><pre>
+% <b>make_das_conf.pl http://genome.cse.ucsc.edu/cgi-bin/das</b>
+[GENERAL]
+description   = Human July 2003 Genome at UCSC
+db_adaptor    = Bio::Das
+db_args       = -source http://genome.cse.ucsc.edu/cgi-bin/das
+	        -dsn    hg16
+
+# examples to show in the introduction
+examples = 10 10_random 11 12 13 13_random 14 15 15_random
+      16 17 17_random 18 18_random 19 19_random 1 1_random
+      20 21 22 2 2_random 3 3_random 4 4_random 5 5_random
+      6 6_random 7 7_random 8 8_random 9 9_random M
+      Un_random X X_random Y
+
+das mapmaster = http://genome.cse.ucsc.edu:80/cgi-bin/das/hg16
+
+aggregators = ECgene{ECgene}
+       affy10K{affy10K}
+       affyGeno{affyGeno}
+       affyRatio{affyRatio}
+       affyTranscriptome{affyTranscriptome}
+       affyU133{affyU133}
+       affyU95{affyU95}
+[...much much more...]
+</pre>
+</blockquote>
+
+If you tried this at the command line, you saw a lot of text scroll up
+your screen and disappear forever.  Run the command again, and this
+time <b>redirect</b> its output into a new configuration file named
+"ucsc_hg16.conf":
+
+<blockquote><pre>
+% <b>make_das_conf.pl http://genome.cse.ucsc.edu/cgi-bin/das &gt;$CONF/gbrowse.conf/ucsc_hg16.conf</b>
+</pre></blockquote>
+
+That should be all you need to do!  Try browsing the new data source
+by requesting <a
+href="http://localhost/cgi-bin/gbrowse/ucsc_hg16.conf"
+target="_new">http://localhost/cgi-bin/gbrowse/ucsc_hg16.conf</a>.
+Request 
 
 <hr>
 
@@ -3122,6 +3413,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Wed Feb 25 15:44:29 SAST 2004
+Last modified: Thu Feb 26 17:17:18 SAST 2004
 <!-- hhmts end -->
 </body> </html>

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.67 2004-02-25 13:26:45 lstein Exp $
+# $Id: gbrowse.PLS,v 1.68 2004-02-26 15:48:47 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -693,7 +693,8 @@ sub settings2cookie {
 sub adjust_settings {
   my $settings = shift;
 
-  if (my @selected = map {/^(http|ftp|das)/ ? $_ : split /[+-]/} param('label')) {
+  if ( param('label') ) {
+    my @selected = map {/^(http|ftp|das)/ ? $_ : split /[+-]/} param('label');
     $settings->{features}{$_}{visible} = 0 foreach keys %{$settings->{features}};
     $settings->{features}{$_}{visible} = 1 foreach @selected;
   }
@@ -973,7 +974,7 @@ sub tracks_table {
   my @defaults = grep {$settings->{features}{$_}{visible}  } @labels;
 
   autoEscape(0);
-  my $sTable 	= '';
+  my $sTable 	= hidden(-name=>'label',-value=>'_',-override=>1);  # dummy, just to keep param() happy.
   $sTable.= table({-border=>0,-width=>'100%'},
 		  # row
 		  $settings->{stp} ?
@@ -1750,6 +1751,7 @@ sub get_remote_feature_data {
       error($CONFIG->tr('NO_DAS'));
       return;
     }
+
     my ($src,$dsn,$cgi_args) = ($1,$2,$3);
     my @aggregators = shellwords($CONFIG->setting('aggregators') ||'');
     my (@types,@categories);
@@ -1762,12 +1764,13 @@ sub get_remote_feature_data {
 	push @categories,unescape($val) if $arg eq 'category';
       }
     }
-    my $das      =  Bio::Das->new(-source     => $src,
-				  -dsn        => $dsn,
-				  -aggregators=> \@aggregators,
-				  -types      => \@types,
-				  -categories => \@categories,
-				 );
+    my @args = (-source     => $src,
+		-dsn        => $dsn,
+		-aggregators=> \@aggregators);
+    push @args,(-types => \@types)           if @types;
+    push @args,(-categories => \@categories) if @categories;
+    my $das      =  Bio::Das->new(@args);
+
     return unless $das;
     my $segment = $das->segment($settings->{ref},$settings->{start},$settings->{stop});
     # the next step gives the current segment the same name as the DAS source
@@ -2144,14 +2147,14 @@ sub help {
 sub make_citation {
   my $config  = shift;
   my $feature = shift;
-  my $citation = $config->citation($feature,$CONFIG->language);
+  my $citation = eval {$config->citation($feature,$CONFIG->language)};
   # BUG: here's where we should remove "bad" HTML, but we don't!
   # should remove active content and other nasties
   (my $link     = $feature) =~ tr/ /-/;
   my $text      = label2key($feature);
   return join ('',
 	       dt(a({-name=>$link},b($text))),
-	       dd($citation||$CONFIG->tr('No_citation')),
+	       dd($citation||$CONFIG->tr('NO_CITATION')),
 	       p());
 }
 
@@ -2176,8 +2179,8 @@ sub build_citation_page {
   # build external features
   if (%$external_features) {
     print hr,h3($CONFIG->tr('External'));
-    @citations = ();
     for my $file (keys %$external_features) {
+      my @citations = ();
       my $f = escape($file);
       my $name   = $file;
       my $is_url = $name =~ m!^(http|ftp)://!;
@@ -2191,8 +2194,14 @@ sub build_citation_page {
 	print blockquote($CONFIG->tr('Activate'));
 	next;
       }
+
+      my $obj = eval{$external_features->{$file}->factory} || $external_features->{$file};
+
+      $link =~ s!(/das/[^/?]+)!$1/types! 
+	if $obj->isa('Bio::Das');
+
       print h4(a{-name=>$anchor,-href=>$link},$name);
-      for my $feature ($external_features->{$file}->types) {
+      for my $feature ($obj->types) {
 	push @citations,make_citation($external_features->{$file},$feature);
       }
       print blockquote(dl(@citations));

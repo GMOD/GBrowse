@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.128 2004-03-18 02:39:16 lstein Exp $
+# $Id: Browser.pm,v 1.129 2004-03-18 18:37:48 scottcain Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1430,7 +1430,7 @@ sub _feature_get {
 	    || $fclass eq $class;
   } @segments;
 
-  warn "segments = @segments, filtered= @filtered";
+  #warn "segments = @segments, filtered= @filtered";
 
   # Return appropriately filtered features
   return @filtered;

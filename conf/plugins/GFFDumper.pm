@@ -1,10 +1,10 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.17 2003-11-05 21:45:47 sheldon_mckay Exp $
+# $Id: GFFDumper.pm,v 1.18 2003-11-06 01:53:17 stajich Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use Bio::Graphics::Browser::GFFhelper;
-use CGI qw(:standard super);
+use CGI qw(:standard *sup);
 
 use vars '$VERSION','@ISA';
 $VERSION = '0.70';
@@ -59,15 +59,17 @@ sub configure_form {
 			 -values => ['view','save','edit'],
 			 -labels => {view => 'View',
 				     save => 'Save to File',
-				     edit => 'Edit<sup>**</sup>'}
+				     edit => 'Edit'.sup('**'),
+				 }
 			));
   autoEscape(1);
-  $html .= p('<sup>*</sup>',"Note: Artemis GFF will contain the entire annotated sequence") .
-           p('<sup>**</sup>',"To edit, install a helper application for MIME type",
-	     cite('application/x-gff2'),'or',
-	     cite('application/x-gff3')
-	     );
-
+  $html .= p(sup('*'),
+	     "Note: Artemis GFF will contain the entire annotated sequence") .
+		 p(sup('**'),
+		   "To edit, install a helper application for MIME type",
+		   cite('application/x-gff2'),'or',
+		   cite('application/x-gff3')
+		   );
   $html;
 }
 
@@ -114,13 +116,14 @@ sub dump {
   my @feats = ();
 
   if ( $version == 2.5 ) {
-    # don't want aggregate features
-    @feats = $whole_segment->features;
+      # don't want aggregate features
+      @feats = $whole_segment->features;
   }
   else {
+      $segment->absolute(0);
     my $iterator = $segment->get_seq_stream(@args);
     while ( my $f = $iterator->next_seq ) {
-      push @feats, $f;
+	push @feats, $f;
     }  
   }
 
@@ -133,7 +136,7 @@ sub dump {
       while ( my $f = $iterator->next_seq ) {
         push @feats, $f;
       }
-      do_dump(\@feats, $version, $whole_segment); 
+      $self->do_dump(\@feats, $version, $whole_segment); 
     }  
   }
 
@@ -152,15 +155,15 @@ sub do_dump {
   for my $f ( @$feats ) {
     $f->version($gff_version);
     my $s = $f->gff_string(1); # the flag is for GFF3 subfeature recursion
-    push @gff, $s if $s;
+    push @gff, $s if defined $s;
  
     next if $gff_version >= 3; # gff3 recurses automatically
 
     for my $ss ($f->sub_SeqFeature) {
-      my $s = $ss->gff_string;
-      push @gff, $s if $s;
+	my $s = $ss->gff_string;
+	push @gff, $s if $s;
     }
-  }
+}
 
   # out of range features break Artemis (some kind of off by one error?)
   if ( $gff_version == 2.5 ) {
@@ -170,18 +173,18 @@ sub do_dump {
 	  s/$num/$len/ if $num > $len;
       }
   }   
-
-  $self->do_gff(@gff);
+  if( @gff ) {
+      $self->do_gff(@gff);
+  }
 }
 
 sub do_gff {
     my $self = shift;
     my @gff = @_;
-    
     # sigh... Artemis mangles uppercase 'Note' attributes
-    @gff = map { s/Note/note/g } @gff;
+    @gff = grep { s/Note/note/g; chomp($_); $_; } @gff;
     chomp @gff;
-
+    
     print join "\n", 
       map  { $_->[3] }
       # sort first asc. by start, then desc. by stop, then ascibetically 

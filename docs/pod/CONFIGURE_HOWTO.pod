@@ -1938,14 +1938,15 @@ these are only available from the CVS.  Anonymous checkout of the
 BioMOBY project can be accomplished as follows:
     
   cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/moby login
+
+When prompted for a password, type "cvs".
+
   cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/moby co moby-live
   cvs update -dP
 
-You will then either need to enter the moby-live/Perl folder and run 
-the Makefile to install the MOBY libraries into your system, or 
-alternately you can add "use lib './moby-live/Perl'" to this script 
-such that the libraries can be found at run-time.
-
+You will then need to enter the moby-live/Perl folder and run "perl
+Makefile.PL; make; make install" to install the MOBY libraries into
+your system.
 
 =item 3 USAGE
 

@@ -129,17 +129,7 @@ if (! (-e $poddir) ) {
 }
 
 my $localpoddir = $working_dir . "docs/pod/";
-my @localpodfiles = qw(CONFIGURE_HOWTO.pod
-                       ORACLE_AND_BIOSQL.pod
-                       README-berkeley-gadfly.pod
-                       PLUGINS_HOWTO.pod
-                       README-gff-files.pod
-                       README-chado.pod
-                       MAKE_IMAGES_HOWTO.pod
-                       GENBANK_HOWTO.pod
-                       INSTALL.MacOSX.pod
-                       INSTALL.pod );
-@localpodfiles = map ($localpoddir . $_ , @localpodfiles);
+my @localpodfiles = glob($localpoddir . "*.pod"); 
 for my $localfile ( @localpodfiles ) {
      my ($name,undef,undef) = fileparse($localfile, "\.pod");
      my $installfile = Bio::Root::IO->catfile("$ht_target/docs/pod","$name.html"); 

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.13 2002-12-11 19:00:04 scottcain Exp $
+# $Id: Segment.pm,v 1.14 2002-12-11 19:53:13 scottcain Exp $
 
 =head1 NAME
 
@@ -126,19 +126,18 @@ print "$name,$dbadaptor\n";
   my $quoted_name = $dbadaptor->{dbh}->quote($name);
 
 print "$quoted_name\n";
+$dbadaptor->{dbh}->trace(4);
 
   my $sth = $dbadaptor->{dbh}->prepare ("
-   select seqlen from feature where feature_id in  
-     (select f.feature_id
-      from dbxref dbx, feature f, feature_dbxref fd
-      where f.type_id = 6 and
+select f.seqlen from dbxref dbx, feature f, feature_dbxref fd
+   where f.type_id = 6 and
          f.feature_id = fd.feature_id and
          fd.dbxref_id = dbx.dbxref_id and
-         dbx.accession = $quoted_name ) ");
+         dbx.accession = $quoted_name  ");
 
 print "prepared:$sth\n" ;
 
-  $sth->execute or throw("unable to validate name/length");
+  $sth->execute or die; #throw("unable to validate name/length");
 
 print "executed\n";
 

@@ -13,6 +13,9 @@ Generic Model Organism Systems Database project (GMOD).
  - To load your own data and configure GBrowse to display it, please
    see the file docs/CONFIGURE_HOWTO.txt.
 
+ - To initialize the database from one or more Genbank records, see
+   docs/GENBANK_HOWTO.txt.
+
  - This software is free.  You can use it under the terms of the Perl
    Artistic License Please.  Please see DISCLAIMER for limitations of
    warranty, the academic citation policy and other legalese.
@@ -22,5 +25,6 @@ www.gmod.org.
 
 Lincoln Stein & the GMOD team
 lstein@cshl.org
-February 9, 2002
+September 8, 2003
+
 

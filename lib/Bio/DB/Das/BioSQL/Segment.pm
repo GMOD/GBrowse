@@ -461,6 +461,7 @@ sub asString {
 }
 
 sub name { shift->asString }
+sub type { 'Segment' }
 
 #Have to return bioseq->obj, not the wrapper around it (bioseq),
 #because some classes check for the exact class name.

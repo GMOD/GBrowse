@@ -226,6 +226,7 @@ sub patch_old_versions_of_bioperl {
     eval <<'END' unless defined &Bio::DB::GFF::Segment::is_circular;
 sub Bio::DB::GFF::Segment::is_circular { 0; }
 END
+    warn $@ if $@;
 
 
     # patch problems on Windows platforms with memory adaptor
@@ -264,7 +265,7 @@ sub Bio::DB::GFF::setup_argv {
   @argv;
 }
 END
-  warn "$@";
+    warn $@ if $@;
 }
 }
 

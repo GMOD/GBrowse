@@ -843,8 +843,6 @@ sub subfeatures {
 sub sub_SeqFeature {
   my($self,$type) = @_;
 
-warn "sub_SeqFeature";
-
   #first call, cache subfeatures
   if(!$self->subfeatures ){
 
@@ -886,6 +884,7 @@ warn "sub_SeqFeature";
     ";
 
     $sql =~ s/\s+/ /gs;
+    warn $sql if DEBUG;
 
     my $sth = $self->factory->dbh->prepare($sql);
     $sth->execute or $self->throw("subfeature query failed");
@@ -907,7 +906,7 @@ warn "sub_SeqFeature";
       my $interbase_start = $$hashref{fmin};
       my $base_start = $interbase_start +1;
 
-      warn "creating new subfeat, $$hashref{name}, $base_start, $stop" ;#if DEBUG;
+      warn "creating new subfeat, $$hashref{name}, $base_start, $stop" if DEBUG;
 
       my $feat = Bio::DB::Das::Chado::Segment::Feature->new (
                     $self->factory,

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.51 2004-01-21 16:54:59 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.52 2004-01-21 22:44:51 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -832,8 +832,10 @@ sub make_hilite_callback {
 sub slidertable {
   my ($segment,$buttonsDir) = @_;
   my $span      = $segment->length;
-  my $half      = unit_label(int $span/2);
-  my $full      = unit_label($span);
+  my $half_title      = unit_label(int $span/2);
+  my $full_title      = unit_label($span);
+  my $half      = int $span/2;
+  my $full      = $span;
   my $fine_zoom = get_zoomincrement();
 
   my @lines;

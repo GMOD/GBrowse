@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.53 2004-01-21 22:48:37 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.54 2004-01-22 19:33:02 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -362,13 +362,11 @@ sub main_display {
     $segment = $segments->[0];
     # $segment = truncated_segment($segment) if $segment->length < 4;
     my $divider = $CONFIG->setting(general=>'unit_divider') || 1;
-    my ($seg_start,$seg_end);
-    if ($divider == 1 ) {
-       $seg_start = $segment->start;
-       $seg_end   = $segment->end;
-    } else {
-       $seg_start = unit_label($segment->start);
-       $seg_end   = unit_label($segment->end);
+    my $seg_start = $segment->start;
+    my $seg_end   = $segment->end;
+    if ($divider != 1 ) {
+       $seg_start = unit_label($seg_start);
+       $seg_end   = unit_label($seg_end);
     }
     print h2($CONFIG->tr('SHOWING_FROM_TO',
 		       unit_label($segment->length),
@@ -472,7 +470,7 @@ sub detail_panel {
   }
 
   else {
-    $cell .= i($CONFIG->tr('TOO_BIG',commas($MAX_SEGMENT),commas($DEFAULT_SEGMENT)));
+    $cell .= i($CONFIG->tr('TOO_BIG',unit_label($MAX_SEGMENT),unit_label($DEFAULT_SEGMENT)));
   }
   $cell .= "\n";
   my $table = table({-border=>0,-width=>'100%'},
@@ -891,6 +889,7 @@ sub unit_label {
   my $value = shift;
   my $unit     = $CONFIG->setting('units')        || 'bp';
   my $divider  = $CONFIG->setting('unit_divider') || 1;
+  return 0 if ($value == 1 and $divider > 1);
   $value /= $divider;
 
   my $label;

@@ -321,7 +321,7 @@ END
 
  NOT_FOUND => 'The landmark named <i>%s</i> is not recognized. See the help pages for suggestions.',
 
- TOO_BIG   => 'Detailed view is limited to %s bases.  Click in the overview to select a region %s bp wide.',
+ TOO_BIG   => 'Detailed view is limited to %s.  Click in the overview to select a region %s wide.',
 
  PURGED    => "Can't find the file named %s.  Perhaps it has been purged?.",
 

@@ -32,7 +32,7 @@ sub insert_sequence {
 package main;
 
 my $bWINDOWS = 0;    # Boolean: is this a MSWindows operating system?
-if ($^O =~ /Win/i) {
+if ($^O =~ /MSWin32/i) {
     $bWINDOWS = 1;
 }
 
@@ -70,17 +70,25 @@ by the \$TMPDIR environment variable), to hold the tables transiently.
 The adaptor used is dbi::mysqlopt.  There is currently no way to
 change this.
 
+Note that Windows users must use the --create option.
+
 USAGE
 ;
 
 $DSN ||= 'test';
 
+if ($bWINDOWS && not $FORCE) {
+  die "Note that Windows users must use the --create option.\n";
+}
+
 unless ($FORCE) {
-  #open (TTY,"/dev/tty") or die "/dev/tty: $!\n";  #TTY use removed for win compatability
+  die "This will delete all existing data in database $DSN.  If you want to do this, rerun with the --create option.\n"
+    if $bWINDOWS;
+  open (TTY,"/dev/tty") or die "/dev/tty: $!\n";  #TTY use removed for win compatability
   print STDERR "This operation will delete all existing data in database $DSN.  Continue? ";
-  my $f = <STDIN>;
+  my $f = <TTY>;
   die "Aborted\n" unless $f =~ /^[yY]/;
-  #close TTY;
+  close TTY;
 }
 
 my (@auth,$AUTH);
@@ -127,8 +135,16 @@ my $FEATURES    = 0;
 my $count;
 while (<>) {
   chomp;
-  next if /^\#/;
-  my ($ref,$source,$method,$start,$stop,$score,$strand,$phase,$group) = split "\t";
+  my ($ref,$source,$method,$start,$stop,$score,$strand,$phase,$group);
+  if (/^\#\#\s*sequence-region\s+(\S+)\s+(\d+)\s+(\d+)/i) { # header line
+    ($ref,$source,$method,$start,$stop,$score,$strand,$phase,$group) = 
+      ($1,'reference','Component',$2,$3,'.','.','.',qq(Sequence "$1"));
+  } elsif (/^\#/) {
+    next;
+  } else {
+    ($ref,$source,$method,$start,$stop,$score,$strand,$phase,$group) = split "\t";
+  }
+  next unless defined $ref;
   $FEATURES++;
 
   $source = '\N' unless defined $source;

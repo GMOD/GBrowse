@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.21 2003-02-26 20:25:13 scottcain Exp $
+# $Id: Segment.pm,v 1.22 2003-02-26 20:47:29 scottcain Exp $
 
 =head1 NAME
 
@@ -289,6 +289,11 @@ sub length { shift->{length} }
  Returns : a list of Bio::SeqFeatureI objects
  Args    : see below
  Status  : Public
+
+Note: There is a hack in this method to increase speed that may or 
+may not work well with a give instance of postgres/chado.  For the
+query to find features, Seq Scans (same as Table Scans in some other
+database) have been disabled, in order to force the use of an index.
 
 This method will find all features that intersect the segment in a
 variety of ways and return a list of Bio::SeqFeatureI objects.  The

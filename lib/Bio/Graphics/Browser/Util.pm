@@ -89,7 +89,8 @@ require Exporter;
 @ISA = 'Exporter';
 @EXPORT = qw(conf_dir open_config open_database
 	     print_header print_top print_bottom html_frag
-	     error fatal_error);
+	     error fatal_error redirect_legacy_url
+	    );
 
 use constant DEBUG => 0;
 
@@ -226,6 +227,18 @@ END
   }
 }
 
+sub redirect_legacy_url {
+  my $source = shift;
+  if ($source && path_info() ne "/$source") {
+    my $q = new CGI '';
+    $q->path_info($source);
+    foreach (qw(name ref start stop)) {
+      $q->param($_=>param($_)) if param($_);
+    }
+    print redirect($q->url(-absolute=>1,-path_info=>1,-query=>1));
+    exit 0;
+  }
+}
 
 
 1;

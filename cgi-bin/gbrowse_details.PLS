@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.9 2003-10-05 02:02:07 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.10 2003-10-06 13:12:06 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -73,17 +73,14 @@ my $ref   = param('ref');
 my $start = param('start');
 my $end   = param('end');
 
-if ($src && path_info() ne "/$src") {
-  path_info(escape($src));
-  Delete('src');
-  Delete('source');
-  print redirect(url(-absolute=>1,-path_info=>1,-query=>1));
-  exit 0;
-}
+# Migrate from 1.56 way of specifying source to 1.57 way
+# This may cause a redirect and exit 0 at this point!
+redirect_legacy_url($src);
 
 $CONFIG->source($src || cookie('gbrowse_source'));
 
-&_getLinkURLs;
+# This populates the %URLS global with link rules from the config file.
+getLinkURLs(\%URLS);
 
 print_top("GBrowse Details: $class:$name");
 print $CONFIG->header || h1("$class:$name Details");
@@ -274,18 +271,19 @@ sub position {
   return a({-href=>$url},$strand ? "$ref:$start..$end ($strand strand)" : "$ref:$start..$end");
 }
 
-sub _getLinkURLs {
-        my $THIS_CONFIG = $CONFIG->config;
-        $THIS_CONFIG->safe(0);
-        my @LINK_CONFIGS = map{$_=~/\:DETAILS$/?$_:undef} $THIS_CONFIG->setting;
-        foreach (@LINK_CONFIGS){
-                next unless $_;
-                next unless $_=~/(.*?)\:DETAILS/;
-                next unless $1;
-                my $URL = $THIS_CONFIG->setting("$_", 'url');
-                next unless $URL;
-                $URLS{$1}=$URL;
-        }
+sub getLinkURLs {
+  my $urls = shift;
+  my $THIS_CONFIG = $CONFIG->config;
+  $THIS_CONFIG->safe(0);
+  my @LINK_CONFIGS = map{$_=~/\:DETAILS$/?$_:undef} $THIS_CONFIG->setting;
+  foreach (@LINK_CONFIGS){
+    next unless $_;
+    next unless $_=~/(.*?)\:DETAILS/;
+    next unless $1;
+    my $URL = $THIS_CONFIG->setting("$_", 'url');
+    next unless $URL;
+    $urls->{$1}=$URL;
+  }
 }
 
 !NO!SUBS!

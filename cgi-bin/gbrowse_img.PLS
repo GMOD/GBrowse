@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.4 2003-10-05 02:02:07 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.5 2003-10-06 13:12:06 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1 path_info escape);
@@ -80,11 +80,9 @@ unless (param()) {
 my $src = param('src') || param('source') || path_info();
 $src    =~ s!^/!!;  # get rid of leading / from path_info()
 
-if ($src && path_info() ne "/$src") {
-  path_info(escape($src));
-  print redirect(url(-absolute=>1,-path_info=>1));
-  exit 0;
-}
+# Migrate from 1.56 way of specifying source to 1.57 way
+# This may cause a redirect and exit 0 at this point!
+redirect_legacy_url($src);
 
 $CONFIG->source($src)     if $src;
 
@@ -452,6 +450,7 @@ For additional help, see <a href="http://www.gmod.org">The GMOD Project</a> page
 END
 ;
 }
+
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.38 2003-10-06 02:53:55 stajich Exp $
+# $Id: gbrowse.PLS,v 1.39 2003-10-06 13:12:06 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -160,12 +160,9 @@ $CONFIG = open_config($CONF_DIR);  # open_config() is exported from Util.pm
 # in some future implementation)
 my ($source,$old_source) = get_source();
 
-# migrate from 1.56 way of specifying source to 1.57 way
-if ($source && path_info() ne "/$source") {
-  path_info(escape($source));
-  print redirect(url(-absolute=>1,-path_info=>1));
-  exit 0;
-}
+# Migrate from 1.56 way of specifying source to 1.57 way
+# This may cause a redirect and exit 0 at this point!
+redirect_legacy_url($source);
 
 $CONFIG->source($source);
 my $page_settings = get_settings($source);
@@ -2467,6 +2464,7 @@ sub tableize {
   }
   $html .= "</table>\n";
 }
+
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

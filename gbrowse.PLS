@@ -42,7 +42,7 @@ $Config{ 'startperl' }
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.74.2.2 2003-05-23 16:38:05 pedlefsen Exp $
+# $Id: gbrowse.PLS,v 1.74.2.3 2003-06-16 18:14:06 pedlefsen Exp $
 
 use strict;
 use vars qw( $VERSION $CONF_DIR );
@@ -134,17 +134,24 @@ if( !defined( $session_id ) ||
 }
 if( !defined( $session_id ) ||
     !( $browser = retrieveBrowser( $session_id ) ) ) {
-  ## TODO: Why do we not get the cookie when we're in GET mode?;
-  $old_source = cookie( 'gbrowse_source' )
-    unless ( $source && ( request_method() eq 'GET' ) );
+  $old_source = param( 'last_source' );
+  unless( defined( $old_source ) ) {
+    ## TODO: Why do we not get the cookie when we're in GET mode?;
+    $old_source = cookie( 'gbrowse_source' );
+    #  unless ( $source && ( request_method() eq 'GET' ) );
+  }
   $browser =
     Bio::Graphics::Browser->new(
       %defaults
     );
   $session_id = $browser->unique_id();
 }
-$old_source |= $browser->source();
-$source |= $old_source;
+unless( defined $old_source ) {
+  $old_source = $browser->source();
+}
+unless( defined $source ) {
+  $source = $old_source;
+}
 
 $browser->gbrowse( \*STDOUT, $source, $old_source );
 

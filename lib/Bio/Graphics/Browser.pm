@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.51.2.3 2003-05-23 16:38:05 pedlefsen Exp $
+# $Id: Browser.pm,v 1.51.2.4 2003-06-16 18:14:06 pedlefsen Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -595,10 +595,9 @@ sub footer {
 ## This is the meaty deal.  The real mccoy.
 sub gbrowse {
   my $self = shift;
-  my ( $out_fh, $source, $cookie_old_source, $arg_page_settings ) = @_;
+  my ( $out_fh, $source, $old_source, $arg_page_settings ) = @_;
 
-  my $old_source = $self->source( $source );
-  $old_source ||= $cookie_old_source;
+  $self->source( $source );
   my $source_changed =
     ( defined( $old_source ) && ( $source ne $old_source ) );
 
@@ -639,6 +638,7 @@ sub gbrowse {
       $plugin_action = 'Configure'; #reconfigure
     }
   } elsif( !@segments && $page_settings->{ 'name' } ) {
+    ## TODO: Shouldn't this happen in _name2segments?
     # try again
     $self->_do_keyword_search( $page_settings, \@segments );
     unless( @segments ) {
@@ -735,7 +735,8 @@ sub gbrowse {
     return 0;
   }
 
-  my $description = $self->setting( 'description' );
+  my $description =
+    $self->setting( 'description' ) || 'Generic Genome Browser';
   
   ## STARTING THE PAGE ############################################################################
   unless( $page_settings->{ '_html_started' }++ ) {
@@ -867,6 +868,11 @@ sub _get_page_settings {
   if( $source_changed ) {
     # Restore old reference point.
     param( 'name' => $page_settings->{ 'name' } );
+    ## If there's a reference in the [GENERAL] section, use it.
+    ## TODO: REMOVE?
+    if( defined $self->setting( 'reference' ) ) {
+      $page_settings->{ 'seq_id' } = $self->setting( 'reference' );
+    }
   }
   return $page_settings;
 } # _get_page_settings(..)
@@ -970,8 +976,8 @@ sub _CGI_page_settings {
     } else {
       warn "Okay we're zoomnaving, but I can't figure out why." if DEBUG;
     }
-    ## TODO: ERE I AM
-    $settings->{ 'seq_id' } = ( param( 'seq_id' ) || param( 'ref' ) );
+    $settings->{ 'seq_id' } =
+      ( param( 'seq_id' ) || param( 'ref' ) || $self->setting( 'reference' ) );
     if( param( 'start' ) =~ /^[\d-]+/ ) {
       $settings->{ 'start' } = param( 'start' );
     }
@@ -991,6 +997,7 @@ sub _CGI_page_settings {
     $settings->{ $_ } = param( $_ ) if defined param( $_ );
   }
 
+  ## TODO: Note that this here code is probably scrappable, when external tracks are all handled via the nice Config chaining dealy.
   ## TODO: This is assuming that the eurl entries will all begin with
   ## http or ftp, and that's not actually tested.
   if( my @external = param( 'eurl' ) ) {
@@ -1178,7 +1185,8 @@ sub _html_main_display {
     $self->_html_error( $settings, $babelfish->tr( 'NOT_FOUND', $name ) );
   } elsif( @$segments == 1 ) {
     $segment = $segments->[ 0 ];
-    if( $segment->length() < 4 ) {
+    ## TODO: Didn't we already handle this one (segment length short), in gbrowse?
+    if( $segment->length() < 4 ) { # TODO: Magic #
       $segment = $self->_truncated_segment( $segment );
     }
     my $divider = $self->setting( 'unit_divider' ) || 1;
@@ -1202,11 +1210,13 @@ sub _html_main_display {
       '-name'   => 'mainform',
       '-action' => url( '-relative' => 1, '-path_info' => 1 )
     );
+  ## TODO: RENAME.  _html should be reserved for those that print to screen.
   print $out_fh $self->_html_navigation_table( $settings, $plugins, $segment );
 
   ## TODO: REMOVE
   warn "_html_main_display 2 A" if DEBUG;
 
+  ## TODO: RENAME.  _html should be reserved for those that print to screen.
   print $out_fh $self->_html_frag( 'html2' );
 
   ## TODO: REMOVE
@@ -1222,6 +1232,7 @@ sub _html_main_display {
 
     warn "Using segment $segment" if DEBUG;
 
+    ## TODO: This will go away when we implement 'config chaining'
     $external_configs = $self->_load_external_sources( $settings );
     print $out_fh $self->_get_overview_panel_html(
                     $settings,
@@ -1625,7 +1636,7 @@ sub _get_navbar_html {
 
   my @lines;
   push( @lines,
-        hidden( '-name'     => 'source',
+        hidden( '-name'     => 'last_source',
                 '-value'    => $self->source(),
                 '-override' => 1 )
       );
@@ -1795,6 +1806,8 @@ sub _get_tracks_table_html {
   my ( $settings ) = @_;
 
   my $babelfish = $self->{ '_babelfish' };
+
+  warn "_get_tracks_table_html(..)" if DEBUG;
 
   # set up the dumps line.
   my $seq_id        = $settings->{ 'seq_id' };
@@ -2355,6 +2368,9 @@ sub _lookup_segments {
 
   my $divisor = $self->setting( 'unit_divider' ) || 1;
 
+  ## TODO: Dude.  Why is it sometimes in 'name', sometimes in 'seq_id'?
+  ##  .. it must be that when zoomnaving we don't have name, we have seq_id.
+  ## TODO: Doublecheck this hypothesis!
   if( my $name = $settings->{ 'name' } ) {
     warn "name = $name" if DEBUG;
     @segments = $self->_name2segments( $name );
@@ -2378,15 +2394,17 @@ sub _lookup_segments {
   # Absolutify them.
   $_->absolute( 1 ) foreach @segments;
 
-  # Filter out redundant segments; this can happen when the same basic
-  # feature is present under several names, such as "genes" and
-  # "frameworks"
-  my %seenit;
-  @segments =
-    grep { !$seenit{ ( '' . $_->seq_id() ), $_->start(), $_->end() }++ }
-         @segments;
-  return @segments if ( @segments > 1 );
+  ## TODO: REMOVE.  This doesn't make sense because all returned segments are on independent sequences, by definition.
+  ## Filter out redundant segments; this can happen when the same basic
+  ## feature is present under several names, such as "genes" and
+  ## "frameworks"
+  #my %seenit;
+  #@segments =
+  #  grep { !$seenit{ ( '' . $_->seq_id() ), $_->start(), $_->end() }++ }
+  #       @segments;
+  #return @segments if ( @segments > 1 );
 
+  ## TODO: Understand this.  Wha?
   # this prevents any confusion over (seq_id,start,end) and (name) addressing.
   $settings->{ 'seq_id' } = ( '' . $segments[ 0 ]->seq_id() );
   $settings->{ 'start' }  = ( $segments[ 0 ]->start() / $divisor );
@@ -3720,6 +3738,8 @@ sub _get_plugin_menu_html {
 
   my $babelfish = $self->{ '_babelfish' };
 
+  warn "_get_plugin_menu_html(..)" if DEBUG;
+
   my %verbs = ( 'dumper'    => $babelfish->tr( 'Dump' ),
 	        'finder'    => $babelfish->tr( 'Find' ),
 	        'annotator' => $babelfish->tr( 'Annotate' ) );
@@ -3769,7 +3789,12 @@ sub _get_source_menu_html {
 
   my $babelfish = $self->{ '_babelfish' };
 
+  warn "_get_source_menu_html(..) A" if DEBUG;
+
   my @sources = sort $self->sources();
+
+  warn "_get_source_menu_html(..) B" if DEBUG;
+
   return
     (
      b( $babelfish->tr( 'DATA_SOURCE' ) ) .
@@ -3778,7 +3803,8 @@ sub _get_source_menu_html {
        popup_menu(
          '-name'     => 'source',
          '-values'   => [ @sources ],
-         '-labels'   => { map { $_ => $self->description( $_ ) } @sources },
+         # TODO: Put back? description(..) loads the named conf file.  If we can avoid that, let's.
+         #'-labels'   => { map { $_ => $self->description( $_ ) } @sources },
          '-default'  => $self->source(),
          '-onChange' => 'document.mainform.submit()',
        ) :
@@ -5103,6 +5129,7 @@ sub _name2segments {
     $start =~ s/,//g; # get rid of commas
     $end  =~ s/,//g;
   } elsif( $name =~ /^(\w+):(.+)$/ ) {
+    ## TODO: Note that this is for namespace qualifiers on the feature or sequence name, but if that's the case, shouldn't it also be done in the above regexp?
     $class = $1;
     $name  = $2;
   }
@@ -5125,6 +5152,7 @@ sub _name2segments {
   ## TODO: REMOVE
   warn "_name2segments: \@argv is " . Dumper( \@argv ) if DEBUG;
 
+  ## TODO: Why do we interchange 'get_collection' and 'segment'?
   @segments = $self->config()->segment( @argv );
 
   ## TODO: REMOVE
@@ -5208,28 +5236,29 @@ sub _name2segments {
   return @segments if ( $name =~ /\*/ );
 
   # Otherwise we try to merge segments that are adjacent if we can!
+  ## TODO: REMOVE.  This bit here is now unnecessary because the segments are necessarily on different sequences, so they're already merged if they need to be.
 
-  # This tricky bit is called when we retrieve multiple segments or when
-  # there is an unusually large feature to display.  In this case, we attempt
-  # to split the feature into its components and offer the user different
-  # portions to look at, invoking _merge_segments() to select the regions.
-  my $max_length = 0;
-  foreach my $segment ( @segments ) {
-    if( $segment->length() > $max_length ) {
-      $max_length = $segment->length();
-    }
-  }
-  if( ( @segments > 1 ) || ( $max_length > $max_segment ) ) {
-    my @s =
-      $self->config()->segment(
-        '-class'     => $segments[ 0 ]->class(),
-        '-unique_id' => ( '' . $segments[ 0 ]->seq_id() ),
-	'-automerge' => 0
-      );
-    if( ( @s > 1 ) && ( @s < $toomany ) ) {
-      @segments = $self->_merge_segments( \@s, ( $self->get_ranges() )[ -1 ] );
-    }
-  }
+  ## This tricky bit is called when we retrieve multiple segments or when
+  ## there is an unusually large feature to display.  In this case, we attempt
+  ## to split the feature into its components and offer the user different
+  ## portions to look at, invoking _merge_segments() to select the regions.
+  #my $max_length = 0;
+  #foreach my $segment ( @segments ) {
+  #  if( $segment->length() > $max_length ) {
+  #    $max_length = $segment->length();
+  #  }
+  #}
+  #if( ( @segments > 1 ) || ( $max_length > $max_segment ) ) {
+  #  my @s =
+  #    $self->config()->segment(
+  #      '-class'     => $segments[ 0 ]->class(),
+  #      '-unique_id' => ( '' . $segments[ 0 ]->seq_id() ),
+  #      '-automerge' => 0
+  #    );
+  #  if( ( @s > 1 ) && ( @s < $toomany ) ) {
+  #    @segments = $self->_merge_segments( \@s, ( $self->get_ranges() )[ -1 ] );
+  #  }
+  #}
   ## TODO: REMOVE
   warn "_name2segments: returning \@segments ( " . join( ', ', @segments ) . " )" if DEBUG;
 

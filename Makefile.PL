@@ -122,7 +122,7 @@ WriteMakefile(
 	      'VERSION'      => $VERSION,
 	      'PREREQ_PM'    => {
 				 Bio::Perl     => 1.02,
-				 GD            => 2.08,
+				 GD            => 2.07,
 				 IO::String    => 0,
 				 Text::Shellwords  => 1.0,
 				}, # e.g., Module::Name => 1.1

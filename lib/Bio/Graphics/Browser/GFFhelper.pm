@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.6 2003-10-16 07:25:49 sheldon_mckay Exp $
+# $Id: GFFhelper.pm,v 1.7 2003-10-17 15:34:49 markwilkinson Exp $
 
 =head1 NAME
 
@@ -299,8 +299,8 @@ sub process_attributes {
     my $group = $f->group;
     my ($class, $name);
     my %att = $f->attributes;
-    my $class = $group->class;
-    my $name = $group->name;
+    $class = $group->class;
+    $name = $group->name;
     
     $att{$class} = $name;
 
@@ -320,6 +320,7 @@ sub process_attributes {
 # Sequence attribute getter/setters 
 ####################################
 *ref = *refseq;
+
 sub refseq {
     my ($self, $id) = @_;
     $self->{seq}->{id} ||= $id;

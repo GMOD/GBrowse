@@ -1,4 +1,4 @@
-# $Id: ImportFeatures.pm,v 1.4 2003-10-16 12:48:19 sheldon_mckay Exp $
+# $Id: ImportFeatures.pm,v 1.5 2003-10-17 15:34:49 markwilkinson Exp $
 
 =head1 NAME
 
@@ -309,10 +309,10 @@ sub dump {
 	my @killme = $segment->features;
 	my $killed;
 
-        my $killed = $db->delete( $segment->ref );
+    $killed = $db->delete( $segment->ref );
 	
-        print h2("I removed $killed features from the database"), pre(join "\n", @killme) 
-	    if $conf->{debug}; 
+    print h2("I removed $killed features from the database"), pre(join "\n", @killme) 
+	if $conf->{debug}; 
     }
 	
     # $gff = $self->component($gff);

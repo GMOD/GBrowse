@@ -1,3 +1,13 @@
+1.54	Thu Aug 28 12:08:15 EDT 2003
+        * Really fixed the security hole that was only partially fixed in 1.53.
+	* Fixed the config file associated with the tutorial.
+        * Fixed the install scripts so that they work on Windows.
+        * Added a patch to allow GBrowse to dump GenBank and EMBL formatted
+	files while using BioPerl 1.2.2.
+	* Modified GFFDumper to dump GFF from multiple sources, not just
+	what is in the primary data source.  This functionality is still
+	experimental and not fully tested.
+
 1.53    Thu Aug 21 14:40:54 EDT 2003
         * Security hole that allowed the display of /etc/passwd and other
 	files fixed

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.7 2003-01-22 22:47:13 scottcain Exp $
+# $Id: Segment.pm,v 1.8 2003-01-24 19:07:59 scottcain Exp $
 
 =head1 NAME
 
@@ -389,24 +389,23 @@ sub features {
   my %termname = %{$self->{dbadaptor}->{cvtermname}};
   while (my $hashref = $sth->fetchrow_hashref) {
 
-    my ($start,$end);
+    my ($start,$stop);
     if ($$hashref{nbeg} > $$hashref{nend}) {
       $start = $$hashref{nend};
-      $end   = $$hashref{nbeg};
+      $stop  = $$hashref{nbeg};
     } else {
-      $end   = $$hashref{nend};
+      $stop  = $$hashref{nend};
       $start = $$hashref{nbeg};
     }
 
     $feat = Bio::DB::Das::Chado::Segment::Feature->new (
-                       -start      => $start,
-                       -end        => $end,
-                       -strand     => $$hashref{strand}, 
-                       -seq_id     => $$hashref{name},
-                       -annotation => $$hashref{name},
-                       -group      => $termname{$$hashref{type_id}},
-                       -type       => $termname{$$hashref{type_id}},
-                       -primary    => $termname{$$hashref{type_id}} );
+                       $self->{dbadaptor},
+                       '',
+                       $start,$stop,
+                       $termname{$$hashref{type_id}},
+                       $$hashref{strand},
+                       $self->{name},
+                       $$hashref{name});  
 
     push @features, $feat;
  

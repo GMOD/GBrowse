@@ -48,7 +48,7 @@ default coordinate system (relative to itself).
 
 The 11 arguments are positional:
 
-  $factory      a Bio::DB::GFF adaptor object (or descendent)
+  $factory      a Bio::DB::Das::Chado adaptor object (or descendent)
   $srcseq       the source sequence
   $start        start of this feature
   $stop         stop of this feature
@@ -130,7 +130,7 @@ sub display_name  {
 =head2 sub_SeqFeature
 
  Title   : sub_SeqFeature
- Usage   : @feat = $feature->sub_SeqFeature([$method])
+ Usage   : @feat = $feature->sub_SeqFeature([$type])
  Function: get subfeatures
  Returns : a list of Bio::DB::Das::Chado::Segment::Feature objects
  Args    : a feature method (optional)
@@ -138,44 +138,82 @@ sub display_name  {
 
 This method returns a list of any subfeatures that belong to the main
 feature.  For those features that contain heterogeneous subfeatures,
-you can retrieve a subset of the subfeatures by providing a method
-name to filter on.
+you can retrieve a subset of the subfeatures by providing a type 
+to filter on.
 
 For AcePerl compatibility, this method may also be called as
 segments().
-
-SQL:
- select child.feature_id, child.name, child.type_id,
-        childloc.nbeg, childloc.nend, childloc.strand, childloc.phase
- from feature as parent
- inner join
- feature_relationship as fr0 on
- (parent.feature_id = fr0.subjfeature_id)
- inner join
- feature as child on
- (child.feature_id = fr0.objfeature_id)
- inner join
- featureloc as childloc on
- (child.feature_id = childloc.feature_id)
- where parent.feature_id = $feature_id;
-
-
 
 =cut
 
 sub sub_SeqFeature {
   my $self = shift;
   my $type = shift;
-  my $subfeat = $self->{subfeatures} or return;
-  $self->sort_features;
-  my @a;
+
+  my $parent_id = $self->{srcfeature_id};
+
+  my $typewhere = '';
   if ($type) {
-    my $features = $subfeat->{lc $type} or return;
-    @a = @{$features};
-  } else {
-    @a = map {@{$_}} values %{$subfeat};
+    $type = lc $type;
+    my %termhash = %{$self->{dbadaptor}->{cvterm_id}};
+    $typewhere = " and child.type_id = $termhash{$type} ";
   }
-  return @a;
+
+  my $sth = $self->{dbadaptor}->{dbh}->prepare("
+    select child.feature_id, child.name, child.type_id,
+           childloc.nbeg, childloc.nend, childloc.strand, childloc.phase
+    from feature as parent
+    inner join
+      feature_relationship as fr0 on
+        (parent.feature_id = fr0.subjfeature_id)
+    inner join
+      feature as child on
+        (child.feature_id = fr0.objfeature_id)
+    inner join
+      featureloc as childloc on
+        (child.feature_id = childloc.feature_id)
+    where parent.feature_id = $feature_id
+          $typewhere;
+    ");
+  $sth->execute or $self->throw("subfeature query failed"); 
+
+  my @features;
+  my %termname = %{$self->{dbadaptor}->{cvtermname}};
+  while (my $hashref = $sth->fetchrow_hashref) {
+
+    my ($start,$stop);
+    if ($$hashref{nbeg} > $$hashref{nend}) {
+      $start = $$hashref{nend};
+      $stop  = $$hashref{nbeg};
+    } else {
+      $stop  = $$hashref{nend};
+      $start = $$hashref{nbeg};
+    }
+
+    my $feat = Bio::DB::Das::Chado::Segment::Feature->new (
+                       $self->{dbadaptor},
+                       '',
+                       $start,$stop,
+                       $termname{$$hashref{type_id}},
+                       $$hashref{strand},
+                       $self->{name},
+                       $$hashref{name}); 
+
+    push @features, $feat;
+
+  }
+#  my $subfeat = $self->{subfeatures} or return;
+#  $self->sort_features;
+#  my @a;
+#  if ($type) {
+#    my $features = $subfeat->{lc $type} or return;
+#    @a = @{$features};
+#  } else {
+#    @a = map {@{$_}} values %{$subfeat};
+#  }
+
+  
+  return @features;
 }
 
 =head2 add_subfeature

@@ -120,12 +120,12 @@ for my $localfile ( qw(./docs/pod/CONFIGURE_HOWTO.pod
                        ./docs/pod/README-gff-files.pod
                        ./docs/pod/README-chado.pod
                        ./docs/pod/MAKE_IMAGES_HOWTO.pod
+                       ./docs/pod/GENBANK_HOWTO.pod
                        ./docs/pod/INSTALL.pod ) ) {
      my ($name,undef,undef) = fileparse($localfile, "\.pod");
      my $installfile = Bio::Root::IO->catfile("$ht_target/docs/pod","$name.html"); 
      system("pod2html", "--infile=$localfile",
                         "--outfile=$installfile",
-                       # "--outfile=$name.html",
                         "--htmlroot=/gbrowse",
                         "--htmldir=$ht_target ",
                         "--podpath=./docs/pod",

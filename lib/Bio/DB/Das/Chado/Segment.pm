@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.64 2004-06-21 20:55:07 scottcain Exp $
+# $Id: Segment.pm,v 1.65 2004-06-22 18:04:54 scottcain Exp $
 
 =head1 NAME
 
@@ -92,7 +92,7 @@ use Carp qw(carp croak cluck);
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI Bio::DB::Das::Chado);
@@ -693,17 +693,19 @@ sub features {
     my $interbase_start = $$hashref{fmin};
     my $base_start      = $interbase_start +1;
 
+    my $source = $self->factory->dbxref2source($$hashref{dbxref_id}) if $$hashref{dbxref_id};
+    my $type   = $self->factory->term2name($$hashref{type_id}). ":$source";
+
     $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                        $self->factory,
                        $self,
                        $self->seq_id,
                        $base_start,$stop,
-                       $self->factory->term2name($$hashref{type_id}),
+                       $type,
                        $$hashref{strand},
                        $$hashref{name},
                        $$hashref{uniquename},$$hashref{feature_id});
 
-    my $source = $self->factory->dbxref2source($$hashref{dbxref_id}) if $$hashref{dbxref_id};
     if ($source) { #set source if present
         $feat->source($source); 
     }

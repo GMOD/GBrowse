@@ -20,6 +20,11 @@ cgi-bin/gbrowse_est.PLS
 cgi-bin/gbrowse_img.PLS
 cgi-bin/gbrowse_moby.PLS
 cgi-bin/gbrowse_syn.PLS
+conf/MobyServices/b64_encoded_gif_renderer.pm
+conf/MobyServices/b64_encoded_jpeg_renderer.pm
+conf/MobyServices/text_formatted_renderer.pm
+conf/MobyServices/text_html_renderer.pm
+conf/MobyServices/text_plain_renderer.pm
 conf/enzymes.txt
 conf/languages/POSIX.pm
 conf/languages/en.pm

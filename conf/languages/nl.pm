@@ -1,6 +1,8 @@
 # do not remove the { } from the top and bottom of this page!!!
 {
 
+   #Dutch translation done by Marc Logghe <marcl@devgen.com>
+
    CHARSET =>   'ISO-8859-1',
 
    #----------
@@ -44,6 +46,10 @@ END
    BETWEEN   => 'Tussen',
  
    BENEATH   => 'Onder',
+
+   LEFT        => 'Links',
+
+   RIGHT       => 'Rechts',
 
    TRACK_NAMES => 'Lijst Baannamen',
 

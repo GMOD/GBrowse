@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.23 2004-09-08 21:56:31 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.24 2004-09-11 02:35:48 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -115,6 +115,7 @@ my $image_class     = param('image_class') || param('format');        # image ty
 my $keystyle        = param('keystyle')    || 'between';
 my @options         = param('options');            # various track options, such as bumping
 my $embed           = param('embed');              # embedded in a frame
+my $flip            = param('flip');               # right<->left
 
 # Get the ID of the requested segment and error out if none provided
 
@@ -163,6 +164,7 @@ else {
 			     image_class   => $image_class,
 			     keystyle      => $keystyle,
 			     do_map        => 1,
+			     flip          => $flip,
 			    );
 }
 
@@ -220,7 +222,15 @@ sub message {
 
 sub get_segments {
   my ($db,@names) = @_;
-  return map {$CONFIG->name2segments($_,$db,undef,1) } @names;
+  my @segments;
+  for my $name (@names) {
+    my $wildcard = $name =~ /[*?]/;
+    my @matches = $CONFIG->name2segments($name,$db,undef,!$wildcard);
+    push @segments,@matches;
+    next unless $wildcard;
+    $_->absolute(1) foreach @matches;
+  }
+  @segments;
 }
 
 sub external_features {

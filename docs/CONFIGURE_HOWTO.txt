@@ -463,6 +463,12 @@ The following [GENERAL] options are recognized:
   See the contents of conf/plugins and contrib/plugins for more plugins
   that you can install.
 
+  * plugin_path
+
+  By default gbrowse searches for plugins in its standard location of conf/plugins.
+  You can store plugins in a non-standard location by providing this option
+  with a space-delimited list of additional directories to search in.
+
   * buttons
 
   URL in which the various graphical buttons used by GBrowse are located.

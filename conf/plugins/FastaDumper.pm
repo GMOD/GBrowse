@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::FastaDumper;
-# $Id: FastaDumper.pm,v 1.7 2002-07-07 21:31:48 lstein Exp $
+# $Id: FastaDumper.pm,v 1.8 2003-05-19 17:25:44 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -57,8 +57,6 @@ sub dump {
     my $browser = $self->browser_config();
     warn("====== beginning dump =====\n") if DEBUG;
     warn "length of dna = ",length($dna) if DEBUG;
-    my $objtype = $self->objtype();
-    $objtype .= ".";
 
     my %types;
 
@@ -130,13 +128,11 @@ sub reconfigure {
   my $current_config = $self->configuration;
   %$current_config = ();
 
-  my $objtype = $self->objtype();
-  foreach my $p ( param() ) {
-    warn "param = $p\n" if DEBUG;
-    my ($param) = $p =~ /^$objtype\.(.+)/ or next;
+  foreach my $param ( $self->config_param() ) {
+    warn "param = $param\n" if DEBUG;
     next if $param =~/\.(f|b)gcolor$/;
-    next unless param($p);
-    $current_config->{$param} = param($p);
+    my $value = $self->config_param($param) or next;
+    $current_config->{$param} = $value;
     warn "current_config($param) = $current_config->{$param}\n" if DEBUG;
   }
   # handle colors specially
@@ -144,7 +140,7 @@ sub reconfigure {
     next unless $current_config->{$type} =~ /^\d+$/;
     next unless $MARKUPS[$current_config->{$type}] =~ /^(F|B)GCOLOR/;
     my $color_key = lc("$1gcolor");
-    $current_config->{"$type.$color_key"} = param("$objtype.$type.$color_key");
+    $current_config->{"$type.$color_key"} = $self->config_param("$type.$color_key");
     warn "current_config($type.$color_key) = ",$current_config->{"$type.$color_key"},"\n" if DEBUG;
   }
 }
@@ -152,13 +148,12 @@ sub reconfigure {
 sub configure_form {
     my $self = shift;
     my $current_config = $self->configuration;
-    my $objtype = $self->objtype();
     my @choices = TR({-class => 'searchtitle'},
 		     th({-align=>'RIGHT',-width=>'25%'},"Output",
-			td(radio_group('-name'   => "$objtype.format",
-				       '-values' => [qw(text html)],
-				       '-default'=> $current_config->{'format'},
-				       '-override' => 1))
+			td(radio_group(-name     => $self->config_name('format'),
+				       -values   => [qw(text html)],
+				       -default  => $current_config->{'format'},
+				       -override => 1))
 		       )
 		    );
     my $browser = $self->browser_config();
@@ -175,22 +170,22 @@ sub configure_form {
 	push @choices, TR({-class => 'searchtitle'}, 
 			  th({-align=>'RIGHT',-width=>'25%'}, $realtext,
 			     td(join ('&nbsp;',
-				      radio_group(-name     => "$objtype.$featuretype",
+				      radio_group(-name     => $self->config_name($featuretype),
 						  -values   => [ (sort keys %LABELS)[0..4] ],
 						  -labels   => \%LABELS,
 						  -default  => $current_config->{$featuretype} || 0),
-				      radio_group(-name     => "$objtype.$featuretype",
+				      radio_group(-name     => $self->config_name($featuretype),
 						  -values   => 5,
 						  -labels   => \%LABELS,
 						  -default  => $current_config->{$featuretype} || 0),
-				      popup_menu(-name      => "$objtype.$featuretype.fgcolor",
+				      popup_menu(-name      => $self->config_name("$featuretype.fgcolor"),
 						 -values    => \@COLORS,
 						 -default    => $current_config->{"$featuretype.fgcolor"}),
-				      radio_group(-name     => "$objtype.$featuretype",
+				      radio_group(-name     => $self->config_name($featuretype),
 						  -values   => 6,
 						  -labels   => \%LABELS,
 						  -default  => $current_config->{$featuretype} || 0),
-				      popup_menu(-name      => "$objtype.$featuretype.bgcolor",
+				      popup_menu(-name      => $self->config_name("$featuretype.bgcolor"),
 						 -values    => \@COLORS,
 						 -default    => $current_config->{"$featuretype.bgcolor"}
 						),
@@ -244,9 +239,5 @@ sub make_markup {
   }
   @regions_to_markup;
 }
-
-# get the <<unique name>> for the COOKIES (may not actually be unique but good 
-# enough for our purposes) of the module
-sub objtype { ( split(/::/,ref(shift)))[-1]; }
 
 1;

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::RestrictionAnnotator;
-# $Id: RestrictionAnnotator.pm,v 1.8 2002-09-09 03:27:03 lstein Exp $
+# $Id: RestrictionAnnotator.pm,v 1.9 2003-05-19 17:25:44 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -29,14 +29,14 @@ sub init {shift->configure_enzymes}
 
 sub config_defaults {
   my $self = shift;
-  return { };
+  return { on => 1};
 }
 
 sub reconfigure {
   my $self = shift;
   my $current_config = $self->configuration;
-  %$current_config = map {$_=>1} param('RestrictionAnnotator.enzyme');
-  $current_config->{on} = param('RestrictionAnnotator.on');
+  %$current_config = map {$_=>1} $self->config_param('enzyme');
+  $current_config->{on} = $self->config_param('on');
 }
 
 
@@ -45,19 +45,19 @@ sub configure_form {
   my $self = shift;
   my $current_config = $self->configuration;
   configure_enzymes() unless %SITES;
-  my @buttons = checkbox_group(-name   => "RestrictionAnnotator.enzyme",
+  my @buttons = checkbox_group(-name   => $self->config_name('enzyme'),
 			       -values => [sort keys %SITES],
 			       -cols   => 4,
 			       -defaults => [grep {$current_config->{$_}} keys %$current_config]
 			       );
   return table(TR({-class=>'searchtitle'},
-		  th("Select Restriction Sites To Annotate (limited selection right now)")),
+		  th("Select Restriction Sites To Annotate")),
 	       TR({-class=>'searchtitle'},
 		  th({-align=>'LEFT'},
 		     "Restriction Site Display ",
-		     radio_group(-name=>'RestrictionAnnotator.on',
-				 -values=>[0,1],
-				 -labels => {0=>'off',1=>'on'},
+		     radio_group(-name=>$self->config_name('on'),
+				 -values  =>[0,1],
+				 -labels  => {0=>'off',1=>'on'},
 				 -default => $current_config->{on},
 				 -override=>1,
 				))),
@@ -73,6 +73,7 @@ sub annotate {
   configure_enzymes() unless %SITES;
   return unless %SITES;
   return unless %$config;
+  warn "on = $config->{on}\n";
   return unless $config->{on};
 
   my $ref        = $segment->ref;

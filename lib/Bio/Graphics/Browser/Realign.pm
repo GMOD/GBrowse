@@ -1,4 +1,40 @@
 package Bio::Graphics::Browser::Realign;
+
+=head1 NAME
+
+Bio::Graphics::Browser::Realign - Perl extension for Smith-Waterman alignments
+
+=head1 SYNOPSIS
+
+  use Bio::Graphics::Browser::Realign 'align';
+  my ($top,$middle,$bottom) = align('gattttttc','gattttccc');
+  print join "\n",$top,$middle,$bottom,"\n";
+
+  # produces:
+  gatttttt--c
+  ||||||    |
+  gatttt--ccc
+
+
+=head1 DESCRIPTION
+
+This is a helper utility used by gbrowse to produce global alignments.
+It uses slow Smith-Waterman, so is only appropriate for short segments
+that are mostly aligned already.
+
+It can be speeded up significantly by compiling
+Bio::Graphics::Browser::CAlign, an XS extension.  To do this, build
+gbrowse with the DO_XS=1 option:
+
+  cd Generic-Genome-Browser
+  perl Makefile.PL DO_XS=1
+
+=head2 METHODS
+
+=over 4
+
+=cut
+
 # file: Sequence/Alignment.pm
 
 use strict;
@@ -34,10 +70,30 @@ use constant GAP_TGT => 2;
 
 my @EVENTS = qw(extend gap_src gap_tgt);
 
+=item $aligner = Bio::Graphics::Browser::Realign->new($src,$target [,\%matrix])
+
+The new() method takes two the two sequence strings to be aligned and
+an optional weight matrix.  Legal weight matrix keys and their default
+values are shown here:
+
+   Key name       Default       Description
+   --------       -------       -----------
+
+   match            1           Award one point for an exact match.
+   mismatch        -1           Penalize one point for a mismatch.
+   wildcard_match   0           No penalty for a match to a wildcard (e.g. "n").
+   gap             -1           Penalize one point to create a gap.
+   gap_extend       0           No penalty for extending an existing gap.
+   wildcard         'N'         The wildcard character.
+
+The alignment algorithm is run when new() is called.
+
+=cut
+
 # Construct a new alignment object.  May be time consuming.
 sub new {
     my ($class,$src,$tgt,$matrix) = @_;
-    croak 'Usage: CAlign->new($src,$tgt [,\%matrix])'
+    croak 'Usage: Realign->new($src,$tgt [,\%matrix])'
       unless $src && $tgt;
     my $self = bless {
 		      src    => $src,
@@ -54,48 +110,33 @@ sub new {
     return $self;
 }
 
-# take two sequences as strings, align them and return
-# a three element array consisting of gapped seq1, match string, and
-# gapped seq2.
-sub align {
-  my ($seq1,$seq2,$matrix) = @_;
-  my $align = __PACKAGE__->new($seq1,$seq2,$matrix);
-  return $align->pads;
-}
+=item $score = $aligner->score
 
-sub align_segs {
-  my ($gap1,$align,$gap2) = align(@_);
+Return the score from the alignment.
 
-  # create arrays that map residue positions to gap positions
-  my @maps;
-  for my $seq ($gap1,$gap2) {
-    my @seq = split '',$seq;
-    my @map;
-    my $residue = 0;
-    for (my $i=0;$i<@seq;$i++) {
-      $map[$i] = $residue;
-      $residue++ if $seq[$i] ne '-';
-    }
-    push @maps,\@map;
-  }
-
-  my @result;
-  while ($align =~ /(\S+)/g) {
-    my $align_end   = pos($align) - 1;
-    my $align_start = $align_end  - length($1) + 1;
-    push @result,[@{$maps[0]}[$align_start,$align_end],
-		  @{$maps[1]}[$align_start,$align_end]];
-  }
-  return @result;
-}
+=cut
 
 # return the score of the aligned region
 sub score { return shift()->{'score'}; }
+
+=item $start = $aligner->start
+
+Return the start of the aligned region, in source sequence
+coordinates.
+
+=cut
 
 # return the start of the aligned region
 sub start { 
     return shift()->{'alignment'}->[0];
 }
+
+=item $end = $aligner->end
+
+Return the end of the aligned region, in source sequence
+coordinates.
+
+=cut
 
 # return the end of the aligned region
 sub end {
@@ -103,8 +144,54 @@ sub end {
     return $alignment->[$#$alignment];
 }
 
+=item $arrayref = $aligner->alignment
+
+Return an arrayref representing the alignment.  The array will be
+exactly as long as the source sequence.  Its indexes correspond to
+positions on the source sequence, and its values correspond to
+positions on the target sequence.  An unaligned base is indicated as
+undef.  Indexes are zero-based.
+
+For example, this alignment:
+
+  gatttttt--c
+  ||||||    |
+  gatttt--ccc
+
+corresponds to this arrayref:
+
+   index    value
+   0[g]    0[g]
+   1[a]    1[a]
+   2[t]    2[t]
+   3[t]    3[t]
+   4[t]    4[t]
+   5[t]    5[t]
+   6[t]    undef
+   7[t]    undef
+   8[c]    8[c]
+
+=cut
+
 # return the alignment as an array
 sub alignment { shift()->{'alignment'}; }
+
+=item ($top,$middle,$bottom) = $aligner->pads
+
+Returns the alignment as three padded strings indicating the top,
+middle and bottom lines of a pretty-printed representation.
+
+For example:
+
+  print join "\n",$aligner->pads;
+
+Will produce this output:
+
+  gatttttt--c
+  ||||||    |
+  gatttt--ccc
+
+=cut
 
 # return the alignment as three padded strings for pretty-printing, etc.
 sub pads {
@@ -133,6 +220,76 @@ sub pads {
 		     map { uc substr($ps,$_,1) eq uc substr($pt,$_,1) ? '|' : ' '  }
 		     (0..length($pt)-1));
     return ($ps,$match,$pt);
+}
+
+=back
+
+=head2 EXPORTED METHODS
+
+No functions are exported by default, but the following two methods
+can be imported explicitly.
+
+=over 4
+
+=cut
+
+=item ($top,$middle,$bottom) = align($source,$target [,\%matrix])
+
+Align the source and target sequences and return the padded strings
+representing the alignment.  It is exactly equivalent to calling:
+
+  Bio::Graphics::Browser::Realign->new($source,$target)->pads;
+
+=cut
+
+# take two sequences as strings, align them and return
+# a three element array consisting of gapped seq1, match string, and
+# gapped seq2.
+sub align {
+  my ($seq1,$seq2,$matrix) = @_;
+  my $align = __PACKAGE__->new($seq1,$seq2,$matrix);
+  return $align->pads;
+}
+
+=item $segs_arrayref = align_segs($source,$target [,\%matrix])
+
+The align_segs() function aligns $source and $target and returns an
+array of non-gapped segments.  Each element of the array corresponds
+to a contiguous nongapped alignment in the format
+[src_start,src_end,tgt_start,tgt_end].
+
+This is useful for converting a gapped alignment into a series of
+nongapped alignments.
+
+In a list context this function will return a list of non-gapped
+segments.
+
+=cut
+
+sub align_segs {
+  my ($gap1,$align,$gap2) = align(@_);
+
+  # create arrays that map residue positions to gap positions
+  my @maps;
+  for my $seq ($gap1,$gap2) {
+    my @seq = split '',$seq;
+    my @map;
+    my $residue = 0;
+    for (my $i=0;$i<@seq;$i++) {
+      $map[$i] = $residue;
+      $residue++ if $seq[$i] ne '-';
+    }
+    push @maps,\@map;
+  }
+
+  my @result;
+  while ($align =~ /(\S+)/g) {
+    my $align_end   = pos($align) - 1;
+    my $align_start = $align_end  - length($1) + 1;
+    push @result,[@{$maps[0]}[$align_start,$align_end],
+		  @{$maps[1]}[$align_start,$align_end]];
+  }
+  return wantarray ? @result : \@result;
 }
 
 sub _do_alignment {
@@ -214,3 +371,24 @@ sub _trace_back {
 }
 
 1;
+
+__END__
+
+=back
+
+=head1 AUTHOR
+
+Lincoln Stein E<lt>lstein@cshl.orgE<gt>.
+
+Copyright (c) 2003 Cold Spring Harbor Laboratory
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.  See DISCLAIMER.txt for
+disclaimers of warranty.
+
+=head1 SEE ALSO
+
+L<Bio::Graphics::Browser>.
+
+=cut
+

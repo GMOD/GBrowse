@@ -26,7 +26,7 @@ For most versions of Apache built from source code, use:
     perl Makefile.PL PREFIX=/usr/local/apache
 
 If you have a C compiler and wish to compile the XS extensions, set
-DO_XS=1.  Currently all this does is to speed up (slightly) the
+DO_XS=1.  Currently all this does is to speed up the
 multiple alignment plugin.
 END
 ;
@@ -123,6 +123,7 @@ WriteMakefile(
 				 'bin/process_ncbi_human.pl',
 				],
 	      'LIBS'	     => [''], # e.g., '-lm'
+	      'DIR'          => $OPTIONS{DO_XS} ? ['libalign'] : [],
 	      'DEFINE'	     => '',
 	      'INC'	     => '', # e.g., '-I/usr/include/other'
               ($] ge '5.005') ? (

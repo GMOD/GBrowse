@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::OligoFinder;
-# $Id: OligoFinder.pm,v 1.4 2003-05-13 22:06:33 lstein Exp $
+# $Id: OligoFinder.pm,v 1.5 2003-05-19 17:25:44 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -33,7 +33,7 @@ sub config_defaults {
 
 sub configure_form {
   my $self = shift;
-  my $oligo = param('OligoFinder.searcholigo'); 
+  my $oligo = $self->config_param('searcholigo');
   my $msg  =  $oligo && !$self->valid_oligo($oligo)
               ? font({-color=>'red'},"Invalid oligo: either too short or not DNA")
 	      : '';
@@ -45,7 +45,10 @@ sub configure_form {
 		'this oligo.  This is NOT a fast algorithm, so have patience.')),
 	  TR({-class=>'searchbody'},
 	     th('Enter oligo:'),
-	     td(textfield(-name=>'OligoFinder.searcholigo',-size=>50,-width=>50))));
+	     td(textfield(-name=>$self->config_name('searcholigo'),
+			  -size=>50,-width=>50))
+	    )
+	 );
 }
 
 # find() returns undef unless the OligoFinder.searcholigo parameter
@@ -57,7 +60,7 @@ sub find {
   my $segments = shift; # current segments - can search inside them or ignore
                         # In this example we do a global search.
 
-  my $oligo = lc param('OligoFinder.searcholigo');
+  my $oligo = lc $self->config_param('searcholigo');
   $self->auto_find($oligo);
 }
 

@@ -1,4 +1,4 @@
-# $Id: SequenceDumper.pm,v 1.5 2003-04-17 14:26:13 lstein Exp $
+# $Id: SequenceDumper.pm,v 1.6 2003-05-19 17:25:44 lstein Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::SequenceDumper
 #
@@ -50,7 +50,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::SequenceDumper;
-# $Id: SequenceDumper.pm,v 1.5 2003-04-17 14:26:13 lstein Exp $
+# $Id: SequenceDumper.pm,v 1.6 2003-05-19 17:25:44 lstein Exp $
 # Sequence Dumper plugin
 
 use strict;
@@ -150,20 +150,17 @@ sub reconfigure {
   my $current_config = $self->configuration;
 
   my $objtype = $self->objtype();
-  
-  foreach my $p ( param() ) {
-      my ($c) = ( $p =~ /$objtype\.(\S+)/) or next;
-      $current_config->{$c} = param($p);
+  foreach my $param ( $self->config_param() ) {
+      $current_config->{$param} = $self->config_param($param);
   }
 }
 
 sub configure_form {
   my $self = shift;
   my $current_config = $self->configuration;
-  my $objtype = $self->objtype();
   my @choices = TR({-class => 'searchtitle'},
 			th({-align=>'RIGHT',-width=>'25%'},"Output",
-			   td(radio_group(-name     => "$objtype.format",
+			   td(radio_group(-name     => $self->config_name('format'),
 					  -values   => [qw(text html todisk)],
 					  -default  => $current_config->{'format'},
 					  -labels   => {html => 'html/xml',
@@ -175,7 +172,7 @@ sub configure_form {
 
   push @choices, TR({-class => 'searchtitle'}, 
 			th({-align=>'RIGHT',-width=>'25%'},"Sequence File Format",
-			   td(popup_menu('-name'   => "$objtype.fileformat",
+			   td(popup_menu('-name'   => $self->config_name('fileformat'),
 					 '-values' => \@ORDER,
 					 '-labels' => \%LABELS,
 					 '-default'=> $current_config->{'fileformat'} ))));
@@ -208,10 +205,6 @@ sub gff_dump {
   }
   print end_pre() if $html;
   print end_html() if $html;
-}
-
-sub objtype { 
-    ( split(/::/,ref(shift)))[-1];
 }
 
 1;

@@ -1,6 +1,7 @@
 package Bio::Graphics::Browser::Plugin::BatchDumper;
 
 use strict;
+use lib '/home/lstein/projects/Generic-Genome-Browser/lib';
 use Bio::Graphics::Browser::Plugin;
 use Bio::SeqIO;
 use Bio::Seq;
@@ -8,7 +9,7 @@ use CGI qw(:standard *pre);
 
 use vars qw($VERSION @ISA);
 use constant DEBUG => 0;
-
+$VERSION = 1.0;
 
              # module        label           is xml?
 my @FORMATS = ( 'fasta'   => ['Fasta',        undef],
@@ -108,21 +109,17 @@ sub reconfigure {
   my $self = shift;
   my $current_config = $self->configuration;
 
-  my $objtype = $self->objtype();
-  
-  foreach my $p ( param() ) {
-      my ($c) = ( $p =~ /$objtype\.(\S+)/) or next;
-      $current_config->{$c} = param($p);
+  foreach my $p ( $self->config_param() ) {
+    $current_config->{$p} = $self->config_param($p);
   }
 }
 
 sub configure_form {
   my $self = shift;
   my $current_config = $self->configuration;
-  my $objtype = $self->objtype();
   my @choices = TR({-class => 'searchtitle'},
 			th({-align=>'RIGHT',-width=>'25%'},"Output",
-			   td(radio_group('-name'   => "$objtype.format",
+			   td(radio_group('-name'   => $self->config_name('format'),
 					  '-values' => [qw(text html external_viewer todisk)],
 					  '-default'=> $current_config->{'format'},
 					  -labels   => {'html' => 'html/xml',
@@ -135,7 +132,7 @@ sub configure_form {
 
   push @choices, TR({-class => 'searchtitle'}, 
 			th({-align=>'RIGHT',-width=>'25%'},"Sequence File Format",
-			   td(popup_menu('-name'   => "$objtype.fileformat",
+			   td(popup_menu('-name'   => $self->config_name('fileformat'),
 					 '-values' => \@ORDER,
 					 '-labels' => \%LABELS,
 					 '-default'=> $current_config->{'fileformat'} ))));
@@ -144,10 +141,9 @@ sub configure_form {
 
   push @choices, TR({-class=>'searchtitle'},
 			th({-align=>'RIGHT',-width=>'25%'},'Sequence IDs','<p><i>(Entry overrides chosen segment)</i></p>',
-			   td(textarea(-name=>"$objtype.sequence_IDs",
+			   td(textarea(-name=>$self->config_name('sequence_IDs'),
                            	       -rows=>20,
                               	       -columns=>20,
-                                       #-default=>$current_config->{sequence_IDs}))));
                                       ))));
 
 
@@ -165,14 +161,15 @@ sub gff_dump {
   my $mime_type = $self->mime_type;
   my $html      = $mime_type =~ /html/;
   print start_html($segments[0]) if $html;
-  
+
   for my $segment (@segments) {
     print h1($segment),start_pre() if $html;
     print "##gff-version 2\n";
     print "##date $date\n";
     print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
 
-    my $iterator = $segment->get_seq_stream() or return;
+    my @feature_types = $self->selected_features;
+    my $iterator = $segment->get_seq_stream(-types=>\@feature_types) or return;
     while (my $f = $iterator->next_seq) {
       print $f->gff_string,"\n";
       for my $s ($f->sub_SeqFeature) {
@@ -182,10 +179,6 @@ sub gff_dump {
     print end_pre() if $html;
   }
   print end_html() if $html;
-}
-
-sub objtype { 
-    ( split(/::/,ref(shift)))[-1];
 }
 
 1;

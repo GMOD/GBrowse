@@ -1,0 +1,13 @@
+ctgA	example	Sequence	27046	35831	.	+	.	Transcript abc-1 ; Note "Example gene"
+ctgA	example	UTR	27046	27250	.	+	.	Transcript abc-1
+ctgA	example	CDS	27251	27396	.	+	.	Transcript abc-1
+ctgA	example	CDS	27772	27917	.	+	.	Transcript abc-1
+ctgA	example	CDS	28311	28448	.	+	.	Transcript abc-1
+ctgA	example	CDS	28851	28999	.	+	.	Transcript abc-1
+ctgA	example	CDS	29134	29298	.	+	.	Transcript abc-1
+ctgA	example	CDS	29514	29890	.	+	.	Transcript abc-1
+ctgA	example	CDS	29980	29990	.	+	.	Transcript abc-1
+ctgA	example	CDS	30138	30377	.	+	.	Transcript abc-1
+ctgA	example	CDS	30548	30602	.	+	.	Transcript abc-1
+ctgA	example	CDS	30823	31267	.	+	.	Transcript abc-1
+ctgA	example	UTR	31268	35831	.	+	.	Transcript abc-1

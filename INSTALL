@@ -448,6 +448,16 @@ files located in the directory gbrowse.conf/plugins/.  To install
 plugins, simply copy them into this directory.  To uninstall, remove
 them.
 
+If you wish to install your own or third party plugins, it is
+suggested that you create a separate directory outside the
+gbrowse.conf/ hierarchy in which to store them and then to indicate
+the location of these plugins using the plugin_path setting:
+
+  plugin_path = /usr/local/gbrowse_plugins
+
+This setting should be somewhere in the [GENERAL] section of the
+relevant gbrowse configuration file.
+
 13. THE GENBANK/EMBL PROXY
 
 Sample configuration number 5 ("05.embl.conf") corresponds to an

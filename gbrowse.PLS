@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.92 2003-05-13 21:29:52 lstein Exp $
+# $Id: gbrowse.PLS,v 1.93 2003-05-19 17:25:43 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -56,7 +56,7 @@ use Carp qw(:DEFAULT croak);
 use CGI qw(:standard escape escapeHTML center *table *dl *TR *td);
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $CONF_DIR
-	    $PLUGINS $PRESETS
+	    $PLUGINS $PRESETS $LANG
 	    %OBJECT_TYPES %PLUGIN_NAME2LABEL );
 
 # if you change the zoom/nav icons, you must change this as well.
@@ -66,9 +66,9 @@ use constant MAG_ICON_WIDTH  => 8;
 # had-coded values for segment sizes
 # many of these can be overridden by configuration file entries
 use constant MAX_SEGMENT     => 1_000_000;
-use constant MIN_SEG_SIZE         => 10;
+use constant MIN_SEG_SIZE         => 50;
 use constant TINY_SEG_SIZE        => 2;
-use constant EXPAND_SEG_SIZE      => 100;
+use constant EXPAND_SEG_SIZE      => 5000;
 use constant TOO_MANY_SEGMENTS => 5_000;
 use constant TOO_MANY_FEATURES => 100;
 use constant TOO_MANY_REFS     => TOO_MANY_FEATURES;
@@ -163,7 +163,8 @@ if (defined($old_source) && $source ne $old_source) {
 }
 
 ### PLUGINS #################################################################
-$PLUGINS = initialize_plugins($CONF_DIR) unless defined $PLUGINS;
+my @plugin_path = ("$CONF_DIR/plugins",shellwords($CONFIG->setting('plugin_path')));
+$PLUGINS = initialize_plugins(@plugin_path) unless defined $PLUGINS;
 configure_plugins($PLUGINS,$page_settings,
 		  open_database(),
 		  $CONFIG,$CONF_DIR);
@@ -332,10 +333,6 @@ sub main_display {
 		       commas($segment->end/$divider)));
   }
 
-  # force flipping
-  my $flip = $segment && $segment->stop < $segment->start;
-  param('Flip'=>'on') if $flip;
-
   # print the top of the form, with navigation bar, etc
   print start_multipart_form(-name=>'mainform',-action=>url(-relative=>1,-path_info=>1));
   print navigation_table($segment,$page_settings);
@@ -408,9 +405,8 @@ sub detail_panel {
 				       limit         => \%limit,
 				       do_map        => 1,
 				       do_centering_map => 1,
-				       lang          => $CONFIG,
+				       lang          => $LANG,
 				       keystyle      => $page_settings->{ks},
-				       flip          => $page_settings->{flip},
 				      );
     $cell .= $img;
   }
@@ -511,7 +507,7 @@ sub get_settings {
 sub default_settings {
   my $settings = shift;
   warn "Setting default settings" if DEBUG;
-  @$settings{'name','ref','start','stop','flip'} = ('','','','','');
+  @$settings{'name','ref','start','stop'} = ('','','','');
   $settings->{width}   = $CONFIG->setting('default width');
   $settings->{source}  = $CONFIG->source;
   $settings->{id}      = md5_hex(rand);  # new identity
@@ -587,7 +583,6 @@ sub settings2cookie {
 			$settings{features}{$_}{limit})} @{$settings{tracks}};
   $settings{tracks} = join $;,@array;
   delete $settings{features};
-  delete $settings{flip};  # obnoxious for this to persist
 
   warn "cookie => ",join ' ',%settings,"\n" if DEBUG;
 
@@ -623,7 +618,6 @@ sub adjust_settings {
       $settings->{start} = param('start') if param('start') =~ /^[\d-]+/;
       $settings->{stop}  = param('stop')  if param('stop')  =~ /^[\d-]+/;
       $settings->{stop}||= param('end')   if param('end')   =~ /^[\d-]+/;
-      $settings->{flip}  = param('flip');
       zoomnav($settings);
       $settings->{name} = "$settings->{ref}:$settings->{start}..$settings->{stop}";
       param(name => $settings->{name});
@@ -705,20 +699,19 @@ sub navigation_table {
 			  a({-href=>bookmark_link($settings)},'['.$CONFIG->tr('BOOKMARK').']'),
 			  a({-href=>image_link($settings),-target=>'_blank'},'['.$CONFIG->tr('IMAGE_LINK').']'),
 			 ) : (),
-			 $help),
-		    ),
+			 $help)
+		     ),
 
 		   TR({-class=>'searchbody'},
 		      td({-align=>'left', -colspan=>2},
 			 $CONFIG->setting('html1')||''
-			),
+			)
 		     ),
 		  TR({-class=>'searchbody', -align=>'left'},
 		     td({-align=>'left'}, b($CONFIG->tr('Landmark')),br,
 			textfield(-name=>'name',-size=>40),
 			submit(-name=>$CONFIG->tr('Search')).'&nbsp;'.
-			submit(-name=>'reset', -label=>$CONFIG->tr('Reset'),-class=>'reset_button').'&nbsp;'.
-			checkbox(-name=>'flip',-checked=>$settings->{flip},-value=>1,-label=>$CONFIG->tr('Flip'),-override=>1)
+			submit(-name=>$CONFIG->tr('Reset'),-class=>'reset_button')
 		       ),
 		     td({-class=>'searchbody',-align=>'left'},
 			$segment ? (b($CONFIG->tr('Scroll').': '),br,slidertable($segment,$buttonsDir)) : ''
@@ -1055,8 +1048,6 @@ sub zoomnav {
   my $stop  = $settings->{stop};
   my $span  = $stop - $start + 1;
 
-  my $flip  = $settings->{flip} ? -1 : 1;
-
   # get zoom parameters
   my $selected_span  = param('span');
   my ($zoom)         = grep {/^zoom (out|in) \S+/} param();
@@ -1076,8 +1067,8 @@ sub zoomnav {
   }
 
   elsif (defined $navlevel){
-    $start += $flip * $navlevel;
-    $stop  += $flip * $navlevel;
+    $start += $navlevel;
+    $stop  += $navlevel;
   }
 
   elsif (defined $overview_x && defined $segment_length) {
@@ -1132,19 +1123,12 @@ sub get_segments {
   }
 
   my @segments = lookup_segments($db,$settings);
-  return resize_segments(@segments) if @segments == 1;
-  return @segments;
-}
-
-sub resize_segments {
-  my @segments = @_;
   # resize any segments that are below MIN_SEG_SIZE
-  my $done_resize = 0;
   for my $s (@segments) {
     next unless $s->length < MIN_SEG_SIZE;
     my $resize = $s->length <= TINY_SEG_SIZE ? EXPAND_SEG_SIZE : MIN_SEG_SIZE;
     # resize
-    error($CONFIG->tr('Small_interval',$resize)) unless $done_resize++; # error message
+    error($CONFIG->tr('Small_interval',$resize)); # error message
     my $middle = int(($s->start + $s->end)/2);
     $s = $s->factory->segment(-name  => $s->seq_id,
 			      -start => $middle - int($resize/2),
@@ -1297,11 +1281,6 @@ sub multiple_choices {
 
       my $objref     = $class ? "$url?name=$c:$n" : "$url?name=$n";
       my $posref     = "$url?ref=$ref;start=$start;stop=$stop";
-      if ((my $length = abs($stop - $start)) < MIN_SEG_SIZE) {
-	my $half     = int((EXPAND_SEG_SIZE-$length)/2);
-	$posref      = "$url?ref=$ref;start=".($start-$half).";stop=".($stop+$half);
-      }
-
       my $position = format_segment($r);
       print TR({-class=>'databody',-valign=>'TOP'},
 	       th({-align=>'right'},ref($name) ? a({-href=>$objref},$name):tt($name)),
@@ -1950,7 +1929,7 @@ sub help {
 sub make_citation {
   my $config  = shift;
   my $feature = shift;
-  my $citation = $config->citation($feature,$config);
+  my $citation = $config->citation($feature,$LANG);
   # BUG: here's where we should remove "bad" HTML, but we don't!
   # should remove active content and other nasties
   (my $link     = $feature) =~ tr/ /-/;
@@ -2038,7 +2017,7 @@ sub build_link_image_page {
 
 sub url2file {
   my $url = shift;
-  for my $l ((map {"$url.$_"} $CONFIG->language->language), $url) {
+  for my $l ((map {"$url.$_"} $LANG->language), $url) {
     my $file = $ENV{MOD_PERL} ? Apache->request->lookup_uri($l)->filename
                               : "$ENV{DOCUMENT_ROOT}/$l";
     return $file if -e $file;
@@ -2095,24 +2074,28 @@ sub label2key {
 ### PLUGINS ###################################################################################
 ###############################################################################################
 sub initialize_plugins {
-  my $path = shift;
+  my @path = @_;
   my %plugin_list = ();
 
-  my $plugins = "$path/plugins";
   warn "initializing plugins..." if DEBUG_PLUGINS;
   my @plugins = shellwords($CONFIG->setting('plugins') || DEFAULT_PLUGINS);
 
+ PLUGIN:
   for my $plugin (@plugins) {
     my $class = "Bio\:\:Graphics\:\:Browser\:\:Plugin\:\:$plugin";
-    my $path  = "$plugins/$plugin.pm";
-    if (eval {require $path}) {
-      warn "plugin $plugin loaded successfully" if DEBUG_PLUGINS;
-      my $obj = $class->new;
-      warn "plugin name = ",$obj->name," base = $plugin" if DEBUG_PLUGINS;
-      $plugin_list{$plugin} = $obj;
-    } else {
-      warn $@ if $@;
+    for my $path (@path) {
+      my $plugin_with_path = "$path/$plugin.pm";
+      if (eval {require $plugin_with_path}) {
+	warn "plugin $plugin loaded successfully" if DEBUG_PLUGINS;
+	my $obj = $class->new;
+	warn "plugin name = ",$obj->name," base = $plugin" if DEBUG_PLUGINS;
+	$plugin_list{$plugin} = $obj;
+	next PLUGIN;
+      } else {
+	warn $@ if $@ and $@ !~ /^Can\'t locate/;
+      }
     }
+    warn $@ if !$plugin_list{$plugin} && $@ =~ /^Can\'t locate/;
   }
   return \%plugin_list;
 }

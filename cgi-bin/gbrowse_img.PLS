@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.2 2003-06-08 21:01:43 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.3 2003-09-15 08:53:11 allenday Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1);
@@ -261,7 +261,7 @@ sub print_usage {
   wormbase
 </blockquote>
 
-  &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img?source=list=sources"&gt;types&lt;/a&gt;
+  &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;list=types"&gt;types&lt;/a&gt;
 <blockquote>
   <i>Will return this document:</i>
   ## Feature types for source wormbase

@@ -36,7 +36,8 @@ automatically.
 Go to http://dev.mysql.com/downloads/mysql .  Select and download the
 most recent version of the Windows package.  Once the package is
 downloaded, you will need to unpack it with the WinZip program.  Then
-launch the installer.
+launch the installer.  Note that there have been problems reported
+with MySQL 4.1, therefore I suggest the newest release of 4.0.
 
 =item Install GBrowse
 
@@ -97,7 +98,9 @@ The MySQL database is a fast open source relational database
 that is widely used for web applications.  It is required for
 most real-live genome annotation projects.  For small projects
 (a few thousands of annotated features), you can skip installing
-MySQL and use an in-memory database instead.
+MySQL and use an in-memory database instead. Note that there have
+been problems reported with MySQL 4.1, therefore I suggest the
+newest release of 4.0.
 
 =item B) Apache Web Server -- L<http://www.apache.org>
 

@@ -416,7 +416,11 @@ entirely reliable.  To get it to work, you must:
    c) set up permissions for this database so that "nobody@localhost"
 	has SELECT, INSERT, UPDATE and DELETE privileges
 
-   d) cross your fingers
+   d) if you need to use a proxy to access remote web sites, uncomment the
+	-proxy line in the conf file, and adjust the URL of the proxy as 
+	appropriate.
+
+   e) cross your fingers
 
 12. UPDATING THE BROWSER WITHOUT REENTERING YOUR DIRECTORY SETTINGS
 

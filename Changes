@@ -19,6 +19,7 @@
 	Katayama.
 	* Added a pairwise_plot glyph for showing linkage disequilibrium,
 	paired blast scores, and other pairwise feature data.
+	* Use can now turn on and off the overview tracks.
 1.61    Wed Mar 17 21:59:16 EST 2004
         * Moved the BioSQL adaptor to 'experimental'.  It is not guaranteed
         to work.

@@ -13,7 +13,7 @@ my $working_dir = cwd;
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN
 		 LIB BIN
 		 DO_XS NONROOT
-		 prefix
+		 PREFIX prefix
 		);
 my $OPTIONS = join ('|',@OPTIONS);
 my %OPTIONS;
@@ -81,8 +81,9 @@ END
 #
 # HARDCODE REDHAT SETTINGS FOR RPM
 #
-@ARGV = ("PREFIX=$OPTIONS{prefix}");
+$OPTIONS{prefix} ||= $OPTIONS{PREFIX};
 $OPTIONS{prefix} =~ s!^(.+)/.+?$!$1!;
+@ARGV = ("PREFIX=$OPTIONS{prefix}");
 $OPTIONS{CONF} = '/etc/httpd/conf';
 $OPTIONS{HTDOCS} = '/var/www/html';
 $OPTIONS{CGIBIN} = '/var/www/cgi-bin';

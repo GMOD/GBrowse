@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.1 2003-10-05 06:17:08 sheldon_mckay Exp $
+# $Id: GFFhelper.pm,v 1.2 2003-10-06 13:27:07 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -66,7 +66,7 @@ sub new {
     my $caller = shift;
     my %args = @_;
     my $self = \%args;
-    $self->{gff} || die "No GFF to process";
+    # $self->{gff} || die "No GFF to process";
     return bless $self;
 }
 
@@ -79,7 +79,7 @@ sub read_gff {
     my (@seq, $gff) = ();
 
     $self->throw("This does not look like GFF to me")
-	if $text !~ /^(\S+\s+){7}\S+/m || $text =~ /^LOCUS|^FT|\.\./m;
+	if $text !~ /^(\S+\s+){7}\S+/m || $text =~ /^LOCUS|^FT/m;
     
     for ( split "\n", $text ) {
 	# save the sequence
@@ -205,7 +205,7 @@ sub guess_name {
     my ($self, $f) = @_;
     my ($class, $name);
 
-    for ( qw/ gene locus_tag standard_name / ) {
+    for ( qw/ Gene gene Locus_tag locus_tag Standard_name standard_name / ) {
         if ( $f->has_tag($_) && !$f->has_tag($f->primary_tag) ) {
             next if $class && $name;
             $class = 'gene';

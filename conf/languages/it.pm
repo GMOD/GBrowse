@@ -53,6 +53,24 @@ END
 
    TRACKS   => 'Tracce',
 
+   ALPHABETIC  => 'Alphabetico',
+
+   BENEATH     => 'Sotto',
+
+   BETWEEN     => 'In Mezzo',
+
+   FLIP     => 'Gira',
+
+   BOOKMARK => 'Usa Segnalibro',
+
+   HIDE              => 'Nascondi',
+
+   HIDE_HEADER       => 'Nascondi Banner',
+
+   HIDE_INSTRUCTIONS => 'Nascondi Instruzioni',
+
+   HIGHLIGHT   => 'Evidenzia',
+
    EXTERNAL_TRACKS => '(Tracce esterne in corsivo)',
 
    EXAMPLES => 'Esempi',
@@ -161,6 +179,85 @@ Per limitare il numero di annotazioni di questo tipo visualizzate,
 cambiare il valore del menu <I>Limiti</I>.
 END
 
+IMAGE_DESCRIPTION => <<END,
+<p>
+Per creare una immagine allegata usando questa immagine 'taglia e incolla' questo Indirizzo Internet in una pagina ipertestuale:</p>
+<pre>
+&lt;IMAGE src="%s" /&gt;
+</pre>
+<p>
+L`immagine rassomigliera` a questa:
+</p>
+<p>
+<img src="%s" />
+</p>
+
+<p>
+Se l`immagine mostrata (sia cromosomica o del contiguo) e` parziale o incompleta, prova a ridurre la grandezza della regione.
+</p>
+END
+
+
+SVG_DESCRIPTION => <<END,
+<p>
+Il Seguente link ipertestuale generera` questa immagine in formato vettoriale Scalabile (SVG). Il formato SVG offre molti vantaggi rispetto a il formato jpeg oppure png.
+</p>
+<ul>
+<li>e` completamente scalabile senza perdita di risoluzione
+<li>e` completamente editabile usando i comuni programmi di grafica vettoriale 
+<li>se necessario, puo` essere convertito in formato EPS per necessita` di pubblicazione
+</ul>
+<p>
+Per poter vedere una immagine in formato SVG e` necessario avere in browser compatibile e il Plug-in di Adobe chiamato 'SVG browser' oppure una applicazione che permette di leggere files con le estensioni .SVG come Adobe Illustrator.
+</p>
+<p>
+Adobe's SVG browser plugin: <a
+href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Macintosh">Macintosh</a>
+| <a
+href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Windows">Windows</a>
+<br />
+Gli utenti Linux possono utilizzare il  <a href="http://xml.apache.org/batik/">Visualizzatore SVG di Batik SVG</a>.
+</p>
+<p>
+<a href="%s" target="_blank">Apri l`immagine in una nuova finestra</a></p>
+<p>
+Per salvare questa immagine nel disco rigido premi control (utenti Machintosh) oppure tasto destro del mouse (utenti Windows) e seleziona l`opzione 'salva' su disco rigido.
+</p>   
+END
+
+   SVG_LINK   => 'Immagine in qualita` di pubblicazione',
+
+TIMEOUT  => <<'END',
+La tua richiesta e` espirata. Tu potresti aver selezionato una regione troppo grande da mostrare in una schermata. Puoi o de-selezionare alcune tracce oppure provare con una regione piu` piccola. Se il problema si ripropone 
+
+Either turn off some tracks or try a smaller region.  If you are experiencing persistent
+timeouts, please press the red "Reset" button.
+END
+
+   TRACK_NAMES => 'Tavola nomi tracce',
+
+   IMAGE_LINK => 'Collega questa schermata ad un`immagine',
+
+   VARYING     => 'Variazione',
+
+   INSTRUCTIONS      => 'Istruzioni',
+
+   KEY_POSITION => 'Posizione tasto',
+
+   LEFT        => 'Sinistra',
+
+   RIGHT       => 'Destra',
+
+   NEW         => 'Nuovo...',
+
+   POSSIBLE_TRUNCATION  => 'I risulati di questa ricerca sono limitati a %d ; Questa lista potrebbe essere incompleta.',
+
+   SEARCH   => 'Cerca',
+
+   SHOW_HEADER       => 'Mostra Banner',
+
+   SHOW_INSTRUCTIONS => 'Mostra Istruzioni',
+
    TRACK  => 'Traccia',
 
    TRACK_TYPE => 'Tipo traccia',
@@ -238,5 +335,7 @@ END
  FETCH_FAILED  => "Non riesco a prelevare %s: %s.",
 
  TOO_MANY_LANDMARKS => '%d punti sono troppi per elencarli singolarmente.',
+
+ SMALL_INTERVAL    => 'Computazione piccolo intervallo a %s pb',
 
 };

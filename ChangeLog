@@ -1,3 +1,9 @@
+1.39	Fri Apr 12 00:18:10 EDT 2002
+	* Fixed problems compiling and installing on Solaris systems.
+	* Added the wormbase_gene aggregator.  Useful for the c. elegans gff file.
+	* If you pick up the latest bioperl-live (or apply extras/bioperl-1.0.patch)
+	there are fixes in Bio::Graphics that prevent genes from disappearing
+	when zoomed all the way into an intron.
 1.38	Mon Apr  8 21:16:12 EDT 2002
 	* Previous version would crash on vanilla Bioperl 1.0 installations.
 	  This problem has been fixed, but at the cost of disabling wildcard

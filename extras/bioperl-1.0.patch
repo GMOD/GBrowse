@@ -1,3 +1,91 @@
+diff -Naur bioperl-1.0/Bio/DB/Biblio/soap.pm bioperl-1.01/Bio/DB/Biblio/soap.pm
+--- bioperl-1.0/Bio/DB/Biblio/soap.pm	Thu Feb 28 04:22:23 2002
++++ bioperl-1.01/Bio/DB/Biblio/soap.pm	Fri Apr 12 00:10:14 2002
+@@ -1,4 +1,4 @@
+-# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
+ #
+ # BioPerl module Bio::DB::Biblio::soap.pm
+ #
+@@ -124,8 +124,8 @@
+ 
+ BEGIN { 
+     # set the version for version checking
+-    $VERSION = do { my @r = (q$Revision: 1.2 $ =~ /\d+/g); sprintf "%d.%-02d", @r };
+-    $Revision = q$Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $;
++    $VERSION = do { my @r = (q$Revision: 1.2 $ =~ /\d+/g); sprintf "%d.%-02d", @r };
++    $Revision = q$Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $;
+ 
+     # where to go...
+     $DEFAULT_SERVICE = 'http://industry.ebi.ac.uk/soap/openBQS';
+@@ -187,6 +187,11 @@
+                 See the code for attributes of the default SOAP::Lite
+                 object.
+ 
++              -httpproxy => 'http://server:port'
++                 In addition to the 'location' parameter, you may need
++                 to specify also a location/URL of a HTTP proxy server
++                 (if your site requires one).
++
+ 	   Additionally, the main module Bio::Biblio recognises
+ 	   also:
+              -access => '...'
+@@ -228,10 +233,18 @@
+     $self->{'_location'} = $DEFAULT_SERVICE unless $self->{'_location'};
+     $self->{'_namespace'} = $DEFAULT_NAMESPACE unless $self->{'_namespace'};
+     $self->{'_destroy_on_exit'} = 1 unless defined $self->{'_destroy_on_exit'};
+-    $self->{'_soap'} = SOAP::Lite
+-	                  -> uri ($self->{'_namespace'})
+-	                  -> proxy ($self->{'_location'}) unless $self->{'_soap'};
+-
++    unless ($self->{'_soap'}) {
++	if (defined $self->{'_httpproxy'}) {
++	    $self->{'_soap'} = SOAP::Lite
++	                          -> uri ($self->{'_namespace'})
++		                  -> proxy ($self->{'_location'},
++				            proxy => ['http' => $self->{'_httpproxy'}]);
++	} else {
++	    $self->{'_soap'} = SOAP::Lite
++	                          -> uri ($self->{'_namespace'})
++				  -> proxy ($self->{'_location'});
++	}
++    }
+ }
+ 
+ # -----------------------------------------------------------------------------
+@@ -420,7 +433,9 @@
+    my $soap = $self->{'_soap'};
+    my ($collection_id) = $self->{'_collection_id'};
+    $self->throw ($self->_no_id_msg) unless $collection_id;
+-   $soap->getNext (SOAP::Data->type (string => $collection_id))->result;
++   my $ra = $soap->getNext (SOAP::Data->type (string => $collection_id))->result;
++   $self->{'_collection_id'} = shift @{ $ra };
++   shift @{ $ra };
+ }
+ 
+ sub get_more {
+@@ -438,8 +453,10 @@
+        $how_many = 1;
+    }
+ 
+-   $soap->getMore (SOAP::Data->type (string => $collection_id),
+-		   SOAP::Data->type (int    => $how_many))->result;
++   my $ra = $soap->getMore (SOAP::Data->type (string => $collection_id),
++			    SOAP::Data->type (int    => $how_many))->result;
++   $self->{'_collection_id'} = shift @{ $ra };
++   $ra;
+ }
+ 
+ sub reset_retrieval {
+@@ -447,7 +464,7 @@
+    my $soap = $self->{'_soap'};
+    my ($collection_id) = $self->{'_collection_id'};
+    $self->throw ($self->_no_id_msg) unless $collection_id;
+-   $soap->resetRetrieval (SOAP::Data->type (string => $collection_id));
++   $self->{'_collection_id'} = $soap->resetRetrieval (SOAP::Data->type (string => $collection_id))->result;
+ }
+ 
+ sub exists {
 diff -Naur bioperl-1.0/Bio/DB/GFF/Adaptor/dbi/mysql.pm bioperl-1.01/Bio/DB/GFF/Adaptor/dbi/mysql.pm
 --- bioperl-1.0/Bio/DB/GFF/Adaptor/dbi/mysql.pm	Sat Feb 16 04:42:28 2002
 +++ bioperl-1.01/Bio/DB/GFF/Adaptor/dbi/mysql.pm	Sun Mar 31 16:27:36 2002
@@ -137,7 +225,7 @@ diff -Naur bioperl-1.0/Bio/DB/GFF/Adaptor/memory.pm bioperl-1.01/Bio/DB/GFF/Adap
 @@ -1,14 +1,27 @@
  package Bio::DB::GFF::Adaptor::memory;
  use strict;
-+# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
 +# AUTHOR: Shulamit Avraham
 +# This module needs to be cleaned up and documented
 +
@@ -800,7 +888,7 @@ diff -Naur bioperl-1.0/Bio/DB/GFF/Adaptor/memory_iterator.pm bioperl-1.01/Bio/DB
 @@ -0,0 +1,51 @@
 +package Bio::DB::GFF::Adaptor::memory_iterator;
 +use strict;
-+# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
 +# this module needs to be cleaned up and documented
 +
 +#use constant STH         => 0;
@@ -849,6 +937,115 @@ diff -Naur bioperl-1.0/Bio/DB/GFF/Adaptor/memory_iterator.pm bioperl-1.01/Bio/DB
 +}
 +
 +1;
+diff -Naur bioperl-1.0/Bio/DB/GFF/Aggregator/wormbase_gene.pm bioperl-1.01/Bio/DB/GFF/Aggregator/wormbase_gene.pm
+--- bioperl-1.0/Bio/DB/GFF/Aggregator/wormbase_gene.pm	Fri Jan 11 13:00:41 2002
++++ bioperl-1.01/Bio/DB/GFF/Aggregator/wormbase_gene.pm	Wed Dec 31 19:00:00 1969
+@@ -1,105 +0,0 @@
+-=head1 NAME
+-
+-Bio::DB::GFF::Aggregator::wormbase_gene -- Wormbase gene aggregator
+-
+-=head1 SYNOPSIS
+-
+-  use Bio::DB::GFF;
+-
+-  # Open the sequence database
+-  my $db      = Bio::DB::GFF->new( -adaptor => 'dbi:mysql',
+-                                   -dsn     => 'dbi:mysql:elegans42',
+-				   -aggregator => ['wormbase_gene','clone'],
+-				 );
+-
+-
+-=head1 DESCRIPTION
+-
+-Bio::DB::GFF::Aggregator::wormbase_gene is one of the default
+-aggregators, and was written to be compatible with the C elegans GFF
+-files.  It aggregates raw ""exon", "CDS", "5'UTR", "3'UTR", "polyA"
+-and "TSS" features into "transcript" features.  For compatibility with
+-the idiosyncrasies of the Sanger GFF format, it expects that the full
+-range of the transcript is contained in a main feature of type
+-"Sequence".
+-
+-=cut
+-
+-package Bio::DB::GFF::Aggregator::wormbase_gene;
+-
+-use strict;
+-use Bio::DB::GFF::Aggregator;
+-
+-use vars qw($VERSION @ISA);
+-@ISA = qw(Bio::DB::GFF::Aggregator);
+-
+-$VERSION = '0.10';
+-
+-=head2 method
+-
+- Title   : method
+- Usage   : $aggregator->method
+- Function: return the method for the composite object
+- Returns : the string "transcript"
+- Args    : none
+- Status  : Public
+-
+-=cut
+-
+-sub method { 'transcript' }
+-
+-sub require_whole_object { 1; }
+-
+-=head2 part_names
+-
+- Title   : part_names
+- Usage   : $aggregator->part_names
+- Function: return the methods for the sub-parts
+- Returns : the list "exon", "CDS", "5'UTR", "3'UTR", "TSS", "PolyA"
+- Args    : none
+- Status  : Public
+-
+-=cut
+-
+-sub part_names {
+-  return qw(exon CDS 5'UTR 3'UTR TSS PolyA);
+-}
+-
+-=head2 main_name
+-
+- Title   : main_name
+- Usage   : $aggregator->main_name
+- Function: return the method for the main component
+- Returns : the string "Sequence"
+- Args    : none
+- Status  : Public
+-
+-=cut
+-
+-sub main_name {
+-  return 'Sequence';
+-}
+-
+-1;
+-__END__
+-
+-=head1 BUGS
+-
+-None reported.
+-
+-
+-=head1 SEE ALSO
+-
+-L<Bio::DB::GFF>, L<Bio::DB::GFF::Aggregator>
+-
+-=head1 AUTHOR
+-
+-Lincoln Stein E<lt>lstein@cshl.orgE<gt>.
+-
+-Copyright (c) 2001 Cold Spring Harbor Laboratory.
+-
+-This library is free software; you can redistribute it and/or modify
+-it under the same terms as Perl itself.
+-
+-=cut
+-
 diff -Naur bioperl-1.0/Bio/DB/GFF/Feature.pm bioperl-1.01/Bio/DB/GFF/Feature.pm
 --- bioperl-1.0/Bio/DB/GFF/Feature.pm	Mon Feb 25 07:18:07 2002
 +++ bioperl-1.01/Bio/DB/GFF/Feature.pm	Sun Mar 31 16:27:19 2002
@@ -968,9 +1165,9 @@ diff -Naur bioperl-1.0/Bio/DB/GFF.pm bioperl-1.01/Bio/DB/GFF.pm
 +++ bioperl-1.01/Bio/DB/GFF.pm	Sun Mar 31 16:25:03 2002
 @@ -1,6 +1,4 @@
 -package Bio::DB::GFF;
--# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
 -
-+# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
  =head1 NAME
  
  Bio::DB::GFF -- Storage and retrieval of sequence annotation data
@@ -1074,9 +1271,32 @@ diff -Naur bioperl-1.0/Bio/DB/Makefile.PL bioperl-1.01/Bio/DB/Makefile.PL
 -    'DEFINE'		=> '', # e.g., '-DHAVE_SOMETHING'
 -    'INC'		=> '', # e.g., '-I/usr/include/other'
 -);
+diff -Naur bioperl-1.0/Bio/DasI.pm bioperl-1.01/Bio/DasI.pm
+--- bioperl-1.0/Bio/DasI.pm	Mon Mar  4 17:16:22 2002
++++ bioperl-1.01/Bio/DasI.pm	Fri Apr 12 00:10:13 2002
+@@ -1,4 +1,4 @@
+-# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
+ #
+ # BioPerl module for Bio::DasI
+ #
+@@ -104,11 +104,10 @@
+ use strict;
+ 
+ use vars qw(@ISA);
+-use Bio::Root;
+-use Carp;
++use Bio::Root::RootI;
+ 
+ # Object preamble - inherits from Bio::Root;
+-@ISA = qw(Bio::Root);
++@ISA = qw(Bio::Root::RootI);
+ 
+ =head2 types
+ 
 diff -Naur bioperl-1.0/Bio/Graphics/Feature.pm bioperl-1.01/Bio/Graphics/Feature.pm
 --- bioperl-1.0/Bio/Graphics/Feature.pm	Fri Mar 15 09:40:02 2002
-+++ bioperl-1.01/Bio/Graphics/Feature.pm	Sun Mar 31 23:24:54 2002
++++ bioperl-1.01/Bio/Graphics/Feature.pm	Fri Apr 12 00:02:07 2002
 @@ -1,15 +1,18 @@
  package Bio::Graphics::Feature;
  use strict;
@@ -1322,12 +1542,12 @@ diff -Naur bioperl-1.0/Bio/Graphics/Feature.pm bioperl-1.01/Bio/Graphics/Feature
  
 diff -Naur bioperl-1.0/Bio/Graphics/FeatureFile.pm bioperl-1.01/Bio/Graphics/FeatureFile.pm
 --- bioperl-1.0/Bio/Graphics/FeatureFile.pm	Fri Mar 15 09:40:02 2002
-+++ bioperl-1.01/Bio/Graphics/FeatureFile.pm	Sun Mar 31 23:22:19 2002
++++ bioperl-1.01/Bio/Graphics/FeatureFile.pm	Fri Apr 12 00:12:00 2002
 @@ -1,5 +1,6 @@
  package Bio::Graphics::FeatureFile;
--# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
 +
-+# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
  
  # This package parses and renders a simple tab-delimited format for features.
  # It is simpler than GFF, but still has a lot of expressive power.
@@ -1442,7 +1662,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/FeatureFile.pm bioperl-1.01/Bio/Graphics/Fea
  sub size  { shift->{stat}->[7];  }
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph/Factory.pm bioperl-1.01/Bio/Graphics/Glyph/Factory.pm
 --- bioperl-1.0/Bio/Graphics/Glyph/Factory.pm	Tue Mar  5 14:20:29 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph/Factory.pm	Sun Mar 31 23:25:01 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/Factory.pm	Fri Apr 12 00:02:17 2002
 @@ -61,7 +61,8 @@
  
  # create a glyph
@@ -1474,7 +1694,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/Factory.pm bioperl-1.01/Bio/Graphics/G
    }
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph/anchored_arrow.pm bioperl-1.01/Bio/Graphics/Glyph/anchored_arrow.pm
 --- bioperl-1.0/Bio/Graphics/Glyph/anchored_arrow.pm	Fri Mar 15 09:40:03 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph/anchored_arrow.pm	Sun Mar 31 23:25:01 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/anchored_arrow.pm	Fri Apr 12 00:02:17 2002
 @@ -50,10 +50,10 @@
    my $pstart  = $self->panel->left;
    my $pend    = $self->panel->right-1;
@@ -1490,7 +1710,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/anchored_arrow.pm bioperl-1.01/Bio/Gra
    return ($sw,$ne,!$sw,!$ne);
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph/diamond.pm bioperl-1.01/Bio/Graphics/Glyph/diamond.pm
 --- bioperl-1.0/Bio/Graphics/Glyph/diamond.pm	Fri Mar 15 09:40:03 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph/diamond.pm	Sun Mar 31 23:25:01 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/diamond.pm	Fri Apr 12 00:02:17 2002
 @@ -16,12 +16,20 @@
    my $ymid = ($y1+$y2)/2;
  
@@ -1517,7 +1737,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/diamond.pm bioperl-1.01/Bio/Graphics/G
    $gd->line($x2,$ymid,$xmid,$y2,$fg);
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph/group.pm bioperl-1.01/Bio/Graphics/Glyph/group.pm
 --- bioperl-1.0/Bio/Graphics/Glyph/group.pm	Fri Mar 15 09:40:03 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph/group.pm	Sun Mar 31 23:25:01 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/group.pm	Fri Apr 12 00:02:17 2002
 @@ -16,6 +16,15 @@
  # we don't label group (yet)
  sub label { 0 }
@@ -1536,18 +1756,18 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/group.pm bioperl-1.01/Bio/Graphics/Gly
  #  my @parts = $self->parts or return $self->SUPER::layout_width;
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph/segmented_keyglyph.pm bioperl-1.01/Bio/Graphics/Glyph/segmented_keyglyph.pm
 --- bioperl-1.0/Bio/Graphics/Glyph/segmented_keyglyph.pm	Fri Mar 15 09:40:03 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph/segmented_keyglyph.pm	Sun Mar 31 23:22:19 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/segmented_keyglyph.pm	Fri Apr 12 00:12:00 2002
 @@ -1,6 +1,6 @@
  package Bio::Graphics::Glyph::segmented_keyglyph;
  
--# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
  # Don't use this package.  It's just for inheriting the segmented glyph in the panel key.
  
  use strict;
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph/segments.pm bioperl-1.01/Bio/Graphics/Glyph/segments.pm
 --- bioperl-1.0/Bio/Graphics/Glyph/segments.pm	Fri Mar 15 09:40:03 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph/segments.pm	Sun Mar 31 23:25:01 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/segments.pm	Fri Apr 12 00:02:17 2002
 @@ -28,14 +28,14 @@
  }
  sub label {
@@ -1569,7 +1789,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/segments.pm bioperl-1.01/Bio/Graphics/
  
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph/track.pm bioperl-1.01/Bio/Graphics/Glyph/track.pm
 --- bioperl-1.0/Bio/Graphics/Glyph/track.pm	Fri Mar 15 09:40:03 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph/track.pm	Sun Mar 31 23:25:01 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/track.pm	Fri Apr 12 00:02:17 2002
 @@ -12,11 +12,14 @@
    return 'none';
  }
@@ -1592,10 +1812,10 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/track.pm bioperl-1.01/Bio/Graphics/Gly
  # sub draw_component { }
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph/transcript.pm bioperl-1.01/Bio/Graphics/Glyph/transcript.pm
 --- bioperl-1.0/Bio/Graphics/Glyph/transcript.pm	Fri Mar 15 09:40:03 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph/transcript.pm	Sun Mar 31 23:22:19 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/transcript.pm	Fri Apr 12 00:12:00 2002
 @@ -1,4 +1,5 @@
  package Bio::Graphics::Glyph::transcript;
-+# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
  
  use strict;
  use Bio::Graphics::Glyph::generic;
@@ -1607,7 +1827,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/transcript.pm bioperl-1.01/Bio/Graphic
    return $pad unless $self->feature->strand < 0;
    return $self->arrow_length > $pad ? $self->arrow_length : $pad;
  }
-@@ -18,6 +20,7 @@
+@@ -18,17 +20,32 @@
  sub pad_right {
    my $self = shift;
    my $pad  = $self->SUPER::pad_right;
@@ -1615,7 +1835,33 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/transcript.pm bioperl-1.01/Bio/Graphic
    return $pad unless $self->feature->strand > 0;
    return $self->arrow_length > $pad ? $self->arrow_length : $pad;
  }
-@@ -60,15 +63,15 @@
+ 
++sub draw_component {
++  my $self = shift;
++  return unless $self->level > 0;
++  $self->SUPER::draw_component(@_);
++}
++
+ sub draw_connectors {
+   my $self = shift;
+   my $gd = shift;
+   my ($left,$top) = @_;
+   $self->SUPER::draw_connectors($gd,$left,$top);
+   my @parts = $self->parts;
+-  @parts = $self unless @parts;
++
++  # H'mmm.  No parts.  Must be in an intron, so draw intron
++  # spanning entire range
++  if (!@parts) {
++    my($x1,$y1,$x2,$y2) = $self->bounds(0,0);
++    $self->_connector($gd,$left,$top,$x1,$y1,$x1,$y2,$x2,$y1,$x2,$y2);
++    @parts = $self;
++  }
++
+   if ($self->feature->strand >= 0) {
+     my($x1,$y1,$x2,$y2) = $parts[-1]->bounds(@_);
+     my $center = ($y2+$y1)/2;
+@@ -60,16 +77,31 @@
  
  sub label {
    my $self = shift;
@@ -1633,15 +1879,31 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/transcript.pm bioperl-1.01/Bio/Graphic
 +  return $self->SUPER::description(@_) if $self->all_callbacks;
 +  return unless $self->{level} == 0;
    return $self->SUPER::description(@_);
++}
++
++
++# This ensures that single-exon genes (which have a position of Bio::Location::Simple
++# rather than Bio::Location::Split) can be drawn uniformly.
++sub _subseq {
++  my $class   = shift;
++  my $feature = shift;
++  my @subseq  = $class->SUPER::_subseq($feature);
++  return @subseq if @subseq;
++  if ($feature->can('location') && $feature->location->isa('Bio::Location::Simple')) {
++    return Bio::Location::Simple->new(-start=>$feature->start,-end=>$feature->end);
++  } else {
++    return;
++  }
  }
  
+ 1;
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph/transcript2.pm bioperl-1.01/Bio/Graphics/Glyph/transcript2.pm
 --- bioperl-1.0/Bio/Graphics/Glyph/transcript2.pm	Fri Mar 15 09:40:03 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph/transcript2.pm	Sun Mar 31 23:22:19 2002
++++ bioperl-1.01/Bio/Graphics/Glyph/transcript2.pm	Fri Apr 12 00:12:00 2002
 @@ -1,9 +1,12 @@
  package Bio::Graphics::Glyph::transcript2;
  
-+# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
 +
  use strict;
  use Bio::Graphics::Glyph::transcript;
@@ -1652,7 +1914,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/transcript2.pm bioperl-1.01/Bio/Graphi
  
  use constant MIN_WIDTH_FOR_ARROW => 8;
  
-@@ -11,21 +14,22 @@
+@@ -11,25 +14,28 @@
    my $self = shift;
    my $pad = $self->Bio::Graphics::Glyph::generic::pad_left;
    return $pad unless $self->feature->strand < 0;
@@ -1679,7 +1941,13 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/transcript2.pm bioperl-1.01/Bio/Graphi
  }
  
  sub draw_component {
-@@ -40,16 +44,14 @@
+   my $self = shift;
++  return unless $self->level > 0;
++
+   my $gd = shift;
+   my ($left,$top) = @_;
+   my @rect = $self->bounds(@_);
+@@ -40,16 +46,14 @@
    if ($filled) {
      my $f = $self->feature;
  
@@ -1702,31 +1970,44 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph/transcript2.pm bioperl-1.01/Bio/Graphi
      } else {
        $self->SUPER::draw_component($gd,@_);
      }
-@@ -68,8 +70,18 @@
+@@ -68,8 +72,22 @@
  
  sub draw_connectors {
    my $self = shift;
 -  my @parts = $self->parts;
 -  if ($self->{filled} || $parts[0]->{filled} || $parts[-1]->{filled}) {
++  my ($gd,$dx,$dy) = @_;
 +
 +  my $part;
 +  if (my @parts  = $self->parts) {
 +    $part   = $self->feature->strand > 0 ? $parts[-1] : $parts[0];
 +  } else {
++    # no parts -- so draw an intron spanning whole thing
++    my($x1,$y1,$x2,$y2) = $self->bounds(0,0);
++    $self->_connector($gd,$dx,$dy,$x1,$y1,$x1,$y2,$x2,$y1,$x2,$y2);
 +    $part = $self;
 +  }
 +  my @rect   = $part->bounds();
 +  my $width  = abs($rect[2] - $rect[0]);
 +  my $filled = $width >= MIN_WIDTH_FOR_ARROW;
-+  
++
 +  if ($filled) {
      $self->Bio::Graphics::Glyph::generic::draw_connectors(@_);
    } else {
      $self->SUPER::draw_connectors(@_);
 diff -Naur bioperl-1.0/Bio/Graphics/Glyph.pm bioperl-1.01/Bio/Graphics/Glyph.pm
 --- bioperl-1.0/Bio/Graphics/Glyph.pm	Fri Mar 15 09:40:02 2002
-+++ bioperl-1.01/Bio/Graphics/Glyph.pm	Sun Mar 31 23:24:54 2002
-@@ -19,10 +19,12 @@
++++ bioperl-1.01/Bio/Graphics/Glyph.pm	Fri Apr 12 00:02:07 2002
+@@ -4,6 +4,8 @@
+ use strict;
+ use Carp 'croak';
+ use constant BUMP_SPACING => 2; # vertical distance between bumped glyphs
++use vars '$VERSION';
++$VERSION = '1.00';
+ 
+ my %LAYOUT_COUNT;
+ 
+@@ -19,10 +21,12 @@
  
    my $feature = $arg{-feature} or die "No feature";
    my $factory = $arg{-factory} || $class->default_factory;
@@ -1739,7 +2020,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph.pm bioperl-1.01/Bio/Graphics/Glyph.pm
    $self->{top} = 0;
  
    my @subglyphs;
-@@ -31,7 +33,7 @@
+@@ -31,7 +35,7 @@
    if (@subfeatures) {
  
      # dynamic glyph resolution
@@ -1748,7 +2029,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph.pm bioperl-1.01/Bio/Graphics/Glyph.pm
  
      $self->{parts}   = \@subglyphs;
    }
-@@ -112,7 +114,7 @@
+@@ -112,7 +116,7 @@
      if (ref $feature eq 'ARRAY') {
        $self->add_group(@$feature);
      } else {
@@ -1757,7 +2038,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph.pm bioperl-1.01/Bio/Graphics/Glyph.pm
      }
    }
  }
-@@ -443,6 +445,7 @@
+@@ -443,6 +447,7 @@
    if (my @parts = $self->parts) {
      my $x = $left;
      my $y = $top  + $self->top + $self->pad_top;
@@ -1765,7 +2046,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph.pm bioperl-1.01/Bio/Graphics/Glyph.pm
  
      my $last_x;
      for (my $i=0; $i<@parts; $i++) {
-@@ -453,16 +456,21 @@
+@@ -453,16 +458,21 @@
        $parts[$i]->draw($gd,$fake_x,$y,$i,scalar(@parts));
        $last_x = $parts[$i]->right;
      }
@@ -1790,7 +2071,16 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph.pm bioperl-1.01/Bio/Graphics/Glyph.pm
  sub draw_connectors {
    my $self = shift;
    my $gd = shift;
-@@ -485,19 +493,24 @@
+@@ -473,7 +483,7 @@
+   }
+ 
+   # extra connectors going off ends
+-  if (@parts>1) {
++  if (@parts) {
+     my($x1,$y1,$x2,$y2) = $self->bounds(0,0);
+     my($xl,$xt,$xr,$xb) = $parts[0]->bounds;
+     $self->_connector($gd,$dx,$dy,$x1,$xt,$x1,$xb,$xl,$xt,$xr,$xb);
+@@ -485,19 +495,24 @@
  
  sub _connector {
    my $self = shift;
@@ -1828,7 +2118,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph.pm bioperl-1.01/Bio/Graphics/Glyph.pm
  }
  
  sub draw_connector {
-@@ -506,6 +519,7 @@
+@@ -506,6 +521,7 @@
  
    my $color          = $self->connector_color;
    my $connector_type = $self->connector or return;
@@ -1836,7 +2126,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph.pm bioperl-1.01/Bio/Graphics/Glyph.pm
    if ($connector_type eq 'hat') {
      $self->draw_hat_connector($gd,$color,@_);
    } elsif ($connector_type eq 'solid') {
-@@ -653,16 +667,16 @@
+@@ -653,16 +669,16 @@
      $gd->line($x2,($y2+$y1)/2,$x2-$indent,$y2,$fg);
      $gd->line($x2-$indent,$y2,$x1,$y2,$fg);
      $gd->line($x1,$y2,$x1,$y1,$fg);
@@ -1857,7 +2147,19 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph.pm bioperl-1.01/Bio/Graphics/Glyph.pm
    }
  }
  
-@@ -739,7 +753,7 @@
+@@ -723,9 +739,9 @@
+   my $feature = shift;
+   return $feature->merged_segments         if $feature->can('merged_segments');
+   return $feature->segments                if $feature->can('segments');
+-  my @split = eval { my $id = $feature->location->seq_id;
++  my @split = eval { my $id   = $feature->location->seq_id;
+ 		     my @subs = $feature->location->sub_Location;
+-		     grep {$id eq $_->seq_id} $feature->location->sub_Location};
++		     grep {$id eq $_->seq_id} @subs};
+   return @split if @split;
+   return $feature->sub_SeqFeature          if $feature->can('sub_SeqFeature');
+   return;
+@@ -739,7 +755,7 @@
    $factory->set_option(label => 1);
    $factory->set_option(bump  => 0);
    $factory->set_option(connector  => 'solid');
@@ -1866,7 +2168,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph.pm bioperl-1.01/Bio/Graphics/Glyph.pm
  }
  
  # synthesize a key glyph
-@@ -764,23 +778,13 @@
+@@ -764,23 +780,13 @@
    my $self = shift;
    my $track_level = $self->option('all_callbacks');
    return $track_level if defined $track_level;
@@ -1891,7 +2193,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph.pm bioperl-1.01/Bio/Graphics/Glyph.pm
  1;
  
  __END__
-@@ -920,6 +924,12 @@
+@@ -920,6 +926,12 @@
  =item $index = $glyph-E<gt>color($color)
  
  Given a symbolic or #RRGGBB-form color name, returns its GD index.
@@ -1906,7 +2208,7 @@ diff -Naur bioperl-1.0/Bio/Graphics/Glyph.pm bioperl-1.01/Bio/Graphics/Glyph.pm
  
 diff -Naur bioperl-1.0/Bio/Graphics/Panel.pm bioperl-1.01/Bio/Graphics/Panel.pm
 --- bioperl-1.0/Bio/Graphics/Panel.pm	Fri Mar 15 09:40:03 2002
-+++ bioperl-1.01/Bio/Graphics/Panel.pm	Sun Mar 31 23:24:54 2002
++++ bioperl-1.01/Bio/Graphics/Panel.pm	Fri Apr 12 00:02:07 2002
 @@ -7,7 +7,7 @@
  use GD;
  use vars '$VERSION';
@@ -2077,8 +2379,8 @@ diff -Naur bioperl-1.0/Bio/Index/GenBank.pm bioperl-1.01/Bio/Index/GenBank.pm
 @@ -1,6 +1,5 @@
 -
  #
--# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
  #
  # BioPerl module for Bio::Index::Abstract
  #
@@ -2125,12 +2427,140 @@ diff -Naur bioperl-1.0/Bio/Index/GenBank.pm bioperl-1.01/Bio/Index/GenBank.pm
 -
 -
 -
+diff -Naur bioperl-1.0/Bio/Root/Exception.pm bioperl-1.01/Bio/Root/Exception.pm
+--- bioperl-1.0/Bio/Root/Exception.pm	Wed Feb 13 06:02:46 2002
++++ bioperl-1.01/Bio/Root/Exception.pm	Fri Apr 12 00:10:14 2002
+@@ -1,5 +1,5 @@
+ #-----------------------------------------------------------------
+-# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
+ #
+ # BioPerl module Bio::Root::Exception
+ #
+@@ -268,7 +268,7 @@
+     my $self = shift;
+     my $msg = $self->text;
+     my $stack = $self->stacktrace();
+-    $stack =~ s/$msg//;
++    $stack =~ s/\Q$msg//;
+     my @stack = split( /\n/, $stack);
+     my @new_stack = ();
+     my ($method, $file, $linenum, $prev_file, $prev_linenum);
+diff -Naur bioperl-1.0/Bio/Search/Hit/BlastHit.pm bioperl-1.01/Bio/Search/Hit/BlastHit.pm
+--- bioperl-1.0/Bio/Search/Hit/BlastHit.pm	Wed Jan 23 06:30:25 2002
++++ bioperl-1.01/Bio/Search/Hit/BlastHit.pm	Fri Apr 12 00:10:14 2002
+@@ -1,5 +1,5 @@
+ #-----------------------------------------------------------------
+-# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
+ #
+ # BioPerl module Bio::Search::Hit::BlastHit
+ #
+@@ -211,7 +211,7 @@
+ 
+ @ISA = qw( Bio::Root::Root Bio::Search::Hit::HitI );
+ 
+-$Revision = '$Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $';  #'
++$Revision = '$Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $';  #'
+ 
+ 
+ =head2 new
+@@ -273,6 +273,7 @@
+ 			      SCORE
+ 			      FOUND_AGAIN )], @args );
+ 
++    # TODO: Handle this in parser. Just pass in name parameter.
+     $self->_set_id( $raw_data->[0] );
+ 
+     if($is_pval) {
+@@ -323,12 +324,14 @@
+ 
+  Usage     : $hit->name([string]);
+  Purpose   : Set/Get a string to identify the hit.
+-             This is parsed out of the "Query=" line as the first chunk of 
+-             non-whitespace text. If you want the rest of the line, use
+-             $hit->description().
+  Example   : $name = $hit->name;
+            : $hit->name('M81707');
+  Returns   : String consisting of the hit's name or undef if not set.
++ Comments  : The name is parsed out of the "Query=" line as the first chunk of 
++             non-whitespace text. If you want the rest of the line, use
++             $hit->description().
++
++See Also: L<accession()|accession>
+ 
+ =cut
+ 
+@@ -371,6 +374,29 @@
+     return substr( $self->{'_description'}, 0 ,$len ); 
+ }
+ 
++=head2 accession
++
++ Title   : accession
++ Usage   : $acc = $hit->accession();
++ Function: Retrieve the accession (if available) for the hit
++ Returns : a scalar string (empty string if not set)
++ Args    : none
++ Comments: Accession numbers are extracted based on the assumption that they
++           are delimited by | characters (NCBI-style). If this is not the case,
++           use the name() method and parse it as necessary.
++
++See Also: L<name()|name>
++
++=cut
++
++#--------------------
++sub accession {
++#--------------------
++    my $self = shift;
++    if(@_) { $self->{'_accession'} = shift; }
++    $self->{'_accession'} || '';
++}
++
+ =head2 raw_score
+ 
+  Usage     : $hit_object->raw_score();
+@@ -684,7 +710,7 @@
+ #           : or first line of an alignment section (with or without the leading '>').
+ # Throws    : Warning if cannot locate sequence ID.
+ #
+-#See Also   : L<new()|new>
++#See Also   : L<new()|new>, L<accession()|accession>
+ #
+ #=cut
+ 
+@@ -694,15 +720,21 @@
+     my( $self, $desc ) = @_;
+ 
+     # New strategy: Assume only that the ID is the first white space
+-    # delimited chunk. Not attempting to extract database name.
++    # delimited chunk. Not attempting to extract accession & database name.
+     # Clients will have to interpret it as necessary.
+     if($desc =~ /^>?(\S+)\s*(.*)/) {
+-        $self->name($1);
+-        $self->{'_description'} = $2;
++        my ($name, $desc) = ($1, $2);
++        $self->name($name);
++        $self->{'_description'} = $desc;
+ 	# Note that this description comes from the summary section of the
+ 	# BLAST report and so may be truncated. The full description will be
+ 	# set from the alignment section. We're setting description here in case
+ 	# the alignment section isn't being parsed.
++
++        # Assuming accession is delimited with | symbols (NCBI-style)
++        my @pieces = split(/\|/,$name);
++        my $acc = pop @pieces;
++        $self->accession( $acc );
+     }
+     else {
+         $self->warn("Can't locate sequence identifier in summary line.", "Line = $desc");
 diff -Naur bioperl-1.0/Bio/SearchIO/blast.pm bioperl-1.01/Bio/SearchIO/blast.pm
 --- bioperl-1.0/Bio/SearchIO/blast.pm	Fri Mar  8 15:22:16 2002
 +++ bioperl-1.01/Bio/SearchIO/blast.pm	Sun Mar 31 16:30:02 2002
 @@ -1,4 +1,4 @@
--# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
  #
  # BioPerl module for Bio::SearchIO::blast
  #
@@ -2156,12 +2586,175 @@ diff -Naur bioperl-1.0/Bio/SearchIO/blast.pm bioperl-1.01/Bio/SearchIO/blast.pm
         } elsif( ($self->in_element('hit') || $self->in_element('hsp')) && # ncbi blast
  		/Score\s*=\s*(\S+)\s*bits\s*\((\d+)\),\s*Expect(\(\d+\))?\s*=\s*(\S+)/) {
  	   $self->in_element('hsp') && $self->end_element({ 'Name' => 'Hsp'});
+diff -Naur bioperl-1.0/Bio/Structure/StructureI.pm bioperl-1.01/Bio/Structure/StructureI.pm
+--- bioperl-1.0/Bio/Structure/StructureI.pm	Wed Feb 13 10:34:52 2002
++++ bioperl-1.01/Bio/Structure/StructureI.pm	Fri Apr 12 00:10:15 2002
+@@ -1,9 +1,9 @@
+-# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
+-# placeholder for Bio::StructureI
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++# placeholder for Bio::Structure::StructureI
+ 
+-# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
+ #
+-# BioPerl module for Bio::StructureI
++# BioPerl module for Bio::Structure::StructureI
+ #
+ # Cared for by Kris Boulez <kris.boulez@algonomics.com>
+ #
+@@ -15,7 +15,7 @@
+ 
+ =head1 NAME
+ 
+-Bio::StructureI - Abstract Interface for a Structure objects
++Bio::Structure::StructureI - Abstract Interface for a Structure objects
+ 
+ =head1 SYNOPSIS
+ 
+@@ -66,7 +66,8 @@
+ # Let the code begin...
+ 
+ 
+-package Bio::StructureI;
++package Bio::Structure::StructureI;
++use Bio::Root::RootI;
+ use vars qw(@ISA);
+ use strict;
+ 
+diff -Naur bioperl-1.0/Bio/Tools/SeqWords.pm bioperl-1.01/Bio/Tools/SeqWords.pm
+--- bioperl-1.0/Bio/Tools/SeqWords.pm	Mon Nov 19 21:09:40 2001
++++ bioperl-1.01/Bio/Tools/SeqWords.pm	Fri Apr 12 00:10:15 2002
+@@ -1,3 +1,4 @@
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
+ 
+ #---------------------------------------------------------------------------
+ # PACKAGE    : SeqWords.pm
+@@ -22,45 +23,45 @@
+ 
+ =head1 SYNOPSIS
+ 
+-Take a sequence object from eg, an inputstream, and creates an object 
++Take a sequence object from eg, an inputstream, and creates an object
+ for the purposes of holding n-mer word statistics about that sequence.
+-The sequence can be nucleic acid or protein, but the module is probably
+-most relevant for DNA.  The words are counted in a non-overlapping manner,
+-ie. in the style of a codon table, but with any word length.
+-For overlapping word counts, a sequence can be 'shifted' to remove the first
+-character and then the count repeated.  For counts on opposite strand
+-(DNA/RNA),
+-a reverse complement method should be performed, and then the count
+-repeated.
++The sequence can be nucleic acid or protein, but the module is
++probably most relevant for DNA.  The words are counted in a
++non-overlapping manner, ie. in the style of a codon table, but with
++any word length.  For overlapping word counts, a sequence can be
++'shifted' to remove the first character and then the count repeated.
++For counts on opposite strand (DNA/RNA), a reverse complement method
++should be performed, and then the count repeated.
+ 
+ Creating the SeqWords object, eg:
+ 
+-	my $inputstream = Bio::SeqIO->new( -file => "seqfile", -format =>
+-'Fasta');
+-	my $seqobj = $inputstream->next_seq();
+-	my $seq_word = Bio::Tools::SeqWords->new(-seq => $seqobj);
++  my $inputstream = Bio::SeqIO->new( -file => "seqfile", 
++	                             -format => 'Fasta');
++  my $seqobj = $inputstream->next_seq();
++  my $seq_word = Bio::Tools::SeqWords->new(-seq => $seqobj);
+ 
+ or:
+ 
+-	my $seqobj = Bio::PrimarySeq->new(-seq=>'[cut and paste a sequence here]', 
+-                                          -alphabet = 'dna', -id = 'test');
+-	my $seq_word  =  Bio::Tools::SeqWords->new(-seq => $seqobj);
++  my $seqobj = Bio::PrimarySeq->new(-seq=>'[cut and paste a sequence here]', 
++                                    -alphabet => 'dna', 
++                                    -id => 'test');
++  my $seq_word  =  Bio::Tools::SeqWords->new(-seq => $seqobj);
+ 
+ obtain a hash of word counts, eg:
+ 
+-	my $hash_ref = $seq_stats->count_words($word_length);
++  my $hash_ref = $seq_stats->count_words($word_length);
+ 
+ display hash table, eg:
+ 
+-	my %hash = %$hash_ref;
+-	foreach my $key(sort keys %hash)
+-	{
+-		print "\n$key\t$hash{$key}";
+-	}
++  my %hash = %$hash_ref;
++  foreach my $key(sort keys %hash)
++  {
++    print "\n$key\t$hash{$key}";
++  }
+ 
+ or	
+ 
+-	my $hash_ref = Bio::SeqWords->count_words($seqobj,$word_length);
++  my $hash_ref = Bio::SeqWords->count_words($seqobj,$word_length);
+ 
+ 
+ =head1 DESCRIPTION
+@@ -91,7 +92,7 @@
+ Your participation is much appreciated.
+ 
+   bioperl-l@bioperl.org                 - General discussion
+-  http://bio.perl.org/MailList.html             - About the mailing lists
++  http://bio.perl.org/MailList.html     - About the mailing lists
+ 
+ =head2 Reporting Bugs
+ 
+@@ -159,11 +160,10 @@
+ 	 : will give the hash
+ 	 : ACCG 1, TCCG 1
+  Returns : Reference to a hash in which keys are words (any length) of the
+-alphabet
+-         : used and values are number of occurrences of the word in the
+-sequence.
++         : alphabet used and values are number of occurrences of the word 
++         : in the sequence.
+  Args    : Word length as scalar and, reference to sequence object if
+-required
++         : required
+ 
+   Throws an exception word length is not a positive integer
+   or if word length is longer than the sequence.
+@@ -188,11 +188,13 @@
+ 
+ 	if($word_length eq "" || $word_length =~ /[a-z]/i)
+ 	{
+-		$self->throw("SeqWords cannot accept non-numeric characters or a null value in the \$word_length variable\n");
++	    $self->throw("SeqWords cannot accept non-numeric characters".
++                         " or a null value in the \$word_length variable\n");
+ 	}
+ 	elsif ($word_length <1 || ($word_length - int($word_length)) >0)
+ 	{
+-		$self->throw("SeqWords requires the word length to be a positive integer\n");
++	    $self->throw("SeqWords requires the word length to be a ".
++                         "positive integer\n");
+     	}
+ 	
+ 	if(! defined($seqobj)) {
+@@ -202,7 +204,8 @@
+ 
+ 	if($word_length > length($seqstring))
+ 	{
+-	    $self->throw("die in count words, \$word_length is bigger than sequence length\n");
++	    $self->throw("die in count words, \$word_length is bigger ".
++                         "than sequence length\n");
+ 	}
+ 	
+ 	my %codon = ();
 diff -Naur bioperl-1.0/Bio/Variation/AAChange.pm bioperl-1.01/Bio/Variation/AAChange.pm
 --- bioperl-1.0/Bio/Variation/AAChange.pm	Mon Feb 18 12:17:25 2002
 +++ bioperl-1.01/Bio/Variation/AAChange.pm	Wed Mar 20 08:08:24 2002
 @@ -1,4 +1,4 @@
--# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
  #
  # BioPerl module for Bio::Variation::AAChange
  #
@@ -2238,8 +2831,8 @@ diff -Naur bioperl-1.0/Bio/Variation/AAReverseMutate.pm bioperl-1.01/Bio/Variati
 --- bioperl-1.0/Bio/Variation/AAReverseMutate.pm	Mon Nov 19 21:09:45 2001
 +++ bioperl-1.01/Bio/Variation/AAReverseMutate.pm	Wed Mar 20 08:08:24 2002
 @@ -1,4 +1,4 @@
--# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
  #
  # BioPerl module for Bio::Variation::AAReverseMutate
  #
@@ -2258,8 +2851,8 @@ diff -Naur bioperl-1.0/Bio/Variation/Allele.pm bioperl-1.01/Bio/Variation/Allele
 --- bioperl-1.0/Bio/Variation/Allele.pm	Mon Feb 18 12:17:25 2002
 +++ bioperl-1.01/Bio/Variation/Allele.pm	Wed Mar 20 08:08:24 2002
 @@ -1,4 +1,4 @@
--# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
  #
  # BioPerl module for Bio::Variation::Allele
  #
@@ -2314,8 +2907,8 @@ diff -Naur bioperl-1.0/Bio/Variation/DNAMutation.pm bioperl-1.01/Bio/Variation/D
 --- bioperl-1.0/Bio/Variation/DNAMutation.pm	Mon Feb 18 12:17:25 2002
 +++ bioperl-1.01/Bio/Variation/DNAMutation.pm	Wed Mar 20 08:08:24 2002
 @@ -1,4 +1,4 @@
--# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
  #
  # BioPerl module for Bio::Variation::DNAMutation
  #
@@ -2391,8 +2984,8 @@ diff -Naur bioperl-1.0/Bio/Variation/RNAChange.pm bioperl-1.01/Bio/Variation/RNA
 --- bioperl-1.0/Bio/Variation/RNAChange.pm	Mon Feb 18 12:17:25 2002
 +++ bioperl-1.01/Bio/Variation/RNAChange.pm	Wed Mar 20 08:08:24 2002
 @@ -1,4 +1,4 @@
--# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
  #
  # BioPerl module for Bio::Variation::RNAChange
  #
@@ -2492,8 +3085,8 @@ diff -Naur bioperl-1.0/Bio/Variation/SeqDiff.pm bioperl-1.01/Bio/Variation/SeqDi
 --- bioperl-1.0/Bio/Variation/SeqDiff.pm	Mon Feb 18 12:17:25 2002
 +++ bioperl-1.01/Bio/Variation/SeqDiff.pm	Wed Mar 20 08:08:24 2002
 @@ -1,4 +1,4 @@
--# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
  # bioperl module for Bio::Variation::SeqDiff
  #
  # Cared for by Heikki Lehvaslaiho <heikki@ebi.ac.uk>
@@ -2510,8 +3103,8 @@ diff -Naur bioperl-1.0/Bio/Variation/SeqDiff.pm bioperl-1.01/Bio/Variation/SeqDi
         $desc, $alphabet, $numbering, $offset, $rna_offset, $rna_id, $cds_end,
 diff -Naur bioperl-1.0/MANIFEST bioperl-1.01/MANIFEST
 --- bioperl-1.0/MANIFEST	Sat Mar 16 19:03:32 2002
-+++ bioperl-1.01/MANIFEST	Sat Mar 23 14:06:51 2002
-@@ -81,6 +81,7 @@
++++ bioperl-1.01/MANIFEST	Fri Apr 12 00:06:47 2002
+@@ -81,12 +81,12 @@
  Bio/DB/GFF/Adaptor/dbi/mysql.pm
  Bio/DB/GFF/Adaptor/dbi/mysqlopt.pm
  Bio/DB/GFF/Adaptor/memory.pm
@@ -2519,6 +3112,20 @@ diff -Naur bioperl-1.0/MANIFEST bioperl-1.01/MANIFEST
  Bio/DB/GFF/Aggregator.pm
  Bio/DB/GFF/Aggregator/alignment.pm
  Bio/DB/GFF/Aggregator/clone.pm
+ Bio/DB/GFF/Aggregator/none.pm
+ Bio/DB/GFF/Aggregator/transcript.pm
+-Bio/DB/GFF/Aggregator/wormbase_gene.pm
+ Bio/DB/GFF/Featname.pm
+ Bio/DB/GFF/Feature.pm
+ Bio/DB/GFF/Homol.pm
+@@ -406,6 +406,7 @@
+ FAQ
+ INSTALL
+ LICENSE
++Makefile.PL
+ MANIFEST
+ PLATFORMS
+ README
 diff -Naur bioperl-1.0/MANIFEST.SKIP bioperl-1.01/MANIFEST.SKIP
 --- bioperl-1.0/MANIFEST.SKIP	Fri Jun 15 18:00:56 2001
 +++ bioperl-1.01/MANIFEST.SKIP	Wed Dec 31 19:00:00 1969
@@ -2536,16 +3143,16 @@ diff -Naur bioperl-1.0/MANIFEST.SKIP bioperl-1.01/MANIFEST.SKIP
 \ No newline at end of file
 diff -Naur bioperl-1.0/Makefile.PL bioperl-1.01/Makefile.PL
 --- bioperl-1.0/Makefile.PL	Sat Mar 16 19:00:47 2002
-+++ bioperl-1.01/Makefile.PL	Mon Apr  8 20:53:39 2002
++++ bioperl-1.01/Makefile.PL	Fri Apr 12 00:11:59 2002
 @@ -1,6 +1,6 @@
  ## --Makefile.PL for Bioperl core module distribution--##
  ## ----------------------------------------------------##
--## $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
-+## $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
+-## $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++## $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
  ##----------------------------------------------------
  
  #
-@@ -23,9 +23,9 @@
+@@ -23,11 +23,11 @@
  	     'XML::Writer'              => '0.0/Parsing + writing of XML documents/Bio::Variation code, GAME parser/Bio::SeqIO::game,Bio::Variation::*',
  	     'XML::Parser::PerlSAX'              => '0.0/Parsing of XML documents/Bio::Variation code, GAME parser/Bio::SeqIO::game,Bio::Variation::*',
  	     'XML::Twig'         	=> '0.0/Available on CPAN/parsing of XML documents/Module Bio::Variation::IO::xml.pm',
@@ -2555,8 +3162,11 @@ diff -Naur bioperl-1.0/Makefile.PL bioperl-1.01/Makefile.PL
 -	     'HTML::Parser'             => '0.0/HTML parsing of GDB page/Bio::DB::GDB',
 +	     'HTML::Parser'             => '0.0/HTML parsing/HTML parsing of GDB page/Bio::DB::GDB',
  	     'DBD::mysql'               => '0.0/Mysql driver/loading and querying of Mysql-based GFF feature databases/Bio::DB::GFF',
- 	     'GD'                       => '1.3/Graphical Drawing Toolkit/Rendering Sequences and Features/Bio::Graphics',
+-	     'GD'                       => '1.3/Graphical Drawing Toolkit/Rendering Sequences and Features/Bio::Graphics',
++	     'GD'                       => '1.19/Graphical Drawing Toolkit/Rendering Sequences and Features/Bio::Graphics',
  	     'Storable'                 => '0.0/Persistent object storage and retrieval/Storing sequence objects in local file cache/Bio::DB::FileCache',
+ # rare function let's not scare people
+ # 	     'srsperl.pm'               => '0.0/Sequence Retrieval System (SRS) perl API/alternative way of retrieving sequences/Bio::LiveSeq::IO::SRS.pm'
 @@ -78,15 +78,22 @@
  # Prompt user for BioGFFDB stuff
  #
@@ -2668,7 +3278,7 @@ diff -Naur bioperl-1.0/Makefile.PL bioperl-1.01/Makefile.PL
  
  				           
  #
-@@ -115,7 +195,7 @@
+@@ -115,13 +195,11 @@
  $do_autoload_finesse = 0;
  $NAME     = 'Bio';
  $DISTNAME = "bioperl";
@@ -2677,6 +3287,12 @@ diff -Naur bioperl-1.0/Makefile.PL bioperl-1.01/Makefile.PL
  
  if( $do_autoload_finesse == 1 ) {
      fatal("Autoload finessing does not work at the moment!");
+ }
+-
+-
+ 
+ @BACKUP_FILES = qw(./Seq.pm.bak);
+ 
 diff -Naur bioperl-1.0/bioperl.lisp bioperl-1.01/bioperl.lisp
 --- bioperl-1.0/bioperl.lisp	Mon Jan 28 15:14:14 2002
 +++ bioperl-1.01/bioperl.lisp	Wed Dec 31 19:00:00 1969
@@ -2700,7 +3316,7 @@ diff -Naur bioperl-1.0/bioperl.lisp bioperl-1.01/bioperl.lisp
 -(defun bioperl-object-start (perl-object-name perl-caretaker-name caretaker-email)
 -  "Places standard bioperl object notation headers and footers"
 -  (interactive "sName of Object: \nsName of caretaker: \nsEmail: ")
--  (insert "# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $\n#\n# BioPerl module for " perl-object-name "\n#\n# Cared for by " perl-caretaker-name " <" caretaker-email ">\n#\n# Copyright " perl-caretaker-name "\n#\n# You may distribute this module under the same terms as perl itself\n\n")
+-  (insert "# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $\n#\n# BioPerl module for " perl-object-name "\n#\n# Cared for by " perl-caretaker-name " <" caretaker-email ">\n#\n# Copyright " perl-caretaker-name "\n#\n# You may distribute this module under the same terms as perl itself\n\n")
 -  (insert "# POD documentation - main docs before the code\n\n")
 -  (insert "=head1 NAME\n\n" perl-object-name " - DESCRIPTION of Object\n\n")
 -  (insert "=head1 SYNOPSIS\n\nGive standard usage here\n\n")
@@ -2732,7 +3348,7 @@ diff -Naur bioperl-1.0/bioperl.lisp bioperl-1.01/bioperl.lisp
 -						 caretaker-email)
 -  "Places standard bioperl object notation headers and footers"
 -  (interactive "sName of Object: \nsName of caretaker: \nsEmail: ")
--  (insert "# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $\n#\n# BioPerl module for " perl-object-name "\n#\n# Cared for by " perl-caretaker-name " <" caretaker-email ">\n#\n# Copyright " perl-caretaker-name "\n#\n# You may distribute this module under the same terms as perl itself\n\n")
+-  (insert "# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $\n#\n# BioPerl module for " perl-object-name "\n#\n# Cared for by " perl-caretaker-name " <" caretaker-email ">\n#\n# Copyright " perl-caretaker-name "\n#\n# You may distribute this module under the same terms as perl itself\n\n")
 -  (insert "# POD documentation - main docs before the code\n\n")
 -  (insert "=head1 NAME\n\n" perl-object-name " - DESCRIPTION of Interface\n\n")
 -  (insert "=head1 SYNOPSIS\n\nGive standard usage here\n\n")
@@ -2807,6 +3423,49 @@ diff -Naur bioperl-1.0/bioperl.lisp bioperl-1.01/bioperl.lisp
 -	   '("bioperl method" . bioperl-method))
 -	 ))
 -
+diff -Naur bioperl-1.0/examples/biblio.pl bioperl-1.01/examples/biblio.pl
+--- bioperl-1.0/examples/biblio.pl	Thu Mar  7 12:53:47 2002
++++ bioperl-1.01/examples/biblio.pl	Fri Apr 12 00:10:20 2002
+@@ -16,7 +16,7 @@
+ #   senger@ebi.ac.uk
+ #   February 2002
+ #
+-#   $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++#   $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
+ #-----------------------------------------------------------------------------
+ 
+ use strict;
+@@ -162,6 +162,14 @@
+       ./biblio.pl -f a_file.xml -Oo   ... to Perl objects
+       ./biblio.pl -f a_file.xml -Or   ... as a raw hash
+ 
++Environment variables:
++   HTTPPROXY = <HTTP proxy server>
++      Use this if you use this script on a machine which
++      needs to access remote HTTP targets via a proxy server.
++      For example:
++         export HTTPPROXY=http://128.243.220.41:3128
++         ./biblio.pl -c
++
+ END_OF_USAGE
+ }
+ 
+@@ -220,10 +228,14 @@
+ #      -namespace => '...' (not set-able here, a default value will be used)
+ #      -soap               (not set-able here)
+ #
++#      Additionally, it uses env. variable HTTPPROXY to create parameter
++#      '-httpproxy'.
++#
+ my @location   = ('-location', $opt_l) if defined $opt_l;
+ my @collection = ('-collection_id', $opt_i) if defined $opt_i;
+ my @destroy    = ('-destroy_on_exit', 0) if $opt_k or $opt_p or $opt_i;
+-my $biblio = new Bio::Biblio (@location, @collection, @destroy);
++my @httpproxy  = ('-httpproxy', $ENV{'HTTPPROXY'}) if defined $ENV{'HTTPPROXY'};
++my $biblio = new Bio::Biblio (@location, @collection, @destroy, @httpproxy);
+ 
+ die "Stopped. No success in accessing the bibliographic repository.\n" unless $biblio;
+ 
 diff -Naur bioperl-1.0/examples/use_registry.pl bioperl-1.01/examples/use_registry.pl
 --- bioperl-1.0/examples/use_registry.pl	Sun Mar 17 18:10:01 2002
 +++ bioperl-1.01/examples/use_registry.pl	Wed Dec 31 19:00:00 1969
@@ -3031,8 +3690,8 @@ diff -Naur bioperl-1.0/t/DNAMutation.t bioperl-1.01/t/DNAMutation.t
 @@ -1,6 +1,6 @@
  # -*-Perl-*-
  ## Bioperl Test Harness Script for Modules
--## $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
-+## $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
+-## $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++## $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
  
  # Before `make install' is performed this script should be runnable with
  # `make test'. After `make install' it should work as `perl test.t'
@@ -3072,7 +3731,15 @@ diff -Naur bioperl-1.0/t/DNAMutation.t bioperl-1.01/t/DNAMutation.t
 +ok $obj->isMutation;
 diff -Naur bioperl-1.0/t/SearchIO.t bioperl-1.01/t/SearchIO.t
 --- bioperl-1.0/t/SearchIO.t	Thu Mar 14 17:48:51 2002
-+++ bioperl-1.01/t/SearchIO.t	Mon Apr  8 21:00:48 2002
++++ bioperl-1.01/t/SearchIO.t	Fri Apr 12 00:12:01 2002
+@@ -1,6 +1,6 @@
+ # -*-Perl-*-
+ ## Bioperl Test Harness Script for Modules
+-## $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++## $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
+ 
+ # Before `make install' is performed this script should be runnable with
+ # `make test'. After `make install' it should work as `perl test.t'
 @@ -20,7 +20,7 @@
  	use lib 't';
      }
@@ -3082,600 +3749,14 @@ diff -Naur bioperl-1.0/t/SearchIO.t bioperl-1.01/t/SearchIO.t
      $LASTXMLTEST = 49;
      $error = 0;
  
-diff -Naur bioperl-1.0/t/SearchIO.t~ bioperl-1.01/t/SearchIO.t~
---- bioperl-1.0/t/SearchIO.t~	Wed Dec 31 19:00:00 1969
-+++ bioperl-1.01/t/SearchIO.t~	Thu Mar 14 17:48:51 2002
-@@ -0,0 +1,582 @@
-+# -*-Perl-*-
-+## Bioperl Test Harness Script for Modules
-+## $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
-+
-+# Before `make install' is performed this script should be runnable with
-+# `make test'. After `make install' it should work as `perl test.t'
-+
-+my $error;
-+
-+use vars qw($SKIPXML $LASTXMLTEST); 
-+use strict;
-+use lib '.';
-+
-+BEGIN {     
-+    # to handle systems with no installed Test module
-+    # we include the t dir (where a copy of Test.pm is located)
-+    # as a fallback
-+    eval { require Test; };
-+    if( $@ ) {
-+	use lib 't';
-+    }
-+    use vars qw($NTESTS);
-+    $NTESTS = 390;
-+    $LASTXMLTEST = 49;
-+    $error = 0;
-+
-+    use Test;
-+    plan tests => $NTESTS; 
-+
-+    eval { require XML::Parser::PerlSAX; };
-+    if( $@ ) {
-+	$SKIPXML = 1;
-+	print STDERR "XML::Parser::PerlSAX not loaded. This means SearchIO::blastxml test cannot be executed. Skipping\n";
-+	foreach ( 1..$LASTXMLTEST ) {
-+	    skip('No XML::Parser::PerlSAX loaded',1);
-+	}
-+    }
-+}
-+
-+if( $error == 1 ) {
-+    exit(0);
-+}
-+
-+use Bio::SearchIO;
-+use Bio::Root::IO;
-+use Bio::SearchIO::Writer::HitTableWriter;
-+use Bio::SearchIO::Writer::HTMLResultWriter;
-+
-+ok(1);
-+my ($searchio, $result,$hit,$hsp);
-+if( ! $SKIPXML ) {
-+    # test with RPSBLAST data first 
-+    $searchio = new Bio::SearchIO ('-tempfile' => 1,
-+				   '-format' => 'blastxml',
-+				   '-file'   => Bio::Root::IO->catfile('t','data','ecoli_domains.rps.xml'));
-+    
-+    $result = $searchio->next_result;
-+    ok($result);    
-+    ok($result->database_name, '/data_2/jason/db/cdd/cdd/Pfam');
-+    ok($result->query_name,'gi|1786182|gb|AAC73112.1| (AE000111) thr operon leader peptide [Escherichia coli]');
-+    ok($result->query_length, 21);
-+    ok($result->algorithm, 'BLASTP');
-+    ok($result->algorithm_version, 'blastp 2.1.3 [Apr-1-2001]');
-+
-+    ok($result->available_parameters, 8);
-+    ok($result->get_parameter('gapext'), 1);
-+    ok($result->available_statistics, 5);
-+    ok($result->get_statistic('lambda'), 0.267);
-+
-+# this result actually has a hit
-+    $result = $searchio->next_result;
-+    $hit = $result->next_hit;
-+    ok($hit->name, 'gnl|Pfam|pfam00742');
-+    ok($hit->description(), 'HomoS_dh, HomoS dehydrogenase');
-+    ok($hit->accession, 'pfam00742');
-+    ok($hit->length, 310);
-+
-+    $hsp = $hit->next_hsp;
-+    ok($hsp->pvalue, undef);
-+    ok($hsp->evalue, 1.46134e-90);
-+    ok($hsp->score, 838);
-+    ok($hsp->bits,327.405);
-+    ok($hsp->query->start, 498);
-+    ok($hsp->query->end,815);
-+    ok($hsp->hit->start, 3);
-+    ok($hsp->hit->end, 310);
-+    ok($hsp->query->frame,0);
-+    ok($hsp->hit->frame,0);
-+    ok(sprintf("%.2f", $hsp->percent_identity), 37.73);
-+    ok(sprintf("%.4f", $hsp->frac_identical('hit')), 0.3994);
-+    ok(sprintf("%.4f", $hsp->frac_identical('query')), 0.3868);
-+    ok(sprintf("%.4f",$hsp->query->frac_identical), 0.3868);
-+
-+    ok(sprintf("%.4f",$hsp->frac_conserved('total')),0.5245);
-+    ok(sprintf("%.4f",$hsp->frac_conserved('hit')),0.5552);
-+    ok(sprintf("%.4f",$hsp->frac_conserved('query')),0.5377);
-+    ok($hsp->gaps('total'), 26);
-+    ok($hsp->length('hsp'), 326);
-+    ok($hsp->query_string, 'LRVCGVANSKALLTNVHGLNLENWQEELAQAKEPF-NLGRLIRLVKEYHLLN----PVIVDCTSSQAVAD-QYADFLREGFHVVTPNKKANTSSMDYYHQLRYAAEKSRRKFLYDTNVGAGLPVIENLQNLLNAGDELMKFSGILSGSLSYIFGKLDE-GMSFSEATTLAREMGYTEPDPRDDLSGMDVARKLLILARET-GRELELADIEIEPVLPAEFNAEGDVAAFMANLSQLDDLFAARVAKARDEGKVLRYVGNIDEDGVCRVKIAEVDGNDPLFKVKNGENALAFYSHYYQPLPLVLRGYGAGNDVTAAGVFADLLRTLS');
-+    ok($hsp->hit_string, 'GVVTGITDSREMLLSRIGLPLEIWKVALRDLEKPRKDLGKLDLTDDAFAVVDDPDIDVVVELTGGIEVARELYLDALEEGKHVVTANKALNASHGDEYLAL---AEKSGVDVLYEAAVAGGIPIIKTLRELLATGDRILKIEGIFNGTTNFILSEMDEKGLPFSDVLAEAQELGYTEADPRDDVEGIDAARKLAILARIAFGIELELDDVYVEGISPITAEDISSADEFGYTLKLLDEAMRQRVEDAESGGEVLRYPTLIPE-------------DHPLASVKGSDNAVAVEGEAYG--PLMFYGPGAGAEPTASAVVADIVRIAR');
-+    ok($hsp->homology_string, '  V G+ +S+ +L +  GL LE W+  L   ++P  +LG+L      + +++     V+V+ T    VA   Y D L EG HVVT NK  N S  D Y  L   AEKS    LY+  V  G+P+I+ L+ LL  GD ++K  GI +G+ ++I  ++DE G+ FS+    A+E+GYTE DPRDD+ G+D ARKL ILAR   G ELEL D+ +E + P           F   L  LD+    RV  A   G+VLRY   I E             + PL  VK  +NA+A     Y   PL+  G GAG + TA+ V AD++R   ');
-+
-+# one more 
-+    $hit = $result->next_hit;
-+    ok($hit);
-+
-+    while( $result = $searchio->next_result ) { ok($result); }
-+
-+
-+    $searchio = new Bio::SearchIO(-format => 'blastxml', 
-+				  -file => Bio::Root::IO->catfile('t','data','plague_yeast.bls.xml'));
-+
-+    $result = $searchio->next_result;
-+
-+    ok($result->database_name, 'yeast.aa');
-+    ok($result->query_name, 'gi|5763811|emb|CAB53164.1| putative transposase [Yersinia pestis]');
-+    ok($result->query_length, 340);
-+
-+    $hit = $result->next_hit;
-+    ok(! $hit);
-+
-+}
-+$searchio = new Bio::SearchIO ('-format' => 'blast',
-+				  '-file'   => Bio::Root::IO->catfile('t','data','ecolitst.bls'));
-+
-+$result = $searchio->next_result;
-+
-+ok($result->database_name, 'ecoli.aa');
-+ok($result->database_entries, 4289);
-+ok($result->database_letters, 1358990);
-+
-+ok($result->algorithm, 'BLASTP');
-+ok($result->algorithm_version, '2.1.3');
-+ok($result->query_name, qr/gi|1786183|gb|AAC73113.1| (AE000111) aspartokinase I,\s+homoserine dehydrogenase I [Escherichia coli]/);
-+ok($result->query_length, 820);
-+ok($result->get_statistic('kappa')== 0.041);
-+ok($result->get_statistic('lambda'), 0.267);
-+ok($result->get_statistic('entropy') == 0.14);
-+ok($result->get_statistic('dbletters'), 1358990);
-+ok($result->get_statistic('dbentries'), 4289);
-+ok($result->get_statistic('hsplength'), 47);
-+ok($result->get_statistic('effectivespace'), 894675611);
-+ok($result->get_parameter('matrix'), 'BLOSUM62');
-+ok($result->get_parameter('gapopen'), 11);
-+ok($result->get_parameter('gapext'), 1);
-+
-+my @valid = ( [ 'gb|AAC73113.1|', 820, 'AAC73113.1', '0.0', 1567],
-+	      [ 'gb|AAC76922.1|', 810, 'AAC76922.1', '1e-91', 332],
-+	      [ 'gb|AAC76994.1|', 449, 'AAC76994.1', '3e-47', 184]);
-+my $count = 0;
-+while( $hit = $result->next_hit ) {
-+    my $d = shift @valid;
-+
-+    ok($hit->name, shift @$d);
-+    ok($hit->length, shift @$d);
-+    ok($hit->accession, shift @$d);
-+    ok($hit->significance, shift @$d );
-+    ok($hit->raw_score, shift @$d );
-+
-+    if( $count == 0 ) {
-+	while( my $hsp = $hit->next_hsp ) {
-+	    ok($hsp->query->start, 1);
-+	    ok($hsp->query->end, 820);
-+	    ok($hsp->hit->start, 1);
-+	    ok($hsp->hit->end, 820);
-+	    ok($hsp->length('hsp'), 820);
-+	    
-+	    ok($hsp->evalue == 0.0);
-+	    ok($hsp->score, 4058);
-+	    ok($hsp->bits,1567);	    	    
-+	    ok(sprintf("%.2f",$hsp->percent_identity), 98.29);
-+	    ok(sprintf("%.4f",$hsp->frac_identical('query')), 0.9829);
-+	    ok(sprintf("%.4f",$hsp->frac_identical('hit')), 0.9829);
-+	    ok($hsp->gaps, 0);	    
-+	}
-+    }
-+    last if( $count++ > @valid );
-+}
-+
-+$searchio = new Bio::SearchIO ('-format' => 'blast',
-+			       '-file'   => Bio::Root::IO->catfile('t','data','ecolitst.wublastp'));
-+
-+$result = $searchio->next_result;
-+
-+ok($result->database_name, 'ecoli.aa');
-+ok($result->database_letters, 1358990);
-+ok($result->database_entries, 4289);
-+ok($result->algorithm, 'BLASTP');
-+ok($result->algorithm_version, '2.0MP-WashU');
-+ok($result->query_name, qr/gi|1786183|gb|AAC73113.1| (AE000111) aspartokinase I,\s+homoserine dehydrogenase I [Escherichia coli]/);
-+ok($result->query_accession, 'AAC73113.1');
-+
-+ok($result->query_length, 820);
-+ok($result->get_statistic('kappa'), 0.136);
-+ok($result->get_statistic('lambda'), 0.319);
-+ok($result->get_statistic('entropy'), 0.384);
-+ok($result->get_statistic('dbletters'), 1358990);
-+ok($result->get_statistic('dbentries'), 4289);
-+ok($result->get_parameter('matrix'), 'BLOSUM62');
-+
-+@valid = ( [ 'gb|AAC73113.1|', 820, 'AAC73113.1', '0.0', 4141],
-+	   [ 'gb|AAC76922.1|', 810, 'AAC76922.1', '3.1e-86', 844],
-+	   [ 'gb|AAC76994.1|', 449, 'AAC76994.1', '2.8e-47', 483]);
-+$count = 0;
-+while( $hit = $result->next_hit ) {
-+    my $d = shift @valid;
-+
-+    ok($hit->name, shift @$d);
-+    ok($hit->length, shift @$d);
-+    ok($hit->accession, shift @$d);
-+    ok($hit->significance, shift @$d );
-+    ok($hit->raw_score, shift @$d );
-+
-+    if( $count == 0 ) {
-+	while( my $hsp = $hit->next_hsp ) {
-+	    ok($hsp->query->start, 1);
-+	    ok($hsp->query->end, 820);
-+	    ok($hsp->hit->start, 1);
-+	    ok($hsp->hit->end, 820);
-+	    ok($hsp->length('hsp'), 820);
-+	    
-+	    ok($hsp->evalue == 0.0);
-+	    ok($hsp->pvalue == 0.0);
-+	    ok($hsp->score, 4141);
-+	    ok($hsp->bits,1462.8);	    	    
-+	    ok($hsp->percent_identity, 100);
-+	    ok($hsp->frac_identical('query'), 1.00);
-+	    ok($hsp->frac_identical('hit'), 1.00);
-+	    ok($hsp->gaps, 0);	    
-+	}
-+    }
-+    last if( $count++ > @valid );
-+}
-+
-+# test tblastx 
-+$searchio = new Bio::SearchIO ('-format' => 'blast',
-+			       '-file'   => Bio::Root::IO->catfile('t','data','HUMBETGLOA.tblastx'));
-+
-+$result = $searchio->next_result;
-+ok($result->database_name, 'ecoli.nt');
-+ok($result->database_letters, 4662239);
-+ok($result->database_entries, 400);
-+ok($result->algorithm, 'TBLASTX');
-+ok($result->algorithm_version, '2.1.2');
-+ok($result->query_name, qr/HUMBETGLOA Human haplotype C4 beta-globin gene, complete cds./);
-+ok($result->query_length, 3002);
-+ok($result->get_statistic('kappa'), 0.135);
-+ok($result->get_statistic('lambda'), 0.318);
-+ok($result->get_statistic('entropy'), 0.401);
-+ok($result->get_statistic('dbletters'), 4662239);
-+ok($result->get_statistic('dbentries'), 400);
-+ok($result->get_statistic('T'), 13);
-+ok($result->get_statistic('decayconst'), 0.1);
-+
-+ok($result->get_parameter('matrix'), 'BLOSUM62');
-+
-+@valid = ( [ 'gb|AE000479.1|AE000479', 10934, 'AE000479', '0.13', 34],
-+	   [ 'gb|AE000302.1|AE000302', 10264, 'AE000302', '0.61', 31],
-+	   [ 'gb|AE000277.1|AE000277', 11653, 'AE000277', '0.84', 31]);
-+$count = 0;
-+
-+while( $hit = $result->next_hit ) {
-+    my $d = shift @valid;
-+    ok($hit->name, shift @$d);
-+    ok($hit->length, shift @$d);
-+    ok($hit->accession, shift @$d);
-+    ok($hit->significance, shift @$d );
-+    ok($hit->raw_score, shift @$d );
-+
-+    if( $count == 0 ) {
-+	while( my $hsp = $hit->next_hsp ) {
-+	    ok($hsp->query->start, 1057);
-+	    ok($hsp->query->end, 1134);
-+	    ok($hsp->query->strand, 1);
-+	    ok($hsp->hit->end, 5893);
-+	    ok($hsp->hit->start, 5816);
-+	    ok($hsp->hit->strand, -1);
-+	    ok($hsp->length('hsp'), 26);
-+	    
-+	    ok($hsp->evalue == 0.13);
-+	    ok($hsp->score, 67);
-+	    ok($hsp->bits,33.6);
-+	    ok(sprintf("%.2f",$hsp->percent_identity), 42.31);
-+	    ok(sprintf("%.4f",$hsp->frac_identical('query')), '0.1410');
-+	    ok(sprintf("%.4f",$hsp->frac_identical('hit')), '0.1410');
-+	    ok($hsp->query->frame(), 0);
-+	    ok($hsp->hit->frame(), 1);
-+	    ok($hsp->gaps, 0);	    
-+	    ok($hsp->query_string, 'SAYWSIFPPLGCWWSTLGPRGSLSPL');
-+	    ok($hsp->hit_string, 'AAVWALFPPVGSQWGCLASQWRTSPL');
-+	    ok($hsp->homology_string, '+A W++FPP+G  W  L  +   SPL');
-+	}
-+    }
-+    last if( $count++ > @valid );
-+}
-+
-+$searchio = new Bio::SearchIO(-format => 'fasta',
-+				 -file   => 't/data/HUMBETGLOA.FASTA');
-+$result = $searchio->next_result;
-+ok($result->database_name, qr/dros_clones.2.5/);
-+ok($result->database_letters, 112936249);
-+ok($result->database_entries, 657);
-+ok($result->algorithm, 'FASTN');
-+ok($result->algorithm_version, '3.3t08');
-+ok($result->query_name, qr/HUMBETGLOA Human haplotype C4 beta-globin gene, complete cds./);
-+ok($result->query_length, 3002);
-+ok($result->get_parameter('gapopen'), -16);
-+ok($result->get_parameter('gapext'), -4);
-+ok($result->get_parameter('ktup'), 6);
-+
-+ok($result->get_statistic('lambda'), 0.0823);
-+ok($result->get_statistic('dbletters'), 112936249);
-+ok($result->get_statistic('dbentries'), 657);
-+
-+@valid = ( [ 'BACR21I23', 73982, 'BACR21I23', '0.017', 44],
-+	   [ 'BACR40P19', 73982, 'BACR40P19', '0.017', 44],
-+	   [ 'BACR30L17', 32481, 'BACR30L17', '0.018', 44]);
-+$count = 0;
-+
-+while( my $hit = $result->next_hit ) {
-+    my $d = shift @valid;
-+    ok($hit->name, shift @$d);
-+    ok($hit->length, shift @$d);
-+    ok($hit->accession, shift @$d);
-+    ok($hit->significance, shift @$d );
-+    ok($hit->raw_score, shift @$d );
-+    
-+    if( $count == 0 ) {
-+	while( my $hsp = $hit->next_hsp ) {
-+	    ok($hsp->query->start, 31);
-+	    ok($hsp->query->end, 289);
-+	    ok($hsp->query->strand, -1);
-+	    ok($hsp->hit->end, 65167);
-+	    ok($hsp->hit->start, 64902);
-+	    ok($hsp->hit->strand, 1);
-+	    ok($hsp->length('hsp'), 267);	    
-+	    ok($hsp->evalue == 0.017);
-+	    ok($hsp->score, 134.5);
-+	    ok($hsp->bits,44.2);
-+	    ok(sprintf("%.2f",$hsp->percent_identity), '57.30');
-+	    ok(sprintf("%.4f",$hsp->frac_identical('query')), 0.5907); 
-+	    ok(sprintf("%.4f",$hsp->frac_identical('hit')), 0.5752); 
-+	    ok($hsp->query->frame(), 0);
-+	    ok($hsp->hit->frame(), 0);
-+	    ok($hsp->gaps, 159);
-+	    ok($hsp->gaps('query'), 8);
-+	    ok($hsp->gaps('hit'),1);
-+	    ok($hsp->query_string, 'GATTAAAACCTTCTGGTAAGAAAAGAAAAAATATATATATATATATATGTGTATATGTACACACATACATATACATATATATGCATTCATTTGTTGTTGTTTTTCTTAATTTGCTCATGCATGCTA----ATAAATTATGTCTAAAAATAGAAT---AAATACAAATCAATGTGCTCTGTGCATTA-GTTACTTATTAGGTTTTGGGAAACAAGAGGTAAAAAACTAGAGACCTCTTAATGCAGTCAAAAATACAAATAAATAAAAAGTCACTTACAACCCAAAGTGTGACTATCAATGGGGTAATCAGTGGTGTCAAATAGGAGGT');
-+	    ok($hsp->hit_string, 'GATGTCCTTGGTGGATTATGGTGTTAGGGTATATATATATATATATATATATATATATATATATATATATATATATATATATATATATATATATATATATATATATATATAATATAATACAAAATATAATACAAAATATAATACAAAATATAATACAAAATATAATACAAAATATAATACAAAATATAATACAAAATATAATATAAAATATAATATAAAATATAATATAAAATAAAATATAAAATAAAATATAAAATAAAATATAAAATAAAATATAAAATAAAATAT-AATATAAAATATAAAATAAAATATAATATAAAATATAATATAAAATATAATATAAAATATAATATAAAATA');
-+	    ok($hsp->homology_string, '                              :::::::::::::::::: : ::::: :: : : ::: ::::: ::::::::  ::  :: : :   : : : : :  ::    : :: ::   ::    : ::: :::     :::::: :::   ::::: ::  :::  :    :    : ::   :::  : ::   : :   : : :: :   :: : : :: : :       ::  : : ::: ::: ::  ::::: ::: : :  :: ::   ::: : : : ::: ::   ');
-+	}
-+    }
-+    last if( $count++ > @valid );
-+} 
-+
-+$searchio = new Bio::SearchIO(-format => 'fasta',
-+				 -file   => 't/data/cysprot1.FASTA');
-+$result = $searchio->next_result;
-+ok($result->database_name, qr/ecoli.aa/);
-+ok($result->database_letters, 1358987);
-+ok($result->database_entries, 4289);
-+ok($result->algorithm, 'FASTP');
-+ok($result->algorithm_version, '3.3t08');
-+ok($result->query_name, 'CYS1_DICDI');
-+ok($result->query_length, 343);
-+ok($result->get_parameter('gapopen'), -12);
-+ok($result->get_parameter('gapext'), -2);
-+ok($result->get_parameter('ktup'), 2);
-+
-+ok($result->get_statistic('lambda'), 0.1456);
-+ok($result->get_statistic('dbletters'), 1358987);
-+ok($result->get_statistic('dbentries'), 4289);
-+
-+
-+@valid = ( [ 'gi|1787478|gb|AAC74309.1|', 512, 'AAC74309', 1.2, 29],
-+	   [ 'gi|1790635|gb|AAC77148.1|', 251, 'AAC77148', 2.1, 27],
-+	   [ 'gi|1786590|gb|AAC73494.1|', 94, 'AAC73494',  2.1, 26]);
-+$count = 0;
-+
-+while( my $hit = $result->next_hit ) {
-+    my $d = shift @valid;
-+
-+    ok($hit->name, shift @$d);
-+    ok($hit->length, shift @$d);
-+    ok($hit->accession, shift @$d);
-+    ok($hit->significance, shift @$d );
-+    ok($hit->raw_score, shift @$d );
-+
-+    if( $count == 0 ) {
-+	while( my $hsp = $hit->next_hsp ) {
-+	    ok($hsp->query->start, 125);
-+	    ok($hsp->query->end, 305);
-+	    ok($hsp->query->strand, 0);
-+	    ok($hsp->hit->start, 2);
-+	    ok($hsp->hit->end, 181);
-+	    ok($hsp->hit->strand, 0);
-+	    ok($hsp->length('hsp'), 188);	    
-+	    ok($hsp->evalue == 1.2);
-+	    ok($hsp->score, 109.2);
-+	    ok($hsp->bits,29.2);
-+	    ok(sprintf("%.2f",$hsp->percent_identity), 23.94);
-+	    ok(sprintf("%.4f",$hsp->frac_identical('query')), 0.2486);
-+	    ok(sprintf("%.4f",$hsp->frac_identical('hit')), '0.2500');
-+	    ok($hsp->query->frame(), 0);
-+	    ok($hsp->hit->frame(), 0);
-+	    ok($hsp->gaps('query'), 7);
-+	    ok($hsp->gaps, 49);	    
-+	    ok($hsp->query_string, 'NKEAIFTDDLPVADYLDDEFINSIPTAFDWRTRGAVTPVKNQGQCGSCWSFSTT-GNV----EGQHFISQNKLVSLSEQNLVDCDHECME-YEGEEACDEGCNGGLQPNAYNYIIKNGGIQTESSYPYTAETGTQCNFNSANIGAKISNFTMIPKNETVMAGYIVSTGP-LAIAADAVEWQFYIGGVFDIPCNPNSLDHGILIVGYSAKNTIFRKNMPYWIVKNSWGADWGEQGYIYLRRGKNTCGVSNFVSTSII');
-+	    ok($hsp->hit_string, 'MKIRSQVGMVLNLDKCIGCHTCSVTCKNVWTSREGVEYAWFNNVETKPGQGF-PTDWENQEKYKGGWI--RKINGKLQPRMGNRAMLLGKIFANPHLPGIDDYYEPFDFDYQNLHTAPEG----SKSQPIARPRSLITGERMAKIEKGPNWEDDLGGEFDKLAKDKNFDN-IQKAMYSQFENTFMMYLPRLCEHCLNPACVATCPSGAIYKREEDGIVLIDQDKCRGWRMCITGCPYKKIYFNWKSGKSEKCIFCYPRIEAGQPTVCSETC');
-+	    ok($hsp->homology_string, '                              . :. :  : :  .: .: . :.:  ::    :: ..   :.. .   :..   : : .: :.:     .  :: :::   :  .  : : ..   :   .     .:.  :. .   .     :.. .     . ::  .:    . .:.  .:: ::   . ...:. :  . ::  .. :   .:                      ');
-+	}
-+    }
-+    last if( $count++ > @valid );
-+} 
-+
-+# test on TFASTXY
-+$searchio = new Bio::SearchIO(-format => 'fasta',
-+			      -file   => 't/data/5X_1895.FASTXY');
-+$result = $searchio->next_result;
-+ok($result->database_name, qr/yeast_nrpep.fasta/);
-+ok($result->database_letters, 4215311);
-+ok($result->database_entries, 9190);
-+ok($result->algorithm, 'FASTY');
-+ok($result->algorithm_version, '3.4t07');
-+ok($result->query_name, '5X_1895.fa');
-+ok($result->query_length, 7972);
-+ok($result->get_parameter('gapopen'), -14);
-+ok($result->get_parameter('gapext'), -2);
-+ok($result->get_parameter('ktup'), 2);
-+ok($result->get_parameter('matrix'), 'BL50');
-+
-+ok($result->get_statistic('lambda'), 0.1711);
-+ok($result->get_statistic('dbletters'), 4215311);
-+ok($result->get_statistic('dbentries'), 9190);
-+
-+
-+@valid = ( [ 'NR_SC:SW-YNN2_YEAST', 1056, 'NR_SC:SW-YNN2_YEAST','1.6e-154', 547],
-+	   [ 'NR_SC:SW-MPCP_YEAST', 311, 'NR_SC:SW-MPCP_YEAST', '1.3e-25', 117],
-+	   [ 'NR_SC:SW-YEO3_YEAST', 300, 'NR_SC:SW-YEO3_YEAST', '5.7e-05', 48]);
-+$count = 0;
-+
-+while( my $hit = $result->next_hit ) {
-+    my $d = shift @valid;
-+
-+    ok($hit->name, shift @$d);
-+    ok($hit->length, shift @$d);
-+    ok($hit->accession, shift @$d);
-+    ok($hit->significance, shift @$d );
-+    ok($hit->raw_score, shift @$d );
-+
-+    if( $count == 0 ) {
-+	while( my $hsp = $hit->next_hsp ) {
-+	    ok($hsp->query->start, 2180);
-+	    ok($hsp->query->end, 5623);
-+	    ok($hsp->query->strand, 1);
-+	    ok($hsp->hit->start, 3);
-+	    ok($hsp->hit->end, 1053);
-+	    ok($hsp->hit->strand, 0);
-+	    ok($hsp->length('hsp'), 1165);
-+
-+	    ok($hsp->evalue == 1.6e-154);
-+	    ok($hsp->score, 2877.6);
-+	    ok($hsp->bits,'547.0');
-+	    ok(sprintf("%.2f",$hsp->percent_identity), 51.67);
-+	    ok(sprintf("%.4f",$hsp->frac_identical('query')), 0.1748);
-+	    ok(sprintf("%.4f",$hsp->frac_identical('hit')), 0.5728);
-+	    ok($hsp->query->frame(), 0);
-+	    ok($hsp->hit->frame(), 0);
-+	    ok($hsp->gaps, 678);	    
-+	    ok($hsp->query_string, 'RKQLDPRIPALINNGVKANHRSFFVMVGDKGRDQVCPGMQAAMRFD*HRCR/LVNLHFLLSQARVSSRPSVLWCYKKD-LGFTT*VAASENLQQTIYFRPIATSHRKKREAKIKRDVKRGIRDANEQDPFELFVTVTDIRYTYYKDSAKILGQTFGMLVLQDYEAITPNLLARTIETVEGGGIVVLLLKTMSSLKQLYAMAM/DKL*CRDGVE*SDFS*LLI*DVHSRYRTDAHQFVQPRFNERFILSLGSNPDCLVLDDELNVLPLSKGKDIQIGKAGEEDDRGRKRKAEELKEMKENLEGVDIVGSLAKLAKTVDQAKAILTFVEAISEKNLSSTVALTAGRGRGKSAALGLAIGAALAHDYSNIFVTSPDPENLKTLFEFVFKALDALGYEEHIDYDVVQSTNPDFKKAIVRVNIFRGHRQTIQYISPEDSHVLGQAELVIIDEAAAIPLPLVRKLIGPYLVFMASTINGYEGTGRSLSIKLIQQLREQTRPSITKDSENAAASSAGSSSKAAAAGRSGAGLVRSLREIKLDEPIRYSPGDNVEKWLNNLLCLDATIVSK---SIQGCPHPSKCELYYVNRDTLFSYHPASEVFLQRMMALYVASHYKNSPNDLQMLSDAPAHHLFVLLPPIDEND-NTLPDPLVVLQVALEGNISREAILKEMAQSGMRSSGDMIPWIISTQFQDNDFATLSGARVVRIATHPDYARMGYGSRAMEALESFYNGTSYNFDDVPVDMGESFAD\VPRSDL*VTSFIPFPQNRTSTECVSQNANLQNDTIAIRDPSRMPPLLQRLSERKPETLDYLGVSFGLTRDLLRFWKKGGFTPLYASQKENALTGEYTFVMLKVLASAGGGGEWLGAFAQGMSCLLLQDEVHMGND*RL*TDFRQRFMNLLSYEAFKKFDASIALSILESTVPRNSPSPAP----KLLTNTELSSLLTPFDIKRLESYADSMLDYHVVLDLVPTIASLFFGKRLETS--LPPAQQAILLALGLQRKNVEALENELGITSTQTLALFGKVLRKMTKSLEDIRKASIASELP-----AEPTLAGRSANGSNKFVALQQTIEQDLADSAVQLNGEDDDASKKEQRELLNTLNMEEFAI-DQGGDWTEAEKQVERLASGKGGTRLSSTVSVKVDKLDD\AKRRRRRARMRVPRMRRR');
-+	    ok($hsp->hit_string, 'KKAIDSRIPSLIRNGVQTKQRSIFVIVGDRARNQ------------------LPNLHYLMMSADLKMNKSVLWAYKKKLLGFT--------------------SHRKKRENKIKKEIKRGTREVNEMDPFESFISNQNIRYVYYKESEKILGNTYGMCILQDFEALTPNLLARTIETVEGGGIVVILLKSMSSLKQLYTMTM-D--------------------VHARYRTEAHGDVVARFNERFILSLGSNPNCLVVDDELNVLPLSGAKNVKPLPPKEDDELPPKQL--ELQELKESLEDVQPAGSLVSLSKTVNQAHAILSFIDAISEKTLNFTVALTAGRGRGKSAALGISIAAAVSHGYSNIFVTSPSPENLKTLFEFIFKGFDALGYQEHIDYDIIQSTNPDFNKAIVRVDIKRDHRQTIQYIVPQDHQVLGQAELVVIDEAAAIPLPIVKNLLGPYLVFMASTINGYEGTGRSLSLKLIQQLRNQNNTSGRESTQTAVVSRDNKEKDSHLHSQS-----RQLREISLDEPIRYAPGDPIEKWLNKLLCLDVTLIKNPRFATRGTPHPSQCNLFVVNRDTLFSYHPVSENFLEKMMALYVSSHYKNSPNDLQLMSDAPAHKLFVLLPPIDPKDGGRIPDPLCVIQIALEGEISKESVRNSLSR-GQRAGGDLIPWLISQQFQDEEFASLSGARIVRIATNPEYASMGYGSRAIELLRDYFEGKF-------TDMSE---D-VRPKDYSI--------KRVSDKELAKT-NLLKDDVKLRDAKTLPPLLLKLSEQPPHYLHYLGVSYGLTQSLHKFWKNNSFVPVYLRQTANDLTGEHTCVMLNVLE--GRESNWLVEFAK---------------------DFRKRFLSLLSYD-FHKFTAVQALSVIESSKKAQDLSDDEKHDNKELTRTHLDDIFSPFDLKRLDSYSNNLLDYHVIGDMIPMLALLYFGDKMGDSVKLSSVQSAILLAIGLQRKNIDTIAKELNLPSNQTIAMFAKIMRKMSQYFRQLLSQSIEETLPNIKDDAIAEMDGEEIKNYNAAEALDQ-MEEDLEEAG----SEAVQAMREKQKELINSLNLDKYAINDNSEEWAESQKSLEIAAKAKGVVSLKTGKKRTTEKAED-IYRQEMKA-MKKPRKSKK');
-+	    ok($hsp->homology_string, '.: .: :::.:: :::....::.::.:::..:.:                  : :::.:. .: ..   :::: :::  ::::                    ::::::: :::...::: :..::.:::: :..  .:::.:::.: ::::.:.:: .:::.::.:::::::::::::::::::.:::.::::::::.:.: :                    ::.::::.::  :  ::::::::::::::.:::.:::::::::: .:...     :.:.   :.   ::.:.::.:: :. .:::..:.:::.::.:::.:..:::::.:. :::::::::::::::::..:.::..: :::::::::.::::::::::.::..:::::.::::::..:::::::.::::::.: : :::::::: :.: .::::::::.::::::::::.:..:.::::::::::::::::::::::.:::::::.:.  :  .....:..:  .. . .   ..:     :.::::.:::::::.::: .:::::.:::::.:....   . .: ::::.:.:. :::::::::::.:: ::..::::::.:::::::::::..::::::.::::::::: .: . .:::: :.:.::::.::.:.. . ... :.:..::.:::.:: ::::..::.:::::.:::::.:.:: :::::::.: :.....:         .::.:   : :  .:  .        .:.: . .... :: .: . .:: . .:::: .:::. :. : :::::.:::..: .:::...:.:.:  :  : ::::.: :::.::   :  ..::  ::.                     :::.::..::::. :.:: :  :::..::.   .. :       : :: :.:.....:::.:::.::....:::::. :..: .: :.:: ..  :  :  .:.:::::.::::::.... .::.. :.::.:.:.:..:::.. .... . ::   ::     :   . :.  .. :   ::.: .:.:: ...    .:  .: ...:.::.:.::....:: :.. .:.:..:..:  :..:: . :..  .  ..: .:   :.. .: :. ::  ..');
-+	}
-+    }
-+    last if( $count++ > @valid );
-+} 
-+
-+# test for MarkW bug in blastN
-+
-+$searchio = new Bio::SearchIO('-format' => 'blast',
-+			      '-file'   => Bio::Root::IO->catfile('t','data','a_thaliana.blastn'));
-+
-+
-+$result = $searchio->next_result;
-+ok($result->database_name, 'All GenBank+EMBL+DDBJ+PDB sequences (but no EST, STS, GSS,or phase 0, 1 or 2 HTGS sequences) ');
-+ok($result->database_letters, 4677375331);
-+ok($result->database_entries, 1083200);
-+ok($result->algorithm, 'BLASTN');
-+ok($result->algorithm_version, '2.2.1');
-+ok($result->query_name, '');
-+ok($result->query_length, 60);
-+ok($result->get_parameter('gapopen'), 5);
-+ok($result->get_parameter('gapext'), 2);
-+ok($result->get_parameter('ktup'), undef);
-+
-+ok($result->get_statistic('lambda'), 1.37);
-+ok($result->get_statistic('kappa'), 0.711);
-+ok($result->get_statistic('entropy'),1.31 );
-+ok($result->get_statistic('T'), 0);
-+ok($result->get_statistic('A'), 30);
-+ok($result->get_statistic('X1'), 6);
-+ok($result->get_statistic('X2'), 15);
-+ok($result->get_statistic('S1'), 12);
-+ok($result->get_statistic('S2'), 17);
-+
-+ok($result->get_statistic('dbentries'), 1083200);
-+
-+@valid = ( [ 'gb|AY052359.1|', 2826, 'AY052359.1', '3e-18', 96],
-+	   [ 'gb|AC002329.2|AC002329', 76170, 'AC002329', '3e-18', 96],
-+	   [ 'gb|AF132318.1|AF132318', 5383, 'AF132318', '0.040', 42]);
-+$count = 0;
-+
-+while( my $hit = $result->next_hit ) {
-+    my $d = shift @valid;
-+    ok($hit->name, shift @$d);
-+    ok($hit->length, shift @$d);
-+    ok($hit->accession, shift @$d);
-+    ok($hit->significance, shift @$d );
-+    ok($hit->raw_score, shift @$d );
-+
-+    if( $count == 0 ) {
-+	while( my $hsp = $hit->next_hsp ) {
-+	    ok($hsp->query->start, 1);
-+	    ok($hsp->query->end, 60);
-+	    ok($hsp->query->strand, 1);
-+	    ok($hsp->hit->start, 154);
-+	    ok($hsp->hit->end, 212);
-+	    ok($hsp->hit->strand, 1);
-+	    ok($hsp->length('hsp'), 60);	    
-+	    ok($hsp->evalue == '3e-18');
-+	    ok($hsp->score, 48);
-+	    ok($hsp->bits,95.6);
-+	    ok(sprintf("%.2f",$hsp->percent_identity), 96.67);
-+	    ok(sprintf("%.4f",$hsp->frac_identical('query')), 0.9667);
-+	    ok(sprintf("%.4f",$hsp->frac_identical('hit')), 0.9831);
-+	    ok($hsp->query->frame(), 0);
-+	    ok($hsp->hit->frame(), 0);
-+	    ok($hsp->gaps('query'), 0);
-+	    ok($hsp->gaps('hit'), 1);
-+	    ok($hsp->gaps, 1);	    
-+	    ok($hsp->query_string, 'aggaatgctgtttaattggaatcgtacaatggagaatttgacggaaatagaatcaacgat');
-+	    ok($hsp->hit_string, 'aggaatgctgtttaattggaatca-acaatggagaatttgacggaaatagaatcaacgat');
-+	    ok($hsp->homology_string, '|||||||||||||||||||||||  |||||||||||||||||||||||||||||||||||');
-+	}
-+    }
-+    last if( $count++ > @valid );
-+} 
-+
-+# TODO: Flesh this test out!
-+$searchio = new Bio::SearchIO ('-format' => 'psiblast',
-+			       '-file'   => Bio::Root::IO->catfile('t','data','HUMBETGLOA.tblastx'));
-+
-+$result = $searchio->next_result;
-+
-+ok($result);
-+$hit = $result->next_hit;
-+$hsp = $hit->next_hsp;
-+ok($hsp->get_aln->isa('Bio::Align::AlignI'));
-+my $writer = Bio::SearchIO::Writer::HitTableWriter->new( 
-+                                  -columns => [qw(
-+                                                  query_name
-+                                                  query_length
-+                                                  hit_name
-+                                                  hit_length
-+                                                  frac_identical_query
-+                                                  expect
-+                                                  )]  );
-+
-+my $out = new Bio::SearchIO(-writer => $writer,
-+			    -file   => ">searchio.out");
-+$out->write_result($result, 1);
-+ok(-e 'searchio.out');
-+my $writerhtml = new Bio::SearchIO::Writer::HTMLResultWriter();
-+my $outhtml = new Bio::SearchIO(-writer => $writerhtml,
-+				-file   => ">searchio.html");
-+ok(-e "searchio.html");
-+
-+END { 
-+    unlink 'searchio.out';
-+    unlink 'searchio.html';
-+
-+}
 diff -Naur bioperl-1.0/t/TCoffee.t bioperl-1.01/t/TCoffee.t
 --- bioperl-1.0/t/TCoffee.t	Mon Mar 18 09:50:34 2002
 +++ bioperl-1.01/t/TCoffee.t	Fri Mar 22 15:29:36 2002
 @@ -1,6 +1,6 @@
  # -*-Perl-*-
  ## Bioperl Test Harness Script for Modules
--## $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
-+## $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
+-## $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++## $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
  
  use strict;
  use vars qw($NUMTESTS);
@@ -3695,8 +3776,8 @@ diff -Naur bioperl-1.0/t/flat.t bioperl-1.01/t/flat.t
  # This is -*-Perl-*- code
  ## Bioperl Test Harness Script for Modules
  ##
--# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
-+# $Id: bioperl-1.0.patch,v 1.1 2002-04-09 01:24:35 lstein Exp $
+-# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
++# $Id: bioperl-1.0.patch,v 1.2 2002-04-12 04:21:21 lstein Exp $
  
  # Before `make install' is performed this script should be runnable with
  # `make test'. After `make install' it should work as `perl test.t'

@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.25 2004-09-12 00:40:30 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.26 2004-10-04 17:25:13 tharris Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -190,7 +190,8 @@ if ($embed) {
   print start_html(''),$img,$map,end_html();
 }
 
-elsif ($image_class eq 'GD::SVG') {
+#elsif ($image_class eq 'GD::SVG') {
+elsif ($image_class =~ /SVG/) {
   # This is a kludge to alert users that their system does not have
   # GD::SVG installed
   my ($version) = (0);

@@ -1,6 +1,8 @@
 # do not remove the { } from the top and bottom of this page!!!
 {
 
+#Icelandic translation done by Gudmundur A. Thorisson <mummi@cshl.edu>
+
  CHARSET =>   'ISO-8859-1',
 
    #----------
@@ -68,6 +70,8 @@ END
    SEARCH   => 'Leita',
 
    DUMP     => 'Dumpa',
+
+   HIGHLIGHT => 'Merkja',
 
    ANNOTATE     => 'Annotera',
 

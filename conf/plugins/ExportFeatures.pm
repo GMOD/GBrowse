@@ -1,4 +1,4 @@
-# $Id: ExportFeatures.pm,v 1.4 2003-11-03 17:56:38 sheldon_mckay Exp $
+# $Id: ExportFeatures.pm,v 1.5 2003-11-09 20:12:31 sheldon_mckay Exp $
 =head1 NAME
 
 Bio::Graphics::Browser::Plugin::ExportFeatures -- a plugin to export 
@@ -46,8 +46,8 @@ use strict;
 use Bio::Graphics::Browser::Plugin;
 use Bio::Graphics::Browser::GFFhelper;
 use Bio::Seq::RichSeq;
-use IO::String;
-use CGI ':standard';
+use IO::Scalar;
+use CGI qw/:standard *sup/;
 
 use vars '$VERSION','@ISA';
 $VERSION = '0.01';
@@ -80,20 +80,27 @@ sub mime_type {
 }
 
 sub config_defaults {
-    { method => 'browser' }
+    { method => 'browser',
+      mode   => 'all' }
 }
 
 sub reconfigure {
     my $self = shift;
     my $conf = $self->configuration;
-    $conf->{'method'} = $self->config_param('method');
+    $conf->{method} = $self->config_param('method');
+    $conf->{mode}   = $self->config_param('mode');
 }
 
 sub configure_form {
     my $self = shift;
     my $conf = $self->configuration;
-    my $html = h3('Dump features to:') .
-	radio_group( -name    => $self->config_name('method'),
+    my $html = 'Dump ' .
+       popup_menu(-name   => $self->config_name('mode'),
+                  -values  => ['selected','all'],
+                  -default => $conf->{mode},
+                  -override => 1 ) . ' features' . br .
+       h3('Dump features to:') .
+       radio_group( -name    => $self->config_name('method'),
                      -values  => ['*Artemis', 'browser'],
 		     -default => $conf->{method} ) .
         p( "<SUP>*</SUP>To edit, install a helper application for MIME type",
@@ -102,22 +109,34 @@ sub configure_form {
 }
 
 sub dump {
-    my ($self, $segment, @more_feature_sets) = @_;
+    my ($self, $segment) = @_;
     my $conf      = $self->configuration;
+    my $mode      = $conf->{mode};
     my $db        = $self->database;
     my $ref       = $segment->ref;
     $segment      = $db->segment(Accession => $ref) || $db->segment($ref);
  
-    my @feats = $segment->features;
-
-    for my $set ( @more_feature_sets ) {
-        if ( $set->can('get_seq_stream') ) {
-	    my $iterator = $set->get_seq_stream;
-	    while ( my $f = $iterator->next_seq ) {
-		push @feats, $f;
-	    }
-	}  
+    # don't use an iterator here because we don't want aggregate features
+    my $feats = join '', $self->selected_features;
+    my @feats;
+    if ( $mode eq 'selected' ) {
+        for ( $segment->features ) {
+            my $type = $_->primary_tag;
+	    push @feats, $_ if $feats =~ /$type/;
+	}
     }
+    else {
+	@feats = $segment->features;
+    }
+
+#    for my $set ( @more_feature_sets ) {
+#        if ( $set->can('get_seq_stream') ) {
+#	    my $iterator = $set->get_seq_stream;
+#	    while ( my $f = $iterator->next_seq ) {
+#		push @feats, $f;
+#	    }
+#	}  
+#    }
 
     my $ft = $self->write_ft( $segment, @feats );
 
@@ -145,8 +164,9 @@ sub write_ft {
     }
     
     my $out = Bio::SeqIO->new( -format => 'embl' );
-    my $io = IO::String->new($table);
-    tie *STDOUT, $io;
+    
+    # write the data to a scalar instead of STDOUT
+    tie *STDOUT, 'IO::Scalar', \$table;
     $out->write_seq($seq);
     untie *STDOUT;
     $table;

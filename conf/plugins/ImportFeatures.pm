@@ -1,4 +1,4 @@
-# $Id: ImportFeatures.pm,v 1.9 2003-11-06 06:52:05 sheldon_mckay Exp $
+# $Id: ImportFeatures.pm,v 1.10 2003-11-09 20:12:31 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -146,6 +146,7 @@ use IO::String;
 use Bio::SeqIO;
 use Bio::Graphics::Browser::Plugin;
 use Bio::Graphics::Browser::GFFhelper;
+use Data::Dumper;
 
 use vars qw /@ISA $ROLLBACK/;
 
@@ -302,7 +303,12 @@ sub dump {
     my $gff = $rollback ? $self->rollback($rollback) : $self->gff;
     
     # add an origin feature if req'd
-    $gff = $self->origin($gff) if $self->{source} && $gff !~ /\torigin\t/i;
+    $gff = $self->origin($gff) if $self->{source} && 
+                                  $gff !~ /\torigin\t/i &&
+				  !$self->{database_ids};
+    
+    # Oracle is case sensitive for attributes
+    $gff =~ s/note=/Note=/gm;    
 
     if ( $conf->{debug} ) {
 	print h2("Rolling back to previous state...", br )
@@ -322,14 +328,41 @@ sub dump {
         # save the state of the segment in case we want to roll back later 
         if ( $ROLLBACK ) {
 	    $self->{rb_loc} ||= $ROLLBACK;
-	    $self->save_state($segment);
+ 	    $self->save_state($segment);
 	}
 
-	my @killme = $segment->features;
-	my $killed = $db->delete_features( @killme );
+        my (@killme, @killme2);
 
+        if ( $self->{database_ids} ) {
+	    # kill features by database id
+	    @killme = @{$self->{database_ids}};
+	    
+	    # remove any full length Component:reference features
+	    # (GFF.pm will add a new one)
+	    my $iterator = $segment->get_seq_stream('Component');
+	    while ( my $comp = $iterator->next_seq ) {
+		if ( $comp->length == $segment->length ) {
+		    push @killme2, $comp;
+		}
+	    }
+	}
+	else {
+	    @killme = $segment->features;
+	}
+	
+        my $killed = $db->delete_features( @killme );
+	
+	# look out for stale database ids
+	if ( $killed && $killed == 0 ) {
+	    print h3("Problem deleting features by database ID" . br .
+		     "The IDs may be stale. 'Selected' feature edits must " .
+		     "be loaded immediately upon completion");
+	    exit;
+	}
 
-        print h2("I removed $killed features from the database"), pre(join "\n", @killme) 
+        $killed += $db->delete_features(@killme2);
+
+	print h2("I removed $killed features from the database"), pre(join "\n", @killme) 
 	    if $conf->{debug}; 
     }
 	
@@ -396,8 +429,9 @@ sub gff {
     }    
 
     unless ( $file ) {
-        print h2("Error: No file was selected");
-	exit;
+        # we don't the text ending up as a cookie, so not plugin prefix
+        # for the text parameter
+        $text = param('text');
     }
     else {
 	while ( <$file> ) {
@@ -407,6 +441,8 @@ sub gff {
 	    $text .= $_;
 	}
     }
+
+    $self->{database_ids} = []if $text =~ /database_id/m;    
 
     if ( $format eq 'GENBANK' ) {
 	$self->{source} = 'GenBank';
@@ -526,10 +562,13 @@ sub seq2GFF {
     print $seq->desc, br;
     $self->{desc} = $seq->desc;
     
-    # crush evil embedded semicolons
     for ( @feats ) {
         for my $t ( $_->all_tags ) {
-	    my @v = $_->remove_tag($t);
+            my @v = $_->remove_tag($t);
+	    if ($t eq 'database_id') {
+		push @{$self->{database_ids}}, $v[0];
+		next;
+	    }
 	    for my $v ( @v ) {
 		$v =~ s/;/,/g;
 		$_->add_tag_value( $t => $v );

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.7 2003-08-27 00:13:27 lstein Exp $
+# $Id: GFFDumper.pm,v 1.8 2003-08-27 21:20:54 markwilkinson Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -40,9 +40,13 @@ sub dump {
 sub do_dump {
   my $iterator = shift;
   while (my $f = $iterator->next_seq) {
-    print $f->gff_string,"\n";
+    my $s = $f->gff_string;
+    chomp $s;
+    print "$s\n";
     for my $s ($f->sub_SeqFeature) {
-      print $s->gff_string,"\n";
+        my $s = $f->gff_string;
+        chomp $s;
+        print "$s\n";
     }
   }
 }

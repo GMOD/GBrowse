@@ -1,9 +1,9 @@
 package MobyServices::b64_encoded_jpeg_renderer;
 use strict;
-use XML::DOM;
+use XML::LibXML;
+use MOBY::MobyXMLConstants;
 our @ISA = qw(Exporter);
 use File::Temp qw/ tempfile /;
-#our @EXPORT = qw(render type);
 our @EXPORT_OK = qw(render type);
 use MIME::Base64;
 
@@ -15,9 +15,9 @@ sub type {
 sub render {
     my ($DOM, $htmldir,$imgdir) = @_;
     my $content;
-    foreach my $subnode($DOM->getChildNodes){
-        next unless  (($subnode->getNodeType == TEXT_NODE) || ($subnode->getNodeType == CDATA_SECTION_NODE));
-        $content .=$subnode->toString;
+    foreach my $subnode($DOM->childNodes){
+        next unless  (($subnode->nodeType == TEXT_NODE) || ($subnode->nodeType == CDATA_SECTION_NODE));
+        $content .=$subnode->textContent;
     }
     $content =~ s/^\s+//; $content =~ s/\s+$//;
     my $bindata = decode_base64($content);

@@ -1,8 +1,8 @@
 package MobyServices::text_formatted_renderer;
 use strict;
-use XML::DOM;
+use XML::LibXML;
+use MOBY::MobyXMLConstants;
 our @ISA = qw(Exporter);
-#our @EXPORT = qw(render type);
 our @EXPORT_OK = qw(render type);
 
 
@@ -13,13 +13,17 @@ sub type {
 sub render {
     my ($DOM, $htmldir,$imgdir) = @_;
     my $content;
-    foreach my $subnode($DOM->getChildNodes){
-        next unless  (($subnode->getNodeType == TEXT_NODE) || ($subnode->getNodeType == CDATA_SECTION_NODE));
+    foreach my $subnode($DOM->childNodes){
+        next unless  (($subnode->nodeType == TEXT_NODE) || ($subnode->nodeType == CDATA_SECTION_NODE));
         no strict 'refs';
-        $content .=$subnode->toString;
+        $content .=$subnode->textContent;
     }
 
-    $content =~ s/(\S{100})/$1\<br\>/g;
+    return ("<pre></pre>", 0) unless $content;
+
+    if ($content =~ /(\S{100})/){
+	    $content =~ s/(\S{100})/$1\<br\>/g;
+    }
     if ($content =~ /\S/){
         return ("<pre>$content</pre>",0);# the 0 indicates that we have only rendered the top-level XML of this object
     } else {
@@ -45,7 +49,6 @@ just put the renderer in your gbrowse.conf/MobyServices folder
 and it will work.
 
 =head1 DESCRIPTION
-
 This renderer returns HTML that fits between the
 <td> tags in a web-page to display the content
 of a text-formatted (or ontological child of) object.

@@ -3,9 +3,7 @@ use strict;
 use XML::LibXML;
 use MOBY::MobyXMLConstants;
 our @ISA = qw(Exporter);
-#our @EXPORT = qw(render type);
 our @EXPORT_OK = qw(render type);
-
 
 sub type {
     return "text-xml";

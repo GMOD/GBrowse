@@ -22,9 +22,11 @@ conf/plugins/OligoFinder.pm
 conf/plugins/RestrictionAnnotator.pm
 conf/plugins/test.pm
 docs/configuration.txt
+docs/gbrowse_img.txt
 extras/README
 extras/bioperl-1.0.patch
 gbrowse.PLS
+gbrowse_img.PLS
 htdocs/annotation_help.html
 htdocs/gbrowse.css
 htdocs/general_help.html

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.18 2002-04-15 21:59:42 lstein Exp $
+# $Id: Browser.pm,v 1.19 2002-05-04 20:38:26 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
@@ -19,7 +19,9 @@ $VERSION = '1.12';
 @ISA    = 'Exporter';
 @EXPORT = 'commas';
 
-use constant RULER_INTERVALS => 20;  # fineness of the centering map on the ruler
+use constant RULER_INTERVALS   => 20;  # fineness of the centering map on the ruler
+use constant TOO_MANY_SEGMENTS => 5_000;
+use constant MAX_SEGMENT       => 1_000_000;
 
 sub new {
   my $class    = shift;
@@ -298,6 +300,7 @@ sub make_alt {
 #    'feature_files' A hash of Bio::Graphics::FeatureFile objects containing 3d party features
 #    'options'       An hashref of options, where 0=auto, 1=force no bump, 2=force bump, 3=force label
 #    'tracks'        List of named tracks, in the order in which they are to be shown
+#    'label_scale'   If true, prints chromosome name next to scale
 sub image_and_map {
   my $self    = shift;
   my %config  = @_;
@@ -326,7 +329,8 @@ sub image_and_map {
 				       );
   $panel->add_track($segment   => 'arrow',
 		    -double => 1,
-		    -tick=>2,
+		    -tick  => 2,
+		    -label => $config{label_scale} ? eval{$segment->ref} : 0,
 		   );
 
   my (%tracks,@blank_tracks);
@@ -582,6 +586,110 @@ sub hits_on_overview {
     $html{$ref} = $self->_hits_to_html($ref,$gd,$boxes);
   }
   return \%html;
+}
+
+# fetch a list of Segment objects given a name or range
+# (this used to be in gbrowse executable itself)
+sub name2segments {
+  my $self = shift;
+  my ($name,$db,$toomany) = @_;
+  $toomany ||= TOO_MANY_SEGMENTS;
+  my $max_segment = $self->config('max_segment') || MAX_SEGMENT;
+
+  my (@segments,$class,$start,$stop);
+  if ($name =~ /([\w._-]+):(-?\d+),(-?\d+)$/ or
+      $name =~ /([\w._-]+):(-?[\d,]+)(?:-|\.\.)?(-?[\d,]+)$/) {
+    $name = $1;
+    $start = $2;
+    $stop = $3;
+    $start =~ s/,//g; # get rid of commas
+    $stop  =~ s/,//g;
+  }
+
+  elsif ($name =~ /^(\w+):(.+)$/) {
+    $class = $1;
+    $name  = $2;
+  }
+
+  my @argv = (-name  => $name);
+  push @argv,(-class => $class) if defined $class;
+  push @argv,(-start => $start) if defined $start;
+  push @argv,(-stop  => $stop)  if defined $stop;
+  @segments = $name =~ /\*/ ? $db->get_feature_by_name(@argv) 
+                            : $db->segment(@argv);
+
+  # Here starts the heuristic part.  Try various abbreviations that
+  # people tend to use for chromosomal addressing.
+  if (!@segments && $name =~ /^([\dIVXA-F]+)$/) {
+    my $id = $1;
+    foreach (qw(CHROMOSOME_ Chr chr)) {
+      my $n = "${_}${id}";
+      my @argv = (-name  => $n);
+      push @argv,(-class => $class) if defined $class;
+      push @argv,(-start => $start) if defined $start;
+      push @argv,(-stop  => $stop)  if defined $stop;
+      @segments = $name =~ /\*/ ? $db->get_feature_by_name(@argv) 
+                                : $db->segment(@argv);
+      last if @segments;
+    }
+  }
+
+  # try to remove the chr CHROMOSOME_I
+  if (!@segments && $name =~ /^(chromosome_?|chr)/i) {
+    (my $chr = $name) =~ s/^(chromosome_?|chr)//i;
+    @segments = $db->segment($chr);
+  }
+
+  # try the wildcard  version, but only if the name is of significant length
+  if (!@segments && length $name > 3) {
+    @argv = (-name => "$name*");
+    push @argv,(-start => $start) if defined $start;
+    push @argv,(-stop  => $stop)  if defined $stop;
+    @segments = $name =~ /\*/ ? $db->get_feature_by_name(@argv) 
+                              : $db->segment(@argv);
+  }
+
+  # try any "automatic" classes that have been defined in the config file
+  if (!@segments && !$class &&
+      (my @automatic = split /\s+/,$self->setting('automatic classes') || '')) {
+    my @names = length($name) > 3 && 
+      $name !~ /\*/ ? ($name,"$name*") : $name;  # possibly add a wildcard
+  NAME:
+      foreach $class (@automatic) {
+	for my $n (@names) {
+	  @argv = (-name=>$n);
+	  push @argv,(-start => $start) if defined $start;
+	  push @argv,(-stop  => $stop)  if defined $stop;
+	  # we are deliberately doing something different in the case that the user
+	  # typed in a wildcard vs an automatic wildcard being added
+	  @segments = $name =~ /\*/ ? $db->get_feature_by_name(-class=>$class,@argv)
+	                            : $db->segment(-class=>$class,@argv);
+	  last NAME if @segments;
+	}
+      }
+  }
+
+  # user wanted multiple locations, so user gets them
+  return @segments if $name =~ /\*/;
+
+  # Otherwise we try to merge segments that are adjacent if we can!
+
+  # This tricky bit is called when we retrieve multiple segments or when
+  # there is an unusually large feature to display.  In this case, we attempt
+  # to split the feature into its components and offer the user different
+  # portions to look at, invoking merge() to select the regions.
+  my $max_length = 0;
+  foreach (@segments) {
+    $max_length = $_->length if $_->length > $max_length;
+  }
+  if (@segments > 1 || $max_length > $max_segment) {
+    my @s     = $db->fetch_feature_by_name(-class => $segments[0]->class,
+					   -name  => $segments[0]->seq_id,
+					   -automerge=>0);
+    @segments     = $self->merge($db,\@s,(get_ranges())[-1])
+      if @s > 1 && @s < TOO_MANY_SEGMENTS;
+  }
+  @segments;
 }
 
 # utility called by hits_on_overview

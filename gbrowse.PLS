@@ -42,10 +42,9 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.27 2002-04-29 15:54:14 lstein Exp $
+# $Id: gbrowse.PLS,v 1.28 2002-05-04 20:38:25 lstein Exp $
 
 use strict;
-use lib '/home/lstein/projects/Generic-Genome-Browser/lib/';
 use Bio::DB::GFF;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
@@ -921,7 +920,7 @@ sub get_segments {
   $db->debug(0);
 
   if (my $name = $settings->{name}) {
-    @segments = name2segments($name,$db);
+    @segments = $CONFIG->name2segments($name,$db,TOO_MANY_SEGMENTS);
   }
 
   elsif (my $ref = $settings->{ref}) {
@@ -962,108 +961,6 @@ sub truncated_segment {
   return $db->segment(-name=>$ref,-start=>1,-stop=>4)                         if $trunc_left;
 }
 
-# try to guess the reference segment from the name, given the variety of
-# ways that people abuse names.
-sub name2segments {
-  my $name = shift;
-  my $db   = shift || open_database();
-
-  my (@segments,$class,$start,$stop);
-  if ($name =~ /([\w._-]+):(-?\d+),(-?\d+)$/ or
-      $name =~ /([\w._-]+):(-?[\d,]+)(?:-|\.\.)?(-?[\d,]+)$/) {
-    $name = $1;
-    $start = $2;
-    $stop = $3;
-    $start =~ s/,//g; # get rid of commas
-    $stop  =~ s/,//g;
-  }
-
-  elsif ($name =~ /^(\w+):(.+)$/) {
-    $class = $1;
-    $name  = $2;
-  }
-
-  my @argv = (-name  => $name);
-  push @argv,(-class => $class) if defined $class;
-  push @argv,(-start => $start) if defined $start;
-  push @argv,(-stop  => $stop)  if defined $stop;
-  @segments = $name =~ /\*/ ? $db->get_feature_by_name(@argv) 
-                            : $db->segment(@argv);
-
-  # Here starts the heuristic part.  Try various abbreviations that
-  # people tend to use for chromosomal addressing.
-  if (!@segments && $name =~ /^([\dIVXA-F]+)$/) {
-    my $id = $1;
-    foreach (qw(CHROMOSOME_ Chr chr)) {
-      my $n = "${_}${id}";
-      my @argv = (-name  => $n);
-      push @argv,(-class => $class) if defined $class;
-      push @argv,(-start => $start) if defined $start;
-      push @argv,(-stop  => $stop)  if defined $stop;
-      @segments = $name =~ /\*/ ? $db->get_feature_by_name(@argv) 
-                                : $db->segment(@argv);
-      last if @segments;
-    }
-  }
-
-  # try to remove the chr CHROMOSOME_I
-  if (!@segments && $name =~ /^(chromosome_?|chr)/i) {
-    (my $chr = $name) =~ s/^(chromosome_?|chr)//i;
-    @segments = $db->segment($chr);
-  }
-
-  # try the wildcard  version, but only if the name is of significant length
-  if (!@segments && length $name > 3) {
-    @argv = (-name => "$name*");
-    push @argv,(-start => $start) if defined $start;
-    push @argv,(-stop  => $stop)  if defined $stop;
-    @segments = $name =~ /\*/ ? $db->get_feature_by_name(@argv) 
-                              : $db->segment(@argv);
-  }
-
-  # try any "automatic" classes that have been defined in the config file
-  if (!@segments && !$class &&
-      (my @automatic = split /\s+/,$CONFIG->setting('automatic classes') || '')) {
-    my @names = length($name) > 3 && 
-      $name !~ /\*/ ? ($name,"$name*") : $name;  # possibly add a wildcard
-  NAME:
-      foreach $class (@automatic) {
-	for my $n (@names) {
-	  @argv = (-name=>$n);
-	  push @argv,(-start => $start) if defined $start;
-	  push @argv,(-stop  => $stop)  if defined $stop;
-	  # we are deliberately doing something different in the case that the user
-	  # typed in a wildcard vs an automatic wildcard being added
-	  @segments = $name =~ /\*/ ? $db->get_feature_by_name(-class=>$class,@argv)
-	                            : $db->segment(-class=>$class,@argv);
-	  last NAME if @segments;
-	}
-      }
-  }
-
-  # user wanted multiple locations, so user gets them
-  return @segments if $name =~ /\*/;
-
-  # Otherwise we try to merge segments that are adjacent if we can!
-
-  # This tricky bit is called when we retrieve multiple segments or when
-  # there is an unusually large feature to display.  In this case, we attempt
-  # to split the feature into its components and offer the user different
-  # portions to look at, invoking merge() to select the regions.
-  my $max_length = 0;
-  foreach (@segments) {
-    $max_length = $_->length if $_->length > $max_length;
-  }
-  if (@segments > 1 || $max_length > $MAX_SEGMENT) {
-    my @s     = $db->fetch_feature_by_name(-class => $segments[0]->class,
-					   -name  => $segments[0]->seq_id,
-					   -automerge=>0);
-    @segments     = $CONFIG->merge($db,\@s,(get_ranges())[-1])
-      if @s > 1 && @s < TOO_MANY_SEGMENTS;
-  }
-  @segments;
-}
-
 ################ perform keyword search ###############
 sub do_keyword_search {
   my $settings = shift;
@@ -1072,7 +969,7 @@ sub do_keyword_search {
 
   my $match_sub = 'sub {';
   foreach (split /\s+/,$searchterm) {
-    $match_sub .= "return unless \$_[0] =~ /\Q$_\E/i; ";
+    $match_sub .= "return unless \$_[0] =~ /\Q$_\E/; ";
   }
   $match_sub .= "};";
   my $match = eval $match_sub;
@@ -1570,7 +1467,7 @@ sub coordinate_mapper {
     unless ($segments{$refname}) {
       my @segments = grep {
 	$_->abs_ref eq $ref && $_->abs_start <= $stop && $_->abs_stop >= $start
-      } name2segments($refname,$db);
+      } $CONFIG->name2segments($refname,$db,TOO_MANY_SEGMENTS);
       return unless @segments;
       $segments{$refname} = $segments[0];
     }

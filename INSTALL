@@ -287,7 +287,31 @@ released.  There are two ways to get it:
    When prompted, the password is "cvs".  For more details, see
    http://cvs.bioperl.org.
 
-9. SUPPORT AND BUG REPORTS
+9. THE GBROWSE_IMG SCRIPT
+
+The gbrowse_img CGI script (a new feature as of version 1.41), is a
+stripped-down version of gbrowse which just generates images.  It is
+suitable for incorporating into <img> tags in order to make a
+thumbnail of a region of interest.  The thumbnail can then be linked
+to the full-featured gbrowse.  Here is an example of how this works
+using the WormBase site:
+
+  <a href="http://www.wormbase.org/db/seq/gbrowse?source=wormbase;name=mec-3">
+    <img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=mec-3;width=200">
+  </a>
+
+This will generate a 200-pixel inline image of the region.  Clicking
+on the image will link to the fully-navigable gbrowse script.
+
+You can also use gbrowse_img to superimpose temporary features (like
+BLAST hits) on the existing genome features.
+
+Read docs/gbrowse_img.txt for the CGI parameters and other
+instructions. A copy of these instructions in HTML form will be
+generated when gbrowse_img is called without any arguments.  Type
+http://your.host/cgi-bin/gbrowse_img into your favorite web browser.
+
+10. SUPPORT AND BUG REPORTS
 
 Please send requests for help to gmod-devel@lists.sourceforge.net.
 There is also a formal bug tracking and feature request system in
@@ -298,4 +322,4 @@ Have fun!
 
 Lincoln Stein & the GMOD team
 lstein@cshl.org
-April 12, 2002
+May 5, 2002

@@ -62,6 +62,7 @@ WriteMakefile(
 				 'bin/process_gadfly.PLS' => 'bin/process_gadfly.pl',
 				 'bin/process_wormbase.PLS' => 'bin/process_wormbase.pl',
 				 'gbrowse.PLS'  => 'gbrowse',
+				 'gbrowse_img.PLS'  => 'gbrowse_img',
 				 },
 	      EXE_FILES      => [
 				 'bin/process_wormbase.pl',
@@ -85,6 +86,7 @@ sub MY::processPL {
   package MY;
   my $inherited = shift->SUPER::processPL(@_);
   $inherited =~ s/:: gbrowse\.PLS/:: gbrowse.PLS GGB.def/;
+  $inherited =~ s/:: gbrowse_img\.PLS/:: gbrowse_img.PLS GGB.def/;
   $inherited;
 }
 
@@ -152,7 +154,9 @@ cgi_install :: gbrowse
 	\@dir=$OPTIONS{CGIBIN}; \\
 	mkdir -p \$\$dir; \\
 	cp $Bin/gbrowse \$\$dir; \\
-	chmod +x \$\$dir/gbrowse
+	chmod +x \$\$dir/gbrowse; \\
+	cp $Bin/gbrowse_img \$\$dir; \\
+	chmod +x \$\$dir/gbrowse_img
 
 };
 }

@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.1 2004-02-19 10:57:40 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.2 2004-03-12 15:21:58 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -18,10 +18,16 @@ be platfrom independent because Bio::PrimerDesigner can access the program
 via a CGI wrapper for a remote installation on a *nix server.
 The target for PCR primer design is selected by clicking on an image map and 
 (optionally) further refined by selecting an individual feature that overlaps the 
-selected sequence coordinate.  A series of increasing PCR product sizes is 
-cycled until products big enough to flank the targetted feature are found.
+selected sequence coordinate.  
 
-Support for ePCR-based  scanning for false priming will eventually be added.
+A series of increasing PCR product sizes is cycled until products big enough 
+to flank the targetted feature are found.  However, for optimal primers and
+improved speed, it is better to define a specific product size-range
+
+
+head1 TO-DO
+
+Add support for ePCR-based scanning for false priming
 
 =head1 FEEDBACK
 
@@ -171,12 +177,12 @@ sub dump {
         next if $e < $target || $s > $target;
         my $tag  = $f->method;
         my $name = $f->name;
-        push @f, "$name $tag: $s..$e";
+        push @f, "$name $tag: $s..$e Size: " . abs($s - $e). " bp";
     }
     if ( @f ) {
-	my $checkbox .= checkbox_group( -name    => $self->config_name('tfeat'),
-					-values  => \@f,
-					-rows    => 4 );
+	my $checkbox .= checkbox_group ( -name    => $self->config_name('tfeat'),
+					 -values  => \@f,
+					 -rows    => 4 );
 
 	# override stylesheet for table width
 	my $pixels = 300 + (int((@f/3) + 0.5) * 300) . 'px';
@@ -261,7 +267,7 @@ sub design_primers {
 
     my $res = $pcr->design( %atts ) or die $pcr->error;
    
-    print $self->primer_results( $res, $segment );
+    $self->primer_results( $res, $segment );
     exit;
 }
 
@@ -271,53 +277,71 @@ sub primer_results {
     my $ref = $segment->ref;
     my $num = grep { /^\d+$/ } keys %$res;
 
+    print h2("No primers found"), pre($res->raw_output) and exit 
+	unless $res->left;
+
     my @attributes = qw/ left right startleft startright tmleft tmright
                          qual lqual rqual leftgc rightgc /;
 
-    my $html;
+    my @rows;
  
+    my $img = $self->segment_map($segment, $res);
+    $img .= ";style=PCR+glyph=primers+bgcolor=red+height=10";
+
     for my $n ( 1 .. $num ) {
 	my %r;
-
 	for ( @attributes ) {
 	    $r{$_} = $res->$_($n);
 	}
         next unless $r{left};
 
-	$r{prod} = $r{startright} - $r{startleft};
+        $r{prod} = $r{startright} - $r{startleft};
 	$r{startleft}  += $offset;
 	$r{startright} += $offset;
         for ( qw/ qual lqual rqual / ) {
 	    $r{$_} =~ s/^(\S{6}).+/$1/;
+
+        # low primer pair quality warning
+	    if ( $r{$_} > 1 ) {
+		my $msg = "Primer-pair penalty (quality score) $r{$_}\\n" .
+                    "For best results, a primer-pair " .
+		    "should be quality score of < 1.\\nThe score for the pair is the " .
+		    "the sum of the score for each individual primer.\\n" .
+		    "If the high score is due to a departure from optimal primer " .
+                    "GC-content or Tm, the primers are pobably OK to use.  " .
+                    "Otherwise, try adjusting the design " .
+		    "parameters (especially the product size-range).\\n";
+		$msg = "alert('$msg')";
+		$r{$_} = a( { -href => 'javascript:void(0)',
+			      -onclick => $msg }, b(font({-color=>'red'},$r{$_})));
+		
+	    }
 	}
-        
 	
-	my $img = $self->segment_map($segment, 1);
 	$img .= ";add=$ref+PCR+Primer_set_$n+$r{startleft}..$r{startright}";
-        $img .= ";style=PCR+glyph=primers+bgcolor=red+height=10";
+
+	push @rows, Tr( [
+			 td( { -bgcolor => 'blue' },
+			     [ map { font( { -color => 'white' }, b($_)) }
+			       qw/Set Primer Sequence Tm %GC Coord 
+			       Quality Product Primer_Pair_Quality/ ] ), 
+			 td( [ $n, 'left', $r{left}, $r{tmleft}, $r{leftgc},
+			       $r{startleft}, $r{lqual}, '&nbsp;', '&nbsp;' ]),
+			 td( [ '&nbsp;', 'right', $r{right}, $r{tmright}, $r{rightgc},
+			       $r{startright}, $r{rqual}, $r{prod}, $r{qual}])
+			 ]
+			);
+    }
+
+    if ( @rows ) {
 	$img = img( { -src => $img } );
-	
-	$html .= table( { -bgcolor => 'lightblue' }, 
-		       Tr( [
-			    td( { -bgcolor => 'blue' },
-				[ map { font( { -color => 'white' }, b($_)) }
-                                  qw/Set Primer Sequence Tm %GC Coord 
-				  Quality Product Primer_Pair_Quality/ ] ), 
-			    td( [ $n, 'left', $r{left}, $r{tmleft}, $r{leftgc},
-				    $r{startleft}, $r{lqual}, '&nbsp;', '&nbsp;' ]),
-                            td( [ '&nbsp;', 'right', $r{right}, $r{tmright}, $r{rightgc},
-				    $r{startright}, $r{rqual}, $r{prod}, $r{qual}]),
-			    td( { -colspan => 9 }, $img )
-			    ]
-			   )
-		       ) . br;
-    }
-    if ( $html ) {
-	return $html;
-    }
-    else {
-	print h1($res->error), pre($res->raw_output);
-	exit;
+	print h2("$segment Primer Design Results"),
+	table( { -bgcolor => 'lightblue', -width => 810 }, 
+	       [
+		Tr( td( { -colspan => 9 }, $img )),
+		@rows
+	       ]
+	     );
     }
 }
 
@@ -331,16 +355,20 @@ sub unit_label {
 }
 
 sub segment_map {
-    my ($self, $segment, $raw) = @_;
+    my ($self, $segment, $res) = @_;
     my @tracks = $self->selected_tracks;
-    my $name = $segment->ref . ':' . $segment->start . '..' . $segment->end;
+    my $offset = $segment->start - 1;
+    my $start = $res ? ($res->startleft - 500 + $offset) : $segment->start;
+    my $stop  = $res ? ($res->startright + 500 + $offset) : $segment->stop;
+
+    my $name = $segment->ref . ":$start..$stop";
     my $url = self_url();
     $url =~ s/\?.+//g;
     my $furl = $url;
     $url =~ s/gbrowse/gbrowse_img/;
     $url .= "?name=$name;width=800;type=add+" . join '+', @tracks;
 
-    return $url if $raw;    
+    return $url if $res;    
 
     my $factor = $segment->length/800;
     

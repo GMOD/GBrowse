@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.29 2002-05-06 23:15:18 lstein Exp $
+# $Id: gbrowse.PLS,v 1.30 2002-05-07 00:07:11 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -1009,10 +1009,11 @@ sub multiple_choices {
 
   $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
   my $overviews = $CONFIG->hits_on_overview($db,$results);
+  my $count = @$results;
 
   print start_table();
   print TR({-class=>'datatitle'},th({-colspan=>4},
-	      "The following regions match your request."));
+	      "The following $count regions match your request."));
   my $url = url(-relative=>1,-path_info=>1);
 
   local $^W = 0;  # get rid of non-numeric warnings coming out of by_score_and_position

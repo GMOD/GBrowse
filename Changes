@@ -1,3 +1,19 @@
+1.52    Thu Aug 21 14:40:54 EDT 2003
+        * Security hole that allowed the display of /etc/passwd and other
+	files fixed
+	* Documentation reworked as pod and which is converted to html on
+	install.  That documentation is then available at
+	http://localhost/gbrowse
+	* Added an extensive tutorial, also available at http://localhost/gbrowse
+	* Added tools for making it easier to create a PPM package for Windows
+	* Added a 'nascent' synteny browser.
+	* Added gbrowse_details, a CGI that gives skeletal details on each feature
+	* Added an optional 'flip mode' to flip the orientation of the display
+	* Added support for the chado database schema
+        * Added support for the PostgreSQL database server
+	* Added a script for converting UCSC genome data to GFF3
+	* Added a script for loading Genbank/EMBL files to a GFF database
+
 1.51	Thu Mar  6 13:40:09 EST 2003
 	* Number of search results returned by keyword search now configurable.
 	* Made it possible for same feature to belong to multiple tracks.

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.30 2002-08-02 22:48:35 lstein Exp $
+# $Id: Browser.pm,v 1.31 2002-08-07 12:10:25 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -73,12 +73,14 @@ $VERSION = '1.14';
 @EXPORT = 'commas';
 
 use constant DEFAULT_WIDTH => 800;
-use constant DEFAULT_DB_ADAPTOR => 'Bio::DB::GFF';
-use constant RULER_INTERVALS   => 20;  # fineness of the centering map on the ruler
-use constant TOO_MANY_SEGMENTS => 5_000;
-use constant MAX_SEGMENT       => 1_000_000;
-use constant DEFAULT_RANGES       => q(100 500 1000 5000 10000 25000 100000 200000 400000);
-use constant MIN_OVERVIEW_PAD  => 20;
+use constant DEFAULT_DB_ADAPTOR  => 'Bio::DB::GFF';
+use constant DEFAULT_KEYSTYLE    => 'bottom';
+use constant DEFAULT_EMPTYTRACKS => 'suppress';
+use constant RULER_INTERVALS     => 20;  # fineness of the centering map on the ruler
+use constant TOO_MANY_SEGMENTS   => 5_000;
+use constant MAX_SEGMENT         => 1_000_000;
+use constant DEFAULT_RANGES      => q(100 500 1000 5000 10000 25000 100000 200000 400000);
+use constant MIN_OVERVIEW_PAD    => 25;
 
 use constant DEBUG => 0;
 
@@ -579,6 +581,11 @@ sub generate_image {
   my $extension = $image->can('png') ? 'png' : 'gif';
   my $data      = $image->can('png') ? $image->png : $image->gif;
   my $signature = md5_hex($data);
+
+  # untaint signature for use in open
+  $signature =~ /^([0-9A-Fa-f]+)$/g or return;
+  $signature = $1;
+
   my ($uri,$path) = $self->tmpdir($self->source.'/img');
   my $url         = sprintf("%s/%s.%s",$uri,$signature,$extension);
   my $imagefile   = sprintf("%s/%s.%s",$path,$signature,$extension);
@@ -604,8 +611,12 @@ sub tmpdir {
   } else {
     $tmpdir = "$ENV{DOCUMENT_ROOT}/$tmpuri";
   }
-  mkpath($tmpdir,0,0777) unless -d $tmpdir;
-  return ($tmpuri,$tmpdir);
+  # we need to untaint tmpdir before calling mkpath()
+  return unless $tmpdir =~ /^(.+)$/;
+  $path = $1;
+
+  mkpath($path,0,0777) unless -d $path;
+  return ($tmpuri,$path);
 }
 
 sub make_map {
@@ -647,7 +658,7 @@ sub make_centering_map {
 
   # divide into RULER_INTERVAL intervals
   my $portion = ($ruler->[3]-$ruler->[1])/RULER_INTERVALS;
-  my $ref    = $ruler->[0]->ref;
+  my $ref    = $ruler->[0]->seq_id;
   my $source =  $self->source;
   my $plugin = escape(param('plugin')||'');
 
@@ -718,15 +729,20 @@ sub image_and_map {
   my @feature_types = map { $conf->label2type($_,$length) } @$tracks;
 
   # Create the tracks that we will need
-  my $panel = Bio::Graphics::Panel->new(-segment => $segment,
-					-width   => $width,
-					-keycolor => 'moccasin',
-					-grid => 1,
-				       );
+  my @argv = (-segment   => $segment,
+	      -width     => $width,
+	      -keycolor  => 'moccasin',
+	      -grid      => 1,
+	      -key_style => $conf->setting(general=>'keystyle')
+	      || DEFAULT_KEYSTYLE,
+	      -empty_tracks => $conf->setting(general=>'empty_tracks')
+	      || DEFAULT_EMPTYTRACKS
+	     );
+  my $panel = Bio::Graphics::Panel->new(@argv);
   $panel->add_track($segment   => 'arrow',
-		    -double => 1,
-		    -tick  => 2,
-		    -label => $config{label_scale} ? eval{$segment->ref} : 0,
+		    -double    => 1,
+		    -tick      => 2,
+		    -label     => $config{label_scale} ? $segment->seq_id : 0,
 		   );
 
   my (%tracks,@blank_tracks);
@@ -743,8 +759,7 @@ sub image_and_map {
 
     # if the glyph is the magic "dna" glyph (for backward compatibility), or if the section
     # is marked as being a "global feature", then we apply the glyph to the entire segment
-    my $g = $conf->glyph($label);
-    if ((defined $g && ($g eq 'dna')) or $conf->setting($label=>'global feature')) {
+    if ($conf->setting($label=>'global feature')) {
       $panel->add_track($segment,
 			$conf->style($label)
 			);
@@ -870,33 +885,33 @@ sub overview {
 
   my $factory = $partial_segment->factory;
   my $segment = $factory->segment(-class=>$factory->refclass,
-				  -name=>$partial_segment->ref);
+				  -name=>$partial_segment->seq_id);
 
-  my $conf     = $self->config;
-  my $width    = $self->width;
-  my @tracks   = $self->config->overview_tracks;
-  my $pad      = $self->overview_pad(\@tracks);
+  my $conf           = $self->config;
+  my $width          = $self->width;
+  my @tracks         = $self->config->overview_tracks;
+  my ($padl,$padr)   = $self->overview_pad(\@tracks);
 
   my $panel = Bio::Graphics::Panel->new(-segment => $segment,
 					-width   => $width,
 					-bgcolor => $self->setting('overview bgcolor')
 					            || 'wheat',
 					-key_style => 'left',
-					-pad_left  => $pad,
-					-pad_right => MIN_OVERVIEW_PAD,
+					-pad_left  => $padl,
+					-pad_right => $padr,
 				       );
 
   my $units = $self->setting('overview units');
   $panel->add_track($segment,
 		    -glyph     => 'arrow',
 		    -double    => 1,
-		    -label     => "Overview of ".$segment->ref,
+		    -label     => "Overview of ".$segment->seq_id,
 		    -labelfont => gdMediumBoldFont,
 		    -tick      => 2,
 		    $units ? (-units => $units) : (),
 		   );
 
-  $self->add_overview_landmarks($panel,$segment,\@tracks,$pad);
+  $self->add_overview_landmarks($panel,$segment,\@tracks,$padl);
 
   my $gd = $panel->gd;
   my $red = $gd->colorClosest(255,0,0);
@@ -1005,7 +1020,7 @@ sub hits_on_overview {
 						      -stop=>$stop,
 						      -name=>$name||'');
     } elsif (UNIVERSAL::can($hit,'ref')) {
-      my $ref  = $hit->ref;
+      my $ref  = $hit->seq_id;
       my $name = $hit->can('seqname') ? $hit->seqname : $hit->name;
       my($start,$end) = ($hit->start,$hit->end);
       $name =~ s/\:\d+,\d+$//;  # remove coordinates if they're there
@@ -1038,7 +1053,7 @@ sub hits_on_overview {
     $panel->add_track($segment,
 		      -glyph     => 'arrow',
 		      -double    => 1,
-		      -label     => 0, #"Overview of ".$segment->ref,
+		      -label     => 0, #"Overview of ".$segment->seq_id,
 		      -labelfont => gdMediumBoldFont,
 		      -tick      => 2,
 		      $units ? (-units => $units) : (),
@@ -1235,7 +1250,7 @@ sub merge {
   $max_range ||= 100_000;
 
   my (%segs,@merged_segs);
-  push @{$segs{$_->ref}},$_ foreach @$features;
+  push @{$segs{$_->seq_id}},$_ foreach @$features;
   foreach (keys %segs) {
     push @merged_segs,_low_merge($db,$segs{$_},$max_range);
   }
@@ -1246,7 +1261,6 @@ sub _low_merge {
   my ($db,$features,$max_range) = @_;
 
   my ($previous_start,$previous_stop,$statistical_cutoff,@spans);
-  patch_biographics() unless $features->[0]->can('low');
 
   my @features = sort {$a->low<=>$b->low} @$features;
 
@@ -1269,7 +1283,7 @@ sub _low_merge {
     $statistical_cutoff = $max_range;
   }
 
-  my $ref = $features[0]->ref;
+  my $ref = $features[0]->seq_id;
 
   for my $f (@features) {
     my $start = $f->low;
@@ -1296,23 +1310,6 @@ sub _low_merge {
   return @spans;
 }
 
-# THESE SHOULD BE MIGRATED INTO BIO::GRAPHICS::FEATURE
-# These fix inheritance problems in Bio::Graphics::Feature
-sub patch_biographics {
-  eval << 'END';
-sub Bio::Graphics::Feature::low {
-  my $self = shift;
-  return $self->start < $self->end ? $self->start : $self->end;
-}
-
-sub Bio::Graphics::Feature::high {
-  my $self = shift;
-  return $self->start > $self->end ? $self->start : $self->end;
-}
-END
-}
-
-
 sub overview_pad {
   my $self   = shift;
   my $tracks = shift;
@@ -1326,8 +1323,8 @@ sub overview_pad {
   foreach (@_) {  #extra
     $max = length if length > $max;
   }
-  return MIN_OVERVIEW_PAD unless $max;
-  $max * gdMediumBoldFont->width + 3;
+  return (MIN_OVERVIEW_PAD,MIN_OVERVIEW_PAD) unless $max;
+  return ($max * gdMediumBoldFont->width + 3,MIN_OVERVIEW_PAD);
 }
 
 
@@ -1351,7 +1348,7 @@ sub overview_tracks {
 sub label2type {
   my ($self,$label,$length) = @_;
   my $l = $self->semantic_label($label,$length);
-  return shellwords($self->setting($l,'feature')||'');
+  return shellwords($self->setting($l,'feature')||$self->setting($label,'feature')||'');
 }
 
 sub style {
@@ -1367,11 +1364,12 @@ sub semantic_label {
   # 1. a section like "Gene:100000" where the cutoff is less than the length of the segment
   #    under display.
   # 2. a section like "Gene" which has no cutoff to use.
-  if (my @lowres = map { [split ':'] }
+  if (my @lowres = map {[split ':']}
       grep {/$label:(\d+)/ && $1 <= $length}
-      $self->configured_types) {
-    ($label) = map {join ':',@$_} sort {$b->[1] <=> $a->[1]} @lowres;
-  }
+      $self->configured_types)
+    {
+      ($label) = map {join ':',@$_} sort {$b->[1] <=> $a->[1]} @lowres;
+    }
   $label
 }
 
@@ -1445,35 +1443,41 @@ sub make_link {
   return $self->link_pattern($link,$feature);
 }
 
-# make the title of an image area
+# make the title for an object on a clickable imagemap
 sub make_title {
   my $self = shift;
   my $feature = shift;
-  my $title;
+  my ($title,$key) = ('','');
  TRY: {
     my $label    = $self->feature2label($feature) or last TRY;
-    my $link     = $self->code_setting($label,'title');
-    $link      ||= $self->code_setting(general=>'title');
+    $key         = $self->setting($label,'key') || $label;
+    $key         =~ s/s$//;
+    my $link     = $self->code_setting($label,'title') || $self->code_setting(general=>'title');
     $link or last TRY;
     $title       = $link->($feature) if ref($link) eq 'CODE';
     $title     ||= $self->link_pattern($link,$feature);
   }
+  return $title if $title;
 
+  # otherwise, try it ourselves
   $title ||= eval {
-    if ($feature->method =~ /^(similarity|alignment)$/i) {
-      $feature->seq_id||''.":".
-	$feature->start."..".
-	  $feature->end.' '.
-	    $feature->info||''.":".
-	      $feature->target->start."..".$feature->target->end;
+    if ($feature->can('target') && (my $target = $feature->target)) {
+      join (' ',
+	    "$key:",
+	    $feature->seq_id.':'.
+	    $feature->start."..".$feature->end,
+	    $feature->target.':'.
+	    $feature->target->start."..".$feature->target->end);
     } else {
-      $feature->class||'' .":".
-	$feature->info||'' . " ".
-	  $feature->seq_id||''.':'.
-	    $feature->start."..".
-	      $feature->end;
+      join(' ',
+	   "$key:",
+	   $feature->can('display_id') ? $feature->display_id : $feature->info,
+	   $feature->seq_id .":".
+	   ($feature->start||'?')."..".($feature->end||'?')
+	  );
     }
   };
+  warn $@ if $@;
 
   return $title;
 }

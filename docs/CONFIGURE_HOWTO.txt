@@ -14,8 +14,10 @@ Project (GMOD; http://www.gmod.org).
      B1. The [GENERAL] Section
      B2. Track Sections
      B3. Glyphs and Glyph options
-     B4. Computed Options
-     B4. Declaring New Aggregators
+     B4. Adding features to the overview
+     B5. Semantic Zooming
+     B6. Computed Options
+     B7. Declaring New Aggregators
   C. CHANGING THE LOCATION OF THE CONFIGURATION FILES
   D. FURTHER INFORMATION
 
@@ -301,9 +303,8 @@ looks like this:
 
  [GENERAL]
  description = S. cerevisae (via SGD Nov 2001)
- adaptor     = dbi::mysqlopt
- database    = dbi:mysql:database=yeast;host=localhost
- # fasta_files = 
+ db_adaptor  = Bio::DB::GFF
+ db_args     = -dsn dbi:mysql:database=yeast;host=localhost
  aggregators = transcript alignment
  user        =
  passwd      =
@@ -333,50 +334,81 @@ The following [GENERAL] options are recognized:
    header of the page.  Don't make it as long as the previous example!
    (You will want to change this.)
 
-  b) adaptor
+  b) db_adaptor
 
-  Tells Bio::DB::GFF what database schema to use when accessing the
-  database.  See the Bio::DB::GFF module for information on this
-  value.  (You will not want to change this unless you know what
-  you are doing).
+  Tells GBrowse what database adaptor to use.  By using different adaptors
+  you can attach gbrowse to a variety of different databases.  Currently
+  the only stable adaptor you can use is Bio::DB::GFF, which is a standard
+  set of adaptors contained in Bioperl.
 
-  c) database
+  c) db_args
 
-  The location of the database using Perl DBI notation.  The general
-  format for MySQL databases is:
-   
-     database = dbi:mysql:database=<db_name>;host=<host_name>
+  Arguments to pass to the adaptor for it to use when making a database
+  connection.  The exact format will depend on the adaptor you're using.
+  For Bio::DB::GFF running on top of a MySQL database use
+  a db_args like the following:
 
-  (You will want to change this).
+    db_args = -dsn dbi:mysql:database=<db_name>;host=<db_host>
 
-  d) fasta_files (deprecated)
+  replacing <db_name> and <db_host> with the database and database
+  host of your choice.
 
-  This option used to be used to specify the location of FASTA files to
-  refer to when displaying the DNA for a selected region.  In more recent
-  versions of Bio::DB::GFF, the DNA is stored directly in the database, and
-  so this option is no longer necessary and should be commented out.
+  To use the Oracle version of Bio::DB::GFF, use these arguments:
 
-  e) aggregators
+
+    db_args = -adaptor oracle
+              -dsn dbi:oracle:database=db_service
+
+  Where db_description should be replaced with the name of the desired
+  database service.
+
+  If the database requires you to log in with a user name and
+  password, use the following db_args:
+
+    db_args = -dsn  dbi:mysql:database=<db_name>;host=<db_host>
+              -user <username>
+              -pass <password>
+
+  replacing <username> and <password> with the appropriate values.
+
+  d) aggregators
 
   Aggregators to use for complex features.  Comment this out to use
-  the default aggregators. It is possible to declare your own aggregator
-  here using a special syntax.  See "B5. Declaring New Aggregators" for 
-  details.
+  the default aggregators. It is possible to declare your own
+  aggregator here using a special syntax.  See "B5. Declaring New
+  Aggregators" for details.  This option is only valid when used with
+  Bio::DB::GFF adaptors.
 
-  f) user
+  e) user (deprecated)
   
-  User name for the gbrowse script to log in under if you are not
-  using "nobody".  (You might need to change this.)
+  The user name for the gbrowse script to log in under if you are not
+  using "nobody".  This is exactly the same as providing the -user
+  option to db_args, which should be used instead. 
 
-  g) passwd
+  f) passwd (deprecated)
 
-  Password to use if the database is password protected.  (You might
-  need to change this.)
+  The password to use if the database is password protected.  This is
+  the same as providing the -pass option to db_args, which should be
+  used instead.
 
-  h) stylesheet
+  g) stylesheet
 
   Location of the stylesheet used to create the GBrowse look and feel.
   (You probably will not need to change this.)
+
+  h) plugins
+
+  This is a list of plugins that you want to be available from gbrowse.
+  Plugins are a way for third-party developers to add functionality to gbrowse
+  without changing its core source code.  Plugins are stored on the gbrowse
+  configuration directory under a subdirectory named "plugins."
+
+  A good standard list of plugins is:
+
+    plugins = SequenceDumper FastaDumper RestrictionAnnotator
+
+  See the contents of conf/plugins and contrib/plugins for more plugins
+  that you can install.
 
   i) buttons
 
@@ -601,6 +633,14 @@ The following [GENERAL] options are recognized:
     features in Symbol, Gene and Clone.  The search stops when the
     first match is found.  Otherwise, the browser will proceed to a
     full text search of all the comment fields.
+
+    ad) remote sources
+    
+    This option allows you to add remote annotation sources to the menu of such
+    sources at the bottom of the main window.  The format is:
+
+      remote sources = "Menu Label 1" http://url1.host.com/etc/etc
+		       "Menu Label 2" http://url2.host.com/etc/etc
 
 B2. Track Sections
 
@@ -846,7 +886,83 @@ Alternatively, you can use the #RRGGBB notation to specify the red,
 green and blue components of the color.  Refer to any book on HTML for
 the details on using the notation.
 
-B4. Computed Options
+---
+
+B4. Adding features to the overview
+
+You can make any set of tracks appear in the overview by creating a
+stanza with a title of the format [<label>:overview], where <label> is
+any unique label of your choice.  The format of the stanza is
+identical to the others, but the indicated track will appear in the
+overview rather than as an option in the detailed view.  For example,
+this stanza adds to the overview a set of features of method "gene",
+source "framework":
+
+ [framework:overview]
+ feature       = gene:framework
+ label         = 1
+ glyph         = generic
+ bgcolor       = lavender
+ height        = 5
+
+---
+
+B5. Semantic Zooming
+
+Sometimes you will want to change the appearance of a track when the
+user has zoomed out or zoomed in beyond a certain level.  To indicate
+this, create a set of "length qualified" stanzas of format
+[<label>:<zoom level>], where all stanzas share the same <label>, and
+<zoom level> indicates the minimum size of the region that the stanza
+will apply to.  For example:
+
+  [gene]
+  feature = transcript:curated
+  glyph    = dna
+  fgcolor  = blue
+  key      = genes
+  citation = example semantic zoom track
+
+  [gene:500]
+  feature = transcript:curated
+  glyph   = transcript2
+
+  [gene:100000]
+  feature = transcript:curated
+  glyph   = arrow
+
+  [gene:500000]
+  feature = transcript:curated
+  glyph   = generic
+
+This series of stanzas says to use the "transcript2" glyph when the
+segment being displayed is 500 bp or longer, to use the "arrow" glyph
+when the segment being displayed is 100,000 bp or longer, and the
+"generic" glyph when the region being displayed is 500,000 bp or
+longer.  For all other segment lengths (1 to 499 bp), the ordinary
+[gene] stanza will be consulted, and the "dna" glyph will be
+displayed.  The bare [gene] stanza is used to set all but the
+"feature" options for the other stanzas.  This means that the fgcolor,
+key and citation options are shared amongst all the [gene:XXXX]
+stanzas, but the "feature" option must be repeated.
+
+You can override any options in the length qualified stanzas.  For
+example, if you want to change the color to red in when displaying
+genes on segments between 500 and 99,999 bp, you can modify the
+[gene:500] stanza as follows:
+
+  [gene:500]
+  feature = transcript:curated
+  glyph   = transcript2
+  fgcolor = red
+
+It is also possible to display different features at different zoom
+levels, although you should handle this potentially confusing feature
+with care!
+
+---
+
+B6. Computed Options
 
 Some options can be computed at run time by using Perl subroutines as
 their values.  Currently this works with the values of the "link",
@@ -904,7 +1020,7 @@ details.
 
 ---
 
-B5. Declaring New Aggregators
+B7. Declaring New Aggregators
 
 The Bio::DB::GFF data model recognizes a single-level of "grouping" of
 features, but doesn't specify how to use the group information to

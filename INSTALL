@@ -30,7 +30,7 @@ already.
 	Digest::MD5
 	Text::Shellwords
 
-  F) BioPerl version 1.02 or higher -- http://www.bioperl.org
+  F) Bioperl version 1.02 or higher -- http://www.bioperl.org
 
 Optional modules:
 
@@ -272,42 +272,78 @@ mod_perl and it is suggested that you disable Apache::DBI.  If you
 cannot do this, then you should remove the file GFFDumper.pm from the
 gbrowse.conf/plugins directory.
 
-8. BIOPERL VERSIONS
+8. MAKING THE BROWSER RUN SAFER
 
-GBrowse requires Bioperl version 1.02. At the time this was written
-(July 7, 2002), version 1.02 had not been officially released but was
-expectedly imminently.  Should version 1.02 not be available at the
-time you read this, there are two ways to obtain it:
+Whenever you are running a server-side Web script using information
+provided by a web client, there is a risk that maliciously-formatted
+data provided by the use will trick the server-side script into
+performing some unintentional action, such as modifying a file on the
+server.  Perl's "taint" checks are designed to catch places in the
+code where such malicious data could cause harm, and GBrowse has been
+tested extensively with these taint checks activated.  
+
+Because of taint checks' noticeable impact on performance, they have
+been turned off in the distributed version of gbrowse.  If you wish to
+reactivate the extra checking (at the expense of a performance hit),
+go to the file "gbrowse" located in the Web scripts directory and edit
+the top line of the file to read:
+
+  #!/usr/bin/perl -w -T
+
+The -T switch turns on taint checks.
+
+If you are running GBrowse under mod_perl, add the following line to
+the httpd.conf configuration file:
+
+  PerlTaintCheck  On
+
+This will affect all mod_perl scripts globally.
+
+9. BIOPERL VERSIONS
+
+Some of GBrowse's advanced features (the use of histograms in semantic
+zooming; labeling of the tracks in the overview) require features of
+the Bioperl Bio::Graphics and Bio::DB::GFF libraries that are only
+available in Bioperl version 1.20. At the time this was written
+(August, 2002), version 1.20 was still in development and was expected
+to be released in the fall of 2002. Should version 1.20 not be
+available at the time you read this, there are two ways to obtain it:
 
   a. The Patch method
 
-  This distribution contains a patch file named "bioperl-101-102.patch"
+  This distribution contains a patch file named "bioperl-102-120.patch"
   located in the "extras" subdirectory. Applying it to a virgin
-  Bioperl-1.0.1 distribution will generate a version 1.0.2 distribution.
+  Bioperl-1.0.2 distribution will generate a version that contains the
+  
   The steps to follow are these:
 
-  a1. unpack bioperl-1.0.1.tar.gz
-      gunzip -c bioperl-1.0.1.tar.gz | tar xvf -
+  a1. unpack bioperl-1.0.2.tar.gz
+      gunzip -c bioperl-1.0.2.tar.gz | tar xvf -
 
-  a2. enter bioperl-1.0.1
-      cd bioperl-1.0.1
+  a2. enter bioperl-1.0.2
+      cd bioperl-1.0.2
 
   a3. apply the patch
-      patch -p1 < ../Generic-Genome-Browser-1.45/extras/bioperl-101-102.patch
+      patch -p1 < ../Generic-Genome-Browser-1.45/extras/bioperl-102-120.patch
 
   Modify the last command to point to the actual location of the patch
-  file.
+  file.  Note that this will give you a version of Bioperl that includes
+  the changes required to run GBrowse, but will not include any experimental
+  features affecting other parts of the Bioperl distribution.
 
   b. By anonymous CVS.  
 
-  You can get the most recent version of the Bioperl 1.00 branch
-  using anonymous CVS.  Here is the incantation:
+  You can get the most recent version of Bioperl using anonymous CVS.
+  Here is the incantation:
 
    cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl \
-	  checkout -r branch-1-0-0 bioperl-live
+	  checkout bioperl-live
 
    When prompted, the password is "cvs".  For more details, see
-   http://cvs.bioperl.org.
+   http://cvs.bioperl.org.  This will give you the entire development
+   version of Bioperl, including incomplete or experimental features.  
+   While the core features of Bioperl are quite stable, there is no 
+   guarantee that the experimental features will work as advertised.
 
 9. THE GBROWSE_IMG SCRIPT
 

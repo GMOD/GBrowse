@@ -9,7 +9,8 @@ check out this branch, and get the GadFly database and perl modules -
 see http://www.fruitfly.org/developers/
 
 We hope to eventually merge the branches, and use an adapter bridge to
-transparently connect to GadFly
+transparently connect to GadFly.  The gadfly adaptor located in the
+lib directory is incomplete and nonfunctional.
 
 Questions -
 Chris Mungall <cjm@fruitfly.org>

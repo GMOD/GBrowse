@@ -41,28 +41,8 @@ $Config{startperl} -w
 
 print OUT <<'!NO!SUBS!';
 
-###################################################################
-# Non-modperl users should change this variable if needed to point
-# to the directory in which the configuration files are stored.
-#
-$CONF_DIR  = '/usr/local/apache/conf/gbrowse.conf';
-#
-###################################################################
-$VERSION   = 1.46;
-
-
-###################################################################
-# Non-modperl users should change this variable if needed to point
-# to the directory in which the configuration files are stored.
-#
-$CONF_DIR  = '/usr/local/apache/conf/gbrowse.conf';
-#
-###################################################################
-$VERSION   = 1.46;
-
-
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.47 2002-08-02 22:48:35 lstein Exp $
+# $Id: gbrowse.PLS,v 1.48 2002-08-07 12:10:25 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -95,6 +75,7 @@ use constant MAX_KEYWORD_RESULTS  => 50;  # max number of results from keyword s
 use constant DEFAULT_RANGES       => q(100 500 1000 5000 10000 25000 100000 200000 400000);
 use constant DEFAULT_FINE_ZOOM    => '10%';
 use constant GBROWSE_HELP         => '/gbrowse';
+use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceDumper';
 
 # if true, turn on surrounding rectangles for debugging the image map
 use constant DEBUG => 0;
@@ -137,16 +118,12 @@ THIS WILL CAUSE THE GFF DUMP TO FAIL INTERMITTENTLY.
 THIS SCRIPT DOES NOT BENEFIT FROM APACHE::DBI
 END
 ;
-    # here's a patch for a fix in Bio::DB::GFF that didn't get into BioPerl 1.0
-    unless (Bio::DB::GFF::Segment->can('seq_id')) {
-      *Bio::DB::GFF::Segment::seq_id  = sub { shift->ref };
-      *Bio::Graphics::Feature::seq_id = sub { shift->ref };
-    }
-
 };
 
 $HEADER=0;
 $HTML=0;
+
+$ENV{PATH} = '/bin:/usr/bin:/usr/local/bin';
 
 if ($ENV{MOD_PERL}) {
     my $conf  = Apache->request->dir_config('GBrowseConf');
@@ -629,7 +606,7 @@ sub navigation_table {
 		    )),
 		  TR({-class=>'searchbody'},
 		     td({-align=>'left', -colspan=>3},
-			'To center on a location, click the ruler.  User the Scroll/Zoom buttons to',
+			'To center on a location, click the ruler.  Use the Scroll/Zoom buttons to',
 			'change magnification and position.',
 			'To save this view,',a({-href=>bookmark_link($settings)},'bookmark this link.')
 		       )),
@@ -937,9 +914,9 @@ sub zoomnav {
   }
 
   elsif (defined $overview_x && defined $segment_length) {
-    my $pad = $CONFIG->overview_pad;
-    my $overview_width = $settings->{width} * OVERVIEW_RATIO - 2*$pad;
-    my $click_position = $segment_length * ($overview_x-$pad)/$overview_width;
+    my ($padl,$padr) = $CONFIG->overview_pad;
+    my $overview_width = ($settings->{width} * OVERVIEW_RATIO) - ($padl+$padr);
+    my $click_position = $segment_length * ($overview_x-$padl)/$overview_width;
     $span = $DEFAULT_SEGMENT if $span > $MAX_SEGMENT;
     $start = int($click_position - $span/2);
     $stop  = $start + $span - 1;
@@ -993,7 +970,7 @@ sub get_segments {
   # Filter out redundant segments; this can happen when the same basic feature is
   # present under several names, such as "genes" and "frameworks"
   my %seenit;
-  @segments = grep {!$seenit{$_->name,$_->ref,$_->start,$_->end}++} @segments;
+  @segments = grep {!$seenit{$_->name,$_->seq_id,$_->start,$_->end}++} @segments;
   return @segments if @segments > 1;
 
   # set CGI name parameter to match segment.
@@ -1021,6 +998,11 @@ sub do_keyword_search {
   my $settings = shift;
   my $segments = shift;
   my $searchterm = $settings->{name};
+
+  # Need to untaint the searchterm.  We are very lenient about
+  # what is accepted here because we wil be quote-metaing it later.
+  $searchterm =~ /([\w .,~!@#$%^&*()-+=<>?\/]+)/;
+  $searchterm = $1;
 
   my $match_sub = 'sub {';
   foreach (split /\s+/,$searchterm) {
@@ -1403,12 +1385,15 @@ sub get_remote_feature_data {
       error('This browser is not configured to fetch external URLs');
       return;
     }
-    $UA = LWP::UserAgent->new(agent   => "Generic-Genome-Browser/$VERSION",
-			      timeout => URL_FETCH_TIMEOUT,
+    $UA = LWP::UserAgent->new(agent    => "Generic-Genome-Browser/$VERSION",
+			      timeout  => URL_FETCH_TIMEOUT,
 			      max_size => URL_FETCH_MAX_SIZE,
 			     );
   }
-  my $id = md5_hex($url);  # turn into a filename
+  my $id = md5_hex($url);     # turn into a filename
+  $id =~ /^([0-9a-fA-F]+)$/;  # untaint operation
+  $id = $1;
+
   my (undef,$tmpdir) = $CONFIG->tmpdir($CONFIG->source.'/external');
   my $response = $UA->mirror($url,"$tmpdir/$id");
   if ($response->is_error) {
@@ -1858,26 +1843,16 @@ sub initialize_plugins {
 
   my $plugins = "$path/plugins";
   warn "initializing plugins..." if DEBUG_PLUGINS;
-
-  croak("$plugins: not a directory") unless -d $plugins;
-  opendir(D,$plugins) or croak "Couldn't open $plugins: $!";
-  my @plugins = map { "$plugins/$_" } grep {/\.pm$/} readdir(D);
-  close D;
-
-  # try to work around a bug in Apache/mod_perl which appears when
-  # running under linux/glibc 2.2.1
-  unless (@plugins) {
-    @plugins = glob("$plugins/*.pm");
-  }
+  my @plugins = shellwords($CONFIG->setting('plugins') || DEFAULT_PLUGINS);
 
   for my $plugin (@plugins) {
-    my $base = basename($plugin,'.pm');
-    my $class = "Bio\:\:Graphics\:\:Browser\:\:Plugin\:\:$base";
-    if (eval {require $plugin}) {
-      warn "plugin $base loaded successfully" if DEBUG_PLUGINS;
+    my $class = "Bio\:\:Graphics\:\:Browser\:\:Plugin\:\:$plugin";
+    my $path  = "$plugins/$plugin.pm";
+    if (eval {require $path}) {
+      warn "plugin $plugin loaded successfully" if DEBUG_PLUGINS;
       my $obj = $class->new;
-      warn "plugin name = ",$obj->name," base = $base" if DEBUG_PLUGINS;
-      $plugin_list{$base} = $obj;
+      warn "plugin name = ",$obj->name," base = $plugin" if DEBUG_PLUGINS;
+      $plugin_list{$plugin} = $obj;
     } else {
       warn $@ if $@;
     }

@@ -3,6 +3,8 @@ package Bio::Graphics::Glyph::xyplot;
 use strict;
 use Bio::Graphics::Glyph::segments;
 use vars '@ISA','$VERSION';
+use GD 'gdTinyFont';
+
 @ISA = 'Bio::Graphics::Glyph::segments';
 $VERSION = '1.02';
 
@@ -19,13 +21,15 @@ sub point_radius {
   shift->option('point_radius') || DEFAULT_POINT_RADIUS;
 }
 
+sub pad_top { 0 }
+
 sub draw {
   my $self = shift;
   my ($gd,$dx,$dy) = @_;
   my ($left,$top,$right,$bottom) = $self->calculate_boundaries($dx,$dy);
 
   my @parts = $self->parts;
-  return $self->SUPER::draw unless @parts > 0;
+  return $self->SUPER::draw(@_) unless @parts > 0;
 
   # figure out the scale and such like
   my $max_score = $self->option('max_score');
@@ -42,24 +46,53 @@ sub draw {
     }
   }
 
+  # if a scale is called for, then we adjust the max and min to be even
+  # multiples of a power of 10.
+  if ($self->option('scale')) {
+    $max_score = max10($max_score);
+    $min_score = min10($min_score);
+  }
+
   my $height = $self->option('height');
-  my $scale  = $max_score>$min_score ? $height/($max_score-$min_score)
-                                     : 1;
-  # now seed all the parts with the information they need
-  # to draw their positions
+  my $scale  = $max_score > $min_score ? $height/($max_score-$min_score)
+                                       : 1;
+  my $x = $dx;
+  my $y = $dy + $self->top + $self->pad_top;
+
+  # now seed all the parts with the information they need to draw their positions
   foreach (@parts) {
     my $s = eval {$_->feature->score} or next;
-    my $position = ($s-$min_score) * $scale;
-    $_->{_y_position} = $position;
+    my $position      = ($s-$min_score) * $scale;
+    $_->{_y_position} = $bottom - $position;
   }
 
   my $type = $self->option('graph_type');
-  $self->_draw_histogram($gd,$dx,$dy)  if $type eq 'histogram';
-  $self->_draw_boxes($gd,$dx,$dy)      if $type eq 'boxes';
-  $self->_draw_line ($gd,$dx,$dy)      if $type eq 'line'
+  $self->_draw_histogram($gd,$x,$y)  if $type eq 'histogram';
+  $self->_draw_boxes($gd,$x,$y)      if $type eq 'boxes';
+  $self->_draw_line ($gd,$x,$y)      if $type eq 'line'
                                        or $type eq 'linepoints';
-  $self->_draw_points($gd,$dx,$dy)     if $type eq 'points'
+  $self->_draw_points($gd,$x,$y)     if $type eq 'points'
                                        or $type eq 'linepoints';
+
+  $self->_draw_scale($gd,$scale,$min_score,$max_score,$dx,$dy)      if $self->option('scale');
+}
+
+sub log10 { log(shift)/log(10) }
+sub max10 {
+  my $a = shift; 
+  my $l=int(log10($a)); 
+  $l = 10**$l; 
+  my $r = $a/$l; 
+  return $r*$l if int($r) == $r;
+  return $l*int(($a+$l)/$l);
+}
+sub min10 {
+  my $a = shift; 
+  my $l=int(log10($a));
+  $l = 10**$l; 
+  my $r = $a/$l; 
+  return $r*$l if int($r) == $r;
+  return $l*int($a/$l);
 }
 
 sub _draw_histogram {
@@ -74,19 +107,27 @@ sub _draw_histogram {
     my $part = $parts[$i];
     my $next = $parts[$i+1];
     my ($x1,$y1,$x2,$y2) = $part->calculate_boundaries($left,$top);
-    $gd->line($x1,$y2 - $part->{_y_position},$x2,$y2 - $part->{_y_position},$fgcolor);
+    $gd->line($x1,$part->{_y_position},$x2,$part->{_y_position},$fgcolor);
     next unless $next;
-    $gd->line($x2,$y2 - $part->{_y_position},$x2,$y2 - $next->{_y_position},$fgcolor);
+    my ($x3,$y3,$x4,$y4) = $next->calculate_boundaries($left,$top);
+    if ($x2 == $x3) {# connect vertically to next level
+      $gd->line($x2,$part->{_y_position},$x2,$next->{_y_position},$fgcolor); 
+    } else {
+      $gd->line($x2,$part->{_y_position},$x2,$y2,$fgcolor); # to bottom
+      $gd->line($x2,$y2,$x3,$y2,$fgcolor);                        # to right
+      $gd->line($x3,$y4,$x3,$next->{_y_position},$fgcolor);   # up
+    }
   }
 
-  # from bottom to first
+  # end points: from bottom to first
   my ($x1,$y1,$x2,$y2) = $parts[0]->calculate_boundaries($left,$top);
-  $gd->line($x1,$y2,$x1,$y2-$parts[0]->{_y_position},$fgcolor);
+  $gd->line($x1,$y2,$x1,$parts[0]->{_y_position},$fgcolor);
   # from last to bottom
   my ($x3,$y3,$x4,$y4) = $parts[-1]->calculate_boundaries($left,$top);
-  $gd->line($x4,$y4-$parts[-1]->{_y_position},$x4,$y4,$fgcolor);
-  # from left to right
-  $gd->line($x1,$y2,$x4,$y4,$fgcolor);
+  $gd->line($x4,$parts[-1]->{_y_position},$x4,$y4,$fgcolor);
+
+  # from left to right  -- don't like this
+  # $gd->line($x1,$y2,$x4,$y4,$fgcolor);
 
   # That's it.  Not too hard.
 }
@@ -105,7 +146,7 @@ sub _draw_boxes {
     my $part = $parts[$i];
     my $next = $parts[$i+1];
     my ($x1,$y1,$x2,$y2) = $part->calculate_boundaries($left,$top);
-    $self->filled_box($gd,$x1,$y2 - $part->{_y_position},$x2,$y2,$bgcolor,$fgcolor);
+    $self->filled_box($gd,$x1,$part->{_y_position},$x2,$y2,$bgcolor,$fgcolor);
     next unless $next;
     my ($x3,$y3,$x4,$y4) = $next->calculate_boundaries($left,$top);
     $gd->line($x2,$y2,$x3,$y4,$fgcolor) if $x2 < $x3;
@@ -126,12 +167,12 @@ sub _draw_line {
   my $first_part = shift @parts;
   my ($x1,$y1,$x2,$y2) = $first_part->calculate_boundaries($left,$top);
   my $current_x = ($x1+$x2)/2;
-  my $current_y = $y2 - $first_part->{_y_position};
+  my $current_y = $first_part->{_y_position};
 
   for my $part (@parts) {
     my ($x1,$y1,$x2,$y2) = $part->calculate_boundaries($left,$top);
     my $next_x = ($x1+$x2)/2;
-    my $next_y = $y2 - $part->{_y_position};
+    my $next_y = $part->{_y_position};
     $gd->line($current_x,$current_y,$next_x,$next_y,$fgcolor);
     ($current_x,$current_y) = ($next_x,$next_y);
   }
@@ -151,8 +192,38 @@ sub _draw_points {
   for my $part (@parts) {
     my ($x1,$y1,$x2,$y2) = $part->calculate_boundaries($left,$top);
     my $x = ($x1+$x2)/2;
-    my $y = $y2 - $part->{_y_position};
+    my $y = $part->{_y_position};
     $symbol_ref->($gd,$x,$y,$pr,$bgcolor);
+  }
+}
+
+sub _draw_scale {
+  my $self = shift;
+  my ($gd,$scale,$min,$max,$dx,$dy) = @_;
+  my ($x1,$y1,$x2,$y2) = $self->calculate_boundaries($dx,$dy);
+
+  my $side = $self->option('scale') || 'left';
+  $side    = 'left' unless $side =~ /^(left|right)$/;
+
+  my $fg    = $self->fgcolor;
+  my $half  = ($y1+$y2)/2;
+  $gd->line($x1,$y1,$x1,$y2,$fg);
+  $gd->line($x2,$y1,$x2,$y2,$fg);
+
+  for ([$y1,$max],[$half,($max-$min)/2]) {
+    $gd->line($x1-1,$_->[0],$x1+1,$_->[0],$fg);
+    $gd->line($x2-1,$_->[0],$x2+1,$_->[0],$fg);
+    if ($side eq 'left') {
+      $gd->string(gdTinyFont,
+		  $x1+3,$_->[0]-(gdTinyFont->height/2),
+		  $_->[1],
+		  $fg);
+    } else {
+      $gd->string(gdTinyFont,
+		  $x2+3,$_->[0]-(gdTinyFont->height/2),
+		  $_->[1],
+		  $fg);
+    }
   }
 }
 

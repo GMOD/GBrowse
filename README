@@ -7,7 +7,7 @@ Generic Model Organism Systems Database project (GMOD).
  - To install on your own system, please see the INSTALL file.
 
  - To load your own data and configure GBrowse to display it, please
-   see the file docs/configuration.txt.
+   see the file docs/CONFIGURE_HOWTO.txt.
 
  - This software is free.  You can use it under the terms of the Perl
    Artistic License Please.  Please see DISCLAIMER for limitations of

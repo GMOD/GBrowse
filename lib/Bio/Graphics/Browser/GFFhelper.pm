@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.4 2003-10-12 17:04:56 sheldon_mckay Exp $
+# $Id: GFFhelper.pm,v 1.5 2003-10-13 19:01:45 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -8,29 +8,40 @@ Bio::Graphics::Browser::GFFhelper -- Helps gbrowse feature editors/loaders handl
   
   package Bio::Graphics::Browser::Plugin::MyPlugin;
 
-  use Bio::Graphics::Browser::Plugin::GFFhelper;
-  use Bio::Graphics::Browser::Plugin;    
   use vars qw/@ISA $ROLLBACK/;
 
-  @ISA = qw/ Bio::Graphics::Browser::Plugin Bio::Graphics::Browser::GFFhelper /;
+  @ISA = qw/ Bio::Graphics::Browser::Plugin 
+             Bio::Graphics::Browser::GFFhelper /;
+  
   $ROLLBACK = '/tmp/';
 
-
-  # etc ...  
-  # get a segment 
-  my $segment = ...
-
-  if ( $ROLLBACK ) {
-      $self->{rb_loc} = $ROLLBACK;
-      $self->save_state($segment);
+  sub reconfigure {
+     #get the rollback id and other config options...
   }
 
-  sub gff {
+  sub save_segment {
+    my ($self, $segment) = @_;
+    return 0 unless $ROLLBACK;
+    $self->{rb_loc} ||= $ROLLBACK;
+    $self->save_state($segment);
+    1;
+  }
+
+  sub gff_from_rollback {
     my $self = shift;
     my $conf = $self->configuration;
+    my $rollback = $conf->{rb_id};
+    my $gff = $self->rollback($rollback);
+    $gff;
+  }
+
+  sub gff_from_file {
+    my $self = shift;
+    my $conf = $self->configuration;
+    my $filename = $conf->{file};
 
     # get a gff string from somewhere
-    open GFF, "</path/to/gff_file";
+    open GFF, "<$filename";
     my $gff = join '', (<GFF>);
     close GFF;  
 
@@ -41,7 +52,8 @@ Bio::Graphics::Browser::GFFhelper -- Helps gbrowse feature editors/loaders handl
     $self->refseq('L16622');
   
     # massage and return the gff and sequence
-    return $self->read_gff($gff); 
+    my ($newGFF, $dna) = $self->read_gff($gff);
+    return ($newGFF, $dna);
   }
   
 =head1 DESCRIPTION
@@ -87,8 +99,6 @@ use strict;
 use Bio::Root::Root;
 use Bio::Tools::GFF;
 use IO::String;
-use CGI ':standard';
-use Data::Dumper;
 
 use vars qw/@ISA/;
 
@@ -153,10 +163,13 @@ sub parse_gff {
 # rework the GFF feature attributes
 sub new_gff_string {
     my ($self, $f) = @_;
+
+    # don't touch similiarity features
+    return $f->gff_string if $f->gff_string =~/Target/;
+
     my ($class, $name) = $self->guess_name($f);
     my $source = $self->{source} || '';
 
-    $name =~ s/\"//g if $name !~ /\s+/;
     $name = qq("$name") if $name =~ /\s+/;
     
     # strip away attributes
@@ -182,9 +195,8 @@ sub new_gff_string {
     }
 
     # add the group assignment
-    $gff .= $class && $name ? "\t$class $name ; " : "\t";
-    $gff .= (join ' ; ', @att) if @att;
-    $gff =~ s/ ; $//;
+    push @att, "$class $name" if $class && $name;
+    $gff .= "\t" . (join ' ; ', @att) if @att;
     
     # fix the source field
     if ( $source ) {
@@ -372,7 +384,7 @@ sub rollback {
 }
 
 sub rollback_form {
-    my $self = shift;
+    my ($self, $msg) = @_;
     my $rb   = $self->rollback;
     my $name = $self->config_name('rb_id');
 
@@ -385,15 +397,14 @@ sub rollback_form {
         push @out, "<option value=$_>$seg $date</option>\n";
     }
 
-    my $help =  '<a onclick="alert(\'selecting rollback will override ' .
-		'file upload or NCBI/EBI accession retrieval\')">[?]</a>';
+    my $help =  qq(<a onclick="alert('$msg')">[?]</a>);
 
 
     return  "\n<table>\n<tr class=searchtitle><td><font color=black><b>" .
 	    "Restore saved features</td></tr>\n<tr><td class=" .
-	    "searchbody>\n<h3><select name=$name>\n" .
-	    "<option value=''> -- Roll back to saved features -- </option>\n" .
-	    (join '', @out) . "</select> $help</h3>\n</td></tr></table>\n";
+	    "searchbody>\n<select name=$name>\n<option value=''> -- Roll " .
+            "back to saved features -- </option>\n" .
+	    (join '', @out) . "</select> $help\n</td></tr></table>\n";
 }
 
 1;

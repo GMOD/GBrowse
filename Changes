@@ -1,4 +1,4 @@
-1.52    Thu Aug 21 14:40:54 EDT 2003
+1.53    Thu Aug 21 14:40:54 EDT 2003
         * Security hole that allowed the display of /etc/passwd and other
 	files fixed
 	* Documentation reworked as pod and which is converted to html on

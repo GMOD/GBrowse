@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.51 2002-12-31 19:26:05 lstein Exp $
+# $Id: Browser.pm,v 1.54 2003-02-27 14:14:56 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -662,9 +662,11 @@ sub make_map {
       $map .= $self->make_centering_map($_) if $centering_map;
       next;
     }
-    my $href  = $self->make_href($_->[0],$panel) or next;
-    my $alt   = $self->make_title($_->[0],$panel);
-    $map .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href" title="$alt" alt="$alt" />\n);
+    my $href   = $self->make_href($_->[0],$panel) or next;
+    my $alt    = $self->make_title($_->[0],$panel);
+    my $target = $self->config->make_link_target($_->[0],$panel);
+    my $t      = defined($target) ? qq(target="$target") : '';
+    $map .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href" title="$alt" alt="$alt" $t/>\n);
   }
   $map .= "</map>\n";
   $map;
@@ -811,7 +813,7 @@ sub image_and_map {
   if (@feature_types) {  # don't do anything unless we have features to fetch!
     my $iterator = $segment->get_feature_stream(-type=>\@feature_types);
     warn "feature types = @feature_types\n" if DEBUG;
-    my (%similarity,%feature_count);
+    my (%groups,%feature_count,%group_pattern);
 
     while (my $feature = $iterator->next_seq) {
 
@@ -824,27 +826,39 @@ sub image_and_map {
 
       # special case to handle paired EST reads
       # WARNING: HARD-CODED RELIANCE ON METHOD NAMES similarity AND alignment.
-      if ($feature->primary_tag =~ /^(similarity|alignment)$/i) {
-	push @{$similarity{$label}},$feature;
+      # if ($feature->primary_tag =~ /^(similarity|alignment)$/i) {
+      # push @{$similarity{$label}},$feature;
+      # next;
+      # }
+
+      # Handle name-based groupings.  Since this occurs for every feature
+      # we cache the pattern data.
+      warn "$track group pattern => ",$conf->code_setting($label => 'group_pattern') if DEBUG;
+      exists $group_pattern{$label} or $group_pattern{$label} = $conf->code_setting($label => 'group_pattern');
+
+      if (defined $group_pattern{$label}) {
+	push @{$groups{$label}},$feature;
 	next;
       }
+
       $track->add_feature($feature);
     }
 
-    # handle the similarities as a special case
-    # WARNING: HARD-CODED f/r, p/q, 3/5 PAIR SUFFIXES.
-    for my $label (keys %similarity) {
-      my $set = $similarity{$label};
-      my %pairs;
-      for my $a (@$set) {
-	(my $base = $a->name) =~ s/\.[frpq35]$//i;
-	push @{$pairs{$base}},$a;
-      }
-      my $track = $tracks{$label};
-      foreach (values %pairs) {
-	$track->add_group($_);
-      }
-    }
+    # handle pattern-based group matches
+     for my $label (keys %groups) {
+       my $set     = $groups{$label};
+       my $pattern = $group_pattern{$label} or next;
+       $pattern =~ s!^/(.+)/$!$1!;  # clean up regexp delimiters
+       my %pairs;
+       for my $a (@$set) {
+	 (my $base = $a->name) =~ s/$pattern//i;
+ 	push @{$pairs{$base}},$a;
+       }
+       my $track = $tracks{$label};
+       foreach (values %pairs) {
+ 	$track->add_group($_);
+       }
+     }
 
     # configure the tracks based on their counts
     for my $label (keys %tracks) {
@@ -1467,8 +1481,8 @@ sub type2label {
 sub feature2label {
   my $self = shift;
   my ($feature,$length) = @_;
-  my $type  = eval {$feature->type} 
-    || $feature->source_tag || $feature->primary_tag or return;
+  my $type  = eval {$feature->type}
+    || eval{$feature->source_tag} || eval{$feature->primary_tag} or return;
   (my $basetype = $type) =~ s/:.+$//;
   my $label = $self->type2label($type,$length)
     || $self->type2label($basetype,$length)
@@ -1536,7 +1550,7 @@ sub make_title {
     my $label    = $self->feature2label($feature) or last TRY;
     $key         = $self->setting($label,'key') || $label;
     $key         =~ s/s$//;
-    my $link     = $self->code_setting($label,'title') || $self->code_setting(general=>'title');
+    my $link     = $self->code_setting($label,'title')       || $self->code_setting(general=>'title');
     $link or last TRY;
     if (ref($link) eq 'CODE') {
       $title       = eval {$link->($feature,$panel)};
@@ -1568,6 +1582,16 @@ sub make_title {
   warn $@ if $@;
 
   return $title;
+}
+
+sub make_link_target {
+  my $self = shift;
+  my ($feature,$panel) = @_;
+  my $label    = $self->feature2label($feature) or return;
+  my $link_target = $self->code_setting($label,'link_target') || $self->code_setting(general=>'link_target');
+  $link_target = eval {$link_target->($feature,$panel)} if ref($link_target) eq 'CODE';
+  warn $@ if $@;
+  return $link_target;
 }
 
 # return language-specific options

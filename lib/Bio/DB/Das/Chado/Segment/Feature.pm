@@ -25,7 +25,7 @@ use vars qw($VERSION @ISA $AUTOLOAD);
 @ISA = qw(Bio::DB::Das::Chado::Segment Bio::SeqFeatureI 
 	  Bio::Root::Root);
 
-$VERSION = '0.01';
+$VERSION = '0.02';
 #' 
 
 *segments = \&sub_SeqFeature;
@@ -74,7 +74,8 @@ sub new {
 
   my $self = bless { },$package;
 
-  ($start,$end) = ($end,$start) if defined($strand) and $strand == -1;
+#check that this is what you want!
+  #($start,$end) = ($end,$start) if defined($strand) and $strand == -1;
 
   @{$self}{qw(factory parent sourceseq start end strand )} =
     ($factory,$parent,$srcseq,$start,$end,$strand);
@@ -94,7 +95,8 @@ sub length {
 }
 
 sub type {shift->{type}}
-sub seq_id { shift->{group} }
+sub seq_id { shift->{sourceseq} }
+*info = \&display_name; #for compatability with broken generic glyphs
 
 =head2 group
 
@@ -217,7 +219,7 @@ sub sub_SeqFeature {
 
   my $sth = $self->{factory}->{dbh}->prepare("
     select child.feature_id, child.name, child.type_id, parent.name as pname,
-           childloc.nbeg, childloc.nend, childloc.strand, childloc.phase
+           childloc.min, childloc.max, childloc.strand, childloc.phase
     from feature as parent
     inner join
       feature_relationship as fr0 on
@@ -237,19 +239,13 @@ sub sub_SeqFeature {
   my %termname = %{$self->{factory}->{cvtermname}};
   while (my $hashref = $sth->fetchrow_hashref) {
 
-    my ($start,$stop);
-    if ($$hashref{nbeg} > $$hashref{nend}) {
-      $start = $$hashref{nend};
-      $stop  = $$hashref{nbeg};
-    } else {
-      $stop  = $$hashref{nend};
-      $start = $$hashref{nbeg};
-    }
+    my $stop  = $$hashref{max};
+    my $start = $$hashref{min};
 
     my $feat = Bio::DB::Das::Chado::Segment::Feature->new (
                        $self->{factory},
                        $self,
-                       $$hashref{pname},
+                       $self->ref,
                        $start,$stop,
                        $termname{$$hashref{type_id}},
                        $$hashref{strand},

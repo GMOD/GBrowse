@@ -2,7 +2,7 @@ use ExtUtils::MakeMaker;
 use FindBin '$Bin';
 require 5.005003;
 
-my $VERSION = '1.47';
+my $VERSION = '1.50';
 
 my @OPTIONS = qw(PREFIX CONF HTDOCS CGIBIN);
 my $OPTIONS = join ('|',@OPTIONS);
@@ -29,7 +29,7 @@ END
   }
 
   elsif (/($OPTIONS)=(.+)/og) {
-    $OPTIONS{$1} = $2;
+    $OPTIONS{$1} = interpolate($2);
   }
 
   else {
@@ -47,7 +47,7 @@ if (-e 'GGB.def' && !%OPTIONS) {
       chomp;
       next if /^\#/;
       next unless /^($OPTIONS)=(.+)/o;
-      $OPTIONS{$1} = $2;
+      $OPTIONS{$1} = interpolate($2);
     }
     close F;
   }
@@ -57,15 +57,12 @@ if (-e 'GGB.def' && !%OPTIONS) {
 $OPTIONS{PREFIX} ||= '/usr/local/apache';
 unless ($OPTIONS{CONF}) {
   $OPTIONS{CONF} = "$OPTIONS{PREFIX}/conf";
-  warn "NOTE: Setting location of browser configuration files to $OPTIONS{CONF}\n";
 }
 unless ($OPTIONS{HTDOCS}) {
   $OPTIONS{HTDOCS} = "$OPTIONS{PREFIX}/htdocs";
-  warn "NOTE: Setting location of browser static files to $OPTIONS{HTDOCS}\n";
 }
 unless ($OPTIONS{CGIBIN}) {
   $OPTIONS{CGIBIN} = "$OPTIONS{PREFIX}/cgi-bin";
-  warn "NOTE: Setting location of browser static files to $OPTIONS{CGIBIN}\n";
 }
 
 open F,">$Bin/GGB.def" or die "Can't open $Bin/GGB.def for writing: $!";
@@ -76,6 +73,23 @@ foreach (keys %OPTIONS) {
 }
 print F "VERSION=$VERSION\n";
 close F;
+
+print STDERR <<END;
+----------------------------------------------
+                File Paths
+
+END
+;
+foreach (qw(PREFIX CONF HTDOCS CGIBIN)) {
+  printf STDERR "%7s %s\n",$_,$OPTIONS{$_};
+}
+print STDERR <<END;
+
+(Run perl Makefile.PL -h for help on changing)
+----------------------------------------------
+END
+;
+
 
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
@@ -101,6 +115,7 @@ WriteMakefile(
 				 'bin/process_wormbase.pl',
 				 'bin/process_sgd.pl',
 				 'bin/process_gadfly.pl',
+				 'bin/process_ncbi_human.pl',
 				],
 	      'LIBS'	     => [''], # e.g., '-lm'
 	      'DEFINE'	     => '',
@@ -110,6 +125,23 @@ WriteMakefile(
                   'ABSTRACT' => 'A CGI-driven browser for genomic annotations.',
                                 ) : (),
 );
+
+sub interpolate {
+  my $path = shift;
+  my ($to_expand,$homedir);
+  return $path unless $path =~ m!^~([^/]*)!;
+  eval {
+    if ($to_expand = $1) {
+      $homedir = (getpwnam($to_expand))[7];
+    } else {
+      $homedir = (getpwuid($<))[7];
+    }
+    return $path unless $homedir;
+
+    $path =~ s!^~[^/]*!$homedir!;
+  };
+  return $path;
+}
 
 sub MY::clean {
   package MY;

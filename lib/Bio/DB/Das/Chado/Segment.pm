@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.16 2003-01-30 21:08:28 scottcain Exp $
+# $Id: Segment.pm,v 1.22 2003-02-26 20:47:29 scottcain Exp $
 
 =head1 NAME
 
@@ -10,6 +10,18 @@ Bio::DB::Das::Chado::Segment - DAS-style access to a chado database
 
   $segment = $das->segment(-name=>'Landmark',
                            -start=>$start,
+te that there is currently a hack in Segment.pm to make it work with
+chado/gadfly: the search space for names of segments is in a small
+table named gbrowse_assembly, which contains only chromosome arms,
+as extracted directly from the feature table.  This is done because
+gbrowse generally only creates segments out of a large reference
+sequence (like an arm), and there is no good, fast way to look up
+arm names in chado: the feature table is too big (affecting performance
+of a common command), and the synonym tables does not contain arm
+names.  In order for Segment.pm to be a general chado tool, this
+will have to be addressed, as it is possible that another use of
+Segment.pm may need to create a segment out of something else.
+
                            -end => $end);
 
   @features = $segment->overlapping_features(-type=>['type1','type2']);
@@ -29,6 +41,18 @@ Bio::DB::Das::Chado::Segment - DAS-style access to a chado database
                                        );
 
 =head1 DESCRIPTION
+
+Note that there is currently a hack in Segment.pm to make it work with
+chado/gadfly: the search space for names of segments is in a small
+table named gbrowse_assembly, which contains only chromosome arms,
+as extracted directly from the feature table.  This is done because
+gbrowse generally only creates segments out of a large reference
+sequence (like an arm), and there is no good, fast way to look up
+arm names in chado: the feature table is too big (affecting performance
+of a common command), and the synonym tables does not contain arm
+names.  In order for Segment.pm to be a general chado tool, this 
+will have to be addressed, as it is possible that another use of 
+Segment.pm may need to create a segment out of something else.
 
 Bio::DB::Das::Chado::Segment is a simplified alternative interface to
 sequence annotation databases used by the distributed annotation
@@ -95,8 +119,10 @@ use constant DEBUG => 0;
 
 use vars '@ISA','$VERSION','$ASSEMBLY_TYPE';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI);
-$VERSION = 0.01;
+$VERSION = 0.02;
 $ASSEMBLY_TYPE = 'arm'; #this should really be set in a config file
+                        # well, it shouldn't really need to be anywhere, 
+                        # it is just a speed hack
 
 # construct a virtual segment that works in a lazy way
 sub new {
@@ -111,7 +137,7 @@ sub new {
     warn "start = $start, end = $end\n" if DEBUG;
 
   $self->throw("start value less than 1\n") if (defined $start && $start < 1);
-  $start ||= 1;
+  $start = $start ? int($start) : 1; 
 
 #moved length determination to constructor, now it will be there from
 # 'the beginning'.
@@ -136,7 +162,7 @@ sub new {
   my $hash_ref = {};
   my $length;
   my $rows_returned = $sth->rows;
-  if ($rows_returned < 1) { #look in synonym for an exact match
+  if ($rows_returned != 1) { #look in synonym for an exact match
     my $isth = $factory->{dbh}->prepare ("
        select fs.feature_id from feature_synonym fs, synonym s
        where fs.synonym_id = s.synonym_id and
@@ -144,14 +170,24 @@ sub new {
         "); 
     $isth->execute or $self->throw("query for name failed"); 
     $rows_returned = $isth->rows;
-    return if $rows_returned != 1;
+
+    if ($rows_returned != 1) { #look in dbxref for accession number match
+      $isth = $factory->{dbh}->prepare ("
+         select feature_id from feature_dbxref fd, dbxref d
+         where fd.dbxrefstr = d.dbxrefstr and
+               d.accession ilike $quoted_name ");
+      $isth->execute or $self->throw("query for accession failed");
+      $rows_returned = $isth->rows;
+
+      return if $rows_returned != 1;
+    }
 
     $hash_ref = $isth->fetchrow_hashref;
 
     my $landmark_feature_id = $$hash_ref{'feature_id'};
 
     $sth = $factory->{dbh}->prepare ("
-       select ga.name,ga.feature_id,ga.seqlen,fl.nbeg,fl.nend
+       select ga.name,ga.feature_id,ga.seqlen,fl.min,fl.max
        from gbrowse_assembly ga, featureloc fl
        where fl.feature_id = $landmark_feature_id and
              fl.srcfeature_id = ga.feature_id
@@ -165,17 +201,15 @@ sub new {
   my $srcfeature_id = $$hash_ref{'feature_id'};
   $name = $$hash_ref{'name'};
 
-  if ($$hash_ref{'nbeg'}) {
-    $start = $$hash_ref{'nbeg'};
-    $end   = $$hash_ref{'nend'};
-    ($end,$start) = ($start,$end) if $start > $end;
+  if ($$hash_ref{'min'}) {
+    $start = $$hash_ref{'min'};
+    $end   = $$hash_ref{'max'};
   }
 
     warn "length:$length, srcfeature_id:$srcfeature_id\n" if DEBUG;
 
   $self->throw("end value greater than length\n") if (defined $end && $end > $length);
-  $end ||= $length;
-
+  $end = $end ? int($end) : $length;
   $length = $end - $start +1;
 
   return bless {factory       => $factory,
@@ -255,6 +289,11 @@ sub length { shift->{length} }
  Returns : a list of Bio::SeqFeatureI objects
  Args    : see below
  Status  : Public
+
+Note: There is a hack in this method to increase speed that may or 
+may not work well with a give instance of postgres/chado.  For the
+query to find features, Seq Scans (same as Table Scans in some other
+database) have been disabled, in order to force the use of an index.
 
 This method will find all features that intersect the segment in a
 variety of ways and return a list of Bio::SeqFeatureI objects.  The
@@ -338,18 +377,15 @@ sub features {
   my $sql_range;
   if ($rangetype eq 'contains') {
 
-    $sql_range = " ((fl.strand=1  and fl.nbeg <= $rstart and fl.nend >= $rend) OR \n"
-           . "      (fl.strand=-1 and fl.nend <= $rstart and fl.nbeg >= $rend)) ";
+    $sql_range = " fl.min >= $rstart and fl.max M= $rend ";
 
   } elsif ($rangetype eq 'contained_in') {
 
-    $sql_range = " ((fl.strand=1  and fl.nbeg => $rstart and fl.nend <= $rend) OR \n"
-           . "      (fl.strand=-1 and fl.nend => $rstart and fl.nbeg <= $rend)) ";
+    $sql_range = " fl.min <= $rstart and fl.max >= $rend ";
 
   } else { #overlaps is the default
 
-    $sql_range = " ((fl.strand=1  and fl.nbeg <= $rend and fl.nend >= $rstart) OR \n"
-           . "      (fl.strand=-1 and fl.nend <= $rend and fl.nbeg >= $rstart)) ";
+    $sql_range = " fl.min <= $rend and fl.max >= $rstart ";
 
   }
 
@@ -390,31 +426,28 @@ sub features {
 #$self->{factory}->{dbh}->trace(1);
 
   my $srcfeature_id = $self->{srcfeature_id};
+
+  $self->{factory}->{dbh}->do("set enable_seqscan=0");
   my $sth = $self->{factory}->{dbh}->prepare("
-    select distinct f.name,fl.nbeg,fl.nend,fl.strand,f.type_id,f.feature_id
+    select distinct f.name,fl.min,fl.max,fl.strand,f.type_id,f.feature_id
     from feature f, featureloc fl
     where
       $sql_types 
       fl.srcfeature_id = $srcfeature_id and
       f.feature_id  = fl.feature_id and
       $sql_range
-    order by fl.nbeg
        ");
    $sth->execute or $self->throw("feature query failed"); 
+   $self->{factory}->{dbh}->do("set enable_seqscan=1");
 
+#$self->{factory}->{dbh}->trace(0);
 #take these results and create a list of Bio::SeqFeatureI objects
 
   my %termname = %{$self->{factory}->{cvtermname}};
   while (my $hashref = $sth->fetchrow_hashref) {
 
-    my ($start,$stop);
-    if ($$hashref{nbeg} > $$hashref{nend}) {
-      $start = $$hashref{nend};
-      $stop  = $$hashref{nbeg};
-    } else {
-      $stop  = $$hashref{nend};
-      $start = $$hashref{nbeg};
-    }
+    my $stop  = $$hashref{max};
+    my $start = $$hashref{min};
 
 #    warn "-->$$hashref{name}<--\n";
 

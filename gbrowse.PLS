@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.74 2003-01-19 19:55:22 lstein Exp $
+# $Id: gbrowse.PLS,v 1.76 2003-02-25 16:08:27 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -79,7 +79,7 @@ use constant ANNOTATION_EDIT_ROWS => 25;
 use constant ANNOTATION_EDIT_COLS => 100;
 use constant URL_FETCH_TIMEOUT    => 5;  # five seconds max!
 use constant URL_FETCH_MAX_SIZE   => 1_000_000;  # don't accept any files larger than 1 Meg
-use constant MAX_KEYWORD_RESULTS  => 50;  # max number of results from keyword search
+use constant MAX_KEYWORD_RESULTS  => 1000;  # max number of results from keyword search
 use constant DEFAULT_RANGES       => q(100 500 1000 5000 10000 25000 100000 200000 400000);
 use constant DEFAULT_FINE_ZOOM    => '10%';
 use constant GBROWSE_HELP         => '/gbrowse';
@@ -2305,7 +2305,8 @@ sub set_language {
 
 sub html_frag {
   my $fragname = shift;
-  my $a = $CONFIG->setting($fragname);
+  my $a = $CONFIG->config->code_setting(general => $fragname);
+  return $a->(@_) if ref $a eq 'CODE';
   return $a;
 }
 

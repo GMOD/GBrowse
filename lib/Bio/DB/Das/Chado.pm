@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.14 2003-01-30 20:10:12 scottcain Exp $
+# $Id: Chado.pm,v 1.17 2003-02-25 18:02:51 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -8,14 +8,11 @@ Bio::DB::Das::Chado - DAS-style access to a chado database
 =head1 SYNOPSIS
 
   # Open up a feature database
- $db = Bio::DB::Das::Chado->new(
-				 driver   => 'postgres',
-				 dbname => 'chado',
-				 host   => 'localhost',
-				 user   => 'scain',
-				 pass   => undef,
-				 port   => undef,
-				) or die;
+                 $db    = Bio::DB::Das::Chado(
+                            -dsn  => 'dbi:Pg:dbname=gadfly;host=lajolla'
+                            -user => 'jimbo',
+                            -pass => 'supersecret',
+                                       );
 
   @segments = $db->segment(-name  => '2L',
                            -start => 1,
@@ -99,19 +96,16 @@ use vars qw($VERSION @ISA);
 use constant SEGCLASS      => 'Bio::DB::Das::Chado::Segment';
 use constant DEBUG =>0;
 
-$VERSION = 0.01;
+$VERSION = 0.02;
 @ISA     = qw(Bio::Root::Root Bio::DasI);
 
 =head2 new
 
  Title   : new
  Usage   : $db    = Bio::DB::Das::Chado(
-				    driver    => 'Pg',
-				    dbname    => 'chado',
-				    host      => 'localhost',
-				    user      => 'jimbo',
-				    pass      => 'supersecret',
-				    port      => 3306,
+                            -dsn  => 'dbi:Pg:dbname=gadfly;host=lajolla'
+			    -user => 'jimbo',
+			    -pass => 'supersecret',
                                        );
 
  Function: Open up a Bio::DB::DasI interface to a Chado database
@@ -124,10 +118,13 @@ $VERSION = 0.01;
 # create new database accessor object
 # takes all the same args as a Bio::DB::BioDB class
 sub new {
-  my $class = shift;
-  my $self  = $class->SUPER::new(@_);
+  my $self = shift;
 
-  my ($dsn,undef,$username,undef,$password) = @_;
+  my %arg =  @_;
+
+  my $dsn      = $arg{-dsn};
+  my $username = $arg{-user};
+  my $password = $arg{-pass};
 
   my $dbh = DBI->connect( $dsn, $username, $password )
     or $self->throw("unable to open db handle");
@@ -328,7 +325,7 @@ sub get_feature_by_name {
     # prepare sql queries for use in while loops
     my $isth =  $self->{dbh}->prepare("
        select f.feature_id, f.name, f.type_id, 
-              fl.nbeg,fl.nend,fl.strand,fl.phase, fl.srcfeature_id
+              fl.min,fl.max,fl.strand,fl.phase, fl.srcfeature_id
        from feature f, featureloc fl 
        where
          f.feature_id = ? and
@@ -366,7 +363,7 @@ sub get_feature_by_name {
                       $self,
                       $parent_segment,
                       $parent_segment->seq_id,
-                      $$hashref{'nbeg'},$$hashref{'nend'},
+                      $$hashref{'min'},$$hashref{'max'},
                       $termname{$$hashref{'type_id'}},
                       $$hashref{'strand'},
                       $$hashref{'name'},

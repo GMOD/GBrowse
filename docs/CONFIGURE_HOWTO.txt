@@ -18,6 +18,7 @@ Project (GMOD; http://www.gmod.org).
      B5. Semantic Zooming
      B6. Computed Options
      B7. Declaring New Aggregators
+     B8. Grouping related features
   C. ADDING HISTOGRAMS
   D. INTERNATIONALIZATION
   E. DISPLAYING GENETIC AND RH MAPS
@@ -365,21 +366,21 @@ example configuration files.
 
 The following [GENERAL] options are recognized:
 
-  a) description
+  * description
 
    The description of the database.  This will appear in the popup
    menu that allows users to select the data source and in the 
    header of the page.  Don't make it as long as the previous example!
    (You will want to change this.)
 
-  b) db_adaptor
+  * db_adaptor
 
   Tells GBrowse what database adaptor to use.  By using different adaptors
   you can attach gbrowse to a variety of different databases.  Currently
   the only stable adaptor you can use is Bio::DB::GFF, which is a standard
   set of adaptors contained in Bioperl.
 
-  c) db_args
+  * db_args
 
   Arguments to pass to the adaptor for it to use when making a database
   connection.  The exact format will depend on the adaptor you're using.
@@ -415,7 +416,7 @@ The following [GENERAL] options are recognized:
   dbd::Oracle database driver for more information about the -dsn
   format.
 
-  d) aggregators
+  * aggregators
 
   Aggregators to use for complex features.  Comment this out to use
   the default aggregators. It is possible to declare your own
@@ -423,23 +424,23 @@ The following [GENERAL] options are recognized:
   Aggregators" for details.  This option is only valid when used with
   Bio::DB::GFF adaptors.
 
-  e) user
+  * user
   
   The user name for the gbrowse script to log in under if you are not
   using "nobody".  This is exactly the same as providing the -user
   option to db_args.
 
-  f) pass
+  * pass
 
   The password to use if the database is password protected.  This is
   the same as providing the -pass option to db_args.
 
-  g) stylesheet
+  * stylesheet
 
   Location of the stylesheet used to create the GBrowse look and feel.
   (You probably will not need to change this.)
 
-  h) plugins
+  * plugins
 
   This is a list of plugins that you want to be available from gbrowse.
   Plugins are a way for third-party developers to add functionality to gbrowse
@@ -453,17 +454,17 @@ The following [GENERAL] options are recognized:
   See the contents of conf/plugins and contrib/plugins for more plugins
   that you can install.
 
-  i) buttons
+  * buttons
 
   URL in which the various graphical buttons used by GBrowse are located.
   (You will probably not need to change this.)
 
-  j) tmpimages
+  * tmpimages
 
   URL of a writable directory in which GBrowse can write its temporary
   images.    (You will probably not need to change this.)
 
-  k) glyph
+  * glyph
      height
      bgcolor
      fgcolor
@@ -475,7 +476,7 @@ The following [GENERAL] options are recognized:
    graphical options found in the [GENERAL] sections are treated as
    defaults.
 
-   l) label density
+   * label density
 
    When there are too many annotations on the screen GBrowse automatically
    disables the printing of identifying labels next to the feature.
@@ -484,7 +485,7 @@ The following [GENERAL] options are recognized:
    there are more than 25 annotations of a particular type on display
    at once.
 
-   m) bump density
+   * bump density
 
    When there are too many annotations on the screen GBrowse automatically
    disables collision control.  The "bump density" option controls
@@ -495,7 +496,7 @@ The following [GENERAL] options are recognized:
    overlap.
 
 
-   n) link
+   * link
 
    The link option creates a default rule for creating outgoing links 
    from the GBrowse display.  When the user clicks on a feature of
@@ -531,16 +532,37 @@ The following [GENERAL] options are recognized:
    this.  It is also possible to declare a subroutine to compute the
    proper URL dynamically.  See COMPUTED OPTIONS for details.
 
-   o) title
+   * link_target
+
+   By default links will replace the contents of the current window.
+   If you wish, you can specify a new window to pop up when the user
+   clicks on a feature, or designate a named window or frame to
+   receive the contents of the link.  To do this, add the "link_target"
+   option to the general section or to a track stanza.  The format
+   is this:
+
+      link_target = _blank
+
+   The value uses the HTML targetting rules to name/create the window
+   to receive the value of the link.  The first time the link is
+   accessed, a window with the specified name is created.  The next
+   time the user clicks on a link with the same target, that window
+   will receive the content of the link if it is still present, or it
+   will be created again if it has been closed.  A target named
+   "_blank" is special and will always create a new window.
+
+   The "link_target" option can also be computed dynamically.  See
+   COMPUTED OPTIONS for details.
+
+   * title
 
    The title option controls the "tooltips" text that pops up when
    the mouse hovers over a glyph in certain browsers.  The rules
    for generating titles are the same as the "link" option discussed
-   in section (n).  The "title" option can also be computed dynamically.
+   above.  The "title" option can also be computed dynamically.
    See COMPUTED OPTIONS for details.
-   
 
-   p) image widths
+   * image widths
 
    The image widths option controls the set of image sizes to offer
    the user.  Its value is a space-delimited list of pixel widths.
@@ -548,12 +570,12 @@ The following [GENERAL] options are recognized:
    depends on the number of tracks and features, and cannot be
    controlled.
 
-   q) default width
+   * default width
 
    The default width is the image width to start off with when the
    user invokes the browser for the first time.  The default is 800.
 
-   r) default features
+   * default features
 
    The default features option is a space-delimited list of tracks
    to turn on by default.  You will probably need to change this.
@@ -561,7 +583,7 @@ The following [GENERAL] options are recognized:
 
       default features = Genes ORFs tRNAs
 
-   s) max segment
+   * max segment
 
    The max segment option sets an upper bound on the maximum size DNA
    segment that will be displayed on the detailed view.  Its value is
@@ -569,21 +591,21 @@ The following [GENERAL] options are recognized:
    select a smaller region on the birds-eye view.  You will probably
    want to adjust this.
 
-   t) default segment
+   * default segment
 
    The default segment option sets the width of the segment (bp) that
    will be displayed when the user clicks on the birds-eye view
    without previously having set a desired magnification.  You may
    want to adjust this value.
 
-   u) zoom levels
+   * zoom levels
 
    GBrowse allows unlimited zoom levels.  This option selects the
    width of each level, in bp.  For example:
 
       zoom levels = 1000 2000 5000 10000 20000 40000 100000 200000
 
-   v) low res
+   * low res
 
    GBrowse currently supports limited semantic zooming in which the
    appearance of certain glyphs changes as the magnification
@@ -599,24 +621,24 @@ The following [GENERAL] options are recognized:
    base pairs shown on the detailed screen is equal to or greater than
    100,000 bp.
 
-   w) overview units
+   * overview units
 
    This option controls the units that will be used on the scale for
    the birds-eye view display.  Possible values are "bp" (base pairs),
-   "K" (kilobases), "M" (megabases), and "G" (gigabases).  If this
+   "k" (kilobases), "M" (megabases), and "G" (gigabases).  If this
    option is omitted, the browser will guess the most appropriate
    unit.
 
 
-   x) overview bgcolor
+   * overview bgcolor
 
    This is the color for the background of the birds-eye view.
 
-   y) detailed bgcolor
+   * detailed bgcolor
 
    This is the color for the background of the detailed view.
 
-   z) header
+   * header
 
    This is a header to print at the top of the browser page.  It is
    any valid HTML, and can span multiple lines provided that the
@@ -631,7 +653,7 @@ The following [GENERAL] options are recognized:
 
     header = <h1>Welcome to the Volvox Sequence Page</h1>
 
-   aa) footer
+   * footer
 
    This is a footer to print at the top of the browser page.  It is
    any valid HTML, and can span multiple lines provided that the
@@ -655,7 +677,7 @@ The following [GENERAL] options are recognized:
 	</TR>
 	</table>
 
-    ab) examples
+    * examples
 
     You can provide GBrowse with some canned examples of "interesting
     regions" for the user to click on.  The examples option, if
@@ -665,7 +687,7 @@ The following [GENERAL] options are recognized:
        examples = II  NPY1 NAB2 Orf:YGL123W
 
 
-    ac) automatic classes
+    * automatic classes
 
     When the user types in a search string that is not qualified by a
     class (as in EST:yk1234.5), GBrowse will automatically search for
@@ -683,7 +705,7 @@ The following [GENERAL] options are recognized:
     first match is found.  Otherwise, the browser will proceed to a
     full text search of all the comment fields.
 
-    ad) remote sources
+    * remote sources
     
     This option allows you to add remote annotation sources to the menu of such
     sources at the bottom of the main window.  The format is:
@@ -691,7 +713,7 @@ The following [GENERAL] options are recognized:
       remote sources = "Menu Label 1" http://url1.host.com/etc/etc
 		       "Menu Label 2" http://url2.host.com/etc/etc
 
-    ae) html1, html2, html3, html4, html5, html6
+    * html1, html2, html3, html4, html5, html6
 
     These options allow you to insert HTML into the GBrowse page at
     strategic places.  Eventually this will be replaced with an HTML
@@ -708,7 +730,27 @@ The following [GENERAL] options are recognized:
     html6	 between the track list and the annotation upload
     footer	 between the annotation upload and the bottom
 
-    af) keystyle, empty_tracks
+    These can be code references.  One useful thing to do is to use the
+    language translator to insert language-specific HTML.  Here's an
+    example provided by Marc Logghe:
+
+    html2 = sub {
+        my $go = $main::LANG->tr('Go');
+        return
+        qq(
+        <table width="800" border="0">
+        <tr class="searchbody">
+        <td align="left" colspan="3" />
+        <b>Dump:</b><input type="button" value="Assembly" onclick="window.open('gbrowse?plugin=AssemblyDumper;plugin_action=$go');">
+        <input type="button" value="Reads" onclick="window.open('gbrowse?plugin=ReadDumper;plugin_action=$go');">
+        </td>
+        </tr>
+        </table>
+        );
+       }
+
+
+    * keystyle, empty_tracks
 
     These two general options control the appearance of the keys
     printed on the detailed view.  keystyle takes one of two values
@@ -855,11 +897,11 @@ Valid options are as follows:
   can be continued across multiple lines, provided that continuation
   lines begin with whitespace.
 
-  m) link
+  m) link, title, link_target
 
-  This option is identical to the link option in the [GENERAL]
-  section, but changes the link rule for the individual feature.  It
-  can be used to override the global link rule.  To force a track not
+  These options are identical to the similarly-named options in 
+  the [GENERAL] section, but change the rules on a track-by-track basis.  
+  They can be used to override the global rules.  To force a track not
   to contain any links, use a blank value.
 
   n) feature_low
@@ -880,6 +922,13 @@ Valid options are as follows:
   glyphs in order to display global characteristics of the sequence.
   If this option is set, then you do not need to specify a "feature"
   option.
+
+  f) group pattern
+
+  This option lets you connect related features by dotted lines based
+  on a pattern match in the features' names.  A typical example is
+  connecting the 5' and 3' read pairs from ESTs or plasmids.  See
+  GROUPING FEATURES for details.
 
 A large number of glyph-specific options are also recognized.  These
 are described in the next section.
@@ -1202,6 +1251,43 @@ Here is the list of available predefined aggregators:
 To view the documentation for any of these aggregators, run the
 command "perldoc Bio::DB::GFF::Aggregator::aggregator_name", where
 "aggregator_name" is the name of the aggregator.
+
+B8. GROUPING FEATURES
+
+gbrowse recognizes the concept of a "group" of related features that
+are connected by dotted lines. The canonical example is a pair of ESTs
+that are related by being from the two ends of the same cDNA clone.
+However many feature databases, including the GFF database recommended
+for gbrowse, do not allow for arbitrary hierarchical grouping.  To
+work around this, you may specify a feature name-based regular
+expression that will be used to trigger grouping.
+
+It works like this.  Say you are working with EST feature pairs and
+they follow the nomenclature 501283.5 and 501283.3, where the suffix
+is "5" or "3" depending on whether the read was from the 5' or 3' ends
+of the insert.  To group these pairs by a dotted line, specify the
+"group_pattern" option in the appropriate track section:
+
+      group_pattern =  /\.[53]$/
+
+At render time, gbrowse will strip off this pattern from the names of
+all features in the EST track and group those that have a common base
+name.  Hence 501283.5 and 501283.3 will be grouped together by a
+dotted line, because after the pattern is removed, they will share the
+same common name "501283".
+
+This works for all embedded pattern, provided that stripping out the
+pattern results in related features sharing the same name.  For
+example, if the convention were "est.for.501283" and "est.rev.501283",
+then this grouping pattern would have the desired effect:
+
+      group_pattern = /\.(for|rev)\./
+
+Don't forget to escape regular expression meta-characters and to
+consider the various ways in which the regular expression might break.
+It is entirely possible to create an invalid regular expression, in
+which case gbrowse will crash until you comment out the offending
+option.
 
 ----------------------------------------------------------------------
 

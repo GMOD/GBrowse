@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.23 2002-06-19 20:41:49 lstein Exp $
+# $Id: Browser.pm,v 1.24 2002-06-26 01:56:37 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -490,7 +490,7 @@ The arguments are a series of tag=>value pairs, where tags are:
   options             A hashref containing options to apply to
                         each track (optional).  Keys are the track labels
                         and the values are 0=auto, 1=force no bump,
-                        2=force bump, 3=force label.
+                        2=force bump, 3=force label, 4=expanded bump.
 
   feature_files       A hashref containing a series of
                         Bio::Graphics::FeatureFile objects to be
@@ -520,6 +520,7 @@ sub render_html {
   my $tracks          = $args{tracks};
   my $do_map          = $args{do_map};
   my $do_centering_map= $args{do_centering_map};
+  my $limit           = $args{limit};
 
   return unless $segment;
 
@@ -527,6 +528,7 @@ sub render_html {
 					 feature_files => $feature_files,
 					 options       => $options,
 					 tracks        => $tracks,
+					 limit         => $limit,
 					);
 
   my ($width,$height) = $image->getBounds;
@@ -591,11 +593,15 @@ sub make_map {
   my $map = qq(<map name="hmap">\n);
 
   # use the scale as a centering mechanism
-  my $ruler = shift @$boxes;
-  $map .= $self->make_centering_map($ruler) if $centering_map;
+#  my $ruler = shift @$boxes;
+#  $map .= $self->make_centering_map($ruler) if $centering_map;
 
   foreach (@$boxes){
     next unless $_->[0]->can('primary_tag');
+    if ($_->[0]->primary_tag eq 'Segment') {
+      $map .= $self->make_centering_map($_) if $centering_map;
+      next;
+    }
     my $href  = $self->make_href($_->[0]) or next;
     my $alt   = $self->make_alt($_->[0]);
     $map .= qq(<AREA SHAPE="RECT" COORDS="$_->[1],$_->[2],$_->[3],$_->[4]" 
@@ -655,7 +661,7 @@ sub make_alt {
   my $slef    = shift;
   my $feature = shift;
 
-  my $label = $feature->class .":".$feature->info;
+  my $label = eval {$feature->class .":".$feature->info} || return '';
   if ($feature->method =~ /^(similarity|alignment)$/) {
     $label .= " ".commas($feature->target->start)."..".commas($feature->target->end);
   } else {
@@ -669,6 +675,8 @@ sub make_alt {
 #    'segment'       A feature iterator that responds to next_seq() methods
 #    'feature_files' A hash of Bio::Graphics::FeatureFile objects containing 3d party features
 #    'options'       An hashref of options, where 0=auto, 1=force no bump, 2=force bump, 3=force label
+#                       4=force fast bump, 5=force fast bump and label
+#    'limit'         Place a limit on the number of features of each type to show.
 #    'tracks'        List of named tracks, in the order in which they are to be shown
 #    'label_scale'   If true, prints chromosome name next to scale
 sub image_and_map {
@@ -679,6 +687,7 @@ sub image_and_map {
   my $feature_files = $config{feature_files} || {};
   my $tracks        = $config{tracks}        || [];
   my $options       = $config{options}       || {};
+  my $limit         = $config{limit}         || {};
 
   # these are natively configured tracks
   my @labels = $self->labels;
@@ -715,10 +724,10 @@ sub image_and_map {
       next;
     }
 
-    # if the label is the magic "dna" or "protein" flag, then add the segment using the
-    # "sequence" glyph
+    # if the glyph is the magic "dna" glyph (for backward compatibility), or if the section
+    # is marked as being a "global feature", then we apply the glyph to the entire segment
     my $g = $conf->glyph($label);
-    if (defined $g && ($g eq 'protein' || $g eq 'dna')) {
+    if ((defined $g && ($g eq 'dna')) or $conf->setting($label=>'global feature')) {
       $panel->add_track($segment,
 			$conf->style($label)
 			);
@@ -746,7 +755,8 @@ sub image_and_map {
       $feature_count{$label}++;
 
       # special case to handle paired EST reads
-      if (!$lowres && $feature->method =~ /^(similarity|alignment)$/) {
+      # WARNING: HARD-CODED RELIANCE ON METHOD NAMES similarity AND alignment.
+      if (!$lowres && $feature->method =~ /^(similarity|alignment)$/i) {
 	push @{$similarity{$label}},$feature;
 	next;
       }
@@ -754,6 +764,7 @@ sub image_and_map {
     }
 
     # handle the similarities as a special case
+    # WARNING: HARD-CODED f/r, p/q, 3/5 PAIR SUFFIXES.
     for my $label (keys %similarity) {
       my $set = $similarity{$label};
       my %pairs;
@@ -770,13 +781,27 @@ sub image_and_map {
     # configure the tracks based on their counts
     for my $label (keys %tracks) {
       next unless $feature_count{$label};
+
+      # break encapsulation -- but this is for testing purposes only
+      if (exists($limit->{$label}) && $limit->{$label} > 0) {
+	my $parts = $tracks{$label}->{parts};
+	splice (@$parts,rand(@$parts),1,())
+	  while @$parts > $limit->{$label};
+	$feature_count{$label} = $limit->{$label} if $limit->{$label} < $feature_count{$label};
+	$tracks{$label}->{parts} = $parts;
+      }
+
       $options->{$label} ||= 0;
       my $do_bump  =   $options->{$label} == 0 ? $feature_count{$label} <= $max_bump
 	             : $options->{$label} == 1 ? 0
-                     : $options->{$label} >= 2 ? 1
+                     : $options->{$label} == 2 ? 1
+                     : $options->{$label} == 3 ? 1
+                     : $options->{$label} == 4 ? 2
+                     : $options->{$label} == 5 ? 2
 		     : 0;
       my $do_label =   $options->{$label} == 0 ? $feature_count{$label} <= $max_labels
 	             : $options->{$label} == 3 ? 1
+	             : $options->{$label} == 5 ? 1
 		     : 0;
       $tracks{$label}->configure(-bump  => $do_bump,
 				 -label => $do_label,

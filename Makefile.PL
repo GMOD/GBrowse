@@ -104,7 +104,7 @@ conf_install ::
 	\@echo "Installing sample configuration files..."
 	\@dir=$OPTIONS{CONF}/gbrowse.conf; \\
 	mkdir -p \$\$dir; \\
-	for i in $Bin/conf/*.conf; do \\
+	for i in $Bin/conf/*.*; do \\
 	  j=`basename \$\$i`; \\
 		if [ -f "\$\$dir/\$\$j" ]; then \\
 			echo "   Found \$\$j in \$\$dir. Skipping..."; \\
@@ -115,11 +115,7 @@ conf_install ::
 	mkdir -p \$\$dir/plugins; \\
 	for i in $Bin/conf/plugins/*.pm; do \\
 	  j=`basename \$\$i`; \\
-		if [ -f "\$\$dir/plugins/\$\$j" ]; then \\
-			echo "   Found \$\$j in \$\$dir/plugins. Skipping..."; \\
-		else \\
-			cp \$\$i \$\$dir/plugins; \\
-		fi \\
+		cp \$\$i \$\$dir/plugins; \\
 	done; \\
 
 

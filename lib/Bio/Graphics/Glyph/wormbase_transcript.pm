@@ -4,7 +4,7 @@ use strict;
 use Bio::Graphics::Glyph::transcript2;
 use vars '@ISA','$VERSION';
 @ISA = 'Bio::Graphics::Glyph::transcript2';
-$VERSION = '1.00';
+$VERSION = '1.02';
 
 use constant DEFAULT_UTR_COLOR => '#D0D0D0';
 
@@ -53,13 +53,9 @@ sub get_description {
 sub _subseq {
   my $class   = shift;
   my $feature = shift;
-  if ($feature->can('segments')) {
-    my @a = $feature->segments;
-    return sort {$a->start<=>$b->start} @a;
-  }
+  return $feature->segments if $feature->can('segments');
   return $class->SUPER::_subseq($feature);
 }
-
 1;
 
 __END__

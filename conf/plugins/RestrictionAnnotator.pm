@@ -1,12 +1,12 @@
 package Bio::Graphics::Browser::Plugin::RestrictionAnnotator;
-# $Id: RestrictionAnnotator.pm,v 1.4 2002-06-19 20:41:49 lstein Exp $
+# $Id: RestrictionAnnotator.pm,v 1.5 2002-06-26 01:56:37 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use CGI qw(:standard *table);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.10';
+$VERSION = '0.20';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -20,7 +20,7 @@ sub name { "Restriction Sites" }
 sub description {
   p("The restriction site plugin generates a restriction map",
     "on the current view.").
-  p("This plugin was written by Lincoln Stein.");
+  p("This plugin was written Elizabeth Nickerson &amp; Lincoln Stein.");
 }
 
 sub type { 'annotator' }
@@ -109,10 +109,7 @@ sub configure_enzymes {
   my $self = shift;
   my $conf_dir = $self->config_path();
   my $file = "$conf_dir/enzymes.txt";
-  open (ENZYMES, "$file");
-  if (!<ENZYMES>){
-    die "Error: cannot locate file $file.\n";
-  }
+  open (ENZYMES, "$file") or die "Error: cannot open file $file: $!.\n";
   while (<ENZYMES>) {
     chomp;
     my @hold_enzyme = split(/\t/,$_);

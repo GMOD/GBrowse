@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.36 2002-06-11 18:57:12 lstein Exp $
+# $Id: gbrowse.PLS,v 1.37 2002-06-26 01:56:37 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -338,10 +338,12 @@ sub main_display {
       $CONFIG->width($page_settings->{width});
       my @tracks_to_show = grep {$page_settings->{features}{$_}{visible}} @{$page_settings->{tracks}};
       my %options = map {$_=>$page_settings->{features}{$_}{options}} @tracks_to_show;
+      my %limit   = map {$_=>$page_settings->{features}{$_}{limit}}   @tracks_to_show;
       ($img,$map) = $CONFIG->render_html(segment       => $segment,
 					 feature_files => $feature_files,
 					 tracks        => \@tracks_to_show,
 					 options       => \%options,
+					 limit         => \%limit,
 					 do_map        => 1,
 					 do_centering_map => 1,
 					);
@@ -410,8 +412,9 @@ sub get_settings {
     $settings{tracks}    = [];  # make sure these are clean
     $settings{features}  = {};
     foreach (@features) {
-      my ($label,$visible,$option) = m!^(.+)/(\d+)/(\d+)$!;
-      warn "label = $label, visible = $visible, option = $option" if DEBUG;
+      warn "feature = $_" if DEBUG;
+      my ($label,$visible,$option,$limit) = m!^(.+)/(\d+)/(\d+)/(\d+)$!;
+      warn "label = $label, visible = $visible, option = $option, limit = $limit" if DEBUG;
       unless ($label) {   # corrupt cookie; purge it.
 	undef $ok;
 	last;
@@ -419,6 +422,7 @@ sub get_settings {
       push @{$settings{tracks}},$label;
       $settings{features}{$label}{visible} = $visible;
       $settings{features}{$label}{options} = $option;
+      $settings{features}{$label}{limit}   = $limit;
     }
     warn "ok 3 = $ok" if DEBUG;
   }
@@ -440,7 +444,7 @@ sub get_settings {
   if (DEBUG) {
     foreach (@{$settings{tracks}}) {
       my $s = $settings{features}{$_};
-      warn "$_: ",$CONFIG->setting($_=>'key')," vis=$s->{visible}, opt=$s->{options}\n";
+      warn "$_: ",$CONFIG->setting($_=>'key')," vis=$s->{visible}, opt=$s->{options}, limit=$s->{limit}\n";
     }
   }
 
@@ -449,6 +453,7 @@ sub get_settings {
 
 sub default_settings {
   my $settings = shift;
+  warn "Setting default settings" if DEBUG;
   @$settings{'name','ref','start','stop'} = ('','','','');
   $settings->{width}   = $CONFIG->setting('default width');
   $settings->{source}  = $CONFIG->source;
@@ -462,7 +467,7 @@ sub set_default_tracks {
   $settings->{tracks}   = \@labels;
   warn "order = @labels" if DEBUG;
   foreach (@labels) {
-    $settings->{features}{$_} = {visible=>0,options=>0};
+    $settings->{features}{$_} = {visible=>0,options=>0,limit=>0};
   }
   foreach ($CONFIG->default_labels) {
     $settings->{features}{$_}{visible} = 1;
@@ -515,9 +520,12 @@ sub settings2cookie {
   my @array = map {join("/",
 			$_,
 			$settings{features}{$_}{visible},
-			$settings{features}{$_}{options})} @{$settings{tracks}};
+			$settings{features}{$_}{options},
+			$settings{features}{$_}{limit})} @{$settings{tracks}};
   $settings{tracks} = join $;,@array;
   delete $settings{features};
+
+  warn "cookie => ",join ' ',%settings,"\n" if DEBUG;
 
   my @cookies;
   my $source = $CONFIG->source;
@@ -666,7 +674,7 @@ sub zoomBar {
 	       -default => $segment->length,
 	       -force   => 1,
 	       -onChange => 'document.mainform.submit()',
-	      ).'&nbsp;';
+	      );
 }
 
 # convert bp into nice Mb/Kb units
@@ -1330,7 +1338,7 @@ sub load_plugin_annotators {
     $name = "plugin:$name";
     unless ($settings->{features}{$name}) {
       push @{$settings->{tracks}},$name;
-      $settings->{features}{$name} = {visible=>1,options=>0};
+      $settings->{features}{$name} = {visible=>1,options=>0,limit=>0};
     }
   }
 }
@@ -1550,6 +1558,12 @@ sub adjust_track_options {
     my $option    = param($_);
     $settings->{features}{$feature}{options} = $option;
   }
+  foreach (grep {/^limit\./} param()) {
+    my ($track)   = /(\d+)/;
+    my $feature   = $settings->{tracks}[$track];
+    my $option    = param($_);
+    $settings->{features}{$feature}{limit} = $option;
+  }
   foreach (@{$settings->{tracks}}) {
     $settings->{features}{$_}{visible} = 0;
   }
@@ -1583,18 +1597,28 @@ sub set_track_options {
 	    ).
       td({-align=>'CENTER',-class=>'searchbody'},
 	     popup_menu( -name     => "option.$track",
-			 -values   => [0,1,2,3],
+			 -values   => [0..5],
 			 -override => 1,
 			 -default  => $settings->{features}{$label}{options},
-			 -labels   => {0=>'Auto',1=>'Compact',2=>'Expand',3=>'Expand & Label'}
+			 -labels   => {0=>'Auto',
+                                       1=>'Compact',
+                                       2=>'Expand',3=>'Expand & Label',
+                                       4=>'Hyperexpand',5=>'Hyperexpand & label'})
 			).
+	td({-align=>'CENTER',-class=>'searchbody'},
+	   popup_menu(-name    => "limit.$track",
+		      -values  => [0,5,10,25,100],
+		      -labels  => {0=>'No limit'},
+		      -override => 1,
+		      -default => $settings->{features}{$label}{limit})
+	    ).
 	td({-align=>'CENTER',-class=>'searchbody'},
 	   popup_menu(-name    => "track.$track",
 		      -values  => \@sorted_labels,
 		      -labels  => \%keys,
 		      -override => 1,
 		      -onChange => 'document.settings.submit()',
-		      -default => ''))
+		      -default => '')
 	    );
   }
   my $controls = TR({-class=>'searchtitle'},
@@ -1603,7 +1627,7 @@ sub set_track_options {
 		       submit('Revert to Defaults').'&nbsp;'.
 		       submit('Refresh').'&nbsp;'
 		      ),
-		    td({-align=>'CENTER',-colspan=>2},
+		    td({-align=>'CENTER',-colspan=>3},
 		       submit(-name=>'Cancel',-value=>'Cancel Changes and Return...').'&nbsp;'.
 		       b(submit(-name=>'Redisplay',-value=>'Accept Changes and Return...'))
 		      ));
@@ -1613,16 +1637,20 @@ sub set_track_options {
   print table({-width=>'100%',-border=>0},
 	      $controls,
 	      TR({-class=>'searchtitle'},
-		 th({-colspan=>5},'Track Options')),
+		 th({-colspan=>6},'Track Options')),
 	      TR({-class=>'searchbody'},
-		 td({-colspan=>5},
+		 td({-colspan=>6},
 		    'The',i('Show'),'checkbox turns the track on and off.',
-		    'The',i('Bump'),'option forces the track to be expanded so that',
-		    'annotations bump each other rather than overlap, and',i('Bump and Label'),
-		    'forces annotations to be labeled.  If',i('Auto'),'is selected, the bump and label',
+		    'The',i('Compact'),'option forces the track to be condensed so that',
+		    'annotations will overlap. The',i('Expand'),'and',i('Hyperexpand'),
+                    'options turn on collision control using slower and faster layout algorithms.',
+		    'The',i('Expand & label'),'and',i('Hyperexpand & label'), 'options force',
+                    'annotations to be labeled.  If',i('Auto'),'is selected, the bump and label',
 		    'options will be set automatically if space permits.',
 		    'To change the track order use the',i('Change Track Order'),'popup menu',
-		    'to assign an annotation to a track.'
+		    'to assign an annotation to a track.',
+                    'To limit the number of annotations of this type shown, change the value of the',
+                    i('Limit'),'menu.',
 		   ),
 		),
 	      TR({-class=>'searchtitle'},
@@ -1630,6 +1658,7 @@ sub set_track_options {
 		 th('Track Type'),
 		 th('Show'),
 		 th('Format'),
+		 th('Limit'),
 		 th('Change Track Order'),
 		),
 	      TR(\@rows),

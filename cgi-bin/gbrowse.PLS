@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.47 2003-12-15 14:04:13 lstein Exp $
+# $Id: gbrowse.PLS,v 1.48 2003-12-29 22:27:29 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -671,7 +671,7 @@ sub settings2cookie {
 sub adjust_settings {
   my $settings = shift;
 
-  if (my @selected = map {split /[+-]/} param('label')) {
+  if (my @selected = map {/^(http|ftp|das)/ ? $_ : split /[+-]/} param('label')) {
     $settings->{features}{$_}{visible} = 0 foreach keys %{$settings->{features}};
     $settings->{features}{$_}{visible} = 1 foreach @selected;
   }
@@ -1786,7 +1786,7 @@ sub get_uploaded_file_info {
     $landmarks = tableize(\@links);
   }
   warn "get_uploaded_file_info(): modified = $modified, landmarks = $landmarks" if DEBUG;
-  return i($CONFIG->tr('File_info',$modified,$landmarks));
+  return i($CONFIG->tr('File_info',$modified,$landmarks||''));
 }
 
 sub clear_uploaded_file {

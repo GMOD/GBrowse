@@ -44,7 +44,7 @@ package MobyServices::GbrowseServices;
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: GbrowseServices.PM,v 1.2 2003-12-15 15:49:36 markwilkinson Exp $
+#$Id: GbrowseServices.PM,v 1.3 2003-12-15 17:27:14 markwilkinson Exp $
 
 use strict;
 use Text::Shellwords;
@@ -56,7 +56,6 @@ use Bio::Graphics::Browser::Util;
 use vars qw(%dbh $CONFIG $authURI $CONF_DIR);
 
 sub _settings {
-    $authURI = "unknown" unless $authURI;
     $CONF_DIR  = conf_dir($CONF_DIR);  # conf_dir() is exported from Util.pm
 
     ## CONFIGURATION & INITIALIZATION ################################  

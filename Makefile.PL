@@ -132,6 +132,7 @@ WriteMakefile(
 				 'bin/process_ncbi_human.PLS' => 'bin/process_ncbi_human.pl',
 				 'bin/ucsc_genes2gff.PLS' => 'bin/ucsc_genes2gff.pl',
 				 'bin/load_genbank.PLS' => 'bin/load_genbank.pl',
+				 'bin/register_moby_services.PLS' => 'bin/register_moby_services.pl',
 				 'install_util/gbrowse_ppm_install.PLS' => 'install_util/gbrowse_ppm_install.pl',
 				 'cgi-bin/gbrowse.PLS'  => 'cgi-bin/gbrowse',
 				 'cgi-bin/gbrowse_syn.PLS'  => 'cgi-bin/gbrowse_syn',

@@ -119,6 +119,7 @@ sub pads {
 
 sub _do_alignment {
     my $self = shift;
+    local $^W = 0;
     my($src,$tgt) = @{$self}{'src','target'};
     my @alignment;
 

@@ -11,9 +11,9 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 =head1 VERSION (CVS-info)
 
  $RCSfile: PadAlignment.pm,v $
- $Revision: 1.3 $
+ $Revision: 1.4 $
  $Author: lstein $
- $Date: 2003-04-22 19:41:45 $
+ $Date: 2003-04-27 15:27:45 $
 
 =head1 SYNOPSIS
 
@@ -268,14 +268,14 @@ sub padded_sequences {
     for (my $targ_pos=$tstart-1, my $j=$start-1; $targ_pos > $last_target; $targ_pos--, $j--) {
       if ($j > $last_src) { # still room
 	my $pos = $gap_map[$j];
-	substr($lines[$targ],$pos,1) = substr($dnas[$targ],$targ_pos,1);
+	eval {substr($lines[$targ],$pos,1) = substr($dnas[$targ],$targ_pos,1)};
       }
       else {  # we've overrun -- start gapping above
 	my $pos = $gap_map[$start];
 	for (my $i=0; $i<@lines; $i++) {
-	  substr($lines[$i],$pos,0) = '-' unless $i==$targ;  # gap all segments
+	  eval {substr($lines[$i],$pos,0) = '-'} unless $i==$targ;  # gap all segments
 	}
-	substr($lines[$targ],$pos+$gap++,0) = substr($dnas[$targ],$targ_pos,1);
+	eval {substr($lines[$targ],$pos+$gap++,0) = substr($dnas[$targ],$targ_pos,1) };
       }
     }
     if ($gap > 0) {
@@ -285,7 +285,7 @@ sub padded_sequences {
     # insert the aligned bit now
     for (my $pos = $start; $pos <= $end; $pos++) {
       my $gap_pos = $gap_map[$pos];
-      substr($lines[$targ],$gap_pos,1) = eval{substr($dnas[$targ],$tstart++,1)} || '-';
+      eval {substr($lines[$targ],$gap_pos,1) = substr($dnas[$targ],$tstart++,1) };
     }
 
     $last_end[$targ][$src]  = $end;
@@ -299,8 +299,8 @@ sub padded_sequences {
   # take care of the extra stuff at the end
   for (my $i=1; $i < @dnas; $i++) {
     my $last_bit = length($dnas[$i]) - $added[$i];
-    substr($lines[$i],$gap_map[$last_end[$i][0]]+1,$last_bit)
-      = substr($dnas[$i],$added[$i]+1,$last_bit);
+    eval {substr($lines[$i],$gap_map[$last_end[$i][0]]+1,$last_bit)
+	    = substr($dnas[$i],$added[$i]+1,$last_bit) };
   }
 
   # change starts and ends to . characters
@@ -333,7 +333,8 @@ sub gap_map {
 
 sub alignment {
   my $self    = shift;
-  my $origins = shift;
+  my $origins         = shift;
+  my $show_mismatches = shift;
 
   my @lines = $self->padded_sequences;
   my %names = reverse %{$self->{names}};  # index to name
@@ -360,8 +361,9 @@ sub alignment {
 
   # use markup to insert word and line breaks
   my $markup = Bio::Graphics::Browser::Markup->new;
-  $markup->add_style(space   => ' ');
-  $markup->add_style(newline => "\n");
+  $markup->add_style(space    => ' ');
+  $markup->add_style(newline  => "\n");
+  $markup->add_style(mismatch => "BGCOLOR pink");
   for (my $i=0; $i < @lines; $i++) {
     my $pad = \$lines[$i];
     my @markup;
@@ -392,6 +394,19 @@ sub alignment {
       my $origin = $origins->{$names{$j}};
       my $offset = $padded[$i][$j] =~ tr/. -/. -/;
       my $skipit = $offset == length($padded[$i][$j]);
+
+      if ($j>0 && $show_mismatches) {
+	my @markup;
+	for (my $r=0; $r<length $padded[$i][$j]; $r++) {
+	  my $source = substr($padded[$i][0],$r,1);
+	  next if $source=~ /^[.\s-]$/;
+	  my $targ = substr($padded[$i][$j],$r,1);
+	  next if $targ =~  /^[.\s-]$/;
+	  push(@markup,['mismatch',$r => $r+1])
+	    if lc($source) ne lc($targ);
+	}
+	$markup->markup(\$padded[$i][$j],\@markup);
+      }
 
       $result .= $skipit ? ""
                          : sprintf ("\%${longest_name}s \%${longest_line}d %s\n",

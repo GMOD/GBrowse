@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.60 2003-04-15 22:15:21 lstein Exp $
+# $Id: Browser.pm,v 1.61 2003-04-27 15:27:44 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -557,6 +557,8 @@ The arguments are a series of tag=>value pairs, where tags are:
 
   noscale             Suppress the scale
 
+  flip                Flip coordinates left to right
+
 =cut
 
 sub render_html {
@@ -652,6 +654,8 @@ sub make_map {
   my ($boxes,$centering_map,$panel) = @_;
   my $map = qq(<map name="hmap" id="hmap">\n);
 
+  my $flip = $panel->flip;
+
   # use the scale as a centering mechanism
 #  my $ruler = shift @$boxes;
 #  $map .= $self->make_centering_map($ruler) if $centering_map;
@@ -659,7 +663,7 @@ sub make_map {
   foreach (@$boxes){
     next unless $_->[0]->can('primary_tag');
     if ($_->[0]->primary_tag eq 'DasSegment') {
-      $map .= $self->make_centering_map($_) if $centering_map;
+      $map .= $self->make_centering_map($_,$flip) if $centering_map;
       next;
     }
     my $href   = $self->make_href($_->[0],$panel) or next;
@@ -677,11 +681,13 @@ sub make_map {
 sub make_centering_map {
   my $self   = shift;
   my $ruler  = shift;
+  my $flip   = shift;
 
   return if $ruler->[3]-$ruler->[1] == 0;
 
   my $length = $ruler->[0]->length;
   my $offset = $ruler->[0]->start;
+  my $end    = $ruler->[0]->end;
   my $scale  = $length/($ruler->[3]-$ruler->[1]);
 
   # divide into RULER_INTERVAL intervals
@@ -695,11 +701,12 @@ sub make_centering_map {
     my $x1 = int($portion * $i+0.5);
     my $x2 = int($portion * ($i+1)+0.5);
     # put the middle of the sequence range into the middle of the picture
-    my $middle = $offset + $scale * ($x1+$x2)/2;
+    my $middle = $flip ? $end - $scale * ($x1+$x2)/2 : $offset + $scale * ($x1+$x2)/2;
     my $start  = int($middle - $length/2);
     my $stop   = int($start  + $length - 1);
     my $url = url(-relative=>1,-path_info=>1);
     $url .= "?ref=$ref;start=$start;stop=$stop;source=$source;nav4=1;plugin=$plugin";
+    $url .= ";flip=1" if $flip;
     push @lines,
       qq(<area shape="rect" coords="$x1,$ruler->[2],$x2,$ruler->[4]" href="$url" title="recenter" alt="recenter" />\n);
   }
@@ -747,6 +754,7 @@ sub image_and_map {
   my $lang          = $config{lang};
   my $keystyle      = $config{keystyle};
   my $title         = $config{title};
+  my $flip          = $config{flip};
   my $suppress_scale= $config{noscale};
 
   # these are natively configured tracks
@@ -770,6 +778,9 @@ sub image_and_map {
 	      -empty_tracks => $conf->setting(general=>'empty_tracks') 	      || DEFAULT_EMPTYTRACKS,
 	      -pad_top   => $title ? gdMediumBoldFont->height : 0,
 	     );
+
+  push @argv, -flip => 1 if $flip;
+
   my $panel = Bio::Graphics::Panel->new(@argv);
   $panel->add_track($segment   => 'arrow',
 		    -double    => 1,

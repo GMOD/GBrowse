@@ -1,12 +1,11 @@
 \bCVS\b
 ^MANIFEST\.
 ^blib/
-\.html$
 \.old$
 \.bak$
 \.dist$
 ^pm_to_blib
-Makefile
+Makefile$
 \.gz$
 \~$
 ^\#

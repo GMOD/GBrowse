@@ -91,7 +91,14 @@ At the end of the install, the automatic installation script will ask
 you to confirm the locations of your Apache conf (configuration),
 htdocs (document root) and cgi-bin (CGI executable)
 directories. Usually it will guess right, but if it doesn't, just type
-in the correct path.
+in the correct path.  If you find that after installing GBrowse, you get
+errors saying "The landmark named XXXX is not recognized...", try uninstalling
+and reinstalling GBrowse and give the "short" filenames for directory paths.
+For example,
+
+  ** Please indicate the location of the following Web Server directories:
+        "conf" directory ([q]uit) [C:/Program Files/Apache Group/Apache2/conf]
+        c:/progra~1/apache~1/apache2/conf
 
 When this is done, go to step (4) below.
 

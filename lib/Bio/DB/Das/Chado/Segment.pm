@@ -1,8 +1,8 @@
-# $Id: Segment.pm,v 1.18 2003-01-02 14:20:53 scottcain Exp $
+# $Id: Segment.pm,v 1.1 2003-01-02 14:20:53 scottcain Exp $
 
 =head1 NAME
 
-Bio::DB::Das::Chado_pf::Segment - DAS-style access to a chado_pf database
+Bio::DB::Das::Chado::Segment - DAS-style access to a chado database
 
 =head1 SYNOPSIS
 
@@ -15,7 +15,7 @@ NOTES: required methods:
         seq
         factory
 
-  # Get a Bio::Das::SegmentI object from a Bio::DB::Das::Chado_pf database...
+  # Get a Bio::Das::SegmentI object from a Bio::DB::Das::Chado database...
 
   $segment = $das->segment(-name=>'Landmark',
                            -start=>$start,
@@ -94,7 +94,7 @@ methods. Internal methods are usually preceded with a _
 
 =cut
 
-package Bio::DB::Das::Chado_pf::Segment;
+package Bio::DB::Das::Chado::Segment;
 
 use strict;
 use Bio::Root::Root;
@@ -356,8 +356,8 @@ sub features {
   }
 
   if ($iterator) {
-   warn "using Bio::DB::Das::Chado_pfIterator\n" if DEBUG;
-    return Bio::DB::Das::Chado_pfIterator->new(\@features);
+   warn "using Bio::DB::Das::ChadoIterator\n" if DEBUG;
+    return Bio::DB::Das::ChadoIterator->new(\@features);
   } else {
     return @features;
   }
@@ -424,7 +424,7 @@ sub get_feature_stream {
   my @features = $self->features;
     warn "using get_feature_stream\n" if DEBUG;
     warn "feature array: @features\n" if DEBUG;
-  return Bio::DB::Das::Chado_pfIterator->new(\@features);
+  return Bio::DB::Das::ChadoIterator->new(\@features);
 }
 
 1;

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.72 2004-04-05 15:50:26 lstein Exp $
+# $Id: gbrowse.PLS,v 1.73 2004-04-08 01:25:53 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -348,7 +348,9 @@ elsif ($plugin_action eq $CONFIG->tr('About')) {
 ## HANDLE PLUGIN CONFIGURATION####################################################
 elsif ($plugin_action eq $CONFIG->tr('Configure')) {
   do_plugin_configure(param('plugin'));
-} elsif ($plugin_action eq $CONFIG->tr('Go') && $plugin_type=~/^(finder|annotator|highlighter)$/i) {
+}
+
+elsif ($plugin_action eq $CONFIG->tr('Go') && $plugin_type=~/^(finder|annotator|highlighter)$/i) {
   do_plugin_configure(param('plugin'));
 }
 
@@ -408,7 +410,7 @@ sub main_display {
   print navigation_table($segment,$page_settings);
   print html_frag('html2',$segment,$page_settings);
 
-  my $feature_files;
+  my $feature_files = load_external_sources($segments,$page_settings);
 
   # if more than one segment, then list them all
   if (@$segments > 1) {
@@ -416,7 +418,6 @@ sub main_display {
   }
 
   elsif ($segment) {
-    $feature_files = load_external_sources($segment,$page_settings);
     # if a plugin passes us back a Feature, rather than a Segment, turn it into a segment
     # (this shouldn't happen - hah!)
     $segment = open_database()->segment($segment->seq_id,
@@ -521,7 +522,6 @@ sub get_settings {
   my $source   = shift;
   open_database() or croak "Can't open database defined by source $source";
   my %settings = cookie("gbrowse_$source");
-
   my $ok = 1;
 
   if (%settings) {  # if cookie is there, then validate it
@@ -1265,7 +1265,12 @@ sub get_features {
     fatal_error("ERROR: Unable to open database",$CONFIG->setting('description'),pre($@));
   }
 
-  my @features = lookup_features($db,$settings);
+  my @features = lookup_features_from_db($db,$settings);
+
+  # h'mmm.  Couldn't find the feature.  See if it is in an uploaded file.
+  @features    = lookup_features_from_external_sources($settings,$settings->{name},undef)
+    unless @features;
+
   return \@features;
 }
 
@@ -1302,7 +1307,7 @@ sub resize {
 }
 
 # interesting heuristic way of fetching sequence segments based on educated guesses
-sub lookup_features {
+sub lookup_features_from_db {
   my ($db,$settings) = @_;
   my @segments;
 
@@ -1350,16 +1355,40 @@ sub lookup_features {
   return $segments[0];
 }
 
-# this gets called when -- for whatever reason -- we got a truncated segment
-#sub truncated_segment {
-#  my $seg   = shift;
-#  my ($trunc_left,$trunc_right) = @{$seg->truncated} if $seg->truncated;
-#  my $ref   = $seg->seq_id;
-#  my $db    = open_database();
-#  my $whole = $db->segment($ref);
-#  return $db->segment(-name=>$ref,-start=>$whole->end-4,-end=>$whole->end) if $trunc_right;
-#  return $db->segment(-name=>$ref,-start=>1,-end=>4)                         if $trunc_left;
-#}
+# Find features named in external sources.
+# Currently this only works with uploaded files, but it should
+# be extended to work with DAS files too.
+sub lookup_features_from_external_sources {
+  my ($settings,$searchterm) = @_;
+
+  my @uploaded_files = load_uploaded_files(undef,$settings) or return;
+  for my $file (@uploaded_files) {
+    next unless $file->can('get_feature_by_name');
+    my @features = $file->get_feature_by_name($searchterm);
+    return @features if @features;
+  }
+
+  # No exact match.  Try inexact match.
+  $searchterm = quotemeta($searchterm);
+  my $max_keywords = $CONFIG->setting('keyword search max')|| MAX_KEYWORD_RESULTS;
+
+  for my $file (@uploaded_files) {
+    next unless $file->can('search_notes');
+    my @matches = $file->search_notes($searchterm,$max_keywords);
+    return map {
+      my ($feature,$description,$score) = @$_;
+      Bio::Graphics::Feature->new(-name => $feature->display_name,
+				  -type => $description,
+				  -score => $score,
+				  -ref   => $feature->ref,
+				  -start => $feature->start,
+				  -end   => $feature->end)
+      } @matches if @matches;
+  }
+
+  return;
+}
+
 
 ################ perform keyword search ###############
 sub do_keyword_search {
@@ -1372,7 +1401,7 @@ sub do_keyword_search {
   
   # Need to untaint the searchterm.  We are very lenient about
   # what is accepted here because we wil be quote-metaing it later.
-  $searchterm =~ /([\w .,~!@#$%^&*()-+=<>?\/]+)/;
+  $searchterm =~ /([\w .,~!@\#$%^&*()-+=<>?\/]+)/;
   $searchterm = $1;
 
   my $match_sub = 'sub {';
@@ -1387,6 +1416,7 @@ sub do_keyword_search {
 		    || MAX_KEYWORD_RESULTS;
   my @matches = grep { $match->($_->[1]) }
     $db->search_notes($searchterm,$max_keywords);
+
   my @results;
   for my $r (@matches) {
     my ($name,$description,$score) = @$r;
@@ -1673,7 +1703,10 @@ sub open_uploaded_file {
 }
 
 sub load_external_sources {
-  my ($segment,$page_settings) = @_;
+  my ($segments,$page_settings) = @_;
+  return if $segments && @$segments > 1;
+  my $segment = $segments->[0] if $segments;
+
   my @feature_file = load_uploaded_files($segment,$page_settings);
   warn "uploaded feature_file = @feature_file" if DEBUG_EXTERNAL;
 
@@ -1707,9 +1740,12 @@ sub load_uploaded_files {
 
     my $fh = open_uploaded_file($settings,$file,"<") or return;
 
+    my @coord_mapper = $rel2abs ? (-map_coords=>$rel2abs) : ();
+
     my $feature_file = Bio::Graphics::FeatureFile->new(-file           => $fh,
-						       -map_coords     => $rel2abs,
-						       -smart_features =>1);
+						       -smart_features =>1,
+						       @coord_mapper,
+						       );
     close $fh;
     next unless $feature_file;
     $feature_file->name($file);
@@ -1851,7 +1887,8 @@ sub get_uploaded_file_info {
   warn "get_uploaded_file_info(): feature_file = $feature_file" if DEBUG;
 
   my $modified = localtime($feature_file->mtime);
-  my @refs      = sort $feature_file->refs;
+  #my @refs      = sort $feature_file->refs;
+  my @refs      = sort $feature_file->features;
   my $db        = open_database();
 
   my ($landmarks,@landmarks,@links);
@@ -1859,7 +1896,7 @@ sub get_uploaded_file_info {
   if (@refs > TOO_MANY_REFS) {
     $landmarks = b($CONFIG->tr('Too_many_landmarks',scalar @refs));
   } else {
-    @links = map {segment2link($_)} @refs;
+    @links = map {segment2link($_,$_->display_name)} @refs;
     $landmarks = tableize(\@links);
   }
   warn "get_uploaded_file_info(): modified = $modified, landmarks = $landmarks" if DEBUG;

@@ -1,4 +1,10 @@
 1.62    Mon Apr  5 09:43:25 EDT 2004
+	* Added ability to search within external annotation files for uploaded
+	features.  You will need to CVS update bioperl-live to get this feature.
+	* Fixed problem of external annotation files disappearing.
+	* Fixed the problem of three-frame translation glyph showing wrong
+	translation.  HOWEVER, for the [x]flip feature to work properly, you will
+	need to CVS update bioperl-live.
 	* Fixed the problem of segments shrinking by 1 bp when the starting
 	segment length was an odd number.
 	* Fixed problem of gbrowse_img consuming all available memory

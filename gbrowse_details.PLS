@@ -40,7 +40,7 @@ $Config{startperl} -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.2 2003-05-09 03:56:23 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.3 2003-05-09 04:17:20 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR);
@@ -107,6 +107,7 @@ sub print_features {
     $string .= PrintMultiple($options,'Type',  $f->method);
     $string .= PrintMultiple($options,'Source',$f->source);
     $string .= PrintMultiple($options,"Position",position($f));
+    $string .= PrintMultiple($options,"Length",$f->length);
     if ($f->target) {
       $string .= PrintMultiple($options,"Matches",position($f->target));
       $string .= PrintMultiple($options,'',print_matches($f,$f->target)) if $subf;
@@ -115,7 +116,7 @@ sub print_features {
     $string .= PrintMultiple($options,"Score",$f->score) if defined $f->score;
     my %attributes = $f->attributes;
     for my $a (sort keys %attributes) {
-      $string .= PrintMultiple($options,$a,$f->attributes($a));
+      $string .= PrintMultiple($options,i($a),$f->attributes($a));
     }
     my @subfeatures = $f->merged_segments;
     $string .= PrintMultiple($options,'Parts',print_features(\@subfeatures,1)) if @subfeatures;
@@ -147,10 +148,12 @@ sub print_dna {
 
   my @markup;
   for my $f (@$features) {
-    my $start = $f->abs_start - $start;
-    my $end   = $start + $f->length;
+    $f->ref($feature);
+    my $s   = $f->low;
+    my $e   = $f->high;
+    ($s,$e) = ($e,$s) if $s > $e;
     next if $COLORS{$f->method} eq 'none';
-    push @markup,[$f->method,$start,$end];
+    push @markup,[$f->method,$s-1,$e];
   }
   push @markup,map {['newline',80*$_]} (1..length($dna)/80);
   $markup->markup(\$dna,\@markup);
@@ -212,10 +215,10 @@ sub PrintMultiple {
 			  td($options, $first)
 			 );
   for my $obj (@a) {
-    $string = join '', TR({-class=>'databody'},
-			  th({-align=>'RIGHT',-class=>'datatitle'},'&nbsp;'),
-			  td($options,$obj)
-			 );
+    $string .= join '', TR({-class=>'databody'},
+			   th({-align=>'RIGHT',-class=>'datatitle'},'&nbsp;'),
+			   td($options,$obj)
+			  );
   }
   $string;
 }

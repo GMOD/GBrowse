@@ -55,8 +55,8 @@ sub keyglyph {
 				-strand => '+1');
   my @sources = grep {/_color$/} $self->factory->options;
   foreach (@sources) {s/_color$//}
-  ($feature->segments)[0]->source_tag($sources[0]);
-  ($feature->segments)[1]->source_tag($sources[1]);
+  ($feature->segments)[0]->source_tag($sources[1]);
+  ($feature->segments)[1]->source_tag($sources[0]);
   ($feature->segments)[2]->source_tag($sources[2]);
   my $factory = $self->factory->clone;
   $factory->set_option(label => 1);

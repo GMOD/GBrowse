@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.93 2003-05-19 17:25:43 lstein Exp $
+# $Id: gbrowse.PLS,v 1.94 2003-05-21 19:00:51 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -56,7 +56,7 @@ use Carp qw(:DEFAULT croak);
 use CGI qw(:standard escape escapeHTML center *table *dl *TR *td);
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $CONF_DIR
-	    $PLUGINS $PRESETS $LANG
+	    $PLUGINS $PRESETS
 	    %OBJECT_TYPES %PLUGIN_NAME2LABEL );
 
 # if you change the zoom/nav icons, you must change this as well.
@@ -273,7 +273,7 @@ if ($file_action && param($file_action) eq $CONFIG->tr('Edit')) {
 }
 
 ## HANDLE TRACK SETTINGS   #######################################################
-elsif ((param($CONFIG->tr('Set_options')) || param($CONFIG->tr('Revert')))
+elsif ((param($CONFIG->tr('Set_options')) || param('revert'))
        && !param($CONFIG->tr('Cancel'))
        && !param($CONFIG->tr('Redisplay'))) {
   set_track_options($page_settings);
@@ -332,6 +332,10 @@ sub main_display {
 		       commas($segment->start/$divider),
 		       commas($segment->end/$divider)));
   }
+
+  # force flipping
+  my $flip = $segment && $segment->stop < $segment->start;
+  param('Flip'=>'on') if $flip;
 
   # print the top of the form, with navigation bar, etc
   print start_multipart_form(-name=>'mainform',-action=>url(-relative=>1,-path_info=>1));
@@ -405,8 +409,9 @@ sub detail_panel {
 				       limit         => \%limit,
 				       do_map        => 1,
 				       do_centering_map => 1,
-				       lang          => $LANG,
+				       lang          => $CONFIG->language,
 				       keystyle      => $page_settings->{ks},
+				       flip          => $page_settings->{flip},
 				      );
     $cell .= $img;
   }
@@ -507,7 +512,7 @@ sub get_settings {
 sub default_settings {
   my $settings = shift;
   warn "Setting default settings" if DEBUG;
-  @$settings{'name','ref','start','stop'} = ('','','','');
+  @$settings{'name','ref','start','stop','flip'} = ('','','','','');
   $settings->{width}   = $CONFIG->setting('default width');
   $settings->{source}  = $CONFIG->source;
   $settings->{id}      = md5_hex(rand);  # new identity
@@ -583,6 +588,7 @@ sub settings2cookie {
 			$settings{features}{$_}{limit})} @{$settings{tracks}};
   $settings{tracks} = join $;,@array;
   delete $settings{features};
+  delete $settings{flip};  # obnoxious for this to persist
 
   warn "cookie => ",join ' ',%settings,"\n" if DEBUG;
 
@@ -618,6 +624,7 @@ sub adjust_settings {
       $settings->{start} = param('start') if param('start') =~ /^[\d-]+/;
       $settings->{stop}  = param('stop')  if param('stop')  =~ /^[\d-]+/;
       $settings->{stop}||= param('end')   if param('end')   =~ /^[\d-]+/;
+      $settings->{flip}  = param('flip');
       zoomnav($settings);
       $settings->{name} = "$settings->{ref}:$settings->{start}..$settings->{stop}";
       param(name => $settings->{name});
@@ -643,12 +650,12 @@ sub adjust_settings {
     }
   }
 
-  if (param($CONFIG->tr('Revert'))) {
+  if (param('revert')) {
     warn "resetting defaults..." if DEBUG;
     set_default_tracks($settings);
   }
 
-  elsif (param($CONFIG->tr('Reset'))) {
+  elsif (param('reset')) {
     %$settings = ();
     Delete_all();
     default_settings($settings);
@@ -711,7 +718,8 @@ sub navigation_table {
 		     td({-align=>'left'}, b($CONFIG->tr('Landmark')),br,
 			textfield(-name=>'name',-size=>40),
 			submit(-name=>$CONFIG->tr('Search')).'&nbsp;'.
-			submit(-name=>$CONFIG->tr('Reset'),-class=>'reset_button')
+			submit(-name=>'reset', -label=>$CONFIG->tr('Reset'),-class=>'reset_button').'&nbsp;'.
+			checkbox(-name=>'flip',-checked=>$settings->{flip},-value=>1,-label=>$CONFIG->tr('Flip'),-override=>1)
 		       ),
 		     td({-class=>'searchbody',-align=>'left'},
 			$segment ? (b($CONFIG->tr('Scroll').': '),br,slidertable($segment,$buttonsDir)) : ''
@@ -1048,6 +1056,8 @@ sub zoomnav {
   my $stop  = $settings->{stop};
   my $span  = $stop - $start + 1;
 
+  my $flip  = $settings->{flip} ? -1 : 1;
+
   # get zoom parameters
   my $selected_span  = param('span');
   my ($zoom)         = grep {/^zoom (out|in) \S+/} param();
@@ -1067,8 +1077,8 @@ sub zoomnav {
   }
 
   elsif (defined $navlevel){
-    $start += $navlevel;
-    $stop  += $navlevel;
+    $start += $flip * $navlevel;
+    $stop  += $flip * $navlevel;
   }
 
   elsif (defined $overview_x && defined $segment_length) {
@@ -1867,8 +1877,8 @@ sub set_track_options {
   my $controls = TR({-class=>'searchtitle'},
 		    td({-colspan=>3,-align=>'center'},
 		       reset($CONFIG->tr('Undo')).'&nbsp;'.
-		       submit($CONFIG->tr('Revert')).'&nbsp;'.
-		       submit($CONFIG->tr('Refresh')).'&nbsp;'
+		       submit(-name=>'revert', -label=>$CONFIG->tr('Revert')).'&nbsp;'.
+		       submit(-name=>'refresh',-label=>$CONFIG->tr('Refresh')).'&nbsp;'
 		      ),
 		    td({-align=>'center',-colspan=>3},
 		       submit  (-name=>$CONFIG->tr('Cancel'),   -value=>$CONFIG->tr('Cancel_Return')).'&nbsp;'.
@@ -1929,7 +1939,7 @@ sub help {
 sub make_citation {
   my $config  = shift;
   my $feature = shift;
-  my $citation = $config->citation($feature,$LANG);
+  my $citation = $config->citation($feature,$CONFIG->language);
   # BUG: here's where we should remove "bad" HTML, but we don't!
   # should remove active content and other nasties
   (my $link     = $feature) =~ tr/ /-/;
@@ -2017,7 +2027,7 @@ sub build_link_image_page {
 
 sub url2file {
   my $url = shift;
-  for my $l ((map {"$url.$_"} $LANG->language), $url) {
+  for my $l ((map {"$url.$_"} $CONFIG->language->language), $url) {
     my $file = $ENV{MOD_PERL} ? Apache->request->lookup_uri($l)->filename
                               : "$ENV{DOCUMENT_ROOT}/$l";
     return $file if -e $file;

@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.24 2004-09-11 02:35:48 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.25 2004-09-12 00:40:30 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -104,61 +104,58 @@ if (param('list')) {
 }
 
 # get all parameters
-my @landmarks       = param('name') || param('q'); # list of landmarks to display
-my $show_overview   = param('overview');           # force an overview-style display
-my $width           = param('width');              # width of the image in pixels
-my @track_types     = param('type');               # track types to turn on
-my @add_features    = param('add');                # overlay features
-my @add_style       = param('style');              # overlay features style
-my $abs             = param('abs');                # absolute rather than relative coordinates
-my $image_class     = param('image_class') || param('format');        # image type
-my $keystyle        = param('keystyle')    || 'between';
-my @options         = param('options');            # various track options, such as bumping
-my $embed           = param('embed');              # embedded in a frame
-my $flip            = param('flip');               # right<->left
+my @landmarks       = (param('name'),   param('q'));        # list of landmarks to display
+my @track_types     = (param('type'),   param('t'));        # track types to turn on
+my @add_features    = (param('add'),    param('a'));        # overlay features
+my @add_style       = (param('style'),  param('s'));        # overlay features style
+my @options         = (param('options'),param('o'));        # various track options, such as bumping
+my $show_overview   = param('overview');                    # force an overview-style display
+my $width           = param('width')||param('w');           # width of the image in pixels
+my $abs             = param('abs')  || param('b');          # absolute rather than relative coordinates
+my $image_class     = param('image_class') || param('format') || 'GD';        # image type
+my $keystyle        = param('keystyle')    || param('k') || 'between';
+my $embed           = param('embed')|| param('e');          # embedded in a frame
+my $flip            = param('flip') || param('f');          # right<->left
+my $hitkey          = param('key');			    # key for hit track
+
+my $db              = open_database($CONFIG);
 
 # Get the ID of the requested segment and error out if none provided
-
+@landmarks = infer_landmarks($db,\@add_features) if @add_features && !@landmarks;
 @landmarks      or message("Must provide a 'name' parameter to specify region to display.");
-
-# get the segment
-my $db       = open_database($CONFIG);
-my @segments = get_segments($db,@landmarks);
-@segments      or message("No matching regions found.");
-
-if ($abs) {
-  $_->absolute(1) foreach @segments;
-}
+my @segments = segments($CONFIG,$abs,\@landmarks);
 
 # set the image width
 $CONFIG->width($width) if $width;
 
-# get the options
-my %options = map {split /[+\s]/} @options;
-$image_class ||= 'GD';
+# get options and visibility hash
+my ($options,$labels,$visible) = get_options(\@options,\@track_types);
+my $max_segment = $CONFIG->setting('max segment') || MAX_SEGMENT;
 
-# set the track types to display.
-my @labels  = map {split /[+\s]/} @track_types;
-@labels     = $CONFIG->default_labels unless @labels;
-my %visible = map {$_ => {visible=>1}} @labels;
+my ($img,$boxes,$panel,$tracks,$detailed_view);
 
+if (@segments > 1 or $show_overview or
+    $segments[0]->length > $max_segment) {   # summary view
 
-my $max = $CONFIG->setting('max segment') || MAX_SEGMENT;
-my ($img,$boxes,$panel,$tracks);
-
-if (@segments > 1 or $show_overview or $segments[0]->length > $max) {
   foreach (@segments) { $_->absolute(0) }
-  my $images   = $CONFIG->hits_on_overview_raw($db,\@segments,\%visible);
-  $img         = consolidate_images($images,$image_class);
+
+  if (@add_features) {
+    my $list = external_features($labels,undef,\@add_features,\@add_style);
+    @segments = $list->{add}->features;
+  }
+
+  my $images    = $CONFIG->hits_on_overview_raw($db,\@segments,$visible,$hitkey);
+  ($img,$boxes) = consolidate_images($images,$image_class);
 }
 
-else {
-  # get external features
-  my $feature_list = external_features(\@labels,$segments[0],\@add_features,\@add_style) if @add_features;
-  ($img,$boxes,$panel,$tracks) 
-    = $CONFIG->image_and_map(segment       => $segments[0],
-			     tracks        => \@labels,
-			     options       => \%options,
+else {  # detailed view
+  my $segment = $segments[0];
+  my $feature_list = external_features($labels,$segment,\@add_features,\@add_style) if @add_features;
+
+  ($img,$boxes,$panel,$tracks)
+    = $CONFIG->image_and_map(segment       => $segment,
+			     tracks        => $labels,
+			     options       => $options,
 			     feature_files => $feature_list||undef,
 			     label_scale   => 1,
 			     image_class   => $image_class,
@@ -166,6 +163,7 @@ else {
 			     do_map        => 1,
 			     flip          => $flip,
 			    );
+  $detailed_view++;
 }
 
 if ($embed) {
@@ -173,13 +171,21 @@ if ($embed) {
   my ($width,$height) = $img->getBounds;
   my $img             = img({-src=>$url,-align=>'middle',-usemap=>'#hmap',-width=>$width,
 			     -height=>$height,-border=>0,-name=>'detailedView',-alt=>'detailed view'});
-  my $ruler           = shift @$boxes;
-  my $map             = $CONFIG->make_map($boxes,0,$panel,$tracks);
-  my $coords          = join ',',@{$ruler}[1,2,3,4];
   my $source          = $CONFIG->source;
-  my $gbrowse         = "../gbrowse/$source?name=$segments[0]";
-  my $rect            = qq(<area shape="rect" coords="$coords" href="$gbrowse" title="Browse Region" />);
-  $map                =~ s!</map>!$rect</map>!;
+  my $map;
+
+  if ($detailed_view) {
+    my $ruler           = shift @$boxes;
+    $map                = $CONFIG->make_map($boxes,0,$panel,$tracks);
+    my $coords          = join ',',@{$ruler}[1,2,3,4];
+    my $gbrowse         = "../gbrowse/$source?name=$segments[0]";
+    my $rect            = qq(<area shape="rect" coords="$coords" href="$gbrowse" title="Browse Region" />);
+    $map                =~ s!</map>!$rect</map>!;
+  } else {
+    $map                = my_make_map($boxes,$source,scalar @add_features);
+  }
+
+  $map =~ s/href/target="_top" href/g;  # add appropriate target tags
   print header('text/html');
   print start_html(''),$img,$map,end_html();
 }
@@ -220,6 +226,31 @@ sub message {
   exit 0;
 }
 
+sub get_options {
+  my ($options,$track_types) = @_;
+
+  # get the options
+  my %options = map {split /[+\s]/} @$options;
+
+  # set the track types to display.
+  my @labels  = map {split /[+\s]/} @$track_types;
+  @labels     = $CONFIG->default_labels unless @labels;
+  my %visible = map {$_ => {visible=>1}} @labels;
+
+  return (\%options,\@labels,\%visible);
+}
+
+sub segments {
+  my ($CONFIG,$abs,$landmarks) = @_;
+  my $db       = open_database($CONFIG);
+  my @segments = get_segments($db,@$landmarks);
+  @segments      or message("No matching regions found.");
+  if ($abs) {
+    $_->absolute(1) foreach @segments;
+  }
+  @segments;
+}
+
 sub get_segments {
   my ($db,@names) = @_;
   my @segments;
@@ -234,16 +265,30 @@ sub get_segments {
 }
 
 sub external_features {
-  my ($labels,$segment,$features,$styles) = @_;
+  my ($labels,$master_segment,$features,$styles) = @_;
   my @features = @$features;
   my @styles   = @$styles;
+  my %mappers;
+  my $master_mapper = coordinate_mapper($master_segment) if $master_segment;
+  $mappers{$master_segment->ref} = $master_mapper        if $master_mapper;
 
-  my $rel2abs = coordinate_mapper($segment) if $segment;
   my $feature_list = Bio::Graphics::FeatureFile->new(-smart_features  => 1);
+  my $fcount = 0;
+  my $db     = open_database($CONFIG);
+
   for my $f (@features) {
-    my ($reference,$type,$name,@position) = shellwords($f||'');
-    my @segments = map { [/(-?\d+)(?:-|\.\.)(-?\d+)/]} map {split /,/} @position;
-    my($ref,@parts) = $rel2abs->($reference,@segments) or next;
+    my ($reference,$type,$name,@segments) = parse_feature_str($f);
+
+    $mappers{$reference} ||= $master_mapper;
+
+    unless ($mappers{$reference}) {
+      my ($segment) = $CONFIG->name2segments($reference,$db) or next;
+      my ($parent)  = $db->segments($segment->abs_ref)       or next;
+      $mappers{$reference} = coordinate_mapper($parent)      or next;
+    }
+    my ($ref,@parts) = $mappers{$reference}->($reference,@segments);
+    next unless $ref;
+
     my $feature = Bio::Graphics::Feature->new(
 					      -ref      => $ref||'',
 					      -type     => $type||'',
@@ -267,7 +312,6 @@ sub external_features {
 sub consolidate_images {
   my ($images,$image_class) = @_;
   my @gds = map {$images->{$_}[1]} sort keys %$images;
-  return $gds[0] if @gds == 1;
 
   my $overall_height = 0;
   my $max_width      = 0;
@@ -280,23 +324,53 @@ sub consolidate_images {
   $overall_height += PANEL_GAP * (@gds-1);
   my $composite = "$image_class\:\:Image"->new($max_width,$overall_height);
   $composite->colorAllocate(255,255,255);
+  my @boxes;
 
   my $offset = 0;
-  foreach (@gds) {
-    my ($width,$height) = $_->getBounds;
-    $composite->copy($_,0,$offset,0,0,$width,$height);
-    $offset += $height + PANEL_GAP;
+
+  for my $ref (sort keys %$images) {
+    my ($gd,$boxes)     = @{$images->{$ref}}[1,2];
+    my ($width,$height) = $gd->getBounds;
+    $composite->copy($gd,0,$offset,0,0,$width,$height);
+    # fix boxes
+    for my $box (@$boxes) {
+      $box->[2] += $offset;
+      $box->[4] += $offset;
+      $box->[6] =  $ref;
+      push @boxes,$box;
+    }
+    $offset            += $height + PANEL_GAP;
   }
-  $composite;
+  ($composite,\@boxes);
+}
+
+sub my_make_map {
+  my ($boxes,$source,$add_features) = @_;
+  my $url = "../gbrowse/$source";
+  my $html = qq(<map name="hmap" alt="imagemap" />\n);
+  foreach (@$boxes){
+    my $feature = $_->[0];
+    my $ref     = $_->[6];  # consolidate_images() sets this slot
+    my ($refname, $version) = split /\sversion\s/i, $ref;
+    my ($name,$start,$stop) = ($feature->display_id,$feature->start,$feature->end);
+    my $href               = $url . "?ref=$refname;start=$start;stop=$stop";
+    $href                 .= ";version=$version" if defined $version;
+    $href                 .= ";add=".join "+",($refname,$feature->type,$feature->name,
+					       $feature->can('location_string') ? $feature->location_string
+                                                                                : $feature->to_FTstring)
+      if $add_features && $feature->isa('Bio::Graphics::Feature');
+    $html .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href"/>\n);
+  }
+  $html .= "</map>\n";
+  $html;
 }
 
 # IMPORTANT NOTE: this should be unified with gbrowse::coordinate_mapper()
 # but note that the two routines do NOT have identical functionality currently.
 sub coordinate_mapper {
-  my $current_segment = shift;
+  my $current_segment = shift or return;
   my $db              = open_database();
 
-  warn "1) current_segment = $current_segment";
   my $absolute = $current_segment->absolute;
 
   my ($absref,$ref,$start,$stop) = ($current_segment->abs_ref,
@@ -307,7 +381,6 @@ sub coordinate_mapper {
   # my $class = $absolute ? $current_segment->factory->refclass : $current_segment->class;
   # $current_segment    = $db->segment(-name=>$current_segment->ref,-class=>$class);
   my %segments;
-
 
   my $closure = sub {
     my ($refname,@ranges) = @_;
@@ -329,7 +402,8 @@ sub coordinate_mapper {
     }
     return ($mapper->abs_ref,@abs_segs) if $absolute;
 
-    my @rel_segs = map {[$current_segment->abs2rel($_->[0],$_->[1])]} @abs_segs;
+    my $offset = $current_segment->start-1;
+    my @rel_segs = map {[map {$offset + $_} $current_segment->abs2rel($_->[0],$_->[1])]} @abs_segs;
 
     # this inhibits mapping outside the displayed region
     foreach (@rel_segs) {
@@ -356,6 +430,29 @@ sub dump_types {
     my $key = $CONFIG->setting($l=>'key')||'';
     print join("\t",$l,$key,$d),"\n";
   }
+}
+
+sub infer_landmarks {
+  my ($db,$features) = @_;
+  my %refs;
+  for my $f (@$features) {
+    my ($ref,$type,$name,@segments) = parse_feature_str($f);
+    my ($min,$max) = minmax(\@segments);
+    $refs{$ref}{min} = $min if !defined $refs{$ref}{min} || $refs{$ref}{min} > $min;
+    $refs{$ref}{max} = $max if !defined $refs{$ref}{max} || $refs{$ref}{max} < $max;
+  }
+  return map {"$_:$refs{$_}{min}..$refs{$_}{max}"} keys %refs;
+}
+
+sub minmax {
+  my $segs = shift;
+  my ($min,$max);
+  my @coords = map {@$_} @$segs;
+  for (@coords) {
+    $min = $_ if !defined $min || $min > $_;
+    $max = $_ if !defined $max || $max < $_;
+  }
+  ($min,$max);
 }
 
 sub print_usage {
@@ -431,29 +528,144 @@ BLAST hits, an STS or a knockout in the context of the genome.
 
 The script recognizes the following CGI arguments, which can be passed
 either as GET or POST argument=value pairs.  Argument pairs must be
-separated by semicolons (preferred) or by ampersands.
+separated by semicolons (preferred) or by ampersands.  Many of the
+options have one-letter aliases that can be used to reduce URL
+lengths.
 </p>
 
 <table border="1">
-<tr><th>Argument</th><th>Description</th></tr>
-<tr> <td>list</td>    <td>get certain types of configuration information</td></tr>
-<tr> <td>source</td>  <td>database name</td></tr>
-<tr> <td>name</td>    <td>genomic landmark or range</td></tr>
-<tr> <td>type</td>    <td>list of feature names</td></tr>
-<tr> <td>width</td>   <td>desired width of image</td></tr>
-<tr> <td>options</td> <td>list of track options (compact, labeled, etc)</td></tr>
-<tr> <td>add</td>     <td>additional features to superimpose on image</td></tr>
-<tr> <td>style</td>   <td>stylesheet for additional features</td></tr>
-<tr> <td>abs</td>     <td>display position in absolute coordinates</td></tr>
-<tr> <td>image_class</td>     <td>generate the image in SVG format if passed the optional "SVG" flag</td></tr>
+<tr><th>Argument</th><th>Alias</th><th>Description</th></tr>
+<tr> <td>name</td>    <td>q</td>   <td>genomic landmark or range</td></tr>
+<tr> <td>type</td>    <td>t</td>   <td>tracks to include in image</td></tr>
+<tr> <td>width</td>   <td>w</td>   <td>desired width of image</td></tr>
+<tr> <td>options</td> <td>o</td>   <td>list of track options (compact, labeled, etc)</td></tr>
+<tr> <td>abs</td>     <td>b</td>   <td>display position in absolute coordinates</td></tr>
+<tr> <td>add</td>     <td>a</td>   <td>added feature(s) to superimpose on the image</td></tr>
+<tr> <td>style</td>   <td>s</td>   <td>stylesheet for additional features</td></tr>
+<tr> <td>keystyle</td><td>k</td>   <td>where to place the image key</td></tr>
+<tr> <td>overview</td><td>&nbsp;</td>   <td>force an overview-style display</td></tr>
+<tr> <td>flip</td>    <td>f</td>   <td>flip image left to right</td></tr>
+<tr> <td>embed</td>   <td>&nbsp;</td>   <td>generate full HTML for image and imagemap for use in an embedded frame</td></tr>
+<tr> <td>format</td>  <td>&nbsp;</td>   <td>format for the image (use "SVG" for scaleable vector graphics)</td></tr>
+<tr> <td>list</td>    <td>&nbsp;</td>    <td>get certain types of configuration information</td></tr>
+<tr> <td>source</td>  <td>&nbsp;</td>    <td>database name</td></tr>
 </table>
 
 <p>The arguments are explained in more detail here</p>
 
 <dl>
+  <dt><b>name</b>  (Alias: <b>q</b>)
+  <dd>This argument specifies the region of the genome to be displayed.  Several
+      forms are recognized:
+      <ul>
+	<li><i>name=Landmark</i>  Display the landmark named "Landmark".  Valid landmark
+	    names include chromosomes, contigs, clones, STSs, predicted genes, and any other
+	    landmark that the administrator has designated.  Be careful when fetching large
+	    landmarks such as whole chromosomes!
+	<li><i>name=Landmark:start..end</i>  Display the region between <i>start</i> and <i>end</i>
+	    relative to "Landmark".
+	<li><i>name=Class:Landmark</i>  Display "Landmark", restricting to a particular class, such
+	    as "PCR_Product".  The list of classes is under the control of the database administrator
+	    and is not yet available through this interface.
+	<li><i>name=Class:Landmark:start..end</i>  As above, but restricted to the designated range.
+      </ul>
+      If you use multiple <b>name</b> options, then this script will generate an overview
+      image showing the position of each landmark.  The alias "q" can be used to
+      shorten the length of the URL.
+      <p>
+  <dt><b>type</b> (Alias: <b>t</b>)
+  <dd>This argument lists the feature types to display.  The value of this argument is
+      a list of mnemonics separated by spaces ("+" characters when URL-escaped).  For example:
+      <p>
+      <pre>
+      &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;
+                   type=tRNA+NG+WABA+CG+ESTB"&gt;
+      </pre>
+      Multiple <i>type=</i> arguments will be combined to form a single space-delimited list.
+      The alias "t" can be used to shorten the length of the URL.
+      <p>
+  <dt><b>width</b> (Alias: <b>w</b>)
+  <dd>Width of the desired image, in pixels.
+       <p>
+  <dt><b>options</b> (Alias: <b>o</b>)
+  <dd>A space-delimited list ("+" characters when URL-escaped) of mnemonic/option
+      pairs describing how features should be
+      formatted. Options are integers from 0 to 3, where
+      0=auto, 1=compact, 2=expanded, 3=expanded and labeled.  For example, to specify that
+      the tRNA and NG tracks should always be expanded and labeled, but that the WABA
+      track should be compact, use:
+      <p>
+      <pre>
+      options=tRNA+3+NG+3+WABA+1
+      </pre>
+      <p>
+       The alias "o" can be used to shorten the length of the URL.
+      <p>
+  <dt><b>abs</b>
+  <dd>Use absolute (chromosome) coordinates when displaying the image.  An argument of
+      <i>abs=1</i> will turn on absolute coordinate addressing.  An argument of
+      <i>abs=0</i> will use relative coordinate addressing (this is the default).
+      <p>
+  <dt><b>add</b> (Alias: <b>a</b>)
+  <dd>Superimpose one or more additional features on top of the view.  Features are specified
+      as space ("+") delimited lists in the following format:
+      <p>
+      <pre>
+      add=Landmark+Type+Name+start..end,start..end,start..end
+      </pre>
+      "Landmark" is the landmark name, "Type" is a descriptive type that will be printed
+      in the image caption, "Name" is a name for the feature to be printed above it,
+      and start..end is a comma-delimited list of ranges for discontinuous feature.
+      Names that contain white space must be quoted, for example "BLAST hit".
+      Note that this all has to be URL-escaped, so an additional
+      feature named "Your Sequence", type "Blast Hit", that is located on chromosome III
+      in a gapped range between 20000 and 22000, will be formatted as:
+      <p>
+      <pre>
+      add=III+%22Blast%20Hit%22+%22Your%20Sequence%22+20000..21000,21550..22000
+      </pre>
+      <p>
+      One or both of the type and name can be omitted.  If omitted, type will
+      default to "Your Features" and the name will default to "Feature XX" where
+      XX is an integer.  This allows for a very simple feature line:
+      <pre>
+      add=III+20000..21000,21550..22000
+      </pre>
+      <p>
+      Multiple <i>add=</i> arguments are allowed. The alias "a" can be used to
+      shorten the length of the URL.
+      <p>
+  <dt><b>style</b>
+  <dd>The style argument can be used to control the rendering of additional features added
+      with "add".  It is a flattened version of the style configuration sections described
+      in <a href="http://www.wormbase.org/db/seq/gbrowse?help=annotation">this document</a>
+      For example, if you have added a "Blast Hit" annotation, then you can tell the
+      renderer to use a red arrow for this glyph in this way:
+      style=%22Blast%20Hit%22+glyph=arrow+fgcolor=red
+      <p>
+  <dt><b>keystyle</b> (Alias: <b>k</b>)
+  <dd>Controls the positioning of the track key. One of "right", "left", "between" (default) 
+      or "bottom"
+      <p>
+  <dt><b>overview</b>
+  <dd>Ordinarily the image will show the detail panel if the query region corresponds to
+       a single region, and the overview panel if multiple regions match (or if a region
+       that is too large to show matches).  Setting overview=1 will force the overview
+       to be shown in all cases.
+      <p>
+  <dt><b>flip</b> (Alias: <b>f</b>)
+  <dd>Flip the image left to right.  Arguments are 0=don't flip (default), and 1=flip.
+     <p>
+  <dt><b>embed</b>
+  <dd>Generate image and a corresponding HTML imagemap in a form suitable for embedding
+      into a frame.
+     <p>
+  <dt><b>format</b>
+  <dd>Specify the format for the image file.  Either "GD" (the default) or
+      "GD::SVG" for scaleable vector graphics.
+     <p>
   <dt><b>list</b>
-  <dd><p>
-      If this argument is present, it will cause the script to dump
+  <dd>If this argument is present, it will cause the script to dump
       out various types of information in plain text form.  Currently the two
       values for this argument are <i>sources</i>, to dump out the list of
       data sources, and <i>types</i>, to dump out the list of configured
@@ -476,91 +688,38 @@ separated by semicolons (preferred) or by ampersands.
   <dd>This argument specifies the database for the images.  The list of sources
       can be found using <i>list=sources</i>.
       <p>
-  <dt><b>name</b>
-  <dd>This argument specifies the region of the genome to be displayed.  Several
-      forms are recognized:
-      <ul>
-	<li><i>name=Landmark</i>  Display the landmark named "Landmark".  Valid landmark
-	    names include chromosomes, contigs, clones, STSs, predicted genes, and any other
-	    landmark that the administrator has designated.  Be careful when fetching large
-	    landmarks such as whole chromosomes!
-	<li><i>name=Landmark:start..end</i>  Display the region between <i>start</i> and <i>end</i>
-	    relative to "Landmark".
-	<li><i>name=Class:Landmark</i>  Display "Landmark", restricting to a particular class, such
-	    as "PCR_Product".  The list of classes is under the control of the database administrator
-	    and is not yet available through this interface.
-	<li><i>name=Class:Landmark:start..end</i>  As above, but restricted to the designated range.
-      </ul>
-      <p>
-  <dt><b>type</b>
-  <dd>This argument lists the feature types to display.  The value of this argument is
-      a list of mnemonics separated by spaces ("+" characters when URL-escaped).  For example:
-      <p>
-      <pre>
-      &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;
-                   type=tRNA+NG+WABA+CG+ESTB"&gt;
-      </pre>
-      Multiple <i>type=</i> arguments will be combined to form a single space-delimited list.
-      <p>
-  <dt><b>keystyle</b>
-  <dd>This argument controls whether the key should be printed to the "right", the "left", "between"
-      (the default), or "bottom".
-      <p>
-  <dt><b>options</b>
-  <dd>A space-delimited list ("+" characters when URL-escaped) of mnemonic/option
-      pairs describing how features should be
-      formatted. Options are integers from 0 to 3, where
-      0=auto, 1=compact, 2=expanded, 3=expanded and labeled.  For example, to specify that
-      the tRNA and NG tracks should always be expanded and labeled, but that the WABA
-      track should be compact, use:
-      <p>
-      <pre>
-      options=tRNA+3+NG+3+WABA+1
-      </pre>
-      <p>
-  <dt><b>add</b>
-  <dd>Superimpose one or more additional features on top of the view.  Features are specified
-      as space ("+") delimited lists in the following format:
-      <p>
-      <pre>
-      add=Landmark+Type+Name+start..end,start..end,start..end
-      </pre>
-      "Landmark" is the landmark name, "Type" is a descriptive type that will be printed
-      in the image caption, "Name" is a name for the feature to be printed above it,
-      and start..end is a comma-delimited list of ranges for discontinuous feature.
-      Names that contain white space must be quoted, for example "BLAST hit".
-      Note that this all has to be URL-escaped, so an additional
-      feature named "Your Sequence", type "Blast Hit", that is located on chromosome III
-      in a gapped range between 20000 and 22000, will be formatted as:
-      <p>
-      <pre>
-      add=III+%22Blast%20Hit%22+%22Your%20Sequence%22+20000..21000,21550..22000
-      </pre>
-      Multiple <i>add=</i> arguments are allowed.
-  <dt><b>style</b>
-  <dd>The style argument can be used to control the rendering of additional features added
-      with "add".  It is a flattened version of the style configuration sections described
-      in <a href="http://www.wormbase.org/db/seq/gbrowse?help=annotation">this document</a>
-      For example, if you have added a "Blast Hit" annotation, then you can tell the
-      renderer to use a red arrow for this glyph in this way:
-      style=%22Blast%20Hit%22+glyph=arrow+fgcolor=red
-  <dt><b>abs</b>
-  <dd>Use absolute (chromosome) coordinates when displaying the image.  An argument of
-      <i>abs=1</i> will turn on absolute coordinate addressing.  An argument of
-      <i>abs=0</i> will use relative coordinate addressing (this is the default).
 </dl>
 <p>
 Putting it all together, here's a working (very long) URL:
-<pre>
-<a href="http://www.wormbase.org/db/seq/gbrowse_img?name=B0001;source=wormbase;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/db/seq/gbrowse_img?name=B0001;source=wormbase;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
+<pre><a href="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
 </pre>
 
+<p>
+
+If you wish to associate the image with an imagemap so that clicking
+on a feature takes the user to the destination configured in the
+gbrowse config file, you may do so by placing the URL in an
+&lt;iframe&gt; section and using the <b>embed=1</b> flag:
+</p>
+
+<pre>
+&lt;iframe src="http://localhost/cgi-bin/gbrowse_img/wormbase?name=B0001;embed=1" width="100%" height="250"&gt;
+   &lt;img src="http://localhost/cgi-bin/gbrowse_img/wormbase?name=B0001"/&gt;
+&lt;/iframe&gt;
+</pre>
+
+<p>
+
+Placing an &lt;img&gt; tag inside the &lt;iframe&gt; tag arranges for
+older browsers that don't know about iframes to display the static
+image instead.  You may need to adjust the width and height attributes
+in order to avoid browsers placing scrollbars around the frame.
 
 <h2>AUTHOR</h2>
 
 <p>Lincoln Stein <a href="mailto:lstein@cshl.org">lstein@cshl.org</a>
 <p>
-Copyright (c) 2002 Cold Spring Harbor Laboratory
+Copyright (c) 2002-2004 Cold Spring Harbor Laboratory
 <p>
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

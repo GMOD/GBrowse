@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.165 2004-09-07 11:51:40 lstein Exp $
+# $Id: Browser.pm,v 1.166 2004-09-12 00:40:31 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1339,7 +1339,7 @@ sub add_overview_landmarks {
 
 =head2 hits_on_overview()
 
-  $hashref = $browser->hits_on_overview($db,$hits,$options);
+  $hashref = $browser->hits_on_overview($db,$hits,$options,$keyname);
 
 This method is used to render a series of genomic positions ("hits")
 into a graphical summary of where they hit on the genome in a
@@ -1358,6 +1358,8 @@ The second argument is an array ref containing one of:
 
 The third argument is the page settings hash from gbrowse.
 
+The fourth option is the key to use for the "hits" track.
+
 The returned HTML is stored in a hashref, where the keys are the
 reference sequence names and the values are HTML to be emitted.
 
@@ -1365,13 +1367,13 @@ reference sequence names and the values are HTML to be emitted.
 
 sub hits_on_overview {
    my $self = shift;
-   my ($db,$hits,$options) = @_;
-   $self->_hits_on_overview($db,$hits,$options,'htmlize');
+   my ($db,$hits,$options,$keyname) = @_;
+   $self->_hits_on_overview($db,$hits,$options,$keyname,'htmlize');
 }
 
 =head2 hits_on_overview_raw()
 
-  $hashref = $browser->hits_on_overview_raw($db,@hits);
+  $hashref = $browser->hits_on_overview_raw($db,$hits,$options,$keyname);
 
 This behaves the same as hits_on_overview() except that the values of
 the returned hashref are a three-element array consisting of 
@@ -1382,8 +1384,8 @@ array of hit coordinates returned by the panel->boxes() call.
 
 sub hits_on_overview_raw {
    my $self = shift;
-   my ($db,$hits,$options) = @_;
-   $self->_hits_on_overview($db,$hits,$options,undef);
+   my ($db,$hits,$options,$keyname) = @_;
+   $self->_hits_on_overview($db,$hits,$options,$keyname,undef);
 }
 
 # Return an HTML showing where multiple hits fall on the genome.
@@ -1391,7 +1393,7 @@ sub hits_on_overview_raw {
 # a list of arrayrefs in the form [ref,start,stop,[name]]
 sub _hits_on_overview {
   my $self = shift;
-  my ($db,$hits,$options,$htmlize) = @_;
+  my ($db,$hits,$options,$keyname,$htmlize) = @_;
 
   my %html; # results are a hashref sorted by chromosome
 
@@ -1424,7 +1426,8 @@ sub _hits_on_overview {
       $name = substr($name,0,7).'...' if length $name > 10;
       push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$start,
 						      -end=>$end,
-						      -name=>$name);
+						      -name=>$name,
+						      -segments=>[$hit->get_SeqFeatures]);
     } elsif (UNIVERSAL::can($hit,'location')) {
       my $location = $hit->location;
       my ($ref,$start,$stop,$name) = ($location->seq_id,$location->start,
@@ -1440,6 +1443,8 @@ sub _hits_on_overview {
   # Should be handled by being passed a $image_class param
   my $image_class = 'GD';
   eval "use $image_class";
+
+  $keyname = 'Matches' unless defined $keyname;
 
   for my $ref (sort keys %refs) {
     my ($name, $version) = split /\sversion\s/i, $ref;
@@ -1475,7 +1480,8 @@ sub _hits_on_overview {
 		      -fgcolor   => 'red',
 		      -bgcolor   => 'red',
 		      -fallback_to_rectangle => 1,
-		      -key       => 'Matches',
+		      -connector => 'solid',
+		      -key       => $keyname,
 		      -bump      => @{$refs{$ref}} <= $max_bump,
 		      -label     => @{$refs{$ref}} <= $max_bump,  # deliberate
 		     );
@@ -1769,7 +1775,7 @@ sub _load_aggregator_types {
 sub _hits_to_html {
   my $self = shift;
   my ($ref,$gd,$boxes) = @_;
-  my ($name, $version) = split /\sversion\s/i, $ref; 
+  my ($name, $version) = split /\sversion\s/i, $ref;
   my $source   = $self->source;
   my $self_url = '';   #url(-relative=>1);
   # $self_url   .= "?source=$source";
@@ -2229,12 +2235,14 @@ sub make_title {
 	    $feature->target.':'.
 	    $feature->target->start."..".$feature->target->end);
     } else {
+      my ($start,$end) = ($feature->start,$feature->end);
+      ($start,$end)    = ($end,$start) if $feature->strand < 0;
       join(' ',
 	   "$key:",
 	   $feature->can('display_name') ? $feature->display_name : $feature->info,
 	   ($feature->can('seq_id')      ? $feature->seq_id : $feature->location->seq_id)
 	   .":".
-	   ($feature->start||'?')."..".($feature->end||'?')
+	   ($start||'?')."..".($end||'?')
 	  );
     }
   };

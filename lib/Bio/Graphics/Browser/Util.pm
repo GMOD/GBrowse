@@ -42,6 +42,15 @@ Create the Bio::Graphics::Browser configuration object.
 
 Open the underlying DAS-compatible database (e.g. Chado).
 
+=item ($ref,$type,$name,@segments) = parse_feature_str($string);
+
+Parse a CGI "added feature" string in the format "reference type name
+start1..end1,start2..end2,..." into a list containing the reference,
+feature type, name and a list of segments in [start,end] format.
+
+The type defaults to 'Your features' and the name defaults to "Feature
+XX" where XX is the number of features parsed so far.
+
 =item print_top($config,$title);
 
 Print the top of the page.
@@ -84,12 +93,15 @@ use strict;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::I18n;
 use CGI qw(:standard);
-use vars qw(@ISA @EXPORT $CONFIG $LANG %DB $HEADER $HTML);
+use Text::Shellwords;
+
+use vars qw(@ISA @EXPORT $CONFIG $LANG %DB $HEADER $HTML $ADDED_FEATURES);
 require Exporter;
 @ISA = 'Exporter';
 @EXPORT = qw(conf_dir open_config open_database
 	     print_header print_top print_bottom html_frag
 	     error fatal_error redirect_legacy_url
+	     parse_feature_str
 	    );
 
 use constant DEBUG => 0;
@@ -119,6 +131,7 @@ sub open_config {
   # initialize some variables
   $HEADER=0;
   $HTML=0;
+  $ADDED_FEATURES = 0;
 
   $CONFIG;
 }
@@ -158,6 +171,26 @@ sub open_database {
 
 sub print_header {
   print header(@_) unless $HEADER++;
+}
+
+sub parse_added_feature {
+  my $f      = shift;
+  my $fcount = shift;
+  my $zero   = 0;
+  $fcount    ||= \$zero;
+  my ($reference,$type,$name,@position);
+  my @args = shellwords($f||'');
+  if (@args > 3) {
+    ($reference,$type,$name,@position) = @args;
+  } elsif (@args > 2) {
+    ($reference,$name,@position) = @args;
+    $type = 'Your Features';
+  } elsif (@args > 1) {
+    ($reference,@position) = @args;
+    ($type,$name) = ('Your Features',"Feature ".++$$fcount);
+  }
+  my @segments = map { [/(-?\d+)(?:-|\.\.)(-?\d+)/]} map {split /,/} @position;
+  ($reference,$type,$name,@segments);
 }
 
 sub print_top {
@@ -373,6 +406,30 @@ sub redirect_legacy_url {
     print redirect($q->url(-absolute=>1,-path_info=>1,-query=>1));
     exit 0;
   }
+}
+sub parse_feature_str {
+  my $f      = shift;
+  my ($reference,$type,$name,@position);
+  my @args = shellwords($f||'');
+  if (@args > 3) {
+    ($reference,$type,$name,@position) = @args;
+  } elsif (@args > 2) {
+    ($reference,$name,@position) = @args;
+  } elsif (@args > 1) {
+    ($reference,@position)       = @args;
+  } elsif ($f =~ /^(.+):(\d+.+)$/) {
+    ($reference,@position) = ($1,$2);
+  } elsif ($f =~ /^(.+)/) {
+    $reference = $1;
+    @position  = '1..1';
+  }
+  return unless $reference;
+
+  $type = 'Your Features'              unless defined $type;
+  $name = "Feature ".++$ADDED_FEATURES unless defined $name;
+
+  my @segments = map { [/(-?\d+)(?:-|\.\.)(-?\d+)/]} map {split /,/} @position;
+  ($reference,$type,$name,@segments);
 }
 
 

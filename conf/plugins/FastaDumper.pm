@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::FastaDumper;
-# $Id: FastaDumper.pm,v 1.8 2003-05-19 17:25:44 lstein Exp $
+# $Id: FastaDumper.pm,v 1.9 2004-12-22 16:41:49 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -53,8 +53,16 @@ sub dump {
     my $self = shift;
     my $segment = shift;
     my $config  = $self->configuration;
-    my $dna = lc $segment->dna;
+    
     my $browser = $self->browser_config();
+    my $settings = $self->page_settings;
+    (my $label    = "$segment") =~ s/,/../;
+
+    $segment     = $segment->subseq($segment->length,1) if $settings->{flip};
+    $segment->ref($segment); # use 1-based coordinates in own coordinate system
+    $label       .= " (flipped)" if $settings->{flip};
+    
+    my $dna = lc $segment->dna;
     warn("====== beginning dump =====\n") if DEBUG;
     warn "length of dna = ",length($dna) if DEBUG;
 
@@ -99,14 +107,14 @@ sub dump {
     # HTML formatting
     if ($config->{format} eq 'html') {
 	
-      print start_html($segment),h1($segment);
-      print pre(">$segment\n$dna");
+      print start_html($label),h1($label);
+      print pre(">$label\n$dna");
       print end_html;
     }
 
     # text/plain formatting
     else {
-	print ">$segment\n";
+	print ">$label\n";
 	print $dna;
     }
     warn("====== end of dump =====\n") if DEBUG;
@@ -199,10 +207,12 @@ sub configure_form {
 
 sub make_markup {
   my $self = shift;
-  my ($segment,$types,$markup) = @_;
+  my ($segment,$types,$markup,$flip) = @_;
   my @regions_to_markup;
+  my $length = $segment->length;
 
-  warn("segment length is ".$segment->length()."\n") if DEBUG;
+  warn("segment length is $length\n") if DEBUG;
+  $segment->ref($segment);
   my $iterator = $segment->get_seq_stream(-types=>$types,
 					  -automerge=>1) or return;
   while (my $markupregion = $iterator->next_seq) {
@@ -218,8 +228,10 @@ sub make_markup {
     @parts = ($markupregion) unless @parts;
 
     for my $p (@parts) {
-      my $start = $p->start - $segment->start;
-      my $end   = $start + $p->length;
+      
+      #my $start = $p->start - $segment->start;
+      #my $end   = $start + $p->length;
+      my ($start,$end) = ($p->start,$p->end);
 
       warn("$p ". $p->location->to_FTstring() . " type is ".$p->primary_tag) if DEBUG;
       $start = 0                   if $start < 0;  # this can happen
@@ -233,8 +245,15 @@ sub make_markup {
       warn "style symbol for $p is $style_symbol, and style is ",$markup->style($style_symbol),"\n" if DEBUG;
       next unless $style_symbol;
 
+      if ($flip) {
+	$start = $length - $start;
+	$end   = $length - $end;
+	($start,$end) = ($end,$start) if $start > $end;
+      }
+      ($start,$end) = ($end,$start) if $start > $end;
+
       warn "[$style_symbol,$start,$end]\n" if DEBUG;
-      push @regions_to_markup,[$style_symbol,$start,$end];
+      push @regions_to_markup,[$style_symbol,$start-1,$end];
     }
   }
   @regions_to_markup;

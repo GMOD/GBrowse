@@ -184,3 +184,20 @@ order by fl.nbeg
 ---------------------------------------------------
 
 CREATE INDEX gbrowse_srcfeature_idx ON featureloc (srcfeature_id, nbeg, nend)
+
+
+---------------------------------
+ select child.feature_id, child.name, child.type_id,
+        childloc.nbeg, childloc.nend, childloc.strand, childloc.phase
+ from feature as parent
+ inner join
+ feature_relationship as fr0 on 
+ (parent.feature_id = fr0.subjfeature_id)
+ inner join
+ feature as child on
+ (child.feature_id = fr0.objfeature_id)
+ inner join
+ featureloc as childloc on
+ (child.feature_id = childloc.feature_id)
+ where parent.feature_id = 29214;
+ 

@@ -55,7 +55,7 @@ The 11 arguments are positional:
   $method       this feature's GFF method
   $source       this feature's GFF source
   $score	this feature's score
-  $fstrand      this feature's strand (relative to the source
+  $strand      this feature's strand (relative to the source
                       sequence, which has its own strandedness!)
   $phase        this feature's phase
   $group        this feature's group
@@ -70,37 +70,20 @@ sub new {
   my ($factory,
       $srcseq,
       $start,$stop,
-      $method,$source,
-      $score,$fstrand,$phase,
-      $group,$db_id,$group_id,
-      $tstart,$tstop) = @_;
+      $type,
+      $strand,
+      $group,       # ie, gene name  (GFF legacy)
+      $db_id) = @_;
 
   my $self = bless { },$package;
-  ($start,$stop) = ($stop,$start) if defined($fstrand) and $fstrand eq '-';
 
-  my $class =  $group ? $group->class : 'Sequence';
+  ($start,$stop) = ($stop,$start) if defined($strand) and $strand == -1;
 
-  @{$self}{qw(factory sourceseq start stop strand class)} =
-    ($factory,$srcseq,$start,$stop,$fstrand,$class);
+  @{$self}{qw(factory sourceseq start stop strand )} =
+    ($factory,$srcseq,$start,$stop,$strand);
 
-  # if the target start and stop are defined, then we use this information to create 
-  # the reference sequence
-  # THIS SHOULD BE BUILT INTO RELSEGMENT
-  if (0 && $tstart ne '' && $tstop ne '') {
-    if ($tstart < $tstop) {
-      @{$self}{qw(ref refstart refstrand)} = ($group,$start - $tstart + 1,'+');
-    } else {
-      @{$self}{'start','stop'} = @{$self}{'stop','start'};
-      @{$self}{qw(ref refstart refstrand)} = ($group,$tstop + $stop - 1,'-');
-    }
-
-  } else {
-    @{$self}{qw(ref refstart refstrand)} = ($srcseq,1,'+');
-  }
-
-  @{$self}{qw(type fstrand score phase group db_id group_id absolute)} =
-    (Bio::DB::GFF::Typename->new($method,$source),$fstrand,$score,$phase,
-     $group,$db_id,$group_id,$factory->{absolute});
+  @{$self}{qw(type group db_id absolute)} =
+    ($type,$group,$db_id,$factory->{absolute});
 
   $self;
 }
@@ -122,11 +105,8 @@ considerations).
 
 sub strand {
   my $self = shift;
-  return 0 unless $self->{fstrand};
-  if ($self->absolute) {
-    return Bio::DB::GFF::RelSegment::_to_strand($self->{fstrand});
-  }
-  return $self->SUPER::strand;
+  return 0 unless $self->{strand};
+  return $self->{strand};
 }
 
 =head2 display_id
@@ -144,8 +124,7 @@ Bio::SeqFeatureI compatibility.
 =cut
 
 sub display_name  {
-# return 'gene name'
-
+  return $self->{group}
 }
 
 =head2 sub_SeqFeature
@@ -164,6 +143,23 @@ name to filter on.
 
 For AcePerl compatibility, this method may also be called as
 segments().
+
+SQL:
+ select child.feature_id, child.name, child.type_id,
+        childloc.nbeg, childloc.nend, childloc.strand, childloc.phase
+ from feature as parent
+ inner join
+ feature_relationship as fr0 on
+ (parent.feature_id = fr0.subjfeature_id)
+ inner join
+ feature as child on
+ (child.feature_id = fr0.objfeature_id)
+ inner join
+ featureloc as childloc on
+ (child.feature_id = childloc.feature_id)
+ where parent.feature_id = $feature_id;
+
+
 
 =cut
 
@@ -320,11 +316,11 @@ sub merged_segments {
 	$previous->{stop} = $s->{stop};
       }
       # fix up the target too
-      my $g = $previous->{group};
-      if ( ref($g) &&  $g->isa('Bio::DB::GFF::Homol')) {
-	my $cg = $s->{group};
-	$g->{stop} = $cg->{stop};
-      }
+   #   my $g = $previous->{group};
+   #   if ( ref($g) &&  $g->isa('Bio::DB::GFF::Homol')) { # always false here
+   #     my $cg = $s->{group};
+   #     $g->{stop} = $cg->{stop};
+   #   }
     } elsif (defined($previous) 
 	     && $previous->start == $s->start 
 	     && $previous->stop == $s->stop) {
@@ -337,6 +333,41 @@ sub merged_segments {
   $self->{merged_segs}{$type} = \@merged;
   @merged;
 }
+
+=head2 clone
+
+ Title   : clone
+ Usage   : $feature = $f->clone
+ Function: make a copy of the feature
+ Returns : a new Bio::DB::Das::Chado::Segment::Feature object
+ Args    : none
+ Status  : Public
+
+This method returns a copy of the feature.
+
+=cut
+
+sub clone {
+  my $self = shift;
+  my $clone = $self->SUPER::clone;
+
+  if (ref(my $t = $clone->type)) {
+    my $type = $t->can('clone') ? $t->clone : bless {%$t},ref $t;
+    $clone->type($type);
+  }
+
+  if (ref(my $g = $clone->group)) {
+    my $group = $g->can('clone') ? $g->clone : bless {%$g},ref $g;
+    $clone->group($group);
+  }
+
+  if (my $merged = $self->{merged_segs}) {
+    $clone->{merged_segs} = { %$merged };
+  }
+
+  $clone;
+}
+
 
 =head2 sub_types
 
@@ -389,7 +420,7 @@ primary_tag(), source_tag(), all_tags(), has_tag(), each_tag_value().
 =cut
 
 sub primary_tag {
-  # return cvtype, eg, 'exon'
+   return $self->{type};
 }
 
 sub source_tag  {
@@ -464,7 +495,7 @@ sub adjust_bounds {
 
 	# fix up our bounds to hold largest subfeature
 	my($start,$stop,$strand) = $feat->adjust_bounds;
-	$self->{fstrand} = $strand unless defined $self->{fstrand};
+	$self->{strand} = $strand unless defined $self->{strand};
 	if ($start <= $stop) {
 	  $self->{start} = $start if !defined($self->{start}) || $start < $self->{start};
 	  $self->{stop}  = $stop  if !defined($self->{stop})  || $stop  > $self->{stop};
@@ -474,16 +505,16 @@ sub adjust_bounds {
 	}
 
 	# fix up endpoints of targets too (for homologies only)
-	my $h = $feat->group;
-	next unless $h && $h->isa('Bio::DB::GFF::Homol');
-	next unless $g && $g->isa('Bio::DB::GFF::Homol');
-	($start,$stop) = ($h->{start},$h->{stop});
-	if ($h->strand >= 0) {
-	  $g->{start} = $start if !defined($g->{start}) || $start < $g->{start};
-	  $g->{stop}  = $stop  if !defined($g->{stop})  || $stop  > $g->{stop};
-	} else {
-	  $g->{start} = $start if !defined($g->{start}) || $start > $g->{start};
-	  $g->{stop}  = $stop  if !defined($g->{stop})  || $stop  < $g->{stop};
+#	my $h = $feat->group;
+#	next unless $h && $h->isa('Bio::DB::GFF::Homol'); # always false (for now)
+#	next unless $g && $g->isa('Bio::DB::GFF::Homol');
+#	($start,$stop) = ($h->{start},$h->{stop});
+#	if ($h->strand >= 0) {
+#	  $g->{start} = $start if !defined($g->{start}) || $start < $g->{start};
+#	  $g->{stop}  = $stop  if !defined($g->{stop})  || $stop  > $g->{stop};
+#	} else {
+#	  $g->{start} = $start if !defined($g->{start}) || $start > $g->{start};
+#	  $g->{stop}  = $stop  if !defined($g->{stop})  || $stop  < $g->{stop};
 	}
       }
     }

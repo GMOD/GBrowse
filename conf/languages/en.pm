@@ -78,11 +78,15 @@ END
 
    DUMP     => 'Dump',
 
+   HIGHLIGHT   => 'Highlight',
+
    ANNOTATE     => 'Annotate',
 
    SCROLL   => 'Scroll/Zoom',
 
    RESET    => 'Reset',
+
+   FLIP     => 'Flip',
 
    DOWNLOAD_FILE    => 'Download File',
 
@@ -121,6 +125,12 @@ END
    BETWEEN     => 'Between',
 
    BENEATH     => 'Beneath',
+
+   TRACK_NAMES => 'Track Name Table',
+
+   ALPHABETIC  => 'Alphabetic',
+
+   VARYING     => 'Varying',
 
    SET_OPTIONS => 'Set Track Options...',
 

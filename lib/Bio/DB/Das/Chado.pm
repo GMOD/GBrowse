@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.59 2004-09-01 15:05:03 scottcain Exp $
+# $Id: Chado.pm,v 1.60 2004-09-01 19:19:51 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -664,13 +664,14 @@ sub dbxref2source {
     my $self   = shift;
     my $dbxref = shift;
 
-    return 'fake' unless defined($self->gff_source_db_id);
+    return '.' unless defined($self->gff_source_db_id);
 
     warn "d2s:dbxref:$dbxref\n" if DEBUG;
 
-    defined ($self->{'dbxref_source'}) 
-       && defined ($self->{'dbxref_source'}->{$dbxref})
-       && return $self->{'dbxref_source'}->{$dbxref};
+    if (defined ($self->{'dbxref_source'}) && $dbxref
+     && defined ($self->{'dbxref_source'}->{$dbxref})) {
+        return $self->{'dbxref_source'}->{$dbxref};
+    }
 
     my $sth = $self->dbh->prepare("
         select dbxref_id,accession from dbxref where db_id=".$self->gff_source_db_id
@@ -682,16 +683,19 @@ sub dbxref2source {
     }
 
     while (my $hashref = $sth->fetchrow_hashref) {
-        warn "d2s:accession:$$hashref{accession}, dbxref_id:$$hashref{dbxref_id}\n" if DEBUG;
-                                                                                                                                                                       
+        warn "d2s:accession:$$hashref{accession}, dbxref_id:$$hashref{dbxref_id}\n"
+            if DEBUG;
+
         $self->{'source_dbxref'}->{$$hashref{accession}} = $$hashref{dbxref_id};
         $self->{'dbxref_source'}->{$$hashref{dbxref_id}} = $$hashref{accession};
     }
                                                                        
-    if ($self->{'dbxref_source'}->{$dbxref}) {
+    if (defined $self->{'dbxref_source'} && $dbxref
+           && defined $self->{'dbxref_source'}->{$dbxref}) {
         return $self->{'dbxref_source'}->{$dbxref};
     } else {
-        return undef;
+        $self->{'dbxref_source'}->{$dbxref} = "." if $dbxref;
+        return ".";
     }
 
 }

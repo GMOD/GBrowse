@@ -1683,16 +1683,16 @@ do it for you.</i> </blockquote>
 <p>
 
 The second subtlety to notice is that for the minus strand ESTs, the
-target coordinates are <b>backwards</b>, and show a start position
-greater than the end position.  For example, for the first agt830.3
+target coordinates are not reversed, that is, the start position is
+less than the end position.  For example, for the first agt830.3
 HSP, we are told that genomic region 5410..5500 aligns to EST region
-596..505.  Although this is arguably redundant with the strand field,
-this is historically the way reverse strand targets have been depicted
-in GFF and is required by GBrowse.
+505..596.  The strand field is used to determine the direction of the
+alignment.
 
-<blockquote class="example"><i>In the proposed revision of GFF, the representation of
-multiple alignments has been rewritten to be more intuitive and
-internally consistent.</i></blockquote>
+<blockquote class="example"><i>Note that this contradicts the historical
+implementation of GFF but the current use is more internal consistent and is 
+the method for target annoation in the proposed revision of GFF.
+</i></blockquote>
 
 <p>
 

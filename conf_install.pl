@@ -1,6 +1,5 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 use strict;
-use warnings;
 
 #Perform installation of gbrowse apache configuration files
 
@@ -20,7 +19,7 @@ if ($Config{'osname'} =~ /win/i) {
 print "Installing sample configuration files...\n";
 
 if (! (-e $dir)) {
-    mkdir $dir or die "unable to make $dir directory\n";
+    mkdir($dir,0777) or die "unable to make $dir directory\n";
 }
 
 opendir CONFDIR, "conf" or die "unable to opendir conf\n";
@@ -38,7 +37,7 @@ closedir CONFDIR;
 
 my $plugindir = $dir . $delim . "plugins";
 if (! (-e $plugindir)) {
-    mkdir $plugindir or die "unable to mkdir $plugindir\n";
+    mkdir($plugindir,0777) or die "unable to mkdir $plugindir\n";
 }
 
 opendir PLUGINS, "conf/plugins" or die "unable to opendir ./conf/plugins\n";
@@ -52,7 +51,7 @@ closedir PLUGINS;
 
 my $langdir = $dir . $delim . 'languages';
 if (! (-e $langdir)) {
-    mkdir $langdir or die "unable to mkdir $langdir\n";
+    mkdir($langdir,0777) or die "unable to mkdir $langdir\n";
 }
 
 opendir LANGS, "conf/languages" or die "unable to opendir ./conf/languages\n";

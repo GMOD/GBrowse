@@ -1,6 +1,5 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 use strict;
-use warnings;
 use File::Copy;
 use Config;
 
@@ -17,7 +16,7 @@ if ($Config{'osname'} =~ /win/i) {
 print "Installing stylesheet and images...\n";
 
 if (! (-e $ht_target) ) {
-    mkdir $ht_target or die "unable to make $ht_target directory\n";
+    mkdir($ht_target,0777) or die "unable to make $ht_target directory\n";
 }
 
 opendir HTDOCS, "htdocs" or die "unable to opendir htdocs\n";
@@ -31,11 +30,11 @@ closedir HTDOCS;
 my $imagedir  = $ht_target . $delim . "images" ;
 my $buttondir = $ht_target . $delim . "images" . $delim . "buttons";
 if (! (-e $imagedir) ) {
-    mkdir $imagedir or die "unable to make $imagedir\n";
+    mkdir($imagedir,0777) or die "unable to make $imagedir\n";
 }
 if (! (-e $buttondir) ) {
     print "Making $buttondir...\n";
-    mkdir $buttondir or die "unable to make $buttondir\n";
+    mkdir($buttondir,0777) or die "unable to make $buttondir\n";
 }
 
 opendir BUTTONS, "htdocs/images/buttons" or die "unable to open ./htdocs/images/buttons\n";
@@ -50,7 +49,7 @@ closedir BUTTONS;
 my $helpdir = $ht_target . $delim . "images" . $delim . "help";
 if (! (-e $helpdir) ) {
     print "Making $helpdir...\n";
-    mkdir $helpdir or die "unable to make $helpdir\n";
+    mkdir($helpdir,0777) or die "unable to make $helpdir\n";
 }
 
 opendir HELP, "htdocs/images/help" or die "unable to open htdocs/images/help\n";
@@ -65,7 +64,7 @@ closedir HELP;
 my $tmpdir = $ht_target . $delim . "tmp";
 if (! (-e $tmpdir) ) {
     print "Making $tmpdir...\n";
-    mkdir $tmpdir or die "unable to make $tmpdir\n";
+    mkdir($tmpdir,0777) or die "unable to make $tmpdir\n";
     my $mode = 0777;
     chmod $mode, $tmpdir or die "unable to make $tmpdir world writable\n";
 }

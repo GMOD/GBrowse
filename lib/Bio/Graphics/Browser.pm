@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.49 2002-12-23 03:41:12 lstein Exp $
+# $Id: Browser.pm,v 1.50 2002-12-30 20:40:25 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -555,6 +555,8 @@ The arguments are a series of tag=>value pairs, where tags are:
 
   title               Add specified title to the top of the image.
 
+  noscale             Suppress the scale
+
 =cut
 
 sub render_html {
@@ -729,6 +731,8 @@ sub make_title {
 #    'limit'         Place a limit on the number of features of each type to show.
 #    'tracks'        List of named tracks, in the order in which they are to be shown
 #    'label_scale'   If true, prints chromosome name next to scale
+#    'title'         A title for the image
+#    'noscale'       Suppress scale entirely
 sub image_and_map {
   my $self    = shift;
   my %config  = @_;
@@ -741,6 +745,7 @@ sub image_and_map {
   my $lang          = $config{lang};
   my $keystyle      = $config{keystyle};
   my $title         = $config{title};
+  my $suppress_scale= $config{noscale};
 
   # these are natively configured tracks
   my @labels = $self->labels;
@@ -770,7 +775,7 @@ sub image_and_map {
 		    -label     => $config{label_scale} ? $segment->seq_id : 0,
 		    -units     => $conf->setting(general=>'units') || '',
 		    -unit_divider => $conf->setting(general=>'unit_divider') || 1,
-		   );
+		   ) unless $suppress_scale;
 
   my (%tracks,@blank_tracks);
 

@@ -133,13 +133,13 @@ sub MY::install {
 sub MY::postamble {
 qq{
 conf_install ::
-        \$(PERL) conf_install.pl $OPTIONS{CONF}/gbrowse.conf
+	\$(PERL) conf_install.pl $OPTIONS{CONF}/gbrowse.conf
 
 htdocs_install ::
-        \$(PERL) htdocs_install.pl $OPTIONS{HTDOCS}/gbrowse
+	\$(PERL) htdocs_install.pl $OPTIONS{HTDOCS}/gbrowse
 
 cgi_install :: gbrowse
-        \$(PERL) cgi_install.pl $OPTIONS{CGIBIN}
+	\$(PERL) cgi_install.pl $OPTIONS{CGIBIN}
 
 };
 }

@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.127 2005-01-22 21:47:43 allenday Exp $
+# $Id: gbrowse.PLS,v 1.128 2005-01-22 22:22:36 allenday Exp $
 
 use strict;
 use Bio::Graphics;
@@ -62,7 +62,7 @@ use File::Basename 'basename','dirname';
 use File::Spec;
 use Carp qw(:DEFAULT croak);
 #use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td);
-use CGI qw(cookie escapeHTML param path_info request_method url);
+use CGI qw(cookie escapeHTML param path_info request_method url referer);
 use Template;
 use URI::Escape;
 use vars qw($MAX_SEGMENT $DEFAULT_SEGMENT
@@ -173,7 +173,7 @@ sub main_display($$) {
     link_bookmark              => bookmark_link(),
     link_image                 => image_link(),
     link_svg                   => svg_link(),
-    link_help                  => "?help=general",
+    link_help                  => "?display_help=general",
 
     rand       => substr(md5_hex(rand),0,5),
 
@@ -402,7 +402,7 @@ sub tracks_table($) {
   # set up the dumps line.
   my($ref,$start,$stop) = ($BROWSER->options->ref(),$BROWSER->options->start(),$BROWSER->options->stop());
   my $source   = $BROWSER->config->source;
-  my $self_url = "?help=citations";
+  my $self_url = "?display_help=citations";
 
   my @labels = $BROWSER->options->tracks();
   my %labels          = map {$_ => make_citation_link($_,$self_url) } @labels;
@@ -493,7 +493,7 @@ sub external_table($) {
 	       TR({-class=>'uploadtitle'},
 		  th({-align=>'left',-colspan=>2},
 		     $BROWSER->translate('Remote_title').':',
-		     a({-href=>'?help=annotation'.'#remote',-target=>'help'},'['.$BROWSER->translate('Help').']'))),
+		     a({-href=>'?display_help=annotation'.'#remote',-target=>'help'},'['.$BROWSER->translate('Help').']'))),
 	       TR({-class=>'uploadbody'},\@rows),
 	       TR({-class=>'uploadbody'},
 		  th('&nbsp;'),
@@ -1197,7 +1197,7 @@ sub edit_uploaded_file($) {
 		),
 	      TR({-class=>'searchbody'},
 		 td(
-		    a({-href=>"?help=annotation#format",-target=>'help'},
+		    a({-href=>"?display_help=annotation#format",-target=>'help'},
 		      b('['.$BROWSER->translate('Help_format').']'))
 		   ),
 		),
@@ -1294,12 +1294,12 @@ sub bookmark_link() {
 
 sub image_link {
   my $rand = md5_hex(rand);
-  return "?help=link_image;rand=$rand";
+  return "?display_help=link_image;rand=$rand";
 }
 
 sub svg_link {
   my $rand = md5_hex(rand);
-  return "?help=svg_image;rand=$rand";
+  return "?display_help=svg_image;rand=$rand";
 }
 
 # reorder @labels based on settings in the 'track.XXX' parameters
@@ -1452,15 +1452,15 @@ sub set_track_options() {
   print '</form>';
 }
 
-sub help($$) {
-  my ($help_type,$conf_dir) = @_;
+sub help() {
+  my $help_type = $BROWSER->options->display_help();
+  my $conf_dir = $BROWSER->config->setting('help') || GBROWSE_HELP;
 
-  my $ref = referer();
-  my $do_close = join('',
-		      '<form action="'.$ref.'">',
-		      button(-onClick=>'window.close()',-label=>$BROWSER->translate('Close_Window')),
-		      '</form>');
-  print div({-align=>'right'},$do_close);
+  my $param = {
+               referer => referer(),
+               browser => $BROWSER,
+              };
+
   if ($help_type eq 'citations') {
     build_citation_page();
   }
@@ -1476,12 +1476,33 @@ sub help($$) {
     my $updir      = File::Spec->updir;
     # don't let evil people get into root directory
     my $evil       = grep { /^$updir$/o } @components;
-    return         if $evil;
-    build_help_page("$conf_dir/${help_type}_help.html");
+    if ( ! grep { /^$updir$/o } @components ) {
+      $param->{help_message} = build_help_page("$conf_dir/${help_type}_help.html");
+    }
   }
-  print div({-align=>'right'},$do_close);
+
+  my $result = undef;
+  $BROWSER->template->process('help.tt2',$param,\$result);
+  print $result;
 }
 
+sub build_help_page {
+  my $helpfile = shift or return;
+  my $file = url2file($helpfile) or return;
+  my $root = $BROWSER->config->setting('help') || GBROWSE_HELP;
+  open(F,$file) or return;
+
+  my $page = undef;
+
+  while (<F>) { # fix up relative addressing of images
+    s/(href|src)=\"([^\"\#\$]+)\"/$1=\"$root\/$2\"/g;
+    s/<!--\s*\#include-classes\s*-->/object_classes_for_help()/e;
+    $page .= $_;
+  }
+  close F;
+
+  return $page;
+}
 
 sub make_citation {
   my $config  = shift;
@@ -1547,19 +1568,6 @@ sub build_citation_page() {
     print p($BROWSER->translate('No_external')) unless @citations;
   }
 
-}
-
-sub build_help_page {
-  my $helpfile = shift or return;
-  my $file = url2file($helpfile) or return;
-  my $root = $BROWSER->config->setting('help') || GBROWSE_HELP;
-  open(F,$file) or return;
-  while (<F>) { # fix up relative addressing of images
-    s/(href|src)=\"([^\"\#\$]+)\"/$1=\"$root\/$2\"/g;
-    s/<!--\s*\#include-classes\s*-->/object_classes_for_help()/e;
-    print;
-  }
-  close F;
 }
 
 sub build_link_image_page($) {
@@ -2025,8 +2033,9 @@ sub main {
   }
 
   ## HANDLE HELP PAGE ##############################################################################
-  elsif (param('help')) {
-    help(param('help'),$BROWSER->config->setting('help')||GBROWSE_HELP);
+  elsif ( $BROWSER->options->display_help() ) {
+    help();
+#    help(param('help'),$BROWSER->config->setting('help')||GBROWSE_HELP);
   }
 
   ## HANDLE PLUGIN ABOUT PAGE ######################################################################

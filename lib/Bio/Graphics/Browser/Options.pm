@@ -207,24 +207,6 @@ sub h_type {
   return $self->{'h_type'};
 }
 
-=head2 help()
-
- Usage   : $obj->help($newval)
- Function: type of help requested
- Example : 
- Returns : value of help (a scalar)
- Args    : on set, new value (a scalar or undef, optional)
-
-
-=cut
-
-sub help {
-  my($self,$val) = @_;
-  $self->{'help'} = $val if defined($val);
-  return $self->{'help'};
-}
-
-
 =head2 id()
 
  Usage   : $obj->id($newval)
@@ -257,6 +239,24 @@ sub display_banner {
   my($self,$val) = @_;
   $self->{'display_banner'} = $val if defined($val);
   return $self->{'display_banner'};
+}
+
+
+=head2 display_help()
+
+ Usage   : $obj->display_help($newval)
+ Function: type of help requested
+ Example : 
+ Returns : value of display_help (a scalar)
+ Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub display_help {
+  my($self,$val) = @_;
+  $self->{'display_help'} = $val if defined($val);
+  return $self->{'display_help'};
 }
 
 =head2 display_instructions()

@@ -1,6 +1,7 @@
 1.34    Tue Feb 19 14:22:31 EST 2002
 	* Fixed JavaScript code so that the popup zoom menu works correctly with konqueror
 	and old Netscape.
+	* Robustified in the face of server timeout errors.
 	
 1.33    Mon Feb 18 17:41:28 EST 2002
 	* Made the zoom/scroll navigation bar more intuitive (in my opinion)

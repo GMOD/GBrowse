@@ -1,15 +1,22 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.7 2002-02-20 22:12:15 lstein Exp $
+# $Id: Browser.pm,v 1.8 2002-02-21 13:13:51 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
 use Bio::Graphics;
 use Carp qw(carp croak);
 use GD 'gdMediumBoldFont';
+use CGI qw(img param Delete_all url);
+use Digest::MD5 'md5_hex';
+
+require Exporter;
 
 use constant DEFAULT_WIDTH => 800;
-use vars '$VERSION';
+use vars '$VERSION','@ISA','@EXPORT';
 $VERSION = '1.10';
+
+@ISA    = 'Exporter';
+@EXPORT = 'commas';
 
 sub new {
   my $class    = shift;
@@ -137,6 +144,160 @@ sub footer {
   my $footer = $self->config->code_setting(general => 'footer');
   return $footer->(@_) if ref $footer eq 'CODE';
   return $footer;
+}
+
+sub render_html {
+  my $self = shift;
+  my %args = @_;
+
+  my $segment         = $args{segment};
+  my $feature_files   = $args{feature_files};
+  my $show            = $args{show};
+  my $order           = $args{order};
+  my $options         = $args{options};
+  my $tracks          = $args{tracks};
+  my $do_map          = $args{do_map};
+  my $do_centering_map= $args{do_centering_map};
+
+  return unless $segment;
+
+  my($image,$map) = $self->image_and_map(segment       => $segment,
+					 feature_files => $feature_files,
+					 show          => $show,
+					 order         => $tracks,
+					 options       => $options,
+					 tracks        => $tracks,
+					);
+
+  my ($width,$height) = $image->getBounds;
+  my @mtimes = map {ref($_) && $_->mtime} @$feature_files;
+
+  local $^W = 0;
+  my $signature = md5_hex($segment,
+			  (map {$_||0} @{$show||$tracks||[]}),
+			  $self->{width},
+			  $self->source || '',
+			  @mtimes,
+			  ref($order) && @{$order},
+			  ref($options) && @{$options}
+			 );
+  my $url     = $self->generate_image($image,$signature);
+  my $img     = img({-src=>$url,-align=>'CENTER',-usemap=>'#hmap',-width => $width,-height => $height,-border=>0});
+  my $img_map = $self->make_map($map,$do_centering_map) if $do_map;
+  return wantarray ? ($img,$img_map) : join "<br>",$img,$img_map;
+}
+
+sub generate_image {
+  my $self = shift;
+  my ($image,$signature) = @_;
+  my $extension = $image->can('png') ? 'png' : 'gif';
+  my ($uri,$path) = $self->tmpdir($self->source.'/img');
+  my $url         = sprintf("%s/%s.%s",$uri,$signature,$extension);
+  my $imagefile   = sprintf("%s/%s.%s",$path,$signature,$extension);
+  open (F,">$imagefile") || die("Can't open image file $imagefile for writing: $!\n");
+  print F $image->can('png') ? $image->png : $image->gif;
+  close F;
+  return $url;
+}
+
+sub tmpdir {
+  my $self = shift;
+
+  my $path = shift || '';
+  my $tmpuri = $self->setting('tmpimages') or die "no tmpimages option defined, can't generate a picture";
+  $tmpuri .= "/$path" if $path;
+  my $tmpdir;
+  if ($ENV{MOD_PERL}) {
+    my $r          = Apache->request;
+    my $subr       = $r->lookup_uri($tmpuri);
+    $tmpdir        = $subr->filename;
+    my $path_info  = $subr->path_info;
+    $tmpdir       .= $path_info if $path_info;
+  } else {
+    $tmpdir = "$ENV{DOCUMENT_ROOT}/$tmpuri";
+  }
+  mkpath($tmpdir,0,0777) unless -d $tmpdir;
+  return ($tmpuri,$tmpdir);
+}
+
+sub make_map {
+  my $self = shift;
+  my $boxes = shift;
+  my $centering_map = shift;
+
+  my $map = qq(<map name="hmap">\n);
+
+  # use the scale as a centering mechanism
+  my $ruler = shift @$boxes;
+  $map .= $self->make_centering_map($ruler) if $centering_map;
+
+  foreach (@$boxes){
+    next unless $_->[0]->can('primary_tag');
+    my $href  = $self->make_href($_->[0]) or next;
+    my $alt   = $self->make_alt($_->[0]);
+    $map .= qq(<AREA SHAPE="RECT" COORDS="$_->[1],$_->[2],$_->[3],$_->[4]" 
+	       HREF="$href" ALT="$alt" TITLE="$alt">\n);
+  }
+  $map .= "</map>\n";
+  $map;
+}
+
+# this one is scary because it messes with CGI parameters
+sub make_centering_map {
+  my $self = shift;
+  my $ruler = shift;
+  return if $ruler->[3]-$ruler->[1] == 0;
+
+  my $offset = $ruler->[0]->start;
+  my $scale  = $ruler->[0]->length/($ruler->[3]-$ruler->[1]);
+
+  # divide into ten intervals
+  my $portion = ($ruler->[3]-$ruler->[1])/10;
+  Delete_all();
+  param(ref => scalar($ruler->[0]->ref));
+
+  my @lines;
+  for my $i (0..19) {
+    my $x1 = $portion * $i;
+    my $x2 = $portion * ($i+1);
+    # put the middle of the sequence range into the middle of the picture
+    my $middle = $offset + $scale * ($x1+$x2)/2;
+    my $start  = int($middle - $ruler->[0]->length/2);
+    my $stop   = int($start + $ruler->[0]->length - 1);
+    param(start => int($start));
+    param(stop  => int($stop));
+    param(nav4  => 1);
+    param(source=> $self->source);
+    my $url = url(-relative=>1,-query=>1,-path_info=>1);
+    push @lines,
+      qq(<AREA SHAPE="RECT" COORDS="$x1,$ruler->[2],$x2,$ruler->[4]"
+	 HREF="$url" ALT="center" TITLE="center">\n);
+  }
+  return join '',@lines;
+}
+
+sub make_href {
+  my $self = shift;
+  my $feature = shift;
+
+  if ($feature->can('make_link')) {
+    return $feature->make_link;
+  } else {
+    return $self->make_link($feature);
+  }
+}
+
+sub make_alt {
+  my $slef    = shift;
+  my $feature = shift;
+
+  my $label = $feature->class .":".$feature->info;
+  if ($feature->method =~ /^(similarity|alignment)$/) {
+    $label .= " ".commas($feature->target->start)."..".commas($feature->target->end);
+  } else {
+    $label .= " ".commas($feature->start)."..".commas($feature->stop);
+  }
+  return $label;
 }
 
 # Generate the image and the box list, and return as a two-element list.
@@ -358,6 +519,16 @@ sub overview {
   $gd->rectangle($x1,$y1,$x2,$y2,$red);
 
   return ($gd,$segment->length);
+}
+
+# I know there must be a more elegant way to insert commas into a long number...
+sub commas {
+  my $i = shift;
+  $i = reverse $i;
+  $i =~ s/(\d{3})/$1,/g;
+  chop $i if $i=~/,$/;
+  $i = reverse $i;
+  $i;
 }
 
 sub read_configuration {

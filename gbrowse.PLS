@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.12 2002-02-20 22:12:15 lstein Exp $
+# $Id: gbrowse.PLS,v 1.13 2002-02-21 13:13:51 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -299,21 +299,32 @@ sub main_display {
   my @feature_file = load_external_sources($segment,$page_settings);
 
   if ($segment) {
-    my $cell = overview($segment,$page_settings);
-    $cell .= br();
+    my ($img,$map);
+    my $cell = overview($segment,$page_settings).br();
     if ($segment->length <= $MAX_SEGMENT) {
-      $cell .= image_and_map($segment,\@feature_file,$page_settings);
+      $CONFIG->width($page_settings->{width});
+      ($img,$map) = $CONFIG->render_html(segment       => $segment,
+					 feature_files => \@feature_file,
+					 show          => $page_settings->{labels},
+					 order         => $page_settings->{track},
+					 options       => $page_settings->{options},
+					 do_map        => 1,
+					 do_centering_map => 1,
+					);
+      $cell .= $img;
     } else {
       $cell .= i(
 		 "Detailed view is limited to",
 		 commas($MAX_SEGMENT),"bases.",
 		 "Click in the overview to select a region",commas($DEFAULT_SEGMENT),'bp wide.');
     }
-    print table({-border=>0,-width=>$page_settings->{width}},
-		TR({-class=>'searchbody'},
-		   td({-align=>'CENTER'},$cell)
-		  )
-	       );
+    print "\n",
+      table({-border=>0,-width=>$page_settings->{width}},
+	    TR({-class=>'searchbody'},
+	       td({-align=>'CENTER'},$cell)
+	      )
+	   ),"\n";
+    print $map,"\n" if $map;
   }
   print hidden('ref'),hidden('start'),hidden('stop');
   print settings_table($page_settings,\@feature_file);
@@ -990,44 +1001,6 @@ sub open_database {
   return $DB{$source};
 }
 
-sub image_and_map {
-  my ($segment,$additional_features,$settings) = @_;
-  return unless $segment;
-
-  $CONFIG->width($settings->{width});
-
-  # get the current track order
-  my $labels  = $settings->{labels},
-  my $tracks  = $settings->{track};
-  my $options = $settings->{options};
-
-  my($image,$map) = $CONFIG->image_and_map(segment       => $segment,
-					   feature_files => $additional_features,
-					   show          => $labels,
-					   order         => $tracks,
-					   options       => $options,
-                                          );
-  if (DEBUGGING_RECTANGLES) { debugging_rectangles($image,$map) }
-
-  my ($width,$height) = $image->getBounds;
-  my @mtimes = map {ref($_) && $_->mtime} @$additional_features;
-
-  local $^W = 0;
-  my $signature = md5_hex($segment,
-			  (map {$_||0} @{$settings->{labels}}),
-			  $settings->{width},
-			  $CONFIG->source || '',
-			  $settings->{id} || '',
-			  @mtimes,
-			  ref($settings->{track}) && @{$settings->{track}},
-			  ref($settings->{options}) && @{$settings->{options}}
-			 );
-  my $url     = generate_image($image,$signature);
-  my $img     = img({-src=>$url,-usemap=>'#hmap',-width => $width,-height => $height,-border=>0});
-  my $img_map = make_map($map);
-  return join "\n",$img,$img_map;
-}
-
 sub overview {
   my ($segment,$settings) = @_;
   return unless $segment;
@@ -1036,7 +1009,7 @@ sub overview {
   my ($image,$length) = $CONFIG->overview($segment) or return;
   my ($width,$height) = $image->getBounds;
   my $signature = md5_hex($segment,$width);
-  my $url = generate_image($image,$signature);
+  my $url = $CONFIG->generate_image($image,$signature);
   return image_button(-name=>'overview',
 		      -src=>$url,
 		      -width=>$width,
@@ -1044,36 +1017,6 @@ sub overview {
 		      -border=>0,
 		      -align=>'MIDDLE')
     .hidden(-name=>'seg_length',-value=>$length,-override=>1);
-}
-
-sub generate_image {
-  my ($image,$signature) = @_;
-  my $extension = $image->can('png') ? 'png' : 'gif';
-  my ($uri,$path) = tmpdir($CONFIG->source.'/img');
-  my $url         = sprintf("%s/%s.%s",$uri,$signature,$extension);
-  my $imagefile   = sprintf("%s/%s.%s",$path,$signature,$extension);
-  open (F,">$imagefile") || die("Can't open image file $imagefile for writing: $!\n");
-  print F $image->can('png') ? $image->png : $image->gif;
-  close F;
-  return $url;
-}
-
-sub tmpdir {
-  my $path = shift || '';
-  my $tmpuri = $CONFIG->setting('tmpimages') or die "no tmpimages option defined, can't generate a picture";
-  $tmpuri .= "/$path" if $path;
-  my $tmpdir;
-  if ($ENV{MOD_PERL}) {
-    my $r          = Apache->request;
-    my $subr       = $r->lookup_uri($tmpuri);
-    $tmpdir        = $subr->filename;
-    my $path_info  = $subr->path_info;
-    $tmpdir       .= $path_info if $path_info;
-  } else {
-    $tmpdir = "$ENV{DOCUMENT_ROOT}/$tmpuri";
-  }
-  mkpath($tmpdir,0,0777) unless -d $tmpdir;
-  return ($tmpuri,$tmpdir);
 }
 
 sub get_ranges {
@@ -1084,77 +1027,6 @@ sub get_ranges {
 sub get_zoomincrement {
   my $zoom      = $CONFIG->setting('fine zoom')  || DEFAULT_FINE_ZOOM;
   $zoom;
-}
-
-sub make_map {
-  my $boxes = shift;
-  my $map = qq(<map name="hmap">\n);
-
-  # use the scale as a centering mechanism
-  my $ruler = shift @$boxes;
-  $map .= make_centering_map($ruler);
-
-  foreach (@$boxes){
-    next unless $_->[0]->can('primary_tag');
-    my $href  = make_href($_->[0]) or next;
-    my $alt   = make_alt($_->[0]);
-    $map .= qq(<AREA SHAPE="RECT" COORDS="$_->[1],$_->[2],$_->[3],$_->[4]" 
-	       HREF="$href" ALT="$alt" TITLE="$alt">\n);
-  }
-  $map .= "</map>\n";
-  $map;
-}
-
-sub make_centering_map {
-  my $ruler = shift;
-  return if $ruler->[3]-$ruler->[1] == 0;
-
-  my $offset = $ruler->[0]->start;
-  my $scale  = $ruler->[0]->length/($ruler->[3]-$ruler->[1]);
-
-  # divide into ten intervals
-  my $portion = ($ruler->[3]-$ruler->[1])/10;
-  Delete_all();
-  param(ref => scalar($ruler->[0]->ref));
-
-  my @lines;
-  for my $i (0..19) {
-    my $x1 = $portion * $i;
-    my $x2 = $portion * ($i+1);
-    # put the middle of the sequence range into the middle of the picture
-    my $middle = $offset + $scale * ($x1+$x2)/2;
-    my $start  = int($middle - $ruler->[0]->length/2);
-    my $stop   = int($start + $ruler->[0]->length - 1);
-    param(start => int($start));
-    param(stop  => int($stop));
-    param(nav4  => 1);
-    param(source=> $CONFIG->source);
-    my $url = url(-relative=>1,-query=>1,-path_info=>1);
-    push @lines,
-      qq(<AREA SHAPE="RECT" COORDS="$x1,$ruler->[2],$x2,$ruler->[4]"
-	 HREF="$url" ALT="center" TITLE="center">\n);
-  }
-  return join '',@lines;
-}
-
-sub make_href {
-  my $feature = shift;
-  if ($feature->can('make_link')) {
-    return $feature->make_link;
-  } else {
-    return $CONFIG->make_link($feature);
-  }
-}
-
-sub make_alt {
-  my $feature = shift;
-  my $label = $feature->class .":".$feature->info;
-  if ($feature->method =~ /^(similarity|alignment)$/) {
-    $label .= " ".commas($feature->target->start)."..".commas($feature->target->end);
-  } else {
-    $label .= " ".commas($feature->start)."..".commas($feature->stop);
-  }
-  return $label;
 }
 
 sub dump_fasta {
@@ -1191,16 +1063,6 @@ sub dump_gff {
       print $s->gff_string,"\n";
     }
   }
-}
-
-# I know there must be a more elegant way to insert commas into a long number...
-sub commas {
-  my $i = shift;
-  $i = reverse $i;
-  $i =~ s/(\d{3})/$1,/g;
-  chop $i if $i=~/,$/;
-  $i = reverse $i;
-  $i;
 }
 
 sub multiple_choices {
@@ -1300,7 +1162,7 @@ sub handle_quickie {
 sub name_uploaded_file {
   my $settings = shift;
   my $id = $settings->{id} or return;
-  my (undef,$tmpdir) = tmpdir($CONFIG->source."/uploaded_file/$id");
+  my (undef,$tmpdir) = $CONFIG->tmpdir($CONFIG->source."/uploaded_file/$id");
   $settings->{'uploaded_file'} ||= 'auto';
   return "$tmpdir/$settings->{'uploaded_file'}";
 }
@@ -1390,7 +1252,7 @@ sub get_remote_feature_data {
 			     );
   }
   my $id = md5_hex($url);  # turn into a filename
-  my (undef,$tmpdir) = tmpdir($CONFIG->source.'/external');
+  my (undef,$tmpdir) = $CONFIG->tmpdir($CONFIG->source.'/external');
   my $response = $UA->mirror($url,"$tmpdir/$id");
   if ($response->is_error) {
     error("Could not fetch $url: ",$response->message);

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.100 2003-10-06 17:52:35 lstein Exp $
+# $Id: Browser.pm,v 1.101 2003-10-16 23:11:43 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -854,7 +854,13 @@ sub image_and_map {
   my @feature_types = map { $conf->label2type($_,$length) } @$tracks;
 
   # Create the tracks that we will need
-  my @argv = (-segment   => $segment,
+  my ($seg_start,$seg_stop ) = ($segment->start,$segment->end);
+  if ($seg_stop < $seg_start) {
+    ($seg_start,$seg_stop)     = ($seg_stop,$seg_start);
+    $flip = 1;
+  }
+  my @argv = (-start     => $seg_start,
+	      -end       => $seg_stop,
 	      -width     => $width,
 	      -key_color => $self->setting('key bgcolor')     || 'moccasin',
 	      -bgcolor   => $self->setting('detail bgcolor')  || 'white',
@@ -1009,7 +1015,8 @@ sub image_and_map {
     my $file = $feature_files->{$tracks->[$track]} or next;
     ref $file or next;
     $track += $offset + 1;
-    my $name = $file->name;
+    my $name = $file->name || '';
+    $options->{$name} ||= {};
     my $inserted = $file->render($panel,$track,$options->{$name},$max_bump,$max_labels);
     $offset += $inserted;
   }
@@ -1251,7 +1258,7 @@ sub hits_on_overview {
 # (this used to be in gbrowse executable itself)
 sub name2segments {
   my $self = shift;
-  my ($name,$db,$toomany,$extra_padding) = @_;
+  my ($name,$db,$toomany,$extra_padding,$segments_have_priority) = @_;
   $extra_padding ||= 0;
   $toomany ||= TOO_MANY_SEGMENTS;
   my $max_segment = $self->config('max_segment') || MAX_SEGMENT;
@@ -1275,7 +1282,7 @@ sub name2segments {
   $start *= $divisor if defined $start;
   $stop  *= $divisor if defined $stop;
 
-  @segments  = $self->_feature_get($db,$name,$class,$start,$stop);
+  @segments  = $self->_feature_get($db,$name,$class,$start,$stop,$segments_have_priority);
 
   # Here starts the heuristic part.  Try various abbreviations that
   # people tend to use for chromosomal addressing.
@@ -1283,7 +1290,7 @@ sub name2segments {
     my $id = $1;
     foreach (qw(CHROMOSOME_ Chr chr)) {
       my $n = "${_}${id}";
-      @segments = $self->_feature_get($db,$n,$class,$start,$stop);
+      @segments = $self->_feature_get($db,$n,$class,$start,$stop,$segments_have_priority);
       last if @segments;
     }
   }
@@ -1296,7 +1303,7 @@ sub name2segments {
 
   # try the wildcard  version, but only if the name is of significant length
   if (!@segments && length $name > 3) {
-    @segments = $self->_feature_get($db,"$name*",$class,$start,$stop);
+    @segments = $self->_feature_get($db,"$name*",$class,$start,$stop,$segments_have_priority);
   }
 
   # try any "automatic" classes that have been defined in the config file
@@ -1307,7 +1314,7 @@ sub name2segments {
   NAME:
       foreach $class (@automatic) {
 	for my $n (@names) {
-	  @segments = $self->_feature_get($db,$n,$class,$start,$stop);
+	  @segments = $self->_feature_get($db,$n,$class,$start,$stop,$segments_have_priority);
 	  last NAME if @segments;
 	}
       }
@@ -1346,15 +1353,21 @@ sub name2segments {
 
 sub _feature_get {
   my $self = shift;
-  my ($db,$name,$class,$start,$stop) = @_;
+  my ($db,$name,$class,$start,$stop,$segments_have_priority) = @_;
+
   my @argv = (-name  => $name);
   push @argv,(-class => $class) if defined $class;
   push @argv,(-start => $start) if defined $start;
   push @argv,(-end   => $stop)  if defined $stop;
   warn "\@argv = @argv\n" if DEBUG;
   my @segments;
-  @segments  = $db->get_feature_by_name(@argv) if !defined($start) && !defined($stop);
-  @segments  = $db->segment(@argv)             if !@segments && $name !~ /[*?]/;
+  if ($segments_have_priority) {
+    @segments  = grep {$_->length} $db->segment(@argv);
+    @segments  = grep {$_->length} $db->get_feature_by_name(@argv) if !@segments;
+  } else {
+    @segments  = grep {$_->length} $db->get_feature_by_name(@argv) if !defined($start) && !defined($stop);
+    @segments  = grep {$_->length} $db->segment(@argv)             if !@segments && $name !~ /[*?]/;
+  }
 
   # uniquify
   my %largest;

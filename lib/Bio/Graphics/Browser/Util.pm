@@ -228,11 +228,12 @@ END
 }
 
 sub redirect_legacy_url {
-  my $source = shift;
+  my $source      = shift;
+  my @more_args   = @_;
   if ($source && path_info() ne "/$source") {
     my $q = new CGI '';
     $q->path_info($source);
-    foreach (qw(name ref start stop)) {
+    foreach (qw(name ref start stop),@more_args) {
       $q->param($_=>param($_)) if param($_);
     }
     print redirect($q->url(-absolute=>1,-path_info=>1,-query=>1));

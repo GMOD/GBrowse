@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.5 2003-10-06 13:12:06 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.6 2003-10-16 23:11:43 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1 path_info escape);
@@ -82,7 +82,7 @@ $src    =~ s!^/!!;  # get rid of leading / from path_info()
 
 # Migrate from 1.56 way of specifying source to 1.57 way
 # This may cause a redirect and exit 0 at this point!
-redirect_legacy_url($src);
+redirect_legacy_url($src,'add','abs','list','style','options','type','width');
 
 $CONFIG->source($src)     if $src;
 
@@ -99,7 +99,6 @@ my $segment_id = param('name') or message("Must provide a 'name' parameter to sp
 # get the segment
 my $segment = get_segment($segment_id) or message("Segment $segment_id not found.");
 $segment->absolute(1) if param('abs');
-
 
 # set the image width
 $CONFIG->width(param('width'))                              if param('width');
@@ -151,7 +150,7 @@ sub message {
 sub get_segment {
   my $name = shift;
   my $db   = open_database($CONFIG);
-  my @segments = $CONFIG->name2segments($name,$db);
+  my @segments = $CONFIG->name2segments($name,$db,undef,undef,1);
   return unless @segments;
   $segments[0];
 }
@@ -196,8 +195,7 @@ sub coordinate_mapper {
 				    $current_segment->ref,
 				    $current_segment->start,$current_segment->stop);
   my $class = $absolute ? $current_segment->factory->refclass : $current_segment->class;
-  $current_segment    = $db->segment(-name=>$current_segment->ref,
-				     -class=>$class);
+  $current_segment    = $db->segment(-name=>$current_segment->ref,-class=>$class);
   my %segments;
 
   my $closure = sub {
@@ -252,10 +250,10 @@ sub print_usage {
 
 <pre>
 
-  &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=mec-3;width=400"&gt;
+  &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;width=400"&gt;
 <blockquote>
   <i>Will generate this picture:</i>
- <img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=mec-3;width=400">
+ <img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;width=400">
 </blockquote>
 
   &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img?list=sources"&gt;list&lt;/a&gt;
@@ -267,7 +265,7 @@ sub print_usage {
   wormbase
 </blockquote>
 
-  &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;list=types"&gt;types&lt;/a&gt;
+  &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?list=types"&gt;types&lt;/a&gt;
 <blockquote>
   <i>Will return this document:</i>
   ## Feature types for source wormbase
@@ -298,7 +296,7 @@ can be used as the destination of an &lt;img&gt; tag like this:
 </p>
 
 <blockquote><pre>
-&lt;img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=III:1..1000"&gt;
+&lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=III:1..1000"&gt;
 </pre></blockquote>
 
 <p>
@@ -380,7 +378,7 @@ separated by semicolons (preferred) or by ampersands.
       a list of mnemonics separated by spaces ("+" characters when URL-escaped).  For example:
       <p>
       <pre>
-      &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=mec-3;
+      &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;
                    type=tRNA+NG+WABA+CG+ESTB"&gt;
       </pre>
       Multiple <i>type=</i> arguments will be combined to form a single space-delimited list.

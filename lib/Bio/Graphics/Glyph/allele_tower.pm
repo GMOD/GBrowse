@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::allele_tower;
 
-# $Id: allele_tower.pm,v 1.1 2004-02-07 00:57:51 mummi Exp $
+# $Id: allele_tower.pm,v 1.2 2004-02-18 23:49:24 fc215 Exp $
 # Glyph for drawing each allele found at a SNP position in a column.
 
 use strict;
@@ -8,6 +8,7 @@ use vars '@ISA';
 @ISA = 'Bio::Graphics::Glyph::generic';
 use Bio::Graphics::Glyph::generic;
 
+# Give enough height to fit in the alleles
 sub height {
   my $self = shift;
   my @alleles;
@@ -16,6 +17,13 @@ sub height {
   }
   my $size = 10 * ($#alleles +1);
   return $size;
+}
+
+# Need to make room for the allele bars if there is room
+sub pad_right {
+  my $self = shift;
+  my $right = $self->SUPER::pad_right;
+  return $right > 55 ? $right: 55 if $self->label;
 }
 
 sub draw_component {
@@ -34,16 +42,47 @@ sub draw_component {
       foreach (@alleles) {
 	tr/ACTG/TGAC/ if $self->option('complement');
       }
-	  $fg = $self->bgcolor if $self->bgcolor;
+      $fg = $self->bgcolor if $self->bgcolor;
     }
 
+    for (my $i=0;$i<@alleles;$i++) {
+      my $position = -2+ $i * 10;       # Space out each allele
 
-  for (my $i=0;$i<@alleles;$i++) {
+      # for the allele frequency horizontal bars (maf lines)
+      # x1, x2 are the same,  y2 is bigger than y1
+      my $maf = defined ($self->option('maf'))? $self->option('maf') : "NO";
 
-      # Space out each allele
-      my $position = -2 + $i * 10;
-      $gd->string(GD::Font->Small,$x1-1, $position + $y1, $alleles[$i], $fg);
-    }
+      # If the MAF freq = 0, the major allele will be length 44 + 6
+      my $bar_length = $maf*44 +6 unless $maf eq "NO";
+      my $y_delta = ($y2- $y1)/(2 * ($#alleles +1));  # correct for height
+
+      if (my $minor_allele = $self->option('minor_allele')){
+	if ($alleles[$i] eq $minor_allele) {
+	  # Print the letter
+	  $gd->string(GD::Font->Small,$x1-1, 
+		      $position + $y1, $alleles[$i], $fg);
+	}
+	else {
+	  # If this is the major allele, the bar length must be 44 +6 - maf length
+	  $bar_length = 44-($maf*44) +6 unless $maf eq "NO";
+	  # Print the letter
+	  $gd->string(GD::Font->MediumBold,$x1-1, 
+		      $position + $y1, $alleles[$i], $fg);
+
+	}
+	# Print the line for the allele freq. bar
+	if ($self->label){
+	  $gd->line($x1+6,           $y1 + (2*$i +1)*$y_delta, 
+		    $x1+$bar_length, $y1 + (2*$i +1)*$y_delta, $fg) 
+	    unless $maf eq "NO";
+	}
+
+      }
+      # if no minor allele is defined, use the small fonts for both
+      else {
+	$gd->string(GD::Font->Small,$x1-1, $position + $y1, $alleles[$i], $fg);
+      }
+    } # end of for
   }
 }
 
@@ -61,7 +100,13 @@ Bio::Graphics::Glyph::allele_tower - The "allele_tower" glyph
 
 =head1 DESCRIPTION
 
-This glyph draws each allele found at a SNP position in a column. See www.hapmap.org/cgi-perl/gbrowse/gbrowse 'genotyped SNPs' for an example. The common options are available (except height which is calculated based on the number of alleles).  
+This glyph draws a letter for each allele found at a SNP position, one above the other (i.e. in a column). For example:
+    A      
+    G   
+
+See also http://www.hapmap.org/cgi-perl/gbrowse/gbrowse 'genotyped SNPs' for an example.
+
+The common options are available (except height which is calculated based on the number of alleles).  In addition, if you give the glyph the minor allele frequency (MAF) and indicate which is the minor allele, the glyph will display these differences.
 
 
 =head2 GETTING THE ALLELES
@@ -75,9 +120,15 @@ To specify the alleles, load these as an attribute in the last column of the GFF
 
 =head2 OPTIONS
 
+ . Glyph Colour
+ . Different colour for alleles on the reverse strand
+ . Print out the complement for alleles on the reverse strand
+ . Major allele shown in bold
+ . Horizontal histogram to show allele frequency
+
 =head3 GLYPH COLOR
 
-The glyph color and be configured to be different if the feature is on the plus or minus strand.  Use fgcolor to define the glyph color for the plus strand and bgcolor for the minus strand.  For example:
+The glyph color can be configured to be different if the feature is on the plus or minus strand.  Use fgcolor to define the glyph color for the plus strand and bgcolor for the minus strand.  For example:
 
    fgcolor     = blue
    bgcolor     = red
@@ -85,7 +136,7 @@ The glyph color and be configured to be different if the feature is on the plus 
 For this option to work, you must also set ref_strand to return the strand of the feature:
    ref_strand        = sub {shift->strand}
 
-=head3 REVERSE
+=head3 REVERSE STRAND ALLELES
 
 If the alleles on the negative strand need to be the complement of what is listed in the GFF files, (e.g. A/G becomes T/C), set the complement option to have value 1
 
@@ -94,6 +145,19 @@ complement   = 1
 For this option to work, you must also set ref_strand to return the strand of the feature:
 
 ref_strand        = sub {shift->strand}
+
+=head3 MAJOR/MINOR ALLELE
+
+Use the 'minor_allele' option to return the minor allele for the SNP.  If you use this option, the major allele will appear in bold type.
+
+=head3 ALLELE FREQUENCY HISTOGRAMS
+
+Use the 'maf' option to return the minor allele frequency for the SNP.  If you use this option, a horizontal histogram will be drawn next to the alleles, to indicate their relative frequencies. e.g.
+
+ A______
+ C__
+
+Note: The 'label' option must be set to 1 (i.e. on) for this to work.
 
 =head1 BUGS
 

@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::ConfigIO;
 
-# $Id: ConfigIO.pm,v 1.1.2.3 2003-06-26 00:33:19 pedlefsen Exp $
+# $Id: ConfigIO.pm,v 1.1.2.4 2003-06-27 18:27:43 pedlefsen Exp $
 # This package parses a simple tab-delimited format for features into
 # a Config object.  It is simpler than GFF, but still has a lot of
 # expressive power.
@@ -454,7 +454,7 @@ sub _parse_line {
     return;
   } # End if this is the beginning of a new section
 
-  if( /^([\w: -]+?)\s*=\s*(.*)/ ) { # Key/value pair
+  if( /^([\w: -_]+?)\s*=\s*(.*)/ ) { # Key/value pair
     ## TODO: REMOVE
     #warn "KEY/VALUE: '$1' = '$2'\n" if Bio::Graphics::Browser::DEBUG;
 

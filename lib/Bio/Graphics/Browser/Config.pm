@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Config;
 
-# $Id: Config.pm,v 1.1.2.1 2003-05-23 16:38:06 pedlefsen Exp $
+# $Id: Config.pm,v 1.1.2.2 2003-06-27 18:27:43 pedlefsen Exp $
 # Configuration data for gbrowse.
 
 =head1 NAME
@@ -436,7 +436,36 @@ sub initialize_segment_providers {
   ## TODO: Here is where we should add the special aggregators for the
   ## per-section "group pattern" entries.
 
-  if( my @aggregators = shellwords( $self->get( 'aggregators' ) || '' ) ) {
+  my @aggregators = shellwords( $self->get( 'aggregators' ) || '' );
+  if( my @auto_aggregator_factory_classes =
+      $self->get( 'auto_aggregators' ) ) {
+    ## TODO: REMOVE
+    #warn "auto aggregator factory: ".$auto_aggregator_factory_classes[ 0 ];
+    my @auto_aggregator_factories;
+    foreach my $class ( @auto_aggregator_factory_classes ) {
+      ## TODO: REMOVE
+      #warn "Loading $class";
+      unless( eval( "require $class" ) ) {
+        warn $@ if $@;
+        next;
+      }
+      ## TODO: REMOVE
+      #warn "Instantiating $class";
+      push( @auto_aggregator_factories, $class->new() );
+    }
+    if( @auto_aggregator_factories ) {
+      foreach my $section ( $self->get_sections() ) {
+        foreach my $factory ( @auto_aggregator_factories ) {
+          ## TODO: REMOVE
+          #warn "applying $factory to section $section";
+          push( @aggregators, $factory->create_aggregator( $self, $section ) );
+        }
+      }
+    }
+  }
+  if( @aggregators ) {
+    ## TODO: REMOVE
+    #warn "The aggregators are ( ".join( ', ', @aggregators )." )";
     push( @argv, ( '-aggregator' => \@aggregators ) );
   }
 

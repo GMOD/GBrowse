@@ -1,7 +1,10 @@
 package Bio::Graphics::Browser::I18n;
 
-# $Id: I18n.pm,v 1.2 2002-09-05 19:22:59 lstein Exp $
+# $Id: I18n.pm,v 1.3 2002-09-05 19:25:27 lstein Exp $
 # $Log: not supported by cvs2svn $
+# Revision 1.2  2002/09/05 19:22:59  lstein
+# fixed upload bugs and some language parsing problems
+#
 
 use strict;
 
@@ -49,6 +52,10 @@ sub read_table {
   my $language  = shift;
   my $path = join '/',$self->dir,"$language.pm";
   my $table = require $path;
+  unless ($table) {  # try removing the -US part
+    $path =~ s/[-_]\w\.pm$/.pm/;
+    $table = require $path;
+  }
   $table;
 }
 

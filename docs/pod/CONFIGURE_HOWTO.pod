@@ -321,7 +321,8 @@ looks like this:
  [GENERAL]
  description = S. cerevisae (via SGD Nov 2001)
  db_adaptor  = Bio::DB::GFF
- db_args     = -dsn dbi:mysql:database=yeast;host=localhost
+ db_args     = -adaptor dbi::mysql
+ 	       -dsn     dbi:mysql:database=yeast;host=localhost
  aggregators = transcript alignment
  user        =
  passwd      =
@@ -367,16 +368,18 @@ connection.  The exact format will depend on the adaptor you're using.
 For Bio::DB::GFF running on top of a MySQL database use
 a db_args like the following:
 
-    db_args = -dsn dbi:mysql:database=<db_name>;host=<db_host>
+    db_args = -adaptor dbi::mysql
+              -dsn     dbi:mysql:database=<db_name>;host=<db_host>
 
 replacing <db_name> and <db_host> with the database and database
-host of your choice.
+host of your choice.  For MySQL databases running on the localhost,
+you can shorten this to just "db_name".
 
 If the database requires you to log in with a user name and
 password, use the following db_adaptor:
 
-    db_args = -dsn     dbi:mysql:database=<db_name>;host=<db_host>
-              -adaptor dbi::Oracle
+    db_args = -adaptor dbi::mysql
+              -dsn     dbi:mysql:database=<db_name>;host=<db_host>
               -user    <username>
               -pass    <password>
 
@@ -388,7 +391,7 @@ without using a password.
 
 To use the Oracle version of Bio::DB::GFF, use these arguments:
 
-    db_args = -adaptor oracle
+    db_args = -adaptor dbi::oracle
               -dsn dbi:oracle:database=db_service
 
 Where db_description should be replaced with the name of the desired
@@ -399,11 +402,10 @@ format.
 To use the in-memory version of Bio::DB::GFF, use these arguments:
 
   db_args = -adaptor memory
-            -file  /path/to/gff_file.gff
-            -fasta /path/to/fasta_file.fa
+            -dir   /path/to/directory
 
-Where gff_file.gff and fasta_file.fa correspond to the locations of
-GFF and FASTA files containing the features and DNA, respectively.
+The indicated directory should contain one or more GFF and FASTA files,
+distinguished by the filename extensions .gff and .fa respectively.
 
 =item * aggregators
 
@@ -466,103 +468,6 @@ URL in which the various graphical buttons used by GBrowse are located.
 
 URL of a writable directory in which GBrowse can write its temporary
 images.    (You will probably not need to change this.)
-
-=item * glyph
-     height
-     bgcolor
-     fgcolor
-     strand_arrow
-
-These options control the default graphical settings for any
-annotation types that are not explicitly specified.  See the
-section below on controlling the settings.  Likewise, any other
-graphical options found in the [GENERAL] sections are treated as
-defaults.
-
-=item * label density
-
-When there are too many annotations on the screen GBrowse automatically
-disables the printing of identifying labels next to the feature.
-"label density" controls where the cutoff occurs.  The value in the
-example files is 25, meaning that labels will be turned off when
-there are more than 25 annotations of a particular type on display
-at once.
-
-=item * bump density
-
-When there are too many annotations on the screen GBrowse automatically
-disables collision control.  The "bump density" option controls
-where the cutoff occurs.  The value in the example files is 100,
-meaning that when there more than 100 annotations of the same type
-on the display, the browser will stop shifting them verticially to
-prevent them from colliding, but will instead allow them to
-overlap.
-
-=item * link
-
-The link option creates a default rule for creating outgoing links 
-from the GBrowse display.  When the user clicks on a feature of
-interest, he will be taken to the corresponding URL.
-
-The link option's value should be a URL containing one or more
-variables.  Variables begin with a dollar sign ($), and are
-replaced at run time with the information relating to the selected
-annotation.  Recognized variables include:
-
-     $name     The feature's name (group name)
-     $class    The feature's class (group class)
-     $method   The feature's method
-     $source   The feature's source
-     $ref      The name of the sequence segment (chromosome, contig) 
-		  on which this feature is located
-     $start    The start position of this feature, relative to $ref
-     $end      The end position of this feature, relative to $ref
-     $segstart The left end of $ref displayed in the detailed view
-     $segend   The right end of $ref displayed in the detailed view
-
-For example, the wormbase.conf file uses this link rule:
-
-     link = http://www.wormbase.org/db/get?name=$name;class=$class
-
-At run time, if the user clicks on an EST named yk1234.5, this
-will generate the URL
-
-   http://www.wormbase.org/db/get?name=yk1234.5;class=EST
-
-It is possible to override the global link rule on a
-feature-by-feature basis.  See the next section for details on
-this.  It is also possible to declare a subroutine to compute the
-proper URL dynamically.  See COMPUTED OPTIONS for details.
-
-=item * link_target
-
-By default links will replace the contents of the current window.
-If you wish, you can specify a new window to pop up when the user
-clicks on a feature, or designate a named window or frame to
-receive the contents of the link.  To do this, add the "link_target"
-option to the general section or to a track stanza.  The format
-is this:
-
-      link_target = _blank
-
-The value uses the HTML targetting rules to name/create the window
-to receive the value of the link.  The first time the link is
-accessed, a window with the specified name is created.  The next
-time the user clicks on a link with the same target, that window
-will receive the content of the link if it is still present, or it
-will be created again if it has been closed.  A target named
-"_blank" is special and will always create a new window.
-
-The "link_target" option can also be computed dynamically.  See
-COMPUTED OPTIONS for details.
-
-=item * title
-
-The title option controls the "tooltips" text that pops up when
-the mouse hovers over a glyph in certain browsers.  The rules
-for generating titles are the same as the "link" option discussed
-above.  The "title" option can also be computed dynamically.
-See COMPUTED OPTIONS for details.
 
 =item * image widths
 
@@ -797,7 +702,126 @@ The default value is "key."
 
 =back
 
-=head2 B2. Track Sections
+=head2 B2. The [TRACK DEFAULTS] section
+
+The track defaults section specifies default values for each track.
+The following common options are recognized:
+
+	     glyph
+ 	     height
+ 	     bgcolor
+ 	     fgcolor
+ 	     fontcolor
+ 	     font2color
+ 	     strand_arrow
+
+These options control the default graphical settings for any
+annotation types that are not explicitly specified.  See the
+section below on controlling the settings.  Any of the options
+allowed in the [track] sections described below are allowed here.
+
+=over
+
+=item * label density
+
+When there are too many annotations on the screen GBrowse automatically
+disables the printing of identifying labels next to the feature.
+"label density" controls where the cutoff occurs.  The value in the
+example files is 25, meaning that labels will be turned off when
+there are more than 25 annotations of a particular type on display
+at once.
+
+=item * bump density
+
+When there are too many annotations on the screen GBrowse automatically
+disables collision control.  The "bump density" option controls
+where the cutoff occurs.  The value in the example files is 100,
+meaning that when there more than 100 annotations of the same type
+on the display, the browser will stop shifting them verticially to
+prevent them from colliding, but will instead allow them to
+overlap.
+
+=item * link
+
+The link option creates a default rule for creating outgoing links
+from the GBrowse display.  When the user clicks on a feature of
+interest, he will be taken to the corresponding URL.
+
+The link option's value should be a URL containing one or more
+variables.  Variables begin with a dollar sign ($), and are
+replaced at run time with the information relating to the selected
+annotation.  Recognized variables include:
+
+     $name        The feature's name (group name)
+     $class       The feature's class (group class)
+     $method      The feature's method
+     $source      The feature's source
+     $ref         The name of the sequence segment (chromosome, contig)
+                     on which this feature is located
+     $description The feature's description (notes)
+     $start       The start position of this feature, relative to $ref
+     $end         The end position of this feature, relative to $ref
+     $segstart    The left end of $ref displayed in the detailed view
+     $segend      The right end of $ref displayed in the detailed view
+
+For example, the wormbase.conf file uses this link rule:
+
+     link = http://www.wormbase.org/db/get?name=$name;class=$class
+
+At run time, if the user clicks on an EST named yk1234.5, this
+will generate the URL
+
+     http://www.wormbase.org/db/get?name=yk1234.5;class=EST
+
+It is possible to override the global link rule on a
+feature-by-feature basis.  See the next section for details on
+this.  It is also possible to declare a subroutine to compute the
+proper URL dynamically.  See COMPUTED OPTIONS for details.
+
+A special link type of AUTO will cause the feature to link to
+the gbrowse_details script, which summarizes information about
+the feature.  The default is not to link at all.
+
+=item * link_target
+
+By default links will replace the contents of the current window.
+If you wish, you can specify a new window to pop up when the user
+clicks on a feature, or designate a named window or frame to
+receive the contents of the link.  To do this, add the "link_target"
+option to the [TRACK DEFAULTS] section or to a track stanza.  The format
+is this:
+
+       link_target = _blank
+
+The value uses the HTML targetting rules to name/create the window
+to receive the value of the link.  The first time the link is
+accessed, a window with the specified name is created.  The next
+time the user clicks on a link with the same target, that window
+will receive the content of the link if it is still present, or it
+will be created again if it has been closed.  A target named
+"_blank" is special and will always create a new window.
+
+The "link_target" option can also be computed dynamically.  See
+COMPUTED OPTIONS for details.
+
+=item * title
+
+The title option controls the "tooltips" text that pops up when
+the mouse hovers over a glyph in certain browsers.  The rules
+for generating titles are the same as the "link" option discussed
+above.  The "title" option can also be computed dynamically.
+See COMPUTED OPTIONS for details.
+
+The special value "AUTO" causes a default description to appear
+describing the name, type and position of the feature.  This is
+also assumed if the title option is missing or blank.
+
+=item * landmark_padding = 1000
+
+The landmark_padding option will add the indicated number of base pairs
+to the right and left of all landmarks that are searched for by name.
+
+=head2 B3. Track Sections
 
 Any other [Section] in the configuration file is treated as a
 declaration of a track.  The order of track sections will become the
@@ -943,7 +967,7 @@ glyphs in order to display global characteristics of the sequence.
 If this option is set, then you do not need to specify a "feature"
 option.
 
-=item 16 group pattern
+=item 16 group_pattern
 
 This option lets you connect related features by dotted lines based
 on a pattern match in the features' names.  A typical example is
@@ -955,7 +979,7 @@ GROUPING FEATURES for details.
 A large number of glyph-specific options are also recognized.  These
 are described in the next section.
 
-=head2 B3. Glyphs and Glyph Options
+=head2 B4. Glyphs and Glyph Options
 
 A large variety of glyphs are available, and more are being added as
 the Bio::Graphics module grows.
@@ -970,6 +994,10 @@ background colors.  The most popular glyph types are:
 
   generic		a rectangle
   arrow			an arrow
+  anchored_arrow        a span with vertical bases |---------|.  If one
+                        or the other end of the feature is off-screen, the
+                        base will be replaced by an arrow.
+  box                   another rectangle; doesn't show subparts of features
   cds                   shows the reading frame of spliced transcripts; used
                         in conjunction with the "coding" aggregator.
   diamond		a point-like feature represented as a triangle
@@ -977,7 +1005,12 @@ background colors.  The most popular glyph types are:
   heterogeneous_segments a multi-segmented feature in which each segment can
                         have a distinctive color.  For Jim Kent's WABA features,
                         this works with the waba_alignment aggregator.
+  processed_transcript  multi-purpose representation of a spliced mRNA, including
+                        positions of UTRs
   segments		a multi-segmented feature such as an alignment
+  span                  like anchored_arrow, except that the ends are
+                        truncated at the edge of the panel, not turned
+                        into an arrow
   triangle		a point-like feature represented as a diamond
   transcript		a gene model
   transcript2		a slightly different representation of a gene model
@@ -986,6 +1019,7 @@ background colors.  The most popular glyph types are:
 			(for features that conform to the WormBase gene
 			schema). Used in conjunction with the
 			"wormbase_gene" aggregator.
+  xyplot                histograms and line plots
 
 A more definitive list of glyph options can be found in the
 Bio::Graphics manual pages.  Consult the manual pages for the
@@ -994,7 +1028,10 @@ following modules:
   Glyph				Manual Page
   -----                         -----------
 
+  (common options for all)      Bio::Graphics::Glyph
   arrow				Bio::Graphics::Glyph::arrow
+  anchored_arrow                Bio::Graphics::Glyph::anchored_arrow
+  box                           Bio::Graphics::Glyph::box
   cds				Bio::Graphics::Glyph::cds
   crossbox			Bio::Graphics::Glyph::crossbox
   diamond			Bio::Graphics::Glyph::diamond
@@ -1002,20 +1039,23 @@ following modules:
   dot                           Bio::Graphics::Glyph::dot
   ellipse			Bio::Graphics::Glyph::ellipse
   extending_arrow		Bio::Graphics::Glyph::extending_arrow
-  generic			Bio::Graphics::Glyph
+  generic			Bio::Graphics::Glyph::generic
   graded_segments		Bio::Graphics::Glyph::graded_segments
   heterogeneous_segments	Bio::Graphics::Glyph::heterogeneous_segments
   line				Bio::Graphics::Glyph::line
   primers			Bio::Graphics::Glyph::primers
+  processed_transcript          Bio::Graphics::Glyph::processed_transcript
   rndrect			Bio::Graphics::Glyph::rndrect
   ruler_arrow			Bio::Graphics::Glyph::ruler_arrow
   segments			Bio::Graphics::Glyph::segments
+  span                          Bio::Graphics::Glyph::span
   toomany			Bio::Graphics::Glyph::toomany
   transcript			Bio::Graphics::Glyph::transcript
   transcript2			Bio::Graphics::Glyph::transcript2
   translation			Bio::Graphics::Glyph::translation
   triangle			Bio::Graphics::Glyph::triangle
   wormbase_transcript		Bio::Graphics::Glyph::wormbase_transcript
+  xyplot                        Bio::Graphics::Glyph::xyplot
 
 The "perldoc" command is handy for reading the documentation from the
 Unix command line.  For example:
@@ -1050,7 +1090,7 @@ Alternatively, you can use the #RRGGBB notation to specify the red,
 green and blue components of the color.  Refer to any book on HTML for
 the details on using the notation.
 
-=head2 B4. Adding features to the overview
+=head2 B5. Adding features to the overview
 
 You can make any set of tracks appear in the overview by creating a
 stanza with a title of the format [<label>:overview], where <label> is
@@ -1068,7 +1108,7 @@ source "framework":
  height        = 5
  key           = Mapped Genes
 
-=head2 B5. Semantic Zooming
+=head2 B6. Semantic Zooming
 
 Sometimes you will want to change the appearance of a track when the
 user has zoomed out or zoomed in beyond a certain level.  To indicate
@@ -1121,7 +1161,7 @@ It is also possible to display different features at different zoom
 levels, although you should handle this potentially confusing feature
 with care!
 
-=head2 B6. Computed Options
+=head2 B7. Computed Options
 
 Some options can be computed at run time by using Perl subroutines as
 their values.  Currently this works with the values of the "link",
@@ -1229,7 +1269,7 @@ Due to the way the configuration file is parsed, there must be no
 empty lines in the init_code section.  Either use comments to
 introduce white space, or "use" a .pm file to do anything fancy.
 
-=head2 B7. Declaring New Aggregators
+=head2 B8. Declaring New Aggregators
 
 The Bio::DB::GFF data model recognizes a single-level of "grouping" of
 features, but doesn't specify how to use the group information to
@@ -1316,7 +1356,7 @@ To view the documentation for any of these aggregators, run the
 command "perldoc Bio::DB::GFF::Aggregator::aggregator_name", where
 "aggregator_name" is the name of the aggregator.
 
-=head2 B8. GROUPING FEATURES
+=head2 B9. GROUPING FEATURES
 
 gbrowse recognizes the concept of a "group" of related features that
 are connected by dotted lines. The canonical example is a pair of ESTs

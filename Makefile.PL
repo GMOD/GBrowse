@@ -231,7 +231,7 @@ sub MY::ppd {
   if ($inherited =~ /qq\{(<S.*R>\\n)\}.*qq\{(\\t<I.*\/>\\n)\}.*qq\{(\\t\\t<O.*G>\\n)\}/sg){
     $oldMM=1;
     my $xml = $1.$2.$3;
-    warn "$xml\n";
+    #warn "$xml\n";
     $inherited =~ s/qq\{.*>>/qq{$xml}" >/s;
   } elsif ($inherited =~ /NOECHO/) {
     my @la = split /\n/, $inherited;

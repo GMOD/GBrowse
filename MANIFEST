@@ -231,6 +231,7 @@ libalign/MANIFEST
 libalign/README
 libalign/realign.h
 libalign/test.pl
+Makefile.PL
 MANIFEST
 README
 README-1.02
@@ -239,3 +240,4 @@ sample_data/yeast_data.gff
 t/01yeast.t
 t/Test.pm
 TODO
+META.yml                                 Module meta-data (added by MakeMaker)

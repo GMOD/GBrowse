@@ -1,3 +1,5 @@
+        * added allele_tower glyph
+
 1.58    Wed Dec 31 10:49:20 EST 2003
         * Fixed memory leak when used with mod_perl
         * Fixed bug with link URL when the same feature type occurred in more

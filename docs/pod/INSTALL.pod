@@ -75,6 +75,7 @@ For PPM3:
 	ppm> install DBD::mysql (or DBD::Pg or DBD::Oracle)
 	ppm> install Generic-Genome-Browser
 
+The binary distribution of GBrowse is at L<http://www.gmod.org/ggb/ppm>.
 Add this repository to the list of active repositories, and then move the
 repository to the top to ensure that you get the most up to date versions
 of the modules.

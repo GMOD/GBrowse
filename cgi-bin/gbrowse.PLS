@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.114 2004-09-09 12:54:30 lstein Exp $
+# $Id: gbrowse.PLS,v 1.115 2004-09-09 16:21:05 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -191,8 +191,8 @@ $PLUGINS = initialize_plugins(@plugin_path) unless defined $PLUGINS;
 configure_plugins($PLUGINS,$page_settings,
 		  open_database(),
 		  $CONFIG,$CONF_DIR);
-my $plugin_type   = $PLUGINS->{param('plugin')}->type
-  if param('plugin') && $PLUGINS->{param('plugin')};
+my $plugin_type   = '';                          # avoid uninit variable warning
+$plugin_type = $PLUGINS->{param('plugin')}->type if param('plugin') && $PLUGINS->{param('plugin')};
 my $plugin_action = param('plugin_action') || '';
 warn "plugin_action = $plugin_action" if DEBUG_PLUGINS;
 
@@ -2537,7 +2537,6 @@ sub configure_plugins {
     # turn the plugin on
     my $setting_name = 'plugin:'.$p->name;
     $settings->{features}{$setting_name}{visible} = 1;
-    warn "\$settings->{features}{$setting_name}{visible} = 1"
   }
 }
 

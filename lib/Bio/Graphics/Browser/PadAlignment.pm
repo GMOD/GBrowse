@@ -12,9 +12,9 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 =head1 VERSION (CVS-info)
 
  $RCSfile: PadAlignment.pm,v $
- $Revision: 1.19 $
+ $Revision: 1.20 $
  $Author: lstein $
- $Date: 2004-09-06 21:05:35 $
+ $Date: 2004-09-09 16:21:06 $
 
 =head1 SYNOPSIS
 
@@ -288,7 +288,7 @@ sub padded_sequences {
   my @added = (length($dnas[0])-1);
 
   # leader sequence to add back after gapping
-  my @leader;
+  my @leader = (0);
 
   # alignments must be sorted according to target
   foreach (sort {$a->[0] cmp $b->[0]
@@ -363,6 +363,7 @@ sub padded_sequences {
   # take care of the extra unaligned stuff at the beginning
   my $max = 0;
   for (my $i=0; $i < @dnas; $i++) {
+    $leader[$i] ||= 0;      # to prevent uninit variable warnings
     next unless $leader[$i];
     my ($leading_gaps) = $lines[$i] =~ /^(-+)/;
     my $leading_pads   = length($leading_gaps||'');
@@ -518,37 +519,36 @@ sub alignment {
   #$i: number of blocks; $j: number of sequences
   for (my $i = 0; $i < @padded; $i++) {
     for (my $j = 0; $j < @{$padded[$i]}; $j++) {
+
       next unless $padded[$i][$j];
       my $origin = $origins->{$names{$j}};
       my $offset = $padded[$i][$j] =~ tr/. -/. -/;
-      my $skipit = $offset == length($padded[$i][$j]);                  
+      my $skipit = $offset == length($padded[$i][$j]); 
+      my @markup;
+
       #warn "Block ", $i, "\tsequence ", $j, "\t", $origin, "\t", $offset, "\t", $skipit, "\n";
 
       if ($color_code_proteins){
         if ($j==0) {                            # colouring reference seq
-          my @refMarkup;
           for(my $q=0; $q<length $padded[$i][$j]; $q++) {
             my $refPos = substr($padded[$i][$j],$q,1);
             next if $refPos =~ /^[.\s-]$/;                               # move on if not amino acid
-            push(@refMarkup,[$aa_type{$refPos},$q=>$q+1]);
+            push(@markup,[$aa_type{$refPos},$q=>$q+1]);
           } # end for
+        }
 
-          $length[$i][$j] = length $padded[$i][$j];
-          $markup->markup(\$padded[$i][0],\@refMarkup);
-        }elsif ($j>0) {
+	else {
           my @markup;
           for (my $r=0; $r<length $padded[$i][$j]; $r++) {
             my $targ = substr($padded[$i][$j],$r,1);
             next if $targ =~  /^[.\s-]$/;
             push(@markup,[$aa_type{$targ}, $r => $r+1]);
           }
-       
-          $length[$i][$j] = length $padded[$i][$j];        
-          $markup->markup(\$padded[$i][$j],\@markup);
         }
-      }elsif($show_mismatches){
-        if ($j>0){
-          my @markup;
+      }
+
+      elsif ($show_mismatches) {
+        if ($j>0) {
           for (my $r=0; $r<length $padded[$i][$j]; $r++) {
             my $targ = substr($padded[$i][$j],$r,1);
             next if $targ =~  /^[.\s-]$/;
@@ -559,11 +559,10 @@ sub alignment {
               if (lc($source) ne lc($targ)); 
 
           }
-          $length[$i][$j] = length $padded[$i][$j];        
-          $markup->markup(\$padded[$i][$j],\@markup);
         }
-      }elsif($show_matches){
-        my @markup;
+      }
+
+      elsif ($show_matches) {
         for (my $r=0; $r<length $padded[$i][$j]; $r++) {
 
           my $targ = substr($padded[$i][$j],$r,1);
@@ -572,7 +571,7 @@ sub alignment {
 
           for (my $m=0; $m<@{$fixed[$i]}; $m++){
             my $source = substr($fixed[$i][$m],$r,1);
-          
+
             if(($source =~ /[.\s-]/)||($targ =~ /[.\s-]/)){
               $identical = undef;
             } elsif (lc($source) ne lc($targ)){
@@ -588,12 +587,10 @@ sub alignment {
           push(@markup,['match',$r => $r+1]) if ($identical);
           push(@markup,['conserved',$r => $r+1]) if ($conserved);
         }
-        $length[$i][$j] = length $padded[$i][$j];        
-        $markup->markup(\$padded[$i][$j],\@markup);
-      }elsif($show_similarities){ #highligt resides same to the reference protein
-        #do things here
-        if ($j ==0){
-          my @markup;
+      }
+
+      elsif ($show_similarities) { #highligt resides same to the reference protein
+        if ($j == 0){
           for (my $r=0; $r<length $padded[$i][$j]; $r++) {
             my $identical = undef;
             my $conserved = undef;
@@ -604,7 +601,7 @@ sub alignment {
             for (my $m=1; $m<@{$fixed[$i]}; $m++){
               my $source = substr($fixed[$i][$m],$r,1);
               next if ($source =~ /^[.\-]$/);
-          
+
               if (($source !~ /^[.\s-]$/) && ($targ !~ /^[.\s-]$/) && (lc($source) eq lc($targ))){
                 $identical = 1;
               }
@@ -619,10 +616,9 @@ sub alignment {
             push(@markup,['conserved',$r => $r+1]) if ($conserved);
             push(@markup,['match',$r => $r+1]) if ($identical);
           }
-          $length[$i][$j] = length $padded[$i][$j];        
-          $markup->markup(\$padded[$i][$j],\@markup);
-        }elsif ($j >0){
-          my @markup;
+        }
+
+	else {
           for (my $r=0; $r<length $padded[$i][$j]; $r++) {
 
             my $targ = substr($padded[$i][$j],$r,1);
@@ -631,14 +627,10 @@ sub alignment {
 
             my $source = substr($fixed[$i][0],$r,1);
             next if ($source =~ /^[.\-]$/);
-          
+
             if (($source !~ /[.\s-]/) && (lc($source) eq lc($targ))){
               $identical = 1;
             }
-
-            #if (($source !~ /[.\s-]/) && (lc($aa_type{$source}) eq lc($aa_type{$targ}))){
-            #  $conserved = 1;
-            #}
 
             if (($source !~ /^[.\s-]$/) && ($targ !~ /^[.\s-]$/) && 
                 (lc($aa_type{$source}) eq lc($aa_type{$targ})) &&
@@ -650,26 +642,23 @@ sub alignment {
             push(@markup,['conserved',$r => $r+1]) if ($conserved);
             push(@markup,['match',$r => $r+1]) if ($identical);
           }
-          $length[$i][$j] = length $padded[$i][$j];        
-          $markup->markup(\$padded[$i][$j],\@markup);
         }
-        ###
-      }else {
-        $length[$i][$j] = length $padded[$i][$j];
       }
 
-      #      my $l = $origin<0 ? $longest_name+2 : $longest_name;
+      $length[$i][$j] = length $padded[$i][$j];
+      $markup->markup(\$padded[$i][$j],\@markup) if @markup;
+
       my $l = $longest_name;
       $result .= $skipit ? ""
                        : sprintf ("\%${l}s \%${longest_line}d %s\n",
                                   $origin < 0 ? "($names{$j})"
                                                 : $names{$j},
                                     $labels[$j],$padded[$i][$j]);
-                                    
+
       $labels[$j] += $length[$i][$j] - $offset  if $origin >= 0;
       $labels[$j] -= $length[$i][$j] - $offset  if $origin < 0;
     }
-    $result .= "\n";
+    $result .= "\n"; # unless $result && $result =~ /^[.\s]+$/;  # skip completely empty lines
   }	
   return $result;
 }

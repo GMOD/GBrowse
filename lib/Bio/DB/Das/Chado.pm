@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.3 2003-01-03 22:33:03 scottcain Exp $
+# $Id: Chado.pm,v 1.4 2003-01-10 22:09:23 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -151,7 +151,7 @@ sub new {
     or warn "unable to prepare select cvterms";
   $sth->execute or $self->throw("unable to select cvterms");
 
-  my $cvterm_id;
+  my $cvterm_id = {};
   while (my $hashref = $sth->fetchrow_hashref) {
     $$cvterm_id{$$hashref{termname}} = $$hashref{cvterm_id};
 #    warn "$$hashref{termname} -> $$hashref{cvterm_id}" if DEBUG;
@@ -264,7 +264,7 @@ sub features {
 			@_);
 
 
-    warn "Chado,features: $iterator\n" if DEBUG;
+    warn "Chado,features: $types\n" if DEBUG;
   my @features = $self->_segclass->features(-types => $types,
                                             -attributes => $attributes,
                                             -callback => $callback,

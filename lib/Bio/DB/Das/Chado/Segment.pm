@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.3 2003-01-03 22:33:03 scottcain Exp $
+# $Id: Segment.pm,v 1.4 2003-01-10 22:09:23 scottcain Exp $
 
 =head1 NAME
 
@@ -132,9 +132,9 @@ sub new {
 #    $dbadaptor->{dbh}->trace(4) if DEBUG;
 
   my $sth = $dbadaptor->{dbh}->prepare ("
-select f.feature_id,f.seqlen from dbxref dbx, feature f
-   where f.dbxrefstr = dbx.dbxrefstr and
-         dbx.accession = $quoted_name  ");
+             select f.feature_id,f.seqlen from dbxref dbx, feature f
+             where f.dbxrefstr = dbx.dbxrefstr and
+                   dbx.accession = $quoted_name  ");
 
     warn "prepared:$sth\n" if DEBUG ;
 
@@ -153,11 +153,14 @@ select f.feature_id,f.seqlen from dbxref dbx, feature f
 
   $length = $end - $start +1;
 
+  my $cvterm_id = $dbadaptor->{cvterm_id};
+
   return bless {dbadaptor     => $dbadaptor,
                 start         => $start,
                 end           => $end,
                 length        => $length,
                 srcfeature_id => $srcfeature_id,
+                cvterm_id     => $cvterm_id,
                 name          => $name }, ref $self || $self;
 }
 
@@ -295,7 +298,7 @@ the SQL layer.
 sub features {
   my $self = shift;
 
-    warn "@_\n" if DEBUG;
+    warn "Segment->features() args:@_\n" if DEBUG;
 
   my ($types,$attributes,$rangetype,$iterator,$callback);
   if ($_[0] =~ /^-/) {
@@ -305,8 +308,11 @@ sub features {
     $types = \@_;
   }
 
+  warn "@$types\n" if (defined $types and DEBUG);
+
   my $feat     = Bio::SeqFeature::Generic->new ();
   my @features;
+  $rangetype ||='overlaps';
 
 # set range variable 
 
@@ -315,36 +321,55 @@ sub features {
   my $sql_range;
   if ($rangetype eq 'contains') {
 
-    $sql_range = " ((fl.strand=1  and fl.nbeg <= $rstart and fl.nend >= $rend) OR "
-               . "  (fl.strand=-1 and fl.nend <= $rstart and fl.nbeg >= $rend)) ";
+    $sql_range = " ((fl.strand=1  and fl.nbeg <= $rstart and fl.nend >= $rend) OR \n"
+           . "      (fl.strand=-1 and fl.nend <= $rstart and fl.nbeg >= $rend)) ";
 
   } elsif ($rangetype eq 'contained_in') {
 
-    $sql_range = " ((fl.strand=1  and fl.nbeg => $rstart and fl.nend <= $rend) OR "
-               . "  (fl.strand=-1 and fl.nend => $rstart and fl.nbeg <= $rend)) ";
+    $sql_range = " ((fl.strand=1  and fl.nbeg => $rstart and fl.nend <= $rend) OR \n"
+           . "      (fl.strand=-1 and fl.nend => $rstart and fl.nbeg <= $rend)) ";
 
   } else { #overlaps is the default
 
-    $sql_range = " ((fl.strand=1  and fl.nbeg <= $rend and fl.nend >= $rstart) OR "
-               . "  (fl.strand=-1 and fl.nend <= $rend and fl.nbeg >= $rstart)) ";
+    $sql_range = " ((fl.strand=1  and fl.nbeg <= $rend and fl.nend >= $rstart) OR \n"
+           . "      (fl.strand=-1 and fl.nend <= $rend and fl.nbeg >= $rstart)) ";
 
   }
 
 # set type variable (hard coded to 'gene' right now)
 
-  my %termhash = %{$self->{dbadaptor}->{cvterm_id}};
+  my %termhash = %{$self->{cvterm_id}};
 
-  my @keys = grep(/\sgene/i , keys %termhash );
-  my $sql_types = "(";
-
-  $sql_types .= "f.type_id = ".$termhash{$keys[0]};
-
-  if (scalar @keys > 1) {
-    for(my $i=1;$i<(scalar @keys);$i++) {
-      $sql_types .= " or \n     f.type_id = ".$termhash{$keys[$i]};
-    }
+  my @keys;
+  foreach my $type (@$types) {
+    my @tempkeys = grep(/\E$type\Q/i , keys %termhash );
+    push @keys, @tempkeys;
+    warn "@tempkeys\n";
   }
-  $sql_types .= ")";
+
+  my $sql_types;
+
+  if (scalar @keys == 0) {
+    # return an empty feature list
+    warn "No types were specified in $self->features!\n";
+    push @features, $feat;
+    if ($iterator) {
+      warn "using Bio::DB::Das::ChadoIterator\n" if DEBUG;
+      return Bio::DB::Das::ChadoIterator->new(\@features);
+    } else {
+      return @features;
+    }
+  } else {
+    
+    $sql_types .= "(f.type_id = ".$termhash{$keys[0]};
+
+    if (scalar @keys > 1) {
+      for(my $i=1;$i<(scalar @keys);$i++) {
+        $sql_types .= " OR \n     f.type_id = ".$termhash{$keys[$i]};
+      }
+    }
+    $sql_types .= ") and ";
+  }
 
 #$self->{dbadaptor}->{dbh}->trace(2);
 
@@ -353,7 +378,7 @@ sub features {
 select f.name,fl.nbeg,fl.nend,fl.strand,f.type_id
 from feature f, featureloc fl
 where
-    $sql_types and
+    $sql_types 
     fl.srcfeature_id = $srcfeature_id and
     f.feature_id  = fl.feature_id and
     $sql_range
@@ -365,36 +390,24 @@ order by fl.nbeg
 
   while (my $hash_ref = $sth->fetchrow_hashref) {
 
-    if ($$hash_ref{strand} == 1) {
-      $feat = Bio::SeqFeature::Generic->new (
-                       -start      => $$hash_ref{nbeg},
-                       -end        => $$hash_ref{nend},
+    my ($start,$end);
+    if ($$hash_ref{nbeg} > $$hash_ref{nend}) {
+      $start = $$hash_ref{nend};
+      $end   = $$hash_ref{nbeg};
+    } else {
+      $end   = $$hash_ref{nend};
+      $start = $$hash_ref{nbeg};
+    }
+
+    $feat = Bio::SeqFeature::Generic->new (
+                       -start      => $start,
+                       -end        => $end,
                        -strand     => 1, 
                        -seq_id     => $$hash_ref{name},
                        -annotation => $$hash_ref{name},
                        -group      => "gene",
                        -type       => "gene:sgd",
                        -primary    => "gene" );
-    } elsif ($$hash_ref{strand} == -1) {
-      $feat = Bio::SeqFeature::Generic->new (
-                       -start      => $$hash_ref{nend},
-                       -end        => $$hash_ref{nbeg},
-                       -strand     => -1, 
-                       -seq_id     => $$hash_ref{name},
-                       -annotation => $$hash_ref{name},
-                       -group      => "gene",
-                       -type       => "gene:sgd",
-                       -primary    => "gene" );
-    } else {
-      $feat = Bio::SeqFeature::Generic->new (
-                       -start      => $$hash_ref{nbeg},
-                       -end        => $$hash_ref{nend},
-                       -seq_id     => $$hash_ref{name},
-                       -annotation => $$hash_ref{name},
-                       -group      => "gene",
-                       -type       => "gene:sgd",
-                       -primary    => "gene" );
-    }
 
     push @features, $feat;
  

@@ -20,6 +20,7 @@ use Bio::DB::Das::Chado::Segment;
 use Bio::SeqFeatureI;
 use Bio::Root::Root;
 use Bio::LocationI;
+use Data::Dumper;
 
 use constant DEBUG => 0;
 
@@ -28,7 +29,6 @@ use vars qw($VERSION @ISA $AUTOLOAD);
 	  Bio::Root::Root);
 
 $VERSION = '0.11';
-#' 
 
 use overload
   '""'   => 'asString';
@@ -59,8 +59,8 @@ The 10 arguments are positional:
   $type         this feature's type (gene, arm, exon, etc)
   $strand       this feature's strand (relative to the source
                       sequence, which has its own strandedness!)
-  $group        this feature's group (a GFF holdover)
-  $db_id        this feature's internal database ID (feature.feature_id)
+  $group        this feature's featureloc.locgroup (NOT a GFF holdover)
+  $db_id        this feature's internal database ID (feature.uniquename)
   $feature_id   the feature's feature_id
 
 =cut
@@ -81,7 +81,7 @@ sub new {
 
   my $self = bless { },$package;
 
-#check that this is what you want!
+  #check that this is what you want!
   #($start,$end) = ($end,$start) if defined($strand) and $strand == -1;
 
   @{$self}{qw(factory parent sourceseq start end strand )} =
@@ -102,6 +102,8 @@ sub length {
   #return $self->end - $self->start +1 ;
   return $len;
 }
+
+sub db_id { shift->{db_id} }
 
 sub uniquename { shift->{db_id} }
 
@@ -128,12 +130,14 @@ sub factory { shift->{factory} }
  Title   : group
  Usage   : $group = $f->group([$new_group])
  Function: get or set the feature group
- Returns : A string (feature name)
+ Returns : featureloc.locgroup
  Args    : a new group (optional)
  Status  : Public
 
-This method gets or sets the feature group.  The group is a
-hold over from GFF and is mostly synonymous with name.
+This method gets or sets the feature group.  The group is NOT 
+a hold over from GFF and is NOT synonymous with name; it is
+featureloc.locgroup.  If you want the feature's name, use
+uniquename().
 
 =cut
 
@@ -201,7 +205,7 @@ Bio::SeqFeatureI compatibility.
 
 sub display_name  { 
   my $self = shift;
-  return $self->{group}
+  return $self->{uniquename}
 }
 
 =head2 sub_SeqFeature
@@ -240,14 +244,16 @@ sub sub_SeqFeature {
 
 #  print "$parent_id\n";
 #  print "$handle\n";
-#  $self->{factory}->{dbh}->trace(2);# if DEBUG;
+  $self->{factory}->{dbh}->trace(2) if DEBUG;
 
   my $partof = defined $termhash{'partof'} ? $termhash{'partof'}
                                            : $termhash{'part_of'};
 
+  warn "partof = $partof" if DEBUG;
+
   my $sth = $self->{factory}->{dbh}->prepare("
  select child.feature_id, child.name, child.type_id, child.uniquename, parent.name as pname,
-           childloc.fmin, childloc.fmax, childloc.strand, childloc.phase
+           childloc.fmin, childloc.fmax, childloc.strand, childloc.locgroup, childloc.phase
     from feature as parent
     inner join
       feature_relationship as fr0 on
@@ -269,6 +275,8 @@ sub sub_SeqFeature {
   my @features;
   my %termname = %{$self->{factory}->{cvname}};
   while (my $hashref = $sth->fetchrow_hashref) {
+
+    next unless $$hashref{locgroup} eq $self->group; #look out, subfeatures may reside on other segments
 
     my $stop  = $$hashref{fmax};
     my $interbase_start = $$hashref{fmin};
@@ -358,7 +366,7 @@ sub location {
    require Bio::Location::Simple unless Bio::Location::Simple->can('new');
 
    my $location;
-   if (my @segments = $self->segments) {
+   if (my @segments = $self->sub_SeqFeature) {
        $location = Bio::Location::Split->new(-seq_id => $self->seq_id);
        foreach (@segments) {
           $location->add_sub_Location($_->location);
@@ -390,7 +398,7 @@ sub entire_seq {
     $self->SUPER::seq();
 }
 
-*merged_segments = \&segments;
+*merged_segments = \&sub_SeqFeature;
 
 =head2 clone
 
@@ -636,7 +644,7 @@ is called by the overloaded "" operator.
 sub asString { 
   my $self = shift;
   my $type = $self->type;
-  my $name = $self->group;
+  my $name = $self->uniquename;
   return "$type($name)" if $name;
   return $type;
 #  my $type = $self->method;
@@ -646,7 +654,7 @@ sub asString {
 
 sub name { 
   my $self =shift;
-  return $self->group;
+  return $self->uniquename;
 }
 
 =head2 score
@@ -676,7 +684,7 @@ sub attributes {
   $factory->attributes($id,@_)
 }
 
-*id  = \&group;
+*id  = \&uniquename;
 sub class     {return shift->{type} }
 
 sub synonyms {

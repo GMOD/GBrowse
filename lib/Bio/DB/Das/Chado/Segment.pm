@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.52 2004-03-16 15:47:40 scottcain Exp $
+# $Id: Segment.pm,v 1.53 2004-04-09 02:34:35 allenday Exp $
 
 =head1 NAME
 
@@ -513,7 +513,7 @@ sub features {
     $sql_types .= ") and ";
   }
 
-#$self->{factory}->{dbh}->trace(1);
+  $self->{factory}->{dbh}->trace(1) if DEBUG;
 
   my $srcfeature_id = $self->{srcfeature_id};
 
@@ -521,13 +521,13 @@ sub features {
 #  $self->{factory}->{dbh}->do("set enable_hashjoin=0");
 
   my $sth = $self->{factory}->{dbh}->prepare("
-    select distinct f.name,fl.fmin,fl.fmax,fl.strand,f.type_id,f.uniquename,f.feature_id
+    select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.locgroup,f.type_id,f.uniquename,f.feature_id
     from feature f, featureslice($interbase_start, $rend) fl
     where
       $sql_types
       fl.srcfeature_id = $srcfeature_id and
       f.feature_id  = fl.feature_id
-    order by type_id,fmin
+    order by type_id,fmin;
        ");
    $sth->execute or $self->throw("feature query failed"); 
 #   $self->{factory}->{dbh}->do("set enable_hashjoin=1");
@@ -567,7 +567,7 @@ sub features {
                        $base_start,$stop,
                        $termname{$$hashref{type_id}},
                        $$hashref{strand},
-                       $$hashref{name},
+                       $$hashref{locgroup},
                        $$hashref{uniquename},$$hashref{feature_id});  
 
     push @features, $feat;

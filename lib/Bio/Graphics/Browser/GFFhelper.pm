@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.2 2003-10-06 13:27:07 sheldon_mckay Exp $
+# $Id: GFFhelper.pm,v 1.3 2003-10-07 06:16:16 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -66,14 +66,13 @@ sub new {
     my $caller = shift;
     my %args = @_;
     my $self = \%args;
-    # $self->{gff} || die "No GFF to process";
-    return bless $self;
+    return bless $self, $caller;
 }
 
 sub read_gff {
     my $self  = shift;
     my $seqid = $self->{refseq} || '';
-    my $text  = $self->{gff};
+    my $text  = $self->{gff} || shift;
     $self->throw("No GFF to parse") unless $text;
 
     my (@seq, $gff) = ();

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.15 2004-04-05 18:26:04 tharris Exp $
+# $Id: gbrowse_img.PLS,v 1.16 2004-05-04 09:20:11 sheldon_mckay Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1 path_info escape);
@@ -191,6 +191,7 @@ sub external_features {
 					      -name     => $name||'',
 					      -segments => \@parts
 					     );
+    $feature_list->{'visible'}->{$feature} = 1;
     $feature_list->add_feature($feature);
   }
   push @$labels,'add' unless grep {$_ eq 'add'} @$labels;

@@ -88,6 +88,9 @@ unless (defined $OPTIONS{DO_XS}) {
   $OPTIONS{DO_XS}  = $^O =~ /^(MSWin|dos)/i ? '' : 1;
 }
 
+# workaround for known bug in FindBin library
+$Bin = "." if -f './Makefile.PL' && -T './Makefile.PL';
+
 open F,">$Bin/GGB.def" or die "Can't open $Bin/GGB.def for writing: $!";
 print F "# This hints file contains configuration information used by the generic browser\n\n";
 print F "# To reconfigure, run perl Makefile.PL `cat GGB.def`\n\n";

@@ -1,0 +1,85 @@
+A:link            { text-decoration: none; 
+                    color: #0000FF;
+                  }
+A:visited         { text-decoration: none; 
+                    color: #AA0088;
+                  }
+A:hover           { text-decoration: underline; 
+                  }
+A.banner          { color  : #FFFFFF;
+                    font-size : small;
+                    text-decoration : none;
+                  }
+A.bblue           { color: #FFFFFF;
+                    background-color: #9999FF;
+                    font-size : small;
+                    text-align: center;
+                  }
+A.bred            { color: #FFFFFF;
+                    background-color: #FF6666;
+                    font-size : small;
+                    text-align: center;
+                  }
+BODY              { background-color: white; 
+                    font-family: sans-serif;
+                  }
+H1                { color: #3366FF; 
+                    font-family: sans-serif; 
+                  }
+H2                { color: #3366FF; 
+                    font-family: sans-serif; 
+                  }
+H3                { color: #3366FF; 
+                    font-family: sans-serif; 
+                  }
+H4                { color: #3366FF; 
+                    font-family: sans-serif; 
+                  }
+INPUT             { background-color: white; }
+OL                { font-family: sans-serif; }
+UL                { font-family: sans-serif; }
+LI                { font-family: sans-serif; 
+                    list-style: url(/images/reddot.jpg) outside;
+                  }
+DL                { font-family: sans-serif; }
+DT                { font-family: sans-serif; }
+DD                { font-family: sans-serif; }
+
+LI.new            { font-family: sans-serif; 
+                  }
+P                 { font-family: sans-serif; }
+PRE.peptide       { font-size: small; }
+PRE.dna           { font-size: small; 
+                    font-family: monospace;
+                  }
+SELECT            { background-color: white; }
+TABLE             { padding: 0;
+                    spacing: 2;
+                    width: 100%;
+                  }
+TD                { font-family: sans-serif; }
+TH                { font-family: sans-serif; 
+                    padding: 0; 
+                  }
+.abstract         { background-color: #FFEEEE; }
+.data             { font-size: small; }
+.databody         { background-color: #CCFFFF; }
+.databodysmall    { background-color: #EEFFFF; }
+.datatitle        { background-color: #93CBF4; }
+.description      { font-style: italic; }
+.error            { color: red; }
+.note             { color: red; }
+.pre              { font-family: monospace; }
+.resultsbody      { background-color: #CCFFFF; }
+.resultsbodyalt   { background-color: #EEFFFF; }
+.resultstitle     { background-color: #93cbf4; }
+.search           { font-size: small; }
+.searchbody       { background-color: #FFFFCC; }
+.searchbodyalt    { background-color: #CCFFFF; }
+.searchtitle      { background-color: #FFFF99; }
+.small            { font-size: small; }
+.smalldescription { font-style: italic;
+                    font-size: small;
+                  }
+.technicalinfo    { background-color: #FFFFFF; }
+.toggle           { color: #3366FF; }

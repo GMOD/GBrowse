@@ -1,0 +1,21 @@
+The Generic Genome Browser (GGB) is a simple but highly configurable
+web-based genome browser.  It is a component of the Generic Model
+Organism Systems Database project (GMOD).
+
+ - For a demo, go to http://www.gmod.org/ggb.
+
+ - To install on your own system, please see the INSTALL file.
+
+ - To load your own data and configure GGB to display it, please see the file
+    docs/configuration.txt.
+
+ - This software is free.  You can use it under the terms of the Perl
+   Artistic License Please.  Please see DISCLAIMER for limitations of
+   warranty, the academic citation policy and other legalese.
+
+Support is available from the discussion groups and mailing lists at
+www.gmod.org.
+
+Lincoln Stein & the GMOD team
+lstein@cshl.org
+January 2, 2001

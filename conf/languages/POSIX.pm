@@ -49,6 +49,34 @@ END
 
    IMAGE_LINK => 'Link to an image of this view',
 
+   SVG_LINK   => 'Publication quality image',
+
+   SVG_DESCRIPTION => <<END,
+<p>
+The following link will generate this image in Scalable Vector Graphic
+(SVG) format.  Unlike raster-based images such as jpeg or png, svg
+images are vector-based and can be resized with no loss in
+resolution. Furthermore, SVG images can be easily edited
+feature-by-feature in common vector-based applications such as Adobe
+Illustrator. SVG can be directly converted to eps for submission for
+publication.</p>
+<p>
+In order to view SVG images, you will need an SVG capable browser, the
+Adobe SVG browser plugin, or an SVG-capable editing application such
+as Adobe Illustrator.</p>
+<P>
+Adobe's SVG browser plugin: <a
+href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Macintosh">Macintosh</a>
+| <a href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Windows">Windows</a>
+</p>
+
+<p><a href="%s" target="_blank">View SVG image in new browser window</a></p>
+
+To save this image to your disk, command-click (Macintosh) or
+right-click (Windows) and select the option to save link to disk.
+
+END
+
    IMAGE_DESCRIPTION => <<END,
 <p>
 To create an embedded image of this view, cut and paste this

@@ -32,7 +32,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.5 2002-01-21 22:37:00 lstein Exp $
+# $Id: gbrowse.PLS,v 1.6 2002-01-22 04:03:58 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -146,6 +146,7 @@ if (defined($old_source) && $source ne $old_source) {
   param(name => $page_settings->{name});  # restore old reference point
 } else {
   adjust_settings($page_settings);        # set settings from CGI parameters
+  rationalize_span($page_settings);
 }
 ###############################################################################################
 
@@ -458,6 +459,16 @@ sub adjust_settings {
     $settings->{options} = $options;
   }
 
+}
+
+# make sure that start is at least 1 bp less than stop
+sub rationalize_span {
+    my $settings = shift;
+    @{$settings}{'start','stop'} = @{$settings}{'stop','start'} if $settings->{start} > $settings->{stop};
+    if ($settings->{stop}-$settings->{start} <= 10) {
+	$settings->{start} -= 10;
+	$settings->{stop}  += 10;
+    }
 }
 
 # prints the zooming and navigation bar
@@ -780,6 +791,13 @@ sub get_segment {
 
   return unless @segments;
   return @segments if @segments > 1;
+
+  # don't accept 1 base pair segments, but instead
+  # set the span to 20 base pairs
+  if ($segments[0]->length <= 10) {
+      $segments[0] = $db->segment($segments[0],-10,10);
+      $segments[0]->absolute(1);
+  }
 
   # set CGI name parameter to match segment.
   # this prevents any confusion over (ref,start,stop) and (name) addressing.
@@ -1754,6 +1772,7 @@ sub make_citation_link {
     return $labels->[$label_index];
   }
 }
+
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

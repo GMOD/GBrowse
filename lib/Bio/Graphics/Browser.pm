@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.26 2002-07-04 15:49:43 lstein Exp $
+# $Id: Browser.pm,v 1.27 2002-07-20 16:42:59 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -866,7 +866,7 @@ sub overview {
       || ($conf->label2type('overview'))[0]) {
     my $max_label  = $conf->setting(general=>'label density') || 10;
     my $max_bump   = $conf->setting(general=>'bump density') || 50;
-    
+
     my @types = split /\s+/,$landmarks;
     my $track = $panel->add_track(-glyph  => 'generic',
 				  -height  => 3,
@@ -874,7 +874,7 @@ sub overview {
 				  -bgcolor => 'black',
 				  $conf->style('overview'),
 				 );
-    my $iterator = $segment->features(-type=>\@types,-iterator=>1,-rare=>1);
+    my $iterator = $segment->get_feature_stream(-type=>\@types,-rare=>1);
     my $count = 0;
     while (my $feature = $iterator->next_seq) {
       $track->add_feature($feature);

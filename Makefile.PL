@@ -220,7 +220,6 @@ sub MY::ppd {
 
   my $implementation;
   my $newimp;
-  warn "$inherited\n";
   if ($inherited =~ /qq\{(<S.*R>\\n)\}.*qq\{(\\t<I.*\/>\\n)\}.*qq\{(\\t\\t<O.*G>\\n)\}/sg){
     my $xml = $1.$2.$3;
     warn "$xml\n";

@@ -41,279 +41,353 @@ $Config{startperl} -w
 
 print OUT <<'!NO!SUBS!';
 
-BEGIN{
-    eval{do "config.pl"};
-    eval{require "$ENV{SERVER_PATH}/.bin/fbserverenv.pl";};
-}
+# Bio::DB::GFF/Bio::Graphics-based annotation browser
+# $Id: gbrowse.PLS,v 1.45 2002-07-20 16:40:55 lstein Exp $
 
 use strict;
-use lib $ENV{FLYBASE_MODULE_PATH};
-use lib $ENV{GMOD_MODULE_PATH};
+use Bio::DB::GFF;
 use Bio::Graphics;
-use WebReports::Browser;
+use Bio::Graphics::Browser;
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
-#use Image::Size;
-use Carp;
-use CGI qw(:standard escape center *table *dl *TR *td);
-use CGI::Cookie;
-use vars qw($CONFIG %DB $MAX_SEGMENT $DEFAULT_SEGMENT $EXTEND_LEN $MAX_BAC_PIC);
-use GxAdapters::ConnectionManager qw(:all);
-use BioModel::HasSeqRange qw(valid_arms);
-use GxAdapters::GxAnalysis;
-use GxAdapters::GxAnnotatedSeq;
-use GxAdapters::GxSegment;
-use DbUtils::SqlWrapper qw(:all);
-use WebReports::WebSite qw(get_abs_docs_dir
-			   get_abs_cache_dir get_relative_cache_dir
-			   get_js_src get_annotation_database);
-use WebReports::AnnotBrowser qw(draw_annotated_seq
-				show_blast_hit
-				add_blast_to_annseq
-				get_preamble get_title get_search_menu
-			       );
+use Text::Tabs;
+use Text::Shellwords;
+use File::Basename 'basename';
+use Carp qw(:DEFAULT croak);
+use CGI qw(:standard escape escapeHTML center *table *dl *TR *td);
+use vars qw($CONFIG %DB $MAX_SEGMENT $DEFAULT_SEGMENT 
+	    $HEADER $HTML $UA $VERSION $CONF_DIR %OBJECT_TYPES
+	    $PLUGINS %PLUGIN_NAME2LABEL $PRESETS);
 
 # if you change the zoom/nav icons, you must change this as well.
 use constant MAG_ICON_HEIGHT => 20;
 use constant MAG_ICON_WIDTH  => 8;
 use constant MAX_SEGMENT     => 1_000_000;
 use constant TOO_MANY_SEGMENTS => 5_000;
+use constant TOO_MANY_FEATURES => 100;
+use constant TOO_MANY_REFS     => 30;
 use constant DEFAULT_SEGMENT => 100_000;
-use constant EXTEND_LEN => 50_000;
-use constant OVERVIEW_RATIO  => 0.99;
-use constant TABLE_COLS => 3; #3=feature search, scroll and zoom
+use constant OVERVIEW_RATIO  => 0.9;
+use constant ANNOTATION_EDIT_ROWS => 25;
+use constant ANNOTATION_EDIT_COLS => 100;
+use constant URL_FETCH_TIMEOUT    => 5;  # five seconds max!
+use constant URL_FETCH_MAX_SIZE   => 1_000_000;  # don't accept any files larger than 1 Meg
+use constant MAX_KEYWORD_RESULTS  => 50;  # max number of results from keyword search
+use constant DEFAULT_RANGES       => q(100 500 1000 5000 10000 25000 100000 200000 400000);
+use constant DEFAULT_FINE_ZOOM    => '10%';
+use constant GBROWSE_HELP         => '/gbrowse';
 
-require 'config.pl';
+# if true, turn on surrounding rectangles for debugging the image map
+use constant DEBUG => 0;
+use constant DEBUG_PLUGINS => 0;
+use constant DEBUGGING_RECTANGLES => 0;
 
-my $pre_messages;
-my $scriptname = script_name();
-my $NAME_LINKS = {};
-my @VALID_ARMS = ();
-#my $cookies = [];
+# IMPORTANT DATA STRUCTURES
 
-###################################################################
-# Non-modperl users should change this constant if needed
-#
-#my $CONF_DIR = '/usr/local/wormbase/conf/gbrowse.conf';
-my $CONF_DIR = $ENV{CONFIG_DIR}
-  || './gbrowse.conf';
-#
-###################################################################
-
+# $SETTINGS (also called $page_settings): hash reference containing state information
+# keys:
+#   name      name of a landmark to search for (e.g. keyword search)
+#   ref       sequence landmark reference ID (once found)
+#   start     start of range relative to ref
+#   stop      stop of range relative to ref
+#   source    symbolic name of database/configuration to use
+#   id        unique cookie-based ID for this user
+#   plugin    last accessed plugin
+#   tracks    array ref which has one element for each track on the
+#               display.  The value of each element indicates what
+#               track to display in that position using the configuration
+#               key code.  For example: [HMM,BAB,GB]
+#               means display the "HMM", "BAB" and "GB" features in that
+#               order.  Uploaded feature data is named "UPLOAD",
+#               External URL tracks are indicated using the URL of the data.
+#   features    hash ref which has one element for each feature type.
+#               Its values are hashrefs with subkeys {visible} and {options}.
+#               A true value in {visible} indicates that the feature is active.
+#               The values of {options} are integers with the following meaning:
+#               0=auto, 1=force no bump, 2=force bump, 3=force label.
+# $CONFIG
+# This is a global Bio::Graphics::Browser object.  It contains information on
+# all the configuration files for this browser and provides access to the various
+# settings within the configuration file.
 
 BEGIN {
-  if ($ENV{MOD_PERL}) {
-# causes iterator breakage
-# eval "use Apache::DBI";
-    eval "use Apache";
-    my $conf = Apache->request->dir_config('DasConfigFile');
-    $CONF_DIR ||= Apache->server_root_relative($conf) if $conf;
+    eval "use Apache"; 
     warn <<END if Apache::DBI->can('connect_on_init');
 WARNING: APACHE::DBI DETECTED.
 THIS WILL CAUSE THE GFF DUMP TO FAIL INTERMITTENTLY.
 THIS SCRIPT DOES NOT BENEFIT FROM APACHE::DBI
 END
 ;
-  }
+    # here's a patch for a fix in Bio::DB::GFF that didn't get into BioPerl 1.0
+    unless (Bio::DB::GFF::Segment->can('seq_id')) {
+      *Bio::DB::GFF::Segment::seq_id  = sub { shift->ref };
+      *Bio::Graphics::Feature::seq_id = sub { shift->ref };
+    }
+
+};
+
+$HEADER=0;
+$HTML=0;
+
+if ($ENV{MOD_PERL}) {
+    my $conf  = Apache->request->dir_config('GBrowseConf');
+    $CONF_DIR = Apache->server_root_relative($conf) if $conf;
 }
 
-
-# preliminaries -- set up some globals
-$CONFIG         = WebReports::Browser->new($CONF_DIR)
-  or die "Couldn't open configuration directory: $!";
+## CONFIGURATION & INITIALIZATION #############################################################
+# preliminaries -- read and/or refresh the configuration directory
+$CONFIG  ||= Bio::Graphics::Browser->new;
+$CONFIG->read_configuration($CONF_DIR) or die "Can't read configuration files: $!";
 
 ## PAGE SETTINGS ##############################################################################
 #
 # Recover a hashref which contains page-specific settings
 # (this involves reading a cookie or possibly a database record in some future implementation
-#print STDERR 'setting name before get_source', param('name'), "\n";
 my ($source,$old_source) = get_source();
 $CONFIG->source($source);
 my $page_settings = get_settings($source);
 
-if ($CONFIG->setting('valid_arms')) {
-    push @VALID_ARMS, (split /\s+/, $CONFIG->setting('valid_arms'));
-} else {
-    # arm "U" is not valid arm, but some segments "attach" to it (w/o, search could fail)!!
-    push @VALID_ARMS, (valid_arms(), 'U');
+$MAX_SEGMENT     = $CONFIG->setting('max segment')     || MAX_SEGMENT;
+$DEFAULT_SEGMENT = $CONFIG->setting('default segment') || DEFAULT_SEGMENT;
 
-    my $dbh = get_handle($CONFIG->setting('database'));
-    my $segms = GxAdapters::GxSegment->get_entry_points($dbh);
-    push @VALID_ARMS, map { $_->name } @$segms;
-}
-
-$MAX_SEGMENT     = $CONFIG->setting('max segment')           || MAX_SEGMENT;
-$DEFAULT_SEGMENT = $CONFIG->setting('default segment')       || DEFAULT_SEGMENT;
-$EXTEND_LEN      = $CONFIG->setting('extend feature length') || EXTEND_LEN;
-$MAX_BAC_PIC     = defined($CONFIG->setting('max bac pic')) ?
-                   $CONFIG->setting('max bac pic')           : 3;
 # Now adjust those settings based on submitted CGI parameters
 # With the exception that we ignore parameter changes if the source has changed.
-# but sometimes
-# this will bring back old name field value when user just types url in browser
-# and return page has no value displayed in name field in such cases
-#print STDERR 'setting name before call adjust', $page_settings->{name}, "\n";
 if (defined($old_source) && $source ne $old_source) {
   param(name => $page_settings->{name});  # restore old reference point
 } else {
-#print STDERR 'setting name before in else call adjust', $page_settings->{name}, "\n";
   adjust_settings($page_settings);        # set settings from CGI parameters
 }
 
-#########################################################################################
+### PLUGINS ###################################################################################
+$PLUGINS = initialize_plugins($CONF_DIR) unless defined $PLUGINS;
+configure_plugins($PLUGINS,$page_settings,open_database(),$CONFIG,$CONF_DIR);
+my $plugin_type   = $PLUGINS->{param('plugin')}->type if param('plugin') && $PLUGINS->{param('plugin')};
+my $plugin_action = param('plugin_action') || '';
+warn "plugin_action = $plugin_action" if DEBUG_PLUGINS;
 
-## GETTING THE SEGMENT ###################################################################
-my @segments  = (); #get_segment($page_settings);
-#@segments     = merge(\@segments) if @segments > 1 && @segments < TOO_MANY_SEGMENTS;
-my $T0 = time;
-my ($arm, $segs_h, $annot_seq) = get_arm_and_annotseq($page_settings);
+## GETTING THE SEGMENT ########################################################################
+my @segments = get_segments($page_settings);
 
-
-my $T1 = time;
-#log query time in server error_log file
-eval {
-    #printf STDERR "_LOG_\t%s\t%s\t%d\t%s\t%d\t%d\n",
-    $CONFIG->setting('database'),time,$T1-$T0,$arm?$arm->name:"none",$annot_seq?$annot_seq->segment->length:0,$annot_seq?scalar(@{$annot_seq->analysis_list || []}):0;
-};
-##########################################################################################
-
-## DUMPS #################################################################################
-if ( (my $dump = param('dump'))) {
-    if ($annot_seq) {
-        if ($dump eq 'FASTA') {
-            print header(-attachment   => $annot_seq->segment->name.".fa",
-                         -type         => 'text/plain');
-#            print $annot_seq->segment->to_fasta;
-            dump_fasta($annot_seq, $page_settings);
-        }
-        elsif($dump eq 'GFF') {
-            print header(-attachment   => $annot_seq->segment->name.".gff",
-                         -type         => 'text/plain');
-            $annot_seq->to_gff;
-        }
-        elsif ($dump eq 'XML') {
-            print header(-attachment   => $annot_seq->segment->name.".xml",
-                         -type         => 'text/plain');
-            $annot_seq->to_xml;
-        }
-        exit 0;
-    } else {
-        $pre_messages .= "can only dump what is in detail view\n";
-    }
+if ($plugin_action eq 'Find' && param('plugin')) {
+  do_plugin_find($page_settings,
+		 param('plugin'),
+		 \@segments) or ($plugin_action='Configure...'); #reconfigure
+} elsif (!@segments && $page_settings->{name}) {
+  do_keyword_search($page_settings,\@segments);
+  do_plugin_autofind($page_settings,\@segments) unless @segments;  # last resort
 }
+
+
 ###############################################################################################
 
+# SETTINGS FOR UPLOADED FILES
+my ($file_action) = grep {/^modify\./} param();
+(my $file = $file_action) =~ s/^modify\.// if $file_action;
 
-## PRINTING THE PAGE #####################################################################
-print header(-cookie => settings2cookie($page_settings));
 
-#printf STDERR "header: %s |end header\n", header(-cookie => settings2cookie($page_settings));
+###############################################################################################
+## DUMPS ######################################################################################
+###############################################################################################
+# Check to see whether one of the plugin dumpers was invoked.  We have to do this first
+# before printing the header because the plugins are responsible for generating the header.
+# NOTE THE EXIT 0 HERE IF THE DUMP IS SUCCESSFUL!
+if (@segments && $plugin_action eq 'Go!'&& $plugin_type eq 'dumper') {
+  do_plugin_header(param('plugin'),$page_settings);
+  do_plugin_dump(param('plugin'),$segments[0]) && exit 0
+}
 
-my $menu = get_search_menu(); #preamble has too much
+
+###############################################################################################
+## HANDLING FILE DOWNLOADS ######################################################################
+
+# This gets called if the user wants to download his annotation data
+if (my $to_download = (param('Download File') ||
+		       ($file_action && param($file_action) eq 'Download File') && $file)) {
+  warn "FILE DOWNLOAD, download = $to_download" if DEBUG;
+  print header(-attachment   =>  $to_download,
+	       -type         => 'application/octet-stream');
+  print_uploaded_file_features($page_settings,$to_download);
+  exit 0;
+}
+
+
+## HANDLING FILE UPLOADS ######################################################################
+if (param('Upload') && (my $file = param('upload_annotations'))) {
+  handle_upload($page_settings,$file);
+}
+
+elsif (defined(my $data = param('a_data'))) {
+  handle_edit($page_settings,$data);
+}
+
+elsif ($data = param('auto')) {
+  handle_quickie($page_settings,$data);
+}
+
+clear_uploaded_file($page_settings,$file) if $file_action && param($file_action) eq 'Delete File';
+
+warn "TRACKS = @{$page_settings->{tracks}}" if DEBUG;
+
+load_plugin_annotators($page_settings);
+adjust_tracks($page_settings);
+
+warn "ADJUSTED TRACKS = @{$page_settings->{tracks}}" if DEBUG;
+
+## UPDATING THE PERSISTENT SETTINGS##############################################################
+my $cookies = settings2cookie($page_settings);
+push @$cookies,plugins2cookies($PLUGINS);
+print header(-cookie => $cookies) unless $HEADER++;
+
 my $description = $CONFIG->setting('description');
 my $segment;
 
-my $browser_title = ($CONFIG->setting('browser title') || 'FlyBase Genome Browser');
-#$browser_title .= ": ".$page_settings->{name};
+## STARTING THE PAGE ############################################################################
+my $title = @segments == 1 ? "$description: $segments[0]" : $description;
 
-my $header =   $CONFIG->setting('header');
 print
-  start_html(-title => $browser_title,
-             -style  => {src=>$CONFIG->setting('stylesheet')},
-             -script=>{language=>'JavaScript', -src=>get_js_src()},
-	    ),
+  start_html(-title  => $title,
+	     -style  => {src=>$CONFIG->setting('stylesheet')},
+	    ) unless $HTML++;
 
-  $header?$header:table({-border=>0, -width=>$page_settings->{width}},
-        TR(td({-align=>'center', -colspan=>2}, $menu)),
-        TR(td({-align=>'center', -colspan=>2}, '')),
-        TR(td({-align=>'center', -colspan=>2}, b($browser_title)))
-       );
+my $header = $CONFIG->header();
+print $header if $header;
 
-#  $menu,
-#  h1(center($description));
-
-$segment = $annot_seq ? $annot_seq->segment : $arm;
-
-#if ($segment) {
-#    print h4("Showing",commas($segment->length),"bp from",
-#         $segment->name.", positions ".commas($segment->coords_origin1->[0])." to ".commas($segment->coords_origin1->[1]));
-#}
-
-print start_form(-action=>url(-relative=>1,-path_info=>1));
-
-print "<b>$pre_messages</b>" if ($pre_messages);
-
-print navigation_table($segment,$page_settings);
-
-#call bac_insitu_image here as it changes $NAME_LINK
-#so image_map can make right link for bac feature
-my $bac_img_table = bac_insitu_image($annot_seq, $page_settings);
-
-if ($segment) {
-  my $cell = "\n".overview($arm, $segs_h,$page_settings, $annot_seq)."\n";
-  if ($annot_seq && $annot_seq->segment->length < $MAX_SEGMENT) {
-      $cell .= image_and_map($annot_seq,$page_settings);
-  } else {
-      $cell .= i(
-	       "Detailed view is limited to",
-           commas($MAX_SEGMENT),
-	       "Click in the overview to select a region",commas($DEFAULT_SEGMENT),'bp wide.');
-  }
-  print table({-border=>0,-width=>$page_settings->{width}},
-              TR({-class=>'searchbody'},
-                 td($cell)
-                )
-             );
+## HANDLE UPLOADED FILE EDITS ##################################################################
+if ($file_action && param($file_action) eq 'Edit File...') {
+  edit_uploaded_file($page_settings,$file);
 }
 
-print settings_table($page_settings);
+## HANDLE TRACK SETTINGS   #######################################################
+elsif ((param('Set Track Options...') || param('Revert fo Defaults..'))
+       && !param('Cancel')
+       && !param('Redisplay')) {
+  set_track_options($page_settings);
+}
 
-print "\n$bac_img_table\n" if ($bac_img_table); # bac_insitu_image($annot_seq, $page_settings);
+## HANDLE HELP PAGE   #######################################################
 
-#remember some values
-print "\n";
-print &hidden_fields($page_settings);
-print "\n";
+elsif (param('help')) {
+  help(param('help'),$CONFIG->setting('help')||GBROWSE_HELP,$page_settings);
+}
 
-my $diff1 = $T1-$T0;
-my $diff2 = time - $T0;
-print end_form(), 
-  $CONFIG->setting('footer'),
-#  p(i(font({-size=>'small'}, "Note: This page uses cookie to save and restore preference information. No information is shared ($diff1,$diff2)."))),
-  end_html;
+## HANDLE PLUGIN ABOUT PAGE #####################################################
+elsif ($plugin_action eq 'About...') {
+  do_plugin_about(param('plugin'));
+}
+
+## HANDLE PLUGIN CONFIGURATION####################################################
+elsif ($plugin_action eq 'Configure...') {
+  do_plugin_configure(param('plugin'));
+} elsif ($plugin_action eq 'Go!' && $plugin_type=~/^(finder|annotator)$/i) {
+  do_plugin_configure(param('plugin'));
+}
+
+## MAIN DISPLAY
+else {
+  print h1($description) unless defined($header);
+  main_display(\@segments,$page_settings);
+}
+
+footer();
+
+#--------------------------------- lots of subroutines --------------------------
+
+sub main_display {
+  my ($segments,$page_settings) = @_;
+  my ($segment,@keyword_search_results);
+
+  # first of all, if there are no segments, then try a keyword search and store the results
+  if (@$segments == 0 && (my $n = $page_settings->{name})) {
+      error("The landmark named",i($n),"is not recognized. See the help pages for suggestions.");
+  }
+
+  # if there's a single segment, then print a message and store the segment into a scalar
+  elsif (@$segments == 1) {
+    $segment = $segments->[0];
+    $segment = truncated_segment($segment) if $segment->length < 4;
+    print h2("Showing",unit_label($segment->length)," from",
+	     $segment->seq_id.", positions ".commas($segment->start)." to ".commas($segment->stop));
+  }
+
+  # print the top of the form, with navigation bar, etc
+  print start_multipart_form(-name=>'mainform',-action=>url(-relative=>1,-path_info=>1)),
+    navigation_table($segment,$page_settings);
+
+  # if more than one segment, then list them all
+  if (@$segments > 1) {
+    multiple_choices($page_settings,$segments);
+  }
+
+  my $feature_files;
+
+  if ($segment) {
+
+      # if a plugin passes us back a Feature, rather than a Segment, turn it into a segment
+      # (this shouldn't happen - hah!)
+    $segment = open_database()->segment($segment->seq_id,$segment->start,$segment->end)
+	unless $segment->can('features');
+
+    # get the third party features
+    $feature_files = load_external_sources($segment,$page_settings);
+
+    my ($img,$map);
+    my $cell = overview($segment,$page_settings).br();
+
+    if ($segment->length <= $MAX_SEGMENT) {
+
+      # add plugin annotators, but only if the length is reasonable!
+      load_plugin_annotations($segment,$feature_files,$page_settings);
+
+      $CONFIG->width($page_settings->{width});
+      my @tracks_to_show = grep {$page_settings->{features}{$_}{visible}} @{$page_settings->{tracks}};
+      my %options = map {$_=>$page_settings->{features}{$_}{options}} @tracks_to_show;
+      my %limit   = map {$_=>$page_settings->{features}{$_}{limit}}   @tracks_to_show;
+      ($img,$map) = $CONFIG->render_html(segment       => $segment,
+					 feature_files => $feature_files,
+					 tracks        => \@tracks_to_show,
+					 options       => \%options,
+					 limit         => \%limit,
+					 do_map        => 1,
+					 do_centering_map => 1,
+					);
+      $cell .= $img;
+    }
+
+    else {
+      $cell .= i(
+		 "Detailed view is limited to",
+		 commas($MAX_SEGMENT),"bases.",
+		 "Click in the overview to select a region",commas($DEFAULT_SEGMENT),'bp wide.');
+    }
+    print "\n",
+      table({-border=>0,-width=>$page_settings->{width}},
+	    TR({-class=>'searchbody'},
+	       td({-align=>'CENTER'},$cell)
+	      )
+	   ),"\n";
+    print $map,"\n" if $map;
+  }
+  print hidden('ref'),hidden('start'),hidden('stop');
+  print settings_table($page_settings,$feature_files);
+  print plugin_and_data_source_table($page_settings,$PLUGINS);
+  print p(),upload_table($page_settings,$feature_files);
+  print p(),external_table($page_settings,$feature_files);
+  print end_form();
+
+  # clean us up
+  foreach (keys %$feature_files) {
+    $_ && ref($_) && $_->destroy;
+  }
+}
 
 ###############################################################################################
 
-sub hidden_fields {
-    my $settings = shift;
-    my $str = "";
-    $str .= hidden(-name=>'hl_gene', -value=>$settings->{hl_gene},-override=>1)
-      if ($settings->{hl_gene});
-    $str .= hidden(-name=>'hl_rset', -value=>$settings->{hl_rset},-override=>1)
-      if ($settings->{hl_rset});
-    $str .= hidden(-name=>'blastfile', -value=>$settings->{blastfile},-override=>1)
-      if ($settings->{blastfile});
-    $str .= hidden(-name=>'hd_seq', -value=>$settings->{hd_seq},-override=>)
-      if ($settings->{hd_seq});
-    return $str;
-}
-
 sub get_source {
   my $new_source = param('source');
-  my $old_source = cookie($scriptname."_source") unless request_method() eq 'GET';
-#request_method is 'GET' when this called at beginning and it IS default value
-
-#  my %cookies = fetch CGI::Cookie;
-#  my $p_old_source = $cookies{$scriptname."_source"};
-#  $p_old_source = "all cookies value \n".join("\n",map{$_."=".$cookies{$_}}keys %cookies);
-
-#  my $old_source = cookie($scriptname."_source") unless param('DEBUG');
-  $old_source = "" if (param('DEBUG'));
+  my $old_source = cookie('gbrowse_source') unless param('source') && request_method() eq 'GET';
 
   my $source   = $new_source || $old_source;
-  my @sources = $CONFIG->sources();
-  $source = $source || $ENV{DEFAULT_SOURCE} || $CONFIG->source || $sources[0];  # the default, whatever it is
-#printf STDERR "source old: %s this: %s\n", $old_source, $source;
+  $source ||= $CONFIG->source;  # the default, whatever it is
   return ($source,$old_source);
 }
 
@@ -321,107 +395,202 @@ sub get_source {
 # if not, set  from defaults
 sub get_settings {
   my $source   = shift;
-  my %settings = cookie($scriptname."_$source");
-
-  %settings = () if (param('DEBUG'));
+  open_database() or croak "Can't open database defined by source $source";
+  my %settings = cookie("gbrowse_$source");
 
   my $ok = 1;
-  if (%settings) {  # if cookie is there, then validate it
-#print STDERR 'setting name in get_settings', $settings{name}, "\n";
 
+  if (%settings) {  # if cookie is there, then validate it
     $ok &&= defined $settings{width} && $settings{width} > 100 && $settings{width} < 5000;
+    warn "ok 1 = $ok" if DEBUG;
+
     my %ok_sources = map {$_=>1} $CONFIG->sources;
     $ok &&= $ok_sources{$settings{source}};
-    my %ok_labels       = map {$_=>1} $CONFIG->labels;
-    my @selected_labels = split $;,$settings{labels} if defined $settings{labels};
-    foreach (@selected_labels) {
-      $ok &&= $ok_labels{$_};
+    warn "ok 2 = $ok" if DEBUG;
+
+    # the single "tracks" key of the cookie gets mapped to the
+    # "track" and "features" key of the page settings
+    my @features = split $;,$settings{tracks} if $ok && defined $settings{tracks};
+    $settings{tracks}    = [];  # make sure these are clean
+    $settings{features}  = {};
+    foreach (@features) {
+      warn "feature = $_" if DEBUG;
+      my ($label,$visible,$option,$limit) = m!^(.+)/(\d+)/(\d+)/(\d+)$!;
+      warn "label = $label, visible = $visible, option = $option, limit = $limit" if DEBUG;
+      unless ($label) {   # corrupt cookie; purge it.
+	undef $ok;
+	last;
+      }
+      push @{$settings{tracks}},$label;
+      $settings{features}{$label}{visible} = $visible;
+      $settings{features}{$label}{options} = $option;
+      $settings{features}{$label}{limit}   = $limit;
     }
-    $settings{labels} = \@selected_labels if $ok;
+    warn "ok 3 = $ok" if DEBUG;
   }
 
-  if (!$ok || !%settings) {
-    %settings = ();
-    @settings{'name','arm','start','stop'} = ('','','','');
-    $settings{width}  = $CONFIG->setting('default width');
-    $settings{source} = $CONFIG->source;
-    $settings{labels} = [$CONFIG->default_labels];
-    $settings{landmark} = $CONFIG->setting('default landmark') || 'Cyto Band';
-    $settings{tier} = 'Default';
-    $settings{show_bac_img} = 'Default';
+  $ok &&= ref($settings{tracks}) && @{$settings{tracks}} > 0;
+
+  warn "ok 4 = $ok" if DEBUG;
+
+  if ($ok && %settings) {
+    adjust_tracks(\%settings);
   }
-  #remove what should not be cookied
-  $settings{hl_rset} = '';
-  $settings{hl_gene} = '';
+  else {
+    %settings = ();
+    default_settings(\%settings);
+  }
+
+  warn "order = @{$settings{tracks}}" if $settings{tracks} && DEBUG;
+
+  if (DEBUG) {
+    foreach (@{$settings{tracks}}) {
+      my $s = $settings{features}{$_};
+      warn "$_: ",$CONFIG->setting($_=>'key')," vis=$s->{visible}, opt=$s->{options}, limit=$s->{limit}\n";
+    }
+  }
+
   \%settings;
 }
 
+sub default_settings {
+  my $settings = shift;
+  warn "Setting default settings" if DEBUG;
+  @$settings{'name','ref','start','stop'} = ('','','','');
+  $settings->{width}   = $CONFIG->setting('default width');
+  $settings->{source}  = $CONFIG->source;
+  $settings->{id}      = md5_hex(rand);  # new identity
+  set_default_tracks($settings);
+}
+
+sub set_default_tracks {
+  my $settings = shift;
+  my @labels = labels($settings);
+  $settings->{tracks}   = \@labels;
+  warn "order = @labels" if DEBUG;
+  foreach (@labels) {
+    $settings->{features}{$_} = {visible=>0,options=>0,limit=>0};
+  }
+  foreach ($CONFIG->default_labels) {
+    $settings->{features}{$_}{visible} = 1;
+  }
+}
+
+# This is called to check that the list of feature types given
+# in the configuration file are consistent with the features
+# given in the user's cookie.  If not, the settings are adjusted
+# as best we can. The attempt here is to allow
+# the administrator to add new feature stanzas
+# without invalidating users' old settings.
+sub adjust_tracks {
+  my $settings = shift;
+  my %configured_labels = map {$_=>1} $CONFIG->labels;
+
+  foreach (grep {!$settings->{features}{$_}} keys %configured_labels) {
+    $settings->{features}{$_}{visible} = 0;  # not visible
+    $settings->{features}{$_}{options} = 0;  # automatic
+    push @{$settings->{tracks}},$_;           # at the end
+  }
+  # Remove any features that are not mentioned in the
+  # config file, excepting Uploaded and remote URL features.
+  # This may happen if a stanza is removed from the config file.
+  my %extra = map {$_=>1} grep {!/^(http|ftp|das|file|plugin):/
+				    && !$configured_labels{$_}} keys %{$settings->{features}};
+  # remove extra from tracks && options
+  if (%extra) {
+    delete $settings->{features}{$_} foreach keys %extra;
+  }
+
+  # make sure that tracks are completely consistent with options
+  $settings->{tracks} = [grep {exists $settings->{features}{$_}} @{$settings->{tracks}}];
+}
+
+# this is called to flatten the settings into an HTTP cookie
 sub settings2cookie {
   my $settings = shift;
   my %settings = %$settings;
+  local $^W = 0;
   for my $key (keys %settings) {
+    next if $key =~ /^(tracks|features)$/;  # handled specially
     if (ref($settings{$key}) eq 'ARRAY') {
       $settings{$key} = join $;,@{$settings{$key}};
     }
   }
+
+  # the "features" and "track" key map to a single array
+  # contained in the "tracks" key of the settings
+  my @array = map {join("/",
+			$_,
+			$settings{features}{$_}{visible},
+			$settings{features}{$_}{options},
+			$settings{features}{$_}{limit})} @{$settings{tracks}};
+  $settings{tracks} = join $;,@array;
+  delete $settings{features};
+
+  warn "cookie => ",join ' ',%settings,"\n" if DEBUG;
+
   my @cookies;
   my $source = $CONFIG->source;
-#printf STDERR "source saved to cookie %s\n", $source;
-
-#there is diff b/n perl5.6.0 and perl.5.6.1 (diff CGI version) to put path in cookie
-#explicitly set to be consistent, otherwise, 2 settings for each version of perl (or CGI)
-#and script gets confusing setting (failed miserably!)
-  push @cookies,cookie(-name    => $scriptname."_$source",
+  push @cookies,cookie(-name    => "gbrowse_$source",
 		      -value   => \%settings,
-                       -path => $scriptname,
-		      -expires => '+7d');
-  push @cookies,cookie(-name   => $scriptname."_source",
+		      -expires => '+3M');
+  push @cookies,cookie(-name   => 'gbrowse_source',
 		       -value  => $source,
-                       -path => $scriptname,
-		       -expires => '+7d');
+		       -expires => '+3M');
   return \@cookies;
 }
 
+# This is called to change the values of the settings
 sub adjust_settings {
   my $settings = shift;
-
-  if (my @selected = param('label')) {
-    $settings->{labels} = \@selected;
+  if (my @selected = map {split /[+-]/} param('label')) {
+    $settings->{features}{$_}{visible} = 0 foreach keys %{$settings->{features}};
+    $settings->{features}{$_}{visible} = 1 foreach @selected;
   }
   $settings->{width}  = param('width')   if param('width');
-  $settings->{landmark} = param('landmark') if param('landmark');
-  $settings->{tier} = param('tier') if param('tier');
-  $settings->{show_bac_img} = param('show_bac_img') if param('show_bac_img');
 
-  if (param('arm') && (request_method() eq 'GET' || grep {/zoom|nav|overview/} param()) ) {
-    $settings->{arm}   = param('arm');
-    $settings->{start} = int(param('start')) if param('start') =~ /^[\d-]+/;
-    $settings->{stop}  = int(param('stop'))  if param('stop')  =~ /^[\d-]+/;
-    zoomnav($settings);
-    $settings->{name} = "$settings->{arm}:$settings->{start}..$settings->{stop}";
-    param(name => $settings->{name});
-  }
-
-  $settings->{name}   = param('name')   if param('name');
-
-  #backward compatibility
-  if (param('seq')) {
-      $settings->{name}  = param('seq');
-      $settings->{hd_seq} = param('seq');
+  local $^W = 0;  # kill uninitialized variable warning
+  if (param('ref') &&
+      ( request_method() eq 'GET'
+	|| param('name') eq param('prevname')
+	|| grep {/zoom|nav|overview/} param())
+     )
+    {
+      $settings->{ref}   = param('ref');
+      $settings->{start} = param('start') if param('start') =~ /^[\d-]+/;
+      $settings->{stop}  = param('stop')  if param('stop')  =~ /^[\d-]+/;
+      zoomnav($settings);
+      $settings->{name} = "$settings->{ref}:$settings->{start}..$settings->{stop}";
       param(name => $settings->{name});
-      $settings->{hl_gene} = param('gene')if (param('gene')) ;
-      $settings->{hl_rset} = param('rset')if (param('rset')) ;
-  }
-  $settings->{name} = "subj:".param('subj_seq') if (param('subj_seq'));
-  unless (grep {/overview/} param()) { #prevent from remember them when clicking on overview
-      $settings->{hl_gene} = param('hl_gene') if (param('hl_gene'));
-      $settings->{hl_rset} = param('hl_rset') if (param('hl_rset'));
-      $settings->{blastfile} = param('blastfile') if (param('blastfile'));
-      $settings->{hd_seq} = param('hd_seq') if (param('hd_seq'));
-  }
-  #end backward compat
+    }
+  $settings->{name}   = param('name')                       if param('name');
+  $settings->{source} = param('source')                     if param('source');
+  $settings->{plugin} = param('plugin')                     if param('plugin');
 
-  $settings->{source} = param('source') if param('source');
+  if (my @external = param('eurl')) {
+    my %external = map {$_=>1} @external;
+    foreach (@external) {
+      next if exists $settings->{features}{$_};
+      $settings->{features}{$_} = {visible=>1,options=>0,limit=>0};
+      push @{$settings->{tracks}},$_;
+    }
+    # remove any URLs that aren't on the list
+    foreach (keys %{$settings->{features}}) {
+      next unless /^(http|ftp):/;
+      delete $settings->{features}{$_} unless exists $external{$_};
+    }
+  }
+
+  if (param('Revert to Defaults') || param('Reset')) {
+    warn "resetting defaults..." if DEBUG;
+    set_default_tracks($settings);
+  }
+
+  elsif (param('Adjust Order') && !param('Cancel')) {
+    adjust_track_options($settings);
+    adjust_track_order($settings);
+  }
+
 }
 
 # prints the zooming and navigation bar
@@ -430,871 +599,363 @@ sub navigation_table {
   my $settings = shift;
   my $buttonsDir    = $CONFIG->setting('buttons');
   my $table = '';
+  my $oligo = $PLUGINS->{'OligoFinder'} ? ', oligonucleotide (15 bp minimum)' : '';
 
-  my $text_field_size = $settings->{width} eq 1024 ? 28 : 24;
-  my $search_w = int($settings->{width} / 2);
-  my $show_name = $segment->name;
-  $show_name =~ s/:.*//g;
-  unless (grep {$_ eq $show_name} @VALID_ARMS) {
-      $show_name = $show_name." on ".$segment->src_seq->name;
-  }
   $table .= table({-border=>0, -width=>$settings->{width}},
 		  TR({-class=>'searchbody'},
-		     td({-align=>'left', -colspan=>TABLE_COLS},
-			'Search using a sequence name, gene name, or other feature.',
+		     td({-align=>'left', -colspan=>3},
+			"Search using a sequence name, gene name, locus${oligo} or other landmark.",
+			'The wildcard character "*" is allowed.',
 			show_examples()
 		    )),
 		  TR({-class=>'searchbody'},
-		     td({-align=>'left', -colspan=>TABLE_COLS},
-		     'To center on a location, click the ruler.  Use the Scroll/Zoom buttons to',
-		     'change magnification and position.')
-		    ),
-          TR({-class=>'searchbody'},
-             td({-align=>'left', -colspan=>TABLE_COLS},
-                $segment ? "<b>Currently showing ".commas($segment->length)." bp from ".$show_name.", positions ".commas($segment->coords_origin1->[0])." to ".commas($segment->coords_origin1->[1])."</b>" : "")
-             ),
-          "\n",
+		     td({-align=>'left', -colspan=>3},
+			'To center on a location, click the ruler.  User the Scroll/Zoom buttons to',
+			'change magnification and position.',
+			'To save this view,',a({-href=>bookmark_link($settings)},'bookmark this link.')
+		       )),
 		  TR({-class=>'searchtitle', -align=>'left'},
-		     td({-class=>'searchtitle', -width=>$search_w}, b('Feature or Region:'),
-			textfield(-name=>'name', -size=>$text_field_size),
+		     td({-class=>'searchtitle'}, b('Landmark or Region'),
+			textfield(-name=>'name',-size=>20),
 			submit(-name=>'Go')),
-#		     td({-align=>'LEFT'},
-#			$segment ? ('Scroll/Zoom: ',slidertable($segment,$buttonsDir)) : ''
-#		       ),
-             td({-align=>'center'},
-                $segment?('Scroll: ', slidertable($segment, $buttonsDir)):''
-               ),
-             td({-align=>'center'},
-                $segment?('Zoom: <b>+</b>', zoomBar($segment, $buttonsDir), "<b>-</b>"):''
-               ),
+		     td({-align=>'LEFT'},
+			$segment ? ('Scroll/Zoom: ',slidertable($segment,$buttonsDir)) : ''
+		       ),
+		     td(submit(-name=>'Reset',-class=>'reset_button'))
 		    ));
 }
 
-#have slider separate from zoom
+# This generates the navigation bar with the arrows
 sub slidertable {
   my ($segment,$buttonsDir) = @_;
+  my $span      = $segment->length;
+  my $half      = unit_label(int $span/2);
+  my $full      = unit_label($span);
+  my $fine_zoom = get_zoomincrement();
 
   my @lines;
   push @lines,hidden(-name=>'start',-value=>$segment->start,-override=>1);
   push @lines,hidden(-name=>'stop',-value=>$segment->end,-override=>1);
-  push @lines,hidden(-name=>'arm',-value=>$segment->src_seq ? $segment->src_seq->name : $segment->name,-override=>1);
-  push @lines, (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>'nav0',-border=>0,-title=>"b1"),
-		image_button(-src=>"$buttonsDir/green_l1.gif",-name=>'nav1',-border=>0,-title=>"b2"),
-                " ",
-#		zoomBar($segment,$buttonsDir),
-		image_button(-src=>"$buttonsDir/green_r1.gif",-name=>'nav2',-border=>0,-title=>"b3"),
-		image_button(-src=>"$buttonsDir/green_r2.gif",-name=>'nav3',-border=>0,-title=>"b4"),
-	       );
+  push @lines,hidden(-name=>'ref',-value=>$segment->seq_id,-override=>1);
+  push @lines,hidden(-name=>'prevname',-value=>scalar(param('name')),-override=>1);
+  push @lines,
+    (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>"left $full",
+		  -border=>0,-title=>"left $full"),
+     image_button(-src=>"$buttonsDir/green_l1.gif",-name=>"left $half",
+		  -border=>0,-title=>"left $half"),
+     '&nbsp;',
+     image_button(-src=>"$buttonsDir/minus.gif",-name=>"zoom out $fine_zoom",
+		  -border=>0,-title=>"zoom out $fine_zoom"),
+     '&nbsp;',
+     zoomBar($segment,$buttonsDir),
+     '&nbsp;',
+     image_button(-src=>"$buttonsDir/plus.gif",-name=>"zoom in $fine_zoom",
+		  -border=>0,-title=>"zoom in $fine_zoom"),
+     '&nbsp;',
+     image_button(-src=>"$buttonsDir/green_r1.gif",-name=>"right $half",
+		  -border=>0,-title=>"right $half"),
+     image_button(-src=>"$buttonsDir/green_r2.gif",-name=>"right $full",
+		  -border=>0,-title=>"right $full"),
+    );
 
   #  print end_form;
   my $str	= join('', @lines);
   return $str;
 }
 
+# this generates the popup zoom menu with the window sizes
 sub zoomBar {
   my ($segment,$buttonsDir) = @_;
 
-  my @letters;
-  my @ranges	= get_ranges();
-  my $span = $segment->length;
-  my $pixels_per_range = MAG_ICON_HEIGHT/@ranges;
+  my %seen;
+  my @ranges	= grep {!$seen{$_}++} sort {$b<=>$a} $segment->length,get_ranges();
+  my %labels    = map {$_=>"Show ".unit_label($_)} @ranges;
+  return popup_menu(-class   => 'searchtitle',
+	       -name    => 'span',
+	       -values  => \@ranges,
+	       -labels  => \%labels,
+	       -default => $segment->length,
+	       -force   => 1,
+	       -onChange => 'document.mainform.submit()',
+	      );
+}
 
-  for(my $i=0; $i < @ranges; $i++){
-    my $altText	   = qq{show $ranges[$i] bp};
-    my $titleText  = qq{show $ranges[$i] bp};
-    my $color;
-    if($i>0){
-      $color = ($ranges[$i-1] < $span) && ($ranges[$i] >= $span) ? 'red' : 'green';
-    }else{
-      $color = ($ranges[$i] >= $span) ? 'red' : 'green';
-    }
-    my $c = $i+1;
-    $letters[$i] = image_button(-src    => "$buttonsDir/$color$c.gif",
-                                -name   => "zoom${i}",
-                                -alt    => $altText,
-                                -border => ,
-#				-height => ($i+1)*$pixels_per_range,
-#				-width  => MAG_ICON_WIDTH,
-                                -title  => $titleText
-                               );
-  }
+# convert bp into nice Mb/Kb units
+sub unit_label {
+  my $value = shift;
+  my $label;
+  $label = $value >= 1e9 ? sprintf("%.4g Gbp",$value/1e9)
+         : $value >= 1e6 ? sprintf("%.4g Mbp",$value/1e6)
+         : $value >= 1e3 ? sprintf("%.4g Kbp",$value/1e3)
+	 : $value." bp";
+  return $label;
+}
 
-  return join('', @letters);
+# convert Mb/Kb back into bp... or a ratio
+sub unit_to_value {
+  my $string = shift;
+  my $sign           = $string =~ /out|left/ ? '-' : '+';
+  my ($value,$units) = $string =~ /([\d.]+) ?(\S+)/;
+  return unless defined $value;
+  $value /= 100   if $units eq '%';  # percentage;
+  $value *= 1000  if $units =~ /kb/i;
+  $value *= 1e6   if $units =~ /mb/i;
+  $value *= 1e9   if $units =~ /gb/i;
+  return "$sign$value";
+}
+
+sub labels {
+  my $settings = shift;
+  my @labels = $CONFIG->labels;
+#  push @labels,$settings->{'uploaded_file'} ? "$settings->{uploaded_file} (Uploaded)"
+#                                            : '(Uploaded Annotations)';
+# this needs to be fixed
+#  push @labels,@{$settings->{eurl}}   if $settings->{eurl};
+  @labels;
 }
 
 
+# This subroutine is invoked to draw the checkbox group underneath the main display.
+# It creates a hyperlinked set of feature names.
 sub settings_table {
   my $settings = shift;
+  my $additional_features = shift;
 
   my @widths = split /\s+/,$CONFIG->setting('image widths');
-  my $landmarks = [$CONFIG->overview_landmarks];
-
   @widths = (640,800,1024) unless @widths;
 
   # set up the dumps line.
-  my($arm,$start,$stop) = @{$settings}{qw(arm start stop)};
+  my($ref,$start,$stop) = @{$settings}{qw(ref start stop)};
   my $source   = $CONFIG->source;
   my $self     = url(-relative=>1,-path_info=>1);
-  my $partial_url;
-  if ($settings->{name} =~ /^AE\d+$/) {
-      $partial_url = sprintf "name=%s;source=%s",$settings->{name},$source;
-  }
-  else {
-      $partial_url = "start=$start;stop=$stop;arm=$arm;source=$source";
-  }
-  my @dumps    = (['GFF'  ,"$self?dump=GFF;".$partial_url]);
-  unshift @dumps,['XML',"$self?dump=XML;".$partial_url];
-  unshift @dumps,['FASTA',"$self?dump=FASTA;".$partial_url];
-  unshift @dumps,['TABLE',"basic.pl?location=$arm:$start..$stop&format=default"];
+  my $self_url = url(-relative=>1,-path_info=>1)."?help=citations";
 
-#  my @dumps    = (['GFF'  ,"$self?dump=GFF;start=$start;stop=$stop;arm=$arm;source=$source"]);
-#  unshift @dumps,['XML',"$self?dump=XML;start=$start;stop=$stop;arm=$arm;source=$source"];
-#  unshift @dumps,['FASTA',"$self?dump=FASTA;start=$start;stop=$stop;arm=$arm;source=$source"];
-#    if $CONFIG->setting('fasta_files');
+  my @labels = @{$settings->{tracks}};
+  my %labels = map {$_ => make_citation_link($_,$self_url) } @labels;
+  my @defaults = grep {$settings->{features}{$_}{visible}} @labels;
 
-  my $ds        = join(', ', (map{a({-href=>"@$_->[1]"},"@$_->[0]")} @dumps));
-
-  my @labels = $CONFIG->labels;
-  my $selected_labels = $settings->{labels};
-
-  my @expands = ("Default", "Collapse All", "Expand All", "Gene Labelling On");
-  my @bac_img_choices = ("Default", "Off");
-  #may not work as it is very recently feature in CSS
-  my $bac_img_row_visible = $MAX_BAC_PIC ? "visible" : "hidden";
-  my $chk_cols = $settings->{width} > 801 ? 9 : 6;
+  autoEscape(0);
   my $sTable 	= '';
   $sTable.= table({-border=>0,-width=>$settings->{width}},
+		  # row
 		  TR(
 		     th({-class=>'searchtitle', -colspan=>3, -align=>'left'},'Display Settings:')),
-		  TR( td({-class=>'searchbody'},'Dump view as: '),
-		      td({-class=>'searchbody',-colspan=>2}, $ds)),
-#		  TR( td({-class=>'searchbody'},'Overview Landmarks: '),
-#		      td(
-#			 radio_group( -name=>'landmark',
-#				      -values=>$landmarks,
-#				      -default=>$settings->{landmark},
-#				      -override=>1
-#				    )
-#			)),
-		  TR(	td({-class=>'searchbody', -valign=>'top'}, 'Show features: '),
-			td({-class=>'searchbody',-colspan=>2},
+		  TR(	td({-class=>'searchbody', -valign=>'top',-align=>'right'}, 
+			   '<b>Tracks<b><p><i>(External tracks italicized)</i></p>'),
+			td({-class=>'searchbody',-colspan=>2,-width=>'85%'},
 			   checkbox_group(-name=>'label',
+					  # use the track ordering to adjust the order of the checkboxes
+					  # this is an array slice
 					  -values   => \@labels,
-					  -defaults => $selected_labels,
-					  -cols     => $chk_cols,
+					  -labels   => \%labels,
+					  -defaults => \@defaults,
+					  -cols     => 3,
 					  -override => 1,
 					 ))),
-		  $CONFIG->sources > 1 ?
-		  (TR({-class=>'searchbody'},
-		      td('Data Source:'),
-		      td({-colspan=>2},
-			 popup_menu(-name   => 'source',
-				    -values => [$CONFIG->sources],
-				    -labels => { map {$_ => $CONFIG->source_description($_)} $CONFIG->sources},
-				    -default => $CONFIG->source
-				   )))
-		   ) : '',
-		  TR( td({-class=>'searchbody'},'Data View: '),
-		      td(
-			 radio_group( -name=>'tier',
-				      -values=>\@expands,
-				      -default=>$settings->{tier},
-				      -override=>1
-				    )
-			)),
-		  TR({-visibility=>$bac_img_row_visible},
-             td({-class=>'searchbody'},'in situ BAC Image: '),
-             td(
-			 radio_group( -name=>'show_bac_img',
-				      -values=>\@bac_img_choices,
-				      -default=>$settings->{show_bac_img},
-				      -override=>1
-				    )
-			)),
-		  TR( td({-class=>'searchbody'},'Image Width: '),
-		      td(
-			 radio_group( -name=>'width',
-				      -values=>\@widths,
-				      -default=>$settings->{width},
-				      -override=>1
-				    )
-			),
-		      td({-class=>'searchbody',-align=>'left'},
-			 hidden('arm'),hidden('start'),hidden('stop'),
-			 submit(-name=>'Change Display Settings')))
+
+		  # row
+		  TR({-class=>'searchbody'},
+		     td('Image Width: '),
+		     td(
+			radio_group( -name=>'width',
+				     -values=>\@widths,
+				     -default=>$settings->{width},
+				     -override=>1
+				   ),
+		       ),
+		     td({-align=>'RIGHT'},
+			submit(-name => 'Set Track Options...')
+			.'&nbsp;'.
+			b(submit(-name => 'Update Image'))
+		       )
+		    ),
 		 );
+  autoEscape(1);
   return $sTable;
+}
+
+sub annotation_help {
+  return url(-relative=>1,-path_info=>1) . "?help=annotation";
+}
+
+sub general_help {
+  return url(-relative=>1,-path_info=>1) . "?help=general";
+}
+
+sub upload_table {
+  my $settings      = shift;
+  my $feature_files = shift;
+
+  # start the table.
+  my $cTable = start_table({-border=>0,-width=>$settings->{width}})
+    . TR(
+	 th({-class=>'datatitle', -colspan=>3, -align=>'left'},
+	    'Upload your own annotations:',
+	    a({-href=>annotation_help(),-target=>'help'},'[Help]'))
+	);
+
+  # now add existing files
+  for my $filename (@{$settings->{tracks}}) {
+    next unless $filename =~ /^file:/ && $feature_files->{$filename};
+    (my $file = $filename) =~ s/^file://;
+    my $name = escape($file);
+    my $link = a({-href=>url(-relative=>1,-path_info=>1)."?Download+File=$name"},"[$name]");
+    my @info =  get_uploaded_file_info($settings->{features}{$filename}{visible}
+					 && $feature_files->{$filename});
+    $cTable .=  TR({-class=>'databody'},
+		   th($link),
+		   td({-colspan=>2},
+		      submit(-name=>"modify.$file",-value=>'Edit File...').'&nbsp;'.
+		      submit(-name=>"modify.$file",-value=>'Download File').'&nbsp;'.
+		      submit(-name=>"modify.$file",-value=>'Delete File')));
+    $cTable .= TR({-class=>'databody'},td('&nbsp;'),td({-colspan=>2},@info));
+  }
+
+  # end the table.
+  $cTable .= TR({-class=>'databody'},
+		th({-align=>'RIGHT'},'Upload a File'),
+		td({-colspan=>2},
+		   filefield(-size=>40,-name=>'upload_annotations'),
+		   submit(-name=>'Upload')));
+  $cTable .= end_table;
+  $cTable;
+}
+
+# URLs for external annotations
+sub external_table {
+  my $settings      = shift;
+  my $feature_files = shift;
+  my (@rows,$count);
+
+  my ($preset_labels,$preset_urls) = get_external_presets($settings);  # (arrayref,arrayref)
+  my $presets = '&nbsp;';
+  if ($preset_labels && @$preset_labels) {  # defined AND non-empty
+    my %presets;
+    @presets{@$preset_urls} = @$preset_labels;
+    unshift @$preset_urls,'';
+    $presets{''} = '--Choose Preset URL--';
+    $presets = popup_menu(-name   => 'eurl',
+			  -values => $preset_urls,
+			  -labels => \%presets,
+			  -override => 1,
+			  -default  => '',
+			  -onChange => 'document.mainform.submit()'
+			 );
+  }
+
+  for my $filename (@{$settings->{tracks}}) {
+    next unless $filename =~ /^(ftp|http):/ && $feature_files->{$filename};
+    warn "external_table(): filename = $filename" if DEBUG;
+    push @rows,th({-align=>'RIGHT'},"URL",++$count).
+      td(textfield(-name=>'eurl',-size=>50,-value=>$filename,-override=>1),br,
+	 a({-href=>$filename,-target=>'help'},'[download]'),
+	 get_uploaded_file_info($settings->{features}{$filename}{visible} && $feature_files->{$filename})
+	);
+  }
+  push @rows,th({-align=>'RIGHT'},
+		"Enter Remote Annotation URL").
+		  td(textfield(-name=>'eurl',-size=>40,-value=>'',-override=>1),
+		     $presets);
+
+  return table({-border=>0,-width=>$settings->{width}},
+	       TR({-class=>'datatitle'},
+		  th({-align=>'LEFT',-colspan=>2},
+		     'Add Remote Annotations:',a({-href=>annotation_help().'#remote',-target=>'help'},'[Help]'))),
+	       TR({-class=>'databody'},\@rows),
+	       TR({-class=>'databody'},
+		  th('&nbsp;'),
+		  th({-align=>'LEFT'},submit('Update URLs')))
+	      );
+}
+
+sub get_external_presets {
+  my $settings = shift;
+  my $presets  = $CONFIG->setting('remote sources') or return;
+  my @presets  = shellwords($presets);
+  my (@labels,@urls);
+  while (@presets) {
+    my ($label,$url) = splice(@presets,0,2);
+    next unless $url && $url =~ /^(http|ftp)/;
+    push @labels,$label;
+    push @urls,$url;
+  }
+  return unless @labels;
+  return (\@labels,\@urls) if wantarray;
+  my %presets;
+  @presets{@urls} = @labels;
+  return \%presets;
 }
 
 # computes the new values for start and stop when the user made use of the zooming bar or navigation bar
 sub zoomnav {
   my $settings = shift;
-  return unless $settings->{arm};
+  return unless $settings->{ref};
   my $start = $settings->{start};
   my $stop  = $settings->{stop};
+  my $span  = $stop - $start + 1;
 
   # get zoom parameters
-  my ($zoom) = grep {/^zoom\d+/} param();
-  my ($nav)  = grep {/^nav\d+/}  param();
+  my $selected_span  = param('span');
+  my ($zoom)         = grep {/^zoom (out|in) \S+/} param();
+  my ($nav)          = grep {/^(left|right) \S+/}  param();
   my $overview_x     = param('overview.x');
   my $segment_length = param('seg_length');
 
-  my $zoomlevel = $1 if $zoom && $zoom =~ /(\d+)/;
-  my $navlevel  = $1 if $nav && $nav  =~ /(\d+)/;
-  my ($center, $ohalf, $nhalf, $span);
-
-  my @ranges	= get_ranges();
-  $span	        = $stop - $start + 1;
+  my $zoomlevel = unit_to_value($1) if $zoom && $zoom =~ /((?:out|in) .+)\.[xy]/;
+  my $navlevel  = unit_to_value($1) if $nav  && $nav  =~ /((?:left|right) .+)/;
 
   if (defined $zoomlevel) {
-    $center	    = int($span / 2) + $start;
-    my $range	    = int(($ranges[$zoomlevel])/2);
+    warn "zoom = $zoom, zoomlevel = $zoomlevel" if DEBUG;
+    my $center	    = int($span / 2) + $start;
+    my $range	    = int($span * (1-$zoomlevel)/2);
+    $range          = 2 if $range < 2;
     ($start, $stop) = ($center - $range , $center + $range -1);
   }
 
   elsif (defined $navlevel){
-    if($navlevel == 0){ $start -= int($span / 2); $stop -= int($span / 2)}
-    if($navlevel == 1){ $start -= int($span / 4); $stop -= int($span / 4)}
-    if($navlevel == 2){ $start += int($span / 4); $stop += int($span / 4)}
-    if($navlevel == 3){ $start += int($span / 2); $stop += int($span / 2)}
+    $start += $navlevel;
+    $stop  += $navlevel;
   }
 
   elsif (defined $overview_x && defined $segment_length) {
-    my $overview_width = $settings->{width} * OVERVIEW_RATIO
-      - $CONFIG->setting('overview pad_right');
-    my $click_position = $overview_x * ($segment_length/$overview_width);
+    my $overview_width = $settings->{width} * OVERVIEW_RATIO;
+    my $click_position = $segment_length * $overview_x/$overview_width;
     $span = $DEFAULT_SEGMENT if $span > $MAX_SEGMENT;
     $start = int($click_position - $span/2);
     $stop  = $start + $span - 1;
   }
 
-  $start = 1 if ($start < 1);
+  elsif ($selected_span) {
+    my $center	    = int($span / 2) + $start;
+    my $range	    = int(($selected_span)/2);
+    ($start, $stop) = ($center - $range , $center + $range -1);
+  }
+
+  # to prevent from going off left end
+  $start = 1 if $start < 1;
+  $stop  = $start + ($span > 4 ? $span - 1 : 4) if $stop <= $start+2;
+
   $settings->{start} = $start;
   $settings->{stop}  = $stop;
 }
 
-sub get_arm_and_annotseq {
-    my $settings = shift;
-
-    my ($arm, $segs_h, $annotseq);
-
-    #parse feature input text box value
-    if (my $p_name = $settings->{name}) {
-        my ($name, $class,$start,$stop);
-        #eg: 2L:1234555..1235555
-        if ($p_name =~ /(\w+\.\d|\w+):([\d,-]+)(?:-|\.\.)?([\d,-]+)$/) {
-            $name = $1;
-            $start = $2;
-            $stop = $3;
-            $start =~ s/,//g;   # get rid of commas
-            $stop  =~ s/,//g;
-            # try to remove the chr CHROMOSOME_I
-            if ($name =~ /^(chromosome_?|chr)/i) {
-                $name =~ s/^(chromosome_?|chr)//i;
-            }
-        }
-        #e.g gene:CG1234
-        elsif ($p_name =~ /^(\w+):(.+)$/) {
-            $class = $1;
-            $name  = $2;
-        } else {                #other wise $name get all (e.g AE*, gene symbol)
-            $name = $p_name;
-        }
-
-        #arm name only
-        #    if (!($start || $stop) && grep {$_ eq $name} valid_arms()) {
-        if (grep {$_ eq $p_name} @VALID_ARMS) {
-            $settings->{arm} = $p_name;
-            $name = '';         #don't generate annot seq for an arm!
-        }
-        my $constr = {};
-        $constr->{name} = $name;
-        $constr->{class} = $class if defined $class;
-        #class =  gene, analysis homol seq name (cDNA, pinsertin, etc)
-        $constr->{start} = $start - 1 if defined($start); #user: 1-based, gadfly: 0-based
-        $constr->{stop} = $stop if defined($stop);
-
-        $annotseq = get_annotated_seq($settings, $constr);
-
-        print STDERR "annseq=$annotseq\n";
-
-        #    # Here starts the heuristic part.  Try various abbreviations that
-        #    # people tend to use for chromosomal addressing.
-        #    if (!@segments && $name =~ /^([\dIVXA-F]+)$/) {
-        #        my $id = $1;
-        #        foreach (qw(CHROMOSOME_ Chr chr)) {
-        #            my $n = "${_}${id}";
-        #            my @argv = (-name  => $n);
-        #            push @argv,(-class => $class) if defined $class;
-        #            push @argv,(-start => $start) if defined $start;
-        #            push @argv,(-stop  => $stop)  if defined $stop;
-        #            @segments = defined($start) ? $db->segment(@argv) : $db->segments(@argv) unless @segments;
-        #        }
-        #    }
-    } elsif (my $arm = $settings->{arm}) { #arm param without name para?
-        my @argv = (-name  => $arm);
-        push @argv,(-start => $settings->{start}) if defined $settings->{start};
-        push @argv,(-stop  => $settings->{stop})  if defined $settings->{stop};
-        #   @segments = $db->segment(@argv);
-    }
-
-    # set CGI name parameter to match segment.
-    # this prevents any confusion over (arm,start,stop) and (name) addressing.
-    if ($annotseq) {
-        $settings->{arm}   = $annotseq->segment->src_seq->name;
-        $settings->{start} = $annotseq->segment->start;
-        $settings->{stop}  = $annotseq->segment->end;
-    }
-    ($arm, $segs_h) = get_arm_sf($settings);
-    return ($arm, $segs_h, $annotseq);
-}
-
-sub get_arm_sf {
-    my $settings = shift;
-
-#    printf STDERR "db=%s\n", $CONFIG->setting('database');
-#    printf STDERR "settings=%s\n", join("; ", map {"$_=$settings->{$_}"} keys %$settings);
-    my $dbh = get_handle($CONFIG->setting('database'));
-    my $armn = $settings->{arm} || $ENV{DEFAULT_OVERVIEW_ARM}
-      || $CONFIG->setting('default_arm') || @VALID_ARMS[0];
-    my $armh = select_hash($dbh, ['seq'], 
-                           ['name = '.sql_quote($armn)], 
-                           ['id', 'length']);
-
-    if ($armh->{'length'} == 0) {
-        $armn =  $ENV{DEFAULT_OVERVIEW_ARM}
-          || $CONFIG->setting('default_arm') || '2L';
-        $armh = select_hash($dbh, ['seq'], 
-                            ['name = '.sql_quote($armn)], 
-                            ['id', 'length']);
-    }
-    confess ("The arm ($armn) has no sequence at all as length is 0")
-      if ($armh->{'length'} == 0);
-
-    my $arm = BioModel::Segment->new
-      (-start => 0,
-       -end   => $armh->{'length'},
-       -name  => $armn
-      );
-
-    my $segments_h = {};
-    my $arm_seqid = $armh->{id} || 0;
-    my $feature = $settings->{landmark};
-    #only alow cyto band
-    $feature = "Cyto Band";
-    if (lc($feature) eq 'gb unit') {
-        my $seg_h = select_hashlist($dbh,
-                                    ['seq_feature sf'],
-                                    ['src_seq_id = '.$arm_seqid,
-                                     'type = '.sql_quote('segment')],
-                                    ['sf.name', 'start', 'end']);
-        foreach my $seg (@{$seg_h}) {
-            my $seg = BioModel::Segment->new
-              (-name  => $seg->{name},
-               -start => $seg->{start},
-               -end   => $seg->{end},
-              );
-            $seg->info($seg->name);
-            push @{$segments_h->{$feature}}, $seg;
-        }
-    } elsif (lc($feature) eq 'cyto band') {
-        my $cyto_h = select_hashlist
-          ($dbh,
-           ['seq_feature sf'],
-           ['sf.type = '.sql_quote("cyto band"),
-            'sf.src_seq_id = '.$arm_seqid],
-           ['sf.name', 'sf.start', 'sf.end'] #need global start
-          );
-        my @cytos = ();
-        foreach my $cyto (@{$cyto_h}) {
-            my $segment = BioModel::Segment->new;
-            my $name = $cyto->{name};
-            #use biggest band (only digit as name)
-            $name =~ s/^band\-//i;
-            next unless ($name =~ /^\d+$/); # || $name =~ /^4\w$/);#what it is w cyto 4?
-            $segment->name($name);
-            $segment->info($segment->name);
-            $segment->start($cyto->{start});
-            $segment->end($cyto->{end});
-            push @{$segments_h->{$feature}}, $segment;
-        }
-    } elsif (lc($feature) eq 'tiling bac') {
-        my ($program, $dbname);
-        $program = "clonelocator";
-        $dbname = "scaffoldbacs";
-
-        my $bac_h = select_hashlist($dbh,
-                                    ['seq_feature sf',
-                                     'analysis a', 'sf_analysis sfa'],
-                                    ['src_seq_id ='.$arm_seqid,
-                                     'a.program ='.sql_quote($program),
-                                     'a.dbname ='.sql_quote($dbname),
-                                     'sf.id = sfa.seq_feature_id',
-                                     'a.id = sfa.analysis_id'],
-                                    ['sf.name', 'sf.start', 'sf.end']);
-        foreach my $bac (@{$bac_h}) {
-            my $segment = BioModel::Segment->new;
-            my $name = $bac->{name};
-            $name =~ s/\-hit$//;
-            $segment->name($name);
-            $segment->info($segment->name);
-            $segment->start($bac->{start});
-            $segment->end($bac->{end});
-            push @{$segments_h->{$feature}}, $segment;
-        }
-    }
-    close_handle($dbh);
-
-    unless ($settings->{name}) {
-        $settings->{name} = $settings->{arm} = $armn;
-        param(name => $settings->{name});
-    }
-
-    return ($arm, $segments_h);
-}
-
-sub get_annotated_seq {
-  my $settings = shift;
-  my $constr = shift;
-
-  my $annseq;
-  my $seqname = ""; # use to decide to get annot seq by name or by range;
-  my $range;
-  my ($hl_gene, $hl_rset); # use to highligh features
-
-  #use value in settings to get which analysis
-  my $config = $CONFIG->config;
-  my $dbh = get_handle($CONFIG->setting('database'));
-  my @selected_analyses;
-  my @an_ids = ();
-  my $extra;
-
-  for my $feature (@{$settings->{labels}}) {
-      if ($config->setting($feature=>'gadfly_type') eq 'analysis') {
-          my $f_val = $config->setting($feature=>'feature');
-          $f_val =~ s/\*/\%/g;
-          push @selected_analyses,(split /\s+/, $f_val);
-      }
-  }
-  if (@selected_analyses) {
-      my $an_l =
-        GxAdapters::GxAnalysis->select_objlist($dbh,
-                                               {analysis_list=>\@selected_analyses});
-      @an_ids = map {$_->id} @$an_l;
-  }
-  if ($constr->{start} || $constr->{stop}) {
-      return unless (defined($constr->{start}) && defined($constr->{stop}));
-      unless (grep {$_ eq $constr->{name}} @VALID_ARMS) {
-          $pre_messages .= "<h2>Nothing found for \"".param('name')."\"</h2>";
-          return;
-      }
-      #name better be arm
-      $range = {};
-      $range = {start => $constr->{start},
-                end   => $constr->{stop},
-                arm   => $constr->{name}};
-      return unless ($range->{end} - $range->{start} <= $MAX_SEGMENT);
-  }
-  elsif ($constr->{name}) {
-      return if (grep {$_ eq $constr->{name}} @VALID_ARMS);
-      if (!$constr->{class}) {
-          if ($constr->{name} =~ /^AE.*/) {
-              $seqname = $constr->{name};
-              $extra = "GB unit";
-              add_label($dbh, $settings, $extra);
-              if (param('rset')) {
-                  my $rsets = get_rsets($dbh, $settings, param('rset'));
-                  my $rset = $rsets->[0];
-                  if ($rset && $rset->isa("BioModel::ResultSet")) {
-                      $extra = $CONFIG->analysis2label($rset->analysis_name);
-                      add_label($dbh, $settings, $extra, \@an_ids);
-                  }
-              }
-          } else { #assume gene symbol
-              $constr->{class} = 'symbol'; #manual to constr class
-          }
-      }
-      if (defined($constr->{class})) {
-          #problem: multiple hits like P insertion (X93507) and maybe blastx hits
-          my $subj_seqname = $constr->{name};
-          my $the_rset  = get_class_sf($dbh, $constr, $settings);
-          if (!$the_rset) {
-              $pre_messages .= "<h2>Nothing found for \"".param('name')."\"</h2>";
-          }
-          else {
-              #from subject_seq, get src_seq name (e.g gb unit) and get annot on this segment
-              $seqname = $the_rset->src_seq->name;
-              $seqname =~ s/\.\d// if $seqname =~ /^AE/;
-              if (lc($constr->{class}) eq 'gene' || lc($constr->{class}) eq 'symbol') {
-                  $hl_gene = $subj_seqname;
-                  $extra = "Gene";
-                  add_label($dbh, $settings, $extra);
-              } else {
-                  $hl_rset = $settings->{hl_rset} || $subj_seqname;
-              }
-              #if thing attached to arm, need to narrow down using range constraint
-#              print STDERR "Checking $seqname vs @VALID_ARMS\n";
-              if (grep {$seqname eq $_} @VALID_ARMS) {
-                  $range = {};
-                  $range->{arm} = $seqname;
-                  my $middle;
-                  if ($the_rset->length > $MAX_SEGMENT
-                      || $the_rset->length < 2 * $EXTEND_LEN) {
-                      $middle = $the_rset->range_low + $the_rset->length / 2;
-                      $range->{start} = $middle - $EXTEND_LEN;
-                      $range->{start} = 1 if ($range->{start} < 1);
-                      $range->{end} = $middle + $EXTEND_LEN;
-                  } else {
-                      $range->{start} = $the_rset->range_low;
-                      $range->{end} = $the_rset->range_high;
-                  }
-                  ($range->{start}, $range->{end}) = ($range->{end}, $range->{start}) if ($range->{start} > $range->{end});
-                  ($range->{start}, $range->{end}) = (int($range->{start}),
-                                                      int($range->{end}));
-                  $seqname=""; # get annot seq by range now
-#printf STDERR "Gene: %s arm %s start %d-%d\n", $the_rset->name, $range->{arm},$range->{start},$range->{end};
-              }
-              if ($the_rset->isa("BioModel::ResultSet")) {
-                  $extra = $CONFIG->analysis2label($the_rset->analysis_name);
-                  add_label($dbh, $settings, $extra, \@an_ids);
-              }
-          }
-      } #end if has class
-  }
-  else {
-      return; # no annot seq
-  }
-
-@an_ids = (0) unless (@an_ids); #make sure no analysis unless analysis is specified
-
-  #finally construct annotated seq
-eval {
-  if ($seqname) {
-      $annseq = GxAdapters::GxAnnotatedSeq->select_obj
-        ($dbh,
-         {name         => $seqname,
-          analysis_ids => \@an_ids},
-         ["visual"]
-        );
-  } elsif ($range) {
-      $annseq = GxAdapters::GxAnnotatedSeq->select_obj
-        ($dbh,
-         {range        => $range,
-          analysis_ids => \@an_ids},
-         ["visual"]
-        );
-  }
-};
-  if ($@) {
-      printf STDERR "get annotseq encounter an error for seqn: %s constr start: %s end:%s: %s\n",$seqname, $constr->{start},$constr->{stop}, $@;
-      printf STDERR "what in range: arm:%s, start:%d, end%d\n",$range->{arm},$range->{start},$range->{end};
-  }
-  return unless ($annseq);
-
-  #hack release 3: display autopromote as gray instead of blue
-  if ($CONFIG->source =~ /3/) {
-      my $ad = GxAdapters::GxTranscript->new;
-      my $gray = "lightslategray";
-      my $trs = [];
-      map {
-          map {
-              push @$trs, $_
-          } @{$_->gene->transcript_list}
-      }@{$annseq->annotation_list || []};
-      $ad->get_properties($dbh, $trs);
-      foreach my $ann (@{$annseq->annotation_list || []}) {
-          my @trs = @{$ann->gene->transcript_list };
-          map {
-              if (defined($_->properties)) {
-                  $_->highlighting($gray)
-                    if (lc($_->properties->{status}) ne 'all done');
-              } else {
-                  $_->highlighting($gray);
-              }
-          } @trs;
-      }
-  }
-
-  #highlighting
-  $hl_gene = $settings->{hl_gene} unless ($hl_gene);
-  $hl_rset = $settings->{hl_rset} unless ($hl_rset);
-  if ($hl_gene) {
-      my $hlighted = 0;
-      foreach my $ann (@{$annseq->annotation_list || []}) {
-          my @trs = @{$ann->gene->transcript_list };
-          map {
-              if ($ann->gene->symbol eq $hl_gene
-                  || $ann->gene->name eq $hl_gene) {
-                  $_->highlighting(1);
-                  $hlighted = 1;
-              }
-          } @trs;
-      }
-      $settings->{hl_gene} = $hl_gene;
-      $settings->{hl_gene} = "" unless ($hlighted);
-  }
-  elsif ($hl_rset) { #from param('rset')
-      my $is_wildc = ($hl_rset =~ s/\*$//);
-      $is_wildc ||= ($hl_rset =~ s/\%$//);
-      my $hlighted = 0;
-      foreach my $an (@{$annseq->analysis_list || []}) {
-          map {
-              my $rset_name = $_->name;
-              $rset_name = (length($rset_name) > length($hl_rset))
-                ? substr($rset_name, 0, length($hl_rset)) : $rset_name;
-              my $homol_seqn = $_->homol_seq?$_->homol_seq->name:$rset_name;
-              $homol_seqn = substr($homol_seqn, 0, length($hl_rset)) if ($is_wildc);
-              if (lc($homol_seqn) eq lc($hl_rset)) {
-                  $_->highlighting(1);
-                  $hlighted = 1;
-              }
-          } @{$an->result_set_list || []};
-      }
-      $settings->{hl_rset} = $hl_rset;
-      $settings->{hl_rset} = "" unless ($hlighted);
-  }
-#$ENV{SQL_TRACE}=1;
-  foreach my $an (@{$annseq->analysis_list || []}) {
-      my $label = $CONFIG->analysis2label($an->name);
-      if ($CONFIG->config->setting($label=>'homol_seq_dbxref')) {
-          my $seqs;
-          map{push @$seqs, $_->homol_seq}@{$an->result_set_list || []};
-          my $ad = GxAdapters::GxSeq->new;
-          $ad->get_dbxrefs($dbh, $seqs);
-      }
-  }
-#$ENV{SQL_TRACE}=0;
-
-  $annseq->segment->db_adapter->get_segment($dbh, $annseq->segment) if ($annseq);
-  if ($settings->{blastfile}) {
-      my $blastfile = get_abs_docs_dir."/".$settings->{blastfile};
-#      print STDERR "BLASTFILE:$blastfile\n";
-      my $hd_seq = $settings->{hd_seq};
-      my $rset = add_blast_to_annseq($annseq, $blastfile, $hd_seq);
-      # need to do all these massaging to get blast results showing correctly (coords)
-      # w new Gadfly API (e.g regular rsets not nec. attached to gb unit rather to v. seg)
-      if ($hd_seq && $rset) {
-          my $segment;
-          map {
-              if ($_->seq->name =~ /$hd_seq/) {
-                  $segment = $_;
-              }
-          } @{$annseq->segment->overlapping_segment_list || []};
-          $segment = $annseq->segment unless ($segment);
-          if ($segment) {
-              $rset->src_seq($segment->seq);
-              $rset->transform_up($segment); #global coords on gbrowse!!
-          }
-      }
-      my $in_view;
-      if ($rset) {
-          my ($low, $hi) = ($rset->range_low, $rset->range_high);
-          my ($as_start, $as_end) = ($annseq->segment->start, $annseq->segment->end);
-          $in_view = ($low >= $as_start && $low <= $as_end
-                      || $hi >= $as_start && $hi <= $as_end);
-      }
-      if ($in_view) {
-          push @{$settings->{labels}}, 'Your BLAST hit';
-          $pre_messages .= "<i>Your blast results should be visible in the tier in dark red and marked *Your BLAST hit*</i><br>";
-      } else {
-          $settings->{blastfile} = '';
-          $settings->{hd_seq} = '';
-      }
-  }
-  return $annseq;
-}
-#side effect: change settings (add label) and add analysis id to $ids
-sub add_label {
-    my $dbh = shift;
-    my $settings = shift;
-    my $extra = shift;
-    my $ids = shift;
-
-    my $config = $CONFIG->config;
-
-    # to dyn add a label so annot seq has that tier that is not selected if search warrants
-    # restricted to what is in config file
-    my $existed = 0;
-    foreach (@{$settings->{labels}}) {
-        if ($_ eq $extra) {
-            $existed = 1;
-            last;
-        }
-    }
-    if (!$existed) {
-        my $ans_str = $config->setting($extra=>'feature');
-        $ans_str =~ s/\*/\%/g;
-        my @extra_analyses = split /\s+/, $ans_str
-          if ($config->setting($extra=>'gadfly_type') eq 'analysis');
-        if (@extra_analyses) {
-            my $an_l =
-              GxAdapters::GxAnalysis->select_objlist
-                  ($dbh,
-                   {analysis_list=>\@extra_analyses});
-            map {push @$ids, $_->id} @$an_l;
-        }
-        push @{$settings->{labels}}, $extra;
-    }
-}
-sub get_rsets {
-  my $dbh = shift;
-  my $settings = shift;
-  my $subj_seqname = shift;
-
-  # get all the result sets by the specified subj seq (homol_seq) name
-  # restrict to analysese specified in config and select the tier if necessary?
-  # (only the selected for now)
-  my $config = $CONFIG->config;
-  my @selected_analyses;
-  #      for my $feature (@{$settings->{labels}}) {
-  for my $feature ($CONFIG->labels) {
-      if ($config->setting($feature=>'gadfly_type') eq 'analysis') {
-          my $f_val = $config->setting($feature=>'feature');
-          $f_val =~ s/\:any/\:\%/i;
-          $f_val =~ s/\*/\%/;
-          push @selected_analyses,(split /\s+/, $f_val);
-      }
-  }
-  my $rsets =
-    GxAdapters::GxResultSet->select_objlist
-        ($dbh,
-         {anlist=>\@selected_analyses,
-          subject_seq=>$subj_seqname},
-         ["*", "result_spans", "analysis"]);
-
-  if (!@$rsets) { #try to get it based on seq feature name (seq descripttion when ready)
-      $rsets =
-        GxAdapters::GxResultSet->select_objlist
-            ($dbh,
-             {anlist=>\@selected_analyses,
-              name_search =>$subj_seqname."*"},
-             ["*", "result_spans", "analysis"]);
-      if (@$rsets) {
-          $settings->{hl_rset} = $rsets->[0]->homol_seq->name;
-      }
-  }
-
-  return $rsets;
-}
-sub get_class_sf {
-  my $dbh = shift;
-  my $constr = shift;
-  my $settings = shift;
-  my $class = lc($constr->{class});
-  my $subj_seqname = $constr->{name};
-  my ($src_seqn, $sf);
-  eval {
-  if ($class eq 'gene') {
-      $sf = GxAdapters::GxGene->select_obj($dbh, {name=>$subj_seqname});
-  }
-  elsif ($class eq 'symbol') {
-      $sf = GxAdapters::GxGene->select_obj($dbh, {alt_symbol=>$subj_seqname});
-  }
-  else { # rset homol seq name
-#      # get all the result sets by the specified subj seq (homol_seq) name
-#      # restrict to analysese specified in config and select the tier if necessary?
-#      # (only the selected for now)
-      my $config = $CONFIG->config;
-      my @selected_analyses;
-      my $rsets = get_rsets($dbh, $settings, $subj_seqname);
-      my @rests;
-      foreach my $rset (@$rsets) {
-          #look for gb unit (hard code!!) or arm ($sf is NOT set!!)
-          #if gb, need to transform_up
-          $src_seqn = $rset->src_seq->name;
-          next if (scalar(grep {$src_seqn eq $_} @VALID_ARMS));
-          next unless ($src_seqn =~ /AE/);
-          $src_seqn =~ s/\.\d+$//; #remove version
-          unless ($sf) {
-              $sf = $rset;
-              if ($src_seqn =~ /AE/) {
-                  my $gb = GxAdapters::GxSeqFeature->select_obj
-                    ($dbh,{name=>$src_seqn});
-                  $sf->transform_up($gb);
-              }
-          } else {
-              push @rests, $rset;
-          }
-      }
-      $sf = $rsets->[0] unless ($sf);
-      if (scalar(@$rsets) > 1) {
-          $pre_messages .= "Warning: Your query gets >1 hits, what is shown is one of them. Click link(s) below to see others.<br>\n";
-          my @sortedrests = sort {lc($a->src_seq->name) <=> lc($b->src_seq->name)} @rests;
-          my $url    = url(-relative=>1,-path_info=>1);
-          my $source = $CONFIG->source;
-          my @urls = map
-            {
-                my $name=$_->src_seq->name;
-                $name =~ s/\.\d+$//;
-                a({-href=>"$url?source=$source&seq=".$name."&rset=".$_->homol_seq->name, -target=>"MORE RESULTS"}, $name)
-            } @sortedrests;
-          $pre_messages .= join '; ',@urls;
-          $pre_messages .= "<br>\n";
-
-      }
-  }
-  };
-  return ($sf);
-}
 
 # interesting heuristic way of fetching sequence segments based on educated guesses
-sub get_segment {
+sub get_segments {
   my $settings = shift;
   my @segments;
 
   my $db = open_database();
+  unless ($db) {
+    error("ERROR: Unable to open database",$CONFIG->setting('description'),pre($@));
+    footer();
+    exit 0;
+  }
+
   $db->debug(0);
 
   if (my $name = $settings->{name}) {
-    my ($class,$start,$stop);
-    #eg: 2L:1234555..1235555
-    if ($name =~ /(\w+):([\d,-]+)(?:-|\.\.)?([\d,-]+)$/) {
-      $name = $1;
-      $start = $2;
-      $stop = $3;
-      $start =~ s/,//g; # get rid of commas
-      $stop  =~ s/,//g;
-    }
-    #e.g gene:CG1234
-    elsif ($name =~ /^(\w+):(.+)$/) {
-      $class = $1;
-      $name  = $2;
-    }
-
-    my @argv = (-name  => $name);
-    push @argv,(-class => $class) if defined $class;
-    push @argv,(-start => $start) if defined $start;
-    push @argv,(-stop  => $stop)  if defined $stop;
-    @segments = defined($start) ? $db->segment(@argv) : $db->segments(@argv);
-
-    # Here starts the heuristic part.  Try various abbreviations that
-    # people tend to use for chromosomal addressing.
-    if (!@segments && $name =~ /^([\dIXA-F]+)$/) {
-      my $id = $1;
-      foreach (qw(CHROMOSOME_ Chr chr)) {
-	my $n = "${_}${id}";
-	my @argv = (-name  => $n);
-	push @argv,(-class => $class) if defined $class;
-	push @argv,(-start => $start) if defined $start;
-	push @argv,(-stop  => $stop)  if defined $stop;
-	@segments = defined($start) ? $db->segment(@argv) : $db->segments(@argv) unless @segments;
-      }
-    }
-
-    # try to remove the chr CHROMOSOME_I
-    if (!@segments && $name =~ /^(chromosome_?|chr)/i) {
-      (my $chr = $name) =~ s/^(chromosome_?|chr)//i;
-      @segments = $db->segment($chr);
-    }
-
-    # try any "automatic" classes that have been defined in the config file
-    if (!@segments && !$class && 
-	(my @automatic = split /\s+/,$CONFIG->setting('automatic classes'))) {
-      foreach $class (@automatic) {
-	@segments = $db->segments($class => $name);
-	last if @segments;
-      }
-    }
+    @segments = $CONFIG->name2segments($name,$db,TOO_MANY_SEGMENTS);
   }
 
   elsif (my $ref = $settings->{ref}) {
@@ -1304,428 +965,1126 @@ sub get_segment {
     @segments = $db->segment(@argv);
   }
 
-  return unless @segments;
-  return @segments if @segments > 1;
+  # some segments are not going to support the absolute() method
+  # if they come out of BioPerl
+  eval {$_->absolute(1)} foreach @segments;
 
   return unless @segments;
-  $segments[0]->absolute(1);
+  # Filter out redundant segments; this can happen when the same basic feature is
+  # present under several names, such as "genes" and "frameworks"
+  my %seenit;
+  @segments = grep {!$seenit{$_->name,$_->ref,$_->start,$_->end}++} @segments;
+  return @segments if @segments > 1;
 
   # set CGI name parameter to match segment.
   # this prevents any confusion over (ref,start,stop) and (name) addressing.
-  $settings->{ref}   = $segments[0]->ref;
+  $settings->{ref}   = $segments[0]->seq_id;
   $settings->{start} = $segments[0]->start;
   $settings->{stop}  = $segments[0]->stop;
 
   return $segments[0];
 }
 
-#sub open_database {
-#  my $source  = $CONFIG->source;
-#  return $DB{$source} if $DB{$source};
+# this gets called when -- for whatever reason -- we got a truncated segment
+sub truncated_segment {
+  my $seg   = shift;
+  my ($trunc_left,$trunc_right) = @{$seg->truncated} if $seg->truncated;
+  my $ref   = $seg->seq_id;
+  my $db    = open_database();
+  my $whole = $db->segment($ref);
+  return $db->segment(-name=>$ref,-start=>$whole->stop-4,-stop=>$whole->stop) if $trunc_right;
+  return $db->segment(-name=>$ref,-start=>1,-stop=>4)                         if $trunc_left;
+}
 
-#  my $dsn     = $CONFIG->setting('database') or die "No database defined in $source";
-#  my $adaptor = $CONFIG->setting('adaptor') || 'dbi::mysqlopt';
-#  my @argv = (-adaptor => $adaptor,
-#	      -dsn     => $dsn);
-#  if (my $fasta = $CONFIG->setting('fasta_files')) {
-#    push @argv,(-fasta=>$fasta);
-#  }
-#  if (my $user = $CONFIG->setting('user')) {
-#    push @argv,(-user=>$user);
-#  }
-#  if (my $pass = $CONFIG->setting('pass')) {
-#    push @argv,(-pass=>$pass);
-#  }
-#  if (my @aggregators = split /\s+/,$CONFIG->setting('aggregators')) {
-#    push @argv,(-aggregator => \@aggregators);
-#  }
-#  $DB{$source} = Bio::DB::GFF->new(@argv) or die "Couldn't open database: ",Bio::DB::GFF->error;
-#  return $DB{$source};
-#}
+################ perform keyword search ###############
+sub do_keyword_search {
+  my $settings = shift;
+  my $segments = shift;
+  my $searchterm = $settings->{name};
 
-sub image_and_map {
-  my ($annotseq,$settings) = @_;  return unless $annotseq;
+  my $match_sub = 'sub {';
+  foreach (split /\s+/,$searchterm) {
+    $match_sub .= "return unless \$_[0] =~ /\Q$_\E/i; ";
+  }
+  $match_sub .= "};";
+  my $match = eval $match_sub;
 
-  $CONFIG->width($settings->{width});
+  my $db = open_database();
+  my @matches = grep { $match->($_->[1]) }
+    $db->search_notes($searchterm,MAX_KEYWORD_RESULTS);
+  my @results;
+  for my $r (@matches) {
+    my ($name,$description,$score) = @$r;
+    my ($seg) = $db->segment($name) or next;
+    push @results,Bio::Graphics::Feature->new(-name   => $name,
+					      -class  => $name->class,
+					      -type   => $description,
+					      -score  => $score,
+					      -ref    => $seg->abs_ref,
+					      -start  => $seg->abs_start,
+					      -stop   => $seg->abs_stop);
 
-  my $option = {};
-  $option->{expand} = $settings->{tier} =~ /Expand/i;
-  $option->{collapse} = $settings->{tier} =~ /Collapse/i;
-  $option->{labelling} = $settings->{tier} eq 'Gene Labelling On';
+  }
+  @$segments = @results;
+}
 
-  my($image,$map) = $CONFIG->annot_seq_image_boxes($annotseq,$settings->{labels}, $option);
-  my ($width,$height) = $image->getBounds;
+################ format keyword search ###################
+sub multiple_choices {
+  my ($settings,$results) = @_;
+  my $db   = open_database();
+  my $name = $settings->{name};
+  my $regexp = join '|',($name =~ /(\w+)/g);
 
-  my $signature = md5_hex($annotseq,@{$settings->{labels}},$settings->{width},$CONFIG->source);
-  $signature = $annotseq->segment->name.$$.".detail.".time;
-  my $url       = generate_image($image,$signature);
-#  print STDERR "sssssss=$signature\n";
-  my $img     = img({-src=>$url,-usemap=>'#hmap',-width => $width,-height => $height,-border=>0});
-  my $img_map = make_map($map, $annotseq, $settings);
-  return center(join "\n",$img,$img_map);
+  # sort into bins by reference
+  my %refs;
+  foreach (@$results) {
+    my $ref = $_->seq_id;
+    push @{$refs{$ref}},$_;
+  }
+
+  $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
+  my $overviews = $CONFIG->hits_on_overview($db,$results);
+  my $count = @$results;
+
+  print start_table();
+  print TR({-class=>'datatitle'},th({-colspan=>4},
+	      "The following $count regions match your request."));
+  my $url = url(-relative=>1,-path_info=>1);
+
+  local $^W = 0;  # get rid of non-numeric warnings coming out of by_score_and_position
+  for my $ref(sort keys %refs) {
+    my @results = @{$refs{$ref}};
+    print TR(th({-class=>'databody',-colspan=>4,-align=>'CENTER'},"Matches on $ref",br,
+		$overviews->{$ref}));
+    for my $r (sort by_score_and_position @results) {
+      my $name        = eval {$r->name}  || $r->primary_tag;
+      my $class       = eval {$r->class} || 'Sequence';
+      my $score       = eval {$r->score} || 'n/a';
+      my ($start,$stop) = ($r->start,$r->end);
+      my $description = escapeHTML(eval{$r->notes}||eval{$r->method}||eval{$r->source_tag}||$r->{ref});
+      my $n           = escape($name);
+      my $c           = escape($class);
+      $description =~ s/($regexp)/<b class="keyword">$1<\/b>/ig;
+
+      my $objref     = $class ? "$url?name=$c:$n" : "$url?name=$n";
+      my $posref     = "$url?ref=$ref;start=$start;stop=$stop";
+      my $position = format_segment($r);
+      print TR({-class=>'databody',-valign=>'TOP'},
+	       th({-align=>'RIGHT'},ref($name) ? a({-href=>$objref},$name):tt($name)),
+	       td($description),
+	       td(a({-href=>$posref},$position . ' ('.($stop-$start+1).' bp)')),
+	       td("score=$score"));
+    }
+  }
+  print end_table;
+
+}
+
+sub by_score_and_position {
+  my $result = eval{$b->score <=> $a->score};
+  return $result unless $result == 0;
+
+  return $a->seq_id cmp $b->seq_id
+    ||
+      $a->start<=>$b->start
+	||
+	  $a->end<=>$b->end;
+}
+
+sub format_segment {
+  my $s = shift or return 'n/a';
+  my $ref = $s->seq_id;
+  my $start = commas($s->start);
+  my $stop  = commas($s->end);
+  return "<b>$ref</b>:$start..$stop";
+}
+
+sub open_database {
+  my $source  = $CONFIG->source;
+  return $DB{$source} if $DB{$source};
+  my @argv = eval{$CONFIG->dbgff_settings};
+  unless (@argv) {
+    warn "gbrowse: trying to reload config, cache must be stale";
+    $CONFIG = Bio::Graphics::Browser->new;
+    $CONFIG->read_configuration($CONF_DIR) or die "Can't read configuration files: $!";
+    $CONFIG->source($source);
+    @argv = $CONFIG->dbgff_settings;
+  }
+  $DB{$source} = eval {Bio::DB::GFF->new(@argv)} or warn $@;
+  return $DB{$source};
 }
 
 sub overview {
-  my ($arm, $segs_h, $settings, $annot_seq) = @_;
-  return unless $arm;
+  my ($segment,$settings) = @_;
+  return unless $segment;
   $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
 
-  my $partial = BioModel::SeqFeature->new
-    (-name=>'',
-     -start=>$settings->{start},
-     -end=>$settings->{stop},
-    );
-
-  if (!$annot_seq) {
-      $partial->start($arm->start);
-      $partial->end($arm->end);
-  }
-
-  my ($image,$length) = $CONFIG->overview($arm, $segs_h, $partial) or return;
+  my ($image,$length) = $CONFIG->overview($segment) or return;
   my ($width,$height) = $image->getBounds;
-  my $signature = md5_hex($segment,$width);
-  $signature = $arm->name.$$.".arm.".time;
-  my $url = generate_image($image,$signature);
-
-  return center(
-		table(TR(
-			 td({-classs=>'searchbody',-align=>'CENTER'},
-			    image_button(-name=>'overview',
-					 -src=>$url,
-                     #-usemap=>'#ovmap',
-					 -width=>$width,
-					 -height=>$height,
-					 -border=>0,
-					 -align=>'MIDDLE')
-			   )
-			)
-		     ).hidden(-name=>'seg_length',-value=>$length,-override=>1)
-		);
+  my $url             = $CONFIG->generate_image($image);
+  return image_button(-name=>'overview',
+		      -src=>$url,
+		      -width=>$width,
+		      -height=>$height,
+		      -border=>0,
+		      -align=>'MIDDLE')
+    .hidden(-name=>'seg_length',-value=>$length,-override=>1);
 }
-
-sub make_ov_map {
-
-}
-
-sub generate_image {
-  my ($image,$signature) = @_;
-
-  my $extension = $image->can('png') ? 'png' : 'gif';
-  my ($uri,$path) = picture_tmpdir();
-  my $url         = sprintf("%s/%s.%s",$uri,$signature,$extension);
-  my $imagefile   = sprintf("%s/%s.%s",$path,$signature,$extension);
-  open (F,">$imagefile") || die("Can't open image file $imagefile for writing: $!\n");
-  print F $image->can('png') ? $image->png : $image->gif;
-  close F;
-  return $url;
-}
-
-sub picture_tmpdir {
-  my $tmpuri = $CONFIG->setting('tmpimages') or die "no tmpimages option defined, can't generate a picture";
-  my $tmpdir;
-  if ($ENV{MOD_PERL}) {
-    my $r = Apache->request;
-    my $subr   = $r->lookup_uri($tmpuri);
-    $tmpdir = $subr->filename;
-  } else {
-    $tmpdir = "$ENV{DOCUMENT_ROOT}/$tmpuri";
-  }
-  mkpath($tmpdir,0,0777) unless -d $tmpdir;
-  return ($tmpuri,$tmpdir);
-}
-
 
 sub get_ranges {
-  my @ranges	= split /\s+/,$CONFIG->setting('zoom levels');
-  @ranges       = qw(500 1000 5000 10000 25000 100000 200000 400000) unless @ranges;
+  my @ranges	= split /\s+/,$CONFIG->setting('zoom levels') || DEFAULT_RANGES;
   @ranges;
 }
 
-sub make_map {
-  my $boxes = shift;
-  my $annot_seq = shift;
-  my $settings = shift;
-  my $map = qq(<map name="hmap">\n);
-
-  # use the scale as a centering mechanism
-  my $ruler; # = shift @$boxes;
-  for my $box (@$boxes) {
-      if ($box->[0]->name eq $annot_seq->segment->name) {
-          $ruler = $box;
-          last;
-      }
-  }
-
-  $map .= make_centering_map($ruler, $settings);
-
-  my $hl;
-  foreach (@$boxes){
-    if ($_->[0]->highlighting && $_->[0]->highlighting eq '1') {
-        map {push @$hl, $_}@$_;
-        last;
-    }
-  }
-  #print out high lighted feature map first
-  if ($hl) {
-    my $f = shift @$hl;
-    my $coords = join(",", map{int($_)}@$hl);
-    $coords =~ s/^(\d+),(\d+),/$1,$2 /;
-    my $alt   = make_alt($f);
-    my $href  = make_href($f);
-    my $target = make_target($f);
-    $map .= qq(
-               <AREA SHAPE="RECT" 
-               COORDS="$coords" 
-               HREF="$href" 
-               ALT="$alt" 
-               TITLE="$alt" 
-               onmouseover='window.status = "$alt"; return true;' 
-               onmouseexit='window.status = ""; return true;' 
-               $target>\n);
-  }
-  foreach (@$boxes){
-    my $f = shift @$_;
-    if ($f->highlighting && $f->highlighting eq '1') {
-        push @{$hl}, ($f, @$_);
-        next;
-    }
-    my $coords = join(",", map{int($_)}@$_);
-    $coords =~ s/^(\d+),(\d+),/$1,$2 /;
-    my $alt   = make_alt($f);
-    my $href  = make_href($f);
-    my $target = make_target($f);
-    $map .= qq(
-               <AREA SHAPE="RECT" 
-               COORDS="$coords" 
-               HREF="$href" 
-               ALT="$alt" 
-               TITLE="$alt" 
-               onmouseover='window.status = "$alt"; return true;' 
-               onmouseexit='window.status = ""; return true;' 
-               $target>\n);
-  }
-#  #print out high lighted feature map last
-#  if ($hl) {
-#    my $f = shift @$hl;#$hl->[0];
-#    my $coords = join(",", map{int($_)}@$hl);
-#    $coords =~ s/^(\d+),(\d+),/$1,$2 /;
-#    my $alt   = make_alt($f);
-#    my $href  = make_href($f);
-#    my $target = make_target($f);
-#    $map .= qq(
-#               <AREA SHAPE="RECT" 
-#               COORDS="$coords" 
-#               HREF="$href" 
-#               ALT="$alt" 
-#               TITLE="$alt" 
-#               onmouseover='window.status = "$alt"; return true;' 
-#               onmouseexit='window.status = ""; return true;' 
-#               $target>\n);
-#  }
-  $map .= "</map>\n";
-  $map;
+sub get_zoomincrement {
+  my $zoom      = $CONFIG->setting('fine zoom')  || DEFAULT_FINE_ZOOM;
+  $zoom;
 }
 
-sub make_centering_map {
-  my $ruler = shift;
-  my $settings = shift;
-  return if $ruler->[3]-$ruler->[1] == 0;
+sub segment2link {
+  my ($base,$segment) = @_;
 
-  my $offset = $ruler->[0]->start;
-  my $scale  = $ruler->[0]->length/($ruler->[3]-$ruler->[1]);
+  my $source = $CONFIG->source;
+  return  a({-href=>"$base?source=$source;name=$segment"},$segment) unless ref $segment;
 
-  # divide into ten intervals
-  my $portion = ($ruler->[3]-$ruler->[1])/10;
-  Delete_all();
-  param(arm => scalar($ruler->[0]->src_seq->name));
-  param(hl_gene=>$settings->{hl_gene}) if ($settings->{hl_gene});
-  param(hl_rset=>$settings->{hl_rset}) if ($settings->{hl_rset});
-  param(blastfile => $settings->{blastfile}) if ($settings->{blastfile});
-  param(hd_seq=>$settings->{hd_seq}) if ($settings->{hd_seq});
-
-  my @lines;
-  my $alt = "click to center";
-  for my $i (0..19) {
-    my $x1 = int($portion * $i);
-    my $x2 = int($portion * ($i+1));
-    # put the middle of the sequence range into
-    # the middle of the picture
-    my $middle = $offset + $scale * ($x1+$x2)/2;
-    my $start  = int($middle - $ruler->[0]->length/2);
-    my $stop   = int($start + $ruler->[0]->length - 1);
-    param(start => int($start));
-    param(stop  => int($stop));
-    param(nav   => 1);
-    param(source=> $CONFIG->source);
-    my $url = url(-relative=>1,-query=>1,-path_info=>1);
-    push @lines,
-      qq(<AREA SHAPE=RECT COORDS="$x1,$ruler->[2] $x2,$ruler->[4]"
-         HREF="$url" ALT="$alt" TITLE="$alt"
-         onmouseover='window.status = "$alt"; return true' 
-         onmouseexit='window.status = ""; return true;'>\n);
-  }
-  return join '',@lines;
+  my ($start,$stop) = ($segment->start,$segment->end);
+  my $ref = $segment->seq_id;
+  my $bp = $stop - $start;
+  my $s = commas($start);
+  my $e = commas($stop);
+  return a({-href=>"$base?source=$source;ref=$ref;start=$start;stop=$stop"},"$ref:$s..$e");
 }
 
-sub bac_insitu_image {
-  my $annot_seq = shift;
-  my $settings = shift;
-
-  my $sTable;
-  return if ($settings->{show_bac_img} eq 'Off');
-
-  if ($annot_seq && $annot_seq->segment->length < $MAX_SEGMENT) {
-#      $sTable .= "<hr>\n";
-      my $t_bac_analysis;
-      foreach my $a (@{$annot_seq->analysis_list || []}) {
-          if ($a->name eq $CONFIG->config->setting('Tiling BAC'=>'feature')) {
-              $t_bac_analysis = $a;
-              last;
-          }
-      }
-      my @tiling_bacs = ();
-      if ($t_bac_analysis) {
-          @tiling_bacs =
-            sort {$a->start <=> $b->start}
-              @{$t_bac_analysis->result_set_list || []};
-      }
-      if (@tiling_bacs && @tiling_bacs <= $MAX_BAC_PIC) {
-          my $bac_href = "tiling_bac_images";
-          $NAME_LINKS->{'Tiling BAC'}=$bac_href;
-          my $page_width = $page_settings->{width};
-#          my $page_width = 0;
-#          my %cols_width;
-#          foreach my $col (@tiling_bacs) {
-#              my $url = $CONFIG->setting("bac_insitu_pic")."/".$col->info.".jpeg";
-#              my $width;
-#              ($width, undef, my $id) = imgsize($ENV{DOCUMENT_ROOT}."/".$url);
-#              $width = $width || $page_width / scalar(@tiling_bacs);
-#              $page_width += $width;
-#              $cols_width{$col->name} = $width;
-#          }
-          $sTable .= qq[<table width=$page_width>
-                        <TR>
-                        <TH align="LEFT" class="searchtitle">
-                        <A Name=$bac_href>Tiling BAC in situ Image:</A>
-                        </TH>
-                        </TR>
-                        </table>];
-
-          $sTable .= "<table border=0 width=$page_width>";
-          $sTable .= "<TR>";
-          foreach my $col (@tiling_bacs) {
-              my $bac_name = $col->homol_seq?$col->homol_seq->name:$col->name;
-              $bac_name =~ s/-hit$//;
-              my $url = $CONFIG->setting("bac_insitu_pic")."/".$bac_name.".jpeg";
-#              my $width = $cols_width{$col->name};
-              my $width = $page_width / scalar(@tiling_bacs);
-              my $height = 188;
-              my $img = img({-src=>$url, -height => $height,-border=>0, center=>1});
-              $sTable .= "<td align='center' class='searchbody'>$img</td>";
-          }
-          $sTable .= "</TR>";
-          $sTable .= "</TABLE>";
-      }
-  }
-  return $sTable;
-}
-
-#as targe is optional, so full html text is return
-sub make_target {
-  my $feature = shift;
-  my $t = $CONFIG->feature2target($feature);
-  return $t ? "TARGET=$t" : '';
-}
-
-sub make_href {
-  my $feature = shift;
-  my $href    = $CONFIG->make_link($feature);
-  if ($href =~ /self\#(.*)/) {
-      my $label = $1;
-      $label =~ s/\s+$//;
-      if (exists $NAME_LINKS->{$label}) {
-          my $self = url(-relative=>1,-path_info=>1);
-          $href = $self."#".$NAME_LINKS->{$label};
-      }
-      $href = "#" if ($href =~ /self\#(.*)/);
-  }
-  return $href;
-}
-
-sub make_alt {
-  my $feature = shift;
-  my $label = $feature->info;
-#  if ($feature->method =~ /^(similarity|alignment)$/) {
-#    $label .= " ".commas($feature->target->start)."..".commas($feature->target->end);
-#  } else {
-#    $label .= " ".commas($feature->start)."..".commas($feature->stop);
-#  }
-  $label .= " ".commas($feature->start)."..".commas($feature->stop);
-  $label = $CONFIG->make_alt($feature) || $feature->info;
-  return $label;
-}
-
-sub dump_fasta {
-  my $annseq = shift;
-  my $settings = shift;
-
-  #hack but with better description line
-  if ($settings->{name} =~ /AE\d+/) {
-      print $annseq->segment->to_fasta;
-      return;
-  }
-
-  #segment is not one gb unit
-  my $config = $CONFIG->config;
-  my $dbh = get_handle($CONFIG->setting('database'));
-  my $seq = 
-    GxAdapters::GxSeqFeature->generate_seq($dbh, $annseq->segment);
-  $annseq->seq($seq);
-  $annseq->seq->residues($seq->residues);#need set residues explicitly?
-  $annseq->seq->name($annseq->segment->name);
-  $annseq->seq->description($annseq->segment->description);
-  print $annseq->segment->to_fasta;
-}
-
-sub dump_gff {
-  my $segment = shift;
-  my $page_settings = shift;
-  my $labels = $page_settings->{labels} or return;
-  my $date = localtime;
-  print "##gff-version 2\n";
-  print "##date $date\n";
-  print "##sequence-region ",join(' ',$segment->name,$segment->start,$segment->stop),"\n";
-
-  my $conf = $CONFIG->config;
-  my @feature_types = map {$conf->label2type($_)} @$labels;
-
-  my $iterator = $segment->features(-types=>\@feature_types,-iterator=>1) or return;
-  while (my $f = $iterator->next_feature) {
-    print $f->gff_string,"\n";
-    for my $s ($f->sub_SeqFeature) {
-      print $s->gff_string,"\n";
-    }
-  }
-}
-
-# I know there must be a more elegant way to insert commas into a long number...
-sub commas {
-  my $i = shift;
-  $i = reverse $i;
-  $i =~ s/(\d{3})/$1,/g;
-  chop $i if $i=~/,$/;
-  $i = reverse $i;
-  $i;
-}
 
 sub show_examples {
-  my @examples = split /\s+/,$CONFIG->setting('examples');
+  my $examples = $CONFIG->setting('examples') or return;;
+  my @examples = split /\s+/,$examples;
   return unless @examples;
   my $url    = url(-relative=>1,-path_info=>1);
   my $source = $CONFIG->source;
   my @urls = map { a({-href=>"$url?source=$source;name=".escape($_)},$_) } @examples;
-  return b('Examples: ').join ', ',@urls;
+  return b('Examples: ').join(', ',@urls) .'.  '.a({-href=>general_help(),-target=>'help'},b('[Help]'));
 }
+
+sub debugging_rectangles {
+  my ($image,$boxes) = @_;
+  my $black = $image->colorClosest(0,0,0);
+  foreach (@$boxes) {
+    my @rect = @{$_}[1,2,3,4];
+    $image->rectangle(@{$_}[1,2,3,4],$black);
+  }
+}
+
+########## upload stuff ########
+sub handle_upload {
+  my ($settings,$fh) = @_;
+  warn "handle_upload($settings,$fh)" if DEBUG;
+  # $fh is a CGI string/filehandle object, so be careful
+  my $filename = "$fh";
+  my $fh_out = open_uploaded_file($settings,$filename,'>') or return;
+  while (<$fh>) {
+    print $fh_out $_;
+  }
+  close $fh_out;
+  my (undef,$url) = name_uploaded_file($settings,$filename);
+  warn "url = $url" if DEBUG;
+  push @{$settings->{tracks}},$url;
+  $settings->{features}{$url} = {visible=>1,options=>0,limit=>0};
+}
+
+sub handle_edit {
+  my ($settings,$data) = @_;
+  my $file = param('edited file') or return;
+  my @lines = unexpand(split /\r?\n|\r\n?/,$data);
+  $data = join "\n",@lines;
+  $data .= "\n";
+  my $fh = open_uploaded_file($settings,$file,'>');
+  print $fh $data;
+  close $fh;
+}
+
+sub handle_quickie {
+  my ($settings,$data) = @_;
+  return unless $data;
+
+  # format of quickie data is reference+type+name+start-stop,start-stop,start-stop
+  my ($reference,$type,$name,$position) = shellwords($data||'');
+  my @segments = map { [/(-?\d+)(?:-|\.\.)(-?\d+)/]} split /,/,$position;
+  my $feature = Bio::Graphics::Feature->new(
+					    -ref      => $reference||'',
+					    -type     => $type||'',
+					    -name     => $name||'',
+					    -segments => \@segments,
+					    );
+  write_auto($settings,[$feature]);
+}
+
+sub write_auto {
+  my ($settings,$features) = @_;
+
+  my $file = 'search_results';
+  clear_uploaded_file($settings,$file);
+  return unless @$features;
+
+  my %seenit;
+
+  warn "opening $file...\n" if DEBUG;
+  my $out = open_uploaded_file($settings,$file,">>") or return;
+  warn "writing $file...\n" if DEBUG;
+  for my $f (@$features) {
+    my $reference = $f->can('seq_id') ? $f->seq_id : $f->seq_id;
+    my $type      = $f->primary_tag;
+    my $name      = $f->seqname;
+    my $position  = $f->sub_SeqFeature ? join (',',map {$_->start.'..'.$_->end} $f->sub_SeqFeature)
+                                       : $f->start.'..'.$f->end;
+    $name .= "($seenit{$name})" if $seenit{$name}++;
+    print $out "\nreference=$reference\n";
+    print $out join ("\t",qq("$type"),qq("$name"),$position),"\n";
+  }
+  close $out;
+  my (undef,$url) = name_uploaded_file($settings,$file);
+  push @{$settings->{tracks}},$url;
+  $settings->{features}{$url} = {visible=>1,options=>0,limit=>0};
+}
+
+sub name_uploaded_file {
+  my ($settings,$filename) = @_;
+  warn "name_uploaded_file(): filename = $filename" if DEBUG;
+  # keep last non-[/\:] part of name
+  my ($name) = $filename =~ /([^:\\\/]+)$/;
+  my $id = $settings->{id} or return;
+  my (undef,$tmpdir) = $CONFIG->tmpdir($CONFIG->source."/uploaded_file/$id");
+  my $physical = "$tmpdir/$filename";
+  my $url      = "file:$filename";
+  return wantarray ? ($physical,$url) : $physical;
+}
+
+sub open_uploaded_file {
+  my ($settings,$filename,$mode) = @_;
+  $filename =~ s/^file://;
+
+  my $file = name_uploaded_file($settings,$filename);
+  warn "file = $file" if DEBUG;
+  unless ($file) {
+    error("Can't find the file named $filename.  Perhaps it has been purged?");
+    clear_uploaded_file($settings,$filename);
+    return;
+  }
+
+  my $result = open (F,"${mode}${file}");
+
+  unless ($result) {
+    warn "Can't open the file named $filename.  Perhaps it has been purged? (error: $!)";
+    clear_uploaded_file($settings,$filename);
+    return;
+  }
+
+  return \*F;
+}
+
+sub load_external_sources {
+  my ($segment,$page_settings) = @_;
+  my @feature_file = load_uploaded_files($segment,$page_settings);
+  warn "uploaded feature_file = @feature_file" if DEBUG;
+
+  my @external = load_remote_sources($segment,$page_settings);
+  push @feature_file,@external if @external;
+
+  my %feature_file = map {(ref($_) ? $_->name: $_) => $_} @feature_file;
+  warn join "\n",%feature_file if DEBUG;
+  \%feature_file;
+}
+
+sub load_uploaded_files {
+  my ($segment,$settings) = @_;
+  my @files;
+  my $width = $settings->{width} or return;
+  my $rel2abs = coordinate_mapper($segment) if $segment;
+
+  my @uploads = grep {/^file:/} @{$settings->{tracks}};
+  my @result;
+  for my $file (@uploads) {
+    warn "loading $file" if DEBUG;
+    if (!$settings->{features}{$file}{visible}) { # turned off
+      push @result,$file;
+      next;
+    }
+
+    my $fh = open_uploaded_file($settings,$file,"<") or return;
+
+    # nasty little bit in which we handle differing line-endings for the various
+    # types of operating systems...
+    my $agent  = CGI->user_agent();
+    local $/ = $/;
+    $/ = "\r"    if $agent =~ /Mac/;
+    $/ = "\r\n"  if $agent =~ /Win/;
+
+    my $feature_file = Bio::Graphics::FeatureFile->new(-file           => $fh,
+						       -map_coords     => $rel2abs,
+						       -smart_features =>1);
+    close $fh;
+    next unless $feature_file;
+    $feature_file->name($file);
+    push @result,$feature_file;
+  }
+  @result;
+}
+
+sub load_remote_sources {
+  my ($segment,$settings) = @_;
+  my @uploads = grep {/^(http|ftp):/} @{$settings->{tracks}};
+  my $rel2abs = coordinate_mapper($segment) if $segment;
+  my @result;
+  for my $file (@uploads) {
+    warn "load_remote_sources(): loading $file" if DEBUG;
+    if (!$settings->{features}{$file}{visible}) { # turned off
+      push @result,$file;
+      next;
+    }
+    my $feature_file = get_remote_feature_data($file,$rel2abs) or next;
+    push @result,$feature_file;
+  }
+  return @result;
+}
+
+sub load_plugin_annotations {
+  my ($segment,$feature_files,$settings) = @_;
+  for my $p (keys %$PLUGINS) {
+    next unless $PLUGINS->{$p}->type eq 'annotator';
+    my $name = "plugin:".$PLUGINS->{$p}->name;
+    next unless $settings->{features}{$name}{visible};
+    my $features = $PLUGINS->{$p}->annotate($segment) or next;
+    $features->name($name);
+    $feature_files->{$name} = $features;
+  }
+}
+
+sub load_plugin_annotators {
+  my ($settings) = @_;
+  for my $p (keys %$PLUGINS) {
+    next unless $PLUGINS->{$p}->type eq 'annotator';
+    my $name = $PLUGINS->{$p}->name;
+    $name = "plugin:$name";
+    $PLUGIN_NAME2LABEL{$name} = $p;
+    unless ($settings->{features}{$name}) {
+      push @{$settings->{tracks}},$name;
+      $settings->{features}{$name} = {visible=>1,options=>0,limit=>0};
+    }
+  }
+}
+
+
+sub get_remote_feature_data {
+  my ($url,$rel2abs) = @_;
+  warn "get_remote_feature_data(): fetching $url" if DEBUG;
+
+  unless ($UA) {
+    unless (eval "require LWP") {
+      error('This browser is not configured to fetch external URLs');
+      return;
+    }
+    $UA = LWP::UserAgent->new(agent   => "Generic-Genome-Browser/$VERSION",
+			      timeout => URL_FETCH_TIMEOUT,
+			      max_size => URL_FETCH_MAX_SIZE,
+			     );
+  }
+  my $id = md5_hex($url);  # turn into a filename
+  my (undef,$tmpdir) = $CONFIG->tmpdir($CONFIG->source.'/external');
+  my $response = $UA->mirror($url,"$tmpdir/$id");
+  if ($response->is_error) {
+    error("Could not fetch $url: ",$response->message);
+    return;
+  }
+  open (F,"<$tmpdir/$id") or return;
+  my $feature_file = Bio::Graphics::FeatureFile->new(-file           => \*F,
+						     -map_coords     => $rel2abs,
+						     -smart_features =>1);
+  $feature_file->name($url);
+  warn "get_remote_feature_data(): got $feature_file" if DEBUG;
+  return $feature_file;
+}
+
+sub print_uploaded_file_features {
+  my ($settings,$file) = @_;
+  if (my $fh = open_uploaded_file($settings,$file)) {
+    while (<$fh>) {
+      print;
+    }
+  }
+}
+
+sub get_uploaded_file_info {
+  my $feature_file = shift or return i("Display off");
+  warn "get_uploaded_file_info(): feature_file = $feature_file" if DEBUG;
+
+  my $modified = localtime($feature_file->mtime);
+  my @refs      = $feature_file->refs;
+  my $db        = open_database();
+
+  my ($landmarks,@landmarks);
+  my $url      = url(-relative=>1,-path_info=>1);
+
+  if (@refs > TOO_MANY_REFS) {
+    $landmarks = b(@refs." landmarks.  Too many to list.");
+  } else {
+    for my $r (sort @refs) {
+      my $features = $feature_file->features;
+      my @features = grep {$_->seq_id && ($_->seq_id eq $r)} map {@$_} values %{$features};
+      my @merged   = @features > TOO_MANY_FEATURES ? $CONFIG->merge($db,\@features) : @features;
+      my @links    = map {segment2link($url,$_)} @merged;
+      @links       = segment2link($url,$r) unless @links;
+      push @landmarks,@links;
+    }
+  }
+  $landmarks = tableize(\@landmarks);
+  warn "get_uploaded_file_info(): modified = $modified, landmarks = $landmarks" if DEBUG;
+  return i("Last modified $modified.  Annotated landmarks:"),$landmarks;
+}
+
+sub clear_uploaded_file {
+  my ($settings,$file) = @_;
+  warn "clear_uploaded_file(): file = $file" if DEBUG;
+  my $path = name_uploaded_file($settings,$file) or return;
+  unlink $path;
+  delete $settings->{features}{"file:$file"};
+  warn "clear_uploaded_file(): deleting file = file:$file" if DEBUG;
+  $settings->{tracks} = [grep {$_ ne "file:$file"} @{$settings->{tracks}}];
+}
+
+sub edit_uploaded_file {
+  my ($settings,$file) = @_;
+  warn "edit_uploaded_file(): file = $file" if DEBUG;
+  print start_form();
+  my $data;
+  my $fh = open_uploaded_file($settings,$file) or return;
+  $data = join '',expand(<$fh>);
+  print table({-width=>'100%'},
+	      TR({-class=>'searchbody'},
+		 td('Edit your uploaded annotation data here.',
+		    'You may use tabs or spaces to separate fields,',
+		    'but fields that contain whitespace must be contained in',
+		    'double or single quotes.',
+		   ),
+		),
+	      TR({-class=>'searchbody'},
+		 td(
+		    a({-href=>url(-relative=>1,-path_info=>1)."?help=annotation#format",-target=>'help'},
+		      b('[Help with File Format]'))
+		   ),
+		),
+	      TR({-class=>'searchtitle'},
+		 th('Enter/Edit Annotation data')),
+	      TR({-class=>'searchbody'},
+		 td({-align=>'CENTER'},
+		    pre(
+			textarea(-name    => 'a_data',
+				 -value   => $data,
+				 -rows    => ANNOTATION_EDIT_ROWS,
+				 -cols    => ANNOTATION_EDIT_COLS,
+				 -wrap    => 'off',
+				 -style   => "white-space : pre"
+				))
+		   )
+		),
+	      TR({-class=>'searchtitle'},
+		 th(reset('Undo Changes').'&nbsp;'.
+		    submit('Cancel').'&nbsp;'.
+		    b(submit('Submit Changes...'))))
+	     );
+  print hidden(-name=>'edited file',-value=>$file);
+  print end_form();
+}
+
+sub coordinate_mapper {
+  my $current_segment = shift;
+  my $db              = open_database();
+
+  my ($ref,$start,$stop) = ($current_segment->seq_id,$current_segment->start,$current_segment->stop);
+  my %segments;
+
+  my $closure = sub {
+    my ($refname,@ranges) = @_;
+
+    unless ($segments{$refname}) {
+      my @segments = grep {
+	$_->abs_ref eq $ref && $_->abs_start <= $stop && $_->abs_stop >= $start
+      } $CONFIG->name2segments($refname,$db,TOO_MANY_SEGMENTS);
+      return unless @segments;
+      $segments{$refname} = $segments[0];
+    }
+    my $mapper   = $segments{$refname};
+    my $absref   = $mapper->abs_ref;
+    my @abs_segs = map {[$mapper->rel2abs($_->[0],$_->[1])]} @ranges;
+
+    # this inhibits mapping outside the displayed region
+    foreach (@abs_segs) {
+      return ($absref,@abs_segs) if $_->[0] <= $stop && $_->[1] >= $start;
+    }
+    return;
+  };
+  return $closure;
+}
+
+sub error {
+  warn "@_" if DEBUG;
+  print header() unless $HEADER++;
+  print start_html(-title => 'Genome browser',
+		   -style  => {src=>$CONFIG->setting('stylesheet')}) unless $HTML++;
+  print h2({-class=>'error'},@_);
+}
+
+sub bookmark_link {
+  my $settings = shift;
+  my $q = new CGI('');
+  my @keys = $settings->{name} ? qw(name source width)
+                               : qw(start stop ref source width);
+  foreach (@keys) {
+    $q->param(-name=>$_,-value=>$settings->{$_});
+  }
+
+  # handle selected features slightly differently
+  my @selected = grep {$settings->{features}{$_}{visible} && !/^(file|ftp|http):/} @{$settings->{tracks}};
+  $q->param(-name=>'label',-value=>join('-',@selected));
+
+  # handle external urls
+  my @url = grep {/^(ftp|http):/} @{$settings->{tracks}};
+  $q->param(-name=>'eurl',-value=>\@url);
+
+  return $q->url(-relative=>1,-path_info=>1,-query=>1);
+}
+
+# reorder @labels based on settings in the 'track.XXX' parameters
+sub adjust_track_order {
+  my $settings = shift;
+
+  my @labels  = @{$settings->{tracks}};
+  warn "adjust_track_order(): labels = @labels" if DEBUG;
+
+  my %seen_it_already;
+  foreach (grep {/^track\./} param()) {
+    warn "$_ =>",param($_) if DEBUG;
+    next unless /^track\.(\d+)/;
+    my $track = $1;
+    my $label   = param($_);
+    next unless length $label > 0;
+    next if $seen_it_already{$label}++;
+    warn "$label => track $track" if DEBUG;
+
+    # figure out where features currently are
+    my $i = 0;
+    my %order = map {$_=>$i++} @labels;
+
+    # remove feature from wherever it is now
+    my $current_position = $order{$label};
+    warn "current position of $label = $current_position" if DEBUG;
+    splice(@labels,$current_position,1);
+
+    warn "new position of $label = $track" if DEBUG;
+    # insert feature into desired position
+    splice(@labels,$track,0,$label);
+  }
+  $settings->{tracks} = \@labels;
+}
+
+sub adjust_track_options {
+  my $settings = shift;
+  foreach (grep {/^option\./} param()) {
+    my ($track)   = /(\d+)/;
+    my $feature   = $settings->{tracks}[$track];
+    my $option    = param($_);
+    $settings->{features}{$feature}{options} = $option;
+  }
+  foreach (grep {/^limit\./} param()) {
+    my ($track)   = /(\d+)/;
+    my $feature   = $settings->{tracks}[$track];
+    my $option    = param($_);
+    $settings->{features}{$feature}{limit} = $option;
+  }
+  foreach (@{$settings->{tracks}}) {
+    $settings->{features}{$_}{visible} = 0;
+  }
+
+  foreach (param('track.label')) {
+    $settings->{features}{$_}{visible} = 1;
+  }
+}
+
+# this controls the "adjust track options" screen
+sub set_track_options {
+  my $settings = shift;
+
+  my @labels = @{$settings->{tracks}};
+
+  my %keys            = map {$_ => $CONFIG->setting($_=>'key') || $_} @labels;
+  my @sorted_labels   = ('',sort {lc $keys{$a} cmp lc $keys{$b}} @labels);
+
+  my @rows;
+  for (my $track = 0; $track < @labels; $track++) {
+    my $label = $labels[$track];
+    push @rows,
+      th({-align=>'LEFT',-class=>'searchtitle'},"Track",$track+1).
+      th({-align=>'LEFT',-class=>'searchbody'},$keys{$label}).
+      td({-align=>'CENTER',-class=>'searchbody'},
+	     checkbox(-name     => 'track.label',
+		      -value    => $label,
+		      -override => 1,
+		      -checked  => $settings->{features}{$label}{visible},
+		      -label => '')
+	    ).
+      td({-align=>'CENTER',-class=>'searchbody'},
+	     popup_menu( -name     => "option.$track",
+			 -values   => [0..5],
+			 -override => 1,
+			 -default  => $settings->{features}{$label}{options},
+			 -labels   => {0=>'Auto',
+                                       1=>'Compact',
+                                       2=>'Expand',3=>'Expand & Label',
+                                       4=>'Hyperexpand',5=>'Hyperexpand & label'})
+			).
+	td({-align=>'CENTER',-class=>'searchbody'},
+	   popup_menu(-name    => "limit.$track",
+		      -values  => [0,5,10,25,100],
+		      -labels  => {0=>'No limit'},
+		      -override => 1,
+		      -default => $settings->{features}{$label}{limit})
+	    ).
+	td({-align=>'CENTER',-class=>'searchbody'},
+	   popup_menu(-name    => "track.$track",
+		      -values  => \@sorted_labels,
+		      -labels  => \%keys,
+		      -override => 1,
+		      -onChange => 'document.settings.submit()',
+		      -default => '')
+	    );
+  }
+  my $controls = TR({-class=>'searchtitle'},
+		    td({-colspan=>3,-align=>'CENTER'},
+		       reset('Undo Changes').'&nbsp;'.
+		       submit('Revert to Defaults').'&nbsp;'.
+		       submit('Refresh').'&nbsp;'
+		      ),
+		    td({-align=>'CENTER',-colspan=>3},
+		       submit(-name=>'Cancel',-value=>'Cancel Changes and Return...').'&nbsp;'.
+		       b(submit(-name=>'Redisplay',-value=>'Accept Changes and Return...'))
+		      ));
+
+  print h1({-align=>'CENTER'},'Settings for ',$CONFIG->setting('description'));
+  print start_form(-name=>'settings');
+  print table({-width=>'100%',-border=>0},
+	      $controls,
+	      TR({-class=>'searchtitle'},
+		 th({-colspan=>6},'Track Options')),
+	      TR({-class=>'searchbody'},
+		 td({-colspan=>6},
+		    'The',i('Show'),'checkbox turns the track on and off.',
+		    'The',i('Compact'),'option forces the track to be condensed so that',
+		    'annotations will overlap. The',i('Expand'),'and',i('Hyperexpand'),
+                    'options turn on collision control using slower and faster layout algorithms.',
+		    'The',i('Expand & label'),'and',i('Hyperexpand & label'), 'options force',
+                    'annotations to be labeled.  If',i('Auto'),'is selected, the bump and label',
+		    'options will be set automatically if space permits.',
+		    'To change the track order use the',i('Change Track Order'),'popup menu',
+		    'to assign an annotation to a track.',
+                    'To limit the number of annotations of this type shown, change the value of the',
+                    i('Limit'),'menu.',
+		   ),
+		),
+	      TR({-class=>'searchtitle'},
+		 th('Track'),
+		 th('Track Type'),
+		 th('Show'),
+		 th('Format'),
+		 th('Limit'),
+		 th('Change Track Order'),
+		),
+	      TR(\@rows),
+	      $controls,
+	      hidden(-name=>'Set Track Options...',-value=>1,-override=>1),
+	      hidden(-name=>'Adjust Order',-value=>1,-override=>1),
+	     );
+    print end_form();
+}
+
+sub help {
+  my ($help_type,$conf_dir,$settings) = @_;
+
+  my $ref = referer();
+  my $do_close = join('',
+		      start_form(-action=>$ref),
+		      button(-onClick=>'window.close()',-label=>'Close this Window'),
+		      end_form());
+  print div({-align=>'RIGHT'},$do_close);
+  if ($help_type eq 'citations') {
+    build_citation_page($settings);
+  } else {
+    build_help_page("$conf_dir/${help_type}_help.html");
+  }
+  print div({-align=>'RIGHT'},$do_close);
+}
+
+# build a citation page
+sub build_citation_page {
+  my $settings = shift;
+  my @labels   = labels($settings);
+
+  my @features = $CONFIG->labels;
+  my $external_features = load_external_sources(undef,$settings);
+  my (@citations);
+
+  print h2('Track Descriptions & Citations');
+
+  # build native features
+  print h3('Tracks Built into this Server');
+  for my $feature (@features) {
+    push @citations,make_citation($CONFIG,$feature);
+  }
+  print blockquote(dl(@citations));
+
+  # build external features
+  if (%$external_features) {
+    print hr,h3('External Annotation Tracks');
+    @citations = ();
+    for my $file (keys %$external_features) {
+      my $f = escape($file);
+      my $name   = $file;
+      my $is_url = $name =~ m!^(http|ftp)://!;
+      my $link   = $is_url  ? $name  : url(-relative=>1,-path_info=>1)."?Download+Data=1;file=$f";
+      my $anchor = $name;
+      $anchor =~ tr/ /-/;
+
+      unless (ref $external_features->{$file}) {
+	print h3(a{-name=>$anchor,-href=>$link},$name);
+	print blockquote('Please activate this track in order to view its information');
+	next;
+      }
+      print h4(a{-name=>$anchor,-href=>$link},$name);
+      for my $feature ($external_features->{$file}->types) {
+	push @citations,make_citation($external_features->{$file},$feature);
+      }
+      print blockquote(dl(@citations));
+    }
+    print p("No external features loaded.") unless @citations;
+  }
+
+}
+
+sub make_citation {
+  my $config  = shift;
+  my $feature = shift;
+  my $citation = $config->citation($feature);
+  # BUG: here's where we should remove "bad" HTML, but we don't!
+  # should remove active content and other nasties
+  (my $link     = $feature) =~ tr/ /-/;
+  my $text      = $config->setting($feature=>'key') || $feature;
+  return join ('',
+	       dt(a({-name=>$link},b($text))),
+	       dd($citation||'No additional information available'),
+	       p());
+}
+
+sub build_help_page {
+  my $helpfile = shift or return;
+  my $file = $ENV{MOD_PERL} ? Apache->request->lookup_uri($helpfile)->filename
+                            : "$ENV{DOCUMENT_ROOT}/$helpfile";
+  my $root = $CONFIG->setting('help') || GBROWSE_HELP;
+  my $url  = url(-relative=>1);
+  open(F,$file) or return;
+  while (<F>) { # fix up relative addressing of images
+    s/(src|href)=\"([^\"\#\$]+)\"/$1=\"$root\/$2\"/g;
+    s/<!--\s*\#include-classes\s*-->/object_classes_for_help()/e;
+    s/href=\"\$GBROWSE/href=\"$url/g;
+    print;
+  }
+  close F;
+}
+
+# get list of object types for help pages
+sub object_classes_for_help {
+  return $OBJECT_TYPES{$CONFIG->source} if exists $OBJECT_TYPES{$CONFIG->source};
+  my $db = open_database();
+  my @classes = eval {$db->classes};
+  return $OBJECT_TYPES{$CONFIG->source} = undef unless @classes;
+  return $OBJECT_TYPES{$CONFIG->source} = ul(li(\@classes));
+}
+
+# Create a link to a citation.  It will point to an external URL if the
+# citation looks like a URL (starts with http: or ftp:).  It will be
+# self-referential otherwise.
+
+# The persistent problem here is that the regular features are cited on a
+# feature-by-feature basis, while the uploaded/external ones are cited as
+# a group.  This makes for ugly logic branches.
+sub make_citation_link {
+  my ($label,$self_url)   = @_;
+  my $key = $label;
+  my $link;
+  if ($label =~ /^plugin:/) {
+    $link = url(-relative=>1) . "?plugin_action=About...;plugin=$PLUGIN_NAME2LABEL{$label}";
+  } else {
+    $PRESETS ||= get_external_presets || {};
+    $key      = $CONFIG->setting($label=>'key') || $PRESETS->{$key} || $label;
+    (my $anchor  = $label) =~ tr/ /-/;
+    $link = $self_url.'#'.escapeHTML($anchor);
+  }
+  my $style = $label =~ /^(http|ftp|file):/ ? 'Font-style: italic' : '';
+  return a({-href=>$link,-target=>'citation',-style=>$style},$key);
+}
+
+### PLUGINS ###################################################################################
+###############################################################################################
+sub initialize_plugins {
+  my $path = shift;
+  my %plugin_list = ();
+
+  my $plugins = "$path/plugins";
+  warn "initializing plugins..." if DEBUG_PLUGINS;
+
+  croak("$plugins: not a directory") unless -d $plugins;
+  opendir(D,$plugins) or croak "Couldn't open $plugins: $!";
+  my @plugins = map { "$plugins/$_" } grep {/\.pm$/} readdir(D);
+  close D;
+
+  # try to work around a bug in Apache/mod_perl which appears when
+  # running under linux/glibc 2.2.1
+  unless (@plugins) {
+    @plugins = glob("$plugins/*.pm");
+  }
+
+  for my $plugin (@plugins) {
+    my $base = basename($plugin,'.pm');
+    my $class = "Bio\:\:Graphics\:\:Browser\:\:Plugin\:\:$base";
+    if (eval {require $plugin}) {
+      warn "plugin $base loaded successfully" if DEBUG_PLUGINS;
+      my $obj = $class->new;
+      warn "plugin name = ",$obj->name," base = $base" if DEBUG_PLUGINS;
+      $plugin_list{$base} = $obj;
+    } else {
+      warn $@ if $@;
+    }
+  }
+  return \%plugin_list;
+}
+
+sub configure_plugins {
+  my ($plugins,$settings,$db,$conf,$conf_dir) = @_;
+  for my $name (keys %$plugins) {
+    my $p = $plugins->{$name};
+    $p->database($db);
+    $p->browser_config($conf);
+    $p->config_path($conf_dir);
+    $p->page_settings($settings);
+    $p->init();  # other initialization
+
+    # retrieve persistent configuration
+    my $config = retrieve_plugin_config($p);
+    # and tell the plugin about it
+    $p->configuration($config);
+
+    # if there are any CGI parameters from the
+    # plugin's configuration screen, set it here
+    my @params = grep {/^$name\./} param();
+    next unless @params;
+    $p->reconfigure unless param('plugin_action') eq 'Cancel';
+  }
+}
+
+sub plugin_and_data_source_table {
+  my ($settings,$plugins) = @_;
+  my $sources = $CONFIG->sources > 1;
+
+  my %verbs = (dumper    => 'Dump',
+	       finder    => 'Find',
+	       annotator => 'Annotate');
+  my %labels = map {$_=> ($verbs{$plugins->{$_}->type}
+			  ||
+			  $plugins->{$_}->type)
+		      .' '.$plugins->{$_}->name}
+    keys %$plugins;
+
+  my @plugins = sort {$labels{$a} cmp $labels{$b}} keys %labels;
+  my $table = table({-border=>0,-width=>$settings->{width}},
+		    TR({-class=>'searchtitle'},
+		       th({-align=>'left'},
+			  'Dumps, Searches and other Operations:'),
+		       $sources ? th({-align=>'left'},'Data Source:') : th('&nbsp;'),
+		      ),
+		    TR({-class=>'searchtitle'},
+		       td({-colspan=>1,-align=>'left'},
+			  popup_menu(-name=>'plugin',
+				     -values=>\@plugins,
+				     -labels=>\%labels,
+				     -default => $settings->{plugin},
+				    ),'&nbsp;',
+			  submit(-name=>'plugin_action',-value=>'About...'),'&nbsp;',
+			  submit(-name=>'plugin_action',-value=>'Configure...'),'&nbsp;',
+			  submit(-name=>'plugin_action',-value=>'Go!'),
+			 ),
+		       td({-colspan=>1,-align=>'left'},
+			  $sources ?
+			  popup_menu(-name   => 'source',
+				     -values => [sort $CONFIG->sources],
+				     -labels => { map {$_ => $CONFIG->description($_)} $CONFIG->sources},
+				     -default => $CONFIG->source,
+                                     -onChange => 'document.mainform.submit()',
+				    )
+			 : '&nbsp;')
+		      )
+		   );
+  $table;
+}
+
+sub do_plugin_header {
+  my $plugin        = shift;
+  my $page_settings = shift;
+  my $mime_type     = $PLUGINS->{$plugin}->mime_type;
+  my @cookies       = plugins2cookies({$plugin => $PLUGINS->{$plugin}});
+  print header(-cookie => \@cookies,-type=>$mime_type) unless $HEADER++;
+}
+
+sub do_plugin_dump {
+  my $plugin  = shift;
+  my $segment = shift;
+  my $p = $PLUGINS->{$plugin} or return;
+  $p->dump($segment);
+  return 1;
+}
+
+sub do_plugin_about {
+  my $plugin = shift;
+  warn "plugin = $plugin, but PLUGINS = ",join ' ',keys %$PLUGINS;
+  my $p = $PLUGINS->{$plugin};
+  print h1("About",$p->name);
+  print $p->description;
+  print start_form(),submit('Back to Browser'),hidden('plugin'),end_form();
+}
+
+sub do_plugin_find {
+  my ($settings,$plugin,$segments,$search_string) = @_;
+
+  my $p = $PLUGINS->{$plugin} or return;
+  my $plugin_name = $p->name;
+
+  my $results = $p->can('auto_find') && defined $search_string
+    ? $p->auto_find($search_string) : $p->find($segments);
+  return unless $results;  # reconfigure message
+
+  @$segments = @$results;
+  $settings->{name} = defined($search_string) ? "$search_string (via $plugin_name search)"
+                                              : "&lt;$plugin_name search&gt;";
+  # remember the search
+  write_auto($settings,$results);
+  1; # return a true result to indicate that we don't need further configuration
+}
+
+sub do_plugin_configure {
+  my $plugin = shift;
+  my $p = $PLUGINS->{$plugin} or return;
+  my $type = $p->type;
+  my @action_labels = ('Cancel','Configure');
+  push @action_labels,'Find' if $type eq 'finder';
+  push @action_labels,'Go!'  if $type eq 'dumper';
+  my @buttons = map {submit(-name=>'plugin_action',-value=>$_)} @action_labels;
+
+  print h1($p->type eq 'finder' ? 'Find' : 'Configure',$p->name);
+  my $config_html = $p->configure_form;
+
+  print start_form(),
+    $config_html ? (
+		    $config_html,p(),
+		    join ('&nbsp;',
+			  @buttons[0..@buttons-2],
+			  b($buttons[-1]),
+			  ),
+		    # This is an insurance policy in case user hits return in text field
+		    # in which case the plugin_action is not going to be defined
+		    hidden(-name=>'plugin_action',-value=>$action_labels[-1],-override=>1),
+		   )
+                 : ( p('This plugin has no extra configuration settings.'),
+		     b(submit('Back to Browser'))
+		   ),
+     hidden('plugin'),
+     end_form();
+}
+
+# invoke any finder plugins that define the auto_find() method
+sub do_plugin_autofind {
+  my ($settings,$segments) = @_;
+
+  for my $p (keys %$PLUGINS) {
+    next unless $PLUGINS->{$p}->type eq 'finder' && $PLUGINS->{$p}->can('auto_find');
+    do_plugin_find($settings,$p,$segments,$settings->{name});
+    last if @$segments;
+  }
+}
+
+sub retrieve_plugin_config {
+  my $plugin = shift;
+  my $name   = $plugin->name;
+  my %settings = cookie("${name}_config");
+  return $plugin->config_defaults unless %settings;
+  foreach (keys %settings) {
+    # need better serialization than this...
+    if ($settings{$_} =~ /$;/) {
+      my @settings = split $;,$settings{$_};
+      pop @settings unless defined $settings[-1];
+      $settings{$_} = \@settings;
+    }
+  }
+  \%settings;
+}
+
+sub plugins2cookies {
+  my $plugins = shift;
+  my @cookies;
+  for my $plugin (values %$plugins) {
+    my $name = $plugin->name;
+    warn "plugins2cookies for $plugin\n" if DEBUG_PLUGINS;
+    my $conf = $plugin->configuration or next;
+    my %conf = %$conf;
+
+    # we need a better serialization than this...
+    for my $key (keys %conf) {
+      if (ref $conf{$key} eq 'ARRAY') {
+	$conf{$key}  = join $;,@{$conf{$key}};
+	$conf{$key} .= $; unless $conf{$key} =~ /$;/;
+      }
+    }
+    push @cookies,cookie(-name    => "${name}_config",
+			 -value   => \%conf,
+			 -expires => '+3M');
+  }
+  warn "plugin cookies = @cookies" if DEBUG_PLUGINS;
+  @cookies;
+}
+
+sub tableize {
+  my $array = shift;
+  return unless @$array;
+  my $rows    = int(sqrt(@$array));
+  my $columns = int(0.99+@$array/$rows);
+  my $html = qq(<table border="1">);
+  for (my $row=0;$row<$rows;$row++) {
+    $html .= "<tr>";
+    for (my $column=0;$column<$columns;$column++) {
+      $html .= "<td>" . $array->[$column*$rows + $row] . "</td>"
+	if defined($array->[$column*$rows + $row]);
+    }
+    $html .= "</tr>\n";
+  }
+  $html .= "</table>\n";
+}
+
+sub footer {
+  ## FOOTER
+  print
+    $CONFIG->footer || '',
+      p(i(font({-size=>'small'},
+	       'Note: This page uses cookie to save and restore preference information.',
+	       'No information is shared.')),br,
+       tt(font({-size=>'small'},"Generic genome browser version $VERSION"))),
+       end_html;
+}
+
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

@@ -58,6 +58,14 @@ psql shell grant select permissions:
   GRANT SELECT ON cvterm               TO nobody;
   GRANT SELECT ON feature_relationship TO nobody;
   GRANT SELECT ON cv                   TO nobody;
+  GRANT SELECT ON gffatts              TO nobody;
+  GRANT SELECT ON feature_cvterm       TO nobody;
+  GRANT SELECT ON feature_gcontext     TO nobody;
+  GRANT SELECT ON gcontext             TO nobody;
+  GRANT SELECT ON featureprop          TO nobody;
+  GRANT SELECT ON pub                  TO nobody;
+  GRANT SELECT ON feature_pub          TO nobody;
+  GRANT SELECT ON db                   TO nobody;
 
 If you encounter any bugs or problems with this chado adaptor, please
 let me know.

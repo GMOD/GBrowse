@@ -185,10 +185,13 @@ sub get_genbank {
   my ($db,$hash) = @_;   # hash keys are cosmid names, values are genbank accessions (1 to 1)
   my @cosmids = $db->fetch(-query=>'find Genome_Sequence Database',-filltag=>'Database');
   for my $cosmid (@cosmids) {
-    my ($database,undef,$accession) = $cosmid->Database(1)->row;
-    next unless $accession;
-    next unless $namespace eq 'NDB_AC';
-    $hash->{$cosmid} = $accession;
+    my @dbs = $cosmid->Database;
+    foreach (@dbs) {
+      foreach my $col ($_->col) {
+	next unless $col eq 'NDB_AC';
+	$hash->{$cosmid} = $col->right;
+      }
+    }
   }
 }
 

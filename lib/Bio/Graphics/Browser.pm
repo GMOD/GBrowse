@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.73 2003-06-07 03:32:41 lstein Exp $
+# $Id: Browser.pm,v 1.74 2003-06-12 16:21:28 scottcain Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1634,8 +1634,8 @@ sub make_link {
     my $c     = $feature->seq_id;
     my $name  = CGI::escape("$n");  # workaround CGI.pm bug
     my $class = eval {CGI::escape($feature->class)};
-    my $ref   = CGI::escape($feature->seq_id);
-    my $start = CGI::escape("$c");  # workaround again
+    my $ref   = CGI::escape("$c");  # workaround again
+    my $start = CGI::escape($feature->start);  
     my $end   = CGI::escape($feature->end);
     my $src   = CGI::escape($source);
     return "gbrowse_details?src=$src;name=$name;class=$class;ref=$ref;start=$start;end=$end";

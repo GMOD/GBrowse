@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.18 2003-03-07 20:36:08 scottcain Exp $
+# $Id: Chado.pm,v 1.19 2003-04-09 03:57:03 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -49,6 +49,27 @@ of it.  It is still somewhat of a moving target, so this package will
 probably require several updates over the coming months to keep it working.
 
 =head2 CAVEATS
+
+Database commands that are needed for the Chado modules to work with
+gbrowse:
+
+  CREATE TABLE gbrowse_assembly AS SELECT * FROM feature
+     WHERE type_id = <id of scaffold>;
+  CREATE USER (apache|nobody);
+  GRANT SELECT ON feature_synonym      TO (apache|nobody);
+  GRANT SELECT ON synonym              TO (apache|nobody);
+  GRANT SELECT ON feature_dbxref       TO (apache|nobody);
+  GRANT SELECT ON dbxref               TO (apache|nobody);
+  GRANT SELECT ON feature              TO (apache|nobody);
+  GRANT SELECT ON featureloc           TO (apache|nobody);
+  GRANT SELECT ON cvterm               TO (apache|nobody);
+  GRANT SELECT ON feature_relationship TO (apache|nobody);
+  GRANT SELECT ON gbrowse_assembly     TO (apache|nobody);
+
+Note that gbrowse_assembly is a hack table that will not be
+required in future versions of this adaptor.  For granting
+permissions, use either apache or nobody depending on which
+user owns the httpd process.
 
 =head1 FEEDBACK
 

@@ -72,7 +72,6 @@ lib/Bio/DB/GFF/Aggregator/wormbase_gene.pm
 lib/Bio/Graphics/Browser.pm
 lib/Bio/Graphics/Browser/Plugin.pm
 lib/Bio/Graphics/Glyph/drosophila_arrow.pm
-lib/Bio/Graphics/Glyph/heterogeneous_segments.pm
 lib/Bio/Graphics/Glyph/wormbase_transcript.pm
 lib/Bio/Graphics/Glyph/phased_exons.pm
 sample_data/yeast_data.gff

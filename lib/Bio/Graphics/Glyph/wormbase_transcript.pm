@@ -55,7 +55,7 @@ sub _subseq {
   my $feature = shift;
   if ($feature->can('segments')) {
     my @a = $feature->segments;
-    return @a;
+    return sort {$a->start<=>$b->start} @a;
   }
   return $class->SUPER::_subseq($feature);
 }

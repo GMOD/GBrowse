@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.34 2002-05-24 00:38:58 lstein Exp $
+# $Id: gbrowse.PLS,v 1.35 2002-05-24 03:00:22 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -604,7 +604,7 @@ sub navigation_table {
 			'To save this view,',a({-href=>bookmark_link($settings)},'bookmark this link.')
 		       )),
 		  TR({-class=>'searchtitle', -align=>'left'},
-		     td({-class=>'searchtitle',-colspan=>$segment ? 1 : 2}, b('Landmark or Region'),
+		     td({-class=>'searchtitle'}, b('Landmark or Region'),
 			textfield(-name=>'name',-size=>28),
 			submit(-name=>'Go')),
 		     td({-align=>'LEFT'},

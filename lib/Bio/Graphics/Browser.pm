@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.21 2002-06-03 01:37:22 lstein Exp $
+# $Id: Browser.pm,v 1.22 2002-06-12 21:06:45 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -226,10 +226,12 @@ idiom:
 
 sub setting {
   my $self = shift;
-  if (@_ == 1) {
-    unshift @_,'general';
+  my @args = @_;
+  if (@args == 1) {
+    unshift @args,'general';
   } else {
-    $_[0] = 'general' if lc($_[0]) eq 'general';  # buglet
+    $args[0] = 'general' 
+      if $args[0] ne 'general' && lc($args[0]) eq 'general';  # buglet
   }
   $self->config->setting(@_);
 }

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.42 2002-10-08 20:23:08 lstein Exp $
+# $Id: Browser.pm,v 1.43 2002-10-25 21:54:09 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -447,7 +447,11 @@ page.
 sub header {
   my $self = shift;
   my $header = $self->config->code_setting(general => 'header');
-  return $header->(@_) if ref $header eq 'CODE';
+  if (ref $header eq 'CODE') {
+    my $h = eval{$header->(@_)};
+    warn $@ if $@;
+    return $h;
+  }
   return $header;
 }
 
@@ -463,7 +467,11 @@ page.
 sub footer {
   my $self = shift;
   my $footer = $self->config->code_setting(general => 'footer');
-  return $footer->(@_) if ref $footer eq 'CODE';
+  if (ref $footer eq 'CODE') {
+    my $f = eval {$footer->(@_)};
+    warn $@ if $@;
+    return $f;
+  }
   return $footer;
 }
 
@@ -1492,7 +1500,11 @@ sub make_link {
   my $link     = $self->code_setting($label,'link');
   $link        = $self->code_setting(general=>'link') unless defined $link;
   return unless $link;
-  return $link->($feature,$panel) if ref($link) eq 'CODE';
+  if (ref($link) eq 'CODE') {
+    my $val = eval {$link->($feature,$panel)};
+    warn $@ if $@;
+    return $val;
+  }
   return $self->link_pattern($link,$feature);
 }
 
@@ -1509,7 +1521,10 @@ sub make_title {
     $key         =~ s/s$//;
     my $link     = $self->code_setting($label,'title') || $self->code_setting(general=>'title');
     $link or last TRY;
-    $title       = $link->($feature,$panel) if ref($link) eq 'CODE';
+    if (ref($link) eq 'CODE') {
+      $title       = eval {$link->($feature,$panel)};
+      warn $@ if $@;
+    }
     $title     ||= $self->link_pattern($link,$feature);
   }
   return $title if $title;

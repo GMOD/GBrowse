@@ -157,6 +157,11 @@ Synopsis:
 
 Details:
 
+Note for RedHat Linux users: note that if you are using the default installed
+Apache, the user that apache runs as is 'apache' as opposed to the otherwise
+standard 'nobody'.  Therefore, everywhere 'nobody' occurs in these directions,
+replace it with 'apache'.
+
 You will need a MySQL database in order to start using GBrowse.  Using the
 mysql command line, create a database (called "yeast" in the synopsis
 above), and ensure that you have update and file privileges on it.

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.129 2004-03-18 18:37:48 scottcain Exp $
+# $Id: Browser.pm,v 1.130 2004-03-18 20:13:11 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1423,14 +1423,12 @@ sub _feature_get {
     my $type    = $_->type;
     my $method  = eval {$_->method} || '';
     my $fclass  = eval {$_->class}  || '';
-    $type eq 'Segment' 
-      || $types->{$type} 
-	|| $types->{$method} 
-	  || $fclass eq $refclass 
+    $type eq 'Segment'
+      || $types->{$type}
+	|| $types->{$method}
+	  || $fclass eq $refclass
 	    || $fclass eq $class;
   } @segments;
-
-  #warn "segments = @segments, filtered= @filtered";
 
   # Return appropriately filtered features
   return @filtered;
@@ -1448,7 +1446,7 @@ sub get_ranges {
     return map {$_ * $divisor} split /\s+/,$rangestr;
   }
 }
-                                                                                
+
 sub get_max_segment {
   my $self = shift;
   my $divisor   = $self->setting('unit_divider') || 1;
@@ -1480,8 +1478,7 @@ sub _all_types {
   my $db    = shift;
   return $self->{_all_types} if exists $self->{_all_types}; # memoize
   my %types = map {$_=>1} map {$self->label2type($_)} $self->labels;
-  # load aggregator types too
-  $types{$_->method}++ foreach eval {$db->aggregators};
+  $types{$_->method}++ foreach grep {defined $_->method} eval {$db->aggregators};
   return $self->{_all_types} = \%types;
 }
 

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.17 2002-04-08 22:22:00 lstein Exp $
+# $Id: Browser.pm,v 1.18 2002-04-15 21:59:42 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
@@ -457,8 +457,9 @@ sub overview {
 
   if (my $landmarks  = $self->setting('overview landmarks')
       || ($conf->label2type('overview'))[0]) {
+    my $max_label  = $conf->setting(general=>'label density') || 10;
     my $max_bump   = $conf->setting(general=>'bump density') || 50;
-
+    
     my @types = split /\s+/,$landmarks;
     my $track = $panel->add_track(-glyph  => 'generic',
 				  -height  => 3,
@@ -472,8 +473,10 @@ sub overview {
       $track->add_feature($feature);
       $count++;
     }
-    $track->configure(-bump  => $count <= $max_bump,
-		      -label => $count <= $max_bump
+    my $bump  = defined $conf->setting(overview=>'bump')  ? $conf->setting(overview=>'bump') : $count <= $max_bump;
+    my $label = defined $conf->setting(overview=>'label') ? $conf->setting(overview=>'label') : $count <= $max_label;
+    $track->configure(-bump  => $bump,
+		      -label => $label,
 		     );
   }
 

@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.109.2.3 2004-09-18 03:48:07 allenday Exp $
+# $Id: gbrowse.PLS,v 1.109.2.4 2004-09-18 05:41:14 allenday Exp $
 
 use strict;
 use Bio::Graphics;
@@ -480,19 +480,22 @@ sub detail_panel {
   my ($img,$map);
   my $cell = '';
 
-  if ($segment->length <= $MAX_SEGMENT) {
+  warn $segment if DEBUG;
+  warn $page_settings if DEBUG;
+  warn $feature_files if DEBUG;
 
+  if ($segment->length <= $MAX_SEGMENT) {
     # this is invoked to force small segments to be larger than the minimum size that can
     # easily be displayed.  Avoids zooming into 1 bp features like SNPs.
     resize(\$segment);
-
     $CONFIG->width($page_settings->{width});
     my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} && !/:overview$/ }
                                @{$page_settings->{tracks}};
     my %options = map {$_=>$page_settings->{features}{$_}{options}} @tracks_to_show;
     my %limit   = map {$_=>$page_settings->{features}{$_}{limit}}   @tracks_to_show;
     my $h_callback = make_hilite_callback($page_settings);
-    ($img,$map) = $CONFIG->render_html(segment       => $segment,
+    ($img,$map) = $CONFIG->render_html(
+                       segment       => $segment,
 				       feature_files => $feature_files,
 				       tracks        => \@tracks_to_show,
 				       options       => \%options,

@@ -846,23 +846,23 @@ sub sub_SeqFeature {
 
   #first call, cache subfeatures
   if(!$self->subfeatures ){
-
     my $parent_id = $self->feature_id();
-
     my $typewhere = '';
     if ($type) {
       $type = lc $type;
-      $typewhere = " and child.type_id = ".$self->factory->name2term($type) ;
+      $typewhere = " and child.type_id = ".$self->factory->map2type($type)->cvterm_id;
     }
 
     my $handle = $self->factory->dbh();
-
     $self->factory->dbh->trace(2) if DEBUG;
 
-    my $partof =  $self->factory->name2term('part_of');
+    warn $self->factory if DEBUG;
+    warn $self->factory->map2type('part_of') if DEBUG;
+    warn $self->factory->map2type('part_of')->cvterm_id if DEBUG;
+
+    my $partof =  $self->factory->map2type('part_of')->cvterm_id;
     $self->throw("part_of cvterm wasn't found.  is DB sane?") unless $partof;
     $partof = join ',', @$partof if ref($partof) eq 'ARRAY';
-
     warn "partof = $partof" if DEBUG;
 
     my $sql = "
@@ -914,7 +914,7 @@ sub sub_SeqFeature {
                     $self,
                     $self->ref,
                     $base_start,$stop,
-                    $self->factory->term2name($$hashref{type_id}),
+                    $self->factory->map2type($$hashref{type_id})->name,
                     $$hashref{strand},
                     $$hashref{phase},
                     $$hashref{name},
@@ -957,7 +957,7 @@ sub add_subfeature {
   my $self    = shift;
   my $subfeature = shift;
 
-   #  warn "in add_subfeat:$subfeature";
+  warn "in add_subfeat:$subfeature" if DEBUG;
 
   return undef unless ref($subfeature);
   return undef unless $subfeature->isa('Bio::DB::Das::Chado::Segment::Feature');

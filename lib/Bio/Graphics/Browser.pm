@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.161 2004-09-06 20:51:02 lstein Exp $
+# $Id: Browser.pm,v 1.161.2.1 2004-09-18 05:41:16 allenday Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -730,7 +730,9 @@ sub render_html {
     $self->_load_aggregator_types($segment);
     $img_map = $self->make_map($map,$do_centering_map,$panel,$tracks)
   }
+
   eval {$panel->finished};  # should quash memory leaks when used in conjunction with bioperl 1.4
+
   return wantarray ? ($img,$img_map) : join "<br>",$img,$img_map;
 }
 
@@ -1096,31 +1098,30 @@ sub image_and_map {
     while (my $feature = $iterator->next_seq) {
 
       warn "next feature = $feature, type = ",$feature->type,' method = ',$feature->method,
-	' start = ',$feature->start,' end = ',$feature->end,"\n" if DEBUG;
+        ' start = ',$feature->start,' end = ',$feature->end,"\n" if DEBUG;
 
       # allow a single feature to live in multiple tracks
       for my $label ($self->feature2label($feature,$length)) {
-	my $track = $tracks{$label}  or next;
-	$filters{$label}->($feature) or next;
+        my $track = $tracks{$label}  or next;
+        $filters{$label}->($feature) or next;
 
-	warn "feature = $feature, label = $label, track = $track\n" if DEBUG;
+        warn "feature = $feature, label = $label, track = $track\n" if DEBUG;
 
-	$feature_count{$label}++;
+        $feature_count{$label}++;
 
-	# Handle name-based groupings.  Since this occurs for every feature
-	# we cache the pattern data.
-	warn "$track group pattern => ",$conf->code_setting($label => 'group_pattern') if DEBUG;
-	exists $group_pattern{$label} or $group_pattern{$label} = $conf->code_setting($label => 'group_pattern');
-	
-	if (defined $group_pattern{$label}) {
-	  push @{$groups{$label}},$feature;
-	  next;
-	}
+        # Handle name-based groupings.  Since this occurs for every feature
+        # we cache the pattern data.
+        warn "$track group pattern => ",$conf->code_setting($label => 'group_pattern') if DEBUG;
+        exists $group_pattern{$label} or $group_pattern{$label} = $conf->code_setting($label => 'group_pattern');
 
-	$track->add_feature($feature);
+        if (defined $group_pattern{$label}) {
+          push @{$groups{$label}},$feature;
+          next;
+        }
+        warn $track if DEBUG;
+        $track->add_feature($feature);
       }
     }
-
     # handle pattern-based group matches
      for my $label (keys %groups) {
        my $set     = $groups{$label};
@@ -1136,7 +1137,6 @@ sub image_and_map {
 	 $track->add_group($_);
        }
      }
-
     # configure the tracks based on their counts
     for my $label (keys %tracks) {
       next unless $feature_count{$label};
@@ -1159,7 +1159,6 @@ sub image_and_map {
 	if $limit->{$label} && $limit->{$label} > 0;
     }
   }
-
   # add additional features, if any
   my $offset = 0;
   for my $track (@blank_tracks) {
@@ -1173,6 +1172,7 @@ sub image_and_map {
   }
 
   my $gd = $panel->gd;
+
   if ($title) {
     my $x = ($width - length($title) * $image_class->gdMediumBoldFont->width)/2;
     $gd->string($image_class->gdMediumBoldFont,$x,0,$title,$panel->translate_color('black'));

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.76 2004-09-05 04:36:02 allenday Exp $
+# $Id: Segment.pm,v 1.76.2.1 2004-09-18 05:41:15 allenday Exp $
 
 =head1 NAME
 
@@ -207,7 +207,7 @@ sub new {
             $name = $$hash_ref{'name'};
 
             my $length = $$hash_ref{'seqlen'};
-            my $type   = $factory->term2name( $$hash_ref{'type_id'} );
+            my $type   = $factory->map2type( $$hash_ref{'type_id'} )->name;
 
             if ( $$hash_ref{'fmin'} ) {
                 $interbase_start = $$hash_ref{'fmin'};
@@ -632,7 +632,7 @@ sub features {
           $temp_source = $2;
       }
 
-      $valid_type = $factory->name2term($temp_type);
+      $valid_type = $factory->map2type($temp_type)->cvterm_id;
       $self->throw("feature type: '$temp_type' is not recognized") unless $valid_type;
 
       my $temp_dbxref = $factory->source2dbxref($temp_source);
@@ -653,7 +653,7 @@ sub features {
           }
           warn "more types:$$types[$i]\n" if DEBUG; 
 
-          $valid_type = $factory->name2term($temp_type);
+          $valid_type = $factory->map2type($temp_type)->cvterm_id;
           $self->throw("feature type: '$temp_type' is not recognized") unless $valid_type;
 
           $temp_dbxref=$factory->source2dbxref($temp_source);
@@ -734,7 +734,7 @@ sub features {
     my $base_start      = $interbase_start +1;
 
     my $source = $factory->dbxref2source($$hashref{dbxref_id}) || "" ;
-    my $type   = $factory->term2name($$hashref{type_id}). ":$source";
+    my $type   = $factory->map2type($$hashref{type_id})->name . ":$source";
 
     $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                        $factory,

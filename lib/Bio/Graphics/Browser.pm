@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.82 2003-07-01 02:22:22 lstein Exp $
+# $Id: Browser.pm,v 1.83 2003-07-12 02:53:07 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -153,7 +153,10 @@ Returns the directory path that this config is attached to.
 =cut
 
 sub dir {
-  shift->{dir};
+  my $self = shift;
+  my $d    = $self->{dir};
+  $self->{dir} = shift if @_;
+  $d;
 }
 
 =head2 sources()

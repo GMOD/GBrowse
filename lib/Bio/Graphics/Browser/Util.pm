@@ -110,6 +110,7 @@ sub open_config {
   $LANG    ||= Bio::Graphics::Browser::I18n->new("$dir/languages");
   set_language($CONFIG,$LANG);
   $CONFIG->language($LANG);
+  $CONFIG->dir($dir);
 
   # initialize some variables
   $HEADER=0;
@@ -125,8 +126,9 @@ sub open_database {
   my ($adaptor,@argv) = eval{$config->db_settings};
   unless ($adaptor) {
     warn "gbrowse: trying to reload config, cache must be stale";
+    my $dir = $config->dir;
     $config = Bio::Graphics::Browser->new;
-    $config->read_configuration($config->dir) or fatal_error("Can't read configuration files: $!");
+    $config->read_configuration($dir) or fatal_error("Can't read configuration files: $!");
     $config->source($source);
     ($adaptor,@argv) = $config->db_settings;
   }

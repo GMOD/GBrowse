@@ -45,7 +45,7 @@ $startperl -w
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.7 2003-06-27 00:27:02 lstein Exp $
+# $Id: gbrowse.PLS,v 1.8 2003-07-12 02:53:07 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2093,9 +2093,10 @@ sub make_citation_link {
   my ($label,$self_url)   = @_;
   my ($link,$key);
   if ($label =~ /^plugin:/) {
-    $key = $label;
-    my $about = escape($CONFIG->tr('About'));
-    $link = url(-relative=>1) . "?plugin_action=$about;plugin=$PLUGIN_NAME2LABEL{$label}";
+    $key = $label || '';
+    my $about = escape($CONFIG->tr('About')) || '';
+    my $plugin = $PLUGIN_NAME2LABEL{$label} ? ";plugin=$PLUGIN_NAME2LABEL{$label}" : '';
+    $link = url(-relative=>1) . "?plugin_action=${about}${plugin}";
   } else {
     $key = label2key($label);
     (my $anchor  = $label) =~ tr/ /-/;

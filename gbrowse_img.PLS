@@ -41,7 +41,7 @@ $Config{startperl} -w
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbrowse_img.PLS,v 1.4 2002-05-08 04:17:52 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.5 2002-05-08 04:23:39 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1);
@@ -434,7 +434,7 @@ separated by semicolons (preferred) or by ampersands.
 <p>
 Putting it all together, here's a working (very long) URL:
 <pre>
-http://www.wormbase.org/db/seq/gbrowse_img?name=B0001;source=wormbase;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1
+<a href="http://www.wormbase.org/db/seq/gbrowse_img?name=B0001;source=wormbase;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/db/seq/gbrowse_img?name=B0001;source=wormbase;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
 </pre>
 
 

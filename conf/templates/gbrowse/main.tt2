@@ -1,0 +1,5 @@
+[% PROCESS "navigationtable.tt2" %]
+<form name="externalform" encoding="multipart/form-data"><p/>
+[% PROCESS "uploadtable.tt2"     %]<p/>
+[% #PROCESS "externaltable.tt2"   %]
+</form>

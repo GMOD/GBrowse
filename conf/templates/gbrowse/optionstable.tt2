@@ -1,0 +1,35 @@
+<table border="0" width="100%" class="settingsbody">
+  <tr>
+
+    <!-- IMAGE WIDTH -->
+    <td>
+      <b>[% browser.translate('image_width') %]</b><br/>
+      [% FOREACH width = browser.config.setting('image widths') %]
+      <input type="radio" name="width" value="[% width %]" [% IF(width == browser.options.width) ; 'selected="selected"' ; END %]>[% width %]</width>
+      [% END %]
+    </td>
+
+    <!-- KEY POSITION -->
+    <td>
+      <b>[% browser.translate('key_position') %]</b><br/>
+      <input type="radio" name="ks" value="between">[% browser.translate('between') %]</input>
+      <input type="radio" name="ks" value="bottom" >[% browser.translate('bottom')  %]</input>
+
+      <!-- need to check if Bio::Graphics::Panel->can('auto_pad') allows these -->
+      <input type="radio" name="ks" value="left"   >[% browser.translate('left')    %]</input>
+      <input type="radio" name="ks" value="right"  >[% browser.translate('right')   %]</input>
+      <!-- end check -->
+    </td>
+
+    <!-- TRACK NAMES -->
+    <td>
+      <b>[% browser.translate('track_names') %]</b><br/>
+      <input type="radio" name="sk" value="sorted"   [% IF('sorted' == browser.options.sk)   ; 'selected="selected"' ; END %]>[% browser.translate('alphabetic') %]</input>
+      <input type="radio" name="sk" value="unsorted" [% IF('unsorted' == browser.options.sk) ; 'selected="selected"' ; END %]>[% browser.translate('varying')    %]</input>
+    </td>
+
+    <!-- BUTTONS -->
+    <td align="right">
+      <submit name="[% browser.translate('set_options') %]"/>&nbsp;<b><submit name="[% browser.translate('update') %]"/></b>
+    </td>
+</table>

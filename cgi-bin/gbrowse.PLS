@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.109.2.6 2004-10-04 05:32:52 allenday Exp $
+# $Id: gbrowse.PLS,v 1.109.2.7 2004-10-06 03:24:09 allenday Exp $
 
 use strict;
 use Bio::Graphics;
@@ -62,8 +62,9 @@ use File::Basename 'basename','dirname';
 use File::Spec;
 use Carp qw(:DEFAULT croak);
 #use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td);
-use CGI qw(cookie escapeHTML param path_info request_method);
+use CGI qw(cookie escapeHTML param path_info request_method url);
 use Template;
+use URI::Escape;
 use vars qw($MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $CONF_DIR
 	    $PLUGINS $PRESETS
@@ -122,7 +123,7 @@ sub main_display($$) {
 
   # first of all, if there are no segments, then try a keyword search and store the results
   if (@$segments == 0 && (my $n = $BROWSER->options->name())) {
-      error($BROWSER->config->translate('NOT_FOUND',escapeHTML($n)));
+      error($BROWSER->translate('NOT_FOUND',escapeHTML($n)));
   }
 
   # if there's a single segment, then print a message and store the segment into a scalar
@@ -136,7 +137,7 @@ sub main_display($$) {
        $seg_start = unit_label($seg_start);
        $seg_end   = unit_label($seg_end);
     }
-    print h2($BROWSER->config->translate('SHOWING_FROM_TO',
+    print h2($BROWSER->translate('SHOWING_FROM_TO',
 		       unit_label($segment->length),
 		       $segment->seq_id,
 		       commas($seg_start),
@@ -165,12 +166,76 @@ sub main_display($$) {
   # print the top of the form, with navigation bar, etc
   print navigation_table($segment,$segments,$features);
 
+
+################################
+
   my $feature_files = load_external_sources($segments);
 
-  print start_multipart_form(-name=>'externalform');
-  print p(),upload_table($feature_files);
-  print p(),external_table($feature_files);
-  print end_form();
+  my $oligo = $PLUGINS->{'OligoFinder'} ? ', oligonucleotide (15 bp minimum)' : '';
+
+  my %seen; #used to keep track of available ranges for display
+
+  my $param =
+  {
+    browser        => $BROWSER,
+    plugins        => $PLUGINS,
+
+    htmlfrag1      => html_frag('html1',$segment) || '',
+    htmlfrag2      => html_frag('html2',$segment) || '',
+    htmlfrag3      => html_frag('html3',$segment) || '',
+    htmlfrag4      => html_frag('html4',$segment) || '',
+    htmlfrag5      => html_frag('html5',$segment) || '',
+    htmlfrag6      => html_frag('html6',$segment) || '',
+
+#FIXME    tracks_table   => tracks_table($feature_files),
+
+    tr_examples                => show_examples() || '',
+
+    tr_toggle_head             => $BROWSER->translate($BROWSER->options->head() ? 'HIDE_HEADER' : 'SHOW_HEADER') || '',
+    tr_toggle_instructions     => $BROWSER->translate($BROWSER->options->ins()  ? 'HIDE_INSTRUCTIONS' : 'SHOW_INSTRUCTIONS') || '',
+
+    link_bookmark              => bookmark_link(),
+    link_image                 => image_link(),
+    link_svg                   => svg_link(),
+    link_help                  => "?help=general",
+
+    hide_ins   => $BROWSER->options->ins()  || 0,
+    name       => $BROWSER->options->name() || '',
+    ref        => $BROWSER->options->ref()  || '',
+    rand       => substr(md5_hex(rand),0,5),
+
+    action     => $BROWSER->config->source() ? url()."/".$BROWSER->config->source : url(),
+
+    segment    => $segment,
+    prevname   => scalar(param('name')),
+    finezoom   => get_zoomincrement(),
+    buttonsdir => $BROWSER->config->setting('buttons'),
+
+#FIXME    multiple_segments => multiple_choices($features),
+#FIXME    overview_panel    => overview_panel($segment),
+#FIXME    detail_panel      => detail_panel_with_timeout($segment,$feature_files),
+  };
+
+  if($segment){
+    $param->{ranges}     = [ grep {!$seen{$_}++} sort {$b<=>$a} $segment->length,get_ranges() ];
+    $param->{halftitle}  = unit_label(int($segment->length/2));
+    $param->{fulltitle}  = unit_label($segment->length);
+    $param->{half}       = int($segment->length/2);
+    $param->{full}       = $segment->length;
+  }
+
+  my $show = $BROWSER->translate('Show');
+  my %range_labels = map {$_=>$show.' '.unit_label($_)} @{ $param->{ranges} };
+  $param->{range_labels} = \%range_labels;
+
+  my $table = undef;
+#  $template->process('navigationtable.tt2',$param,\$table);
+
+
+  $template->process('main.tt2',$param,\$table) or warn $template->error();
+  print $table;
+
+################################
 
   # clean us up
   foreach (values %$feature_files) {
@@ -198,7 +263,7 @@ sub detail_panel_with_timeout {
     };
     alarm(0);
     if ($@ =~ /^timeout/) {
-      return p(b(font({-size=>'+2'},$BROWSER->config->translate('TIMEOUT'))));
+      return p(b(font({-size=>'+2'},$BROWSER->translate('TIMEOUT'))));
     } else {
       return $data;
     }
@@ -240,7 +305,7 @@ sub detail_panel($$) {
   }
 
   else {
-    $cell .= i($BROWSER->config->translate('TOO_BIG',unit_label($MAX_SEGMENT),unit_label($DEFAULT_SEGMENT)));
+    $cell .= i($BROWSER->translate('TOO_BIG',unit_label($MAX_SEGMENT),unit_label($DEFAULT_SEGMENT)));
   }
   $cell .= "\n";
   my $table = table({-border=>0,-width=>'100%'},
@@ -313,76 +378,6 @@ sub auto_open($) {
 
 # prints the zooming and navigation bar
 sub navigation_table($$$) {
-  my $segment = shift;
-  my $features = shift;
-  my $segments = shift;
-
-  my $feature_files = load_external_sources($segments);
-
-  my $oligo = $PLUGINS->{'OligoFinder'} ? ', oligonucleotide (15 bp minimum)' : '';
-
-  my %seen; #used to keep track of available ranges for display
-
-  my $param =
-  {
-    browser         => $BROWSER,
-
-    htmlfrag1      => html_frag('html1',$segment) || '',
-    htmlfrag2      => html_frag('html2',$segment) || '',
-    htmlfrag3      => html_frag('html3',$segment) || '',
-    htmlfrag4      => html_frag('html4',$segment) || '',
-    htmlfrag5      => html_frag('html5',$segment) || '',
-    htmlfrag6      => html_frag('html6',$segment) || '',
-
-    source_menu    => source_menu(),
-    plugin_menu    => plugin_menu($PLUGINS),
-
-    tracks_table   => tracks_table($feature_files),
-    settings_table => settings_table(),
-
-    tr_examples                => show_examples() || '',
-
-    tr_toggle_head             => $BROWSER->config->translate($BROWSER->options->head() ? 'HIDE_HEADER' : 'SHOW_HEADER') || '',
-    tr_toggle_instructions     => $BROWSER->config->translate($BROWSER->options->ins()  ? 'HIDE_INSTRUCTIONS' : 'SHOW_INSTRUCTIONS') || '',
-
-    link_bookmark              => bookmark_link(),
-    link_image                 => image_link(),
-    link_svg                   => svg_link(),
-    link_help                  => "?help=general",
-
-    hide_ins   => !($BROWSER->options->ins())  || 0,
-    name       => $BROWSER->options->name() || '',
-    ref        => $BROWSER->options->ref()  || '',
-    rand       => substr(md5_hex(rand),0,5),
-
-    action     => $BROWSER->config->source() ? url()."/".$BROWSER->config->source : url(),
-
-    segment    => $segment,
-    prevname   => scalar(param('name')),
-    finezoom   => get_zoomincrement(),
-    buttonsdir => $BROWSER->config->setting('buttons'),
-
-    multiple_segments => multiple_choices($features),
-    overview_panel    => overview_panel($segment),
-    detail_panel      => detail_panel_with_timeout($segment,$feature_files),
-  };
-
-  if($segment){
-    $param->{ranges}     = [ grep {!$seen{$_}++} sort {$b<=>$a} $segment->length,get_ranges() ];
-    $param->{halftitle}  = unit_label(int($segment->length/2));
-    $param->{fulltitle}  = unit_label($segment->length);
-    $param->{half}       = int($segment->length/2);
-    $param->{full}       = $segment->length;
-  }
-
-  my $show = $BROWSER->config->translate('Show');
-  my %range_labels = map {$_=>$show.' '.unit_label($_)} @{ $param->{ranges} };
-  $param->{range_labels} = \%range_labels;
-
-  my $table = undef;
-  $template->process('navigationtable.tt2',$param,\$table);
-
-  return $table;
 }
 
 # this generates the callback for highlighting "interesting" features
@@ -478,9 +473,9 @@ sub tracks_table($) {
 		  $BROWSER->options->stp() ?
 		  (
 		   TR(	td({-class=>'searchbody', -valign=>'top',-align=>'left'},
-			   b($BROWSER->config->translate('Tracks')),a({-href=>"?stp=0"},'['.$BROWSER->config->translate('HIDE').']'),
-			   p(i($BROWSER->config->translate('External_tracks')),
-			     div({-style=>"background: $overview_color"},$BROWSER->config->translate('Overview_tracks'))
+			   b($BROWSER->translate('Tracks')),a({-href=>"?stp=0"},'['.$BROWSER->translate('HIDE').']'),
+			   p(i($BROWSER->translate('External_tracks')),
+			     div({-style=>"background: $overview_color"},$BROWSER->translate('Overview_tracks'))
 			    )),
 			td({-class=>'searchbody',-colspan=>3,-width=>'85%'},
 			   checkbox_group(-name=>'label',
@@ -494,105 +489,11 @@ sub tracks_table($) {
 					 ))),
 		  ) :
 		  TR(td({-class=>'searchbody',-colspan=>3},
-			b($BROWSER->config->translate('Tracks')),a({-href=>"?stp=1"},'['.$BROWSER->config->translate('SHOW').']'))
+			b($BROWSER->translate('Tracks')),a({-href=>"?stp=1"},'['.$BROWSER->translate('SHOW').']'))
 		    )
 		 );
   autoEscape(1);
   return $sTable;
-}
-
-sub settings_table() {
-
-  my @widths = split /\s+/,$BROWSER->config->setting('image widths');
-  @widths = (640,800,1024) unless @widths;
-  my @key_positions   = qw(between bottom);
-  push @key_positions,qw(left right) if Bio::Graphics::Panel->can('auto_pad');
-
-  return table({-border=>0,-width=>'100%',-class=>'settingsbody'},
-	       # row
-	       TR(
-		  td(
-		     b($BROWSER->config->translate('Image_width')),'<br/>',
-		     radio_group( -name=>'width',
-				  -values=>\@widths,
-				  -default=>$BROWSER->options->width(),
-				  -override=>1
-				),
-		    ),
-		  td(
-		     b($BROWSER->config->translate('KEY_POSITION')),'<br/>',
-		     radio_group( -name=>'ks',
-				  -values=>\@key_positions,
-				  -labels=>{between=>$BROWSER->config->translate('BETWEEN'),
-					    bottom =>$BROWSER->config->translate('BENEATH'),
- 					    left   =>$BROWSER->config->translate('LEFT'),
- 					    right  =>$BROWSER->config->translate('RIGHT'),
-					   },
-				  -default=>$BROWSER->options->ks(),
-				  -override=>1
-				),
-		    ),
-		  td(
-		     b($BROWSER->config->translate('TRACK_NAMES')),'<br/>',
-		     radio_group( -name=>'sk',
-				  -values=>['sorted','unsorted'],
-				  -labels=>{sorted   =>$BROWSER->config->translate('ALPHABETIC'),
-					    unsorted =>$BROWSER->config->translate('VARYING')},
-				  -default=>$BROWSER->options->sk(),
-				  -override=>1
-				),
-		    ),
-		  td({-align=>'right'},
-		     submit(-name => $BROWSER->config->translate('Set_options'))
-		     .'&nbsp;'.
-		     b(submit(-name => $BROWSER->config->translate('Update')))
-		    )
-		 ),
-	      );
-}
-
-sub upload_table($) {
-  my $feature_files = shift;
-
-  # start the table.
-  my $cTable = start_table({-border=>0,-width=>'100%'})
-    . TR(
-	 th({-class=>'uploadtitle', -colspan=>4, -align=>'left'},
-	    $BROWSER->config->translate('Upload_title').':',
-	    a({-href=>'?help=annotation',-target=>'help'},'['.$BROWSER->config->translate('HELP').']'))
-	);
-
-  # now add existing files
-  for my $filename ($BROWSER->options->tracks()) {
-    next unless $filename =~ /^file:/ && $feature_files->{$filename};
-    (my $file = $filename) =~ s/^file://;
-    my $name = escape($file);
-    my $download = escape($BROWSER->config->translate('Download_file'));
-    my $link = a({-href=>"?$download=$name"},"[$name]");
-    my @info =  get_uploaded_file_info($BROWSER->options->{features}{$filename}{visible}
-					 && $feature_files->{$filename});
-    $cTable .=  TR({-class=>'uploadbody'},
-		   th($link),
-		   td({-colspan=>3},
-		      submit(-name=>"modify.$file",-value=>$BROWSER->config->translate('Edit')).'&nbsp;'.
-		      submit(-name=>"modify.$file",-value=>$BROWSER->config->translate('Download_file')).'&nbsp;'.
-		      submit(-name=>"modify.$file",-value=>$BROWSER->config->translate('Delete'))));
-    $cTable .= TR({-class=>'uploadbody'},td('&nbsp;'),td({-colspan=>3},@info));
-  }
-
-  # end the table.
-  $cTable .= TR({-class=>'uploadbody'},
-		th({-align=>'right'},$BROWSER->config->translate('Upload_File')),
-		td({-colspan=>3},
-		   filefield(-size=>40,-name=>'upload_annotations'),
-		   '&nbsp;',
-		   submit(-name=>$BROWSER->config->translate('Upload')),
-		   '&nbsp;',
-		   submit(-name=>'new_upload',-value=>$BROWSER->config->translate('New')),
-		  )
-	       );
-  $cTable .= '</table>';
-  $cTable;
 }
 
 # URLs for external annotations
@@ -606,7 +507,7 @@ sub external_table($) {
     my %presets;
     @presets{@$preset_urls} = @$preset_labels;
     unshift @$preset_urls,'';
-    $presets{''} = $BROWSER->config->translate('PRESETS');
+    $presets{''} = $BROWSER->translate('PRESETS');
     $presets = popup_menu(-name   => 'eurl',
 			  -values => $preset_urls,
 			  -labels => \%presets,
@@ -627,24 +528,24 @@ sub external_table($) {
     warn "external_table(): filename = $filename" if DEBUG;
     push @rows,th({-align=>'right',-valign=>'TOP'},"URL",++$count).
       td(textfield(-name=>'eurl',-size=>50,-value=>$filename,-override=>1),'<br/>',
-	 a({-href=>$f,-target=>'help'},'['.$BROWSER->config->translate('Download').']'),
+	 a({-href=>$f,-target=>'help'},'['.$BROWSER->translate('Download').']'),
 	 get_uploaded_file_info($BROWSER->options->{features}{$filename}{visible} && $feature_files->{$filename})
 	);
   }
   push @rows,th({-align=>'right'},
-		$BROWSER->config->translate('Remote_url')).
+		$BROWSER->translate('Remote_url')).
 		  td(textfield(-name=>'eurl',-size=>40,-value=>'',-override=>1),
 		     $presets);
 
   return table({-border=>0,-width=>'100%'},
 	       TR({-class=>'uploadtitle'},
 		  th({-align=>'left',-colspan=>2},
-		     $BROWSER->config->translate('Remote_title').':',
-		     a({-href=>'?help=annotation'.'#remote',-target=>'help'},'['.$BROWSER->config->translate('Help').']'))),
+		     $BROWSER->translate('Remote_title').':',
+		     a({-href=>'?help=annotation'.'#remote',-target=>'help'},'['.$BROWSER->translate('Help').']'))),
 	       TR({-class=>'uploadbody'},\@rows),
 	       TR({-class=>'uploadbody'},
 		  th('&nbsp;'),
-		  th({-align=>'left'},submit($BROWSER->config->translate('Update_urls'))))
+		  th({-align=>'left'},submit($BROWSER->translate('Update_urls'))))
 	      );
 }
 
@@ -803,7 +704,7 @@ sub resize {
 
   # resize
   my $resize = ($s->length <= TINY_SEG_SIZE) ? EXPAND_SEG_SIZE : MIN_SEG_SIZE;
-  error($BROWSER->config->translate('Small_interval',$resize)); # error message
+  error($BROWSER->translate('Small_interval',$resize)); # error message
 
   my $middle = int(($s->start + $s->end)/2);
   my $new_seg = $s->factory->segment(-name  => $s->seq_id,
@@ -969,20 +870,20 @@ sub multiple_choices($) {
   my $overviews = $BROWSER->config->hits_on_overview($db,$results,$BROWSER->options->{features});
   my $count = @$results;
 
-  $result .= start_table();
+  $result .= '<table>';
   $result .= TR({-class=>'datatitle'},
 	   th({-colspan=>4},
-	      $BROWSER->config->translate('Hit_count',$count)));
+	      $BROWSER->translate('Hit_count',$count)));
   $result .= TR({-class=>'datatitle'},
 	   th({-colspan=>4},
-	      $BROWSER->config->translate('Possible_truncation',MAX_KEYWORD_RESULTS)))
+	      $BROWSER->translate('Possible_truncation',MAX_KEYWORD_RESULTS)))
     if $count >= MAX_KEYWORD_RESULTS;
 
   local $^W = 0;  # get rid of non-numeric warnings coming out of by_score_and_position
   for my $ref(sort keys %refs) {
     my ($id) = split /\s/, $ref; 
     my @results = @{$refs{$ref}};
-    $result .= TR(th({-class=>'databody',-colspan=>4,-align=>'center'},$BROWSER->config->translate('Matches_on_ref',$ref),'<br/>',
+    $result .= TR(th({-class=>'databody',-colspan=>4,-align=>'center'},$BROWSER->translate('Matches_on_ref',$ref),'<br/>',
 		$overviews->{$ref}));
 
     my $padding = $BROWSER->config->setting(general=>'landmark_padding') || 0;
@@ -991,8 +892,8 @@ sub multiple_choices($) {
       my $version = eval {$r->isa('Bio::SeqFeatureI') ? undef : $r->version};
       my $name        = eval {$r->name}  || $r->primary_tag;
 
-      my $class       = eval {$r->class} || $BROWSER->config->translate('Sequence');
-      my $score       = eval {$r->score} || $BROWSER->config->translate('NOT_APPLICABLE');
+      my $class       = eval {$r->class} || $BROWSER->translate('Sequence');
+      my $score       = eval {$r->score} || $BROWSER->translate('NOT_APPLICABLE');
       my ($start,$stop) = ($r->start,$r->end);
       my $padstart = $start - $padding;
       my $padstop  = $stop  + $padding;
@@ -1001,8 +902,8 @@ sub multiple_choices($) {
       if (my @aliases = eval{$r->attributes('Alias')}) {
         $description .= escapeHTML " [@aliases]";
       }
-      my $n           = escape("$name");
-      my $c           = escape($class);
+      my $n           = uri_escape("$name");
+      my $c           = uri_escape($class);
       $description =~ s/($regexp)/<b class="keyword">$1<\/b>/ig;
       $description =~ s/(\S{60})/$1 /g;  # wrap way long lines
 
@@ -1012,8 +913,8 @@ sub multiple_choices($) {
       $result .= TR({-class=>'databody',-valign=>'TOP'},
 	       th({-align=>'right'},ref($name) ? a({-href=>$objref},$name):tt($name)),
 	       td($description),
-	       td(a({-href=>$posref},$position . ' ('.($stop-$start+1).' '.$BROWSER->config->translate('bp').')')),
-	       td($BROWSER->config->translate('SCORE',$score)));
+	       td(a({-href=>$posref},$position . ' ('.($stop-$start+1).' '.$BROWSER->translate('bp').')')),
+	       td($BROWSER->translate('SCORE',$score)));
     }
   }
   $result .= '</table>';
@@ -1033,7 +934,7 @@ sub by_score_and_position {
 }
 
 sub format_segment {
-  my $s = shift or return $BROWSER->config->translate('Not_applicable');
+  my $s = shift or return $BROWSER->translate('Not_applicable');
   my $ref = $s->seq_id;
   my $start = commas($s->start);
   my $stop  = commas($s->end);
@@ -1070,7 +971,7 @@ sub segment2link {
   my ($segment,$label) = @_;
 
   my $source = $BROWSER->config->source;
-  return  a({-href=>"?name=$segment"},$segment) unless ref $segment;
+  return  qq(<a href="?name=$segment">$segment</a>) unless ref $segment;
 
   my ($start,$stop) = ($segment->start,$segment->end);
   my $ref = $segment->seq_id;
@@ -1078,7 +979,7 @@ sub segment2link {
   my $s = commas($start);
   my $e = commas($stop);
   $label ||= "$ref:$s..$e";
-  return a({-href=>"?ref=$ref;start=$start;stop=$stop"},$label);
+  return qq(<a href="?ref=$ref;start=$start;stop=$stop">$label</a>);
 }
 
 
@@ -1087,8 +988,8 @@ sub show_examples {
   my @examples = shellwords($examples);
   return unless @examples;
   my $source = $BROWSER->config->source;
-  my @urls = map { a({-href=>"?name=".escape($_)},$_) } @examples;
-  return b($BROWSER->config->translate('Examples')).': '.join(', ',@urls).". ";
+  my @urls = map { '<a href="?name='.uri_escape($_).'">'.$_.'</a>' } @examples;
+  return '<b>'.$BROWSER->translate('Examples').':</b> '.join(', ',@urls).". ";
 }
 
 ########## upload stuff ########
@@ -1198,7 +1099,7 @@ sub open_uploaded_file($$) {
   my $file = name_uploaded_file($filename);
   warn "file = $file" if DEBUG;
   unless ($file) {
-    error($BROWSER->config->translate('Purged',$filename));
+    error($BROWSER->translate('Purged',$filename));
     clear_uploaded_file($filename);
     return;
   }
@@ -1334,7 +1235,7 @@ sub get_remote_feature_data($$) {
 
   if ($url =~ m!^(http://.+/das)/([^/?]+)(?:\?(.+))?$!) { # DAS source!
     unless (eval "require Bio::Das; 1;") {
-      error($BROWSER->config->translate('NO_DAS'));
+      error($BROWSER->translate('NO_DAS'));
       return;
     }
 
@@ -1346,8 +1247,8 @@ sub get_remote_feature_data($$) {
       my @a = split /[;&]/,$cgi_args;
       foreach (@a) {
 	my ($arg,$val) = split /=/;
-	push @types,unescape($val)      if $arg eq 'type';
-	push @categories,unescape($val) if $arg eq 'category';
+	push @types,uri_unescape($val)      if $arg eq 'type';
+	push @categories,uri_unescape($val) if $arg eq 'category';
       }
     }
     my @args = (-source     => $src,
@@ -1367,7 +1268,7 @@ sub get_remote_feature_data($$) {
 
   unless ($UA) {
     unless (eval "require LWP") {
-      error($BROWSER->config->translate('NO_LWP'));
+      error($BROWSER->translate('NO_LWP'));
       return;
     }
     $UA = LWP::UserAgent->new(agent    => "Generic-Genome-Browser/$VERSION",
@@ -1382,7 +1283,7 @@ sub get_remote_feature_data($$) {
   my (undef,$tmpdir) = $BROWSER->config->tmpdir($BROWSER->config->source.'/external');
   my $response = $UA->mirror($url,"$tmpdir/$id");
   if ($response->is_error) {
-    error($BROWSER->config->translate('Fetch_failed',$url,$response->message));
+    error($BROWSER->translate('Fetch_failed',$url,$response->message));
     return;
   }
   open (F,"<$tmpdir/$id") or return;
@@ -1420,13 +1321,13 @@ sub get_uploaded_file_info {
   my ($landmarks,@landmarks,@links);
 
   if (@refs > TOO_MANY_REFS) {
-    $landmarks = b($BROWSER->config->translate('Too_many_landmarks',scalar @refs));
+    $landmarks = b($BROWSER->translate('Too_many_landmarks',scalar @refs));
   } else {
     @links = map {segment2link($_,$_->display_name)} @refs;
     $landmarks = tableize(\@links);
   }
   warn "get_uploaded_file_info(): modified = $modified, landmarks = $landmarks" if DEBUG;
-  return i($BROWSER->config->translate('File_info',$modified,$landmarks||''));
+  return i($BROWSER->translate('File_info',$modified,$landmarks||''));
 }
 
 sub clear_uploaded_file($) {
@@ -1442,22 +1343,22 @@ sub clear_uploaded_file($) {
 sub edit_uploaded_file($) {
   my ($file) = @_;
   warn "edit_uploaded_file(): file = $file" if DEBUG;
-  print start_form();
+  print '<form>';
   my $data;
   my $fh = open_uploaded_file($file,"<") or return;
   $data = join '',expand(<$fh>);
   print table({-width=>'100%'},
 	      TR({-class=>'searchbody'},
-		 td($BROWSER->config->translate('Edit_instructions')),
+		 td($BROWSER->translate('Edit_instructions')),
 		),
 	      TR({-class=>'searchbody'},
 		 td(
 		    a({-href=>"?help=annotation#format",-target=>'help'},
-		      b('['.$BROWSER->config->translate('Help_format').']'))
+		      b('['.$BROWSER->translate('Help_format').']'))
 		   ),
 		),
 	      TR({-class=>'searchtitle'},
-		 th($BROWSER->config->translate('Edit_title'))),
+		 th($BROWSER->translate('Edit_title'))),
 	      TR({-class=>'searchbody'},
 		 td({-align=>'center'},
 		    pre(
@@ -1471,12 +1372,12 @@ sub edit_uploaded_file($) {
 		   )
 		),
 	      TR({-class=>'searchtitle'},
-		 th(reset($BROWSER->config->translate('Undo')).'&nbsp;'.
+		 th(reset($BROWSER->translate('Undo')).'&nbsp;'.
 		    submit('Cancel').'&nbsp;'.
 		    b(submit('Submit Changes...'))))
 	     );
   print hidden(-name=>'edited file',-value=>$file);
-  print end_form();
+  print '</form>';
 }
 
 sub coordinate_mapper {
@@ -1626,7 +1527,7 @@ sub set_track_options() {
   for (my $track = 0; $track < @labels; $track++) {
     my $label = $labels[$track];
     push @rows,
-      th({-align=>'left',-class=>'searchtitle'},$BROWSER->config->translate("Track"),$track+1).
+      th({-align=>'left',-class=>'searchtitle'},$BROWSER->translate("Track"),$track+1).
       th({-align=>'left',-class=>'searchbody'},$label=~/:overview$/ ? div({-style=>"background: $oc"},
 									  "$keys{$label}<sup>*</sup>")
 	                                                            :$keys{$label}).
@@ -1642,16 +1543,16 @@ sub set_track_options() {
 			 -values   => [0..3],
 			 -override => 1,
 			 -default  => $BROWSER->options->{features}{$label}{options},
-			 -labels   => {0=> $BROWSER->config->translate('Auto'),
-                                       1=> $BROWSER->config->translate('Compact'),
-                                       2=> $BROWSER->config->translate('Expand'),
-				       3=> $BROWSER->config->translate('Expand_Label'),
+			 -labels   => {0=> $BROWSER->translate('Auto'),
+                                       1=> $BROWSER->translate('Compact'),
+                                       2=> $BROWSER->translate('Expand'),
+				       3=> $BROWSER->translate('Expand_Label'),
 				      })
 	   ).
 	td({-align=>'center',-class=>'searchbody'},
 	   popup_menu(-name    => "limit.$track",
 		      -values  => [0,5,10,25,100],
-		      -labels  => {0=>$BROWSER->config->translate('No_limit')},
+		      -labels  => {0=>$BROWSER->translate('No_limit')},
 		      -override => 1,
 		      -default => $BROWSER->options->{features}{$label}{limit})
 	    ).
@@ -1666,45 +1567,45 @@ sub set_track_options() {
   }
   my $controls = TR({-class=>'searchtitle'},
 		    td({-colspan=>3,-align=>'center'},
-		       reset($BROWSER->config->translate('Undo')).'&nbsp;'.
-		       submit(-name=>'revert', -label=>$BROWSER->config->translate('Revert')).'&nbsp;'.
-		       submit(-name=>'refresh',-label=>$BROWSER->config->translate('Refresh')).'&nbsp;'
+		       reset($BROWSER->translate('Undo')).'&nbsp;'.
+		       submit(-name=>'revert', -label=>$BROWSER->translate('Revert')).'&nbsp;'.
+		       submit(-name=>'refresh',-label=>$BROWSER->translate('Refresh')).'&nbsp;'
 		      ),
 		    td({-align=>'center',-colspan=>3},
-		       submit  (-name=>$BROWSER->config->translate('Cancel'),   -value=>$BROWSER->config->translate('Cancel_Return')).'&nbsp;'.
-		       b(submit(-name=>$BROWSER->config->translate('Redisplay'),-value=>$BROWSER->config->translate('Accept_Return')))
+		       submit  (-name=>$BROWSER->translate('Cancel'),   -value=>$BROWSER->translate('Cancel_Return')).'&nbsp;'.
+		       b(submit(-name=>$BROWSER->translate('Redisplay'),-value=>$BROWSER->translate('Accept_Return')))
 		      ));
 
-  print h1({-align=>'center'},$BROWSER->config->translate('Settings',$BROWSER->config->setting('description')));
+  print h1({-align=>'center'},$BROWSER->translate('Settings',$BROWSER->config->setting('description')));
   print start_form(-name=>'settings');
   print table({-width=>'100%',-border=>0},
 	      $controls,
 	      TR({-class=>'searchtitle'},
-		 th({-colspan=>6},$BROWSER->config->translate('Options_title'))),
+		 th({-colspan=>6},$BROWSER->translate('Options_title'))),
 	      TR({-class=>'searchbody'},
 		 td({-colspan=>6},
-		    $BROWSER->config->translate('Settings_instructions')
+		    $BROWSER->translate('Settings_instructions')
 		   ),
 		),
 	      TR({-class=>'searchtitle'},
-		 th($BROWSER->config->translate('Track')),
-		 th($BROWSER->config->translate('Track Type')),
-		 th($BROWSER->config->translate('Show')),
-		 th($BROWSER->config->translate('Format')),
-		 th($BROWSER->config->translate('Limit')),
-		 th($BROWSER->config->translate('Change_Order')),
+		 th($BROWSER->translate('Track')),
+		 th($BROWSER->translate('Track Type')),
+		 th($BROWSER->translate('Show')),
+		 th($BROWSER->translate('Format')),
+		 th($BROWSER->translate('Limit')),
+		 th($BROWSER->translate('Change_Order')),
 		),
 	      TR(\@rows),
 	      $controls,
-	      hidden(-name=>$BROWSER->config->translate('Set_options'), -value=>1,-override=>1),
-	      hidden(-name=>$BROWSER->config->translate('Adjust_order'),-value=>1,-override=>1),
+	      hidden(-name=>$BROWSER->translate('Set_options'), -value=>1,-override=>1),
+	      hidden(-name=>$BROWSER->translate('Adjust_order'),-value=>1,-override=>1),
 	     );
-  print $BROWSER->config->translate('EXTERNAL_TRACKS'),
+  print $BROWSER->translate('EXTERNAL_TRACKS'),
     '<br/>',
       div({-style=>"background: $oc"},
-	  $BROWSER->config->translate('OVERVIEW_TRACKS')
+	  $BROWSER->translate('OVERVIEW_TRACKS')
 	  );
-  print end_form();
+  print '</form>';
 }
 
 sub help($$) {
@@ -1712,18 +1613,18 @@ sub help($$) {
 
   my $ref = referer();
   my $do_close = join('',
-		      start_form(-action=>$ref),
-		      button(-onClick=>'window.close()',-label=>$BROWSER->config->translate('Close_Window')),
-		      end_form());
+		      '<form action="'.$ref.'">',
+		      button(-onClick=>'window.close()',-label=>$BROWSER->translate('Close_Window')),
+		      '</form>');
   print div({-align=>'right'},$do_close);
   if ($help_type eq 'citations') {
     build_citation_page();
   }
 
   elsif ($help_type eq 'link_image') {
-    build_link_image_page(undef);
+#FIXME    build_link_image_page(undef);
   } elsif ($help_type eq 'svg_image') {
-    build_svg_image_page(undef);
+#FIXME    build_svg_image_page(undef);
   }
 
   else {
@@ -1748,7 +1649,7 @@ sub make_citation {
   my $text      = label2key($feature);
   return join ('',
 	       dt(a({-name=>$link},b($text))),
-	       dd($citation||$BROWSER->config->translate('NO_CITATION')),
+	       dd($citation||$BROWSER->translate('NO_CITATION')),
 	       p());
 }
 
@@ -1760,10 +1661,10 @@ sub build_citation_page() {
   my $external_features = load_external_sources(undef);
   my (@citations);
 
-  print h2($BROWSER->config->translate('Track_descriptions'));
+  print h2($BROWSER->translate('Track_descriptions'));
 
   # build native features
-  print h3($BROWSER->config->translate('Built_in'));
+  print h3($BROWSER->translate('Built_in'));
   for my $feature (@features) {
     push @citations,make_citation($BROWSER->config,$feature);
   }
@@ -1771,20 +1672,20 @@ sub build_citation_page() {
 
   # build external features
   if (%$external_features) {
-    print '<hr/>',h3($BROWSER->config->translate('External'));
+    print '<hr/>',h3($BROWSER->translate('External'));
     for my $file (keys %$external_features) {
       my @citations = ();
-      my $f = escape($file);
+      my $f = uri_escape($file);
       my $name   = $file;
       my $is_url = $name =~ m!^(http|ftp)://!;
-      my $download = escape($BROWSER->config->translate('Download_data'));
+      my $download = uri_escape($BROWSER->translate('Download_data'));
       my $link   = $is_url  ? $name  : "?$download=1;file=$f";
       my $anchor = $name;
       $anchor =~ tr/ /-/;
 
       unless (ref $external_features->{$file}) {
 	print h3(a{-name=>$anchor,-href=>$link},$name);
-	print blockquote($BROWSER->config->translate('Activate'));
+	print blockquote($BROWSER->translate('Activate'));
 	next;
       }
 
@@ -1799,7 +1700,7 @@ sub build_citation_page() {
       }
       print blockquote(dl(@citations));
     }
-    print p($BROWSER->config->translate('No_external')) unless @citations;
+    print p($BROWSER->translate('No_external')) unless @citations;
   }
 
 }
@@ -1822,12 +1723,12 @@ sub build_link_image_page($) {
   my $source = $BROWSER->config->source;
   my $url = url(-base=>1);
   $url   .= url(-absolute=>1);
-  $url    = dirname($url) . "/gbrowse_img/".escape($source);
+  $url    = dirname($url) . "/gbrowse_img/".uri_escape($source);
   my $width  = $BROWSER->config->width;
   my $name   = $BROWSER->options->name() || $BROWSER->options->ref().':'.$BROWSER->options->start().'..'.$BROWSER->options->stop();
-  my $type   = join '+',map{escape($_)} grep {$BROWSER->options->{features}{$_}{visible}} $BROWSER->options->tracks();
+  my $type   = join '+',map{uri_escape($_)} grep {$BROWSER->options->{features}{$_}{visible}} $BROWSER->options->tracks();
   my $img_url = "$url?name=$name;type=$type;width=$width";
-  print $BROWSER->config->translate('IMAGE_DESCRIPTION',$img_url,$img_url);
+  print $BROWSER->translate('IMAGE_DESCRIPTION',$img_url,$img_url);
 }
 
 sub build_svg_image_page($) {
@@ -1835,12 +1736,12 @@ sub build_svg_image_page($) {
   my $source = $BROWSER->config->source;
   my $url = url(-base=>1);
   $url   .= url(-absolute=>1);
-  $url    = dirname($url) . "/gbrowse_img/".escape($source);
+  $url    = dirname($url) . "/gbrowse_img/".uri_escape($source);
   my $width  = $BROWSER->config->width;
   my $name   = $BROWSER->options->name() || $BROWSER->options->ref().':'.$BROWSER->options->start().'..'.$BROWSER->options->stop();
-  my $type   = join '+',map{escape($_)} grep {$BROWSER->options->{features}{$_}{visible}} $BROWSER->options->tracks();
+  my $type   = join '+',map{uri_escape($_)} grep {$BROWSER->options->{features}{$_}{visible}} $BROWSER->options->tracks();
   my $img_url = "$url?name=$name;type=$type;width=$width;image_class=SVG";
-  print $BROWSER->config->translate('SVG_DESCRIPTION',$img_url,$img_url);
+  print $BROWSER->translate('SVG_DESCRIPTION',$img_url,$img_url);
 }
 
 
@@ -1876,7 +1777,7 @@ sub make_citation_link {
   my ($link,$key);
   if ($label =~ /^plugin:/) {
     $key = $label || '';
-    my $about = escape($BROWSER->config->translate('About')) || '';
+    my $about = uri_escape($BROWSER->translate('About')) || '';
     my $plugin = $PLUGIN_NAME2LABEL{$label} ? ";plugin=$PLUGIN_NAME2LABEL{$label}" : '';
     $link = "?plugin_action=${about}${plugin}";
   } else {
@@ -1956,7 +1857,7 @@ sub configure_plugins {
     # plugin's configuration screen, set it here
     my @params = grep {/^$name\./} param();
     next unless @params;
-    $p->reconfigure unless param('plugin_action') eq $BROWSER->config->translate('Cancel');
+    $p->reconfigure unless param('plugin_action') eq $BROWSER->translate('Cancel');
     $p->filter if ($p->type eq 'filter');
 
     # turn the plugin on
@@ -1964,74 +1865,6 @@ sub configure_plugins {
     $BROWSER->options->{features}{$setting_name}{visible} = 1;
     warn "\$BROWSER->options->{features}{$setting_name}{visible} = 1"
   }
-}
-
-sub plugin_adjust_labels {
-  my $plugins = shift;
-
-  my %verbs = (dumper       => $BROWSER->config->translate('Dump'),
-	       finder       => $BROWSER->config->translate('Find'),
-	       highlighter  => $BROWSER->config->translate('Highlight'),
-	       annotator    => $BROWSER->config->translate('Annotate'));
-  
-  my %labels = ();
-
-  # Adjust plugin menu labels
-  for ( keys %{$plugins} ) {
-    
-    # plugin-defined verb
-    if ( $plugins->{$_}->verb ) {
-      $labels{$_} = $BROWSER->config->translate($plugins->{$_}->verb) ||
-        ucfirst $plugins->{$_}->verb;
-    }
-    # default verb
-    else {
-      $labels{$_} = $verbs{$plugins->{$_}->type} ||
-        ucfirst $plugins->{$_}->type;
-    }
-    my $name = $plugins->{$_}->type eq 'filter' ?  
-               $BROWSER->config->setting($plugins->{$_}->name => 'key') : 
-               $plugins->{$_}->name;
-    $labels{$_} .= " $name";
-    $labels{$_} =~ s/^\s+//;
-  }
-  return \%labels;
-}
-
-
-sub plugin_menu($) {
-  my ($plugins) = @_;
-
-  my $labels = plugin_adjust_labels($plugins);  
-
-  my @plugins = sort {$labels->{$a} cmp $labels->{$b}} keys %$labels;
-  return unless @plugins;
-  return join('',
-	      b($BROWSER->config->translate('Dumps').':'),'<br/>',
-	      popup_menu(-name=>'plugin',
-			 -values=>\@plugins,
-			 -labels=> $labels,
-			 -default => $BROWSER->options->plugin(),
-			),'&nbsp;',
-	      submit(-name=>'plugin_action',-value=>$BROWSER->config->translate('About')),'&nbsp;',
-	      submit(-name=>'plugin_action',-value=>$BROWSER->config->translate('Configure')),'&nbsp;',
-	      submit(-name=>'plugin_action',-value=>$BROWSER->config->translate('Go'))
-	      );
-}
-
-sub source_menu() {
-  my @sources = $BROWSER->config->sources;
-  my $sources = @sources > 1;
-  return b($BROWSER->config->translate('DATA_SOURCE')).'<br/>'.
-    ( $sources ?
-      popup_menu(-name   => 'source',
-		 -values => \@sources,
-		 -labels => { map {$_ => $BROWSER->config->description($_)} $BROWSER->config->sources},
-		 -default => $BROWSER->config->source,
-		 -onChange => 'document.mainform.submit()',
-		)
-	: $BROWSER->config->description($BROWSER->config->source)
-      );
 }
 
 sub do_plugin_header {
@@ -2062,9 +1895,9 @@ sub do_plugin_about {
   my $p = $PLUGINS->{$plugin};
   my $type  = ( split ( /::/, ref($p) ) )[-1];
   my $labels = plugin_adjust_labels($PLUGINS);
-  print h1($BROWSER->config->translate('About_plugin',$labels->{$type}));
+  print h1($BROWSER->translate('About_plugin',$labels->{$type}));
   print $p->description;
-  print start_form(),submit($BROWSER->config->translate('Back_to_Browser')),hidden('plugin'),end_form();
+  print '<form>',submit($BROWSER->translate('Back_to_Browser')),hidden('plugin'),'</form>';
 }
 
 sub do_plugin_find {
@@ -2080,8 +1913,8 @@ sub do_plugin_find {
   return unless @$results;
 
   @$features = @$results;
-  $BROWSER->options->name(defined($search_string) ? $BROWSER->config->translate('Plugin_search_1',$search_string,$plugin_name)
-                                              : $BROWSER->config->translate('Plugin_search_2',$plugin_name));
+  $BROWSER->options->name(defined($search_string) ? $BROWSER->translate('Plugin_search_1',$search_string,$plugin_name)
+                                              : $BROWSER->translate('Plugin_search_2',$plugin_name));
   # remember the search
   write_auto($results);
   1; # return a true result to indicate that we don't need further configuration
@@ -2091,12 +1924,12 @@ sub do_plugin_configure {
   my $plugin   = shift;
   my $p = $PLUGINS->{$plugin} or return;
   my $type = $p->type;
-  my @action_labels = ($BROWSER->config->translate('Cancel'),$BROWSER->config->translate('Configure_plugin'));
-  push @action_labels,$BROWSER->config->translate('Find') if $type eq 'finder';
-  push @action_labels,$BROWSER->config->translate('Go')   if ($type eq 'dumper' or $type eq 'filter');
+  my @action_labels = ($BROWSER->translate('Cancel'),$BROWSER->translate('Configure_plugin'));
+  push @action_labels,$BROWSER->translate('Find') if $type eq 'finder';
+  push @action_labels,$BROWSER->translate('Go')   if ($type eq 'dumper' or $type eq 'filter');
   my @buttons = map {submit(-name=>'plugin_action',-value=>$_)} @action_labels;
 
-  print h1($p->type eq 'finder' ? $BROWSER->config->translate('Find') : $BROWSER->config->translate('Configure'),$p->name);
+  print h1($p->type eq 'finder' ? $BROWSER->translate('Find') : $BROWSER->translate('Configure'),$p->name);
   my $config_html = $p->configure_form;
 
   print start_multipart_form(),
@@ -2110,11 +1943,11 @@ sub do_plugin_configure {
 		    # in which case the plugin_action is not going to be defined
 		    hidden(-name=>'plugin_action',-value=>$action_labels[-1],-override=>1),
 		   )
-                 : ( p($BROWSER->config->translate('Boring_plugin')),
-		     b(submit($BROWSER->config->translate('Back_to_Browser')))
+                 : ( p($BROWSER->translate('Boring_plugin')),
+		     b(submit($BROWSER->translate('Back_to_Browser')))
 		   ),
      hidden('plugin'),
-     end_form();
+     '</form>';
 }
 
 # invoke any finder plugins that define the auto_find() method
@@ -2189,6 +2022,7 @@ sub tableize {
 
 sub main {
 
+warn 1;
   ## PAGE SETTINGS #################################################
   #
   # Recover a hashref which contains page-specific settings
@@ -2199,10 +2033,11 @@ sub main {
   # Migrate from 1.56 way of specifying source to 1.57 way
   # This may cause a redirect and exit 0 at this point!
   redirect_legacy_url($source);
-
+warn 2;
 
   $MAX_SEGMENT     = $BROWSER->config->get_max_segment;
   $DEFAULT_SEGMENT = $BROWSER->config->get_default_segment;
+warn 3;
 
   # Now adjust those settings based on submitted CGI parameters
   # With the exception that we ignore parameter changes if the source has changed.
@@ -2211,11 +2046,13 @@ sub main {
   } else {
     #FIXMEadjust_settings($page_settings);        # set settings from CGI parameters
   }
+warn 4;
 
   ### PLUGINS #################################################################
   my @plugin_path = "$CONF_DIR/plugins";
   unshift @plugin_path,shellwords($BROWSER->config->setting('plugin_path'))
     if $BROWSER->config->setting('plugin_path');
+warn 5;
 
   $PLUGINS = initialize_plugins(@plugin_path) unless defined $PLUGINS;
   configure_plugins($PLUGINS,
@@ -2225,16 +2062,19 @@ sub main {
     if param('plugin') && $PLUGINS->{param('plugin')};
   my $plugin_action = param('plugin_action') || '';
   warn "plugin_action = $plugin_action" if DEBUG_PLUGINS;
+warn 6;
 
   # for activating the plugin by URL
   if (param('plugin_do')) {
-    $plugin_action = $BROWSER->config->translate(param('plugin_do')) || $BROWSER->config->translate('Go');
+    $plugin_action = $BROWSER->translate(param('plugin_do')) || $BROWSER->translate('Go');
   }
+warn 7;
 
   ## GETTING THE SEGMENT ######################################################
   my $features = get_features();
+warn 8;
 
-  if ($plugin_action eq $BROWSER->config->translate('Find') && param('plugin')) {
+  if ($plugin_action eq $BROWSER->translate('Find') && param('plugin')) {
     do_plugin_find(
                    param('plugin'),
                    $features) or ($plugin_action = 'Configure'); #reconfigure
@@ -2245,22 +2085,24 @@ sub main {
     @$features = do_plugin_autofind($BROWSER->options->{name})
       if !@$features;  # last resort
   }
+warn 10;
 
   my $segments = features2segments($features);
   my @segments = @$segments;
+warn 11;
 
   # tell the plugins which segments are in play
   for my $k ( keys %$PLUGINS ) {
     $PLUGINS->{$k}->segments( \@segments );
   }
-
+warn 12;
 
   ###############################################################################################
 
   # SETTINGS FOR UPLOADED FILES
   my ($file_action) = grep {/^modify\./} param();
   (my $file = $file_action) =~ s/^modify\.// if $file_action;
-
+warn 13;
 
   ###############################################################################################
   ## DUMPS ######################################################################################
@@ -2268,31 +2110,33 @@ sub main {
   # Check to see whether one of the plugin dumpers was invoked.  We have to do this first
   # before printing the header because the plugins are responsible for generating the header.
   # NOTE THE EXIT 0 HERE IF THE DUMP IS SUCCESSFUL!
-  if (@segments && $plugin_action eq $BROWSER->config->translate('Go') && $plugin_type eq 'dumper') {
+  if (@segments && $plugin_action eq $BROWSER->translate('Go') && $plugin_type eq 'dumper') {
     do_plugin_header(param('plugin'));
     do_plugin_dump(param('plugin'),$segments[0]) && exit 0
   }
 
   # The ImportFeatures plugin is a dumper plugin but does not require a segment.
   # it will be invoked here if no segment is defined
-  elsif ($plugin_action eq $BROWSER->config->translate('Go') && $plugin_type eq 'dumper' &&
-         $PLUGINS->{param('plugin')}->verb eq ($BROWSER->config->translate('Import')||'Import') ) {
+  elsif ($plugin_action eq $BROWSER->translate('Go') && $plugin_type eq 'dumper' &&
+         $PLUGINS->{param('plugin')}->verb eq ($BROWSER->translate('Import')||'Import') ) {
     do_plugin_header(param('plugin'));
     do_plugin_dump(param('plugin'),$segments[0]) && exit 0
   }
+warn 14;
 
   ###############################################################################################
   ## HANDLING FILE DOWNLOADS ######################################################################
 
   # This gets called if the user wants to download his annotation data
-  if (my $to_download = (param($BROWSER->config->translate('Download_file')) ||
-                         ($file_action && param($file_action) eq $BROWSER->config->translate('Download_file')) && $file)) {
+  if (my $to_download = (param($BROWSER->translate('Download_file')) ||
+                         ($file_action && param($file_action) eq $BROWSER->translate('Download_file')) && $file)) {
     warn "FILE DOWNLOAD, download = $to_download" if DEBUG;
     print_header(-attachment   =>  $to_download,
                  -type         => 'application/octet-stream');
     print_uploaded_file_features($to_download);
     exit 0;
   }
+warn 15;
 
   ## HANDLING FILE UPLOADS ######################################################################
   if (param('Upload') && (my $f = param('upload_annotations'))) {
@@ -2302,7 +2146,7 @@ sub main {
   elsif (param('new_upload')) {
     $file = new_upload();  # global
     $file_action = "modify.$file";       # global
-    param(-name=>"modify.$file",-value=>$BROWSER->config->translate('Edit'));
+    param(-name=>"modify.$file",-value=>$BROWSER->translate('Edit'));
   }
 
   elsif (defined(my $data = param('a_data'))) {
@@ -2312,6 +2156,7 @@ sub main {
   elsif ($data = param('auto') or $data = param('add')) {
     handle_quickie($data);
   }
+warn 16;
 
   clear_uploaded_file($file) if $file_action && param($file_action) eq 'Delete File';
 
@@ -2322,14 +2167,15 @@ sub main {
   auto_open($features) if @$features;
 
   warn "ADJUSTED TRACKS = ".$BROWSER->options->tracks() if DEBUG;
+warn 17;
 
   ## UPDATING THE PERSISTENT SETTINGS##############################################################
-  my $cookies = settings2cookie(); #FIXME moved to GBrowse_run
-  push @$cookies,plugins2cookies($PLUGINS);
-
-  print_header(-cookie => $cookies,
-               -charset=>$BROWSER->config->translate('CHARSET'),
-              );
+  #FIXMEmy $cookies = settings2cookie(); #FIXME moved to GBrowse_run
+  #FIXMEpush @$cookies,plugins2cookies($PLUGINS);
+  #FIXME
+  #FIXMEprint_header(-cookie => $cookies,
+  #FIXME             -charset=>$BROWSER->translate('CHARSET'),
+  #FIXME            );
 
   if (request_method eq 'HEAD') {exit 0}
 
@@ -2352,48 +2198,64 @@ sub main {
       $title = $description;
     }
   }
+warn 18;
 
   print_top($title);
 
+warn '18a';
+
   ## HANDLE UPLOADED FILE EDITS ##################################################################
-  if ($file_action && param($file_action) eq $BROWSER->config->translate('Edit')) {
+  if ($file_action && param($file_action) eq $BROWSER->translate('Edit')) {
+warn '18b';
     edit_uploaded_file($file);
   }
 
   ## HANDLE TRACK SETTINGS   #######################################################
-  elsif ((param($BROWSER->config->translate('Set_options')) || param('revert'))
-         && !param($BROWSER->config->translate('Cancel'))
-         && !param($BROWSER->config->translate('Redisplay'))) {
+  elsif ((param($BROWSER->translate('Set_options')) || param('revert'))
+         && !param($BROWSER->translate('Cancel'))
+         && !param($BROWSER->translate('Redisplay'))) {
+warn '18c';
     set_track_options();
   }
 
   ## HANDLE HELP PAGE   #######################################################
   elsif (param('help')) {
+warn '18d';
     help(param('help'),$BROWSER->config->setting('help')||GBROWSE_HELP);
   }
 
   ## HANDLE PLUGIN ABOUT PAGE #####################################################
-  elsif ($plugin_action eq $BROWSER->config->translate('About')) {
+  elsif ($plugin_action eq $BROWSER->translate('About')) {
+warn '18e';
     do_plugin_about(param('plugin'));
   }
 
   ## HANDLE PLUGIN CONFIGURATION####################################################
-  elsif ($plugin_action eq $BROWSER->config->translate('Configure')) {
+  elsif ($plugin_action eq $BROWSER->translate('Configure')) {
+warn '18f';
     do_plugin_configure(param('plugin'));
   }
 
-  elsif ($plugin_action eq $BROWSER->config->translate('Go') && $plugin_type=~/^(finder|annotator|highlighter)$/i) {
+  elsif ($plugin_action eq $BROWSER->translate('Go') && $plugin_type=~/^(finder|annotator|highlighter)$/i) {
+warn '18g';
     do_plugin_configure(param('plugin'));
   }
 
   ## MAIN DISPLAY
   else {
+warn '18h';
     my $header = $BROWSER->config->header;
+warn '18i';
     if ($BROWSER->options->head()) {
+warn '18j';
       print $header ? $header : h1($description);
+warn '18k';
     }
+warn '18l';
     main_display($segments,$features);
+warn '18m';
   }
+warn 19;
 
   print_bottom($VERSION);
 }

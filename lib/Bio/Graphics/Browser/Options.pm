@@ -323,7 +323,7 @@ sub stp {
 
 sub tracks {
   my($self,@val) = @_;
-  @{ $self->{'tracks'} } = @val if defined(@val);
+  @{ $self->{'tracks'} } = @val if scalar(@val);
   return defined $self->{'tracks'} ? @{ $self->{'tracks'} } : ();
 }
 

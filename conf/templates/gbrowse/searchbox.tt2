@@ -1,5 +1,5 @@
-<b>[% tr_landmark %]</b><br/>
+<b>[% browser.translate('landmark') %]</b><br/>
 <input type="text" name="name" size="25"/>
-<input type="submit" name="search" value="[% tr_search %]"/>
-<input type="submit" name="reset" value="[% tr_reset %]" class="reset_button"/>
-<input type="checkbox" name="flip" value="1" [% IF flip ; "checked" ; END %]/>[% tr_flip %]
+<input type="submit" name="search" value="[% browser.translate('search') %]"/>
+<input type="submit" name="reset" value="[% browser.translate('reset') %]" class="reset_button"/>
+<input type="checkbox" name="flip" value="1" [% IF browser.options.flip ; "checked" ; END %]/>[% browser.translate('flip') %]

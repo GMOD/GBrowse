@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.53 2003-02-23 03:18:56 lstein Exp $
+# $Id: Browser.pm,v 1.54 2003-02-27 14:14:56 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1482,8 +1482,7 @@ sub feature2label {
   my $self = shift;
   my ($feature,$length) = @_;
   my $type  = eval {$feature->type}
-    || eval{$feature->source_tag} || eval{$feature->primary_tag} 
-      or return;
+    || eval{$feature->source_tag} || eval{$feature->primary_tag} or return;
   (my $basetype = $type) =~ s/:.+$//;
   my $label = $self->type2label($type,$length)
     || $self->type2label($basetype,$length)

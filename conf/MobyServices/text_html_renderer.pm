@@ -1,7 +1,7 @@
 package MobyServices::text_html_renderer;
 use strict;
 our @ISA = qw(Exporter);
-our @EXPORT = qw(render type);
+#our @EXPORT = qw(render type);
 our @EXPORT_OK = qw(render type);
 
 

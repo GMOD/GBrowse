@@ -2,7 +2,7 @@ package MobyServices::b64_encoded_gif_renderer;
 use strict;
 our @ISA = qw(Exporter);
 use File::Temp qw/ tempfile /;
-our @EXPORT = qw(render type);
+#our @EXPORT = qw(render type);
 our @EXPORT_OK = qw(render type);
 use MIME::Base64;
 

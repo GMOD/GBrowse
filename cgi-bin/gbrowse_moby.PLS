@@ -48,11 +48,9 @@ print OUT <<'!NO!SUBS!';
 
 
 
+
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.18 2003-12-30 20:30:15 markwilkinson Exp $
-
-
-
+#$Id: gbrowse_moby.PLS,v 1.19 2003-12-30 22:37:26 markwilkinson Exp $
 # for some reason I am unable to dynamically load these??
 use MobyServices::b64_encoded_gif_renderer;
 use MobyServices::b64_encoded_jpeg_renderer;
@@ -295,9 +293,10 @@ sub init {
     $id ||= param('id'); # for MOBY calls we call it "id" not "name", but they are ~the same thing
 
     unless ($namespace && $id){
-        print_top("MOBY Call failed");
-        print $CONFIG->header || h1("Initialization failure");
-        print h2("Both Namespace and ID must be passed to the MOBY-S browser");
+        print_top("MOBY-S Client Initialization");
+        print $CONFIG->header || h1("MOBY-S Client Initialization");
+        print h1("Initialization Required");
+        print h2("This browsing session must be primed with a Namespace and ID:");
         &INITIALIZE;
         return;
     }
@@ -551,8 +550,7 @@ sub INITIALIZE {
     my $Central = MOBY::Client::Central->new();
     my $NameSpaces = $Central->retrieveNamespaces;
     my @Namespaces = sort keys(%{$NameSpaces});
-    print h1('MOBY-S Client Initialization'),
-    start_form,
+    print start_form,
     "<h2>Select a namespace: ";
     print popup_menu(-name => 'namespace',
         '-values' => ["select", @Namespaces],
@@ -560,12 +558,12 @@ sub INITIALIZE {
     );
 
     print p,
-    "Which ID within this namespace? (one per line)</h2>",
-    p,
+    "Which ID within this namespace?: ",   
     textfield(-name => 'id',-width=>'15', -value => "163483",);
-    print p,
+    print "</h2>",p,
     submit("Initialize with this seed data"),
     end_form;
+
 }
 
 

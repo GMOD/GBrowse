@@ -191,10 +191,13 @@ htdocs/images/help/upload.gif
 htdocs/index.html
 INSTALL
 install_util/cgi_install.PLS
+install_util/ppm_cgi_install.pl
 install_util/conf_install.PLS
+install_util/ppm_conf_install.pl
 install_util/gbrowse_ppm_install.PLS
 install_util/GuessDirectories.pm
 install_util/htdocs_install.PLS
+install_util/ppm_htdocs_install.pl
 install_util/make_clean_add.pl
 install_util/pod2docs.pl
 lib/Bio/DB/Das/BioSQL.pm

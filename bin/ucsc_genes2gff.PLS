@@ -41,7 +41,8 @@ the comments and aliases some other way.
 Options:
 
     -src    <string>   Choose a source for the gene, default "UCSC"
-    -origin <integer>  Choose a relative position to number from, default is "1"
+    -origin <integer>  Choose a relative position to number from, default
+is "1"
 
 USAGE
 
@@ -53,7 +54,10 @@ print "##gff-version 3\n";
 while (<>) {
   chomp;
   next if /^\#/;;
-  my ($id,$chrom,$strand,$txStart,$txEnd,$cdsStart,$cdsEnd,$exons,$exonStarts,$exonEnds) = split /\t/;
+  next if /random/;  ## added line
+  my
+($id,$chrom,$strand,$txStart,$txEnd,$cdsStart,$cdsEnd,$exons,$exonStarts,$exonEnds)
+= split /\t/;
   my ($utr5_start,$utr5_end,$utr3_start,$utr3_end);
 
   # adjust for Jim's 0-based coordinates
@@ -66,7 +70,8 @@ while (<>) {
   $cdsEnd   -= $ORIGIN;
 
   # print the transcript
-  print join ("\t",$chrom,$SRC,'mRNA',$txStart,$txEnd,'.',$strand,'.',"ID=$id"),"\n";
+  print join
+("\t",$chrom,$SRC,'mRNA',$txStart,$txEnd,'.',$strand,'.',"ID=$id"),"\n";
 
   # now handle the CDS entries -- the tricky part is the need to keep
   # track of phase
@@ -74,118 +79,169 @@ while (<>) {
   my @exon_starts = map {$_-$ORIGIN} split ',',$exonStarts;
   my @exon_ends   = map {$_-$ORIGIN} split ',',$exonEnds;
 
+
   if ($strand eq '+') {
-    for (my $i=0;$i<@exon_starts;$i++) {
+    for (my $i=0;$i<@exon_starts;$i++) {  # for each exon start
       my $exon_start = $exon_starts[$i] + 1;
       my $exon_end   = $exon_ends[$i];
-      my ($utr_start,$utr_end,$cds_start,$cds_end);
+      my (@utr_start,@utr_end,$cds_start,$cds_end);
 
       if ($exon_start < $cdsStart) { # in a 5' UTR
-	$utr_start = $exon_start;
-      } elsif ($exon_start > $cdsEnd) {
-	$utr_start = $exon_start;
+	push (@utr_start, $exon_start);
+      } elsif ($exon_start > $cdsEnd) { 
+	push (@utr_start, $exon_start);
       } else {
 	$cds_start = $exon_start;
       }
 
       if ($exon_end < $cdsStart) {
-	$utr_end = $exon_end;
+	push (@utr_end, $exon_end);
       } elsif ($exon_end > $cdsEnd) {
-	$utr_end = $exon_end;
+	push (@utr_end, $exon_end);
       } else {
 	$cds_end = $exon_end;
       }
 
-      if ($utr_start && !$utr_end) { # half in half out on 5' end
-	$utr_end   = $cdsStart - 1;
+      if ($utr_start[0] && !$utr_end[0]) { # half in half out on 5' end
+	$utr_end[0]= $cdsStart - 1;
 	$cds_start = $cdsStart;
 	$cds_end   = $exon_end;
       }
 
-      if ($utr_end && !$utr_start) { # half in half out on 3' end
-	$utr_start = $cdsEnd + 1;
+      if ($utr_end[0] && !$utr_start[0]) { # half in half out on 3' end
+	$utr_start[0]= $cdsEnd + 1;
+	$cds_end     = $cdsEnd;
+	$cds_start   = $exon_start;
+      }
+
+      # If the CDS is within the exon
+      if (defined $utr_start[0] == defined $utr_end[0] && 
+	  $utr_start[0] < $cdsStart && $utr_end[0] > $cdsEnd) {
+	$utr_end[0]= $cdsStart - 1;
+	$cds_start = $cdsStart;
 	$cds_end   = $cdsEnd;
-	$cds_start = $exon_start;
+	
+	push (@utr_start, $cdsEnd + 1);
+	push (@utr_end, $exon_end);
       }
 
-      die "programmer error, utr_start and no utr_end" unless defined $utr_start == defined $utr_end;
-      die "programmer error, cds_start and no cds_end" unless defined $cds_start == defined $cds_end;
 
-      if (defined $utr_start && $utr_start <= $utr_end && $utr_start < $cdsStart) {
-	print join ("\t",$chrom,$SRC,"5'-UTR",$utr_start,$utr_end,'.',$strand,'.',"Parent=$id"),"\n"	
-      }
+      die "programmer error, not an even number of utr_starts and
+utr_ends"
+	unless $#utr_start == $#utr_end;
+      die "programmer error, cds_start and no cds_end" 
+	unless defined $cds_start == defined $cds_end;
+
+      for (my $i=0;$i<@utr_start;$i++) {  # for each utr start
+	if (defined $utr_start[$i] && $utr_start[$i] <= $utr_end[$i] &&
+$utr_start[$i] < $cdsStart) {
+	  print join
+("\t",$chrom,$SRC,"5'-UTR",$utr_start[$i],$utr_end[$i],'.',$strand,'.',"Parent=$id"),"\n"	
+	} # end of if	    
+      } # end of foreach
 
       if (defined $cds_start && $cds_start <= $cds_end) {
-	print join ("\t",$chrom,$SRC,'CDS',$cds_start,$cds_end,'.',$strand,$phase,"Parent=$id"),"\n";
+	print join
+("\t",$chrom,$SRC,'CDS',$cds_start,$cds_end,'.',$strand,$phase,"Parent=$id"),"\n";
 	$phase = (($cds_end-$cds_start+1-$phase)) % 3;
       }
 
-      if (defined $utr_start && $utr_start <= $utr_end && $utr_start > $cdsEnd) {
-	print join ("\t",$chrom,$SRC,"3'-UTR",,$utr_start,$utr_end,'.',$strand,'.',"Parent=$id"),"\n"	
+      for (my $i=0;$i<@utr_start;$i++) {  # for each utr start
+	if (defined $utr_start[$i] && $utr_start[$i] <= $utr_end[$i] &&
+$utr_start[$i] > $cdsEnd) {
+	  print join ("\t",$chrom,$SRC,"3'-UTR",,$utr_start[$i],
+$utr_end[$i],'.',$strand,'.',"Parent=$id"),"\n"	
+	}
       }
-    }
-  }
+    } # end of for each exon
+  } # matches if strand = +
+
 
   if ($strand eq '-') {
     my @lines;
     for (my $i=@exon_starts-1; $i>=0; $i--) { # count backwards
       my $exon_start = $exon_starts[$i] + 1;
       my $exon_end   = $exon_ends[$i];
-      my ($utr_start,$utr_end,$cds_start,$cds_end);
+      my (@utr_start,@utr_end,$cds_start,$cds_end);
 
       if ($exon_end > $cdsEnd) { # in a 5' UTR
-	$utr_end = $exon_end;
+	push (@utr_end,  $exon_end);
       } elsif ($exon_end < $cdsStart) {
-	$utr_end = $exon_end;
+	push (@utr_end,  $exon_end);
       } else {
 	$cds_end = $exon_end;
       }
 
       if ($exon_start > $cdsEnd) {
-	$utr_start = $exon_start;
+	push (@utr_start, $exon_start);
       } elsif ($exon_start < $cdsStart) {
-	$utr_start = $exon_start;
+	push (@utr_start, $exon_start);
       } else {
 	$cds_start = $exon_start;
       }
 
-      if ($utr_start && !$utr_end) { # half in half out on 3' end
-	$utr_end   = $cdsStart - 1;
+      if ($utr_start[0] && !$utr_end[0]) { # half in half out on 3' end
+	$utr_end[0]   = $cdsStart - 1;
 	$cds_start = $cdsStart;
 	$cds_end   = $exon_end;
       }
 
-      if ($utr_end && !$utr_start) { # half in half out on 5' end
-	$utr_start = $cdsEnd + 1;
+      if ($utr_end[0] && !$utr_start[0]) { # half in half out on 5' end
+	$utr_start[0] = $cdsEnd + 1;
 	$cds_end   = $cdsEnd;
 	$cds_start = $exon_start;
       }
 
-      die "programmer error, utr_start and no utr_end" unless defined $utr_start == defined $utr_end;
-      die "programmer error, cds_start and no cds_end" unless defined $cds_start == defined $cds_end;
-
-      if (defined $utr_start && $utr_start <= $utr_end && $utr_start > $cdsEnd) {
-	unshift @lines,join ("\t",$chrom,$SRC,"5'-UTR",,$utr_start,$utr_end,'.',$strand,'.',"Parent=$id"),"\n"	
+      # If the CDS is within the exon  
+      if (defined $utr_start[0] == defined $utr_end[0] && 
+	  $utr_start[0] < $cdsStart && $utr_end[0] > $cdsEnd) {
+	$utr_end[0]= $cdsStart - 1;
+	$cds_start = $cdsStart;
+	$cds_end   = $cdsEnd;
+	
+	push (@utr_start, $cdsEnd + 1);
+	push (@utr_end, $exon_end);
       }
+
+      die "programmer error, not an even number of utr_starts and
+utr_ends"
+	unless $#utr_start == $#utr_end;
+
+      die "programmer error, cds_start and no cds_end" unless defined
+$cds_start == defined $cds_end;
+
+      for (my $i=0;$i<@utr_start;$i++) {  # for each utr start
+	if (defined $utr_start[$i] && $utr_start[$i] <= $utr_end[$i] &&
+$utr_start[$i] > $cdsEnd) {
+	  unshift @lines,join
+("\t",$chrom,$SRC,"5'-UTR",,$utr_start[$i],$utr_end[$i],'.',$strand,'.',"Parent=$id"),"\n"	
+	}
+      } # end of for
+
       if (defined $cds_start && $cds_start <= $cds_end) {
-	unshift @lines,join ("\t",$chrom,$SRC,'CDS',$cds_start,$cds_end,'.',$strand,$phase,"Parent=$id"),"\n";
+	unshift @lines,join
+("\t",$chrom,$SRC,'CDS',$cds_start,$cds_end,'.',$strand,$phase,"Parent=$id"),"\n";
 	$phase = (($cds_end-$cds_start+1-$phase)) % 3;
       }
 
-      if (defined $utr_start && $utr_start <= $utr_end && $utr_end < $cdsStart) {
-	unshift @lines,join ("\t",$chrom,$SRC,"3'-UTR",$utr_start,$utr_end,'.',$strand,'.',"Parent=$id"),"\n"	
-      }
-
+      for (my $i=0;$i<@utr_start;$i++) {  # for each utr start
+	if (defined $utr_start[$i] && $utr_start[$i] <= $utr_end[$i] &&
+$utr_end[$i] < $cdsStart) {
+	  unshift @lines,join
+("\t",$chrom,$SRC,"3'-UTR",$utr_start[$i],$utr_end[$i],'.',$strand,'.',"Parent=$id"),"\n"	
+	}
+      } # end for
     }
     print @lines;
   }
-}
+} # end while <>
 
 __END__
 
 =head1 NAME
 
-ucsc_genes2gff.pl - Convert UCSC Genome Browser-format gene files into GFF files suitable for loading into gbrowse
+ucsc_genes2gff.pl - Convert UCSC Genome Browser-format gene files into GFF
+files suitable for loading into gbrowse
 
 =head1 SYNOPSIS
 
@@ -194,7 +250,8 @@ ucsc_genes2gff.pl - Convert UCSC Genome Browser-format gene files into GFF files
 Options:
 
     -src    <string>   Choose a source for the gene, default "UCSC"
-    -origin <integer>  Choose a relative position to number from, default is "1"
+    -origin <integer>  Choose a relative position to number from, default
+is "1"
 
 =head1 DESCRIPTION
 

@@ -2631,17 +2631,17 @@ Instead of using the artificial volvox data, we will now use some real
 genome annotations from the <i>C. elegans</i> genome project.  This is
 a region around <i>C. elegans</i> cosmid C01F4.  The core data that
 we'll be using is contained in the files <a
-href="data_files/elegans.gff">elegans.gff</a>, and <a
+href="data_files/elegans_core.gff">elegans_core.gff</a>, and <a
 href="data_files/elegans.fa">elegans.fa</a>.
 
 <p>
 
 Refer back to the <a href="#basics">beginning of the tutorial</a> now
 and create a GBrowse database directory named "elegans_core".  Then
-copy <a href="data_files/elegans.gff">elegans.gff</a>, and <a
+copy <a href="data_files/elegans_core.gff">elegans_core.gff</a>, and <a
 href="data_files/elegans.fa">elegans.fa</a> into it.  The
 configuration file to use is <a
-href="datafiles/elegans.conf">elegans.conf</a>.  Place it in <a
+href="datafiles/elegans_core.conf">elegans_core.conf</a>.  Place it in <a
 href="file:///$CONF/gbrowse.conf">$CONF/gbrowse.conf/</a>.
 
 <p>
@@ -2659,8 +2659,9 @@ the entire data set with all core tracks turned on.
 <p>
 
 We will now add some third-party annotations to the display.  These
-are contained in the files "elegans_accept.gff",
-"elegans_expression.gff", and "elefans_sts.gff":
+are contained in the files "elegans_acceptor.gff",
+"elegans_expression.gff", "elefans_sts.gff", "elegans_deletion.gff", and
+"elegans_repeats.gff":
 
 <p>
 
@@ -2670,7 +2671,7 @@ are contained in the files "elegans_accept.gff",
 	<a href="data_files/elegans_acceptor.gff">elegans_acceptor.gff</a>
     </td>
     <td>
-	Annotations of <i>C. elegans<i> spliced leader acceptor sites.
+	Annotations of <i>C. elegans</i> spliced leader acceptor sites.
     </td>
   </TR>
     
@@ -2679,7 +2680,7 @@ are contained in the files "elegans_accept.gff",
 	<a href="data_files/elegans_expression.gff">elegans_expression.gff</a>
     </td>
     <td>
-	Positions assayed for gene expression level in <i>C. elegans<i>
+	Positions assayed for gene expression level in <i>C. elegans</i>
 	microarrays.
     </td>
   </TR>
@@ -2690,7 +2691,7 @@ are contained in the files "elegans_accept.gff",
     </td>
     <td>
 	Primer pairs available for the region produced by the
-	C. elegans ORFeome project.
+	<i>C. elegans</i> ORFeome project.
     </td>
   </TR>
 
@@ -2717,13 +2718,13 @@ are contained in the files "elegans_accept.gff",
 <p>
 
 We can load each of these files to private storage located on the
-server using the file upload feature.  Copy these four files to your
+server using the file upload feature.  Copy these five files to your
 home directory where you can find them easily.  Go to the section
 marked <b>Upload your own annotations</b> and choose the "Browse..."
 button.  Select one of the annotation files, and then press the
 "Upload" button to upload the file to the server.  The annotations
 contained in the file should now appear on the display.  If you now do
-this for all four of the annotation files, you will eventually get a
+this for all five of the annotation files, you will eventually get a
 display like that shown in Figure 23.
 
 <p>

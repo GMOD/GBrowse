@@ -47,7 +47,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 print OUT <<'!NO!SUBS!';
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.40 2005-01-11 22:26:55 allenday Exp $
+#$Id: gbrowse_moby.PLS,v 1.41 2005-01-18 18:41:51 markwilkinson Exp $
 ###########################################################
 
 use MOBY::Client::Central;
@@ -647,7 +647,7 @@ sub processXrefs {
 sub setupFilters {
 #<SPAN title=" description here " class="popup">text</SPAN>
     return "<table border=1><tr><td>",checkbox_group(-name => 'expandObjects', -values => ['?'], -checked=>"ON"),
-    "  <SPAN title=' When this box is checked, your input object will be decomposed into its ISA parentage and services that operate on any parent class will also be discovered. ' class='popup' cursor='help'>Decompose Objects?</span> ",
+    "  <SPAN title=' When this box is checked, your input object will be decomposed into its ISA parentage and services that operate on any parent class will also be discovered. ' class='popup' cursor='help'>Decompose Objects?</span> ","</td>",
     "<td>","  <SPAN title=' Enter a comma-delimited list of keywords that should appear in the service description. ' class='popup' cursor='help'>Keywords:</span> ", textfield(-name => 'keyword', -size => 20),"</td>",
     "<td>","  <SPAN title=' Enter the full URI for the authority (service provider) that you want to restrict your search to.  e.g. sgn.cornell.edu ' class='popup' cursor='help'>Authority:</span> ",textfield(-name => 'authURI', -size => 20),"</td>",
     "<td>","  <SPAN title=' Enter a valid term from the Service Type Ontology. ' class='popup' cursor='help'>Service Type:</span> ", textfield(-name => "serviceType", -size => 10),"</td>",

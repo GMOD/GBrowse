@@ -116,7 +116,7 @@ sub fetch_Seq_by_accession
   my $query = Bio::DB::Query::BioQuery->new(
        -datacollections =>
          [ "Bio::SeqI seq", "Bio::DB::Persistent::BioNamespace=>Bio::SeqI db" ],
-       -where => [ "db.namespace ='$namespace'", "seq.accession_number = '$acc'", $version < 100 ? ("seq.version = '$version'") : () ]
+       -where => [ "db.namespace ='$namespace'", "seq.accession_number = '$acc'", $version && $version < 100 ? ("seq.version = '$version'") : () ]
   );
 
   my $adp     = $self->db->get_object_adaptor("Bio::Seq");

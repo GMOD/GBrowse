@@ -597,7 +597,7 @@ Search for a Genbank or embl accession number, such as CEF58D5
 =back
 
 
-=head2 16. UPDATING THE BROWSER WITHOUT REENTERING YOUR DIRECTORY SETTINGS
+=head2 15. UPDATING THE BROWSER WITHOUT REENTERING YOUR DIRECTORY SETTINGS
 
 When updating GBrowse to a new version of the software, you can
 configure it using your preferred directory settings by making a
@@ -611,14 +611,14 @@ Makefile.PL.  Here is the recipe:
   make
   make install
 
-=head2 17. KNOWN BUGS
+=head2 16. KNOWN BUGS
 
 Currently there is one known bug.  The navigation buttons do not
 operate properly when the client is using Internet Explorer 5.1 on a
 Macintosh and accessing gbrowse running on a MacOS X server running
 Apache.  Other combinations of clients and servers work properly.
 
-=head2 18. FEATURE WISH LIST (updated June 6, 2003)
+=head2 17. FEATURE WISH LIST (updated June 6, 2003)
 
  - Full DAS support.
  - A glyph for representing cytogenetic maps.
@@ -626,7 +626,7 @@ Apache.  Other combinations of clients and servers work properly.
 If you are interested in working on any of these features, please
 contact the developers at the address given in the next section.
 
-=head2 19. SUPPORT AND BUG REPORTS
+=head2 18. SUPPORT AND BUG REPORTS
 
 Please send requests for help to gmod-gbrowse@lists.sourceforge.net.
 There is also a formal bug tracking and feature request system in

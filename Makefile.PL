@@ -10,7 +10,8 @@ require 5.005003;
 my $VERSION = '1.61';
 my $working_dir = cwd;
 
-my @OPTIONS = qw(PREFIX CONF HTDOCS CGIBIN DO_XS);
+my @OPTIONS = qw( PREFIX CONF HTDOCS CGIBIN DO_XS LIB 
+		  INSTALLSCRIPT NONROOT);
 my $OPTIONS = join ('|',@OPTIONS);
 my %OPTIONS;
 
@@ -30,6 +31,37 @@ For RedHat Linux, you will want to use:
 
 For most versions of Apache built from source code, use:
     perl Makefile.PL PREFIX=/usr/local/apache
+
+
+To install as a user without root privileges, in addition to 
+the arguments above, provide the arguments NONROOT=1,
+LIB=/path/to/perl/libs and INSTALLBIN=/path/to/scripts
+
+For example:
+    perl Makefile.PL CONF=$HOME/gbrowse/conf \\
+                     HTDOCS=$HOME/gbrowse/html \\
+                     CGIBIN=$HOME/gbrowse/cgi-bin \\
+		     LIB=$HOME/gbrowse/lib \\
+		     INSTALLSCRIPT=$HOME/gbrowse/bin \\
+		     NONROOT=1
+
+will perform a non-privileged installation that places all 
+gbrowse components (including perl libraries) in the path
+$HOME/gbrowse.  
+
+In the above example, before running 'make install',
+create the directories ~/gbrowse/html, ~gbrowse/cgi-bin
+and ~/gbrowse/conf 
+
+To make the CGI scipts aware of the custom library
+location, you can either ask someone with root privileges to 
+edit the apache configuration file or define the environmental 
+variable $PERL5LIB for the owner of the httpd processes 
+serving gbrowse.  Failing that, you will want to add the line 
+
+  use lib "$HOME/gbrowse/lib"; 
+
+to each of the CGI scripts.  
 
 If you have a C compiler and wish to compile the XS extensions, set
 DO_XS=1.  Currently all this does is to speed up the
@@ -86,6 +118,12 @@ unless ($OPTIONS{CGIBIN}) {
 }
 unless (defined $OPTIONS{DO_XS}) {
   $OPTIONS{DO_XS}  = $^O =~ /^(MSWin|dos)/i ? '' : 1;
+}
+
+# look for non-root installation 
+if (defined $OPTIONS{NONROOT}) {
+  $OPTIONS{INSTALLSITEMAN3DIR} = 'none';
+  $OPTIONS{INSTALLSITEMAN1DIR} = 'none';
 }
 
 # workaround for known bug in FindBin library
@@ -161,6 +199,7 @@ WriteMakefile(
                                  'bin/load_genbank.pl',
 				],
 	      'LIBS'	     => [''], # e.g., '-lm'
+	      'LIB'          => $OPTIONS{LIB}, # custom location for perl modules
 	      'DIR'          => $OPTIONS{DO_XS} ? ['libalign'] : [],
 	      'DEFINE'	     => '',
 	      'INC'	     => '', # e.g., '-I/usr/include/other'
@@ -168,6 +207,9 @@ WriteMakefile(
                   'AUTHOR'   => 'Lincoln Stein (lstein@cshl.org)',
                   'ABSTRACT' => 'A CGI-driven browser for genomic annotations.',
                                 ) : (),
+              'INSTALLSITEMAN1DIR' => $OPTIONS{INSTALLSITEMAN1DIR}, # don't install man pages for 
+              'INSTALLSITEMAN3DIR' => $OPTIONS{INSTALLSITEMAN3DIR}, # non-root user
+	      'INSTALLSCRIPT'  => $OPTIONS{INSTALLSCRIPT}
 );
 
 sub interpolate {

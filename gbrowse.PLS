@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.62 2002-10-05 00:18:49 lstein Exp $
+# $Id: gbrowse.PLS,v 1.63 2002-10-06 18:25:34 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -271,9 +271,6 @@ print
 	     -style  => {src=>$CONFIG->setting('stylesheet')},
 	    ) unless $HTML++;
 
-my $header = $CONFIG->header();
-print $header if $header;
-
 ## HANDLE UPLOADED FILE EDITS ##################################################################
 if ($file_action && param($file_action) eq $LANG->tr('Edit')) {
   edit_uploaded_file($page_settings,$file);
@@ -306,7 +303,9 @@ elsif ($plugin_action eq $LANG->tr('Configure')) {
 
 ## MAIN DISPLAY
 else {
-  print h1($description) unless defined($header);
+  my $header = html_frag('header');
+  print $header;
+  print h1($description) unless $header;
   main_display(\@segments,$page_settings);
 }
 
@@ -340,65 +339,32 @@ sub main_display {
   # print the top of the form, with navigation bar, etc
   print start_multipart_form(-name=>'mainform',-action=>url(-relative=>1,-path_info=>1));
   print navigation_table($segment,$page_settings);
+  print html_frag('html2');
+
+  my $feature_files;  
 
   # if more than one segment, then list them all
   if (@$segments > 1) {
     multiple_choices($page_settings,$segments);
   }
 
-  my $feature_files;
-
-  if ($segment) {
-
-      # if a plugin passes us back a Feature, rather than a Segment, turn it into a segment
-      # (this shouldn't happen - hah!)
-    $segment = open_database()->segment($segment->seq_id,$segment->start,$segment->end)
-	unless $segment->can('features');
-
-    # get the third party features
+  elsif ($segment) {
     $feature_files = load_external_sources($segment,$page_settings);
-
-    my ($img,$map);
-    my $cell = overview($segment,$page_settings).br();
-
-    if ($segment->length <= $MAX_SEGMENT) {
-
-      # add plugin annotators, but only if the length is reasonable!
-      load_plugin_annotations($segment,$feature_files,$page_settings);
-
-      $CONFIG->width($page_settings->{width});
-      my @tracks_to_show = grep {$page_settings->{features}{$_}{visible}} @{$page_settings->{tracks}};
-      my %options = map {$_=>$page_settings->{features}{$_}{options}} @tracks_to_show;
-      my %limit   = map {$_=>$page_settings->{features}{$_}{limit}}   @tracks_to_show;
-      ($img,$map) = $CONFIG->render_html(segment       => $segment,
-					 feature_files => $feature_files,
-					 tracks        => \@tracks_to_show,
-					 options       => \%options,
-					 limit         => \%limit,
-					 do_map        => 1,
-					 do_centering_map => 1,
-					 lang          => $LANG,
-					 keystyle      => $page_settings->{ks},
-					);
-      $cell .= $img;
-    }
-
-    else {
-      $cell .= i($LANG->tr('TOO_BIG',commas($MAX_SEGMENT),commas($DEFAULT_SEGMENT)));
-    }
-    print "\n",
-      table({-border=>0,-width=>$page_settings->{width}},
-	    TR({-class=>'searchbody'},
-	       td({-align=>'CENTER'},$cell)
-	      )
-	   ),"\n";
-    print $map,"\n" if $map;
+    # if a plugin passes us back a Feature, rather than a Segment, turn it into a segment
+    # (this shouldn't happen - hah!)
+    $segment = open_database()->segment($segment->seq_id,$segment->start,$segment->end)
+      unless $segment->can('features');
+    print overview_panel($segment,$page_settings);
+    print detail_panel($segment,$page_settings,$feature_files);
   }
-  print hidden('ref'),hidden('start'),hidden('stop');
 
+  print html_frag('html3');
   print plugins_table($page_settings);
+  print html_frag('html4');
   print tracks_table($page_settings,$feature_files);
+  print html_frag('html5');
   print settings_table($page_settings);
+  print html_frag('html6');
   print p(),upload_table($page_settings,$feature_files);
   print p(),external_table($page_settings,$feature_files);
   print end_form();
@@ -407,6 +373,59 @@ sub main_display {
   foreach (keys %$feature_files) {
     $_ && ref($_) && $_->destroy;
   }
+}
+
+sub overview_panel {
+  my ($segment,$page_settings) = @_;
+  my $image = overview($segment,$page_settings).br();
+  return table({-border=>0,-width=>$page_settings->{width}},
+	       TR({-class=>'databody'},
+		  td({-align=>'CENTER'},$image)
+		 )
+	      );
+}
+
+sub detail_panel {
+  my ($segment,$page_settings,$feature_files) = @_;
+
+  my ($img,$map);
+  my $cell = '';
+
+  if ($segment->length <= $MAX_SEGMENT) {
+
+    # add plugin annotators, but only if the length is reasonable!
+    load_plugin_annotations($segment,$feature_files,$page_settings);
+
+    $CONFIG->width($page_settings->{width});
+    my @tracks_to_show = grep {$page_settings->{features}{$_}{visible}} @{$page_settings->{tracks}};
+    my %options = map {$_=>$page_settings->{features}{$_}{options}} @tracks_to_show;
+    my %limit   = map {$_=>$page_settings->{features}{$_}{limit}}   @tracks_to_show;
+    ($img,$map) = $CONFIG->render_html(segment       => $segment,
+				       feature_files => $feature_files,
+				       tracks        => \@tracks_to_show,
+				       options       => \%options,
+				       limit         => \%limit,
+				       do_map        => 1,
+				       do_centering_map => 1,
+				       lang          => $LANG,
+				       keystyle      => $page_settings->{ks},
+				      );
+    $cell .= $img;
+  }
+
+  else {
+    $cell .= i($LANG->tr('TOO_BIG',commas($MAX_SEGMENT),commas($DEFAULT_SEGMENT)));
+  }
+  $cell .= "\n";
+  my $table = table({-border=>0,-width=>$page_settings->{width}},
+		    TR({-class=>'databody'},
+		       td({-align=>'CENTER'},$cell)
+		      )
+		   );
+  $table .= "\n";
+  $table .= $map if $map;
+  $table .= join '',hidden('ref'),hidden('start'),hidden('stop');
+  return $table;
 }
 
 ###############################################################################################
@@ -652,10 +671,10 @@ sub navigation_table {
   my $oligo = $PLUGINS->{'OligoFinder'} ? ', oligonucleotide (15 bp minimum)' : '';
   my $help  =  a({-href=>general_help(),-target=>'help'},b('['.$LANG->tr('Help').']'));
 
-  $table .= table({-border=>0, -width=>$settings->{width},-cellspacing=>0},
+  $table .= table({-border=>0, -width=>$settings->{width},-cellspacing=>0,-class=>'searchtitle'},
 		  $settings->{ins} ?
 		  (
-		   TR({-class=>'searchbody'},
+		   TR(
 		      td({-align=>'left', -colspan=>3},
 			 b($LANG->tr('INSTRUCTIONS').' '),
 			 '['.a({-href=>"$self?ins=0"},$LANG->tr('HIDE')).']: ',
@@ -663,26 +682,31 @@ sub navigation_table {
 			 show_examples(),
 			 $help
 			)),
-		   TR({-class=>'searchbody'},
+		   TR(
 		      td({-align=>'left', -colspan=>3},
 			 $LANG->tr('NAVIGATION_INSTRUCTIONS',bookmark_link($settings))
 			)),
 		  ) :
 		  (
-		   TR({-class=>'searchbody'},
+		   TR(
 		      td({-align=>'left', -colspan=>3},
 			 a({-href=>"$self?ins=1"},'['.$LANG->tr('SHOW_INSTRUCTIONS').']'),
 			 a({-href=>bookmark_link($settings)},'['.$LANG->tr('BOOKMARK').']'),$help)
 		     ),
 		  ),
-		  TR({-class=>'searchtitle', -align=>'left'},
-		     td({-class=>'searchtitle',-align=>'left'}, b($LANG->tr('Landmark')),
+		   TR({-class=>'searchbody'},
+		      td({-align=>'left', -colspan=>3},
+			 $CONFIG->setting('html1')
+			)
+		     ),
+		  TR({-class=>'searchbody', -align=>'left'},
+		     td({-align=>'left'}, b($LANG->tr('Landmark')),br,
 			textfield(-name=>'name',-size=>40),
 			submit(-name=>$LANG->tr('Search')).'&nbsp;'.
 			submit(-name=>$LANG->tr('Reset'),-class=>'reset_button')
 		       ),
-		     td({-align=>'left'},
-			$segment ? (b($LANG->tr('Scroll').': '),slidertable($segment,$buttonsDir)) : ''
+		     td({-class=>'searchbody',-align=>'left'},
+			$segment ? (b($LANG->tr('Scroll').': '),br,slidertable($segment,$buttonsDir)) : ''
 		       ),
 		    ),
 		 );
@@ -786,7 +810,7 @@ sub labels {
 sub plugins_table {
   my $settings = shift;
   return table({-border=>0, -width=>$settings->{width},-cellspacing=>0},
-	      TR({-class=>'searchtitle',-align=>'left'},
+	      TR({-class=>'settingsbody',-align=>'left'},
 		 td({-align=>'left'},
 		    table(td(
 			     source_menu($settings),
@@ -849,7 +873,7 @@ sub settings_table {
   my @widths = split /\s+/,$CONFIG->setting('image widths');
   @widths = (640,800,1024) unless @widths;
 
-  return table({-border=>0,-width=>$settings->{width},-class=>'searchtitle'},
+  return table({-border=>0,-width=>$settings->{width},-class=>'settingsbody'},
 	       # row
 	       TR(
 		  td(
@@ -894,7 +918,7 @@ sub upload_table {
   # start the table.
   my $cTable = start_table({-border=>0,-width=>$settings->{width}})
     . TR(
-	 th({-class=>'datatitle', -colspan=>3, -align=>'left'},
+	 th({-class=>'uploadtitle', -colspan=>3, -align=>'left'},
 	    $LANG->tr('Upload_title').':',
 	    a({-href=>annotation_help(),-target=>'help'},'['.$LANG->tr('HELP').']'))
 	);
@@ -908,17 +932,17 @@ sub upload_table {
     my $link = a({-href=>url(-relative=>1,-path_info=>1)."?$download=$name"},"[$name]");
     my @info =  get_uploaded_file_info($settings->{features}{$filename}{visible}
 					 && $feature_files->{$filename});
-    $cTable .=  TR({-class=>'databody'},
+    $cTable .=  TR({-class=>'uploadbody'},
 		   th($link),
 		   td({-colspan=>2},
 		      submit(-name=>"modify.$file",-value=>$LANG->tr('Edit')).'&nbsp;'.
 		      submit(-name=>"modify.$file",-value=>$LANG->tr('Download_file')).'&nbsp;'.
 		      submit(-name=>"modify.$file",-value=>$LANG->tr('Delete'))));
-    $cTable .= TR({-class=>'databody'},td('&nbsp;'),td({-colspan=>2},@info));
+    $cTable .= TR({-class=>'uploadbody'},td('&nbsp;'),td({-colspan=>2},@info));
   }
 
   # end the table.
-  $cTable .= TR({-class=>'databody'},
+  $cTable .= TR({-class=>'uploadbody'},
 		th({-align=>'RIGHT'},$LANG->tr('Upload_File')),
 		td({-colspan=>3},
 		   filefield(-size=>40,-name=>'upload_annotations'),
@@ -968,12 +992,12 @@ sub external_table {
 		     $presets);
 
   return table({-border=>0,-width=>$settings->{width}},
-	       TR({-class=>'datatitle'},
+	       TR({-class=>'uploadtitle'},
 		  th({-align=>'LEFT',-colspan=>2},
 		     $LANG->tr('Remote_title').':',
 		     a({-href=>annotation_help().'#remote',-target=>'help'},'['.$LANG->tr('Help').']'))),
-	       TR({-class=>'databody'},\@rows),
-	       TR({-class=>'databody'},
+	       TR({-class=>'uploadbody'},\@rows),
+	       TR({-class=>'uploadbody'},
 		  th('&nbsp;'),
 		  th({-align=>'LEFT'},submit($LANG->tr('Update_urls'))))
 	      );
@@ -2266,6 +2290,12 @@ sub set_language {
   warn "languages = ",join(',',@languages) if DEBUG;
   return unless @languages;
   $lang->language(@languages);
+}
+
+sub html_frag {
+  my $fragname = shift;
+  my $a = $CONFIG->setting($fragname);
+  return $a;
 }
 
 sub footer {

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.39 2002-10-02 02:48:23 lstein Exp $
+# $Id: Browser.pm,v 1.40 2002-10-06 18:25:34 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -739,14 +739,14 @@ sub image_and_map {
   my $max_labels     = $conf->setting(general=>'label density') || 10;
   my $max_bump       = $conf->setting(general=>'bump density')  || 50;
   my $length         = $segment->length;
-  my $global_lowres  = $conf->setting(general=>'low res');
 
   my @feature_types = map { $conf->label2type($_,$length) } @$tracks;
 
   # Create the tracks that we will need
   my @argv = (-segment   => $segment,
 	      -width     => $width,
-	      -keycolor  => 'moccasin',
+	      -key_color => $self->setting('key bgcolor')     || 'moccasin',
+	      -bgcolor   => $self->setting('detail bgcolor')  || 'white',
 	      -grid      => 1,
 	      -key_style => $keystyle || $conf->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
 	      -empty_tracks => $conf->setting(general=>'empty_tracks')
@@ -1049,7 +1049,7 @@ sub hits_on_overview {
 						      -name=>$name||'');
     } elsif (UNIVERSAL::can($hit,'ref')) {
       my $ref  = $hit->seq_id;
-      my $name = $hit->can('seqname') ? $hit->seqname : $hit->name;
+      my $name = $hit->can('seq_name') ? $hit->seq_name : $hit->name;
       my($start,$end) = ($hit->start,$hit->end);
       $name =~ s/\:\d+,\d+$//;  # remove coordinates if they're there
       $name = substr($name,0,7).'...' if length $name > 10;

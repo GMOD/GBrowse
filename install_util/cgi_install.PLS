@@ -46,7 +46,7 @@ foreach (glob('*')) {
   next if /~$/;
   next if /\.PLS$/;
   my $installfile = Bio::Root::IO->catfile($cgi_target, $_);
-  warn "copying $_ to $installfile";
+  warn "copying $_ to $installfile\n";
   copy($_, $installfile ) or die "unable to copy to $installfile\n";
   my $mode = 0755;
   chmod $mode, $installfile

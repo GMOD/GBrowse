@@ -137,6 +137,8 @@ END
 
    HIT_COUNT      => 'The following %d regions match your request.',
 
+   POSSIBLE_TRUNCATION  => 'Search results are limited to %d hits; list may be incomplete.',
+
    MATCHES_ON_REF => 'Matches on %s',
 
    SEQUENCE        => 'sequence',

@@ -495,7 +495,6 @@ The following [GENERAL] options are recognized:
    prevent them from colliding, but will instead allow them to
    overlap.
 
-
    * link
 
    The link option creates a default rule for creating outgoing links 
@@ -605,22 +604,15 @@ The following [GENERAL] options are recognized:
 
       zoom levels = 1000 2000 5000 10000 20000 40000 100000 200000
 
-   * low res
+   * keyword search max
 
-   GBrowse currently supports limited semantic zooming in which the
-   appearance of certain glyphs changes as the magnification
-   increases.  The "low res" option specifies the point at which the
-   detailed view switches from high resolution to low resolution, and
-   is measured in base pairs.
-
-   For example, this option
-
-       low res = 100000
-
-   tells GBrowse to switch into low resolution mode when the number of
-   base pairs shown on the detailed screen is equal to or greater than
-   100,000 bp.
-
+   Ty default, gbrowse will limit the number of keyword search results
+   to 1,000.  The order in which the 1,000 hits are returned depends on
+   how the database was loaded, and so you may see odd patterns, such as
+   only hits on a particular chromosome being displayed.  To raise the 
+   limit on keyword search results, set "keyword search max" to the
+   desired maximum value.
+    
    * overview units
 
    This option controls the units that will be used on the scale for

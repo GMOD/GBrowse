@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.55 2003-02-27 15:33:56 lstein Exp $
+# $Id: Browser.pm,v 1.56 2003-03-06 16:56:14 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -817,31 +817,26 @@ sub image_and_map {
 
     while (my $feature = $iterator->next_seq) {
 
-      my $label = $self->feature2label($feature,$length);
-      my $track = $tracks{$label} or next;
+      # allow a single feature to live in multiple tracks
+      for my $label ($self->feature2label($feature,$length)) {
+	my $track = $tracks{$label} or next;
 
-      warn "feature = $feature, label = $label, track = $track\n" if DEBUG;
+	warn "feature = $feature, label = $label, track = $track\n" if DEBUG;
 
-      $feature_count{$label}++;
+	$feature_count{$label}++;
 
-      # special case to handle paired EST reads
-      # WARNING: HARD-CODED RELIANCE ON METHOD NAMES similarity AND alignment.
-      # if ($feature->primary_tag =~ /^(similarity|alignment)$/i) {
-      # push @{$similarity{$label}},$feature;
-      # next;
-      # }
+	# Handle name-based groupings.  Since this occurs for every feature
+	# we cache the pattern data.
+	warn "$track group pattern => ",$conf->code_setting($label => 'group_pattern') if DEBUG;
+	exists $group_pattern{$label} or $group_pattern{$label} = $conf->code_setting($label => 'group_pattern');
+	
+	if (defined $group_pattern{$label}) {
+	  push @{$groups{$label}},$feature;
+	  next;
+	}
 
-      # Handle name-based groupings.  Since this occurs for every feature
-      # we cache the pattern data.
-      warn "$track group pattern => ",$conf->code_setting($label => 'group_pattern') if DEBUG;
-      exists $group_pattern{$label} or $group_pattern{$label} = $conf->code_setting($label => 'group_pattern');
-
-      if (defined $group_pattern{$label}) {
-	push @{$groups{$label}},$feature;
-	next;
+	$track->add_feature($feature);
       }
-
-      $track->add_feature($feature);
     }
 
     # handle pattern-based group matches
@@ -1130,7 +1125,7 @@ sub hits_on_overview {
     # add the hits
     $panel->add_track($refs{$ref},
 		      -glyph     => 'diamond',
-		      -height    => 6,
+		      -height    => 8,
 		      -fgcolor   => 'red',
 		      -bgcolor   => 'red',
 		      -fallback_to_rectangle => 1,
@@ -1469,14 +1464,29 @@ sub semantic_label {
 # override inherited in order to be case insensitive
 # and to account for semantic zooming
 sub type2label {
-  my $self = shift;
+  my $self           = shift;
   my ($type,$length) = @_;
   $length ||= 0;
-  my $array  = $self->SUPER::type2label(lc $type) or return;
-  my @normal = grep {!/:\d+$/} @$array;
-  my @lowres = map {$_->[0]} sort {$b->[1] <=> $a->[1]} map { [split ':'] }
-    grep {/:(\d+)$/ && $1 <= $length} @$array;
-  $lowres[0] || $normal[0];
+
+  my @labels;
+
+  @labels = @{$self->{_type2labelmemo}{$type,$length}}
+    if defined $self->{_type2labelmemo}{$type,$length};
+
+  unless (@labels) {
+    my @array  = $self->SUPER::type2label(lc $type) or return;
+    my %label_groups;
+    for my $label (@array) {
+      my ($label_base,$minlength) = $label =~ /([^:]+)(?::(\d+))?/;
+      $minlength ||= 0;
+      next if defined $length && $minlength > $length;
+      $label_groups{$label_base}++;
+    }
+    @labels = keys %label_groups;
+    $self->{_type2labelmemo}{$type,$length} = \@labels;
+  }
+
+  return wantarray ? @labels : $labels[0];
 }
 
 # override inherited in order to allow for semantic zooming
@@ -1486,10 +1496,10 @@ sub feature2label {
   my $type  = eval {$feature->type}
     || eval{$feature->source_tag} || eval{$feature->primary_tag} or return;
   (my $basetype = $type) =~ s/:.+$//;
-  my $label = $self->type2label($type,$length)
-    || $self->type2label($basetype,$length)
-      || $type;
-  $label;
+  my @label = $self->type2label($type,$length);
+  @label = $self->type2label($basetype,$length) unless @label;
+  @label = ($type) unless @label;
+  wantarray ? @label : $label[0];
 }
 
 sub invert_types {
@@ -1500,7 +1510,7 @@ sub invert_types {
     next if $label=~/:?overview$/;   # special case
     my $feature = $config->{$label}{'feature'} or next;
     foreach (shellwords($feature||'')) {
-      push @{$inverted{lc $_}},$label;
+      $inverted{lc $_}{$label}++;
     }
   }
   \%inverted;
@@ -1529,7 +1539,7 @@ sub summary_mode {
 sub make_link {
   my $self     = shift;
   my ($feature,$panel)  = @_;
-  my $label    = $self->feature2label($feature,$panel) or return;
+  my $label    = $self->feature2label($feature) or return;
   my $link     = $self->code_setting($label,'link');
   $link        = $self->code_setting(general=>'link') unless defined $link;
   return unless $link;

@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.76 2003-02-25 16:08:27 lstein Exp $
+# $Id: gbrowse.PLS,v 1.77 2003-03-06 16:56:11 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -79,7 +79,7 @@ use constant ANNOTATION_EDIT_ROWS => 25;
 use constant ANNOTATION_EDIT_COLS => 100;
 use constant URL_FETCH_TIMEOUT    => 5;  # five seconds max!
 use constant URL_FETCH_MAX_SIZE   => 1_000_000;  # don't accept any files larger than 1 Meg
-use constant MAX_KEYWORD_RESULTS  => 1000;  # max number of results from keyword search
+use constant MAX_KEYWORD_RESULTS  => 1_000;     # max number of results from keyword search
 use constant DEFAULT_RANGES       => q(100 500 1000 5000 10000 25000 100000 200000 400000);
 use constant DEFAULT_FINE_ZOOM    => '10%';
 use constant GBROWSE_HELP         => '/gbrowse';
@@ -315,7 +315,7 @@ exit 0;
 
 sub main_display {
   my ($segments,$page_settings) = @_;
-  my ($segment,@keyword_search_results);
+  my ($segment);
 
   # first of all, if there are no segments, then try a keyword search and store the results
   if (@$segments == 0 && (my $n = $page_settings->{name})) {
@@ -339,7 +339,7 @@ sub main_display {
   print navigation_table($segment,$page_settings);
   print html_frag('html2');
 
-  my $feature_files;  
+  my $feature_files;
 
   # if more than one segment, then list them all
   if (@$segments > 1) {
@@ -1186,8 +1186,10 @@ sub do_keyword_search {
   my $match = eval $match_sub;
 
   my $db = open_database();
+  my $max_keywords = $CONFIG->setting('keyword search max')
+		    || MAX_KEYWORD_RESULTS;
   my @matches = grep { $match->($_->[1]) }
-    $db->search_notes($searchterm,MAX_KEYWORD_RESULTS);
+    $db->search_notes($searchterm,$max_keywords);
   my @results;
   for my $r (@matches) {
     my ($name,$description,$score) = @$r;
@@ -1226,6 +1228,10 @@ sub multiple_choices {
   print TR({-class=>'datatitle'},
 	   th({-colspan=>4},
 	      $LANG->tr('Hit_count',$count)));
+  print TR({-class=>'datatitle'},
+	   th({-colspan=>4},
+	      $LANG->tr('Possible_truncation',MAX_KEYWORD_RESULTS)))
+    if $count >= MAX_KEYWORD_RESULTS;
   my $url = url(-relative=>1,-path_info=>1);
 
   local $^W = 0;  # get rid of non-numeric warnings coming out of by_score_and_position

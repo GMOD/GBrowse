@@ -50,7 +50,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.25 2004-02-29 17:15:50 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.26 2004-03-18 23:25:01 markwilkinson Exp $
 ###########################################################
 
 use MOBY::Client::Central;
@@ -508,7 +508,9 @@ sub execute {
             print TR({-valign=>'top', -class=>'databody'},
                 th({-align => 'left', -valign=>'top', -class=>'datatitle'},"Data Type: "),
                 td($MOBYClass));
-            &printIt($_);    
+                print "<!-- SCRAPE_ME_START -->";
+            &printIt($_);
+                print "<!-- SCRAPE_ME_END -->";
         }
     }
     print end_table;

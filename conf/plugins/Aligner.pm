@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::Aligner;
-# $Id: Aligner.pm,v 1.1 2003-05-21 13:45:12 lstein Exp $
+# $Id: Aligner.pm,v 1.2 2003-05-26 21:05:09 lstein Exp $
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use CGI qw(table TR td th p popup_menu radio_group checkbox checkbox_group h1 h2 pre);
@@ -44,15 +44,15 @@ sub init {
   $self->{ragged}     = \@ragged;
 
   $self->{upcase_default} = $browser_conf->plugin_setting('upcase_default');
+  $self->{align_default}  = [shellwords($browser_conf->plugin_setting('align_default'))];
   $self->{ragged_default} = $browser_conf->plugin_setting('ragged_default');
 
 }
 
 sub config_defaults {
   my $self = shift;
-  return { align  => $self->{alignable},
-	   upcase => $self->{upcase},
-	   flip   => 0,
+  return { align  => @{$self->{align_default}} ? $self->{align_default} : $self->{alignable},
+	   upcase => $self->{upcase}[0]
 	 };
 }
 
@@ -67,7 +67,7 @@ sub configure_form {
 		th('Features to render uppercase:'),
 		td(radio_group(-name    => $self->config_name('upcase'),
 			       -values  => ['none',@{$self->{upcase}}],
-			       -default => $current->{upcase} || $self->{upcase_default} || 'none',
+			       -default  => $current->{upcase} || $self->{upcase_default} || 'none',
 			       -labels   => \%labels,
 			       @{$self->{upcase}} > 4 ? (-cols     => 4) : ()
 			      ))
@@ -91,11 +91,6 @@ sub configure_form {
 					  -default  => $current->{ragged} || $self->{ragged_default} || 0),
 		 '&nbsp;bp of unaligned sequence at ends.')
 	      );
-  $html .= TR(
-	      th({-colspan=>2,-align=>'left'},
-		 checkbox(-name     => $self->config_name('flip'),
-			  -default  => $current->{flip},
-			 -label     => 'Reverse complement alignment')));
   return $html ? table({-class=>'searchtitle'},$html) : undef;
 }
 
@@ -107,7 +102,6 @@ sub reconfigure {
   $current->{align}  = \@align;
   $current->{upcase} = $upcase eq 'none' ? undef : $upcase;
   $current->{ragged} = $self->config_param('ragged');
-  $current->{flip}   = $self->config_param('flip');
 }
 
 sub mime_type { 'text/html' }
@@ -119,6 +113,8 @@ sub dump {
   my $database      = $self->database;
   my $browser       = $self->browser_config;
   my $configuration = $self->configuration;
+
+  $configuration->{flip} = $self->page_settings->{flip};
 
   my $flipped = $configuration->{flip} ? " (reverse complemented)" :'';
   print h1("Alignments for $segment$flipped");
@@ -135,7 +131,11 @@ sub dump {
       my @segments = $f->segments;
       @segments    = $f unless @segments;
       for my $s (@segments) {
-	substr($ref_dna,$s->low-$abs_start,$s->length) =~ tr/a-z/A-Z/;
+	my $upstart   = $s->low-$abs_start;
+	$upstart      = 0 if $upstart < 0;
+	my $uplength  = $s->high - $upstart;
+	$uplength     = length($ref_dna) if $uplength > length($ref_dna);
+	substr($ref_dna,$upstart,$uplength) =~ tr/a-z/A-Z/;
       }
     }
   }
@@ -168,16 +168,25 @@ sub dump {
       }
 
       else {  # unfortunately if this isn't the case, then we have to realign the segment a bit
-	warn "Realigning. Probably won't work!" if DEBUG;
-	push @segments,map {
-	  [$target,$_->[0]+$src_start,$_->[1]+$src_start,$_->[2]+$tgt_start,$_->[3]+$tgt_start]
+	warn   "Realigning [$target,$src_start,$src_end,$tgt_start,$tgt_end].\n" if DEBUG;
+	my ($sdna,$tdna) = ($s->dna,$target->dna);
+	warn   $sdna,"\n",$tdna,"\n" if DEBUG;
+	my @result = $self->realign($sdna,$tdna);
+	foreach (@result) {
+	  next unless $_->[1]+$src_start >= $abs_start && $_->[0]+$src_start <= $abs_end;
+	  warn "=========> [$target,@$_]\n" if DEBUG;
+	  my $a = $strands{$target} >= 0 ? [$target,$_->[0]+$src_start,$_->[1]+$src_start,$_->[2]+$tgt_start,$_->[3]+$tgt_start]
+	                                 : [$target,$_->[0]+$src_start,$_->[1]+$src_start,$tgt_end-$_->[3],$tgt_end-$_->[2]];
+	  warn "=========> [@$a]\n" if DEBUG;
+	  warn substr($sdna,     $_->[0],$_->[1]-$_->[0]+1),"\n" if DEBUG;
+	  warn substr($tdna,$_->[2],$_->[3]-$_->[2]+1),"\n" if DEBUG;
+	  push @segments,$a;
 	}
-	  $self->realign($segment->dna,$target->dna);
       }
     }
   }
 
-  # We're now going to  all the alignments
+  # We're now going to do all the alignments
   my %clip;
   for my $seg (@segments) {
     my $target = $seg->[TARGET];
@@ -191,6 +200,7 @@ sub dump {
       } else {
 	$seg->[TGT_END]  +=  $delta;
       }
+      warn "Left clipping gives [@$seg]\n" if DEBUG;
     }
 
     # right clipping
@@ -202,8 +212,8 @@ sub dump {
       } else {
 	$seg->[TGT_START] -= $delta;
       }
+      warn "Right clipping gives [@$seg]\n" if DEBUG;
     }
-
     $clip{$target}{low} = $seg->[TGT_START]
       if !defined $clip{$target}{low} || $clip{$target}{low} > $seg->[TGT_START];
     $clip{$target}{high} = $seg->[TGT_END]
@@ -226,12 +236,12 @@ sub dump {
     $clip{$t}{low}   = 1 if $clip{$t}{low} < 1;
 
     my @order = $strands{$t}>=0?('low','high'):('high','low');
-    my $dna = $database->dna($t,@{$clip{$t}}{@order});
+    my $dna = lc $database->dna($t,@{$clip{$t}}{@order});
     push @sequences,($t => $dna);  # dna() api gives implicit reversec
 
     # sanity check - needed for adjusting for ragged ends
     warn "$t low = $clip{$t}{low}, dna = $dna\n" if DEBUG;
-    warn "expected ",$clip{$t}{high}-$clip{$t}{low}+1," but got ",length($dna) if DEBUG;
+    warn "expected ",$clip{$t}{high}-$clip{$t}{low}+1," and got ",length($dna) if DEBUG;
     $clip{$t}{high} = $clip{$t}{low}+length($dna)-1 if $clip{$t}{high} > $clip{$t}{low}+length($dna)-1;
   }
 
@@ -249,6 +259,15 @@ sub dump {
     }
     ($target,$src_start,$src_end,$tgt_start,$tgt_end) = @$seg;
     warn "is  [$target,$src_start,$src_end,$tgt_start,$tgt_end]" if DEBUG;
+  }
+
+  if (DEBUG) {
+    my %sequences = @sequences;
+    foreach (@segments) {
+      my ($t,$s,$e,$ts,$te) = @$_;
+      warn substr($sequences{$segment->display_name},$s,$e-$s+1),"\n";
+      warn substr($sequences{$t},$ts,$te-$ts+1),"\n";
+    }
   }
 
   my $align = Bio::Graphics::Browser::PadAlignment->new(\@sequences,\@segments);

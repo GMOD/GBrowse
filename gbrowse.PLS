@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.94 2003-05-21 19:00:51 lstein Exp $
+# $Id: gbrowse.PLS,v 1.95 2003-05-26 21:05:08 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -66,7 +66,7 @@ use constant MAG_ICON_WIDTH  => 8;
 # had-coded values for segment sizes
 # many of these can be overridden by configuration file entries
 use constant MAX_SEGMENT     => 1_000_000;
-use constant MIN_SEG_SIZE         => 50;
+use constant MIN_SEG_SIZE         => 20;
 use constant TINY_SEG_SIZE        => 2;
 use constant EXPAND_SEG_SIZE      => 5000;
 use constant TOO_MANY_SEGMENTS => 5_000;

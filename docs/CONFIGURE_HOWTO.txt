@@ -427,11 +427,19 @@ The following [GENERAL] options are recognized:
 
   * aggregators
 
-  Aggregators to use for complex features.  Comment this out to use
-  the default aggregators. It is possible to declare your own
-  aggregator here using a special syntax.  See "B7. Declaring New
-  Aggregators" for details.  This option is only valid when used with
-  Bio::DB::GFF adaptors.
+  This option is only valid when used with Bio::DB::GFF adaptors, and
+  lists one or more aggregators to use for complex features.  It is
+  possible to declare your own aggregator here using a special syntax
+  described in "B7. Declaring New Aggregators."
+
+  To disable the default aggregators, leave this setting blank, as in:
+
+     aggregators=
+
+  To activate the default aggregators of "transcript," "clone,"
+  and "alignment," comment this setting out entirely:
+
+    # aggregators =
 
   * user
   

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.68 2003-05-21 13:45:12 lstein Exp $
+# $Id: Browser.pm,v 1.69 2003-05-26 21:05:10 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -323,7 +323,8 @@ sub db_settings {
     push @argv,(-pass=>$pass);
   }
 
-  if (my @aggregators = shellwords($self->setting('aggregators')||'')) {
+  if (defined (my $a = $self->setting('aggregators'))) {
+    my @aggregators = shellwords($a);
     push @argv,(-aggregator => \@aggregators);
   }
 

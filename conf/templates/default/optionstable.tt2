@@ -4,20 +4,20 @@
     <!-- IMAGE WIDTH -->
     <td>
       <b>[% browser.translate('image_width') %]</b><br/>
-      [% FOREACH width = browser.config.setting('image widths') %]
-      <input type="radio" name="width" value="[% width %]" [% IF(width == browser.options.width) ; 'selected="selected"' ; END %]>[% width %]</width>
+      [% FOREACH width = browser.config.setting('image widths').split('\s+') %]
+      <input type="radio" name="width" value="[% width %]" [% IF(width == browser.options.width) ; 'checked="checked"' ; END %]/>[% width %]
       [% END %]
     </td>
 
     <!-- KEY POSITION -->
     <td>
       <b>[% browser.translate('key_position') %]</b><br/>
-      <input type="radio" name="ks" value="between">[% browser.translate('between') %]</input>
-      <input type="radio" name="ks" value="bottom" >[% browser.translate('bottom')  %]</input>
+      <input type="radio" name="ks" value="between">[% browser.translate('BETWEEN') %]</input>
+      <input type="radio" name="ks" value="beneath">[% browser.translate('BENEATH') %]</input>
 
       <!-- need to check if Bio::Graphics::Panel->can('auto_pad') allows these -->
-      <input type="radio" name="ks" value="left"   >[% browser.translate('left')    %]</input>
-      <input type="radio" name="ks" value="right"  >[% browser.translate('right')   %]</input>
+      <input type="radio" name="ks" value="left"   >[% browser.translate('LEFT')    %]</input>
+      <input type="radio" name="ks" value="right"  >[% browser.translate('RIGHT')   %]</input>
       <!-- end check -->
     </td>
 
@@ -30,6 +30,8 @@
 
     <!-- BUTTONS -->
     <td align="right">
-      <submit name="[% browser.translate('set_options') %]"/>&nbsp;<b><submit name="[% browser.translate('update') %]"/></b>
+      <!-- FIXME do these button names need to be translated? -->
+      <input type="submit" name="Set Track Options..." value="[% browser.translate('set_options') %]"/>
+      <input type="submit" name="Update Image"         value="[% browser.translate('update') %]"     />
     </td>
 </table>

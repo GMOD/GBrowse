@@ -5,8 +5,6 @@ use warnings;
 #Perform installation of gbrowse apache configuration files
 
 use File::Copy;
-use Config;
-
 
 # get configuration stuff from command line
 my $CONF = $ARGV[0];
@@ -25,7 +23,7 @@ while (my $conffile = readdir(CONFDIR) ) {
         if (-f "$dir/$conffile") {
 	    print "   Found $conffile in $dir. Skipping...\n";
         } else {
-	    copy("./conf/$conffile", "$dir/$conffile") or die "unable to copy $conffile\n";
+	    copy("./conf/$conffile", "$dir/$conffile") or die "unable to copy to$dir/$conffile\n";
         }
     }
 }
@@ -38,7 +36,7 @@ if (! (-e "$dir/plugins")) {
 opendir PLUGINS, "./conf/plugins" or die "unable to opendir ./conf/plugins\n";
 while (my $pluginfile = readdir(PLUGINS) ) {
     if (-f "./conf/plugin/$pluginfile") {
-        copy($pluginfile, "$dir/plugins/$pluginfile") or die "unable to copy $pluginfile\n";
+        copy($pluginfile, "$dir/plugins/$pluginfile") or die "unable to copy to $dir/plugins/$pluginfile\n";
     } 
 }
 closedir PLUGINS;
@@ -50,7 +48,7 @@ if (! (-e "$dir/languages")) {
 opendir LANGDIR, "./conf/languages" or die "unable to opendir ./conf/languages\n";
 while (my $langfile = readdir(LANGDIR)) {
     if (-f "./conf/languages/$langfile") {
-        copy($langfile, "$dir/languages/$langfile") or die "unable to copy $langfile\n";
+        copy($langfile, "$dir/languages/$langfile") or die "unable to copy to $dir/languages/$langfile\n";
     }
 }
 closedir LANGDIR;

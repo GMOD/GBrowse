@@ -104,7 +104,7 @@ my @args = (
              "'HTDOCS=$htdocs'"
            );
 
-for my $inst ("win_htdocs_install.pl","win_conf_install.pl","win_cgi_install.pl") {
+for my $inst ("htdocs_install.pl","conf_install.pl","cgi_install.pl") {
   system("perl","install_util/$inst",@args); #==0
     # or die "The install script, $inst, failed.  I don't know why\n";;
 }

@@ -11,19 +11,21 @@ $file .= $^O eq 'VMS' ? '.com' : '.pl';
 open OUT,">$file" or die "Can't create $file: $!";
                                                                                 
 print "Extracting $file (with variable substitutions)\n";
-                                                                                
-print OUT <<"!GROK!THIS!";
-$Config{startperl}
 
+print OUT "$Config{startperl}\n";
+
+print OUT <<'!NO!SUBS!';
 use strict;
 use File::Copy;
 use Bio::Root::IO;
+use Cwd;
+use FindBin '$Bin';
 
-my \$working_dir = \'$origdir\/\';
+my $origdir = cwd;
+my $homedir = "$Bin/..";
 
-!GROK!THIS!
+chdir $homedir or die "couldn't cd to $homedir: $!\n";
 
-print OUT <<'!NO!SUBS!';
 foreach (@ARGV) {
   $_ =~ s/^\'(.*)\'$/$1/;
 }
@@ -37,7 +39,7 @@ if (! (-e $cgi_target) ) {
     mkdir($cgi_target,0777) or die "unable to create $cgi_target directory\n";
 }
 
-my $cgidir = $working_dir . "cgi-bin";
+my $cgidir = "cgi-bin";
 chdir $cgidir;
 foreach (glob('*')) {
   next if /README/;
@@ -53,6 +55,8 @@ foreach (glob('*')) {
   chmod $mode, $installfile
     or die "unable to make $installfile world executable\n";
 }
+
+chdir $origdir or die "couldn't cd to $origdir: $!\n";
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

@@ -12,19 +12,22 @@ open OUT,">$file" or die "Can't create $file: $!";
                                                                                 
 print "Extracting $file (with variable substitutions)\n";
                                                                                 
-print OUT <<"!GROK!THIS!";
-$Config{startperl}
+print OUT "$Config{startperl}\n";
+
+print OUT <<'!NO!SUBS!';
 use strict;
 use File::Basename qw( basename fileparse );
 use Carp 'croak';
 use IO::Dir;
 use Bio::Root::IO;
+use Cwd;
+use FindBin '$Bin';
 
-my \$working_dir = \'$origdir\/\';
+my $origdir = cwd;
+my $homedir = "$Bin/..";
                                                                                 
-!GROK!THIS!
-
-print OUT <<'!NO!SUBS!';
+chdir $homedir or die "couldn't cd to $homedir: $!\n";
+                                                                                
 foreach (@ARGV) {
   $_ =~ s/^\'(.*)\'$/$1/;
 }
@@ -38,7 +41,7 @@ if (! (-e $ht_target) ) {
     mkdir($ht_target,0777) or die "unable to make $ht_target directory\n";
 }
 
-my $localhtdocsdir = $working_dir . "htdocs";
+my $localhtdocsdir = "htdocs";
 opendir HTDOCS, $localhtdocsdir or die "unable to opendir $localhtdocsdir\n";
 while (my $file = readdir(HTDOCS) ) {
     my $localfile = Bio::Root::IO->catfile($localhtdocsdir, $file);
@@ -63,7 +66,7 @@ if (! (-e $buttondir) ) {
     mkdir($buttondir,0777) or die "unable to make $buttondir\n";
 }
 
-my $localbuttondir = $working_dir . "htdocs/images/buttons";
+my $localbuttondir = "htdocs/images/buttons";
 opendir BUTTONS, $localbuttondir or die "unable to open $localbuttondir\n";
 while (my $file = readdir(BUTTONS) ) {
     my $localfile = Bio::Root::IO->catfile($localbuttondir,$file);
@@ -83,7 +86,7 @@ if (! (-e $helpdir) ) {
     mkdir($helpdir,0777) or die "unable to make $helpdir\n";
 }
 
-my $localhelpdir = $working_dir . "htdocs/images/help";
+my $localhelpdir = "htdocs/images/help";
 opendir HELP, $localhelpdir or die "unable to open $localhelpdir\n";
 while (my $file = readdir(HELP) ) {
     my $localfile = Bio::Root::IO->catfile($localhelpdir, $file);
@@ -111,7 +114,7 @@ print "Installing documentation...\n";
 #  a pod2html dohicky (it can create the html in the htdocs dir directly)
 #  a wanted subroutine to do File::Find's work
 #  also need to modify gbrowse/index.html
-for my $localfile ($working_dir. "DISCLAIMER") {
+for my $localfile ("DISCLAIMER") {
   my $installfile = Bio::Root::IO->catfile($ht_target,basename($localfile));
   chmod (0666, $installfile);
   copy_with_substitutions($localfile,$installfile);
@@ -128,7 +131,7 @@ if (! (-e $poddir) ) {
     mkdir($poddir,0777) or die "unable to make $poddir\n";
 }
 
-my $localpoddir = $working_dir . "docs/pod/";
+my $localpoddir = "docs/pod/";
 my @localpodfiles = glob($localpoddir . "*.pod"); 
 for my $localfile ( @localpodfiles ) {
      my ($name,undef,undef) = fileparse($localfile, "\.pod");
@@ -145,16 +148,16 @@ unlink './pod2htmi.x~~';
 unlink './pod2htmd.x~~';
 
 print "Installing tutorial...\n";
-copy_tree("$working_dir/docs/tutorial",$ht_target);
+copy_tree("./docs/tutorial",$ht_target);
 
 print "Installing sample_data...\n";
-copy_tree("$working_dir/sample_data",$ht_target);
+copy_tree("./sample_data",$ht_target);
 
 print "Installing contrib...\n";
-copy_tree("$working_dir/contrib",$ht_target);
+copy_tree("./contrib",$ht_target);
 
 print "Installing sample data files...\n";
-copy_tree("$working_dir/htdocs/databases","$ht_target");
+copy_tree("./htdocs/databases","$ht_target");
 chmod 0777,glob("$ht_target/databases/*");
 
 print "\n\n#############################################################################\n";
@@ -162,6 +165,7 @@ print "GBrowse is now installed.  Read INSTALL for further setup instructions.\n
 print "Go to http://localhost/gbrowse/ for the online tutorial and reference manual.\n";
 print "#############################################################################\n";
 
+chdir $origdir or die "couldn't cd to $origdir: $!\n";
 exit 0;
 
 sub copy_tree {
@@ -215,6 +219,7 @@ sub copy_with_substitutions {
   close OUT;
   close IN;
 }
+
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

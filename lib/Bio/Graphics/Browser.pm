@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.120 2004-02-15 15:28:31 lstein Exp $
+# $Id: Browser.pm,v 1.121 2004-02-17 16:48:50 scottcain Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -80,6 +80,7 @@ use constant DEFAULT_EMPTYTRACKS => 'key';
 use constant RULER_INTERVALS     => 20;  # fineness of the centering map on the ruler
 use constant TOO_MANY_SEGMENTS   => 5_000;
 use constant MAX_SEGMENT         => 1_000_000;
+use constant DEFAULT_SEGMENT     => 100_000;
 use constant DEFAULT_RANGES      => q(100 500 1000 5000 10000 25000 100000 200000 400000);
 use constant MIN_OVERVIEW_PAD    => 25;
 use constant PAD_OVERVIEW_BOTTOM => 3;
@@ -1311,7 +1312,7 @@ sub name2segments {
   $extra_padding ||= 0;
   $toomany ||= TOO_MANY_SEGMENTS;
 
-  my $max_segment   = $self->setting('max_segment') || MAX_SEGMENT;
+  my $max_segment   = $self->get_max_segment;
 
   my (@segments,$class,$start,$stop);
   if ($name =~ /([\w._\/-]+):(-?[-e\d.]+),(-?[-e\d.]+)$/ or
@@ -1428,8 +1429,41 @@ sub _feature_get {
 
 sub get_ranges {
   my $self      = shift;
-  my @ranges	= split /\s+/,$self->setting('zoom levels') || DEFAULT_RANGES;
-  @ranges;
+  my $divisor   = $self->setting('unit_divider') || 1;
+  my $rangestr  = $self->setting('zoom levels');
+  if (!$rangestr) {
+    return split /\s+/,DEFAULT_RANGES;
+  } elsif ($divisor == 1 ) {
+    return split /\s+/,$rangestr;
+  } else {
+    return map {$_ * $divisor} split /\s+/,$rangestr;
+  }
+}
+                                                                                
+sub get_max_segment {
+  my $self = shift;
+  my $divisor   = $self->setting('unit_divider') || 1;
+  my $max_seg   = $self->setting('max segment');
+  if (!$max_seg) {
+    return MAX_SEGMENT;
+  } elsif ($divisor == 1 ) {
+    return $max_seg
+  } else {
+    return $max_seg * $divisor;
+  }
+}
+                                                                                
+sub get_default_segment {
+  my $self = shift;
+  my $divisor   = $self->setting('unit_divider') || 1;
+  my $def_seg   = $self->setting('default segment');
+  if (!$def_seg) {
+    return DEFAULT_SEGMENT;
+  } elsif ($divisor == 1 ) {
+    return $def_seg
+  } else {
+    return $def_seg * $divisor;
+  }
 }
 
 sub _all_types {

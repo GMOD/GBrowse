@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.62 2004-02-17 16:09:31 marclogghe Exp $
+# $Id: gbrowse.PLS,v 1.63 2004-02-17 16:48:50 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -168,8 +168,8 @@ redirect_legacy_url($source);
 $CONFIG->source($source);
 my $page_settings = get_settings($source);
 
-$MAX_SEGMENT     = $CONFIG->setting('max segment')     || MAX_SEGMENT;
-$DEFAULT_SEGMENT = $CONFIG->setting('default segment') || DEFAULT_SEGMENT;
+$MAX_SEGMENT     = $CONFIG->get_max_segment;
+$DEFAULT_SEGMENT = $CONFIG->get_default_segment;
 
 # Now adjust those settings based on submitted CGI parameters
 # With the exception that we ignore parameter changes if the source has changed.
@@ -1471,8 +1471,7 @@ sub overview {
 }
 
 sub get_ranges {
-  my @ranges	= split /\s+/,$CONFIG->setting('zoom levels') || DEFAULT_RANGES;
-  @ranges;
+  return $CONFIG->get_ranges;
 }
 
 sub get_zoomincrement {

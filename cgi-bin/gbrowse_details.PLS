@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.21 2004-02-27 12:20:55 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.22 2004-03-16 16:15:14 scottcain Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -122,7 +122,7 @@ sub print_features {
       $string .= PrintMultiple($options,$a,$f->attributes($a));
     }
     $string .= PrintMultiple($options,'Type',  $f->method, $f->name); # sending name here for the sake of alignment features, that need to make a link from it
-    $string .= PrintMultiple($options,'Source',$f->source);
+    $string .= PrintMultiple($options,'Source',$f->source) if $f->source;
     $string .= PrintMultiple($options,"Position",position($f));
     $string .= PrintMultiple($options,"Length",$f->length);
     if ($f->target) {

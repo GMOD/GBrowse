@@ -1,8 +1,8 @@
 package Bio::Graphics::Browser::Plugin::BatchDumper;
 
 use strict;
-use lib '/home/lstein/projects/Generic-Genome-Browser/lib';
 use Bio::Graphics::Browser::Plugin;
+use Bio::Seq::RichSeq;
 use Bio::SeqIO;
 use Bio::Seq;
 use CGI qw(:standard *pre);
@@ -52,6 +52,7 @@ sub description {
 sub dump {
   my $self = shift;
   my $segment = shift;
+  my @more_feature_sets = @_;
 
   my $browser = $self->browser_config;
   my $config  = $self->configuration;
@@ -61,80 +62,78 @@ sub dump {
   # take the original segment if no segments were found/entered via the sequence_IDs textarea field
   @segments = ($segment) unless (@segments); 
   my @filter    = $self->selected_features;
-      
-  foreach my $segment ( @segments ) {
-      my $seq  = new Bio::Seq::RichSeq(-display_id       => $segment->display_id,
-				       -desc             => $segment->desc,
-				       -accession_number => $segment->accession_number,
-				       
-				       -alphabet         => $segment->alphabet || 'dna',
-				       );
-      $seq->add_date(strftime("%d-%b-%Y",localtime));
-      $seq->primary_seq($segment->primary_seq);
-      $segment->absolute(1);
-      my $offset     = $segment->start - 1;
-      my $segmentend = $segment->length;
-      $seq->add_SeqFeature( map {       
-	  my $nf = new Bio::SeqFeature::Generic(-primary_tag => $_->primary_tag,
-						-source_tag  => $_->source_tag,
-						-phase       => $_->phase,
-						-score       => $_->score,
-						);
-	  for my $tag ( $_->get_all_tags ) {
-	      my %seen;
-	      $nf->add_tag_value($tag, grep { ! $seen{$_}++ } 
-				 grep { defined } $_->get_tag_values($tag));
-	  }
-	  my $loc = $_->location;
-	  my @locs = $loc->each_Location;
-	  for my $sl (@locs ) {
-	      $sl->start($sl->start() - $offset);
-	      $sl->end  ($sl->end() - $offset );
-	      my ($startstr,$endstr);
-	      
-	  if( $sl->start() < 1) {
-	      $startstr = "<1";
-	      $endstr   = $sl->end;
-	  }
-	      
-	      if( $sl->end() > $segmentend) {
-		  $endstr = ">$segmentend";
-		  $startstr = $sl->start unless defined $startstr;
-	      }
-	      if( defined $startstr || defined $endstr ) {
-		  $sl = Bio::Location::Fuzzy->new(-start         => $startstr,
-						  -end           => $endstr,
-						  -strand        => $sl->strand,
-						  -location_type => '..');
-		  warn $sl->to_FTstring();
-	      }
-	  }
-	  if( @locs > 1 ) { 
-	      # let's insure they are sorted
-	      if( $wantsorted ) {  # for VectorNTI
-		  @locs = sort { $a->start <=> $b->start } @locs;
-	      }
-	      $nf->location( new Bio::Location::Split(-locations => \@locs,
-						      -seq_id    =>
-						      $segment->display_id));
-	  } else { 
-	      $nf->location(shift @locs);
-	  }
-      $nf;
-      } $segment->features(-types => \@filter) );
-      $segment = $seq;
-  }
-  
+
   # special case for GFF dumping
   if ($config->{fileformat} eq 'gff') {
-      $self->gff_dump(@segments);
+      $self->gff_dump(@segments,@more_feature_sets);
       return;
   }
-  
+
+  foreach my $segment ( @segments ) {
+    my $seq  = new Bio::Seq::RichSeq(-display_id       => $segment->display_id,
+				     -desc             => $segment->desc,
+				     -accession_number => $segment->accession_number,
+				     -alphabet         => $segment->alphabet || 'dna',
+				    );
+    $seq->add_date(strftime("%d-%b-%Y",localtime));
+    $seq->primary_seq($segment->primary_seq);
+    $segment->absolute(1);
+    my $offset     = $segment->start - 1;
+    my $segmentend = $segment->length;
+    $seq->add_SeqFeature( map {
+      my $nf = new Bio::SeqFeature::Generic(-primary_tag => $_->primary_tag,
+					    -source_tag  => $_->source_tag,
+					    -phase       => $_->phase,
+					    -score       => $_->score,
+					   );
+      for my $tag ( $_->get_all_tags ) {
+	my %seen;
+	$nf->add_tag_value($tag, grep { ! $seen{$_}++ } 
+			   grep { defined } $_->get_tag_values($tag));
+      }
+      my $loc = $_->location;
+      my @locs = $loc->each_Location;
+      for my $sl (@locs ) {
+	$sl->start($sl->start() - $offset);
+	$sl->end  ($sl->end() - $offset );
+	my ($startstr,$endstr);
+
+	if( $sl->start() < 1) {
+	  $startstr = "<1";
+	  $endstr   = $sl->end;
+	}
+
+	if( $sl->end() > $segmentend) {
+	  $endstr = ">$segmentend";
+	  $startstr = $sl->start unless defined $startstr;
+	}
+	if( defined $startstr || defined $endstr ) {
+	  $sl = Bio::Location::Fuzzy->new(-start         => $startstr,
+					  -end           => $endstr,
+					  -strand        => $sl->strand,
+					  -location_type => '..');
+	  warn $sl->to_FTstring();
+	}
+      }
+      if( @locs > 1 ) { 
+	# let's insure they are sorted
+	if( $wantsorted ) {  # for VectorNTI
+	  @locs = sort { $a->start <=> $b->start } @locs;
+	}
+	$nf->location( new Bio::Location::Split(-locations => \@locs,
+						-seq_id    =>
+						$segment->display_id));
+      } else { 
+	$nf->location(shift @locs);
+      }
+      $nf;
+    } $segment->features(-types => \@filter) );
+    $segment = $seq;
+  }
+
   # for the external viewer (like VNTI) the best import format is genbank (?)
   $config->{'fileformat'} = 'Genbank' if ($config->{'format'} eq 'external_viewer');
 
-  
   my $out = new Bio::SeqIO(-format => $config->{'fileformat'});
   my $mime_type = $self->mime_type;
   if ($mime_type =~ /html/) {
@@ -226,34 +225,46 @@ sub configure_form {
 }
 
 sub gff_dump {
-  my $self          = shift;
-  my @segments      = @_;
+  my $self             = shift;
+  my ($segment,@extra) = @_;
   my $page_settings = $self->page_settings;
   my $conf          = $self->browser_config;
   my $date = localtime;
 
   my $mime_type = $self->mime_type;
   my $html      = $mime_type =~ /html/;
-  print start_html($segments[0]) if $html;
+  print start_html($segment) if $html;
+  my @feature_types = $self->selected_features;
 
-  for my $segment (@segments) {
-    print h1($segment),start_pre() if $html;
-    print "##gff-version 2\n";
-    print "##date $date\n";
-    print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
-
-    my @feature_types = $self->selected_features;
-    my $iterator = $segment->get_seq_stream(-types=>\@feature_types) or return;
-    while (my $f = $iterator->next_seq) {
-      print $f->gff_string,"\n";
-      for my $s ($f->sub_SeqFeature) {
-	print $s->gff_string,"\n";
-      }
-    }
-    print end_pre() if $html;
+  print h1($segment),start_pre() if $html;
+  print "##gff-version 2\n";
+  print "##date $date\n";
+  print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
+  print "##source gbrowse BatchDumper\n";
+  print "##NOTE: Selected features dumped.\n";
+  my $iterator = $segment->get_seq_stream(-types=>\@feature_types) or return;
+  do_dump($iterator);
+  for my $set (@extra) {
+    do_dump($set->get_seq_stream)  if $set->can('get_seq_stream');
   }
+  print end_pre() if $html;
   print end_html() if $html;
 }
+
+sub do_dump {
+  my $iterator = shift;
+  while (my $f = $iterator->next_seq) {
+    my $s = $f->gff_string;
+    chomp $s;
+    print "$s\n";
+    for my $ss ($f->sub_SeqFeature) {
+      my $string = $ss->gff_string;
+      chomp $string;
+      print "$string\n";
+    }
+  }
+}
+
 
 1;
 

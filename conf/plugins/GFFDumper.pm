@@ -1,12 +1,12 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.8 2003-08-27 21:20:54 markwilkinson Exp $
+# $Id: GFFDumper.pm,v 1.9 2003-09-26 16:19:31 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use CGI qw(param url header p a);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.25';
+$VERSION = '0.50';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -27,6 +27,8 @@ sub dump {
   print "##gff-version 2\n";
   print "##date $date\n";
   print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
+  print "##source gbrowse GFFDumper plugin\n";
+  print "##NOTE: Selected features dumped.\n";
 
   my @feature_types = $self->selected_features;
   my $iterator = $segment->get_seq_stream(-types=>\@feature_types);
@@ -43,10 +45,10 @@ sub do_dump {
     my $s = $f->gff_string;
     chomp $s;
     print "$s\n";
-    for my $s ($f->sub_SeqFeature) {
-        my $s = $f->gff_string;
-        chomp $s;
-        print "$s\n";
+    for my $ss ($f->sub_SeqFeature) {
+      my $string = $ss->gff_string;
+      chomp $string;
+      print "$string\n";
     }
   }
 }

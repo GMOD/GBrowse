@@ -1,0 +1,11 @@
+=head1 Welcome to Gbrowse, the Generic Genome Browser
+
+There are several useful help documents here, including:
+
+=over
+
+=item 1 L<INSTALL>
+
+=item 2 L<CONFIGURE_HOWTO>
+
+=back

@@ -12,9 +12,9 @@
 <p>
 
 This is a quick tutorial to take you through the main features and
-gotchas of gbrowse.  This tutorial assumes that you have successfully
-setup Perl, GD, BioPerl and the other gbrowse dependencies.  During
-most of the tutorial, we will be using the "in-memory" gbrowse
+gotchas of GBrowse.  This tutorial assumes that you have successfully
+setup Perl, GD, BioPerl and the other GBrowse dependencies.  During
+most of the tutorial, we will be using the "in-memory" GBrowse
 database (no relational database required!)  At the end, we will show
 how to set up a database with MySQL that will scale to genome sizes.
 </p>
@@ -22,7 +22,7 @@ how to set up a database with MySQL that will scale to genome sizes.
 <p>
 
 We will be working with simulated Volvox genome annotation data.  The
-database will be named "volvox" and gbrowse will be invoked with this
+database will be named "volvox" and GBrowse will be invoked with this
 URL:
 
 <blockquote
@@ -37,16 +37,16 @@ These directories contain data files used during the tutorial:
   <dd>DNA and features files to load into the local database.
       <p>
   <dt><a href="conf_files/">conf_files</a>
-  <dd>Gbrowse configuration files for you to take and modify.
+  <dd>GBrowse configuration files for you to take and modify.
 </dl>
 
 <h2><a name="basics">1. The Basics</a></h2>
 
 <p>
 
-We will be using a file-based database which allows gbrowse to run
+We will be using a file-based database which allows GBrowse to run
 directly off text files.  To prepare this database for use, find the
-gbrowse databases directory which was created in your Apache web
+GBrowse databases directory which was created in your Apache web
 server directory at the time of installation.  It should be located at
 <b>$HTDOCS/gbrowse/databases</b>, but check to make sure.
 
@@ -132,11 +132,11 @@ database directory.
 
 <p>
 
-Now we will need a gbrowse config file to tell gbrowse how to render
+Now we will need a GBrowse config file to tell GBrowse how to render
 this data set.  In the subdirectory <a
 href="conf_files">conf_files</a>, you will find a sample configuration
 file named <a href="conf_files/volvox.conf">volvox.conf</a>.  Copy
-this into your gbrowse configuration directory ($CONF/gbrowse.conf).
+this into your GBrowse configuration directory ($CONF/gbrowse.conf).
 
 <p>
 
@@ -191,7 +191,7 @@ direction.
 
 <blockquote>
 If you're still having no luck, sorry!  Stop the
-tutorial and send an e-mail to gbrowse support at <a
+tutorial and send an e-mail to GBrowse support at <a
 href="mailto:gmod-gbrowse@lists.sourceforge.net">gmod-gbrowse@lists.sourceforge.net</a>
 </blockquote>
 
@@ -223,7 +223,7 @@ ctgA   example	 my_feature   13280  16394   .   +   .   My_feature f08
 Each feature has a "source" of example, a type of "my_feature", and
 occupies a short range (roughly 1.5k) on a contig named "ctgA."  In
 addition to the features themselves, there is an entry for the contig
-itself (type "contig").  This entry is needed to tell gbrowse what the
+itself (type "contig").  This entry is needed to tell GBrowse what the
 length of ctgA is.
 
 <p>
@@ -407,7 +407,7 @@ look something like Figure 3.
 We'll see other examples of glyphs later on.  To get a list of the
 most popular glyphs and the options that are available for them, see
 the file CONFIGURE_HOWTO.txt, located in the docs/ subdirectory of the
-gbrowse distribution.  Or for the gory and bleeding edge details, run
+GBrowse distribution.  Or for the gory and bleeding edge details, run
 the command:
 
 <blockquote class="example"><pre>
@@ -418,7 +418,7 @@ the command:
 
 This produces copious documentation on the Perl interface to all the
 glyphs, including some amazingly obscure ones, from which you should
-be able to deduce the gbrowse equivalents.
+be able to deduce the GBrowse equivalents.
 
 <hr>
 
@@ -426,7 +426,7 @@ be able to deduce the gbrowse equivalents.
 
 <p>
 
-Now we'll look at the interaction between feature names and gbrowse's
+Now we'll look at the interaction between feature names and GBrowse's
 search box.  If you look through the <a
 href="data_files/volvox1.gff">volvox1.gff</a> data file, you'll see
 that all the example features are named, and that their class is
@@ -451,7 +451,7 @@ now.
 
 You probably don't want to remember to enter the class of the object
 to search for a feature.  Fortunately, it is easy to declare one or
-more classes "automatic" and specify the order in which gbrowse will
+more classes "automatic" and specify the order in which GBrowse will
 search for them.  To do this with our example database, open up the
 volvox.conf config file, find the option named "automatic classes",
 and change it to read:
@@ -462,9 +462,9 @@ automatic classes = My_feature
 
 <p>
 
-This tells gbrowse that when the user types in an unqualified feature
+This tells GBrowse that when the user types in an unqualified feature
 name, it should search the My_feature class for a match.  You can now
-type "f07" directly into the search field and gbrowse will find and
+type "f07" directly into the search field and GBrowse will find and
 display it.  If you wish, you may list several (or many!) automatic classes on
 this line.  Just separate them by spaces:
 
@@ -493,7 +493,7 @@ bioperl 1.4.</small>
 
 <p>
 
-By default, gbrowse will display the name of the feature above its
+By default, GBrowse will display the name of the feature above its
 glyph provided that there is sufficient space to do this.  Optionally,
 you can also attach some descriptive text to the feature.  This text
 will be displayed below the feature, and can also be searched.
@@ -556,7 +556,7 @@ corresponding feature type is "motif" and it uses the "span" glyph, a
 graphic that displays a horizontal line capped by vertical endpoints.
 The height is set to five pixels, and the human-readable key is set to
 "Example motifs."  A new option, "description" is a flag that tells
-gbrowse to display the Note attribute, if any.  Any non-zero value
+GBrowse to display the Note attribute, if any.  Any non-zero value
 means true.
 
 <p>
@@ -577,7 +577,7 @@ A copy of this config file is also available for you to use in
 
 <p>
 
-To show that gbrowse will search the notes for keyword matches, try
+To show that GBrowse will search the notes for keyword matches, try
 typing in "kinase."  You will be presented with a list of all the
 motifs whose Note attribute contains the word "kinase."
 
@@ -589,7 +589,7 @@ motifs whose Note attribute contains the word "kinase."
 
 Many features are discontinuous.  Examples include spliced
 transcripts, and gapped sequence similarity alignments, such as the
-alignment of cDNAs to the genome.  Gbrowse can deal with such features
+alignment of cDNAs to the genome.  GBrowse can deal with such features
 easily provided that you take a little care in setting them up.
 
 <p>
@@ -634,10 +634,10 @@ and so forth.
 <p>
 
 The types "match" and "HSP" are not arbitrary, but are needed to tell
-the gbrowse database what the relationship between the full-length
+the GBrowse database what the relationship between the full-length
 feature and its subparts are.  The specific type names expected are
 mediated by a series of "aggregators" -- code modules that are loaded
-when gbrowse starts up.  We will see later in this section how to
+when GBrowse starts up.  We will see later in this section how to
 manipulate these aggregators and to define custom ones.
 
 <p>
@@ -688,12 +688,12 @@ aggregators = match
 
 <p>
 
-This is telling gbrowse to turn on the "match" aggregator.  Now
+This is telling GBrowse to turn on the "match" aggregator.  Now
 reload.  You should see a much-improved image similar to Figure 6.
 
 <blockquote>
 <img src="figures/figure6.gif">
-<i>Figure 6: Turning on the "match" aggregator allows gbrowse to
+<i>Figure 6: Turning on the "match" aggregator allows GBrowse to
 recognize that the match feature has subparts</i>
 </blockquote>
 
@@ -774,7 +774,7 @@ To use any of these aggregators, follow this recipe:
 
 <p>
 
-Gbrowse can display protein-coding genes in various shapes and styles.
+GBrowse can display protein-coding genes in various shapes and styles.
 The easiest way to set this up is to use the "processed_transcript"
 aggregator and its companion glyph also called "processed_transcript."
 Take a look at the file <a
@@ -818,7 +818,7 @@ the ninth column ("mRNA EDEN.1", "mRNA EDEN.2", and so forth).  In
 addition, each mRNA has a Gene <i>attribute</i> that ties it to the
 EDEN gene itself ("Gene EDEN").  Although this isn't required for the
 display, doing this will identify the various alternative transcripts
-as belonging to the same gene should you wish to use the gbrowse
+as belonging to the same gene should you wish to use the GBrowse
 database for data mining.  It will also show the user what gene the
 transcript belongs to when he or she clicks on it for details.
 
@@ -865,7 +865,7 @@ by this name!), turns on the description lines, and sets the human
 readable track name to "Protein-coding genes."  <p>
 
 <blockquote class="example"><pre>
-<i>The aggregators option demonstrates that gbrowse config file
+<i>The aggregators option demonstrates that GBrowse config file
 options can continue across multiple lines
 provided that each additional line is indented.</i>
 </blockquote>
@@ -885,7 +885,7 @@ track, and viewing the region around 1..10K, you'll see this:
 This image is nice, but we can make it even better.  One problem is
 that the gene description (the Note in the EDEN GFF line) isn't being
 displayed, because the description is attached to the gene and not to
-the individual mRNAs.  To fix this, we simply tell gbrowse to display
+the individual mRNAs.  To fix this, we simply tell GBrowse to display
 features of type "gene" as well as those of type
 "processed_transcript".  Modify volvox.conf so the last stanza looks
 like this:
@@ -903,7 +903,7 @@ key          = Protein-coding genes
 
 The only change is that there are now <b>two</b> types listed for the
 feature option, "processed_transcript" and "gene."  This is telling
-gbrowse to place both feature types in the same track.  If we reload
+GBrowse to place both feature types in the same track.  If we reload
 the page, it now looks like this:
 
 <blockquote>
@@ -1010,7 +1010,9 @@ key          = Frame usage
 <p>
 
 When you reload the page and turn this track on, you'll see a "musical
-staff" representation of the frame usage (Figure 10).
+staff" representation of the frame usage (Figure 10).  From this we
+can see that the alternative splicing in fact changes the reading
+frame of the second exon.
 
 <blockquote>
 <img src="figures/figure10.gif"><br>
@@ -1088,7 +1090,7 @@ key          = Fingerprinted BACs
 <p>
 
 With this new track turned on, look at ctgA:1..24200.  It will show
-that gbrowse has correctly picked up and rendered the relationship
+that GBrowse has correctly picked up and rendered the relationship
 between the whole BAC and its two end reads (Figure 11).
 
 <blockquote>
@@ -1108,7 +1110,7 @@ in <a href="conf_files/volvox3.conf">volvox3.conf</a>.
 
 <p>
 
-Gbrowse can plot quantitative data such as alignment scores,
+GBrowse can plot quantitative data such as alignment scores,
 confidence scores from gene prediction programs, and microarray
 intensity data.  The data can be displayed either with glyphs that
 change color to indicate score levels (see the
@@ -1223,7 +1225,7 @@ change graph_type to "boxes."</i> </blockquote>
 
 <p>
 
-Gbrowse can take advantage of DNA sequence data in several ways:
+GBrowse can take advantage of DNA sequence data in several ways:
 
 <ol>
   <li>It can display a GC content graph of the reference sequence at
@@ -1258,7 +1260,7 @@ volvox1.gff  volvox3.gff  volvox5.gff
 
 After copying the .fa file into the volvox database directory, you
 will need to change the configuration file very slightly to tell
-gbrowse to look for and load the FASTA file.  At the top of the config
+GBrowse to look for and load the FASTA file.  At the top of the config
 file, change the <tt>db_args</tt> section to look like this:
 
 <p>
@@ -1270,11 +1272,11 @@ db_args       = -adaptor memory
 
 <p>
 
-Previously the <tt>-gff</tt> argument told gbrowse to load all GFF
+Previously the <tt>-gff</tt> argument told GBrowse to load all GFF
 files in the directory.  The new <tt>-dir</tt> argument says to load
 both GFF files and FASTA sequence files.  (There's also a
 <tt>-fasta</tt> argument to load sequence without features, but this
-is not much use with gbrowse.)
+is not much use with GBrowse.)
 
 <p>
 
@@ -1311,7 +1313,7 @@ magnifications (zoomed way out), this glyph draws a GC content plot.
 At high magnifications (zoomed way in), this glyph draws the dna.  Of
 the various options given in the example stanza, the most important
 one is "global feature", which is set to a true value (1).  This tells
-gbrowse that the stanza doesn't correspond to a specific feature type,
+GBrowse that the stanza doesn't correspond to a specific feature type,
 but should be displayed globally.  Other options control whether to
 draw one or both strands, whether to draw the GC content histogram,
 and what colors to use.
@@ -1324,7 +1326,7 @@ magnifications (zoomed way out), this glyph draws little symbols
 indicating where start and stop codons are.  At high magnifications,
 the actual amino acid sequence comes into view. Again, the most
 important option is "global feature", which is set to a true value to
-tell gbrowse that the track isn't attached to a particular feature
+tell GBrowse that the track isn't attached to a particular feature
 type, but is to be generated automatically.  Other options control the
 height of the glyph, whether to draw start and/or stop codon symbols,
 and whether to generate a 3frame or 6frame translation.
@@ -1351,9 +1353,9 @@ magnification; (b) high magnification</i>
 If you happen to do a listing of the volvox database directory after
 adding the DNA file, you might notice that a new file named
 "directory.index" has appeared.  This index directory is created
-automatically by gbrowse in order to speed up access to the .fa file
+automatically by GBrowse in order to speed up access to the .fa file
 and to reduce memory requirements.  If the database directory is
-<b>not</b> writable by all users, gbrowse will not be able to create
+<b>not</b> writable by all users, GBrowse will not be able to create
 this directory, and the display will be somewhat slower whenever a
 DNA track is turned on.
 </i></blockquote>
@@ -1471,7 +1473,7 @@ key           = ESTs
 
 <p>
 
-The new group_pattern option tells gbrowse to use a Perl regular
+The new group_pattern option tells GBrowse to use a Perl regular
 expression pattern matching operation to find and group related EST
 matches based on their names.  It helps to understand how Perl regular
 expressions work, but basically the pattern match breaks down this
@@ -1560,12 +1562,12 @@ bgcolor      = sub {
 You'll need to know the basics of the Perl programming language in
 order to do this type of thing yourself.  Suffice to say that instead
 of hard-coding the color "orange" into the bgcolor option, we are
-asking gbrowse to run a Perl subroutine each time it needs to render
+asking GBrowse to run a Perl subroutine each time it needs to render
 an EST.  The subroutine is passed the feature that is about to be
 drawn.  It asks the feature for its human-readable name (display_name)
 and assigns that name to a variable named $name.  It then performs a
 pattern match on the name to see if it ends in a "5".  If the name
-matches, the subroutine returns the color "red" to gbrowse.  Otherwise
+matches, the subroutine returns the color "red" to GBrowse.  Otherwise
 it returns the color "orange."
 
 <p>
@@ -1584,7 +1586,7 @@ The effect is shown in Figure 16.
 <p>
 
 The last thing we'll do with the EST data set is to add DNA to the
-ESTs so that at high magnification gbrowse will show the multiple
+ESTs so that at high magnification GBrowse will show the multiple
 alignment.  This information is also used by the "dump alignments"
 plugin to generate a text-based multiple alignment.
 
@@ -1619,12 +1621,12 @@ agt830.5     1 gattgccattcaccttgggcattggccaagctgaa 135
 What we currently have in the GFF file are the <b>source</b> genomic
 positions of the alignments (in ctgA-relative coordinates).  We need
 to add the <b>target</b> positions in agt830.5-relative coordinates in
-order for gbrowse to fetch and display the appropriate segments of the
+order for GBrowse to fetch and display the appropriate segments of the
 EST DNA.
 
 <p>
 
-The fasta file <href="data_files/ests.fa">ests.fa</a> provides the DNA
+The fasta file <a href="data_files/ests.fa">ests.fa</a> provides the DNA
 sequences for the six EST reads.  The GFF load file
 <a href="data_files/volvox8.gff">volvox8.gff</a> contains the revised
 coordinates.  If you look at this file you'll see that it is
@@ -1644,7 +1646,7 @@ ctgA	est	HSP	7000	7503	.	-	.	Target EST:agt830.3 1 504
 The first eight columns are identical to what we've been using before,
 but the ninth column follows a new convention used for nucleotide to
 nucleotide and protein to nucleotide alignments.  There is now a
-special class name, "Target", that tells gbrowse that the group field
+special class name, "Target", that tells GBrowse that the group field
 represents the combination of a target sequence and its coordinates.
 Following Target is the name EST:agt830.5, which is a composite of the
 "real" class name ("EST") and the name of the EST.  The two are
@@ -1665,10 +1667,10 @@ genome coordinates and 1..451 in target (EST) coordinates; the second
 covers 3000..3202 in genome coordinates and 452..654 in target
 coordinates.  The HSPs should have the same alignment length in both
 genome and target coordinates, or at least very close lengths.  If the
-lengths are close but not identical, gbrowse will realign the
+lengths are close but not identical, GBrowse will realign the
 segments, introducing small gaps where necessary.
 
-<blockquote class="example"> <i>NOTE: gbrowse uses a simple but slow segment
+<blockquote class="example"> <i>NOTE: GBrowse uses a simple but slow segment
 realigner.  If there are numerous gaps, it is better to break them
 into a set of smaller colinear HSPs than to rely on the realigner to
 do it for you.</i> </blockquote>
@@ -1681,7 +1683,7 @@ greater than the end position.  For example, for the first agt830.3
 HSP, we are told that genomic region 5410..5500 aligns to EST region
 596..505.  Although this is arguably redundant with the strand field,
 this is historically the way reverse strand targets have been depicted
-in GFF and is required by gbrowse.
+in GFF and is required by GBrowse.
 
 <blockquote class="example"><i>In the proposed revision of GFF, the representation of
 multiple alignments has been rewritten to be more intuitive and
@@ -1690,9 +1692,10 @@ internally consistent.</i></blockquote>
 <p>
 
 Since this data file contains a revised version of volvox7.gff, remove
-volvox7.gff from the database directory and replace it with
-volvox8.gff.  Also copy ests.fa into the database directory.  If you
-perform a directory listing, it should look like this:
+volvox7.gff from the database directory and replace it with <a
+href="data_files/volvox8.gff">volvox8.gff</a>.  Also copy <a
+href="data_files/ests.fa">ests.fa</a> into the database directory.  If
+you perform a directory listing, it should look like this:
 
 <blockquote><pre>
 directory.index  volvox.fa    volvox2.gff  volvox4.gff	volvox6.gff
@@ -1751,6 +1754,18 @@ that it doesn't match the corresponding genomic base.
 <img src="figures/figure17.gif"><br>
 <i>Figure 17: Multiple alignments at the DNA level</i>
 </blockquote>
+
+<p>
+
+If you don't see the EST sequence appearing, make sure that ests.fa is
+in the volvox database directory and is world readable.  If it still
+isn't working, you may need to "touch" the file in order to update its
+modification date.  This tells GBrowse that it is new and needs to be
+reindexed.  In Unix:
+
+<blockquote class="example"><pre>
+% <b>touch $HTDOCS/gbrowse/databases/volvox/ests.fa</b>
+</pre></blockquote>
 
 <hr>
 
@@ -1844,7 +1859,7 @@ Aligner plugin, the configuration options are:
     <td>alignable_tracks</td>
     <td>Space-delimited list of tracks to include in the multiple
 	alignment.  The genome is always included.  If this option is
-	not present, then gbrowse will automatically include any track
+	not present, then GBrowse will automatically include any track
 	that has the "draw_target" option set.
     </td>
   </tr>
@@ -2010,7 +2025,7 @@ reference class  = Contig
 
 <p>
 
-This line is required for gbrowse to effectively find and render with
+This line is required for GBrowse to effectively find and render with
 features located on the reference sequence.
 
 <p>
@@ -2043,7 +2058,7 @@ as the default classname.  This means you don't have to have a
 
 <p>
 
-One of the cooler features of gbrowse is its ability to support
+One of the cooler features of GBrowse is its ability to support
 semantic zooming.  Semantic zooming is a feature in which objects show
 different levels of detail depending on the level of magnification.
 We've already seen this behavior in the "dna" and "segments" glyphs,
@@ -2060,11 +2075,11 @@ GBrowse has several types of semantic zooming:
       zooming out of the box.  This happens automatically and can't
       be modified.
   <dt>semantic labeling
-  <dd>When there's sufficient room, gbrowse will print the label and
+  <dd>When there's sufficient room, GBrowse will print the label and
       descriptions next to the glyphs.  The threshold at which this
       happens is under your control.
   <dt>semantic bumping
-  <dd>When there's sufficient room, gbrowse will "bump" features to
+  <dd>When there's sufficient room, GBrowse will "bump" features to
       prevent them from colliding on the screen.  When this would
       cause the display to become to high, bumping is suppressed.
       This threshold is also under your control.
@@ -2110,6 +2125,7 @@ glyph        = box
 [Alignments:45000]
 glyph        = box
 bump         = 0
+label        = 0
 </pre></blockquote>
 
 <p>
@@ -2138,7 +2154,8 @@ to "segments."
 Make these changes to volvox.conf, turn on the "Example Alignments"
 track, and view the contig at 20K, 40K and 50K.  At 40K, you'll see
 the alignments lose their internal structure and be replaced by solid
-boxes (Figure 20).  At 50K they'll begin to overlap.
+boxes (Figure 20).  At 50K they'll begin to overlap and the feature
+labels will be suppressed.
 
 <blockquote>
 <img src="figures/figure20.gif"><br>
@@ -2177,7 +2194,7 @@ key          = Motifs
 
 This stanza is identical to the [Motifs] track that we created
 earlier, except that its name is qualified with ":overview".  This
-tells gbrowse that this is not an ordinary track to be placed in the
+tells GBrowse that this is not an ordinary track to be placed in the
 detail image, but one that should be placed in the overview.
 
 <p>
@@ -2203,7 +2220,7 @@ displayed.
 
 <p>
 
-The last topic we'll cover in this tutorial is configuring gbrowse's
+The last topic we'll cover in this tutorial is configuring GBrowse's
 outgoing links.  When the user clicks on a glyph in the details image,
 he will be taken to another page by following a URL.  The URL to
 follow is generated from the <code>link</code> option.  The default
@@ -2266,7 +2283,7 @@ key          = Example motifs
 
 The only change we've made is to add a "link" option to the stanza,
 where the value is a Google search URL.  "$name" is a Perl variable.
-Gbrowse will fill in this variable with the name of the motif.  Reload
+GBrowse will fill in this variable with the name of the motif.  Reload
 the page and click on a motif to see that this works as advertised
 ("m01," "m02" and the other example motifs are similar to the names
 for galactic clusters, so be prepared for some astronomy hits).
@@ -2284,7 +2301,7 @@ link         = http://www.google.com/search?q=$description
 <p>
 
 There are a large number of possible variables that you can use inside
-link rules.  See the CONFIGURE_HOWTO document in the gbrowse
+link rules.  See the CONFIGURE_HOWTO document in the GBrowse
 distribution for the full list.  You can also construct links using
 Perl callbacks as described in the section on <a
 href="#multiple_alignments">displaying ESTs</a>.  This gives you the
@@ -2476,7 +2493,7 @@ The arguments to <i>bp_load_gff.pl</i> are:
 
 <p>
 
-The MySQL database is all ready to go.  Now, in order to tell gbrowse
+The MySQL database is all ready to go.  Now, in order to tell GBrowse
 to start using the MySQL database rather than the in-memory database,
 you need to make a small change to the volvox.conf configuration
 file.  Find the few lines of the file and change them to look like
@@ -2505,7 +2522,7 @@ When you reload the web page, GBrowse will now be using MySQL.
 Depending on the speed of your CPU and disk, you might notice that it
 seems a bit snappier than the in-memory version.  See <a
 href="../CONFIGURE_HOWTO.txt">CONFIGURE_HOWTO.txt</a> for more
-information on configuring gbrowse to use relational databases.  Also
+information on configuring GBrowse to use relational databases.  Also
 see the following perldoc manual pages:
 
 <dl>
@@ -2544,7 +2561,7 @@ see the following perldoc manual pages:
 <p>
 
 This is just a short introduction to the many things that you can do
-with Gbrowse.  Major features not discussed were:
+with GBrowse.  Major features not discussed were:
 
 <ul>
   <li>multi-language support
@@ -2565,6 +2582,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Tue Dec 23 16:51:13 EST 2003
+Last modified: Tue Dec 23 18:54:10 EST 2003
 <!-- hhmts end -->
 </body> </html>

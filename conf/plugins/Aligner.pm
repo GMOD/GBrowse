@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::Aligner;
-# $Id: Aligner.pm,v 1.4 2003-06-23 01:00:28 lstein Exp $
+# $Id: Aligner.pm,v 1.5 2003-12-23 23:56:26 lstein Exp $
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use CGI qw(table a TR td th p popup_menu radio_group checkbox checkbox_group h1 h2 pre);
@@ -165,10 +165,12 @@ sub dump {
 
       unless (exists $strands{$target}) {
 	my $strand = $f->strand;
-	$strand    = -1 if $tgt_start > $tgt_end;  # fix data bugs in some GFF files
+	if ($tgt_start > $tgt_end) {
+	  $strand    = -1;
+	  ($tgt_start,$tgt_end) = ($tgt_end,$tgt_start);
+	}
 	$strands{$target} = $strand;
       }
-      ($tgt_start,$tgt_end) = ($tgt_end,$tgt_start) if $strands{$target} < 0;
 
       # If the source and target length match, then we are home free
       if ($s->length == $target->length) {

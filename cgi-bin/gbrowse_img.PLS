@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.21 2004-09-07 02:22:22 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.22 2004-09-07 03:11:21 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1 path_info escape);
@@ -87,7 +87,13 @@ $src    =~ s!^/!!;  # get rid of leading / from path_info()
 # This may cause a redirect and exit 0 at this point!
 redirect_legacy_url($src,'add','abs','list','style','options','type','width');
 
-$CONFIG->source($src)     if $src;
+if ($src) {
+  unless ($CONFIG->source($src)) {
+    print header('text/plain');
+    print "Invalid source $src; you may not have permission to access this data source.\n";
+    exit 0;
+  }
+}
 
 # self-documentation feature: dump out tab-delimited list of mnemonics and keys
 if (param('list')) {
@@ -105,6 +111,7 @@ my @add_features    = param('add');                # overlay features
 my @add_style       = param('style');              # overlay features style
 my $abs             = param('abs');                # absolute rather than relative coordinates
 my $image_class     = param('image_class') || param('format');        # image type
+my $keystyle        = param('keystyle')    || 'between';
 my @options         = param('options');            # various track options, such as bumping
 
 # Get the ID of the requested segment and error out if none provided
@@ -150,6 +157,7 @@ else {
 					   feature_files => $feature_list||undef,
 					   label_scale   => 1,
 					   image_class   => $image_class,
+					   keystyle      => $keystyle,
 					   do_map        => 1,
        );
 }
@@ -463,6 +471,10 @@ separated by semicolons (preferred) or by ampersands.
                    type=tRNA+NG+WABA+CG+ESTB"&gt;
       </pre>
       Multiple <i>type=</i> arguments will be combined to form a single space-delimited list.
+      <p>
+  <dt><b>keystyle</b>
+  <dd>This argument controls whether the key should be printed to the "right", the "left", "between"
+      (the default), or "bottom".
       <p>
   <dt><b>options</b>
   <dd>A space-delimited list ("+" characters when URL-escaped) of mnemonic/option

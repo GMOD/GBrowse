@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.10 2002-02-25 12:33:49 lstein Exp $
+# $Id: Browser.pm,v 1.11 2002-02-27 06:38:35 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
@@ -8,6 +8,7 @@ use Carp qw(carp croak);
 use GD 'gdMediumBoldFont';
 use CGI qw(img param Delete_all url);
 use Digest::MD5 'md5_hex';
+use File::Path 'mkpath';
 
 require Exporter;
 

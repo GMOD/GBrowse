@@ -17,7 +17,7 @@ if (open F,"$Bin/../GGB.def") {
 $OPTIONS{CONF} ||= '/usr/local/apache/conf';
 
 my $dir = dirname($0);
-$file   = shift || File::Spec->catfile($dir,basename($0, '.PM'));
+$file   = shift || File::Spec->catfile($dir,basename($0, '.PLS'));
 
 open OUT,">$file" or die "Can't create $file: $!";
 
@@ -47,7 +47,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: register_moby_services.PLS,v 1.3 2003-12-22 19:51:01 markwilkinson Exp $
+#$Id: register_moby_services.PLS,v 1.4 2003-12-29 15:37:19 markwilkinson Exp $
 
 use MOBY::Client::Central;
 use strict;

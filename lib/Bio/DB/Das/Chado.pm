@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.16 2003-02-19 15:19:25 scottcain Exp $
+# $Id: Chado.pm,v 1.17 2003-02-25 18:02:51 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -8,14 +8,11 @@ Bio::DB::Das::Chado - DAS-style access to a chado database
 =head1 SYNOPSIS
 
   # Open up a feature database
- $db = Bio::DB::Das::Chado->new(
-				 driver   => 'postgres',
-				 dbname => 'chado',
-				 host   => 'localhost',
-				 user   => 'scain',
-				 pass   => undef,
-				 port   => undef,
-				) or die;
+                 $db    = Bio::DB::Das::Chado(
+                            -dsn  => 'dbi:Pg:dbname=gadfly;host=lajolla'
+                            -user => 'jimbo',
+                            -pass => 'supersecret',
+                                       );
 
   @segments = $db->segment(-name  => '2L',
                            -start => 1,

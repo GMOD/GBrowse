@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.19 2003-02-17 21:27:00 scottcain Exp $
+# $Id: Segment.pm,v 1.20 2003-02-25 18:02:52 scottcain Exp $
 
 =head1 NAME
 
@@ -162,7 +162,7 @@ sub new {
   my $hash_ref = {};
   my $length;
   my $rows_returned = $sth->rows;
-  if ($rows_returned < 1) { #look in synonym for an exact match
+  if ($rows_returned != 1) { #look in synonym for an exact match
     my $isth = $factory->{dbh}->prepare ("
        select fs.feature_id from feature_synonym fs, synonym s
        where fs.synonym_id = s.synonym_id and
@@ -171,11 +171,16 @@ sub new {
     $isth->execute or $self->throw("query for name failed"); 
     $rows_returned = $isth->rows;
 
-#need to add a try at checking for an accession number.
-#but, since there is no dbxrefstr for arms, it is impossible
-#to test for gbrowse--leave it out for now.
+    if ($rows_returned != 1) { #look in dbxref for accession number match
+      $isth = $factory->{dbh}->prepare ("
+         select feature_id from feature_dbxref fd, dbxref d
+         where fd.dbxrefstr = d.dbxrefstr and
+               d.accession ilike $quoted_name ");
+      $isth->execute or $self->throw("query for accession failed");
+      $rows_returned = $isth->rows;
 
-    return if $rows_returned != 1;
+      return if $rows_returned != 1;
+    }
 
     $hash_ref = $isth->fetchrow_hashref;
 

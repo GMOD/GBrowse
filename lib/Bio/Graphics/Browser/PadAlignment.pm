@@ -11,9 +11,9 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 =head1 VERSION (CVS-info)
 
  $RCSfile: PadAlignment.pm,v $
- $Revision: 1.11 $
+ $Revision: 1.12 $
  $Author: lstein $
- $Date: 2003-07-02 00:55:42 $
+ $Date: 2003-07-18 18:23:35 $
 
 =head1 SYNOPSIS
 
@@ -169,9 +169,14 @@ reverse complemented (the negative number should indicate the
 coordinate of the first base in the provided sequence).
 
 An optional second argument, if present, contains a hash reference to
-a set of option=>value pairs.  Two options are recognized:
+a set of option=>value pairs.  Three options are recognized:
 
    show_mismatches      0|1      if true, highlight mismatches in pink
+   color_code_proteins  0|1      if true, highlight amino acids thus:
+                                        Acidic amino acids in red
+                                        Basic amino acids in blue
+                                        Hydrophobic amino acids in grey
+                                        Polar amino acids in yellow
    flip                 0|1      if true, reverse complement the whole alignment
 
 =back
@@ -208,6 +213,32 @@ disclaimers of warranty.
 # IMPORTANT NOTE: see the section after __END__ for a slightly
 # different implementation which keeps a separate gap map for each 
 # sequence in the alignment
+
+# define the types of amino acids -- this was done by an undergrad and is subject to change
+
+my %aa_type = (
+	       K=> "basic_aa",
+	       R=> "basic_aa",
+	       H=> "basic_aa",
+	       S=> "polar_aa",
+	       T=> "polar_aa",
+	       N=> "polar_aa",
+	       Q=> "polar_aa",
+	       D=> "acidic_aa",
+	       E=> "acidic_aa",
+	       A=> "hphobic_aa",
+	       V=> "hphobic_aa",
+	       I=> "hphobic_aa",
+	       L=> "hphobic_aa",
+	       M=> "hphobic_aa",
+	       F=> "hphobic_aa",
+	       Y=> "hphobic_aa",
+	       W=> "hphobic_aa",
+	       C=> "special_aa",
+	       G=> "special_aa",
+	       P=> "special_aa",
+	       "*" => "special_aa"
+	      );
 
 sub new {
   my $class = shift;
@@ -396,6 +427,7 @@ sub alignment {
   my $options         = shift || {};
 
   my $show_mismatches = $options->{show_mismatches};
+  my $color_code_proteins = $options->{color_code_proteins};
   my $flip            = $options->{flip};
 
   my @lines = $self->padded_sequences;
@@ -436,13 +468,20 @@ sub alignment {
   $markup->add_style(space    => ' ');
   $markup->add_style(newline  => "\n");
   $markup->add_style(mismatch => "BGCOLOR pink");
+
+  # Styles for printing protein alignments
+  $markup->add_style(acidic_aa => "BGCOLOR red");
+  $markup->add_style(basic_aa => "BGCOLOR lightskyblue");
+  $markup->add_style(hphobic_aa => "BGCOLOR lightgrey");
+  $markup->add_style(polar_aa => "BGCOLOR yellow");
+  $markup->add_style(special_aa => '');
   for (my $i=0; $i < @lines; $i++) {
     my $pad = \$lines[$i];
     my @markup;
     # add word and line breaks
     for (my $j=0; $j < length $$pad; $j += 10) {
       push (@markup,[$j % 80 ? 'space':'newline',
-		     $j => $j]);
+                     $j => $j]);
     }
     $markup->markup($pad,\@markup);
   }
@@ -460,7 +499,19 @@ sub alignment {
 
   my $result;
   my @length;
+
   for (my $i = 0; $i < @padded; $i++) {
+
+     if ($color_code_proteins) {
+        next unless $padded[$i][0];
+        my @refMarkup;
+        for(my $r=0; $r<length $padded[$i][0]; $r++) {
+           my $refPos = substr($padded[$i][0],$r,1);
+           next if $refPos =~ /[.\s-]/;         # move on if not amino acid
+           push(@refMarkup,[$aa_type{$refPos},$r=>$r+1]);
+        }
+        $markup->markup(\$padded[$i][0],\@refMarkup);
+    }
 
     for (my $j = 0; $j < @{$padded[$i]}; $j++) {
       next unless $padded[$i][$j];
@@ -468,28 +519,32 @@ sub alignment {
       my $offset = $padded[$i][$j] =~ tr/. -/. -/;
       my $skipit = $offset == length($padded[$i][$j]);
 
-      if ($j>0 && $show_mismatches) {
-	my @markup;
-	for (my $r=0; $r<length $padded[$i][$j]; $r++) {
-	  my $source = substr($padded[$i][0],$r,1);
-	  next if $source=~ /^[.\s-]$/;
-	  my $targ = substr($padded[$i][$j],$r,1);
-	  next if $targ =~  /^[.\s-]$/;
-	  push(@markup,['mismatch',$r => $r+1])
-	    if lc($source) ne lc($targ);
-	}
-	$length[$i][$j] = length $padded[$i][$j];
-	$markup->markup(\$padded[$i][$j],\@markup);
+
+      if ($j>0 && ($show_mismatches || $color_code_proteins)) {
+        my @markup;
+        for (my $r=0; $r<length $padded[$i][$j]; $r++) {
+          my $source = substr($padded[$i][0],$r,1);
+          next if $source=~ /^[.\s-]$/;
+          my $targ = substr($padded[$i][$j],$r,1);
+          next if $targ =~  /^[.\s-]$/;
+
+          push(@markup,['mismatch',$r => $r+1])
+            if (lc($source) ne lc($targ)) && ($show_mismatches);
+          push(@markup,[$aa_type{$targ}, $r => $r+1])
+            if $color_code_proteins;
+        }
+        $length[$i][$j] = length $padded[$i][$j];
+        $markup->markup(\$padded[$i][$j],\@markup);
       } else {
-	$length[$i][$j] = length $padded[$i][$j];
+        $length[$i][$j] = length $padded[$i][$j];
       }
 
-      my $l = $longest_name;
+      my $l = $origin<0 ? $longest_name+2 : $longest_name;
       $result .= $skipit ? ""
                          : sprintf ("\%${l}s \%${longest_line}d %s\n",
-				    $origin < 0 ? "($names{$j})"
+                                    $origin < 0 ? "($names{$j})"
                                                 : $names{$j},
-				    $labels[$j],$padded[$i][$j]);
+                                    $labels[$j],$padded[$i][$j]);
       $labels[$j] += $length[$i][$j] - $offset  if $origin >= 0;
       $labels[$j] -= $length[$i][$j] - $offset  if $origin < 0;
     }
@@ -498,7 +553,6 @@ sub alignment {
   }
 
   return $result;
-
 }
 
 1;

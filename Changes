@@ -7,6 +7,8 @@
 	authentication/authorization techniques.
 	* Default time for cookie expiration reduced to 7 days.  This will avoid
 	issues arising from previous change.
+	* Added mechanisms to restrict individual tracks by username and password
+	or by host, domain, or IP address.
 1.55
         * Removed hard coded paths in install scripts
 	* Auto-open tracks that contain matches to the search term.  This avoids

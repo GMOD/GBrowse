@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.95 2003-10-05 02:02:07 lstein Exp $
+# $Id: Browser.pm,v 1.96 2003-10-05 20:11:06 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -393,7 +393,8 @@ order to retrieve track-specific options.
 sub labels {
   my $self  = shift;
   my $order = shift;
-  my @labels = $self->config->labels;
+  $self->{cached_data}{labels} ||= [$self->config->labels];
+  my @labels = @{$self->{cached_data}{labels}};
   if ($order) { # custom order
     return @labels[@$order];
   } else {
@@ -686,6 +687,23 @@ sub generate_image {
   print F $image->can('png') ? $image->png : $image->gif;
   close F;
   return $url;
+}
+
+=head2 clear_cache()
+
+ $browser->clear_cache;
+
+Clears out cached per-request values that might take some time to
+compute, such as per-track authorization information.  This is only
+relevant when gbrowse is run under a persistent environment such as
+mod_perl.  It is ordinarily called internally by the open_config()
+routine in Bio::Graphics::Browser::Util.
+
+=cut
+
+sub clear_cache {
+  my $self = shift;
+  delete $self->{cached_data};
 }
 
 sub tmpdir {
@@ -1515,16 +1533,106 @@ use strict;
 use Bio::Graphics::FeatureFile;
 use Text::Shellwords;
 use Carp 'croak';
+use Socket;  # for inet_aton() call
 
 use vars '@ISA';
 @ISA = 'Bio::Graphics::FeatureFile';
 
 sub labels {
-  grep { !($_ eq 'TRACK DEFAULTS' || $_ eq 'overview' || /:(\d+|overview|plugin|DETAILS)$/) } shift->configured_types;
+  my $self   = shift;
+
+  # filter out all configured types that correspond to the overview, overview details
+  # plugins, or other name:value types
+  my @labels =  grep {
+    !($_ eq 'TRACK DEFAULTS' || $_ eq 'overview' || /:(\d+|overview|plugin|DETAILS)$/)
+       } $self->configured_types;
+  # apply restriction rules
+  return grep { $self->authorized($_)} @labels;
 }
 
 sub overview_tracks {
   grep { $_ eq 'overview' || /:overview$/ } shift->configured_types;
+}
+
+# implement the "restrict" option
+sub authorized {
+  my $self  = shift;
+  my $label = shift;
+  my $restrict = $self->code_setting($label=>'restrict') or return 1;
+  my $host     = CGI->remote_host;
+  my $user     = CGI->remote_user;
+  my $addr     = CGI->remote_addr;
+  undef $host if $host eq $addr;
+  return $restrict->($host,$addr,$user) if ref $restrict eq 'CODE';
+  my @tokens = split /\s*(satisfy|order|allow from|deny from|require user|require group)\s+/i,$restrict;
+  shift @tokens;
+  my $mode    = 'allow,deny';
+  my $satisfy = 'all';
+  my (@allow,@deny,%users);
+  while (@tokens) {
+    my ($directive,$value) = splice(@tokens,0,2);
+    $directive = lc $directive;
+    $value ||= '';
+    if ($directive eq 'order') {
+      $mode = $value;
+      next;
+    }
+    my @values = split /[^\w.-]/,$value;
+    if ($directive eq 'allow from') {
+      push @allow,@values;
+      next;
+    }
+    if ($directive eq 'deny from') {
+      push @deny,@values;
+      next;
+    }
+    if ($directive eq 'satisfy') {
+      $satisfy = $value;
+      next;
+    }
+    if ($directive eq 'require user') {
+      foreach (@values) {
+	if ($_ eq 'valid-user' && defined $user) {
+	  $users{$user}++;  # ensures that this user will match
+	} else {
+	  $users{$_}++;
+	}
+      }
+      next;
+    }
+    if ($directive eq 'require group') {
+      croak "Sorry, but gbrowse does not support the require group limit.  Use a subroutine to implement role-based authentication.";
+    }
+  }
+
+  my $allow = $mode eq  'allow,deny' ? match_host(\@allow,$host,$addr) && !match_host(\@deny,$host,$addr)
+                      : 'deny,allow' ? !match_host(\@deny,$host,$addr) ||  match_host(\@allow,$host,$addr)
+		      : croak "$mode is not a valid authorization mode";
+  return $allow unless %users;
+  return $satisfy eq 'any' ? $allow || $users{$user}
+                           : $allow && $users{$user};
+}
+
+sub match_host {
+  my ($matches,$host,$addr) = @_;
+  my $ok;
+  for my $candidate (@$matches) {
+    if ($candidate eq 'all') {
+      $ok = 1;
+    } elsif ($candidate =~ /^[\d.]+$/) { # ip match
+      $addr      .= '.' unless $addr      =~ /\.$/;  # these lines ensure subnets match correctly
+      $candidate .= '.' unless $candidate =~ /\.$/;
+      $ok = $addr =~ /^\Q$candidate\E/;
+    } else {
+      $host ||= gethostbyaddr(inet_aton($addr),AF_INET);
+      next unless $host;
+      $candidate = ".$candidate" unless $candidate =~ /^\./; # these lines ensure domains match correctly
+      $host      = ".$host"      unless $host      =~ /^\./;
+      $ok = $host =~ /\Q$candidate\E$/;
+    }
+    return 1 if $ok;
+  }
+  $ok;
 }
 
 sub label2type {

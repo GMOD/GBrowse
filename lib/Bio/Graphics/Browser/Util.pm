@@ -111,6 +111,7 @@ sub open_config {
   set_language($CONFIG,$LANG);
   $CONFIG->language($LANG);
   $CONFIG->dir($dir);
+  $CONFIG->clear_cache();  # remove cached information
 
   # initialize some variables
   $HEADER=0;

@@ -4,6 +4,28 @@ This document provides information on configuring the Generic Genome
 Browser (GBrowse), part of the Generic Model Organism Systems Database
 Project (L<http://www.gmod.org/>).
 
+=head2 CONTENTS
+
+=over 4
+
+=item A. CREATING NEW DATABASES FROM SCRATCH
+
+=item B. ADDING A NEW DATABASE TO THE BROWSER
+
+=item C. GENERATING HISTOGRAMS
+
+=item D. INTERNATIONALIZATION
+
+=item E. AUTHENTICATION AND AUTHORIZATION
+
+=item F. DISPLAYING GENETIC AND RH MAPS
+
+=item G. CHANGING THE LOCATION OF THE CONFIGURATION FILES
+
+=item H. FURTHER INFORMATION
+
+=back
+
 =head1 A. CREATING NEW DATABASES FROM SCRATCH
 
 This section describes how to create new annotation databases from
@@ -978,6 +1000,12 @@ on a pattern match in the features' names.  A typical example is
 connecting the 5' and 3' read pairs from ESTs or plasmids.  See
 GROUPING FEATURES for details.
 
+=item 17 restrict
+
+This option allows you to restrict who is allowed to view the current
+track by host name, IP address or username/password.  See
+AUTHENTICATION AND AUTHORIZATION for details.
+
 =back
 
 A large number of glyph-specific options are also recognized.  These
@@ -1633,7 +1661,91 @@ often outstrips the ability of volunteers to update the translationf
 files.  This means that new buttons and fields may be displayed in
 English on an otherwise correctly internationalized page.
 
-=head1 E. DISPLAYING GENETIC AND RH MAPS
+=head1 E. AUTHENTICATION AND AUTHORIZATION
+
+You can restrict who has access to gbrowse by IP address, host name,
+domain or username and password.  Restriction can apply to the
+database as a whole, or to particular annotation tracks.
+
+To limit access to a whole database, you can use Apache's standard
+authentication and authorization.  Gbrowse uses a URL of this form to
+select which database it is set to:
+
+      http://your.host/cgi-bin/gbrowse/your_database
+
+where "your_database" is the name of the currently selected database.
+For example, the yeast database is
+http://your.host/cgi-bin/gbrowse/yeast.
+
+To control access to the entire database, create a <Location> section
+in httpd.conf.  The <Location> section should look like this:
+
+   <Location /cgi-bin/gbrowse/your_database>
+	Order deny,allow
+	deny from all
+	allow from localhost .cshl.edu .ebi.ac.uk
+   </Location>
+
+This denies access to everybody except for "localhost" and browsers
+from the domains .cshl.edu and .ebi.ac.uk.  You can also limit by IP
+address, by username and password or by combinations of these
+techniques.  See http://httpd.apache.org/docs/howto/auth.html for
+the full details.
+
+You can also limit individual tracks to certain individuals or
+organizations.  Unless the stated requirements are met, the track will
+not appear on the main screen or any of the configuration screens.  To
+set this up, add a "restrict" option to the track you wish to make
+off-limits:
+
+	[PROPRIETARY]
+	feature = etc
+	glyph   = etc
+	restrict = Order deny,allow
+		   deny from all
+		   allow from localhost .cshl.edu .ebi.ac.uk
+
+The value of the restrict option is identical to the Apache
+authorization directives and can include any of the directives
+"Order," "Satisfy," "deny from," "allow from," or "require user."  The
+only difference is that the "require group" directive is not
+supported, since the location of Apache's group file is not passed to
+CGI scripts.  Note that username/password authentication must be
+turned on in httpd.conf and the user must have successfully
+authenticated himself in order for the username to be available.
+
+As with other gbrowse options, restrict can be a code subroutine.  The
+subroutine will be called with three arguments consisting of the host,
+ip address and authenticated user.  It should return a true value to
+allow access to the track, or a false value to forbid it.  This can be
+used to implement group-based authorization or more complex schemes.
+
+Here is an example that uses the Text::GenderFromName to allow access
+if the user's name sounds female and forbids access if the name sounds
+male.  (It might be useful for an X-chromosome annotation site.)
+
+    restrict = sub {
+	       my ($host,$ip,$user) = @_;
+	       return unless defined $user;
+	       use Text::GenderFromName qw(gender);
+	       return gender($user) eq 'f';
+	     }
+
+You should be aware that the username will only be defined if username
+authentication is turned on and the user has successfully
+authenticated himself against Apache's user database using the correct
+password.  In addition, the hostname will only be defined if
+HostnameLookups have been turned on in httpd.conf.  In the latter
+case, you can convert the IP address into a hostname using this piece
+of code:
+    
+    use Socket;
+    $host = gethostbyaddr(inet_aton($addr),AF_INET);
+
+Note that this may slow down the response time of gbrowse noticeably
+if you have a slow DNS name server.
+
+=head1 F. DISPLAYING GENETIC AND RH MAPS
 
 GBrowse can be tweaked to make it more suitable for displaying genetic
 and radiation hybrid maps.  
@@ -1659,7 +1771,7 @@ divide all coordinates by 100.  GBrowse will automatically display the
 scale using the most appropriate units, so the displayed map will
 typically be drawn using cM units.
 
-=head1 F. CHANGING THE LOCATION OF THE CONFIGURATION FILES
+=head1 G. CHANGING THE LOCATION OF THE CONFIGURATION FILES
 
 If you wish to change the location of the gbrowse.conf configuration
 file directory, you must manually edit the gbrowse CGI script.  Open
@@ -1689,10 +1801,11 @@ For example:
    PerlSetVar      GBrowseConf /etc/gbrowse.conf
  </Directory>
 
-=head1 G. FURTHER INFORMATION
+=head1 H. FURTHER INFORMATION
 
 For further information, bug reports, etc, please consult the mailing
-lists www.gmod.org.
+lists at www.gmod.org.  The main mailing list for gbrowse support is
+gmod-gbrowse@lists.sourceforge.net.
 
 Have fun!
 

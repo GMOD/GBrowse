@@ -37,25 +37,29 @@ $string = $plugin->type();
   Return one of "dumper", "finder", "annotator".  The default is
   "dumper".
 
-$settings = $plugin->configure()
+$settings = $plugin->config_defaults();
   Generate a hashref containing settings.  This will be stored
   between sessions in a cookie.  Because of limited serialization
   and cookie space restraints, the values of the settings hash
   must be scalars or array refs.
 
-$plugin->configure($current_settings);
-  Restore current settings.  This will be called before 
+$plugin->configuration($current_settings);
+  Get/set current settings.  This will be called before 
   change_configuration()
 
-$plugin->change_configuration();
+$plugin->configure_form();
   Generate an HTML form that prompts user to set/change current
-  configuration.  The fragment must begin with <FORM> and end with
-  </FORM>.  All form fields must be preceded with the plug-in's name,
+  configuration.  The fragment will automatically be surrounded by 
+  <FORM> and </FORM> tags.  
+  All form fields must be preceded with the plug-in's name,
   in the format "<name>.<field>" (a dot separates the two).
   
-$plugin->change_configuration($field=>@values);
-  Configure a field based on the given field and its values.
-  This is generated after the HTML form is submitted.
+$plugin->reconfigure
+  This gives the plugin a chance to reconfigure itself
+  after its form is submitted.  It should call the CGI param()
+  method to get its arguments. This will only be called
+  if param() returns at least one parameter name that begins
+  with the plugin's name.
 
 $plugin->database($database)
   A chance to store a copy of the Bio::DB::GFF or Gadfly
@@ -68,6 +72,9 @@ $plugin->config_file($bio_graphics_browser)
 $plugin->config_path($path)
   A chance to store a copy of the gbrowse configuration
   directory path.
+
+$plugin->page_settings($settings)
+  A chance to store the current settings on the GBrowse page.
 
 $plugin->dump($segment);
   Dump out the data (dumpers only).  Must generate an HTTP header 

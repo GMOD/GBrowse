@@ -1,12 +1,12 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.14 2002-03-24 23:18:47 lstein Exp $
+# $Id: Browser.pm,v 1.15 2002-03-25 05:31:45 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
 use Bio::Graphics;
 use Carp qw(carp croak);
 use GD 'gdMediumBoldFont';
-use CGI qw(img param Delete_all url);
+use CGI qw(img param escape url);
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 
@@ -14,7 +14,7 @@ require Exporter;
 
 use constant DEFAULT_WIDTH => 800;
 use vars '$VERSION','@ISA','@EXPORT';
-$VERSION = '1.11';
+$VERSION = '1.12';
 
 @ISA    = 'Exporter';
 @EXPORT = 'commas';
@@ -250,8 +250,9 @@ sub make_centering_map {
 
   # divide into ten intervals
   my $portion = ($ruler->[3]-$ruler->[1])/10;
-  Delete_all();
-  param(ref => scalar($ruler->[0]->ref));
+  my $ref    = $ruler->[0]->ref;
+  my $source =  $self->source;
+  my $plugin = escape(param('plugin'));
 
   my @lines;
   for my $i (0..19) {
@@ -261,11 +262,8 @@ sub make_centering_map {
     my $middle = $offset + $scale * ($x1+$x2)/2;
     my $start  = int($middle - $ruler->[0]->length/2);
     my $stop   = int($start + $ruler->[0]->length - 1);
-    param(start => int($start));
-    param(stop  => int($stop));
-    param(nav4  => 1);
-    param(source=> $self->source);
-    my $url = url(-relative=>1,-query=>1,-path_info=>1);
+    my $url = url(-relative=>1,-path_info=>1);
+    $url .= "?ref=$ref;start=$start;stop=$stop;source=$source;nav4=1;plugin=$plugin";
     push @lines,
       qq(<AREA SHAPE="RECT" COORDS="$x1,$ruler->[2],$x2,$ruler->[4]"
 	 HREF="$url" ALT="center" TITLE="center">\n);

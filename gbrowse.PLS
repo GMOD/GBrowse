@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.18 2002-03-24 23:18:47 lstein Exp $
+# $Id: gbrowse.PLS,v 1.19 2002-03-25 05:31:45 lstein Exp $
 
 use strict;
 use lib '/home/lstein/projects/Generic-Genome-Browser/lib/';
@@ -53,10 +53,12 @@ use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use Text::Tabs;
 use Text::Shellwords;
-use Carp;
+use File::Basename 'basename';
+use Carp qw(:DEFAULT croak);
 use CGI qw(:standard escape escapeHTML center *table *dl *TR *td);
 use vars qw($CONFIG %DB $MAX_SEGMENT $DEFAULT_SEGMENT 
-	    $HEADER $HTML $UA $VERSION $CONF_DIR %OBJECT_TYPES);
+	    $HEADER $HTML $UA $VERSION $CONF_DIR %OBJECT_TYPES
+	    $PLUGINS);
 
 # if you change the zoom/nav icons, you must change this as well.
 use constant MAG_ICON_HEIGHT => 20;
@@ -77,6 +79,7 @@ use constant GBROWSE_HELP         => '/gbrowse';
 
 # if true, turn on surrounding rectangles for debugging the image map
 use constant DEBUG => 0;
+use constant DEBUG_PLUGINS => 0;
 use constant DEBUGGING_RECTANGLES => 0;
 
 # IMPORTANT DATA STRUCTURES
@@ -146,35 +149,43 @@ if (defined($old_source) && $source ne $old_source) {
 } else {
   adjust_settings($page_settings);        # set settings from CGI parameters
 }
-###############################################################################################
+
+### PLUGINS ###################################################################################
+$PLUGINS = initialize_plugins($CONF_DIR) unless defined $PLUGINS;
+configure_plugins($PLUGINS,$page_settings,open_database(),$CONFIG,$CONF_DIR);
+my $plugin_action = param('plugin_action') || '';
+
 
 ## GETTING THE SEGMENT ########################################################################
 my @segments  = get_segment($page_settings);
 ###############################################################################################
 
+
+
 # SETTINGS FOR UPLOADED FILES
 my ($file_action) = grep {/^modify\./} param();
 (my $file = $file_action) =~ s/^modify\.// if $file_action;
 
+
+
 ###############################################################################################
 ## DUMPS ######################################################################################
 ###############################################################################################
-if ( (my $dump = param('dump')) && @segments == 1) {
-  if ($dump eq 'FastA') {
-    print header(-type         => 'text/plain',
-                 # -attachment   => "$segments[0].fa",
-                );
-    dump_fasta($segments[0],$page_settings);
-  }
-
-  elsif($dump eq 'GFF') {
-    print header( -type         => 'text/plain'
-                # -attachment   => "$segments[0].gff",
-                );
-    dump_gff($segments[0],$page_settings);
-  }
-  exit 0;
+# Check to see whether one of the plugin dumpers was invoked.  We have to do this first
+# before printing the header because the plugins are responsible for generating the header.
+# NOTE THE EXIT 0 HERE IF THE DUMP IS SUCCESSFUL!
+if (@segments && $plugin_action eq 'Go!'
+    &&
+    $PLUGINS->{param('plugin')}
+    &&
+    $PLUGINS->{param('plugin')}->type eq 'dumper') {
+  warn "plugin_action = $plugin_action!" if DEBUG_PLUGINS;
+  do_plugin_dump(param('plugin'),$segments[0]) && exit 0
 }
+
+
+
+
 
 ###############################################################################################
 ## HANDLING FILE DOWNLOADS ######################################################################
@@ -212,7 +223,9 @@ adjust_tracks($page_settings);
 warn "ADJUSTED TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 
 ## UPDATING THE PERSISTENT SETTINGS##############################################################
-print header(-cookie => settings2cookie($page_settings)) unless $HEADER++;
+my $cookies = settings2cookie($page_settings);
+push @$cookies,plugins2cookies($PLUGINS);
+print header(-cookie => $cookies) unless $HEADER++;
 
 my $description = $CONFIG->setting('description');
 my $segment;
@@ -241,6 +254,14 @@ elsif ((param('Set Track Options...') || param('Revert fo Defaults..'))
 
 elsif (param('help')) {
   help(param('help'),$CONFIG->setting('help')||GBROWSE_HELP,$page_settings);
+}
+
+elsif ($plugin_action eq 'About...') {
+  do_plugin_about(param('plugin'));
+}
+
+elsif ($plugin_action eq 'Configure...') {
+  do_plugin_configure(param('plugin'));
 }
 
 ## MAIN DISPLAY
@@ -338,6 +359,7 @@ sub main_display {
     print $map,"\n" if $map;
   }
   print hidden('ref'),hidden('start'),hidden('stop');
+  print plugin_table($page_settings,$PLUGINS);
   print settings_table($page_settings,$feature_files);
   print p(),upload_table($page_settings,$feature_files);
   print p(),external_table($page_settings,$feature_files);
@@ -687,11 +709,6 @@ sub settings_table {
   my($ref,$start,$stop) = @{$settings}{qw(ref start stop)};
   my $source   = $CONFIG->source;
   my $self     = url(-relative=>1,-path_info=>1);
-  my @dumps    = (['GFF'  ,"$self?dump=GFF;start=$start;stop=$stop;ref=$ref;source=$source"]);
-  unshift @dumps,['FastA',"$self?dump=FastA;start=$start;stop=$stop;ref=$ref;source=$source"];
-
-  my $ds        = join(', ', (map{a({-href=>"@$_->[1]"},"@$_->[0]")} @dumps));
-
   my $self_url = url(-relative=>1,-path_info=>1)."?help=citations";
 
   my @labels = @{$settings->{tracks}};
@@ -703,11 +720,7 @@ sub settings_table {
   $sTable.= table({-border=>0,-width=>$settings->{width}},
 		  # row
 		  TR(
-		     th({-class=>'searchtitle', -colspan=>3, -align=>'left'},'Genome Browser Search Settings:')),
-
-		  TR( td({-class=>'searchbody'},'Dump view as: '),
-		      td({-class=>'searchbody',-colspan=>2}, $ds)),
-
+		     th({-class=>'searchtitle', -colspan=>3, -align=>'left'},'Display Settings:')),
 		  TR(	td({-class=>'searchbody', -valign=>'top'}, 'Show features: '),
 			td({-class=>'searchbody',-colspan=>2,-width=>'85%'},
 			   checkbox_group(-name=>'label',
@@ -719,18 +732,6 @@ sub settings_table {
 					  -cols     => 3,
 					  -override => 1,
 					 ))),
-
-		  # row
-		  $CONFIG->sources > 1 ?
-		  (TR({-class=>'searchbody'},
-		      td('Data Source:'),
-		      td({-colspan=>2},
-			 popup_menu(-name   => 'source',
-				    -values => [sort $CONFIG->sources],
-				    -labels => { map {$_ => $CONFIG->description($_)} $CONFIG->sources},
-				    -default => $CONFIG->source
-				   )))
-		   ) : '',
 
 		  # row
 		  TR({-class=>'searchbody'},
@@ -748,6 +749,18 @@ sub settings_table {
 			b(submit(-name => 'Update Image'))
 		       )
 		    ),
+
+		  # row
+		  $CONFIG->sources > 1 ?
+		  (TR({-class=>'searchbody'},
+		      td('Data Source:'),
+		      td({-colspan=>2},
+			 popup_menu(-name   => 'source',
+				    -values => [sort $CONFIG->sources],
+				    -labels => { map {$_ => $CONFIG->description($_)} $CONFIG->sources},
+				    -default => $CONFIG->source
+				   )))
+		   ) : '',
 
 		 );
   return $sTable;
@@ -1036,8 +1049,16 @@ sub name2segments {
 ################ perform keyword search ###############
 sub do_keyword_search {
   my $searchterm = shift;
+  my $match_sub = 'sub {';
+  foreach (split /\s+/,$searchterm) {
+    $match_sub .= "return unless \$_[0] =~ /\Q$_\E/; ";
+  }
+  $match_sub .= "};";
+  my $match = eval $match_sub;
+
   my $db = open_database();
-  my @results = $db->search_notes($searchterm,MAX_KEYWORD_RESULTS);
+  my @results = grep { $match->($_->[1]) }
+    $db->search_notes($searchterm,MAX_KEYWORD_RESULTS);
   return @results;
 }
 
@@ -1143,42 +1164,6 @@ sub get_ranges {
 sub get_zoomincrement {
   my $zoom      = $CONFIG->setting('fine zoom')  || DEFAULT_FINE_ZOOM;
   $zoom;
-}
-
-sub dump_fasta {
-  my $segment = shift;
-  my $dna = $segment->dna;
-  $dna =~ s/(.{1,60})/$1\n/g;
-  print ">$segment\n";
-  print $dna;
-}
-
-sub dump_gff {
-  my $segment = shift;
-  my $page_settings = shift;
-
-  my $selected_labels = $page_settings->{labels} or return;
-  my @labels   = labels($page_settings);
-  my @selected = grep {$selected_labels->[$_]} 0..@labels;
-  @selected = @labels[@selected];
-
-  my $date = localtime;
-  print "##gff-version 2\n";
-  print "##date $date\n";
-  print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
-
-  my $conf = $CONFIG->config;
-  my @feature_types = map {$conf->label2type($_)} @selected;
-
-  warn "dumping @feature_types" if DEBUG;
-
-  my $iterator = $segment->features(-types=>\@feature_types,-iterator=>1) or return;
-  while (my $f = $iterator->next_feature) {
-    print $f->gff_string,"\n";
-    for my $s ($f->sub_SeqFeature) {
-      print $s->gff_string,"\n";
-    }
-  }
 }
 
 sub multiple_choices {
@@ -1815,6 +1800,163 @@ sub make_citation_link {
   (my $anchor  = $label) =~ tr/ /-/;
   my $link = $self_url.'#'.escapeHTML($anchor);
   return a({-href=>$link,-target=>'citation'},$key);
+}
+
+### PLUGINS ###################################################################################
+###############################################################################################
+sub initialize_plugins {
+  my $path = shift;
+  my %plugin_list = ();
+
+  my $plugins = "$path/plugins";
+  warn "initializing plugins..." if DEBUG_PLUGINS;
+
+  croak("$plugins: not a directory") unless -d $plugins;
+  opendir(D,$plugins) or croak "Couldn't open $plugins: $!";
+  my @plugins = map { "$plugins/$_" } grep {/\.pm$/} readdir(D);
+  close D;
+
+  # try to work around a bug in Apache/mod_perl which appears when
+  # running under linux/glibc 2.2.1
+  unless (@plugins) {
+    @plugins = glob("$plugins/*.pm");
+  }
+
+  for my $plugin (@plugins) {
+    my $base = basename($plugin,'.pm');
+    my $class = "Bio\:\:Graphics\:\:Browser\:\:Plugin\:\:$base";
+    if (eval {require $plugin}) {
+      warn "plugin $base loaded successfully" if DEBUG_PLUGINS;
+      my $obj = $class->new;
+      warn "plugin name = ",$obj->name," base = $base" if DEBUG_PLUGINS;
+      $plugin_list{$base} = $obj;
+    } else {
+      warn $@ if $@;
+    }
+  }
+  return \%plugin_list;
+}
+
+sub configure_plugins {
+  my ($plugins,$settings,$db,$conf,$conf_dir) = @_;
+  for my $name (keys %$plugins) {
+    my $p = $plugins->{$name};
+    $p->database($db);
+    $p->browser_config($conf);
+    $p->config_path($conf_dir);
+    $p->page_settings($settings);
+
+    # retrieve persistent configuration
+    my $config = retrieve_plugin_config($p);
+    # and tell the plugin about it
+    $p->configuration($config);
+
+    # if there are any CGI parameters from the
+    # plugin's configuration screen, set it here
+    warn "param($name) = ",join ' ',param() if DEBUG_PLUGINS;
+    $p->reconfigure if grep {/^$name\./} param();
+  }
+}
+
+sub plugin_table {
+  my ($settings,$plugins) = @_;
+  my %verbs = (dumper    => 'Dump',
+	       finder    => 'Find',
+	       annotator => 'Annotate');
+  my %labels = map {$_=> ($verbs{$plugins->{$_}->type}
+			  ||
+			  $plugins->{$_}->type)
+		      .' '.$plugins->{$_}->name}
+    keys %$plugins;
+
+  my @plugins = sort {$labels{$a} cmp $labels{$b}} keys %labels;
+  my $table = table({-border=>0,-width=>$settings->{width}},
+		    TR({-class=>'searchtitle'},
+		       th({-align=>'left'},
+			  'Dumps, Searches and other Operations:'),
+		       td(popup_menu(-name=>'plugin',
+				     -values=>\@plugins,
+				     -labels=>\%labels,
+				    ),'&nbsp;',
+			  submit(-name=>'plugin_action',-value=>'Go!')),
+		       td(submit(-name=>'plugin_action',-value=>'Configure...'),'&nbsp;',
+			  submit(-name=>'plugin_action',-value=>'About...'))
+		      ));
+  $table;
+}
+
+sub do_plugin_dump {
+  my $plugin  = shift;
+  my $segment = shift;
+  my $p = $PLUGINS->{$plugin} or return;
+  $p->dump($segment);
+  return 1;
+}
+
+sub do_plugin_about {
+  my $plugin = shift;
+  my $p = $PLUGINS->{$plugin};
+  print h1("About",$p->name);
+  print $p->description;
+  print start_form(),submit('Back to Browser'),hidden('plugin'),end_form();
+}
+
+sub do_plugin_configure {
+  my $plugin = shift;
+  my $p = $PLUGINS->{$plugin};
+  print h1("Configure",$p->name);
+  my $config_html = $p->configure_form;
+
+  print start_form(),
+    $config_html ? (
+		    $config_html,p(),
+		    submit('Cancel'),'&nbsp;',
+		    b(submit(-name=>'plugin_action',-value=>'Configure'))
+		   )
+                 : ( p('This plugin has no extra configuration settings.'),
+		     b(submit('Back to Browser'))
+		   ),
+     hidden('plugin'),
+     end_form();
+}
+
+sub retrieve_plugin_config {
+  my $plugin = shift;
+  my $name   = $plugin->name;
+  my %settings = cookie("${name}_config");
+  return $plugin->config_defaults unless %settings;
+  foreach (keys %settings) {
+    # need better serialization than this...
+    if ($settings{$_} =~ /$;/) {
+      my @settings = split $;,$settings{$_};
+      pop @settings unless defined $settings[-1];
+      $settings{$_} = \@settings;
+    }
+  }
+  \%settings;
+}
+
+sub plugins2cookies {
+  my $plugins = shift;
+  my @cookies;
+  for my $plugin (values %$plugins) {
+    my $name = $plugin->name;
+    my $conf = $plugin->configuration or next;
+    my %conf = %$conf;
+
+    # we need a better serialization than this...
+    for my $key (keys %conf) {
+      if (ref $conf{$key} eq 'ARRAY') {
+	$conf{$key}  = join $;,@{$conf{$key}};
+	$conf{$key} .= $; unless $conf{$key} =~ /$;/;
+      }
+    }
+    push @cookies,cookie(-name    => "${name}_config",
+			 -value   => \%conf,
+			 -expires => '+3M');
+  }
+  warn "plugin cookies = @cookies" if DEBUG_PLUGINS;
+  @cookies;
 }
 
 !NO!SUBS!

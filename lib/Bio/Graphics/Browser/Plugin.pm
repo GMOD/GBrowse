@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.1 2002-03-24 23:18:47 lstein Exp $
+# $Id: Plugin.pm,v 1.2 2002-03-25 05:31:45 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 use strict;
@@ -37,15 +37,24 @@ sub type {
   return 'dumper';
 }
 
-sub configure {
+sub config_defaults {
   my $self = shift;
-  my $configuration = shift;
-  # do nothing
+  return;  # no configuration
 }
 
-sub change_configuration {
+sub configuration {
   my $self = shift;
-  my ($conf_name,@conf_values) = @_;
+  my $d = $self->{g_config};
+  $self->{g_config} = shift if @_;
+  $d;
+}
+
+sub configure_form {
+  return;
+}
+
+sub reconfigure {
+  my $self = shift;
   # do nothing
 }
 
@@ -59,10 +68,19 @@ sub database {
 
 # get/store configuration file
 # it's a Bio::Graphics::Browser file
-sub config_file {
+sub browser_config {
   my $self = shift;
   my $d = $self->{g_config_file};
   $self->{g_config_file} = shift if @_;
+  $d;
+}
+
+# get/store page settings
+# it's a big hash as described in the notes of the gbrowse executable
+sub page_settings {
+  my $self = shift;
+  my $d = $self->{g_page_settings};
+  $self->{g_page_settings} = shift if @_;
   $d;
 }
 

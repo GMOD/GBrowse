@@ -342,7 +342,7 @@ sub MY::ppd {
 	\@echo "creating gbrowse_ppm_support_files-$VERSION.tar.gz"
 	\@\$(TAR) zcf gbrowse_ppm_support_files-$VERSION.tar.gz --exclude CVS --exclude '*~' --exclude '*.PLS' --exclude '.*' --exclude README --exclude '#*' DISCLAIMER INSTALL docs htdocs conf cgi-bin install_util sample_data contrib
 	\@echo "creating gbrowse_ppm-$VERSION.tar.gz"
-	\@\$(TAR) zcf gbrowse_ppm-$VERSION.tar.gz --exclude man1 blib
+	\@\$(TAR) zcf gbrowse_ppm-$VERSION.tar.gz --exclude man1 --exclude man3 blib
 	\@perl -pi -e 's!HREF=""!HREF="$repository/gbrowse_ppm-$VERSION.tar.gz"!' Generic-Genome-Browser.ppd
 	\@perl -pi -e 's!(\\s*</IMPLEMENTATION>)!\\t\\t<INSTALL HREF="$repository/gbrowse_ppm_install.pl" EXEC="PPM_PERL" />\\n\\1!' Generic-Genome-Browser.ppd
 	\@perl -pi -e 's!Bio-Perl!bioperl!' Generic-Genome-Browser.ppd

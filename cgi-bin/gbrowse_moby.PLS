@@ -40,14 +40,14 @@ use lib "$OPTIONS{CONF}/gbrowse.conf";
 #
 ###################################################################
 \$VERSION   = $OPTIONS{VERSION};
-print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 !GROK!THIS!
 
+print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 print OUT <<'!NO!SUBS!';
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.35 2004-12-16 14:45:39 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.36 2004-12-16 14:56:19 markwilkinson Exp $
 ###########################################################
 
 use MOBY::Client::Central;

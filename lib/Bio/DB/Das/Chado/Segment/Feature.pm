@@ -655,17 +655,35 @@ sub all_tags {
 =head2 source()
 
   Title   : source
-  Usage   : unimplemented
-  Function: Source (manual curation, computation method, etc
-            not sure where to get this.
-  Returns :
-  Args    :
+  Usage   : $f->source();
+  Function: caches and returns the source from a GFF file, this is stored
+            in featureprop with a tag of 'GFF_Source'
+  Returns : See above
+  Args    : none
 
 =cut
 
 sub source {
-  my ($self,%arg) = @_;
-  return undef;
+    my $self = shift;
+
+    return $self->{'source'} if defined $self->{'source'};
+
+    my $dbh  = $self->factory->dbh();
+
+    my $source_type = $self->factory->name2term('GFF_source');
+    my $sth  = $dbh->prepare("
+        select value from featureprop
+        where type_id = $source_type
+          and feature_id = ?
+       ");
+    $sth->execute($self->feature_id)
+         or $self->throw("getting source query failed");
+   
+    return if ($sth->rows != 1);
+
+    my $hashref = $sth->fetchrow_hashref(); 
+    $self->{'source'} = $$hashref{'value'};
+    return $self->{'source'};
 }
 
 =head2 segments()

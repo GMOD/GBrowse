@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.42 2004-04-17 02:29:50 allenday Exp $
+# $Id: Chado.pm,v 1.43 2004-04-30 14:34:13 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -138,7 +138,8 @@ sub new {
                            from cvterm ct, cv c 
                            where ct.cv_id=c.cv_id and
                            c.name IN ('SO','Sequence Ontology',
-                               'relationship type','Relationship Ontology')")
+                               'relationship type','Relationship Ontology',
+                               'autocreated')")
     or warn "unable to prepare select cvterms";
   $sth->execute or $self->throw("unable to select cvterms");
 
@@ -181,9 +182,13 @@ sub dbh {
 
   Title   : term2name
   Usage   : $obj->term2name($newval)
-  Function: cvterm.cvterm_id to cvterm.name mapping hashref #FIXME -allenday
-  Returns : value of term2name (a scalar) #FIXME -allenday
-  Args    : on set, new value (a scalar or undef, optional)
+  Function: When called with a hashref, sets cvterm.cvterm_id to cvterm.name 
+            mapping hashref; when called with an int, returns the name
+            corresponding to that cvterm_id; called with no arguments, returns
+            the hashref.
+  Returns : see above
+  Args    : on set, a hashref; to retrieve a name, an int; to retrieve the
+            hashref, none.
 
 
 =cut
@@ -206,9 +211,13 @@ sub term2name {
 
   Title   : name2term
   Usage   : $obj->name2term($newval)
-  Function: cvterm.name to cvterm.cvterm_id mapping hashref #FIXME -allenday
-  Returns : value of name2term (a scalar) #FIXME -allenday
-  Args    : on set, new value (a scalar or undef, optional)
+  Function: When called with a hashref, sets cvterm.name to cvterm.cvterm_id
+            mapping hashref; when called with a string, returns the cvterm_id
+            corresponding to that name; called with no arguments, returns
+            the hashref.
+  Returns : see above
+  Args    : on set, a hashref; to retrieve a cvterm_id, a string; to retrieve
+            the hashref, none.
 
 
 =cut

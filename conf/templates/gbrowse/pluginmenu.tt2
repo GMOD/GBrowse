@@ -1,0 +1,26 @@
+<b>[% browser.translate('dumps') %]:</b><br/>
+<select name="plugin">
+[% FOREACH plugin = plugins.keys %]
+  [% label = 'anonymous label' %]
+  [% name  = 'anonymous name'  %]
+  [% IF plugins.${plugin}.verb %]
+    [% label = browser.translate(plugins.${plugin}.verb) || plugins.${plugin}.verb %]
+  [% ELSE %]
+    [% IF    plugins.${plugin}.type == 'dumper'      ; label = browser.translate('dump')      %]
+    [% ELSIF plugins.${plugin}.type == 'finder'      ; label = browser.translate('find')      %]
+    [% ELSIF plugins.${plugin}.type == 'highlighter' ; label = browser.translate('highlight') %]
+    [% ELSIF plugins.${plugin}.type == 'annotator'   ; label = browser.translate('annotate')  %]
+    [% END %]
+  [% END %]
+
+  [% IF plugins.${plugin}.type == 'filter' %]
+    [% name = browser.config.setting(plugins.${plugin}.name,'key')%]
+  [% ELSE %]
+    [% name = plugins.${plugin}.name %]
+  [% END %]
+  [% label = label _ ' ' _ name %]
+  [% label = label | replace('^\s+',,'') %]
+
+  <option value="[% plugin %]" [% IF(plugin == browser.options.plugin) ; 'selected="selected"' ; END %]>[% label %]</option>
+[% END %]
+</select>

@@ -1,0 +1,5 @@
+<b>[% browser.translate('landmark') %]</b><br/>
+<input type="text" name="name" size="25"/>
+<input type="submit" name="search" value="[% browser.translate('search') %]"/>
+<input type="submit" name="reset" value="[% browser.translate('reset') %]" class="reset_button"/>
+<input type="checkbox" name="flip" value="1" [% IF browser.options.flip ; "checked" ; END %]/>[% browser.translate('flip') %]

@@ -1,0 +1,35 @@
+<table border="0" width="100%">
+  <tr>
+    <th class="uploadtitle" colspan="4" align="left">[% browser.translate('upload_title') %]:
+      <a href="?help=annotation" target="help">[[% browser.translate('help') %]]</a>
+    </th>
+  </tr>
+
+  [% FOREACH filename = browser.options.tracks %]
+    [% NEXT UNLESS filename.match('^file:') # && $feature_files->{$filename} %]
+    [% file = filename %]
+    [% file = file | replace('^file:','') %]
+    [% name = file | uri %]
+
+    <tr class="uploadbody">
+      <th><a href="?[% browser.translate('download_file') | uri %]=[% name %]">[[% name %]]</a></th>
+      <td colspan="3">
+        <submit name="modify.[% file %]" value="[% browser.translate('edit') %]">&nbsp;
+        <submit name="modify.[% file %]" value="[% browser.translate('download_file') %]">&nbsp;
+        <submit name="modify.[% file %]" value="[% browser.translate('delete') %]">&nbsp;
+      </td>
+    </tr>
+    <tr class="uploadbody">
+      <td>&nbsp</td><td colspan="3">get_uploaded_file_info($BROWSER->options->{features}{$filename}{visible} && $feature_files->{$filename});</td>
+    </tr>
+  [% END %]
+
+  <tr class="uploadbody">
+    <th align="right">[% browser.translate('upload_file') %]</th>
+    <td colspan="3">
+      <input type="file" name="upload_annotations"/>&nbsp;
+      <submit name="[% browser.translate('upload') %]"/>&nbsp;
+      <submit name="new_upload" value="[% browser.translate('new') %]"/>&nbsp;
+    </td>
+  </tr>
+</table>

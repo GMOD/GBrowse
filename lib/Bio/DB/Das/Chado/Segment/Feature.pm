@@ -71,7 +71,7 @@ sub new {
   my ($factory,
       $parent,
       $srcseq,
-      $start,$end,
+      $base_start,$end,
       $type,
       $strand,
       $group,       # ie, gene name  (GFF legacy)
@@ -83,7 +83,7 @@ sub new {
   #($start,$end) = ($end,$start) if defined($strand) and $strand == -1;
 
   @{$self}{qw(factory parent sourceseq start end strand )} =
-    ($factory,$parent,$srcseq,$start,$end,$strand);
+    ($factory,$parent,$srcseq,$base_start,$end,$strand);
 
   @{$self}{qw(type group db_id absolute)} =
     ($type,$group,$db_id,$factory->{absolute});
@@ -262,13 +262,14 @@ sub sub_SeqFeature {
   while (my $hashref = $sth->fetchrow_hashref) {
 
     my $stop  = $$hashref{fmax};
-    my $start = $$hashref{fmin};
+    my $interbase_start = $$hashref{fmin};
+    my $base_start = $interbase_start +1;
 
     my $feat = Bio::DB::Das::Chado::Segment::Feature->new (
                        $self->{factory},
                        $self,
                        $self->ref,
-                       $start,$stop,
+                       $base_start,$stop,
                        $termname{$$hashref{type_id}},
                        $$hashref{strand},
                        $$hashref{name},

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.32 2003-06-02 15:08:34 scottcain Exp $
+# $Id: Segment.pm,v 1.33 2003-06-30 18:33:04 scottcain Exp $
 
 =head1 NAME
 
@@ -104,13 +104,15 @@ sub new {
 
   my $self  = shift;
 
-  my ($name,$factory,$start,$end) = @_;
+  my ($name,$factory,$base_start,$end) = @_;
 
     warn "$name, $factory\n" if DEBUG;
-    warn "start = $start, end = $end\n" if DEBUG;
+    warn "base_start = $base_start, end = $end\n" if DEBUG;
 
-  $self->throw("start value less than 1\n") if (defined $start && $start < 1);
-  $start = $start ? int($start) : 1; 
+  $self->throw("start value less than 1\n") if (defined $base_start && $base_start < 1);
+  $base_start = $base_start ? int($base_start) : 1; 
+  my $interbase_start = $base_start -1;
+
 
 #moved length determination to constructor, now it will be there from
 # 'the beginning'.
@@ -169,10 +171,10 @@ sub new {
                                                  : $landmark_feature_id;    
 
     $sth = $factory->{dbh}->prepare ("
-       select ga.name,ga.feature_id,ga.seqlen,fl.fmin,fl.fmax
-       from feature ga, featureloc fl
+       select f.name,f.feature_id,f.seqlen,fl.fmin,fl.fmax
+       from feature f, featureloc fl
        where fl.feature_id = $landmark_feature_id and
-             $srcfeature_id = ga.feature_id
+             $srcfeature_id = f.feature_id
          ");
     $sth->execute or throw("synonym to assembly query failed");
 
@@ -196,10 +198,10 @@ sub new {
     if ($$ihash_ref{'srcfeature_id'}) {
       $srcfeature_id = $$ihash_ref{'srcfeature_id'};
       $sth = $factory->{dbh}->prepare ("
-       select ga.name,ga.feature_id,ga.seqlen,fl.fmin,fl.fmax
-       from feature ga, featureloc fl
+       select f.name,f.feature_id,f.seqlen,fl.fmin,fl.fmax
+       from feature f, featureloc fl
        where fl.feature_id = $landmark_feature_id and
-             $srcfeature_id = ga.feature_id
+             $srcfeature_id = f.feature_id
          ");
       $sth->execute or throw("synonym to assembly query failed");
 
@@ -216,18 +218,19 @@ sub new {
   $name = $$hash_ref{'name'};
 
   if ($$hash_ref{'fmin'}) {
-    $start = $$hash_ref{'fmin'};
-    $end   = $$hash_ref{'fmax'};
+    $interbase_start = $$hash_ref{'fmin'};
+    $base_start      = $interbase_start +1;
+    $end             = $$hash_ref{'fmax'};
   }
 
     warn "length:$length, srcfeature_id:$srcfeature_id\n" if DEBUG;
 
   $self->throw("end value greater than length\n") if (defined $end && $end > $length);
   $end = $end ? int($end) : $length;
-  $length = $end - $start +1;
+  $length = $end - $interbase_start;
 
   return bless {factory       => $factory,
-                start         => $start,
+                start         => $base_start,
                 end           => $end,
                 length        => $length,
                 srcfeature_id => $srcfeature_id,
@@ -385,20 +388,21 @@ sub features {
 
 # set range variable 
 
-  my $rstart = $self->start;
-  my $rend   = $self->end;
+  my $base_start = $self->start;
+  my $interbase_start = $base_start -1;
+  my $rend       = $self->end;
   my $sql_range;
   if ($rangetype eq 'contains') {
 
-    $sql_range = " fl.fmin >= $rstart and fl.fmax <= $rend ";
+    $sql_range = " fl.fmin >= $interbase_start and fl.fmax <= $rend ";
 
   } elsif ($rangetype eq 'contained_in') {
 
-    $sql_range = " fl.fmin <= $rstart and fl.fmax >= $rend ";
+    $sql_range = " fl.fmin <= $interbase_start and fl.fmax >= $rend ";
 
   } else { #overlaps is the default
 
-    $sql_range = " fl.fmin <= $rend and fl.fmax >= $rstart ";
+    $sql_range = " fl.fmin <= $rend and fl.fmax >= $interbase_start ";
 
   }
 
@@ -452,14 +456,15 @@ sub features {
   my %termname = %{$self->{factory}->{cvname}};
   while (my $hashref = $sth->fetchrow_hashref) {
 
-    my $stop  = $$hashref{fmax};
-    my $start = $$hashref{fmin};
+    my $stop            = $$hashref{fmax};
+    my $interbase_start = $$hashref{fmin};
+    my $base_start      = $interbase_start +1;
 
     $feat = Bio::DB::Das::Chado::Segment::Feature->new (
                        $self->{factory},
                        $self,
                        $self->seq_id,
-                       $start,$stop,
+                       $base_start,$stop,
                        $termname{$$hashref{type_id}},
                        $$hashref{strand},
                        $$hashref{name},
@@ -494,14 +499,14 @@ Returns the sequence for this segment as a simple string.
 
 sub seq {
   my $self = shift;
-  my ($ref,$class,$start,$stop)
-    = @{$self}{qw(sourceseq class start end)};
+  my ($ref,$class,$base_start,$stop,$strand)
+    = @{$self}{qw(sourceseq class start end strand)};
 
 #$self->{factory}->{dbh}->trace(1);
 
   my $feat_id = $self->{srcfeature_id};
 
-    warn "src_id:$feat_id, start $start stop $stop\n" if DEBUG;
+    warn "src_id:$feat_id, base_start $base_start stop $stop\n" if DEBUG;
 
   my $sth = $self->{factory}->{dbh}->prepare("
      select residues from feature 
@@ -513,16 +518,18 @@ sub seq {
   my $hash_ref = $sth->fetchrow_hashref;
   my $seq = $$hash_ref{'residues'};
  
-  my $has_start = defined $start;
+  my $has_start = defined $base_start;
   my $has_stop  = defined $stop;
 
   my $reversed;
   if ($has_start && $has_stop && $start > $stop) {
     $reversed++;
-    ($start,$stop) = ($stop,$start);
+    ($base_start,$stop) = ($stop,$base_start);
+  } elsif ($strand < 0 ) {
+    $reversed++;
   }
 
-  $start -= 1;
+  $base_start -= 1;
   $stop -= 1;
 
   if (!$has_start and !$has_stop) {
@@ -530,9 +537,9 @@ sub seq {
   } elsif (!$has_start) {
     $seq = substr($seq,0,$stop);    
   } elsif (!$has_stop) {
-    $seq = substr($seq,$start);
+    $seq = substr($seq,$base_start);
   } else { #has both start and stop
-    $seq = substr($seq,$start, ($stop-$start+1));
+    $seq = substr($seq,$base_start, ($stop-$base_start+1));
   }
 
   if ($reversed) {

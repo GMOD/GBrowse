@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.22 2003-05-30 03:35:36 scottcain Exp $
+# $Id: Chado.pm,v 1.23 2003-06-30 18:33:04 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -197,13 +197,13 @@ Otherwise, the method must throw a "multiple segment exception".
 
 sub segment {
   my $self = shift;
-  my ($name,$start,$end,$class,$version) = $self->_rearrange([qw(NAME
+  my ($name,$base_start,$end,$class,$version) = $self->_rearrange([qw(NAME
 								 START
 								 END
 								 CLASS
 								 VERSION)],@_);
   # lets the Segment class handle all the lifting.
-  return $self->_segclass->new($name,$self,$start,$end);
+  return $self->_segclass->new($name,$self,$base_start,$end);
 }
 
 =head2 features
@@ -304,7 +304,7 @@ sub types {
 sub get_feature_by_name {
   my $self = shift;
 
-  my ($name, $class, $ref, $start, $stop) = $self->_rearrange([qw(NAME CLASS REF START END)],@_);
+  my ($name, $class, $ref, $base_start, $stop) = $self->_rearrange([qw(NAME CLASS REF START END)],@_);
 
   my @features;
   if ($name =~ /^\s*\S+\s*$/) {
@@ -360,11 +360,14 @@ sub get_feature_by_name {
 
         my %name = %{$self->{cvname}};
 
+        my $interbase_start = $$hashref{'fmin'}:
+        $base_start = $interbase_start +1; 
+
         my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                       $self,
                       $parent_segment,
                       $parent_segment->seq_id,
-                      $$hashref{'fmin'},$$hashref{'fmax'},
+                      $base_start,$$hashref{'fmax'},
                       $name{$$hashref{'type_id'}},
                       $$hashref{'strand'},
                       $$hashref{'name'},

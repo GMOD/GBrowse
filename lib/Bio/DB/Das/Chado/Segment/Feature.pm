@@ -393,11 +393,11 @@ sub has_tag {
 
 =cut
 
-sub seq {
-  my ($self,%arg) = @_;
-
-  $self->throw_not_implemented();
-}
+#sub seq {
+#  my ($self,%arg) = @_;
+#
+#  $self->throw_not_implemented();
+#}
 
 =head2 seq_id()
 

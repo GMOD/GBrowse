@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.57 2004-04-17 02:29:51 allenday Exp $
+# $Id: Segment.pm,v 1.58 2004-04-20 22:00:14 allenday Exp $
 
 =head1 NAME
 
@@ -91,7 +91,7 @@ use strict;
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI Bio::DB::Das::Chado);
@@ -639,8 +639,26 @@ Returns the sequence for this segment as a simple string.
 
 sub seq {
   my $self = shift;
+  my %arg = @_;
   my ($ref,$class,$base_start,$stop,$strand)
     = @{$self}{qw(sourceseq class start end strand)};
+
+  if($arg{self}){
+    my $r_id    = $self->feature_id;
+  	 
+    $self->warn("FIXME: incomplete implementation of alternate sequence selection");
+  	 
+    my $sth = $self->factory->dbh->prepare("
+      select residues from feature
+      where feature_id = $r_id ");
+
+    $sth->execute or $self->throw("seq query failed");
+  	 
+    my $array_ref = $sth->fetchrow_arrayref;
+    my $seq = $$array_ref[0];
+  	 
+    return $seq;
+  }
 
   my $feat_id = $self->{srcfeature_id};
 

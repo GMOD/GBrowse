@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.57 2002-09-11 11:43:34 lstein Exp $
+# $Id: gbrowse.PLS,v 1.58 2002-09-12 01:58:43 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -228,7 +228,6 @@ if (param('Upload') && (my $f = param('upload_annotations'))) {
 elsif (param('new_upload')) {
   $file = new_upload($page_settings);  # global
   $file_action = "modify.$file";       # global
-  warn "file = $file";
   param(-name=>"modify.$file",-value=>$LANG->tr('Edit'));
 }
 
@@ -240,7 +239,7 @@ elsif ($data = param('auto') or $data = param('add')) {
   handle_quickie($page_settings,$data);
 }
 
-warn "file again = $file";
+warn "file again = $file" if DEBUG;
 
 clear_uploaded_file($page_settings,$file) if $file_action && param($file_action) eq 'Delete File';
 
@@ -325,11 +324,12 @@ sub main_display {
   elsif (@$segments == 1) {
     $segment = $segments->[0];
     $segment = truncated_segment($segment) if $segment->length < 4;
+    my $divider = $CONFIG->setting(general=>'unit_divider') || 1;
     print h2($LANG->tr('SHOWING_FROM_TO',
 		       unit_label($segment->length),
 		       $segment->seq_id,
-		       commas($segment->start),
-		       commas($segment->stop)));
+		       commas($segment->start/$divider),
+		       commas($segment->stop/$divider)));
   }
 
   # print the top of the form, with navigation bar, etc
@@ -633,14 +633,16 @@ sub navigation_table {
 			$LANG->tr('NAVIGATION_INSTRUCTIONS',bookmark_link($settings))
 		       )),
 		  TR({-class=>'searchtitle', -align=>'left'},
-		     td({-class=>'searchtitle'}, b('Landmark or Region'),
-			textfield(-name=>'name',-size=>20),
+		     td({-class=>'searchtitle'}, b($LANG->tr('Landmark')),
+			textfield(-name=>'name',-size=>30),
 			submit(-name=>$LANG->tr('Go'))),
-		     td({-align=>'LEFT'},
-			$segment ? ($LANG->tr('Scroll').': ',slidertable($segment,$buttonsDir)) : ''
-		       ),
 		     td(submit(-name=>$LANG->tr('Reset'),-class=>'reset_button'))
-		    ));
+		    ),
+		  TR({-class=>'searchtitle',-align=>'left'},
+		     th({-align=>'CENTER',-colspan=>3},
+			$segment ? ($LANG->tr('Scroll').': ',slidertable($segment,$buttonsDir)) : ''
+		       ))
+		 );
 }
 
 # This generates the navigation bar with the arrows
@@ -684,10 +686,11 @@ sub slidertable {
 # this generates the popup zoom menu with the window sizes
 sub zoomBar {
   my ($segment,$buttonsDir) = @_;
+  my $show = $LANG->tr('Show');
 
   my %seen;
   my @ranges	= grep {!$seen{$_}++} sort {$b<=>$a} $segment->length,get_ranges();
-  my %labels    = map {$_=>"Show ".unit_label($_)} @ranges;
+  my %labels    = map {$_=>$show.' '.unit_label($_)} @ranges;
   return popup_menu(-class   => 'searchtitle',
 	       -name    => 'span',
 	       -values  => \@ranges,
@@ -701,11 +704,20 @@ sub zoomBar {
 # convert bp into nice Mb/Kb units
 sub unit_label {
   my $value = shift;
+  my $unit     = $CONFIG->setting('units')        || 'bp';
+  my $divider  = $CONFIG->setting('unit_divider') || 1;
+  $value /= $divider;
+
   my $label;
-  $label = $value >= 1e9 ? sprintf("%.4g Gbp",$value/1e9)
-         : $value >= 1e6 ? sprintf("%.4g Mbp",$value/1e6)
-         : $value >= 1e3 ? sprintf("%.4g Kbp",$value/1e3)
-	 : $value." bp";
+  $label = $value >= 1e9  ? sprintf("%.4g G%s",$value/1e9,$unit)
+         : $value >= 1e6  ? sprintf("%.4g M%s",$value/1e6,$unit)
+         : $value >= 1e3  ? sprintf("%.4g K%s",$value/1e3,$unit)
+	 : $value >= 1    ? $value." $unit"
+	 : $value >= 1e-2 ? sprintf("%.4g c%s",$value*100,$unit)
+	 : $value >= 1e-3 ? sprintf("%.4g m%s",$value*1e3,$unit)
+	 : $value >= 1e-6 ? sprintf("%.4g u%s",$value*1e6,$unit)
+	 : $value >= 1e-9 ? sprintf("%.4g n%s",$value*1e9,$unit)
+         : sprintf("%.4g p%s",$value*1e12,$unit);
   return $label;
 }
 
@@ -854,7 +866,7 @@ sub external_table {
     my %presets;
     @presets{@$preset_urls} = @$preset_labels;
     unshift @$preset_urls,'';
-    $presets{''} = '--Choose Preset URL--';
+    $presets{''} = $LANG->tr('choose_preset');
     $presets = popup_menu(-name   => 'eurl',
 			  -values => $preset_urls,
 			  -labels => \%presets,
@@ -971,8 +983,9 @@ sub zoomnav {
 
   warn "start = $start, stop = $stop\n" if DEBUG;
 
-  $settings->{start} = $start;
-  $settings->{stop}  = $stop;
+  my $divisor = $CONFIG->setting(general=>'unit_divider') || 1;
+  $settings->{start} = $start/$divisor;
+  $settings->{stop}  = $stop/$divisor;
 }
 
 # The get_segments() call fetches the genome segments specified in the
@@ -1012,15 +1025,18 @@ sub lookup_segments {
   my @segments;
 
   $db->debug(0);
+  my $divisor = $CONFIG->setting(general=>'unit_divider') || 1;
 
   if (my $name = $settings->{name}) {
+    warn "name = $name" if DEBUG;
     @segments = $CONFIG->name2segments($name,$db,TOO_MANY_SEGMENTS);
   }
 
   elsif (my $ref = $settings->{ref}) {
     my @argv = (-name  => $ref);
-    push @argv,(-start => $settings->{start}) if defined $settings->{start};
-    push @argv,(-end   => $settings->{stop})  if defined $settings->{stop};
+    push @argv,(-start => $settings->{start}*$divisor) if defined $settings->{start};
+    push @argv,(-end   => $settings->{stop}*$divisor)  if defined $settings->{stop};
+    warn "looking up @argv" if DEBUG;
     @segments = $db->segment(@argv);
   }
 
@@ -1035,11 +1051,10 @@ sub lookup_segments {
   @segments = grep {!$seenit{$_->seq_id,$_->seq_id,$_->start,$_->end}++} @segments;
   return @segments if @segments > 1;
 
-  # set CGI name parameter to match segment.
   # this prevents any confusion over (ref,start,stop) and (name) addressing.
   $settings->{ref}   = $segments[0]->seq_id;
-  $settings->{start} = $segments[0]->start;
-  $settings->{stop}  = $segments[0]->end;
+  $settings->{start} = $segments[0]->start/$divisor;
+  $settings->{stop}  = $segments[0]->end/$divisor;
 
   return $segments[0];
 }
@@ -1912,8 +1927,9 @@ sub make_citation_link {
     (my $anchor  = $label) =~ tr/ /-/;
     $link = $self_url.'#'.escapeHTML($anchor);
   }
-  my $style = $label =~ /^(http|ftp|file):/ ? 'Font-style: italic' : '';
-  return a({-href=>$link,-target=>'citation',-style=>$style},$key);
+  my @args = (-href=>$link,-target=>'citation');
+  push @args,-style=>'Font-style: italic' if $label =~ /^(http|ftp|file):/;
+  return a({@args},$key);
 }
 
 ### PLUGINS ###################################################################################
@@ -2153,10 +2169,11 @@ sub tableize {
 sub set_language {
   my ($config,$lang) = @_;
   my $default_language   = $config->setting('language');
-  my @http_languages     = split /,\s+/,http('Accept-language');
-  my $preferred_language = $http_languages[0] || $default_language;
-  return unless $preferred_language;
-  $lang->language($preferred_language);
+  my @http_languages     = http('Accept-language') =~ /([a-z]{2}-?[a-z]*)/ig;
+  my @languages = (@http_languages,$default_language);
+  warn "languages = @languages" if DEBUG;
+  return unless @languages;
+  $lang->language(@languages);
 }
 
 sub footer {

@@ -1,7 +1,10 @@
 package Bio::Graphics::Browser::I18n;
 
-# $Id: I18n.pm,v 1.4 2002-09-11 11:42:23 lstein Exp $
+# $Id: I18n.pm,v 1.5 2002-09-12 01:58:43 lstein Exp $
 # $Log: not supported by cvs2svn $
+# Revision 1.4  2002/09/11 11:42:23  lstein
+# fixed language handling
+#
 # Revision 1.3  2002/09/05 19:25:27  lstein
 # tried to fix problems with localization
 #
@@ -16,7 +19,7 @@ sub new {
   my $dir   = shift;
   my $self  = bless {
 		     dir  => $dir,
-		     lang => 'POSIX',
+		     lang => [],
 		    },ref $class || $class;
 }
 
@@ -30,8 +33,8 @@ sub dir {
 sub language {
   my $self = shift;
   my $d    = $self->{lang};
-  $self->{lang} = shift if @_;
-  $d;
+  $self->{lang} = [@_] if @_;  # probably could use \@_ here
+  @$d;
 }
 
 sub tr {
@@ -46,8 +49,15 @@ sub tr {
 
 sub tr_table {
   my $self = shift;
-  my $language = shift;
-  $self->{tr}{$language} ||= $self->read_table($language);
+  my @languages = @_;
+  my $table;
+  for my $lang (@languages) {
+    $self->{tr}{$lang} = $self->read_table($lang) 
+      unless exists $self->{tr}{$lang};
+    next unless $self->{tr}{$lang};
+    return $self->{tr}{$lang};
+  }
+  return {};  # language could not be loaded
 }
 
 sub read_table {
@@ -56,7 +66,7 @@ sub read_table {
   my $path = join '/',$self->dir,"$language.pm";
   my $table = eval "require '$path'";
   unless ($table) {  # try removing the -br part
-    $path =~ s/[-_]\w\.pm$/.pm/;
+    $path =~ s/-\w+\.pm$/.pm/;
     $table = eval "require '$path'";
   }
   $table;

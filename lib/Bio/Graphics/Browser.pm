@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.36 2002-09-09 03:27:03 lstein Exp $
+# $Id: Browser.pm,v 1.37 2002-09-12 01:58:43 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -750,6 +750,8 @@ sub image_and_map {
 		    -double    => 1,
 		    -tick      => 2,
 		    -label     => $config{label_scale} ? $segment->seq_id : 0,
+		    -units     => $conf->setting(general=>'units'),
+		    -unit_divider => $conf->setting(general=>'unit_divider') || 1,
 		   );
 
   my (%tracks,@blank_tracks);
@@ -932,7 +934,8 @@ sub overview {
 		    -label     => "Overview of ".$segment->seq_id,
 		    -labelfont => gdMediumBoldFont,
 		    -tick      => 2,
-		    $units ? (-units => $units) : (),
+		    -units     => $conf->setting(general=>'units'),
+		    -unit_divider => $conf->setting(general=>'unit_divider') || 1,
 		   );
 
   $self->add_overview_landmarks($panel,$segment,\@tracks,$padl);
@@ -1114,11 +1117,11 @@ sub name2segments {
   my $max_segment = $self->config('max_segment') || MAX_SEGMENT;
 
   my (@segments,$class,$start,$stop);
-  if ($name =~ /([\w._-]+):(-?\d+),(-?\d+)$/ or
-      $name =~ /([\w._-]+):(-?[\d,]+)(?:-|\.\.)?(-?[\d,]+)$/) {
-    $name = $1;
+  if ($name =~ /([\w._-]+):(-?[\d.]+),(-?[\d.]+)$/ or
+      $name =~ /([\w._-]+):(-?[\d,.]+)(?:-|\.\.)(-?[\d,.]+)$/) {
+    $name  = $1;
     $start = $2;
-    $stop = $3;
+    $stop  = $3;
     $start =~ s/,//g; # get rid of commas
     $stop  =~ s/,//g;
   }
@@ -1127,6 +1130,10 @@ sub name2segments {
     $class = $1;
     $name  = $2;
   }
+
+  my $divisor = $self->config->setting(general=>'unit_divider') || 1;
+  $start *= $divisor if defined $start;
+  $stop  *= $divisor if defined $stop;
 
   my @argv = (-name  => $name);
   push @argv,(-class => $class) if defined $class;
@@ -1280,6 +1287,7 @@ sub _hits_to_html {
 # I know there must be a more elegant way to insert commas into a long number...
 sub commas {
   my $i = shift;
+  return $i if $i=~ /\./;
   $i = reverse $i;
   $i =~ s/(\d{3})/$1,/g;
   chop $i if $i=~/,$/;

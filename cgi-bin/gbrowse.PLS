@@ -45,7 +45,7 @@ print OUT "use libs '$OPTIONS{LIB}'\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.97 2004-06-24 18:13:26 lstein Exp $
+# $Id: gbrowse.PLS,v 1.98 2004-07-17 16:51:35 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -412,8 +412,10 @@ sub main_display {
   }
 
   # print the top of the form, with navigation bar, etc
-  print start_form(-name=>'mainform',
-		   -method=>'POST');
+  my $action = $source ? url()."/$source" : url();
+  print start_form(-name   => 'mainform',
+                   -action => $action,
+		   -method => 'POST');
   print navigation_table($segment,$page_settings);
   print html_frag('html2',$segment,$page_settings);
 

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.82 2004-12-03 15:08:17 scottcain Exp $
+# $Id: Segment.pm,v 1.83 2004-12-03 17:00:03 scottcain Exp $
 
 =head1 NAME
 
@@ -666,7 +666,9 @@ sub features {
   }
   my $select_part = "select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.phase,"
                    ."fl.locgroup,fl.srcfeature_id,f.type_id,f.uniquename,"
-                   ."f.feature_id,fd.dbxref_id, af.significance as score ";
+                   ."f.feature_id, af.significance as score, "
+                   ."CASE (dbx.db_id = ".$factory->gff_source_db_id
+                   .") WHEN true THEN fd.dbxref_id ELSE NULL END AS dbxref_id ";
 
   my $order_by    = "order by f.type_id,fl.fmin ";
 
@@ -675,18 +677,14 @@ sub features {
   if ($feature_id) {
     $from_part    = "from (feature f join featureloc fl using (feature_id)) "
                    ."left join feature_dbxref fd using (feature_id) "
-                   . "join dbxref dbx on "
-                   .    "(dbx.dbxref_id = fd.dbxref_id and "
-                   .     "dbx.db_id = ".$factory->gff_source_db_id.") "
+                   ."left join dbxref dbx on (dbx.dbxref_id = fd.dbxref_id) "
                    ."left join analysisfeature af using (feature_id)";
 
     $where_part   = "where f.feature_id = $feature_id and fl.rank=0 ";
   } else {
     $from_part   = "from (feature f join featureslice($interbase_start, $rend) fl using (feature_id)) "
                   ."left join feature_dbxref fd using (feature_id) "
-                  . "join dbxref dbx on "
-                   .    "(dbx.dbxref_id = fd.dbxref_id and "
-                   .     "dbx.db_id = ".$factory->gff_source_db_id.") "
+                  ."left join dbxref dbx on (dbx.dbxref_id = fd.dbxref_id) "
                   ."left join analysisfeature af using (feature_id)";
 
     $where_part  = "where $sql_types "

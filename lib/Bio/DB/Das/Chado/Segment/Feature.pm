@@ -19,6 +19,7 @@ package Bio::DB::Das::Chado::Segment::Feature;
 use strict;
 
 use Bio::DB::Das::Chado::Segment;
+use Bio::Graphics::Browser::Util;
 use Bio::SeqFeatureI;
 use Bio::Root::Root;
 use Bio::LocationI;
@@ -56,7 +57,6 @@ The 11 arguments are positional:
   $start        start of this feature
   $stop         stop of this feature
   $type         this feature's type (gene, arm, exon, etc)
-  $score        the feature's score
   $strand       this feature's strand (relative to the source
                 sequence, which has its own strandedness!)
   $phase        this feature's phase (often with respect to the 
@@ -78,7 +78,6 @@ sub new {
       $srcseq,
       $start,$end,
       $type,
-      $score,
       $strand,
       $phase,
       $group,
@@ -95,7 +94,6 @@ sub new {
   $self->seq_id($srcseq);
   $self->start($start);
   $self->end($end);
-  $self->score($score);
   $self->strand($strand);
   $self->phase($phase);
 
@@ -116,6 +114,7 @@ sub new {
 
   $self->srcfeature_id($parent->srcfeature_id() ) 
            if (defined $parent && $parent->can('srcfeature_id'));
+  $self->score(0);
 
   return $self;
 }
@@ -441,6 +440,19 @@ sub gff_string {
   }
   $string;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 =head2 has_tag()
 
@@ -834,28 +846,28 @@ sub sub_SeqFeature {
 
   #first call, cache subfeatures
   if(!$self->subfeatures ){
-
     my $parent_id = $self->feature_id();
-
     my $typewhere = '';
     if ($type) {
       $type = lc $type;
-      $typewhere = " and child.type_id = ".$self->factory->name2term($type) ;
+      $typewhere = " and child.type_id = ".$self->factory->map2type($type)->cvterm_id;
     }
 
     my $handle = $self->factory->dbh();
-
     $self->factory->dbh->trace(2) if DEBUG;
 
-    my $partof =  $self->factory->name2term('part_of');
+    warn $self->factory if DEBUG;
+    warn $self->factory->map2type('part_of') if DEBUG;
+    warn $self->factory->map2type('part_of')->cvterm_id if DEBUG;
+
+    my $partof =  $self->factory->map2type('part_of')->cvterm_id;
     $self->throw("part_of cvterm wasn't found.  is DB sane?") unless $partof;
     $partof = join ',', @$partof if ref($partof) eq 'ARRAY';
-
     warn "partof = $partof" if DEBUG;
 
     my $sql = "
     select child.feature_id, child.name, child.type_id, child.uniquename, parent.name as pname,
-      childloc.fmin, childloc.fmax, childloc.strand, childloc.locgroup, childloc.phase, af.significance as score,
+      childloc.fmin, childloc.fmax, childloc.strand, childloc.locgroup, childloc.phase,
       childloc.srcfeature_id
     from feature as parent
     inner join
@@ -867,11 +879,7 @@ sub sub_SeqFeature {
     inner join
       featureloc as childloc on
         (child.feature_id = childloc.feature_id)
-    left join
-       analysisfeature as af on
-        (child.feature_id = af.feature_id)
     where parent.feature_id = $parent_id
-          and childloc.rank = 0
           and fr0.type_id in ($partof)
           $typewhere
     ";
@@ -906,8 +914,7 @@ sub sub_SeqFeature {
                     $self,
                     $self->ref,
                     $base_start,$stop,
-                    $self->factory->term2name($$hashref{type_id}),
-                    $$hashref{score},
+                    $self->factory->map2type($$hashref{type_id})->name,
                     $$hashref{strand},
                     $$hashref{phase},
                     $$hashref{name},
@@ -950,7 +957,7 @@ sub add_subfeature {
   my $self    = shift;
   my $subfeature = shift;
 
-   #  warn "in add_subfeat:$subfeature";
+  warn "in add_subfeat:$subfeature" if DEBUG;
 
   return undef unless ref($subfeature);
   return undef unless $subfeature->isa('Bio::DB::Das::Chado::Segment::Feature');
@@ -1212,20 +1219,6 @@ sub attributes {
   $factory->attributes($id,@_);
 }
 
-=head2 synonyms()
-
- Title   : synonyms
- Usage   : @synonyms = $feature->synonyms
- Function: return a list of synonyms for a feature
- Returns : a list of strings
- Args    : none
- Status  : Public
-
-Looks in the synonym table to collect all synonyms of a feature.
-
-=cut
-
-
 sub synonyms {
   #returns an array with synonyms
   my $self = shift;
@@ -1245,58 +1238,6 @@ sub synonyms {
   }
 
   return @synonyms;
-}
-
-=head2 cmap_link()
-
- Title   : cmap_link
- Usage   : $link = $feature->cmap_link
- Function: returns a URL link to the corresponding feature in cmap
- Returns : a string
- Args    : none
- Status  : Public
-
-Returns a link to a cmap installation (which is assumed to be on the
-same host as gbrowse).  In addition to the cmap tables being present
-in chado, this method also assumes the presence of a link table called
-feature_to_cmap.  See the cmap documentation for more information.
-
-This function is intended primarily to be used in gbrowse conf files. 
-For example:
-
-  link       = sub {my $self = shift; return $self->cmap_link();}
-
-=cut
-
-
-sub cmap_link {
-  # Use ONLY if CMap is installed in chado and
-  # the feature_to_cmap table is also installed
-  # This table is provided with CMap.
-  my $self = shift;
-  my $data_source = shift;
- 
-  my $dbh = $self->factory->dbh();
-
-  my $sth = $dbh->prepare("
-    select  cm_f.feature_name,
-            cm_m.accession_id as map_aid
-    from    cmap_feature cm_f,
-            cmap_map cm_m,
-            feature_to_cmap ftc
-    where   ? = ftc.feature_id
-            and cm_f.accession_id=ftc.cmap_feature_aid
-            and cm_f.map_id=cm_m.map_id
-  ");
-  $sth->execute($self->feature_id()) or $self->throw("cmap link query
-failed");
-  my $link_str='';
-  if (my $hashref = $sth->fetchrow_hashref) {
-   
-$link_str='/cgi-bin/cmap/viewer?ref_map_aids='.$$hashref{map_aid}.'&data_source='.$data_source.'&highlight='.$$hashref{'feature_name'};
-  }
-
-  return $link_str;
 }
 
 1;

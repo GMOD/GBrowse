@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.118 2004-02-13 13:52:17 lstein Exp $
+# $Id: Browser.pm,v 1.119 2004-02-13 14:11:36 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1697,17 +1697,17 @@ sub match_host {
   my $ok;
   for my $candidate (@$matches) {
     if ($candidate eq 'all') {
-      $ok = 1;
+      $ok ||= 1;
     } elsif ($candidate =~ /^[\d.]+$/) { # ip match
       $addr      .= '.' unless $addr      =~ /\.$/;  # these lines ensure subnets match correctly
       $candidate .= '.' unless $candidate =~ /\.$/;
-      $ok = $addr =~ /^\Q$candidate\E/;
+      $ok ||= $addr =~ /^\Q$candidate\E/;
     } else {
       $host ||= gethostbyaddr(inet_aton($addr),AF_INET);
       next unless $host;
       $candidate = ".$candidate" unless $candidate =~ /^\./; # these lines ensure domains match correctly
       $host      = ".$host"      unless $host      =~ /^\./;
-      $ok = $host =~ /\Q$candidate\E$/;
+      $ok ||= $host =~ /\Q$candidate\E$/;
     }
     return 1 if $ok;
   }

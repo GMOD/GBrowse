@@ -73,9 +73,10 @@ sub part_names {
 sub aggregate {
   my $self = shift;
   my ($features,$factory) = @_;
+  my $method = $self->method;
   $self->SUPER::aggregate($features,$factory);
   foreach (@$features) {
-    $_->source('WABA');
+    $_->source('WABA') if $_->method eq $method;
   }
 }
 

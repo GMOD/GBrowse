@@ -32,7 +32,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.2 2002-01-11 18:11:30 lstein Exp $
+# $Id: gbrowse.PLS,v 1.3 2002-01-11 22:01:43 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -1425,6 +1425,13 @@ sub bookmark_link {
 # fix up tracks to adjust for an increase or decrease in their number
 sub adjust_tracks {
   my $settings = shift;
+
+  # safety/sanity check for broken cookies
+  unless (ref $settings->{track} eq 'ARRAY' && ref $settings->{labels} eq 'ARRAY') {
+    set_default_tracks($settings);
+    return;
+  }
+
   my $old_count     = @{$settings->{track}};
   my $new_count     = labels($settings);
 

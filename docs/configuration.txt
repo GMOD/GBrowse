@@ -1,5 +1,5 @@
 This document provides information on configuring the Generic Genome
-Browser (GBrowse), part of the Generic Model Organism Systems Database
+Browser (GGB), part of the Generic Model Organism Systems Database
 Project (GMOD; http://www.gmod.org).
 
 * Table of Contents
@@ -26,7 +26,7 @@ scratch.
 
 A1. The GFF file format
 
-GBrowse is based around the GFF file format, which stands for "Gene
+GGB is based around the GFF file format, which stands for "Gene
 Finding Format" and was invented at the Sanger Centre. The GFF format
 is a flat tab-delimited file, each line of which corresponds to an
 annotation, or feature.  Each line has nine columns and looks like
@@ -276,18 +276,12 @@ browser.  Just provide a source=<sourcename> CGI argument, as in:
   http://your.site.org/cgi-bin/gbrowse?source=sourcename
 
 It is suggested that you use the same name as the database, although
-this isn't a requirement.  (If no "source=" argument is given, gbrowse
-picks the first configuration file that occurs alphabetically; you can
-control this by placing numbers in front of the configuration file, as
-in "01.yeast.conf".)
+this isn't a requirement.
 
 The configuration file is divided into a number of sections, each one
 introduced by a [SECTION TITLE].  The [GENERAL] section contains
 settings that are applicable to the entire application.  Other
 sections define tracks to display.
-
-I suggest that you begin with one of the example configuration files
-provided with the distribution and modify it to suit your needs.
 
 ---
 
@@ -371,17 +365,17 @@ The following [GENERAL] options are recognized:
 
   h) stylesheet
 
-  Location of the stylesheet used to create the GBrowse look and feel.
+  Location of the stylesheet used to create the GGB look and feel.
   (You probably will not need to change this.)
 
   i) buttons
 
-  URL in which the various graphical buttons used by GBrowse are located.
+  URL in which the various graphical buttons used by GGB are located.
   (You will probably not need to change this.)
 
   j) tmpimages
 
-  URL of a writable directory in which GBrowse can write its temporary
+  URL of a writable directory in which GGB can write its temporary
   images.    (You will probably not need to change this.)
 
   k) glyph
@@ -398,7 +392,7 @@ The following [GENERAL] options are recognized:
 
    l) label density
 
-   When there are too many annotations on the screen GBrowse automatically
+   When there are too many annotations on the screen GGB automatically
    disables the printing of identifying labels next to the feature.
    "label density" controls where the cutoff occurs.  The value in the
    example files is 25, meaning that labels will be turned off when
@@ -407,7 +401,7 @@ The following [GENERAL] options are recognized:
 
    m) bump density
 
-   When there are too many annotations on the screen GBrowse automatically
+   When there are too many annotations on the screen GGB automatically
    disables collision control.  The "bump density" option controls
    where the cutoff occurs.  The value in the example files is 100,
    meaning that when there more than 100 annotations of the same type
@@ -419,7 +413,7 @@ The following [GENERAL] options are recognized:
    n) link
 
    The link option creates a default rule for creating outgoing links 
-   from the GBrowse display.  When the user clicks on a feature of
+   from the GGB display.  When the user clicks on a feature of
    interest, he will be taken to the corresponding URL.
 
    The link option's value should be a URL containing one or more
@@ -446,16 +440,7 @@ The following [GENERAL] options are recognized:
    this.  It is also possible to declare a subroutine to compute the
    proper URL dynamically.  See COMPUTED OPTIONS for details.
 
-   o) title
-
-   The title option controls the "tooltips" text that pops up when
-   the mouse hovers over a glyph in certain browsers.  The rules
-   for generating titles are the same as the "link" option discussed
-   in section (n).  The "title" option can also be computed dynamically.
-   See COMPUTED OPTIONS for details.
-   
-
-   p) image widths
+   o) image widths
 
    The image widths option controls the set of image sizes to offer
    the user.  Its value is a space-delimited list of pixel widths.
@@ -463,12 +448,12 @@ The following [GENERAL] options are recognized:
    depends on the number of tracks and features, and cannot be
    controlled.
 
-   q) default width
+   p) default width
 
    The default width is the image width to start off with when the
    user invokes the browser for the first time.  The default is 800.
 
-   r) default features
+   q) default features
 
    The default features option is a space-delimited list of tracks
    to turn on by default.  You will probably need to change this.
@@ -476,88 +461,72 @@ The following [GENERAL] options are recognized:
 
       default features = Genes ORFs tRNAs
 
-   s) max segment
+    r) max segment
 
-   The max segment option sets an upper bound on the maximum size DNA
-   segment that will be displayed on the detailed view.  Its value is
-   in base pairs.  Above this limit, the user will be prompted to
-   select a smaller region on the birds-eye view.  You will probably
-   want to adjust this.
+    The max segment option sets an upper bound on the maximum size DNA
+    segment that will be displayed on the detailed view.  Its value is
+    in base pairs.  Above this limit, the user will be prompted to
+    select a smaller region on the birds-eye view.  You will probably
+    want to adjust this.
 
-   t) default segment
+    s) default segment
 
-   The default segment option sets the width of the segment (bp) that
-   will be displayed when the user clicks on the birds-eye view
-   without previously having set a desired magnification.  You may
-   want to adjust this value.
+    The default segment option sets the width of the segment (bp) that
+    will be displayed when the user clicks on the birds-eye view
+    without previously having set a desired magnification.  You may
+    want to adjust this value.
 
-   u) zoom levels
+    t) zoom levels
 
-   GBrowse allows unlimited zoom levels.  This option selects the
-   width of each level, in bp.  For example:
+    The GGB allows exactly eight levels of zoom.  This option selects
+    the width of each level, in bp.  For example:
 
       zoom levels = 1000 2000 5000 10000 20000 40000 100000 200000
 
-   v) low res
+    u) overview units
 
-   GBrowse currently supports limited semantic zooming in which the
-   appearance of certain glyphs changes as the magnification
-   increases.  The "low res" option specifies the point at which the
-   detailed view switches from high resolution to low resolution, and
-   is measured in base pairs.
-
-   For example, this option
-
-       low res = 100000
-
-   tells GBrowse to switch into low resolution mode when the number of
-   base pairs shown on the detailed screen is equal to or greater than
-   100,000 bp.
-
-   w) overview units
-
-   This option controls the units that will be used on the scale for
-   the birds-eye view display.  Possible values are "bp" (base pairs),
-   "K" (kilobases), "M" (megabases), and "G" (gigabases).  If this
-   option is omitted, the browser will guess the most appropriate
-   unit.
+    This option controls the units that will be used on the scale for
+    the birds-eye view display.  Possible values are "bp" (base
+    pairs), "K" (kilobases), "M" (megabases), and "G" (gigabases).
+    If this option is omitted, the browser will guess the most
+    appropriate unit.
 
 
-   x) overview bgcolor
+    v) overview bgcolor
 
-   This is the color for the background of the birds-eye view.
+    This is the color for the background of the birds-eye view.
 
-   y) detailed bgcolor
+    w) detailed bgcolor
 
-   This is the color for the background of the detailed view.
+    This is the color for the background of the detailed view.
 
-   z) header
+    x) header
 
-   This is a header to print at the top of the browser page.  It is
-   any valid HTML, and can span multiple lines provided that the
-   continuation lines begin with white space.
+    This is a header to print at the top of the browser page.  It is
+    any valid HTML, and can span multiple lines provided that the
+    continuation lines begin with white space.
 
-   It is also possible to place an anonymous Perl subroutine here.
-   The code will be invoked during preparation of the page and must
-   return a string value to use as the header.  See COMPUTED OPTIONS
-   for details.
+    It is also possible to place an anonymous Perl subroutine here.
+    The code will be invoked during preparation of the page and must
+    return a string value to use as the header.  See COMPUTED OPTIONS
+    for details.
 
-   Example:
+    Example:
 
     header = <h1>Welcome to the Volvox Sequence Page</h1>
 
-   aa) footer
+    x) footer
 
-   This is a footer to print at the top of the browser page.  It is
-   any valid HTML, and can span multiple lines provided that the
-   continuation lines begin with white space.
+    This is a footer to print at the top of the browser page.  It is
+    any valid HTML, and can span multiple lines provided that the
+    continuation lines begin with white space.
 
-   It is also possible to place an anonymous Perl subroutine here.
-   The code will be invoked during preparation of the page and must
-   return a string value to use as the header.  See COMPUTED OPTIONS
-   for details.
+    It is also possible to place an anonymous Perl subroutine here.
+    The code will be invoked during preparation of the page and must
+    return a string value to use as the header.  See COMPUTED OPTIONS
+    for details.
 
-   Example:
+    Example:
 
     footer = <hr>
 	<table width="100%">
@@ -570,33 +539,35 @@ The following [GENERAL] options are recognized:
 	</TR>
 	</table>
 
-    ab) examples
+     y) examples
 
-    You can provide GBrowse with some canned examples of "interesting
-    regions" for the user to click on.  The examples option, if
-    present, provides a space-delimited list of interesting regions.
-    For example:
+     You can provide GGB with some canned examples of "interesting
+     regions" for the user to click on.  The examples option, if
+     present, provides a space-delimited list of interesting regions.
+     For example:
 
        examples = II  NPY1 NAB2 Orf:YGL123W
 
 
-    ac) automatic classes
+     z) automatic classes
 
-    When the user types in a search string that is not qualified by a
-    class (as in EST:yk1234.5), GBrowse will automatically search for
-    a matching feature of class "Sequence".  You can have it search
-    for the name in other classes as well by defining the "automatic
-    classes" option.
+     When the user types in a search string that is not qualified by a
+     class (as in EST:yk1234.5), GGB will automatically search for a
+     matching feature of class "Sequence".  You can have it search for
+     the name in other classes as well by defining the "automatic
+     classes" option.  
 
-    Example:
+     Example:
 
 	automatic classes = Symbol Gene Clone
  
-    When the user types in "hb3", the browser will search first for a
-    Sequence feature of class hb3, followed in turn by matching
-    features in Symbol, Gene and Clone.  The search stops when the
-    first match is found.  Otherwise, the browser will proceed to a
-    full text search of all the comment fields.
+     When the user types in "hb3", the browser will search first for a
+     Sequence feature of class hb3, followed in turn by matching
+     features in Symbol, Gene and Clone.  The search stops when the
+     first match is found.  Otherwise, the browser will proceed to a
+     full text search of all the comment fields.
+
+---
 
 B2. Track Sections
 
@@ -616,8 +587,9 @@ later).  Here is a typical track declaration from yeast.conf:
  description  = 1
  key          = Named gene
 
-The track is named "Genes".  You may use a short mnemonic if you
-prefer.  As in the general configuration section, the track
+The track is named "Genes".  This is the name that will appear in the
+checkbox group that the end-user uses to select the tracks he wishes
+to display.  As in the general configuration section, the track
 declaration contains multiple name=value option pairs.
 
 Valid options are as follows:
@@ -700,8 +672,7 @@ Valid options are as follows:
   k) key
 
   This option controls the descriptive key that is drawn in the key
-  area at the bottom of the image.  It also appears in the checkboxes
-  that the end user uses to switch tracks on and off. If not specified, it defaults to
+  area at the bottom of the image.  If not specified, it defaults to
   the track name.
 
   l) citation
@@ -723,25 +694,6 @@ Valid options are as follows:
   can be used to override the global link rule.  To force a track not
   to contain any links, use a blank value.
 
-  n) feature_low
-
-  If this option is present, GBrowse will use the list of feature types
-  listed here at resolution views.  (This is one of the ways that
-  semantic zooming is implemented.)  This allows you, for example,
-  to switch off detailed exon, UTR, promoters and other within-the-gene
-  features, and just show the start and stop of the transcription
-  unit.
-
-  o) global feature
-  
-  If this option is present and set to a true value (e.g. "1"), GBrowse 
-  will automatically generate a  pseudo-feature that starts at the 
-  beginning of the currently displayed region and extends to the end.  
-  This is often used in conjunction with the "translation" and "dna"
-  glyphs in order to display global characteristics of the sequence.
-  If this option is set, then you do not need to specify a "feature"
-  option.
-
 A large number of glyph-specific options are also recognized.  These
 are described in the next section.
 
@@ -752,7 +704,7 @@ B3. Glyphs and Glyph Options
 A large variety of glyphs are available, and more are being added as
 the Bio::Graphics module grows.
 
-A list of the common glyphs and their options is provided by the GBrowse
+A list of the common glyphs and their options is provided by the GGB
 itself.  Click on the "[Help]" link in the section labeled "Upload
 your own annotations".  This page also lists the valid foreground and
 background colors.  The most popular glyph types are:
@@ -762,22 +714,12 @@ background colors.  The most popular glyph types are:
 
   generic		a rectangle
   arrow			an arrow
-  cds                   shows the reading frame of spliced transcripts; used
-                        in conjunction with the "coding" aggregator.
   diamond		a point-like feature represented as a triangle
-  dna                   DNA and GC content
-  heterogeneous_segments a multi-segmented feature in which each segment can
-                        have a distinctive color.  For Jim Kent's WABA features,
-                        this works with the waba_alignment aggregator.
   segments		a multi-segmented feature such as an alignment
   triangle		a point-like feature represented as a diamond
   transcript		a gene model
   transcript2		a slightly different representation of a gene model
-  translation		1-, 3- and 6-frame translations
-  wormbase_transcript	yet another gene model that can show UTR segments
-			(for features that conform to the WormBase gene
-			schema). Used in conjunction with the
-			"wormbase_gene" aggregator.
+  wormbase_transcript	yet another gene model	
 
 A more definitive list of glyph options can be found in the
 Bio::Graphics manual pages.  Consult the manual pages for the
@@ -786,26 +728,17 @@ following modules:
   Glyph				Manual Page
   -----                         -----------
 
+  generic			Bio::Graphics::Glyph
   arrow				Bio::Graphics::Glyph::arrow
-  cds				Bio::Graphics::Glyph::cds
   crossbox			Bio::Graphics::Glyph::crossbox
   diamond			Bio::Graphics::Glyph::diamond
-  dna                           Bio::Graphics::Glyph::dna
-  dot                           Bio::Graphics::Glyph::dot
-  ellipse			Bio::Graphics::Glyph::ellipse
-  extending_arrow		Bio::Graphics::Glyph::extending_arrow
-  generic			Bio::Graphics::Glyph
   graded_segments		Bio::Graphics::Glyph::graded_segments
-  heterogeneous_segments	Bio::Graphics::Glyph::heterogeneous_segments
   line				Bio::Graphics::Glyph::line
   primers			Bio::Graphics::Glyph::primers
   rndrect			Bio::Graphics::Glyph::rndrect
-  ruler_arrow			Bio::Graphics::Glyph::ruler_arrow
   segments			Bio::Graphics::Glyph::segments
-  toomany			Bio::Graphics::Glyph::toomany
   transcript			Bio::Graphics::Glyph::transcript
   transcript2			Bio::Graphics::Glyph::transcript2
-  translation			Bio::Graphics::Glyph::translation
   triangle			Bio::Graphics::Glyph::triangle
   wormbase_transcript		Bio::Graphics::Glyph::wormbase_transcript
 
@@ -845,9 +778,9 @@ the details on using the notation.
 B4. Computed Options
 
 Some options can be computed at run time by using Perl subroutines as
-their values.  Currently this works with the values of the "link",
-"title", "header" and "footer" options, and any glyph-specific option
-that appears in a track stanza.
+their values.  Currently this is limited to the values of the "link",
+"header" and "footer" options, but may be made more general in the
+future.
 
 You need to know the Perl programming language to take advantage of
 this.  The general format of this type of option is:
@@ -858,7 +791,7 @@ this.  The general format of this type of option is:
 	      even more perl code;
 	      }
 
-The value must begin with the sequence "sub {" in order to be
+The value must begin with the sequence "sub {"in order to be
 recognized as a subroutine declaration.  After this, you can have one
 or more lines of Perl code followed by a closing brace.  Continuation
 lines must begin with whitespace.
@@ -880,29 +813,11 @@ the value of the URL as a string, or undef if no link should be made.
 See the manual page for Bio::DB::GFF::Feature for information on how
 to interrogate the feature object.
 
-For glyph-specific features, the subroutine will be called at run time
-with the feature (a Bio::SeqI-complaint object) as the first argument.
-The subroutine can examine this feature and determine what value to
-return.  The return value is treated as the value of the corresponding
-option.  For example, this bgcolor subroutine will call the feature's
-primary_tag() method, and return "blue" if it is an exon, "orange"
-otherwise:
-
-  bgcolor = sub {
-	  my $feature = shift;
-	  return "blue" if $feature->primary_tag eq 'exon';
-	  return "orange";
-	  }
-
-More subroutine arguments are available to the glyph-specific
-subroutines.  See the Bio::Graphics::Panel manual page for the full
-details.
-
 ----------------------------------------------------------------------
 
 C. INSTALLING FASTA FILES FOR DNA
 
-The GBrowse can dump the current segment under display as FASTA files.  To
+The GGB can dump the current segment under display as FASTA files.  To
 do this, designate a directory to contain FASTA file(s) of the genomic
 sequence.  There must be a single DNA entry for each reference point
 that is used by the corresponding GFF file.  For example, if the GFF
@@ -921,7 +836,7 @@ You may put all entries into a single FASTA file, or spread them out
 among multiple files.  The files must have one of the extensions
 ".fa", ".fasta", ".fast", or ".dna".
 
-Tell GBrowse where to find the FASTA files by setting the fasta_files
+Tell GGB where to find the FASTA files by setting the fasta_files
 option to the directory that contains them:
 
  fasta_files = /usr/local/share/fasta/yeast
@@ -975,4 +890,4 @@ Have fun!
 
 Lincoln Stein & the GMOD development team
 lstein@cshl.org
-March 22, 2002
+January 2, 2001

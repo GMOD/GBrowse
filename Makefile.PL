@@ -2,9 +2,9 @@ use ExtUtils::MakeMaker;
 use FindBin '$Bin';
 require 5.005003;
 
-my $VERSION = 1.38;
+my $VERSION = 1.39;
 
-my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN);
+my @OPTIONS = qw(PREFIX CONF HTDOCS CGIBIN);
 my $OPTIONS = join ('|',@OPTIONS);
 my %OPTIONS;
 
@@ -13,7 +13,7 @@ my @argv = @ARGV;
 
 foreach (@argv) {
   if (/^--?h/i) {
-    die "To customize install locations, provide one or more of the options APACHE, CONF, HTDOCS, or CGIBIN, as in CONF=/usr/local/apache/conf\n";
+    die "To customize install locations, provide one or more of the options PREFIX, CONF, HTDOCS, or CGIBIN, as in CONF=/usr/local/apache/conf\n";
   }
 
   elsif (/($OPTIONS)=(.+)/g) {
@@ -101,19 +101,19 @@ conf_install ::
 	\@echo "Installing sample configuration files..."
 	\@dir=$OPTIONS{CONF}/gbrowse.conf; \\
 	mkdir -p \$\$dir; \\
-	cd $Bin/conf; \\
-	for i in *.conf; do \\
-		if [ -e "\$\$dir/\$\$i" ]; then \\
-			echo "   Found \$\$i in \$\$dir. Skipping..."; \\
+	for i in $Bin/conf/*.conf; do \\
+	  j=`basename \$\$i`; \\
+		if [ -f "\$\$dir/\$\$j" ]; then \\
+			echo "   Found \$\$j in \$\$dir. Skipping..."; \\
 		else \\
 			cp \$\$i \$\$dir; \\
 		fi \\
 	done; \\
-	cd $Bin/conf/plugins; \\
 	mkdir -p \$\$dir/plugins; \\
-	for i in *.pm; do \\
-		if [ -e "\$\$dir/\$\$i/plugins" ]; then \\
-			echo "   Found \$\$i in \$\$dir/plugins. Skipping..."; \\
+	for i in $Bin/conf/plugins/*.pm; do \\
+	  j=`basename \$\$i`; \\
+		if [ -f "\$\$dir/plugins/\$\$j" ]; then \\
+			echo "   Found \$\$j in \$\$dir/plugins. Skipping..."; \\
 		else \\
 			cp \$\$i \$\$dir/plugins; \\
 		fi \\
@@ -124,24 +124,22 @@ htdocs_install ::
 	\@echo "Installing stylesheet and images..."
 	\@dir=$OPTIONS{HTDOCS}/gbrowse; \\
 	mkdir -p \$\$dir; \\
-	cd $Bin/htdocs; \\
-	for i in *.{css,html}; do \\
-		if [ -e "\$\$dir/\$\$i" ]; then \\
-			echo "   Found \$\$i in \$\$dir. Skipping..."; \\
+	for i in $Bin/htdocs/*.css $Bin/htdocs/*.html; do \\
+	  j=`basename \$\$i`; \\
+		if [ -f "\$\$dir/\$\$j" ]; then \\
+			echo "   Found \$\$j in \$\$dir. Skipping..."; \\
 		else \\
 			cp \$\$i \$\$dir; \\
 		fi \\
 	done; \\
-	cd $Bin/htdocs/images/buttons; \\
 	echo "Making \$\$dir/images/buttons..."; \\
 	mkdir -p \$\$dir/images/buttons; \\
-	for i in *.gif; do \\
+	for i in $Bin/htdocs/images/buttons/*.gif; do \\
 		cp -p \$\$i \$\$dir/images/buttons; \\
 	done; \\
-	cd $Bin/htdocs/images/help; \\
 	echo "Making \$\$dir/images/help..."; \\
 	mkdir -p \$\$dir/images/help; \\
-	for i in *.gif; do \\
+	for i in $Bin/htdocs/images/help/*.gif; do \\
 		cp -p \$\$i \$\$dir/images/help; \\
 	done; \\
 	echo "Making \$\$dir/tmp..."; \\

@@ -1,4 +1,4 @@
-# $Id: SequenceDumper.pm,v 1.7 2003-08-01 16:44:53 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.8 2003-09-03 14:48:06 stajich Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::SequenceDumper
 #
@@ -50,7 +50,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::SequenceDumper;
-# $Id: SequenceDumper.pm,v 1.7 2003-08-01 16:44:53 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.8 2003-09-03 14:48:06 stajich Exp $
 # Sequence Dumper plugin
 
 use strict;
@@ -81,7 +81,7 @@ my @ORDER = grep {
   warn "trying to load $module\n" if DEBUG;
   eval "require $module; 1";
 }
-  map { $FORMATS[2*$_] } (0..@FORMATS/2-1);
+  grep { ! /gff/ } map { $FORMATS[2*$_] } (0..@FORMATS/2-1);
 
 unshift @ORDER,'gff';
 

@@ -1,5 +1,4 @@
-Using gbrowse with GadFly
-=========================
+=head1 Using gbrowse with GadFly
 
 In order to get gbrowse to work with the GadFly database and API we
 hacked the gbrowse script considerably, making it use GadFly objects

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.26 2003-07-31 18:51:28 scottcain Exp $
+# $Id: Chado.pm,v 1.27 2003-10-15 22:27:16 allenday Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -135,7 +135,7 @@ sub new {
   my $sth = $dbh->prepare("select ct.cvterm_id,ct.name
                            from cvterm ct, cv c 
                            where ct.cv_id=c.cv_id and
-                                 c.name = 'SO'")
+                                 (c.name = 'SO' or c.name = 'Sequence Ontology')")
     or warn "unable to prepare select cvterms";
   $sth->execute or $self->throw("unable to select cvterms");
 

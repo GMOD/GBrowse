@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.49 2004-01-20 09:57:45 lstein Exp $
+# $Id: gbrowse.PLS,v 1.50 2004-01-21 16:23:43 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -887,7 +887,7 @@ sub unit_label {
   $label = $value >= 1e9  ? sprintf("%.4g G%s",$value/1e9,$unit)
          : $value >= 1e6  ? sprintf("%.4g M%s",$value/1e6,$unit)
          : $value >= 1e3  ? sprintf("%.4g k%s",$value/1e3,$unit)
-	 : $value >= 1    ? $value." $unit"
+	 : $value >= 1    ? sprintf("%.4g %s", $value,    $unit)
 	 : $value >= 1e-2 ? sprintf("%.4g c%s",$value*100,$unit)
 	 : $value >= 1e-3 ? sprintf("%.4g m%s",$value*1e3,$unit)
 	 : $value >= 1e-6 ? sprintf("%.4g u%s",$value*1e6,$unit)

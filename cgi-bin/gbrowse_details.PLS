@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.23 2004-06-08 20:31:26 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.24 2004-06-08 21:06:34 scottcain Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -92,7 +92,7 @@ my @features = sort {$b->length<=>$a->length} $CONFIG->_feature_get($db,$name,$c
 
 warn "features = @features" if DEBUG;
 
-warn "segments = ",join ' ',$features[0]->segments if @features;
+warn "segments = ",join ' ',$features[0]->segments if (DEBUG && @features);
 
 if (@features) {
   print print_features(\@features);

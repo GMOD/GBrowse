@@ -36,7 +36,21 @@ supported by Bio::DB::GFF.
 
 =head2 NOTES
 
-If no arguments are provided, or the filename is given as "-"
+Note that this bulk loader is different from the mysql bulk loader,
+as this script generates a Postgres dump file that it prints to
+standard out.  Therefore, the most common way to use it (ie, to
+load to a PostgreSQL database), pipe the output to psql:
+
+  pg_bulk_load_gff.pl <arguments> | psql <dbname>
+
+Note that the create option will NOT create the database, that
+must be done beforehand.  The create option is a flag to indicate
+that it is OK to wipe the database (ie, drop the tables), and if you
+don't supply it, you will be prompted for that OK before tables are
+dropped.  Note that the Postgres user must have table create permissions
+or the load will fail.
+
+Also note that if no arguments are provided, or the filename is given as "-"
 then the input is taken from standard input. Compressed files (.gz,
 .Z, .bz2) are automatically uncompressed.  Fasta files must end in .fa
 optionally followed by a compression suffix in order to be recognized.

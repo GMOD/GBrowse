@@ -50,7 +50,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.27 2004-03-19 00:09:20 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.28 2004-03-29 18:23:25 markwilkinson Exp $
 ###########################################################
 
 use MOBY::Client::Central;
@@ -197,7 +197,16 @@ gbrowse_moby understands the following variables passed by GET:
  class       - this is the GFF column 9 class; used for the page title
  objectclass - this should be a MOBY Class ontology term
                (becomes 'Object' by default)
- object      - contains the XML of a valid MOBY object 
+ object      - contains the XML of a valid MOBY object
+ 
+to auto-execute a MOBY service on the supplied namespace/id/object you
+may use the following GET parameters:
+ 
+ servicename - the service name of the desired MOBY Service (must be
+               accompanied by 'authority' parameter, below)
+ authority   - the authority of the desired MOBY Service (must be
+               accompanied by 'servicenmae' parameter, above)
+
 
 Note that you MUST at least pass a namespace-type variable (source/namespace)
 and an id-type variable (name/id) in order to have a successful MOBY
@@ -316,6 +325,12 @@ sub init {
     # Gbrowse    MOBY
     # source   = namespace
     # name     = id
+    
+    if ((param('servicename')) && (param('authority'))){
+        &execute;
+        return;
+    }
+
     my $class = param('class');  # this is a Gbrowse variable, (the GFF column 9 class)
     $class ||=param('namespace');  # for MOBY calls, we will need to use the namespace rather than the GFF class
     $class ||=param('source');  # failsafe

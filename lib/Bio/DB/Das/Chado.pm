@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.52 2004-06-23 15:43:00 scottcain Exp $
+# $Id: Chado.pm,v 1.53 2004-06-23 19:17:52 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -428,9 +428,21 @@ sub get_feature_by_name {
     $sth = $self->dbh->prepare($query);
     $sth->execute($name) or $self->throw("getting the feature_ids failed");
 
-  } else {
-    $self->throw("multiword searching not supported yet");
-    return;
+    if ($sth->rows == 0) {
+        ($name,$query) = $self->_complex_search($name,$class);
+
+        $sth = $self->dbh->prepare($query);
+        $sth->execute($name) or $self->throw("getting the feature_ids failed");
+    }
+
+  } else { # not a simple wild card search
+    
+    my $query;
+    ($name,$query) = $self->_complex_search($name,$class);
+
+    $sth = $self->dbh->prepare($query);
+    $sth->execute($name) or $self->throw("getting the feature_ids failed");
+
   }
 
      # prepare sql queries for use in while loops
@@ -519,6 +531,35 @@ sub get_feature_by_name {
 }
 
 *fetch_feature_by_name = \&get_feature_by_name; 
+
+sub _complex_search {
+    my $self = shift;
+    my $name = shift;
+    my $class= shift;
+
+    warn "name before wildcard subs:$name\n" if DEBUG;
+                                                                                                                          
+    $name =~ s/\*/%/g;
+    $name = "\%$name" unless (0 == index($name, "%"));
+    $name = "$name%"  unless (0 == index(reverse($name), "%"));
+                                                                                                                          
+    warn "name after wildcard subs:$name\n" if DEBUG;
+                                                                                                                          
+    my $select_part = "select ga.feature_id ";
+    my $from_part   = "from gffatts ga ";
+    my $where_part  = "where ga.attribute ilike ? ";
+                                                                                                                          
+    if ($class) {
+        my $type    = $self->name2term($class);
+        return unless $type;
+        $from_part .= ", feature f ";
+        $where_part.= "and ga.feature_id = f.feature_id and "
+                     ."f.type_id = $type";
+    }
+    my $query = $select_part . $from_part . $where_part;
+    return ($name, $query);
+}
+
 
 =head2 srcfeature2name
 

@@ -49,7 +49,17 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.17 2003-12-30 17:58:09 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.18 2003-12-30 20:30:15 markwilkinson Exp $
+
+
+
+# for some reason I am unable to dynamically load these??
+use MobyServices::b64_encoded_gif_renderer;
+use MobyServices::b64_encoded_jpeg_renderer;
+use MobyServices::text_formatted_renderer;
+use MobyServices::text_html_renderer;
+use MobyServices::text_plain_renderer;
+###########################################################
 
 use MOBY::Client::Central;
 use MOBY::Client::Service;
@@ -71,10 +81,10 @@ my @files = readdir DIR;
 foreach my $file(@files){
     no strict 'refs';
     next if (-d $file);
-    next unless ($file =~ /(.*)_renderer\.pm/);
-    require "MobyServices::".$1;
-    my $type = &{'MobyServices::'.$1.'_renderer::type'};
-    $RENDERERS{$1} =   "MobyServices::".$1."_renderer";
+    next unless ($file =~ /(.*_renderer)\.pm/);
+#    require "MobyServices::".$1;  # this is the line that always fails.  I don't really know why?!?
+    my $type = &{'MobyServices::'.$1.'::type'};
+    $RENDERERS{$type} =   "MobyServices::".$1."";
     use strict;
 }
 
@@ -477,8 +487,8 @@ sub printIt {
     my $thisdatatype = $this->getTagName;
     my $imgdir = $CONFIG->setting('tmpimages');
     my $renderer;
-
-    my ($renderer_term, $renderer_lsid) = &whichDeepestParentObject($Central, $thisdatatype, keys(%RENDERERS));
+    my @rtypes = keys %RENDERERS;
+    my ($renderer_term, $renderer_lsid) = &whichDeepestParentObject($Central, $thisdatatype, \@rtypes);
 
     unless ($renderer_term){
         $renderer = $RENDERERS{'text-formatted'}
@@ -499,7 +509,10 @@ sub printIt {
         my $article = $this->getAttributeNode('articleName');
         $article = $article?($article->getValue):"";
         next unless $subnode->toString =~ /\S/;
-        my $content = $renderer->($subnode->toString, $HTML_DIR, $imgdir);
+        no strict 'refs';
+        my $content = &{$renderer."::render"}($subnode->toString, $HTML_DIR, $imgdir);
+        
+        use strict;
         
         next unless ($content =~ /\S/);  # meaningless whitespace is removed
         print TR({-valign=>'top', -class=>'databody'},

@@ -21,6 +21,7 @@ use Bio::Root::IO;
 use File::Path 'mkpath';
 use Cwd;
 use FindBin '$Bin';
+use constant DEBUG => 0;
 
 my $origdir = cwd;
 my $homedir = "$Bin/..";

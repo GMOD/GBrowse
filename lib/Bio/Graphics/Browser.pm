@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.51.2.9 2003-07-02 22:33:42 pedlefsen Exp $
+# $Id: Browser.pm,v 1.51.2.10 2003-07-03 16:17:31 pedlefsen Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -76,10 +76,16 @@ use CGI qw( :standard escape escapeHTML center expires *table *dl *TR *td );
 use Cwd;
 use vars qw( $SOURCES $DEFAULT_SOURCE );
 
+## TODO: REMOVE.  Testing Hugo normalizer.
+use Bio::DB::LocusLinkHugoNormalizer;
+use vars '$normalizer';
+my $normalizer = Bio::DB::LocusLinkHugoNormalizer->new();
+
+
 ## TODO: Document this.  Why?
 #$ENV{ 'PATH' } = '/bin:/usr/bin:/usr/local/bin';
 
-use constant DEBUG                => 0;
+use constant DEBUG                => 1;
 use constant DEBUG_PLUGINS        => 0;
 
 # if true, turn on surrounding rectangles for debugging the image map
@@ -658,7 +664,8 @@ sub gbrowse {
   } elsif( !@segments && $page_settings->{ 'name' } ) {
     ## TODO: Shouldn't this happen in _name2segments?
     # try again
-    $self->_do_keyword_search( $page_settings, \@segments );
+    ## TODO: Put this back.. For now we're using the Hugo normalizer...
+    #$self->_do_keyword_search( $page_settings, \@segments );
     unless( @segments ) {
       # last resort
       $self->_do_plugin_autofind( $page_settings, $plugins, \@segments );
@@ -1200,7 +1207,9 @@ sub _html_main_display {
   # It's bad if we don't have any segments, but only if they asked for one.
   if( ( @$segments == 0 ) &&
       ( my $name = $settings->{ 'name' } ) ) {
-    $self->_html_error( $settings, $babelfish->tr( 'NOT_FOUND', $name ) );
+    unless( $settings->{ '__already_printed_not_found' } ) {
+      $self->_html_error( $settings, $babelfish->tr( 'NOT_FOUND', $name ) );
+    }
   } elsif( @$segments == 1 ) {
     $segment = $segments->[ 0 ];
     ## TODO: Didn't we already handle this one (segment length short), in gbrowse?
@@ -1800,7 +1809,21 @@ sub _get_plugins_table_html {
   my $source_menu_html = $self->_get_source_menu_html( $settings );
   my $plugin_menu_html = $self->_get_plugin_menu_html( $settings, $plugins );
 
-  return unless( $source_menu_html || $plugin_menu_html );
+  unless( $source_menu_html ) {
+    ## We have to say something about the source or else nobody will
+    ## ever know and the next time the user refreshes they'll be
+    ## sorry, and then we'll be sorry, and then sorryness will reign
+    ## supreme.  We don't want that.
+    $source_menu_html =
+      hidden(
+        '-name'     => 'source',
+        '-value'    => $self->source(),
+        '-override' => 1
+      );
+    unless( $plugin_menu_html ) {
+      return $source_menu_html;
+    }
+  }
   return
     table(
       { '-border'      => 0,
@@ -2406,7 +2429,7 @@ sub _lookup_segments {
   ## TODO: Doublecheck this hypothesis!
   if( my $name = $settings->{ 'name' } ) {
     warn "name = $name" if DEBUG;
-    @segments = $self->_name2segments( $name );
+    @segments = $self->_name2segments( $settings, $name );
   } elsif( my $seq_id = $settings->{ 'seq_id' } ) {
     my @argv = ( '-seq_id' => $seq_id );
     if( defined $settings->{ 'start' } ) {
@@ -2702,6 +2725,7 @@ sub _get_overview_panel_html {
       ) .
       hidden(
         '-name'     => 'seg_length',
+             ## TODO: There's a problem here with the CompoundSegment returning the wrong abs_range if one of them can ground it on a real segment but others can't.
         '-value'    => $segment->abs_range()->length(),#$segment->length(),
         '-override' => 1
       );
@@ -2972,7 +2996,7 @@ sub _load_uploaded_files {
         '-safe' => 1
       )->read_config();
     ## TODO: Note the old parameters.  rel2abs was from:
-    ## my $rel2abs = $self->_coordinate_mapper( $segment ) if $segment;
+    ## my $rel2abs = $self->_coordinate_mapper( $settings, $segment ) if $segment;
     ## and who knows about smart_features...
     # my $feature_file = Bio::Graphics::FeatureFile->new(-file           => $local_fh,
     #                                                    -map_coords     => $rel2abs,
@@ -3248,7 +3272,7 @@ sub _html_edit_uploaded_file {
 
 sub _coordinate_mapper {
   my $self = shift;
-  my ( $segment ) = @_;
+  my ( $settings, $segment ) = @_;
 
   my $seq_id = $segment->seq_id();
   my $start  = $segment->start();
@@ -3265,7 +3289,7 @@ sub _coordinate_mapper {
             ( $_->abs_seq_id() eq $seq_id ) &&
             ( $_->abs_start() <= $end ) &&
             ( $_->abs_end()  >= $start )
-          } $self->_name2segments( $refname );
+          } $self->_name2segments( $settings, $refname );
         return unless @segments;
         $segments{ $refname } = $segments[ 0 ];
       }
@@ -4280,7 +4304,7 @@ sub _replace_vars_with_vals {
       : $1 eq 'end'       ? $feature->end()
       : $1 eq 'segstart'  ? $panel->start()
       : $1 eq 'segend'    ? $panel->end()
-      : $1 eq 'alias'     ? ( $feature->get_tag_values( 'alias' ) ||
+      : $1 eq 'alias'     ? ( ( $feature->has_tag( 'alias' ) ? $feature->get_tag_values( 'alias' ) : undef ) ||
                               $feature->display_name() )
       : $1
        /exg;
@@ -5162,12 +5186,24 @@ sub _overview_pad {
 
 sub _name2segments {
   my $self = shift;
-  my ( $name ) = @_;
+  my ( $settings, $name ) = @_;
 
   my $toomany = $self->setting( 'too_many_segments' );
   my $max_segment = $self->setting( 'max_segment' );
 
   my ( @segments, $class, $start, $end );
+  unless( $name =~ /([\w._-]+):(-?[\dkKmM.]+),(-?[\dkKmM.]+)$/ or
+          $name =~ /([\w._-]+):(-?[\dkKmM,.]+)(?:-|\.\.)(-?[\dkKmM,.]+)$/ ) {
+    ## TODO: REMOVE.  Testing Hugo normalizer.
+    my $location = $normalizer->locate( $name );
+    if( $location eq 'none' ) {
+      ## TODO: Use the babelfish.  Something like 'NOT_FOUND', only, like, different n stuff.
+      $self->_html_error( $settings, "Gene $name does not have a known location." );
+      $settings->{ '__already_printed_not_found' } = 1;
+    } elsif( defined $location ) {
+      $name = $location;
+    }
+  }
   if( $name =~ /([\w._-]+):(-?[\dkKmM.]+),(-?[\dkKmM.]+)$/ or
       $name =~ /([\w._-]+):(-?[\dkKmM,.]+)(?:-|\.\.)(-?[\dkKmM,.]+)$/ ) {
     $name  = $1;
@@ -5430,7 +5466,7 @@ sub _merge_segments_low {
 
 sub _html_error {
   my $self = shift;
-  my $settings = shift;;
+  my $settings = shift;
   my @msg = @_;
 
   warn "@msg" if DEBUG;

@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::ConfigIO;
 
-# $Id: ConfigIO.pm,v 1.1.2.5 2003-07-02 22:33:43 pedlefsen Exp $
+# $Id: ConfigIO.pm,v 1.1.2.6 2003-07-03 16:17:32 pedlefsen Exp $
 # This package parses a simple tab-delimited format for features into
 # a Config object.  It is simpler than GFF, but still has a lot of
 # expressive power.
@@ -443,7 +443,7 @@ sub _parse_line {
   } # End if this is a continuation line
 
   if( ( $current_section eq 'general' ) &&
-      ( my ( $label ) = ( $_ =~ /^\s*\<([^\>]+)\>/ ) ) ) {
+      ( my ( $label ) = ( $_ =~ /^\s*\<([^\/][^\>]*)\>/ ) ) ) {
     # New segment provider
     $label =~ s/\s/_/g; # No whitespace allowed.
     ## TODO: REMOVE
@@ -459,7 +459,7 @@ sub _parse_line {
         $config->get( '#segment_providers' ) . ' ' . $current_segment_provider
       );
     }
-    $parse_state->current_segment_provider( $current_section );
+    $parse_state->current_segment_provider( $label );
     return;
   } # End if this is the beginning of a new segment provider definition
 

@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Config;
 
-# $Id: Config.pm,v 1.1.2.4 2003-07-02 22:33:43 pedlefsen Exp $
+# $Id: Config.pm,v 1.1.2.5 2003-07-03 16:17:31 pedlefsen Exp $
 # Configuration data for gbrowse.
 
 =head1 NAME
@@ -441,10 +441,13 @@ sub initialize_segment_providers {
     $db_args    = $self->get_and_eval( $provider.'db_args' );
     $db_user    = $self->get_and_eval( $provider.'user' );
     $db_pass    = $self->get_and_eval( $provider.'pass' );
-    next unless $db_args;
+    unless( $db_args ) {
+      warn "Unable to instantiate $provider: There are no db_args as ${provider}db_args.";
+      next;
+    }
     
     unless( eval "require $db_adaptor; 1" ) {
-      warn $@;
+      warn "Unable to instantiate $provider: Error in 'require $db_adaptor': $@";
       next;
     }
     my @argv =
@@ -481,11 +484,12 @@ sub initialize_segment_providers {
     
     my $segment_provider = eval{ $db_adaptor->new( @argv ) };
     if( $@ ) {
-      warn $@;
+      warn "Unable to instantiate $provider: Error in '$db_adaptor->new( ".
+        join( ', ', @argv )." )': $@";
       next;
     }
     ## TODO: REMOVE
-    warn "Adding segment provider $segment_provider.\n";
+    #warn "Adding segment provider $segment_provider.\n";
     $self->add_next_provider( $segment_provider );
   } # End foreach provider, construct it and add it.
 } # initialize_segment_providers(..)

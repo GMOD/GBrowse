@@ -1,4 +1,6 @@
 1.57	Sat Oct  4 21:59:19 EDT 2003
+	* Fixed bug in generation of interspersed HTML that prevented one from
+	providing a code reference for the html1 option.
 	* New idiogram glyph for putting images of Giemsa-stained chromosomes
 	in the overview.
 	* Added Icelandic translation

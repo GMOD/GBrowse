@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.41 2003-10-07 06:21:34 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.42 2003-10-27 16:20:03 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -769,7 +769,7 @@ sub navigation_table {
 
 		   TR({-class=>'searchbody'},
 		      td({-align=>'left', -colspan=>2},
-			 $CONFIG->setting('html1')||''
+			 html_frag('html1')||''
 			)
 		     ),
 		  TR({-class=>'searchbody', -align=>'left'},

@@ -183,7 +183,7 @@ sub MY::processPL {
 sub MY::install {
   package MY;
   my $inherited = shift->SUPER::install(@_);
-  $inherited =~ s/doc_install/doc_install conf_install htdocs_install cgi_install/;
+  $inherited =~ s/doc_install/doc_install conf_install cgi_install htdocs_install/;
   $inherited;
 }
 

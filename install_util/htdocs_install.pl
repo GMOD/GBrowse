@@ -1,6 +1,9 @@
 #!/usr/bin/perl -w
 use strict;
 use File::Copy;
+use File::Basename 'basename';
+use Carp 'croak';
+use IO::Dir;
 use Bio::Root::IO;
 
 my $ht_target = $ARGV[0]; #target directory
@@ -11,7 +14,6 @@ my $ht_target = $ARGV[0]; #target directory
 #    $ht_target =~ s!\/!\\!g;
 #    $delim = '\\';
 #}
-
 
 
 print "Installing stylesheet and images...\n";
@@ -76,6 +78,8 @@ while (my $file = readdir(HELP) ) {
 }
 closedir HELP;
 
+print "Installing temporary directory...\n";
+
 my $tmpdir = Bio::Root::IO->catfile($ht_target, "tmp");
 if (! (-e $tmpdir) ) {
     print "Making $tmpdir...\n";
@@ -83,3 +87,52 @@ if (! (-e $tmpdir) ) {
     chmod 0777, $tmpdir or die "unable to make $tmpdir world writable\n";
 }
 
+print "Installing documentation...\n";
+for my $localfile (qw(./INSTALL ./docs/CONFIGURE_HOWTO.txt 
+		      ./docs/README-gff-files ./docs/PLUGINS_HOWTO.txt
+		      ./docs/ORACLE_AND_BIOSQL.txt)) {
+  my $installfile = Bio::Root::IO->catfile($ht_target,basename($localfile));
+  copy($localfile,$installfile);
+  chmod(0444,$installfile);
+}
+
+print "Installing tutorial...\n";
+copy_tree('./docs/tutorial',$ht_target);
+
+print "\n\n#############################################################################\n";
+print "GBrowse is now installed.  Read INSTALL for further setup instructions.\n";
+print "Go to http://your.host/gbrowse/ for the online tutorial and reference manual.\n";
+print "#############################################################################\n";
+
+exit 0;
+
+sub copy_tree {
+  my ($src,$dest) = @_;
+  if (-f $src) {
+    copy($src,$dest) or die "copy($src,$dest): $!";
+    return 1;
+  }
+  croak "Usage: copy_tree(\$src,\$dest).  Can't copy a directory into a file or vice versa" 
+    unless -d $src && -d $dest;
+  croak "Can't read from $src" unless -r $src;
+  croak "Can't write to $dest" unless -w $dest;
+
+  my $tgt = basename($src);
+
+  # create the dest if it doesn't exist
+  mkdir ("$dest/$tgt",0777) or die "mkdir($dest/$tgt): $!" unless -d "$dest/$tgt";
+  my $d = IO::Dir->new($src) or die "opendir($src): $!";
+  while (my $item = $d->read) {
+    # bunches of things to skip
+    next if $item eq 'CVS';
+    next if $item =~ /^\./;
+    next if $item =~ /~$/;
+    next if $item =~ /^\#/;
+    if (-f "$src/$item") {
+      copy("$src/$item","$dest/$tgt") or die "copy('$src/$item','$dest/$tgt'): $!";
+    } elsif (-d "$src/$item") {
+      copy_tree("$src/$item","$dest/$tgt");
+    }
+  }
+  1;
+}

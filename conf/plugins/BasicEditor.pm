@@ -1,4 +1,4 @@
-# $Id: BasicEditor.pm,v 1.6 2003-10-12 19:39:23 sheldon_mckay Exp $
+# $Id: BasicEditor.pm,v 1.7 2003-10-13 18:58:51 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -41,17 +41,27 @@ package Bio::Graphics::Browser::Plugin::BasicEditor;
 use strict;
 use CGI qw/:standard/;
 use CGI::Carp qw/fatalsToBrowser/;
-use Bio::Graphics::Browser::GFFhelper;
 use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser::GFFhelper;
 
-use vars '$VERSION','@ISA';
-$VERSION = '0.01';
+use vars qw/ $VERSION @ISA $ROLLBACK /;
+$VERSION = '0.2';
 
-@ISA = qw(Bio::Graphics::Browser::Plugin Bio::Graphics::Browser::GFFhelper);
+@ISA = qw / Bio::Graphics::Browser::Plugin 
+            Bio::Graphics::Browser::GFFhelper /;
 
 
 ####################################################################
-# Edit this list IP addresses of trusted hosts for database access
+# Edit this line to specify the rollback file location
+# Comment it out to turn off rollbacks
+####################################################################
+# $ROLLBACK = '/tmp/';
+####################################################################
+
+
+####################################################################
+# List IP addresses of trusted hosts for database access
+# Adding an IP address will turn security on
 ####################################################################
 my $ips = <<END;
 END
@@ -62,7 +72,7 @@ sub name {
 }
 
 sub description {
-  p("BasicEditor allows simple feature editing"),
+  p("BasicEditor allows simple feature editing within gbrowse"),
   p("This plugin was written by Sheldon McKay");
 }
 
@@ -79,12 +89,16 @@ sub verb {
     ' '
 }
 
-# not used
-#sub reconfigure {
-# }
 
-#sub config_defaults {
-# }
+sub reconfigure {
+    my $self = shift;
+    my $conf = $self->configuration;
+    $conf->{rb_id} = $self->config_param('rb_id');
+}
+
+sub config_defaults {
+    { rb_id => undef }
+}
 
 sub configure_form {
     my $self = shift;
@@ -97,15 +111,26 @@ sub configure_form {
     }
 
     return 0 unless $segment;
-    my $html = start_table() .
-               Tr( {-class => 'searchtitle'}, 
-		   th( { -colspan => 9 }, 
-		       h2("Features in $segment", 
-			  "(based on the " . 
-			  a( { -href => "http://www.sanger.ac.uk/Software/formats/GFF/GFF_Spec.shtml",
-                               -target => '_NEW' },
-			  u( "GFF2 specification)" ) ) ) ) ) . 
-               $self->build_form($segment) .
+    
+    my $html;
+
+    if ( $ROLLBACK ) {
+	$self->{rb_loc} ||= $ROLLBACK;
+	my $msg = "Selecting a rollback will override feature editing and " . 
+	          "restore a previous state for segment $segment";
+        $html = $self->rollback_form($msg) . 
+	        '<input type="submit" name="plugin_action" value="Configure" />' . 
+                br . br . "\n";
+    }    
+
+    $html .= start_table() .
+	     Tr( {-class => 'searchtitle'}, 
+		th( { -colspan => 9 }, 
+		   "Features in $segment (based on the " . 
+		      a( { -href => "http://www.sanger.ac.uk/Software/formats/GFF/GFF_Spec.shtml",
+			   -target => '_NEW' },
+		      u( "GFF2 specification)" ) ) ) ) . 
+	       $self->build_form($segment) .
 	       end_table();
 }
 
@@ -142,31 +167,17 @@ sub build_form {
 	$feat_count++;
 	my $cellcount = 0;
 	my @cell = split /\t/, $_->gff_string;
-        
-	# massage the attributes
-	pop @cell;
-	my @att = ();
-	my %att = $_->attributes;
 
-	while ( my ($k, $v) = each %att ) {
-	    next if uc $k eq uc $v;
-	    $v = qq("$v") if $v =~ /\s+/ && $v !~ /\"/;
-	    push @att, "$k $v"; 
-        }
-        
-        if ($_->group) {
-	    my $class = $_->group->class;
-	    my $name  = $_->group->name;
-	    unshift @att, "$class $name" unless uc $class eq uc $name;	
-	}
+        # controlled vocabulary for Target
+	$cell[8]  =~ s/Target \"?([^\"]+)\"? (\d+) (\d+)/Target "$1" ; tstart $2 ; tend $3/;
 
-	push @cell, join ' ; ', @att;
-	
+        # column 9 must be defined
+        $cell[8] ||= ' ';
+
 	$row .= "\n<tr class=searchdata valign=top>\n";
         my $del_name = 'BasicEditor.delete' . $feat_count;
         $row .= td( "<input type=checkbox name=$del_name>" ) . "\n";	
 	
-	$cell[8] ||= ' ';
 	for my $cell ( @cell  ) {
             next if ++$cellcount == 1;
 	    $row .= td( textfield( -name  => 'BasicEditor.feature' . $feat_count,
@@ -214,18 +225,28 @@ sub set_cell_size {
 
 sub annotate {
     my ($self, $segment ) = @_;
+    my $conf = $self->configuration;
+    my $rollback = $conf->{rb_id};
 
     if ( forbid() ) {
 	print h1("Access not allowed from your location");
         exit;
     }
 
-    $self->{ref} = $segment->ref;
-    my $db = $self->database;    
+    my $gff;
+    my $db = $self->database;
 
-    my $gff_in = $self->gff_builder || return 0;
-    my $gff = $self->read_gff($gff_in);
-    
+    if ( $rollback ) {
+	$self->{rb_loc} ||= $ROLLBACK;
+	$self->save_state($segment) if $ROLLBACK;
+	$gff = $self->rollback($rollback);
+    }
+    else {
+	$self->{ref} = $segment->ref;
+	my $gff_in = $self->gff_builder || return 0;
+	$gff = $self->read_gff($gff_in);
+    }    
+
     my @killme = ();
     
     # delete contained feature (except the reference component)

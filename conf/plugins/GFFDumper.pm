@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.12 2003-10-12 19:39:23 sheldon_mckay Exp $
+# $Id: GFFDumper.pm,v 1.13 2003-10-13 18:58:51 sheldon_mckay Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -149,16 +149,19 @@ sub do_dump {
   
   for my $f ( @$feats ) {
     
-    push @gff, $gff_version == 3 ? $f->gff3_string(1) :  # flag means recurse automatically
-	       $gff_version == 2 ? $f->gff_string     : gff25_string($f);
+    my $s = $gff_version == 3 ? $f->gff3_string(1) :  # flag means recurse automatically
+	    $gff_version == 2 ? $f->gff_string     : gff25_string($f);
+ 
+    push @gff, $s if $s;
  
     next if $gff_version >= 3; # gff3 recurses automatically
 
     for my $ss ($f->sub_SeqFeature) {
-      push @gff, $gff_version == 2 ? $ss->gff_string : gff25_string($f);
+      my $s = $gff_version == 2 ? $ss->gff_string : gff25_string($f);
+      push @gff, $s if $s;
     }
   }
-
+  
   do_gff(@gff);
 }
 
@@ -174,34 +177,25 @@ sub do_gff {
     print "\n";
 }
 
-# handle embedded semicolons and target attributes CV
 sub gff25_string {
     my $f  = shift;
-    return 0 if $f->primary_tag =~ /conponent/i;
+    return 0 if $f->primary_tag =~ /component/i;
+    my $gff = $f->gff_string;    
 
-    my @cell = split /\t/, $f->gff_string;
+    # remove embedded semicolons
+    my %r;
+    for ( $f->get_all_tags ) {
+	my ($v) = $f->get_tag_values($_); 
+	
+	if ( $v =~ /;/ ) {
+	    ( my $V = $v ) =~ s/;/,/g;
+	    $gff =~ s/$v/$V/;
+	}
+    }    
 
-    pop @cell;
-    my @att = ();
-    my %att = $f->attributes;
-
-    while ( my ($k, $v) = each %att ) {
-	next if uc $k eq uc $v;
-	$v =~ s/;/,/;
-	$v = qq("$v") if $v =~ /\s+/ && $v !~ /\"|Target/;
-	push @att, "$k $v";
-    }
-
-    if ($f->group) {
-	my $class = $f->group->class;
-	my $name  = $f->group->name;
-	unshift @att, "$class $name" unless uc $class eq uc $name;
-    }
-
-    push @cell, join ' ; ', @att;
-
-    my $gff .= join "\t", @cell;
+    # controlled vocabulary for Target
     $gff =~ s/Target \"?([^\"]+)\"? (\d+) (\d+)/Target "$1" ; tstart $2 ; tend $3/;
+
     $gff;
 }
 

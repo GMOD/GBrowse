@@ -1,4 +1,4 @@
-# $Id: ImportFeatures.pm,v 1.1 2003-10-12 16:56:08 sheldon_mckay Exp $
+# $Id: ImportFeatures.pm,v 1.2 2003-10-13 18:58:51 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -44,7 +44,7 @@ deletion and editing of features can also be done from gbrowse
 
  2) edit your features 
 
- 3) use "Save as" to create a new GFF file
+ 3) use "Save as" to create a new GFF file (see below)
 
  4) load the file via this plugin.  
 
@@ -66,6 +66,14 @@ which are feature tables with the header information
 stripped away.  All three flavors of Artemis tab files 
 can be imported via this plugin if the name of the 
 sequence is provided with the file.
+
+=head2  Loading Sequence
+
+If the DNA is included in a new file/accession, it
+will be loaded into the database along with the features.
+However, if this the sequence for the segment is not
+already in the database, it will not be reloaded.
+
 
 =head2  Loading Features
 
@@ -166,18 +174,14 @@ consider using the the BasicEditor plugin from within gbrowse
 In the highly improbable event that a user regrets editing 
 or deleting features, this plugin can be used to roll back 
 to an earlier state.  If the rollback functionality is enabled, 
-the prior state of the segment will be saved to a file before 
+the state of the segment will be saved to a file before 
 each database update.  The last five pre-update states will 
 be saved in a round-robin rotation and can be accessed via 
 the configuration form.
 
-To enable rollback capability, add this stanza to the 
-browser configuration file and change the path to a 
-location where the web user ('apache', 'nobody', etc) 
-has read/write access.
-
-  [ImportFeatures:plugin]
-  rollback_path = /path/to/rollback_files
+To enable rollback capability, define the $ROLLBACK scalar with
+a string containing the path to location where the web user 
+('apache', 'nobody', etc) has read/write access.
 
 =head1 FEEDBACK
 
@@ -212,8 +216,6 @@ use CGI ':standard';
 use CGI::Carp 'fatalsToBrowser';
 use IO::String;
 use Bio::SeqIO;
-use Bio::Graphics::Browser::GFFhelper;
-use Data::Dumper;
 
 use vars qw /@ISA $ROLLBACK/;
 
@@ -228,11 +230,11 @@ END
 ####################################################################
 
 
-##########################################################################
-# Edit this line to change the rollback path.  Comment it out to switch
-# off the rollback functionality
+###################################################################
+# Edit this line to change the rollback path.  Comment it out to
+# switch off the rollback functionality
 $ROLLBACK = '/tmp/';
-##########################################################################
+###################################################################
 
 
 $| = 1;
@@ -325,7 +327,8 @@ sub configure_form {
         "</td></tr></table>\n";
 
     # add a rollback table if required
-    $html .= "\n" . h3(' - OR - ') . "\n" . $self->rollback_form if $ROLLBACK;
+    my $msg = "Selecting rollback will override loading of files or accessions";
+    $html .= "\n" . h3(' - OR - ') . "\n" . $self->rollback_form($msg) if $ROLLBACK;
 
     $html .= h4(checkbox ( -name    => $self->config_name('debug'),
 			   -value   => 'debug',
@@ -340,11 +343,10 @@ sub configure_form {
     $html;
 }
 
-sub dump { 
+sub dump {
     my $self = shift;
     my $conf = $self->configuration;
     my $db   = $self->database;
-    my $gff  = ''; 
     my $rollback = $conf->{rb_id};
     
     my $gff = $rollback ? $self->rollback($rollback) : $self->gff;
@@ -374,17 +376,16 @@ sub dump {
 	print h2("This is a new sequence; no features to remove") if $conf->{debug}
     }
 
+    # don't try loading sequence if the sequence is already in
+    # the database
+    if ( $self->seq && !( $segment && $segment->seq ) ) {
+	$gff .= "\n>" . $self->refseq . "\n" . $self->seq;
+    }
+
     my $gff_fh  = IO::String->new($gff);
     my $result = $db->load_gff($gff_fh);
 
-    print h2("$result new features loaded into the database");
-
-    if ( $segment && $segment->seq ) {
-	$self->seq('>' . $self->refseq . "\n" . $self->seq);
-	my $seq_fh = IO::String->new($self->seq);
-	eval {my $seq_loaded = $db->load_fasta($seq_fh) or print h1("Sequence not loaded")};
-    }
-
+    print h2($result, " new features loaded into the database");
 
     my $source = $conf->{acc} ? "Sequence " . $conf->{acc}
                               : $conf->{format} . ' file ' . $conf->{file};

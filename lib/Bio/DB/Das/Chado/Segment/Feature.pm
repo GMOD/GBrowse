@@ -40,11 +40,8 @@ my %CONSTANT_TAGS = ();
  Args    : see below
  Status  : Internal
 
-This method is called by Bio::DB::GFF to create a new feature using
-information obtained from the GFF database.  It is one of two similar
-constructors.  This one is called when the feature is generated
-without reference to a RelSegment object, and should therefore use its
-default coordinate system (relative to itself).
+This method is called by Bio::DB::Das::Chado::Segment to create a new feature using
+information obtained from the chado database.  
 
 The 11 arguments are positional:
 
@@ -52,14 +49,11 @@ The 11 arguments are positional:
   $srcseq       the source sequence
   $start        start of this feature
   $stop         stop of this feature
-  $method       this feature's GFF method
-  $source       this feature's GFF source
-  $score	this feature's score
-  $strand      this feature's strand (relative to the source
+  $type         this feature's type (gene, arm, exon, etc)
+  $strand       this feature's strand (relative to the source
                       sequence, which has its own strandedness!)
-  $phase        this feature's phase
-  $group        this feature's group
-  $db_id        this feature's internal database ID
+  $group        this feature's group (a GFF holdover)
+  $db_id        this feature's internal database ID (feature.feature_id)
 
 =cut
 
@@ -87,6 +81,24 @@ sub new {
 
   $self;
 }
+
+=head2 method
+
+ Title   : method
+ Usage   : $method = $f->method([$newmethod])
+ Function: get or set the feature method
+ Returns : a string
+ Args    : a new method (optional)
+ Status  : Public
+
+This method gets the feature type (analogous to method, like in GFF). 
+
+=cut
+
+sub method {
+  return $self->{type}
+}
+
 
 =head2 strand
 

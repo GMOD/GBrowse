@@ -1,19 +1,10 @@
-# $Id: Segment.pm,v 1.8 2003-01-24 19:07:59 scottcain Exp $
+# $Id: Segment.pm,v 1.9 2003-01-26 20:15:17 scottcain Exp $
 
 =head1 NAME
 
 Bio::DB::Das::Chado::Segment - DAS-style access to a chado database
 
 =head1 SYNOPSIS
-
-NOTES: required methods:
-        seq_id
-        start
-        end
-        length
-        features
-        seq
-        factory
 
   # Get a Bio::Das::SegmentI object from a Bio::DB::Das::Chado database...
 
@@ -101,6 +92,7 @@ use Bio::Root::Root;
 use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
 use constant DEBUG => 1;
+use constant ASSEMBLY_TYPE=>'arm';
 
 use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI);
@@ -131,10 +123,12 @@ sub new {
     warn "$quoted_name\n" if DEBUG;
 #    $dbadaptor->{dbh}->trace(4) if DEBUG;
 
+  my $cvterm_id = $dbadaptor->{cvterm_id};
+
   my $sth = $dbadaptor->{dbh}->prepare ("
-             select f.feature_id,f.seqlen from dbxref dbx, feature f
-             where f.dbxrefstr = dbx.dbxrefstr and
-                   dbx.accession = $quoted_name  ");
+             select feature_id,seqlen from gbrowse_assembly
+             where type_id = ". $$cvterm_id{ASSEMBLY_TYPE} . " and
+                   name = $quoted_name  ");
 
     warn "prepared:$sth\n" if DEBUG ;
 
@@ -152,8 +146,6 @@ sub new {
   $end ||= $length;
 
   $length = $end - $start +1;
-
-  my $cvterm_id = $dbadaptor->{cvterm_id};
 
   return bless {dbadaptor     => $dbadaptor,
                 start         => $start,

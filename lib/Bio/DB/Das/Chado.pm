@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.7 2003-01-14 22:17:24 scottcain Exp $
+# $Id: Chado.pm,v 1.8 2003-01-26 20:15:16 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -329,6 +329,10 @@ $score is the match strength.
 
 =cut
 
+=commentout code
+search_notes is the sub to support keyword wildcard searching
+
+
 sub search_notes {
   my $self = shift;
   my ($search_string,$limit) = @_;
@@ -380,6 +384,8 @@ sub search_notes {
   @results;
 }
 
+=cut
+
 
 =head2 _segclass
 
@@ -393,6 +399,8 @@ sub search_notes {
 =cut
 
 sub _segclass { return SEGCLASS }
+
+sub absolute {return}
 
 sub DESTROY {
         my $self = shift;

@@ -1,4 +1,4 @@
-# $Id: BasicEditor.pm,v 1.3 2003-10-06 12:50:38 sheldon_mckay Exp $
+# $Id: BasicEditor.pm,v 1.4 2003-10-07 06:22:17 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -18,6 +18,11 @@ specify who is allowed to edit features
 The database user specified in the configuration file must have sufficient 
 privileges to delete and insert data.  See the gbrowse tutorial
 for information on how to set this up.
+
+The features contained in the current segment are dumped as GFF2 into a form
+where the fields can be edited directly (except the reference sequence field).
+The edited features are then loaded into the database after all features in the
+segment's coordinate range are removed (except the reference component if one exists).
 
 =head1 FEEDBACK
 
@@ -42,8 +47,7 @@ use Bio::Graphics::Browser::Plugin;
 use vars '$VERSION','@ISA';
 $VERSION = '0.01';
 
-@ISA = qw(Bio::Graphics::Browser::Plugin);
-
+@ISA = qw(Bio::Graphics::Browser::Plugin Bio::Graphics::Browser::GFFhelper);
 
 
 ####################################################################
@@ -74,7 +78,7 @@ sub mime_type {
 
 # just use the plugin name for the plugin menu
 sub verb {
-    ''
+    ' '
 }
 
 # not used
@@ -85,8 +89,10 @@ sub verb {
 # }
 
 sub configure_form {
-    my ($self, $segment) = @_;
-    
+    my $self = shift;
+    my $segments = $self->segments;
+    my $segment = $segments->[0];
+
     # is this a trusted host?
     if ( forbid() ) {
 	return h1("Sorry, access to the database is not allowed from your location");
@@ -216,7 +222,7 @@ sub annotate {
     my $db = $self->database;    
 
     my $gff_in = $self->gff_builder || return 0;
-    my $gff = $self->fix_gff($gff_in);
+    my $gff = $self->read_gff($gff_in);
     
     my @killme = ();
     
@@ -242,11 +248,11 @@ sub annotate {
 
 }
 
-sub fix_gff {
-    my ($self, $gff) = @_;
-    my $gff_fixer = Bio::Graphics::Browser::GFFhelper->new( gff => $gff );
-    $gff_fixer->read_gff || die $gff_fixer->error;
-}
+#sub fix_gff {
+#    my ($self, $gff) = @_;
+    # my $gff_fixer = Bio::Graphics::Browser::GFFhelper->new( gff => $gff );
+#    $gff_fixer->read_gff || die $gff_fixer->error;
+#}
 
 sub gff_builder {
     my $self = shift;

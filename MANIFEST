@@ -32,6 +32,7 @@ conf/plugins/OligoFinder.pm
 conf/plugins/RandomGene.pm
 conf/plugins/RestrictionAnnotator.pm
 conf/plugins/SequenceDumper.pm
+conf/plugins/CreateBlastDB.pm
 conf/plugins/test.pm
 conf/yeast_chr1.conf
 contrib/bulk_load_gff_win.pl

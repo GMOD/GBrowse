@@ -127,7 +127,7 @@ local $CGI::USE_PARAM_SEMICOLONS = 1;
 # settings within the configuration file.
 
 BEGIN {
-    eval "use Apache"; 
+    eval "use Apache";
     warn <<END if Apache::DBI->can('connect_on_init');
 WARNING: APACHE::DBI DETECTED.
 THIS WILL CAUSE THE GFF DUMP TO FAIL INTERMITTENTLY.
@@ -1988,8 +1988,9 @@ sub help {
   else {
     my @components = File::Spec->splitdir($help_type);
     my $updir      = File::Spec->updir;
-    my $bad        = grep { /^$updir$/ } @components;
-    return         if $bad;
+    # don't let evil people get into root directory
+    my $evil       = grep { /^$updir$/o } @components;
+    return         if $evil;
     build_help_page("$conf_dir/${help_type}_help.html");
   }
   print div({-align=>'right'},$do_close);
@@ -2390,6 +2391,7 @@ sub tableize {
   }
   $html .= "</table>\n";
 }
+
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

@@ -1,12 +1,12 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.5 2003-08-25 19:03:05 lstein Exp $
+# $Id: GFFDumper.pm,v 1.6 2003-08-25 22:46:26 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use CGI qw(param url header p a);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.20';
+$VERSION = '0.25';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -29,21 +29,21 @@ sub dump {
   print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
 
   my @feature_types = $self->selected_features;
-  my $iterator = $segment->get_seq_stream(-types=>\@feature_types) or return;
-  while (my $f = $iterator->next_seq) {
-      print $f->gff_string,"\n";
-      for my $s ($f->sub_SeqFeature) {
-	print $s->gff_string,"\n";
-    }
-  }
+  my $iterator = $segment->get_seq_stream(-types=>\@feature_types);
+  do_dump($iterator);
 
-  # now dump out the additional features
   for my $set (@more_feature_sets) {
-    for my $f ($set->features) {
-      print $f->gff_string,"\n";
-      for my $s ($f->sub_SeqFeature) {
-	print $s->gff_string,"\n";
-      }
+    next unless $set->can('get_seq_stream');
+    do_dump($set->get_seq_stream);
+  }
+}
+
+sub do_dump {
+  my $iterator = shift;
+  while (my $f = $iterator->next_seq) {
+    print $f->gff_string,"\n";
+    for my $s ($f->sub_SeqFeature) {
+      print $s->gff_string,"\n";
     }
   }
 }

@@ -186,7 +186,8 @@ sub fatal_error {
 sub set_language {
   my ($config,$lang) = @_;
   my $default_language   = $config->setting('language');
-  my @languages     = http('Accept-language') =~ /([a-z]{2}-?[a-z]*)/ig;
+  my $accept         = http('Accept-language') || '';
+  my @languages    = $accept =~ /([a-z]{2}-?[a-z]*)/ig;
   push @languages,$default_language if $default_language;
   warn "languages = ",join(',',@languages) if DEBUG;
   return unless @languages;

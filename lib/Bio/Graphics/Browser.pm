@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.85 2003-08-25 19:03:05 lstein Exp $
+# $Id: Browser.pm,v 1.86 2003-08-25 22:46:26 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -301,6 +301,12 @@ sub db_settings {
 
   my $adaptor = $self->setting('db_adaptor') || DEFAULT_DB_ADAPTOR;
   eval "require $adaptor; 1" or die $@;
+
+  ###################
+  # HACK ALERT - REMOVE AFTER BIOPERL 1.3 RELEASED
+  $self->patch_old_versions_of_biodbgff() if $adaptor eq 'Bio::DB::GFF';
+  ###################
+
   my $args    = $self->config->code_setting(general => 'db_args');
   my @argv = ref $args eq 'CODE'
         ? $args->()
@@ -1509,6 +1515,16 @@ sub overview_pad {
   return (MIN_OVERVIEW_PAD,MIN_OVERVIEW_PAD) unless $max;
   return ($max * gdMediumBoldFont->width + 3,MIN_OVERVIEW_PAD);
 }
+
+###################
+# HACK ALERT - REMOVE AFTER BIOPERL 1.3 RELEASED
+sub patch_old_versions_of_biodbgff {
+  local $^W = 0;
+  eval <<'END';
+sub Bio::DB::GFF::Segment::is_circular { 0; }
+END
+}
+
 
 package Bio::Graphics::BrowserConfig;
 use strict;

@@ -46,7 +46,7 @@ print OUT <<'!NO!SUBS!';
 
 
 
-#$Id: gbrowse_moby.PLS,v 1.9 2003-12-26 23:47:16 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.10 2003-12-26 23:57:39 markwilkinson Exp $
 
 
 # use lib "/usr/local/GB/GMOD_LIBS/moby-live/Perl";
@@ -527,7 +527,7 @@ sub printIt {
         next unless  (($subnode->getNodeType == TEXT_NODE) || ($subnode->getNodeType == CDATA_SECTION_NODE));
         my $article = $this->getAttributeNode('articleName');
         $article = $article?($article->getValue):"";
-     
+        next unless $subnode->toString =~ /\S/;
         my $content = $renderer->($subnode->toString, $HTML_DIR, $imgdir);
         
         next unless ($content =~ /\S/);  # meaningless whitespace is removed

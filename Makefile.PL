@@ -12,7 +12,7 @@ my $working_dir = cwd;
 
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN
 		 LIB BIN
-		 DO_XS NONROOT);
+		 DO_XS NONROOT SELINUX);
 my $OPTIONS = join ('|',@OPTIONS);
 my %OPTIONS;
 
@@ -88,6 +88,26 @@ if (-e 'GGB.def' && !%OPTIONS) {
     close F;
   }
 }
+
+
+if(-e '/proc/filesystems' 
+   && `grep selinux /proc/filesystems`
+   && !$OPTIONS{SELINUX} ) {
+  die <<"END"
+
+------------------------------------------------------------------
+WARNING:
+You appear to have SELinux installed on this computer.
+GBrowse can have problems working on SELinux systems.
+Before you complete this installation please read 'README.selinux'
+Then you can avoid this message by adding the flag --SELINUX=1 when
+you execute perl Makefile.PL.
+------------------------------------------------------------------
+perl Makefile.PL aborted.
+END
+;
+}
+
 $OPTIONS{APACHE} ||= $OPTIONS{PREFIX}        if exists $OPTIONS{PREFIX};
 $OPTIONS{BIN}    ||= $OPTIONS{INSTALLSCRIPT} if exists $OPTIONS{INSTALLSCRIPT};
 

@@ -1,0 +1,156 @@
+The .gff and .fasta files located in the files download area of the
+GMOD web site correspond to feature and dna information for the model
+organism systems drosophila, C. elegans, yeast and human.  They are
+designed to be loaded into the Generic Genome Browser (GBrowse) for
+browsing.  You can think of them as a starter's kit for your own
+genome browser.  Because of the size of the human genome, there is no
+human.fa.gz file available.  You will have to create your own
+following the instructions below.
+
+These files are *not* necessarily kept up to date, but are imported
+from the model organism databases at irregular intervals.  You are
+strongly advised to generate your own versions of these files if you
+want the most current data.
+
+To assist in updating, the GBrowse distribution comes with several
+scripts for converting the data downloaded from the model organism
+databases into .gff format.  These are:
+
+  process_wormbase.pl	   Import C. elegans annotations from WormBase
+  process_sgd.pl           Import S. cerevisiae annotations from SGD
+  process_gadfly.pl        Import D. melanogaster annotations from Flybase
+  process_ncbi_human.pl    Import H. sapiens annotations from NCBI
+
+Here is a brief description of the process for importing these files:
+
+-----
+
+1) WormBase
+
+The GFF files distributed at WormBase are actually useable as is.  The
+process_wormbase.pl script adds some useful information to the GFF
+files, most notably the positions of genetically mapped genes.
+However you will need the Ace module (available at
+http://www.cpan.org) to use it.
+
+a) Go to ftp://www.wormbase.org/pub/wormbase/GENE_DUMPS/ and download
+   the CHROMOSOME_?.gff.gz files that you find there.  Put them all into
+   one local directory named "wormbase_orig".
+
+b) While you're there, go to ftp://www.wormbase.org/pub/wormbase/DNA_DUMPS/unpacked
+   and download the six CHROMOSOME_?.fa files that you find there.  Put them
+   into wormbase_orig too.
+
+c) Create a new directory called wormbase_new".
+
+d) Convert the WormBase GFF files into gbrowse GFF files:
+
+	process_wormbase.pl wormbase_orig > wormbase_new/wormbase.gff
+
+e) Copy the DNA files to wormbase_new
+
+	mv wormbase_orig/*.fa wormbase_new
+
+f) Load everything -- see gbrowse instructions for how this works.
+
+        fast_load_gff.pl -d elegans -f wormbase_new wormbase_new/wormbase.gff
+
+
+-----
+
+2) FlyBase
+
+The FlyBase files are maintained in a Berkeley database called GadFly.
+They must be processed before they can be used in gbrowse.
+
+a) Go to ftp://ftp.fruitfly.org/pub/genomic/gadfly/ 
+   Download the files named RELEASEXXgff.2L.tar.gz,
+   RELEASEXXgff.3L.tar.gz and so on, where XX corresponds to the
+   latest release.  These are annotation files.
+
+b) Go to ftp://ftp.fruitfly.org/pub/genomic/fasta/
+   and get the file na_arms.dros.RELEASEXX.Z.  This contains
+   the sequence in FASTA format.  Make sure to use the same 
+   release number as the annotation files!
+
+c) Unpack the annotation files to yield a directory named after the release,
+   e.g. RELEASE2, containing a directory named after the chromosome
+   arm.  Do this repeatedly in order to create a directory that
+   contains each of the chromosome arms, i.e.:
+
+     RELEASE2/gff/X
+     RELEASE2/gff/2L
+     RELEASE2/gff/2R
+
+d) Run the process_gadfly.pl script to convert into gbrowse GFF format:
+
+  process_gadfly.pl ./RELEASE2 > fly.gff
+
+e) Run the following script to put the fly FASTA files into a loadable
+   format:
+
+   uncompress -c na_arms.dros.RELEASEXX.Z  | \
+        perl -pe 's/^>Chromosome_arm_(S+)/>/' > fly.fa
+
+f) Run the GFF loader
+
+  fast_load_gff.pl -d fly -f fly.fa fly.gff
+
+
+----
+
+3) SGD (yeast)
+
+a) Go to ftp://genome-ftp.stanford.edu/pub/yeast/data_download/chromosomal_feature/
+   and download the files chromosomal_feature.tab.
+
+b) Go to ftp://genome-ftp.stanford.edu/pub/yeast/data_download/sequence/genomic_sequence/chromosomes/fasta
+   and download all the .fsa files.
+
+c) Run the process_sgd.pl script to create a loadable GFF file.
+
+   process_sgd.pl chromosomal_features.tab > yeast.gff
+
+d) Run the following script to put the FASTA files into a loadable
+   format:
+
+   perl -pe 's/>.+chromosome=(\w+)/>$1//' *.fsa > yeast.fa
+
+e) Run the GFF loader
+
+  fast_load_gff.pl -d yeast -f yeast.fa yeast.gff
+
+---
+
+4) NCBI (human)
+
+a) Go to ftp://ftp.ncbi.nih.gov/genomes/H_sapiens/maps/mapview/chromosome_order/
+   and download the *sequence.gz files found in each CHR*
+   subdirectory.  For example chr01_sequence.gz.  
+   These are annotations on the current human assembly.
+
+b) Go to ftp://ftp.ncbi.nih.gov/refseq/LocusLink/ and download the file
+   LL.out.hs.gz.  This contains LocusLink names for gene predictions.
+
+c) Go to ftp://ftp.ensembl.org/pub/human-X.XX/data/golden_path/ and download
+   the .fa.gz files that you find there.  Use the version of the assembly
+   that matches the version of the assembly that you downloaded from NCBI.
+
+d) Run the process_ncbi_human.pl script:
+
+   process_ncbi_human.pl --locuslink LL.out.hs.gz chr*sequence.gz > human.gff
+
+e) Put all the .fa.gz files into a single directory named human_fasta
+
+f) Run the loader:
+
+   fast_load_gff.pl -d human -f human_fasta human.gff
+
+---
+
+IMPORTANT NOTE:
+
+File formats and paths change all the time.  These recipes worked as
+of 11/07/02, but are not guaranteed for the future!
+
+

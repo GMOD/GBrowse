@@ -6,7 +6,7 @@ auto_install_databases.pl - Download and install GFF data sets
 
 =head1 SYNOPSYS
 
-  % auto_install_databases.pl -r pg -u scott
+  % auto_install_databases.pl --rdms pg --user scott
 
 =head1 DESCRIPTION
 
@@ -69,7 +69,6 @@ disclaimers of warranty.
 use strict;
 
 use LWP::UserAgent;
-use IO::File;
 use Getopt::Long;
 
 my $bWINDOWS = ($^O =~ /MSWin32/i) ? 1 : 0;
@@ -169,16 +168,7 @@ chomp($answer = <STDIN>);
 
 die "ok, nothing will be installed\n" if ($answer =~ /^n/i);
 
-my %FH;
-warn "retrieving data (this could take a while) ...\n";
-foreach my $set (@data_sets) {
-
-  warn "getting $keys[$set] ...\n";
-  $req = HTTP::Request->new(GET => $available_data{$keys[$set]});
-  $res = $ua->request($req,"$tmpdir/$keys[$set].$$" );
-}
-
-#build arg list
+#do arg building and error checking here
 
 my @args;
 push @args, $bulkloader;
@@ -192,7 +182,6 @@ if (defined $USER) {
   }
 }
 
-
 #figure out which data sets, and if they include fastas
 #don't allow loading fasta without gff
 
@@ -200,12 +189,12 @@ if (defined $USER) {
 #it assumes that for every gff file there is a fasta, and than they are named
 #with the same prefix (eg, yeast_), and that the gff file comes second 
 #alphabetically (ie, first when reverse sorted).
-
+warn "retrieving data (this could take a while) ...\n";
 for ($i=0;$i < scalar @data_sets;$i++) {
   my $set = $data_sets[$i];
   if ($set % 2 == 0) {
     warn "Importing of fasta without gff is not permitted from this interface\n";
-    unlink "$tmpdir/$keys[$set].$$";"$tmpdir/$keys[$set].$$";
+    unlink "$tmpdir/$keys[$set].$$";
     next;
   }   
   
@@ -213,6 +202,9 @@ for ($i=0;$i < scalar @data_sets;$i++) {
         # fasta is to be imported too
     my $gff      = "$tmpdir/$keys[$set].$$";
     my $fasta    = "$tmpdir/$keys[$set+1].$$";
+
+    download_data($keys[$set]);
+    download_data($keys[$set+1]);
 
     $keys[$set] =~ /^(.+)_/;
     my $db       = $1;
@@ -233,6 +225,8 @@ for ($i=0;$i < scalar @data_sets;$i++) {
   } else {  # don't import fasta
     my $gff     = "$tmpdir/$keys[$set].$$";
 
+    download_data($keys[$set]);
+
     $keys[$set] =~ /^(.+)_/;
     my $db      = $1;
 
@@ -246,6 +240,13 @@ for ($i=0;$i < scalar @data_sets;$i++) {
 
     unlink $gff;
   } 
+}
+
+sub download_data {
+  my $set = shift;
+  warn "getting $set ...\n";
+  $req = HTTP::Request->new(GET => $available_data{$set});
+  $res = $ua->request($req,"$tmpdir/$set.$$" );
 }
 
 __END__

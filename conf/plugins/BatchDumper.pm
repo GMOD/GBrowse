@@ -58,7 +58,7 @@ sub dump {
   my $config  = $self->configuration;
   my $wantsorted = $config->{'wantsorted'}; 
 
-  my @segments = map { ( $browser->name2segments($_,$self->database) ) } split /\s+/m, $config->{sequence_IDs};
+  my @segments = map { ( $browser->name2segments($_,$self->database) ) } split /\s+/m, $config->{sequence_IDs}||'';
   # take the original segment if no segments were found/entered via the sequence_IDs textarea field
   @segments = ($segment) unless (@segments); 
   my @filter    = $self->selected_features;
@@ -83,7 +83,7 @@ sub dump {
     $seq->add_SeqFeature( map {
       my $nf = new Bio::SeqFeature::Generic(-primary_tag => $_->primary_tag,
 					    -source_tag  => $_->source_tag,
-					    -phase       => $_->phase,
+					    -frame       => (eval{$_->phase}||eval{$_->frame}||undef),
 					    -score       => $_->score,
 					   );
       for my $tag ( $_->get_all_tags ) {
@@ -112,7 +112,6 @@ sub dump {
 					  -end           => $endstr,
 					  -strand        => $sl->strand,
 					  -location_type => '..');
-	  warn $sl->to_FTstring();
 	}
       }
       if( @locs > 1 ) { 
@@ -137,12 +136,12 @@ sub dump {
   my $out = new Bio::SeqIO(-format => $config->{'fileformat'});
   my $mime_type = $self->mime_type;
   if ($mime_type =~ /html/) {
-      print start_html($segment);
+      print start_html($segment->desc);
       foreach my $segment (@segments) {
-	  print h1($segment),"\n",
-	  start_pre,"\n";
-	  $out->write_seq($segment);
-	  print end_pre(),"\n";
+	print h1($segment->desc),"\n",
+	start_pre,"\n";
+	$out->write_seq($segment);
+	print end_pre(),"\n";
       }
       print end_html;
   } else {
@@ -241,6 +240,7 @@ sub gff_dump {
   print "##date $date\n";
   print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
   print "##source gbrowse BatchDumper\n";
+  print "##See http://www.sanger.ac.uk/Software/formats/GFF/\n";
   print "##NOTE: Selected features dumped.\n";
   my $iterator = $segment->get_seq_stream(-types=>\@feature_types) or return;
   do_dump($iterator);

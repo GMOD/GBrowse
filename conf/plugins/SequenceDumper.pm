@@ -1,4 +1,4 @@
-# $Id: SequenceDumper.pm,v 1.16 2003-10-13 12:01:29 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.17 2004-01-23 08:24:38 lstein Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::SequenceDumper
 #
@@ -50,7 +50,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::SequenceDumper;
-# $Id: SequenceDumper.pm,v 1.16 2003-10-13 12:01:29 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.17 2004-01-23 08:24:38 lstein Exp $
 # Sequence Dumper plugin
 
 use strict;
@@ -132,7 +132,7 @@ sub dump {
   $seq->add_SeqFeature( map {       
       my $nf = new Bio::SeqFeature::Generic(-primary_tag => $_->primary_tag,
 					    -source_tag  => $_->source_tag,
-					    -phase       => $_->phase,
+					    -frame       => eval{$_->phase}||eval{$_->frame}||undef,
 					    -score       => $_->score,
 					    );
       for my $tag ( $_->get_all_tags ) {
@@ -181,7 +181,7 @@ sub dump {
   my $out = new Bio::SeqIO(-format => $config->{fileformat});
   my $mime_type = $self->mime_type;
   if ($mime_type =~ /html/) {
-    print start_html($segment),h1($segment), start_pre;
+    print start_html($segment->desc),h1($segment->desc), start_pre;
     $out->write_seq($seq);
     print end_pre();
     print end_html;
@@ -268,6 +268,9 @@ sub gff_dump {
   print "##gff-version 2\n";
   print "##date $date\n";
   print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
+  print "##source gbrowse SequenceDumper\n";
+  print "##See http://www.sanger.ac.uk/Software/formats/GFF/\n";
+  print "##NOTE: Selected features dumped.\n";
   my @feature_types = $self->selected_features;
   $segment->absolute(0);
   my $iterator = $segment->get_seq_stream(-types => \@feature_types) or return;

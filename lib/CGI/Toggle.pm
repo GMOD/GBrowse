@@ -12,9 +12,10 @@ use constant PLUS    => '/gbrowse/images/buttons/plus.png';
 use constant MINUS   => '/gbrowse/images/buttons/minus.png';
 use constant JS      => '/gbrowse/js/toggle.js';
 use constant EXPIRES => CGI::Util::expires('+7d');
-use constant COOKIE_NAME => __PACKAGE__;
 
-my $next_id = 'T0000';
+my $cookie_name = __PACKAGE__;
+$cookie_name    =~ s/:/_/g;
+my $next_id;
 
 my $jscript = <<"END";
 function turnOn (a) {
@@ -43,22 +44,22 @@ function visibility (a,state) {
 }
 
 function setVisState (a,state) {
-   var cookie_name    = '${\COOKIE_NAME}';
+   var cookie_name    = '$cookie_name';
    var cookie_path    = location.pathname;
    var cookie_expires = '${\EXPIRES}';
    var el_index       = a.substring(1);
    var cookie_value   = xGetCookie(cookie_name);
-   if (!cookie_value) { cookie_value = 0xFF; }
+   if (!cookie_value) { cookie_value = 0xFFFFFF; }
    if (state == "on") { cookie_value |= (1 << el_index) }
                  else { cookie_value &= ~(1 << el_index) }
    xSetCookie(cookie_name,cookie_value,cookie_expires,cookie_path);
 }
 
 function getVisState (a) {
-   var cookie_name    = '${\COOKIE_NAME}';
+   var cookie_name    = '$cookie_name';
    var el_index       = a.id.substring(1);
    var cookie_value   = xGetCookie(cookie_name);
-   if (!cookie_value) { cookie_value = 0xFF; }
+   if (!cookie_value) { cookie_value = 0xFFFFFF; }
    return (cookie_value &= (1 << el_index)) == 0 ? 'off' : 'on';
 }
 
@@ -119,6 +120,7 @@ END
 
 
 sub start_html {
+  $next_id = 'T0000';
   my %args = @_ == 1 ? (-title=>shift) : @_;
   if ($args{-style}) {
     $args{-style}= [{src => $args{-style}}] if !ref $args{-style};
@@ -131,15 +133,19 @@ sub start_html {
     $args{-script} = [$args{-script}]          if ref $args{-script} && ref $args{-script} ne 'ARRAY';
   }
 
-  my $cookie = CGI::cookie(COOKIE_NAME);
-  $cookie = CGI::cookie(-name=>COOKIE_NAME,-value=>0xFF) 
-    unless defined $cookie && $cookie >= 0 && $cookie <= 0xFF;
+  my $state = CGI::cookie($cookie_name);
+  $state = 0xFFFFFF unless defined $state && $state >= 0 && $state <= 0xFFFFFF;
+  warn "current state = $state";
 
+  my $cookie = CGI::cookie(-name=>$cookie_name,
+			   -value=>$state,
+			   -expires=>'+7d');
+  
   push @{$args{-script}},{code=>$jscript};
   $args{-noscript}     = $noscript;
   $args{-onLoad}       = "startPage()";
-  $args{-cookie}     ||= [];
-  push @{$args{-cookie}},$cookie;
+  $args{-head}         = CGI::meta({-http_equiv=>'Set-Cookie',
+				    -content => $cookie});
   CGI::start_html(%args);
 }
 
@@ -150,8 +156,8 @@ sub toggle_section {
   my ($section_title,@section_body) = @_;
 
   my $id = $next_id++;
-  if (!$config{override} && (my $cookie = CGI::cookie(COOKIE_NAME))) {
-    $config{on} = ($cookie & (1<<substr($id,1))) != 0;
+  if (!$config{override} && (my $cookie = CGI::cookie($cookie_name))) {
+    $config{on} = ($cookie & (1<<substr($id,1)||0)) != 0;
   }
 
   my $plus  = $config{plus_img}  || PLUS;

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.14 2003-11-12 20:01:55 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.15 2003-11-12 20:59:02 scottcain Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -197,7 +197,8 @@ sub print_matches {
 
   my $src_x = $src->abs_start;
   my $tgt_x = $tgt->abs_start;
-  my $dir   = $tgt->abs_strand || +1;
+  my $tdir  = $tgt->abs_strand || +1;
+  my $sdir  = $src->abs_strand || +1;
 
   my $m = max(length($top_label),length($bot_label));
   my $p = max(length($src_x),length($tgt_x));
@@ -211,13 +212,13 @@ sub print_matches {
   my @bottom = $bottom =~ /(.{1,60})/g;
 
   for (my $i=0; $i<@top; $i++) {
-    my $src_delta = length($top[$i]) - $top[$i]=~tr/-/-/;
-    my $tgt_delta = $dir * (length($bottom[$i]) - $bottom[$i]=~tr/-/-/);
+    my $src_delta = $sdir * (length($top[$i]) - $top[$i]=~tr/-/-/);
+    my $tgt_delta = $tdir * (length($bottom[$i]) - $bottom[$i]=~tr/-/-/);
 
     $string .= sprintf("$sp %d\n$l%s\n$sp %d\n\n",
-		       "$top_label $src_x",$top[$i],$src_x + $src_delta - 1,
+		       "$top_label $src_x",$top[$i],$src_x + $src_delta - $sdir,
 		       $middle[$i],
-		       "$bot_label $tgt_x",$bottom[$i],$tgt_x + $tgt_delta - $dir);
+		       "$bot_label $tgt_x",$bottom[$i],$tgt_x + $tgt_delta - $tdir);
     $src_x  += $src_delta;
     $tgt_x  += $tgt_delta;
 

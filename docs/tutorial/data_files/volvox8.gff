@@ -1,6 +1,7 @@
 ctgA	est	match	1050	3202	.	+	.	Target EST:agt830.5 1 654
 ctgA	est	HSP	1050	1500	.	+	.	Target EST:agt830.5 1 451
 ctgA	est	HSP	3000	3202	.	+	.	Target EST:agt830.5 452 654
+
 ctgA	est	match	5410	7503	.	-	.	Target EST:agt830.3 1 595
 ctgA	est	HSP	5410	5500	.	-	.	Target EST:agt830.3 505 595
 ctgA	est	HSP	7000	7503	.	-	.	Target EST:agt830.3 1 504 

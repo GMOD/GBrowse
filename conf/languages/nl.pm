@@ -1,5 +1,8 @@
 # do not remove the { } from the top and bottom of this page!!!
 {
+
+   CHARSET =>   'ISO-8859-1',
+
    #----------
    # MAIN PAGE
    #----------
@@ -34,6 +37,8 @@ END
 
    LANDMARK => 'Mijlpaal of Gebied',
 
+   BOOKMARK => 'Toevoegen aan Favorieten',
+
    KEY_POSITION => 'Positie van Legende',
 
    BETWEEN   => 'Tussen',
@@ -42,7 +47,9 @@ END
 
    GO       => 'Doorgaan',
 
-   FIND     => 'Zoeken',
+   FIND     => 'Vinden',
+
+   SEARCH   => 'Zoeken',
 
    DUMP     => 'Dumpen',
 
@@ -50,7 +57,7 @@ END
 
    SCROLL   => 'Scroll/Zoom',
 
-   RESET    => 'Terugstellen',
+   RESET    => 'Reset',
 
    DOWNLOAD_FILE    => 'Downloaden Bestand',
 
@@ -174,7 +181,9 @@ END
 
    TRACK_TYPE => 'Baantype',
 
-   SHOW => 'Toon',
+   SHOW => 'Tonen',
+
+   SHOW_INSTRUCTIONS => 'Instructies Tonen',
 
    FORMAT => 'Formaat',
 

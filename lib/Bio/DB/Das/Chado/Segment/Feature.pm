@@ -229,10 +229,10 @@ sub sub_SeqFeature {
 
   my $parent_id = $self->{feature_id};
 
+  my %termhash = %{$self->{factory}->{cvterm_id}};
   my $typewhere = '';
   if ($type) {
     $type = lc $type;
-    my %termhash = %{$self->{factory}->{cvterm_id}};
     $typewhere = " and child.type_id = $termhash{$type} ";
   }
 
@@ -240,7 +240,6 @@ sub sub_SeqFeature {
 
 #  print "$parent_id\n";
 #  print "$handle\n";
-
 #  $self->{factory}->{dbh}->trace(2);# if DEBUG;
 
   my $sth = $self->{factory}->{dbh}->prepare("
@@ -257,6 +256,7 @@ sub sub_SeqFeature {
       featureloc as childloc on
         (child.feature_id = childloc.feature_id)
     where parent.feature_id = $parent_id
+          and fr0.type_id = $termhash{'partof'}
           $typewhere
     ");
   $sth->execute or $self->throw("subfeature query failed"); 

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.41 2003-11-12 20:03:34 scottcain Exp $
+# $Id: Segment.pm,v 1.42 2003-11-21 19:40:33 scottcain Exp $
 
 =head1 NAME
 
@@ -470,7 +470,7 @@ sub features {
       $sql_types
       fl.srcfeature_id = $srcfeature_id and
       f.feature_id  = fl.feature_id
-    order by type_id
+    order by type_id,fmin
        ");
    $sth->execute or $self->throw("feature query failed"); 
 #   $self->{factory}->{dbh}->do("set enable_hashjoin=1");

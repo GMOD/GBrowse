@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.61 2002-10-02 02:48:23 lstein Exp $
+# $Id: gbrowse.PLS,v 1.62 2002-10-05 00:18:49 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -338,8 +338,8 @@ sub main_display {
   }
 
   # print the top of the form, with navigation bar, etc
-  print start_multipart_form(-name=>'mainform',-action=>url(-relative=>1,-path_info=>1)),
-    navigation_table($segment,$page_settings);
+  print start_multipart_form(-name=>'mainform',-action=>url(-relative=>1,-path_info=>1));
+  print navigation_table($segment,$page_settings);
 
   # if more than one segment, then list them all
   if (@$segments > 1) {
@@ -395,8 +395,10 @@ sub main_display {
     print $map,"\n" if $map;
   }
   print hidden('ref'),hidden('start'),hidden('stop');
-  print settings_table($page_settings,$feature_files);
-  print plugin_and_data_source_table($page_settings,$PLUGINS);
+
+  print plugins_table($page_settings);
+  print tracks_table($page_settings,$feature_files);
+  print settings_table($page_settings);
   print p(),upload_table($page_settings,$feature_files);
   print p(),external_table($page_settings,$feature_files);
   print end_form();
@@ -622,9 +624,15 @@ sub adjust_settings {
     }
   }
 
-  if (param($LANG->tr('Revert')) || param($LANG->tr('Reset'))) {
+  if (param($LANG->tr('Revert'))) {
     warn "resetting defaults..." if DEBUG;
     set_default_tracks($settings);
+  }
+
+  elsif (param($LANG->tr('Reset'))) {
+    %$settings = ();
+    Delete_all();
+    default_settings($settings);
   }
 
   elsif (param($LANG->tr('Adjust_Order')) && !param($LANG->tr('Cancel'))) {
@@ -644,13 +652,13 @@ sub navigation_table {
   my $oligo = $PLUGINS->{'OligoFinder'} ? ', oligonucleotide (15 bp minimum)' : '';
   my $help  =  a({-href=>general_help(),-target=>'help'},b('['.$LANG->tr('Help').']'));
 
-  $table .= table({-border=>0, -width=>$settings->{width}},
+  $table .= table({-border=>0, -width=>$settings->{width},-cellspacing=>0},
 		  $settings->{ins} ?
 		  (
 		   TR({-class=>'searchbody'},
 		      td({-align=>'left', -colspan=>3},
-			 b($LANG->tr('INSTRUCTIONS').': '),
-			 '['.a({-href=>"$self?ins=0"},$LANG->tr('HIDE')).']',
+			 b($LANG->tr('INSTRUCTIONS').' '),
+			 '['.a({-href=>"$self?ins=0"},$LANG->tr('HIDE')).']: ',
 			 $LANG->tr('SEARCH_INSTRUCTIONS',$oligo),
 			 show_examples(),
 			 $help
@@ -663,20 +671,20 @@ sub navigation_table {
 		  (
 		   TR({-class=>'searchbody'},
 		      td({-align=>'left', -colspan=>3},
-			 a({-href=>"$self?ins=1"},$LANG->tr('SHOW_INSTRUCTIONS')),
+			 a({-href=>"$self?ins=1"},'['.$LANG->tr('SHOW_INSTRUCTIONS').']'),
 			 a({-href=>bookmark_link($settings)},'['.$LANG->tr('BOOKMARK').']'),$help)
 		     ),
 		  ),
 		  TR({-class=>'searchtitle', -align=>'left'},
-		     td({-class=>'searchtitle'}, b($LANG->tr('Landmark')),
-			textfield(-name=>'name',-size=>50),
-			submit(-name=>$LANG->tr('Go'))),
-		     td(submit(-name=>$LANG->tr('Reset'),-class=>'reset_button'))
+		     td({-class=>'searchtitle',-align=>'left'}, b($LANG->tr('Landmark')),
+			textfield(-name=>'name',-size=>40),
+			submit(-name=>$LANG->tr('Search')).'&nbsp;'.
+			submit(-name=>$LANG->tr('Reset'),-class=>'reset_button')
+		       ),
+		     td({-align=>'left'},
+			$segment ? (b($LANG->tr('Scroll').': '),slidertable($segment,$buttonsDir)) : ''
+		       ),
 		    ),
-		  TR({-class=>'searchtitle',-align=>'left'},
-		     th({-align=>'CENTER',-colspan=>3},
-			$segment ? ($LANG->tr('Scroll').': ',slidertable($segment,$buttonsDir)) : ''
-		       ))
 		 );
 }
 
@@ -775,15 +783,27 @@ sub labels {
   @labels;
 }
 
+sub plugins_table {
+  my $settings = shift;
+  return table({-border=>0, -width=>$settings->{width},-cellspacing=>0},
+	      TR({-class=>'searchtitle',-align=>'left'},
+		 td({-align=>'left'},
+		    table(td(
+			     source_menu($settings),
+			    )
+			 )
+		   ),
+		 td({-align=>'left'},
+		    plugin_menu($settings,$PLUGINS)),
+		)
+	     );
+}
 
 # This subroutine is invoked to draw the checkbox group underneath the main display.
 # It creates a hyperlinked set of feature names.
-sub settings_table {
+sub tracks_table {
   my $settings = shift;
   my $additional_features = shift;
-
-  my @widths = split /\s+/,$CONFIG->setting('image widths');
-  @widths = (640,800,1024) unless @widths;
 
   # set up the dumps line.
   my($ref,$start,$stop) = @{$settings}{qw(ref start stop)};
@@ -798,10 +818,6 @@ sub settings_table {
   autoEscape(0);
   my $sTable 	= '';
   $sTable.= table({-border=>0,-width=>$settings->{width}},
-		  # row
-		  TR(
-		     th({-class=>'searchtitle', -colspan=>4, -align=>'left'},$LANG->tr('Display_Settings').':')
-		     ),
 		  # row
 		  $settings->{stp} ?
 		  (
@@ -821,36 +837,46 @@ sub settings_table {
 		  ) :
 		  TR(td({-class=>'searchbody',-colspan=>3},
 			b($LANG->tr('Tracks')),a({-href=>"$self?stp=1"},'['.$LANG->tr('SHOW').']'))
-		    ),
-		  # row
-		  TR({-class=>'searchbody'},
-		     th({align=>'RIGHT'},$LANG->tr('Image_width')),
-		     td(
-			radio_group( -name=>'width',
-				     -values=>\@widths,
-				     -default=>$settings->{width},
-				     -override=>1
-				   ),
-		       ),
-		     td(
-			b('Key Position'),
-			radio_group( -name=>'keystyle',
-				     -values=>['between','bottom'],
-				     -labels=>{between=>$LANG->tr('BETWEEN'),
-					       bottom =>$LANG->tr('BENEATH')},
-				     -default=>$settings->{ks},
-				     -override=>1
-				   ),
-		       ),
-		     td({-align=>'RIGHT'},
-			submit(-name => $LANG->tr('Set_options'))
-			.'&nbsp;'.
-			b(submit(-name => $LANG->tr('Update')))
-		       )
-		    ),
+		    )
 		 );
   autoEscape(1);
   return $sTable;
+}
+
+sub settings_table {
+  my $settings = shift;
+
+  my @widths = split /\s+/,$CONFIG->setting('image widths');
+  @widths = (640,800,1024) unless @widths;
+
+  return table({-border=>0,-width=>$settings->{width},-class=>'searchtitle'},
+	       # row
+	       TR(
+		  td(
+		     b($LANG->tr('Image_width')),br,
+		     radio_group( -name=>'width',
+				  -values=>\@widths,
+				  -default=>$settings->{width},
+				  -override=>1
+				),
+		    ),
+		  td(
+		     b($LANG->tr('KEY_POSITION')),br,
+		     radio_group( -name=>'keystyle',
+				  -values=>['between','bottom'],
+				  -labels=>{between=>$LANG->tr('BETWEEN'),
+					    bottom =>$LANG->tr('BENEATH')},
+				  -default=>$settings->{ks},
+				  -override=>1
+				),
+		    ),
+		  td({-align=>'RIGHT'},
+		     submit(-name => $LANG->tr('Set_options'))
+		     .'&nbsp;'.
+		     b(submit(-name => $LANG->tr('Update')))
+		    )
+		 ),
+	      );
 }
 
 sub annotation_help {
@@ -1648,7 +1674,6 @@ sub edit_uploaded_file {
 	     );
   print hidden(-name=>'edited file',-value=>$file);
   print end_form();
-  warn "here I am";
 }
 
 sub coordinate_mapper {
@@ -1789,16 +1814,15 @@ sub set_track_options {
 	    ).
       td({-align=>'CENTER',-class=>'searchbody'},
 	     popup_menu( -name     => "option.$track",
-			 -values   => [0..5],
+			 -values   => [0..3],
 			 -override => 1,
 			 -default  => $settings->{features}{$label}{options},
 			 -labels   => {0=> $LANG->tr('Auto'),
                                        1=> $LANG->tr('Compact'),
                                        2=> $LANG->tr('Expand'),
 				       3=> $LANG->tr('Expand_Label'),
-                                       4=> $LANG->tr('Hyperexpand'),
-				       5=> $LANG->tr('Hyperexpand_Label')})
-			).
+				      })
+	   ).
 	td({-align=>'CENTER',-class=>'searchbody'},
 	   popup_menu(-name    => "limit.$track",
 		      -values  => [0,5,10,25,100],
@@ -2051,7 +2075,7 @@ sub configure_plugins {
   }
 }
 
-sub plugin_and_data_source_table {
+sub plugin_menu {
   my ($settings,$plugins) = @_;
   my $sources = $CONFIG->sources > 1;
 
@@ -2065,35 +2089,32 @@ sub plugin_and_data_source_table {
     keys %$plugins;
 
   my @plugins = sort {$labels{$a} cmp $labels{$b}} keys %labels;
-  my $table = table({-border=>0,-width=>$settings->{width}},
-		    TR({-class=>'searchtitle'},
-		       th({-align=>'left'},
-			  $LANG->tr('Dumps').':'),
-		       $sources ? th({-align=>'left'},$LANG->tr('Data_source'.':')) : th('&nbsp;'),
-		      ),
-		    TR({-class=>'searchtitle'},
-		       td({-colspan=>1,-align=>'left'},
-			  popup_menu(-name=>'plugin',
-				     -values=>\@plugins,
-				     -labels=>\%labels,
-				     -default => $settings->{plugin},
-				    ),'&nbsp;',
-			  submit(-name=>'plugin_action',-value=>$LANG->tr('About')),'&nbsp;',
-			  submit(-name=>'plugin_action',-value=>$LANG->tr('Configure')),'&nbsp;',
-			  submit(-name=>'plugin_action',-value=>$LANG->tr('Go')),
-			 ),
-		       td({-colspan=>1,-align=>'left'},
-			  $sources ?
-			  popup_menu(-name   => 'source',
-				     -values => [sort $CONFIG->sources],
-				     -labels => { map {$_ => $CONFIG->description($_)} $CONFIG->sources},
-				     -default => $CONFIG->source,
-                                     -onChange => 'document.mainform.submit()',
-				    )
-			 : '&nbsp;')
-		      )
-		   );
-  $table;
+  return join('',
+	      b($LANG->tr('Dumps').':'),br,
+	      popup_menu(-name=>'plugin',
+			 -values=>\@plugins,
+			 -labels=>\%labels,
+			 -default => $settings->{plugin},
+			),'&nbsp;',
+	      submit(-name=>'plugin_action',-value=>$LANG->tr('About')),'&nbsp;',
+	      submit(-name=>'plugin_action',-value=>$LANG->tr('Configure')),'&nbsp;',
+	      submit(-name=>'plugin_action',-value=>$LANG->tr('Go'))
+	      );
+}
+
+sub source_menu {
+  my $settings = shift;
+  my $sources = $CONFIG->sources > 1;
+  return b($LANG->tr('DATA_SOURCE')).br.
+    ( $sources ?
+      popup_menu(-name   => 'source',
+		 -values => [sort $CONFIG->sources],
+		 -labels => { map {$_ => $CONFIG->description($_)} $CONFIG->sources},
+		 -default => $CONFIG->source,
+		 -onChange => 'document.mainform.submit()',
+		)
+	: $CONFIG->source
+      );
 }
 
 sub do_plugin_header {
@@ -2256,7 +2277,6 @@ sub footer {
        tt(font({-size=>'small'},$LANG->tr('Footer_2',$VERSION)))),
        end_html;
 }
-
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

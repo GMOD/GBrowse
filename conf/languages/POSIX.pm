@@ -36,15 +36,17 @@ END
 
    SHOW              => 'Show',
 
-   SHOW_INSTRUCTIONS => '[show instructions]',
+   SHOW_INSTRUCTIONS => 'Show instructions',
 
    LANDMARK => 'Landmark or Region',
 
-   BOOKMARK => 'bookmark this view',
+   BOOKMARK => 'Bookmark this view',
 
    GO       => 'Go',
 
    FIND     => 'Find',
+
+   SEARCH   => 'Search',
 
    DUMP     => 'Dump',
 
@@ -103,6 +105,8 @@ END
    UPLOAD_TITLE=> 'Upload your own annotations',
 
    UPLOAD_FILE => 'Upload a file',
+
+   KEY_POSITION => 'Key position',
 
    BROWSE      => 'Browse...',
 

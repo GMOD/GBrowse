@@ -1,22 +1,6 @@
 package Bio::Graphics::Browser::I18n;
 
-# $Id: I18n.pm,v 1.7 2002-10-02 02:48:23 lstein Exp $
-# $Log: not supported by cvs2svn $
-# Revision 1.6  2002/09/25 04:39:21  lstein
-# folded in character set support
-#
-# Revision 1.5  2002/09/12 01:58:43  lstein
-# added undocumented support for non-bp units and fixed language handling
-#
-# Revision 1.4  2002/09/11 11:42:23  lstein
-# fixed language handling
-#
-# Revision 1.3  2002/09/05 19:25:27  lstein
-# tried to fix problems with localization
-#
-# Revision 1.2  2002/09/05 19:22:59  lstein
-# fixed upload bugs and some language parsing problems
-#
+# $Id: I18n.pm,v 1.8 2002-10-05 00:18:50 lstein Exp $
 
 use strict;
 
@@ -68,8 +52,7 @@ sub tr_table {
   for my $lang (@languages) {
     $self->{tr}{$lang} = $self->read_table($lang)
       unless exists $self->{tr}{$lang};
-    next unless $self->{tr}{$lang};
-    return $self->{tr}{$lang};
+    return $self->{tr}{$lang} if $self->{tr}{$lang};
   }
   return {};  # language could not be loaded
 }
@@ -78,7 +61,7 @@ sub read_table {
   my $self = shift;
   my $language  = shift;
   my $path = join '/',$self->dir,"$language.pm";
-  my $table = eval "require '$path'";
+  my $table = do $path;
   $table;
 }
 

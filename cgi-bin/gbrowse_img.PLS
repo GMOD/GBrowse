@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.14 2004-04-01 20:17:38 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.15 2004-04-05 18:26:04 tharris Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1 path_info escape);
@@ -130,19 +130,22 @@ else {
        );
 }
 
+
 if ($image_class eq 'GD::SVG') {
   # This is a kludge to alert users that their system does not have
   # GD::SVG installed
-  # my $version = `perl -MGD::SVG -e print $GD::SVG::VERSION 2>&1 1>/dev/null`;
-  my $result = eval "use GD::SVG";
-  my $version = `perl -MGD::SVG -e 'print $GD::SVG::VERSION'`;
-  if ($version) {
-     print header('image/svg-xml');
-     print $img->svg;
+  my ($version) = (0);
+  eval {
+    require GD::SVG;
+    $version = $GD::SVG::VERSION;
+  };
+  if ($@ || ! $version) {
+    message('SVG output from GBrowse requires that the GD::SVG Perl
+    module be installed. Please advise your system administrator of
+    this error.');
   } else {
-     message('SVG output from GBrowse requires that the GD::SVG Perl
-     module be installed. Please advise your system administrator of this
-     error.');
+    print header('image/svg-xml');
+    print $img->svg;
   }
 } elsif ($img->can('png')) {
   print header('image/png');

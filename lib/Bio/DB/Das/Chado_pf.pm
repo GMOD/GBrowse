@@ -1,4 +1,4 @@
-# $Id: Chado_pf.pm,v 1.2 2002-11-22 22:36:54 scottcain Exp $
+# $Id: Chado_pf.pm,v 1.3 2002-11-26 21:55:07 scottcain Exp $
 # Das adaptor for Chado_pf
 
 =head1 NAME
@@ -6,6 +6,15 @@
 Bio::DB::Das::Chado_pf - DAS-style access to a chado_pf database
 
 =head1 SYNOPSIS
+
+NOTES:  required methods:
+        new
+        segment
+        features
+        types
+        get_seq_stream
+
+
 
   # Open up a feature database
  $db = Bio::DB::Das::Chado_pf->new(
@@ -96,10 +105,12 @@ use strict;
 use Bio::DB::Das::Chado_pf::Segment;
 use Bio::Root::Root;
 use Bio::DasI;
+use DBI;
+use DBD::Pg;
 use vars qw($VERSION @ISA);
 
 use constant SEGCLASS      => 'Bio::DB::Das::Chado_pf::Segment';
-use constant ADAPTOR_CLASS => 'Bio::DB::Chado_pf::BioDatabaseAdaptor';
+#use constant ADAPTOR_CLASS => 'Bio::DB::Chado_pf::BioDatabaseAdaptor';
 
 $VERSION = 0.01;
 @ISA     = qw(Bio::Root::Root Bio::DasI);
@@ -108,7 +119,7 @@ $VERSION = 0.01;
 
  Title   : new
  Usage   : $db    = Bio::DB::Das::Chado_pf(
-				    driver    => 'postgres',
+				    driver    => 'Pg',
 				    dbname    => 'chado_pf',
 				    host      => 'localhost',
 				    user      => 'jimbo',
@@ -189,13 +200,45 @@ sub segment {
 								 CLASS
 								 VERSION)],@_);
   #my $seq = eval{$self->biosql->get_Seq_by_acc($name)};
-  my $seq = eval{$self->get_Seq_by_acc($name)};
-
-  if (!$seq && $name =~ s/\.\d+$//) {  # workaround version ?bug in get_Seq_by_acc
-    $seq = eval{$self->get_Seq_by_acc($name)}; #shouldn't be necessary in my code, but keep
+  my $seq = eval{$self->get_Seq_by_acc($name)}; # this needs to return a
+                                                # Bio::Das::SegmentI object
+						# OK, now I don't think so,
+						# it is just getting the seq
+  if (!$seq && $name =~ s/\.\d+$//) {  # workaround version ?bug in
+                                       # get_Seq_by_acc
+    $seq = eval{$self->get_Seq_by_acc($name)}; # shouldn't be necessary in my
+                                               # code, but keep
   }
   return unless $seq;
   return $self->_segclass->new($seq,$self,$start,$end);
+}
+
+=head2 get_Seq_by_acc
+
+=cut
+
+sub get_Seq_by_acc {
+  my $name = shift;
+  my $dbh = DBI->connect(  "DBI:$self->$driver:"
+                         . "dbname=$self->$dbname;"
+                         . "host=$self->$host" ,
+                           $self->$username,
+                           $self->$password );
+  
+  $name = $dbh->quote($name);
+  my $sth = prepare (" select residues from feature where feature_id in
+                         (select f.feature_id
+                          from dbxref dbx, feature f, feature_dbxref fd
+                          where f.type_id = 6 and
+                                f.feature_id = fd.feature_id and
+                                fd.dbxref_id = dbx.dbxref_id and
+                                dbx.accession = $name ");
+  $sth->execute or return;
+
+  return if ($sth->rows != 1);
+
+  my $hash_ref = $sth->fetchrow_hashref or return;
+  return $$hash_ref{'residues'};
 }
 
 
@@ -345,11 +388,13 @@ sub get_seq_stream {
 }
 
 sub get_Seq_by_acc {
+# Lincoln says this need not be implemented
 #to take the place of biosql->get_Seq_by_acc($name)
   my $self = shift;
   my $id = shift;
-  my $stream = $self->get_Stream_by_accession($id);
-  return $stream->next_seq;
+  $self->throw_not_implemented;
+#  my $stream = $self->get_Stream_by_accession($id);
+#  return $stream->next_seq;
 }
 
 =head2 biosql
@@ -393,7 +438,7 @@ sub _segclass { return SEGCLASS }
 
 =cut
 
-sub _adaptorclass { return ADAPTOR_CLASS }
+#sub _adaptorclass { return ADAPTOR_CLASS }
 
 
 package Bio::DB::Das::Chado_pfIterator;

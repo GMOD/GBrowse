@@ -1,10 +1,19 @@
-# $Id: Segment.pm,v 1.2 2002-11-22 22:36:54 scottcain Exp $
+# $Id: Segment.pm,v 1.3 2002-11-26 21:55:07 scottcain Exp $
 
 =head1 NAME
 
 Bio::DB::Das::Chado_pf::Segment - DAS-style access to a chado_pf database
 
 =head1 SYNOPSIS
+
+NOTES: required methods:
+        seq_id
+        start
+        end
+        length
+        features
+        seq
+        factory
 
   # Get a Bio::Das::SegmentI object from a Bio::DB::Das::Chado_pf database...
 
@@ -90,6 +99,8 @@ package Bio::DB::Das::Chado_pf::Segment;
 use strict;
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
+#use DBI;
+#use DBD::Pg;
 use constant DEBUG => 1;
 
 use vars '@ISA','$VERSION';
@@ -107,6 +118,7 @@ sub new {
 		start  =>  $start,
 		end    =>  $end},ref $self || $self;
 }
+
 
 =head2 seq_id
 

@@ -32,8 +32,9 @@ sub bgcolor {
   my $feature = $self->feature;
   warn "feature = $feature";
   my $color   = $self->SUPER::bgcolor;
-  if (defined(my $phase = eval{$feature->phase})) {
-    my $tag = "${phase}color";
+  if (defined(eval{$feature->phase})) {
+    my $frame = $feature->start %3;
+    my $tag = "${frame}color";
     $color  ||= $self->color($tag);
   }
   return $color;

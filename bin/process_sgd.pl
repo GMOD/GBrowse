@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: process_sgd.pl,v 1.1.1.1 2002-01-03 13:34:19 lstein Exp $
+# $Id: process_sgd.pl,v 1.2 2002-02-18 22:47:34 lstein Exp $
 # This script will convert from SGD format to GFF format
 # See http://genome-www4.stanford.edu/Saccharomyces/SGD/doc/db_specifications.html
 
@@ -69,11 +69,12 @@ while (<>) {
   die "Strand logic is messed up" if $stop < $start;
 
   if ($gene) {
-    my @genes = ($gene,split/\|/,$aliases);
-    foreach (@genes) {
-      print join("\t",$ref,'sgd','gene',$start,$stop,'.',$strand,'.',qq(Gene "$_" ; Note "$description")),"\n";
-    }
-    $description = "$gene\\; $description";
+     my @aliases = split(/\|/,$aliases);
+     my $aliases = join " ; ",map {qq(Alias "$_")} @aliases;
+     my $group = qq(Gene "$gene" ; Note "$description");
+     $group .= " ; $aliases" if $aliases;
+     print join("\t",$ref,'sgd','gene',$start,$stop,'.',$strand,'.',$group),"\n";
+     $description .= "\\; AKA @aliases" if @aliases;
   }
 
   print join("\t",$ref,'sgd',$type,$start,$stop,'.',$strand,'.',qq($type "$id" ; Note "$description")),"\n";

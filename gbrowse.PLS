@@ -33,7 +33,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.8 2002-01-31 06:29:39 lstein Exp $
+# $Id: gbrowse.PLS,v 1.9 2002-02-18 22:47:34 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -45,7 +45,7 @@ use Text::Tabs;
 use Text::Shellwords;
 use Carp;
 use CGI qw(:standard escape center *table *dl *TR *td);
-use vars qw($CONFIG $VERSION %DB $MAX_SEGMENT $DEFAULT_SEGMENT $HEADER $HTML $UA);
+use vars qw($CONFIG %DB $MAX_SEGMENT $DEFAULT_SEGMENT $HEADER $HTML $UA);
 
 # if you change the zoom/nav icons, you must change this as well.
 use constant MAG_ICON_HEIGHT => 20;
@@ -59,6 +59,8 @@ use constant ANNOTATION_EDIT_COLS => 100;
 use constant URL_FETCH_TIMEOUT    => 5;  # five seconds max!
 use constant URL_FETCH_MAX_SIZE   => 1_000_000;  # don't accept any files larger than 1 Meg
 use constant MAX_KEYWORD_RESULTS  => 50;  # max number of results from keyword search
+use constant DEFAULT_RANGES       => q(100 500 1000 5000 10000 25000 100000 200000 400000);
+use constant DEFAULT_FINE_ZOOM    => '10%';
 
 # if true, turn on surrounding rectangles for debugging the image map
 use constant DEBUG => 0;
@@ -148,7 +150,6 @@ if (defined($old_source) && $source ne $old_source) {
   param(name => $page_settings->{name});  # restore old reference point
 } else {
   adjust_settings($page_settings);        # set settings from CGI parameters
-  rationalize_span($page_settings);
 }
 ###############################################################################################
 
@@ -159,22 +160,18 @@ my @segments  = get_segment($page_settings);
 ## DUMPS ######################################################################################
 if ( (my $dump = param('dump')) && @segments == 1) {
   if ($dump eq 'FastA') {
-    print header(-type         => 'text/plain',
-		 #-attachment   => "$segments[0].fa",
-		);
+    print header(-attachment   => "$segments[0].fa",
+		 -type         => 'text/plain');
     dump_fasta($segments[0],$page_settings);
   }
 
   elsif($dump eq 'GFF') {
-    print header(-type         => 'text/plain',
-		 #-attachment   => "$segments[0].gff",
-		 );
-		 
+    print header(-attachment   => "$segments[0].gff",
+		 -type         => 'text/plain');
     dump_gff($segments[0],$page_settings);
   }
   exit 0;
 }
-
 ###############################################################################################
 
 # This gets called if the user wants to download his annotation data
@@ -250,9 +247,8 @@ sub footer {
     $CONFIG->footer || '',
       p(i(font({-size=>'small'},
 	       'Note: This page uses cookie to save and restore preference information.',
-	       'No information is shared.')),br,
-	tt("Generic genome browser version $VERSION")),
-      end_html;
+	       'No information is shared.'))),
+		 end_html;
 }
 
 #--------------------------------- lots of subroutines --------------------------
@@ -279,7 +275,8 @@ sub main_display {
   # into a scalar
   elsif (@$segments == 1) {
     $segment = $segments->[0];
-    print h2("Showing",commas($segment->length),"bp from",
+    $segment = truncated_segment($segment) if $segment->length < 4;
+    print h2("Showing",unit_label($segment->length)," from",
 	     $segment->ref.", positions ".commas($segment->start)." to ".commas($segment->stop));
   }
 
@@ -441,20 +438,26 @@ sub settings2cookie {
 
 sub adjust_settings {
   my $settings = shift;
-  if (my @selected = param('label')) {
+  if (my @selected = map {split '-'} param('label')) {
     $settings->{labels} = [];
     $settings->{labels}[$_] = 1 foreach @selected;
   }
   $settings->{width}  = param('width')   if param('width');
 
-  if (param('ref') && (request_method() eq 'GET' || grep {/zoom|nav|overview/} param()) ) {
-    $settings->{ref}   = param('ref');
-    $settings->{start} = param('start') if param('start') =~ /^[\d-]+/;
-    $settings->{stop}  = param('stop')  if param('stop')  =~ /^[\d-]+/;
-    zoomnav($settings);
-    $settings->{name} = "$settings->{ref}:$settings->{start}..$settings->{stop}";
-    param(name => $settings->{name});
-  }
+  #  if (param('ref') && (request_method() eq 'GET' || grep {/zoom|nav|overview|span/} param()) ) {
+  if (param('ref') &&
+      ( request_method() eq 'GET'
+	|| param('name') eq param('prevname')
+	|| grep {/zoom|nav|overview/} param())
+     )
+    {
+      $settings->{ref}   = param('ref');
+      $settings->{start} = param('start') if param('start') =~ /^[\d-]+/;
+      $settings->{stop}  = param('stop')  if param('stop')  =~ /^[\d-]+/;
+      zoomnav($settings);
+      $settings->{name} = "$settings->{ref}:$settings->{start}..$settings->{stop}";
+      param(name => $settings->{name});
+    }
   $settings->{name}   = param('name')                       if param('name');
   $settings->{source} = param('source')                     if param('source');
   $settings->{eurl}   = [grep {m!^([\w.-]+)://!} param('eurl')] if defined param('eurl');
@@ -466,16 +469,6 @@ sub adjust_settings {
     $settings->{options} = $options;
   }
 
-}
-
-# make sure that start is at least 1 bp less than stop
-sub rationalize_span {
-    my $settings = shift;
-    @{$settings}{'start','stop'} = @{$settings}{'stop','start'} if $settings->{start} > $settings->{stop};
-    if ($settings->{stop}-$settings->{start} <= 10) {
-	$settings->{start} -= 10;
-	$settings->{stop}  += 10;
-    }
 }
 
 # prints the zooming and navigation bar
@@ -509,17 +502,29 @@ sub navigation_table {
 
 sub slidertable {
   my ($segment,$buttonsDir) = @_;
+  my $span      = $segment->length;
+  my $half      = unit_label(int $span/2);
+  my $full      = unit_label($span);
+  my $fine_zoom = get_zoomincrement();
 
   my @lines;
   push @lines,hidden(-name=>'start',-value=>$segment->start,-override=>1);
   push @lines,hidden(-name=>'stop',-value=>$segment->end,-override=>1);
   push @lines,hidden(-name=>'ref',-value=>$segment->ref,-override=>1);
-  push @lines, (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>'nav0',-border=>0,-title=>"b1"),
-		image_button(-src=>"$buttonsDir/green_l1.gif",-name=>'nav1',-border=>0,-title=>"b2"),
-		zoomBar($segment,$buttonsDir),
-		image_button(-src=>"$buttonsDir/green_r1.gif",-name=>'nav2',-border=>0,-title=>"b3"),
-		image_button(-src=>"$buttonsDir/green_r2.gif",-name=>'nav3',-border=>0,-title=>"b4"),
-	       );
+  push @lines,hidden(-name=>'prevname',-value=>scalar(param('name')),-override=>1);
+  push @lines,
+    (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>"left $full",-border=>0,-title=>"left $full"),
+     image_button(-src=>"$buttonsDir/green_l1.gif",-name=>"left $half",-border=>0,-title=>"left $half"),
+     '&nbsp;',
+     image_button(-src=>"$buttonsDir/minus.gif",-name=>"zoom out $fine_zoom",-border=>0,-title=>"zoom out $fine_zoom"),
+     '&nbsp;',
+     zoomBar($segment,$buttonsDir),
+     '&nbsp;',
+     image_button(-src=>"$buttonsDir/plus.gif",-name=>"zoom in $fine_zoom",-border=>0,-title=>"zoom in $fine_zoom"),
+     '&nbsp;',
+     image_button(-src=>"$buttonsDir/green_r1.gif",-name=>"right $half",-border=>0,-title=>"right $half"),
+     image_button(-src=>"$buttonsDir/green_r2.gif",-name=>"right $full",-border=>0,-title=>"right $full"),
+    );
 
   #  print end_form;
   my $str	= join('', @lines);
@@ -529,29 +534,41 @@ sub slidertable {
 sub zoomBar {
   my ($segment,$buttonsDir) = @_;
 
-  my @letters;
-  my @ranges	= get_ranges();
-  my $span = $segment->length;
-  my $pixels_per_range = MAG_ICON_HEIGHT/@ranges;
+  my %seen;
+  my @ranges	= grep {!$seen{$_}++} sort {$b<=>$a} $segment->length,get_ranges();
+  my %labels    = map {$_=>"Show ".unit_label($_)} @ranges;
+  return popup_menu(-class   => 'searchtitle',
+	       -name    => 'span',
+	       -values  => \@ranges,
+	       -labels  => \%labels,
+	       -default => $segment->length,
+	       -force   => 1,
+	       -onChange => 'submit()',
+	      ).'&nbsp;';
+}
 
-  for(my $i=0; $i < @ranges; $i++){
-    my $altText	   = qq{show $ranges[$i] bp};
-    my $titleText  = qq{show $ranges[$i] bp};
-    my $color;
-    if($i>0){
-      $color = ($ranges[$i-1] < $span) && ($ranges[$i] >= $span) ? 'red' : 'green';
-    }else{
-      $color = ($ranges[$i] >= $span) ? 'red' : 'green';
-    }
-    my $c = $i+1;
-    $letters[$i] = image_button(-src    => "$buttonsDir/$color$c.gif",
-				-name   => "zoom${i}",
-				-alt    => $altText,
-				-border => ,
-				-title  => $titleText);
-  }
+# convert bp into nice Mb/Kb units
+sub unit_label {
+  my $value = shift;
+  my $label;
+  $label = $value >= 1e9 ? sprintf("%.4g Gbp",$value/1e9)
+         : $value >= 1e6 ? sprintf("%.4g Mbp",$value/1e6)
+         : $value >= 1e3 ? sprintf("%.4g Kbp",$value/1e3)
+	 : $value." bp";
+  return $label;
+}
 
-  return join('', @letters);
+# convert Mb/Kb back into bp... or a ratio
+sub unit_to_value {
+  my $string = shift;
+  my $sign           = $string =~ /out|left/ ? '-' : '+';
+  my ($value,$units) = $string =~ /([\d.]+) ?(\S+)/;
+  return unless defined $value;
+  $value /= 100   if $units eq '%';  # percentage;
+  $value *= 1000  if $units =~ /kb/i;
+  $value *= 1e6   if $units =~ /mb/i;
+  $value *= 1e9   if $units =~ /gb/i;
+  return "$sign$value";
 }
 
 sub labels {
@@ -728,31 +745,29 @@ sub zoomnav {
   return unless $settings->{ref};
   my $start = $settings->{start};
   my $stop  = $settings->{stop};
+  my $span  = $stop - $start + 1;
 
   # get zoom parameters
-  my ($zoom) = grep {/^zoom\d+/} param();
-  my ($nav)  = grep {/^nav\d+/}  param();
+  my $selected_span  = param('span');
+  my ($zoom)         = grep {/^zoom (out|in) \S+/} param();
+  my ($nav)          = grep {/^(left|right) \S+/}  param();
   my $overview_x     = param('overview.x');
   my $segment_length = param('seg_length');
 
-  my $zoomlevel = $1 if $zoom && $zoom =~ /(\d+)/;
-  my $navlevel  = $1 if $nav && $nav  =~ /(\d+)/;
-  my ($center, $ohalf, $nhalf, $span);
-
-  my @ranges	= get_ranges();
-  $span	        = $stop - $start + 1;
+  my $zoomlevel = unit_to_value($1) if $zoom && $zoom =~ /((?:out|in) .+)\.[xy]/;
+  my $navlevel  = unit_to_value($1) if $nav  && $nav  =~ /((?:left|right) .+)/;
 
   if (defined $zoomlevel) {
-    $center	    = int($span / 2) + $start;
-    my $range	    = int(($ranges[$zoomlevel])/2);
+    warn "zoom = $zoom, zoomlevel = $zoomlevel" if DEBUG;
+    my $center	    = int($span / 2) + $start;
+    my $range	    = int($span * (1-$zoomlevel)/2);
+    $range          = 2 if $range < 2;
     ($start, $stop) = ($center - $range , $center + $range -1);
   }
 
   elsif (defined $navlevel){
-    if($navlevel == 0){ $start -= int($span); $stop -= int($span )       }
-    if($navlevel == 1){ $start -= int($span / 2); $stop -= int($span / 2)}
-    if($navlevel == 2){ $start += int($span / 2); $stop += int($span / 2)}
-    if($navlevel == 3){ $start += int($span); $stop += int($span)        }
+    $start += $navlevel;
+    $stop  += $navlevel;
   }
 
   elsif (defined $overview_x && defined $segment_length) {
@@ -763,7 +778,16 @@ sub zoomnav {
     $stop  = $start + $span - 1;
   }
 
+  elsif ($selected_span) {
+    my $center	    = int($span / 2) + $start;
+    my $range	    = int(($selected_span)/2);
+    ($start, $stop) = ($center - $range , $center + $range -1);
+  }
+
+  # to prevent from going off left end
   $start = 1 if $start < 1;
+  $stop  = $start + ($span > 4 ? $span - 1 : 4) if $stop <= $start+2;
+
   $settings->{start} = $start;
   $settings->{stop}  = $stop;
 }
@@ -799,13 +823,6 @@ sub get_segment {
   return unless @segments;
   return @segments if @segments > 1;
 
-  # don't accept 1 base pair segments, but instead
-  # set the span to 20 base pairs
-  if ($segments[0]->length <= 10) {
-      $segments[0] = $db->segment($segments[0],-10,10);
-      $segments[0]->absolute(1);
-  }
-
   # set CGI name parameter to match segment.
   # this prevents any confusion over (ref,start,stop) and (name) addressing.
   $settings->{ref}   = $segments[0]->ref;
@@ -813,6 +830,17 @@ sub get_segment {
   $settings->{stop}  = $segments[0]->stop;
 
   return $segments[0];
+}
+
+# this gets called when -- for whatever reason -- we got a truncated segment
+sub truncated_segment {
+  my $seg   = shift;
+  my ($trunc_left,$trunc_right) = @{$seg->truncated} if $seg->truncated;
+  my $ref   = $seg->ref;
+  my $db    = open_database();
+  my $whole = $db->segment($ref);
+  return $db->segment(-name=>$ref,-start=>$whole->stop-4,-stop=>$whole->stop) if $trunc_right;
+  return $db->segment(-name=>$ref,-start=>1,-stop=>4)                         if $trunc_left;
 }
 
 # try to guess the reference segment from the name, given the variety of
@@ -865,8 +893,11 @@ sub name2segments {
   # try any "automatic" classes that have been defined in the config file
   if (!@segments && !$class && 
       (my @automatic = split /\s+/,$CONFIG->setting('automatic classes') || '')) {
+    @argv = (-name=>$name);
+    push @argv,(-start => $start) if defined $start;
+    push @argv,(-stop  => $stop)  if defined $stop;
     foreach $class (@automatic) {
-      @segments = $db->segment($class => $name);
+      @segments = $db->segment(-class=>$class,@argv);
       last if @segments;
     }
   }
@@ -1057,11 +1088,14 @@ sub tmpdir {
   return ($tmpuri,$tmpdir);
 }
 
-
 sub get_ranges {
-  my @ranges	= split /\s+/,$CONFIG->setting('zoom levels');
-  @ranges       = qw(500 1000 5000 10000 25000 100000 200000 400000) unless @ranges;
+  my @ranges	= split /\s+/,$CONFIG->setting('zoom levels') || DEFAULT_RANGES;
   @ranges;
+}
+
+sub get_zoomincrement {
+  my $zoom      = $CONFIG->setting('fine zoom')  || DEFAULT_FINE_ZOOM;
+  $zoom;
 }
 
 sub make_map {
@@ -1105,7 +1139,7 @@ sub make_centering_map {
     my $stop   = int($start + $ruler->[0]->length - 1);
     param(start => int($start));
     param(stop  => int($stop));
-    param(nav   => 1);
+    param(nav4  => 1);
     param(source=> $CONFIG->source);
     my $url = url(-relative=>1,-query=>1,-path_info=>1);
     push @lines,
@@ -1155,7 +1189,7 @@ sub dump_gff {
   my $date = localtime;
   print "##gff-version 2\n";
   print "##date $date\n";
-  print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
+  print "##sequence-region ",join(',',$segment->ref,$segment->start,$segment->stop),"\n";
 
   my $conf = $CONFIG->config;
   my @feature_types = map {$conf->label2type($_)} @selected;
@@ -1499,7 +1533,7 @@ sub bookmark_link {
   for (my $i=0; $i<@labels; $i++) {
     push @selected,$i if $settings->{labels}[$i];
   }
-  $q->param(-name=>'label',-value=>\@selected);
+  $q->param(-name=>'label',-value=>join('-',@selected));
   return $q->url(-relative=>1,-path_info=>1,-query=>1);
 }
 
@@ -1632,7 +1666,7 @@ sub set_track_options {
   }
 
   print h1({-align=>'CENTER'},'Settings for ',$CONFIG->setting('description'));
-  print start_form();
+  print start_form(-name=>'settings');
   print table({-width=>'100%',-border=>0},
 	      TR({-class=>'searchtitle'},
 		 th({-colspan=>5},'Track Options')),
@@ -1781,7 +1815,6 @@ sub make_citation_link {
     return $labels->[$label_index];
   }
 }
-
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

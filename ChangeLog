@@ -1,3 +1,9 @@
+1.32    Mon Feb 18 17:41:28 EST 2002
+	* Made the zoom/scroll navigation bar more intuitive (in my opinion)
+	* Zoom levels more configurable
+	* Cleaned up the GIF buttons (you might need to install them manually)
+	* Added GC and DNA content glyph to example config file
+	
 1.31	Thu Jan 24 15:44:40 EST 2002
 	* Fixed GFF and FASTA dumping problems.
 	* Version number is now printed at bottom of page.

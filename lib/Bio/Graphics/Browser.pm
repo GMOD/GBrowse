@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.3 2002-01-31 18:47:17 lstein Exp $
+# $Id: Browser.pm,v 1.4 2002-02-18 22:47:34 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
@@ -8,7 +8,7 @@ use GD 'gdMediumBoldFont';
 
 use constant DEFAULT_WIDTH => 800;
 use vars '$VERSION';
-$VERSION = '1.00';
+$VERSION = '1.01';
 
 sub new {
   my $class    = shift;
@@ -117,7 +117,7 @@ sub footer {
 
 # Generate the image and the box list, and return as a two-element list.
 # arguments:
-# $segment       A feature iterator that responds to next_feature() methods
+# $segment       A feature iterator that responds to next_seq() methods
 # $feature_files A list of Bio::Graphics::FeatureFile objects containing 3d party features
 # $show          An array of booleans indicating which labels should be shown
 # $options       An array of options, where 0=auto, 1=force bump, 2=force label
@@ -155,25 +155,39 @@ sub image_and_map {
 
     # skip this if it isn't in the @$show array
     next unless $show->[$l];
+
     # if we don't have a configured label, then it is a third party annotation
     unless ($label) {
       push @blank_tracks,$i;
       next;
     }
 
-    my $track = $panel->add_track(-glyph => 'generic',
-				  -key   => $label,
-				  $conf->style($label),
-				 );
-    $tracks{$label}  = $track;
-    $options{$label} = $options->[$l];
+    # if the label is the magic "DNA/GC Content" flag, then add the segment using the
+    # "sequence" glyph
+    my $g = $conf->glyph($label);
+    if (defined $g && $g eq 'sequence') {
+      $panel->add_track($segment,
+			$conf->style($label)
+			);
+    }
+
+    else {
+
+      my $track = $panel->add_track(-glyph => 'generic',
+				    -key   => $label,
+				    $conf->style($label),
+				   );
+      $tracks{$label}  = $track;
+      $options{$label} = $options->[$l];
+    }
+
   }
 
   if (@feature_types) {  # don't do anything unless we have features to fetch!
     my $iterator = $segment->features(-type=>\@feature_types,-iterator=>1);
     my (%similarity,%feature_count);
 
-    while (my $feature = $iterator->next_feature) {
+    while (my $feature = $iterator->next_seq) {
 
       my $label = $self->feature2label($feature);
       my $track = $tracks{$label} or next;
@@ -193,7 +207,7 @@ sub image_and_map {
       my $set = $similarity{$label};
       my %pairs;
       for my $a (@$set) {
-	(my $base = $a->name) =~ s/\.[fr35]$//i;
+	(my $base = $a->name) =~ s/\.[frpq35]$//i;
 	push @{$pairs{$base}},$a;
       }
       my $track = $tracks{$label};
@@ -212,6 +226,7 @@ sub image_and_map {
 				 -label => $do_label,
 				 -description => $do_label && $tracks{$label}->option('description'),
 				);
+      $tracks{$label}->configure(-connector  => 'none') if !$do_bump;
     }
   }
 
@@ -248,13 +263,16 @@ sub overview {
 					-width   => $width,
 					-bgcolor => $self->setting('overview bgcolor') || 'wheat',
 				       );
+
+  my $units = $self->setting('overview units');
   $panel->add_track($segment   => 'arrow',
 		    -double    => 1,
 		    -label     => sub {"Overview of ".$segment->ref},
 		    -labelfont => gdMediumBoldFont,
-		    -units     => $self->setting('overview units') || 'M',
 		    -tick      => 2,
+		    $units ? (-units => $units) : (),
 		   );
+
   if (my $landmarks  = $self->setting('overview landmarks') || ($conf->label2type('overview'))[0]) {
     my $max_bump   = $conf->setting(general=>'bump density') || 50;
 
@@ -267,7 +285,7 @@ sub overview {
 				 );
     my $iterator = $segment->features(-type=>\@types,-iterator=>1,-rare=>1);
     my $count;
-    while (my $feature = $iterator->next_feature) {
+    while (my $feature = $iterator->next_seq) {
       $track->add_feature($feature);
       $count++;
     }
@@ -280,7 +298,6 @@ sub overview {
   my $red = $gd->colorClosest(255,0,0);
   my ($x1,$x2) = $panel->map_pt($partial_segment->start,$partial_segment->end);
   my ($y1,$y2) = (0,$panel->height-1);
-  $x1 = $x2 if $x2-$x1 <= 1;
   $x2 = $panel->right-1 if $x2 >= $panel->right;
   $gd->rectangle($x1,$y1,$x2,$y2,$red);
 
@@ -402,7 +419,7 @@ sub labels {
 sub label2type {
   my $self = shift;
   my $label = shift or return;
-  return shellwords($self->setting($label,'feature'));
+  return shellwords($self->setting($label,'feature')||'');
 }
 
 sub label2index {
@@ -422,7 +439,7 @@ sub invert_types {
   for my $label (keys %{$config}) {
     next if $label eq 'overview';   # special case
     my $feature = $config->{$label}{feature} or next;
-    foreach (shellwords($feature)) {
+    foreach (shellwords($feature||'')) {
       $inverted{$_} = $label;
     }
   }
@@ -432,7 +449,7 @@ sub invert_types {
 sub default_labels {
   my $self = shift;
   my $defaults = $self->setting('general'=>'default features');
-  return shellwords($defaults);
+  return shellwords($defaults||'');
 }
 
 sub default_label_indexes {
@@ -448,7 +465,7 @@ sub summary_mode {
   my $summary = $self->settings(general=>'summary mode') or return {};
   my %pairs = $summary =~ /(\d+)\s+{([^\}]+?)}/g;
   foreach (keys %pairs) {
-    my @l = shellwords($pairs{$_});
+    my @l = shellwords($pairs{$_}||'');
     $pairs{$_} = \@l
   }
   \%pairs;
@@ -539,10 +556,14 @@ sub image_and_map {
     # handle similarities a bit differently
     if (my $set = $similarity->{$label}) {
       my %pairs;
+
+      # HACK ALERT; look for feature pairs that end with [fr] and [35] suffix pairs
+      # and group them.  Used for paired ESTs -- not nice.
       for my $a (@$set) {
-	(my $base = $a->name) =~ s/\.[fr35]$//i;
+	(my $base = $a->name) =~ s/\.[frpq35]$//i;
 	push @{$pairs{$base}},$a;
       }
+
       my $track = $panel->add_track(-glyph =>'segments',
 				    -label => @$set <= $max_labels,
 				    -bump  => @$set <= $max_bump,
@@ -578,7 +599,7 @@ sub sort_features {
   my $iterator = shift;
 
   my (%similarity,%other);
-  while (my $feature = $iterator->next_feature) {
+  while (my $feature = $iterator->next_seq) {
 
     my $label = $self->feature2label($feature);
 

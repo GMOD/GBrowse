@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.2 2004-03-12 15:21:58 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3 2004-03-19 05:45:32 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -11,19 +11,45 @@ This module is not used directly
 =head1 DESCRIPTION
 
 PrimerDesigner.pm uses the Bio::PrimerDesigner API for primer3 to design
-PCR primers for features or target coordinates in gbrowse.  
-On unix-like systems a locally installed primer3 binary executable is
-recommended.  Primer3 is *nix specific but this module should, in theory, 
-be platfrom independent because Bio::PrimerDesigner can access the program 
-via a CGI wrapper for a remote installation on a *nix server.
+PCR primers for features or target coordinates in gbrowse.
+
+=head1 PRIMER3 is *nix-specific
+  
+On unix-like systems, compile a primer3 (v. 0.9) binary executable for your 
+OS and copy it to the default path 'usr/local/bin'.  An alternate path can be 
+specified as follows
+
+  my $binpath = '/path/to/primer3'; 
+
+=head1 primer3 for other platforms
+
+Primer3 can be used in a platform independent manner via the Bio::PrimerDesigner
+API.  To specify remote access to primer3:
+
+  my $method = 'remote';
+  my $url    = 'http://your_url/cgi-bin/primerdesigner.cgi';
+
+The URL should point to a *nix host that has Bio::PrimerDesigner and the
+script "primerdesigner.cgi" (a CGI wrapper for the primer3 binary) installed.
+
+=head1 Designing Primers
+
+
+=head2 Targeting a feature or coordinate
+
 The target for PCR primer design is selected by clicking on an image map and 
 (optionally) further refined by selecting an individual feature that overlaps the 
-selected sequence coordinate.  
+selected sequence coordinate.
 
-A series of increasing PCR product sizes is cycled until products big enough 
-to flank the targetted feature are found.  However, for optimal primers and
-improved speed, it is better to define a specific product size-range
+=head2 Design Paramaters
 
+The Provided  set of reasonable default primer attributes will work in most 
+cases.  Product size will vary by target feature size.  Rather than providing
+a default size-range, a series of increasing PCR product sizes is cycled until 
+products big enough to flank the target feature are found.  This will not 
+necessarily find the best primers, just the first ones that produce a big 
+enough product to flank the target.  If the primers are flagged as low quality,
+more optimal optimal primers may be found by specifying a specific size-range.
 
 head1 TO-DO
 
@@ -37,9 +63,13 @@ See the GMOD website for information on bug submission http://www.gmod.org.
 
 Email smckay@bcgsc.bc.ca
 
-=head1 CONTRIBUTORS
+=head1 SEE ALSO
+
+Bio::PrimerDesigner (www.cpan.org)
+primer3 (http://frodo.wi.mit.edu/primer3/primer3_code.html)
 
 =cut
+
 
 
 package Bio::Graphics::Browser::Plugin::PrimerDesigner;
@@ -139,7 +169,7 @@ sub dump {
     print "<head><link rel=stylesheet type=text/css".
 	" href=/gbrowse/gbrowse.css /></head>\n";
 
-    my @feats = $segment->features;
+    my @feats = $segment->contained_features;
     my $start  = $segment->start;
     my $end    = $segment->end;
     my $ref    = $segment->ref;
@@ -185,7 +215,7 @@ sub dump {
 					 -rows    => 4 );
 
 	# override stylesheet for table width
-	my $pixels = 300 + (int((@f/3) + 0.5) * 300) . 'px';
+	my $pixels = 400 + (int((@f/3) + 0.5) * 400) . 'px';
 	$checkbox =~ s/table/table style="width:$pixels"/;
 	$html .= h3( 'Select a feature to target (optional)...' . br. 
 		     $checkbox);
@@ -304,13 +334,14 @@ sub primer_results {
         # low primer pair quality warning
 	    if ( $r{$_} > 1 ) {
 		my $msg = "Primer-pair penalty (quality score) $r{$_}\\n" .
-                    "For best results, a primer-pair " .
-		    "should be quality score of < 1.\\nThe score for the pair is the " .
+                    "For best results, a primer-pair should have a quality " .
+		    "score of < 1.\\nThe score for the pair is the " .
 		    "the sum of the score for each individual primer.\\n" .
 		    "If the high score is due to a departure from optimal primer " .
-                    "GC-content or Tm, the primers are pobably OK to use.  " .
-                    "Otherwise, try adjusting the design " .
-		    "parameters (especially the product size-range).\\n";
+                    "GC-content or Tm, the primers are probably OK.  " .
+                    "Otherwise, more optimal primers can often be obtained " .
+		    "by adjusting the design parameters (especially the product " .
+                    "size-range).\\n";
 		$msg = "alert('$msg')";
 		$r{$_} = a( { -href => 'javascript:void(0)',
 			      -onclick => $msg }, b(font({-color=>'red'},$r{$_})));

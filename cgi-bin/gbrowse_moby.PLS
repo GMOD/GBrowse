@@ -50,7 +50,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.23 2004-01-02 19:43:53 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.24 2004-01-18 15:34:55 markwilkinson Exp $
 ###########################################################
 
 use MOBY::Client::Central;
@@ -324,7 +324,7 @@ sub init {
     print start_table();
     foreach my $SERVICE(@Services){
         
-            my $form= join "", (start_form(),
+            my $form= join "", (start_form(-action => url(-full)),
             hidden('namespace',$namespace[0]),
             hidden('id',$id),
             hidden('servicename',$SERVICE->name),
@@ -460,7 +460,7 @@ sub execute {
                 th({-align => 'left', -valign=>'top', -class=>'datatitle'},"ID: "),
                 td(b($short_namespace.":".$id),
                    "  ",
-                   start_form,
+                   start_form(-action => url(-full)),
                    hidden("object", $_->toString),
                    hidden("namespace", $namespace),
                    hidden("id",$id),
@@ -553,7 +553,7 @@ sub INITIALIZE {
     my $Central = MOBY::Client::Central->new();
     my $NameSpaces = $Central->retrieveNamespaces;
     my @Namespaces = sort keys(%{$NameSpaces});
-    print start_form,
+    print start_form(-action => url(-full)),
     "<h2>Select a namespace: ";
     print popup_menu(-name => 'namespace',
         '-values' => ["select", @Namespaces],

@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.60 2002-09-25 04:42:00 lstein Exp $
+# $Id: gbrowse.PLS,v 1.61 2002-10-02 02:48:23 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -101,6 +101,7 @@ use constant DEBUGGING_RECTANGLES => 0;
 #   source    symbolic name of database/configuration to use
 #   id        unique cookie-based ID for this user
 #   plugin    last accessed plugin
+#   ks        position of key (beneath or between)
 #   tracks    array ref which has one element for each track on the
 #               display.  The value of each element indicates what
 #               track to display in that position using the configuration
@@ -376,6 +377,8 @@ sub main_display {
 					 limit         => \%limit,
 					 do_map        => 1,
 					 do_centering_map => 1,
+					 lang          => $LANG,
+					 keystyle      => $page_settings->{ks},
 					);
       $cell .= $img;
     }
@@ -492,6 +495,7 @@ sub default_settings {
   $settings->{v}       = $VERSION;
   $settings->{stp}     = 1;
   $settings->{ins}     = 1;
+  $settings->{ks}      = 'between';
   set_default_tracks($settings);
 }
 
@@ -602,6 +606,7 @@ sub adjust_settings {
   $settings->{plugin} = param('plugin')                     if param('plugin');
   $settings->{stp}    = param('stp')                        if defined param('stp');
   $settings->{ins}    = param('ins')                        if defined param('ins');
+  $settings->{ks}     = param('keystyle')                   if defined param('keystyle');
 
   if (my @external = param('eurl')) {
     my %external = map {$_=>1} @external;
@@ -637,31 +642,34 @@ sub navigation_table {
   my $self  = url(-relative=>1,-path_info=>1);
   my $table = '';
   my $oligo = $PLUGINS->{'OligoFinder'} ? ', oligonucleotide (15 bp minimum)' : '';
+  my $help  =  a({-href=>general_help(),-target=>'help'},b('['.$LANG->tr('Help').']'));
 
   $table .= table({-border=>0, -width=>$settings->{width}},
 		  $settings->{ins} ?
 		  (
 		   TR({-class=>'searchbody'},
 		      td({-align=>'left', -colspan=>3},
-			 a({-href=>"$self?ins=0"},$LANG->tr('HIDE_INSTRUCTIONS')),
+			 b($LANG->tr('INSTRUCTIONS').': '),
+			 '['.a({-href=>"$self?ins=0"},$LANG->tr('HIDE')).']',
 			 $LANG->tr('SEARCH_INSTRUCTIONS',$oligo),
-			 show_examples()
+			 show_examples(),
+			 $help
 			)),
 		   TR({-class=>'searchbody'},
 		      td({-align=>'left', -colspan=>3},
 			 $LANG->tr('NAVIGATION_INSTRUCTIONS',bookmark_link($settings))
 			)),
-		  ) : 
+		  ) :
 		  (
 		   TR({-class=>'searchbody'},
 		      td({-align=>'left', -colspan=>3},
 			 a({-href=>"$self?ins=1"},$LANG->tr('SHOW_INSTRUCTIONS')),
-			 a({-href=>bookmark_link($settings)},'[bookmark this view]'))
+			 a({-href=>bookmark_link($settings)},'['.$LANG->tr('BOOKMARK').']'),$help)
 		     ),
 		  ),
 		  TR({-class=>'searchtitle', -align=>'left'},
 		     td({-class=>'searchtitle'}, b($LANG->tr('Landmark')),
-			textfield(-name=>'name',-size=>30),
+			textfield(-name=>'name',-size=>50),
 			submit(-name=>$LANG->tr('Go'))),
 		     td(submit(-name=>$LANG->tr('Reset'),-class=>'reset_button'))
 		    ),
@@ -785,22 +793,22 @@ sub settings_table {
 
   my @labels = @{$settings->{tracks}};
   my %labels = map {$_ => make_citation_link($_,$self_url) } @labels;
-  my @defaults = grep {$settings->{features}{$_}{visible}} @labels;
+  my @defaults = grep {$settings->{features}{$_}{visible}  } @labels;
 
   autoEscape(0);
   my $sTable 	= '';
   $sTable.= table({-border=>0,-width=>$settings->{width}},
 		  # row
 		  TR(
-		     th({-class=>'searchtitle', -colspan=>3, -align=>'left'},$LANG->tr('Display_Settings').':')
+		     th({-class=>'searchtitle', -colspan=>4, -align=>'left'},$LANG->tr('Display_Settings').':')
 		     ),
 		  # row
 		  $settings->{stp} ?
 		  (
 		   TR(	td({-class=>'searchbody', -valign=>'top',-align=>'right'},
-			   b($LANG->tr('Tracks'),a({-href=>"$self?stp=0"},'[Hide]')),
+			   b($LANG->tr('Tracks')),a({-href=>"$self?stp=0"},'['.$LANG->tr('HIDE').']'),
 			   p(i($LANG->tr('External_tracks')))),
-			td({-class=>'searchbody',-colspan=>2,-width=>'85%'},
+			td({-class=>'searchbody',-colspan=>3,-width=>'85%'},
 			   checkbox_group(-name=>'label',
 					  # use the track ordering to adjust the order of the checkboxes
 					  # this is an array slice
@@ -812,7 +820,7 @@ sub settings_table {
 					 ))),
 		  ) :
 		  TR(td({-class=>'searchbody',-colspan=>3},
-			b($LANG->tr('Tracks'),a({-href=>"$self?stp=1"},'[Show]')))
+			b($LANG->tr('Tracks')),a({-href=>"$self?stp=1"},'['.$LANG->tr('SHOW').']'))
 		    ),
 		  # row
 		  TR({-class=>'searchbody'},
@@ -821,6 +829,16 @@ sub settings_table {
 			radio_group( -name=>'width',
 				     -values=>\@widths,
 				     -default=>$settings->{width},
+				     -override=>1
+				   ),
+		       ),
+		     td(
+			b('Key Position'),
+			radio_group( -name=>'keystyle',
+				     -values=>['between','bottom'],
+				     -labels=>{between=>$LANG->tr('BETWEEN'),
+					       bottom =>$LANG->tr('BENEATH')},
+				     -default=>$settings->{ks},
 				     -override=>1
 				   ),
 		       ),
@@ -852,7 +870,7 @@ sub upload_table {
     . TR(
 	 th({-class=>'datatitle', -colspan=>3, -align=>'left'},
 	    $LANG->tr('Upload_title').':',
-	    a({-href=>annotation_help(),-target=>'help'},'[Help]'))
+	    a({-href=>annotation_help(),-target=>'help'},'['.$LANG->tr('HELP').']'))
 	);
 
   # now add existing files
@@ -1284,9 +1302,7 @@ sub show_examples {
   my $url    = url(-relative=>1,-path_info=>1);
   my $source = $CONFIG->source;
   my @urls = map { a({-href=>"$url?source=$source;name=".escape($_)},$_) } @examples;
-  return b($LANG->tr('Examples')).': '.join(', ',@urls) .
-    '.  '.a({-href=>general_help(),-target=>'help'},
-	    b('['.$LANG->tr('Help').']'));
+  return b($LANG->tr('Examples')).': '.join(', ',@urls).". ";
 }
 
 sub debugging_rectangles {
@@ -1854,6 +1870,21 @@ sub help {
   print div({-align=>'RIGHT'},$do_close);
 }
 
+
+sub make_citation {
+  my $config  = shift;
+  my $feature = shift;
+  my $citation = $config->citation($feature,$LANG);
+  # BUG: here's where we should remove "bad" HTML, but we don't!
+  # should remove active content and other nasties
+  (my $link     = $feature) =~ tr/ /-/;
+  my $text      = label2key($feature);
+  return join ('',
+	       dt(a({-name=>$link},b($text))),
+	       dd($citation||$LANG->tr('No_citation')),
+	       p());
+}
+
 # build a citation page
 sub build_citation_page {
   my $settings = shift;
@@ -1901,24 +1932,9 @@ sub build_citation_page {
 
 }
 
-sub make_citation {
-  my $config  = shift;
-  my $feature = shift;
-  my $citation = $config->citation($feature);
-  # BUG: here's where we should remove "bad" HTML, but we don't!
-  # should remove active content and other nasties
-  (my $link     = $feature) =~ tr/ /-/;
-  my $text      = $config->setting($feature=>'key') || $feature;
-  return join ('',
-	       dt(a({-name=>$link},b($text))),
-	       dd($citation||$LANG->tr('No_citation')),
-	       p());
-}
-
 sub build_help_page {
   my $helpfile = shift or return;
-  my $file = $ENV{MOD_PERL} ? Apache->request->lookup_uri($helpfile)->filename
-                            : "$ENV{DOCUMENT_ROOT}/$helpfile";
+  my $file = url2file($helpfile) or return;
   my $root = $CONFIG->setting('help') || GBROWSE_HELP;
   my $url  = url(-relative=>1);
   open(F,$file) or return;
@@ -1930,6 +1946,17 @@ sub build_help_page {
   }
   close F;
 }
+
+sub url2file {
+  my $url = shift;
+  for my $l ((map {"$url.$_"} $LANG->language), $url) {
+    my $file = $ENV{MOD_PERL} ? Apache->request->lookup_uri($l)->filename
+                              : "$ENV{DOCUMENT_ROOT}/$l";
+    return $file if -e $file;
+  }
+  return;
+}
+
 
 # get list of object types for help pages
 sub object_classes_for_help {
@@ -1949,20 +1976,31 @@ sub object_classes_for_help {
 # a group.  This makes for ugly logic branches.
 sub make_citation_link {
   my ($label,$self_url)   = @_;
-  my $key = $label;
-  my $link;
+  my ($link,$key);
   if ($label =~ /^plugin:/) {
+    $key = $label;
     my $about = escape($LANG->tr('About'));
     $link = url(-relative=>1) . "?plugin_action=$about;plugin=$PLUGIN_NAME2LABEL{$label}";
   } else {
-    $PRESETS ||= get_external_presets || {};
-    $key      = $CONFIG->setting($label=>'key') || $PRESETS->{$key} || $label;
+    $key = label2key($label);
     (my $anchor  = $label) =~ tr/ /-/;
     $link = $self_url.'#'.escapeHTML($anchor);
   }
   my @args = (-href=>$link,-target=>'citation');
   push @args,-style=>'Font-style: italic' if $label =~ /^(http|ftp|file):/;
   return a({@args},$key);
+}
+
+sub label2key {
+  my $label = shift;
+  my $key;
+  $PRESETS ||= get_external_presets || {};
+  for my $l ($LANG->language) {
+    $key     ||= $CONFIG->setting($label=>"key:$l");
+  }
+  $key     ||= $CONFIG->setting($label => 'key');
+  $key     ||= $PRESETS->{$key} || $label;
+  $key;
 }
 
 ### PLUGINS ###################################################################################
@@ -2202,9 +2240,9 @@ sub tableize {
 sub set_language {
   my ($config,$lang) = @_;
   my $default_language   = $config->setting('language');
-  my @http_languages     = http('Accept-language') =~ /([a-z]{2}-?[a-z]*)/ig;
-  my @languages = (@http_languages,$default_language);
-  warn "languages = @languages" if DEBUG;
+  my @languages     = http('Accept-language') =~ /([a-z]{2}-?[a-z]*)/ig;
+  push @languages,$default_language if $default_language;
+  warn "languages = ",join(',',@languages) if DEBUG;
   return unless @languages;
   $lang->language(@languages);
 }

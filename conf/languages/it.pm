@@ -1,5 +1,7 @@
 # do not remove the { } from the top and bottom of this page!!!
 {
+
+ CHARSET =>   'ISO-8859-1',
    #----------
    # MAIN PAGE
    #----------

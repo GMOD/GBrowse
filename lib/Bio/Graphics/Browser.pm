@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.38 2002-09-12 02:09:11 lstein Exp $
+# $Id: Browser.pm,v 1.39 2002-10-02 02:48:23 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -63,6 +63,7 @@ use CGI qw(img param escape url);
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use Text::Shellwords;
+use Bio::Graphics::Browser::I18n;
 
 require Exporter;
 
@@ -238,7 +239,7 @@ sub setting {
   if (@args == 1) {
     unshift @args,'general';
   } else {
-    $args[0] = 'general' 
+    $args[0] = 'general'
       if $args[0] ne 'general' && lc($args[0]) eq 'general';  # buglet
   }
   $self->config->setting(@args);
@@ -405,8 +406,17 @@ label.  It simply calls $browser->setting($label=>'citation');
 
 sub citation {
   my $self = shift;
-  my $label = shift;
-  $self->config->setting($label=>'citation');
+  my $label     = shift;
+  my $language  = shift;
+  my $config = $self->config;
+  my $c;
+  if ($language) {
+    for my $l ($language->language) {
+      $c ||= $config->setting($label=>"citation:$l");
+    }
+  }
+  $c ||= $config->setting($label=>'citation');
+  $c;
 }
 
 =head2 width()
@@ -548,15 +558,11 @@ sub render_html {
   my $do_map          = $args{do_map};
   my $do_centering_map= $args{do_centering_map};
   my $limit           = $args{limit};
+  my $lang            = $args{lang};
 
   return unless $segment;
 
-  my($image,$map,$panel) = $self->image_and_map(segment       => $segment,
-						feature_files => $feature_files,
-						options       => $options,
-						tracks        => $tracks,
-						limit         => $limit,
-					       );
+  my($image,$map,$panel) = $self->image_and_map(%args);
 
 
   my ($width,$height) = $image->getBounds;
@@ -722,6 +728,8 @@ sub image_and_map {
   my $tracks        = $config{tracks}        || [];
   my $options       = $config{options}       || {};
   my $limit         = $config{limit}         || {};
+  my $lang          = $config{lang};
+  my $keystyle      = $config{keystyle};
 
   # these are natively configured tracks
   my @labels = $self->labels;
@@ -740,8 +748,7 @@ sub image_and_map {
 	      -width     => $width,
 	      -keycolor  => 'moccasin',
 	      -grid      => 1,
-	      -key_style => $conf->setting(general=>'keystyle')
-	      || DEFAULT_KEYSTYLE,
+	      -key_style => $keystyle || $conf->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
 	      -empty_tracks => $conf->setting(general=>'empty_tracks')
 	      || DEFAULT_EMPTYTRACKS
 	     );
@@ -770,14 +777,14 @@ sub image_and_map {
     # is marked as being a "global feature", then we apply the glyph to the entire segment
     if ($conf->setting($label=>'global feature')) {
       $panel->add_track($segment,
-			$conf->style($label)
+			$conf->i18n_style($label,$lang),
 			);
     }
 
     else {
       my $track = $panel->add_track(-glyph => 'generic',
 				    # -key   => $label,
-				    $conf->style($label,$length),
+				    $conf->i18n_style($label,$lang,$length),
 				   );
       $tracks{$label}  = $track;
     }
@@ -827,15 +834,6 @@ sub image_and_map {
     for my $label (keys %tracks) {
       next unless $feature_count{$label};
 
-      # break encapsulation -- but this is for testing purposes only
-      if (exists($limit->{$label}) && $limit->{$label} > 0) {
-	my $parts = $tracks{$label}->{parts};
-	splice (@$parts,rand(@$parts),1,())
-	  while @$parts > $limit->{$label};
-	$feature_count{$label} = $limit->{$label} if $limit->{$label} < $feature_count{$label};
-	$tracks{$label}->{parts} = $parts;
-      }
-
       $options->{$label} ||= 0;
       my $conf_label        = $conf->code_setting($label => 'label');
       $conf_label           = 1 unless defined $conf_label;
@@ -845,8 +843,10 @@ sub image_and_map {
 
       my $conf_description  = $conf->code_setting($label => 'description');
       $conf_description     = 0 unless defined $conf_description;
+      my $count = $feature_count{$label};
+      $count    = $limit->{$label} if $limit->{$label} && $limit->{$label} < $count;
       my $do_bump  = $options->{$label} == 0 
-                     ? $feature_count{$label} <= $max_bump && $conf_bump
+                     ? $count <= $max_bump && $conf_bump
 	             : $options->{$label} == 1 ? 0
                      : $options->{$label} == 2 ? 1
                      : $options->{$label} == 3 ? 1
@@ -868,6 +868,7 @@ sub image_and_map {
 				 -description => $do_description,
 				);
       $tracks{$label}->configure(-connector  => 'none') if !$do_bump;
+      $tracks{$label}->configure(-bump_limit => $limit->{$label}) if $limit->{$label} > 0;
     }
   }
 
@@ -1535,6 +1536,35 @@ sub make_title {
 
   return $title;
 }
+
+# return language-specific options
+sub i18n_style {
+  my $self      = shift;
+  my ($label,$lang,$length) = @_;
+  my $charset   = $lang->tr('CHARSET');
+
+  # GD can't handle non-ASCII/LATIN scripts transparently
+  return $self->style($label,$length) if $charset && $charset !~ /^(us-ascii|iso-8859)/i;
+
+  my @languages = $lang->language;
+
+  push @languages,'';
+  # ('fr_CA','fr','en_BR','en','')
+
+  my $idx = 1;
+  my %priority = map {$_=>$idx++} @languages;
+  # ('fr-ca'=>1, 'fr'=>2, 'en-br'=>3, 'en'=>4, ''=>5)
+
+  my %options  = $self->style($label,$length);
+  my %lang_options = map { $_->[1] => $options{$_->[0]} }
+  sort { $b->[2]<=>$a->[2] }
+  map { my ($option,undef,$lang) = /^(-[^:]+)(:(\w+))?$/; [$_ => $option, $priority{$lang}||99] }
+  keys %options;
+
+  %lang_options;
+}
+
+__END__
 
 
 =head1 SEE ALSO

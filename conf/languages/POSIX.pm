@@ -1,7 +1,7 @@
 # do not remove the { } from the top and bottom of this page!!!
 {
 
- CHARSET =>   'us-ascii',
+ CHARSET =>   'ISO-8859-1',
 
    #----------
    # MAIN PAGE
@@ -30,11 +30,17 @@ END
 
    SHOWING_FROM_TO => 'Showing %s from %s, positions %s to %s',
 
-   HIDE_INSTRUCTIONS => '[hide instructions]',
+   INSTRUCTIONS      => 'Instructions',
+
+   HIDE              => 'Hide',
+
+   SHOW              => 'Show',
 
    SHOW_INSTRUCTIONS => '[show instructions]',
 
    LANDMARK => 'Landmark or Region',
+
+   BOOKMARK => 'bookmark this view',
 
    GO       => 'Go',
 
@@ -81,6 +87,10 @@ END
    EDIT_TITLE => 'Enter/Edit Annotation data',
 
    IMAGE_WIDTH => 'Image Width',
+
+   BETWEEN     => 'Between',
+
+   BENEATH     => 'Beneath',
 
    SET_OPTIONS => 'Set Track Options...',
 

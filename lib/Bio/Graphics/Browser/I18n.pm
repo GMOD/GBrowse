@@ -1,7 +1,10 @@
 package Bio::Graphics::Browser::I18n;
 
-# $Id: I18n.pm,v 1.6 2002-09-25 04:39:21 lstein Exp $
+# $Id: I18n.pm,v 1.7 2002-10-02 02:48:23 lstein Exp $
 # $Log: not supported by cvs2svn $
+# Revision 1.6  2002/09/25 04:39:21  lstein
+# folded in character set support
+#
 # Revision 1.5  2002/09/12 01:58:43  lstein
 # added undocumented support for non-bp units and fixed language handling
 #
@@ -36,7 +39,15 @@ sub dir {
 sub language {
   my $self = shift;
   my $d    = $self->{lang};
-  $self->{lang} = [@_] if @_;  # probably could use \@_ here
+  if (@_) {
+    my @lang = ();
+    for my $l (map {lc $_} @_) {  # lowercase all
+      push @lang,$l;
+      (my $bare = $l) =~ s/-\w+$//;
+      push @lang,$bare if $bare ne $l;
+    }
+    $self->{lang} = \@lang;
+  }
   @$d;
 }
 
@@ -68,10 +79,6 @@ sub read_table {
   my $language  = shift;
   my $path = join '/',$self->dir,"$language.pm";
   my $table = eval "require '$path'";
-  unless ($table) {  # try removing the -br part
-    $path =~ s/-\w+\.pm$/.pm/;
-    $table = eval "require '$path'";
-  }
   $table;
 }
 

@@ -93,7 +93,6 @@ lib/Bio/DB/Das/BioSQL/Segment.pm
 lib/Bio/DB/Das/Chado.pm
 lib/Bio/DB/Das/Chado/Segment/Feature.pm
 lib/Bio/DB/Das/Chado/Segment.pm
-lib/Bio/DB/Das/sql.notes
 lib/Bio/DB/Gadfly/Adaptor.pm
 lib/Bio/DB/Gadfly/Segment.pm
 lib/Bio/DB/GFF/Aggregator/coding.pm

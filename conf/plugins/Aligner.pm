@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::Aligner;
-# $Id: Aligner.pm,v 1.3 2003-05-28 20:44:15 lstein Exp $
+# $Id: Aligner.pm,v 1.4 2003-06-23 01:00:28 lstein Exp $
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use CGI qw(table a TR td th p popup_menu radio_group checkbox checkbox_group h1 h2 pre);
@@ -11,7 +11,7 @@ use constant DEBUG => 0;
 use constant DEFAULT_RAGGED_ENDS => (0,10,25,50,100,150,500);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.10';
+$VERSION = '0.20';
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
 use constant TARGET    => 0;
@@ -44,7 +44,9 @@ sub init {
   $self->{ragged}     = \@ragged;
 
   $self->{upcase_default} = $browser_conf->plugin_setting('upcase_default');
-  $self->{align_default}  = [shellwords($browser_conf->plugin_setting('align_default'))];
+  $self->{align_default}  = $browser_conf->plugin_setting('align_default')
+                           ? [shellwords($browser_conf->plugin_setting('align_default'))]
+			   : \@alignable;
   $self->{ragged_default} = $browser_conf->plugin_setting('ragged_default');
 
 }
@@ -299,3 +301,81 @@ sub reversec {
 
 1;
 
+__END__
+
+=head1 NAME
+
+Bio::Graphics::Browser::Plugin::Aligner - Dump multiple alignments from GBrowse
+
+=head1 SYNOPSIS
+
+In the appropriate gbrowse configuration file:
+
+ plugins = Aligner
+
+ # and later
+ [Aligner:plugin]
+ alignable_tracks   = EST
+ upcase_tracks      = CDS Motifs
+ upcase_default     = CDS
+
+=head1 DESCRIPTION
+
+The Aligner plugin dumps multiple nucleotide-to-nucleotide alignments
+in text form.  For it to work properly, the genomic DNA must be
+loaded, as well as the DNAs for each of the aligned objects.  In
+addition, the GFF load file must represent both the source and the
+target of the alignment using the Target notation.  For example:
+
+  ctgA  est  match  1050  3202  .  +  .  Target EST:agt830.5 1 554
+  ctgA  est  HSP    1050  1500  .  +  .  Target EST:agt830.5 1 451
+  ctgA  est  HSP    3000  3202  .  +  .  Target EST:agt830.5 452 654
+
+=head1 OPTIONS
+
+The following options are recognized.  They must be placed into a
+configuration file section named [Aligner:plugin].
+
+ Option             Description
+
+ alignable_tracks   Space-delimited list of tracks to include in
+                    the multiple alignment. The genome is always
+                    included. If this option is not present, then
+                    gbrowse will automatically include any track
+                    that has the "draw_target" option set.
+
+ upcase_tracks      Space-delimited list of tracks that will be used
+                    to UPCASE the genomic DNA. This is very useful if
+                    you want to embed the positions of coding regions
+                    or other features inside the multiple alignment.
+                    Uppercasing will not be turned on by default. The
+                    user must press the "Configure" button, and select
+                    which of the uppercase tracks are to be activated
+                    from a radiolist.
+ upcase_default     A space-delimited list of tracks that will be uppercased
+                    by default.
+
+
+ ragged_default     A small integer indicating that the aligner should
+                    include some unaligned bases from the end of each sequence.
+                    This is useful for seeing the sequencing primer or cloning
+                    site in ESTs.
+
+=head1 BUGS
+
+None known yet.
+
+=head1 SEE ALSO
+
+L<Bio::Graphics::Browser::Plugin>
+
+=head1 AUTHOR
+
+Lincoln Stein E<lt>lstein@cshl.orgE<gt>.
+
+Copyright (c) 2001 Cold Spring Harbor Laboratory.
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.76 2003-06-22 02:52:42 lstein Exp $
+# $Id: Browser.pm,v 1.77 2003-06-23 01:00:29 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -935,14 +935,16 @@ sub image_and_map {
       next unless $feature_count{$label};
 
       $options->{$label} ||= 0;
-      my $conf_label        = $conf->code_setting($label => 'label');
+      my $conf_label        = $conf->semantic_setting($label => 'label',$length);
       $conf_label           = 1 unless defined $conf_label;
 
-      my $conf_description  = $conf->code_setting($label => 'description');
+      my $conf_description  = $conf->semantic_setting($label => 'description',$length);
       $conf_description     = 0 unless defined $conf_description;
 
-      my $conf_bump         = $conf->code_setting($label => 'bump');
+      my $conf_bump         = $conf->semantic_setting($label => 'bump',$length);
 
+      # I don't think it makes sense for the max bump and max label settings to be
+      # under the control of semantic zooming, so we call non-semantic code_setting() here.
       my $maxb              = $conf->code_setting($label => 'bump density');
       $maxb                 = $max_bump unless defined $maxb;
 
@@ -1524,6 +1526,15 @@ sub style {
   my ($self,$label,$length) = @_;
   my $l = $self->semantic_label($label,$length);
   return $l eq $label ? $self->SUPER::style($l) : ($self->SUPER::style($label),$self->SUPER::style($l));
+}
+
+# like code_setting, but obeys semantic hints
+sub semantic_setting {
+  my ($self,$label,$option,$length) = @_;
+  my $slabel = $self->semantic_label($label,$length);
+  my $val = $self->code_setting($slabel => $option) if defined $slabel;
+  return $val if defined $val;
+  return $self->code_setting($label => $option);
 }
 
 sub semantic_label {

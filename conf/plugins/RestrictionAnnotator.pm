@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::RestrictionAnnotator;
-# $Id: RestrictionAnnotator.pm,v 1.9 2003-05-19 17:25:44 lstein Exp $
+# $Id: RestrictionAnnotator.pm,v 1.10 2003-06-23 01:00:28 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -123,3 +123,60 @@ sub configure_enzymes {
 
 1;
 
+__END__
+
+=head1 NAME
+
+Bio::Graphics::Browser::Plugin::RestrictionAnnotator - Generate a restriction map track in GBrowse
+
+=head1 SYNOPSIS
+
+In the appropriate gbrowse configuration file:
+
+ plugins = RestrictionAnnotator
+
+=head1 DESCRIPTION
+
+The RestrictionAnnotator plugin generates a series of automatic tracks
+showing restriction enzyme cut sites.  For it to work properly, the
+genomic DNA must be loaded.
+
+=head1 OPTIONS
+
+There are now config file options.  The list of enzymes and their cut
+sites is contained in APACHE_CONFIG/gbrowse.conf/enzymes.txt, where
+APACHE_CONFIG is your Apache configuration directory.  It is
+straightforward to add new enzymes.  The format is:
+
+ <enzyme name>   <recognition site>   <cut site position>
+
+For example, the entry for EcoRI is
+
+  EcoRI	GAATTC	1
+
+The "1" means that EcoRI will be cleaved at position 1, where
+positions are BETWEEN the bases starting with 0:
+
+  0 1 2 3 4 5 6
+   G A A T T C
+
+The recognition site can be a regular expression.
+
+=head1 BUGS
+
+None known yet.
+
+=head1 SEE ALSO
+
+L<Bio::Graphics::Browser::Plugin>
+
+=head1 AUTHOR
+
+Lincoln Stein E<lt>lstein@cshl.orgE<gt>.
+
+Copyright (c) 2001 Cold Spring Harbor Laboratory.
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut

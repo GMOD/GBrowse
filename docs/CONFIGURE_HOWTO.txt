@@ -761,16 +761,17 @@ The following common options are recognized:
    replaced at run time with the information relating to the selected
    annotation.  Recognized variables include:
 
-     $name     The feature's name (group name)
-     $class    The feature's class (group class)
-     $method   The feature's method
-     $source   The feature's source
-     $ref      The name of the sequence segment (chromosome, contig) 
-		  on which this feature is located
-     $start    The start position of this feature, relative to $ref
-     $end      The end position of this feature, relative to $ref
-     $segstart The left end of $ref displayed in the detailed view
-     $segend   The right end of $ref displayed in the detailed view
+     $name        The feature's name (group name)
+     $class       The feature's class (group class)
+     $method      The feature's method
+     $source      The feature's source
+     $ref         The name of the sequence segment (chromosome, contig) 
+		    on which this feature is located
+     $description The feature's description (notes)
+     $start       The start position of this feature, relative to $ref
+     $end         The end position of this feature, relative to $ref
+     $segstart    The left end of $ref displayed in the detailed view
+     $segend      The right end of $ref displayed in the detailed view
 
    For example, the wormbase.conf file uses this link rule:
 
@@ -1001,6 +1002,8 @@ background colors.  The most popular glyph types are:
 			or the other end of the feature is off-screen, the
 			base will be replaced by an arrow.
 
+  box                   another rectangle; doesn't show subparts of features
+
   cds                   shows the reading frame of spliced transcripts; used
                         in conjunction with the "coding" aggregator.
 
@@ -1034,6 +1037,8 @@ background colors.  The most popular glyph types are:
 			schema). Used in conjunction with the
 			"wormbase_gene" aggregator.
 
+  xyplot                histograms and line plots
+
 A more definitive list of glyph options can be found in the
 Bio::Graphics manual pages.  Consult the manual pages for the
 following modules:
@@ -1041,8 +1046,10 @@ following modules:
   Glyph				Manual Page
   -----                         -----------
 
+  (common options for all)      Bio::Graphics::Glyph
   arrow				Bio::Graphics::Glyph::arrow
   anchored_arrow		Bio::Graphics::Glyph::anchored_arrow
+  box				Bio::Graphics::Glyph::box
   cds				Bio::Graphics::Glyph::cds
   crossbox			Bio::Graphics::Glyph::crossbox
   diamond			Bio::Graphics::Glyph::diamond
@@ -1050,20 +1057,23 @@ following modules:
   dot                           Bio::Graphics::Glyph::dot
   ellipse			Bio::Graphics::Glyph::ellipse
   extending_arrow		Bio::Graphics::Glyph::extending_arrow
-  generic			Bio::Graphics::Glyph
+  generic			Bio::Graphics::Glyph::generic
   graded_segments		Bio::Graphics::Glyph::graded_segments
   heterogeneous_segments	Bio::Graphics::Glyph::heterogeneous_segments
   line				Bio::Graphics::Glyph::line
   primers			Bio::Graphics::Glyph::primers
+  processed_transcript		Bio::Graphics::Glyph::processed_transcript
   rndrect			Bio::Graphics::Glyph::rndrect
   ruler_arrow			Bio::Graphics::Glyph::ruler_arrow
   segments			Bio::Graphics::Glyph::segments
+  span				Bio::Graphics::Glyph::span
   toomany			Bio::Graphics::Glyph::toomany
   transcript			Bio::Graphics::Glyph::transcript
   transcript2			Bio::Graphics::Glyph::transcript2
   translation			Bio::Graphics::Glyph::translation
   triangle			Bio::Graphics::Glyph::triangle
-  wormbase_transcript		Bio::Graphics::Glyph::wormbase_transcript
+  wormbase_transcript           Bio::Graphics::Glyph::wormbase_transcript
+  xyplot                        Bio::Graphics::Glyph::xyplot
 
 The "perldoc" command is handy for reading the documentation from the
 Unix command line.  For example:

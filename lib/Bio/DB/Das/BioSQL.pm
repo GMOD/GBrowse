@@ -197,9 +197,9 @@ sub get_feature_by_name
 								 END
 								 CLASS
 								 VERSION)],@_);
-  my $seq = $self->biosql->fetch_Seq_by_accession($name);
-  return unless $seq;
-  return $self->_segclass->new(-bioseq => $seq, -dbadaptor => $self);
+  my @seq = $self->biosql->fetch_Seq_by_accession($name);
+  return unless @seq;
+  return map {$self->_segclass->new(-bioseq => $_, -dbadaptor => $self)} @seq;
 }
 
 sub segment {
@@ -207,10 +207,10 @@ sub segment {
   my ($name,$start,$end,$class,$version, $absolute) =
     $self->_rearrange([qw(NAME START END CLASS VERSION ABSOLUTE)],@_);
 
-  my $seq = $self->biosql->fetch_Seq_by_accession($name);
+  my @seq = $self->biosql->fetch_Seq_by_accession($name);
   
-  return unless $seq;
-  return $self->_segclass->new(-bioseq => $seq, -dbadaptor => $self, -start => $start, -end => $end, -absolute => $absolute);
+  return unless @seq;
+  return map {$self->_segclass->new(-bioseq => $_, -dbadaptor => $self, -start => $start, -end => $end, -absolute => $absolute)} @seq;
 }
 
 

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.130 2004-03-18 20:13:11 lstein Exp $
+# $Id: Browser.pm,v 1.131 2004-03-18 20:14:11 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1478,7 +1478,7 @@ sub _all_types {
   my $db    = shift;
   return $self->{_all_types} if exists $self->{_all_types}; # memoize
   my %types = map {$_=>1} map {$self->label2type($_)} $self->labels;
-  $types{$_->method}++ foreach grep {defined $_->method} eval {$db->aggregators};
+  defined($_->method) && $types{$_->method}++ foreach eval {$db->aggregators};
   return $self->{_all_types} = \%types;
 }
 

@@ -72,7 +72,7 @@ http://www.biodas.org/download/Bio::Das/Bio-Das-0.92.tar.gz
 
 Needed by gbrowse_moby to fetch and display data from MOBY providers.
 Available from biomoby.org; obtain via anonymous cvs until it is released.
-Directions are at http://www.biomoby.org/cvs_checkout.html.
+Directions are at http://www.biomoby.org/GettingTheCode.html.
 
 =item J) GD::SVG
 

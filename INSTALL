@@ -57,7 +57,7 @@ Generic Genome Browser Installation
         Needed by gbrowse_moby to fetch and display data from MOBY
         providers. Available from biomoby.org; obtain via anonymous cvs
         until it is released. Directions are at
-        http://www.biomoby.org/cvs_checkout.html.
+        http://www.biomoby.org/GettingTheCode.html.
 
     J) GD::SVG
         To save images as publication-quality editable images in Scalar

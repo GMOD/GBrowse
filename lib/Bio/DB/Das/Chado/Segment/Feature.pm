@@ -32,7 +32,7 @@ use vars qw($VERSION @ISA $AUTOLOAD);
 
 $VERSION = '0.12';
 
-use overload '""'   => 'asString';
+use overload '""' => 'asString';
 
 =head2 new
 
@@ -712,7 +712,6 @@ sub subfeatures {
  Args    : a feature method (optional)
  Status  : Public
 
-
 =cut
 
 sub sub_SeqFeature {
@@ -905,7 +904,8 @@ with sub_SeqFeature().
 
 sub sub_types {
   my $self = shift;
-  my $subfeat = $self->{subfeatures} or return;
+  $self->warn("this method appears to be broken, check subfeatures() return value");
+  my $subfeat = $self->subfeatures or return;
   return keys %$subfeat;
 }
 
@@ -967,6 +967,8 @@ sub adjust_bounds {
   my $self = shift;
   my $g = $self->{group};
 
+  $self->warn("this method appears to be broken, check subfeatures() return value");
+
   if (my $subfeat = $self->{subfeatures}) {
     for my $list (values %$subfeat) {
       for my $feat (@$list) {
@@ -998,7 +1000,7 @@ sub adjust_bounds {
     }
   }
 
-  ($self->{start},$self->{stop},$self->strand);
+  ( $self->start(),$self->stop(),$self->strand() );
 }
 
 =head2 sort_features()
@@ -1072,14 +1074,14 @@ sub attributes {
 sub synonyms {
   #returns an array with synonyms
   my $self = shift;
-  my $dbh = $self->{factory}->{dbh};
+  my $dbh = $self->factory->dbh();
  
   my $sth = $dbh->prepare("
     select s.name from synonym s, feature_synonym fs
     where ? = fs.feature_id and
           fs.synonym_id = s.synonym_id
   ");
-  $sth->execute($self->{feature_id}) or $self->throw("synonym query failed");
+  $sth->execute($self->feature_id()) or $self->throw("synonym query failed");
  
   my $name = $self->display_name;
   my @synonyms;
@@ -1089,6 +1091,5 @@ sub synonyms {
 
   return @synonyms;
 }
-
 
 1;

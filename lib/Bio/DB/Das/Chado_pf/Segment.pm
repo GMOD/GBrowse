@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.4 2002-12-02 22:25:21 scottcain Exp $
+# $Id: Segment.pm,v 1.5 2002-12-03 03:22:54 scottcain Exp $
 
 =head1 NAME
 
@@ -99,8 +99,6 @@ package Bio::DB::Das::Chado_pf::Segment;
 use strict;
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
-#use DBI;
-#use DBD::Pg;
 use constant DEBUG => 1;
 
 use vars '@ISA','$VERSION';
@@ -114,12 +112,12 @@ sub new {
   my $self = shift;
   my ($name,$dbadaptor,$start,$end) = @_;
 
-  return if (defined $start && $start < 1);
+  throw("start value less than 1\n") if (defined $start && $start < 1);
   $start ||= 1;
 
 #can I cache this value?
   my $length = $self->length;
-  return if (defined $end && $end >= $length);
+  throw("end value greater than length\n") if (defined $end && $end >= $length);
   $end ||= $length;
 
   return $self;
@@ -137,7 +135,7 @@ sub new {
 
 =cut
 
-sub seq_id {  shift->{bioseq}->accession; }
+sub seq_id {  shift->name; }
 
 =head2 start
 
@@ -186,8 +184,11 @@ Returns the length of the segment.  Always a positive number.
 
 sub length {
 
-  my $quoted_name = $dbadaptor->quote($self->$name);
-  my $sth = $dbadaptor->prepare ("
+  if (self->length) {
+    return self->length;
+  } else {
+    my $quoted_name = $dbadaptor->quote($self->$name);
+    my $sth = $dbadaptor->prepare ("
      select seqlen from feature where feature_id in  
        (select f.feature_id
         from dbxref dbx, feature f, feature_dbxref fd
@@ -195,10 +196,11 @@ sub length {
            f.feature_id = fd.feature_id and
            fd.dbxref_id = dbx.dbxref_id and
            dbx.accession = $name) ");
-  $sth->execute or return;
+    $sth->execute or return;
 
-  my $hash_ref = $sth->fetchrow_hashref;
-  return $$hash_ref{'seqlen'};
+    my $hash_ref = $sth->fetchrow_hashref;
+    return $$hash_ref{'seqlen'};
+  }
 }
 
 =head2 features
@@ -309,8 +311,11 @@ Returns the sequence for this segment as a simple string.
 
 sub seq {
   my $self = shift;
-  $self->bioseq->subseq($self->start,$self->end);
+
+
+   #sql to get the sequence
 }
+
 
 =head2 factory
 

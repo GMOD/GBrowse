@@ -67,6 +67,7 @@ htdocs/images/help/track+settings.gif
 htdocs/images/help/upload+edit.gif
 htdocs/images/help/upload+remote.gif
 htdocs/images/help/upload.gif
+lib/Bio/DB/GFF/Aggregator/coding.pm
 lib/Bio/DB/GFF/Aggregator/waba_alignment.pm
 lib/Bio/DB/GFF/Aggregator/wormbase_gene.pm
 lib/Bio/Graphics/Browser.pm

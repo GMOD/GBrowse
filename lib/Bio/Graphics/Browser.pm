@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.25 2002-06-26 05:31:50 lstein Exp $
+# $Id: Browser.pm,v 1.26 2002-07-04 15:49:43 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -126,7 +126,7 @@ sub read_configuration {
     $basename =~ s/^\d+\.//;
     next if defined($self->{conf}{$basename}{mtime})
       && ($self->{conf}{$basename}{mtime} >= $mtimes{$file});
-    my $config = Bio::Graphics::BrowserConfig->new(-file => $file) or next;
+    my $config = Bio::Graphics::BrowserConfig->new(-file => $file,-safe=>1) or next;
     $self->{conf}{$basename}{data}  = $config;
     $self->{conf}{$basename}{mtime} = $mtimes{$file};
     $self->{source} ||= $basename;
@@ -1374,9 +1374,17 @@ sub make_title {
 
   $title ||= eval {
     if ($feature->method =~ /^(similarity|alignment)$/i) {
-      $feature->seq_id.":".$feature->start."..".$feature->stop.' '.$feature->info.":".$feature->target->start."..".$feature->target->end;
+      $feature->seq_id||''.":".
+	$feature->start."..".
+	  $feature->end.' '.
+	    $feature->info||''.":".
+	      $feature->target->start."..".$feature->target->end;
     } else {
-      $feature->class .":".$feature->info . " ".$feature->seq_id.':'.$feature->start."..".$feature->stop;
+      $feature->class||'' .":".
+	$feature->info||'' . " ".
+	  $feature->seq_id||''.':'.
+	    $feature->start."..".
+	      $feature->end;
     }
   };
 

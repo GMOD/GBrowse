@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.41 2002-06-30 20:29:26 lstein Exp $
+# $Id: gbrowse.PLS,v 1.42 2002-07-04 15:49:43 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -618,7 +618,7 @@ sub navigation_table {
 		     td({-align=>'LEFT'},
 			$segment ? ('Scroll/Zoom: ',slidertable($segment,$buttonsDir)) : ''
 		       ),
-		     td(submit(-name=>'Reset'))
+		     td(submit(-name=>'Reset',-class=>'reset_button'))
 		    ));
 }
 
@@ -1905,7 +1905,8 @@ sub plugin_and_data_source_table {
 			  popup_menu(-name   => 'source',
 				     -values => [sort $CONFIG->sources],
 				     -labels => { map {$_ => $CONFIG->description($_)} $CONFIG->sources},
-				     -default => $CONFIG->source
+				     -default => $CONFIG->source,
+                                     -onChange => 'document.mainform.submit()',
 				    )
 			 : '&nbsp;')
 		      )

@@ -228,7 +228,9 @@ as indicated by the group field, Chr1 has class "Sequence" and name
 
 It is suggested that you use "Sequence" as the class name for all
 reference sequences, since this is the default class used by the
-Bio::DB::GFF module when no more specific class is requested.
+Bio::DB::GFF module when no more specific class is requested.  If you
+use a different class name, then be sure to indicate that fact with
+the "reference class" option (see below).
 
 =head2 A4. Sequence alignments
 

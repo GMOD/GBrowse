@@ -21,7 +21,7 @@ use Bio::SeqFeatureI;
 use Bio::Root::Root;
 use Bio::LocationI;
 
-use constant DEBUG => 0;
+use constant DEBUG => 1;
 
 use vars qw($VERSION @ISA $AUTOLOAD);
 @ISA = qw(Bio::DB::Das::Chado::Segment Bio::SeqFeatureI 
@@ -217,11 +217,11 @@ sub sub_SeqFeature {
 #  print "$parent_id\n";
 #  print "$handle\n";
 
-  $self->{factory}->{dbh}->trace(2) if DEBUG;
+  $self->{factory}->{dbh}->trace(2);# if DEBUG;
 
   my $sth = $self->{factory}->{dbh}->prepare("
  select child.feature_id, child.name, child.type_id, parent.name as pname,
-           childloc.min, childloc.max, childloc.strand, childloc.phase
+           childloc.fmin, childloc.fmax, childloc.strand, childloc.phase
     from feature as parent
     inner join
       feature_relationship as fr0 on
@@ -237,14 +237,14 @@ sub sub_SeqFeature {
     ");
   $sth->execute or $self->throw("subfeature query failed"); 
 
-  $self->{factory}->{dbh}->trace(0) if DEBUG;
+  $self->{factory}->{dbh}->trace(0);# if DEBUG;
 
   my @features;
-  my %termname = %{$self->{factory}->{cvtermname}};
+  my %termname = %{$self->{factory}->{cvname}};
   while (my $hashref = $sth->fetchrow_hashref) {
 
-    my $stop  = $$hashref{max};
-    my $start = $$hashref{min};
+    my $stop  = $$hashref{fmax};
+    my $start = $$hashref{fmin};
 
     my $feat = Bio::DB::Das::Chado::Segment::Feature->new (
                        $self->{factory},

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.27 2003-03-19 21:39:39 scottcain Exp $
+# $Id: Segment.pm,v 1.28 2003-04-24 20:15:47 scottcain Exp $
 
 =head1 NAME
 
@@ -41,6 +41,18 @@ Segment.pm may need to create a segment out of something else.
                                        );
 
 =head1 DESCRIPTION
+
+Note that there is currently a hack in Segment.pm to make it work with
+chado/gadfly: the search space for names of segments is in a small
+table named gbrowse_assembly, which contains only chromosome arms,
+as extracted directly from the feature table.  This is done because
+gbrowse generally only creates segments out of a large reference
+sequence (like an arm), and there is no good, fast way to look up
+arm names in chado: the feature table is too big (affecting performance
+of a common command), and the synonym tables does not contain arm
+names.  In order for Segment.pm to be a general chado tool, this 
+will have to be addressed, as it is possible that another use of 
+Segment.pm may need to create a segment out of something else.
 
 Bio::DB::Das::Chado::Segment is a simplified alternative interface to
 sequence annotation databases used by the distributed annotation
@@ -105,9 +117,12 @@ use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
 use constant DEBUG => 1;
 
-use vars '@ISA','$VERSION';
+use vars '@ISA','$VERSION','$ASSEMBLY_TYPE';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI);
 $VERSION = 0.02;
+$ASSEMBLY_TYPE = 'arm'; #this should really be set in a config file
+                        # well, it shouldn't really need to be anywhere, 
+                        # it is just a speed hack
 
 # construct a virtual segment that works in a lazy way
 sub new {
@@ -131,6 +146,8 @@ sub new {
 
   warn "$quoted_name\n" if DEBUG;
 
+  my $cvterm_id = $factory->{cvterm_id};
+
   my $sth = $factory->{dbh}->prepare ("
              select name,feature_id,seqlen from gbrowse_assembly
              where lower(name) = $quoted_name  ");
@@ -141,7 +158,6 @@ sub new {
 
     warn "executed\n" if DEBUG;
 
-  $quoted_name = $factory->{dbh}->quote($name);
   my $hash_ref = {};
   my $length;
   my $rows_returned = $sth->rows;
@@ -170,7 +186,7 @@ sub new {
     my $landmark_feature_id = $$hash_ref{'feature_id'};
 
     $sth = $factory->{dbh}->prepare ("
-       select ga.name,ga.feature_id,ga.seqlen,fl.min,fl.max
+       select ga.name,ga.feature_id,ga.seqlen,fl.fmin,fl.fmax
        from gbrowse_assembly ga, featureloc fl
        where fl.feature_id = $landmark_feature_id and
              fl.srcfeature_id = ga.feature_id
@@ -184,9 +200,9 @@ sub new {
   my $srcfeature_id = $$hash_ref{'feature_id'};
   $name = $$hash_ref{'name'};
 
-  if ($$hash_ref{'min'}) {
-    $start = $$hash_ref{'min'};
-    $end   = $$hash_ref{'max'};
+  if ($$hash_ref{'fmin'}) {
+    $start = $$hash_ref{'fmin'};
+    $end   = $$hash_ref{'fmax'};
   }
 
     warn "length:$length, srcfeature_id:$srcfeature_id\n" if DEBUG;
@@ -356,15 +372,15 @@ sub features {
   my $sql_range;
   if ($rangetype eq 'contains') {
 
-    $sql_range = " fl.min >= $rstart and fl.max M= $rend ";
+    $sql_range = " fl.fmin >= $rstart and fl.fmax <= $rend ";
 
   } elsif ($rangetype eq 'contained_in') {
 
-    $sql_range = " fl.min <= $rstart and fl.max >= $rend ";
+    $sql_range = " fl.fmin <= $rstart and fl.fmax >= $rend ";
 
   } else { #overlaps is the default
 
-    $sql_range = " fl.min <= $rend and fl.max >= $rstart ";
+    $sql_range = " fl.fmin <= $rend and fl.fmax >= $rstart ";
 
   }
 
@@ -397,7 +413,7 @@ $self->{factory}->{dbh}->trace(1);
 
   $self->{factory}->{dbh}->do("set enable_seqscan=0");
   my $sth = $self->{factory}->{dbh}->prepare("
-    select distinct f.name,fl.min,fl.max,fl.strand,f.type_id,f.feature_id
+    select distinct f.name,fl.fmin,fl.fmax,fl.strand,f.type_id,f.feature_id
     from feature f, featureloc fl
     where
       $sql_types 
@@ -415,11 +431,15 @@ $self->{factory}->{dbh}->trace(0);
 #check if the type id is 'alignment hsp' and find/create the parent
 #'alignment hit' object; otherwise do normal stuff
 
-  my %termname = %{$self->{factory}->{cvtermname}};
+  my %termname = %{$self->{factory}->{cvname}};
   while (my $hashref = $sth->fetchrow_hashref) {
 
-    my $stop  = $$hashref{max};
-    my $start = $$hashref{min};
+    foreach my $key (keys %$hashref) {
+      warn "keys:$key, $$hashref{$key}\n";
+    }
+
+    my $stop  = $$hashref{fmax};
+    my $start = $$hashref{fmin};
 
     $feat = Bio::DB::Das::Chado::Segment::Feature->new (
                        $self->{factory},

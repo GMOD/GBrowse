@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.19 2003-04-09 03:57:03 scottcain Exp $
+# $Id: Chado.pm,v 1.20 2003-04-24 20:15:46 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -49,27 +49,6 @@ of it.  It is still somewhat of a moving target, so this package will
 probably require several updates over the coming months to keep it working.
 
 =head2 CAVEATS
-
-Database commands that are needed for the Chado modules to work with
-gbrowse:
-
-  CREATE TABLE gbrowse_assembly AS SELECT * FROM feature
-     WHERE type_id = <id of scaffold>;
-  CREATE USER (apache|nobody);
-  GRANT SELECT ON feature_synonym      TO (apache|nobody);
-  GRANT SELECT ON synonym              TO (apache|nobody);
-  GRANT SELECT ON feature_dbxref       TO (apache|nobody);
-  GRANT SELECT ON dbxref               TO (apache|nobody);
-  GRANT SELECT ON feature              TO (apache|nobody);
-  GRANT SELECT ON featureloc           TO (apache|nobody);
-  GRANT SELECT ON cvterm               TO (apache|nobody);
-  GRANT SELECT ON feature_relationship TO (apache|nobody);
-  GRANT SELECT ON gbrowse_assembly     TO (apache|nobody);
-
-Note that gbrowse_assembly is a hack table that will not be
-required in future versions of this adaptor.  For granting
-permissions, use either apache or nobody depending on which
-user owns the httpd process.
 
 =head1 FEEDBACK
 
@@ -154,15 +133,15 @@ sub new {
 
 # get the cvterm relationships here and save for later use
 
-  my $sth = $dbh->prepare("select cvterm_id,termname from cvterm")
+  my $sth = $dbh->prepare("select cvterm_id,name from cvterm where cv_id=1")
     or warn "unable to prepare select cvterms";
   $sth->execute or $self->throw("unable to select cvterms");
 
   my $cvterm_id  = {};
-  my $cvtermname = {};
+  my $cvname = {};
   while (my $hashref = $sth->fetchrow_hashref) {
-    $$cvterm_id{$$hashref{termname}}   = $$hashref{cvterm_id};
-    $$cvtermname{$$hashref{cvterm_id}} = $$hashref{termname};
+    $$cvterm_id{$$hashref{name}}   = $$hashref{cvterm_id};
+    $$cvname{$$hashref{cvterm_id}} = $$hashref{name};
   }
   
 
@@ -170,7 +149,7 @@ sub new {
 
   return bless {dbh        => $dbh,
                 cvterm_id  => $cvterm_id,
-                cvtermname => $cvtermname}, ref $self ||$self;
+                cvname => $cvname}, ref $self ||$self;
 }
 
 =head2 segment
@@ -346,7 +325,7 @@ sub get_feature_by_name {
     # prepare sql queries for use in while loops
     my $isth =  $self->{dbh}->prepare("
        select f.feature_id, f.name, f.type_id, 
-              fl.min,fl.max,fl.strand,fl.phase, fl.srcfeature_id
+              fl.fmin,fl.fmax,fl.strand,fl.phase, fl.srcfeature_id
        from feature f, featureloc fl 
        where
          f.feature_id = ? and
@@ -378,14 +357,14 @@ sub get_feature_by_name {
         }
         #now build the feature
 
-        my %termname = %{$self->{cvtermname}};
+        my %name = %{$self->{cvname}};
 
         my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                       $self,
                       $parent_segment,
                       $parent_segment->seq_id,
-                      $$hashref{'min'},$$hashref{'max'},
-                      $termname{$$hashref{'type_id'}},
+                      $$hashref{'fmin'},$$hashref{'fmax'},
+                      $name{$$hashref{'type_id'}},
                       $$hashref{'strand'},
                       $$hashref{'name'},
                       $$hashref{'name'},$$hashref{'feature_id'}
@@ -510,9 +489,10 @@ sub new {
 sub next_seq {
   my $self = shift;
   return unless @$self;
-  return shift @$self;
+    my $next_feature = shift @$self;
+    warn "next feature:$next_feature\n";
+  return $next_feature;
 }
-
 
 
 1;

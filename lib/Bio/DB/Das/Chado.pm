@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.46 2004-05-06 19:37:36 scottcain Exp $
+# $Id: Chado.pm,v 1.47 2004-05-19 15:23:16 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -190,6 +190,7 @@ sub dbh {
   Args    : on set, a hashref; to retrieve a name, an int; to retrieve the
             hashref, none.
 
+Note: should be replaced by Bio::GMOD::Util->term2name
 
 =cut
 
@@ -219,6 +220,7 @@ sub term2name {
   Args    : on set, a hashref; to retrieve a cvterm_id, a string; to retrieve
             the hashref, none.
 
+Note: Should be replaced by Bio::GMOD::Util->name2term
 
 =cut
 

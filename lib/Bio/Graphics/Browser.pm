@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.146 2004-06-09 21:26:55 lstein Exp $
+# $Id: Browser.pm,v 1.147 2004-06-10 20:00:06 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -731,6 +731,12 @@ sub generate_image {
   my $data      = $image->can('png') ? $image->png : $image->gif;
   my $signature = md5_hex($data);
 
+  warn ((CGI::param('ref')||'')   . ':' .
+	(CGI::param('start')||'') . '..'.
+	(CGI::param('stop')||'')
+	,
+	" sig $signature\n") if DEBUG;
+
   # untaint signature for use in open
   $signature =~ /^([0-9A-Fa-f]+)$/g or return;
   $signature = $1;
@@ -760,6 +766,7 @@ sub gd_cache_path {
   my $self = shift;
   my ($cache_name,@keys) = @_;
   return unless $self->config->setting(general=>$cache_name);
+  warn "got here and cache_name = $cache_name";
   my $signature = md5_hex(@keys);
   my ($uri,$path) = $self->tmpdir($self->source.'/cache_overview');
   my $extension   = 'gd';
@@ -1175,6 +1182,7 @@ will be added to the overview panel.
 sub overview {
   my $self = shift;
   my ($partial_segment,$track_options) = @_;
+  my $gd;
 
   # turn requests for a piece of a segment into the whole segment9
   my $factory = $partial_segment->factory;
@@ -1206,10 +1214,12 @@ sub overview {
 				       );
 
   # cache check so that we can cache the overview images
-  my $cache_path = $self->gd_cache_path('cache_overview',$segment,
-					@tracks,$width,
-					map {@{$track_options->{$_}}{'options','limit'}} @tracks);
-  my $gd         = $self->gd_cache_check('cache_overview',$cache_path) if $cache_path;
+  my $cache_path;
+  $cache_path = $self->gd_cache_path('cache_overview',$segment,
+				     @tracks,$width,
+				     map {@{$track_options->{$_}}{'options','limit','visible'}
+					} @tracks);
+  $gd         = $self->gd_cache_check('cache_overview',$cache_path) if $cache_path;
 
   # no cached data, so do it ourselves
   unless ($gd) {

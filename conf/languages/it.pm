@@ -100,7 +100,7 @@ END
 
    PRESETS      => '--Scegli URL predefinito--',
 
-   FILE_INFO    => 'Ultima modifica %s. Oggetti annotati: $s',
+   FILE_INFO    => 'Ultima modifica %s. Oggetti annotati: %s',
 
    FOOTER_1     => <<END,
 Nota: Questa pagina usa cookie per memorizzare e ripristinare configurazioni preferite.

@@ -1,7 +1,7 @@
 package Bio::Graphics::Browser::I18n;
 
-# $Id: I18n.pm,v 1.1 2002-08-08 01:15:52 lstein Exp $
-# $History$
+# $Id: I18n.pm,v 1.2 2002-09-05 19:22:59 lstein Exp $
+# $Log: not supported by cvs2svn $
 
 use strict;
 

@@ -24,7 +24,7 @@ open OUT,">$file" or die "Can't create $file: $!";
 print "Extracting $file (with variable substitutions)\n";
 
 print OUT <<"!GROK!THIS!";
-$Config{startperl} -w
+$Config{startperl}
 
 ###################################################################
 # Non-modperl users should change this variable if needed to point
@@ -41,7 +41,7 @@ $Config{startperl} -w
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.54 2002-08-30 21:17:35 lstein Exp $
+# $Id: gbrowse.PLS,v 1.55 2002-09-05 19:22:58 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -180,7 +180,7 @@ my @segments = get_segments($page_settings);
 if ($plugin_action eq $LANG->tr('FIND') && param('plugin')) {
   do_plugin_find($page_settings,
 		 param('plugin'),
-		 \@segments) or ($plugin_action=$LANG->tr('Configure')); #reconfigure
+		 \@segments) or ($plugin_action = 'Configure'); #reconfigure
 } elsif (!@segments && $page_settings->{name}) {
   do_keyword_search($page_settings,\@segments);
   do_plugin_autofind($page_settings,\@segments) unless @segments;  # last resort
@@ -200,7 +200,7 @@ my ($file_action) = grep {/^modify\./} param();
 # Check to see whether one of the plugin dumpers was invoked.  We have to do this first
 # before printing the header because the plugins are responsible for generating the header.
 # NOTE THE EXIT 0 HERE IF THE DUMP IS SUCCESSFUL!
-if (@segments && $plugin_action eq 'Go!'&& $plugin_type eq 'dumper') {
+if (@segments && $plugin_action eq $LANG->tr('Go') && $plugin_type eq 'dumper') {
   do_plugin_header(param('plugin'),$page_settings);
   do_plugin_dump(param('plugin'),$segments[0]) && exit 0
 }
@@ -221,8 +221,15 @@ if (my $to_download = (param($LANG->tr('Download_file')) ||
 
 
 ## HANDLING FILE UPLOADS ######################################################################
-if (param('Upload') && (my $file = param('upload_annotations'))) {
-  handle_upload($page_settings,$file);
+if (param('Upload') && (my $f = param('upload_annotations'))) {
+  handle_upload($page_settings,$f);
+}
+
+elsif (param('new_upload')) {
+  $file = new_upload($page_settings);  # global
+  $file_action = "modify.$file";       # global
+  warn "file = $file";
+  param(-name=>"modify.$file",-value=>$LANG->tr('Edit'));
 }
 
 elsif (defined(my $data = param('a_data'))) {
@@ -232,6 +239,8 @@ elsif (defined(my $data = param('a_data'))) {
 elsif ($data = param('auto') or $data = param('add')) {
   handle_quickie($page_settings,$data);
 }
+
+warn "file again = $file";
 
 clear_uploaded_file($page_settings,$file) if $file_action && param($file_action) eq 'Delete File';
 
@@ -813,7 +822,7 @@ sub upload_table {
 		   th($link),
 		   td({-colspan=>2},
 		      submit(-name=>"modify.$file",-value=>$LANG->tr('Edit')).'&nbsp;'.
-		      submit(-name=>"modify.$file",-value=>$download).'&nbsp;'.
+		      submit(-name=>"modify.$file",-value=>$LANG->tr('Download_file')).'&nbsp;'.
 		      submit(-name=>"modify.$file",-value=>$LANG->tr('Delete'))));
     $cTable .= TR({-class=>'databody'},td('&nbsp;'),td({-colspan=>2},@info));
   }
@@ -821,9 +830,13 @@ sub upload_table {
   # end the table.
   $cTable .= TR({-class=>'databody'},
 		th({-align=>'RIGHT'},$LANG->tr('Upload_File')),
-		td({-colspan=>2},
+		td({-colspan=>3},
 		   filefield(-size=>40,-name=>'upload_annotations'),
-		   submit(-name=>$LANG->tr('Upload'))));
+		   '&nbsp;',
+		   submit(-name=>$LANG->tr('Upload')),
+		   '&nbsp;',
+		   submit(-name=>'new_upload',-value=>$LANG->tr('New')),
+		  ));
   $cTable .= end_table;
   $cTable;
 }
@@ -1224,6 +1237,19 @@ sub debugging_rectangles {
 }
 
 ########## upload stuff ########
+sub new_upload {
+  my $page_settings = shift;
+  my $rand = int(1000*rand);
+  my $file = "upload.$rand";
+  my $fh_out = open_uploaded_file($page_settings,$file,'>');
+  close $fh_out;
+  my (undef,$url) = name_uploaded_file($page_settings,$file);
+  warn "url = $url" if DEBUG;
+  push @{$page_settings->{tracks}},$url;
+  $page_settings->{features}{$url} = {visible=>1,options=>0,limit=>0};
+  return $file;
+}
+
 sub handle_upload {
   my ($settings,$fh) = @_;
   warn "handle_upload($settings,$fh)" if DEBUG;
@@ -1508,7 +1534,7 @@ sub clear_uploaded_file {
 
 sub edit_uploaded_file {
   my ($settings,$file) = @_;
-  warn "edit_uploaded_file(): file = $file" if DEBUG;
+  warn "edit_uploaded_file(): file = $file";# if DEBUG;
   print start_form();
   my $data;
   my $fh = open_uploaded_file($settings,$file) or return;
@@ -1544,6 +1570,7 @@ sub edit_uploaded_file {
 	     );
   print hidden(-name=>'edited file',-value=>$file);
   print end_form();
+  warn "here I am";
 }
 
 sub coordinate_mapper {
@@ -2112,7 +2139,7 @@ sub tableize {
 sub set_language {
   my ($config,$lang) = @_;
   my $default_language   = $config->setting('language');
-  my @http_languages     = split /,\s+/,http('Accept-language');
+  my @http_languages     = split /,\s*/,http('Accept-language');
   my $preferred_language = $http_languages[0] || $default_language;
   return unless $preferred_language;
   $lang->language($preferred_language);

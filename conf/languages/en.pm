@@ -91,6 +91,8 @@ END
 
    UPLOAD      => 'Upload',
 
+   NEW         => 'New...',
+
    REMOTE_TITLE => 'Add remote annotations',
 
    REMOTE_URL   => 'Enter Remote Annotation URL',
@@ -99,7 +101,7 @@ END
 
    PRESETS      => '--Choose Preset URL--',
 
-   FILE_INFO    => 'Last modified %s.  Annotated landmarks: $s',
+   FILE_INFO    => 'Last modified %s.  Annotated landmarks: %s',
 
    FOOTER_1     => <<END,
 Note: This page uses cookie to save and restore preference information.

@@ -46,6 +46,7 @@ information obtained from the chado database.
 The 11 arguments are positional:
 
   $factory      a Bio::DB::Das::Chado adaptor object (or descendent)
+  $parent       the parent feature object (if it exists)
   $srcseq       the source sequence
   $start        start of this feature
   $stop         stop of this feature
@@ -62,6 +63,7 @@ The 11 arguments are positional:
 sub new {
   my $package = shift;
   my ($factory,
+      $parent,
       $srcseq,
       $start,$stop,
       $type,
@@ -73,13 +75,14 @@ sub new {
 
   ($start,$stop) = ($stop,$start) if defined($strand) and $strand == -1;
 
-  @{$self}{qw(factory sourceseq start stop strand )} =
-    ($factory,$srcseq,$start,$stop,$strand);
+  @{$self}{qw(factory parent sourceseq start stop strand )} =
+    ($factory,$parent,$srcseq,$start,$stop,$strand);
 
   @{$self}{qw(type group db_id absolute)} =
     ($type,$group,$db_id,$factory->{absolute});
 
-  @{$self}{qw(feature_id)} = ($feature_id);
+  @{$self}{qw(feature_id srcfeature_id)} = 
+    ($feature_id,$parent->{srcfeature_id});
 
   $self;
 }
@@ -236,6 +239,7 @@ sub sub_SeqFeature {
 
     my $feat = Bio::DB::Das::Chado::Segment::Feature->new (
                        $self->{factory},
+                       $self,
                        '',
                        $start,$stop,
                        $termname{$$hashref{type_id}},

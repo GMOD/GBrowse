@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.11 2003-01-27 04:39:51 scottcain Exp $
+# $Id: Segment.pm,v 1.12 2003-01-27 18:05:00 scottcain Exp $
 
 =head1 NAME
 
@@ -105,9 +105,9 @@ sub new {
 
   my $self  = shift;
 
-  my ($name,$dbadaptor,$start,$end) = @_;
+  my ($name,$factory,$start,$end) = @_;
 
-    warn "$name, $dbadaptor\n" if DEBUG;
+    warn "$name, $factory\n" if DEBUG;
     warn "start = $start, end = $end\n" if DEBUG;
 
   $self->throw("start value less than 1\n") if (defined $start && $start < 1);
@@ -116,16 +116,16 @@ sub new {
 #moved length determination to constructor, now it will be there from
 # 'the beginning'.
 
-#    $dbadaptor->{dbh}->trace(4) if DEBUG;
+#    $factory->{dbh}->trace(4) if DEBUG;
 
-  my $quoted_name = $dbadaptor->{dbh}->quote($name);
+  my $quoted_name = $factory->{dbh}->quote($name);
 
     warn "$quoted_name\n" if DEBUG;
-#    $dbadaptor->{dbh}->trace(4) if DEBUG;
+#    $factory->{dbh}->trace(4) if DEBUG;
 
-  my $cvterm_id = $dbadaptor->{cvterm_id};
+  my $cvterm_id = $factory->{cvterm_id};
 
-  my $sth = $dbadaptor->{dbh}->prepare ("
+  my $sth = $factory->{dbh}->prepare ("
              select feature_id,seqlen from gbrowse_assembly
              where type_id = ". $$cvterm_id{$ASSEMBLY_TYPE} . " and
                    name = $quoted_name  ");
@@ -147,7 +147,7 @@ sub new {
 
   $length = $end - $start +1;
 
-  return bless {dbadaptor     => $dbadaptor,
+  return bless {factory       => $factory,
                 start         => $start,
                 end           => $end,
                 length        => $length,
@@ -279,11 +279,6 @@ value, feature retrieval will be aborted.
 -callback and -iterator are mutually exclusive options.  If -iterator
 is defined, then -callback is ignored.
 
-NOTE: In his implementation, -attributes does exactly nothing, and features()
-is wildly inefficient because it works by calling top_SeqFeatures and then
-filters by position in the Perl layer, rather than filtering by position in
-the SQL layer.
-
 =cut
 
 sub features {
@@ -329,11 +324,11 @@ sub features {
 
 # set type variable (hard coded to 'gene' right now)
 
-  my %termhash = %{$self->{dbadaptor}->{cvterm_id}};
+  my %termhash = %{$self->{factory}->{cvterm_id}};
 
   my @keys;
   foreach my $type (@$types) {
-    my @tempkeys = grep(/\E$type\Q/i , keys %termhash );
+    my @tempkeys = grep(/\Q$type\E/i , keys %termhash );
     push @keys, @tempkeys;
   }
 
@@ -361,10 +356,10 @@ sub features {
     $sql_types .= ") and ";
   }
 
-#$self->{dbadaptor}->{dbh}->trace(2);
+#$self->{factory}->{dbh}->trace(2);
 
   my $srcfeature_id = $self->{srcfeature_id};
-  my $sth = $self->{dbadaptor}->{dbh}->prepare("
+  my $sth = $self->{factory}->{dbh}->prepare("
     select f.name,fl.nbeg,fl.nend,fl.strand,f.type_id,f.feature_id
     from feature f, featureloc fl
     where
@@ -378,7 +373,7 @@ sub features {
 
 #take these results and create a list of Bio::SeqFeatureI objects
 
-  my %termname = %{$self->{dbadaptor}->{cvtermname}};
+  my %termname = %{$self->{factory}->{cvtermname}};
   while (my $hashref = $sth->fetchrow_hashref) {
 
     my ($start,$stop);
@@ -391,7 +386,8 @@ sub features {
     }
 
     $feat = Bio::DB::Das::Chado::Segment::Feature->new (
-                       $self->{dbadaptor},
+                       $self->{factory},
+                       $self,
                        '',
                        $start,$stop,
                        $termname{$$hashref{type_id}},
@@ -430,7 +426,7 @@ sub seq {
   my $self = shift;
 
   my $feat_id = $self->{srcfeature_id};
-  my $sth = $self->{dbadaptor}->{dbh}->prepare("
+  my $sth = $self->{factory}->{dbh}->prepare("
      select residues from feature 
      where feature_id = $feat_id ");
   $sth->execute or $self->throw("seq query failed");
@@ -457,7 +453,7 @@ the segment was originally generated.
 
 #'
 
-sub factory {shift->{dbadaptor} }
+sub factory {shift->{factory} }
 sub alphabet {return 'dna'; }
 sub display_id {shift->{name} }
 sub display_name {shift->{name} }

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.10 2003-01-27 04:39:51 scottcain Exp $
+# $Id: Chado.pm,v 1.11 2003-01-27 18:04:59 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -321,10 +321,12 @@ sub get_feature_by_name {
 
   my ($name, $start, $stop) = $self->_rearrange([qw(NAME START END)],@_);
 
+  my @features;
   if ($name =~ s/[?*]\s*$/%/) {
     # get feature_id
     # foreach feature_id, get the feature info
-    # then get src_feature stuff (chromosome info) (and do what with it?)
+    # then get src_feature stuff (chromosome info) and create a parent feature,
+    #  of which these features will be children?  Yeah, that could work :-)
 
     my $quoted_name = $self->{dbh}->quote($name);
     my $sth = $self->{dbh}->prepare("
@@ -333,24 +335,65 @@ sub get_feature_by_name {
        synonym ilike $quoted_name
        ");
     $sth->execute or throw("getting the feature_ids failed");
-    
-    while (my $feature_id_ref = $sth->fetchrow_hashref) {
-      my $isth = $self->{dbh}->prepare("
+
+
+    # prepare sql queries for use in while loops
+    my $isth =  $self->{dbh}->prepare("
        select f.feature_id, f.name, f.type_id, 
               fl.nbeg,fl.nend,fl.strand,fl.phase, fl.srcfeature_id
        from feature f, featureloc fl 
        where
-         f.feature_id = $$feature_id_ref{'feature_id'} and
+         f.feature_id = ? and
          fl.feature_id = f.feature_id and
          f.feature_id = fl.feature_id
+       order by fl.srcfeature_id
         ");
 
-      
+
+    my $jsth = $self->{dbh}->prepare("select name from gbrowse_assembly
+                                      where feature_id = ?");
+
+    # getting feature info    
+    while (my $feature_id_ref = $sth->fetchrow_hashref) {
+      $isth->execute($$feature_id_ref{'feature_id'}) 
+             or $self->throw("getting feature info failed");
+   
+      #getting chromosome info 
+      my $old_srcfeature_id=0;
+      my $parent_segment;
+      while (my $hashref = $isth->fetchrow_hashref) {
+
+        if ($$hashref{'srcfeature_id'} != $old_srcfeature_id) {
+          $jsth->execute($$hashref{'srcfeature_id'})
+                 or die ("getting assembly info failed");
+          my $src_name = $jsth->fetchrow_hashref;
+          $parent_segment =
+             Bio::DB::Das::Chado::Segment->new($$src_name{'name'},$self);
+          $old_srcfeature_id=$$hashref{'srcfeature_id'};
+        }
+        #now build the feature
+
+        my %termname = %{$self->{cvtermname}};
+
+        my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
+                      $self,
+                      $parent_segment,
+                      "",
+                      $$hashref{'nbeg'},$$hashref{'nend'},
+                      $termname{$$hashref{'type_id'}},
+                      $$hashref{'strand'},
+                      $$hashref{'name'},
+                      $$hashref{'name'},$$hashref{'feature_id'}
+        ); 
+        push @features, $feat;
+      } 
+ 
     } 
   } else {
     $self->throw("multiword searching not supported yet");
   }
 
+  @features;
 }
 
 =head2 search_notes

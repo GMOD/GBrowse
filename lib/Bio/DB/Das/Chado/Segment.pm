@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.33 2003-06-30 18:33:04 scottcain Exp $
+# $Id: Segment.pm,v 1.34 2003-06-30 18:37:39 scottcain Exp $
 
 =head1 NAME
 
@@ -522,7 +522,7 @@ sub seq {
   my $has_stop  = defined $stop;
 
   my $reversed;
-  if ($has_start && $has_stop && $start > $stop) {
+  if ($has_start && $has_stop && $base_start > $stop) {
     $reversed++;
     ($base_start,$stop) = ($stop,$base_start);
   } elsif ($strand < 0 ) {

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.36 2003-10-05 02:38:38 lstein Exp $
+# $Id: gbrowse.PLS,v 1.37 2003-10-05 06:22:04 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2266,11 +2266,28 @@ sub plugin_menu {
 	       finder       => $CONFIG->tr('Find'),
 	       highlighter  => $CONFIG->tr('Highlight'),
 	       annotator    => $CONFIG->tr('Annotate'));
-  my %labels = map {$_=> ($verbs{$plugins->{$_}->type}
-			  ||
-			  $plugins->{$_}->type)
-		      .' '.$plugins->{$_}->name}
-    keys %$plugins;
+  
+  my %labels = ();
+
+  # Adjust plugin menu labels
+  for ( keys %{$plugins} ) {
+    
+    # plugin-defined verb
+    if ( $plugins->{$_}->can('verb') ) {
+      $labels{$_} = $CONFIG->tr($plugins->{$_}->verb) ||
+        ucfirst $plugins->{$_}->verb;
+    }
+    
+    # default verb
+    else {
+      $labels{$_} = $verbs{$plugins->{$_}->type} ||
+        $plugins->{$_}->type;
+    }
+
+    $labels{$_} .= $labels{$_} ? ' ' : '';
+    $labels{$_} .= $plugins->{$_}->name;
+  }
+
 
   my @plugins = sort {$labels{$a} cmp $labels{$b}} keys %labels;
   return unless @plugins;
@@ -2363,9 +2380,9 @@ sub do_plugin_configure {
   my @buttons = map {submit(-name=>'plugin_action',-value=>$_)} @action_labels;
 
   print h1($p->type eq 'finder' ? $CONFIG->tr('Find') : $CONFIG->tr('Configure'),$p->name);
-  my $config_html = $p->configure_form;
+  my $config_html = $p->configure_form($segments[0]);
 
-  print start_form(),
+  print start_multipart_form(),
     $config_html ? (
 		    $config_html,p(),
 		    join ('&nbsp;',

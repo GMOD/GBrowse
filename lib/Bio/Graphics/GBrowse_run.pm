@@ -1,13 +1,18 @@
 package Bio::Graphics::GBrowse_run;
 
 use strict;
+use base qw(Exporter); #temporary
+use Term::ANSIColor;
+use Bio::Graphics::Browser::Constants;
 use Bio::Graphics::Browser::Options;
 use Bio::Graphics::Browser::Util;
-use CGI qw(cookie);
-use Carp qw(croak);
+use CGI qw(Delete_all cookie param);
+use Carp qw(croak cluck);
 use Digest::MD5 qw(md5_hex);
-use vars qw($VERSION);
-use constant DEBUG => 0;
+use vars qw($VERSION @EXPORT_OK); #temporary
+
+@EXPORT_OK = qw(param); #this is a temporary scaffold to clean param() calls from gbrowse.PLS
+sub param { print(STDERR (caller())[0]."+".(caller())[2]." called param() with: ".join(' ',map {"'$_'"} @_)."\n"); return CGI::param(@_) } #temporary
 
 my $singleton = undef;
 
@@ -36,6 +41,7 @@ sub init {
   open_database() or croak "Can't open database defined by source ".$self->config->source;
   $self->options(Bio::Graphics::Browser::Options->new());
   $self->read_cookie();
+  $self->read_params();
 }
 
 =head2 config()
@@ -225,84 +231,158 @@ sub write_cookie {
 }
 
 
-#taken from gbrowse.PLS
-# # This is called to change the values of the settings
-# sub adjust_settings {
+=head2 read_params()
+
+ Usage   :
+ Function: This is called to change the values of the options
+           by examining GET/POST parameters
+ Example :
+ Returns : 
+ Args    :
+
+
+=cut
+
+sub read_params {
+  my $self = shift;
+
+  my $options = $self->options();
+
+  if ( CGI::param('label') ) {
+    my @selected = map {/^(http|ftp|das)/ ? $_ : split /[+-]/} CGI::param('label');
+
+    $options->feature($_)->{visible} = 0 foreach $options->feature();
+    $options->feature($_)->{visible} = 1 foreach @selected;
+  }
+
+  #
+  # these are designed to have a universal set of parameters for file, track, and plugin
+  # manipulation.  the base param name (file,track,plugin) indicates the target of the operation,
+  # while the action_ param name indicates the action to be performed on the target
+  #
+  $options->action_file(  CGI::param('action_file'))   if CGI::param('action_file');
+  $options->action_track( CGI::param('action_track'))  if CGI::param('action_track');
+  $options->action_plugin(CGI::param('action_plugin')) if CGI::param('action_plugin');
+  $options->file(  CGI::param('file'))   if CGI::param('file');
+  $options->track( CGI::param('track'))  if CGI::param('track');
+  $options->plugin(CGI::param('plugin')) if CGI::param('plugin');
+
+
+  $options->width(CGI::param('width')) if CGI::param('width');
+  $options->id(CGI::param('id'))       if CGI::param('id');
+
+  local $^W = 0;  # kill uninitialized variable warning
+  if ( CGI::param('ref') && (CGI::param('name') eq CGI::param('prevname') || grep {/zoom|nav|overview/} CGI::param()) ) {
+    $options->version(CGI::param('version') || '') unless $options->version();
+    $options->ref(CGI::param('ref'));
+    $options->start(CGI::param('start')) if CGI::param('start') =~ /^[\d-]+/;
+    $options->stop(CGI::param('stop'))   if CGI::param('stop')  =~ /^[\d-]+/;
+    $options->stop(CGI::param('end'))    if CGI::param('end')   =~ /^[\d-]+/ && !defined($options->stop());
+    $options->flip(CGI::param('flip'));
+
+#FIXME    zoomnav($settings);
+    $options->name(sprintf("%s:%s..%s",$options->ref(),$options->start,$options->stop));
+  }
+
+  foreach (qw(name source plugin stp ins head ks sk version h_feat h_type)) {
+    $options->$_(CGI::param($_)) if defined CGI::param($_);
+  }
+
+  #strip leading/trailing whitespace
+  my $name = $options->name();
+  $name =~ s/^\s*(.*)\s*$/$1/;
+  $options->name($name);
+
+  if (my @external = CGI::param('eurl')) {
+    my %external = map {$_=>1} @external;
+    foreach (@external) {
+      warn "eurl = $_" if DEBUG_EXTERNAL;
+      next if $options->feature($_);
+      $options->feature($_,{visible=>1,options=>0,limit=>0});
+      $options->tracks($options->tracks(),$_);
+    }
+    # remove any URLs that aren't on the list
+    foreach ($options->feature()) {
+      next unless /^(http|ftp):/;
+      $options->remove_feature($_) unless exists $external{$_};
+    }
+  }
+
+   # the "q" request overrides name, ref, h_feat and h_type
+  if (my @q = CGI::param('q')) {
+    $options->unset($_) foreach qw(name ref h_feat h_type);
+    $options->q( [map {split /[+-]/} @q] );
+  }
+
+  if (CGI::param('revert')) {
+    warn "resetting defaults..." if DEBUG;
+    #FIXME was this ported??? set_default_tracks($settings);
+  } elsif (CGI::param('reset')) {
+    $options->unset($_) foreach keys %{ $options }; #yeah, yeah, this is bad OOP.  add a slots() accessor to Options if you really care.
+    Delete_all();
+    #FIXME was this ported??? default_settings($settings);
+  } elsif (CGI::param($self->translate('adjust_order')) && !CGI::param($self->translate('cancel'))) {
+    #FIXME adjust_track_options($settings);
+    #FIXME adjust_track_order($settings);
+  }
+}
+
+
+#NOT YET PORTED OUT OF gbrowse.PLS
+# # reorder @labels based on settings in the 'track.XXX' parameters
+# sub adjust_track_order {
 #   my $settings = shift;
 
-#   if ( param('label') ) {
-#     my @selected = map {/^(http|ftp|das)/ ? $_ : split /[+-]/} param('label');
-#     $settings->{features}{$_}{visible} = 0 foreach keys %{$settings->{features}};
-#     $settings->{features}{$_}{visible} = 1 foreach @selected;
+#   my @labels  = $BROWSER->options->tracks();
+#   warn "adjust_track_order(): labels = @labels" if DEBUG;
+
+#   my %seen_it_already;
+#   foreach (grep {/^track\./} CGI::param()) {
+#     warn "$_ =>",CGI::param($_) if DEBUG;
+#     next unless /^track\.(\d+)/;
+#     my $track = $1;
+#     my $label   = CGI::param($_);
+#     next unless length $label > 0;
+#     next if $seen_it_already{$label}++;
+#     warn "$label => track $track" if DEBUG;
+
+#     # figure out where features currently are
+#     my $i = 0;
+#     my %order = map {$_=>$i++} @labels;
+
+#     # remove feature from wherever it is now
+#     my $current_position = $order{$label};
+#     warn "current position of $label = $current_position" if DEBUG;
+#     splice(@labels,$current_position,1);
+
+#     warn "new position of $label = $track" if DEBUG;
+#     # insert feature into desired position
+#     splice(@labels,$track,0,$label);
+#   }
+#   $BROWSER->options->tracks(@labels);
+# }
+
+# sub adjust_track_options {
+#   my $settings = shift;
+#   foreach (grep {/^option\./} CGI::param()) {
+#     my ($track)   = /(\d+)/;
+#     my $feature   = $BROWSER->options->{tracks}[$track];
+#     my $option    = CGI::param($_);
+#     $BROWSER->options->{features}{$feature}{options} = $option;
+#   }
+#   foreach (grep {/^limit\./} CGI::param()) {
+#     my ($track)   = /(\d+)/;
+#     my $feature   = $BROWSER->options->{tracks}[$track];
+#     my $option    = CGI::param($_);
+#     $BROWSER->options->{features}{$feature}{limit} = $option;
+#   }
+#   foreach (@{$BROWSER->options->{tracks}}) {
+#     $BROWSER->options->{features}{$_}{visible} = 0;
 #   }
 
-#   $settings->{width}  = param('width')   if param('width');
-#   # support programmatic upload
-#   $settings->{id} = param('id')          if param('id');
-
-#   local $^W = 0;  # kill uninitialized variable warning
-#   if (param('ref') &&
-#       ( #request_method() eq 'GET'
-# 	# || 
-#        param('name') eq param('prevname')
-# 	|| grep {/zoom|nav|overview/} param())
-#      )
-#     {
-#       $settings->{version} ||= param('version') || '';
-#       $settings->{ref}   = param('ref');
-#       $settings->{start} = param('start') if param('start') =~ /^[\d-]+/;
-#       $settings->{stop}  = param('stop')  if param('stop')  =~ /^[\d-]+/;
-#       $settings->{stop}||= param('end')   if param('end')   =~ /^[\d-]+/;
-#       $settings->{flip}  = param('flip');
-#       zoomnav($settings);
-#       $settings->{name} = "$settings->{ref}:$settings->{start}..$settings->{stop}";
-#       param(name => $settings->{name});
-#     }
-
-#   foreach (qw(name source plugin stp ins head
-#               ks sk version h_feat h_type)) {
-#     $settings->{$_} = param($_) if defined param($_);
+#   foreach (CGI::param('track.label')) {
+#     $BROWSER->options->{features}{$_}{visible} = 1;
 #   }
-#   $settings->{name} =~ s/^\s+//; # strip leading
-#   $settings->{name} =~ s/\s+$//; # and trailing whitespace
-
-#   if (my @external = param('eurl')) {
-#     my %external = map {$_=>1} @external;
-#     foreach (@external) {
-#       warn "eurl = $_" if DEBUG_EXTERNAL;
-#       next if exists $settings->{features}{$_};
-#       $settings->{features}{$_} = {visible=>1,options=>0,limit=>0};
-#       push @{$settings->{tracks}},$_;
-#     }
-#     # remove any URLs that aren't on the list
-#     foreach (keys %{$settings->{features}}) {
-#       next unless /^(http|ftp):/;
-#       delete $settings->{features}{$_} unless exists $external{$_};
-#     }
-#   }
-
-#   # the "q" request overrides name, ref, h_feat and h_type
-#   if (my @q = param('q')) {
-#     delete $settings->{$_} foreach qw(name ref h_feat h_type);
-#     $settings->{q} = [map {split /[+-]/} @q];
-#   }
-
-#   if (param('revert')) {
-#     warn "resetting defaults..." if DEBUG;
-#     set_default_tracks($settings);
-#   }
-
-#   elsif (param('reset')) {
-#     %$settings = ();
-#     Delete_all();
-#     default_settings($settings);
-#   }
-
-#   elsif (param($CONFIG->tr('Adjust_Order')) && !param($CONFIG->tr('Cancel'))) {
-#     adjust_track_options($settings);
-#     adjust_track_order($settings);
-#   }
-
 # }
 
 1;

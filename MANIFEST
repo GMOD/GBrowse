@@ -24,7 +24,6 @@ conf/04.human.conf
 conf/05.embl.conf
 conf/06.biosql.conf
 conf/07.chado.conf
-conf/biosql.conf
 conf/enzymes.txt
 conf/languages/POSIX.pm
 conf/languages/en.pm
@@ -131,12 +130,11 @@ install_util/htdocs_install.pl
 install_util/make_clean_add.pl
 libalign/CAlign.pm
 libalign/CAlign.xs
-libalign/Changes
 libalign/MANIFEST
 libalign/README
 libalign/realign.h
-sample_data/yeast1.fa
-sample_data/yeast1.gff
+sample_data/chromosome1.fa
+sample_data/chromosome1.gff
 sample_data/yeast_data.gff
 screenshots/chr8_1.png
 screenshots/chr8_2.png

@@ -33,7 +33,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.9 2002-02-18 22:47:34 lstein Exp $
+# $Id: gbrowse.PLS,v 1.10 2002-02-19 19:23:26 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -45,7 +45,7 @@ use Text::Tabs;
 use Text::Shellwords;
 use Carp;
 use CGI qw(:standard escape center *table *dl *TR *td);
-use vars qw($CONFIG %DB $MAX_SEGMENT $DEFAULT_SEGMENT $HEADER $HTML $UA);
+use vars qw($CONFIG %DB $MAX_SEGMENT $DEFAULT_SEGMENT $HEADER $HTML $UA $VERSION);
 
 # if you change the zoom/nav icons, you must change this as well.
 use constant MAG_ICON_HEIGHT => 20;
@@ -160,14 +160,16 @@ my @segments  = get_segment($page_settings);
 ## DUMPS ######################################################################################
 if ( (my $dump = param('dump')) && @segments == 1) {
   if ($dump eq 'FastA') {
-    print header(-attachment   => "$segments[0].fa",
-		 -type         => 'text/plain');
+    print header(-type         => 'text/plain',
+                 # -attachment   => "$segments[0].fa",
+                );
     dump_fasta($segments[0],$page_settings);
   }
 
   elsif($dump eq 'GFF') {
-    print header(-attachment   => "$segments[0].gff",
-		 -type         => 'text/plain');
+    print header( -type         => 'text/plain'
+                # -attachment   => "$segments[0].gff",
+                );
     dump_gff($segments[0],$page_settings);
   }
   exit 0;
@@ -247,8 +249,9 @@ sub footer {
     $CONFIG->footer || '',
       p(i(font({-size=>'small'},
 	       'Note: This page uses cookie to save and restore preference information.',
-	       'No information is shared.'))),
-		 end_html;
+	       'No information is shared.')),br,
+       tt(font({-size=>'small'},"Generic genome browser version $VERSION"))),
+       end_html;
 }
 
 #--------------------------------- lots of subroutines --------------------------
@@ -281,7 +284,7 @@ sub main_display {
   }
 
   # print the top of the form, with navigation bar, etc
-  print start_multipart_form(-action=>url(-relative=>1,-path_info=>1)),
+  print start_multipart_form(-name=>'mainform',-action=>url(-relative=>1,-path_info=>1)),
     navigation_table($segment,$page_settings);
 
   # if more than one segment, then list them all
@@ -543,7 +546,7 @@ sub zoomBar {
 	       -labels  => \%labels,
 	       -default => $segment->length,
 	       -force   => 1,
-	       -onChange => 'submit()',
+	       -onChange => 'document.mainform.submit()',
 	      ).'&nbsp;';
 }
 
@@ -1189,7 +1192,7 @@ sub dump_gff {
   my $date = localtime;
   print "##gff-version 2\n";
   print "##date $date\n";
-  print "##sequence-region ",join(',',$segment->ref,$segment->start,$segment->stop),"\n";
+  print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
 
   my $conf = $CONFIG->config;
   my @feature_types = map {$conf->label2type($_)} @selected;

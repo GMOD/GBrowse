@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.20 2004-02-22 09:24:57 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.21 2004-02-27 12:20:55 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -76,8 +76,7 @@ my $end   = param('end');
 # Migrate from 1.56 way of specifying source to 1.57 way
 # This may cause a redirect and exit 0 at this point!
 redirect_legacy_url($src);
-
-$CONFIG->source($src || cookie('gbrowse_source'));
+$CONFIG->source(get_source());
 
 # This populates the %URLS global with link rules from the config file.
 getLinkURLs(\%URLS);
@@ -324,6 +323,17 @@ sub getLinkURLs {
     $urls->{$1}=$URL;
   }
 }
+
+sub get_source {
+  my $new_source = param('source') || param('src') || path_info();
+  $new_source    =~ s!^/!!;  # get rid of leading / from path_info()
+  my $old_source = cookie('gbrowse_source') unless $new_source && request_method() eq 'GET';
+
+  my $source   = $new_source || $old_source;
+  $source ||= $CONFIG->source;  # the default, whatever it is
+  return ($source,$old_source);
+}
+
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

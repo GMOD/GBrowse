@@ -143,13 +143,17 @@ sub start_html {
   }
 
   my $state = CGI::cookie($cookie_name);
-  $state = 0xFFFFFF unless defined $state && $state >= 0 && $state <= 0xFFFFFF;
+# these various attempts to default end up forcing all sections either open or closed.
+#  $state = 0 unless defined $state && $state >= 0;
+#  $state = 0xFFFFFF unless defined $state && $state >= 0 && $state <= 0xFFFFFF;
+  if (defined $state) {
+    my $cookie = CGI::cookie(-name=>$cookie_name,
+			     -value=>$state,
+			     -expires=>'+7d');
+    $args{-head}         = CGI::meta({-http_equiv=>'Set-Cookie',
+				      -content => $cookie});
+  }
 
-  my $cookie = CGI::cookie(-name=>$cookie_name,
-			   -value=>$state,
-			   -expires=>'+7d');
-  $args{-head}         = CGI::meta({-http_equiv=>'Set-Cookie',
-				    -content => $cookie});
   my $result = CGI::start_html(%args);
 
   if ($CGI::VERSION < 3.05) {

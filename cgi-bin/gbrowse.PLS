@@ -462,14 +462,15 @@ sub main_display {
 sub overview_panel {
   my ($segment,$page_settings) = @_;
   my $image = overview($segment,$page_settings).br();
-  return toggle_section({on=>1},
-			b($CONFIG->tr('Overview')),
-			table({-border=>0,-width=>'100%'},
-			      TR({-class=>'databody'},
-				 td({-align=>'center'},$image)
-				)
-			     )
-		       );
+  return br().
+    toggle_section({on=>1},
+		   b($CONFIG->tr('Overview')),
+		   table({-border=>0,-width=>'100%'},
+			 TR({-class=>'databody'},
+			    td({-align=>'center'},$image)
+			   )
+			)
+		  );
 }
 
 sub detail_panel_with_timeout {
@@ -824,8 +825,7 @@ sub navigation_table {
   $table .= table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
 		  TR(
 		     td({-align=>'left', -colspan=>2},
-		     toggle_section(
-				    {on=>1},
+		     toggle_section({on=>1},
 				    b($CONFIG->setting('instructions')
 				      || $CONFIG->tr('INSTRUCTIONS').': '),
 				    $CONFIG->setting('search_instructions')
@@ -866,8 +866,9 @@ sub navigation_table {
 				    td({-colspan=>1,-align=>'left'},b($CONFIG->tr('Dumps')).':',br,
 				       plugin_menu($settings,$PLUGINS))
 				   ),
-				 TR({-class=>'searchbody'},
-				    td({-align=>'center',-colspan=>2,-style=>'padding-top: 5 px'},
+				 TR({-class=>'searchbody',-style=>'padding-top: 5 px'},
+				    td({-align=>'left'},source_menu($settings)),
+				    td({-align=>'left'},
 				       $segment ? (b($CONFIG->tr('Scroll').': '),slidertable($segment,$buttonsDir)) : '',
 				       b(
 					 checkbox(-name=>'flip',
@@ -1097,9 +1098,6 @@ sub settings_table {
   my $content =
     table({-class=>'searchbody'},
 	  TR(
-	     td({-align=>'left'},
-		source_menu($settings),
-	       ),
 	     td(
 		b($CONFIG->tr('Image_width')),br,
 		radio_group( -name=>'width',
@@ -1107,10 +1105,7 @@ sub settings_table {
 			     -default=>$settings->{width},
 			     -override=>1,
 			   ),
-	       )
-	    ),
-	  # row
-	  TR(
+	       ),
 	     td(
 		b($CONFIG->tr('KEY_POSITION')),br,
 		radio_group( -name=>'ks',
@@ -1125,18 +1120,8 @@ sub settings_table {
 			   ),
 	       ),
 	     td(
-		b($CONFIG->tr('TRACK_NAMES')),br,
-		radio_group( -name=>'sk',
-			     -values=>['sorted','unsorted'],
-			     -labels=>{sorted   =>$CONFIG->tr('ALPHABETIC'),
-				       unsorted =>$CONFIG->tr('VARYING')},
-			     -default=>$settings->{sk},
-			     -override=>1
-			   ),
-	       ),
-	     td(
 		b(submit(-name => $CONFIG->tr('Update')))
-	       )
+	       ),
 	    ),
 	 );
   return toggle_section({on=>0},
@@ -2668,7 +2653,7 @@ sub source_menu {
 		 -values => \@sources,
 		 -labels => { map {$_ => $CONFIG->description($_)} $CONFIG->sources},
 		 -default => $CONFIG->source,
-		 -onChange => 'document.settingsform.submit()',
+		 -onChange => 'document.mainform.submit()',
 		)
 	: $CONFIG->description($CONFIG->source)
       );

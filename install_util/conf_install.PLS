@@ -92,6 +92,26 @@ while (my $langfile = readdir(LANGS)) {
 closedir LANGS;
 
 
+my $mobydir = Bio::Root::IO->catfile($dir, 'MobyServices');
+if (! (-e $mobydir)) {
+    mkdir($mobydir,0777) or die "unable to mkdir $mobydir\n";
+}
+
+my $localmobydir = "conf/MobyServices";
+opendir MOBYS, $localmobydir or die "unable to opendir $localmobydir\n";
+while (my $mobyfile = readdir(MOBYS)) {
+    next if $mobyfile =~ /\.PMS$/;
+    my $localfile = Bio::Root::IO->catfile($localmobydir, $mobyfile);
+    if (-f $localfile) {
+        my $installfile = Bio::Root::IO->catfile($mobydir, $mobyfile);
+        chmod (0666, $installfile);
+        copy($localfile, $installfile) 
+            or die "unable to copy to $installfile\n";
+        chmod (0444, $installfile);
+    }
+}
+closedir MOBYS;
+
 sub copy_with_substitutions {
   my ($localfile,$install_file) = @_;
   open (IN,$localfile) or die "Couldn't open $localfile: $!";

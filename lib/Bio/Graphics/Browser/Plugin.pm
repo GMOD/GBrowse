@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.10 2004-06-22 22:32:14 lstein Exp $
+# $Id: Plugin.pm,v 1.11 2004-06-22 22:35:07 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME
@@ -733,7 +733,8 @@ sub selected_features {
 # called by annotators when they need to create a new list of features
 sub new_feature_list {
   my $self     = shift;
-  return Bio::Graphics::FeatureFile->new(-smart_features=>1);
+  return Bio::Graphics::FeatureFile->new(-smart_features=>1
+					 -safe => 1);
 }
 
 1;

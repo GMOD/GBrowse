@@ -24,6 +24,7 @@ conf/plugins/FastaDumper.pm
 conf/plugins/GFFDumper.pm
 conf/plugins/OligoFinder.pm
 conf/plugins/RestrictionAnnotator.pm
+conf/plugins/SequenceDumper.pm
 conf/plugins/test.pm
 docs/configuration.txt
 docs/gbrowse_img.txt

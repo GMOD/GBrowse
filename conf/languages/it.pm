@@ -25,7 +25,7 @@ ma i campi contenenti spazi spazi devono essere delimitati
 da virgolette o apostrofi.
 END
 
-   SHOWING_FROM_TO => 'Visualizzazione di %s da %s, posizione %s - %s',
+   SHOWING_FROM_TO => 'Mappa di %s da %s, posizione %s - %s',
 
    LANDMARK => 'Elemento genomico o regione',
 
@@ -39,7 +39,7 @@ END
 
    SCROLL   => 'Sfoglia/Zoom',
 
-   RESET    => 'Ripristinare',
+   RESET    => 'Ripristina',
 
    DOWNLOAD_FILE    => 'Scarica File',
 

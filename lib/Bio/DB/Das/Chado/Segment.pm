@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.17 2003-02-06 18:20:11 scottcain Exp $
+# $Id: Segment.pm,v 1.18 2003-02-06 21:31:12 scottcain Exp $
 
 =head1 NAME
 
@@ -10,6 +10,18 @@ Bio::DB::Das::Chado::Segment - DAS-style access to a chado database
 
   $segment = $das->segment(-name=>'Landmark',
                            -start=>$start,
+te that there is currently a hack in Segment.pm to make it work with
+chado/gadfly: the search space for names of segments is in a small
+table named gbrowse_assembly, which contains only chromosome arms,
+as extracted directly from the feature table.  This is done because
+gbrowse generally only creates segments out of a large reference
+sequence (like an arm), and there is no good, fast way to look up
+arm names in chado: the feature table is too big (affecting performance
+of a common command), and the synonym tables does not contain arm
+names.  In order for Segment.pm to be a general chado tool, this
+will have to be addressed, as it is possible that another use of
+Segment.pm may need to create a segment out of something else.
+
                            -end => $end);
 
   @features = $segment->overlapping_features(-type=>['type1','type2']);
@@ -29,6 +41,18 @@ Bio::DB::Das::Chado::Segment - DAS-style access to a chado database
                                        );
 
 =head1 DESCRIPTION
+
+Note that there is currently a hack in Segment.pm to make it work with
+chado/gadfly: the search space for names of segments is in a small
+table named gbrowse_assembly, which contains only chromosome arms,
+as extracted directly from the feature table.  This is done because
+gbrowse generally only creates segments out of a large reference
+sequence (like an arm), and there is no good, fast way to look up
+arm names in chado: the feature table is too big (affecting performance
+of a common command), and the synonym tables does not contain arm
+names.  In order for Segment.pm to be a general chado tool, this 
+will have to be addressed, as it is possible that another use of 
+Segment.pm may need to create a segment out of something else.
 
 Bio::DB::Das::Chado::Segment is a simplified alternative interface to
 sequence annotation databases used by the distributed annotation
@@ -144,6 +168,11 @@ sub new {
         "); 
     $isth->execute or $self->throw("query for name failed"); 
     $rows_returned = $isth->rows;
+
+#need to add a try at checking for an accession number.
+#but, since there is no dbxrefstr for arms, it is impossible
+#to test for gbrowse--leave it out for now.
+
     return if $rows_returned != 1;
 
     $hash_ref = $isth->fetchrow_hashref;

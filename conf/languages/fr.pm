@@ -76,6 +76,22 @@ END
 
    EDIT_TITLE => 'Entrer/éditer des données d\'annotation',
 
+ INSTRUCTIONS      => 'Instructions',
+
+ HIDE              => 'Cacher',
+
+ SHOW              => 'Montrer',
+
+ SHOW_INSTRUCTIONS => 'Montrer les instructions',
+
+ SEARCH  => 'Chercher',
+
+ KEY_POSITION => 'Position clef',
+
+ BETWEEN     => 'Entre',
+
+ BENEATH     => 'Après',
+
    IMAGE_WIDTH => 'Largeur d\'image',
 
    SET_OPTIONS => 'Configurer les pistes...',

@@ -1,0 +1,90 @@
+Support for various databases and database schemas are coming.  Right
+now, there is full support for the Bio::DB::GFF schema running on
+MySQL, preliminary support for the Bio::DB::GFF schema running on top
+of Oracle, and preliminary support for the BioSQL schema running on
+top of MySQL.  There is also support for the GadFly schema running on
+top of MySQL and PostgreSQL, but this uses an earlier (forked) version
+of GBrowse.  See README-berkeley-gadfly for more details.
+
+Bio::DB::GFF on Oracle
+----------------------
+
+To run GBrowse on top of Oracle, you will need a recent version of
+BioPerl that contains Shuly Avraham's
+Bio::DB::GFF::Adaptor::dbi::oracleopt adaptor.  Create the database,
+name it, and set access permissions.  Then run the load_gff.pl script
+to initialize and load it with the GFF data:
+
+ load_gff.pl -c -adaptor dbi::oracleopt -user <user> -pass <pass> \
+             -dsn 'dbi:oracle:sid=<service>;host=<host>' yeast_data.gff
+
+Replace <service> with the service definition for your database, as
+well as the username, password and host fields.
+
+If you haven't already, you must configure Apache so that various
+Oracle environment variables are available to CGI scripts.  My
+httpd.conf file contains these declarations:
+
+ <Directory "/var/www/cgi-bin">
+    AllowOverride None
+    Options ExecCGI
+    Order allow,deny
+    Allow from all
+    SetEnv ORACLE_BASE /home/oracle
+    SetEnv ORACLE_HOME /home/oracle/Home
+    SetEnv ORACLE_SID  gbrowse
+    SetEnv NLS_LANG    AMERICAN_AMERICA.US7ASCII
+ </Directory>
+
+You will need to adjust these values to suit your particular Oracle
+installation.
+
+The final step is to tell GBrowse to use the Oracle database.  In the
+[GENERAL] section, enter the following values for db_adaptor and
+db_args:
+
+
+    db_adaptor = Bio::DB::GFF
+    db_args = -dsn     dbi:Oracle:sid=<service>;host=<host>
+              -adaptor dbi::oracleopt
+              -user    <username>
+              -pass    <password>
+
+Replace <service>, <host>, <username> and <password> with the values
+appropriate for your system.
+
+BioSQL on MySQL
+---------------
+
+To run GBrowse on top of BioSQL, you will need a recent version of
+BioPerl that has the DAS (distributed annotation system) interface
+files.  Initialize and load your BioSQL database according to the
+directions in the biosql-schema and bioperl-db distributions.  Since
+the API is still changing, I highly recommend that you check out the
+bioperl-release-1-1-0 branches of both modules (use 'cvs' for the
+anonymous checkout):
+
+   cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl login
+   cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl \
+	  co -r bioperl-release-1-1-0 bioperl-db
+
+   cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/biosql login
+   cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/biosql \
+	  co -r bioperl-release-1-1-0 biosql-schema
+
+Use the following db_adaptor and db_args options as templates for your
+GBrowse configuration file:
+
+db_adaptor  = Bio::DB::Das::BioSQL
+db_args     = driver    mysql
+	      dbname    <dbname>
+	      biodbname <biodbname>
+	      host      <hostname>
+	      user      <username>
+              pass      <password>
+
+Replace the values in angle brackets with the appropriate values.  A
+sample configuration file can be found in conf/06.biosql.conf
+
+Lincoln Stein
+<lstein@cshl.org>

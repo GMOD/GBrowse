@@ -9,7 +9,7 @@ already.
 
 =over
 
-=item A) MySQL -- http://www.mysql.com
+=item A) MySQL -- L<http://www.mysql.com>
 
 The MySQL database is a fast open source relational database
 that is widely used for web applications.  It is required for
@@ -17,17 +17,17 @@ most real-live genome annotation projects.  For small projects
 (a few thousands of annotated features), you can skip installing
 MySQL and use an in-memory database instead.
 
-=item B) Apache Web Server -- http://www.apache.org
+=item B) Apache Web Server -- L<http://www.apache.org>
 
 The Apache web server is the industry standard open source
 web server for Unix and Windows systems.
 
-=item C) Perl 5.005 -- http://www.cpan.org
+=item C) Perl 5.005 -- L<http://www.cpan.org>
 
 The Perl language is widely used for web applications.
 Version 5.6 is preferred, but 5.00503 or higher will work.
 
-=item D) Standard Perl modules -- http://www.cpan.org
+=item D) Standard Perl modules -- L<http://www.cpan.org>
 
 The following Perl modules must be installed for GBrowse to work.
 They can be found on the Comprehensive Perl Archive Network
@@ -40,7 +40,7 @@ They can be found on the Comprehensive Perl Archive Network
 	Digest::MD5
 	Text::Shellwords
 
-=item E) Bioperl version 1.3 or higher -- http://www.bioperl.org
+=item E) Bioperl version 1.3 or higher -- L<http://www.bioperl.org>
 
 (Note: Use anonymous CVS to get Bioperl 1.3 if it isn't yet released).
 
@@ -69,14 +69,20 @@ installed before you start.
 
 Brief synopsis:
 
+For PPM3:
+
 	ppm> rep add gmod http://stein.cshl.org/ppm
 	ppm> rep up gmod
 	ppm> rep up gmod
 	ppm> install DBD::mysql
 	ppm> install Generic-Genome-Browser
 
+for PPM2:
+
+        add ppm synopsis here
+
 Binary distributions of GBrowse and the 1.3 version of Bioperl live at
-http://stein.cshl.org/ppm.  Add this repository to the list of active
+L<http://stein.cshl.org/ppm>.  Add this repository to the list of active
 repositories, and then move the repository to the top to ensure that
 you get the most up to date versions of the modules.
 
@@ -106,11 +112,11 @@ you can run it.
 This will install the software in the default location under
 /usr/local/apache. See "Details" to change this.
 
-To further configure GBrowse, see docs/CONFIGURE_HOWTO.txt.  To run
+To further configure GBrowse, see L<CONFIGURE_HOWTO>.  To run
 GBrowse on top of Oracle and BioSQL databases see
-docs/ORACLE_AND_BIOSQL.txt.  To run GBrowse on top of Gadfly, see
-README-berkeley-gadfly. To install on Microsoft Windows platforms, see
-README-windows.txt.
+L<ORACLE_AND_BIOSQL>.  To run GBrowse on top of Gadfly, see
+L<README-berkeley-gadfly>. To install on Microsoft Windows platforms, see
+L<README-windows>.
 
 Details:
 
@@ -174,7 +180,7 @@ directory are checked before overwriting them, so be careful to copy
 the new copies somewhere safe if you have modified them.
 
 You can always manually move the files around after install.  See
-docs/configuration.txt for details.
+L<CONFIGURE_HOWTO> for details.
 
 When installing the static files, the install script also creates an
 empty directory named "tmp".  This directory is set to be world
@@ -410,7 +416,7 @@ objects for rendering.
 =back
 
 To improve (1), I recommend that you install the mod_perl module for
-Apache. (http://perl.apache.org).  By configuring an Apache::Registry
+Apache. (L<http://perl.apache.org>).  By configuring an Apache::Registry
 directory and placing gbrowse inside it (rather than in the default
 cgi-bin directory). The overhead for loading Perl and its libraries
 are eliminated, thereby increasing the performance of the script
@@ -438,7 +444,7 @@ Finally, there is a slowdown when gbrowse converts the results of
 database SQL queries into renderable biological objects.  This becomes
 particularly noticeable when there are lots of multi-segment objects
 to be displayed.  You can work around this slowdown by using semantic
-zooming (see docs/CONFIGURE_HOWTO.txt).  Otherwise, there's not much
+zooming (see L<CONFIGURE_HOWTO>).  Otherwise, there's not much
 that can be done about this short of buying a faster machine.
 The GMOD team is working hard to reduce this performance hit.
 
@@ -495,7 +501,7 @@ on the image will link to the fully-navigable gbrowse script.
 You can also use gbrowse_img to superimpose temporary features (like
 BLAST hits) on the existing genome features.
 
-Read docs/gbrowse_img.txt for the CGI parameters and other
+Read docs/gbrowse_img.txt B<DOES NOT EXIST> for the CGI parameters and other
 instructions. A copy of these instructions in HTML form will be
 generated when gbrowse_img is called without any arguments.  Type
 http://your.host/cgi-bin/gbrowse_img into your favorite web browser.
@@ -591,7 +597,7 @@ contact the developers at the address given in the next section.
 
 Please send requests for help to gmod-gbrowse@lists.sourceforge.net.
 There is also a formal bug tracking and feature request system in
-place at http://sourceforge.net/projects/gmod/
+place at L<http://www.gmod.org/>
 
 
 Have fun!

@@ -8,4 +8,10 @@ There are several useful help documents here, including:
 
 =item 2 L<CONFIGURE_HOWTO>
 
+=item 3 L<ORACLE_AND_BIOSQL>
+
+=item 4 L<README-berkeley-gadfly>
+
+=item 5 L<README-windows>
+
 =back

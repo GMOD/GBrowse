@@ -42,7 +42,9 @@ system halts.  Also be sure to add MySQL's bin directory to your PATH
 environment variable.  Typically, it is C:\mysql\bin.
 
 Bulk upload notes:
-Be sure that the modules you need are actually installed in your Activestate
+* Note that you must use the --force option to use bulk_load_gff.pl. 
+
+* Be sure that the modules you need are actually installed in your Activestate
 Perl.  I found the PPM 'thought' that they were installed, but really there
 was a package list and nothing else.  I found this to be the case with both
 DBI and DBD::Mysql.  I had to use PPM to remove the modules and install them
@@ -51,5 +53,5 @@ variable (set in the System control panel) points to a writable directory.
 
 Scott Cain
 cain@cshl.org
-12/27/2002
+1/3/2003
 

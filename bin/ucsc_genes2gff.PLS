@@ -143,7 +143,7 @@ utr_ends"
 	if (defined $utr_start[$i] && $utr_start[$i] <= $utr_end[$i] &&
 $utr_start[$i] < $cdsStart) {
 	  print join
-("\t",$chrom,$SRC,"5'-UTR",$utr_start[$i],$utr_end[$i],'.',$strand,'.',"Parent=$id"),"\n"	
+("\t",$chrom,$SRC,"five_prime_UTR",$utr_start[$i],$utr_end[$i],'.',$strand,'.',"Parent=$id"),"\n"	
 	} # end of if	    
       } # end of foreach
 
@@ -156,7 +156,7 @@ $utr_start[$i] < $cdsStart) {
       for (my $i=0;$i<@utr_start;$i++) {  # for each utr start
 	if (defined $utr_start[$i] && $utr_start[$i] <= $utr_end[$i] &&
 $utr_start[$i] > $cdsEnd) {
-	  print join ("\t",$chrom,$SRC,"3'-UTR",,$utr_start[$i],
+	  print join ("\t",$chrom,$SRC,"three_prime_UTR",,$utr_start[$i],
 $utr_end[$i],'.',$strand,'.',"Parent=$id"),"\n"	
 	}
       }
@@ -221,7 +221,7 @@ $cds_start == defined $cds_end;
 	if (defined $utr_start[$i] && $utr_start[$i] <= $utr_end[$i] &&
 $utr_start[$i] > $cdsEnd) {
 	  unshift @lines,join
-("\t",$chrom,$SRC,"5'-UTR",,$utr_start[$i],$utr_end[$i],'.',$strand,'.',"Parent=$id"),"\n"	
+("\t",$chrom,$SRC,"five_prime_UTR",,$utr_start[$i],$utr_end[$i],'.',$strand,'.',"Parent=$id"),"\n"	
 	}
       } # end of for
 
@@ -235,7 +235,7 @@ $utr_start[$i] > $cdsEnd) {
 	if (defined $utr_start[$i] && $utr_start[$i] <= $utr_end[$i] &&
 $utr_end[$i] < $cdsStart) {
 	  unshift @lines,join
-("\t",$chrom,$SRC,"3'-UTR",$utr_start[$i],$utr_end[$i],'.',$strand,'.',"Parent=$id"),"\n"	
+("\t",$chrom,$SRC,"three_prime_UTR",$utr_start[$i],$utr_end[$i],'.',$strand,'.',"Parent=$id"),"\n"	
 	}
       } # end for
     }

@@ -18,17 +18,17 @@ foreach (@argv) {
 }
 
 # set hard-coded values
-$OPTIONS{APACHE} ||= '/usr/local/apache';
+$OPTIONS{PREFIX} ||= '/usr/local/apache';
 unless ($OPTIONS{CONF}) {
-  $OPTIONS{CONF} = "$OPTIONS{APACHE}/conf";
+  $OPTIONS{CONF} = "$OPTIONS{PREFIX}/conf";
   warn "NOTE: Setting location of browser configuration files to $OPTIONS{CONF}\n";
 }
 unless ($OPTIONS{HTDOCS}) {
-  $OPTIONS{HTDOCS} = "$OPTIONS{APACHE}/htdocs";
+  $OPTIONS{HTDOCS} = "$OPTIONS{PREFIX}/htdocs";
   warn "NOTE: Setting location of browser static files to $OPTIONS{HTDOCS}\n";
 }
 unless ($OPTIONS{CGIBIN}) {
-  $OPTIONS{CGIBIN} = "$OPTIONS{APACHE}/cgi-bin";
+  $OPTIONS{CGIBIN} = "$OPTIONS{PREFIX}/cgi-bin";
   warn "NOTE: Setting location of browser static files to $OPTIONS{CGIBIN}\n";
 }
 
@@ -43,7 +43,7 @@ close F;
 # the contents of the Makefile that is written.
 WriteMakefile(
 	      'NAME'	     => 'Generic-Genome-Browser',
-	      'VERSION'      => '1.02',
+	      'VERSION'      => '1.03',
 	      'PREREQ_PM'    => {
 				 Bio::Graphics => 0.92,
 				 Bio::DB::GFF  => 1.01,

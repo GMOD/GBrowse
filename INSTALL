@@ -67,7 +67,7 @@ following locations:
 
    CGI script:      /usr/local/apache/cgi-bin/gbrowse
    Static images:   /usr/local/apache/htdocs/gbrowse
-   Config files:    /usr/local/apache/htdocs/conf/gbrowse.conf
+   Config files:    /usr/local/apache/conf/gbrowse.conf
    The module:	    -standard site-specific Perl library location-
 
 You can change change the location of the installation by passing
@@ -85,11 +85,27 @@ The following arguments are recognized:
   HTDOCS	  Static files directory
   CGIBIN	  CGI script directory
   INSTALLSITELIB  Perl site-specific modules directory
-  APACHE	  Base directory for conf, htdocs and cgibin
+  PREFIX	  Base directory for conf, htdocs and cgibin
 
-If you specify APACHE, then the configuration, static and CGI files
-will be placed into <APACHE>/conf, <APACHE>htdocs and <APACHE>/cgi-bin
-respectively, where <APACHE> is the directory you specified.  
+For example, if you are on a RedHat system, where the default Apache
+installation uses /var/www/html for HTML files, /var/www/cgi-bin for
+CGI scripts, and /etc/httpd/conf for the configuration files, you
+should specify the following configuration:
+
+  perl Makefile.PL HTDOCS=/var/www/html \
+	           CONF=/etc/httpd/conf \
+		   CGIBIN=/var/www/cgi-bin
+
+(The backslashes are there to split the command across multiple lines
+only). To make it easier when upgrading to new versions of the
+software, you can put this command into a shell script.
+
+As a convenience, you can use the configuration option PREFIX, in
+which case the static and CGI files will be placed into PREFIX/conf,
+PREFIX/htdocs and PREFIX/cgi-bin respectively, where PREFIX is the
+location you specified:
+
+  perl Makefile.PL PREFIX=/home/www
 
 Note that the configuration files are always placed in a subdirectory
 named gbrowse.conf.  You cannot change this.  Similarly, the static

@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.14 2003-11-09 20:10:23 sheldon_mckay Exp $
+# $Id: GFFhelper.pm,v 1.15 2003-11-17 18:16:00 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -103,7 +103,6 @@ use Bio::Root::Root;
 use Bio::SeqFeature::Generic;
 use IO::String;
 use Bio::DB::GFF::Homol;
-use Data::Dumper;
 
 use vars qw/ @ISA /;
 
@@ -296,44 +295,54 @@ sub component {
 sub gff2Generic {
     my ($self, $f) = @_;
 
-    Bio::SeqFeature::Generic->new( -primary_tag => $f->primary_tag,
-				   -source_tag  => $f->source_tag,
-				   -phase       => $f->phase,
-				   -score       => $f->score,
-				   -start       => $f->start,
-				   -end         => $f->end,
-				   -strand      => $f->strand,
-				   -tag         => $self->process_attributes($f) );
+    my $feat = Bio::SeqFeature::Generic->new( -primary_tag => $f->primary_tag,
+					      -source_tag  => $f->source_tag,
+					      -phase       => $f->phase,
+					      -score       => $f->score,
+					      -start       => $f->start,
+					      -end         => $f->end,
+					      -strand      => $f->strand );
+
+    my $att = $self->process_attributes($f);
+    for my $t ( keys %$att ) {
+	for my $v ( @{$att->{$t}} ) {
+	    $feat->add_tag_value( $t => $v );
+	}
+    }
+    
+    $feat;
 }
 
 
 sub process_attributes {
     my ($self, $f) = @_;
     my $mode = $self->configuration->{mode};
-    my %att = $f->attributes;
+    my $att = $f->attributes;
 
     # add database identifiers for select mode
-    $att{database_id} = $f->id if $mode eq 'selected';
+    $att->{database_id} = [$f->id] if $mode eq 'selected';
     
     # handle GFF2.5 targets
     if ( my $t = $f->target ) {
 	my $tclass = $t->class;
 	my $tname  = $t->name;
-	$att{Target} = "$tclass:$tname";
-	$att{tstart} = $t->start;
-	$att{tend}   = $t->end;
+	$att->{Target} = "$tclass:$tname";
+	$att->{tstart} = [$t->start];
+	$att->{tend}   = [$t->end];
     }
     elsif ( $f->group )  {
 	my $class = $f->class;
 	my $name  = $f->name;
-	$att{$class} = $name if $class && $name;
+	push @{$att->{$class}}, $name if $class && $name;
     }
-    for ( keys %att ) { 
-	$att{$_} =~ s/;/,/g;
-	$att{$_} =~ s/\"|\s+$//g;
+    for ( keys %$att ) { 
+	for my $v ( @{$att->{$_}} ) {
+	    $v =~ s/;/,/g;
+	    $v =~ s/\"|\s+$//g;
+	}
     }
 
-    \%att;
+    $att;
 }
 
 

@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.51.2.6 2003-06-26 00:33:19 pedlefsen Exp $
+# $Id: Browser.pm,v 1.51.2.7 2003-06-30 20:24:59 pedlefsen Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -74,14 +74,12 @@ use File::Basename 'basename';
 use CGI::Carp;
 use CGI qw( :standard escape escapeHTML center expires *table *dl *TR *td );
 use Cwd;
-## TODO: REMOVE?  Testing normalizer.
-use Bio::DB::LocusLinkHugoNormalizer;
 use vars qw( $SOURCES $DEFAULT_SOURCE );
 
 ## TODO: Document this.  Why?
 #$ENV{ 'PATH' } = '/bin:/usr/bin:/usr/local/bin';
 
-use constant DEBUG                => 0;#1;
+use constant DEBUG                => 0;
 use constant DEBUG_PLUGINS        => 0;
 
 # if true, turn on surrounding rectangles for debugging the image map
@@ -1796,6 +1794,10 @@ sub _get_plugins_table_html {
   my $self = shift;
   my ( $settings, $plugins ) = @_;
 
+  my $source_menu_html = $self->_get_source_menu_html( $settings );
+  my $plugin_menu_html = $self->_get_plugin_menu_html( $settings, $plugins );
+
+  return unless( $source_menu_html || $plugin_menu_html );
   return
     table(
       { '-border'      => 0,
@@ -1806,11 +1808,11 @@ sub _get_plugins_table_html {
           '-align' => 'left' },
         td(
           { '-align' => 'left' },
-          $self->_get_source_menu_html( $settings ),
+          $source_menu_html
         ),
         td(
           { '-align' => 'left' },
-          $self->_get_plugin_menu_html( $settings, $plugins )
+          $plugin_menu_html
         )
       )
     );
@@ -2370,29 +2372,6 @@ sub _get_segments {
     $settings->{ 'end' }   = ( $new_end / $divisor );
 
   } # End foreach $segment, resize if below $min_seg_size.
-
-  ## TODO: REMOVE.  Testing.
-  ## I think that ultimately we'll want to put the normalizer in the SegmentProviderI so that names can be normalized as the features are retrieved from the db, and perhaps also allow them to be attatched to SegmentIs also, to normalize as features are returned by the features() method.
-  # Test normalization:
-  if( @segments ) {
-    #my $normalizer = Bio::DB::LocusLinkHugoNormalizer->new();
-    #my @features = $segments[ 0 ]->features();
-    #foreach my $feature ( @features ) {
-    #  $normalizer->normalize( $feature );
-    #  ## TODO: REMOVE
-    #  print STDERR "The feature's normalized name is ".$feature->display_name()."\n";
-    #}
-    #my $iterator = $segments[ 0 ]->features( '-iterator' => 1 );
-    ### TODO: REMOVE
-    #warn "Bouts to normalize ".$segments[ 0 ]->feature_count()." features.";
-    #warn "\$iterator->{ '_features' } = [ ".join( ', ', @{ $iterator->{ '_features' } } )." ]";
-    #while( $iterator->has_more_features() ) {
-    #  my $seq_feature = $iterator->next_feature();
-    #  $normalizer->normalize( $seq_feature );
-    #  ## TODO: REMOVE
-    #  print STDERR "The feature's normalized name is ".$seq_feature->display_name()."\n";
-    #}
-  }
 
   return @segments;
 } # _get_segments(..)
@@ -3796,6 +3775,7 @@ sub _get_plugin_menu_html {
         keys %$plugins;
 
   my @plugins = sort { $labels{ $a } cmp $labels{ $b } } keys %labels;
+  return unless @plugins;
   return
     (
      b( $babelfish->tr( 'Dumps' ) . ':' ) .
@@ -3833,6 +3813,7 @@ sub _get_source_menu_html {
   warn "_get_source_menu_html(..) A" if DEBUG;
 
   my @sources = sort $self->sources();
+  return unless scalar( @sources > 1 );
 
   warn "_get_source_menu_html(..) B" if DEBUG;
 
@@ -5168,13 +5149,29 @@ sub _name2segments {
   my $max_segment = $self->setting( 'max_segment' );
 
   my ( @segments, $class, $start, $end );
-  if( $name =~ /([\w._-]+):(-?[\d.]+),(-?[\d.]+)$/ or
-      $name =~ /([\w._-]+):(-?[\d,.]+)(?:-|\.\.)(-?[\d,.]+)$/ ) {
+  if( $name =~ /([\w._-]+):(-?[\dkKmM.]+),(-?[\dkKmM.]+)$/ or
+      $name =~ /([\w._-]+):(-?[\dkKmM,.]+)(?:-|\.\.)(-?[\dkKmM,.]+)$/ ) {
     $name  = $1;
     $start = $2;
     $end  = $3;
-    $start =~ s/,//g; # get rid of commas
-    $end  =~ s/,//g;
+    $start =~ s/,\.//g; # get rid of commas
+    $end  =~ s/,\.//g;
+    if( $start =~ /[kKmM]/ ) {
+      my ( $millions, $rest ) = ( $start =~ /^(\d+)[Mm](.+)$/ );
+      unless( defined $millions ) {
+        $rest = $start;
+      }
+      my ( $thousands, $ones ) = ( $rest =~ /^(\d+)[Kk](\d*)$/ );
+      $start = ( $millions * 1000000 ) + ( $thousands * 1000 ) + $ones;
+    }
+    if( $end =~ /[kKmM]/ ) {
+      my ( $millions, $rest ) = ( $end =~ /^(\d+)[Mm](.*)$/ );
+      unless( defined $millions ) {
+        $rest = $end;
+      }
+      my ( $thousands, $ones ) = ( $rest =~ /^(\d+)[Kk](\d*)$/ );
+      $end = ( $millions * 1000000 ) + ( $thousands * 1000 ) + $ones;
+    }
   } elsif( $name =~ /^(\w+):(.+)$/ ) {
     ## TODO: Note that this is for namespace qualifiers on the feature or sequence name, but if that's the case, shouldn't it also be done in the above regexp?
     $class = $1;
@@ -5230,8 +5227,17 @@ sub _name2segments {
 
   # try to remove the chr CHROMOSOME_I
   if( !@segments && ( $name =~ /^(chromosome_?|chr)/i ) ) {
-    ( my $chr = $name ) =~ s/^(chromosome_?|chr)//i;
-    @segments = $self->config()->segment( $chr );
+      ( my $chr = $name ) =~ s/^(chromosome_?|chr)//i;
+      @argv = ( '-name'  => $chr );
+      push( @argv, ( '-class' => $class ) ) if defined $class;
+      if( defined( $start ) || defined( $end ) ) {
+        push( @argv,
+              ( '-range' => Bio::RelRange->new(
+                              '-start' => $start,
+                              '-end' => $end
+                            ) ) );
+      }
+    @segments = $self->config()->segment( @argv );
   }
 
   # try the wildcard version, but only if the name is of significant length

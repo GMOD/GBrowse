@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Config;
 
-# $Id: Config.pm,v 1.1.2.2 2003-06-27 18:27:43 pedlefsen Exp $
+# $Id: Config.pm,v 1.1.2.3 2003-06-30 20:24:59 pedlefsen Exp $
 # Configuration data for gbrowse.
 
 =head1 NAME
@@ -247,7 +247,7 @@ sub search_notes {
 sub get_and_eval {
   my $self = shift;
   my $val = $self->get( @_ );
-  return $val unless $val =~ /^sub\s*\{/;
+  return $val unless ( defined( $val ) && ( $val =~ /^sub\s*\{/ ) );
   unless( $self->safe() ) {
     $self->throw( "Unsafe to eval" );
   }
@@ -443,6 +443,8 @@ sub initialize_segment_providers {
     #warn "auto aggregator factory: ".$auto_aggregator_factory_classes[ 0 ];
     my @auto_aggregator_factories;
     foreach my $class ( @auto_aggregator_factory_classes ) {
+      ## TODO: Why is this line necessary?
+      next unless $class;
       ## TODO: REMOVE
       #warn "Loading $class";
       unless( eval( "require $class" ) ) {

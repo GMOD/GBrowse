@@ -1,27 +1,16 @@
-<table border="0" width="100%">
-  <tr>
-  [% IF browser.options.display_tracks == 1 %]
-    <td class="searchbody" valign="top" align="left">
-      <b>[% browser.translate('tracks') %]</b><a href="?display_tracks=0">[[% browser.translate('hide') %]]</a>
-      <p>
-        <i>[% browser.translate('external_tracks') %]</i>
-        <div style="background: [% browser.config.setting('overview bgcolor') %]">[% browser.translate('overview_tracks') %]</div>
-      </p>
-    </td>
-    <td class="searchbody" colspan="3" width="85%">
-      <!-- sorting tracks by browser.options.sk not ported yet -->
-      [% i = 0 %]
-      <table border="0"><tr>
-      [% FOREACH tracklabel = browser.options.tracks -%]
-        <td><input type="checkbox" name="label" value="[% tracklabel %]" checked="checked"/>[% citation_link(tracklabel,'?help=citations') %]</td>
-        [% i = i + 1 ; IF(i % 3) == 0 ; '</tr><tr>' ; END %]
-      [% END -%]
-      </tr></table>
-    </td>
-  [% ELSE %]
-    <td class="searchbody" colspan="3">
-      <b>[% browser.translate('tracks') %]</b> <a href="?display_tracks=1">[[% browser.translate('show') %]]</a>
-    </td>
-  [% END %]
-  </tr>    
-</table>
+<div class="searchbody" width="100%">
+  <div style="float: left;" class="controller" id="controller3"><b>[% browser.translate('tracks') %]</b> [[% browser.translate('hide') %]]&nbsp;</div>
+  <div style="float: left;"><i>[% browser.translate('external_tracks') %]</i>&nbsp;</div>
+  <div style="background: [% browser.config.setting('overview bgcolor') %]; float: left;">[% browser.translate('overview_tracks') %]&nbsp;</div>
+</div>
+<br/><br/>
+<div class="searchbody" id="target3" style="width: 100%;">
+  <!-- sorting tracks by browser.options.sk not ported yet -->
+  [% i = 0 %]
+  <table border="0"><tr>
+  [% FOREACH tracklabel = browser.options.tracks -%]
+    <td><input type="checkbox" name="label" value="[% tracklabel %]" checked="checked"/>[% citation_link(tracklabel,'?help=citations') %]</td>
+    [% i = i + 1 ; IF(i % 3) == 0 ; '</tr><tr>' ; END %]
+  [% END -%]
+  </tr></table>
+</div>

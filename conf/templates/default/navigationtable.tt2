@@ -9,9 +9,11 @@
     <a href="?name=[% example | uri %]">[% example %]</a>[% UNLESS loop.last ; ', ' ; END %]
   [% END %]
   <br/>
+  <br/>
 </div>
-<input type="hidden" id="keep1" name="display_banner" value="[% browser.options.display_banner %]"/>
+<input type="hidden" id="keep1" name="display_banner"       value="[% browser.options.display_banner %]"/>
 <input type="hidden" id="keep2" name="display_instructions" value="[% browser.options.display_instructions %]"/>
+<input type="hidden" id="keep3" name="display_tracks"       value="[% browser.options.display_tracks %]"/>
 
 <div class="searchtitle" width="100%">
   [% IF browser.options.display_banner == 1 ;
@@ -45,6 +47,6 @@
     [% htmlfrag1 %]
   </div>
 
-  <div class="searchbody" style="width: 50%;">[% PROCESS "searchbox.tt2" %]</div>
-  <div class="searchbody" style="width: 50%; text-align: right;">[% IF segment %]<b>[% browser.translate('scroll') %]</b><br/>[% PROCESS "slider.tt2" %][% END %]</div>
+  <div class="searchbody" style="float: left; width: 50%;">[% PROCESS "searchbox.tt2" %]</div>
+  <div class="searchbody" style="float: left; width: 50%;">[% IF segment %]<b>[% browser.translate('scroll') %]</b><br/>[% PROCESS "slider.tt2" %][% END %]</div>
 </div>

@@ -48,7 +48,7 @@ function setup()
     panel.oldHeight = xHeight(panel);
     xHeight(panel,0);
     xWidth(panel,0);
-    xHide( xGetElementById('target1') );
+    xHide( panel );
   [% END %]
   [% IF ! browser.options.display_instructions %]
     panel = xGetElementById('target2');
@@ -57,7 +57,16 @@ function setup()
     panel.oldHeight = xHeight(panel);
     xHeight(panel,0);
     xWidth(panel,0);
-    xHide( xGetElementById('target2') );
+    xHide( panel );
+  [% END %]
+  [% IF ! browser.options.display_tracks %]
+    panel = xGetElementById('target3');
+    panel.on = 0;
+    panel.oldWidth  = xWidth(panel);
+    panel.oldHeight = xHeight(panel);
+    xHeight(panel,0);
+    xWidth(panel,0);
+    xHide( panel );
   [% END %]
 }
 function tOnClick()

@@ -59,11 +59,10 @@ INPUT.reset_button {background-color: red;
 	            font-size: small;
 }
 .searchbody       { background-color: lightgoldenrodyellow;
-	            font-size: small;
-                    float: left;
+                    font-size: small;
 }
 .settingstitle    { background-color: DarkKhaki;
-	            font-size: small;
+	                font-size: small;
 }
 .settingsbody     { background-color: khaki;
 	            font-size: small;

@@ -1,8 +1,6 @@
 <b>[% browser.translate('data_source') %]</b><br/>
-[% IF browser.config.sources.size > 1 %]
 <select name="source">
 [% FOREACH source = browser.config.sources %]
-  <option value="source">[% browser.config.description(source) %]</option>
+  <option value="[% source %]">[% browser.config.description(source) %]</option>
 [% END %]
 </select>
-[% END %]

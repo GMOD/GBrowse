@@ -9,6 +9,7 @@ README-PLUGINS
 TODO
 bin/process_gadfly.PLS
 bin/process_gadfly.pl
+bin/process_ncbi_human.pl
 bin/process_sgd.PLS
 bin/process_sgd.pl
 bin/process_wormbase.PLS

@@ -1,20 +1,40 @@
-#!/usr/bin/perl -w
+#!perl
+use Config;
+use File::Basename qw(&basename &dirname);
+use Cwd;
+
+$origdir = cwd;
+chdir dirname($0);
+$file = basename($0, '.PL','.PLS');
+$file .= $^O eq 'VMS' ? '.com' : '.pl';
+
+open OUT,">$file" or die "Can't create $file: $!";
+
+print "Extracting $file (with variable substitutions)\n";
+
+print OUT <<"!GROK!THIS!";
+$Config{startperl}
+!GROK!THIS!
+
+# In the following, perl variables are not expanded during extraction.
+
+print OUT <<'!NO!SUBS!';
 
 =head1 NAME
 
-ncbi_2_gff.pl - Massage NCBI chromosome annotation into GFF-format suitable for Bio::DB::GFF
+process_ncbi_human.pl - Massage NCBI chromosome annotation into GFF-format suitable for Bio::DB::GFF
 
 =head1 VERSION (CVS-info)
 
- $RCSfile: ncbi_to_gff.pl,v $
+ $RCSfile: process_ncbi_human.PLS,v $
  $Revision: 1.1 $
  $Author: lstein $
- $Date: 2002-07-04 16:38:20 $
+ $Date: 2002-07-05 13:08:29 $
 
 
 =head2 SYNOPSIS
 
-   perl ncbi_to_gff.pl [options] /path/to/gzipped/datafile(s)
+   perl process_ncbi_human.pl [options] /path/to/gzipped/datafile(s)
 
 =head2 DESCRIPTION
 
@@ -22,21 +42,38 @@ This script massages the chromosome annotation files located at
 
   ftp://ftp.ncbi.nih.gov/genomes/H_sapiens/maps/mapview/chromosome_order/
 
-into the GFF-format recognized by Bio::DB::GFF. If the resulting GFF-files are loaded into a Bio::DB:GFF database using the utilities described below, the annotation can be viewed in the Generic Genome Browser (http://www.gmod.org/ggb/) and interfaced with using the Bio::DB:GFF libraries.
-  (NB these NCBI-datafiles are dumps from their own mapviewer database backend, according to their READMEs)
+into the GFF-format recognized by Bio::DB::GFF. If the resulting
+GFF-files are loaded into a Bio::DB:GFF database using the utilities
+described below, the annotation can be viewed in the Generic Genome
+Browser (http://www.gmod.org/ggb/) and interfaced with using the
+Bio::DB:GFF libraries.  (NB these NCBI-datafiles are dumps from their
+own mapviewer database backend, according to their READMEs)
 
-To produce the GFF-files, download all the chr*sequence.gz files from the FTP-directory above. While in that same directory, run the following example command (see also help clause by running script with no arguments):
+To produce the GFF-files, download all the chr*sequence.gz files from
+the FTP-directory above. While in that same directory, run the
+following example command (see also help clause by running script with
+no arguments):
 
-ncbi_to_gff.pl --locuslink [path to LL.out_hs.gz] chr*sequence.gz
-  
-This will unzip all the files on the fly and open an output file with the name chrom[$chrom]_ncbiannotation.gff for each, read the LocusLink records into an in-memory hash and then read through the NCBI feature lines, lookup 'locus' features in the LocusLink hash for details on 'locus' features and print to the proper GFF files.
-LL.out_hs.gz is accessible here at the time of writing:
+process_ncbi_human.pl --locuslink [path to LL.out_hs.gz] chr*sequence.gz This
+will unzip all the files on the fly and open an output file with the
+name chrom[$chrom]_ncbiannotation.gff for each, read the LocusLink
+records into an in-memory hash and then read through the NCBI feature
+lines, lookup 'locus' features in the LocusLink hash for details on
+'locus' features and print to the proper GFF files.  LL.out_hs.gz is
+accessible here at the time of writing:
 
   ftp://ftp.ncbi.nih.gov/refseq/LocusLink/LL.out_hs.gz
 
-Note that several of the NCBI features are skipped from the reformatting, either because their nature is not fully known at this time (TAG,GS_TRAN) or their sheer volume stands in the way of them being accessibly in Bio::DB::GFF at this time (EST similarities). You  can easily change this by modifying the $SKIP variable to your liking to add or remove features, but if you add then you will have to add handling for those new features.
+Note that several of the NCBI features are skipped from the
+reformatting, either because their nature is not fully known at this
+time (TAG,GS_TRAN) or their sheer volume stands in the way of them
+being accessibly in Bio::DB::GFF at this time (EST similarities). You
+can easily change this by modifying the $SKIP variable to your liking
+to add or remove features, but if you add then you will have to add
+handling for those new features.
 
-To bulk-import the GFF-files into a Bio::DB::GFF database, use the bulk_load_gff.pl utility provided with Bio::DB::GFF
+To bulk-import the GFF-files into a Bio::DB::GFF database, use the
+bulk_load_gff.pl utility provided with Bio::DB::GFF
 
 =head2 AUTHOR
 
@@ -61,7 +98,12 @@ my $opt = &GetOptions ('locuslink=s'  => \$doLocuslink,
 		       );
 die <<USAGE if(!defined($opt) || @ARGV == 0);
 Usage: $self [options] <GFF filename or wildcard pattern>
-  Massage NCBI chromosome annotation datafiles into GFF-format suitable for importing into  Bio::DB::GFF database. Note that the program handles both unzipped datafiles and gzipped, bzipped or compressed ones, so do not bother with unzipping big downloads before running.
+
+Massage NCBI chromosome annotation datafiles into GFF-format suitable
+for importing into Bio::DB::GFF database. Note that the program
+handles both unzipped datafiles and gzipped, bzipped or compressed
+ones, so do not bother with unzipping big downloads before running.
+
   See 'perldoc $self' for more info
 Options:
    --locuslink Path to zipped LocusLink file, currently located at
@@ -70,9 +112,10 @@ Options:
    --tscsnp    DSN string to TSC MySQL database to use for auxiliary
                SNP feature attributes (CSHL internal use)
 
-  Options can be abbreviated.  For example, you can use -l for
---locuslink.
+  Options can be abbreviated.  For example, you can use -l for --locuslink.
+
 Author: Gudmundur Arni Thorisson <mummi\@cshl.org>
+
 Copyright (c) 2002 Cold Spring Harbor Laboratory
        This library is free software; you can redistribute it
        and/or modify it under the same terms as Perl itself.
@@ -280,6 +323,8 @@ while(my ($chrom,$max) = each %maxCoords)
 
 print "DONE. $i features parsed\n\n";
 
+exit 0;
+
 #------------------------------------------------
 # Subroutines
 #------------------------------------------------
@@ -326,3 +371,9 @@ sub dbConnect
     }
     return $dbh;
 }
+
+!NO!SUBS!
+close OUT or die "Can't close $file: $!";
+chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
+exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
+chdir $origdir;

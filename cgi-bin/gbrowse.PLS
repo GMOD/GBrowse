@@ -1154,6 +1154,7 @@ sub get_segments {
   }
 
   my @segments = lookup_segments($db,$settings);
+
   # resize any segments that are below MIN_SEG_SIZE
   for my $s (@segments) {
     next unless $s->length < MIN_SEG_SIZE;
@@ -1175,10 +1176,11 @@ sub lookup_segments {
 
   $db->debug(0);
   my $divisor = $CONFIG->setting(general=>'unit_divider') || 1;
+  my $padding = $CONFIG->setting(general=>'landmark_padding') || 0;
 
   if (my $name = $settings->{name}) {
     warn "name = $name" if DEBUG;
-    @segments = $CONFIG->name2segments($name,$db,TOO_MANY_SEGMENTS);
+    @segments = $CONFIG->name2segments($name,$db,TOO_MANY_SEGMENTS,$padding);
   }
 
   elsif (my $ref = $settings->{ref}) {
@@ -1224,10 +1226,10 @@ sub do_keyword_search {
   my $settings = shift;
   my $segments = shift;
   my $searchterm = $settings->{name};
-
+  
   # if they wanted something specific, don't give them non-specific results.
   return if $searchterm =~ /^[\w._-]+:/;
-
+  
   # Need to untaint the searchterm.  We are very lenient about
   # what is accepted here because we wil be quote-metaing it later.
   $searchterm =~ /([\w .,~!@#$%^&*()-+=<>?\/]+)/;
@@ -1295,11 +1297,16 @@ sub multiple_choices {
     my @results = @{$refs{$ref}};
     print TR(th({-class=>'databody',-colspan=>4,-align=>'center'},$CONFIG->tr('Matches_on_ref',$ref),br,
 		$overviews->{$ref}));
+
+    my $padding = $CONFIG->setting(general=>'landmark_padding') || 0;
+
     for my $r (sort by_score_and_position @results) {
       my $name        = eval {$r->name}  || $r->primary_tag;
       my $class       = eval {$r->class} || $CONFIG->tr('Sequence');
       my $score       = eval {$r->score} || $CONFIG->tr('NOT_APPLICABLE');
       my ($start,$stop) = ($r->start,$r->end);
+      my $padstart = $start - $padding;
+      my $padstop  = $stop  + $padding;
       my %attributes;
       my $description = escapeHTML(eval{join ' ',$r->attributes('Note')}
 				   ||eval{$r->method}||eval{$r->source_tag}||$r->{ref});
@@ -1311,7 +1318,7 @@ sub multiple_choices {
       $description =~ s/($regexp)/<b class="keyword">$1<\/b>/ig;
 
       my $objref     = $class ? "$url?name=$c:$n" : "$url?name=$n";
-      my $posref     = "$url?ref=$ref;start=$start;stop=$stop";
+      my $posref     = "$url?ref=$ref;start=$padstart;stop=$padstop";
       my $position = format_segment($r);
       print TR({-class=>'databody',-valign=>'TOP'},
 	       th({-align=>'right'},ref($name) ? a({-href=>$objref},$name):tt($name)),

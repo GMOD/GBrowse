@@ -827,6 +827,12 @@ The following common options are recognized:
    describing the name, type and position of the feature.  This is
    also assumed if the title option is missing or blank.
 
+   * landmark_padding = 1000
+
+   The landmark_padding option will add the indicated number of base pairs
+   to the right and left of all landmarks that are searched for by name.
+   
+
 B3. Track Sections
 
 Any other [Section] in the configuration file is treated as a

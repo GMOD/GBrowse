@@ -2,6 +2,8 @@ use ExtUtils::MakeMaker;
 use FindBin '$Bin';
 require 5.005003;
 
+my $VERSION = 1.31;
+
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN);
 my $OPTIONS = join ('|',@OPTIONS);
 my %OPTIONS;
@@ -18,17 +20,17 @@ foreach (@argv) {
 }
 
 # set hard-coded values
-$OPTIONS{APACHE} ||= '/usr/local/apache';
+$OPTIONS{PREFIX} ||= '/usr/local/apache';
 unless ($OPTIONS{CONF}) {
-  $OPTIONS{CONF} = "$OPTIONS{APACHE}/conf";
+  $OPTIONS{CONF} = "$OPTIONS{PREFIX}/conf";
   warn "NOTE: Setting location of browser configuration files to $OPTIONS{CONF}\n";
 }
 unless ($OPTIONS{HTDOCS}) {
-  $OPTIONS{HTDOCS} = "$OPTIONS{APACHE}/htdocs";
+  $OPTIONS{HTDOCS} = "$OPTIONS{PREFIX}/htdocs";
   warn "NOTE: Setting location of browser static files to $OPTIONS{HTDOCS}\n";
 }
 unless ($OPTIONS{CGIBIN}) {
-  $OPTIONS{CGIBIN} = "$OPTIONS{APACHE}/cgi-bin";
+  $OPTIONS{CGIBIN} = "$OPTIONS{PREFIX}/cgi-bin";
   warn "NOTE: Setting location of browser static files to $OPTIONS{CGIBIN}\n";
 }
 
@@ -37,16 +39,17 @@ print F "# This hints file contains configuration information used by the generi
 foreach (keys %OPTIONS) {
   print F "$_=$OPTIONS{$_}\n";
 }
+print F "VERSION=$VERSION\n";
 close F;
 
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
 WriteMakefile(
 	      'NAME'	     => 'Generic-Genome-Browser',
-	      'VERSION'      => '1.00',
+	      'VERSION'      => $VERSION,
 	      'PREREQ_PM'    => {
 				 Bio::Graphics => 0.92,
-				 Bio::DB::GFF  => 0.51,
+				 Bio::DB::GFF  => 1.01,
 				}, # e.g., Module::Name => 1.1
 	      PL_FILES       => {
 				 'bin/process_sgd.PLS' => 'bin/process_sgd.pl',
@@ -113,6 +116,8 @@ htdocs_install ::
 			cp -pr \$\$i \$\$dir; \\
 		fi \\
 	done; \\
+	echo "Making \$\$dir/tmp..."; \\
+	mkdir \$\$dir/tmp; \\
 	echo "Making \$\$dir/tmp world writable..."; \\
 	chmod ugo+rwx \$\$dir/tmp
 

@@ -25,6 +25,7 @@ print "Extracting $file (with variable substitutions)\n";
 
 print OUT <<"!GROK!THIS!";
 $Config{startperl} -w
+\$VERSION = $OPTIONS{VERSION};
 !GROK!THIS!
 
 # In the following, perl variables are not expanded during extraction.
@@ -32,7 +33,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.1.1.1 2002-01-03 13:34:18 lstein Exp $
+# $Id: gbrowse.PLS,v 1.7 2002-01-24 20:45:36 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -44,7 +45,7 @@ use Text::Tabs;
 use Text::Shellwords;
 use Carp;
 use CGI qw(:standard escape center *table *dl *TR *td);
-use vars qw($CONFIG %DB $MAX_SEGMENT $DEFAULT_SEGMENT $HEADER $HTML $UA $tabstop);
+use vars qw($CONFIG $VERSION %DB $MAX_SEGMENT $DEFAULT_SEGMENT $HEADER $HTML $UA);
 
 # if you change the zoom/nav icons, you must change this as well.
 use constant MAG_ICON_HEIGHT => 20;
@@ -63,20 +64,47 @@ use constant MAX_KEYWORD_RESULTS  => 50;  # max number of results from keyword s
 use constant DEBUG => 0;
 use constant DEBUGGING_RECTANGLES => 0;
 
-!NO!SUBS!
-
-print OUT <<"!GROK!THIS!";
 ###################################################################
 # Non-modperl users should change this variable if needed to point
 # to the directory in which the configuration files are stored.
 #
-use constant CONF_DIR => '$OPTIONS{CONF}/gbrowse.conf';
+use constant CONF_DIR => '/usr/local/apache/conf/gbrowse.conf';
 #
 ###################################################################
-!GROK!THIS!
 
-# In the following, perl variables are not expanded during extraction.
-print OUT <<'!NO!SUBS!';
+# IMPORTANT DATA STRUCTURES
+
+# $SETTINGS (also called $page_settings): hash reference containing state information
+# keys:
+#   name      name of a landmark to search for (e.g. keyword search)
+#   ref       sequence landmark reference ID (once found)
+#   start     start of range relative to ref
+#   stop      stop of range relative to ref
+#   source    symbolic name of database/configuration to use
+#   eurl      array of external URLs to load
+#   id        unique cookie-based ID for this user
+#   track     array ref which has one element for each track on the
+#               display.  The value of each element indicates what
+#               track to display in that position.  For example:
+#               [3,1,2] means display tracks 3, 1, and 2 in that
+#               order.  Tracks are numbered from zero, and default
+#               to their order in the configuration file.  Uploaded feature
+#               data is track N, where N is the number of tracks defined
+#               in the configuration file.  External URL tracks are N+1, N+2,
+#               and so on.
+#   labels    array ref which has one element for each track on the
+#               display.  A true value indicates that the track should
+#               be shown.  (NOTE: this key is poorly named; originally,
+#               the field was an array of track labels)
+#   options   array ref which has one element for each track on the
+#               display.  Values control the display options for the
+#               track, where 0=automatic, 1=force bump, and 2=force bump & label
+
+# $CONFIG
+# This is a global Bio::Graphics::Browser object.  It contains information on
+# all the configuration files for this browser and provides access to the various
+# settings within the configuration file.
+
 
 BEGIN {
     eval "use Apache"; 
@@ -119,30 +147,33 @@ if (defined($old_source) && $source ne $old_source) {
   param(name => $page_settings->{name});  # restore old reference point
 } else {
   adjust_settings($page_settings);        # set settings from CGI parameters
+  rationalize_span($page_settings);
 }
 ###############################################################################################
 
 ## GETTING THE SEGMENT ########################################################################
 my @segments  = get_segment($page_settings);
-@segments     = $CONFIG->merge(\@segments,(get_ranges())[-1])
-  if @segments > 1 && @segments < TOO_MANY_SEGMENTS;
 ###############################################################################################
 
 ## DUMPS ######################################################################################
 if ( (my $dump = param('dump')) && @segments == 1) {
   if ($dump eq 'FastA') {
-    print header(-attachment   => "$segments[0].fa",
-		 -type         => 'text/plain');
+    print header(-type         => 'text/plain',
+		 #-attachment   => "$segments[0].fa",
+		);
     dump_fasta($segments[0],$page_settings);
   }
 
   elsif($dump eq 'GFF') {
-    print header(-attachment   => "$segments[0].gff",
-		 -type         => 'text/plain');
+    print header(-type         => 'text/plain',
+		 #-attachment   => "$segments[0].gff",
+		 );
+		 
     dump_gff($segments[0],$page_settings);
   }
   exit 0;
 }
+
 ###############################################################################################
 
 # This gets called if the user wants to download his annotation data
@@ -210,13 +241,18 @@ else {
   main_display(\@segments,$page_settings);
 }
 
-## FOOTER
-print
-  $CONFIG->footer || '',
-  p(i(font({-size=>'small'},
-	   'Note: This page uses cookie to save and restore preference information.',
-	   'No information is shared.'))),
-  end_html;
+footer();
+
+sub footer {
+  ## FOOTER
+  print
+    $CONFIG->footer || '',
+      p(i(font({-size=>'small'},
+	       'Note: This page uses cookie to save and restore preference information.',
+	       'No information is shared.')),br,
+	tt("Generic genome browser version $VERSION")),
+      end_html;
+}
 
 #--------------------------------- lots of subroutines --------------------------
 
@@ -356,14 +392,19 @@ sub get_settings {
 
   if (!$ok || !%settings) {
     %settings = ();
-    @settings{'name','ref','start','stop'} = ('','','','');
-    $settings{width}   = $CONFIG->setting('default width');
-    $settings{source}  = $CONFIG->source;
-    $settings{eurl}    = [];
-    $settings{id}      = md5_hex(rand);  # new identity
-    set_default_tracks(\%settings);
+    default_settings(\%settings);
   }
   \%settings;
+}
+
+sub default_settings {
+  my $settings = shift;
+  @$settings{'name','ref','start','stop'} = ('','','','');
+  $settings->{width}   = $CONFIG->setting('default width');
+  $settings->{source}  = $CONFIG->source;
+  $settings->{eurl}    = [];
+  $settings->{id}      = md5_hex(rand);  # new identity
+  set_default_tracks($settings);
 }
 
 sub set_default_tracks {
@@ -424,6 +465,16 @@ sub adjust_settings {
     $settings->{options} = $options;
   }
 
+}
+
+# make sure that start is at least 1 bp less than stop
+sub rationalize_span {
+    my $settings = shift;
+    @{$settings}{'start','stop'} = @{$settings}{'stop','start'} if $settings->{start} > $settings->{stop};
+    if ($settings->{stop}-$settings->{start} <= 10) {
+	$settings->{start} -= 10;
+	$settings->{stop}  += 10;
+    }
 }
 
 # prints the zooming and navigation bar
@@ -496,8 +547,6 @@ sub zoomBar {
 				-name   => "zoom${i}",
 				-alt    => $altText,
 				-border => ,
-#				-height => ($i+1)*$pixels_per_range,
-#				-width  => MAG_ICON_WIDTH,
 				-title  => $titleText);
   }
 
@@ -528,8 +577,7 @@ sub settings_table {
   my $source   = $CONFIG->source;
   my $self     = url(-relative=>1,-path_info=>1);
   my @dumps    = (['GFF'  ,"$self?dump=GFF;start=$start;stop=$stop;ref=$ref;source=$source"]);
-  unshift @dumps,['FastA',"$self?dump=FastA;start=$start;stop=$stop;ref=$ref;source=$source"]
-    if $CONFIG->setting('fasta_files');
+  unshift @dumps,['FastA',"$self?dump=FastA;start=$start;stop=$stop;ref=$ref;source=$source"];
 
   my $ds        = join(', ', (map{a({-href=>"@$_->[1]"},"@$_->[0]")} @dumps));
 
@@ -727,8 +775,9 @@ sub get_segment {
 
   my $db = open_database();
   unless ($db) {
-    error("ERROR: Unable to open database",$CONFIG->setting('description'));
-    return;
+    error("ERROR: Unable to open database",$CONFIG->setting('description'),pre($@));
+    footer();
+    exit 0;
   }
 
   $db->debug(0);
@@ -744,11 +793,17 @@ sub get_segment {
     @segments = $db->segment(@argv);
   }
 
+  $_->absolute(1) foreach @segments;
+
   return unless @segments;
   return @segments if @segments > 1;
 
-  return unless @segments;
-  $segments[0]->absolute(1);
+  # don't accept 1 base pair segments, but instead
+  # set the span to 20 base pairs
+  if ($segments[0]->length <= 10) {
+      $segments[0] = $db->segment($segments[0],-10,10);
+      $segments[0]->absolute(1);
+  }
 
   # set CGI name parameter to match segment.
   # this prevents any confusion over (ref,start,stop) and (name) addressing.
@@ -766,7 +821,8 @@ sub name2segments {
   my $db   = shift || open_database();
 
   my (@segments,$class,$start,$stop);
-  if ($name =~ /(\w+):([\d,-]+)(?:-|\.\.)?([\d,-]+)$/) {
+  if ($name =~ /([\w._-]+):(-?\d+),(-?\d+)$/ or
+      $name =~ /([\w._-]+):(-?[\d,]+)(?:-|\.\.)?(-?[\d,]+)$/) {
     $name = $1;
     $start = $2;
     $stop = $3;
@@ -783,7 +839,7 @@ sub name2segments {
   push @argv,(-class => $class) if defined $class;
   push @argv,(-start => $start) if defined $start;
   push @argv,(-stop  => $stop)  if defined $stop;
-  @segments = defined($start) ? $db->segment(@argv) : $db->segments(@argv);
+  @segments = $db->segments(@argv);
 
   # Here starts the heuristic part.  Try various abbreviations that
   # people tend to use for chromosomal addressing.
@@ -813,6 +869,20 @@ sub name2segments {
       last if @segments;
     }
   }
+
+  # This tricky bit is called when we retrieve multiple segments or when
+  # there is an unusually large feature on display.  In this case, we attempt
+  # to split the feature into its components and offer the user different
+  # portions to look at, invoking merge() to select the regions.
+  my $max_length = 0;
+  foreach (@segments) {
+    $max_length = $_->length if $_->length > $max_length;
+  }
+  if (@segments > 1 || $max_length > $MAX_SEGMENT) {
+    @segments = $db->fetch_feature($segments[0]->ref);
+    @segments = $CONFIG->merge(\@segments,(get_ranges())[-1])
+      if @segments > 1 && @segments < TOO_MANY_SEGMENTS;
+  }
   @segments;
 }
 
@@ -828,6 +898,9 @@ sub do_keyword_search {
 sub format_keyword_search {
   my ($name,$results) = @_;
   my $db = open_database();
+
+  my $regexp = join '|',($name =~ /(\w+)/g);
+
   print start_table();
   print TR({-class=>'datatitle'},th({-colspan=>4},
 	      "No landmark named $name is found, but the following landmarks may be related."));
@@ -838,12 +911,15 @@ sub format_keyword_search {
   for my $r (sort {by_score_and_position(\%position)} @$results) {
     my $name  = escape($r->[0]->name);
     my $class    = escape($r->[0]->class);
+    my $description = escapeHTML($r->[1]);
+    $description =~ s/($regexp)/<b class="keyword">$1<\/b>/ig;
+
     my $href     = "$url?name=$class:$name";
-    my $segment  = $position{overload::StrVal($r->[0])};
-    my $position = format_segment($segment);
+    my $seg      = $position{overload::StrVal($r->[0])};
+    my $position = format_segment($seg);
     print TR({-class=>'databody',-valign=>'TOP'},
 	     th({-align=>'RIGHT'},a({-href=>$href},$r->[0])),
-	     td($r->[1]),
+	     td($description),
 	     td(a({-href=>$href},$position)),
 	     td($r->[2]));
   }
@@ -891,7 +967,7 @@ sub open_database {
   if (my @aggregators = split /\s+/,$CONFIG->setting('aggregators')) {
     push @argv,(-aggregator => \@aggregators);
   }
-  $DB{$source} = eval {Bio::DB::GFF->new(@argv)};
+  $DB{$source} = eval {Bio::DB::GFF->new(@argv)} or warn $@;
   return $DB{$source};
 }
 
@@ -902,8 +978,8 @@ sub image_and_map {
   $CONFIG->width($settings->{width});
 
   # get the current track order
-  my $labels = $settings->{labels},
-  my $tracks = $settings->{track};
+  my $labels  = $settings->{labels},
+  my $tracks  = $settings->{track};
   my $options = $settings->{options};
 
   my($image,$map) = $CONFIG->image_and_map($segment,
@@ -1020,8 +1096,7 @@ sub make_centering_map {
   for my $i (0..19) {
     my $x1 = $portion * $i;
     my $x2 = $portion * ($i+1);
-    # put the middle of the sequence range into
-    # the middle of the picture
+    # put the middle of the sequence range into the middle of the picture
     my $middle = $offset + $scale * ($x1+$x2)/2;
     my $start  = int($middle - $ruler->[0]->length/2);
     my $stop   = int($start + $ruler->[0]->length - 1);
@@ -1068,14 +1143,21 @@ sub dump_fasta {
 sub dump_gff {
   my $segment = shift;
   my $page_settings = shift;
-  my $labels = $page_settings->{labels} or return;
+
+  my $selected_labels = $page_settings->{labels} or return;
+  my @labels   = labels($page_settings);
+  my @selected = grep {$selected_labels->[$_]} 0..@labels;
+  @selected = @labels[@selected];
+
   my $date = localtime;
   print "##gff-version 2\n";
   print "##date $date\n";
   print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
 
   my $conf = $CONFIG->config;
-  my @feature_types = map {$conf->label2type($_)} @$labels;
+  my @feature_types = map {$conf->label2type($_)} @selected;
+
+  warn "dumping @feature_types" if DEBUG;
 
   my $iterator = $segment->features(-types=>\@feature_types,-iterator=>1) or return;
   while (my $f = $iterator->next_feature) {
@@ -1333,13 +1415,15 @@ sub edit_uploaded_file {
   print table({-width=>'100%'},
 	      TR({-class=>'searchbody'},
 		 td('Edit your uploaded annotation data here.',
-		    'Note that you must use tabs (not spaces) to separate fields.',
-		    'Some browsers will replace tabs with spaces,',
-		    'in which case your annotations will not appear.',
-		    'If this is happening to you, go back to the previous page,',
-		    'download the file using the',
-		    i('Download Data'),'button, edit the file with your favorite',
-		    'text editor, and upload it.'
+		    'You may use tabs or spaces to separate fields,',
+		    'but fields that contain whitespace must be contained in',
+		    'double or single quotes.',
+		   ),
+		),
+	      TR({-class=>'searchbody'},
+		 td(
+		    a({-href=>url(-relative=>1,-path_info=>1)."?help=annotation#format",-target=>'_new'},
+		      b('[Help with File Format]'))
 		   ),
 		),
 	      TR({-class=>'searchtitle'},
@@ -1419,6 +1503,15 @@ sub bookmark_link {
 # fix up tracks to adjust for an increase or decrease in their number
 sub adjust_tracks {
   my $settings = shift;
+
+  # sanity check as a defense against invalid cookies
+  foreach (qw(track options labels)) {
+    unless (ref $settings->{$_} eq 'ARRAY') {
+       set_default_tracks($settings);
+       return;
+    }
+  }
+
   my $old_count     = @{$settings->{track}};
   my $new_count     = labels($settings);
 
@@ -1614,6 +1707,7 @@ sub build_citation_page {
     print hr,h3('External Annotation Tracks');
     @citations = ();
     for my $file (@external_features) {
+      next unless defined $file;
       my $name   = ref($file) ? $file->name : $file;
       my $is_url = $name =~ m!^(http|ftp)://!;
       my $link   = $is_url  ? $name  : url(-relative=>1,-path_info=>1)."?Download+Data=1";
@@ -1631,6 +1725,7 @@ sub build_citation_page {
       }
       print blockquote(dl(@citations));
     }
+    print p("No external features loaded.") unless @citations;
   }
 
 }
@@ -1639,6 +1734,8 @@ sub make_citation {
   my $config  = shift;
   my $feature = shift;
   my $citation = $config->citation($feature);
+  # BUG: here's where we should remove "bad" HTML, but we don't!
+  # should remove active content and other nasties
   (my $link     = $feature) =~ tr/ /-/;
   my $text      = $config->setting($feature=>'key') || $feature;
   return join ('',
@@ -1681,6 +1778,7 @@ sub make_citation_link {
     return $labels->[$label_index];
   }
 }
+
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

@@ -111,8 +111,9 @@ Generic Genome Browser Installation
     /usr/local/apache. See "Details" to change this.
 
     To further configure GBrowse, see CONFIGURE_HOWTO. To run GBrowse on top
-    of Oracle, PostgreSQL and BioSQL databases see ORACLE_AND_BIOSQL. To run
-    GBrowse on top of Gadfly, see README-berkeley-gadfly.
+    of Oracle and PostgreSQL databases see ORACLE_AND_POSTGRESQL. To run on
+    top of a BioSQL database, see BIOSQL_ADAPTER_HOWTO. To run GBrowse on
+    top of Gadfly, see README-berkeley-gadfly.
 
     Details:
 

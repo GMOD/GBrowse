@@ -1,0 +1,97 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>GBrowse on Mac OS X</title>
+<link rev="made" href="mailto:root@hampsten.nonet" />
+</head>
+
+<body style="background-color: white">
+
+<p><a name="__index__"></a></p>
+<!-- INDEX BEGIN -->
+
+<ul>
+
+	<li><a href="#gbrowse_on_mac_os_x">GBrowse on Mac OS X</a></li>
+	<ul>
+
+		<li><a href="#description">Description</a></li>
+		<li><a href="#prerequisites_">Prerequisites:</a></li>
+		<li><a href="#quick_start_">Quick start:</a></li>
+		<li><a href="#additional_information">Additional Information</a></li>
+		<li><a href="#author">Author</a></li>
+	</ul>
+
+</ul>
+<!-- INDEX END -->
+
+<hr />
+<p>
+</p>
+<hr />
+<h1><a name="gbrowse_on_mac_os_x">GBrowse on Mac OS X</a></h1>
+<p>
+</p>
+<h2><a name="description">Description</a></h2>
+<p>These scripts simplify the installation of GBrowse on Mac OS X.</p>
+<p>
+</p>
+<h2><a name="prerequisites_">Prerequisites:</a></h2>
+<ol>
+<li><strong><a name="item_the_cpanplus_module">The CPANPLUS module</a></strong><br />
+</li>
+This module automates the installation of a variety of Perl modules.
+<p></p>
+<li><strong><a name="item_2002">December 2002 (or greater) Developer Tools</a></strong><br />
+</li>
+<pre>
+     <a href="http://www.apple.com/developer">http://www.apple.com/developer</a></pre>
+<li><strong><a name="item_root_access">root access</a></strong><br />
+</li>
+If you do not, you may still install GBrowse and its dependencies in
+non-standard paths.  See the documentation below on ``Installing
+GBrowse in non-standard paths''.
+<p>The Fink package manager is *not* required; instead, all packages are
+built from source.</p>
+<p></p></ol>
+<p>
+</p>
+<h2><a name="quick_start_">Quick start:</a></h2>
+<ol>
+<li><strong><a name="item_build_the_libraries_and_dependencies_of_gbrowse">Build the libraries and dependencies of GBrowse</a></strong><br />
+</li>
+<pre>
+   % make libraries</pre>
+<li><strong><a name="item_build_gbrowse_proper">Build GBrowse proper</a></strong><br />
+</li>
+<pre>
+   % make gbrowse</pre>
+</ol>
+<p>
+</p>
+<h2><a name="additional_information">Additional Information</a></h2>
+<p>See the full documentation for installing and using GBrowse on Mac OS
+X in</p>
+<pre>
+     docs/INSTALL.MacOSX.pod</pre>
+<p>For additional information and configuration options, try</p>
+<pre>
+    % perldoc scripts/build-libraries.pl 
+    % perldoc scripts/build-gbrowse.pl
+    
+=head2 Versions and URLs</pre>
+<p>Due to inconsistent naming and distribution of dependencies, these
+scripts rely on a Perl package (BuildConfig.pm) that stores the
+versions and URLs of dependencies known to work with GBrowse. If you
+wish to use a newer version of a library, simply edit the
+BuildConfig.pm file (and drop me a line concerning your results).</p>
+<p>
+</p>
+<h2><a name="author">Author</a></h2>
+<pre>
+ Todd Harris (harris@cshl.org)
+ Copyright @ 2003 Cold Spring Harbor Laboratory</pre>
+
+</body>
+
+</html>

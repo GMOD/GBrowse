@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.109.2.2 2004-09-18 01:12:36 allenday Exp $
+# $Id: gbrowse.PLS,v 1.109.2.3 2004-09-18 03:48:07 allenday Exp $
 
 use strict;
 use Bio::Graphics;
@@ -801,6 +801,7 @@ sub navigation_table {
   my $settings = shift;
   my $features = shift;
   my $segments = shift;
+
   my $feature_files = load_external_sources($segments,$settings);
 
   my $oligo = $PLUGINS->{'OligoFinder'} ? ', oligonucleotide (15 bp minimum)' : '';
@@ -1270,7 +1271,9 @@ sub get_features {
     fatal_error("ERROR: Unable to open database",$CONFIG->setting('description'),pre($@));
   }
 
-  eval {$db->biosql->version($settings->{version})};
+  if($db->can('biosql')){
+    eval {$db->biosql->version($settings->{version})};
+  }
 
   my @features = lookup_features_from_db($db,$settings);
 
@@ -1735,6 +1738,8 @@ sub load_external_sources {
   }
 
   my $segment = $segments->[0] if $segments;
+
+  return undef unless ref($segment) || $segment =~ /\S/;
 
   my @feature_file = load_uploaded_files($segment,$page_settings);
   warn "uploaded feature_file = @feature_file" if DEBUG_EXTERNAL;

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.51 2004-03-08 17:26:24 scottcain Exp $
+# $Id: Segment.pm,v 1.52 2004-03-16 15:47:40 scottcain Exp $
 
 =head1 NAME
 
@@ -240,6 +240,11 @@ sub new {
     }
 }
 
+sub name {
+  my $self = shift;
+  return $self->{'name'}
+}
+
 =head2 _search_by_name
 
 =cut
@@ -451,7 +456,7 @@ sub features {
     warn "Segment->features() args:@_\n" if DEBUG;
 
   my ($types,$attributes,$rangetype,$iterator,$callback);
-  if ($_[0] =~ /^-/) {
+  if ($_[0] and $_[0] =~ /^-/) {
     ($types,$attributes,$rangetype,$iterator,$callback) =
       $self->_rearrange([qw(TYPE ATTRIBUTES RANGETYPE ITERATOR CALLBACK RARE)],@_);
   #  warn "$types\n";
@@ -575,10 +580,16 @@ sub features {
   if ($iterator) {
    warn "using Bio::DB::Das::ChadoIterator\n" if DEBUG;
     return Bio::DB::Das::ChadoIterator->new(\@features);
+  } elsif (wantarray) {
+    return @features;
   } else {
     return \@features;
   }
 }
+
+*get_all_SeqFeature = *get_SeqFeatures = *top_SeqFeatures = *all_SeqFeatures = \&features;
+
+
 =head2 seq
 
  Title   : seq

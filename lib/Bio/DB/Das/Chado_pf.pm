@@ -1,4 +1,4 @@
-# $Id: Chado_pf.pm,v 1.1 2002-11-22 21:48:18 scottcain Exp $
+# $Id: Chado_pf.pm,v 1.2 2002-11-22 22:36:54 scottcain Exp $
 # Das adaptor for Chado_pf
 
 =head1 NAME
@@ -93,7 +93,7 @@ package Bio::DB::Das::Chado_pf;
 use strict;
 
 #use Bio::DB::Chado_pf::BioDatabaseAdaptor;
-#use Bio::DB::Das::Chado_pf::Segment;
+use Bio::DB::Das::Chado_pf::Segment;
 use Bio::Root::Root;
 use Bio::DasI;
 use vars qw($VERSION @ISA);
@@ -130,6 +130,7 @@ sub new {
   my $self  = $class->SUPER::new(@_);
 
   # may throw an exception on new_from_registry()
+  # this must return the dbh
   my $chado_pf   = $self ->_adaptorclass->new_from_registry(@_);
 
   $self->biosql($biosql);
@@ -246,6 +247,8 @@ sub features {
   #					   {types => $types},
   #					   $callback);
 
+
+  #top_SeqFeatures -- a Bio::Root::Root or Bio::DasI method?
   my @features = $self->_segclass->_filter([$self->top_SeqFeatures],
                                           {types => $types},
                                           $callback);
@@ -286,6 +289,7 @@ sub types {
   my $self = shift;
   my ($enumerate) =  $self->_rearrange([qw(ENUMERATE)],@_);
   $self->throw_not_implemented;
+  #if lincoln didn't need to implement it, neither do I!
 }
 
 =head2 search_notes

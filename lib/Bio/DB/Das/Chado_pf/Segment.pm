@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.1 2002-11-22 21:48:19 scottcain Exp $
+# $Id: Segment.pm,v 1.2 2002-11-22 22:36:54 scottcain Exp $
 
 =head1 NAME
 
@@ -258,7 +258,7 @@ sub features {
   my @features          = $self->bioseq->top_SeqFeatures;
   my @filtered_features = $self->_filter(\@features,\%filter_args,$callback);
   if ($iterator) {
-    return Bio::DB::Das::BioSQLIterator->new(\@filtered_features);
+    return Bio::DB::Das::Chado_pfIterator->new(\@filtered_features);
   } else {
     return @filtered_features;
   }

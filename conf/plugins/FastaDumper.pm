@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::FastaDumper;
-# $Id: FastaDumper.pm,v 1.2 2002-03-31 21:15:51 lstein Exp $
+# $Id: FastaDumper.pm,v 1.3 2002-05-09 23:30:20 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -29,6 +29,7 @@ sub dump {
 					    -automerge=>0);
     while (my $coding = $iterator->next_seq) {
       my $start = $coding->start-$segment->start;
+      $start = 0 if $start < 0;
 
       # for Text formatting
       substr($dna,$start,$coding->length) =~ tr/a-z/A-Z/;

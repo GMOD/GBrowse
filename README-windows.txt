@@ -38,7 +38,8 @@ directories in the Apache directory.
 MySQL notes:
 Be sure to set up MySQL as a service as described in the MySQL documentation,
 so that MySQL is started up on boot and properly shutdown before the operating
-system halts.
+system halts.  Also be sure to add MySQL's bin directory to you PATH
+environment variable.  Typically, it is C:\mysql\bin.
 
 More notes here, as I figure them out.
 
@@ -46,12 +47,4 @@ Scott Cain
 cain@cshl.org
 12/27/2002
 
-
-
-> > in Bio/Graphics/Browser.pm
-> >
-> > had to put in "binmode" line in sub generate_image
-> >
-> > after opeing file handle F, insert this line:
-> >
-> > binmode F;
+Check temp directory usage in bulk_load_gff.pl

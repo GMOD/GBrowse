@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.2 2005-03-28 21:13:29 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.3 2005-03-30 20:27:51 scottcain Exp $
 
 =head1 NAME
 
@@ -92,6 +92,7 @@ use Carp qw(carp croak cluck);
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
+use Bio::DB::GFF::Typename;
 use constant DEBUG => 0;
 
 use vars '@ISA','$VERSION';
@@ -161,8 +162,8 @@ sub new {
               or Bio::Root::Root->throw("fetching uniquename from feature_id failed") ;
 
             my $hashref = $fetch_uniquename_query->fetchrow_hashref;
-            $base_start = $$hashref{fmin} + 1;
-            $stop       = $$hashref{fmax};
+            $base_start = $base_start ? $base_start : $$hashref{fmin} + 1;
+            $stop       = $stop       ? $stop       : $$hashref{fmax};
             $db_id      = $$hashref{uniquename};
 
             next if (!defined ($base_start) or !defined($stop) or !defined($db_id));
@@ -206,7 +207,7 @@ sub new {
             $name = $$hash_ref{'name'};
 
             my $length = $$hash_ref{'seqlen'};
-            my $class  = $factory->term2name( $$hash_ref{'type_id'} );
+            my $type   = $factory->term2name( $$hash_ref{'type_id'} );
 
             if ( $$hash_ref{'fmin'} ) {
                 $interbase_start = $$hash_ref{'fmin'};
@@ -232,7 +233,7 @@ sub new {
                 end           => $stop,
                 length        => $length,
                 srcfeature_id => $srcfeature_id,
-                class         => $class,
+                class         => $type,
                 name          => $name,
               },
               ref $self || $self;
@@ -358,7 +359,7 @@ sub _search_by_name {
 
   Title   : class
   Usage   : $obj->class($newval)
-  Function: Returns the segment class 
+  Function: Returns the segment class (synonymous with type)
   Returns : value of class (a scalar)
   Args    : on set, new value (a scalar or undef, optional)
 
@@ -374,15 +375,12 @@ sub class {
 
 =head2 type
 
- Title   : type
- Usage   : $segment->type($newval)
- Function: Get/set segment type
- Returns : value of the segment type (a scalar)
- Args    : on set, a new value
+  Title   : type
+  Usage   : $obj->type($newval)
+  Function: alias of class() for backward compatibility
+  Returns : value of type (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
 
-It is unclear to me how class and type are different in
-the context of a segment, so for the moment, type will
-be an alias of class.
 
 =cut
 
@@ -415,7 +413,8 @@ be an alias of class.
 sub start {
   my $self = shift;
   return $self->{'start'} = shift if @_;
-  return $self->{'start'};
+  return $self->{'start'} if $self->{'start'};
+  return undef;
 
 } 
 
@@ -448,7 +447,8 @@ Alias of start for backward compatibility
 sub end {
   my $self = shift;
   return $self->{'end'} = shift if @_;
-  return $self->{'end'};
+  return $self->{'end'} if $self->{'end'};
+  return undef;
 }
 
 =head2 high
@@ -618,47 +618,47 @@ sub features {
 
     $sql_types = '';
 
-    my $valid_class = undef;
+    my $valid_type = undef;
     if (scalar @$types != 0) {
 
       warn "first type:$$types[0]\n" if DEBUG;
 
-      my $temp_class = $$types[0];
+      my $temp_type = $$types[0];
       my $temp_source = '';
       if ($$types[0] =~ /(.*):(.*)/) {
-          $temp_class  = $1;
+          $temp_type   = $1;
           $temp_source = $2;
       }
 
-      $valid_class = $factory->name2term($temp_class);
-      $self->throw("feature type: '$temp_class' is not recognized") unless $valid_class;
+      $valid_type = $factory->name2term($temp_type);
+      $self->throw("feature type: '$temp_type' is not recognized") unless $valid_type;
 
       my $temp_dbxref = $factory->source2dbxref($temp_source);
       if ($temp_source && $temp_dbxref) {
-          $sql_types .= "((f.type_id = $valid_class and fd.dbxref_id = $temp_dbxref)"; 
+          $sql_types .= "((f.type_id = $valid_type and fd.dbxref_id = $temp_dbxref)"; 
       } else {
-          $sql_types  .= "((f.type_id = $valid_class)";
+          $sql_types  .= "((f.type_id = $valid_type)";
       }
 
       if (scalar @$types > 1) {
         for(my $i=1;$i<(scalar @$types);$i++) {
       
-          $temp_class   = $$types[$i]; 
+          $temp_type   = $$types[$i]; 
           $temp_source = '';
           if ($$types[$i] =~ /(.*):(.*)/) {
-              $temp_class  = $1;
+              $temp_type = $1;
               $temp_source = $2;
           }
           warn "more types:$$types[$i]\n" if DEBUG; 
 
-          $valid_class = $factory->name2term($temp_class);
-          $self->throw("feature type: '$temp_class' is not recognized") unless $valid_class;
+          $valid_type = $factory->name2term($temp_type);
+          $self->throw("feature type: '$temp_type' is not recognized") unless $valid_type;
 
           $temp_dbxref=$factory->source2dbxref($temp_source);
           if ($temp_source && $temp_dbxref) {
-              $sql_types .= " OR \n     (f.type_id = $valid_class and fd.dbxref_id = $temp_dbxref)";
+              $sql_types .= " OR \n     (f.type_id = $valid_type and fd.dbxref_id = $temp_dbxref)";
           } else {
-              $sql_types .= " OR \n     (f.type_id = $valid_class)";
+              $sql_types .= " OR \n     (f.type_id = $valid_type)";
           }
         }
       }
@@ -673,8 +673,7 @@ sub features {
   my $select_part = "select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.phase,"
                    ."fl.locgroup,fl.srcfeature_id,f.type_id,f.uniquename,"
                    ."f.feature_id, af.significance as score, "
-                   ."CASE (dbx.db_id = ".$factory->gff_source_db_id
-                   .") WHEN true THEN fd.dbxref_id ELSE NULL END AS dbxref_id ";
+                   ."dbx.dbxref_id ";
 
   my $order_by    = "order by f.type_id,fl.fmin ";
 
@@ -686,7 +685,7 @@ sub features {
                    ."left join dbxref dbx on (dbx.dbxref_id = fd.dbxref_id) "
                    ."left join analysisfeature af using (feature_id)";
 
-    $where_part   = "where f.feature_id = $feature_id and fl.rank=0 ";
+    $where_part   = "where f.feature_id = $feature_id and fl.rank=0 and dbx.db_id=".$factory->gff_source_db_id;
   } else {
     $from_part   = "from (feature f join featureslice($interbase_start, $rend) fl using (feature_id)) "
                   ."left join feature_dbxref fd using (feature_id) "
@@ -694,7 +693,8 @@ sub features {
                   ."left join analysisfeature af using (feature_id)";
 
     $where_part  = "where $sql_types "
-                  ."fl.srcfeature_id = $srcfeature_id and fl.rank=0 ";
+                  ."fl.srcfeature_id = $srcfeature_id and fl.rank=0 "
+                  ."and dbx.db_id=".$factory->gff_source_db_id;
   }
 
   my $query       = "$select_part\n$from_part\n$where_part\n$order_by\n";
@@ -733,22 +733,29 @@ sub features {
 
   while (my $hashref = $sth->fetchrow_hashref) {
 
-    if ($feature_id && defined($stop)) {
+    warn "dbstart:$$hashref{fmim}, dbstop:$$hashref{fmax}" if DEBUG;
+    warn "start:$base_start, stop:$stop\n" if DEBUG;
+
+    if ($feature_id && 
+        defined($stop) && $stop != $$hashref{fmax} ) {
       $stop = $$hashref{fmin} + $stop + 1;  
     } else {
       $stop = $$hashref{fmax};
     }
-    if ($feature_id && defined($base_start)) {
+    if ($feature_id && 
+        defined($base_start) && $base_start != ($$hashref{fmin}+1) ) {
       my $interbase_start = $$hashref{fmin} + $base_start - 1;
       $base_start = $interbase_start + 1;
     } else {
       my $interbase_start = $$hashref{fmin};
       $base_start         = $interbase_start +1;
     }
+    warn "base_start:$base_start, end:$stop" if DEBUG;
 
     my $source = $factory->dbxref2source($$hashref{dbxref_id}) || "" ;
-    my $class  = $factory->term2name($$hashref{type_id}); #. ":$source";
-    my $type   = "$class:$source";
+    my $type   = Bio::DB::GFF::Typename->new(
+                     $factory->term2name($$hashref{type_id}),
+                     $source);
 
     $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                        $factory,
@@ -767,10 +774,6 @@ sub features {
                        $$hashref{phase},
                        $$hashref{name},
                        $$hashref{uniquename},$$hashref{feature_id});
-
-    if ($source) { #set source if present
-        $feat->source($source); 
-    }
 
     push @features, $feat;
 

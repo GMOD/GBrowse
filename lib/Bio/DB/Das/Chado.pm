@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.1 2005-03-17 20:50:47 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.2 2005-03-30 20:27:36 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -91,6 +91,7 @@ use Bio::DB::Das::Chado::Segment;
 use Bio::Root::Root;
 use Bio::DasI;
 use Bio::PrimarySeq;
+use Bio::DB::GFF::Typename;
 use DBI;
 use Carp qw(longmess);
 use vars qw($VERSION @ISA);
@@ -426,12 +427,9 @@ sub get_feature_by_name {
 
    warn "name after protecting _ and % in the string:$name\n" if DEBUG;
 
-  my (@features,$sth,$source);
+  my (@features,$sth);
   
   if ($name =~ /^\s*\S+\s*$/) {
-
-    warn "insided simple if\n" if DEBUG;
-
     # get feature_id
     # foreach feature_id, get the feature info
     # then get src_feature stuff (chromosome info) and create a parent feature,
@@ -443,20 +441,12 @@ sub get_feature_by_name {
     my $where_part  = "where fs.synonym_id = s.synonym_id and\n"
                     . "s.synonym_sgml ilike ?";
                     #this ilike should probably be replace with a 'lower' index
-
-    warn "before if class\n"  if DEBUG;
-
     if ($class) {
-        if ($class =~ /([^:]+)\:([^:]+)/) {
-            $class = $1;
-            $source = $2; #ignoring source for the moment!
-        }
-        warn "class:$class\n" if DEBUG;
-        my $type_id = $self->name2term($class);
-        return unless $type_id;
+        my $type = $self->name2term($class);
+        return unless $type;
         $from_part .= ", feature f \n";
         $where_part.= "\nand fs.feature_id = f.feature_id and\n"
-                    . "f.type_id = $type_id";
+                    . "f.type_id = $type";
     }
 
     my $query = $select_part . $from_part . $where_part;
@@ -484,16 +474,15 @@ sub get_feature_by_name {
   }
 
      # prepare sql queries for use in while loops
-  my $dbxref_ids = $self->source_dbxref_list;
   my $isth =  $self->dbh->prepare("
        select f.feature_id, f.name, f.type_id,f.uniquename,af.significance as score,
-              fl.fmin,fl.fmax,fl.strand,fl.phase, fl.srcfeature_id,fd.dbxref_id
+              fl.fmin,fl.fmax,fl.strand,fl.phase, fl.srcfeature_id, dbx.dbxref_id
        from feature f join featureloc fl using (feature_id)
-            left join feature_dbxref fd using (feature_id)
             left join analysisfeature af using (feature_id)
+            left join feature_dbxref fd using (feature_id) 
+            left join dbxref dbx on (dbx.dbxref_id = fd.dbxref_id) 
        where
-         f.feature_id = ? and fl.rank=0 and 
-         fd.dbxref_id in ($dbxref_ids)
+         f.feature_id = ? and fl.rank=0 and dbx.db_id=".$self->gff_source_db_id."
        order by fl.srcfeature_id
         ");
 
@@ -553,15 +542,18 @@ sub get_feature_by_name {
       my $interbase_start = $$hashref{'fmin'};
       $base_start = $interbase_start +1;
 
-      my $type = $self->term2name($$hashref{'type_id'}) 
-                 . ":" .
-                 $self->dbxref2source();
+      my $source = $self->dbxref2source($$hashref{dbxref_id}) || "" ;
+      my $type_obj = Bio::DB::GFF::Typename->new(
+             $self->term2name($$hashref{'type_id'}),
+             $source 
+      );
+
       my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                       $self,
                       $parent_segment,
                       $parent_segment->seq_id,
                       $base_start,$$hashref{'fmax'},
-                      $type,
+                      $type_obj,
                       $$hashref{'score'},
                       $$hashref{'strand'},
                       $$hashref{'phase'},
@@ -569,9 +561,6 @@ sub get_feature_by_name {
                       $$hashref{'uniquename'},
                       $$hashref{'feature_id'}
         );
-
-      warn "building feature list to return:$feat, class:".$feat->class if DEBUG;
-
       push @features, $feat;
     }
   }
@@ -758,10 +747,11 @@ sub source_dbxref_list {
     while (my $row = $sth->fetchrow_arrayref) {
         push @dbxref_list, $$row[0];
     }
-    
+
     $self->{'source_dbxref_list'} = join (",",@dbxref_list);
     return $self->{'source_dbxref_list'};
-} 
+}
+
 
 =head2 search_notes
 

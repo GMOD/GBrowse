@@ -55,7 +55,7 @@ The 11 arguments are positional:
   $srcseq       the source sequence
   $start        start of this feature
   $stop         stop of this feature
-  $type         this feature's type
+  $type         a Bio::DB::GFF::Typename (containing a method and source)
   $score        the feature's score
   $strand       this feature's strand (relative to the source
                 sequence, which has its own strandedness!)
@@ -242,12 +242,9 @@ sub phase {
 
   Title   : type
   Usage   : $obj->type($newval)
-  Function: holds feature.type (which is NOT! the SOFA type)
-  Returns : value of type (a scalar)
-  Args    : on set, new value (a scalar or undef, optional)
-
-In GBrowse space, the type is the concatination of the class
-(which is the SOFA/chado type) and the GFF source, eg mRNA:GenBank.
+  Function: holds a Bio::DB::GFF::Typename object
+  Returns : returns a Bio::DB::GFF::Typename object
+  Args    : on set, new value
 
 =cut
 
@@ -466,11 +463,11 @@ sub has_tag {
 =head2 primary_tag()
 
   Title   : primary_tag
-  Function: aliased to class() for Bio::SeqFeatureI compatibility
+  Function: aliased to type() for Bio::SeqFeatureI compatibility
 
 =cut
 
-*primary_tag = \&class;
+*primary_tag = \&method;
 
 =head2 seq()
 
@@ -570,28 +567,11 @@ methods described below, L<Bio::RangeI> for details.
 =head2 class()
 
   Title   : class
-  Usage   : $feature->class()
-  Function: Gets/sets the class
-  Returns : the feature class
-  Args    : none
-
-Note that since the feature type will always be available
-at the birth of the feature, the class can be obtained from
-it.  Also note that the feature class in GBrowse space is 
-the same as the chado feature type.  Confusing, I know.
+  Function: aliased to method()for backward compatibility
 
 =cut
 
-sub class {
-    my $self = shift;
-    
-    return $self->{'class'} if defined $self->{'class'};
-
-    if ( $self->type =~ /^([^:]+)/) {
-        $self->{'class'} = $1;
-    }
-    return $self->{'class'};
-}
+*class = \&type;
 
 =head2 db_id()
 
@@ -606,7 +586,7 @@ sub class {
 
   Title   : factory
   Usage   : $obj->factory($newval)
-  Function: Gets/sets the db connection object (ie, the Chado object)
+  Function: ???
   Returns : value of factory (a scalar)
   Args    : on set, new value (a scalar or undef, optional)
 
@@ -658,11 +638,17 @@ sub length {
 =head2 method()
 
  Title   : method
- Function: aliased to class for backward compatibility
+ Usage   : $obj->method
+ Function: returns a Feature's method (SOFA type)
+ Returns : the Features SOFA type
+ Args    : none
 
 =cut
 
-*method = \&class;
+sub method {
+  my $self = shift;
+  return $self->type->method();
+}
 
 =head2 name()
 
@@ -772,31 +758,7 @@ sub all_tags {
 sub source {
     my $self = shift;
 
-    warn "in Feature->source()\n\n" if DEBUG;
-
-    return $self->{'source'} = $_[0] if defined $_[0];
-    return $self->{'source'} if defined $self->{'source'};
-
-    my $dbh  = $self->factory->dbh();
-
-    my $source_db_id = $self->factory->gff_source_db_id();
-
-    #this is a backward compatibility patch.
-    return undef unless $source_db_id;
-
-    my $sth  = $dbh->prepare("
-        select dx.accession from dbxref dx, feature_dbxref fd
-        where dx.db_id = $source_db_id
-          and dx.dbxref_id = fd.dbxref_id 
-          and feature_id = ?
-       ");
-
-    $sth->execute($self->feature_id)
-         or $self->throw("getting source query failed");
-
-    my $hashref = $sth->fetchrow_hashref(); 
-    $self->{'source'} = $$hashref{'accession'} || '.';
-    return $self->{'source'};
+    return $self->type->source();
 }
 
 =head2 segments()
@@ -859,9 +821,7 @@ sub sub_SeqFeature {
 
     my $typewhere = '';
     if ($type) {
-      if ($type =~ /^([^:]+)/) { #ignoring source for now
-        $type = $1;
-      }
+      $type = lc $type;
       $typewhere = " and child.type_id = ".$self->factory->name2term($type) ;
     }
 
@@ -875,14 +835,10 @@ sub sub_SeqFeature {
 
     warn "partof = $partof" if DEBUG;
 
-    my $dbxref_ids = $self->factory->source_dbxref_list;
     my $sql = "
-    select child.feature_id, child.name, child.type_id, 
-           child.uniquename, parent.name as pname,
-           childloc.fmin, childloc.fmax, childloc.strand, 
-           childloc.locgroup, childloc.phase, 
-           af.significance as score, fd.dbxref_id as childsource,
-           childloc.srcfeature_id
+    select child.feature_id, child.name, child.type_id, child.uniquename, parent.name as pname,
+      childloc.fmin, childloc.fmax, childloc.strand, childloc.locgroup, childloc.phase, af.significance as score,
+      childloc.srcfeature_id, dbx.accession
     from feature as parent
     inner join
       feature_relationship as fr0 on
@@ -894,16 +850,19 @@ sub sub_SeqFeature {
       featureloc as childloc on
         (child.feature_id = childloc.feature_id)
     left join
-       feature_dbxref as fd on 
-        (child.feature_id = fd.feature_id)
-    left join
        analysisfeature as af on
         (child.feature_id = af.feature_id)
+    left join
+       feature_dbxref as fd on
+        (child.feature_id = fd.feature_id)
+    left join
+       dbxref as dbx on
+        (fd.dbxref_id = dbx.dbxref_id)
     where parent.feature_id = $parent_id
           and childloc.rank = 0
           and fr0.type_id in ($partof)
+          and dbx.db_id = ".$self->factory->gff_source_db_id."
           $typewhere
-          and fd.dbxref_id in ($dbxref_ids)
     ";
 
     $sql =~ s/\s+/ /gs;
@@ -925,12 +884,14 @@ sub sub_SeqFeature {
 #in order for the adaptor to work with gbrowse
     #  next unless $$hashref{locgroup} eq $self->group; #look out, subfeatures may reside on other segments
 
-      my $stop            = $$hashref{fmax};
+      my $stop  = $$hashref{fmax};
       my $interbase_start = $$hashref{fmin};
-      my $base_start      = $interbase_start +1;
-      my $childtype       = $self->factory->term2name($$hashref{type_id})
-                            .":".
-                            $self->factory->dbxref2source();
+      my $base_start = $interbase_start +1;
+      my $source = $$hashref{accession};
+      my $type_obj = Bio::DB::GFF::Typename->new(
+           $self->factory->term2name($$hashref{type_id}),
+           $source
+      );
 
       warn "creating new subfeat, $$hashref{name}, $base_start, $stop" if DEBUG;
 
@@ -939,7 +900,7 @@ sub sub_SeqFeature {
                     $self,
                     $self->ref,
                     $base_start,$stop,
-                    $childtype,
+                    $type_obj,
                     $$hashref{score},
                     $$hashref{strand},
                     $$hashref{phase},

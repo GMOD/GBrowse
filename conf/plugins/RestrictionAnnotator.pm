@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::RestrictionAnnotator;
-# $Id: RestrictionAnnotator.pm,v 1.2 2002-04-03 04:11:39 lstein Exp $
+# $Id: RestrictionAnnotator.pm,v 1.3 2002-04-08 22:22:00 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -113,5 +113,52 @@ sub annotate {
 
   return $feature_list;
 }
+
+# this is a patch for older versions of BioPerl.  Will soon be unecessary
+BEGIN {
+  unless (Bio::Graphics::FeatureFile->can('add_type')) {
+    eval <<'END';
+
+    # add a feature of given type to our list
+    # we use the primary_tag() method
+    sub Bio::Graphics::FeatureFile::add_feature {
+      my $self = shift;
+      my ($feature,$type) = @_;
+      $type = $feature->primary_tag unless defined $type;
+      push @{$self->{features}{$type}},$feature;
+    }
+
+    # Add a type to the list.  Hash values are used for key/value pairs
+    # in the configuration.  Call as add_type($type,$configuration) where
+    # $configuration is a hashref.
+    sub Bio::Graphics::FeatureFile::add_type {
+      my $self = shift;
+      my ($type,$type_configuration) = @_;
+      my $cc = $type =~ /^(general|default)$/i ? 'general' : $type;  # normalize
+      push @{$self->{types}},$cc unless $cc eq 'general' or $self->{config}{$cc};
+      if (defined $type_configuration) {
+	for my $tag (keys %$type_configuration) {
+	  $self->{config}{$cc}{lc $tag} = $type_configuration->{$tag};
+	}
+      }
+    }
+
+    # change configuration of a type.  Call as set($type,$tag,$value)
+    # $type will be added if not already there.
+    sub Bio::Graphics::FeatureFile::set {
+      my $self = shift;
+      croak("Usage: \$featurefile->set(\$type,\$tag,\$value\n")
+	unless @_ == 3;
+      my ($type,$tag,$value) = @_;
+      unless ($self->{config}{$type}) {
+	return $self->add_type($type,{$tag=>$value});
+      } else {
+	$self->{config}{$type}{lc $tag} = $value;
+      }
+    }
+END
+  }
+}
+
 
 1;

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.16 2002-03-31 21:15:51 lstein Exp $
+# $Id: Browser.pm,v 1.17 2002-04-08 22:22:00 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
@@ -351,9 +351,8 @@ sub image_and_map {
     }
 
     else {
-
       my $track = $panel->add_track(-glyph => 'generic',
-				    -key   => $label,
+				    # -key   => $label,
 				    $conf->style($label),
 				   );
       $tracks{$label}  = $track;

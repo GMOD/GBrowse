@@ -646,7 +646,7 @@ sub asString {
 
 sub name { 
   my $self =shift;
-  return $self->group || $self->SUPER::name;
+  return $self->group;
 }
 
 =head2 score

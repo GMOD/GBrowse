@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.14 2002-02-25 12:33:49 lstein Exp $
+# $Id: gbrowse.PLS,v 1.15 2002-03-12 22:35:03 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -53,7 +53,7 @@ use File::Path 'mkpath';
 use Text::Tabs;
 use Text::Shellwords;
 use Carp;
-use CGI qw(:standard escape center *table *dl *TR *td);
+use CGI qw(:standard escape escapeHTML center *table *dl *TR *td);
 use vars qw($CONFIG %DB $MAX_SEGMENT $DEFAULT_SEGMENT $HEADER $HTML $UA $VERSION $CONF_DIR);
 
 # if you change the zoom/nav icons, you must change this as well.

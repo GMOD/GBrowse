@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.113 2004-09-08 19:44:59 stajich Exp $
+# $Id: gbrowse.PLS,v 1.114 2004-09-09 12:54:30 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -89,7 +89,6 @@ use constant DEFAULT_RANGES       => q(100 500 1000 5000 10000 25000 100000 2000
 use constant DEFAULT_FINE_ZOOM    => '10%';
 use constant GBROWSE_HELP         => '/gbrowse';
 use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceDumper';
-use constant DEFAULT_OVERVIEW_BGCOLOR => 'wheat';
 
 # if true, turn on surrounding rectangles for debugging the image map
 use constant DEBUG          => 0;
@@ -593,13 +592,12 @@ sub get_settings {
     }
   }
 
-#  if ($ok && %settings) {
-#    adjust_tracks(\%settings);
-#  }
-#  else {
-#    %settings = ();
-#    default_settings(\%settings);
-#  }
+  else {
+    %settings = ();
+    default_settings(\%settings);
+    $ok = 1;
+  }
+
   if (!$ok) {
     %settings = ();
     default_settings(\%settings);
@@ -1030,7 +1028,7 @@ sub tracks_table {
     ? hidden(-name=>'label',-value=>'_',-override=>1) 
     : '';  # dummy, just to keep param() happy.
 
-  my $overview_color = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR;
+  my $overview_color = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR(); # imported from Browser.pm
 
   $sTable.= table({-border=>0,-width=>'100%'},
 		  # row
@@ -2194,7 +2192,7 @@ sub set_track_options {
   my %keys            = map {$_ => $CONFIG->setting($_=>'key') || $_} @labels;
   my @sorted_labels   = ('',sort {lc $keys{$a} cmp lc $keys{$b}} @labels);
 
-  my $oc = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR;
+  my $oc = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR();
 
   my @rows;
   for (my $track = 0; $track < @labels; $track++) {
@@ -2461,7 +2459,7 @@ sub make_citation_link {
     (my $anchor  = $label) =~ tr/ /-/;
     $link = $self_url.'#'.escapeHTML($anchor);
   }
-  my $overview_color = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR;
+  my $overview_color = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR();
   my @args = (-href=>$link,-target=>'citation');
   push @args,-style=>'Font-style: italic' if $label =~ /^(http|ftp|file):/;
   push @args,-style=>"background: $overview_color" if $label =~ /:overview$/;

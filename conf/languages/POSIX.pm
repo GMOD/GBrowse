@@ -84,6 +84,8 @@ END
 
    RESET    => 'Reset',
 
+   FLIP     => 'Flip (in development)',
+
    DOWNLOAD_FILE    => 'Download File',
 
    DOWNLOAD_DATA    => 'Download Data',

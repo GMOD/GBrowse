@@ -36,7 +36,7 @@ my $i = 0;
 my @keys;
 $keys[0] = '';
 
-foreach my $key (keys %available_data) {
+foreach my $key (reverse sort keys %available_data) {
   $i++;
   push @keys, $key;
   print "[$i] $key\n";
@@ -52,13 +52,13 @@ print "\nInstall these datasets?\n";
 foreach my $set (@data_sets) {
   print "$keys[$set]\n";
 }
-print "y/n [y]?";
+print "yes/no [y]?";
 chomp($answer = <STDIN>);
 
 die if ($answer =~ /^n/i);
 
 my %FH;
-warn "retrieving data ...\n";
+warn "retrieving data (this could take a while) ...\n";
 foreach my $set (@data_sets) {
 
   warn "getting $keys[$set] ...\n";
@@ -67,8 +67,8 @@ foreach my $set (@data_sets) {
 
   if ($res->is_success) {
     $result = $res->content;
-    $FH{$keys[$set]} = IO::File->new("$tmpdir/$keys[$set].$$.gz",">")
-        or die "couldn't open $tmpdir/$keys[$set].$$.gz: $!\n";
+    $FH{$keys[$set]} = IO::File->new("$tmpdir/$keys[$set].$$",">")
+        or die "couldn't open $tmpdir/$keys[$set].$$: $!\n";
     $FH{$keys[$set]}->autoflush;
     $FH{$keys[$set]}->print($result);
     $FH{$keys[$set]}->close;
@@ -77,4 +77,26 @@ foreach my $set (@data_sets) {
   }
 }
 
+#figure out which data sets, and if they include fastas
+#don't allow loading fasta without gff
 
+#this loop is really taking advantage of my control of the download site
+#it assumes that for every gff file there is a fasta, and than they are named
+#with the same prefix (eg, yeast_), and that the gff file comes second 
+#alphabetically (ie, first when reverse sorted).
+for ($i=0;$i < scalar @data_sets;$i++) {
+  my $set = $data_sets[$i];
+  if ($set % 2 == 0) {
+    warn "Importing of fasta without gff is not permitted from this interface\n";
+    next;
+  }   
+  
+
+  if (defined $data_sets[$i+1] && $set + 1 == $data_sets[$i+1]) { # fasta is to be imported too
+    print "key1: $keys[$set], $keys[$set+1]\n";
+    $i++;
+  } else {  # don't import fasta
+    print "key1: $keys[$set]\n";
+  } 
+
+}

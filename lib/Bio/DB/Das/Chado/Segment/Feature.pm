@@ -56,6 +56,7 @@ The 11 arguments are positional:
   $start        start of this feature
   $stop         stop of this feature
   $type         this feature's type (gene, arm, exon, etc)
+  $score        the feature's score
   $strand       this feature's strand (relative to the source
                 sequence, which has its own strandedness!)
   $phase        this feature's phase (often with respect to the 
@@ -77,6 +78,7 @@ sub new {
       $srcseq,
       $start,$end,
       $type,
+      $score,
       $strand,
       $phase,
       $group,
@@ -93,6 +95,7 @@ sub new {
   $self->seq_id($srcseq);
   $self->start($start);
   $self->end($end);
+  $self->score($score);
   $self->strand($strand);
   $self->phase($phase);
 
@@ -113,7 +116,6 @@ sub new {
 
   $self->srcfeature_id($parent->srcfeature_id() ) 
            if (defined $parent && $parent->can('srcfeature_id'));
-  $self->score(0);
 
   return $self;
 }
@@ -439,19 +441,6 @@ sub gff_string {
   }
   $string;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 =head2 has_tag()
 
@@ -866,7 +855,7 @@ sub sub_SeqFeature {
 
     my $sql = "
     select child.feature_id, child.name, child.type_id, child.uniquename, parent.name as pname,
-      childloc.fmin, childloc.fmax, childloc.strand, childloc.locgroup, childloc.phase,
+      childloc.fmin, childloc.fmax, childloc.strand, childloc.locgroup, childloc.phase, af.significance as score,
       childloc.srcfeature_id
     from feature as parent
     inner join
@@ -878,7 +867,11 @@ sub sub_SeqFeature {
     inner join
       featureloc as childloc on
         (child.feature_id = childloc.feature_id)
+    left join
+       analysisfeature as af on
+        (child.feature_id = af.feature_id)
     where parent.feature_id = $parent_id
+          and childloc.rank = 0
           and fr0.type_id in ($partof)
           $typewhere
     ";
@@ -914,6 +907,7 @@ sub sub_SeqFeature {
                     $self->ref,
                     $base_start,$stop,
                     $self->factory->term2name($$hashref{type_id}),
+                    $$hashref{score},
                     $$hashref{strand},
                     $$hashref{phase},
                     $$hashref{name},

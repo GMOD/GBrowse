@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.66 2004-10-03 20:07:47 scottcain Exp $
+# $Id: Chado.pm,v 1.67 2004-11-23 20:33:08 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -138,7 +138,8 @@ sub new {
   my $sth = $dbh->prepare("select ct.cvterm_id,ct.name
                            from cvterm ct, cv c 
                            where ct.cv_id=c.cv_id and
-                           c.name IN ('SOFA','Sequence Ontology Feature Annotation',
+                           c.name IN ('SOFA',
+                               'Sequence Ontology Feature Annotation',
                                'relationship type','Relationship Ontology',
                                'autocreated')")
     or warn "unable to prepare select cvterms";
@@ -466,12 +467,12 @@ sub get_feature_by_name {
 
      # prepare sql queries for use in while loops
   my $isth =  $self->dbh->prepare("
-       select f.feature_id, f.name, f.type_id,f.uniquename,
+       select f.feature_id, f.name, f.type_id,f.uniquename,af.significance as score,
               fl.fmin,fl.fmax,fl.strand,fl.phase, fl.srcfeature_id
-       from feature f, featureloc fl
+       from feature f join featureloc fl using (feature_id)
+            left join analysisfeature af using (feature_id)
        where
-         f.feature_id = ? and
-         f.feature_id = fl.feature_id
+         f.feature_id = ? and fl.rank=0
        order by fl.srcfeature_id
         ");
 
@@ -537,6 +538,7 @@ sub get_feature_by_name {
                       $parent_segment->seq_id,
                       $base_start,$$hashref{'fmax'},
                       $self->term2name($$hashref{'type_id'}),
+                      $$hashref{'score'},
                       $$hashref{'strand'},
                       $$hashref{'phase'},
                       $$hashref{'name'},

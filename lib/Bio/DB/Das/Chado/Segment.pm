@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.78 2004-09-09 20:02:58 scottcain Exp $
+# $Id: Segment.pm,v 1.79 2004-11-23 20:33:19 scottcain Exp $
 
 =head1 NAME
 
@@ -662,7 +662,7 @@ sub features {
   }
   my $select_part = "select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.phase,"
                    ."fl.locgroup,fl.srcfeature_id,f.type_id,f.uniquename,"
-                   ."f.feature_id,fd.dbxref_id ";
+                   ."f.feature_id,fd.dbxref_id, af.significance as score ";
 
   my $order_by    = "order by f.type_id,fl.fmin ";
 
@@ -670,15 +670,17 @@ sub features {
   my $from_part;
   if ($feature_id) {
     $from_part    = "from (feature f join featureloc fl using (feature_id)) "
-                   ."left join feature_dbxref fd using (feature_id) ";
+                   ."left join feature_dbxref fd using (feature_id) "
+                   ."left join analysisfeature af using (feature_id)";
 
-    $where_part   = "where f.feature_id = $feature_id ";
+    $where_part   = "where f.feature_id = $feature_id and fl.rank=0 ";
   } else {
     $from_part   = "from (feature f join featureslice($interbase_start, $rend) fl using (feature_id)) "
-                  ."left join feature_dbxref fd using (feature_id) ";
+                  ."left join feature_dbxref fd using (feature_id) "
+                  ."left join analysisfeature af using (feature_id)";
 
     $where_part  = "where $sql_types "
-                  ."fl.srcfeature_id = $srcfeature_id ";
+                  ."fl.srcfeature_id = $srcfeature_id and fl.rank=0 ";
   }
 
   my $query       = "$select_part\n$from_part\n$where_part\n$order_by\n";
@@ -736,6 +738,7 @@ sub features {
 
                        $base_start,$stop,
                        $type,
+                       $$hashref{score},
                        $$hashref{strand},
                        $$hashref{phase},
                        $$hashref{name},

@@ -19,7 +19,7 @@ $Config{startperl}
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: load_genbank.PLS,v 1.4 2003-07-28 17:06:12 lstein Exp $
+# $Id: load_genbank.PLS,v 1.5 2004-11-23 20:33:08 scottcain Exp $
 use strict;
 use Bio::DB::GFF;
 use Getopt::Long;
@@ -103,7 +103,7 @@ sub load_gff_line {
   # synthesize GFF3-compatible line
   my @attributes;
   if (my $parent = $options->{gname}) {
-     push @attributes,"Parent=".escape($parent) unless $options->{method} =~ /^(mRNA|gene)$/;
+     push @attributes,"Parent=".escape($parent) unless $options->{method} =~ /^gene$/;
      push @attributes,"ID=".escape($parent);
   }
   if (my $tstart = $options->{tstart}) {
@@ -125,6 +125,8 @@ sub load_gff_line {
   if ($options->{method} eq 'origin') {
      print "##sequence-region $options->{gname} $options->{start} $options->{stop}\n";
   }
+  $$options{score}  ||='.';
+  $$options{source} ||='genbank';
   print join("\t",@{$options}{qw(ref source method start stop score strand phase)},$last_column),"\n";
 }
 

@@ -138,6 +138,7 @@ WriteMakefile(
 				 'cgi-bin/gbrowse_img.PLS'  => 'cgi-bin/gbrowse_img',
 				 'cgi-bin/gbrowse_details.PLS'  => 'cgi-bin/gbrowse_details',
 				 'cgi-bin/gbrowse_moby.PLS'  => 'cgi-bin/gbrowse_moby',
+				 'cgi-bin/gbrowse_est.PLS'  => 'cgi-bin/gbrowse_est',
 				 },
 	      EXE_FILES      => [
 				 'bin/process_wormbase.pl',

@@ -9,6 +9,7 @@ cgi-bin/gbrowse_details.PLS
 cgi-bin/gbrowse_img.PLS
 cgi-bin/gbrowse_syn.PLS
 cgi-bin/gbrowse_moby.PLS
+cgi-bin/gbrowse_est.PLS
 cgi-bin/README
 Changes
 conf/enzymes.txt

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.15 2002-12-13 15:48:06 scottcain Exp $
+# $Id: Segment.pm,v 1.16 2002-12-13 21:39:40 scottcain Exp $
 
 =head1 NAME
 
@@ -310,7 +310,7 @@ sub features {
     $sql_range = " fmin <= $rend and fmax >= $rstart ";
   }
 
-#$self->{dbadaptor}->{dbh}->trace(2);
+$self->{dbadaptor}->{dbh}->trace(2);
 
   my $quoted_name = $self->{dbadaptor}->{dbh}->quote($self->{name});
   my $sth = $self->{dbadaptor}->{dbh}->prepare("
@@ -334,16 +334,16 @@ sub features {
   while (my $hash_ref = $sth->fetchrow_hashref) {
 
     my $feat = Bio::SeqFeature::Generic->new (
-                       -ref        => $self->{name},
                        -start      => $$hash_ref{fmin},
-                       -stop       => $$hash_ref{fmax},
+                       -end        => $$hash_ref{fmax},
                        -strand     => $$hash_ref{fstrand}, 
-                       -seq_id     => $self->{name},
+                       -seq_id     => $$hash_ref{name},
                        -annotation => $$hash_ref{name},
-                       -type       => "gene:gene",
+                       -group      => "gene",
+                       -type       => "gene:sgd",
                        -primary    => "gene" );
     push @features, $feat;
-  warn "$feat->{annotation}\n";
+  warn "$feat->{annotation}, $$hash_ref{fmin}, $feat->{start}, $$hash_ref{fmax}, $feat->{stop}\n";
   }
 
   if ($iterator) {
@@ -369,7 +369,7 @@ Returns the sequence for this segment as a simple string.
 sub seq {
   my $self = shift;
 
-  my $quoted_name = $self->{dbadaptor}->{dbh}->quote($self->name);
+  my $quoted_name = $self->{dbadaptor}->{dbh}->quote($self->{name});
   my $sth = $self->{dbadaptor}->{dbh}->prepare("
      select residues from feature where feature_id in
        (select f.feature_id
@@ -403,5 +403,19 @@ the segment was originally generated.
 #'
 
 sub factory {shift->{dbadaptor} }
+sub alphabet {return 'dna'; }
+sub display_id {shift->{name} }
+sub display_name {shift->{name} }
+sub accession_number {shift->{name} }
+sub desc {shift->{name} }
+
+
+sub get_feature_stream {
+  my $self = shift;
+  my @features = $self->features;
+warn "using get_feature_stream\n";
+warn "feature array: @features\n";
+  return Bio::DB::Das::Chado_pfIterator->new(\@features);
+}
 
 1;

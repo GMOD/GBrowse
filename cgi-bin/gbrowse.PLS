@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.103 2004-08-18 21:42:14 lstein Exp $
+# $Id: gbrowse.PLS,v 1.104 2004-08-23 15:56:30 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2628,8 +2628,10 @@ sub do_plugin_find {
   my $plugin_name = $p->name;
 
   my $results = $p->can('auto_find') && defined $search_string
-    ? $p->auto_find($search_string) : $p->find($features);
+              ? $p->auto_find($search_string) 
+              : $p->find($features);
   return unless $results;  # reconfigure message
+  return unless @$results;
 
   @$features = @$results;
   $settings->{name} = defined($search_string) ? $CONFIG->tr('Plugin_search_1',$search_string,$plugin_name)

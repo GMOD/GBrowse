@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::OligoFinder;
-# $Id: OligoFinder.pm,v 1.8 2003-07-01 02:22:22 lstein Exp $
+# $Id: OligoFinder.pm,v 1.9 2004-08-23 15:56:31 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -82,7 +82,6 @@ sub auto_find {
   my $dbi   = $db->features_db;
 
   my @chroms = $self->get_chroms($db);
-  warn "searching @chroms\n";
   my $in     = join ',',map {$dbi->quote($_)} @chroms;
   my $sth =
     $dbi->prepare("select fref,foffset,fdna from fdna where fref in ($in) order by fref,foffset",

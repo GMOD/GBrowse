@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.98 2003-10-06 02:53:55 stajich Exp $
+# $Id: Browser.pm,v 1.99 2003-10-06 13:21:48 scottcain Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1394,7 +1394,7 @@ sub _hits_to_html {
   my $self = shift;
   my ($ref,$gd,$boxes) = @_;
   my $source   = $self->source;
-  my $self_url = url(-relative=>1);
+  my $self_url = '';   #url(-relative=>1);
   # $self_url   .= "?source=$source";
 
   my $signature = md5_hex(rand().rand()); # just a big random number

@@ -1,4 +1,4 @@
-# $Id: Chado_pf.pm,v 1.4 2002-11-26 22:26:41 scottcain Exp $
+# $Id: Chado_pf.pm,v 1.5 2002-12-02 18:00:25 scottcain Exp $
 # Das adaptor for Chado_pf
 
 =head1 NAME
@@ -105,6 +105,7 @@ use strict;
 use Bio::DB::Das::Chado_pf::Segment;
 use Bio::Root::Root;
 use Bio::DasI;
+use Bio::PrimarySeq;
 use DBI;
 use DBD::Pg;
 use vars qw($VERSION @ISA);
@@ -225,21 +226,22 @@ sub get_Seq_by_acc {
                            $self->$username,
                            $self->$password );
   
-  $name = $dbh->quote($name);
-  my $sth = prepare (" select residues from feature where feature_id in
+  $quoted_name = $dbh->quote($name);
+  my $sth = prepare (" select seqlen from feature where feature_id in
                          (select f.feature_id
                           from dbxref dbx, feature f, feature_dbxref fd
                           where f.type_id = 6 and
                                 f.feature_id = fd.feature_id and
                                 fd.dbxref_id = dbx.dbxref_id and
-                                dbx.accession = $name ");
+                                dbx.accession = $quoted_name )");
   $sth->execute or return;
 
   return if ($sth->rows != 1);
 
   my $hash_ref = $sth->fetchrow_hashref or return;
-  my $bioseq = Bio::PrimarySeq->new ( -seq => $$hash_ref{'residues'}
-                                      -accession_number => $name    );
+  my $bioseq = Bio::Seq->new ( -alphabet         => 'dna'
+                               -length           => $$hash_ref{'seqlen'},
+                               -accession_number => $name    );
   return $bioseq;
 }
 

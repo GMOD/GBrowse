@@ -66,7 +66,7 @@ where f.type_id =6 and
       f.feature_id = fd.feature_id and
       fd.dbxref_id = dbx.dbxref_id
 
-select residues from feature where feature_id in 
+select seqlen from feature where feature_id in 
   (select f.feature_id 
    from dbxref dbx, feature f, feature_dbxref fd
    where f.type_id = 6 and

@@ -732,6 +732,16 @@ Valid options are as follows:
   features, and just show the start and stop of the transcription
   unit.
 
+  o) global feature
+  
+  If this option is present and set to a true value (e.g. "1"), GBrowse 
+  will automatically generate a  pseudo-feature that starts at the 
+  beginning of the currently displayed region and extends to the end.  
+  This is often used in conjunction with the "translation" and "dna"
+  glyphs in order to display global characteristics of the sequence.
+  If this option is set, then you do not need to specify a "feature"
+  option.
+
 A large number of glyph-specific options are also recognized.  These
 are described in the next section.
 
@@ -752,12 +762,22 @@ background colors.  The most popular glyph types are:
 
   generic		a rectangle
   arrow			an arrow
+  cds                   shows the reading frame of spliced transcripts; used
+                        in conjunction with the "coding" aggregator.
   diamond		a point-like feature represented as a triangle
+  dna                   DNA and GC content
+  heterogeneous_segments a multi-segmented feature in which each segment can
+                        have a distinctive color.  For Jim Kent's WABA features,
+                        this works with the waba_alignment aggregator.
   segments		a multi-segmented feature such as an alignment
   triangle		a point-like feature represented as a diamond
   transcript		a gene model
   transcript2		a slightly different representation of a gene model
-  wormbase_transcript	yet another gene model	
+  translation		1-, 3- and 6-frame translations
+  wormbase_transcript	yet another gene model that can show UTR segments
+			(for features that conform to the WormBase gene
+			schema). Used in conjunction with the
+			"wormbase_gene" aggregator.
 
 A more definitive list of glyph options can be found in the
 Bio::Graphics manual pages.  Consult the manual pages for the
@@ -766,17 +786,26 @@ following modules:
   Glyph				Manual Page
   -----                         -----------
 
-  generic			Bio::Graphics::Glyph
   arrow				Bio::Graphics::Glyph::arrow
+  cds				Bio::Graphics::Glyph::cds
   crossbox			Bio::Graphics::Glyph::crossbox
   diamond			Bio::Graphics::Glyph::diamond
+  dna                           Bio::Graphics::Glyph::dna
+  dot                           Bio::Graphics::Glyph::dot
+  ellipse			Bio::Graphics::Glyph::ellipse
+  extending_arrow		Bio::Graphics::Glyph::extending_arrow
+  generic			Bio::Graphics::Glyph
   graded_segments		Bio::Graphics::Glyph::graded_segments
+  heterogeneous_segments	Bio::Graphics::Glyph::heterogeneous_segments
   line				Bio::Graphics::Glyph::line
   primers			Bio::Graphics::Glyph::primers
   rndrect			Bio::Graphics::Glyph::rndrect
+  ruler_arrow			Bio::Graphics::Glyph::ruler_arrow
   segments			Bio::Graphics::Glyph::segments
+  toomany			Bio::Graphics::Glyph::toomany
   transcript			Bio::Graphics::Glyph::transcript
   transcript2			Bio::Graphics::Glyph::transcript2
+  translation			Bio::Graphics::Glyph::translation
   triangle			Bio::Graphics::Glyph::triangle
   wormbase_transcript		Bio::Graphics::Glyph::wormbase_transcript
 
@@ -816,9 +845,9 @@ the details on using the notation.
 B4. Computed Options
 
 Some options can be computed at run time by using Perl subroutines as
-their values.  Currently this is limited to the values of the "link",
-"title", "header" and "footer" options, but may be made more general
-in the future.
+their values.  Currently this works with the values of the "link",
+"title", "header" and "footer" options, and any glyph-specific option
+that appears in a track stanza.
 
 You need to know the Perl programming language to take advantage of
 this.  The general format of this type of option is:
@@ -829,7 +858,7 @@ this.  The general format of this type of option is:
 	      even more perl code;
 	      }
 
-The value must begin with the sequence "sub {"in order to be
+The value must begin with the sequence "sub {" in order to be
 recognized as a subroutine declaration.  After this, you can have one
 or more lines of Perl code followed by a closing brace.  Continuation
 lines must begin with whitespace.
@@ -850,6 +879,24 @@ should examine this object to determine what URL to link to and return
 the value of the URL as a string, or undef if no link should be made.
 See the manual page for Bio::DB::GFF::Feature for information on how
 to interrogate the feature object.
+
+For glyph-specific features, the subroutine will be called at run time
+with the feature (a Bio::SeqI-complaint object) as the first argument.
+The subroutine can examine this feature and determine what value to
+return.  The return value is treated as the value of the corresponding
+option.  For example, this bgcolor subroutine will call the feature's
+primary_tag() method, and return "blue" if it is an exon, "orange"
+otherwise:
+
+  bgcolor = sub {
+	  my $feature = shift;
+	  return "blue" if $feature->primary_tag eq 'exon';
+	  return "orange";
+	  }
+
+More subroutine arguments are available to the glyph-specific
+subroutines.  See the Bio::Graphics::Panel manual page for the full
+details.
 
 ----------------------------------------------------------------------
 

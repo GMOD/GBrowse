@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.23 2002-04-03 04:11:39 lstein Exp $
+# $Id: gbrowse.PLS,v 1.24 2002-04-06 15:52:31 lstein Exp $
 
 use strict;
 use lib '/home/lstein/projects/Generic-Genome-Browser/lib/';
@@ -528,7 +528,7 @@ sub settings2cookie {
 # This is called to change the values of the settings
 sub adjust_settings {
   my $settings = shift;
-  if (my @selected = map {split /\+/} param('label')) {
+  if (my @selected = map {split /[+-]/} param('label')) {
     $settings->{features}{$_}{visible} = 0 foreach keys %{$settings->{features}};
     $settings->{features}{$_}{visible} = 1 foreach @selected;
   }

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.16 2003-11-03 17:56:38 sheldon_mckay Exp $
+# $Id: GFFDumper.pm,v 1.17 2003-11-05 21:45:47 sheldon_mckay Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -59,11 +59,11 @@ sub configure_form {
 			 -values => ['view','save','edit'],
 			 -labels => {view => 'View',
 				     save => 'Save to File',
-				     edit => 'Edit'.super('**')}
+				     edit => 'Edit<sup>**</sup>'}
 			));
   autoEscape(1);
-  $html .= p(super('*'),"Note: Artemis GFF will contain the entire annotated sequence") .
-           p(super('**'),"To edit, install a helper application for MIME type",
+  $html .= p('<sup>*</sup>',"Note: Artemis GFF will contain the entire annotated sequence") .
+           p('<sup>**</sup>',"To edit, install a helper application for MIME type",
 	     cite('application/x-gff2'),'or',
 	     cite('application/x-gff3')
 	     );

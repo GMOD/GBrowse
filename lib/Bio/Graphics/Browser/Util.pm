@@ -163,8 +163,10 @@ sub print_top {
   local $^W = 0;  # to avoid a warning from CGI.pm
   print_header(-expires=>'+1m');
   my @args = (-title => $title,
-	      -style  => {src=>$CONFIG->setting('stylesheet')});
-  push @args,(-head=>$CONFIG->setting('head')) if $CONFIG->setting('head');
+	      -style  => {src=>$CONFIG->setting('stylesheet')},
+              -charset=>$CONFIG->tr('CHARSET')
+	     );
+  push @args,(-head=>$CONFIG->setting('head'))  if $CONFIG->setting('head');
   print start_html(@args) unless $HTML++;
 }
 

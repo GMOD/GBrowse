@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.8 2003-10-21 14:50:14 stajich Exp $
+# $Id: GFFhelper.pm,v 1.9 2003-10-24 18:13:09 markwilkinson Exp $
 
 =head1 NAME
 
@@ -304,7 +304,7 @@ sub process_attributes {
     my $class = $group->class;
     my $nm = $group->name;
     
-    $att{$class} = $name;
+    $att{$class} = $nm;
 
     for ( keys %att ) { 
 	$att{$_} =~ s/;/,/g;

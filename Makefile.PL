@@ -4,9 +4,11 @@ use lib './install_util';
 use ExtUtils::MakeMaker;
 use GuessDirectories;
 use FindBin '$Bin';
+use Cwd;
 require 5.005003;
 
-my $VERSION = '1.55';
+my $VERSION = '1.54';
+my $working_dir = cwd;
 
 my @OPTIONS = qw(PREFIX CONF HTDOCS CGIBIN DO_XS);
 my $OPTIONS = join ('|',@OPTIONS);
@@ -22,8 +24,8 @@ To customize install locations, provide one or more of the options
 PREFIX, CONF, HTDOCS, or CGIBIN, as in CONF=/usr/local/apache/conf.
 
 For RedHat Linux, you will want to use:
-    perl Makefile.PL CONF=/etc/httpd/conf \\
-                     HTDOCS=/var/www/html \\
+    perl Makefile.PL CONF=/etc/httpd/conf \
+                     HTDOCS=/var/www/html \
                      CGIBIN=/var/www/cgi-bin
 
 For most versions of Apache built from source code, use:
@@ -46,7 +48,7 @@ END
 }
 
 if (-e 'GGB.def' && !%OPTIONS) {
-  print STDERR "\nShould I use your previous settings to set the file paths and options (y/n) [y]? ";
+  print STDERR "Should I use your previous settings to set the file paths and options (y/n) [y]? ";
   chomp (my $line = <>);
   if (!$line || $line =~ /^[yY]/) {
     print STDERR "Using previous settings for file paths and options.\n";
@@ -121,6 +123,7 @@ WriteMakefile(
 				 Text::Shellwords  => 1.0,
 				}, # e.g., Module::Name => 1.1
 	      PL_FILES       => {
+                                 'install_util/conf_install.PLS' => 'install_util/conf_install.pl',
 				 'bin/process_sgd.PLS' => 'bin/process_sgd.pl',
 				 'bin/process_gadfly.PLS' => 'bin/process_gadfly.pl',
 				 'bin/process_wormbase.PLS' => 'bin/process_wormbase.pl',
@@ -177,7 +180,9 @@ sub MY::clean {
 sub MY::processPL {
   package MY;
   my $inherited = shift->SUPER::processPL(@_);
-  $inherited =~ s/(cgi-bin\/gbrowse\w*)\s\:\:.+/$1 : FORCE/g;
+  $inherited =~ s/:: gbrowse\.PLS/:: gbrowse.PLS GGB.def/;
+  $inherited =~ s/:: gbrowse_img\.PLS/:: gbrowse_img.PLS GGB.def/;
+  $inherited =~ s/:: gbrowse_details\.PLS/:: gbrowse_details.PLS GGB.def/;
   $inherited;
 }
 
@@ -195,13 +200,13 @@ sub MY::postamble {
   }
 qq{
 conf_install ::
-	\$(PERL) install_util/conf_install.pl $paths
+	\$(PERL) $working_dir/install_util/conf_install.pl $paths
 
 htdocs_install ::
-	\$(PERL) install_util/htdocs_install.pl $paths
+	\$(PERL) $working_dir/install_util/htdocs_install.pl $paths
 
 cgi_install ::
-	\$(PERL) install_util/cgi_install.pl $paths
+	\$(PERL) $working_dir/install_util/cgi_install.pl $paths
 
 };
 }

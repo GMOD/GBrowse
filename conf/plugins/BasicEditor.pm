@@ -1,4 +1,4 @@
-# $Id: BasicEditor.pm,v 1.4 2003-10-07 06:22:17 sheldon_mckay Exp $
+# $Id: BasicEditor.pm,v 1.5 2003-10-12 16:52:22 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -52,10 +52,8 @@ $VERSION = '0.01';
 
 ####################################################################
 # Edit this list IP addresses of trusted hosts for database access
-# We will need better security than this
 ####################################################################
 my $ips = <<END;
-127.0.0.1
 END
 ####################################################################
 
@@ -64,7 +62,7 @@ sub name {
 }
 
 sub description {
-  p("BasicEditor allows simple feature editing");
+  p("BasicEditor allows simple feature editing"),
   p("This plugin was written by Sheldon McKay");
 }
 
@@ -247,12 +245,6 @@ sub annotate {
     return 0;
 
 }
-
-#sub fix_gff {
-#    my ($self, $gff) = @_;
-    # my $gff_fixer = Bio::Graphics::Browser::GFFhelper->new( gff => $gff );
-#    $gff_fixer->read_gff || die $gff_fixer->error;
-#}
 
 sub gff_builder {
     my $self = shift;

@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.80 2003-03-07 02:50:48 lstein Exp $
+# $Id: gbrowse.PLS,v 1.81 2003-03-18 18:52:53 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -630,6 +630,8 @@ sub adjust_settings {
   foreach (qw(name source plugin stp ins head keystyle)) {
     $settings->{$_} = param($_) if defined param($_);
   }
+  $settings->{name} =~ s/^\s+//; # strip leading
+  $settings->{name} =~ s/\s+$//; # and trailing whitespace
 
   if (my @external = param('eurl')) {
     my %external = map {$_=>1} @external;

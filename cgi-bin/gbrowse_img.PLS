@@ -44,10 +44,10 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.3 2003-09-15 08:53:11 allenday Exp $
+# $Id: gbrowse_img.PLS,v 1.4 2003-10-05 02:02:07 lstein Exp $
 
 use strict;
-use CGI qw(param redirect header start_html end_html p h1);
+use CGI qw(param redirect header start_html end_html p h1 path_info escape);
 use Bio::DB::GFF;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
@@ -77,7 +77,15 @@ unless (param()) {
 }
 
 # set the database source
-my $src = param('src') || param('source');
+my $src = param('src') || param('source') || path_info();
+$src    =~ s!^/!!;  # get rid of leading / from path_info()
+
+if ($src && path_info() ne "/$src") {
+  path_info(escape($src));
+  print redirect(url(-absolute=>1,-path_info=>1));
+  exit 0;
+}
+
 $CONFIG->source($src)     if $src;
 
 # self-documentation feature: dump out tab-delimited list of mnemonics and keys

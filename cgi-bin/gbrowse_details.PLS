@@ -44,10 +44,10 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.8 2003-09-23 23:36:47 markwilkinson Exp $
+# $Id: gbrowse_details.PLS,v 1.9 2003-10-05 02:02:07 lstein Exp $
 
 use strict;
-use CGI qw(:standard *table *TR);
+use CGI qw(:standard *table *TR escape);
 use Bio::DB::GFF;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Markup;
@@ -66,12 +66,20 @@ $CONFIG = open_config($CONF_DIR);  # open_config() is exported from Util.pm
 $INDEX  = 0;
 %COLORS = ();
 
-my $src   = param('src');
+my $src   = param('src') || param('source');
 my $name  = param('name');
 my $class = param('class');
 my $ref   = param('ref');
 my $start = param('start');
 my $end   = param('end');
+
+if ($src && path_info() ne "/$src") {
+  path_info(escape($src));
+  Delete('src');
+  Delete('source');
+  print redirect(url(-absolute=>1,-path_info=>1,-query=>1));
+  exit 0;
+}
 
 $CONFIG->source($src || cookie('gbrowse_source'));
 
@@ -261,7 +269,8 @@ sub position {
     return "<b>$ref</b> $start..$end";
   }
   my $strand = $f->abs_strand > 0 ? '+' : $f->abs_strand < 0 ? '-' : '';
-  my $url = "gbrowse?name=$ref:$start..$end;src=".$CONFIG->source;
+  my $src = escape($CONFIG->source);
+  my $url = "../gbrowse/$src?name=$ref:$start..$end";
   return a({-href=>$url},$strand ? "$ref:$start..$end ($strand strand)" : "$ref:$start..$end");
 }
 

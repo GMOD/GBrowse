@@ -44,6 +44,8 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
+# $Id: gbrowse.PLS,v 1.35 2003-10-05 02:02:07 lstein Exp $
+
 use strict;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
@@ -56,7 +58,6 @@ use File::Basename 'basename','dirname';
 use File::Spec;
 use Carp qw(:DEFAULT croak);
 use CGI qw(:standard escape escapeHTML center *table *dl *TR *td);
-# use CGI::Carp 'fatalsToBrowser';
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $CONF_DIR
 	    $PLUGINS $PRESETS
@@ -92,6 +93,10 @@ use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceD
 use constant DEBUG => 0;
 use constant DEBUG_PLUGINS => 0;
 use constant DEBUGGING_RECTANGLES => 0;
+
+# amount of time to remember persistent settings
+use constant REMEMBER_SETTINGS_TIME => '+7d';  # 7 days
+use constant REMEMBER_SOURCE_TIME   => '+3M';  # 3 months
 
 local $CGI::USE_PARAM_SEMICOLONS = 1;
 
@@ -154,6 +159,14 @@ $CONFIG = open_config($CONF_DIR);  # open_config() is exported from Util.pm
 # (this involves reading a cookie or possibly a database record
 # in some future implementation)
 my ($source,$old_source) = get_source();
+
+# migrate from 1.56 way of specifying source to 1.57 way
+if ($source && path_info() ne "/$source") {
+  path_info(escape($source));
+  print redirect(url(-absolute=>1,-path_info=>1));
+  exit 0;
+}
+
 $CONFIG->source($source);
 my $page_settings = get_settings($source);
 
@@ -354,8 +367,8 @@ sub main_display {
   }
 
   # print the top of the form, with navigation bar, etc
-  my $self = url(-relative=>1,-path_info=>1) . "?source=$page_settings->{source}";
-  print start_form(-name=>'mainform',-method=>'POST',-action=>$self);
+  print start_form(-name=>'mainform',
+		   -method=>'POST');
   print navigation_table($segment,$page_settings);
   print html_frag('html2');
 
@@ -386,7 +399,7 @@ sub main_display {
   print html_frag('html6');
   print end_form();
 
-  print start_multipart_form(-name=>'externalform',-action=>url(-relative=>1,-path_info=>1));
+  print start_multipart_form(-name=>'externalform');
   print p(),upload_table($page_settings,$feature_files);
   print p(),external_table($page_settings,$feature_files);
   print end_form();
@@ -457,7 +470,8 @@ sub detail_panel {
 ###############################################################################################
 
 sub get_source {
-  my $new_source = param('source') || param('src');
+  my $new_source = param('source') || param('src') || path_info();
+  $new_source    =~ s!^/!!;  # get rid of leading / from path_info()
   my $old_source = cookie('gbrowse_source') unless $new_source && request_method() eq 'GET';
 
   my $source   = $new_source || $old_source;
@@ -632,11 +646,12 @@ sub settings2cookie {
   my @cookies;
   my $source = $CONFIG->source;
   push @cookies,cookie(-name    => "gbrowse_$source",
-		      -value   => \%settings,
-		      -expires => '+3M');
-  push @cookies,cookie(-name   => 'gbrowse_source',
-		       -value  => $source,
-		       -expires => '+3M');
+		       -value   => \%settings,
+		       -path    => url(-absolute=>1,-path=>1),
+		       -expires => REMEMBER_SETTINGS_TIME);
+  push @cookies,cookie(-name    => 'gbrowse_source',
+		       -value   => $source,
+		       -expires => REMEMBER_SOURCE_TIME);
   warn "cookies = @cookies" if DEBUG;
   return \@cookies;
 }
@@ -644,6 +659,7 @@ sub settings2cookie {
 # This is called to change the values of the settings
 sub adjust_settings {
   my $settings = shift;
+
   if (my @selected = map {split /[+-]/} param('label')) {
     $settings->{features}{$_}{visible} = 0 foreach keys %{$settings->{features}};
     $settings->{features}{$_}{visible} = 1 foreach @selected;
@@ -711,7 +727,6 @@ sub navigation_table {
   my $segment = shift;
   my $settings = shift;
   my $buttonsDir    = $CONFIG->setting('buttons');
-  my $self  = url(-relative=>1,-path_info=>1);
   my $table = '';
   my $oligo = $PLUGINS->{'OligoFinder'} ? ', oligonucleotide (15 bp minimum)' : '';
   my $help  =  a({-href=>general_help(),-target=>'help'},'['.$CONFIG->tr('Help').']');
@@ -738,9 +753,9 @@ sub navigation_table {
 
 		  TR(
 		     th({-align=>'left', -colspan=>2},
-			a({-href=>"$self?rand=$rand;head=".((!$settings->{head})||0)},
+			a({-href=>"?rand=$rand;head=".((!$settings->{head})||0)},
 			  '['.$CONFIG->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
-			a({-href=>"$self?rand=$rand;ins=".((!$settings->{ins})||0)},
+			a({-href=>"?rand=$rand;ins=".((!$settings->{ins})||0)},
 			  '['.$CONFIG->tr($settings->{ins}? 'HIDE_INSTRUCTIONS':'SHOW_INSTRUCTIONS').']'),
 			 $settings->{name} || $settings->{ref} ?
 			 (
@@ -909,8 +924,7 @@ sub tracks_table {
   # set up the dumps line.
   my($ref,$start,$stop) = @{$settings}{qw(ref start stop)};
   my $source   = $CONFIG->source;
-  my $self     = url(-relative=>1,-path_info=>1);
-  my $self_url = url(-relative=>1,-path_info=>1)."?help=citations";
+  my $self_url = "?help=citations";
 
   my @labels = @{$settings->{tracks}};
   my %labels = map {$_ => make_citation_link($_,$self_url) } @labels;
@@ -927,7 +941,7 @@ sub tracks_table {
 		  $settings->{stp} ?
 		  (
 		   TR(	td({-class=>'searchbody', -valign=>'top',-align=>'right'},
-			   b($CONFIG->tr('Tracks')),a({-href=>"$self?stp=0"},'['.$CONFIG->tr('HIDE').']'),
+			   b($CONFIG->tr('Tracks')),a({-href=>"?stp=0"},'['.$CONFIG->tr('HIDE').']'),
 			   p(i($CONFIG->tr('External_tracks')))),
 			td({-class=>'searchbody',-colspan=>3,-width=>'85%'},
 			   checkbox_group(-name=>'label',
@@ -941,7 +955,7 @@ sub tracks_table {
 					 ))),
 		  ) :
 		  TR(td({-class=>'searchbody',-colspan=>3},
-			b($CONFIG->tr('Tracks')),a({-href=>"$self?stp=1"},'['.$CONFIG->tr('SHOW').']'))
+			b($CONFIG->tr('Tracks')),a({-href=>"?stp=1"},'['.$CONFIG->tr('SHOW').']'))
 		    )
 		 );
   autoEscape(1);
@@ -995,11 +1009,11 @@ sub settings_table {
 }
 
 sub annotation_help {
-  return url(-relative=>1,-path_info=>1) . "?help=annotation";
+  return "?help=annotation";
 }
 
 sub general_help {
-  return url(-relative=>1,-path_info=>1) . "?help=general";
+  return "?help=general";
 }
 
 sub upload_table {
@@ -1020,7 +1034,7 @@ sub upload_table {
     (my $file = $filename) =~ s/^file://;
     my $name = escape($file);
     my $download = escape($CONFIG->tr('Download_file'));
-    my $link = a({-href=>url(-relative=>1,-path_info=>1)."?$download=$name"},"[$name]");
+    my $link = a({-href=>"?$download=$name"},"[$name]");
     my @info =  get_uploaded_file_info($settings->{features}{$filename}{visible}
 					 && $feature_files->{$filename});
     $cTable .=  TR({-class=>'uploadbody'},
@@ -1343,7 +1357,6 @@ sub multiple_choices {
 	   th({-colspan=>4},
 	      $CONFIG->tr('Possible_truncation',MAX_KEYWORD_RESULTS)))
     if $count >= MAX_KEYWORD_RESULTS;
-  my $url = url(-relative=>1,-path_info=>1);
 
   local $^W = 0;  # get rid of non-numeric warnings coming out of by_score_and_position
   for my $ref(sort keys %refs) {
@@ -1370,8 +1383,8 @@ sub multiple_choices {
       my $c           = escape($class);
       $description =~ s/($regexp)/<b class="keyword">$1<\/b>/ig;
 
-      my $objref     = $class ? "$url?name=$c:$n" : "$url?name=$n";
-      my $posref     = "$url?ref=$ref;start=$padstart;stop=$padstop";
+      my $objref     = $class ? "?name=$c:$n" : "?name=$n";
+      my $posref     = "?ref=$ref;start=$padstart;stop=$padstop";
       my $position = format_segment($r);
       print TR({-class=>'databody',-valign=>'TOP'},
 	       th({-align=>'right'},ref($name) ? a({-href=>$objref},$name):tt($name)),
@@ -1431,10 +1444,10 @@ sub get_zoomincrement {
 }
 
 sub segment2link {
-  my ($base,$segment,$label) = @_;
+  my ($segment,$label) = @_;
 
   my $source = $CONFIG->source;
-  return  a({-href=>"$base?source=$source;name=$segment"},$segment) unless ref $segment;
+  return  a({-href=>"?name=$segment"},$segment) unless ref $segment;
 
   my ($start,$stop) = ($segment->start,$segment->end);
   my $ref = $segment->seq_id;
@@ -1442,7 +1455,7 @@ sub segment2link {
   my $s = commas($start);
   my $e = commas($stop);
   $label ||= "$ref:$s..$e";
-  return a({-href=>"$base?source=$source;ref=$ref;start=$start;stop=$stop"},$label);
+  return a({-href=>"?ref=$ref;start=$start;stop=$stop"},$label);
 }
 
 
@@ -1450,9 +1463,8 @@ sub show_examples {
   my $examples = $CONFIG->setting('examples') or return;;
   my @examples = shellwords($examples);
   return unless @examples;
-  my $url    = url(-relative=>1,-path_info=>1);
   my $source = $CONFIG->source;
-  my @urls = map { a({-href=>"$url?source=$source;name=".escape($_)},$_) } @examples;
+  my @urls = map { a({-href=>"?source=$source;name=".escape($_)},$_) } @examples;
   return b($CONFIG->tr('Examples')).': '.join(', ',@urls).". ";
 }
 
@@ -1600,7 +1612,7 @@ sub load_external_sources {
   warn join "\n",%feature_file if DEBUG;
   my $f = \%feature_file;
 
-  load_plugin_annotations($segment,$f,$page_settings) if $segment->length <= $MAX_SEGMENT;
+  load_plugin_annotations($segment,$f,$page_settings) if $segment && $segment->length <= $MAX_SEGMENT;
   return $f;
 }
 
@@ -1736,12 +1748,11 @@ sub get_uploaded_file_info {
   my $db        = open_database();
 
   my ($landmarks,@landmarks,@links);
-  my $url      = url(-relative=>1,-path_info=>1);
 
   if (@refs > TOO_MANY_REFS) {
     $landmarks = b($CONFIG->tr('Too_many_landmarks',scalar @refs));
   } else {
-    @links = map {segment2link($url,$_)} @refs;
+    @links = map {segment2link($_)} @refs;
     $landmarks = tableize(\@links);
   }
   warn "get_uploaded_file_info(): modified = $modified, landmarks = $landmarks" if DEBUG;
@@ -1771,7 +1782,7 @@ sub edit_uploaded_file {
 		),
 	      TR({-class=>'searchbody'},
 		 td(
-		    a({-href=>url(-relative=>1,-path_info=>1)."?help=annotation#format",-target=>'help'},
+		    a({-href=>"?help=annotation#format",-target=>'help'},
 		      b('['.$CONFIG->tr('Help_format').']'))
 		   ),
 		),
@@ -1864,13 +1875,13 @@ sub bookmark_link {
   my @url = grep {/^(ftp|http):/} @{$settings->{tracks}};
   $q->param(-name=>'eurl',-value=>\@url);
 
-  return $q->url(-relative=>1,-path_info=>1,-query=>1);
+  return "?".$q->query_string();
 }
 
 sub image_link {
   my $settings = shift;
   my $rand = md5_hex(rand);
-  return url(-relative=>1,-path_info=>1) ."?help=link_image;rand=$rand";
+  return "?help=link_image;rand=$rand";
 }
 
 # reorder @labels based on settings in the 'track.XXX' parameters
@@ -2086,7 +2097,7 @@ sub build_citation_page {
       my $name   = $file;
       my $is_url = $name =~ m!^(http|ftp)://!;
       my $download = escape($CONFIG->tr('Download_data'));
-      my $link   = $is_url  ? $name  : url(-relative=>1,-path_info=>1)."?$download=1;file=$f";
+      my $link   = $is_url  ? $name  : "?$download=1;file=$f";
       my $anchor = $name;
       $anchor =~ tr/ /-/;
 
@@ -2110,7 +2121,6 @@ sub build_help_page {
   my $helpfile = shift or return;
   my $file = url2file($helpfile) or return;
   my $root = $CONFIG->setting('help') || GBROWSE_HELP;
-  my $url  = url(-relative=>1);
   open(F,$file) or return;
   while (<F>) { # fix up relative addressing of images
     s/(href|src)=\"([^\"\#\$]+)\"/$1=\"$root\/$2\"/g;
@@ -2123,14 +2133,12 @@ sub build_help_page {
 sub build_link_image_page {
   my $settings = shift;
   my $segment  = shift;
-  my $url = url(-base=>1);
-  $url   .= url(-absolute=>1);
-  $url   = dirname($url) . "/gbrowse_img";
   my $source = $CONFIG->source;
+  my $url    = "../gbrowse_img/".escape($source);
   my $width  = $CONFIG->width;
   my $name   = $settings->{name} || "$settings->{ref}:$settings->{start}..$settings->{stop}";
   my $type   = join '+',map{escape($_)} grep {$settings->{features}{$_}{visible}} @{$settings->{tracks}};
-  my $img_url = "$url?source=$source;name=$name;type=$type;width=$width";
+  my $img_url = "$url?name=$name;type=$type;width=$width";
   print $CONFIG->tr('IMAGE_DESCRIPTION',$img_url,$img_url);
 }
 
@@ -2168,7 +2176,7 @@ sub make_citation_link {
     $key = $label || '';
     my $about = escape($CONFIG->tr('About')) || '';
     my $plugin = $PLUGIN_NAME2LABEL{$label} ? ";plugin=$PLUGIN_NAME2LABEL{$label}" : '';
-    $link = url(-relative=>1) . "?plugin_action=${about}${plugin}";
+    $link = "?plugin_action=${about}${plugin}";
   } else {
     $key = label2key($label);
     (my $anchor  = $label) =~ tr/ /-/;

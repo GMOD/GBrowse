@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.94 2003-09-30 16:21:15 lstein Exp $
+# $Id: Browser.pm,v 1.95 2003-10-05 02:02:07 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -767,8 +767,7 @@ sub make_centering_map {
     my $middle = $flip ? $end - $scale * ($x1+$x2)/2 : $offset + $scale * ($x1+$x2)/2;
     my $start  = int($middle - $length/2);
     my $stop   = int($start  + $length - 1);
-    my $url = url(-relative=>1,-path_info=>1);
-    $url .= "?ref=$ref;start=$start;stop=$stop;source=$source;nav4=1;plugin=$plugin";
+    my $url = "?ref=$ref;start=$start;stop=$stop;source=$source;nav4=1;plugin=$plugin";
     $url .= ";flip=1" if $flip;
     push @lines,
       qq(<area shape="rect" coords="$x1,$ruler->[2],$x2,$ruler->[4]" href="$url" title="recenter" alt="recenter" />\n);
@@ -1659,10 +1658,10 @@ sub make_link {
     my $name  = CGI::escape("$n");  # workaround CGI.pm bug
     my $class = eval {CGI::escape($feature->class)};
     my $ref   = CGI::escape("$c");  # workaround again
-    my $start = CGI::escape($feature->start);  
+    my $start = CGI::escape($feature->start);
     my $end   = CGI::escape($feature->end);
     my $src   = CGI::escape($source);
-    return "gbrowse_details?src=$src;name=$name;class=$class;ref=$ref;start=$start;end=$end";
+    return "../gbrowse_details/$src?name=$name;class=$class;ref=$ref;start=$start;end=$end";
   }
   return $self->link_pattern($link,$feature,$panel);
 }

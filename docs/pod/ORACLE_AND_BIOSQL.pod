@@ -7,7 +7,7 @@ of Oracle,  preliminary support for the Bio::DB::GFF schema running
 on top of PostgreSQL, and preliminary support for the BioSQL schema running
 on top of MySQL.  There is also support for the GadFly schema running on
 top of MySQL and PostgreSQL, but this uses an earlier (forked) version
-of GBrowse.  See README-berkeley-gadfly for more details.
+of GBrowse.  See L<README-berkeley-gadfly> for more details.
 
 =head2 Bio::DB::GFF on Oracle
 

@@ -132,6 +132,7 @@ WriteMakefile(
                                  'install_util/htdocs_install.PLS' => 'install_util/htdocs_install.pl',
                                  'install_util/cgi_install.PLS' => 'install_util/cgi_install.pl',
                                  'install_util/conf_install.PLS' => 'install_util/conf_install.pl',
+				 'bin/make_das_conf.PLS' => 'bin/make_das_conf.pl',
 				 'bin/process_sgd.PLS' => 'bin/process_sgd.pl',
 				 'bin/process_gadfly.PLS' => 'bin/process_gadfly.pl',
 				 'bin/process_wormbase.PLS' => 'bin/process_wormbase.pl',
@@ -147,6 +148,7 @@ WriteMakefile(
 				 'cgi-bin/gbrowse_est.PLS'  => 'cgi-bin/gbrowse_est',
 				 'cgi-bin/gbrowse_moby.PLS'  => 'cgi-bin/gbrowse_moby',
 				 'cgi-bin/moby_server.PLS'  => 'cgi-bin/moby_server',
+				 'cgi-bin/das.PLS'          => 'cgi-bin/das',
 				 'conf/MobyServices/GbrowseServices.PMS'  => 'conf/MobyServices/GbrowseServices.pm',
 				 },
 	      EXE_FILES      => [

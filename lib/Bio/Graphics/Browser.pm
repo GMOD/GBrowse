@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.121 2004-02-17 16:48:50 scottcain Exp $
+# $Id: Browser.pm,v 1.122 2004-02-21 22:12:05 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -864,6 +864,8 @@ sub image_and_map {
   my $suppress_scale= $config{noscale};
   my $hilite_callback = $config{hilite_callback};
   my $image_class   = $config{image_class} || 'GD';
+
+  $segment->factory->debug(1) if DEBUG;
   
   # Bring in the appropriate package - just for the fonts. Ugh.
   eval "use $image_class";
@@ -949,6 +951,8 @@ sub image_and_map {
     my (%groups,%feature_count,%group_pattern);
 
     while (my $feature = $iterator->next_seq) {
+
+      warn "next feature = $feature, type = ",$feature->type,' method = ',$feature->method,"\n" if DEBUG;
 
       # allow a single feature to live in multiple tracks
       for my $label ($self->feature2label($feature,$length)) {
@@ -1047,7 +1051,7 @@ sub image_and_map {
     ref $file or next;
     $track += $offset + 1;
     my $name = $file->name || '';
-    $options->{$name} ||= {};
+    $options->{$name} ||= 0;
     my $inserted = $file->render($panel,$track,$options->{$name},$max_bump,$max_labels);
     $offset += $inserted;
   }
@@ -1087,7 +1091,6 @@ sub overview {
   my $class   = eval {$partial_segment->seq_id->class} || $factory->refclass;
   my ($segment) = $factory->segment(-class=>$class,
 				    -name=>$partial_segment->seq_id);
-  warn "factory = $factory, segment = $segment" if DEBUG;
   $segment   ||= $partial_segment;  # paranoia
 
   # Temporary kludge until I can figure out a more
@@ -1420,7 +1423,7 @@ sub _feature_get {
     my $type   = $_->type;
     my $method = eval {$_->method} || '';
     my $class  = eval {$_->class}  || '';
-    $types->{$type} || $types->{$method} || $class eq $refclass;
+    $type eq 'Segment' || $types->{$type} || $types->{$method} || $class eq $refclass;
   } @segments;
 
   # Return appropriately filtered features

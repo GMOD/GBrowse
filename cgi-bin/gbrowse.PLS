@@ -44,7 +44,12 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.64 2004-02-20 12:41:18 lstein Exp $
+# $Id: gbrowse.PLS,v 1.65 2004-02-21 22:12:05 lstein Exp $
+
+use lib
+  '/home/lstein/projects/bioperl-live',
+  '/home/lstein/projects/Bio-Das2',
+  '/home/lstein/projects/Generic-Genome-Browser/lib';
 
 use strict;
 use Bio::Graphics;
@@ -57,7 +62,7 @@ use Text::Shellwords;
 use File::Basename 'basename','dirname';
 use File::Spec;
 use Carp qw(:DEFAULT croak);
-use CGI qw(:standard escape escapeHTML center *table *dl *TR *td);
+use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td);
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $CONF_DIR
 	    $PLUGINS $PRESETS
@@ -1117,14 +1122,19 @@ sub external_table {
 			  -onChange => 'document.externalform.submit()'
 			 );
   }
+  my $segment = "$settings->{ref}:$settings->{start},$settings->{stop}";
 
+  local $^W = 0;
   for my $filename (@{$settings->{tracks}}) {
+
+    (my $f = $filename) =~ s!(http:.+/das/\w+)(?:\?(.+))?$!$1/features?segment=$segment;$2!;
+
     warn "filename = $filename" if DEBUG_EXTERNAL;
     next unless $filename =~ /^(ftp|http):/ && $feature_files->{$filename};
     warn "external_table(): filename = $filename" if DEBUG;
     push @rows,th({-align=>'right',-valign=>'TOP'},"URL",++$count).
       td(textfield(-name=>'eurl',-size=>50,-value=>$filename,-override=>1),br,
-	 a({-href=>$filename,-target=>'help'},'['.$CONFIG->tr('Download').']'),
+	 a({-href=>$f,-target=>'help'},'['.$CONFIG->tr('Download').']'),
 	 get_uploaded_file_info($settings->{features}{$filename}{visible} && $feature_files->{$filename})
 	);
   }
@@ -1737,12 +1747,29 @@ sub get_remote_feature_data {
   my ($url,$rel2abs,$settings) = @_;
   warn "get_remote_feature_data(): fetching $url" if DEBUG;
 
-  if ($url =~ m!^(http://.+/das)/([^/]+)$!) { # DAS source!
-    unless (eval "require Bio::Das") {
+  if ($url =~ m!^(http://.+/das)/([^/?]+)(?:\?(.+))?$!) { # DAS source!
+    unless (eval "require Bio::Das; 1;") {
       error($CONFIG->tr('NO_DAS'));
       return;
     }
-    my $das      =  Bio::Das->new(-source=>$1,-dsn=>$2);
+    my ($src,$dsn,$cgi_args) = ($1,$2,$3);
+    my @aggregators = shellwords($CONFIG->setting('aggregators') ||'');
+    my (@types,@categories);
+
+    if ($cgi_args) {
+      my @a = split /[;&]/,$cgi_args;
+      foreach (@a) {
+	my ($arg,$val) = split /=/;
+	push @types,unescape($val)      if $arg eq 'type';
+	push @categories,unescape($val) if $arg eq 'category';
+      }
+    }
+    my $das      =  Bio::Das->new(-source     => $src,
+				  -dsn        => $dsn,
+				  -aggregators=> \@aggregators,
+				  -types      => \@types,
+				  -categories => \@categories,
+				 );
     return unless $das;
     my $segment = $das->segment($settings->{ref},$settings->{start},$settings->{stop});
     # the next step gives the current segment the same name as the DAS source

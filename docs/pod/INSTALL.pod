@@ -33,12 +33,12 @@ The following Perl modules must be installed for GBrowse to work.
 They can be found on the Comprehensive Perl Archive Network
 (CPAN):
 
-        CGI
-	GD
-        DBI
-        DBD::mysql
-	Digest::MD5
-	Text::Shellwords
+        CGI                  (2.56 or higher)
+	GD                   (2.07 or higher)
+        DBI                  (any version)
+        DBD::mysql           (any version)
+	Digest::MD5          (any version)
+	Text::Shellwords     (any version)
 
 =item E) Bioperl version 1.2.3 or higher -- L<http://www.bioperl.org>
 
@@ -60,11 +60,25 @@ downloaded from CPAN.
 
 =item G) LWP
 
-To load remote 3d party annotations.
+To load remote 3d party annotations. Available from CPAN.
 
-=item H) MOBY
+=item H) Bio::Das
+
+To display remote annotations using the Distributed Annotation
+System.  The current version is available at
+http://www.biodas.org/download/Bio::Das/Bio-Das-0.92.tar.gz
+
+=item I) MOBY
 
 Needed by gbrowse_moby to fetch and display data from MOBY providers.
+Available from biomoby.org; obtain via anonymous cvs until it is released.
+Directions are at http://www.biomoby.org/cvs_checkout.html.
+
+=item J) GD::SVG
+
+To save images as publication-quality editable images in Scalar
+Vector Graphics format.  Available from CPAN.
+
 
 =back
 
@@ -95,14 +109,7 @@ At the end of the install, the automatic installation script will ask
 you to confirm the locations of your Apache conf (configuration),
 htdocs (document root) and cgi-bin (CGI executable)
 directories. Usually it will guess right, but if it doesn't, just type
-in the correct path.  If you find that after installing GBrowse, you get
-errors saying "The landmark named XXXX is not recognized...", try uninstalling
-and reinstalling GBrowse and give the "short" filenames for directory paths.
-For example,
-
-  ** Please indicate the location of the following Web Server directories:
-        "conf" directory ([q]uit) [C:/Program Files/Apache Group/Apache2/conf]
-        c:/progra~1/apache~1/apache2/conf
+in the correct path. 
 
 When this is done, go to step (4) below.
 

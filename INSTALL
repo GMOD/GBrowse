@@ -25,12 +25,12 @@ Generic Genome Browser Installation
         The following Perl modules must be installed for GBrowse to work.
         They can be found on the Comprehensive Perl Archive Network (CPAN):
 
-                CGI              (2.56 or higher)
-                GD               (2.07 or higher)
-                DBI              (any version)
-                DBD::mysql       (any version)
-                Digest::MD5      (any version)
-                Text::Shellwords (any version)
+                CGI                  (2.56 or higher)
+                GD                   (2.07 or higher)
+                DBI                  (any version)
+                DBD::mysql           (any version)
+                Digest::MD5          (any version)
+                Text::Shellwords     (any version)
 
     E) Bioperl version 1.2.3 or higher -- <http://www.bioperl.org>
         While the basic functionality of GBrowse will work with Bioperl
@@ -50,16 +50,18 @@ Generic Genome Browser Installation
 
     H) Bio::Das
         To display remote annotations using the Distributed Annotation
-        System.  The current version is available at 
-        http://www.biodas.org/download/Bio::Das/Bio-Das-0.9.tar.gz
+        System. The current version is available at
+        http://www.biodas.org/download/Bio::Das/Bio-Das-0.92.tar.gz
 
-    I) GD::SVG
-        To save images as publication-quality editable images in Scalar
-	Vector Graphics format.  Available from CPAN.
-
-    H) MOBY
+    I) MOBY
         Needed by gbrowse_moby to fetch and display data from MOBY
-        providers.
+        providers. Available from biomoby.org; obtain via anonymous cvs
+        until it is released. Directions are at
+        http://www.biomoby.org/cvs_checkout.html.
+
+    J) GD::SVG
+        To save images as publication-quality editable images in Scalar
+        Vector Graphics format. Available from CPAN.
 
   2. INSTALLING THE BROWSER WITH ACTIVESTATE'S PPM TOOL
 

@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.68 2002-11-07 05:44:56 lstein Exp $
+# $Id: gbrowse.PLS,v 1.69 2002-11-25 17:53:14 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -331,7 +331,7 @@ sub main_display {
 		       unit_label($segment->length),
 		       $segment->seq_id,
 		       commas($segment->start/$divider),
-		       commas($segment->stop/$divider)));
+		       commas($segment->end/$divider)));
   }
 
   # print the top of the form, with navigation bar, etc
@@ -1160,7 +1160,7 @@ sub truncated_segment {
   my $ref   = $seg->seq_id;
   my $db    = open_database();
   my $whole = $db->segment($ref);
-  return $db->segment(-name=>$ref,-start=>$whole->stop-4,-end=>$whole->stop) if $trunc_right;
+  return $db->segment(-name=>$ref,-start=>$whole->end-4,-end=>$whole->end) if $trunc_right;
   return $db->segment(-name=>$ref,-start=>1,-end=>4)                         if $trunc_left;
 }
 
@@ -1692,7 +1692,7 @@ sub coordinate_mapper {
   my $current_segment = shift;
   my $db              = open_database();
 
-  my ($ref,$start,$stop) = ($current_segment->seq_id,$current_segment->start,$current_segment->stop);
+  my ($ref,$start,$stop) = ($current_segment->seq_id,$current_segment->start,$current_segment->end);
   my %segments;
 
   my $closure = sub {

@@ -1,4 +1,4 @@
-#$Id: ExportFeatures.pm,v 1.10 2004-02-27 19:31:17 sheldon_mckay Exp $
+#$Id: ExportFeatures.pm,v 1.11 2004-03-12 15:18:18 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -57,8 +57,8 @@ The id_holder is a synthetic feature designed to facilitate
 the return trip to gbrowse. It holds the database IDs of all 
 dumped features.  It also contains the coordinate offset for 
 subseqments (always dumped with relative coordinates).  The 
-id_holder also contains a qualifier specifying whether dis-
-aggregated features were exported.  Deleting the id_holder
+id_holder also contains a qualifier specifying whether 
+disaggregated features were exported.  Deleting the id_holder
 feature is not recommended.
 
 =head1 RELATIVE COORDINATES
@@ -79,8 +79,8 @@ round-trip.  This way, deletion of selectively dumped features
 in an external editor will be reflected when the database is 
 updated on the return trip.  If the IDS go stale or are not 
 supported, then colliding features (same type, strand and 
-coordinates as the incoming features). There is also a 
-user-specified option to delete all in-range features for 
+coordinates as the incoming features) will be deleted. There 
+is also a user-specified option to delete all in-range features for 
 the segment.  -- Caveat emptor --
 
 =head1 GENES ARE TREATED DIFFERENTLY
@@ -97,6 +97,48 @@ table that has each gene component as a stand-alone feature. The
 feature importer is made aware of disaggregated features via the 
 id_holder
 
+=head1 CONTROLLING DUMPING BEHAVIOR VIA THE CONFIGURATION FILE
+
+Two optional controls can be accessed by placing a stanza 
+in the config file:
+
+  [ExportFeatures:plugin]
+  editor     = [Artemis|Apollo]
+  aggregator = off
+
+Defining an editor (Apollo or Artemis) will set the default
+export format and editor.  There are cases where one editor
+is better suited to a database.  
+
+Setting the aggregator to 'off' will turn off transcript
+aggregation.  This will result in the features being dumped
+as stand-alone flattened features rather than in containment
+hierarchies.
+
+For a simple viral or prokayotic genome, the optimal setting would be
+  
+  [ExportFeatures:plugin]
+  editor     = Artemis
+  aggregator = off
+
+This will configure the dumper to have a default EMBL format
+and export only to Artemis.  An Apollo-only dumper can be configured
+like so:
+
+  [ExportFeatures:plugin]
+  editor = Apollo
+
+Note that aggregation is required for dumping GAME-XML, so aggregation
+can not be disabled in Apollo is selected as the editor.
+
+The default is to offer a choice of Editors and have aggregation 
+switched on.  Note that an option to disable aggregation is
+also available in the configuration form. 
+
+=head1 TO-DO
+
+Add support for user-defined feature aggregators
+Add support for Apollo's new EMBL data adapter
 
 =head1 FEEDBACK
 
@@ -120,16 +162,30 @@ use Bio::SeqFeature::Generic;
 use Bio::Location::Split;
 use Bio::Seq::RichSeq;
 use CGI qw/:standard *sup/;
-use CGI::Carp qw/croak fatalsToBrowser/;
-use Data::Dumper;
-use vars '$VERSION','@ISA';
-
-$VERSION = '0.01';
+use CGI::Carp qw/fatalsToBrowser/;
+use Text::Shellwords;
+use vars '@ISA';
 
 @ISA = qw / Bio::Graphics::Browser::Plugin Bio::Graphics::Browser::GFFhelper/;
 
+
+sub init {
+    my $self = shift;
+    my $conf = $self->browser_config;
+    ($self->{editor})  = shellwords($conf->plugin_setting('editor'));
+
+    if ( $self->{editor} ) {
+	$self->{format}  = lc $self->{editor} eq 'artemis' ? 'EMBL' : 'GAME';
+    }
+
+    my ($aggregator)   = shellwords($conf->plugin_setting('aggregator'));
+    $self->{aggregator} = 1 unless $aggregator && $aggregator eq 'off';
+}
+
 sub name { 
-    'Export Annotations' 
+    my $self = shift;
+    my $editor = $self->{editor} ? " to " . ucfirst $self->{editor} : '';
+    "Export Annotations$editor"; 
 }
 
 # don't use a verb in the plugin menu
@@ -148,7 +204,7 @@ sub mime_type {
     my $self = shift;
     my $conf = $self->configuration;
 
-    if ( !param('configured') ) {
+    if ( !param('configured') && !param('demo_script')) {
         return 'text/html';
     }
 
@@ -176,15 +232,26 @@ sub config_defaults {
 sub reconfigure {
     my $self = shift;
     my $conf = $self->configuration;
-    my $format = $self->config_param('format');
-    ($conf->{format}) = $format =~ /(GAME|EMBL)/;
-    
+
+    if ( $self->{editor} ) {
+	$conf->{format} = lc $self->{editor} eq 'artemis' ? 
+	    'EMBL' : 'GAME';
+    }
+    else { 
+	my $format = $self->config_param('format');
+	($conf->{format}) = $format =~ /(GAME|EMBL)/;
+    }
+
+    if ( $self->{aggregator} ) {
+	$conf->{aggregate} = 1;
+    }
+
     $conf->{method} = $self->config_param('method');
     $conf->{types}  = [ $self->config_param('type') ];
     $conf->{expand} = $self->config_param('expand');
     
     # Artemis-specific
-    if ( $conf->{format} eq 'EMBL' ) {
+    if ( $conf->{format} eq 'EMBL' && $self->{aggregator} ) {
 	$conf->{disaggregate} = param('disaggregate') ? 1 : 0;
     }
 }
@@ -193,13 +260,21 @@ sub configure_form {
     my $self = shift;
     my $conf = $self->configuration;
 
-    # use a really generic transcript aggregator
-    $self->generic_aggregator;
+    # use a really generic transcript aggregator if 
+    # aggregation is requested.  Aggregation is not 
+    # optional if Apollo is defined as the editor
+    my $aggregate = lc $self->{editor} eq 'apollo' ? 1 : $self->{aggregator};
+    if ( $aggregate ) {
+	$self->generic_aggregator;
+    }
+    # otherwise, no aggregation
+    else {
+	my $db = $self->database;
+	$db->clear_aggregators;
+    }
 
-    # and just deal with selected features
     my ($segment) = @{$self->segments};
-    my @types = $self->selected_features;
-    my $iterator = $segment->get_seq_stream;    
+    my $iterator = $segment->get_seq_stream();    
 
     # find out what kind of features we have
     my (%seen, @gene_stuff, @other) = ();
@@ -215,7 +290,7 @@ sub configure_form {
 
 	next if ++$seen{$method} > 1;
         
-	if ( $method =~ /RNA|gene|transcript/ ) {
+	if ( $method =~ /RNA|gene|transcript/ && $aggregate) {
 	    push @gene_stuff, $method;
 	}
 	else {
@@ -230,42 +305,42 @@ sub configure_form {
                "that contain processed transcript components such as " .
 	       "UTRs, exons and CDSs";
 
-    my $html = _buttons($segment) . br .
-	       table(
+    my $html = _buttons($segment) . br;
+
+    if ( $aggregate ) {
+	$html .= table(
 		     Tr( { -class => 'searchtitle' },
 			 td( b("The following gene-related features will " .
                                "be exported from $segment"),
 			     _js_help($msg))
 			 )
 		     ) . ul( join '', map { li($_) } @gene_stuff );
-    
-    $html .= hidden ( -name    => $self->config_name('type'),
-		      -default => [grep { s/ \(.+\)// || $_ } @gene_stuff] );
-   
-    # avoid including partial genes
-    $msg    = "To avoid dumping partial genes that span the ends, the sequence " .
-	      "region will be expanded to contain all gene components.\\n\\n" .
-	      "Partial genes will not be included unless this box is checked";
-    my $lbl = "Resize the selected region to completely include overlapping " .
-	      "genes ";
-    $html .= p(checkbox( -name    => $self->config_name('expand'),
-			 -checked => 1,
-			 -label   => $lbl ) . ' ' . _js_help($msg));
+
+	$html .= hidden ( -name    => $self->config_name('type'),
+			  -default => [grep { s/ \(.+\)// || $_ } @gene_stuff] );
+    }   
 
     # give the option to unflatten aggregates
-    $msg = "Break apart mRNAs into component parts (UTRs, exons, CDS, etc)\\n\\n" .
-	   "NOTE: This option is only available for EMBL format ";
-    $lbl = "Disaggregate mRNAs";
-    $html .= p(checkbox( -name    => 'disaggregate',
-			 -checked => 0,
-			 -label   => $lbl ) . ' ' . _js_help($msg));
-
+    if ( $aggregate ) {
+	$msg = "Break apart mRNAs into component parts (UTRs, exons, CDS, etc)\\n\\n" .
+	       "NOTE: This option is only available for EMBL format ";
+	my $lbl = "Disaggregate mRNAs";
+	$html .= p(checkbox( -name    => 'disaggregate',
+			     -checked => 0,
+			     -label   => $lbl ) . ' ' . _js_help($msg));
+    }
 
     # optional other features
     if ( @other ) {
-        my $msg = "Generic features are treated differently because they are not " .
-	          "in nested containment hierarchies like genes and " .
-                  "gene-containing features";
+	my ($ng, $msg);
+	if ( $aggregate ) {
+	    $msg = "Generic features are treated differently because they are not " .
+		   "in nested containment hierarchies like genes and " .
+		   "gene-containing features";
+	    $msg = _js_help($msg);
+            $ng = 'non-gene';
+	}
+
         my $width = 200 + int(@other/10 * 200);
 	my $feat_list = checkbox_group ( -name    => $self->config_name('type'),
 					 -values  => \@other,
@@ -274,25 +349,45 @@ sub configure_form {
 
 	$html .= table(
 		       Tr( { -class => 'searchtitle' },
-			   td( b("Select non-gene features to include "), _js_help($msg)),
+			   td( b("Select $ng features to include "), $msg ),
 			   )
 		       ) . $feat_list;
     }
 
+    # avoid including partial genes
+    $msg    = "To avoid dumping partial genes, the sequence " .
+              "region will be expanded to contain all overlapping features.\\n\\n" .
+              "Partial genes will not be included unless this box is checked";
+    my $lbl = "Resize the selected region to completely include overlapping " .
+	      "features ";
+    $html .= p(checkbox( -name    => $self->config_name('expand'),
+                         -checked => 1,
+                         -label   => $lbl ) . ' ' . _js_help($msg));
+
     # dump to browser or helper-app?
-    $msg = "For external editors, install a helper application for MIME type " .
-	   "application/apollo or application/artemis";
+    my $mime;
+    if ( $self->{editor} ) {
+	$mime = "application/" . lc $self->{editor};
+    }
+    else {
+	$mime = "application/apollo or application/artemis";
+    }
+    $msg = "For external editors, install a helper application for MIME type $mime";
+
     $html .= p('Destination: ' .
 	       radio_group( -name    => $self->config_name('method'),
 			    -values  => [ qw/editor browser/ ],
 			    -default => $conf->{method} ) . ' ' . _js_help($msg));
 
-    my $default_format = $conf->{format} eq 'GAME' ? 'Apollo (GAME)' : 'Artemis (EMBL)'; 
+    
+    unless ( $self->{editor} ) {
+	my $default_format = $conf->{format} eq 'GAME' ? 'Apollo (GAME)' : 'Artemis (EMBL)'; 
 
-    $html .= p('Format: ' . 
-	       radio_group( -name    => $self->config_name('format'),
-			    -values  => [ 'Apollo (GAME)', 'Artemis (EMBL)' ],
-			    -default => $default_format ) );
+	$html .= p('Format: ' . 
+		   radio_group( -name    => $self->config_name('format'),
+				-values  => [ 'Apollo (GAME)', 'Artemis (EMBL)' ],
+				-default => $default_format ) );
+    }
 
     # give a sample client-side perl wrapper
     my $url = $self->demo_script_url;
@@ -335,17 +430,16 @@ sub dump {
     my $mode  = $conf->{mode};
     my $db    = $self->database;
     my $exp   = $conf->{expand};
+    my $aggregate = 1 if $self->{aggregator} && !$conf->{disaggregate};
 
-    my $whole_segment = $db->segment( $segment->ref ); 
-    my $whole = 1 if $segment->start == 1 
-                  && abs( $segment->stop - $whole_segment->stop ) < 10;
+    # is this a sub-segment?
+    my $whole = $self->is_whole($segment);
+    $exp = 0 if $whole;
 
-    # expand the segment to completely contain genes
+    # expand the segment to completely contain features
     # that span the ends
-    if ( $exp && !$whole ) {
-	my @feats = grep { 
-	    $_->method =~ /gene|transcript|RNA/ 
-        } $segment->features;
+    if ( $exp ) {
+	my @feats = $segment->features( -types => $conf->{types} );
         my ($low, $high) = ($segment->start, $segment->stop);
         for ( @feats ) {
 	    my $start = $_->start;
@@ -367,9 +461,17 @@ sub dump {
     $self->{offset} = $segment->start - 1;
 
     # use a generic transcript aggregator
-    $self->generic_aggregator;
+    my @extra_parts;
+    if ( $aggregate ) {
+	$self->generic_aggregator;
+    }
+    else {
+	$db->clear_aggregators;
+        @extra_parts = $self->generic_aggregator(1);
+    }
+
     $self->{genes} = [];
-    my ($transcripts, $gff_feats) = $self->get_feats($segment);
+    my ($transcripts, $gff_feats) = $self->get_feats($segment, @extra_parts);
     my @transcripts = @$transcripts;
     my @GFF_feats   = @$gff_feats;
 
@@ -377,7 +479,7 @@ sub dump {
 
     for my $f ( @transcripts ) {
 
-	my $transcript = $self->convert($f);
+	my $transcript = $self->convert($f, $segment);
         
 	#  find the parent gene...
 	my $gene;
@@ -388,6 +490,7 @@ sub dump {
 	    ($gene) = grep { 
 		_name($_, 'gene') eq $f->name ||
 		_name($_, 'standard_name') eq $f->name ||
+                _name($_, 'Name') eq $f->name ||
 		( $_->strand == $transcript->strand && 
                  ( $_->start == $transcript->start ||
                   $_->end   == $transcript->end ))   
@@ -399,7 +502,8 @@ sub dump {
 	    ($gene) =  grep {
 		$_->name eq $f->name ||   
 		_name($_, 'standard_name') eq $f->name ||
-                _name($_, 'gene') eq $f->name ||    
+                _name($_, 'gene') eq $f->name ||
+		_name($_, 'Name') eq $f->name ||
 		( $_->start <= $f->start && 
 		  $_->end >= $f->end && 
 		  $_->strand eq $f->strand ) 
@@ -408,7 +512,7 @@ sub dump {
 
 	# convert GFF gene to BSG gene
 	if ( $gene && $gene->can('id') ) {
-	    $gene = $self->convert($gene);
+	    $gene = $self->convert($gene, $segment);
 	}
 
         # last resort; create a new gene feature
@@ -419,7 +523,7 @@ sub dump {
 	}
 
         # convert nested subfeats
-	my @sf = map  { $self->convert($_) } $f->get_SeqFeatures;
+	my @sf = map  { $self->convert($_, $segment) } $f->get_SeqFeatures;
 	
 	my @CDS  = _grab('CDS', @sf);
 	my @exon = _grab('exon', @sf);
@@ -437,7 +541,7 @@ sub dump {
         # flatten the CDS
 	my $meta_cds;
 	if ( @CDS ) {
-	    $meta_cds = $CDS[0];
+	    $meta_cds = $CDS[0]; # first CDS has all the tags
             my $meta_loc = Bio::Location::Split->new;
 	    
 	    for ( @CDS ) {
@@ -457,10 +561,7 @@ sub dump {
         }
 
         # save the CDS, just in case.
-        my $gname = _name($gene, 'gene') 
-                 || _name($gene, 'standard_name')
-                 || _name($gene, 'locus_tag');
-
+	my $gname = _name($gene, qw/gene standard_name locus_tag Name/);        
         if ( $meta_cds ) {
 	    unshift @sf, $meta_cds;
 	    $self->{curr_CDS}->{$gname} = $meta_cds;
@@ -483,10 +584,7 @@ sub dump {
     # survey the genes for CDS-less transcripts (may happen
     # with alt. spliced UTRs)
     for my $g ( @BSG_feats ) {
-	my $gname = _name($g, 'gene')
-                 || _name($g, 'standard_name')
-                 || _name($g, 'locus_tag');
-
+	my $gname = _name($g, qw/gene standard_name locus_tag Name/);
 	my @rnas = $g->get_SeqFeatures;
 	
 	for my $rna ( @rnas ) {
@@ -549,7 +647,7 @@ sub dump {
     # other feats (or disaggregated sets)?
     # plain old 1:1 feature conversion
     for my $f ( @GFF_feats ) {
-	my $gf = $self->convert($f);
+	my $gf = $self->convert($f, $segment);
 	push @BSG_feats, $gf;
     }
 
@@ -574,6 +672,7 @@ sub dump {
     $seq->description($id);
     $seq->add_SeqFeature(@BSG_feats, $id_holder);
 
+    
     # we must have a sequence
     unless ( $seq->seq ) {
 	$seq->seq( ('N' x $segment->length) );
@@ -581,27 +680,25 @@ sub dump {
 
     my $format = lc $conf->{format};
     #$format = 'asciitree';
-    my $out = eval { Bio::SeqIO->new( -format => $format ) };
-    $out || croak("Sequence conversion error: " . join '', @!);
-    my $out_ok = eval{ $out->write_seq($seq) };
-    $out_ok || croak("Sequence writing error: " . join '', @!);
+    my $out = Bio::SeqIO->new( -format => $format );
+    eval{ $out->write_seq($seq) }
+    || print ("Sequence writing error: " . join '', $@);
 }
 
 sub get_feats {
-    my ($self, $segment) = @_;
+    my ($self, $segment, @parts) = @_;
     my $conf   = $self->configuration;
     my $disagg = $conf->{disaggregate};
-    my $types  = \@{$conf->{types}};
+    $disagg = 1 if !$conf->{aggregate};
+    my $types  = $conf->{types};
+    push @{$types}, @parts if @parts;
     my $iterator = $segment->get_seq_stream( -types => $types );
     
     my (@GFF_feats, @transcripts);
 
     while ( my $f = $iterator->next_seq ) {
-        # only use contained features
-        unless ( $conf->{expand} ) {
-            next if $f->start < $segment->start;
-            next if $f->end > $segment->end;
-        }
+	next if $f->start < $segment->start;
+	next if $f->end > $segment->end;
 
 	if ( $disagg ) {
 	    if ( my @sf = $f->sub_SeqFeature ) {
@@ -621,6 +718,10 @@ sub get_feats {
 	}
     }
 
+    if ( !(@transcripts || @GFF_feats) ) {
+	print "\n\nNo features to dump\n" and exit;
+    }
+
     return \@transcripts, \@GFF_feats;
 }
 
@@ -632,18 +733,22 @@ sub _grab {
 }
 
 sub _name {
-    my ($f, $t) = @_;
-    return 0 unless $f->has_tag($t);
-    ($f->get_tag_values($t))[0];
+    my ($f, @t) = @_;
+    for my $t ( @t ) {
+	next unless $f->has_tag($t);
+	my ($v) = $f->get_tag_values($t);
+        return $v if $v;
+    }
+    return '';
 }
 
 # GFF->Generic feature
 sub convert {
-    my ($self, $f) = @_;
+    my ($self, $f, $segment) = @_;
     $self->{database_ids} ||= [];
     push @{$self->{database_ids}}, $f->id;
     $f = $self->gff2Generic($f);
-    $self->remap($f);
+    $self->remap($f, $segment->length);
     _strandfix($f);
     _tagfix($f);
     $f;
@@ -678,18 +783,21 @@ sub _tagfix {
 
 sub generic_aggregator {
     my $self = shift;
+    my $parts_list = shift;
     my $db   = $self->database;
     my $aggregator;
 
     # similar to processed_transcript.pm, but it also uses exons
-    my $transcript_parts = join ',', ( qw/ UTR 5_UTR 3_UTR 5'UTR 3'UTR 5'-UTR 3'-UTR 
-				       exon CDS TSS transcription_start_site TSS
-				       polyA_site five_prime_untranslated_region
-				       three_prime_untranslated_region
-				       untranslated_region / );
+    my @transcript_parts = ( qw/ UTR 5_UTR 3_UTR 5'UTR 3'UTR 5'-UTR 3'-UTR 
+			     exon CDS TSS transcription_start_site TSS
+			     polyA_site five_prime_untranslated_region
+			     three_prime_untranslated_region
+			     untranslated_region / );
+    
+    return @transcript_parts if $parts_list; 
+
+    my $transcript_parts = join ',', @transcript_parts;
     $aggregator = "mRNA{${transcript_parts}/mRNA}";
-    
-    
     $db->aggregators( $aggregator  );
     $aggregator;
 } 
@@ -716,10 +824,11 @@ sub id_holder {
 
 # recursively remap features to relative coordinates
 sub remap {
-    my ($self, $f) = @_;
+    my ($self, $f, $max_length) = @_;
     for ( $f, $f->get_SeqFeatures ) {
 	$_->start($_->start - $self->{offset});
 	$_->end($_->end - $self->{offset});
+        $_->end($max_length) if $max_length && $_->end > $max_length;
     }
 }
 
@@ -768,6 +877,13 @@ sub _buttons {
 	    -name    => 'Upload Annotations' ) . br; 
 }
 
+sub is_whole {
+    my ($self, $s) = @_;
+    my $ref = $s->ref;
+    my $db = $self->database;
+    my $whole_seg = $db->segment($ref);
+    return $s->length + 1 >= $whole_seg->length ? 1 : 0;
+}
 
 1;
 

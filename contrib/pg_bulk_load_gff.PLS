@@ -43,7 +43,8 @@ load to a PostgreSQL database), pipe the output to psql:
 
   pg_bulk_load_gff.pl <arguments> | psql <dbname>
 
-Note that the create option will NOT create the database, that
+The dump file created is only compatible with PostgreSQL version 7.3 or
+greater.  Note that the create option will NOT create the database, that
 must be done beforehand.  The create option is a flag to indicate
 that it is OK to wipe the database (ie, drop the tables), and if you
 don't supply it, you will be prompted for that OK before tables are

@@ -86,8 +86,6 @@ INSTALL
 lib/Bio/DB/Das/BioSQL.pm
 lib/Bio/DB/Das/BioSQL/Segment/Feature.pm
 lib/Bio/DB/Das/BioSQL/Segment.pm
-lib/Bio/DB/Das/Chado_pf.pm
-lib/Bio/DB/Das/Chado_pf/Segment.pm
 lib/Bio/DB/Das/Chado.pm
 lib/Bio/DB/Das/Chado/Segment/Feature.pm
 lib/Bio/DB/Das/Chado/Segment.pm

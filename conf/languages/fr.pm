@@ -37,6 +37,35 @@ END
 
    IMAGE_LINK => 'Lien vers une image de cet affichage',
 
+   SVG_LINK   => 'Image haute qualité pour les publications',
+
+   SVG_DESCRIPTION => <<END,
+<p>
+Le lien suivant permet de générer une image au format Scalable Vector Graphic (SVG). Les images SVG disposent de certains avantages sur les images bitmap (jpeg or png for exampe).
+</p>
+<ul>
+<li>Possibilité de redimmensionner l'image sans perte de résolution
+<li>Edition objet par objet dans dans des applications de dessin vectoriel
+<li>Conversion au format EPS (Encapsulated PostScript) si nécessaire pour des soumissions de publications
+</ul>
+<p>
+Pour voir des images SVG, vous devez disposer d'un navigateur qui sache les afficher, le plugin Adobe SVG, ou une application de visualisation/édition SVG telle qu'Adobe Illustrator.
+</p>
+<p>
+Plugin Adobe pour navigateurs : <a
+href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Macintosh">Macintosh</a>
+| <a
+href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Windows">Windows</a>
+<br />
+Les utilisateurs de Linux peuvent regarder le <a href="http://xml.apache.org/batik/">Batik SVG Viewer</a>.
+</p>
+<p>
+<a href="%s" target="_blank">Voir l'image SVG dans une nouvelle fenêtre du navigateur.</a></p>
+<p>
+Pour Sauver cette image sur votre disque, control-click (Macintosh) ou bouton-droit de la souris (windows) et choisisser l'option pour sauver le lien sur disque.
+</p>
+END
+
    IMAGE_DESCRIPTION => <<END,
 <p>
 Pour créer une image incrustée de cet affichage, il faut copier et coller
@@ -56,6 +85,11 @@ L'image ressemblera à ceci :
 Si seul l'aperçu (affichage d'un chromosome ou contig) est visible, il
 faut essayer de réduire la taille de la région.
 </p>
+END
+
+TIMEOUT  => <<'END',
+Le délai alloué pour votre requête a expiré. Vous avez probablement choisi une
+région trop grande pour être affichée. Vous pouvez décocher quelques pistes ou essayer une région plus petite. Si le problème persiste, veuillez cliquer sur le bouton rouge ("Remise à zéro").
 END
 
 
@@ -128,6 +162,10 @@ END
  BETWEEN     => 'Entre les pistes',
 
  BENEATH     => 'Sous l\'affichage',
+
+ LEFT        => 'Left',
+
+ RIGHT       => 'Right',
 
  TRACK_NAMES => 'Tableau des pistes',
  

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.37 2004-03-11 15:48:58 scottcain Exp $
+# $Id: Chado.pm,v 1.38 2004-04-09 07:57:31 allenday Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -117,7 +117,8 @@ $VERSION = 0.11;
 # create new database accessor object
 # takes all the same args as a Bio::DB::BioDB class
 sub new {
-  my $self = shift;
+  my $proto = shift;
+  my $self = bless {}, ref($proto) || $proto;
 
   my %arg =  @_;
 
@@ -142,18 +143,77 @@ sub new {
 
   my $cvterm_id  = {};
   my $cvname = {};
+
+  my($term2name,$name2term) = ({},{});
+
   while (my $hashref = $sth->fetchrow_hashref) {
-    $$cvterm_id{$$hashref{name}}   = $$hashref{cvterm_id};
-    $$cvname{$$hashref{cvterm_id}} = $$hashref{name};
+    $term2name{ $hashref->{cvterm_id} } = $hashref->{name};
+    $name2term{ $hashref->{name} }      = $hashref->{cvterm_id};
   }
-  
 
-  warn "in chado.pm: $cvterm_id\n" if DEBUG;
+  $self->term2name($term2name);
+  $self->name2term($name2term);
+  $self->dbh($dbh);
 
-  return bless {dbh        => $dbh,
-                cvterm_id  => $cvterm_id,
-                cvname => $cvname}, ref $self ||$self;
+  return $self;
 }
+
+=head2 dbh
+
+  Title   : dbh
+  Usage   : $obj->dbh($newval)
+  Function:
+  Returns : value of dbh (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub dbh {
+  my $self = shift;
+
+  return $self->{'dbh'} = shift if @_;
+  return $self->{'dbh'};
+}
+
+=head2 term2name
+
+  Title   : term2name
+  Usage   : $obj->term2name($newval)
+  Function: cvterm.cvterm_id to cvterm.name mapping hashref
+  Returns : value of term2name (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub term2name {
+  my $self = shift;
+
+  return $self->{'term2name'} = shift if @_;
+  return $self->{'term2name'};
+}
+
+
+=head2 name2term
+
+  Title   : name2term
+  Usage   : $obj->name2term($newval)
+  Function: cvterm.name to cvterm.cvterm_id mapping hashref
+  Returns : value of name2term (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub name2term {
+  my $self = shift;
+
+  return $self->{'name2term'} = shift if @_;
+  return $self->{'name2term'};
+}
+
+
 
 =head2 segment
 

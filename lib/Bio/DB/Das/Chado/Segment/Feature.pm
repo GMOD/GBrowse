@@ -1,12 +1,14 @@
 =head1 NAME
 
-Bio::DB::Das::Chado::Segment::Feature -- 
+Bio::DB::Das::Chado::Segment::Feature
 
 =head1 SYNOPSIS
 
 See L<Bio::DB::Das::Chado>.
 
 =head1 DESCRIPTION
+
+Not yet written
 
 =head1 API
 
@@ -25,17 +27,12 @@ use Data::Dumper;
 use constant DEBUG => 0;
 
 use vars qw($VERSION @ISA $AUTOLOAD);
-@ISA = qw(Bio::DB::Das::Chado::Segment Bio::SeqFeatureI 
-	  Bio::Root::Root);
+@ISA = qw(Bio::DB::Das::Chado::Segment Bio::SeqFeatureI
+          Bio::Root::Root);
 
-$VERSION = '0.11';
+$VERSION = '0.12';
 
-use overload
-  '""'   => 'asString';
-
-*get_SeqFeatures = \&sub_SeqFeature;
-*segments = \&sub_SeqFeature;
-my %CONSTANT_TAGS = ();
+use overload '""'   => 'asString';
 
 =head2 new
 
@@ -58,25 +55,26 @@ The 10 arguments are positional:
   $stop         stop of this feature
   $type         this feature's type (gene, arm, exon, etc)
   $strand       this feature's strand (relative to the source
-                      sequence, which has its own strandedness!)
+                sequence, which has its own strandedness!)
   $group        this feature's featureloc.locgroup (NOT a GFF holdover)
-  $db_id        this feature's internal database ID (feature.uniquename)
+  $uniquename   this feature's internal unique database name (feature.uniquename)
   $feature_id   the feature's feature_id
+
+This is called when creating a feature from scratch.  It does not have
+an inherited coordinate system.
 
 =cut
 
-# 'This is called when creating a feature from scratch.  It does not have
-# an inherited coordinate system.
-sub new { 
+sub new {
   my $package = shift;
   my ($factory,
       $parent,
       $srcseq,
-      $base_start,$end,
+      $start,$end,
       $type,
       $strand,
-      $group,       # ie, gene name  (GFF legacy)
-      $db_id,
+      $group,       # featureloc.locgroup, NOT to be confused with GFF group
+      $uniquename,
       $feature_id) = @_;
 
   my $self = bless { },$package;
@@ -84,72 +82,38 @@ sub new {
   #check that this is what you want!
   #($start,$end) = ($end,$start) if defined($strand) and $strand == -1;
 
-  @{$self}{qw(factory parent seq_id start end strand )} =
-    ($factory,$parent,$srcseq,$base_start,$end,$strand);
+  $self->factory($factory);
+  $self->parent($parent);
+  $self->seq_id($srcseq);
+  $self->start($start);
+  $self->end($end);
+  $self->strand($strand);
 
-  @{$self}{qw(type group db_id absolute)} =
-    ($type,$group,$db_id,$factory->{absolute});
+  $self->type($type);
+  $self->group($group);
+  $self->uniquename($uniquename);
+  $self->absolute($factory->absolute);
 
-  @{$self}{qw(feature_id srcfeature_id score ) } = 
-    ($feature_id,$parent->{srcfeature_id},0);
+  $self->feature_id($feature_id);
+  $self->srcfeature_id($parent->srcfeature_id) if $parent->can('srcfeature_id');
+  $self->score(0);
 
-  $self;
+  return $self;
 }
 
+######################################################################
+# feature and featureloc db value slots
+######################################################################
 
+=head1 feature and featureloc accessors
 
-
-###############################################################
-# get/setters and their composites, alphabetical
-###############################################################
-
-=head2 abs_strand
-
-  Title   : abs_strand
-  Usage   : $obj->abs_strand($newval)
-  Function: aliased to strand() for backward compatibility
+Methods below are accessors for data that is drawn directly from the
+Chado dataabase and can be considered "primary" accessors for this
+class.
 
 =cut
 
-*abs_strand = \&strand;
-
-=head2 class
-
-  Title   : class
-  Function: aliased to type()for backward compatibility
-
-=cut
-
-*class = \&type;
-
-=head2 db_id
-
-  Title   : db_id
-  Function: aliased to uniquename() for backward compatibility
-
-=cut
-
-*db_id = \&uniquename;
-
-=head2 factory
-
-  Title   : factory
-  Usage   : $obj->factory($newval)
-  Function: ???
-  Returns : value of factory (a scalar)
-  Args    : on set, new value (a scalar or undef, optional)
-
-
-=cut
-
-sub factory {
-  my $self = shift;
-
-  return $self->{'factory'} = shift if @_;
-  return $self->{'factory'};
-}
-
-=head2 feature_id
+=head2 feature_id()
 
   Title   : feature_id
   Usage   : $obj->feature_id($newval)
@@ -167,7 +131,7 @@ sub feature_id {
   return $self->{'feature_id'};
 }
 
-=head2 group
+=head2 group()
 
   Title   : group
   Usage   : $group = $f->group([$new_group]);
@@ -189,78 +153,252 @@ sub group {
   return $self->{'group'};
 }
 
-=head2 id
+=head2 srcfeature_id()
 
-  Title   : id
-  Function: aliased to uniquename() for backward compatibility
-
-=cut
-
-*id  = \&uniquename;
-
-=head2 info
-
-  Title   : info
-  Function: aliased to uniquename() for backward compatibility
-            with broken generic glyphs primarily
-
-=cut
-
-*info = \&uniquename;
-
-=head2 length
-
-  Title   : length
-  Usage   : $obj->length()
-  Function: convenience for end - start + 1
-  Returns : length of feature in basepairs
-  Args    : none
-
-=cut
-
-sub length {
-  my ($self) = @_;
-  my $len = $self->end - $self->start +1;
-  return $len;
-}
-
-=head2 method
-
- Title   : method
- Function: aliased to uniquename for backward compatibility
-
-=cut
-
-*method = \&type;
-
-=head2 name
-
-  Title   : name
-  Function: aliased to uniquename for backward compatibility
-
-=cut
-
-*name = \&uniquename
-
-=head2 score
-
-  Title   : score
-  Usage   : $obj->score($newval)
-  Function: holds the (alignment?) feature's score
-  Returns : value of score (a scalar)
+  Title   : srcfeature_id
+  Usage   : $obj->srcfeature_id($newval)
+  Function: ???
+  Returns : value of srcfeature_id (a scalar)
   Args    : on set, new value (a scalar or undef, optional)
 
 
 =cut
 
-sub score {
+sub srcfeature_id {
   my $self = shift;
 
-  return $self->{'score'} = shift if @_;
-  return $self->{'score'};
+  return $self->{'srcfeature_id'} = shift if @_;
+  return $self->{'srcfeature_id'};
 }
 
-=head2 seq_id
+=head2 strand()
+
+  Title   : strand
+  Usage   : $obj->strand()
+  Function: Returns the strand of the feature.  Unlike the other
+            methods, the strand cannot be changed once the object is
+            created (due to coordinate considerations).
+            corresponds to featureloc.strand
+  Returns : -1, 0, or 1
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub strand {
+  my $self = shift;
+
+  return $self->{'strand'} = shift if @_;
+  return $self->{'strand'} || 0;
+}
+
+=head2 type()
+
+  Title   : type
+  Usage   : $obj->type($newval)
+  Function: holds feature.type_id (Sequence Ontology feature type)
+  Returns : value of type (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+=cut
+
+sub type {
+  my $self = shift;
+
+  return $self->{'type'} = shift if @_;
+  return $self->{'type'};
+}
+
+=head2 uniquename()
+
+  Title   : uniquename
+  Usage   : $obj->uniquename($newval)
+  Function: holds feature.uniquename
+  Returns : value of uniquename (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+=cut
+
+sub uniquename {
+  my $self = shift;
+
+  return $self->{'uniquename'} = shift if @_;
+  return $self->{'uniquename'};
+}
+
+######################################################################
+# ISA Bio::SeqFeatureI
+######################################################################
+
+=head1 SeqFeatureI methods
+
+Bio::DB::Das::Chado::Segment::Feature implements the Bio::SeqFeatureI
+interface.  Methods described below, L<Bio:SeqFeatureI> for more
+details.
+
+=cut
+
+=head2 attach_seq()
+
+ Title   : attach_seq
+ Usage   : $sf->attach_seq($seq)
+ Function: Attaches a Bio::Seq object to this feature. This
+           Bio::Seq object is for the *entire* sequence: ie
+           from 1 to 10000
+ Example :
+ Returns : TRUE on success
+ Args    : a Bio::PrimarySeqI compliant object
+
+=cut
+
+sub attach_seq {
+  my ($self) = @_;
+
+  $self->throw_not_implemented();
+}
+
+=head2 display_name()
+
+  Title   : display_name
+  Function: aliased to uniquename() for Bio::SeqFeatureI compatibility
+
+=cut
+
+*display_name = \&uniquename;
+
+=head2 entire_seq()
+
+ Title   : entire_seq
+ Usage   : $whole_seq = $sf->entire_seq()
+ Function: gives the entire sequence that this seqfeature is attached to
+ Example :
+ Returns : a Bio::PrimarySeqI compliant object, or undef if there is no
+           sequence attached
+ Args    : none
+
+
+=cut
+
+sub entire_seq {
+    my $self = shift;
+    $self->SUPER::seq();
+}
+
+=head2 get_all_tags()
+
+  Title   : get_all_tags
+  Function: aliased to all_tags() for Bio::SeqFeatureI compatibility
+
+=cut
+
+*get_all_tags = \&all_tags;
+
+=head2 get_SeqFeatures()
+
+  Title   : get_SeqFeatures
+  Function: aliased to sub_SeqFeature() for Bio::SeqFeatureI compatibility
+
+=cut
+
+*get_SeqFeatures = \&sub_SeqFeature;
+
+=head2 get_tag_values()
+
+  Title   : get_tag_values
+  Usage   :
+  Function: ???
+  Returns :
+  Args    :
+
+
+=cut
+
+sub get_tag_values {
+  my $self = shift;
+  my $tag  = shift;
+  return $self->$tag() if $CONSTANT_TAGS{$tag};
+  $tag = ucfirst $tag;
+  return $self->$tag();  # try autogenerated tag
+}
+
+=head2 get_tagset_values()
+
+  Title   : get_tagset_values
+  Usage   :
+  Function: ???
+  Returns :
+  Args    :
+
+
+=cut
+
+sub get_tagset_values {
+  my ($self,%arg) = @_;
+
+  $self->throw_not_implemented();
+}
+
+=head2 gff_string()
+
+  Title   : gff_string
+  Usage   :
+  Function: ???
+  Returns :
+  Args    :
+
+
+=cut
+
+sub gff_string {
+  my ($self,%arg) = @_;
+
+  $self->throw_not_implemented();
+}
+
+=head2 has_tag()
+
+  Title   : has_tag
+  Usage   :
+  Function: ???
+  Returns :
+  Args    :
+
+
+=cut
+
+sub has_tag { 
+  my $self = shift;
+  my $tag  = shift;
+  my %tags = map {$_=>1} $self->all_tags;
+  return $tags{$tag};
+}
+
+=head2 primary_tag()
+
+  Title   : primary_tag
+  Function: aliased to type() for Bio::SeqFeatureI compatibility
+
+=cut
+
+*primary_tag = \&type;
+
+=head2 seq()
+
+  Title   : seq
+  Usage   :
+  Function: ???
+  Returns :
+  Args    :
+
+=cut
+
+sub seq {
+  my ($self,%arg) = @_;
+
+  $self->throw_not_implemented();
+}
+
+=head2 seq_id()
 
   Title   : seq_id
   Usage   : $obj->seq_id($newval)
@@ -278,43 +416,193 @@ sub seq_id {
   return $self->{'seq_id'};
 }
 
-=head2 _strand
+=head2 source_tag()
 
-  Title   : _strand
-  Usage   : $obj->_strand($newval)
-  Function: internal method; sets the feature strand, see strand()
-  Returns : value of _strand (a scalar)
+  Title   : source_tag
+  Function: aliased to source() for Bio::SeqFeatureI compatibility
+
+=cut
+
+*source_tag = \&source;
+
+######################################################################
+# ISA Bio::SeqFeatureI
+######################################################################
+
+=head1 Bio::RangeI methods
+
+Bio::SeqFeatureI in turn ISA Bio::RangeI.  Bio::RangeI interface
+methods described below, L<Bio::RangeI> for details.
+
+=cut
+
+=head2 end()
+
+  Title   : end
+  Function: inherited, L<Bio::DB::Das::Chado::Segment>
+
+=cut
+
+=head2 start()
+
+  Title   : start
+  Function: inherited, L<Bio::DB::Das::Chado::Segment>
+
+=cut
+
+=head2 strand()
+
+  Title   : strand
+  Function: inherited, L<Bio::DB::Das::Chado::Segment>
+
+=cut
+
+
+
+###############################################################
+# get/setters and their composites, alphabetical
+###############################################################
+
+=head1 other get/setters
+
+=cut
+
+=head2 abs_strand()
+
+  Title   : abs_strand
+  Usage   : $obj->abs_strand($newval)
+  Function: aliased to strand() for backward compatibility
+
+=cut
+
+*abs_strand = \&strand;
+
+=head2 class()
+
+  Title   : class
+  Function: aliased to type()for backward compatibility
+
+=cut
+
+*class = \&type;
+
+=head2 db_id()
+
+  Title   : db_id
+  Function: aliased to uniquename() for backward compatibility
+
+=cut
+
+*db_id = \&uniquename;
+
+=head2 factory()
+
+  Title   : factory
+  Usage   : $obj->factory($newval)
+  Function: ???
+  Returns : value of factory (a scalar)
   Args    : on set, new value (a scalar or undef, optional)
 
 
 =cut
 
-sub _strand {
+sub factory {
   my $self = shift;
 
-  return $self->{'strand'} = shift if @_;
-  return $self->{'strand'};
+  return $self->{'factory'} = shift if @_;
+  return $self->{'factory'};
 }
 
-=head2 strand
+=head2 id()
 
-  Title   : strand
-  Usage   : $obj->strand()
-  Function: Returns the strand of the feature.  Unlike the other
-            methods, the strand cannot be changed once the object is
-            created (due to coordinate considerations).
-  Returns : -1, 0, or 1
-  Args    : none, readonly.
+  Title   : id
+  Function: aliased to uniquename() for backward compatibility
+
+=cut
+
+*id  = \&uniquename;
+
+=head2 info()
+
+  Title   : info
+  Function: aliased to uniquename() for backward compatibility
+            with broken generic glyphs primarily
+
+=cut
+
+*info = \&uniquename;
+
+=head2 length()
+
+  Title   : length
+  Usage   : $obj->length()
+  Function: convenience for end - start + 1
+  Returns : length of feature in basepairs
+  Args    : none
+
+=cut
+
+sub length {
+  my ($self) = @_;
+  my $len = $self->end() - $self->start() +1;
+  return $len;
+}
+
+=head2 method()
+
+ Title   : method
+ Function: aliased to uniquename for backward compatibility
+
+=cut
+
+*method = \&type;
+
+=head2 name()
+
+  Title   : name
+  Function: aliased to uniquename for backward compatibility
+
+=cut
+
+*name = \&uniquename
+
+=head2 parent()
+
+  Title   : parent
+  Usage   : $obj->parent($newval)
+  Function: ???
+  Returns : value of parent (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
 
 
 =cut
 
-sub strand {
+sub parent {
   my $self = shift;
-  return $self->{'strand'} || 0;
+
+  return $self->{'parent'} = shift if @_;
+  return $self->{'parent'};
 }
 
-=head2 target
+=head2 score()
+
+  Title   : score
+  Usage   : $obj->score($newval)
+  Function: holds the (alignment?) feature's score
+  Returns : value of score (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub score {
+  my $self = shift;
+
+  return $self->{'score'} = shift if @_;
+  return $self->{'score'};
+}
+
+=head2 target()
 
   Title   : target
   Usage   : unimplemented
@@ -325,7 +613,7 @@ sub strand {
 =cut
 
 sub target {
-  my ($self,%arg) = @_;
+  my ($self) = @_;
 
   #my $group = $self->group or return;
   #return unless $group->can('start');
@@ -334,90 +622,129 @@ sub target {
   return;
 }
 
-=head2 type
+#####################################################################
+# other methods
+######################################################################
 
-  Title   : type
-  Usage   : $obj->type($newval)
-  Function: holds feature.type (Sequence Ontology feature type)
-  Returns : value of type (a scalar)
-  Args    : on set, new value (a scalar or undef, optional)
+=head1 Other methods
 
 =cut
 
-sub type {
-  my $self = shift;
+=head2 all_tags()
 
-  return $self->{'type'} = shift if @_;
-  return $self->{'type'};
-}
+  Title   : all_tags
+  Usage   :
+  Function: ???
+  Returns :
+  Args    :
 
-=head2 uniquename
-
-  Title   : uniquename
-  Usage   : $obj->uniquename($newval)
-  Function: holds feature.uniquename
-  Returns : value of uniquename (a scalar)
-  Args    : on set, new value (a scalar or undef, optional)
 
 =cut
 
-sub uniquename {
+sub all_tags {
   my $self = shift;
-
-  return $self->{'uniquename'} = shift if @_;
-  return $self->{'uniquename'};
+  my @tags = keys %CONSTANT_TAGS;
+  # autogenerated methods
+  if (my $subfeat = $self->{subfeatures}) {
+    push @tags,keys %$subfeat;
+  }
+  @tags;
 }
 
-##############################################################
-# end of get/setters and their composites
-##############################################################
+=head2 source()
 
-=head2 sub_SeqFeature
+  Title   : source
+  Usage   : unimplemented
+  Function: Source (manual curation, computation method, etc
+            not sure where to get this.
+  Returns :
+  Args    :
+
+=cut
+
+sub source {
+  my ($self,%arg) = @_;
+  return undef;
+}
+
+=head2 segments()
+
+  Title   : segments
+  Function: aliased to sub_SeqFeature() for compatibility
+
+
+=cut
+
+*segments = \&sub_SeqFeature;
+
+=head2 subfeatures
+
+  Title   : subfeatures
+  Usage   : $obj->subfeatures($newval)
+  Function: returns a list of subfeatures
+  Returns : value of subfeatures (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub subfeatures {
+  my $self = shift;
+
+  return $self->{'subfeatures'} = shift if @_;
+  return @{ $self->{'subfeatures'} };
+}
+
+
+=head2 sub_SeqFeature()
 
  Title   : sub_SeqFeature
  Usage   : @feat = $feature->sub_SeqFeature([$type])
- Function: get subfeatures
+ Function: This method returns a list of any subfeatures
+           that belong to the main feature.  For those
+           features that contain heterogeneous subfeatures,
+           you can retrieve a subset of the subfeatures by
+           providing an array of types to filter on.
+
+           For AcePerl compatibility, this method may also
+           be called as segments().
  Returns : a list of Bio::DB::Das::Chado::Segment::Feature objects
  Args    : a feature method (optional)
  Status  : Public
 
-This method returns a list of any subfeatures that belong to the main
-feature.  For those features that contain heterogeneous subfeatures,
-you can retrieve a subset of the subfeatures by providing a type 
-to filter on.
-
-For AcePerl compatibility, this method may also be called as
-segments().
 
 =cut
 
 sub sub_SeqFeature {
-  my $self = shift;
-  my $type = shift;
+  my($self,$types) = @_;
 
-  my $parent_id = $self->{feature_id};
+  #first call, cache subfeatures
+  if(!$self->subfeatures ){
 
-  my %termhash = %{$self->{factory}->{cvterm_id}};
-  my $typewhere = '';
-  if ($type) {
-    $type = lc $type;
-    $typewhere = " and child.type_id = $termhash{$type} ";
-  }
+    my $parent_id = $self->feature_id();
 
-  my $handle = $self->{factory}->{dbh};
+    my %n2t = %{ $self->factory->name2term() };
+    my %t2n = %{ $self->factory->term2name() };
 
-#  print "$parent_id\n";
-#  print "$handle\n";
-  $self->{factory}->{dbh}->trace(2) if DEBUG;
+    my $typewhere = '';
+    if ($type) {
+      $type = lc $type;
+      $typewhere = " and child.type_id = $n2t{$type} ";
+    }
 
-  my $partof = defined $termhash{'partof'} ? $termhash{'partof'}
-                                           : $termhash{'part_of'};
+    my $handle = $self->factory->dbh();
 
-  warn "partof = $partof" if DEBUG;
+    $self->factory->dbh->trace(2) if DEBUG;
 
-  my $sth = $self->{factory}->{dbh}->prepare("
- select child.feature_id, child.name, child.type_id, child.uniquename, parent.name as pname,
-           childloc.fmin, childloc.fmax, childloc.strand, childloc.locgroup, childloc.phase
+    my $partof = defined $n2t{'partof'} ? $n2t{'partof'} : $n2t{'part_of'};
+    $self->throw("partof and part_of cvterms weren't found.  is DB sane?") unless $partof;
+
+    warn "partof = $partof" if DEBUG;
+
+    my $sth = $self->{factory}->{dbh}->prepare("
+
+    select child.feature_id, child.name, child.type_id, child.uniquename, parent.name as pname,
+      childloc.fmin, childloc.fmax, childloc.strand, childloc.locgroup, childloc.phase
     from feature as parent
     inner join
       feature_relationship as fr0 on
@@ -431,89 +758,69 @@ sub sub_SeqFeature {
     where parent.feature_id = $parent_id
           and fr0.type_id = $partof
           $typewhere
+
     ");
-  $sth->execute or $self->throw("subfeature query failed"); 
+    $sth->execute or $self->throw("subfeature query failed");
 
-#  $self->{factory}->{dbh}->trace(0);# if DEBUG;
+    #$self->{factory}->{dbh}->trace(0) if DEBUG;
 
-  my @features;
-  my %termname = %{$self->{factory}->{cvname}};
-  while (my $hashref = $sth->fetchrow_hashref) {
+    while (my $hashref = $sth->fetchrow_hashref) {
 
-    next unless $$hashref{locgroup} eq $self->group; #look out, subfeatures may reside on other segments
+      next unless $$hashref{locgroup} eq $self->group; #look out, subfeatures may reside on other segments
 
-    my $stop  = $$hashref{fmax};
-    my $interbase_start = $$hashref{fmin};
-    my $base_start = $interbase_start +1;
+      my $stop  = $$hashref{fmax};
+      my $interbase_start = $$hashref{fmin};
+      my $base_start = $interbase_start +1;
 
-    my $feat = Bio::DB::Das::Chado::Segment::Feature->new (
-                       $self->{factory},
-                       $self,
-                       $self->ref,
-                       $base_start,$stop,
-                       $termname{$$hashref{type_id}},
-                       $$hashref{strand},
-                       $$hashref{name},
-                       $$hashref{uniquename}, $$hashref{feature_id}); 
-
-    push @features, $feat;
-
+      my $feat = Bio::DB::Das::Chado::Segment::Feature->new (
+                                                             $self->factory,
+                                                             $self,
+                                                             $self->ref,
+                                                             $base_start,$stop,
+                                                             $t2n{$$hashref{type_id}},
+                                                             $$hashref{strand},
+                                                             $$hashref{name},
+                                                             $$hashref{uniquename},
+                                                             $$hashref{feature_id}
+                                                            );
+      $self->add_subfeature($feat);
+    }
   }
-#  my $subfeat = $self->{subfeatures} or return;
-#  $self->sort_features;
-#  my @a;
-#  if ($type) {
-#    my $features = $subfeat->{lc $type} or return;
-#    @a = @{$features};
-#  } else {
-#    @a = map {@{$_}} values %{$subfeat};
-#  }
 
-  
-  return @features;
+  if($types){
+    my %ok = map {$n2t{$_} => 1} @$types;
+    return grep { $ok{ $_->type } } $self->subfeatures();
+  }
+
+  return $self->subfeatures();
 }
 
-=head2 add_subfeature
+=head2 add_subfeature()
 
  Title   : add_subfeature
  Usage   : $feature->add_subfeature($feature)
- Function: add a subfeature to the feature
+ Function: This method adds a new subfeature to the object.
+           It is used internally by aggregators, but is
+           available for public use as well.
  Returns : nothing
  Args    : a Bio::DB::Das::Chado::Segment::Feature object
  Status  : Public
 
-This method adds a new subfeature to the object.  It is used
-internally by aggregators, but is available for public use as well.
 
 =cut
 
-sub add_subfeature { 
+sub add_subfeature {
   my $self    = shift;
-#  my $feature = shift;
-#  my $type = $feature->method;
-#  my $subfeat = $self->{subfeatures}{lc $type} ||= [];
-#  push @{$subfeat},$feature;
-  $self->throw("not implemented");
+  my $subfeature = shift;
+
+  return undef unless ref($subfeature);
+  return undef unless $subfeature->isa('Bio::DB::Das::Chado::Segment::Feature');
+
+  push @{$self->{subfeatures}}, $subfeature;
+  return $subfeature;
 }
 
-=head2 attach_seq
-
- Title   : attach_seq
- Usage   : $sf->attach_seq($seq)
- Function: Attaches a Bio::Seq object to this feature. This
-           Bio::Seq object is for the *entire* sequence: ie
-           from 1 to 10000
- Example :
- Returns : TRUE on success
- Args    : a Bio::PrimarySeqI compliant object
-
-=cut
-
-sub attach_seq { # nothing!?! what is this for (also probably nothing warn "in sub attach_seq { # nothing!?! what is this for (also probably nothing\n";
-                 }
-
-
-=head2 location
+=head2 location()
 
  Title   : location
  Usage   : my $location = $seqfeature->location()
@@ -544,27 +851,9 @@ sub location {
    $location;
 }
 
-=head2 entire_seq
-
- Title   : entire_seq
- Usage   : $whole_seq = $sf->entire_seq()
- Function: gives the entire sequence that this seqfeature is attached to
- Example :
- Returns : a Bio::PrimarySeqI compliant object, or undef if there is no
-           sequence attached
- Args    : none
-
-
-=cut
-
-sub entire_seq { 
-    my $self = shift;
-    $self->SUPER::seq();
-}
-
 *merged_segments = \&sub_SeqFeature;
 
-=head2 clone
+=head2 clone()
 
  Title   : clone
  Usage   : $feature = $f->clone
@@ -599,7 +888,7 @@ sub clone {
 }
 
 
-=head2 sub_types
+=head2 sub_types()
 
  Title   : sub_types
  Usage   : @methods = $feature->sub_types
@@ -641,59 +930,6 @@ is equivalent to this call:
 
 =cut
 
-=head1 SeqFeatureI methods
-
-=cut
-
-=head2 display_name
-
-  Title   : display_name
-  Function: aliased to uniquename() for Bio::SeqFeatureI compatibility
-
-=cut
-
-*display_name = \&uniquename;
-
-=head2 primary_tag
-
-  Title   : primary_tag
-  Function: aliased to type() for Bio::SeqFeatureI compatibility
-
-=cut
-
-*primary_tag = \&type;
-
-sub source_tag  { 
-  # returns source (manual curation, computation method, etc
-  # not sure where to get this.
-}
-*source = \&source_tag;
-
-sub all_tags { 
-  my $self = shift;
-  my @tags = keys %CONSTANT_TAGS;
-  # autogenerated methods
-  if (my $subfeat = $self->{subfeatures}) {
-    push @tags,keys %$subfeat;
-  }
-  @tags;
-}
-*get_all_tags = \&all_tags;
-
-sub has_tag { 
-  my $self = shift;
-  my $tag  = shift;
-  my %tags = map {$_=>1} $self->all_tags;
-  return $tags{$tag};
-}
-sub each_tag_value { 
-  my $self = shift;
-  my $tag  = shift;
-  return $self->$tag() if $CONSTANT_TAGS{$tag};
-  $tag = ucfirst $tag;
-  return $self->$tag();  # try autogenerated tag
-}
-
 sub AUTOLOAD {
   my($pack,$func_name) = $AUTOLOAD=~/(.+)::([^:]+)$/;
   my $sub = $AUTOLOAD;
@@ -703,14 +939,14 @@ sub AUTOLOAD {
   return if $func_name eq 'DESTROY';
 
   # fetch subfeatures if func_name has an initial cap
-#  return sort {$a->start <=> $b->start} $self->sub_SeqFeature($func_name) if $func_name =~ /^[A-Z]/;
+  #return sort {$a->start <=> $b->start} $self->sub_SeqFeature($func_name) if $func_name =~ /^[A-Z]/;
   return $self->sub_SeqFeature($func_name) if $func_name =~ /^[A-Z]/;
 
   # error message of last resort
   $self->throw(qq(Can't locate object method "$func_name" via package "$pack"));
-}#'
+}
 
-=head2 adjust_bounds
+=head2 adjust_bounds()
 
  Title   : adjust_bounds
  Usage   : $feature->adjust_bounds
@@ -765,7 +1001,7 @@ sub adjust_bounds {
   ($self->{start},$self->{stop},$self->strand);
 }
 
-=head2 sort_features
+=head2 sort_features()
 
  Title   : sort_features
  Usage   : $feature->sort_features
@@ -801,7 +1037,7 @@ sub sort_features {
   }
 }
 
-=head2 asString
+=head2 asString()
 
  Title   : asString
  Usage   : $string = $feature->asString

@@ -255,6 +255,7 @@ warn "TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 
 load_plugin_annotators($page_settings);
 adjust_tracks($page_settings);
+auto_open($page_settings,$segments[0]) if @segments;
 
 warn "ADJUSTED TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 
@@ -568,7 +569,7 @@ sub adjust_tracks {
     $settings->{features}{$_}{options} = 0;  # automatic
     push @{$settings->{tracks}},$_;           # at the end
   }
-  # Remove any features that are not mentioned in the
+  # Remove any feature types that are not mentioned in the
   # config file, excepting Uploaded and remote URL features.
   # This may happen if a stanza is removed from the config file.
   my %extra = map {$_=>1} grep {!/^(http|ftp|das|file|plugin):/
@@ -580,6 +581,14 @@ sub adjust_tracks {
 
   # make sure that tracks are completely consistent with options
   $settings->{tracks} = [grep {exists $settings->{features}{$_}} @{$settings->{tracks}}];
+}
+
+# auto-open any tracks that match the search term
+sub auto_open {
+  my ($settings,$feature) = @_;
+  my $tracks = $settings->{features};
+  my $desired_label = $CONFIG->feature2label($feature) or return;
+  $tracks->{$desired_label}{visible} = 1;
 }
 
 # this is called to flatten the settings into an HTTP cookie
@@ -1197,7 +1206,7 @@ sub lookup_segments {
   # Filter out redundant segments; this can happen when the same basic feature is
   # present under several names, such as "genes" and "frameworks"
   my %seenit;
-  @segments = grep {!$seenit{$_->seq_id,$_->seq_id,$_->start,$_->end}++} @segments;
+  @segments = grep {!$seenit{$_->seq_id,$_->start,$_->end}++} @segments;
   return @segments if @segments > 1;
 
   # this prevents any confusion over (ref,start,stop) and (name) addressing.

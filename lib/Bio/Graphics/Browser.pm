@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.89 2003-09-11 16:49:56 lstein Exp $
+# $Id: Browser.pm,v 1.90 2003-09-16 17:21:26 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1255,13 +1255,7 @@ sub name2segments {
   $start *= $divisor if defined $start;
   $stop  *= $divisor if defined $stop;
 
-  my @argv = (-name  => $name);
-  push @argv,(-class => $class) if defined $class;
-  push @argv,(-start => $start) if defined $start;
-  push @argv,(-end   => $stop)  if defined $stop;
-
-  @segments = $name =~ /[*?]/ ? $db->get_feature_by_name(@argv) 
-                              : $db->segment(@argv);
+  @segments  = $self->_feature_get($db,$name,$class,$start,$stop);
 
   # Here starts the heuristic part.  Try various abbreviations that
   # people tend to use for chromosomal addressing.
@@ -1269,12 +1263,7 @@ sub name2segments {
     my $id = $1;
     foreach (qw(CHROMOSOME_ Chr chr)) {
       my $n = "${_}${id}";
-      my @argv = (-name  => $n);
-      push @argv,(-class => $class) if defined $class;
-      push @argv,(-start => $start) if defined $start;
-      push @argv,(-end   => $stop)  if defined $stop;
-      @segments = $name =~ /\*/ ? $db->get_feature_by_name(@argv) 
-                                : $db->segment(@argv);
+      @segments = $self->_feature_get($db,$n,$class,$start,$stop);
       last if @segments;
     }
   }
@@ -1287,11 +1276,7 @@ sub name2segments {
 
   # try the wildcard  version, but only if the name is of significant length
   if (!@segments && length $name > 3) {
-    @argv = (-name => "$name*");
-    push @argv,(-start => $start) if defined $start;
-    push @argv,(-end   => $stop)  if defined $stop;
-    @segments = $name =~ /\*/ ? $db->get_feature_by_name(@argv)
-                              : $db->segment(@argv);
+    @segments = $self->_feature_get($db,"$name*",$class,$start,$stop);
   }
 
   # try any "automatic" classes that have been defined in the config file
@@ -1302,13 +1287,7 @@ sub name2segments {
   NAME:
       foreach $class (@automatic) {
 	for my $n (@names) {
-	  @argv = (-name=>$n);
-	  push @argv,(-start => $start) if defined $start;
-	  push @argv,(-end   => $stop)  if defined $stop;
-	  # we are deliberately doing something different in the case that the user
-	  # typed in a wildcard vs an automatic wildcard being added
-	  @segments = $name =~ /\*/ ? $db->get_feature_by_name(-class=>$class,@argv)
-	                            : $db->segment(-class=>$class,@argv);
+	  @segments = $self->_feature_get($db,$n,$class,$start,$stop);
 	  last NAME if @segments;
 	}
       }
@@ -1343,6 +1322,26 @@ sub name2segments {
   }
 
   @segments;
+}
+
+sub _feature_get {
+  my $self = shift;
+  my ($db,$name,$class,$start,$stop) = @_;
+  my @argv = (-name  => $name);
+  push @argv,(-class => $class) if defined $class;
+  push @argv,(-start => $start) if defined $start;
+  push @argv,(-end   => $stop)  if defined $stop;
+  my @segments  = $db->get_feature_by_name(@argv) unless defined $start or defined $stop;
+  @segments     = $db->segment(@argv)                 if !@segments && $name !~ /[*?]/;
+
+  # uniquify
+  my %seenit;
+  foreach (@segments) {
+    my $name = $_->display_name;
+    $seenit{$name} = $_ if !exists $seenit{$name} 
+      or $seenit{$name}->length < $_->length;
+  }
+  values %seenit;
 }
 
 sub get_ranges {

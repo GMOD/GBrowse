@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.81 2003-07-01 02:12:37 lstein Exp $
+# $Id: Browser.pm,v 1.82 2003-07-01 02:22:22 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1181,8 +1181,7 @@ sub hits_on_overview {
   }
 
   for my $ref (sort keys %refs) {
-    my $segment = ($db->segment(-class=>$class,-name=>$ref))[0];
-    next unless $segment->length > 0;
+    my $segment = ($db->segment(-class=>$class,-name=>$ref))[0] or next;
     my $panel = Bio::Graphics::Panel->new(-segment => $segment,
 					  -width   => $width,
 					  -bgcolor => $self->setting('overview bgcolor') || 'wheat',

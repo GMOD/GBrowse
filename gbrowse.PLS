@@ -32,7 +32,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.1.1.1 2002-01-03 13:34:18 lstein Exp $
+# $Id: gbrowse.PLS,v 1.2 2002-01-11 18:11:30 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -63,20 +63,13 @@ use constant MAX_KEYWORD_RESULTS  => 50;  # max number of results from keyword s
 use constant DEBUG => 0;
 use constant DEBUGGING_RECTANGLES => 0;
 
-!NO!SUBS!
-
-print OUT <<"!GROK!THIS!";
 ###################################################################
 # Non-modperl users should change this variable if needed to point
 # to the directory in which the configuration files are stored.
 #
-use constant CONF_DIR => '$OPTIONS{CONF}/gbrowse.conf';
+use constant CONF_DIR => '/usr/local/apache/conf/gbrowse.conf';
 #
 ###################################################################
-!GROK!THIS!
-
-# In the following, perl variables are not expanded during extraction.
-print OUT <<'!NO!SUBS!';
 
 BEGIN {
     eval "use Apache"; 
@@ -210,13 +203,17 @@ else {
   main_display(\@segments,$page_settings);
 }
 
-## FOOTER
-print
-  $CONFIG->footer || '',
-  p(i(font({-size=>'small'},
-	   'Note: This page uses cookie to save and restore preference information.',
-	   'No information is shared.'))),
-  end_html;
+footer();
+
+sub footer {
+  ## FOOTER
+  print
+    $CONFIG->footer || '',
+      p(i(font({-size=>'small'},
+	       'Note: This page uses cookie to save and restore preference information.',
+	       'No information is shared.'))),
+		 end_html;
+}
 
 #--------------------------------- lots of subroutines --------------------------
 
@@ -727,8 +724,9 @@ sub get_segment {
 
   my $db = open_database();
   unless ($db) {
-    error("ERROR: Unable to open database",$CONFIG->setting('description'));
-    return;
+    error("ERROR: Unable to open database",$CONFIG->setting('description'),pre($@));
+    footer();
+    exit 0;
   }
 
   $db->debug(0);
@@ -828,6 +826,9 @@ sub do_keyword_search {
 sub format_keyword_search {
   my ($name,$results) = @_;
   my $db = open_database();
+
+  my $regexp = join '|',($name =~ /(\w+)/g);
+
   print start_table();
   print TR({-class=>'datatitle'},th({-colspan=>4},
 	      "No landmark named $name is found, but the following landmarks may be related."));
@@ -838,12 +839,15 @@ sub format_keyword_search {
   for my $r (sort {by_score_and_position(\%position)} @$results) {
     my $name  = escape($r->[0]->name);
     my $class    = escape($r->[0]->class);
+    my $description = escapeHTML($r->[1]);
+    $description =~ s/($regexp)/<b class="keyword">$1<\/b>/ig;
+
     my $href     = "$url?name=$class:$name";
-    my $segment  = $position{overload::StrVal($r->[0])};
-    my $position = format_segment($segment);
+    my $seg      = $position{overload::StrVal($r->[0])};
+    my $position = format_segment($seg);
     print TR({-class=>'databody',-valign=>'TOP'},
 	     th({-align=>'RIGHT'},a({-href=>$href},$r->[0])),
-	     td($r->[1]),
+	     td($description),
 	     td(a({-href=>$href},$position)),
 	     td($r->[2]));
   }
@@ -891,7 +895,7 @@ sub open_database {
   if (my @aggregators = split /\s+/,$CONFIG->setting('aggregators')) {
     push @argv,(-aggregator => \@aggregators);
   }
-  $DB{$source} = eval {Bio::DB::GFF->new(@argv)};
+  $DB{$source} = eval {Bio::DB::GFF->new(@argv)} or warn $@;
   return $DB{$source};
 }
 
@@ -1333,13 +1337,15 @@ sub edit_uploaded_file {
   print table({-width=>'100%'},
 	      TR({-class=>'searchbody'},
 		 td('Edit your uploaded annotation data here.',
-		    'Note that you must use tabs (not spaces) to separate fields.',
-		    'Some browsers will replace tabs with spaces,',
-		    'in which case your annotations will not appear.',
-		    'If this is happening to you, go back to the previous page,',
-		    'download the file using the',
-		    i('Download Data'),'button, edit the file with your favorite',
-		    'text editor, and upload it.'
+		    'You may use tabs or spaces to separate fields,',
+		    'but fields that contain whitespace must be contained in',
+		    'double or single quotes.',
+		   ),
+		),
+	      TR({-class=>'searchbody'},
+		 td(
+		    a({-href=>url(-relative=>1,-path_info=>1)."?help=annotation#format",-target=>'_new'},
+		      b('[Help with File Format]'))
 		   ),
 		),
 	      TR({-class=>'searchtitle'},
@@ -1614,6 +1620,7 @@ sub build_citation_page {
     print hr,h3('External Annotation Tracks');
     @citations = ();
     for my $file (@external_features) {
+      next unless defined $file;
       my $name   = ref($file) ? $file->name : $file;
       my $is_url = $name =~ m!^(http|ftp)://!;
       my $link   = $is_url  ? $name  : url(-relative=>1,-path_info=>1)."?Download+Data=1";
@@ -1631,6 +1638,7 @@ sub build_citation_page {
       }
       print blockquote(dl(@citations));
     }
+    print p("No external features loaded.") unless @citations;
   }
 
 }
@@ -1639,6 +1647,8 @@ sub make_citation {
   my $config  = shift;
   my $feature = shift;
   my $citation = $config->citation($feature);
+  # BUG: here's where we should remove "bad" HTML, but we don't!
+  # should remove active content and other nasties
   (my $link     = $feature) =~ tr/ /-/;
   my $text      = $config->setting($feature=>'key') || $feature;
   return join ('',
@@ -1681,6 +1691,7 @@ sub make_citation_link {
     return $labels->[$label_index];
   }
 }
+
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

@@ -1,6 +1,13 @@
 BODY {
    background-color: #FFFFFF;
+   font-family: sans-serif;
 }
+HTML { 
+  font-family: sans-serif;
+}
+P { 
+  font-family: sans-serif;
+ }
 TD.code {
    font-family: fixed;
    background: rgb(220,220,220);

@@ -37,8 +37,9 @@ print OUT <<'!NO!SUBS!';
 # and installs them.
 
 use strict;
+use Config;
 use LWP::Simple;
-use Archive::Tar;
+use PPM::Archive;
 use File::Basename 'dirname';
 use ExtUtils::MakeMaker 'prompt';  # love it!
 !NO!SUBS!
@@ -51,7 +52,7 @@ use constant SUPPORT_FILES  => 'gbrowse_ppm_support_files-$OPTIONS{VERSION}.tar.
 print OUT <<'!NO!SUBS!';
 use constant PPM_REPOSITORY => 'http://stein.cshl.org/ppm';
 
-my $startperl = $Config{startperl} ne '#!perl'
+my $startperl = $Config{startperl} ne '#!perl' 
   ? $Config{startperl}
   : "#!$Config{perlpath}";
 
@@ -94,14 +95,14 @@ $prefix     = dirname($conf); # update
 my $htdocs  = prompt_for_directory('htdocs', GuessDirectories->htdocs || "$prefix/htdocs");
 my $cgibin  = prompt_for_directory('cgi-bin',GuessDirectories->cgibin || "$prefix/cgi-bin");
 
-fixup($_,"$conf/gbrowse.conf") foreach @files;
+fixup($_,"$conf/gbrowse.conf") foreach grep {-T} @files;
 
 system("perl","install_util/htdocs_install.pl","$htdocs/gbrowse");
 system("perl","install_util/conf_install.pl","$conf/gbrowse.conf");
 system("perl","install_util/cgi_install.pl",$cgibin);
 
 print STDERR "\n** GBrowse installation complete.\n";
-print STDERR "** Now go to http://your.server/gbrowse for further setup instructions.\n\n";
+print STDERR "** Now go to http://your.server/gbrowse for further setup instructions.\n";
 
 exit 0;
 

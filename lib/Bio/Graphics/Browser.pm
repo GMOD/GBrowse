@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.77 2003-06-23 01:00:29 lstein Exp $
+# $Id: Browser.pm,v 1.78 2003-06-25 17:34:56 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -825,8 +825,8 @@ sub image_and_map {
 
   my $width = $self->width;
   my $conf  = $self->config;
-  my $max_labels     = $conf->setting(general=>'label density') || $conf->setting(Default=>'label density') || 10;
-  my $max_bump       = $conf->setting(general=>'bump density')  || $conf->setting(Default=>'bump density')  || 50;
+  my $max_labels     = $conf->setting(general=>'label density') || $conf->setting('TRACK DEFAULTS'=>'label density') || 10;
+  my $max_bump       = $conf->setting(general=>'bump density')  || $conf->setting('TRACK DEFAULTS'=>'bump density')  || 50;
   my $length         = $segment->length;
 
   my @feature_types = map { $conf->label2type($_,$length) } @$tracks;

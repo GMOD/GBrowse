@@ -504,19 +504,23 @@ entirely reliable.  To get it to work, you must:
    a) make sure you are using Bioperl 1.02 (or a patched version of
    1.01)
 
-   b) create a local database named "embl" and initialize it
-	this way:
-
-      perl -MBio::DB::GFF -e "Bio::DB::GFF->new('embl')->initialize(1)"
+   b) create a local database named "embl" 
 
    c) set up permissions for this database so that "nobody@localhost"
 	has SELECT, INSERT, UPDATE and DELETE privileges
 
-   d) if you need to use a proxy to access remote web sites, uncomment the
-	-proxy line in the conf file, and adjust the URL of the proxy as 
+   d) initialize the database for use with this command:
+	
+	bp_load_gff.pl -c -d embl </dev/null
+
+	(if you are on a windows system, just leave out the </dev/null)
+
+   e) if you need to use a proxy to access remote web sites, uncomment the
+	-proxy line in the 05.embl.conf file, and adjust the URL of the proxy as 
 	appropriate.
 
-   e) cross your fingers
+   f) go to http://localhost/cgi-bin/gbrowse?source=embl
+	Search for a Genbank or embl accession number, such as CEF58D5
 
 14. UPDATING THE BROWSER WITHOUT REENTERING YOUR DIRECTORY SETTINGS
 

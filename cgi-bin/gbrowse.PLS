@@ -45,7 +45,7 @@ $startperl -w
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.5 2003-06-22 02:52:41 lstein Exp $
+# $Id: gbrowse.PLS,v 1.6 2003-06-25 17:34:55 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1737,22 +1737,39 @@ sub coordinate_mapper {
   my $current_segment = shift;
   my $db              = open_database();
 
-  my ($ref,$start,$stop) = ($current_segment->seq_id,$current_segment->start,$current_segment->end);
+  my ($ref,$start,$stop) = ($current_segment->seq_id,
+			    $current_segment->start,$current_segment->end);
   my %segments;
 
   my $closure = sub {
     my ($refname,@ranges) = @_;
 
-    unless ($segments{$refname}) {
-      my @segments = grep {
-	$_->abs_ref eq $ref && $_->abs_start <= $stop && $_->abs_stop >= $start
-      } $CONFIG->name2segments($refname,$db,TOO_MANY_SEGMENTS);
-      return unless @segments;
-      $segments{$refname} = $segments[0];
+    # hack for timing tests - this disables coordinate remapping
+    # and shows what would happen if user uploaded everything in abs
+    # coordinates.
+    if (0)  {  # turn on for timing tests
+      return unless $refname eq $ref;
+      my @in_range = grep {$_->[0] <= $stop && $_->[1] >= $start} @ranges;
+      return unless @in_range;
+      return ($refname,@in_range);
     }
-    my $mapper   = $segments{$refname};
+
+    unless (exists $segments{$refname}) {
+      my @segments = $CONFIG->name2segments($refname,$db,TOO_MANY_SEGMENTS);
+      $segments{$refname} = $segments[0];
+      return unless @segments;
+    }
+
+    my $mapper   = $segments{$refname} || return;
     my $absref   = $mapper->abs_ref;
-    my @abs_segs = map {[$mapper->rel2abs($_->[0],$_->[1])]} @ranges;
+    return unless $absref eq $current_segment->abs_ref;
+
+    my @abs_segs;
+    if ($absref eq $refname) {  # doesn't need remapping
+      @abs_segs = @ranges;
+    } else {
+      @abs_segs = map {[$mapper->rel2abs($_->[0],$_->[1])]} @ranges;
+    }
 
     # this inhibits mapping outside the displayed region
     foreach (@abs_segs) {

@@ -24,7 +24,7 @@ database will be named "volvox" and gbrowse will be invoked with this
 URL:
 
 <blockquote
-class="example"><pre>http://your.host/cgi-bin/gbrowse?source=volvox</pre></blockquote>
+class="example"><pre>http://localhost/cgi-bin/gbrowse?source=volvox</pre></blockquote>
 
 <p>
 
@@ -47,7 +47,7 @@ mysql tool, create the database, grant yourself read/write privileges,
 and grant the "nobody" user read privileges:
 
 <blockquote class="example"><pre>
-% <b>mysqladmin -uroot -p create volvox</b>
+% <b>mysql -uroot -p</b>
 Enter password: *********
 
 mysql> <b>create database volvox;</b>
@@ -129,13 +129,15 @@ pass    =    *put password here*
 <p>
 
 You should now be able to view the data set.  Point your web browser
-at http://your.host/cgi-bin/gbrowse?source=volvox and type in "ctgA"
-in the search box.  The result is shown in Figure 1.
+at <a
+href="http://localhost/cgi-bin/gbrowse?source=volvox">http://localhost/cgi-bin/gbrowse?source=volvox</a>
+and type in "ctgA" in the search box.  The result is shown in Figure
+1.
 
 <p>
 <blockquote>
 <img src="figures/figure1.gif"><br>
-<i>Figure 1: volvox1.gff data with volvox.conf config file.
+<i>Figure 1: volvox1.gff data with volvox.conf config file.</i>
 </blockquote>
 
 <hr>
@@ -774,7 +776,7 @@ aggregators = match
 	processed_transcript
       </pre></blockquote>
   <li>Add the following new stanza to the bottom of the file:
-      <blockquote><pre>
+      <blockquote class="example"><pre>
 [Transcripts]
 feature      = processed_transcript
 glyph        = processed_transcript
@@ -1171,11 +1173,11 @@ Gbrowse can take advantage of DNA sequence data in several ways:
 So we've been working with feature coordinates, but no actual DNA
 sequence has been loaded into the volvox database.  We will again
 rebuild the database, this time loading in a simulated DNA file in
-fasta format.  From inside the tutorial data_files directory, type
-this command:
+fasta format.  Download the file <a
+href="data_files/volvox.fa">volvox.fa</a>, and type this command:
 
 <blockquote class="example"><pre>
-% <b>bp_load_gff.pl -c -d volvox -f volvox.fa volvox1.gff volvox2.gff volvox3.gff volvox4.gff volvox5.gff</b>
+% <b>bp_load_gff.pl -c -d volvox -f volvox.fa volvox1.gff volvox2.gff volvox3.gff volvox4.gff volvox5.gff volvox6.gff</b>
 volvox1.gff: loading...
 volvox1.gff: 16 records loaded
 volvox2.gff: loading...
@@ -1318,6 +1320,7 @@ configuration file:
 [EST]
 feature      = match:est
 glyph        = segments
+height       = 6
 bgcolor      = orange
 key          = ESTs
 </pre></blockquote>
@@ -2280,6 +2283,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Sun Jun 22 20:55:42 EDT 2003
+Last modified: Wed Jun 25 13:32:05 EDT 2003
 <!-- hhmts end -->
 </body> </html>

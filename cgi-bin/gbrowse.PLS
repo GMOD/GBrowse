@@ -1985,6 +1985,7 @@ sub help {
   }
 
   else {
+    return if (${help_type} =~ /^\.\./); #don't allow ../../../../ etc attack
     build_help_page("$conf_dir/${help_type}_help.html");
   }
   print div({-align=>'right'},$do_close);

@@ -1,5 +1,8 @@
-2002-01-02  Lincoln Stein  <lstein@cshl.org>
+1.01 	Fri Jan 11 13:12:36 EST 2002 Lincoln Stein  <lstein@cshl.org>
+	* Better error reporting for when a database can't be opened
+	for whatever reason.
 
+1.00	2002-01-02  Lincoln Stein  <lstein@cshl.org>
 	* Made GGB a project separate from Bio::Graphics
 	* Wrote lots of documentation!
 	

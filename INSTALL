@@ -157,10 +157,10 @@ Generic Genome Browser Installation
     so be careful to copy the new copies somewhere safe if you have modified
     them.
 
-    The DO_XS flag, if true (perl Makefile.PL DO_XS=1), will compile a
-    small C subroutine for nucleotide alignments.  This will vastly improve
-    the performance of the gbrowse_details script when displaying alignments.
-    To use this feature, you will need a C compiler.
+    The DO_XS flag, if true (perl Makefile.PL DO_XS=1), will compile a small
+    C subroutine for nucleotide alignments. This will vastly improve the
+    performance of the gbrowse_details script when displaying alignments. To
+    use this feature, you will need a C compiler.
 
     You can always manually move the files around after install. See
     CONFIGURE_HOWTO for details.

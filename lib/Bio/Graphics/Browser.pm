@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.163 2004-09-06 22:41:48 lstein Exp $
+# $Id: Browser.pm,v 1.164 2004-09-07 02:22:23 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1191,7 +1191,7 @@ sub image_and_map {
 
 =head2 overview()
 
-  ($gd,$length) = $browser->overview($segment);
+  ($gd,$length) = $browser->overview($segment,$track_options);
 
 This method generates a GD::Image object containing the image data for
 the overview panel.  Its argument is a Bio::DB::GFF::Segment (or
@@ -1339,14 +1339,15 @@ sub add_overview_landmarks {
 
 =head2 hits_on_overview()
 
-  $hashref = $browser->hits_on_overview($db,@hits);
+  $hashref = $browser->hits_on_overview($db,$hits,$options);
 
 This method is used to render a series of genomic positions ("hits")
 into a graphical summary of where they hit on the genome in a
 segment-by-segment (e.g. chromosome) manner.
 
-The first argument is a Bio::DB::GFF (or Bio::DasI) database.  The
-second and subsequent arguments are one of:
+The first argument is a Bio::DB::GFF (or Bio::DasI) database.  
+
+The second argument is an array ref containing one of:
 
   1) a set of array refs in the form [ref,start,stop,name], where
      name is optional.
@@ -1355,18 +1356,42 @@ second and subsequent arguments are one of:
 
   3) a Bio::SeqFeatureI object.
 
+The third argument is the page settings hash from gbrowse.
+
 The returned HTML is stored in a hashref, where the keys are the
 reference sequence names and the values are HTML to be emitted.
 
 =cut
 
+sub hits_on_overview {
+   my $self = shift;
+   my ($db,$hits,$options) = @_;
+   $self->_hits_on_overview($db,$hits,$options,'htmlize');
+}
+
+=head2 hits_on_overview_raw()
+
+  $hashref = $browser->hits_on_overview_raw($db,@hits);
+
+This behaves the same as hits_on_overview() except that the values of
+the returned hashref are a three-element array consisting of 
+a segment, a GD image showing the segment and its hits, and the
+array of hit coordinates returned by the panel->boxes() call.
+
+=cut
+
+sub hits_on_overview_raw {
+   my $self = shift;
+   my ($db,$hits,$options) = @_;
+   $self->_hits_on_overview($db,$hits,$options,undef);
+}
 
 # Return an HTML showing where multiple hits fall on the genome.
 # Can either provide a list of objects that provide the ref() method call, or
 # a list of arrayrefs in the form [ref,start,stop,[name]]
-sub hits_on_overview {
+sub _hits_on_overview {
   my $self = shift;
-  my ($db,$hits,$options) = @_;
+  my ($db,$hits,$options,$htmlize) = @_;
 
   my %html; # results are a hashref sorted by chromosome
 
@@ -1376,7 +1401,7 @@ sub hits_on_overview {
   my $max_label  = $self->label_density;
   my $max_bump   = $self->bump_density;
   my $class      = eval{$hits->[0]->factory->default_class} || 'Sequence';
-  my ($padl,$padr)  = $self->overview_pad([grep { $options->{$_}{visible}} 
+  my ($padl,$padr)  = $self->overview_pad([grep { $options->{$_}{visible}}
 					   $self->config->overview_tracks],
 					  'Matches');
 
@@ -1388,11 +1413,12 @@ sub hits_on_overview {
       push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$start,
 						      -end=>$stop,
 						      -name=>$name||'');
-    } elsif (UNIVERSAL::can($hit,'ref')) {
+    } elsif (UNIVERSAL::can($hit,'seq_id')) {
+      my $name = $hit->can('seq_name') ? $hit->seq_name : $hit->name;
+      eval {$hit->absolute(1)};
       my $ref  = my $id = $hit->seq_id;
       my $version = eval {$hit->isa('Bio::SeqFeatureI') ? undef : $hit->version};
       $ref .= " version $version" if defined $version;
-      my $name = $hit->can('seq_name') ? $hit->seq_name : $hit->name;
       my($start,$end) = ($hit->start,$hit->end);
       $name =~ s/\:\d+,\d+$//;  # remove coordinates if they're there
       $name = substr($name,0,7).'...' if length $name > 10;
@@ -1416,8 +1442,8 @@ sub hits_on_overview {
   eval "use $image_class";
 
   for my $ref (sort keys %refs) {
-    my ($name, $version) = split /\sversion\s/i, $ref; 
-    my $segment = ($db->segment(-class=>$class,-name=>$name, 
+    my ($name, $version) = split /\sversion\s/i, $ref;
+    my $segment = ($db->segment(-class=>$class,-name=>$name,
 				defined $version ? (-version => $version):()))[0] or next;
     my $panel = Bio::Graphics::Panel->new(-segment => $segment,
 					  -width   => $width,
@@ -1433,7 +1459,7 @@ sub hits_on_overview {
     $panel->add_track($segment,
 		      -glyph     => 'arrow',
 		      -double    => 1,
-		      -label     => 0, #"Overview of ".$segment->seq_id,
+		      -label     => ($htmlize ? 0 : $segment->seq_id),
 		      -labelfont => $image_class->gdMediumBoldFont,
 		      -tick      => 2,
 		      $units ? (-units => $units) : (),
@@ -1456,7 +1482,9 @@ sub hits_on_overview {
 
     my $gd    = $panel->gd;
     my $boxes = $panel->boxes;
-    $html{$ref} = $self->_hits_to_html($ref,$gd,$boxes);
+
+    eval {$panel->finished};
+    $html{$ref} = $htmlize? $self->_hits_to_html($ref,$gd,$boxes) : [$ref,$gd,$boxes];
   }
 
   return \%html;

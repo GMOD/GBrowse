@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.20 2004-08-18 10:02:16 scottcain Exp $
+# $Id: gbrowse_img.PLS,v 1.21 2004-09-07 02:22:22 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1 path_info escape);
@@ -57,6 +57,7 @@ use Text::Shellwords;
 use vars qw($CONFIG $VERSION $CONF_DIR);
 use constant MAX_SEGMENT     => 1_000_000;
 use constant TOO_MANY_SEGMENTS => 500;
+use constant PANEL_GAP         => 3;
 
 # call with following arguments:
 # source    database source
@@ -95,40 +96,61 @@ if (param('list')) {
   exit 0;
 }
 
-# don't even bother if the name argument is missing
-my $segment_id = param('name') or message("Must provide a 'name' parameter to specify region to display.");
+# get all parameters
+my @landmarks       = param('name') || param('q'); # list of landmarks to display
+my $show_overview   = param('overview');           # force an overview-style display
+my $width           = param('width');              # width of the image in pixels
+my @track_types     = param('type');               # track types to turn on
+my @add_features    = param('add');                # overlay features
+my @add_style       = param('style');              # overlay features style
+my $abs             = param('abs');                # absolute rather than relative coordinates
+my $image_class     = param('image_class') || param('format');        # image type
+my @options         = param('options');            # various track options, such as bumping
+
+# Get the ID of the requested segment and error out if none provided
+
+@landmarks      or message("Must provide a 'name' parameter to specify region to display.");
 
 # get the segment
-my $segment = get_segment($segment_id) or message("Segment $segment_id not found.");
-$segment->absolute(1) if param('abs');
+my $db       = open_database($CONFIG);
+my @segments = get_segments($db,@landmarks);
+@segments      or message("No matching regions found.");
+
+if ($abs) {
+  $_->absolute(1) foreach @segments;
+}
 
 # set the image width
-$CONFIG->width(param('width'))                              if param('width');
-
-# set the track types to display.
-my @labels = map {split /[+\s]/} param('type');
-@labels    = $CONFIG->default_labels unless @labels;
-
-# add external features
-my $feature_list = external_features(\@labels,$segment) if param('add');
+$CONFIG->width($width) if $width;
 
 # get the options
-my %options = map {split /[+\s]/} param('options');
-my $image_class = (param('image_class')) ? 'GD::' . param('image_class') : 'GD';
+my %options = map {split /[+\s]/} @options;
+$image_class ||= 'GD';
 
-my ($img, $img_map);
-if ($segment->length > ($CONFIG->setting('max segment') || MAX_SEGMENT)) {
-  ($img,undef) = $CONFIG->overview($segment);
+# set the track types to display.
+my @labels  = map {split /[+\s]/} @track_types;
+@labels     = $CONFIG->default_labels unless @labels;
+my %visible = map {$_ => {visible=>1}} @labels;
+
+
+my $max = $CONFIG->setting('max segment') || MAX_SEGMENT;
+my ($img,$img_map);
+
+if (@segments > 1 or $show_overview or $segments[0]->length > $max) {
+  my $images   = $CONFIG->hits_on_overview_raw($db,\@segments,\%visible);
+  $img         = consolidate_images($images,$image_class);
 }
 
 else {
-  ($img,$img_map) = $CONFIG->image_and_map(segment       => $segment,
-				tracks        => \@labels,
-				options       => \%options,
-				feature_files => $feature_list||undef,
-				label_scale   => 1,
-                                image_class   => $image_class,
-                                do_map        => 1,
+  # get external features
+  my $feature_list = external_features(\@labels,$segments[0],\@add_features,\@add_style) if @add_features;
+  ($img,$img_map) = $CONFIG->image_and_map(segment       => $segments[0],
+					   tracks        => \@labels,
+					   options       => \%options,
+					   feature_files => $feature_list||undef,
+					   label_scale   => 1,
+					   image_class   => $image_class,
+					   do_map        => 1,
        );
 }
 
@@ -156,6 +178,8 @@ if ($image_class eq 'GD::SVG') {
   print $img->gif;
 }
 
+exit 0;
+
 sub message {
   my @msg = @_;
   print header();
@@ -166,19 +190,15 @@ sub message {
   exit 0;
 }
 
-sub get_segment {
-  my $name = shift;
-  my $db   = open_database($CONFIG);
-  my @segments = $CONFIG->name2segments($name,$db,undef,1);
-  return unless @segments;
-  $segments[0];
+sub get_segments {
+  my ($db,@names) = @_;
+  return map {$CONFIG->name2segments($_,$db,undef,1) } @names;
 }
 
 sub external_features {
-  my $labels   = shift;
-  my $segment  = shift;
-  my @features = param('add');
-  my @styles   = param('style');
+  my ($labels,$segment,$features,$styles) = @_;
+  my @features = @$features;
+  my @styles   = @$styles;
 
   my $rel2abs = coordinate_mapper($segment) if $segment;
   my $feature_list = Bio::Graphics::FeatureFile->new(-smart_features  => 1);
@@ -190,6 +210,7 @@ sub external_features {
 					      -ref      => $ref||'',
 					      -type     => $type||'',
 					      -name     => $name||'',
+					      -strand   => $parts[0][0]<=$parts[0][1] ? +1 : -1,
 					      -segments => \@parts
 					     );
     $feature_list->{'visible'}->{$feature} = 1;
@@ -205,26 +226,56 @@ sub external_features {
   return {add => $feature_list};
 }
 
+sub consolidate_images {
+  my ($images,$image_class) = @_;
+  my @gds = map {$images->{$_}[1]} sort keys %$images;
+  return $gds[0] if @gds == 1;
+
+  my $overall_height = 0;
+  my $max_width      = 0;
+  for my $gd (@gds) {
+    my ($width,$height)  = $gd->getBounds;
+    $overall_height     += $height;
+    $max_width = $width if $max_width < $width;
+  }
+
+  $overall_height += PANEL_GAP * (@gds-1);
+  my $composite = "$image_class\:\:Image"->new($max_width,$overall_height);
+  $composite->colorAllocate(255,255,255);
+
+  my $offset = 0;
+  foreach (@gds) {
+    my ($width,$height) = $_->getBounds;
+    $composite->copy($_,0,$offset,0,0,$width,$height);
+    $offset += $height + PANEL_GAP;
+  }
+  $composite;
+}
+
 # IMPORTANT NOTE: this should be unified with gbrowse::coordinate_mapper()
 # but note that the two routines do NOT have identical functionality currently.
 sub coordinate_mapper {
   my $current_segment = shift;
   my $db              = open_database();
 
+  warn "1) current_segment = $current_segment";
   my $absolute = $current_segment->absolute;
 
   my ($absref,$ref,$start,$stop) = ($current_segment->abs_ref,
 				    $current_segment->ref,
 				    $current_segment->start,$current_segment->stop);
-  my $class = $absolute ? $current_segment->factory->refclass : $current_segment->class;
-  $current_segment    = $db->segment(-name=>$current_segment->ref,-class=>$class);
+
+  # what is this for?  It seems silly
+  # my $class = $absolute ? $current_segment->factory->refclass : $current_segment->class;
+  # $current_segment    = $db->segment(-name=>$current_segment->ref,-class=>$class);
   my %segments;
+
 
   my $closure = sub {
     my ($refname,@ranges) = @_;
 
     unless ($segments{$refname}) {
-      my @segments = grep { $current_segment->overlaps($_) } get_segment($refname);
+      my @segments = grep { $current_segment->overlaps($_) } get_segments($db,$refname);
       return unless @segments;
       $segments{$refname} = $segments[0];
     }
@@ -354,7 +405,7 @@ separated by semicolons (preferred) or by ampersands.
 <tr> <td>width</td>   <td>desired width of image</td></tr>
 <tr> <td>options</td> <td>list of track options (compact, labeled, etc)</td></tr>
 <tr> <td>add</td>     <td>additional features to superimpose on image</td></tr>
-<tr> <td>stle</td>    <td>stylesheet for additional features</td></tr>
+<tr> <td>style</td>   <td>stylesheet for additional features</td></tr>
 <tr> <td>abs</td>     <td>display position in absolute coordinates</td></tr>
 <tr> <td>image_class</td>     <td>generate the image in SVG format if passed the optional "SVG" flag</td></tr>
 </table>

@@ -528,6 +528,16 @@ don't, certain features such as the keyword search will fail):
 
       reference class = contig
 
+=item * units, unit_divider
+
+The units option allows GBrowse to display units on an alternate scale
+(for example, (centi)Morgans), and the unit_divider provides the converstion
+factor between base pair units (which is what must be specified in the
+GFF file) and the specified units.  For example if it is known that 5010
+base pairs is equal to one Morgan, 5010 would be specified for the unit_divider.
+Note that if unit_divider is specified, max segment, default segment and
+and zoom levels will all be interpreted in terms of the specified units.
+
 =item * max segment
 
 The max segment option sets an upper bound on the maximum size DNA

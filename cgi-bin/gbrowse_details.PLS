@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.5 2003-07-03 13:52:37 scottcain Exp $
+# $Id: gbrowse_details.PLS,v 1.6 2003-07-03 20:06:35 scottcain Exp $
 
 use strict;
 use CGI qw(:standard *table *TR);
@@ -157,9 +157,16 @@ sub print_dna {
       $s   = $f->low  - $start;
       $e   = $f->high - $start;
     } else {
-      $s   = $start - $f->low;
-      $e   = $start - $f->high;
+      if ($start - $f->high < 0) { #how much of a hack is this!
+                                   #it fixes chado feature differences
+        $s   = $start + length($dna) - $f->low  -1;
+        $e   = $start + length($dna) - $f->high -1;
+      } else {
+        $s   = $start - $f->low;
+        $e   = $start - $f->high;
+      }
     }
+
     ($s,$e) = ($e,$s) if $s > $e;
     next if $COLORS{$f->method} eq 'none';
     push @markup,[$f->method,$s,$e+1];  # Duelling off-by-one errors....

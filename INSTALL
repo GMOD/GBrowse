@@ -156,7 +156,7 @@ with two tools for loading Bio::DB::GFF databases:
      allows incremental loading.
 
 You will find these scripts in the Bioperl distribution, in the
-subdirectory scripts/Bio::DB::GFF.  Earlier versions of the
+subdirectory scripts/Bio-DB-GFF.  Earlier versions of the
 distribution will have these files directly in the scripts/
 subdirectory.  
 

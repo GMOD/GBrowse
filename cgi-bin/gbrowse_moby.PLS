@@ -35,6 +35,7 @@ $startperl -w
 # to the directory in which the configuration files are stored.
 #
 \$CONF_DIR  = '$OPTIONS{CONF}/gbrowse.conf';
+\$HTML_DIR  = '$OPTIONS{HTDOCS}';
 #
 ###################################################################
 \$VERSION   = $OPTIONS{VERSION};
@@ -42,7 +43,10 @@ $startperl -w
 !GROK!THIS!
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_moby.PLS,v 1.6 2003-12-15 22:08:08 markwilkinson Exp $
+
+
+
+ $Id: gbrowse_moby.PLS,v 1.7 2003-12-26 23:15:23 markwilkinson Exp $
 
 
 # use lib "/usr/local/GB/GMOD_LIBS/moby-live/Perl";
@@ -50,12 +54,14 @@ use MOBY::Client::Central;
 use MOBY::Client::Service;
 use MOBY::CommonSubs qw(:all);
 use XML::DOM;
+use File::Temp qw/ tempfile /;
+use MIME::Base64;
 use LWP;
 use Carp;
 use Bio::Graphics::Browser::Util;
 use CGI qw(:standard *table *TR);
 use strict;
-use vars qw($CONFIG $VERSION $CONF_DIR $LANG @COLORS $INDEX %strands %COLORS %URLS);
+use vars qw($Central $CONFIG $VERSION $CONF_DIR $HTML_DIR);
 
 =head1 NAME
 
@@ -238,7 +244,7 @@ searches for papers about that organism.
 
 
 my $conf_dir  = conf_dir($CONF_DIR);  # conf_dir() is exported from Util.pm
-my $config = open_config($CONF_DIR);  # open_config() is exported from Util.pm
+$CONFIG = open_config($CONF_DIR);  # open_config() is exported from Util.pm
 
 my %source2namespace = (
 #   GFF-source      MOBY-namespace
@@ -265,17 +271,20 @@ sub init {
 
     unless ($namespace && $id){
         print_top("MOBY Call failed");
-        print $config->header || h1("MOBY Call Failed");
+        print $CONFIG->header || h1("MOBY Call Failed");
         print h1("MOBY Call Failed"),"Both a namespace and an id must be passed";
         return;
     }
-        
+
+
+    $Central = MOBY::Client::Central->new();  # CENTRAL is a global variable
+
     my $objectclass =param('objectclass');  # for MOBY calls we may have a data class (e.g. VirtualSequence)
     $objectclass ||="Object";  # by default, the base object class is "Object"
     my $XML_Object = param('object');  # a recursive MOBY call may pass the current MOBY Object (XML) as a hidden field
     
     print_top("BioMOBY Details: $objectclass - $class:$id");
-    print $config->header || h1("$objectclass - $class:$id Details");
+    print $CONFIG->header || h1("$objectclass - $class:$id Details");
     print p;
     
     # okay, prepare the list of list's input structure for the MOBY::Central->findService call
@@ -344,7 +353,7 @@ sub init {
             th({-colspan=>3,-align => 'left', -valign=>'top', -class=>'datatitle'},"")),
     }
     print end_table();
-    print_bottom($config,"BioMOBY project:  http://www.biomoby.org");
+    print_bottom($CONFIG,"BioMOBY project:  http://www.biomoby.org");
 }
 
 sub getObjectDescription {
@@ -369,7 +378,6 @@ sub findService {
     my @simpleArticle = ($class, $namespace);
     my @input = (\@simpleArticle);
 
-    my $Central = MOBY::Client::Central->new();
     my ($Services, $REG) = $Central->findService(input => \@input, expandObjects => 1, expandServices => 1);
     unless ($Services){
             print h2("Service discovery failed with the following errror: ").i($REG->message).p;
@@ -392,15 +400,15 @@ sub execute {
     $OBJECT ||= "<Object namespace='$namespace' id='$id'/>";  # this should never happen, but just in case... make a default base object
 
     print_top("BioMOBY Details: $namespace:$id");
-    print $config->header || h1("$namespace:$id Details");
+    print $CONFIG->header || h1("$namespace:$id Details");
     print p;
     
-    my $MOBY = MOBY::Client::Central->new();
-    my ($SI, $reg) = $MOBY->findService(authURI => $auth,
+    $Central = MOBY::Client::Central->new();
+    my ($SI, $reg) = $Central->findService(authURI => $auth,
                        serviceName => $service);
     $SI = $$SI[0]; # there can only be one, since authURI/serviceName is a unique index
 
-    my $WSDL = $MOBY->retrieveService($SI); # get the WSDL
+    my $WSDL = $Central->retrieveService($SI); # get the WSDL
     my $SERVICE = MOBY::Client::Service->new(service => $WSDL);  # prepare the connection stubs
     
     print h2("\nBioMOBY Service: ".($SI->name)),i($SI->description),hr,h2("\nResult for $namespace:$id\n");
@@ -446,9 +454,66 @@ sub execute {
     print end_table;
     print_bottom("of the gbrowse_moby executable written by the <a href='http://www.biomoby.org'>BioMOBY project</a> (http://www.biomoby.org)");    
 }
+sub renderGIF {
+        # these renderers should probably exist in their own modules to be more flexible... think about that in the next iteration
+        my ($data, $htmldir,$imgdir) = @_;
+        my $bindata = decode_base64($data);
+        my ($fh, $filename) = tempfile( DIR => "$htmldir/$imgdir/", SUFFIX=> ".gif" );
+        $filename =~ /(\w+\.jpg)$/;
+        $filename = $1;
+        binmode($fh);
+        print $fh $bindata;
+        close $fh;
+        return "<img src='$imgdir/$filename'>";
+}
+sub renderJPEG {
+        # these renderers should probably exist in their own modules to be more flexible... think about that in the next iteration
+        my ($data, $htmldir,$imgdir) = @_;
+        my $bindata = decode_base64($data);
+        my ($fh, $filename) = tempfile( DIR => "$htmldir/$imgdir/", SUFFIX=> ".jpg" );
+        $filename =~ /(\w+\.jpg)$/;
+        $filename = $1;
+        binmode($fh);
+        print $fh $bindata;
+        close $fh;
+        return "<img src='$imgdir/$filename'>";
+}
+
+sub renderPlainText {
+        # these renderers should probably exist in their own modules to be more flexible... think about that in the next iteration
+        my ($data, $htmldir,$imgdir) = @_;
+        return "$data";
+}
+
+sub renderFormattedText {
+        my ($data, $htmldir,$imgdir) = @_;
+        $data =~ s/(\S{100})/$1\<br\>/g;
+        return "<pre>$data</pre>";
+}
+
+sub renderHTML {
+        my ($data, $htmldir,$imgdir) = @_;
+        $data =~ s/(\S{100})/$1\<br\>/g;
+        return "$data";
+}
 
 sub printIt {
     my ($this) = @_;
+    my $datatype = $this->getTagName;
+    my $imgdir = $CONFIG->setting('tmpimages');
+    my $renderer;
+
+    if ($Central->ISA($datatype, 'b64_encoded_gif')){
+        $renderer = \&renderGIF;
+    } elsif ($Central->ISA($datatype, 'b64_encoded_jpeg')){
+        $renderer = \&renderJPEG;
+    } elsif ($Central->ISA($datatype, 'text-formatted')){
+        $renderer = \&renderFormattedText;
+    } elsif ($Central->ISA($datatype, 'text-html')){
+        $renderer = \&renderHTML;
+    } elsif ($Central->ISA($datatype, 'text-plain')){
+        $renderer = \&renderPlainText;
+    }
     foreach my $subnode($this->getChildNodes){
         next unless ($subnode->getNodeType == ELEMENT_NODE);
         if ($subnode->getTagName eq "CrossReference"){
@@ -460,13 +525,15 @@ sub printIt {
         next unless  (($subnode->getNodeType == TEXT_NODE) || ($subnode->getNodeType == CDATA_SECTION_NODE));
         my $article = $this->getAttributeNode('articleName');
         $article = $article?($article->getValue):"";
-        my $content = $subnode->toString;
-        $content =~ s/(\S{100})/$1\<br\>/g;
+     
+        my $content = $renderer->($subnode->toString, $HTML_DIR, $imgdir);
+        
         next unless ($content =~ /\S/);  # meaningless whitespace is removed
         print TR({-valign=>'top', -class=>'databody'},
             th({-align => 'left', -valign=>'top', -class=>'datatitle'},"$article "),
-            td("<pre>$content</pre>"));
+            td("$content"));
     }
+
     foreach my $subnode($this->getChildNodes){
         next unless ($subnode->getNodeType == ELEMENT_NODE);
         next if ($subnode->getTagName eq "CrossReference"); 

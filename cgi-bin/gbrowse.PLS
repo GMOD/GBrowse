@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.101 2004-08-09 14:46:18 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.102 2004-08-17 20:26:20 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1326,7 +1326,7 @@ sub get_features {
   # sort of hacky way to force keyword search on wildcards
   if (defined $settings->{name} && $settings->{name} =~ /[*?]/) {
     (my $searchterm = $settings->{name}) =~ tr/*?//d;
-    push @features,do_keyword_search($searchterm);
+    push @features,do_keyword_search($searchterm) if length $searchterm > 0;
   }
 
   # h'mmm.  Couldn't find the feature.  See if it is in an uploaded file.

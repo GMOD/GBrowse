@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.158 2004-07-20 17:45:34 lstein Exp $
+# $Id: Browser.pm,v 1.159 2004-08-17 20:26:20 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1877,6 +1877,14 @@ sub debugging_rectangles {
   }
 }
 
+# Returns the language code, but only if we have a translate table for it.
+sub language_code {
+  my $self = shift;
+  my $lang = $self->language;
+  my $table= $lang->tr_table($lang->language);
+  return unless %$table;
+  return $lang->language;
+}
 
 package Bio::Graphics::BrowserConfig;
 use strict;
@@ -2231,6 +2239,7 @@ sub i18n_style {
        keys %options;
   %lang_options;
 }
+
 
 1;
 

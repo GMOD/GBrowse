@@ -166,7 +166,8 @@ sub print_top {
 	      -style  => {src=>$CONFIG->setting('stylesheet')},
               -charset=>$CONFIG->tr('CHARSET')
 	     );
-  push @args,(-head=>$CONFIG->setting('head'))  if $CONFIG->setting('head');
+  push @args,(-head=>$CONFIG->setting('head'))   if $CONFIG->setting('head');
+  push @args,(-lang=>$CONFIG->language_code)     if $CONFIG->language_code;
   print start_html(@args) unless $HTML++;
 }
 

@@ -1,4 +1,4 @@
-# $Id: BasicEditor.pm,v 1.9 2003-10-24 21:13:56 markwilkinson Exp $
+# $Id: BasicEditor.pm,v 1.10 2003-10-24 21:35:12 markwilkinson Exp $
 
 =head1 NAME
 
@@ -195,6 +195,7 @@ sub build_form {
         $row .= "\n<tr class=searchdata valign=top>\n" . 
                 td( font( { -color => 'red' }, 'New' ) ) . "\n";
         for my $cell ( 2..9 ) {
+            $size{$cell}  ||=0;
             $row .= td( textfield( -name  => 'BasicEditor.feature' . $feat_count,
                                    -size  => $size{$cell} + 1 )) . "\n";
         }

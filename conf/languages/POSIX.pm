@@ -160,6 +160,10 @@ END
 
    BENEATH     => 'Beneath',
 
+   LEFT        => 'Left',
+
+   RIGHT       => 'Right',
+
    TRACK_NAMES => 'Track Name Table',
 
    ALPHABETIC  => 'Alphabetic',

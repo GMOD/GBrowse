@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.28 2002-05-04 20:38:25 lstein Exp $
+# $Id: gbrowse.PLS,v 1.29 2002-05-06 23:15:18 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -969,7 +969,7 @@ sub do_keyword_search {
 
   my $match_sub = 'sub {';
   foreach (split /\s+/,$searchterm) {
-    $match_sub .= "return unless \$_[0] =~ /\Q$_\E/; ";
+    $match_sub .= "return unless \$_[0] =~ /\Q$_\E/i; ";
   }
   $match_sub .= "};";
   my $match = eval $match_sub;

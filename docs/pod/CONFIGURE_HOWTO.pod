@@ -350,7 +350,7 @@ example, the beginning of the yeast.conf sample configuration file
 looks like this:
 
  [GENERAL]
- description = S. cerevisae (via SGD Nov 2001)
+ description = S. cerevisiae (via SGD Nov 2001)
  db_adaptor  = Bio::DB::GFF
  db_args     = -adaptor dbi::mysql
  	       -dsn     dbi:mysql:database=yeast;host=localhost

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.162 2004-09-06 22:21:13 lstein Exp $
+# $Id: Browser.pm,v 1.163 2004-09-06 22:41:48 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -211,18 +211,22 @@ Sets or gets the current source.  The default source will the first
 one found in the gbrowse.conf directory when sorted alphabetically.
 
 If you attempt to set an invalid source, the module will issue a
-warning but will not raise an exception.
+warning and will return undef.
 
 =cut
 
-# get/set current source (not sure if this is wanted)
+# get/set current source
 sub source {
   my $self = shift;
-  my $d = $self->{source};
+  my $d    = $self->{source};
   if (@_) {
     my $source = shift;
     unless ($self->{conf}{$source}) {
       carp("invalid source: $source");
+      return;
+    }
+    unless ($self->{conf}{$source}{data}->authorized('general')) {
+      carp ("Unauthorized source: $source");
       return;
     }
     $self->{source} = $source;

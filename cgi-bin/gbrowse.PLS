@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.110 2004-09-06 22:21:11 lstein Exp $
+# $Id: gbrowse.PLS,v 1.111 2004-09-06 22:41:46 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -168,7 +168,7 @@ my ($source,$old_source) = get_source();
 # This may cause a redirect and exit 0 at this point!
 redirect_legacy_url($source);
 
-$CONFIG->source($source);
+$CONFIG->source($source) or redirect_legacy_url($old_source || $CONFIG->source);
 my $page_settings = get_settings($source);
 
 $MAX_SEGMENT     = $CONFIG->get_max_segment;
@@ -2597,7 +2597,7 @@ sub plugin_menu {
 
 sub source_menu {
   my $settings = shift;
-  my @sources = $CONFIG->sources;
+  my @sources      = $CONFIG->sources;
   my $show_sources = $CONFIG->setting('show sources');
   $show_sources    = 1 unless defined $show_sources;   # default to true
   my $sources = $show_sources && @sources > 1;

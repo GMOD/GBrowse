@@ -16,6 +16,8 @@ bin/process_wormbase.pl
 conf/01.yeast.conf
 conf/02.wormbase.conf
 conf/03.fly.conf
+conf/04.human.conf
+conf/05.embl.conf
 conf/plugins/FastaDumper.pm
 conf/plugins/GFFDumper.pm
 conf/plugins/OligoFinder.pm

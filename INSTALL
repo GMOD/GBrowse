@@ -311,7 +311,32 @@ instructions. A copy of these instructions in HTML form will be
 generated when gbrowse_img is called without any arguments.  Type
 http://your.host/cgi-bin/gbrowse_img into your favorite web browser.
 
-10. UPDATING THE BROWSER WITHOUT REENTERING YOUR DIRECTORY SETTINGS
+10. THE GENBANK/EMBL PROXY
+
+Sample configuration number 5 ("05.embl.conf") corresponds to an
+experimental pass-through proxy for Genbank.  At least in theory, if
+you enter a landmark that isn't recognized, gbrowse will go to EMBL
+using the bioperl BioFetch facility, parse the record, and enter it
+into the local database.  This allows you to browse arbitrary
+Genbank/EMBL/Refseq entries.
+
+You are free to experiment with this, but don't expect it to be
+entirely reliable.  To get it to work, you must:
+
+   a) get the most up to date version of Bioperl.  The patch file
+	does *NOT* contain the code needed to support this.
+
+   b) create a local database named "embl" and initialize it
+	this way:
+
+      perl -MBio::DB::GFF -e "Bio::DB::GFF->new('embl')->initialize(1)"
+
+   c) set up permissions for this database so that "nobody@localhost"
+	has SELECT, INSERT, UPDATE and DELETE privileges
+
+   d) cross your fingers
+
+11. UPDATING THE BROWSER WITHOUT REENTERING YOUR DIRECTORY SETTINGS
 
 When updating GBrowse to a new version of the software, you can
 configure it using your preferred directory settings by making a
@@ -325,8 +350,7 @@ Makefile.PL.  Here is the recipe:
   make
   make install
 
-
-11. SUPPORT AND BUG REPORTS
+12. SUPPORT AND BUG REPORTS
 
 Please send requests for help to gmod-devel@lists.sourceforge.net.
 There is also a formal bug tracking and feature request system in

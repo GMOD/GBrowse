@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.19 2002-05-04 20:38:26 lstein Exp $
+# $Id: Browser.pm,v 1.20 2002-05-06 18:05:00 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
@@ -14,7 +14,7 @@ require Exporter;
 
 use constant DEFAULT_WIDTH => 800;
 use vars '$VERSION','@ISA','@EXPORT';
-$VERSION = '1.12';
+$VERSION = '1.13';
 
 @ISA    = 'Exporter';
 @EXPORT = 'commas';
@@ -22,6 +22,7 @@ $VERSION = '1.12';
 use constant RULER_INTERVALS   => 20;  # fineness of the centering map on the ruler
 use constant TOO_MANY_SEGMENTS => 5_000;
 use constant MAX_SEGMENT       => 1_000_000;
+use constant DEFAULT_RANGES       => q(100 500 1000 5000 10000 25000 100000 200000 400000);
 
 sub new {
   my $class    = shift;
@@ -438,7 +439,9 @@ sub overview {
   my $self = shift;
   my ($partial_segment) = @_;
 
-  my $segment = $partial_segment->factory->segment($partial_segment->ref);
+  my $factory = $partial_segment->factory;
+  my $segment = $factory->segment(-class=>$factory->refclass,
+				  -name=>$partial_segment->ref);
 
   my $conf  = $self->config;
   my $width = $self->width;
@@ -472,12 +475,12 @@ sub overview {
 				  $conf->style('overview'),
 				 );
     my $iterator = $segment->features(-type=>\@types,-iterator=>1,-rare=>1);
-    my $count;
+    my $count = 0;
     while (my $feature = $iterator->next_seq) {
       $track->add_feature($feature);
       $count++;
     }
-    my $bump  = defined $conf->setting(overview=>'bump')  ? $conf->setting(overview=>'bump') : $count <= $max_bump;
+    my $bump  = defined $conf->setting(overview=>'bump')  ? $conf->setting(overview=>'bump')  : $count <= $max_bump;
     my $label = defined $conf->setting(overview=>'label') ? $conf->setting(overview=>'label') : $count <= $max_label;
     $track->configure(-bump  => $bump,
 		      -label => $label,
@@ -508,6 +511,7 @@ sub hits_on_overview {
   my $units = $self->setting('overview units');
   my $max_label  = $conf->setting(general=>'label density') || 10;
   my $max_bump   = $conf->setting(general=>'bump density') || 50;
+  my $class      = $hits->[0]->can('factory') ? $hits->[0]->factory->refclass : 'Sequence';
 
   # sort hits out by reference
   my (%refs);
@@ -530,7 +534,7 @@ sub hits_on_overview {
   }
 
   for my $ref (sort keys %refs) {
-    my $segment = $db->segment($ref);
+    my $segment = ($db->segment(-class=>$class,-name=>$ref))[0];
     my $panel = Bio::Graphics::Panel->new(-segment => $segment,
 					  -width   => $width,
 					  -bgcolor => $self->setting('overview bgcolor')
@@ -686,11 +690,18 @@ sub name2segments {
     my @s     = $db->fetch_feature_by_name(-class => $segments[0]->class,
 					   -name  => $segments[0]->seq_id,
 					   -automerge=>0);
-    @segments     = $self->merge($db,\@s,(get_ranges())[-1])
+    @segments     = $self->merge($db,\@s,($self->get_ranges())[-1])
       if @s > 1 && @s < TOO_MANY_SEGMENTS;
   }
   @segments;
 }
+
+sub get_ranges {
+  my $self      = shift;
+  my @ranges	= split /\s+/,$self->setting('zoom levels') || DEFAULT_RANGES;
+  @ranges;
+}
+
 
 # utility called by hits_on_overview
 sub _hits_to_html {
@@ -838,7 +849,8 @@ sub _low_merge {
     }
 
   }
-  push @spans,$db ? $db->segment($ref,$previous_start,$previous_stop)
+  my $class = $features[0]->factory->refclass;
+  push @spans,$db ? $db->segment(-name=>$ref,-class=>$class,-start=>$previous_start,-end=>$previous_stop)
                   : Bio::Graphics::Feature->new(-start=>$previous_start,-stop=>$previous_stop,-ref=>$ref);
   return @spans;
 }

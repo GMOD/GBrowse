@@ -39,7 +39,7 @@ wormbase.
 
 =head1 COMMAND-LINE OPTIONS
 
-Options can be abbreviated.  For example, you can use -d for --database.
+Options can be abbreviated.  For example, you can use -s for --server.
 
     --server           URL of web server to obtain datasets
                          Default = 'http://brie4.cshl.org:8000/'
@@ -92,7 +92,7 @@ Retrieve data sets and bulk-load multiple Bio::DB::GFF databases from GFF files.
     --password         Password associated with username
                          Default = ''
 
-Options can be abbreviated.  For example, you can use -d for --database.
+Options can be abbreviated.  For example, you can use -s for --server.
 
 This program uses the bulk loader for its database (bp_bulk_load_gff.pl
 for mysql, bp_pg_bulk_load_gff.pl for postgres); read the documentation 

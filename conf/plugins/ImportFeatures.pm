@@ -1,4 +1,4 @@
-# $Id: ImportFeatures.pm,v 1.13 2004-01-21 19:17:54 sheldon_mckay Exp $
+# $Id: ImportFeatures.pm,v 1.14 2004-01-24 16:57:31 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -215,7 +215,7 @@ sub reconfigure {
     $conf->{acc}    = $self->config_param('acc');
     $conf->{debug}  = $self->config_param('debug');
     $conf->{reload} = $self->config_param('reload');
-    $conf->{erase}  = $self->config_param('erase');
+    $conf->{erase}  = $self->config_param('erase') || 'selected';
     $conf;
 }
 
@@ -231,56 +231,68 @@ sub configure_form {
     
     my $f = "<font color=black><b>";
 
-    my $html = join ( "\n", 
-	"<table>\n" ,
-	Tr( { -class => 'searchtitle' }, td( $f, 'Upload External Annotations' ) ) ,
-        "<tr><td class='searchbody'>" ,
-        h3('Format: ',
-	   radio_group( -name    => $self->config_name('format'),
-			-values  => [ qw/GFF GENBANK EMBL GAME/ ],
-			-default => $conf->{format} || $self->config_param('format'))),
-	h3('Sequence ID: ', 
-            textfield( -name  => $self->config_name('seqid'),
-		       -size  => 10,
-		       -value => $conf->{seqid}), ' ',
-	   a( {-onclick => 'alert("Required for headerless feature tables")'}, '[?]')),
-	h3('Name of file to upload: ',
-            filefield( -name    =>  $self->config_name('file'),
-		       -size    => 40,
-		       -default => $conf->{file} )),
-        "</td></tr></table>" );
-    unless ( $self->config_param('filesource') && $self->config_param('filesource') eq 'external' ) {
-        $html =~ s/External Annotations/a GenBank\/EMBL\/GFF File/m;
-	$html .= join ( "\n", h3(' - OR - '), "<table>\n" ,
-	         Tr( { -class => 'searchtitle' }, td( $f, 'Direct Download from NCBI/EBI' ) ),
-                 "<tr><td class='searchbody'>",
-                 h3( 'Accession ',
-	         textfield( -name    =>  $self->config_name('acc'),
-		            -size    => '15'), ' ',
-	         a( {-onclick => 'alert("Use a GenBank/EMBL accession number (not GI)\\n' .
-                                  'Note: this will override file uploading")'}, '[?]')),
-                 "</td></tr></table>\n" );
+    my $html = join ( "\n", "<table>\n" ,
+	Tr( { -class => 'searchtitle' }, td( $f, 'Upload a file' ) ) ,
+		      "<tr><td class='searchbody'>" ,
+		      h3('Format: ',
+			 radio_group( -name    => $self->config_name('format'),
+				      -values  => [ qw/GFF GENBANK EMBL GAME/ ],
+				      -default => $conf->{format} || $self->config_param('format'))),
+		      h3('Sequence ID: ', 
+			 textfield( -name  => $self->config_name('seqid'),
+				    -size  => 10,
+				    -value => $conf->{seqid}), ' ',
+			 a( {-onclick => 'alert("Required for headerless feature tables")',
+			     -href => "javascript:void(0)"}, '[?]')),
+		      h3('Name of file to upload: ',
+			 filefield( -name    =>  $self->config_name('file'),
+				    -size    => 40,
+				    -default => $conf->{file} )),
+		      "</td></tr></table>" );
+    
+    $html .= join ( "\n", h3(' - OR - '), "<table>\n" ,
+		    Tr( { -class => 'searchtitle' }, td( $f, 'Direct Download from NCBI/EBI' ) ),
+		    "<tr><td class='searchbody'>",
+		    h3( 'Accession ',
+			textfield( -name    =>  $self->config_name('acc'),
+				   -size    => '15'), ' ',
+			a( {-onclick => 'alert("Use a GenBank/EMBL accession number (not GI)\\n' .
+				'Note: this will override file uploading")',
+				-href => "javascript:void(0)"}, '[?]')),
+		    "</td></tr></table>\n" );
 
-        # add a rollback table if required
-        my $msg = "Selecting rollback will override loading of files or accessions";
-        $html .= "\n" . h3(' - OR - ') . "\n" . $self->rollback_form($msg) if $ROLLBACK;
-        $html =~ s|searchbody>(.+)</td>|searchbody><h3>$1</h3></td>|sm;
-    }
+    # add a rollback table if required
+    my $msg = "Selecting rollback will override loading of files or accessions";
+    $html .= "\n" . h3(' - OR - ') . "\n" . $self->rollback_form($msg) if $ROLLBACK;
+    $html =~ s|searchbody>(.+)</td>|searchbody><h3>$1</h3></td>|sm;
+    
+    $msg = "If the data being loaded affect an existing segment, select one of " .
+	"these options to specify how existing features should be handled:\\n" .
+	"colliding -- remove any features of the same type and coordinates as " .
+	"the incoming features.\\n\\nspecified --  if only selected features for a " .
+	"segment were exported to the external editor, the annotation file will " .
+	"contain the original feature ids, which will allow targeted deletion " .
+	"of the old features prior to loading.  If deleting features by id fails, " .
+	"colliding features will automatically be removed.\\n\\nall -- this option will ".
+	"wipe the affected coordinate range free of all contained features before loading";
+
+    $msg = a( {-onclick => "alert('$msg')", -href => "javascript:void(0)"}, '[?]' );
+
     $html .= h4(checkbox ( -name    => $self->config_name('debug'),
 			   -value   => 'debug',
 			   -label   => '' ), 'Verbose Reporting',
 	     a( {-onclick => 'alert("Report on database loading progress;\\n' .
-		             'provides debugging information")' }, '[?]')) . 
+		             'provides debugging information")',
+                 -href => "javascript:void(0)" }, '[?]')) . 
 	     h4(checkbox ( -name    => $self->config_name('reload'),
 			-value   => 'reload',
 			-label   => '',
 			-checked => 1 ) . 'Reload browser after database update') .
-             h4(checkbox ( -name    => $self->config_name('erase'),
-                        -value   => 'erase',
-                        -label   => '',
-			   -checked => 0 ) . 'Erase all features in this range before reloading');
-
-    
+             h4("Method for deleting existing in-range features $msg " .
+                '&nbsp;&nbsp;&nbsp;' .
+		radio_group ( -name    => $self->config_name('erase'),
+			      -values  => [ qw/colliding selected all/ ],
+		              -default => $conf->{erase} || 'all' ));
     $html;
 }
 
@@ -309,14 +321,18 @@ sub dump {
 	print h2("The input features:"), pre($gff);
     }
     
-    my $segment  = $db->segment( 'Sequence', $self->refseq )  ||
-	           $db->segment( 'Accession', $self->refseq );
+    my $segment  = $db->segment( Sequence => $self->refseq )
+                || $db->segment( Accession => $self->refseq );
 
     my $nodna = 0;
     
     if ( $segment ) {
 	# make sure we know not to try to add sequence later
 	$nodna++ if $segment->seq;
+
+        # adjust segment coordinates to match GFF range
+        $segment->start($self->start);
+        $segment->end($self->end);
         
         # save the state of the segment in case we want to roll back later 
         if ( $ROLLBACK ) {
@@ -325,18 +341,36 @@ sub dump {
 	}
 
 	my @killme;
-        if ( $conf->{erase} ) {
+        if ( $conf->{erase} eq 'all' && ! $self->{database_ids} ) {
             # wipe the segment clean
             $self->_print("Removing all features from $segment");
-	    @killme = $segment->features; 
+	    @killme = grep { 
+		$_->start >= $self->start &&
+                $_->end   <= $self->end  
+	    } $segment->features; 
+	}
+	elsif ( $conf->{erase} eq 'selected' && $self->{database_ids} ) {
+            # remove features by database id
+	    $self->_print("Removing selected features (by id) from $segment");
+	    @killme = @{$self->{database_ids}};
 	}
 	else {
             # just remove colliding features
-	    $self->_print("Removing selected features from $segment");
+	    $self->_print("Removing colliding features from $segment");
 	    @killme = $self->kill_list($gff, $segment);
 	}        
 
-	my $killed = $db->delete_features( @killme ) || 'No';
+	my $killed = $db->delete_features( @killme );
+        
+	# stale database ids?
+	if ( !ref $killme[0] && $killed < @killme ) {
+            $self->_print("That did not work, looking for colliding features instead...");
+	    @killme = $self->kill_list($gff, $segment);
+	    $killed += $db->delete_features( @killme );
+	}
+
+	$killed ||= 'No';
+
 	$self->_print("I removed $killed features from the database" . 
                       pre(join "\n", @killme) ); 
 
@@ -388,7 +422,7 @@ sub load_page {
 	print body( { -onLoad => "document.f1.submit()" } );
     }
     else {
-	print submit( -name => "Return to Browser($name)" );
+	print submit( -name => "Return to Browser ($name)" );
     }
 }
 
@@ -422,8 +456,6 @@ sub gff {
 
     # beware of DOS line endings!
     $text =~ s/\r//gm;
-
-    $self->{database_ids} = [] if $text =~ /database_id/m;    
 
     if ( $format eq 'GENBANK' ) {
 	$self->{source} = 'GenBank';
@@ -589,6 +621,12 @@ sub seq2GFF {
 
     my $gene_count;
     for my $sf (@sfs) {
+	if ( $sf->has_tag('database_ids') ) {
+	    my ($ids) = $sf->get_tag_values('database_ids');
+	    $self->{database_ids} = [ split ',', $ids ];
+	    next;
+	}
+
         $sf->seq_id($acc);
         $sf->source_tag($self->{source});
         $sf->gff_format( Bio::Tools::GFF->new( -gff_version => 3 ) );
@@ -885,7 +923,7 @@ sub _is_match {
     return grep {
           ( ( $_->class eq $pclass || $_->class eq $iclass) && 
             ( $_->name  eq $pname  || $_->name  eq $iname ) ) ||
-          ( $_->start eq $start && $_->end eq $end )
+          ( $_->start == $start && $_->end == $end )
     } $segment->features( -types => ["$type:EMBL", "$type:GenBank", "$type:Apollo"] );
 }
 

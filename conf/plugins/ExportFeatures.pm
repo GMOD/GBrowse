@@ -1,4 +1,4 @@
-# $Id: ExportFeatures.pm,v 1.8 2004-01-21 19:17:54 sheldon_mckay Exp $
+# $Id: ExportFeatures.pm,v 1.9 2004-01-24 16:57:26 sheldon_mckay Exp $
 =head1 NAME
 
 Bio::Graphics::Browser::Plugin::ExportFeatures -- a plugin to export 
@@ -53,6 +53,7 @@ package Bio::Graphics::Browser::Plugin::ExportFeatures;
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use Bio::Graphics::Browser::GFFhelper;
+use Bio::SeqFeature::Generic;
 use Bio::Location::Split;
 use Bio::Seq::RichSeq;
 use CGI qw/:standard *sup/;
@@ -133,7 +134,7 @@ sub configure_form {
 
 sub dump {
     my ($self, $segment) = @_;
-    
+
     # is this a request for the demo script?
     if ( param('demo_script') ) {
 	print while (<DATA>);
@@ -145,46 +146,64 @@ sub dump {
     my $db    = $self->database;
     my $ref   = $segment->ref;
     my $dest  = $conf->{destination};
-    $mode     = 'all' if $dest eq 'Apollo';
-    $segment  = $db->segment(Accession => $ref) || $db->segment($ref);
+    #$mode     = 'all' if $dest eq 'Apollo';
+    
+    my $whole_seg  = $db->segment(Accession => $ref) || $db->segment($ref);
  
-    # don't use an iterator here because we don't want aggregate features
     my $feats = join '', $self->selected_features;
-    my @feats;
+    my (@feats, @ids);
 
     if ( $mode eq 'selected' ) {
-        for my $f ( $segment->features ) {
+        for my $f ( $segment->contained_features ) {
             my $type = $f->primary_tag;
 	    if ($feats =~ /$type/) {
 		push @feats, $f;
 		$self->{seen}->{$f->id}++;
-		my $name  = $f->name;
-                # get all gene parts
-		if ( $f->class =~ /gene|mRNA/ ) {
-		    push @feats, grep {
-			!$self->{seen}->{$_->id}
-		    } $db->get_feature_by_name( $f->class, $f->name );
-		}
 	    }
 	}
+
+	# get all gene parts if genes are selected
+	if ( $feats =~ /gene|CDS|exon|RNA|transcript/ ) {
+	    push @feats, grep {
+		! $self->{seen}->{$_->id} &&
+		$_->class =~ /gene|RNA/   
+	    } $segment->contained_features;
+	}
+
+        # save the ids for database updating
+        @ids = map { $_->id } @feats;
     }
     else {
-	@feats = $segment->features;
+	@feats = grep {
+	    $_->start >= $segment->start - 1 &&
+            $_->end   <= $segment->end + 1
+        } $segment->features;
     }
 
-    my $ft = $self->write_ft( $segment, @feats );
+    my $ft = $self->write_ft( $segment, $whole_seg, \@feats, @ids );
 
 }
 
 sub write_ft {
-    my ($self, $segment, @feats) = @_;
+    my ($self, $segment, $whole_segment, $feats, @ids) = @_;
+    my @feats = @$feats;
     my $dest    = $self->configuration->{destination};
     my $table   = '';
 
     # make a Seq object
     my $seq  = Bio::Seq::RichSeq->new( -id  => $segment->refseq,
-				       -seq => $segment->seq ); 
+				       -seq => $whole_segment->seq ); 
     $seq->accession($segment->refseq);
+
+    # if we are in selected mode, we will need an id_holder;
+    my $holder;
+    if ( @ids ) {
+        $holder = Bio::SeqFeature::Generic->new ( -primary => 'misc_feature',
+						  -start   => $segment->start,
+						  -end     => $segment->start + 1 );
+	$holder->add_tag_value( note => "GFF database id container; do not delete" );
+        $holder->add_tag_value( database_ids => join ',', @ids );
+    }
 
     # convert the features to generic SeqFeatures
     for ( @feats ) {
@@ -193,10 +212,13 @@ sub write_ft {
 	$self->strandfix($_);
         $self->tagfix($_);
     }
-    
+
+    push @feats, $holder if $holder;
+
     # flatten segmented features
     my @add = $self->flatten_segmented_feats(@feats);
     $seq->add_SeqFeature(@add);
+    
 
     my $format = $dest eq 'Artemis' ? 'embl' : 'game';
     #$format = 'asciitree';

@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.16 2004-01-21 19:11:42 sheldon_mckay Exp $
+# $Id: GFFhelper.pm,v 1.17 2004-01-24 16:57:58 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -389,9 +389,10 @@ sub get_range {
     for ( split "\n", $gff ) {
         next if /\#/;
 	my @word = split "\t", $_;
+	next if !$word[3] || !$word[4];
         $self->refseq($word[0]) 
 	    unless $word[0] =~ /\.|SEQ/ || $self->refseq;
-	push @nums, @word[3,4];
+	push @nums, @word[3,4] if $word[3] =~ /^\d+$/ && $word[4] =~ /^\d+$/;
     }
 
     # give up if the sequence has no name
@@ -494,7 +495,7 @@ sub rollback_form {
         push @out, "<option value=$_>$seg $date</option>\n";
     }
 
-    my $help =  qq(<a onclick="alert('$msg')">[?]</a>);
+    my $help =  qq(<a onclick="alert('$msg')" href="javascript:void(0)">[?]</a>);
 
     return  "\n<table>\n<tr class=searchtitle><td><font color=black><b>" .
 	    "Restore saved features</td></tr>\n<tr><td class=" .

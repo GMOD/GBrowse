@@ -21,7 +21,7 @@ sub render {
     $content =~ s/^\s+//; $content =~ s/\s+$//;
     my $bindata = decode_base64($content);
     my ($fh, $filename) = tempfile( DIR => "$htmldir/$imgdir/", SUFFIX=> ".gif" );
-    $filename =~ /(\w+\.jpg)$/;
+    $filename =~ /(\w+\.gif)$/;
     $filename = $1;
     binmode($fh);
     print $fh $bindata;

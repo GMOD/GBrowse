@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.14 2003-01-30 17:58:16 scottcain Exp $
+# $Id: Segment.pm,v 1.15 2003-01-30 20:10:15 scottcain Exp $
 
 =head1 NAME
 
@@ -30,10 +30,10 @@ Bio::DB::Das::Chado::Segment - DAS-style access to a chado database
 
 =head1 DESCRIPTION
 
-Bio::DB::Das::Segment is a simplified alternative interface to
+Bio::DB::Das::Chado::Segment is a simplified alternative interface to
 sequence annotation databases used by the distributed annotation
 system. In this scheme, the genome is represented as a series of
-landmarks.  Each Bio::DB::Das::Segment object ("segment") corresponds
+landmarks.  Each Bio::DB::Das::Chado::Segment object ("segment") corresponds
 to a genomic region defined by a landmark and a start and end position
 relative to that landmark.  A segment is created using the Bio::DasI
 segment() method.
@@ -96,10 +96,10 @@ use constant DEBUG => 0;
 use vars '@ISA','$VERSION','$ASSEMBLY_TYPE';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI);
 $VERSION = 0.01;
-$ASSEMBLY_TYPE = 'arm';
+$ASSEMBLY_TYPE = 'arm'; #this should really be set in a config file
 
 # construct a virtual segment that works in a lazy way
-sub new { warn "in new {\n";
+sub new {
  #validate that the name/accession is valid, and start and end are valid,
  #then return a new segment
 
@@ -116,18 +116,15 @@ sub new { warn "in new {\n";
 #moved length determination to constructor, now it will be there from
 # 'the beginning'.
 
-#    $factory->{dbh}->trace(4) if DEBUG;
-
   my $quoted_name = $factory->{dbh}->quote($name);
 
-    warn "$quoted_name\n" if DEBUG;
-#    $factory->{dbh}->trace(4) if DEBUG;
+  warn "$quoted_name\n" if DEBUG;
 
   my $cvterm_id = $factory->{cvterm_id};
 
   my $sth = $factory->{dbh}->prepare ("
              select name,feature_id,seqlen from gbrowse_assembly
-             where type_id = ". $$cvterm_id{$ASSEMBLY_TYPE} . " and
+             where type_id = ." $$cvterm_id{$ASSEMBLY_TYPE} ." and
                    name ilike $quoted_name  ");
 
     warn "prepared:$sth\n" if DEBUG ;
@@ -139,7 +136,7 @@ sub new { warn "in new {\n";
   my $hash_ref = {};
   my $length;
   my $rows_returned = $sth->rows;
-  if ($rows_returned < 1) { #look in synonym or an exact match
+  if ($rows_returned < 1) { #look in synonym for an exact match
     my $isth = $factory->{dbh}->prepare ("
        select fs.feature_id from feature_synonym fs, synonym s
        where fs.synonym_id = s.synonym_id and
@@ -201,7 +198,7 @@ sub new { warn "in new {\n";
 
 =cut
 
-sub seq_id {  shift->{name} } warn "in seq_id {  shift->{name} }\n";
+sub seq_id {  shift->{name} } 
 
 =head2 start
 
@@ -217,7 +214,7 @@ to low() for Gadfly compatibility.
 
 =cut
 
-sub start { shift->{start} } warn "in start { shift->{start} }\n";
+sub start { shift->{start} } 
 
 =head2 end
 
@@ -233,7 +230,7 @@ high() for Gadfly compatibility.
 
 =cut
 
-sub end   { shift->{end} } warn "in end   { shift->{end} }\n";
+sub end   { shift->{end} } 
 
 =head2 length
 
@@ -248,7 +245,7 @@ Returns the length of the segment.  Always a positive number.
 
 =cut
 
-sub length { shift->{length} } warn "in length { shift->{length} }\n";
+sub length { shift->{length} } 
 
 =head2 features
 
@@ -315,7 +312,7 @@ is defined, then -callback is ignored.
 
 =cut
 
-sub features { warn "in features {\n";
+sub features {
   my $self = shift;
 
     warn "Segment->features() args:@_\n" if DEBUG;
@@ -356,7 +353,7 @@ sub features { warn "in features {\n";
 
   }
 
-# set type variable (hard coded to 'gene' right now)
+# set type variable 
 
   my %termhash = %{$self->{factory}->{cvterm_id}};
 
@@ -366,18 +363,18 @@ sub features { warn "in features {\n";
     push @keys, @tempkeys;
   }
 
-  my $sql_types;
+  my $sql_types = '';
 
   if (scalar @keys == 0) {
     # return an empty feature list
-    warn "No types were specified in $self->features!\n";
-    push @features, $feat;
-    if ($iterator) {
-      warn "using Bio::DB::Das::ChadoIterator\n" if DEBUG;
-      return Bio::DB::Das::ChadoIterator->new(\@features);
-    } else {
-      return @features;
-    }
+#    warn "No types were specified in $self->features!\n";
+#    push @features, $feat;
+#    if ($iterator) {
+#      warn "using Bio::DB::Das::ChadoIterator\n" if DEBUG;
+#      return Bio::DB::Das::ChadoIterator->new(\@features);
+#    } else {
+#      return @features;
+#    }
   } else {
     
     $sql_types .= "(f.type_id = ".$termhash{$keys[0]};
@@ -422,7 +419,7 @@ sub features { warn "in features {\n";
     $feat = Bio::DB::Das::Chado::Segment::Feature->new (
                        $self->{factory},
                        $self,
-                       '',
+                       $self->seq_id,
                        $start,$stop,
                        $termname{$$hashref{type_id}},
                        $$hashref{strand},
@@ -456,7 +453,7 @@ Returns the sequence for this segment as a simple string.
 
 =cut
 
-sub seq { warn "in seq {\n";
+sub seq {
   my $self = shift;
 
   my $feat_id = $self->{srcfeature_id};
@@ -487,15 +484,15 @@ the segment was originally generated.
 
 #'
 
-sub factory {shift->{factory} } warn "in factory {shift->{factory} }\n";
-sub alphabet {return 'dna'; } warn "in alphabet {return 'dna'; }\n";
-sub display_id {shift->{name} } warn "in display_id {shift->{name} }\n";
-sub display_name {shift->{name} } warn "in display_name {shift->{name} }\n";
-sub accession_number {shift->{name} } warn "in accession_number {shift->{name} }\n";
-sub desc {shift->{name} } warn "in desc {shift->{name} }\n";
+sub factory {shift->{factory} } 
+sub alphabet {return 'dna'; } 
+sub display_id {shift->{name} };
+sub display_name {shift->{name} } 
+sub accession_number {shift->{name} } 
+sub desc {shift->{name} } 
 
 
-sub get_feature_stream { warn "in get_feature_stream {\n";
+sub get_feature_stream {
   my $self = shift;
   my @features = $self->features;
     warn "using get_feature_stream\n" if DEBUG;

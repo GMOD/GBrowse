@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.13 2003-01-30 17:58:15 scottcain Exp $
+# $Id: Chado.pm,v 1.14 2003-01-30 20:10:12 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -6,15 +6,6 @@
 Bio::DB::Das::Chado - DAS-style access to a chado database
 
 =head1 SYNOPSIS
-
-NOTES:  required methods:
-        new
-        segment
-        features
-        types
-        get_seq_stream  NEEDED?  conv w/Lincoln on 12/2 leads me to "No"
-
-
 
   # Open up a feature database
  $db = Bio::DB::Das::Chado->new(
@@ -26,7 +17,7 @@ NOTES:  required methods:
 				 port   => undef,
 				) or die;
 
-  @segments = $db->segment(-name  => 'NT_29921.4',
+  @segments = $db->segment(-name  => '2L',
                            -start => 1,
 			   -end   => 1000000);
 
@@ -97,7 +88,6 @@ methods. Internal methods are usually preceded with a _
 package Bio::DB::Das::Chado;
 use strict;
 
-#use Bio::DB::Chado::BioDatabaseAdaptor;
 use Bio::DB::Das::Chado::Segment;
 use Bio::Root::Root;
 use Bio::DasI;
@@ -108,7 +98,6 @@ use vars qw($VERSION @ISA);
 
 use constant SEGCLASS      => 'Bio::DB::Das::Chado::Segment';
 use constant DEBUG =>0;
-#use constant ADAPTOR_CLASS => 'Bio::DB::Chado::BioDatabaseAdaptor';
 
 $VERSION = 0.01;
 @ISA     = qw(Bio::Root::Root Bio::DasI);
@@ -127,7 +116,7 @@ $VERSION = 0.01;
 
  Function: Open up a Bio::DB::DasI interface to a Chado database
  Returns : a new Bio::DB::Das::Chado object
- Args    : ???
+ Args    : 
          
 
 =cut
@@ -326,7 +315,6 @@ sub get_feature_by_name {
     # get feature_id
     # foreach feature_id, get the feature info
     # then get src_feature stuff (chromosome info) and create a parent feature,
-    #  of which these features will be children?  Yeah, that could work :-)
 
     my $quoted_name = $self->{dbh}->quote($name);
     my $sth = $self->{dbh}->prepare("
@@ -348,7 +336,6 @@ sub get_feature_by_name {
          f.feature_id = fl.feature_id
        order by fl.srcfeature_id
         ");
-
 
     my $jsth = $self->{dbh}->prepare("select name from gbrowse_assembly
                                       where feature_id = ?");

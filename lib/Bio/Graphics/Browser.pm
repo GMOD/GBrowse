@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.28 2002-07-23 05:39:18 lstein Exp $
+# $Id: Browser.pm,v 1.29 2002-07-31 03:06:14 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -66,17 +66,20 @@ use Text::Shellwords;
 
 require Exporter;
 
-use constant DEFAULT_WIDTH => 800;
 use vars '$VERSION','@ISA','@EXPORT';
 $VERSION = '1.14';
 
 @ISA    = 'Exporter';
 @EXPORT = 'commas';
 
+use constant DEFAULT_WIDTH => 800;
 use constant RULER_INTERVALS   => 20;  # fineness of the centering map on the ruler
 use constant TOO_MANY_SEGMENTS => 5_000;
 use constant MAX_SEGMENT       => 1_000_000;
 use constant DEFAULT_RANGES       => q(100 500 1000 5000 10000 25000 100000 200000 400000);
+use constant MIN_OVERVIEW_PAD  => 20;
+
+use constant DEBUG => 0;
 
 =head2 new()
 
@@ -743,13 +746,15 @@ sub image_and_map {
 
   if (@feature_types) {  # don't do anything unless we have features to fetch!
     my $iterator = $segment->get_seq_stream(-type=>\@feature_types);
+    warn "feature types = @feature_types\n" if DEBUG;
     my (%similarity,%feature_count);
 
     while (my $feature = $iterator->next_seq) {
 
       my $label = $self->feature2label($feature,$length);
-      warn "feature = $feature => $label";
       my $track = $tracks{$label} or next;
+
+      warn "feature = $feature, label = $label, track = $track\n" if DEBUG;
 
       $feature_count{$label}++;
 
@@ -851,13 +856,18 @@ sub overview {
   my $segment = $factory->segment(-class=>$factory->refclass,
 				  -name=>$partial_segment->ref);
 
-  my $conf  = $self->config;
-  my $width = $self->width;
+  my $conf     = $self->config;
+  my $width    = $self->width;
+  my @tracks   = $self->config->overview_tracks;
+  my $pad      = $self->overview_pad(\@tracks);
+
   my $panel = Bio::Graphics::Panel->new(-segment => $segment,
 					-width   => $width,
 					-bgcolor => $self->setting('overview bgcolor')
 					            || 'wheat',
-					-key_style => 'between',
+					-key_style => 'left',
+					-pad_left  => $pad,
+					-pad_right => MIN_OVERVIEW_PAD,
 				       );
 
   my $units = $self->setting('overview units');
@@ -870,8 +880,26 @@ sub overview {
 		    $units ? (-units => $units) : (),
 		   );
 
+  $self->add_overview_landmarks($panel,$segment,\@tracks,$pad);
+
+  my $gd = $panel->gd;
+  my $red = $gd->colorClosest(255,0,0);
+  my ($x1,$x2) = $panel->map_pt($partial_segment->start,$partial_segment->end);
+  my ($y1,$y2) = (0,$panel->height-1);
+  $x2 = $panel->right-1 if $x2 >= $panel->right;
+  $gd->rectangle($x1,$y1,$x2,$y2,$red);
+
+  return ($gd,$segment->length);
+}
+
+sub add_overview_landmarks {
+  my $self = shift;
+  my ($panel,$segment,$tracks,$pad) = @_;
+  my $conf = $self->config;
+
   my (@feature_types,%type2track,%track);
-  for my $overview_track ($self->config->overview_tracks) {
+
+  for my $overview_track (@$tracks) {
     my @types = $conf->label2type($overview_track);
     my $track = $panel->add_track(-glyph  => 'generic',
 				  -height  => 3,
@@ -908,15 +936,8 @@ sub overview {
 		      -label => $label,
 		     );
   }
-
-  my $gd = $panel->gd;
-  my $red = $gd->colorClosest(255,0,0);
-  my ($x1,$x2) = $panel->map_pt($partial_segment->start,$partial_segment->end);
-  my ($y1,$y2) = (0,$panel->height-1);
-  $x2 = $panel->right-1 if $x2 >= $panel->right;
-  $gd->rectangle($x1,$y1,$x2,$y2,$red);
-
-  return ($gd,$segment->length);
+  return \%track;
+  $panel;
 }
 
 =head2 hits_on_overview()
@@ -957,6 +978,7 @@ sub hits_on_overview {
   my $max_label  = $conf->setting(general=>'label density') || 10;
   my $max_bump   = $conf->setting(general=>'bump density') || 50;
   my $class      = $hits->[0]->can('factory') ? $hits->[0]->factory->refclass : 'Sequence';
+  my $pad        = $self->overview_pad([$self->config->overview_tracks],'Matches');
 
   # sort hits out by reference
   my (%refs);
@@ -991,7 +1013,9 @@ sub hits_on_overview {
 					  -width   => $width,
 					  -bgcolor => $self->setting('overview bgcolor')
 					  || 'wheat',
-					  -key_style => 'between',
+					  -pad_left  => $pad,
+					  -pad_right => MIN_OVERVIEW_PAD,
+					  -key_style => 'left',
 					 );
 
     # add the arrow
@@ -1005,38 +1029,20 @@ sub hits_on_overview {
 		     );
 
     # add the landmarks
-    if (my $landmarks  = $self->setting('overview landmarks')
-	|| ($conf->label2type('overview'))[0]) {
+    $self->add_overview_landmarks($panel,$segment,[$self->config->overview_tracks]);
 
-      my @types = split /\s+/,$landmarks;
-      my $track = $panel->add_track(-glyph  => 'generic',
-				    -height  => 3,
-				    -fgcolor => 'black',
-				    -bgcolor => 'black',
-				    $conf->style('overview'),
-				   );
-      my $iterator = $segment->features(-type=>\@types,-iterator=>1,-rare=>1);
-      my $count;
-      while (my $feature = $iterator->next_seq) {
-	$track->add_feature($feature);
-	$count++;
-      }
-      $track->configure(-bump  => $count <= $max_bump,
-			-label => $count <= $max_label,
-		       );
+    # add the hits
+    $panel->add_track($refs{$ref},
+		      -glyph     => 'diamond',
+		      -height    => 6,
+		      -fgcolor   => 'red',
+		      -bgcolor   => 'red',
+		      -fallback_to_rectangle => 1,
+		      -key       => 'Matches',
+		      -bump      => @{$refs{$ref}} <= $max_bump,
+		      -label     => @{$refs{$ref}} <= $max_bump,  # deliberate
+		     );
 
-      # add the hits
-      $panel->add_track($refs{$ref},
-			-glyph     => 'diamond',
-			-height    => 6,
-			-fgcolor   => 'red',
-			-bgcolor   => 'red',
-			-fallback_to_rectangle => 1,
-			-bump      => @{$refs{$ref}} <= $max_bump,
-			-label     => @{$refs{$ref}} <= $max_bump,  # deliberate
-		       );
-
-    }
     my $gd    = $panel->gd;
     my $boxes = $panel->boxes;
     $html{$ref} = $self->_hits_to_html($ref,$gd,$boxes);
@@ -1311,7 +1317,7 @@ sub make_aggregators {
 
   my @result;
   foreach (@agg) {
-    my($agg_name,$subparts,$mainpart) = /^(\w+)\{([^\/}]+)\/?(.*)\}$/;
+    my($agg_name,$subparts,$mainpart) = /^(\w+)\{([^\/\}]+)\/?(.*)\}$/;
     unless ($agg_name) {
       push @result,$_;
       next;
@@ -1319,10 +1325,28 @@ sub make_aggregators {
     my @subparts = split /,\s*/,$subparts;
     my @args = (-method    => $agg_name,
 		-sub_parts => \@subparts);
-    push @args,(-main_method => $mainpart) if defined $mainpart;
+    push @args,(-main_method => $mainpart) if $mainpart;
+    warn "making an aggregator with (@args), subparts = @subparts" if DEBUG;
     push @result,Bio::DB::GFF::Aggregator->new(@args);
   }
   \@result;
+}
+
+sub overview_pad {
+  my $self   = shift;
+  my $tracks = shift;
+  $tracks ||= [$self->config->overview_tracks];
+  my $max = 0;
+  foreach (@$tracks) {
+    my $key = $self->setting($_=>'key');
+    next unless defined $key;
+    $max = length $key if length $key > $max;
+  }
+  foreach (@_) {  #extra
+    $max = length if length > $max;
+  }
+  return MIN_OVERVIEW_PAD unless $max;
+  $max * gdMediumBoldFont->width + 3;
 }
 
 

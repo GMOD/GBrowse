@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.45 2002-07-20 16:40:55 lstein Exp $
+# $Id: gbrowse.PLS,v 1.46 2002-07-31 03:06:14 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -918,8 +918,9 @@ sub zoomnav {
   }
 
   elsif (defined $overview_x && defined $segment_length) {
-    my $overview_width = $settings->{width} * OVERVIEW_RATIO;
-    my $click_position = $segment_length * $overview_x/$overview_width;
+    my $pad = $CONFIG->overview_pad;
+    my $overview_width = $settings->{width} * OVERVIEW_RATIO - 2*$pad;
+    my $click_position = $segment_length * ($overview_x-$pad)/$overview_width;
     $span = $DEFAULT_SEGMENT if $span > $MAX_SEGMENT;
     $start = int($click_position - $span/2);
     $stop  = $start + $span - 1;

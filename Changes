@@ -8,6 +8,7 @@
         * Fixed alignment problems in gbrowse_details
         * Fixed several items with the chado/gmod adaptor
         * Added documentation for installing on MacOSX
+        * Added a simple MOBY browser (see CONFIGURE_HOWTO for configuring it).
 
 1.57	Sat Oct  4 21:59:19 EDT 2003
 	* Fixed formatting errors in gbrowse_details alignments.

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.58 2004-04-20 22:00:14 allenday Exp $
+# $Id: Segment.pm,v 1.59 2004-04-30 19:41:29 scottcain Exp $
 
 =head1 NAME
 
@@ -206,6 +206,7 @@ sub new {
         }
 
         $name = $$hash_ref{'name'};
+
         my $length = $$hash_ref{'seqlen'};
         my $type   = $factory->term2name( $$hash_ref{'type_id'} );
 
@@ -231,7 +232,7 @@ sub new {
             length        => $length,
             srcfeature_id => $srcfeature_id,
             class         => $type,
-            name          => $name
+            name          => $name,
           },
           ref $self || $self;
 
@@ -844,9 +845,23 @@ sub clone {
 sub sourceseq {
   my $self = shift;
 
-  return $self->{'sourceseq'} = shift if @_;
+  return $self->{'sourceseq'} if $self->{'sourceseq'};
+
+  my $dbh  = $self->factory->dbh;
+  my $sth  = $dbh->prepare ("
+      select name from feature where feature_id = ?");
+  $sth->execute($self->srcfeature_id)
+      or $self->throw("getting sourceseq name query failed"); 
+
+  return if $sth->rows < 1;
+  my $hashref = $sth->fetchrow_hashref;
+  
+  $self->{'sourceseq'} = $$hashref{'name'};
   return $self->{'sourceseq'};
+ 
 }
+
+#*sourceseq = \&name;
 
 =head2 abs_ref
 
@@ -854,12 +869,7 @@ sub sourceseq {
 
 =cut
 
-sub abs_ref {
-  my $self = shift;
-
-  return $self->{'abs_ref'} = shift if @_;
-  return $self->{'abs_ref'};
-}
+*abs_ref = \&sourceseq;
 
 =head2 abs_start
 

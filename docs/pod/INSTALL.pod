@@ -15,7 +15,7 @@ install a database management system such as MySQL.
 =item Install ActiveState Perl
 
 Go to http://www.activestate.com, and download the product
-"ActivePerl."  This is a little confusinb because web site tries to
+"ActivePerl."  This is a little confusing because web site tries to
 point you to the commercial product, ASPN Perl.  At the current time,
 the full download URL for ActivePerl is:
 
@@ -26,14 +26,14 @@ package, and it will install automatically.
 
 =item Install the Apache web server
 
-Go to http://httpd.apache.org/download.cgi.  Select the most recent
+Go to http://httpd.apache.org/download.cgi .  Select the most recent
 version of Apache, and choose the download marked "Win32 Binary (MSI
 Installer)."  Once downloaded, launch the package and it will install
 automatically.
 
 =item Install the MySQL database (optional)
 
-Go to http://dev.mysql.com/downloads/mysql.  Select and download the
+Go to http://dev.mysql.com/downloads/mysql .  Select and download the
 most recent version of the Windows package.  Once the package is
 downloaded, you will need to unpack it with the WinZip program.  Then
 launch the installer.

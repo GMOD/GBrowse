@@ -222,8 +222,6 @@ sub MY::ppd {
   my $newimp;
   my $oldMM =0;
 
-    warn "$inherited\n";
-
 #VERY irritating--different versions of ExtUtils::MakeMaker has
 #different ways of generating the ppd file.
   if ($inherited =~ /qq\{(<S.*R>\\n)\}.*qq\{(\\t<I.*\/>\\n)\}.*qq\{(\\t\\t<O.*G>\\n)\}/sg){
@@ -277,8 +275,6 @@ sub MY::ppd {
     push @newinherit, qq{\t\$(NOECHO) \$(ECHO) '</SOFTPKG>' >> \$(DISTNAME).ppd\n};
     $inherited = join "\n", @newinherit;
   }
-
-  warn "$inherited\n";
 
   $inherited .= <<END;
 

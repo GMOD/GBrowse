@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.3 2004-02-25 13:26:45 lstein Exp $
+#$Id: das.PLS,v 1.4 2004-02-25 17:15:49 lstein Exp $
 
 use strict;
 use Bio::DB::GFF 1.02;
@@ -58,7 +58,7 @@ use vars qw($DB $DSN $HEADER %ERRCODES $CONFIG
             $VERSION $DAS_VERSION $CONF_DIR 
             %CACHED_TYPES);
 
-#$Id: das.PLS,v 1.3 2004-02-25 13:26:45 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
+#$Id: das.PLS,v 1.4 2004-02-25 17:15:49 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';
@@ -86,6 +86,7 @@ $HEADER = 0;
 
 my ($junk,$dsn,$operation) = split '/',path_info();
 $DSN = $dsn;
+$operation ||= '';
 
 do { error_header('invalid request',400); exit 0 } unless $DSN;
 do { list_dsns();   exit 0 } if $dsn eq 'dsn' or $operation eq 'dsn';
@@ -307,12 +308,14 @@ sub dump_segment {
   }
   print qq(<SEGMENT id="$r" start="$s" stop="$e" version="$version">\n);
 
+  my %agg_map = map {$_->get_method => $_->main_name} $DB->aggregators;
+
   my $iterator = $seq->features(-types=>$filter,-merge=>1,-iterator=>1);
   while (my $f = $iterator->next_seq) {
     my @subparts = $f->get_SeqFeatures;
     my @notes =  $f->notes;
-    print_feature($f,undef,$type2category,\@notes) unless @subparts;
-    print_feature($_,$f,$type2category,\@notes)    foreach @subparts;
+    print_feature($f,undef,$type2category,\@notes,\%agg_map); # unless @subparts;
+    print_feature($_,$f,$type2category,\@notes,\%agg_map) foreach @subparts;
   }
 
   print qq(</SEGMENT>\n);
@@ -323,6 +326,7 @@ sub print_feature {
   my $parent = shift;
   my $type2category = shift;
   my $notes         = shift;
+  my $agg_map       = shift || {};
 
   my $type        = $f->type;
   my $flabel      = $f->info || $f->type;
@@ -337,6 +341,12 @@ sub print_feature {
   my $gclass      = $group->class if $group;
   my $id          = $f->id;
   my $fid         = $id;
+
+  # This is way nasty.  The aggregator may have changed the method of the
+  # main feature, so we need to change it back to what it was originally
+  # for the purpose of serializing on the net.  What amazing shortsightedness
+  # on the part of someone who should know better.
+  $method = $agg_map->{$method} if defined $agg_map->{$method};
 	
   $phase       ||= 0;
   $orientation ||= 0;
@@ -931,6 +941,7 @@ sub hack_link {
   $self_url =~ s!/das(/.+)?!!;
   $$url_ref =~ s!^\.\./!$self_url/!g;
 }
+
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

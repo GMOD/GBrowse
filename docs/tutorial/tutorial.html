@@ -3082,8 +3082,17 @@ returns all the feature types that the database knows about.  Using a
 web browser fetch the URL <a
 href="http://localhost/cgi-bin/das/elegans_core/types"
 target="_new">http://localhost/cgi-bin/das/elegans_core/types</a>.
-This should return another short 
-data sources that you have configured.
+This should return another short document confirming that the
+"processed_transcript" and "match:BLAT_EST_BEST" feature types are
+available.
+
+<p>
+
+The final test that the DAS server is performing correctly is to
+browse to the <a href="http://localhost/cgi-bin/gbrowse/elegans_core"
+target="_new>elegans_core</a> database and to <b>turn off</b> all the
+tracks except for DNA/GC content.  This should give you an empty
+details panel.
 
 <hr>
 
@@ -3113,6 +3122,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Wed Feb 25 14:44:12 SAST 2004
+Last modified: Wed Feb 25 15:44:29 SAST 2004
 <!-- hhmts end -->
 </body> </html>

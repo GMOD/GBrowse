@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.59 2002-09-25 04:39:21 lstein Exp $
+# $Id: gbrowse.PLS,v 1.60 2002-09-25 04:42:00 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -643,7 +643,7 @@ sub navigation_table {
 		  (
 		   TR({-class=>'searchbody'},
 		      td({-align=>'left', -colspan=>3},
-			 a({-href=>"$self?ins=0"},"[Hide instructions]"),
+			 a({-href=>"$self?ins=0"},$LANG->tr('HIDE_INSTRUCTIONS')),
 			 $LANG->tr('SEARCH_INSTRUCTIONS',$oligo),
 			 show_examples()
 			)),
@@ -655,7 +655,7 @@ sub navigation_table {
 		  (
 		   TR({-class=>'searchbody'},
 		      td({-align=>'left', -colspan=>3},
-			 a({-href=>"$self?ins=1"},"[Show instructions]"),
+			 a({-href=>"$self?ins=1"},$LANG->tr('SHOW_INSTRUCTIONS')),
 			 a({-href=>bookmark_link($settings)},'[bookmark this view]'))
 		     ),
 		  ),
@@ -2218,6 +2218,7 @@ sub footer {
        tt(font({-size=>'small'},$LANG->tr('Footer_2',$VERSION)))),
        end_html;
 }
+
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

@@ -30,6 +30,10 @@ END
 
    SHOWING_FROM_TO => 'Showing %s from %s, positions %s to %s',
 
+   HIDE_INSTRUCTIONS => '[hide instructions]',
+
+   SHOW_INSTRUCTIONS => '[show instructions]',
+
    LANDMARK => 'Landmark or Region',
 
    GO       => 'Go',

@@ -1717,7 +1717,7 @@ character set is called for, such as Japanese, GBrowse will use
 Japanese for the frame, but English for the image.
 
 - The rate at which the GBrowse team adds new features to the browser
-often outstrips the ability of volunteers to update the translationf
+often outstrips the ability of volunteers to update the translation
 files.  This means that new buttons and fields may be displayed in
 English on an otherwise correctly internationalized page.
 

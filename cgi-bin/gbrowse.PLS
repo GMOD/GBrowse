@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.77 2004-04-10 13:23:11 lstein Exp $
+# $Id: gbrowse.PLS,v 1.78 2004-04-22 01:58:41 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1888,7 +1888,10 @@ sub get_uploaded_file_info {
 
   my $modified = localtime($feature_file->mtime);
   #my @refs      = sort $feature_file->refs;
-  my @refs      = sort $feature_file->features;
+  #my @refs      = sort $feature_file->features;
+  my @refs      = sort($feature_file->features)
+    unless $feature_file->name =~ m!/das/!;
+
   my $db        = open_database();
 
   my ($landmarks,@landmarks,@links);

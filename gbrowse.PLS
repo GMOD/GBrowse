@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.21 2002-04-01 04:08:44 lstein Exp $
+# $Id: gbrowse.PLS,v 1.22 2002-04-03 02:02:01 lstein Exp $
 
 use strict;
 use lib '/home/lstein/projects/Generic-Genome-Browser/lib/';
@@ -1157,7 +1157,14 @@ sub format_segment {
 sub open_database {
   my $source  = $CONFIG->source;
   return $DB{$source} if $DB{$source};
-  my @argv = $CONFIG->dbgff_settings;
+  my @argv = eval{$CONFIG->dbgff_settings};
+  unless (@argv) {
+    warn "trying to reload config: source = $source: $@";
+    $CONFIG = Bio::Graphics::Browser->new;
+    $CONFIG->read_configuration($CONF_DIR) or die "Can't read configuration files: $!";
+    $CONFIG->source($source);
+    @argv = $CONFIG->dbgff_settings;
+  }
   $DB{$source} = eval {Bio::DB::GFF->new(@argv)} or warn $@;
   return $DB{$source};
 }
@@ -1559,11 +1566,11 @@ sub coordinate_mapper {
     my $absref   = $mapper->abs_ref;
     my @abs_segs = map {[$mapper->rel2abs($_->[0],$_->[1])]} @ranges;
 
-    # this inhibits mapping outside the displayed region - uncomment it
-    # if performance is poor.
-    # return unless grep { $_->[0] <= $stop && $_->[1] >= $start } @abs_segs;
-
-    return ($absref,@abs_segs);
+    # this inhibits mapping outside the displayed region
+    foreach (@abs_segs) {
+      return ($absref,@abs_segs) if $_->[0] <= $stop && $_->[1] >= $start;
+    }
+    return;
   };
   return $closure;
 }

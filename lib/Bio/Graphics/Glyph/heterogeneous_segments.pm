@@ -38,12 +38,11 @@ sub draw {
 # synthesize a key glyph
 sub keyglyph {
   my $self = shift;
-
+  
   my $scale = 1/$self->scale;  # base pairs/pixel
 
   # two segments, at pixels 0->50, 60->80
   my $offset = $self->panel->offset;
-
 
   my $feature =
     Bio::Graphics::Feature->new(
@@ -62,7 +61,8 @@ sub keyglyph {
   $factory->set_option(label => 1);
   $factory->set_option(bump  => 0);
   $factory->set_option(connector  => 'solid');
-  return $factory->make_glyph($feature);
+  my $glyph = $factory->make_glyph(0,$feature);
+  return $glyph;
 }
 
 # component draws a shaded box

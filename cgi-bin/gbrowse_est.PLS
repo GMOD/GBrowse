@@ -41,12 +41,12 @@ $startperl -w
 
 !GROK!THIS!
 
-print OUT "use libs '$OPTIONS{LIB}'\n" if defined $OPTIONS{LIB};
+print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbrowse_est.PLS,v 1.5 2004-06-24 18:13:26 lstein Exp $
+# $Id: gbrowse_est.PLS,v 1.6 2004-08-09 14:46:18 sheldon_mckay Exp $
 
 =head1 NAME
 

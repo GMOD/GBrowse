@@ -40,12 +40,12 @@ $startperl -w
 \$VERSION   = $OPTIONS{VERSION};
 
 !GROK!THIS!
-print OUT "use libs '$OPTIONS{LIB}'\n" if defined $OPTIONS{LIB};
+print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.18 2004-07-24 00:09:58 boconnor Exp $
+# $Id: gbrowse_img.PLS,v 1.19 2004-08-09 14:46:18 sheldon_mckay Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1 path_info escape);

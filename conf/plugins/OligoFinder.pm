@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::OligoFinder;
-# $Id: OligoFinder.pm,v 1.3 2002-12-06 21:43:59 lstein Exp $
+# $Id: OligoFinder.pm,v 1.1 2002-03-31 21:41:49 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -15,7 +15,7 @@ $VERSION = '0.10';
 sub name { "Short Oligos" }
 
 sub description {
-  p("The oligo finder plugin finds oligos between 11 and 50 bp in length.",
+  p("The oligo finder plugin finds oligos between 12 and 50 bp in length.",
     "It does a slow search, making it suitable only for small (<150 MB) genomes.",
     "[NOTE TO SYSADMINS: The browser must use the Bio::DB::GFF schema for this plugin to work.]").
   p("This plugin was written by Lincoln Stein.");
@@ -40,7 +40,7 @@ sub configure_form {
   return $msg .
     table(TR({-class=>'searchtitle'},
 	     th({-colspan=>2,-align=>'LEFT'},
-		'Enter an oligonucleotide between 12 and 50 bp in length.',
+		'Enter an oligonucleotide between 15 and 50 bp in length.',
 		'The browser will identify all genomic regions that contain',
 		'this oligo.  This is NOT a fast algorithm, so have patience.')),
 	  TR({-class=>'searchbody'},
@@ -66,7 +66,7 @@ sub find {
 # types something into the search box that isn't recognized.
 sub auto_find {
   my $self  = shift;
-  my $oligo = lc shift;
+  my $oligo = shift;
 
   $self->valid_oligo($oligo) or return;
 
@@ -86,7 +86,7 @@ sub auto_find {
 
   my $bit_to_keep = length($oligo) - 1;
   my ($current_ref,$offset,$dna,@results);
-  
+
   while (my ($ref,$off,$d) = $sth->fetchrow_array) {
     if (!defined($current_ref) or $current_ref ne $ref) {
       $offset = 0;
@@ -149,7 +149,7 @@ sub get_chroms {
 sub valid_oligo {
   my $self = shift;
   my $oligo = shift or return;
-  return $oligo =~ /^[gatcn]{11,50}$/i
+  return $oligo =~ /^[gatcn]{15,50}$/i
 }
 
 1;

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.51 2002-12-31 19:26:05 lstein Exp $
+# $Id: Browser.pm,v 1.42 2002-10-08 20:23:08 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -58,7 +58,7 @@ use strict;
 use File::Basename 'basename';
 use Bio::Graphics;
 use Carp qw(carp croak);
-use GD 'gdMediumBoldFont','gdLargeFont';
+use GD 'gdMediumBoldFont';
 use CGI qw(img param escape url);
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
@@ -447,11 +447,7 @@ page.
 sub header {
   my $self = shift;
   my $header = $self->config->code_setting(general => 'header');
-  if (ref $header eq 'CODE') {
-    my $h = eval{$header->(@_)};
-    warn $@ if $@;
-    return $h;
-  }
+  return $header->(@_) if ref $header eq 'CODE';
   return $header;
 }
 
@@ -467,11 +463,7 @@ page.
 sub footer {
   my $self = shift;
   my $footer = $self->config->code_setting(general => 'footer');
-  if (ref $footer eq 'CODE') {
-    my $f = eval {$footer->(@_)};
-    warn $@ if $@;
-    return $f;
-  }
+  return $footer->(@_) if ref $footer eq 'CODE';
   return $footer;
 }
 
@@ -553,10 +545,6 @@ The arguments are a series of tag=>value pairs, where tags are:
                         center the image by clicking on the scale.  It defaults
                         to false, and has no effect unless do_map is also true.
 
-  title               Add specified title to the top of the image.
-
-  noscale             Suppress the scale
-
 =cut
 
 sub render_html {
@@ -571,7 +559,6 @@ sub render_html {
   my $do_centering_map= $args{do_centering_map};
   my $limit           = $args{limit};
   my $lang            = $args{lang};
-  my $title           = $args{title};
 
   return unless $segment;
 
@@ -580,9 +567,9 @@ sub render_html {
 
   my ($width,$height) = $image->getBounds;
   my $url     = $self->generate_image($image);
-  my $img     = img({-src=>$url,-align=>'middle',-usemap=>'#hmap',-width=>$width,
-		     -height=>$height,-border=>0,-name=>'detailedView',-alt=>'detailed view'});
-  my $img_map = '';
+  my $img     = img({-src=>$url,-align=>'CENTER',-usemap=>'#hmap',-width=>$width,
+		     -height=>$height,-border=>0,-name=>'detailedView'});
+  my $img_map;
   if ($do_map) {
     $self->_load_aggregator_types($segment);
     $img_map = $self->make_map($map,$do_centering_map,$panel)
@@ -617,7 +604,6 @@ sub generate_image {
   my $url         = sprintf("%s/%s.%s",$uri,$signature,$extension);
   my $imagefile   = sprintf("%s/%s.%s",$path,$signature,$extension);
   open (F,">$imagefile") || die("Can't open image file $imagefile for writing: $!\n");
-  binmode(F);
   print F $image->can('png') ? $image->png : $image->gif;
   close F;
   return $url;
@@ -650,7 +636,7 @@ sub tmpdir {
 sub make_map {
   my $self = shift;
   my ($boxes,$centering_map,$panel) = @_;
-  my $map = qq(<map name="hmap" id="hmap">\n);
+  my $map = qq(<map name="hmap">\n);
 
   # use the scale as a centering mechanism
 #  my $ruler = shift @$boxes;
@@ -664,7 +650,8 @@ sub make_map {
     }
     my $href  = $self->make_href($_->[0],$panel) or next;
     my $alt   = $self->make_title($_->[0],$panel);
-    $map .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href" title="$alt" alt="$alt" />\n);
+    $map .= qq(<area shape="RECT" coords="$_->[1],$_->[2],$_->[3],$_->[4]"
+	       href="$href" title="$alt">\n);
   }
   $map .= "</map>\n";
   $map;
@@ -690,8 +677,8 @@ sub make_centering_map {
 
   my @lines;
   for my $i (0..RULER_INTERVALS-1) {
-    my $x1 = int($portion * $i+0.5);
-    my $x2 = int($portion * ($i+1)+0.5);
+    my $x1 = $portion * $i;
+    my $x2 = $portion * ($i+1);
     # put the middle of the sequence range into the middle of the picture
     my $middle = $offset + $scale * ($x1+$x2)/2;
     my $start  = int($middle - $length/2);
@@ -699,7 +686,8 @@ sub make_centering_map {
     my $url = url(-relative=>1,-path_info=>1);
     $url .= "?ref=$ref;start=$start;stop=$stop;source=$source;nav4=1;plugin=$plugin";
     push @lines,
-      qq(<area shape="rect" coords="$x1,$ruler->[2],$x2,$ruler->[4]" href="$url" title="recenter" alt="recenter" />\n);
+      qq(<area shape="RECT" COORDS="$x1,$ruler->[2],$x2,$ruler->[4]"
+	 href="$url" title="recenter">\n);
   }
   return join '',@lines;
 }
@@ -731,8 +719,6 @@ sub make_title {
 #    'limit'         Place a limit on the number of features of each type to show.
 #    'tracks'        List of named tracks, in the order in which they are to be shown
 #    'label_scale'   If true, prints chromosome name next to scale
-#    'title'         A title for the image
-#    'noscale'       Suppress scale entirely
 sub image_and_map {
   my $self    = shift;
   my %config  = @_;
@@ -744,8 +730,6 @@ sub image_and_map {
   my $limit         = $config{limit}         || {};
   my $lang          = $config{lang};
   my $keystyle      = $config{keystyle};
-  my $title         = $config{title};
-  my $suppress_scale= $config{noscale};
 
   # these are natively configured tracks
   my @labels = $self->labels;
@@ -765,8 +749,8 @@ sub image_and_map {
 	      -bgcolor   => $self->setting('detail bgcolor')  || 'white',
 	      -grid      => 1,
 	      -key_style => $keystyle || $conf->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
-	      -empty_tracks => $conf->setting(general=>'empty_tracks') 	      || DEFAULT_EMPTYTRACKS,
-	      -pad_top   => $title ? gdMediumBoldFont->height : 0,
+	      -empty_tracks => $conf->setting(general=>'empty_tracks')
+	      || DEFAULT_EMPTYTRACKS
 	     );
   my $panel = Bio::Graphics::Panel->new(@argv);
   $panel->add_track($segment   => 'arrow',
@@ -775,7 +759,7 @@ sub image_and_map {
 		    -label     => $config{label_scale} ? $segment->seq_id : 0,
 		    -units     => $conf->setting(general=>'units') || '',
 		    -unit_divider => $conf->setting(general=>'unit_divider') || 1,
-		   ) unless $suppress_scale;
+		   );
 
   my (%tracks,@blank_tracks);
 
@@ -901,10 +885,6 @@ sub image_and_map {
   }
 
   my $gd       = $panel->gd;
-  if ($title) {
-    my $x = ($width - length($title) * gdMediumBoldFont->width)/2;
-    $gd->string(gdMediumBoldFont,$x,0,$title,$panel->translate_color('black'));
-  }
   return $gd   unless wantarray;
 
   my $boxes    = $panel->boxes;
@@ -1275,19 +1255,17 @@ sub _hits_to_html {
   my $signature = md5_hex(rand().rand()); # just a big random number
   my ($width,$height) = $gd->getBounds;
   my $url       = $self->generate_image($gd,$signature);
-  my $img       = img({-src=>$url,
-		       -align=>'middle',
+  my $img       = img({-src=>$url,-align=>'CENTER',
 		       -usemap=>"#$ref",
 		       -width => $width,
 		       -height => $height,
 		       -border=>0});
   my $html = "\n";
   $html   .= $img;
-  $html   .= qq(<br /><map name="$ref" alt="imagemap" />\n);
+  $html   .= qq(<br><map name="$ref">\n);
 
   # use the scale as a centering mechanism
   my $ruler   = shift @$boxes;
-  return unless $ruler->[0];  # don't know why....
   my $length  = $ruler->[0]->length/RULER_INTERVALS;
   $width   = ($ruler->[3]-$ruler->[1])/RULER_INTERVALS;
   for my $i (0..RULER_INTERVALS-1) {
@@ -1296,13 +1274,13 @@ sub _hits_to_html {
     my $start = int($length * $i);
     my $stop  = int($start + $length);
     my $href      = $self_url . ";ref=$ref;start=$start;stop=$stop";
-    $html .= qq(<area shape="rect" coords="$x,$ruler->[2],$y,$ruler->[4]" href="$href" alt="ruler" />\n);
+    $html .= qq(<AREA SHAPE="RECT" COORDS="$x,$ruler->[2],$y,$ruler->[4]" HREF="$href">\n);
   }
 
   foreach (@$boxes){
     my ($start,$stop) = ($_->[0]->start,$_->[0]->end);
     my $href      = $self_url . ";ref=$ref;start=$start;stop=$stop";
-    $html .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href" alt="ruler" />\n);
+    $html .= qq(<AREA SHAPE="RECT" COORDS="$_->[1],$_->[2],$_->[3],$_->[4]" HREF="$href">\n);
   }
   $html .= "</map>\n";
   $html;
@@ -1379,10 +1357,8 @@ sub _low_merge {
     }
 
   }
-  my $class = eval { $features[0]->factory->refclass };
-  my @args  = (-name=>$ref,-start=>$previous_start,-end=>$previous_stop);
-  push @args,(-class=>$class) if defined $class;
-  push @spans,$db ? $db->segment(@args)
+  my $class = $features[0]->factory->refclass;
+  push @spans,$db ? $db->segment(-name=>$ref,-class=>$class,-start=>$previous_start,-end=>$previous_stop)
                   : Bio::Graphics::Feature->new(-start=>$previous_start,-end=>$previous_stop,-ref=>$ref);
   return @spans;
 }
@@ -1467,8 +1443,7 @@ sub type2label {
 sub feature2label {
   my $self = shift;
   my ($feature,$length) = @_;
-  my $type  = eval {$feature->type} 
-    || $feature->source_tag || $feature->primary_tag or return;
+  my $type  = eval {$feature->type} || $feature->primary_tag or return;
   (my $basetype = $type) =~ s/:.+$//;
   my $label = $self->type2label($type,$length)
     || $self->type2label($basetype,$length)
@@ -1517,12 +1492,8 @@ sub make_link {
   my $link     = $self->code_setting($label,'link');
   $link        = $self->code_setting(general=>'link') unless defined $link;
   return unless $link;
-  if (ref($link) eq 'CODE') {
-    my $val = eval {$link->($feature,$panel)};
-    warn $@ if $@;
-    return $val;
-  }
-  return $self->link_pattern($link,$feature,$panel);
+  return $link->($feature,$panel) if ref($link) eq 'CODE';
+  return $self->link_pattern($link,$feature);
 }
 
 # make the title for an object on a clickable imagemap
@@ -1538,10 +1509,7 @@ sub make_title {
     $key         =~ s/s$//;
     my $link     = $self->code_setting($label,'title') || $self->code_setting(general=>'title');
     $link or last TRY;
-    if (ref($link) eq 'CODE') {
-      $title       = eval {$link->($feature,$panel)};
-      warn $@ if $@;
-    }
+    $title       = $link->($feature,$panel) if ref($link) eq 'CODE';
     $title     ||= $self->link_pattern($link,$feature);
   }
   return $title if $title;

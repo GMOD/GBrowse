@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.74 2003-01-19 19:55:22 lstein Exp $
+# $Id: gbrowse.PLS,v 1.66 2002-10-08 20:23:08 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -71,7 +71,7 @@ use constant TINY_SEG_SIZE        => 2;
 use constant EXPAND_SEG_SIZE      => 5000;
 use constant TOO_MANY_SEGMENTS => 5_000;
 use constant TOO_MANY_FEATURES => 100;
-use constant TOO_MANY_REFS     => TOO_MANY_FEATURES;
+use constant TOO_MANY_REFS     => 30;
 use constant DEFAULT_SEGMENT => 100_000;
 
 use constant OVERVIEW_RATIO  => 0.9;
@@ -331,7 +331,7 @@ sub main_display {
 		       unit_label($segment->length),
 		       $segment->seq_id,
 		       commas($segment->start/$divider),
-		       commas($segment->end/$divider)));
+		       commas($segment->stop/$divider)));
   }
 
   # print the top of the form, with navigation bar, etc
@@ -376,9 +376,9 @@ sub main_display {
 sub overview_panel {
   my ($segment,$page_settings) = @_;
   my $image = overview($segment,$page_settings).br();
-  return table({-border=>0,-width=>'100%'},
+  return table({-border=>0,-width=>$page_settings->{width}},
 	       TR({-class=>'databody'},
-		  td({-align=>'center'},$image)
+		  td({-align=>'CENTER'},$image)
 		 )
 	      );
 }
@@ -415,9 +415,9 @@ sub detail_panel {
     $cell .= i($LANG->tr('TOO_BIG',commas($MAX_SEGMENT),commas($DEFAULT_SEGMENT)));
   }
   $cell .= "\n";
-  my $table = table({-border=>0,-width=>'100%'},
+  my $table = table({-border=>0,-width=>$page_settings->{width}},
 		    TR({-class=>'databody'},
-		       td({-align=>'center'},$cell)
+		       td({-align=>'CENTER'},$cell)
 		      )
 		   );
   $table .= "\n";
@@ -669,7 +669,7 @@ sub navigation_table {
   my $oligo = $PLUGINS->{'OligoFinder'} ? ', oligonucleotide (15 bp minimum)' : '';
   my $help  =  a({-href=>general_help(),-target=>'help'},b('['.$LANG->tr('Help').']'));
 
-  $table .= table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
+  $table .= table({-border=>0, -width=>$settings->{width},-cellspacing=>0,-class=>'searchtitle'},
 		  $settings->{ins} ?
 		  (
 		   TR(
@@ -694,7 +694,7 @@ sub navigation_table {
 		  ),
 		   TR({-class=>'searchbody'},
 		      td({-align=>'left', -colspan=>3},
-			 $CONFIG->setting('html1')||''
+			 $CONFIG->setting('html1')
 			)
 		     ),
 		  TR({-class=>'searchbody', -align=>'left'},
@@ -776,7 +776,7 @@ sub unit_label {
   my $label;
   $label = $value >= 1e9  ? sprintf("%.4g G%s",$value/1e9,$unit)
          : $value >= 1e6  ? sprintf("%.4g M%s",$value/1e6,$unit)
-         : $value >= 1e3  ? sprintf("%.4g k%s",$value/1e3,$unit)
+         : $value >= 1e3  ? sprintf("%.4g K%s",$value/1e3,$unit)
 	 : $value >= 1    ? $value." $unit"
 	 : $value >= 1e-2 ? sprintf("%.4g c%s",$value*100,$unit)
 	 : $value >= 1e-3 ? sprintf("%.4g m%s",$value*1e3,$unit)
@@ -807,10 +807,13 @@ sub labels {
 
 sub plugins_table {
   my $settings = shift;
-  return table({-border=>0, -width=>'100%',-cellspacing=>0},
+  return table({-border=>0, -width=>$settings->{width},-cellspacing=>0},
 	      TR({-class=>'settingsbody',-align=>'left'},
 		 td({-align=>'left'},
+		    table(td(
 			     source_menu($settings),
+			    )
+			 )
 		   ),
 		 td({-align=>'left'},
 		    plugin_menu($settings,$PLUGINS)),
@@ -836,7 +839,7 @@ sub tracks_table {
 
   autoEscape(0);
   my $sTable 	= '';
-  $sTable.= table({-border=>0,-width=>'100%'},
+  $sTable.= table({-border=>0,-width=>$settings->{width}},
 		  # row
 		  $settings->{stp} ?
 		  (
@@ -868,7 +871,7 @@ sub settings_table {
   my @widths = split /\s+/,$CONFIG->setting('image widths');
   @widths = (640,800,1024) unless @widths;
 
-  return table({-border=>0,-width=>'100%',-class=>'settingsbody'},
+  return table({-border=>0,-width=>$settings->{width},-class=>'settingsbody'},
 	       # row
 	       TR(
 		  td(
@@ -889,7 +892,7 @@ sub settings_table {
 				  -override=>1
 				),
 		    ),
-		  td({-align=>'right'},
+		  td({-align=>'RIGHT'},
 		     submit(-name => $LANG->tr('Set_options'))
 		     .'&nbsp;'.
 		     b(submit(-name => $LANG->tr('Update')))
@@ -911,7 +914,7 @@ sub upload_table {
   my $feature_files = shift;
 
   # start the table.
-  my $cTable = start_table({-border=>0,-width=>'100%'})
+  my $cTable = start_table({-border=>0,-width=>$settings->{width}})
     . TR(
 	 th({-class=>'uploadtitle', -colspan=>3, -align=>'left'},
 	    $LANG->tr('Upload_title').':',
@@ -938,7 +941,7 @@ sub upload_table {
 
   # end the table.
   $cTable .= TR({-class=>'uploadbody'},
-		th({-align=>'right'},$LANG->tr('Upload_File')),
+		th({-align=>'RIGHT'},$LANG->tr('Upload_File')),
 		td({-colspan=>3},
 		   filefield(-size=>40,-name=>'upload_annotations'),
 		   '&nbsp;',
@@ -975,26 +978,26 @@ sub external_table {
   for my $filename (@{$settings->{tracks}}) {
     next unless $filename =~ /^(ftp|http):/ && $feature_files->{$filename};
     warn "external_table(): filename = $filename" if DEBUG;
-    push @rows,th({-align=>'right',-valign=>'TOP'},"URL",++$count).
+    push @rows,th({-align=>'RIGHT'},"URL",++$count).
       td(textfield(-name=>'eurl',-size=>50,-value=>$filename,-override=>1),br,
 	 a({-href=>$filename,-target=>'help'},'['.$LANG->tr('Download').']'),
 	 get_uploaded_file_info($settings->{features}{$filename}{visible} && $feature_files->{$filename})
 	);
   }
-  push @rows,th({-align=>'right'},
+  push @rows,th({-align=>'RIGHT'},
 		$LANG->tr('Remote_url')).
 		  td(textfield(-name=>'eurl',-size=>40,-value=>'',-override=>1),
 		     $presets);
 
-  return table({-border=>0,-width=>'100%'},
+  return table({-border=>0,-width=>$settings->{width}},
 	       TR({-class=>'uploadtitle'},
-		  th({-align=>'left',-colspan=>2},
+		  th({-align=>'LEFT',-colspan=>2},
 		     $LANG->tr('Remote_title').':',
 		     a({-href=>annotation_help().'#remote',-target=>'help'},'['.$LANG->tr('Help').']'))),
 	       TR({-class=>'uploadbody'},\@rows),
 	       TR({-class=>'uploadbody'},
 		  th('&nbsp;'),
-		  th({-align=>'left'},submit($LANG->tr('Update_urls'))))
+		  th({-align=>'LEFT'},submit($LANG->tr('Update_urls'))))
 	      );
 }
 
@@ -1057,8 +1060,8 @@ sub zoomnav {
   }
 
   elsif ($selected_span) {
-    my $center	    = ($span / 2) + $start;
-    my $range	    = ($selected_span)/2;
+    my $center	    = int($span / 2) + $start;
+    my $range	    = int(($selected_span)/2);
     ($start, $stop) = ($center - $range , $center + $range -1);
   }
 
@@ -1160,7 +1163,7 @@ sub truncated_segment {
   my $ref   = $seg->seq_id;
   my $db    = open_database();
   my $whole = $db->segment($ref);
-  return $db->segment(-name=>$ref,-start=>$whole->end-4,-end=>$whole->end) if $trunc_right;
+  return $db->segment(-name=>$ref,-start=>$whole->stop-4,-end=>$whole->stop) if $trunc_right;
   return $db->segment(-name=>$ref,-start=>1,-end=>4)                         if $trunc_left;
 }
 
@@ -1231,7 +1234,7 @@ sub multiple_choices {
   local $^W = 0;  # get rid of non-numeric warnings coming out of by_score_and_position
   for my $ref(sort keys %refs) {
     my @results = @{$refs{$ref}};
-    print TR(th({-class=>'databody',-colspan=>4,-align=>'center'},$LANG->tr('Matches_on_ref',$ref),br,
+    print TR(th({-class=>'databody',-colspan=>4,-align=>'CENTER'},$LANG->tr('Matches_on_ref',$ref),br,
 		$overviews->{$ref}));
     for my $r (sort by_score_and_position @results) {
       my $name        = eval {$r->name}  || $r->primary_tag;
@@ -1252,7 +1255,7 @@ sub multiple_choices {
       my $posref     = "$url?ref=$ref;start=$start;stop=$stop";
       my $position = format_segment($r);
       print TR({-class=>'databody',-valign=>'TOP'},
-	       th({-align=>'right'},ref($name) ? a({-href=>$objref},$name):tt($name)),
+	       th({-align=>'RIGHT'},ref($name) ? a({-href=>$objref},$name):tt($name)),
 	       td($description),
 	       td(a({-href=>$posref},$position . ' ('.($stop-$start+1).' '.$LANG->tr('bp').')')),
 	       td($LANG->tr('SCORE',$score)));
@@ -1310,7 +1313,7 @@ sub overview {
 		      -width=>$width,
 		      -height=>$height,
 		      -border=>0,
-		      -align=>'middle')
+		      -align=>'MIDDLE')
     .hidden(-name=>'seg_length',-value=>$length,-override=>1);
 }
 
@@ -1325,7 +1328,7 @@ sub get_zoomincrement {
 }
 
 sub segment2link {
-  my ($base,$segment,$label) = @_;
+  my ($base,$segment) = @_;
 
   my $source = $CONFIG->source;
   return  a({-href=>"$base?source=$source;name=$segment"},$segment) unless ref $segment;
@@ -1335,8 +1338,7 @@ sub segment2link {
   my $bp = $stop - $start;
   my $s = commas($start);
   my $e = commas($stop);
-  $label ||= "$ref:$s..$e";
-  return a({-href=>"$base?source=$source;ref=$ref;start=$start;stop=$stop"},$label);
+  return a({-href=>"$base?source=$source;ref=$ref;start=$start;stop=$stop"},"$ref:$s..$e");
 }
 
 
@@ -1622,18 +1624,25 @@ sub get_uploaded_file_info {
   warn "get_uploaded_file_info(): feature_file = $feature_file" if DEBUG;
 
   my $modified = localtime($feature_file->mtime);
-  my @refs      = sort $feature_file->refs;
+  my @refs      = $feature_file->refs;
   my $db        = open_database();
 
-  my ($landmarks,@landmarks,@links);
+  my ($landmarks,@landmarks);
   my $url      = url(-relative=>1,-path_info=>1);
 
   if (@refs > TOO_MANY_REFS) {
     $landmarks = b($LANG->tr('Too_many_landmarks',scalar @refs));
   } else {
-    @links = map {segment2link($url,$_)} @refs;
-    $landmarks = tableize(\@links);
+    for my $r (sort @refs) {
+      my $features = $feature_file->features;
+      my @features = grep {$_->seq_id && ($_->seq_id eq $r)} map {@$_} values %{$features};
+      my @merged   = @features > TOO_MANY_FEATURES ? $CONFIG->merge($db,\@features) : @features;
+      my @links    = map {segment2link($url,$_)} @merged;
+      @links       = segment2link($url,$r) unless @links;
+      push @landmarks,@links;
+    }
   }
+  $landmarks = tableize(\@landmarks);
   warn "get_uploaded_file_info(): modified = $modified, landmarks = $landmarks" if DEBUG;
   return i($LANG->tr('File_info',$modified,$landmarks));
 }
@@ -1668,7 +1677,7 @@ sub edit_uploaded_file {
 	      TR({-class=>'searchtitle'},
 		 th($LANG->tr('Edit_title'))),
 	      TR({-class=>'searchbody'},
-		 td({-align=>'center'},
+		 td({-align=>'CENTER'},
 		    pre(
 			textarea(-name    => 'a_data',
 				 -value   => $data,
@@ -1692,7 +1701,7 @@ sub coordinate_mapper {
   my $current_segment = shift;
   my $db              = open_database();
 
-  my ($ref,$start,$stop) = ($current_segment->seq_id,$current_segment->start,$current_segment->end);
+  my ($ref,$start,$stop) = ($current_segment->seq_id,$current_segment->start,$current_segment->stop);
   my %segments;
 
   my $closure = sub {
@@ -1834,16 +1843,16 @@ sub set_track_options {
   for (my $track = 0; $track < @labels; $track++) {
     my $label = $labels[$track];
     push @rows,
-      th({-align=>'left',-class=>'searchtitle'},$LANG->tr("Track"),$track+1).
-      th({-align=>'left',-class=>'searchbody'},$keys{$label}).
-      td({-align=>'center',-class=>'searchbody'},
+      th({-align=>'LEFT',-class=>'searchtitle'},$LANG->tr("Track"),$track+1).
+      th({-align=>'LEFT',-class=>'searchbody'},$keys{$label}).
+      td({-align=>'CENTER',-class=>'searchbody'},
 	     checkbox(-name     => 'track.label',
 		      -value    => $label,
 		      -override => 1,
 		      -checked  => $settings->{features}{$label}{visible},
 		      -label => '')
 	    ).
-      td({-align=>'center',-class=>'searchbody'},
+      td({-align=>'CENTER',-class=>'searchbody'},
 	     popup_menu( -name     => "option.$track",
 			 -values   => [0..3],
 			 -override => 1,
@@ -1854,14 +1863,14 @@ sub set_track_options {
 				       3=> $LANG->tr('Expand_Label'),
 				      })
 	   ).
-	td({-align=>'center',-class=>'searchbody'},
+	td({-align=>'CENTER',-class=>'searchbody'},
 	   popup_menu(-name    => "limit.$track",
 		      -values  => [0,5,10,25,100],
 		      -labels  => {0=>$LANG->tr('No_limit')},
 		      -override => 1,
 		      -default => $settings->{features}{$label}{limit})
 	    ).
-	td({-align=>'center',-class=>'searchbody'},
+	td({-align=>'CENTER',-class=>'searchbody'},
 	   popup_menu(-name    => "track.$track",
 		      -values  => \@sorted_labels,
 		      -labels  => \%keys,
@@ -1871,17 +1880,17 @@ sub set_track_options {
 	    );
   }
   my $controls = TR({-class=>'searchtitle'},
-		    td({-colspan=>3,-align=>'center'},
+		    td({-colspan=>3,-align=>'CENTER'},
 		       reset($LANG->tr('Undo')).'&nbsp;'.
 		       submit($LANG->tr('Revert')).'&nbsp;'.
 		       submit($LANG->tr('Refresh')).'&nbsp;'
 		      ),
-		    td({-align=>'center',-colspan=>3},
+		    td({-align=>'CENTER',-colspan=>3},
 		       submit  (-name=>$LANG->tr('Cancel'),   -value=>$LANG->tr('Cancel_Return')).'&nbsp;'.
 		       b(submit(-name=>$LANG->tr('Redisplay'),-value=>$LANG->tr('Accept_Return')))
 		      ));
 
-  print h1({-align=>'center'},$LANG->tr('Settings',$CONFIG->setting('description')));
+  print h1({-align=>'CENTER'},$LANG->tr('Settings',$CONFIG->setting('description')));
   print start_form(-name=>'settings');
   print table({-width=>'100%',-border=>0},
 	      $controls,
@@ -1916,13 +1925,13 @@ sub help {
 		      start_form(-action=>$ref),
 		      button(-onClick=>'window.close()',-label=>$LANG->tr('Close_Window')),
 		      end_form());
-  print div({-align=>'right'},$do_close);
+  print div({-align=>'RIGHT'},$do_close);
   if ($help_type eq 'citations') {
     build_citation_page($settings);
   } else {
     build_help_page("$conf_dir/${help_type}_help.html");
   }
-  print div({-align=>'right'},$do_close);
+  print div({-align=>'RIGHT'},$do_close);
 }
 
 
@@ -1994,9 +2003,9 @@ sub build_help_page {
   my $url  = url(-relative=>1);
   open(F,$file) or return;
   while (<F>) { # fix up relative addressing of images
-    s/(href|src)=\"([^\"\#\$]+)\"/$1=\"$root\/$2\"/g;
+    s/(src|href)=\"([^\"\#\$]+)\"/$1=\"$root\/$2\"/g;
     s/<!--\s*\#include-classes\s*-->/object_classes_for_help()/e;
-#    s/href=\"\$GBROWSE/href=\"$url/g;
+    s/href=\"\$GBROWSE/href=\"$url/g;
     print;
   }
   close F;

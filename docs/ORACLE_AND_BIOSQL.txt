@@ -59,18 +59,7 @@ BioSQL on MySQL
 To run GBrowse on top of BioSQL, you will need a recent version of
 BioPerl that has the DAS (distributed annotation system) interface
 files.  Initialize and load your BioSQL database according to the
-directions in the biosql-schema and bioperl-db distributions.  Since
-the API is still changing, I highly recommend that you check out the
-bioperl-release-1-1-0 branches of both modules (use 'cvs' for the
-anonymous checkout):
-
-   cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl login
-   cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl \
-	  co -r bioperl-release-1-1-0 bioperl-db
-
-   cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/biosql login
-   cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/biosql \
-	  co -r bioperl-release-1-1-0 biosql-schema
+directions in the biosql-schema and bioperl-db distributions.
 
 Use the following db_adaptor and db_args options as templates for your
 GBrowse configuration file:
@@ -85,6 +74,13 @@ db_args     = driver    mysql
 
 Replace the values in angle brackets with the appropriate values.  A
 sample configuration file can be found in conf/06.biosql.conf
+
+NOTE:
+
+The BioSQL adaptor was recently broken (as of October 8) because
+BioPerl interface file Bio::DB::BioSQL::BioDatabaseAdaptor disappeared
+from the bioperl-db distribution.  You may need to use CVS to recover
+this file.  A more permanent fix is on the way.
 
 Lincoln Stein
 <lstein@cshl.org>

@@ -1,24 +1,4 @@
-#!perl
-use Config;
-use File::Basename qw(&basename &dirname);
-use Cwd;
-
-$origdir = cwd;
-chdir dirname($0);
-$file = basename($0, '.PL','.PLS');
-$file .= $^O eq 'VMS' ? '.com' : '.pl';
-
-open OUT,">$file" or die "Can't create $file: $!";
-
-print "Extracting $file (with variable substitutions)\n";
-
-print OUT <<"!GROK!THIS!";
-$Config{startperl}
-!GROK!THIS!
-
-# In the following, perl variables are not expanded during extraction.
-
-print OUT <<'!NO!SUBS!';
+#!/usr/bin/perl
 
 
 if ($ARGV[0]=~/^-?-h/i) {
@@ -354,8 +334,3 @@ disclaimers of warranty.
 =cut
 
 
-!NO!SUBS!
-close OUT or die "Can't close $file: $!";
-chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
-exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
-chdir $origdir;

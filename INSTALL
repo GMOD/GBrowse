@@ -40,10 +40,6 @@ Optional modules:
    will be able to produce GAME and BSML output.  They can be
    downloaded from CPAN.
 
-  H) LWP
-
-  To load remote 3d party annotations.
-
 2. INSTALLING THE BROWSER
 
 Brief synopsis:
@@ -62,8 +58,7 @@ This will install the software in the default location under
 To further configure GBrowse, see docs/CONFIGURE_HOWTO.txt.  To run
 GBrowse on top of Oracle and BioSQL databases see
 docs/ORACLE_AND_BIOSQL.txt.  To run GBrowse on top of Gadfly, see
-README-berkeley-gadfly. To install on Microsoft Windows platforms, see
-README-windows.txt.
+README-berkeley-gadfly.
 
 Details:
 
@@ -417,11 +412,7 @@ entirely reliable.  To get it to work, you must:
    c) set up permissions for this database so that "nobody@localhost"
 	has SELECT, INSERT, UPDATE and DELETE privileges
 
-   d) if you need to use a proxy to access remote web sites, uncomment the
-	-proxy line in the conf file, and adjust the URL of the proxy as 
-	appropriate.
-
-   e) cross your fingers
+   d) cross your fingers
 
 12. UPDATING THE BROWSER WITHOUT REENTERING YOUR DIRECTORY SETTINGS
 

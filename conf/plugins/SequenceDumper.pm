@@ -1,4 +1,4 @@
-# $Id: SequenceDumper.pm,v 1.13 2003-09-08 15:30:43 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.14 2003-09-17 20:59:52 stajich Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::SequenceDumper
 #
@@ -50,7 +50,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::SequenceDumper;
-# $Id: SequenceDumper.pm,v 1.13 2003-09-08 15:30:43 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.14 2003-09-17 20:59:52 stajich Exp $
 # Sequence Dumper plugin
 
 use strict;
@@ -107,12 +107,13 @@ sub dump {
   my $segment = shift;
   
   my $config  = $self->configuration;  
-  my $browser = $self->browser_config();
+  my $wantsorted = $config->{'wantsorted'} || 0; 
+ my $browser = $self->browser_config();
   my @markup;
   my %markuptype;
 
   # special case for GFF dumping
-  if ($config->{fileformat} eq 'gff') {
+  if ($config->{'fileformat'} eq 'gff') {
     $self->gff_dump($segment);
     return;
   }
@@ -125,8 +126,9 @@ sub dump {
 			  );
   $seq->add_date(strftime("%d-%b-%Y",localtime));
   $seq->primary_seq($segment->primary_seq);
-  my $offset = $segment->start - 1;
-  my $segmentend = $segment->end;
+  $segment->absolute(1);
+  my $offset     = $segment->start - 1;
+  my $segmentend = $segment->length;
   $seq->add_SeqFeature( map {       
       my $nf = new Bio::SeqFeature::Generic(-primary_tag => $_->primary_tag,
 					    -source_tag  => $_->source_tag,
@@ -157,13 +159,19 @@ sub dump {
 	  if( defined $startstr || defined $endstr ) {
 	      $sl = Bio::Location::Fuzzy->new(-start         => $startstr,
 					      -end           => $endstr,
+					      -strand        => $sl->strand,
 					      -location_type => '..');
 	      warn $sl->to_FTstring();
 	  }
       }
       if( @locs > 1 ) { 
+	  # let's insure they are sorted
+          if( $wantsorted ) {  # for VectorNTI
+	      @locs = sort { $a->start <=> $b->start } @locs;
+          }
 	  $nf->location( new Bio::Location::Split(-locations => \@locs,
-						  -seq_id    => $segment->display_id));
+						  -seq_id    =>
+						  $segment->display_id));
       } else { 
 	  $nf->location(shift @locs);
       }
@@ -198,6 +206,7 @@ sub config_defaults {
   my $self = shift;
   return { format           => 'html',
 	   fileformat       => 'fasta',
+           wantsorted       => 0,
        };
 }
 
@@ -231,6 +240,15 @@ sub configure_form {
 					 '-values' => \@ORDER,
 					 '-labels' => \%LABELS,
 					 '-default'=> $current_config->{'fileformat'} ))));
+  push @choices, TR({-class => 'searchtitle'}, 
+			th({-align=>'RIGHT',-width=>'25%'},
+			   "Sorted SubLocations (for VectorNTI input of GenBank)",
+			   td(popup_menu('-name'   => $self->config_name('wantsorted'),
+					 '-values' => [qw(0 1)],
+					 '-labels' => { '0' => 'No',
+							'1' => 'Yes'},
+					 '-default'=> $current_config->{'wantsorted'} ))));
+  
   my $html= table(@choices);
   $html;
 }

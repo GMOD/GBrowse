@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.38 2004-04-09 07:57:31 allenday Exp $
+# $Id: Chado.pm,v 1.39 2004-04-09 16:14:56 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -144,15 +144,15 @@ sub new {
   my $cvterm_id  = {};
   my $cvname = {};
 
-  my($term2name,$name2term) = ({},{});
+  my(%term2name,%name2term) = ({},{});
 
   while (my $hashref = $sth->fetchrow_hashref) {
     $term2name{ $hashref->{cvterm_id} } = $hashref->{name};
     $name2term{ $hashref->{name} }      = $hashref->{cvterm_id};
   }
 
-  $self->term2name($term2name);
-  $self->name2term($name2term);
+  $self->term2name(%term2name);
+  $self->name2term(%name2term);
   $self->dbh($dbh);
 
   return $self;
@@ -677,7 +677,7 @@ sub default_class {return 'Sequence' }
 
 sub _segclass { return SEGCLASS }
 
-sub absolute {return}
+sub absolute {return 1}
 
 #this sub doesn't work and just causes annoying warnings
 #sub DESTROY {

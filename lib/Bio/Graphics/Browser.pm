@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.4 2002-02-18 22:47:34 lstein Exp $
+# $Id: Browser.pm,v 1.5 2002-02-19 04:18:15 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
@@ -162,10 +162,10 @@ sub image_and_map {
       next;
     }
 
-    # if the label is the magic "DNA/GC Content" flag, then add the segment using the
+    # if the label is the magic "dna" or "protein" flag, then add the segment using the
     # "sequence" glyph
     my $g = $conf->glyph($label);
-    if (defined $g && $g eq 'sequence') {
+    if (defined $g && ($g eq 'protein' || $g eq 'dna')) {
       $panel->add_track($segment,
 			$conf->style($label)
 			);

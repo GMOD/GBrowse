@@ -111,7 +111,11 @@ Note that the configuration files are always placed in a subdirectory
 named gbrowse.conf.  You cannot change this.  Similarly, the static
 files are placed in a directory named gbrowse.  The install script
 will detect if there are already configuration files in the selected
-directory and not overwrite them if so.
+directory and not overwrite them if so.  The same applies to the
+cascading stylesheet file (gbrowse.css) located in the gbrowse
+subdirectory.  However, the GIF files in the "buttons" subdirectory
+are not checked before they are overwritten, so be careful to copy the
+new copies somewhere safe if you have modified them.
 
 You can always manually move the files around after install.  See
 docs/configuration.txt for details.
@@ -124,6 +128,7 @@ world writable directory on your system, simply change the ownership
 and permissions to allow the web server account to write into it.  The
 directory is located in /usr/local/apache/htdocs/gbrowse/tmp by
 default.
+
 
 3. POPULATING THE DATABASE
 

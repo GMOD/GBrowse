@@ -115,15 +115,19 @@ htdocs_install ::
 	\@dir=$OPTIONS{HTDOCS}/gbrowse; \\
 	mkdir -p \$\$dir; \\
 	cd $Bin/htdocs; \\
-	for i in *; do \\
+	for i in *.css; do \\
 		if [ -e "\$\$dir/\$\$i" ]; then \\
 			echo "   Found \$\$i in \$\$dir. Skipping..."; \\
 		else \\
-			cp -pr \$\$i \$\$dir; \\
+			cp \$\$i \$\$dir; \\
 		fi \\
 	done; \\
+	cd $Bin/htdocs/images; \\
+	for i in *; do \\
+		cp -pr \$\$i \$\$dir; \\
+	done; \\
 	echo "Making \$\$dir/tmp..."; \\
-	mkdir \$\$dir/tmp; \\
+	mkdir -p \$\$dir/tmp; \\
 	echo "Making \$\$dir/tmp world writable..."; \\
 	chmod ugo+rwx \$\$dir/tmp
 

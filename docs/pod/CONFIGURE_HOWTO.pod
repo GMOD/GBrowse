@@ -523,12 +523,14 @@ The default features option is a space-delimited list of tracks
 to turn on by default.  You will probably need to change this.
 For example:
 
-     default features = Genes ORFs tRNAs
+     default features = Genes ORFs tRNAs Centromeres:overview
 
-To activate an annotation plugin track by default, preface the
-plugin's name with "plugin:":
+The syntax for annotation plugins is slightly different. To activate
+an annotation plugin track by default, preface the plugin's name with
+"plugin:"
 
-     default features = Genes ORFs tRNAs plugin:RestrictionAnnotator
+     default features = Genes ORFs Centromeres:overview 
+                        plugin:RestrictionAnnotator
 
 =item * reference class
 

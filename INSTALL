@@ -32,7 +32,11 @@ Generic Genome Browser Installation
                 Digest::MD5
                 Text::Shellwords
 
-    E) Bioperl version 1.2.2 or higher -- <http://www.bioperl.org>
+    E) Bioperl version 1.2.3 or higher -- <http://www.bioperl.org>
+        While the basic functionality of GBrowse will work with Bioperl
+        1.2.3, Bioperl 1.4 contains fixes for certain features. If you find
+        that a particular feature is not working as expected, upgrade to
+        Bioperl 1.4.
 
     Optional modules:
 
@@ -59,6 +63,7 @@ Generic Genome Browser Installation
             ppm> install DBD::mysql (or DBD::Pg or DBD::Oracle)
             ppm> install Generic-Genome-Browser
 
+    The binary distribution of GBrowse is at <http://www.gmod.org/ggb/ppm>.
     Add this repository to the list of active repositories, and then move
     the repository to the top to ensure that you get the most up to date
     versions of the modules.

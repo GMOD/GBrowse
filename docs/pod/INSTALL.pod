@@ -40,7 +40,11 @@ They can be found on the Comprehensive Perl Archive Network
 	Digest::MD5
 	Text::Shellwords
 
-=item E) Bioperl version 1.2.2 or higher -- L<http://www.bioperl.org>
+=item E) Bioperl version 1.2.3 or higher -- L<http://www.bioperl.org>
+
+While the basic functionality of GBrowse will work with Bioperl 1.2.3, 
+Bioperl 1.4 contains fixes for certain features.  If you find that a 
+particular feature is not working as expected, upgrade to Bioperl 1.4.
 
 =back
 

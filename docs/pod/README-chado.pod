@@ -3,7 +3,7 @@
 Note that I consider chado support experimental still, as I am the only 
 person that I know of who has tested it.
 
-The chado schema (http://www.gmod.org/schema) is a comprehensive database
+The chado schema ( http://www.gmod.org/schema ) is a comprehensive database
 schema developed largely by developers at UC Berkeley and Harvard working
 on FlyBase.  It is intended to be a generic database schema for model
 organism use.  Its use with GBrowse is supported via a limited implementation
@@ -17,7 +17,7 @@ distribution:
   lib/Bio/DB/Das/Chado/Segment.pm
   lib/Bio/DB/Das/Chado/Segment/Feature.pm
 
-These files are installed the in the BioPerl infastruture when 'make install' 
+These files are installed the in the BioPerl infastructure when 'make install' 
 is run.
 
 A sample chado configuration file is included in contrib/conf_files/.  

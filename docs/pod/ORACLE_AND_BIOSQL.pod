@@ -64,6 +64,8 @@ obtain a tarball of bioperl-live using this link:
 
    http://cvs.bioperl.org/cgi-bin/viewcvs/viewcvs.cgi/bioperl-live/bioperl-live.tar.gz?tarball=1&cvsroot=bioperl 
 
+   (note that pod2html usually breaks this URL--you will probably have to cut and paste it.)
+
 It is suggested that during the make process for BioPerl that you 
 run `make test` for the Pg adaptor.
 

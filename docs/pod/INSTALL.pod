@@ -113,7 +113,7 @@ This will install the software in the default location under
 /usr/local/apache. See "Details" to change this.
 
 To further configure GBrowse, see L<CONFIGURE_HOWTO>.  To run
-GBrowse on top of Oracle and BioSQL databases see
+GBrowse on top of Oracle, PostgreSQL and BioSQL databases see
 L<ORACLE_AND_BIOSQL>.  To run GBrowse on top of Gadfly, see
 L<README-berkeley-gadfly>. 
 
@@ -195,7 +195,7 @@ created your file path settings.  When Makefile.PL is run again, it
 will ask you whether you wish to use the 
 
 =head2 4. TRY THE BROWSER OUT
- 	 
+
 The installation procedure will create a small in-memory database of
 yeast chromosome 1 for you to play with.  To try the browser out, use
 your favorite browser to open:

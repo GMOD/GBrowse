@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.5 2002-12-03 03:22:54 scottcain Exp $
+# $Id: Segment.pm,v 1.6 2002-12-05 04:15:28 scottcain Exp $
 
 =head1 NAME
 
@@ -184,8 +184,8 @@ Returns the length of the segment.  Always a positive number.
 
 sub length {
 
-  if (self->length) {
-    return self->length;
+  if ($self->length) {
+    return $self->length;
   } else {
     my $quoted_name = $dbadaptor->quote($self->$name);
     my $sth = $dbadaptor->prepare ("
@@ -282,20 +282,29 @@ sub features {
   } else {
     $types = \@_;
   }
-  my %filter_args;
-  $filter_args{rangetype} = $rangetype || 'overlaps';
-  $filter_args{range}     = [$self->start,$self->end];
-  $filter_args{types}     = $types if $types && ref $types eq 'ARRAY' && @$types;
 
-  my @features          = $self->bioseq->top_SeqFeatures;
-  my @filtered_features = $self->_filter(\@features,\%filter_args,$callback);
+  my $rstart = $self->start;
+  my $rend   = $self->end;
+  my $sql_range;
+  if ($rangetupe eq 'overlaps') {
+    $sql_range = " fmin <= $rend and fmax >= $rstart ";
+  } elsif ($rangetype eq 'contains') {
+    $sql_range = " fmin <= $rstart and fmax >= $rend ";
+  } elsif ($rangetype eq 'contained_in') {
+    $sql_range = " fmin => $rstart and fmax <= $rend ";
+  } else {
+    return;
+  }
+
+
+#put sql here to select features
+
   if ($iterator) {
     return Bio::DB::Das::Chado_pfIterator->new(\@filtered_features);
   } else {
     return @filtered_features;
   }
 }
-
 =head2 seq
 
  Title   : seq
@@ -312,8 +321,19 @@ Returns the sequence for this segment as a simple string.
 sub seq {
   my $self = shift;
 
+  my $quoted_name = $self->quote($self->name);
+  my $sth = $self->prepare("
+     select residues from feature where feature_id in
+       (select f.feature_id
+        from dbxref dbx, feature f, feature_dbxref fd
+        where f.type_id = 6 and
+           f.feature_id = fd.feature_id and
+           fd.dbxref_id = dbx.dbxref_id and
+           dbx.accession = $quoted_name ) ");
+  $sth->execute or return;
 
-   #sql to get the sequence
+  my $hash_ref = $sth->fetchrow_hashref;
+  return $$hash_ref{'residues'};
 }
 
 

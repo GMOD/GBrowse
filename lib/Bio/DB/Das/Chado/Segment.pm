@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.66 2004-06-22 21:10:21 scottcain Exp $
+# $Id: Segment.pm,v 1.67 2004-06-23 13:54:13 scottcain Exp $
 
 =head1 NAME
 
@@ -107,6 +107,7 @@ sub new {
 
     my ( $name, $factory, $base_start, $end, $db_id ) = @_;
 
+    warn "$db_id\n";
     warn "$name, $factory\n"                      if DEBUG;
     warn "base_start = $base_start, end = $end\n" if DEBUG;
 
@@ -275,12 +276,20 @@ sub name {
 =cut
 
 sub _search_by_name {
-  my ($factory,$quoted_name) = @_;
+  my ($factory,$quoted_name,$db_id) = @_;
 
-  my $sth = $factory->dbh->prepare ("
+  my $sth; 
+  if ($db_id) {
+    $sth = $factory->dbh->prepare ("
+             select name,feature_id,seqlen from feature
+             where uniquename = \'$db_id\'  ");
+
+  } else {
+    $sth = $factory->dbh->prepare ("
              select name,feature_id,seqlen from feature
              where lower(name) = $quoted_name  ");
-  
+  }
+ 
   $sth->execute or Bio::Root::Root->throw("unable to validate name/length");
   
   my $rows_returned = $sth->rows;

@@ -87,6 +87,7 @@ my (%NOTES,%LOCUS,%GENBANK,%CONFIRMED,%ORFEOME);
 get_confirmed($db,\%CONFIRMED);
 get_genbank($db,\%GENBANK);
 get_loci($db,\%LOCUS);
+get_transcripts($db,\%LOCUS);
 get_notes($db,\%NOTES);
 get_orfeome($db,\%ORFEOME);
 
@@ -95,12 +96,15 @@ while (<>) {
   next if /^\#/;
   my ($ref,$source,$method,$start,$stop,$score,$strand,$phase,$group) = split /\t/;
   next if $source eq 'assembly_tag';  # don't want 'em, don't need 'em
+  next if $method eq 'HOMOL_GAP';     # don't want that neither
   $ref    =~ s/^CHROMOSOME_//;
   $group  =~ s/CHROMOSOME_//;
 
   $source ='' if $source eq '*UNKNOWN*';
 
-  if ($method eq 'Sequence' && ($source eq 'curated' || $source eq 'RNA') && $group =~ /Sequence "(\w+\.\d+[a-z]?)"/) {
+  if ($method     =~ /Transcript|CDS/
+      && ($source =~ /curated|RNA|miRNA/)
+      && $group   =~ /Transcript|CDS "(\w+\.\d+[a-z]?)"/) {
     my @notes;
     push @notes,map { qq(Note "$_")        } @{$NOTES{$1}}     if $NOTES{$1};
     push @notes,map { qq(Note "$_")        } @{$LOCUS{$1}}     if $LOCUS{$1};
@@ -115,14 +119,18 @@ while (<>) {
     }
   }
 
-  if ($method eq 'Sequence' && $source eq 'Genomic_canonical' && $group =~ /Sequence "(\w+)"/) {
+  if ($method eq 'region' && $source eq 'Genomic_canonical' && $group =~ /Sequence "(\w+)"/) {
     if (my $accession = $GENBANK{$1}) {
       $group .= qq( ; Note "Genbank $accession");
       print join("\t",$ref,'Genbank',$method,$start,$stop,$score,$strand,$phase,"Genbank \"$accession\""),"\n";
     }
   }
 
-  if ($method eq 'reagent' && $source eq 'Orfeome_project' && $group =~ /PCR_product "([^\"]+)"/) {
+  if ($method eq 'intron' && $source =~ /^tRNAscan/) {
+    next;  # messing up tRNA scanning
+  }
+
+  if ($method eq 'PCR_product' && $source eq 'Orfeome' && $group =~ /PCR_product "([^\"]+)"/) {
     my $amp = $ORFEOME{$1};
     $group .= qq( ; Amplified $amp) if defined $amp;
   }
@@ -133,8 +141,8 @@ while (<>) {
   # fix UTR fields
   if ($group =~ /UTR "([35])_UTR:(\S+)"/) {
     $method = 'UTR';
-    $source = "$1_UTR";
-    $group = qq(Sequence "$2");
+    $source = "curated";
+    $group = qq(CDS "$2");
   }
 
   print join("\t",$ref,$source,$method,$start,$stop,$score,$strand,$phase,$group),"\n";
@@ -142,9 +150,20 @@ while (<>) {
 
 sub get_loci {
   my ($db,$hash) = @_;  # hash keys are predicted gene names, values are one or more loci names
-  my @genes = $db->fetch(-query=>'find Locus Genomic_sequence',-filltag=>'Genomic_sequence');
+  my @genes = $db->fetch(-query=>'find Locus CDS',-filltag=>'CDS');
   foreach my $obj (@genes) {
-    my @genomic = $obj->Genomic_sequence or next;
+    my @genomic = $obj->CDS or next;
+    foreach (@genomic) {
+      push @{$hash->{$_}},$obj;
+    }
+  }
+}
+
+sub get_transcripts {
+  my ($db,$hash) = @_;  # hash keys are predicted gene names, values are one or more loci names
+  my @genes = $db->fetch(-query=>'find Locus Transcript',-filltag=>'Transcript');
+  foreach my $obj (@genes) {
+    my @genomic = $obj->Transcript or next;
     foreach (@genomic) {
       push @{$hash->{$_}},$obj;
     }
@@ -153,7 +172,9 @@ sub get_loci {
 
 sub get_notes {
   my ($db,$hash) = @_;  # hash keys are predicted gene names, values are one or more brief identifications
-  my @genes = $db->fetch(-query=>'find Sequence Brief_identification',-filltag=>'Brief_identification');
+  my @genes = $db->fetch(-query=>'find CDS Brief_identification',-filltag=>'Brief_identification');
+  # Should probably also look for notes attached to sequences, yes? As before...
+  push (@genes,$db->fetch(-query=>'find Sequence Brief_identification',-filltag=>'Brief_identification')); 
   foreach my $obj (@genes) {
     my @notes = $obj->Brief_identification or next;
     $hash->{$obj} = \@notes;
@@ -166,6 +187,7 @@ sub get_genbank {
   for my $cosmid (@cosmids) {
     my ($database,undef,$accession) = $cosmid->Database(1)->row;
     next unless $accession;
+    next unless $namespace eq 'NDB_AC';
     $hash->{$cosmid} = $accession;
   }
 }
@@ -196,15 +218,16 @@ process_wormbase.pl - Massage WormBase GFF files into a version suitable for the
 
 =head1 SYNOPSIS
 
-  % process_wormbase.pl ./WS61 > wormbase.gff
+  % process_wormbase.pl ./WS121 > wormbase.gff
 
 =head1 DESCRIPTION
 
 This script massages the Wormbase GFF files located at
 ftp://www.wormbase.org/pub/wormbase/GENE_DUMPS into a version of the
-GFF format suitable for display by the generic genome browser.  It
-mainly adds comments to the annotations and designates certain
-well-spaced genetic loci as framework landmarks.
+GFF format suitable for display by the generic genome browser.  It is
+current for data releases WS121 and beyond. It mainly adds comments to
+the annotations and designates certain well-spaced genetic loci as
+framework landmarks.
 
 This script requires the AcePerl distribution, which is available on
 CPAN (look for the "Ace" module).
@@ -217,7 +240,7 @@ not need to uncompress the files.
 Then give that directory as the argument to this script and capture
 the script's output to a file:
 
-  % process_wormbase.pl ./WS61 > wormbase.gff
+  % process_wormbase.pl ./WS121 > wormbase.gff
 
 It may take a while before you see output from this script, since it
 must first fetch gene and protein database from the remote AceDB

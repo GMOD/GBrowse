@@ -1,4 +1,4 @@
-# $Id: SequenceDumper.pm,v 1.1 2002-06-03 18:33:40 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.2 2002-07-04 21:57:47 lstein Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::SequenceDumper
 #
@@ -50,7 +50,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::SequenceDumper;
-# $Id: SequenceDumper.pm,v 1.1 2002-06-03 18:33:40 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.2 2002-07-04 21:57:47 lstein Exp $
 # Sequence Dumper plugin
 
 use strict;
@@ -92,19 +92,20 @@ sub dump {
   my @markup;
   my %markuptype;
   my $out = new Bio::SeqIO(-format => $config->{'fileformat'});
-  if( $config->{'fileformat'} eq 'bsml' ||
-      $config->{'fileformat'} eq 'game'  ) {
+  if ($config->{'format'} eq 'html') {
+    if ($config->{'fileformat'} =~ /^game|bsml$/i) {
       print header('text/xml');
       $out->write_seq($segment);
-  } elsif( $config->{'format'} eq 'html' ) {
+    }  else {
       print header('text/html');
       print start_html($segment),h1($segment), start_pre;
       $out->write_seq($segment);
       print end_pre();
-      print end_html;      
+      print end_html;
+    }
   } else { 
-      print header('text/plain');
-      $out->write_seq($segment);      
+    print header('text/plain');
+    $out->write_seq($segment);      
   }  
   undef $out;
 }
@@ -123,7 +124,7 @@ sub reconfigure {
   my $objtype = $self->objtype();
   
   foreach my $p ( param() ) {
-      my ($c) = ( $p =~ /$objtype\.(\S+)/);
+      my ($c) = ( $p =~ /$objtype\.(\S+)/) or next;
       $current_config->{$c} = param($p);
   }
 }

@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.66 2002-10-08 20:23:08 lstein Exp $
+# $Id: gbrowse.PLS,v 1.67 2002-10-11 00:40:08 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -776,7 +776,7 @@ sub unit_label {
   my $label;
   $label = $value >= 1e9  ? sprintf("%.4g G%s",$value/1e9,$unit)
          : $value >= 1e6  ? sprintf("%.4g M%s",$value/1e6,$unit)
-         : $value >= 1e3  ? sprintf("%.4g K%s",$value/1e3,$unit)
+         : $value >= 1e3  ? sprintf("%.4g k%s",$value/1e3,$unit)
 	 : $value >= 1    ? $value." $unit"
 	 : $value >= 1e-2 ? sprintf("%.4g c%s",$value*100,$unit)
 	 : $value >= 1e-3 ? sprintf("%.4g m%s",$value*1e3,$unit)

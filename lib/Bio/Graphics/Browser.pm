@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.47 2002-12-07 18:18:25 lstein Exp $
+# $Id: Browser.pm,v 1.48 2002-12-22 19:57:34 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -612,6 +612,7 @@ sub generate_image {
   my $url         = sprintf("%s/%s.%s",$uri,$signature,$extension);
   my $imagefile   = sprintf("%s/%s.%s",$path,$signature,$extension);
   open (F,">$imagefile") || die("Can't open image file $imagefile for writing: $!\n");
+  binmode(F);
   print F $image->can('png') ? $image->png : $image->gif;
   close F;
   return $url;

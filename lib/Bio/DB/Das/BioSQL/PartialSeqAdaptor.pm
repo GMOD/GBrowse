@@ -70,12 +70,12 @@ sub slow_attach_children
     my $values = [$obj->primary_key];
     if ($start && $end)
     {
-        push @$where, (["OR",
+        push @$where, (["AND",
                               ["AND",
-                                     "t2.start > ?", "t2.start < ?"],
+                                     "t2.start < ?"],
                               ["AND",
-                                     "t2.end > ?", "t2.end < ?"]]);
-        push @$values, ($start-1, $end+1, $start-1, $end+1);
+                                     "t2.end > ?"]]);
+        push @$values, ($end+1, $start-1);
     }
     my $query = Bio::DB::Query::BioQuery->new(
         -datacollections => ["Bio::SeqFeatureI t1", "Bio::LocationI t2", "Bio::SeqFeatureI=>Bio::LocationI"],

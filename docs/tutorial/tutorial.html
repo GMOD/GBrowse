@@ -1818,9 +1818,15 @@ alignment of the current region on view.
 
 <p>
 
-To see these plugins at work, find the option "plugins=" at the top of
-volvox.conf, and modify it to activate the Aligner and
-RestrictionAnnotator plugins:
+To see these plugins at work, first make sure that the database files
+are up to date with this position in the tutorial.  If you are in any
+doubt, remove the current contents of the volvox database directory
+and replace them with the files <a
+href="data_files/volvox_all.gff">volvox_all.gff</a> and <a
+href="data_files/volvox_all.fa">volvox_all.fa</a>.  <p>
+
+Now find the option "plugins=" at the top of volvox.conf, and modify
+it to activate the Aligner and RestrictionAnnotator plugins:
 
 <blockquote class="example"><pre>
 plugins = Aligner RestrictionAnnotator
@@ -1853,11 +1859,10 @@ tracks.
 
 The Aligner plugin has some additional configuration that you can
 perform.  We'll look at this now as an example of how to configure
-plugins.
+plugins. Open up volvox.conf and add the following configuration
+section:
 
 <p>
-
-Open up volvox.conf and add the following configuration section:
 
 <blockquote class="example"><pre>
 ########################
@@ -3436,6 +3441,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Thu Jun 24 11:44:10 EDT 2004
+Last modified: Mon Sep  6 16:50:31 EDT 2004
 <!-- hhmts end -->
 </body> </html>

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.160 2004-09-05 04:36:03 allenday Exp $
+# $Id: Browser.pm,v 1.161 2004-09-06 20:51:02 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1078,7 +1078,6 @@ sub image_and_map {
     }
 
     else {
-
       my @settings = ($conf->default_style,$conf->i18n_style($label,$lang,$length));
       push @settings,(-hilite => $hilite_callback) if $hilite_callback;
       my $track = $panel->add_track(-glyph => 'generic',@settings);

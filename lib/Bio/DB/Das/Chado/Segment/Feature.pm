@@ -27,8 +27,11 @@ use vars qw($VERSION @ISA $AUTOLOAD);
 @ISA = qw(Bio::DB::Das::Chado::Segment Bio::SeqFeatureI 
 	  Bio::Root::Root);
 
-$VERSION = '0.1';
+$VERSION = '0.11';
 #' 
+
+use overload
+  '""'   => 'asString';
 
 *segments = \&sub_SeqFeature;
 my %CONSTANT_TAGS = ();
@@ -97,8 +100,21 @@ sub length {
 }
 
 sub type {shift->{type}}
+
 sub seq_id { shift->{sourceseq} }
+
 *info = \&display_name; #for compatability with broken generic glyphs
+
+sub target {
+  my $self = shift;
+  if ($self->type =~ /alignment/i) {
+    return $self->display_name;
+  } else {
+    return;
+  }
+}
+
+sub factory { shift->{factory} }
 
 =head2 group
 
@@ -161,6 +177,7 @@ sub strand {
   return 0 unless $self->{strand};
   return $self->{strand};
 }
+*abs_strand = \&strand;
 
 =head2 display_id
 
@@ -523,6 +540,8 @@ sub source_tag  {
   # returns source (manual curation, computation method, etc
   # not sure where to get this.
 }
+*source = \&source_tag;
+
 sub all_tags { 
   my $self = shift;
   my @tags = keys %CONSTANT_TAGS;
@@ -704,5 +723,15 @@ sub score  {
   $self->{score} = shift if @_;
   $d;
 }
+
+sub attributes {
+  my $self = shift;
+  my $factory = $self->factory;
+  defined(my $id = $self->id) or return;
+  $factory->attributes($id,@_)
+}
+
+*id  = \&group;
+sub class     {return shift->{type} }
 
 1;

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.21 2003-05-28 18:29:32 scottcain Exp $
+# $Id: Chado.pm,v 1.22 2003-05-30 03:35:36 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -95,7 +95,7 @@ use vars qw($VERSION @ISA);
 use constant SEGCLASS      => 'Bio::DB::Das::Chado::Segment';
 use constant DEBUG =>0;
 
-$VERSION = 0.1;
+$VERSION = 0.11;
 @ISA     = qw(Bio::Root::Root Bio::DasI);
 
 =head2 new
@@ -304,13 +304,15 @@ sub types {
 sub get_feature_by_name {
   my $self = shift;
 
-  my ($name, $start, $stop) = $self->_rearrange([qw(NAME START END)],@_);
+  my ($name, $class, $ref, $start, $stop) = $self->_rearrange([qw(NAME CLASS REF START END)],@_);
 
   my @features;
-  if ($name =~ s/[?*]\s*$/%/) {
+  if ($name =~ /^\s*\S+\s*$/) {
     # get feature_id
     # foreach feature_id, get the feature info
     # then get src_feature stuff (chromosome info) and create a parent feature,
+
+    $name =~ s/[?*]\s*$/%/;
 
     my $quoted_name = $self->{dbh}->quote($name);
     my $sth = $self->{dbh}->prepare("
@@ -420,7 +422,7 @@ sub search_notes {
 #  4. search each word anded together like '%'.$string.'%' --if found, keep and continue
 #  5. search somewhere in analysis like '%'.$string.'%'
 
-  $self->{dbh}->trace(1);
+#  $self->{dbh}->trace(1);
 
   my @search_str = split /\s+/, $search_string;
   my $qsearch_term = $self->{dbh}->quote($search_str[0]);
@@ -454,6 +456,72 @@ sub search_notes {
 }
 
 =cut
+
+=head2 attributes
+
+ Title   : attributes
+ Usage   : @attributes = $db->attributes($id,$name)
+ Function: get the "attributres" on a particular feature
+ Returns : an array of string
+ Args    : feature ID [, attribute name]
+ Status  : public
+
+This method is intended as a "work-alike" to Bio::DB::GFF's 
+attributes method, which has the following returns:
+
+If called in a scalar context, it returns the first value of
+the attribute if an attribute name is provided, otherwise it
+returns a hash reference in which the keys are attribute
+names and the values are anonymous arrays containing the values.
+
+=cut
+
+sub attributes {
+  my $self = shift;
+  my ($id,$tag) = @_;
+
+  #get feature_id
+  
+  my $sth = $self->{dbh}->prepare("select feature_id from feature where name = ?");
+  $sth->execute($id) or $self->throw("failed to get feature_id in attributes"); 
+  my $hashref = $sth->fetchrow_hashref;
+  my $feature_id = $$hashref{'feature_id'};
+
+  if (defined $tag) {
+    my $query = "SELECT attribute FROM gfffeatureatts(?) WHERE type = ?";
+    $sth = $self->{dbh}->prepare($query);
+    $sth->execute($feature_id,$tag);
+  } else {
+    my $query = "SELECT type,attribute FROM gfffeatureatts(?)"; 
+    $sth = $self->{dbh}->prepare($query);
+    $sth->execute($feature_id);
+  }
+
+  my $arrayref = $sth->fetchall_arrayref;
+ 
+  my @array = @$arrayref;
+  return () if scalar @array == 0;
+
+  my @result;
+   foreach my $lineref (@array) {
+      my @la = @$lineref;
+      push @result, @la;
+   }
+
+  return @result if wantarray;
+
+  return $result[0] if $tag;
+
+  my %result;
+
+  foreach my $lineref (@array) {
+    my ($key,$value) = splice(@$lineref,0,2);
+    push @{$result{$key}},$value;
+  }
+  return \%result;
+
+}
+
 
 
 =head2 _segclass

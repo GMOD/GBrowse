@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.29 2003-05-28 18:29:32 scottcain Exp $
+# $Id: Segment.pm,v 1.30 2003-05-30 03:35:36 scottcain Exp $
 
 =head1 NAME
 
@@ -94,8 +94,8 @@ use Bio::DB::Das::Chado::Segment::Feature;
 use constant DEBUG => 0;
 
 use vars '@ISA','$VERSION';
-@ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI);
-$VERSION = 0.1;
+@ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI Bio::DB::Das::Chado);
+$VERSION = 0.11;
 
 # construct a virtual segment that works in a lazy way
 sub new {
@@ -506,6 +506,7 @@ sub seq {
   return $$hash_ref{'residues'};
 }
 
+*dna = \&seq;
 
 =head2 factory
 
@@ -563,5 +564,9 @@ sub clone {
   return bless \%h,ref($self);
 }
 
+sub sourceseq { shift->{sourceseq} }
+*abs_ref  =  \&sourceseq;
+*abs_start = \&start;
+*abs_end   = \&end;
 
 1;

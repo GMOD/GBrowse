@@ -6,7 +6,7 @@ use FindBin '$Bin';
 use Cwd;
 
 my %OPTIONS;
-if (open F,"$Bin/../GGB.def") {
+if (open F,"$Bin/../../GGB.def") {
   while (<F>) {
     next if /^\#/;
     chomp;
@@ -44,7 +44,14 @@ package MobyServices::GbrowseServices;
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-$Id: GbrowseServices.PM,v 1.4 2003-12-15 18:26:42 markwilkinson Exp $
+
+
+
+
+
+
+#====================================================================
+#$Id: GbrowseServices.PM,v 1.5 2003-12-22 19:29:54 markwilkinson Exp $
 
 use strict;
 use Text::Shellwords;
@@ -78,6 +85,110 @@ sub _settings {
     }
 }
 
+
+sub GbrowseGetReferenceGFF2 {
+    my ($caller, $data) = @_;
+    _settings();
+    my $reference = $CONFIG->{'MOBY'}->{'Reference'};
+    $reference = shift(@$reference); $reference ||='';
+    unless ($reference){
+        print STDERR "\n\nMobyServices::GbrowseServices - you have not set a reference class in your moby.conf file\n\n";
+        return SOAP::Data->type('base64' => responseHeader($authURI) . responseFooter());
+    }
+
+    my $authURI = $CONFIG->{'MOBY'}->{'authURI'};
+    $authURI = shift(@$authURI); $authURI ||='unknown.org';
+    
+    my @validNS = validateNamespaces($reference);  # ONLY do this if you are intending to be namespace aware!
+    unless (scalar(@validNS)){
+        print STDERR "\n\nMobyServices::GbrowseServices - namespace $reference does not exist in the MOBY Namespace ontology\n\n";
+        return SOAP::Data->type('base64' => responseHeader($authURI) . responseFooter());
+    }
+
+    my $MOBY_RESPONSE = "";
+    foreach my $source($CONFIG->sources){
+        $CONFIG->source($source); # set the current source
+        my $db = $dbh{$source};  # get the database object
+        next unless $db;
+
+        my (@inputs)= genericServiceInputParser($data); # ([SIMPLE, $queryID, $simple],...)
+        next unless (scalar(@inputs));
+
+        foreach (@inputs){
+            my ($articleType, $qID, $input) = @{$_};
+            unless (($articleType == SIMPLE) && ($input)){
+                $MOBY_RESPONSE .= simpleResponse("", "", $qID) ;
+                next;
+            } else {
+                my $namespace = getSimpleArticleNamespaceURI($input);
+                (($MOBY_RESPONSE .= simpleResponse("", "", $qID)) && next) unless validateThisNamespace($namespace, @validNS);
+                my ($identifier) = getSimpleArticleIDs($input);  # note array output!
+                # do your thing here!
+                my $seg = $db->segment(-name => $identifier);
+                (($MOBY_RESPONSE .= simpleResponse("", "", $qID)) && next) unless $seg;
+                my $gff = join "\n", map {$_->gff_string} ($seg->get_SeqFeatures);
+                $MOBY_RESPONSE .= simpleResponse("<moby:GFF2 moby:namespace='$namespace' moby:id='$identifier'>\n$gff\n</moby:GFF2>", "", $qID);
+            }
+        }
+    }
+    print STDERR (responseHeader($authURI) . $MOBY_RESPONSE . responseFooter);
+    return SOAP::Data->type('base64' => (responseHeader($authURI) . $MOBY_RESPONSE . responseFooter));    
+}
+
+sub GbrowseGetReferenceGFF3 {
+    my ($caller, $data) = @_;
+    _settings();
+    my $reference = $CONFIG->{'MOBY'}->{'Reference'};
+    $reference = shift(@$reference); $reference ||='';
+    unless ($reference){
+        print STDERR "\n\nMobyServices::GbrowseServices - you have not set a reference class in your moby.conf file\n\n";
+        return SOAP::Data->type('base64' => responseHeader($authURI) . responseFooter());
+    }
+
+    my $authURI = $CONFIG->{'MOBY'}->{'authURI'};
+    $authURI = shift(@$authURI); $authURI ||='unknown.org';
+    
+    my @validNS = validateNamespaces($reference);  # ONLY do this if you are intending to be namespace aware!
+    unless (scalar(@validNS)){
+        print STDERR "\n\nMobyServices::GbrowseServices - namespace $reference does not exist in the MOBY Namespace ontology\n\n";
+        return SOAP::Data->type('base64' => responseHeader($authURI) . responseFooter());
+    }
+
+    my $MOBY_RESPONSE = "";
+    foreach my $source($CONFIG->sources){
+        $CONFIG->source($source); # set the current source
+        my $db = $dbh{$source};  # get the database object
+        next unless $db;
+
+        my (@inputs)= genericServiceInputParser($data); # ([SIMPLE, $queryID, $simple],...)
+        next unless (scalar(@inputs));
+
+        foreach (@inputs){
+            my ($articleType, $qID, $input) = @{$_};
+            unless (($articleType == SIMPLE) && ($input)){
+                $MOBY_RESPONSE .= simpleResponse("", "", $qID) ;
+                next;
+            } else {
+                my $namespace = getSimpleArticleNamespaceURI($input);
+                (($MOBY_RESPONSE .= simpleResponse("", "", $qID)) && next) unless validateThisNamespace($namespace, @validNS);
+                my ($identifier) = getSimpleArticleIDs($input);  # note array output!
+                # do your thing here!
+                my $seg = $db->segment(-name => $identifier);
+                (($MOBY_RESPONSE .= simpleResponse("", "", $qID)) && next) unless $seg;
+                my $gff = join "\n", map {$_->version(3); $_->gff_string} ($seg->get_SeqFeatures);
+                my $seq = $seg->seq;
+                $seq =~ s/\s//g;
+                $seq =~ s/(\S{70})/$1\n/g;
+                my $fasta = ">$identifier\n$seq\n";
+                $MOBY_RESPONSE .= simpleResponse("<moby:GFF3 moby:namespace='$namespace' moby:id='$identifier'>\n$gff\n###FASTA\n$fasta\n</moby:GFF3>", "", $qID);
+            }
+        }
+    }
+    print STDERR (responseHeader($authURI) . $MOBY_RESPONSE . responseFooter);
+    return SOAP::Data->type('base64' => (responseHeader($authURI) . $MOBY_RESPONSE . responseFooter));    
+}
+
+
 sub GbrowseGetReferenceFasta {
     my ($caller, $data) = @_;
     _settings();
@@ -104,7 +215,7 @@ sub GbrowseGetReferenceFasta {
         next unless $db;
 
         my (@inputs)= genericServiceInputParser($data); # ([SIMPLE, $queryID, $simple],...)
-        return SOAP::Data->type('base64' => responseHeader($authURI) . responseFooter()) unless (scalar(@inputs));
+        next unless (scalar(@inputs));
 
         foreach (@inputs){
             my ($articleType, $qID, $input) = @{$_};
@@ -159,7 +270,7 @@ sub GbrowseGetReferenceSeqObj {
         next unless $db;
         
         my (@inputs)= genericServiceInputParser($data); # ([SIMPLE, $queryID, $simple],...)
-        return SOAP::Data->type('base64' => responseHeader($authURI) . responseFooter()) unless (scalar(@inputs));
+        next unless (scalar(@inputs));
 
         my @validNS = validateNamespaces($reference);  # ONLY do this if you are intending to be namespace aware!
         unless (scalar(@validNS)){
@@ -197,6 +308,8 @@ sub GbrowseGetReferenceSeqObj {
 
 
 1;
+
+#===========================================
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

@@ -45,6 +45,8 @@ package MobyServices::GbrowseServices;
 
 print OUT <<'!NO!SUBS!';
 
+
+#=======================================================================
 use MOBY::Client::Central;
 use strict;
 use Text::Shellwords;
@@ -110,7 +112,7 @@ Please go ahead and configure this file, then run this script again
     die "\nYou have not configured a valid contactEmail parameter in
     your config file!\n" unless ($contactEmail =~ /\S+\@\S+\.\S+/);
 
-    my $cgiURL = $CONFIG->{'MOBY'}->{'contactEmail'};
+    my $cgiURL = $CONFIG->{'MOBY'}->{'CGI_URL'};
     $cgiURL = shift(@$cgiURL);
     die "\nYou have not configured a valid CGI_URL parameter in
     your config file!\n" unless ($cgiURL =~ "^http\://");
@@ -166,6 +168,57 @@ Please go ahead and configure this file, then run this script again
     } else {
         print DONE "$authURI\tGbrowseGetReferenceSeqObj\n";
     }
+
+
+    $description = "Consumes base Object's in the $reference namespace and does a retrieval of GFF2-formatted text from the ".(join ",", @sources)." database(s), returning it as a GFF2 object.";
+    $success = TEST($C->registerService(
+        serviceName  => "GbrowseGetReferenceGFF2",  
+        serviceType  => "Retrieval",
+        authURI      => $authURI,      
+        contactEmail => $contactEmail,      
+        description => $description,
+        category  =>  "moby",
+        URL    => "$cgiURL/moby_server",
+        input =>[
+                ['', ['Object', [$reference]]],  # this will fail if the $reference namespace is not yet registered
+                ],
+        output =>[
+                ['', ['GFF2', [$reference]]],
+               ],
+    ), 1, 1);
+    unless ($success){
+        close DONE;
+        DEREGISTER_SERVICES();
+        die "registered services have been purged from MOBY Central pending successful completion of this routine\n  You will need to start again.\n";;
+    } else {
+        print DONE "$authURI\tGbrowseGetReferenceSeqObj\n";
+    }
+
+
+    $description = "Consumes base Object's in the $reference namespace and does a retrieval of GFF3-formatted text plus FASTA from the ".(join ",", @sources)." database(s), returning it as a GFF3 object.";
+    $success = TEST($C->registerService(
+        serviceName  => "GbrowseGetReferenceGFF3",  
+        serviceType  => "Retrieval",
+        authURI      => $authURI,      
+        contactEmail => $contactEmail,      
+        description => $description,
+        category  =>  "moby",
+        URL    => "$cgiURL/moby_server",
+        input =>[
+                ['', ['Object', [$reference]]],  # this will fail if the $reference namespace is not yet registered
+                ],
+        output =>[
+                ['', ['GFF3', [$reference]]],
+               ],
+    ), 1, 1);
+    unless ($success){
+        close DONE;
+        DEREGISTER_SERVICES();
+        die "registered services have been purged from MOBY Central pending successful completion of this routine\n  You will need to start again.\n";;
+    } else {
+        print DONE "$authURI\tGbrowseGetReferenceSeqObj\n";
+    }
+
 
     return 1;
 }
@@ -224,6 +277,8 @@ sub TEST {  # test of Registration object
 }
 
 
+
+#=======================================================================
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

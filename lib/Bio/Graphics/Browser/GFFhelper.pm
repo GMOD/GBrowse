@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.15 2003-11-17 18:16:00 sheldon_mckay Exp $
+# $Id: GFFhelper.pm,v 1.16 2004-01-21 19:11:42 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -113,6 +113,7 @@ sub read_gff {
     my ($self, $text) = @_;
     $self->throw("No GFF to parse") unless $text;
     my $seqid = $self->refseq;
+
     my (@seq, $gff) = ();
 
     # give up if the GFF is not correctly formatted
@@ -244,7 +245,8 @@ sub fix_gff {
 
 sub gff_header {
     my $self  = shift;
-    my $ver   = 3;
+    my $ver   = shift || 3;
+    my $exists = shift;
     my $date  = localtime;
     my $start = $self->start || 0; 
     my $end   = $self->end;
@@ -253,10 +255,13 @@ sub gff_header {
     $start = 1 if $start > 1;
     $end   = (length $seq) + 1 if $end < length $seq;
 
-    "##gff-version $ver\n" .
-    "##date $date\n" .
-    "##sequence-region $ref $start $end\n" .
-    "##source Bio::Graphics::Browser::GFFhelper.pm";
+    my $header = "##gff-version $ver\n##date $date\n";
+    
+    # don't give GFF.pm this line if the segment exists
+    $header   .= "##sequence-region $ref $start $end\n" unless $exists;
+    
+    $header .= "##source Bio::Graphics::Browser::GFFhelper.pm";
+    $header;
 }
 
 sub origin {
@@ -382,6 +387,7 @@ sub get_range {
 
 
     for ( split "\n", $gff ) {
+        next if /\#/;
 	my @word = split "\t", $_;
         $self->refseq($word[0]) 
 	    unless $word[0] =~ /\.|SEQ/ || $self->refseq;
@@ -392,7 +398,7 @@ sub get_range {
     $self->throw("A Sequence ID is required for this GFF file")
 	unless $self->refseq;
     
-    my @sorted = sort { $a <=> $b } @nums;
+    my @sorted = sort { $a <=> $b } @nums if @nums;
     $self->start($sorted[0]);
     $self->end($sorted[-1]);
 }
@@ -418,16 +424,14 @@ sub save_state {
 
     print OUT "##$outfile \"$date\" $segment\n";
     for ( $segment->features ) {
-	$_->version(2.5);
-	print OUT $_->gff_string, "\n" unless $_->method =~ /Component/i;
+	$_->version(3);
+	print OUT $_->gff_string unless $_->method =~ /Component/i;
     }
     close OUT;
     
     my $rbfiles = $loc . 'rollback_*';
-    
-    # not cross-platform
-    my $list = `echo $rbfiles`;
-    my @list = sort split /\s+/, $list;
+    my $lister = $^O !~ /win32/i ? '\ls' : 'dir /B';
+    my @list = sort `$lister $rbfiles`;
 
     if ( @list > 5 ) {
 	my $file  = shift @list;
@@ -444,16 +448,21 @@ sub rollback {
     if ( $file ) {
 	$self->throw("Rollback file '$file' not found") unless -e $file;
 
-        # not cross-platform
-	my @gff = `cat $file`;
+	open FILE, "<$file";
+	my @gff = <FILE>;
+        close FILE;
         
 	shift @gff;
-        my $gff = join '', @gff;
-        $self->get_range($gff);
-	$self->{header} = 1;
-        return $self->fix_gff($gff);
+	my $gff = join '', @gff;
+	$self->get_range($gff);
+        $gff =  $self->gff_header(3,1) . "\n$gff"; # 1 flag means no sequence region line
+	return $gff;
     }
     else {
+	my $rbfiles = $loc . 'rollback_*';
+	my $typer = $^O !~ /win32/i ? 'cat' : 'type';
+	my @list = sort `$typer $rbfiles`;
+
 	my @file = `cat ${loc}rollback_* | grep '##' |grep rollback`;
 	
 	my $rb = {};

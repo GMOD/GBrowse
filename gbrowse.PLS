@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.72 2002-12-22 20:03:32 lstein Exp $
+# $Id: gbrowse.PLS,v 1.73 2003-01-02 03:46:02 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -79,7 +79,7 @@ use constant ANNOTATION_EDIT_ROWS => 25;
 use constant ANNOTATION_EDIT_COLS => 100;
 use constant URL_FETCH_TIMEOUT    => 5;  # five seconds max!
 use constant URL_FETCH_MAX_SIZE   => 1_000_000;  # don't accept any files larger than 1 Meg
-use constant MAX_KEYWORD_RESULTS  => 1000;  # max number of results from keyword search
+use constant MAX_KEYWORD_RESULTS  => 50;  # max number of results from keyword search
 use constant DEFAULT_RANGES       => q(100 500 1000 5000 10000 25000 100000 200000 400000);
 use constant DEFAULT_FINE_ZOOM    => '10%';
 use constant GBROWSE_HELP         => '/gbrowse';
@@ -376,7 +376,7 @@ sub main_display {
 sub overview_panel {
   my ($segment,$page_settings) = @_;
   my $image = overview($segment,$page_settings).br();
-  return table({-border=>0,-width=>$page_settings->{width}},
+  return table({-border=>0,-width=>'100%'},
 	       TR({-class=>'databody'},
 		  td({-align=>'center'},$image)
 		 )
@@ -415,7 +415,7 @@ sub detail_panel {
     $cell .= i($LANG->tr('TOO_BIG',commas($MAX_SEGMENT),commas($DEFAULT_SEGMENT)));
   }
   $cell .= "\n";
-  my $table = table({-border=>0,-width=>$page_settings->{width}},
+  my $table = table({-border=>0,-width=>'100%'},
 		    TR({-class=>'databody'},
 		       td({-align=>'center'},$cell)
 		      )
@@ -669,7 +669,7 @@ sub navigation_table {
   my $oligo = $PLUGINS->{'OligoFinder'} ? ', oligonucleotide (15 bp minimum)' : '';
   my $help  =  a({-href=>general_help(),-target=>'help'},b('['.$LANG->tr('Help').']'));
 
-  $table .= table({-border=>0, -width=>$settings->{width},-cellspacing=>0,-class=>'searchtitle'},
+  $table .= table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
 		  $settings->{ins} ?
 		  (
 		   TR(
@@ -807,7 +807,7 @@ sub labels {
 
 sub plugins_table {
   my $settings = shift;
-  return table({-border=>0, -width=>$settings->{width},-cellspacing=>0},
+  return table({-border=>0, -width=>'100%',-cellspacing=>0},
 	      TR({-class=>'settingsbody',-align=>'left'},
 		 td({-align=>'left'},
 			     source_menu($settings),
@@ -836,7 +836,7 @@ sub tracks_table {
 
   autoEscape(0);
   my $sTable 	= '';
-  $sTable.= table({-border=>0,-width=>$settings->{width}},
+  $sTable.= table({-border=>0,-width=>'100%'},
 		  # row
 		  $settings->{stp} ?
 		  (
@@ -868,7 +868,7 @@ sub settings_table {
   my @widths = split /\s+/,$CONFIG->setting('image widths');
   @widths = (640,800,1024) unless @widths;
 
-  return table({-border=>0,-width=>$settings->{width},-class=>'settingsbody'},
+  return table({-border=>0,-width=>'100%',-class=>'settingsbody'},
 	       # row
 	       TR(
 		  td(
@@ -911,7 +911,7 @@ sub upload_table {
   my $feature_files = shift;
 
   # start the table.
-  my $cTable = start_table({-border=>0,-width=>$settings->{width}})
+  my $cTable = start_table({-border=>0,-width=>'100%'})
     . TR(
 	 th({-class=>'uploadtitle', -colspan=>3, -align=>'left'},
 	    $LANG->tr('Upload_title').':',
@@ -986,7 +986,7 @@ sub external_table {
 		  td(textfield(-name=>'eurl',-size=>40,-value=>'',-override=>1),
 		     $presets);
 
-  return table({-border=>0,-width=>$settings->{width}},
+  return table({-border=>0,-width=>'100%'},
 	       TR({-class=>'uploadtitle'},
 		  th({-align=>'left',-colspan=>2},
 		     $LANG->tr('Remote_title').':',

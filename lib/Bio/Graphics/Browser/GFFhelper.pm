@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.5 2003-10-13 19:01:45 sheldon_mckay Exp $
+# $Id: GFFhelper.pm,v 1.6 2003-10-16 07:25:49 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -61,31 +61,31 @@ Bio::Graphics::Browser::GFFhelper -- Helps gbrowse feature editors/loaders handl
 This modules helps process GFF prior to loading into the database and provides
 rollback capability for feature editors/loaders
 
-=head2 Group Assignments
+=head2 GFF help
 
-Attribute order may not be consistent in GFF from various sources. To avoid 
-spurious group assignments, this module goes through each feature's attributes 
-and tries to guess the appropriate group to preserve feature containment 
-hierarchies (eg gene->mRNA->CDS), then places the class:name key value pair in 
-the first slot of column 9.  It also adds a header and Component:reference feature
-to the GFF if required.
+This module attepts to deal with the different kinds of GFF parsers and
+GFF flavors (Bio::DB::GFF, Bio::Tools::GFF, Artemis) and changes format 
+to avoid breaking them.  It also helps deal with converting Bio::DB::GFF::Feature
+objects to Bio::SeqFeature::Generic objects, which is required for consistent
+feature and attribute handling across different input/output formats.
 
 =head2 Sequence Extraction
 
 If DNA is appended to the GFF, it will be extracted.  The read_gff method returns a 
-string containing processed GFF and a sequence string
+string containing processed GFF and also a sequence string
 
 =head2 Rollbacks
 
-The state of a segment can be captured and saved in case the user wishes to rollback 
-to an earlier version of the segment.  The last five states are saved in a round robin 
-rotation.  The $ROLLBACK variable must be defined with a string containing the path
-to a directory where the web user ('apache', 'nobody', 'etc') has write access.  if 
-$ROLLBACK is undefined, the rollback functionality is disabled.
+The state of a segment can be captured and saved in case the user wishes to reload 
+to an earlier version of the segment after editing/deleting features.  The last 
+five states are saved in a round-robin rotation.  In plugins that inherit methods from
+this module, the $ROLLBACK variable must be defined with a string containing the 
+path to a directory where the web user ('apache', 'nobody', 'etc') has write access.  
+If $ROLLBACK is undefined, the rollback functionality is disabled.
 
 =head1 FEEDBACK
 
-See the GMOD website for information on bug submission http://www.gmod.org.
+See the GMOD website for information on bug submission http://www.gmod.org
 
 =head1 AUTHOR - Sheldon McKay
 
@@ -98,19 +98,18 @@ package Bio::Graphics::Browser::GFFhelper;
 use strict;
 use Bio::Root::Root;
 use Bio::Tools::GFF;
+use Bio::SeqFeature::Generic;
 use IO::String;
 
-use vars qw/@ISA/;
+use vars qw/ @ISA /;
 
 @ISA = qw/ Bio::Root::Root /;
 
 
 sub read_gff {
-    my $self  = shift;
-    my $seqid = $self->refseq || '';
-    my $text  = shift;
+    my ($self, $text) = @_;
     $self->throw("No GFF to parse") unless $text;
-
+    my $seqid = $self->refseq;
     my (@seq, $gff) = ();
 
     # give up if the GFF is not correctly formatted
@@ -141,10 +140,6 @@ sub read_gff {
         $self->get_range($gff);
     }
 
-    # fix Artemis-style GFF
-    my $refseq = $self->refseq;
-    $gff =~ s/^\./$refseq/gm;
-    
     return $self->fix_gff($gff);
 }
 
@@ -154,63 +149,67 @@ sub parse_gff {
     my $fh = IO::String->new($gff);
     my $in = Bio::Tools::GFF->new(-fh => $fh);
     my @feats = ();
+    
     while ( my $f = $in->next_feature ) {
         push @feats, $f;
     }
-    return @feats;
+    
+    @feats;
 }
 
 # rework the GFF feature attributes
 sub new_gff_string {
     my ($self, $f) = @_;
-
-    # don't touch similiarity features
-    return $f->gff_string if $f->gff_string =~/Target/;
-
-    my ($class, $name) = $self->guess_name($f);
-    my $source = $self->{source} || '';
-
-    $name = qq("$name") if $name =~ /\s+/;
+    my $segment = $self->segments->[0];
     
-    # strip away attributes
-    my $gff = $f->gff_string;
-    my @gff = split "\t", $gff; 
-    @gff = @gff[0..7];
-    $gff = join "\t", @gff;
-
-    # fix column 1
-    my $refseq = $self->refseq;
-    $gff =~ s/^SEQ/$refseq/gm;    
-    
-    # manipulate attributes
-    my @att;
-    for ( $f->all_tags ) {
-        my ($v) = $f->get_tag_values($_);        
+    if ( $f->can('attributes') ) {
+	# don't touch similarity features
+	return $f->gff_string if eval { $f->group->start };
         
-        # skip the class attribute
-        next if $_ eq $class && $v eq $name;
-
-        $v = qq("$v") if $v =~ /\s/ && $v !~ /\"/;
-        push @att, "$_ $v"
+	# convert BioDB::GFF objects to Bio::SeqFeature::Generic
+	$f = $self->gff2Generic($f);
     }
 
-    # add the group assignment
-    push @att, "$class $name" if $class && $name;
-    $gff .= "\t" . (join ' ; ', @att) if @att;
-    
-    # fix the source field
-    if ( $source ) {
-	my $gff_src = (split /\s+/, $gff)[1];
-	$gff =~ s/$gff_src/$source/;
-    }		
-    
-    $gff;
+    my ($class, $name) = $self->guess_name($f);
+    my $source = $self->{source} || $f->source_tag;
+    my $refseq = $self->refseq   || $segment->ref;
+    my @gff    = split /\t/, $f->gff_string;
+
+    $gff[1] = $source if $source;
+    $gff[0] = $refseq if $refseq;
+
+#    pop @gff;
+
+#    if ( $class && $name ) {
+#	$gff[8] = "$class $name";    
+	
+#	for ( $f->all_tags ) {
+#	    next if $_ eq $class;
+#	    my $v = join ' ', $f->get_tag_values($_);
+#	    $v =~ s/;/,/g;
+#	    $gff[8] .= " ; $_ $v";
+#	}
+#    }
+
+    # die, you pesky "'s and ;'s!
+    while ( $gff[8] =~ /\"([^\"]+?;[^\"])\"/g ) {
+	(my $v = $1) =~ s/;/,/;
+	$gff[8] =~ s/$1/$v/;
+    }
+    if ( $self->{parser} eq 'Bio::DB::GFF' ) {
+	$gff[8] =~ s/\"//g;
+    }
+    else {
+	$gff[8] =~ s/(db_xref.+?)\"(.+?)\"/$1$2/;
+	$gff[8] =~ s/\"(\S+)\"/$1/g;
+    }
+    return join "\t", @gff;
 }
 
 sub fix_gff {
     my ($self, $gff) = @_;
 
-    # convert the GFF lines to Bio::SeqFeature objects
+    # convert features to Bio::SeqFeature::Generic objects
     my @feats = $self->parse_gff($gff);
 
     # rebuild the GFF
@@ -218,56 +217,62 @@ sub fix_gff {
     
     # add a header if required
     unshift @gff, $self->gff_header if $self->{header};
-    return join "\n", @gff;
+    return ( join "\n", @gff ) . "\n";
 }
 
 # add a GFF header if required
 sub gff_header {
-    my $self = shift;
-    my $date = localtime; 
-    
-    my $header = 
+    my $self  = shift;
+    my $date  = localtime;
+    my $start = $self->start; 
+    my $end   = $self->end;
+    my $ref   = $self->refseq;
+    my $seq   = $self->seq;
+    $start = 1 if $start > 1;
+    $end   = length $seq if $end < length $seq;
+
     "##gff-version 2\n" .
     "##date $date\n" .
-    "##sequence-region " . 
-    (join ' ', ($self->refseq, $self->start, $self->end));
-    
-    return $self->database->segment($self->refseq) 
-	? $header : $self->component($header); 
+    "##sequence-region $ref $start $end"; 
 }
 
 
 # add a reference component for new sequences
 sub component {
-    my ($self, $header) = @_;
-    my @row = ($self->refseq, 'reference', 'Component', $self->start); 
-    push @row, ($self->end, '.', '.', '.', 'Sequence ' . $self->refseq);
-    $header .= join "\t", @row;
-    $header;
+    my ($self, $gff) = @_;
+    chomp $gff;
+    my $seq   = $self->seq;
+    my $start = 1;
+    my $end   = length $seq;
+
+    my @row = ($self->refseq, 'reference', 'Component', $start); 
+    push @row, ($end, '.', '.', '.', 'Sequence ' . $self->refseq);
+    
+    $gff .= "\n" . join "\t", @row;
+    $gff;
 }
 
 # handle group assignments
+# probably uneccesary --will be deprecated
 sub guess_name {
     my ($self, $f) = @_;
-    my ($class, $name);
 
-    # is the feature part of a gene?
+    my ($class, $name) = ('', '');
+
     for ( qw/ Gene gene Locus_tag locus_tag Standard_name standard_name / ) {
-        if ( $f->has_tag($_) && !$f->has_tag($f->primary_tag) ) {
-            next if $class && $name;
-            $class = 'gene';
-            ($name) = $f->get_tag_values($_);
-        }
+	if ( $f->has_tag($_) && !$f->has_tag($f->primary_tag) ) {
+	    $class = 'gene';
+	    ($name) = $f->get_tag_values($_);
+	    return ( $class, $name );
+	}
     }
-
-    # is it a scaffold or source feature?
+    
     if ( $f->primary_tag =~ /source|origin|component/i ) {
 	$class = 'Sequence';
-	$name  = $self->{refseq};
+	$name  = $self->refseq;
     }
-
-    # is the class name the same as the feature name?
-    if ( !$name && $f->has_tag($f->primary_tag) ) {
+    
+    elsif ( $f->has_tag($f->primary_tag) ) {
         $class = $f->primary_tag;
         ($name) = $f->get_tag_values($f->primary_tag);
     }
@@ -275,10 +280,46 @@ sub guess_name {
     ($class, $name);
 }
 
+sub gff2Generic {
+    my ($self, $f) = @_;
+
+    Bio::SeqFeature::Generic->new( -primary_tag => $f->primary_tag,
+				   -source_tag  => $f->source_tag,
+				   -phase       => $f->phase,
+				   -score       => $f->score,
+				   -start       => $f->start,
+				   -end         => $f->end,
+				   -strand      => $f->strand,
+				   -tag         => $self->process_attributes($f) );
+}
+
+
+sub process_attributes {
+    my ($self, $f) = @_;
+    my $group = $f->group;
+    my ($class, $name);
+    my %att = $f->attributes;
+    my $class = $group->class;
+    my $name = $group->name;
+    
+    $att{$class} = $name;
+
+    for ( keys %att ) { 
+	$att{$_} =~ s/;/,/g;
+	$att{$_} =~ s/\"|\s+$//g;
+    }
+
+    \%att;
+}
+
+
+
+
 
 ####################################
 # Sequence attribute getter/setters 
 ####################################
+*ref = *refseq;
 sub refseq {
     my ($self, $id) = @_;
     $self->{seq}->{id} ||= $id;
@@ -310,13 +351,14 @@ sub get_range {
 
     for ( split "\n", $gff ) {
 	my @word = split "\t", $_;
-        $self->{seq}->{id} ||= $word[0] if $word[0] !~ /\.|SEQ/;
+        $self->refseq($word[0]) 
+	    unless $word[0] =~ /\.|SEQ/ || $self->refseq;
 	push @nums, @word[3,4];
     }
 
     # give up if the sequence has no name
     $self->throw("A Sequence ID is required for this GFF file")
-	unless $self->{seq}->{id};
+	unless $self->refseq;
     
     my @sorted = sort { $a <=> $b } @nums;
     $self->start($sorted[0]);
@@ -324,6 +366,10 @@ sub get_range {
 }
 ####################################
 
+
+###################################
+# Rollback functions
+###################################
 
 sub save_state {
     my ($self, $segment) = @_;
@@ -360,7 +406,7 @@ sub rollback {
     my $conf = $self->configuration;
 
     if ( $file ) {
-	$self->throw("Rollback file not found") unless -e $file;        
+	$self->throw("Rollback file '$file' not found") unless -e $file;        
 	# not cross-platform
 	my @gff = `cat $file`;
         
@@ -383,6 +429,8 @@ sub rollback {
     }
 }
 
+
+# called by configure_form methods if req'd
 sub rollback_form {
     my ($self, $msg) = @_;
     my $rb   = $self->rollback;
@@ -406,6 +454,8 @@ sub rollback_form {
             "back to saved features -- </option>\n" .
 	    (join '', @out) . "</select> $help\n</td></tr></table>\n";
 }
+
+###################################################
 
 1;
 

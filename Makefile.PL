@@ -4,7 +4,7 @@ require 5.005003;
 
 my $VERSION = '1.51';
 
-my @OPTIONS = qw(PREFIX CONF HTDOCS CGIBIN);
+my @OPTIONS = qw(PREFIX CONF HTDOCS CGIBIN LOG);
 my $OPTIONS = join ('|',@OPTIONS);
 my %OPTIONS;
 
@@ -20,6 +20,7 @@ PREFIX, CONF, HTDOCS, or CGIBIN, as in CONF=/usr/local/apache/conf.
 For RedHat Linux, you will want to use:
     perl Makefile.PL CONF=/etc/httpd/conf \
                      HTDOCS=/var/www/html \
+                     LOG=/var/www/log \
                      CGIBIN=/var/www/cgi-bin
 
 For most versions of Apache built from source code, use:
@@ -64,6 +65,9 @@ unless ($OPTIONS{HTDOCS}) {
 unless ($OPTIONS{CGIBIN}) {
   $OPTIONS{CGIBIN} = "$OPTIONS{PREFIX}/cgi-bin";
 }
+unless ($OPTIONS{LOG}) {
+  $OPTIONS{LOGS} = "$OPTIONS{PREFIX}/gbrowse-logs";
+}
 
 open F,">$Bin/GGB.def" or die "Can't open $Bin/GGB.def for writing: $!";
 print F "# This hints file contains configuration information used by the generic browser\n\n";
@@ -80,7 +84,7 @@ print STDERR <<END;
 
 END
 ;
-foreach (qw(PREFIX CONF HTDOCS CGIBIN)) {
+foreach (qw(PREFIX CONF HTDOCS CGIBIN LOG)) {
   printf STDERR "%7s %s\n",$_,$OPTIONS{$_};
 }
 print STDERR <<END;

@@ -42,7 +42,7 @@ $Config{ 'startperl' }
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.74.2.3 2003-06-16 18:14:06 pedlefsen Exp $
+# $Id: gbrowse.PLS,v 1.74.2.4 2003-08-13 18:16:40 ccavnor Exp $
 
 use strict;
 use vars qw( $VERSION $CONF_DIR );
@@ -92,6 +92,9 @@ my %defaults =
 
 );
 
+## CONFIGURATION & INITIALIZATION ################################
+# preliminaries -- read and/or refresh the configuration directory
+
 BEGIN {
   eval "use Apache"; 
   warn <<END if Apache::DBI->can('connect_on_init');
@@ -102,13 +105,14 @@ END
 ;
   ## Redirect STDERR to a log file.
   use CGI::Carp qw( carpout fatalsToBrowser );
-  open( LOG, ">>/usr/local/apache/logs/gbrowse-log" ) or
-    die( "Unable to open /usr/local/apache/logs/gbrowse-log: $!\n");
+  $ENV{LOG_LOCATION} ||= '/usr/local/apache/logs/gbrowse-log';
+  open( LOG, ">>$ENV{LOG_LOCATION}" ) or
+    die( "Unable to open $ENV{LOG_LOCATION}: $!\n");
   carpout( \*LOG );
 };
 
-## CONFIGURATION & INITIALIZATION ################################
-# preliminaries -- read and/or refresh the configuration directory
+
+
 
 ## Build a Browser object and load the config directory's config files.
 # first set $CONF_DIR

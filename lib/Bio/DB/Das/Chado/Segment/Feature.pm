@@ -103,6 +103,8 @@ sub length {
 
 sub type {shift->{type}}
 
+sub feature_id { shift->{feature_id} }
+
 sub seq_id { shift->{sourceseq} }
 
 *info = \&display_name; #for compatability with broken generic glyphs

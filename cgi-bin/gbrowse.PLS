@@ -45,7 +45,7 @@ $startperl -w
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.2 2003-06-08 21:01:42 lstein Exp $
+# $Id: gbrowse.PLS,v 1.3 2003-06-09 01:50:46 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -58,6 +58,7 @@ use Text::Shellwords;
 use File::Basename 'basename';
 use Carp qw(:DEFAULT croak);
 use CGI qw(:standard escape escapeHTML center *table *dl *TR *td);
+use CGI::Carp 'fatalsToBrowser';
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $CONF_DIR
 	    $PLUGINS $PRESETS

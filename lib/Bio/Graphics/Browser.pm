@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.116 2004-02-04 13:07:09 lstein Exp $
+# $Id: Browser.pm,v 1.117 2004-02-13 12:56:52 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -145,6 +145,7 @@ sub read_configuration {
     my $config = Bio::Graphics::BrowserConfig->new(-file => $file,-safe=>1) or next;
     $self->{conf}{$basename}{data}  = $config;
     $self->{conf}{$basename}{mtime} = $mtimes{$file};
+    $self->{conf}{$basename}{path}  = $file;
     $self->{source} ||= $basename;
   }
   $self->{width} = DEFAULT_WIDTH;
@@ -173,7 +174,7 @@ Returns the list of symbolic names for sources.  The symbolic names
 are derived from the configuration file name by:
 
   1) stripping off the .conf extension.
-  2) removing the pattern "\d+\."
+  2) removing the pattern "^\d+\."
 
 This means that the configuration file "03.fly.conf" will have the
 symbolic name "fly".
@@ -182,8 +183,17 @@ symbolic name "fly".
 
 sub sources {
   my $self = shift;
-  my $conf = $self->{conf} or return;
-  return keys %$conf;
+  my $conf        = $self->{conf} or return;
+  my @sources = keys %$conf;
+
+  # alternative: sort by the config file name
+  # return sort {$conf->{$a}{path} cmp $conf->{$b}{path}} @sources;
+
+  # alternative: sort by description
+  return sort {lc $self->description($a) cmp lc $self->description($b)} @sources;
+
+  # alternative: sort by base name
+  # return sort {$a cmp $b} @sources;
 }
 
 =head2 source()
@@ -1362,6 +1372,7 @@ sub name2segments {
 
   # user wanted multiple locations, so user gets them
   return @segments if $name =~ /\*/;
+  return @segments if defined($start) && defined($stop);
 
   # do a split/merge operation to handle very large features
   @segments = map {
@@ -1402,13 +1413,15 @@ sub _feature_get {
 
   # Deal with multiple hits.  Winnow down to just those that
   # were mentioned in the config file.
-  return @segments if @segments == 1;
   my $types = $self->_all_types();
-  return grep {
+  my @filtered = grep {
     my $type   = $_->type;
-    my $method = $_->method;
+    my $method = eval {$_->method} || '';
     $types->{$type} || $types->{$method}
   } @segments;
+
+  # always return something rather than nothing
+  return @filtered ? @filtered : @segments;
 }
 
 sub get_ranges {

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.53 2004-04-09 02:34:35 allenday Exp $
+# $Id: Segment.pm,v 1.54 2004-04-13 17:15:52 scottcain Exp $
 
 =head1 NAME
 
@@ -207,7 +207,7 @@ sub new {
 
         $name = $$hash_ref{'name'};
         my $length = $$hash_ref{'seqlen'};
-        my $type   = $factory->{cvname}{ $$hash_ref{'type_id'} };
+        my $type   = $factory->t2n( $$hash_ref{'type_id'} );
 
         if ( $$hash_ref{'fmin'} ) {
             $interbase_start = $$hash_ref{'fmin'};
@@ -492,22 +492,14 @@ sub features {
 
 # set type variable 
 
-  my %termhash = %{$self->{factory}->{cvterm_id}};
-
-  my @keys;
-  foreach my $type (@$types) {
-    my @tempkeys = grep(/^\Q$type\E\s*$/i , keys %termhash );
-    push @keys, @tempkeys;
-  }
-
   my $sql_types = '';
 
-  if (scalar @keys != 0) {
-    $sql_types .= "(f.type_id = ".$termhash{$keys[0]};
+  if (scalar @$types != 0) {
+    $sql_types .= "(f.type_id = ".$self->factory->n2t($$types[0]);
 
-    if (scalar @keys > 1) {
-      for(my $i=1;$i<(scalar @keys);$i++) {
-        $sql_types .= " OR \n     f.type_id = ".$termhash{$keys[$i]};
+    if (scalar @$types > 1) {
+      for(my $i=1;$i<(scalar @$types);$i++) {
+        $sql_types .= " OR \n     f.type_id = ".$self->factory->n2t($$types[$i]);
       }
     }
     $sql_types .= ") and ";
@@ -550,10 +542,7 @@ sub features {
 #$self->{factory}->{dbh}->trace(0);
 #take these results and create a list of Bio::SeqFeatureI objects
 #
-#check if the type id is 'alignment hsp' and find/create the parent
-#'alignment hit' object; otherwise do normal stuff
 
-  my %termname = %{$self->{factory}->{cvname}};
   while (my $hashref = $sth->fetchrow_hashref) {
 
     my $stop            = $$hashref{fmax};
@@ -565,7 +554,7 @@ sub features {
                        $self,
                        $self->seq_id,
                        $base_start,$stop,
-                       $termname{$$hashref{type_id}},
+                       $self->factory->t2n($$hashref{type_id}),
                        $$hashref{strand},
                        $$hashref{locgroup},
                        $$hashref{uniquename},$$hashref{feature_id});  
@@ -673,6 +662,7 @@ the segment was originally generated.
 
 #'
 
+sub srcfeature_id {shift->{'srcfeature_id'} };
 sub factory {shift->{factory} } 
 sub alphabet {return 'dna'; } 
 sub display_id {shift->{name} };

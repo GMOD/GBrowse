@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.39 2004-04-09 16:14:56 scottcain Exp $
+# $Id: Chado.pm,v 1.40 2004-04-13 17:15:51 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -141,8 +141,8 @@ sub new {
     or warn "unable to prepare select cvterms";
   $sth->execute or $self->throw("unable to select cvterms");
 
-  my $cvterm_id  = {};
-  my $cvname = {};
+#  my $cvterm_id  = {}; replaced with better-named variables
+#  my $cvname = {};
 
   my(%term2name,%name2term) = ({},{});
 
@@ -151,8 +151,8 @@ sub new {
     $name2term{ $hashref->{name} }      = $hashref->{cvterm_id};
   }
 
-  $self->term2name(%term2name);
-  $self->name2term(%name2term);
+  $self->term2name(\%term2name);
+  $self->name2term(\%name2term);
   $self->dbh($dbh);
 
   return $self;
@@ -214,6 +214,21 @@ sub name2term {
 }
 
 
+sub n2t {
+  my $self = shift;
+  my $name = shift;
+
+  my %temphash = %{$self->{'name2term'}};
+  return $temphash{$name};
+}
+
+sub t2n {
+  my $self = shift;
+  my $term = shift;
+
+  my %temphash = %{$self->{'term2name'}};
+  return $temphash{$term};
+}
 
 =head2 segment
 
@@ -494,17 +509,17 @@ sub get_feature_by_name {
       }
         #now build the feature
 
-      my %name = %{$self->{cvname}};
-
       my $interbase_start = $$hashref{'fmin'};
       $base_start = $interbase_start +1;
+
+      #warn "in chado gfbn, type: $t2n{$$hashref{'type_id'}}";
 
       my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                       $self,
                       $parent_segment,
                       $parent_segment->seq_id,
                       $base_start,$$hashref{'fmax'},
-                      $name{$$hashref{'type_id'}},
+                      $self->t2n($$hashref{'type_id'}),
                       $$hashref{'strand'},
                       $$hashref{'name'},
                       $$hashref{'uniquename'},

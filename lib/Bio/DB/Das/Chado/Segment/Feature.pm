@@ -94,10 +94,12 @@ sub new {
   $self->type($type);
   $self->group($group);
   $self->uniquename($uniquename);
-  $self->absolute($factory->absolute);
+#  $self->absolute($factory->absolute);
+  $self->absolute(1);
 
   $self->feature_id($feature_id);
-  $self->srcfeature_id($parent->srcfeature_id) if $parent->can('srcfeature_id');
+  $self->srcfeature_id($parent->srcfeature_id() ) 
+           if (defined $parent && $parent->can('srcfeature_id'));
   $self->score(0);
 
   return $self;
@@ -148,12 +150,14 @@ sub feature_id {
 
 =cut
 
-sub group {
-  my $self = shift;
+*group = &name;
 
-  return $self->{'group'} = shift if @_;
-  return $self->{'group'};
-}
+#sub group {
+#  my $self = shift;
+
+#  return $self->{'group'} = shift if @_;
+#  return $self->{'group'};
+#}
 
 =head2 srcfeature_id()
 
@@ -694,7 +698,7 @@ sub subfeatures {
   my $self = shift;
 
   return $self->{'subfeatures'} = shift if @_;
-  return @{ $self->{'subfeatures'} };
+  return $self->{'subfeatures'};
 }
 
 
@@ -719,27 +723,25 @@ sub subfeatures {
 sub sub_SeqFeature {
   my($self,$types) = @_;
 
-  my %n2t = %{ $self->factory->name2term() };
-  my %t2n = %{ $self->factory->term2name() };
-
-
   #first call, cache subfeatures
   if(!$self->subfeatures ){
+
+    warn "no cached subfeatures";
 
     my $parent_id = $self->feature_id();
 
     my $typewhere = '';
     if ($types) {
       $types = lc $types;
-      $typewhere = " and child.type_id = $n2t{$types} ";
+      $typewhere = " and child.type_id = ".$self->factory->n2t($types) ;
     }
 
     my $handle = $self->factory->dbh();
 
     $self->factory->dbh->trace(2) if DEBUG;
 
-    my $partof = defined $n2t{'partof'} ? $n2t{'partof'} : $n2t{'part_of'};
-    $self->throw("partof and part_of cvterms weren't found.  is DB sane?") unless $partof;
+    my $partof =  $self->factory->n2t('part_of');
+    $self->throw("part_of cvterm wasn't found.  is DB sane?") unless $partof;
 
     warn "partof = $partof" if DEBUG;
 
@@ -768,33 +770,43 @@ sub sub_SeqFeature {
 
     while (my $hashref = $sth->fetchrow_hashref) {
 
-      next unless $$hashref{locgroup} eq $self->group; #look out, subfeatures may reside on other segments
+#this problem can't be solved this way--group really needs to return 'name'
+#in order for the adaptor to work with gbrowse
+    #  next unless $$hashref{locgroup} eq $self->group; #look out, subfeatures may reside on other segments
 
       my $stop  = $$hashref{fmax};
       my $interbase_start = $$hashref{fmin};
       my $base_start = $interbase_start +1;
 
+      warn "creating new subfeat, $$hashref{name}, $base_start, $stop";
+
       my $feat = Bio::DB::Das::Chado::Segment::Feature->new (
-                                                             $self->factory,
-                                                             $self,
-                                                             $self->ref,
-                                                             $base_start,$stop,
-                                                             $t2n{$$hashref{type_id}},
-                                                             $$hashref{strand},
-                                                             $$hashref{name},
-                                                             $$hashref{uniquename},
-                                                             $$hashref{feature_id}
+                    $self->factory,
+                    $self,
+                    $self->ref,
+                    $base_start,$stop,
+                    $self->factory->t2n($$hashref{type_id}),
+                    $$hashref{strand},
+                    $$hashref{name},
+                    $$hashref{uniquename},
+                    $$hashref{feature_id}
                                                             );
       $self->add_subfeature($feat);
     }
   }
 
   if($types){
-    my %ok = map {$n2t{$_} => 1} @$types;
+    my %oktypes;
+    my %ok = map {$oktypes{$_} => 1} @$types;
     return grep { $ok{ $_->type } } $self->subfeatures();
   }
 
-  return $self->subfeatures();
+  my @subfeatures = $self->subfeatures();
+
+    warn "subfeature array:@subfeatures\n";
+
+  return  @subfeatures if @subfeatures;
+  return;
 }
 
 =head2 add_subfeature()
@@ -946,7 +958,7 @@ sub AUTOLOAD {
   return $self->sub_SeqFeature($func_name) if $func_name =~ /^[A-Z]/;
 
   # error message of last resort
-  $self->throw(qq(Can't locate object method "$func_name" via package "$pack"));
+  #$self->throw(qq(Can't locate object method "$func_name" via package "$pack"));
 }
 
 =head2 adjust_bounds()
@@ -1060,6 +1072,7 @@ sub asString {
   my $self = shift;
   my $type = $self->type;
   my $name = $self->uniquename;
+
   return "$type($name)" if $name;
   return $type;
 #  my $type = $self->method;

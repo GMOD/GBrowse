@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.58 2004-08-26 23:16:25 allenday Exp $
+# $Id: Chado.pm,v 1.59 2004-09-01 15:05:03 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -668,22 +668,31 @@ sub dbxref2source {
 
     warn "d2s:dbxref:$dbxref\n" if DEBUG;
 
-    return $self->{'dbxref_source'}->{$dbxref}
-        if $self->{'dbxref_source'}->{$dbxref};
+    defined ($self->{'dbxref_source'}) 
+       && defined ($self->{'dbxref_source'}->{$dbxref})
+       && return $self->{'dbxref_source'}->{$dbxref};
 
     my $sth = $self->dbh->prepare("
         select dbxref_id,accession from dbxref where db_id=".$self->gff_source_db_id
     );
     $sth->execute();
-                                                                                                                                                                       
+
+    if  ($sth->rows < 1) {
+        return ".";
+    }
+
     while (my $hashref = $sth->fetchrow_hashref) {
         warn "d2s:accession:$$hashref{accession}, dbxref_id:$$hashref{dbxref_id}\n" if DEBUG;
                                                                                                                                                                        
         $self->{'source_dbxref'}->{$$hashref{accession}} = $$hashref{dbxref_id};
         $self->{'dbxref_source'}->{$$hashref{dbxref_id}} = $$hashref{accession};
     }
-                                                                                                                                                                       
-    return $self->{'dbxref_source'}->{$dbxref}; 
+                                                                       
+    if ($self->{'dbxref_source'}->{$dbxref}) {
+        return $self->{'dbxref_source'}->{$dbxref};
+    } else {
+        return undef;
+    }
 
 }
 

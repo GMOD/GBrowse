@@ -50,7 +50,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.21 2004-01-01 00:58:13 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.22 2004-01-02 17:16:17 markwilkinson Exp $
 ###########################################################
 
 use MOBY::Client::Central;
@@ -71,10 +71,10 @@ opendir (DIR, "$CONF_DIR/MobyServices") || die "Can't open directory $CONF_DIR/M
 my @files = readdir DIR;
 
 foreach my $file(@files){ 
-    no strict 'refs';
     next if (-d $file);
     next unless ($file =~ /(.*_renderer)\.pm/);  # find all renderers in the config folder
     my $rendererclass = "MobyServices::$1";   # create the module name
+    no strict 'refs';
     eval "require $rendererclass";          # load it
     my $type = &{$rendererclass."::type"};  # invoke the sub type {} routine to get the object type rendered
     $RENDERERS{$type} =   $rendererclass;  # assign this renderer by its object type
@@ -442,10 +442,9 @@ sub execute {
     }
     my ($collections, $objects) = extractResponseArticles($result);
     unless (scalar @$objects || scalar @$collections){
-        print h3("Service Response contained no data: \n<br><pre>".(escapeHTML($result))."</pre>\n");
+        print h3("Service Response contained no data.  Message body contained the following: \n<br><pre>".(escapeHTML($result))."</pre>\n");
         exit 0;
     }
-    #print h3("<pre>".(escapeHTML($result))."</pre>\n");
     Delete_all();  # reset all CGI parameters so we don't conflict
     print start_table;
     my @colls = @{$collections};  # flatten the list of lists
@@ -454,7 +453,7 @@ sub execute {
             my $MOBYClass = $_->getTagName;
             my $namespace = $_->getAttributeNode('namespace');
             $namespace = $namespace?($namespace->getValue):"";
-            my $short_namespace = $namespace =~ /urn:lsid:biomoby.org:namespacetype:(\S+)/?$1:$namespace;
+            my $short_namespace = $namespace =~ /urn:lsid:biomoby.org:namespacetype:(\S+)/?$1:$namespace; # namespaces may or may not be fully qualified LSID's.  if they are, and if they are MOBY ID's, then we can just take the last field, otherwise we should take the whole thing
             my $id = $_->getAttributeNode('id');
             $id = $id ?($id->getValue):"";
             print TR({-valign=>'top', -class=>'databody'},
@@ -478,45 +477,53 @@ sub execute {
     print_bottom("of the gbrowse_moby executable written by the <a href='http://www.biomoby.org'>BioMOBY project</a> (http://www.biomoby.org)");    
 }
 
+# the printIt subroutine will print the content of an object
+# in a very particular way. It does the following:
+
 sub printIt {
     my ($this) = @_;
     my $thisdatatype = $this->getTagName;
     my $imgdir = $CONFIG->setting('tmpimages');
     my $renderer;
     my @rtypes = keys %RENDERERS;
-    my ($renderer_term, $renderer_lsid) = &whichDeepestParentObject($Central, $thisdatatype, \@rtypes);
+    # @rtypes are all of the object types that we have renderers for
+    # $thisdatatype is the datatype that we have
+    # whichDeepestParentObject subroutine (exported from CommonSubs.pm)
+    # will compare the in-hand object with the list of renderable objects and
+    # chose the parent object type of $thisdatatype that is closest
+    # in our list of known object types.
+    my ($renderer_term, $renderer_lsid) = &whichDeepestParentObject($Central, $thisdatatype, \@rtypes); 
 
     unless ($renderer_term){
-        $renderer = $RENDERERS{'text-formatted'}
+        $renderer = $RENDERERS{'text-formatted'} # default to formatted text to at least render the XML in a sensible way
     } else {
-        $renderer = $RENDERERS{$renderer_term}
+        $renderer = $RENDERERS{$renderer_term}  # but preferably pick the best module ($renderer) to render this object
     }
-    die "Can render this information\n" unless $renderer;
+    die "Can't render this information\n" unless $renderer;
     
+    # first parse the object to get all of the CrossReference objects out of it.
     foreach my $subnode($this->getChildNodes){
         next unless ($subnode->getNodeType == ELEMENT_NODE);
-        if ($subnode->getTagName eq "CrossReference"){
+        if (($subnode->getTagName =~ /(moby:)?CrossReference/) || ($subnode->getTagName =~ /(moby:)?Xref/)){  # if it is one of the two types of Xrefs, then pass it to the Xref parser
             &processXrefs($subnode);
             last;
         }
     }
-    foreach my $subnode($this->getChildNodes){
-        next unless  (($subnode->getNodeType == TEXT_NODE) || ($subnode->getNodeType == CDATA_SECTION_NODE));
-        my $article = $this->getAttributeNode('articleName');
-        $article = $article?($article->getValue):"";
-        next unless $subnode->toString =~ /\S/;
-        no strict 'refs';
-        my $content = &{$renderer."::render"}($subnode->toString, $HTML_DIR, $imgdir);
-        
-        use strict;
-        
-        next unless ($content =~ /\S/);  # meaningless whitespace is removed
-        print TR({-valign=>'top', -class=>'databody'},
-            th({-align => 'left', -valign=>'top', -class=>'datatitle'},"$article "),
-            td("$content"));
-    }
 
-    foreach my $subnode($this->getChildNodes){
+    my $done=0;  # this is a boolean that indicates whether the renderer handles ALL sub-objects, or if it handles only the top-level content of an object and requires that the sub-nodes (objects) be parsed and rendered
+    my $article = $this->getAttributeNode('articleName');  # get the article name
+    $article = $article?($article->getValue):"";
+    no strict 'refs';
+    my $content;
+    ($content, $done) = &{$renderer."::render"}($this, $HTML_DIR, $imgdir);  # if the renderer handles everything, then $done is set and we can stop parsing this object
+    use strict;
+    print TR({-valign=>'top', -class=>'databody'}, # print the HTML content that you got back from the renderer
+        th({-align => 'left', -valign=>'top', -class=>'datatitle'},"$article "),
+        td("$content"));
+    
+    return if $done;  # if the renderer said that it handled the entire object, then quit
+
+    foreach my $subnode($this->getChildNodes){  # otherwise, we need to now start unpacking the object and rendering its subcomponents
         next unless ($subnode->getNodeType == ELEMENT_NODE);
         next if ($subnode->getTagName eq "CrossReference"); 
         &printIt($subnode);

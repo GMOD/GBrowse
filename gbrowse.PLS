@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.90 2003-05-13 02:33:09 lstein Exp $
+# $Id: gbrowse.PLS,v 1.91 2003-05-13 02:44:28 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -408,7 +408,7 @@ sub detail_panel {
 				       limit         => \%limit,
 				       do_map        => 1,
 				       do_centering_map => 1,
-				       lang          => $LANG,
+				       lang          => $CONFIG,
 				       keystyle      => $page_settings->{ks},
 				       flip          => $page_settings->{flip},
 				      );
@@ -1939,7 +1939,7 @@ sub help {
 sub make_citation {
   my $config  = shift;
   my $feature = shift;
-  my $citation = $config->citation($feature,$LANG);
+  my $citation = $config->citation($feature,$config);
   # BUG: here's where we should remove "bad" HTML, but we don't!
   # should remove active content and other nasties
   (my $link     = $feature) =~ tr/ /-/;
@@ -2027,7 +2027,7 @@ sub build_link_image_page {
 
 sub url2file {
   my $url = shift;
-  for my $l ((map {"$url.$_"} $LANG->language), $url) {
+  for my $l ((map {"$url.$_"} $CONFIG->language->language), $url) {
     my $file = $ENV{MOD_PERL} ? Apache->request->lookup_uri($l)->filename
                               : "$ENV{DOCUMENT_ROOT}/$l";
     return $file if -e $file;

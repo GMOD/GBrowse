@@ -151,7 +151,7 @@ sub interpolate {
 sub MY::clean {
   package MY;
   my $inherited = shift->SUPER::clean(@_);
-  $inherited .= "\t-\$(PERL) make_clean_add.pl\n";
+  $inherited .= "\t-\$(PERL) install_util/make_clean_add.pl\n";
   $inherited;
 }
 

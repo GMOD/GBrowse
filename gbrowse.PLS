@@ -41,8 +41,9 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.85 2003-05-07 15:40:17 lstein Exp $
+# $Id: gbrowse.PLS,v 1.86 2003-05-08 05:06:38 lstein Exp $
 
+use lib '/home/lstein/projects/Generic-Genome-Browser/lib';
 use strict;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
@@ -57,7 +58,7 @@ use CGI qw(:standard escape escapeHTML center *table *dl *TR *td);
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $CONF_DIR
 	    $PLUGINS $PRESETS $LANG
-	    %OBJECT_TYPES %DB %PLUGIN_NAME2LABEL );
+	    %OBJECT_TYPES %PLUGIN_NAME2LABEL );
 
 # if you change the zoom/nav icons, you must change this as well.
 use constant MAG_ICON_HEIGHT => 20;
@@ -89,6 +90,9 @@ use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceD
 use constant DEBUG => 0;
 use constant DEBUG_PLUGINS => 0;
 use constant DEBUGGING_RECTANGLES => 0;
+
+# allow sharing with a global configuration variable
+*CONFIG = *GBrowse::CONFIG;
 
 # IMPORTANT DATA STRUCTURES
 
@@ -434,7 +438,7 @@ sub detail_panel {
 ###############################################################################################
 
 sub get_source {
-  my $new_source = param('source');
+  my $new_source = param('source') || param('src');
   my $old_source = cookie('gbrowse_source') unless param('source') && request_method() eq 'GET';
 
   my $source   = $new_source || $old_source;
@@ -1071,8 +1075,8 @@ sub zoomnav {
   }
 
   elsif ($selected_span) {
-    my $center	    = ($span / 2) + $start;
-    my $range	    = ($selected_span)/2;
+    my $center	    = int(($span / 2)) + $start;
+    my $range	    = int(($selected_span)/2);
     ($start, $stop) = ($center - $range , $center + $range -1);
   }
 
@@ -1304,7 +1308,7 @@ sub format_segment {
 
 sub open_database {
   my $source  = $CONFIG->source;
-  return $DB{$source} if $DB{$source};
+  return $GBrowse::DB{$source} if $GBrowse::DB{$source};
   my ($adaptor,@argv) = eval{$CONFIG->db_settings};
   unless ($adaptor) {
     warn "gbrowse: trying to reload config, cache must be stale";
@@ -1313,12 +1317,12 @@ sub open_database {
     $CONFIG->source($source);
     ($adaptor,@argv) = $CONFIG->db_settings;
   }
-  $DB{$source} = eval {$adaptor->new(@argv)} or warn $@;
-  fatal_error(pre($@)) unless $DB{$source};
+  $GBrowse::DB{$source} = eval {$adaptor->new(@argv)} or warn $@;
+  fatal_error(pre($@)) unless $GBrowse::DB{$source};
   if (my $refclass = $CONFIG->setting('reference class')) {
-    eval {$DB{$source}->default_class($refclass)};
+    eval {$GBrowse::DB{$source}->default_class($refclass)};
   }
-  return $DB{$source};
+  return $GBrowse::DB{$source};
 }
 
 sub overview {

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.62 2003-05-07 15:40:18 lstein Exp $
+# $Id: Browser.pm,v 1.63 2003-05-08 05:06:39 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -509,7 +509,7 @@ sub make_link {
   my $self = shift;
   my $feature = shift;
   my $panel   = shift;
-  return $self->config->make_link($feature,$panel);
+  return $self->config->make_link($feature,$panel,$self->source);
 }
 
 =head2 render_html()
@@ -1434,7 +1434,6 @@ sub overview_pad {
   return ($max * gdMediumBoldFont->width + 3,MIN_OVERVIEW_PAD);
 }
 
-
 package Bio::Graphics::BrowserConfig;
 use strict;
 use Bio::Graphics::FeatureFile;
@@ -1557,7 +1556,7 @@ sub summary_mode {
 # override make_link to allow for code references
 sub make_link {
   my $self     = shift;
-  my ($feature,$panel)  = @_;
+  my ($feature,$panel,$source)  = @_;
   my $label    = $self->feature2label($feature) or return;
   my $link     = $self->code_setting($label,'link');
   $link        = $self->code_setting(general=>'link') unless defined $link;
@@ -1566,6 +1565,12 @@ sub make_link {
     my $val = eval {$link->($feature,$panel)};
     warn $@ if $@;
     return $val;
+  }
+  elsif (!$link || $link eq 'AUTO') {
+    my $name  = CGI::escape($feature->name);
+    my $class = CGI::escape($feature->class);
+    my $src   = CGI::escape($source);
+    return "gbrowse_details?src=$src;name=$name;class=$class";
   }
   return $self->link_pattern($link,$feature,$panel);
 }
@@ -1587,12 +1592,12 @@ sub make_title {
       $title       = eval {$link->($feature,$panel)};
       warn $@ if $@;
     }
-    $title     ||= $self->link_pattern($link,$feature);
+    $title     = $self->link_pattern($link,$feature) unless defined $title;
   }
-  return $title if $title;
+  return $title if defined $title;
 
   # otherwise, try it ourselves
-  $title ||= eval {
+  $title = eval {
     if ($feature->can('target') && (my $target = $feature->target)) {
       join (' ',
 	    "$key:",

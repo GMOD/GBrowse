@@ -40,6 +40,7 @@ docs/ORACLE_AND_BIOSQL.txt
 docs/README-gff-files
 extras/README
 gbrowse_img.PLS
+gbrowse_details.PLS
 gbrowse.PLS
 History
 htdocs/annotation_help.html

@@ -40,7 +40,7 @@ $Config{startperl} -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.9 2003-03-06 22:29:51 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.10 2003-05-08 05:06:39 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1);
@@ -48,7 +48,7 @@ use Bio::DB::GFF;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
 use Text::Shellwords;
-use vars qw($CONFIG $VERSION $CONF_DIR %DB);
+use vars qw($CONFIG $VERSION $CONF_DIR);
 use constant MAX_SEGMENT     => 1_000_000;
 
 # call with following arguments:
@@ -69,6 +69,9 @@ BEGIN {
       *Bio::Graphics::Feature::seq_id = sub { shift->ref };
     }
 };
+
+# allow sharing with a global configuration variable
+*CONFIG = *GBrowse::CONFIG;
 
 if ($ENV{MOD_PERL}) {
   my $conf  = Apache->request->dir_config('GBrowseConf');
@@ -158,7 +161,7 @@ sub get_segment {
 
 sub open_database {
   my $source  = $CONFIG->source;
-  return $DB{$source} if $DB{$source};
+  return $GBrowse::{$source} if $GBrowse::{$source};
   my ($adaptor,@argv) = eval{$CONFIG->db_settings};
   unless (@argv) {
     warn "gbrowse: trying to reload config, cache must be stale";
@@ -167,8 +170,8 @@ sub open_database {
     $CONFIG->source($source);
     ($adaptor,@argv) = $CONFIG->db_settings;
   }
-  $DB{$source} = eval {$adaptor->new(@argv)} or warn $@;
-  return $DB{$source};
+  $GBrowse::{$source} = eval {$adaptor->new(@argv)} or warn $@;
+  return $GBrowse::{$source};
 }
 
 sub external_features {

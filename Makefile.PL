@@ -114,6 +114,7 @@ WriteMakefile(
 				 'bin/process_ncbi_human.PLS' => 'bin/process_ncbi_human.pl',
 				 'gbrowse.PLS'  => 'gbrowse',
 				 'gbrowse_img.PLS'  => 'gbrowse_img',
+				 'gbrowse_details.PLS'  => 'gbrowse_details',
 				 },
 	      EXE_FILES      => [
 				 'bin/process_wormbase.pl',
@@ -159,6 +160,7 @@ sub MY::processPL {
   my $inherited = shift->SUPER::processPL(@_);
   $inherited =~ s/:: gbrowse\.PLS/:: gbrowse.PLS GGB.def/;
   $inherited =~ s/:: gbrowse_img\.PLS/:: gbrowse_img.PLS GGB.def/;
+  $inherited =~ s/:: gbrowse_details\.PLS/:: gbrowse_details.PLS GGB.def/;
   $inherited;
 }
 

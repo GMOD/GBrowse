@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.154 2004-06-24 19:56:56 lstein Exp $
+# $Id: Browser.pm,v 1.155 2004-07-12 17:43:27 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1252,7 +1252,7 @@ sub overview {
   my $pl = $panel->can('auto_pad') ? $panel->pad_left : 0;
 
   $gd->rectangle($pl+$x1,$y1,
-		 $pl+$x2,$y2,
+		 $pl+$x2,$y2-1,
 		 $red);
 
   eval {$panel->finished};  # should quash memory leaks when used in conjunction with bioperl 1.4

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68 2004-12-03 15:08:15 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.1 2005-03-17 20:50:47 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -426,9 +426,12 @@ sub get_feature_by_name {
 
    warn "name after protecting _ and % in the string:$name\n" if DEBUG;
 
-  my (@features,$sth);
+  my (@features,$sth,$source);
   
   if ($name =~ /^\s*\S+\s*$/) {
+
+    warn "insided simple if\n" if DEBUG;
+
     # get feature_id
     # foreach feature_id, get the feature info
     # then get src_feature stuff (chromosome info) and create a parent feature,
@@ -440,12 +443,20 @@ sub get_feature_by_name {
     my $where_part  = "where fs.synonym_id = s.synonym_id and\n"
                     . "s.synonym_sgml ilike ?";
                     #this ilike should probably be replace with a 'lower' index
+
+    warn "before if class\n"  if DEBUG;
+
     if ($class) {
-        my $type = $self->name2term($class);
-        return unless $type;
+        if ($class =~ /([^:]+)\:([^:]+)/) {
+            $class = $1;
+            $source = $2; #ignoring source for the moment!
+        }
+        warn "class:$class\n" if DEBUG;
+        my $type_id = $self->name2term($class);
+        return unless $type_id;
         $from_part .= ", feature f \n";
         $where_part.= "\nand fs.feature_id = f.feature_id and\n"
-                    . "f.type_id = $type";
+                    . "f.type_id = $type_id";
     }
 
     my $query = $select_part . $from_part . $where_part;
@@ -473,13 +484,16 @@ sub get_feature_by_name {
   }
 
      # prepare sql queries for use in while loops
+  my $dbxref_ids = $self->source_dbxref_list;
   my $isth =  $self->dbh->prepare("
        select f.feature_id, f.name, f.type_id,f.uniquename,af.significance as score,
-              fl.fmin,fl.fmax,fl.strand,fl.phase, fl.srcfeature_id
+              fl.fmin,fl.fmax,fl.strand,fl.phase, fl.srcfeature_id,fd.dbxref_id
        from feature f join featureloc fl using (feature_id)
+            left join feature_dbxref fd using (feature_id)
             left join analysisfeature af using (feature_id)
        where
-         f.feature_id = ? and fl.rank=0
+         f.feature_id = ? and fl.rank=0 and 
+         fd.dbxref_id in ($dbxref_ids)
        order by fl.srcfeature_id
         ");
 
@@ -539,12 +553,15 @@ sub get_feature_by_name {
       my $interbase_start = $$hashref{'fmin'};
       $base_start = $interbase_start +1;
 
+      my $type = $self->term2name($$hashref{'type_id'}) 
+                 . ":" .
+                 $self->dbxref2source();
       my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                       $self,
                       $parent_segment,
                       $parent_segment->seq_id,
                       $base_start,$$hashref{'fmax'},
-                      $self->term2name($$hashref{'type_id'}),
+                      $type,
                       $$hashref{'score'},
                       $$hashref{'strand'},
                       $$hashref{'phase'},
@@ -552,6 +569,9 @@ sub get_feature_by_name {
                       $$hashref{'uniquename'},
                       $$hashref{'feature_id'}
         );
+
+      warn "building feature list to return:$feat, class:".$feat->class if DEBUG;
+
       push @features, $feat;
     }
   }
@@ -710,6 +730,38 @@ sub dbxref2source {
     }
 
 }
+
+=head2 source_dbxref_list
+
+ Title   : source_dbxref_list
+ Usage   : @all_dbxref_ids = $db->source_dbxref_list()
+ Function: Gets a list of all dbxref_ids that are used for GFF sources
+ Returns : a comma delimited string that is a list of dbxref_ids
+ Args    : none
+ Status  : public
+
+This method queries the database for all dbxref_ids that are used
+to store GFF source terms.
+
+=cut
+
+sub source_dbxref_list {
+    my $self = shift;
+    return $self->{'source_dbxref_list'} if defined $self->{'source_dbxref_list'};
+
+    my $query = "select dbxref_id from dbxref where db_id = ".$self->gff_source_db_id;
+    my $sth = $self->dbh->prepare($query);
+    $sth->execute();
+
+    #unpack it here to make it easier
+    my @dbxref_list;
+    while (my $row = $sth->fetchrow_arrayref) {
+        push @dbxref_list, $$row[0];
+    }
+    
+    $self->{'source_dbxref_list'} = join (",",@dbxref_list);
+    return $self->{'source_dbxref_list'};
+} 
 
 =head2 search_notes
 

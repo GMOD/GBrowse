@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84 2004-12-03 19:29:15 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.1 2005-03-17 20:50:57 scottcain Exp $
 
 =head1 NAME
 
@@ -203,7 +203,7 @@ sub new {
             $name = $$hash_ref{'name'};
 
             my $length = $$hash_ref{'seqlen'};
-            my $type   = $factory->term2name( $$hash_ref{'type_id'} );
+            my $class  = $factory->term2name( $$hash_ref{'type_id'} );
 
             if ( $$hash_ref{'fmin'} ) {
                 $interbase_start = $$hash_ref{'fmin'};
@@ -229,7 +229,7 @@ sub new {
                 end           => $stop,
                 length        => $length,
                 srcfeature_id => $srcfeature_id,
-                class         => $type,
+                class         => $class,
                 name          => $name,
               },
               ref $self || $self;
@@ -355,7 +355,7 @@ sub _search_by_name {
 
   Title   : class
   Usage   : $obj->class($newval)
-  Function: Returns the segment class (synonymous with type)
+  Function: Returns the segment class 
   Returns : value of class (a scalar)
   Args    : on set, new value (a scalar or undef, optional)
 
@@ -371,12 +371,15 @@ sub class {
 
 =head2 type
 
-  Title   : type
-  Usage   : $obj->type($newval)
-  Function: alias of class() for backward compatibility
-  Returns : value of type (a scalar)
-  Args    : on set, new value (a scalar or undef, optional)
+ Title   : type
+ Usage   : $segment->type($newval)
+ Function: Get/set segment type
+ Returns : value of the segment type (a scalar)
+ Args    : on set, a new value
 
+It is unclear to me how class and type are different in
+the context of a segment, so for the moment, type will
+be an alias of class.
 
 =cut
 
@@ -612,47 +615,47 @@ sub features {
 
     $sql_types = '';
 
-    my $valid_type = undef;
+    my $valid_class = undef;
     if (scalar @$types != 0) {
 
       warn "first type:$$types[0]\n" if DEBUG;
 
-      my $temp_type = $$types[0];
+      my $temp_class = $$types[0];
       my $temp_source = '';
       if ($$types[0] =~ /(.*):(.*)/) {
-          $temp_type   = $1;
+          $temp_class  = $1;
           $temp_source = $2;
       }
 
-      $valid_type = $factory->name2term($temp_type);
-      $self->throw("feature type: '$temp_type' is not recognized") unless $valid_type;
+      $valid_class = $factory->name2term($temp_class);
+      $self->throw("feature type: '$temp_class' is not recognized") unless $valid_class;
 
       my $temp_dbxref = $factory->source2dbxref($temp_source);
       if ($temp_source && $temp_dbxref) {
-          $sql_types .= "((f.type_id = $valid_type and fd.dbxref_id = $temp_dbxref)"; 
+          $sql_types .= "((f.type_id = $valid_class and fd.dbxref_id = $temp_dbxref)"; 
       } else {
-          $sql_types  .= "((f.type_id = $valid_type)";
+          $sql_types  .= "((f.type_id = $valid_class)";
       }
 
       if (scalar @$types > 1) {
         for(my $i=1;$i<(scalar @$types);$i++) {
       
-          $temp_type   = $$types[$i]; 
+          $temp_class   = $$types[$i]; 
           $temp_source = '';
           if ($$types[$i] =~ /(.*):(.*)/) {
-              $temp_type = $1;
+              $temp_class  = $1;
               $temp_source = $2;
           }
           warn "more types:$$types[$i]\n" if DEBUG; 
 
-          $valid_type = $factory->name2term($temp_type);
-          $self->throw("feature type: '$temp_type' is not recognized") unless $valid_type;
+          $valid_class = $factory->name2term($temp_class);
+          $self->throw("feature type: '$temp_class' is not recognized") unless $valid_class;
 
           $temp_dbxref=$factory->source2dbxref($temp_source);
           if ($temp_source && $temp_dbxref) {
-              $sql_types .= " OR \n     (f.type_id = $valid_type and fd.dbxref_id = $temp_dbxref)";
+              $sql_types .= " OR \n     (f.type_id = $valid_class and fd.dbxref_id = $temp_dbxref)";
           } else {
-              $sql_types .= " OR \n     (f.type_id = $valid_type)";
+              $sql_types .= " OR \n     (f.type_id = $valid_class)";
           }
         }
       }
@@ -741,7 +744,8 @@ sub features {
     }
 
     my $source = $factory->dbxref2source($$hashref{dbxref_id}) || "" ;
-    my $type   = $factory->term2name($$hashref{type_id}). ":$source";
+    my $class  = $factory->term2name($$hashref{type_id}); #. ":$source";
+    my $type   = "$class:$source";
 
     $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                        $factory,

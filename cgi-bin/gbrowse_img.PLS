@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.7 2003-11-21 22:50:42 tharris Exp $
+# $Id: gbrowse_img.PLS,v 1.8 2003-11-24 14:09:55 tharris Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1 path_info escape);
@@ -330,6 +330,7 @@ separated by semicolons (preferred) or by ampersands.
 <tr> <td>add</td>     <td>additional features to superimpose on image</td></tr>
 <tr> <td>stle</td>    <td>stylesheet for additional features</td></tr>
 <tr> <td>abs</td>     <td>display position in absolute coordinates</td></tr>
+<tr> <td>image_class</td>     <td>generate the image in SVG format if passed the optional "SVG" flag</td></tr>
 </table>
 
 <p>The arguments are explained in more detail here</p>

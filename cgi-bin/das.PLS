@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.5 2004-02-27 13:17:36 lstein Exp $
+#$Id: das.PLS,v 1.6 2004-08-30 02:11:58 allenday Exp $
 
 use strict;
 use Bio::DB::GFF 1.02;
@@ -58,7 +58,7 @@ use vars qw($DB $DSN $HEADER %ERRCODES $CONFIG
             $VERSION $DAS_VERSION $CONF_DIR 
             %CACHED_TYPES);
 
-#$Id: das.PLS,v 1.5 2004-02-27 13:17:36 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
+#$Id: das.PLS,v 1.6 2004-08-30 02:11:58 allenday Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';
@@ -340,7 +340,7 @@ sub print_feature {
   my $orientation = $f->strand;
   my $phase       = $f->phase;
   my $group       = $f->group;
-  my $gclass      = $group->class if $group;
+  my $gclass      = (ref($group) && $group->can('class')) ? $group->class : 'anonymous';
   my $id          = $f->id;
   my $fid         = $id;
 

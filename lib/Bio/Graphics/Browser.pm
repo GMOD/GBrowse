@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.104 2003-12-01 18:54:12 scottcain Exp $
+# $Id: Browser.pm,v 1.105 2003-12-02 21:31:53 stajich Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -85,6 +85,12 @@ use constant MIN_OVERVIEW_PAD    => 25;
 use constant PAD_OVERVIEW_BOTTOM => 3;
 
 use constant DEBUG => 0;
+
+if( $ENV{MOD_PERL} && 
+    $ENV{MOD_PERL} =~ /mod_perl\/(\d+\.\d+)/ && 
+    $1 > 1.98 ) { 
+    require Apache::SubRequest;
+}
 
 =head2 new()
 
@@ -713,12 +719,12 @@ sub tmpdir {
   my $tmpuri = $self->setting('tmpimages') or die "no tmpimages option defined, can't generate a picture";
   $tmpuri .= "/$path" if $path;
   my $tmpdir;
-  if ($ENV{MOD_PERL}) {
-    my $r          = Apache->request;
-    my $subr       = $r->lookup_uri($tmpuri);
-    $tmpdir        = $subr->filename;
-    my $path_info  = $subr->path_info;
-    $tmpdir       .= $path_info if $path_info;
+  if ($ENV{MOD_PERL} ) {      
+      my $r          = Apache->request;
+      my $subr       = $r->lookup_uri($tmpuri);
+      $tmpdir        = $subr->filename;
+      my $path_info  = $subr->path_info;
+      $tmpdir       .= $path_info if $path_info;
   } else {
     $tmpdir = "$ENV{DOCUMENT_ROOT}/$tmpuri";
   }
@@ -1063,7 +1069,8 @@ sub overview {
   my $class   = eval {$partial_segment->seq_id->class} || $factory->refclass;
   my ($segment) = $factory->segment(-class=>$class,
 				    -name=>$partial_segment->seq_id);
-  #warn "factory = $factory, segment = $segment";
+  warn "factory = $factory, segment = $segment" if DEBUG;
+
   $segment   ||= $partial_segment;  # paranoia
 
   # Temporary kludge until I can figure out a more

@@ -242,6 +242,9 @@ sub sub_SeqFeature {
 #  print "$handle\n";
 #  $self->{factory}->{dbh}->trace(2);# if DEBUG;
 
+  my $partof = defined $termhash{'partof'} ? $termhash{'partof'}
+                                           : $termhash{'part_of'};
+
   my $sth = $self->{factory}->{dbh}->prepare("
  select child.feature_id, child.name, child.type_id, child.uniquename, parent.name as pname,
            childloc.fmin, childloc.fmax, childloc.strand, childloc.phase
@@ -256,7 +259,7 @@ sub sub_SeqFeature {
       featureloc as childloc on
         (child.feature_id = childloc.feature_id)
     where parent.feature_id = $parent_id
-          and fr0.type_id = $termhash{'partof'}
+          and fr0.type_id = $partof
           $typewhere
     ");
   $sth->execute or $self->throw("subfeature query failed"); 

@@ -220,7 +220,6 @@ sub read_cookie {
     $self->options->version(100);
     $self->options->width($self->config->setting('default width'));
     $self->options->source($self->config->source);
-    $self->options->display_banner(1);
     $self->options->ks('between');
     $self->options->sk('sorted');
     $self->options->id(md5_hex(rand)); # new identity

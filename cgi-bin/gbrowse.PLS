@@ -45,7 +45,7 @@ $startperl -w
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.9 2003-07-17 16:32:09 lstein Exp $
+# $Id: gbrowse.PLS,v 1.10 2003-07-18 16:49:04 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1762,7 +1762,9 @@ sub coordinate_mapper {
 
     my $mapper   = $segments{$refname} || return;
     my $absref   = $mapper->abs_ref;
-    return unless eval { $absref eq $current_segment->abs_ref };
+    my $cur_ref  = eval {$current_segment->abs_ref} 
+       || eval{$current_segment->ref};  # account for api changes in Bio::SeqI
+    return unless $absref eq $cur_ref;
 
     my @abs_segs;
     if ($absref eq $refname) {  # doesn't need remapping

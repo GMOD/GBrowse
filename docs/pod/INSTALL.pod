@@ -79,10 +79,10 @@ for PPM2:
 
         add ppm synopsis here
 
-Binary distributions of GBrowse and the 1.2.2 version of Bioperl live at
-L<http://stein.cshl.org/ppm>.  Add this repository to the list of active
-repositories, and then move the repository to the top to ensure that
-you get the most up to date versions of the modules.
+The binary distribution of GBrowse is at L<http://www.gmod.org/ggb/ppm>. 
+Add this repository to the list of active repositories, and then move the
+repository to the top to ensure that you get the most up to date versions
+of the modules.
 
 If you wish to use a MySQL database, install DBD::mysql if you have
 not already done so.  Then install Generic-Genome-Browser.
@@ -324,7 +324,7 @@ and hit ^Z when the script pauses.)
 You should now be able to browse the yeast genome.  Type the following
 URL into your favorite browser:
 
-  http://name.of.your.host/cgi-bin/gbrowse?source=yeast
+  http://name.of.your.host/cgi-bin/gbrowse/yeast
 
 This will display the genome browser instructions and a search field.
 Type in "III" to start searching chromosome III, or search for
@@ -515,8 +515,8 @@ thumbnail of a region of interest.  The thumbnail can then be linked
 to the full-featured gbrowse.  Here is an example of how this works
 using the WormBase site:
 
-  <a href="http://www.wormbase.org/db/seq/gbrowse?source=wormbase;name=mec-3">
-    <img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=mec-3;width=200">
+  <a href="http://www.wormbase.org/db/seq/gbrowse/wormbase?name=mec-3">
+    <img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;width=200">
   </a>
 
 This will generate a 200-pixel inline image of the region.  Clicking
@@ -590,7 +590,7 @@ If you need to use a proxy to access remote web sites, uncomment the
 
 =item 6
 
-Go to http://localhost/cgi-bin/gbrowse?source=embl.
+Go to http://localhost/cgi-bin/gbrowse/embl.
 Search for a Genbank or embl accession number, such as CEF58D5
 
 =back

@@ -11,7 +11,7 @@ We will be working with simulated Volvox genome annotation data.  The
 database will be named "volvox" and gbrowse will be invoked with this
 URL:
 
-  http://your.host/cgi-bin/gbrowse?source=volvox
+  http://your.host/cgi-bin/gbrowse/volvox
 
 1.  THE BASICS
 

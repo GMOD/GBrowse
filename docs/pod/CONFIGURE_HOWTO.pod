@@ -316,9 +316,10 @@ configuration file must follow the form:
 
 where "sourcename" is a short word that describes the data source.
 You can use this name to select the data source when linking to the
-browser.  Just provide a source=<sourcename> CGI argument, as in:
+browser.  Just construct a URL that uses "sourcename" as a virtual
+directory under cgi-bin/gbrowse:
 
-  http://your.site.org/cgi-bin/gbrowse?source=sourcename
+  http://your.site.org/cgi-bin/gbrowse/sourcename
 
 It is suggested that you use the same name as the database, although
 this isn't a requirement.  (If no "source=" argument is given, gbrowse
@@ -1480,7 +1481,7 @@ feature attribute.  Recognized variables are:
 With a little bit of additional effort, you can set one or more tracks
 up to display a density histogram of the features contained within the
 track.  For example, the human data source in GBrowse demo
-(http://www.wormbase.org/db/seq/gbrowse?source=human) uses density
+(http://www.wormbase.org/db/seq/gbrowse/human) uses density
 histograms in the chromosomal overview.  In addition, when the
 features in the SNP track become too dense to view, this track
 converts into a histogram.  To see this in action, turn on the SNP

@@ -2,19 +2,19 @@
 
 =head1 SYNOPSIS
 
-  <img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=mec-3;width=400">
+  <img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;width=400">
 
 Will generate this picture:
 
 =begin text
 
-[gbrowse_img?source=wormbase;name=mec-3;width=400]
+[gbrowse_img/wormbase?name=mec-3;width=400]
 
 =end text
 
 =begin html
 
-<img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=mec-3;width=400"><br>
+<img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;width=400"><br>
 
 =end html
 
@@ -55,7 +55,7 @@ This CGI script is an interface to the Generic Genome Browser for the
 purpose of retrieving dynamic images of a region of the genome. It can
 be used as the destination of an <img> tag like this:
 
-  <img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=III:1 ..1000">
+  <img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=III:1 ..1000">
 
 The script can also be used to superimpose one or more external
 features onto the display, for example for the purpose of displaying
@@ -139,7 +139,7 @@ This argument lists the feature types to display. The value of
 this argument is a list of mnemonics separated by spaces ("+"
 characters when URL-escaped). For example:
           
-  <img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=mec-3;type=tRNA+NG+WABA+CG+ESTB">
+  <img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;type=tRNA+NG+WABA+CG+ESTB">
 
 Multiple type= arguments will be combined to form a single
 space-delimited list.

@@ -92,8 +92,7 @@ print "Installing documentation...\n";
 #  a pod2html dohicky (it can create the html in the htdocs dir directly)
 #  a wanted subroutine to do File::Find's work
 #  also need to modify gbrowse/index.html
-for my $localfile (qw(./DISCLAIMER
-		      ./docs/README-gff-files ./docs/PLUGINS_HOWTO.txt)) {
+for my $localfile (qw(./DISCLAIMER)) {
   my $installfile = Bio::Root::IO->catfile($ht_target,basename($localfile));
   copy_with_substitutions($localfile,$installfile);
   chmod(0444,$installfile);
@@ -111,8 +110,9 @@ if (! (-e $poddir) ) {
 
 for my $localfile ( qw(./docs/pod/CONFIGURE_HOWTO.pod
                        ./docs/pod/ORACLE_AND_BIOSQL.pod
-                       ./docs/pod/README-windows.pod
                        ./docs/pod/README-berkeley-gadfly.pod
+                       ./docs/pod/PLUGINS_HOWTO.pod
+                       ./docs/pod/README-gff-files.pod
                        ./docs/pod/INSTALL.pod ) ) {
      my ($name,undef,undef) = fileparse($localfile, "\.pod");
      my $installfile = Bio::Root::IO->catfile("$ht_target/docs/pod","$name.html"); 

@@ -98,13 +98,13 @@ my $cgibin  = prompt_for_directory('cgi-bin',GuessDirectories->cgibin || "$prefi
 fixup($_,"$conf/gbrowse.conf") foreach grep {-T} @files;
 
 my @args = (
-             "CGIBIN=$cgibin",
-             "PREFIX=$prefix",
-             "CONF=$conf",
-             "HTDOCS=$htdocs"
+             "'CGIBIN=$cgibin'",
+             "'PREFIX=$prefix'",
+             "'CONF=$conf'",
+             "'HTDOCS=$htdocs'"
            );
 
-for my $inst ("ppm_htdocs_install.pl","ppm_conf_install.pl","ppm_cgi_install.pl") {
+for my $inst ("win_htdocs_install.pl","win_conf_install.pl","win_cgi_install.pl") {
   system("perl","install_util/$inst",@args); #==0
     # or die "The install script, $inst, failed.  I don't know why\n";;
 }

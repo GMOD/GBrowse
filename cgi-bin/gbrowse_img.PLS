@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.12 2004-02-26 18:11:41 tharris Exp $
+# $Id: gbrowse_img.PLS,v 1.13 2004-04-01 17:42:34 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1 path_info escape);
@@ -55,6 +55,7 @@ use Bio::Graphics::Browser::Util;
 use Text::Shellwords;
 use vars qw($CONFIG $VERSION $CONF_DIR);
 use constant MAX_SEGMENT     => 1_000_000;
+use constant TOO_MANY_SEGMENTS => 500;
 
 # call with following arguments:
 # source    database source
@@ -199,6 +200,8 @@ sub external_features {
   return {add => $feature_list};
 }
 
+# IMPORTANT NOTE: this should be unified with gbrowse::coordinate_mapper()
+# but note that the two routines do NOT have identical functionality currently.
 sub coordinate_mapper {
   my $current_segment = shift;
   my $db              = open_database();
@@ -221,8 +224,15 @@ sub coordinate_mapper {
       $segments{$refname} = $segments[0];
     }
     my $mapper   = $segments{$refname};
+    my $absref   = $mapper->abs_ref;
     my $ref      = $current_segment->ref;
-    my @abs_segs = map {[$mapper->rel2abs($_->[0],$_->[1])]} @ranges;
+
+    my @abs_segs;
+    if ($absref eq $refname) {
+      @abs_segs = @ranges;
+    } else {
+      @abs_segs = map {[$mapper->rel2abs($_->[0],$_->[1])]} @ranges;
+    }
     return ($mapper->abs_ref,@abs_segs) if $absolute;
 
     my @rel_segs = map {[$current_segment->abs2rel($_->[0],$_->[1])]} @abs_segs;

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.69 2004-04-01 17:13:19 lstein Exp $
+# $Id: gbrowse.PLS,v 1.70 2004-04-01 20:17:38 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1917,7 +1917,7 @@ sub coordinate_mapper {
     }
 
     unless (exists $segments{$refname}) {
-      my @segments = $CONFIG->name2segments($refname,$db,TOO_MANY_SEGMENTS);
+      my @segments = $CONFIG->name2segments($refname,$db,TOO_MANY_SEGMENTS,1);
       $segments{$refname} = $segments[0];
       return unless @segments;
     }

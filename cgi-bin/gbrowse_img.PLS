@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.13 2004-04-01 17:42:34 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.14 2004-04-01 20:17:38 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1 path_info escape);
@@ -165,7 +165,7 @@ sub message {
 sub get_segment {
   my $name = shift;
   my $db   = open_database($CONFIG);
-  my @segments = $CONFIG->name2segments($name,$db,undef,undef,1);
+  my @segments = $CONFIG->name2segments($name,$db,undef,1);
   return unless @segments;
   $segments[0];
 }

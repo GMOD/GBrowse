@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.135 2004-04-01 17:13:20 lstein Exp $
+# $Id: Browser.pm,v 1.136 2004-04-01 20:17:38 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1380,15 +1380,15 @@ sub name2segments {
   return @segments if defined($start) && defined($stop);
 
   # do a split/merge operation to handle very large features
-  @segments = map {
-    if ($_->length <= $max_segment) {
-      $_;
-    } elsif (my @subtypes = $_->get_SeqFeatures) {
-      $self->merge($db,\@subtypes,($self->get_ranges())[-1]);
-    } else {
-      $_;
-    }
-  } @segments;
+   @segments = map {
+     if ($_->length <= $max_segment) {
+       $_;
+     } elsif (my @subtypes = $_->get_SeqFeatures) {
+       $self->merge($db,\@subtypes,($self->get_ranges())[-1]);
+     } else {
+       $_;
+     }
+   } @segments unless $segments_have_priority;
 
   @segments;
 }

@@ -140,9 +140,15 @@ sub open_database {
 
   $DB{$source} = eval {$adaptor->new(@argv)} or warn $@;
   fatal_error(pre($@)) unless $DB{$source};
+
   if (my $refclass = $config->setting('reference class')) {
     eval {$DB{$source}->default_class($refclass)};
   }
+
+  if ($DB{$source}->can('strict_bounds_checking')) {
+    $DB{$source}->strict_bounds_checking(1);
+  }
+
   return $DB{$source};
 }
 

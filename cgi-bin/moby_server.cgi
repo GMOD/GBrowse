@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+#$Id: moby_server.cgi,v 1.2 2003-12-12 18:57:18 markwilkinson Exp $
 # _________________________________________________________________
 use SOAP::Transport::HTTP;
 use MobyServices::GbrowseServices;

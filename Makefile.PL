@@ -185,7 +185,7 @@ conf_install ::
 htdocs_install ::
 	\$(PERL) install_util/htdocs_install.pl $OPTIONS{HTDOCS}/gbrowse
 
-cgi_install :: gbrowse
+cgi_install ::
 	\$(PERL) install_util/cgi_install.pl $OPTIONS{CGIBIN}
 
 };

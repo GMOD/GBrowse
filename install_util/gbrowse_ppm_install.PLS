@@ -50,7 +50,7 @@ use constant SUPPORT_FILES  => 'gbrowse_ppm_support_files-$OPTIONS{VERSION}.tar.
 !GROK!THIS!
 
 print OUT <<'!NO!SUBS!';
-use constant PPM_REPOSITORY => 'http://stein.cshl.org/ppm';
+use constant PPM_REPOSITORY => 'http://www.gmod.org/ggb/ppm';
 
 my $startperl = $Config{startperl} ne '#!perl' 
   ? $Config{startperl}
@@ -97,9 +97,17 @@ my $cgibin  = prompt_for_directory('cgi-bin',GuessDirectories->cgibin || "$prefi
 
 fixup($_,"$conf/gbrowse.conf") foreach grep {-T} @files;
 
-system("perl","install_util/htdocs_install.pl","$htdocs/gbrowse");
-system("perl","install_util/conf_install.pl","$conf/gbrowse.conf");
-system("perl","install_util/cgi_install.pl",$cgibin);
+my @args = (
+             "CGIBIN=$cgibin",
+             "PREFIX=$prefix",
+             "CONF=$conf",
+             "HTDOCS=$htdocs"
+           );
+
+for my $inst ("htdocs_install.pl","conf_install.pl","cgi_install.pl") {
+  system("perl","install_util/$inst",@args); #==0
+    # or die "The install script, $inst, failed.  I don't know why\n";;
+}
 
 print STDERR "\n** GBrowse installation complete.\n";
 print STDERR "** Now go to http://your.server/gbrowse for further setup instructions.\n";

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.11 2003-10-12 16:58:50 sheldon_mckay Exp $
+# $Id: GFFDumper.pm,v 1.12 2003-10-12 19:39:23 sheldon_mckay Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -176,22 +176,32 @@ sub do_gff {
 
 # handle embedded semicolons and target attributes CV
 sub gff25_string {
-    my $f      = shift;
-    my $gff    = $f->gff_string;
-    return 0 if $gff =~ /component/i;
+    my $f  = shift;
+    return 0 if $f->primary_tag =~ /conponent/i;
 
-    $gff =~ s/^((\S+\s+){8})/$1/;
+    my @cell = split /\t/, $f->gff_string;
+
+    pop @cell;
+    my @att = ();
     my %att = $f->attributes;
-    my @atts = ();
-    
+
     while ( my ($k, $v) = each %att ) {
-	$v =~ s/;/,/g;
-	push @atts, "$k $v";
+	next if uc $k eq uc $v;
+	$v =~ s/;/,/;
+	$v = qq("$v") if $v =~ /\s+/ && $v !~ /\"|Target/;
+	push @att, "$k $v";
     }
-    
-    $gff .= join ' ; ', @atts if @atts;
-    
-    $gff =~ s/Target \"([^\"]+)\" (\d+) (\d+)/Target "$1" ; tstart $2 ; tend $3/;
+
+    if ($f->group) {
+	my $class = $f->group->class;
+	my $name  = $f->group->name;
+	unshift @att, "$class $name" unless uc $class eq uc $name;
+    }
+
+    push @cell, join ' ; ', @att;
+
+    my $gff .= join "\t", @cell;
+    $gff =~ s/Target \"?([^\"]+)\"? (\d+) (\d+)/Target "$1" ; tstart $2 ; tend $3/;
     $gff;
 }
 

@@ -1,4 +1,4 @@
-# $Id: BasicEditor.pm,v 1.5 2003-10-12 16:52:22 sheldon_mckay Exp $
+# $Id: BasicEditor.pm,v 1.6 2003-10-12 19:39:23 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -154,15 +154,19 @@ sub build_form {
 	    push @att, "$k $v"; 
         }
         
-        my $class = $_->group->class;
-        my $name  = $_->group->name;
-        unshift @att, "$class $name" unless uc $class eq uc $name;	
-        push @cell, join ' ; ', @att;
+        if ($_->group) {
+	    my $class = $_->group->class;
+	    my $name  = $_->group->name;
+	    unshift @att, "$class $name" unless uc $class eq uc $name;	
+	}
+
+	push @cell, join ' ; ', @att;
 	
 	$row .= "\n<tr class=searchdata valign=top>\n";
         my $del_name = 'BasicEditor.delete' . $feat_count;
         $row .= td( "<input type=checkbox name=$del_name>" ) . "\n";	
 	
+	$cell[8] ||= ' ';
 	for my $cell ( @cell  ) {
             next if ++$cellcount == 1;
 	    $row .= td( textfield( -name  => 'BasicEditor.feature' . $feat_count,

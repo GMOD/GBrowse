@@ -12,7 +12,9 @@ my $working_dir = cwd;
 
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN
 		 LIB BIN
-		 DO_XS NONROOT);
+		 DO_XS NONROOT
+		 prefix
+		);
 my $OPTIONS = join ('|',@OPTIONS);
 my %OPTIONS;
 
@@ -75,6 +77,16 @@ END
     push @ARGV,$_;
   }
 }
+
+#
+# HARDCODE REDHAT SETTINGS FOR RPM
+#
+@ARGV = ("PREFIX=$OPTIONS{prefix}");
+$OPTIONS{prefix} =~ s!^(.+)/.+?$!$1!;
+$OPTIONS{CONF} = '/etc/httpd/conf';
+$OPTIONS{HTDOCS} = '/var/www/html';
+$OPTIONS{CGIBIN} = '/var/www/cgi-bin';
+
 
 if (-e 'GGB.def' && !%OPTIONS) {
   print STDERR "\nShould I use your previous settings to set the file paths and options (y/n) [y]? ";
@@ -258,8 +270,9 @@ sub MY::install {
 
 sub MY::postamble {
   my $paths;
+  my $prefix = $OPTIONS{prefix} || ''; #this is for RPM
   for my $key (keys %OPTIONS) {
-    $paths .= qq('$key=$OPTIONS{$key}' ) if defined $OPTIONS{$key};
+    $paths .= qq('$key=$prefix$OPTIONS{$key}' ) if defined $OPTIONS{$key};
   }
 qq{
 conf_install ::

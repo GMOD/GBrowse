@@ -7,7 +7,7 @@ use FindBin '$Bin';
 use Cwd;
 require 5.005003;
 
-my $VERSION = '1.58';
+my $VERSION = '1.59';
 my $working_dir = cwd;
 
 my @OPTIONS = qw(PREFIX CONF HTDOCS CGIBIN DO_XS);

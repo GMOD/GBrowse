@@ -51,6 +51,13 @@ $ORIGIN ||= 1;
 
 print "##gff-version 3\n";
 
+# automatically uncompress varous compression formats
+foreach (@ARGV) {
+  $_ = "gunzip     -c $_ |" if /\.gz$/;
+  $_ = "uncompress -c $_ |" if /\.Z$/;
+  $_ = "bunzip2    -c $_ |" if /\.bz2$/;
+}
+
 while (<>) {
   chomp;
   next if /^\#/;;

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.8 2003-11-24 14:09:55 tharris Exp $
+# $Id: gbrowse_img.PLS,v 1.9 2003-12-01 22:28:18 tharris Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1 path_info escape);
@@ -129,7 +129,7 @@ else {
        );
 }
 
-if ($image_class eq 'GD::SVG') {
+if ($image_class =~ /GD\:\:SVG/) {
   print header('image/svg-xml');
   print $img->svg;
 } elsif ($img->can('png')) {

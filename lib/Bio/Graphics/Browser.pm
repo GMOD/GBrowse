@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.51.2.15 2003-07-07 20:41:45 pedlefsen Exp $
+# $Id: Browser.pm,v 1.51.2.16 2003-07-07 20:45:40 pedlefsen Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -4993,15 +4993,25 @@ sub _add_overview_tracks {
     undef( $feature_count );
     $bump = $conf->get_and_eval( $section, 'bump' );
     unless( defined $bump ) {
-      $feature_count = $collection->feature_count();
-      $bump = ( $feature_count <= $max_bump );
+
+      ## TODO: Put back.  This is a temporary hack; never look at the
+      ## bump limits for now..
+
+      #$feature_count = $collection->feature_count();
+      #$bump = ( $feature_count <= $max_bump );
+      $bump = 1;
     }
     $label = $conf->get_and_eval( $section, 'label' );
     unless( defined $label ) {
-      unless( defined $feature_count ) {
-        $feature_count = $collection->feature_count();
-      }
-      $label = ( $feature_count <= $max_label );
+
+      ## TODO: Put back.  This is a temporary hack; never look at the
+      ## label limits for now..
+
+      #unless( defined $feature_count ) {
+      #  $feature_count = $collection->feature_count();
+      #}
+      #$label = ( $feature_count <= $max_label );
+      $label = 1;
     }
     $track->configure( '-bump' => $bump, '-label' => $label );
   } # End foreach $section in @$tracks, build the corresponding overview track.

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::RestrictionAnnotator;
-# $Id: RestrictionAnnotator.pm,v 1.10 2003-06-23 01:00:28 lstein Exp $
+# $Id: RestrictionAnnotator.pm,v 1.11 2003-07-21 20:32:44 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -73,7 +73,6 @@ sub annotate {
   configure_enzymes() unless %SITES;
   return unless %SITES;
   return unless %$config;
-  warn "on = $config->{on}\n";
   return unless $config->{on};
 
   my $ref        = $segment->ref;
@@ -98,7 +97,7 @@ sub annotate {
     $i++;
     while ($dna =~ /($pattern)/ig) {
       my $pos = $abs_start + pos($dna) - length($1) + $offset;
-      my $feature = Bio::Graphics::Feature->new(-start=>$pos,-stop=>$pos,-ref=>$ref,-name=>$type);
+      my $feature = Bio::Graphics::Feature->new(-start=>$pos,-stop=>$pos,-ref=>$ref,-name=>$type,-type=>$type);
       $feature_list->add_feature($feature,$type);
     }
   }

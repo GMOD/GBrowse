@@ -45,7 +45,7 @@ $startperl -w
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbrowse_est.PLS,v 1.3 2003-10-20 19:59:57 markwilkinson Exp $
+# $Id: gbrowse_est.PLS,v 1.4 2003-10-20 20:03:45 markwilkinson Exp $
 
 
 =head1 NAME
@@ -61,7 +61,7 @@ Please report all bugs to Mark Wilkinson (markw at illuminae.com)
 In 0X.organism.conf:
 
  [alignment:DETAILS]
- URL = http://brie4.cshl.org:9320/cgi-bin/gbrowse_est?id=$value
+ URL = http://yoursite.com/cgi-bin/gbrowse_est?id=$value
 
 
 =head1 DESCRIPTION

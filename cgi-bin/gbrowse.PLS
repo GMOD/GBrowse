@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.109.2.8 2004-10-06 17:07:48 allenday Exp $
+# $Id: gbrowse.PLS,v 1.109.2.9 2004-10-06 20:22:14 allenday Exp $
 
 use strict;
 use Bio::Graphics;
@@ -187,23 +187,15 @@ sub main_display($$) {
     htmlfrag5      => html_frag('html5',$segment) || '',
     htmlfrag6      => html_frag('html6',$segment) || '',
 
-#FIXME    tracks_table   => tracks_table($feature_files),
-
     examples                   => [shellwords($BROWSER->config->setting('examples'))],
 
     citation_link              => \&make_citation_link,
-
-    tr_toggle_head             => $BROWSER->translate($BROWSER->options->head() ? 'HIDE_HEADER' : 'SHOW_HEADER') || '',
-    tr_toggle_instructions     => $BROWSER->translate($BROWSER->options->ins()  ? 'HIDE_INSTRUCTIONS' : 'SHOW_INSTRUCTIONS') || '',
 
     link_bookmark              => bookmark_link(),
     link_image                 => image_link(),
     link_svg                   => svg_link(),
     link_help                  => "?help=general",
 
-    hide_ins   => $BROWSER->options->ins()  || 0,
-    name       => $BROWSER->options->name() || '',
-    ref        => $BROWSER->options->ref()  || '',
     rand       => substr(md5_hex(rand),0,5),
 
     action     => $BROWSER->config->source() ? url()."/".$BROWSER->config->source : url(),
@@ -211,7 +203,6 @@ sub main_display($$) {
     segment    => $segment,
     prevname   => scalar(param('name')),
     finezoom   => get_zoomincrement(),
-    buttonsdir => $BROWSER->config->setting('buttons'),
 
 #FIXME    multiple_segments => multiple_choices($features),
 #FIXME    overview_panel    => overview_panel($segment),

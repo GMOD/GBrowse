@@ -4,4 +4,3 @@
     <td align="left">[% PROCESS "pluginmenu.tt2" %]</td>
   </tr>
 </table>
-

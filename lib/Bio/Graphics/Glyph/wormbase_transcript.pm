@@ -4,9 +4,15 @@ use strict;
 use Bio::Graphics::Glyph::transcript2;
 use vars '@ISA','$VERSION';
 @ISA = 'Bio::Graphics::Glyph::transcript2';
-$VERSION = '1.02';
+$VERSION = '1.03';
 
 use constant DEFAULT_UTR_COLOR => '#D0D0D0';
+
+sub pad_top {
+  my $self = shift;
+  my $top  = $self->option('pad_top');
+  return defined $top ? $top : $self->SUPER::pad_top;
+}
 
 sub bgcolor {
   my $self = shift;

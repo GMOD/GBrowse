@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.32 2002-08-28 14:54:35 lstein Exp $
+# $Id: Browser.pm,v 1.33 2002-08-30 17:02:08 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -81,6 +81,7 @@ use constant TOO_MANY_SEGMENTS   => 5_000;
 use constant MAX_SEGMENT         => 1_000_000;
 use constant DEFAULT_RANGES      => q(100 500 1000 5000 10000 25000 100000 200000 400000);
 use constant MIN_OVERVIEW_PAD    => 25;
+use constant PAD_OVERVIEW_BOTTOM => 3;
 
 use constant DEBUG => 0;
 
@@ -838,9 +839,9 @@ sub image_and_map {
 	             : $options->{$label} == 3 ? 1
 	             : $options->{$label} == 5 ? 1
 		     : 0;
-      $tracks{$label}->configure(-bump  => $do_bump,
-				 -label => $do_label,
-				 -description => $do_label && $tracks{$label}->option('description'),
+      $tracks{$label}->configure(-bump        => $do_bump,
+				 -label       => $do_label,
+				 -description => ($do_label && $self->setting($label=>'description')),
 				);
       $tracks{$label}->configure(-connector  => 'none') if !$do_bump;
     }
@@ -899,6 +900,7 @@ sub overview {
 					-key_style => 'left',
 					-pad_left  => $padl,
 					-pad_right => $padr,
+					-pad_bottom => PAD_OVERVIEW_BOTTOM,
 				       );
 
   my $units = $self->setting('overview units');
@@ -944,6 +946,7 @@ sub add_overview_landmarks {
     $track{$overview_track} = $track;
     push @feature_types,@types;
   }
+  return unless @feature_types;
   my $iterator = $segment->features(-type=>\@feature_types,-iterator=>1,-rare=>1);
 
   my %count;
@@ -1009,7 +1012,7 @@ sub hits_on_overview {
   my $max_label  = $conf->setting(general=>'label density') || 10;
   my $max_bump   = $conf->setting(general=>'bump density') || 50;
   my $class      = $hits->[0]->can('factory') ? $hits->[0]->factory->refclass : 'Sequence';
-  my $pad        = $self->overview_pad([$self->config->overview_tracks],'Matches');
+  my ($padl,$padr)  = $self->overview_pad([$self->config->overview_tracks],'Matches');
 
   # sort hits out by reference
   my (%refs);
@@ -1042,10 +1045,10 @@ sub hits_on_overview {
     my $segment = ($db->segment(-class=>$class,-name=>$ref))[0];
     my $panel = Bio::Graphics::Panel->new(-segment => $segment,
 					  -width   => $width,
-					  -bgcolor => $self->setting('overview bgcolor')
-					  || 'wheat',
-					  -pad_left  => $pad,
-					  -pad_right => MIN_OVERVIEW_PAD,
+					  -bgcolor => $self->setting('overview bgcolor') || 'wheat',
+					  -pad_left  => $padl,
+					  -pad_right => $padr,
+					  -pad_bottom => PAD_OVERVIEW_BOTTOM,
 					  -key_style => 'left',
 					 );
 

@@ -41,7 +41,7 @@ $Config{startperl} -w
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbrowse_img.PLS,v 1.7 2002-07-23 05:39:18 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.8 2002-08-30 17:02:08 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1);
@@ -149,15 +149,15 @@ sub get_segment {
 sub open_database {
   my $source  = $CONFIG->source;
   return $DB{$source} if $DB{$source};
-  my @argv = eval{$CONFIG->dbgff_settings};
+  my ($adaptor,@argv) = eval{$CONFIG->db_settings};
   unless (@argv) {
     warn "gbrowse: trying to reload config, cache must be stale";
     $CONFIG = Bio::Graphics::Browser->new;
     $CONFIG->read_configuration($CONF_DIR) or message("Can't read configuration files: $!");
     $CONFIG->source($source);
-    @argv = $CONFIG->dbgff_settings;
+    ($adaptor,@argv) = $CONFIG->db_settings;
   }
-  $DB{$source} = eval {Bio::DB::GFF->new(@argv)} or warn $@;
+  $DB{$source} = eval {$adaptor->new(@argv)} or warn $@;
   return $DB{$source};
 }
 

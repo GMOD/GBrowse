@@ -154,7 +154,7 @@ END
 
    REDISPLAY   => 'Redisplay',
 
-   CONFIGURE   => 'Configure tracks...',
+   CONFIGURE   => 'Configure...',
 
    EDIT       => 'Edit File...',
 
@@ -178,7 +178,7 @@ END
 
    VARYING     => 'Varying',
 
-   SET_OPTIONS => 'Set Track Options...',
+   SET_OPTIONS => 'Configure tracks...',
 
    UPDATE      => 'Update Image',
 

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.23 2004-10-01 13:44:33 sheldon_mckay Exp $
+# $Id: GFFDumper.pm,v 1.23.4.1 2005-03-03 21:59:29 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -146,14 +146,14 @@ sub dump {
   my $iterator = $segment->get_seq_stream(@args);
   while ( my $f = $iterator->next_seq ) {
     $self->print_feature($f,$version);
+  }
 
-    for my $set (@more_feature_sets) {
-      if ( $set->can('get_seq_stream') ) {
-        my @feats = ();
-        my $iterator = $set->get_seq_stream;
-        while ( my $f = $iterator->next_seq ) {
-	  $self->print_feature($f);
-        }
+  for my $set (@more_feature_sets) {
+    if ( $set->can('get_seq_stream') ) {
+      my @feats = ();
+      my $iterator = $set->get_seq_stream;
+      while ( my $f = $iterator->next_seq ) {
+	$self->print_feature($f);
       }
     }
   }
@@ -169,7 +169,8 @@ sub dump {
 sub print_feature {
   my $self = shift;
   my ($f,$version) = @_;
-  $f->version($version);
+  $version       ||= 3;
+  eval{$f->version($version)};
   my $s = $f->gff_string(1); # the flag is for GFF3 subfeature recursion
   chomp $s;
   print $s,"\n";

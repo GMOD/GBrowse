@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::FastaDumper;
-# $Id: FastaDumper.pm,v 1.8 2003-05-19 17:25:44 lstein Exp $
+# $Id: FastaDumper.pm,v 1.8.6.1 2005-03-03 21:59:29 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -52,6 +52,15 @@ sub description {
 sub dump {
     my $self = shift;
     my $segment = shift;
+
+    unless ($segment) {
+      my $mime_type = $self->mime_type;
+      print start_html($self->name) if $mime_type =~ /html/;
+      print "No sequence specified.\n";
+      print end_html if $mime_type =~ /html/;
+      exit 0;
+    }
+
     my $config  = $self->configuration;
     my $dna = lc $segment->dna;
     my $browser = $self->browser_config();

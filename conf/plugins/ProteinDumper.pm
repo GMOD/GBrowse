@@ -1,4 +1,4 @@
-# $Id: ProteinDumper.pm,v 1.1 2004-06-16 14:54:17 lstein Exp $
+# $Id: ProteinDumper.pm,v 1.1.6.1 2005-03-03 21:59:29 lstein Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::ProteinDumper
 #
@@ -47,7 +47,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::ProteinDumper;
-# $Id: ProteinDumper.pm,v 1.1 2004-06-16 14:54:17 lstein Exp $
+# $Id: ProteinDumper.pm,v 1.1.6.1 2005-03-03 21:59:29 lstein Exp $
 # Protein Dumper plugin
 
 use strict;
@@ -99,6 +99,14 @@ sub description {
 sub dump {
   my $self = shift;
   my $segment = shift;
+
+  unless ($segment) {
+    my $mime_type = $self->mime_type;
+    print start_html($self->name) if $mime_type =~ /html/;
+    print "No sequence specified.\n";
+    print end_html if $mime_type =~ /html/;
+    exit 0;
+  }
 
   my $config  = $self->configuration;
 

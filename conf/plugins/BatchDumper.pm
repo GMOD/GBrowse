@@ -56,11 +56,23 @@ sub dump {
 
   my $browser = $self->browser_config;
   my $config  = $self->configuration;
-  my $wantsorted = $config->{'wantsorted'}; 
+  my $wantsorted = $config->{'wantsorted'};
 
-  my @segments = map { ( $browser->name2segments($_,$self->database) ) } split /\s+/m, $config->{sequence_IDs}||'';
+  my @segments = map { 
+    ( $browser->name2segments($_,$self->database) )
+		     } split /\s+/m, $config->{sequence_IDs}||'';
   # take the original segment if no segments were found/entered via the sequence_IDs textarea field
-  @segments = ($segment) unless (@segments); 
+  @segments = $segment if $segment && !@segments;
+
+  my $mime_type = $self->mime_type;
+
+  unless (@segments) {
+    print start_html($self->name) if $mime_type =~ /html/;
+    print "No sequence specified.\n";
+    print end_html if $mime_type =~ /html/;
+    exit 0;
+  }
+
   my @filter    = $self->selected_features;
 
   # special case for GFF dumping
@@ -134,9 +146,8 @@ sub dump {
   $config->{'fileformat'} = 'Genbank' if ($config->{'format'} eq 'external_viewer');
 
   my $out = new Bio::SeqIO(-format => $config->{'fileformat'});
-  my $mime_type = $self->mime_type;
   if ($mime_type =~ /html/) {
-      print start_html($segment->desc);
+    print start_html('Batch Sequence');
       foreach my $segment (@segments) {
 	print h1($segment->desc),"\n",
 	start_pre,"\n";

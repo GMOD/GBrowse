@@ -122,31 +122,43 @@ END
 sub start_html {
   $next_id = 'T0000';
   my %args = @_ == 1 ? (-title=>shift) : @_;
-  if ($args{-style}) {
-    $args{-style}= [{src => $args{-style}}] if !ref $args{-style};
-    $args{-style}= [$args{-style}]          if ref $args{-style} && ref $args{-style} ne 'ARRAY';
-  }
-  push @{$args{-style}},{code=>$style};
 
-  if ($args{-script}) {
-    $args{-script} = [{src => $args{-script}}] if !ref $args{-script};
-    $args{-script} = [$args{-script}]          if ref $args{-script} && ref $args{-script} ne 'ARRAY';
+  $args{-noscript}     = $noscript;
+  $args{-onLoad}       = "startPage()";
+
+  # earlier versions of CGI.pm don't support multiple -style and -script args.
+  if ($CGI::VERSION >= 3.05) {
+    if ($args{-style}) {
+      $args{-style}= [{src => $args{-style}}] if !ref $args{-style};
+      $args{-style}= [$args{-style}]          if ref $args{-style} && ref $args{-style} ne 'ARRAY';
+    }
+    push @{$args{-style}},{code=>$style};
+
+    if ($args{-script}) {
+      $args{-script} = [{src => $args{-script}}] if !ref $args{-script};
+      $args{-script} = [$args{-script}]          if ref $args{-script} && ref $args{-script} ne 'ARRAY';
+    }
+
+    push @{$args{-script}},{code=>$jscript};
   }
 
   my $state = CGI::cookie($cookie_name);
   $state = 0xFFFFFF unless defined $state && $state >= 0 && $state <= 0xFFFFFF;
-  warn "current state = $state";
 
   my $cookie = CGI::cookie(-name=>$cookie_name,
 			   -value=>$state,
 			   -expires=>'+7d');
-  
-  push @{$args{-script}},{code=>$jscript};
-  $args{-noscript}     = $noscript;
-  $args{-onLoad}       = "startPage()";
   $args{-head}         = CGI::meta({-http_equiv=>'Set-Cookie',
 				    -content => $cookie});
-  CGI::start_html(%args);
+  my $result = CGI::start_html(%args);
+
+  if ($CGI::VERSION < 3.05) {
+    my $style_section  = join '',CGI->_style({code=>$style});
+    my $script_section = join '',CGI->_script({code=>$jscript});
+    $result =~ s/<\/head>/$style_section\n$script_section\n<\/head>/i;
+  }
+
+  return $result;
 }
 
 # The weird playing around with class names is to accomodate the need to have

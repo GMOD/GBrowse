@@ -154,7 +154,9 @@ END
 
    REDISPLAY   => 'Redisplay',
 
-   CONFIGURE   => 'Configure tracks...',
+   CONFIGURE   => 'Configure...',
+
+   CONFIGURE_TRACKS   => 'Configure tracks...',
 
    EDIT       => 'Edit File...',
 

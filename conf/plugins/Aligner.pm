@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::Aligner;
-# $Id: Aligner.pm,v 1.6 2004-09-30 19:04:04 lstein Exp $
+# $Id: Aligner.pm,v 1.6.4.1 2005-03-03 21:59:29 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -113,6 +113,11 @@ sub mime_type { 'text/html' }
 sub dump {
   my $self    = shift;
   my $segment = shift;
+
+  unless ($segment) {
+    print "No sequence specified.\n";
+    exit 0;
+  }
 
   my $database      = $self->database;
   my $browser       = $self->browser_config;

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::RestrictionAnnotator;
-# $Id: RestrictionAnnotator.pm,v 1.12 2004-06-22 22:32:13 lstein Exp $
+# $Id: RestrictionAnnotator.pm,v 1.12.6.1 2005-03-03 21:59:29 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -99,7 +99,11 @@ sub annotate {
     while ($dna =~ /($pattern)/ig) {
       my $pos = $abs_start + pos($dna) - length($1) + $offset;
       my $feature = Bio::Graphics::Feature->new(-start=>$pos,-stop=>$pos,
-						-ref=>$ref,-name=>$type,-type=>$type);
+						-ref=>$ref,
+						-name=>$type,
+						-type=>$type,
+						-class=>'RestrictionSite',
+						-source=>'RestrictionAnnotator.pm');
       $feature_list->add_feature($feature,$type);
     }
   }

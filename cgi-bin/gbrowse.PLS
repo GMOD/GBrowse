@@ -237,7 +237,8 @@ my ($file_action) = grep {/^modify\./} param();
 # Check to see whether one of the plugin dumpers was invoked.  We have to do this first
 # before printing the header because the plugins are responsible for generating the header.
 # NOTE THE EXIT 0 HERE IF THE DUMP IS SUCCESSFUL!
-if (@segments && $plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper') {
+if ((@segments||param('plugin_config'))
+     && $plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper') {
   do_plugin_header(param('plugin'),$page_settings);
   do_plugin_dump(param('plugin'),$segments[0],$page_settings) && exit 0
 }
@@ -683,11 +684,8 @@ sub auto_open {
   my ($settings,$features) = @_;
   my $tracks = $settings->{features};
   for my $feature (@$features) {
-    warn "feature = $feature";
     my $desired_label = $CONFIG->feature2label($feature) or next;
-    warn "desired_label = $desired_label";
     if (exists $tracks->{$desired_label}) {
-      warn "here I am";
       $tracks->{$desired_label}{visible} = 1;
       $settings->{h_feat}  = $feature->display_name;
       $settings->{h_type}  = $feature->type;
@@ -860,18 +858,21 @@ sub navigation_table {
 				 
 				 TR({-class=>'searchbody'},
 				    td({-align=>'left'}, 
-				       b($CONFIG->tr('Landmark')),br,
+				       b($CONFIG->tr('Landmark')).':',br,
 				       textfield(-name=>'name',-size=>25),
 				       submit(-name=>$CONFIG->tr('Search')).'&nbsp;'.
-				       submit(-name=>'reset', -label=>$CONFIG->tr('Reset'),-class=>'reset_button').'&nbsp;'.
-				       checkbox(-name=>'flip',-checked=>$settings->{flip},-value=>1,-label=>$CONFIG->tr('Flip'),-override=>1)
+				       submit(-name=>'reset', -label=>$CONFIG->tr('Reset'),-class=>'reset_button')
 				      ),
-				    td({-colspan=>1,-align=>'left'},b($CONFIG->tr('Dumps')),br,
+				    td({-colspan=>1,-align=>'left'},b($CONFIG->tr('Dumps')).':',br,
 				       plugin_menu($settings,$PLUGINS))
 				   ),
-				 TR(
-				    td({-class=>'searchbody',-align=>'center',-colspan=>2},
-				       $segment ? (b($CONFIG->tr('Scroll').': '),br,slidertable($segment,$buttonsDir)) : ''
+				 TR({-class=>'searchbody'},
+				    td({-align=>'center',-colspan=>2,-style=>'padding-top: 5 px'},
+				       $segment ? (b($CONFIG->tr('Scroll').': '),slidertable($segment,$buttonsDir)) : '',
+				       b(
+					 checkbox(-name=>'flip',
+						  -checked=>$settings->{flip},-value=>1,
+						  -label=>$CONFIG->tr('Flip'),-override=>1))
 				      ),
 				   ),
 				)
@@ -1064,7 +1065,7 @@ sub tracks_table {
 			div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
 			table({-width=>'100%',-class=>"searchbody"},
 			      TR(td{-align=>'right'},
-				 submit(-name => $CONFIG->tr('CONFIGURE')),
+				 submit(-name => $CONFIG->tr('Set_options')),
 				 b(submit(-name => $CONFIG->tr('Update'))
 				  )
 				)
@@ -2754,6 +2755,7 @@ sub do_plugin_configure {
                  : ( p($CONFIG->tr('Boring_plugin')),
 		     b(submit($CONFIG->tr('Back_to_Browser')))
 		   ),
+     hidden(-name=>'plugin_config',-value=>1,-override=>1),
      hidden('plugin'),
      end_form();
 }
@@ -2831,7 +2833,7 @@ sub tableize {
 sub unique {
   my @list = shift;
   my %seenit;
-  return grep {!$seenit{$_}++} @list;
+  return grep {defined $_ && !$seenit{$_}++} @list;
 }
 
 !NO!SUBS!

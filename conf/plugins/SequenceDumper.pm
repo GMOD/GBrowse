@@ -1,4 +1,4 @@
-# $Id: SequenceDumper.pm,v 1.17 2004-01-23 08:24:38 lstein Exp $
+# $Id: SequenceDumper.pm,v 1.17.6.1 2005-03-03 21:59:29 lstein Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::SequenceDumper
 #
@@ -50,7 +50,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::SequenceDumper;
-# $Id: SequenceDumper.pm,v 1.17 2004-01-23 08:24:38 lstein Exp $
+# $Id: SequenceDumper.pm,v 1.17.6.1 2005-03-03 21:59:29 lstein Exp $
 # Sequence Dumper plugin
 
 use strict;
@@ -262,6 +262,14 @@ sub gff_dump {
 
   my $mime_type = $self->mime_type;
   my $html      = $mime_type =~ /html/;
+
+  unless ($segment) {
+    print start_html($self->name) if $html;
+    print "No sequence specified.\n";
+    print end_html if $html;
+    exit 0;
+  }
+
   print start_html($segment) if $html;
   
   print h1($segment),start_pre() if $html;

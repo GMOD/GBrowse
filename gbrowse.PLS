@@ -42,11 +42,12 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.49 2002-08-08 01:15:52 lstein Exp $
+# $Id: gbrowse.PLS,v 1.50 2002-08-08 12:13:48 lstein Exp $
 
 use strict;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
+use Bio::Graphics::Browser::I18n;
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use Text::Tabs;
@@ -54,9 +55,10 @@ use Text::Shellwords;
 use File::Basename 'basename';
 use Carp qw(:DEFAULT croak);
 use CGI qw(:standard escape escapeHTML center *table *dl *TR *td);
-use vars qw($CONFIG %DB $MAX_SEGMENT $DEFAULT_SEGMENT 
-	    $HEADER $HTML $UA $VERSION $CONF_DIR %OBJECT_TYPES
-	    $PLUGINS %PLUGIN_NAME2LABEL $PRESETS);
+use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
+	    $HEADER $HTML $UA $VERSION $CONF_DIR
+	    $PLUGINS $PRESETS $LANG
+	    %OBJECT_TYPES %DB %PLUGIN_NAME2LABEL );
 
 # if you change the zoom/nav icons, you must change this as well.
 use constant MAG_ICON_HEIGHT => 20;
@@ -130,15 +132,19 @@ if ($ENV{MOD_PERL}) {
     $CONF_DIR = Apache->server_root_relative($conf) if $conf;
 }
 
-## CONFIGURATION & INITIALIZATION #############################################################
+## CONFIGURATION & INITIALIZATION ################################
 # preliminaries -- read and/or refresh the configuration directory
+
 $CONFIG  ||= Bio::Graphics::Browser->new;
 $CONFIG->read_configuration($CONF_DIR) or die "Can't read configuration files: $!";
+$LANG    ||= Bio::Graphics::Browser::I18n->new("$CONF_DIR/languages");
+set_language($CONFIG,$LANG);
 
-## PAGE SETTINGS ##############################################################################
+## PAGE SETTINGS #################################################
 #
 # Recover a hashref which contains page-specific settings
-# (this involves reading a cookie or possibly a database record in some future implementation
+# (this involves reading a cookie or possibly a database record
+# in some future implementation)
 my ($source,$old_source) = get_source();
 $CONFIG->source($source);
 my $page_settings = get_settings($source);
@@ -154,20 +160,21 @@ if (defined($old_source) && $source ne $old_source) {
   adjust_settings($page_settings);        # set settings from CGI parameters
 }
 
-### PLUGINS ###################################################################################
+### PLUGINS #################################################################
 $PLUGINS = initialize_plugins($CONF_DIR) unless defined $PLUGINS;
 configure_plugins($PLUGINS,$page_settings,open_database(),$CONFIG,$CONF_DIR);
-my $plugin_type   = $PLUGINS->{param('plugin')}->type if param('plugin') && $PLUGINS->{param('plugin')};
+my $plugin_type   = $PLUGINS->{param('plugin')}->type 
+  if param('plugin') && $PLUGINS->{param('plugin')};
 my $plugin_action = param('plugin_action') || '';
 warn "plugin_action = $plugin_action" if DEBUG_PLUGINS;
 
-## GETTING THE SEGMENT ########################################################################
+## GETTING THE SEGMENT ######################################################
 my @segments = get_segments($page_settings);
 
-if ($plugin_action eq 'Find' && param('plugin')) {
+if ($plugin_action eq $LANG->tr('FIND') && param('plugin')) {
   do_plugin_find($page_settings,
 		 param('plugin'),
-		 \@segments) or ($plugin_action='Configure...'); #reconfigure
+		 \@segments) or ($plugin_action=$LANG->tr('Configure')); #reconfigure
 } elsif (!@segments && $page_settings->{name}) {
   do_keyword_search($page_settings,\@segments);
   do_plugin_autofind($page_settings,\@segments) unless @segments;  # last resort
@@ -197,8 +204,8 @@ if (@segments && $plugin_action eq 'Go!'&& $plugin_type eq 'dumper') {
 ## HANDLING FILE DOWNLOADS ######################################################################
 
 # This gets called if the user wants to download his annotation data
-if (my $to_download = (param('Download File') ||
-		       ($file_action && param($file_action) eq 'Download File') && $file)) {
+if (my $to_download = (param($LANG->tr('Download_file')) ||
+		       ($file_action && param($file_action) eq $LANG->tr('Download_file')) && $file)) {
   warn "FILE DOWNLOAD, download = $to_download" if DEBUG;
   print header(-attachment   =>  $to_download,
 	       -type         => 'application/octet-stream');
@@ -249,14 +256,14 @@ my $header = $CONFIG->header();
 print $header if $header;
 
 ## HANDLE UPLOADED FILE EDITS ##################################################################
-if ($file_action && param($file_action) eq 'Edit File...') {
+if ($file_action && param($file_action) eq $LANG->tr('Edit')) {
   edit_uploaded_file($page_settings,$file);
 }
 
 ## HANDLE TRACK SETTINGS   #######################################################
-elsif ((param('Set Track Options...') || param('Revert fo Defaults..'))
-       && !param('Cancel')
-       && !param('Redisplay')) {
+elsif ((param($LANG->tr('Set_options')) || param($LANG->tr('Revert')))
+       && !param($LANG->tr('Cancel'))
+       && !param($LANG->tr('Redisplay'))) {
   set_track_options($page_settings);
 }
 
@@ -267,14 +274,14 @@ elsif (param('help')) {
 }
 
 ## HANDLE PLUGIN ABOUT PAGE #####################################################
-elsif ($plugin_action eq 'About...') {
+elsif ($plugin_action eq $LANG->tr('About')) {
   do_plugin_about(param('plugin'));
 }
 
 ## HANDLE PLUGIN CONFIGURATION####################################################
-elsif ($plugin_action eq 'Configure...') {
+elsif ($plugin_action eq $LANG->tr('Configure')) {
   do_plugin_configure(param('plugin'));
-} elsif ($plugin_action eq 'Go!' && $plugin_type=~/^(finder|annotator)$/i) {
+} elsif ($plugin_action eq $LANG->tr('Go') && $plugin_type=~/^(finder|annotator)$/i) {
   do_plugin_configure(param('plugin'));
 }
 
@@ -286,6 +293,8 @@ else {
 
 footer();
 
+exit 0;
+
 #--------------------------------- lots of subroutines --------------------------
 
 sub main_display {
@@ -294,15 +303,18 @@ sub main_display {
 
   # first of all, if there are no segments, then try a keyword search and store the results
   if (@$segments == 0 && (my $n = $page_settings->{name})) {
-      error("The landmark named",i($n),"is not recognized. See the help pages for suggestions.");
+      error($LANG->tr('NOT_FOUND',$n));
   }
 
   # if there's a single segment, then print a message and store the segment into a scalar
   elsif (@$segments == 1) {
     $segment = $segments->[0];
     $segment = truncated_segment($segment) if $segment->length < 4;
-    print h2("Showing",unit_label($segment->length)," from",
-	     $segment->seq_id.", positions ".commas($segment->start)." to ".commas($segment->stop));
+    print h2($LANG->tr('SHOWING_FROM_TO',
+		       unit_label($segment->length),
+		       $segment->seq_id,
+		       commas($segment->start),
+		       commas($segment->stop)));
   }
 
   # print the top of the form, with navigation bar, etc
@@ -350,10 +362,7 @@ sub main_display {
     }
 
     else {
-      $cell .= i(
-		 "Detailed view is limited to",
-		 commas($MAX_SEGMENT),"bases.",
-		 "Click in the overview to select a region",commas($DEFAULT_SEGMENT),'bp wide.');
+      $cell .= i($LANG->tr('TOO_BIG',commas($MAX_SEGMENT),commas($DEFAULT_SEGMENT)));
     }
     print "\n",
       table({-border=>0,-width=>$page_settings->{width}},
@@ -577,12 +586,12 @@ sub adjust_settings {
     }
   }
 
-  if (param('Revert to Defaults') || param('Reset')) {
+  if (param($LANG->tr('Revert')) || param($LANG->tr('Reset'))) {
     warn "resetting defaults..." if DEBUG;
     set_default_tracks($settings);
   }
 
-  elsif (param('Adjust Order') && !param('Cancel')) {
+  elsif (param($LANG->tr('Adjust_Order')) && !param($LANG->tr('Cancel'))) {
     adjust_track_options($settings);
     adjust_track_order($settings);
   }
@@ -600,24 +609,21 @@ sub navigation_table {
   $table .= table({-border=>0, -width=>$settings->{width}},
 		  TR({-class=>'searchbody'},
 		     td({-align=>'left', -colspan=>3},
-			"Search using a sequence name, gene name, locus${oligo} or other landmark.",
-			'The wildcard character "*" is allowed.',
+			$LANG->tr('SEARCH_INSTRUCTIONS',$oligo),
 			show_examples()
 		    )),
 		  TR({-class=>'searchbody'},
 		     td({-align=>'left', -colspan=>3},
-			'To center on a location, click the ruler.  Use the Scroll/Zoom buttons to',
-			'change magnification and position.',
-			'To save this view,',a({-href=>bookmark_link($settings)},'bookmark this link.')
+			$LANG->tr('NAVIGATION_INSTRUCTIONS',bookmark_link($settings))
 		       )),
 		  TR({-class=>'searchtitle', -align=>'left'},
 		     td({-class=>'searchtitle'}, b('Landmark or Region'),
 			textfield(-name=>'name',-size=>20),
-			submit(-name=>'Go')),
+			submit(-name=>$LANG->tr('Go'))),
 		     td({-align=>'LEFT'},
-			$segment ? ('Scroll/Zoom: ',slidertable($segment,$buttonsDir)) : ''
+			$segment ? ($LANG->tr('Scroll').': ',slidertable($segment,$buttonsDir)) : ''
 		       ),
-		     td(submit(-name=>'Reset',-class=>'reset_button'))
+		     td(submit(-name=>$LANG->tr('Reset'),-class=>'reset_button'))
 		    ));
 }
 
@@ -703,10 +709,6 @@ sub unit_to_value {
 sub labels {
   my $settings = shift;
   my @labels = $CONFIG->labels;
-#  push @labels,$settings->{'uploaded_file'} ? "$settings->{uploaded_file} (Uploaded)"
-#                                            : '(Uploaded Annotations)';
-# this needs to be fixed
-#  push @labels,@{$settings->{eurl}}   if $settings->{eurl};
   @labels;
 }
 
@@ -735,9 +737,11 @@ sub settings_table {
   $sTable.= table({-border=>0,-width=>$settings->{width}},
 		  # row
 		  TR(
-		     th({-class=>'searchtitle', -colspan=>3, -align=>'left'},'Display Settings:')),
-		  TR(	td({-class=>'searchbody', -valign=>'top',-align=>'right'}, 
-			   '<b>Tracks<b><p><i>(External tracks italicized)</i></p>'),
+		     th({-class=>'searchtitle', -colspan=>3, -align=>'left'},$LANG->tr('Display_Settings').':')
+		     ),
+		  TR(	td({-class=>'searchbody', -valign=>'top',-align=>'right'},
+			   b($LANG->tr('Tracks')),
+			   p(i($LANG->tr('External_tracks')))),
 			td({-class=>'searchbody',-colspan=>2,-width=>'85%'},
 			   checkbox_group(-name=>'label',
 					  # use the track ordering to adjust the order of the checkboxes
@@ -751,7 +755,7 @@ sub settings_table {
 
 		  # row
 		  TR({-class=>'searchbody'},
-		     td('Image Width: '),
+		     th({align=>'RIGHT'},$LANG->tr('Image_width')),
 		     td(
 			radio_group( -name=>'width',
 				     -values=>\@widths,
@@ -760,9 +764,9 @@ sub settings_table {
 				   ),
 		       ),
 		     td({-align=>'RIGHT'},
-			submit(-name => 'Set Track Options...')
+			submit(-name => $LANG->tr('Set_options'))
 			.'&nbsp;'.
-			b(submit(-name => 'Update Image'))
+			b(submit(-name => $LANG->tr('Update')))
 		       )
 		    ),
 		 );
@@ -786,7 +790,7 @@ sub upload_table {
   my $cTable = start_table({-border=>0,-width=>$settings->{width}})
     . TR(
 	 th({-class=>'datatitle', -colspan=>3, -align=>'left'},
-	    'Upload your own annotations:',
+	    $LANG->tr('Upload_title').':',
 	    a({-href=>annotation_help(),-target=>'help'},'[Help]'))
 	);
 
@@ -795,24 +799,25 @@ sub upload_table {
     next unless $filename =~ /^file:/ && $feature_files->{$filename};
     (my $file = $filename) =~ s/^file://;
     my $name = escape($file);
-    my $link = a({-href=>url(-relative=>1,-path_info=>1)."?Download+File=$name"},"[$name]");
+    my $download = escape($LANG->tr('Download_file'));
+    my $link = a({-href=>url(-relative=>1,-path_info=>1)."?$download=$name"},"[$name]");
     my @info =  get_uploaded_file_info($settings->{features}{$filename}{visible}
 					 && $feature_files->{$filename});
     $cTable .=  TR({-class=>'databody'},
 		   th($link),
 		   td({-colspan=>2},
-		      submit(-name=>"modify.$file",-value=>'Edit File...').'&nbsp;'.
-		      submit(-name=>"modify.$file",-value=>'Download File').'&nbsp;'.
-		      submit(-name=>"modify.$file",-value=>'Delete File')));
+		      submit(-name=>"modify.$file",-value=>$LANG->tr('Edit')).'&nbsp;'.
+		      submit(-name=>"modify.$file",-value=>$download).'&nbsp;'.
+		      submit(-name=>"modify.$file",-value=>$LANG->tr('Delete'))));
     $cTable .= TR({-class=>'databody'},td('&nbsp;'),td({-colspan=>2},@info));
   }
 
   # end the table.
   $cTable .= TR({-class=>'databody'},
-		th({-align=>'RIGHT'},'Upload a File'),
+		th({-align=>'RIGHT'},$LANG->tr('Upload_File')),
 		td({-colspan=>2},
 		   filefield(-size=>40,-name=>'upload_annotations'),
-		   submit(-name=>'Upload')));
+		   submit(-name=>$LANG->tr('Upload'))));
   $cTable .= end_table;
   $cTable;
 }
@@ -844,23 +849,24 @@ sub external_table {
     warn "external_table(): filename = $filename" if DEBUG;
     push @rows,th({-align=>'RIGHT'},"URL",++$count).
       td(textfield(-name=>'eurl',-size=>50,-value=>$filename,-override=>1),br,
-	 a({-href=>$filename,-target=>'help'},'[download]'),
+	 a({-href=>$filename,-target=>'help'},'['.$LANG->tr('Download').']'),
 	 get_uploaded_file_info($settings->{features}{$filename}{visible} && $feature_files->{$filename})
 	);
   }
   push @rows,th({-align=>'RIGHT'},
-		"Enter Remote Annotation URL").
+		$LANG->tr('Remote_url')).
 		  td(textfield(-name=>'eurl',-size=>40,-value=>'',-override=>1),
 		     $presets);
 
   return table({-border=>0,-width=>$settings->{width}},
 	       TR({-class=>'datatitle'},
 		  th({-align=>'LEFT',-colspan=>2},
-		     'Add Remote Annotations:',a({-href=>annotation_help().'#remote',-target=>'help'},'[Help]'))),
+		     $LANG->tr('Remote_title').':',
+		     a({-href=>annotation_help().'#remote',-target=>'help'},'['.$LANG->tr('Help').']'))),
 	       TR({-class=>'databody'},\@rows),
 	       TR({-class=>'databody'},
 		  th('&nbsp;'),
-		  th({-align=>'LEFT'},submit('Update URLs')))
+		  th({-align=>'LEFT'},submit($LANG->tr('Update_urls'))))
 	      );
 }
 
@@ -1049,19 +1055,20 @@ sub multiple_choices {
   my $count = @$results;
 
   print start_table();
-  print TR({-class=>'datatitle'},th({-colspan=>4},
-	      "The following $count regions match your request."));
+  print TR({-class=>'datatitle'},
+	   th({-colspan=>4},
+	      $LANG->tr('Hit_count',$count)));
   my $url = url(-relative=>1,-path_info=>1);
 
   local $^W = 0;  # get rid of non-numeric warnings coming out of by_score_and_position
   for my $ref(sort keys %refs) {
     my @results = @{$refs{$ref}};
-    print TR(th({-class=>'databody',-colspan=>4,-align=>'CENTER'},"Matches on $ref",br,
+    print TR(th({-class=>'databody',-colspan=>4,-align=>'CENTER'},$LANG->tr('Matches_on_ref',$ref),br,
 		$overviews->{$ref}));
     for my $r (sort by_score_and_position @results) {
       my $name        = eval {$r->name}  || $r->primary_tag;
-      my $class       = eval {$r->class} || 'Sequence';
-      my $score       = eval {$r->score} || 'n/a';
+      my $class       = eval {$r->class} || $LANG->tr('Sequence');
+      my $score       = eval {$r->score} || $LANG->tr('NOT_APPLICABLE');
       my ($start,$stop) = ($r->start,$r->end);
       my $description = escapeHTML(eval{$r->notes}||eval{$r->method}||eval{$r->source_tag}||$r->{ref});
       my $n           = escape($name);
@@ -1074,8 +1081,8 @@ sub multiple_choices {
       print TR({-class=>'databody',-valign=>'TOP'},
 	       th({-align=>'RIGHT'},ref($name) ? a({-href=>$objref},$name):tt($name)),
 	       td($description),
-	       td(a({-href=>$posref},$position . ' ('.($stop-$start+1).' bp)')),
-	       td("score=$score"));
+	       td(a({-href=>$posref},$position . ' ('.($stop-$start+1).' '.$LANG->tr('bp'))),
+	       td($LANG->tr('SCORE',$score)));
     }
   }
   print end_table;
@@ -1094,7 +1101,7 @@ sub by_score_and_position {
 }
 
 sub format_segment {
-  my $s = shift or return 'n/a';
+  my $s = shift or return $LANG->tr('Not_applicable');
   my $ref = $s->seq_id;
   my $start = commas($s->start);
   my $stop  = commas($s->end);
@@ -1165,7 +1172,9 @@ sub show_examples {
   my $url    = url(-relative=>1,-path_info=>1);
   my $source = $CONFIG->source;
   my @urls = map { a({-href=>"$url?source=$source;name=".escape($_)},$_) } @examples;
-  return b('Examples: ').join(', ',@urls) .'.  '.a({-href=>general_help(),-target=>'help'},b('[Help]'));
+  return b($LANG->tr('Examples')).': '.join(', ',@urls) .
+    '.  '.a({-href=>general_help(),-target=>'help'},
+	    b('['.$LANG->tr('Help').']'));
 }
 
 sub debugging_rectangles {
@@ -1268,7 +1277,7 @@ sub open_uploaded_file {
   my $file = name_uploaded_file($settings,$filename);
   warn "file = $file" if DEBUG;
   unless ($file) {
-    error("Can't find the file named $filename.  Perhaps it has been purged?");
+    error($LANG->tr('Purged',$filename));
     clear_uploaded_file($settings,$filename);
     return;
   }
@@ -1382,7 +1391,7 @@ sub get_remote_feature_data {
 
   unless ($UA) {
     unless (eval "require LWP") {
-      error('This browser is not configured to fetch external URLs');
+      error($LANG->tr('NO_LWP'));
       return;
     }
     $UA = LWP::UserAgent->new(agent    => "Generic-Genome-Browser/$VERSION",
@@ -1397,7 +1406,7 @@ sub get_remote_feature_data {
   my (undef,$tmpdir) = $CONFIG->tmpdir($CONFIG->source.'/external');
   my $response = $UA->mirror($url,"$tmpdir/$id");
   if ($response->is_error) {
-    error("Could not fetch $url: ",$response->message);
+    error($LANG->tr('Fetch_failed',$url,$response->message));
     return;
   }
   open (F,"<$tmpdir/$id") or return;
@@ -1430,7 +1439,7 @@ sub get_uploaded_file_info {
   my $url      = url(-relative=>1,-path_info=>1);
 
   if (@refs > TOO_MANY_REFS) {
-    $landmarks = b(@refs." landmarks.  Too many to list.");
+    $landmarks = b($LANG->tr('Too_many_landmarks',scalar @refs));
   } else {
     for my $r (sort @refs) {
       my $features = $feature_file->features;
@@ -1443,7 +1452,7 @@ sub get_uploaded_file_info {
   }
   $landmarks = tableize(\@landmarks);
   warn "get_uploaded_file_info(): modified = $modified, landmarks = $landmarks" if DEBUG;
-  return i("Last modified $modified.  Annotated landmarks:"),$landmarks;
+  return i($LANG->tr('File_info',$modified,$landmarks));
 }
 
 sub clear_uploaded_file {
@@ -1465,20 +1474,16 @@ sub edit_uploaded_file {
   $data = join '',expand(<$fh>);
   print table({-width=>'100%'},
 	      TR({-class=>'searchbody'},
-		 td('Edit your uploaded annotation data here.',
-		    'You may use tabs or spaces to separate fields,',
-		    'but fields that contain whitespace must be contained in',
-		    'double or single quotes.',
-		   ),
+		 td($LANG->tr('Edit_instructions')),
 		),
 	      TR({-class=>'searchbody'},
 		 td(
 		    a({-href=>url(-relative=>1,-path_info=>1)."?help=annotation#format",-target=>'help'},
-		      b('[Help with File Format]'))
+		      b('['.$LANG->tr('Help_format').']'))
 		   ),
 		),
 	      TR({-class=>'searchtitle'},
-		 th('Enter/Edit Annotation data')),
+		 th($LANG->tr('Edit_title'))),
 	      TR({-class=>'searchbody'},
 		 td({-align=>'CENTER'},
 		    pre(
@@ -1492,7 +1497,7 @@ sub edit_uploaded_file {
 		   )
 		),
 	      TR({-class=>'searchtitle'},
-		 th(reset('Undo Changes').'&nbsp;'.
+		 th(reset($LANG->tr('Undo')).'&nbsp;'.
 		    submit('Cancel').'&nbsp;'.
 		    b(submit('Submit Changes...'))))
 	     );
@@ -1533,7 +1538,7 @@ sub coordinate_mapper {
 sub error {
   warn "@_" if DEBUG;
   print header() unless $HEADER++;
-  print start_html(-title => 'Genome browser',
+  print start_html(-title => $LANG->tr('Page_title'),
 		   -style  => {src=>$CONFIG->setting('stylesheet')}) unless $HTML++;
   print h2({-class=>'error'},@_);
 }
@@ -1627,7 +1632,7 @@ sub set_track_options {
   for (my $track = 0; $track < @labels; $track++) {
     my $label = $labels[$track];
     push @rows,
-      th({-align=>'LEFT',-class=>'searchtitle'},"Track",$track+1).
+      th({-align=>'LEFT',-class=>'searchtitle'},$LANG->tr("Track"),$track+1).
       th({-align=>'LEFT',-class=>'searchbody'},$keys{$label}).
       td({-align=>'CENTER',-class=>'searchbody'},
 	     checkbox(-name     => 'track.label',
@@ -1641,15 +1646,17 @@ sub set_track_options {
 			 -values   => [0..5],
 			 -override => 1,
 			 -default  => $settings->{features}{$label}{options},
-			 -labels   => {0=>'Auto',
-                                       1=>'Compact',
-                                       2=>'Expand',3=>'Expand & Label',
-                                       4=>'Hyperexpand',5=>'Hyperexpand & label'})
+			 -labels   => {0=> $LANG->tr('Auto'),
+                                       1=> $LANG->tr('Compact'),
+                                       2=> $LANG->tr('Expand'),
+				       3=> $LANG->tr('Expand_Label'),
+                                       4=> $LANG->tr('Hyperexpand'),
+				       5=> $LANG->tr('Hyperexpand_Label')})
 			).
 	td({-align=>'CENTER',-class=>'searchbody'},
 	   popup_menu(-name    => "limit.$track",
 		      -values  => [0,5,10,25,100],
-		      -labels  => {0=>'No limit'},
+		      -labels  => {0=>$LANG->tr('No_limit')},
 		      -override => 1,
 		      -default => $settings->{features}{$label}{limit})
 	    ).
@@ -1664,48 +1671,38 @@ sub set_track_options {
   }
   my $controls = TR({-class=>'searchtitle'},
 		    td({-colspan=>3,-align=>'CENTER'},
-		       reset('Undo Changes').'&nbsp;'.
-		       submit('Revert to Defaults').'&nbsp;'.
-		       submit('Refresh').'&nbsp;'
+		       reset($LANG->tr('Undo')).'&nbsp;'.
+		       submit($LANG->tr('Revert')).'&nbsp;'.
+		       submit($LANG->tr('Refresh')).'&nbsp;'
 		      ),
 		    td({-align=>'CENTER',-colspan=>3},
-		       submit(-name=>'Cancel',-value=>'Cancel Changes and Return...').'&nbsp;'.
-		       b(submit(-name=>'Redisplay',-value=>'Accept Changes and Return...'))
+		       submit  (-name=>$LANG->tr('Cancel'),   -value=>$LANG->tr('Cancel_Return')).'&nbsp;'.
+		       b(submit(-name=>$LANG->tr('Redisplay'),-value=>$LANG->tr('Accept_Return')))
 		      ));
 
-  print h1({-align=>'CENTER'},'Settings for ',$CONFIG->setting('description'));
+  print h1({-align=>'CENTER'},$LANG->tr('Settings',$CONFIG->setting('description')));
   print start_form(-name=>'settings');
   print table({-width=>'100%',-border=>0},
 	      $controls,
 	      TR({-class=>'searchtitle'},
-		 th({-colspan=>6},'Track Options')),
+		 th({-colspan=>6},$LANG->tr('Options_title'))),
 	      TR({-class=>'searchbody'},
 		 td({-colspan=>6},
-		    'The',i('Show'),'checkbox turns the track on and off.',
-		    'The',i('Compact'),'option forces the track to be condensed so that',
-		    'annotations will overlap. The',i('Expand'),'and',i('Hyperexpand'),
-                    'options turn on collision control using slower and faster layout algorithms.',
-		    'The',i('Expand & label'),'and',i('Hyperexpand & label'), 'options force',
-                    'annotations to be labeled.  If',i('Auto'),'is selected, the bump and label',
-		    'options will be set automatically if space permits.',
-		    'To change the track order use the',i('Change Track Order'),'popup menu',
-		    'to assign an annotation to a track.',
-                    'To limit the number of annotations of this type shown, change the value of the',
-                    i('Limit'),'menu.',
+		    $LANG->tr('Settings_instructions')
 		   ),
 		),
 	      TR({-class=>'searchtitle'},
-		 th('Track'),
-		 th('Track Type'),
-		 th('Show'),
-		 th('Format'),
-		 th('Limit'),
-		 th('Change Track Order'),
+		 th($LANG->tr('Track')),
+		 th($LANG->tr('Track Type')),
+		 th($LANG->tr('Show')),
+		 th($LANG->tr('Format')),
+		 th($LANG->tr('Limit')),
+		 th($LANG->tr('Change_Order')),
 		),
 	      TR(\@rows),
 	      $controls,
-	      hidden(-name=>'Set Track Options...',-value=>1,-override=>1),
-	      hidden(-name=>'Adjust Order',-value=>1,-override=>1),
+	      hidden(-name=>$LANG->tr('Set_options'), -value=>1,-override=>1),
+	      hidden(-name=>$LANG->tr('Adjust_order'),-value=>1,-override=>1),
 	     );
     print end_form();
 }
@@ -1716,7 +1713,7 @@ sub help {
   my $ref = referer();
   my $do_close = join('',
 		      start_form(-action=>$ref),
-		      button(-onClick=>'window.close()',-label=>'Close this Window'),
+		      button(-onClick=>'window.close()',-label=>$LANG->tr('Close_Window')),
 		      end_form());
   print div({-align=>'RIGHT'},$do_close);
   if ($help_type eq 'citations') {
@@ -1736,10 +1733,10 @@ sub build_citation_page {
   my $external_features = load_external_sources(undef,$settings);
   my (@citations);
 
-  print h2('Track Descriptions & Citations');
+  print h2($LANG->tr('Track_descriptions'));
 
   # build native features
-  print h3('Tracks Built into this Server');
+  print h3($LANG->tr('Built_in'));
   for my $feature (@features) {
     push @citations,make_citation($CONFIG,$feature);
   }
@@ -1747,19 +1744,20 @@ sub build_citation_page {
 
   # build external features
   if (%$external_features) {
-    print hr,h3('External Annotation Tracks');
+    print hr,h3($LANG->tr('External'));
     @citations = ();
     for my $file (keys %$external_features) {
       my $f = escape($file);
       my $name   = $file;
       my $is_url = $name =~ m!^(http|ftp)://!;
-      my $link   = $is_url  ? $name  : url(-relative=>1,-path_info=>1)."?Download+Data=1;file=$f";
+      my $download = escape($LANG->tr('Download_data'));
+      my $link   = $is_url  ? $name  : url(-relative=>1,-path_info=>1)."?$download=1;file=$f";
       my $anchor = $name;
       $anchor =~ tr/ /-/;
 
       unless (ref $external_features->{$file}) {
 	print h3(a{-name=>$anchor,-href=>$link},$name);
-	print blockquote('Please activate this track in order to view its information');
+	print blockquote($LANG->tr('Activate'));
 	next;
       }
       print h4(a{-name=>$anchor,-href=>$link},$name);
@@ -1768,7 +1766,7 @@ sub build_citation_page {
       }
       print blockquote(dl(@citations));
     }
-    print p("No external features loaded.") unless @citations;
+    print p($LANG->tr('No_external')) unless @citations;
   }
 
 }
@@ -1783,7 +1781,7 @@ sub make_citation {
   my $text      = $config->setting($feature=>'key') || $feature;
   return join ('',
 	       dt(a({-name=>$link},b($text))),
-	       dd($citation||'No additional information available'),
+	       dd($citation||$LANG->tr('No_citation')),
 	       p());
 }
 
@@ -1824,7 +1822,8 @@ sub make_citation_link {
   my $key = $label;
   my $link;
   if ($label =~ /^plugin:/) {
-    $link = url(-relative=>1) . "?plugin_action=About...;plugin=$PLUGIN_NAME2LABEL{$label}";
+    my $about = escape($LANG->tr('About'));
+    $link = url(-relative=>1) . "?plugin_action=$about;plugin=$PLUGIN_NAME2LABEL{$label}";
   } else {
     $PRESETS ||= get_external_presets || {};
     $key      = $CONFIG->setting($label=>'key') || $PRESETS->{$key} || $label;
@@ -1879,7 +1878,7 @@ sub configure_plugins {
     # plugin's configuration screen, set it here
     my @params = grep {/^$name\./} param();
     next unless @params;
-    $p->reconfigure unless param('plugin_action') eq 'Cancel';
+    $p->reconfigure unless param('plugin_action') eq $LANG->tr('Cancel');
   }
 }
 
@@ -1887,9 +1886,9 @@ sub plugin_and_data_source_table {
   my ($settings,$plugins) = @_;
   my $sources = $CONFIG->sources > 1;
 
-  my %verbs = (dumper    => 'Dump',
-	       finder    => 'Find',
-	       annotator => 'Annotate');
+  my %verbs = (dumper    => $LANG->tr('Dump'),
+	       finder    => $LANG->tr('Find'),
+	       annotator => $LANG->tr('Annotate'));
   my %labels = map {$_=> ($verbs{$plugins->{$_}->type}
 			  ||
 			  $plugins->{$_}->type)
@@ -1900,8 +1899,8 @@ sub plugin_and_data_source_table {
   my $table = table({-border=>0,-width=>$settings->{width}},
 		    TR({-class=>'searchtitle'},
 		       th({-align=>'left'},
-			  'Dumps, Searches and other Operations:'),
-		       $sources ? th({-align=>'left'},'Data Source:') : th('&nbsp;'),
+			  $LANG->tr('Dumps').':'),
+		       $sources ? th({-align=>'left'},$LANG->tr('Data_source'.':')) : th('&nbsp;'),
 		      ),
 		    TR({-class=>'searchtitle'},
 		       td({-colspan=>1,-align=>'left'},
@@ -1910,9 +1909,9 @@ sub plugin_and_data_source_table {
 				     -labels=>\%labels,
 				     -default => $settings->{plugin},
 				    ),'&nbsp;',
-			  submit(-name=>'plugin_action',-value=>'About...'),'&nbsp;',
-			  submit(-name=>'plugin_action',-value=>'Configure...'),'&nbsp;',
-			  submit(-name=>'plugin_action',-value=>'Go!'),
+			  submit(-name=>'plugin_action',-value=>$LANG->tr('About')),'&nbsp;',
+			  submit(-name=>'plugin_action',-value=>$LANG->tr('Configure')),'&nbsp;',
+			  submit(-name=>'plugin_action',-value=>$LANG->tr('Go')),
 			 ),
 		       td({-colspan=>1,-align=>'left'},
 			  $sources ?
@@ -1948,9 +1947,9 @@ sub do_plugin_about {
   my $plugin = shift;
   warn "plugin = $plugin, but PLUGINS = ",join ' ',keys %$PLUGINS;
   my $p = $PLUGINS->{$plugin};
-  print h1("About",$p->name);
+  print h1($LANG->tr('About_plugin',$p->name));
   print $p->description;
-  print start_form(),submit('Back to Browser'),hidden('plugin'),end_form();
+  print start_form(),submit($LANG->tr('Back_to_Browser')),hidden('plugin'),end_form();
 }
 
 sub do_plugin_find {
@@ -1964,8 +1963,8 @@ sub do_plugin_find {
   return unless $results;  # reconfigure message
 
   @$segments = @$results;
-  $settings->{name} = defined($search_string) ? "$search_string (via $plugin_name search)"
-                                              : "&lt;$plugin_name search&gt;";
+  $settings->{name} = defined($search_string) ? $LANG->tr('Plugin_search_1',$search_string,$plugin_name)
+                                              : $LANG->tr('Plugin_search_2',$plugin_name);
   # remember the search
   write_auto($settings,$results);
   1; # return a true result to indicate that we don't need further configuration
@@ -1975,12 +1974,12 @@ sub do_plugin_configure {
   my $plugin = shift;
   my $p = $PLUGINS->{$plugin} or return;
   my $type = $p->type;
-  my @action_labels = ('Cancel','Configure');
-  push @action_labels,'Find' if $type eq 'finder';
-  push @action_labels,'Go!'  if $type eq 'dumper';
+  my @action_labels = ($LANG->tr('Cancel'),$LANG->tr('Configure_plugin'));
+  push @action_labels,$LANG->tr('Find') if $type eq 'finder';
+  push @action_labels,$LANG->tr('Go')   if $type eq 'dumper';
   my @buttons = map {submit(-name=>'plugin_action',-value=>$_)} @action_labels;
 
-  print h1($p->type eq 'finder' ? 'Find' : 'Configure',$p->name);
+  print h1($p->type eq 'finder' ? $LANG->tr('Find') : $LANG->tr('Configure'),$p->name);
   my $config_html = $p->configure_form;
 
   print start_form(),
@@ -1994,8 +1993,8 @@ sub do_plugin_configure {
 		    # in which case the plugin_action is not going to be defined
 		    hidden(-name=>'plugin_action',-value=>$action_labels[-1],-override=>1),
 		   )
-                 : ( p('This plugin has no extra configuration settings.'),
-		     b(submit('Back to Browser'))
+                 : ( p($LANG->tr('Boring_plugin')),
+		     b(submit($LANG->tr('Back_to_Browser')))
 		   ),
      hidden('plugin'),
      end_form();
@@ -2069,14 +2068,22 @@ sub tableize {
   $html .= "</table>\n";
 }
 
+sub set_language {
+  my ($config,$lang) = @_;
+  my $default_language   = $config->setting('language');
+  my @http_languages     = split /,\s+/,http('Accept-language');
+  my $preferred_language = $http_languages[0] || $default_language;
+  return unless $preferred_language;
+  $lang->language($preferred_language);
+}
+
 sub footer {
   ## FOOTER
   print
     $CONFIG->footer || '',
       p(i(font({-size=>'small'},
-	       'Note: This page uses cookie to save and restore preference information.',
-	       'No information is shared.')),br,
-       tt(font({-size=>'small'},"Generic genome browser version $VERSION"))),
+	       $LANG->tr('Footer_1'))),br,
+       tt(font({-size=>'small'},$LANG->tr('Footer_2',$VERSION)))),
        end_html;
 }
 

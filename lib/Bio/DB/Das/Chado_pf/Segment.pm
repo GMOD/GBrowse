@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.10 2002-12-09 22:05:04 scottcain Exp $
+# $Id: Segment.pm,v 1.11 2002-12-10 23:01:00 scottcain Exp $
 
 =head1 NAME
 
@@ -110,17 +110,40 @@ $VERSION = 0.01;
 sub new {
  #validate that the name/accession is valid, and start and end are valid,
  #then return a new segment
-  my $self = shift;
+
+  my $self  = shift;
+
   my ($name,$dbadaptor,$start,$end) = @_;
 
   throw("start value less than 1\n") if (defined $start && $start < 1);
   $start ||= 1;
 
-  my $length = $self->length;
+#moved length determination to constructor, now it will be there from
+# 'the beginning'.
+
+  my $quoted_name = $dbadaptor->quote($name);
+  my $sth = $dbadaptor->prepare ("
+   select seqlen from feature where feature_id in  
+     (select f.feature_id
+      from dbxref dbx, feature f, feature_dbxref fd
+      where f.type_id = 6 and
+         f.feature_id = fd.feature_id and
+         fd.dbxref_id = dbx.dbxref_id and
+         dbx.accession = $quoted_name ) ");
+  $sth->execute or throw("unable to validate name/length");
+
+  my $hash_ref = $sth->fetchrow_hashref;
+  my $length =  $$hash_ref{'seqlen'};
+
+
   throw("end value greater than length\n") if (defined $end && $end >= $length);
   $end ||= $length;
 
-  return $self;
+  return bless {dbadaptor => $dbadaptor,
+                start     => $start,
+                end       => $end,
+                length    => $length,
+                name      => $name }, ref $self || $self;
 }
 
 
@@ -182,23 +205,7 @@ Returns the length of the segment.  Always a positive number.
 
 =cut
 
-sub length {
-  my $self = shift;
-  my $quoted_name = $self->dbadaptor->quote($self->name);
-  my $sth = $self->dbadaptor->prepare ("
-   select seqlen from feature where feature_id in  
-     (select f.feature_id
-      from dbxref dbx, feature f, feature_dbxref fd
-      where f.type_id = 6 and
-         f.feature_id = fd.feature_id and
-         fd.dbxref_id = dbx.dbxref_id and
-         dbx.accession = $quoted_name ) ");
-  $sth->execute or return;
-
-  my $hash_ref = $sth->fetchrow_hashref;
-  return $$hash_ref{'seqlen'};
-  
-}
+sub length { shift->{end} }
 
 =head2 features
 
@@ -293,8 +300,8 @@ sub features {
     return;
   }
 
-  my $quoted_name = $self->quote($self->name);
-  my $sth = $self->prepare("
+  my $quoted_name = $self->dbadaptor->quote($self->name);
+  my $sth = $self->dbadaptor->prepare("
       select f.name,f.fmin,f.fmax,f.fstrand,cv.termname
       from feature f, cvterm cv, dbxref dbx, feature_dbxref fd
       where
@@ -348,8 +355,8 @@ Returns the sequence for this segment as a simple string.
 sub seq {
   my $self = shift;
 
-  my $quoted_name = $self->quote($self->name);
-  my $sth = $self->prepare("
+  my $quoted_name = $self->dbadaptor->quote($self->name);
+  my $sth = $self->dbadaptor->prepare("
      select residues from feature where feature_id in
        (select f.feature_id
         from dbxref dbx, feature f, feature_dbxref fd
@@ -381,6 +388,6 @@ the segment was originally generated.
 
 #'
 
-sub factory {shift->{dbadaptor}}
+sub factory {shift->{dbh}}
 
 1;

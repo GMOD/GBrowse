@@ -1,4 +1,4 @@
-# $Id: Chado_pf.pm,v 1.9 2002-12-09 22:05:04 scottcain Exp $
+# $Id: Chado_pf.pm,v 1.10 2002-12-10 23:01:00 scottcain Exp $
 # Das adaptor for Chado_pf
 
 =head1 NAME
@@ -134,11 +134,15 @@ $VERSION = 0.01;
 # create new database accessor object
 # takes all the same args as a Bio::DB::BioDB class
 sub new {
-  my $self = shift;
+  my $class = shift;
+  my $self  = $class->SUPER::new(@_);
+
   my ($dsn,$username,$password) = @_;
 
-  my $dbh = DBI->connect( $dsn, $username, $password );
+  my $dbh = DBI->connect( $dsn, $username, $password )
+    or warn "unable to open db handle";
 
+  $self->{dbh} = $dbh;
   $self;
 }
 
@@ -194,7 +198,7 @@ sub segment {
 								 CLASS
 								 VERSION)],@_);
   # lets the Segment class handle all the lifting.
-  return $self->_segclass->new($name,$self,$start,$end);
+  return $self->_segclass->new($name,$self->{dbh},$start,$end);
 }
 
 =head2 features
@@ -319,6 +323,11 @@ TO WORK.
 
 sub _segclass { return SEGCLASS }
 
+sub DESTROY {
+        my $self = shift;
+        $self->{dbh}->disconnect;
+        return;
+}
 
 package Bio::DB::Das::Chado_pfIterator;
 

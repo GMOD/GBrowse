@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::OligoFinder;
-# $Id: OligoFinder.pm,v 1.1 2002-03-31 21:41:49 lstein Exp $
+# $Id: OligoFinder.pm,v 1.2 2002-11-24 22:20:26 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -81,7 +81,7 @@ sub auto_find {
   my $in     = join ',',map {$dbi->quote($_)} @chroms;
   my $sth =
     $dbi->prepare("select fref,foffset,fdna from fdna where fref in ($in) order by fref,foffset",
-		  { 'mysql_use_result' => 1}) or die "Couldn't prepare ",$db->errstr;
+		  { 'mysql_use_result' => 1}) or die "Couldn't prepare ",$dbi->errstr;
   $sth->execute or die "Couldn't execute ",$db->errstr;
 
   my $bit_to_keep = length($oligo) - 1;

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.13 2002-03-24 04:29:44 lstein Exp $
+# $Id: Browser.pm,v 1.14 2002-03-24 23:18:47 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
@@ -14,7 +14,7 @@ require Exporter;
 
 use constant DEFAULT_WIDTH => 800;
 use vars '$VERSION','@ISA','@EXPORT';
-$VERSION = '1.10';
+$VERSION = '1.11';
 
 @ISA    = 'Exporter';
 @EXPORT = 'commas';
@@ -446,19 +446,23 @@ sub overview {
   my $width = $self->width;
   my $panel = Bio::Graphics::Panel->new(-segment => $segment,
 					-width   => $width,
-					-bgcolor => $self->setting('overview bgcolor') || 'wheat',
+					-bgcolor => $self->setting('overview bgcolor')
+					            || 'wheat',
+					-key_style => 'between',
 				       );
 
   my $units = $self->setting('overview units');
-  $panel->add_track($segment   => 'arrow',
+  $panel->add_track($segment,
+		    -glyph     => 'arrow',
 		    -double    => 1,
-		    -label     => sub {"Overview of ".$segment->ref},
+		    -label     => "Overview of ".$segment->ref,
 		    -labelfont => gdMediumBoldFont,
 		    -tick      => 2,
 		    $units ? (-units => $units) : (),
 		   );
 
-  if (my $landmarks  = $self->setting('overview landmarks') || ($conf->label2type('overview'))[0]) {
+  if (my $landmarks  = $self->setting('overview landmarks')
+      || ($conf->label2type('overview'))[0]) {
     my $max_bump   = $conf->setting(general=>'bump density') || 50;
 
     my @types = split /\s+/,$landmarks;
@@ -487,6 +491,131 @@ sub overview {
   $gd->rectangle($x1,$y1,$x2,$y2,$red);
 
   return ($gd,$segment->length);
+}
+
+# Return an HTML showing where multiple hits fall on the genome.
+# Can either provide a list of objects that provide the ref() method call, or
+# a list of arrayrefs in the form [ref,start,stop,[name]]
+sub hits_on_overview {
+  my $self = shift;
+  my ($db,$hits) = @_;
+
+  my %html; # results are a hashref sorted by chromosome
+
+  my $conf  = $self->config;
+  my $width = $self->width;
+  my $units = $self->setting('overview units');
+  my $max_label  = $conf->setting(general=>'label density') || 10;
+  my $max_bump   = $conf->setting(general=>'bump density') || 50;
+
+  # sort hits out by reference
+  my (%refs,%seenit);
+  for my $hit (@$hits) {
+    if (UNIVERSAL::can($hit,'abs_ref')) {
+      my $ref = $hit->abs_ref;
+      my $name = $hit->name;
+      next if $seenit{$name}++;
+      $name =~ s/\:\d+,\d+$//;  # remove coordinates if they're there
+      push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$hit->abs_start,
+						      -stop=>$hit->abs_stop,
+						      -name=>$name);
+    } else {
+      my ($ref,$start,$stop,$name) = @$hit;
+      push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$start,
+						      -stop=>$stop,
+						      -name=>$name||'');
+    }
+  }
+
+  for my $ref (sort keys %refs) {
+    my $segment = $db->segment($ref);
+    my $panel = Bio::Graphics::Panel->new(-segment => $segment,
+					  -width   => $width,
+					  -bgcolor => $self->setting('overview bgcolor')
+					  || 'wheat',
+					  -key_style => 'between',
+					 );
+
+    # add the arrow
+    $panel->add_track($segment,
+		      -glyph     => 'arrow',
+		      -double    => 1,
+		      -label     => 0, #"Overview of ".$segment->ref,
+		      -labelfont => gdMediumBoldFont,
+		      -tick      => 2,
+		      $units ? (-units => $units) : (),
+		     );
+
+    # add the landmarks
+    if (my $landmarks  = $self->setting('overview landmarks')
+	|| ($conf->label2type('overview'))[0]) {
+
+      my @types = split /\s+/,$landmarks;
+      my $track = $panel->add_track(-glyph  => 'generic',
+				    -height  => 3,
+				    -fgcolor => 'black',
+				    -bgcolor => 'black',
+				    $conf->style('overview'),
+				   );
+      my $iterator = $segment->features(-type=>\@types,-iterator=>1,-rare=>1);
+      my $count;
+      while (my $feature = $iterator->next_seq) {
+	$track->add_feature($feature);
+	$count++;
+      }
+      $track->configure(-bump  => $count <= $max_bump,
+			-label => $count <= $max_label,
+		       );
+
+      # add the hits
+      $panel->add_track($refs{$ref},
+			-glyph     => 'diamond',
+			-height    => 6,
+			-fgcolor   => 'red',
+			-bgcolor   => 'red',
+			-bump      => @{$refs{$ref}} <= $max_bump,
+			-label     => @{$refs{$ref}} <= $max_bump,  # deliberate
+		       );
+
+    }
+    my $gd    = $panel->gd;
+    my $boxes = $panel->boxes;
+    $html{$ref} = $self->_hits_to_html($ref,$gd,$boxes);
+  }
+  return \%html;
+}
+
+# utility called by hits_on_overview
+sub _hits_to_html {
+  my $self = shift;
+  my ($ref,$gd,$boxes) = @_;
+  my $source   = $self->source;
+  my $self_url = url(-relative=>1);
+  $self_url   .= "?source=$source";
+
+  my $signature = md5_hex(rand().rand()); # just a big random number
+  my ($width,$height) = $gd->getBounds;
+  my $url       = $self->generate_image($gd,$signature);
+  my $img       = img({-src=>$url,-align=>'CENTER',
+		       -usemap=>"#$ref",
+		       -width => $width,
+		       -height => $height,
+		       -border=>0});
+  my $html = "\n";
+  $html   .= $img;
+  $html   .= qq(<br><map name="$ref">\n);
+
+  # use the scale as a centering mechanism
+  my $ruler = shift @$boxes;
+  $html    .= $self->make_centering_map($ruler);
+
+  foreach (@$boxes){
+    my ($start,$stop) = ($_->[0]->start,$_->[0]->end);
+    my $href      = $self_url . ";ref=$ref;start=$start;stop=$stop";
+    $html .= qq(<AREA SHAPE="RECT" COORDS="$_->[1],$_->[2],$_->[3],$_->[4]" HREF="$href">\n);
+  }
+  $html .= "</map>\n";
+  $html;
 }
 
 # I know there must be a more elegant way to insert commas into a long number...

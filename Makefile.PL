@@ -108,7 +108,17 @@ conf_install ::
 		else \\
 			cp \$\$i \$\$dir; \\
 		fi \\
-	done
+	done; \\
+	cd $Bin/conf/plugins; \\
+	mkdir -p \$\$dir/plugins; \\
+	for i in *.pm; do \\
+		if [ -e "\$\$dir/\$\$i/plugins" ]; then \\
+			echo "   Found \$\$i in \$\$dir/plugins. Skipping..."; \\
+		else \\
+			cp \$\$i \$\$dir/plugins; \\
+		fi \\
+	done; \\
+
 
 htdocs_install ::
 	\@echo "Installing stylesheet and images..."

@@ -55,6 +55,7 @@ htdocs/images/buttons/red7.gif
 htdocs/images/buttons/red8.gif
 lib/Bio/DB/GFF/Aggregator/waba_alignment.pm
 lib/Bio/Graphics/Browser.pm
+lib/Bio/Graphics/Browser/Plugin.pm
 lib/Bio/Graphics/Glyph/annloraine_transcript.pm
 lib/Bio/Graphics/Glyph/drosophila_arrow.pm
 lib/Bio/Graphics/Glyph/heterogeneous_segments.pm

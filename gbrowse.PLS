@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.17 2002-03-24 04:29:44 lstein Exp $
+# $Id: gbrowse.PLS,v 1.18 2002-03-24 23:18:47 lstein Exp $
 
 use strict;
 use lib '/home/lstein/projects/Generic-Genome-Browser/lib/';
@@ -302,7 +302,7 @@ sub main_display {
 
   # if there are keyword search results, then print those as well
   elsif (@keyword_search_results) {
-    format_keyword_search($page_settings->{name},\@keyword_search_results);
+    format_keyword_search($page_settings,$page_settings->{name},\@keyword_search_results);
   }
 
   # get the third party features
@@ -961,7 +961,8 @@ sub name2segments {
   push @argv,(-class => $class) if defined $class;
   push @argv,(-start => $start) if defined $start;
   push @argv,(-stop  => $stop)  if defined $stop;
-  @segments = $db->segment(@argv);
+  @segments = $class && $name =~ /\*/ ? $db->get_feature_by_name(@argv) 
+                                      : $db->segment(@argv);
 
   # Here starts the heuristic part.  Try various abbreviations that
   # people tend to use for chromosomal addressing.
@@ -994,18 +995,25 @@ sub name2segments {
   # try any "automatic" classes that have been defined in the config file
   if (!@segments && !$class &&
       (my @automatic = split /\s+/,$CONFIG->setting('automatic classes') || '')) {
-    my @names = length $name > 3 ? ($name,"$name*") : $name;  # possibly add a wildcard
+    my @names = length($name) > 3 && $name !~ /\*/ ? ($name,"$name*") : $name;  # possibly add a wildcard
     for my $n (@names) {
       @argv = (-name=>$n);
       push @argv,(-start => $start) if defined $start;
       push @argv,(-stop  => $stop)  if defined $stop;
       foreach $class (@automatic) {
-	@segments = $db->segment(-class=>$class,@argv);
+	# we are deliberabely doing something different in the case that the user
+	# typed in a wildcard vs an automatic wildcard being added
+ 	@segments = $name =~ /\*/ ? $db->get_feature_by_name(-class=>$class,@argv)
+                                  : $db->segment(-class=>$class,@argv);
 	last if @segments;
       }
     }
   }
 
+  # user wanted multiple locations, so user gets them
+  return @segments if $name =~ /\*/;
+
+  # Otherwise we try to merge segments that are adjacent if we can!
 
   # This tricky bit is called when we retrieve multiple segments or when
   # there is an unusually large feature to display.  In this case, we attempt
@@ -1035,34 +1043,49 @@ sub do_keyword_search {
 
 ################ format keyword search ###################
 sub format_keyword_search {
-  my ($name,$results) = @_;
+  my ($settings,$name,$results) = @_;
   my $db = open_database();
-
   my $regexp = join '|',($name =~ /(\w+)/g);
+
+  my %position = map { overload::StrVal($_->[0]) => $db->segment($_->[0]) } @$results;
+  # sort into bins by reference
+  my %refs;
+  foreach (@$results) {
+    my $pos = $position{overload::StrVal($_->[0])};
+    my $abs_ref = $pos->abs_ref;
+    push @{$refs{$abs_ref}},$_;
+  }
+
+  $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
+  my $overviews = $CONFIG->hits_on_overview($db,[values %position]);
 
   print start_table();
   print TR({-class=>'datatitle'},th({-colspan=>4},
 	      "No landmark named $name is found, but the following landmarks may be related."));
-  print TR({-class=>'datatitle'},th(['Name','Description','Location','Relevance']));
   my $url = url(-relative=>1,-path_info=>1);
-  my %position = map { overload::StrVal($_->[0]) => $db->segment($_->[0]) } @$results;
 
-  for my $r (sort {by_score_and_position(\%position)} @$results) {
-    my $name  = escape($r->[0]->name);
-    my $class    = escape($r->[0]->class);
-    my $description = escapeHTML($r->[1]);
-    $description =~ s/($regexp)/<b class="keyword">$1<\/b>/ig;
+  for my $ref(sort keys %refs) {
+    my @results = @{$refs{$ref}};
+    print TR(th({-class=>'databody',-colspan=>4,-align=>'CENTER'},"Matches on $ref",br,
+		$overviews->{$ref}));
+    for my $r (sort {by_score_and_position(\%position)} @results) {
+      my $name  = escape($r->[0]->name);
+      my $class    = escape($r->[0]->class);
+      my $description = escapeHTML($r->[1]);
+      $description =~ s/($regexp)/<b class="keyword">$1<\/b>/ig;
 
-    my $href     = "$url?name=$class:$name";
-    my $seg      = $position{overload::StrVal($r->[0])};
-    my $position = format_segment($seg);
-    print TR({-class=>'databody',-valign=>'TOP'},
-	     th({-align=>'RIGHT'},a({-href=>$href},$r->[0])),
-	     td($description),
-	     td(a({-href=>$href},$position)),
-	     td($r->[2]));
+      my $href     = "$url?name=$class:$name";
+      my $seg      = $position{overload::StrVal($r->[0])};
+      my $position = format_segment($seg);
+      print TR({-class=>'databody',-valign=>'TOP'},
+	       th({-align=>'RIGHT'},a({-href=>$href},$r->[0])),
+	       td($description),
+	       td(a({-href=>$href},$position)),
+	       td("score=$r->[2]"));
+    }
   }
   print end_table;
+
 }
 
 sub by_score_and_position {
@@ -1164,13 +1187,15 @@ sub multiple_choices {
 
   my $message = "The landmark named ".$settings->{name}." exists in multiple locations";
   $message   .= @$segments > TOO_MANY_SEGMENTS ?  ", but there are too many to choose from (".@$segments.")."
-                                                 ." Please try a different landmark." 
+                                                 ." Please try a different landmark."
                                                : ". Please choose one.";
 
-  print start_table({-class=>'datatitle'});
-  print TR(th($message));
+  $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
+  my $overviews =  $CONFIG->hits_on_overview(open_database(),$segments);
+
+  print start_table();
+  print TR(th({-colspan=>2,-class=>'datatitle'},$message));
   if (@$segments <= TOO_MANY_SEGMENTS) {
-    print start_TR({-class=>'databody'}),start_td();
 
     # aggregate segments by reference and then split on gaps of > 1 M
     my %segs;
@@ -1181,19 +1206,23 @@ sub multiple_choices {
 
     print start_dl;
     for my $ref (sort keys %segs) {
+      print TR(th({-colspan=>2,-class=>'databody',-align=>'CENTER'},"Matches on $ref",br,
+		  $overviews->{$ref}));
+      my $overview = $overviews->{$ref};
       my @spans  = sort {$a->start <=> $b->start} @{$segs{$ref}};
-      print dt(b($ref)),"\n";
+      my %seen;
       foreach (@spans) {
+	next if $seen{$_->name}++;
 	# consider using segment2link() here
 	my ($start,$stop) = ($_->start,$_->stop);
 	my $bp = $stop - $start;
 	my $s = commas($start);
 	my $e = commas($stop);
-	print dd(a({-href=>"$url?source=$source;ref=$ref;start=$start;stop=$stop"},"$s..$e ($bp bp)")),"\n";
+	print TR({-class=>'databody',-valign=>'TOP'},
+		 th({-align=>'RIGHT',-width=>'50%'},$_->class.':'.' '.$_->name),
+		 td(a({-href=>"$url?source=$source;ref=$ref;start=$start;stop=$stop"},"$s..$e ($bp bp)"))),"\n";
       }
-
     }
-    print end_dl,end_td,end_TR;
   }
   print end_table;
 }

@@ -38,13 +38,14 @@ $startperl -w
 #
 ###################################################################
 \$VERSION   = $OPTIONS{VERSION};
-
 !GROK!THIS!
+
+print OUT "use libs '$OPTIONS{LIB}'\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.96 2004-06-22 22:32:12 lstein Exp $
+# $Id: gbrowse.PLS,v 1.97 2004-06-24 18:13:26 lstein Exp $
 
 use strict;
 use Bio::Graphics;

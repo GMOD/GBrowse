@@ -1,22 +1,8 @@
 Generic Genome Browser Installation
-
     GBrowse is distributed as binary packages for Windows and Macintosh OS
     X, and as source code for Unix systems.
 
-  1. MACINTOSH OS X INSTALL
-
-    Go to the following URL:
-
-        ftp://dev.wormbase.org/pub/people/tharris/macosx/packages
-
-    Find the most recent version of the GBrowse package. These files have
-    the .dmg extension.
-
-    Once the package is downloaded, double click on it. The installer will
-    handle everything else.
-
-  2. WINDOWS INSTALL
-
+  1. WINDOWS INSTALL
     Before installing on Windows systems, you will need to install
     ActiveState Perl and the Apache web server. You may also wish to install
     a database management system such as MySQL.
@@ -73,8 +59,18 @@ Generic Genome Browser Installation
 
     When this is done, go to step (5) below.
 
-  3. SOURCE CODE INSTALL
+  2. MACINTOSH OS X INSTALL
+    Go to the following URL:
 
+        ftp://dev.wormbase.org/pub/people/tharris/macosx/packages
+
+    Find the most recent version of the GBrowse package. These files have
+    the .dmg extension.
+
+    Once the package is downloaded, double click on it. The installer will
+    handle everything else.
+
+  3. SOURCE CODE INSTALL
     GBrowse runs on top of several software packages. These must be
     installed and configured before you can run GBrowse. Most preconfigured
     Linux systems will have some of these packages installed already.
@@ -148,12 +144,9 @@ Generic Genome Browser Installation
             make
             make install
 
-    The last step may need to be done as root. There is a test defined for
-    this package, but you must initialize and load a database before you can
-    run it.
-
     This will install the software in the default location under
-    /usr/local/apache. See "Details" to change this.
+    /usr/local/apache. See "Details" to change this, or to install gbrowse
+    into your home directory.
 
     To further configure GBrowse, see CONFIGURE_HOWTO. To run GBrowse on top
     of Oracle and PostgreSQL databases see ORACLE_AND_POSTGRESQL. To run on
@@ -184,12 +177,15 @@ Generic Genome Browser Installation
 
     The following arguments are recognized:
 
-      CONF            Configuration file directory
-      HTDOCS          Static files directory
-      CGIBIN          CGI script directory
-      INSTALLSITELIB  Perl site-specific modules directory
-      PREFIX          Base directory for conf, htdocs and cgibin
-      DO_XS           Compile fast alignment algorithm (XS C extension)
+       CONF            Configuration file directory
+       HTDOCS          Static files directory
+       CGIBIN          CGI script directory
+       APACHE          Base directory for Apache's conf, htdocs and cgibin directories
+       LIB             Perl site-specific modules directory
+       BIN             Perl executable scripts directory
+       NONROOT         If set to a non-zero value (e.g. NONROOT=1) then install
+                          gbrowse in a way that does not require root access.
+       DO_XS           Compile fast alignment algorithm (XS C extension)
 
     For example, if you are on a RedHat system, where the default Apache
     installation uses /var/www/html for HTML files, /var/www/cgi-bin for CGI
@@ -204,12 +200,12 @@ Generic Genome Browser Installation
     only). To make it easier when upgrading to new versions of the software,
     you can put this command into a shell script.
 
-    As a convenience, you can use the configuration option PREFIX, in which
-    case the static and CGI files will be placed into PREFIX/conf,
-    PREFIX/htdocs and PREFIX/cgi-bin respectively, where PREFIX is the
-    location you specified:
+    As a convenience, you can use the configuration option APACHE, in which
+    case the static and CGI files will be placed into APACHE/conf,
+    APACHE/htdocs and APACHE/cgi-bin respectively, where APACHE is the
+    location you specified on the command line:
 
-      perl Makefile.PL PREFIX=/home/www
+      perl Makefile.PL APACHE=/home/www
 
     Note that the configuration files are always placed in a subdirectory
     named gbrowse.conf. You cannot change this. Similarly, the static files
@@ -242,8 +238,105 @@ Generic Genome Browser Installation
     your file path settings. When Makefile.PL is run again, it will ask you
     whether you wish to reuse the settings stored in the file.
 
-  4. TRY THE BROWSER OUT
+  4. INSTALLING INTO YOUR HOME DIRECTORY
+    Read this section only if you are on a Unix system and do not have root
+    privileges. You will need to configure Apache to run out of your home
+    directory. One way to do this is to install Apache from source code and
+    to specify your home directory when you first configure it:
 
+       % cd apache_x.xx.xx
+       % ./configure --prefix=$HOME/apache
+       % make
+       % make install
+
+    This will place Apache into your home directory under ~/apache. You
+    should then edit ~/apache/conf/httpd.conf and replace the directive:
+
+      Listen 80
+
+    with
+
+      Listen 8000
+
+    so that Apache will listen for connections to the unprivileged port 8000
+    rather than the usual port 80. If you also see a "Port 80" directive,
+    change it to read "Port 8000." You'll now be able to talk to Apache
+    using URLs like http://your.host.edu:8000/.
+
+    You may not need to install Apache from scratch if your Unix
+    distribution already has Apache installed. What you will do is to create
+    an Apache directory tree in your home directory and then start Apache
+    using command-line arguments that tell it to start up from the home
+    directory rather than its default system-wide directory.
+
+    Create an Apache directory and its subdirectories using the following
+    series of commands:
+
+      % cd ~
+      % mkdir apache
+      % mkdir apache/conf
+      % mkdir apache/logs
+      % mkdir apache/htdocs
+      % mkdir apache/cgi-bin
+
+    Now copy the system-wide httpd.conf into ~/apache/conf. You may need to
+    search around a bit to find out where the system-wide httpd.conf lives
+    (try running the command "locate httpd.conf):
+
+      % cp /etc/httpd/conf/httpd.conf ~/apache/conf
+
+    Now open up ~/apache/conf/httpd.conf with a text editor and add the
+    following four directives, replacing $HOME with the full path to your
+    home directory (for example "/home/fred"):
+
+      Listen       8000
+      ServerRoot   $HOME/apache
+      DocumentRoot $HOME/apache/htdocs
+      SetEnv       PERL5LIB $HOME/lib  
+
+    You should search the httpd.conf file for older versions of these
+    directives, and delete them if they're there. If you see a Port
+    directive, change it to read "Port 8000".
+
+    Somewhere in httpd.conf there will be a ScriptAlias directives, as well
+    as a <Directory> section that refers to "cgi-bin". Delete the
+    ScriptAlias directive and the entire <Directory> section through to the
+    </Directory> line. Replace both these sections with the following:
+
+     ScriptAlias /cgi-bin/ "cgi-bin/"
+
+     <Location "/cgi-bin">
+        AllowOverride None
+        Options None
+        Order allow,deny
+        Allow from all
+     </Location>
+
+    You can now start Apache from the command line using the "apachectl"
+    script:
+
+     % /usr/sbin/apachectl -d ~/apache -k start
+
+    If Apache starts successfully, then this command will return silently.
+    Otherwise, it will print an error message. More error messages may be
+    found in ~/apache/logs/error_log.
+
+    To confirm that Apache is running from your home directory, create a
+    file named index.html and copy it into ~/apache/htdocs. You should then
+    be able to open a browser, connect to http://localhost:8000/, and see
+    the index.html file that you just created.
+
+    Now you can build and install gbrowse with the following incantation:
+
+     % cd Generic-Genome-Browser-X.XX
+     % perl Makefile.PL APACHE=~/apache LIB=~/lib BIN=~/bin NONROOT=1
+     % make
+     % make install
+
+    When you are prompted to load gbrowse using http://localhost/gbrowse,
+    use http://localhost:8000/gbrowse instead.
+
+  5. TRY THE BROWSER OUT
     The installation procedure will create a small in-memory database of
     yeast chromosome 1 for you to play with. To try the browser out, use
     your favorite browser to open:
@@ -263,8 +356,7 @@ Generic Genome Browser Installation
 
        http://localhost/gbrowse
 
-  5. POPULATING THE DATABASE (MySQL)
-
+  6. POPULATING THE DATABASE (MySQL)
     This step takes you through populating the database with the full yeast
     genome. You can skip this step if you use the in-memory database for
     small projects (see section 6).
@@ -376,8 +468,7 @@ Generic Genome Browser Installation
     an informative error message in the error log. The most common problem
     is MySQL password or permissions problems.
 
-  6. LOADING OTHER DATA SETS
-
+  7. LOADING OTHER DATA SETS
     Genome feature tables for the major model organisms and human can be
     found at www.gmod.org in the downloads section, but these files are not
     guaranteed to be up to date.
@@ -426,8 +517,7 @@ Generic Genome Browser Installation
     The sample configuration file 08.genbank.conf (located in
     contrib/conf_files) is appropriate for data loaded with load_genbank.pl.
 
-  7. LOADING DNA
-
+  8. LOADING DNA
     To display the DNA sequence and to run sequence-dependent glyphs such as
     the three-frame translation, you will need to load the DNA as well as
     the annotations. The DNA must be formatted as a series of one or more
@@ -452,14 +542,12 @@ Generic Genome Browser Installation
     annotations. If you are loading one of these GFF files, the DNA will be
     recognized automatically and loaded by any of the loaders.
 
-  8. CREATING YOUR OWN GENOME DATABASE
-
+  9. CREATING YOUR OWN GENOME DATABASE
     See the file doc/pod/CONFIGURE_HOWTO.pod for information on how to
     create new databases from scratch, add new browser tracks, and how to
     get the browser to dump the DNA from the region currently under display.
 
-  9. MAKING THE BROWSER RUN FASTER
-
+  10. MAKING THE BROWSER RUN FASTER
     Three factors are major contributors to the length of time it takes to
     load a gbrowse page:
 
@@ -503,8 +591,7 @@ Generic Genome Browser Installation
     done about this short of buying a faster machine. The GMOD team is
     working hard to reduce this performance hit.
 
-  10. MAKING THE SERVER RUN SAFER
-
+  11. MAKING THE SERVER RUN SAFER
     Whenever you are running a server-side Web script using information
     provided by a web client, there is a risk that maliciously-formatted
     data provided by the use will trick the server-side script into
@@ -530,14 +617,12 @@ Generic Genome Browser Installation
 
     This will affect all mod_perl scripts globally.
 
-  11. BIOPERL VERSIONS
-
+  12. BIOPERL VERSIONS
     GBrowse is evolving quickly, and some of its features are dependent on
     new features in Bioperl 1.4.0. If you are having trouble making GBrowse
     run, make sure you are using Bioperl 1.4.0!
 
-  12. THE GBROWSE_IMG SCRIPT
-
+  13. THE GBROWSE_IMG SCRIPT
     The gbrowse_img CGI script (a new feature as of version 1.41), is a
     stripped-down version of gbrowse which just generates images. It is
     suitable for incorporating into <img> tags in order to make a thumbnail
@@ -560,8 +645,7 @@ Generic Genome Browser Installation
     generated when gbrowse_img is called without any arguments. Type
     http://your.host/cgi-bin/gbrowse_img into your favorite web browser.
 
-  13. PLUGINS
-
+  14. PLUGINS
     Gbrowse has a plugin architecture which makes it easy for third-party
     developers to expand its functionality. The plugins are Perl .pm files
     located in the directory gbrowse.conf/plugins/. To install plugins,
@@ -577,8 +661,7 @@ Generic Genome Browser Installation
     This setting should be somewhere in the [GENERAL] section of the
     relevant gbrowse configuration file.
 
-  14. THE GENBANK/EMBL PROXY
-
+  15. THE GENBANK/EMBL PROXY
     Sample configuration number 5 ("05.embl.conf") corresponds to an
     experimental pass-through proxy for Genbank. At least in theory, if you
     enter a landmark that isn't recognized, gbrowse will go to EMBL using
@@ -609,8 +692,7 @@ Generic Genome Browser Installation
     6   Go to http://localhost/cgi-bin/gbrowse/embl. Search for a Genbank or
         embl accession number, such as CEF58D5
 
-  15. UPDATING THE BROWSER WITHOUT REENTERING YOUR DIRECTORY SETTINGS
-
+  16. UPDATING THE BROWSER WITHOUT REENTERING YOUR DIRECTORY SETTINGS
     When updating GBrowse to a new version of the software, you can
     configure it using your preferred directory settings by making a backup
     copy of the file GGB.def that was generated the first time you installed
@@ -623,8 +705,7 @@ Generic Genome Browser Installation
       make
       make install
 
-  16. REMOVING OUT-OF-DATE IMAGE FILES
-
+  17. REMOVING OUT-OF-DATE IMAGE FILES
     As GBrowse runs, it creates temporary image files in the gbrowse tmp
     directory (typically /usr/local/apache/htdocs/gbrowse/tmp). These image
     files are relatively small, but if you run GBrowse for a long time they
@@ -638,23 +719,20 @@ Generic Genome Browser Installation
     the image files are owned by user "nobody", you must install this
     command in the cron script for "nobody" or "root."
 
-  17. KNOWN BUGS
-
+  18. KNOWN BUGS
     Currently there is one known bug. The navigation buttons do not operate
     properly when the client is using Internet Explorer 5.1 on a Macintosh
     and accessing gbrowse running on a MacOS X server running Apache. Other
     combinations of clients and servers work properly.
 
-  18. FEATURE WISH LIST (updated April, 2004)
-
+  19. FEATURE WISH LIST (updated April, 2004)
       - Configure data sources on a track-by-track basis.
       - A configurable synteny viewer.
 
     If you are interested in working on any of these features, please
     contact the developers at the address given in the next section.
 
-  19. SUPPORT AND BUG REPORTS
-
+  20. SUPPORT AND BUG REPORTS
     Please send requests for help to gmod-gbrowse@lists.sourceforge.net.
     There is also a formal bug tracking and feature request system in place
     at <http://www.gmod.org/>

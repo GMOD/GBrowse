@@ -18,6 +18,7 @@ print OUT <<'!NO!SUBS!';
 use strict;
 use File::Copy;
 use Bio::Root::IO;
+use File::Path 'mkpath';
 use Cwd;
 use FindBin '$Bin';
 
@@ -36,7 +37,7 @@ my $cgi_target = $options{CGIBIN};
 print "Installing gbrowse CGI scripts...\n";
 
 if (! (-e $cgi_target) ) {
-    mkdir($cgi_target,0777) or die "unable to create $cgi_target directory\n";
+    mkpath($cgi_target,0,0777) or die "unable to create $cgi_target directory\n";
 }
 
 my $cgidir = "cgi-bin";

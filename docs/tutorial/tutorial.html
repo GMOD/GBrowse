@@ -144,7 +144,7 @@ this into your GBrowse configuration directory ($CONF/gbrowse.conf).
 
 You should now be able to view the data set.  Point your web browser
 at <a
-href="http://localhost/cgi-bin/gbrowse/volvox">http://localhost/cgi-bin/gbrowse/volvox</a>
+href="/cgi-bin/gbrowse/volvox">http://localhost/cgi-bin/gbrowse/volvox</a>
 and type in "ctgA" in the search box.  The result is shown in Figure
 1.
 
@@ -2876,7 +2876,7 @@ stanza at the top.  Then copy this file to the directory "$HTDOCS".
 This will place it at the top of the Web server document tree, but
 <b>outside</b> the location of GBrowse databases.  Check that the file
 is correctly installed on your web server by fetching this URL: <a
-href="http://localhost/elegans_sts.gff"
+href="elegans_sts.gff"
 target="_new">http://localhost/elegans_sts.gff</a>.  If the file is
 correctly installed on the Web server, you will see this:
 
@@ -2923,9 +2923,9 @@ files.  To make this more interesting, first copy the
 elegans_expression.gff file to the "$HTDOCS" directory in the way
 described earlier.  Now elegans_sts.gff and elegans_expression.gff
 will be available as the URLs <a
-href="http://localhost/elegans_sts.gff">http://localhost/elegans_sts.gff</a>
+href="/elegans_sts.gff">http://localhost/elegans_sts.gff</a>
 and <a
-href="http://localhost/elegans_expression.gff">http://localhost/elegans_expression.gff</a>,
+href="/elegans_expression.gff">http://localhost/elegans_expression.gff</a>,
 respectively.
 
 <p>
@@ -3117,7 +3117,7 @@ configuration file before you try the next step.
 <p>
 
 Using a web browser fetch the URL <a
-href="http://localhost/cgi-bin/das/dsn"
+href="/cgi-bin/das/dsn"
 target="_new">http://localhost/cgi-bin/das/dsn</a>.  This will return
 an XML document giving information about each of the data sources that
 you have configured. 
@@ -3142,7 +3142,7 @@ This is showing that there is one configured DAS source, the
 Next test that the DAS "types" request is working.  This request
 returns all the feature types that the database knows about.  Using a
 web browser fetch the URL <a
-href="http://localhost/cgi-bin/das/elegans_core/types"
+href="/cgi-bin/das/elegans_core/types"
 target="_new">http://localhost/cgi-bin/das/elegans_core/types</a>.
 This should return another short document confirming that the
 "processed_transcript" and "match:BLAT_EST_BEST" feature types are
@@ -3151,7 +3151,7 @@ available.
 <p>
 
 The final test that the DAS server is performing correctly is to
-browse to the <a href="http://localhost/cgi-bin/gbrowse/elegans_core"
+browse to the <a href="/cgi-bin/gbrowse/elegans_core"
 target="_new">elegans_core</a> database and to <b>turn off</b> all the
 tracks except for DNA/GC content.  This should give you an empty
 details panel.  Now scroll down to the first empty URL entry field and
@@ -3186,14 +3186,14 @@ category" configuration objects.
 
 Once the config file is installed, confirm that you can browse the
 extra annotations by fetching <a
-href="http://localhost/cgi-bin/gbrowse/elegans_extra"
+href="/cgi-bin/gbrowse/elegans_extra"
 target="_new">http://localhost/cgi-bin/gbrowse/elegans_extra</a>.
 
 <p>
 
 Now we're ready to layer the extra annotations onto the core
 annotations using DAS.  Open up a browser window on the <a
-href="http://localhost/cgi-bin/gbrowse/elegans_core"
+href="/cgi-bin/gbrowse/elegans_core"
 target="_new">http://localhost/cgi-bin/gbrowse/elegans_core</a>
 database.  Delete any URLs that are already listed in the "Add remote
 annotations" area, and add the URL
@@ -3217,7 +3217,7 @@ feature types that the DAS server makes available.  If this is not
 desirable, you can limit the tracks by type and/or category.  To find
 out what feature types a DAS server supports, retrieve a URL like the
 following: <a
-href="http://localhost/cgi-bin/das/elegans_extra/types">http://localhost/cgi-bin/das/elegans_extra/types</a>.
+href="/cgi-bin/das/elegans_extra/types">http://localhost/cgi-bin/das/elegans_extra/types</a>.
 This will provide a list of feature type names and their functional
 categories.  From this we can see that the elegans_extra database
 exports types of "repeat", "trans-splice_acceptor," "Deletion_allele,"
@@ -3382,7 +3382,7 @@ time <b>redirect</b> its output into a new configuration file named
 
 That should be all you need to do!  Try browsing the new data source
 by requesting <a
-href="http://localhost/cgi-bin/gbrowse/ucsc_hg16.conf"
+href="/cgi-bin/gbrowse/ucsc_hg16.conf"
 target="_new">http://localhost/cgi-bin/gbrowse/ucsc_hg16.conf</a>, and you
 should be able to browse through a rudimentary version of the Human
 genome display.
@@ -3426,6 +3426,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Mon Mar  1 08:35:22 SAST 2004
+Last modified: Thu Jun 24 11:44:10 EDT 2004
 <!-- hhmts end -->
 </body> </html>

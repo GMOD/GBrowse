@@ -40,11 +40,11 @@ $startperl -w
 \$VERSION   = $OPTIONS{VERSION};
 
 !GROK!THIS!
+print OUT "use libs '$OPTIONS{LIB}'\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
-
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.24 2004-06-08 21:06:34 scottcain Exp $
+# $Id: gbrowse_details.PLS,v 1.25 2004-06-24 18:13:26 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);

@@ -33,10 +33,12 @@ use lib '$OPTIONS{CONF}/gbrowse.conf/';
 
 !GROK!THIS!
 
+print OUT "use libs '$OPTIONS{LIB}'\n" if defined $OPTIONS{LIB};
+
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: moby_server.PLS,v 1.4 2004-02-29 16:14:27 markwilkinson Exp $
+#$Id: moby_server.PLS,v 1.5 2004-06-24 18:13:26 lstein Exp $
 use SOAP::Transport::HTTP;
 use MobyServices::GbrowseServices;
 use strict;

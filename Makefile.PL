@@ -7,11 +7,12 @@ use FindBin '$Bin';
 use Cwd;
 require 5.005003;
 
-my $VERSION = '1.61';
+my $VERSION = '1.62';
 my $working_dir = cwd;
 
-my @OPTIONS = qw( PREFIX CONF HTDOCS CGIBIN DO_XS LIB 
-		  INSTALLSCRIPT NONROOT);
+my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN
+		 LIB BIN
+		 DO_XS NONROOT);
 my $OPTIONS = join ('|',@OPTIONS);
 my %OPTIONS;
 
@@ -22,7 +23,7 @@ foreach (@argv) {
   if (/^--?h/i) {
     die <<END;
 To customize install locations, provide one or more of the options
-PREFIX, CONF, HTDOCS, or CGIBIN, as in CONF=/usr/local/apache/conf.
+APACHE, CONF, HTDOCS, or CGIBIN, as in CONF=/usr/local/apache/conf.
 
 For RedHat Linux, you will want to use:
     perl Makefile.PL CONF=/etc/httpd/conf \\
@@ -30,42 +31,38 @@ For RedHat Linux, you will want to use:
                      CGIBIN=/var/www/cgi-bin
 
 For most versions of Apache built from source code, use:
-    perl Makefile.PL PREFIX=/usr/local/apache
+    perl Makefile.PL APACHE=/usr/local/apache
 
 
 To install as a user without root privileges, in addition to 
 the arguments above, provide the arguments NONROOT=1,
-LIB=/path/to/perl/libs and INSTALLBIN=/path/to/scripts
+LIB=/path/to/perl/libs and BIN=/path/to/scripts
 
 For example:
-    perl Makefile.PL CONF=$HOME/gbrowse/conf \\
-                     HTDOCS=$HOME/gbrowse/html \\
-                     CGIBIN=$HOME/gbrowse/cgi-bin \\
-		     LIB=$HOME/gbrowse/lib \\
-		     INSTALLSCRIPT=$HOME/gbrowse/bin \\
+    perl Makefile.PL APACHE=~/gbrowse \\
+		     LIB=~/gbrowse/lib \\
+		     BIN=~/gbrowse/bin \\
 		     NONROOT=1
 
-will perform a non-privileged installation that places all 
-gbrowse components (including perl libraries) in the path
-$HOME/gbrowse.  
+will perform a non-privileged installation that places all gbrowse
+components (including perl libraries) in the path ~/gbrowse.
 
-In the above example, before running 'make install',
-create the directories ~/gbrowse/html, ~gbrowse/cgi-bin
-and ~/gbrowse/conf 
+In the above example, before running 'make install', create the
+directories ~/gbrowse/html, ~gbrowse/cgi-bin and ~/gbrowse/conf
 
-To make the CGI scipts aware of the custom library
-location, you can either ask someone with root privileges to 
-edit the apache configuration file or define the environmental 
-variable $PERL5LIB for the owner of the httpd processes 
-serving gbrowse.  Failing that, you will want to add the line 
+To make the CGI scipts aware of the custom library location, you can
+either ask someone with root privileges to edit the apache
+configuration file or define the environmental variable $PERL5LIB for
+the owner of the httpd processes serving gbrowse.  Failing that, you
+will want to add the line
 
-  use lib "$HOME/gbrowse/lib"; 
+  use lib "$ENV{HOME}/gbrowse/lib";
 
-to each of the CGI scripts.  
+to each of the CGI scripts.
 
 If you have a C compiler and wish to compile the XS extensions, set
-DO_XS=1.  Currently all this does is to speed up the
-multiple alignment plugin.
+DO_XS=1.  Currently all this does is to speed up the multiple
+alignment plugin.
 END
 ;
   }
@@ -94,27 +91,29 @@ if (-e 'GGB.def' && !%OPTIONS) {
     close F;
   }
 }
+$OPTIONS{APACHE} ||= $OPTIONS{PREFIX};
+$OPTIONS{BIN}    ||= $OPTIONS{INSTALLSCRIPT};
 
-if ($OPTIONS{PREFIX} && !(defined $OPTIONS{CONF})) {
-  $OPTIONS{CONF} = "$OPTIONS{PREFIX}/conf";
+if ($OPTIONS{APACHE} && !(defined $OPTIONS{CONF})) {
+  $OPTIONS{CONF} = "$OPTIONS{APACHE}/conf";
 }
-if ($OPTIONS{PREFIX} && !(defined $OPTIONS{HTDOCS})) {
-  $OPTIONS{HTDOCS} = "$OPTIONS{PREFIX}/htdocs";
+if ($OPTIONS{APACHE} && !(defined $OPTIONS{HTDOCS})) {
+  $OPTIONS{HTDOCS} = "$OPTIONS{APACHE}/htdocs";
 }
-if ($OPTIONS{PREFIX} && !(defined $OPTIONS{CGIBIN})) {
-  $OPTIONS{CGIBIN} = "$OPTIONS{PREFIX}/cgi-bin";
+if ($OPTIONS{APACHE} && !(defined $OPTIONS{CGIBIN})) {
+  $OPTIONS{CGIBIN} = "$OPTIONS{APACHE}/cgi-bin";
 }
 
 # set hard-coded values
-$OPTIONS{PREFIX} ||= '/usr/local/apache';
+$OPTIONS{APACHE} ||= '/usr/local/apache';
 unless ($OPTIONS{CONF}) {
-  $OPTIONS{CONF} = GuessDirectories->conf || "$OPTIONS{PREFIX}/conf";
+  $OPTIONS{CONF} = GuessDirectories->conf || "$OPTIONS{APACHE}/conf";
 }
 unless ($OPTIONS{HTDOCS}) {
-  $OPTIONS{HTDOCS} = GuessDirectories->htdocs || "$OPTIONS{PREFIX}/htdocs";
+  $OPTIONS{HTDOCS} = GuessDirectories->htdocs || "$OPTIONS{APACHE}/htdocs";
 }
 unless ($OPTIONS{CGIBIN}) {
-  $OPTIONS{CGIBIN} = GuessDirectories->cgibin || "$OPTIONS{PREFIX}/cgi-bin";
+  $OPTIONS{CGIBIN} = GuessDirectories->cgibin || "$OPTIONS{APACHE}/cgi-bin";
 }
 unless (defined $OPTIONS{DO_XS}) {
   $OPTIONS{DO_XS}  = $^O =~ /^(MSWin|dos)/i ? '' : 1;
@@ -207,7 +206,7 @@ WriteMakefile(
                                 ) : (),
               'INSTALLSITEMAN1DIR' => $OPTIONS{INSTALLSITEMAN1DIR}, # don't install man pages for 
               'INSTALLSITEMAN3DIR' => $OPTIONS{INSTALLSITEMAN3DIR}, # non-root user
-	      'INSTALLSCRIPT'  => $OPTIONS{INSTALLSCRIPT}
+	      'INSTALLSCRIPT'      => $OPTIONS{BIN} || $OPTIONS{INSTALLSCRIPT}
 );
 
 sub interpolate {

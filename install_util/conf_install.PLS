@@ -18,6 +18,7 @@ print OUT <<'!NO!SUBS!';
 use strict;
 use File::Copy;
 use Bio::Root::IO;
+use File::Path 'mkpath';
 use Cwd;
 use FindBin '$Bin';
 
@@ -38,7 +39,7 @@ my $dir = "$options{CONF}/gbrowse.conf";
 print "Installing sample configuration files...\n";
 
 if (! (-e $dir)) {
-    mkdir($dir,0777) or die "unable to make $dir directory\n";
+    mkpath($dir,0,0777) or die "unable to make $dir directory\n";
 }
 
 my $localconfdir = "conf";

@@ -19,6 +19,7 @@ use strict;
 use File::Basename qw( basename fileparse );
 use Carp 'croak';
 use IO::Dir;
+use File::Path 'mkpath';
 use Bio::Root::IO;
 use Cwd;
 use FindBin '$Bin';
@@ -38,7 +39,7 @@ my $ht_target = "$options{HTDOCS}/gbrowse";
 print "Installing stylesheet and images...\n";
 
 if (! (-e $ht_target) ) {
-    mkdir($ht_target,0777) or die "unable to make $ht_target directory\n";
+    mkpath($ht_target,0,0777) or die "unable to make $ht_target directory\n";
 }
 
 my $localhtdocsdir = "htdocs";

@@ -98,8 +98,8 @@ my $cgibin  = prompt_for_directory('cgi-bin',GuessDirectories->cgibin || "$prefi
 fixup($_,"$conf/gbrowse.conf") foreach grep {-T} @files;
 
 my @args = (
+             "'APACHE=$prefix'",
              "'CGIBIN=$cgibin'",
-             "'PREFIX=$prefix'",
              "'CONF=$conf'",
              "'HTDOCS=$htdocs'"
            );

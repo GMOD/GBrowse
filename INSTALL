@@ -197,6 +197,18 @@ Generic Genome Browser Installation
     your file path settings. When Makefile.PL is run again, it will ask you
     whether you wish to reuse the settings stored in the file.
 
+    * IF YOU GET AN ERROR MESSAGE* of "Warning: I could not locate your
+    pod2man program", then you are likely using a RedHat system with a
+    flawed installation of Perl.  You can fix this problem easily
+    by editing /etc/sysconfig/i18n to contain:
+
+        LANG="en_US.iso885915"
+        SUPPORTED="en_US:en"
+        SYSFONT="lat0-sun16"
+        SYSFONTACM="iso01"
+
+    I don't know why this works, but it does.
+
   4. TRY THE BROWSER OUT
 
     The installation procedure will create a small in-memory database of

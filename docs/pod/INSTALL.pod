@@ -8,7 +8,7 @@ X, and as source code for Unix systems.
 
 Go to the following URL:
 
-  ftp://ftp.wormbase.org/pub/people/tharris/macosx/packages
+    ftp://dev.wormbase.org/pub/people/tharris/macosx/packages
 
 Find the most recent version of the GBrowse package.  These files have
 the .dmg extension.

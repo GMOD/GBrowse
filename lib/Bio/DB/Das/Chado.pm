@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.47 2004-05-19 15:23:16 scottcain Exp $
+# $Id: Chado.pm,v 1.48 2004-06-01 03:41:57 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -646,7 +646,7 @@ sub attributes {
 
   #get feature_id
 
-  my $sth = $self->dbh->prepare("select feature_id from feature where name = ?");
+  my $sth = $self->dbh->prepare("select feature_id from feature where uniquename = ?");
   $sth->execute($id) or $self->throw("failed to get feature_id in attributes"); 
   my $hashref = $sth->fetchrow_hashref;
   my $feature_id = $$hashref{'feature_id'};

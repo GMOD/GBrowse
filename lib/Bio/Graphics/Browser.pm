@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.57 2003-03-06 18:40:01 lstein Exp $
+# $Id: Browser.pm,v 1.58 2003-03-07 02:29:22 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1261,15 +1261,16 @@ sub get_ranges {
 sub _load_aggregator_types {
   my $self    = shift;
   my $segment = shift;
-  return if $self->config->{_load_aggregator_types}++;
+  return if $self->config->{_load_aggregator_types}++; # don't do it twice
   my $db          = eval {$segment->factory} or return;
   my @aggregators = eval {$db->aggregators } or return;
   for my $a (@aggregators) {
     my $method   = $a->method;
     my @subparts = ($a->part_names,$a->main_name);
-    my $track    = $self->type2label($method) or next;
-    foreach (@subparts) {
-      push @{$self->config->{_type2label}{$_}},$track;
+    for my $track ($self->type2label($method)) {
+      foreach (@subparts) {
+	$self->config->{_type2label}{$_}{$track}++;
+      }
     }
   }
 }

@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.21 2004-03-19 19:38:15 lstein Exp $
+# $Id: GFFhelper.pm,v 1.22 2004-06-15 18:03:04 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -303,7 +303,7 @@ sub gff2Generic {
 
 sub process_attributes {
     my ($self, $f) = @_;
-    my $mode = $self->configuration->{mode};
+
     my $att = $f->attributes || $self->{missing_attributes};
 
     # handle GFF2.5 targets

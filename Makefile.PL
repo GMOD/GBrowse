@@ -43,7 +43,7 @@ close F;
 # the contents of the Makefile that is written.
 WriteMakefile(
 	      'NAME'	     => 'Generic-Genome-Browser',
-	      'VERSION'      => '1.00',
+	      'VERSION'      => '1.01',
 	      'PREREQ_PM'    => {
 				 Bio::Graphics => 0.92,
 				 Bio::DB::GFF  => 0.51,

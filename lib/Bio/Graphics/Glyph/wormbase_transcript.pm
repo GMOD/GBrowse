@@ -53,13 +53,10 @@ sub get_description {
 sub _subseq {
   my $class   = shift;
   my $feature = shift;
-  if ($feature->can('segments')) {
-    my @segs = sort {$a->start<=>$b->start} $feature->segments;
-    return @segs if @segs;
-  }
+  return sort {$a->start<=>$b->start} $feature->segments 
+    if $feature->can('segments');
   return $class->SUPER::_subseq($feature);
 }
-
 1;
 
 __END__

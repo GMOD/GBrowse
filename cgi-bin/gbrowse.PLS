@@ -45,7 +45,7 @@ $startperl -w
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.6 2003-06-25 17:34:55 lstein Exp $
+# $Id: gbrowse.PLS,v 1.7 2003-06-27 00:27:02 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1387,7 +1387,7 @@ sub segment2link {
 
 sub show_examples {
   my $examples = $CONFIG->setting('examples') or return;;
-  my @examples = split /\s+/,$examples;
+  my @examples = shellwords($examples);
   return unless @examples;
   my $url    = url(-relative=>1,-path_info=>1);
   my $source = $CONFIG->source;
@@ -2214,7 +2214,7 @@ sub source_menu {
 		 -default => $CONFIG->source,
 		 -onChange => 'document.mainform.submit()',
 		)
-	: $CONFIG->source
+	: $CONFIG->description($CONFIG->source)
       );
 }
 

@@ -7,14 +7,8 @@ use File::Copy;
 use Bio::Root::IO;
 
 # get configuration stuff from command line
-my $dir = $ARGV[0];
-
-# use Bio::Root::IO now
-#my $delim = '/';
-#if ($Config{'osname'} =~ /win/i && $Config{'osname'} !~ /darwin/i ) {
-#    $dir =~ s!\/!\\!g;
-#    $delim = '\\';    
-#}
+my %options = map {split /=/} @ARGV;
+my $dir = "$options{CONF}/gbrowse.conf";
 
 #start the installation...
 print "Installing sample configuration files...\n";
@@ -25,16 +19,12 @@ if (! (-e $dir)) {
 
 opendir CONFDIR, "conf" or die "unable to opendir conf\n";
 while (my $conffile = readdir(CONFDIR) ) {
-    my $localfile = Bio::Root::IO->catfile('conf', $conffile);
-    if (-f $localfile) {
-        my $installfile = Bio::Root::IO->catfile($dir, $conffile);
-        if (-f $installfile) {
-	    print "   Found $conffile in $dir. Skipping...\n";
-        } else {
-	    copy($localfile, $installfile) 
-                or die "unable to copy to $installfile\n";
-        }
-    }
+  my $localfile = Bio::Root::IO->catfile('conf', $conffile);
+  if (-f $localfile) {
+    my $installfile = Bio::Root::IO->catfile($dir, $conffile);
+    copy_with_substitutions($localfile, $installfile)
+      or die "unable to copy to $installfile\n";
+  }
 }
 closedir CONFDIR;
 
@@ -76,3 +66,14 @@ while (my $langfile = readdir(LANGS)) {
 closedir LANGS;
 
 
+sub copy_with_substitutions {
+  my ($localfile,$install_file) = @_;
+  open (IN,$localfile) or die "Couldn't open $localfile: $!";
+  open (OUT,">$install_file") or die "Couldn't open $install_file for writing: $!";
+  while (<IN>) {
+    s/\$(\w+)/$options{$1}||"\$$1"/eg;
+    print OUT;
+  }
+  close OUT;
+  close IN;
+}

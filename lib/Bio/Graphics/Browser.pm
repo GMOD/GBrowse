@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.79 2003-06-26 12:32:23 lstein Exp $
+# $Id: Browser.pm,v 1.80 2003-06-27 00:27:03 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -59,7 +59,7 @@ use File::Basename 'basename';
 use Bio::Graphics;
 use Carp qw(carp croak);
 use GD 'gdMediumBoldFont','gdLargeFont';
-use CGI qw(img param escape url);
+use CGI qw(img param escape unescape url);
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use Text::Shellwords;
@@ -730,7 +730,7 @@ sub make_map {
       next;
     }
     my $href   = $self->make_href($_->[0],$panel) or next;
-    my $alt    = $self->make_title($_->[0],$panel);
+    my $alt    = unescape($self->make_title($_->[0],$panel));
     my $target = $self->config->make_link_target($_->[0],$panel);
     my $t      = defined($target) ? qq(target="$target") : '';
     $map .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href" title="$alt" alt="$alt" $t/>\n);

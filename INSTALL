@@ -81,6 +81,8 @@ When this is done, go to step (4) below.
 
 3. INSTALLING THE BROWSER FROM SOURCE
 
+Skip this step if you have installed with ActiveState's PPM.
+
 Brief synopsis:
 
 	perl Makefile.PL
@@ -177,10 +179,32 @@ The first time you run Makefile.PL, a file named GGB.def will be
 created your file path settings.  When Makefile.PL is run again, it
 will ask you whether you wish to use the 
 
-4. POPULATING THE DATABASE (MySQL)
+4. TRY THE BROWSER OUT
 
-You can skip this step if you use the in-memory database for small
-projects (see section 5).
+The installation procedure will create a small in-memory database of
+yeast chromosome 1 for you to play with.  To try the browser out, use
+your favorite browser to open:
+
+ http://localhost/cgi-bin/gbrowse
+
+Try searching for "I" (the name of the first chromosome of yeast), or
+a gene such as NUT21 or TCF3.  Then try searching for "membrane
+trafficking."
+
+For your interest, the feature and DNA files for this database is
+located in the web server's document root at
+gbrowse/databases/yeast_chr1.  The configuration file is in the web
+server's configuration directory under gbrowse.conf/yeast1.conf.
+
+More configuration information and a short tutorial are located at:
+
+  http://localhost/gbrowse
+
+5. POPULATING THE DATABASE (MySQL)
+
+This step takes you through populating the database with the full
+yeast genome.  You can skip this step if you use the in-memory
+database for small projects (see section 6).
 
 Synopsis:
 
@@ -272,8 +296,6 @@ Load the file with this command:
 
  and hit ^Z when the script pauses.)
 
-5. TESTING THE BROWSER (MySQL DATABASE)
-
 You should now be able to browse the yeast genome.  Type the following
 URL into your favorite browser:
 
@@ -291,55 +313,56 @@ elsewhere).  Usually there will be an informative error message in the
 error log.  The most common problem is MySQL password or permissions
 problems.
 
-5. TESTING THE BROWSER (IN-MEMORY DATABASE)
-
-For testing the in-memory database (no MySQL server required!), this
-distribution includes sample files for yeast chromosome 1.  On
-Unix/Linux systems, copy the following files to /usr/tmp:
-
-  cp sample_data/yeast1.fa  /usr/tmp
-  cp sample_data/yeast1.gff /usr/tmp
-
-You should now be able to browse yeast chromosome 1.  Type the
-following URL into your favorite browser:
-
-  http://name.of.your.host/cgi-bin/gbrowse?source=yeast1
-
-This will display the genome browser instructions and a search field.
-Type in "I" to start searching chromosome I, or search for "glutamate"
-to find several genes that are involved in glutamate metabolism.
-
-On Windows systems, copy the yeast1.fa and yeast1.gff files to
-C:\Windows\Temp, and ask for this URL:
-
-  http://name.of.your.host/cgi-bin/gbrowse?source=yeast1w
-
 6. LOADING OTHER DATA SETS
 
+Genome feature tables for the major model organisms and human can be
+found at www.gmod.org in the downloads section, but these files are
+not guaranteed to be up to date.
+
 Each model organism database has its own flat file format for
-representing the data.  This package includes three small perl scripts
-that massage the model-specific annotation files into GFF format
-suitable for loading:
+representing the data.  For the most up to date information, you
+should download these files and process them into GFF format.
+Currently, all of the model organism databases require some tweaking
+of the flat files, but the bioperl distribution includes several small
+perl scripts to make this easier.  These scripts are optionally
+installed when you install Bioperl.  You'll find them in the bioperl
+scripts/Bio-DB-GFF directory if you didn't install them directly.
 
-  process_gadfly.pl     For FlyBase D. melanogaster flat files
-  process_ncbi_human.pl For human annotations from NCBI
-  process_sgd.pl        For SGD S. cerevisiae flat files
-  process_wormbase.pl   For WormBase C. elegans flat files
+They are:
 
-You will find the scripts, along with information on downloading the
-current model organism files, in the "bin" subdirectory of this
-package.  The scripts will also have been copied into your system
-binaries directory when you made "install".  Run the script with the
--h option to get some data-specific help:
+  bp_process_gadfly.pl     For FlyBase D. melanogaster flat files
+  bp_process_ncbi_human.pl For human annotations from NCBI
+  bp_process_sgd.pl        For SGD S. cerevisiae flat files
+  bp_process_wormbase.pl   For WormBase C. elegans flat files
 
-  % process_gadfly.pl -h
+Run the script with the -h option to get some data-specific help:
 
-The process_wormbase.pl script requires the AcePerl package, which is
-available from CPAN.  It is not strictly necessary to run this script
-because the unaltered GFF files distributed from WormBase are
-compatible with GBrowse.  process_wormbase.pl supplements the
+  % bp_process_gadfly.pl -h
+
+The bp_process_wormbase.pl script requires the AcePerl package, which
+is available from CPAN.  It is not strictly necessary to run this
+script because the unaltered GFF files distributed from WormBase are
+compatible with GBrowse.  bp_process_wormbase.pl supplements the
 information with the physical positions of genetic markers, GenBank
 accession numbers and functional descriptions of gene products.
+
+For configuration files that will work with each of these databases,
+look in contrib/conf_files (or in
+http://localhost/gbrowse/contrib/conf_files).  Simply copy the
+appropriate configuration file into your gbrowse.conf directory, and
+edit the database name as appropriate.
+
+You might also be interested in the load_genbank.pl script, which is
+installed when you install GBrowse.  You can give this script a list
+of Genbank or EMBL accession numbers and it will automatically
+download the indicated entries and load them into a MySQL
+database. You can also load flat files in Genbank or EMBL format.
+
+The sample configuration file 08.genbank.conf (located in
+contrib/conf_files) is appropriate for data loaded with
+load_genbank.pl.
+
+7. LOADING DNA
 
 To display the DNA sequence and to run sequence-dependent glyphs such
 as the three-frame translation, you will need to load the DNA as well
@@ -361,13 +384,13 @@ ftp://genome-ftp.stanford.edu/pub/yeast/)
 
 Run "bp_bulk_load_gff.pl -h" to see usage instructions.
 
-7. CREATING YOUR OWN GENOME DATABASE
+8. CREATING YOUR OWN GENOME DATABASE
 
 See the file doc/configuration.txt for information on how to create
 new databases from scratch, add new browser tracks, and how to get the
 browser to dump the DNA from the region currently under display.
 
-8. MAKING THE BROWSER RUN FASTER
+9. MAKING THE BROWSER RUN FASTER
 
 Three factors are major contributors to the length of time it takes to
 load a gbrowse page:
@@ -413,7 +436,7 @@ zooming (see docs/CONFIGURE_HOWTO.txt).  Otherwise, there's not much
 that can be done about this short of buying a faster machine.
 The GMOD team is working hard to reduce this performance hit.
 
-9. MAKING THE BROWSER RUN SAFER
+10. MAKING THE BROWSER RUN SAFER
 
 Whenever you are running a server-side Web script using information
 provided by a web client, there is a risk that maliciously-formatted
@@ -442,10 +465,11 @@ This will affect all mod_perl scripts globally.
 
 10. BIOPERL VERSIONS
 
-Some of GBrowse's advanced features (the use of histograms in semantic
-zooming; labeling of the tracks in the overview) require features of
-the Bioperl Bio::Graphics and Bio::DB::GFF libraries that are only
-available in Bioperl version 1.2.
+GBrowse is evolving quickly, and some of its features are dependent on
+new features in Bioperl 1.3.  If you are having trouble making GBrowse
+run, make sure you are using Bioperl 1.3!  If Bioperl 1.3 is not
+released by the time you read this, you'll need to use Anonymous CVS
+to obtain it.  Full instructions are given at http://www.bioperl.org
 
 11. THE GBROWSE_IMG SCRIPT
 

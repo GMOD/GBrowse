@@ -11,33 +11,46 @@
 
 <p>
 
-Welcome to the Generic Genome Browser.  Before you can start using the
-system, you must create a genome database and load some data.  Sample
-data from yeast is located in the gbrowse distribution in the
-directory <i>sample_data</i>.  Instructions for loading this data is
-in <a href="INSTALL">INSTALL</a>.  You will most likely want to use
-the script <i>bp_bulk_load_gff.pl</i> which should have been installed when 
-you installed BioPerl.
+Welcome to the Generic Genome Browser.  An example in-memory database
+from yeast chromosome 1 has been installed for you.  Try it at this
+URL:
+
+<blockquote>
+<a href="/cgi-bin/gbrowse?source=yeast_chr1">http://localhost/cgi-bin/gbrowse?source=yeast_chr1</a>
+</blockquote>
+
 
 <p>
 
-If you installed using PPM, you can download the <a
+To load larger data sets you must create a MySQL database.  Sample
+data from yeast is located in the gbrowse distribution in the
+directory <i>sample_data</i>.  Instructions for loading this data is
+in <a href="INSTALL">INSTALL</a>.  You will most likely want to use
+the script <i>bp_bulk_load_gff.pl</i> which should have been installed
+when you installed BioPerl.
+
+<p>
+
+The full yeast genome is also available for download from Sourceforge.
+Get <a
 href="http://prdownloads.sourceforge.net/gmod/yeast.gff.gz">yeast
 features</a> and <a
 href="http://prdownloads.sourceforge.net/gmod/yeast.fasta.gz">yeast
 DNA</a> from <a
 href="http://sourceforge.net/project/showfiles.php?group_id=27707">the
 gmod downloads page</a>.  You'll also find Worm, Fly and Human genome
-annotations here, although not necessarily the most up to date ones. 
+annotations here, although not necessarily the most up to date ones.
 Note that you will need to uncompress the data files prior to running
-to load script.
+to load script.  See the <a href="contrib/conf_files">sample
+configuration files</a> directory for starter config files to get you
+up and running.
 
 <p>
 
 Once you've loaded the yeast data (and adjusted the config file as
 described in the <a href="INSTALL">INSTALL</a> document), you can
 browse the yeast genome by following the link <a
-href="/cgi-bin/gbrowse?source=yeast">http://your.host/cgi-bin/gbrowse?source=yeast</a>.
+href="/cgi-bin/gbrowse?source=yeast">http://localhost/cgi-bin/gbrowse?source=yeast</a>.
 
 <h2>Learning More</h2>
 
@@ -47,6 +60,7 @@ To find out more about Gbrowse, try the:
 
 <ul>
   <li><a href="tutorial/tutorial.html">GBrowse Tutorial</a>
+  <li><a href="contrib/conf_files">Sample Configuration Files</a>
   <li><a href="CONFIGURE_HOWTO.txt">GBROWSE CONFIGURE HOWTO</a>
 </ul>
 
@@ -55,6 +69,6 @@ To find out more about Gbrowse, try the:
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Sun Jun 22 21:42:17 EDT 2003
+Last modified: Thu Jun 26 20:22:26 EDT 2003
 <!-- hhmts end -->
 </body> </html>

@@ -3,7 +3,8 @@ use strict;
 use File::Copy;
 use Bio::Root::IO;
 
-my $cgi_target = $ARGV[0];
+my %options = map {split /=/} @ARGV;
+my $cgi_target = $options{CGIBIN};
 
 print "Installing gbrowse CGI scripts...\n";
 

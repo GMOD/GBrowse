@@ -125,6 +125,7 @@ WriteMakefile(
 				 'bin/process_gadfly.PLS' => 'bin/process_gadfly.pl',
 				 'bin/process_wormbase.PLS' => 'bin/process_wormbase.pl',
 				 'bin/process_ncbi_human.PLS' => 'bin/process_ncbi_human.pl',
+				 'bin/load_genbank.PLS' => 'bin/load_genbank.pl',
 				 'install_util/gbrowse_ppm_install.PLS' => 'install_util/gbrowse_ppm_install.pl',
 				 'cgi-bin/gbrowse.PLS'  => 'cgi-bin/gbrowse',
 				 'cgi-bin/gbrowse_syn.PLS'  => 'cgi-bin/gbrowse_syn',
@@ -136,7 +137,7 @@ WriteMakefile(
 				 'bin/process_sgd.pl',
 				 'bin/process_gadfly.pl',
 				 'bin/process_ncbi_human.pl',
-                                 'bin/load_embl.pl',
+                                 'bin/load_genbank.pl',
 				],
 	      'LIBS'	     => [''], # e.g., '-lm'
 	      'DIR'          => $OPTIONS{DO_XS} ? ['libalign'] : [],
@@ -189,15 +190,19 @@ sub MY::install {
 }
 
 sub MY::postamble {
+  my $paths;
+  for my $key (keys %OPTIONS) {
+    $paths .= qq('$key=$OPTIONS{$key}' );
+  }
 qq{
 conf_install ::
-	\$(PERL) install_util/conf_install.pl $OPTIONS{CONF}/gbrowse.conf
+	\$(PERL) install_util/conf_install.pl $paths
 
 htdocs_install ::
-	\$(PERL) install_util/htdocs_install.pl $OPTIONS{HTDOCS}/gbrowse
+	\$(PERL) install_util/htdocs_install.pl $paths
 
 cgi_install ::
-	\$(PERL) install_util/cgi_install.pl $OPTIONS{CGIBIN}
+	\$(PERL) install_util/cgi_install.pl $paths
 
 };
 }

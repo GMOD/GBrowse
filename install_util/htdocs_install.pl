@@ -6,7 +6,8 @@ use Carp 'croak';
 use IO::Dir;
 use Bio::Root::IO;
 
-my $ht_target = $ARGV[0]; #target directory
+my %options = map {split /=/} @ARGV;
+my $ht_target = "$options{HTDOCS}/gbrowse";
 
 # use Bio::Root::IO instead
 #my $delim = '/';
@@ -98,6 +99,13 @@ for my $localfile (qw(./INSTALL ./docs/CONFIGURE_HOWTO.txt
 
 print "Installing tutorial...\n";
 copy_tree('./docs/tutorial',$ht_target);
+
+print "Installing contrib...\n";
+copy_tree('./contrib',$ht_target);
+
+print "Installing sample data files...\n";
+copy_tree('./htdocs/databases',"$ht_target");
+chmod 0777,glob("$ht_target/databases/*");
 
 print "\n\n#############################################################################\n";
 print "GBrowse is now installed.  Read INSTALL for further setup instructions.\n";

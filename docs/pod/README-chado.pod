@@ -1,8 +1,5 @@
 =head1 Support for the chado database schema
 
-Note that I consider chado support experimental still, as I am the only 
-person that I know of who has tested it.
-
 The chado schema ( http://www.gmod.org/schema ) is a comprehensive database
 schema developed largely by developers at UC Berkeley and Harvard working
 on FlyBase.  It is intended to be a generic database schema for model

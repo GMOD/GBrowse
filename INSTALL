@@ -214,7 +214,7 @@ Synopsis:
   mysql -uroot -p password -e 'grant file on *.* to me@localhost'
   mysql -uroot -p password -e 'grant select on yeast.* to nobody@localhost'
 
-  bp_bulk_load_gff.pl -d yeast sample_data/yeast_data.gff
+  bulk_load_gff.pl -d yeast sample_data/yeast_data.gff
   make test
 
 Details:
@@ -223,6 +223,9 @@ Note for RedHat Linux users: note that if you are using the default installed
 Apache, the user that apache runs as is 'apache' as opposed to the otherwise
 standard 'nobody'.  Therefore, everywhere 'nobody' occurs in these directions,
 replace it with 'apache'.
+
+In Bioperl versions 1.3 or later (not released as of August 2003),
+this script is named bp_bulk_load_gff.pl.
 
 You will need a MySQL database in order to start using GBrowse.  Using the
 mysql command line, create a database (called "yeast" in the synopsis
@@ -244,12 +247,12 @@ by loading the database from a tab-delimited file containing the
 genomic annotations in GFF format.  The Bioperl distribution comes
 with three tools for loading Bio::DB::GFF databases:
 
-  1) bp_load_gff.pl
+  1) load_gff.pl  (bp_load_gff.pl in Bioperl 1.3)
      This will incrementally load a database, optionally initializing
      it if it does not already exist.  This script will work correctly
      even if the MySQL server is located on another host.
 
-  2) bp_bulk_load_gff.pl
+  2) bulk_load_gff.pl (bp_bulk_load_gff.pl in Bioperl 1.3)
      This Perl script will initialize a new Bio::DB::GFF database with
      a fresh schema, deleting anything that was there before.  It will
      then load the file.  Only suitable for use the very first time
@@ -258,7 +261,7 @@ with three tools for loading Bio::DB::GFF databases:
      does not work in the situation in which the MySQL database
      is running on a remote host.
 
-  3) bp_fast_load_gff.pl
+  3) fast_load_gff.pl (bp_fast_load_gff.pl in Bioperl 1.3)
      This will incrementally load a database.  On UNIX systems, it will
      activate a fast loader that makes the speed almost the same as
      the bulk loader.  Be careful, though, because this is an experimental

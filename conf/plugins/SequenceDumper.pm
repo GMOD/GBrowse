@@ -1,4 +1,4 @@
-# $Id: SequenceDumper.pm,v 1.11 2003-09-08 15:20:04 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.12 2003-09-08 15:21:47 stajich Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::SequenceDumper
 #
@@ -50,7 +50,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::SequenceDumper;
-# $Id: SequenceDumper.pm,v 1.11 2003-09-08 15:20:04 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.12 2003-09-08 15:21:47 stajich Exp $
 # Sequence Dumper plugin
 
 use strict;
@@ -122,7 +122,7 @@ sub dump {
 			  -alphabet     => $segment->alphabet,
 			  );
   $seq->primary_seq($segment->primary_seq);
-  my $offset = $segment->start;
+  my $offset = $segment->start - 1;
   my $segmentend = $segment->end;
   $seq->add_SeqFeature( map {       
       my $nf = new Bio::SeqFeature::Generic(-primary_tag => $_->primary_tag,
@@ -139,7 +139,7 @@ sub dump {
       my @locs = $loc->each_Location;
       for my $sl (@locs ) {
 	  $sl->start($sl->start() - $offset);
-	  $sl->end  ($sl->end() - $offset);
+	  $sl->end  ($sl->end() - $offset );
 	  my ($startstr,$endstr);
 
 	  if( $sl->start() < 1) {

@@ -48,6 +48,10 @@ Generic Genome Browser Installation
     G) LWP
         To load remote 3d party annotations.
 
+    H) MOBY
+        Needed by gbrowse_moby to fetch and display data from MOBY
+        providers.
+
   2. INSTALLING THE BROWSER WITH ACTIVESTATE'S PPM TOOL
 
     Make sure that Apache and a database (MySQL, Oracle or PostgreSQL) are

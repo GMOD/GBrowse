@@ -9,6 +9,7 @@
     <th><a href="#other">Downloading</a></th>
     <th><a href="#format">File Format</a></th>
     <th><a href="#customize">Customizing Appearance</a></th>
+    <th><a href="#numeric">Displaying Intensity Plots &amp; Other Numeric Data</a></th>
     <th><a href="#remote">Publishing</a></th>
   </tr>
 </table>
@@ -594,16 +595,17 @@ be oriented north, south, east or west.<td> </tr>
 used for graphic numeric features such as microarray intensity values. To indicate
 the value you wish to chart, add a score=XXXX note to the description section:
 <blockquote><pre>
-    Intensity    spot1    15569-15724    score=192
-    Intensity    spot2    17451-17597    score=1071
+    Intensity    expt1    15569..15724    score=192
+    Intensity    expt1    17451..17597    score=1071
     </pre></blockquote>
-<td> </tr>
+    See <a href="#numeric">Displaying Intensity Plots &amp; Other
+    Numeric Data</a> for full details.  <td> </tr>
 
 </table>
 
 <p>
 
-The following glyph-specific options are recognized:
+<a name="glyph_specific">The following glyph-specific options are recognized:</a>
 
 <table border="1">
   <tr class="searchtitle">
@@ -697,7 +699,7 @@ The following glyph-specific options are recognized:
 
   <tr class="searchbody">
   <th class="searchtitle">xyplot</th>
-  <td>graphtype</td>
+  <td>graph_type</td>
   <td>Type of graph
       (histogram, boxes, line, points, linepoints)
   </td>
@@ -721,7 +723,91 @@ The following glyph-specific options are recognized:
   <td>Where to draw the Y axis scale, if any (left, right, both, none)</td>
 </tr>
 
+<tr class="searchbody">
+<th class="searchtitle">&nbsp;</th>
+<td>point_symbol</td>
+<td>When using points or linepoints graph types, controls the symbol to use for the data points.  One of
+    triangle, square, disc, point, or none.</td>
+    
+    <tr class="searchbody">
+    <th class="searchtitle">&nbsp;</th>
+<td>point_radius</td>
+<td>The radius of the symbols, if applicable, in pixels</td>
+
 </table>
+
+<hr>
+
+<H2><a name="numeric">Displaying Intensity Plots &amp; Other Numeric Data</a></H2>
+
+<p>
+
+
+You can upload microarray intensity data sets and other numeric data.
+The plot of the data will be displayed as a histogram or line chart
+superimposed on the genomic annotations.
+
+<p>
+
+Here is a simple template for you to follow. The result is shown on
+the right.
+
+<img src="images/help/numeric+data.gif" align="RIGHT">
+
+<table border="1">
+  <tr>
+    <td>
+<pre>
+[expression]
+glyph = xyplot
+graph_type=boxes
+fgcolor = black
+bgcolor = red
+height=100
+min_score=0
+max_score=110
+label=1
+key=Expression Level
+
+
+reference=B0019
+expression       liver   10000..12000    score=10
+expression       liver   12001..19999    score=50
+expression       liver   20000..25000    score=100
+
+expression       kidney   10000..12000    score=80
+expression       kidney   12001..19999    score=10
+expression       kidney   20000..25000    score=100
+</pre>
+    </td>
+  </tr>
+</table>
+
+<p>
+
+
+The [expression] section says to use the xyplot type of glyph, to set
+its type to "boxes" (a column chart), to make the fore and background
+colors black and red respectively, to set the height of the chart to
+100, and to set the minimum and maximum values for the Y axis to 0 and
+110 respectively.  We also add a label and a human-readable track key.
+
+<p>
+
+
+The data section defines two experiments to show in the track.  Both
+experiments use probes whose positions are relative to landmark B0019
+(you can of course use chromosome coordinates, or whatever you
+choose).  Both experiments are of type "expression", but one is the
+"liver" experiment and the other is the "kidney" experiment, as
+indicated in the second column.  The third column contains the
+coordinates of each assay point, and the fourth column contains the
+score=XXX attribute, where XXX is the intensity value.
+
+<p>
+
+See the <a href="#glyph_specific">chart in the previous section</a>
+for the xyplot glyph options.
 
 <hr>
 <H2><A NAME="remote">Publishing Annotations</A></H2>

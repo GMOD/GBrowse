@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.48 2003-12-29 22:27:29 lstein Exp $
+# $Id: gbrowse.PLS,v 1.49 2004-01-20 09:57:45 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1052,11 +1052,11 @@ sub upload_table {
 					 && $feature_files->{$filename});
     $cTable .=  TR({-class=>'uploadbody'},
 		   th($link),
-		   td({-colspan=>2},
+		   td({-colspan=>3},
 		      submit(-name=>"modify.$file",-value=>$CONFIG->tr('Edit')).'&nbsp;'.
 		      submit(-name=>"modify.$file",-value=>$CONFIG->tr('Download_file')).'&nbsp;'.
 		      submit(-name=>"modify.$file",-value=>$CONFIG->tr('Delete'))));
-    $cTable .= TR({-class=>'uploadbody'},td('&nbsp;'),td({-colspan=>2},@info));
+    $cTable .= TR({-class=>'uploadbody'},td('&nbsp;'),td({-colspan=>3},@info));
   }
 
   # end the table.
@@ -1068,7 +1068,8 @@ sub upload_table {
 		   submit(-name=>$CONFIG->tr('Upload')),
 		   '&nbsp;',
 		   submit(-name=>'new_upload',-value=>$CONFIG->tr('New')),
-		  ));
+		  )
+	       );
   $cTable .= end_table;
   $cTable;
 }
@@ -2507,7 +2508,7 @@ sub tableize {
   return unless @$array;
   my $rows    = int(sqrt(@$array));
   my $columns = int(0.99+@$array/$rows);
-  my $html = qq(<table border="1">);
+  my $html = qq(<table border="0">);
   for (my $row=0;$row<$rows;$row++) {
     $html .= "<tr>";
     for (my $column=0;$column<$columns;$column++) {

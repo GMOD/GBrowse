@@ -220,8 +220,6 @@ lib/Bio/DB/GFF/Aggregator/orf.pm
 lib/Bio/DB/GFF/Aggregator/reftranscript.pm
 lib/Bio/DB/GFF/Aggregator/waba_alignment.pm
 lib/Bio/DB/GFF/Aggregator/wormbase_gene.pm
-lib/Bio/DB/Gadfly/Adaptor.pm
-lib/Bio/DB/Gadfly/Segment.pm
 lib/Bio/Graphics/Browser.pm
 lib/Bio/Graphics/Browser/GFFhelper.pm
 lib/Bio/Graphics/Browser/I18n.pm
@@ -236,7 +234,6 @@ lib/Bio/Graphics/Glyph/ideogram.pm
 lib/Bio/Graphics/Glyph/insertion_chromosome.pm
 lib/Bio/Graphics/Glyph/phased_exons.pm
 lib/Bio/Graphics/Glyph/wormbase_transcript.pm
-lib/WebReports/Browser.pm
 libalign/CAlign.pm
 libalign/CAlign.xs
 libalign/MANIFEST
@@ -247,4 +244,3 @@ libalign/test.pl
 sample_data/yeast_data.gff
 t/01yeast.t
 t/Test.pm
-META.yml                                 Module meta-data (added by MakeMaker)

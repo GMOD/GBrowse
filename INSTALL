@@ -457,7 +457,7 @@ Generic Genome Browser Installation
     done about this short of buying a faster machine. The GMOD team is
     working hard to reduce this performance hit.
 
-  10. MAKING THE BROWSER RUN SAFER
+  10. MAKING THE SERVER RUN SAFER
 
     Whenever you are running a server-side Web script using information
     provided by a web client, there is a risk that maliciously-formatted

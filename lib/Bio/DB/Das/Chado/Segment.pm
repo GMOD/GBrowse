@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.62 2004-05-03 19:15:50 allenday Exp $
+# $Id: Segment.pm,v 1.63 2004-05-04 19:47:49 allenday Exp $
 
 =head1 NAME
 
@@ -160,7 +160,7 @@ sub new {
             my $hashref = $fetch_uniquename_query->fetchrow_hashref;
             $base_start = $$hashref{fmin} + 1;
             $end        = $$hashref{fmax};
-            $db_id      = $$hashref{uniquename};            
+            $db_id      = $$hashref{uniquename};
 
             push @segments, $factory->segment($name,$factory,$base_start,$end,$db_id);
         }
@@ -190,7 +190,7 @@ sub new {
           : $landmark_feature_id;
 
         warn "srcfeature_id:$srcfeature_id" if DEBUG;
- 
+
         if ( $landmark_feature_id == $srcfeature_id ) {
 
             $landmark_is_src_query->execute($landmark_feature_id)
@@ -203,7 +203,7 @@ sub new {
             $feature_query->execute($landmark_feature_id,$srcfeature_id)
               or Bio::Root::Root->throw("something else failed");
             $hash_ref = $feature_query->fetchrow_hashref;
- 
+
         }
 
         $name = $$hash_ref{'name'};
@@ -247,14 +247,14 @@ sub new {
 }
 
 =head2 name
-                                                                                
+
  Title   : name
  Usage   : $segname = $seg->name();
  Function: Returns the name of the segment
  Returns : see above
  Args    : none
  Status  : public
-                                                                                
+
 =cut
 
 sub name {
@@ -279,9 +279,9 @@ sub _search_by_name {
   my $sth = $factory->dbh->prepare ("
              select name,feature_id,seqlen from feature
              where lower(name) = $quoted_name  ");
-                                                                                                              
+  
   $sth->execute or Bio::Root::Root->throw("unable to validate name/length");
-                                                                                                              
+  
   my $rows_returned = $sth->rows;
   if ($rows_returned == 0) { #look in synonym for an exact match
     my $isth = $factory->dbh->prepare ("
@@ -291,7 +291,7 @@ sub _search_by_name {
         ");
     $isth->execute or Bio::Root::Root->throw("query for name in synonym failed");
     $rows_returned = $isth->rows;
-                                                                                                              
+    
     if ($rows_returned == 0) { #look in dbxref for accession number match
       $isth = $factory->dbh->prepare ("
          select feature_id from feature_dbxref fd, dbxref d
@@ -299,7 +299,7 @@ sub _search_by_name {
                lower(d.accession) = $quoted_name ");
       $isth->execute or Bio::Root::Root->throw("query for accession failed");
       $rows_returned = $isth->rows;
-                                                                                                              
+      
       return if $rows_returned == 0;
 
       if ($rows_returned == 1) {
@@ -610,10 +610,10 @@ sub features {
   $self->factory->dbh->do("set enable_seqscan=0");
 #  $self->factory->dbh->do("set enable_hashjoin=0");
 
-  warn "select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.locgroup,f.type_id,f.uniquename,f.feature_id from feature f, featureslice($interbase_start, $rend) fl where $sql_types fl.srcfeature_id = $srcfeature_id and f.feature_id  = fl.feature_id order by type_id,fmin;" if DEBUG;
+  warn "select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.locgroup,fl.srcfeature_id,f.type_id,f.uniquename,f.feature_id from feature f, featureslice($interbase_start, $rend) fl where $sql_types fl.srcfeature_id = $srcfeature_id and f.feature_id  = fl.feature_id order by type_id,fmin;" if DEBUG;
 
   my $sth = $self->factory->dbh->prepare("
-    select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.locgroup,f.type_id,f.uniquename,f.feature_id
+    select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.locgroup,fl.srcfeature_id,f.type_id,f.uniquename,f.feature_id
     from feature f, featureslice($interbase_start, $rend) fl
     where
       $sql_types
@@ -645,13 +645,16 @@ sub features {
 #take these results and create a list of Bio::SeqFeatureI objects
 #
 
+#  my $sth_srcfeature_id_to_name = $self->factory->dbh->prepare("
+#    select name from feature where feature_id = ?;");
+
   while (my $hashref = $sth->fetchrow_hashref) {
 
     my $stop            = $$hashref{fmax};
     my $interbase_start = $$hashref{fmin};
     my $base_start      = $interbase_start +1;
 
-    $feat = Bio::DB::Das::Chado::Segment::Feature->new (
+    $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                        $self->factory,
                        $self,
                        $self->seq_id,

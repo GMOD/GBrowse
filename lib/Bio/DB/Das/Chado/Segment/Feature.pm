@@ -76,7 +76,7 @@ sub new {
       $start,$end,
       $type,
       $strand,
-      $group,       
+      $group,
       $uniquename,
       $feature_id) = @_;
 
@@ -822,7 +822,8 @@ sub sub_SeqFeature {
     my $sth = $self->factory->dbh->prepare("
 
     select child.feature_id, child.name, child.type_id, child.uniquename, parent.name as pname,
-      childloc.fmin, childloc.fmax, childloc.strand, childloc.locgroup, childloc.phase
+      childloc.fmin, childloc.fmax, childloc.strand, childloc.locgroup, childloc.phase,
+      childloc.srcfeature_id
     from feature as parent
     inner join
       feature_relationship as fr0 on
@@ -846,6 +847,8 @@ sub sub_SeqFeature {
     return if ($rows<1);    #nothing retrieve during query
 
     while (my $hashref = $sth->fetchrow_hashref) {
+
+      next unless $$hashref{srcfeature_id} == $self->srcfeature_id;
 
 #this problem can't be solved this way--group really needs to return 'name'
 #in order for the adaptor to work with gbrowse

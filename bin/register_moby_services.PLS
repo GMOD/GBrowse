@@ -47,6 +47,8 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
+#$Id: register_moby_services.PLS,v 1.3 2003-12-22 19:51:01 markwilkinson Exp $
+
 use MOBY::Client::Central;
 use strict;
 use Text::Shellwords;

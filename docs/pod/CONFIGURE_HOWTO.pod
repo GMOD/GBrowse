@@ -1397,6 +1397,44 @@ It is entirely possible to create an invalid regular expression, in
 which case gbrowse will crash until you comment out the offending
 option.
 
+=head2 B10. Linking-out from AUTO-generated details
+
+If the [Track Defaults]-Link (see section B2) or an individual [Track]-
+Link (see section B3) is set to AUTO, the gbrowse_details script will be
+invoked when the user clicks on one of those features.  This will
+generate a simple table of all feature information available in the
+database.  This includes the user-defined tag/value attributes set
+in Column 9 of the GFF for that feature.
+
+It is possible to configure HTML link-outs for each tag-type in these
+tag/value pairs such that clicking on the value will invoke an external
+script with the tag and value information being passed to that script.
+This is achieved by adding a new stanza for each tag-type you wish to
+associate links to.
+
+The format of the stanza header is [TagName:DETAILS], and currently the
+only option allowed within this stanza is URL.
+
+For example, to link to a local cgi script from the following GFF line:
+    
+ IV	curated	exon	518	550	. + .   Transcript B0273.1; local_id 11723
+
+
+one might add the following stanza to the configuration file:
+    
+    [local_id:DETAILS]
+    URL   = http://localhost/cgi-bin/localLookup.cgi?tag=$tag;id=$value
+
+
+The URL option's value should be a URL containing one or more
+variables.  Variables begin with a dollar sign ($), and are
+replaced at run time with the information relating to the selected
+feature attribute.  Recognized variables are:
+
+     $tag        The "tag" of the tag/value pair
+     $value      The "value" of the tag/value pair
+
+
 =head1 C. GENERATING HISTOGRAMS
 
 With a little bit of additional effort, you can set one or more tracks

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.91 2003-09-17 17:08:09 lstein Exp $
+# $Id: Browser.pm,v 1.92 2003-09-22 20:26:57 markwilkinson Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1524,7 +1524,7 @@ use vars '@ISA';
 @ISA = 'Bio::Graphics::FeatureFile';
 
 sub labels {
-  grep { !($_ eq 'TRACK DEFAULTS' || $_ eq 'overview' || /:(\d+|overview|plugin)$/) } shift->configured_types;
+  grep { !($_ eq 'TRACK DEFAULTS' || $_ eq 'overview' || /:(\d+|overview|plugin|DETAILS)$/) } shift->configured_types;
 }
 
 sub overview_tracks {

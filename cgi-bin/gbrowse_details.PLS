@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.6 2003-07-03 20:06:35 scottcain Exp $
+# $Id: gbrowse_details.PLS,v 1.7 2003-09-22 20:26:56 markwilkinson Exp $
 
 use strict;
 use CGI qw(:standard *table *TR);
@@ -53,7 +53,7 @@ use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Markup;
 use Bio::Graphics::Browser::Util;
 use Bio::Graphics::Browser::Realign 'align';
-use vars qw($CONFIG $VERSION $CONF_DIR $LANG @COLORS $INDEX %strands %COLORS);
+use vars qw($CONFIG $VERSION $CONF_DIR $LANG @COLORS $INDEX %strands %COLORS %URLS);
 
 use constant DEBUG=>0;
 
@@ -74,6 +74,8 @@ my $start = param('start');
 my $end   = param('end');
 
 $CONFIG->source($src || cookie('gbrowse_source'));
+
+&_getLinkURLs;
 
 print_top("GBrowse Details: $class:$name");
 print $CONFIG->header || h1("$class:$name Details");
@@ -227,10 +229,18 @@ sub PrintMultiple {
   my @a = @_;
   return unless @a;
   my $first = shift @a;
+  my $LINK = "";
+  if ($URLS{$label}){
+        $LINK = $URLS{$label};
+        $LINK =~ s/\$tag/$label/;
+        $LINK=~ s/\$value/$first/;
+        $LINK = "<a href='$LINK'>$first</a>";
+  }
+
   my $string = join '',TR({-valign=>'top',-class=>'databody'},
-			  th({-align=>'LEFT',-valign=>'top',-class=>'datatitle'},length $label>0 ? "$label: " : ''),
-			  td($options, $first)
-			 );
+                          th({-align=>'LEFT',-valign=>'top',-class=>'datatitle'},length $label>0 ? "$label: " : ''),
+                          td($options, $LINK?$LINK:$first)
+                         );
   for my $obj (@a) {
     $string .= join '', TR({-class=>'databody'},
 			   th({-align=>'RIGHT',-class=>'datatitle'},'&nbsp;'),
@@ -253,6 +263,20 @@ sub position {
   my $strand = $f->abs_strand > 0 ? '+' : $f->abs_strand < 0 ? '-' : '';
   my $url = "gbrowse?name=$ref:$start..$end;src=".$CONFIG->source;
   return a({-href=>$url},$strand ? "$ref:$start..$end ($strand strand)" : "$ref:$start..$end");
+}
+
+sub _getLinkURLs {
+        my $THIS_CONFIG = $CONFIG->config;
+        $THIS_CONFIG->safe(0);
+        my @LINK_CONFIGS = map{$_=~/\:DETAILS$/?$_:undef} $THIS_CONFIG->setting;
+        foreach (@LINK_CONFIGS){
+                next unless $_;
+                next unless $_=~/(.*?)\:DETAILS/;
+                next unless $1;
+                my $URL = $THIS_CONFIG->setting("$_", 'url');
+                next unless $URL;
+                $URLS{$1}=$URL;
+        }
 }
 
 !NO!SUBS!

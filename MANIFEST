@@ -37,7 +37,7 @@ contrib/conf_files/01.yeast.conf
 contrib/conf_files/02.wormbase.conf
 contrib/conf_files/03.fly.conf
 contrib/conf_files/04.human.conf
-contrib/conf_files/05.embl.conf
+contrib/conf_files/05.embl_proxy.conf
 contrib/conf_files/06.biosql.conf
 contrib/conf_files/07.chado.conf
 contrib/conf_files/08.genbank.conf
@@ -69,6 +69,7 @@ contrib/TextDumper/README
 contrib/TextDumper/TextDumper.pm
 DISCLAIMER
 docs/pod/CONFIGURE_HOWTO.pod
+docs/pod/GENBANK_HOWTO.pod
 docs/pod/INSTALL.pod
 docs/pod/MAKE_IMAGES_HOWTO.pod
 docs/pod/ORACLE_AND_BIOSQL.pod

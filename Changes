@@ -7,6 +7,8 @@
 	* Modified GFFDumper to dump GFF from multiple sources, not just
 	what is in the primary data source.  This functionality is still
 	experimental and not fully tested.
+        * Added more complete documentation for using GBrowse with GenBank
+        formated files
 
 1.53    Thu Aug 21 14:40:54 EDT 2003
         * Security hole that allowed the display of /etc/passwd and other

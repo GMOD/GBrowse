@@ -311,6 +311,8 @@ sub table_create {
   print<<END;
 SET search_path = public, pg_catalog;
 
+/* CREATE USER $webowner;  */
+
 DROP TABLE fmeta;
 CREATE TABLE fmeta (
     fname character varying(255) DEFAULT '' NOT NULL,

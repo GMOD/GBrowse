@@ -295,6 +295,7 @@ the SQL layer.
 
 sub features {
   my $self = shift;
+  return () unless @_;
   my ($types,$attributes,$rangetype,$iterator,$callback);
 
   if ($_[0] =~ /^-/) {
@@ -482,6 +483,5 @@ sub location {return shift}
 sub is_circular {return shift->bioseq->is_circular}
 sub annotation {return shift->bioseq->annotation}
 sub species {return shift->bioseq->species}
-
 
 1;

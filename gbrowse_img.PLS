@@ -41,7 +41,7 @@ $Config{startperl} -w
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbrowse_img.PLS,v 1.6 2002-05-23 19:17:02 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.7 2002-07-23 05:39:18 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1);
@@ -120,12 +120,12 @@ my $img = $CONFIG->image_and_map(segment       => $segment,
 				 feature_files => $feature_list||undef,
 				 label_scale   => 1,
 				);
-if ($img->can('gif')) {
-  print header('image/gif');
-  print $img->gif;
-} else {
+if ($img->can('png')) {
   print header('image/png');
   print $img->png;
+} else {
+  print header('image/gif');
+  print $img->gif;
 }
 
 sub message {

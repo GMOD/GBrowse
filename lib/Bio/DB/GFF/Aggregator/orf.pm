@@ -12,6 +12,11 @@ Bio::DB::GFF::Aggregator::orf -- An aggregator for orf regions
 				   -aggregator => ['orf','clone'],
 				 );
 
+ ---------------------------
+ Aggregator method: orf
+ Main method:       -none-
+ Sub methods:       ORF
+ ---------------------------
 
 =head1 DESCRIPTION
 
@@ -43,7 +48,7 @@ $VERSION = '1.00';
 
 =cut
 
-sub method { 'coding' }
+sub method { 'orf' }
 
 # sub require_whole_object { 1; }
 

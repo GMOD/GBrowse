@@ -15,9 +15,9 @@ Project (GMOD; http://www.gmod.org).
      B2. Track Sections
      B3. Glyphs and Glyph options
      B4. Computed Options
-  C. INSTALLING FASTA FILES FOR DNA
-  D. CHANGING THE LOCATION OF THE CONFIGURATION FILES
-  E. FURTHER INFORMATION
+     B4. Declaring New Aggregators
+  C. CHANGING THE LOCATION OF THE CONFIGURATION FILES
+  D. FURTHER INFORMATION
 
 A. CREATING NEW DATABASES FROM SCRATCH
 
@@ -253,9 +253,11 @@ standard "alignment" aggregator takes multiple alignments of method
 of method "alignment".
 
 The various aggregators are described in detail in the Bio::DB::GFF
-manual page, and it is easy to write new ones.  It is suggested that
-you use the sample GFF files from the yeast, drosophila and C. elegans
-projects to see what methods to use to achieve the desired results.
+manual page.  It is easy to write new aggregators, and also possible
+to define aggregators on the fly in the gbrowse configuration file.
+It is suggested that you use the sample GFF files from the yeast,
+drosophila and C. elegans projects to see what methods to use to
+achieve the desired results.
 
 ----------------------------------------------------------------------
 
@@ -347,17 +349,19 @@ The following [GENERAL] options are recognized:
 
   (You will want to change this).
 
-  d) fasta_files
+  d) fasta_files (deprecated)
 
-  The location of the FASTA files to refer to when dumping out the 
-  DNA for a displayed region.  Comment this option out to disable
-  the feature.  (You will want to change this).
+  This option used to be used to specify the location of FASTA files to
+  refer to when displaying the DNA for a selected region.  In more recent
+  versions of Bio::DB::GFF, the DNA is stored directly in the database, and
+  so this option is no longer necessary and should be commented out.
 
   e) aggregators
 
   Aggregators to use for complex features.  Comment this out to use
-  the default aggregators.  (You will probably not want to change
-  this).
+  the default aggregators. It is possible to declare your own aggregator
+  here using a special syntax.  See "B5. Declaring New Aggregators" for 
+  details.
 
   f) user
   
@@ -847,7 +851,7 @@ B4. Computed Options
 Some options can be computed at run time by using Perl subroutines as
 their values.  Currently this works with the values of the "link",
 "title", "header" and "footer" options, and any glyph-specific option
-that appears in a track stanza.
+that appears in a track section.
 
 You need to know the Perl programming language to take advantage of
 this.  The general format of this type of option is:
@@ -898,43 +902,98 @@ More subroutine arguments are available to the glyph-specific
 subroutines.  See the Bio::Graphics::Panel manual page for the full
 details.
 
+---
+
+B5. Declaring New Aggregators
+
+The Bio::DB::GFF data model recognizes a single-level of "grouping" of
+features, but doesn't specify how to use the group information to
+correctly assemble the various individual components into a biological
+object.  Aggregators are used to assemble this information.  For
+example, let's say that you decide that your preferred "transcript"
+data model contains three subfeature types: a set of one or more
+features of method "exon", a single feature of method "TSS", and a
+single feature of method "polyA".  Optionally, the data model could
+contain a single "main subfeature" that runs the length of the entire
+transcript.  We might give this feature a method of "primary_transc"
+(for "primary transcript.")
+
+In a GFF file, a three-exon transcript might be represented as
+follows:
+
+ Chr1 confirmed primary_transc 100 500  .  +  .  Transcript "ABC.1"
+ Chr1 confirmed TSS            100 100  .  +  .  Transcript "ABC.1"
+ Chr1 confirmed exon           100 200  .  +  .  Transcript "ABC.1"
+ Chr1 confirmed exon           250 300  .  +  .  Transcript "ABC.1"
+ Chr1 confirmed exon           400 500  .  +  .  Transcript "ABC.1"
+ Chr1 confirmed polyA          500 500  .  +  .  Transcript "ABC.1"
+
+To aggregate this, you would like to create an aggregator named
+"transcript", whose "main method" is "primary_transc", and whose "sub
+methods" are "TSS," "exon," and "polyA."
+
+The way to indicate this in the configuration file is to add a
+"complex aggregator" to the list of aggregators:
+
+  aggregator = transcript{TSS,exon,polyA/primary_transc}
+
+The format of this value is
+"aggregator_name{submethod1,submethod2,.../mainmethod}".  
+
+You can now use the name of the aggregator name as the argument of the
+"feature" option in a track section:
+
+  [Transcripts]
+  feature      = transcript
+  glyph        = segments
+  bgcolor      = wheat
+  fgcolor      = black
+  height       = 10
+  key          = Transcripts
+
+If you do not have a main subfeature, leave off the "/mainmethod".
+For example:
+
+  aggregator = transcript{TSS,exon,polyA}
+
+A few formatting notes.  You are free to mix simple and complex
+aggregators in the "aggregator" option.  For example, you can activate
+the standard "clone" and "alignment" aggregators as well as the new
+transcript aggregator with a line like this one:
+
+ aggregator = clone
+              transcript{TSS,exon,polyA/primary_transc}
+              alignment
+
+If the complex aggregator contains whitespace or apostrophes, you must
+surround it with double-quotes, like this:
+
+   "transcript{TSS,5'UTR,3'UTR,exon,polyA/primary_transc}"
+
+Be aware that some glyphs look for particular method names when
+rendering aggregated features.  For example, the standard "transcript"
+glyph is closely tied to the "transcript" aggregator, and looks for
+submethods named "intron", "exon" and "CDS", and a main method named
+"transcript."  
+
+Here is the list of available predefined aggregators:
+
+     alignment
+     clone
+     coding
+     transcript
+     none
+     orf
+     waba_alignment
+     wormbase_gene
+
+To view the documentation for any of these aggregators, run the
+command "perldoc Bio::DB::GFF::Aggregator::aggregator_name", where
+"aggregator_name" is the name of the aggregator.
+
 ----------------------------------------------------------------------
 
-C. INSTALLING FASTA FILES FOR DNA
-
-The GBrowse can dump the current segment under display as FASTA files.  To
-do this, designate a directory to contain FASTA file(s) of the genomic
-sequence.  There must be a single DNA entry for each reference point
-that is used by the corresponding GFF file.  For example, if the GFF
-file uses chromosome coordinates, and the chromosomes are named
-"Chr1", "Chr2" and so forth, then the FASTA files must have entries of
-the form:
-
- >Chr1
- ggaggtcaaa....
- ..............
- >Chr2
- ccttgaggccca..
- ..............
-
-You may put all entries into a single FASTA file, or spread them out
-among multiple files.  The files must have one of the extensions
-".fa", ".fasta", ".fast", or ".dna".
-
-Tell GBrowse where to find the FASTA files by setting the fasta_files
-option to the directory that contains them:
-
- fasta_files = /usr/local/share/fasta/yeast
-
-The last step is to make the directory that contains the fasta files
-writable by the web server user.  This is because the first time the
-web server accesses the files it generates an index of the DNA entries
-and stores the index to disk.  This makes subsequent accesses to
-the DNA data very fast.
-
-----------------------------------------------------------------------
-
-D. CHANGING THE LOCATION OF THE CONFIGURATION FILES
+C. CHANGING THE LOCATION OF THE CONFIGURATION FILES
 
 If you wish to change the location of the gbrowse.conf configuration
 file directory, you must manually edit the gbrowse CGI script.  Open
@@ -966,7 +1025,7 @@ For example:
 
 ----------------------------------------------------------------------
 
-E. FURTHER INFORMATION
+D. FURTHER INFORMATION
 
 For further information, bug reports, etc, please consult the mailing
 lists and discussion forums at www.gmod.org.

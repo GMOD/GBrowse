@@ -14,6 +14,11 @@ Bio::DB::GFF::Aggregator::waba_alignment -- A WABA alignment
   # fetch the synthetic feature type "waba_alignment"
   my @waba    = $db->features('waba_alignment');
 
+ -------------------------------------------------------------------------------------
+ Aggregator method: waba_alignment
+ Main method:       -none
+ Sub methods:       similarity:waba_weak similarity:waba_strong similarity:waba_coding
+ -------------------------------------------------------------------------------------
 
 =head1 DESCRIPTION
 

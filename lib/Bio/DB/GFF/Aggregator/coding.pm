@@ -11,7 +11,11 @@ Bio::DB::GFF::Aggregator::coding -- An aggregator for coding regions
                                    -dsn     => 'dbi:mysql:elegans42',
 				   -aggregator => ['coding','clone'],
 				 );
-
+ ---------------------------
+ Aggregator method: coding
+ Main method:       Sequence
+ Sub methods:       CDS
+ ---------------------------
 
 =head1 DESCRIPTION
 

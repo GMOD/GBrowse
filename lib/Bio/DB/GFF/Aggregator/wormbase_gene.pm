@@ -12,6 +12,11 @@ Bio::DB::GFF::Aggregator::wormbase_gene -- Wormbase gene aggregator
 				   -aggregator => ['wormbase_gene','clone'],
 				 );
 
+ -------------------------------------------------------------------------------------
+ Aggregator method: transcript
+ Main method:       Sequence
+ Sub methods:       CDS 5'UTR 3'UTR TSS PolyA
+ -------------------------------------------------------------------------------------
 
 =head1 DESCRIPTION
 

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.27 2002-07-20 16:42:59 lstein Exp $
+# $Id: Browser.pm,v 1.28 2002-07-23 05:39:18 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -62,12 +62,13 @@ use GD 'gdMediumBoldFont';
 use CGI qw(img param escape url);
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
+use Text::Shellwords;
 
 require Exporter;
 
 use constant DEFAULT_WIDTH => 800;
 use vars '$VERSION','@ISA','@EXPORT';
-$VERSION = '1.13';
+$VERSION = '1.14';
 
 @ISA    = 'Exporter';
 @EXPORT = 'commas';
@@ -264,8 +265,9 @@ sub dbgff_settings {
   if (my $pass = $self->setting('pass')) {
     push @argv,(-pass=>$pass);
   }
-  if (my @aggregators = split /\s+/,$self->setting('aggregators')) {
-    push @argv,(-aggregator => \@aggregators);
+  if (my @aggregators = shellwords($self->setting('aggregators'))) {
+    my $agg = $self->make_aggregators(@aggregators);
+    push @argv,(-aggregator => $agg);
   }
   @argv;
 }
@@ -299,7 +301,7 @@ order to retrieve track-specific options.
 =cut
 
 sub labels {
-  my $self = shift;
+  my $self  = shift;
   my $order = shift;
   my @labels = $self->config->labels;
   if ($order) { # custom order
@@ -356,17 +358,18 @@ sub type2label {
 
 =head2 feature2label()
 
-  $label = $browser->feature2label($feature);
+  $label = $browser->feature2label($feature [,$length]);
 
 Given a Bio::DB::GFF::Feature (or anything that implements a type()
-method), this method returns the corresponding label.
+method), this method returns the corresponding label.  If an optional
+length is provided, the method takes semantic zooming into account.
 
 =cut
 
 sub feature2label {
   my $self = shift;
-  my $feature = shift;
-  return $self->config->feature2label($feature);
+  my ($feature,$length) = @_;
+  return $self->config->feature2label($feature,$length);
 }
 
 =head2 citation()
@@ -688,11 +691,12 @@ sub image_and_map {
 
   my $width = $self->width;
   my $conf  = $self->config;
-  my $max_labels = $conf->setting(general=>'label density') || 10;
-  my $max_bump   = $conf->setting(general=>'bump density')  || 50;
-  my $lowres     = ($conf->setting(general=>'low res')||0) <= $segment->length;
+  my $max_labels     = $conf->setting(general=>'label density') || 10;
+  my $max_bump       = $conf->setting(general=>'bump density')  || 50;
+  my $length         = $segment->length;
+  my $global_lowres  = $conf->setting(general=>'low res');
 
-  my @feature_types = map {$conf->label2type($_,$lowres)} @$tracks;
+  my @feature_types = map { $conf->label2type($_,$length) } @$tracks;
 
   # Create the tracks that we will need
   my $panel = Bio::Graphics::Panel->new(-segment => $segment,
@@ -730,7 +734,7 @@ sub image_and_map {
     else {
       my $track = $panel->add_track(-glyph => 'generic',
 				    # -key   => $label,
-				    $conf->style($label),
+				    $conf->style($label,$length),
 				   );
       $tracks{$label}  = $track;
     }
@@ -743,14 +747,15 @@ sub image_and_map {
 
     while (my $feature = $iterator->next_seq) {
 
-      my $label = $self->feature2label($feature);
+      my $label = $self->feature2label($feature,$length);
+      warn "feature = $feature => $label";
       my $track = $tracks{$label} or next;
 
       $feature_count{$label}++;
 
       # special case to handle paired EST reads
       # WARNING: HARD-CODED RELIANCE ON METHOD NAMES similarity AND alignment.
-      if (!$lowres && $feature->method =~ /^(similarity|alignment)$/i) {
+      if ($feature->method =~ /^(similarity|alignment)$/i) {
 	push @{$similarity{$label}},$feature;
 	next;
       }
@@ -832,6 +837,9 @@ the overview panel.  Its argument is a Bio::DB::GFF::Segment (or
 Bio::Das::SegmentI) object. It returns a two element list consisting
 of the image data and the length of the segment (in bp).
 
+In the configuration file, any section labeled "[something:overview]"
+will be added to the overview panel.
+
 =cut
 
 # generate the overview, if requested, and return it as a GD
@@ -862,26 +870,40 @@ sub overview {
 		    $units ? (-units => $units) : (),
 		   );
 
-  if (my $landmarks  = $self->setting('overview landmarks')
-      || ($conf->label2type('overview'))[0]) {
-    my $max_label  = $conf->setting(general=>'label density') || 10;
-    my $max_bump   = $conf->setting(general=>'bump density') || 50;
-
-    my @types = split /\s+/,$landmarks;
+  my (@feature_types,%type2track,%track);
+  for my $overview_track ($self->config->overview_tracks) {
+    my @types = $conf->label2type($overview_track);
     my $track = $panel->add_track(-glyph  => 'generic',
 				  -height  => 3,
 				  -fgcolor => 'black',
 				  -bgcolor => 'black',
-				  $conf->style('overview'),
+				  $conf->style($overview_track),
 				 );
-    my $iterator = $segment->get_feature_stream(-type=>\@types,-rare=>1);
-    my $count = 0;
-    while (my $feature = $iterator->next_seq) {
-      $track->add_feature($feature);
-      $count++;
+    foreach (@types) {
+      $type2track{$_} = $overview_track
     }
-    my $bump  = defined $conf->setting(overview=>'bump')  ? $conf->setting(overview=>'bump')  : $count <= $max_bump;
-    my $label = defined $conf->setting(overview=>'label') ? $conf->setting(overview=>'label') : $count <= $max_label;
+    $track{$overview_track} = $track;
+    push @feature_types,@types;
+  }
+  my $iterator = $segment->features(-type=>\@feature_types,-iterator=>1,-rare=>1);
+
+  my %count;
+  while (my $feature = $iterator->next_seq) {
+    my $track_name = $type2track{$feature->type} || $type2track{$feature->method} || next;
+    my $track = $track{$track_name} or next;
+    $track->add_feature($feature);
+    $count{$track_name}++;
+  }
+
+  my $max_label  = $conf->setting(general=>'label density') || 10;
+  my $max_bump   = $conf->setting(general=>'bump density') || 50;
+
+  for my $track_name (keys %count) {
+    my $track = $track{$track_name};
+    my $bump  = defined $conf->setting($track_name => 'bump')
+              ? $conf->setting($track_name=>'bump')    : $count{$track_name} <= $max_bump;
+    my $label = defined $conf->setting($track_name  => 'label')
+              ? $conf->setting($track_name => 'label') : $count{$track_name} <= $max_label;
     $track->configure(-bump  => $bump,
 		      -label => $label,
 		     );
@@ -1268,6 +1290,41 @@ sub Bio::Graphics::Feature::high {
 END
 }
 
+=head2 make_aggregators()
+
+  @agg = $browser->make_aggregators(@string);
+
+This interprets the aggregators option, returning a list of strings or
+Aggregator objects.  Items with simple names like "alignment" are
+passed as-is to DBGFF.  Items using the syntax:
+
+   aggregate_name{subpart1,subpart2,subpart3/mainpart}
+
+are turned into a Bio::DB::GFF::Aggregator object.
+
+=cut
+
+sub make_aggregators {
+  my $self = shift;
+  my @agg  = @_;
+  require Bio::DB::GFF::Aggregator;
+
+  my @result;
+  foreach (@agg) {
+    my($agg_name,$subparts,$mainpart) = /^(\w+)\{([^\/}]+)\/?(.*)\}$/;
+    unless ($agg_name) {
+      push @result,$_;
+      next;
+    }
+    my @subparts = split /,\s*/,$subparts;
+    my @args = (-method    => $agg_name,
+		-sub_parts => \@subparts);
+    push @args,(-main_method => $mainpart) if defined $mainpart;
+    push @result,Bio::DB::GFF::Aggregator->new(@args);
+  }
+  \@result;
+}
+
 
 package Bio::Graphics::BrowserConfig;
 use strict;
@@ -1279,30 +1336,63 @@ use vars '@ISA';
 @ISA = 'Bio::Graphics::FeatureFile';
 
 sub labels {
-  grep { $_ ne 'overview' } shift->configured_types;
+  grep { !($_ eq 'overview' || /:(\d+|overview)$/) } shift->configured_types;
+}
+
+sub overview_tracks {
+  grep { $_ eq 'overview' || /:overview$/ } shift->configured_types;
 }
 
 sub label2type {
-  my ($self,$label,$lowres) = @_;
-  return ($lowres ? shellwords($self->setting($label,'feature_low')||$self->setting($label,'feature')||'')
-                  : shellwords($self->setting($label,'feature')||''));
+  my ($self,$label,$length) = @_;
+  my $l = $self->semantic_label($label,$length);
+  return shellwords($self->setting($l,'feature')||'');
+}
+
+sub style {
+  my ($self,$label,$length) = @_;
+  my $l = $self->semantic_label($label,$length);
+  return $l eq $label ? $self->SUPER::style($l) : ($self->SUPER::style($label),$self->SUPER::style($l));
+}
+
+sub semantic_label {
+  my ($self,$label,$length) = @_;
+  return $label unless defined $length && $length > 0;
+  # look for:
+  # 1. a section like "Gene:100000" where the cutoff is less than the length of the segment
+  #    under display.
+  # 2. a section like "Gene" which has no cutoff to use.
+  if (my @lowres = map { [split ':'] }
+      grep {/$label:(\d+)/ && $1 <= $length}
+      $self->configured_types) {
+    ($label) = map {join ':',@$_} sort {$b->[1] <=> $a->[1]} @lowres;
+  }
+  $label
 }
 
 # override inherited in order to be case insensitive
+# and to account for semantic zooming
 sub type2label {
   my $self = shift;
-  my $type = shift;
-  $self->SUPER::type2label(lc $type);
+  my ($type,$length) = @_;
+  $length ||= 0;
+  my $array  = $self->SUPER::type2label(lc $type) or return;
+  my @normal = grep {!/:\d+$/} @$array;
+  my @lowres = map {$_->[0]} sort {$b->[1] <=> $a->[1]} map { [split ':'] }
+    grep {/:(\d+)$/ && $1 <= $length} @$array;
+  $lowres[0] || $normal[0];
 }
 
-sub label2index {
+# override inherited in order to allow for semantic zooming
+sub feature2label {
   my $self = shift;
-  my $label = shift;
-  unless ($self->{label2index}) {
-    my $index = 0;
-    $self->{label2index} = { map {$_=>$index++} $self->labels };
-  }
-  return $self->{label2index}{$label};
+  my ($feature,$length) = @_;
+  my $type  = eval {$feature->type} || $feature->primary_tag or return;
+  (my $basetype = $type) =~ s/:.+$//;
+  my $label = $self->type2label($type,$length)
+    || $self->type2label($basetype,$length) 
+      || $type;
+  $label;
 }
 
 sub invert_types {
@@ -1310,12 +1400,10 @@ sub invert_types {
   my $config  = $self->{config} or return;
   my %inverted;
   for my $label (keys %{$config}) {
-    next if $label eq 'overview';   # special case
-    for my $f (qw(feature feature_low)) {
-      my $feature = $config->{$label}{$f} or next;
-      foreach (shellwords($feature||'')) {
-	$inverted{lc $_} = $label;
-      }
+    next if $label=~/:?overview$/;   # special case
+    my $feature = $config->{$label}{'feature'} or next;
+    foreach (shellwords($feature||'')) {
+      push @{$inverted{lc $_}},$label;
     }
   }
   \%inverted;
@@ -1325,12 +1413,6 @@ sub default_labels {
   my $self = shift;
   my $defaults = $self->setting('general'=>'default features');
   return shellwords($defaults||'');
-}
-
-sub default_label_indexes {
-  my $self = shift;
-  my @labels = $self->default_labels;
-  return map {$self->label2index($_)} @labels;
 }
 
 # return a hashref in which keys are the thresholds, and values are the list of

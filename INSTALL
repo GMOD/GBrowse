@@ -232,6 +232,26 @@ compatible with GBrowse.  process_wormbase.pl supplements the
 information with the physical positions of genetic markers, GenBank
 accession numbers and functional descriptions of gene products.
 
+To display the DNA sequence and to run sequence-dependent glyphs such
+as the three-frame translation, you will need to load the DNA as well
+as the annotations.  The DNA must be formatted as a series of one or
+more FASTA-format files in which each entry in the file corresponds to
+a top-level sequence such as a chromosome pseudomolecule.  You can
+then run the load_gff.pl or bulk_load_gff.pl script using the -fasta
+argument.  For example, if the yeast genome is contained in a FASTA
+file named yeast.fa, you would run the command:
+
+  bulk_load_gff.pl -d yeast -fasta yeast.fa sample/yeast_data.gff
+
+Alternatively, you may put several FASTA files into a directory, and
+provide the directory name as the argument to -fasta.
+
+(The yeast DNA is too large to be included in this distribution, but
+you can get a copy of it from
+ftp://genome-ftp.stanford.edu/pub/yeast/)
+
+Run "bulk_load_gff.pl -h" to see usage instructions.
+
 6. CREATING YOUR OWN GENOME DATABASE
 
 See the file doc/configuration.txt for information on how to create
@@ -313,7 +333,15 @@ instructions. A copy of these instructions in HTML form will be
 generated when gbrowse_img is called without any arguments.  Type
 http://your.host/cgi-bin/gbrowse_img into your favorite web browser.
 
-10. THE GENBANK/EMBL PROXY
+10. PLUGINS
+
+Gbrowse has a plugin architecture which makes it easy for third-party
+developers to expand its functionality.  The plugins are Perl .pm
+files located in the directory gbrowse.conf/plugins/.  To install
+plugins, simply copy them into this directory.  To uninstall, remove
+them.
+
+11. THE GENBANK/EMBL PROXY
 
 Sample configuration number 5 ("05.embl.conf") corresponds to an
 experimental pass-through proxy for Genbank.  At least in theory, if
@@ -338,7 +366,7 @@ entirely reliable.  To get it to work, you must:
 
    d) cross your fingers
 
-11. UPDATING THE BROWSER WITHOUT REENTERING YOUR DIRECTORY SETTINGS
+12. UPDATING THE BROWSER WITHOUT REENTERING YOUR DIRECTORY SETTINGS
 
 When updating GBrowse to a new version of the software, you can
 configure it using your preferred directory settings by making a
@@ -352,14 +380,14 @@ Makefile.PL.  Here is the recipe:
   make
   make install
 
-12. KNOWN BUGS
+13. KNOWN BUGS
 
 Currently there is one known bug.  The navigation buttons do not
 operate properly when the client is using Internet Explorer 5.1 on a
 Macintosh and accessing gbrowse running on a MacOS X server running
 Apache.  Other combinations of clients and servers work properly.
 
-13. FEATURE WISH LIST (updated July 7, 2002)
+14. FEATURE WISH LIST (updated July 7, 2002)
 
  - Full DAS support.
  - Internationalization and localization support.
@@ -372,7 +400,7 @@ Apache.  Other combinations of clients and servers work properly.
 If you are interested in working on any of these features, please
 contact the developers at the address given in the next section.
 
-14. SUPPORT AND BUG REPORTS
+15. SUPPORT AND BUG REPORTS
 
 Please send requests for help to gmod-devel@lists.sourceforge.net.
 There is also a formal bug tracking and feature request system in

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.43 2003-10-29 16:19:58 lstein Exp $
+# $Id: gbrowse.PLS,v 1.44 2003-11-03 18:02:06 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -230,6 +230,14 @@ if (@segments && $plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper'
   do_plugin_header(param('plugin'),$page_settings);
   do_plugin_dump(param('plugin'),$segments[0],$page_settings) && exit 0
 }
+# The ImportFeatures plugin is a dumper plugin but does not require a segment.
+# it will be invoked here if no segment is defined
+elsif ($plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper' &&
+       $PLUGINS->{param('plugin')}->verb eq ($CONFIG->tr('Import')||'Import') ) {
+    do_plugin_header(param('plugin'),$page_settings);
+    do_plugin_dump(param('plugin'),$segments[0],$page_settings) && exit 0
+}
+
 
 
 ###############################################################################################

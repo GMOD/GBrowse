@@ -6,6 +6,8 @@
 	  machines and causes an internal server error.
 	* Fixed the plugins so that they are not turned on by default.
 	* Changed the default empty track style from "suppress" to "key."
+	* Better error reporting.
+	* Changed passwd=>pass in all the sample config files.
 1.46	Sun Oct  6 18:25:05 EDT 2002
 	* Major feature release.
 	* Internationalization support: French, Italian, Japanese, English.

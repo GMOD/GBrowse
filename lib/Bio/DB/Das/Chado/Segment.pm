@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.45 2004-01-20 20:48:09 scottcain Exp $
+# $Id: Segment.pm,v 1.46 2004-01-20 21:35:27 scottcain Exp $
 
 =head1 NAME
 
@@ -165,8 +165,11 @@ sub new {
             push @segments, $factory->segment($name,$factory,$base_start,$end,$db_id);
         }
 
-        if (@segments < 2) {
-            return $segments[0]; #I don't think this should ever happen
+        if    (@segments == 0) {
+            return;              #I don't think this should ever happen here
+        }
+        elsif (@segments == 1) {
+            return $segments[0]; #nor this
         }
         elsif (wantarray) {
             return @segments;

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.14 2003-01-30 20:10:12 scottcain Exp $
+# $Id: Chado.pm,v 1.15 2003-02-17 21:26:59 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -99,7 +99,7 @@ use vars qw($VERSION @ISA);
 use constant SEGCLASS      => 'Bio::DB::Das::Chado::Segment';
 use constant DEBUG =>0;
 
-$VERSION = 0.01;
+$VERSION = 0.02;
 @ISA     = qw(Bio::Root::Root Bio::DasI);
 
 =head2 new
@@ -328,7 +328,7 @@ sub get_feature_by_name {
     # prepare sql queries for use in while loops
     my $isth =  $self->{dbh}->prepare("
        select f.feature_id, f.name, f.type_id, 
-              fl.nbeg,fl.nend,fl.strand,fl.phase, fl.srcfeature_id
+              fl.min,fl.max,fl.strand,fl.phase, fl.srcfeature_id
        from feature f, featureloc fl 
        where
          f.feature_id = ? and
@@ -366,7 +366,7 @@ sub get_feature_by_name {
                       $self,
                       $parent_segment,
                       $parent_segment->seq_id,
-                      $$hashref{'nbeg'},$$hashref{'nend'},
+                      $$hashref{'min'},$$hashref{'max'},
                       $termname{$$hashref{'type_id'}},
                       $$hashref{'strand'},
                       $$hashref{'name'},

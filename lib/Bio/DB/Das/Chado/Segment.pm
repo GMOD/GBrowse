@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.18 2003-02-06 21:31:12 scottcain Exp $
+# $Id: Segment.pm,v 1.19 2003-02-17 21:27:00 scottcain Exp $
 
 =head1 NAME
 
@@ -119,8 +119,10 @@ use constant DEBUG => 0;
 
 use vars '@ISA','$VERSION','$ASSEMBLY_TYPE';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI);
-$VERSION = 0.01;
+$VERSION = 0.02;
 $ASSEMBLY_TYPE = 'arm'; #this should really be set in a config file
+                        # well, it shouldn't really need to be anywhere, 
+                        # it is just a speed hack
 
 # construct a virtual segment that works in a lazy way
 sub new {
@@ -180,7 +182,7 @@ sub new {
     my $landmark_feature_id = $$hash_ref{'feature_id'};
 
     $sth = $factory->{dbh}->prepare ("
-       select ga.name,ga.feature_id,ga.seqlen,fl.nbeg,fl.nend
+       select ga.name,ga.feature_id,ga.seqlen,fl.min,fl.max
        from gbrowse_assembly ga, featureloc fl
        where fl.feature_id = $landmark_feature_id and
              fl.srcfeature_id = ga.feature_id
@@ -194,10 +196,9 @@ sub new {
   my $srcfeature_id = $$hash_ref{'feature_id'};
   $name = $$hash_ref{'name'};
 
-  if ($$hash_ref{'nbeg'}) {
-    $start = $$hash_ref{'nbeg'};
-    $end   = $$hash_ref{'nend'};
-    ($end,$start) = ($start,$end) if $start > $end;
+  if ($$hash_ref{'min'}) {
+    $start = $$hash_ref{'min'};
+    $end   = $$hash_ref{'max'};
   }
 
     warn "length:$length, srcfeature_id:$srcfeature_id\n" if DEBUG;
@@ -366,18 +367,15 @@ sub features {
   my $sql_range;
   if ($rangetype eq 'contains') {
 
-    $sql_range = " ((fl.strand=1  and fl.nbeg <= $rstart and fl.nend >= $rend) OR \n"
-           . "      (fl.strand=-1 and fl.nend <= $rstart and fl.nbeg >= $rend)) ";
+    $sql_range = " fl.min >= $rstart and fl.max M= $rend ";
 
   } elsif ($rangetype eq 'contained_in') {
 
-    $sql_range = " ((fl.strand=1  and fl.nbeg => $rstart and fl.nend <= $rend) OR \n"
-           . "      (fl.strand=-1 and fl.nend => $rstart and fl.nbeg <= $rend)) ";
+    $sql_range = " fl.min <= $rstart and fl.max >= $rend ";
 
   } else { #overlaps is the default
 
-    $sql_range = " ((fl.strand=1  and fl.nbeg <= $rend and fl.nend >= $rstart) OR \n"
-           . "      (fl.strand=-1 and fl.nend <= $rend and fl.nbeg >= $rstart)) ";
+    $sql_range = " fl.min <= $rend and fl.max >= $rstart ";
 
   }
 
@@ -419,14 +417,13 @@ sub features {
 
   my $srcfeature_id = $self->{srcfeature_id};
   my $sth = $self->{factory}->{dbh}->prepare("
-    select distinct f.name,fl.nbeg,fl.nend,fl.strand,f.type_id,f.feature_id
+    select distinct f.name,fl.min,fl.max,fl.strand,f.type_id,f.feature_id
     from feature f, featureloc fl
     where
       $sql_types 
       fl.srcfeature_id = $srcfeature_id and
       f.feature_id  = fl.feature_id and
       $sql_range
-    order by fl.nbeg
        ");
    $sth->execute or $self->throw("feature query failed"); 
 
@@ -435,14 +432,8 @@ sub features {
   my %termname = %{$self->{factory}->{cvtermname}};
   while (my $hashref = $sth->fetchrow_hashref) {
 
-    my ($start,$stop);
-    if ($$hashref{nbeg} > $$hashref{nend}) {
-      $start = $$hashref{nend};
-      $stop  = $$hashref{nbeg};
-    } else {
-      $stop  = $$hashref{nend};
-      $start = $$hashref{nbeg};
-    }
+    my $stop  = $$hashref{max};
+    my $start = $$hashref{min};
 
 #    warn "-->$$hashref{name}<--\n";
 

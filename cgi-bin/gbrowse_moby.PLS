@@ -50,7 +50,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.20 2003-12-31 15:21:21 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.21 2004-01-01 00:58:13 markwilkinson Exp $
 ###########################################################
 
 use MOBY::Client::Central;
@@ -556,7 +556,7 @@ sub INITIALIZE {
 
     print p,
     "Which ID within this namespace?: ",   
-    textfield(-name => 'id',-width=>'15', -value => "163483",);
+    textfield(-name => 'id',-width=>'15', -value => "431260",);
     print "</h2>",p,
     submit("Initialize with this seed data"),
     end_form;

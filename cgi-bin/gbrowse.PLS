@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.111 2004-09-06 22:41:46 lstein Exp $
+# $Id: gbrowse.PLS,v 1.112 2004-09-08 17:34:52 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -89,6 +89,7 @@ use constant DEFAULT_RANGES       => q(100 500 1000 5000 10000 25000 100000 2000
 use constant DEFAULT_FINE_ZOOM    => '10%';
 use constant GBROWSE_HELP         => '/gbrowse';
 use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceDumper';
+use constnat DEFAULT_OVERVIEW_BGCOLOR => 'wheat';
 
 # if true, turn on surrounding rectangles for debugging the image map
 use constant DEBUG          => 0;

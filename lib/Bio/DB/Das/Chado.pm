@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.6 2003-01-13 22:11:57 scottcain Exp $
+# $Id: Chado.pm,v 1.7 2003-01-14 22:17:24 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -323,7 +323,7 @@ sub types {
 
 This routine performs a full-text search on feature attributes (which
 attributes depend on implementation) and returns a list of
-[$name,$description,$score], where $name is the feature ID,
+[$name,$description,$score], where $name is the feature ID (accession?),
 $description is a human-readable description such as a locus line, and
 $score is the match strength.
 
@@ -334,24 +334,48 @@ sub search_notes {
   my ($search_string,$limit) = @_;
   my $limit_str;
   if (defined $limit) {
-    $limit_str = "     LIMIT $limit ";
+    $limit_str = " LIMIT $limit ";
   } else {
     $limit_str = "";
   } 
 
+# so here's the plan:
+# if there is only 1 word, do 1-3
+#  1. search for accessions like $string.'%'--if any are found, quit and return them
+#  2. search for feature.name like $string.'%'--if found, keep and continue
+#  3. search somewhere in analysis like $string.'%'--if found, keep and continue
+# if there is more than one word, don't search accessions
+#  4. search each word anded together like '%'.$string.'%' --if found, keep and continue
+#  5. search somewhere in analysis like '%'.$string.'%'
+
+  $self->{dbh}->trace(1);
+
+  my @search_str = split /\s+/, $search_string;
+  my $qsearch_term = $self->{dbh}->quote($search_str[0]);
+  my $like_str = "( (dbx.accession ~* $qsearch_term OR \n"
+        ."           f.name        ~* $qsearch_term) ";
+  for (my $i=1;$i<(scalar @search_str);$i++) {
+    $qsearch_term = $self->{dbh}->quote($search_str[$i]);
+    $like_str .= "and \n";
+    $like_str .= "          (dbx.accession ~* $qsearch_term OR \n"
+                ."           f.name        ~* $qsearch_term) ";
+  } 
+  $like_str .= ")";
 
   my $sth = $self->{dbh}->prepare("
-     select type_id, name, 0
-     from feature
-     where name is not null
+     select dbx.accession,f.name,0 
+     from feature f, dbxref dbx
+     where
+        f.dbxrefstr = dbx.dbxrefstr and 
+        $like_str 
      $limit_str
     ");
+  $sth->execute or throw ("couldn't execute keyword query");
 
   my @results;
-  while (my ($type_id, $name, $score) = $sth->fetchrow_array) {
+  while (my ($acc, $name, $score) = $sth->fetchrow_array) {
     $score = sprintf("%.2f",$score);
-    my $termname = $self->{cvtermname}->{$type_id});
-    push @results, [$termname, $name, $score];
+    push @results, [$acc, $name, $score];
   }
   @results;
 }

@@ -102,7 +102,7 @@ conf_install ::
 	\@dir=$OPTIONS{CONF}/gbrowse.conf; \\
 	mkdir -p \$\$dir; \\
 	cd $Bin/conf; \\
-	for i in *.conf; do \\
+	for i in *.{conf,html}; do \\
 		if [ -e "\$\$dir/\$\$i" ]; then \\
 			echo "   Found \$\$i in \$\$dir. Skipping..."; \\
 		else \\

@@ -9,6 +9,7 @@ bin/process_gadfly.PLS
 bin/process_sgd.PLS
 bin/process_wormbase.PLS
 conf/annotation_help.html
+conf/general_help.html
 conf/fly.conf
 conf/wormbase.conf
 conf/yeast.conf

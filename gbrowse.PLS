@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.13 2002-02-21 13:13:51 lstein Exp $
+# $Id: gbrowse.PLS,v 1.14 2002-02-25 12:33:49 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -685,6 +685,10 @@ sub annotation_help {
   return url(-relative=>1,-path_info=>1) . "?help=annotation";
 }
 
+sub general_help {
+  return url(-relative=>1,-path_info=>1) . "?help=general";
+}
+
 sub upload_table {
   my $settings      = shift;
   my $feature_files = shift;
@@ -699,7 +703,7 @@ sub upload_table {
 		  TR(
 		     th({-class=>'datatitle', -colspan=>3, -align=>'left'},
 			'Upload your own annotations:',
-			a({-href=>annotation_help(),-target=>'_new'},'[Help]'))
+			a({-href=>annotation_help(),-target=>'help'},'[Help]'))
 		    ),
 
 		  # row
@@ -731,7 +735,7 @@ sub external_table {
     for (my $i=0;$i<@$urls;$i++) {
       push @rows,th({-align=>'RIGHT'},"URL",$i+1).
 	td(textfield(-name=>'eurl',-size=>50,-value=>$urls->[$i],-override=>1),br,
-	   a({-href=>$urls->[$i],-target=>'_new'},'[download]'),
+	   a({-href=>$urls->[$i],-target=>'help'},'[download]'),
 	   get_uploaded_file_info($settings->{labels}[$CONFIG->labels+$i+1] && $feature_files->[$i+1])
 	  );
     }
@@ -743,7 +747,7 @@ sub external_table {
   return table({-border=>0,-width=>$settings->{width}},
 	       TR({-class=>'datatitle'},
 		  th({-align=>'LEFT',-colspan=>2},
-		     'Add Remote Annotations:',a({-href=>annotation_help().'#remote',-target=>'_new'},'[Help]'))),
+		     'Add Remote Annotations:',a({-href=>annotation_help().'#remote',-target=>'help'},'[Help]'))),
 	       TR({-class=>'databody'},\@rows),
 	       TR({-class=>'databody'},
 		  th({-align=>'RIGHT',-colspan=>2},
@@ -830,7 +834,9 @@ sub get_segment {
     @segments = $db->segment(@argv);
   }
 
-  $_->absolute(1) foreach @segments;
+  # some segments are not going to support the absolute() method
+  # if they come out of BioPerl
+  eval {$_->absolute(1)} foreach @segments;
 
   return unless @segments;
   return @segments if @segments > 1;
@@ -1112,7 +1118,7 @@ sub show_examples {
   my $url    = url(-relative=>1,-path_info=>1);
   my $source = $CONFIG->source;
   my @urls = map { a({-href=>"$url?source=$source;name=".escape($_)},$_) } @examples;
-  return b('Examples: ').join ', ',@urls;
+  return b('Examples: ').join(', ',@urls) .'.  '.a({-href=>general_help(),-target=>'help'},b('[Help]'));
 }
 
 sub debugging_rectangles {
@@ -1309,7 +1315,7 @@ sub edit_uploaded_file {
 		),
 	      TR({-class=>'searchbody'},
 		 td(
-		    a({-href=>url(-relative=>1,-path_info=>1)."?help=annotation#format",-target=>'_new'},
+		    a({-href=>url(-relative=>1,-path_info=>1)."?help=annotation#format",-target=>'help'},
 		      b('[Help with File Format]'))
 		   ),
 		),
@@ -1658,7 +1664,7 @@ sub make_citation_link {
     (my $anchor  = $label) =~ tr/ /-/;
     my $link = $citation && $citation =~ m!^(http|ftp)://! ? $citation
                                                            : $self_url.'#'.escapeHTML($anchor);
-    return a({-href=>$link,-target=>'_new'},$labels->[$label_index]);
+    return a({-href=>$link,-target=>'citation'},$labels->[$label_index]);
   }
 
   else {

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.9 2002-02-21 23:28:34 lstein Exp $
+# $Id: Browser.pm,v 1.10 2002-02-25 12:33:49 lstein Exp $
 
 use strict;
 use File::Basename 'basename';
@@ -399,7 +399,7 @@ sub image_and_map {
   }
 
   if (@feature_types) {  # don't do anything unless we have features to fetch!
-    my $iterator = $segment->features(-type=>\@feature_types,-iterator=>1);
+    my $iterator = $segment->get_seq_stream(-type=>\@feature_types);
     my (%similarity,%feature_count);
 
     while (my $feature = $iterator->next_seq) {

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.92 2003-09-22 20:26:57 markwilkinson Exp $
+# $Id: Browser.pm,v 1.93 2003-09-26 15:35:59 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -626,9 +626,7 @@ The arguments are a series of tag=>value pairs, where tags are:
 
   flip                Flip coordinates left to right
 
-  hilite_feat         Hilite matching features
-
-  hilite_track        Track to hilite in
+  hilite_callback     Callback for performing hilighting
 
 =cut
 

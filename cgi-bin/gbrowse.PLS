@@ -415,6 +415,10 @@ sub detail_panel {
 
   if ($segment->length <= $MAX_SEGMENT) {
 
+    # this is invoked to force small segments to be larger than the minimum size that can
+    # easily be displayed.  Avoids zooming into 1 bp features like SNPs.
+    resize(\$segment);
+
     $CONFIG->width($page_settings->{width});
     my @tracks_to_show = grep {$page_settings->{features}{$_}{visible}} @{$page_settings->{tracks}};
     my %options = map {$_=>$page_settings->{features}{$_}{options}} @tracks_to_show;
@@ -1195,18 +1199,25 @@ sub get_segments {
   my @segments = lookup_segments($db,$settings);
   warn "segments = @segments\n" if DEBUG;
 
-  # resize any segments that are below MIN_SEG_SIZE
-  for my $s (@segments) {
-    next unless $s->length < MIN_SEG_SIZE;
-    my $resize = $s->length <= TINY_SEG_SIZE ? EXPAND_SEG_SIZE : MIN_SEG_SIZE;
-    # resize
-    error($CONFIG->tr('Small_interval',$resize)); # error message
-    my $middle = int(($s->start + $s->end)/2);
-    $s = $s->factory->segment(-name  => $s->seq_id,
-			      -start => $middle - int($resize/2),
-			      -end   => $middle + int($resize/2)-1);
-  }
   @segments;
+}
+
+# sort of un-perlish -- we pass a reference to the handle that holds the segment
+sub resize {
+  my $segment_ref = shift;
+  my $s = $$segment_ref;
+  return unless $s->length < MIN_SEG_SIZE;
+
+  # resize
+  my $resize = $s->length <= TINY_SEG_SIZE ? EXPAND_SEG_SIZE : MIN_SEG_SIZE;
+  error($CONFIG->tr('Small_interval',$resize)); # error message
+
+  my $middle = int(($s->start + $s->end)/2);
+  my $new_seg = $s->factory->segment(-name  => $s->seq_id,
+				     -start => $middle - int($resize/2),
+
+				     -end   => $middle + int($resize/2)-1);
+  $$segment_ref = $new_seg;
 }
 
 # interesting heuristic way of fetching sequence segments based on educated guesses

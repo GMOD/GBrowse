@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.69 2002-11-25 17:53:14 lstein Exp $
+# $Id: gbrowse.PLS,v 1.70 2002-12-20 15:21:30 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1994,7 +1994,7 @@ sub build_help_page {
   my $url  = url(-relative=>1);
   open(F,$file) or return;
   while (<F>) { # fix up relative addressing of images
-    s/(src|href)=\"([^\"\#\$]+)\"/$1=\"$root\/$2\"/g;
+    s/(src|href)=\"(?<!(http:|ftp:))([^\"\#\$]+)\"/$1=\"$root\/$2\"/g;
     s/<!--\s*\#include-classes\s*-->/object_classes_for_help()/e;
     s/href=\"\$GBROWSE/href=\"$url/g;
     print;

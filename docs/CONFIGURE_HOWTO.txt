@@ -131,15 +131,20 @@ group field is a challenge.  It is used in three distinct ways:
 
   c. to add one or more notes to the annotation.
 
-For a feature that spans a single continuous range, choose a name and
-class for the object and give it a line in the GFF file that refers to
-its start and stop positions.
+* Using the Group field for simple features
+
+For a simple feature that spans a single continuous range, choose a
+name and class for the object and give it a line in the GFF file that
+refers to its start and stop positions.
 
  Chr3	giemsa heterochromatin	4500000 6000000	. . .   Band 3q12.1
 
-For discontinuous segments such as the exons in a transcript, choose a
-name and class for the object.  Give each segment a separate line in
-the GFF file but use the same name for each line.  For example:
+* Using the Group field to group features that belong together
+
+For a group of features that belong together, such as the exons in a
+transcript, choose a name and class for the object.  Give each segment
+a separate line in the GFF file but use the same name for each line.
+For example:
 
  IV	curated	exon	5506900	5506996	. + .   Transcript B0273.1
  IV	curated	exon	5506026	5506382	. + .   Transcript B0273.1
@@ -153,24 +158,32 @@ for this object by asking the browser to retrieve
 "Transcript:B0273.1".  The browser can also be configured to allow the
 Transcript: prefix to be omitted.
 
+You can extend the idiom for objects that have heterogeneous parts,
+such as a transcript that has 5' and 3' UTRs
+
+ IV     curated  mRNA   5506800 5508917 . + .   Transcript B0273.1; Note "Zn-Finger"
+ IV	curated  5'UTR	5506800	5508999	. + .   Transcript B0273.1
+ IV	curated	 exon	5506900	5506996	. + .   Transcript B0273.1
+ IV	curated	 exon	5506026	5506382	. + .   Transcript B0273.1
+ IV	curated	 exon	5506558	5506660	. + .   Transcript B0273.1
+ IV	curated	 exon	5506738	5506852	. + .   Transcript B0273.1
+ IV	curated  3'UTR	5506852 5508917	. + .   Transcript B0273.1
+
+In this example, there is a single feature with method "mRNA" that
+spans the entire range.  It is grouped with subparts of type 5'UTR,
+3'UTR and exon.  They are all grouped together into a Transcript named
+B0273.1. Furthermore the mRNA feature has a note attached to it.
+
 *NOTE* The subparts of a feature are in absolute (chromosomal or
 contig) coordinates.  It is not currently possible to define a feature
 in absolute coordinates and then to load its subparts using
 coordinates that are relative to the start of the feature.
 
-You can extend the idiom for objects that have heterogeneous parts,
-such as a transcript that has 5' and 3' UTRs
-
- IV	genewise 5'UTR	5506800	5508999	. + .   Transcript B0273.1
- IV	curated	 exon	5506900	5506996	. + .   Transcript B0273.1
- IV	curated	 exon	5506026	5506382	. + .   Transcript B0273.1
- IV	curated	 exon	5506558	5506660	. + .   Transcript B0273.1
- IV	curated	 exon	5506738	5506852	. + .   Transcript B0273.1
- IV	genewise 3'UTR	5506852 5508917	. + .   Transcript B0273.1
-
 Some annotations do not need to be individually named.  For example,
 it is probably not useful to assign a unique name to each ALU repeat
 in a vertebrate genome.  For these, just leave the Group field empty.
+
+* Using the Group field to add a note
 
 The group field can be used to add one or more notes to an annotation.
 To do this, place a semicolon after the group name and add a Note
@@ -181,6 +194,8 @@ field:
 You can add multiple Notes.  Just separate them by semicolons:
 
   Band 3q12.1 ; Note "Marfan's syndrome" ; Note "dystrophic dysplasia"
+
+The Note should come AFTER the group type and name.
 
 ----
 
@@ -404,7 +419,7 @@ The following [GENERAL] options are recognized:
 
   Aggregators to use for complex features.  Comment this out to use
   the default aggregators. It is possible to declare your own
-  aggregator here using a special syntax.  See "B5. Declaring New
+  aggregator here using a special syntax.  See "B7. Declaring New
   Aggregators" for details.  This option is only valid when used with
   Bio::DB::GFF adaptors.
 

@@ -1,6 +1,89 @@
 =head1 Generic Genome Browser Installation
 
-=head2 1. PREREQUISITES
+GBrowse is distributed as binary packages for Windows and Macintosh OS
+X, and as source code for Unix systems.
+
+
+=head2 1. MACINTOSH OS X INSTALL
+
+Go to the following URL:
+
+  ftp://ftp.wormbase.org/pub/people/tharris/macosx/packages
+
+Find the most recent version of the GBrowse package.  These files have
+the .dmg extension.
+
+Once the package is downloaded, double click on it.  The installer
+will handle everything else.
+
+
+=head2 2. WINDOWS INSTALL
+
+Before installing on Windows systems, you will need to install
+ActiveState Perl and the Apache web server.  You may also wish to
+install a database management system such as MySQL.
+
+=over 4
+
+=item Install ActiveState Perl
+
+Go to http://www.activestate.com, and download the product
+"ActivePerl."  This is a little confusinb because web site tries to
+point you to the commercial product, ASPN Perl.  At the current time,
+the full download URL for ActivePerl is:
+
+http://www.activestate.com/Products/Download/Download.plex?id=ActivePerl
+
+Choose the "MSI" package for Windows.  Once downloaded, launch the
+package, and it will install automatically.
+
+=item Install the Apache web server
+
+Go to http://httpd.apache.org/download.cgi.  Select the most recent
+version of Apache, and choose the download marked "Win32 Binary (MSI
+Installer)."  Once downloaded, launch the package and it will install
+automatically.
+
+=item Install the MySQL database (optional)
+
+Go to http://dev.mysql.com/downloads/mysql.  Select and download the
+most recent version of the Windows package.  Once the package is
+downloaded, you will need to unpack it with the WinZip program.  Then
+launch the installer.
+
+=item Install GBrowse
+
+Apache and ActiveState Perl must be installed before you try this
+step.  Launch the Windows command shell by choosing "Run..." and then
+typing "cmd".  Once the command shell appears, type the following
+commands:
+
+	ppm> rep add gmod http://www.gmod.org/ggb/ppm
+	ppm> rep up gmod
+	ppm> rep up gmod
+	ppm> install DBD::mysql   (OPTIONAL)
+	ppm> install Generic-Genome-Browser
+
+The binary distribution of GBrowse is at L<http://www.gmod.org/ggb/ppm>.
+Add this repository to the list of active repositories, and then move the
+repository to the top to ensure that you get the most up to date versions
+of the modules.
+
+If you wish to use a MySQL database, install DBD::mysql if you have
+not already done so.  Then install Generic-Genome-Browser.
+
+At the end of the install, the automatic installation script will ask
+you to confirm the locations of your Apache conf (configuration),
+htdocs (document root) and cgi-bin (CGI executable)
+directories. Usually it will guess right, but if it doesn't, just type
+in the correct path. 
+
+=back
+
+When this is done, go to step (5) below.
+
+
+=head2 3. SOURCE CODE INSTALL
 
 GBrowse runs on top of several software packages.  These must be
 installed and configured before you can run GBrowse.  Most
@@ -82,42 +165,13 @@ Vector Graphics format.  Available from CPAN.
 
 =back
 
-=head2 2. INSTALLING THE BROWSER WITH ACTIVESTATE'S PPM TOOL
+Once the prerequisites are installed, download the most recent version
+of the Generic-Genome-Browser source code from:
 
-Make sure that Apache and a database (MySQL, Oracle or PostgreSQL) are
-installed before you start.
+   http://prdownloads.sourceforge.net/gmod
 
-Brief synopsis:
-
-For PPM3:
-
-	ppm> rep add gmod http://www.gmod.org/ggb/ppm
-	ppm> rep up gmod
-	ppm> rep up gmod
-	ppm> install DBD::mysql (or DBD::Pg or DBD::Oracle)
-	ppm> install Generic-Genome-Browser
-
-The binary distribution of GBrowse is at L<http://www.gmod.org/ggb/ppm>.
-Add this repository to the list of active repositories, and then move the
-repository to the top to ensure that you get the most up to date versions
-of the modules.
-
-If you wish to use a MySQL database, install DBD::mysql if you have
-not already done so.  Then install Generic-Genome-Browser.
-
-At the end of the install, the automatic installation script will ask
-you to confirm the locations of your Apache conf (configuration),
-htdocs (document root) and cgi-bin (CGI executable)
-directories. Usually it will guess right, but if it doesn't, just type
-in the correct path. 
-
-When this is done, go to step (4) below.
-
-=head2 3. INSTALLING THE BROWSER FROM SOURCE
-
-Skip this step if you have installed with ActiveState's PPM.
-
-Brief synopsis:
+This will give you a .tar.gz file, which must be uncompressed and
+unpacked.  Then run the following commands (in brief):
 
 	perl Makefile.PL
 	make
@@ -219,6 +273,8 @@ The first time you run Makefile.PL, a file named GGB.def will be
 created your file path settings.  When Makefile.PL is run again, it
 will ask you whether you wish to reuse the settings stored in the file.
 
+
+
 =head2 4. TRY THE BROWSER OUT
 
 The installation procedure will create a small in-memory database of
@@ -239,6 +295,8 @@ server's configuration directory under gbrowse.conf/yeast1.conf.
 More configuration information and a short tutorial are located at:
 
    http://localhost/gbrowse
+
+
 
 =head2 5. POPULATING THE DATABASE (MySQL)
 

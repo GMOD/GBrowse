@@ -12,9 +12,15 @@ my @argv = @ARGV;
 @ARGV = ();
 
 foreach (@argv) {
-  if (/($OPTIONS)=(.+)/g) {
+  if (/^--?h/i) {
+    die "To customize install locations, provide one or more of the options APACHE, CONF, HTDOCS, or CGIBIN, as in CONF=/usr/local/apache/conf\n";
+  }
+
+  elsif (/($OPTIONS)=(.+)/g) {
     $OPTIONS{$1} = $2;
-  } else {
+  }
+
+  else {
     push @ARGV,$_;
   }
 }

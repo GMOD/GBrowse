@@ -6,7 +6,7 @@ use GuessDirectories;
 use FindBin '$Bin';
 require 5.005003;
 
-my $VERSION = '1.52';
+my $VERSION = '1.53';
 
 my @OPTIONS = qw(PREFIX CONF HTDOCS CGIBIN DO_XS);
 my $OPTIONS = join ('|',@OPTIONS);
@@ -115,7 +115,7 @@ WriteMakefile(
 	      'NAME'	     => 'Generic-Genome-Browser',
 	      'VERSION'      => $VERSION,
 	      'PREREQ_PM'    => {
-				 Bio::Perl     => 1.3,
+				 Bio::Perl     => 0,
 				 GD            => 0,
 				 IO::String    => 0,
 				 Text::Shellwords  => 1.0,

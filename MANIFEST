@@ -1,6 +1,5 @@
 Changes
 DISCLAIMER
-Generic-Genome-Browser.ppd
 History
 INSTALL
 MANIFEST
@@ -99,7 +98,6 @@ docs/tutorial/conf_files/volvox.conf
 docs/tutorial/conf_files/volvox2.conf
 docs/tutorial/conf_files/volvox3.conf
 docs/tutorial/conf_files/volvox4.conf
-docs/tutorial/conf_files/volvox_all.conf
 docs/tutorial/conf_files/volvox_final.conf
 docs/tutorial/data_files/ests.fa
 docs/tutorial/data_files/volvox.fa
@@ -111,7 +109,6 @@ docs/tutorial/data_files/volvox4.gff
 docs/tutorial/data_files/volvox4a.gff
 docs/tutorial/data_files/volvox4b.gff
 docs/tutorial/data_files/volvox5.gff
-docs/tutorial/data_files/volvox5b.gff
 docs/tutorial/data_files/volvox6.gff
 docs/tutorial/data_files/volvox7.gff
 docs/tutorial/data_files/volvox8.gff
@@ -141,7 +138,6 @@ docs/tutorial/figures/figure7a.gif
 docs/tutorial/figures/figure7b.gif
 docs/tutorial/figures/figure8.gif
 docs/tutorial/figures/figure9.gif
-docs/tutorial/synthetic_dna
 docs/tutorial/tutorial.css
 docs/tutorial/tutorial.txt
 htdocs/databases/yeast_chr1/chromosome1.fa
@@ -189,7 +185,6 @@ install_util/GuessDirectories.pm
 install_util/cgi_install.pl
 install_util/conf_install.pl
 install_util/gbrowse_ppm_install.PLS
-install_util/gbrowse_ppm_install.pl
 install_util/htdocs_install.pl
 install_util/make_clean_add.pl
 lib/Bio/DB/Das/BioSQL.pm
@@ -213,7 +208,6 @@ lib/Bio/Graphics/Browser/PadAlignment.pm
 lib/Bio/Graphics/Browser/Plugin.pm
 lib/Bio/Graphics/Browser/Realign.pm
 lib/Bio/Graphics/Browser/Util.pm
-lib/Bio/Graphics/Glyph/annloraine_transcript.pm
 lib/Bio/Graphics/Glyph/connector.pm
 lib/Bio/Graphics/Glyph/drosophila_arrow.pm
 lib/Bio/Graphics/Glyph/insertion_chromosome.pm
@@ -223,14 +217,10 @@ lib/Bio/Graphics/Glyph/xyplot.pm
 lib/WebReports/Browser.pm
 libalign/CAlign.pm
 libalign/CAlign.xs
-libalign/Changes
 libalign/MANIFEST
 libalign/README
 libalign/realign.h
 libalign/test.pl
 sample_data/yeast_data.gff
-screenshots/chr8_1.png
-screenshots/chr8_2.png
-screenshots/chr8_3.png
 t/01yeast.t
 t/Test.pm

@@ -42,9 +42,11 @@
   [% IF segments && segments.size() > 1 %]
     [% multiple_segments %]
   [% ELSE %]
+     <center>
     [% PROCESS "overviewpanel.tt2" %]
     [% #PROCESS "detailpanel.tt2"   %]
     [% detailpanel   %]
+    </center>
   [% END %]
 
   [% htmlfrag3 %]

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.11 2002-12-10 23:01:00 scottcain Exp $
+# $Id: Segment.pm,v 1.12 2002-12-11 00:14:35 scottcain Exp $
 
 =head1 NAME
 
@@ -115,14 +115,19 @@ sub new {
 
   my ($name,$dbadaptor,$start,$end) = @_;
 
+print "$name,$dbadaptor\n";
+
   throw("start value less than 1\n") if (defined $start && $start < 1);
   $start ||= 1;
 
 #moved length determination to constructor, now it will be there from
 # 'the beginning'.
 
-  my $quoted_name = $dbadaptor->quote($name);
-  my $sth = $dbadaptor->prepare ("
+  my $quoted_name = $dbadaptor->{dbh}->quote($name);
+
+print "$quoted_name\n";
+
+  my $sth = $dbadaptor->{dbh}->prepare ("
    select seqlen from feature where feature_id in  
      (select f.feature_id
       from dbxref dbx, feature f, feature_dbxref fd
@@ -130,11 +135,17 @@ sub new {
          f.feature_id = fd.feature_id and
          fd.dbxref_id = dbx.dbxref_id and
          dbx.accession = $quoted_name ) ");
+
+print "prepared:$sth\n" ;
+
   $sth->execute or throw("unable to validate name/length");
+
+print "executed\n";
 
   my $hash_ref = $sth->fetchrow_hashref;
   my $length =  $$hash_ref{'seqlen'};
 
+  print "$length\n";
 
   throw("end value greater than length\n") if (defined $end && $end >= $length);
   $end ||= $length;
@@ -158,7 +169,7 @@ sub new {
 
 =cut
 
-sub seq_id {  shift->name; }
+sub seq_id {  shift->{name} }
 
 =head2 start
 
@@ -388,6 +399,6 @@ the segment was originally generated.
 
 #'
 
-sub factory {shift->{dbh}}
+sub factory {shift->{dbadaptor} }
 
 1;

@@ -1,4 +1,4 @@
-# $Id: Chado_pf.pm,v 1.10 2002-12-10 23:01:00 scottcain Exp $
+# $Id: Chado_pf.pm,v 1.11 2002-12-11 00:14:35 scottcain Exp $
 # Das adaptor for Chado_pf
 
 =head1 NAME
@@ -137,13 +137,13 @@ sub new {
   my $class = shift;
   my $self  = $class->SUPER::new(@_);
 
-  my ($dsn,$username,$password) = @_;
+  my ($dsn,undef,$username,undef,$password) = @_;
 
   my $dbh = DBI->connect( $dsn, $username, $password )
     or warn "unable to open db handle";
 
   $self->{dbh} = $dbh;
-  $self;
+  return bless {dbh  => $dbh}, ref $self ||$self;
 }
 
 =head2 segment
@@ -198,7 +198,7 @@ sub segment {
 								 CLASS
 								 VERSION)],@_);
   # lets the Segment class handle all the lifting.
-  return $self->_segclass->new($name,$self->{dbh},$start,$end);
+  return $self->_segclass->new($name,$self,$start,$end);
 }
 
 =head2 features

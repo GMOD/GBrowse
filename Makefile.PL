@@ -105,6 +105,10 @@ WriteMakefile(
 	      'LIBS'	     => [''], # e.g., '-lm'
 	      'DEFINE'	     => '',
 	      'INC'	     => '', # e.g., '-I/usr/include/other'
+              ($] ge '5.005') ? (
+                  'AUTHOR'   => 'Lincoln Stein (lstein@cshl.org)',
+                  'ABSTRACT' => 'A CGI-driven browser for genomic annotations.',
+                                ) : (),
 );
 
 sub MY::clean {

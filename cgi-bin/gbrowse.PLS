@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.118 2004-10-18 13:59:55 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119 2004-11-17 23:06:44 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1897,6 +1897,9 @@ sub load_plugin_annotators {
 sub get_remote_feature_data {
   my ($url,$rel2abs,$settings) = @_;
   warn "get_remote_feature_data(): fetching $url" if DEBUG;
+  my $proxy           = $CONFIG->setting('proxy') || '';
+  my $http_proxy      = $CONFIG->setting('http proxy') || $proxy || '';
+  my $ftp_proxy       = $CONFIG->setting('ftp proxy')  || $proxy || '';
 
   if ($url =~ m!^(http://.+/das)/([^/?]+)(?:\?(.+))?$!) { # DAS source!
     unless (eval "require Bio::Das; 1;") {
@@ -1924,6 +1927,10 @@ sub get_remote_feature_data {
     my $das      =  Bio::Das->new(@args);
 
     return unless $das;
+
+    # set up proxy
+    $das->proxy($http_proxy) if $http_proxy && $http_proxy ne 'none';
+
     my $segment = $das->segment($settings->{ref},$settings->{start},$settings->{stop});
     # the next step gives the current segment the same name as the DAS source
     # and ensures that the DAS source appears in the list of external sources in the UI
@@ -1940,6 +1947,8 @@ sub get_remote_feature_data {
 			      timeout  => URL_FETCH_TIMEOUT,
 			      max_size => URL_FETCH_MAX_SIZE,
 			     );
+    $UA->proxy(http => $http_proxy) if $http_proxy && $http_proxy ne 'none';
+    $UA->proxy(ftp => $http_proxy)  if $ftp_proxy  && $ftp_proxy  ne 'none';
   }
   my $id = md5_hex($url);     # turn into a filename
   $id =~ /^([0-9a-fA-F]+)$/;  # untaint operation

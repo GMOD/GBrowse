@@ -804,6 +804,19 @@ what reference servers are.)
 Please see L<DAS_HOWTO> for more information on using DAS with
 GBrowse.
 
+=item * proxy, http proxy, ftp proxy
+
+If your web server is behind a firewall and needs to use a proxy in
+order to access remote HTTP or FTP sites, then one or more of these
+options needs to be specified in order for the "add remote
+annotations" feature to work (both for file-based and DAS-based remote
+annotations).  "http proxy" will set the proxy to use for outgoing
+HTTP connections, "ftp proxy" will set the proxy to use for outgoing
+FTP connections, and "proxy" will set both.  The value is the URL of
+the proxy:
+
+   proxy = http://myproxy.myorg.com:9000
+
 =back
 
 =head2 B2. The [TRACK DEFAULTS] section

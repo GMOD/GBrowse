@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.90 2003-09-16 17:21:26 lstein Exp $
+# $Id: Browser.pm,v 1.91 2003-09-17 17:08:09 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -626,6 +626,10 @@ The arguments are a series of tag=>value pairs, where tags are:
 
   flip                Flip coordinates left to right
 
+  hilite_feat         Hilite matching features
+
+  hilite_track        Track to hilite in
+
 =cut
 
 sub render_html {
@@ -633,14 +637,8 @@ sub render_html {
   my %args = @_;
 
   my $segment         = $args{segment};
-  my $feature_files   = $args{feature_files};
-  my $options         = $args{options};
-  my $tracks          = $args{tracks};
   my $do_map          = $args{do_map};
   my $do_centering_map= $args{do_centering_map};
-  my $limit           = $args{limit};
-  my $lang            = $args{lang} || $self->language;
-  my $title           = $args{title};
 
   return unless $segment;
 
@@ -823,6 +821,7 @@ sub image_and_map {
   my $title         = $config{title};
   my $flip          = $config{flip};
   my $suppress_scale= $config{noscale};
+  my $hilite_callback = $config{hilite_callback};
 
   # these are natively configured tracks
   my @labels = $self->labels;
@@ -879,9 +878,10 @@ sub image_and_map {
     }
 
     else {
+
       my @settings = ($conf->default_style,$conf->i18n_style($label,$lang,$length));
-      my $track = $panel->add_track(-glyph => 'generic',
-				    @settings);
+      push @settings,(-hilite => $hilite_callback) if $hilite_callback;
+      my $track = $panel->add_track(-glyph => 'generic',@settings);
       $tracks{$label}  = $track;
     }
 
@@ -1140,6 +1140,7 @@ reference sequence names and the values are HTML to be emitted.
 
 =cut
 
+
 # Return an HTML showing where multiple hits fall on the genome.
 # Can either provide a list of objects that provide the ref() method call, or
 # a list of arrayrefs in the form [ref,start,stop,[name]]
@@ -1331,8 +1332,10 @@ sub _feature_get {
   push @argv,(-class => $class) if defined $class;
   push @argv,(-start => $start) if defined $start;
   push @argv,(-end   => $stop)  if defined $stop;
-  my @segments  = $db->get_feature_by_name(@argv) unless defined $start or defined $stop;
-  @segments     = $db->segment(@argv)                 if !@segments && $name !~ /[*?]/;
+  warn "\@argv = @argv\n" if DEBUG;
+  my @segments;
+  @segments  = $db->get_feature_by_name(@argv) if !defined($start) && !defined($stop);
+  @segments  = $db->segment(@argv)             if !@segments && $name !~ /[*?]/;
 
   # uniquify
   my %seenit;
@@ -1603,7 +1606,6 @@ sub feature2label {
   (my $basetype = $type) =~ s/:.+$//;
   my @label = $self->type2label($type,$length);
   @label = $self->type2label($basetype,$length) unless @label;
-  @label = ($type) unless @label;
   wantarray ? @label : $label[0];
 }
 

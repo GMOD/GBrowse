@@ -71,7 +71,7 @@ setting:
 
       plugin_path = /usr/local/gbrowse_plugins
 
-GBrowse currently recognizes three distinct types of plugins:
+GBrowse currently recognizes four distinct types of plugins:
 
 =over
 
@@ -92,6 +92,12 @@ allows the user to select among them. Example: BLAST search.
 These plugins receive the genomic segment object and return a list
 of features which are overlayed on top of the detailed view.
 Example: restriction site annotator.
+
+=item 4. highlighters
+
+These plugins receive each feature in turn before it is rendered and
+can return a color name in order to highlight the background of the
+feature with that color.
 
 =back
 
@@ -171,9 +177,9 @@ who wrote it. This text is displayed when the user presses the
 =item     $type = $self->type()
 
 This tells gbrowse what the plugin's type is. It must return one of
-the scripts "dumper," "finder," or "annotator" as described in the
-introduction to this documentation. If the method is not overridden,
-type() will return "dumper."
+the scripts "dumper," "finder," "annotator" or "highlighter" as
+described in the introduction to this documentation. If the method is
+not overridden, type() will return "dumper."
 
 =item     $self->init()
 
@@ -420,6 +426,26 @@ glyph, color, and other options.
 
 See the Bio::Graphics::FeatureFile manpage for details, and the
 RestrictionAnnotator.pm plugin for an example.
+
+=back
+
+=head1 METHODS TO BE IMPLEMENTED IN HIGHLIGHTERS
+
+All annotator plugins will need to override the method described in this
+section.
+
+=over
+
+=item     $color = $plugin->highlight($feature)
+
+The highlight() method will be invoked with a Bio::Das::FeatureI
+object representing one of the features currently being rendered.  The
+method must either return a color name or undef.  In the former case,
+the feature will be rendered on top of a rectangular background of the
+indicated color.  In the latter case no highlighting will be applied.
+See Bio::Graphics::Panel for a list of valid color names.
+
+See the AttributeHiliter plugin for an example.
 
 =back
 

@@ -6,7 +6,7 @@ use GuessDirectories;
 use FindBin '$Bin';
 require 5.005003;
 
-my $VERSION = '1.54';
+my $VERSION = '1.55';
 
 my @OPTIONS = qw(PREFIX CONF HTDOCS CGIBIN DO_XS);
 my $OPTIONS = join ('|',@OPTIONS);

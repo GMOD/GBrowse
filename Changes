@@ -1,3 +1,12 @@
+1.55
+	* Auto-open tracks that contain matches to the search term.  This avoids
+	nasty behavior in which someone searches for "collagen" and never sees
+	what it was that matched.
+	* Support for highlighting the matched feature in yellow.  Highlighted
+	feature is persistent across sessions (may annoy people - consider
+	a selectable option)
+	* Support for a "highlight" plugin class which will highlight features
+	based on matching attributes or other queries.
 1.54	Thu Aug 28 12:08:15 EDT 2003
         * Really fixed the security hole that was only partially fixed in 1.53.
 	* Fixed the config file associated with the tutorial.

@@ -78,6 +78,8 @@ END
 
    DUMP     => 'Dump',
 
+   HIGHLIGHT   => 'Highlight',
+
    ANNOTATE     => 'Annotate',
 
    SCROLL   => 'Scroll/Zoom',

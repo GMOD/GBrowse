@@ -121,6 +121,8 @@ local $CGI::USE_PARAM_SEMICOLONS = 1;
 #               0=auto, 1=force no bump, 2=force bump, 3=force label.
 #   ins         Show instructions
 #   head        Show header and footer
+#   h_feat      Search term for hiliting
+#   h_type      Search type for hiliting
 # $CONFIG
 # This is a global Bio::Graphics::Browser object.  It contains information on
 # all the configuration files for this browser and provides access to the various
@@ -145,7 +147,6 @@ $CONF_DIR  = conf_dir($CONF_DIR);  # conf_dir() is exported from Util.pm
 ## CONFIGURATION & INITIALIZATION ################################
 # preliminaries -- read and/or refresh the configuration directory
 $CONFIG = open_config($CONF_DIR);  # open_config() is exported from Util.pm
-
 
 ## PAGE SETTINGS #################################################
 #
@@ -304,7 +305,7 @@ elsif ($plugin_action eq $CONFIG->tr('About')) {
 ## HANDLE PLUGIN CONFIGURATION####################################################
 elsif ($plugin_action eq $CONFIG->tr('Configure')) {
   do_plugin_configure(param('plugin'));
-} elsif ($plugin_action eq $CONFIG->tr('Go') && $plugin_type=~/^(finder|annotator)$/i) {
+} elsif ($plugin_action eq $CONFIG->tr('Go') && $plugin_type=~/^(finder|annotator|highlighter)$/i) {
   do_plugin_configure(param('plugin'));
 }
 
@@ -418,6 +419,7 @@ sub detail_panel {
     my @tracks_to_show = grep {$page_settings->{features}{$_}{visible}} @{$page_settings->{tracks}};
     my %options = map {$_=>$page_settings->{features}{$_}{options}} @tracks_to_show;
     my %limit   = map {$_=>$page_settings->{features}{$_}{limit}}   @tracks_to_show;
+    my $h_callback = make_hilite_callback($page_settings);
     ($img,$map) = $CONFIG->render_html(segment       => $segment,
 				       feature_files => $feature_files,
 				       tracks        => \@tracks_to_show,
@@ -428,6 +430,7 @@ sub detail_panel {
 				       lang          => $CONFIG->language,
 				       keystyle      => $page_settings->{ks},
 				       flip          => $page_settings->{flip},
+				       hilite_callback => $h_callback,
 				      );
     $cell .= $img;
   }
@@ -588,7 +591,13 @@ sub auto_open {
   my ($settings,$feature) = @_;
   my $tracks = $settings->{features};
   my $desired_label = $CONFIG->feature2label($feature) or return;
-  $tracks->{$desired_label}{visible} = 1;
+  delete $settings->{h_feat};
+  delete $settings->{h_type};
+  if (exists $tracks->{$desired_label}) {
+    $tracks->{$desired_label}{visible} = 1;
+    $settings->{h_feat}  = $feature->display_name;
+    $settings->{h_type}  = $feature->type;
+  }
 }
 
 # this is called to flatten the settings into an HTTP cookie
@@ -754,6 +763,29 @@ sub navigation_table {
 		       ),
 		    ),
 		 );
+}
+
+# this generates the callback for highlighting "interesting" features
+sub make_hilite_callback {
+  my $settings = shift;
+  my @hiliters = grep {$_->type eq 'highlighter'} values %$PLUGINS;
+  return unless @hiliters or ($settings->{h_feat} && $settings->{h_type});
+  return sub {
+    my $feature = shift;
+    my $color;
+
+    # run through the set of hilite plugins and give each one
+    # a chance to choose the highlighting for its feature
+    foreach (@hiliters) {
+      $color ||= $_->highlight($feature);
+    }
+    return $color if $color;
+
+    # if we get here, we select the search term for highlighting
+    return unless $feature->type eq $settings->{h_type};
+    return unless $feature->display_name eq $settings->{h_feat};
+    'yellow';
+  }
 }
 
 # This generates the navigation bar with the arrows
@@ -1161,6 +1193,7 @@ sub get_segments {
   }
 
   my @segments = lookup_segments($db,$settings);
+  warn "segments = @segments\n" if DEBUG;
 
   # resize any segments that are below MIN_SEG_SIZE
   for my $s (@segments) {
@@ -1180,6 +1213,8 @@ sub get_segments {
 sub lookup_segments {
   my ($db,$settings) = @_;
   my @segments;
+
+  warn "name = $settings->{name}, ref = $settings->{ref}, start = $settings->{start}, stop = $settings->{stop}\n" if DEBUG;
 
   $db->debug(0);
   my $divisor = $CONFIG->setting(general=>'unit_divider') || 1;
@@ -2206,8 +2241,9 @@ sub plugin_menu {
   my ($settings,$plugins) = @_;
   my $sources = $CONFIG->sources > 1;
 
-  my %verbs = (dumper    => $CONFIG->tr('Dump'),
-	       finder    => $CONFIG->tr('Find'),
+  my %verbs = (dumper       => $CONFIG->tr('Dump'),
+	       finder       => $CONFIG->tr('Find'),
+	       highlighter  => $CONFIG->tr('Highlight'),
 	       annotator => $CONFIG->tr('Annotate'));
   my %labels = map {$_=> ($verbs{$plugins->{$_}->type}
 			  ||
@@ -2393,7 +2429,6 @@ sub tableize {
   }
   $html .= "</table>\n";
 }
-
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

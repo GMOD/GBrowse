@@ -41,7 +41,7 @@ $Config{startperl} -w
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbrowse_img.PLS,v 1.2 2002-05-05 15:36:29 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.3 2002-05-07 18:07:14 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html p h1);
@@ -182,30 +182,31 @@ sub external_features {
   return {add => $feature_list};
 }
 
+
 sub coordinate_mapper {
   my $current_segment = shift;
   my $db              = open_database();
 
-  my ($ref,$start,$stop) = ($current_segment->seq_id,$current_segment->start,$current_segment->stop);
+  my ($ref,$start,$stop) = ($current_segment->ref,$current_segment->start,$current_segment->stop);
+  my $current_segment    = $db->segment($current_segment->ref);
   my %segments;
 
   my $closure = sub {
     my ($refname,@ranges) = @_;
 
     unless ($segments{$refname}) {
-      my @segments = grep {
-	$_->abs_ref eq $ref && $_->abs_start <= $stop && $_->abs_stop >= $start
-      } get_segment($refname);
+      my @segments = grep { $current_segment->overlaps($_) } get_segment($refname);
       return unless @segments;
       $segments{$refname} = $segments[0];
     }
     my $mapper   = $segments{$refname};
-    my $absref   = $mapper->abs_ref;
+    my $ref      = $current_segment->ref;
     my @abs_segs = map {[$mapper->rel2abs($_->[0],$_->[1])]} @ranges;
+    my @rel_segs = map {[$current_segment->abs2rel($_->[0],$_->[1])]} @abs_segs;
 
     # this inhibits mapping outside the displayed region
-    foreach (@abs_segs) {
-      return ($absref,@abs_segs) if $_->[0] <= $stop && $_->[1] >= $start;
+    foreach (@rel_segs) {
+      return ($ref,@rel_segs) if $_->[0] <= $stop && $_->[1] >= $start;
     }
     return;
   };

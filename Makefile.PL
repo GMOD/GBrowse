@@ -61,6 +61,16 @@ if (-e 'GGB.def' && !%OPTIONS) {
   }
 }
 
+if ($OPTIONS{PREFIX} && !(defined $OPTIONS{CONF})) {
+  $OPTIONS{CONF} = "$OPTIONS{PREFIX}/conf";
+}
+if ($OPTIONS{PREFIX} && !(defined $OPTIONS{HTDOCS})) {
+  $OPTIONS{HTDOCS} = "$OPTIONS{PREFIX}/htdocs";
+}
+if ($OPTIONS{PREFIX} && !(defined $OPTIONS{CGIBIN})) {
+  $OPTIONS{CGIBIN} = "$OPTIONS{PREFIX}/cgi-bin";
+}
+
 # set hard-coded values
 $OPTIONS{PREFIX} ||= '/usr/local/apache';
 unless ($OPTIONS{CONF}) {

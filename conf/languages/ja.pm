@@ -1,7 +1,10 @@
 # do not remove the { } from the top and bottom of this page!!!
 {
 
- CHARSET =>   'euc-jp',
+   # Translated by Toshiaki Katayama <k@bioruby.org>
+   # Tue Sep 30 18:38:30 JST 2003
+
+   CHARSET => 'euc-jp',
 
    #----------
    # MAIN PAGE
@@ -18,8 +21,6 @@ END
    NAVIGATION_INSTRUCTIONS => <<END,
 ルーラー上でクリックした位置が真ん中になります。
 スクロールとズームボタンを使って拡大率と位置を変更します。
-現在の画面の状態を保存するには
-<a href="%s">このリンクをブックマーク</a>します。
 END
 
    EDIT_INSTRUCTIONS => <<END,
@@ -29,124 +30,182 @@ END
 フィールドをシングルまたはダブルクォートで囲む必要があります。
 END
 
-   SHOWING_FROM_TO => '%s の範囲を %s から表示、塩基番号 %s から %s',
+   SHOWING_FROM_TO   => '%s の範囲を %s から表示、塩基番号 %s から %s',
 
-   LANDMARK => 'ランドマークまたは領域',
+   INSTRUCTIONS      => '説明',
 
-   GO       => '実行',
+   HIDE              => '隠す',
 
-   FIND     => '検索',
+   SHOW              => '表示',
 
-   DUMP     => '出力',
+   SHOW_INSTRUCTIONS => '説明を表示',
 
-   ANNOTATE     => 'アノテート',
+   HIDE_INSTRUCTIONS => '説明を隠す',
 
-   SCROLL   => 'スクロール/ズーム',
+   SHOW_HEADER       => 'バナーを表示',
 
-   RESET    => 'リセット',
+   HIDE_HEADER       => 'バナーを隠す',
 
-   DOWNLOAD_FILE    => 'ダウンロードファイル',
+   LANDMARK	     => 'ランドマークまたは領域',
 
-   DOWNLOAD_DATA    => 'ダウンロードデータ',
+   BOOKMARK          => 'この表示をブックマーク',
 
-   DOWNLOAD         => 'ダウンロード',
+   IMAGE_LINK        => 'この表示の画像へのリンク',
 
-   DISPLAY_SETTINGS => '表示設定',
+   IMAGE_DESCRIPTION => <<END,
+<p>
+この画像を HTML ページに埋め込むには、次の URL をカット＆ペーストします:
+</p>
+<pre>
+&lt;IMAGE src="%s" /&gt;
+</pre>
+<p>
+画像はこのように表示されることになります:
+</p>
+<p>
+<img src="%s" />
+</p>
 
-   TRACKS   => '項目',
+<p>
+もし（染色体やコンティグなど）オーバービューしか表示されていない場合、
+領域のサイズを縮めてみてください。
+</p>
+END
 
-   EXTERNAL_TRACKS => '(外部の情報は斜体表示)',
+   GO                => '実行',
 
-   EXAMPLES => '例',
+   FIND              => '探す',
 
-   HELP     => 'ヘルプ',
+   SEARCH            => '検索',
 
-   HELP_FORMAT => 'ファイルフォーマットについてのヘルプ',
+   DUMP              => '出力',
 
-   CANCEL   => '取り消し',
+   HIGHLIGHT         => '強調',
 
-   ABOUT    => '解説...',
+   ANNOTATE          => 'アノテート',
 
-   REDISPLAY   => '再描画',
+   SCROLL            => 'スクロール/ズーム',
 
-   CONFIGURE   => '設定...',
+   RESET             => 'リセット',
 
-   EDIT       => 'ファイルを編集...',
+   FLIP              => '反転',
 
-   DELETE     => 'ファイルを削除',
+   DOWNLOAD_FILE     => 'ファイルをダウンロード',
 
-   EDIT_TITLE => 'アノテーションデータの入力/編集',
+   DOWNLOAD_DATA     => 'データをダウンロード',
 
-   IMAGE_WIDTH => '画像の横幅',
+   DOWNLOAD          => 'ダウンロード',
 
-   SET_OPTIONS => '項目毎のオプション設定...',
+   DISPLAY_SETTINGS  => '表示設定',
 
-   UPDATE      => '画像を更新',
+   TRACKS            => '項目',
 
-   DUMPS       => '出力や検索などの操作',
+   EXTERNAL_TRACKS   => '(外部の項目は車体表示)',
 
-   DATA_SOURCE => 'データソース',
+   EXAMPLES          => '例',
 
-   UPLOAD_TITLE=> 'アノテーションのアップロード',
+   HELP              => 'ヘルプ',
 
-   UPLOAD_FILE => 'アップロードファイル',
+   HELP_FORMAT       => 'ファイルフォーマットについてヘルプ',
 
-   BROWSE      => '選択...',
+   CANCEL            => '取り消し',
 
-   UPLOAD      => 'アップロード',
+   ABOUT             => '解説...',
 
-   NEW         => '新規...',
+   REDISPLAY         => '再描画',
 
-   REMOTE_TITLE => '外部アノテーションの追加',
+   CONFIGURE         => '設定...',
 
-   REMOTE_URL   => '外部アノテーションの URL',
+   EDIT              => 'ファイルを編集...',
 
-   UPDATE_URLS  => 'URL 更新',
+   DELETE            => 'ファイルを削除',
 
-   PRESETS      => '--リストから URL を選択--',
+   EDIT_TITLE  	     => 'アノテーションデータの入力/編集',
 
-   FILE_INFO    => '最終更新日 %s アノテーションされたランドマーク %s',
+   IMAGE_WIDTH 	     => '画像の横幅',
 
-   FOOTER_1     => <<END,
+   BETWEEN     	     => '項目の間',
+
+   BENEATH     	     => '下にまとめて',
+
+   TRACK_NAMES 	     => '項目名リスト',
+
+   ALPHABETIC  	     => 'アルファベット順',
+
+   VARYING     	     => '種類別',
+
+   SET_OPTIONS 	     => '項目毎のオプション設定...',
+
+   UPDATE      	     => '画像を更新',
+
+   DUMPS       	     => '出力や検索などの操作',
+
+   DATA_SOURCE 	     => 'データソース',
+
+   UPLOAD_TITLE	     => 'アノテーションのアップロード',
+
+   UPLOAD_FILE 	     => 'ファイルのアップロード',
+
+   KEY_POSITION      => '項目の表示位置',
+
+   BROWSE            => '選択...',
+
+   UPLOAD            => 'アップロード',
+
+   NEW               => '新規...',
+
+   REMOTE_TITLE      => '外部アノテーションの追加',
+
+   REMOTE_URL        => '外部アノテーションのURL',
+
+   UPDATE_URLS       => 'URL更新',
+
+   PRESETS           => '--リストから URL を選択--',
+
+   FILE_INFO         => '最終更新日 %s / アノテーションされたランドマーク: %s',
+
+   FOOTER_1          => <<END,
 注意: このページは設定を保存するためにクッキーを使用しています。
 クッキーの情報を他に流用することはありません。
 END
 
-   FOOTER_2    => 'Generic genome browser バージョン %s',
+   FOOTER_2          => 'Generic genome browser バージョン %s',
 
    #----------------------
    # MULTIPLE MATCHES PAGE
    #----------------------
 
-   HIT_COUNT      => '以下の %d 領域がマッチしました。',
+   HIT_COUNT         => '以下の %d 領域がマッチしました。',
 
-   MATCHES_ON_REF => '%s にマッチ',
+   POSSIBLE_TRUNCATION => '検索結果中 %d 件を表示 (全部表示されていない場合があります)',
 
-   SEQUENCE        => '配列',
+   MATCHES_ON_REF    => '%s にマッチ',
 
-   SCORE           => 'スコア=%s',
+   SEQUENCE          => '配列',
 
-   NOT_APPLICABLE => 'n/a',
+   SCORE             => 'スコア=%s',
 
-   BP             => 'bp',
+   NOT_APPLICABLE    => 'n/a',
+
+   BP                => 'bp',
 
    #--------------
    # SETTINGS PAGE
    #--------------
 
-   SETTINGS => '%s の設定',
+   SETTINGS          => '%s の設定',
 
-   UNDO     => '変更の取り消し',
+   UNDO              => '変更の取り消し',
 
-   REVERT   => 'デフォルト値に戻す',
+   REVERT            => 'デフォルト値に戻す',
 
-   REFRESH  => '更新',
+   REFRESH           => '更新',
 
-   CANCEL_RETURN   => '変更を取り消して戻る...',
+   CANCEL_RETURN     => '変更を取り消して戻る...',
 
-   ACCEPT_RETURN   => '変更を適用して戻る...',
+   ACCEPT_RETURN     => '変更を適用して戻る...',
 
-   OPTIONS_TITLE => '項目のオプション',
+   OPTIONS_TITLE     => '項目のオプション',
 
    SETTINGS_INSTRUCTIONS => <<END,
 <i>表示</i> チェックボックスで項目をオン・オフします。
@@ -155,7 +214,7 @@ END
 <i>拡張</i> と <i>特別</i> フォーマットはアノテーションの
 レイアウトに遅いまたは速い重なり検出アルゴリズムを使います。
 <i>拡張 &amp; ラベル</i> と <i>特別 &amp; ラベル</i>
-フォーマットはアノテーションにラベルをつけます。
+フォーマットはアノテーションに必ずラベルをつけます。
 <i>自動</i> を選んだ場合には、スペースがある限り、
 重なり検出とラベル機能が自動的に有効になります。
 項目の順番を変更するには <i>順番の変更</i> ポップアップメニューを
@@ -164,85 +223,84 @@ END
 値を変更します。
 END
 
-   TRACK  => '項目',
+   TRACK             => '項目',
 
-   TRACK_TYPE => '項目のタイプ',
+   TRACK_TYPE        => '項目のタイプ',
 
-   SHOW => '表示',
+   SHOW              => '表示',
 
-   FORMAT => 'フォーマット',
+   FORMAT            => 'フォーマット',
 
-   LIMIT  => 'リミット',
+   LIMIT             => 'リミット',
 
-   ADJUST_ORDER => '順番の調整',
+   ADJUST_ORDER      => '順番の調整',
 
-   CHANGE_ORDER => '順番の変更',
+   CHANGE_ORDER      => '順番の変更',
 
-   AUTO => '自動',
+   AUTO              => '自動',
 
-   COMPACT => '簡易',
+   COMPACT           => '簡易',
 
-   EXPAND => '拡張',
+   EXPAND            => '拡張',
 
-   EXPAND_LABEL => '拡張 & ラベル',
+   EXPAND_LABEL      => '拡張 & ラベル',
 
-   HYPEREXPAND => '特別',
+   HYPEREXPAND       => '特別',
 
-   HYPEREXPAND_LABEL =>'特別 & ラベル',
+   HYPEREXPAND_LABEL => '特別 & ラベル',
 
-   NO_LIMIT    => '無制限',
+   NO_LIMIT          => '無制限',
 
    #--------------
    # HELP PAGES
    #--------------
 
-   CLOSE_WINDOW => 'このウィンドウを閉じる',
+   CLOSE_WINDOW      => 'このウィンドウを閉じる',
 
    TRACK_DESCRIPTIONS => '項目の解説と引用',
 
-   BUILT_IN           => 'このサーバにある項目',
+   BUILT_IN          => 'このサーバにある項目',
 
-   EXTERNAL           => '外部のアノテーション項目',
+   EXTERNAL          => '外部のアノテーション項目',
 
-   ACTIVATE           => 'この項目の情報を見るにはこの項目を有効にしてください。',
+   ACTIVATE          => 'この項目の情報を見るにはこの項目を有効にしてください。',
 
-   NO_EXTERNAL        => '外部のフィーチャーはロードされていません。',
+   NO_EXTERNAL       => '外部のフィーチャーはロードされていません。',
 
-   NO_CITATION        => '他の情報はありません。',
+   NO_CITATION       => '他の情報はありません。',
 
    #--------------
    # PLUGIN PAGES
    #--------------
 
- ABOUT_PLUGIN  => '%s について',
+   ABOUT_PLUGIN      => '%s について',
 
- BACK_TO_BROWSER => 'ブラウザに戻る',
+   BACK_TO_BROWSER   => 'ブラウザに戻る',
 
- PLUGIN_SEARCH_1   => '%s (%s による検索)',
+   PLUGIN_SEARCH_1   => '%s (%s による検索)',
 
- PLUGIN_SEARCH_2   => '&lt;%s 検索&gt;',
+   PLUGIN_SEARCH_2   => '&lt;%s 検索&gt;',
 
- CONFIGURE_PLUGIN   => '設定',
+   CONFIGURE_PLUGIN  => '設定',
 
- BORING_PLUGIN => 'このプラグインにはその他の設定項目はありません。',
+   BORING_PLUGIN     => 'このプラグインにはその他の設定項目はありません。',
 
    #--------------
    # ERROR MESSAGES
    #--------------
 
- NOT_FOUND => '<i>%s</i> というランドマークは認識できませんでした。ヘルプページを参照してください。',
+   NOT_FOUND         => '<i>%s</i> というランドマークは認識できませんでした。ヘルプページを参照してください。',
 
- TOO_BIG   => '詳細ビューは %s 塩基までです。オーバービューをクリックして %s bp の領域を選んでください。',
+   TOO_BIG           => '詳細ビューは %s 塩基までです。オーバービューをクリックして %s bp の領域を選んでください。',
 
- PURGED    => "%s というファイルは見つかりませんでした。すでに消去された可能性があります。",
+   PURGED            => '%s という名前のファイルは見あたりません。すでに消されてしまった可能性があります。',
 
- NO_LWP    => "このサーバは外部の URL を取れるように設定されていません。",
+   NO_LWP            => 'このサーバは外部の URL から情報を取れるように設定されていません。',
 
- FETCH_FAILED  => "%s を取得できませんでした: %s.",
+   FETCH_FAILED      => '%s を取得できませんでした: %s.',
 
- TOO_MANY_LANDMARKS => 'ランドマーク数 %d は大きすぎるためリストできません。',
+   TOO_MANY_LANDMARKS => 'ランドマーク数 %d は大きすぎるためリストできません。',
 
- SMALL_INTERVAL    => '小間隔を %s bp にリサイズしました',
+   SMALL_INTERVAL    => '小さな間隔を %s bp にリサイズしました。',
 
-   # translated by KATAYAMA Toshiaki <k@bioruby.org>
 };

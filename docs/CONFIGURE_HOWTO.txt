@@ -710,7 +710,6 @@ The following [GENERAL] options are recognized:
 
        examples = II  NPY1 NAB2 Orf:YGL123W
 
-
     * automatic classes
 
     When the user types in a search string that is not qualified by a
@@ -736,6 +735,13 @@ The following [GENERAL] options are recognized:
 
       remote sources = "Menu Label 1" http://url1.host.com/etc/etc
 		       "Menu Label 2" http://url2.host.com/etc/etc
+
+    * instructions, search_instructions, navigation_instructions
+
+    You may override the default instructions (as defined in the language-specific
+    configuration files in conf/lang) by setting these options.  For example:
+
+         instructions = "Type in the name of a contig or clone."
 
     * html1, html2, html3, html4, html5, html6
 

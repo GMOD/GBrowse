@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.98 2003-06-06 17:00:49 lstein Exp $
+# $Id: gbrowse.PLS,v 1.99 2003-06-06 17:09:20 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -689,9 +689,12 @@ sub navigation_table {
 		  (
 		   TR(
 		      td({-align=>'left', -colspan=>2},
-			 b($CONFIG->tr('INSTRUCTIONS').': '),
-			 $CONFIG->tr('SEARCH_INSTRUCTIONS',$oligo),
-			 $CONFIG->tr('NAVIGATION_INSTRUCTIONS'),
+			 b($CONFIG->setting('instructions') 
+			   || $CONFIG->tr('INSTRUCTIONS').': '),
+			 $CONFIG->setting('search_instructions')   
+			   || $CONFIG->tr('SEARCH_INSTRUCTIONS',$oligo),
+			 $CONFIG->setting('navigation_instructions') 
+			   || $CONFIG->tr('NAVIGATION_INSTRUCTIONS'),
 			)),
 		   TR(
 		      td({-align=>'left', -colspan=>2},

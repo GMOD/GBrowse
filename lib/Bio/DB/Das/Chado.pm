@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.36 2004-03-11 00:33:26 scottcain Exp $
+# $Id: Chado.pm,v 1.37 2004-03-11 15:48:58 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -619,11 +619,12 @@ sub _segclass { return SEGCLASS }
 
 sub absolute {return}
 
-sub DESTROY {
-        my $self = shift;
-        $self->{dbh}->disconnect;
-        return;
-}
+#this sub doesn't work and just causes annoying warnings
+#sub DESTROY {
+#        my $self = shift;
+#        $self->{dbh}->disconnect;
+#        return;
+#}
 
 package Bio::DB::Das::ChadoIterator;
 

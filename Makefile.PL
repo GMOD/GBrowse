@@ -84,9 +84,9 @@ END
 #
 $OPTIONS{prefix} ||= $OPTIONS{PREFIX};
 @ARGV = ("PREFIX=$OPTIONS{prefix} INSTALLSITEMAN1DIR=$OPTIONS{INSTALLSITEMAN1DIR} INSTALLSITEMAN3DIR=$OPTIONS{INSTALLSITEMAN3DIR}");
-$OPTIONS{CONF} = '/etc/httpd/conf';
-$OPTIONS{HTDOCS} = '/var/www/html';
-$OPTIONS{CGIBIN} = '/var/www/cgi-bin';
+$OPTIONS{CONF} =   $OPTIONS{prefix}.'/etc/httpd/conf';
+$OPTIONS{HTDOCS} = $OPTIONS{prefix}.'/var/www/html';
+$OPTIONS{CGIBIN} = $OPTIONS{prefix}.'/var/www/cgi-bin';
 
 
 if (-e 'GGB.def' && !%OPTIONS) {

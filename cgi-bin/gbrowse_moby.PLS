@@ -46,7 +46,7 @@ print OUT <<'!NO!SUBS!';
 
 
 
-#$Id: gbrowse_moby.PLS,v 1.10 2003-12-26 23:57:39 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.11 2003-12-27 14:26:38 markwilkinson Exp $
 
 
 # use lib "/usr/local/GB/GMOD_LIBS/moby-live/Perl";
@@ -432,11 +432,12 @@ sub execute {
             my $MOBYClass = $_->getTagName;
             my $namespace = $_->getAttributeNode('namespace');
             $namespace = $namespace?($namespace->getValue):"";
+            my $short_namespace = $namespace =~ /urn:lsid:biomoby.org:namespacetype:(\S+)/?$1:$namespace;
             my $id = $_->getAttributeNode('id');
             $id = $id ?($id->getValue):"";
             print TR({-valign=>'top', -class=>'databody'},
                 th({-align => 'left', -valign=>'top', -class=>'datatitle'},"ID: "),
-                td(b($namespace.":".$id),
+                td(b($short_namespace.":".$id),
                    "  ",
                    start_form,
                    hidden("object", $_->toString),

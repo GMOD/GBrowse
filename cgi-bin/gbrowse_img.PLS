@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.26 2004-10-04 17:25:13 tharris Exp $
+# $Id: gbrowse_img.PLS,v 1.27 2004-10-18 13:59:55 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -313,6 +313,13 @@ sub external_features {
 sub consolidate_images {
   my ($images,$image_class) = @_;
   my @gds = map {$images->{$_}[1]} sort keys %$images;
+
+  unless ($gds[0]->can('copy')) { # workaround for GD::SVG
+     my @refs  = sort keys %$images;
+     my $first = $images->{$refs[0]};
+     my ($gd,$boxes) = @{$first}[1,2];
+     return $gd,$boxes;
+  }
 
   my $overall_height = 0;
   my $max_width      = 0;

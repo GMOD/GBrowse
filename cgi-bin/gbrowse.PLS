@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.117 2004-09-12 00:40:30 lstein Exp $
+# $Id: gbrowse.PLS,v 1.118 2004-10-18 13:59:55 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2397,10 +2397,16 @@ sub build_link_image_page {
   my $url = url(-base=>1);
   $url   .= url(-absolute=>1);
   $url    = dirname($url) . "/gbrowse_img/".escape($source);
+  my $tracks = $settings->{tracks};
   my $width  = $CONFIG->width;
   my $name   = $settings->{name} || "$settings->{ref}:$settings->{start}..$settings->{stop}";
-  my $type   = join '+',map{escape($_)} grep {$settings->{features}{$_}{visible}} @{$settings->{tracks}};
+  my $type   = join '+',map{escape($_)} grep {$settings->{features}{$_}{visible}} @$tracks;
+  my $options =  join '+',map { join '+', escape($_),$settings->{features}{$_}{options}
+                              } grep {
+                                      $settings->{features}{$_}{options}
+                                     } @$tracks;
   my $img_url = "$url?name=$name;type=$type;width=$width";
+  $img_url   .= ";options=$options" if $options;
   print $CONFIG->tr('IMAGE_DESCRIPTION',$img_url,$img_url);
 }
 
@@ -2411,10 +2417,16 @@ sub build_svg_image_page {
   my $url = url(-base=>1);
   $url   .= url(-absolute=>1);
   $url    = dirname($url) . "/gbrowse_img/".escape($source);
+  my $tracks = $settings->{tracks};
   my $width  = $CONFIG->width;
   my $name   = $settings->{name} || "$settings->{ref}:$settings->{start}..$settings->{stop}";
-  my $type   = join '+',map{escape($_)} grep {$settings->{features}{$_}{visible}} @{$settings->{tracks}};
-  my $img_url = "$url?name=$name;type=$type;width=$width;image_class=SVG";
+  my $type   = join '+',map{escape($_)} grep {$settings->{features}{$_}{visible}} @$tracks;
+  my $options =  join '+',map { join '+', escape($_),$settings->{features}{$_}{options}
+                              } grep {
+                                      $settings->{features}{$_}{options}
+                                     } @$tracks;
+  my $img_url = "$url?name=$name;type=$type;width=$width;format=GD::SVG";
+  $img_url   .= ";options=$options" if $options;
   print $CONFIG->tr('SVG_DESCRIPTION',$img_url,$img_url);
 }
 

@@ -1,4 +1,4 @@
-# $Id: BasicEditor.pm,v 1.17 2004-02-19 17:55:02 sheldon_mckay Exp $
+# $Id: BasicEditor.pm,v 1.18 2004-03-12 15:16:23 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -141,7 +141,7 @@ sub build_form {
     my ($self, $segment) = @_;
     my $form = '';
     my $feat_count = 0;
-    my @feats = _contained_feats($segment); 
+    my @feats = $self->contained_feats($segment); 
 
     # try to put the features in a sensible order 
     # this is biased toward gene containment hierarchies
@@ -256,19 +256,23 @@ sub dump {
 
     if ( $rollback ) {
 	$gff = $self->rollback($rollback);
+        # re-define the segment to the coordinate range of the cached GFF
+	$self->get_range($gff);
+	$segment = $db->segment( -name  => $self->ref,
+				 -start => $self->start,
+				 -stop  => $self->end );
     }
     else {
 	$self->{ref} = $segment->ref;
 	$gff  = $self->build_gff || return 0;
+	$self->get_range($gff);
     }
 
     $gff = $self->gff_header(3,1) . "\n$gff";
 
-    my @killme = _contained_feats($segment);
+    my @killme = $self->contained_feats($segment);
 
-    for ( @killme ) {
-	$db->delete_features($_) unless $_->primary_tag =~ /Component/i; 
-    }
+    my $killed = $db->delete_features(@killme);
 
     my $fh = IO::String->new($gff);
     my $result = $db->load_gff($fh);
@@ -359,11 +363,14 @@ sub forbid {
 }
 
 # deals with segment edge-effects
-sub _contained_feats {
+sub contained_feats {
+    my $self    = shift;
     my $segment = shift;
+    my $seq = $self->start ? $self : $segment;
     grep {
-        $_->start >= $segment->start - 1 &&
-        $_->end   <= $segment->end   + 1
+        $_->start >= $seq->start - 1 &&
+        $_->end   <= $seq->end   + 1 &&
+	$_->method !~ /component/i
     } $segment->features;
 }
 

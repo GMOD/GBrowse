@@ -1,4 +1,4 @@
-# $Id: ImportFeatures.pm,v 1.15 2004-02-27 19:31:17 sheldon_mckay Exp $
+# $Id: ImportFeatures.pm,v 1.16 2004-03-12 15:16:24 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -213,10 +213,10 @@ sub reconfigure {
     $conf->{format} = $self->config_param('format');
     ($conf->{format}) = $conf->{format} =~ /\((\S+)\)/
 	if $conf->{format} =~ /\(/;
-    $conf->{seqid}  = $self->config_param('seqid');
-    $conf->{acc}    = $self->config_param('acc');
-    $conf->{debug}  = $self->config_param('debug');
-    $conf->{reload} = $self->config_param('reload');
+    $conf->{seqid}  = $self->config_param('seqid') if $self->config_param('seqid');
+    $conf->{acc}    = $self->config_param('acc') if $self->config_param('acc');
+    $conf->{debug}  = 1 if $self->config_param('debug');
+    $conf->{reload} = 1 if $self->config_param('reload');
     $conf->{erase}  = $self->config_param('erase') || 'selected';
     $conf;
 }
@@ -264,9 +264,11 @@ sub configure_form {
 	   );
 
     $msg = "Use a GenBank/EMBL accession number (not GI)\\n" .
-	      "Note: this will override file uploading";
+	   "Note1: this will override file uploading\\n" .
+	   "Note2: downloading a fresh genbank/EMBL record will " .
+	   "overwrite any existing annotations for the sequence";
 	      
-    $html .= 
+    $html .= br .
              table([
 		    Tr( { -class => 'searchtitle' }, 
                         td( $f, 'Direct Download from NCBI/EBI' ) 
@@ -283,7 +285,9 @@ sub configure_form {
 
     # add a rollback table if required
     if ( $ROLLBACK ) {
-        $msg = "Selecting rollback will override loading of files or accessions";
+        $msg = "Selecting rollback will override loading of files or accessions\\n\\n" .
+               "Note: select delete-all to completely erase changes made since " .
+               "the segment was backed up.";
         my $rb_form = br . "\n" . $self->rollback_form($msg);
         $rb_form =~ s/<h3>/<p>/igm;
 	$rb_form =~ s/<\/h3>/<\/p>/igm;
@@ -350,10 +354,9 @@ sub dump {
     my $rollback = $self->config_param('rb_id');
     
     my $gff = $rollback ? $self->rollback($rollback) : $self->gff;
-
     
+    # make sure GFF refseq and user supplied seq ID match
     if ( $conf->{seqid} ) {
-	$self->refseq($conf->{seqid});
         my $newgff;
 	for ( split "\n", $gff ) {
 	    $newgff .= $_ . "\n" and next if /#/;
@@ -362,6 +365,19 @@ sub dump {
 	    $newgff .= $_ . "\n";
 	}
         $gff = $newgff;
+    }
+
+    # if the input was GFF, look for an id_holder
+    if ( $conf->{format} eq 'GFF' && $gff =~ /database_ids|segment_offset/m ) {
+	my @gff = split "\n", $gff;
+	for ( @gff ) {
+	    my ($ids)    = /database_ids=(\S+?)\;?/;
+            my ($offset) = /segment_offset=(\S+)\;?/;
+            next unless $ids || $offset;
+	    $self->{database_ids} = [ split ',', $ids ] if $ids;
+	    $self->{offset} = $offset if $offset;
+	}
+	$gff = join "\n", grep { !/database_ids|segment_offset/ } @gff;
     }
 
     # adjust to absolute coordinates if req'd
@@ -379,8 +395,7 @@ sub dump {
 	print h2("The input features:"), pre($gff);
     }
     
-    my $segment  = $db->segment( $self->refseq )
-                || $db->segment( Accession => $self->refseq );
+    my ($segment)  = $db->segment( $self->refseq );
 
     my $nodna = 0;
     
@@ -389,27 +404,29 @@ sub dump {
 	$nodna++ if $segment->seq;
 
         # adjust segment coordinates to match GFF range
-        $segment = $db->segment( -name => $self->refseq, -class => 'Accession',
-				 -start => $self->start, -end  => $self->end )
-	         || $db->segment( -name => $self->refseq,
-				  -start => $self->start, -end  => $self->end );
-
+        ($segment) = $db->segment( -name  => $self->refseq,
+				   -start => $self->start, 
+				   -end   => $self->end );
 				 
-	$segment->start($self->start);
-        $segment->end($self->end);
+	#$segment->start($self->start);
+        #$segment->end($self->end);
 
         # save the state of the segment in case we want to roll back later 
         if ( $ROLLBACK ) {
  	    $self->save_state($segment);
 	}
 
+        # wipe the slate claen for GenBank/EMBL downloads
+	$conf->{erase} = 'all' if $conf->{acc};
+
 	my @killme;
+        
         if ( $conf->{erase} eq 'all' ) {
             # wipe the segment clean
             $self->_print("Removing all features from $segment");
 	    @killme = grep { 
-		$_->start >= $self->start &&
-                $_->end   <= $self->end  
+		$_->start >= $self->start - 1 &&
+                $_->end   <= $self->end + 1 
 	    } $segment->features; 
 	}
 	elsif ( $conf->{erase} eq 'selected' && $self->{database_ids} ) {
@@ -424,6 +441,7 @@ sub dump {
 	}        
 
 	my $killed = $db->delete_features( @killme );
+
         
 	# stale database ids?
 	if ( !ref $killme[0] && $killed < @killme ) {
@@ -444,8 +462,9 @@ sub dump {
           
 	my @gff = split "\n", $gff;
         my $skip;
-        #check for a full-length source feature
-        for ( @gff ) {
+        # check for a full-length 'source' feature
+        # skip the header is we find one
+	for ( @gff ) {
 	    $skip++ if (split)[3] == $self->start 
 		    && (split)[4] == $self->end 
                     && (split)[8] =~ /ID=(Sequence|Accession)/;
@@ -456,7 +475,6 @@ sub dump {
 	    unshift @gff, $self->gff_header;
 	}
         
-        print pre($gff);
 	$gff = join "\n", @gff;
     }
 	
@@ -469,9 +487,10 @@ sub dump {
     # load the GFF into the database
     my $gff_fh  = IO::String->new($gff);
     my $result  = $db->load_gff($gff_fh) || 'No';
-    my $remark = $result =~ /No/ ? br ."This can't be good..." : ''; 
+    my $remark  = $result =~ /No/ ? br ."This can't be good..." : '';
+    my $success = $result =~ /No/ ? 'Failure.' : 'Success!';
 
-    print h2("Success! $result features were loaded into the database.$remark");
+    print h2("$success $result features were loaded into the database.$remark");
 
     unless ( $result =~ /^\d+$/ ) {
 	print h2("Features (below) not loaded correctly") . pre($gff);
@@ -488,7 +507,7 @@ sub load_page {
     my ($self, $gff) = @_;
     my $url = self_url();
 
-    # go to configure page if this is a caught misdirection
+    # go to configure page if 'Go' was hit from the browser
     unless ( $gff ) {
         $url =~ s/plugin_action=Go/plugin_action=Configure.../;
         print body( { -onLoad => "window.location='$url'" } );
@@ -558,6 +577,7 @@ sub gff {
 	return $self->read_embl($text);
     }
     elsif ( $format eq 'GFF' ) {
+	$self->refseq($conf->{seqid});
         return $text =~ /\#gff-version 3/m ? $text : $self->read_gff($text);
     }
     elsif ( $format eq 'GAME' ) {
@@ -607,7 +627,7 @@ sub read_game {
 
     my $in = eval{
       Bio::SeqIO->new( -fh => IO::String->new($text), -format => 'game')
-    } || $self->parsefail( 'Parsing error: ', @! );
+    } || $self->parsefail( 'Parsing error: ', $@ );
 
     my $seqobj    = $in->next_seq || $self->parsefail($in->error);
 
@@ -638,7 +658,7 @@ sub read_genbank {
 
     my $in = eval {
 	Bio::SeqIO->new( -fh => IO::String->new($text), -format => 'genbank')
-    }  || $self->parsefail( 'Parse error: ', @!);
+    }  || $self->parsefail( 'Parse error: ', $@);
 
     my $seqobj    = $in->next_seq || $self->parsefail($in->error);
     
@@ -675,9 +695,9 @@ sub read_embl {
 
     my $in = eval {
 	Bio::SeqIO->new( -fh => IO::String->new($text), -format => 'embl')
-    } || $self->parsefail( 'Parse error; ', @!);
+    } || $self->parsefail( 'Parse error; ', $@);
 
-    my $seqobj    = $in->next_seq || $self->parsefail($in->error);
+    my $seqobj    = $in->next_seq;
 
     $seqobj || $self->bad_format("Problem reading EMBL:", $self->{display_text});
 
@@ -746,8 +766,8 @@ sub seq2GFF {
     unless ( $self->{unflattened} ) {
 	@sfs = eval {
 	    $unflattener->unflatten_seq( -seq => $seq, -use_magic => 1)
-	} or $self->_print("Error: The features did not unflatten properly\n"
-			   . "Please check your annotation file \n\n", $text) and exit;
+	} or print h1("Error: The features did not unflatten properly\n" .
+		      "Please check your annotation file \n\n"), pre($text) and exit;
     }
     # but only if they are flat
     else {
@@ -789,9 +809,16 @@ sub seq2GFF {
         }
 
 	if ( $sf->primary_tag eq 'gene' ) {
-            my ($gene_name) = $sf->has_tag('gene') 
+            # make best efforts to find a name for the gene
+	    my ($gene_name) = $sf->has_tag('gene') 
                   ? $sf->get_tag_values('gene')
-                  : $sf->get_tag_values('locus_tag');
+                  : $sf->has_tag('locus_tag')
+                  ? $sf->get_tag_values('locus_tag')
+		  : $sf->has_tag('standard_name')
+		  ? $sf->get_tag_values('standard_name')
+		  : $sf->has_tag('Name')
+		  ? $sf->get_tag_values('Name')
+		  : 'gene';
 	    $sf->add_tag_value( 'ID', "gene:$gene_name" );
         }
 
@@ -803,7 +830,7 @@ sub seq2GFF {
 
         unless ( $sf->has_tag('ID') ) {
 	    my @tags = $sf->all_tags;
-	    if ( @tags == 1 ) {
+	    if ( @tags == 1 && lc $tags[0] ne 'note') {
 		my ($v) = $sf->get_tag_values($tags[0]);
                 $sf->add_tag_value( ID => "$tags[0]:$v" );
 	    }
@@ -894,7 +921,7 @@ sub seq2GFF {
 
 		# Shared exons in alternative splice variants point to
                 # the same Bio::SeqFeature object.  We have to clone.
-                $sf3 = _Dolly($sf3) if $sf3->has_tag('Parent');
+                $sf3 = _clone($sf3) if $sf3->has_tag('Parent');
 		for ( qw/ mRNA Parent / ) {
 		    $sf3->remove_tag($_) if $sf3->has_tag($_);
 		}
@@ -1022,7 +1049,8 @@ sub kill_list {
 
     for ( split "\n", $gff ) {
 	next if /\#/;
-        push @killme,  _is_match($_, $segment);
+        my $moribund = _is_match($_, $segment);
+        push @killme,  $moribund if $moribund;
     }
     @killme;
 }
@@ -1085,7 +1113,7 @@ sub _fix_qualifiers {
 
 # shallow clone the feature but give it ownership
 # of the copied tags
-sub _Dolly {
+sub _clone {
     my $obj = shift;
     my %new =  %{$obj};
     my %tags = %{$obj->{_gsf_tag_hash}};

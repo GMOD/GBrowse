@@ -132,6 +132,12 @@ sub open_database {
     $config->source($source);
     ($adaptor,@argv) = $config->db_settings;
   }
+
+  ################################################
+  # HACK ALERT - REMOVE AFTER BIOPERL 1.3 RELEASED
+  patch_old_versions_of_bioperl($adaptor);
+  ################################################
+
   $DB{$source} = eval {$adaptor->new(@argv)} or warn $@;
   fatal_error(pre($@)) unless $DB{$source};
   if (my $refclass = $config->setting('reference class')) {
@@ -200,5 +206,17 @@ sub html_frag {
   return $a->(@_) if ref $a eq 'CODE';
   return $a || '';
 }
+
+sub patch_old_versions_of_bioperl {
+  my $adaptor = shift;
+  local $^W = 0;
+  if ($adaptor eq 'Bio::DB::GFF') {
+    eval <<'END' unless defined &Bio::DB::GFF::Segment::is_circular;
+sub Bio::DB::GFF::Segment::is_circular { 0; }
+END
+  }
+}
+
+
 
 1;

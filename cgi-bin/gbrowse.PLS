@@ -1512,6 +1512,7 @@ sub name_uploaded_file {
 sub open_uploaded_file {
   my ($settings,$filename,$mode) = @_;
   $filename =~ s/^file://;
+  $mode ||= "<";
 
   my $file = name_uploaded_file($settings,$filename);
   warn "file = $file" if DEBUG;
@@ -1704,7 +1705,7 @@ sub clear_uploaded_file {
 
 sub edit_uploaded_file {
   my ($settings,$file) = @_;
-  warn "edit_uploaded_file(): file = $file";# if DEBUG;
+  warn "edit_uploaded_file(): file = $file" if DEBUG;
   print start_form();
   my $data;
   my $fh = open_uploaded_file($settings,$file) or return;

@@ -145,7 +145,7 @@ the path to the volvox database directory in this section is correct:
 
 <pre>
 db_args       = -adaptor memory
-		-dir     /usr/local/apache/htdocs/gbrowse/databases/volvox
+		-gff     /usr/local/apache/htdocs/gbrowse/databases/volvox
 </pre>
 
 <p>
@@ -1235,9 +1235,31 @@ volvox1.gff  volvox3.gff  volvox5.gff
 
 <p>
 
-Copying the .fa file into the volvox database directory is all you
-need to do to load the DNA.  To see that it worked, add two new
-stanzas to the volvox.conf configuration file:
+After copying the .fa file into the volvox database directory, you
+will need to change the configuration file very slightly to tell
+gbrowse to look for and load the FASTA file.  At the top of the config
+file, change the <tt>db_args</tt> section to look like this:
+
+<p>
+
+<pre>
+db_args       = -adaptor memory
+		-dir     /usr/local/apache/htdocs/gbrowse/databases/volvox
+</pre>
+
+<p>
+
+Previously the <tt>-gff</tt> argument told gbrowse to load all GFF
+files in the directory.  The new <tt>-dir</tt> argument says to load
+both GFF files and FASTA sequence files.  (There's also a
+<tt>-fasta</tt> argument to load sequence without features, but this
+is not much use with gbrowse.)
+
+<p>
+
+This is all you need to do to load the DNA.  To see that the DNA is
+indeed being loaded, add two new stanzas to the volvox.conf
+configuration file:
 
 <blockquote class="example"><pre>
 [DNA]
@@ -2519,6 +2541,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Sun Jun 29 16:27:31 PDT 2003
+Last modified: Tue Aug 26 19:19:38 EDT 2003
 <!-- hhmts end -->
 </body> </html>

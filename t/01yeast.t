@@ -20,10 +20,9 @@ BEGIN {
   use Test;
   plan test => TEST_COUNT;
 }
-use DBI;
 use Bio::DB::GFF;
 
-my $db = eval { Bio::DB::GFF->new(-dsn=>'yeast',-user=>'nobody') } ;
+my $db = eval { Bio::DB::GFF->new(-adaptor=>'memory',-gff=>'sample_data/yeast_data.gff') } ;
 
 ok($db);
 

@@ -13,90 +13,7 @@
   </title>
   <link rel="stylesheet" type="text/css" href="[% browser.config.setting('stylesheet') %]"/>
 
-<script src="/gbrowse/js/x_core.js" type="text/javascript"></script>
-<script type="text/javascript">
-window.onload = function()
-{
-    if (window.winOnLoad) window.winOnLoad();
-}
-
-function winOnLoad()
-{
-  setup();
-}
-
-function setup()
-{
-  var ele, i = 1;
-  do {
-    ele = xGetElementById('controller' + i);
-    if (ele) {
-      ele.keepId  = 'keep'   + i;
-      ele.panelId = 'target' + i;
-      ele.onclick = tOnClick;
-
-      panel = xGetElementById(ele.panelId);
-      i++;
-    }
-  } while(ele);
-
-  var panel;
-  [% IF ! browser.options.display_banner %]
-    panel = xGetElementById('target1');
-    panel.on = 0;
-    panel.oldWidth  = xWidth(panel);
-    panel.oldHeight = xHeight(panel);
-    xHeight(panel,0);
-    xWidth(panel,0);
-    xHide( panel );
-  [% END %]
-  [% IF ! browser.options.display_instructions %]
-    panel = xGetElementById('target2');
-    panel.on = 0;
-    panel.oldWidth  = xWidth(panel);
-    panel.oldHeight = xHeight(panel);
-    xHeight(panel,0);
-    xWidth(panel,0);
-    xHide( panel );
-  [% END %]
-  [% IF ! browser.options.display_tracks %]
-    panel = xGetElementById('target3');
-    panel.on = 0;
-    panel.oldWidth  = xWidth(panel);
-    panel.oldHeight = xHeight(panel);
-    xHeight(panel,0);
-    xWidth(panel,0);
-    xHide( panel );
-  [% END %]
-}
-function tOnClick()
-{
-  var panel = xGetElementById(this.panelId);
-  var keep  = xGetElementById(this.keepId);
-
-  if (panel) {
-    if(panel.on == 0){
-      panel.on = 1;
-      xWidth(panel,  panel.oldWidth);
-      xHeight(panel, panel.oldHeight);
-      xShow(panel);
-
-      keep.value = 1;
-    }
-    else {
-      panel.on = 0;
-      panel.oldWidth  = xWidth(panel);
-      panel.oldHeight = xHeight(panel);
-      xHeight(panel,0);
-      xWidth(panel,0);
-      xHide(panel);
-
-      keep.value = 0;
-    }
-  }
-}
-</script>
-
+[% PROCESS "script.tt2" %]
 </head>
 <!-- FIXME language_code not working -->
 <body en="[% browser.config.setting('language_code') %]" charset="[% browser.translate('CHARSET') %]">
@@ -104,6 +21,12 @@ function tOnClick()
 <!-- datasource description and current position -->
 [% IF(browser.options.display_banner) %]
 [%END %]
+
+<form name="mainform" action="[% action %]" method="POST">
+  <!-- navigation table -->
+  [% PROCESS "navigationtable.tt2" %]
+
+
 <div class="target" id="target1">
   <h1>[% browser.config.setting('description') %]</h1>
   <!-- FIXME need to fix formatting on string below -->
@@ -117,9 +40,6 @@ function tOnClick()
   -%]</h2>
 </div>
 
-<form name="mainform" action="[% action %]" method="POST">
-  <!-- navigation table -->
-  [% PROCESS "navigationtable.tt2" %]
 
   [% htmlfrag2 %]
 
@@ -127,11 +47,13 @@ function tOnClick()
   [% IF segments && segments.size() > 1 %]
     [% multiple_segments %]
   [% ELSE %]
-     <center>
+    <div id="target4">
+    <center>
     [% PROCESS "overviewpanel.tt2" %]
     [% #PROCESS "detailpanel.tt2"   %]
     [% detailpanel   %]
     </center>
+    </div>
   [% END %]
 
   [% htmlfrag3 %]
@@ -150,6 +72,8 @@ function tOnClick()
   [% PROCESS "optionstable.tt2" %]
 
   [% htmlfrag6 %]
+
+  [% PROCESS "script_input.tt2" %]
 </form>
 
 <form name="externalform" encoding="multipart/form-data"><p/>

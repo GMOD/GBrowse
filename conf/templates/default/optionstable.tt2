@@ -1,16 +1,15 @@
-<table border="0" width="100%" class="settingsbody">
-  <tr>
+<div class="searchtitle" style="width: 100%;">
 
-    <!-- IMAGE WIDTH -->
-    <td>
+  <!-- IMAGE WIDTH -->
+  <div style="float: left;">
       <b>[% browser.translate('image_width') %]</b><br/>
       [% FOREACH width = browser.config.setting('image widths').split('\s+') %]
       <input type="radio" name="width" value="[% width %]" [% IF(width == browser.options.width) ; 'checked="checked"' ; END %]/>[% width %]
       [% END %]
-    </td>
+  </div>
 
-    <!-- KEY POSITION -->
-    <td>
+  <!-- KEY POSITION -->
+  <div style="float: left;">
       <b>[% browser.translate('key_position') %]</b><br/>
       <input type="radio" name="ks" value="between">[% browser.translate('BETWEEN') %]</input>
       <input type="radio" name="ks" value="beneath">[% browser.translate('BENEATH') %]</input>
@@ -19,19 +18,23 @@
       <input type="radio" name="ks" value="left"   >[% browser.translate('LEFT')    %]</input>
       <input type="radio" name="ks" value="right"  >[% browser.translate('RIGHT')   %]</input>
       <!-- end check -->
-    </td>
+  </div>
 
-    <!-- TRACK NAMES -->
-    <td>
+  <!-- TRACK NAMES -->
+  <div style="float: left;">
       <b>[% browser.translate('track_names') %]</b><br/>
       <input type="radio" name="sk" value="sorted"   [% IF('sorted' == browser.options.sk)   ; 'selected="selected"' ; END %]>[% browser.translate('alphabetic') %]</input>
       <input type="radio" name="sk" value="unsorted" [% IF('unsorted' == browser.options.sk) ; 'selected="selected"' ; END %]>[% browser.translate('varying')    %]</input>
-    </td>
+  </div>
 
-    <!-- BUTTONS -->
-    <td align="right">
+  <!-- BUTTONS -->
+  <div>
       <!-- FIXME do these button names need to be translated? -->
       <input type="submit" name="Set Track Options..." value="[% browser.translate('set_options') %]"/>
       <input type="submit" name="Update Image"         value="[% browser.translate('update') %]"     />
-    </td>
-</table>
+  </div>
+
+  &nbsp;
+</div>
+
+<br/>

@@ -1,11 +1,12 @@
-<div class="searchbody" width="100%">
-  <div style="float: left;" class="controller" id="controller3"><b>[% browser.translate('tracks') %]</b> [[% browser.translate('hide') %]]&nbsp;</div>
-  <div style="float: left;"><i>[% browser.translate('external_tracks') %]</i>&nbsp;</div>
-  <div style="background: [% browser.config.setting('overview bgcolor') %]; float: left;">[% browser.translate('overview_tracks') %]&nbsp;</div>
-</div>
-<br/><br/>
 <div class="searchbody" id="target3" style="width: 100%;">
+  <div style="width: 100%">
+    <!-- FIXME hardcoded white background -->
+    <div style="float: left; background: white;"><i>[% browser.translate('external_tracks') %]</i></div>
+    <div style="background: [% browser.config.setting('overview bgcolor') %];">[% browser.translate('overview_tracks') %]</div>
+  </div>
+
   <!-- sorting tracks by browser.options.sk not ported yet -->
+  <div style="width: 100%">
   [% i = 0 %]
   <table border="0"><tr>
   [% FOREACH tracklabel = browser.options.tracks -%]
@@ -13,4 +14,5 @@
     [% i = i + 1 ; IF(i % 3) == 0 ; '</tr><tr>' ; END %]
   [% END -%]
   </tr></table>
+  </div>
 </div>

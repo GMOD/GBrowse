@@ -1,3 +1,5 @@
+<div>
+
 <table border="0" width="100%">
   <tr>
     <th class="uploadtitle" colspan="4" align="left">[% browser.translate('upload_title') %]:
@@ -33,3 +35,5 @@
     </td>
   </tr>
 </table>
+
+</div>

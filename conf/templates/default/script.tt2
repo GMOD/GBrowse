@@ -1,0 +1,83 @@
+<script src="/gbrowse/js/x_core.js" type="text/javascript"></script>
+<script type="text/javascript">
+window.onload = function()
+{
+    if (window.winOnLoad) window.winOnLoad();
+}
+
+function winOnLoad()
+{
+  setup();
+}
+
+function setup()
+{
+  var ele, i = 1;
+  do {
+    ele = xGetElementById('controller' + i);
+    if (ele) {
+      ele.keepId  = 'keep'   + i;
+      ele.panelId = 'target' + i;
+      ele.onclick = tOnClick;
+
+      panel = xGetElementById(ele.panelId);
+      i++;
+    }
+  } while(ele);
+
+  var panel;
+  [% IF ! browser.options.display_banner %]
+    panel = xGetElementById('target1');
+    panel.on = 0;
+    panel.oldWidth  = xWidth(panel);
+    panel.oldHeight = xHeight(panel);
+    xHeight(panel,0);
+    xWidth(panel,0);
+    xHide( panel );
+  [% END %]
+  [% IF ! browser.options.display_instructions %]
+    panel = xGetElementById('target2');
+    panel.on = 0;
+    panel.oldWidth  = xWidth(panel);
+    panel.oldHeight = xHeight(panel);
+    xHeight(panel,0);
+    xWidth(panel,0);
+    xHide( panel );
+  [% END %]
+  [% IF ! browser.options.display_tracks %]
+    panel = xGetElementById('target3');
+    panel.on = 0;
+    panel.oldWidth  = xWidth(panel);
+    panel.oldHeight = xHeight(panel);
+    xHeight(panel,0);
+    xWidth(panel,0);
+    xHide( panel );
+  [% END %]
+}
+function tOnClick()
+{
+  var panel = xGetElementById(this.panelId);
+  var keep  = xGetElementById(this.keepId);
+
+  if (panel) {
+    if(panel.on == 0){
+      panel.on = 1;
+      xWidth(panel,  panel.oldWidth);
+      xHeight(panel, panel.oldHeight);
+      xShow(panel);
+
+      keep.value = 1;
+    }
+    else {
+      panel.on = 0;
+      panel.oldWidth  = xWidth(panel);
+      panel.oldHeight = xHeight(panel);
+      xHeight(panel,0);
+      xWidth(panel,0);
+      xHide(panel);
+
+      keep.value = 0;
+    }
+  }
+}
+</script>

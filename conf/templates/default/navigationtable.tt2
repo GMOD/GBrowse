@@ -1,5 +1,46 @@
-[% IF browser.options.display_instructions == 1 %]
-[% END %]
+<div class="searchtitle" width="100%">
+  [%- IF browser.options.display_banner == 1 ;
+       label = 'hide_header';
+       toggle_banner = 0;
+     ELSE ;
+       label = 'show_header';
+       toggle_banner = 1;
+     END
+  -%]
+  <div class="controller" id="controller1">[[% browser.translate( label ) %]]</div>
+
+  [%- IF browser.options.display_instructions == 1 ;
+       label = 'hide_instructions';
+       display_instructions = 0;
+     ELSE ;
+       label = 'show_instructions';
+       display_instructions = 1;
+     END
+  -%]
+  <div class="controller" id="controller2">[[% browser.translate( label ) %]]</div>
+
+  <!-- FIXME we need a better translation for "hide tracks" instead of just "hide", also uncapitalize tracks -->
+  <div class="controller" id="controller3">[[% browser.translate('hide') %] [% browser.translate('tracks') %]]</div>
+  <div class="controller" id="controller4">[[% browser.translate('hide') %] image]</div>
+
+  [% IF browser.options.name OR browser.options.ref %]
+  <div style="text-align: right;">
+    <a href="[% link_bookmark %]">[[% browser.translate('bookmark') %]]</a>
+    <a href="[% link_image    %]" target="_blank">[[% browser.translate('image_link') %]]</a>
+    <a href="[% link_svg      %]" target="_blank">[[% browser.translate('svg_link')   %]]</a>
+    <a href="[% link_help     %]" target="help">[[% browser.translate('help') %]]</a>
+  </div>
+  [% END %]
+
+  <div class="searchbody">
+    [% htmlfrag1 %]
+  </div>
+
+  <div class="searchbody" style="float: left; width: 50%;">[% PROCESS "searchbox.tt2" %]</div>
+  <div class="searchbody" style="margin-left: 50%; width: 50%;">[% IF segment %]<b>[% browser.translate('scroll') %]</b><br/>[% PROCESS "slider.tt2" %][% END %]</div>
+
+</div>
+
 <div class="searchtitle" id="target2">
   <b>[% browser.translate('instructions') %]</b><br/>
   [% browser.translate('search_instructions','') %]<br/>
@@ -10,43 +51,4 @@
   [% END %]
   <br/>
   <br/>
-</div>
-<input type="hidden" id="keep1" name="display_banner"       value="[% browser.options.display_banner %]"/>
-<input type="hidden" id="keep2" name="display_instructions" value="[% browser.options.display_instructions %]"/>
-<input type="hidden" id="keep3" name="display_tracks"       value="[% browser.options.display_tracks %]"/>
-
-<div class="searchtitle" width="100%">
-  [% IF browser.options.display_banner == 1 ;
-       label = 'hide_header';
-       toggle_banner = 0;
-     ELSE ;
-       label = 'show_header';
-       toggle_banner = 1;
-     END
-  %]
-  <div class="controller" id="controller1">[[% browser.translate( label ) %]]</div>
-
-  [% IF browser.options.display_instructions == 1 ;
-       label = 'hide_instructions';
-       display_instructions = 0;
-     ELSE ;
-       label = 'show_instructions';
-       display_instructions = 1;
-     END
-  %]
-  <div class="controller" id="controller2">[[% browser.translate( label ) %]]</div>
-
-  [% IF browser.options.name OR browser.options.ref %]
-    <a href="[% link_bookmark %]">[[% browser.translate('bookmark') %]]</a>
-    <a href="[% link_image    %]" target="_blank">[[% browser.translate('image_link') %]]</a>
-    <a href="[% link_svg      %]" target="_blank">[[% browser.translate('svg_link')   %]]</a>
-    <a href="[% link_help     %]" target="help">[[% browser.translate('help') %]]</a>
-  [% END %]
-
-  <div class="searchbody">
-    [% htmlfrag1 %]
-  </div>
-
-  <div class="searchbody" style="float: left; width: 50%;">[% PROCESS "searchbox.tt2" %]</div>
-  <div class="searchbody" style="float: left; width: 50%;">[% IF segment %]<b>[% browser.translate('scroll') %]</b><br/>[% PROCESS "slider.tt2" %][% END %]</div>
 </div>

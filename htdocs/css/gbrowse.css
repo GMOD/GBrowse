@@ -82,7 +82,7 @@ INPUT.reset_button {background-color: red;
                     cursor: help;
                     text-decoration: none;
 }
-.controller:hover { text-decoration: underline; }
+.controller:hover { text-decoration: underline;}
 .controller       { color: blue;
                     float: left;
 }

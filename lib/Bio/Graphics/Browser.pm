@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.138 2004-04-13 23:44:29 lstein Exp $
+# $Id: Browser.pm,v 1.139 2004-04-27 21:38:35 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -68,7 +68,7 @@ use Bio::Graphics::Browser::I18n;
 require Exporter;
 
 use vars '$VERSION','@ISA','@EXPORT';
-$VERSION = '1.16';
+$VERSION = '1.17';
 
 @ISA    = 'Exporter';
 @EXPORT = 'commas';
@@ -651,6 +651,9 @@ The arguments are a series of tag=>value pairs, where tags are:
 Any arguments names that begin with an initial - (hyphen) are passed
 through to Bio::Graphics::Panel->new() directly
 
+Any arguments names that begin with an initial - (hyphen) are passed
+through to Bio::Graphics::Panel->new() directly
+
 =cut
 
 sub render_html {
@@ -800,17 +803,18 @@ sub make_centering_map {
   my $offset = $ruler->[0]->start;
   my $end    = $ruler->[0]->end;
   my $scale  = $length/($ruler->[3]-$ruler->[1]);
+  my $pl     = $ruler->[-1]->panel->pad_left;
 
   # divide into RULER_INTERVAL intervals
   my $portion = ($ruler->[3]-$ruler->[1])/RULER_INTERVALS;
   my $ref    = $ruler->[0]->seq_id;
-  my $source =  $self->source;
+  my $source = $self->source;
   my $plugin = escape(param('plugin')||'');
 
   my @lines;
   for my $i (0..RULER_INTERVALS-1) {
-    my $x1 = int($portion * $i+0.5);
-    my $x2 = int($portion * ($i+1)+0.5);
+    my $x1 = $pl + int($portion * $i+0.5);
+    my $x2 = $pl + int($portion * ($i+1)+0.5);
     # put the middle of the sequence range into the middle of the picture
     my $middle = $flip ? $end - $scale * ($x1+$x2)/2 : $offset + $scale * ($x1+$x2)/2;
     my $start  = int($middle - $length/2);
@@ -857,6 +861,7 @@ sub make_title {
 #
 # any arguments that begin with an initial - (hyphen) are passed through to Panel->new
 # directly
+#
 sub image_and_map {
   my $self    = shift;
   my %config  = @_;
@@ -875,7 +880,7 @@ sub image_and_map {
   my $image_class   = $config{image_class} || 'GD';
 
   $segment->factory->debug(1) if DEBUG;
-  
+
   # Bring in the appropriate package - just for the fonts. Ugh.
   eval "use $image_class";
 
@@ -914,13 +919,13 @@ sub image_and_map {
 	      -width     => $width,
 	      -grid      => 1,
 	      -key_style    => $keystyle || $conf->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
-	      -empty_tracks => $conf->setting(general=>'empty_tracks') 	      || DEFAULT_EMPTYTRACKS,
+	      -empty_tracks => $conf->setting(general=>'empty_tracks') 	        || DEFAULT_EMPTYTRACKS,
 	      -pad_top      => $title ? $image_class->gdMediumBoldFont->height : 0,
 	      -image_class  => $image_class,
 	     );
 
   push @argv, -flip => 1 if $flip;
-  my $p = defined $conf->setting(general=>'image_padding') ? $conf->setting(general=>'image_padding') 
+  my $p = defined $conf->setting(general=>'image_padding') ? $conf->setting(general=>'image_padding')
                                                            : PAD_DETAIL_SIDES;
   push @argv,(-pad_left =>$p, -pad_right=>$p) if $p;
 
@@ -977,7 +982,7 @@ sub image_and_map {
 
       # allow a single feature to live in multiple tracks
       for my $label ($self->feature2label($feature,$length)) {
-	my $track = $tracks{$label} or next;
+	my $track = $tracks{$label}  or next;
 	$filters{$label}->($feature) or next;
 
 	warn "feature = $feature, label = $label, track = $track\n" if DEBUG;
@@ -1133,6 +1138,7 @@ sub overview {
 					-pad_right => $padr,
 					-pad_bottom => PAD_OVERVIEW_BOTTOM,
 					-image_class=> $image_class,
+					-auto_pad   => 0,
 				       );
 
   my $units = $self->setting('overview units');
@@ -1153,7 +1159,10 @@ sub overview {
   my ($x1,$x2) = $panel->map_pt($partial_segment->start,$partial_segment->end);
   my ($y1,$y2) = (0,$panel->height-1);
   $x2 = $panel->right-1 if $x2 >= $panel->right;
-  $gd->rectangle($x1,$y1,$x2,$y2,$red);
+  my $pl = $panel->can('auto_pad') ? $panel->pad_left : 0;
+  $gd->rectangle($pl+$x1,$y1,
+		 $pl+$x2,$y2,
+		 $red);
 
   eval {$panel->finished};  # should quash memory leaks when used in conjunction with bioperl 1.4
   return ($gd,$segment->length);
@@ -1550,10 +1559,11 @@ sub _hits_to_html {
   # use the scale as a centering mechanism
   my $ruler   = shift @$boxes;
   return unless $ruler->[0];  # don't know why....
+  my $pl = $ruler->[-1]->panel->pad_left;
   my $length  = $ruler->[0]->length/RULER_INTERVALS;
   $width   = ($ruler->[3]-$ruler->[1])/RULER_INTERVALS;
   for my $i (0..RULER_INTERVALS-1) {
-    my $x = $ruler->[1] + $i * $width;
+    my $x = $pl + $ruler->[1] + $i * $width;
     my $y = $x + $width;
     my $start = int($length * $i);
     my $stop  = int($start + $length);

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.79 2004-04-23 14:49:09 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.80 2004-04-27 21:38:34 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1009,6 +1009,8 @@ sub settings_table {
 
   my @widths = split /\s+/,$CONFIG->setting('image widths');
   @widths = (640,800,1024) unless @widths;
+  my @key_positions   = qw(between bottom);
+  push @key_positions,qw(left right) if Bio::Graphics::Panel->can('auto_pad');
 
   return table({-border=>0,-width=>'100%',-class=>'settingsbody'},
 	       # row
@@ -1024,9 +1026,12 @@ sub settings_table {
 		  td(
 		     b($CONFIG->tr('KEY_POSITION')),br,
 		     radio_group( -name=>'ks',
-				  -values=>['between','bottom'],
+				  -values=>\@key_positions,
 				  -labels=>{between=>$CONFIG->tr('BETWEEN'),
-					    bottom =>$CONFIG->tr('BENEATH')},
+					    bottom =>$CONFIG->tr('BENEATH'),
+ 					    left   =>$CONFIG->tr('LEFT'),
+ 					    right  =>$CONFIG->tr('RIGHT'),
+					   },
 				  -default=>$settings->{ks},
 				  -override=>1
 				),
@@ -1212,8 +1217,14 @@ sub zoomnav {
 
   elsif (defined $overview_x && defined $segment_length) {
     my ($padl,$padr) = $CONFIG->overview_pad;
-    my $overview_width = ($settings->{width} * OVERVIEW_RATIO) - ($padl+$padr);
+
+    my $overview_width = ($settings->{width} * OVERVIEW_RATIO);# - ($padl+$padr);
+
+    # adjust for padding in pre 1.6 versions of bioperl
+    $overview_width -= ($padl+$padr) unless Bio::Graphics::Panel->can('auto_pad');
+
     my $click_position = $segment_length * ($overview_x-$padl)/$overview_width;
+
     $span = $DEFAULT_SEGMENT if $span > $MAX_SEGMENT;
     $start = int($click_position - $span/2);
     $stop  = $start + $span - 1;

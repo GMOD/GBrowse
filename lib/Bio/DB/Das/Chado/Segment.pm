@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.38 2003-07-31 18:51:28 scottcain Exp $
+# $Id: Segment.pm,v 1.39 2003-10-30 21:02:48 scottcain Exp $
 
 =head1 NAME
 
@@ -91,7 +91,7 @@ use strict;
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
-use constant DEBUG => 0;
+use constant DEBUG => 1;
 
 use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI Bio::DB::Das::Chado);
@@ -109,132 +109,154 @@ sub new {
     warn "$name, $factory\n" if DEBUG;
     warn "base_start = $base_start, end = $end\n" if DEBUG;
 
-  $self->throw("start value less than 1\n") if (defined $base_start && $base_start < 1);
+  $self->Bio::Root::Root->throw("start value less than 1\n") if (defined $base_start && $base_start < 1);
   $base_start = $base_start ? int($base_start) : 1; 
   my $interbase_start = $base_start -1;
 
-
-#moved length determination to constructor, now it will be there from
-# 'the beginning'.
-
   my $quoted_name = $factory->{dbh}->quote(lc $name);
 
-  warn "$quoted_name\n" if DEBUG;
+  warn "quoted name:$quoted_name\n" if DEBUG;
 
   my $cvterm_id = $factory->{cvterm_id};
 
-  my $sth = $factory->{dbh}->prepare ("
-             select name,feature_id,seqlen from feature 
-             where lower(name) = $quoted_name  ");
+  my $ref = _search_by_name($factory, $quoted_name);
+     #returns either a feature_id scalar (if there is only one result)
+     #or an arrayref (of feature_ids) if there is more than one result
+     #or nothing if there is no result
 
-  $sth->execute or $self->throw("unable to validate name/length");
-
-  my $hash_ref = {};
-  my $length;
-  my $srcfeature_id;
-  my $rows_returned = $sth->rows;
-  if ($rows_returned != 1) { #look in synonym for an exact match
-    my $isth = $factory->{dbh}->prepare ("
-       select fs.feature_id from feature_synonym fs, synonym s
-       where fs.synonym_id = s.synonym_id and
-       lower(s.synonym_sgml) = $quoted_name
-        "); 
-    $isth->execute or $self->throw("query for name in synonym failed"); 
-    $rows_returned = $isth->rows;
-
-    if ($rows_returned != 1) { #look in dbxref for accession number match
-      $isth = $factory->{dbh}->prepare ("
-         select feature_id from feature_dbxref fd, dbxref d
-         where fd.dbxref_id = d.dbxref_id and
-               lower(d.accession) = $quoted_name ");
-      $isth->execute or $self->throw("query for accession failed");
-      $rows_returned = $isth->rows;
-
-      return if $rows_returned != 1;
-    }
-
-    $hash_ref = $isth->fetchrow_hashref;
-
-    my $landmark_feature_id = $$hash_ref{'feature_id'};
-
-    #find srcfeature_id
-    # this assumes only one level of feature->srcfeature relationship
-    $isth = $factory->{dbh}->prepare ("
-       select srcfeature_id from featureloc
-       where feature_id = $landmark_feature_id
-         ");
-    $isth->execute or $self->throw("finding srcfeature_id failed");
+  if (ref $ref eq 'ARRAY') { #more than one result returned
+    warn "multiple segments--deal with it!";
+    return
+  } elsif (ref $ref eq 'SCALAR') { #one result returned
    
-    $hash_ref = $isth->fetchrow_hashref;
+    my $landmark_feature_id = $$ref;
 
-    $srcfeature_id = $$hash_ref{'srcfeature_id'} ? $$hash_ref{'srcfeature_id'} 
-                                                 : $landmark_feature_id;    
-
-    $sth = $factory->{dbh}->prepare ("
-       select f.name,f.feature_id,f.seqlen,fl.fmin,fl.fmax
-       from feature f, featureloc fl
-       where fl.feature_id = $landmark_feature_id and
-             $srcfeature_id = f.feature_id
-         ");
-    $sth->execute or throw("synonym to assembly query failed");
-
-    $hash_ref = $sth->fetchrow_hashref;
-    
-  } else { # the first query returned one result; now find related data
-    $hash_ref = $sth->fetchrow_hashref; #note this is the statement handle from
-                                        # just above this if structure
-    my $landmark_feature_id = $$hash_ref{'feature_id'};
-
-    #find srcfeature_id
-    # this assumes only one level of feature->srcfeature relationship
-    my $isth = $factory->{dbh}->prepare ("
+    my $sth = $factory->{dbh}->prepare ("
        select srcfeature_id from featureloc
        where feature_id = $landmark_feature_id
          ");
-    $isth->execute or $self->throw("finding srcfeature_id failed");
+    $sth->execute or Bio::Root::Root->throw("finding srcfeature_id failed");
 
-    my $ihash_ref = $isth->fetchrow_hashref;
+    my $hash_ref = $sth->fetchrow_hashref;
+    my $srcfeature_id = $$hash_ref{'srcfeature_id'} ? $$hash_ref{'srcfeature_id'}
+                                                    : $landmark_feature_id;
 
-    if ($$ihash_ref{'srcfeature_id'}) {
-      $srcfeature_id = $$ihash_ref{'srcfeature_id'};
+    warn "srcfeature_id:$srcfeature_id" if DEBUG;
+
+
+    if ($landmark_feature_id == $srcfeature_id) {
+      $sth = $factory->{dbh}->prepare ("
+       select f.name,f.feature_id,f.seqlen
+       from feature f
+       where f.feature_id = $landmark_feature_id
+         ");
+    } else {
       $sth = $factory->{dbh}->prepare ("
        select f.name,f.feature_id,f.seqlen,fl.fmin,fl.fmax
        from feature f, featureloc fl
        where fl.feature_id = $landmark_feature_id and
              $srcfeature_id = f.feature_id
          ");
-      $sth->execute or throw("synonym to assembly query failed");
+    }
+    $sth->execute or Bio::Root::Root->throw("something else failed");
 
-      $hash_ref = $sth->fetchrow_hashref;
+    $hash_ref = $sth->fetchrow_hashref;
 
-    } else {
-      $srcfeature_id = $landmark_feature_id;
+    $name      = $$hash_ref{'name'};
+    my $length = $$hash_ref{'seqlen'};
+
+    if ($$hash_ref{'fmin'}) {
+      $interbase_start = $$hash_ref{'fmin'};
+      $base_start      = $interbase_start +1;
+      $end             = $$hash_ref{'fmax'};
     }
 
+    warn "base_start:$base_start, end:$end, length:$length" if DEBUG;
+
+    $self->Bio::Root::Root::throw("end value greater than length\n") if (defined $end && $end > $length);
+    $end = $end ? int($end) : $length;
+    $length = $end - $interbase_start ;
+
+    return bless {factory       => $factory,
+                  start         => $base_start,
+                  end           => $end,
+                  length        => $length,
+                  srcfeature_id => $srcfeature_id,
+                  name          => $name }, ref $self || $self;
+
+  } else {
+    return; #nothing returned
   }
+}
 
-  $length =  $$hash_ref{'seqlen'};
-  #my $srcfeature_id = $$hash_ref{'feature_id'};
-  $name = $$hash_ref{'name'};
+=head2 _search_by_name
 
-  if ($$hash_ref{'fmin'}) {
-    $interbase_start = $$hash_ref{'fmin'};
-    $base_start      = $interbase_start +1;
-    $end             = $$hash_ref{'fmax'};
+=cut
+
+sub _search_by_name {
+  my ($factory,$quoted_name) = @_;
+
+  my $sth = $factory->{dbh}->prepare ("
+             select name,feature_id,seqlen from feature
+             where lower(name) = $quoted_name  ");
+                                                                                                              
+  $sth->execute or Bio::Root::Root->throw("unable to validate name/length");
+                                                                                                              
+  my $rows_returned = $sth->rows;
+  if ($rows_returned == 0) { #look in synonym for an exact match
+    my $isth = $factory->{dbh}->prepare ("
+       select fs.feature_id from feature_synonym fs, synonym s
+       where fs.synonym_id = s.synonym_id and
+       lower(s.synonym_sgml) = $quoted_name
+        ");
+    $isth->execute or Bio::Root::Root->throw("query for name in synonym failed");
+    $rows_returned = $isth->rows;
+                                                                                                              
+    if ($rows_returned == 0) { #look in dbxref for accession number match
+      $isth = $factory->{dbh}->prepare ("
+         select feature_id from feature_dbxref fd, dbxref d
+         where fd.dbxref_id = d.dbxref_id and
+               lower(d.accession) = $quoted_name ");
+      $isth->execute or Bio::Root::Root->throw("query for accession failed");
+      $rows_returned = $isth->rows;
+                                                                                                              
+      return if $rows_returned == 0;
+
+      if ($rows_returned == 1) {
+        my $hashref = $isth->fetchrow_hashref;
+        my $feature_id = $$hashref{'feature_id'};
+        return \$feature_id;
+      } else {
+        my @feature_ids;
+        while (my $hashref = $isth->fetchrow_hashref) {
+          push @feature_ids, $$hashref{'feature_id'};
+        }
+        return \@feature_ids; 
+      }
+
+    } elsif ($rows_returned == 1) {
+      my $hashref = $isth->fetchrow_hashref;
+      my $feature_id = $$hashref{'feature_id'};
+      return \$feature_id;
+    } else {
+       my @feature_ids;
+       while (my $hashref = $isth->fetchrow_hashref) {
+         push @feature_ids, $$hashref{'feature_id'};
+       }
+       return \@feature_ids;
+    }
+
+  } elsif ($rows_returned == 1) {
+    my $hashref = $sth->fetchrow_hashref;
+    my $feature_id = $$hashref{'feature_id'};
+    return \$feature_id;
+  } else {
+     my @feature_ids;
+     while (my $hashref = $sth->fetchrow_hashref) {
+       push @feature_ids, $$hashref{'feature_id'};
+     }
+     return \@feature_ids;
   }
-
-    warn "length:$length, srcfeature_id:$srcfeature_id\n" if DEBUG;
-
-  $self->throw("end value greater than length\n") if (defined $end && $end > $length);
-  $end = $end ? int($end) : $length;
-  $length = $end - $interbase_start;
-
-  return bless {factory       => $factory,
-                start         => $base_start,
-                end           => $end,
-                length        => $length,
-                srcfeature_id => $srcfeature_id,
-                name          => $name }, ref $self || $self;
 }
 
 

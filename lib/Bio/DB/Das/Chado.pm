@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.32 2003-11-21 19:40:33 scottcain Exp $
+# $Id: Chado.pm,v 1.33 2003-12-11 02:14:24 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -312,7 +312,7 @@ sub get_feature_by_name {
 
   my (@features,$sth);
   
-  if ($class eq 'GO') {
+  if ($class && $class eq 'GO') {
     $name =~ s/[?*]\s*$//;
     $name = '%'.$name.'%'; #put wildcards at beginning and end
 
@@ -334,7 +334,7 @@ sub get_feature_by_name {
 
      $sth->execute($name) or $self->throw("GO query failed"); 
 
-  } elsif ($class eq 'Prop') {
+  } elsif ($class && $class eq 'Prop') {
 
     $name =~ s/[?*]\s*$//;
     $name = '%'.$name.'%'; #put wildcards at beginning and end

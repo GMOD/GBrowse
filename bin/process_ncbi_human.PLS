@@ -29,9 +29,9 @@ ncbi_2_gff.pl - Massage NCBI chromosome annotation into GFF-format suitable for 
 =head1 VERSION (CVS-info)
 
  $RCSfile: process_ncbi_human.PLS,v $
- $Revision: 1.3 $
+ $Revision: 1.4 $
  $Author: lstein $
- $Date: 2002-10-09 12:29:37 $
+ $Date: 2002-11-01 21:14:42 $
 
 
 =head2 SYNOPSIS
@@ -110,7 +110,8 @@ USAGE
 my %FH;
 print "\nPreparing input and output streams:\n";
 foreach (@ARGV) {
-    my ($chrom) = /0?([0-9,XYxy]{1,2})/;
+    my $chrom=basename($_);                       # NG 02-10-24
+    ($chrom) = $chrom=~/0?([0-9,XYxy]{1,2})/;     # NG 02-10-24
     unless($chrom)
     {
 	print "can't get chrom name from filename '$_', SKIPPING";

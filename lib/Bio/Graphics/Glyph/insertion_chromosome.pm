@@ -4,8 +4,6 @@ use strict;
 use vars '@ISA';
 @ISA = 'Bio::Graphics::Glyph::generic';
 
-use GD 'gdTinyFont';
-
 # override draw_component to draw a chromosome
 sub draw_component {
   my $self = shift;
@@ -13,8 +11,9 @@ sub draw_component {
   my ($left,$top) = @_;
   my($x1,$y1,$x2,$y2) = $self->bounds(@_); 
 
-  require GD;
-  my $poly = GD::Polygon->new;
+  my $poly_pkg = $self->polygon_package;
+  my $poly     = $poly_pkg->new();
+
   my $white = $gd->colorAllocate(255,255,255);
   my $black = $gd->colorAllocate(0,0,0);
   my $red   = $gd->colorAllocate(255,0,0);
@@ -53,8 +52,8 @@ sub draw_component {
   $poly->addPt($left+$top_arm-1, $Ty+2);
   $poly->addPt($left+$top_arm-4, $Ty);
 
-  $gd->filledPolygon($poly, $self->fillcolor);
-  $gd->polygon($poly, $self->fgcolor);
+  $gd->filledPolygon($poly,$self->fillcolor);
+  $gd->polygon($poly,$self->fgcolor);
   
   my $seq_id = $self->feature->seq_id;
   my $dbh = $self->feature->factory->features_db;
@@ -85,10 +84,10 @@ sub draw_component {
   my $ltypes = $self->option('linetypes');
   my @line_types = split(/, /, $ltypes);
   while ($sth2->fetch()) {
-   
+
       my $line_color;
       if ($name =~ /$line_types[0]/) {
-	 $line_color = $blue;                 
+	 $line_color = $blue;
       } elsif ($name =~ /$line_types[1]/) {
 	 $line_color = $purple;
       } elsif ($name =~ /$line_types[2]/) {
@@ -127,11 +126,10 @@ sub draw_component {
           $y1 = $Ty+1;
           $y2 = $By-1;
       }
-      $gd->line($left+$pos+10, $y1, $left+$pos+10, $y2, $line_color);      
-  } 
+      $gd->line($left+$pos+10, $y1, $left+$pos+10, $y2, $line_color);
+  }
   $sth2->finish();
   $dbh->disconnect();
-   
 }
 
 

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.56 2004-04-17 01:52:18 allenday Exp $
+# $Id: Segment.pm,v 1.57 2004-04-17 02:29:51 allenday Exp $
 
 =head1 NAME
 
@@ -207,7 +207,7 @@ sub new {
 
         $name = $$hash_ref{'name'};
         my $length = $$hash_ref{'seqlen'};
-        my $type   = $factory->t2n( $$hash_ref{'type_id'} );
+        my $type   = $factory->term2name( $$hash_ref{'type_id'} );
 
         if ( $$hash_ref{'fmin'} ) {
             $interbase_start = $$hash_ref{'fmin'};
@@ -317,10 +317,34 @@ sub _search_by_name {
   }
 }
 
+=head2 class
+
+  Title   : class
+  Usage   : $obj->class($newval)
+  Function: undocumented method by Scott Cain
+  Returns : value of class (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
 sub class {
   my $self = shift;
-  return $self->{class};
+
+  return $self->{'class'} = shift if @_;
+  return $self->{'class'};
 }
+
+=head2 type
+
+  Title   : type
+  Usage   : $obj->type($newval)
+  Function: undocumented method by Scott Cain, aliased to class() for backward compatibility
+  Returns : value of type (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
 
 *type = \&class;
 
@@ -328,14 +352,14 @@ sub class {
 
  Title   : seq_id
  Usage   : $ref = $s->seq_id
- Function: return the ID of the landmark
+ Function: return the ID of the landmark, aliased to name() for backward compatibility
  Returns : a string
  Args    : none
  Status  : Public
 
 =cut
 
-sub seq_id {  shift->{name} } 
+*seq_id = \&name;
 
 =head2 start
 
@@ -395,7 +419,7 @@ Returns the length of the segment.  Always a positive number.
 
 =cut
 
-sub length { shift->{length} } 
+sub length { shift->{length} }
 
 =head2 features
 
@@ -508,13 +532,13 @@ sub features {
 
   my $valid_type = undef;
   if (scalar @$types != 0) {
-    $valid_type = $self->factory->n2t($$types[0]);
+    $valid_type = $self->factory->name2term($$types[0]);
     $self->throw("feature type: '$$types[0]' is not recognized") unless $valid_type;
     $sql_types .= "(f.type_id = $valid_type";
 
     if (scalar @$types > 1) {
       for(my $i=1;$i<(scalar @$types);$i++) {
-       $valid_type = $self->factory->n2t($$types[$i]);
+       $valid_type = $self->factory->name2term($$types[$i]);
         $self->throw("feature type: '$$types[$i]' is not recognized") unless $valid_type;
         $sql_types .= " OR \n     f.type_id = $valid_type";
       }
@@ -575,7 +599,7 @@ sub features {
                        $self,
                        $self->seq_id,
                        $base_start,$stop,
-                       $self->factory->t2n($$hashref{type_id}),
+                       $self->factory->term2name($$hashref{type_id}),
                        $$hashref{strand},
                        $$hashref{name},
                        $$hashref{uniquename},$$hashref{feature_id});  
@@ -681,16 +705,83 @@ the segment was originally generated.
 
 =cut
 
-#'
-
-sub srcfeature_id {shift->{'srcfeature_id'} };
 sub factory {shift->{factory} } 
-sub alphabet {return 'dna'; } 
-sub display_id {shift->{name} };
-sub display_name {shift->{name} } 
-sub accession_number {shift->{name} } 
-sub desc {shift->{name} } 
 
+=head2 srcfeature_id
+
+  Title   : srcfeature_id
+  Usage   : $obj->srcfeature_id($newval)
+  Function: undocumented method by Scott Cain
+  Returns : value of srcfeature_id (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub srcfeature_id {
+  my $self = shift;
+
+  return $self->{'srcfeature_id'} = shift if @_;
+  return $self->{'srcfeature_id'};
+}
+
+=head2 alphabet
+
+  Title   : alphabet
+  Usage   : $obj->alphabet($newval)
+  Function: undocumented method by Scott Cain
+  Returns : scalar 'dna'
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub alphabet {
+  return 'dna';
+}
+
+=head2 display_id
+
+  Function: undocumented method by Scott Cain, referenced to name() for backward compatibility
+
+=cut
+
+*display_id = \&name;
+
+
+=head2 display_name
+
+  Function: undocumented method by Scott Cain, referenced to name() for backward compatibility
+
+=cut
+
+*display_name = \&name;
+
+=head2 accession_number
+
+  Function: undocumented method by Scott Cain, referenced to name() for backward compatibility
+
+=cut
+
+*accession_number = \&name;
+
+=head2 desc
+
+  Function: undocumented method by Scott Cain, referenced to name() for backward compatibility
+
+=cut
+
+*desc = \&name;
+
+=head2 get_feature_stream
+
+  Title   : get_feature_stream
+  Usage   :
+  Function: undocumented method by Scott Cain
+  Returns :
+  Args    :
+
+=cut
 
 sub get_feature_stream {
   my $self = shift;
@@ -712,8 +803,6 @@ sub get_feature_stream {
  Args    : none
  Status  : Public
 
-This method creates a copy of the segment and returns it.
-
 =cut
 
 # deep copy of the thing
@@ -723,9 +812,51 @@ sub clone {
   return bless \%h,ref($self);
 }
 
-sub sourceseq { shift->{sourceseq} }
-*abs_ref  =  \&sourceseq;
+=head2 sourceseq
+
+  Title   : sourceseq
+  Usage   : $obj->sourceseq($newval)
+  Function: undocumented method by Scott Cain
+  Returns : value of sourceseq (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub sourceseq {
+  my $self = shift;
+
+  return $self->{'sourceseq'} = shift if @_;
+  return $self->{'sourceseq'};
+}
+
+=head2 abs_ref
+
+  Function: undocumented method by Scott Cain, aliased to sourceseq() for backward compatibility
+
+=cut
+
+sub abs_ref {
+  my $self = shift;
+
+  return $self->{'abs_ref'} = shift if @_;
+  return $self->{'abs_ref'};
+}
+
+=head2 abs_start
+
+  Function: undocumented method by Scott Cain, aliased to start() for backward compatibility
+
+=cut
+
 *abs_start = \&start;
+
+=head2 abs_end
+
+  Function: undocumented method by Scott Cain, aliased to end() for backward compatibility
+
+=cut
+
 *abs_end   = \&end;
 
 1;

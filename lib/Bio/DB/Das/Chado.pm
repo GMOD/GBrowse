@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.41 2004-04-15 15:38:12 scottcain Exp $
+# $Id: Chado.pm,v 1.42 2004-04-17 02:29:50 allenday Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -50,6 +50,8 @@ probably require several updates over the coming months to keep it working.
 
 =head2 CAVEATS
 
+This is alpha code and doesn't work very well
+
 =head1 FEEDBACK
 
 =head2 Mailing Lists
@@ -92,8 +94,8 @@ use Bio::PrimarySeq;
 use DBI;
 use vars qw($VERSION @ISA);
 
-use constant SEGCLASS      => 'Bio::DB::Das::Chado::Segment';
-use constant DEBUG =>0;
+use constant SEGCLASS => 'Bio::DB::Das::Chado::Segment';
+use constant DEBUG => 0;
 
 $VERSION = 0.11;
 @ISA     = qw(Bio::Root::Root Bio::DasI);
@@ -109,8 +111,7 @@ $VERSION = 0.11;
 
  Function: Open up a Bio::DB::DasI interface to a Chado database
  Returns : a new Bio::DB::Das::Chado object
- Args    : 
-         
+ Args    :
 
 =cut
 
@@ -180,8 +181,8 @@ sub dbh {
 
   Title   : term2name
   Usage   : $obj->term2name($newval)
-  Function: cvterm.cvterm_id to cvterm.name mapping hashref
-  Returns : value of term2name (a scalar)
+  Function: cvterm.cvterm_id to cvterm.name mapping hashref #FIXME -allenday
+  Returns : value of term2name (a scalar) #FIXME -allenday
   Args    : on set, new value (a scalar or undef, optional)
 
 
@@ -189,9 +190,15 @@ sub dbh {
 
 sub term2name {
   my $self = shift;
+  my $arg = shift;
 
-  return $self->{'term2name'} = shift if @_;
-  return $self->{'term2name'};
+  if(ref($arg) eq 'HASH'){
+    return $self->{'term2name'} = $arg;
+  } elsif($arg) {
+    return $self->{'term2name'}{$arg};
+  } else {
+    return $self->{'term2name'};
+  }
 }
 
 
@@ -199,8 +206,8 @@ sub term2name {
 
   Title   : name2term
   Usage   : $obj->name2term($newval)
-  Function: cvterm.name to cvterm.cvterm_id mapping hashref
-  Returns : value of name2term (a scalar)
+  Function: cvterm.name to cvterm.cvterm_id mapping hashref #FIXME -allenday
+  Returns : value of name2term (a scalar) #FIXME -allenday
   Args    : on set, new value (a scalar or undef, optional)
 
 
@@ -208,26 +215,15 @@ sub term2name {
 
 sub name2term {
   my $self = shift;
+  my $arg = shift;
 
-  return $self->{'name2term'} = shift if @_;
-  return $self->{'name2term'};
-}
-
-
-sub n2t {
-  my $self = shift;
-  my $name = shift;
-
-  my %temphash = %{$self->{'name2term'}};
-  return $temphash{$name};
-}
-
-sub t2n {
-  my $self = shift;
-  my $term = shift;
-
-  my %temphash = %{$self->{'term2name'}};
-  return $temphash{$term};
+  if(ref($arg) eq 'HASH'){
+    return $self->{'name2term'} = $arg;
+  } elsif($arg) {
+    return $self->{'name2term'}{$arg};
+  } else {
+    return $self->{'name2term'};
+  }
 }
 
 =head2 segment
@@ -407,7 +403,7 @@ sub get_feature_by_name {
                       );
 
     my $GO_names = join ',', @GO_names;
-    $sth = $self->{dbh}->prepare("
+    $sth = $self->dbh->prepare("
           select fc.feature_id from feature_cvterm fc, cvterm c, cv
           where fc.cvterm_id = c.cvterm_id and
                 cv.cv_id  = c.cv_id and
@@ -423,7 +419,7 @@ sub get_feature_by_name {
     $name =~ s/[?*]\s*$//;
     $name = '%'.$name.'%'; #put wildcards at beginning and end
 
-    $sth = $self->{dbh}->prepare("
+    $sth = $self->dbh->prepare("
           select feature_id from featureprop
           where value ilike ?
       "); 
@@ -437,7 +433,7 @@ sub get_feature_by_name {
 
     $name =~ s/[?*]\s*$/%/;
 
-    $sth = $self->{dbh}->prepare("
+    $sth = $self->dbh->prepare("
        select fs.feature_id from feature_synonym fs, synonym s
        where fs.synonym_id = s.synonym_id and
        s.synonym_sgml ilike ? 
@@ -450,7 +446,7 @@ sub get_feature_by_name {
   }
 
      # prepare sql queries for use in while loops
-  my $isth =  $self->{dbh}->prepare("
+  my $isth =  $self->dbh->prepare("
        select f.feature_id, f.name, f.type_id,f.uniquename,
               fl.fmin,fl.fmax,fl.strand,fl.phase, fl.srcfeature_id
        from feature f, featureloc fl
@@ -460,7 +456,7 @@ sub get_feature_by_name {
        order by fl.srcfeature_id
         ");
 
-  my $jsth = $self->{dbh}->prepare("select name from feature
+  my $jsth = $self->dbh->prepare("select name from feature
                                       where feature_id = ?");
 
     # getting feature info
@@ -472,7 +468,7 @@ sub get_feature_by_name {
 
       warn "$name might be a srcfeature" if DEBUG;
 
-      my $is_srcfeature_query = $self->{dbh}->prepare("
+      my $is_srcfeature_query = $self->dbh->prepare("
          select srcfeature_id from featureloc where srcfeature_id=? limit 1
       ");
       $is_srcfeature_query->execute($$feature_id_ref{'feature_id'})
@@ -516,14 +512,12 @@ sub get_feature_by_name {
       my $interbase_start = $$hashref{'fmin'};
       $base_start = $interbase_start +1;
 
-      #warn "in chado gfbn, type: $t2n{$$hashref{'type_id'}}";
-
       my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                       $self,
                       $parent_segment,
                       $parent_segment->seq_id,
                       $base_start,$$hashref{'fmax'},
-                      $self->t2n($$hashref{'type_id'}),
+                      $self->term2name($$hashref{'type_id'}),
                       $$hashref{'strand'},
                       $$hashref{'name'},
                       $$hashref{'uniquename'},
@@ -579,21 +573,21 @@ sub search_notes {
 #  4. search each word anded together like '%'.$string.'%' --if found, keep and continue
 #  5. search somewhere in analysis like '%'.$string.'%'
 
-#  $self->{dbh}->trace(1);
+#  $self->dbh->trace(1);
 
   my @search_str = split /\s+/, $search_string;
-  my $qsearch_term = $self->{dbh}->quote($search_str[0]);
+  my $qsearch_term = $self->dbh->quote($search_str[0]);
   my $like_str = "( (dbx.accession ~* $qsearch_term OR \n"
         ."           f.name        ~* $qsearch_term) ";
   for (my $i=1;$i<(scalar @search_str);$i++) {
-    $qsearch_term = $self->{dbh}->quote($search_str[$i]);
+    $qsearch_term = $self->dbh->quote($search_str[$i]);
     $like_str .= "and \n";
     $like_str .= "          (dbx.accession ~* $qsearch_term OR \n"
                 ."           f.name        ~* $qsearch_term) ";
   } 
   $like_str .= ")";
 
-  my $sth = $self->{dbh}->prepare("
+  my $sth = $self->dbh->prepare("
      select dbx.accession,f.name,0 
      from feature f, dbxref dbx, feature_dbxref fd
      where
@@ -639,18 +633,18 @@ sub attributes {
 
   #get feature_id
   
-  my $sth = $self->{dbh}->prepare("select feature_id from feature where name = ?");
+  my $sth = $self->dbh->prepare("select feature_id from feature where name = ?");
   $sth->execute($id) or $self->throw("failed to get feature_id in attributes"); 
   my $hashref = $sth->fetchrow_hashref;
   my $feature_id = $$hashref{'feature_id'};
 
   if (defined $tag) {
     my $query = "SELECT attribute FROM gfffeatureatts(?) WHERE type = ?";
-    $sth = $self->{dbh}->prepare($query);
+    $sth = $self->dbh->prepare($query);
     $sth->execute($feature_id,$tag);
   } else {
     my $query = "SELECT type,attribute FROM gfffeatureatts(?)"; 
-    $sth = $self->{dbh}->prepare($query);
+    $sth = $self->dbh->prepare($query);
     $sth->execute($feature_id);
   }
 
@@ -701,7 +695,7 @@ sub absolute {return}
 #this sub doesn't work and just causes annoying warnings
 #sub DESTROY {
 #        my $self = shift;
-#        $self->{dbh}->disconnect;
+#        $self->dbh->disconnect;
 #        return;
 #}
 

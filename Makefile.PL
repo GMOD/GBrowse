@@ -16,12 +16,27 @@ foreach (@argv) {
     die "To customize install locations, provide one or more of the options PREFIX, CONF, HTDOCS, or CGIBIN, as in CONF=/usr/local/apache/conf\n";
   }
 
-  elsif (/($OPTIONS)=(.+)/g) {
+  elsif (/($OPTIONS)=(.+)/og) {
     $OPTIONS{$1} = $2;
   }
 
   else {
     push @ARGV,$_;
+  }
+}
+
+if (-e 'GGB.def' && !%OPTIONS) {
+  print STDERR "I see an existing GGB.def file.  Should I use it to set defaults? ";
+  chomp (my $line = <>);
+  if ($line =~ /^[yY]/) {
+    open F,'GGB.def' or die "GGB.def: $!";
+    while (<F>) {
+      chomp;
+      next if /^\#/;
+      next unless /^($OPTIONS)=(.+)/o;
+      $OPTIONS{$1} = $2;
+    }
+    close F;
   }
 }
 

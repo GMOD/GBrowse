@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::FastaDumper;
-# $Id: FastaDumper.pm,v 1.4 2002-06-06 16:57:32 stajich Exp $
+# $Id: FastaDumper.pm,v 1.5 2002-06-26 05:31:50 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -61,7 +61,7 @@ sub dump {
 	    unless (defined $typev) {  next } 
 	    if( $val =~ /^\#([A-F0-9]{6})/ ) { $val = '#'.$1 } 
 	    ($typev) = ( $typev =~ /^(\S+)\:/);
-	    $colors{$typev} = $val;
+	    $colors{$typev} = $val if defined $typev;
 	} else {
 	    my $typev = $browser->setting($type,'feature');	    
 	    if( defined $typev ) {
@@ -74,37 +74,46 @@ sub dump {
     my @ornament;
 #    warn("segment length is ".$segment->length()."\n");
     foreach my $formattype ( keys %markuptype ) { 
-#	warn("types are ".join(' ', @{ $markuptype{$formattype} } ) . "\n");
+	warn("types are ".join(' ', @{ $markuptype{$formattype} } ) . "\n");
 	my $iterator = $segment->get_seq_stream(-types=>$markuptype{$formattype},
-						-automerge=>0);
-
-	#warn("segment is ".$segment->start ."..". $segment->end."\n");
+						-automerge=>1);
+	warn("segment is ".$segment->start ."..". $segment->end."\n");
 	next unless $iterator;
 	while (my $markupregion = $iterator->next_seq) {
-	    my $start = $markupregion->start - $segment->start;
-	    my $end   = $start + $markupregion->length;
+
+	  # handle both sub seqfeatures and split locations...
+	  my @parts = eval { $markupregion->sub_SeqFeature } ;
+	  @parts = eval { my $id   = $markupregion->location->seq_id;
+			  my @subs = $markupregion->location->sub_Location;
+			  grep {$id eq $_->seq_id} @subs } unless @parts;
+	  @parts = ($markupregion) unless @parts;
+
+	  for my $p (@parts) {
+	    my $start = $p->start - $segment->start;
+	    my $end   = $start + $p->length;
+	    warn "annotating $start..$end";
 	    $start = 0 if( $start < 0);
 
-#	    warn("$markupregion ". $markupregion->location->to_FTstring() . " type is ".$markupregion->primary_tag);
+	    #	    warn("$p ". $p->location->to_FTstring() . " type is ".$p->primary_tag);
 
 	    my $fontadj = $formattype;
 
 	    # capitalization is a special case
 	    if( $formattype == 1  ) {
-#		warn("capitalization for $start - $end");
-		substr($dna,$start,$end - $start) =~ tr/a-z/A-Z/;
-		$fontadj = "$formattype;COLOR=$BACKGROUNDUPPER";
+	      #		warn("capitalization for $start - $end");
+	      substr($dna,$start,$end - $start) =~ tr/a-z/A-Z/;
+	      $fontadj = "$formattype;COLOR=$BACKGROUNDUPPER";
 	    } elsif( $formattype == 5 ) {
-		$fontadj = "$formattype;COLOR=".$colors{$markupregion->primary_tag};
+	      $fontadj = "$formattype;COLOR=".$colors{$p->primary_tag};
 	    }
 	    if( $config->{format} eq 'html') {
-		# for HTML formatting		
+	      # for HTML formatting		
 #		warn("$fontadj $start - $end\n");
 		push @ornament,[$fontadj,$start,$end];
-	    }
+	      }
+	  }
 	}
-    }
-    
+      }
     # HTML formatting
     if ($config->{format} eq 'html') {
 	
@@ -284,9 +293,9 @@ sub ornament {
       }
       push @ret, [$p,$v];
   }
-#  foreach my $t ( @ret )  {
-#      warn(join(" ", @$t), "\n");
-#  }
+  foreach my $t ( @ret )  {
+      warn(join(" ", @$t), "\n");
+  }
   markup($string,[ @ret, @$extra]);
 }
 

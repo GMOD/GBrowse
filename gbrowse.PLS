@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.37 2002-06-26 01:56:37 lstein Exp $
+# $Id: gbrowse.PLS,v 1.38 2002-06-26 05:31:50 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -366,8 +366,7 @@ sub main_display {
   }
   print hidden('ref'),hidden('start'),hidden('stop');
   print settings_table($page_settings,$feature_files);
-  print plugin_table($page_settings,$PLUGINS);
-  print data_source_table($page_settings);
+  print plugin_and_data_source_table($page_settings,$PLUGINS);
   print p(),upload_table($page_settings,$feature_files);
   print p(),external_table($page_settings,$feature_files);
   print end_form();
@@ -768,20 +767,6 @@ sub settings_table {
 		 );
   autoEscape(1);
   return $sTable;
-}
-
-sub data_source_table {
-  my $settings = shift;
-  return unless $CONFIG->sources > 1;
-  return table({-border=>0,-width=>$settings->{width}},
-	       TR({-class=>'searchtitle'},
-		  th('Data Source:'),
-		  td({-colspan=>2},
-		     popup_menu(-name   => 'source',
-				-values => [sort $CONFIG->sources],
-				-labels => { map {$_ => $CONFIG->description($_)} $CONFIG->sources},
-				-default => $CONFIG->source
-			       ))));
 }
 
 sub annotation_help {
@@ -1326,6 +1311,7 @@ sub load_plugin_annotations {
     my $name = "plugin:".$PLUGINS->{$p}->name;
     next unless $settings->{features}{$name}{visible};
     my $features = $PLUGINS->{$p}->annotate($segment) or next;
+    $features->name($name);
     $feature_files->{$name} = $features;
   }
 }
@@ -1844,8 +1830,10 @@ sub configure_plugins {
   }
 }
 
-sub plugin_table {
+sub plugin_and_data_source_table {
   my ($settings,$plugins) = @_;
+  my $sources = $CONFIG->sources > 1;
+
   my %verbs = (dumper    => 'Dump',
 	       finder    => 'Find',
 	       annotator => 'Annotate');
@@ -1860,14 +1848,28 @@ sub plugin_table {
 		    TR({-class=>'searchtitle'},
 		       th({-align=>'left'},
 			  'Dumps, Searches and other Operations:'),
-		       td(popup_menu(-name=>'plugin',
+		       $sources ? th({-align=>'left'},'Data Source:') : th('&nbsp;'),
+		      ),
+		    TR({-class=>'searchtitle'},
+		       td({-colspan=>1,-align=>'left'},
+			  popup_menu(-name=>'plugin',
 				     -values=>\@plugins,
 				     -labels=>\%labels,
 				    ),'&nbsp;',
-			  submit(-name=>'plugin_action',-value=>'Go!')),
-		       td(submit(-name=>'plugin_action',-value=>'Configure...'),'&nbsp;',
-			  submit(-name=>'plugin_action',-value=>'About...'))
-		      ));
+			  submit(-name=>'plugin_action',-value=>'About...'),'&nbsp;',
+			  submit(-name=>'plugin_action',-value=>'Configure...'),'&nbsp;',
+			  submit(-name=>'plugin_action',-value=>'Go!'),
+			 ),
+		       td({-colspan=>1,-align=>'left'},
+			  $sources ?
+			  popup_menu(-name   => 'source',
+				     -values => [sort $CONFIG->sources],
+				     -labels => { map {$_ => $CONFIG->description($_)} $CONFIG->sources},
+				     -default => $CONFIG->source
+				    )
+			 : '&nbsp;')
+		      )
+		   );
   $table;
 }
 
@@ -1908,9 +1910,11 @@ sub do_plugin_find {
 sub do_plugin_configure {
   my $plugin = shift;
   my $p = $PLUGINS->{$plugin} or return;
-  my $action_label = $p->type eq 'finder' ? 'Find' : 'Configure';
+  my $action_label = $p->type eq 'finder' ? 'Find'
+    : $p->type eq 'annotator' ? 'Configure'
+    : 'Go!';
 
-  print h1($action_label,$p->name);
+  print h1($p->type eq 'finder' ? 'Find' : 'Configure',$p->name);
   my $config_html = $p->configure_form;
 
   print start_form(),

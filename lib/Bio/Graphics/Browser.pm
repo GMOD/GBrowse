@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.24 2002-06-26 01:56:37 lstein Exp $
+# $Id: Browser.pm,v 1.25 2002-06-26 05:31:50 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -533,7 +533,8 @@ sub render_html {
 
   my ($width,$height) = $image->getBounds;
   my $url     = $self->generate_image($image);
-  my $img     = img({-src=>$url,-align=>'CENTER',-usemap=>'#hmap',-width => $width,-height => $height,-border=>0});
+  my $img     = img({-src=>$url,-align=>'CENTER',-usemap=>'#hmap',-width=>$width,
+		     -height=>$height,-border=>0,-name=>'detailedView'});
   my $img_map = $self->make_map($map,$do_centering_map) if $do_map;
   return wantarray ? ($img,$img_map) : join "<br>",$img,$img_map;
 }
@@ -589,7 +590,6 @@ sub make_map {
   my $self = shift;
   my $boxes = shift;
   my $centering_map = shift;
-
   my $map = qq(<map name="hmap">\n);
 
   # use the scale as a centering mechanism
@@ -603,9 +603,9 @@ sub make_map {
       next;
     }
     my $href  = $self->make_href($_->[0]) or next;
-    my $alt   = $self->make_alt($_->[0]);
-    $map .= qq(<AREA SHAPE="RECT" COORDS="$_->[1],$_->[2],$_->[3],$_->[4]" 
-	       HREF="$href" ALT="$alt" TITLE="$alt">\n);
+    my $alt   = $self->make_title($_->[0]);
+    $map .= qq(<area shape="RECT" coords="$_->[1],$_->[2],$_->[3],$_->[4]"
+	       href="$href" title="$alt">\n);
   }
   $map .= "</map>\n";
   $map;
@@ -640,8 +640,8 @@ sub make_centering_map {
     my $url = url(-relative=>1,-path_info=>1);
     $url .= "?ref=$ref;start=$start;stop=$stop;source=$source;nav4=1;plugin=$plugin";
     push @lines,
-      qq(<AREA SHAPE="RECT" COORDS="$x1,$ruler->[2],$x2,$ruler->[4]"
-	 HREF="$url" ALT="center" TITLE="center">\n);
+      qq(<area shape="RECT" COORDS="$x1,$ruler->[2],$x2,$ruler->[4]"
+	 href="$url" title="recenter">\n);
   }
   return join '',@lines;
 }
@@ -657,17 +657,11 @@ sub make_href {
   }
 }
 
-sub make_alt {
-  my $slef    = shift;
+sub make_title {
+  my $self    = shift;
   my $feature = shift;
-
-  my $label = eval {$feature->class .":".$feature->info} || return '';
-  if ($feature->method =~ /^(similarity|alignment)$/) {
-    $label .= " ".commas($feature->target->start)."..".commas($feature->target->end);
-  } else {
-    $label .= " ".commas($feature->start)."..".commas($feature->stop);
-  }
-  return $label;
+  return $feature->make_title if $feature->can('make_title');
+  return $self->config->make_title($feature);
 }
 
 # Generate the image and the box list, and return as a two-element list.
@@ -817,7 +811,8 @@ sub image_and_map {
     my $file = $feature_files->{$tracks->[$track]} or next;
     ref $file or next;
     $track += $offset + 1;
-    my $inserted = $file->render($panel,$track,$options->{$file});
+    my $name = $file->name;
+    my $inserted = $file->render($panel,$track,$options->{$name},$max_bump,$max_labels);
     $offset += $inserted;
   }
 
@@ -1361,6 +1356,31 @@ sub make_link {
   return unless $link;
   return $link->($feature) if ref($link) eq 'CODE';
   return $self->link_pattern($link,$feature);
+}
+
+# make the title of an image area
+sub make_title {
+  my $self = shift;
+  my $feature = shift;
+  my $title;
+ TRY: {
+    my $label    = $self->feature2label($feature) or last TRY;
+    my $link     = $self->code_setting($label,'title');
+    $link      ||= $self->code_setting(general=>'title');
+    $link or last TRY;
+    $title       = $link->($feature) if ref($link) eq 'CODE';
+    $title     ||= $self->link_pattern($link,$feature);
+  }
+
+  $title ||= eval {
+    if ($feature->method =~ /^(similarity|alignment)$/i) {
+      $feature->seq_id.":".$feature->start."..".$feature->stop.' '.$feature->info.":".$feature->target->start."..".$feature->target->end;
+    } else {
+      $feature->class .":".$feature->info . " ".$feature->seq_id.':'.$feature->start."..".$feature->stop;
+    }
+  };
+
+  return $title;
 }
 
 

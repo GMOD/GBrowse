@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::RestrictionAnnotator;
-# $Id: RestrictionAnnotator.pm,v 1.5 2002-06-26 01:56:37 lstein Exp $
+# $Id: RestrictionAnnotator.pm,v 1.6 2002-06-26 05:31:50 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -89,8 +89,6 @@ sub annotate {
 				    key     => "$type restriction site",
 				    fgcolor => $COLORS[$i % @COLORS],
 				    bgcolor => $COLORS[$i % @COLORS],
-				    bump    => 1,
-				    label   => 1,
 				    point   => 0,
 				    orient  => 'N',
 				   });

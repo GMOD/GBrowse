@@ -446,7 +446,16 @@ The following [GENERAL] options are recognized:
    this.  It is also possible to declare a subroutine to compute the
    proper URL dynamically.  See COMPUTED OPTIONS for details.
 
-   o) image widths
+   o) title
+
+   The title option controls the "tooltips" text that pops up when
+   the mouse hovers over a glyph in certain browsers.  The rules
+   for generating titles are the same as the "link" option discussed
+   in section (n).  The "title" option can also be computed dynamically.
+   See COMPUTED OPTIONS for details.
+   
+
+   p) image widths
 
    The image widths option controls the set of image sizes to offer
    the user.  Its value is a space-delimited list of pixel widths.
@@ -454,12 +463,12 @@ The following [GENERAL] options are recognized:
    depends on the number of tracks and features, and cannot be
    controlled.
 
-   p) default width
+   q) default width
 
    The default width is the image width to start off with when the
    user invokes the browser for the first time.  The default is 800.
 
-   q) default features
+   r) default features
 
    The default features option is a space-delimited list of tracks
    to turn on by default.  You will probably need to change this.
@@ -467,88 +476,88 @@ The following [GENERAL] options are recognized:
 
       default features = Genes ORFs tRNAs
 
-    r) max segment
+   s) max segment
 
-    The max segment option sets an upper bound on the maximum size DNA
-    segment that will be displayed on the detailed view.  Its value is
-    in base pairs.  Above this limit, the user will be prompted to
-    select a smaller region on the birds-eye view.  You will probably
-    want to adjust this.
+   The max segment option sets an upper bound on the maximum size DNA
+   segment that will be displayed on the detailed view.  Its value is
+   in base pairs.  Above this limit, the user will be prompted to
+   select a smaller region on the birds-eye view.  You will probably
+   want to adjust this.
 
-    s) default segment
+   t) default segment
 
-    The default segment option sets the width of the segment (bp) that
-    will be displayed when the user clicks on the birds-eye view
-    without previously having set a desired magnification.  You may
-    want to adjust this value.
+   The default segment option sets the width of the segment (bp) that
+   will be displayed when the user clicks on the birds-eye view
+   without previously having set a desired magnification.  You may
+   want to adjust this value.
 
-    t) zoom levels
+   u) zoom levels
 
-    GBrowse allows unlimited zoom levels.  This option selects
-    the width of each level, in bp.  For example:
+   GBrowse allows unlimited zoom levels.  This option selects the
+   width of each level, in bp.  For example:
 
       zoom levels = 1000 2000 5000 10000 20000 40000 100000 200000
 
-    u) low res
+   v) low res
 
-    GBrowse currently supports limited semantic zooming in which the
-    appearance of certain glyphs changes as the magnification increases.
-    The "low res" option specifies the point at which the detailed view
-    switches from high resolution to low resolution, and is measured in 
-    base pairs.
+   GBrowse currently supports limited semantic zooming in which the
+   appearance of certain glyphs changes as the magnification
+   increases.  The "low res" option specifies the point at which the
+   detailed view switches from high resolution to low resolution, and
+   is measured in base pairs.
 
-    For example, this option
+   For example, this option
 
        low res = 100000
 
-    tells GBrowse to switch into low resolution mode when the number
-    of base pairs shown on the detailed screen is equal to or greater than
-    100,000 bp.
+   tells GBrowse to switch into low resolution mode when the number of
+   base pairs shown on the detailed screen is equal to or greater than
+   100,000 bp.
 
-    v) overview units
+   w) overview units
 
-    This option controls the units that will be used on the scale for
-    the birds-eye view display.  Possible values are "bp" (base
-    pairs), "K" (kilobases), "M" (megabases), and "G" (gigabases).
-    If this option is omitted, the browser will guess the most
-    appropriate unit.
+   This option controls the units that will be used on the scale for
+   the birds-eye view display.  Possible values are "bp" (base pairs),
+   "K" (kilobases), "M" (megabases), and "G" (gigabases).  If this
+   option is omitted, the browser will guess the most appropriate
+   unit.
 
 
-    w) overview bgcolor
+   x) overview bgcolor
 
-    This is the color for the background of the birds-eye view.
+   This is the color for the background of the birds-eye view.
 
-    x) detailed bgcolor
+   y) detailed bgcolor
 
-    This is the color for the background of the detailed view.
+   This is the color for the background of the detailed view.
 
-    y) header
+   z) header
 
-    This is a header to print at the top of the browser page.  It is
-    any valid HTML, and can span multiple lines provided that the
-    continuation lines begin with white space.
+   This is a header to print at the top of the browser page.  It is
+   any valid HTML, and can span multiple lines provided that the
+   continuation lines begin with white space.
 
-    It is also possible to place an anonymous Perl subroutine here.
-    The code will be invoked during preparation of the page and must
-    return a string value to use as the header.  See COMPUTED OPTIONS
-    for details.
+   It is also possible to place an anonymous Perl subroutine here.
+   The code will be invoked during preparation of the page and must
+   return a string value to use as the header.  See COMPUTED OPTIONS
+   for details.
 
-    Example:
+   Example:
 
     header = <h1>Welcome to the Volvox Sequence Page</h1>
 
-    z) footer
+   aa) footer
 
-    This is a footer to print at the top of the browser page.  It is
-    any valid HTML, and can span multiple lines provided that the
-    continuation lines begin with white space.
+   This is a footer to print at the top of the browser page.  It is
+   any valid HTML, and can span multiple lines provided that the
+   continuation lines begin with white space.
 
-    It is also possible to place an anonymous Perl subroutine here.
-    The code will be invoked during preparation of the page and must
-    return a string value to use as the header.  See COMPUTED OPTIONS
-    for details.
+   It is also possible to place an anonymous Perl subroutine here.
+   The code will be invoked during preparation of the page and must
+   return a string value to use as the header.  See COMPUTED OPTIONS
+   for details.
 
-    Example:
+   Example:
 
     footer = <hr>
 	<table width="100%">
@@ -561,35 +570,33 @@ The following [GENERAL] options are recognized:
 	</TR>
 	</table>
 
-     aa) examples
+    ab) examples
 
-     You can provide GBrowse with some canned examples of "interesting
-     regions" for the user to click on.  The examples option, if
-     present, provides a space-delimited list of interesting regions.
-     For example:
+    You can provide GBrowse with some canned examples of "interesting
+    regions" for the user to click on.  The examples option, if
+    present, provides a space-delimited list of interesting regions.
+    For example:
 
        examples = II  NPY1 NAB2 Orf:YGL123W
 
 
-     bb) automatic classes
+    ac) automatic classes
 
-     When the user types in a search string that is not qualified by a
-     class (as in EST:yk1234.5), GBrowse will automatically search for a
-     matching feature of class "Sequence".  You can have it search for
-     the name in other classes as well by defining the "automatic
-     classes" option.  
+    When the user types in a search string that is not qualified by a
+    class (as in EST:yk1234.5), GBrowse will automatically search for
+    a matching feature of class "Sequence".  You can have it search
+    for the name in other classes as well by defining the "automatic
+    classes" option.
 
-     Example:
+    Example:
 
 	automatic classes = Symbol Gene Clone
  
-     When the user types in "hb3", the browser will search first for a
-     Sequence feature of class hb3, followed in turn by matching
-     features in Symbol, Gene and Clone.  The search stops when the
-     first match is found.  Otherwise, the browser will proceed to a
-     full text search of all the comment fields.
-
----
+    When the user types in "hb3", the browser will search first for a
+    Sequence feature of class hb3, followed in turn by matching
+    features in Symbol, Gene and Clone.  The search stops when the
+    first match is found.  Otherwise, the browser will proceed to a
+    full text search of all the comment fields.
 
 B2. Track Sections
 
@@ -810,8 +817,8 @@ B4. Computed Options
 
 Some options can be computed at run time by using Perl subroutines as
 their values.  Currently this is limited to the values of the "link",
-"header" and "footer" options, but may be made more general in the
-future.
+"title", "header" and "footer" options, but may be made more general
+in the future.
 
 You need to know the Perl programming language to take advantage of
 this.  The general format of this type of option is:

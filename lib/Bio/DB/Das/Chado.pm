@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.12 2003-01-27 20:45:17 scottcain Exp $
+# $Id: Chado.pm,v 1.13 2003-01-30 17:58:15 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -7,9 +7,18 @@ Bio::DB::Das::Chado - DAS-style access to a chado database
 
 =head1 SYNOPSIS
 
+NOTES:  required methods:
+        new
+        segment
+        features
+        types
+        get_seq_stream  NEEDED?  conv w/Lincoln on 12/2 leads me to "No"
+
+
+
   # Open up a feature database
  $db = Bio::DB::Das::Chado->new(
-				 driver => 'postgres',
+				 driver   => 'postgres',
 				 dbname => 'chado',
 				 host   => 'localhost',
 				 user   => 'scain',
@@ -17,7 +26,7 @@ Bio::DB::Das::Chado - DAS-style access to a chado database
 				 port   => undef,
 				) or die;
 
-  @segments = $db->segment(-name  => 'X',
+  @segments = $db->segment(-name  => 'NT_29921.4',
                            -start => 1,
 			   -end   => 1000000);
 
@@ -32,10 +41,10 @@ Bio::DB::Das::Chado - DAS-style access to a chado database
 		);
 
 
-  # get all feature types (not currently implemented)
+  # get all feature types
   @types   = $db->types;
 
-  # count types (not currently implemented)
+  # count types
   %types   = $db->types(-enumerate=>1);
 
   @feature = $db->get_feature_by_name($class=>$name);
@@ -61,8 +70,7 @@ User feedback is an integral part of the evolution of this and other
 Bioperl modules. Send your comments and suggestions preferably to one
 of the Bioperl mailing lists.  Your participation is much appreciated.
 
-  bioperl-l@bio.perl.org, and
-  gmod-schema@lists.sourceforge.net
+  bioperl-l@bio.perl.org
 
 =head2 Reporting Bugs
 
@@ -119,7 +127,7 @@ $VERSION = 0.01;
 
  Function: Open up a Bio::DB::DasI interface to a Chado database
  Returns : a new Bio::DB::Das::Chado object
- Args    : see above
+ Args    : ???
          
 
 =cut
@@ -341,6 +349,7 @@ sub get_feature_by_name {
        order by fl.srcfeature_id
         ");
 
+
     my $jsth = $self->{dbh}->prepare("select name from gbrowse_assembly
                                       where feature_id = ?");
 
@@ -369,7 +378,7 @@ sub get_feature_by_name {
         my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                       $self,
                       $parent_segment,
-                      "",
+                      $parent_segment->seq_id,
                       $$hashref{'nbeg'},$$hashref{'nend'},
                       $termname{$$hashref{'type_id'}},
                       $$hashref{'strand'},
@@ -394,7 +403,7 @@ sub get_feature_by_name {
  Function: full-text search on features, ENSEMBL-style
  Returns : an array of [$name,$description,$score]
  Args    : see below
- Status  : Not implemented 
+ Status  : public
 
 This routine performs a full-text search on feature attributes (which
 attributes depend on implementation) and returns a list of

@@ -55,18 +55,17 @@ The 11 arguments are positional:
                       sequence, which has its own strandedness!)
   $group        this feature's group (a GFF holdover)
   $db_id        this feature's internal database ID (feature.feature_id)
-  $feature_id	an internal chado database id
 
 =cut
 
 # 'This is called when creating a feature from scratch.  It does not have
 # an inherited coordinate system.
-sub new {
+sub new { warn "in sub new {\n";
   my $package = shift;
   my ($factory,
       $parent,
       $srcseq,
-      $start,$stop,
+      $start,$end,
       $type,
       $strand,
       $group,       # ie, gene name  (GFF legacy)
@@ -74,19 +73,27 @@ sub new {
 
   my $self = bless { },$package;
 
-  ($start,$stop) = ($stop,$start) if defined($strand) and $strand == -1;
+  ($start,$end) = ($end,$start) if defined($strand) and $strand == -1;
 
-  @{$self}{qw(factory parent sourceseq start stop strand )} =
-    ($factory,$parent,$srcseq,$start,$stop,$strand);
+  @{$self}{qw(factory parent sourceseq start end strand )} =
+    ($factory,$parent,$srcseq,$start,$end,$strand);
 
   @{$self}{qw(type group db_id absolute)} =
     ($type,$group,$db_id,$factory->{absolute});
 
-  @{$self}{qw(feature_id srcfeature_id)} = 
+  @{$self}{qw(feature_id srcfeature_id )} = 
     ($feature_id,$parent->{srcfeature_id});
 
   $self;
 }
+
+sub length {
+  my $self = shift;
+  return $self->end - $self->start +1 ;
+}
+
+
+sub seq_id { shift->{sourceseq} }
 
 =head2 group
 
@@ -102,7 +109,7 @@ hold over from GFF and is mostly synonymous with name.
 
 =cut
 
-sub group  {
+sub group  { warn "in sub group  {\n";
   my $self = shift;
   my $d    = $self->{group};
   $self->{group} = shift if @_;
@@ -123,7 +130,7 @@ This method gets the feature type (analogous to method, like in GFF).
 
 =cut
 
-sub method {
+sub method { warn "in sub method {\n";
   my $self = shift;
   return $self->{type}
 }
@@ -144,7 +151,7 @@ considerations).
 
 =cut
 
-sub strand {
+sub strand { warn "in sub strand {\n";
   my $self = shift;
   return 0 unless $self->{strand};
   return $self->{strand};
@@ -163,7 +170,7 @@ Bio::SeqFeatureI compatibility.
 
 =cut
 
-sub display_name  {
+sub display_name  { warn "in sub display_name  {\n";
   my $self = shift;
   return $self->{group}
 }
@@ -187,7 +194,7 @@ segments().
 
 =cut
 
-sub sub_SeqFeature {
+sub sub_SeqFeature { warn "in sub sub_SeqFeature {\n";
   my $self = shift;
   my $type = shift;
 
@@ -208,7 +215,7 @@ sub sub_SeqFeature {
 #  $self->{factory}->{dbh}->trace(2);
 
   my $sth = $self->{factory}->{dbh}->prepare("
-    select child.feature_id, child.name, child.type_id,
+    select child.feature_id, child.name, child.type_id, parent.name as pname,
            childloc.nbeg, childloc.nend, childloc.strand, childloc.phase
     from feature as parent
     inner join
@@ -241,7 +248,7 @@ sub sub_SeqFeature {
     my $feat = Bio::DB::Das::Chado::Segment::Feature->new (
                        $self->{factory},
                        $self,
-                       '',
+                       $$hashref{pname},
                        $start,$stop,
                        $termname{$$hashref{type_id}},
                        $$hashref{strand},
@@ -279,7 +286,7 @@ internally by aggregators, but is available for public use as well.
 
 =cut
 
-sub add_subfeature {
+sub add_subfeature { warn "in sub add_subfeature {\n";
   my $self    = shift;
 #  my $feature = shift;
 #  my $type = $feature->method;
@@ -301,7 +308,7 @@ sub add_subfeature {
 
 =cut
 
-sub attach_seq { # nothing!?! what is this for (also probably nothing
+sub attach_seq { # nothing!?! what is this for (also probably nothing warn "in sub attach_seq { # nothing!?! what is this for (also probably nothing\n";
                  }
 
 
@@ -316,7 +323,7 @@ sub attach_seq { # nothing!?! what is this for (also probably nothing
 
 =cut
 
-sub location {
+sub location { warn "in sub location {\n";
    my $self = shift;
    require Bio::Location::Split unless Bio::Location::Split->can('new');
    require Bio::Location::Simple unless Bio::Location::Simple->can('new');
@@ -349,7 +356,7 @@ sub location {
 
 =cut
 
-sub entire_seq {
+sub entire_seq { warn "in sub entire_seq {\n";
     my $self = shift;
     $self->SUPER::seq();
 }
@@ -376,7 +383,7 @@ sorted order by their start tposition.
 
 #'
 
-sub merged_segments {
+sub merged_segments { warn "in sub merged_segments {\n";
   my $self = shift;
   my $type = shift;
   $type ||= '';    # prevent uninitialized variable warnings
@@ -435,7 +442,7 @@ This method returns a copy of the feature.
 
 =cut
 
-sub clone {
+sub clone { warn "in sub clone {\n";
   my $self = shift;
   my $clone = $self->SUPER::clone;
 
@@ -472,7 +479,7 @@ with sub_SeqFeature().
 
 =cut
 
-sub sub_types {
+sub sub_types { warn "in sub sub_types {\n";
   my $self = shift;
   my $subfeat = $self->{subfeatures} or return;
   return keys %$subfeat;
@@ -507,15 +514,15 @@ primary_tag(), source_tag(), all_tags(), has_tag(), each_tag_value().
 
 =cut
 
-sub primary_tag {
+sub primary_tag { warn "in sub primary_tag {\n";
    shift->{type};
 }
 
-sub source_tag  {
+sub source_tag  { warn "in sub source_tag  {\n";
   # returns source (manual curation, computation method, etc
   # not sure where to get this.
 }
-sub all_tags {
+sub all_tags { warn "in sub all_tags {\n";
   my $self = shift;
   my @tags = keys %CONSTANT_TAGS;
   # autogenerated methods
@@ -526,13 +533,13 @@ sub all_tags {
 }
 *get_all_tags = \&all_tags;
 
-sub has_tag {
+sub has_tag { warn "in sub has_tag {\n";
   my $self = shift;
   my $tag  = shift;
   my %tags = map {$_=>1} $self->all_tags;
   return $tags{$tag};
 }
-sub each_tag_value {
+sub each_tag_value { warn "in sub each_tag_value {\n";
   my $self = shift;
   my $tag  = shift;
   return $self->$tag() if $CONSTANT_TAGS{$tag};
@@ -540,7 +547,7 @@ sub each_tag_value {
   return $self->$tag();  # try autogenerated tag
 }
 
-sub AUTOLOAD {
+sub AUTOLOAD { warn "in sub AUTOLOAD {\n";
   my($pack,$func_name) = $AUTOLOAD=~/(.+)::([^:]+)$/;
   my $sub = $AUTOLOAD;
   my $self = $_[0];
@@ -573,7 +580,7 @@ enclosing feature.
 
 # adjust a feature so that its boundaries are synched with its subparts' boundaries.
 # this works recursively, so subfeatures can contain other features
-sub adjust_bounds {
+sub adjust_bounds { warn "in sub adjust_bounds {\n";
   my $self = shift;
   my $g = $self->{group};
 
@@ -630,7 +637,7 @@ This method is called internally by merged_segments().
 =cut
 
 # sort features
-sub sort_features {
+sub sort_features { warn "in sub sort_features {\n";
   my $self = shift;
   return if $self->{sorted}++;
   my $strand = $self->strand or return;
@@ -661,7 +668,7 @@ is called by the overloaded "" operator.
 
 =cut
 
-sub asString {
+sub asString { warn "in sub asString {\n";
   my $self = shift;
   my $type = $self->type;
   my $name = $self->group;
@@ -672,7 +679,7 @@ sub asString {
 #  return join '/',$id,$type,$self->SUPER::asString;
 }
 
-sub name {
+sub name { warn "in sub name {\n";
   my $self =shift;
   return $self->group || $self->SUPER::name;
 }

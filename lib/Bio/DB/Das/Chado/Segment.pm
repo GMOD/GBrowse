@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.13 2003-01-27 20:45:17 scottcain Exp $
+# $Id: Segment.pm,v 1.14 2003-01-30 17:58:16 scottcain Exp $
 
 =head1 NAME
 
@@ -30,10 +30,10 @@ Bio::DB::Das::Chado::Segment - DAS-style access to a chado database
 
 =head1 DESCRIPTION
 
-Bio::DB::Das::Chado::Segment is a simplified alternative interface to
+Bio::DB::Das::Segment is a simplified alternative interface to
 sequence annotation databases used by the distributed annotation
 system. In this scheme, the genome is represented as a series of
-landmarks.  Each Bio::DB::Das::Chado::Segment object ("segment") corresponds
+landmarks.  Each Bio::DB::Das::Segment object ("segment") corresponds
 to a genomic region defined by a landmark and a start and end position
 relative to that landmark.  A segment is created using the Bio::DasI
 segment() method.
@@ -96,10 +96,10 @@ use constant DEBUG => 0;
 use vars '@ISA','$VERSION','$ASSEMBLY_TYPE';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI);
 $VERSION = 0.01;
-$ASSEMBLY_TYPE = 'arm'; #this should really be gotten from a config file
+$ASSEMBLY_TYPE = 'arm';
 
 # construct a virtual segment that works in a lazy way
-sub new {
+sub new { warn "in new {\n";
  #validate that the name/accession is valid, and start and end are valid,
  #then return a new segment
 
@@ -126,9 +126,9 @@ sub new {
   my $cvterm_id = $factory->{cvterm_id};
 
   my $sth = $factory->{dbh}->prepare ("
-             select feature_id,seqlen from gbrowse_assembly
+             select name,feature_id,seqlen from gbrowse_assembly
              where type_id = ". $$cvterm_id{$ASSEMBLY_TYPE} . " and
-                   name = $quoted_name  ");
+                   name ilike $quoted_name  ");
 
     warn "prepared:$sth\n" if DEBUG ;
 
@@ -136,9 +136,43 @@ sub new {
 
     warn "executed\n" if DEBUG;
 
-  my $hash_ref = $sth->fetchrow_hashref;
-  my $length =  $$hash_ref{'seqlen'};
+  my $hash_ref = {};
+  my $length;
+  my $rows_returned = $sth->rows;
+  if ($rows_returned < 1) { #look in synonym or an exact match
+    my $isth = $factory->{dbh}->prepare ("
+       select fs.feature_id from feature_synonym fs, synonym s
+       where fs.synonym_id = s.synonym_id and
+       synonym ilike $quoted_name
+        "); 
+    $isth->execute or $self->throw("query for name failed"); 
+    $rows_returned = $isth->rows;
+    return if $rows_returned != 1;
+
+    $hash_ref = $isth->fetchrow_hashref;
+
+    my $landmark_feature_id = $$hash_ref{'feature_id'};
+
+    $sth = $factory->{dbh}->prepare ("
+       select ga.name,ga.feature_id,ga.seqlen,fl.nbeg,fl.nend
+       from gbrowse_assembly ga, featureloc fl
+       where fl.feature_id = $landmark_feature_id and
+             fl.srcfeature_id = ga.feature_id
+         ");
+    $sth->execute or throw("synonym to assembly query failed");
+    
+  }
+
+  $hash_ref = $sth->fetchrow_hashref;
+  $length =  $$hash_ref{'seqlen'};
   my $srcfeature_id = $$hash_ref{'feature_id'};
+  $name = $$hash_ref{'name'};
+
+  if ($$hash_ref{'nbeg'}) {
+    $start = $$hash_ref{'nbeg'};
+    $end   = $$hash_ref{'nend'};
+    ($end,$start) = ($start,$end) if $start > $end;
+  }
 
     warn "length:$length, srcfeature_id:$srcfeature_id\n" if DEBUG;
 
@@ -167,7 +201,7 @@ sub new {
 
 =cut
 
-sub seq_id {  shift->{name} }
+sub seq_id {  shift->{name} } warn "in seq_id {  shift->{name} }\n";
 
 =head2 start
 
@@ -183,7 +217,7 @@ to low() for Gadfly compatibility.
 
 =cut
 
-sub start { shift->{start} }
+sub start { shift->{start} } warn "in start { shift->{start} }\n";
 
 =head2 end
 
@@ -199,7 +233,7 @@ high() for Gadfly compatibility.
 
 =cut
 
-sub end   { shift->{end} }
+sub end   { shift->{end} } warn "in end   { shift->{end} }\n";
 
 =head2 length
 
@@ -214,7 +248,7 @@ Returns the length of the segment.  Always a positive number.
 
 =cut
 
-sub length { shift->{length} }
+sub length { shift->{length} } warn "in length { shift->{length} }\n";
 
 =head2 features
 
@@ -281,7 +315,7 @@ is defined, then -callback is ignored.
 
 =cut
 
-sub features {
+sub features { warn "in features {\n";
   my $self = shift;
 
     warn "Segment->features() args:@_\n" if DEBUG;
@@ -422,7 +456,7 @@ Returns the sequence for this segment as a simple string.
 
 =cut
 
-sub seq {
+sub seq { warn "in seq {\n";
   my $self = shift;
 
   my $feat_id = $self->{srcfeature_id};
@@ -453,15 +487,15 @@ the segment was originally generated.
 
 #'
 
-sub factory {shift->{factory} }
-sub alphabet {return 'dna'; }
-sub display_id {shift->{name} }
-sub display_name {shift->{name} }
-sub accession_number {shift->{name} }
-sub desc {shift->{name} }
+sub factory {shift->{factory} } warn "in factory {shift->{factory} }\n";
+sub alphabet {return 'dna'; } warn "in alphabet {return 'dna'; }\n";
+sub display_id {shift->{name} } warn "in display_id {shift->{name} }\n";
+sub display_name {shift->{name} } warn "in display_name {shift->{name} }\n";
+sub accession_number {shift->{name} } warn "in accession_number {shift->{name} }\n";
+sub desc {shift->{name} } warn "in desc {shift->{name} }\n";
 
 
-sub get_feature_stream {
+sub get_feature_stream { warn "in get_feature_stream {\n";
   my $self = shift;
   my @features = $self->features;
     warn "using get_feature_stream\n" if DEBUG;

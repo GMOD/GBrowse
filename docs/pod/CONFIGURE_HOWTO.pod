@@ -26,7 +26,9 @@ Project (L<http://www.gmod.org/>).
 
 =item I. THE BioMOBY BROWSER
 
-=item J. FURTHER INFORMATION
+=item J. BioMOBY Services
+
+=item K. FURTHER INFORMATION
 
 =back
 
@@ -2097,7 +2099,110 @@ searches for papers about that organism.
 
 =cut
 
-=head1 J. FURTHER INFORMATION
+=head1 J. BioMOBY Services
+
+A selection of services are distributed with the Gbrowse
+package that will allow you to serve your underlying data
+using the BioMOBY Services architecture.
+
+To enable these, simply do the following:
+
+=over
+
+=item 1. Set-up and fill your database 
+
+as per the normal Gbrowse instructions
+
+=item 2. Edit the moby.conf file 
+
+in the /$CONFIG/gbrowse.conf/MobyServices folder. It
+should be set up as follows:
+
+=over
+
+
+=item a. Reference
+
+Your reference sequences will be based
+on some type of identifier - e.g. they will be from Genbank
+or from Embl or from Flybase, etc.  Look-up the BioMOBY
+namespace corresponding to the type of identifier you are
+using for your Reference sequences and put that
+identifier here.
+
+-The full listing of valid MOBY namespaces is available at:
+
+    http://mobycentral.cbr.nrc.ca/cgi-bin/types/Namespaces
+
+=item b. authURI
+
+You are required to identify yourself when registering MOBY
+Services.  Your authURI is a URI uniquely identifying you.
+This is generally your domain (e.g. flybase.org)
+
+=item c. contactEmail
+
+You are required to provide a contact email address to which
+people can contact you v.v. the services you are providing.
+
+=item d. CGI_URL
+
+This is simply the URL to the folder from which you are serving
+your gbrowse scripts.  e.g. http://flybase.org/cgi-bin/browser/
+DO NOT include the script name in this parameter!  It is the 
+folder only!!
+
+=item e. [Namespace_Class_Mappings]
+
+This section is just a list of tuples indicating the relationship
+between various entities in your database (e.g. Genes, Transcripts)
+and their equivalent BioMOBY namespaces.  For example, if you are
+TAIR, and you have entities in your database called "Locus", you 
+would add the line:
+	
+	Locus = TAIR_Locus
+
+to this section of the config file.  This will allow people who
+have TAIR_Locus identifiers in-hand to discover your service and
+request information about that locus from your database.
+
+You may add as many Namespace->Class mappings as you wish; one per
+line.
+
+=back
+
+=item 3. REGISTERING SERVICES
+
+To register your services with the MOBY Central web service registry
+simply run the "register_moby_services.pl" script, located in the 
+Generic-Genome-Browser/bin folder.  The script documentation can be
+retrieved with POD or simple documentation can be printed by simply 
+running the script with no command-line parameters.  Generally speaking
+you need only run:
+
+perl register_moby_services.pl -register
+
+As services are registered they will be added to a file:
+registeredMOBYServices.dat.  This file is used to de-register
+your services if you wish to do so.  To deregister, simply run:
+
+perl register_moby_services.pl -clean
+
+If your .dat file is not available, cleaning your services will
+be unsuccessful.
+
+=item 4. Service script
+
+Your services are served by the script 'moby_server' in your
+cgi-bin folder.  This is auto-configured by the register_services 
+step above, so generally speaking you do not need to edit this
+script.
+
+=back
+
+=cut
+
+=head1 K. FURTHER INFORMATION
 
 For further information, bug reports, etc, please consult the mailing
 lists at www.gmod.org.  The main mailing list for gbrowse support is

@@ -30,15 +30,17 @@ already.
 	Digest::MD5
 	Text::Shellwords
 
-  F) BioPerl version 1.02 or higher -- http://www.bioperl.org
+  E) Bio::DB::GFF module -- http://www.bioperl.org
+	This is the middleware layer that translates between
+	the CGI script to the database.  It is part of the
+	Bioperl package.  See the note at the bottom of this file
+	about Bioperl versions.
 
-Optional modules:
-
-  G) XML::Parser, XML::Writer, XML::Twig, XML::DOM
-
-   If these modules are present, the "Sequence Dumper" plugin
-   will be able to produce GAME and BSML output.  They can be
-   downloaded from CPAN.
+  F) Bio::Graphics module -- http://www.gmod.org
+	This is the module that renders the information in the
+	database into graphics.  It is part of the GMOD project
+	and can be downloaded from the same location you got this
+	package.
 
 2. INSTALLING THE BROWSER
 
@@ -111,10 +113,9 @@ files are placed in a directory named gbrowse.  The install script
 will detect if there are already configuration files in the selected
 directory and not overwrite them if so.  The same applies to the
 cascading stylesheet file (gbrowse.css) located in the gbrowse
-subdirectory.  However, neither the GIF files in the "buttons"
-subdirectory nor the plugin modules in the gbrowse.conf/plugins
-directory are checked before overwriting them, so be careful to copy
-the new copies somewhere safe if you have modified them.
+subdirectory.  However, the GIF files in the "buttons" subdirectory
+are not checked before they are overwritten, so be careful to copy the
+new copies somewhere safe if you have modified them.
 
 You can always manually move the files around after install.  See
 docs/configuration.txt for details.
@@ -128,9 +129,6 @@ and permissions to allow the web server account to write into it.  The
 directory is located in /usr/local/apache/htdocs/gbrowse/tmp by
 default.
 
-The first time you run Makefile.PL, a file named GGB.def will be
-created your file path settings.  When Makefile.PL is run again, it
-will ask you whether you wish to use the 
 
 3. POPULATING THE DATABASE
 
@@ -213,15 +211,14 @@ that massage the model-specific annotation files into GFF format
 suitable for loading:
 
   process_gadfly.pl     For FlyBase D. melanogaster flat files
-  process_ncbi_human.pl For human annotations from NCBI
   process_sgd.pl        For SGD S. cerevisiae flat files
   process_wormbase.pl   For WormBase C. elegans flat files
 
 You will find the scripts, along with information on downloading the
-current model organism files, in the "bin" subdirectory of this
-package.  The scripts will also have been copied into your system
-binaries directory when you made "install".  Run the script with the
--h option to get some data-specific help:
+current model organism files, in the bin subdirectory of this package.
+The scripts will also have been copied into your system binaries
+directory when you made "install".  Run the script with the -h option
+to get some data-specific help:
 
   % process_gadfly.pl -h
 
@@ -246,42 +243,43 @@ performance of the script noticeably.
 
 Be aware that there is a bad interaction between the Apache::DBI
 module (often used to speed up database accesses) and Bio::DB::GFF.
-This will cause the GFF dumper plugin to fail intermittently.  GBrowse
-does not need Apache::DBI to achieve performance increases under
-mod_perl and it is suggested that you disable Apache::DBI.  If you
-cannot do this, then you should remove the file GFFDumper.pm from the
-gbrowse.conf/plugins directory.
+This will result in the GFF dump feature failing intermittently.
+GBrowse does not need Apache::DBI to achieve performance increases
+under mod_perl and it is suggested that you disable Apache::DBI.
 
 8. BIOPERL VERSIONS
 
-GBrowse requires Bioperl version 1.02. At the time this was written
-(July 7, 2002), version 1.02 had not been officially released but was
-expectedly imminently.  Should version 1.02 not be available at the
-time you read this, there are two ways to obtain it:
+GBrowse works with Bioperl version 1.0. However, one useful feature --
+the ability to use wildcards in the search field -- requires Bioperl
+version 1.01 or higher. In addition, there are a number of subtle
+display problems present in Bioperl 1.0 that have since been fixed.
+
+
+At the time this was written, Bioperl 1.01 had not been officially
+released.  There are two ways to get it:
 
   a. The Patch method
 
-  This distribution contains a patch file named "bioperl-101-102.patch"
+  This distribution contains a patch file named "bioperl-1.0.patch"
   located in the "extras" subdirectory. Applying it to a virgin
-  Bioperl-1.0.1 distribution will generate a version 1.0.2 distribution.
+  Bioperl-1.0 distribution will generate a version 1.01 distribution.
   The steps to follow are these:
 
-  a1. unpack bioperl-1.0.1.tar.gz
-      gunzip -c bioperl-1.0.1.tar.gz | tar xvf -
+  a1. unpack bioperl-1.0.tar.gz:
+      gunzip -c bioperl-1.0.tar.gz | tar xvf -
 
-  a2. enter bioperl-1.0.1
-      cd bioperl-1.0.1
+  a2. enter bioperl-1.0:
+      cd bioperl-1.0
 
-  a3. apply the patch
-      patch -p1 < ../Generic-Genome-Browser-1.45/extras/bioperl-101-102.patch
+  a3. apply the patch:
+      patch -p1 < ../Generic-Genome-Browser-1.XX/extras/bioperl-1.0.patch
 
-  Modify the last command to point to the actual location of the patch
-  file.
+  The last command will need to be modified to indicate the actual
+  location of the patch file.
 
   b. By anonymous CVS.  
 
-  You can get the most recent version of the Bioperl 1.00 branch
-  using anonymous CVS.  Here is the incantation:
+  You can get Bioperl 1.01 by anonymous CVS using this incantation:
 
    cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl \
 	  checkout -r branch-1-0-0 bioperl-live
@@ -289,90 +287,7 @@ time you read this, there are two ways to obtain it:
    When prompted, the password is "cvs".  For more details, see
    http://cvs.bioperl.org.
 
-9. THE GBROWSE_IMG SCRIPT
-
-The gbrowse_img CGI script (a new feature as of version 1.41), is a
-stripped-down version of gbrowse which just generates images.  It is
-suitable for incorporating into <img> tags in order to make a
-thumbnail of a region of interest.  The thumbnail can then be linked
-to the full-featured gbrowse.  Here is an example of how this works
-using the WormBase site:
-
-  <a href="http://www.wormbase.org/db/seq/gbrowse?source=wormbase;name=mec-3">
-    <img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=mec-3;width=200">
-  </a>
-
-This will generate a 200-pixel inline image of the region.  Clicking
-on the image will link to the fully-navigable gbrowse script.
-
-You can also use gbrowse_img to superimpose temporary features (like
-BLAST hits) on the existing genome features.
-
-Read docs/gbrowse_img.txt for the CGI parameters and other
-instructions. A copy of these instructions in HTML form will be
-generated when gbrowse_img is called without any arguments.  Type
-http://your.host/cgi-bin/gbrowse_img into your favorite web browser.
-
-10. THE GENBANK/EMBL PROXY
-
-Sample configuration number 5 ("05.embl.conf") corresponds to an
-experimental pass-through proxy for Genbank.  At least in theory, if
-you enter a landmark that isn't recognized, gbrowse will go to EMBL
-using the bioperl BioFetch facility, parse the record, and enter it
-into the local database.  This allows you to browse arbitrary
-Genbank/EMBL/Refseq entries.
-
-You are free to experiment with this, but don't expect it to be
-entirely reliable.  To get it to work, you must:
-
-   a) make sure you are using Bioperl 1.02 (or a patched version of
-   1.01)
-
-   b) create a local database named "embl" and initialize it
-	this way:
-
-      perl -MBio::DB::GFF -e "Bio::DB::GFF->new('embl')->initialize(1)"
-
-   c) set up permissions for this database so that "nobody@localhost"
-	has SELECT, INSERT, UPDATE and DELETE privileges
-
-   d) cross your fingers
-
-11. UPDATING THE BROWSER WITHOUT REENTERING YOUR DIRECTORY SETTINGS
-
-When updating GBrowse to a new version of the software, you can
-configure it using your preferred directory settings by making a
-backup copy of the file GGB.def that was generated the first time you
-installed GBrowse and using `cat GGB.def` as the argument to
-Makefile.PL.  Here is the recipe:
-
-  cp Generic-Genome-Browser-1.40/GGB.def Generic-Genome-Browser-1.41/GGB.def
-  cd Generic-Genome-Browser-1.41/
-  perl Makefile.PL `cat GGB.def`
-  make
-  make install
-
-12. KNOWN BUGS
-
-Currently there is one known bug.  The navigation buttons do not
-operate properly when the client is using Internet Explorer 5.1 on a
-Macintosh and accessing gbrowse running on a MacOS X server running
-Apache.  Other combinations of clients and servers work properly.
-
-13. FEATURE WISH LIST (updated July 7, 2002)
-
- - Full DAS support.
- - Internationalization and localization support.
- - A glyph for representing cytogenetic maps.
- - Multiple alignment representations.
- - A percent identity (PIP) glyph.
- - An XY plot glyph.
- - Support for Oracle and PostgreSQL databases.
-
-If you are interested in working on any of these features, please
-contact the developers at the address given in the next section.
-
-14. SUPPORT AND BUG REPORTS
+9. SUPPORT AND BUG REPORTS
 
 Please send requests for help to gmod-devel@lists.sourceforge.net.
 There is also a formal bug tracking and feature request system in
@@ -383,4 +298,4 @@ Have fun!
 
 Lincoln Stein & the GMOD team
 lstein@cshl.org
-July 7, 2002
+April 12, 2002

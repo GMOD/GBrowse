@@ -17,7 +17,7 @@ Bio::DB::GFF::Aggregator::wormbase_gene -- Wormbase gene aggregator
 
 Bio::DB::GFF::Aggregator::wormbase_gene is one of the default
 aggregators, and was written to be compatible with the C elegans GFF
-files.  It aggregates raw "CDS", "5'UTR", "3'UTR", "polyA"
+files.  It aggregates raw ""exon", "CDS", "5'UTR", "3'UTR", "polyA"
 and "TSS" features into "transcript" features.  For compatibility with
 the idiosyncrasies of the Sanger GFF format, it expects that the full
 range of the transcript is contained in a main feature of type
@@ -33,7 +33,7 @@ use Bio::DB::GFF::Aggregator;
 use vars qw($VERSION @ISA);
 @ISA = qw(Bio::DB::GFF::Aggregator);
 
-$VERSION = '0.30';
+$VERSION = '0.20';
 
 =head2 method
 
@@ -55,14 +55,14 @@ sub method { 'transcript' }
  Title   : part_names
  Usage   : $aggregator->part_names
  Function: return the methods for the sub-parts
- Returns : the list "CDS", "5'UTR", "3'UTR", "TSS", "PolyA"
+ Returns : the list "exon", "CDS", "5'UTR", "3'UTR", "TSS", "PolyA"
  Args    : none
  Status  : Public
 
 =cut
 
 sub part_names {
-  return qw(CDS 5'UTR 3'UTR TSS PolyA);
+  return qw(exon CDS 5'UTR 3'UTR TSS PolyA);
 }
 
 =head2 main_name

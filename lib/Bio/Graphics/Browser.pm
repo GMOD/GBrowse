@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.43 2002-10-25 21:54:09 lstein Exp $
+# $Id: Browser.pm,v 1.44 2002-11-07 05:44:56 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -575,8 +575,8 @@ sub render_html {
 
   my ($width,$height) = $image->getBounds;
   my $url     = $self->generate_image($image);
-  my $img     = img({-src=>$url,-align=>'CENTER',-usemap=>'#hmap',-width=>$width,
-		     -height=>$height,-border=>0,-name=>'detailedView'});
+  my $img     = img({-src=>$url,-align=>'middle',-usemap=>'#hmap',-width=>$width,
+		     -height=>$height,-border=>0,-name=>'detailedView',-alt=>'detailed view'});
   my $img_map;
   if ($do_map) {
     $self->_load_aggregator_types($segment);
@@ -644,7 +644,7 @@ sub tmpdir {
 sub make_map {
   my $self = shift;
   my ($boxes,$centering_map,$panel) = @_;
-  my $map = qq(<map name="hmap">\n);
+  my $map = qq(<map name="hmap" id="hmap">\n);
 
   # use the scale as a centering mechanism
 #  my $ruler = shift @$boxes;
@@ -658,8 +658,7 @@ sub make_map {
     }
     my $href  = $self->make_href($_->[0],$panel) or next;
     my $alt   = $self->make_title($_->[0],$panel);
-    $map .= qq(<area shape="RECT" coords="$_->[1],$_->[2],$_->[3],$_->[4]"
-	       href="$href" title="$alt">\n);
+    $map .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href" title="$alt" alt="$alt" />\n);
   }
   $map .= "</map>\n";
   $map;
@@ -685,8 +684,8 @@ sub make_centering_map {
 
   my @lines;
   for my $i (0..RULER_INTERVALS-1) {
-    my $x1 = $portion * $i;
-    my $x2 = $portion * ($i+1);
+    my $x1 = int($portion * $i+0.5);
+    my $x2 = int($portion * ($i+1)+0.5);
     # put the middle of the sequence range into the middle of the picture
     my $middle = $offset + $scale * ($x1+$x2)/2;
     my $start  = int($middle - $length/2);
@@ -694,8 +693,7 @@ sub make_centering_map {
     my $url = url(-relative=>1,-path_info=>1);
     $url .= "?ref=$ref;start=$start;stop=$stop;source=$source;nav4=1;plugin=$plugin";
     push @lines,
-      qq(<area shape="RECT" COORDS="$x1,$ruler->[2],$x2,$ruler->[4]"
-	 href="$url" title="recenter">\n);
+      qq(<area shape="rect" coords="$x1,$ruler->[2],$x2,$ruler->[4]" href="$url" title="recenter" alt="recenter" />\n);
   }
   return join '',@lines;
 }
@@ -1263,14 +1261,15 @@ sub _hits_to_html {
   my $signature = md5_hex(rand().rand()); # just a big random number
   my ($width,$height) = $gd->getBounds;
   my $url       = $self->generate_image($gd,$signature);
-  my $img       = img({-src=>$url,-align=>'CENTER',
+  my $img       = img({-src=>$url,
+		       -align=>'middle',
 		       -usemap=>"#$ref",
 		       -width => $width,
 		       -height => $height,
 		       -border=>0});
   my $html = "\n";
   $html   .= $img;
-  $html   .= qq(<br><map name="$ref">\n);
+  $html   .= qq(<br /><map name="$ref" alt="imagemap" />\n);
 
   # use the scale as a centering mechanism
   my $ruler   = shift @$boxes;
@@ -1282,13 +1281,13 @@ sub _hits_to_html {
     my $start = int($length * $i);
     my $stop  = int($start + $length);
     my $href      = $self_url . ";ref=$ref;start=$start;stop=$stop";
-    $html .= qq(<AREA SHAPE="RECT" COORDS="$x,$ruler->[2],$y,$ruler->[4]" HREF="$href">\n);
+    $html .= qq(<area shape="rect" coords="$x,$ruler->[2],$y,$ruler->[4]" href="$href" alt="ruler" />\n);
   }
 
   foreach (@$boxes){
     my ($start,$stop) = ($_->[0]->start,$_->[0]->end);
     my $href      = $self_url . ";ref=$ref;start=$start;stop=$stop";
-    $html .= qq(<AREA SHAPE="RECT" COORDS="$_->[1],$_->[2],$_->[3],$_->[4]" HREF="$href">\n);
+    $html .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href" alt="ruler" />\n);
   }
   $html .= "</map>\n";
   $html;
@@ -1365,8 +1364,10 @@ sub _low_merge {
     }
 
   }
-  my $class = $features[0]->factory->refclass;
-  push @spans,$db ? $db->segment(-name=>$ref,-class=>$class,-start=>$previous_start,-end=>$previous_stop)
+  my $class = eval { $features[0]->factory->refclass };
+  my @args  = (-name=>$ref,-start=>$previous_start,-end=>$previous_stop);
+  push @args,(-class=>$class) if defined $class;
+  push @spans,$db ? $db->segment(@args)
                   : Bio::Graphics::Feature->new(-start=>$previous_start,-end=>$previous_stop,-ref=>$ref);
   return @spans;
 }

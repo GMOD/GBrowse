@@ -41,7 +41,7 @@ $Config{startperl} -w
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.53 2002-08-28 14:54:34 lstein Exp $
+# $Id: gbrowse.PLS,v 1.54 2002-08-30 21:17:35 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1105,7 +1105,7 @@ sub multiple_choices {
       my %attributes;
       my $description = escapeHTML(eval{join ' ',$r->attributes('Note')}
 				   ||eval{$r->method}||eval{$r->source_tag}||$r->{ref});
-      if (my @aliases = $r->attributes('Alias')) {
+      if (my @aliases = eval{$r->attributes('Alias')}) {
 	$description .= escapeHTML " [@aliases]";
       }
       my $n           = escape("$name");

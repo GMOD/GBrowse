@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.33 2002-08-30 17:02:08 lstein Exp $
+# $Id: Browser.pm,v 1.34 2002-08-30 21:17:36 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -556,11 +556,16 @@ sub render_html {
 					 limit         => $limit,
 					);
 
+
   my ($width,$height) = $image->getBounds;
   my $url     = $self->generate_image($image);
   my $img     = img({-src=>$url,-align=>'CENTER',-usemap=>'#hmap',-width=>$width,
 		     -height=>$height,-border=>0,-name=>'detailedView'});
-  my $img_map = $self->make_map($map,$do_centering_map) if $do_map;
+  my $img_map;
+  if ($do_map) {
+    $self->_load_aggregator_types($segment);
+    $img_map = $self->make_map($map,$do_centering_map) 
+  }
   return wantarray ? ($img,$img_map) : join "<br>",$img,$img_map;
 }
 
@@ -775,6 +780,7 @@ sub image_and_map {
     }
 
   }
+
 
   if (@feature_types) {  # don't do anything unless we have features to fetch!
     my $iterator = $segment->get_seq_stream(-type=>\@feature_types);
@@ -1194,6 +1200,25 @@ sub get_ranges {
   @ranges;
 }
 
+# Handle types that are hidden by aggregators so that
+# features link correctly when they are subparts rather than
+# the top-level part
+sub _load_aggregator_types {
+  my $self    = shift;
+  my $segment = shift;
+  return if $self->config->{_load_aggregator_types}++;
+  my $db          = eval {$segment->factory} or return;
+  my @aggregators = eval {$db->aggregators } or return;
+  for my $a (@aggregators) {
+    my $method   = $a->method;
+    my @subparts = ($a->part_names,$a->main_name);
+    my $track    = $self->type2label($method) or next;
+    foreach (@subparts) {
+      push @{$self->config->{_type2label}{$_}},$track;
+    }
+  }
+}
+
 
 # utility called by hits_on_overview
 sub _hits_to_html {
@@ -1396,7 +1421,7 @@ sub feature2label {
   my $type  = eval {$feature->type} || $feature->primary_tag or return;
   (my $basetype = $type) =~ s/:.+$//;
   my $label = $self->type2label($type,$length)
-    || $self->type2label($basetype,$length) 
+    || $self->type2label($basetype,$length)
       || $type;
   $label;
 }

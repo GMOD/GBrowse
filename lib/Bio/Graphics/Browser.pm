@@ -1,5 +1,58 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.20 2002-05-06 18:05:00 lstein Exp $
+# $Id: Browser.pm,v 1.21 2002-06-03 01:37:22 lstein Exp $
+# This package provides methods that support the Generic Genome Browser.
+# Its main utility for plugin writers is to access the configuration file information
+
+=head1 NAME
+
+Bio::Graphics::Browser -- Utility methods for the Generic Genome Browser
+
+=head1 SYNOPSIS
+
+  $b = Bio::Graphics::Browser->new;
+  $b->read_configuration('/path/to/conf/files');
+
+  my @data_sources = $b->sources;
+  my $current_source = $b->source;
+  my $setting = $b->setting('default width');
+  my $description    = $b->description;
+  my @track_labels   = $b->labels;
+  my @default_tracks = $b->default_labels;
+  my $track_label    = $b->feature2label;
+
+  # warning: commas() is exported
+  my $big_number_with_commas = commas($big_number_without_commas);
+
+=head1 DESCRIPTION
+
+This package provides methods that support the Generic Genome Browser.
+Its main utility for plugin writers is to access the configuration
+file information.
+
+Typically, the Bio::Graphics::Browser object will be created before
+the plugin is invoked, and will be passed to the plugin for retrieval
+by its browser_config method.  For example:
+
+  $browser_obj = $self->browser_config;
+
+Each browser configuration has a set of "sources" that correspond to
+the individual configuration files in the gbrowse.conf directory.  At
+any time there is a "current source" which indicates the source to
+fetch settings from.  It is equal to the current setting of the "Data
+Source" menu.
+
+From the current source you can retrieve configuration settings
+corresponding to the keys and values of the current config file.
+These are fetched using the setting() method.  You can retrieve both
+general settings and settings that are specific to a particular
+track.
+
+=head1 METHODS
+
+The remainder of this document describes the methods available to the
+programmer.
+
+=cut
 
 use strict;
 use File::Basename 'basename';
@@ -24,17 +77,97 @@ use constant TOO_MANY_SEGMENTS => 5_000;
 use constant MAX_SEGMENT       => 1_000_000;
 use constant DEFAULT_RANGES       => q(100 500 1000 5000 10000 25000 100000 200000 400000);
 
+=head2 new()
+
+  my $browser = Bio::Graphics::Browser->new();
+
+Create a new Bio::Graphics::Browser object.  The object is initially
+empty.  This is done automatically by gbrowse.
+
+=cut
+
 sub new {
   my $class    = shift;
   my $self = bless { },ref($class) || $class;
   $self;
 }
 
+=head2 read_configuration()
+
+  my $success = $browser->read_configuration('/path/to/gbrowse.conf');
+
+Parse the files in the gbrowse.conf configuration directory.  This is
+done automatically by gbrowse.  Returns a true status code if
+successful.
+
+=cut
+
+sub read_configuration {
+  my $self        = shift;
+  my $conf_dir    = shift;
+  $self->{conf} ||= {};
+
+  croak("$conf_dir: not a directory") unless -d $conf_dir;
+  opendir(D,$conf_dir) or croak "Couldn't open $conf_dir: $!";
+  my @conf_files = map { "$conf_dir/$_" } grep {/\.conf$/} readdir(D);
+  close D;
+
+  # try to work around a bug in Apache/mod_perl which appears when
+  # running under linux/glibc 2.2.1
+  unless (@conf_files) {
+    @conf_files = glob("$conf_dir/*.conf");
+  }
+
+  # get modification times
+  my %mtimes     = map { $_ => (stat($_))[9] } @conf_files;
+
+  for my $file (sort {$b cmp $a} @conf_files) {
+    my $basename = basename($file,'.conf');
+    $basename =~ s/^\d+\.//;
+    next if defined($self->{conf}{$basename}{mtime})
+      && ($self->{conf}{$basename}{mtime} >= $mtimes{$file});
+    my $config = Bio::Graphics::BrowserConfig->new(-file => $file) or next;
+    $self->{conf}{$basename}{data}  = $config;
+    $self->{conf}{$basename}{mtime} = $mtimes{$file};
+    $self->{source} ||= $basename;
+  }
+  $self->{width} = DEFAULT_WIDTH;
+  1;
+}
+
+=head2 sources()
+
+  @sources = $browser->sources;
+
+Returns the list of symbolic names for sources.  The symbolic names
+are derived from the configuration file name by:
+
+  1) stripping off the .conf extension.
+  2) removing the pattern "\d+\."
+
+This means that the configuration file "03.fly.conf" will have the
+symbolic name "fly".
+
+=cut
+
 sub sources {
   my $self = shift;
   my $conf = $self->{conf} or return;
   return keys %$conf;
 }
+
+=head2 source()
+
+  $source = $browser->source;
+  $source = $browser->source($new_source);
+
+Sets or gets the current source.  The default source will the first
+one found in the gbrowse.conf directory when sorted alphabetically.
+
+If you attempt to set an invalid source, the module will issue a
+warning but will not raise an exception.
+
+=cut
 
 # get/set current source (not sure if this is wanted)
 sub source {
@@ -50,6 +183,67 @@ sub source {
   }
   $d;
 }
+
+=head2 setting()
+
+  $value = $browser->setting(general => 'stylesheet');
+  $value = $browser->setting(gene => 'fgcolor');
+  $value = $browser->setting('stylesheet');
+
+The setting() method returns the value of one of the current source's
+configuration settings.  setting() takes two arguments.  The first
+argument is the name of the stanza in which the configuration option
+is located.  The second argument is the name of the setting.  Stanza
+and option names are case sensitive, with the exception of the
+"general" section, which is automatically folded to lowercase.
+
+If only one argument is provided, then the "general" stanza is
+assumed.
+
+Option values are folded in such a way that newlines and tabs become
+single spaces.  For example, if the "default features" option is defined like this:
+
+ default features = Transcripts
+                    Genes
+	 	    Scaffolds
+
+Then the value retrieved by 
+
+  $browser->setting('general'=>'default features');
+
+will be the string "Transcripts Genes Scaffolds".  Note that it is
+your responsibility to split this into a list.  I suggest that you use
+Text::Shellwords to split the list in such a way that quotes and
+escapes are preserved.
+
+Because of the default, you could also fetch this information without
+explicitly specifying the stanza.  Combined with shellwords gives the
+idiom:
+
+ @defaults = shellwords($browser->setting('default features'));
+
+=cut
+
+sub setting {
+  my $self = shift;
+  if (@_ == 1) {
+    unshift @_,'general';
+  } else {
+    $_[0] = 'general' if lc($_[0]) eq 'general';  # buglet
+  }
+  $self->config->setting(@_);
+}
+
+=head2 dbgff_settings()
+
+  @args = $browser->dbgff_settings;
+
+Returns the appropriate arguments for connecting to Bio::DB::GFF.  It
+can be used this way:
+
+  $db = Bio::DB::GFF->new($browser->dbgff_settings);
+
+=cut
 
 # get Bio::DB::GFF settings
 sub dbgff_settings {
@@ -74,17 +268,15 @@ sub dbgff_settings {
   @argv;
 }
 
-sub setting {
-  my $self = shift;
-  unshift @_,'general' if @_ == 1;
-  $self->config->setting(@_);
-}
+=head2 description()
 
-sub citation {
-  my $self = shift;
-  my $label = shift;
-  $self->config->setting($label=>'citation');
-}
+  $description = $browser->description
+
+This is a shortcut method that returns the value of the "description"
+option in the general section.  The value returned is a human-readable
+description of the data source.
+
+=cut
 
 sub description {
   my $self = shift;
@@ -93,33 +285,16 @@ sub description {
   return $c->setting('general','description');
 }
 
-sub config {
-  my $self = shift;
-  my $source = $self->source;
-  $self->{conf}{$source}{data};
-}
+=head2 labels()
 
-sub default_labels {
-  my $self = shift;
-  $self->config->default_labels;
-}
+  @track_labels = $browser->labels
 
-sub default_label_indexes {
-  my $self = shift;
-  $self->config->default_label_indexes;
-}
+This method returns the names of each of the track stanzas,
+hereinafter called "track labels" or simply "labels".  These labels
+can be used in subsequent calls as the first argument to setting() in
+order to retrieve track-specific options.
 
-sub feature2label {
-  my $self = shift;
-  my $feature = shift;
-  return $self->config->feature2label($feature);
-}
-
-sub make_link {
-  my $self = shift;
-  my $feature = shift;
-  return $self->config->make_link($feature);
-}
+=cut
 
 sub labels {
   my $self = shift;
@@ -132,12 +307,105 @@ sub labels {
   }
 }
 
+=head2 default_labels()
+
+  @default_labels = $browser->default_labels
+
+This method returns the labels for each track that is turned on by
+default.
+
+=cut
+
+sub default_labels {
+  my $self = shift;
+  $self->config->default_labels;
+}
+
+=head2 label2type()
+
+  @feature_types = $browser->label2type($label,$lowres);
+
+Given a track label, this method returns a list of the corresponding
+sequence feature types in a form that can be passed to Bio::DB::GFF.
+The optional $lowres flag can be used to tell label2type() to select a
+set of features that are suitable when viewing large sections of the
+sequence (it is up to the person who writes the configuration file to
+specify this).
+
+=cut
+
+sub label2type {
+  my $self = shift;
+  $self->config->label2type(@_);
+}
+
+=head2 type2label()
+
+  $label = $browser->type2label($type);
+
+Given a feature type, this method translates it into a track label.
+
+=cut
+
+sub type2label {
+  my $self = shift;
+  $self->config->type2label(@_);
+}
+
+=head2 feature2label()
+
+  $label = $browser->feature2label($feature);
+
+Given a Bio::DB::GFF::Feature (or anything that implements a type()
+method), this method returns the corresponding label.
+
+=cut
+
+sub feature2label {
+  my $self = shift;
+  my $feature = shift;
+  return $self->config->feature2label($feature);
+}
+
+=head2 citation()
+
+  $citation = $browser->citation($label)
+
+This is a shortcut method that returns the citation for a given track
+label.  It simply calls $browser->setting($label=>'citation');
+
+=cut
+
+sub citation {
+  my $self = shift;
+  my $label = shift;
+  $self->config->setting($label=>'citation');
+}
+
+=head2 width()
+
+  $width = $browser->width
+
+This is a shortcut method that returns the width of the display in
+pixels.
+
+=cut
+
 sub width {
   my $self = shift;
   my $d = $self->{width};
   $self->{width} = shift if @_;
   $d;
 }
+
+=head2 header()
+
+  $header = $browser->header;
+
+This is a shortcut method that returns the header HTML for the gbrowse
+page.
+
+=cut
 
 sub header {
   my $self = shift;
@@ -146,12 +414,99 @@ sub header {
   return $header;
 }
 
+=head2 footer()
+
+  $footer = $browser->footer;
+
+This is a shortcut method that returns the footer HTML for the gbrowse
+page.
+
+=cut
+
 sub footer {
   my $self = shift;
   my $footer = $self->config->code_setting(general => 'footer');
   return $footer->(@_) if ref $footer eq 'CODE';
   return $footer;
 }
+
+=head2 config()
+
+  $config = $browser->config;
+
+This method returns a Bio::Graphics::FeatureFile object corresponding
+to the current source.
+
+=cut
+
+sub config {
+  my $self = shift;
+  my $source = $self->source;
+  $self->{conf}{$source}{data};
+}
+
+sub default_label_indexes {
+  my $self = shift;
+  $self->config->default_label_indexes;
+}
+
+=head2 make_link()
+
+  $url = $browser->make_link($feature)
+
+Given a Bio::SeqFeatureI object, turn it into a URL suitable for use
+in a hypertext link.
+
+=cut
+
+sub make_link {
+  my $self = shift;
+  my $feature = shift;
+  return $self->config->make_link($feature);
+}
+
+=head2 render_html()
+
+  ($image,$image_map) = $browser->render_html(%args);
+
+Render an image and an image map according to the options in %args.
+Returns a two-element list.  The first element is a URL that refers to
+the image which can be used as the SRC for an <IMG> tag.  The second
+is a complete image map, including the <MAP> and </MAP> sections.
+
+The arguments are a series of tag=>value pairs, where tags are:
+
+  Argument            Value
+
+  segment             A Bio::DB::GFF::Segment or
+                      Bio::Das::SegmentI object (required).
+
+  tracks              An arrayref containing a series of track
+                        labels to render (required).  The order of the labels
+                        determines the order of the tracks.
+
+  options             A hashref containing options to apply to
+                        each track (optional).  Keys are the track labels
+                        and the values are 0=auto, 1=force no bump,
+                        2=force bump, 3=force label.
+
+  feature_files       A hashref containing a series of
+                        Bio::Graphics::FeatureFile objects to be
+                        rendered onto the display (optional).  The keys
+                        are labels assigned to the 3d party
+                        features.  These labels must apepar in the
+                        tracks arrayref in order for render_html() to
+                        determine the order in which to render them.
+
+  do_map              This argument is a flag that controls whether or not
+                        to generate the image map.  It defaults to false.
+
+  do_centering_map    This argument is a flag that controls whether or not
+                        to add elements to the image map so that the user can
+                        center the image by clicking on the scale.  It defaults
+                        to false, and has no effect unless do_map is also true.
+
+=cut
 
 sub render_html {
   my $self = shift;
@@ -178,6 +533,18 @@ sub render_html {
   my $img_map = $self->make_map($map,$do_centering_map) if $do_map;
   return wantarray ? ($img,$img_map) : join "<br>",$img,$img_map;
 }
+
+=head2 generate_image
+
+  ($url,$path) = $browser->generate_image($gd)
+
+Given a GD::Image object, this method calls its png() or gif() methods
+(depending on GD version), stores the output into the temporary
+directory given by the "tmpimages" option in the configuration file,
+and returns a two element list consisting of the URL to the image and
+the physical path of the image.
+
+=cut
 
 sub generate_image {
   my $self  = shift;
@@ -434,6 +801,17 @@ sub image_and_map {
   return ($gd,$boxes);
 }
 
+=head2 overview()
+
+  ($gd,$length) = $browser->overview($segment);
+
+This method generates a GD::Image object containing the image data for
+the overview panel.  Its argument is a Bio::DB::GFF::Segment (or
+Bio::Das::SegmentI) object. It returns a two element list consisting
+of the image data and the length of the segment (in bp).
+
+=cut
+
 # generate the overview, if requested, and return it as a GD
 sub overview {
   my $self = shift;
@@ -497,6 +875,29 @@ sub overview {
   return ($gd,$segment->length);
 }
 
+=head2 hits_on_overview()
+
+  $hashref = $browser->hits_on_overview($db,@hits);
+
+This method is used to render a series of genomic positions ("hits")
+into a graphical summary of where they hit on the genome in a
+segment-by-segment (e.g. chromosome) manner.
+
+The first argument is a Bio::DB::GFF (or Bio::DasI) database.  The
+second and subsequent arguments are one of:
+
+  1) a set of array refs in the form [ref,start,stop,name], where
+     name is optional.
+
+  2) a Bio::DB::GFF::Feature object
+
+  3) a Bio::SeqFeatureI object.
+
+The returned HTML is stored in a hashref, where the keys are the
+reference sequence names and the values are HTML to be emitted.
+
+=cut
+
 # Return an HTML showing where multiple hits fall on the genome.
 # Can either provide a list of objects that provide the ref() method call, or
 # a list of arrayrefs in the form [ref,start,stop,[name]]
@@ -516,7 +917,12 @@ sub hits_on_overview {
   # sort hits out by reference
   my (%refs);
   for my $hit (@$hits) {
-    if (UNIVERSAL::can($hit,'ref')) {
+    if (ref($hit) eq 'ARRAY') {
+      my ($ref,$start,$stop,$name) = @$hit;
+      push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$start,
+						      -stop=>$stop,
+						      -name=>$name||'');
+    } elsif (UNIVERSAL::can($hit,'ref')) {
       my $ref  = $hit->ref;
       my $name = $hit->can('seqname') ? $hit->seqname : $hit->name;
       my($start,$end) = ($hit->start,$hit->end);
@@ -525,8 +931,10 @@ sub hits_on_overview {
       push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$start,
 						      -stop=>$end,
 						      -name=>$name);
-    } else {
-      my ($ref,$start,$stop,$name) = @$hit;
+    } elsif (UNIVERSAL::can($hit,'location')) {
+      my $location = $hit->location;
+      my ($ref,$start,$stop,$name) = ($location->seq_id,$location->start,
+				      $location->end,$location->primary_tag);
       push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$start,
 						      -stop=>$stop,
 						      -name=>$name||'');
@@ -755,39 +1163,6 @@ sub commas {
   $i;
 }
 
-sub read_configuration {
-  my $self        = shift;
-  my $conf_dir    = shift;
-  $self->{conf} ||= {};
-
-  croak("$conf_dir: not a directory") unless -d $conf_dir;
-  opendir(D,$conf_dir) or croak "Couldn't open $conf_dir: $!";
-  my @conf_files = map { "$conf_dir/$_" } grep {/\.conf$/} readdir(D);
-  close D;
-
-  # try to work around a bug in Apache/mod_perl which appears when
-  # running under linux/glibc 2.2.1
-  unless (@conf_files) {
-    @conf_files = glob("$conf_dir/*.conf");
-  }
-
-  # get modification times
-  my %mtimes     = map { $_ => (stat($_))[9] } @conf_files;
-
-  for my $file (sort {$b cmp $a} @conf_files) {
-    my $basename = basename($file,'.conf');
-    $basename =~ s/^\d+\.//;
-    next if defined($self->{conf}{$basename}{mtime})
-      && ($self->{conf}{$basename}{mtime} >= $mtimes{$file});
-    my $config = Bio::Graphics::BrowserConfig->new(-file => $file) or next;
-    $self->{conf}{$basename}{data}  = $config;
-    $self->{conf}{$basename}{mtime} = $mtimes{$file};
-    $self->{source} ||= $basename;
-  }
-  $self->{width} = DEFAULT_WIDTH;
-  1;
-}
-
 sub merge {
   my $self = shift;
   my ($db,$features,$max_range) = @_;
@@ -962,33 +1337,18 @@ sub make_link {
 }
 
 
-1;
-
-__END__
-
-=head1 NAME
-
-Bio::Graphics::Browser - Support library for Generic Genome Browser
-
-=head1 SYNOPSIS
-
-This is a support library for the Generic Genome Browser
-(http://www.gmod.org).
-
-=head1 DESCRIPTION
-
-Documention is pending.
-
 =head1 SEE ALSO
 
-L<Bio::Graphics>, L<Bio::Graphics::Panel>, the GGB installation
-documentation.
+L<Bio::Graphics::Panel>,
+L<Bio::Graphics::Glyph>,
+L<Bio::Graphics::Feature>,
+L<Bio::Graphics::FeatureFile>
 
 =head1 AUTHOR
 
-Lincoln Stein <lstein@cshl.org>.
+Lincoln Stein E<lt>lstein@cshl.orgE<gt>.
 
-Copyright (c) 2002 Cold Spring Harbor Laboratory
+Copyright (c) 2001 Cold Spring Harbor Laboratory
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.  See DISCLAIMER.txt for
@@ -996,102 +1356,9 @@ disclaimers of warranty.
 
 =cut
 
-THIS IS AN OLDER VERSION OF image_and_map() WHICH IS LESS PIPELINED
-NOT SURE WHETHER IT IS ACTUALLY SLOWER THOUGH
-
-# Generate the image and the box list, and return as a two-element list.
-sub image_and_map {
-  my $self = shift;
-  my ($segment,$labels,$order) = @_;
-  my %labels = map {$_=>1} @$labels;
-
-  my $width = $self->width;
-  my $conf  = $self->config;
-  my $max_labels = $conf->setting(general=>'label density') || 10;
-  my $max_bump   = $conf->setting(general=>'bump density')  || 50;
-  my @feature_types = map {$conf->label2type($_)} @$labels;
-
-  my $iterator = $segment->features(-type=>\@feature_types,
-				    -iterator=>1);
-  my ($similarity,$other) = $self->sort_features($iterator);
-
-  my $panel = Bio::Graphics::Panel->new(-segment => $segment,
-					-width   => $width,
-					-keycolor => $self->setting('detailed bgcolor') || 'moccasin',
-					-grid => 1,
-				       );
-  $panel->add_track($segment   => 'arrow',
-		    -double => 1,
-		    -bump =>1,
-		    -tick=>2,
-		   );
-
-  # all the rest comes from configuration
-  for my $label ($self->labels($order)) {  # use labels() method in order to preserve order in .conf file
-
-    next unless $labels{$label};
-
-    # handle similarities a bit differently
-    if (my $set = $similarity->{$label}) {
-      my %pairs;
-
-      # HACK ALERT; look for feature pairs that end with [fr] and [35] suffix pairs
-      # and group them.  Used for paired ESTs -- not nice.
-      for my $a (@$set) {
-	(my $base = $a->name) =~ s/\.[frpq35]$//i;
-	push @{$pairs{$base}},$a;
-      }
-
-      my $track = $panel->add_track(-glyph =>'segments',
-				    -label => @$set <= $max_labels,
-				    -bump  => @$set <= $max_bump,
-				    -key   => $label,
-				    $conf->style($label)
-				   );
-      foreach (values %pairs) {
-	$track->add_group($_);
-      }
-      next;
-    }
-
-    if (my $set = $other->{$label}) {
-      $panel->add_track($set,
-			-glyph => 'generic',
-			-label => @$set <= $max_labels,
-			-bump  => @$set <= $max_bump,
-			-key   => $label,
-			$conf->style($label),
-
-		       );
-      next;
-    }
-  }
-
-  my $boxes    = $panel->boxes;
-  my $gd       = $panel->gd;
-  return ($gd,$boxes);
-}
-
-sub sort_features {
-  my $self     = shift;
-  my $iterator = shift;
-
-  my (%similarity,%other);
-  while (my $feature = $iterator->next_seq) {
-
-    my $label = $self->feature2label($feature);
-
-    # special case to handle paired EST reads
-    if ($feature->method =~ /^(similarity|alignment)$/) {
-      push @{$similarity{$label}},$feature;
-    }
-
-    else {  #otherwise, just sort by label
-      push @{$other{$label}},$feature;
-    }
-  }
-
-  return (\%similarity,\%other);
-}
 
 
+
+1;
+
+__END__

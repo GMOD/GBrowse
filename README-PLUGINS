@@ -62,6 +62,7 @@ $segments = $plugin->find($segment);
   [ref,start,stop].  If further configuration is needed return undef
   -- gbrowse will invoke configure_form() and try again.  If
   nothing is found, return empty list.
+
   NOTE: You can ignore the segment and do the find on the whole 
   database if that's more appropriate.  If you need auxiliary files
   like BLAST files, you can store that information in the .conf
@@ -86,16 +87,37 @@ See the RestrictionAnnotator.pm module for how this works.
 	
 METHODS WITH REASONABLE DEFAULTS THAT YOU MIGHT WANT TO OVERRIDE
 
+$plugin->browser_config($bio_graphics_browser)
+  Get.set a copy of the Bio::Graphics::Browser
+  object.  This object provides access to values in the
+  stored in the gbrowse configuration files.  
+
+  To fetch the current Bio::Graphics::Browser object,
+  invoke browser_config from within a plugin method
+  like this:
+    
+      $browser = $self->browser_config();
+
+$plugin->config_path($path)
+  Get/set the gbrowse configuration directory path.  You can use
+  this within a plugin method to retrieve the path to any
+  configuration files the plugin might depend on.
+
 $plugin->configuration($current_settings);
   Get/set current settings.  This will be called before 
-  change_configuration()
+  change_configuration().  The settings are a hash reference
+  containing anything you want.
 
 $plugin->configure_form();
   Generate an HTML form that prompts user to set/change current
   configuration.  The fragment will automatically be surrounded by 
-  <FORM> and </FORM> tags.  
+  <FORM> and </FORM> tags.
+
   All form fields must be preceded with the plug-in's name,
   in the format "<name>.<field>" (a dot separates the two).
+
+  The method is expected to return a string containing the
+  HTML that produces the form.
   
 $plugin->reconfigure
   This gives the plugin a chance to reconfigure itself
@@ -105,17 +127,10 @@ $plugin->reconfigure
   with the plugin's name.
 
 $plugin->database($database)
-  A chance to store a copy of the Bio::DB::GFF or Gadfly
-  database handle.
-
-$plugin->browser_config($bio_graphics_browser)
-  A chance to store a copy of the Bio::Graphics::Browser
-  interface to the current configuration file.
-
-$plugin->config_path($path)
-  A chance to store a copy of the gbrowse configuration
-  directory path.
+  Get/set a copy of the Bio::DB::GFF or Gadfly database handle.
 
 $plugin->page_settings($settings)
-  A chance to store the current settings on the GBrowse page.
+  Get/set the GBrowse page settings. This is a big hash whose
+  structure is described in the source code for the gbrowse
+  executable.
 

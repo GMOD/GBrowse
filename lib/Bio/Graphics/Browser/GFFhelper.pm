@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.20 2004-03-12 15:29:10 sheldon_mckay Exp $
+# $Id: GFFhelper.pm,v 1.21 2004-03-19 19:38:15 lstein Exp $
 
 =head1 NAME
 
@@ -282,7 +282,7 @@ sub gff2Generic {
     my ($self, $f) = @_;
 
     my $feat = Bio::SeqFeature::Generic->new( -primary_tag => $f->primary_tag,
-					      -source_tag  => $f->source,
+					      -source_tag  => $f->source_tag,
 					      -phase       => $f->phase,
 					      -score       => $f->score,
 					      -start       => $f->start,

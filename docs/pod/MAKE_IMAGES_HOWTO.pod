@@ -6,21 +6,48 @@
 
 Will generate this picture:
 
-  [gbrowse_img?source=wormbase;name=mec-3;width=400]
+=begin text
+
+[gbrowse_img?source=wormbase;name=mec-3;width=400]
+
+=end text
+
+=begin html
+
+<img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=mec-3;width=400"><br>
+
+=end html
 
    <a href="http://www.wormbase.org/db/seq/gbrowse_img?list=sources">list</a>
 
-Will return this document: ## Sources fly yeast wormbase
+Will return this document:
 
-   <a href="http://www.wormbase.org/db/seq/gbrowse_img?source=list=sources">types</a>
+  ## Sources
+  human
+  ws77
+  worm_pmap
+  embl
+  fly
+  briggsae
+  yeast
+  wormbase
 
-Will return this document: ## Feature types for source wormbase
-tRNA tRNAs NG Named Genes default CG Curated genes default PG
-Predicted genes WABA Briggsae alignments (WABA) ESTB ESTs aligned
-by BLAT (best) ESTO ESTs aligned by BLAT (other) mRNAB mRNAs
-aligned by BLAT (best) mRNAO mRNAs aligned by BLAT (other) RNAi
-RNAi experiments EXPR Expression chip profiles WTP Worm
-Transcriptome Project genes SNP SNPs TcI Transposon Insertions
+   <a href="http://www.wormbase.org/db/seq/gbrowse_img?list=types">types</a>
+
+Will return this document: 
+
+	## Feature types for source yeast
+	Genes	Named gene	default
+	ORFs	ORF	default
+	CDS	CDS	
+	tRNAs	tRNAs	default
+	Centro	Centromeres	
+	Transp	Transposons	
+	LTRs	Long Terminal Repeats	
+	TranslationF	3-frame translation (forward)	
+	DNA/GC Content		
+	TranslationR	3-frame translation (reverse)	
+	ncRNA	Noncoding RNAs	
 
 =head1 DESCRIPTION
 

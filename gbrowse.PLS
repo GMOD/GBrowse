@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.82 2003-03-24 18:32:18 lstein Exp $
+# $Id: gbrowse.PLS,v 1.83 2003-04-10 12:07:44 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2215,7 +2215,6 @@ sub do_plugin_dump {
 
 sub do_plugin_about {
   my $plugin = shift;
-  warn "plugin = $plugin, but PLUGINS = ",join ' ',keys %$PLUGINS;
   my $p = $PLUGINS->{$plugin};
   print h1($LANG->tr('About_plugin',$p->name));
   print $p->description;

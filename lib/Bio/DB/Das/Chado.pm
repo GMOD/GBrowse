@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.23 2003-06-30 18:33:04 scottcain Exp $
+# $Id: Chado.pm,v 1.24 2003-06-30 18:45:18 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -360,7 +360,7 @@ sub get_feature_by_name {
 
         my %name = %{$self->{cvname}};
 
-        my $interbase_start = $$hashref{'fmin'}:
+        my $interbase_start = $$hashref{'fmin'};
         $base_start = $interbase_start +1; 
 
         my $feat = Bio::DB::Das::Chado::Segment::Feature->new(

@@ -1,6 +1,7 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.1 2003-09-29 20:45:13 mummi Exp $
+# $Id: ideogram.pm,v 1.2 2003-10-27 15:40:35 mummi Exp $
+# Glyph to draw chromosome ideograms for the overview display
 
 use strict;
 use vars '@ISA';
@@ -18,18 +19,21 @@ sub draw_component {
   my $feat = $self->feature;
   my $class = $feat->class;
   my $stain = $feat->attributes('Stain');
-  my $arcradius = $self->option('arcradius') || 6;
+  my $arcradius = $self->option('arcradius') || 7;
+
+  # Some genome sequences don't contain substantial telomere sequence (i.e. Arabidopsis)
+  # We can suggest their presence at the tips of the chromosomes by setting fake_telomeres = 1
+  # in the configuration file, resulting in the tips of the chromosome being painted black.
+  my $fake_telomeres = $self->option('fake_telomeres') || 0;
+
   my ($bgcolor_index)  =  $self->option('bgcolor') =~ /$stain:(\S+)/;
   $bgcolor_index ||= 'white';
   my $black = $gd->colorAllocate(0,0,0);
-  warn "cytoband $feat:\$class=$class,stained=$stain, fgcolor=",$self->fgcolor,",bgcolor=>",$bgcolor_index;
-  warn "\$feat=$feat,bgcolor-option f.stain $stain=", $self->option('bgcolor');
-  my($is_teltop,$is_telbot);
+  my($is_teltop,$is_telbot, $telomere_tip_color);
   if($class eq 'CytoBand')
   {
-      if($feat->start == 1)
+      if($feat->start == 1 || $feat->start == 0)
       {
-	  warn "Drawing telomere top";
 	  $is_teltop  = 1;
 	  $gd->arc($x1+$arcradius,$y1+$arcradius,
 		   $arcradius*2,$arcradius*2,
@@ -43,7 +47,6 @@ sub draw_component {
       }
       elsif($feat->stop >= $self->panel->end-1000)
       {
-	  warn "Drawing telomere bottom";
 	  $is_telbot = 1;
 	  $gd->arc($x2-$arcradius,$y1+$arcradius,
 		   $arcradius*2,$arcradius*2,
@@ -54,31 +57,57 @@ sub draw_component {
 	  $gd->line($x1,$y1,$x2-$arcradius,$y1,$self->fgcolor);
 	  $gd->line($x1,$y2,$x2-$arcradius,$y2,$self->fgcolor);
 	  $gd->line($x2,$y1+$arcradius,$x2,$y2-$arcradius,$self->fgcolor);
-	  $gd->fill($x2-1,$y1+1,$self->panel->bgcolor);
-	  $gd->fill($x2-1,$y2-1,$self->panel->bgcolor);
       }
       else
       {
 	  #Just draw a regular box
-	  warn "drawing a regular box for band";
 	  $gd->rectangle($x1,$y1,$x2,$y2,$self->fgcolor);
       }
       
       #Time to put in the fill color
       #Special handling for the background color
-      warn "$feat stained as $stain \$bgcolor='$bgcolor_index'";
       my $bgcolor = $self->factory->translate_color($bgcolor_index);
       if($bgcolor_index eq 'var')
       {
-	  warn "Using tile to fill var-stained band ($x1,$y1,$x2,$y2)";
 	  my $var_tile = $self->create_tile('left');
 	  $gd->setTile($var_tile);
-	  $gd->fill($x1+2,$y1+4,gdTiled);
+	  $gd->fill($x1+3,$y1+(($y2-$y1)/2),gdTiled); 
       }
       else
       {
-	  warn "Using regular color to fill normal-stained band";
-	  $gd->fill($x1+3,$y1+3,$bgcolor);
+	  if($x2-$x1 > 1)
+	  {
+	      $gd->fill($x1+1,$y1+(($y2-$y1)/2),$bgcolor);
+	  }
+	  #$gd->line($x1+1,$y1+(($y2-$y1)/2),$x1+1,$y1+(($y2-$y1)/2),$black);
+	  if ($fake_telomeres) 
+	  {
+	      warn "got fake_telomeres";
+	      $telomere_tip_color = $black;
+	  }
+	  else 
+	  {
+	      $telomere_tip_color = $bgcolor;
+	  }
+	  
+	  if ($is_teltop) {
+		# Fill inside the round part of the telomere...
+		$gd->fill($x1+($arcradius/2), $y1+(($y2-$y1)/2), $telomere_tip_color);
+		# and paint over the line between the telomere box and the arc
+		# We back off the y-coordinates +/- 1 to keep the color inside the bounding
+		# line sourrounding the feature.
+		$gd->line($x1+$arcradius, $y1+1, $x1+$arcradius, $y2-1, $telomere_tip_color);
+	  }
+	  if ($is_telbot) {
+		# Fill inside the round part of the telomere..
+		$gd->fill($x2-($arcradius/2), $y1+(($y2-$y1)/2), $telomere_tip_color);
+		# and paint over the line between the telomere box and the arc
+		# We back off the y-coordinates +/- 1 to keep the color inside the bounding
+		# line sourrounding the feature.
+		$gd->line($x2-$arcradius, $y1+1, $x2-$arcradius, $y2-1, $telomere_tip_color);
+	  }
+	  $is_teltop or $gd->line($x1,$y1+1,$x1,$y2-1,$bgcolor);
+	  $is_telbot or $gd->line($x2,$y1+1,$x2,$y2-1,$bgcolor);
 	  $is_teltop or $gd->line($x1,$y1+1,$x1,$y2-1,$bgcolor);
 	  $is_telbot or $gd->line($x2,$y1+1,$x2,$y2-1,$bgcolor);
       }
@@ -108,14 +137,13 @@ sub draw_component {
       $gd->line(($x1+$x2)/2-1,$y1+$arcradius-1,($x1+$x2)/2-1,$y2-$arcradius+1,$self->fgcolor);
       $gd->line(($x1+$x2)/2+1,$y1+$arcradius-1,($x1+$x2)/2+1,$y2-$arcradius+1,$self->fgcolor);
 
-      warn "Using tile to fill centromere regions with pattern ($x1,$y1,$x2,$y2)";
       my $centrom_tile = $self->create_tile('right');
       
       $gd->setTile($centrom_tile);
       $gd->line($x1,$y1,$x1,$y2,$self->fgcolor);
       $gd->line($x2,$y1,$x2,$y2,$self->fgcolor);
-      $gd->fill($x1+2,$y1+4,gdTiled);
-      $gd->fill($x2-2,$y2-4,gdTiled);
+      $gd->fill($x1+1,$y1+(($y2-$y1)/2),gdTiled);
+      $gd->fill($x2-1,$y1+(($y2-$y1)/2),gdTiled);
   }
 }
 
@@ -126,7 +154,6 @@ sub create_tile
 
     #Prepare tile to use for filling an area
     my $tile = new GD::Image(5,5);
-    warn "Creating tile in direction '$direction'";
     $tile->fill(1,1,$tile->colorAllocate(255,255,255));
     if($direction eq 'right')
     {
@@ -138,6 +165,9 @@ sub create_tile
     }
     return $tile;
 }
+
+sub bump{return 0;}
+
 1;
 
 __END__
@@ -182,19 +212,7 @@ bgcolor       = gneg:white gpos25:silver gpos50:gray gpos:gray gpos75:darkgray g
 arcradius     = 6
 height        = 25
 
- Note however that 
-
 =head2 OPTIONS
-
-  Option      Description                        Default
-  ------      -----------                        -------
-
-  -arcradius  Radius of the curved telomere ends    6
-
-  -bgcolor    List of tag:value pairs describing   N/A
-              which color should be used for each
-              stain type (e.g. gpos50,gneg etc.)
-
 
 The following options are standard among all Glyphs.  See
 L<Bio::Graphics::Glyph> for a full explanation.
@@ -263,7 +281,7 @@ L<GD>
 
 =head1 AUTHOR
 
-Gudmundur A. Thorisson<lt>mummi@cshl.eduE<gt>
+Gudmundur A. Thorisson<lt>mummi@cshl.orgE<gt>
 
 Copyright (c) 2001 Cold Spring Harbor Laboratory
 

@@ -41,7 +41,7 @@ $Config{startperl}
 
 print OUT <<'!NO!SUBS!';
 # Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.95 2003-05-26 21:05:08 lstein Exp $
+# $Id: gbrowse.PLS,v 1.96 2003-05-28 20:44:14 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -173,11 +173,16 @@ my $plugin_type   = $PLUGINS->{param('plugin')}->type
 my $plugin_action = param('plugin_action') || '';
 warn "plugin_action = $plugin_action" if DEBUG_PLUGINS;
 
+# for activating the plugin by URL
+if (param('plugin_do')) {
+  $plugin_action = $CONFIG->tr(param('plugin_do')) || $CONFIG->tr('Go');
+}
+
 
 ## GETTING THE SEGMENT ######################################################
 my @segments = get_segments($page_settings);
 
-if ($plugin_action eq $CONFIG->tr('FIND') && param('plugin')) {
+if ($plugin_action eq $CONFIG->tr('Find') && param('plugin')) {
   do_plugin_find($page_settings,
 		 param('plugin'),
 		 \@segments) or ($plugin_action = 'Configure'); #reconfigure
@@ -335,7 +340,7 @@ sub main_display {
 
   # force flipping
   my $flip = $segment && $segment->stop < $segment->start;
-  param('Flip'=>'on') if $flip;
+  param('flip'=>'on') if $flip;
 
   # print the top of the form, with navigation bar, etc
   print start_multipart_form(-name=>'mainform',-action=>url(-relative=>1,-path_info=>1));

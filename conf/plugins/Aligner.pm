@@ -1,8 +1,8 @@
 package Bio::Graphics::Browser::Plugin::Aligner;
-# $Id: Aligner.pm,v 1.2 2003-05-26 21:05:09 lstein Exp $
+# $Id: Aligner.pm,v 1.3 2003-05-28 20:44:15 lstein Exp $
 use strict;
 use Bio::Graphics::Browser::Plugin;
-use CGI qw(table TR td th p popup_menu radio_group checkbox checkbox_group h1 h2 pre);
+use CGI qw(table a TR td th p popup_menu radio_group checkbox checkbox_group h1 h2 pre);
 use Text::Shellwords;
 use Bio::Graphics::Browser::Realign 'align_segs';
 use Bio::Graphics::Browser::PadAlignment;
@@ -120,6 +120,12 @@ sub dump {
   print h1("Alignments for $segment$flipped");
 
   my $ref_dna = lc $segment->seq;
+
+  if ($segment->strand < 0) {  # don't ask
+    $ref_dna    = reversec($ref_dna);
+    $configuration->{flip} = 1;
+  }
+
   my ($abs_start,$abs_end) = ($segment->start,$segment->end);
 
 
@@ -132,8 +138,8 @@ sub dump {
       @segments    = $f unless @segments;
       for my $s (@segments) {
 	my $upstart   = $s->low-$abs_start;
+	my $uplength  = $s->length;
 	$upstart      = 0 if $upstart < 0;
-	my $uplength  = $s->high - $upstart;
 	$uplength     = length($ref_dna) if $uplength > length($ref_dna);
 	substr($ref_dna,$upstart,$uplength) =~ tr/a-z/A-Z/;
       }

@@ -11,9 +11,9 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 =head1 VERSION (CVS-info)
 
  $RCSfile: PadAlignment.pm,v $
- $Revision: 1.7 $
+ $Revision: 1.8 $
  $Author: lstein $
- $Date: 2003-05-29 21:27:53 $
+ $Date: 2003-06-19 21:07:05 $
 
 =head1 SYNOPSIS
 
@@ -157,7 +157,7 @@ gap maps for each of the targets (at the cost of speed and memory
 efficiency) see the section after __END__ in the source file for this
 module.
 
-=item $align_string = $aligner->alignment(\%origins)
+=item $align_string = $aligner->alignment(\%origins [,\%options])
 
 This method returns a pretty-printed string of the aligned sequences.
 You may provide a hashref of sequence origins in order to control the
@@ -167,6 +167,12 @@ the coordinate to be assigned to the first base of the sequence.  Use
 a negative number if you wish to indicate that the sequence has been
 reverse complemented (the negative number should indicate the
 coordinate of the first base in the provided sequence).
+
+An optional second argument, if present, contains a hash reference to
+a set of option=>value pairs.  Two options are recognized:
+
+   show_mismatches      0|1      if true, highlight mismatches in pink
+   flip                 0|1      if true, reverse complement the whole alignment
 
 =back
 

@@ -47,7 +47,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: register_moby_services.PLS,v 1.4 2003-12-29 15:37:19 markwilkinson Exp $
+#$Id: register_moby_services.PLS,v 1.5 2004-01-07 22:21:49 markwilkinson Exp $
 
 use MOBY::Client::Central;
 use strict;
@@ -120,6 +120,8 @@ Please go ahead and configure this file, then run this script again
     your config file!\n" unless ($cgiURL =~ "^http\://");
 
     my @sources = $CONFIG->sources;
+
+    my @featureNamespaces = keys %{$CONFIG->{'MOBY'}->{'NAMESPACE'}};
     # =============================================
     # =============================================
     
@@ -221,6 +223,80 @@ Please go ahead and configure this file, then run this script again
         print DONE "$authURI\tGbrowseGetReferenceSeqObj\n";
     }
 
+    $description = "Consumes base Object's in the ".(join ",", @featureNamespaces)." namespace(s) and does a retrieval of GFF2-formatted text plus FASTA from the ".(join ",", @sources)." database(s), returning it as a GFF2 object.";
+    $success = TEST($C->registerService(
+        serviceName  => "GbrowseGetFeatureGFF2",  
+        serviceType  => "Retrieval",
+        authURI      => $authURI,      
+        contactEmail => $contactEmail,      
+        description => $description,
+        category  =>  "moby",
+        URL    => "$cgiURL/moby_server",
+        input =>[
+                ['', ['Object', \@featureNamespaces]],  # this will fail if the $reference namespace is not yet registered
+                ],
+        output =>[
+                ['', ['GFF2', \@featureNamespaces]],
+               ],
+    ), 1, 1);
+    unless ($success){
+        close DONE;
+        DEREGISTER_SERVICES();
+        die "registered services have been purged from MOBY Central pending successful completion of this routine\n  You will need to start again.\n";;
+    } else {
+        print DONE "$authURI\tGbrowseGetFeatureGFF2\n";
+    }
+
+
+    $description = "Consumes base Object's in the ".(join ",", @featureNamespaces)." namespace(s) and does a retrieval of GFF3-formatted text plus FASTA from the ".(join ",", @sources)." database(s), returning it as a GFF3 object.";
+    $success = TEST($C->registerService(
+        serviceName  => "GbrowseGetFeatureGFF3",  
+        serviceType  => "Retrieval",
+        authURI      => $authURI,      
+        contactEmail => $contactEmail,      
+        description => $description,
+        category  =>  "moby",
+        URL    => "$cgiURL/moby_server",
+        input =>[
+                ['', ['Object', \@featureNamespaces]],  # this will fail if the $reference namespace is not yet registered
+                ],
+        output =>[
+                ['', ['GFF3', \@featureNamespaces]],
+               ],
+    ), 1, 1);
+    unless ($success){
+        close DONE;
+        DEREGISTER_SERVICES();
+        die "registered services have been purged from MOBY Central pending successful completion of this routine\n  You will need to start again.\n";;
+    } else {
+        print DONE "$authURI\tGbrowseGetFeatureGFF3\n";
+    }
+
+
+    $description = "Consumes base Object's in the ".(join ",", @featureNamespaces)." namespace(s) and does a retrieval of a GenericSequence object or better (RNA, DNA, or AminoAcid Sequence) from the ".(join ",", @sources)." database(s).";
+    $success = TEST($C->registerService(
+        serviceName  => "GbrowseGetFeatureSequenceObject",  
+        serviceType  => "Retrieval",
+        authURI      => $authURI,      
+        contactEmail => $contactEmail,      
+        description => $description,
+        category  =>  "moby",
+        URL    => "$cgiURL/moby_server",
+        input =>[
+                ['', ['Object', \@featureNamespaces]],  # this will fail if the $reference namespace is not yet registered
+                ],
+        output =>[
+                ['', ['GFF3', \@featureNamespaces]],
+               ],
+    ), 1, 1);
+    unless ($success){
+        close DONE;
+        DEREGISTER_SERVICES();
+        die "registered services have been purged from MOBY Central pending successful completion of this routine\n  You will need to start again.\n";;
+    } else {
+        print DONE "$authURI\tGbrowseGetFeatureSequenceObject\n";
+    }
+
 
     return 1;
 }
@@ -256,14 +332,22 @@ sub _settings {
         $dbh{$_}=$db;
     }
     
-    open (IN, "$CONF_DIR/MobyServices/moby.conf") || die "\n**** GbrowseServices.pm couldn't open configuration file $CONF_DIR/MOBY/moby.conf:  $!\n";
+    open (IN, "$CONF_DIR/MobyServices/moby.conf") || die "\n**** GbrowseServices.pm couldn't open configuration file $CONF_DIR/MobyServices/moby.conf:  $!\n";
     while (<IN>){
         chomp; next unless $_; # filter out blank lines
         next if m/^#/;  # filter out comment lines
+        last if $_ =~ /\[Namespace_Class_Mappings\]/;
         my @res = shellwords($_);  # parse the tokens key = value1 value2 value3
         $CONFIG->{MOBY}->{$res[0]} = [@res[2..scalar(@res)]];  # add them to the existing config with a new tag MOBY in key = \@values format
     }
+    while (<IN>){  # now process the namespace mappings
+        chomp; next unless $_; # filter out blank lines
+        next if m/^#/;  # filter out comment lines
+        my @res = shellwords($_);  # parse the tokens key = value1 value2 value3
+        $CONFIG->{'MOBY'}->{'NAMESPACE'}->{$res[0]} = [$res[2]];  # add them to the existing config with a new tag MOBY in key = \@values format
+    }
 }
+
 
 sub TEST {  # test of Registration object
     my ($reg, $test, $expect) = @_;
@@ -281,6 +365,9 @@ sub TEST {  # test of Registration object
 
 
 #=======================================================================
+
+
+
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

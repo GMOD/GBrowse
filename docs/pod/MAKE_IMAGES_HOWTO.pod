@@ -7,6 +7,7 @@
 Will generate this picture:
 
   [gbrowse_img?source=wormbase;name=mec-3;width=400]
+
    <a href="http://www.wormbase.org/db/seq/gbrowse_img?list=sources">list</a>
 
 Will return this document: ## Sources fly yeast wormbase

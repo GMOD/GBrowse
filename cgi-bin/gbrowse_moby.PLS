@@ -49,7 +49,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.16 2003-12-30 17:51:36 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.17 2003-12-30 17:58:09 markwilkinson Exp $
 
 use MOBY::Client::Central;
 use MOBY::Client::Service;
@@ -72,9 +72,9 @@ foreach my $file(@files){
     no strict 'refs';
     next if (-d $file);
     next unless ($file =~ /(.*)_renderer\.pm/);
-    require "MobyServices::".$file;
-    my $type = &{'MobyServices::'.$file.'_renderer::type'};
-    $RENDERERS{$1} =   "MobyServices::".$file."_renderer";
+    require "MobyServices::".$1;
+    my $type = &{'MobyServices::'.$1.'_renderer::type'};
+    $RENDERERS{$1} =   "MobyServices::".$1."_renderer";
     use strict;
 }
 

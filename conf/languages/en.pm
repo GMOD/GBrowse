@@ -209,7 +209,7 @@ END
    FILE_INFO    => 'Last modified %s.  Annotated landmarks: %s',
 
    FOOTER_1     => <<END,
-Note: This page uses cookie to save and restore preference information.
+Note: This page uses cookies to save and restore preference information.
 No information is shared.
 END
 

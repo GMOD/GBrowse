@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.13 2003-11-06 06:56:50 sheldon_mckay Exp $
+# $Id: GFFhelper.pm,v 1.14 2003-11-09 20:10:23 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -155,7 +155,7 @@ sub parse_gff {
     my @feats = ();
     for ( split "\n", $gff ) {
 	next if /^\#\#/ || !/\t/ || /reference\tcomponent/i;
-	push @feats, $self->parse_gff_line($_);
+        push @feats, $self->parse_gff_line($_);
     }    
     @feats;
 }
@@ -185,7 +185,6 @@ sub parse_gff_line {
     elsif ( $gname && $gclass ) {
 	$groupobj = Bio::DB::GFF::Featname->new($gclass,$gname);
     }
-
 
     # create a Bio::DB::GFF::Feature
     my @args = ( undef, $seqid, $start, $stop, $method );
@@ -310,7 +309,11 @@ sub gff2Generic {
 
 sub process_attributes {
     my ($self, $f) = @_;
+    my $mode = $self->configuration->{mode};
     my %att = $f->attributes;
+
+    # add database identifiers for select mode
+    $att{database_id} = $f->id if $mode eq 'selected';
     
     # handle GFF2.5 targets
     if ( my $t = $f->target ) {

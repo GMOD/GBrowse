@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.50 2004-06-21 20:55:06 scottcain Exp $
+# $Id: Chado.pm,v 1.51 2004-06-22 20:09:44 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -95,7 +95,7 @@ use DBI;
 use vars qw($VERSION @ISA);
 
 use constant SEGCLASS => 'Bio::DB::Das::Chado::Segment';
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 $VERSION = 0.11;
 @ISA     = qw(Bio::Root::Root Bio::DasI);

@@ -1,0 +1,5 @@
+This directory contains CGI scripts that are installed when you "make
+install".  To install manually, simply copy them into your Web
+server's CGI-BIN directory.
+
+

@@ -11,6 +11,11 @@ TextDumper  Don Jackson's plugin for dumping out current region of
 bulk_load_win.pl, pg_bulk_load_gff.PLS
 	    Early versions of windows and PostGres loaders.
 
+macosx_install
+	    Scripts that streamline the installation of GBrowse
+            and its dependencies on Mac OS X. Contributed by Todd
+            Harris.
+
 conf_files  Configuration files for:
  01.yeast.conf		yeast data
  02.wormbase.conf	c. elegans data

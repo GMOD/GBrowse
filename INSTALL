@@ -27,7 +27,7 @@ already.
 	They can be found on the Comprehensive Perl Archive Network
 	(CPAN):
 
-        CGI (a relatively recent version is required; 2.93 is sufficent).
+        CGI
 	GD
         DBI
         DBD::mysql

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.125 2004-02-25 13:26:46 lstein Exp $
+# $Id: Browser.pm,v 1.126 2004-03-16 21:28:53 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -68,7 +68,7 @@ use Bio::Graphics::Browser::I18n;
 require Exporter;
 
 use vars '$VERSION','@ISA','@EXPORT';
-$VERSION = '1.15';
+$VERSION = '1.16';
 
 @ISA    = 'Exporter';
 @EXPORT = 'commas';
@@ -1418,7 +1418,7 @@ sub _feature_get {
 
   # Deal with multiple hits.  Winnow down to just those that
   # were mentioned in the config file.
-  my $types = $self->_all_types();
+  my $types = $self->_all_types($db);
   my @filtered = grep {
     my $type   = $_->type;
     my $method = eval {$_->method} || '';
@@ -1455,7 +1455,7 @@ sub get_max_segment {
     return $max_seg * $divisor;
   }
 }
-                                                                                
+
 sub get_default_segment {
   my $self = shift;
   my $divisor   = $self->setting('unit_divider') || 1;
@@ -1471,8 +1471,11 @@ sub get_default_segment {
 
 sub _all_types {
   my $self  = shift;
+  my $db    = shift;
   return $self->{_all_types} if exists $self->{_all_types}; # memoize
   my %types = map {$_=>1} map {$self->label2type($_)} $self->labels;
+  # load aggregator types too
+  $types{$_->method}++ foreach eval {$db->aggregators};
   return $self->{_all_types} = \%types;
 }
 

@@ -1,3 +1,7 @@
+1.60	Tue Mar 16 16:36:45 EST 2004
+	* Fixed problem of some landmarks not being recognized using 
+	the Class:Name syntax.
+
 1.59    Mon Feb 16 13:56:46 EST 2004
         * Fixed security hole related to track level security
         * Fixed functioning related to arbitrary (non-base) units

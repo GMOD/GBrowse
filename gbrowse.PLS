@@ -32,7 +32,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.4 2002-01-20 20:10:08 lstein Exp $
+# $Id: gbrowse.PLS,v 1.5 2002-01-21 22:37:00 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -151,8 +151,6 @@ if (defined($old_source) && $source ne $old_source) {
 
 ## GETTING THE SEGMENT ########################################################################
 my @segments  = get_segment($page_settings);
-@segments     = $CONFIG->merge(\@segments,(get_ranges())[-1])
-  if @segments > 1 && @segments < TOO_MANY_SEGMENTS;
 ###############################################################################################
 
 ## DUMPS ######################################################################################
@@ -778,11 +776,10 @@ sub get_segment {
     @segments = $db->segment(@argv);
   }
 
-  return unless @segments;
-  return @segments if @segments > 1;
+  $_->absolute(1) foreach @segments;
 
   return unless @segments;
-  $segments[0]->absolute(1);
+  return @segments if @segments > 1;
 
   # set CGI name parameter to match segment.
   # this prevents any confusion over (ref,start,stop) and (name) addressing.
@@ -818,7 +815,7 @@ sub name2segments {
   push @argv,(-class => $class) if defined $class;
   push @argv,(-start => $start) if defined $start;
   push @argv,(-stop  => $stop)  if defined $stop;
-  @segments = defined($start) ? $db->segment(@argv) : $db->segments(@argv);
+  @segments = $db->segments(@argv);
 
   # Here starts the heuristic part.  Try various abbreviations that
   # people tend to use for chromosomal addressing.
@@ -847,6 +844,20 @@ sub name2segments {
       @segments = $db->segments($class => $name);
       last if @segments;
     }
+  }
+
+  # This tricky bit is called when we retrieve multiple segments or when
+  # there is an unusually large feature on display.  In this case, we attempt
+  # to split the feature into its components and offer the user different
+  # portions to look at, invoking merge() to select the regions.
+  my $max_length = 0;
+  foreach (@segments) {
+    $max_length = $_->length if $_->length > $max_length;
+  }
+  if (@segments > 1 || $max_length > $MAX_SEGMENT) {
+    @segments = $db->fetch_feature($segments[0]->ref);
+    @segments = $CONFIG->merge(\@segments,(get_ranges())[-1])
+      if @segments > 1 && @segments < TOO_MANY_SEGMENTS;
   }
   @segments;
 }

@@ -136,7 +136,7 @@ sub open_database {
   }
 
   ################################################
-  # HACK ALERT - REMOVE AFTER BIOPERL 1.3 RELEASED
+  # HACK ALERT - REMOVE AFTER BIOPERL 2.0 RELEASED
   patch_old_versions_of_bioperl($adaptor);
   ################################################
 
@@ -221,10 +221,51 @@ sub patch_old_versions_of_bioperl {
   my $adaptor = shift;
   local $^W = 0;
   if ($adaptor eq 'Bio::DB::GFF') {
+
+    # patch missing is_circular method
     eval <<'END' unless defined &Bio::DB::GFF::Segment::is_circular;
 sub Bio::DB::GFF::Segment::is_circular { 0; }
 END
+
+
+    # patch problems on Windows platforms with memory adaptor
+    # (having to do with broken glob() in perl 5.8)
+    eval <<'END';# if $^O =~ /^MSWin/ && $Bio::DB::GFF::VERSION <= 1.4;
+sub Bio::DB::GFF::setup_argv {
+  my $self = shift;
+  my $file_or_directory = shift;
+  my @suffixes          = @_;
+  no strict 'refs';  # so that we can call fileno() on the argument
+  my @argv;
+
+  if (-d $file_or_directory) {
+    # Because glob() is broken with long file names that contain spaces
+    $file_or_directory = Win32::GetShortPathName($file_or_directory)
+      if $^O =~ /^MSWin/i && eval "use Win32; 1;";
+    @argv = map { glob("$file_or_directory/*.{$_,$_.gz,$_.Z,$_.bz2}")} @suffixes;
+  }elsif (my $fd = fileno($file_or_directory)) {
+    open STDIN,"<&=$fd" or $self->throw("Can't dup STDIN");
+    @argv = '-';
+  } elsif (ref $file_or_directory) {
+    @argv = @$file_or_directory;
+  } else {
+    @argv = $file_or_directory;
   }
+
+  foreach (@argv) {
+    if (/\.gz$/) {
+      $_ = "gunzip -c $_ |";
+    } elsif (/\.Z$/) {
+      $_ = "uncompress -c $_ |";
+    } elsif (/\.bz2$/) {
+      $_ = "bunzip2 -c $_ |";
+    }
+  }
+  @argv;
+}
+END
+  warn "$@";
+}
 }
 
 sub redirect_legacy_url {

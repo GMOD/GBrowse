@@ -22,12 +22,16 @@ is run.
 
 In addition to the standard chado schema, this adaptor requires a few
 additional views and functions.  These are found in two files in the
-chado CVS (or in a chado distribution, when one is available).  These are:
+chado CVS or in a gmod distribution.  These are:
 
   schema/chado/modules/sequence/gff-bridge/sequence-gff-views.sql
   schema/chado/modules/sequence/gff-bridge/sequence-gff-funcs.pgsql
 
-The easiest way to get these into the chado schema is to cat the files
+The easiest way to get these into the chado schema is include them when 
+building the chado schema from a gmod release during `perl Makefile.PL`.
+It is currently included by default when the schema is built this way.
+If you already have a chado instance and want to add these items,
+the easiest way to do that is to cat the files
 to stdout and pipe that to a psql command:
 
   % cat sequence-gff-views.sql   | psql <chado-database-name>

@@ -44,9 +44,6 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.11 2003-07-21 16:52:31 lstein Exp $
-
 use strict;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
@@ -1024,7 +1021,7 @@ sub external_table {
 			  -labels => \%presets,
 			  -override => 1,
 			  -default  => '',
-			  -onChange => 'document.mainform.submit()'
+			  -onChange => 'document.externalform.submit()'
 			 );
   }
 

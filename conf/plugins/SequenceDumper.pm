@@ -1,4 +1,4 @@
-# $Id: SequenceDumper.pm,v 1.12 2003-09-08 15:21:47 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.13 2003-09-08 15:30:43 stajich Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::SequenceDumper
 #
@@ -50,13 +50,14 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::SequenceDumper;
-# $Id: SequenceDumper.pm,v 1.12 2003-09-08 15:21:47 stajich Exp $
+# $Id: SequenceDumper.pm,v 1.13 2003-09-08 15:30:43 stajich Exp $
 # Sequence Dumper plugin
 
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use Bio::SeqIO;
-use Bio::Seq;
+use Bio::Seq::RichSeq;
+use POSIX qw(strftime);
 use Bio::Location::Fuzzy;
 use CGI qw(:standard *pre);
 use Bio::SeqFeature::Generic;
@@ -116,11 +117,13 @@ sub dump {
     return;
   }
   my @filter    = $self->selected_features;
-  my $seq  = new Bio::Seq(-display_id   => $segment->display_id,
-			  -desc         => $segment->desc,
-			  -accession_number => $segment->accession_number,
-			  -alphabet     => $segment->alphabet,
+  my $seq  = new Bio::Seq::RichSeq(-display_id       => $segment->display_id,
+				   -desc             => $segment->desc,
+				   -accession_number => $segment->accession_number,
+				   
+				   -alphabet         => $segment->alphabet || 'dna',
 			  );
+  $seq->add_date(strftime("%d-%b-%Y",localtime));
   $seq->primary_seq($segment->primary_seq);
   my $offset = $segment->start - 1;
   my $segmentend = $segment->end;

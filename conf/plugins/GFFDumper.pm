@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.15 2003-10-27 15:26:22 sheldon_mckay Exp $
+# $Id: GFFDumper.pm,v 1.16 2003-11-03 17:56:38 sheldon_mckay Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -93,7 +93,8 @@ sub dump {
   my $version       = $config->{version} || 2;
   my $mode          = $config->{mode}    || 'selected';
   my $db            = $self->database;
-  my $whole_segment = $db->segment($segment->sourceseq);
+  my $whole_segment = $db->segment(Accession => $segment->ref) ||
+                      $db->segment($segment->ref);
   $mode             = 'all' if $version == 2.5;  
 
   my $date = localtime;
@@ -123,7 +124,7 @@ sub dump {
     }  
   }
 
-  $self->do_dump(\@feats, $version);
+  $self->do_dump(\@feats, $version, $whole_segment);
 
   for my $set (@more_feature_sets) {
     if ( $set->can('get_seq_stream') ) {
@@ -132,7 +133,7 @@ sub dump {
       while ( my $f = $iterator->next_seq ) {
         push @feats, $f;
       }
-      do_dump(\@feats, $version); 
+      do_dump(\@feats, $version, $whole_segment); 
     }  
   }
 
@@ -145,7 +146,7 @@ sub dump {
 }
 
 sub do_dump {
-  my ($self, $feats, $gff_version) = @_;
+  my ($self, $feats, $gff_version, $segment) = @_;
   my @gff;
   
   for my $f ( @$feats ) {
@@ -160,14 +161,27 @@ sub do_dump {
       push @gff, $s if $s;
     }
   }
-  
+
+  # out of range features break Artemis (some kind of off by one error?)
+  if ( $gff_version == 2.5 ) {
+      my $len = $segment->length - 1;
+      for ( @gff ) {
+	  my $num = (split)[4];
+	  s/$num/$len/ if $num > $len;
+      }
+  }   
+
   $self->do_gff(@gff);
 }
 
 sub do_gff {
     my $self = shift;
     my @gff = @_;
+    
+    # sigh... Artemis mangles uppercase 'Note' attributes
+    @gff = map { s/Note/note/g } @gff;
     chomp @gff;
+
     print join "\n", 
       map  { $_->[3] }
       # sort first asc. by start, then desc. by stop, then ascibetically 

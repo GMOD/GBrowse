@@ -1,4 +1,4 @@
-# $Id: ImportFeatures.pm,v 1.7 2003-10-27 15:35:58 sheldon_mckay Exp $
+# $Id: ImportFeatures.pm,v 1.8 2003-11-03 17:56:38 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -216,7 +216,7 @@ sub reconfigure {
     $conf;
 }
 
-sub configure_form {
+sub configure_form { 
     my $self  = shift;
     my $conf  = $self->configuration;
     $self->{rb_loc} = $ROLLBACK;
@@ -227,48 +227,66 @@ sub configure_form {
     }
     
     my $f = "<font color=black><b>";
-    my $html = 
-	"<table>\n" .
-	Tr( { -class => 'searchtitle' }, td( $f, 'Upload a GenBank/EMBL/GFF Flatfile' ) ) . 
-        "<tr><td class='searchbody'>" .
+
+    # web browsers won't let us force a filename in a filefield
+    # give the user some text to cut and paste of this information is
+    # passed in via the URL
+    my $sorry = '';
+    if ( my $filename = $self->config_param('file') ) {
+	my $len = (length $filename) + 20;
+        $filename = "<input name=null value='$filename' size=$len>";
+	$sorry = br . br ."<font size=-1>This browser does not support direct file " .
+                          "loading from an external editor. <br>Please copy and paste " .
+                          "the following text into the file upload field " . br .
+                          "or use the 'Browse' button to navigate to the saved annotation file" .
+                 br . $filename; 
+    }                         
+
+    my $html = join ( "\n", 
+	"<table>\n" ,
+	Tr( { -class => 'searchtitle' }, td( $f, 'Upload External Annotations' ) ) ,
+        "<tr><td class='searchbody'>" ,
         h3('Format: ',
 	   radio_group( -name    => $self->config_name('format'),
 			-values  => [ qw/GFF GENBANK EMBL/ ],
-			-default => $conf->{format} )) . "\n" .
+			-default => $conf->{format} || $self->config_param('format'))),
 	h3('Sequence ID: ', 
             textfield( -name  => $self->config_name('seqid'),
 		       -size  => 10,
 		       -value => $conf->{seqid}), ' ',
-	   a( {-onclick => 'alert("Required for headerless feature tables")'}, '[?]')) . "\n" .
+	   a( {-onclick => 'alert("Required for headerless feature tables")'}, '[?]')),
 	h3('Name of file to upload: ',
-            filefield( -name  =>  $self->config_name('file'),
-		       -size  => 40,
-		       -value => $conf->{file} )) . "\n" .
-        "</td></tr></table>" . "\n" . h3(' - OR - ') . 
-        "<table>\n" .
-	Tr( { -class => 'searchtitle' }, td( $f, 'Direct Download from NCBI/EBI' ) ) .
-        "<tr><td class='searchbody'>\n" .
-        h3( 'Accession ',
-	    textfield( -name    =>  $self->config_name('acc'),
-		       -size    => '15'), ' ',
-	    a( {-onclick => 'alert("Use a GenBank/EMBL accession number (not GI)\\n' .
-                            'Note: this will override file uploading")'}, '[?]')) .
-        "</td></tr></table>\n";
+            filefield( -name    =>  $self->config_name('file'),
+		       -size    => 40,
+		       -default => $conf->{file} || $self->config_param('file') ), $sorry),
+        "</td></tr></table>" );
+    unless ( $self->config_param('filesource') eq 'external' ) {
+        $html =~ s/External Annotations/a GenBank\/EMBL\/GFF File/m;
+	$html .= join ( "\n", h3(' - OR - '), "<table>\n" ,
+	         Tr( { -class => 'searchtitle' }, td( $f, 'Direct Download from NCBI/EBI' ) ),
+                 "<tr><td class='searchbody'>",
+                 h3( 'Accession ',
+	         textfield( -name    =>  $self->config_name('acc'),
+		            -size    => '15'), ' ',
+	         a( {-onclick => 'alert("Use a GenBank/EMBL accession number (not GI)\\n' .
+                                  'Note: this will override file uploading")'}, '[?]')),
+                 "</td></tr></table>\n" );
 
-    # add a rollback table if required
-    my $msg = "Selecting rollback will override loading of files or accessions";
-    $html .= "\n" . h3(' - OR - ') . "\n" . $self->rollback_form($msg) if $ROLLBACK;
-    $html =~ s|searchbody>(.+)</td>|searchbody><h3>$1</h3></td>|sm;
+        # add a rollback table if required
+        my $msg = "Selecting rollback will override loading of files or accessions";
+        $html .= "\n" . h3(' - OR - ') . "\n" . $self->rollback_form($msg) if $ROLLBACK;
+        $html =~ s|searchbody>(.+)</td>|searchbody><h3>$1</h3></td>|sm;
+    }
     $html .= h4(checkbox ( -name    => $self->config_name('debug'),
 			   -value   => 'debug',
 			   -label   => '' ), 'debug ',
-		a( {-onclick => 'alert("Report on database loading progress;\\n' .
-			        'provides debugging information")' }, '[?]'), '&nbsp;&nbsp;',
-		checkbox ( -name    => $self->config_name('reload'),
-			   -value   => 'reload',
-			   -label   => '',
-			   -checked => 1 ), 'reload browser after database update') . "\n";
-
+	     a( {-onclick => 'alert("Report on database loading progress;\\n' .
+		             'provides debugging information")' }, '[?]'), '&nbsp;&nbsp;',
+	     checkbox ( -name    => $self->config_name('reload'),
+			-value   => 'reload',
+			-label   => '',
+			-checked => 1 ), 'reload browser after database update') . "\n";
+    
     $html;
 }
 
@@ -282,14 +300,19 @@ sub dump {
     my $rollback = $self->config_param('rb_id');
     
     my $gff = $rollback ? $self->rollback($rollback) : $self->gff;
+    
+    # add an origin feature if req'd
+    $gff = $self->origin($gff) if $self->{source} && $gff !~ /\torigin\t/i;
 
     if ( $conf->{debug} ) {
 	print h2("Rolling back to previous state...", br )
           if $rollback;
 	print h2("The input features:"), pre($gff);
     }
+    
+    my $segment  = $db->segment( 'Sequence', $self->refseq )  ||
+	           $db->segment( 'Accession', $self->refseq );
 
-    my $segment  = $db->segment( $self->refseq );
     my $nodna = 0;
     
     if ( $segment ) {
@@ -303,14 +326,13 @@ sub dump {
 	}
 
 	my @killme = $segment->features;
-        my $killed = $db->delete( $segment->ref );
-	
+	my $killed = $db->delete_features( @killme );
+
+
         print h2("I removed $killed features from the database"), pre(join "\n", @killme) 
 	    if $conf->{debug}; 
     }
 	
-    # $gff = $self->component($gff);
-
     # don't try loading sequence if the sequence is already in
     # the database
     if ( $self->seq && !$nodna ) {
@@ -338,7 +360,7 @@ sub dump {
     $self->load_page();
 }
 
-# relaod gbrowse or make a reload button
+# reload gbrowse or make a reload button
 sub load_page {
     my $self = shift;
     my $conf = $self->configuration;
@@ -349,7 +371,8 @@ sub load_page {
     print start_form( -name   => 'f1', 
 		      -method => 'POST',
 		      -action => $url );
-    print hidden( name => $name );
+    
+    print qq(<input type=hidden name=name value="$name">);
 
     if ( $conf->{reload} ) {
 	print body( { -onLoad => "document.f1.submit()" } );
@@ -378,6 +401,9 @@ sub gff {
     }
     else {
 	while ( <$file> ) {
+	    # Artemis mangles uppercase /Note=... qualifiers, 
+            # switch back
+            s/note=/Note=/;
 	    $text .= $_;
 	}
     }
@@ -479,6 +505,9 @@ sub read_embl {
 	$self->refseq($1);
     }
 
+    # change Sequence qualifier to Accession
+    $text =~ s/\/Sequence/\/Accession/img;
+
     my $in = Bio::SeqIO->new( -fh => IO::String->new($text), -format => 'embl')
 	|| $self->parsefail(Bio::SeqIO->error);
     my $seqobj    = $in->next_seq || $self->parsefail($in->error);
@@ -491,16 +520,16 @@ sub read_embl {
 sub seq2GFF {
     my ($self, $seq) = @_;
     my $conf = $self->configuration;
-
     my @feats = $seq->all_SeqFeatures;
 
+    # save the description
+    print $seq->desc, br;
+    $self->{desc} = $seq->desc;
     
-    # make the 'Note' key lowercase and
     # crush evil embedded semicolons
     for ( @feats ) {
         for my $t ( $_->all_tags ) {
 	    my @v = $_->remove_tag($t);
-	    
 	    for my $v ( @v ) {
 		$v =~ s/;/,/g;
 		$_->add_tag_value( $t => $v );
@@ -574,7 +603,6 @@ sub unflatten {
 
     if ( $feat->primary_tag eq 'CDS' ) {
 	$feat->primary_tag('mRNA');
-	#$feat->add_tag_value( mRNA => $name ); 
     }
     
     my $parttype;

@@ -1,4 +1,4 @@
-# $Id: BasicEditor.pm,v 1.12 2003-10-27 15:26:22 sheldon_mckay Exp $
+# $Id: BasicEditor.pm,v 1.13 2003-11-03 17:56:38 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -10,19 +10,18 @@ This modules is not used directly
 
 =head1 DESCRIPTION
 
-This plugin allows basic editing of features in the GFF database. It is just for 
-demonstration purposes until it is properly secured against unauthorized 
-database access.  Edit the list of allowed hosts in this module to
-specify who is allowed to edit features
+This plugin allows basic editing of features in the GFF database. 
+
 
 The database user specified in the configuration file must have sufficient 
 privileges to delete and insert data.  See the gbrowse tutorial
 for information on how to set this up.
 
-The features contained in the current segment are dumped as GFF2.5 into a form
-where the fields can be edited directly (except the reference sequence field).
-The edited features are then loaded into the database after all features in the
-segment's coordinate range are removed (except the reference component if one exists).
+The features contained in the current segment are dumped as GFF2.5 (generic GFF2
+with free text wrapped in quotes and controlled vocabulary for similarity features 
+such as BLAST hits) into a form where the fields can be edited directly 
+(except the reference sequence field).  The edited features are then loaded into 
+the database after all features in the segment's coordinate range are removed 
 
 =head1 FEEDBACK
 
@@ -43,7 +42,6 @@ use CGI qw/:standard/;
 use CGI::Carp qw/fatalsToBrowser/;
 use Bio::Graphics::Browser::Plugin;
 use Bio::Graphics::Browser::GFFhelper;
-use Data::Dumper;
 
 use vars qw/ $VERSION @ISA $ROLLBACK /;
 $VERSION = '0.3';
@@ -69,7 +67,7 @@ END
 ####################################################################
 
 sub name { 
-    'Basic Feature Editor'
+    'Edit Features (Gbrowse)'
 }
 
 sub description {
@@ -114,11 +112,10 @@ sub configure_form {
     if ( $ROLLBACK ) {
 	$self->{rb_loc} ||= $ROLLBACK;
 	my $msg = "Selecting a rollback will override feature editing and " . 
-	          "restore an archived feature set\\n\\nNote: restoring a feature " .
-                  "from a different segment will not affect $segment";
+	          "restore an archived feature set";
         $html = $self->rollback_form($msg, $segment->ref);
         my $button = qq(\n<input type="submit" name="plugin_action" value="Configure">\n);
-        $html =~ s|</a>|</a> $button|m; 
+        $html =~ s|</a>|$& $button|m; 
         $html .= br . "\n";
     }    
 
@@ -225,7 +222,8 @@ sub set_cell_size {
 
 sub annotate {
     my ($self, $segment ) = @_;
-    my $conf = $self->configuration;
+    return unless $segment;
+    my $db = $self->database;
     my $rollback;
 
     # look for a rollback request. We do not want this to persist,
@@ -233,7 +231,10 @@ sub annotate {
     if ( $ROLLBACK ) {
 	$rollback = $self->config_param('rb_id');
 	$self->{rb_loc} = $ROLLBACK;
-	$self->save_state($segment);
+        my $wholeseg = $db->segment( Accession => $segment->ref ) ||
+	               $db->segment( Sequence  => $segment->ref );
+	$self->save_state($wholeseg);
+        $segment = $wholeseg if $rollback;
     }
 
     if ( forbid() ) {
@@ -252,7 +253,7 @@ sub annotate {
 	$gff  = $self->build_gff || return 0;
     }
 
-    for ( $segment->contained_features ) {
+    for ( $segment->features ) {
 	next if $_->end > $segment->end + 1;
 	next if $_->start < $segment->start;
 	next if $_->method =~ /component/i;

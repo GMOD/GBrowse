@@ -1,4 +1,4 @@
-# $Id: ExportFeatures.pm,v 1.3 2003-10-16 12:48:19 sheldon_mckay Exp $
+# $Id: ExportFeatures.pm,v 1.4 2003-11-03 17:56:38 sheldon_mckay Exp $
 =head1 NAME
 
 Bio::Graphics::Browser::Plugin::ExportFeatures -- a plugin to export 
@@ -55,11 +55,12 @@ $VERSION = '0.01';
 @ISA = qw / Bio::Graphics::Browser::Plugin Bio::Graphics::Browser::GFFhelper/;
 
 sub name { 
-    'Artemis Feature Table' 
+    'Edit Features (Artemis)' 
 }
 
+# don't use a verb in the plugin menu
 sub verb {
-    'Export'
+    ' '
 }
 
 sub description {
@@ -95,9 +96,9 @@ sub configure_form {
 	radio_group( -name    => $self->config_name('method'),
                      -values  => ['*Artemis', 'browser'],
 		     -default => $conf->{method} ) .
-        p( super('*'),"To edit, install a helper application for MIME type",
+        p( "<SUP>*</SUP>To edit, install a helper application for MIME type",
 	                cite('application/artemis') );
-
+    $html;
 }
 
 sub dump {
@@ -105,7 +106,7 @@ sub dump {
     my $conf      = $self->configuration;
     my $db        = $self->database;
     my $ref       = $segment->ref;
-    $segment      = $db->segment($ref);
+    $segment      = $db->segment(Accession => $ref) || $db->segment($ref);
  
     my @feats = $segment->features;
 
@@ -122,10 +123,9 @@ sub dump {
 
     for ( split "\n", $ft ) {
 	# strip away junk
-	next if /^[^FIS\s]/;
+	next if /^[^DFIS\s]/ || /^FH/;
 	s/(ID\s+\S+).+/$1/;
-	# Uppercase key confuses Artemis
-	s/Note/note/;
+        s/Note/note/;
 	print $_, "\n";
     }
 }

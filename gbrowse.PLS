@@ -42,7 +42,7 @@ $Config{startperl} -w
 print OUT <<'!NO!SUBS!';
 
 # Bio::DB::GFF/Bio::Graphics-based annotation browser
-# $Id: gbrowse.PLS,v 1.25 2002-04-08 22:22:00 lstein Exp $
+# $Id: gbrowse.PLS,v 1.26 2002-04-09 01:24:35 lstein Exp $
 
 use strict;
 use lib '/home/lstein/projects/Generic-Genome-Browser/lib/';
@@ -120,7 +120,6 @@ END
 ;
     # here's a patch for a fix in Bio::DB::GFF that didn't get into BioPerl 1.0
     unless (Bio::DB::GFF::Segment->can('seq_id')) {
-      warn "Bioperl 1.0: patching a bug in Bio::DB::GFF. You can make this warning go away by getting the current CVS version of BioPerl.\n";
       *Bio::DB::GFF::Segment::seq_id  = sub { shift->ref };
       *Bio::Graphics::Feature::seq_id = sub { shift->ref };
     }

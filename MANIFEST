@@ -22,6 +22,8 @@ conf/plugins/OligoFinder.pm
 conf/plugins/RestrictionAnnotator.pm
 conf/plugins/test.pm
 docs/configuration.txt
+extras/README
+extras/bioperl-1.0.patch
 gbrowse.PLS
 htdocs/annotation_help.html
 htdocs/gbrowse.css

@@ -1,11 +1,10 @@
-This document describes how to install the Generic Genome Browser
-(GGB).
+This document describes how to install the Generic Genome Browser.
 
 1. PREREQUISITES
 
-GGB runs on top of several software packages.  These must be installed
-and configured before you can run it.  Most preconfigured Linux
-systems will have some of these packages installed already.
+GBrowse runs on top of several software packages.  These must be
+installed and configured before you can run it.  Most preconfigured
+Linux systems will have some of these packages installed already.
 
   A) MySQL -- http://www.mysql.com
 	The MySQL database is a fast open source relational database
@@ -21,7 +20,7 @@ systems will have some of these packages installed already.
 	
 
   D) Standard Perl modules -- http://www.cpan.org
-	The following Perl modules must be installed for GGB to work.
+	The following Perl modules must be installed for GBrowse to work.
 	They can be found on the Comprehensive Perl Archive Network
 	(CPAN):
 
@@ -34,7 +33,8 @@ systems will have some of these packages installed already.
   E) Bio::DB::GFF module -- http://www.bioperl.org
 	This is the middleware layer that translates between
 	the CGI script to the database.  It is part of the
-	bioperl package.
+	Bioperl package.  See the note at the bottom of this file
+	about Bioperl versions.
 
   F) Bio::Graphics module -- http://www.gmod.org
 	This is the module that renders the information in the
@@ -122,7 +122,7 @@ docs/configuration.txt for details.
 
 When installing the static files, the install script also creates an
 empty directory named "tmp".  This directory is set to be world
-writable so that the GGB server can use it to manage temporary image
+writable so that the GBrowse server can use it to manage temporary image
 files that it creates on the fly.  If you would prefer not to have a
 world writable directory on your system, simply change the ownership
 and permissions to allow the web server account to write into it.  The
@@ -145,7 +145,7 @@ Synopsis:
 
 Details:
 
-You will need a MySQL database in order to start using GGB.  Using the
+You will need a MySQL database in order to start using GBrowse.  Using the
 mysql command line, create a database (called "yeast" in the synopsis
 above), and ensure that you have update and file privileges on it.
 The example above assumes that you have a username of "me" and that
@@ -225,9 +225,9 @@ to get some data-specific help:
 The process_wormbase.pl script requires the AcePerl package, which is
 available from CPAN.  It is not strictly necessary to run this script
 because the unaltered GFF files distributed from WormBase are
-compatible with GGB.  process_wormbase.pl supplements the information
-with the physical positions of genetic markers, GenBank accession
-numbers and functional descriptions of gene products.
+compatible with GBrowse.  process_wormbase.pl supplements the
+information with the physical positions of genetic markers, GenBank
+accession numbers and functional descriptions of gene products.
 
 6. CREATING YOUR OWN GENOME DATABASE
 
@@ -243,12 +243,43 @@ performance of the script noticeably.
 
 Be aware that there is a bad interaction between the Apache::DBI
 module (often used to speed up database accesses) and Bio::DB::GFF.
-This will result in the GFF dump feature failing intermittently.  GGB
-does not need Apache::DBI to achieve performance increases under
-mod_perl and it is suggested that you disable Apache::DBI.
+This will result in the GFF dump feature failing intermittently.
+GBrowse does not need Apache::DBI to achieve performance increases
+under mod_perl and it is suggested that you disable Apache::DBI.
+
+8. BIOPERL VERSIONS
+
+GBrowse will work with Bioperl version 1.00. However, one useful
+feature -- the ability to use wildcards in the search field --
+requires Bioperl version 1.01 or higher. At the time this was written,
+version 1.01 was not available and could only be obtained using
+anonymous CVS.  Here is the magic incantation:
+
+ cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl \
+	checkout -r branch-1-0-0 bioperl-live
+
+When prompted, the password is "cvs".  For more details, see
+http://cvs.bioperl.org.
+
+Another alternative is to unpack a virgin Bioperl-1.0 distribution and
+patch it to 1.01 using the patch file "bioperl-1.0.patch", which
+you'll find in the "extras" directory of the GBrowse distribution.
+The steps to follow are these:
+
+ 1. unpack bioperl-1.0.tar.gz
+    gunzip -c bioperl-1.0.tar.gz | tar xvf -
+
+ 2. enter bioperl-1.0
+    cd bioperl-1.0
+
+ 3. apply the patch
+    patch -p1 < ../Generic-Genome-Browser-1.38/extras/bioperl-1.0.patch
+
+Modify the last command for the actual location of the patch file.
+
 
 Have fun!
 
 Lincoln Stein & the GMOD team
 lstein@cshl.org
-March 22, 2002
+April 8, 2002

@@ -1,3 +1,14 @@
+1.38	Mon Apr  8 21:16:12 EDT 2002
+	* Previous version would crash on vanilla Bioperl 1.0 installations.
+	  This problem has been fixed, but at the cost of disabling wildcard
+	  searches.  To get wildcard searches, upgrade to Bioperl 1.01 using
+	  CVS or the patch file in extras/bioperl-1.0.patch.
+	* Fixed aesthetic problems with a phantom "plugin:Restriction Sites"
+	  entry appearing on the key even when restriction sites are turned
+ 	  off.
+	* Fixed intermittent "Couldn't open database" errors.
+	* Fixed intermittent scrambling of user settings.
+	
 1.37	Sun Mar 31 16:10:11 EST 2002
 	* Plugin architecture completed see README-PLUGINS
 	* Sample plugins provided:

@@ -74,17 +74,61 @@ line:
 
    % createdb --owner <username> <dbname>
 
-To load the data, two options are available:
+To load the data, two options are available from the BioPerl installation:
 
 =over
 
 =item bp_load_gff.pl
 
+This will incrementally load a database, optionally initializing
+it if it does not already exist.  This script will work correctly
+even if the PostgreSQL server is located on another host.
+
 =item bp_pg_bulk_load_gff.pl
+
+This Perl script will initialize a new Bio::DB::GFF database with
+a fresh schema, deleting anything that was there before.  It will
+then load the file.  Only suitable for use the very first time
+you create a database, or when you want to start from scratch!
+The bulk loader is as much as 10x faster than bp_load_gff.pl, but
+does not work in the situation in which the PostgreSQL database
+is running on a remote host.
 
 =back
 
+Next, the configuration must be set to work with Pg.  It is fairly
+straight forward.  First, the GBrowse configuration file needs the
+adaptor line changed to 'dbi::pg' (note that case matters):
+
+  [GENERAL]
+  description = C. elegans (via Wormbase Release 60)
+  adaptor     = dbi::pg
+  database    = wormbase
+  user        = nobody
+  passwd      =
+
+Next, the database needs to have SELECT permission for the username
+that will do the querying.  While Postgres usernames and unix usernames
+are different things, it is usually easier to name them the same.  So,
+if your webserver is running as 'nobody' (which is typicall), run the
+following commands in psql as the database owner:
+
+  CREATE USER nobody;
+  GRANT SELECT ON TABLE fmeta                 TO nobody;
+  GRANT SELECT ON TABLE fgroup                TO nobody;
+  GRANT SELECT ON TABLE fdata                 TO nobody;
+  GRANT SELECT ON TABLE fattribute_to_feature TO nobody;
+  GRANT SELECT ON TABLE fdna                  TO nobody;
+  GRANT SELECT ON TABLE fattribute            TO nobody;
+  GRANT SELECT ON TABLE ftype                 TO nobody;
+
+That should be it.  If you encounter problems, please let Scott Cain
+(cain@cshl.org) know.
+
 =head2 BioSQL on MySQL
+
+Note that this section is very out of date and unlikely to work with
+recent versions of GBrowse.
 
 To run GBrowse on top of BioSQL, you will need a recent version of
 BioPerl that has the DAS (distributed annotation system) interface

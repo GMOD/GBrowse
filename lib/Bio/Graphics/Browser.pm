@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.101 2003-10-16 23:11:43 lstein Exp $
+# $Id: Browser.pm,v 1.102 2003-11-21 22:53:48 tharris Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -58,7 +58,7 @@ use strict;
 use File::Basename 'basename';
 use Bio::Graphics;
 use Carp qw(carp croak);
-use GD 'gdMediumBoldFont','gdLargeFont';
+#use GD 'gdMediumBoldFont','gdLargeFont';
 use CGI qw(img param escape unescape url);
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
@@ -826,6 +826,7 @@ sub make_title {
 #    'label_scale'   If true, prints chromosome name next to scale
 #    'title'         A title for the image
 #    'noscale'       Suppress scale entirely
+#    'image_class'   Optional image class for generating SVG output (by passing GD::SVG)
 sub image_and_map {
   my $self    = shift;
   my %config  = @_;
@@ -841,6 +842,10 @@ sub image_and_map {
   my $flip          = $config{flip};
   my $suppress_scale= $config{noscale};
   my $hilite_callback = $config{hilite_callback};
+  my $image_class   = $config{image_class} || 'GD';
+  
+  # Bring in the appropriate package - just for the fonts. Ugh.
+  eval "use $image_class";
 
   # these are natively configured tracks
   my @labels = $self->labels;
@@ -867,7 +872,8 @@ sub image_and_map {
 	      -grid      => 1,
 	      -key_style => $keystyle || $conf->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
 	      -empty_tracks => $conf->setting(general=>'empty_tracks') 	      || DEFAULT_EMPTYTRACKS,
-	      -pad_top   => $title ? gdMediumBoldFont->height : 0,
+	      -pad_top   => $title ? $image_class->gdMediumBoldFont->height : 0,
+	      -image_class => $image_class,
 	     );
 
   push @argv, -flip => 1 if $flip;
@@ -1021,10 +1027,10 @@ sub image_and_map {
     $offset += $inserted;
   }
 
-  my $gd       = $panel->gd;
+  my $gd = $panel->gd;
   if ($title) {
-    my $x = ($width - length($title) * gdMediumBoldFont->width)/2;
-    $gd->string(gdMediumBoldFont,$x,0,$title,$panel->translate_color('black'));
+    my $x = ($width - length($title) * $image_class->gdMediumBoldFont->width)/2;
+    $gd->string($image_class->gdMediumBoldFont,$x,0,$title,$panel->translate_color('black'));
   }
   return $gd   unless wantarray;
 
@@ -1057,11 +1063,16 @@ sub overview {
 				    -name=>$partial_segment->seq_id);
   $segment   ||= $partial_segment;  # paranoia
 
+  # Temporary kludge until I can figure out a more
+  # sane way of rendering overview with SVG...
+  my $image_class = 'GD';
+  eval "use $image_class";
+
   my $conf           = $self->config;
   my $width          = $self->width;
   my @tracks         = $self->config->overview_tracks;
   my ($padl,$padr)   = $self->overview_pad(\@tracks);
-
+  
   my $panel = Bio::Graphics::Panel->new(-segment => $segment,
 					-width   => $width,
 					-bgcolor => $self->setting('overview bgcolor')
@@ -1070,6 +1081,7 @@ sub overview {
 					-pad_left  => $padl,
 					-pad_right => $padr,
 					-pad_bottom => PAD_OVERVIEW_BOTTOM,
+					-image_class=> $image_class,
 				       );
 
   my $units = $self->setting('overview units');
@@ -1077,7 +1089,7 @@ sub overview {
 		    -glyph     => 'arrow',
 		    -double    => 1,
 		    -label     => "Overview of ".$segment->seq_id,
-		    -labelfont => gdMediumBoldFont,
+		    -labelfont => $image_class->gdMediumBoldFont,
 		    -tick      => 2,
 		    -units     => $conf->setting(general=>'units') ||'',
 		    -unit_divider => $conf->setting(general=>'unit_divider') || 1,
@@ -1211,6 +1223,12 @@ sub hits_on_overview {
     }
   }
 
+  # Temporary kludge until I can figure out a more
+  # sane way of rendering overview with SVG...
+  # Should be handled by being passed a $image_class param
+  my $image_class = 'GD';
+  eval "use $image_class";
+
   for my $ref (sort keys %refs) {
     my $segment = ($db->segment(-class=>$class,-name=>$ref))[0] or next;
     my $panel = Bio::Graphics::Panel->new(-segment => $segment,
@@ -1220,6 +1238,7 @@ sub hits_on_overview {
 					  -pad_right => $padr,
 					  -pad_bottom => PAD_OVERVIEW_BOTTOM,
 					  -key_style => 'left',
+					  -image_class => $image_class
 					 );
 
     # add the arrow
@@ -1227,7 +1246,7 @@ sub hits_on_overview {
 		      -glyph     => 'arrow',
 		      -double    => 1,
 		      -label     => 0, #"Overview of ".$segment->seq_id,
-		      -labelfont => gdMediumBoldFont,
+		      -labelfont => $image_class->gdMediumBoldFont,
 		      -tick      => 2,
 		      $units ? (-units => $units) : (),
 		     );
@@ -1541,8 +1560,13 @@ sub overview_pad {
   foreach (@_) {  #extra
     $max = length if length > $max;
   }
+
+  # Tremendous kludge!  Not able to generate overview maps in GD yet
+  # This needs to be cleaned...
+  my $image_class = 'GD';
+  eval "use $image_class";
   return (MIN_OVERVIEW_PAD,MIN_OVERVIEW_PAD) unless $max;
-  return ($max * gdMediumBoldFont->width + 3,MIN_OVERVIEW_PAD);
+  return ($max * $image_class->gdMediumBoldFont->width + 3,MIN_OVERVIEW_PAD);
 }
 
 package Bio::Graphics::BrowserConfig;

@@ -416,6 +416,15 @@ The following [GENERAL] options are recognized:
   dbd::Oracle database driver for more information about the -dsn
   format.
 
+  To use the in-memory version of Bio::DB::GFF, use these arguments:
+
+  db_args = -adaptor memory
+            -file  /path/to/gff_file.gff
+            -fasta /path/to/fasta_file.fa
+  
+  Where gff_file.gff and fasta_file.fa correspond to the locations of
+  GFF and FASTA files containing the features and DNA, respectively.
+
   * aggregators
 
   Aggregators to use for complex features.  Comment this out to use

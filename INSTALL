@@ -9,7 +9,10 @@ already.
 
   A) MySQL -- http://www.mysql.com
 	The MySQL database is a fast open source relational database
-	that is widely used for web applications.
+	that is widely used for web applications.  It is required for
+	most real-live genome annotation projects.  For small projects
+	(a few thousands of annotated features), you can skip installing
+	MySQL and use an in-memory database instead.
 
   B) Apache Web Server -- http://www.apache.org
 	The Apache web server is the industry standard open source
@@ -142,7 +145,10 @@ The first time you run Makefile.PL, a file named GGB.def will be
 created your file path settings.  When Makefile.PL is run again, it
 will ask you whether you wish to use the 
 
-3. POPULATING THE DATABASE
+3. POPULATING THE DATABASE (MySQL)
+
+You can skip this step if you use the in-memory database for small
+projects (see section 5).
 
 Synopsis:
 
@@ -182,16 +188,19 @@ by loading the database from a tab-delimited file containing the
 genomic annotations in GFF format.  The Bioperl distribution comes
 with three tools for loading Bio::DB::GFF databases:
 
-  1) bulk_load_gff.pl
+  1) load_gff.pl
+     This will incrementally load a database, optionally initializing
+     it if it does not already exist.  This script will work correctly
+     even if the MySQL server is located on another host.
+
+  2) bulk_load_gff.pl
      This Perl script will initialize a new Bio::DB::GFF database with
      a fresh schema, deleting anything that was there before.  It will
      then load the file.  Only suitable for use the very first time
      you create a database, or when you want to start from scratch!
-
-  2) load_gff.pl
-     This will incrementally load a database, optionally initializing
-     it if it does not already exist.  This script is slower, but it
-     allows incremental loading.
+     The bulk loader is as much as 10x faster than load_gff.pl, but
+     does not work in the situation in which the MySQL database
+     is running on a remote host.
 
   3) fast_load_gff.pl
      This will incrementally load a database.  On UNIX systems, it will
@@ -214,7 +223,24 @@ test".  This invokes a small test script that tests that the database
 is accessible by the "nobody" user and that the basic feature
 retrieval functions are working.
 
-4. TESTING THE BROWSER
+You may also wish to load the yeast DNA, so that you can test the
+three-frame translation and GC content features of the browser.
+Because of its size, the file containing the complete yeast genome is
+distributed separately and can be downloaded from:
+
+  http://prdownloads.sourceforge.net/gmod/yeast.fasta.gz?download
+
+Load the file with this command:
+
+  load_gff.pl -d yeast -fasta yeast.fasta.gz </dev/null
+
+(or, if you are on a windows system:
+
+  load_gff.pl -d yeast -fasta yeast.fasta.gz
+
+ and hit ^Z when the script pauses.)
+
+4. TESTING THE BROWSER (MySQL DATABASE)
 
 You should now be able to browse the yeast genome.  Type the following
 URL into your favorite browser:
@@ -226,7 +252,38 @@ Type in "III" to start searching chromosome III, or search for
 "glucose" to find a bunch of genes that are involved in glucose
 metabolism.
 
-5. LOADING OTHER DATA SETS
+*IF YOU GET AN ERROR* examine the Apache server error log (depending
+on how Apache was installed, it may be located in
+/usr/local/apache/logs/, /var/log/httpd/, /var/log/apache, or
+elsewhere).  Usually there will be an informative error message in the
+error log.  The most common problem is MySQL password or permissions
+problems.
+
+5. TESTING THE BROWSER (IN-MEMORY DATABASE)
+
+For testing the in-memory database (no MySQL server required!), this
+distribution includes sample files for yeast chromosome 1.  On
+Unix/Linux systems, copy the following files to /usr/tmp:
+
+  cp sample_data/yeast1.fa  /usr/tmp
+  cp sample_data/yeast1.gff /usr/tmp
+
+You should now be able to browse yeast chromosome 1.  Type the
+following URL into your favorite browser:
+
+  http://name.of.your.host/cgi-bin/gbrowse?source=yeast1
+
+This will display the genome browser instructions and a search field.
+Type in "I" to start searching chromosome I, or search for "glutamate"
+to find several genes that are involved in glutamate metabolism.
+
+On Windows systems, copy the yeast1.fa and yeast1.gff files to
+C:\Windows\Temp, and ask for this URL:
+
+  http://name.of.your.host/cgi-bin/gbrowse?source=yeast1w
+
+
+6. LOADING OTHER DATA SETS
 
 Each model organism database has its own flat file format for
 representing the data.  This package includes three small perl scripts
@@ -273,13 +330,13 @@ ftp://genome-ftp.stanford.edu/pub/yeast/)
 
 Run "bulk_load_gff.pl -h" to see usage instructions.
 
-6. CREATING YOUR OWN GENOME DATABASE
+7. CREATING YOUR OWN GENOME DATABASE
 
 See the file doc/configuration.txt for information on how to create
 new databases from scratch, add new browser tracks, and how to get the
 browser to dump the DNA from the region currently under display.
 
-7. MAKING THE BROWSER RUN FASTER
+8. MAKING THE BROWSER RUN FASTER
 
 Three factors are major contributors to the length of time it takes to
 load a gbrowse page:
@@ -325,8 +382,7 @@ zooming (see docs/CONFIGURE_HOWTO.txt).  Otherwise, there's not much
 that can be done about this short of buying a faster machine.
 The GMOD team is working hard to reduce this performance hit.
 
-
-8. MAKING THE BROWSER RUN SAFER
+9. MAKING THE BROWSER RUN SAFER
 
 Whenever you are running a server-side Web script using information
 provided by a web client, there is a risk that maliciously-formatted
@@ -353,14 +409,14 @@ the httpd.conf configuration file:
 
 This will affect all mod_perl scripts globally.
 
-9. BIOPERL VERSIONS
+10. BIOPERL VERSIONS
 
 Some of GBrowse's advanced features (the use of histograms in semantic
 zooming; labeling of the tracks in the overview) require features of
 the Bioperl Bio::Graphics and Bio::DB::GFF libraries that are only
 available in Bioperl version 1.2.
 
-9. THE GBROWSE_IMG SCRIPT
+11. THE GBROWSE_IMG SCRIPT
 
 The gbrowse_img CGI script (a new feature as of version 1.41), is a
 stripped-down version of gbrowse which just generates images.  It is
@@ -384,7 +440,7 @@ instructions. A copy of these instructions in HTML form will be
 generated when gbrowse_img is called without any arguments.  Type
 http://your.host/cgi-bin/gbrowse_img into your favorite web browser.
 
-10. PLUGINS
+12. PLUGINS
 
 Gbrowse has a plugin architecture which makes it easy for third-party
 developers to expand its functionality.  The plugins are Perl .pm
@@ -392,7 +448,7 @@ files located in the directory gbrowse.conf/plugins/.  To install
 plugins, simply copy them into this directory.  To uninstall, remove
 them.
 
-11. THE GENBANK/EMBL PROXY
+13. THE GENBANK/EMBL PROXY
 
 Sample configuration number 5 ("05.embl.conf") corresponds to an
 experimental pass-through proxy for Genbank.  At least in theory, if
@@ -421,7 +477,7 @@ entirely reliable.  To get it to work, you must:
 
    e) cross your fingers
 
-12. UPDATING THE BROWSER WITHOUT REENTERING YOUR DIRECTORY SETTINGS
+14. UPDATING THE BROWSER WITHOUT REENTERING YOUR DIRECTORY SETTINGS
 
 When updating GBrowse to a new version of the software, you can
 configure it using your preferred directory settings by making a
@@ -435,22 +491,19 @@ Makefile.PL.  Here is the recipe:
   make
   make install
 
-13. KNOWN BUGS
+15. KNOWN BUGS
 
 Currently there is one known bug.  The navigation buttons do not
 operate properly when the client is using Internet Explorer 5.1 on a
 Macintosh and accessing gbrowse running on a MacOS X server running
 Apache.  Other combinations of clients and servers work properly.
 
-14. FEATURE WISH LIST (updated July 7, 2002)
+16. FEATURE WISH LIST (updated April 4, 2003)
 
  - Full DAS support.
- - Internationalization and localization support.
  - A glyph for representing cytogenetic maps.
- - Multiple alignment representations.
  - A percent identity (PIP) glyph.
- - An XY plot glyph.
- - Support for Oracle and PostgreSQL databases.
+ - Support for PostgreSQL databases.
 
 If you are interested in working on any of these features, please
 contact the developers at the address given in the next section.

@@ -5,6 +5,8 @@ bin/process_wormbase.PLS
 cgi_install.pl
 ChangeLog
 conf/01.yeast.conf
+conf/011.yeast1.conf
+conf/012.yeast1.conf
 conf/02.wormbase.conf
 conf/03.fly.conf
 conf/04.human.conf
@@ -116,6 +118,8 @@ README-berkeley-gadfly
 README-BioGraphics
 README-PLUGINS
 README-windows.txt
+sample_data/yeast1.fa
+sample_data/yeast1.gff
 sample_data/yeast_data.gff
 t/01yeast.t
 TODO

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.74 2004-04-08 01:35:42 lstein Exp $
+# $Id: gbrowse.PLS,v 1.75 2004-04-08 13:06:44 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1369,7 +1369,6 @@ sub lookup_features_from_external_sources {
   }
 
   # No exact match.  Try inexact match.
-  $searchterm = quotemeta($searchterm);
   my $max_keywords = $CONFIG->setting('keyword search max')|| MAX_KEYWORD_RESULTS;
 
   for my $file (@uploaded_files) {

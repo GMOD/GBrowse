@@ -1,0 +1,170 @@
+=head1 gbrowse_img - CGI script to generate genome images via the Generic Genome Browser
+
+=head1 SYNOPSIS
+
+  <img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=mec-3;width=400">
+
+Will generate this picture:
+
+  [gbrowse_img?source=wormbase;name=mec-3;width=400]
+   <a href="http://www.wormbase.org/db/seq/gbrowse_img?list=sources">list</a>
+
+Will return this document: ## Sources fly yeast wormbase
+
+   <a href="http://www.wormbase.org/db/seq/gbrowse_img?source=list=sources">types</a>
+
+Will return this document: ## Feature types for source wormbase
+tRNA tRNAs NG Named Genes default CG Curated genes default PG
+Predicted genes WABA Briggsae alignments (WABA) ESTB ESTs aligned
+by BLAT (best) ESTO ESTs aligned by BLAT (other) mRNAB mRNAs
+aligned by BLAT (best) mRNAO mRNAs aligned by BLAT (other) RNAi
+RNAi experiments EXPR Expression chip profiles WTP Worm
+Transcriptome Project genes SNP SNPs TcI Transposon Insertions
+
+=head1 DESCRIPTION
+
+This CGI script is an interface to the Generic Genome Browser for the
+purpose of retrieving dynamic images of a region of the genome. It can
+be used as the destination of an <img> tag like this:
+
+  <img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=III:1 ..1000">
+
+The script can also be used to superimpose one or more external
+features onto the display, for example for the purpose of displaying
+BLAST hits, an STS or a knockout in the context of the genome.
+
+=head1 CGI arguments
+
+The script recognizes the following CGI arguments, which can be passed
+either as GET or POST argument=value pairs. Argument pairs must be
+separated by semicolons (preferred) or by ampersands.
+
+   Argument                  Description
+   list     get certain types of configuration information
+   source   database name
+   name     genomic landmark or range
+   type     list of feature names
+   width    desired width of image
+   options  list of track options (compact, labeled, etc)
+   add      additional features to superimpose on image
+   abs      display position in absolute coordinates
+
+The arguments are explained in more detail here
+
+=over
+
+=item list
+
+If this argument is present, it will cause the script to dump
+out various types of information in plain text form. Currently
+the two values for this argument are sources, to dump out the
+list of data sources, and types, to dump out the list of
+configured types. For list=sources, the script will return a
+simple text list of the data source names. For list=types, the
+script will return a three-column tab-delimited list giving the
+track names and feature types corresponding to the
+currently-selected data source. The format is as follows:
+
+   Mnemonic <tab> Full description of feature <tab> [default]
+
+The third column contains the word "default" if the track will
+be shown by default when no type argument is provided.
+
+=item source
+
+This argument specifies the database for the images. The list
+of sources can be found using list=sources.
+
+=item name
+
+This argument specifies the region of the genome to be
+displayed. Several forms are recognized:
+
+=over
+
+=item name=Landmark
+
+Display the landmark named "Landmark". Valid landmark names include
+chromosomes, contigs, clones, STSs, predicted genes, and any other
+landmark that the administrator has designated. Be careful when
+fetching large landmarks such as whole chromosomes!
+
+=item name=Landmark:start..end
+
+Display the region between start and end relative to "Landmark".
+
+=item name=Class:Landmark
+
+Display "Landmark", restricting to a particular class, such as
+"PCR_Product". The list of classes is under the control of the
+database administrator and is not yet available through this interface.
+
+=item name=Class:Landmark:start..end
+
+As above, but restricted to the designated range.
+
+=back
+
+=item type
+
+This argument lists the feature types to display. The value of
+this argument is a list of mnemonics separated by spaces ("+"
+characters when URL-escaped). For example:
+          
+  <img src="http://www.wormbase.org/db/seq/gbrowse_img?source=wormbase;name=mec-3;type=tRNA+NG+WABA+CG+ESTB">
+
+Multiple type= arguments will be combined to form a single
+space-delimited list.
+
+=item options
+
+A space-delimited list ("+" characters when URL-escaped) of
+mnemonic/option pairs describing how features should be
+formatted. Options are integers from 0 to 3, where 0=auto,
+1=compact, 2=expanded, 3=expanded and labeled. For example, to
+specify that the tRNA and NG tracks should always be expanded
+and labeled, but that the WABA track should be compact, use:
+
+   options=tRNA+3+NG+3+WABA+1
+
+=item add
+
+Superimpose one or more additional features on top of the view.
+Features are specified as space ("+") delimited lists in the
+following format:
+
+   add=Landmark+Type+Name+start..end,start..end,start..end
+
+"Landmark" is the landmark name, "Type" is a descriptive type
+that will be printed in the image caption, "Name" is a name for
+the feature to be printed above it, and start..end is a
+comma-delimited list of ranges for discontinuous feature. Names
+that contain white space must be quoted, for example "BLAST
+hit". Note that this all has to be URL-escaped, so an
+additional feature named "Your Sequence", type "Blast Hit",
+that is located on chromosome III in a gapped range between
+20000 and 22000, will be formatted as:
+
+   add=III+%22Blast%20Hit%22+%22Your%20Sequence%22+20000..21000,21550..22000
+
+Multiple add= arguments are allowed.
+
+=item abs
+
+Use absolute (chromosome) coordinates when displaying the
+image. An argument of abs=1 will turn on absolute coordinate
+addressing. An argument of abs=0 will use relative coordinate
+addressing (this is the default).
+
+=back
+
+=head1 AUTHOR
+
+Lincoln Stein lstein@cshl.org
+
+Copyright (c) 2002 Cold Spring Harbor Laboratory
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+For additional help, see The GMOD Project pages.

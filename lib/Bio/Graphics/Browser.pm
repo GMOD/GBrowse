@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.51.2.18 2003-08-12 00:30:27 ccavnor Exp $
+# $Id: Browser.pm,v 1.51.2.19 2003-09-02 20:06:45 ccavnor Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -75,12 +75,6 @@ use CGI::Carp;
 use CGI qw( :standard escape escapeHTML center expires *table *dl *TR *td );
 use Cwd;
 use vars qw( $SOURCES $DEFAULT_SOURCE );
-
-## TODO: REMOVE.  Testing Hugo normalizer.
-use Bio::DB::LocusLinkHugoNormalizer;
-use vars '$normalizer';
-my $normalizer = Bio::DB::LocusLinkHugoNormalizer->new();
-
 
 ## TODO: Document this.  Why?
 #$ENV{ 'PATH' } = '/bin:/usr/bin:/usr/local/bin';
@@ -5228,18 +5222,6 @@ sub _name2segments {
   my $max_segment = $self->setting( 'max_segment' );
 
   my ( @segments, $class, $start, $end );
-  unless( $name =~ /([\w._-]+):(-?[\dkKmM.]+),(-?[\dkKmM.]+)$/ or
-          $name =~ /([\w._-]+):(-?[\dkKmM,.]+)(?:-|\.\.)(-?[\dkKmM,.]+)$/ ) {
-    ## TODO: REMOVE.  Testing Hugo normalizer.
-    my $location = $normalizer->locate( $name );
-    if( $location eq 'none' ) {
-      ## TODO: Use the babelfish.  Something like 'NOT_FOUND', only, like, different n stuff.
-      $self->_html_error( $settings, "Gene $name does not have a known location." );
-      $settings->{ '__already_printed_not_found' } = 1;
-    } elsif( defined $location ) {
-      $name = $location;
-    }
-  }
   if( $name =~ /([\w._-]+):(-?[\dkKmM.]+),(-?[\dkKmM.]+)$/ or
       $name =~ /([\w._-]+):(-?[\dkKmM,.]+)(?:-|\.\.)(-?[\dkKmM,.]+)$/ ) {
     $name  = $1;

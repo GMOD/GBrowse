@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.63 2004-02-17 16:48:50 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.64 2004-02-20 12:41:18 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2313,7 +2313,6 @@ sub configure_plugins {
     $p->database($db);
     $p->browser_config($conf);
     $p->config_path($conf_dir);
-  my $sources = $CONFIG->sources > 1;
     $p->page_settings($settings);
     $p->init();  # other initialization
 

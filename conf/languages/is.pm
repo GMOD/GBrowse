@@ -2,7 +2,7 @@
 {
 
 #Icelandic translation done by Gudmundur A. Thorisson <mummi@cshl.edu>
-#$Id: is.pm,v 1.3 2004-08-17 15:30:51 mummi Exp $
+#$Id: is.pm,v 1.4 2004-08-17 16:07:37 mummi Exp $
 
  CHARSET =>   'ISO-8859-1',
 
@@ -91,6 +91,10 @@ Myndin mun líta svona út:
 
 <p>
 Ef aðeins yfirlitsmyndin  sést að ofan, reynið að minnka stærðina á svæðinu</p>
+END
+
+   TIMEOUT  => <<'END',
+Fyrirspurn þín tók of langan tíma. Þú gætir hafa valið svæði sem er of stórt til að sýna. Prófaðu að slökkva á einhverjum brautanna, eða minnka svæðið. Ef þetta gerist trekk í trekk, vinsamlega ýttu á "Endursetja" takkann.
 END
 
    GO       => 'Keyra',
@@ -330,3 +334,4 @@ END
  SMALL_INTERVAL    => 'Breyti stærð svæðis í %s bp',
 
 };
+

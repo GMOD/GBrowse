@@ -1,5 +1,0 @@
-Text notes for the plugin architecture has been moved to docs/, and
-can also be found in the Bio::Graphics::Browser::Plugin man page:
-
-  perldoc Bio::Graphics::Browser::Plugin
-

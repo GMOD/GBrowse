@@ -115,7 +115,8 @@ $VERSION = 0.02;
 # Install horrible patch for gbrowse compatibility
 use Bio::SeqFeature::Generic;
 
-*Bio::SeqFeature::Generic::attributes = \&Bio::SeqFeature::Generic::get_tag_values;
+
+*Bio::SeqFeature::Generic::attributes = \&Bio::AnnotatableI::get_tag_values;
 *Bio::SeqFeature::Generic::method = \&Bio::SeqFeature::Generic::primary_tag;
 *Bio::SeqFeature::Generic::type = sub {
     my $feat = shift;

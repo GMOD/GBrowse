@@ -1,7 +1,6 @@
 package Bio::Graphics::Glyph::insertion_chromosome;
 
 use strict;
-#use Bio::Graphics::Glyph::generic;
 use vars '@ISA';
 @ISA = 'Bio::Graphics::Glyph::generic';
 
@@ -54,19 +53,8 @@ sub draw_component {
   $poly->addPt($left+$top_arm-1, $Ty+2);
   $poly->addPt($left+$top_arm-4, $Ty);
 
-  #$gd->filledPolygon($poly, $self->fillcolor);
+  $gd->filledPolygon($poly, $self->fillcolor);
   $gd->polygon($poly, $self->fgcolor);
-
-  #my $agg = Bio::DB::GFF::Aggregator->new(-method    => 'insertion',
-  #                                        -sub_parts => 'seq:experiment');
-
-  #my $database = $self->option('database');
-  #my $user     = $self->option('user');
-  #my $password = $self->option('password');
-  #my $db  = Bio::DB::GFF->new( -dsn=>$database,
-  #                             -user=>$user,
-  #                             -pass=>$password,
-  #                             -aggregators=>$agg);
   
   my $seq_id = $self->feature->seq_id;
   my $dbh = $self->feature->factory->features_db;
@@ -76,10 +64,12 @@ sub draw_component {
                     and fdata.gid = fgroup.gid
                     and fgroup.gclass = 'Sequence'";
   my $qry2 = "select gname, fstart  
-              from fdata, fgroup
+              from fdata, fgroup 
               where fdata.gid = fgroup.gid 
                     and fdata.fref = '$seq_id' 
-                    and fgroup.gclass='Seq'"; 
+                    and fgroup.gclass='Seq' 
+                    and gname not like 'T-DNA_LB.SALK%'
+                    and gname not like 'T-DNA_LB.GK%'"; 
   my $sth1 = $dbh->prepare($qry1);
   $sth1->execute();
   my ($chr_start, $chr_stop); 
@@ -87,29 +77,28 @@ sub draw_component {
   my $chr_len = $chr_stop - $chr_start if $sth1->fetch();  
   $sth1->finish();
 
-  #my $segment  = $db->segment($self->feature->seq_id);
-  #my $chr_len  = $segment->abs_stop - $segment->abs_start;
-  #my @features = $segment->features('insertion');
-
   my $sth2 = $dbh->prepare($qry2);
   my ($name, $start);
   $sth2->execute();
   $sth2->bind_columns( undef, \$name, \$start);
+
+  my $ltypes = $self->option('linetypes');
+  my @line_types = split(/, /, $ltypes);
   while ($sth2->fetch()) {
    
       my $line_color;
-      if ($name =~ /dspm/) {
+      if ($name =~ /$line_types[0]/) {
 	 $line_color = $blue;                 
-      } elsif ($name =~ /SM/) {
-	$line_color = $purple;
-      } elsif ($name =~ /AT/) {
-	$line_color = $green;
-      } elsif ($name =~ /GT/) {
-	$line_color = $red;
-      } elsif ($name =~ /ET/) {
-	$line_color = $pink;
-      } else {
-	$line_color = $yellow;
+      } elsif ($name =~ /$line_types[1]/) {
+	 $line_color = $purple;
+      } elsif ($name =~ /$line_types[2]/) {
+	 $line_color = $green;
+      } elsif ($name =~ /$line_types[3]/) {
+	 $line_color = $red;
+      } elsif ($name =~ /$line_types[4]/) {
+	 $line_color = $pink;
+      } elsif ($name =~ /$line_types[5]/) {
+	 $line_color = $yellow;
       }
 
       my $pos = int($start*($length-20)/$chr_len);
@@ -142,7 +131,6 @@ sub draw_component {
   } 
   $sth2->finish();
   $dbh->disconnect();
-  #$gd->string(gdTinyFont, $left, $y1, $temp, $red);
    
 }
 

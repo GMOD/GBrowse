@@ -42,7 +42,7 @@ $startperl -w
 !GROK!THIS!
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_moby.PLS,v 1.5 2003-12-15 22:01:11 markwilkinson Exp $
+# $Id: gbrowse_moby.PLS,v 1.6 2003-12-15 22:08:08 markwilkinson Exp $
 
 
 # use lib "/usr/local/GB/GMOD_LIBS/moby-live/Perl";
@@ -113,16 +113,21 @@ BioMOBY project can be accomplished as follows:
     
 cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/moby login
 cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/moby co moby-live
+cvs update -dP
 
-You will then need to add a "use lib" line in this script that
-points to moby-live/Perl/
+You will then either need to enter the moby-live/Perl folder and run 
+the Makefile and install the MOBY libraries into your system, or 
+alternately you can add "use lib './moby-live/Perl'" to this script 
+such that the libraries can be found at run-time.
 
 
 =head1 USAGE
 
 gbrowse_moby understands the following variables passed by GET:
 
- source      - converted into a MOBY namespace by %source2namespace
+ source      - converted into a MOBY namespace by parsing the
+               'source' GFF tag against the %source2namespace hash
+               (see more detailed explanation in the examples below)
  namespace   - used verbatim as a valid MOBY namespace
  name        - used verbatim as a MOBY id interpreted in the namespace
  id          - used verbatim as a MOBY id interpreted in the namespace

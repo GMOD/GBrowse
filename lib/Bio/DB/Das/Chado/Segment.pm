@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.59 2004-04-30 19:41:29 scottcain Exp $
+# $Id: Segment.pm,v 1.60 2004-04-30 20:32:26 scottcain Exp $
 
 =head1 NAME
 
@@ -243,12 +243,30 @@ sub new {
     }
 }
 
+=head2 name
+                                                                                
+ Title   : name
+ Usage   : $segname = $seg->name();
+ Function: Returns the name of the segment
+ Returns : see above
+ Args    : none
+ Status  : public
+                                                                                
+=cut
+
 sub name {
   my $self = shift;
   return $self->{'name'}
 }
 
 =head2 _search_by_name
+
+ Title   : _search_by_name 
+ Usage   : _search_by_name($name);
+ Function: Searches for segments based on a name
+ Returns : Either a scalar (a feature_id) or an arrary ref (containing feature_ids)
+ Args    : A string (name)
+ Status  : private (used by new)
 
 =cut
 
@@ -322,7 +340,7 @@ sub _search_by_name {
 
   Title   : class
   Usage   : $obj->class($newval)
-  Function: undocumented method by Scott Cain
+  Function: Returns the segment class (synonymous with type)
   Returns : value of class (a scalar)
   Args    : on set, new value (a scalar or undef, optional)
 
@@ -340,7 +358,7 @@ sub class {
 
   Title   : type
   Usage   : $obj->type($newval)
-  Function: undocumented method by Scott Cain, aliased to class() for backward compatibility
+  Function: alias of class() for backward compatibility
   Returns : value of type (a scalar)
   Args    : on set, new value (a scalar or undef, optional)
 
@@ -371,9 +389,6 @@ sub class {
  Args    : none
  Status  : Public
 
-This is a read-only accessor for the start of the segment.  Alias
-to low() for Gadfly compatibility.
-
 =cut
 
 sub start {
@@ -382,6 +397,20 @@ sub start {
   return $self->{'start'};
 
 } 
+
+=head2 low
+
+ Title   : low
+ Usage   : $s->low
+ Function: start of segment
+ Returns : integer
+ Args    : none
+ Status  : Public
+
+Alias of start for backward compatibility
+
+=cut
+
 *low = \&start;
 
 =head2 end
@@ -393,9 +422,6 @@ sub start {
  Args    : none
  Status  : Public
 
-This is a read-only accessor for the end of the segment. Alias to
-high() for Gadfly compatibility.
-
 =cut
 
 sub end {
@@ -404,7 +430,34 @@ sub end {
   return $self->{'end'};
 }
 
+=head2 high
+
+ Title   : high
+ Usage   : $s->high
+ Function: end of segment
+ Returns : integer
+ Args    : none
+ Status  : Public
+
+Alias of end for backward compatiblity
+
+=cut
+
 *high = \&end;
+
+=head2 stop
+
+ Title   : stop
+ Usage   : $s->stop
+ Function: end of segment
+ Returns : integer
+ Args    : none
+ Status  : Public
+
+Alias of end for backward compatiblity
+
+=cut
+
 *stop = \&end;
 
 =head2 length
@@ -622,8 +675,20 @@ sub features {
   }
 }
 
-*get_all_SeqFeature = *get_SeqFeatures = *top_SeqFeatures = *all_SeqFeatures = \&features;
+=head2 get_all_SeqFeature, get_SeqFeatures, top_SeqFeatures, all_SeqFeatures
+                                                                                      
+ Title   : get_all_SeqFeature, get_SeqFeatures, top_SeqFeatures, all_SeqFeatures
+ Usage   : $s->get_all_SeqFeature()
+ Function: get the sequence string for this segment
+ Returns : a string
+ Args    : none
+ Status  : Public
 
+Several aliases of features() for backward compatibility
+
+=cut
+
+*get_all_SeqFeature = *get_SeqFeatures = *top_SeqFeatures = *all_SeqFeatures = \&features;
 
 =head2 seq
 
@@ -759,38 +824,20 @@ sub alphabet {
   return 'dna';
 }
 
-=head2 display_id
+=head2 display_id, display_name, accession_number, desc
 
-  Function: undocumented method by Scott Cain, referenced to name() for backward compatibility
+  Title   : display_id, display_name, accession_number, desc
+  Usage   : $s->display_name()
+  Function: Alias of name()
+  Returns : string
+  Args    : none
 
-=cut
-
-*display_id = \&name;
-
-
-=head2 display_name
-
-  Function: undocumented method by Scott Cain, referenced to name() for backward compatibility
+Several aliases for name; it may be that these could do something better than
+just giving back the name.
 
 =cut
 
-*display_name = \&name;
-
-=head2 accession_number
-
-  Function: undocumented method by Scott Cain, referenced to name() for backward compatibility
-
-=cut
-
-*accession_number = \&name;
-
-=head2 desc
-
-  Function: undocumented method by Scott Cain, referenced to name() for backward compatibility
-
-=cut
-
-*desc = \&name;
+*display_id = *display_name = *accession_number = *desc = \&name;
 
 =head2 get_feature_stream
 
@@ -861,11 +908,15 @@ sub sourceseq {
  
 }
 
-#*sourceseq = \&name;
-
 =head2 abs_ref
 
-  Function: undocumented method by Scott Cain, aliased to sourceseq() for backward compatibility
+  Title   : abs_ref
+  Usage   : $obj->abs_ref()
+  Function: Alias of sourceseq
+  Returns : value of sourceseq (a scalar)
+  Args    : none
+
+Alias of sourceseq for backward compatibility
 
 =cut
 
@@ -873,7 +924,11 @@ sub sourceseq {
 
 =head2 abs_start
 
-  Function: undocumented method by Scott Cain, aliased to start() for backward compatibility
+  Title   : abs_start
+  Usage   : $obj->abs_start()
+  Function: Alias of start
+  Returns : value of start (a scalar)
+  Args    : none
 
 =cut
 
@@ -881,7 +936,11 @@ sub sourceseq {
 
 =head2 abs_end
 
-  Function: undocumented method by Scott Cain, aliased to end() for backward compatibility
+  Title   : abs_end
+  Usage   : $obj->abs_end()
+  Function: Alias of end
+  Returns : value of end (a scalar)
+  Args    : none
 
 =cut
 

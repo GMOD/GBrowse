@@ -1,4 +1,4 @@
-# $Id: SequenceDumper.pm,v 1.2 2002-07-04 21:57:47 lstein Exp $
+# $Id: SequenceDumper.pm,v 1.3 2002-07-05 13:53:10 lstein Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::SequenceDumper
 #
@@ -12,7 +12,7 @@
 
 =head1 NAME
 
-Bio::Graphics::Browser::Plugin::SequenceDumper - A plugin for dumping 
+Bio::Graphics::Browser::Plugin::SequenceDumper - A plugin for dumping sequences in various formats
 
 =head1 SYNOPSIS
 
@@ -50,7 +50,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::SequenceDumper;
-# $Id: SequenceDumper.pm,v 1.2 2002-07-04 21:57:47 lstein Exp $
+# $Id: SequenceDumper.pm,v 1.3 2002-07-05 13:53:10 lstein Exp $
 # Sequence Dumper plugin
 
 use strict;
@@ -59,18 +59,32 @@ use Bio::SeqIO;
 use Bio::Seq;
 use CGI qw(:standard *pre);
 
-use vars '$VERSION','@ISA', '%LABELS', '@ORDER';
+use vars qw($VERSION @ISA);
+use constant DEBUG => 0;
 
-%LABELS = ( 'fasta'   => 'Fasta',
-	    'genbank' => 'Genbank',
-	    'embl'    => 'EMBL',
-	    'game'    => 'GAME (XML)',
-	    'bsml'    => 'BSML (XML)',
-	    'gcg'     => 'GCG',
-	    'raw'     => 'Raw sequence'
-	    );
+             # module        label           is xml?
+my @FORMATS = ( 'fasta'   => ['Fasta',        undef],
+		'genbank' => ['Genbank',      undef],
+		'embl'    => ['EMBL',         undef],
+		'gcg'     => ['GCG',          undef],
+		'raw'     => ['Raw sequence', undef],
+		'game'    => ['GAME (XML)',   'xml'],
+		'bsml'    => ['BSML (XML)',   'xml'],
+	      );
 
-@ORDER = qw(fasta genbank embl gcg raw game bsml);
+# initialize @ORDER using the even-numbered elements of the array
+# and grepping for those that load successfully (some of the
+# modules depend on optional XML modules).
+my @ORDER = grep {
+  my $module = "Bio::SeqIO::$_";
+  warn "trying to load $module\n" if DEBUG;
+  eval "require $module; 1";
+}
+  map { $FORMATS[2*$_] } (0..@FORMATS/2-1);
+
+# initialize %FORMATS and %LABELS from @FORMATS
+my %FORMATS = @FORMATS;
+my %LABELS  = map { $_ => $FORMATS{$_}[0] } keys %FORMATS;
 
 $VERSION = '0.11';
 
@@ -93,10 +107,10 @@ sub dump {
   my %markuptype;
   my $out = new Bio::SeqIO(-format => $config->{'fileformat'});
   if ($config->{'format'} eq 'html') {
-    if ($config->{'fileformat'} =~ /^game|bsml$/i) {
+    if ($FORMATS{$config->{'fileformat'}}[1]) {  # is xml
       print header('text/xml');
       $out->write_seq($segment);
-    }  else {
+    } else {
       print header('text/html');
       print start_html($segment),h1($segment), start_pre;
       $out->write_seq($segment);
@@ -105,8 +119,8 @@ sub dump {
     }
   } else { 
     print header('text/plain');
-    $out->write_seq($segment);      
-  }  
+    $out->write_seq($segment);
+  }
   undef $out;
 }
 
@@ -145,7 +159,7 @@ sub configure_form {
   push @choices, TR({-class => 'searchtitle'}, 
 			th({-align=>'RIGHT',-width=>'25%'},"Sequence File Format",
 			   td(popup_menu('-name'   => "$objtype.fileformat",
-					 '-values' =>  \@ORDER, 
+					 '-values' => \@ORDER,
 					 '-labels' => \%LABELS,
 					 '-default'=> $current_config->{'fileformat'} ))));
   my $html= table(@choices);

@@ -19,6 +19,7 @@ conf/02.wormbase.conf
 conf/03.fly.conf
 conf/04.human.conf
 conf/05.embl.conf
+conf/enzymes.txt
 conf/plugins/FastaDumper.pm
 conf/plugins/GFFDumper.pm
 conf/plugins/OligoFinder.pm
@@ -69,6 +70,7 @@ htdocs/images/help/upload+edit.gif
 htdocs/images/help/upload+remote.gif
 htdocs/images/help/upload.gif
 lib/Bio/DB/GFF/Aggregator/coding.pm
+lib/Bio/DB/GFF/Aggregator/orf.pm
 lib/Bio/DB/GFF/Aggregator/waba_alignment.pm
 lib/Bio/DB/GFF/Aggregator/wormbase_gene.pm
 lib/Bio/Graphics/Browser.pm

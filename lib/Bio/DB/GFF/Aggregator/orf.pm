@@ -1,6 +1,6 @@
 =head1 NAME
 
-Bio::DB::GFF::Aggregator::coding -- An aggregator for coding regions
+Bio::DB::GFF::Aggregator::orf -- An aggregator for orf regions
 
 =head1 SYNOPSIS
 
@@ -9,21 +9,20 @@ Bio::DB::GFF::Aggregator::coding -- An aggregator for coding regions
   # Open the sequence database
   my $db      = Bio::DB::GFF->new( -adaptor => 'dbi:mysql',
                                    -dsn     => 'dbi:mysql:elegans42',
-				   -aggregator => ['coding','clone'],
+				   -aggregator => ['orf','clone'],
 				 );
 
 
 =head1 DESCRIPTION
 
-Bio::DB::GFF::Aggregator::coding was written to work with the "cds"
-glyph.  GFF files.  It aggregates raw "CDS" features into "coding"
-features.  For compatibility with the idiosyncrasies of the Sanger GFF
-format, it expects that the full range of the transcript is contained
-in a feature of type "Sequence".
+Bio::DB::GFF::Aggregator::orf was written to work with the "cds"
+glyph.  GFF files.  It aggregates raw "ORF" features into "coding"
+features. This is basically identical to the "coding" aggregator,
+except that it looks for features of type "ORF" rather than "cds".
 
 =cut
 
-package Bio::DB::GFF::Aggregator::coding;
+package Bio::DB::GFF::Aggregator::orf;
 
 use strict;
 use Bio::DB::GFF::Aggregator;
@@ -60,22 +59,7 @@ sub method { 'coding' }
 =cut
 
 sub part_names {
-  return qw(CDS);
-}
-
-=head2 main_name
-
- Title   : main_name
- Usage   : $aggregator->main_name
- Function: return the method for the main component
- Returns : the string "Sequence"
- Args    : none
- Status  : Public
-
-=cut
-
-sub main_name {
-  return 'Sequence';
+  return qw(ORF);
 }
 
 1;
@@ -88,8 +72,9 @@ None reported.
 
 =head1 SEE ALSO
 
-L<Bio::DB::GFF>, L<Bio::DB::GFF::orf>,
-L<Bio::DB::GFF::Aggregator>, L<Bio::Graphics::Glyph::cds>,
+L<Bio::DB::GFF>, L<Bio::DB::GFF::coding>, 
+L<Bio::DB::GFF::Aggregator>, L<Bio::Graphics::Glyph::cds>
+
 
 =head1 AUTHOR
 

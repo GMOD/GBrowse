@@ -1,4 +1,4 @@
-# $Id: BasicEditor.pm,v 1.2 2003-10-05 14:44:07 sheldon_mckay Exp $
+# $Id: BasicEditor.pm,v 1.3 2003-10-06 12:50:38 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -37,6 +37,7 @@ use strict;
 use CGI qw/:standard/;
 use CGI::Carp qw/fatalsToBrowser/;
 use Bio::Graphics::Browser::GFFhelper;
+use Bio::Graphics::Browser::Plugin;
 
 use vars '$VERSION','@ISA';
 $VERSION = '0.01';

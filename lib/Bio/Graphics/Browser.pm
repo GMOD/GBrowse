@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.46 2002-12-03 15:40:38 lstein Exp $
+# $Id: Browser.pm,v 1.47 2002-12-07 18:18:25 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1508,7 +1508,7 @@ sub make_link {
     warn $@ if $@;
     return $val;
   }
-  return $self->link_pattern($link,$feature);
+  return $self->link_pattern($link,$feature,$panel);
 }
 
 # make the title for an object on a clickable imagemap

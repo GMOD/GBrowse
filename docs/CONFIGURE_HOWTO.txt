@@ -491,10 +491,16 @@ The following [GENERAL] options are recognized:
    replaced at run time with the information relating to the selected
    annotation.  Recognized variables include:
 
-     $name    The feature's name (group name)
-     $class   The feature's class (group class)
-     $method  The feature's method
-     $source  The feature's source
+     $name     The feature's name (group name)
+     $class    The feature's class (group class)
+     $method   The feature's method
+     $source   The feature's source
+     $ref      The name of the sequence segment (chromosome, contig) 
+		  on which this feature is located
+     $start    The start position of this feature, relative to $ref
+     $end      The end position of this feature, relative to $ref
+     $segstart The left end of $ref displayed in the detailed view
+     $segend   The right end of $ref displayed in the detailed view
 
    For example, the wormbase.conf file uses this link rule:
 

@@ -1,5 +1,8 @@
 # do not remove the { } from the top and bottom of this page!!!
 {
+
+ CHARSET =>   'ISO-8859-1',
+
    #----------
    # MAIN PAGE
    #----------
@@ -27,11 +30,23 @@ END
 
    SHOWING_FROM_TO => 'Showing %s from %s, positions %s to %s',
 
+   INSTRUCTIONS      => 'Instructions',
+
+   HIDE              => 'Hide',
+
+   SHOW              => 'Show',
+
+   SHOW_INSTRUCTIONS => 'Show instructions',
+
    LANDMARK => 'Landmark or Region',
+
+   BOOKMARK => 'Bookmark this view',
 
    GO       => 'Go',
 
    FIND     => 'Find',
+
+   SEARCH   => 'Search',
 
    DUMP     => 'Dump',
 
@@ -75,6 +90,10 @@ END
 
    IMAGE_WIDTH => 'Image Width',
 
+   BETWEEN     => 'Between',
+
+   BENEATH     => 'Beneath',
+
    SET_OPTIONS => 'Set Track Options...',
 
    UPDATE      => 'Update Image',
@@ -86,6 +105,8 @@ END
    UPLOAD_TITLE=> 'Upload your own annotations',
 
    UPLOAD_FILE => 'Upload a file',
+
+   KEY_POSITION => 'Key position',
 
    BROWSE      => 'Browse...',
 

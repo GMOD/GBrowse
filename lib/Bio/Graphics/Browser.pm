@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.124 2004-02-22 09:24:57 lstein Exp $
+# $Id: Browser.pm,v 1.125 2004-02-25 13:26:46 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1870,7 +1870,7 @@ sub make_link {
   $panel ||= 'Bio::Graphics::Panel';
   $label     ||= $self->feature2label($feature);
 
-  my $link     = $self->code_setting($label,'link');
+  my $link      = $self->code_setting($label,'link');
   $link        = $self->code_setting('TRACK DEFAULTS'=>'link') unless defined $link;
   $link        = $self->code_setting(general=>'link')          unless defined $link;
 

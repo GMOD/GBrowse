@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.66 2004-02-22 20:28:39 lstein Exp $
+# $Id: gbrowse.PLS,v 1.67 2004-02-25 13:26:45 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1111,7 +1111,7 @@ sub external_table {
     my %presets;
     @presets{@$preset_urls} = @$preset_labels;
     unshift @$preset_urls,'';
-    $presets{''} = $CONFIG->tr('choose_preset');
+    $presets{''} = $CONFIG->tr('PRESETS');
     $presets = popup_menu(-name   => 'eurl',
 			  -values => $preset_urls,
 			  -labels => \%presets,

@@ -184,6 +184,16 @@ all users on your system.
 
 <p>
 
+Microsoft Windows has an unpleasant tendency to add a ".txt" extension
+to files without warning.  If something seems to be wrong with the
+config or GFF file and you can't figure out what, check that the file
+extension hasn't been modified.  To avoid this phenomenon, I suggest
+that you select "All File Types" from the popup menu in the File Save
+dialog.  You might also want to configure your Folder display to show
+known file extensions.
+
+<p>
+
 If you're still having no luck, check the bottom of the Apache server
 error log for error messages.  This file is located in various places
 depending on how Apache is installed.  Look for the file
@@ -1695,9 +1705,9 @@ the method for target annoation in the proposed revision of GFF.
 
 <p>
 
-Since this data file contains a revised version of volvox7.gff, remove
-volvox7.gff from the database directory and replace it with <a
-href="data_files/volvox8.gff">volvox8.gff</a>.  Also copy <a
+Since this data file contains a revised version of volvox7.gff,
+<b>remove volvox7.gff from the database directory and replace it with
+<a href="data_files/volvox8.gff">volvox8.gff</a> </b>.  Also copy <a
 href="data_files/ests.fa">ests.fa</a> into the database directory.  If
 you perform a directory listing, it should look like this:
 
@@ -1705,6 +1715,19 @@ you perform a directory listing, it should look like this:
 directory.index  volvox.fa    volvox2.gff  volvox4.gff	volvox6.gff
 ests.fa		 volvox1.gff  volvox3.gff  volvox5.gff	volvox8.gff
 </pre></blockquote>
+
+<p>
+
+<blockquote> <i>NOTE: If you see doubled EST features after this
+point, make sure that you have removed volvox7.gff.  Another thing to
+watch out for is that some sort of bug in the BioPerl layer (up
+through at least version 1.4) causes the EST DNA display to get messed
+up at this point on Windows systems.  To fix the latter problem, go to
+the volvox database directory and remove the files directory.dir and
+directory.pag.  These are automatically-generated DNA file indexes
+that GBrowse develops, and will be regenerated for you the next time
+you access a page.</i> </blockquote>
+
 
 <p>
 
@@ -2224,7 +2247,7 @@ displayed.
 
 <p>
 
-The last topic we'll cover in this tutorial is configuring GBrowse's
+The next topic we'll cover in this tutorial is configuring GBrowse's
 outgoing links.  When the user clicks on a glyph in the details image,
 he will be taken to another page by following a URL.  The URL to
 follow is generated from the <code>link</code> option.  The default
@@ -2375,7 +2398,7 @@ entirety of the feature and DNA data.</i>
 
 <hr>
 
-<h2><a name="mysql">20. Setting up a MySQL database</a></h2>
+<h2><a name="mysql">19. Setting up a MySQL database</a></h2>
 
 <p>
 
@@ -2385,7 +2408,9 @@ memory).  For larger data sets, however, you'll want to use a database
 management system.  GBrowse handles a number of DBMS through its
 "database adaptor" system.  In this section, you'll learn to use one
 of them, the Bio::DB::GFF MySQL adaptor that comes for free when you
-install BioPerl.
+install BioPerl.  You may skip this section and go on to working with
+third-party annotations if you do not wish to install a MySQL server
+at this time.
 
 <p>
 
@@ -2591,23 +2616,474 @@ annotation possible.  You can:
 
 <p>
 
-To watch this in action, we will use some real genome annotations from
-the <i>C. elegans</i> genome project.  This is a region around
-<i>C. elegans</i> cosmid C01F4.  The core data that we'll be using is
-contained in <a href="data_files/elegans.gff3">elegans.gff3</a>.  The
-.gff3 suffix indicates that it is using version 3 of the GFF format,
-which conveniently enough allows both the DNA and the annotation data
-to be stored in one place.
+This section will lead you through the various ways to view third
+party annotations on top of GBrowse. The examples are somewhat
+contrived since we only have one computer to work with, and by
+necessity both the main data and the third-party feature data will
+have to reside on the same computer.  Don't be confused by this, and
+keep in mind that in the real world, GBrowse will be running on one
+computer, and the third-party annotation data will be loaded from
+another network-accessible computer.
+
+<p>
+
+Instead of using the artificial volvox data, we will now use some real
+genome annotations from the <i>C. elegans</i> genome project.  This is
+a region around <i>C. elegans</i> cosmid C01F4.  The core data that
+we'll be using is contained in the files <a
+href="data_files/elegans.gff">elegans.gff</a>, and <a
+href="data_files/elegans.fa">elegans.fa</a>.
 
 <p>
 
 Refer back to the <a href="#basics">beginning of the tutorial</a> now
 and create a GBrowse database directory named "elegans_core".  Then
-copy <a href="data_files/elegans.gff3">elegans.gff3</a> into it.
+copy <a href="data_files/elegans.gff">elegans.gff</a>, and <a
+href="data_files/elegans.fa">elegans.fa</a> into it.  The
+configuration file to use is <a
+href="datafiles/elegans.conf">elegans.conf</a>.  Place it in <a
+href="file:///$CONF/gbrowse.conf">$CONF/gbrowse.conf/</a>.
 
 <p>
 
+Confirm that you can browse the database.  Figure 22 is a picture of
+the entire data set with all core tracks turned on.
 
+<blockquote>
+<img src="figures/figure22.gif"><br>
+<i>Figure 22:</i> The core <i>C. elegans</i> dataset.
+</blockquote>
+
+<h3>Uploading an Annotation File</h3>
+
+<p>
+
+We will now add some third-party annotations to the display.  These
+are contained in the files "elegans_accept.gff",
+"elegans_expression.gff", and "elefans_sts.gff":
+
+<p>
+
+<table border="1" width="100%">
+  <TR>
+    <td>
+	<a href="data_files/elegans_acceptor.gff">elegans_acceptor.gff</a>
+    </td>
+    <td>
+	Annotations of <i>C. elegans<i> spliced leader acceptor sites.
+    </td>
+  </TR>
+    
+  <TR>
+    <td>
+	<a href="data_files/elegans_expression.gff">elegans_expression.gff</a>
+    </td>
+    <td>
+	Positions assayed for gene expression level in <i>C. elegans<i>
+	microarrays.
+    </td>
+  </TR>
+    
+  <TR>
+    <td>
+	<a href="data_files/elegans_sts.gff">elegans_sts.gff</a>
+    </td>
+    <td>
+	Primer pairs available for the region produced by the
+	C. elegans ORFeome project.
+    </td>
+  </TR>
+
+  <TR>
+    <td>
+	<a href="data_files/elegans_deletion.gff">elegans_deletion.gff</a>
+    </td>
+    <td>
+	Deletion endpoints from a targeted gene knockout project.
+    </td>
+  </TR>
+    
+  <TR>
+    <td>
+	<a href="data_files/elegans_repeats.gff">elegans_repeats.gff</a>
+    </td>
+    <td>
+	Complex repetitive elements found using the RepeatMasker program.
+    </td>
+  </TR>
+    
+</table>
+
+<p>
+
+We can load each of these files to private storage located on the
+server using the file upload feature.  Copy these four files to your
+home directory where you can find them easily.  Go to the section
+marked <b>Upload your own annotations</b> and choose the "Browse..."
+button.  Select one of the annotation files, and then press the
+"Upload" button to upload the file to the server.  The annotations
+contained in the file should now appear on the display.  If you now do
+this for all four of the annotation files, you will eventually get a
+display like that shown in Figure 23.
+
+<p>
+
+<blockquote>
+<img src="figures/figure23.gif"><br>
+<i>Figure 23:</i> After uploading four annotation files.
+</blockquote>
+
+<p>
+
+<blockquote>
+NOTE: <i>This upload function works even if the gbrowse
+you are uploading to is located on a remote server.  The uploaded
+files are stored in a private directory on the server away from the
+main data set.  Other users cannot see your data.</i>
+</blockquote>
+
+<p>
+
+Although this display is functional, there is no difference between
+the appearance of each of the tracks.  Fortunately, we can customize
+the uploaded files quite easily.  Let us change the "elegans_sts.gff"
+file so that the primer pairs use the "primers" glyph.  We can either
+do this by deleting the uploaded file, making the appropriate
+modification to our local version and then reuploading it, or by
+editing the file in place.  We'll take the latter course.
+
+<p>
+
+Scroll to the bottom of the browser window, find the uploaded file
+named "elegans_sts.gff", and choose "Edit File...".
+
+<p>
+
+<blockquote>
+<img src="figures/figure24.gif"><br>
+<i>Figure 24:</i> The uploaded files can be edited in place by
+clicking the "Edit File..." button.
+</blockquote>
+
+<p>
+
+This will take you to a simple text editor window.  At the top of the
+window, add the following configuration stanza:
+
+<blockquote><pre>
+# edited elegans_sts.gff file
+[reagent]
+glyph = primers
+height = 6
+key   = ORFeome project primer pairs
+</pre></blockquote>
+
+<p>
+
+When you are done, press "Submit Changes..." and the display will be
+updated to show the track with a more readable track name and the
+primers glyph.
+
+<p>
+
+If you like, you can customize each of the files.  Here is a suggested
+set of customizations:
+
+<blockquote><pre>
+# for the file elegans_repeats.gff
+[repeat]
+bgcolor = white
+key = Complex repeats
+
+# for the file elegans_acceptor.gff
+[trans-splice_acceptor]
+glyph = diamond
+bgcolor = red
+key = Trans-splice Acceptors
+
+# for the file elegans_deletion.gff
+[Deletion_allele]
+glyph = span
+key   = Gene knockouts
+
+# for the file elegans_expression.gff
+[Expression]
+bgcolor = orange
+height  = 4
+key     = Microarray expression probe
+</pre></blockquote>
+
+<p>
+
+With this combination of configurations, the display will now look
+as shown in Figure 25:
+
+<blockquote>
+<img src="figures/figure25.gif"><br>
+<i>Figure 25:</i> After customizing the annotation files.
+</blockquote>
+
+<p>
+
+<blockquote> NOTE: <i>Be aware of an important difference between the
+track configuration of the uploaded files and of the main GBrowse
+configuration files.  In GBrowse, the [STANZA] heading is the name of
+the symbolic name of the track, and particular feature types are added
+to the track using the feature= option.  In uploaded files, the
+[STANZA] heading is the feature type itself.  This means that each
+track can only contain one feature type.  However, any uploaded GFF
+file can contain multiple feature types, and each feature type can
+have its own configuration stanza.</i></blockquote>
+
+<p>
+
+<blockquote><i>The other important difference between the uploaded
+file configuration and the GBrowse main configuration is that for
+security reasons Perl subroutines are not allowed in the configuration
+sections of uploaded files.  However links and link patterns are
+allowed.</i></blockquote>
+
+<p>
+
+There is no particular reason that each of the annotation sets were
+broken into separate files.  We could easily combine them into a
+single GFF file just as you do for the core annotations.
+
+<h3>Sharing an Annotation File</h3>
+
+<p>
+
+Once you have an uploaded annotation file set up the way you like it,
+you might want to share it with others.  You can do this easily if you
+have access to an anonymous FTP or web server (if you are reading this
+tutorial, it is fair to assume that you do!)
+
+<p>
+
+To watch this in action, we will place one of the annotation files
+onto the local web server and then load it from within the local
+GBrowse.  This contrived example doesn't make much sense until you
+realize that the same trick will work when the GBrowse server and the
+web-accessible annotation file can be on separate machines halfway
+across the world.
+
+<p>
+
+We will demonstrate using the elegans_sts.gff file.  Please use a
+version that has been edited to place the [reagent] configuration
+stanza at the top.  Then copy this file to the directory "$HTDOCS".
+This will place it at the top of the Web server document tree, but
+<b>outside</b> the location of GBrowse databases.  Check that the file
+is correctly installed on your web server by fetching this URL: <a
+href="http://localhost/elegans_sts.gff"
+target="_new">http://localhost/elegans_sts.gff</a>.  If the file is
+correctly installed on the Web server, you will see this:
+
+<blockquote><pre>
+[reagent]
+glyph = primers
+height = 6
+key   = ORFeome project primer pairs
+
+##gff-version 2
+##date Tue Feb 24 06:39:41 2004
+##sequence-region C01F4 1 40000
+##source gbrowse GFFDumper plugin
+##NOTE: Selected features dumped.
+C01F4	Orfeome_project reagent 3319	17668	.  +  .  PCR_product mv_ZK783.1 ; Amplified 0
+C01F4	Orfeome_project reagent 18584	20445	.  -  .  PCR_product mv_G_YK5686 ; Amplified 1
+C01F4	Orfeome_project reagent 24509	25425	.  -  .  PCR_product mv_ZK783.3 ; Amplified 1
+C01F4	Orfeome_project reagent 26525	33359	.  -  .  PCR_product mv_ZK783.4 ; Amplified 0
+C01F4	Orfeome_project reagent 38660	49506	.  +  .  PCR_product mv_C18H2.1 ; Amplified 1
+</pre></blockquote>
+
+<p>
+
+Now go back to your browser, and <b>delete</b> all the uploaded files.
+(This is to prevent the list of tracks from getting too long!)  You
+can do this by scrolling to the bottom of the browser window and
+pressing "Delete File" for each of the annotation files that you
+previously uploaded.  This should return you to the display of the
+core gene models and EST alignments that we began with.
+
+<p>
+
+Now we'll reload the STS annotations by using their URL.  Scroll to
+the bottom of the window, find the text field labeled "Enter Remote
+Annotation URL", type in <b>http://localhost/elegans_sts.gff</b>, and
+press "Update URLs."  The "ORFeome project primer pairs" track will
+reappear.
+
+<p>
+
+In order to make this process even simpler, you can create a popup
+menu containing the URLs of frequently-accessed remote annotation
+files.  To make this more interesting, first copy the
+elegans_expression.gff file to the "$HTDOCS" directory in the way
+described earlier.  Now elegans_sts.gff and elegans_expression.gff
+will be available as the URLs <a
+href="http://localhost/elegans_sts.gff">http://localhost/elegans_sts.gff</a>
+and <a
+href="http://localhost/elegans_expression.gff">http://localhost/elegans_expression.gff</a>,
+respectively.
+
+<p>
+
+Open up the GBrowse configuration file,
+"$CONF/gbrowse.conf/elegans_core.conf", and insert the following
+lines right after the "plugins =" line:
+
+<blockquote><pre>
+# remote GFF files to make available for optional loading
+remote sources = "ORFeome STSs"      http://localhost/elegans_sts.gff
+	         "Expression probes" http://localhost/elegans_expression.gff
+
+</pre></blockquote>
+
+<p>
+
+When you reload the web page, you will see a popup menu appear next to
+the remote annotation URL textfield (Figure 26).  The menu will
+contain options to load "ORFeome STSs" and "Expression probes", and
+selecting a menu item will have exactly the same effect as typing in
+the URL manually.
+
+<blockquote>
+<img src="figures/figure26.gif"><br>
+<i>Figure 26:</i> The preset remote annotation URL popup menu.
+</blockquote>
+
+The neat thing about all this is that it works across the
+Internet. Send the URL of the annotation files to your colleagues
+(being sure to replace "localhost" with the hostname of your web
+server!) and they'll be able to load this URL into any GBrowse that
+uses the same core annotations. You can also use this mechanism within
+your laboratory or department to share annotation sets without having
+to give everyone write access to the web server's $HTDOCS directory.
+
+<hr>
+
+<h2><a name="DAS">21. Using GBrowse as a DAS Server</a></h2>
+
+<p>
+
+The Distributed Annotation System protocol (DAS; <a
+href="http://www.biodas.org">http://www.biodas.org</a>) is a system
+for exchanging genomic annotations across the Internet.  It works
+similarly to the idea of sharing the URLs of web-accessible GFF files,
+except that it is designed to support large data sets.  When a client
+application needs to fetch just a subset of the data, such as a small
+piece of a chromosomal arm, the DAS protocol allows only the relevant
+annotations to be retrieved, rather than the whole data set.
+
+<p>
+
+When you installed GBrowse, you also installed a CGI script that
+enables your web server to act as a DAS server. The CGI script is
+named "$CGIBIN/das", and it runs off the same configuration files as
+GBrowse itself.  Only a very small bit of extra configuration is
+required to enable full DAS server functionality.  In this part of the
+tutorial we will first turn on the DAS server, and then use it to
+serve out annotations on the <i>C. elegans</i> database.
+
+<p>
+
+To start, open the elegans_core.conf configuration file and add the
+following line to the configuration file.  It can go anywhere before
+the start of the track definition stanzas, but it is probably a good
+idea to place it towards the top between "plugins" and "default
+features."
+
+<blockquote>
+<pre>
+# DAS reference server
+das mapmaster      = SELF
+</pre>
+</blockquote>
+
+<p>
+
+What this line is doing is to declare to the DAS system that our
+server is authoritative for the coordinates on the current
+<i>C. elegans</i> genome example.  This is appropriate if you are
+starting out a genome for the first time.  If, however, you want to
+annotate against an existing set of genome coordinates, you should
+replace SELF with the URL of the DAS reference server that serves that
+genome.  For example release <i>hg16</i> of the human genome at UCSC
+corresponds to DAS URL http://genome.cse.ucsc.edu/cgi-bin/das.  A list
+of reference servers for various model organisms can be found at <a
+href="http://www.biodas.org"><http://www.biodas.org/a>.
+
+<p>
+
+The next step is to go through the configured tracks and add a "das
+category" to each of them.  DAS uses the idea of the "category" of a
+feature in order to filter sets of features by their purpose.
+Categories include "transcription", for features that have to do with
+RNA transcription, "translation," for features that have to do with
+protein translation, "variation," for features that have to do with
+mutations or polymorphisms, "structural," for contigs, clones, STS
+primers and other features having to do with the assembly,
+"similarity" for nucleotide and protein alignments, "repeat" for
+features having to do with repetitive elements, and "miscellaneous"
+for anything else.  It is not vital to assign each track a DAS
+category, but it is helpful to the end users.  Any track that doesn't
+have a category will be hidden from the DAS transmission.
+
+<p>
+
+Find the [Transcripts] stanza and modify it to to have a das category
+of "transcription" as shown here:
+
+<blockquote><pre>
+[Transcripts]
+feature      = processed_transcript
+glyph        = processed_transcript
+height       = 8
+bgcolor      = blue
+description  = 1
+das category = transcription
+key          = Protein-coding genes
+</pre>
+</blockquote>
+
+Similarly, modify the [Alignments] track to have a das category of
+"similarity."  You do not need to add a category to the DNA track, as
+it is treated specially by das.  You're all done!  Be sure to save the
+configuration file before you try the next step.
+
+<p>
+
+Using a web browser fetch the URL <a
+href="http://localhost/cgi-bin/das/dsn"
+target="_new">http://localhost/cgi-bin/das/dsn</a>.  This will return
+an XML document giving information about each of the data sources that
+you have configured. 
+
+<blockquote><pre>
+&lt;?xml version="1.0" standalone="yes"?&gt;
+&lt;!DOCTYPE DASDSN SYSTEM "http://www.biodas.org/dtd/dasdsn.dtd"&gt;
+&lt;DASDSN&gt;
+   &lt;DSN&gt;
+      &lt;SOURCE id="elegans_core"&gt;elegans_core&lt;/SOURCE&gt;
+      &lt;MAPMASTER&gt;http://localhost/cgi-bin/das/elegans_core&lt;/MAPMASTER&gt;
+      &lt;DESCRIPTION&gt;C. elegans Core Annotations&lt;/DESCRIPTION&gt;
+   &lt;/DSN&gt;
+&lt;/DASDSN&gt;
+</pre></blockquote>
+
+This is showing that there is one configured DAS source, the
+"elegans_core" data set.
+
+<p>
+
+Next test that the DAS "types" request is working.  This request
+returns all the feature types that the database knows about.  Using a
+web browser fetch the URL <a
+href="http://localhost/cgi-bin/das/elegans_core/types"
+target="_new">http://localhost/cgi-bin/das/elegans_core/types</a>.
+This should return another short 
+data sources that you have configured.
 
 <hr>
 
@@ -2637,6 +3113,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Mon Feb 23 16:15:03 SAST 2004
+Last modified: Wed Feb 25 14:44:12 SAST 2004
 <!-- hhmts end -->
 </body> </html>

@@ -45,10 +45,11 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.22 2004-09-07 03:11:21 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.23 2004-09-08 21:56:31 lstein Exp $
 
 use strict;
-use CGI qw(param redirect header start_html end_html p h1 path_info escape);
+use CGI qw(param redirect header start_html end_html
+	   p h1 path_info escape img);
 use Bio::DB::GFF;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
@@ -113,6 +114,7 @@ my $abs             = param('abs');                # absolute rather than relati
 my $image_class     = param('image_class') || param('format');        # image type
 my $keystyle        = param('keystyle')    || 'between';
 my @options         = param('options');            # various track options, such as bumping
+my $embed           = param('embed');              # embedded in a frame
 
 # Get the ID of the requested segment and error out if none provided
 
@@ -141,9 +143,10 @@ my %visible = map {$_ => {visible=>1}} @labels;
 
 
 my $max = $CONFIG->setting('max segment') || MAX_SEGMENT;
-my ($img,$img_map);
+my ($img,$boxes,$panel,$tracks);
 
 if (@segments > 1 or $show_overview or $segments[0]->length > $max) {
+  foreach (@segments) { $_->absolute(0) }
   my $images   = $CONFIG->hits_on_overview_raw($db,\@segments,\%visible);
   $img         = consolidate_images($images,$image_class);
 }
@@ -151,18 +154,35 @@ if (@segments > 1 or $show_overview or $segments[0]->length > $max) {
 else {
   # get external features
   my $feature_list = external_features(\@labels,$segments[0],\@add_features,\@add_style) if @add_features;
-  ($img,$img_map) = $CONFIG->image_and_map(segment       => $segments[0],
-					   tracks        => \@labels,
-					   options       => \%options,
-					   feature_files => $feature_list||undef,
-					   label_scale   => 1,
-					   image_class   => $image_class,
-					   keystyle      => $keystyle,
-					   do_map        => 1,
-       );
+  ($img,$boxes,$panel,$tracks) 
+    = $CONFIG->image_and_map(segment       => $segments[0],
+			     tracks        => \@labels,
+			     options       => \%options,
+			     feature_files => $feature_list||undef,
+			     label_scale   => 1,
+			     image_class   => $image_class,
+			     keystyle      => $keystyle,
+			     do_map        => 1,
+			    );
 }
 
-if ($image_class eq 'GD::SVG') {
+if ($embed) {
+  my $url             = $CONFIG->generate_image($img);
+  my ($width,$height) = $img->getBounds;
+  my $img             = img({-src=>$url,-align=>'middle',-usemap=>'#hmap',-width=>$width,
+			     -height=>$height,-border=>0,-name=>'detailedView',-alt=>'detailed view'});
+  my $ruler           = shift @$boxes;
+  my $map             = $CONFIG->make_map($boxes,0,$panel,$tracks);
+  my $coords          = join ',',@{$ruler}[1,2,3,4];
+  my $source          = $CONFIG->source;
+  my $gbrowse         = "../gbrowse/$source?name=$segments[0]";
+  my $rect            = qq(<area shape="rect" coords="$coords" href="$gbrowse" title="Browse Region" />);
+  $map                =~ s!</map>!$rect</map>!;
+  print header('text/html');
+  print start_html(''),$img,$map,end_html();
+}
+
+elsif ($image_class eq 'GD::SVG') {
   # This is a kludge to alert users that their system does not have
   # GD::SVG installed
   my ($version) = (0);

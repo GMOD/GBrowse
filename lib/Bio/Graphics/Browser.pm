@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.5 2005-02-18 22:10:32 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.6 2005-03-22 17:06:44 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1424,10 +1424,12 @@ sub _hits_on_overview {
       my($start,$end) = ($hit->start,$hit->end);
       $name =~ s/\:\d+,\d+$//;  # remove coordinates if they're there
       $name = substr($name,0,7).'...' if length $name > 10;
-      push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$start,
-						      -end=>$end,
-						      -name=>$name,
-						      -segments=>[$hit->get_SeqFeatures]);
+      my $feature = Bio::Graphics::Feature->new(-start=>$start,
+						-end=>$end,
+						-name=>$name,
+						# -segments=>[$hit->get_SeqFeatures]  # this has an awful performance hit
+					       );
+      push @{$refs{$ref}},$feature;
     } elsif (UNIVERSAL::can($hit,'location')) {
       my $location = $hit->location;
       my ($ref,$start,$stop,$name) = ($location->seq_id,$location->start,

@@ -207,7 +207,6 @@ lib/Bio/Graphics/Glyph/drosophila_arrow.pm
 lib/Bio/Graphics/Glyph/insertion_chromosome.pm
 lib/Bio/Graphics/Glyph/phased_exons.pm
 lib/Bio/Graphics/Glyph/wormbase_transcript.pm
-lib/Bio/Graphics/Glyph/xyplot.pm
 lib/WebReports/Browser.pm
 libalign/CAlign.pm
 libalign/CAlign.xs

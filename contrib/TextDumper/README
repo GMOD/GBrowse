@@ -11,3 +11,7 @@ user-friendliness:
   - users can select a mime type for the report.  Currently the plugin
   supports text/plain or application/vnd.ms-excel
 
+To install, copy TextDumper.pm to your plugins directory, stored
+underneath your web server configuration directory at
+gbrowse.conf/plugins.  Then add TextDumper to plugins line in the
+appropriate gbrowse.conf configuration file.

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.11 2003-10-17 16:12:03 markwilkinson Exp $
+# $Id: gbrowse_details.PLS,v 1.12 2003-10-20 19:34:37 markwilkinson Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -119,7 +119,7 @@ sub print_features {
     for my $a (sort keys %attributes) {
       $string .= PrintMultiple($options,$a,$f->attributes($a));
     }
-    $string .= PrintMultiple($options,'Type',  $f->method);
+    $string .= PrintMultiple($options,'Type',  $f->method, $f->name);
     $string .= PrintMultiple($options,'Source',$f->source);
     $string .= PrintMultiple($options,"Position",position($f));
     $string .= PrintMultiple($options,"Length",$f->length);
@@ -241,6 +241,14 @@ sub PrintMultiple {
         $LINK=~ s/\$value/$first/;
         $LINK = "<a href='$LINK'>$first</a>";
   }
+
+    # for EST alignment features, create a link to get the orignal EST sequence   
+    if (($label eq "Type") && ($URLS{'alignment'}) && ($first =~ /alignment/i)){
+            my $name = shift @a;
+            $LINK = $URLS{'alignment'};
+            $LINK=~ s/\$value/$name/;
+            $LINK = "$first : (<a href='$LINK'>Aligned Sequence</a>)";
+    }
 
   my $string = join '',TR({-valign=>'top',-class=>'databody'},
                           th({-align=>'LEFT',-valign=>'top',-class=>'datatitle'},length $label>0 ? "$label: " : ''),

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.28 2003-11-06 20:24:58 scottcain Exp $
+# $Id: Chado.pm,v 1.29 2003-11-06 20:30:12 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -302,23 +302,9 @@ sub types {
 
 =head2 get_feature_by_name
 
-This method handles wild card searches, at the moment it only searches
-the synonym table, however in the future, we may want to include
-searches of featureprop (for notes) and feature_cvterm (for GO terms).
-Assuming we do that, we have to descide how we want to do it.
-Since these will be wild card searches, they are not going to 
-generally be able to take advantage of indexes (right?), so
-for speed, we may want to do one search, if there is a result, 
-quit and return it, if not continue to the next one.  Unfortunately, 
-that may result in unfindable things.  Perhaps we could use a method
-like Bio::DB::GFF uses:  one could search for "cellular_component::cytosol"
-and jump to searching the cellular component section of GO.  That would
-be cool.
-
 =cut
 
 sub get_feature_by_name {
-  warn "get_feature_by_name:@_";
   my $self = shift;
 
   my ($name, $class, $ref, $base_start, $stop) 

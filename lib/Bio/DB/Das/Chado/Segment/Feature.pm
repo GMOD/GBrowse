@@ -1212,6 +1212,20 @@ sub attributes {
   $factory->attributes($id,@_);
 }
 
+=head2 synonyms()
+
+ Title   : synonyms
+ Usage   : @synonyms = $feature->synonyms
+ Function: return a list of synonyms for a feature
+ Returns : a list of strings
+ Args    : none
+ Status  : Public
+
+Looks in the synonym table to collect all synonyms of a feature.
+
+=cut
+
+
 sub synonyms {
   #returns an array with synonyms
   my $self = shift;
@@ -1231,6 +1245,58 @@ sub synonyms {
   }
 
   return @synonyms;
+}
+
+=head2 cmap_link()
+
+ Title   : cmap_link
+ Usage   : $link = $feature->cmap_link
+ Function: returns a URL link to the corresponding feature in cmap
+ Returns : a string
+ Args    : none
+ Status  : Public
+
+Returns a link to a cmap installation (which is assumed to be on the
+same host as gbrowse).  In addition to the cmap tables being present
+in chado, this method also assumes the presence of a link table called
+feature_to_cmap.  See the cmap documentation for more information.
+
+This function is intended primarily to be used in gbrowse conf files. 
+For example:
+
+  link       = sub {my $self = shift; return $self->cmap_link();}
+
+=cut
+
+
+sub cmap_link {
+  # Use ONLY if CMap is installed in chado and
+  # the feature_to_cmap table is also installed
+  # This table is provided with CMap.
+  my $self = shift;
+  my $data_source = shift;
+ 
+  my $dbh = $self->factory->dbh();
+
+  my $sth = $dbh->prepare("
+    select  cm_f.feature_name,
+            cm_m.accession_id as map_aid
+    from    cmap_feature cm_f,
+            cmap_map cm_m,
+            feature_to_cmap ftc
+    where   ? = ftc.feature_id
+            and cm_f.accession_id=ftc.cmap_feature_aid
+            and cm_f.map_id=cm_m.map_id
+  ");
+  $sth->execute($self->feature_id()) or $self->throw("cmap link query
+failed");
+  my $link_str='';
+  if (my $hashref = $sth->fetchrow_hashref) {
+   
+$link_str='/cgi-bin/cmap/viewer?ref_map_aids='.$$hashref{map_aid}.'&data_source='.$data_source.'&highlight='.$$hashref{'feature_name'};
+  }
+
+  return $link_str;
 }
 
 1;

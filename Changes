@@ -24,7 +24,9 @@
         * Fixed chado adaptor to properly render the gbrowse_details page.
         * Patch from Eric Just to eliminate unecessary URL arguments.
         * Fixes from Jack Chen to get colors in multiple alignments "just right."
-
+        * Several fixes, improvements to the chado adaptor.
+        * added code to the chado adaptor to allow it to generate
+        URLs to corresponding cmap features
 
 1.61    Wed Mar 17 21:59:16 EST 2004
         * Moved the BioSQL adaptor to 'experimental'.  It is not guaranteed

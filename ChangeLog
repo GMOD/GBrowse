@@ -1,3 +1,17 @@
+1.45	Sun Jul  7 17:32:08 EDT 2002
+	* Major feature release.
+	* New CDS/reading frame glyph.
+	* New 3-frame translation glyph.
+	* FASTA dumper now dumps out decorated FASTA files.
+	* Sequence dumper supports output in GenBank, EMBL, GAME, BSML and other
+		formats (thanks to magic of Bio::SeqIO).
+	* Full set of restriction enzymes in restriction enzyme annotator plugin.
+	* Support for named external feature tracks in popup menu.
+	* External feature tracks are now highlighted in selection list.
+	* Fixed uploaded files so that they are persistent.
+	* Minor aesthetic improvements.
+	* REQUIRES: BioPerl 1.02.
+	* STILL PENDING: Internationalization/localization fixes
 1.44	Mon May  6 19:14:45 EDT 2002
 	* Bug fix that caused keyword searches to fail on case mismatch.
 	* Number of matches now printed at top of multiple-match page.

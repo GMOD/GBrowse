@@ -1,17 +1,33 @@
-The file bioperl-1.0.patch is a patch file that will bring a virgin
-Bioperl 1.0 distribution up to version 1.01.  This version contains
-certain fixes that allow the wildcard search feature of GBrowse to
-work.
+The file bioperl-101-102.patch is a patch file that will bring a
+virgin Bioperl 1.01 distribution up to version 1.02.  This version a
+number of coordinate-related bug fixes and several glyphs improvements
+that are required for GBrowse to work.
 
 Here are the patch steps:
 
- 1. unpack bioperl-1.0.tar.gz
-    gunzip -c bioperl-1.0.tar.gz | tar xvf -
+ 1. unpack bioperl-1.0.1.tar.gz
+    gunzip -c bioperl-1.0.1.tar.gz | tar xvf -
 
- 2. enter bioperl-1.0
-    cd bioperl-1.0
+ 2. enter bioperl-1.0.1
+    cd bioperl-1.0.1
 
  3. apply the patch
-    patch -p1 < ../Generic-Genome-Browser-1.38/extras/bioperl-1.0.patch
+    patch -p1 < ../Generic-Genome-Browser-1.45/extras/bioperl-101-102.patch
 
-Modify the last command for the actual location of the patch file.
+Modify the last command to point to the actual location of the patch
+file.
+
+Note that as of the time this patch was prepared (July 7, 2002),
+Bioperl 1.02 was still in pre-release stage and was failing a few
+tests.  It is unlikely that these failures will affect you, but you
+should upgrade to the release version of 1.02 as soon as it is
+available.
+
+Failed Test      Status Wstat Total Fail  Failed  List of Failed
+--------------------------------------------------------------------------------
+t/EMBL_DB.t     	              15    1   6.67%  6
+t/LocatableSeq.t	              22    2   9.09%  15-16
+t/SearchIO.t    	             557    2   0.36%  227, 277
+4 subtests skipped.
+Failed 3/95 test scripts, 96.84% okay. 5/3280 subtests failed, 99.85% okay.
+

@@ -30,17 +30,15 @@ already.
 	Digest::MD5
 	Text::Shellwords
 
-  E) Bio::DB::GFF module -- http://www.bioperl.org
-	This is the middleware layer that translates between
-	the CGI script to the database.  It is part of the
-	Bioperl package.  See the note at the bottom of this file
-	about Bioperl versions.
+  F) BioPerl version 1.02 or higher -- http://www.bioperl.org
 
-  F) Bio::Graphics module -- http://www.gmod.org
-	This is the module that renders the information in the
-	database into graphics.  It is part of the GMOD project
-	and can be downloaded from the same location you got this
-	package.
+Optional modules:
+
+  G) XML::Parser, XML::Writer, XML::Twig, XML::DOM
+
+   If these modules are present, the "Sequence Dumper" plugin
+   will be able to produce GAME and BSML output.  They can be
+   downloaded from CPAN.
 
 2. INSTALLING THE BROWSER
 
@@ -113,9 +111,10 @@ files are placed in a directory named gbrowse.  The install script
 will detect if there are already configuration files in the selected
 directory and not overwrite them if so.  The same applies to the
 cascading stylesheet file (gbrowse.css) located in the gbrowse
-subdirectory.  However, the GIF files in the "buttons" subdirectory
-are not checked before they are overwritten, so be careful to copy the
-new copies somewhere safe if you have modified them.
+subdirectory.  However, neither the GIF files in the "buttons"
+subdirectory nor the plugin modules in the gbrowse.conf/plugins
+directory are checked before overwriting them, so be careful to copy
+the new copies somewhere safe if you have modified them.
 
 You can always manually move the files around after install.  See
 docs/configuration.txt for details.
@@ -129,6 +128,9 @@ and permissions to allow the web server account to write into it.  The
 directory is located in /usr/local/apache/htdocs/gbrowse/tmp by
 default.
 
+The first time you run Makefile.PL, a file named GGB.def will be
+created your file path settings.  When Makefile.PL is run again, it
+will ask you whether you wish to use the 
 
 3. POPULATING THE DATABASE
 
@@ -244,43 +246,42 @@ performance of the script noticeably.
 
 Be aware that there is a bad interaction between the Apache::DBI
 module (often used to speed up database accesses) and Bio::DB::GFF.
-This will result in the GFF dump feature failing intermittently.
-GBrowse does not need Apache::DBI to achieve performance increases
-under mod_perl and it is suggested that you disable Apache::DBI.
+This will cause the GFF dumper plugin to fail intermittently.  GBrowse
+does not need Apache::DBI to achieve performance increases under
+mod_perl and it is suggested that you disable Apache::DBI.  If you
+cannot do this, then you should remove the file GFFDumper.pm from the
+gbrowse.conf/plugins directory.
 
 8. BIOPERL VERSIONS
 
-GBrowse works with Bioperl version 1.0. However, one useful feature --
-the ability to use wildcards in the search field -- requires Bioperl
-version 1.01 or higher. In addition, there are a number of subtle
-display problems present in Bioperl 1.0 that have since been fixed.
-
-
-At the time this was written, Bioperl 1.01 had not been officially
-released.  There are two ways to get it:
+GBrowse requires Bioperl version 1.02. At the time this was written
+(July 7, 2002), version 1.02 had not been officially released but was
+expectedly imminently.  Should version 1.02 not be available at the
+time you read this, there are two ways to obtain it:
 
   a. The Patch method
 
-  This distribution contains a patch file named "bioperl-1.0.patch"
+  This distribution contains a patch file named "bioperl-101-102.patch"
   located in the "extras" subdirectory. Applying it to a virgin
-  Bioperl-1.0 distribution will generate a version 1.01 distribution.
+  Bioperl-1.0.1 distribution will generate a version 1.0.2 distribution.
   The steps to follow are these:
 
-  a1. unpack bioperl-1.0.tar.gz:
-      gunzip -c bioperl-1.0.tar.gz | tar xvf -
+  a1. unpack bioperl-1.0.1.tar.gz
+      gunzip -c bioperl-1.0.1.tar.gz | tar xvf -
 
-  a2. enter bioperl-1.0:
-      cd bioperl-1.0
+  a2. enter bioperl-1.0.1
+      cd bioperl-1.0.1
 
-  a3. apply the patch:
-      patch -p1 < ../Generic-Genome-Browser-1.XX/extras/bioperl-1.0.patch
+  a3. apply the patch
+      patch -p1 < ../Generic-Genome-Browser-1.45/extras/bioperl-101-102.patch
 
-  The last command will need to be modified to indicate the actual
-  location of the patch file.
+  Modify the last command to point to the actual location of the patch
+  file.
 
   b. By anonymous CVS.  
 
-  You can get Bioperl 1.01 by anonymous CVS using this incantation:
+  You can get the most recent version of the Bioperl 1.00 branch
+  using anonymous CVS.  Here is the incantation:
 
    cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl \
 	  checkout -r branch-1-0-0 bioperl-live
@@ -324,8 +325,8 @@ Genbank/EMBL/Refseq entries.
 You are free to experiment with this, but don't expect it to be
 entirely reliable.  To get it to work, you must:
 
-   a) get the most up to date version of Bioperl.  The patch file
-	does *NOT* contain the code needed to support this.
+   a) make sure you are using Bioperl 1.02 (or a patched version of
+   1.01)
 
    b) create a local database named "embl" and initialize it
 	this way:
@@ -351,7 +352,27 @@ Makefile.PL.  Here is the recipe:
   make
   make install
 
-12. SUPPORT AND BUG REPORTS
+12. KNOWN BUGS
+
+Currently there is one known bug.  The navigation buttons do not
+operate properly when the client is using Internet Explorer 5.1 on a
+Macintosh and accessing gbrowse running on a MacOS X server running
+Apache.  Other combinations of clients and servers work properly.
+
+13. FEATURE WISH LIST (updated July 7, 2002)
+
+ - Full DAS support.
+ - Internationalization and localization support.
+ - A glyph for representing cytogenetic maps.
+ - Multiple alignment representations.
+ - A percent identity (PIP) glyph.
+ - An XY plot glyph.
+ - Support for Oracle and PostgreSQL databases.
+
+If you are interested in working on any of these features, please
+contact the developers at the address given in the next section.
+
+14. SUPPORT AND BUG REPORTS
 
 Please send requests for help to gmod-devel@lists.sourceforge.net.
 There is also a formal bug tracking and feature request system in
@@ -362,4 +383,4 @@ Have fun!
 
 Lincoln Stein & the GMOD team
 lstein@cshl.org
-May 5, 2002
+July 7, 2002

@@ -2,7 +2,7 @@ use ExtUtils::MakeMaker;
 use FindBin '$Bin';
 require 5.005003;
 
-my $VERSION = '1.44';
+my $VERSION = '1.45';
 
 my @OPTIONS = qw(PREFIX CONF HTDOCS CGIBIN);
 my $OPTIONS = join ('|',@OPTIONS);
@@ -26,9 +26,10 @@ foreach (@argv) {
 }
 
 if (-e 'GGB.def' && !%OPTIONS) {
-  print STDERR "You have installed gbrowse before.  Should I use the previous settings to set the file paths (y/n)? ";
+  print STDERR "You have installed gbrowse before.  Should I use the previous settings to set the file paths (y/n) [y]? ";
   chomp (my $line = <>);
-  if ($line =~ /^[yY]/) {
+  if (!$line || $line =~ /^[yY]/) {
+    print STDERR "Using previous settings for file paths.\n";
     open F,'GGB.def' or die "GGB.def: $!";
     while (<F>) {
       chomp;

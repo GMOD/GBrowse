@@ -1,7 +1,7 @@
 IMPORTANT NOTE: Between version 1.01 and 1.02 there was a change in
 the Bio::DB::GFF module which will invalidate 1.01 (and earlier)
 databases.  Specifically, the DNA can now be stored inside the MySQL
-database rather than in external FASTA files, which is a vast
+database rather than in external FASTA files.  This is a big
 administrative improvement.  To upgrade your database without
 reloading the data, follow these steps:
 

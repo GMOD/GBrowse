@@ -28,7 +28,7 @@ conf/plugins/test.pm
 docs/configuration.txt
 docs/gbrowse_img.txt
 extras/README
-extras/bioperl-1.0.patch
+extras/bioperl-101-102.patch
 gbrowse.PLS
 gbrowse_img.PLS
 htdocs/annotation_help.html

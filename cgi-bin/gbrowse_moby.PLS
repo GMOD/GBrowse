@@ -42,7 +42,7 @@ $startperl -w
 !GROK!THIS!
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_moby.PLS,v 1.1 2003-10-13 17:10:26 markwilkinson Exp $
+# $Id: gbrowse_moby.PLS,v 1.2 2003-10-20 19:58:36 markwilkinson Exp $
 
 
 # use lib "/usr/local/GB/GMOD_LIBS/moby-live/Perl";
@@ -58,14 +58,18 @@ use strict;
 
 =head1 NAME
 
-askMOBY -- a Gbrowse accessory that enables browsing of MOBY data
+gbrowse_moby -- a Gbrowse accessory that enables browsing of MOBY data
+
+=head1 AUTHOR
+
+Please report all bugs to Mark Wilkinson (markw at illuminae.com)
 
 =head1 SYNOPSIS
 
 In 0X.organism.conf:
      
  [ORIGIN]
- link         = http://yoursite.com/cgi-bin/askMOBY?source=$source&name=$name&class=$class&method=$method&ref=$ref&description=$description
+ link         = http://yoursite.com/cgi-bin/gbrowse_moby?source=$source&name=$name&class=$class&method=$method&ref=$ref&description=$description
  feature      = origin:Genbank
  glyph        = anchored_arrow
  fgcolor      = orange
@@ -81,7 +85,7 @@ AND/OR
 
 
  [db_xref:DETAILS]
- URL = http://brie4.cshl.org:9320/cgi-bin/askMOBY?namespace=$tag;id=$value
+ URL = http://brie4.cshl.org:9320/cgi-bin/gbrowse_moby?namespace=$tag;id=$value
 
 
 =head1 DESCRIPTION
@@ -141,7 +145,7 @@ If your GFF were:
 You would set your configuration file as follows:
  
      [ORIGIN]
-     link         = http://yoursite.com/cgi-bin/askMOBY?source=$source&name=$name&class=$class
+     link         = http://yoursite.com/cgi-bin/gbrowse_moby?source=$source&name=$name&class=$class
      feature      = origin:Genbank
 
 and you would edit the askMOBY script as follows:
@@ -164,7 +168,7 @@ If your GFF were:
 You would set your configuration file as follows:
  
      [ORIGIN]
-     link         = http://yoursite.com/cgi-bin/askMOBY?source=$source&name=$name&class=$class
+     link         = http://yoursite.com/cgi-bin/gbrowse_moby?source=$source&name=$name&class=$class
      feature      = origin:Genbank
 
 and you might also set a DETAILS call to handle the Locus Xref:
@@ -172,7 +176,7 @@ and you might also set a DETAILS call to handle the Locus Xref:
 the foreign namespace into a MOBY namespace)
 
      [db_xref:DETAILS]
-     URL = http://brie4.cshl.org:9320/cgi-bin/askMOBY?source=$tag;id=$value
+     URL = http://brie4.cshl.org:9320/cgi-bin/gbrowse_moby?source=$tag;id=$value
 
 then to handle the mapping of Locus to YDB_Locus as well
 as the Genbank GFF source tag you would
@@ -195,7 +199,7 @@ If your GFF were (NCBI_gi is a valid MOBY namespace):
 You would set your configuration file as follows:
  
      [ORIGIN]
-     link         = http://yoursite.com/cgi-bin/askMOBY?source=$source&name=$name&class=$class
+     link         = http://yoursite.com/cgi-bin/gbrowse_moby?source=$source&name=$name&class=$class
      feature      = origin:Genbank
 
 and you might also set a DETAILS call to handle the NCBI_gi Xref:
@@ -203,7 +207,7 @@ and you might also set a DETAILS call to handle the NCBI_gi Xref:
 the tag is already a valid MOBY namespace)
 
      [db_xref:DETAILS]
-     URL = http://brie4.cshl.org:9320/cgi-bin/askMOBY?namespace=$tag;id=$value
+     URL = http://brie4.cshl.org:9320/cgi-bin/gbrowse_moby?namespace=$tag;id=$value
 
 Since there is no need to map the namespace portion, we now
 only need to handle the Genbank GFF source as before:

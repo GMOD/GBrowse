@@ -45,7 +45,59 @@ $startperl -w
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbrowse_est.PLS,v 1.1 2003-10-20 19:34:38 markwilkinson Exp $
+# $Id: gbrowse_est.PLS,v 1.2 2003-10-20 19:58:36 markwilkinson Exp $
+
+
+=head1 NAME
+
+gbrowse_est -- a Gbrowse accessory that retrieves EST sequences from Alignment (Target) features.
+
+=head1 AUTHOR
+
+Please report all bugs to Mark Wilkinson (markw at illuminae.com)
+
+=head1 SYNOPSIS
+
+In 0X.organism.conf:
+
+ [alignment:DETAILS]
+ URL = http://brie4.cshl.org:9320/cgi-bin/gbrowse_est?id=$value
+
+
+=head1 DESCRIPTION
+
+Alignment features may be stored in Gbrowse using one of the following GFF
+styles
+
+ Gbrowse GFF Style:
+ Seqname BLASTN match 100  200  5   +   .   Target EST:a3255.abi  1  100
+
+ GFF 2.5 Style:
+ Seqname BLASTN match 100  200  5   +   .   Target EST:a3255.abi ; tstart 1 ; tend 100
+
+In addition, the sequence of the aligned EST (in this case a3255.abi)
+can also be stored in the database in order to view the gapped alignment
+from a mouse-click on the alignment feature glyph.  It is not possible,
+however, to see the original EST sequence.  
+
+This script will accomplish that for you.  Set up an [alignment:DETAILS]
+section in your config file that calls on this script with a single
+parameter "id" set to the name of your est sequence and it will
+retrieve it for you.  On the gbrowse_details screen A link appears next
+to the Type: line, that will call on the link you have configured.
+    
+ Type:  alignment  (Aligned Sequence)
+ 
+Click on 'Aligned Sequence' to view the original EST sequence.
+ 
+ 
+=cut
+
+
+
+
+
+
 
 use strict;
 use CGI qw(:standard *table *TR escape);

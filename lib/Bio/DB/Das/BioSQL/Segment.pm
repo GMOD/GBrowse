@@ -75,8 +75,10 @@ package Bio::DB::Das::BioSQL::Segment;
 use strict;
 use Bio::Root::Root;
 use Bio::Das::SegmentI;
-  use Bio::DB::Das::BioSQL::Iterator;
+use Bio::DB::Das::BioSQL::Iterator;
 use constant DEBUG => 1;
+
+*get_SeqFeatures = \&features;
 
 use overload '""' => 'asString';
 

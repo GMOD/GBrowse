@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.88 2004-05-19 15:27:37 lstein Exp $
+# $Id: gbrowse.PLS,v 1.89 2004-05-21 19:01:00 marclogghe Exp $
 
 use strict;
 use Bio::Graphics;
@@ -714,7 +714,7 @@ sub adjust_settings {
 	|| grep {/zoom|nav|overview/} param())
      )
     {
-      $settings->{version}   = param('version')||'';
+      $settings->{version} ||= param('version');
       $settings->{ref}   = param('ref');
       $settings->{start} = param('start') if param('start') =~ /^[\d-]+/;
       $settings->{stop}  = param('stop')  if param('stop')  =~ /^[\d-]+/;
@@ -725,7 +725,7 @@ sub adjust_settings {
       param(name => $settings->{name});
     }
 
-  foreach (qw(name source plugin stp ins head ks sk)) {
+  foreach (qw(name source plugin stp ins head ks sk version)) {
     $settings->{$_} = param($_) if defined param($_);
   }
   $settings->{name} =~ s/^\s+//; # strip leading
@@ -2043,8 +2043,8 @@ sub coordinate_mapper {
 sub bookmark_link {
   my $settings = shift;
   my $q = new CGI('');
-  my @keys = $settings->{name} ? qw(name source width)
-                               : qw(start stop ref source width);
+  my @keys = $settings->{name} ? qw(name source width version)
+                               : qw(start stop ref source width version);
   foreach (@keys) {
     $q->param(-name=>$_,-value=>$settings->{$_});
   }

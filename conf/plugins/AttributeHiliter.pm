@@ -1,11 +1,11 @@
 package Bio::Graphics::Browser::Plugin::AttributeHiliter;
-# $Id: AttributeHiliter.pm,v 1.1 2003-09-17 17:08:09 lstein Exp $
+# $Id: AttributeHiliter.pm,v 1.2 2003-09-18 19:51:33 scottcain Exp $
 use strict;
 use Bio::Graphics::Browser::Plugin;
 
 use CGI qw(:standard);
 
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 use vars qw($VERSION @ISA);
 
@@ -58,7 +58,7 @@ sub highlight {
 
     my $regexp = quotemeta($text);
     if ($attribute eq 'Feature Name') {
-      $sub .= "  return '$color' if \$feature->display_name =~ /$regexp/i\n";
+      $sub .= "  return '$color' if \$feature->display_name =~ /$regexp/i;\n";
     } elsif ($attribute eq 'Feature Type') {
       $sub .= "  return '$color' if \$feature->type =~ /$regexp/i;\n";
     } elsif (defined $attribute) {

@@ -44,7 +44,7 @@ package MobyServices::GbrowseServices;
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: GbrowseServices.PM,v 1.3 2003-12-15 17:27:14 markwilkinson Exp $
+$Id: GbrowseServices.PM,v 1.4 2003-12-15 18:26:42 markwilkinson Exp $
 
 use strict;
 use Text::Shellwords;
@@ -69,7 +69,7 @@ sub _settings {
         $dbh{$_}=$db;
     }
     
-    open (IN, "$CONF_DIR/MobyServices/moby.conf") || die "\n**** GbrowseServices.pm couldn't open configuration file $CONF_DIR/MOBY/moby.conf:  $!\n";
+    open (IN, "$CONF_DIR/MobyServices/moby.conf") || die "\n**** GbrowseServices.pm couldn't open configuration file $CONF_DIR/MobyServices/moby.conf:  $!\n";
     while (<IN>){
         chomp; next unless $_; # filter out blank lines
         next if m/^#/;  # filter out comment lines
@@ -83,6 +83,10 @@ sub GbrowseGetReferenceFasta {
     _settings();
     my $reference = $CONFIG->{'MOBY'}->{'Reference'};
     $reference = shift(@$reference); $reference ||='';
+    unless ($reference){
+        print STDERR "\n\nMobyServices::GbrowseServices - you have not set a reference class in your moby.conf file\n\n";
+        return SOAP::Data->type('base64' => responseHeader($authURI) . responseFooter());
+    }
 
     my $authURI = $CONFIG->{'MOBY'}->{'authURI'};
     $authURI = shift(@$authURI); $authURI ||='unknown.org';
@@ -96,9 +100,8 @@ sub GbrowseGetReferenceFasta {
     my $MOBY_RESPONSE;
     foreach my $source($CONFIG->sources){
         $CONFIG->source($source); # set the current source
-        my $ref = $CONFIG->setting('reference class');  # get the top-level segment class
         my $db = $dbh{$source};  # get the database object
-        return SOAP::Data->type('base64' => responseHeader($authURI) . responseFooter()) unless ($ref && $db);
+        next unless $db;
 
         my (@inputs)= genericServiceInputParser($data); # ([SIMPLE, $queryID, $simple],...)
         return SOAP::Data->type('base64' => responseHeader($authURI) . responseFooter()) unless (scalar(@inputs));
@@ -123,7 +126,7 @@ sub GbrowseGetReferenceFasta {
             }
         }
     }
-    #print STDERR (responseHeader($authURI) . $MOBY_RESPONSE . responseFooter);
+    print STDERR (responseHeader($authURI) . $MOBY_RESPONSE . responseFooter);
     return SOAP::Data->type('base64' => (responseHeader($authURI) . $MOBY_RESPONSE . responseFooter));    
 }
 
@@ -134,6 +137,10 @@ sub GbrowseGetReferenceSeqObj {
 
     my $reference = $CONFIG->{'MOBY'}->{'Reference'};
     $reference = shift(@$reference); $reference ||='';
+    unless ($reference){
+        print STDERR "\n\nMobyServices::GbrowseServices - you have not set a reference class in your moby.conf file\n\n";
+        return SOAP::Data->type('base64' => responseHeader($authURI) . responseFooter());
+    }
 
     my $authURI = $CONFIG->{'MOBY'}->{'authURI'};
     $authURI = shift(@$authURI); $authURI ||='unknown.org';
@@ -148,14 +155,17 @@ sub GbrowseGetReferenceSeqObj {
     my $MOBY_RESPONSE;
     foreach my $source($CONFIG->sources){
         $CONFIG->source($source); # set the current source
-        my $ref = $CONFIG->setting('reference class');  # get the top-level segment class
         my $db = $dbh{$source};  # get the database object
-        return SOAP::Data->type('base64' => responseHeader($authURI) . responseFooter()) unless ($ref && $db);
-
+        next unless $db;
+        
         my (@inputs)= genericServiceInputParser($data); # ([SIMPLE, $queryID, $simple],...)
         return SOAP::Data->type('base64' => responseHeader($authURI) . responseFooter()) unless (scalar(@inputs));
 
-#        my @validNS = validateNamespaces("NCBI_Acc");  # ONLY do this if you are intending to be namespace aware!
+        my @validNS = validateNamespaces($reference);  # ONLY do this if you are intending to be namespace aware!
+        unless (scalar(@validNS)){
+            print STDERR "\n\nMobyServices::GbrowseServices - namespace $reference does not exist in the MOBY Namespace ontology\n\n";
+            return SOAP::Data->type('base64' => responseHeader($authURI) . responseFooter());
+        }
 
         foreach (@inputs){
             my ($articleType, $qID, $input) = @{$_};

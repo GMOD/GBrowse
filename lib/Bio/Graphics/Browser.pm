@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.51.2.11 2003-07-03 18:31:30 pedlefsen Exp $
+# $Id: Browser.pm,v 1.51.2.12 2003-07-03 22:06:06 pedlefsen Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -350,6 +350,12 @@ sub source {
   my $self = shift;
   my $new_value = shift;
   my $old_value = $self->{ '_source' };
+  unless( $SOURCES->{ $old_value } ) {
+    ## Sometimes the last source that the user used no longer exists.
+    ## This rescues them.
+    $old_value = $DEFAULT_SOURCE;
+    $self->{ '_source' } = $old_value;
+  }
   if( defined( $new_value ) && ( $new_value ne $old_value ) ) {
     unless( $SOURCES->{ $new_value } ) {
       carp( "invalid source: $new_value" );
@@ -2723,10 +2729,18 @@ sub _get_overview_panel_html {
         '-border'   => 0,
         '-align'    => 'middle'
       ) .
+
+      ## There's a problem here with using just the abs_range length
+      ## if the abs_seq_id isn't a true sequence (so the abs_range is
+      ## really just $segment, and its abs_high() value is greater
+      ## than its length().  We temporarily, hackily solve it by
+      ## taking the max of the two.  This value is used on the next
+      ## call to gbrowse to determine the sequence's length, so this
+      ## may still cause problems if, for instance, the user pans
+      ## right.
       hidden(
         '-name'     => 'seg_length',
-             ## TODO: There's a problem here with the CompoundSegment returning the wrong abs_range if one of them can ground it on a real segment but others can't.
-        '-value'    => $segment->abs_range()->length(),#$segment->length(),
+        '-value'    => max( $segment->abs_range()->length(), $segment->abs_high() ),#$segment->length(),
         '-override' => 1
       );
   } # End if( $segment )
@@ -5554,6 +5568,11 @@ can be used this way:
 #
 #  ($adaptor,@argv);
 #} # db_settings(..)
+
+sub max {
+  my ( $a, $b ) = @_;
+  return ( $a > $b ) ? $a : $b;
+}
 
 1;
 

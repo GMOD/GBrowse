@@ -65,6 +65,8 @@ END
 
    DUMP     => 'Sortie',
 
+   HIGHLIGHT   => 'Surligner',
+
    ANNOTATE     => 'Annoter',
 
    SCROLL   => 'Défil./Zoom',

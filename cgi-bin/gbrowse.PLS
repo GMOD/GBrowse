@@ -2420,7 +2420,7 @@ sub do_plugin_header {
   my $plugin        = shift;
   my $page_settings = shift;
   my ($mime_type,$attachment)     = $PLUGINS->plugin($plugin)->mime_type;
-  my @cookies                     = $PLUGINS->plugin($plugin)->cookie;
+  my @cookies                     = $PLUGINS->plugin($plugin)->make_cookie;
   print_header(-cookie => \@cookies,
 	       -type=>$mime_type,
 	       $attachment ? (-attachment=>$attachment) : (),

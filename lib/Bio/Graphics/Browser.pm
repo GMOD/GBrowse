@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.6 2005-03-22 17:06:44 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.7 2005-04-12 19:08:35 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -721,7 +721,6 @@ sub render_html {
   my $do_centering_map= $args{do_centering_map};
 
   return unless $segment;
-
   my($image,$map,$panel,$tracks) = $self->image_and_map(%args);
 
   $self->debugging_rectangles($image,$map) if DEBUG;
@@ -1091,7 +1090,6 @@ sub image_and_map {
 
   }
 
-
   if (@feature_types) {  # don't do anything unless we have features to fetch!
 
     my $iterator = $segment->get_feature_stream(-type=>\@feature_types);
@@ -1178,6 +1176,7 @@ sub image_and_map {
   }
 
   my $gd = $panel->gd;
+
   if ($title) {
     my $x = ($width - length($title) * $image_class->gdMediumBoldFont->width)/2;
     $gd->string($image_class->gdMediumBoldFont,$x,0,$title,$panel->translate_color('black'));

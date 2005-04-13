@@ -1,4 +1,4 @@
-If you got a cvs checkout of GBrowse and it isn't work, it is probably 
+If you got a cvs checkout of GBrowse and it isn't working, it is probably 
 because you checked out from cvs HEAD, which is the main development 
 branch.  Unfortunately, that branch is currently unstable due to some 
 major reworking which will make GBrowse so much better.  In the mean time

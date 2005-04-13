@@ -1078,7 +1078,13 @@ the [GENERAL] section, but change the rules on a track-by-track basis.
 They can be used to override the global rules.  To force a track not
 to contain any links, use a blank value.
 
-=item 14 feature_low
+=item 14 box_subparts
+
+If this option is true, then gbrowse will generate imagemap rectangles
+for each of the subparts of a feature (e.g. the exons within a
+transcript), allowing you to link each subpart separately.
+
+=item 15 feature_low
 
 If this option is present, GBrowse will use the list of feature types
 listed here at resolution views.  (This is one of the ways that
@@ -1087,7 +1093,7 @@ to switch off detailed exon, UTR, promoters and other within-the-gene
 features, and just show the start and stop of the transcription
 unit.
 
-=item 15 global feature
+=item 16 global feature
 
 If this option is present and set to a true value (e.g. "1"), GBrowse 
 will automatically generate a  pseudo-feature that starts at the 
@@ -1097,20 +1103,20 @@ glyphs in order to display global characteristics of the sequence.
 If this option is set, then you do not need to specify a "feature"
 option.
 
-=item 16 group_pattern
+=item 17 group_pattern
 
 This option lets you connect related features by dotted lines based
 on a pattern match in the features' names.  A typical example is
 connecting the 5' and 3' read pairs from ESTs or plasmids.  See
 GROUPING FEATURES for details.
 
-=item 17 restrict
+=item 18 restrict
 
 This option allows you to restrict who is allowed to view the current
 track by host name, IP address or username/password.  See
 AUTHENTICATION AND AUTHORIZATION for details.
 
-=item 18 das category, das landmark, das subparts, das superparts
+=item 19 das category, das landmark, das subparts, das superparts
 
 All these options pertain to exporting the GBrowse database as a DAS
 data source.  Please see L<DAS_HOWTO> for more information.

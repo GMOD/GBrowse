@@ -472,6 +472,7 @@ sub detail_panel_with_timeout {
     if ($@ =~ /^timeout/) {
       return p(b(font({-size=>'+2'},$CONFIG->tr('TIMEOUT'))));
     } else {
+      warn $@ if $@ && $@ !~ /^timeout/ ;
       return $data;
     }
 }

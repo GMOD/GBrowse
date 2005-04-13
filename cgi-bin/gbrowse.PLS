@@ -619,7 +619,7 @@ sub default_settings {
   $settings->{ins}     = 1;
   $settings->{head}    = 1;
   $settings->{ks}      = 'between';
-  $settings->{sk}      = 'sorted';
+  $settings->{sk}      = $CONFIG->setting("default varying") ? "unsorted" : "sorted";
   set_default_tracks($settings);
 }
 
@@ -1042,7 +1042,9 @@ sub tracks_table {
     next if $seenit{$category}++;
     my $table;
     if  (exists $track_groups{$category}) {
-      my @track_labels = sort {lc $labels{$a} cmp lc $labels{$b}} @{$track_groups{$category}};
+      my @track_labels = @{$track_groups{$category}};
+      @track_labels = sort {lc $labels{$a} cmp lc $labels{$b}} @track_labels
+        if ($settings->{sk} eq "sorted");
       my @checkboxes = checkbox_group(-name=>'label',
 				      -values     => \@track_labels,
 				      -labels     => \%labels,
@@ -1128,6 +1130,16 @@ sub settings_table {
 			     -override=>1
 			   ),
 	       ),
+             td(
+                b($CONFIG->tr("TRACK_NAMES")),br,
+                radio_group( -name=>"sk",
+                             -values=>["sorted","unsorted"],
+                             -labels=>{sorted   =>$CONFIG->tr("ALPHABETIC"),
+                                       unsorted =>$CONFIG->tr("VARYING")},
+                             -default=>$settings->{sk},
+                             -override=>1
+                           ),
+               ),
 	     td(
 		b(submit(-name => $CONFIG->tr('Update')))
 	       ),

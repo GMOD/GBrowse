@@ -61,7 +61,6 @@ conf/plugins/PrimerDesigner.pm
 conf/plugins/ProteinDumper.pm
 conf/plugins/RandomGene.pm
 conf/plugins/RestrictionAnnotator.pm
-conf/plugins/SequenceDumper.pm
 conf/plugins/test.pm
 conf/yeast_chr1.conf
 contrib/install_macosx/scripts/build-gbrowse.pl

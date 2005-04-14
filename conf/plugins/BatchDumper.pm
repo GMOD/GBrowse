@@ -20,6 +20,7 @@ my @FORMATS = ( 'fasta'   => ['Fasta',        undef],
 		'game'    => ['GAME (XML)',   'xml'],
 		'bsml'    => ['BSML (XML)',   'xml'],
 		'gff'     => ['GFF',          undef],
+		'gff3'    => ['GFF3',         undef],
 	      );
 
 # initialize @ORDER using the even-numbered elements of the array
@@ -32,13 +33,14 @@ my @ORDER = grep {
 }
  grep { ! /gff/i }  map { $FORMATS[2*$_] } (0..@FORMATS/2-1);
 
-unshift @ORDER,'gff';
+unshift @ORDER,'gff','gff3';
+@ORDER = sort @ORDER;
 
 # initialize %FORMATS and %LABELS from @FORMATS
 my %FORMATS = @FORMATS;
 my %LABELS  = map { $_ => $FORMATS{$_}[0] } keys %FORMATS;
 
-$VERSION = '0.13';
+$VERSION = '0.20';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -76,8 +78,8 @@ sub dump {
   my @filter    = $self->selected_features;
 
   # special case for GFF dumping
-  if ($config->{fileformat} eq 'gff') {
-      $self->gff_dump(@segments,@more_feature_sets);
+  if ($config->{fileformat} =~ /gff(3?)/) {
+      $self->gff_dump($1,@segments,@more_feature_sets);
       return;
   }
 
@@ -126,8 +128,8 @@ sub dump {
 					  -location_type => '..');
 	}
       }
-      if( @locs > 1 ) { 
-	# let's insure they are sorted
+      if( @locs > 1 ) {
+	# let's ensure they are sorted
 	if( $wantsorted ) {  # for VectorNTI
 	  @locs = sort { $a->start <=> $b->start } @locs;
 	}
@@ -145,11 +147,22 @@ sub dump {
   # for the external viewer (like VNTI) the best import format is genbank (?)
   $config->{'fileformat'} = 'Genbank' if ($config->{'format'} eq 'external_viewer');
 
+  my $flip   = $config->{fileformat} =~ /^(fasta|raw)$/ &&
+    (defined $config->{flip} ? $config->{flip}
+                             : $self->page_settings->{flip});
+  if ($flip) {
+    foreach (@segments) {
+      $_ = $_->revcom;
+      $_->desc($_->desc . " (reverse complemented)");
+    }
+  }
+
   my $out = new Bio::SeqIO(-format => $config->{'fileformat'});
   if ($mime_type =~ /html/) {
     print start_html('Batch Sequence');
       foreach my $segment (@segments) {
-	print h1($segment->desc),"\n",
+	my $label = $segment->desc;
+	print h1($label),"\n",
 	start_pre,"\n";
 	$out->write_seq($segment);
 	print end_pre(),"\n";
@@ -185,6 +198,7 @@ sub reconfigure {
   my $self = shift;
   my $current_config = $self->configuration;
 
+  $current_config->{flip} = '';
   foreach my $p ( $self->config_param() ) {
     $current_config->{$p} = $self->config_param($p);
   }
@@ -213,6 +227,13 @@ sub configure_form {
 					 '-labels' => \%LABELS,
 					 '-default'=> $current_config->{'fileformat'} ))));
 
+  push @choices,TR({-class=>'searchtitle'},
+		   th({-align=>'RIGHT',-width=>'25%'},"Orientation",
+		      td(checkbox(-name    => $self->config_name('flip'),
+				  -label   => 'Flip (Fasta and raw sequence only)',
+				  -checked => $self->page_settings->{flip},
+				  -override => 1))));
+
 
   push @choices, TR({-class => 'searchtitle'}, 
 		    th({-align=>'RIGHT',-width=>'25%'},
@@ -236,7 +257,7 @@ sub configure_form {
 
 sub gff_dump {
   my $self             = shift;
-  my ($segment,@extra) = @_;
+  my ($gff3_flag,$segment,@extra) = @_;
   my $page_settings = $self->page_settings;
   my $conf          = $self->browser_config;
   my $date = localtime;
@@ -247,25 +268,28 @@ sub gff_dump {
   my @feature_types = $self->selected_features;
 
   print h1($segment),start_pre() if $html;
-  print "##gff-version 2\n";
+  print "##gff-version ",$gff3_flag || 2,"\n";
   print "##date $date\n";
   print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
   print "##source gbrowse BatchDumper\n";
-  print "##See http://www.sanger.ac.uk/Software/formats/GFF/\n";
+  print $gff3_flag ? "##See http://song.sourceforge.net/gff3.shtml\n"
+                   : "##See http://www.sanger.ac.uk/Software/formats/GFF/\n";
   print "##NOTE: Selected features dumped.\n";
   my $iterator = $segment->get_seq_stream(-types=>\@feature_types) or return;
-  do_dump($iterator);
+  do_dump($gff3_flag,$iterator);
   for my $set (@extra) {
-    do_dump($set->get_seq_stream)  if $set->can('get_seq_stream');
+    do_dump($gff3_flag,$set->get_seq_stream)  if $set->can('get_seq_stream');
   }
   print end_pre() if $html;
   print end_html() if $html;
 }
 
 sub do_dump {
+  my $gff3     = shift;
   my $iterator = shift;
   while (my $f = $iterator->next_seq) {
-    my $s = $f->gff_string;
+    eval {$f->version($gff3 || 2)};
+    my $s = $f->gff_string(1);
     chomp $s;
     print "$s\n";
     for my $ss ($f->sub_SeqFeature) {

@@ -736,9 +736,7 @@ sub adjust_settings {
 
   local $^W = 0;  # kill uninitialized variable warning
   if (param('ref') &&
-      ( #request_method() eq 'GET'
-	# || 
-       param('name') eq param('prevname')
+      ( param('name') eq param('prevname')
 	|| grep {/zoom|nav|overview/} param())
      )
     {
@@ -1991,8 +1989,9 @@ sub coordinate_mapper {
 sub bookmark_link {
   my $settings = shift;
   my $q = new CGI('');
-  my @keys = $settings->{name} ? qw(name source width version)
-                               : qw(start stop ref source width version);
+#  my @keys = $settings->{name} ? qw(name width version flip)
+#                               : qw(start stop ref width version flip);
+  my @keys = qw(start stop ref width version flip);
   foreach (@keys) {
     $q->param(-name=>$_,-value=>$settings->{$_});
   }
@@ -2011,13 +2010,13 @@ sub bookmark_link {
 sub image_link {
   my $settings = shift;
   my $rand = md5_hex(rand);
-  return "?help=link_image;rand=$rand";
+  return "?help=link_image;rand=$rand;flip=".($settings->{flip}||0);
 }
 
 sub svg_link {
   my $settings = shift;
   my $rand = md5_hex(rand);
-  return "?help=svg_image;rand=$rand";
+  return "?help=svg_image;rand=$rand;flip=".($settings->{flip}||0);
 }
 
 # reorder @labels based on settings in the 'track.XXX' parameters
@@ -2285,9 +2284,11 @@ sub build_help_page {
 
 sub build_link_image_page {
   my $settings = shift;
+  warn join ' ',%$settings;
   my $segment  = shift;
   my $source = $CONFIG->source;
   my $id     = $settings->{id};
+  my $flip   = $settings->{flip} || param('flip') || 0;
   my $url = url(-base=>1);
   $url   .= url(-absolute=>1);
   $url    = dirname($url) . "/gbrowse_img/".escape($source);
@@ -2301,6 +2302,7 @@ sub build_link_image_page {
 				 $settings->{features}{$_}{options}
 			       } @$tracks;
   my $img_url = "$url?name=$name;type=$type;width=$width;id=$id";
+  $img_url   .= ";flip=$flip" if $flip;
   $img_url   .= ";options=$options" if $options;
   print $CONFIG->tr('IMAGE_DESCRIPTION',$img_url,$img_url);
 }
@@ -2310,6 +2312,7 @@ sub build_svg_image_page {
   my $segment  = shift;
   my $source = $CONFIG->source;
   my $id     = $settings->{id};
+  my $flip   = $settings->{flip} || param('flip') || 0;
   my $url = url(-base=>1);
   $url   .= url(-absolute=>1);
   $url    = dirname($url) . "/gbrowse_img/".escape($source);
@@ -2323,6 +2326,7 @@ sub build_svg_image_page {
 				 $settings->{features}{$_}{options}
 			       } @$tracks;
   my $img_url = "$url?name=$name;type=$type;width=$width;id=$id;format=GD::SVG";
+  $img_url   .= ";flip=$flip" if $flip;
   $img_url   .= ";options=$options" if $options;
   print $CONFIG->tr('SVG_DESCRIPTION',$img_url,$img_url);
 }

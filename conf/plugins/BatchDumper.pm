@@ -44,7 +44,7 @@ $VERSION = '0.20';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
-sub name { "(Multiple) Sequence File" }
+sub name { "Sequence File" }
 sub description {
   p("The Sequence dumper plugin dumps out the currently displayed genomic segment",
     "or the segments corresponding to the given accessions, in the requested format.").
@@ -56,8 +56,8 @@ sub dump {
   my $segment = shift;
   my @more_feature_sets = @_;
 
-  my $browser = $self->browser_config;
-  my $config  = $self->configuration;
+  my $browser    = $self->browser_config;
+  my $config     = $self->configuration;
   my $wantsorted = $config->{'wantsorted'};
 
   my @segments = map { 

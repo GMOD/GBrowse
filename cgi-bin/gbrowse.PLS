@@ -2284,7 +2284,6 @@ sub build_help_page {
 
 sub build_link_image_page {
   my $settings = shift;
-  warn join ' ',%$settings;
   my $segment  = shift;
   my $source = $CONFIG->source;
   my $id     = $settings->{id};

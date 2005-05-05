@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.2 2005-03-30 20:27:36 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.3 2005-05-05 02:31:59 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -436,7 +436,7 @@ sub get_feature_by_name {
 
     $name =~ s/[?*]\s*$/%/;
 
-    my $select_part = "select fs.feature_id \n";
+    my $select_part = "select distinct fs.feature_id \n";
     my $from_part   = "from feature_synonym fs, synonym s ";
     my $where_part  = "where fs.synonym_id = s.synonym_id and\n"
                     . "s.synonym_sgml ilike ?";
@@ -457,6 +457,7 @@ sub get_feature_by_name {
     $sth->execute($name) or $self->throw("getting the feature_ids failed");
 
     if ($sth->rows == 0) {
+        warn "trying a complex search for $name\n" if DEBUG;
         ($name,$query) = $self->_complex_search($name,$class);
 
         $sth = $self->dbh->prepare($query);
@@ -476,13 +477,13 @@ sub get_feature_by_name {
      # prepare sql queries for use in while loops
   my $isth =  $self->dbh->prepare("
        select f.feature_id, f.name, f.type_id,f.uniquename,af.significance as score,
-              fl.fmin,fl.fmax,fl.strand,fl.phase, fl.srcfeature_id, dbx.dbxref_id
+              fl.fmin,fl.fmax,fl.strand,fl.phase, fl.srcfeature_id, fd.dbxref_id
        from feature f join featureloc fl using (feature_id)
             left join analysisfeature af using (feature_id)
             left join feature_dbxref fd using (feature_id) 
-            left join dbxref dbx on (dbx.dbxref_id = fd.dbxref_id) 
        where
-         f.feature_id = ? and fl.rank=0 and dbx.db_id=".$self->gff_source_db_id."
+         f.feature_id = ? and fl.rank=0 and "
+       ."(fd.dbxref_id is null or fd.dbxref_id in (select dbxref_id from dbxref where db_id =".$self->gff_source_db_id."))
        order by fl.srcfeature_id
         ");
 
@@ -504,6 +505,7 @@ sub get_feature_by_name {
       $is_srcfeature_query->execute($$feature_id_ref{'feature_id'})
              or $self->throw("checking if feature is a srcfeature failed");
 
+####FIXME!
       if ($is_srcfeature_query->rows == 1) {#yep, its a srcfeature
           #build a feature out of the srcfeature:
           warn "Yep, $name is a srcfeature" if DEBUG;

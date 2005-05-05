@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.3 2005-03-30 20:27:51 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.4 2005-05-05 02:31:59 scottcain Exp $
 
 =head1 NAME
 
@@ -93,7 +93,7 @@ use Bio::Root::Root;
 use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
 use Bio::DB::GFF::Typename;
-use constant DEBUG => 0;
+use constant DEBUG => 1;
 
 use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI Bio::DB::Das::Chado);
@@ -217,7 +217,7 @@ sub new {
 
             warn "base_start:$base_start, stop:$stop, length:$length" if DEBUG;
 
-            if( defined($stop) and $stop > $length ){
+            if( defined($stop) and defined($length) and $stop > $length ){
                 $self->warn("end value ($stop) greater than length ($length),"
                            ." truncating to $length");
                 $stop = $length;
@@ -578,7 +578,7 @@ sub features {
                             STOP
                             FEATURE_ID
                             FACTORY)],@_);
-  #  warn "$types\n";
+    warn "$types\n" if DEBUG;
   } else {
     $types = \@_;
   }
@@ -673,7 +673,7 @@ sub features {
   my $select_part = "select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.phase,"
                    ."fl.locgroup,fl.srcfeature_id,f.type_id,f.uniquename,"
                    ."f.feature_id, af.significance as score, "
-                   ."dbx.dbxref_id ";
+                   ."fd.dbxref_id ";
 
   my $order_by    = "order by f.type_id,fl.fmin ";
 
@@ -682,19 +682,17 @@ sub features {
   if ($feature_id) {
     $from_part    = "from (feature f join featureloc fl using (feature_id)) "
                    ."left join feature_dbxref fd using (feature_id) "
-                   ."left join dbxref dbx on (dbx.dbxref_id = fd.dbxref_id) "
                    ."left join analysisfeature af using (feature_id)";
 
-    $where_part   = "where f.feature_id = $feature_id and fl.rank=0 and dbx.db_id=".$factory->gff_source_db_id;
+    $where_part   = "where f.feature_id = $feature_id and fl.rank=0 and (fd.dbxref_id is null or fd.dbxref_id in (select dbxref_id from dbxref where db_id=".$factory->gff_source_db_id."))";
   } else {
     $from_part   = "from (feature f join featureslice($interbase_start, $rend) fl using (feature_id)) "
                   ."left join feature_dbxref fd using (feature_id) "
-                  ."left join dbxref dbx on (dbx.dbxref_id = fd.dbxref_id) "
                   ."left join analysisfeature af using (feature_id)";
 
     $where_part  = "where $sql_types "
                   ."fl.srcfeature_id = $srcfeature_id and fl.rank=0 "
-                  ."and dbx.db_id=".$factory->gff_source_db_id;
+                  ."and (fd.dbxref_id is null or fd.dbxref_id in (select dbxref_id from dbxref where db_id=".$factory->gff_source_db_id."))";
   }
 
   my $query       = "$select_part\n$from_part\n$where_part\n$order_by\n";

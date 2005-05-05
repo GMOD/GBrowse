@@ -815,6 +815,8 @@ sub sub_SeqFeature {
   my($self,$type) = @_;
 
   #first call, cache subfeatures
+#Bio::SeqFeature::CollectionI?
+#like SeqFeature::Generic?
   if(!$self->subfeatures ){
 
     my $parent_id = $self->feature_id();
@@ -838,7 +840,7 @@ sub sub_SeqFeature {
     my $sql = "
     select child.feature_id, child.name, child.type_id, child.uniquename, parent.name as pname,
       childloc.fmin, childloc.fmax, childloc.strand, childloc.locgroup, childloc.phase, af.significance as score,
-      childloc.srcfeature_id, dbx.accession
+      childloc.srcfeature_id
     from feature as parent
     inner join
       feature_relationship as fr0 on
@@ -852,16 +854,9 @@ sub sub_SeqFeature {
     left join
        analysisfeature as af on
         (child.feature_id = af.feature_id)
-    left join
-       feature_dbxref as fd on
-        (child.feature_id = fd.feature_id)
-    left join
-       dbxref as dbx on
-        (fd.dbxref_id = dbx.dbxref_id)
     where parent.feature_id = $parent_id
           and childloc.rank = 0
           and fr0.type_id in ($partof)
-          and dbx.db_id = ".$self->factory->gff_source_db_id."
           $typewhere
     ";
 
@@ -887,7 +882,15 @@ sub sub_SeqFeature {
       my $stop  = $$hashref{fmax};
       my $interbase_start = $$hashref{fmin};
       my $base_start = $interbase_start +1;
-      my $source = $$hashref{accession};
+
+      my $source_query = $self->factory->dbh->prepare("
+            select d.accession from dbxref d,feature_dbxref fd
+            where fd.feature_id = $$hashref{feature_id} and
+                  fd.dbxref_id  = d.dbxref_id and
+                  d.db_id = ".$self->factory->gff_source_db_id);
+      $source_query->execute();
+
+      my ($source) = $source_query->fetchrow_array;
       my $type_obj = Bio::DB::GFF::Typename->new(
            $self->factory->term2name($$hashref{type_id}),
            $source

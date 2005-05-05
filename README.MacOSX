@@ -1,0 +1,87 @@
+Courtesy of Yair Benita <y.benita@wanadoo.nl>
+May 5, 2005
+
+A while ago I posted detailed instruction on how to install GBrowse  
+on Mac OS X Panther (10.3) using Fink. See 
+
+  http://sourceforge.net/forum/forum.php?thread_id=1162893&forum_id=87358
+
+Last night I installed GBrowse on Mac OS X Tiger (10.4) and I am  
+happy to report that everything works. Here is a detailed how to:
+
+1. Make sure you have installed Mac OS X Developer tools that come  
+with Tiger. Include X11 and X11 sdk in the installation.
+
+2. Install Fink version 0.23-9 which is Tiger compatible: http:// 
+fink.sourceforge.net
+
+3. Tiger comes with perl 5.8.6 so we will install pm586 packages.  
+Install the following Fink packages one after the other (I use -> to  
+indicate the prompt of the Terminal application):
+
+MySQL -> fink install mysql
+DBI -> fink install dbi-pm586
+GD -> fink install gd-pm586
+
+At this point I had to switch to the FINK unstable package because  
+dbd-mysql and svg were still not moved into the stable packages:
+Open the file /sw/etc/fink.conf, and edit the trees line to look like  
+this:
+
+Trees: local/main stable/main stable/crypto unstable/main unstable/crypto
+
+Now go back to the terminal and type: fink selfupdate. Once that is  
+done you don't need to reconfigure Fink and DO NOT update all  
+package, that will convert everything you have installed to the  
+unstable versions.
+
+DBD::MySQL -> fink install dbd-mysql-pm586
+SVG -> fink install gd-svg-pm586
+
+at this point you should go back to the Fink stable packages by  
+editing the Trees line again to look like this:
+
+Trees: local/main stable/main stable/crypto
+
+In the terminal window type: fink index
+Only stable packages are available now.
+
+continue with installing fink packages:
+bioperl -> fink install bioperl-pm586
+
+4. Download GBrowse version 1.62 and do the following in the Terminal  
+window:
+
+bzip2 -d Generic-Genome-Browser-1.62.tar.bz2
+tar -xvf Generic-Genome-Browser-1.62.tar
+cd Generic-Genome-Browser-1.62
+perl Makefile.PL HTDOCS=/Library/WebServer/Documents \
+CONF=/Library/WebServer/conf \
+CGIBIN=/Library/WebServer/CGI-Executables \
+LIB=/sw/lib/perl5
+make
+make test
+sudo make intall
+
+5. Activate the local web sever: Apple Menu -> System Preferences ->  
+Sharing. Activate "Personal Web Sharing". If you constantly work with  
+GBrowse like I do you may want to look into configuring your Firewall  
+so that only you can access GBrowse and not all other users on the  
+internet.
+
+6. Test the browser:
+http://localhost/cgi-bin/gbrowse/yeast_chr1
+
+There is one other issue to take care of if you want to work with a  
+MySql database rather than with a gff file: The bp_bulk_load_gff.pl
+file, which is used to load gff files into a mysql database is now
+loacated in /sw/bin/. The script uses /usr/tmp as the temporary
+directory, which doesn't exist on the Mac. Edit line 204 of
+bp_bulk_load_gff.pl to look like this: 
+
+  my $tmpdir = $ENV{TMPDIR} || $ENV{TMP} || '/tmp';
+
+Everything should be working now.
+Good luck.
+Yair Benita
+

@@ -488,6 +488,14 @@ A good standard list of plugins is:
 See the contents of conf/plugins and contrib/plugins for more plugins
 that you can install.
 
+=item * quicklink plugins
+
+This is a list of plugins that you want to appear as links in the link
+bar (which includes the [Bookmark this] and [Link to Image] links).
+Selecting one of these links is equivalent to choosing the plugin from
+the popup menu and pressing the "Go" button.  The popup will continue
+to appear in the popup menu.
+
 =item * plugin_path
 
 By default gbrowse searches for plugins in its standard location of conf/plugins.
@@ -540,6 +548,17 @@ another class, such as Contig, please indicate the class here (if you
 don't, certain features such as the keyword search will fail):
 
       reference class = contig
+
+=item * initial landmark
+
+This option controls what feature to show when the user first visits a
+gbrowse database and has not yet performed a search. If not present,
+gbrowse displays a page with the search area and options, but no
+overview or panel.
+
+Example:
+
+       initial landmark = Chr1
 
 =item * units, unit_divider
 

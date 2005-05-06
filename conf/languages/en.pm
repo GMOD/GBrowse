@@ -45,11 +45,11 @@ END
 
    LANDMARK => 'Landmark or Region',
 
-   BOOKMARK => 'Bookmark this view',
+   BOOKMARK => 'Bookmark this',
 
-   IMAGE_LINK => 'Link to an image of this view',
+   IMAGE_LINK => 'Link to Image',
 
-   SVG_LINK   => 'Publication quality image',
+   SVG_LINK   => 'High-res Image',
 
    SVG_DESCRIPTION => <<END,
 <p>

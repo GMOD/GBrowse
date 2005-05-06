@@ -51,6 +51,11 @@ TH                { font-family: sans-serif;
                     padding: 0; 
 	            font-size: small;
                   }
+TH.linkmenu       { 
+                    font-family: sans-serif;
+                    padding: 0;
+                    font-size: 9pt;
+                  }
 INPUT.reset_button {background-color: red;
 	            color: yellow;             }
 .datatitle        { background-color: khaki; }

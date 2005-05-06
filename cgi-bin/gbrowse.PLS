@@ -802,9 +802,11 @@ sub navigation_table {
   my $segment = shift;
   my $settings = shift;
   my $buttonsDir    = $CONFIG->setting('buttons');
-  my $table = '';
-  my $oligo = $PLUGINS->plugin('OligoFinder') ? ', oligonucleotide (15 bp minimum)' : '';
-  my $help  =  a({-href=>general_help(),-target=>'help'},'['.$CONFIG->tr('Help').']');
+  my $table        = '';
+  my $oligo        = $PLUGINS->plugin('OligoFinder') ? ', oligonucleotide (15 bp minimum)' : '';
+  my $svg_link     = $HAVE_SVG? a({-href=>svg_link($settings),-target=>'_blank'},'['.$CONFIG->tr('SVG_LINK').']'):'';
+  my $help_link    =  a({-href=>general_help(),-target=>'help'},'['.$CONFIG->tr('Help').']');
+  my $plugin_link  = plugin_links($PLUGINS);
   my $instructions = 'Instructions';
   my $rand         =   substr(md5_hex(rand),0,5);
 
@@ -821,16 +823,17 @@ sub navigation_table {
 				    p(show_examples()))),
 		    ),
 		  TR(
-		     th({-align=>'left', -colspan=>2},
+		     th({-align=>'left', -colspan=>2,-class=>'linkmenu'},
 			 $settings->{name} || $settings->{ref} ?
 			 (
 			  a({-href=>"?rand=$rand;head=".((!$settings->{head})||0)},
 			    '['.$CONFIG->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
 			  a({-href=>bookmark_link($settings)},'['.$CONFIG->tr('BOOKMARK').']'),
 			  a({-href=>image_link($settings),-target=>'_blank'},'['.$CONFIG->tr('IMAGE_LINK').']'),
-			  $HAVE_SVG? a({-href=>svg_link($settings),-target=>'_blank'},'['.$CONFIG->tr('SVG_LINK').']'):'',
+			  $plugin_link,
+			  $svg_link,
 			 ) : (),
-			 $help)
+			 $help_link)
 		     )
 		 );
   $table .= toggle_section({on=>1},
@@ -1379,6 +1382,11 @@ sub get_features {
   }
 
   eval {$db->biosql->version($settings->{version})};
+
+  # if no name is specified but there is a "initial landmark" defined in the
+  # config file, then we default to that.
+  $settings->{name} ||= $CONFIG->setting('initial landmark')
+    if defined $CONFIG->setting('initial landmark');
 
   my @features = lookup_features_from_db($db,$settings);
 
@@ -1989,8 +1997,6 @@ sub coordinate_mapper {
 sub bookmark_link {
   my $settings = shift;
   my $q = new CGI('');
-#  my @keys = $settings->{name} ? qw(name width version flip)
-#                               : qw(start stop ref width version flip);
   my @keys = qw(start stop ref width version flip);
   foreach (@keys) {
     $q->param(-name=>$_,-value=>$settings->{$_});
@@ -2414,6 +2420,22 @@ sub plugin_menu {
 	      );
 }
 
+# for the subset of plugins that are named in the 'quicklink plugins' option, create
+# quick links for them.
+sub plugin_links {
+  my $plugins = shift;
+  my @plugins = shellwords($CONFIG->setting('quicklink plugins')) or return '';
+  my @result;
+  for my $p (@plugins) {
+    my $plugin = $plugins->plugin($p) or next;
+    my $name   = $plugin->name;
+    warn "name = $name";
+    my $action = "?plugin=$p;plugin_do=".$CONFIG->tr('Go');
+    push @result,a({-href=>$action},"[$name]");
+  }
+  return join ' ',@result;
+}
+
 sub source_menu {
   my $settings = shift;
   my @sources      = $CONFIG->sources;
@@ -2554,7 +2576,6 @@ sub unique {
   my %seenit;
   return grep {defined $_ && !$seenit{$_}++} @list;
 }
-
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

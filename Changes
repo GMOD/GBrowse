@@ -1,3 +1,12 @@
+1.63
+	* Sections can now be opened and closed with a JavaScript toggle.
+	* Added ability to group tracks logically.
+	* Plugins menu moved to a more prominent position.
+	* Added the "initial landmark" configuration option to bring up a 
+	default region the first time user visits the web page.
+	* Added the "quicklink plugins" option to add selected plugins to
+	the links list underneath the instructions.
+
 1.62    Mon Apr  5 09:43:25 EDT 2004
 	* Added request timeout option for very long requests.
 	* Added additional padding to prevent scales of xyplot glyph from being

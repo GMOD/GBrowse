@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.85 2005-01-11 22:22:50 allenday Exp $
+# $Id: Segment.pm,v 1.86 2005-05-14 13:11:18 scottcain Exp $
 
 =head1 NAME
 
@@ -8,9 +8,9 @@ Bio::DB::Das::Chado::Segment - DAS-style access to a chado database
 
   # Get a Bio::Das::SegmentI object from a Bio::DB::Das::Chado database...
 
-  $segment = $das->segment(-name=>'Landmark',
-                           -start=>$start,
-                           -end => $end);
+  $segment = $das->segment(-name => 'Landmark',
+                           -start=> $start,
+                           -stop => $stop);
 
   @features = $segment->overlapping_features(-type=>['type1','type2']);
   # each feature is a Bio::SeqFeatureI-compliant object
@@ -88,17 +88,14 @@ methods. Internal methods are usually preceded with a _
 package Bio::DB::Das::Chado::Segment;
 
 use strict;
-
-use Carp qw(carp croak cluck longmess);
-
+use Carp qw(carp croak cluck);
 use Bio::Root::Root;
-use Bio::Graphics::Browser::Util;
 use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
+use Bio::DB::GFF::Typename;
 use constant DEBUG => 0;
 
-use vars qw($VERSION @ISA);
-
+use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI Bio::DB::Das::Chado);
 $VERSION = 0.11;
 
@@ -111,13 +108,13 @@ sub new {
 
     my $self = shift;
 
-    my ( $name, $factory, $base_start, $end, $db_id ) = @_;
+    my ( $name, $factory, $base_start, $stop, $db_id ) = @_;
 
     warn "$name, $factory\n"                      if DEBUG;
-    warn "base_start = $base_start, end = $end\n" if DEBUG;
+    warn "base_start = $base_start, stop = $stop\n" if DEBUG;
 
-    $self->Bio::Root::Root->throw("start value less than 1\n")
-      if ( defined $base_start && $base_start < 1 );
+#    $self->Bio::Root::Root->throw("start value less than 1\n")
+#      if ( defined $base_start && $base_start < 1 );
     $base_start = $base_start ? int($base_start) : 1;
     my $interbase_start = $base_start - 1;
 
@@ -165,11 +162,14 @@ sub new {
               or Bio::Root::Root->throw("fetching uniquename from feature_id failed") ;
 
             my $hashref = $fetch_uniquename_query->fetchrow_hashref;
-            $base_start = $$hashref{fmin} + 1;
-            $end        = $$hashref{fmax};
+            $base_start = $base_start ? $base_start : $$hashref{fmin} + 1;
+            $stop       = $stop       ? $stop       : $$hashref{fmax};
             $db_id      = $$hashref{uniquename};
 
-            push @segments, $factory->segment(-name=>$name,-start=>$base_start,-end=>$end,-db_id=>$db_id);
+            next if (!defined ($base_start) or !defined($stop) or !defined($db_id));
+
+            warn "calling factory->segment with name:$name, start:$base_start, stop:$stop, db_id:$db_id\n" if DEBUG;
+            push @segments, $factory->segment(-name=>$name,-start=>$base_start,-stop=>$stop,-db_id=>$db_id);
         }
 
         if (@segments < 2) {
@@ -207,46 +207,44 @@ sub new {
             $name = $$hash_ref{'name'};
 
             my $length = $$hash_ref{'seqlen'};
-            my $type   = $factory->map2type( $$hash_ref{'type_id'} )->name;
+            my $type   = $factory->term2name( $$hash_ref{'type_id'} );
 
             if ( $$hash_ref{'fmin'} ) {
                 $interbase_start = $$hash_ref{'fmin'};
                 $base_start      = $interbase_start + 1;
-                $end             = $$hash_ref{'fmax'};
+                $stop            = $$hash_ref{'fmax'};
             }
 
-            warn "base_start:$base_start, end:$end, length:$length" if DEBUG;
+            warn "base_start:$base_start, stop:$stop, length:$length" if DEBUG;
 
-            if( defined($end) and $end > $length ){
-                $self->warn("end value ($end) greater than length ($length),"
+            if( defined($stop) and defined($length) and $stop > $length ){
+                $self->warn("end value ($stop) greater than length ($length),"
                            ." truncating to $length");
-                $end = $length;
+                $stop = $length;
             }
-            $end    = $end ? int($end) : $length;
-            $length = $end - $interbase_start;
+            $stop    = $stop ? int($stop) : $length;
+            $length  = $stop - $interbase_start;
 
-            warn "base_start:$base_start, end:$end, length:$length" if DEBUG;
+            warn "base_start:$base_start, stop:$stop, length:$length" if DEBUG;
 
-            $self = bless {
+            return bless {
                 factory       => $factory,
                 start         => $base_start,
-                end           => $end,
+                end           => $stop,
                 length        => $length,
                 srcfeature_id => $srcfeature_id,
                 class         => $type,
                 name          => $name,
               },
               ref $self || $self;
-
-            $self->log();
-            return $self;
         }
 
         else { #return a Feature object for the feature_id
             my ($feat) = $self->features(
                           -feature_id => $landmark_feature_id,
-                          -factory    => $factory);
-            $feat->log();
+                          -factory    => $factory,
+                          -start      => $base_start,
+                          -stop       => $stop, );
             return $feat;
         }
     }
@@ -414,9 +412,9 @@ sub class {
 
 sub start {
   my $self = shift;
-
   return $self->{'start'} = shift if @_;
-  return $self->{'start'};
+  return $self->{'start'} if $self->{'start'};
+  return undef;
 
 } 
 
@@ -449,7 +447,8 @@ Alias of start for backward compatibility
 sub end {
   my $self = shift;
   return $self->{'end'} = shift if @_;
-  return $self->{'end'};
+  return $self->{'end'} if $self->{'end'};
+  return undef;
 }
 
 =head2 high
@@ -565,28 +564,28 @@ is defined, then -callback is ignored.
 sub features {
   my $self = shift;
 
-#  $log->debug("Segment->features() args:@_");
+  warn "Segment->features() args:@_\n" if DEBUG;
 
-  my ($type,$types,$attributes,$rangetype,$iterator,$callback,$feature_id,$factory);
+  my ($types,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,$feature_id,$factory);
   if ($_[0] and $_[0] =~ /^-/) {
-    ($type,$types,$attributes,$rangetype,$iterator,$callback,$feature_id,$factory) =
+    ($types,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,$feature_id,$factory) =
       $self->_rearrange([qw(TYPE 
-                            TYPES
                             ATTRIBUTES 
                             RANGETYPE 
                             ITERATOR 
                             CALLBACK 
+                            START
+                            STOP
                             FEATURE_ID
                             FACTORY)],@_);
-    $types ||= $type; #grr
-#    $log->debug("$types");
+    warn "$types\n" if DEBUG;
   } else {
     $types = \@_;
   }
 
-#  $log->debug("@$types") if defined($types);
+  warn "@$types\n" if (defined $types and DEBUG);
 
-  $factory   ||= $self->factory();
+  $factory ||=$self->factory();
   my $feat     = Bio::DB::Das::Chado::Segment::Feature->new();
   my @features;
 
@@ -597,7 +596,6 @@ sub features {
 
 # set range variable 
 
-#$log->debug("AA $self");
     my $base_start = $self->start;
     $interbase_start = $base_start -1;
     $rend       = $self->end;
@@ -632,7 +630,7 @@ sub features {
           $temp_source = $2;
       }
 
-      $valid_type = $factory->map2type($temp_type)->cvterm_id;
+      $valid_type = $factory->name2term($temp_type);
       $self->throw("feature type: '$temp_type' is not recognized") unless $valid_type;
 
       my $temp_dbxref = $factory->source2dbxref($temp_source);
@@ -653,7 +651,7 @@ sub features {
           }
           warn "more types:$$types[$i]\n" if DEBUG; 
 
-          $valid_type = $factory->map2type($temp_type)->cvterm_id;
+          $valid_type = $factory->name2term($temp_type);
           $self->throw("feature type: '$temp_type' is not recognized") unless $valid_type;
 
           $temp_dbxref=$factory->source2dbxref($temp_source);
@@ -674,7 +672,8 @@ sub features {
   }
   my $select_part = "select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.phase,"
                    ."fl.locgroup,fl.srcfeature_id,f.type_id,f.uniquename,"
-                   ."f.feature_id,fd.dbxref_id ";
+                   ."f.feature_id, af.significance as score, "
+                   ."fd.dbxref_id ";
 
   my $order_by    = "order by f.type_id,fl.fmin ";
 
@@ -682,15 +681,18 @@ sub features {
   my $from_part;
   if ($feature_id) {
     $from_part    = "from (feature f join featureloc fl using (feature_id)) "
-                   ."left join feature_dbxref fd using (feature_id) ";
+                   ."left join feature_dbxref fd using (feature_id) "
+                   ."left join analysisfeature af using (feature_id)";
 
-    $where_part   = "where f.feature_id = $feature_id ";
+    $where_part   = "where f.feature_id = $feature_id and fl.rank=0 and (fd.dbxref_id is null or fd.dbxref_id in (select dbxref_id from dbxref where db_id=".$factory->gff_source_db_id."))";
   } else {
     $from_part   = "from (feature f join featureslice($interbase_start, $rend) fl using (feature_id)) "
-                  ."left join feature_dbxref fd using (feature_id) ";
+                  ."left join feature_dbxref fd using (feature_id) "
+                  ."left join analysisfeature af using (feature_id)";
 
     $where_part  = "where $sql_types "
-                  ."fl.srcfeature_id = $srcfeature_id ";
+                  ."fl.srcfeature_id = $srcfeature_id and fl.rank=0 "
+                  ."and (fd.dbxref_id is null or fd.dbxref_id in (select dbxref_id from dbxref where db_id=".$factory->gff_source_db_id."))";
   }
 
   my $query       = "$select_part\n$from_part\n$where_part\n$order_by\n";
@@ -729,12 +731,29 @@ sub features {
 
   while (my $hashref = $sth->fetchrow_hashref) {
 
-    my $stop            = $$hashref{fmax};
-    my $interbase_start = $$hashref{fmin};
-    my $base_start      = $interbase_start +1;
+    warn "dbstart:$$hashref{fmim}, dbstop:$$hashref{fmax}" if DEBUG;
+    warn "start:$base_start, stop:$stop\n" if DEBUG;
+
+    if ($feature_id && 
+        defined($stop) && $stop != $$hashref{fmax} ) {
+      $stop = $$hashref{fmin} + $stop + 1;  
+    } else {
+      $stop = $$hashref{fmax};
+    }
+    if ($feature_id && 
+        defined($base_start) && $base_start != ($$hashref{fmin}+1) ) {
+      my $interbase_start = $$hashref{fmin} + $base_start - 1;
+      $base_start = $interbase_start + 1;
+    } else {
+      my $interbase_start = $$hashref{fmin};
+      $base_start         = $interbase_start +1;
+    }
+    warn "base_start:$base_start, end:$stop" if DEBUG;
 
     my $source = $factory->dbxref2source($$hashref{dbxref_id}) || "" ;
-    my $type   = $factory->map2type($$hashref{type_id})->name . ":$source";
+    my $type   = Bio::DB::GFF::Typename->new(
+                     $factory->term2name($$hashref{type_id}),
+                     $source);
 
     $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                        $factory,
@@ -748,18 +767,14 @@ sub features {
 
                        $base_start,$stop,
                        $type,
+                       $$hashref{score},
                        $$hashref{strand},
                        $$hashref{phase},
                        $$hashref{name},
                        $$hashref{uniquename},$$hashref{feature_id});
 
-    if ($source) { #set source if present
-        $feat->source($source); 
-    }
-
     push @features, $feat;
 
-#$log->debug('BB');
     my $fstart = $feat->start() if DEBUG;
     my $fend   = $feat->end()   if DEBUG;  
   #  warn "$feat->{annotation}, $$hashref{nbeg}, $fstart, $$hashref{nend}, $fend\n" if DEBUG;
@@ -1047,24 +1062,24 @@ Alias of sourceseq for backward compatibility
 *abs_end   = \&end;
 
 =head2 asString
-
+                                                                                
  Title   : asString
  Usage   : $s->asString
  Function: human-readable string for segment
  Returns : a string
  Args    : none
  Status  : Public
-
-Returns a human-readable string representing this sequence.  Format is:
-
+                                                                                
+Returns a human-readable string representing this sequence.  Format
+is:
+                                                                                
    sourceseq:start,stop
-
+                                                                                
 =cut
-
+                                                                                
 sub asString {
   my $self = shift;
   my $label = $self->refseq;
-#$log->debug('CC');
   my $start = $self->start;
   my $stop  = $self->stop;
   return "$label:$start,$stop";

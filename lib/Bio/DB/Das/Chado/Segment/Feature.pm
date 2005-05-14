@@ -19,7 +19,6 @@ package Bio::DB::Das::Chado::Segment::Feature;
 use strict;
 
 use Bio::DB::Das::Chado::Segment;
-use Bio::Graphics::Browser::Util;
 use Bio::SeqFeatureI;
 use Bio::Root::Root;
 use Bio::LocationI;
@@ -56,7 +55,8 @@ The 11 arguments are positional:
   $srcseq       the source sequence
   $start        start of this feature
   $stop         stop of this feature
-  $type         this feature's type (gene, arm, exon, etc)
+  $type         a Bio::DB::GFF::Typename (containing a method and source)
+  $score        the feature's score
   $strand       this feature's strand (relative to the source
                 sequence, which has its own strandedness!)
   $phase        this feature's phase (often with respect to the 
@@ -78,6 +78,7 @@ sub new {
       $srcseq,
       $start,$end,
       $type,
+      $score,
       $strand,
       $phase,
       $group,
@@ -94,6 +95,7 @@ sub new {
   $self->seq_id($srcseq);
   $self->start($start);
   $self->end($end);
+  $self->score($score);
   $self->strand($strand);
   $self->phase($phase);
 
@@ -114,7 +116,6 @@ sub new {
 
   $self->srcfeature_id($parent->srcfeature_id() ) 
            if (defined $parent && $parent->can('srcfeature_id'));
-  $self->score(0);
 
   return $self;
 }
@@ -241,9 +242,9 @@ sub phase {
 
   Title   : type
   Usage   : $obj->type($newval)
-  Function: holds feature.type_id (Sequence Ontology feature type)
-  Returns : value of type (a scalar)
-  Args    : on set, new value (a scalar or undef, optional)
+  Function: holds a Bio::DB::GFF::Typename object
+  Returns : returns a Bio::DB::GFF::Typename object
+  Args    : on set, new value
 
 =cut
 
@@ -441,19 +442,6 @@ sub gff_string {
   $string;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 =head2 has_tag()
 
   Title   : has_tag
@@ -479,7 +467,7 @@ sub has_tag {
 
 =cut
 
-*primary_tag = \&type;
+*primary_tag = \&method;
 
 =head2 seq()
 
@@ -579,7 +567,7 @@ methods described below, L<Bio::RangeI> for details.
 =head2 class()
 
   Title   : class
-  Function: aliased to type()for backward compatibility
+  Function: aliased to method()for backward compatibility
 
 =cut
 
@@ -650,11 +638,17 @@ sub length {
 =head2 method()
 
  Title   : method
- Function: aliased to uniquename for backward compatibility
+ Usage   : $obj->method
+ Function: returns a Feature's method (SOFA type)
+ Returns : the Features SOFA type
+ Args    : none
 
 =cut
 
-*method = \&type;
+sub method {
+  my $self = shift;
+  return $self->type->method();
+}
 
 =head2 name()
 
@@ -764,31 +758,7 @@ sub all_tags {
 sub source {
     my $self = shift;
 
-    warn "in Feature->source()\n\n" if DEBUG;
-
-    return $self->{'source'} = $_[0] if defined $_[0];
-    return $self->{'source'} if defined $self->{'source'};
-
-    my $dbh  = $self->factory->dbh();
-
-    my $source_db_id = $self->factory->gff_source_db_id();
-
-    #this is a backward compatibility patch.
-    return undef unless $source_db_id;
-
-    my $sth  = $dbh->prepare("
-        select dx.accession from dbxref dx, feature_dbxref fd
-        where dx.db_id = $source_db_id
-          and dx.dbxref_id = fd.dbxref_id 
-          and feature_id = ?
-       ");
-
-    $sth->execute($self->feature_id)
-         or $self->throw("getting source query failed");
-
-    my $hashref = $sth->fetchrow_hashref(); 
-    $self->{'source'} = $$hashref{'accession'} || '.';
-    return $self->{'source'};
+    return $self->type->source();
 }
 
 =head2 segments()
@@ -845,29 +815,31 @@ sub sub_SeqFeature {
   my($self,$type) = @_;
 
   #first call, cache subfeatures
+#Bio::SeqFeature::CollectionI?
+#like SeqFeature::Generic?
   if(!$self->subfeatures ){
+
     my $parent_id = $self->feature_id();
+
     my $typewhere = '';
     if ($type) {
       $type = lc $type;
-      $typewhere = " and child.type_id = ".$self->factory->map2type($type)->cvterm_id;
+      $typewhere = " and child.type_id = ".$self->factory->name2term($type) ;
     }
 
     my $handle = $self->factory->dbh();
+
     $self->factory->dbh->trace(2) if DEBUG;
 
-    warn $self->factory if DEBUG;
-    warn $self->factory->map2type('part_of') if DEBUG;
-    warn $self->factory->map2type('part_of')->cvterm_id if DEBUG;
-
-    my $partof =  $self->factory->map2type('part_of')->cvterm_id;
+    my $partof =  $self->factory->name2term('part_of');
     $self->throw("part_of cvterm wasn't found.  is DB sane?") unless $partof;
     $partof = join ',', @$partof if ref($partof) eq 'ARRAY';
+
     warn "partof = $partof" if DEBUG;
 
     my $sql = "
     select child.feature_id, child.name, child.type_id, child.uniquename, parent.name as pname,
-      childloc.fmin, childloc.fmax, childloc.strand, childloc.locgroup, childloc.phase,
+      childloc.fmin, childloc.fmax, childloc.strand, childloc.locgroup, childloc.phase, af.significance as score,
       childloc.srcfeature_id
     from feature as parent
     inner join
@@ -879,7 +851,11 @@ sub sub_SeqFeature {
     inner join
       featureloc as childloc on
         (child.feature_id = childloc.feature_id)
+    left join
+       analysisfeature as af on
+        (child.feature_id = af.feature_id)
     where parent.feature_id = $parent_id
+          and childloc.rank = 0
           and fr0.type_id in ($partof)
           $typewhere
     ";
@@ -907,6 +883,19 @@ sub sub_SeqFeature {
       my $interbase_start = $$hashref{fmin};
       my $base_start = $interbase_start +1;
 
+      my $source_query = $self->factory->dbh->prepare("
+            select d.accession from dbxref d,feature_dbxref fd
+            where fd.feature_id = $$hashref{feature_id} and
+                  fd.dbxref_id  = d.dbxref_id and
+                  d.db_id = ".$self->factory->gff_source_db_id);
+      $source_query->execute();
+
+      my ($source) = $source_query->fetchrow_array;
+      my $type_obj = Bio::DB::GFF::Typename->new(
+           $self->factory->term2name($$hashref{type_id}),
+           $source
+      );
+
       warn "creating new subfeat, $$hashref{name}, $base_start, $stop" if DEBUG;
 
       my $feat = Bio::DB::Das::Chado::Segment::Feature->new (
@@ -914,7 +903,8 @@ sub sub_SeqFeature {
                     $self,
                     $self->ref,
                     $base_start,$stop,
-                    $self->factory->map2type($$hashref{type_id})->name,
+                    $type_obj,
+                    $$hashref{score},
                     $$hashref{strand},
                     $$hashref{phase},
                     $$hashref{name},
@@ -957,7 +947,7 @@ sub add_subfeature {
   my $self    = shift;
   my $subfeature = shift;
 
-  warn "in add_subfeat:$subfeature" if DEBUG;
+   #  warn "in add_subfeat:$subfeature";
 
   return undef unless ref($subfeature);
   return undef unless $subfeature->isa('Bio::DB::Das::Chado::Segment::Feature');
@@ -1219,6 +1209,20 @@ sub attributes {
   $factory->attributes($id,@_);
 }
 
+=head2 synonyms()
+
+ Title   : synonyms
+ Usage   : @synonyms = $feature->synonyms
+ Function: return a list of synonyms for a feature
+ Returns : a list of strings
+ Args    : none
+ Status  : Public
+
+Looks in the synonym table to collect all synonyms of a feature.
+
+=cut
+
+
 sub synonyms {
   #returns an array with synonyms
   my $self = shift;
@@ -1238,6 +1242,58 @@ sub synonyms {
   }
 
   return @synonyms;
+}
+
+=head2 cmap_link()
+
+ Title   : cmap_link
+ Usage   : $link = $feature->cmap_link
+ Function: returns a URL link to the corresponding feature in cmap
+ Returns : a string
+ Args    : none
+ Status  : Public
+
+Returns a link to a cmap installation (which is assumed to be on the
+same host as gbrowse).  In addition to the cmap tables being present
+in chado, this method also assumes the presence of a link table called
+feature_to_cmap.  See the cmap documentation for more information.
+
+This function is intended primarily to be used in gbrowse conf files. 
+For example:
+
+  link       = sub {my $self = shift; return $self->cmap_link();}
+
+=cut
+
+
+sub cmap_link {
+  # Use ONLY if CMap is installed in chado and
+  # the feature_to_cmap table is also installed
+  # This table is provided with CMap.
+  my $self = shift;
+  my $data_source = shift;
+ 
+  my $dbh = $self->factory->dbh();
+
+  my $sth = $dbh->prepare("
+    select  cm_f.feature_name,
+            cm_m.accession_id as map_aid
+    from    cmap_feature cm_f,
+            cmap_map cm_m,
+            feature_to_cmap ftc
+    where   ? = ftc.feature_id
+            and cm_f.accession_id=ftc.cmap_feature_aid
+            and cm_f.map_id=cm_m.map_id
+  ");
+  $sth->execute($self->feature_id()) or $self->throw("cmap link query
+failed");
+  my $link_str='';
+  if (my $hashref = $sth->fetchrow_hashref) {
+   
+$link_str='/cgi-bin/cmap/viewer?ref_map_aids='.$$hashref{map_aid}.'&data_source='.$data_source.'&highlight='.$$hashref{'feature_name'};
+  }
+
+  return $link_str;
 }
 
 1;

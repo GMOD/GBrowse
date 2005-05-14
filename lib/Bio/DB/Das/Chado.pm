@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.69 2005-01-11 22:22:49 allenday Exp $
+# $Id: Chado.pm,v 1.70 2005-05-14 13:11:17 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -86,65 +86,30 @@ methods. Internal methods are usually preceded with a _
 
 package Bio::DB::Das::Chado;
 use strict;
-no warnings;
-use Data::Dumper;
 
 use Bio::DB::Das::Chado::Segment;
-use Bio::DB::Das::Chado::Type;
-use Bio::Graphics::Browser::Util;
 use Bio::Root::Root;
 use Bio::DasI;
 use Bio::PrimarySeq;
+use Bio::DB::GFF::Typename;
 use DBI;
-
 use Carp qw(longmess);
-use Log::Log4perl;
-
 use vars qw($VERSION @ISA);
 
 use constant SEGCLASS => 'Bio::DB::Das::Chado::Segment';
 use constant DEBUG => 0;
 
 $VERSION = 0.11;
-use base qw(Bio::Root::Root Bio::DasI);
-
-=head2 log
-
- Title   : log
- Usage   : $obj->log($newval)
- Function: holds a Log::Log4perl logging instance
-           corresponding to the object's class
- Example :
- Returns : value of log (a scalar)
- Args    : on set, new value (a scalar or undef, optional)
-
-
-=cut
-
-sub log {
-  my $self = shift;
-  #warn caller();
-  if(!$self->{'log'}){
-    #FIXME hardcoded for now
-    #Log::Log4perl::init(conf_dir().'/log4perl.conf');
-    Log::Log4perl::init('/etc/httpd/conf/gbrowse.conf/log4perl.conf');
-    my $pack = ref($self);
-    $pack =~ s/::/./g;
-    my $log = Log::Log4perl->get_logger($pack);
-    $self->{'log'} = $log;
-  }
-
-  return $self->{'log'};
-}
+@ISA = qw(Bio::Root::Root Bio::DasI);
 
 =head2 new
 
  Title   : new
- Usage   : $db = Bio::DB::Das::Chado(
-                   -dsn  => 'dbi:Pg:dbname=gadfly;host=lajolla'
-			       -user => 'jimbo',
-			       -pass => 'supersecret',
-                                    );
+ Usage   : $db    = Bio::DB::Das::Chado(
+                            -dsn  => 'dbi:Pg:dbname=gadfly;host=lajolla'
+			    -user => 'jimbo',
+			    -pass => 'supersecret',
+                                       );
 
  Function: Open up a Bio::DB::DasI interface to a Chado database
  Returns : a new Bio::DB::Das::Chado object
@@ -167,10 +132,53 @@ sub new {
   my $dbh = DBI->connect( $dsn, $username, $password )
     or $self->throw("unable to open db handle");
 
-  warn "$dbh\n" if DEBUG;
+    warn "$dbh\n" if DEBUG;
 
+# get the cvterm relationships here and save for later use
+
+  my $sth = $dbh->prepare("select ct.cvterm_id,ct.name
+                           from cvterm ct, cv c 
+                           where ct.cv_id=c.cv_id and
+                           c.name IN ('SOFA',
+                               'Sequence Ontology Feature Annotation',
+                               'sofa.ontology',
+                               'relationship',
+                               'relationship type','Relationship Ontology',
+                               'autocreated')")
+    or warn "unable to prepare select cvterms";
+  $sth->execute or $self->throw("unable to select cvterms");
+
+#  my $cvterm_id  = {}; replaced with better-named variables
+#  my $cvname = {};
+
+  my(%term2name,%name2term) = ({},{});
+
+  while (my $hashref = $sth->fetchrow_hashref) {
+    $term2name{ $hashref->{cvterm_id} } = $hashref->{name};
+
+    #this addresses a bug in gmod_load_gff3 (Scott!), which creates a 'part_of'
+    #term in addition to the OBO_REL one that already exists!  this will also
+    #help with names that exist in both GO and SO, like 'protein'.
+    if(defined($name2term{ $hashref->{name} })){ #already seen this name
+
+      if(ref($name2term{ $hashref->{name} }) ne 'ARRAY'){ #already array-converted
+
+        $name2term{ $hashref->{name} } = [ $name2term{ $hashref->{name} } ];
+
+      }
+
+      push @{ $name2term{ $hashref->{name} } }, $hashref->{cvterm_id};
+
+    } else {
+
+      $name2term{ $hashref->{name} }      = $hashref->{cvterm_id};
+
+    }
+  }
+
+  $self->term2name(\%term2name);
+  $self->name2term(\%name2term);
   $self->dbh($dbh);
-  $self->map2type();
 
   return $self;
 }
@@ -193,72 +201,63 @@ sub dbh {
   return $self->{'dbh'};
 }
 
-=head2 map2type
+=head2 term2name
 
-  Title   : map2type
-  Usage   : $obj->map2type($name || $cvterm_id);
-  Function: returns a type object given a name or cvterm_id
-  Returns : A Bio::DB::Das::Chado::Type object, or undef.
-  Args    : name or cvterm_id found in cvterm table, where ontology is
-            ONLY 'Sequence Ontology' and 'Relationship Ontology'.
+  Title   : term2name
+  Usage   : $obj->term2name($newval)
+  Function: When called with a hashref, sets cvterm.cvterm_id to cvterm.name 
+            mapping hashref; when called with an int, returns the name
+            corresponding to that cvterm_id; called with no arguments, returns
+            the hashref.
+  Returns : see above
+  Args    : on set, a hashref; to retrieve a name, an int; to retrieve the
+            hashref, none.
+
+Note: should be replaced by Bio::GMOD::Util->term2name
 
 =cut
 
-sub map2type {
-  my($self,$key) = @_;
+sub term2name {
+  my $self = shift;
+  my $arg = shift;
 
-  if(!$self->{'map2type'}){
-    $self->{map2type} = {};
-    my $dbh = $self->dbh();
-
-    # get the cvterm relationships here and save for later use
-    #  my $sth = $dbh->prepare("select ct.cvterm_id,ct.name,ct.definition,dbx.accession
-    #                           from cvterm ct, cv c, dbxref dbx 
-    #                           where ct.cv_id=c.cv_id and
-    #                           ct.dbxref_id = dbx.dbxref_id and
-    #                           c.name IN ('SO','Sequence Ontology',
-    #                               'relationship type','Relationship Ontology',
-    #                               'autocreated')")
-
-    # this OUTER JOIN style query allows bringing in of cvterm.dbxref_id.accession,
-    # even if terms don't have an accession (like autocreated terms, for instance).
-    #
-    # WARNING: i have explicitly required the terms to come from 'Sequence Ontology'.
-    # no more of this 'autocreated' crap.
-    my $cvterm_query = qq(
-    SELECT c.*, dbxref.accession
-      FROM
-        (SELECT cvterm.cvterm_id, cvterm.name, cvterm.dbxref_id
-          FROM
-            cv, cvterm
-          WHERE
-            cvterm.cv_id = cv.cv_id
-              AND
-            cv.name IN ('Sequence Ontology','Relationship Ontology')
-        ) AS c
-      LEFT JOIN
-        dbxref
-      ON
-        (c.dbxref_id = dbxref.dbxref_id)
-      ORDER BY name
-    );
-
-    my $sth = $dbh->prepare($cvterm_query) or warn "unable to prepare select cvterms";
-    $sth->execute or $self->throw("unable to select cvterms");
-
-    while (my $row = $sth->fetchrow_hashref) {
-      #warn "m2t 4: fetching row for: ".$row->{name};
-      my $type = Bio::DB::Das::Chado::Type->new();
-      $type->name( $row->{'name'} );
-      $type->definition( $row->{'definition'} );
-      $type->accession( $row->{'accession'} );
-      $type->cvterm_id( $row->{'cvterm_id'} );
-      $self->{map2type}{$row->{'name'}}      = $type;
-      $self->{map2type}{$row->{'cvterm_id'}} = $type;
-    }
+  if(ref($arg) eq 'HASH'){
+    return $self->{'term2name'} = $arg;
+  } elsif($arg) {
+    return $self->{'term2name'}{$arg};
+  } else {
+    return $self->{'term2name'};
   }
+}
 
-  return $self->{map2type}{$key};
+
+=head2 name2term
+
+  Title   : name2term
+  Usage   : $obj->name2term($newval)
+  Function: When called with a hashref, sets cvterm.name to cvterm.cvterm_id
+            mapping hashref; when called with a string, returns the cvterm_id
+            corresponding to that name; called with no arguments, returns
+            the hashref.
+  Returns : see above
+  Args    : on set, a hashref; to retrieve a cvterm_id, a string; to retrieve
+            the hashref, none.
+
+Note: Should be replaced by Bio::GMOD::Util->name2term
+
+=cut
+
+sub name2term {
+  my $self = shift;
+  my $arg = shift;
+
+  if(ref($arg) eq 'HASH'){
+    return $self->{'name2term'} = $arg;
+  } elsif($arg) {
+    return $self->{'name2term'}{$arg};
+  } else {
+    return $self->{'name2term'};
+  }
 }
 
 =head2 segment
@@ -401,58 +400,16 @@ reference) in which the keys are the stringified versions of
 Bio::Das::FeatureTypeI and the values are the number of times each
 feature appears in the database.
 
-NONO NOTE: This currently raises a "not-implemented" exception, as the
-NONO BioSQL API does not appear to provide this functionality.
+NOTE: This currently raises a "not-implemented" exception, as the
+BioSQL API does not appear to provide this functionality.
 
 =cut
 
 sub types {
   my $self = shift;
   my ($enumerate) =  $self->_rearrange([qw(ENUMERATE)],@_);
-
-  if($enumerate){
-    #if lincoln didn't need to implement it, neither do I!
-    $self->throw_not_implemented;
-  }
-
-
-  #FIXME this code is almost identical to that in map2type.  we need a refactor here
-  if(!$self->{'types'}){
-    my $dbh = $self->dbh();
-
-    my $cvterm_query = qq(
-    SELECT c.*, dbxref.accession
-      FROM
-        (SELECT cv.name AS cv, cvterm.name AS term, cvterm.definition AS definition, cvterm.dbxref_id
-          FROM
-            cv, cvterm
-          WHERE
-            cvterm.cv_id = cv.cv_id
-              AND
-            cv.name IN ('Sequence Ontology','Relationship Ontology')
-        ) AS c
-      LEFT JOIN
-        dbxref
-      ON
-        (c.dbxref_id = dbxref.dbxref_id)
-      ORDER BY cv,term
-    );
-
-    my $sth = $dbh->prepare($cvterm_query) or warn "unable to prepare select cvterms";
-    $sth->execute or $self->throw("unable to select cvterms");
-
-    while (my $row = $sth->fetchrow_hashref) {
-      my $type = Bio::DB::Das::Chado::Type->new();
-      $type->name( $row->{'term'} );
-      $type->definition( $row->{'definition'} );
-      $type->accession( $row->{'accession'} );
-      $type->ontology( $row->{'cv'} );
-
-      push @{ $self->{'types'} }, $type;
-    }
-  }
-
-  return @{ $self->{'types'} };
+  $self->throw_not_implemented;
+  #if lincoln didn't need to implement it, neither do I!
 }
 
 =head2 get_feature_by_name
@@ -465,10 +422,15 @@ sub get_feature_by_name {
   my ($name, $class, $ref, $base_start, $stop) 
        = $self->_rearrange([qw(NAME CLASS REF START END)],@_);
 
-  warn "name:$name in get_feature_by_name" if DEBUG;
+   warn "name:$name in get_feature_by_name" if DEBUG;
+
+  $name =~ s/_/\\_/g;  # escape underscores in name
+  $name =~ s/\%/\\%/g; # ditto for percent signs
+
+   warn "name after protecting _ and % in the string:$name\n" if DEBUG;
 
   my (@features,$sth);
-
+  
   if ($name =~ /^\s*\S+\s*$/) {
     # get feature_id
     # foreach feature_id, get the feature info
@@ -476,24 +438,28 @@ sub get_feature_by_name {
 
     $name =~ s/[?*]\s*$/%/;
 
-    my $query = qq(
-                   SELECT fs.feature_id FROM feature_synonym AS fs, synonym AS s WHERE fs.synonym_id = s.synonym_id AND s.synonym_sgml ilike ?
-                     UNION
-                   SELECT feature.feature_id FROM feature WHERE feature.name ilike ?
-                  );
-
-
-    $query =~ s/ilike/=/gs unless $name =~ /%/; #SPEED! GIVE ME SPEED!
-
+    my $select_part = "select distinct fs.feature_id \n";
+    my $from_part   = "from feature_synonym fs, synonym s ";
+    my $where_part  = "where fs.synonym_id = s.synonym_id and\n"
+                    . "s.synonym_sgml ilike ?";
+                    #this ilike should probably be replace with a 'lower' index
     if ($class) {
-      my $type = $self->map2type($class);
-      return unless $type;
-      $query .= " and feature.type_id = ".$type->cvterm_id;
+        my $type = $self->name2term($class);
+        return unless $type;
+        $from_part .= ", feature f \n";
+        $where_part.= "\nand fs.feature_id = f.feature_id and\n"
+                    . "f.type_id = $type";
     }
 
+    my $query = $select_part . $from_part . $where_part;
+
+    warn "first get_feature_by_name query:$query" if DEBUG;
+
     $sth = $self->dbh->prepare($query);
-    $sth->execute($name,$name) or $self->throw("getting the feature_ids failed");
+    $sth->execute($name) or $self->throw("getting the feature_ids failed");
+
     if ($sth->rows == 0) {
+        warn "trying a complex search for $name\n" if DEBUG;
         ($name,$query) = $self->_complex_search($name,$class);
 
         $sth = $self->dbh->prepare($query);
@@ -501,6 +467,7 @@ sub get_feature_by_name {
     }
 
   } else { # not a simple wild card search
+    
     my $query;
     ($name,$query) = $self->_complex_search($name,$class);
 
@@ -509,14 +476,16 @@ sub get_feature_by_name {
 
   }
 
-  # prepare sql queries for use in while loops
+     # prepare sql queries for use in while loops
   my $isth =  $self->dbh->prepare("
-       select f.feature_id, f.name, f.type_id,f.uniquename,
-              fl.fmin,fl.fmax,fl.strand,fl.phase, fl.srcfeature_id
-       from feature f, featureloc fl
+       select f.feature_id, f.name, f.type_id,f.uniquename,af.significance as score,
+              fl.fmin,fl.fmax,fl.strand,fl.phase, fl.srcfeature_id, fd.dbxref_id
+       from feature f join featureloc fl using (feature_id)
+            left join analysisfeature af using (feature_id)
+            left join feature_dbxref fd using (feature_id) 
        where
-         f.feature_id = ? and
-         f.feature_id = fl.feature_id
+         f.feature_id = ? and fl.rank=0 and "
+       ."(fd.dbxref_id is null or fd.dbxref_id in (select dbxref_id from dbxref where db_id =".$self->gff_source_db_id."))
        order by fl.srcfeature_id
         ");
 
@@ -529,6 +498,7 @@ sub get_feature_by_name {
              or $self->throw("getting feature info failed");
 
     if ($isth->rows == 0) { #this might be a srcfeature
+
       warn "$name might be a srcfeature" if DEBUG;
 
       my $is_srcfeature_query = $self->dbh->prepare("
@@ -537,6 +507,7 @@ sub get_feature_by_name {
       $is_srcfeature_query->execute($$feature_id_ref{'feature_id'})
              or $self->throw("checking if feature is a srcfeature failed");
 
+####FIXME!
       if ($is_srcfeature_query->rows == 1) {#yep, its a srcfeature
           #build a feature out of the srcfeature:
           warn "Yep, $name is a srcfeature" if DEBUG;
@@ -547,7 +518,7 @@ sub get_feature_by_name {
 
             warn "srcfeature args:$args[0]" if DEBUG;
 
-          my @seg = ($self->segment(@args));
+          my @seg = ($self->segment(@args));           
           return @seg;
       }
       else {
@@ -556,10 +527,12 @@ sub get_feature_by_name {
 
     }
 
+
       #getting chromosome info
     my $old_srcfeature_id=-1;
     my $parent_segment;
     while (my $hashref = $isth->fetchrow_hashref) {
+
       if ($$hashref{'srcfeature_id'} != $old_srcfeature_id) {
         $jsth->execute($$hashref{'srcfeature_id'})
                  or die ("getting assembly info failed");
@@ -572,18 +545,26 @@ sub get_feature_by_name {
 
       my $interbase_start = $$hashref{'fmin'};
       $base_start = $interbase_start +1;
+
+      my $source = $self->dbxref2source($$hashref{dbxref_id}) || "" ;
+      my $type_obj = Bio::DB::GFF::Typename->new(
+             $self->term2name($$hashref{'type_id'}),
+             $source 
+      );
+
       my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                       $self,
                       $parent_segment,
                       $parent_segment->seq_id,
                       $base_start,$$hashref{'fmax'},
-                      $self->map2type($$hashref{'type_id'})->name,
+                      $type_obj,
+                      $$hashref{'score'},
                       $$hashref{'strand'},
                       $$hashref{'phase'},
                       $$hashref{'name'},
                       $$hashref{'uniquename'},
                       $$hashref{'feature_id'}
-                                                           );
+        );
       push @features, $feat;
     }
   }
@@ -591,34 +572,36 @@ sub get_feature_by_name {
   @features;
 }
 
-*fetch_feature_by_name = \&get_feature_by_name;
+*fetch_feature_by_name = \&get_feature_by_name; 
 
 sub _complex_search {
-  my $self = shift;
-  my $name = shift;
-  my $class= shift;
+    my $self = shift;
+    my $name = shift;
+    my $class= shift;
 
-  warn "name before wildcard subs:$name\n" if DEBUG;
+    warn "name before wildcard subs:$name\n" if DEBUG;
 
-  $name =~ s/\*/%/g;
-  $name = "\%$name" unless (0 == index($name, "%"));
-  $name = "$name%"  unless (0 == index(reverse($name), "%"));
+    
 
-  warn "name after wildcard subs:$name\n" if DEBUG;
+    $name =~ s/\*/%/g;
+    $name = "\%$name" unless (0 == index($name, "%"));
+    $name = "$name%"  unless (0 == index(reverse($name), "%"));
 
-  my $select_part = "select ga.feature_id ";
-  my $from_part   = "from gffatts ga ";
-  my $where_part  = "where ga.attribute ilike ? ";
+    warn "name after wildcard subs:$name\n" if DEBUG;
 
-  if ($class) {
-    my $type    = $self->map2type($class);
-    return unless $type;
-    $from_part .= ", feature f ";
-    $where_part.= "and ga.feature_id = f.feature_id and f.type_id = ".$type->cvterm_id;
-  }
-
-  my $query = $select_part . $from_part . $where_part;
-  return ($name, $query);
+    my $select_part = "select ga.feature_id ";
+    my $from_part   = "from gffatts ga ";
+    my $where_part  = "where ga.attribute ilike ? ";
+                                                                                                                          
+    if ($class) {
+        my $type    = $self->name2term($class);
+        return unless $type;
+        $from_part .= ", feature f ";
+        $where_part.= "and ga.feature_id = f.feature_id and "
+                     ."f.type_id = $type";
+    }
+    my $query = $select_part . $from_part . $where_part;
+    return ($name, $query);
 }
 
 
@@ -730,7 +713,7 @@ sub dbxref2source {
         $self->{'source_dbxref'}->{$$hashref{accession}} = $$hashref{dbxref_id};
         $self->{'dbxref_source'}->{$$hashref{dbxref_id}} = $$hashref{accession};
     }
-
+                                                                       
     if (defined $self->{'dbxref_source'} && $dbxref
            && defined $self->{'dbxref_source'}->{$dbxref}) {
         return $self->{'dbxref_source'}->{$dbxref};
@@ -740,6 +723,39 @@ sub dbxref2source {
     }
 
 }
+
+=head2 source_dbxref_list
+
+ Title   : source_dbxref_list
+ Usage   : @all_dbxref_ids = $db->source_dbxref_list()
+ Function: Gets a list of all dbxref_ids that are used for GFF sources
+ Returns : a comma delimited string that is a list of dbxref_ids
+ Args    : none
+ Status  : public
+
+This method queries the database for all dbxref_ids that are used
+to store GFF source terms.
+
+=cut
+
+sub source_dbxref_list {
+    my $self = shift;
+    return $self->{'source_dbxref_list'} if defined $self->{'source_dbxref_list'};
+
+    my $query = "select dbxref_id from dbxref where db_id = ".$self->gff_source_db_id;
+    my $sth = $self->dbh->prepare($query);
+    $sth->execute();
+
+    #unpack it here to make it easier
+    my @dbxref_list;
+    while (my $row = $sth->fetchrow_arrayref) {
+        push @dbxref_list, $$row[0];
+    }
+
+    $self->{'source_dbxref_list'} = join (",",@dbxref_list);
+    return $self->{'source_dbxref_list'};
+}
+
 
 =head2 search_notes
 
@@ -939,4 +955,6 @@ sub next_seq {
 }
 
 1;
+
+
 

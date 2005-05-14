@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.3 2005-05-05 02:31:59 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.4 2005-05-14 13:08:30 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -141,6 +141,8 @@ sub new {
                            where ct.cv_id=c.cv_id and
                            c.name IN ('SOFA',
                                'Sequence Ontology Feature Annotation',
+                               'sofa.ontology',
+                               'relationship',
                                'relationship type','Relationship Ontology',
                                'autocreated')")
     or warn "unable to prepare select cvterms";

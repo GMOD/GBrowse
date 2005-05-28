@@ -7,7 +7,7 @@ use FindBin '$Bin';
 use Cwd;
 require 5.005003;
 
-my $VERSION = '1.62';
+my $VERSION = '1.63';
 my $working_dir = cwd;
 
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN
@@ -170,6 +170,14 @@ print STDERR <<END;
 END
 ;
 
+my $bioperl_needs_patching = bioperl_version() < 1.5;
+if ($bioperl_needs_patching) {
+  print STDERR "\nInstalled Bioperl version is less than 1.5.  I will update to latest versions of the BioGraphics and GFF libraries.\n";
+}
+
+my @dir = ();
+push @dir,'libalign'         if $OPTIONS{DO_XS};
+push @dir,'extras/BioPerl'   if $bioperl_needs_patching;
 
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
@@ -177,7 +185,7 @@ WriteMakefile(
 	      'NAME'	     => 'Generic-Genome-Browser',
 	      'VERSION'      => $VERSION,
 	      'PREREQ_PM'    => {
-				 Bio::Perl         => 1.02,
+				 Bio::Perl         => 1.4,
 				 GD                => 2.07,
 				 IO::String        => 0,
 				 Text::Shellwords  => 1.0,
@@ -193,7 +201,7 @@ WriteMakefile(
 				 'bin/ucsc_genes2gff.PLS' => 'bin/ucsc_genes2gff.pl',
 				 'bin/load_genbank.PLS' => 'bin/load_genbank.pl',
 				 'bin/register_moby_services.PLS' => 'bin/register_moby_services.pl',
-				 'install_util/gbrowse_ppm_install.PLS' => 'gbrowse_ppm_install.pl',
+				 'install_util/gbrowse_ppm_install.PLS' => 'install_util/gbrowse_ppm_install.pl',
 				 'cgi-bin/gbrowse.PLS'  => 'cgi-bin/gbrowse',
 				 'cgi-bin/gbrowse_syn.PLS'  => 'cgi-bin/gbrowse_syn',
 				 'cgi-bin/gbrowse_img.PLS'  => 'cgi-bin/gbrowse_img',
@@ -214,7 +222,7 @@ WriteMakefile(
 				],
 	      'LIBS'	     => [''], # e.g., '-lm'
 	      'LIB'          => $OPTIONS{LIB}, # custom location for perl modules
-	      'DIR'          => $OPTIONS{DO_XS} ? ['libalign'] : [],
+	      'DIR'          => \@dir,
 	      'DEFINE'	     => '',
 	      'INC'	     => '', # e.g., '-I/usr/include/other'
               ($] ge '5.005') ? (
@@ -225,6 +233,13 @@ WriteMakefile(
               'INSTALLSITEMAN3DIR' => $OPTIONS{INSTALLSITEMAN3DIR}, # non-root user
 	      'INSTALLSCRIPT'      => $OPTIONS{BIN} || $OPTIONS{INSTALLSCRIPT}
 );
+
+sub bioperl_version {
+  eval <<'END' || 0;
+    require Bio::Perl;
+    $Bio::Perl::VERSION;
+END
+}
 
 sub interpolate {
   my $path = shift;
@@ -287,6 +302,15 @@ cgi_install ::
 	\$(PERL) \"$working_dir/install_util/cgi_install.pl\" $paths
 
 };
+}
+
+sub MY::libscan {
+  package MY;
+  my $self = shift;
+  my $from = shift;
+  my $to = $self->SUPER::libscan($from);
+  return undef if $to=~/README/;
+  return $to;
 }
 
 sub MY::ppd {
@@ -361,7 +385,7 @@ sub MY::ppd {
 	\@echo "creating gbrowse_ppm-$VERSION.tar.gz"
 	\@\$(TAR) zcf gbrowse_ppm-$VERSION.tar.gz --exclude man1 --exclude man3 blib
 	\@perl -pi -e 's!HREF=""!HREF="$repository/gbrowse_ppm-$VERSION.tar.gz"!' Generic-Genome-Browser.ppd
-	\@perl -pi -e 's!(\\s*</IMPLEMENTATION>)!\\t\\t<INSTALL HREF="$repository/gbrowse_ppm_install.pl" EXEC="PPM_PERL" />\\n\\1!' Generic-Genome-Browser.ppd
+	\@perl -pi -e 's!(\\s*</IMPLEMENTATION>)!\\t\\t<INSTALL HREF="$repository/install_util/gbrowse_ppm_install.pl" EXEC="PPM_PERL" />\\n\\1!' Generic-Genome-Browser.ppd
 	\@perl -pi -e 's!Bio-Perl!bioperl!' Generic-Genome-Browser.ppd
 END
 ;

@@ -319,9 +319,9 @@ END
 sub redirect_legacy_url {
   my $source      = shift;
   my @more_args   = @_;
-  if ($source && path_info() ne "/$source") {
+  if ($source && path_info() ne "/$source/") {
     my $q = new CGI '';
-    $q->path_info($source);
+    $q->path_info("$source/");
     if (request_method() eq 'GET') {
       foreach (qw(name ref start stop),@more_args) {
 	$q->param($_=>param($_)) if param($_);

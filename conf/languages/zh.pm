@@ -1,4 +1,5 @@
 # do not remove the { } from the top and bottom of this page!!!
+# translation by Jack Chen <chenn@cshl.edu>
 {
 
  CHARSET =>   'Big5',

@@ -56,11 +56,6 @@ function setVisState (a,state) {
    xSetCookie(cookie_name,cookie_value,cookie_expires);
 }
 
-function msie() {
-   var ua = navigator.userAgent.toLowerCase();
-   return ua.indexOf('msie') != -1;
-}
-
 function getVisState (a) {
    var cookie_name    = '$cookie_name';
    var el_index       = a.id.substring(1);
@@ -74,9 +69,6 @@ function getVisState (a) {
 function xSetCookie(name, value, expire)
 {
   var path = location.pathname;
-   if (msie()) {
-     path      = path.substring(0,path.lastIndexOf('/'));
-   }
   var text = name + "=" + escape(value) +
              (!expire ? "" : "; expires=" + expire) +
              "; path=" + path;
@@ -159,10 +151,9 @@ sub start_html {
 #  $state = 0 unless defined $state && $state >= 0;
 #  $state = 0xFFFFFF unless defined $state && $state >= 0 && $state <= 0xFFFFFF;
   if (defined $state) {
-    my $msie   = CGI::user_agent =~ /msie/i;
     my $cookie = CGI::cookie(-name=>$cookie_name,
 			     -value=>$state,
-			     -path=>url(-path_info=>!$msie,-absolute=>1),
+			     -path=>url(-path_info=>1,-absolute=>1),
 			     -expires=>'+7d');
     $args{-head}         = CGI::meta({-http_equiv=>'Set-Cookie',
 				      -content => $cookie});

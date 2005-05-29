@@ -398,7 +398,7 @@ sub main_display {
 
   # print the top of the form, with navigation bar, etc
   my $src    = $CONFIG->source;
-  my $action = $src ? url()."/$src" : url();
+  my $action = $src ? url()."/$src/" : url();
   print start_form(-name   => 'mainform',
                    -action => $action,
 		   -method => 'POST');
@@ -535,7 +535,8 @@ sub detail_panel {
 
 sub get_source {
   my $new_source = param('source') || param('src') || path_info();
-  $new_source    =~ s!^/!!;  # get rid of leading / from path_info()
+  $new_source    =~ s!^/!!;  # get rid of leading & trailing / from path_info()
+  $new_source    =~ s!/$!!;
   my $old_source = cookie('gbrowse_source') unless $new_source && request_method() eq 'GET';
 
   my $source   = $new_source || $old_source;
@@ -2580,6 +2581,7 @@ sub unique {
   my %seenit;
   return grep {defined $_ && !$seenit{$_}++} @list;
 }
+
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

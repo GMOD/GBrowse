@@ -157,6 +157,8 @@ END
 
    EXTERNAL_TRACKS => '(Externe banen cursief)',
 
+   OVERVIEW_TRACKS => '<sup>*</sup>Baan uit Overzicht',
+
    EXAMPLES => 'Voorbeelden',
 
    HELP     => 'Hulp',

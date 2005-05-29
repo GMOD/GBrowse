@@ -210,6 +210,8 @@ END
 
    PRESETS      => '--Choose Preset URL--',
 
+   NO_TRACKS    => '*none*',
+
    FILE_INFO    => 'Last modified %s.  Annotated landmarks: %s',
 
    FOOTER_1     => <<END,

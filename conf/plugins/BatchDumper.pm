@@ -46,7 +46,7 @@ $VERSION = '0.20';
 
 sub name { "Sequence File" }
 sub description {
-  p("The Sequence dumper plugin dumps out the currently displayed genomic segment",
+  p("The Sequence file plugin dumps out the currently displayed genomic segment",
     "or the segments corresponding to the given accessions, in the requested format.").
   p("This plugin was written by Lincoln Stein and Jason Stajich.");
 }

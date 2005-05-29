@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.12.4.3 2005-03-17 17:20:55 lstein Exp $
+# $Id: Plugin.pm,v 1.12.4.4 2005-05-29 00:46:27 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME
@@ -763,6 +763,7 @@ sub make_cookie {
   }
   return CGI::cookie(-name    => "${name}_config",
 		     -value   => \%conf,
+		     -path    => CGI::url(-path_info=>1,-absolute=>1),
 		     -expires => '+3M');
 }
 

@@ -5,10 +5,11 @@ use base 'Exporter';
 use CGI 'div','span','img','url';
 use CGI::Util;
 
-use vars '$next_id';
+use vars '$next_id','$VECTOR';
 
 our @EXPORT = ('toggle_section',
-	       'start_html');
+	       'start_html',
+	      'end_html');
 
 use constant PLUS    => '/gbrowse/images/buttons/plus.png';
 use constant MINUS   => '/gbrowse/images/buttons/minus.png';
@@ -46,14 +47,18 @@ function visibility (a,state) {
 
 function setVisState (a,state) {
    var cookie_name    = '$cookie_name';
-   var cookie_path    = location.pathname;
    var cookie_expires = '${\EXPIRES}';
    var el_index       = a.substring(1);
    var cookie_value   = xGetCookie(cookie_name);
    if (!cookie_value) { cookie_value = 0xFFFFFF; }
    if (state == "on") { cookie_value |= (1 << el_index) }
                  else { cookie_value &= ~(1 << el_index) }
-   xSetCookie(cookie_name,cookie_value,cookie_expires,cookie_path);
+   xSetCookie(cookie_name,cookie_value,cookie_expires);
+}
+
+function msie() {
+   var ua = navigator.userAgent.toLowerCase();
+   return ua.indexOf('msie') != -1;
 }
 
 function getVisState (a) {
@@ -64,13 +69,18 @@ function getVisState (a) {
    return (cookie_value &= (1 << el_index)) == 0 ? 'off' : 'on';
 }
 
-// The x{Set,Get}Cookie functions are derived from cross-brower.com
+// The x{Set,Get}Cookie functions are derived from cross-browser.com
 // Copyright (c) 2004 Michael Foster, Licensed LGPL (gnu.org)
-function xSetCookie(name, value, expire, path)
+function xSetCookie(name, value, expire)
 {
-  document.cookie = name + "=" + escape(value) +
-                    (!expire ? "" : "; expires=" + expire) +
-                    "; path=" + ((!path) ? "/" : path);
+  var path = location.pathname;
+   if (msie()) {
+     path      = path.substring(0,path.lastIndexOf('/'));
+   }
+  var text = name + "=" + escape(value) +
+             (!expire ? "" : "; expires=" + expire) +
+             "; path=" + path;
+  document.cookie = text;
 }
 
 function xGetCookie(name)
@@ -122,6 +132,7 @@ END
 
 sub start_html {
   $next_id = 'T0000';
+  $VECTOR  = 0;
   my %args = @_ == 1 ? (-title=>shift) : @_;
 
   $args{-noscript}     = $noscript;
@@ -148,9 +159,10 @@ sub start_html {
 #  $state = 0 unless defined $state && $state >= 0;
 #  $state = 0xFFFFFF unless defined $state && $state >= 0 && $state <= 0xFFFFFF;
   if (defined $state) {
+    my $msie   = CGI::user_agent =~ /msie/i;
     my $cookie = CGI::cookie(-name=>$cookie_name,
 			     -value=>$state,
-			     -path=>url(-path_info=>1,-absolute=>1),
+			     -path=>url(-path_info=>!$msie,-absolute=>1),
 			     -expires=>'+7d');
     $args{-head}         = CGI::meta({-http_equiv=>'Set-Cookie',
 				      -content => $cookie});
@@ -165,6 +177,11 @@ sub start_html {
   }
 
   return $result;
+}
+
+sub end_html {
+ my @script_section = CGI->_script({code=>"xSetCookie('$cookie_name',$VECTOR,'${\EXPIRES}')"});
+ return @script_section,CGI::end_html;
 }
 
 # The weird playing around with class names is to accomodate the need to have
@@ -193,6 +210,9 @@ sub toggle_section {
 		      -class => $config{on} ? 'el_visible' : 'el_hidden'},
 		     @section_body);
   my @result = ($show_ctl.$hide_ctl,$content);
+  my $val = substr($id,1);
+  $VECTOR   |= (1  << $val)  if $config{on};
+  $VECTOR   &= ~(1 << $val) if !$config{on};
   return wantarray ? @result : "@result";
 }
 

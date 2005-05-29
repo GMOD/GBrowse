@@ -1,7 +1,11 @@
+* Better workaround for MSIE broken cookie handling.  When moving from
+  datasource to datasource, the section visibility toggle will change
+  haphazardly rather than being reset to the previous value.  This will be
+  noticeable within the track section.
 * Synteny display
 * More internationalization
 * Limit search results to user-set max
 * Group SVG elements by feature ID
 
-$Id: TODO,v 1.4.6.1 2005-05-28 21:41:54 lstein Exp $
+$Id: TODO,v 1.4.6.2 2005-05-29 00:46:25 lstein Exp $
 

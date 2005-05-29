@@ -393,10 +393,10 @@ Makefile.PL
 MANIFEST
 README
 README-1.02
-README-BioGraphics
 README.MacOSX
 README.selinux
 sample_data/yeast_data.gff
 t/01yeast.t
 t/Test.pm
 TODO
+META.yml                                 Module meta-data (added by MakeMaker)

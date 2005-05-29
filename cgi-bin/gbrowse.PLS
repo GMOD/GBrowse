@@ -422,6 +422,10 @@ sub main_display {
       unless $segment->can('features');
     print overview_panel($segment,$page_settings);
     print detail_panel_with_timeout($segment,$page_settings,$feature_files);
+  } else {
+    # empty overview & detail sections
+    print toggle_section({on=>1},b($CONFIG->tr('Overview')),'');
+    print toggle_section({on=>1},b($CONFIG->tr('Details')),'');
   }
 
   print html_frag('html3',$segment,$page_settings);

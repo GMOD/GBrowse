@@ -31,6 +31,20 @@ END
 
    SHOWING_FROM_TO => 'Vue de %s depuis %s, positions %s à %s',
 
+   INSTRUCTIONS      => 'Instructions',
+
+   HIDE              => 'Cacher',
+
+   SHOW              => 'Montrer',
+
+   SHOW_INSTRUCTIONS => 'Montrer les instructions',
+
+   HIDE_INSTRUCTIONS => 'Cacher les instructions',
+
+   SHOW_HEADER       => 'Montrer l\'en-tête',
+
+   HIDE_HEADER       => 'Cacher l\'en-tête',
+
    LANDMARK => 'Référentiel ou Région',
 
    BOOKMARK => 'Ajouter cet affichage à vos favoris',
@@ -97,6 +111,8 @@ END
 
    FIND     => 'Trouver',
 
+   SEARCH  => 'Chercher',
+
    DUMP     => 'Sortie',
 
    HIGHLIGHT   => 'Surligner',
@@ -143,39 +159,21 @@ END
 
    EDIT_TITLE => 'Entrer/éditer des données d\'annotation',
 
- INSTRUCTIONS      => 'Instructions',
-
- HIDE              => 'Cacher',
-
- SHOW              => 'Montrer',
-
- SHOW_INSTRUCTIONS => 'Montrer les instructions',
-
- HIDE_INSTRUCTIONS => 'Cacher les instructions',
-
- SHOW_HEADER => 'Montrer l\'en-tête',
-
- HIDE_HEADER => 'Cacher l\'en-tête',
-
- SEARCH  => 'Chercher',
-
- KEY_POSITION => 'Position des légendes',
-
- BETWEEN     => 'Entre les pistes',
-
- BENEATH     => 'Sous l\'affichage',
-
- LEFT        => 'Left',
-
- RIGHT       => 'Right',
-
- TRACK_NAMES => 'Tableau des pistes',
- 
- ALPHABETIC => 'Tri alphabétique',
-
- VARYING => 'Pas de tri',
-
    IMAGE_WIDTH => 'Largeur d\'image',
+
+   BETWEEN     => 'Entre les pistes',
+
+   BENEATH     => 'Sous l\'affichage',
+
+   LEFT        => 'Left',
+
+   RIGHT       => 'Right',
+
+   TRACK_NAMES => 'Tableau des pistes',
+ 
+   ALPHABETIC => 'Tri alphabétique',
+
+   VARYING => 'Pas de tri',
 
    SET_OPTIONS => 'Configurer les pistes...',
 
@@ -185,9 +183,13 @@ END
 
    DATA_SOURCE => 'Source de données',
 
-   UPLOAD_TITLE=> 'Ajouter vos propres annotations',
+   UPLOAD_TRACKS =>'Ajouter vos propres pistes',
+
+   UPLOAD_TITLE => 'Ajouter vos propres annotations',
 
    UPLOAD_FILE => 'Ajouter un fichier',
+
+   KEY_POSITION => 'Position des légendes',
 
    BROWSE      => 'Parcourir...',
 
@@ -202,6 +204,8 @@ END
    UPDATE_URLS  => 'Mettre à jour les URLs',
 
    PRESETS      => "--Choix d'une URL prédéfinie--",
+
+   NO_TRACKS    => '*aucune*',
 
    FILE_INFO    => 'Dernière modif. %s.  Référentiel annoté : %s',
 
@@ -293,6 +297,20 @@ END
 
    NO_LIMIT    => 'Pas de limite',
 
+   OVERVIEW    => 'Aperçu',
+
+   EXTERNAL    => 'Externe',
+
+   ANALYSIS    => 'Analyse',
+
+   GENERAL     => 'Général',
+
+   DETAILS     => 'Détails',
+
+   ALL_ON      => 'Tout activer',
+
+   ALL_OFF     => 'Tout désactiver',
+
    #--------------
    # HELP PAGES
    #--------------
@@ -344,5 +362,7 @@ END
  TOO_MANY_LANDMARKS => '%d référentiels.  La liste est trop grande.',
 
  SMALL_INTERVAL    => 'Redimmensionnement du petit intervalle à %s pb',
+
+ NO_SOURCES        => 'Vous n\'avez pas configuré de sources de données. Peut-être n\'avez-vous pas les droits pour les voir.',
 
 };

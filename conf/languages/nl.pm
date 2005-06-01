@@ -205,6 +205,8 @@ END
 
    PRESETS      => '--Kies Preset URL--',
 
+   NO_TRACKS    => '*geen*',
+
    FILE_INFO    => 'Recentste veranderingen op %s.  Geannoteerde mijlpalen: %s',
 
    FOOTER_1     => <<END,

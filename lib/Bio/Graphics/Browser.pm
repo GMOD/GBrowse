@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.8 2005-06-02 12:06:28 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.9 2005-06-02 12:07:32 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1164,7 +1164,6 @@ sub image_and_map {
     my $file  = shift;
     my $type  = shift;
     my $section = $file->setting($type=>'section');
-    warn "section = $section";
     return 1 unless defined $section;
     return $section =~ /detail/;
   };

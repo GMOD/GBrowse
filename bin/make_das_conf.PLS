@@ -19,7 +19,7 @@ $Config{startperl}
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: make_das_conf.PLS,v 1.2 2004-02-26 16:45:47 lstein Exp $
+# $Id: make_das_conf.PLS,v 1.2.6.1 2005-06-02 12:06:24 lstein Exp $
 
 use strict;
 use Bio::Das 0.96;
@@ -178,8 +178,6 @@ label density = 25
 bump density  = 100
 label         = 1
 description   = 1
-# where to link to when user clicks in detailed view
-link          = AUTO
 
 END
 ;

@@ -420,7 +420,7 @@ sub main_display {
     $segment = open_database()->segment($segment->seq_id,
 				        $segment->start,$segment->end)
       unless $segment->can('features');
-    print overview_panel($segment,$page_settings);
+    print overview_panel($segment,$page_settings,$feature_files);
     print detail_panel_with_timeout($segment,$page_settings,$feature_files);
   } else {
     # empty overview & detail sections
@@ -451,8 +451,8 @@ sub main_display {
 }
 
 sub overview_panel {
-  my ($segment,$page_settings) = @_;
-  my $image = overview($segment,$page_settings).br();
+  my ($segment,$page_settings,$feature_files) = @_;
+  my $image = overview($segment,$page_settings,$feature_files).br();
   return br().
     toggle_section({on=>1},
 		   b($CONFIG->tr('Overview')),
@@ -1669,11 +1669,11 @@ sub format_segment {
 }
 
 sub overview {
-  my ($segment,$settings) = @_;
+  my ($segment,$settings,$feature_files) = @_;
   return unless $segment;
   $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
 
-  my ($image,$length) = $CONFIG->overview($segment,$settings->{features}) or return;
+  my ($image,$length) = $CONFIG->overview($segment,$settings->{features},$feature_files) or return;
   my ($width,$height) = $image->getBounds;
   my $url             = $CONFIG->generate_image($image);
   return image_button(-name=>'overview',
@@ -2581,7 +2581,6 @@ sub unique {
   my %seenit;
   return grep {defined $_ && !$seenit{$_}++} @list;
 }
-
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

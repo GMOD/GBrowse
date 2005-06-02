@@ -80,6 +80,7 @@ sub feature_file {
   my $http_proxy      = $config->setting('http proxy') || $proxy || '';
   my $ftp_proxy       = $config->setting('ftp proxy')  || $proxy || '';
 
+  # DAS handling
   if ($source =~ m!^(http://.+/das)/([^/?]+)(?:\?(.+))?$!) { # DAS source!
     unless (eval "require Bio::Das; 1;") {
       error($config->tr('NO_DAS'));
@@ -117,6 +118,7 @@ sub feature_file {
     return $segment;
   }
 
+  # Uploaded feature handling
   unless ($UA) {
     unless (eval "require LWP") {
       error($config->tr('NO_LWP'));

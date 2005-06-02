@@ -331,7 +331,11 @@ You can use this name to select the data source when linking to the
 browser.  Just construct a URL that uses "sourcename" as a virtual
 directory under cgi-bin/gbrowse:
 
-  http://your.site.org/cgi-bin/gbrowse/sourcename
+  http://your.site.org/cgi-bin/gbrowse/sourcename/
+
+(Note: If you don't add the slash at the end, gbrowse will
+automatically do it for you, since the terminal slash is needed to
+work around an apparent bug in MSIE's cookie handling.)
 
 It is suggested that you use the same name as the database, although
 this isn't a requirement.  (If no "source=" argument is given, gbrowse

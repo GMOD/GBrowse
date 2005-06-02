@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.7 2005-04-12 19:08:35 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.8 2005-06-02 12:06:28 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -954,12 +954,7 @@ sub make_centering_map {
 sub make_href {
   my $self = shift;
   my ($feature,$panel,$label)   = @_;
-
-  if ($feature->can('make_link')) {
-    return $feature->make_link;
-  } else {
-    return $self->make_link($feature,$panel,$label);
-  }
+  return $self->make_link($feature,$panel,$label);
 }
 
 sub make_title {
@@ -1165,13 +1160,24 @@ sub image_and_map {
 
   # add additional features, if any
   my $offset = 0;
+  my $select = sub {
+    my $file  = shift;
+    my $type  = shift;
+    my $section = $file->setting($type=>'section');
+    warn "section = $section";
+    return 1 unless defined $section;
+    return $section =~ /detail/;
+  };
   for my $track (@blank_tracks) {
     my $file = $feature_files->{$tracks->[$track]} or next;
     ref $file or next;
     $track += $offset + 1;
     my $name = $file->name || '';
     $options->{$name} ||= 0;
-    my $inserted = $file->render($panel,$track,$options->{$name},$max_bump,$max_labels);
+    my $inserted = $file->render($panel,$track,$options->{$name},
+				 $max_bump,$max_labels,
+				 $select
+				);
     $offset += $inserted;
   }
 
@@ -1205,7 +1211,7 @@ will be added to the overview panel.
 # generate the overview, if requested, and return it as a GD
 sub overview {
   my $self = shift;
-  my ($partial_segment,$track_options) = @_;
+  my ($partial_segment,$track_options,$feature_files) = @_;
   my $gd;
 
   # turn requests for a piece of a segment into the whole segment9
@@ -1260,6 +1266,21 @@ sub overview {
 		     );
 
     $self->add_overview_landmarks($panel,$segment,$track_options);
+
+    # add uploaded files that have the "overview" option set
+    if ($feature_files) {
+      my $select = sub {
+	my $file  = shift;
+	my $type  = shift;
+	return $file->setting($type=>'section') =~ /overview/;
+      };
+      foreach (keys %$feature_files) {
+	my $ff = $feature_files->{$_};
+	next unless $ff->isa('Bio::Graphics::FeatureFile'); #only FeatureFile supports this
+	$ff->render($panel,-1,$track_options->{$_},undef,undef,$select);
+      }
+    }
+
     $gd = $panel->gd;
     $self->gd_cache_write($cache_path,$gd) if $cache_path;
   }
@@ -2175,7 +2196,9 @@ sub make_link {
   $link        = $self->code_setting('TRACK DEFAULTS'=>'link') unless defined $link;
   $link        = $self->code_setting(general=>'link')          unless defined $link;
 
+  return $feature->make_link if !$link && $feature->can('make_link');
   return unless $link;
+
   if (ref($link) eq 'CODE') {
     my $val = eval {$link->($feature,$panel)};
     warn $@ if $@;
@@ -2190,7 +2213,7 @@ sub make_link {
     my $start = CGI::escape($feature->start);
     my $end   = CGI::escape($feature->end);
     my $src   = CGI::escape($source);
-    return "../gbrowse_details/$src?name=$name;class=$class;ref=$ref;start=$start;end=$end";
+    return "../../gbrowse_details/$src?name=$name;class=$class;ref=$ref;start=$start;end=$end";
   }
   return $self->link_pattern($link,$feature,$panel);
 }

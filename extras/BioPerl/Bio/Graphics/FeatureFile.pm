@@ -1,6 +1,6 @@
 package Bio::Graphics::FeatureFile;
 
-# $Id: FeatureFile.pm,v 1.1.2.1 2005-05-28 21:42:06 lstein Exp $
+# $Id: FeatureFile.pm,v 1.1.2.2 2005-06-02 12:06:27 lstein Exp $
 # This package parses and renders a simple tab-delimited format for features.
 # It is simpler than GFF, but still has a lot of expressive power.
 # See __END__ for the file format
@@ -296,6 +296,7 @@ sub render {
     my @config = ( -glyph   => 'segments',         # really generic
 		   -bgcolor => $COLORS[$color++ % @COLORS],
 		   -label   => 1,
+		   -description => 1,
 		   -key     => $type,
 		   @auto_bump,
 		   @base_config,         # global

@@ -171,7 +171,8 @@ sub start_html {
 }
 
 sub end_html {
- my @script_section = CGI->_script({code=>"xSetCookie('$cookie_name',$VECTOR,'${\EXPIRES}')"});
+ my @script_section = CGI->_script({code=>"xSetCookie('$cookie_name',$VECTOR,'${\EXPIRES}')"})
+   unless $VECTOR==0;
  return @script_section,CGI::end_html;
 }
 

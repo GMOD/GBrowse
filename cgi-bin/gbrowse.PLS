@@ -1863,7 +1863,8 @@ sub load_plugin_annotators {
     next unless $p->type eq 'annotator';
     my $name = $p->name;
     $name = "plugin:$name";
-    $PLUGIN_NAME2LABEL{$name} = $p->name;
+    #$PLUGIN_NAME2LABEL{$name} = $p->name;
+    ($PLUGIN_NAME2LABEL{$name}) = ref($p) =~ /(\w+)$/;
     unless ($settings->{features}{$name}) {
       push @{$settings->{tracks}},$name;
       $settings->{features}{$name} = {visible=>$default_plugin{$p}||0,options=>0,limit=>0};
@@ -2377,11 +2378,19 @@ sub make_citation_link {
     my $about = escape($CONFIG->tr('About')) || '';
     my $plugin = $PLUGIN_NAME2LABEL{$label} ? ";plugin=$PLUGIN_NAME2LABEL{$label}" : '';
     $link = "?plugin_action=${about}${plugin}";
-  } else {
+  }
+
+  elsif ($label =~ /^file:/){
+    $key  = label2key($label);
+    $link = "?Download%20File=$key";
+  }
+
+  else {
     $key = label2key($label);
     (my $anchor  = $label) =~ tr/ /-/;
     $link = $self_url.'#'.escapeHTML($anchor);
   }
+
   my $overview_color = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR();
   my @args = (-href=>$link,-target=>'citation');
   push @args,-style=>'Font-style: italic' if $label =~ /^(http|ftp|file):/;
@@ -2486,12 +2495,15 @@ sub do_plugin_dump {
 
 sub do_plugin_about {
   my $plugin = shift;
-  my $p = $PLUGINS->plugin($plugin);
+  my $p = $PLUGINS->plugin($plugin) or return;
+  warn "plugin = $plugin, p = $p";
   my $type  = ( split ( /::/, ref($p) ) )[-1];
   my $labels = $PLUGINS->menu_labels;
   print h1($CONFIG->tr('About_plugin',$labels->{$type}));
   print $p->description;
-  print start_form(),submit($CONFIG->tr('Back_to_Browser')),hidden('plugin'),end_form();
+  print start_form(),submit(-name=>$CONFIG->tr('Back_to_Browser'),
+			    -onClick=>'window.close()')
+    ,hidden('plugin'),end_form();
 }
 
 sub do_plugin_find {

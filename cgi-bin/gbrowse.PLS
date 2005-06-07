@@ -535,8 +535,8 @@ sub detail_panel {
 
 sub get_source {
   my $new_source = param('source') || param('src') || path_info();
-  $new_source    =~ s!^/!!;  # get rid of leading & trailing / from path_info()
-  $new_source    =~ s!/$!!;
+  $new_source    =~ s!^/+!!;  # get rid of leading & trailing / from path_info()
+  $new_source    =~ s!/+$!!;
   my $old_source = cookie('gbrowse_source') unless $new_source && request_method() eq 'GET';
 
   my $source   = $new_source || $old_source;

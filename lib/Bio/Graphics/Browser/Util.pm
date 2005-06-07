@@ -323,10 +323,16 @@ sub redirect_legacy_url {
     my $q = new CGI '';
     $q->path_info("$source/");
     if (request_method() eq 'GET') {
-      foreach (qw(name ref start stop),@more_args) {
+      foreach (param()) {
+	next if $_ eq 'source';
 	$q->param($_=>param($_)) if param($_);
       }
     }
+#    if (request_method() eq 'GET') {
+#      foreach (qw(name ref start stop),@more_args) {
+#	$q->param($_=>param($_)) if param($_);
+#      }
+#    }
     print redirect($q->url(-absolute=>1,-path_info=>1,-query=>1));
     exit 0;
   }

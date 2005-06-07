@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.2 2005-03-16 22:58:48 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.3 2005-06-07 17:40:59 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -85,7 +85,8 @@ unless (param()) {
 
 # set the database source
 my $src = param('src') || param('source') || path_info();
-$src    =~ s!^/!!;  # get rid of leading / from path_info()
+$src    =~ s!^/+!!;  # get rid of leading / from path_info()
+$src    =~ s!/+$!!;  # get rid of trailing / from path_info()
 
 # Migrate from 1.56 way of specifying source to 1.57 way
 # This may cause a redirect and exit 0 at this point!

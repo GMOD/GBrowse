@@ -1,5 +1,5 @@
 # do not remove the { } from the top and bottom of this page!!!
-# Author: Marcela Karey Tello-Ruiz <marcela@broad.mit.edu>
+# Translation by Marcela Tello-Ruiz
 {
 
  CHARSET =>   'ISO-8859-1',
@@ -8,27 +8,21 @@
    # MAIN PAGE
    #----------
 
-   PAGE_TITLE => 'Buscador de Genoma',
+   PAGE_TITLE => 'Buscador de genoma',
 
    SEARCH_INSTRUCTIONS => <<END,
-Buscar usando el nombre de una secuencia, el nombre de un gen, locus%s, u otro punto o región de referencia. El caracter
-comodín * está permitido.
+Buscar usando el nombre de una secuencia, el nombre de un gen, locus%s, u otro punto o región de referencia. El caracter comodín * está permitido.
 END
 
    NAVIGATION_INSTRUCTIONS => <<END,
-Para concentrarse en una locación, pulsar sobre la regla. Usar los botones Avanzar/Acercar
-para cambiar la magnificación y la posición. Para grabar tal imagen,
-<a href="%s">marcar esta página.</a>
+Para concentrarse en una locación, pulsar sobre la regla. Usar los botones Avanzar/Acercar para cambiar la magnificación y la posición. Para grabar tal imagen,<a href="%s">marcar esta página.</a>
 END
 
    EDIT_INSTRUCTIONS => <<END,
-Editar datos anotacdos que han sido subidos aquí.
-Puedes usar sangrías (tabs) o espacios para separar campos,
-pero campos que contengan espacios en blanco deben especificarse entre
-comillas dobles o sencillas.
+Editar datos anotados que han sido subidos aquí. Puedes usar sangrías (tabs) o espacios para separar campos, pero campos que contengan espacios en blanco deben especificarse entre comillas dobles o sencillas.
 END
 
-   SHOWING_FROM_TO => 'Mostrando %s de %s, Posiciones %s a %s',
+   SHOWING_FROM_TO => 'Mostrando %s de %s, posiciones %s a %s',
 
    INSTRUCTIONS      => 'Instrucciones',
 
@@ -36,21 +30,21 @@ END
 
    SHOW              => 'Mostrar',
 
-   SHOW_INSTRUCTIONS => 'Mostrar Instrucciones',
+   SHOW_INSTRUCTIONS => 'Mostrar instrucciones',
 
-   HIDE_INSTRUCTIONS => 'Ocultar Instrucciones',
+   HIDE_INSTRUCTIONS => 'Ocultar instrucciones',
 
-   SHOW_HEADER       => 'Mostrar Encabezado',
+   SHOW_HEADER       => 'Mostrar encabezado',
 
-   HIDE_HEADER       => 'Ocultar Encabezado',
+   HIDE_HEADER       => 'Ocultar encabezado',
 
-   LANDMARK => 'Punto o Región de Referencia',
+   LANDMARK => 'Punto o región de referencia',
 
-   BOOKMARK => 'Marcar esta Página',
+   BOOKMARK => 'Marcar esta página',
 
-   IMAGE_LINK => 'Liga a una imagen de esta vista',
+   IMAGE_LINK => 'Ligar a imagen',
 
-   SVG_LINK   => 'Calidad de imagen para publicación',
+   SVG_LINK   => 'Imagen de alta resolución',
 
    SVG_DESCRIPTION => <<END,
 <p>
@@ -99,8 +93,7 @@ Si sólo aparece la vista global (cromosoma o contig), trata de reducir el tamaño
 END
 
    TIMEOUT  => <<'END',
-Tu solicitud expiró.  Posiblemente seleccionaste una región muy grande para ver.
-Puedes eliminar algunas de las pistas que seleccionaste antes o intentar ver una región mas pequeña. Si esto te sucede continuamente, por favor presiona el botón rojo que dice "Reiniciar".
+Tu solicitud expiró.  Posiblemente seleccionaste una región muy grande para ver.Puedes eliminar algunas de las pistas que seleccionaste antes o intentar ver una región mas pequeña. Si esto te sucede continuamente, por favor presiona el botón rojo que dice "Reiniciar".
 END
 
    GO       => 'Ir',
@@ -121,41 +114,43 @@ END
 
    FLIP     => 'Dar la vuelta',
 
-   DOWNLOAD_FILE    => 'Bajar el Documento',
+   DOWNLOAD_FILE    => 'Bajar el documento',
 
-   DOWNLOAD_DATA    => 'Bajar los Datos',
+   DOWNLOAD_DATA    => 'Bajar los datos',
 
    DOWNLOAD         => 'Bajar',
 
-   DISPLAY_SETTINGS => 'Mostrar Configuraciones',
+   DISPLAY_SETTINGS => 'Mostrar configuraciones',
 
    TRACKS   => 'Pistas',
 
-   EXTERNAL_TRACKS => '(Pistas Externas en Itálicas)',
+   EXTERNAL_TRACKS => '<i>Pistas externas en itálicas</i>',
+
+   OVERVIEW_TRACKS => '<sup>*</sup>Resumen de pistas',
 
    EXAMPLES => 'Ejemplos',
 
    HELP     => 'Ayuda',
 
-   HELP_FORMAT => 'Ayuda con el Formato del Documento',
+   HELP_FORMAT => 'Ayuda con el formato del documento',
 
    CANCEL   => 'Cancelar',
 
    ABOUT    => 'Acerca de...',
 
-   REDISPLAY   => 'Volver a Mostrar',
+   REDISPLAY   => 'Volver a mostrar',
 
    CONFIGURE   => 'Configurar...',
 
-   EDIT       => 'Editar Documento...',
+   EDIT       => 'Editar documento...',
 
-   DELETE     => 'Borrar Documento',
+   DELETE     => 'Borrar documento',
 
-   EDIT_TITLE => 'Insertar/Editar Datos de Anotación',
+   EDIT_TITLE => 'Insertar/Editar datos de anotación',
 
-   IMAGE_WIDTH => 'Ancho de la Imagen',
+   IMAGE_WIDTH => 'Ancho de la imagen',
 
-   BETWEEN     => 'Entre Dos Puntos de Referencia',
+   BETWEEN     => 'Entre dos puntos de referencia',
 
    BENEATH     => 'Debajo',
 
@@ -163,25 +158,27 @@ END
 
    RIGHT       => 'Derecha',
 
-   TRACK_NAMES => 'Nombre de la Tabla de Pistas',
+   TRACK_NAMES => 'Nombre de la tabla de pistas',
 
    ALPHABETIC  => 'Alfabético',
 
    VARYING     => 'Variando/Variante',
 
-   SET_OPTIONS => 'Definir Opciones para Pistas/Trayectoria...',
+   SET_OPTIONS => 'Definir Opciones para pistas...',
 
-   UPDATE      => 'Actualizar Imagen',
+   UPDATE      => 'Actualizar imagen',
 
-   DUMPS       => 'Depósitos, Búsquedas y otras Operaciones',
+   DUMPS       => 'Reportes &amp; análisis',
 
-   DATA_SOURCE => 'Fuente de Datos',
+   DATA_SOURCE => 'Fuente de datos',
 
-   UPLOAD_TITLE=> 'Subir tus Anotaciones',
+   UPLOAD_TRACKS=>'Agregar tus propias pistas',
 
-   UPLOAD_FILE => 'Subir un Documento',
+   UPLOAD_TITLE=> 'Subir tus anotaciones',
 
-   KEY_POSITION => 'Posición de la Clave',
+   UPLOAD_FILE => 'Subir un documento',
+
+   KEY_POSITION => 'Posición de la clave',
 
    BROWSE      => 'Buscar...',
 
@@ -189,22 +186,23 @@ END
 
    NEW         => 'Nuevo...',
 
-   REMOTE_TITLE => 'Agregar Anotaciones Remotas',
+   REMOTE_TITLE => 'Agregar anotaciones remotas',
 
-   REMOTE_URL   => 'Insertar Anotación Remota -Localizador (URL)',
+   REMOTE_URL   => 'Insertar anotación remota - Localizador (URL)',
 
    UPDATE_URLS  => 'Actualizar URLs',
 
    PRESETS      => '-Seleccionar URL pre-establecido--',
 
-   FILE_INFO    => '%s Modificados por última vez.  Puntos de Referencia Anotados: %s',
+   NO_TRACKS    => '*Ninguna pista*',
+
+   FILE_INFO    => '%s Modificados por última vez.  Puntos de referencia anotados: %s',
 
    FOOTER_1     => <<END,
-Nota: Esta página usa "cookie" para grabar y restaurar información sobre preferencias.
-Ninguna información es compartida.
+Nota: Esta página usa "cookies" para grabar y restaurar información sobre preferencias. Ninguna información es compartida.
 END
 
-   FOOTER_2    => 'Versión Genérica del Buscador de Genoma %s',
+   FOOTER_2    => 'Versión genérica del buscador de genoma %s',
 
    #----------------------
    # MULTIPLE MATCHES PAGE
@@ -214,7 +212,7 @@ END
 
    POSSIBLE_TRUNCATION  => 'Resultados de búsqueda están limitados a %d aciertos; la lista puede ser incompleta.',
 
-   MATCHES_ON_REF => 'Cantidad de regiones que coinciden en %s',
+   MATCHES_ON_REF => 'Cantidad de regiones que coinciden (hits) en %s',
 
    SEQUENCE        => 'secuencia',
 
@@ -230,32 +228,25 @@ END
 
    SETTINGS => 'Configuración para %s',
 
-   UNDO     => 'Deshacer los Cambios',
+   UNDO     => 'Deshacer los cambios',
 
-   REVERT   => 'Revertir a la Configuración Pre-establecida',
+   REVERT   => 'Revertir a la configuración pre-establecida',
 
    REFRESH  => 'Refrescar',
 
-   CANCEL_RETURN   => 'Cancelar Cambios y Regresar...',
+   CANCEL_RETURN   => 'Cancelar cambios y regresar...',
 
-   ACCEPT_RETURN   => 'Aceptar Cambios y Regresar...',
+   ACCEPT_RETURN   => 'Aceptar cambios y regresar...',
 
-   OPTIONS_TITLE => 'Seguir Opciones',
+   OPTIONS_TITLE => 'Seguir la pista de opciones',
 
    SETTINGS_INSTRUCTIONS => <<END,
-La casilla de <i>Mostrar</i> enciende y apaga la pista. La
-opción <i>Compactar</i> obliga a condensar la pista, de manera que
-las anotaciones se sobrepondrán. Las opciones <i>Expander</i> e^M <i>Hiperexpander</i> encienden el control de colisión usando algoritmos de diseño más lentos y^M más rápidos. Las opciones <i>Expander</i> &amp; <i>etiqueta</i> e <i>Hiper-extender &amp; etiqueta</i> obligan a las anotaciones a ser marcadas. Si
-<i>Auto</i> es seleccionado, el control de colisión y las opciones de etiquetado serán
-colocadas automáticamente si el espacio lo permite. Para cambiar el orden de las pistas usar
-el menú emergente <i>Cambiar el Orden de las Pistas</i> para asignar una anotación a una
-pista. Para limitar el número de anotaciones mostradas de este tipo, cambiar
-el valor del menú de <i>Límite</i>.
+La casilla de <i>Mostrar</i> enciende y apaga la pista. La opción <i>Compactar</i> obliga a condensar la pista, de manera que las anotaciones se sobrepondrán. Las opciones <i>Expander</i> e <i>Hiperexpander</i> encienden el control de colisión usando algoritmos de diseño más lentos y más rápidos. Las opciones <i>Expander</i> &amp; <i>etiqueta</i> e <i>Hiper-extender &amp; etiqueta</i> obligan a las anotaciones a ser marcadas. Si se selecciona <i>Auto</i>, el control de colisión y las opciones de etiquetado serán colocadas automáticamente si el espacio lo permite. Para cambiar el orden de las pistas usar el menú emergente <i>Cambiar el orden de las pistas</i> para asignar una anotación a una pista. Para limitar el número de anotaciones mostradas de este tipo, cambiar el valor del menú de <i>Límite</i>.
 END
 
    TRACK  => 'Pista',
 
-   TRACK_TYPE => 'Tipo de Pista',
+   TRACK_TYPE => 'Tipo de pista',
 
    SHOW => 'Mostrar',
 
@@ -263,9 +254,9 @@ END
 
    LIMIT  => 'Limitar',
 
-   ADJUST_ORDER => 'Ajustar el Orden',
+   ADJUST_ORDER => 'Ajustar el orden',
 
-   CHANGE_ORDER => 'Cambiar el Orden',
+   CHANGE_ORDER => 'Cambiar el orden',
 
    AUTO => 'Auto',
 
@@ -273,25 +264,39 @@ END
 
    EXPAND => 'Extender',
 
-   EXPAND_LABEL => 'Extender & Etiquetar',
+   EXPAND_LABEL => 'Extender & etiquetar',
 
    HYPEREXPAND => 'Hiper-extender',
 
-   HYPEREXPAND_LABEL =>'Hiper-extender & Etiquetar',
+   HYPEREXPAND_LABEL =>'Hiper-extender & etiquetar',
 
    NO_LIMIT    => 'Sin límite',
+
+   OVERVIEW    => 'Resumen',
+
+   EXTERNAL    => 'Externo',
+
+   ANALYSIS    => 'Análisis',
+
+   GENERAL     => 'General',
+
+   DETAILS     => 'Detalles',
+
+   ALL_ON      => 'Todo encendido',
+
+   ALL_OFF     => 'Todo apagado',
 
    #--------------
    # HELP PAGES
    #--------------
 
-   CLOSE_WINDOW => 'Cerrar esta Ventana',
+   CLOSE_WINDOW => 'Cerrar esta ventana',
 
-   TRACK_DESCRIPTIONS => 'Seguir la Pista de Descripciones & Citas',
+   TRACK_DESCRIPTIONS => 'Seguir la pista de descripciones & citas',
 
-   BUILT_IN           => 'Pistas Incluídas en este Servidor',
+   BUILT_IN           => 'Pistas incluídas en este servidor',
 
-   EXTERNAL           => 'Pistas de Anotación Externas',
+   EXTERNAL           => 'Pistas de anotación externas',
 
    ACTIVATE           => 'Favor de activar esta pista para ver sus contenidos.',
 
@@ -305,9 +310,9 @@ END
 
  ABOUT_PLUGIN  => 'Acerca de %s',
 
- BACK_TO_BROWSER => 'Regresar al Buscador',
+ BACK_TO_BROWSER => 'Regresar al buscador',
 
- PLUGIN_SEARCH_1   => '%s (por medio de búsqueda de %s)',
+ PLUGIN_SEARCH_1   => '%s (por medio de %s búsqueda)',
 
  PLUGIN_SEARCH_2   => '&lt;%s busca&gt;',
 
@@ -325,7 +330,7 @@ END
 
  PURGED    => "No puedo encontrar el documento denominado %s.  Tal vez ha sido eliminado?.",
 
- NO_LWP    => "Este servidor no esta configurado para importar URLs externos.",
+ NO_LWP    => "Este servidor no está configurado para importar URLs externos.",
 
  FETCH_FAILED  => "No pude importar %s: %s.",
 
@@ -333,5 +338,6 @@ END
 
  SMALL_INTERVAL    => 'Ajustando el tamaño pequeño del intervalo a %s pares de bases',
 
-};
+ NO_SOURCES        => 'No hay fuentes de datos legibles configuradas. Es posible que no tengas permiso para verlas.',
 
+};

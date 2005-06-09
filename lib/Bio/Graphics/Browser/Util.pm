@@ -221,7 +221,7 @@ sub print_top {
   print_header(-expires=>'+1m');
   my @args = (-title => $title,
 	      -style  => {src=>$CONFIG->setting('stylesheet')},
-              -charset=>$CONFIG->tr('CHARSET')
+	      -encoding=>$CONFIG->tr('CHARSET'),
 	     );
   push @args,(-head=>$CONFIG->setting('head'))    if $CONFIG->setting('head');
   push @args,(-lang=>($CONFIG->language_code)[0]) if $CONFIG->language_code;

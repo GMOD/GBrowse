@@ -1,6 +1,6 @@
 package Bio::Graphics::FeatureFile;
 
-# $Id: FeatureFile.pm,v 1.1.2.2 2005-06-02 12:06:27 lstein Exp $
+# $Id: FeatureFile.pm,v 1.1.2.3 2005-06-10 13:42:03 lstein Exp $
 # This package parses and renders a simple tab-delimited format for features.
 # It is simpler than GFF, but still has a lot of expressive power.
 # See __END__ for the file format
@@ -251,7 +251,7 @@ for you.
 sub render {
   my $self = shift;
   my $panel = shift;
-  my ($position_to_insert,$options,$max_bump,$max_label) = @_;
+  my ($position_to_insert,$options,$max_bump,$max_label,$selector) = @_;
 
   $panel ||= $self->new_panel;
 
@@ -284,6 +284,7 @@ sub render {
   }
 
   for my $type (@configured_types,@unconfigured_types) {
+    next if defined $selector && !$selector->($self,$type);
     my $f = $self->features($type);
     my @features = grep {$self->{visible}{$_} || $_->type eq 'group'} @$f;
     next unless @features;  # suppress tracks for features that don't appear

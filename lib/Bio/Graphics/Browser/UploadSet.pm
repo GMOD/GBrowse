@@ -45,12 +45,14 @@ sub upload_file {
   my $settings   = $self->page_settings;
 
   # $fh is a CGI string/filehandle object, so be careful
+  warn "upload_file($filehandle), fileno=",fileno($filehandle)," content type=$ENV{CONTENT_TYPE}" if DEBUG;
   my ($filename)  = "$filehandle" =~ /([^\/\\:]+)$/;
   my $url         = $self->new_file($filename);
   my $fh_out      = $self->open_file($url,'>') or return;
   if (defined fileno($filehandle)) {
     my $buffer;
     while (read($filehandle,$buffer,1024)) {
+      warn "uploaded file: $buffer\n" if DEBUG;
       $buffer =~ s/\r\n?/\n/g;
       print $fh_out $buffer;
     }

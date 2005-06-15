@@ -399,9 +399,9 @@ sub main_display {
   # print the top of the form, with navigation bar, etc
   my $src    = $CONFIG->source;
   my $action = $src ? url()."/$src/" : url();
-  print start_form(-name   => 'mainform',
-                   -action => $action,
-		   -method => 'POST');
+  print start_multipart_form(-name   => 'mainform',
+                             -action => $action,
+		             -method => 'POST');
   print navigation_table($segment,$page_settings);
   print html_frag('html2',$segment,$page_settings);
 

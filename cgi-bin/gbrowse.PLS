@@ -1261,8 +1261,8 @@ sub das_table {
 		     $presets);
 
   return table({-border=>0,-width=>'100%'},
-	       TR({-class=>'uploadtitle'},
-		  th({-align=>'left',-colspan=>2},
+              TR(
+                 th({-class=>'uploadtitle',-align=>'left',-colspan=>2},
 		     $CONFIG->tr('Remote_title').':',
 		     a({-href=>annotation_help().'#remote',-target=>'help'},'['.$CONFIG->tr('Help').']'))),
 	       TR({-class=>'uploadbody'},\@rows),

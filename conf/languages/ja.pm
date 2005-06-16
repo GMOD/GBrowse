@@ -13,13 +13,13 @@
    PAGE_TITLE => 'ゲノムブラウザー',
 
    SEARCH_INSTRUCTIONS => <<END,
-配列の名前、遺伝子名、ローカス、%s
-またはその他のランドマークを使って検索します。
+配列の名前、遺伝子名、ゲノム上の位置、
+その他のランドマークなどを使って検索します。
 ワイルドカード文字として * を使うことができます。
 END
 
    NAVIGATION_INSTRUCTIONS => <<END,
-ルーラー上でクリックした位置が真ん中になります。
+ルーラー上でクリックした位置が中心になります。
 スクロールとズームボタンを使って拡大率と位置を変更します。
 END
 
@@ -50,9 +50,9 @@ END
 
    BOOKMARK          => 'この表示をブックマーク',
 
-   IMAGE_LINK        => 'この表示の画像へのリンク',
+   IMAGE_LINK        => 'この画像へのリンク',
 
-   SVG_LINK          => '印刷用の高品質SVG画像',
+   SVG_LINK          => '高品質SVG画像',
 
    SVG_DESCRIPTION => <<END,
 <p>
@@ -88,7 +88,7 @@ END
 
    IMAGE_DESCRIPTION => <<END,
 <p>
-この画像を HTML ページに埋め込むには、次の URL をカット＆ペーストします:
+この画像を HTML ページに埋め込むには、次の URL をコピー＆ペーストします:
 </p>
 <pre>
 &lt;IMAGE src="%s" /&gt;
@@ -123,7 +123,7 @@ END
 
    HIGHLIGHT         => '強調',
 
-   ANNOTATE          => 'アノテート',
+   ANNOTATE          => '解析',
 
    SCROLL            => 'スクロール/ズーム',
 
@@ -139,7 +139,7 @@ END
 
    DISPLAY_SETTINGS  => '表示設定',
 
-   TRACKS            => '項目',
+   TRACKS            => '表示項目',
 
    EXTERNAL_TRACKS   => '(外部の項目は斜体表示)',
 
@@ -165,31 +165,33 @@ END
 
    IMAGE_WIDTH 	     => '画像の横幅',
 
-   BETWEEN     	     => '項目の間',
+   BETWEEN     	     => '項目間',
 
-   BENEATH     	     => '下にまとめて',
+   BENEATH     	     => '下端',
 
-   LEFT              => '左',
+   LEFT              => '左端',
 
-   RIGHT             => '右',
+   RIGHT             => '右端',
 
    TRACK_NAMES 	     => '項目名リスト',
 
-   ALPHABETIC  	     => 'アルファベット順',
+   ALPHABETIC  	     => '名前順',
 
    VARYING     	     => '種類別',
 
-   SET_OPTIONS 	     => '項目毎のオプション設定...',
+   SET_OPTIONS 	     => '項目毎の設定...',
 
    UPDATE      	     => '画像を更新',
 
-   DUMPS       	     => '出力や検索などの操作',
+   DUMPS       	     => '出力や解析などの操作',
 
    DATA_SOURCE 	     => 'データソース',
 
-   UPLOAD_TITLE	     => 'アノテーションのアップロード',
+   UPLOAD_TRACKS     => 'アノテーションの追加',
 
-   UPLOAD_FILE 	     => 'ファイルのアップロード',
+   UPLOAD_TITLE	     => '独自アノテーションをアップロード',
+
+   UPLOAD_FILE 	     => 'アップロードするファイル',
 
    KEY_POSITION      => '項目の表示位置',
 
@@ -199,13 +201,15 @@ END
 
    NEW               => '新規...',
 
-   REMOTE_TITLE      => '外部アノテーションの追加',
+   REMOTE_TITLE      => '外部アノテーションを追加',
 
    REMOTE_URL        => '外部アノテーションのURL',
 
-   UPDATE_URLS       => 'URL更新',
+   UPDATE_URLS       => 'URLを更新',
 
    PRESETS           => '--リストから URL を選択--',
+
+   NO_TRACKS         => '(なし)',
 
    FILE_INFO         => '最終更新日 %s / アノテーションされたランドマーク: %s',
 
@@ -296,6 +300,20 @@ END
 
    NO_LIMIT          => '無制限',
 
+   OVERVIEW          => 'オーバービュー',
+
+   EXTERNAL          => '追加項目',
+
+   ANALYSIS          => '解析項目',
+
+   GENERAL           => '一般項目',
+
+   DETAILS           => '詳細ビュー',
+
+   ALL_ON            => '全てオン',
+
+   ALL_OFF           => '全てオフ',
+
    #--------------
    # HELP PAGES
    #--------------
@@ -306,7 +324,7 @@ END
 
    BUILT_IN          => 'このサーバにある項目',
 
-   EXTERNAL          => '外部のアノテーション項目',
+#  EXTERNAL          => '外部のアノテーション項目',
 
    ACTIVATE          => 'この項目の情報を見るにはこの項目を有効にしてください。',
 
@@ -344,8 +362,10 @@ END
 
    FETCH_FAILED      => '%s を取得できませんでした: %s.',
 
-   TOO_MANY_LANDMARKS => 'ランドマーク数 %d は大きすぎるためリストできません。',
+   TOO_MANY_LANDMARKS => 'ランドマーク数 %d は多すぎるため表示を省略します。',
 
    SMALL_INTERVAL    => '小さな間隔を %s bp にリサイズしました。',
+
+   NO_SOURCES        => '表示可能なデータソースがありません。データの閲覧が許可されていない可能性もあります。'
 
 };

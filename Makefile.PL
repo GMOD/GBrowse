@@ -28,10 +28,23 @@ APACHE, CONF, HTDOCS, or CGIBIN, as in CONF=/usr/local/apache/conf.
 For RedHat Linux, you will want to use:
     perl Makefile.PL CONF=/etc/httpd/conf \\
                      HTDOCS=/var/www/html \\
-                     CGIBIN=/var/www/cgi-bin
+                     CGIBIN=/var/www/cgi-bin \\
+                     DO_XS=1
+
+For Macintosh OS X, you will want to use:
+    perl Makefile.PL CONF=/etc/httpd/conf \\
+                     HTDOCS=/Library/WebServer/Documents \\
+                     CGIBIN=/Library/WebServer/CGI-Executables \\
+                     DO_XS=1
+
+For Slackware systems, you will want to use:
+    perl Makefile.PL CONF=/etc/apache \\
+                     HTDOCS=/var/www/htdocs \\
+                     CGIBIN=/var/www/cgi-bin \\
+                     DO_XS=1
 
 For most versions of Apache built from source code, use:
-    perl Makefile.PL APACHE=/usr/local/apache
+    perl Makefile.PL APACHE=/usr/local/apache DO_XS=1
 
 
 To install as a user without root privileges, in addition to 

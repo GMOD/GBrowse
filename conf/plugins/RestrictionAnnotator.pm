@@ -1,12 +1,12 @@
 package Bio::Graphics::Browser::Plugin::RestrictionAnnotator;
-# $Id: RestrictionAnnotator.pm,v 1.12.6.1 2005-03-03 21:59:29 lstein Exp $
+# $Id: RestrictionAnnotator.pm,v 1.12.6.2 2005-06-16 16:51:05 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use CGI qw(:standard *table);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.22';
+$VERSION = '0.23';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -75,7 +75,7 @@ sub annotate {
   return unless %$config;
   return unless $config->{on};
 
-  my $ref        = $segment->ref;
+  my $ref        = $segment->seq_id;
   my $abs_start  = $segment->start;
   my $dna        = $segment->seq;
 

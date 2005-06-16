@@ -299,8 +299,6 @@ END
 
    OVERVIEW    => 'Overview',
 
-   EXTERNAL    => 'External',
-
    ANALYSIS    => 'Analysis',
 
    GENERAL     => 'General',

@@ -1,4 +1,5 @@
 # do not remove the { } from the top and bottom of this page!!!
+# Translation by: Marco Mangone <mangone@cshl.edu>
 {
 
  CHARSET =>   'ISO-8859-1',
@@ -29,7 +30,27 @@ END
 
    SHOWING_FROM_TO => 'Mappa di %s da %s, posizione %s - %s',
 
-   LANDMARK => 'Elemento genomico o regione',
+   INTRUCTIONS    => 'Istruzioni',
+
+   HIDE           => 'Nascondi',
+
+   SHOW           => 'Mostra',
+  
+   SHOW_INSTRUCTIONS => 'Mostra Istruzioni',
+
+   HIDE_INSTRUCTIONS => 'Nascondi Istruzioni',
+
+   SHOW_HEADER       => 'Mostra banner',
+
+   HIDE_HEADER       => 'Nascondi banner',
+
+   LANDMARK => 'Elemento Genomico o Regione',
+
+   BOOKMARK => 'Aggiungi ai Preferiti',
+
+   IMAGE_LINK => 'Vai all'Immagine',
+
+   SVG_LINK   => 'Immagine ad Alta Risoluzione',
 
    GO       => 'Vai',
 
@@ -60,10 +81,6 @@ END
    BETWEEN     => 'In Mezzo',
 
    FLIP     => 'Gira',
-
-   BOOKMARK => 'Usa Segnalibro',
-
-   HIDE              => 'Nascondi',
 
    HIDE_HEADER       => 'Nascondi Banner',
 
@@ -134,6 +151,8 @@ END
    #----------------------
 
    HIT_COUNT      => 'Le seguenti %d regioni soddisfano la tua richiesta',
+
+  POSSIBLE_TRUNCATION  => 'I risultati della ricerca sono limitati a %d' valori; La lista potrebbe essere incompleta',
 
    MATCHES_ON_REF => 'Corrispondenza su %s',
 
@@ -286,6 +305,21 @@ END
 
    NO_LIMIT    => 'Senza limiti',
 
+
+   OVERVIEW   => 'Panoramica',
+
+   EXTERNAL  => 'Esterna',
+
+   ANALYSIS  => 'Analisi',
+
+   GENERAL  =>  'Generale',
+
+   DETAILS  => 'Dettagli',
+
+   ALL_ON   => 'Mostra tutto',
+
+   ALL_OFF  => 'Nascondi tutto',
+
    #--------------
    # HELP PAGES
    #--------------
@@ -338,4 +372,5 @@ END
 
  SMALL_INTERVAL    => 'Computazione piccolo intervallo a %s pb',
 
+ NO_SOURCES   =<'input dati non e` stato configurato oppure non hai il permesso di vederli',
 };

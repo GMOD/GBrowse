@@ -9,6 +9,8 @@
 	* The link option in the config file can now be used to override the built-in linking
 	rules from DAS sources.
 	* Uploaded features can now be placed in details panel, overview panel, or both panels.
+	* init_code subroutines and anonymous callbacks are now placed in the same package so that
+	one can refer to the other.
 
 1.62    Mon Apr  5 09:43:25 EDT 2004
 	* Added request timeout option for very long requests.

@@ -1447,6 +1447,16 @@ Due to the way the configuration file is parsed, there must be no
 empty lines in the init_code section.  Either use comments to
 introduce white space, or "use" a .pm file to do anything fancy.
 
+Subroutines that you define in the init_code section, as well as
+anonymous subroutines, will go into a package that changes
+unpredictably each time you load the page. If you need a predictable
+package name, you can define it this way:
+
+   init_code = package My; sub score_height { .... }
+
+   [EST_ALIGNMENTS]
+   height = \&My::score_height
+
 =head2 B8. Declaring New Aggregators
 
 The Bio::DB::GFF data model recognizes a single-level of "grouping" of

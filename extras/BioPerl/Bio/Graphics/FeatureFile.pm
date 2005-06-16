@@ -1,6 +1,6 @@
 package Bio::Graphics::FeatureFile;
 
-# $Id: FeatureFile.pm,v 1.1.2.3 2005-06-10 13:42:03 lstein Exp $
+# $Id: FeatureFile.pm,v 1.1.2.4 2005-06-16 19:51:17 lstein Exp $
 # This package parses and renders a simple tab-delimited format for features.
 # It is simpler than GFF, but still has a lot of expressive power.
 # See __END__ for the file format
@@ -797,7 +797,8 @@ sub code_setting {
     return $coderef;
   }
   elsif ($setting =~ /^sub\s*(\(\$\$\))*\s*\{/) {
-    my $coderef   = eval $setting;
+    my $package         = $self->base2package;
+    my $coderef         = eval "package $package; $setting";
     warn $@ if $@;
     $self->set($section,$option,$coderef);
     return $coderef;

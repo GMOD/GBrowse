@@ -32,7 +32,7 @@ For RedHat Linux, you will want to use:
                      DO_XS=1
 
 For Macintosh OS X, you will want to use:
-    perl Makefile.PL CONF=/etc/httpd/conf \\
+    perl Makefile.PL CONF=/etc/httpd \\
                      HTDOCS=/Library/WebServer/Documents \\
                      CGIBIN=/Library/WebServer/CGI-Executables \\
                      DO_XS=1

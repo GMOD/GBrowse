@@ -400,8 +400,8 @@ sub main_display {
   my $src    = $CONFIG->source;
   my $action = $src ? url()."/$src/" : url();
   print start_multipart_form(-name   => 'mainform',
-                             -action => $action,
-		             -method => 'POST');
+                   -action => $action,
+		   -method => 'POST');
   print navigation_table($segment,$page_settings);
   print html_frag('html2',$segment,$page_settings);
 
@@ -2509,7 +2509,11 @@ sub do_plugin_about {
 sub do_plugin_find {
   my ($settings,$plugin,$features,$search_string) = @_;
 
-  my $p = $PLUGINS->plugin($plugin) or return;
+  # to simplify life, this subroutine takes either the plugin name
+  # or a plugin reference.
+  my $p = ref $plugin ? $plugin : $PLUGINS->plugin($plugin);
+  $p or return;
+
   my $plugin_name = $p->name;
 
   my $results = $p->can('auto_find') && defined $search_string

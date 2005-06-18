@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.10 2005-06-16 19:51:17 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.11 2005-06-18 21:41:19 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1644,7 +1644,8 @@ sub name2segments {
     }
 
     # try the wildcard  version, but only if the name is of significant length
-    push @sloppy_names,"*$name*" if length $name > 3;
+    # IMPORTANT CHANGE: we used to put stars at the beginning and end, but this killed performance!
+    push @sloppy_names,"$name*" if length $name > 3;
 
     # automatic classes to try
     my @classes = $class ? ($class) : (split /\s+/,$self->setting('automatic classes'));
@@ -1662,6 +1663,7 @@ sub name2segments {
 sub _feature_get {
   my $self = shift;
   my ($db,$name,$class,$start,$stop,$segments_have_priority) = @_;
+
   my $refclass = $self->setting('reference class') || 'Sequence';
   $class ||= $refclass;
 

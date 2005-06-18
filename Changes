@@ -11,6 +11,8 @@
 	* Uploaded features can now be placed in details panel, overview panel, or both panels.
 	* init_code subroutines and anonymous callbacks are now placed in the same package so that
 	one can refer to the other.
+	* The feature name search now no longer does a wildcard PREFIX search (*foo*), which was killing
+	performance. It still does a wildcard SUFFIX search (foo*).
 
 1.62    Mon Apr  5 09:43:25 EDT 2004
 	* Added request timeout option for very long requests.

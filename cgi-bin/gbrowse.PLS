@@ -729,10 +729,17 @@ sub settings2cookie {
 sub adjust_settings {
   my $settings = shift;
 
-  if ( param('label') ) {
-    my @selected = map {/^(http|ftp|das)/ ? $_ : split /[+-]/} param('label');
+  if (my @selected = split_labels (param('label'))) {
     $settings->{features}{$_}{visible} = 0 foreach keys %{$settings->{features}};
     $settings->{features}{$_}{visible} = 1 foreach @selected;
+  }
+
+  if (my @selected = split_labels(param('enable'))) {
+    $settings->{features}{$_}{visible} = 1 foreach @selected;
+  }
+
+  if (my @selected = split_labels(param('disable'))) {
+    $settings->{features}{$_}{visible} = 0 foreach @selected;
   }
 
   $settings->{width}  = param('width')   if param('width');
@@ -2597,6 +2604,11 @@ sub unique {
   my %seenit;
   return grep {defined $_ && !$seenit{$_}++} @list;
 }
+
+sub split_labels {
+   map {/^(http|ftp|das)/ ? $_ : split /[+-]/} @_;
+}
+
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

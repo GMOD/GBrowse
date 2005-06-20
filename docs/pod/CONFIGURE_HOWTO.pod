@@ -466,12 +466,12 @@ and "alignment," comment this setting out entirely:
 
 The user name for the gbrowse script to log in under if you are not
 using "nobody".  This is exactly the same as providing the -user
-option to db_args.
+option to db_args, and is deprecated.
 
 =item * pass
 
 The password to use if the database is password protected.  This is
-the same as providing the -pass option to db_args.
+the same as providing the -pass option to db_args, and is deprecated.
 
 =item * stylesheet
 
@@ -2424,7 +2424,37 @@ same as in the main search field:
 
 =item label
 
-[To come]
+The tracks to display. This parameter must contain the track names
+(i.e. the names in [brackets] in the config file) separated by "+" or
+"-" characters.  For example:
+
+   http://www.your.site/cgi-bin/gbrowse/yeast?labels=ORFs-tRNAs
+
+To use the "+" character you may have to URL escape it:
+
+   http://www.your.site/cgi-bin/gbrowse/yeast?labels=ORFs%2BtRNAs
+
+All tracks not explicitly given by the label parameter will be closed
+(disabled).
+
+=item enable
+
+Tracks to enable. The tracks indicated by this parameter will be
+opened in addition to any tracks that were previously opened by the
+user.  The format is the same as label:
+
+   http://www.your.site/cgi-bin/gbrowse/yeast?enable=ORFs-tRNAs
+
+=item disable
+
+Tracks to close. The tracks indicated by this parameter will be
+disabled. Tracks not mentioned by this parameter will keep their
+previous state.  The format is the same as label:
+
+   http://www.your.site/cgi-bin/gbrowse/yeast?disable=ORFs-tRNAs
+
+When modifying track state, the "label" parameter is processed first,
+followed by the "enable" parameter and the "disable" parameter.
 
 =back
 

@@ -3,16 +3,19 @@
 	* Added ability to group tracks logically.
 	* Plugins menu moved to a more prominent position.
 	* Added the "initial landmark" configuration option to bring up a 
-	default region the first time user visits the web page.
+		default region the first time user visits the web page.
 	* Added the "quicklink plugins" option to add selected plugins to
-	the links list underneath the instructions.
+		the links list underneath the instructions.
 	* The link option in the config file can now be used to override the built-in linking
-	rules from DAS sources.
+		rules from DAS sources.
 	* Uploaded features can now be placed in details panel, overview panel, or both panels.
 	* init_code subroutines and anonymous callbacks are now placed in the same package so that
-	one can refer to the other.
+		one can refer to the other.
 	* The feature name search now no longer does a wildcard PREFIX search (*foo*), which was killing
-	performance. It still does a wildcard SUFFIX search (foo*).
+		performance. It still does a wildcard SUFFIX search (foo*).
+	* You can now use the parameters "enable" and "disable" to
+		selectively open or close a set of tracks without blowing
+		away the settings for all the other tracks the way "label" does.
 
 1.62    Mon Apr  5 09:43:25 EDT 2004
 	* Added request timeout option for very long requests.

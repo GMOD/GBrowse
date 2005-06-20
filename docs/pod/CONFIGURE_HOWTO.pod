@@ -1636,7 +1636,7 @@ There are four steps for making histograms:
 
 =item 1
 
-generate the density data using the generate_histogram.pl script.
+generate the density data using the bp_generate_histogram.pl script.
 
 =item 2
 
@@ -1654,14 +1654,14 @@ add the density aggregator to the appropriate track in the configuration file.
 
 The first step is to generate the density data.  Currently this is
 done by generating a GFF file containing a set of "bin" feature
-types.  Use the generate_histogram.pl script to do this.  You will
+types.  Use the bp_generate_histogram.pl script to do this.  You will
 find it in bioperl under the scripts/Bio-DB-GFF directory.
 
 Assuming that your database is named "dicty", you have a feature named
 SNP, and you wish to generate a density distribution across 10,000 bp
 bins, here is the command you would use:
 
-  generate_histogram.pl -merge -d dicty -bin 10000 SNP >snp_density.gff
+  bp_generate_histogram.pl -merge -d dicty -bin 10000 SNP >snp_density.gff
 
 This is saying to use the "dicty" database (-d) option, to use 10,000
 bp bins (the -bin option) and to count the occurrences of the SNP

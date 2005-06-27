@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.5 2005-05-05 02:39:50 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.6 2005-06-27 15:34:20 scottcain Exp $
 
 =head1 NAME
 
@@ -566,10 +566,11 @@ sub features {
 
   warn "Segment->features() args:@_\n" if DEBUG;
 
-  my ($types,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,$feature_id,$factory);
+  my ($types,$type_placeholder,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,$feature_id,$factory);
   if ($_[0] and $_[0] =~ /^-/) {
-    ($types,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,$feature_id,$factory) =
-      $self->_rearrange([qw(TYPE 
+    ($types,$type_placeholder,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,$feature_id,$factory) =
+      $self->_rearrange([qw(TYPES 
+                            TYPE
                             ATTRIBUTES 
                             RANGETYPE 
                             ITERATOR 
@@ -581,6 +582,11 @@ sub features {
     warn "$types\n" if DEBUG;
   } else {
     $types = \@_;
+  }
+
+  #UGG, allow both -types and -type to be used in the args
+  if ($type_placeholder and !$types) {
+    $types = $type_placeholder;
   }
 
   warn "@$types\n" if (defined $types and DEBUG);

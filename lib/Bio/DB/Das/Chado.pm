@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.4 2005-05-14 13:08:30 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.5 2005-07-05 20:48:41 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -179,8 +179,29 @@ sub new {
   $self->term2name(\%term2name);
   $self->name2term(\%name2term);
   $self->dbh($dbh);
+  #Recursive Mapping
+  $self->recursivMapping($arg{-recursivMapping} ? $arg{-recursivMapping} : 0);
 
   return $self;
+}
+
+=head2 recursivMapping
+
+  Title   : recursivMapping
+  Usage   : $obj->recursivMapping($newval)
+  Function: Flag for activating the recursive mapping (desactivated by default)
+  Returns : value of recursivMapping (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+  Goal : When we have a clone mapped on a chromosome, the recursive mapping maps the features of the clone on the chromosome.
+
+=cut
+
+sub  recursivMapping{
+  my $self = shift;
+
+  return $self->{'recursivMapping'} = shift if @_;
+  return $self->{'recursivMapping'};
 }
 
 =head2 dbh
@@ -543,32 +564,70 @@ sub get_feature_by_name {
       }
         #now build the feature
 
-      my $interbase_start = $$hashref{'fmin'};
-      $base_start = $interbase_start +1;
+      #Recursive Mapping
+      if ($self->{recursivMapping}){
+      #Fetch the recursively mapped  position
 
-      my $source = $self->dbxref2source($$hashref{dbxref_id}) || "" ;
-      my $type_obj = Bio::DB::GFF::Typename->new(
-             $self->term2name($$hashref{'type_id'}),
-             $source 
-      );
+        my $sql = "select fl.fmin,fl.fmax,fl.strand,fl.phase
+                   from feat_remapping(".$$feature_id_ref{'feature_id'}.")  fl
+                   where fl.rank=0";
+        my $recurs_sth =  $self->dbh->prepare($sql);
+        $sql =~ s/\s+/ /gs ;
+        $recurs_sth->execute();
+        my $hashref2 = $recurs_sth->fetchrow_hashref;
+        my $strand_ = $$hashref{'strand'};
+        my $phase_ = $$hashref{'phase'};
+        my $fmax_ = $$hashref{'fmax'};
+        my $interbase_start;
 
-      my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
-                      $self,
-                      $parent_segment,
-                      $parent_segment->seq_id,
-                      $base_start,$$hashref{'fmax'},
-                      $type_obj,
-                      $$hashref{'score'},
-                      $$hashref{'strand'},
-                      $$hashref{'phase'},
-                      $$hashref{'name'},
-                      $$hashref{'uniquename'},
-                      $$hashref{'feature_id'}
-        );
+      #If unable to recursively map we assume that the feature is
+      # already mapped on the lowest refseq
+
+        if ($recurs_sth->rows != 0){
+          $interbase_start = $$hashref2{'fmin'};
+          $strand_ = $$hashref2{'strand'};
+          $phase_ = $$hashref2{'phase'};
+          $fmax_ = $$hashref2{'fmax'};
+        }else{
+          $interbase_start = $$hashref{'fmin'};
+        }
+        $base_start = $interbase_start +1;
+        my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
+                                        $self,
+                                        $parent_segment,
+                                        $parent_segment->seq_id,
+                                        $base_start,$fmax_,
+                                        $self->term2name($$hashref{'type_id'}),
+                                        $$hashref{'score'},
+                                        $strand_,
+                                        $phase_,
+                                        $$hashref{'name'},
+                                        $$hashref{'uniquename'},
+                                        $$hashref{'feature_id'}
+                                                               );
+        push @features, $feat;
+        #END Recursive Mapping
+      } else {
+      
+        my $interbase_start = $$hashref{'fmin'};
+        $base_start = $interbase_start +1;
+        my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
+                                        $self,
+                                        $parent_segment,
+                                        $parent_segment->seq_id,
+                                        $base_start,$$hashref{'fmax'},
+                                        $self->term2name($$hashref{'type_id'}),
+                                        $$hashref{'score'},
+                                        $$hashref{'strand'},
+                                        $$hashref{'phase'},
+                                        $$hashref{'name'},
+                                        $$hashref{'uniquename'},
+                                        $$hashref{'feature_id'}
+                                                               );
       push @features, $feat;
+      } 
     }
   }
-
   @features;
 }
 

@@ -860,7 +860,49 @@ sub sub_SeqFeature {
           $typewhere
     ";
 
-    $sql =~ s/\s+/ /gs;
+#Recursive Mapping
+#Construct a query that recursively maps clone's features on the underlying chromosome
+  if ($self->factory->recursivMapping){
+
+    #Notes on the interbase computation :
+    #$self->start is already converted to base coordinates, so  we need to substract the unit which has been added by this conversion
+    $sql="
+   select child.feature_id, child.name, child.type_id, child.uniquename, parent.name as pname,
+         (childloc.fmin + ".$self->start." - parentloc.fmin -1)  AS fmin,
+        (childloc.fmax + ".$self->start." - parentloc.fmin -1)  AS fmax,
+          (childloc.strand * ".$self->strand." * parentloc.strand)  AS strand,
+         childloc.locgroup, childloc.phase, af.significance as score,
+          CASE WHEN  (
+                     parentloc.srcfeature_id=
+                           (select distinct srcfeature_id from featureloc where feature_id=".$self->feature_id." and rank=0)
+                     )
+               THEN ".$self->srcfeature_id."
+               ELSE childloc.srcfeature_id  END as srcfeature_id
+       from feature as parent
+       inner join
+         feature_relationship as fr0 on
+           (parent.feature_id = fr0.object_id)
+       inner join
+         feature as child on
+           (child.feature_id = fr0.subject_id)
+       inner join
+         featureloc as childloc on
+           (child.feature_id = childloc.feature_id)
+       inner join
+         featureloc as parentloc on
+           (parent.feature_id = parentloc.feature_id)
+       left join
+          analysisfeature as af on
+           (child.feature_id = af.feature_id)
+       where parent.feature_id = $parent_id
+             and childloc.rank = 0
+             and fr0.type_id in ($partof)
+             $typewhere";
+  }
+
+#END Recursive Mapping
+
+    $sql =~ s/\s+/ /gs if DEBUG;
     warn $sql if DEBUG;
 
     my $sth = $self->factory->dbh->prepare($sql);

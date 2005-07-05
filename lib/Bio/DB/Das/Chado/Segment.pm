@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.6 2005-06-27 15:34:20 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.7 2005-07-05 20:48:42 scottcain Exp $
 
 =head1 NAME
 
@@ -602,23 +602,23 @@ sub features {
 
 # set range variable 
 
-    my $base_start = $self->start;
+    $base_start = $self->start;
     $interbase_start = $base_start -1;
     $rend       = $self->end;
-    my $sql_range;
-    if ($rangetype eq 'contains') {
-
-      $sql_range = " fl.fmin >= $interbase_start and fl.fmax <= $rend ";
-
-    } elsif ($rangetype eq 'contained_in') {
-
-      $sql_range = " fl.fmin <= $interbase_start and fl.fmax >= $rend ";
-
-    } else { #overlaps is the default
-
-      $sql_range = " fl.fmin <= $rend and fl.fmax >= $interbase_start ";
-
-    }
+#    my $sql_range;
+#    if ($rangetype eq 'contains') {
+#
+#      $sql_range = " fl.fmin >= $interbase_start and fl.fmax <= $rend ";
+#
+#    } elsif ($rangetype eq 'contained_in') {
+#
+#      $sql_range = " fl.fmin <= $interbase_start and fl.fmax >= $rend ";
+#
+#    } else { #overlaps is the default
+#
+#      $sql_range = " fl.fmin <= $rend and fl.fmax >= $interbase_start ";
+#
+#    }
 
 # set type variable 
 
@@ -702,6 +702,19 @@ sub features {
   }
 
   my $query       = "$select_part\n$from_part\n$where_part\n$order_by\n";
+
+#Recursive Mapping
+#  Construct a query that recursively maps clone's features on
+#  the underlying chromosome
+  if ($factory->recursivMapping && ! $feature_id){
+    my $qFrom=$from_part;
+    $qFrom =~ s/featureslice/recurs_featureslice/g;
+    $query="$select_part\n$from_part\n$where_part\nUNION\n$select_part\n$qFrom\n$where_part\norder by type_id, fmin";
+  }
+  $query =~ s/\s+/ /gs  if DEBUG;
+  warn $query if DEBUG;
+#END Recursive Mapping
+
 
   $factory->dbh->do("set enable_seqscan=0");
 #  $factory->dbh->do("set enable_hashjoin=0");

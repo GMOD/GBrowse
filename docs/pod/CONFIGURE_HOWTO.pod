@@ -1139,7 +1139,18 @@ This option allows you to restrict who is allowed to view the current
 track by host name, IP address or username/password.  See
 AUTHENTICATION AND AUTHORIZATION for details.
 
-=item 19 das category, das landmark, das subparts, das superparts
+=item 19 category
+
+This option allows you to group tracks into different groups on the
+GBrowse display in addition to the default group called 'General'.
+For example, if you wanted several tracks to be in a separate group
+called "Genes", you would add this to each of the track defintions:
+
+  category = Genes
+
+Note that it is not possible to make subgroups.
+
+=item 20 das category, das landmark, das subparts, das superparts
 
 All these options pertain to exporting the GBrowse database as a DAS
 data source.  Please see L<DAS_HOWTO> for more information.

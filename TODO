@@ -5,8 +5,9 @@
 * More internationalization
 * Limit search results to user-set max
 * Group SVG elements by feature ID
-* Get rid of verbs attached to plugin names so that translations work properly. Will need plugin
-authors to provide internationalization (fat chance).
+* Get rid of verbs attached to plugin names so that translations work properly.
+  Will need plugin authors to provide internationalization.
+* Colorize xyglyph.
 
-$Id: TODO,v 1.4.6.3 2005-06-16 16:51:04 lstein Exp $
+$Id: TODO,v 1.4.6.4 2005-07-10 03:01:57 lstein Exp $
 

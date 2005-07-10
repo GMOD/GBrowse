@@ -81,6 +81,7 @@ use constant TOO_MANY_SEGMENTS => 5_000;
 use constant TOO_MANY_FEATURES => 100;
 use constant TOO_MANY_REFS     => TOO_MANY_FEATURES;
 use constant DEFAULT_SEGMENT => 100_000;
+use constant DEFAULT_REGION_SIZE => 100_000_000;
 
 use constant OVERVIEW_RATIO  => 0.9;
 use constant ANNOTATION_EDIT_ROWS => 25;
@@ -420,13 +421,28 @@ sub main_display {
     $segment = open_database()->segment($segment->seq_id,
 				        $segment->start,$segment->end)
       unless $segment->can('features');
+
     print overview_panel($segment,$page_settings,$feature_files);
+
+    if ($page_settings->{region_size}) {
+      my ($region_seg_start, $region_seg_end) = get_regionview_seg($page_settings,$segment->start, $segment->end);
+      my $region_segment = open_database()->segment($segment->seq_id, $region_seg_start, $region_seg_end);
+      print region_panel($region_segment,$segment,$page_settings,$feature_files);
+    }
+
     print detail_panel_with_timeout($segment,$page_settings,$feature_files);
+
   } else {
-    # empty overview & detail sections
+    # empty overview,region & detail sections
     print toggle_section({on=>1},b($CONFIG->tr('Overview')),'');
+    print toggle_section({on=>1},b($CONFIG->tr('Region')),'') if $page_settings->{region_size};
     print toggle_section({on=>1},b($CONFIG->tr('Details')),'');
   }
+
+  print table({-width=>'100%'},
+	      TR(td({-align=>'right'},
+		 b(submit(-name => $CONFIG->tr('Update'))))));
+
 
   print html_frag('html3',$segment,$page_settings);
   print html_frag('html4',$segment,$page_settings);
@@ -464,6 +480,21 @@ sub overview_panel {
 		  );
 }
 
+sub region_panel {
+  my ($region_segment,$segment,$page_settings,$feature_files) = @_;
+  my $image = regionview($region_segment,$segment,$page_settings,$feature_files).br();
+  return br().
+    toggle_section({on=>1},
+		   b($CONFIG->tr('Region')),
+		   table({-border=>0,-width=>'100%'},
+			 TR({-class=>'databody'},
+			    td({-align=>'center'},$image)
+			   )
+			)
+		  );
+}
+
+
 sub detail_panel_with_timeout {
     my @args    = @_;
     my $timeout = $CONFIG->setting('request timeout') || GLOBAL_TIMEOUT;
@@ -494,7 +525,7 @@ sub detail_panel {
     resize(\$segment);
 
     $CONFIG->width($page_settings->{width});
-    my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} && !/:overview$/ }
+    my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} && !/:.+view$/ }
                                @{$page_settings->{tracks}};
     my %options = map {$_=>$page_settings->{features}{$_}{options}} @tracks_to_show;
     my %limit   = map {$_=>$page_settings->{features}{$_}{limit}}   @tracks_to_show;
@@ -619,6 +650,7 @@ sub default_settings {
   @$settings{'name','ref','start','stop','flip','version'} = ('','','','','',100);
   $settings->{width}   = $CONFIG->setting('default width');
   $settings->{source}  = $CONFIG->source;
+  $settings->{region_size}  = $CONFIG->setting('region segment');
   $settings->{id}      = md5_hex(rand);  # new identity
   $settings->{v}       = $VERSION;
   $settings->{stp}     = 1;
@@ -749,7 +781,7 @@ sub adjust_settings {
   local $^W = 0;  # kill uninitialized variable warning
   if (param('ref') &&
       ( param('name') eq param('prevname')
-	|| grep {/zoom|nav|overview/} param())
+	|| grep {/zoom|nav|region|overview/} param())
      )
     {
       $settings->{version} ||= param('version') || '';
@@ -769,6 +801,9 @@ sub adjust_settings {
   }
   $settings->{name} =~ s/^\s+//; # strip leading
   $settings->{name} =~ s/\s+$//; # and trailing whitespace
+
+  $settings->{region_size} = param('region_size') if defined param('region_size') 
+    && $CONFIG->setting('region segment');
 
   if (my @external = param('eurl')) {
     my %external = map {$_=>1} @external;
@@ -1020,6 +1055,7 @@ sub tracks_table {
 
   # Sort the tracks into categories:
   # Overview tracks
+  # Region tracks
   # Regular tracks (which may be further categorized by user)
   # Plugin tracks
   # External tracks
@@ -1032,7 +1068,7 @@ sub tracks_table {
   autoEscape(0);
   my @sections;
 
-  my %exclude = map {$_=>1} map {$CONFIG->tr($_)} qw(OVERVIEW ANALYSIS EXTERNAL);
+  my %exclude = map {$_=>1} map {$CONFIG->tr($_)} qw(OVERVIEW REGION ANALYSIS EXTERNAL);
 
   my @user_keys = grep {!$exclude{$_}} sort keys %track_groups;
   my $id = "c00000";
@@ -1049,6 +1085,7 @@ sub tracks_table {
 
   my %seenit;
   foreach my $category ($CONFIG->tr('OVERVIEW'),
+			$CONFIG->tr('REGION'),
 			$CONFIG->tr('ANALYSIS'),
 			@user_keys,
 			$CONFIG->tr('EXTERNAL'),
@@ -1101,6 +1138,7 @@ sub tracks_table {
 sub categorize_track {
   my $label = shift;
   return $CONFIG->tr('OVERVIEW') if $label =~ /:overview$/;
+  return $CONFIG->tr('REGION')   if $label =~ /:region$/;
   return $CONFIG->tr('EXTERNAL') if $label =~ /^(http|ftp|file):/;
   return $CONFIG->tr('ANALYSIS') if $label =~ /^plugin:/;
 
@@ -1131,6 +1169,15 @@ sub settings_table {
 			     -override=>1,
 			   ),
 	       ),
+	     $CONFIG->setting('region segment') ?
+	     (
+	      td(b($CONFIG->tr('Region_size')),br,
+		 textfield(-name=>'region_size',
+			   -default=>$settings->{region_size},
+			   -override=>1,
+			   -size=>20),
+		)
+	     ) : (),
 	     td(
 		b($CONFIG->tr('KEY_POSITION')),br,
 		radio_group( -name=>'ks',
@@ -1154,10 +1201,10 @@ sub settings_table {
                              -override=>1
                            ),
                ),
-	     td(
-		b(submit(-name => $CONFIG->tr('Update')))
-	       ),
 	    ),
+	  TR(td({-colspan=>4,
+		 -align=>'right'},
+		b(submit(-name => $CONFIG->tr('Update')))))
 	 );
   return toggle_section({on=>0},
 			b($CONFIG->tr('display_settings')),$content);
@@ -1314,7 +1361,9 @@ sub zoomnav {
   my ($zoom)         = grep {/^zoom (out|in) \S+/} param();
   my ($nav)          = grep {/^(left|right) \S+/}  param();
   my $overview_x     = param('overview.x');
-  my $segment_length = param('seg_length');
+  my $regionview_x     = param('regionview.x');
+  my $regionview_size  = $settings->{region_size};
+  my $segment_length   = param('seg_length');
 
   my $zoomlevel = unit_to_value($1) if $zoom && $zoom =~ /((?:out|in) .+)\.[xy]/;
   my $navlevel  = unit_to_value($1) if $nav  && $nav  =~ /((?:left|right) .+)/;
@@ -1347,6 +1396,24 @@ sub zoomnav {
     $start = int($click_position - $span/2);
     $stop  = $start + $span - 1;
   }
+
+  elsif (defined $regionview_x) {
+    my ($regionview_start, $regionview_end) = get_regionview_seg($settings,$start, $stop); 
+    my @regionview_tracks = grep {$settings->{features}{$_}{visible}} 
+      $CONFIG->config->regionview_tracks;
+    my ($padl,$padr) = $CONFIG->overview_pad(\@regionview_tracks);
+
+    my $regionview_width = ($settings->{width} * OVERVIEW_RATIO);
+
+    # adjust for padding in pre 1.6 versions of bioperl
+    $regionview_width -= ($padl+$padr) unless Bio::Graphics::Panel->can('auto_pad');
+    my $click_position = $regionview_size  * ($regionview_x-$padl)/$regionview_width;
+
+    $span = $DEFAULT_SEGMENT if $span > $MAX_SEGMENT;
+    $start = int($click_position - $span/2 + $regionview_start);
+    $stop  = $start + $span - 1;
+  }
+
   elsif ($selected_span) {
     warn "selected_span = $selected_span" if DEBUG;
     my $center	    = int(($span / 2)) + $start;
@@ -1680,7 +1747,15 @@ sub overview {
   return unless $segment;
   $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
 
-  my ($image,$length) = $CONFIG->overview($segment,$settings->{features},$feature_files) or return;
+
+  my $factory = $segment->factory;
+  my $class   = eval {$segment->seq_id->class} || $factory->refclass;
+  my ($whole_segment) = $factory->segment(-class=>$class,
+					  -name=>$segment->seq_id);
+  $whole_segment   ||= $segment;  # just paranoia
+
+
+  my ($image,$length) = $CONFIG->overview($whole_segment,$segment,$settings->{features},$feature_files) or return;
   my ($width,$height) = $image->getBounds;
   my $url             = $CONFIG->generate_image($image);
   return image_button(-name=>'overview',
@@ -1691,6 +1766,23 @@ sub overview {
 		      -align=>'middle')
     .hidden(-name=>'seg_length',-value=>$length,-override=>1);
 }
+
+sub regionview {
+  my ($region_segment,$segment,$settings,$feature_files) = @_;
+  return unless $region_segment;
+
+  my ($image,$length) = $CONFIG->regionview($region_segment,$segment,$settings->{features},$feature_files) or return;
+  my ($width,$height) = $image->getBounds;
+  my $url             = $CONFIG->generate_image($image);
+  return image_button(-name=>'regionview',
+ 		      -src=>$url,
+ 		      -width=>$width,
+ 		      -height=>$height,
+ 		      -border=>0,
+ 		      -align=>'middle')
+    .hidden(-name=>'seg_length',-value=>$length,-override=>1);
+}
+
 
 sub get_ranges {
   return $CONFIG->get_ranges;
@@ -1845,9 +1937,10 @@ sub load_external_sources {
   # feature files and values are FeatureFile objects.
   my $f       = {};
   if ($segment && $segment->length <= $MAX_SEGMENT) {
-    my $rel2abs = coordinate_mapper($segment);
+    my $rel2abs      = coordinate_mapper($segment,1);
+    my $rel2abs_slow = coordinate_mapper($segment,0);
     for my $featureset ($PLUGINS,$UPLOADED_SOURCES,$REMOTE_SOURCES) {
-      $featureset->annotate($segment,$f,$rel2abs);
+      $featureset->annotate($segment,$f,$rel2abs,$rel2abs_slow);
     }
   }
   return $f;
@@ -1959,6 +2052,8 @@ sub edit_uploaded_file {
 
 sub coordinate_mapper {
   my $current_segment = shift;
+  my $optimize        = shift;
+
   my $db              = open_database();
 
   my ($ref,$start,$stop) = ($current_segment->seq_id,
@@ -1998,11 +2093,15 @@ sub coordinate_mapper {
     }
 
     # this inhibits mapping outside the displayed region
-    my $in_window;
-    foreach (@abs_segs) {
-      $in_window ||= $_->[0] <= $stop && $_->[1] >= $start;
+    if ($optimize) {
+      my $in_window;
+      foreach (@abs_segs) {
+	$in_window ||= $_->[0] <= $stop && $_->[1] >= $start;
+      }
+      return $in_window ? ($absref,@abs_segs) : ();
+    } else {
+      return ($absref,@abs_segs);
     }
-    return $in_window ? ($absref,@abs_segs) : ();
   };
   return $closure;
 }
@@ -2110,9 +2209,11 @@ sub set_track_options {
     my $label = $labels[$track];
     push @rows,
       th({-align=>'left',-class=>'searchtitle'},$CONFIG->tr("Track"),$track+1).
-      th({-align=>'left',-class=>'searchbody'},$label=~/:overview$/ ? div({-style=>"background: $oc"},
-									  "$keys{$label}<sup>*</sup>")
-	                                                            :$keys{$label}).
+      th({-align=>'left',-class=>'searchbody'},$label=~/:overview$/  ? div({-style=>"background: $oc"},
+									   "$keys{$label}<sup>*</sup>")
+	                                     : $label=~/:regionview$/? div({-style=>"background: $oc"},
+									   "$keys{$label}<sup>**</sup>")
+	                                     : $keys{$label}).
       td({-align=>'center',-class=>'searchbody'},
 	     checkbox(-name     => 'track.label',
 		      -value    => $label,
@@ -2186,7 +2287,11 @@ sub set_track_options {
     br,
       div({-style=>"background: $oc"},
 	  $CONFIG->tr('OVERVIEW_TRACKS')
-	  );
+	 ),
+    br,
+      div({-style=>"background: $oc"},
+	  $CONFIG->tr('REGION_TRACKS')
+	 );
   print end_form();
 }
 
@@ -2597,6 +2702,15 @@ sub tableize {
     $html .= "</tr>\n";
   }
   $html .= "</table>\n";
+}
+
+sub get_regionview_seg {
+  my ($settings,$detail_start, $detail_end) = @_;;
+  my $midpoint = ($detail_end + $detail_start) / 2;
+  my $regionview_length = $settings->{region_size};
+  my $regionview_start = int($midpoint - $regionview_length/2 + 1);
+  my $regionview_end = int($midpoint + $regionview_length/2);
+  return ($regionview_start, $regionview_end);
 }
 
 sub unique {

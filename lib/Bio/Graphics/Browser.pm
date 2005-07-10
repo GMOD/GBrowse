@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.11 2005-06-18 21:41:19 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.12 2005-07-10 03:01:59 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1210,15 +1210,19 @@ will be added to the overview panel.
 # generate the overview, if requested, and return it as a GD
 sub overview {
   my $self = shift;
-  my ($partial_segment,$track_options,$feature_files) = @_;
-  my $gd;
+  $self->_overview('overview',@_);
+}
 
-  # turn requests for a piece of a segment into the whole segment9
-  my $factory = $partial_segment->factory;
-  my $class   = eval {$partial_segment->seq_id->class} || $factory->refclass;
-  my ($segment) = $factory->segment(-class=>$class,
-				    -name=>$partial_segment->seq_id);
-  $segment   ||= $partial_segment;  # paranoia
+# generate the regionview, if requested, and return it as a GD
+sub regionview {
+  my $self = shift;
+  $self->_overview('region',@_);
+}
+
+sub _overview {
+  my $self = shift;
+  my ($region_name,$segment,$partial_segment,$track_options,$feature_files) = @_;
+  my $gd;
 
   # Temporary kludge until I can figure out a more
   # sane way of rendering overview with SVG...
@@ -1227,7 +1231,9 @@ sub overview {
 
   my $conf           = $self->config;
   my $width          = $self->width;
-  my @tracks         = grep {$track_options->{$_}{visible}} $conf->overview_tracks;
+  my @tracks         = grep {$track_options->{$_}{visible}} 
+    $region_name eq 'region' ? $conf->regionview_tracks : $conf->overview_tracks;
+
   my ($padl,$padr)   = $self->overview_pad(\@tracks);
 
   my $panel = Bio::Graphics::Panel->new(-segment => $segment,
@@ -1257,22 +1263,22 @@ sub overview {
     $panel->add_track($segment,
 		      -glyph     => 'arrow',
 		      -double    => 1,
-		      -label     => "Overview of ".$segment->seq_id,
+		      -label     => "\u$region_name\E of ".$segment->seq_id,
 		      -labelfont => $image_class->gdMediumBoldFont,
 		      -tick      => 2,
 		      -units     => $conf->setting(general=>'units') ||'',
 		      -unit_divider => $conf->setting(general=>'unit_divider') || 1,
 		     );
 
-    $self->add_overview_landmarks($panel,$segment,$track_options);
+    $self->_add_landmarks(\@tracks,$panel,$segment,$track_options);
 
-    # add uploaded files that have the "overview" option set
+    # add uploaded files that have the "(over|region)view" option set
     if ($feature_files) {
       my $select = sub {
 	my $file  = shift;
 	my $type  = shift;
 	my $section = $file->setting($type=>'section') || '';
-	return $section =~ /overview/;
+	return defined $section && $section =~ /$region_name/;
       };
       foreach (keys %$feature_files) {
 	my $ff = $feature_files->{$_};
@@ -1303,8 +1309,22 @@ sub overview {
 sub add_overview_landmarks {
   my $self = shift;
   my ($panel,$segment,$options) = @_;
+  my @tracks = $self->overview_tracks;
+  $self->_add_landmarks(\@tracks,$panel,$segment,$options);
+}
+
+sub add_regionview_landmarks {
+  my $self = shift;
+  my ($panel,$segment,$options) = @_;
+  my @tracks = $self->regionview_tracks;
+  $self->_add_landmarks(\@tracks,$panel,$segment,$options);
+}
+
+sub _add_landmarks {
+  my $self = shift;
+  my ($tracks_to_add,$panel,$segment,$options) = @_;
   my $conf = $self->config;
-  my @tracks = grep {$options->{$_}{visible}} $conf->overview_tracks;
+  my @tracks = grep {$options->{$_}{visible}} @$tracks_to_add;
 
   my (@feature_types,%type2track,%track);
 
@@ -1317,7 +1337,7 @@ sub add_overview_landmarks {
 				  $conf->style($overview_track),
 				 );
     foreach (@types) {
-      $type2track{$_} = $overview_track
+      $type2track{lc $_} = $overview_track
     }
     $track{$overview_track} = $track;
     push @feature_types,@types;
@@ -1328,10 +1348,12 @@ sub add_overview_landmarks {
 
   my %count;
   while (my $feature = $iterator->next_seq) {
-    my $track_name = eval{$type2track{$feature->type}}
-      || $type2track{$feature->primary_tag}
-	|| eval{$type2track{$feature->method}}
+
+    my $track_name = eval{$type2track{lc $feature->type}}
+      || $type2track{lc $feature->primary_tag}
+	|| eval{$type2track{lc $feature->method}}
 	  || next;
+
     my $track = $track{$track_name} or next;
     $track->add_feature($feature);
     $count{$track_name}++;
@@ -1356,6 +1378,7 @@ sub add_overview_landmarks {
   }
   return \%track;
 }
+
 
 =head2 hits_on_overview()
 
@@ -1976,6 +1999,11 @@ sub labels {
 sub overview_tracks {
   my $self = shift;
   grep { ($_ eq 'overview' || /:overview$/) && $self->authorized($_) } $self->configured_types;
+}
+
+sub regionview_tracks {
+  my $self = shift;
+  grep { ($_ eq 'region' || /:region$/) && $self->authorized($_) } $self->configured_types;
 }
 
 # implement the "restrict" option

@@ -1,4 +1,4 @@
-# $Id: dbi.pm,v 1.1.2.1 2005-05-28 21:42:05 lstein Exp $
+# $Id: dbi.pm,v 1.1.2.2 2005-07-10 03:01:58 lstein Exp $
 
 =head1 NAME
 
@@ -47,6 +47,10 @@ use constant STRAIGHT_JOIN_LIMIT => 200_000;
 # this is the size to which DNA should be shredded
 use constant DNA_CHUNK_SIZE  => 2000;
 
+# for debugging fbin optimization
+use constant EPSILON  => 1e-7;  # set to zero if you trust mysql's floating point comparisons
+use constant OPTIMIZE => 1;     # set to zero to turn off optimization completely
+
 ##############################################################################
 
 
@@ -80,7 +84,7 @@ sub new {
   my ($features_db,$username,$auth,$other) = rearrange([
 							[qw(FEATUREDB DB DSN)],
 							[qw(USERNAME USER)],
-							[qw(PASSWORD PASS)],
+							[qw(PASSWORD PASSWD PASS)],
 						       ],@_);
 
   $features_db  || $class->throw("new(): Provide a data source or DBI database");
@@ -1940,7 +1944,7 @@ sub bin_query {
   $maxbin = defined $maxbin ? $maxbin : $self->max_bin;
   my $tier = $maxbin;
   while ($tier >= $minbin) {
-    my ($tier_start,$tier_stop) = (bin_bot($tier,$start),bin_top($tier,$stop));
+    my ($tier_start,$tier_stop) = (bin_bot($tier,$start)-EPSILON(),bin_top($tier,$stop)+EPSILON());
     if ($tier_start == $tier_stop) {
       push @bins,'fbin=?';
       push @args,$tier_start;
@@ -1960,10 +1964,17 @@ sub overlap_query {
   my $self = shift;
   my ($start,$stop) = @_;
 
-  my ($bq,@bargs)   = $self->bin_query($start,$stop);
-  my ($iq,@iargs) = $self->overlap_query_nobin($start,$stop);
-  my $query = "($bq)\n\tAND $iq";
-  my @args  = (@bargs,@iargs);
+  my ($query,@args);
+  my ($iq,@iargs)   = $self->overlap_query_nobin($start,$stop);
+  if (OPTIMIZE) {
+    my ($bq,@bargs)   = $self->bin_query($start,$stop);
+    $query = "($bq)\n\tAND $iq";
+    @args  = (@bargs,@iargs);
+  }
+  else {
+    $query = $iq;
+    @args  = @iargs;
+  }
 
   return wantarray ? ($query,@args) : $self->dbh->dbi_quote($query,@args);
 }

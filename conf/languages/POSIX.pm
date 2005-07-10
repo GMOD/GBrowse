@@ -142,7 +142,11 @@ END
 
    OVERVIEW_TRACKS => '<sup>*</sup>Overview track',
 
+   REGION_TRACKS => '<sup>**</sup>Region track',
+
    EXAMPLES => 'Examples',
+
+   REGION_SIZE => 'Region Size (bp)',
 
    HELP     => 'Help',
 
@@ -304,6 +308,8 @@ END
    GENERAL     => 'General',
 
    DETAILS     => 'Details',
+
+   REGION      => 'Region',
 
    ALL_ON      => 'All on',
 

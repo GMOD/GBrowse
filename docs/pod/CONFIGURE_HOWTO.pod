@@ -596,6 +596,13 @@ width of each level, in bp.  For example:
 
       zoom levels = 1000 2000 5000 10000 20000 40000 100000 200000
 
+=item * region segment
+
+If this configuration option is set, a new "region panel" will appear
+that is intermediate in size between the overview and the detail
+panel. The value of this option becomes the size of the region panel
+in base pairs.
+
 =item * show sources
 
 A 0 (false) or 1 (true) value which controls whether or not to show
@@ -1296,6 +1303,19 @@ source "framework":
  bgcolor       = lavender
  height        = 5
  key           = Mapped Genes
+
+Similarly, you can make a track appear in the region panel by
+appending ":region" to its name:
+
+ [genedensity:region]
+ feature       = gene_density
+ glyph         = xyplot
+ graph_type    = boxes
+ scale         = right
+ bgcolor       = red
+ fgcolor       = red
+ height        = 20
+ key           = SNP Density
 
 =head2 B6. Semantic Zooming
 

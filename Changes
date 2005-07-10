@@ -17,7 +17,8 @@
 		selectively open or close a set of tracks without blowing
 		away the settings for all the other tracks the way "label" does.
 	* Incorporated a new "region" panel which is intermediate in size between the overview
-		and the detail panels. Thanks to Barry Healy for coding this.
+		and the detail panels. Thanks to Barry Healy for coding this. Use the new 
+		"region segment" configuration option to turn this feature on.
 
 1.62    Mon Apr  5 09:43:25 EDT 2004
 	* Added request timeout option for very long requests.

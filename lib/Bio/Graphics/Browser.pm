@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.17 2005-07-11 22:57:18 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.18 2005-07-11 23:12:07 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1589,7 +1589,7 @@ sub do_label {
 
   my $maxl              = $conf->code_setting($track_name => 'label density');
   $maxl                 = $max_labels unless defined $maxl;
-  my $maxed_out = $count <= $maxl;
+  my $maxed_out         = $count <= $maxl;
 
   my $conf_label        = $conf->semantic_setting($track_name => 'label',$length);
   $conf_label           = 1 unless defined $conf_label;

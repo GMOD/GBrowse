@@ -1,7 +1,4 @@
-* Better workaround for MSIE broken cookie handling.  When moving from
-  datasource to datasource, the section visibility toggle will change
-  haphazardly rather than being reset to the previous value.  This will be
-  noticeable within the track section.
+* Add popup menu support using Cyril's code.
 * More internationalization
 * Limit search results to user-set max
 * Group SVG elements by feature ID
@@ -9,5 +6,5 @@
   Will need plugin authors to provide internationalization.
 * Colorize xyglyph.
 
-$Id: TODO,v 1.4.6.4 2005-07-10 03:01:57 lstein Exp $
+$Id: TODO,v 1.4.6.5 2005-07-11 18:57:31 lstein Exp $
 

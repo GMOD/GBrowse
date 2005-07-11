@@ -59,7 +59,7 @@ it under the same terms as Perl itself.
 =cut
 
 use strict;
-# $Id: memory.pm,v 1.1.2.1 2005-05-28 21:42:05 lstein Exp $
+# $Id: memory.pm,v 1.1.2.2 2005-07-11 18:57:31 lstein Exp $
 # AUTHOR: Shulamit Avraham
 # This module needs to be cleaned up and documented
 
@@ -179,7 +179,7 @@ sub load_gff_line {
   my $feature_hash  = shift;
   $feature_hash->{strand} = '' if $feature_hash->{strand} && $feature_hash->{strand} eq '.';
   $feature_hash->{phase}  = ''  if $feature_hash->{phase}  && $feature_hash->{phase} eq '.';
-  $feature_hash->{gclass} = 'Sequence' if length $feature_hash->{gclass} == 0;
+  $feature_hash->{gclass} = 'Sequence' unless defined $feature_hash->{gclass};
   # sort by group please
   push @{$self->{tmp}{$feature_hash->{gclass},$feature_hash->{gname}}},$feature_hash;
 }

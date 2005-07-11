@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.15 2005-07-11 22:17:41 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.16 2005-07-11 22:31:35 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1149,7 +1149,7 @@ sub image_and_map {
       my $count = $feature_count{$label};
       $count    = $limit->{$label} if $limit->{$label} && $limit->{$label} < $count;
 
-      my $do_bump  = $self->do_bump($label, $options->{$label},$count,$max_bump);
+      my $do_bump  = $self->do_bump($label, $options->{$label},$count,$max_bump,$length);
       my $do_label = $self->do_label($label,$options->{$label},$count,$max_labels,$length);
       my $do_description = $self->do_description($label,$options->{$label},$count,$max_labels,$length);
 
@@ -1565,14 +1565,14 @@ sub label_density {
 
 sub do_bump {
   my $self = shift;
-  my ($track_name,$option,$count,$max) = @_;
+  my ($track_name,$option,$count,$max,$length) = @_;
 
   my $conf              = $self->config;
   my $maxb              = $conf->code_setting($track_name => 'bump density');
   $maxb                 = $max unless defined $maxb;
 
   my $maxed_out = $count <= $maxb;
-  my $conf_bump = $conf->code_setting($track_name => 'bump');
+  my $conf_bump = $conf->semantic_setting($track_name => 'bump',$length);
   $option ||= 0;
   return defined $conf_bump ? $conf_bump
       :  $option == 0 ? $maxed_out

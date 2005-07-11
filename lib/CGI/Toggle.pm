@@ -26,21 +26,21 @@ my $cookie_expires = EXPIRES;
 
 my $style = <<'END';
 .el_hidden  {display:none}
-.el_visible {display:block}
+.el_visible {display:inline}
 .ctl_hidden {
              cursor:hand;
              display:none;
             }
 .ctl_visible {
              cursor:hand;
-             display:inline;
+             display:block;
             }
 .tctl      {  text-decoration:underline; }
 END
 
 my $noscript = <<'END';
 <style>
-.el_hidden { display:block }
+.el_hidden { display:inline }
 .nojs      { display:none }
 </style>
 END
@@ -114,11 +114,11 @@ sub toggle_section {
   my $plus  = $config{plus_img}  || "$image_dir/".PLUS;
   my $minus = $config{minus_img} || "$image_dir/".MINUS;
 
-  my $show_ctl = span({-id=>"${id}_show",
+  my $show_ctl = div({-id=>"${id}_show",
 		       -class=>$config{on} ? "ctl_hidden" : "ctl_visible",
 		       -onClick=>"visibility('$id','on','$cookie_name','$cookie_expires')"},
 		      img({-src=>$plus}).'&nbsp;'.span({-class=>'tctl'},$section_title));
-  my $hide_ctl = span({-id=>"${id}_hide",
+  my $hide_ctl = div({-id=>"${id}_hide",
 		       -class=>$config{on} ? "ctl_visible" : "ctl_hidden",
 		       -onClick=>"visibility('$id','off','$cookie_name','$cookie_expires')"},
 		      img({-src=>$minus}).'&nbsp;'.span({-class=>'tctl'},$section_title));

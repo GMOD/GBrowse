@@ -155,8 +155,9 @@ sub start_html {
 			     -value=>$state,
 			     -path=>url(-path_info=>1,-absolute=>1),
 			     -expires=>'+7d');
-    $args{-head}         = CGI::meta({-http_equiv=>'Set-Cookie',
-				      -content => $cookie});
+    $args{-head}         .= "\n" if defined $args{-head};
+    $args{-head}         .= CGI::meta({-http_equiv=>'Set-Cookie',
+				       -content => $cookie});
   }
 
   my $result = CGI::start_html(%args);

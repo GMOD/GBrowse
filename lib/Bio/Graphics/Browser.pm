@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.14 2005-07-11 20:06:46 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.15 2005-07-11 22:17:41 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1531,6 +1531,7 @@ sub _hits_on_overview {
 		      -bgcolor   => 'red',
 		      -fallback_to_rectangle => 1,
 		      -connector => 'solid',
+		      -no_subparts => 1,
 		      -key       => $keyname,
 		      -bump      => @{$refs{$ref}} <= $max_bump,
 		      -label     => @{$refs{$ref}} <= $max_bump,  # deliberate

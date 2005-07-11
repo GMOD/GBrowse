@@ -453,11 +453,11 @@ sub main_display {
   print hr();
   print tracks_table($page_settings,$feature_files);
   print html_frag('html5',$segment,$page_settings);
-  print br(),settings_table($page_settings);
+  print settings_table($page_settings);
   print html_frag('html6',$segment,$page_settings);
 
   print start_multipart_form(-name=>'externalform');
-  print br(),external_table($page_settings,$feature_files);
+  print external_table($page_settings,$feature_files);
   print end_form();
 
   print end_form();
@@ -472,30 +472,28 @@ sub main_display {
 
 sub overview_panel {
   my ($segment,$page_settings,$feature_files) = @_;
-  my $image = overview($segment,$page_settings,$feature_files).br();
-  return br().
-    toggle_section({on=>1},
-		   b($CONFIG->tr('Overview')),
-		   table({-border=>0,-width=>'100%'},
-			 TR({-class=>'databody'},
-			    td({-align=>'center'},$image)
-			   )
-			)
-		  );
+  my $image = overview($segment,$page_settings,$feature_files);
+  return toggle_section({on=>1},
+			b($CONFIG->tr('Overview')),
+			table({-border=>0,-width=>'100%'},
+			      TR({-class=>'databody'},
+				 td({-align=>'center'},$image)
+				)
+			     )
+		       );
 }
 
 sub region_panel {
   my ($region_segment,$segment,$page_settings,$feature_files) = @_;
-  my $image = regionview($region_segment,$segment,$page_settings,$feature_files).br();
-  return br().
-    toggle_section({on=>1},
-		   b($CONFIG->tr('Region')),
-		   table({-border=>0,-width=>'100%'},
-			 TR({-class=>'databody'},
-			    td({-align=>'center'},$image)
-			   )
-			)
-		  );
+  my $image = regionview($region_segment,$segment,$page_settings,$feature_files);
+  return toggle_section({on=>1},
+			b($CONFIG->tr('Region')),
+			table({-border=>0,-width=>'100%'},
+			      TR({-class=>'databody'},
+				 td({-align=>'center'},$image)
+				)
+			     )
+		       );
 }
 
 
@@ -529,7 +527,7 @@ sub detail_panel {
     resize(\$segment);
 
     $CONFIG->width($page_settings->{width});
-    my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} && !/:.+view$/ }
+    my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} && !/:(overview|region)$/ }
                                @{$page_settings->{tracks}};
     my %options = map {$_=>$page_settings->{features}{$_}{options}} @tracks_to_show;
     my %limit   = map {$_=>$page_settings->{features}{$_}{limit}}   @tracks_to_show;
@@ -2215,7 +2213,7 @@ sub set_track_options {
       th({-align=>'left',-class=>'searchtitle'},$CONFIG->tr("Track"),$track+1).
       th({-align=>'left',-class=>'searchbody'},$label=~/:overview$/  ? div({-style=>"background: $oc"},
 									   "$keys{$label}<sup>*</sup>")
-	                                     : $label=~/:regionview$/? div({-style=>"background: $oc"},
+	                                     : $label=~/:region$/? div({-style=>"background: $oc"},
 									   "$keys{$label}<sup>**</sup>")
 	                                     : $keys{$label}).
       td({-align=>'center',-class=>'searchbody'},

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.16 2005-07-11 22:31:35 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.17 2005-07-11 22:57:18 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1006,9 +1006,6 @@ sub image_and_map {
 
   # Bring in the appropriate package - just for the fonts. Ugh.
   eval "use $image_class";
-
-  # these are natively configured tracks
-  my @labels = $self->labels;
 
   my $width = $self->width;
   my $conf  = $self->config;
@@ -2193,7 +2190,7 @@ sub invert_types {
   my $config  = $self->{config} or return;
   my %inverted;
   for my $label (keys %{$config}) {
-    next if $label=~/:?overview$/;   # special case
+    next if $label=~/:?(overview|region)$/;   # special case
     my $feature = $config->{$label}{'feature'} or next;
     foreach (shellwords($feature||'')) {
       $inverted{lc $_}{$label}++;

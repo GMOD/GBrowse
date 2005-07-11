@@ -22,6 +22,7 @@ my $js_dir    = '/gbrowse/js';
 my $cookie_name = __PACKAGE__;
 $cookie_name    =~ s/:/_/g;
 
+my $cookie_expires = EXPIRES;
 
 my $style = <<'END';
 .el_hidden  {display:none}
@@ -76,7 +77,7 @@ sub start_html {
     my $cookie = CGI::cookie(-name=>$cookie_name,
 			     -value=>$state,
 			     -path=>url(-path_info=>1,-absolute=>1),
-			     -expires=>'+7d');
+			     -expires=>$cookie_expires);
     $args{-head}         .= "\n" if defined $args{-head};
     $args{-head}         .= CGI::meta({-http_equiv=>'Set-Cookie',
 				       -content => $cookie});
@@ -94,7 +95,7 @@ sub start_html {
 }
 
 sub end_html {
- my @script_section = CGI->_script({code=>"xSetCookie('$cookie_name',$VECTOR,'${\EXPIRES}')"})
+ my @script_section = CGI->_script({code=>"xSetCookie('$cookie_name',$VECTOR,'$cookie_expires')"})
    unless $VECTOR==0;
  return @script_section,CGI::end_html;
 }
@@ -115,11 +116,11 @@ sub toggle_section {
 
   my $show_ctl = span({-id=>"${id}_show",
 		       -class=>$config{on} ? "ctl_hidden" : "ctl_visible",
-		       -onClick=>"visibility('$id','on')"},
+		       -onClick=>"visibility('$id','on','$cookie_name','$cookie_expires')"},
 		      img({-src=>$plus}).'&nbsp;'.span({-class=>'tctl'},$section_title));
   my $hide_ctl = span({-id=>"${id}_hide",
 		       -class=>$config{on} ? "ctl_visible" : "ctl_hidden",
-		       -onClick=>"visibility('$id','off')"},
+		       -onClick=>"visibility('$id','off','$cookie_name','$cookie_expires')"},
 		      img({-src=>$minus}).'&nbsp;'.span({-class=>'tctl'},$section_title));
   my $content  = div({-id    => $id,
 		      -class => $config{on} ? 'el_visible' : 'el_hidden'},

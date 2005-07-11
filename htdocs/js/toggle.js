@@ -6,7 +6,7 @@ function turnOff (a) {
     a.style.display="none";
 }
 
-function visibility (a,state) {
+function visibility (a,state,cookie_name,cookie_expires) {
    var element = document.getElementById(a);
    var show_control = document.getElementById(a + "_show");
    var hide_control = document.getElementById(a + "_hide");
@@ -19,13 +19,11 @@ function visibility (a,state) {
       turnOff(hide_control);
       turnOn(show_control);
    }
-   setVisState(a,state);
+   setVisState(a,state,cookie_name,cookie_expires);
    return false;
 }
 
-function setVisState (a,state) {
-   var cookie_name    = '$cookie_name';
-   var cookie_expires = '${\EXPIRES}';
+function setVisState (a,state,cookie_name,cookie_expires) {
    var el_index       = a.substring(1);
    var cookie_value   = xGetCookie(cookie_name);
    if (!cookie_value) { cookie_value = 0xFFFFFF; }
@@ -34,8 +32,7 @@ function setVisState (a,state) {
    xSetCookie(cookie_name,cookie_value,cookie_expires);
 }
 
-function getVisState (a) {
-   var cookie_name    = '$cookie_name';
+function getVisState (a,cookie_name) {
    var el_index       = a.id.substring(1);
    var cookie_value   = xGetCookie(cookie_name);
    if (!cookie_value) { cookie_value = 0xFFFFFF; }

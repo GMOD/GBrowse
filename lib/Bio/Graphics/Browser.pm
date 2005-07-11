@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.13 2005-07-11 16:28:44 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.14 2005-07-11 20:06:46 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -858,20 +858,25 @@ sub clear_cache {
 
 sub tmpdir {
   my $self = shift;
-
   my $path = shift || '';
-  my $tmpuri = $self->setting('tmpimages') or die "no tmpimages option defined, can't generate a picture";
+
+  my ($tmpuri,$tmpdir) = shellwords($self->setting('tmpimages')) 
+    or die "no tmpimages option defined, can't generate a picture";
   $tmpuri .= "/$path" if $path;
-  my $tmpdir;
+
   if ($ENV{MOD_PERL} ) {
-      my $r          = Apache->request;
-      my $subr       = $r->lookup_uri($tmpuri);
-      $tmpdir        = $subr->filename;
-      my $path_info  = $subr->path_info;
-      $tmpdir       .= $path_info if $path_info;
-  } else {
+    my $r          = Apache->request;
+    my $subr       = $r->lookup_uri($tmpuri);
+    $tmpdir        = $subr->filename;
+    my $path_info  = $subr->path_info;
+    $tmpdir       .= $path_info if $path_info;
+  } elsif ($tmpdir) {
+    $tmpdir .= "/$path" if $path;
+  }
+  else {
     $tmpdir = "$ENV{DOCUMENT_ROOT}/$tmpuri";
   }
+
   # we need to untaint tmpdir before calling mkpath()
   return unless $tmpdir =~ /^(.+)$/;
   $path = $1;

@@ -519,7 +519,20 @@ URL in which the gbrowse javascript helper function files are located.
 =item * tmpimages
 
 URL of a writable directory in which GBrowse can write its temporary
-images.    (You will probably not need to change this.)
+images. The format is:
+
+  tmpimages = <tmpimages_url> <tmpimages_path>
+
+Where <tmpimages_url> is the directory as it appears as a URL and
+<tmpimages_path> is the physical path to the directory as it appears
+to the filesystem. Usually the physical path is just the URL with the
+DocumentRoot configuration variable prepended to it, in which case
+only the URL is needed. However, if the URL is defined using an Alias
+directive, then the path argument is mandatory.
+
+NOTE: The path argument is ignored if gbrowse is running under
+modperl, because modperl allows the URL to be translated into a
+physical directory programatically.
 
 =item * image widths
 

@@ -107,26 +107,7 @@ require Exporter;
 	    );
 
 use constant DEBUG => 0;
-
-use constant JS => <<'END';
-function gbTurnOff (a) {
-  if (document.getElementById(a+"_a")) { document.getElementById(a+"_a").checked='' };
-  if (document.getElementById(a+"_n")) { document.getElementById(a+"_n").checked='' };
-}
-function gbCheck (button,state) {
-  var a         = button.id;
-  a             = a.substring(0,a.indexOf("_"));
-  var container = document.getElementById(a);
-  if (!container) { return false; }
-  var checkboxes = container.getElementsByTagName('input');
-  if (!checkboxes) { return false; }
-  for (var i=0; i<checkboxes.length; i++)
-     checkboxes[i].checked=state;
-  gbTurnOff(a);
-  button.checked="on";
-  return false;
-}
-END
+use constant JS    => '/gbrowse/js';
 
 sub conf_dir {
   my $default = shift;
@@ -225,7 +206,9 @@ sub print_top {
 	     );
   push @args,(-head=>$CONFIG->setting('head'))    if $CONFIG->setting('head');
   push @args,(-lang=>($CONFIG->language_code)[0]) if $CONFIG->language_code;
-  push @args,(-script=>{code=>JS});
+  push @args,(-script=>{src=>($CONFIG->setting('js')||JS) . "/buttons.js"});
+  push @args,(-gbrowse_images => $CONFIG->setting('buttons') || '/gbrowse/images/buttons');
+  push @args,(-gbrowse_js     => $CONFIG->setting('js')      || '/gbrowse/js');
   print start_html(@args) unless $HTML++;
 }
 

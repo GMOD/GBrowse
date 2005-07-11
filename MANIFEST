@@ -337,6 +337,8 @@ htdocs/images/help/track+settings.gif
 htdocs/images/help/upload+edit.gif
 htdocs/images/help/upload+remote.gif
 htdocs/images/help/upload.gif
+htdocs/js/toggle.js
+htdocs/js/buttons.js
 htdocs/index.html
 INSTALL
 install_util/cgi_install.PLS

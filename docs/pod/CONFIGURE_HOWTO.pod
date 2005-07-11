@@ -511,6 +511,11 @@ with a space-delimited list of additional directories to search in.
 URL in which the various graphical buttons used by GBrowse are located.
 (You will probably not need to change this.)
 
+=item * js
+
+URL in which the gbrowse javascript helper function files are located.
+(You will probably not need to change this).
+
 =item * tmpimages
 
 URL of a writable directory in which GBrowse can write its temporary

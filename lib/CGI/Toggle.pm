@@ -9,96 +9,19 @@ use vars '$next_id','$VECTOR';
 
 our @EXPORT = ('toggle_section',
 	       'start_html',
-	      'end_html');
+	       'end_html');
 
-use constant PLUS    => '/gbrowse/images/buttons/plus.png';
-use constant MINUS   => '/gbrowse/images/buttons/minus.png';
-use constant JS      => '/gbrowse/js/toggle.js';
+use constant PLUS    => 'plus.png';
+use constant MINUS   => 'minus.png';
+use constant JS      => 'toggle.js';
 use constant EXPIRES => CGI::Util::expires('+7d');
+
+my $image_dir = '/gbrowse/images/buttons';
+my $js_dir    = '/gbrowse/js';
 
 my $cookie_name = __PACKAGE__;
 $cookie_name    =~ s/:/_/g;
 
-my $jscript = <<"END";
-function turnOn (a) {
-    a.style.display=(a.className=="ctl_hidden" || a.className=="ctl_visible")
-           ? "inline" : "block";
-}
-function turnOff (a) {
-    a.style.display="none";
-}
-
-function visibility (a,state) {
-   var element = document.getElementById(a);
-   var show_control = document.getElementById(a + "_show");
-   var hide_control = document.getElementById(a + "_hide");
-   if (state == "on") {
-      turnOn(element);
-      turnOff(show_control);
-      turnOn(hide_control);
-   } else if (state == "off"){
-      turnOff(element);
-      turnOff(hide_control);
-      turnOn(show_control);
-   }
-   setVisState(a,state);
-   return false;
-}
-
-function setVisState (a,state) {
-   var cookie_name    = '$cookie_name';
-   var cookie_expires = '${\EXPIRES}';
-   var el_index       = a.substring(1);
-   var cookie_value   = xGetCookie(cookie_name);
-   if (!cookie_value) { cookie_value = 0xFFFFFF; }
-   if (state == "on") { cookie_value |= (1 << el_index) }
-                 else { cookie_value &= ~(1 << el_index) }
-   xSetCookie(cookie_name,cookie_value,cookie_expires);
-}
-
-function getVisState (a) {
-   var cookie_name    = '$cookie_name';
-   var el_index       = a.id.substring(1);
-   var cookie_value   = xGetCookie(cookie_name);
-   if (!cookie_value) { cookie_value = 0xFFFFFF; }
-   return (cookie_value &= (1 << el_index)) == 0 ? 'off' : 'on';
-}
-
-// The x{Set,Get}Cookie functions are derived from cross-browser.com
-// Copyright (c) 2004 Michael Foster, Licensed LGPL (gnu.org)
-function xSetCookie(name, value, expire)
-{
-  var path = location.pathname;
-  var text = name + "=" + escape(value) +
-             (!expire ? "" : "; expires=" + expire) +
-             "; path=" + path;
-  document.cookie = text;
-}
-
-function xGetCookie(name)
-{
-  var value=null, search=name+"=";
-  if (document.cookie.length > 0) {
-    var offset = document.cookie.indexOf(search);
-    if (offset != -1) {
-      offset += search.length;
-      var end = document.cookie.indexOf(";", offset);
-      if (end == -1) end = document.cookie.length;
-      value = unescape(document.cookie.substring(offset, end));
-    }
-  }
-  return value;
-}
-
-function startPage() {
- var spans=document.getElementsByTagName("div");
- for (var i=0; i < spans.length; i++){
-    if (spans[i].className=="ctl_hidden" || spans[i].className=="el_hidden" ) {
-           spans[i].style.display = "none";
-    }
- }
-}
-END
 
 my $style = <<'END';
 .el_hidden  {display:none}
@@ -121,7 +44,6 @@ my $noscript = <<'END';
 </style>
 END
 
-
 sub start_html {
   $next_id = 'T0000';
   $VECTOR  = 0;
@@ -129,6 +51,9 @@ sub start_html {
 
   $args{-noscript}     = $noscript;
   $args{-onLoad}       = "startPage()";
+
+  $image_dir           = $args{-gbrowse_images} if defined $args{-gbrowse_images};
+  $js_dir              = $args{-gbrowse_js}     if defined $args{-gbrowse_js};
 
   # earlier versions of CGI.pm don't support multiple -style and -script args.
   if ($CGI::VERSION >= 3.05) {
@@ -143,13 +68,10 @@ sub start_html {
       $args{-script} = [$args{-script}]          if ref $args{-script} && ref $args{-script} ne 'ARRAY';
     }
 
-    push @{$args{-script}},{code=>$jscript};
+    push @{$args{-script}},{src=>"$js_dir/".JS};
   }
 
   my $state = CGI::cookie($cookie_name);
-# these various attempts to default end up forcing all sections either open or closed.
-#  $state = 0 unless defined $state && $state >= 0;
-#  $state = 0xFFFFFF unless defined $state && $state >= 0 && $state <= 0xFFFFFF;
   if (defined $state) {
     my $cookie = CGI::cookie(-name=>$cookie_name,
 			     -value=>$state,
@@ -164,7 +86,7 @@ sub start_html {
 
   if ($CGI::VERSION < 3.05) {
     my $style_section  = join '',CGI->_style({code=>$style});
-    my $script_section = join '',CGI->_script({code=>$jscript});
+    my $script_section = join '',CGI->_script({src=>"$js_dir/".JS});
     $result =~ s/<\/head>/$style_section\n$script_section\n<\/head>/i;
   }
 
@@ -188,8 +110,8 @@ sub toggle_section {
     $config{on} = ($cookie & (1<<substr($id,1)||0)) != 0;
   }
 
-  my $plus  = $config{plus_img}  || PLUS;
-  my $minus = $config{minus_img} || MINUS;
+  my $plus  = $config{plus_img}  || "$image_dir/".PLUS;
+  my $minus = $config{minus_img} || "$image_dir/".MINUS;
 
   my $show_ctl = span({-id=>"${id}_show",
 		       -class=>$config{on} ? "ctl_hidden" : "ctl_visible",

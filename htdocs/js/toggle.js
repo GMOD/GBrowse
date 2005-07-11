@@ -1,9 +1,8 @@
 function turnOn (a) {
-    a.style.display=(a.className=="ctl_hidden" || a.className=="ctl_visible")
-           ? "inline" : "block";
+  a.style.display="block";
 }
 function turnOff (a) {
-    a.style.display="none";
+  a.style.display="none";
 }
 
 function visibility (a,state,cookie_name,cookie_expires) {

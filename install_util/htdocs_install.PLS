@@ -58,15 +58,14 @@ closedir HTDOCS;
 
 my $imagedir  = Bio::Root::IO->catfile($ht_target, "images");
 my $buttondir = Bio::Root::IO->catfile($imagedir, "buttons");
-if (! (-e $imagedir) ) {
-    print "Making $imagedir...\n";
-    mkdir($imagedir,0777) or die "unable to make $imagedir\n";
-}
-if (! (-e $buttondir) ) {
-    print "Making $buttondir...\n";
-    mkdir($buttondir,0777) or die "unable to make $buttondir\n";
-}
+my $jsdir  = Bio::Root::IO->catfile($ht_target, "js");
 
+for my $ddir ( $imagedir,$buttondir,$jsdir ) {
+    if (! (-e $ddir) ) {
+	print "Making $ddir...\n";
+	mkdir($ddir,0777) or die "unable to make $ddir\n";
+    }
+}
 my $localbuttondir = "htdocs/images/buttons";
 opendir BUTTONS, $localbuttondir or die "unable to open $localbuttondir\n";
 while (my $file = readdir(BUTTONS) ) {
@@ -157,9 +156,13 @@ copy_tree("./sample_data",$ht_target);
 print "Installing contrib...\n";
 copy_tree("./contrib",$ht_target);
 
+print "Installing js files...\n";
+copy_tree("./htdocs/js",$ht_target);
+
 print "Installing sample data files...\n";
-copy_tree("./htdocs/databases","$ht_target");
+copy_tree("./htdocs/databases",$ht_target);
 chmod 0777,glob("$ht_target/databases/*");
+
 
 print "\n\n#############################################################################\n";
 print "GBrowse is now installed.  Read INSTALL for further setup instructions.\n";

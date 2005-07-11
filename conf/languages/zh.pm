@@ -11,7 +11,7 @@
    PAGE_TITLE => '基因組流覽器',
 
    SEARCH_INSTRUCTIONS => <<END,
-根據序列名﹐ 基因名﹐遺傳位點%s, 或其他標記進行查詢. 允許使用*通配符.
+根據序列名﹐ 基因名﹐遺傳位點%s, 或其他標記進行查詢. 允許使用* 通配符.
 END
 
    NAVIGATION_INSTRUCTIONS => <<END,
@@ -20,8 +20,8 @@ END
 END
 
    EDIT_INSTRUCTIONS => <<END,
-在此編輯你的上載註釋數據. 你可用 tab鍵或空白分界,
-但如果數據中有 tab 或空白﹐ 必須用引號.
+在此編輯你的上載註釋數據. 你可用表格(tab) 鍵或空白分界,
+但如果數據中有 tab  或空白﹐ 必須用引號.
 END
 
    SHOWING_FROM_TO => '顯示 %s 起始于 %s, 位置從 %s 到 %s',
@@ -91,24 +91,24 @@ END
 </p>
 
 <p>
-如選擇粗覽(染色體或contig)﹐儘量縮小觀察區域。
+如選擇略覽(染色體或contig)﹐儘量縮小觀察區域。
 </p>
 END
 
    TIMEOUT  => <<'END',
 超時。你可能選擇的區域過大。要避免超時﹐你可關掉一些數據道﹐選擇較小區域﹐或點擊"回執"鍵。
 END
-   GO       => '運行',
+   GO       => '執行',
 
    FIND     => '尋找',
 
    SEARCH   => '查詢',
 
-   DUMP     => '轉存',
+   DUMP     => '顯示',
 
    HIGHLIGHT   => '強調',
 
-   ANNOTATE     => '註釋',
+   ANNOTATE     => '註解',
 
    SCROLL   => '卷動/縮放',
 
@@ -126,7 +126,9 @@ END
 
    TRACKS   => '數據道',
 
-   EXTERNAL_TRACKS => '外部數據道(斜體)',
+   EXTERNAL_TRACKS => '外來數據道(斜體)',
+
+  OVERVIEW_TRACKS => '<sup>*</sup>概覽數據道',
 
    EXAMPLES => '範例',
 
@@ -172,6 +174,8 @@ END
 
    DATA_SOURCE => '數據來源',
 
+   UPLOAD_TRACKS=>'上載數據道',
+
    UPLOAD_TITLE=> '上載註釋',
 
    UPLOAD_FILE => '上載文件',
@@ -184,18 +188,20 @@ END
 
    NEW         => '新',
 
-   REMOTE_TITLE => '增加遠程註釋',
+   REMOTE_TITLE => '增加遠程註解',
 
-   REMOTE_URL   => '輸入遠程註釋網址',
+   REMOTE_URL   => '輸入遠程註解網址',
 
-   UPDATE_URLS  => '上載網址',
+   UPDATE_URLS  => '更新網址',
 
    PRESETS      => '--選擇當前網址--',
+   
+   NO_TRACKS    => '*空白*',
 
    FILE_INFO    => '最近修改于 %s.  註釋標誌為: %s',
 
    FOOTER_1     => <<END,
-注: 此頁利用 cookie 儲存相關信息. 無信息共享.
+注: 此頁利用 cookie 儲存相關信息. 數據不會混淆.
 END
 
    FOOTER_2    => '通用基因組流覽器版本 %s',
@@ -204,9 +210,9 @@ END
    # MULTIPLE MATCHES PAGE
    #----------------------
 
-   HIT_COUNT      => '以下區域 %d 符合你的要求.',
+   HIT_COUNT      => '以下區域 %d滿足你的要求.',
 
-   POSSIBLE_TRUNCATION  => '搜尋結果限於 %d 次。一些結果會能不全',
+   POSSIBLE_TRUNCATION  => '搜尋結果限於 %d 次。一些結果會能不完全',
 
    MATCHES_ON_REF => '符合于 %s',
 
@@ -222,7 +228,7 @@ END
    # SETTINGS PAGE
    #--------------
 
-   SETTINGS => '%s 的設置',
+   SETTINGS => '%s  的設置',
 
    UNDO     => '復原',
 
@@ -266,7 +272,19 @@ END
 
    HYPEREXPAND_LABEL =>'通過鏈接擴展並標記',
 
-   NO_LIMIT    => '無極限',
+   NO_LIMIT    => '無邊界',
+
+   OVERVIEW    => '概覽',
+
+   ANALYSIS    => '分析',
+
+   GENERAL     => '概要',
+
+   DETAILS     => '細節',
+
+   ALL_ON      => '全選',
+
+   ALL_OFF     => '全關',
 
    #--------------
    # HELP PAGES
@@ -320,6 +338,9 @@ END
 
  SMALL_INTERVAL    => '將區域縮小到 %s bp',
 
+
+ NO_SOURCES        => '找不到可讀的數據。或許你沒有閱讀權限。',
 };
+
 
 

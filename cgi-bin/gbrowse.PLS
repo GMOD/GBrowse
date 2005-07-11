@@ -413,6 +413,10 @@ sub main_display {
   # if more than one segment, then list them all
   if (@$segments > 1) {
     multiple_choices($page_settings,$features);
+    # empty sections
+    print toggle_section({on=>1},b($CONFIG->tr('Overview')),'');
+    print toggle_section({on=>1},b($CONFIG->tr('Region')),'') if $page_settings->{region_size};
+    print toggle_section({on=>1},b($CONFIG->tr('Details')),'');
   }
 
   elsif ($segment) {
@@ -781,7 +785,7 @@ sub adjust_settings {
   local $^W = 0;  # kill uninitialized variable warning
   if (param('ref') &&
       ( param('name') eq param('prevname')
-	|| grep {/zoom|nav|region|overview/} param())
+	|| grep {/zoom|nav|regionview\.[xy]|overview\.[xy]/} param())
      )
     {
       $settings->{version} ||= param('version') || '';

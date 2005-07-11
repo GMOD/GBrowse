@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.12 2005-07-10 03:01:59 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.13 2005-07-11 16:28:44 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1309,14 +1309,14 @@ sub _overview {
 sub add_overview_landmarks {
   my $self = shift;
   my ($panel,$segment,$options) = @_;
-  my @tracks = $self->overview_tracks;
+  my @tracks = $self->config->overview_tracks;
   $self->_add_landmarks(\@tracks,$panel,$segment,$options);
 }
 
 sub add_regionview_landmarks {
   my $self = shift;
   my ($panel,$segment,$options) = @_;
-  my @tracks = $self->regionview_tracks;
+  my @tracks = $self->config->regionview_tracks;
   $self->_add_landmarks(\@tracks,$panel,$segment,$options);
 }
 

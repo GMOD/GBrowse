@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.18 2005-07-11 23:12:07 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.19 2005-07-12 13:56:30 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -561,7 +561,7 @@ sub header {
   my $header = $self->config->code_setting(general => 'header');
   if (ref $header eq 'CODE') {
     my $h = eval{$header->(@_)};
-    warn $@ if $@;
+    $self->_callback_complain(general=>'header') if @_;
     return $h;
   }
   return $header;
@@ -581,7 +581,7 @@ sub footer {
   my $footer = $self->config->code_setting(general => 'footer');
   if (ref $footer eq 'CODE') {
     my $f = eval {$footer->(@_)};
-    warn $@ if $@;
+    $self->_callback_complain(general=>'footer') if @_;
     return $f;
   }
   return $footer;
@@ -2234,7 +2234,7 @@ sub make_link {
 
   if (ref($link) eq 'CODE') {
     my $val = eval {$link->($feature,$panel)};
-    warn $@ if $@;
+    $self->_callback_complain($label=>'link') if @_;
     return $val;
   }
   elsif (!$link || $link eq 'AUTO') {
@@ -2267,7 +2267,7 @@ sub make_title {
       || $self->code_setting(general=>'title');
     if (defined $link && ref($link) eq 'CODE') {
       $title       = eval {$link->($feature,$panel)};
-      warn $@ if $@;
+      $self->_callback_complain($label=>'title') if $@;
       return $title if defined $title;
     }
     return $self->link_pattern($link,$feature) if $link && $link ne 'AUTO';
@@ -2307,7 +2307,7 @@ sub make_link_target {
     || $self->code_setting('LINK DEFAULTS' => 'link_target')
     || $self->code_setting(general => 'link_target');
   $link_target = eval {$link_target->($feature,$panel)} if ref($link_target) eq 'CODE';
-  warn $@ if $@;
+  $self->_callback_complain($label=>'link_target') if $@;
   return $link_target;
 }
 

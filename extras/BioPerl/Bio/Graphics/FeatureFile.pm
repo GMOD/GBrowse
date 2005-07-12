@@ -1,6 +1,6 @@
 package Bio::Graphics::FeatureFile;
 
-# $Id: FeatureFile.pm,v 1.1.2.4 2005-06-16 19:51:17 lstein Exp $
+# $Id: FeatureFile.pm,v 1.1.2.5 2005-07-12 13:56:29 lstein Exp $
 # This package parses and renders a simple tab-delimited format for features.
 # It is simpler than GFF, but still has a lot of expressive power.
 # See __END__ for the file format
@@ -203,6 +203,7 @@ sub new {
 		   },$class;
   $self->{coordinate_mapper} = $args{-map_coords} 
     if exists $args{-map_coords} && ref($args{-map_coords}) eq 'CODE';
+
   $self->smart_features($args{-smart_features})       if exists $args{-smart_features};
   $self->{safe}              = $args{-safe}           if exists $args{-safe};
 
@@ -792,19 +793,25 @@ sub code_setting {
     my $package         = $self->base2package;
     my $codestring      = "\\&${package}\:\:${subroutine_name}";
     my $coderef         = eval $codestring;
-    warn $@ if $@;
+    $self->_callback_complain($section,$option) if $@;
     $self->set($section,$option,$coderef);
     return $coderef;
   }
   elsif ($setting =~ /^sub\s*(\(\$\$\))*\s*\{/) {
     my $package         = $self->base2package;
     my $coderef         = eval "package $package; $setting";
-    warn $@ if $@;
+    $self->_callback_complain($section,$option) if $@;
     $self->set($section,$option,$coderef);
     return $coderef;
   } else {
     return $setting;
   }
+}
+
+sub _callback_complain {
+  my $self    = shift;
+  my ($section,$option) = @_;
+  warn "An error occurred while evaluating the callback at section='$section', option='$option':\n   => $@";
 }
 
 =over 4
@@ -1208,7 +1215,7 @@ sub initialize_code {
   my $init_code = $self->_setting(general => 'init_code') or return;
   my $code = "package $package; $init_code; 1;";
   eval $code;
-  warn $@ if $@;
+  $self->_callback_complain(general=>'init_code') if $@;
 }
 
 sub base2package {
@@ -1324,7 +1331,7 @@ sub link_pattern {
 
   if (ref($linkrule) && ref($linkrule) eq 'CODE') {
     my $val = eval {$linkrule->($feature,$panel)};
-    warn $@ if $@;
+    $self->_callback_complain(none=>"linkrule for $feature") if $@;
     return $val;
   }
 

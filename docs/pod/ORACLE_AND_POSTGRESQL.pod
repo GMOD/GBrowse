@@ -103,11 +103,12 @@ straight forward.  First, the GBrowse configuration file needs the
 adaptor line changed to 'dbi::pg' (note that case matters):
 
   [GENERAL]
-  description = C. elegans (via Wormbase Release 60)
-  adaptor     = dbi::pg
-  database    = wormbase
-  user        = nobody
-  passwd      =
+  description = C. elegans (via Wormbase Release 60
+  db_adaptor    = Bio::DB::GFF
+  db_args       = -dsn  dbi:Pg:dbname=chado
+                  -adaptor dbi::pg
+                  -user <username>
+                  -pass <password>
 
 Next, the database needs to have SELECT permission for the username
 that will do the querying.  While Postgres usernames and unix usernames

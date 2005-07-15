@@ -1,5 +1,5 @@
 function turnOn (a) {
-  a.style.display="block";
+  a.style.display="inline";
 }
 function turnOff (a) {
   a.style.display="none";

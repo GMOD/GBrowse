@@ -33,7 +33,7 @@ my $style = <<'END';
             }
 .ctl_visible {
              cursor:hand;
-             display:block;
+             display:inline;
             }
 .tctl      {  text-decoration:underline; }
 END
@@ -125,7 +125,7 @@ sub toggle_section {
   my $content  = div({-id    => $id,
 		      -class => $config{on} ? 'el_visible' : 'el_hidden'},
 		     @section_body);
-  my @result = ($show_ctl.$hide_ctl,$content);
+  my @result = $config{nodiv} ? ($show_ctl.$hide_ctl,$content) : div(($show_ctl.$hide_ctl,$content));
   my $val = substr($id,1);
   $VECTOR   |= (1  << $val)  if $config{on};
   $VECTOR   &= ~(1 << $val) if !$config{on};

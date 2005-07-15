@@ -136,7 +136,7 @@ sub feature_file {
   my ($url,$coordinate_mapper) = @_;
   my @args              = $coordinate_mapper ? (-map_coords=>$coordinate_mapper) : ();
 
-  my $fh = $self->open_file($url) or next;
+  my $fh = $self->open_file($url) or return;
   my $feature_file = Bio::Graphics::FeatureFile->new(-file           => $fh,
 						     -smart_features =>1,
 						     @args,

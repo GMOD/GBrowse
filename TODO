@@ -4,7 +4,7 @@
 * Group SVG elements by feature ID
 * Get rid of verbs attached to plugin names so that translations work properly.
   Will need plugin authors to provide internationalization.
-* Colorize xyglyph.
 
-$Id: TODO,v 1.4.6.5 2005-07-11 18:57:31 lstein Exp $
+
+$Id: TODO,v 1.4.6.6 2005-07-15 17:17:55 lstein Exp $
 

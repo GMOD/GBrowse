@@ -183,9 +183,9 @@ print STDERR <<END;
 END
 ;
 
-my $bioperl_needs_patching = bioperl_version() < 1.5;
+my $bioperl_needs_patching = bioperl_version() < 1.6;
 if ($bioperl_needs_patching) {
-  print STDERR "\nInstalled Bioperl version is less than 1.5.  I will update to latest versions of the BioGraphics and GFF libraries.\n";
+  print STDERR "\nInstalled Bioperl version is less than 1.6.  I will update to latest versions of the BioGraphics and GFF libraries.\n";
 }
 
 my @dir = ();

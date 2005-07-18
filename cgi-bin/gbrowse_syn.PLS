@@ -46,7 +46,6 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-use lib '/home/lstein/projects/Generic-Genome-Browser/lib';
 use strict;
 use CGI qw(:standard);
 use Bio::Graphics;

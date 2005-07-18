@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.21 2005-07-15 17:17:56 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.22 2005-07-18 20:46:37 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -651,7 +651,7 @@ the feature.
 sub make_link {
   my $self = shift;
   my ($feature,$panel,$label) = @_;
-  my @results = $self->config->make_link($feature,$panel,$self->source,$label);
+  my @results = $self->config->make_link($feature,$panel,$label);
   return wantarray ? @results : $results[0];
 }
 
@@ -910,6 +910,7 @@ sub make_map {
     }
 
     my $label  = $_->[5] ? $track2label{$_->[5]} : '';
+
     my $href   = $self->make_href($_->[0],$panel,$label) or next;
     my $alt    = unescape($self->make_title($_->[0],$panel,$label));
     my $target = $self->config->make_link_target($_->[0],$panel,$label);
@@ -1002,6 +1003,8 @@ sub image_and_map {
   my $suppress_scale= $config{noscale};
   my $hilite_callback = $config{hilite_callback};
   my $image_class   = $config{image_class} || 'GD';
+  my $postgrid      = $config{postgrid} || '';
+  my $background    = $config{background} || '';
 
   $segment->factory->debug(1) if DEBUG;
 
@@ -1041,6 +1044,8 @@ sub image_and_map {
 	      -empty_tracks => $conf->setting(general=>'empty_tracks') 	        || DEFAULT_EMPTYTRACKS,
 	      -pad_top      => $title ? $image_class->gdMediumBoldFont->height : 0,
 	      -image_class  => $image_class,
+	      -postgrid     => $postgrid,
+	      -background   => $background,
 	     );
 
   push @argv, -flip => 1 if $flip;
@@ -2222,9 +2227,10 @@ sub summary_mode {
 # override make_link to allow for code references
 sub make_link {
   my $self     = shift;
-  my ($feature,$panel,$source,$label)  = @_;
+  my ($feature,$panel,$label)  = @_;
+
   $panel ||= 'Bio::Graphics::Panel';
-  $label     ||= $self->feature2label($feature);
+  $label ||= $self->feature2label($feature);
 
   my $link     = $self->code_setting($label,'link');
   $link        = $self->code_setting('TRACK DEFAULTS'=>'link') unless defined $link;
@@ -2235,7 +2241,7 @@ sub make_link {
 
   if (ref($link) eq 'CODE') {
     my $val = eval {$link->($feature,$panel)};
-    $self->_callback_complain($label=>'link') if @_;
+    $self->_callback_complain($label=>'link') if $@;
     return $val;
   }
   elsif (!$link || $link eq 'AUTO') {
@@ -2246,7 +2252,7 @@ sub make_link {
     my $ref   = CGI::escape("$c");  # workaround again
     my $start = CGI::escape($feature->start);
     my $end   = CGI::escape($feature->end);
-    my $src   = CGI::escape($source);
+    my $src   = CGI::escape(eval{$feature->source} || '');
     return "../../gbrowse_details/$src?name=$name;class=$class;ref=$ref;start=$start;end=$end";
   }
   return $self->link_pattern($link,$feature,$panel);

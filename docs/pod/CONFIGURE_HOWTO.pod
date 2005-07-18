@@ -842,6 +842,27 @@ no features in it.  Possible values are:
 
 The default value is "key."
 
+=item * background, postgrid
+
+These two options can be used to place custom background images in the
+details panel and are useful for advanced operations such as
+colorizing the panel to show gaps in the assembly. Either option
+accepts either the path to a graphics file to be tiled onto the
+background, or a callback subroutine. In the case of the latter the
+callback will passed a two argument list consisting of the GD::Image
+object and the Bio::Graphics::Panel object. This gives the callback a
+chance to draw on top of the background using GD library calls.
+
+The only difference between the two options is the time that they are
+applied relative to the grid that shows base pair coordinates. The
+background option is invoked before the grid is drawn so that the grid
+appears on top of it. The postgrid option is invoked after the grid is
+drawn, so that anything the option draws appears on top of the
+grid. See
+http://sourceforge.net/mailarchive/message.php?msg_id=12116755 for an
+example of using this feature to show assembly gaps as vertical gray
+regions.
+
 =item * das mapmaster
 
 This option, which should appear somewhere in the [GENERAL] section,

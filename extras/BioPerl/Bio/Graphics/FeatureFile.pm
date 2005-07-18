@@ -1,6 +1,6 @@
 package Bio::Graphics::FeatureFile;
 
-# $Id: FeatureFile.pm,v 1.1.2.5 2005-07-12 13:56:29 lstein Exp $
+# $Id: FeatureFile.pm,v 1.1.2.6 2005-07-18 20:46:37 lstein Exp $
 # This package parses and renders a simple tab-delimited format for features.
 # It is simpler than GFF, but still has a lot of expressive power.
 # See __END__ for the file format
@@ -117,7 +117,7 @@ belong to the same group named yk53c10.
 use strict;
 use Bio::Graphics::Feature;
 use Bio::DB::GFF::Util::Rearrange;
-use Carp;
+use Carp 'cluck','carp','croak';
 use Bio::DB::GFF;
 use IO::File;
 use Text::Shellwords;
@@ -811,7 +811,7 @@ sub code_setting {
 sub _callback_complain {
   my $self    = shift;
   my ($section,$option) = @_;
-  warn "An error occurred while evaluating the callback at section='$section', option='$option':\n   => $@";
+  carp "An error occurred while evaluating the callback at section='$section', option='$option':\n   => $@";
 }
 
 =over 4

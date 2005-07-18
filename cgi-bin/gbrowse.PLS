@@ -542,6 +542,8 @@ sub detail_panel {
 				       lang          => $CONFIG->language,
 				       keystyle      => $page_settings->{ks},
 				       flip          => $page_settings->{flip},
+                                       postgrid      => $CONFIG->setting('postgrid') || '',
+                                       background    => $CONFIG->setting('background') || '',
 				       hilite_callback => $h_callback,
 				      );
     $cell .= $img;

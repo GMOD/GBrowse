@@ -1,4 +1,4 @@
-* Add popup menu support using Cyril's code.
+* Add popup menu support using Cyril's code and overlib/overlibmws.
 * More internationalization
 * Limit search results to user-set max
 * Group SVG elements by feature ID
@@ -6,5 +6,5 @@
   Will need plugin authors to provide internationalization.
 
 
-$Id: TODO,v 1.4.6.6 2005-07-15 17:17:55 lstein Exp $
+$Id: TODO,v 1.4.6.7 2005-07-18 20:46:35 lstein Exp $
 

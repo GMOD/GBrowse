@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.22 2005-07-18 20:46:37 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.23 2005-07-19 21:41:40 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -650,8 +650,8 @@ the feature.
 
 sub make_link {
   my $self = shift;
-  my ($feature,$panel,$label) = @_;
-  my @results = $self->config->make_link($feature,$panel,$label);
+  my ($feature,$panel,$label,$src) = @_;
+  my @results = $self->config->make_link($feature,$panel,$label,$self->source);
   return wantarray ? @results : $results[0];
 }
 
@@ -888,8 +888,7 @@ sub tmpdir {
 
 sub make_map {
   my $self = shift;
-  my ($boxes,$centering_map,$panel,$tracks) = @_;
-  my %track2label = reverse %$tracks;
+  my ($boxes,$centering_map,$panel,$track2label) = @_;
   my $map = qq(<map name="hmap" id="hmap">\n);
 
   my $flip = $panel->flip;
@@ -909,7 +908,7 @@ sub make_map {
       next;
     }
 
-    my $label  = $_->[5] ? $track2label{$_->[5]} : '';
+    my $label  = $_->[5] ? $track2label->{$_->[5]} : '';
 
     my $href   = $self->make_href($_->[0],$panel,$label) or next;
     my $alt    = unescape($self->make_title($_->[0],$panel,$label));
@@ -961,7 +960,7 @@ sub make_centering_map {
 sub make_href {
   my $self = shift;
   my ($feature,$panel,$label)   = @_;
-  return $self->make_link($feature,$panel,$label);
+  return $self->make_link($feature,$panel,$label,$self->source);
 }
 
 sub make_title {
@@ -971,7 +970,8 @@ sub make_title {
   return $self->config->make_title($feature,$panel,$label);
 }
 
-# Generate the image and the box list, and return as a two-element list.
+# Generate the image and the box list, and return the GD object, the boxes() list, the panel object and
+# a hashref that maps track objects to track labels or feature files.
 # arguments: a key=>value list
 #    'segment'       A feature iterator that responds to next_seq() methods
 #    'feature_files' A hash of Bio::Graphics::FeatureFile objects containing 3d party features
@@ -1063,7 +1063,7 @@ sub image_and_map {
 		    -unit_divider => $conf->setting(general=>'unit_divider') || 1,
 		   ) unless $suppress_scale;
 
-  my (%tracks,@blank_tracks);
+  my (%track2label,%tracks,@blank_tracks);
 
   for (my $i= 0; $i < @$tracks; $i++) {
 
@@ -1088,7 +1088,8 @@ sub image_and_map {
       my @settings = ($conf->default_style,$conf->i18n_style($label,$lang,$length));
       push @settings,(-hilite => $hilite_callback) if $hilite_callback;
       my $track = $panel->add_track(-glyph => 'generic',@settings);
-      $tracks{$label}  = $track;
+      $track2label{$track} = $label;
+      $tracks{$label}      = $track;
     }
 
   }
@@ -1181,10 +1182,12 @@ sub image_and_map {
     $track += $offset + 1;
     my $name = $file->name || '';
     $options->{$name} ||= 0;
-    my $inserted = $file->render($panel,$track,$options->{$name},
-				 $max_bump,$max_labels,
-				 $select
-				);
+    my ($inserted,undef,$new_tracks)
+      = $file->render($panel,$track,$options->{$name},
+		      $max_bump,$max_labels,
+		      $select
+		     );
+    foreach (@$new_tracks) { $track2label{$_} = $file }
     $offset += $inserted;
   }
 
@@ -1198,7 +1201,7 @@ sub image_and_map {
 
   my $boxes    = $panel->boxes;
 
-  return ($gd,$boxes,$panel,\%tracks);
+  return ($gd,$boxes,$panel,\%track2label);
 }
 
 =head2 overview()
@@ -2174,6 +2177,7 @@ sub feature2label {
   my ($feature,$length) = @_;
   my $type  = eval {$feature->type}
     || eval{$feature->source_tag} || eval{$feature->primary_tag} or return;
+
   (my $basetype = $type) =~ s/:.+$//;
   my @label = $self->type2label($type,$length);
 
@@ -2227,7 +2231,11 @@ sub summary_mode {
 # override make_link to allow for code references
 sub make_link {
   my $self     = shift;
-  my ($feature,$panel,$label)  = @_;
+  my ($feature,$panel,$label,$data_source)  = @_;
+
+  if ($label->isa('Bio::Graphics::FeatureFile')) {
+    return $label->make_link($feature);
+  }
 
   $panel ||= 'Bio::Graphics::Panel';
   $label ||= $self->feature2label($feature);
@@ -2253,7 +2261,7 @@ sub make_link {
     my $start = CGI::escape($feature->start);
     my $end   = CGI::escape($feature->end);
     my $src   = CGI::escape(eval{$feature->source} || '');
-    return "../../gbrowse_details/$src?name=$name;class=$class;ref=$ref;start=$start;end=$end";
+    return "../../gbrowse_details/$data_source?name=$name;class=$class;ref=$ref;start=$start;end=$end";
   }
   return $self->link_pattern($link,$feature,$panel);
 }
@@ -2265,19 +2273,28 @@ sub make_title {
   local $^W = 0;  # tired of uninitialized variable warnings
 
   my ($title,$key) = ('','');
+
  TRY: {
-    $label     ||= $self->feature2label($feature) or last TRY;
-    $key         = $self->setting($label,'key') || $label;
-    $key         =~ s/s$//;
-    my $link     = $self->code_setting($label,'title')
-      || $self->code_setting('TRACK DEFAULTS'=>'title')
-      || $self->code_setting(general=>'title');
-    if (defined $link && ref($link) eq 'CODE') {
-      $title       = eval {$link->($feature,$panel)};
-      $self->_callback_complain($label=>'title') if $@;
-      return $title if defined $title;
+    if ($label->isa('Bio::Graphics::FeatureFile')) {
+      $key = $label->name;
+      $title = $label->make_title($feature) or last TRY;
+      return $title;
     }
-    return $self->link_pattern($link,$feature) if $link && $link ne 'AUTO';
+
+    else {
+      $label     ||= $self->feature2label($feature) or last TRY;
+      $key       ||= $self->setting($label,'key') || $label;
+      $key         =~ s/s$//;
+      my $link     = $self->code_setting($label,'title')
+	|| $self->code_setting('TRACK DEFAULTS'=>'title')
+	  || $self->code_setting(general=>'title');
+      if (defined $link && ref($link) eq 'CODE') {
+	$title       = eval {$link->($feature,$panel)};
+	$self->_callback_complain($label=>'title') if $@;
+	return $title if defined $title;
+      }
+      return $self->link_pattern($link,$feature) if $link && $link ne 'AUTO';
+    }
   }
 
   # otherwise, try it ourselves

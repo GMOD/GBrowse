@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::RandomGene;
-# $Id: RandomGene.pm,v 1.1.6.1 2005-07-18 23:03:42 lstein Exp $
+# $Id: RandomGene.pm,v 1.1.6.2 2005-07-19 21:41:39 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -7,7 +7,7 @@ use Bio::SeqFeature::Generic;
 use CGI qw(:standard *table);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.1';
+$VERSION = '0.2';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 

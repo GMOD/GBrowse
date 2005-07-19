@@ -220,6 +220,18 @@ You can add multiple Notes.  Just separate them by semicolons:
 
 The Note should come AFTER the group type and name.
 
+3. Using the Group field to add an alternative name
+
+If you want the feature to be quickly searchable by an alternative
+name, you can add one or more Alias tags. A feature can have multiple
+aliases, and multiple features can share the same alias:
+
+ Chr3 giemsa heterochromatin 4500000 6000000 . . . Band 3q12.1 ; Alias MFX
+
+Searches for aliases will be both faster and more reliable than
+searches for keywords in notes, since the latter relies on whole-text
+search methods that vary somewhat from DBMS to DBMS.
+
 =head2 A3. Identifying the reference sequence
 
 Each reference sequence in the GFF table must itself have an entry.
@@ -995,11 +1007,17 @@ COMPUTED OPTIONS for details.
 
 =item * title
 
-The title option controls the "tooltips" text that pops up when
-the mouse hovers over a glyph in certain browsers.  The rules
-for generating titles are the same as the "link" option discussed
-above.  The "title" option can also be computed dynamically.
-See COMPUTED OPTIONS for details.
+The title option controls the "tooltips" text that pops up when the
+mouse hovers over a glyph in certain browsers.  The rules for
+generating titles are the same as the "link" option discussed above.
+The "title" option can also be computed dynamically.  See COMPUTED
+OPTIONS for details.
+
+Note HTML characters such as "<", ">" and "&" are not automatically
+escaped from the title. This lets you do neat stuff, such as create
+popup menus, but also means that you need to be careful. The function
+CGI::escapeHTML() is available to properly escape HTML characters in
+dynamically-generated titles.
 
 The special value "AUTO" causes a default description to appear
 describing the name, type and position of the feature.  This is
@@ -1194,7 +1212,8 @@ called "Genes", you would add this to each of the track defintions:
 
   category = Genes
 
-Note that it is not possible to make subgroups.
+Note that it is not possible to make subcategories. If all tracks are
+categorized, then the "General" category will not be displayed.
 
 =item 20 das category, das landmark, das subparts, das superparts
 

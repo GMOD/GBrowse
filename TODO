@@ -4,7 +4,9 @@
 * Group SVG elements by feature ID
 * Get rid of verbs attached to plugin names so that translations work properly.
   Will need plugin authors to provide internationalization.
+* Add popup window/hyperlink to track labels in the image.
+* Make boxes/callbacks for gaps between components, such as introns.
 
 
-$Id: TODO,v 1.4.6.7 2005-07-18 20:46:35 lstein Exp $
+$Id: TODO,v 1.4.6.8 2005-07-19 20:22:13 lstein Exp $
 

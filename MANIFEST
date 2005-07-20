@@ -175,7 +175,6 @@ docs/tutorial/figures/figure7a.gif
 docs/tutorial/figures/figure7b.gif
 docs/tutorial/figures/figure8.gif
 docs/tutorial/figures/figure9.gif
-docs/tutorial/synthetic_dna
 docs/tutorial/tutorial.css
 docs/tutorial/tutorial.html
 docs/tutorial/tutorial.txt
@@ -198,7 +197,6 @@ extras/BioPerl/Bio/DB/GFF/Adaptor/memory.pm
 extras/BioPerl/Bio/DB/GFF/Adaptor/memory_iterator.pm
 extras/BioPerl/Bio/DB/GFF/Aggregator.pm
 extras/BioPerl/Bio/DB/GFF/Aggregator/alignment.pm
-extras/BioPerl/Bio/DB/GFF/Aggregator/cds.pm
 extras/BioPerl/Bio/DB/GFF/Aggregator/clone.pm
 extras/BioPerl/Bio/DB/GFF/Aggregator/coding.pm
 extras/BioPerl/Bio/DB/GFF/Aggregator/match.pm
@@ -251,7 +249,6 @@ extras/BioPerl/Bio/Graphics/Glyph/generic.pm
 extras/BioPerl/Bio/Graphics/Glyph/graded_segments.pm
 extras/BioPerl/Bio/Graphics/Glyph/group.pm
 extras/BioPerl/Bio/Graphics/Glyph/heterogeneous_segments.pm
-extras/BioPerl/Bio/Graphics/Glyph/image.pm
 extras/BioPerl/Bio/Graphics/Glyph/lightning.pm
 extras/BioPerl/Bio/Graphics/Glyph/line.pm
 extras/BioPerl/Bio/Graphics/Glyph/minmax.pm
@@ -366,7 +363,6 @@ lib/Bio/Graphics/Browser/GFFhelper.pm
 lib/Bio/Graphics/Browser/I18n.pm
 lib/Bio/Graphics/Browser/Markup.pm
 lib/Bio/Graphics/Browser/PadAlignment.pm
-lib/Bio/Graphics/Browser/PadAlignment_broken.pm
 lib/Bio/Graphics/Browser/Plugin.pm
 lib/Bio/Graphics/Browser/PluginSet.pm
 lib/Bio/Graphics/Browser/Realign.pm
@@ -394,7 +390,6 @@ libalign/test.pl
 Makefile.PL
 MANIFEST
 README
-README-1.02
 README.MacOSX
 README.selinux
 sample_data/yeast_data.gff

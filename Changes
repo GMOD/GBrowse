@@ -19,8 +19,13 @@
 	* Incorporated a new "region" panel which is intermediate in size between the overview
 		and the detail panels. Thanks to Barry Healy for coding this. Use the new 
 		"region segment" configuration option to turn this feature on.
-        * gbrowse_img now takes a new "highlight" parameter that will highlight the indicated
+        * gbrowse_img now takes a "highlight" parameter that will highlight the indicated
                 named feature(s) in yellow.
+	* gbrowse_details will now evaluate URL options expressed as anonymous subroutines (contributed
+		by Cyril Pommier).
+	* gbrowse_details now accepts a general formatting rule syntax
+		that allows the formatting of each tag value to be precisely
+		controlled.
 
 1.62    Mon Apr  5 09:43:25 EDT 2004
 	* Added request timeout option for very long requests.

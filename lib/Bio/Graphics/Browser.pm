@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.24 2005-07-20 03:12:29 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.25 2005-07-20 21:17:01 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -2002,7 +2002,7 @@ sub labels {
   # filter out all configured types that correspond to the overview, overview details
   # plugins, or other name:value types
   my @labels =  grep {
-    !($_ eq 'TRACK DEFAULTS' || /:(\d+|plugin|DETAILS)$/)
+    !($_ eq 'TRACK DEFAULTS' || /:(\d+|plugin|DETAILS|details)$/)
        } $self->configured_types;
   # apply restriction rules
   return grep { $self->authorized($_)} @labels;

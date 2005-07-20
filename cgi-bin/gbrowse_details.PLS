@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.28 2004-12-20 16:40:25 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.28.4.1 2005-07-20 21:17:01 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -53,7 +53,7 @@ use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Markup;
 use Bio::Graphics::Browser::Util;
 use Bio::Graphics::Browser::Realign 'align';
-use vars qw($CONFIG $VERSION $CONF_DIR $LANG @COLORS $INDEX %strands %COLORS %URLS);
+use vars qw($CONFIG $VERSION $CONF_DIR $LANG @COLORS $INDEX %strands %COLORS %URLS %formatterCache);
 
 use constant DEBUG=>0;
 
@@ -65,6 +65,8 @@ $CONFIG = open_config($CONF_DIR);  # open_config() is exported from Util.pm
 
 $INDEX  = 0;
 %COLORS = ();
+%URLS   = ();
+%formatterCache = ();
 
 my $src   = param('src') || param('source');
 my $name  = param('name');
@@ -111,36 +113,35 @@ sub print_features {
   my $subf       = shift;
   my $string;
   for my $f (@$features) {
-    warn "index = $INDEX, method = ",$f->method,"\n" if DEBUG;
-    $COLORS{$f->method} ||= $COLORS[$INDEX++ % @COLORS];
-    my $options = {-bgcolor => $COLORS{$f->method}} if $subf;
+    warn "index = $INDEX, method = ",$f->primary_tag,"\n" if DEBUG;
+    $COLORS{$f->primary_tag} ||= $COLORS[$INDEX++ % @COLORS];
+    my $options = {-bgcolor => $COLORS{$f->primary_tag}} if $subf;
 
     $string .= start_table();
     unless ($subf) {
-      $string .= PrintMultiple($options,'Name',b($f->name));
-      $string .= PrintMultiple($options,'Class',$f->class);
+      $string .= PrintMultiple($f,$options,'Name',$f->name);
+      $string .= PrintMultiple($f,$options,'Class',$f->class);
     }
-    $string .= PrintMultiple($options,'Type',$f->method);
-    $string .= PrintMultiple($options,'Source',$f->source) if $f->source;
-    $string .= PrintMultiple($options,"Position",position($f));
-    $string .= PrintMultiple($options,"Length",$f->length);
+    $string .= PrintMultiple($f,$options,'Type',$f->primary_tag);
+    $string .= PrintMultiple($f,$options,'Source',$f->source_tag) if $f->source_tag;
+    $string .= PrintMultiple($f,$options,"Position",$f);
+    $string .= PrintMultiple($f,$options,"Length",$f->length);
     if ($f->target) {
       # try to correct for common GFF2 error of indicating a -/- alignment
       # using a (-) src strand and a target_start > target_end
       my $bug = $f->abs_strand < 0 && $f->target->abs_strand < 0;
-      $string .= PrintMultiple($options,'Target',$f->target);
-      $string .= PrintMultiple($options,"Matches",position($f->target,undef,$bug));
-      $string .= PrintMultiple($options,'',print_matches($f,$f->target,$bug)) if $subf;
+      $string .= PrintMultiple($f,$options,'Target',$f->target);
+      $string .= PrintMultiple($f,$options,"Matches",$f);
+      $string .= PrintMultiple($f,$options,'',print_matches($f,$f->target,$bug)) if $subf;
 
     }
-    $string .= PrintMultiple($options,"Score",$f->score) if defined $f->score;
+    $string .= PrintMultiple($f,$options,"Score",$f->score) if defined $f->score;
     my %attributes = $f->attributes;
     for my $a (sort keys %attributes) {
-      $string .= PrintMultiple($options,$a,$f->attributes($a));
+      $string .= PrintMultiple($f,$options,$a,$f->attributes($a));
     }
-#    my @subfeatures = $f->merged_segments;  # broken with old bioperl
     my @subfeatures = $f->segments;          # works with old bioperl
-    $string .= PrintMultiple($options,'Parts',print_features(\@subfeatures,1)) if @subfeatures;
+    $string .= PrintMultiple($f,$options,'Parts',print_features(\@subfeatures,1)) if @subfeatures;
     $string .= end_table();
 
     if (!$subf) {
@@ -160,9 +161,9 @@ sub print_dna {
   my $markup = Bio::Graphics::Browser::Markup->new;
   for my $f (@$features) {
     warn "f = $f" if DEBUG;
-    my $method = $f->method;
+    my $method = $f->primary_tag;
     warn "$method => $COLORS{$method}" if DEBUG;
-    next if $COLORS{$f->method} eq 'none';
+    next if $COLORS{$f->primary_tag} eq 'none';
     $markup->add_style($method => "BGCOLOR $COLORS{$method}");
   }
   # add a newline every 80 positions
@@ -186,8 +187,8 @@ sub print_dna {
     }
 
     ($s,$e) = ($e,$s) if $s > $e;
-    next if $COLORS{$f->method} eq 'none';
-    push @markup,[$f->method,$s,$e+1];  # Duelling off-by-one errors....
+    next if $COLORS{$f->primary_tag} eq 'none';
+    push @markup,[$f->primary_tag,$s,$e+1];  # Duelling off-by-one errors....
   }
   push @markup,map {['newline',80*$_]} (1..length($dna)/80);
   $markup->markup(\$dna,\@markup);
@@ -256,41 +257,57 @@ sub max {
 sub PrintMultiple {
   local $^W = 0;  # get rid of uninit variable warnings
 
+  my $feature = shift;
   my $options = shift;
   my $label   = shift;
+
   $options ||= {};
-  my @a = @_;
+
+  my @a = formatValues($feature,$label,@_);
   return unless @a;
-  my $first = shift @a;
+
   my $LINK = "";
-  if ($URLS{$label}){
-    $LINK = $URLS{$label};
-    $LINK =~ s/\$tag/$label/;
-    $LINK=~ s/\$value/$first/;
-    $LINK = "<a href='$LINK'>$first</a>";
-  }
+  my $isFirst=1;
+  my $string = ' ' ;
 
-  # for EST alignment features, create a link to get the orignal EST sequence
-  if (($label eq 'Target') && ($URLS{'alignment'}) && ($first =~ /alignment/i)){
-    my $name = shift @a;
-    $LINK = $URLS{'alignment'};
-    $LINK=~ s/\$value/$name/;
-    $LINK = "$first : (<a href='$LINK'>Aligned Sequence</a>)";
-  }
-
-  $first =~ s/([^<>\s]{60})/$1 /g;  # wrap way long lines
-
-
-  my $string = join '',TR({-valign=>'top',-class=>'databody'},
-                          th({-align=>'LEFT',-valign=>'top',-class=>'datatitle'},length $label>0 ? "$label: " : ''),
-                          td($options, $LINK?$LINK:$first)
-                         );
   for my $obj (@a) {
-    $obj =~ s/([^<>\s]{60})/$1 /g;  # wrap way long lines
-    $string .= join '', TR({-class=>'databody'},
-			   th({-align=>'RIGHT',-class=>'datatitle'},'&nbsp;'),
-			   td($options,$obj)
-			  );
+    if ($URLS{$label}){
+      $LINK = $URLS{$label};
+      if ( ref ($LINK)   eq 'CODE' ){ #Testing subs
+	$LINK= eval { $LINK->($label,$obj)};
+	$LINK = $LINK ? "<a href='$LINK'>$obj</a>" : $obj;
+      }
+      else { #end testing subs
+	$LINK =~ s/\$tag/$label/;
+	$LINK=~ s/\$value/$obj/;
+	$LINK = "<a href='$LINK'>$obj</a>";
+      } # testing subs
+    }
+
+    # for EST alignment features, create a link to get the orignal EST sequence
+    if (($label eq 'Target') && ($URLS{'alignment'}) && ($obj =~ /alignment/i)){
+      my $name = shift @a;
+      $LINK = $URLS{'alignment'};
+      $LINK=~ s/\$value/$name/;
+      $LINK = "$obj : (<a href='$LINK'>Aligned Sequence</a>)";
+    }
+
+    $obj =~ s/([^<>\s'"]{60})/$1 /g;  # wrap way long lines. Note : ading '" prevent this regexp from wrapping html tags
+
+    if ($isFirst) {
+      $isFirst =0 ;
+      $string .= join '',TR({-valign=>'top',-class=>'databody'},
+			    th({-align=>'LEFT',-valign=>'top',-class=>'datatitle'},length $label>0 ? "$label: " : ''),
+			    td($options, $LINK ? $LINK : $obj)
+			   );
+    } else {
+
+      $string .= join '', TR({-class=>'databody'},
+			     th({-align=>'RIGHT',-class=>'datatitle'},'&nbsp;'),
+			     td($options,$LINK?$LINK:$obj)
+			    );
+    }
+    $LINK='';
   }
   $string;
 }
@@ -334,6 +351,65 @@ sub getLinkURLs {
   }
 }
 
+sub formatValues {
+  my ($feature,$tag,@values) = @_;
+  my $formatter    = getFormatter($feature,$tag);
+  return @values unless $formatter;
+  if (ref $formatter eq 'CODE') {
+    return map {$formatter->($_,$tag,$feature)} @values;
+  }
+  my $name   = $feature->display_name;
+  my $start  = $feature->start || '';
+  my $end    = $feature->end   || '';
+  my $strand = $feature->strand || '';
+  my $method = $feature->primary_tag || '';
+  my $source = $feature->source_tag || '';
+  my $type   = eval {$feature->type} || $method || '';
+  my $class  = eval {$feature->class} || '';
+  my $description = eval { join ' ',$feature->notes } || '';
+  $formatter =~ s/\$tag/$tag/g;
+  $formatter =~ s/\$name/$name/g;
+  $formatter =~ s/\$start/$start/g;
+  $formatter =~ s/\$end/$end/g;
+  $formatter =~ s/\$stop/$end/g;
+  $formatter =~ s/\$strand/$strand/g;
+  $formatter =~ s/\$method/$method/g;
+  $formatter =~ s/\$source/$source/g;
+  $formatter =~ s/\$type/$type/g;
+  $formatter =~ s/\$class/$class/g;
+  $formatter =~ s/\$description/$description/g;
+  return map {$formatter =~ s/\$value/$_/g; $formatter} @values;
+}
+
+sub getFormatter {
+  my ($feature,$tag) = @_;
+  my $method  = $feature->primary_tag;
+  my $source  = $feature->source_tag;
+  my $key     = join ':',$method,$source,$tag;
+
+  return $formatterCache{$key} if exists $formatterCache{$key};
+
+  my $config = $CONFIG->config;
+  my $s;
+
+  # implement simple search path for formatters
+ SEARCH:
+  for my $base ("$method:$source",$method,'default') {
+    for my $option ($tag,'default') {
+      $s ||= $config->code_setting("$base:details" => lc $option);
+      $s ||= $config->code_setting("$base:DETAILS" => lc $option);
+      last SEARCH if defined $s;
+    }
+  }
+
+  unless (defined $s) {
+    $s = \&format_position if $tag eq 'Position';
+    $s = \&format_matches  if $tag eq 'Matches';
+    $s = \&format_name     if $tag eq 'Name';
+  }
+  return $formatterCache{$key} = $s;
+}
+
 sub get_source {
   my $new_source = param('source') || param('src') || path_info();
   $new_source    =~ s!^/!!;  # get rid of leading / from path_info()
@@ -342,6 +418,24 @@ sub get_source {
   my $source   = $new_source || $old_source;
   $source ||= $CONFIG->source;  # the default, whatever it is
   return ($source,$old_source);
+}
+
+sub format_position {
+  my (undef,undef,$feature) = @_;
+  position($feature);
+}
+
+sub format_matches {
+  my (undef,undef,$feature) = @_;
+  # try to correct for common GFF2 error of indicating a -/- alignment
+  # using a (-) src strand and a target_start > target_end
+  my $bug = $feature->abs_strand < 0 && $feature->target->abs_strand < 0;
+  position($feature->target,undef,$bug)
+}
+
+sub format_name {
+  my $name = shift;
+  b($name)
 }
 
 !NO!SUBS!

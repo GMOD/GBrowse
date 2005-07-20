@@ -442,7 +442,7 @@ sub height {
 
   # get rid of spacing under last track
   $height -= $self->spacing unless $bottom_key;
-  return $height + $key_height + $self->pad_top + $self->pad_bottom + 1;
+  return $height + $key_height + $self->pad_top + $self->pad_bottom + 2;
 }
 
 sub setup_fonts {

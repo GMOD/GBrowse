@@ -1670,23 +1670,89 @@ It is entirely possible to create an invalid regular expression, in
 which case gbrowse will crash until you comment out the offending
 option.
 
-=head2 B10. Linking-out from AUTO-generated details
+=head2 B10. Controlling the gbrowse_details page
 
-If the [Track Defaults]-Link (see section B2) or an individual [Track]-
-Link (see section B3) is set to AUTO, the gbrowse_details script will be
-invoked when the user clicks on one of those features.  This will
-generate a simple table of all feature information available in the
-database.  This includes the user-defined tag/value attributes set
-in Column 9 of the GFF for that feature.
+If a track definition's "link" option (see section B2) is set to AUTO,
+the gbrowse_details script will be invoked when the user clicks on a
+feature contained within the track.  This will generate a simple table
+of all feature information available in the database.  This includes
+the user-defined tag/value attributes set in Column 9 of the GFF for
+that feature.
 
-It is possible to configure HTML link-outs for each tag-type in these
-tag/value pairs such that clicking on the value will invoke an external
-script with the tag and value information being passed to that script.
-This is achieved by adding a new stanza for each tag-type you wish to
-associate links to.
+You can control, to some extent, the formatting of the tag value table
+by providing a configuration stanza with the following format:
 
-The format of the stanza header is [TagName:DETAILS], and currently the
-only option allowed within this stanza is URL.
+  [feature_type:details]
+  tag1 = formatting rule
+  tag2 = formatting rule
+  tag3 = formatting rule
+
+"feature_type" is the type of the feature you wish to control. For
+example, "gene:sgd" or simply "gene". You may also specify a
+feature_type of "default" to control the formatting for all
+features. "tag1", "tag2" and so forth are the tags that you wish to
+control the formatting of. The tags "Name," "Class", "Type", "Source",
+"Position", and "Length" are valid for all features, while "Target"
+and "Matches" are valid for all features that have a target
+alignment. In addition, you can use the names of any attributes that
+you have defined. Tags names are NOT case sensitive, and you may use a
+tag named "default" to define a formatting rule that is general to all
+tags (more specific formatting rules will override less specific ones).
+
+A formatting rule can be a string with (possible) substitution values,
+or a callback. If a string, it can contain one or more of the
+substitution variable "$name", "$start", "$end", "$stop", "$strand",
+"$method", "$type", "$description" and "$class", which are replaced
+with the corresponding values from the current feature. In addition,
+the substitution variable "$value" is replaced with the current value
+of the attribute, and the variable "$tag" is replaced with the current
+tag (attribute) name. HTML characters are passed through.
+
+For example, here is a simple way to boldface the Type field,
+italicize the Length field, and turn the Notes into a Google
+search:
+
+ [gene:details]
+ Type   = <b>$value</b>
+ Length = <i>$value</b>
+ Note  = <a href="http://www.google.com/search?q=$value">$value</a>
+
+If you provide a callback, the callback subroutine will be invoked
+with three arguments. WARNING: the three arguments are different from
+the ones passed to other callbacks, and consist of the tag value, the
+tag name, and the current feature:
+
+  Note = sub {
+	     my($value,$tag_name,$feature) = @_;
+	     do something....
+	     }
+
+You can use this feature to format sequence attributes nicely. For
+example, if your features have a Translation attribute which contains
+their protein translations, then you are probably unsatisified with
+the default formatting of these features. You can modify this with a
+callback that word-wraps the value into lines of at most 60
+characters, and puts the whole thing in a <pre> section.
+
+ [gene:details]
+ Translation = sub {
+     		my $value = shift;
+		$value =~ s/(\S{1,60})/$1\n/g;
+		"<pre>$value</pre>";
+	     }
+
+=head2 B11. Linking out from gbrowse_details
+
+The formatting rule mechanism described in the previous section is the
+recommended way of creating a link out from the gbrowse_details
+page. However, an older mechanism is available for backward
+compatibility.
+
+To use this legacy mechanism, create a stanza header named
+[TagName:DETAILS], where TagName is the name of the tag (attribute
+name) whose values you wish to turn into URLs, and where DETAILS must
+be spelled with capital letters. Put the option "URL" inside this
+stanza, containing a string to be transformed into the URL.
 
 For example, to link to a local cgi script from the following GFF line:
     
@@ -1698,7 +1764,6 @@ one might add the following stanza to the configuration file:
     [local_id:DETAILS]
     URL   = http://localhost/cgi-bin/localLookup.cgi?tag=$tag;id=$value
 
-
 The URL option's value should be a URL containing one or more
 variables.  Variables begin with a dollar sign ($), and are
 replaced at run time with the information relating to the selected
@@ -1707,6 +1772,20 @@ feature attribute.  Recognized variables are:
      $tag        The "tag" of the tag/value pair
      $value      The "value" of the tag/value pair
 
+The value of URL can also be an anonymous subroutine, in which case
+the subroutine will be invoked with a two-element argument list
+consisting of the name of the tag and its value. This example,
+provided by Cyril Pommier, will convert Dbxref tags into links to
+NCBI, provided that the value of the tag looks like an NCBI GI number:
+
+ [Dbxref:DETAILS]
+ URL = sub { 
+       my ($tag,$value)=@_;
+       if ($value =~ /NCBI_gi:(.+)/){
+        return "http://www.ncbi.nlm.nih.gov/gquery/gquery.fcgi?term=$1";
+        }
+        return;
+      }
 
 =head1 C. GENERATING HISTOGRAMS
 

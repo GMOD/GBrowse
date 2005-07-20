@@ -2483,6 +2483,15 @@ As noted earlier, you can place numbers in front of the configuration
 file names in order to adjust the order in which they appear in the
 data source menu.
 
+NOTE: For obscure reasons involving Internet Explorer compatibility,
+gbrowse will add an extra slash to the end of the URL, resulting in
+URLs that look like:
+
+  http://www.your.site/cgi-bin/gbrowse/yeast/?q=NAB2
+
+Don't worry about this. The URL works the same with and without the
+terminal slash.
+
 =item q
 
 The argument "q" will set the landmark or search string:
@@ -2507,9 +2516,13 @@ same as in the main search field:
 
    http://www.your.site/cgi-bin/gbrowse/yeast?q=Gene:NAB2:1..5000
 
-=item ref, start, end
+=item ref, start, stop, end
 
-[To come]
+Together the "ref," "start" and "stop" arguments specify the reference
+sequence and the start and end coordinates of the region of
+interest. The "q" argument, if present, overrides these settings.
+
+The "end" argument is a synonym for "stop".
 
 =item label
 
@@ -2544,6 +2557,91 @@ previous state.  The format is the same as label:
 
 When modifying track state, the "label" parameter is processed first,
 followed by the "enable" parameter and the "disable" parameter.
+
+=item flip
+
+Whether to flip the display. If set to a true value (flip=1), then the
+coordinates will be reversed so that forward strand features become
+reverse strand features. If set to a false value (flip=0) or absent,
+then the forward strand is displayed as per usual.
+
+=item width
+
+Set the width of the overview, region and details images, in pixels.
+
+=item region_size
+
+Set the length of the region covered by the "region" panel, in base
+pairs.
+
+=item ks
+
+The position of the key in the detail panel. Possible values are
+"between," "beneath," "left" and "right".
+
+=item sk
+
+The sort order of track names in the "Tracks" panel.  Values are
+"sorted" (alphabetically sorted by name) and "unsorted" (sorted by
+the order of tracks as defined in the config file).
+
+=item track_options
+
+If true, open up the track configuration page.
+
+=item help
+
+Open up the specified help page. Possible values are:
+
+     "general"    open the general help page
+     "citations"  open up the track description & citation page
+     "link_image" open the page that describes how to
+                  generate an embedded image of the current view
+      "svg_image" the page that describes how to generate SVGs
+
+=item Upload, upload_annotations, id
+
+These three arguments must be present in order to upload a file of
+external annotations to the server. "Upload" must be a true value, and
+"upload_annotations" will contain the content of the uploaded
+file. Note that you must POST the data using MIME type
+"multipart/form-data".
+
+The "id" argument is used to associated the upload with a
+session. Pick some long, hard to guess number. This will be associated
+stably with the uploaded file(s). To see the upload information,
+provide the same number in the "id" argument every time you access
+gbrowse.
+
+=item eurl
+
+Specify the URL of a remote annotation source to load into the
+database. You should also supply an "id" argument as well, as
+described earlier, in order to be able to view the annotations.
+
+=item plugin, plugin_do
+
+These arguments run plugins. The "plugin" argument gives the name of
+the plugin to activate. The name is the last component of the plugin
+package name, e.g. FastaDumper. The "plugin_do" argument selects what
+to do with the plugin. Possible values are "Configure", "Find" and
+"Go". "Configure" launches the plugin's configure page, "Go" runs
+dumper plugins' dump operation, and "Find" activates finder plugins'
+find function. For find operations, you should in most cases pass the
+find string in the "q" argument, but this depends on the particular
+plugin.
+
+Each plugin may have its own set of URL arguments. A plugin's
+arguments are preceded by the plugin's name. For example, the
+FastaDumper plugin has a parameter named "format" which controls the
+output format. So to invoke this plugin and make the output plain
+text, one would provide the arguments:
+
+ http://www.your.site/cgi-bin/gbrowse/yeast?q=NUT21;plugin=FastaDumper;
+             plugin_do=Go;FastaDumper.format=text
+
+Plugins tend not to be well documented, so you may have to read
+through the source code to figure out their arguments.
 
 =back
 

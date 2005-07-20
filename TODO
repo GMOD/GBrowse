@@ -6,7 +6,9 @@
   Will need plugin authors to provide internationalization.
 * Add popup window/hyperlink to track labels in the image.
 * Make boxes/callbacks for gaps between components, such as introns.
+* Move all configuration information into a server-side file using CGI::Session 
+	(or similar).
 
 
-$Id: TODO,v 1.4.6.8 2005-07-19 20:22:13 lstein Exp $
+$Id: TODO,v 1.4.6.9 2005-07-20 03:12:26 lstein Exp $
 

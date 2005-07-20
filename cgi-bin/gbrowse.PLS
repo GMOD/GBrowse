@@ -155,6 +155,8 @@ END
 $HEADER=0;
 $HTML=0;
 
+check_versions() or exit 0;
+
 $ENV{PATH} = '/bin:/usr/bin:/usr/local/bin';
 $CONF_DIR  = conf_dir($CONF_DIR);  # conf_dir() is exported from Util.pm
 
@@ -321,7 +323,7 @@ if ($divisor == 1) {
 print_top($title);
 
 ## HANDLE TRACK SETTINGS   #######################################################
-if ((param($CONFIG->tr('Set_options')) || param('revert'))
+if ((param('set_options') || param($CONFIG->tr('Set_options')) || param('revert'))
        && !param($CONFIG->tr('Cancel'))
        && !param($CONFIG->tr('Redisplay'))) {
   set_track_options($page_settings);
@@ -792,8 +794,8 @@ sub adjust_settings {
       $settings->{version} ||= param('version') || '';
       $settings->{ref}   = param('ref');
       $settings->{start} = param('start') if param('start') =~ /^[\d-]+/;
+      $settings->{stop}  = param('end')   if param('end')   =~ /^[\d-]+/;
       $settings->{stop}  = param('stop')  if param('stop')  =~ /^[\d-]+/;
-      $settings->{stop}||= param('end')   if param('end')   =~ /^[\d-]+/;
       $settings->{flip}  = param('flip');
       zoomnav($settings);
       $settings->{name} = "$settings->{ref}:$settings->{start}..$settings->{stop}";
@@ -2725,6 +2727,21 @@ sub unique {
 
 sub split_labels {
    map {/^(http|ftp|das)/ ? $_ : split /[+-]/} @_;
+}
+
+sub check_versions {
+  unless (Bio::Graphics::Panel->can('api_version') &&
+	  Bio::Graphics::Panel->api_version >= $VERSION) {
+    print header(),
+      start_html('Version Mismatch'),
+	h1('Version Mismatch'),
+	  p("GBrowse version $VERSION requires a compatible version of the Bio::Graphics library.",
+	    "Either install the latest version of BioPerl (possibly from CVS) or reinstall GBrowse after installing Bioperl."
+	   ),
+	     end_html();
+    return 0;
+  }
+  1;
 }
 
 !NO!SUBS!

@@ -183,9 +183,9 @@ print STDERR <<END;
 END
 ;
 
-my $bioperl_needs_patching = bioperl_version() < 1.6;
+my $bioperl_needs_patching = biographics_version() < $VERSION;
 if ($bioperl_needs_patching) {
-  print STDERR "\nInstalled Bioperl version is less than 1.6.  I will update to latest versions of the BioGraphics and GFF libraries.\n";
+  print STDERR "\nInstalled Bio::Graphics version is less than $VERSION.  I will update to latest versions of the BioGraphics and GFF libraries.\n";
 }
 
 my @dir = ();
@@ -198,7 +198,7 @@ WriteMakefile(
 	      'NAME'	     => 'Generic-Genome-Browser',
 	      'VERSION'      => $VERSION,
 	      'PREREQ_PM'    => {
-				 Bio::Perl         => 1.4,
+				 Bio::Perl         => 1.5,
 				 GD                => 2.07,
 				 IO::String        => 0,
 				 Text::Shellwords  => 1.0,
@@ -247,12 +247,13 @@ WriteMakefile(
 	      'INSTALLSCRIPT'      => $OPTIONS{BIN} || $OPTIONS{INSTALLSCRIPT}
 );
 
-sub bioperl_version {
+sub biographics_version {
   eval <<'END' || 0;
-    require Bio::Perl;
-    $Bio::Perl::VERSION;
+    require Bio::Graphics::Panel;
+    Bio::Graphics::Panel->api_version;
 END
 }
+
 
 sub interpolate {
   my $path = shift;

@@ -30,7 +30,6 @@ conf/languages/zh.pm
 conf/log4perl.conf
 conf/MobyServices/b64_encoded_gif_renderer.pm
 conf/MobyServices/b64_encoded_jpeg_renderer.pm
-conf/MobyServices/GbrowseServices.pm
 conf/MobyServices/GbrowseServices.PMS
 conf/MobyServices/moby.conf
 conf/MobyServices/text_formatted_renderer.pm
@@ -132,7 +131,6 @@ docs/tutorial/data_files/elegans_sts.gff
 docs/tutorial/data_files/ests.fa
 docs/tutorial/data_files/HEADER.html
 docs/tutorial/data_files/volvox.fa
-docs/tutorial/data_files/volvox.fa.index
 docs/tutorial/data_files/volvox1.gff
 docs/tutorial/data_files/volvox2.gff
 docs/tutorial/data_files/volvox3.gff
@@ -178,7 +176,6 @@ docs/tutorial/figures/figure9.gif
 docs/tutorial/tutorial.css
 docs/tutorial/tutorial.html
 docs/tutorial/tutorial.txt
-elegans.gb
 extras/BioPerl/Bio/DB/GFF.pm
 extras/BioPerl/Bio/DB/GFF/Adaptor/ace.pm
 extras/BioPerl/Bio/DB/GFF/Adaptor/biofetch.pm
@@ -396,4 +393,3 @@ sample_data/yeast_data.gff
 t/01yeast.t
 t/Test.pm
 TODO
-META.yml                                 Module meta-data (added by MakeMaker)

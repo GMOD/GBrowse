@@ -1,5 +1,5 @@
-If you have SELinux installed, typically as part of Fedora Core 3,
-then you may experience difficulties getting GBrowse to work.  The
+If you have SELinux installed, typically as part of Fedora Core 3 or
+4, then you may experinece difficulties getting GBrowse to work.  The
 default security parameters for SELinux prevent GBrowse from
 performing some fundamental tasks, including reading its configuration
 file in $CONF/gbrowse.conf (where $CONF is typically /etc/httpd/conf
@@ -18,7 +18,7 @@ select "Disable SELinux protection for httpd daemon".
 2a. Alternatively, uncheck "Enforcing" to set the enforcement level
 to permissive.
 
-After you do this, add the --SELINUX=1 tag when executing perl Makefile.PL:
+After you do this, add the --SELINUX=1 tag when exectuting perl Makefile.PL:
 
   % perl Makefile.PL --SELINUX=1
 

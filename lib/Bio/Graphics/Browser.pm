@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.25 2005-07-20 21:17:01 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.26 2005-07-21 19:42:38 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -910,9 +910,9 @@ sub make_map {
 
     my $label  = $_->[5] ? $track2label->{$_->[5]} : '';
 
-    my $href   = $self->make_href($_->[0],$panel,$label) or next;
-    my $alt    = unescape($self->make_title($_->[0],$panel,$label));
-    my $target = $self->config->make_link_target($_->[0],$panel,$label);
+    my $href   = $self->make_href($_->[0],$panel,$label,$_->[5]) or next;
+    my $alt    = unescape($self->make_title($_->[0],$panel,$label,$_->[5]));
+    my $target = $self->config->make_link_target($_->[0],$panel,$label,$_->[5]);
     my $t      = defined($target) ? qq(target="$target") : '';
     $map .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href" title="$alt" alt="$alt" $t/>\n);
   }
@@ -959,8 +959,8 @@ sub make_centering_map {
 
 sub make_href {
   my $self = shift;
-  my ($feature,$panel,$label)   = @_;
-  return $self->make_link($feature,$panel,$label,$self->source);
+  my ($feature,$panel,$label,$track)   = @_;
+  return $self->make_link($feature,$panel,$label,$self->source,$track);
 }
 
 sub make_title {
@@ -2231,7 +2231,7 @@ sub summary_mode {
 # override make_link to allow for code references
 sub make_link {
   my $self     = shift;
-  my ($feature,$panel,$label,$data_source)  = @_;
+  my ($feature,$panel,$label,$data_source,$track)  = @_;
 
   if ($label && $label->isa('Bio::Graphics::FeatureFile')) {
     return $label->make_link($feature);
@@ -2248,7 +2248,7 @@ sub make_link {
   return unless $link;
 
   if (ref($link) eq 'CODE') {
-    my $val = eval {$link->($feature,$panel)};
+    my $val = eval {$link->($feature,$panel,$track)};
     $self->_callback_complain($label=>'link') if $@;
     return $val;
   }
@@ -2269,7 +2269,7 @@ sub make_link {
 # make the title for an object on a clickable imagemap
 sub make_title {
   my $self = shift;
-  my ($feature,$panel,$label) = @_;
+  my ($feature,$panel,$label,$track) = @_;
   local $^W = 0;  # tired of uninitialized variable warnings
 
   my ($title,$key) = ('','');
@@ -2289,7 +2289,7 @@ sub make_title {
 	|| $self->code_setting('TRACK DEFAULTS'=>'title')
 	  || $self->code_setting(general=>'title');
       if (defined $link && ref($link) eq 'CODE') {
-	$title       = eval {$link->($feature,$panel)};
+	$title       = eval {$link->($feature,$panel,$track)};
 	$self->_callback_complain($label=>'title') if $@;
 	return $title if defined $title;
       }
@@ -2325,12 +2325,12 @@ sub make_title {
 
 sub make_link_target {
   my $self = shift;
-  my ($feature,$panel,$label) = @_;
+  my ($feature,$panel,$label,$track) = @_;
   $label    ||= $self->feature2label($feature) or return;
   my $link_target = $self->code_setting($label,'link_target')
     || $self->code_setting('LINK DEFAULTS' => 'link_target')
     || $self->code_setting(general => 'link_target');
-  $link_target = eval {$link_target->($feature,$panel)} if ref($link_target) eq 'CODE';
+  $link_target = eval {$link_target->($feature,$panel,$track)} if ref($link_target) eq 'CODE';
   $self->_callback_complain($label=>'link_target') if $@;
   return $link_target;
 }

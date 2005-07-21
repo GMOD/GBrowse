@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Plugin::GeneFinder;
 
-# $Id: GeneFinder.pm,v 1.2 2004-03-19 14:36:18 lstein Exp $
+# $Id: GeneFinder.pm,v 1.2.6.1 2005-07-21 19:42:37 lstein Exp $
 # test plugin
 use strict;
 use File::Temp 'tempfile';
@@ -21,7 +21,8 @@ sub name { "GeneFinder Features" }
 
 sub description {
   p("This plugin is a front end to Phil Green's GeneFinder program.").
-  p("It is an early work in progress.");
+  p("It is an early work in progress.").
+  p("Please build and install the 'gfcode' program (located in the contrib directory) before using this plugin.");
 }
 
 sub type { 'annotator' }
@@ -44,7 +45,7 @@ sub configure_form {
   my $self = shift;
   return;
 }
-  
+
 sub annotate {
   my $self    = shift;
   my $segment = shift;
@@ -64,7 +65,7 @@ sub annotate {
   my $gftables = File::Spec->catfile($self->config_path(),GFTABLES);
   my $command = join ' ',GENEFINDER,$gftables,$filename;
 
-  open (F,"$command |") or die "Couldn't open genefinder: $!";
+  open (F,"$command |") or die "Couldn't open genefinder. Did you install the gfcode program and the gftables config file?: $!";
   my $atgheight = sub {
     my $f = shift;
     return int($f->score/5 * 20);

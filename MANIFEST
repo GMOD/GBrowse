@@ -388,7 +388,7 @@ Makefile.PL
 MANIFEST
 README
 README.MacOSX
-README.selinux
+README.fedora
 sample_data/yeast_data.gff
 t/01yeast.t
 t/Test.pm

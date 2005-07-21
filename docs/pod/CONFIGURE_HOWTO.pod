@@ -1431,9 +1431,10 @@ with care!
 =head2 B7. Computed Options
 
 Some options can be computed at run time by using Perl subroutines as
-their values.  Currently this works with the values of the "link",
-"title", "header" and "footer" options, and any glyph-specific option
-that appears in a track section.
+their values. These are known as "callbacks." Currently this works
+with the values of the "link", "title", "link_target", "header" and
+"footer" options, and any glyph-specific option that appears in a
+track section.
 
 You need to know the Perl programming language to take advantage of
 this.  The general format of this type of option is:
@@ -1459,20 +1460,14 @@ For options of type "footer" and "header", the subroutine is passed no
 arguments.  It is expected to produce some HTML and return it as a
 string value.
 
-For the "link" option, the subroutine will be called with a single
-argument consisting of a Bio::DB::GFF::Feature object.  The subroutine
-should examine this object to determine what URL to link to and return
-the value of the URL as a string, or undef if no link should be made.
-See the manual page for Bio::DB::GFF::Feature for information on how
-to interrogate the feature object.
-
-For glyph-specific features, the subroutine will be called at run time
-with the feature (a Bio::SeqI-complaint object) as the first argument.
-The subroutine can examine this feature and determine what value to
-return.  The return value is treated as the value of the corresponding
-option.  For example, this bgcolor subroutine will call the feature's
-primary_tag() method, and return "blue" if it is an exon, "orange"
-otherwise:
+For glyph-specific features, such as "bgcolor" the subroutine will be
+called at run time with five arguments consisting of the feature, the
+name of the option, the current part number of the feature, the total
+number of parts in this feature, and the glyph corresponding to the
+feature. Usually you will just look at the first argument.  The return
+value is treated as the value of the corresponding option.  For
+example, this bgcolor subroutine will call the feature's primary_tag()
+method, and return "blue" if it is an exon, "orange" otherwise:
 
   bgcolor = sub {
 	  my $feature = shift;
@@ -1480,9 +1475,44 @@ otherwise:
 	  return "orange";
 	  }
 
-More subroutine arguments are available to the glyph-specific
-subroutines.  See the Bio::Graphics::Panel manual page for the full
-details.
+See the manual page for Bio::DB::GFF::Feature for information on how
+to interrogate the feature object.
+
+For special effects, such as coloring the first and last exons
+differently, you may need access to all five arguments. Here is an
+example that draws the first and last parts of a feature in blue and
+the rest in red:
+
+   sub { 
+	 my($feature,$option_name,$part_no,$total_parts,$glyph) = @_;
+	 return 'blue' if $part_no == 0;                # zero-based indexing!
+	 return 'blue' if $part_no == $total_parts-1;   # zero-based indexing!
+	 return 'red';
+	 }
+
+See the Bio::Graphics::Panel manual page for more details.
+
+Callbacks for the "link", "title", and "link_target" options have a
+slightly different call signature. They receive three arguments
+consisting of the feature, the Bio::Graphics::Panel object, and the
+Bio::Graphics::Glyph object corresponding to the current track within
+the panel:
+
+  link = sub {
+	     my ($feature, $panel, $track) = @_;
+	     ... do something
+	     }
+
+Ordinarily you will only need to use the feature object. The other
+arguments are useful to look up panel-specific settings such as the
+pixel width of the panel or the state of the "flip" setting:
+
+  title = sub {
+	  my ($feature,$panel,$track) = @_;
+	  my $name = $feature->display_name;
+	  return $panel->flip ? "$name (flipped)" : $name;
+       }
+
 
 Named Subroutine References
 ---------------------------

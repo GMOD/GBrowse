@@ -1,6 +1,6 @@
 package Bio::Graphics::FeatureFile;
 
-# $Id: FeatureFile.pm,v 1.1.2.7 2005-07-19 21:41:40 lstein Exp $
+# $Id: FeatureFile.pm,v 1.1.2.8 2005-07-24 17:18:39 lstein Exp $
 # This package parses and renders a simple tab-delimited format for features.
 # It is simpler than GFF, but still has a lot of expressive power.
 # See __END__ for the file format
@@ -775,13 +775,10 @@ sub _setting {
   my $self = shift;
   my $config = $self->{config} or return;
   return keys %{$config} unless @_;
-  return keys %{$config->{$_[0]}} if @_ == 1;
-
-  # this seems reasonable, but it prevents deliberate assignment of
-  # undef to settings
-  # return $config->{$_[0]}{$_[1]}  if @_ > 1 && exists $config->{$_[0]};
-
-  return $config->{$_[0]}{$_[1]}  if @_ > 1;
+  return keys %{$config->{$_[0]}}        if @_ == 1;
+  return $config->{$_[0]}{$_[1]}         if @_ == 2 && exists $config->{$_[0]};
+  return $config->{$_[0]}{$_[1]} = $_[2] if @_ > 2;
+  return;
 }
 
 

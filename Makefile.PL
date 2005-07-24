@@ -7,7 +7,8 @@ use FindBin '$Bin';
 use Cwd;
 require 5.005003;
 
-my $VERSION = '1.63';
+my $VERSION     = '1.63';
+my $API_VERSION = 1.631;
 my $working_dir = cwd;
 
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN
@@ -183,9 +184,9 @@ print STDERR <<END;
 END
 ;
 
-my $bioperl_needs_patching = biographics_version() < $VERSION;
+my $bioperl_needs_patching = biographics_version() < $API_VERSION;
 if ($bioperl_needs_patching) {
-  print STDERR "\nInstalled Bio::Graphics version is less than $VERSION.  I will update to latest versions of the BioGraphics and GFF libraries.\n";
+  print STDERR "\nInstalled Bio::Graphics version is less than $API_VERSION.  I will update to latest versions of the BioGraphics and GFF libraries.\n";
 }
 
 my @dir = ();

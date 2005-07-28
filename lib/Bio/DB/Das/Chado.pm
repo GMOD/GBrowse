@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.5 2005-07-05 20:48:41 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.6 2005-07-28 19:04:48 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -443,59 +443,70 @@ sub get_feature_by_name {
   my ($name, $class, $ref, $base_start, $stop) 
        = $self->_rearrange([qw(NAME CLASS REF START END)],@_);
 
-   warn "name:$name in get_feature_by_name" if DEBUG;
+  my $wildcard = 0;
+  if ($name =~ /\*/) {
+    $wildcard = 1;
+  }
 
-  $name =~ s/_/\\_/g;  # escape underscores in name
-  $name =~ s/\%/\\%/g; # ditto for percent signs
+  warn "name:$name in get_feature_by_name" if DEBUG;
 
-   warn "name after protecting _ and % in the string:$name\n" if DEBUG;
+  $name = $self->_search_name_prep($name);
+
+  warn "name after protecting _ and % in the string:$name\n" if DEBUG;
 
   my (@features,$sth);
   
-  if ($name =~ /^\s*\S+\s*$/) {
-    # get feature_id
-    # foreach feature_id, get the feature info
-    # then get src_feature stuff (chromosome info) and create a parent feature,
+  # get feature_id
+  # foreach feature_id, get the feature info
+  # then get src_feature stuff (chromosome info) and create a parent feature,
 
-    $name =~ s/[?*]\s*$/%/;
+  my $select_part = "select distinct fs.feature_id \n";
+  my $from_part   = "from feature_synonym fs, synonym s ";
 
-    my $select_part = "select distinct fs.feature_id \n";
-    my $from_part   = "from feature_synonym fs, synonym s ";
-    my $where_part  = "where fs.synonym_id = s.synonym_id and\n"
-                    . "s.synonym_sgml ilike ?";
-                    #this ilike should probably be replace with a 'lower' index
-    if ($class) {
-        my $type = $self->name2term($class);
-        return unless $type;
-        $from_part .= ", feature f \n";
-        $where_part.= "\nand fs.feature_id = f.feature_id and\n"
-                    . "f.type_id = $type";
-    }
-
-    my $query = $select_part . $from_part . $where_part;
-
-    warn "first get_feature_by_name query:$query" if DEBUG;
-
-    $sth = $self->dbh->prepare($query);
-    $sth->execute($name) or $self->throw("getting the feature_ids failed");
-
-    if ($sth->rows == 0) {
-        warn "trying a complex search for $name\n" if DEBUG;
-        ($name,$query) = $self->_complex_search($name,$class);
-
-        $sth = $self->dbh->prepare($query);
-        $sth->execute($name) or $self->throw("getting the feature_ids failed");
-    }
-
-  } else { # not a simple wild card search
-    
-    my $query;
-    ($name,$query) = $self->_complex_search($name,$class);
-
-    $sth = $self->dbh->prepare($query);
-    $sth->execute($name) or $self->throw("getting the feature_ids failed");
-
+  my $where_part;
+  if ($wildcard) {
+    $where_part  = "where fs.synonym_id = s.synonym_id and\n"
+                    . "lower(s.synonym_sgml) like ?";
+  } else {
+    $where_part  = "where fs.synonym_id = s.synonym_id and\n"
+                    . "lower(s.synonym_sgml) = ?";
   }
+
+
+  if ($class) {
+      my $type = $self->name2term($class);
+      return unless $type;
+      $from_part .= ", feature f \n";
+      $where_part.= "\nand fs.feature_id = f.feature_id and\n"
+                    . "f.type_id = $type";
+  }
+
+  my $query = $select_part . $from_part . $where_part;
+
+  warn "first get_feature_by_name query:$query" if DEBUG;
+
+  $sth = $self->dbh->prepare($query);
+  $sth->execute($name) or $self->throw("getting the feature_ids failed");
+
+# this makes performance awful!  It does a wildcard search on a view
+# that has several selects in it.  For any reasonably sized database,
+# this won't work.
+#
+#  if ($sth->rows < 1 and 
+#      $class ne 'chromosome' and
+#      $class ne 'region' and
+#      $class ne 'contig') {  
+#
+#    my $query;
+#    ($name,$query) = $self->_complex_search($name,$class,$wildcard);
+#
+#    warn "complex_search query:$query\n";
+#
+#    $sth = $self->dbh->prepare($query);
+#    $sth->execute($name) or $self->throw("getting the feature_ids failed");
+#
+#  }
+
 
      # prepare sql queries for use in while loops
   my $isth =  $self->dbh->prepare("
@@ -640,9 +651,6 @@ sub _complex_search {
 
     warn "name before wildcard subs:$name\n" if DEBUG;
 
-    
-
-    $name =~ s/\*/%/g;
     $name = "\%$name" unless (0 == index($name, "%"));
     $name = "$name%"  unless (0 == index(reverse($name), "%"));
 
@@ -650,7 +658,7 @@ sub _complex_search {
 
     my $select_part = "select ga.feature_id ";
     my $from_part   = "from gffatts ga ";
-    my $where_part  = "where ga.attribute ilike ? ";
+    my $where_part  = "where lower(ga.attribute) like ? ";
                                                                                                                           
     if ($class) {
         my $type    = $self->name2term($class);
@@ -661,6 +669,18 @@ sub _complex_search {
     }
     my $query = $select_part . $from_part . $where_part;
     return ($name, $query);
+}
+
+sub _search_name_prep {
+  my $self = shift;
+  my $name = shift;
+
+  $name =~ s/_/\\_/g;  # escape underscores in name
+  $name =~ s/\%/\\%/g; # ditto for percent signs
+
+  $name =~ s/\*/%/g;
+
+  return lc($name);
 }
 
 

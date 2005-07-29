@@ -8,8 +8,8 @@
 * Make boxes/callbacks for gaps between components, such as introns.
 * Move all configuration information into a server-side file using CGI::Session 
 	(or similar).
-* More general tag formatter for gbrowse_details.
+* Move toggle section state information into a server-side session.
 
 
-$Id: TODO,v 1.4.6.10 2005-07-20 21:17:01 lstein Exp $
+$Id: TODO,v 1.4.6.11 2005-07-29 20:24:21 lstein Exp $
 

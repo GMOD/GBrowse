@@ -9,7 +9,7 @@ use Digest::MD5 'md5_hex';
 use Text::Shellwords;
 
 use constant URL_FETCH_TIMEOUT    => 5;  # five seconds max!
-use constant URL_FETCH_MAX_SIZE   => 1_000_000;  # don't accept any files larger than 1 Meg
+use constant URL_FETCH_MAX_SIZE   => 50_000_000;  # don't accept any files larger than 50 Meg
 
 use constant DEBUG=>0;
 

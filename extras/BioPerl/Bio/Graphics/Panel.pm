@@ -18,7 +18,7 @@ use constant EXTRA_RIGHT_PADDING => 30;
 my %COLORS;  # translation table for symbolic color names to RGB triple
 my $IMAGEMAP = 'bgmap00001';
 
-sub api_version { 1.631 }
+sub api_version { 1.632 }
 
 # Create a new panel of a given width and height, and add lists of features
 # one by one
@@ -366,9 +366,9 @@ sub _add_track {
   # top-level glyph is the track
   my $feature = Bio::Graphics::Feature->new(
 					    -segments=>$features,
-					    -start => $self->offset+1,
-					    -stop  => $self->offset+$self->length,
-					    -type => 'track'
+					    -start   => $self->offset+1,
+					    -stop    => $self->offset+$self->length,
+					    -type    => 'track'
 					   );
 
   my $factory = Bio::Graphics::Glyph::Factory->new($self,@options);

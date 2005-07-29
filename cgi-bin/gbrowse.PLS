@@ -1125,7 +1125,7 @@ sub tracks_table {
 			     checkbox(-id=>"${id}_n",-name=>"${id}_n",
 				      -label=>$all_off,onClick=>"gbCheck(this,0)")
 			    ).br()   if exists $track_groups{$category};
-    push @sections,$control.span({-id=>$id},$section);
+    push @sections,div($control.span({-id=>$id},$section));
     $id++;
   }
   autoEscape(1);

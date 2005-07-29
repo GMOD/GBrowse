@@ -8,7 +8,6 @@ use Cwd;
 require 5.005003;
 
 my $VERSION     = '1.63';
-my $API_VERSION = 1.631;
 my $working_dir = cwd;
 
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN
@@ -184,9 +183,11 @@ print STDERR <<END;
 END
 ;
 
-my $bioperl_needs_patching = biographics_version() < $API_VERSION;
+my $patch_version       = biographics_patch_version();
+my $biographics_version = biographics_version();
+my $bioperl_needs_patching = $biographics_version < $patch_version;
 if ($bioperl_needs_patching) {
-  print STDERR "\nInstalled Bio::Graphics version is less than $API_VERSION.  I will update to latest versions of the BioGraphics and GFF libraries.\n";
+  print STDERR "\nInstalled Bio::Graphics version $biographics_version is less than desired version $patch_version.  I will update to latest versions of the BioGraphics and GFF libraries.\n";
 }
 
 my @dir = ();
@@ -249,10 +250,20 @@ WriteMakefile(
 );
 
 sub biographics_version {
+  delete $INC{'Bio/Graphics/Panel.pm'};
   eval <<'END' || 0;
     require Bio::Graphics::Panel;
     Bio::Graphics::Panel->api_version;
 END
+}
+
+sub biographics_patch_version {
+  delete $INC{'Bio/Graphics/Panel.pm'};
+  my @inc = @INC;
+  local @INC = @inc;
+  unshift @INC,'./extras/BioPerl';
+  require Bio::Graphics::Panel;
+  Bio::Graphics::Panel->api_version;
 }
 
 

@@ -65,7 +65,7 @@ use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $CONF_DIR
 	    $PLUGINS $UPLOADED_SOURCES $REMOTE_SOURCES
 	    $PRESETS $HAVE_SVG
-	    %OBJECT_TYPES %PLUGIN_NAME2LABEL );
+	    %OBJECT_CLASSES %PLUGIN_NAME2LABEL );
 
 # if you change the zoom/nav icons, you must change this as well.
 use constant MAG_ICON_HEIGHT => 20;
@@ -2463,11 +2463,11 @@ sub build_svg_image_page {
 
 # get list of object types for help pages
 sub object_classes_for_help {
-  return $OBJECT_TYPES{$CONFIG->source} if exists $OBJECT_TYPES{$CONFIG->source};
+  return $OBJECT_CLASSES{$CONFIG->source} if exists $OBJECT_CLASSES{$CONFIG->source};
   my $db = open_database();
   my @classes = eval {$db->classes};
-  return $OBJECT_TYPES{$CONFIG->source} = undef unless @classes;
-  return $OBJECT_TYPES{$CONFIG->source} = ul(li(\@classes));
+  return $OBJECT_CLASSES{$CONFIG->source} = '' unless @classes;
+  return $OBJECT_CLASSES{$CONFIG->source} = ul(li(\@classes));
 }
 
 # Create a link to a citation.  It will point to an external URL if the

@@ -184,11 +184,13 @@ unpacked.  Then run the following commands (in brief):
 	perl Makefile.PL
 	make
         make test (optional)
-	make install
+	make install UNINST=1
 
 This will install the software in the default location under
 /usr/local/apache. See "Details" to change this, or to install gbrowse
-into your home directory.
+into your home directory.   The 'UNINST=1' will insure that older
+versions of perl modules being installed will be removed to
+help prevent conflicts.
 
 
 To further configure GBrowse, see L<CONFIGURE_HOWTO>.  To run

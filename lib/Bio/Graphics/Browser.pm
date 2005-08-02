@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.26 2005-07-21 19:42:38 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.27 2005-08-02 14:47:06 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -64,6 +64,7 @@ use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use Text::Shellwords;
 use Bio::Graphics::Browser::I18n;
+use Bio::Graphics::Browser::Util 'modperl_request';
 
 require Exporter;
 
@@ -89,10 +90,12 @@ use constant DEFAULT_OVERVIEW_BGCOLOR => 'wheat';
 
 use constant DEBUG => 0;
 
-if( $ENV{MOD_PERL} && 
-    $ENV{MOD_PERL} =~ /mod_perl\/(\d+\.\d+)/ && 
-    $1 > 1.98 ) { 
-    require Apache::SubRequest;
+if( $ENV{MOD_PERL} &&
+    exists $ENV{MOD_PERL_API_VERSION} &&
+    $ENV{MOD_PERL_API_VERSION} >= 2) {
+    require Apache2::SubRequest;
+    require Apache2::RequestUtil;
+    require Apache2::ServerUtil;
 }
 
 =head2 new()
@@ -866,7 +869,7 @@ sub tmpdir {
   $tmpuri .= "/$path" if $path;
 
   if ($ENV{MOD_PERL} ) {
-    my $r          = Apache->request;
+    my $r          = modperl_request();
     my $subr       = $r->lookup_uri($tmpuri);
     $tmpdir        = $subr->filename;
     my $path_info  = $subr->path_info;

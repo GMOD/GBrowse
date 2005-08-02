@@ -793,9 +793,9 @@ sub adjust_settings {
     {
       $settings->{version} ||= param('version') || '';
       $settings->{ref}   = param('ref');
-      $settings->{start} = param('start') if param('start') =~ /^[\d-]+/;
-      $settings->{stop}  = param('end')   if param('end')   =~ /^[\d-]+/;
-      $settings->{stop}  = param('stop')  if param('stop')  =~ /^[\d-]+/;
+      $settings->{start} = param('start') if defined param('start') && param('start') =~ /^[\d-]+/;
+      $settings->{stop}  = param('end')   if defined param('end')   && param('end')   =~ /^[\d-]+/;
+      $settings->{stop}  = param('stop')  if defined param('stop')  && param('stop')  =~ /^[\d-]+/;
       $settings->{flip}  = param('flip');
       zoomnav($settings);
       $settings->{name} = "$settings->{ref}:$settings->{start}..$settings->{stop}";
@@ -803,7 +803,7 @@ sub adjust_settings {
     }
 
   foreach (qw(name source plugin stp ins head
-              ks sk version h_feat h_type)) {
+	      ks sk version h_feat h_type)) {
     $settings->{$_} = param($_) if defined param($_);
   }
   $settings->{name} =~ s/^\s+//; # strip leading
@@ -2458,17 +2458,6 @@ sub build_svg_image_page {
   $img_url   .= ";flip=$flip" if $flip;
   $img_url   .= ";options=$options" if $options;
   print $CONFIG->tr('SVG_DESCRIPTION',$img_url,$img_url);
-}
-
-
-sub url2file {
-  my $url = shift;
-  for my $l ((map {"$url.$_"} $CONFIG->language->language), $url) {
-    my $file = $ENV{MOD_PERL} && Apache->can('request') ? Apache->request->lookup_uri($l)->filename
-                                                        : "$ENV{DOCUMENT_ROOT}/$l";
-    return $file if -e $file;
-  }
-  return;
 }
 
 

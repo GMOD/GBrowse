@@ -326,7 +326,7 @@ END
 sub redirect_legacy_url {
   my $source      = shift;
   my @more_args   = @_;
-  if ($source && path_info() !~ m/+$source/+$^) {
+  if ($source && path_info() !~ m^/+$source/+$^) {
     my $q = new CGI '';
     $q->path_info("$source/");
     if (request_method() eq 'GET') {

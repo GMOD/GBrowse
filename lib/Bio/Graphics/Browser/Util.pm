@@ -328,25 +328,35 @@ sub redirect_legacy_url {
   my @more_args   = @_;
   if ($source && path_info() ne "/$source/") {
 
-    # This ugly-looking code is a workaround for a mod_cgi bug that occurs in
-    # Apache version 2 when the path contains double slashes //
-    $ENV{SCRIPT_NAME} =~ s!^(.+/gbrowse[^/]*)/.*!$1!;
-    $ENV{REQUEST_URI} =~ s!^(.+/gbrowse[^/]*)/.*!$1!;
-
     my $q = new CGI '';
-    $q->path_info("/$source/");
-
     if (request_method() eq 'GET') {
       foreach (param()) {
 	next if $_ eq 'source';
 	$q->param($_=>param($_)) if param($_);
       }
     }
-    my $new_url = $q->url(-absolute=>1,-path_info=>1,-query=>1);
+
+    # This is infinitely more difficult due to horrible bug in Apache version 2
+    # It is fixed in CGI.pm versions 3.11 and higher, but this version is not guaranteed
+    # to be available.
+    my ($script_name,$path_info) = _broken_apache_hack();
+    my $query_string = $q->query_string;
+    my $protocol     = $q->protocol;
+    my $host         = $q->virtual_host;
+    my $port         = $q->virtual_port;
+
+    my $new_url      = "$protocol://$host";
+    $new_url        .= ":$port" unless  (lc($protocol) eq 'http'  && $port == 80)
+                                     or (lc($protocol) eq 'https' && $port == 443);
+    $new_url        .= $script_name;
+    $new_url        .= "/$source/";
+    $new_url        .= "?$query_string" if $query_string;
+
     print redirect($new_url);
     exit 0;
   }
 }
+
 sub parse_feature_str {
   my $f      = shift;
   my ($reference,$type,$name,@position);
@@ -371,6 +381,31 @@ sub parse_feature_str {
   my @segments = map { [/(-?\d+)(?:-|\.\.)(-?\d+)/]} map {split /,/} @position;
   ($reference,$type,$name,@segments);
 }
+
+# workaround for broken Apache 2 and CGI.pm <= 3.10
+sub _broken_apache_hack {
+  my $raw_script_name = $ENV{SCRIPT_NAME} || '';
+  my $raw_path_info   = $ENV{PATH_INFO}   || '';
+  my $uri             = $ENV{REQUEST_URI} || '';
+
+  my @uri_double_slashes  = $uri =~ m^(/{2,}?)^g;
+  my @path_double_slashes = "$raw_script_name $raw_path_info" =~ m^(/{2,}?)^g;
+
+  my $apache_bug      = @uri_double_slashes != @path_double_slashes;
+  return ($raw_script_name,$raw_path_info) unless $apache_bug;
+
+  my $path_info_search = $raw_path_info;
+  # these characters will not (necessarily) be escaped
+  $path_info_search    =~ s/([^a-zA-Z0-9$()':_.,+*\/;?=&-])/uc sprintf("%%%02x",ord($1))/eg;
+  $path_info_search    = quotemeta($path_info_search);
+  $path_info_search    =~ s!/!/+!g;
+  if ($uri =~ m/^(.+)($path_info_search)/) {
+    return ($1,$2);
+  } else {
+    return ($raw_script_name,$raw_path_info);
+  }
+}
+
 
 
 1;

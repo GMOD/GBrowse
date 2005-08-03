@@ -326,16 +326,24 @@ END
 sub redirect_legacy_url {
   my $source      = shift;
   my @more_args   = @_;
-  if ($source && path_info() !~ m^/+$source/+$^) {
+  if ($source && path_info() ne "/$source/") {
+
+    # This ugly-looking code is a workaround for a mod_cgi bug that occurs in
+    # Apache version 2 when the path contains double slashes //
+    $ENV{SCRIPT_NAME} =~ s!^(.+/gbrowse[^/]*)/.*!$1!;
+    $ENV{REQUEST_URI} =~ s!^(.+/gbrowse[^/]*)/.*!$1!;
+
     my $q = new CGI '';
-    $q->path_info("$source/");
+    $q->path_info("/$source/");
+
     if (request_method() eq 'GET') {
       foreach (param()) {
 	next if $_ eq 'source';
 	$q->param($_=>param($_)) if param($_);
       }
     }
-    print redirect($q->url(-full=>1,-path_info=>1,-query=>1));
+    my $new_url = $q->url(-absolute=>1,-path_info=>1,-query=>1);
+    print redirect($new_url);
     exit 0;
   }
 }

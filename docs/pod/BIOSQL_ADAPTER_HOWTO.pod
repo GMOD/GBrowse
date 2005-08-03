@@ -17,7 +17,7 @@ Make sure that Gbrowse is correctly installed.
 
 Make sure that you have the latest version of Bioperl-db.
 
-=item C) Bioperl-schema -- L<http://cvs.bioperl.org/cgi-bin/viewcvs/viewcvs.cgi/biosql-schema/?cvsroot=bioperl>
+=item C) Biosql-schema -- L<http://cvs.bioperl.org/cgi-bin/viewcvs/viewcvs.cgi/biosql-schema/?cvsroot=bioperl>
 
 Make sure that you have the latest version of Bioperl-schema.
 

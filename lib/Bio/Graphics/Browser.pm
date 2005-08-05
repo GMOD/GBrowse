@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.27 2005-08-02 14:47:06 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.28 2005-08-05 22:27:50 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1010,6 +1010,7 @@ sub image_and_map {
   my $background    = $config{background} || '';
 
   $segment->factory->debug(1) if DEBUG;
+  $self->error('');
 
   # Bring in the appropriate package - just for the fonts. Ugh.
   eval "use $image_class";
@@ -1186,10 +1187,12 @@ sub image_and_map {
     my $name = $file->name || '';
     $options->{$name} ||= 0;
     my ($inserted,undef,$new_tracks)
-      = $file->render($panel,$track,$options->{$name},
-		      $max_bump,$max_labels,
-		      $select
-		     );
+      = eval { $file->render($panel,$track,$options->{$name},
+			     $max_bump,$max_labels,
+			     $select
+			    )
+	     };
+    $self->error($@) if $@;
     foreach (@$new_tracks) { $track2label{$_} = $file }
     $offset += $inserted;
   }
@@ -1987,6 +1990,21 @@ sub language_code {
   my $table= $lang->tr_table($lang->language);
   return unless %$table;
   return $lang->language;
+}
+
+=head2 error()
+
+  my $error = $browser->error(['new error']);
+
+Retrieve or store an error message. Currently used to pass run-time
+errors involving uploaded/remote annotation files.
+
+=cut
+
+sub error {
+  my $self = shift; # do nothing
+  $self->{'.err_msg'} = shift if @_;
+  $self->{'.err_msg'};
 }
 
 package Bio::Graphics::BrowserConfig;

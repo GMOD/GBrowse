@@ -555,10 +555,18 @@ sub detail_panel {
     $cell .= i($CONFIG->tr('TOO_BIG',unit_label($MAX_SEGMENT),unit_label($DEFAULT_SEGMENT)));
   }
   $cell .= "\n";
+  my $error_msg = $CONFIG->error ? p({-style=>"color: red"},
+				     "An error occurred while processing an uploaded or remote annotation file: ",
+				     b($CONFIG->error) ) : '';
   my $table = table({-border=>0,-width=>'100%'},
 		    TR({-class=>'databody'},
 		       td({-align=>'center'},$cell)
-		      )
+		      ),
+		    $error_msg ? (
+				  TR({-class=>'databody'},
+				     td($error_msg)
+				    )
+				  ) : (),
 		   );
   $table .= "\n";
   $table .= $map if $map;

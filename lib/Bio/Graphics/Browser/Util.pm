@@ -343,7 +343,7 @@ sub redirect_legacy_url {
     my $query_string = $q->query_string;
     my $protocol     = $q->protocol;
     my $host         = $q->virtual_host;
-    my $port         = $q->virtual_port;
+    my $port         = $q->server_port;
 
     my $new_url      = "$protocol://$host";
     $new_url        .= ":$port" unless  (lc($protocol) eq 'http'  && $port == 80)

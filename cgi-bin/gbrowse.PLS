@@ -155,7 +155,7 @@ END
 $HEADER=0;
 $HTML=0;
 
-check_versions() or exit 0;
+version_warning();
 
 $ENV{PATH} = '/bin:/usr/bin:/usr/local/bin';
 $CONF_DIR  = conf_dir($CONF_DIR);  # conf_dir() is exported from Util.pm
@@ -2726,19 +2726,16 @@ sub split_labels {
    map {/^(http|ftp|das)/ ? $_ : split /[+-]/} @_;
 }
 
-sub check_versions {
-  unless (Bio::Graphics::Panel->can('api_version') &&
-	  Bio::Graphics::Panel->api_version >= $VERSION) {
-    print header(),
-      start_html('Version Mismatch'),
-	h1('Version Mismatch'),
-	  p("GBrowse version $VERSION requires a compatible version of the Bio::Graphics library.",
-	    "Either install the latest version of BioPerl (possibly from CVS) or reinstall GBrowse after installing Bioperl."
-	   ),
-	     end_html();
-    return 0;
-  }
-  1;
+sub version_warning {
+  return if Bio::Graphics::Panel->can('api_version') &&
+	  Bio::Graphics::Panel->api_version >= $VERSION;
+
+    warn <<END;
+GBROWSE VERSION MISMATCH:
+GBrowse version $VERSION requires a compatible version of the Bio::Graphics library.
+You should either install BioPerl (the CVS live version) or reinstall GBrowse,
+which will patch Bio::Graphics to the latest version.
+END
 }
 
 !NO!SUBS!

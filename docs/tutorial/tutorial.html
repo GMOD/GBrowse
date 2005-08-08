@@ -7,7 +7,7 @@
 <body>
 <h1>Generic Genome Browser: A Tutorial</h1>
 
-<h2>Author: Lincoln Stein, June 16, 2003 (<i>revised 20 February 2004</i>)</h2>
+<h2>Author: Lincoln Stein, June 16, 2003 (<i>revised 8 August 2005</i>)</h2>
 
 <p>
 
@@ -15,8 +15,8 @@ This is a quick tutorial to take you through the main features and
 gotchas of GBrowse.  This tutorial assumes that you have successfully
 setup Perl, GD, BioPerl and the other GBrowse dependencies.  During
 most of the tutorial, we will be using the "in-memory" GBrowse
-database (no relational database required!)  At the end, we will show
-how to set up a database with MySQL that will scale to genome sizes.
+database (no relational database required!)  Later we will show how to
+set up a genome size database using the berkeleydb and MySQL adaptors.
 </p>
 
 <p>
@@ -2424,7 +2424,33 @@ entirety of the feature and DNA data.</i>
 
 <hr>
 
-<h2><a name="mysql">19. Setting up a MySQL database</a></h2>
+<h2><a name="berkeleydb">19. Setting up a Berkeleydb database</a></h2>
+
+<p>
+
+The in-memory database is great for smaller data sets, and can handle
+GFF files of up to about 20,000 features (more if you have lots of
+memory).  For larger data sets, however, you'll want to use a database
+management system.  GBrowse handles a number of DBMS through its
+"database adaptor" system.  This section shows how to use the
+Bio::DB::GFF berkeleydb adaptor that comes for free when you install
+BioPerl; this will enable you to create databases of 10 million or
+more features. The next section shows you how to install a MySQL
+relational database that will support even larger data sets.  You may
+skip these sections and move on to working with third-party
+annotations if you do not wish to install a berkeleydb-based server at
+this time.
+
+<p>
+
+The Berkeleydb database adaptor comes with newer versions of
+bioperl. As of the time this was written, you will have to install the
+CVS version of Bioperl (or a snapshot), but the feature is expected to
+be part of Bioperl release 1.51. See <a
+href="http://cvs.bioperl.org/">http://cvs.bioperl.org/</a> for
+instructions on getting the "bleeding edge" bioperl.
+
+<h2><a name="mysql">20. Setting up a MySQL database</a></h2>
 
 <p>
 
@@ -3456,6 +3482,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Mon Jun 20 16:12:41 EDT 2005
+Last modified: Mon Aug  8 15:24:26 EDT 2005
 <!-- hhmts end -->
 </body> </html>

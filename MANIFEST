@@ -180,6 +180,8 @@ extras/BioPerl/Bio/DB/GFF.pm
 extras/BioPerl/Bio/DB/GFF/Adaptor/ace.pm
 extras/BioPerl/Bio/DB/GFF/Adaptor/biofetch.pm
 extras/BioPerl/Bio/DB/GFF/Adaptor/biofetch_oracle.pm
+extras/BioPerl/Bio/DB/GFF/Adaptor/berkeleydb.pm
+extras/BioPerl/Bio/DB/GFF/Adaptor/berkeleydb/iterator.pm
 extras/BioPerl/Bio/DB/GFF/Adaptor/dbi.pm
 extras/BioPerl/Bio/DB/GFF/Adaptor/dbi/caching_handle.pm
 extras/BioPerl/Bio/DB/GFF/Adaptor/dbi/iterator.pm
@@ -191,7 +193,8 @@ extras/BioPerl/Bio/DB/GFF/Adaptor/dbi/oracle.pm
 extras/BioPerl/Bio/DB/GFF/Adaptor/dbi/oracleace.pm
 extras/BioPerl/Bio/DB/GFF/Adaptor/dbi/pg.pm
 extras/BioPerl/Bio/DB/GFF/Adaptor/memory.pm
-extras/BioPerl/Bio/DB/GFF/Adaptor/memory_iterator.pm
+extras/BioPerl/Bio/DB/GFF/Adaptor/memory/feature_serializer.pm
+extras/BioPerl/Bio/DB/GFF/Adaptor/memory/iterator.pm
 extras/BioPerl/Bio/DB/GFF/Aggregator.pm
 extras/BioPerl/Bio/DB/GFF/Aggregator/alignment.pm
 extras/BioPerl/Bio/DB/GFF/Aggregator/clone.pm

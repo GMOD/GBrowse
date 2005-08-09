@@ -2410,8 +2410,123 @@ displayed whenever the user hovers the mouse over the feature for a
 second or two.  The same variable substitution rules apply, so when
 the user mouses over feature "m06", a hints window will pop up that
 says "Search Google for SUSHI repeat."  Give it a try!
+</p>
+
+<hr>
+
+<h2><a name="enhancemengs">19. Enhancements</a></h2>
 
 <p>
+This section will show you how to add two nice user interface
+enhancements to the volvox database.
+</p>
+
+<h3>Adding a "region" panel</h3>
+
+<p> With larger genomes, you may want to add a "region panel" that is
+intermediate in size between the overview panel and the detail
+panel. The region panel can contain tracks of its own and is useful
+for displaying features that are too numerous for the overview panel
+and too large for the detail panel.</p>
+
+<p>Open the volvox.conf configuration file and add the following line
+to the [GENERAL] section. A good place is near the "max segment" and
+"default segment" sections:</p>
+
+<blockquote class="example"><pre>
+# max and default segment sizes for detailed view
+max segment     = 50000
+default segment = 5000
+
+# size of the "region panel"
+region segment = 20000
+</pre></blockquote>
+
+<p>Now when you reload the volvox page, you will see an intermediate
+panel labeled "region", as shown in Figure 22:</p>
+
+<blockquote>
+<img src="figures/figure22.gif"><br>
+<i>Figure 22:</i> The "region" panel shows a region intermediate in
+size between the overview and the detail panel.
+</blockquote>
+
+<p>You can declare region panel tracks in exactly the same way that you
+declare overview tracks by declaring stanzas qualified by ":region"</p>
+
+<blockquote class="example"><pre>
+[TransChip:region]
+feature        = tprofile
+glyph          = xyplot
+graph_type     = boxes
+height         = 50
+min_score      = 0
+max_score      = 1000
+bgcolor        = blue
+scale          = right
+key            = Profile
+</pre></blockquote>
+
+<p>Figure 23 shows what the region looks like with its "Profile" track
+turned on.</p>
+
+<blockquote>
+<img src="figures/figure23.gif"><br>
+<i>Figure 23:</i> You can add any number of tracks to the region
+panel, just as you would for the overview panel.
+</blockquote>
+
+<h3>Grouping Tracks</h3>
+
+<p>The bottom of the GBrowse window contains an expandable set of
+checkboxes that allows the users to turn tracks on and off. By
+default, the tracks are grouped into sections corresponding to tracks
+belonging to the overview panel, those belonging to the region panel,
+tracks created by external (third-party) annotations, and tracks
+created by plugins. All other tracks are grouped together in a
+catch-all section named "General."</p>
+
+<p>You can easily define new track groups to make navigation
+easier. To do so, just add a "category" option to each of the track
+stanzas. This option defines the name of the category. Tracks that
+belong to the same category will be grouped together, regardless of
+the order in which the track definitions appear in the configuration
+file. For example, we can place the [Motifs] and the [Translation]
+tracks into a section named "Proteins" by modifying their stanzas
+to look like this:</p>
+
+<blockquote class="example"><pre>
+[Motifs]
+feature      = motif
+glyph        = span
+height       = 5
+description  = 1
+category     = Proteins
+key          = Example motifs
+
+[Translation]
+glyph          = translation
+global feature = 1
+height         = 40
+fgcolor        = purple
+start_codons   = 0
+stop_codons    = 1
+category       = Proteins
+translation  = 6frame
+key          = 6-frame translation
+</pre></blockquote>
+
+<p>In this way we can create sections named "Alignments," "Examples,"
+"Genes" and "Proteins" and assign the appropriate tracks to them. The
+Tracks control section will look something like figure 24:</p>
+
+
+<blockquote>
+<img src="figures/figure24.gif"><br>
+<i>Figure 24:</i> You can add any number of tracks to the region
+panel, just as you would for the overview panel.
+</blockquote>
+
 
 <blockquote>
 <i>The file <a href="conf_files/volvox_final.conf">volvox_final.conf</a>
@@ -2421,6 +2536,7 @@ href="data_files/volvox_all.gff">volvox_all.gff</a> and <a
 href="data_files/volvox_all.fa">volvox_all.fa</a> likewise contain the
 entirety of the feature and DNA data.</i>
 </blockquote>
+
 
 <hr>
 
@@ -2443,26 +2559,189 @@ this time.
 
 <p>
 
-The Berkeleydb database adaptor comes with newer versions of
-bioperl. As of the time this was written, you will have to install the
-CVS version of Bioperl (or a snapshot), but the feature is expected to
-be part of Bioperl release 1.51. See <a
-href="http://cvs.bioperl.org/">http://cvs.bioperl.org/</a> for
-instructions on getting the "bleeding edge" bioperl.
+The Berkeleydb database adaptor comes with BioPerl 1.51 or higher
+(still under development at the time this tutorial was written). If
+you have an older version of BioPerl, GBrowse will install the adaptor
+for you. As its name implies, this adaptor uses the Berkeleydb
+database system (http://www.sleepycat.com) to create indexed database
+files from GFF feature files. The adaptor also requires the Perl
+DB_File interface to Berkeleydb. If you are using a Linux or Mac OSX
+system, you almost certainly have both Berkeleydb and DB_File already
+installed. For Windows users of ActiveState Perl, you should confirm
+that DB_File is installed by running the following command: </p>
+
+<blockquote class="example">
+<pre>
+C:\&gt; perl -MDB_File -e 'print $DB_FILE::VERSION'
+</pre>
+</blockquote>
+
+<p>
+If this prints out a number, then you are golden. If you get an error,
+you should reinstall DB_File by running the PPM tool:</p>
+
+<blockquote class="example"><pre>
+C:\&gt; ppm
+PPM interactive shell (2.1) - type 'help' for available commands.
+PPM> install DB_File
+</pre></blockquote>
+
+<p>It is an extremely simple task to convert an existing in-memory
+database to use the Berkeleydb database. We will now convert the
+Volvox example database to Berkeleydb.</p>
+
+<p>Take the most recent version of the volvox.conf configuration file,
+and edit the top few lines of the new file so that it looks like
+this:</p>
+
+<blockquote class="example"><pre>
+[GENERAL]
+description   = Volvox Berkeleydb Database
+db_adaptor    = Bio::DB::GFF
+db_args       = -adaptor berkeleydb
+	        -dir     '$HTDOCS/gbrowse/databases/volvox'
+</pre></blockquote>
+
+<p> We made just two changes. First, we changed the description of the
+database to "Volvox Berkeleydb Database" to distinguish it from the
+in-memory database. Second, we changed the value of the
+<b>-adaptor</b> option from "memory" to "berkeleydb".
+</p>
+
+<p>Now reload the volvox page in your browser. There will be a slight
+delay as the Berkeleydb adaptor constructs its indexes, and then the
+page will reappear. You should now be able to browse and search the
+database exactly as before. Depending on how fast the memory adaptor
+was to begin with, you may not notice a speed improvement; however,
+with large GFF files, the performance improvement will be very
+marked.</p>
+
+<p>If you look in the volvox database directory, you will see a series
+of newly-created index files named "bdb_features.btree",
+"bdb_features.data", etc. These are automatically created when needed
+and updated whenever the underlying GFF or FASTA files are
+changed.</p>
+
+<p>If you get an "Internal Server Error" or similar message, check the
+server error log file for messages that explain what went wrong. The
+most common problem is that the volvox database directory is not
+writeable by the web server user. As described earlier, this directory
+must be "world writeable" in order to allow the web server to create
+and maintain the databases</p>
+
+<h3>Creating a Berkeleydb database using bp_load_gff.pl</h3>
+
+<p>Although it is convenient to maintain the Berkeleydb indexes
+automatically, this mechanism has a number of disadvantages. One
+disadvantage is that this mechanism requires the database directory to
+be world writeable (or at least writeable by the web user), which may
+not be acceptable in some installations. Another disadvantage is that
+the indexing may take a long time, up to 10 minutes for a GFF
+databases containing a million lines. Some web servers will time out
+during this process. For large databases, it is better to explicitly
+create the database index files using the <i>bp_load_gff.pl</i>
+program.</p>
+
+<p><i>bp_load_gff.pl</i> is a BioPerl utility that is described in
+more detail in <a href="#mysql">Setting up a MySQL database</a>. It
+takes as its input a series of GFF and FASTA files and creates the
+appropriate database files. To see how to use it, we will create a
+fresh database directory. Go to the GBrowse database located at
+<b>$HTDOCS/gbrowse/databases</b> and create a new subdirectory called
+"volvox_bdb:"</p>
+
+<blockquote class="example"><pre>
+ % cd $HTDOCS/gbrowse/databases
+ % mkdir volvox_bdb
+</pre></blockquote>
+
+<p>
+
+On Windows systems you can use the file manager to create this new
+folder.
+
+<p>
+
+You do <b>not</b> have to make this directory world writeable, but it
+should be readable and executable by the user that the web server runs
+as. Now enter the tutorial data files directory
+($HTDOCS/gbrowse/tutorial/data_files) and load the GFF and sequence
+files using the following command:</p>
+
+<blockquote class="example"><pre>
+<b>% bp_load_gff.pl -c -a berkeleydb -d $HTDOCS/gbrowse/databases/volvox_bdb volvox_all.fa volvox_all.gff</b>
+volvox_all.gff: loading...
+738 records loaded
+volvox_all.gff: 738 records loaded
+Loading fasta file volvox_all.fa
+volvox_all.fa: 7 records loaded
+</pre></blockquote>
+
+The arguments to <i>bp_load_gff.pl</i> are:
+
+<table>
+  <tr>
+    <td><b>-a</b></td>
+    <td>Use the berkeleydb database <b>a</b>daptor.
+  </tr>
+  <tr>
+    <td><b>-c</b></td>
+    <td><b>c</b>lear (initialize) the database
+  </tr>
+  <tr>
+    <td><b>-d $HTDOCS/gbrowse/databases/volvox_bdb</b></td>
+    <td>Load the data into the indicated <b>d</b>atabase directory.
+  </tr>
+  <tr>
+    <td><b>volvox_all.fa volvox_all.gff</b></td>
+    <td>The data files to load.
+  </tr>
+</table>
+
+<p> If all goes well, this will create the index files in
+<tt>$HTDOCS/gbrowse/databases/volvox_bdb</tt>. If you look in that
+directory now, you'll see a series of bdb_* index files.</p>
+
+<p>
+The last step is to modify the volvox.conf to point to this
+directory. Open it in a text editor and modify the top part so that it
+looks like this:
+</p>
+
+<blockquote class="example"><pre>
+[GENERAL]
+description   = Volvox Berkeleydb Database
+db_adaptor    = Bio::DB::GFF
+db_args       = -adaptor berkeleydb
+	        -dsn    '$HTDOCS/gbrowse/databases/volvox_bdb'
+</pre></blockquote>
+
+<p>The change here is to replace the <b>-dir</b> argument with
+<b>-dsn</b> ("data source name").  This tells the Berkeleydb adaptor
+that pre-made index files can be found in the indicated directory. It
+will not attempt to update the index files automatically.</p>
+
+<p>If you wish to update the indexes with new GFF or sequence data,
+you should run the bp_load_gff.pl script again to update the
+indexes. Using the <b>-c</b> flag will reinitialize the indexes from
+scratch, erasing whatever was there before. Without this flag, the
+provided GFF and/or sequence data will be incrementally added to the
+indexes.</p>
 
 <h2><a name="mysql">20. Setting up a MySQL database</a></h2>
 
 <p>
 
-The in-memory database is great for smaller data sets, and can handle
-GFF files of up to about 100,000 features (more if you have lots of
-memory).  For larger data sets, however, you'll want to use a database
-management system.  GBrowse handles a number of DBMS through its
-"database adaptor" system.  In this section, you'll learn to use one
-of them, the Bio::DB::GFF MySQL adaptor that comes for free when you
-install BioPerl.  You may skip this section and go on to working with
-third-party annotations if you do not wish to install a MySQL server
-at this time.
+The Bio::DB::GFF MySQL adaptor is an interface to the open source
+MySQL database management system. Its performance is similar to that
+of the Berkeleydb adaptor, but it has better provisions for error
+recovery and is safe to use in environments where multiple users write
+to the database simultaneously. In addition, the MySQL adaptor has
+been tested much more extensively than the Berkeleydb adaptor and is
+highly recommended for production environments. This section describes
+how to set up GBrowse to use the MySQL adaptor. If you are not
+interested in this, you may skip to the next section that describes
+loading third-party annotations.
 
 <p>
 
@@ -2564,12 +2843,11 @@ The arguments to <i>bp_load_gff.pl</i> are:
     <td><b>-d volvox</b></td>
     <td>Load into the <b>d</b>atabase named volvox
   </tr>
-  </tr>
-    <tr>
+  <tr>
     <td><b>volvox_all.fa volvox_all.gff</b></td>
     <td>The data files to load.
   </tr>
-
+  
 </table>
 
 <p>
@@ -2637,7 +2915,7 @@ see the following perldoc manual pages:
 
 <hr>
 
-<h2><a name="third-party">20. Adding Third Party Features</a></h2>
+<h2><a name="third-party">21. Adding Third Party Features</a></h2>
 
 <p>
 
@@ -2698,12 +2976,12 @@ href="file:///$CONF/gbrowse.conf">$CONF/gbrowse.conf/</a>.
 
 <p>
 
-Confirm that you can browse the database.  Figure 22 is a picture of
+Confirm that you can browse the database.  Figure 25 is a picture of
 the entire data set with all core tracks turned on.
 
 <blockquote>
-<img src="figures/figure22.gif"><br>
-<i>Figure 22:</i> The core <i>C. elegans</i> dataset.
+<img src="figures/figure25.gif"><br>
+<i>Figure 25:</i> The core <i>C. elegans</i> dataset.
 </blockquote>
 
 <h3>Uploading an Annotation File</h3>
@@ -2777,13 +3055,13 @@ button.  Select one of the annotation files, and then press the
 "Upload" button to upload the file to the server.  The annotations
 contained in the file should now appear on the display.  If you now do
 this for all five of the annotation files, you will eventually get a
-display like that shown in Figure 23.
+display like that shown in Figure 26.
 
 <p>
 
 <blockquote>
-<img src="figures/figure23.gif"><br>
-<i>Figure 23:</i> After uploading four annotation files.
+<img src="figures/figure26.gif"><br>
+<i>Figure 26:</i> After uploading four annotation files.
 </blockquote>
 
 <p>
@@ -2813,8 +3091,8 @@ named "elegans_sts.gff", and choose "Edit File...".
 <p>
 
 <blockquote>
-<img src="figures/figure24.gif"><br>
-<i>Figure 24:</i> The uploaded files can be edited in place by
+<img src="figures/figure27.gif"><br>
+<i>Figure 27:</i> The uploaded files can be edited in place by
 clicking the "Edit File..." button.
 </blockquote>
 
@@ -2869,11 +3147,11 @@ key     = Microarray expression probe
 <p>
 
 With this combination of configurations, the display will now look
-as shown in Figure 25:
+as shown in Figure 28:
 
 <blockquote>
-<img src="figures/figure25.gif"><br>
-<i>Figure 25:</i> After customizing the annotation files.
+<img src="figures/figure28.gif"><br>
+<i>Figure 28:</i> After customizing the annotation files.
 </blockquote>
 
 <p>
@@ -2996,14 +3274,14 @@ remote sources = "ORFeome STSs"      http://localhost/elegans_sts.gff
 <p>
 
 When you reload the web page, you will see a popup menu appear next to
-the remote annotation URL textfield (Figure 26).  The menu will
+the remote annotation URL textfield (Figure 29).  The menu will
 contain options to load "ORFeome STSs" and "Expression probes", and
 selecting a menu item will have exactly the same effect as typing in
 the URL manually.
 
 <blockquote>
-<img src="figures/figure26.gif"><br>
-<i>Figure 26:</i> The preset remote annotation URL popup menu.
+<img src="figures/figure29.gif"><br>
+<i>Figure 29:</i> The preset remote annotation URL popup menu.
 </blockquote>
 
 The neat thing about all this is that it works across the
@@ -3021,7 +3299,7 @@ text field and reload.
 
 <hr>
 
-<h2><a name="DAS">21. Using GBrowse as a DAS Server</a></h2>
+<h2><a name="DAS">22. Using GBrowse as a DAS Server</a></h2>
 
 <p>
 
@@ -3288,15 +3566,15 @@ reload, you will see only the repeat track and not the other three.
 <p>
 
 What if we want to see two of the four tracks?  We just add additional
-type= sections, separated by semicolons.  To see both the repeat and
-Deletion_allele tracks, we could request
-http://localhost/cgi-bin/das/elegans_extra?type=repeat;type=Deletion_allele
-(Figure 27).
+type= sections, separated by semicolons.  To see both the "repeat" and
+"Expression" tracks, we could request
+http://localhost/cgi-bin/das/elegans_extra?type=repeat;type=Expression
+(Figure 30).
 
 <blockquote>
-<img src="figures/figure27.gif"><br> <i>Figure 27:</i>
+<img src="figures/figure30.gif"><br> <i>Figure 30:</i>
 The <i>C. elegans</i> core annotations database with the "repeat" and
-"Deletion_allele" tracks  superimposed on it using DAS.
+"Expression" tracks  superimposed on it using DAS.
 </blockquote>
 
 <p>
@@ -3456,7 +3734,7 @@ needs.
 
 <hr>
 
-<h2><a name="conclusion">22. Conclusion</a></h2>
+<h2><a name="conclusion">23. Conclusion</a></h2>
 
 <p>
 
@@ -3482,6 +3760,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Mon Aug  8 15:24:26 EDT 2005
+Last modified: Mon Aug  8 20:57:05 EDT 2005
 <!-- hhmts end -->
 </body> </html>

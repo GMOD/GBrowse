@@ -1,3 +1,4 @@
+bin/bp_load_gff.PLS
 bin/load_genbank.PLS
 bin/make_das_conf.PLS
 bin/process_gadfly.PLS
@@ -164,6 +165,9 @@ docs/tutorial/figures/figure24.gif
 docs/tutorial/figures/figure25.gif
 docs/tutorial/figures/figure26.gif
 docs/tutorial/figures/figure27.gif
+docs/tutorial/figures/figure28.gif
+docs/tutorial/figures/figure29.gif
+docs/tutorial/figures/figure30.gif
 docs/tutorial/figures/figure3.gif
 docs/tutorial/figures/figure4.gif
 docs/tutorial/figures/figure5.gif

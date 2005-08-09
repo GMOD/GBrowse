@@ -817,8 +817,12 @@ sub adjust_settings {
   $settings->{name} =~ s/^\s+//; # strip leading
   $settings->{name} =~ s/\s+$//; # and trailing whitespace
 
-  $settings->{region_size} = param('region_size') if defined param('region_size') 
-    && $CONFIG->setting('region segment');
+  if ($CONFIG->setting('region segment')) {
+    $settings->{region_size} = param('region_size') if defined param('region_size');
+    $settings->{region_size} = $CONFIG->setting('region segment') unless defined $settings->{region_size};
+  } else {
+    delete $settings->{region_size};
+  }
 
   if (my @external = param('eurl')) {
     my %external = map {$_=>1} @external;

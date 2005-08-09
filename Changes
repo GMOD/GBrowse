@@ -27,6 +27,8 @@
 		that allows the formatting of each tag value to be precisely
 		controlled.
         * Added compatibility with mod_perl version 2 (via ModPerl::Registry)
+	* Added sections on grouping tracks by category, defining
+	  region panels, and loading Berkeleydb databases to tutorial.
 
 1.62    Mon Apr  5 09:43:25 EDT 2004
 	* Added request timeout option for very long requests.

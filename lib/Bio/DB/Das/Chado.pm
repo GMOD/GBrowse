@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.7 2005-08-05 12:59:30 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.8 2005-08-17 03:16:49 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -141,7 +141,7 @@ sub new {
                            where ct.cv_id=c.cv_id and
                            c.name IN ('SOFA',
                                'Sequence Ontology Feature Annotation',
-                               'Sequence Ontology,
+                               'Sequence Ontology',
                                'sequence',
                                'sofa.ontology',
                                'relationship',

@@ -180,6 +180,7 @@ docs/tutorial/figures/figure9.gif
 docs/tutorial/tutorial.css
 docs/tutorial/tutorial.html
 docs/tutorial/tutorial.txt
+extras/BioPerl/Bio/DB/Fasta.pm
 extras/BioPerl/Bio/DB/GFF.pm
 extras/BioPerl/Bio/DB/GFF/Adaptor/ace.pm
 extras/BioPerl/Bio/DB/GFF/Adaptor/biofetch.pm

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.8 2005-08-17 03:16:49 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9 2005-08-23 18:49:42 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -452,9 +452,9 @@ sub get_feature_by_name {
 
   warn "name:$name in get_feature_by_name" if DEBUG;
 
-  $name = $self->_search_name_prep($name);
+#  $name = $self->_search_name_prep($name);
 
-  warn "name after protecting _ and % in the string:$name\n" if DEBUG;
+#  warn "name after protecting _ and % in the string:$name\n" if DEBUG;
 
   my (@features,$sth);
   
@@ -488,6 +488,12 @@ sub get_feature_by_name {
   warn "first get_feature_by_name query:$query" if DEBUG;
 
   $sth = $self->dbh->prepare($query);
+
+  if ($wildcard) {
+    $name = $self->_search_name_prep($name);
+    warn "name after protecting _ and % in the string:$name\n" if DEBUG;
+  }
+
   $sth->execute($name) or $self->throw("getting the feature_ids failed");
 
 # this makes performance awful!  It does a wildcard search on a view

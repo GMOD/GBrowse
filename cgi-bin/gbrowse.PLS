@@ -2712,9 +2712,12 @@ sub tableize {
 }
 
 sub get_regionview_seg {
-  my ($settings,$detail_start, $detail_end) = @_;;
-  my $midpoint = ($detail_end + $detail_start) / 2;
+  my ($settings,$detail_start, $detail_end) = @_;
   my $regionview_length = $settings->{region_size};
+  if ($detail_end - $detail_start + 1 > $regionview_length) { # region can't be smaller than detail
+    $regionview_length = $detail_end - $detail_start + 1;
+  }
+  my $midpoint = ($detail_end + $detail_start) / 2;
   my $regionview_start = int($midpoint - $regionview_length/2 + 1);
   my $regionview_end = int($midpoint + $regionview_length/2);
   return ($regionview_start, $regionview_end);

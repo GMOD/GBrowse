@@ -1,5 +1,5 @@
 package Bio::Graphics::Glyph::transcript;
-# $Id: transcript.pm,v 1.1.2.3 2005-07-24 17:18:40 lstein Exp $
+# $Id: transcript.pm,v 1.1.2.4 2005-08-24 02:47:35 lstein Exp $
 
 use strict;
 use Bio::Graphics::Glyph::segments;
@@ -28,6 +28,13 @@ sub draw_component {
   my $self = shift;
   return unless $self->level > 0;
   $self->SUPER::draw_component(@_);
+}
+
+sub part_label_merge {
+  my $self = shift;
+  my $label = $self->SUPER::part_label_merge;
+  return $label if defined $label;
+  1;
 }
 
 sub draw_connectors {

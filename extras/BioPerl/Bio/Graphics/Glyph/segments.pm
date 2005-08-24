@@ -1,5 +1,5 @@
 package Bio::Graphics::Glyph::segments;
-#$Id: segments.pm,v 1.1.2.3 2005-07-24 17:18:40 lstein Exp $
+#$Id: segments.pm,v 1.1.2.4 2005-08-24 02:47:35 lstein Exp $
 
 use strict;
 use Bio::Location::Simple;
@@ -93,6 +93,7 @@ sub draw {
 
   $self->draw_label(@_)       if $self->option('label');
   $self->draw_description(@_) if $self->option('description');
+  $self->draw_part_labels(@_) if $self->option('part_labels');
 
   my $drew_sequence;
 

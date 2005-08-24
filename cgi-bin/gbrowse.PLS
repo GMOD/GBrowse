@@ -401,7 +401,7 @@ sub main_display {
 
   # print the top of the form, with navigation bar, etc
   my $src    = $CONFIG->source;
-  my $action = $src ? url()."/$src/" : url();
+  my $action = $src ? url(-absolute=>1)."/$src/" : url(-absolute=>1);
   print start_multipart_form(-name   => 'mainform',
                    -action => $action,
 		   -method => 'POST');

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.28 2005-08-05 22:27:50 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.29 2005-08-24 16:52:08 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1193,7 +1193,9 @@ sub image_and_map {
 			    )
 	     };
     $self->error($@) if $@;
-    foreach (@$new_tracks) { $track2label{$_} = $file }
+    foreach (@$new_tracks) {
+      $track2label{$_} = $file;
+    }
     $offset += $inserted;
   }
 
@@ -2256,16 +2258,21 @@ sub make_link {
 
   if ($label && $label->isa('Bio::Graphics::FeatureFile')) {
     return $label->make_link($feature);
-  }
+  } 
 
   $panel ||= 'Bio::Graphics::Panel';
   $label ||= $self->feature2label($feature);
 
+  # most specific -- a configuration line
   my $link     = $self->code_setting($label,'link');
+
+  # less specific - a smart feature
+  $link        = $feature->make_link if $feature->can('make_link') && !defined $link;
+
+  # general defaults
   $link        = $self->code_setting('TRACK DEFAULTS'=>'link') unless defined $link;
   $link        = $self->code_setting(general=>'link')          unless defined $link;
 
-  return $feature->make_link if !$link && $feature->can('make_link');
   return unless $link;
 
   if (ref($link) eq 'CODE') {
@@ -2306,6 +2313,8 @@ sub make_title {
       $label     ||= $self->feature2label($feature) or last TRY;
       $key       ||= $self->setting($label,'key') || $label;
       $key         =~ s/s$//;
+      $key         = $feature->segment->dsn if $feature->isa('Bio::Das::Feature');  # for DAS sources
+
       my $link     = $self->code_setting($label,'title')
 	|| $self->code_setting('TRACK DEFAULTS'=>'title')
 	  || $self->code_setting(general=>'title');
@@ -2347,6 +2356,13 @@ sub make_title {
 sub make_link_target {
   my $self = shift;
   my ($feature,$panel,$label,$track) = @_;
+
+  if ($feature->isa('Bio::Das::Feature')) { # new window
+    my $dsn = $feature->segment->dsn;
+    $dsn =~ s/^.+\///;
+    return $dsn;
+  }
+
   $label    ||= $self->feature2label($feature) or return;
   my $link_target = $self->code_setting($label,'link_target')
     || $self->code_setting('LINK DEFAULTS' => 'link_target')

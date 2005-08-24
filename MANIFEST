@@ -207,6 +207,7 @@ extras/BioPerl/Bio/DB/GFF/Aggregator/coding.pm
 extras/BioPerl/Bio/DB/GFF/Aggregator/match.pm
 extras/BioPerl/Bio/DB/GFF/Aggregator/none.pm
 extras/BioPerl/Bio/DB/GFF/Aggregator/processed_transcript.pm
+extras/BioPerl/Bio/DB/GFF/Aggregator/so_transcript.pm
 extras/BioPerl/Bio/DB/GFF/Aggregator/transcript.pm
 extras/BioPerl/Bio/DB/GFF/Aggregator/ucsc_acembly.pm
 extras/BioPerl/Bio/DB/GFF/Aggregator/ucsc_ensgene.pm
@@ -395,6 +396,7 @@ libalign/test.pl
 Makefile.PL
 MANIFEST
 README
+README.berkeleydb
 README.MacOSX
 README.fedora
 sample_data/yeast_data.gff

@@ -18,6 +18,11 @@ select "Disable SELinux protection for httpd daemon".
 2a. Alternatively, uncheck "Enforcing" to set the enforcement level
 to permissive.
 
+2b. If you don't have X11, you can do the same as step 2 via the command line:
+
+      %  setsebool -P httpd_disable_trans 1
+      %  system httpd restart
+
 After you do this, add the --SELINUX=1 tag when exectuting perl Makefile.PL:
 
   % perl Makefile.PL --SELINUX=1

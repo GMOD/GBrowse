@@ -112,7 +112,7 @@ if(-e '/proc/filesystems'
 WARNING:
 You appear to have SELinux installed on this computer.
 GBrowse can have problems working on SELinux systems.
-Before you complete this installation please read 'README.selinux'
+Before you complete this installation please read 'README.fedora'
 Then you can avoid this message by adding the flag --SELINUX=1 when
 you execute perl Makefile.PL.
 ------------------------------------------------------------------
@@ -201,6 +201,7 @@ WriteMakefile(
 	      'VERSION'      => $VERSION,
 	      'PREREQ_PM'    => {
 				 Bio::Perl         => 1.5,
+                                 #Bio::Root::Version => 1.5,
 				 GD                => 2.07,
 				 IO::String        => 0,
 				 Text::Shellwords  => 1.0,

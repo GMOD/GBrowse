@@ -1,15 +1,16 @@
 =head1 CONFIGURATION OF Bio::DB::Das::BioSQL, THE ADAPTER CODE TO BIOPERL-DB
 
-=head1 WARNING
-
-The BioSQL adaptor in its current state is not known to work.  Development
-on this adaptor is ongoing.
+BioSQL is a Bioperl-based system for storing record-oriented
+biological objects, including GenBank/EMBL sequences and PubMed
+records, in a relational database. GBrowse provides support for
+viewing sequence annotation data stored in BioSQL. The support is
+functional, but not heavily tested, so it may still contain bugs.
 
 =head2 1. PREREQUISITES
 
 =over 4
 
-=item A) Gbrowse -- L<http://www.gmod.org/>
+=item A) GBrowse -- L<http://www.gmod.org/>
 
 Make sure that Gbrowse is correctly installed.
 

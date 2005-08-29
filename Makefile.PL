@@ -183,9 +183,10 @@ print STDERR <<END;
 END
 ;
 
-my $patch_version       = biographics_patch_version();
 my $biographics_version = biographics_version();
+my $patch_version       = biographics_patch_version();
 my $bioperl_needs_patching = $biographics_version < $patch_version;
+
 if ($bioperl_needs_patching) {
   print STDERR "\nInstalled Bio::Graphics version $biographics_version is less than desired version $patch_version.  I will update to latest versions of the BioGraphics and GFF libraries.\n";
 }

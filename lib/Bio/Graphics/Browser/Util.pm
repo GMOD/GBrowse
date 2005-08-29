@@ -388,6 +388,11 @@ sub _broken_apache_hack {
   my $raw_path_info   = $ENV{PATH_INFO}   || '';
   my $uri             = $ENV{REQUEST_URI} || '';
 
+   ## dgg patch; need for what versions? apache 1.x; 
+  if ($raw_script_name =~ m/$raw_path_info$/) {
+    $raw_script_name =~ s/$raw_path_info$//;
+  }
+
   my @uri_double_slashes  = $uri =~ m^(/{2,}?)^g;
   my @path_double_slashes = "$raw_script_name $raw_path_info" =~ m^(/{2,}?)^g;
 

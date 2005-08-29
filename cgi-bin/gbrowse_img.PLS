@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.4 2005-07-20 03:12:28 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.5 2005-08-29 16:57:50 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -58,6 +58,8 @@ use Bio::Graphics::Browser::PluginSet;
 use Bio::Graphics::Browser::UploadSet;
 use Bio::Graphics::Browser::RemoteSet;
 use Text::Shellwords;
+use Digest::MD5 'md5_hex';
+
 use vars qw($CONFIG $VERSION $CONF_DIR $PLUGINS $UPLOADS $REMOTES);
 use constant MAX_SEGMENT     => 1_000_000;
 use constant TOO_MANY_SEGMENTS => 500;
@@ -106,6 +108,38 @@ if (param('list')) {
   dump_types()   if param('list') eq 'types';
   exit 0;
 }
+
+## dgg here; cache of all this so dont regen slow images for each browser-back 
+my ($pagecache,$newpagecache)= checkCachedPage('cachedir', param());
+if ($pagecache && open(CP,$pagecache)) {
+  #warn "gbrowse_img cached: $pagecache\n" ; #if DEBUG;
+  print <CP>;  close(CP);
+  exit 0;
+}
+
+sub checkCachedPage {
+  #sub gd_cache_path
+  my ($cache_name,@keys) = @_;
+  my $cachetime= $CONFIG->setting(general=>$cache_name);
+  return unless($cachetime);
+  my $signature = md5_hex(@keys);
+  my ($uri,$path) = $CONFIG->tmpdir($CONFIG->source.'/'.$cache_name); #'cache_overview'
+  my $extension   = 'html';
+  $path= "$path/$signature.$extension";
+
+  #sub gd_cache_check
+  return if param('nocache');
+  my $cache_file_mtime   = (stat($path))[9] || 0;
+  my $conf_file_mtime    = $CONFIG->mtime;
+  my $cache_expiry       = $cachetime * 60*60; 
+  if ($cache_file_mtime && ($cache_file_mtime > $conf_file_mtime) && (time() - $cache_file_mtime < $cache_expiry)) {
+    return ($path,$path);
+  }
+  else {
+    return (undef,$path); # return missing/expired path for writing to
+  }
+}
+
 
 # get all parameters
 my @landmarks       = (param('name'),   param('q'));        # list of landmarks to display
@@ -198,7 +232,7 @@ if ($embed) {
     my $ruler           = shift @$boxes;
     $map                = $CONFIG->make_map($boxes,0,$panel,$tracks);
     my $coords          = join ',',@{$ruler}[1,2,3,4];
-    my $gbrowse         = "../gbrowse/$source?name=$segments[0]";
+    my $gbrowse         = "../../gbrowse/$source/?name=$segments[0]"; # dgg; was  "../gbrowse/$source?"
     my $rect            = qq(<area shape="rect" coords="$coords" href="$gbrowse" title="Browse Region" />);
     $map                =~ s!</map>!$rect</map>!;
   } else {
@@ -206,8 +240,15 @@ if ($embed) {
   }
 
   $map =~ s/href/target="_top" href/g;  # add appropriate target tags
-  print header('text/html');
-  print start_html(''),$img,$map,end_html();
+  if ($newpagecache && open(CP,">$newpagecache")) {
+     print CP header('text/html');
+     print CP start_html(''),$img,$map,end_html();
+     close(CP);
+     open(CP,$newpagecache); print <CP>; close(CP);
+   } else {
+     print header('text/html');
+     print start_html(''),$img,$map,end_html();
+ }
 }
 
 #elsif ($image_class eq 'GD::SVG') {
@@ -339,7 +380,9 @@ sub add_features {
     my %options = map {split /=/} @options;
     $feature_list->add_type($type=>\%options);
   }
-  $feature_hash->{add} = $feature_list
+  $feature_hash= {} unless(ref $feature_hash);## dgg; fix missing hash:
+  $feature_hash->{add} = $feature_list;
+  return $feature_hash; # dgg; caller expects valid return
 }
 
 sub consolidate_images {
@@ -386,7 +429,7 @@ sub consolidate_images {
 
 sub my_make_map {
   my ($boxes,$source,$add_features) = @_;
-  my $url = "../gbrowse/$source";
+  my $url = "../../gbrowse/$source/";  # dgg; was"../gbrowse/$source";
   my $html = qq(<map name="hmap" alt="imagemap" />\n);
   foreach (@$boxes){
     my $feature = $_->[0];

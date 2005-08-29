@@ -546,6 +546,14 @@ NOTE: The path argument is ignored if gbrowse is running under
 modperl, because modperl allows the URL to be translated into a
 physical directory programatically.
 
+=item * cachedir
+
+This is a writable directory that can be used for caching
+gbrowse_img-generated images. Defining it will speed up some
+operations. If not defined gbrowse_img will still work, but will
+regenerate images from scratch even if they've been used before. It is
+OK to use the same path as the tmpimages directory.
+
 =item * image widths
 
 The image widths option controls the set of image sizes to offer

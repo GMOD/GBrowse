@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.28.4.1 2005-07-20 21:17:01 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.28.4.2 2005-08-29 13:54:10 scottcain Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -200,8 +200,8 @@ sub print_dna {
 
 sub print_matches {
   my ($src,$tgt,$bug) = @_;
-  my $sdna = $src->dna or return;
-  my $tdna = $tgt->dna or return;
+  my $sdna = $src->dna or return '';
+  my $tdna = $tgt->dna or return '';
   my $top_label = $src->abs_ref;
   my $bot_label = $tgt->abs_ref;
 

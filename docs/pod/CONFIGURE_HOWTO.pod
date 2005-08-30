@@ -328,6 +328,66 @@ It is suggested that you use the sample GFF files from the yeast,
 drosophila and C. elegans projects to see what methods to use to
 achieve the desired results.
 
+In addition to the standard aggregators that are distributed with
+BioPerl, GBrowse distributes several experimental and/or
+special-purpose aggregators:
+
+=over 4
+
+=item match_gap
+
+This aggregator is used for GFF3 style gapped alignments, in which
+there is a single feature of method 'match' with a 'Gap' attribute.
+This aggregator was contributed by Dmitri Bichko.
+
+=item orf
+
+This aggregator aggregates raw "ORF" features into "coding"
+features. It is basically identical to the "coding" aggregator, except
+that it looks for features of type "ORF" rather than "cds".
+
+=item reftranscript
+
+This aggregator was written to make the compound feature,
+"reftranscript" for use with Gbrowse editing software developed
+outside of the GMOD development group.  It can be used to aggregate
+"reftranscripts" from "refexons", loaded as second copy features.
+These features, in contrast to "transcripts", are usually implemented
+as features which cannot be edited and serve as starting point
+references for annotations added using Gbrowse for feature
+visualization.
+
+Adding features to the compound feature, "reftranscript", can be done
+by adding to the "part_names" call (i.e. "refCDS").
+
+=item  waba_alignment
+
+This aggregator handles the type of alignments produced by Jim Kent's
+WABA program, and was written to be compatible with the C elegans GFF
+files.  It aggregates the following feature types into an aggregate
+type of "waba_alignment":
+
+   nucleotide_match:waba_weak
+   nucleotide_match:waba_strong
+   nucleotide_match:waba_coding
+
+=item wormbase_gene
+
+This aggregator was written to be compatible with the C elegans GFF2
+files distributed by the Sanger Institute.  It aggregates raw "CDS",
+"5'UTR", "3'UTR", "polyA" and "TSS" features into "transcript"
+features.  For compatibility with the idiosyncrasies of the Sanger GFF
+format, it expects that the full range of the transcript is contained
+in a main feature of type "Sequence".
+
+It is strongly recommended that for mirroring C. elegans annotations,
+you use the "processed_transcript" aggregator in conjunction with the
+GFF3 files found at:
+
+ ftp://ftp.wormbase.org/pub/wormbase/genomes/elegans/genome_feature_tables/GFF3
+
+=back
+
 =head1 B. ADDING A NEW DATABASE TO THE BROWSER
 
 Each data source has a corresponding configuration file in the

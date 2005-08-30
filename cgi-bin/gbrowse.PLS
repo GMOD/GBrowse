@@ -1069,8 +1069,9 @@ sub tracks_table {
   my $self_url = "?help=citations";
 
   my @labels = @{$settings->{tracks}};
-  my %labels = map {$_ => make_citation_link($_,$self_url) } @labels;
-  my @defaults = grep {$settings->{features}{$_}{visible}  } @labels;
+  my %labels     = map {$_ => make_citation_link($_,$self_url) } @labels;
+  my %label_keys = map {$_ => label2key($_)}                     @labels;
+  my @defaults = grep {$settings->{features}{$_}{visible}  }     @labels;
 
   # Sort the tracks into categories:
   # Overview tracks
@@ -1100,7 +1101,7 @@ sub tracks_table {
   # toggles get confused as the tracks grow and expand to accomodate
   # uploaded & third party features.
   local $CGI::Toggle::next_id = $CGI::Toggle::next_id;
-  for (1..10) { $CGI::Toggle::next_id++ }
+  for (1..10) { $CGI::Toggle::next_id++ } # Can't do += 10 because next_id isn't a simple number.
 
   my %seenit;
   foreach my $category ($CONFIG->tr('OVERVIEW'),
@@ -1111,9 +1112,15 @@ sub tracks_table {
 		       ) {
     next if $seenit{$category}++;
     my $table;
-    if  (exists $track_groups{$category}) {
+
+    if ($category eq $CONFIG->tr('REGION') && !$CONFIG->setting('region segment')) {
+      $CGI::Toggle::next_id++;
+      next;
+    }
+
+    elsif  (exists $track_groups{$category}) {
       my @track_labels = @{$track_groups{$category}};
-      @track_labels = sort {lc $labels{$a} cmp lc $labels{$b}} @track_labels
+      @track_labels = sort {lc $label_keys{$a} cmp lc $label_keys{$b}} @track_labels
         if ($settings->{sk} eq "sorted");
       my @checkboxes = checkbox_group(-name=>'label',
 				      -values     => \@track_labels,
@@ -1124,22 +1131,26 @@ sub tracks_table {
 				     );
       $table = tableize(\@checkboxes);
       $table =~ s/<tr>/<tr class="searchtitle">/g;
-    }
-    else {
-      $table = table(TR({-class=>'searchtitle',-width=>'100%'},td($CONFIG->tr('NO_TRACKS'))));
-    }
-
-    my ($control,$section)=toggle_section({on=>1,nodiv=>1},
-					  b(ucfirst $category),div({-style=>'padding-left:1em'},$table));
-    $control .= '&nbsp;'.i({-class=>'nojs'},
+      my ($control,$section)=toggle_section({on=>1,nodiv=>1},
+					    b(ucfirst $category),div({-style=>'padding-left:1em'},$table));
+      $control .= '&nbsp;'.i({-class=>'nojs'},
 			     checkbox(-id=>"${id}_a",-name=>"${id}_a",
 				      -label=>$all_on,-onClick=>"gbCheck(this,1)"),
 			     checkbox(-id=>"${id}_n",-name=>"${id}_n",
 				      -label=>$all_off,onClick=>"gbCheck(this,0)")
 			    ).br()   if exists $track_groups{$category};
-    push @sections,div($control.span({-id=>$id},$section));
-    $id++;
+      push @sections,div($control.span({-id=>$id},$section));
+      $id++;
+    }
+
+    else {
+      #$table = table(TR({-class=>'searchtitle',-width=>'100%'},td($CONFIG->tr('NO_TRACKS'))));
+      $CGI::Toggle::next_id++;
+      next;
+    }
+
   }
+
   autoEscape(1);
   return toggle_section({on=>0},
 			b($CONFIG->tr('Tracks')),
@@ -1820,8 +1831,8 @@ sub segment2link {
   my ($start,$stop) = ($segment->start,$segment->end);
   my $ref = $segment->seq_id;
   my $bp = $stop - $start;
-  my $s = commas($start);
-  my $e = commas($stop);
+  my $s  = commas($start) || '';
+  my $e  = commas($stop)  || '';
   $label ||= "$ref:$s..$e";
   return a({-href=>"?ref=$ref;start=$start;stop=$stop"},$label);
 }
@@ -2006,8 +2017,6 @@ sub get_uploaded_file_info {
   warn "get_uploaded_file_info(): feature_file = $feature_file" if DEBUG;
 
   my $modified = localtime($feature_file->mtime);
-  #my @refs      = sort $feature_file->refs;
-  #my @refs      = sort $feature_file->features;
   my @refs      = sort($feature_file->features)
     unless $feature_file->name =~ m!/das/!;
 

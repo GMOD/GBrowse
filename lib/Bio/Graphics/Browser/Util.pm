@@ -359,7 +359,7 @@ sub redirect_legacy_url {
     $new_url        .= "/$source/";
     $new_url        .= "?$query_string" if $query_string;
 
-    print redirect(-uri=>$new_url,-status=>"301 Moved permanently");
+    print redirect(-uri=>$new_url,-status=>"301 Moved Permanently");
     exit 0;
   }
 }

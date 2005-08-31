@@ -342,17 +342,24 @@ sub redirect_legacy_url {
     my ($script_name,$path_info) = _broken_apache_hack();
     my $query_string = $q->query_string;
     my $protocol     = $q->protocol;
-    my $host         = $q->virtual_host;
-    my $port         = $q->server_port;
 
-    my $new_url      = "$protocol://$host";
-    $new_url        .= ":$port" unless  (lc($protocol) eq 'http'  && $port == 80)
-                                     or (lc($protocol) eq 'https' && $port == 443);
-    $new_url        .= $script_name;
+# Try using an absolute rather than a full URL in the redirect in order
+# to avoid reverse proxy issues. If this breaks, uncomment the following lines
+# and comment the line that starts "my $new_url"
+#    my $host         = $q->virtual_host;
+#    my $host         = $q->http('host') || $q->server_name();
+#    my $port         = $q->server_port;
+
+#    my $new_url      = "$protocol://$host";
+#    $new_url        .= ":$port" unless  (lc($protocol) eq 'http'  && $port == 80)
+#                                     or (lc($protocol) eq 'https' && $port == 443);
+#    $new_url        .= $script_name;
+
+    my $new_url      = $script_name;
     $new_url        .= "/$source/";
     $new_url        .= "?$query_string" if $query_string;
 
-    print redirect($new_url);
+    print redirect(-uri=>$new_url,-status=>"301 Moved permanently");
     exit 0;
   }
 }

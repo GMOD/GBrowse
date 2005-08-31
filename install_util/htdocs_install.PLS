@@ -217,6 +217,7 @@ sub copy_with_substitutions {
     }
   }
   else {
+    binmode IN;
     binmode OUT;
     my $buffer;
     print OUT $buffer while read(IN,$buffer,5000);

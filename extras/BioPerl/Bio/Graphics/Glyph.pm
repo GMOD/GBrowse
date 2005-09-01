@@ -712,7 +712,7 @@ sub draw_connectors {
   my ($dx,$dy) = @_;
   my @parts = sort { $a->left <=> $b->left } $self->parts;
   for (my $i = 0; $i < @parts-1; $i++) {
-    # don't connectors double-back on themselves
+    # don't let connectors double-back on themselves
     next if ($parts[$i]->bounds)[2] > ($parts[$i+1]->bounds)[0];
     $self->_connector($gd,$dx,$dy,$parts[$i]->bounds,$parts[$i+1]->bounds);
   }
@@ -1121,13 +1121,24 @@ sub make_key_feature {
   # one segments, at pixels 0->80
   my $offset = $self->panel->offset;
 
-
   my $feature =
     Bio::Graphics::Feature->new(-start =>0 * $scale +$offset,
 				-end   =>80*$scale+$offset,
-				-name => $self->option('key'),
+				-name => $self->make_key_name(),
 				-strand => '+1');
   return $feature;
+}
+
+sub make_key_name {
+  my $self = shift;
+
+  # breaking encapsulation - this should be handled by the panel
+  my $key      = $self->option('key') || '';
+  return $key unless $self->panel->add_category_labels;
+
+  my $category = $self->option('category');
+  my $name     = defined $category ? "$key ($category)" : $key;
+  return $name;
 }
 
 sub all_callbacks {

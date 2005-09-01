@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.29 2005-08-24 16:52:08 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.30 2005-09-01 19:42:58 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -131,7 +131,7 @@ sub read_configuration {
 
   croak("$conf_dir: not a directory") unless -d $conf_dir;
   opendir(D,$conf_dir) or croak "Couldn't open $conf_dir: $!";
-  my @conf_files = map { "$conf_dir/$_" } grep {/\.$suffix$/} grep {$_ !~ /log4perl/} readdir(D);
+  my @conf_files = map { "$conf_dir/$_" } grep {/\.$suffix$/} grep {!/^\.|^#|log4perl/} readdir(D);
   close D;
 
   # try to work around a bug in Apache/mod_perl which appears when

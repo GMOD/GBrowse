@@ -943,6 +943,16 @@ http://sourceforge.net/mailarchive/message.php?msg_id=12116755 for an
 example of using this feature to show assembly gaps as vertical gray
 regions.
 
+=item * show track categories
+
+If this option is set to a true value, then tracks that have been
+assigned to categories (using the "category" option described later),
+will have their categories included in their labels. For example, a
+track of key "Protein matches" and category "vertebrate" will be
+displayed in a track labeled "Protein match (vertebrate)".
+
+The default is false.
+
 =item * das mapmaster
 
 This option, which should appear somewhere in the [GENERAL] section,

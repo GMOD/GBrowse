@@ -547,6 +547,7 @@ sub detail_panel {
                                        postgrid      => $CONFIG->setting('postgrid') || '',
                                        background    => $CONFIG->setting('background') || '',
 				       hilite_callback => $h_callback,
+				       -add_category_labels => $CONFIG->setting('show track categories'),
 				      );
     $cell .= $img;
   }

@@ -13,9 +13,7 @@
 * Boolean operations on queries
 * Give access to plugin highlighters (and other plugins?) to
 	gbrowse_details. See Letter from Vince.Forgetta Friday August 26.
-* Add option to make track category appear in the track name in the details
-	panel e.g. "markers (cow)"
 
 
-$Id: TODO,v 1.4.6.14 2005-08-31 14:37:02 lstein Exp $
+$Id: TODO,v 1.4.6.15 2005-09-02 20:32:21 lstein Exp $
 

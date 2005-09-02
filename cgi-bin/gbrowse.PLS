@@ -403,8 +403,8 @@ sub main_display {
   my $src    = $CONFIG->source;
   my $action = $src ? url(-absolute=>1)."/$src/" : url(-absolute=>1);
   print start_multipart_form(-name   => 'mainform',
-                   -action => $action,
-		   -method => 'POST');
+                             -action => $action,
+		             -method => 'GET');
   print navigation_table($segment,$page_settings);
   print html_frag('html2',$segment,$page_settings);
 
@@ -457,11 +457,10 @@ sub main_display {
   print html_frag('html5',$segment,$page_settings);
   print settings_table($page_settings);
   print html_frag('html6',$segment,$page_settings);
+  print end_form();
 
   print start_multipart_form(-name=>'externalform');
   print external_table($page_settings,$feature_files);
-  print end_form();
-
   print end_form();
 
 
@@ -995,7 +994,6 @@ sub slidertable {
 		  -border=>0,-title=>"right $full_title"),
     );
 
-  #  print end_form;
   my $str	= join('', @lines);
   return $str;
 }

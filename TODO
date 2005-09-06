@@ -13,7 +13,8 @@
 * Boolean operations on queries
 * Give access to plugin highlighters (and other plugins?) to
 	gbrowse_details. See Letter from Vince.Forgetta Friday August 26.
+* Add per-track parameter lists as per letter from Russell Smithies, 
+	Monday, Sept 5.
 
-
-$Id: TODO,v 1.4.6.15 2005-09-02 20:32:21 lstein Exp $
+$Id: TODO,v 1.4.6.16 2005-09-06 19:38:10 lstein Exp $
 

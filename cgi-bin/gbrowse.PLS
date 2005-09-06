@@ -400,11 +400,12 @@ sub main_display {
   }
 
   # print the top of the form, with navigation bar, etc
+  my $method = CGI->user_agent =~ /MSIE/ ? 'GET' : 'POST';  # grrrrrr
   my $src    = $CONFIG->source;
   my $action = $src ? url(-absolute=>1)."/$src/" : url(-absolute=>1);
-  print start_multipart_form(-name   => 'mainform',
-                             -action => $action,
-		             -method => 'GET');
+  print startform(-name   => 'mainform',
+		  -action => $action,
+		  -method => $method);
   print navigation_table($segment,$page_settings);
   print html_frag('html2',$segment,$page_settings);
 
@@ -541,12 +542,12 @@ sub detail_panel {
 				       do_map        => 1,
 				       do_centering_map => 1,
 				       lang          => $CONFIG->language,
-				       keystyle      => $page_settings->{ks},
-				       flip          => $page_settings->{flip},
+				       keystyle      => $page_settings->{ks}   || 'between',
+				       flip          => $page_settings->{flip} || undef,
                                        postgrid      => $CONFIG->setting('postgrid') || '',
                                        background    => $CONFIG->setting('background') || '',
-				       hilite_callback => $h_callback,
-				       -add_category_labels => $CONFIG->setting('show track categories'),
+				       hilite_callback => $h_callback || undef,
+				       -add_category_labels => $CONFIG->setting('show track categories') || undef,
 				      );
     $cell .= $img;
   }
@@ -582,7 +583,7 @@ sub get_source {
   my $new_source = param('source') || param('src') || path_info();
   $new_source    =~ s!^/+!!;  # get rid of leading & trailing / from path_info()
   $new_source    =~ s!/+$!!;
-  my $old_source = cookie('gbrowse_source') unless $new_source && request_method() eq 'GET';
+  my $old_source = cookie('gbrowse_source') unless $new_source && param('.cgifields');
 
   my $source   = $new_source || $old_source;
   $source ||= $CONFIG->source;  # the default, whatever it is

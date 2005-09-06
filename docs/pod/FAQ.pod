@@ -1,0 +1,41 @@
+=head1 GBROWSE FAQ
+
+Frequently asked questions - with answers.
+
+=over 4
+
+=item When I search, why doesn't GBrowse find my 3-letter gene name?
+
+If you are using the MySQL GFF adaptor and are storing gene names
+inside Note attributes, then you may bump up against MySQL's default
+four-letter limit on full text searches. To fix this, either:
+
+  1. Put the gene name in an Alias attribute, e.g. "Alias LEP"
+
+or
+
+  2. Change MySQL to allow searches on 3-character words.
+
+The latter solution is a multi-step process:
+
+  1. Open /etc/my.cnf and add the following configuration line
+     to the [mysqld] stanza:
+
+         ft_min_word_len=3
+
+  2. Restart the mysql server.
+
+  3. Connect to your database using the mysql command-line client
+     and run the command:
+
+         mysql> repair table fattribute_to_feature quick;
+
+=item Why are there so few questions in the FAQ?
+
+Because I just started this document.
+
+=back
+
+$Id: FAQ.pod,v 1.1.2.1 2005-09-06 21:03:15 lstein Exp $
+
+

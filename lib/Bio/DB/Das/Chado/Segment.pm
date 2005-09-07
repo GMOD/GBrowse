@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.7 2005-07-05 20:48:42 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.8 2005-09-07 17:05:57 scottcain Exp $
 
 =head1 NAME
 
@@ -216,6 +216,13 @@ sub new {
             }
 
             warn "base_start:$base_start, stop:$stop, length:$length" if DEBUG;
+
+            if( defined($interbase_start) and $interbase_start < 0) {
+                $self->warn("start value ($interbase_start) less than zero,"
+                           ." resetting to zero");
+                $base_start = 1;
+                $interbase_start = 0;
+            }
 
             if( defined($stop) and defined($length) and $stop > $length ){
                 $self->warn("end value ($stop) greater than length ($length),"

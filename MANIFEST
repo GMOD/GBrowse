@@ -114,6 +114,7 @@ docs/pod/PLUGINS_HOWTO.pod
 docs/pod/README-berkeley-gadfly.pod
 docs/pod/README-chado.pod
 docs/pod/README-gff-files.pod
+docs/pod/README-lucegene.pod
 docs/tutorial/conf_files/elegans_core.conf
 docs/tutorial/conf_files/elegans_extra.conf
 docs/tutorial/conf_files/HEADER.html

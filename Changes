@@ -31,6 +31,7 @@
 	  region panels, and loading Berkeleydb databases to tutorial.
         * Changed mainform submission method from POST to GET in order to defeat evil 
 	"cache has expired" message in IE
+	* Add README-lucegen.pod, describing the Lucegene GFF adaptor
 
 1.62    Mon Apr  5 09:43:25 EDT 2004
 	* Added request timeout option for very long requests.

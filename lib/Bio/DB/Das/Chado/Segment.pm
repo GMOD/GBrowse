@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.8 2005-09-07 17:05:57 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9 2005-09-09 12:38:57 scottcain Exp $
 
 =head1 NAME
 
@@ -219,14 +219,14 @@ sub new {
 
             if( defined($interbase_start) and $interbase_start < 0) {
                 $self->warn("start value ($interbase_start) less than zero,"
-                           ." resetting to zero");
+                           ." resetting to zero") if DEBUG;
                 $base_start = 1;
                 $interbase_start = 0;
             }
 
             if( defined($stop) and defined($length) and $stop > $length ){
                 $self->warn("end value ($stop) greater than length ($length),"
-                           ." truncating to $length");
+                           ." truncating to $length") if DEBUG;
                 $stop = $length;
             }
             $stop    = $stop ? int($stop) : $length;

@@ -19,15 +19,6 @@
 <body en="[% browser.config.setting('language_code') %]" charset="[% browser.translate('CHARSET') %]">
 
 <!-- datasource description and current position -->
-[% IF(browser.options.display_banner) %]
-[%END %]
-
-<form name="mainform" action="[% action %]" method="POST">
-  <!-- navigation table -->
-  [% PROCESS "navigationtable.tt2" %]
-
-
-
 <div class="target" id="target1">
   <h1>[% browser.config.setting('description') %]</h1>
   <!-- FIXME need to fix formatting on string below -->
@@ -41,6 +32,13 @@
   -%]</h2>
 </div>
 
+<form name="mainform" action="[% action %]" method="POST">
+  <!-- navigation table -->
+  [% PROCESS "navigationtable.tt2" %]
+
+
+
+
 
   [% htmlfrag2 %]
 
@@ -49,18 +47,13 @@
     [% multiple_segments %]
   [% ELSE %]
     <div id="target4">
-    <center>
     [% PROCESS "overviewpanel.tt2" %]
-    [% #PROCESS "detailpanel.tt2"   %]
-    [% detailpanel   %]
-    </center>
+    [% PROCESS "detailpanel.tt2"   %]
     </div>
   [% END %]
 
   [% htmlfrag3 %]
 
-  <!-- plugins_table -->
-  [% PROCESS "pluginstable.tt2" %]
 
   [% htmlfrag4 %]
 
@@ -72,9 +65,9 @@
   <!-- settings_table -->
   [% PROCESS "optionstable.tt2" %]
 
-  [% htmlfrag6 %]
+  [%- htmlfrag6 -%]
 
-  [% PROCESS "script_input.tt2" %]
+  [%- PROCESS "script_input.tt2" -%]
 </form>
 
 <form name="externalform" encoding="multipart/form-data"><p/>

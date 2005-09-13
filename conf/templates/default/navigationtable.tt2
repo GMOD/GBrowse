@@ -1,4 +1,24 @@
 <div class="searchtitle" width="100%">
+  <!-- Instructions -->
+  <div style="display: none;" class="ctl_hidden" id="T0000_show" onclick="visibility('T0000','on','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/plus.png">&nbsp;
+    <span class="tctl"><b>[% browser.translate('instructions') %] </b></span>
+                                                                                                                             
+  </div>
+                                                                                                                             
+  <div class="ctl_visible" id="T0000_hide" onclick="visibility('T0000','off','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/minus.png">&nbsp;
+    <span class="tctl"><b>[% browser.translate('instructions') %] </b></span>
+                                                                                                                             
+  </div>
+                                                                                                                             
+  <div class="el_visible" id="T0000">[% browser.translate('search_instructions','') %]<br/>
+    [% browser.translate('navigation_instructions') %]<br/>
+    <b>[% browser.translate('examples') %]</b><br/>
+    [% FOREACH example = examples %]
+      <a href="?name=[% example | uri %]">[% example %]</a>[% UNLESS loop.last ; ', ' ; END %]
+    [% END %]
+  </div>
+
+  <!-- menu -->
   [%- IF browser.options.display_banner == 1 ;
        label = 'hide_header';
        toggle_banner = 0;
@@ -9,21 +29,7 @@
   -%]
   <div class="controller" id="controller1">[[% browser.translate( label ) %]]</div>
 
-  [%- IF browser.options.display_instructions == 1 ;
-       label = 'hide_instructions';
-       display_instructions = 0;
-     ELSE ;
-       label = 'show_instructions';
-       display_instructions = 1;
-     END
-  -%]
-  <div class="controller" id="controller2">[[% browser.translate( label ) %]]</div>
-
-  <!-- FIXME we need a better translation for "hide tracks" instead of just "hide", also uncapitalize tracks -->
-  <div class="controller" id="controller3" style="float: left;">[[% browser.translate('hide') %] [% browser.translate('tracks') %]]</div>
-  <div class="controller" id="controller4" style="float: left;">[[% browser.translate('hide') %] image]</div>
-
-  [% IF browser.options.name OR browser.options.ref %]
+  [%- IF browser.options.name OR browser.options.ref -%]
   <div style="text-align: right;">
     <a href="[% link_bookmark %]">[[% browser.translate('bookmark') %]]</a>
     <a href="[% link_image    %]" target="_blank">[[% browser.translate('image_link') %]]</a>
@@ -35,23 +41,24 @@
   <div class="searchbody">
     [% htmlfrag1 %]
   </div>
-&nbsp;
-  <div class="searchbody" style="height: 4em;">
-    <div class="searchbody" style="float: left; width: 50%;">[% PROCESS "searchbox.tt2" %]</div>
-    <div class="searchbody" style="margin-left: 50%; width: 50%;">[% IF segment %]<b>[% browser.translate('scroll') %]</b><br/>[% PROCESS "slider.tt2" %][% END %]</div>
+  &nbsp;
+</div>
+  <!-- Search -->
+  <div style="display: none;" class="ctl_hidden" id="T0001_show" onclick="visibility('T0001','on','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/plus.png">&nbsp;
+    <span class="tctl"><b>[% browser.translate('search') %] </b></span>
+  </div>
+                                                                                                                           
+  <div class="ctl_visible" id="T0001_hide" onclick="visibility('T0001','off','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/minus.png">&nbsp;
+    <span class="tctl"><b>[% browser.translate('search') %] </b></span>
+  </div>
+                                                                                                                             
+  <div class="el_visible" id="T0001">
+    <div class="searchbody" style="height: 4em;">
+      <div class="searchbody" style="float: left; width: 50%;">[% PROCESS "searchbox.tt2" %]</div>
+      <div class="searchbody" style="margin-left: 50%; width: 50%;">[% IF segment %]<b>[% browser.translate('scroll') %]</b><br/>[% PROCESS "slider.tt2" %][% END %]</div>
+    </div>
+    <!-- plugins_table -->
+    [% PROCESS "pluginstable.tt2" %]
   </div>
 
-</div>
-
-<div class="searchtitle" id="target2">
-  <b>[% browser.translate('instructions') %]</b><br/>
-  [% browser.translate('search_instructions','') %]<br/>
-  [% browser.translate('navigation_instructions') %]<br/>
-  <b>[% browser.translate('examples') %]</b><br/>
-  [% FOREACH example = examples %]
-    <a href="?name=[% example | uri %]">[% example %]</a>[% UNLESS loop.last ; ', ' ; END %]
-  [% END %]
-  <br/>
-  <br/>
-</div>
 

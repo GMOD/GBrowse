@@ -51,7 +51,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.129 2005-02-01 00:30:22 allenday Exp $
+# $Id: gbrowse.PLS,v 1.130 2005-09-13 04:43:31 mwz444 Exp $
 
 use strict;
 use Bio::Graphics;
@@ -79,6 +79,8 @@ use vars qw($MAX_SEGMENT $DEFAULT_SEGMENT
 );
 
 local $CGI::USE_PARAM_SEMICOLONS = 1;
+
+use constant EXPIRES => CGI::Util::expires('+7d');
 
 # IMPORTANT DATA STRUCTURES
 
@@ -190,7 +192,9 @@ sub main_display($$) {
     finezoom   => get_zoomincrement(),
 
 #FIXME    multiple_segments => multiple_choices($features),
-    detailpanel      => detail_panel_with_timeout($segment,$feature_files),
+    detailpanel           => detail_panel_with_timeout($segment,$feature_files),
+    toggle_cookie_name    => 'GBROWSE_TOGGLE',
+    toggle_cookie_expires => EXPIRES,
   };
 
   if($segment){

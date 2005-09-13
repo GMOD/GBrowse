@@ -1,17 +1,33 @@
 [% IF segment %]
-  [% ii = browser.config.overview( segment , browser.options.features ) ; image = ii.0 ; length = ii.1 %]
-  [% ii = image.getBounds ; width = ii.0 ; length = ii.1 %]
-  [% url = browser.config.generate_image(image) %]
-  <input
-    type="image"
-    name="overview"
-    width="[% width %]"
-    height="[% height %]"
-    border="0"
-    align="middle"
-    src="[% browser.config.generate_image(image) %]"
-  />
-  <input type="hidden" name="seg_length" value="[% length %]" override="1"/>
+  <div style="display: none;" class="ctl_hidden" id="T0002_show" onclick="visibility('T0002','on','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/plus.png">&nbsp;
+    <span class="tctl"><b>Overview[% browser.translate('overview') %] </b></span>
+                                                                                                                             
+  </div>
+                                                                                                                             
+  <div class="ctl_visible" id="T0002_hide" onclick="visibility('T0002','off','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/minus.png">&nbsp;
+    <span class="tctl"><b>Overview[% browser.translate('overview') %] </b></span>
+                                                                                                                             
+  </div>
+                                                                                                                             
+  <center>
+  <div class="el_visible" id="T0002">
+    [% ii = browser.config.overview( segment , browser.options.features ) ; image = ii.0 ; length = ii.1 %]
+    [% ii = image.getBounds ; width = ii.0 ; length = ii.1 %]
+    [% url = browser.config.generate_image(image) %]
+    <input
+      type="image"
+      name="overview"
+      width="[% width %]"
+      height="[% height %]"
+      border="0"
+      align="middle"
+      src="[% browser.config.generate_image(image) %]"
+    />
+    <input type="hidden" name="seg_length" value="[% length %]" override="1"/>
+  </center>
+  </div>
 [% ELSE %]
-no segment
+  <center>
+  no segment
+  </center>
 [% END %]

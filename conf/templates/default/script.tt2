@@ -81,3 +81,4 @@ function tOnClick()
   }
 }
 </script>
+<script src="/gbrowse/js/toggle.js" type="text/javascript"></script></head>

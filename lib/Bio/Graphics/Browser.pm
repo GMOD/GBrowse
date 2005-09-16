@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.30 2005-09-01 19:42:58 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.31 2005-09-16 22:14:01 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1073,6 +1073,9 @@ sub image_and_map {
 
     my $label = $tracks->[$i];
 
+    # if "hide" is set to true, then track goes away
+    next if $conf->semantic_setting($label=>'hide',$length);
+
     # if we don't have a built-in label, then this is a third party annotation
     if (my $ff = $feature_files->{$label}) {
       push @blank_tracks,$i;
@@ -1081,7 +1084,7 @@ sub image_and_map {
 
     # if the glyph is the magic "dna" glyph (for backward compatibility), or if the section
     # is marked as being a "global feature", then we apply the glyph to the entire segment
-    if ($conf->setting($label=>'global feature')) {
+    if ($conf->semantic_setting($label=>'global feature',$length)) {
       $panel->add_track($segment,
 			$conf->default_style,
 			$conf->i18n_style($label,$lang),

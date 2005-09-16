@@ -1,6 +1,6 @@
 package Bio::Graphics::FeatureFile;
 
-# $Id: FeatureFile.pm,v 1.1.2.8 2005-07-24 17:18:39 lstein Exp $
+# $Id: FeatureFile.pm,v 1.1.2.9 2005-09-16 22:14:01 lstein Exp $
 # This package parses and renders a simple tab-delimited format for features.
 # It is simpler than GFF, but still has a lot of expressive power.
 # See __END__ for the file format
@@ -377,8 +377,9 @@ sub smart_features {
 
 sub parse_argv {
   my $self = shift;
-
   $self->init_parse;
+
+  local $/ = "\n";
   while (<>) {
     chomp;
     $self->parse_line($_);
@@ -389,9 +390,11 @@ sub parse_argv {
 sub parse_file {
   my $self = shift;
   my $fh   = shift or return;
-  $self->_stat($fh);
 
+  $self->_stat($fh);
   $self->init_parse;
+
+  local $/ = "\n";
   while (<$fh>) {
     chomp;
     $self->parse_line($_) || last;
@@ -504,6 +507,8 @@ sub parse_line {
 	  $url = $_ 
 	} elsif ($key=~/note/i) { 
 	  push @notes,$value;
+	} else {
+	  push @notes,"$key=$value";
 	}
       }
       $description = join '; ',@notes if @notes;
@@ -562,7 +567,7 @@ sub parse_line {
   }
 
   # attribute handling
-  if (defined $description && $description =~ /\w+=\w+/) { # attribute line
+  if (defined $description && $description =~ /\w+=\S+/) { # attribute line
     my @attributes = split /;\s*/,$description;
     foreach (@attributes) {
       my ($name,$value) = split /=/,$_,2;
@@ -1271,7 +1276,8 @@ sub new_panel {
   my $new_segment = Bio::Graphics::Feature->new(-start=>$start,-stop=>$stop);
   my $panel = Bio::Graphics::Panel->new(-segment   => $new_segment,
 					-width     => $width,
-					-key_style => 'between');
+					-key_style => 'between',
+					$self->style('general'));
   $panel;
 }
 

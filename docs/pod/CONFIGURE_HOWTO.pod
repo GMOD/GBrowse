@@ -1504,7 +1504,13 @@ genes on segments between 500 and 99,999 bp, you can modify the
 
 It is also possible to display different features at different zoom
 levels, although you should handle this potentially confusing feature
-with care!
+with care.
+
+If you wish to turn off a track entirely, you can use the "hide" flag
+to hide the track when the display exceeds a certain size:
+
+  [6_frame_translation:50000]
+  hide = 1
 
 =head2 B7. Computed Options
 

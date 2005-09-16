@@ -290,6 +290,7 @@ extras/BioPerl/Bio/Graphics/Glyph/two_bolts.pm
 extras/BioPerl/Bio/Graphics/Glyph/wave.pm
 extras/BioPerl/Bio/Graphics/Glyph/weighted_arrow.pm
 extras/BioPerl/Bio/Graphics/Glyph/xyplot.pm
+extras/BioPerl/Bio/Graphics/Glyph/whiskerplot.pm
 extras/BioPerl/Bio/Graphics/Panel.pm
 extras/BioPerl/Bio/Graphics/Pictogram.pm
 extras/BioPerl/Bio/Graphics/RendererI.pm
@@ -406,3 +407,4 @@ sample_data/yeast_data.gff
 t/01yeast.t
 t/Test.pm
 TODO
+META.yml                                 Module meta-data (added by MakeMaker)

@@ -30,7 +30,9 @@
 	* Added sections on grouping tracks by category, defining
 	  region panels, and loading Berkeleydb databases to tutorial.
         * Changed mainform submission method from POST to GET in order to defeat evil 
-	"cache has expired" message in IE
+	  "cache has expired" message in IE
+        * Added a "hide" option to use when semantic zooming should turn a track
+          off altogether.
 	* Add README-lucegene.pod, describing the Lucegene GFF adaptor
 
 1.62    Mon Apr  5 09:43:25 EDT 2004

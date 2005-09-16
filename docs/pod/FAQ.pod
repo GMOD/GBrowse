@@ -30,12 +30,20 @@ The latter solution is a multi-step process:
 
          mysql> repair table fattribute_to_feature quick;
 
+=item How do I use semantic zooming to hide a track completely?
+
+If you wish to turn off a track entirely, you can use the "hide" flag
+to hide the track when the display exceeds a certain size:
+
+  [6_frame_translation:50000]
+  hide = 1
+
 =item Why are there so few questions in the FAQ?
 
 Because I just started this document.
 
 =back
 
-$Id: FAQ.pod,v 1.1.2.1 2005-09-06 21:03:15 lstein Exp $
+$Id: FAQ.pod,v 1.1.2.2 2005-09-16 22:14:01 lstein Exp $
 
 

@@ -70,35 +70,65 @@ sub draw {
   $y_origin    = $top if $max_score < 0;
 
   my $clip_ok = $self->option('clip');
+  $self->{_clip_ok}   = $clip_ok;
+  $self->{_scale}     = $scale;
+  $self->{_min_score} = $min_score;
+  $self->{_max_score} = $max_score;
+  $self->{_top}       = $top;
+  $self->{_bottom}    = $bottom;
 
   # now seed all the parts with the information they need to draw their positions
   foreach (@parts) {
-    my $s = eval {$_->feature->score};
+    my $s = $_->score;
     next unless defined $s;
-    if ($clip_ok && $s < $min_score) {
-      $_->{_y_position} = $bottom;
-      next;
-    }
-    if ($clip_ok && $s > $max_score) {
-      $_->{_y_position} = $top;
-      next;
-    }
-    my $position      = ($s-$min_score) * $scale;
-    $_->{_y_position} = $bottom - $position;
+    $_->{_y_position}   = $self->score2position($s);
   }
 
-  my $type = $self->option('graph_type') || $self->option('graphtype') || 'boxes';
-  $self->_draw_histogram($gd,$x,$y)            if $type eq 'histogram';
-  $self->_draw_boxes($gd,$x,$y,$y_origin)      if $type eq 'boxes';
-  $self->_draw_line ($gd,$x,$y)                if $type eq 'line' or $type eq 'linepoints';
-  $self->_draw_points($gd,$x,$y)               if $type eq 'points' or $type eq 'linepoints';
-
+  my $type        = $self->option('graph_type') || $self->option('graphtype') || 'boxes';
+  my $draw_method = $self->lookup_draw_method($type);
+  $self->$draw_method($gd,$x,$y,$y_origin);
 
   $self->_draw_scale($gd,$scale,$min_score,$max_score,$dx,$dy,$y_origin);
-
   $self->draw_label(@_)       if $self->option('label');
   $self->draw_description(@_) if $self->option('description');
 
+}
+
+sub lookup_draw_method {
+  my $self = shift;
+  my $type = shift;
+
+  return '_draw_histogram'            if $type eq 'histogram';
+  return '_draw_boxes'                if $type eq 'boxes';
+  return '_draw_line'                 if $type eq 'line'   or $type eq 'linepoints';
+  return '_draw_points'               if $type eq 'points' or $type eq 'linepoints';
+}
+
+sub score {
+  my $self    = shift;
+  my $s       = $self->option('score');
+  return $s   if defined $s;
+  return eval { $self->feature->score };
+}
+
+sub score2position {
+  my $self  = shift;
+  my $score = shift;
+
+  return unless defined $score;
+
+  if ($self->{_clip_ok} && $score < $self->{_min_score}) {
+    return $self->{_bottom};
+  }
+
+  elsif ($self->{_clip_ok} && $score > $self->{_max_score}) {
+    return $self->{_top};
+  }
+
+  else {
+    my $position      = ($score-$self->{_min_score}) * $self->{_scale};
+    return $self->{_bottom} - $position;
+  }
 }
 
 sub log10 { log(shift)/log(10) }
@@ -284,8 +314,10 @@ sub _draw_scale {
 
   $gd->line($x1,$y_origin,$x2,$y_origin,$fg);
 
-  my @points = ([$y1,$max],[$y2,$min]);
+  my @points = ([$y1,$max],[($y1+$y2)/2,($min+$max)/2],[$y2,$min]);
   push @points,[$y_origin,0] if ($min < 0 && $max > 0);
+
+  my $last_font_pos = -99999999999;
 
   for (@points) {
     $gd->line($x1-3,$_->[0],$x1,$_->[0],$fg) if $side eq 'left'  || $side eq 'both';
@@ -293,8 +325,9 @@ sub _draw_scale {
 
     my $font_pos = $_->[0]-($font->height/2);
 
+    next unless $font_pos > $last_font_pos + $font->height; # prevent labels from clashing
     if ($side eq 'left' or $side eq 'both') {
-     $gd->string($font,
+      $gd->string($font,
 		  $x1 - $font->width * length($_->[1]) - 3,$font_pos,
 		  $_->[1],
 		  $fg);
@@ -305,6 +338,7 @@ sub _draw_scale {
 		  $_->[1],
 		  $fg);
     }
+    $last_font_pos = $font_pos;
   }
 }
 
@@ -430,15 +464,25 @@ of events would look like this:
   my $segment  = $db->segment('Chr1');
   my @features = $segment->features('repeat_density');
 
-  my $panel = Bio::Graphics::Panel->new;
+  my $panel = Bio::Graphics::Panel->new(-pad_left=>40,-pad_right=>40);
   $panel->add_track(\@features,
-                    -glyph => 'xyplot');
+                    -glyph => 'xyplot',
+  		    -graph_type=>'points',
+		    -point_symbol=>'disc',
+		    -point_radius=>4,
+		    -scale=>'both',
+		    -height=>200,
+  );
 
 If you are using Generic Genome Browser, you will add this to the
 configuration file:
 
   aggregators = repeat_density{density:repeat}
                 clone alignment etc
+
+Note that it is a good idea to add some padding to the left and right
+of the panel; otherwise the scale will be partially cut off by the
+edge of the image.
 
 =head2 OPTIONS
 
@@ -533,6 +577,62 @@ affected by this.  Here's a simple example:
                                    return 'blue'      if $score >= 500;
                                   }
                       );
+
+=head2 METHODS
+
+For those developers wishing to derive new modules based on this
+glyph, the main method to override is:
+
+=over 4
+
+=item 'method_name' = $glyph->lookup_draw_method($type)
+
+This method accepts the name of a graph type (such as 'histogram') and
+returns the name of a method that will be called to draw the contents
+of the graph, for example '_draw_histogram'. This method will be
+called with three arguments:
+
+  $self->$draw_method($gd,$left,$top,$y_origin)
+
+where $gd is the GD object, $left and $top are the left and right
+positions of the whole glyph (which includes the scale and label), and
+$y_origin is the position of the zero value on the y axis (in
+pixels). By the time this method is called, the y axis and labels will
+already have been drawn, and the scale of the drawing (in pixels per
+unit score) will have been calculated and stored in
+$self->{_scale}. The y position (in pixels) of each point to graph
+will have been stored into the part, as $part->{_y_position}. Hence
+you could draw a simple scatter plot with this code:
+
+ sub lookup_draw_method {
+    my $self = shift;
+    my $type = shift;
+    if ($type eq 'simple_scatterplot') {
+      return 'draw_points';
+    } else {
+      return $self->SUPER::lookup_draw_method($type);
+    }
+ }
+
+ sub draw_points {
+  my $self = shift;
+  my ($gd,$left,$top) = @_;
+  my @parts   = $self->parts;
+  my $bgcolor = $self->bgcolor;
+
+  for my $part (@parts) {
+    my ($x1,$y1,$x2,$y2) = $part->calculate_boundaries($left,$top);
+    my $x = ($x1+$x2)/2;  # take center
+    my $y = $part->{_y_position};
+    $gd->setPixel($x,$y,$bgcolor);
+ }
+
+=item $y_position = $self->score2position($score)
+
+Translate a score into a y pixel position, obeying clipping rules and
+min and max values.
+
+=back
 
 =head1 BUGS
 

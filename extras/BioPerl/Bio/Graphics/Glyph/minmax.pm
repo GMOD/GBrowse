@@ -1,5 +1,5 @@
 package Bio::Graphics::Glyph::minmax;
-# $Id: minmax.pm,v 1.1.2.3 2005-07-24 17:18:40 lstein Exp $
+# $Id: minmax.pm,v 1.1.2.4 2005-09-19 14:28:02 lstein Exp $
 
 use strict;
 use Bio::Graphics::Glyph::segments;

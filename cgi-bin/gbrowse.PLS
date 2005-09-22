@@ -777,7 +777,8 @@ sub settings2cookie {
 sub adjust_settings {
   my $settings = shift;
 
-  if (my @selected = split_labels (param('label'))) {
+  if (param('width') || param('label')) { # just looking to see if the settings form was submitted
+    my @selected = split_labels (param('label'));
     $settings->{features}{$_}{visible} = 0 foreach keys %{$settings->{features}};
     $settings->{features}{$_}{visible} = 1 foreach @selected;
   }

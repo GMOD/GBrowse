@@ -38,12 +38,38 @@ to hide the track when the display exceeds a certain size:
   [6_frame_translation:50000]
   hide = 1
 
+=item I have a multi-segmented feature (such as a multi-exon transcript). It looks fine at low power, but when I zoom in the connecting lines between segments disappear. Help!
+
+You need to structure the feature in such a way that it has a single
+parent part that spans the whole feature from end to end, and then use
+the appropriate aggregator. For example, the "match" aggregator looks
+for a parent feature of type "match" and subpart features of type
+"HSP." So the GFF file you load should look like this:
+
+  Chr1 . match  1  1000 . . . ID=Hit27
+  Chr1 . HSP    1   200 . . . Parent=Hit27
+  Chr1 . HSP  500   600 . . . Parent=Hit27
+  Chr1 . HSP  900  1000 . . . Parent=Hit27
+
+In GFF2 format, the example will look like this:
+
+  Chr1 . match  1  1000 . . . Hit Hit27
+  Chr1 . HSP    1   200 . . . Hit Hit27
+  Chr1 . HSP  500   600 . . . Hit Hit27
+  Chr1 . HSP  900  1000 . . . Hit Hit27
+
+
+For transcripts, use the "processed_transcript" aggregator and create
+features with a main part of "mRNA" and subparts of "CDS", "exon",
+and/or various types of UTRs.
+
+
 =item Why are there so few questions in the FAQ?
 
 Because I just started this document.
 
 =back
 
-$Id: FAQ.pod,v 1.1.2.2 2005-09-16 22:14:01 lstein Exp $
+$Id: FAQ.pod,v 1.1.2.3 2005-09-23 15:29:49 lstein Exp $
 
 

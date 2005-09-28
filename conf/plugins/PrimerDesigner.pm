@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3 2004-03-19 05:45:32 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1 2005-09-28 09:53:51 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -76,7 +76,7 @@ package Bio::Graphics::Browser::Plugin::PrimerDesigner;
 
 #################################################################################
 # Edit these lines to point to the path or URL of the primer3 binary executable
-my $binpath = '/usr/local/bin';
+my $binpath = '/home/smckay/PCR/bin/';
 my $method  = 'local';
 #my $binpath = 'http://aceserver.biotech.ubc.ca/cgi-bin/primer_designer.cgi';
 #my $method  = 'remote';
@@ -88,6 +88,8 @@ use Bio::Graphics::Browser::Plugin;
 use CGI::Pretty qw/:standard escape/;
 use CGI::Carp qw/fatalsToBrowser/;
 use strict;
+
+use Data::Dumper;
 
 use vars '@ISA', '$CONFIG';
 
@@ -169,7 +171,15 @@ sub dump {
     print "<head><link rel=stylesheet type=text/css".
 	" href=/gbrowse/gbrowse.css /></head>\n";
 
-    my @feats = $segment->contained_features;
+    my @feature_types = $self->selected_features;
+    my @args = (-types => \@feature_types);
+    my @feats  = $segment->contained_features(@args);
+    
+    # sort by distance from target
+    @feats = map  { $_->[1] } 
+             sort { abs($a->[0]-$target) <=> abs($b->[0]-$target)} 
+             map  { [(($_->end - $_->start)/2 + $_->start), $_] } @feats;
+
     my $start  = $segment->start;
     my $end    = $segment->end;
     my $ref    = $segment->ref;
@@ -202,15 +212,13 @@ sub dump {
     for my $f (@feats ) {
         my ($s, $e) = ($f->start, $f->end);
         ($s, $e) = ($e, $s) if $s > $e;
-        next if $s < ($target - 2000);
-        next if $e > ($target + 2000);
-        next if $e < $target || $s > $target;
+        next if $e < ($target-3000) || $s > ($target+3000);
         my $tag  = $f->method;
         my $name = $f->name;
         push @f, "$name $tag: $s..$e Size: " . abs($s - $e). " bp";
     }
     if ( @f ) {
-	my $checkbox .= checkbox_group ( -name    => $self->config_name('tfeat'),
+	my $checkbox .= radio_group ( -name    => $self->config_name('tfeat'),
 					 -values  => \@f,
 					 -rows    => 4 );
 
@@ -262,6 +270,7 @@ sub dump {
 
 sub design_primers {
     my ($self, $segment, $conf) = @_;
+    
     my %atts = $self->get_primer3_params;
     my $exclude = $conf->{exclude};
     my $target  = $conf->{target};
@@ -388,6 +397,7 @@ sub unit_label {
 sub segment_map {
     my ($self, $segment, $res) = @_;
     my @tracks = $self->selected_tracks;
+    push @tracks, 'target';
     my $offset = $segment->start - 1;
     my $start = $res ? ($res->startleft - 500 + $offset) : $segment->start;
     my $stop  = $res ? ($res->startright + 500 + $offset) : $segment->stop;
@@ -436,12 +446,18 @@ sub refocus {
 # find the target
 sub set_focus {
     my ($self, $segment) = @_;
+    my $tfeat  = $self->config_param('tfeat');
+
     my $target;
     my $factor = param('conversion_factor');
 
     if ( param('map.x') ) {
 	$target = int(($factor * param('map.x')) + 0.5);
 	$target += $segment->start;
+    }
+    elsif ($tfeat) {
+        my ($s,$e) = $tfeat =~ /(\d+)\.\.(\d+)/;
+	$target = int($s + ($e-$s)/2);
     }
     
     $target;
@@ -465,6 +481,9 @@ sub get_primer3_params {
 
 # form elements stolen and modified from the primer3 website
 sub primer3_params {
+    #my $tfeat = shift;
+    #my $min = $tfeat->length;
+    #my $range = $min .'-'. ($min + 300);
     my $help = 'http://frodo.wi.mit.edu/cgi-bin/primer3/primer3_www_help.cgi';
     my $msg  = "Format xxx-xxx\\nSize_range is optional; by default the best " .
 	"product size to flank the feature will be selected\\n" .
@@ -474,7 +493,7 @@ sub primer3_params {
     my %table = (
     h3(qq(<a name="PRIMER_NUM_RETURN_INPUT" target="_new" href="$help\#PRIMER_NUM_RETURN">
        Primer sets:</a>)),
-    qq(<input type="text" size="4" name="PRIMER_NUM_RETURN" value="1">),
+    qq(<input type="text" size="4" name="PRIMER_NUM_RETURN" value="5">),
     h3(qq(<a name="PRIMER_OPT_SIZE_INPUT" target="_new" href="$help\#PRIMER_SIZE">
           Primer Size</a>)),
     qq(Min. <input type="text" size="4" name="PRIMER_MIN_SIZE" value="18">
@@ -487,7 +506,7 @@ sub primer3_params {
        Max. <input type="text" size="4" name="PRIMER_MAX_TM" value="63.0">),
     h3(qq(<a name="PRIMER_PRODUCT_SIZE_RANGE" href="javascript:void(0)"
            onclick="alert('$msg')">Product size range:</a>)),
-    qq(<input type="text" size="8" name="PRIMER_PRODUCT_SIZE_RANGE" value=''>),
+    qq(<input type="text" size="8" name="PRIMER_PRODUCT_SIZE_RANGE" value='500-3000'>),
     h3(qq(<a name="PRIMER_MAX_END_STABILITY_INPUT" target="_new" href="$help\#PRIMER_MAX_END_STABILITY">
        Max 3\' Stability:</a>)),
     qq(<input type="text" size="4" name="PRIMER_MAX_END_STABILITY" value="9.0">),

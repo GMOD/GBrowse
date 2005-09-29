@@ -6,15 +6,18 @@ use Bio::Graphics::Browser::Constants;
 use Bio::Graphics::Browser::Options;
 use Bio::Graphics::Browser::Util;
 use CGI qw(Delete_all cookie param url);
+use CGI::Session;
 #use CGI::ParamComposite;
 use Carp qw(croak cluck);
 use Data::Dumper;
 use Digest::MD5 qw(md5_hex);
 use vars qw($VERSION @EXPORT_OK); #temporary
+use vars qw($SESSION_DIR); # Temporary until I can figure out where I should get this value.
 
 no warnings 'redefine';
 
 @EXPORT_OK = qw(param); #this is a temporary scaffold to clean param() calls from gbrowse.PLS
+$SESSION_DIR = '/tmp';
 
 # LS to AD - Do we *really* need this ugliness?
 sub param { print(STDERR (caller())[0]."+".(caller())[2]." called param() with: ".join(' ',map {"'$_'"} @_)."\n"); return CGI::param(@_) } #temporary
@@ -51,9 +54,9 @@ warn "***** read view";
   $self->read_view();
 warn "***** display instructions: ".$self->options->display_instructions();
 warn "***** display tracks      : ".$self->options->display_tracks();
-  #then mask with cookie
-warn "***** read cookie";
-  $self->read_cookie();
+  #then mask with session
+warn "***** read session";
+  $self->read_session();
 warn "***** display instructions: ".$self->options->display_instructions();
 warn "***** display tracks      : ".$self->options->display_tracks();
   #then mask with GET/POST parameters
@@ -62,10 +65,10 @@ warn "***** read params";
 warn "***** display instructions: ".$self->options->display_instructions();
 warn "***** display tracks      : ".$self->options->display_tracks();
 
-  #now store the masked results to the cookie for next time.
-  #this will be available via the ->cookie() accessor.
-warn "***** make cookie";
-  $self->make_cookie();
+  #now store the masked results to the session for next time.
+  #the data will be available via the ->get_session_object() accessor.
+warn "***** make session";
+  $self->make_session();
 }
 
 =head2 config()
@@ -145,10 +148,10 @@ sub translate {
   return $self->config->tr($tag,@args);
 }
 
-=head2 read_cookie()
+=head2 get_session_id()
 
- Usage   :
- Function:
+ Usage   : Get/Set the session id
+ Function: retrieves and stores the session id in a cookie
  Example :
  Returns : 
  Args    :
@@ -156,86 +159,29 @@ sub translate {
 
 =cut
 
-sub read_cookie {
-  my ($self) = @_;
+sub session_id {
+    my $self           = shift;
+    my $new_session_id = shift;
 
-  my %cookie = CGI::cookie("gbrowse_".$self->config->source());
-  #warn Dumper(%cookie);
-
-  my $ok = 1;
-  if(%cookie){
-  BLOCK: {
-      $ok &&= $cookie{v} == $VERSION;
-      warn "ok 0 = $ok" if DEBUG;
-      last unless $ok;
-
-      foreach my $k (keys %cookie){
-        if( $self->options->can($k) ){
-          $self->options->$k($cookie{$k});
-        } else {
-          warn "found option $k in cookie, can't handle it yet";
-        }
-      }
-
-      $ok &&= defined $cookie{width} && $cookie{width} > 100 && $cookie{width} < 5000;
-      $self->options->width($cookie{width});
-      warn "ok 1 = $ok" if DEBUG;
-
-      my %ok_sources = map {$_=>1} $self->config->sources;
-      $ok &&= $ok_sources{$cookie{source}};
-      $self->options->source($cookie{source});
-      warn "ok 2 = $ok" if DEBUG;
-
-      # the single "tracks" key of the cookie gets mapped to the
-      # "track" and "features" key of the page cookie
-      my @features = split $;,$cookie{tracks} if $ok && defined $cookie{tracks};
-      my @tracks = ();
-      $cookie{features}  = {};
-      foreach (@features) {
-        warn "feature = $_" if DEBUG;
-        my ($label,$visible,$option,$limit) = m!^(.+)/(\d+)/(\d+)/(\d+)$!;
-        warn "label = $label, visible = $visible, option = $option, limit = $limit" if DEBUG;
-        unless ($label) {   # corrupt cookie; purge it.
-          undef $ok;
-          last;
-        }
-        push @tracks,$label;
-        $self->options->feature($label,
-                                {visible => $visible,
-                                 options => $option,
-                                 limit   => $limit
-                                },
-                               );
-      }
-      warn "ok 3 = $ok" if DEBUG;
-
-      $ok &&= scalar(@tracks) > 0;
-      $self->options->tracks(@tracks);
-      warn "ok 4 = $ok" if DEBUG;
+    if ($new_session_id) {
+        $self->{'session_id'} = $new_session_id;
+        $self->cookie(
+            CGI::cookie(
+                -name    => 'gbrowse_session_id',
+                -value   => $self->{'session_id'},
+                -path    => url( -absolute => 1, -path => 1 ),
+                -expires => REMEMBER_SETTINGS_TIME,
+            )
+        );
     }
-  }
 
-  #unusable cookie.  use default settings
-  if(!$ok){
-    $self->options->version(100);
-    $self->options->width($self->config->setting('default width'));
-    $self->options->source($self->config->source);
-    $self->options->ks('between');
-    $self->options->sk('sorted');
-    $self->options->id(md5_hex(rand)); # new identity
-
-    my @labels = $self->config->labels;
-    $self->options->tracks(@labels);
-    warn "order = @labels" if DEBUG;
-    my %default = map {$_=>1} $self->config->default_labels();
-    foreach my $label (@labels) {
-      my $visible = $default{$label} ? 1 : 0;
-      $self->options->feature($_,{visible=>$visible,options=>0,limit=>0});
+    unless ( defined( $self->{'session_id'} ) ) {
+        $self->{'session_id'} = CGI::cookie("gbrowse_session_id");
     }
-  }
+    return $self->{'session_id'};
 }
 
-=head2 make_cookie()
+=head2 get_session()
 
  Usage   :
  Function:
@@ -246,50 +192,188 @@ sub read_cookie {
 
 =cut
 
-sub make_cookie {
-  my ($self) = @_;
+sub get_session {
+    my $self = shift;
 
-#I guess this is ->options() ??
-#   my %settings = %$settings;
-
-  my %settings = %{ $self->options() };
-  $settings{v} = $VERSION;
-
-  local $^W = 0;
-
-  for my $key (keys %settings) {
-    next if $key =~ /^(tracks|features)$/;  # handled specially
-    if (ref($settings{$key}) eq 'ARRAY') {
-      $settings{$key} = join $;,@{$settings{$key}};
+    unless ( $self->{'session'} ) {
+        my $session_id = $self->session_id();
+        $self->{'session'} =
+          new CGI::Session( "driver:File", $session_id,
+            { Directory => $SESSION_DIR } );
+        $self->session_id( $self->{'session'}->id() );    # in case it has changed
     }
-  }
 
-  # the "features" and "track" key map to a single array
-  # contained in the "tracks" key of the settings
-  my @array = map {join("/",
-			$_,
-			$settings{features}{$_}{visible},
-			$settings{features}{$_}{options},
-			$settings{features}{$_}{limit})} @{$settings{tracks}};
-  $settings{tracks} = join $;,@array;
-  delete $settings{features};
-  delete $settings{flip};  # obnoxious for this to persist
+    return $self->{'session'};
 
-  warn "cookie => ",join ' ',%settings,"\n" if DEBUG;
+}
 
-  my @cookies;
-  my $source = $self->config->source;
-  push @cookies,CGI::cookie(-name    => "gbrowse_$source",
-                            -value   => \%settings,
-                            -path    => url(-absolute=>1,-path=>1),
-                            -expires => REMEMBER_SETTINGS_TIME,
-                           );
-  push @cookies,CGI::cookie(-name    => 'gbrowse_source',
-		       -value   => $source,
-		       -expires => REMEMBER_SOURCE_TIME);
+=head2 get_session_object()
 
-  warn "cookies = @cookies" if DEBUG;
-  $self->cookie(\@cookies);
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+
+=cut
+
+sub get_session_object {
+    my $self = shift;
+
+    unless ( $self->{'session_object'} ) {
+        my $session = $self->get_session();
+        $self->{'session_object'} = $session->param('session_object');
+    }
+
+    return $self->{'session_object'};
+}
+
+=head2 set_session_object()
+
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+
+=cut
+
+sub set_session_object {
+    my $self           = shift;
+    my $session_object = shift;
+
+    $self->{'session_object'} = $session_object if ($session_object);
+    my $session = $self->get_session();
+    $session->param( 'session_object', $session_object );
+
+    return $self->{'session_object'};
+}
+
+=head2 read_session()
+
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+
+=cut
+
+sub read_session {
+    my ($self) = @_;
+
+    my $session_object = $self->get_session_object();
+
+    my $ok = 1;
+    if ( $session_object and %$session_object ) {
+        $ok &&= $session_object->{v} == $VERSION;
+        warn "ok 0 = $ok" if DEBUG;
+        last unless $ok;
+
+        my %ok_sources = map { $_ => 1 } $self->config->sources;
+        $ok &&= $ok_sources{ $session_object->{current_source} };
+        $self->options->source( $session_object->{current_source} );
+        my $current_source = $self->options->source;
+        warn "ok 2 = $ok" if DEBUG;
+
+        if ( $session_object->{$current_source}
+            and my $current_options =
+            $session_object->{$current_source}{gbrowse} )
+        {
+
+            foreach my $k ( keys %$current_options ) {
+                if ( $self->options->can($k) ) {
+                    $self->options->$k( $current_options->{$k} );
+                }
+                else {
+                    warn "found option $k in session, can't handle it yet";
+                }
+            }
+
+            $ok &&= defined $current_options->{width}
+              && $current_options->{width} > 100
+              && $current_options->{width} < 5000;
+            $self->options->width( $current_options->{width} );
+
+            warn "ok 4 = $ok" if DEBUG;
+        }
+    }
+
+    #unusable session.  use default settings
+    if ( !$ok ) {
+        $self->options->version(100);
+        $self->options->width( $self->config->setting('default width') );
+        $self->options->source( $self->config->source );
+        $self->options->ks('between');
+        $self->options->sk('sorted');
+        $self->options->id( md5_hex(rand) );    # new identity
+
+        my @labels = $self->config->labels;
+        $self->options->tracks(@labels);
+        warn "order = @labels" if DEBUG;
+        my %default = map { $_ => 1 } $self->config->default_labels();
+        foreach my $label (@labels) {
+            my $visible = $default{$label} ? 1 : 0;
+            $self->options->set_feature( $label,
+                { visible => $visible, options => 0, limit => 0 } )
+              or warn("Unable to set the feature $_\n");
+        }
+    }
+}
+
+=head2 make_session()
+
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+
+=cut
+
+sub make_session {
+    my ($self) = @_;
+
+    my %settings = %{ $self->options() };
+
+    local $^W = 0; # Why turn off warnings? BF
+
+    #WE CAN NOW HANDLE tracks and features in the session as objects
+#    for my $key ( keys %settings ) {
+#        next if $key =~ /^(tracks|features)$/;    # handled specially
+#        if ( ref( $settings{$key} ) eq 'ARRAY' ) {
+#            $settings{$key} = join $;, @{ $settings{$key} };
+#        }
+#    }
+
+    # the "features" and "track" key map to a single array
+    # contained in the "tracks" key of the settings
+#    my @array = map {join("/",
+#            $_,
+#            $settings{features}{$_}{visible},
+#            $settings{features}{$_}{options},
+#            $settings{features}{$_}{limit})} @{$settings{tracks}};
+#    $settings{tracks} = join $;,@array;
+#    delete $settings{features};
+    delete $settings{flip};  # obnoxious for this to persist
+
+
+    my $source = $self->config->source;
+    my $session_object = $self->get_session_object();
+    $session_object->{'current_source'} = $source;
+    $session_object->{'v'} = $VERSION;
+    $session_object->{$source}{'gbrowse'} = \%settings; 
+  
+    warn "session_object => ",join ' ',%$session_object,"\n" if DEBUG;
+
+    # This used to save a cookie but now it saves a session.
+    # The session id *is* stored in a cookie which is handled by session_id().
+    $self->set_session_object($session_object);
+
 }
 
 
@@ -314,17 +398,17 @@ sub read_params {
     my @selected = map {/^(http|ftp|das)/ ? $_ : split /[+-]/} CGI::param('label');
 
     #set all visibility to zero (off)
-    foreach my $featuretag ($options->feature()){
-      my $feature = $options->feature($featuretag);
+    foreach my $featuretag (keys %{ $options->features() || {} } ){
+      my $feature = $options->get_feature($featuretag);
       $feature->{visible} = 0;
-      $options->feature($featuretag,$feature);
+      $options->set_feature($featuretag,$feature);
     }
 
     #make selected on (visible)
     foreach my $featuretag (@selected){
-      my $feature = $options->feature($featuretag);
+      my $feature = $options->get_feature($featuretag);
       $feature->{visible} = 1;
-      $options->feature($featuretag,$feature);
+      $options->set_feature($featuretag,$feature);
     }
   }
 
@@ -380,12 +464,12 @@ sub read_params {
     my %external = map {$_=>1} @external;
     foreach (@external) {
       warn "eurl = $_" if DEBUG_EXTERNAL;
-      next if $options->feature($_);
-      $options->feature($_,{visible=>1,options=>0,limit=>0});
+      next if $options->get_feature($_);
+      $options->set_feature($_,{visible=>1,options=>0,limit=>0});
       $options->tracks($options->tracks(),$_);
     }
     # remove any URLs that aren't on the list
-    foreach ($options->feature()) {
+    foreach ( keys %{ $options->features() || {} } ) {
       next unless /^(http|ftp):/;
       $options->remove_feature($_) unless exists $external{$_};
     }

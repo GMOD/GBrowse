@@ -1,6 +1,7 @@
 package Bio::Graphics::Browser::Options;
 
 use strict;
+use Data::Dumper;
 use Bio::Graphics::Browser::Util;
 #use Bio::Graphics::Browser::Options::navigation;
 
@@ -89,12 +90,11 @@ sub action_plugin {
   return $self->{'action_plugin'};
 }
 
-=head2 feature()
+=head2 features()
 
- Usage   : $hashref = $obj->feature($tag,{new => 'hash'});
-           $hashref = $obj->feature($tag);
-           @tags = $obj->feature();
- Function: hash ref which has one element for each feature type.
+ Usage   : $hashref = $obj->features();
+           $hashref = $obj->features($new_feature_data);
+ Function: Gets and setshash ref which has one element for each feature type.
            Its values are hashrefs with subkeys {visible} and {options}.
            A true value in {visible} indicates that the feature is active.
            The values of {options} are integers with the following meaning:
@@ -106,19 +106,60 @@ sub action_plugin {
 
 =cut
 
-sub feature {
-  my($self,$tag,$val) = @_;
+sub features {
 
-  if(!defined($tag)){
-    return defined($self->{'feature'}) ? keys %{ $self->{'feature'} } : ();
-  } elsif(!defined($val) && defined($self->{'feature'}{$tag})){
-    return $self->{'feature'}{$tag};
-  } elsif(defined($val) and ref($val) eq 'HASH') {
-    $self->{'feature'}{$tag} = $val;
-    return $val;
-  } else {
-    return undef;
-  }
+    my ( $self, $features_hash ) = @_;
+    if ( defined $features_hash ) {
+        $self->{'features'} = $features_hash;
+    }
+    return $self->{'features'};
+}
+
+=head2 feature()
+
+ Usage   : $hashref = $obj->set_feature($tag,{new => 'hash'});
+ Function: Sets hash ref for the feature type specified.
+           Its values are {visible} and {options}.
+           A true value in {visible} indicates that the feature is active.
+           The values of {options} are integers with the following meaning:
+           0=auto, 1=force no bump, 2=force bump, 3=force label.
+ Example : 
+ Returns : a hash or undef
+ Args    : Name of the feature and the new hash ref
+
+
+=cut
+sub set_feature {
+    my ( $self, $tag, $val ) = @_;
+
+    if ( defined($tag) and defined($val) and ref($val) eq 'HASH' ) {
+        $self->{'features'}{$tag} = $val;
+        return $val;
+    }
+    else {
+        return undef;
+    }
+}
+=head2 get_feature()
+
+ Usage   : $hashref = $obj->get_feature($tag);
+ Function: Returns hash ref which has element for feature type specified.
+           It has subkeys {visible} and {options}.
+           A true value in {visible} indicates that the feature is active.
+           The values of {options} are integers with the following meaning:
+           0=auto, 1=force no bump, 2=force bump, 3=force label.
+ Example : 
+ Returns : a hash or undef
+ Args    : Name of the feature
+
+
+=cut
+
+sub get_feature {
+
+    my ( $self, $tag ) = @_;
+
+    return $self->{'features'}{$tag};
 }
 
 =head2 remove_feature()
@@ -135,10 +176,8 @@ sub feature {
 sub remove_feature {
   my ($self,$kill) = @_;
 
-  if(!defined($kill)){
-    return undef;
-  } elsif(defined($self->{'feature'}{$kill})){
-    delete $self->{'feature'}{$kill};
+  if(defined($kill) and defined($self->{'features'}{$kill})){
+    delete $self->{'features'}{$kill};
     return 1;
   } else {
     return undef;
@@ -557,11 +596,11 @@ sub display_tracks {
 
 =cut
 
-sub track {
-  my($self,$val) = @_;
-  $self->{'track'} = $val if defined($val);
-  return $self->{'track'};
-}
+#sub track {
+#  my($self,$val) = @_;
+#  $self->{'track'} = $val if defined($val);
+#  return $self->{'track'};
+#}
 
 
 =head2 tracks()
@@ -582,9 +621,15 @@ sub track {
 =cut
 
 sub tracks {
-  my($self,@val) = @_;
-  @{ $self->{'tracks'} } = @val if scalar(@val);
-  return defined $self->{'tracks'} ? @{ $self->{'tracks'} } : ();
+    my ( $self, @val ) = @_;
+
+    # We want to accept array refs as well as arrays
+    if ( @val and ref( $val[0] ) eq 'ARRAY' ) {
+        @val = @{$val[0]};
+    }
+
+    $self->{'tracks'} = [ sort @val ] if ( scalar(@val) );
+    return defined $self->{'tracks'} ? @{ $self->{'tracks'} } : ();
 }
 
 =head2 version()

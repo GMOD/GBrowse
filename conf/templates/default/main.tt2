@@ -22,14 +22,17 @@
 <div class="target" id="target1">
   <h1>[% browser.config.setting('description') %]</h1>
   <!-- FIXME need to fix formatting on string below -->
-  <h2>[%-
+  <h2>[%- IF segment -%]
+      [%-
          browser.translate('SHOWING_FROM_TO',
                            unit_label( segment.length ),
                            segment.seq_id,
                            unit_label( segment.start  ),
                            unit_label( segment.end    )
                           );
-  -%]</h2>
+      -%]
+    [%- END -%]
+  </h2>
 </div>
 
 <form name="mainform" action="[% action %]" method="POST">

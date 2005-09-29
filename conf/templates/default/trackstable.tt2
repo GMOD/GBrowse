@@ -15,7 +15,7 @@
   [% i = 0 %]
   <table border="0"><tr>
   [% FOREACH tracklabel = browser.options.tracks -%]
-    <td><input type="checkbox" name="label" value="[% tracklabel %]" checked="checked"/>[% citation_link(tracklabel,'?help=citations') %]</td>
+    <td><input type="checkbox" name="label" value="[% tracklabel %]" [% IF selected_tracks.$tracklabel %] checked="checked"/>[% END %][% citation_link(tracklabel,'?help=citations') %]</td>
     [% i = i + 1 ; IF(i % 3) == 0 ; '</tr><tr>' ; END %]
   [% END -%]
   </tr></table>

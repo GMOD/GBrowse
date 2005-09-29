@@ -51,7 +51,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.130 2005-09-13 04:43:31 mwz444 Exp $
+# $Id: gbrowse.PLS,v 1.131 2005-09-29 18:52:29 mwz444 Exp $
 
 use strict;
 use Bio::Graphics;
@@ -68,6 +68,7 @@ use File::Basename 'basename','dirname';
 use File::Spec;
 use Carp qw(:DEFAULT croak);
 #use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td);
+use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td);
 use CGI qw(cookie escapeHTML param path_info request_method url referer);
 use Template;
 use URI::Escape;
@@ -124,9 +125,10 @@ exit 0;
 sub main_display($$) {
   my ($segments,$features) = @_;
   my ($segment);
+  my $options = $BROWSER->options();
 
   # first of all, if there are no segments, then try a keyword search and store the results
-  if (@$segments == 0 && (my $n = $BROWSER->options->name())) {
+  if (@$segments == 0 && (my $n = $options->name())) {
     error($BROWSER->translate('NOT_FOUND',escapeHTML($n)));
   }
 
@@ -140,7 +142,7 @@ sub main_display($$) {
       $segment = $segment->factory->segment(-name  => $segment->seq_id,
 					    -start => $segment->stop,
 					    -stop  => $segment->start);
-      $BROWSER->options->flip(1);
+      $options->flip(1);
   }
 
 
@@ -190,6 +192,8 @@ sub main_display($$) {
     segment    => $segment,
     prevname   => scalar(param('name')),
     finezoom   => get_zoomincrement(),
+    selected_tracks => { map { $_ => $options->get_feature($_)->{'visible'} }
+          keys %{ $options->features() || {} } },
 
 #FIXME    multiple_segments => multiple_choices($features),
     detailpanel           => detail_panel_with_timeout($segment,$feature_files),
@@ -260,8 +264,8 @@ sub detail_panel($$) {
 
 #warn Dumper($BROWSER->options->{tracks});
 #warn Dumper($BROWSER->options->{features});
-@tracks_to_show = @{ $BROWSER->options->{tracks} };
-warn Dumper(\@tracks_to_show);
+#@tracks_to_show = @{ $BROWSER->options->{tracks} };
+#warn Dumper(\@tracks_to_show);
 
     my %options = map {$_=>$BROWSER->options->{features}{$_}{options}} @tracks_to_show;
     my %limit   = map {$_=>$BROWSER->options->{features}{$_}{limit}}   @tracks_to_show;

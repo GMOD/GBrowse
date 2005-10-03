@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.4 2005-05-10 23:53:40 mummi Exp $
+# $Id: ideogram.pm,v 1.5 2005-10-03 14:06:17 mummi Exp $
 # Glyph to draw chromosome ideograms for the overview display
 
 use strict;
@@ -19,8 +19,7 @@ sub draw_component {
   my $arcradius = $self->option('arcradius') || 7;
   my $feat = $self->feature;
   my $fake_telomeres = $self->option('fake_telomeres') || 0;
-  warn "Drawing '$feat', name=",$feat->name,", method='",$feat->method,"' from ",$feat->start," to ", $feat->stop;
-  #warn Dumper($feat);
+  #warn "Drawing '$feat', name=",$feat->name,", method='",$feat->method,"' from ",$feat->start," to ", $feat->stop;
 
   my($x1,$y1,$x2,$y2) = $self->bounds(@_);
   
@@ -88,7 +87,7 @@ sub draw_component {
 	      #$gd->line($x1+1,$y1+(($y2-$y1)/2),$x1+1,$y1+(($y2-$y1)/2),$black);
 	      if ($fake_telomeres) 
 	      {
-		  warn "got fake_telomeres";
+		  #warn "got fake_telomeres";
 		  $telomere_tip_color = $black;
 	      }
 	      else 
@@ -174,7 +173,7 @@ sub create_tile
 }
 
 #Disable bumping entirely, since it messes up the nice ideogram 
-sub bump{my $self = shift; warn "in ideogram bump() (self=$self)"; return 0;}
+sub bump{my $self = shift;  return 0;}
 
 sub label{return 1;}
 

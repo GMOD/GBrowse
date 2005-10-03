@@ -215,6 +215,14 @@ END
 
    FOOTER_2    => 'Generic genome browser version %s',
 
+   OVERVIEW    => 'Overview',
+
+   DISPLAY_SETTINGS => 'Display Settings', 
+
+   DETAILS     => 'Details',
+
+   ADD_YOUR_OWN_TRACKS => 'Add Your Own Tracks',
+
    #----------------------
    # MULTIPLE MATCHES PAGE
    #----------------------

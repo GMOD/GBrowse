@@ -1,9 +1,9 @@
 <div style="display: none;" class="ctl_hidden" id="T0004_show" onclick="visibility('T0004','on','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/plus.png">&nbsp;
-  <span class="tctl"><b>Display Settings[% browser.translate('display settings') %] </b></span>
+  <span class="tctl"><b>[% browser.translate('display_settings') %] </b></span>
 </div>
                                                                                                                              
 <div class="ctl_visible" id="T0004_hide" onclick="visibility('T0004','off','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/minus.png">&nbsp;
-  <span class="tctl"><b>Display Settings[% browser.translate('display settings') %] </b></span>
+  <span class="tctl"><b>[% browser.translate('display_settings') %] </b></span>
 </div>
                                                                                                                              
 <div class="el_visible" id="T0004">

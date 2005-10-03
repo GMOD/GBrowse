@@ -1,9 +1,9 @@
 <div style="display: none;" class="ctl_hidden" id="T0005_show" onclick="visibility('T0005','on','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/plus.png">&nbsp;
-  <span class="tctl"><b>Add Your Own Tracks[% browser.translate('add_your_own_tracks') %] </b></span>
+  <span class="tctl"><b>[% browser.translate('add_your_own_tracks') %] </b></span>
 </div>
                                                                                                                              
 <div class="ctl_visible" id="T0005_hide" onclick="visibility('T0005','off','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/minus.png">&nbsp;
-  <span class="tctl"><b>Add Your Own Tracks[% browser.translate('add_your_own_tracks') %] </b></span>
+  <span class="tctl"><b>[% browser.translate('add_your_own_tracks') %] </b></span>
 </div>
                                                                                                                              
 <div class="el_visible" id="T0005">

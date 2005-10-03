@@ -1,11 +1,11 @@
 [% IF segment %]
   <div style="display: none;" class="ctl_hidden" id="T0002_show" onclick="visibility('T0002','on','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/plus.png">&nbsp;
-    <span class="tctl"><b>Overview[% browser.translate('overview') %] </b></span>
+    <span class="tctl"><b>[% browser.translate('overview') %] </b></span>
                                                                                                                              
   </div>
                                                                                                                              
   <div class="ctl_visible" id="T0002_hide" onclick="visibility('T0002','off','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/minus.png">&nbsp;
-    <span class="tctl"><b>Overview[% browser.translate('overview') %] </b></span>
+    <span class="tctl"><b>[% browser.translate('overview') %] </b></span>
                                                                                                                              
   </div>
                                                                                                                              

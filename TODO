@@ -1,5 +1,5 @@
 NEXT VERSION:
-$Id: TODO,v 1.6 2005-01-25 02:55:08 allenday Exp $
+$Id: TODO,v 1.7 2005-10-06 14:15:25 lstein Exp $
 
 Feature               PRE-PORT   POST-PORT
 ===============================================================================
@@ -58,6 +58,7 @@ Apache::Test          n/a        not started
 * Group SVG elements by feature ID
 * Allow annotator plugins to be turned on by default
 * Convert to use a templating system?
+* gbrowse_img should respect external uploaded and DAS tracks
 
 Id: TODO,v 1.4 2004/08/23 15:39:59 lstein Exp
 

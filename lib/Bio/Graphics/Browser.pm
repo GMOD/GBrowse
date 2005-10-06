@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.168 2005-01-25 22:09:01 marclogghe Exp $
+# $Id: Browser.pm,v 1.169 2005-10-06 14:15:25 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -955,6 +955,8 @@ sub make_centering_map {
 sub make_href {
   my $self = shift;
   my ($feature,$panel,$label)   = @_;
+
+  warn "HERE!!!!!";
 
   if ($feature->can('make_link')) {
     return $feature->make_link;
@@ -2112,6 +2114,7 @@ sub feature2label {
   my ($feature,$length) = @_;
   my $type  = eval {$feature->type}
     || eval{$feature->source_tag} || eval{$feature->primary_tag} or return;
+
   (my $basetype = $type) =~ s/:.+$//;
   my @label = $self->type2label($type,$length);
 
@@ -2162,7 +2165,7 @@ sub make_link {
   my $self     = shift;
   my ($feature,$panel,$source,$label)  = @_;
   $panel ||= 'Bio::Graphics::Panel';
-  $label     ||= $self->feature2label($feature);
+  $label ||= $self->feature2label($feature);
 
   my $link     = $self->code_setting($label,'link');
   $link        = $self->code_setting('TRACK DEFAULTS'=>'link') unless defined $link;

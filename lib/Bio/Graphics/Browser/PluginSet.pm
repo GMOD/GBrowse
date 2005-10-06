@@ -56,10 +56,9 @@ sub plugin        {
 
 sub configure {
   my $self     = shift;
-  my $database = shift;
+  my ($database,$page_settings) = @_;
   my $conf     = $self->config;
   my $plugins  = $self->plugins;
-  my $settings = $self->page_settings;
   my $conf_dir = $conf->dir;
 
   for my $name (keys %$plugins) {
@@ -68,7 +67,7 @@ sub configure {
     $p->database($database);
     $p->browser_config($conf);
     $p->config_path($conf_dir);
-    $p->page_settings($settings);
+    $p->page_settings($page_settings);
     $p->init();  # other initialization
 
     # retrieve persistent configuration
@@ -85,7 +84,7 @@ sub configure {
 
     # turn the plugin on
     my $setting_name = 'plugin:'.$p->name;
-    $settings->{features}{$setting_name}{visible} = 1;
+    $page_settings->{features}{$setting_name}{visible} = 1;
 
   }
 }

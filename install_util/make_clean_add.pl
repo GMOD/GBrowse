@@ -6,7 +6,6 @@ unlink 'cgi-bin/das';
 unlink 'cgi-bin/gbrowse';
 unlink 'cgi-bin/gbrowse_img';
 unlink 'cgi-bin/gbrowse_details';
-unlink 'cgi-bin/gbrowse_syn';
 unlink 'cgi-bin/gbrowse_est';
 unlink 'cgi-bin/gbrowse_moby';
 unlink 'cgi-bin/moby_server';

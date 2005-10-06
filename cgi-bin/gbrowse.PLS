@@ -195,7 +195,7 @@ unshift @plugin_path,shellwords($CONFIG->setting('plugin_path'))
   if $CONFIG->setting('plugin_path');
 
 $PLUGINS = Bio::Graphics::Browser::PluginSet->new($CONFIG,$page_settings,@plugin_path) unless defined $PLUGINS;
-$PLUGINS->configure(open_database());
+$PLUGINS->configure(open_database(),$page_settings);
 
 my $plugin_type   = '';                          # avoid uninit variable warning
 $plugin_type = $PLUGINS->plugin(param('plugin'))->type if param('plugin') && $PLUGINS->plugin(param('plugin'));

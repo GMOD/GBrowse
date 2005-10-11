@@ -1,6 +1,8 @@
 package Bio::Graphics::Browser::PluginSet;
 # API for using plugins
 
+#  $Id: PluginSet.pm,v 1.1.2.6 2005-10-11 21:36:48 mummi Exp $
+
 use strict;
 use Bio::Graphics::Browser;
 use CGI 'cookie','param';
@@ -37,13 +39,11 @@ sub new {
 
   return bless {
 		config        => $config,
-		page_settings => $page_settings,
 		plugins       => \%plugin_list
 	       },ref $package || $package;
 }
 
 sub config        { shift->{config}         }
-sub page_settings { shift->{page_settings}  }
 sub plugins       {
   my $self = shift;
   return wantarray ? values %{$self->{plugins}} : $self->{plugins};
@@ -84,7 +84,7 @@ sub configure {
 
     # turn the plugin on
     my $setting_name = 'plugin:'.$p->name;
-    $page_settings->{features}{$setting_name}{visible} = 1;
+    $p->page_settings->{features}{$setting_name}{visible} = 1;
 
   }
 }
@@ -96,12 +96,12 @@ sub annotate {
   my $coordinate_mapper = shift;
 
   my @plugins = $self->plugins;
-  my $page_settings = $self->page_settings;
 
   for my $p (@plugins) {
     next unless $p->type eq 'annotator';
     my $name = "plugin:".$p->name;
-    next unless $page_settings->{features}{$name}{visible};
+    next unless $p->page_settings->{features}{$name}{visible};
+    warn "Plugin $name is visible, so running it on segment $segment" if DEBUG;
     my $features = $p->annotate($segment,$coordinate_mapper) or next;
     $features->name($name);
     $feature_files->{$name} = $features;

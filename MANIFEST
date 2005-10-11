@@ -26,6 +26,7 @@ conf/languages/ja.pm
 conf/languages/ko.pm
 conf/languages/nl.pm
 conf/languages/POSIX.pm
+conf/languages/ru.pm
 conf/languages/zh.pm
 conf/log4perl.conf
 conf/MobyServices/b64_encoded_gif_renderer.pm

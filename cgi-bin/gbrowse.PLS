@@ -39,8 +39,6 @@ $startperl -w
 ###################################################################
 \$VERSION   = $OPTIONS{VERSION};
 
-# $Id: gbrowse.PLS,v 1.119.4.46 2005-10-12 11:16:10 mummi Exp $
-
 !GROK!THIS!
 
 print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
@@ -48,6 +46,8 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
+# $Id: gbrowse.PLS,v 1.119.4.47 2005-10-12 11:19:06 mummi Exp $
+
 use strict;
 use Bio::Graphics;
 use Bio::Graphics::Browser;

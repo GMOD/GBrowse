@@ -38,6 +38,9 @@ $startperl -w
 #
 ###################################################################
 \$VERSION   = $OPTIONS{VERSION};
+
+# $Id: gbrowse.PLS,v 1.119.4.46 2005-10-12 11:16:10 mummi Exp $
+
 !GROK!THIS!
 
 print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};

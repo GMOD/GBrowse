@@ -1,7 +1,7 @@
 package Bio::Graphics::Browser::PluginSet;
 # API for using plugins
 
-#  $Id: PluginSet.pm,v 1.1.2.6 2005-10-11 21:36:48 mummi Exp $
+#  $Id: PluginSet.pm,v 1.1.2.7 2005-10-15 23:42:32 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser;
@@ -100,7 +100,7 @@ sub annotate {
   for my $p (@plugins) {
     next unless $p->type eq 'annotator';
     my $name = "plugin:".$p->name;
-    next unless $p->page_settings->{features}{$name}{visible};
+    next unless $p->page_settings && $p->page_settings->{features}{$name}{visible};
     warn "Plugin $name is visible, so running it on segment $segment" if DEBUG;
     my $features = $p->annotate($segment,$coordinate_mapper) or next;
     $features->name($name);

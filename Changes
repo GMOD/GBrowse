@@ -27,6 +27,8 @@
 		that allows the formatting of each tag value to be precisely
 		controlled.
         * Added compatibility with mod_perl version 2 (via ModPerl::Registry)
+	* Added the ability to highlight multiple features using URL arguments.
+	* Added the ability to highlight multiple sequence regions using URL arguments.
 	* Added sections on grouping tracks by category, defining
 	  region panels, and loading Berkeleydb databases to tutorial.
         * Changed mainform submission method from POST to GET in order to defeat evil 

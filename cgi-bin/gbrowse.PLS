@@ -46,7 +46,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.47 2005-10-12 11:19:06 mummi Exp $
+# $Id: gbrowse.PLS,v 1.119.4.48 2005-10-15 23:42:32 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -137,8 +137,8 @@ $HAVE_SVG = eval {require GD::SVG; 1};
 #               0=auto, 1=force no bump, 2=force bump, 3=force label.
 #   ins         Show instructions
 #   head        Show header and footer
-#   h_feat      Search term for hiliting
-#   h_type      Search type for hiliting
+#   h_feat     Search term(s) for hiliting
+#   h_region    Region to hilight
 #   q           A search term passed in the URL -- there may be multiple ones
 # $CONFIG
 # This is a global Bio::Graphics::Browser object.  It contains information on
@@ -290,7 +290,7 @@ warn "ADJUSTED TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 
 # NOTE: we may exit out on the next statement if the user wants to download a previously-
 # uploaded file
-handle_uploads($page_settings) || exit 0;
+handle_uploads($page_settings) || exit 0 unless $CONFIG->setting('no upload');
 
 ## UPDATING THE PERSISTENT SETTINGS##############################################################
 my $cookies = settings2cookie($page_settings);
@@ -403,18 +403,21 @@ sub main_display {
   }
 
   # print the top of the form, with navigation bar, etc
-  my $method = CGI->user_agent =~ /MSIE/ ? 'GET' : 'POST';  # grrrrrr
+  my $msie_hack = CGI->user_agent =~ /MSIE/;
   my $src    = $CONFIG->source;
   my $action = $src ? url(-absolute=>1)."/$src/" : url(-absolute=>1);
-  print startform(-name   => 'mainform',
-		  -action => $action,
-		  -method => $method);
+  print $msie_hack ? startform(-name   => 'mainform',
+			       -action => $action,
+			       -method => 'GET')
+                   : start_multipart_form(-name   => 'mainform',
+					  -action => $action,
+					  -method => 'POST');
   print navigation_table($segment,$page_settings);
   print html_frag('html2',$segment,$page_settings);
 
   # NOTE: we may exit out on the next statement if the user wants to download a previously-
   # uploaded file
-  my $feature_files = load_external_sources($segments,$page_settings);
+  my $feature_files = load_external_sources($segments,$page_settings) unless $CONFIG->setting('no upload');
 
   # if more than one segment, then list them all
   if (@$segments > 1) {
@@ -442,17 +445,18 @@ sub main_display {
 
     print detail_panel_with_timeout($segment,$page_settings,$feature_files);
 
+    print table({-width=>'100%'},
+		TR(td({-align=>'left'},
+		      a({-href=>'?h_feat=_clear_;h_region=_clear_'},font({-size=>-2},$CONFIG->tr('Clear_highlighting')))),
+		   td({-align=>'right'},
+		      b(submit(-name => $CONFIG->tr('Update'))))));
+
   } else {
     # empty overview,region & detail sections
     print toggle_section({on=>1},b($CONFIG->tr('Overview')),'');
     print toggle_section({on=>1},b($CONFIG->tr('Region')),'') if $page_settings->{region_size};
     print toggle_section({on=>1},b($CONFIG->tr('Details')),'');
   }
-
-  print table({-width=>'100%'},
-	      TR(td({-align=>'right'},
-		 b(submit(-name => $CONFIG->tr('Update'))))));
-
 
   print html_frag('html3',$segment,$page_settings);
   print html_frag('html4',$segment,$page_settings);
@@ -463,9 +467,11 @@ sub main_display {
   print html_frag('html6',$segment,$page_settings);
   print end_form();
 
-  print start_multipart_form(-name=>'externalform');
-  print external_table($page_settings,$feature_files);
-  print end_form();
+  unless ($CONFIG->setting('no upload')) {
+    print start_multipart_form(-name=>'externalform');
+    print external_table($page_settings,$feature_files);
+    print end_form();
+  }
 
 
   # clean us up
@@ -537,6 +543,7 @@ sub detail_panel {
     my %options = map {$_=>$page_settings->{features}{$_}{options}} @tracks_to_show;
     my %limit   = map {$_=>$page_settings->{features}{$_}{limit}}   @tracks_to_show;
     my $h_callback = make_hilite_callback($page_settings);
+    my $postgrid   = make_postgrid_callback($page_settings);
     ($img,$map) = $CONFIG->render_html(segment       => $segment,
 				       feature_files => $feature_files,
 				       tracks        => \@tracks_to_show,
@@ -547,7 +554,7 @@ sub detail_panel {
 				       lang          => $CONFIG->language,
 				       keystyle      => $page_settings->{ks}   || 'between',
 				       flip          => $page_settings->{flip} || undef,
-                                       postgrid      => $CONFIG->setting('postgrid') || '',
+                                       postgrid      => $postgrid || $CONFIG->setting('postgrid') || '',
                                        background    => $CONFIG->setting('background') || '',
 				       hilite_callback => $h_callback || undef,
 				       -add_category_labels => $CONFIG->setting('show track categories') || undef,
@@ -619,6 +626,7 @@ sub get_settings {
       my @features = split $;,$settings{tracks} if $ok && defined $settings{tracks};
       $settings{tracks}    = [];  # make sure these are clean
       $settings{features}  = {};
+
       foreach (@features) {
 	warn "feature = $_" if DEBUG;
 	my ($label,$visible,$option,$limit) = m!^(.+)/(\d+)/(\d+)/(\d+)$!;
@@ -636,6 +644,17 @@ sub get_settings {
 
       $ok &&= ref($settings{tracks}) && @{$settings{tracks}} > 0;
       warn "ok 4 = $ok" if DEBUG;
+
+      # hilighting
+      my $hilights = $settings{h_feat} || '';
+      $settings{h_feat} = {};
+      for my $hi (split $;,$hilights) {
+	my ($name,$color) = split '@',$hi;
+	$settings{h_feat}{$name} = $color;
+      }
+
+      my @regions = split $;,$settings{h_region} if $settings{h_region};
+      $settings{h_region} = \@regions;
     }
   }
 
@@ -732,8 +751,7 @@ sub auto_open {
     my $desired_label = $CONFIG->feature2label($feature) or next;
     if (exists $tracks->{$desired_label}) {
       $tracks->{$desired_label}{visible} = 1;
-      $settings->{h_feat}  = $feature->display_name;
-      $settings->{h_type}  = $feature->type;
+      $settings->{h_feat}{$feature->display_name} = 'yellow';
     }
   }
 }
@@ -744,7 +762,7 @@ sub settings2cookie {
   my %settings = %$settings;
   local $^W = 0;
   for my $key (keys %settings) {
-    next if $key =~ /^(tracks|features)$/;  # handled specially
+    next if $key =~ /^(tracks|features|h_feat)$/;  # handled specially
     if (ref($settings{$key}) eq 'ARRAY') {
       $settings{$key} = join $;,@{$settings{$key}};
     }
@@ -760,6 +778,14 @@ sub settings2cookie {
   $settings{tracks} = join $;,@array;
   delete $settings{features};
   delete $settings{flip};  # obnoxious for this to persist
+
+  @array = ();
+  for my $hi (keys %{$settings{h_feat}}) {
+    push @array,"$hi\@$settings{h_feat}{$hi}";
+  }
+  $settings{h_feat} = join $;,@array;
+  $settings{h_region} = join $;,@{$settings{h_region}} if $settings{h_region} 
+    && ref $settings{h_region} eq 'ARRAY';
 
   warn "cookie => ",join ' ',%settings,"\n" if DEBUG;
 
@@ -813,14 +839,26 @@ sub adjust_settings {
       zoomnav($settings);
       $settings->{name} = "$settings->{ref}:$settings->{start}..$settings->{stop}";
       param(name => $settings->{name});
+    } elsif (!param('help')) { # don't even ask
+      $settings->{h_region} = [];
     }
 
   foreach (qw(name source plugin stp ins head
-	      ks sk version h_feat h_type)) {
+	      ks sk version h_region)) {
     $settings->{$_} = param($_) if defined param($_);
   }
   $settings->{name} =~ s/^\s+//; # strip leading
   $settings->{name} =~ s/\s+$//; # and trailing whitespace
+
+  for my $hilight (param('h_feat')) {
+    $settings->{h_feat} = {} if $hilight eq '_clear_';
+    my ($featname,$color) = split '@',$hilight;
+    $settings->{h_feat}{$featname} = $color || 'yellow';
+  }
+
+  if (my @regions = split_labels(param('h_region'))) {
+    $settings->{h_region} = \@regions;
+  }
 
   if ($CONFIG->setting('region segment')) {
     $settings->{region_size} = param('region_size') if defined param('region_size');
@@ -844,9 +882,9 @@ sub adjust_settings {
     }
   }
 
-  # the "q" request overrides name, ref, h_feat and h_type
+  # the "q" request overrides name, ref, and h_feat
   if (my @q = param('q')) {
-    delete $settings->{$_} foreach qw(name ref h_feat h_type);
+    delete $settings->{$_} foreach qw(name ref h_feat h_region);
     $settings->{q} = [map {split /[+-]/} @q];
   }
 
@@ -907,6 +945,15 @@ sub navigation_table {
 			 $help_link)
 		     )
 		 );
+
+  my $searchbox = $CONFIG->setting('no search')
+    ? '' : b($CONFIG->tr('Landmark')).':'.br.
+           textfield(-name=>'name',-size=>25).
+	   submit(-name=>$CONFIG->tr('Search')).'&nbsp;'.
+	   submit(-name=>'reset', -label=>$CONFIG->tr('Reset'),-class=>'reset_button');
+  my $plugin_menu = plugin_menu($settings,$PLUGINS);
+  my $plugins     = $plugin_menu ? b($CONFIG->tr('Dumps')).':'.br.$plugin_menu : '';
+
   $table .= toggle_section({on=>1},
 			   b($CONFIG->tr('SEARCH')),
 			   table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
@@ -915,16 +962,14 @@ sub navigation_table {
 				       html_frag('html1',$segment,$settings)||''
 				      )
 				   ),
-				 
+
 				 TR({-class=>'searchbody'},
-				    td({-align=>'left'}, 
-				       b($CONFIG->tr('Landmark')).':',br,
-				       textfield(-name=>'name',-size=>25),
-				       submit(-name=>$CONFIG->tr('Search')).'&nbsp;'.
-				       submit(-name=>'reset', -label=>$CONFIG->tr('Reset'),-class=>'reset_button')
+				    td({-align=>'left'},
+				       $searchbox
 				      ),
-				    td({-colspan=>1,-align=>'left'},b($CONFIG->tr('Dumps')).':',br,
-				       plugin_menu($settings,$PLUGINS))
+				    td({-colspan=>1,-align=>'left'},
+				       $plugins
+				      )
 				   ),
 				 TR({-class=>'searchbody',-style=>'padding-top: 5 px'},
 				    td({-align=>'left'},source_menu($settings)),
@@ -945,7 +990,7 @@ sub navigation_table {
 sub make_hilite_callback {
   my $settings = shift;
   my @hiliters = grep {$_->type eq 'highlighter'} $PLUGINS->plugins;
-  return unless @hiliters or ($settings->{h_feat} && $settings->{h_type});
+  return unless @hiliters or $settings->{h_feat};
   return sub {
     my $feature = shift;
     my $color;
@@ -958,9 +1003,28 @@ sub make_hilite_callback {
     return $color if $color;
 
     # if we get here, we select the search term for highlighting
-    # return unless $feature->type         eq $settings->{h_type};
-    return unless $feature->display_name && $feature->display_name eq $settings->{h_feat};
-    'yellow';
+    return unless $feature->display_name;
+    return $settings->{h_feat}{$feature->display_name};
+  }
+}
+
+# this generates the callback for highlighting a region
+sub make_postgrid_callback {
+  my $settings = shift;
+  my @h_regions = @{$settings->{h_region}} or return;
+  return sub {
+    my $gd     = shift;
+    my $panel  = shift;
+    my $left   = $panel->pad_left;
+    my $top    = $panel->top;
+    my $bottom = $panel->bottom;
+    for my $r (@h_regions) {
+      my ($h_start,$h_end,$h_color) = $r =~ /^(\d+)\.\.(\d+)(?:@(\S+))?/ or next;
+      $h_color ||= 'lightgrey';
+      my ($start,$end) = $panel->location2pixel($h_start,$h_end);
+      $gd->filledRectangle($left+$start,$top,$left+$end,$bottom,
+			   $panel->translate_color($h_color));
+    }
   }
 }
 
@@ -1112,7 +1176,7 @@ sub tracks_table {
 			$CONFIG->tr('REGION'),
 			$CONFIG->tr('ANALYSIS'),
 			@user_keys,
-			$CONFIG->tr('EXTERNAL'),
+			$CONFIG->setting('no upload') ? () : ($CONFIG->tr('EXTERNAL')),
 		       ) {
     next if $seenit{$category}++;
     my $table;
@@ -2458,6 +2522,8 @@ sub build_link_image_page {
   my $img_url = "$url?name=$name;type=$type;width=$width;id=$id";
   $img_url   .= ";flip=$flip" if $flip;
   $img_url   .= ";options=$options" if $options;
+  add_hilites($settings,\$img_url);
+
   print $CONFIG->tr('IMAGE_DESCRIPTION',$img_url,$img_url);
 }
 
@@ -2482,7 +2548,27 @@ sub build_svg_image_page {
   my $img_url = "$url?name=$name;type=$type;width=$width;id=$id;format=GD::SVG";
   $img_url   .= ";flip=$flip" if $flip;
   $img_url   .= ";options=$options" if $options;
+  add_hilites($settings,\$img_url);
   print $CONFIG->tr('SVG_DESCRIPTION',$img_url,$img_url);
+}
+
+sub add_hilites {
+  my $settings = shift;
+  my $img_url  = shift;
+
+  # add feature hilighting
+  if ($settings->{h_feat} && ref $settings->{h_feat} eq 'HASH') {
+    for my $h (keys %{$settings->{h_feat}}) {
+      $$img_url .= ";h_feat=$h\@$settings->{h_feat}{$h}";
+    }
+  }
+  # add region hilighting
+  if ($settings->{h_region} && ref $settings->{h_region} eq 'ARRAY') {
+    for my $h (@{$settings->{h_region}}) {
+      $$img_url .= ";h_region=$h";
+    }
+  }
+
 }
 
 

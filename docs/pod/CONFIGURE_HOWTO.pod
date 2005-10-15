@@ -850,6 +850,22 @@ configuration files in conf/lang) by setting these options.  For example:
 
          instructions = "Type in the name of a contig or clone."
 
+=item * no search
+
+If you don't want the "Landmark or Region" textbox to appear, set this
+to true. The user will still be able to search the database by
+appending q=<search term> to the URL.
+
+          no search = 1
+
+=item * no upload
+
+If you don't want the file upload text field to appear, set this to
+true. This disables file uploading and remote DAS tracks completely,
+even if the user tries to reverse-engineer the gbrowse form.
+
+           no upload = 1
+
 =item * html1, html2, html3, html4, html5, html6
 
 These options allow you to insert HTML into the GBrowse page at
@@ -2766,6 +2782,28 @@ Set the width of the overview, region and details images, in pixels.
 
 Set the length of the region covered by the "region" panel, in base
 pairs.
+
+=item h_feat
+
+The name of a feature to highlight in the format
+"<feature_name>@<color_name>". Example:
+
+      h_feat=SKT5@blue
+
+You may omit "@color", in which case the highlight will default to
+yellow. You can specify multiple h_feat arguments in order to
+highlight several features with distinct colors.
+
+=item h_region
+
+The name of a region to highlight in the format
+"<seq_id>:start..end@color". Example:
+
+      h_region=Chr3:200000..250000@wheat
+
+You may omit "@color" in which case the highlight will default to
+lightgrey. You can specify multiple h_region arguments in order to
+highlight multiple sequence ranges with different colors.
 
 =item ks
 

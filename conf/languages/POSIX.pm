@@ -184,6 +184,8 @@ END
 
    SET_OPTIONS => 'Configure tracks...',
 
+   CLEAR_HIGHLIGHTING => 'Clear highlighting',
+
    UPDATE      => 'Update Image',
 
    DUMPS       => 'Reports &amp; Analysis',

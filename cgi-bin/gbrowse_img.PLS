@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.5 2005-08-29 16:57:50 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.6 2005-10-15 23:42:32 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -75,6 +75,8 @@ use constant PANEL_GAP         => 3;
 #             in format: reference+type+name+start..stop,start..stop,start..stop
 #           multiple "add" arguments are allowed
 # style     stylesheet for added features
+# h_region  region(s) to hilight
+# h_feat    feature(s) to hilight
 
 $CONF_DIR = conf_dir($CONF_DIR);
 $CONFIG = open_config($CONF_DIR);  # open_config() is exported from Util.pm
@@ -156,6 +158,8 @@ my $embed           = param('embed')|| param('e');          # embedded in a fram
 my $flip            = param('flip') || param('f');          # right<->left
 my $hitkey          = param('key');			    # key for hit track
 my $id              = param('id');
+my @h_region        = param('h_region');
+my @h_feat          = param('h_feat');
 
 my $db              = open_database($CONFIG);
 
@@ -177,7 +181,7 @@ my $page_settings = {features=>$visible,tracks=>$labels,id=>$id};
 my @plugin_path = "$CONF_DIR/plugins";
 unshift @plugin_path,shellwords($CONFIG->setting('plugin_path')) if $CONFIG->setting('plugin_path');
 $PLUGINS = Bio::Graphics::Browser::PluginSet->new($CONFIG,$page_settings,@plugin_path) unless defined $PLUGINS;
-$PLUGINS->configure($db);
+$PLUGINS->configure($db,$page_settings);
 
 # uploaded files
 $UPLOADS = Bio::Graphics::Browser::UploadSet->new($CONFIG,$page_settings);
@@ -206,6 +210,9 @@ else {  # detailed view
   add_features($labels,$segment,\@add_features,\@add_style,$feature_list) if @add_features;
   external_features($segment,$feature_list);
 
+  my $feature_hilighting = make_hilite_callback(\@h_feat);
+  my $region_hilighting  = make_postgrid_callback(\@h_region);
+
   ($img,$boxes,$panel,$tracks)
     = $CONFIG->image_and_map(segment       => $segment,
 			     tracks        => $labels,
@@ -216,6 +223,8 @@ else {  # detailed view
 			     keystyle      => $keystyle,
 			     do_map        => 1,
 			     flip          => $flip,
+			     $feature_hilighting ? (hilite_callback => $feature_hilighting) : (),
+			     $region_hilighting  ? (postgrid        => $region_hilighting)  : (),
 			    );
   $detailed_view++;
 }
@@ -384,6 +393,49 @@ sub add_features {
   $feature_hash->{add} = $feature_list;
   return $feature_hash; # dgg; caller expects valid return
 }
+
+# this generates the callback for highlighting "interesting" features
+sub make_hilite_callback {
+  my $features = shift;
+  return unless @$features;
+  my %features;
+  for my $f (@$features) {
+    my ($name,$color) = split '@',$f;
+    $color ||= 'yellow';
+    $features{$name} = $color;
+  }
+  return sub {
+    my $feature = shift;
+    my $color;
+
+    # if we get here, we select the search term for highlighting
+    return unless $feature->display_name;
+    return $features{$feature->display_name};
+  }
+}
+
+# this generates the callback for highlighting a region
+sub make_postgrid_callback {
+  my $h_regions = shift;
+  my @h_regions = @$h_regions or return;
+
+  return sub {
+    my $gd     = shift;
+    my $panel  = shift;
+    my $left   = $panel->pad_left;
+    my $top    = $panel->top;
+    my $bottom = $panel->bottom;
+    for my $r (@h_regions) {
+      my ($h_start,$h_end,$h_color) = $r =~ /^(\d+)\.\.(\d+)(?:@(\S+))?/ or next;
+      $h_color ||= 'lightgrey';
+      my ($start,$end) = $panel->location2pixel($h_start,$h_end);
+      $gd->filledRectangle($left+$start,$top,$left+$end,$bottom,
+			   $panel->translate_color($h_color));
+    }
+  }
+}
+
+
 
 sub consolidate_images {
   my ($images,$image_class) = @_;
@@ -776,6 +828,26 @@ lengths.
   <dd>This argument specifies the database for the images.  The list of sources
       can be found using <i>list=sources</i>.
       <p>
+  <dt><b>h_feat</b>
+  <dd>The name of a feature to highlight in the format <i>feature_name</i>@<i>color_name</i>".
+       Example:
+       <blockquote></pre>
+        h_feat=SKT5@blue
+        </pre></blockquote>
+        You may omit "@color", in which case the highlight will default to
+        yellow. You can specify multiple h_feat arguments in order to
+        highlight several features with distinct colors.
+  <dt><b>h_region</b>
+  <dd>The name of a region to highlight in a solid background color, in the
+      format <i>sequence_name</i>:<i>start</i>..<i>end</i>@<i>color_name</i>".
+       Example:
+       <blockquote></pre>
+        h_region=Chr3:200000..250000@wheat
+        </pre></blockquote>
+        You may omit "@color", in which case the highlighted region 
+        will default to
+        lightgrey. You can specify multiple h_region arguments in order to
+        highlight several regions with distinct colors.
 </dl>
 <p>
 Putting it all together, here's a working (very long) URL:

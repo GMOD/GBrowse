@@ -160,6 +160,8 @@ END
 
    CONFIGURE   => 'Configure...',
 
+   CONFIGURE_TRACKS   => 'Configure tracks...',
+
    EDIT       => 'Edit File...',
 
    DELETE     => 'Delete File',
@@ -213,6 +215,14 @@ END
    UPDATE_URLS  => 'Update URLs',
 
    PRESETS      => '--Choose Preset URL--',
+
+   FEATURES_TO_HIGHLIGHT => 'Highlight feature(s) (feature1 feature2...)',
+
+   REGIONS_TO_HIGHLIGHT => 'Highlight regions (region1:start..end region2:start..end)',
+
+   FEATURES_TO_HIGHLIGHT_HINT => 'Hint: use feature@color to select the color, as in \'NUT21@lightblue\'',
+
+   REGIONS_TO_HIGHLIGHT_HINT  => 'Hint: use region@color to select the color, as in \'Chr1:10000..20000@lightblue\'',
 
    NO_TRACKS    => '*none*',
 
@@ -304,6 +314,8 @@ END
    NO_LIMIT    => 'No limit',
 
    OVERVIEW    => 'Overview',
+
+   EXTERNAL    => 'External',
 
    ANALYSIS    => 'Analysis',
 

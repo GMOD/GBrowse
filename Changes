@@ -1,13 +1,26 @@
 1.63
-	* Sections can now be opened and closed with a JavaScript toggle.
+	* Added a new "region" panel which is intermediate in size between the overview
+		and the detail panels. Thanks to Barry Healy for coding this. Use the new 
+		"region segment" configuration option to turn this feature on.
+	* Added ability to open and close sections with a JavaScript toggle.
 	* Added ability to group tracks logically.
-	* Plugins menu moved to a more prominent position.
 	* Added the "initial landmark" configuration option to bring up a 
 		default region the first time user visits the web page.
 	* Added the "quicklink plugins" option to add selected plugins to
 		the links list underneath the instructions.
+        * Added compatibility with mod_perl version 2 (via ModPerl::Registry)
+	* Added the ability to highlight multiple features using URL arguments.
+	* Added the ability to highlight multiple sequence regions using URL arguments.
+	* Added the ability to turn off the autosearch feature which restores the previous
+	        region when the user revisits the browser.
+	* Added sections on grouping tracks by category, defining
+	        region panels, and loading Berkeleydb databases to tutorial.
+        * Added a "hide" option to use when semantic zooming should turn a track
+                off altogether.
+	* Added README-lucegene.pod, describing the Lucegene GFF adaptor
 	* The link option in the config file can now be used to override the built-in linking
 		rules from DAS sources.
+	* Moved plugins menu to a more prominent position.
 	* Uploaded features can now be placed in details panel, overview panel, or both panels.
 	* init_code subroutines and anonymous callbacks are now placed in the same package so that
 		one can refer to the other.
@@ -16,9 +29,6 @@
 	* You can now use the parameters "enable" and "disable" to
 		selectively open or close a set of tracks without blowing
 		away the settings for all the other tracks the way "label" does.
-	* Incorporated a new "region" panel which is intermediate in size between the overview
-		and the detail panels. Thanks to Barry Healy for coding this. Use the new 
-		"region segment" configuration option to turn this feature on.
         * gbrowse_img now takes a "highlight" parameter that will highlight the indicated
                 named feature(s) in yellow.
 	* gbrowse_details will now evaluate URL options expressed as anonymous subroutines (contributed
@@ -26,16 +36,8 @@
 	* gbrowse_details now accepts a general formatting rule syntax
 		that allows the formatting of each tag value to be precisely
 		controlled.
-        * Added compatibility with mod_perl version 2 (via ModPerl::Registry)
-	* Added the ability to highlight multiple features using URL arguments.
-	* Added the ability to highlight multiple sequence regions using URL arguments.
-	* Added sections on grouping tracks by category, defining
-	  region panels, and loading Berkeleydb databases to tutorial.
-        * Changed mainform submission method from POST to GET in order to defeat evil 
-	  "cache has expired" message in IE
-        * Added a "hide" option to use when semantic zooming should turn a track
-          off altogether.
-	* Add README-lucegene.pod, describing the Lucegene GFF adaptor
+        * Changed mainform submission method from POST to GET when MSIE detected,
+                in order to defeat evil "cache has expired" message.
 
 1.62    Mon Apr  5 09:43:25 EDT 2004
 	* Added request timeout option for very long requests.

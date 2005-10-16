@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.6 2005-10-15 23:42:32 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.7 2005-10-16 19:03:57 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -211,7 +211,7 @@ else {  # detailed view
   external_features($segment,$feature_list);
 
   my $feature_hilighting = make_hilite_callback(\@h_feat);
-  my $region_hilighting  = make_postgrid_callback(\@h_region);
+  my $region_hilighting  = make_postgrid_callback(\@h_region,$segment);
 
   ($img,$boxes,$panel,$tracks)
     = $CONFIG->image_and_map(segment       => $segment,
@@ -417,7 +417,16 @@ sub make_hilite_callback {
 # this generates the callback for highlighting a region
 sub make_postgrid_callback {
   my $h_regions = shift;
-  my @h_regions = @$h_regions or return;
+  my $segment   = shift;
+  my $ref       = $segment->ref;
+  my @h_regions;
+
+  for my $r (@$h_regions) {
+    my ($h_ref,$h_start,$h_end,$h_color) = $r =~ /^(.+):(\d+)\.\.(\d+)(?:@(\S+))?/ or next;
+    next unless $h_ref eq $ref;
+    push @h_regions,[$h_start,$h_end,$h_color||'lightgrey'];
+  }
+  @h_regions or return;
 
   return sub {
     my $gd     = shift;
@@ -426,8 +435,7 @@ sub make_postgrid_callback {
     my $top    = $panel->top;
     my $bottom = $panel->bottom;
     for my $r (@h_regions) {
-      my ($h_start,$h_end,$h_color) = $r =~ /^(\d+)\.\.(\d+)(?:@(\S+))?/ or next;
-      $h_color ||= 'lightgrey';
+      my ($h_start,$h_end,$h_color) = @$r;
       my ($start,$end) = $panel->location2pixel($h_start,$h_end);
       $gd->filledRectangle($left+$start,$top,$left+$end,$bottom,
 			   $panel->translate_color($h_color));

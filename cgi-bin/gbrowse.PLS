@@ -46,7 +46,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.48 2005-10-15 23:42:32 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.49 2005-10-16 19:03:56 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -215,7 +215,9 @@ $UPLOADED_SOURCES = Bio::Graphics::Browser::UploadSet->new($CONFIG,$page_setting
 $REMOTE_SOURCES   = Bio::Graphics::Browser::RemoteSet->new($CONFIG,$page_settings);
 
 ## GETTING THE SEGMENT ######################################################
-my $features = get_features($page_settings);
+## but only if we have started a search! ##
+my $is_search = is_search($page_settings);
+my $features  = $is_search ? get_features($page_settings) : [];
 
 if ($plugin_action eq $CONFIG->tr('Find') && param('plugin')) {
   do_plugin_find($page_settings,
@@ -223,7 +225,7 @@ if ($plugin_action eq $CONFIG->tr('Find') && param('plugin')) {
 		 $features) or ($plugin_action = 'Configure'); #reconfigure
 }
 
-elsif (!@$features && $page_settings->{name}) {
+elsif (!@$features && $page_settings->{name} && $is_search) {
   @$features = do_keyword_search($page_settings->{name});
   @$features = do_plugin_autofind($page_settings,$page_settings->{name})
     if !@$features;  # last resort
@@ -235,7 +237,6 @@ my @segments = @$segments;
 # tell the plugins which segments are in play
 $PLUGINS->set_segments(\@segments);
 $REMOTE_SOURCES->set_sources([param('eurl')]) if param('eurl');
-
 
 ###############################################################################################
 
@@ -372,7 +373,7 @@ sub main_display {
   my ($segment);
 
   # first of all, if there are no segments, then try a keyword search and store the results
-  if (@$segments == 0 && (my $n = $page_settings->{name})) {
+  if (param() && (@$segments == 0) && (my $n = $page_settings->{name})) {
       error($CONFIG->tr('NOT_FOUND',escapeHTML($n)));
   }
 
@@ -447,7 +448,8 @@ sub main_display {
 
     print table({-width=>'100%'},
 		TR(td({-align=>'left'},
-		      a({-href=>'?h_feat=_clear_;h_region=_clear_'},font({-size=>-2},$CONFIG->tr('Clear_highlighting')))),
+		      a({-href=>"?name=$page_settings->{name};h_feat=_clear_;h_region=_clear_"},
+			font({-size=>-2},$CONFIG->tr('Clear_highlighting')))),
 		   td({-align=>'right'},
 		      b(submit(-name => $CONFIG->tr('Update'))))));
 
@@ -783,7 +785,7 @@ sub settings2cookie {
   for my $hi (keys %{$settings{h_feat}}) {
     push @array,"$hi\@$settings{h_feat}{$hi}";
   }
-  $settings{h_feat} = join $;,@array;
+  $settings{h_feat}   = join $;,@array;
   $settings{h_region} = join $;,@{$settings{h_region}} if $settings{h_region} 
     && ref $settings{h_region} eq 'ARRAY';
 
@@ -839,8 +841,6 @@ sub adjust_settings {
       zoomnav($settings);
       $settings->{name} = "$settings->{ref}:$settings->{start}..$settings->{stop}";
       param(name => $settings->{name});
-    } elsif (!param('help')) { # don't even ask
-      $settings->{h_region} = [];
     }
 
   foreach (qw(name source plugin stp ins head
@@ -850,15 +850,25 @@ sub adjust_settings {
   $settings->{name} =~ s/^\s+//; # strip leading
   $settings->{name} =~ s/\s+$//; # and trailing whitespace
 
-  for my $hilight (param('h_feat')) {
-    $settings->{h_feat} = {} if $hilight eq '_clear_';
-    my ($featname,$color) = split '@',$hilight;
-    $settings->{h_feat}{$featname} = $color || 'yellow';
+  if (my @f = param('h_feat')) {
+    $settings->{h_feat} = {};
+    for my $hilight (@f) {
+      next if $hilight eq '_clear_';
+      my ($featname,$color) = split '@',$hilight;
+      $settings->{h_feat}{$featname} = $color || 'yellow';
+    }
   }
 
   if (my @regions = split_labels(param('h_region'))) {
-    $settings->{h_region} = \@regions;
+    $settings->{h_region} = [];
+    foreach (@regions) {
+      next if $_ eq '_clear_';
+      $_ = "$settings->{ref}:$_" if /^\d+/; # add reference if not there
+      push @{$settings->{h_region}},$_;
+    }
   }
+  Delete('h_feat')   if param('h_feat')   eq '_clear_';
+  Delete('h_region') if param('h_region') eq '_clear_';
 
   if ($CONFIG->setting('region segment')) {
     $settings->{region_size} = param('region_size') if defined param('region_size');
@@ -948,7 +958,7 @@ sub navigation_table {
 
   my $searchbox = $CONFIG->setting('no search')
     ? '' : b($CONFIG->tr('Landmark')).':'.br.
-           textfield(-name=>'name',-size=>25).
+           textfield(-name=>'name',-size=>25,-default=>$settings->{name}).
 	   submit(-name=>$CONFIG->tr('Search')).'&nbsp;'.
 	   submit(-name=>'reset', -label=>$CONFIG->tr('Reset'),-class=>'reset_button');
   my $plugin_menu = plugin_menu($settings,$PLUGINS);
@@ -1011,7 +1021,15 @@ sub make_hilite_callback {
 # this generates the callback for highlighting a region
 sub make_postgrid_callback {
   my $settings = shift;
-  my @h_regions = @{$settings->{h_region}} or return;
+  my @h_regions;
+  return unless ref $settings->{h_region};
+  for my $r (@{$settings->{h_region}}) {
+    my ($h_ref,$h_start,$h_end,$h_color) = $r =~ /^(.+):(\d+)\.\.(\d+)(?:@(\S+))?/ or next;
+    next unless $h_ref eq $settings->{ref};
+    push @h_regions,[$h_start,$h_end,$h_color||'lightgrey'];
+  }
+  @h_regions or return;
+
   return sub {
     my $gd     = shift;
     my $panel  = shift;
@@ -1019,8 +1037,7 @@ sub make_postgrid_callback {
     my $top    = $panel->top;
     my $bottom = $panel->bottom;
     for my $r (@h_regions) {
-      my ($h_start,$h_end,$h_color) = $r =~ /^(\d+)\.\.(\d+)(?:@(\S+))?/ or next;
-      $h_color ||= 'lightgrey';
+      my ($h_start,$h_end,$h_color) = @$r;
       my ($start,$end) = $panel->location2pixel($h_start,$h_end);
       $gd->filledRectangle($left+$start,$top,$left+$end,$bottom,
 			   $panel->translate_color($h_color));
@@ -1256,7 +1273,7 @@ sub settings_table {
   my @key_positions   = qw(between bottom);
   push @key_positions,qw(left right) if Bio::Graphics::Panel->can('auto_pad');
   my $content =
-    table({-class=>'searchbody'},
+    table({-class=>'searchbody',-border=>0},
 	  TR(
 	     td(
 		b($CONFIG->tr('Image_width')),br,
@@ -1298,6 +1315,28 @@ sub settings_table {
                              -override=>1
                            ),
                ),
+	    ),
+	  TR(
+	     td(
+		span({-title=>$CONFIG->tr('FEATURES_TO_HIGHLIGHT_HINT')},
+		     b(
+		       $CONFIG->tr('FEATURES_TO_HIGHLIGHT')
+		      ),br,
+		     textfield(-name=>'h_feat',
+			       -size=>50,
+			      ),
+		    ),
+	       ),
+	     td({-colspan=>2},
+		span({-title=>$CONFIG->tr('REGIONS_TO_HIGHLIGHT_HINT')},
+		     b(
+		       $CONFIG->tr('REGIONS_TO_HIGHLIGHT')
+		      ),br,
+		     textfield(-name=>'h_region',
+			       -size=>50,
+			      ),
+		    ),
+	       ),
 	    ),
 	  TR(td({-colspan=>4,
 		 -align=>'right'},
@@ -2502,8 +2541,17 @@ sub build_help_page {
 }
 
 sub build_link_image_page {
+  _build_image_page(@_,'IMAGE_DESCRIPTION');
+}
+sub build_svg_image_page {
+  _build_image_page(@_,'SVG_DESCRIPTION','GD::SVG');
+}
+
+sub _build_image_page {
   my $settings = shift;
-  my $segment  = shift;
+  my $help     = shift;
+  my $format   = shift;
+
   my $source = $CONFIG->source;
   my $id     = $settings->{id};
   my $flip   = $settings->{flip} || param('flip') || 0;
@@ -2520,36 +2568,11 @@ sub build_link_image_page {
 				 $settings->{features}{$_}{options}
 			       } @$tracks;
   my $img_url = "$url?name=$name;type=$type;width=$width;id=$id";
-  $img_url   .= ";flip=$flip" if $flip;
+  $img_url   .= ";flip=$flip"       if $flip;
   $img_url   .= ";options=$options" if $options;
+  $img_url   .= ";format=$format"   if $format;
   add_hilites($settings,\$img_url);
-
-  print $CONFIG->tr('IMAGE_DESCRIPTION',$img_url,$img_url);
-}
-
-sub build_svg_image_page {
-  my $settings = shift;
-  my $segment  = shift;
-  my $source = $CONFIG->source;
-  my $id     = $settings->{id};
-  my $flip   = $settings->{flip} || param('flip') || 0;
-  my $url = url(-base=>1);
-  $url   .= url(-absolute=>1);
-  $url    = dirname($url) . "/gbrowse_img/".escape($source);
-  my $tracks = $settings->{tracks};
-  my $width  = $CONFIG->width;
-  my $name   = $settings->{name} || "$settings->{ref}:$settings->{start}..$settings->{stop}";
-  my $type    = join '+',map{escape($_)} map {/\s/?qq("$_"):$_} grep {$settings->{features}{$_}{visible}} @$tracks;
-  my $options = join '+',map { join '+', escape($_),$settings->{features}{$_}{options}
-			     } map {/\s/?"$_":$_}
-			       grep {
-				 $settings->{features}{$_}{options}
-			       } @$tracks;
-  my $img_url = "$url?name=$name;type=$type;width=$width;id=$id;format=GD::SVG";
-  $img_url   .= ";flip=$flip" if $flip;
-  $img_url   .= ";options=$options" if $options;
-  add_hilites($settings,\$img_url);
-  print $CONFIG->tr('SVG_DESCRIPTION',$img_url,$img_url);
+  print $CONFIG->tr($help,$img_url,$img_url);
 }
 
 sub add_hilites {
@@ -2829,7 +2852,15 @@ sub unique {
 }
 
 sub split_labels {
-   map {/^(http|ftp|das)/ ? $_ : split /[+-]/} @_;
+   map {/^(http|ftp|das)/ ? $_ : split /[\s+-]/} @_;
+}
+
+sub is_search {
+  my $page_settings = shift;
+  return 1 if param();
+  return 1 if     $CONFIG->setting('initial landmark') && !$page_settings->{name};
+  return 1 unless $CONFIG->setting('no autosearch');
+  return undef;
 }
 
 sub version_warning {

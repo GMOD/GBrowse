@@ -142,7 +142,11 @@ END
 
    OVERVIEW_TRACKS => '<sup>*</sup>Overview track',
 
+   REGION_TRACKS => '<sup>**</sup>Region track',
+
    EXAMPLES => 'Examples',
+
+   REGION_SIZE => 'Region Size (bp)',
 
    HELP     => 'Help',
 
@@ -180,7 +184,9 @@ END
 
    VARYING     => 'Varying',
 
-   SET_OPTIONS => 'Set Track Options...',
+   SET_OPTIONS => 'Configure tracks...',
+
+   CLEAR_HIGHLIGHTING => 'Clear highlighting',
 
    UPDATE      => 'Update Image',
 
@@ -209,6 +215,14 @@ END
    UPDATE_URLS  => 'Update URLs',
 
    PRESETS      => '--Choose Preset URL--',
+
+   FEATURES_TO_HIGHLIGHT => 'Highlight feature(s) (feature1 feature2...)',
+
+   REGIONS_TO_HIGHLIGHT => 'Highlight regions (region1:start..end region2:start..end)',
+
+   FEATURES_TO_HIGHLIGHT_HINT => 'Hint: use feature@color to select the color, as in \'NUT21@lightblue\'',
+
+   REGIONS_TO_HIGHLIGHT_HINT  => 'Hint: use region@color to select the color, as in \'Chr1:10000..20000@lightblue\'',
 
    NO_TRACKS    => '*none*',
 
@@ -308,6 +322,8 @@ END
    GENERAL     => 'General',
 
    DETAILS     => 'Details',
+
+   REGION      => 'Region',
 
    ALL_ON      => 'All on',
 

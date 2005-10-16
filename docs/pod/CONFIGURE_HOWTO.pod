@@ -866,6 +866,14 @@ even if the user tries to reverse-engineer the gbrowse form.
 
            no upload = 1
 
+=item * no autosearch
+
+If this option is set to a true value, then the user's previous search
+will not be automatically re-executed the next time he visits
+gbrowse. Instead, the previous search will be pasted into the
+"Landmark or Region" box and the user will have to press "Search" to
+reexecute it.
+
 =item * html1, html2, html3, html4, html5, html6
 
 These options allow you to insert HTML into the GBrowse page at
@@ -2794,6 +2802,9 @@ You may omit "@color", in which case the highlight will default to
 yellow. You can specify multiple h_feat arguments in order to
 highlight several features with distinct colors.
 
+Passing an argument of h_feature=_clear_ will clear all feature
+highlighting.
+
 =item h_region
 
 The name of a region to highlight in the format
@@ -2804,6 +2815,9 @@ The name of a region to highlight in the format
 You may omit "@color" in which case the highlight will default to
 lightgrey. You can specify multiple h_region arguments in order to
 highlight multiple sequence ranges with different colors.
+
+Passing an argument of h_region=_clear_ will clear all region
+highlighting.
 
 =item ks
 

@@ -48,7 +48,7 @@ END
 
    BOOKMARK => 'Aggiungi ai Preferiti',
 
-   IMAGE_LINK => 'Vai all'Immagine',
+   IMAGE_LINK => "Vai all'Immagine",
 
    SVG_LINK   => 'Immagine ad Alta Risoluzione',
 
@@ -152,7 +152,7 @@ END
 
    HIT_COUNT      => 'Le seguenti %d regioni soddisfano la tua richiesta',
 
-  POSSIBLE_TRUNCATION  => 'I risultati della ricerca sono limitati a %d' valori; La lista potrebbe essere incompleta',
+  POSSIBLE_TRUNCATION  => 'I risultati della ricerca sono limitati a %d\' valori; La lista potrebbe essere incompleta',
 
    MATCHES_ON_REF => 'Corrispondenza su %s',
 
@@ -372,5 +372,5 @@ END
 
  SMALL_INTERVAL    => 'Computazione piccolo intervallo a %s pb',
 
- NO_SOURCES   =<'input dati non e` stato configurato oppure non hai il permesso di vederli',
+ NO_SOURCES   =>'input dati non e` stato configurato oppure non hai il permesso di vederli',
 };

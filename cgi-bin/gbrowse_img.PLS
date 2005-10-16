@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.7 2005-10-16 19:03:57 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8 2005-10-16 19:07:25 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -422,7 +422,8 @@ sub make_postgrid_callback {
   my @h_regions;
 
   for my $r (@$h_regions) {
-    my ($h_ref,$h_start,$h_end,$h_color) = $r =~ /^(.+):(\d+)\.\.(\d+)(?:@(\S+))?/ or next;
+    my ($h_ref,$h_start,$h_end,$h_color) = $r =~ /^(?:(.+):)?(\d+)\.\.(\d+)(?:@(\S+))?/ or next;
+    $h_ref ||= $ref;
     next unless $h_ref eq $ref;
     push @h_regions,[$h_start,$h_end,$h_color||'lightgrey'];
   }

@@ -140,8 +140,12 @@ END
    EXTERNAL_TRACKS => '<i>Externe Tracks kursiv</i>',
 
    OVERVIEW_TRACKS => '<sup>*</sup>',
+ 
+   REGION_TRACKS => '<sup>**</sup>Track Region',
 
    EXAMPLES => 'Beispiele',
+
+   REGION_SIZE => 'Gr&ouml;&szlig;e der Region (bp)',
 
    HELP     => 'Hilfe',
 
@@ -154,6 +158,8 @@ END
    REDISPLAY   => 'Neu Zeichnen',
 
    CONFIGURE   => 'Konfiguration...',
+
+   CONFIGURE_TRACKS   => 'Track Konfiguration...',
 
    EDIT       => 'Datei Editieren...',
 
@@ -179,11 +185,15 @@ END
 
    SET_OPTIONS => 'Einstellung Track Optionen...',
 
+   CLEAR_HIGHLIGHTING => 'Markierungen entfernen',
+
    UPDATE      => 'Bild Neu Zeichen',
 
    DUMPS       => 'Dumps, Suchen und andere Operationen',
 
    DATA_SOURCE => 'Daten Quelle',
+
+   UPLOAD_TRACKS=>'Eigene Tracks hinzuf&uuml;gen',
 
    UPLOAD_TITLE=> 'Eigene Annotationen hochladen',
 
@@ -204,6 +214,16 @@ END
    UPDATE_URLS  => 'Update URLs',
 
    PRESETS      => '--Auswahl voreingestellter URLs--',
+
+   FEATURES_TO_HIGHLIGHT => 'Markierte Feature(s) (Feature1 Feature2...)',
+
+   REGIONS_TO_HIGHLIGHT => 'Markierte Regionen (region1:start..end region2:start..end)',
+
+   FEATURES_TO_HIGHLIGHT_HINT => 'Hinweis: Verwende Feature@color um die Farbe auszuw&auml;hlen wie zum Beispiel in \'NUT21@lightblue\'',
+
+   REGIONS_TO_HIGHLIGHT_HINT  => 'Hinweis: Verwende Region@color um die Farbe auszuw&auml;hlen wie zum Beispiel in  \'Chr1:10000..20000@lightblue\'',
+
+   NO_TRACKS    => '*keine*',
 
    FILE_INFO    => 'Letzte &Auml;nderung %s.  Annotierte Landmarks: %s',
 
@@ -283,11 +303,32 @@ END
 
    NO_LIMIT    => 'Kein Limit',
 
+   OVERVIEW    => '&Uuml;berblick',
+
+   EXTERNAL    => 'Extern',
+
+   ANALYSIS    => 'Analyse',
+
+   GENERAL     => 'Allgemein',
+
+   DETAILS     => 'Details',
+
+   REGION      => 'Region',
+
+   ALL_ON      => 'Alles an',
+
+   ALL_OFF     => 'Alles aus',
+
+
+
+
+
+
    #--------------
    # HELP PAGES
    #--------------
 
-   CLOSE_WINDOW => 'Fenster schließen',
+   CLOSE_WINDOW => 'Fenster schlie&szlig;en',
 
    TRACK_DESCRIPTIONS => 'Track Beschreibung und Zitate',
 
@@ -335,5 +376,6 @@ END
 
  SMALL_INTERVAL    => 'Kleines Intervall wird auf %s bp angepasst',
 
+ NO_SOURCES        => 'Es wurden keine lesbaren Datenquellen konfiguriert. M&ouml;glicherweise haben Sie nicht ausreichend Berechtigungen um sie zu sehen.',
 };
 

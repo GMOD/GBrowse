@@ -46,7 +46,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.50 2005-10-17 00:09:02 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.119.4.51 2005-10-17 17:45:30 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -851,20 +851,16 @@ sub adjust_settings {
   $settings->{name} =~ s/^\s+//; # strip leading
   $settings->{name} =~ s/\s+$//; # and trailing whitespace
 
-  my @f = param('h_feat');
-  @f = split /\s+/, $f[0] if @f == 1;
-  if (@f > 0) {
+  if (my @features = shellwords(param('h_feat'))) {
     $settings->{h_feat} = {};
-    for my $hilight (@f) {
+    for my $hilight (@features) {
       next if $hilight eq '_clear_';
       my ($featname,$color) = split '@',$hilight;
       $settings->{h_feat}{$featname} = $color || 'yellow';
     }
   }
 
-  my @regions = param('h_region');
-  @regions    = split /\s+/, $regions[0] if @regions == 1;
-  if (my @regions = split_labels(@regions)) {
+  if (my @regions = shellwords(param('h_region'))) {
     $settings->{h_region} = [];
     foreach (@regions) {
       next if $_ eq '_clear_';
@@ -2857,7 +2853,7 @@ sub unique {
 }
 
 sub split_labels {
-   map {/^(http|ftp|das)/ ? $_ : split /[\s+-]/} @_;
+   map {/^(http|ftp|das)/ ? $_ : split /[+-]/} @_;
 }
 
 sub is_search {

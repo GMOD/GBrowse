@@ -323,6 +323,8 @@ END
 
    DETAILS     => 'Détails',
 
+   REGION      => 'Région',
+
    ALL_ON      => 'Tout activer',
 
    ALL_OFF     => 'Tout désactiver',

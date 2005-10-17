@@ -46,7 +46,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.49 2005-10-16 19:03:56 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.50 2005-10-17 00:09:02 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -843,14 +843,17 @@ sub adjust_settings {
       param(name => $settings->{name});
     }
 
+#sc 10/16/05 removed h_region it is handled below
   foreach (qw(name source plugin stp ins head
-	      ks sk version h_region)) {
+	      ks sk version)) {
     $settings->{$_} = param($_) if defined param($_);
   }
   $settings->{name} =~ s/^\s+//; # strip leading
   $settings->{name} =~ s/\s+$//; # and trailing whitespace
 
-  if (my @f = param('h_feat')) {
+  my @f = param('h_feat');
+  @f = split /\s+/, $f[0] if @f == 1;
+  if (@f > 0) {
     $settings->{h_feat} = {};
     for my $hilight (@f) {
       next if $hilight eq '_clear_';
@@ -859,7 +862,9 @@ sub adjust_settings {
     }
   }
 
-  if (my @regions = split_labels(param('h_region'))) {
+  my @regions = param('h_region');
+  @regions    = split /\s+/, $regions[0] if @regions == 1;
+  if (my @regions = split_labels(@regions)) {
     $settings->{h_region} = [];
     foreach (@regions) {
       next if $_ eq '_clear_';

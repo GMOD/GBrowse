@@ -159,6 +159,8 @@ END
 
    EXAMPLES => 'Voorbeelden',
 
+   REGION_SIZE => 'Lengte van het Gebied (bp)',
+
    HELP     => 'Hulp',
 
    HELP_FORMAT => 'Hulp met Bestandsformaat',
@@ -171,6 +173,8 @@ END
 
    CONFIGURE   => 'Configureren...',
 
+   CONFIGURE_TRACKS   => 'Configuren banen...',
+
    EDIT       => 'Aanpassen Bestand...',
 
    DELETE     => 'Wissen Bestand',
@@ -180,6 +184,8 @@ END
    IMAGE_WIDTH => 'Beeldbreedte',
 
    SET_OPTIONS => 'Baaninstellingen...',
+
+   CLEAR_HIGHLIGHTING => 'Fluo Markering afzetten',
 
    UPDATE      => 'Beeld Vernieuwen',
 
@@ -205,6 +211,14 @@ END
 
    PRESETS      => '--Kies Preset URL--',
 
+   FEATURES_TO_HIGHLIGHT => 'Fluo Markeren kenmerk(en) (kenmerk1 kenmerk2...)',
+
+   REGIONS_TO_HIGHLIGHT => 'Fluo Markeren gebieden (gebied1:begin..einde gebied2:begin..einde)',
+
+   FEATURES_TO_HIGHLIGHT_HINT => 'Tip: gebruik kenmerk@kleur om de kleur te selecteren, zoals in \'NUT21@lightblue\'',
+
+   REGIONS_TO_HIGHLIGHT_HINT  => 'Tip: gebruik gebied@kleur om de kleur te selecteren, zoals in \'Chr1:10000..20000@lightblue\'',
+
    NO_TRACKS    => '*geen*',
 
    FILE_INFO    => 'Recentste veranderingen op %s.  Geannoteerde mijlpalen: %s',
@@ -227,11 +241,15 @@ END
 
    GENERAL => 'Algemeen',
 
+   REGION      => 'Gebied',
+
    NO_SOURCES => 'Geen gegevensbronnen',
 
    OVERVIEW => 'Overzicht',
 
    OVERVIEW_TRACKS => 'Overzichtsbanen',
+
+   REGION_TRACKS => '<sup>**</sup>Gebiedsbanen',
 
    UPLOAD_TRACKS => 'Upload banen',
 
@@ -328,7 +346,7 @@ END
 
    ACTIVATE           => 'Gelieve deze baan te activeren om de informatie te kunnen bekijken.',
 
-   NO_EXTERNAL        => 'Geen externe features geladen.',
+   NO_EXTERNAL        => 'Geen externe kenmerken geladen.',
 
    NO_CITATION        => 'Geen additionele informatie beschikbaar.',
 

@@ -46,7 +46,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.51 2005-10-17 17:45:30 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.52 2005-10-18 02:37:44 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2256,6 +2256,9 @@ sub bookmark_link {
   # handle external urls
   my @url = grep {/^(ftp|http):/} @{$settings->{tracks}};
   $q->param(-name=>'eurl',-value=>\@url);
+  $q->param(-name=>'h_region',-value=>$settings->{h_region}) if $settings->{h_region};
+  my @h_feat= map {"$_\@$settings->{h_feat}{$_}"} keys %{$settings->{h_feat}};
+  $q->param(-name=>'h_feat',-value=>\@h_feat) if @h_feat;
 
   return "?".$q->query_string();
 }

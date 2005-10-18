@@ -141,6 +141,28 @@ For transcripts, use the "processed_transcript" aggregator and create
 features with a main part of "mRNA" and subparts of "CDS", "exon",
 and/or various types of UTRs.
 
+=item I'm using the GFF database adaptor. Is it better to load it using GFF2 or GFF3?
+
+GFF2, described in the GBrowse tutorial, is the older version of the
+GFF feature annotation format. Its main limitation is that it cannot
+represent features that have more than one level of nested
+subparts. For example, you cannot represent the relationship between a
+gene, two alternatively spliced transcripts, and the exons inside the
+transcripts. GFF3 (L<http://song.sourceforge.net>) corrects this
+problem as well as a number of other deficiencies.
+
+You can load a BioPerl GFF database using either GFF2 or GFF3
+format. However, the BioPerl GFF database schema has not yet been
+updated to handle the new features of GFF3. Therefore you will not
+benefit from most of GFF3's features. In particular, BioPerl will use
+the GFF3 ID as the name of the feature, rather than NAME (the provided
+name will be recognizeed as a synonym). In addition, BioPerl allows
+only one level of feature nesting.
+
+The bottom line is that you might want to use GFF3 in order to have
+forward-compatiility with new versions of Bio::DB::GFF. Otherwise GFF2
+will work perfectly well.
+
 =item How do I pass parameters into functions of init_code?
 
 You want to define a function in the init_code section which will then
@@ -188,6 +210,6 @@ Because I just started this document.
 
 =back
 
-$Id: FAQ.pod,v 1.1.2.4 2005-10-17 16:47:51 lstein Exp $
+$Id: FAQ.pod,v 1.1.2.5 2005-10-18 02:37:44 lstein Exp $
 
 

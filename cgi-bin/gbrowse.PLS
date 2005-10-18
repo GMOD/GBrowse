@@ -46,7 +46,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.52 2005-10-18 02:37:44 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.53 2005-10-18 13:33:26 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -186,7 +186,7 @@ $DEFAULT_SEGMENT = $CONFIG->get_default_segment;
 
 # Now adjust those settings based on submitted CGI parameters
 # With the exception that we ignore parameter changes if the source has changed.
-if (defined($old_source) && $source ne $old_source) {
+if (defined($old_source) && ($source ne $old_source) && !param('name') && !param('q')) {
   param(name => $page_settings->{name});  # restore old reference point
 } else {
   adjust_settings($page_settings);        # set settings from CGI parameters

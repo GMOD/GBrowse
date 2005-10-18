@@ -5,7 +5,7 @@ use base 'Exporter';
 use CGI 'div','span','img','url';
 use CGI::Util;
 
-use vars '$next_id','$VECTOR';
+use vars '$next_id','$VECTOR','$RESET';
 
 our @EXPORT = ('toggle_section',
 	       'start_html',
@@ -48,13 +48,16 @@ END
 sub start_html {
   $next_id = 'T0000';
   $VECTOR  = 0;
+
   my %args = @_ == 1 ? (-title=>shift) : @_;
 
   $args{-noscript}     = $noscript;
   $args{-onLoad}       = "startPage()";
+  $RESET   = $args{-reset_toggle};
 
   $image_dir           = $args{-gbrowse_images} if defined $args{-gbrowse_images};
   $js_dir              = $args{-gbrowse_js}     if defined $args{-gbrowse_js};
+
 
   # earlier versions of CGI.pm don't support multiple -style and -script args.
   if ($CGI::VERSION >= 3.05) {
@@ -72,17 +75,6 @@ sub start_html {
     push @{$args{-script}},{src=>"$js_dir/".JS};
   }
 
-  my $state = CGI::cookie($cookie_name);
-  if (defined $state) {
-    my $cookie = CGI::cookie(-name=>$cookie_name,
-			     -value=>$state,
-			     -path=>url(-path_info=>1,-absolute=>1),
-			     -expires=>$cookie_expires);
-    $args{-head}         .= "\n" if defined $args{-head};
-    $args{-head}         .= CGI::meta({-http_equiv=>'Set-Cookie',
-				       -content => $cookie});
-  }
-
   my $result = CGI::start_html(%args);
 
   if ($CGI::VERSION < 3.05) {
@@ -96,7 +88,7 @@ sub start_html {
 
 sub end_html {
  my @script_section = CGI->_script({code=>"xSetCookie('$cookie_name',$VECTOR,'$cookie_expires')"})
-   unless $VECTOR==0;
+   unless $RESET || $VECTOR==0;
  return @script_section,CGI::end_html;
 }
 
@@ -107,7 +99,7 @@ sub toggle_section {
   my ($section_title,@section_body) = @_;
 
   my $id = $next_id++;
-  if (!$config{override} && (my $cookie = CGI::cookie($cookie_name))) {
+  if (!$config{override} && !$RESET && (my $cookie = CGI::cookie($cookie_name))) {
     $config{on} = ($cookie & (1<<substr($id,1)||0)) != 0;
   }
 

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.32 2005-10-06 14:40:53 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.33 2005-10-18 21:19:19 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -413,6 +413,7 @@ sub language {
   $d;
 }
 
+
 =head2 $french = $browser->tr($english)
 
 Translate message into currently-set language, with fallback to POSIX,
@@ -424,6 +425,29 @@ sub tr {
   my $self = shift;
   my $lang = $self->language or return @_;
   $lang->tr(@_);
+}
+
+=head2 $section_setting = $browser->section_setting($section_name)
+
+Returns "open" "closed" or "off" for the named section. Named sections are:
+
+ instructions
+ search
+ overview
+ details
+ tracks
+ display
+ add tracks
+
+=cut
+
+sub section_setting {
+  my $self = shift;
+  my $section = shift;
+  my $config_setting = "\L$section\E section";
+  my $s = $self->setting($config_setting);
+  return 'open' unless defined $s;
+  return $s;
 }
 
 =head2 labels()

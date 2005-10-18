@@ -56,8 +56,9 @@ TH.linkmenu       {
                     padding: 0;
                     font-size: 9pt;
                   }
-INPUT.reset_button {background-color: red;
-	            color: yellow;             }
+.reset_button     {background-color: red;
+	            color: yellow;           
+                  }
 .datatitle        { background-color: khaki; }
 .databody         { background-color: lightgoldenrodyellow; }
 .searchtitle      { background-color: khaki;

@@ -221,8 +221,10 @@ sub parse_added_feature {
 }
 
 sub print_top {
-  my $title = shift;
+  my $title     = shift;
+  my $reset_all = shift;
   local $^W = 0;  # to avoid a warning from CGI.pm
+
   print_header(-expires=>'+1m');
   my @args = (-title => $title,
 	      -style  => {src=>$CONFIG->setting('stylesheet')},
@@ -233,6 +235,7 @@ sub print_top {
   push @args,(-script=>{src=>($CONFIG->setting('js')||JS) . "/buttons.js"});
   push @args,(-gbrowse_images => $CONFIG->setting('buttons') || '/gbrowse/images/buttons');
   push @args,(-gbrowse_js     => $CONFIG->setting('js')      || '/gbrowse/js');
+  push @args,(-reset_toggle   => 1)               if $reset_all;
   print start_html(@args) unless $HTML++;
 }
 

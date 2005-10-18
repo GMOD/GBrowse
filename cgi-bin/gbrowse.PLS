@@ -46,7 +46,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.53 2005-10-18 13:33:26 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.54 2005-10-18 21:19:18 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -178,6 +178,8 @@ my ($source,$old_source) = get_source();
 # This may cause a redirect and exit 0 at this point!
 redirect_legacy_url($source);
 
+my $reset_all = param('reset');
+
 $CONFIG->source($source) or redirect_legacy_url($old_source || $CONFIG->source);
 my $page_settings = get_settings($source);
 
@@ -291,11 +293,16 @@ warn "ADJUSTED TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 
 # NOTE: we may exit out on the next statement if the user wants to download a previously-
 # uploaded file
-handle_uploads($page_settings) || exit 0 unless $CONFIG->setting('no upload');
+handle_uploads($page_settings) || exit 0 unless $CONFIG->section_setting('upload_tracks') eq 'off';
 
 ## UPDATING THE PERSISTENT SETTINGS##############################################################
-my $cookies = settings2cookie($page_settings);
-push @$cookies,$PLUGINS->cookies;
+my $cookies;
+if ($reset_all) {
+  $cookies = reset_cookies($page_settings);
+} else {
+  $cookies = settings2cookie($page_settings);
+  push @$cookies,$PLUGINS->cookies;
+}
 
 print_header(-cookie => $cookies,
 	     -charset=>$CONFIG->tr('CHARSET'),
@@ -324,7 +331,7 @@ if ($divisor == 1) {
 }
 
 
-print_top($title);
+print_top($title,$reset_all);
 
 ## HANDLE TRACK SETTINGS   #######################################################
 if ((param('set_options') || param($CONFIG->tr('Set_options')) || param('revert'))
@@ -418,15 +425,16 @@ sub main_display {
 
   # NOTE: we may exit out on the next statement if the user wants to download a previously-
   # uploaded file
-  my $feature_files = load_external_sources($segments,$page_settings) unless $CONFIG->setting('no upload');
+  my $feature_files = load_external_sources($segments,$page_settings)
+    unless $CONFIG->section_setting('upload_tracks') eq 'off';
 
   # if more than one segment, then list them all
   if (@$segments > 1) {
     multiple_choices($page_settings,$features);
     # empty sections
-    print toggle_section({on=>1},b($CONFIG->tr('Overview')),'');
-    print toggle_section({on=>1},b($CONFIG->tr('Region')),'') if $page_settings->{region_size};
-    print toggle_section({on=>1},b($CONFIG->tr('Details')),'');
+    print toggle('Overview','');
+    print toggle('Region','')     if $page_settings->{region_size};
+    print toggle('Details','');
   }
 
   elsif ($segment) {
@@ -455,9 +463,9 @@ sub main_display {
 
   } else {
     # empty overview,region & detail sections
-    print toggle_section({on=>1},b($CONFIG->tr('Overview')),'');
-    print toggle_section({on=>1},b($CONFIG->tr('Region')),'') if $page_settings->{region_size};
-    print toggle_section({on=>1},b($CONFIG->tr('Details')),'');
+    print toggle('Overview','');
+    print toggle('Region','')   if $page_settings->{region_size};
+    print toggle('Details');
   }
 
   print html_frag('html3',$segment,$page_settings);
@@ -469,7 +477,7 @@ sub main_display {
   print html_frag('html6',$segment,$page_settings);
   print end_form();
 
-  unless ($CONFIG->setting('no upload')) {
+  unless ($CONFIG->section_setting('upload_tracks') eq 'off') {
     print start_multipart_form(-name=>'externalform');
     print external_table($page_settings,$feature_files);
     print end_form();
@@ -485,28 +493,28 @@ sub main_display {
 
 sub overview_panel {
   my ($segment,$page_settings,$feature_files) = @_;
+  return '' if $CONFIG->section_setting('overview') eq 'hide';
   my $image = overview($segment,$page_settings,$feature_files);
-  return toggle_section({on=>1},
-			b($CONFIG->tr('Overview')),
-			table({-border=>0,-width=>'100%'},
-			      TR({-class=>'databody'},
-				 td({-align=>'center'},$image)
-				)
-			     )
-		       );
+  return toggle('Overview',
+		table({-border=>0,-width=>'100%'},
+		      TR({-class=>'databody'},
+			 td({-align=>'center'},$image)
+			)
+		     )
+	       );
 }
 
 sub region_panel {
   my ($region_segment,$segment,$page_settings,$feature_files) = @_;
+  return '' if $CONFIG->section_setting('region') eq 'hide';
   my $image = regionview($region_segment,$segment,$page_settings,$feature_files);
-  return toggle_section({on=>1},
-			b($CONFIG->tr('Region')),
-			table({-border=>0,-width=>'100%'},
-			      TR({-class=>'databody'},
-				 td({-align=>'center'},$image)
-				)
-			     )
-		       );
+  return toggle('Region',
+		table({-border=>0,-width=>'100%'},
+		      TR({-class=>'databody'},
+			 td({-align=>'center'},$image)
+			)
+		     )
+	       );
 }
 
 
@@ -529,6 +537,7 @@ sub detail_panel_with_timeout {
 
 sub detail_panel {
   my ($segment,$page_settings,$feature_files) = @_;
+  return '' if $CONFIG->section_setting('details') eq 'hide';
 
   my ($img,$map);
   my $cell = '';
@@ -584,9 +593,8 @@ sub detail_panel {
   $table .= "\n";
   $table .= $map if $map;
   $table .= join '',unique(hidden('ref')),unique(hidden('start')),unique(hidden('stop'));
-  return div(toggle_section({on=>1},
-			    b($CONFIG->tr('Details')),
-			    $table));
+  return div(toggle('Details',
+		    $table));
 }
 
 ###############################################################################################
@@ -760,7 +768,7 @@ sub auto_open {
 
 # this is called to flatten the settings into an HTTP cookie
 sub settings2cookie {
-  my $settings = shift;
+  my $settings  = shift;
   my %settings = %$settings;
   local $^W = 0;
   for my $key (keys %settings) {
@@ -804,6 +812,18 @@ sub settings2cookie {
   return \@cookies;
 }
 
+sub reset_cookies {
+  my @cookies;
+  foreach my $c (CGI::cookie()) {
+    next if $c eq 'gbrowse_source';
+    push @cookies,CGI::Cookie->new(-name => $c,
+				   -path => url(-path_info=>1,-absolute=>1),
+				   -expires => '-1y'
+				  );
+  }
+  return \@cookies;
+}
+
 # This is called to change the values of the settings
 sub adjust_settings {
   my $settings = shift;
@@ -843,7 +863,6 @@ sub adjust_settings {
       param(name => $settings->{name});
     }
 
-#sc 10/16/05 removed h_region it is handled below
   foreach (qw(name source plugin stp ins head
 	      ks sk version)) {
     $settings->{$_} = param($_) if defined param($_);
@@ -923,24 +942,24 @@ sub navigation_table {
   my $settings = shift;
   my $buttonsDir    = $CONFIG->setting('buttons');
   my $table        = '';
-  my $oligo        = $PLUGINS->plugin('OligoFinder') ? ', oligonucleotide (15 bp minimum)' : '';
   my $svg_link     = $HAVE_SVG? a({-href=>svg_link($settings),-target=>'_blank'},'['.$CONFIG->tr('SVG_LINK').']'):'';
+  my $reset_link   = a({-href=>"?reset=1",-class=>'reset_button'},'['.$CONFIG->tr('RESET').']');
   my $help_link    =  a({-href=>general_help(),-target=>'help'},'['.$CONFIG->tr('Help').']');
   my $plugin_link  = plugin_links($PLUGINS);
-  my $instructions = 'Instructions';
+  my $oligo        = $PLUGINS->plugin('OligoFinder') ? ', oligonucleotide (15 bp minimum)' : '';
   my $rand         =   substr(md5_hex(rand),0,5);
 
   $table .= table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
 		  TR(
 		     td({-align=>'left', -colspan=>2},
-		     toggle_section({on=>1},
-				    b($CONFIG->setting('instructions')
-				      || $CONFIG->tr('INSTRUCTIONS').': '),
-				    $CONFIG->setting('search_instructions')
-				    || $CONFIG->tr('SEARCH_INSTRUCTIONS',$oligo),
-				    $CONFIG->setting('navigation_instructions') 
-				    || $CONFIG->tr('NAVIGATION_INSTRUCTIONS'),
-				    p(show_examples()))),
+		     toggle('Instructions',
+			    br($CONFIG->setting('search_instructions') ||
+			      $CONFIG->tr('SEARCH_INSTRUCTIONS',$oligo),
+			      $CONFIG->setting('navigation_instructions') ||
+			      $CONFIG->tr('NAVIGATION_INSTRUCTIONS')),
+			    p(show_examples())
+			   )
+		       ),
 		    ),
 		  TR(
 		     th({-align=>'left', -colspan=>2,-class=>'linkmenu'},
@@ -953,47 +972,47 @@ sub navigation_table {
 			  $plugin_link,
 			  $svg_link,
 			 ) : (),
-			 $help_link)
+			$help_link,
+			$reset_link
+		       ),
 		     )
 		 );
 
   my $searchbox = $CONFIG->setting('no search')
     ? '' : b($CONFIG->tr('Landmark')).':'.br.
            textfield(-name=>'name',-size=>25,-default=>$settings->{name}).
-	   submit(-name=>$CONFIG->tr('Search')).'&nbsp;'.
-	   submit(-name=>'reset', -label=>$CONFIG->tr('Reset'),-class=>'reset_button');
+	   submit(-name=>$CONFIG->tr('Search'));
   my $plugin_menu = plugin_menu($settings,$PLUGINS);
   my $plugins     = $plugin_menu ? b($CONFIG->tr('Dumps')).':'.br.$plugin_menu : '';
 
-  $table .= toggle_section({on=>1},
-			   b($CONFIG->tr('SEARCH')),
-			   table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
-				 TR({-class=>'searchbody'},
-				    td({-align=>'left', -colspan=>2},
-				       html_frag('html1',$segment,$settings)||''
-				      )
-				   ),
+  $table .= toggle('Search',
+		   table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
+			 TR({-class=>'searchbody'},
+			    td({-align=>'left', -colspan=>2},
+			       html_frag('html1',$segment,$settings)||''
+			      )
+			   ),
 
-				 TR({-class=>'searchbody'},
-				    td({-align=>'left'},
-				       $searchbox
-				      ),
-				    td({-colspan=>1,-align=>'left'},
-				       $plugins
-				      )
-				   ),
-				 TR({-class=>'searchbody',-style=>'padding-top: 5 px'},
-				    td({-align=>'left'},source_menu($settings)),
-				    td({-align=>'left'},
-				       $segment ? (b($CONFIG->tr('Scroll').': '),slidertable($segment,$buttonsDir)) : '',
-				       b(
-					 checkbox(-name=>'flip',
-						  -checked=>$settings->{flip},-value=>1,
-						  -label=>$CONFIG->tr('Flip'),-override=>1))
-				      ),
-				   ),
-				)
-			  );
+			 TR({-class=>'searchbody'},
+			    td({-align=>'left'},
+			       $searchbox
+			      ),
+			    td({-colspan=>1,-align=>'left'},
+			       $plugins
+			      )
+			   ),
+			 TR({-class=>'searchbody',-style=>'padding-top: 5 px'},
+			    td({-align=>'left'},source_menu($settings)),
+			    td({-align=>'left'},
+			       $segment ? (b($CONFIG->tr('Scroll').': '),slidertable($segment,$buttonsDir)) : '',
+			       b(
+				 checkbox(-name=>'flip',
+					  -checked=>$settings->{flip},-value=>1,
+					  -label=>$CONFIG->tr('Flip'),-override=>1))
+			      ),
+			   ),
+			)
+		  );
   return $table;
 }
 
@@ -1194,7 +1213,7 @@ sub tracks_table {
 			$CONFIG->tr('REGION'),
 			$CONFIG->tr('ANALYSIS'),
 			@user_keys,
-			$CONFIG->setting('no upload') ? () : ($CONFIG->tr('EXTERNAL')),
+			$CONFIG->section_setting('upload_tracks') eq 'off' ? () : ($CONFIG->tr('EXTERNAL')),
 		       ) {
     next if $seenit{$category}++;
     my $table;
@@ -1238,16 +1257,16 @@ sub tracks_table {
   }
 
   autoEscape(1);
-  return toggle_section({on=>0},
-			b($CONFIG->tr('Tracks')),
-			div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
-			table({-width=>'100%',-class=>"searchbody"},
-			      TR(td{-align=>'right'},
-				 submit(-name => $CONFIG->tr('Set_options')),
-				 b(submit(-name => $CONFIG->tr('Update'))
-				  )
-				)
-			     ));
+  return toggle('Tracks',
+		b($CONFIG->tr('Tracks')),
+		div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
+		table({-width=>'100%',-class=>"searchbody"},
+		      TR(td{-align=>'right'},
+			 submit(-name => $CONFIG->tr('Set_options')),
+			 b(submit(-name => $CONFIG->tr('Update'))
+			  )
+			)
+		     ));
 }
 
 sub categorize_track {
@@ -1343,8 +1362,7 @@ sub settings_table {
 		 -align=>'right'},
 		b(submit(-name => $CONFIG->tr('Update')))))
 	 );
-  return toggle_section({on=>0},
-			b($CONFIG->tr('display_settings')),$content);
+  return toggle('Display_settings',$content);
 }
 
 sub annotation_help {
@@ -1359,10 +1377,9 @@ sub external_table {
   my ($settings,$feature_files) = @_;
   my $upload_table = upload_table($settings,$feature_files);
   my $das_table    = das_table($settings,$feature_files);
-  toggle_section({on=>0},
-		 b($CONFIG->tr('UPLOAD_TRACKS')),
-		 table({-width=>'100%',-class=>'searchbody'},
-		       TR(td($upload_table,$das_table))));
+  toggle('Upload_tracks',
+	 table({-width=>'100%',-class=>'searchbody'},
+	       TR(td($upload_table,$das_table))));
 }
 
 sub upload_table {
@@ -1618,6 +1635,8 @@ sub get_features {
 
   return \@features;
 }
+
+
 
 sub features2segments {
   my $features = shift;
@@ -2817,6 +2836,19 @@ sub do_plugin_autofind {
     last if @$segments;
   }
   return @$segments;
+}
+
+sub toggle {
+  my $section = shift;
+  my @body    = @_;
+
+  my $label = $CONFIG->tr($section)               or return '';
+  my $state = $CONFIG->section_setting($section)  or return '';
+  return '' if $state eq 'off';
+
+  return toggle_section({on=>($state eq 'open')},
+			b($label),
+			@body);
 }
 
 

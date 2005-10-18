@@ -858,14 +858,6 @@ appending q=<search term> to the URL.
 
           no search = 1
 
-=item * no upload
-
-If you don't want the file upload text field to appear, set this to
-true. This disables file uploading and remote DAS tracks completely,
-even if the user tries to reverse-engineer the gbrowse form.
-
-           no upload = 1
-
 =item * no autosearch
 
 If this option is set to a true value, then the user's previous search
@@ -873,6 +865,33 @@ will not be automatically re-executed the next time he visits
 gbrowse. Instead, the previous search will be pasted into the
 "Landmark or Region" box and the user will have to press "Search" to
 reexecute it.
+
+=item * instructions section
+=item * search section
+=item * overview section
+=item * region section
+=item * details section
+=item * tracks section
+=item * display_settings section
+=item * upload_tracks section
+
+These options control which sections are displayed and whether they
+are initially open or collapsed. Their values are one of:
+
+ open     Show the section initially open
+ closed   Show the section initially collapsed
+ off      Do not show the section at all
+
+For example "instructions section = closed" will initially show the
+instructions section in collapsed form when the user visits gbrowse
+for the first time. "upload_tracks section = off" will disable the
+uploads section entirely.
+
+Note that turning off the details section will effectively disable
+gbrowse, but you might want to do this if you want to show the
+overview section only. Turning off the search section will also
+disable the navigation buttons. If you want to disable searching
+selectively, you should use the "no search" option instead.
 
 =item * html1, html2, html3, html4, html5, html6
 

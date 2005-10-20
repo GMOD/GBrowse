@@ -1,13 +1,13 @@
 package Bio::Graphics::Browser::Plugin::RandomGene;
-# $Id: RandomGene.pm,v 1.1.6.2 2005-07-19 21:41:39 lstein Exp $
+# $Id: RandomGene.pm,v 1.1.6.3 2005-10-20 15:52:17 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
-use Bio::SeqFeature::Generic;
+use Bio::Graphics::Feature;
 use CGI qw(:standard *table);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.2';
+$VERSION = '0.3';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -89,12 +89,14 @@ sub annotate {
     my $gene_start = int(rand($length));
     my $gene_end   = $gene_start+int(rand($gene_size));
     my $strand = rand > 0.5 ? +1 : -1;
-    my $gene       = Bio::SeqFeature::Generic->new(-start=>$abs_start+$gene_start,
-						   -end  =>$abs_start+$gene_end,
-						   -display_name => sprintf("ENS%010d",rand(1E6)),
-						   -primary_tag=>'gene',
-						   -strand => $strand,
-						  );
+    my $name   = sprintf("GMOD%010d",rand(1E6));
+    my $gene       = Bio::Graphics::Feature->new(-start=>$abs_start+$gene_start,
+						 -end  =>$abs_start+$gene_end,
+						 -display_name => $name,
+						 -type=>'gene',
+						 -strand => $strand,
+						 -url    => "http://www.google.com/search?q=$name",
+						);
 
     my $exon_start = $gene_start;
     my $exon_end;
@@ -102,12 +104,12 @@ sub annotate {
       $exon_end   = $exon_start + int(rand($exon_size));
       $exon_end   = $gene_end if $exon_end > $gene_end;
 
-      my $exon_feature = Bio::SeqFeature::Generic->new(-start=>$abs_start+$exon_start,
-						       -end  =>$abs_start+$exon_end,
-						       -primary_tag => 'exon',
-						       -strand => $strand,
+      my $exon_feature = Bio::Graphics::Feature->new(-start=>$abs_start+$exon_start,
+						     -end  =>$abs_start+$exon_end,
+						     -type => 'exon',
+						     -strand => $strand,
 						      );
-      $gene->add_SeqFeature($exon_feature,'EXPAND');
+      $gene->add_segment($exon_feature);
       $exon_start = $exon_end + int(rand($intron_size));
     } until ($exon_end >= $gene_end);
 

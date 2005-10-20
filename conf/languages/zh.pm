@@ -69,7 +69,7 @@ href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Win
 Linux¥Î¤á¥i¹Á¸Õ¨Ï¥Î<a href="http://xml.apache.org/batik/">Batik SVG ¬yÄý¾¹</a>.
 </p>
 <p>
-<a href="%s" target="_blank">¦b??­·sµøµ¡Æ[¹îSVG¹Ï¹³</a></p>
+<a href="%s" target="_blank">¦b·sµøµ¡?Æ[¹îSVG¹Ï¹³</a></p>
 <p>
 «öcontrol-click (Macintosh) ©Î¹«¼Ð¥kÀ»(Windows) ¨Ã¿ï¾Ü¾A·í¿ï¶µ¤U¸ü¹Ï¹³
 </p>   
@@ -129,11 +129,11 @@ END
 
    OVERVIEW_TRACKS => '<sup>*</sup>·§Äý¼Æ¾Ú¹D',
 
-   REGION_TRACKS => '<sup>**</sup>?????',
+   REGION_TRACKS => '<sup>**</sup>?°ì?Õu¹D',
 
    EXAMPLES => '½d¨Ò',
 
-   REGION_SIZE => '????(bp)',
+   REGION_SIZE => '?°ì¤j¤p(bp)',
 
    HELP     => 'À°§U',
 
@@ -143,11 +143,11 @@ END
 
    ABOUT    => 'Ãö©ó...',
 
-   REDISPLAY   => '­??Åã¥Ü',
+   REDISPLAY   => '­«·sÅã¥Ü',
 
    CONFIGURE   => '°t¸m...', 
 
-   CONFIGURE_TRACKS   => '?????',
+   CONFIGURE_TRACKS   => '°t¸m?Õu¹D',
 
    EDIT       => '½s¿è¤å¥ó...',
 
@@ -159,11 +159,11 @@ END
 
    BETWEEN     => '¤§¶¡',
 
-   BENEATH     => '¤U­?',
+   BENEATH     => '¤U­±',
 
-   LEFT        => '¥ª­?',
+   LEFT        => '¥ª­±',
 
-   RIGHT       => '¥k­?',
+   RIGHT       => '¥k­±',
 
    TRACK_NAMES => '¼Æ¾Ú¹D¦WºÙªí',
 
@@ -173,7 +173,7 @@ END
 
    SET_OPTIONS => '³]©w¯S©º¼Æ¾Ú¿ï¶µ...',
   
-   CLEAR_HIGHLIGHTING => '??',
+   CLEAR_HIGHLIGHTING => 'Î`­ì',
 
    UPDATE      => '§ó·s¹Ï¹³',
 
@@ -203,16 +203,15 @@ END
 
    PRESETS      => '--¿ï¾Ü·í«eºô§}--',
 
-   FEATURES_TO_HIGHLIGHT => '????(??1? ??2)',
+   FEATURES_TO_HIGHLIGHT => '»Ý??ªº¯S©º',
 
-   REGIONS_TO_HIGHLIGHT => '????(??1???????  ??2??????? )',
+   REGIONS_TO_HIGHLIGHT => '»Ý??ªº?°ì',
 
-   FEATURES_TO_HIGHLIGHT_HINT => '??????@??????? ?\'NUT21@??\'',
+   FEATURES_TO_HIGHLIGHT_HINT => '·t¥Ü¡G¥Î¯S©º@?¦â????¦â¡A¦p\'NUT21@²H?\''',
 
-   REGIONS_TO_HIGHLIGHT_HINT  => '??????@??????? ?\'Chr1:10000..20000@??\'',
+   REGIONS_TO_HIGHLIGHT_HINT  => '·t¥Ü¡G¥Î¯S©º@?¦â????¦â¡A¦p\'Chr1:10000..20000@²H?\''',
 
-   
-   NO_TRACKS    => '*ªÅ¥Õ*',
+    NO_TRACKS    => '*ªÅ¥Õ*',
 
    FILE_INFO    => '³Ìªñ­×§ï¤_ %s.  µùÄÀ¼Ð»x¬°: %s',
 
@@ -246,9 +245,9 @@ END
 
    SETTINGS => '%s  ªº³]¸m',
 
-   UNDO     => '´_­?',
+   UNDO     => '´_­ì',
 
-   REVERT   => 'ªð¦^¯Ê·l­?',
+   REVERT   => 'ªð¦^¯Ê·l­È',
 
    REFRESH  => '§ó·s«Ì¹õ',
 
@@ -294,9 +293,11 @@ END
 
    ANALYSIS    => '¤ÀªR',
 
-   GENERAL     => '·§­?',
+   GENERAL     => '·§?',
 
    DETAILS     => '²Ó¸`',
+
+   REGION      => '?°ì', 
 
    ALL_ON      => '¥þ¿ï',
 
@@ -314,7 +315,7 @@ END
 
    EXTERNAL           => '¥~³¡µùÄÀ¯S©º¼Æ¾Ú',
 
-   ACTIVATE           => '½Ð¿E¬¡³o­?©º¼Æ¾Ú¥H«K¾\Åª¬ÛÃö«H®§.',
+   ACTIVATE           => '½Ð¿E¬¡³o?©º¼Æ¾Ú¥H«K¾\Åª¬ÛÃö«H®§.',
 
    NO_EXTERNAL        => '¨S¦³¸ü¤J¥~³¡¯S¼x.',
 

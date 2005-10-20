@@ -49,7 +49,7 @@ First consult the mailing lists at
 L<http://sourceforge.net/mailarchive/forum.php?forum_id=31947>. Your
 problem may already have been reported and discussed. If you find no
 help there, then send email to
-L<mailto:gmod-gbrowse@lists.sourceforge.net>. If you are pretty
+E<gmod-gbrowse@lists.sourceforge.net>. If you are pretty
 certain you have found a bug, please report it to the bug report
 tracking system at
 L<http://sourceforge.net/tracker/?func=add&group_id=27707&atid=511474>.
@@ -201,8 +201,11 @@ You may have to give the two halves different names in order to
 prevent GBrowse from trying to join the two halves. This is nonoptimal
 and will be fixed in a later release.
 
+=back
+
 =head1 OTHER
 
+=over
 
 =item Why are there so few questions in the FAQ?
 
@@ -210,6 +213,6 @@ Because I just started this document.
 
 =back
 
-$Id: FAQ.pod,v 1.1.2.5 2005-10-18 02:37:44 lstein Exp $
+$Id: FAQ.pod,v 1.1.2.6 2005-10-20 18:26:15 scottcain Exp $
 
 

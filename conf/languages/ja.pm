@@ -115,7 +115,7 @@ END
 
    GO                => '実行',
 
-   FIND              => '探す',
+   FIND              => '検索',
 
    SEARCH            => '検索',
 
@@ -143,7 +143,13 @@ END
 
    EXTERNAL_TRACKS   => '(外部の項目は斜体表示)',
 
+   OVERVIEW_TRACKS   => '<sup>*</sup>オーバービューの項目',
+
+   REGION_TRACKS     => '<sup>**</sup>領域の項目',
+
    EXAMPLES          => '例',
+
+   REGION_SIZE       => '領域のサイズ (bp)',
 
    HELP              => 'ヘルプ',
 
@@ -156,6 +162,8 @@ END
    REDISPLAY         => '再描画',
 
    CONFIGURE         => '設定...',
+
+   CONFIGURE_TRACKS  => '項目の設定...',
 
    EDIT              => 'ファイルを編集...',
 
@@ -180,6 +188,8 @@ END
    VARYING     	     => '種類別',
 
    SET_OPTIONS 	     => '項目毎の設定...',
+
+   CLEAR_HIGHLIGHTING => '強調表示を解除',
 
    UPDATE      	     => '画像を更新',
 
@@ -208,6 +218,14 @@ END
    UPDATE_URLS       => 'URLを更新',
 
    PRESETS           => '--リストから URL を選択--',
+
+   FEATURES_TO_HIGHLIGHT      => 'フィーチャーを強調表示 (feature1@color1 feature2@color2 ...)',
+
+   REGIONS_TO_HIGHLIGHT       => '領域を強調表示 (region1:start..end@color1 region2:start..end@color2 ...)',
+
+   FEATURES_TO_HIGHLIGHT_HINT => 'ヒント： フィーチャー（遺伝子名等）を強調表示するには「フィーチャー@色」を \'NUT21@lightblue\' の書式で指定',
+
+   REGIONS_TO_HIGHLIGHT_HINT  => 'ヒント： 領域を強調表示するには「領域@色」を \'Chr1:10000..20000@lightblue\' の書式で指定',
 
    NO_TRACKS         => '(なし)',
 

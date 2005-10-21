@@ -207,9 +207,9 @@ END
 
    REGIONS_TO_HIGHLIGHT => '需??的?域',
 
-   FEATURES_TO_HIGHLIGHT_HINT => '暗示：用特征@?色????色，如\'NUT21@淡?\''',
+   FEATURES_TO_HIGHLIGHT_HINT => '暗示：用特征@?色????色，如\'NUT21@淡?\'\'',
 
-   REGIONS_TO_HIGHLIGHT_HINT  => '暗示：用特征@?色????色，如\'Chr1:10000..20000@淡?\''',
+   REGIONS_TO_HIGHLIGHT_HINT  => '暗示：用特征@?色????色，如\'Chr1:10000..20000@淡?\'\'',
 
     NO_TRACKS    => '*空白*',
 

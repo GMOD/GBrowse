@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.5 2005-10-03 14:06:17 mummi Exp $
+# $Id: ideogram.pm,v 1.6 2005-10-22 20:55:53 mummi Exp $
 # Glyph to draw chromosome ideograms for the overview display
 
 use strict;
@@ -173,9 +173,9 @@ sub create_tile
 }
 
 #Disable bumping entirely, since it messes up the nice ideogram 
-sub bump{my $self = shift;  return 0;}
+sub bump{return 0;}
 
-sub label{return 1;}
+sub label{return 0;}
 
 1;
 

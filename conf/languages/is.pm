@@ -3,7 +3,7 @@
 
 #Icelandic translation done by Gudmundur A. Thorisson <mummi@cshl.edu>
 
-#$Id: is.pm,v 1.4.6.1 2005-10-24 21:08:43 mummi Exp $
+#$Id: is.pm,v 1.4.6.2 2005-10-24 21:43:07 mummi Exp $
 
  CHARSET =>   'ISO-8859-1',
 
@@ -303,9 +303,9 @@ END
 
    DETAILS  => 'Nánar',
 
-   ALL_OFF => '',
+   ALL_OFF => 'Virkja allar',
 
-   ALL_ON  => '',
+   ALL_ON  => 'Afvirkja allar',
 
    ANALYSIS  => 'Greining',
 
@@ -365,7 +365,7 @@ END
 
  SMALL_INTERVAL    => 'Breyti stærð svæðis í %s bp',
           
-CLEAR_HIGHLIGHTING  => '',
+CLEAR_HIGHLIGHTING  => 'Fjarlægja merkingar',
 
 CONFIGURE_TRACKS  => 'Stilla brautir...', 
      

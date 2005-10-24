@@ -328,6 +328,8 @@ END
 
    DETAILS           => '詳細ビュー',
 
+   REGION            => '領域',
+
    ALL_ON            => '全てオン',
 
    ALL_OFF           => '全てオフ',

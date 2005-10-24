@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::allele_tower;
 
-# $Id: allele_tower.pm,v 1.4.6.1 2005-07-11 23:12:09 lstein Exp $
+# $Id: allele_tower.pm,v 1.4.6.2 2005-10-24 19:02:41 scottcain Exp $
 # Glyph for drawing each allele found at a SNP position in a column.
 
 use strict;
@@ -11,10 +11,8 @@ use Bio::Graphics::Glyph::generic;
 # Give enough height to fit in the alleles
 sub height {
   my $self = shift;
-  my @alleles;
-  if (my $d = $self->option('alleles')) {
-    @alleles = split /\//, $d;
-  }
+  my @alleles = $self->feature->attributes('Alleles');
+  @alleles    = split /\//,$self->option('alleles') unless @alleles >= 2;
   my $size = 2 + 10 * ($#alleles +1);
   return $size;
 }

@@ -46,7 +46,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.54 2005-10-18 21:19:18 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.55 2005-10-24 22:41:34 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1074,6 +1074,7 @@ sub slidertable {
   my $half      = int $span/2;
   my $full      = $span;
   my $fine_zoom = get_zoomincrement();
+  Delete($_) foreach qw(ref start stop);
 
   my @lines;
   push @lines,hidden(-name=>'start',-value=>$segment->start,-override=>1);

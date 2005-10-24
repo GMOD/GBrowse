@@ -3,7 +3,7 @@
 
 #Icelandic translation done by Gudmundur A. Thorisson <mummi@cshl.edu>
 
-#$Id: is.pm,v 1.4.6.2 2005-10-24 21:43:07 mummi Exp $
+#$Id: is.pm,v 1.4.6.3 2005-10-24 22:10:59 mummi Exp $
 
  CHARSET =>   'ISO-8859-1',
 
@@ -104,7 +104,7 @@ END
 
    SEARCH   => 'Leita',
 
-   DUMP     => 'Dumpa',
+   DUMP     => 'Vista',
 
    HIGHLIGHT => 'Merkja',
 

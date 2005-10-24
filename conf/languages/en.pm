@@ -116,7 +116,7 @@ END
 
    SEARCH   => 'Search',
 
-   DUMP     => 'Display',
+   DUMP     => 'Download',
 
    HIGHLIGHT   => 'Highlight',
 

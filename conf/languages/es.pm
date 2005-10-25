@@ -128,7 +128,11 @@ END
 
    OVERVIEW_TRACKS => '<sup>*</sup>Resumen de pistas',
 
+   REGION_TRACKS => '<sup>**</sup>Pistas en región',
+
    EXAMPLES => 'Ejemplos',
+
+   REGION_SIZE => 'Tamaño de la región (en pares de bases)',
 
    HELP     => 'Ayuda',
 
@@ -141,6 +145,8 @@ END
    REDISPLAY   => 'Volver a mostrar',
 
    CONFIGURE   => 'Configurar...',
+
+   CONFIGURE_TRACKS   => 'Configurar pistas...',
 
    EDIT       => 'Editar documento...',
 
@@ -158,13 +164,15 @@ END
 
    RIGHT       => 'Derecha',
 
-   TRACK_NAMES => 'Nombre de la tabla de pistas',
+   TRACK_NAMES => 'Nombres de las pistas',
 
    ALPHABETIC  => 'Alfabético',
 
    VARYING     => 'Variando/Variante',
 
    SET_OPTIONS => 'Definir Opciones para pistas...',
+
+   CLEAR_HIGHLIGHTING => 'Eliminar resaltado',
 
    UPDATE      => 'Actualizar imagen',
 
@@ -193,6 +201,14 @@ END
    UPDATE_URLS  => 'Actualizar URLs',
 
    PRESETS      => '-Seleccionar URL pre-establecido--',
+
+   FEATURES_TO_HIGHLIGHT => 'Resaltar propiedad(es) (propiedad1 propiedad2...)',
+
+   REGIONS_TO_HIGHLIGHT => 'Resaltar regiones (region1:inicia..termina region2:inicia..termina)',
+
+   FEATURES_TO_HIGHLIGHT_HINT => 'Idea: usar feature@color para seleccionar el color, como en \'NUT21@lightblue\'',
+
+   REGIONS_TO_HIGHLIGHT_HINT  => 'Idea: usar region@color para seleccionar el color, como en \'Chr1:10000..20000@lightblue\'',
 
    NO_TRACKS    => '*Ninguna pista*',
 
@@ -281,6 +297,8 @@ END
    GENERAL     => 'General',
 
    DETAILS     => 'Detalles',
+
+   REGION      => 'Región',
 
    ALL_ON      => 'Todo encendido',
 

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.2 2005-10-26 15:03:57 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.3 2005-10-26 15:20:28 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -180,10 +180,8 @@ my ($page_settings,$session) = page_settings($CONFIG); # WARNING: this may cause
 my $source                   = $CONFIG->source;
 my $cookie                   = CGI::Cookie->new(-name    => $CGI::Session::NAME,
 						-value   => $session->id,
-						-path    => '/',
+						-path    => url(-absolute=>1),
 						-expires => REMEMBER_SETTINGS_TIME);
-$MAX_SEGMENT     = $CONFIG->get_max_segment;
-$DEFAULT_SEGMENT = $CONFIG->get_default_segment;
 
 ### PLUGINS #################################################################
 my @plugin_path = "$CONF_DIR/plugins";
@@ -609,6 +607,10 @@ sub page_settings {
 
   my $old_source    = $session->source($source);
   $config->source($source);
+
+  # NOTE: very bad form to set these globals here
+  $MAX_SEGMENT     = $CONFIG->get_max_segment;
+  $DEFAULT_SEGMENT = $CONFIG->get_default_segment;
 
   # do not change the page settings when the user is changing from one
   # database source to another
@@ -1415,7 +1417,6 @@ sub zoomnav {
   my $navlevel  = unit_to_value($1) if $nav  && $nav  =~ /((?:left|right) .+)/;
 
   if (defined $zoomlevel) {
-    warn "zoom = $zoom, zoomlevel = $zoomlevel";
     warn "zoom = $zoom, zoomlevel = $zoomlevel" if DEBUG;
     my $center	    = int($span / 2) + $start;
     my $range	    = int($span * (1-$zoomlevel)/2);

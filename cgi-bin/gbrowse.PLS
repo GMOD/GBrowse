@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.1 2005-10-26 05:09:49 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.2 2005-10-26 15:03:57 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2630,7 +2630,6 @@ sub do_plugin_header {
   my $page_settings = shift;
   my $cookie        = shift;
   my ($mime_type,$attachment)     = $PLUGINS->plugin($plugin)->mime_type;
-  my @cookies                     = $PLUGINS->plugin($plugin)->make_cookie;
   print_header(-cookie => $cookie,
 	       -type=>$mime_type,
 	       $attachment ? (-attachment=>$attachment) : (),

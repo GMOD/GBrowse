@@ -602,6 +602,8 @@ DocumentRoot configuration variable prepended to it, in which case
 only the URL is needed. However, if the URL is defined using an Alias
 directive, then the path argument is mandatory.
 
+The tmpimages option is mandatory.
+
 NOTE: The path argument is ignored if gbrowse is running under
 modperl, because modperl allows the URL to be translated into a
 physical directory programatically.
@@ -1020,6 +1022,38 @@ FTP connections, and "proxy" will set both.  The value is the URL of
 the proxy:
 
    proxy = http://myproxy.myorg.com:9000
+
+=item * session driver
+=item * session args
+
+These options fine-tune how gbrowse manages its state-maintaining
+sessions. GBrowse uses L<CGI::Session> to store session data on the
+server. By default (if neither of these options is present), it uses
+CGI::Session's "file" driver and "default" serializer. The session
+files are stored in the "sessions" directory underneath the directory
+specified by the "tmpimages" option
+(e.g. /usr/local/apache/htdocs/gbrowse/tmpimages/sessions).
+
+The "session driver" option will be passed to CGI::Session->new() as
+the first argument. It specifies the driver, serializer and ID
+generator according to the syntax described in L<CGI::Session>. The
+"session args" option will be passed to CGI::Session->new() as the
+third argument. It specifies additional parameters to be passed to the
+selected driver.
+
+For example, here is how to create session data that is stored in the
+MySQL "test" database under a table named "gbrowse_sessions." The
+session data will be stored in binary form by the Storable module:
+
+session driver = driver:mysql;serializer:storable
+session args   = DataSource test
+		 TableName  gbrowse_sessions
+
+See the CGI::Session documentation for information about setting up
+the MySQL table and appropriate permissions.
+
+You will not ordinarily need to use these settings, as the defaults
+seem to work well.
 
 =back
 

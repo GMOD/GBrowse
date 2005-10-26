@@ -1,9 +1,15 @@
-This version of gbrowse (branch gbrowse-session) replaces the big
-cookies previously used to save state with server-side files and a
-single small cookie containing an ID. Using this version of gbrowse
-will avoid problems with MS Internet Explorer when the cookies become
-too big or numerous (symptom: the plugins stop working properly).
+This version of gbrowse (CVS branch "gbrowse-session") replaces the
+obese cookies previously used to save state with server-side session
+files and small cookies that contain a short ID. This version of
+gbrowse will avoid problems with MS Internet Explorer when the cookies
+become too big or too numerous (major symptom: plugins stop working).
 
 The only known disadvantage of this version is that you must install
-CGI::Session.
+the CGI::Session module. See CONFIGURE_HOWTO for information on how to
+fine-tune the session handling behavior (look for "session driver" and
+"session args").
+
+Lincoln Stein
+27 October 2005
+
 

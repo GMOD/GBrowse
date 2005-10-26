@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.3 2005-10-26 15:20:28 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.4 2005-10-26 20:32:10 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -180,7 +180,7 @@ my ($page_settings,$session) = page_settings($CONFIG); # WARNING: this may cause
 my $source                   = $CONFIG->source;
 my $cookie                   = CGI::Cookie->new(-name    => $CGI::Session::NAME,
 						-value   => $session->id,
-						-path    => url(-absolute=>1),
+						-path    => url(-absolute=>1,-path_info=>1),
 						-expires => REMEMBER_SETTINGS_TIME);
 
 ### PLUGINS #################################################################
@@ -600,13 +600,13 @@ sub page_settings {
   my $source = param('source') || param('src') || path_info();
   $source    =~ s!^/+!!;  # get rid of leading & trailing / from path_info()
   $source    =~ s!/+$!!;
+  redirect_legacy_url($source);
+
+  $config->source($source) if $source;
 
   my $session       = Bio::Graphics::Browser::PageSettings->new($config);
   $source         ||= $session->source;
-  redirect_legacy_url($source);
-
   my $old_source    = $session->source($source);
-  $config->source($source);
 
   # NOTE: very bad form to set these globals here
   $MAX_SEGMENT     = $CONFIG->get_max_segment;

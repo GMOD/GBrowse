@@ -1,13 +1,18 @@
 package Bio::Graphics::Browser::PageSettings;
 use strict;
 
-use CGI::Session;
+use Text::Shellwords;
+use CGI::Session 'shellwords';
 
 sub new {
   my $class    = shift;
   my $config   = shift;
-  my $dir      = $config->tmpdir('sessions');
-  my $session  = CGI::Session->new('driver:file',undef,{Directory=>$dir});
+  $CGI::Session::NAME = 'gbrowse_sess';
+  my $dir             = $config->tmpdir('sessions');
+  my $driver          = $config->setting('session driver') || 'driver:file';
+  my %args            = shellwords $config->setting('session args');
+  %args               = (Directory => $dir) unless %args;
+  my $session         = CGI::Session->new($driver,undef,\%args);
 
   my $self = bless {
 		    session => $session,
@@ -22,6 +27,8 @@ sub flush {
 sub id {
   shift->{session}->id;
 }
+
+sub session { shift->{session} }
 
 sub page_settings {
   my $self   = shift;

@@ -7,7 +7,7 @@ use FindBin '$Bin';
 use Cwd;
 require 5.005003;
 
-my $VERSION     = '1.63';
+my $VERSION     = '1.64';
 my $working_dir = cwd;
 
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN
@@ -158,6 +158,10 @@ if (defined $OPTIONS{NONROOT}) {
 # workaround for known bug in FindBin library
 $Bin = "." if -f './Makefile.PL' && -T './Makefile.PL';
 
+my $biographics_version = biographics_version();
+my $patch_version       = biographics_patch_version();
+my $bioperl_needs_patching = $biographics_version < $patch_version;
+
 open F,">$Bin/GGB.def" or die "Can't open $Bin/GGB.def for writing: $!";
 print F "# This hints file contains configuration information used by the generic browser\n\n";
 print F "# To reconfigure, run perl Makefile.PL `cat GGB.def`\n\n";
@@ -165,6 +169,7 @@ foreach (keys %OPTIONS) {
   print F "$_=$OPTIONS{$_}\n";
 }
 print F "VERSION=$VERSION\n";
+print F "BIOGRAPHICS_VERSION=$biographics_version\n";
 close F;
 
 print STDERR <<END;
@@ -183,9 +188,6 @@ print STDERR <<END;
 END
 ;
 
-my $biographics_version = biographics_version();
-my $patch_version       = biographics_patch_version();
-my $bioperl_needs_patching = $biographics_version < $patch_version;
 
 if ($bioperl_needs_patching) {
   print STDERR "\nInstalled Bio::Graphics version $biographics_version is less than desired version $patch_version.  I will update to latest versions of the BioGraphics and GFF libraries.\n";
@@ -206,6 +208,7 @@ WriteMakefile(
 				 GD                => 2.07,
 				 IO::String        => 0,
 				 Text::Shellwords  => 1.0,
+				 CGI::Session      => 4.03,
 				}, # e.g., Module::Name => 1.1
 	      PL_FILES       => {
                                  'install_util/htdocs_install.PLS' => 'install_util/htdocs_install.pl',

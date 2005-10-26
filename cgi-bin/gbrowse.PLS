@@ -38,6 +38,8 @@ $startperl -w
 #
 ###################################################################
 \$VERSION   = $OPTIONS{VERSION};
+\$BIOGRAPHICS_VERSION   = $OPTIONS{BIOGRAPHICS_VERSION};
+
 
 !GROK!THIS!
 
@@ -46,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57 2005-10-25 17:05:29 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.1 2005-10-26 05:09:49 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -55,6 +57,7 @@ use Bio::Graphics::Browser::Util;
 use Bio::Graphics::Browser::PluginSet;
 use Bio::Graphics::Browser::UploadSet;
 use Bio::Graphics::Browser::RemoteSet;
+use Bio::Graphics::Browser::PageSettings;
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use Text::Tabs;
@@ -65,10 +68,11 @@ use Carp qw(:DEFAULT croak);
 use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td);
 use CGI::Toggle;
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
-	    $HEADER $HTML $UA $VERSION $CONF_DIR
+	    $HEADER $HTML $UA $VERSION $BIOGRAPHICS_VERSION $CONF_DIR
 	    $PLUGINS $UPLOADED_SOURCES $REMOTE_SOURCES
 	    $PRESETS $HAVE_SVG
 	    %OBJECT_CLASSES %PLUGIN_NAME2LABEL );
+
 
 # if you change the zoom/nav icons, you must change this as well.
 use constant MAG_ICON_HEIGHT => 20;
@@ -172,27 +176,14 @@ $CONFIG = open_config($CONF_DIR);  # open_config() is exported from Util.pm
 # Recover a hashref which contains page-specific settings
 # (this involves reading a cookie or possibly a database record
 # in some future implementation)
-my ($source,$old_source) = get_source();
-
-# Migrate from 1.56 way of specifying source to 1.57 way
-# This may cause a redirect and exit 0 at this point!
-redirect_legacy_url($source);
-
-my $reset_all = param('reset');
-
-$CONFIG->source($source) or redirect_legacy_url($old_source || $CONFIG->source);
-my $page_settings = get_settings($source);
-
+my ($page_settings,$session) = page_settings($CONFIG); # WARNING: this may cause a redirect and exit
+my $source                   = $CONFIG->source;
+my $cookie                   = CGI::Cookie->new(-name    => $CGI::Session::NAME,
+						-value   => $session->id,
+						-path    => '/',
+						-expires => REMEMBER_SETTINGS_TIME);
 $MAX_SEGMENT     = $CONFIG->get_max_segment;
 $DEFAULT_SEGMENT = $CONFIG->get_default_segment;
-
-# Now adjust those settings based on submitted CGI parameters
-# With the exception that we ignore parameter changes if the source has changed.
-if (defined($old_source) && ($source ne $old_source) && !param('name') && !param('q')) {
-  param(name => $page_settings->{name});  # restore old reference point
-} else {
-  adjust_settings($page_settings);        # set settings from CGI parameters
-}
 
 ### PLUGINS #################################################################
 my @plugin_path = "$CONF_DIR/plugins";
@@ -200,7 +191,7 @@ unshift @plugin_path,shellwords($CONFIG->setting('plugin_path'))
   if $CONFIG->setting('plugin_path');
 
 $PLUGINS = Bio::Graphics::Browser::PluginSet->new($CONFIG,$page_settings,@plugin_path) unless defined $PLUGINS;
-$PLUGINS->configure(open_database(),$page_settings);
+$PLUGINS->configure(open_database(),$page_settings,$session);
 
 my $plugin_type   = '';                          # avoid uninit variable warning
 $plugin_type = $PLUGINS->plugin(param('plugin'))->type if param('plugin') && $PLUGINS->plugin(param('plugin'));
@@ -255,7 +246,7 @@ my ($file_action) = grep {/^modify\./} param();
 # NOTE THE EXIT 0 HERE IF THE DUMP IS SUCCESSFUL!
 if ((@segments||param('plugin_config'))
      && $plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper') {
-  do_plugin_header(param('plugin'),$page_settings);
+  do_plugin_header(param('plugin'),$page_settings,$cookie);
   do_plugin_dump(param('plugin'),$segments[0],$page_settings) && exit 0
 }
 
@@ -263,8 +254,13 @@ if ((@segments||param('plugin_config'))
 # it will be invoked here if no segment is defined
 elsif ($plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper' &&
        $PLUGINS->plugin(param('plugin'))->verb eq ($CONFIG->tr('Import')||'Import') ) {
-    do_plugin_header(param('plugin'),$page_settings);
-    do_plugin_dump(param('plugin'),$segments[0],$page_settings) && exit 0
+
+    do_plugin_header(param('plugin'),
+		     $page_settings,
+		     $cookie);
+    do_plugin_dump(param('plugin'),
+		   $segments[0],
+		   $page_settings) && exit 0
 }
 
 
@@ -276,7 +272,8 @@ elsif ($plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper' &&
 if (my $to_download = (param($CONFIG->tr('Download_file')) ||
 		       ($file_action && param($file_action) eq $CONFIG->tr('Download_file')) && $file)) {
   warn "FILE DOWNLOAD, download = $to_download" if DEBUG;
-  print_header(-attachment   =>  $to_download,
+  print_header(-cookie       => $cookie,
+	       -attachment   =>  $to_download,
 	       -type         => 'application/octet-stream');
   print_uploaded_file_features($page_settings,$to_download);
   exit 0;
@@ -297,11 +294,11 @@ handle_uploads($page_settings) || exit 0 unless $CONFIG->section_setting('upload
 
 ## UPDATING THE PERSISTENT SETTINGS##############################################################
 my $cookies;
-if ($reset_all) {
+if (param('reset')) {
   $cookies = reset_cookies($page_settings);
 } else {
-  $cookies = settings2cookie($page_settings);
-  push @$cookies,$PLUGINS->cookies;
+  $session->{session}->flush;
+  $cookies = [$cookie];
 }
 
 print_header(-cookie => $cookies,
@@ -331,7 +328,7 @@ if ($divisor == 1) {
 }
 
 
-print_top($title,$reset_all);
+print_top($title,param('reset'));
 
 ## HANDLE TRACK SETTINGS   #######################################################
 if ((param('set_options') || param($CONFIG->tr('Set_options')) || param('revert'))
@@ -411,7 +408,7 @@ sub main_display {
   }
 
   # print the top of the form, with navigation bar, etc
-  my $msie_hack = CGI->user_agent =~ /MSIE/;  # hack is not working
+  my $msie_hack = CGI->user_agent =~ /MSIE/;
   my $src    = $CONFIG->source;
   my $action = $src ? url(-absolute=>1)."/$src/" : url(-absolute=>1);
   print $msie_hack ? startform(-name   => 'mainform',
@@ -599,101 +596,41 @@ sub detail_panel {
 
 ###############################################################################################
 
-sub get_source {
-  my $new_source = param('source') || param('src') || path_info();
-  $new_source    =~ s!^/+!!;  # get rid of leading & trailing / from path_info()
-  $new_source    =~ s!/+$!!;
-  my $old_source = cookie('gbrowse_source') unless $new_source && param('.cgifields');
+sub page_settings {
+  my $config = shift;
 
-  my $source   = $new_source || $old_source;
-  $source ||= $CONFIG->source;  # the default, whatever it is
-  return ($source,$old_source);
+  my $source = param('source') || param('src') || path_info();
+  $source    =~ s!^/+!!;  # get rid of leading & trailing / from path_info()
+  $source    =~ s!/+$!!;
+
+  my $session       = Bio::Graphics::Browser::PageSettings->new($config);
+  $source         ||= $session->source;
+  redirect_legacy_url($source);
+
+  my $old_source    = $session->source($source);
+  $config->source($source);
+
+  # do not change the page settings when the user is changing from one
+  # database source to another
+  my $page_settings = get_settings($session);
+  adjust_settings($page_settings) unless $old_source and $old_source ne $source;
+  return ($page_settings,$session);
 }
 
 # read from cookie, if there is one
 # if not, set  from defaults
 sub get_settings {
-  my $source   = shift;
-  open_database() or croak "Can't open database defined by source $source";
-  my %settings = cookie("gbrowse_$source");
-  my $ok = 1;
-
-  if (%settings) {  # if cookie is there, then validate it
-  BLOCK: {
-      $ok &&= $settings{v} == $VERSION;
-      warn "ok 0 = $ok" if DEBUG;
-      last unless $ok;
-
-      $ok &&= defined $settings{width} && $settings{width} > 100 && $settings{width} < 5000;
-      warn "ok 1 = $ok" if DEBUG;
-
-      my %ok_sources = map {$_=>1} $CONFIG->sources;
-      $ok &&= $ok_sources{$settings{source}};
-      warn "ok 2 = $ok" if DEBUG;
-
-      # the single "tracks" key of the cookie gets mapped to the
-      # "track" and "features" key of the page settings
-      my @features = split $;,$settings{tracks} if $ok && defined $settings{tracks};
-      $settings{tracks}    = [];  # make sure these are clean
-      $settings{features}  = {};
-
-      foreach (@features) {
-	warn "feature = $_" if DEBUG;
-	my ($label,$visible,$option,$limit) = m!^(.+)/(\d+)/(\d+)/(\d+)$!;
-	warn "label = $label, visible = $visible, option = $option, limit = $limit" if DEBUG;
-	unless ($label) {   # corrupt cookie; purge it.
-	  undef $ok;
-	  last;
-	}
-	push @{$settings{tracks}},$label;
-	$settings{features}{$label}{visible} = $visible;
-	$settings{features}{$label}{options} = $option;
-	$settings{features}{$label}{limit}   = $limit;
-      }
-      warn "ok 3 = $ok" if DEBUG;
-
-      $ok &&= ref($settings{tracks}) && @{$settings{tracks}} > 0;
-      warn "ok 4 = $ok" if DEBUG;
-
-      # hilighting
-      my $hilights = $settings{h_feat} || '';
-      $settings{h_feat} = {};
-      for my $hi (split $;,$hilights) {
-	my ($name,$color) = split '@',$hi;
-	$settings{h_feat}{$name} = $color;
-      }
-
-      my @regions = split $;,$settings{h_region} if $settings{h_region};
-      $settings{h_region} = \@regions;
-    }
-  }
-
-  else {
-    %settings = ();
-    default_settings(\%settings);
-    $ok = 1;
-  }
-
-  if (!$ok) {
-    %settings = ();
-    default_settings(\%settings);
-  }
-
-  warn "order = @{$settings{tracks}}" if $settings{tracks} && DEBUG;
-
-  if (DEBUG) {
-    foreach (@{$settings{tracks}}) {
-      my $s = $settings{features}{$_};
-      warn "$_: ",$CONFIG->setting($_=>'key')," vis=$s->{visible}, opt=$s->{options}, limit=$s->{limit}\n";
-    }
-  }
-
-  \%settings;
+  my $session   = shift;
+  my $hash             = $session->page_settings;
+  delete $hash->{flip}; # obnoxious for this to persist
+  default_settings($hash) if param('reset') or !%$hash;
+  $hash;
 }
 
 sub default_settings {
   my $settings = shift;
   warn "Setting default settings" if DEBUG;
+  %$settings = ();
   @$settings{'name','ref','start','stop','flip','version'} = ('','','','','',100);
   $settings->{width}   = $CONFIG->setting('default width');
   $settings->{source}  = $CONFIG->source;
@@ -766,56 +703,9 @@ sub auto_open {
   }
 }
 
-# this is called to flatten the settings into an HTTP cookie
-sub settings2cookie {
-  my $settings  = shift;
-  my %settings = %$settings;
-  local $^W = 0;
-  for my $key (keys %settings) {
-    next if $key =~ /^(tracks|features|h_feat)$/;  # handled specially
-    if (ref($settings{$key}) eq 'ARRAY') {
-      $settings{$key} = join $;,@{$settings{$key}};
-    }
-  }
-
-  # the "features" and "track" key map to a single array
-  # contained in the "tracks" key of the settings
-  my @array = map {join("/",
-			$_,
-			$settings{features}{$_}{visible},
-			$settings{features}{$_}{options},
-			$settings{features}{$_}{limit})} @{$settings{tracks}};
-  $settings{tracks} = join $;,@array;
-  delete $settings{features};
-  delete $settings{flip};  # obnoxious for this to persist
-
-  @array = ();
-  for my $hi (keys %{$settings{h_feat}}) {
-    push @array,"$hi\@$settings{h_feat}{$hi}";
-  }
-  $settings{h_feat}   = join $;,@array;
-  $settings{h_region} = join $;,@{$settings{h_region}} if $settings{h_region} 
-    && ref $settings{h_region} eq 'ARRAY';
-
-  warn "cookie => ",join ' ',%settings,"\n" if DEBUG;
-
-  my @cookies;
-  my $source = $CONFIG->source;
-  push @cookies,cookie(-name    => "gbrowse_$source",
-		       -value   => \%settings,
-		       -path    => url(-absolute=>1,-path=>1),
-		       -expires => REMEMBER_SETTINGS_TIME);
-  push @cookies,cookie(-name    => 'gbrowse_source',
-		       -value   => $source,
-		       -expires => REMEMBER_SOURCE_TIME);
-  warn "cookies = @cookies" if DEBUG;
-  return \@cookies;
-}
-
 sub reset_cookies {
   my @cookies;
   foreach my $c (CGI::cookie()) {
-    next if $c eq 'gbrowse_source';
     push @cookies,CGI::Cookie->new(-name => $c,
 				   -path => url(-path_info=>1,-absolute=>1),
 				   -expires => '-1y'
@@ -832,6 +722,7 @@ sub adjust_settings {
     my @selected = split_labels (param('label'));
     $settings->{features}{$_}{visible} = 0 foreach keys %{$settings->{features}};
     $settings->{features}{$_}{visible} = 1 foreach @selected;
+    $settings->{flip}                  = param('flip');
   }
 
   if (my @selected = split_labels(param('enable'))) {
@@ -844,12 +735,14 @@ sub adjust_settings {
 
   $settings->{width}  = param('width')   if param('width');
   # support programmatic upload
-  $settings->{id} = param('id')          if param('id');
+  $settings->{id}   = param('id')        if param('id');
 
   local $^W = 0;  # kill uninitialized variable warning
-  if (param('ref') &&
-      ( param('name') eq param('prevname')
-	|| grep {/zoom|nav|regionview\.[xy]|overview\.[xy]/} param())
+  if ( (request_method() eq 'GET' && param('ref'))
+       ||
+       (param('span') && $settings->{stop}-$settings->{start}+1 != param('span'))
+       ||
+       grep {/left|right|zoom|nav|regionview\.[xy]|overview\.[xy]/} param()
      )
     {
       $settings->{version} ||= param('version') || '';
@@ -857,7 +750,6 @@ sub adjust_settings {
       $settings->{start} = param('start') if defined param('start') && param('start') =~ /^[\d-]+/;
       $settings->{stop}  = param('end')   if defined param('end')   && param('end')   =~ /^[\d-]+/;
       $settings->{stop}  = param('stop')  if defined param('stop')  && param('stop')  =~ /^[\d-]+/;
-      $settings->{flip}  = param('flip');
       zoomnav($settings);
       $settings->{name} = "$settings->{ref}:$settings->{start}..$settings->{stop}";
       param(name => $settings->{name});
@@ -1080,7 +972,6 @@ sub slidertable {
   push @lines,hidden(-name=>'start',-value=>$segment->start,-override=>1);
   push @lines,hidden(-name=>'stop',-value=>$segment->end,-override=>1);
   push @lines,hidden(-name=>'ref',-value=>$segment->seq_id,-override=>1);
-  push @lines,hidden(-name=>'prevname',-value=>scalar(param('name')),-override=>1);
   push @lines,
     (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>"left $full",
 		  -border=>0,-title=>"left $full_title"),
@@ -1524,6 +1415,7 @@ sub zoomnav {
   my $navlevel  = unit_to_value($1) if $nav  && $nav  =~ /((?:left|right) .+)/;
 
   if (defined $zoomlevel) {
+    warn "zoom = $zoom, zoomlevel = $zoomlevel";
     warn "zoom = $zoom, zoomlevel = $zoomlevel" if DEBUG;
     my $center	    = int($span / 2) + $start;
     my $range	    = int($span * (1-$zoomlevel)/2);
@@ -1620,7 +1512,7 @@ sub get_features {
   # if no name is specified but there is a "initial landmark" defined in the
   # config file, then we default to that.
   $settings->{name} ||= $CONFIG->setting('initial landmark')
-    if defined $CONFIG->setting('initial landmark');
+    if defined $CONFIG->setting('initial landmark') && !defined $settings->{q};
 
   my @features = lookup_features_from_db($db,$settings);
 
@@ -1679,7 +1571,7 @@ sub lookup_features_from_db {
   my ($db,$settings) = @_;
   my @segments;
 
-  warn "name = $settings->{name}, ref = $settings->{ref}, start = $settings->{start}, stop = $settings->{stop}, version = $settings->{version}\n" if DEBUG;
+  warn "name = $settings->{name}, ref = $settings->{ref}, start = $settings->{start}, stop = $settings->{stop}, version = $settings->{version}" if DEBUG;
 
   $db->debug(0);
   my $divisor = $CONFIG->setting(general=>'unit_divider') || 1;
@@ -2736,9 +2628,10 @@ sub source_menu {
 sub do_plugin_header {
   my $plugin        = shift;
   my $page_settings = shift;
+  my $cookie        = shift;
   my ($mime_type,$attachment)     = $PLUGINS->plugin($plugin)->mime_type;
   my @cookies                     = $PLUGINS->plugin($plugin)->make_cookie;
-  print_header(-cookie => \@cookies,
+  print_header(-cookie => $cookie,
 	       -type=>$mime_type,
 	       $attachment ? (-attachment=>$attachment) : (),
 	      );
@@ -2902,7 +2795,7 @@ sub is_search {
 
 sub version_warning {
   return if Bio::Graphics::Panel->can('api_version') &&
-	  Bio::Graphics::Panel->api_version >= $VERSION;
+	  Bio::Graphics::Panel->api_version >= $BIOGRAPHICS_VERSION;
 
     warn <<END;
 GBROWSE VERSION MISMATCH:

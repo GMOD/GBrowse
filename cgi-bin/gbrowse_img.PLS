@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8 2005-10-16 19:07:25 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.1 2005-10-26 05:09:49 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -57,6 +57,7 @@ use Bio::Graphics::Browser::Util;
 use Bio::Graphics::Browser::PluginSet;
 use Bio::Graphics::Browser::UploadSet;
 use Bio::Graphics::Browser::RemoteSet;
+use Bio::Graphics::Browser::PageSettings;
 use Text::Shellwords;
 use Digest::MD5 'md5_hex';
 
@@ -79,7 +80,7 @@ use constant PANEL_GAP         => 3;
 # h_feat    feature(s) to hilight
 
 $CONF_DIR = conf_dir($CONF_DIR);
-$CONFIG = open_config($CONF_DIR);  # open_config() is exported from Util.pm
+$CONFIG   = open_config($CONF_DIR);  # open_config() is exported from Util.pm
 
 unless (param()) {
   print header;
@@ -177,11 +178,14 @@ my ($options,$labels,$visible) = get_options(\@options,\@track_types);
 my $max_segment = $CONFIG->setting('max segment') || MAX_SEGMENT;
 my $page_settings = {features=>$visible,tracks=>$labels,id=>$id};
 
+my $session       = Bio::Graphics::Browser::PageSettings->new($CONFIG);
+$session->source($src);
+
 # plugin initialization - should be easier
 my @plugin_path = "$CONF_DIR/plugins";
 unshift @plugin_path,shellwords($CONFIG->setting('plugin_path')) if $CONFIG->setting('plugin_path');
 $PLUGINS = Bio::Graphics::Browser::PluginSet->new($CONFIG,$page_settings,@plugin_path) unless defined $PLUGINS;
-$PLUGINS->configure($db,$page_settings);
+$PLUGINS->configure($db,$page_settings,$session);
 
 # uploaded files
 $UPLOADS = Bio::Graphics::Browser::UploadSet->new($CONFIG,$page_settings);

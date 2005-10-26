@@ -1,11 +1,11 @@
 package Bio::Graphics::Browser::PluginSet;
 # API for using plugins
 
-#  $Id: PluginSet.pm,v 1.1.2.7 2005-10-15 23:42:32 lstein Exp $
+#  $Id: PluginSet.pm,v 1.1.2.7.2.1 2005-10-26 05:09:49 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser;
-use CGI 'cookie','param';
+use CGI 'param';
 use Text::Shellwords;
 use constant DEBUG=>0;
 
@@ -56,7 +56,7 @@ sub plugin        {
 
 sub configure {
   my $self     = shift;
-  my ($database,$page_settings) = @_;
+  my ($database,$page_settings,$session) = @_;
   my $conf     = $self->config;
   my $plugins  = $self->plugins;
   my $conf_dir = $conf->dir;
@@ -71,7 +71,8 @@ sub configure {
     $p->init();  # other initialization
 
     # retrieve persistent configuration
-    my $config = _retrieve_plugin_config($p);
+    my $config = $session->plugin_settings($p->name);
+    %$config   = %{$p->config_defaults} unless %$config;
     # and tell the plugin about it
     $p->configuration($config);
     $p->filter if ($p->type eq 'filter');
@@ -165,16 +166,6 @@ sub menu_labels {
     $labels{$_} =~ s/^\s+//;
   }
   return \%labels;
-}
-
-sub cookies {
-  my $self    = shift;
-  my $plugins = $self->plugins;
-  my @cookies;
-  for my $plugin (values %$plugins) {
-    push @cookies,$plugin->make_cookie();
-  }
-  @cookies;
 }
 
 1;

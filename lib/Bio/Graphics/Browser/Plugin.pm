@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.12.4.6 2005-07-20 15:48:02 lstein Exp $
+# $Id: Plugin.pm,v 1.12.4.6.2.1 2005-10-26 05:09:49 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME
@@ -495,8 +495,8 @@ This method will be called once at plugin startup time to give the
 plugin a chance to set up its default configuration state.  If you
 implement this method you should return the configuration as a hash
 reference in which the values of the hash are either scalar values or
-array references.  The contents of this hash will be placed in a cookie
-in order to establish the state.
+array references.  The contents of this hash will be placed in a
+CGI::Session.
 
 You will wish to implement this method if the plugin has
 user-modifiable settings.
@@ -744,33 +744,6 @@ sub new_feature_list {
   my $self     = shift;
   return Bio::Graphics::FeatureFile->new(-smart_features=>1,
 					 -safe => 1);
-}
-
-# return a configuration cookie
-sub make_cookie {
-  my $self = shift;
-  my @cookies;
-  my $name = $self->name;
-  my $conf = $self->configuration or return;
-  my %conf = %$conf;
-
-  # we need a better serialization than this...
-  for my $key (keys %conf) {
-    if (ref $conf{$key} eq 'ARRAY') {
-      $conf{$key}  = join $;,@{$conf{$key}};
-      $conf{$key} .= $; unless $conf{$key} =~ /$;/;
-    }
-  }
-  my $path1 = CGI::url(-path_info=>1,-absolute=>1);
-  (my $path2 = $path1) =~ s/gbrowse/gbrowse_img/;
-  return CGI::cookie(-name    => "${name}_config",
-		     -value   => \%conf,
-		     -path    => $path1,
-		     -expires => '+3M'),
-         CGI::cookie(-name    => "${name}_config",
-		     -value   => \%conf,
-		     -path    => $path2,
-		     -expires => '+3M');
 }
 
 1;

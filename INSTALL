@@ -104,6 +104,7 @@ Generic Genome Browser Installation
 
                 CGI                  (2.56 or higher)
                 GD                   (2.07 or higher)
+                CGI::Session         (4.03 or higher)
                 DBI                  (any version)
                 DBD::mysql           (any version)
                 Digest::MD5          (any version)
@@ -159,9 +160,9 @@ Generic Genome Browser Installation
 
     This will install the software in the default location under
     /usr/local/apache. See "Details" to change this, or to install gbrowse
-    into your home directory.  The 'UNINST=1' will insure that older
-    versions of perl modules being installed will be removed to 
-    help prevent conflicts.
+    into your home directory. The 'UNINST=1' will insure that older versions
+    of perl modules being installed will be removed to help prevent
+    conflicts.
 
     To further configure GBrowse, see CONFIGURE_HOWTO. To run GBrowse on top
     of Oracle and PostgreSQL databases see ORACLE_AND_POSTGRESQL. To run on

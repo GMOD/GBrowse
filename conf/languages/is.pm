@@ -3,7 +3,7 @@
 
 #Icelandic translation done by Gudmundur A. Thorisson <mummi@cshl.edu>
 
-#$Id: is.pm,v 1.4.6.3 2005-10-24 22:10:59 mummi Exp $
+#$Id: is.pm,v 1.4.6.4 2005-11-01 17:41:20 mummi Exp $
 
  CHARSET =>   'ISO-8859-1',
 
@@ -303,9 +303,9 @@ END
 
    DETAILS  => 'Nánar',
 
-   ALL_OFF => 'Virkja allar',
+   ALL_OFF => 'Afvirkja allar',
 
-   ALL_ON  => 'Afvirkja allar',
+   ALL_ON  => 'Virkja allar',
 
    ANALYSIS  => 'Greining',
 

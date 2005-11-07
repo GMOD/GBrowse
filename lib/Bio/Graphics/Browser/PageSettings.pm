@@ -7,12 +7,15 @@ use CGI::Session 'shellwords';
 sub new {
   my $class    = shift;
   my $config   = shift;
+  my $id       = shift;
   $CGI::Session::NAME = 'gbrowse_sess';
   my $dir             = $config->tmpdir('sessions');
   my $driver          = $config->setting('session driver') || 'driver:file';
   my %args            = shellwords $config->setting('session args');
   %args               = (Directory => $dir) unless %args;
-  my $session         = CGI::Session->new($driver,undef,\%args);
+  my $session         = CGI::Session->new($driver,$id,\%args);
+  $session->expire($config->source,
+		   $config->remember_settings_time);
 
   my $self = bless {
 		    session => $session,

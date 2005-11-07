@@ -14,7 +14,7 @@ our @EXPORT = ('toggle_section',
 use constant PLUS    => 'plus.png';
 use constant MINUS   => 'minus.png';
 use constant JS      => 'toggle.js';
-use constant EXPIRES => CGI::Util::expires('+7d');
+use constant EXPIRES => CGI::Util::expires('+1M');
 
 my $image_dir = '/gbrowse/images/buttons';
 my $js_dir    = '/gbrowse/js';

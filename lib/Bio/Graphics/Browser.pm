@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34 2005-10-20 15:52:17 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.1 2005-11-07 16:44:19 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -87,6 +87,10 @@ use constant MIN_OVERVIEW_PAD    => 25;
 use constant PAD_OVERVIEW_BOTTOM => 5;
 use constant PAD_DETAIL_SIDES    => 25;
 use constant DEFAULT_OVERVIEW_BGCOLOR => 'wheat';
+
+# amount of time to remember persistent settings
+use constant REMEMBER_SOURCE_TIME   => '+3M';   # 3 months
+use constant REMEMBER_SETTINGS_TIME => '+1M';   # 1 month
 
 use constant DEBUG => 0;
 
@@ -398,6 +402,32 @@ sub description {
   my $source = shift;
   my $c = $self->{conf}{$source}{data} or return;
   return $c->setting('general','description');
+}
+
+=head2 $time = $browser->remember_settings_time
+
+Return the relative time (in CGI "expires" format) to maintain
+information about the current page settings, including plugin
+configuration.
+
+=cut
+
+sub remember_settings_time {
+  my $self = shift;
+  return $self->setting('remember settings time') || REMEMBER_SETTINGS_TIME;
+}
+
+
+=head2 $time = $browser->remember_source_time
+
+Return the relative time (in CGI "expires" format) to maintain information
+on which source the user is viewing.
+
+=cut
+
+sub remember_source_time {
+  my $self = shift;
+  return $self->setting('remember source time') || REMEMBER_SOURCE_TIME;
 }
 
 =head2 $language = $browser->language([$new_language])
@@ -1211,7 +1241,7 @@ sub image_and_map {
   for my $track (@blank_tracks) {
     my $file = $feature_files->{$tracks->[$track]} or next;
     ref $file or next;
-    $track += $offset;
+    $track += $offset + 1;
     my $name = $file->name || '';
     $options->{$name} ||= 0;
     my ($inserted,undef,$new_tracks)

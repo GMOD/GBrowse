@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.4 2005-10-26 20:32:10 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.5 2005-11-07 16:44:17 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -67,6 +67,7 @@ use File::Spec;
 use Carp qw(:DEFAULT croak);
 use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td);
 use CGI::Toggle;
+use CGI::Cookie;
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $BIOGRAPHICS_VERSION $CONF_DIR
 	    $PLUGINS $UPLOADED_SOURCES $REMOTE_SOURCES
@@ -105,10 +106,6 @@ use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceD
 use constant DEBUG          => 0;
 use constant DEBUG_EXTERNAL => 0;
 use constant DEBUG_PLUGINS  => 0;
-
-# amount of time to remember persistent settings
-use constant REMEMBER_SETTINGS_TIME => '+7d';  # 7 days
-use constant REMEMBER_SOURCE_TIME   => '+3M';  # 3 months
 
 use constant GLOBAL_TIMEOUT => 60;  # 60 seconds to failure unless overridden in config
 
@@ -180,8 +177,8 @@ my ($page_settings,$session) = page_settings($CONFIG); # WARNING: this may cause
 my $source                   = $CONFIG->source;
 my $cookie                   = CGI::Cookie->new(-name    => $CGI::Session::NAME,
 						-value   => $session->id,
-						-path    => url(-absolute=>1,-path_info=>1),
-						-expires => REMEMBER_SETTINGS_TIME);
+						-path    => url(-absolute=>1),
+						-expires => $CONFIG->remember_source_time);
 
 ### PLUGINS #################################################################
 my @plugin_path = "$CONF_DIR/plugins";
@@ -604,11 +601,12 @@ sub page_settings {
 
   $config->source($source) if $source;
 
-  my $session       = Bio::Graphics::Browser::PageSettings->new($config);
+  my $session       = Bio::Graphics::Browser::PageSettings->new($config,param('id'));
   $source         ||= $session->source;
   my $old_source    = $session->source($source);
+  $config->source($source);
 
-  # NOTE: very bad form to set these globals here
+  # NOTE: bad form to set these globals here, but they are needed by adjust_settings();
   $MAX_SEGMENT     = $CONFIG->get_max_segment;
   $DEFAULT_SEGMENT = $CONFIG->get_default_segment;
 
@@ -626,6 +624,7 @@ sub get_settings {
   my $hash             = $session->page_settings;
   delete $hash->{flip}; # obnoxious for this to persist
   default_settings($hash) if param('reset') or !%$hash;
+  $hash->{id}          = $session->id;
   $hash;
 }
 
@@ -637,7 +636,6 @@ sub default_settings {
   $settings->{width}   = $CONFIG->setting('default width');
   $settings->{source}  = $CONFIG->source;
   $settings->{region_size}  = $CONFIG->setting('region segment');
-  $settings->{id}      = md5_hex(rand);  # new identity
   $settings->{v}       = $VERSION;
   $settings->{stp}     = 1;
   $settings->{ins}     = 1;
@@ -736,8 +734,6 @@ sub adjust_settings {
   }
 
   $settings->{width}  = param('width')   if param('width');
-  # support programmatic upload
-  $settings->{id}   = param('id')        if param('id');
 
   local $^W = 0;  # kill uninitialized variable warning
   if ( (request_method() eq 'GET' && param('ref'))
@@ -898,11 +894,14 @@ sub navigation_table {
 			 TR({-class=>'searchbody',-style=>'padding-top: 5 px'},
 			    td({-align=>'left'},source_menu($settings)),
 			    td({-align=>'left'},
-			       $segment ? (b($CONFIG->tr('Scroll').': '),slidertable($segment,$buttonsDir)) : '',
-			       b(
-				 checkbox(-name=>'flip',
-					  -checked=>$settings->{flip},-value=>1,
-					  -label=>$CONFIG->tr('Flip'),-override=>1))
+			       $segment ? (
+					   (b($CONFIG->tr('Scroll').': '),slidertable($segment,$buttonsDir)),
+					   b(
+					     checkbox(-name=>'flip',
+						      -checked=>$settings->{flip},-value=>1,
+						      -label=>$CONFIG->tr('Flip'),-override=>1))
+					  )
+			       : '',
 			      ),
 			   ),
 			)
@@ -1186,6 +1185,13 @@ sub settings_table {
   @widths = (640,800,1024) unless @widths;
   my @key_positions   = qw(between bottom);
   push @key_positions,qw(left right) if Bio::Graphics::Panel->can('auto_pad');
+
+  my $feature_highlights = $settings->{h_feat}   ?
+    join ' ',map { "$_\@$settings->{h_feat}{$_}"   } keys %{$settings->{h_feat}} : '';
+
+  my $region_highlights  = $settings->{h_region} ?
+    join ' ',@{$settings->{h_region}} : '';
+
   my $content =
     table({-class=>'searchbody',-border=>0},
 	  TR(
@@ -1236,8 +1242,10 @@ sub settings_table {
 		     b(
 		       $CONFIG->tr('FEATURES_TO_HIGHLIGHT')
 		      ),br,
-		     textfield(-name=>'h_feat',
-			       -size=>50,
+		     textfield(-name  => 'h_feat',
+			       -value => $feature_highlights,
+			       -size  => 50,
+			       -override=>1,
 			      ),
 		    ),
 	       ),
@@ -1247,7 +1255,9 @@ sub settings_table {
 		       $CONFIG->tr('REGIONS_TO_HIGHLIGHT')
 		      ),br,
 		     textfield(-name=>'h_region',
+			       -value=>$region_highlights,
 			       -size=>50,
+			       -override=>1,
 			      ),
 		    ),
 	       ),
@@ -2009,17 +2019,17 @@ sub load_plugin_annotators {
   my %default_plugin = map {$_=>1} map {s/^plugin:// && $_} 
     grep {/^plugin:/} $CONFIG->default_labels;
 
+  my %listed = map {$_=>1} @{$settings->{tracks}}; # are we already on the list?
+
   for my $p ($PLUGINS->plugins) {
     next unless $p->type eq 'annotator';
     my $name = $p->name;
     $name = "plugin:$name";
-    #$PLUGIN_NAME2LABEL{$name} = $p->name;
     ($PLUGIN_NAME2LABEL{$name}) = ref($p) =~ /(\w+)$/;
-    unless ($settings->{features}{$name}) {
-      push @{$settings->{tracks}},$name;
-      $settings->{features}{$name} = {visible=>$default_plugin{$p}||0,options=>0,limit=>0};
-    }
+    $settings->{features}{$name} ||= {visible=>$default_plugin{$p}||0,options=>0,limit=>0};
+    push @{$settings->{tracks}},$name unless $listed{$name};
   }
+
 }
 
 sub print_uploaded_file_features {
@@ -2172,20 +2182,19 @@ sub bookmark_link {
   $q->param(-name=>'h_region',-value=>$settings->{h_region}) if $settings->{h_region};
   my @h_feat= map {"$_\@$settings->{h_feat}{$_}"} keys %{$settings->{h_feat}};
   $q->param(-name=>'h_feat',-value=>\@h_feat) if @h_feat;
+  $q->param(-name=>'id',-value=>$settings->{id});
 
   return "?".$q->query_string();
 }
 
 sub image_link {
   my $settings = shift;
-  my $rand = md5_hex(rand);
-  return "?help=link_image;rand=$rand;flip=".($settings->{flip}||0);
+  return "?help=link_image;flip=".($settings->{flip}||0);
 }
 
 sub svg_link {
   my $settings = shift;
-  my $rand = md5_hex(rand);
-  return "?help=svg_image;rand=$rand;flip=".($settings->{flip}||0);
+  return "?help=svg_image;flip=".($settings->{flip}||0);
 }
 
 # reorder @labels based on settings in the 'track.XXX' parameters

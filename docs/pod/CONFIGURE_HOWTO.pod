@@ -1055,6 +1055,32 @@ the MySQL table and appropriate permissions.
 You will not ordinarily need to use these settings, as the defaults
 seem to work well.
 
+=item remember settings time
+
+The length of time to remember page-specific settings in the format
+"+NNNu", where NNN is a number and "u" is a unit ("w" = weeks, "d" =
+days, "M" = months). For example:
+
+  remember settings time = +3M   # remember settings for 3 months
+
+The users' settings, which includes uploaded files, track options and
+plugin configuration, will be reset to the default if he or she fails
+to visit the site within the time specified.
+
+The default value is 1 month.
+
+See L<CGI> for more information on the time format.
+
+=item remember source time
+
+Like "remember settings time" but applies to remembering the user's
+preferred data source. "remember source time" should be greater or
+equal to "remember settings time" because the settings will expire
+when the source expires. If you have multiple sources, this option
+should be the same for each one.
+
+The default value is 3 months.
+
 =back
 
 =head2 B2. The [TRACK DEFAULTS] section
@@ -2896,6 +2922,14 @@ Open up the specified help page. Possible values are:
      "link_image" open the page that describes how to
                   generate an embedded image of the current view
       "svg_image" the page that describes how to generate SVGs
+
+=item id
+
+The id is a unique session ID that will store persistent configuration
+information. You do not typically need to use the id parameter except
+in the circumstance in which you wish to upload an annotation file
+programatically, in which case you should choose some large
+hard-to-guess number.
 
 =item Upload, upload_annotations, id
 

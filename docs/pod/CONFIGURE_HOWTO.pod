@@ -1050,7 +1050,11 @@ session args   = DataSource test
 		 TableName  gbrowse_sessions
 
 See the CGI::Session documentation for information about setting up
-the MySQL table and appropriate permissions.
+the MySQL table and appropriate permissions. 
+
+You might also want to read about L<CGI::Session::ID::salted_md5> for
+an ID generation algorithm that should be more secure (but slightly
+slower) than the default one.
 
 You will not ordinarily need to use these settings, as the defaults
 seem to work well.

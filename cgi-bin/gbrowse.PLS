@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.5 2005-11-07 16:44:17 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.6 2005-11-08 22:59:08 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -561,6 +561,7 @@ sub detail_panel {
                                        background    => $CONFIG->setting('background') || '',
 				       hilite_callback => $h_callback || undef,
 				       -add_category_labels => $CONFIG->setting('show track categories') || undef,
+				       -truecolor      => $CONFIG->setting('truecolor') || undef,
 				      );
     $cell .= $img;
   }

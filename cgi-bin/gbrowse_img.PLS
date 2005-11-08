@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8.2.2 2005-11-07 16:44:19 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.3 2005-11-08 22:59:08 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -230,6 +230,7 @@ else {  # detailed view
 			     flip          => $flip,
 			     $feature_hilighting ? (hilite_callback => $feature_hilighting) : (),
 			     $region_hilighting  ? (postgrid        => $region_hilighting)  : (),
+                             -truecolor    => $CONFIG->setting('truecolor'),
 			    );
   $detailed_view++;
 }

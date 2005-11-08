@@ -664,6 +664,14 @@ Example:
 
        initial landmark = Chr1
 
+=item * truecolor
+
+If this option is present and true, then GBrowse will create 24-bit
+(truecolor) images. This is mainly useful when using the "image"
+glyph, which allows you to paste arbitrary images onto the genome
+map. Do not use this option unless you need it, because it slows down
+drawing and makes the images much larger.
+
 =item * units, unit_divider
 
 The units option allows GBrowse to display units on an alternate scale

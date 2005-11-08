@@ -308,6 +308,108 @@ sub patch_old_versions_of_bioperl {
   my $adaptor = shift;
   my %argv    = @_;
   local $^W = 0;
+  require Bio::Perl;
+  if ($adaptor eq 'Bio::DB::GFF' && $Bio::Perl::VERSION == 1.5) {
+  eval <<'END';
+use Bio::DB::GFF;
+sub Bio::DB::GFF::load_gff {
+  my $self              = shift;
+  my $file_or_directory = shift || '.';
+  my $verbose           = shift;
+
+  local $self->{__verbose__} = $verbose;
+  return $self->do_load_gff($file_or_directory) if ref($file_or_directory) 
+                                                   && tied *$file_or_directory;
+
+  my $tied_stdin = tied(*STDIN);
+  open SAVEIN,"<&STDIN" unless $tied_stdin;
+  local @ARGV = $self->setup_argv($file_or_directory,'gff','gff3') or return;  # to play tricks with reader
+  my $result = $self->do_load_gff('ARGV');
+  open STDIN,"<&SAVEIN" unless $tied_stdin;  # restore STDIN
+  return $result;
+}
+sub Bio::DB::GFF::_load_gff_line {
+  my $self = shift;
+  my $line = shift;
+  my $lineend = $self->{load_data}{lineend};
+
+  $self->{load_data}{gff3_flag}++           if $line =~ /^\#\#\s*gff-version\s+3/;
+  $self->preferred_groups(split(/\s+/,$1))  if $line =~ /^\#\#\s*group-tags?\s+(.+)/;
+
+  if ($line =~ /^\#\#\s*sequence-region\s+(\S+)\s+(\d+)\s+(\d+)/i) { # header line
+    $self->load_gff_line(
+			 {
+			  ref    => $1,
+			  class  => 'Sequence',
+			  source => 'reference',
+			  method => 'Component',
+			  start  => $2,
+			  stop   => $3,
+			  score  => undef,
+			  strand => undef,
+			  phase  => undef,
+			  gclass => 'Sequence',
+			  gname  => $1,
+			  tstart => undef,
+			  tstop  => undef,
+			  attributes  => [],
+			 }
+			);
+    return $self->{load_data}{count}++;
+  }
+
+  return if /^#/;
+
+  my ($ref,$source,$method,$start,$stop,$score,$strand,$phase,$group) = split "\t",$line;
+  return unless defined($ref) && defined($method) && defined($start) && defined($stop);
+  foreach (\$score,\$strand,\$phase) {
+    undef $$_ if $$_ eq '.';
+  }
+
+  print STDERR $self->{load_data}{count}," records$lineend" 
+    if $self->{__verbose__} && $self->{load_data}{count} % 1000 == 0;
+
+  my ($gclass,$gname,$tstart,$tstop,$attributes) = $self->split_group($group,$self->{load_data}{gff3_flag});
+
+  # no standard way in the GFF file to denote the class of the reference sequence -- drat!
+  # so we invoke the factory to do it
+  my $class = $self->refclass($ref);
+
+  # call subclass to do the dirty work
+  if ($start > $stop) {
+    ($start,$stop) = ($stop,$start);
+    if ($strand eq '+') {
+      $strand = '-';
+    } elsif ($strand eq '-') {
+      $strand = '+';
+    }
+  }
+  # GFF2/3 transition stuff
+  $gclass = [$gclass] unless ref $gclass;
+  $gname  = [$gname]  unless ref $gname;
+  for (my $i=0; $i<@$gname;$i++) {
+    $self->load_gff_line({ref    => $ref,
+			  class  => $class,
+			  source => $source,
+			  method => $method,
+			  start  => $start,
+			  stop   => $stop,
+			  score  => $score,
+			  strand => $strand,
+			  phase  => $phase,
+			  gclass => $gclass->[$i],
+			  gname  => $gname->[$i],
+			  tstart => $tstart,
+			  tstop  => $tstop,
+			  attributes  => $attributes}
+			);
+    $self->{load_data}{count}++;
+  }
+}
+END
+  warn $@ if $@;
+  }
+
   if ($adaptor eq 'Bio::DB::GFF' && $argv{-adaptor} eq 'memory' && $Bio::Perl::VERSION <= 1.5) {
     # patch memory.pm inability to handle missing gclass fields
     eval <<'END';
@@ -317,7 +419,7 @@ sub Bio::DB::GFF::Adaptor::memory::load_gff_line {
   my $feature_hash  = shift;
   $feature_hash->{strand} = '' if $feature_hash->{strand} && $feature_hash->{strand} eq '.';
   $feature_hash->{phase}  = ''  if $feature_hash->{phase}  && $feature_hash->{phase} eq '.';
-  $feature_hash->{gclass} = 'Sequence' if length $feature_hash->{gclass} == 0;
+  $feature_hash->{gclass} = 'Sequence' unless length $feature_hash->{gclass} > 0;
   # sort by group please
   push @{$self->{tmp}{$feature_hash->{gclass},$feature_hash->{gname}}},$feature_hash;
 }
@@ -345,18 +447,6 @@ sub redirect_legacy_url {
     my ($script_name,$path_info) = _broken_apache_hack();
     my $query_string = $q->query_string;
     my $protocol     = $q->protocol;
-
-# Try using an absolute rather than a full URL in the redirect in order
-# to avoid reverse proxy issues. If this breaks, uncomment the following lines
-# and comment the line that starts "my $new_url"
-#    my $host         = $q->virtual_host;
-#    my $host         = $q->http('host') || $q->server_name();
-#    my $port         = $q->server_port;
-
-#    my $new_url      = "$protocol://$host";
-#    $new_url        .= ":$port" unless  (lc($protocol) eq 'http'  && $port == 80)
-#                                     or (lc($protocol) eq 'https' && $port == 443);
-#    $new_url        .= $script_name;
 
     my $new_url      = $script_name;
     $new_url        .= "/$source/";

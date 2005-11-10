@@ -207,7 +207,7 @@ WriteMakefile(
                                  #Bio::Root::Version => 1.5,
 				 GD                => 2.07,
 				 IO::String        => 0,
-				 Text::Shellwords  => 1.0,
+				 Text::Shellwords  => 1.08,
 				 CGI::Session      => 4.03,
 				}, # e.g., Module::Name => 1.1
 	      PL_FILES       => {

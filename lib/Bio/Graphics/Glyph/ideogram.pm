@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.3.6.1 2005-05-11 03:27:07 scottcain Exp $
+# $Id: ideogram.pm,v 1.3.6.1.2.1 2005-11-10 23:49:28 lstein Exp $
 # Glyph to draw chromosome ideograms for the overview display
 
 use strict;
@@ -19,7 +19,7 @@ sub draw_component {
   my $arcradius = $self->option('arcradius') || 7;
   my $feat = $self->feature;
   my $fake_telomeres = $self->option('fake_telomeres') || 0;
-  warn "Drawing '$feat', name=",$feat->name,", method='",$feat->method,"' from ",$feat->start," to ", $feat->stop;
+  # warn "Drawing '$feat', name=",$feat->name,", method='",$feat->method,"' from ",$feat->start," to ", $feat->stop;
   #warn Dumper($feat);
 
   my($x1,$y1,$x2,$y2) = $self->bounds(@_);

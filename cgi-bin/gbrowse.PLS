@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.6 2005-11-08 22:59:08 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.7 2005-11-10 23:49:28 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -292,7 +292,6 @@ my $cookies;
 if (param('reset')) {
   $cookies = reset_cookies($page_settings);
 } else {
-  $session->{session}->flush;
   $cookies = [$cookie];
 }
 
@@ -361,6 +360,7 @@ else {
 
 print_bottom($VERSION);
 
+$session->flush;
 exit 0;
 
 #################################################################################
@@ -403,7 +403,7 @@ sub main_display {
   }
 
   # print the top of the form, with navigation bar, etc
-  my $msie_hack = CGI->user_agent =~ /MSIE/;
+  my $msie_hack = 0; # CGI->user_agent =~ /MSIE/;
   my $src    = $CONFIG->source;
   my $action = $src ? url(-absolute=>1)."/$src/" : url(-absolute=>1);
   print $msie_hack ? startform(-name   => 'mainform',
@@ -561,7 +561,6 @@ sub detail_panel {
                                        background    => $CONFIG->setting('background') || '',
 				       hilite_callback => $h_callback || undef,
 				       -add_category_labels => $CONFIG->setting('show track categories') || undef,
-				       -truecolor      => $CONFIG->setting('truecolor') || undef,
 				      );
     $cell .= $img;
   }
@@ -648,7 +647,8 @@ sub default_settings {
 
 sub set_default_tracks {
   my $settings = shift;
-  my @labels = labels($settings);
+  my @labels = $CONFIG->labels;
+
   $settings->{tracks}   = \@labels;
   warn "order = @labels" if DEBUG;
   foreach (@labels) {
@@ -1050,12 +1050,6 @@ sub unit_to_value {
   return "$sign$value";
 }
 
-sub labels {
-  my $settings = shift;
-  my @labels = $CONFIG->labels;
-  @labels;
-}
-
 # This subroutine is invoked to draw the checkbox group underneath the main display.
 # It creates a hyperlinked set of feature names.
 sub tracks_table {
@@ -1194,7 +1188,7 @@ sub settings_table {
     join ' ',@{$settings->{h_region}} : '';
 
   my $content =
-    table({-class=>'searchbody',-border=>0},
+    table({-class=>'searchbody',-border=>0,-width=>'100%'},
 	  TR(
 	     td(
 		b($CONFIG->tr('Image_width')),br,
@@ -2404,8 +2398,6 @@ sub make_citation {
 # build a citation page
 sub build_citation_page {
   my $settings = shift;
-  my @labels   = labels($settings);
-
   my @features = $CONFIG->labels;
   my $external_features = load_external_sources(undef,$settings);
   my (@citations);

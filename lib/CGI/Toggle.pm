@@ -78,8 +78,8 @@ sub start_html {
   my $result = CGI::start_html(%args);
 
   if ($CGI::VERSION < 3.05) {
-    my $style_section  = join '',CGI->_style({code=>$style});
-    my $script_section = join '',CGI->_script({src=>"$js_dir/".JS});
+    my $style_section  = join '',$CGI::Q->_style({code=>$style});
+    my $script_section = join '',$CGI::Q->_script({src=>"$js_dir/".JS});
     $result =~ s/<\/head>/$style_section\n$script_section\n<\/head>/i;
   }
 
@@ -87,7 +87,7 @@ sub start_html {
 }
 
 sub end_html {
- my @script_section = CGI->_script({code=>"xSetCookie('$cookie_name',$VECTOR,'$cookie_expires')"})
+ my @script_section = $CGI::Q->_script({code=>"xSetCookie('$cookie_name',$VECTOR,'$cookie_expires')"})
    unless $RESET || $VECTOR==0;
  return @script_section,CGI::end_html;
 }

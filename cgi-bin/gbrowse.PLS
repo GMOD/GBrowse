@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.8 2005-11-11 00:11:15 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.9 2005-11-11 22:00:39 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1906,8 +1906,8 @@ sub handle_uploads {
     handle_edit($page_settings,$data);
   }
 
-  elsif ($data = param('auto') or $data = param('add')) {
-    handle_quickie($page_settings,$data);
+  elsif (my @data = (param('auto'),param('add'))) {
+    handle_quickie($page_settings,\@data);
   }
 
   if ($file_action && param($file_action) eq 'Delete File') {
@@ -1939,14 +1939,17 @@ sub handle_quickie {
   return unless $data;
 
   # format of quickie data is reference+type+name+start..end,start..end,start..end
-  my ($reference,$type,$name,@segments) = parse_feature_str($data);
-  my $feature = Bio::Graphics::Feature->new(
-					    -ref      => $reference||'',
-					    -type     => $type||'',
-					    -name     => $name||'',
-					    -segments => \@segments,
-					    );
-  write_auto($settings,[$feature]);
+  my @features;
+  foreach my $d (@$data) {
+    my ($reference,$type,$name,@segments) = parse_feature_str($d);
+    push @features, Bio::Graphics::Feature->new(
+  					    -ref      => $reference||'',
+  					    -type     => $type||'',
+  					    -name     => $name||'',
+  					    -segments => \@segments,
+  					    );
+   }
+  write_auto($settings,\@features);
 }
 
 sub write_auto {

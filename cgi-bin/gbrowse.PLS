@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.7 2005-11-10 23:49:28 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.8 2005-11-11 00:11:15 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -597,12 +597,12 @@ sub page_settings {
   my $source = param('source') || param('src') || path_info();
   $source    =~ s!^/+!!;  # get rid of leading & trailing / from path_info()
   $source    =~ s!/+$!!;
-  redirect_legacy_url($source);
-
   $config->source($source) if $source;
 
   my $session       = Bio::Graphics::Browser::PageSettings->new($config,param('id'));
   $source         ||= $session->source;
+  redirect_legacy_url($source); # may cause a redirect and exit!!!
+
   my $old_source    = $session->source($source);
   $config->source($source);
 

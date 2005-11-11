@@ -1081,7 +1081,7 @@ to visit the site within the time specified.
 
 The default value is 1 month.
 
-See L<CGI.pm> for more information on the time format.
+See L<CGI> for more information on the time format.
 
 =item remember source time
 

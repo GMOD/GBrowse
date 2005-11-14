@@ -25,6 +25,7 @@ conf/languages/it.pm
 conf/languages/ja.pm
 conf/languages/ko.pm
 conf/languages/nl.pm
+conf/languages/pl.pm
 conf/languages/POSIX.pm
 conf/languages/ru.pm
 conf/languages/zh.pm

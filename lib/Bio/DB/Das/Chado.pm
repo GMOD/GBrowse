@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9 2005-08-23 18:49:42 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.10 2005-11-14 17:15:01 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -131,23 +131,32 @@ sub new {
 
   my $dbh = DBI->connect( $dsn, $username, $password )
     or $self->throw("unable to open db handle");
+  $self->dbh($dbh);
 
     warn "$dbh\n" if DEBUG;
 
+# determine which cv to use for SO terms
+
+  $self->sofa_id(1); 
+
+    warn "SOFA id to use: ",$self->sofa_id() if DEBUG;
+
 # get the cvterm relationships here and save for later use
 
-  my $sth = $dbh->prepare("select ct.cvterm_id,ct.name
-                           from cvterm ct, cv c 
+  my $cvterm_query="select ct.cvterm_id,ct.name
+                           from cvterm ct, cv c
                            where ct.cv_id=c.cv_id and
-                           c.name IN ('SOFA',
-                               'Sequence Ontology Feature Annotation',
-                               'Sequence Ontology',
-                               'sequence',
-                               'sofa.ontology',
+                           (c.name IN (
                                'relationship',
                                'relationship type','Relationship Ontology',
-                               'autocreated')")
+                               'autocreated')
+                            OR c.cv_id = ".$self->sofa_id().")";
+
+    warn "cvterm query: $cvterm_query\n" if DEBUG;
+
+  my $sth = $self->dbh->prepare($cvterm_query)
     or warn "unable to prepare select cvterms";
+
   $sth->execute or $self->throw("unable to select cvterms");
 
 #  my $cvterm_id  = {}; replaced with better-named variables
@@ -180,11 +189,52 @@ sub new {
 
   $self->term2name(\%term2name);
   $self->name2term(\%name2term);
-  $self->dbh($dbh);
   #Recursive Mapping
   $self->recursivMapping($arg{-recursivMapping} ? $arg{-recursivMapping} : 0);
 
   return $self;
+}
+
+=head2 sofa_id
+
+  Title   : sofa_id 
+  Usage   : $obj->sofa_id()
+  Function: get or return the ID to use for SO terms
+  Returns : the cv.cv_id for the SO ontology to use
+  Args    : to return the id, none; to determine the id, 1
+
+=cut
+
+sub sofa_id {
+  my $self = shift;
+  return $self->{'sofa_id'} unless @_;
+
+  my $query = "select cv_id from cv where name in (
+                     'SOFA',
+                     'Sequence Ontology Feature Annotation',
+                     'sofa.ontology')";
+
+  my $sth = $self->dbh->prepare($query);
+  $sth->execute() or $self->throw("trying to find SOFA");
+
+  my $data = $sth->fetchrow_hashref(); 
+  my $sofa_id = $$data{'cv_id'};
+
+  return $self->{'sofa_id'} = $sofa_id if $sofa_id;
+
+  $query = "select cv_id from cv where name in (
+                    'Sequence Ontology',
+                    'sequence')";
+
+  $sth = $self->dbh->prepare($query);
+  $sth->execute() or $self->throw("trying to find SO");
+
+  $data = $sth->fetchrow_hashref();
+  $sofa_id = $$data{'cv_id'};
+
+  return $self->{'sofa_id'} = $sofa_id if $sofa_id;
+
+  $self->throw("unable to find SO or SOFA in the database!");
 }
 
 =head2 recursivMapping

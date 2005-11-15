@@ -37,7 +37,8 @@
 		that allows the formatting of each tag value to be precisely
 		controlled.
         * Changed mainform submission method from POST to GET when MSIE detected,
-                in order to defeat evil "cache has expired" message.
+                in order to defeat evil "cache has expired" message. This hack is
+		under the control of the "msie hack" option, and is false by default.
 
 1.62    Mon Apr  5 09:43:25 EDT 2004
 	* Added request timeout option for very long requests.

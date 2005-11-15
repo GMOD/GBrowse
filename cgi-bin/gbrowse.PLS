@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.9 2005-11-11 22:00:39 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.10 2005-11-15 19:20:40 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -403,7 +403,7 @@ sub main_display {
   }
 
   # print the top of the form, with navigation bar, etc
-  my $msie_hack = 0; # CGI->user_agent =~ /MSIE/;
+  my $msie_hack = CGI->user_agent =~ /MSIE/ && $CONFIG->setting('msie hack');
   my $src    = $CONFIG->source;
   my $action = $src ? url(-absolute=>1)."/$src/" : url(-absolute=>1);
   print $msie_hack ? startform(-name   => 'mainform',

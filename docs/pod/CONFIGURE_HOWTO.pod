@@ -1093,6 +1093,18 @@ should be the same for each one.
 
 The default value is 3 months.
 
+=item msie hack
+
+GBrowse uses HTTP POST to transfer the current page settings to the
+web server. Because of the way that Microsoft Internet Explorer caches
+pages, when users of this browser press the "Back" button, MSIE will
+display an annoying alert that prompts the user to reload the page.
+
+When you set "msie hack" to a true value, Gbrowse will use the GET
+request when it detects MSIE in use. This will fix the "Back" button
+issue, but will put very long URLs in the Location box. It is your
+choice which of these is more annoying to your users.
+
 =back
 
 =head2 B2. The [TRACK DEFAULTS] section

@@ -1,3 +1,6 @@
+1.64	* Revamped state handling to use CGI::Session instead of cookies
+	* Added Russian and Polish language translations
+
 1.63
 	* Added a new "region" panel which is intermediate in size between the overview
 		and the detail panels. Thanks to Barry Healy for coding this. Use the new 

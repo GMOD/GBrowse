@@ -411,3 +411,4 @@ sample_data/yeast_data.gff
 t/01yeast.t
 t/Test.pm
 TODO
+META.yml                                 Module meta-data (added by MakeMaker)

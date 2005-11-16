@@ -159,6 +159,8 @@ END
 
    CONFIGURE   => 'Ustawienia...',
 
+   CONFIGURE_TRACKS   => 'Ustawienia ścieżek...',
+
    EDIT       => 'Edytuj plik...',
 
    DELETE     => 'Usuń plik',
@@ -182,6 +184,8 @@ END
    VARYING     => 'inna',
 
    SET_OPTIONS => 'Ustawienia ścieżek...',
+
+   CLEAR_HIGHLIGHTING => 'Wyłącz wyróżnianie',
 
    UPDATE      => 'Odśwież',
 
@@ -210,6 +214,14 @@ END
    UPDATE_URLS  => 'Odśwież URLs',
 
    PRESETS      => '--Wybierz URL--',
+
+   FEATURES_TO_HIGHLIGHT => 'Wyróżnij adnotacje (adnotacja1 adnotacja2...)',
+
+   REGIONS_TO_HIGHLIGHT => 'Wyróżnij fragmenty sekwencji (sekwencja1:od..do sekwencja2:od..do)',
+
+   FEATURES_TO_HIGHLIGHT_HINT => 'Wskazówka: by wybrać kolor wyróżnienia użyj adnotacja@kolor (np. \'NUT21@lightblue\')',
+
+   REGIONS_TO_HIGHLIGHT_HINT  => 'Wskazówka: by wybrać kolor wyróżnienia użyj sekwencja:od..do@kolor (np. \'Chr1:10000..20000@lightblue\')',
 
    NO_TRACKS    => '*brak*',
 

@@ -1,5 +1,8 @@
 1.64	* Revamped state handling to use CGI::Session instead of cookies
 	* Added Russian and Polish language translations
+        * Fixed chado adaptor bug for older chado databases with both 
+          SO and SOFA loaded
+	* Fixed bug to allow multple 'add' parameters 
 
 1.63
 	* Added a new "region" panel which is intermediate in size between the overview

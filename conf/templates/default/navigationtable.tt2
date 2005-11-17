@@ -1,16 +1,22 @@
 <div class="searchtitle" width="100%">
   <!-- Instructions -->
-  <div style="display: none;" class="ctl_hidden" id="T0000_show" onclick="visibility('T0000','on','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/plus.png">&nbsp;
+  <div class="ctl_hidden" id="instruction_panel_show" onclick="visibility('instruction_panel',1)"
+  [%- PROCESS 'div_inline.tt2' vis_value=instruction_panel_vis vis_default=1 opposite_of_value=1 -%]
+  ><img src="/gbrowse/images/buttons/plus.png">&nbsp;
     <span class="tctl"><b>[% browser.translate('instructions') %] </b></span>
                                                                                                                              
   </div>
                                                                                                                              
-  <div class="ctl_visible" id="T0000_hide" onclick="visibility('T0000','off','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/minus.png">&nbsp;
+  <div class="ctl_visible" id="instruction_panel_hide" onclick="visibility('instruction_panel',0)"
+  [%- PROCESS 'div_inline.tt2' vis_value=instruction_panel_vis vis_default=1 opposite_of_value=0 -%]
+  ><img src="/gbrowse/images/buttons/minus.png">&nbsp;
     <span class="tctl"><b>[% browser.translate('instructions') %] </b></span>
                                                                                                                              
   </div>
                                                                                                                              
-  <div class="el_visible" id="T0000">[% browser.translate('search_instructions','') %]<br/>
+  <div class="el_visible" id="instruction_panel"
+  [%- PROCESS 'div_inline.tt2' vis_value=instruction_panel_vis vis_default=1 opposite_of_value=0 -%]
+  >[% browser.translate('search_instructions','') %]<br/>
     [% browser.translate('navigation_instructions') %]<br/>
     <b>[% browser.translate('examples') %]</b><br/>
     [% FOREACH example = examples %]
@@ -44,15 +50,21 @@
   &nbsp;
 </div>
   <!-- Search -->
-  <div style="display: none;" class="ctl_hidden" id="T0001_show" onclick="visibility('T0001','on','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/plus.png">&nbsp;
+  <div class="ctl_hidden" id="search_panel_show" onclick="visibility('search_panel',1)"
+    [%- PROCESS 'div_inline.tt2' vis_value=search_panel_vis vis_default=1 opposite_of_value=1 -%]
+  ><img src="/gbrowse/images/buttons/plus.png">&nbsp;
     <span class="tctl"><b>[% browser.translate('search') %] </b></span>
   </div>
                                                                                                                            
-  <div class="ctl_visible" id="T0001_hide" onclick="visibility('T0001','off','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/minus.png">&nbsp;
+  <div class="ctl_visible" id="search_panel_hide" onclick="visibility('search_panel',0)"
+    [%- PROCESS 'div_inline.tt2' vis_value=search_panel_vis vis_default=1 opposite_of_value=0 -%]
+  ><img src="/gbrowse/images/buttons/minus.png">&nbsp;
     <span class="tctl"><b>[% browser.translate('search') %] </b></span>
   </div>
                                                                                                                              
-  <div class="el_visible" id="T0001">
+  <div class="el_visible" id="search_panel" 
+    [%- PROCESS 'div_inline.tt2' vis_value=search_panel_vis vis_default=1 opposite_of_value=0 -%]
+  >
     <div class="searchbody" style="height: 4em;">
       <div class="searchbody" style="float: left; width: 50%;">[% PROCESS "searchbox.tt2" %]</div>
       <div class="searchbody" style="margin-left: 50%; width: 50%;">[% IF segment %]<b>[% browser.translate('scroll') %]</b><br/>[% PROCESS "slider.tt2" %][% END %]</div>

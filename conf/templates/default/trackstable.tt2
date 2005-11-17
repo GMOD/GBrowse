@@ -1,14 +1,20 @@
-<div style="display: none;" class="ctl_hidden" id="T0019_show" onclick="visibility('T0019','on','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/plus.png">&nbsp;
+<div class="ctl_hidden" id="tracks_panel_show" onclick="visibility('tracks_panel',1)"
+    [%- PROCESS 'div_inline.tt2' vis_value=tracks_panel_vis vis_default=1 opposite_of_value=1 -%]
+  ><img src="/gbrowse/images/buttons/plus.png">&nbsp;
   <span class="tctl"><b>[% browser.translate('tracks') %] </b></span>
                                                                                                                              
 </div>
                                                                                                                              
-<div class="ctl_visible" id="T0019_hide" onclick="visibility('T0019','off','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/minus.png">&nbsp;
+<div class="ctl_visible" id="tracks_panel_hide" onclick="visibility('tracks_panel',0)"
+    [%- PROCESS 'div_inline.tt2' vis_value=tracks_panel_vis vis_default=1 opposite_of_value=0 -%]
+  ><img src="/gbrowse/images/buttons/minus.png">&nbsp;
   <span class="tctl"><b>[% browser.translate('tracks') %] </b></span>
                                                                                                                              
 </div>
                                                                                                                              
-<div class="el_visible" id="T0019">
+<div class="el_visible" id="tracks_panel"
+    [%- PROCESS 'div_inline.tt2' vis_value=tracks_panel_vis vis_default=1 opposite_of_value=0 -%]
+  >
 <div class="searchbody" id="target3" style="width: 100%;">
   <!-- sorting tracks by browser.options.sk not ported yet -->
   <div style="width: 100%">

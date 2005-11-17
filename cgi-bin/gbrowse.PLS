@@ -51,7 +51,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.131 2005-09-29 18:52:29 mwz444 Exp $
+# $Id: gbrowse.PLS,v 1.132 2005-11-17 21:04:41 mwz444 Exp $
 
 use strict;
 use Bio::Graphics;
@@ -76,7 +76,7 @@ use vars qw($MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $CONF_DIR
 	    $PLUGINS $PRESETS
 	    %OBJECT_TYPES %PLUGIN_NAME2LABEL
-	    $BROWSER
+	    $BROWSER @COLLAPSIBLE_DIV_PARAMS
 );
 
 local $CGI::USE_PARAM_SEMICOLONS = 1;
@@ -114,6 +114,13 @@ $BROWSER = Bio::Graphics::GBrowse_run->new(config     => open_config($CONF_DIR),
 my($source) = get_source();
 $BROWSER->config->source($source);
 #############################
+
+@COLLAPSIBLE_DIV_PARAMS = qw/
+    detail_panel_vis  instruction_panel_vis
+    options_panel_vis overview_panel_vis
+    search_panel_vis  tracks_panel_vis
+    upload_panel_vis
+    /;
 
 main(); #at the bottom
 exit 0;
@@ -164,6 +171,8 @@ sub main_display($$) {
 
   my %seen; #used to keep track of available ranges for display
 
+  my %div_visibility = map {$_ => scalar(param($_))} @COLLAPSIBLE_DIV_PARAMS;
+
   my $param =
   {
     browser        => $BROWSER,
@@ -199,6 +208,7 @@ sub main_display($$) {
     detailpanel           => detail_panel_with_timeout($segment,$feature_files),
     toggle_cookie_name    => 'GBROWSE_TOGGLE',
     toggle_cookie_expires => EXPIRES,
+    %div_visibility,
   };
 
   if($segment){

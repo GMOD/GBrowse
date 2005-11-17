@@ -1,12 +1,18 @@
-<div style="display: none;" class="ctl_hidden" id="T0004_show" onclick="visibility('T0004','on','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/plus.png">&nbsp;
+<div class="ctl_hidden" id="options_panel_show" onclick="visibility('options_panel',1)"
+    [%- PROCESS 'div_inline.tt2' vis_value=options_panel_vis vis_default=1 opposite_of_value=1 -%]
+  ><img src="/gbrowse/images/buttons/plus.png">&nbsp;
   <span class="tctl"><b>[% browser.translate('display_settings') %] </b></span>
 </div>
                                                                                                                              
-<div class="ctl_visible" id="T0004_hide" onclick="visibility('T0004','off','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/minus.png">&nbsp;
+<div class="ctl_visible" id="options_panel_hide" onclick="visibility('options_panel',0)"
+    [%- PROCESS 'div_inline.tt2' vis_value=options_panel_vis vis_default=1 opposite_of_value=0 -%]
+  ><img src="/gbrowse/images/buttons/minus.png">&nbsp;
   <span class="tctl"><b>[% browser.translate('display_settings') %] </b></span>
 </div>
                                                                                                                              
-<div class="el_visible" id="T0004">
+<div class="el_visible" id="options_panel"
+    [%- PROCESS 'div_inline.tt2' vis_value=options_panel_vis vis_default=1 opposite_of_value=0 -%]
+  >
   <div class="searchtitle" style="width: 100%;">
 
     <!-- IMAGE WIDTH -->
@@ -35,13 +41,12 @@
         <input type="radio" name="sk" value="sorted"   [% IF('sorted' == browser.options.sk)   ; 'selected="selected"' ; END %]>[% browser.translate('alphabetic') %]</input>
         <input type="radio" name="sk" value="unsorted" [% IF('unsorted' == browser.options.sk) ; 'selected="selected"' ; END %]>[% browser.translate('varying')    %]</input>
     </div>
-
     <!-- BUTTONS -->
     <div>
         <!-- FIXME do these button names need to be translated? -->
         <input type="submit" name="Set Track Options..." value="[% browser.translate('set_options') %]"/>
         <input type="submit" name="Update Image"         value="[% browser.translate('update') %]"     />
     </div>
-
   </div>
 </div>
+

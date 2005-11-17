@@ -1,16 +1,22 @@
 [% IF segment %]
-  <div style="display: none;" class="ctl_hidden" id="T0002_show" onclick="visibility('T0002','on','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/plus.png">&nbsp;
+  <div class="ctl_hidden" id="overview_panel_show" onclick="visibility('overview_panel',1)"
+    [%- PROCESS 'div_inline.tt2' vis_value=overview_panel_vis vis_default=1 opposite_of_value=1 -%]
+  ><img src="/gbrowse/images/buttons/plus.png">&nbsp;
     <span class="tctl"><b>[% browser.translate('overview') %] </b></span>
                                                                                                                              
   </div>
                                                                                                                              
-  <div class="ctl_visible" id="T0002_hide" onclick="visibility('T0002','off','[% toggle_cookie_name %]','[% toggle_cookie_expires %]')"><img src="/gbrowse/images/buttons/minus.png">&nbsp;
+  <div class="ctl_visible" id="overview_panel_hide" onclick="visibility('overview_panel',0)"
+    [%- PROCESS 'div_inline.tt2' vis_value=overview_panel_vis vis_default=1 opposite_of_value=0 -%]
+  ><img src="/gbrowse/images/buttons/minus.png">&nbsp;
     <span class="tctl"><b>[% browser.translate('overview') %] </b></span>
                                                                                                                              
   </div>
                                                                                                                              
   <center>
-  <div class="el_visible" id="T0002">
+  <div class="el_visible" id="overview_panel" 
+    [%- PROCESS 'div_inline.tt2' vis_value=overview_panel_vis vis_default=1 opposite_of_value=0 -%]
+  >
     [% ii = browser.config.overview( segment , browser.options.features ) ; image = ii.0 ; length = ii.1 %]
     [% ii = image.getBounds ; width = ii.0 ; length = ii.1 %]
     [% url = browser.config.generate_image(image) %]

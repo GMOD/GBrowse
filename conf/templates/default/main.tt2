@@ -36,6 +36,9 @@
 </div>
 
 <form name="mainform" action="[% action %]" method="POST">
+  <!-- Menu Visibility items -->
+  [% PROCESS "savevisibility.tt2" %]
+
   <!-- navigation table -->
   [% PROCESS "navigationtable.tt2" %]
 
@@ -54,6 +57,7 @@
     [% PROCESS "detailpanel.tt2"   %]
     </div>
   [% END %]
+  <input type="submit" name="Update Image" value="[% browser.translate('update') %]"/><br>
 
   [% htmlfrag3 %]
 

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.11 2005-11-18 15:56:15 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.12 2005-11-18 18:59:03 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -173,12 +173,21 @@ $CONFIG = open_config($CONF_DIR);  # open_config() is exported from Util.pm
 # Recover a hashref which contains page-specific settings
 # (this involves reading a cookie or possibly a database record
 # in some future implementation)
+
 my ($page_settings,$session) = page_settings($CONFIG); # WARNING: this may cause a redirect and exit
+
 my $source                   = $CONFIG->source;
 my $cookie                   = CGI::Cookie->new(-name    => $CGI::Session::NAME,
 						-value   => $session->id,
 						-path    => url(-absolute=>1),
 						-expires => $CONFIG->remember_source_time);
+
+my $cookies;
+if (param('reset')) {
+  $cookies = reset_cookies($page_settings);
+} else {
+  $cookies = [$cookie];
+}
 
 ### PLUGINS #################################################################
 my @plugin_path = "$CONF_DIR/plugins";
@@ -258,8 +267,6 @@ elsif ($plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper' &&
 		   $page_settings) && exit 0
 }
 
-
-
 ###############################################################################################
 ## HANDLING FILE DOWNLOADS ######################################################################
 
@@ -288,12 +295,6 @@ warn "ADJUSTED TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 handle_uploads($page_settings) || exit 0 unless $CONFIG->section_setting('upload_tracks') eq 'off';
 
 ## UPDATING THE PERSISTENT SETTINGS##############################################################
-my $cookies;
-if (param('reset')) {
-  $cookies = reset_cookies($page_settings);
-} else {
-  $cookies = [$cookie];
-}
 
 print_header(-cookie => $cookies,
 	     -charset=>$CONFIG->tr('CHARSET'),
@@ -708,7 +709,9 @@ sub auto_open {
 
 sub reset_cookies {
   my @cookies;
+  warn "in reset_cookies()";
   foreach my $c (CGI::cookie()) {
+    warn "got a cookie $c";
     push @cookies,CGI::Cookie->new(-name => $c,
 				   -path => url(-path_info=>1,-absolute=>1),
 				   -expires => '-1y'
@@ -821,7 +824,7 @@ sub adjust_settings {
 
   elsif (param('reset')) {
     %$settings = ();
-    Delete_all();
+    #    Delete_all();
     default_settings($settings);
   }
 
@@ -1265,7 +1268,8 @@ sub settings_table {
 		b(
 		  checkbox(-name=>'grid',
 			   -label=>$CONFIG->tr('SHOW_GRID'),
-			   -checked=>1)
+			   -override=>1,
+			   -checked=>$settings->{grid}||0)
 		 )
 	       ),
 	    ),

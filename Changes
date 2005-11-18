@@ -3,6 +3,8 @@
         * Fixed chado adaptor bug for older chado databases with both 
           SO and SOFA loaded
 	* Fixed bug to allow multple 'add' parameters 
+	* Added an option to turn on and off the background grid.
+	* Fixed extraneous redirect when calling gbrowse_img.
 
 1.63
 	* Added a new "region" panel which is intermediate in size between the overview

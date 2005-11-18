@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.1 2005-11-07 16:44:19 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.2 2005-11-18 15:56:16 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1090,6 +1090,7 @@ sub image_and_map {
 
    my @pass_thru_args = map {/^-/ ? ($_=>$config{$_}) : ()} keys %config;
   my @argv = (
+	      -grid      => 1,
 	      @pass_thru_args,
 	      -start     => $seg_start,
 	      -end       => $seg_stop,
@@ -1097,7 +1098,6 @@ sub image_and_map {
 	      -key_color => $self->setting('key bgcolor')     || 'moccasin',
 	      -bgcolor   => $self->setting('detail bgcolor')  || 'white',
 	      -width     => $width,
-	      -grid      => 1,
 	      -key_style    => $keystyle || $conf->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
 	      -empty_tracks => $conf->setting(general=>'empty_tracks') 	        || DEFAULT_EMPTYTRACKS,
 	      -pad_top      => $title ? $image_class->gdMediumBoldFont->height : 0,

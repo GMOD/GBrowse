@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.10 2005-11-15 19:20:40 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.11 2005-11-18 15:56:15 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -404,7 +404,7 @@ sub main_display {
 
   # print the top of the form, with navigation bar, etc
   my $msie_hack = CGI->user_agent =~ /MSIE/ && $CONFIG->setting('msie hack');
-  my $src    = $CONFIG->source;
+  my $src       = $CONFIG->source;
   my $action = $src ? url(-absolute=>1)."/$src/" : url(-absolute=>1);
   print $msie_hack ? startform(-name   => 'mainform',
 			       -action => $action,
@@ -561,6 +561,7 @@ sub detail_panel {
                                        background    => $CONFIG->setting('background') || '',
 				       hilite_callback => $h_callback || undef,
 				       -add_category_labels => $CONFIG->setting('show track categories') || undef,
+				       -grid         => $page_settings->{grid} || 0,
 				      );
     $cell .= $img;
   }
@@ -641,6 +642,7 @@ sub default_settings {
   $settings->{ins}     = 1;
   $settings->{head}    = 1;
   $settings->{ks}      = 'between';
+  $settings->{grid}    = 1;
   $settings->{sk}      = $CONFIG->setting("default varying") ? "unsorted" : "sorted";
   set_default_tracks($settings);
 }
@@ -719,11 +721,14 @@ sub reset_cookies {
 sub adjust_settings {
   my $settings = shift;
 
+  $settings->{grid} = 1 unless exists $settings->{grid};  # to upgrade from older settings
+
   if (param('width') || param('label')) { # just looking to see if the settings form was submitted
     my @selected = split_labels (param('label'));
     $settings->{features}{$_}{visible} = 0 foreach keys %{$settings->{features}};
     $settings->{features}{$_}{visible} = 1 foreach @selected;
     $settings->{flip}                  = param('flip');
+    $settings->{grid}                  = param('grid');
   }
 
   if (my @selected = split_labels(param('enable'))) {
@@ -1244,7 +1249,7 @@ sub settings_table {
 			      ),
 		    ),
 	       ),
-	     td({-colspan=>2},
+	     td(
 		span({-title=>$CONFIG->tr('REGIONS_TO_HIGHLIGHT_HINT')},
 		     b(
 		       $CONFIG->tr('REGIONS_TO_HIGHLIGHT')
@@ -1255,6 +1260,13 @@ sub settings_table {
 			       -override=>1,
 			      ),
 		    ),
+	       ),
+	     td(
+		b(
+		  checkbox(-name=>'grid',
+			   -label=>$CONFIG->tr('SHOW_GRID'),
+			   -checked=>1)
+		 )
 	       ),
 	    ),
 	  TR(td({-colspan=>4,
@@ -2477,6 +2489,8 @@ sub _build_image_page {
   my $source = $CONFIG->source;
   my $id     = $settings->{id};
   my $flip   = $settings->{flip} || param('flip') || 0;
+  my $keystyle = $settings->{ks};
+  my $grid     = $settings->{grid} || 0;
   my $url = url(-base=>1);
   $url   .= url(-absolute=>1);
   $url    = dirname($url) . "/gbrowse_img/".escape($source);
@@ -2489,10 +2503,12 @@ sub _build_image_page {
 			       grep {
 				 $settings->{features}{$_}{options}
 			       } @$tracks;
-  my $img_url = "$url?name=$name;type=$type;width=$width;id=$id";
-  $img_url   .= ";flip=$flip"       if $flip;
-  $img_url   .= ";options=$options" if $options;
-  $img_url   .= ";format=$format"   if $format;
+  my $img_url = "$url/?name=$name;type=$type;width=$width;id=$id";
+  $img_url   .= ";flip=$flip"         if $flip;
+  $img_url   .= ";options=$options"   if $options;
+  $img_url   .= ";format=$format"     if $format;
+  $img_url   .= ";keystyle=$keystyle" if $keystyle;
+  $img_url   .= ";grid=$grid";
   add_hilites($settings,\$img_url);
   print $CONFIG->tr($help,$img_url,$img_url);
 }

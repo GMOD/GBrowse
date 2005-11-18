@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8.2.4 2005-11-11 22:00:39 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.5 2005-11-18 15:56:15 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -96,7 +96,7 @@ $src    =~ s!/+$!!;  # get rid of trailing / from path_info()
 
 # Migrate from 1.56 way of specifying source to 1.57 way
 # This may cause a redirect and exit 0 at this point!
-redirect_legacy_url($src,'add','abs','list','style','options','type','width');
+redirect_legacy_url($src,'add','abs','list','style','options','type','width','grid','keystyle');
 
 if ($src) {
   unless ($CONFIG->source($src)) {
@@ -137,12 +137,15 @@ my $width           = param('width')||param('w');           # width of the image
 my $abs             = param('abs')  || param('b');          # absolute rather than relative coordinates
 my $image_class     = param('image_class') || param('format') || 'GD';        # image type
 my $keystyle        = param('keystyle')    || param('k') || 'between';
+my $grid            = param('grid')        || param('g');
 my $embed           = param('embed')|| param('e');          # embedded in a frame
 my $flip            = param('flip') || param('f');          # right<->left
 my $hitkey          = param('key');			    # key for hit track
 my $id              = param('id');
 my @h_region        = param('h_region');
 my @h_feat          = param('h_feat');
+
+$grid = 1 unless defined $grid;  # default for backward compatibility
 
 my $db              = open_database($CONFIG);
 
@@ -212,7 +215,8 @@ else {  # detailed view
 			     flip          => $flip,
 			     $feature_hilighting ? (hilite_callback => $feature_hilighting) : (),
 			     $region_hilighting  ? (postgrid        => $region_hilighting)  : (),
-                             -truecolor    => $CONFIG->setting('truecolor'),
+                             -truecolor    => $CONFIG->setting('truecolor') || 0,
+			     -grid         => $grid,
 			    );
   $detailed_view++;
 }
@@ -722,6 +726,7 @@ lengths.
 <tr> <td>keystyle</td><td>k</td>   <td>where to place the image key</td></tr>
 <tr> <td>overview</td><td>&nbsp;</td>   <td>force an overview-style display</td></tr>
 <tr> <td>flip</td>    <td>f</td>   <td>flip image left to right</td></tr>
+<tr> <td>grid</td>    <td>g</td>   <td>turn grid on (1) or off (0)</td></tr>
 <tr> <td>embed</td>   <td>&nbsp;</td>   <td>generate full HTML for image and imagemap for use in an embedded frame</td></tr>
 <tr> <td>format</td>  <td>&nbsp;</td>   <td>format for the image (use "SVG" for scaleable vector graphics)</td></tr>
 <tr> <td>list</td>    <td>&nbsp;</td>    <td>get certain types of configuration information</td></tr>

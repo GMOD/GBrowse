@@ -184,6 +184,8 @@ END
 
    VARYING     => 'Varying',
 
+   SHOW_GRID    => 'Show grid',
+
    SET_OPTIONS => 'Configure tracks...',
 
    CLEAR_HIGHLIGHTING => 'Clear highlighting',

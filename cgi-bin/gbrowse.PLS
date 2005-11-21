@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.12 2005-11-18 18:59:03 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.13 2005-11-21 16:48:17 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2203,12 +2203,14 @@ sub bookmark_link {
 
 sub image_link {
   my $settings = shift;
-  return "?help=link_image;flip=".($settings->{flip}||0);
+  my $rand     = int(rand(100000));
+  return "?help=link_image;rand=$rand;flip=".($settings->{flip}||0);
 }
 
 sub svg_link {
   my $settings = shift;
-  return "?help=svg_image;flip=".($settings->{flip}||0);
+  my $rand     = int(rand(100000));
+  return "?help=svg_image;rand=$rand;flip=".($settings->{flip}||0);
 }
 
 # reorder @labels based on settings in the 'track.XXX' parameters
@@ -2507,7 +2509,7 @@ sub _build_image_page {
 			       grep {
 				 $settings->{features}{$_}{options}
 			       } @$tracks;
-  my $img_url = "$url/?name=$name;type=$type;width=$width;id=$id";
+  my $img_url = "$url/?name=$name;type=$type;width=$width;id=$id;absolute=1";
   $img_url   .= ";flip=$flip"         if $flip;
   $img_url   .= ";options=$options"   if $options;
   $img_url   .= ";format=$format"     if $format;

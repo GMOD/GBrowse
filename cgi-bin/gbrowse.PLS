@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.13 2005-11-21 16:48:17 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.14 2005-11-23 16:03:36 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1574,10 +1574,13 @@ sub features2segments {
 sub resize {
   my $segment_ref = shift;
   my $s = $$segment_ref;
-  return unless $s->length < MIN_SEG_SIZE;
+  my $divider = $CONFIG->setting('unit_divider') || 1;
+  my $min_seg_size  = $CONFIG->setting('min seg size')  || MIN_SEG_SIZE/$divider;
+  my $tiny_seg_size = $CONFIG->setting('tiny seg size') || TINY_SEG_SIZE/$divider;
+  return unless $s->length < MIN_SEG_SIZE/$divider;
 
   # resize
-  my $resize = $s->length <= TINY_SEG_SIZE ? EXPAND_SEG_SIZE : MIN_SEG_SIZE;
+  my $resize = $s->length <= TINY_SEG_SIZE/$divider ? EXPAND_SEG_SIZE/$divider : MIN_SEG_SIZE/$divider;
   error($CONFIG->tr('Small_interval',$resize)); # error message
 
   my $middle = int(($s->start + $s->end)/2);

@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8.2.6 2005-11-18 18:59:04 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.7 2005-11-29 02:49:25 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -134,7 +134,8 @@ my @add_style       = (param('style'),  param('s'));        # overlay features s
 my @options         = (param('options'),param('o'));        # various track options, such as bumping
 my $show_overview   = param('overview');                    # force an overview-style display
 my $width           = param('width')||param('w');           # width of the image in pixels
-my $abs             = param('abs')  || param('b');          # absolute rather than relative coordinates
+my $abs             = param('abs');                         # absolute rather than relative coordinates
+$abs                = param('b') unless defined $abs;
 my $image_class     = param('image_class') || param('format') || 'GD';        # image type
 my $keystyle        = param('keystyle')    || param('k') || 'between';
 my $grid            = param('grid');
@@ -144,7 +145,9 @@ my $hitkey          = param('key');			    # key for hit track
 my $id              = param('id');
 my @h_region        = param('h_region');
 my @h_feat          = param('h_feat');
+
 $grid = 1 unless defined $grid;  # default for backward compatibility
+$abs = 1  unless defined $abs;
 
 my $db              = open_database($CONFIG);
 
@@ -313,11 +316,13 @@ sub get_options {
 sub segments {
   my ($CONFIG,$abs,$landmarks) = @_;
   my $db       = open_database($CONFIG);
+  my $was = $db->absolute($abs) if $db->can('absolute');
   my @segments = get_segments($db,@$landmarks);
   @segments      or message("No matching regions found.");
   if ($abs) {
     $_->absolute(1) foreach @segments;
   }
+  $db->absolute($was) if $db->can('absolute');
   @segments;
 }
 

@@ -682,13 +682,20 @@ base pairs is equal to one Morgan, 5010 would be specified for the unit_divider.
 Note that if unit_divider is specified, max segment, default segment and
 and zoom levels will all be interpreted in terms of the specified units.
 
-=item * max segment
+=item * max segment, min segment
 
-The max segment option sets an upper bound on the maximum size DNA
-segment that will be displayed on the detailed view.  Its value is
-in base pairs.  Above this limit, the user will be prompted to
-select a smaller region on the birds-eye view.  You will probably
-want to adjust this.
+These options control the size of segments that will be shown in the
+detailed view.
+
+The max segment option sets an upper bound on the maximum size segment
+that will be displayed on the detailed view.  Its value is in the
+selected units.  Above this limit, the user will be prompted to select
+a smaller region on the birds-eye view.  The default is 1,000,000 base
+pairs.
+
+If the user tries to view a segment smaller than the min segment
+option, then the segment will be resized to be this size. The default
+is 20 bp.
 
 =item * default segment
 

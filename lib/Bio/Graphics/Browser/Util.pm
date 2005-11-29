@@ -189,9 +189,8 @@ sub open_database {
     eval {$DB{$source}->default_class($refclass)};
   }
 
-  if ($DB{$source}->can('strict_bounds_checking')) {
-    $DB{$source}->strict_bounds_checking(1);
-  }
+  $DB{$source}->strict_bounds_checking(1) if $DB{$source}->can('strict_bounds_checking');
+  $DB{$source}->absolute(1)               if $DB{$source}->can('absolute');
 
   return $DB{$source};
 }

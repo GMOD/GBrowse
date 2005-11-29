@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.14 2005-11-23 16:03:36 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.15 2005-11-29 02:49:25 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -285,6 +285,7 @@ warn "TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 
 load_plugin_annotators($page_settings);
 warn "ANNOTATOR TRACKS = @{$page_settings->{tracks}}" if DEBUG;
+
 adjust_tracks($page_settings);
 auto_open($page_settings,$features) if @$features;
 
@@ -322,8 +323,8 @@ if ($divisor == 1) {
   }
 }
 
-
 print_top($title,param('reset'));
+
 
 ## HANDLE TRACK SETTINGS   #######################################################
 if ((param('set_options') || param($CONFIG->tr('Set_options')) || param('revert'))
@@ -441,7 +442,10 @@ sub main_display {
 
     if ($page_settings->{region_size}) {
       my ($region_seg_start, $region_seg_end) = get_regionview_seg($page_settings,$segment->start, $segment->end);
-      my $region_segment = open_database()->segment($segment->seq_id, $region_seg_start, $region_seg_end);
+      my $region_segment = open_database()->segment(-name=>$segment->seq_id,
+						    -start=>$region_seg_start,
+						    -end=>$region_seg_end,
+						   -absolute=>1);
       print region_panel($region_segment,$segment,$page_settings,$feature_files);
     }
 
@@ -670,6 +674,7 @@ sub set_default_tracks {
 # without invalidating users' old settings.
 sub adjust_tracks {
   my $settings = shift;
+
   my %configured_labels = map {$_=>1} $CONFIG->labels;
 
   # tracks added to the config file recently that are not contained in
@@ -702,7 +707,8 @@ sub auto_open {
     my $desired_label = $CONFIG->feature2label($feature) or next;
     if (exists $tracks->{$desired_label}) {
       $tracks->{$desired_label}{visible} = 1;
-      $settings->{h_feat}{$feature->display_name} = 'yellow';
+      $settings->{h_feat} = {};
+      $settings->{h_feat}{$feature->display_name} = 'yellow' unless param('h_feat') && param('h_feat') eq '_clear_';
     }
   }
 }
@@ -772,7 +778,7 @@ sub adjust_settings {
   if (my @features = shellwords(param('h_feat'))) {
     $settings->{h_feat} = {};
     for my $hilight (@features) {
-      next if $hilight eq '_clear_';
+      last if $hilight eq '_clear_';
       my ($featname,$color) = split '@',$hilight;
       $settings->{h_feat}{$featname} = $color || 'yellow';
     }
@@ -781,13 +787,11 @@ sub adjust_settings {
   if (my @regions = shellwords(param('h_region'))) {
     $settings->{h_region} = [];
     foreach (@regions) {
-      next if $_ eq '_clear_';
+      last if $_ eq '_clear_';
       $_ = "$settings->{ref}:$_" if /^\d+/; # add reference if not there
       push @{$settings->{h_region}},$_;
     }
   }
-  Delete('h_feat')   if param('h_feat')   eq '_clear_';
-  Delete('h_region') if param('h_region') eq '_clear_';
 
   if ($CONFIG->setting('region segment')) {
     $settings->{region_size} = param('region_size') if defined param('region_size');
@@ -922,7 +926,7 @@ sub navigation_table {
 sub make_hilite_callback {
   my $settings = shift;
   my @hiliters = grep {$_->type eq 'highlighter'} $PLUGINS->plugins;
-  return unless @hiliters or $settings->{h_feat};
+  return unless @hiliters or ($settings->{h_feat} && %{$settings->{h_feat}});
   return sub {
     my $feature = shift;
     my $color;
@@ -1432,7 +1436,9 @@ sub zoomnav {
   my $overview_x     = param('overview.x');
   my $regionview_x     = param('regionview.x');
   my $regionview_size  = $settings->{region_size};
-  my $segment_length   = param('seg_length');
+  my $seg_min          = param('seg_min');
+  my $seg_max          = param('seg_max');
+  my $segment_length   = $seg_max - $seg_min + 1 if defined $seg_min && defined $seg_max;
 
   my $zoomlevel = unit_to_value($1) if $zoom && $zoom =~ /((?:out|in) .+)\.[xy]/;
   my $navlevel  = unit_to_value($1) if $nav  && $nav  =~ /((?:left|right) .+)/;
@@ -1459,7 +1465,7 @@ sub zoomnav {
 
     # adjust for padding in pre 1.6 versions of bioperl
     $overview_width -= ($padl+$padr) unless Bio::Graphics::Panel->can('auto_pad');
-    my $click_position = $segment_length * ($overview_x-$padl)/$overview_width;
+    my $click_position = $seg_min + $segment_length * ($overview_x-$padl)/$overview_width;
 
     $span = $DEFAULT_SEGMENT if $span > $MAX_SEGMENT;
     $start = int($click_position - $span/2);
@@ -1494,15 +1500,15 @@ sub zoomnav {
   warn "after adjusting for navlevel, start = $start, stop = $stop, span=$span" if DEBUG;
 
   # to prevent from going off left end
-  if ($start < 1) {
-    warn "adjusting left because $start < 1" if DEBUG;
-    ($start,$stop) = (1,$stop-$start+1);
+  if (defined $seg_min && $start < $seg_min) {
+    warn "adjusting left because $start < $seg_min" if DEBUG;
+    ($start,$stop) = ($seg_min,$seg_min+$stop-$start);
   }
 
   # to prevent from going off right end
-  if (defined $segment_length && $stop > $segment_length) {
-    warn "adjusting right because $stop > $segment_length" if DEBUG;
-    ($start,$stop) = ($segment_length-($stop-$start),$segment_length);
+  if (defined $seg_max && $stop > $seg_max) {
+    warn "adjusting right because $stop > $seg_max" if DEBUG;
+    ($start,$stop) = ($seg_max-($stop-$start),$seg_max);
   }
 
   # to prevent divide-by-zero errors when zoomed down to a region < 2 bp
@@ -1574,20 +1580,20 @@ sub features2segments {
 sub resize {
   my $segment_ref = shift;
   my $s = $$segment_ref;
-  my $divider = $CONFIG->setting('unit_divider') || 1;
-  my $min_seg_size  = $CONFIG->setting('min seg size')  || MIN_SEG_SIZE/$divider;
-  my $tiny_seg_size = $CONFIG->setting('tiny seg size') || TINY_SEG_SIZE/$divider;
-  return unless $s->length < MIN_SEG_SIZE/$divider;
+  my $divider       = $CONFIG->setting('unit_divider') || 1;
+  my $min_seg_size  = $CONFIG->setting('min segment')  || MIN_SEG_SIZE/$divider;
+  return unless $s->length < $min_seg_size;
 
   # resize
-  my $resize = $s->length <= TINY_SEG_SIZE/$divider ? EXPAND_SEG_SIZE/$divider : MIN_SEG_SIZE/$divider;
-  error($CONFIG->tr('Small_interval',$resize)); # error message
+  my $resize = $min_seg_size;
+  #  error($CONFIG->tr('Small_interval',$resize)); # error message
 
   my $middle = int(($s->start + $s->end)/2);
   my $new_seg = $s->factory->segment(-name  => $s->seq_id,
 				     -start => $middle - int($resize/2),
-
-				     -end   => $middle + int($resize/2)-1);
+				     -end   => $middle + int($resize/2),
+				     -absolute => 1
+				    );
   $$segment_ref = $new_seg;
 }
 
@@ -1838,7 +1844,8 @@ sub overview {
 		      -height=>$height,
 		      -border=>0,
 		      -align=>'middle')
-    .hidden(-name=>'seg_length',-value=>$length,-override=>1);
+    .hidden(-name=>'seg_min',-value=>$whole_segment->start,-override=>1)
+    .hidden(-name=>'seg_max',-value=>$whole_segment->stop,-override=>1);
 }
 
 sub regionview {
@@ -1853,8 +1860,7 @@ sub regionview {
  		      -width=>$width,
  		      -height=>$height,
  		      -border=>0,
- 		      -align=>'middle')
-    .hidden(-name=>'seg_length',-value=>$length,-override=>1);
+ 		      -align=>'middle');
 }
 
 
@@ -2206,14 +2212,12 @@ sub bookmark_link {
 
 sub image_link {
   my $settings = shift;
-  my $rand     = int(rand(100000));
-  return "?help=link_image;rand=$rand;flip=".($settings->{flip}||0);
+  return "?help=link_image;flip=".($settings->{flip}||0);
 }
 
 sub svg_link {
   my $settings = shift;
-  my $rand     = int(rand(100000));
-  return "?help=svg_image;rand=$rand;flip=".($settings->{flip}||0);
+  return "?help=svg_image;flip=".($settings->{flip}||0);
 }
 
 # reorder @labels based on settings in the 'track.XXX' parameters
@@ -2512,7 +2516,7 @@ sub _build_image_page {
 			       grep {
 				 $settings->{features}{$_}{options}
 			       } @$tracks;
-  my $img_url = "$url/?name=$name;type=$type;width=$width;id=$id;absolute=1";
+  my $img_url = "$url/?name=$name;type=$type;width=$width;id=$id";
   $img_url   .= ";flip=$flip"         if $flip;
   $img_url   .= ";options=$options"   if $options;
   $img_url   .= ";format=$format"     if $format;

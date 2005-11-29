@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.2 2005-11-18 15:56:16 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.3 2005-11-29 02:49:25 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1706,7 +1706,7 @@ sub name2segments {
 
   my (@segments,$class,$start,$stop);
   if ($name =~ /([\w._\/-]+):(-?[-e\d.]+),(-?[-e\d.]+)$/ or
-      $name =~ /([\w._\/-]+):(-?[-e\d,.]+)(?:-|\.\.)(-?[-e\d,.]+)$/) {
+      $name =~ /([\w._\/-]+):(-?[-e\d,.]+?)(?:-|\.\.)(-?[-e\d,.]+)$/) {
     $name  = $1;
     $start = $2;
     $stop  = $3;
@@ -1772,6 +1772,7 @@ sub _feature_get {
   push @argv,(-class => $class) if defined $class;
   push @argv,(-start => $start) if defined $start;
   push @argv,(-end   => $stop)  if defined $stop;
+  push @argv,(-absolute=>1)     if $class eq $refclass;
   warn "\@argv = @argv" if DEBUG;
   my @segments;
   if ($segments_have_priority) {

@@ -53,11 +53,10 @@ sub start_html {
 
   $args{-noscript}     = $noscript;
   $args{-onLoad}       = "startPage()";
-  $RESET   = $args{-reset_toggle};
+  $RESET               = $args{-reset_toggle};
 
   $image_dir           = $args{-gbrowse_images} if defined $args{-gbrowse_images};
   $js_dir              = $args{-gbrowse_js}     if defined $args{-gbrowse_js};
-
 
   # earlier versions of CGI.pm don't support multiple -style and -script args.
   if ($CGI::VERSION >= 3.05) {
@@ -120,7 +119,7 @@ sub toggle_section {
   my @result = $config{nodiv} ? ($show_ctl.$hide_ctl,$content) : div(($show_ctl.$hide_ctl,$content));
   my $val = substr($id,1);
   $VECTOR   |= (1  << $val)  if $config{on};
-  $VECTOR   &= ~(1 << $val) if !$config{on};
+  $VECTOR   &= ~(1 << $val)  if !$config{on};
   return wantarray ? @result : "@result";
 }
 

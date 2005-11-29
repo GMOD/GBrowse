@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.15 2005-11-29 02:49:25 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.16 2005-11-29 19:12:34 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -371,7 +371,7 @@ exit 0;
 
 sub main_display {
   my ($segments,$features,$page_settings) = @_;
-  my ($segment);
+  my ($segment,$whole_segment);
 
   # first of all, if there are no segments, then try a keyword search and store the results
   if (param() && (@$segments == 0) && (my $n = $page_settings->{name})) {
@@ -381,6 +381,12 @@ sub main_display {
   # if there's a single segment, then print a message and store the segment into a scalar
   elsif (@$segments == 1) {
     $segment = $segments->[0];
+
+    $whole_segment = whole_segment($segment);
+
+    # truncate the segment to fit within min and max segment boundaries
+    resize(\$segment,$whole_segment);
+
     # $segment = truncated_segment($segment) if $segment->length < 4;
     my $divider = $CONFIG->setting(general=>'unit_divider') || 1;
     my $seg_start = $segment->start;
@@ -389,6 +395,7 @@ sub main_display {
        $seg_start = unit_label($seg_start);
        $seg_end   = unit_label($seg_end);
     }
+
     print h2($CONFIG->tr('SHOWING_FROM_TO',
 		       unit_label($segment->length),
 		       $segment->seq_id,
@@ -400,7 +407,8 @@ sub main_display {
   if ($segment && $segment->stop < $segment->start) {
       $segment = $segment->factory->segment(-name  => $segment->seq_id,
 					    -start => $segment->stop,
-					    -stop  => $segment->start);
+					    -stop  => $segment->start,
+					    -absolute => 1);
       $page_settings->{flip} = 1;
   }
 
@@ -438,14 +446,14 @@ sub main_display {
 				        $segment->start,$segment->end)
       unless $segment->can('features');
 
-    print overview_panel($segment,$page_settings,$feature_files);
+    print overview_panel($whole_segment,$segment,$page_settings,$feature_files);
 
     if ($page_settings->{region_size}) {
       my ($region_seg_start, $region_seg_end) = get_regionview_seg($page_settings,$segment->start, $segment->end);
       my $region_segment = open_database()->segment(-name=>$segment->seq_id,
 						    -start=>$region_seg_start,
 						    -end=>$region_seg_end,
-						   -absolute=>1);
+						    -absolute=>1);
       print region_panel($region_segment,$segment,$page_settings,$feature_files);
     }
 
@@ -489,9 +497,9 @@ sub main_display {
 }
 
 sub overview_panel {
-  my ($segment,$page_settings,$feature_files) = @_;
+  my ($whole_segment,$segment,$page_settings,$feature_files) = @_;
   return '' if $CONFIG->section_setting('overview') eq 'hide';
-  my $image = overview($segment,$page_settings,$feature_files);
+  my $image = overview($whole_segment,$segment,$page_settings,$feature_files);
   return toggle('Overview',
 		table({-border=>0,-width=>'100%'},
 		      TR({-class=>'databody'},
@@ -540,10 +548,6 @@ sub detail_panel {
   my $cell = '';
 
   if ($segment->length <= $MAX_SEGMENT) {
-
-    # this is invoked to force small segments to be larger than the minimum size that can
-    # easily be displayed.  Avoids zooming into 1 bp features like SNPs.
-    resize(\$segment);
 
     $CONFIG->width($page_settings->{width});
     my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} && !/:(overview|region)$/ }
@@ -715,13 +719,14 @@ sub auto_open {
 
 sub reset_cookies {
   my @cookies;
-  warn "in reset_cookies()";
   foreach my $c (CGI::cookie()) {
-    warn "got a cookie $c";
     push @cookies,CGI::Cookie->new(-name => $c,
 				   -path => url(-path_info=>1,-absolute=>1),
 				   -expires => '-1y'
 				  );
+    push @cookies,CGI::Cookie->new(-name=>'CGI__Toggle',
+				   -path => '/',         # fix a bug introduced by transitional versions of software
+				   -expires => '-1y');
   }
   return \@cookies;
 }
@@ -749,11 +754,12 @@ sub adjust_settings {
   }
 
   $settings->{width}  = param('width')   if param('width');
+  my $divider  = $CONFIG->setting('unit_divider') || 1;
 
   local $^W = 0;  # kill uninitialized variable warning
   if ( (request_method() eq 'GET' && param('ref'))
        ||
-       (param('span') && $settings->{stop}-$settings->{start}+1 != param('span'))
+       (param('span') && $divider*$settings->{stop}-$divider*$settings->{start}+1 != param('span'))
        ||
        grep {/left|right|zoom|nav|regionview\.[xy]|overview\.[xy]/} param()
      )
@@ -1033,18 +1039,18 @@ sub unit_label {
   my $value = shift;
   my $unit     = $CONFIG->setting('units')        || 'bp';
   my $divider  = $CONFIG->setting('unit_divider') || 1;
-  return 0 if ($value == 1 and $divider > 1);
   $value /= $divider;
+  my $abs = abs($value);
 
   my $label;
-  $label = $value >= 1e9  ? sprintf("%.4g G%s",$value/1e9,$unit)
-         : $value >= 1e6  ? sprintf("%.4g M%s",$value/1e6,$unit)
-         : $value >= 1e3  ? sprintf("%.4g k%s",$value/1e3,$unit)
-	 : $value >= 1    ? sprintf("%.4g %s", $value,    $unit)
-	 : $value >= 1e-2 ? sprintf("%.4g c%s",$value*100,$unit)
-	 : $value >= 1e-3 ? sprintf("%.4g m%s",$value*1e3,$unit)
-	 : $value >= 1e-6 ? sprintf("%.4g u%s",$value*1e6,$unit)
-	 : $value >= 1e-9 ? sprintf("%.4g n%s",$value*1e9,$unit)
+  $label = $abs >= 1e9  ? sprintf("%.4g G%s",$value/1e9,$unit)
+         : $abs >= 1e6  ? sprintf("%.4g M%s",$value/1e6,$unit)
+         : $abs >= 1e3  ? sprintf("%.4g k%s",$value/1e3,$unit)
+	 : $abs >= 1    ? sprintf("%.4g %s", $value,    $unit)
+	 : $abs >= 1e-2 ? sprintf("%.4g c%s",$value*100,$unit)
+	 : $abs >= 1e-3 ? sprintf("%.4g m%s",$value*1e3,$unit)
+	 : $abs >= 1e-6 ? sprintf("%.4g u%s",$value*1e6,$unit)
+	 : $abs >= 1e-9 ? sprintf("%.4g n%s",$value*1e9,$unit)
          : sprintf("%.4g p%s",$value*1e12,$unit);
   return $label;
 }
@@ -1424,6 +1430,7 @@ sub zoomnav {
   my $start = $settings->{start};
   my $stop  = $settings->{stop};
   my $span  = $stop - $start + 1;
+  my $divisor = $CONFIG->setting(general=>'unit_divider') || 1;
 
   warn "before adjusting, start = $start, stop = $stop, span=$span" if DEBUG;
 
@@ -1447,8 +1454,9 @@ sub zoomnav {
     warn "zoom = $zoom, zoomlevel = $zoomlevel" if DEBUG;
     my $center	    = int($span / 2) + $start;
     my $range	    = int($span * (1-$zoomlevel)/2);
-    $range          = 2 if $range < 2;
+    $range          = 1 if $range < 1;
     ($start, $stop) = ($center - $range , $center + $range - 1);
+    warn "start = $start, stop = $stop";
   }
 
   elsif (defined $navlevel){
@@ -1512,11 +1520,10 @@ sub zoomnav {
   }
 
   # to prevent divide-by-zero errors when zoomed down to a region < 2 bp
-  $stop  = $start + ($span > 4 ? $span - 1 : 4) if $stop <= $start+2;
+  # $stop  = $start + ($span > 4 ? $span - 1 : 4) if $stop <= $start+2;
 
   warn "start = $start, stop = $stop\n" if DEBUG;
 
-  my $divisor = $CONFIG->setting(general=>'unit_divider') || 1;
   $settings->{start} = $start/$divisor;
   $settings->{stop}  = $stop/$divisor;
 }
@@ -1525,7 +1532,7 @@ sub zoomnav {
 # current settings.  It is really just a front end to lookup_segments()
 # which does the real work.  The main work in get_segments() is to
 # identify any segments that are below MIN_SEG_SIZE in length, and to
-# recenter on a window MIN_SEG_SIZE wide.  This prevents the browser
+# re-center on a window MIN_SEG_SIZE wide.  This prevents the browser
 # from getting brain damaged when fetching 1bp features like SNPs.
 sub get_features {
   my $settings = shift;
@@ -1578,20 +1585,43 @@ sub features2segments {
 
 # sort of un-perlish -- we pass a reference to the handle that holds the segment
 sub resize {
-  my $segment_ref = shift;
+  my $segment_ref   = shift;
+  my $whole_segment = shift;
   my $s = $$segment_ref;
   my $divider       = $CONFIG->setting('unit_divider') || 1;
   my $min_seg_size  = $CONFIG->setting('min segment')  || MIN_SEG_SIZE/$divider;
-  return unless $s->length < $min_seg_size;
 
-  # resize
-  my $resize = $min_seg_size;
-  #  error($CONFIG->tr('Small_interval',$resize)); # error message
 
-  my $middle = int(($s->start + $s->end)/2);
+  my ($new_start,$new_stop,$fix) = ($s->start,$s->end,0);
+  if ($s->length < $min_seg_size) {
+    my $resize = $min_seg_size;
+    my $middle = int(($s->start + $s->end)/2);
+    $new_start = $middle - int($resize/2);
+    $new_stop  = $middle + int($resize/2);
+    $fix++;
+  }
+  if ($s->start < $whole_segment->start) {
+    $new_start  = $whole_segment->start;
+    $fix++;
+  } elsif ($s->start > $whole_segment->end) {
+    $new_start  = $whole_segment->end - $min_seg_size;
+    $fix++;
+  }
+  if ($s->end   > $whole_segment->end) {
+    $new_stop   = $whole_segment->end;
+    $fix++;
+  } elsif ($s->end < $whole_segment->start) {
+    $new_stop   = $whole_segment->start+$min_seg_size;
+    $fix++;
+  }
+  # error($CONFIG->tr('Small_interval',$resize)); # error message
+  return unless $fix;
+
+  warn "new start = $new_start, new end = $new_stop";
+
   my $new_seg = $s->factory->segment(-name  => $s->seq_id,
-				     -start => $middle - int($resize/2),
-				     -end   => $middle + int($resize/2),
+				     -start => $new_start,
+				     -end   => $new_stop,
 				     -absolute => 1
 				    );
   $$segment_ref = $new_seg;
@@ -1605,7 +1635,7 @@ sub lookup_features_from_db {
   warn "name = $settings->{name}, ref = $settings->{ref}, start = $settings->{start}, stop = $settings->{stop}, version = $settings->{version}" if DEBUG;
 
   $db->debug(0);
-  my $divisor = $CONFIG->setting(general=>'unit_divider') || 1;
+  my $divisor = $CONFIG->setting(general=>'unit_divider')     || 1;
   my $padding = $CONFIG->setting(general=>'landmark_padding') || 0;
 
   if (my $name = $settings->{name}) {
@@ -1621,8 +1651,8 @@ sub lookup_features_from_db {
 
   elsif (my $ref = $settings->{ref}) {
     my @argv = (-name  => $ref);
-    push @argv,(-start => $settings->{start}*$divisor) if defined $settings->{start};
-    push @argv,(-end   => $settings->{stop}*$divisor)  if defined $settings->{stop};
+    push @argv,(-start => $settings->{start}* $divisor) if defined $settings->{start};
+    push @argv,(-end   => $settings->{stop} * $divisor)  if defined $settings->{stop};
     warn "looking up @argv" if DEBUG;
     @segments = $db->segment(@argv);
   }
@@ -1822,17 +1852,20 @@ sub format_segment {
   return "<b>$ref</b>:$start..$stop";
 }
 
-sub overview {
-  my ($segment,$settings,$feature_files) = @_;
-  return unless $segment;
-  $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
-
-
+sub whole_segment {
+  my $segment = shift;
   my $factory = $segment->factory;
   my $class   = eval {$segment->seq_id->class} || $factory->refclass;
   my ($whole_segment) = $factory->segment(-class=>$class,
 					  -name=>$segment->seq_id);
   $whole_segment   ||= $segment;  # just paranoia
+  $whole_segment;
+}
+
+sub overview {
+  my ($whole_segment,$segment,$settings,$feature_files) = @_;
+  return unless $segment;
+  $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
 
 
   my ($image,$length) = $CONFIG->overview($whole_segment,$segment,$settings->{features},$feature_files) or return;

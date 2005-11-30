@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8.2.7 2005-11-29 02:49:25 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.8 2005-11-30 17:02:06 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -162,7 +162,8 @@ $CONFIG->width($width) if $width;
 # get options and visibility hash
 my ($options,$labels,$visible) = get_options(\@options,\@track_types);
 
-my $max_segment = $CONFIG->setting('max segment') || MAX_SEGMENT;
+my $divider     = $CONFIG->setting('unit_divider') || 1;
+my $max_segment = $CONFIG->setting('max segment')*$divider  || MAX_SEGMENT;
 
 my $session       = Bio::Graphics::Browser::PageSettings->new($CONFIG,$id);
 $session->source($src);

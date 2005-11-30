@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.3 2005-11-29 02:49:25 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.4 2005-11-30 17:02:06 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1336,14 +1336,16 @@ sub _overview {
   # no cached data, so do it ourselves
   unless ($gd) {
 
-    my $units = $self->setting('overview units');
+    my $units         = $self->setting(general=>'units') || '';
+    my $no_tick_units = $self->setting(general=>'no tick units');
     $panel->add_track($segment,
 		      -glyph     => 'arrow',
 		      -double    => 1,
 		      -label     => "\u$region_name\E of ".$segment->seq_id,
 		      -labelfont => $image_class->gdMediumBoldFont,
 		      -tick      => 2,
-		      -units     => $conf->setting(general=>'units') ||'',
+		      -units_in_label => $no_tick_units,
+		      -units     => $units,
 		      -unit_divider => $conf->setting(general=>'unit_divider') || 1,
 		     );
 
@@ -1519,7 +1521,11 @@ sub _hits_on_overview {
 
   my $conf  = $self->config;
   my $width = $self->width;
-  my $units = $self->setting('overview units');
+
+  my $units         = $conf->setting(general=>'units');
+  my $no_tick_units = $conf->setting(general=>'no tick units');
+  my $unit_divider  = $conf->setting(general=>'unit_divider') || 1;
+
   my $max_label  = $self->label_density;
   my $max_bump   = $self->bump_density;
   my $class      = eval{$hits->[0]->factory->default_class} || 'Sequence';
@@ -1547,7 +1553,6 @@ sub _hits_on_overview {
       my $feature = Bio::Graphics::Feature->new(-start=>$start,
 						-end=>$end,
 						-name=>$name,
-						# -segments=>[$hit->get_SeqFeatures]  # this has an awful performance hit
 					       );
       push @{$refs{$ref}},$feature;
     } elsif (UNIVERSAL::can($hit,'location')) {
@@ -1585,11 +1590,13 @@ sub _hits_on_overview {
     # add the arrow
     $panel->add_track($segment,
 		      -glyph     => 'arrow',
-		      -double    => 1,
-		      -label     => ($htmlize ? 0 : $segment->seq_id),
-		      -labelfont => $image_class->gdMediumBoldFont,
-		      -tick      => 2,
-		      $units ? (-units => $units) : (),
+		      -double         => 1,
+		      -label          => ($htmlize ? 0 : $segment->seq_id),
+		      -labelfont      => $image_class->gdMediumBoldFont,
+		      -units_in_label => $no_tick_units,
+		      -units          => $units,
+		      -unit_divider   => $unit_divider,
+		      -tick           => 2
 		     );
 
     # add the landmarks

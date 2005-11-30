@@ -1,3 +1,6 @@
+1.65	* Improved support for negative and fractional coordinates, such as those used
+	  in some genetic maps.
+
 1.64	* Revamped state handling to use CGI::Session instead of cookies
 	* Added Russian and Polish language translations
         * Fixed chado adaptor bug for older chado databases with both 

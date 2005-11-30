@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.16 2005-11-29 19:12:34 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.17 2005-11-30 17:02:06 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1052,7 +1052,11 @@ sub unit_label {
 	 : $abs >= 1e-6 ? sprintf("%.4g u%s",$value*1e6,$unit)
 	 : $abs >= 1e-9 ? sprintf("%.4g n%s",$value*1e9,$unit)
          : sprintf("%.4g p%s",$value*1e12,$unit);
-  return $label;
+  if (wantarray) {
+    return split ' ',$label;
+  } else {
+    return $label;
+  }
 }
 
 # convert Mb/Kb back into bp... or a ratio
@@ -1456,7 +1460,6 @@ sub zoomnav {
     my $range	    = int($span * (1-$zoomlevel)/2);
     $range          = 1 if $range < 1;
     ($start, $stop) = ($center - $range , $center + $range - 1);
-    warn "start = $start, stop = $stop";
   }
 
   elsif (defined $navlevel){
@@ -1799,6 +1802,8 @@ sub multiple_choices {
 		$overviews->{$ref}));
 
     my $padding = $CONFIG->setting(general=>'landmark_padding') || 0;
+    my $units    = $CONFIG->setting(general=>'units') || $CONFIG->tr('bp');
+    my $divisor  = $CONFIG->setting(general=>'unit_divider') || 1;
 
     for my $r (sort by_score_and_position @results) {
       my $version = eval {$r->isa('Bio::SeqFeatureI') ? undef : $r->version};
@@ -1822,10 +1827,11 @@ sub multiple_choices {
       my $objref     = $class ? "?name=$c:$n" : "?name=$n";
       my $posref     = "?ref=$id;start=$padstart;stop=$padstop;version=$version";
       my $position = format_segment($r);
+      my $length   = unit_label($stop-$start+1);
       print TR({-class=>'databody',-valign=>'TOP'},
 	       th({-align=>'right'},ref($name) ? a({-href=>$objref},$name):tt($name)),
 	       td($description),
-	       td(a({-href=>$posref},$position . ' ('.($stop-$start+1).' '.$CONFIG->tr('bp').')')),
+	       td(a({-href=>$posref},$position . " ($length)")),
 	       td($CONFIG->tr('SCORE',$score)));
     }
   }
@@ -1847,9 +1853,12 @@ sub by_score_and_position {
 sub format_segment {
   my $s = shift or return $CONFIG->tr('Not_applicable');
   my $ref = $s->seq_id;
-  my $start = commas($s->start);
-  my $stop  = commas($s->end);
-  return "<b>$ref</b>:$start..$stop";
+  my ($start,$s_units) = unit_label($s->start);
+  my ($end,$e_units)   = unit_label($s->end);
+  $start  = commas($start);
+  $end    = commas($end);
+  my $pos = $s_units eq $e_units ? "$start..$end $s_units" : "$start $s_units..$end $e_units";
+  return "<b>$ref</b>:$pos";
 }
 
 sub whole_segment {

@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8.2.8 2005-11-30 17:02:06 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.9 2005-12-02 19:05:18 sheldon_mckay Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -139,6 +139,7 @@ $abs                = param('b') unless defined $abs;
 my $image_class     = param('image_class') || param('format') || 'GD';        # image type
 my $keystyle        = param('keystyle')    || param('k') || 'between';
 my $grid            = param('grid');
+my $noscale         = param('noscale');
 my $embed           = param('embed')|| param('e');          # embedded in a frame
 my $flip            = param('flip') || param('f');          # right<->left
 my $hitkey          = param('key');			    # key for hit track
@@ -216,6 +217,7 @@ else {  # detailed view
 			     keystyle      => $keystyle,
 			     do_map        => 1,
 			     flip          => $flip,
+			     noscale       => $noscale,
 			     $feature_hilighting ? (hilite_callback => $feature_hilighting) : (),
 			     $region_hilighting  ? (postgrid        => $region_hilighting)  : (),
                              -truecolor    => $CONFIG->setting('truecolor') || 0,

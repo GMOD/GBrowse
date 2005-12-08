@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.17 2005-11-30 17:02:06 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.18 2005-12-08 22:35:22 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2197,14 +2197,17 @@ sub coordinate_mapper {
     }
 
     unless (exists $segments{$refname}) {
-      my @segments = $CONFIG->name2segments($refname,$db,TOO_MANY_SEGMENTS,1);
+      my @segments = map {
+	eval{$_->absolute(0)}; $_  # so that rel2abs works properly later
+      }
+	$CONFIG->name2segments($refname,$db,TOO_MANY_SEGMENTS,1);
       $segments{$refname} = $segments[0];
       return unless @segments;
     }
 
     my $mapper   = $segments{$refname} || return;
     my $absref   = $mapper->abs_ref;
-    my $cur_ref  = eval {$current_segment->abs_ref} 
+    my $cur_ref  = eval {$current_segment->abs_ref}
        || eval{$current_segment->ref};  # account for api changes in Bio::SeqI
     return unless $absref eq $cur_ref;
 

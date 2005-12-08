@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8.2.9 2005-12-02 19:05:18 sheldon_mckay Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10 2005-12-08 22:38:37 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -534,7 +534,10 @@ sub coordinate_mapper {
     my ($refname,@ranges) = @_;
 
     unless ($segments{$refname}) {
-      my @segments = grep { $current_segment->overlaps($_) } get_segments($db,$refname);
+      my @segments = map {
+	eval{$_->absolute(0)}; $_  # so that rel2abs works properly later
+      }
+	grep { $current_segment->overlaps($_) } get_segments($db,$refname);
       return unless @segments;
       $segments{$refname} = $segments[0];
     }

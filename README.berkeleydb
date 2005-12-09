@@ -1,0 +1,14 @@
+Using the Berkeleydb Bio::DB::GFF Adaptor
+
+As of version 1.63, GBrowse supports Berkeleydb-index GFF files via
+the "berkeleydb" adaptor of the Bio::DB::GFF module. This facility
+allows you to run GBrowse off fast indexed GFF files without the
+administrative overhead of MySQL or PostgreSQL, or the memory overhead
+of the original "memory" adaptor.
+
+To use this adaptor, see section 19 of the tutorial
+(docs/tutorial/tutorial.html).
+
+August 2005
+Lincoln Stein & the GMOD Team
+

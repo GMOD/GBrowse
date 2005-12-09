@@ -1,0 +1,92 @@
+A:link            { text-decoration: none; 
+                    color: #0000FF;
+                  }
+A:visited         { text-decoration: none; 
+                    color: #AA0088;
+                  }
+A:hover           { text-decoration: underline; 
+                  }
+A.banner          { color  : #FFFFFF;
+                    font-size : small;
+                    text-decoration : none;
+                  }
+A.bblue           { color: #FFFFFF;
+                    background-color: #9999FF;
+                    font-size : small;
+                    text-align: center;
+                  }
+A.bred            { color: #FFFFFF;
+                    background-color: #FF6666;
+                    font-size : small;
+                    text-align: center;
+                  }
+BODY              { background-color: white; 
+                    font-family: sans-serif;
+	            font-size: small;
+                  }
+H1                { color: #3366FF; 
+                    font-family: sans-serif; 
+                  }
+H2                { color: #3366FF; 
+                    font-family: sans-serif; 
+                  }
+H3                { color: #3366FF; 
+                    font-family: sans-serif; 
+                  }
+H4                { color: #3366FF; 
+                    font-family: sans-serif; 
+                  }
+INPUT             { background-color: white; }
+P                 { font-family: sans-serif; }
+SELECT            { background-color: white; }
+TABLE             { padding: 0;
+                    spacing: 0;
+                    width: 100%;
+                  }
+TD                { font-family: sans-serif; 
+                    padding: 0; 
+	            font-size: small;
+		  }
+TH                { font-family: sans-serif; 
+                    padding: 0; 
+	            font-size: small;
+                  }
+TH.linkmenu       { 
+                    font-family: sans-serif;
+                    padding: 0;
+                    font-size: 9pt;
+                  }
+.reset_button     {background-color: red;
+	            color: yellow;           
+                  }
+.datatitle        { background-color: khaki; }
+.databody         { background-color: lightgoldenrodyellow; }
+.searchtitle      { background-color: khaki;
+	            font-size: small;
+}
+.searchbody       { background-color: lightgoldenrodyellow;
+	            font-size: small;
+}
+.settingstitle    { background-color: DarkKhaki;
+	            font-size: small;
+}
+.settingsbody     { background-color: khaki;
+	            font-size: small;
+}
+.uploadtitle      { background-color: DarkKhaki;
+	            font-size: small;
+}
+.uploadbody       { background-color: khaki;
+	            font-size: small;
+}
+.technicalinfo    { background-color: #FFFFFF; }
+.toggle           { color: #3366FF; }
+.error            { color: red; }
+.note             { color: red; }
+.pre              { font-family: monospace; }
+.popup            { COLOR: #9F141A;
+                    CURSOR: help;
+                    TEXT-DECORATION: none
+                  }
+ 
+

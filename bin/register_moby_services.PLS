@@ -14,12 +14,6 @@ if (open F,"$Bin/../GGB.def") {
   }
   close F;
 }
-
-if($OPTIONS{PREFIXSTRIP}){
-  $OPTIONS{CONF} =~ s/^$OPTIONS{PREFIX}//;
-  $OPTIONS{LIB}  =~ s/^$OPTIONS{PREFIX}//;
-}
-
 $OPTIONS{CONF} ||= '/usr/local/apache/conf';
 
 my $dir = dirname($0);
@@ -53,7 +47,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: register_moby_services.PLS,v 1.6 2005-02-01 00:30:21 allenday Exp $
+#$Id: register_moby_services.PLS,v 1.7 2005-12-09 22:19:08 mwz444 Exp $
 
 use MOBY::Client::Central;
 use strict;

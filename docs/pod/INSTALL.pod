@@ -36,8 +36,7 @@ automatically.
 Go to http://dev.mysql.com/downloads/mysql .  Select and download the
 most recent version of the Windows package.  Once the package is
 downloaded, you will need to unpack it with the WinZip program.  Then
-launch the installer.  Note that there have been problems reported
-with MySQL 4.1, therefore I suggest the newest release of 4.0.
+launch the installer. 
 
 =item Install GBrowse
 
@@ -102,9 +101,7 @@ The MySQL database is a fast open source relational database
 that is widely used for web applications.  It is required for
 most real-live genome annotation projects.  For small projects
 (a few thousands of annotated features), you can skip installing
-MySQL and use an in-memory database instead. Note that there have
-been problems reported with MySQL 4.1, therefore I suggest the
-newest release of 4.0.
+MySQL and use an in-memory database instead.
 
 =item B) Apache Web Server -- L<http://www.apache.org>
 
@@ -124,6 +121,7 @@ They can be found on the Comprehensive Perl Archive Network
 
         CGI                  (2.56 or higher)
 	GD                   (2.07 or higher)
+        CGI::Session         (4.03 or higher)
         DBI                  (any version)
         DBD::mysql           (any version)
 	Digest::MD5          (any version)
@@ -187,11 +185,13 @@ unpacked.  Then run the following commands (in brief):
 	perl Makefile.PL
 	make
         make test (optional)
-	make install
+	make install UNINST=1
 
 This will install the software in the default location under
 /usr/local/apache. See "Details" to change this, or to install gbrowse
-into your home directory.
+into your home directory.   The 'UNINST=1' will insure that older
+versions of perl modules being installed will be removed to
+help prevent conflicts.
 
 
 To further configure GBrowse, see L<CONFIGURE_HOWTO>.  To run

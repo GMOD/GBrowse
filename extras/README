@@ -1,18 +1,10 @@
-The file bioperl-102-1.1.patch is a patch file that will bring a
-virgin Bioperl 1.02 distribution up to version 1.1.  This patch only
-affects the Bio::DB::GFF and Bio::Graphics modules.
+The BioPerl directory contains the versions of the Bioperl
+Bio::Graphics and Bio::DB::GFF libraries that were current as of May
+28, 2005.  These correct a number of minor bugs in Bioperl version
+1.4, plus add Sequence Ontology compatibility.  They are installed
+automatically if Makefile.PL detects that you are running Bioperl 1.4
+or earlier.
 
-Here are the patch steps:
+Do not install these files if you are running Bioperl 1.5 or higher.
 
- 1. unpack bioperl-1.0.2.tar.gz
-    gunzip -c bioperl-1.0.2.tar.gz | tar xvf -
-
- 2. enter bioperl-1.0.2
-    cd bioperl-1.0.2
-
- 3. apply the patch
-    patch -p1 < ../Generic-Genome-Browser-1.46/extras/bioperl-102-1.1.patch
-
-Modify the last command to point to the actual location of the patch
-file.
 

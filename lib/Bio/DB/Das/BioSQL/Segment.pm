@@ -335,7 +335,7 @@ sub top_SeqFeatures
     
     my @result = $self->bioseq->get_SeqFeatures();
     
-    if ($self->absolute)
+    unless ($self->absolute)
     {
         foreach my $feat (@result)
         {
@@ -448,12 +448,11 @@ Currently the format is:
 =cut
 
 sub asString {
-  my $self = shift;
-  my $label = $self->display_name;
-  my $start = $self->start || '';
-  my $stop  = $self->stop  || '';
-  
-  return "$label:$start,$stop";
+   my $self = shift;
+   my $label = $self->display_name;
+   my $start = $self->start || '';
+   my $stop  = $self->stop  || '';
+   return "$label:$start,$stop";
 }
 
 sub name { shift->asString }

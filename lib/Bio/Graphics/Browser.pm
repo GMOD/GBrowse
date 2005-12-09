@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.169 2005-10-06 14:15:25 lstein Exp $
+# $Id: Browser.pm,v 1.170 2005-12-09 22:19:12 mwz444 Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -64,6 +64,7 @@ use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use Text::Shellwords;
 use Bio::Graphics::Browser::I18n;
+use Bio::Graphics::Browser::Util 'modperl_request';
 
 require Exporter;
 
@@ -87,12 +88,18 @@ use constant PAD_OVERVIEW_BOTTOM => 5;
 use constant PAD_DETAIL_SIDES    => 25;
 use constant DEFAULT_OVERVIEW_BGCOLOR => 'wheat';
 
+# amount of time to remember persistent settings
+use constant REMEMBER_SOURCE_TIME   => '+3M';   # 3 months
+use constant REMEMBER_SETTINGS_TIME => '+1M';   # 1 month
+
 use constant DEBUG => 0;
 
-if( $ENV{MOD_PERL} && 
-    $ENV{MOD_PERL} =~ /mod_perl\/(\d+\.\d+)/ && 
-    $1 > 1.98 ) { 
-    require Apache::SubRequest;
+if( $ENV{MOD_PERL} &&
+    exists $ENV{MOD_PERL_API_VERSION} &&
+    $ENV{MOD_PERL_API_VERSION} >= 2) {
+    require Apache2::SubRequest;
+    require Apache2::RequestUtil;
+    require Apache2::ServerUtil;
 }
 
 =head2 new()
@@ -128,7 +135,7 @@ sub read_configuration {
 
   croak("$conf_dir: not a directory") unless -d $conf_dir;
   opendir(D,$conf_dir) or croak "Couldn't open $conf_dir: $!";
-  my @conf_files = map { "$conf_dir/$_" } grep {/\.$suffix$/} grep {$_ !~ /log4perl/} readdir(D);
+  my @conf_files = map { "$conf_dir/$_" } grep {/\.$suffix$/} grep {!/^\.|^#|log4perl/} readdir(D);
   close D;
 
   # try to work around a bug in Apache/mod_perl which appears when
@@ -397,6 +404,32 @@ sub description {
   return $c->setting('general','description');
 }
 
+=head2 $time = $browser->remember_settings_time
+
+Return the relative time (in CGI "expires" format) to maintain
+information about the current page settings, including plugin
+configuration.
+
+=cut
+
+sub remember_settings_time {
+  my $self = shift;
+  return $self->setting('remember settings time') || REMEMBER_SETTINGS_TIME;
+}
+
+
+=head2 $time = $browser->remember_source_time
+
+Return the relative time (in CGI "expires" format) to maintain information
+on which source the user is viewing.
+
+=cut
+
+sub remember_source_time {
+  my $self = shift;
+  return $self->setting('remember source time') || REMEMBER_SOURCE_TIME;
+}
+
 =head2 $language = $browser->language([$new_language])
 
 Get/set an associated Bio::Graphics::Browser::I18n language translation object.
@@ -410,6 +443,7 @@ sub language {
   $d;
 }
 
+
 =head2 $french = $browser->tr($english)
 
 Translate message into currently-set language, with fallback to POSIX,
@@ -421,6 +455,29 @@ sub tr {
   my $self = shift;
   my $lang = $self->language or return @_;
   $lang->tr(@_);
+}
+
+=head2 $section_setting = $browser->section_setting($section_name)
+
+Returns "open" "closed" or "off" for the named section. Named sections are:
+
+ instructions
+ search
+ overview
+ details
+ tracks
+ display
+ add tracks
+
+=cut
+
+sub section_setting {
+  my $self = shift;
+  my $section = shift;
+  my $config_setting = "\L$section\E section";
+  my $s = $self->setting($config_setting);
+  return 'open' unless defined $s;
+  return $s;
 }
 
 =head2 labels()
@@ -561,7 +618,7 @@ sub header {
   my $header = $self->config->code_setting(general => 'header');
   if (ref $header eq 'CODE') {
     my $h = eval{$header->(@_)};
-    warn $@ if $@;
+    $self->_callback_complain(general=>'header') if @_;
     return $h;
   }
   return $header;
@@ -581,7 +638,7 @@ sub footer {
   my $footer = $self->config->code_setting(general => 'footer');
   if (ref $footer eq 'CODE') {
     my $f = eval {$footer->(@_)};
-    warn $@ if $@;
+    $self->_callback_complain(general=>'footer') if @_;
     return $f;
   }
   return $footer;
@@ -650,8 +707,8 @@ the feature.
 
 sub make_link {
   my $self = shift;
-  my ($feature,$panel,$label) = @_;
-  my @results = $self->config->make_link($feature,$panel,$self->source,$label);
+  my ($feature,$panel,$label,$src) = @_;
+  my @results = $self->config->make_link($feature,$panel,$label,$self->source);
   return wantarray ? @results : $results[0];
 }
 
@@ -721,7 +778,6 @@ sub render_html {
   my $do_centering_map= $args{do_centering_map};
 
   return unless $segment;
-
   my($image,$map,$panel,$tracks) = $self->image_and_map(%args);
 
   $self->debugging_rectangles($image,$map) if DEBUG;
@@ -859,20 +915,26 @@ sub clear_cache {
 
 sub tmpdir {
   my $self = shift;
-
   my $path = shift || '';
-  my $tmpuri = $self->setting('tmpimages') or die "no tmpimages option defined, can't generate a picture";
+
+  my ($tmpuri,$tmpdir) = shellwords($self->setting('tmpimages'))
+    or die "no tmpimages option defined, can't generate a picture";
+
   $tmpuri .= "/$path" if $path;
-  my $tmpdir;
+
   if ($ENV{MOD_PERL} ) {
-      my $r          = Apache->request;
-      my $subr       = $r->lookup_uri($tmpuri);
-      $tmpdir        = $subr->filename;
-      my $path_info  = $subr->path_info;
-      $tmpdir       .= $path_info if $path_info;
-  } else {
+    my $r          = modperl_request();
+    my $subr       = $r->lookup_uri($tmpuri);
+    $tmpdir        = $subr->filename;
+    my $path_info  = $subr->path_info;
+    $tmpdir       .= $path_info if $path_info;
+  } elsif ($tmpdir) {
+    $tmpdir .= "/$path" if $path;
+  }
+  else {
     $tmpdir = "$ENV{DOCUMENT_ROOT}/$tmpuri";
   }
+
   # we need to untaint tmpdir before calling mkpath()
   return unless $tmpdir =~ /^(.+)$/;
   $path = $1;
@@ -883,8 +945,7 @@ sub tmpdir {
 
 sub make_map {
   my $self = shift;
-  my ($boxes,$centering_map,$panel,$tracks) = @_;
-  my %track2label = reverse %$tracks;
+  my ($boxes,$centering_map,$panel,$track2label) = @_;
   my $map = qq(<map name="hmap" id="hmap">\n);
 
   my $flip = $panel->flip;
@@ -904,10 +965,11 @@ sub make_map {
       next;
     }
 
-    my $label  = $_->[5] ? $track2label{$_->[5]} : '';
-    my $href   = $self->make_href($_->[0],$panel,$label) or next;
-    my $alt    = unescape($self->make_title($_->[0],$panel,$label));
-    my $target = $self->config->make_link_target($_->[0],$panel,$label);
+    my $label  = $_->[5] ? $track2label->{$_->[5]} : '';
+
+    my $href   = $self->make_href($_->[0],$panel,$label,$_->[5]) or next;
+    my $alt    = unescape($self->make_title($_->[0],$panel,$label,$_->[5]));
+    my $target = $self->config->make_link_target($_->[0],$panel,$label,$_->[5]);
     my $t      = defined($target) ? qq(target="$target") : '';
     $map .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href" title="$alt" alt="$alt" $t/>\n);
   }
@@ -954,15 +1016,8 @@ sub make_centering_map {
 
 sub make_href {
   my $self = shift;
-  my ($feature,$panel,$label)   = @_;
-
-  warn "HERE!!!!!";
-
-  if ($feature->can('make_link')) {
-    return $feature->make_link;
-  } else {
-    return $self->make_link($feature,$panel,$label);
-  }
+  my ($feature,$panel,$label,$track)   = @_;
+  return $self->make_link($feature,$panel,$label,$self->source,$track);
 }
 
 sub make_title {
@@ -972,7 +1027,8 @@ sub make_title {
   return $self->config->make_title($feature,$panel,$label);
 }
 
-# Generate the image and the box list, and return as a two-element list.
+# Generate the image and the box list, and return the GD object, the boxes() list, the panel object and
+# a hashref that maps track objects to track labels or feature files.
 # arguments: a key=>value list
 #    'segment'       A feature iterator that responds to next_seq() methods
 #    'feature_files' A hash of Bio::Graphics::FeatureFile objects containing 3d party features
@@ -1004,14 +1060,14 @@ sub image_and_map {
   my $suppress_scale= $config{noscale};
   my $hilite_callback = $config{hilite_callback};
   my $image_class   = $config{image_class} || 'GD';
+  my $postgrid      = $config{postgrid} || '';
+  my $background    = $config{background} || '';
 
   $segment->factory->debug(1) if DEBUG;
+  $self->error('');
 
   # Bring in the appropriate package - just for the fonts. Ugh.
   eval "use $image_class";
-
-  # these are natively configured tracks
-  my @labels = $self->labels;
 
   my $width = $self->width;
   my $conf  = $self->config;
@@ -1034,6 +1090,7 @@ sub image_and_map {
 
    my @pass_thru_args = map {/^-/ ? ($_=>$config{$_}) : ()} keys %config;
   my @argv = (
+	      -grid      => 1,
 	      @pass_thru_args,
 	      -start     => $seg_start,
 	      -end       => $seg_stop,
@@ -1041,11 +1098,12 @@ sub image_and_map {
 	      -key_color => $self->setting('key bgcolor')     || 'moccasin',
 	      -bgcolor   => $self->setting('detail bgcolor')  || 'white',
 	      -width     => $width,
-	      -grid      => 1,
 	      -key_style    => $keystyle || $conf->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
 	      -empty_tracks => $conf->setting(general=>'empty_tracks') 	        || DEFAULT_EMPTYTRACKS,
 	      -pad_top      => $title ? $image_class->gdMediumBoldFont->height : 0,
 	      -image_class  => $image_class,
+	      -postgrid     => $postgrid,
+	      -background   => $background,
 	     );
 
   push @argv, -flip => 1 if $flip;
@@ -1063,11 +1121,14 @@ sub image_and_map {
 		    -unit_divider => $conf->setting(general=>'unit_divider') || 1,
 		   ) unless $suppress_scale;
 
-  my (%tracks,@blank_tracks);
+  my (%track2label,%tracks,@blank_tracks);
 
   for (my $i= 0; $i < @$tracks; $i++) {
 
     my $label = $tracks->[$i];
+
+    # if "hide" is set to true, then track goes away
+    next if $conf->semantic_setting($label=>'hide',$length);
 
     # if we don't have a built-in label, then this is a third party annotation
     if (my $ff = $feature_files->{$label}) {
@@ -1077,7 +1138,7 @@ sub image_and_map {
 
     # if the glyph is the magic "dna" glyph (for backward compatibility), or if the section
     # is marked as being a "global feature", then we apply the glyph to the entire segment
-    if ($conf->setting($label=>'global feature')) {
+    if ($conf->semantic_setting($label=>'global feature',$length)) {
       $panel->add_track($segment,
 			$conf->default_style,
 			$conf->i18n_style($label,$lang),
@@ -1088,11 +1149,11 @@ sub image_and_map {
       my @settings = ($conf->default_style,$conf->i18n_style($label,$lang,$length));
       push @settings,(-hilite => $hilite_callback) if $hilite_callback;
       my $track = $panel->add_track(-glyph => 'generic',@settings);
-      $tracks{$label}  = $track;
+      $track2label{$track} = $label;
+      $tracks{$label}      = $track;
     }
 
   }
-
 
   if (@feature_types) {  # don't do anything unless we have features to fetch!
 
@@ -1153,7 +1214,7 @@ sub image_and_map {
       my $count = $feature_count{$label};
       $count    = $limit->{$label} if $limit->{$label} && $limit->{$label} < $count;
 
-      my $do_bump  = $self->do_bump($label, $options->{$label},$count,$max_bump);
+      my $do_bump  = $self->do_bump($label, $options->{$label},$count,$max_bump,$length);
       my $do_label = $self->do_label($label,$options->{$label},$count,$max_labels,$length);
       my $do_description = $self->do_description($label,$options->{$label},$count,$max_labels,$length);
 
@@ -1169,17 +1230,37 @@ sub image_and_map {
 
   # add additional features, if any
   my $offset = 0;
+  my $select = sub {
+    my $file  = shift;
+    my $type  = shift;
+    my $section = $file->setting($type=>'section');
+    return 1 unless defined $section;
+    return $section =~ /detail/;
+  };
+
+  my $extra_tracks = $config{noscale} ? 0 : 1;
+
   for my $track (@blank_tracks) {
     my $file = $feature_files->{$tracks->[$track]} or next;
     ref $file or next;
-    $track += $offset + 1;
+    $track += $offset + $extra_tracks;
     my $name = $file->name || '';
     $options->{$name} ||= 0;
-    my $inserted = $file->render($panel,$track,$options->{$name},$max_bump,$max_labels);
-    $offset += $inserted;
+    my ($inserted,undef,$new_tracks)
+      = eval { $file->render($panel,$track,$options->{$name},
+			     $max_bump,$max_labels,
+			     $select
+			    )
+	     };
+    $self->error($@) if $@;
+    foreach (@$new_tracks) {
+      $track2label{$_} = $file;
+    }
+    $offset += $inserted-1; # adjust for feature files that insert multiple tracks
   }
 
   my $gd = $panel->gd;
+
   if ($title) {
     my $x = ($width - length($title) * $image_class->gdMediumBoldFont->width)/2;
     $gd->string($image_class->gdMediumBoldFont,$x,0,$title,$panel->translate_color('black'));
@@ -1188,7 +1269,7 @@ sub image_and_map {
 
   my $boxes    = $panel->boxes;
 
-  return ($gd,$boxes,$panel,\%tracks);
+  return ($gd,$boxes,$panel,\%track2label);
 }
 
 =head2 overview()
@@ -1208,15 +1289,19 @@ will be added to the overview panel.
 # generate the overview, if requested, and return it as a GD
 sub overview {
   my $self = shift;
-  my ($partial_segment,$track_options) = @_;
-  my $gd;
+  $self->_overview('overview',@_);
+}
 
-  # turn requests for a piece of a segment into the whole segment9
-  my $factory = $partial_segment->factory;
-  my $class   = eval {$partial_segment->seq_id->class} || $factory->refclass;
-  my ($segment) = $factory->segment(-class=>$class,
-				    -name=>$partial_segment->seq_id);
-  $segment   ||= $partial_segment;  # paranoia
+# generate the regionview, if requested, and return it as a GD
+sub regionview {
+  my $self = shift;
+  $self->_overview('region',@_);
+}
+
+sub _overview {
+  my $self = shift;
+  my ($region_name,$segment,$partial_segment,$track_options,$feature_files) = @_;
+  my $gd;
 
   # Temporary kludge until I can figure out a more
   # sane way of rendering overview with SVG...
@@ -1225,7 +1310,9 @@ sub overview {
 
   my $conf           = $self->config;
   my $width          = $self->width;
-  my @tracks         = grep {$track_options->{$_}{visible}} $conf->overview_tracks;
+  my @tracks         = grep {$track_options->{$_}{visible}} 
+    $region_name eq 'region' ? $conf->regionview_tracks : $conf->overview_tracks;
+
   my ($padl,$padr)   = $self->overview_pad(\@tracks);
 
   my $panel = Bio::Graphics::Panel->new(-segment => $segment,
@@ -1251,18 +1338,36 @@ sub overview {
   # no cached data, so do it ourselves
   unless ($gd) {
 
-    my $units = $self->setting('overview units');
+    my $units         = $self->setting(general=>'units') || '';
+    my $no_tick_units = $self->setting(general=>'no tick units');
     $panel->add_track($segment,
 		      -glyph     => 'arrow',
 		      -double    => 1,
-		      -label     => "Overview of ".$segment->seq_id,
+		      -label     => "\u$region_name\E of ".$segment->seq_id,
 		      -labelfont => $image_class->gdMediumBoldFont,
 		      -tick      => 2,
-		      -units     => $conf->setting(general=>'units') ||'',
+		      -units_in_label => $no_tick_units,
+		      -units     => $units,
 		      -unit_divider => $conf->setting(general=>'unit_divider') || 1,
 		     );
 
-    $self->add_overview_landmarks($panel,$segment,$track_options);
+    $self->_add_landmarks(\@tracks,$panel,$segment,$track_options);
+
+    # add uploaded files that have the "(over|region)view" option set
+    if ($feature_files) {
+      my $select = sub {
+	my $file  = shift;
+	my $type  = shift;
+	my $section = $file->setting($type=>'section') || '';
+	return defined $section && $section =~ /$region_name/;
+      };
+      foreach (keys %$feature_files) {
+	my $ff = $feature_files->{$_};
+	next unless $ff->isa('Bio::Graphics::FeatureFile'); #only FeatureFile supports this
+	$ff->render($panel,-1,$track_options->{$_},undef,undef,$select);
+      }
+    }
+
     $gd = $panel->gd;
     $self->gd_cache_write($cache_path,$gd) if $cache_path;
   }
@@ -1285,8 +1390,22 @@ sub overview {
 sub add_overview_landmarks {
   my $self = shift;
   my ($panel,$segment,$options) = @_;
+  my @tracks = $self->config->overview_tracks;
+  $self->_add_landmarks(\@tracks,$panel,$segment,$options);
+}
+
+sub add_regionview_landmarks {
+  my $self = shift;
+  my ($panel,$segment,$options) = @_;
+  my @tracks = $self->config->regionview_tracks;
+  $self->_add_landmarks(\@tracks,$panel,$segment,$options);
+}
+
+sub _add_landmarks {
+  my $self = shift;
+  my ($tracks_to_add,$panel,$segment,$options) = @_;
   my $conf = $self->config;
-  my @tracks = grep {$options->{$_}{visible}} $conf->overview_tracks;
+  my @tracks = grep {$options->{$_}{visible}} @$tracks_to_add;
 
   my (@feature_types,%type2track,%track);
 
@@ -1299,7 +1418,7 @@ sub add_overview_landmarks {
 				  $conf->style($overview_track),
 				 );
     foreach (@types) {
-      $type2track{$_} = $overview_track
+      $type2track{lc $_} = $overview_track
     }
     $track{$overview_track} = $track;
     push @feature_types,@types;
@@ -1310,10 +1429,12 @@ sub add_overview_landmarks {
 
   my %count;
   while (my $feature = $iterator->next_seq) {
-    my $track_name = eval{$type2track{$feature->type}}
-      || $type2track{$feature->primary_tag}
-	|| eval{$type2track{$feature->method}}
+
+    my $track_name = eval{$type2track{lc $feature->type}}
+      || $type2track{lc $feature->primary_tag}
+	|| eval{$type2track{lc $feature->method}}
 	  || next;
+
     my $track = $track{$track_name} or next;
     $track->add_feature($feature);
     $count{$track_name}++;
@@ -1338,6 +1459,7 @@ sub add_overview_landmarks {
   }
   return \%track;
 }
+
 
 =head2 hits_on_overview()
 
@@ -1401,7 +1523,11 @@ sub _hits_on_overview {
 
   my $conf  = $self->config;
   my $width = $self->width;
-  my $units = $self->setting('overview units');
+
+  my $units         = $conf->setting(general=>'units');
+  my $no_tick_units = $conf->setting(general=>'no tick units');
+  my $unit_divider  = $conf->setting(general=>'unit_divider') || 1;
+
   my $max_label  = $self->label_density;
   my $max_bump   = $self->bump_density;
   my $class      = eval{$hits->[0]->factory->default_class} || 'Sequence';
@@ -1426,10 +1552,11 @@ sub _hits_on_overview {
       my($start,$end) = ($hit->start,$hit->end);
       $name =~ s/\:\d+,\d+$//;  # remove coordinates if they're there
       $name = substr($name,0,7).'...' if length $name > 10;
-      push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$start,
-						      -end=>$end,
-						      -name=>$name,
-						      -segments=>[$hit->get_SeqFeatures]);
+      my $feature = Bio::Graphics::Feature->new(-start=>$start,
+						-end=>$end,
+						-name=>$name,
+					       );
+      push @{$refs{$ref}},$feature;
     } elsif (UNIVERSAL::can($hit,'location')) {
       my $location = $hit->location;
       my ($ref,$start,$stop,$name) = ($location->seq_id,$location->start,
@@ -1465,11 +1592,13 @@ sub _hits_on_overview {
     # add the arrow
     $panel->add_track($segment,
 		      -glyph     => 'arrow',
-		      -double    => 1,
-		      -label     => ($htmlize ? 0 : $segment->seq_id),
-		      -labelfont => $image_class->gdMediumBoldFont,
-		      -tick      => 2,
-		      $units ? (-units => $units) : (),
+		      -double         => 1,
+		      -label          => ($htmlize ? 0 : $segment->seq_id),
+		      -labelfont      => $image_class->gdMediumBoldFont,
+		      -units_in_label => $no_tick_units,
+		      -units          => $units,
+		      -unit_divider   => $unit_divider,
+		      -tick           => 2
 		     );
 
     # add the landmarks
@@ -1483,6 +1612,7 @@ sub _hits_on_overview {
 		      -bgcolor   => 'red',
 		      -fallback_to_rectangle => 1,
 		      -connector => 'solid',
+		      -no_subparts => 1,
 		      -key       => $keyname,
 		      -bump      => @{$refs{$ref}} <= $max_bump,
 		      -label     => @{$refs{$ref}} <= $max_bump,  # deliberate
@@ -1516,14 +1646,14 @@ sub label_density {
 
 sub do_bump {
   my $self = shift;
-  my ($track_name,$option,$count,$max) = @_;
+  my ($track_name,$option,$count,$max,$length) = @_;
 
   my $conf              = $self->config;
   my $maxb              = $conf->code_setting($track_name => 'bump density');
   $maxb                 = $max unless defined $maxb;
 
   my $maxed_out = $count <= $maxb;
-  my $conf_bump = $conf->code_setting($track_name => 'bump');
+  my $conf_bump = $conf->semantic_setting($track_name => 'bump',$length);
   $option ||= 0;
   return defined $conf_bump ? $conf_bump
       :  $option == 0 ? $maxed_out
@@ -1543,7 +1673,7 @@ sub do_label {
 
   my $maxl              = $conf->code_setting($track_name => 'label density');
   $maxl                 = $max_labels unless defined $maxl;
-  my $maxed_out = $count <= $maxl;
+  my $maxed_out         = $count <= $maxl;
 
   my $conf_label        = $conf->semantic_setting($track_name => 'label',$length);
   $conf_label           = 1 unless defined $conf_label;
@@ -1585,7 +1715,7 @@ sub name2segments {
 
   my (@segments,$class,$start,$stop);
   if ($name =~ /([\w._\/-]+):(-?[-e\d.]+),(-?[-e\d.]+)$/ or
-      $name =~ /([\w._\/-]+):(-?[-e\d,.]+)(?:-|\.\.)(-?[-e\d,.]+)$/) {
+      $name =~ /([\w._\/-]+):(-?[-e\d,.]+?)(?:-|\.\.)(-?[-e\d,.]+)$/) {
     $name  = $1;
     $start = $2;
     $stop  = $3;
@@ -1624,7 +1754,8 @@ sub name2segments {
     }
 
     # try the wildcard  version, but only if the name is of significant length
-    push @sloppy_names,"*$name*" if length $name > 3;
+    # IMPORTANT CHANGE: we used to put stars at the beginning and end, but this killed performance!
+    push @sloppy_names,"$name*" if length $name > 3;
 
     # automatic classes to try
     my @classes = $class ? ($class) : (split /\s+/,$self->setting('automatic classes'));
@@ -1642,6 +1773,7 @@ sub name2segments {
 sub _feature_get {
   my $self = shift;
   my ($db,$name,$class,$start,$stop,$segments_have_priority) = @_;
+
   my $refclass = $self->setting('reference class') || 'Sequence';
   $class ||= $refclass;
 
@@ -1649,6 +1781,7 @@ sub _feature_get {
   push @argv,(-class => $class) if defined $class;
   push @argv,(-start => $start) if defined $start;
   push @argv,(-end   => $stop)  if defined $stop;
+  push @argv,(-absolute=>1)     if $class eq $refclass;
   warn "\@argv = @argv" if DEBUG;
   my @segments;
   if ($segments_have_priority) {
@@ -1678,9 +1811,10 @@ sub _feature_get {
   # and take the largest one.
   my %longest;
   foreach (@filtered) {
-    # try the second line from Scott.  If multi-hit searches start coming up with too many 
+    # try the second line from Scott.  If multi-hit searches start coming up with too many
     # identical hits, try the first one again.
     # my $n = $_->display_name.$_->abs_ref.(eval{$_->version}||''); # avoiding uninit warnings
+    # my $n = $_->display_name.$_->abs_ref.(eval{$_->version}||'').$_->class;
     my $n = $_->display_name.$_->abs_ref.(eval{$_->version}||'').(eval{$_->class}||'');
     $longest{$n} = $_ if !defined($longest{$n}) || $_->length > $longest{$n}->length;
   }
@@ -1928,6 +2062,21 @@ sub language_code {
   return $lang->language;
 }
 
+=head2 error()
+
+  my $error = $browser->error(['new error']);
+
+Retrieve or store an error message. Currently used to pass run-time
+errors involving uploaded/remote annotation files.
+
+=cut
+
+sub error {
+  my $self = shift; # do nothing
+  $self->{'.err_msg'} = shift if @_;
+  $self->{'.err_msg'};
+}
+
 package Bio::Graphics::BrowserConfig;
 use strict;
 use Bio::Graphics::FeatureFile;
@@ -1944,7 +2093,7 @@ sub labels {
   # filter out all configured types that correspond to the overview, overview details
   # plugins, or other name:value types
   my @labels =  grep {
-    !($_ eq 'TRACK DEFAULTS' || /:(\d+|plugin|DETAILS)$/)
+    !($_ eq 'TRACK DEFAULTS' || /:(\d+|plugin|DETAILS|details)$/)
        } $self->configured_types;
   # apply restriction rules
   return grep { $self->authorized($_)} @labels;
@@ -1953,6 +2102,11 @@ sub labels {
 sub overview_tracks {
   my $self = shift;
   grep { ($_ eq 'overview' || /:overview$/) && $self->authorized($_) } $self->configured_types;
+}
+
+sub regionview_tracks {
+  my $self = shift;
+  grep { ($_ eq 'region' || /:region$/) && $self->authorized($_) } $self->configured_types;
 }
 
 # implement the "restrict" option
@@ -2120,10 +2274,15 @@ sub feature2label {
 
   # WARNING: if too many features start showing up in tracks, uncomment
   # the following line and comment the one after that.
-  # @label    = $self->type2label($basetype,$length) unless @label;
+  #@label    = $self->type2label($basetype,$length) unless @label;
   push @label,$self->type2label($basetype,$length);
 
   @label    = ($type) unless @label;
+
+  # remove duplicate labels
+  my %seen;
+  @label = grep {! $seen{$_}++ } @label; 
+
   wantarray ? @label : $label[0];
 }
 
@@ -2132,7 +2291,7 @@ sub invert_types {
   my $config  = $self->{config} or return;
   my %inverted;
   for my $label (keys %{$config}) {
-    next if $label=~/:?overview$/;   # special case
+    next if $label=~/:?(overview|region)$/;   # special case
     my $feature = $config->{$label}{'feature'} or next;
     foreach (shellwords($feature||'')) {
       $inverted{lc $_}{$label}++;
@@ -2163,18 +2322,29 @@ sub summary_mode {
 # override make_link to allow for code references
 sub make_link {
   my $self     = shift;
-  my ($feature,$panel,$source,$label)  = @_;
+  my ($feature,$panel,$label,$data_source,$track)  = @_;
+
+  return $feature->url if $feature->can('url');
+  return $label->make_link($feature) if $label && $label->isa('Bio::Graphics::FeatureFile');
+
   $panel ||= 'Bio::Graphics::Panel';
   $label ||= $self->feature2label($feature);
 
+  # most specific -- a configuration line
   my $link     = $self->code_setting($label,'link');
+
+  # less specific - a smart feature
+  $link        = $feature->make_link if $feature->can('make_link') && !defined $link;
+
+  # general defaults
   $link        = $self->code_setting('TRACK DEFAULTS'=>'link') unless defined $link;
   $link        = $self->code_setting(general=>'link')          unless defined $link;
 
   return unless $link;
+
   if (ref($link) eq 'CODE') {
-    my $val = eval {$link->($feature,$panel)};
-    warn $@ if $@;
+    my $val = eval {$link->($feature,$panel,$track)};
+    $self->_callback_complain($label=>'link') if $@;
     return $val;
   }
   elsif (!$link || $link eq 'AUTO') {
@@ -2185,8 +2355,8 @@ sub make_link {
     my $ref   = CGI::escape("$c");  # workaround again
     my $start = CGI::escape($feature->start);
     my $end   = CGI::escape($feature->end);
-    my $src   = CGI::escape($source);
-    return "../gbrowse_details/$src?name=$name;class=$class;ref=$ref;start=$start;end=$end";
+    my $src   = CGI::escape(eval{$feature->source} || '');
+    return "../../gbrowse_details/$data_source?name=$name;class=$class;ref=$ref;start=$start;end=$end";
   }
   return $self->link_pattern($link,$feature,$panel);
 }
@@ -2194,23 +2364,34 @@ sub make_link {
 # make the title for an object on a clickable imagemap
 sub make_title {
   my $self = shift;
-  my ($feature,$panel,$label) = @_;
+  my ($feature,$panel,$label,$track) = @_;
   local $^W = 0;  # tired of uninitialized variable warnings
 
   my ($title,$key) = ('','');
+
  TRY: {
-    $label     ||= $self->feature2label($feature) or last TRY;
-    $key         = $self->setting($label,'key') || $label;
-    $key         =~ s/s$//;
-    my $link     = $self->code_setting($label,'title')
-      || $self->code_setting('TRACK DEFAULTS'=>'title')
-      || $self->code_setting(general=>'title');
-    if (defined $link && ref($link) eq 'CODE') {
-      $title       = eval {$link->($feature,$panel)};
-      warn $@ if $@;
-      return $title if defined $title;
+    if ($label && $label->isa('Bio::Graphics::FeatureFile')) {
+      $key = $label->name;
+      $title = $label->make_title($feature) or last TRY;
+      return $title;
     }
-    return $self->link_pattern($link,$feature) if $link && $link ne 'AUTO';
+
+    else {
+      $label     ||= $self->feature2label($feature) or last TRY;
+      $key       ||= $self->setting($label,'key') || $label;
+      $key         =~ s/s$//;
+      $key         = $feature->segment->dsn if $feature->isa('Bio::Das::Feature');  # for DAS sources
+
+      my $link     = $self->code_setting($label,'title')
+	|| $self->code_setting('TRACK DEFAULTS'=>'title')
+	  || $self->code_setting(general=>'title');
+      if (defined $link && ref($link) eq 'CODE') {
+	$title       = eval {$link->($feature,$panel,$track)};
+	$self->_callback_complain($label=>'title') if $@;
+	return $title if defined $title;
+      }
+      return $self->link_pattern($link,$feature) if $link && $link ne 'AUTO';
+    }
   }
 
   # otherwise, try it ourselves
@@ -2241,13 +2422,20 @@ sub make_title {
 
 sub make_link_target {
   my $self = shift;
-  my ($feature,$panel,$label) = @_;
+  my ($feature,$panel,$label,$track) = @_;
+
+  if ($feature->isa('Bio::Das::Feature')) { # new window
+    my $dsn = $feature->segment->dsn;
+    $dsn =~ s/^.+\///;
+    return $dsn;
+  }
+
   $label    ||= $self->feature2label($feature) or return;
   my $link_target = $self->code_setting($label,'link_target')
     || $self->code_setting('LINK DEFAULTS' => 'link_target')
     || $self->code_setting(general => 'link_target');
-  $link_target = eval {$link_target->($feature,$panel)} if ref($link_target) eq 'CODE';
-  warn $@ if $@;
+  $link_target = eval {$link_target->($feature,$panel,$track)} if ref($link_target) eq 'CODE';
+  $self->_callback_complain($label=>'link_target') if $@;
   return $link_target;
 }
 

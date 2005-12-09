@@ -23,7 +23,7 @@ END
 
    NAVIGATION_INSTRUCTIONS => <<END,
 Klik op het lineaal om de figuur op de aangeduide plaats te centreren. 
-Maak gebruik van de Scroll/Zoom knoppen om de vergroting of de positie te veranderen. 
+Maak gebruik van de 'Scrollen/Inzoomen' knoppen om de vergroting of de positie te veranderen. 
 Om de huidige pagina te bewaren, 
 <a href="%s">voeg deze koppeling toe aan uw favorieten.</a>  
 END
@@ -141,7 +141,7 @@ END
 
    ANNOTATE     => 'Annoteren',
 
-   SCROLL   => 'Scroll/Zoom',
+   SCROLL   => 'Scrollen/Inzoomen',
 
    RESET    => 'Reset',
 
@@ -157,9 +157,9 @@ END
 
    EXTERNAL_TRACKS => '(Externe banen cursief)',
 
-   OVERVIEW_TRACKS => '<sup>*</sup>Baan uit Overzicht',
-
    EXAMPLES => 'Voorbeelden',
+
+   REGION_SIZE => 'Lengte van het Gebied (bp)',
 
    HELP     => 'Hulp',
 
@@ -173,6 +173,8 @@ END
 
    CONFIGURE   => 'Configureren...',
 
+   CONFIGURE_TRACKS   => 'Configuren banen...',
+
    EDIT       => 'Aanpassen Bestand...',
 
    DELETE     => 'Wissen Bestand',
@@ -182,6 +184,8 @@ END
    IMAGE_WIDTH => 'Beeldbreedte',
 
    SET_OPTIONS => 'Baaninstellingen...',
+
+   CLEAR_HIGHLIGHTING => 'Fluo Markering afzetten',
 
    UPDATE      => 'Beeld Vernieuwen',
 
@@ -207,6 +211,16 @@ END
 
    PRESETS      => '--Kies Preset URL--',
 
+   FEATURES_TO_HIGHLIGHT => 'Fluo Markeren kenmerk(en) (kenmerk1 kenmerk2...)',
+
+   REGIONS_TO_HIGHLIGHT => 'Fluo Markeren gebieden (gebied1:begin..einde gebied2:begin..einde)',
+
+   FEATURES_TO_HIGHLIGHT_HINT => 'Tip: gebruik kenmerk@kleur om de kleur te selecteren, zoals in \'NUT21@lightblue\'',
+
+   REGIONS_TO_HIGHLIGHT_HINT  => 'Tip: gebruik gebied@kleur om de kleur te selecteren, zoals in \'Chr1:10000..20000@lightblue\'',
+
+   NO_TRACKS    => '*geen*',
+
    FILE_INFO    => 'Recentste veranderingen op %s.  Geannoteerde mijlpalen: %s',
 
    FOOTER_1     => <<END,
@@ -216,6 +230,29 @@ Er wordt geen informatie gedeeld.
 END
 
    FOOTER_2    => 'Generic genome browser versie %s',
+
+   ALL_OFF => 'Alles uit',
+
+   ALL_ON => 'Alles aan',
+
+   ANALYSIS => 'Analyse',
+
+   DETAILS => 'Details',
+
+   GENERAL => 'Algemeen',
+
+   REGION      => 'Gebied',
+
+   NO_SOURCES => 'Geen gegevensbronnen',
+
+   OVERVIEW => 'Overzicht',
+
+   OVERVIEW_TRACKS => 'Overzichtsbanen',
+
+   REGION_TRACKS => '<sup>**</sup>Gebiedsbanen',
+
+   UPLOAD_TRACKS => 'Upload banen',
+
 
    #----------------------
    # MULTIPLE MATCHES PAGE
@@ -309,7 +346,7 @@ END
 
    ACTIVATE           => 'Gelieve deze baan te activeren om de informatie te kunnen bekijken.',
 
-   NO_EXTERNAL        => 'Geen externe features geladen.',
+   NO_EXTERNAL        => 'Geen externe kenmerken geladen.',
 
    NO_CITATION        => 'Geen additionele informatie beschikbaar.',
 

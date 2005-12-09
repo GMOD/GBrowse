@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.86 2005-05-14 13:11:18 scottcain Exp $
+# $Id: Segment.pm,v 1.87 2005-12-09 22:19:12 mwz444 Exp $
 
 =head1 NAME
 
@@ -217,9 +217,16 @@ sub new {
 
             warn "base_start:$base_start, stop:$stop, length:$length" if DEBUG;
 
+            if( defined($interbase_start) and $interbase_start < 0) {
+                $self->warn("start value ($interbase_start) less than zero,"
+                           ." resetting to zero") if DEBUG;
+                $base_start = 1;
+                $interbase_start = 0;
+            }
+
             if( defined($stop) and defined($length) and $stop > $length ){
                 $self->warn("end value ($stop) greater than length ($length),"
-                           ." truncating to $length");
+                           ." truncating to $length") if DEBUG;
                 $stop = $length;
             }
             $stop    = $stop ? int($stop) : $length;
@@ -566,10 +573,11 @@ sub features {
 
   warn "Segment->features() args:@_\n" if DEBUG;
 
-  my ($types,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,$feature_id,$factory);
+  my ($types,$type_placeholder,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,$feature_id,$factory);
   if ($_[0] and $_[0] =~ /^-/) {
-    ($types,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,$feature_id,$factory) =
-      $self->_rearrange([qw(TYPE 
+    ($types,$type_placeholder,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,$feature_id,$factory) =
+      $self->_rearrange([qw(TYPES 
+                            TYPE
                             ATTRIBUTES 
                             RANGETYPE 
                             ITERATOR 
@@ -581,6 +589,11 @@ sub features {
     warn "$types\n" if DEBUG;
   } else {
     $types = \@_;
+  }
+
+  #UGG, allow both -types and -type to be used in the args
+  if ($type_placeholder and !$types) {
+    $types = $type_placeholder;
   }
 
   warn "@$types\n" if (defined $types and DEBUG);
@@ -596,23 +609,23 @@ sub features {
 
 # set range variable 
 
-    my $base_start = $self->start;
+    $base_start = $self->start;
     $interbase_start = $base_start -1;
     $rend       = $self->end;
-    my $sql_range;
-    if ($rangetype eq 'contains') {
-
-      $sql_range = " fl.fmin >= $interbase_start and fl.fmax <= $rend ";
-
-    } elsif ($rangetype eq 'contained_in') {
-
-      $sql_range = " fl.fmin <= $interbase_start and fl.fmax >= $rend ";
-
-    } else { #overlaps is the default
-
-      $sql_range = " fl.fmin <= $rend and fl.fmax >= $interbase_start ";
-
-    }
+#    my $sql_range;
+#    if ($rangetype eq 'contains') {
+#
+#      $sql_range = " fl.fmin >= $interbase_start and fl.fmax <= $rend ";
+#
+#    } elsif ($rangetype eq 'contained_in') {
+#
+#      $sql_range = " fl.fmin <= $interbase_start and fl.fmax >= $rend ";
+#
+#    } else { #overlaps is the default
+#
+#      $sql_range = " fl.fmin <= $rend and fl.fmax >= $interbase_start ";
+#
+#    }
 
 # set type variable 
 
@@ -696,6 +709,19 @@ sub features {
   }
 
   my $query       = "$select_part\n$from_part\n$where_part\n$order_by\n";
+
+#Recursive Mapping
+#  Construct a query that recursively maps clone's features on
+#  the underlying chromosome
+  if ($factory->recursivMapping && ! $feature_id){
+    my $qFrom=$from_part;
+    $qFrom =~ s/featureslice/recurs_featureslice/g;
+    $query="$select_part\n$from_part\n$where_part\nUNION\n$select_part\n$qFrom\n$where_part\norder by type_id, fmin";
+  }
+  $query =~ s/\s+/ /gs  if DEBUG;
+  warn $query if DEBUG;
+#END Recursive Mapping
+
 
   $factory->dbh->do("set enable_seqscan=0");
 #  $factory->dbh->do("set enable_hashjoin=0");

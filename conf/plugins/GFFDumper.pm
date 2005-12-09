@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.24 2005-01-11 21:58:02 allenday Exp $
+# $Id: GFFDumper.pm,v 1.25 2005-12-09 22:19:09 mwz444 Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -31,7 +31,7 @@ sub config_defaults {
 sub reconfigure {
   my $self = shift;
   my $current_config = $self->configuration;
-
+  delete $current_config->{embed};
   foreach my $p ( $self->config_param() ) {
     $current_config->{$p} = $self->config_param($p);
   }
@@ -74,6 +74,11 @@ sub configure_form {
 				     edit => 'Edit'.sup('**'),
 				 }
 			));
+  $html .= p(
+	     checkbox(-name=>$self->config_name('embed'),
+		      -checked=>0,
+		      -label=>'Embed DNA sequence in the GFF file')
+		      );      
   autoEscape(1);
 
   my $href = a( {-href => 'javascript:void(0)', -onclick => "alert('" .
@@ -118,6 +123,7 @@ sub dump {
   my $whole_segment = $db->segment(Accession => $segment->ref) ||
                       $db->segment($segment->ref);
   my $coords        = $config->{coords};
+  my $embed         = $config->{embed};
 
   $segment->refseq($segment) if $coords eq 'relative';
 
@@ -140,23 +146,31 @@ sub dump {
   my $iterator = $segment->get_seq_stream(@args);
   while ( my $f = $iterator->next_seq ) {
     $self->print_feature($f,$version);
+  }
 
-    for my $set (@more_feature_sets) {
-      if ( $set->can('get_seq_stream') ) {
-        my @feats = ();
-        my $iterator = $set->get_seq_stream;
-        while ( my $f = $iterator->next_seq ) {
-	  $self->print_feature($f);
-        }
+  for my $set (@more_feature_sets) {
+    if ( $set->can('get_seq_stream') ) {
+      my @feats = ();
+      my $iterator = $set->get_seq_stream;
+      while ( my $f = $iterator->next_seq ) {
+	$self->print_feature($f);
       }
     }
   }
+
+  if ( $embed ) {
+    my $dna = $segment->dna;
+    $dna =~ s/(\S{60})/$1\n/g;
+    print ">$segment\n$dna\n" if $dna;
+  }
+  
 }
 
 sub print_feature {
   my $self = shift;
   my ($f,$version) = @_;
-  $f->version($version);
+  $version       ||= 3;
+  eval{$f->version($version)};
   my $s = $f->gff_string(1); # the flag is for GFF3 subfeature recursion
   chomp $s;
   print $s,"\n";

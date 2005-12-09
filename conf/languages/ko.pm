@@ -42,9 +42,80 @@ END
 
    SHOW_INSTRUCTIONS => '설명 보기',
 
+   HIDE_INSTRUCTIONS => '설명 숨기기',
+
+   SHOW_HEADER       => '제목 보기',
+
+   HIDE_HEADER       => '제목 숨기기',
+   
    LANDMARK => '표지 혹은 영역',
 
    BOOKMARK => '즐겨찾기 추가',
+
+   IMAGE_LINK => '이미지 링크',
+
+   SVG_LINK => '고해상도 이미지',
+   
+   SVG_DESCRIPTION => <<END,
+<p>
+이 링크의 이미지는 SVG(Scalable Vector Graphics) 형식으로
+생성됩니다. SVG 이미지는 jpeg 이나 png 와 같은 점으로 이루어진
+이미지보다 몇 다음과 같은 몇가지 장점을 가지고 있습니다.
+</p>
+<ul>
+<li>해상도 손실 없이 이미지의 크기 조절이 가능합니다.
+<li>일반적인 백터 기반의 그래픽 프로그램에서 feature 별로 편집이 가능합니다.
+<li>필요할 때 논문 출판을 위한 EPS 포멧으로 변환할 수 있습니다.
+</ul>
+<p>
+SVG 이미지를 보기 위해서는 SVG 형식을 지원하는 브러우저나 Adobe 사에서
+지원하는 SVG 브라우저 플러그인, 또는 SVG 이미지를 보고 편집할 수 있는
+Adobe Illustrator 와 같은 별도의 프로그램이 필요합니다.
+</p>
+<p>
+Adobe 사의 SVG browser plugin: <a
+href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Macintosh">Macintosh</a>
+| <a
+href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Windows">Windows</a>
+<br />
+Linux 사용자들은 
+<a href="http://xml.apache.org/batik/">Batik SVG Viewer</a>를 보세요.
+</p>
+<p>
+<a href="%s" target="_blank">SVG 이미지를 새 브라우저 창에서 봅니다</a></p>
+<p>
+이 그림을 하드 디스크에 저장하려면, 
+control-click (Macintosh) 또는  
+마우스 오른쪽 버튼 클릭 (Windows) 이후 다른 이름으로 그림 저장을 선택하세요.
+</p>   
+END
+   
+     IMAGE_DESCRIPTION => <<END,
+<p>
+이 화면에 포함된 이미지를 다른 곳에서 사용하고 싶다면, 아래의
+URL 주소를 HTML 페이지에 복사해서 붙여 넣으세요:
+</p>
+<pre>
+&lt;IMAGE src="%s" /&gt;
+</pre>
+<p>
+이 이미지는 다음과 같이 보일 겁니다:
+</p>
+<p>
+<img src="%s" />
+</p>
+
+<p>
+만약 개략적인 그림(chromosome 이나 contig view)만 보인다면, 
+영역의 크기를 줄여보시기 바랍니다.
+</p>
+END
+
+   TIMEOUT  => <<'END',
+요청에 대한 시간이 초과되었습니다. 너무 넓은 영역을 선택하신 것 같습니다.
+몇몇 정보를 보이지 않게 하거나 선택 영역을 줄여서 다시 시도해보시기 바랍니다.
+만약 계속 시간 초과 문제가 발생하면 빨간 색의 "초기화" 버튼을 눌러보세요.
+END 
 
    GO       => '실행',
 
@@ -54,12 +125,16 @@ END
 
    DUMP     => '내려받기(dump)',
 
+   HIGHLIGHT => '하이라이트',
+
    ANNOTATE     => 'Annotate',
 
    SCROLL   => '이동/확대',
 
    RESET    => '초기화',
 
+   FLIP     => '뒤집기(flip)',
+   
    DOWNLOAD_FILE    => '파일 내려받기',
 
    DOWNLOAD_DATA    => '데이터 내려받기',
@@ -70,8 +145,10 @@ END
 
    TRACKS   => '표시 정보',
 
-   EXTERNAL_TRACKS => '(외부 정보는 이텔릭으로 표시됩니다)',
+   EXTERNAL_TRACKS => '<i>(외부 정보는 이텔릭으로 표시됩니다)</i>',
 
+   OVERVIEW_TRACKS => '<sup>*</sup>개략적인 정보',
+   
    EXAMPLES => '예제',
 
    HELP     => '도움말',
@@ -80,7 +157,7 @@ END
 
    CANCEL   => '취소',
 
-   ABOUT    => 'GBrowser는...',
+   ABOUT    => '추가 정보...',
 
    REDISPLAY   => '새로 고침',
 
@@ -98,6 +175,16 @@ END
 
    BENEATH     => '밑에 표시',
 
+   LEFT        => '왼쪽',
+
+   RIGHT       => '오른쪽',
+
+   TRACK_NAMES => '정보 이름표',
+   
+   ALPHABETIC  => '알파벳순',
+
+   VARYING     => '설정순',
+   
    SET_OPTIONS => '표시 정보 설정...',
 
    UPDATE      => '그림 다시부르기',
@@ -105,6 +192,8 @@ END
    DUMPS       => '내려받기, 검색 및 기타 기능',
 
    DATA_SOURCE => '데이터 출처',
+
+   UPLOAD_TRACKS=> '나만의 정보 추가하기',
 
    UPLOAD_TITLE=> '개인 annotation 정보 등록',
 
@@ -126,6 +215,8 @@ END
 
    PRESETS      => '--URL 선택--',
 
+   NO_TRACKS 	=> '*정보없음*',
+
    FILE_INFO    => '최종 수정 %s.  annotation 표지 %s',
 
    FOOTER_1     => <<END,
@@ -141,6 +232,8 @@ END
 
    HIT_COUNT      => '%d 개의 영역이 검색되었습니다.',
 
+   POSSIBLE_TRUNCATION =>  '검색 결과가 % 개로 제한되었습니다; 목록이 완전하지 않습니다.',
+   
    MATCHES_ON_REF => '%s에 일치합니다',
 
    SEQUENCE        => '서열',
@@ -212,6 +305,20 @@ END
 
    NO_LIMIT    => '제한 없음',
 
+   OVERVIEW    => '개요(overview)',
+
+   EXTERNAL    => '외부(external)',
+
+   ANALYSIS    => '분석',
+
+   GENERAL     => '일반(general)',
+
+   DETAILS     => '세부(details)',
+
+   ALL_ON      => '모두 켜기',
+
+   ALL_OFF     => '모두 끄기',
+   
    #--------------
    # HELP PAGES
    #--------------
@@ -263,5 +370,7 @@ END
  TOO_MANY_LANDMARKS => '%d 개의 표지는 너무 많아 표시할 수 없습니다.',
 
  SMALL_INTERVAL    => '작은 간격을 %s bp로 재조정합니다',
+
+ NO_SOURCES        => '읽을 수 있는 데이터 소스가 설정되어 있지 않습니다. 볼 수 있는 권한이 주어지지 않은 것 같습니다.',
 
 };

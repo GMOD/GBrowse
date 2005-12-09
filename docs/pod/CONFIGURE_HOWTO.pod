@@ -220,6 +220,18 @@ You can add multiple Notes.  Just separate them by semicolons:
 
 The Note should come AFTER the group type and name.
 
+3. Using the Group field to add an alternative name
+
+If you want the feature to be quickly searchable by an alternative
+name, you can add one or more Alias tags. A feature can have multiple
+aliases, and multiple features can share the same alias:
+
+ Chr3 giemsa heterochromatin 4500000 6000000 . . . Band 3q12.1 ; Alias MFX
+
+Searches for aliases will be both faster and more reliable than
+searches for keywords in notes, since the latter relies on whole-text
+search methods that vary somewhat from DBMS to DBMS.
+
 =head2 A3. Identifying the reference sequence
 
 Each reference sequence in the GFF table must itself have an entry.
@@ -316,6 +328,66 @@ It is suggested that you use the sample GFF files from the yeast,
 drosophila and C. elegans projects to see what methods to use to
 achieve the desired results.
 
+In addition to the standard aggregators that are distributed with
+BioPerl, GBrowse distributes several experimental and/or
+special-purpose aggregators:
+
+=over 4
+
+=item match_gap
+
+This aggregator is used for GFF3 style gapped alignments, in which
+there is a single feature of method 'match' with a 'Gap' attribute.
+This aggregator was contributed by Dmitri Bichko.
+
+=item orf
+
+This aggregator aggregates raw "ORF" features into "coding"
+features. It is basically identical to the "coding" aggregator, except
+that it looks for features of type "ORF" rather than "cds".
+
+=item reftranscript
+
+This aggregator was written to make the compound feature,
+"reftranscript" for use with Gbrowse editing software developed
+outside of the GMOD development group.  It can be used to aggregate
+"reftranscripts" from "refexons", loaded as second copy features.
+These features, in contrast to "transcripts", are usually implemented
+as features which cannot be edited and serve as starting point
+references for annotations added using Gbrowse for feature
+visualization.
+
+Adding features to the compound feature, "reftranscript", can be done
+by adding to the "part_names" call (i.e. "refCDS").
+
+=item  waba_alignment
+
+This aggregator handles the type of alignments produced by Jim Kent's
+WABA program, and was written to be compatible with the C elegans GFF
+files.  It aggregates the following feature types into an aggregate
+type of "waba_alignment":
+
+   nucleotide_match:waba_weak
+   nucleotide_match:waba_strong
+   nucleotide_match:waba_coding
+
+=item wormbase_gene
+
+This aggregator was written to be compatible with the C elegans GFF2
+files distributed by the Sanger Institute.  It aggregates raw "CDS",
+"5'UTR", "3'UTR", "polyA" and "TSS" features into "transcript"
+features.  For compatibility with the idiosyncrasies of the Sanger GFF
+format, it expects that the full range of the transcript is contained
+in a main feature of type "Sequence".
+
+It is strongly recommended that for mirroring C. elegans annotations,
+you use the "processed_transcript" aggregator in conjunction with the
+GFF3 files found at:
+
+ ftp://ftp.wormbase.org/pub/wormbase/genomes/elegans/genome_feature_tables/GFF3
+
+=back
+
 =head1 B. ADDING A NEW DATABASE TO THE BROWSER
 
 Each data source has a corresponding configuration file in the
@@ -331,7 +403,11 @@ You can use this name to select the data source when linking to the
 browser.  Just construct a URL that uses "sourcename" as a virtual
 directory under cgi-bin/gbrowse:
 
-  http://your.site.org/cgi-bin/gbrowse/sourcename
+  http://your.site.org/cgi-bin/gbrowse/sourcename/
+
+(Note: If you don't add the slash at the end, gbrowse will
+automatically do it for you, since the terminal slash is needed to
+work around an apparent bug in MSIE's cookie handling.)
 
 It is suggested that you use the same name as the database, although
 this isn't a requirement.  (If no "source=" argument is given, gbrowse
@@ -462,12 +538,12 @@ and "alignment," comment this setting out entirely:
 
 The user name for the gbrowse script to log in under if you are not
 using "nobody".  This is exactly the same as providing the -user
-option to db_args.
+option to db_args, and is deprecated.
 
 =item * pass
 
 The password to use if the database is password protected.  This is
-the same as providing the -pass option to db_args.
+the same as providing the -pass option to db_args, and is deprecated.
 
 =item * stylesheet
 
@@ -488,6 +564,14 @@ A good standard list of plugins is:
 See the contents of conf/plugins and contrib/plugins for more plugins
 that you can install.
 
+=item * quicklink plugins
+
+This is a list of plugins that you want to appear as links in the link
+bar (which includes the [Bookmark this] and [Link to Image] links).
+Selecting one of these links is equivalent to choosing the plugin from
+the popup menu and pressing the "Go" button.  The popup will continue
+to appear in the popup menu.
+
 =item * plugin_path
 
 By default gbrowse searches for plugins in its standard location of conf/plugins.
@@ -499,10 +583,38 @@ with a space-delimited list of additional directories to search in.
 URL in which the various graphical buttons used by GBrowse are located.
 (You will probably not need to change this.)
 
+=item * js
+
+URL in which the gbrowse javascript helper function files are located.
+(You will probably not need to change this).
+
 =item * tmpimages
 
 URL of a writable directory in which GBrowse can write its temporary
-images.    (You will probably not need to change this.)
+images. The format is:
+
+  tmpimages = <tmpimages_url> <tmpimages_path>
+
+Where <tmpimages_url> is the directory as it appears as a URL and
+<tmpimages_path> is the physical path to the directory as it appears
+to the filesystem. Usually the physical path is just the URL with the
+DocumentRoot configuration variable prepended to it, in which case
+only the URL is needed. However, if the URL is defined using an Alias
+directive, then the path argument is mandatory.
+
+The tmpimages option is mandatory.
+
+NOTE: The path argument is ignored if gbrowse is running under
+modperl, because modperl allows the URL to be translated into a
+physical directory programatically.
+
+=item * cachedir
+
+This is a writable directory that can be used for caching
+gbrowse_img-generated images. Defining it will speed up some
+operations. If not defined gbrowse_img will still work, but will
+regenerate images from scratch even if they've been used before. It is
+OK to use the same path as the tmpimages directory.
 
 =item * image widths
 
@@ -523,12 +635,14 @@ The default features option is a space-delimited list of tracks
 to turn on by default.  You will probably need to change this.
 For example:
 
-     default features = Genes ORFs tRNAs
+     default features = Genes ORFs tRNAs Centromeres:overview
 
-To activate an annotation plugin track by default, preface the
-plugin's name with "plugin:":
+The syntax for annotation plugins is slightly different. To activate
+an annotation plugin track by default, preface the plugin's name with
+"plugin:"
 
-     default features = Genes ORFs tRNAs plugin:RestrictionAnnotator
+     default features = Genes ORFs Centromeres:overview 
+                        plugin:RestrictionAnnotator
 
 =item * reference class
 
@@ -538,6 +652,25 @@ another class, such as Contig, please indicate the class here (if you
 don't, certain features such as the keyword search will fail):
 
       reference class = contig
+
+=item * initial landmark
+
+This option controls what feature to show when the user first visits a
+gbrowse database and has not yet performed a search. If not present,
+gbrowse displays a page with the search area and options, but no
+overview or panel.
+
+Example:
+
+       initial landmark = Chr1
+
+=item * truecolor
+
+If this option is present and true, then GBrowse will create 24-bit
+(truecolor) images. This is mainly useful when using the "image"
+glyph, which allows you to paste arbitrary images onto the genome
+map. Do not use this option unless you need it, because it slows down
+drawing and makes the images much larger.
 
 =item * units, unit_divider
 
@@ -549,13 +682,20 @@ base pairs is equal to one Morgan, 5010 would be specified for the unit_divider.
 Note that if unit_divider is specified, max segment, default segment and
 and zoom levels will all be interpreted in terms of the specified units.
 
-=item * max segment
+=item * max segment, min segment
 
-The max segment option sets an upper bound on the maximum size DNA
-segment that will be displayed on the detailed view.  Its value is
-in base pairs.  Above this limit, the user will be prompted to
-select a smaller region on the birds-eye view.  You will probably
-want to adjust this.
+These options control the size of segments that will be shown in the
+detailed view.
+
+The max segment option sets an upper bound on the maximum size segment
+that will be displayed on the detailed view.  Its value is in the
+selected units.  Above this limit, the user will be prompted to select
+a smaller region on the birds-eye view.  The default is 1,000,000 base
+pairs.
+
+If the user tries to view a segment smaller than the min segment
+option, then the segment will be resized to be this size. The default
+is 20 bp.
 
 =item * default segment
 
@@ -570,6 +710,13 @@ GBrowse allows unlimited zoom levels.  This option selects the
 width of each level, in bp.  For example:
 
       zoom levels = 1000 2000 5000 10000 20000 40000 100000 200000
+
+=item * region segment
+
+If this configuration option is set, a new "region panel" will appear
+that is intermediate in size between the overview and the detail
+panel. The value of this option becomes the size of the region panel
+in base pairs.
 
 =item * show sources
 
@@ -720,6 +867,49 @@ configuration files in conf/lang) by setting these options.  For example:
 
          instructions = "Type in the name of a contig or clone."
 
+=item * no search
+
+If you don't want the "Landmark or Region" textbox to appear, set this
+to true. The user will still be able to search the database by
+appending q=<search term> to the URL.
+
+          no search = 1
+
+=item * no autosearch
+
+If this option is set to a true value, then the user's previous search
+will not be automatically re-executed the next time he visits
+gbrowse. Instead, the previous search will be pasted into the
+"Landmark or Region" box and the user will have to press "Search" to
+reexecute it.
+
+=item * instructions section
+=item * search section
+=item * overview section
+=item * region section
+=item * details section
+=item * tracks section
+=item * display_settings section
+=item * upload_tracks section
+
+These options control which sections are displayed and whether they
+are initially open or collapsed. Their values are one of:
+
+ open     Show the section initially open
+ closed   Show the section initially collapsed
+ off      Do not show the section at all
+
+For example "instructions section = closed" will initially show the
+instructions section in collapsed form when the user visits gbrowse
+for the first time. "upload_tracks section = off" will disable the
+uploads section entirely.
+
+Note that turning off the details section will effectively disable
+gbrowse, but you might want to do this if you want to show the
+overview section only. Turning off the search section will also
+disable the navigation buttons. If you want to disable searching
+selectively, you should use the "no search" option instead.
+
 =item * html1, html2, html3, html4, html5, html6
 
 These options allow you to insert HTML into the GBrowse page at
@@ -792,6 +982,37 @@ no features in it.  Possible values are:
 
 The default value is "key."
 
+=item * background, postgrid
+
+These two options can be used to place custom background images in the
+details panel and are useful for advanced operations such as
+colorizing the panel to show gaps in the assembly. Either option
+accepts either the path to a graphics file to be tiled onto the
+background, or a callback subroutine. In the case of the latter the
+callback will passed a two argument list consisting of the GD::Image
+object and the Bio::Graphics::Panel object. This gives the callback a
+chance to draw on top of the background using GD library calls.
+
+The only difference between the two options is the time that they are
+applied relative to the grid that shows base pair coordinates. The
+background option is invoked before the grid is drawn so that the grid
+appears on top of it. The postgrid option is invoked after the grid is
+drawn, so that anything the option draws appears on top of the
+grid. See
+http://sourceforge.net/mailarchive/message.php?msg_id=12116755 for an
+example of using this feature to show assembly gaps as vertical gray
+regions.
+
+=item * show track categories
+
+If this option is set to a true value, then tracks that have been
+assigned to categories (using the "category" option described later),
+will have their categories included in their labels. For example, a
+track of key "Protein matches" and category "vertebrate" will be
+displayed in a track labeled "Protein match (vertebrate)".
+
+The default is false.
+
 =item * das mapmaster
 
 This option, which should appear somewhere in the [GENERAL] section,
@@ -816,6 +1037,80 @@ FTP connections, and "proxy" will set both.  The value is the URL of
 the proxy:
 
    proxy = http://myproxy.myorg.com:9000
+
+=item * session driver
+=item * session args
+
+These options fine-tune how gbrowse manages its state-maintaining
+sessions. GBrowse uses L<CGI::Session> to store session data on the
+server. By default (if neither of these options is present), it uses
+CGI::Session's "file" driver and "default" serializer. The session
+files are stored in the "sessions" directory underneath the directory
+specified by the "tmpimages" option
+(e.g. /usr/local/apache/htdocs/gbrowse/tmpimages/sessions).
+
+The "session driver" option will be passed to CGI::Session->new() as
+the first argument. It specifies the driver, serializer and ID
+generator according to the syntax described in L<CGI::Session>. The
+"session args" option will be passed to CGI::Session->new() as the
+third argument. It specifies additional parameters to be passed to the
+selected driver.
+
+For example, here is how to create session data that is stored in the
+MySQL "test" database under a table named "gbrowse_sessions." The
+session data will be stored in binary form by the Storable module:
+
+session driver = driver:mysql;serializer:storable
+session args   = DataSource test
+		 TableName  gbrowse_sessions
+
+See the CGI::Session documentation for information about setting up
+the MySQL table and appropriate permissions. 
+
+You might also want to read about L<CGI::Session::ID::salted_md5> for
+an ID generation algorithm that should be more secure (but slightly
+slower) than the default one.
+
+You will not ordinarily need to use these settings, as the defaults
+seem to work well.
+
+=item remember settings time
+
+The length of time to remember page-specific settings in the format
+"+NNNu", where NNN is a number and "u" is a unit ("w" = weeks, "d" =
+days, "M" = months). For example:
+
+  remember settings time = +3M   # remember settings for 3 months
+
+The users' settings, which includes uploaded files, track options and
+plugin configuration, will be reset to the default if he or she fails
+to visit the site within the time specified.
+
+The default value is 1 month.
+
+See L<CGI> for more information on the time format.
+
+=item remember source time
+
+Like "remember settings time" but applies to remembering the user's
+preferred data source. "remember source time" should be greater or
+equal to "remember settings time" because the settings will expire
+when the source expires. If you have multiple sources, this option
+should be the same for each one.
+
+The default value is 3 months.
+
+=item msie hack
+
+GBrowse uses HTTP POST to transfer the current page settings to the
+web server. Because of the way that Microsoft Internet Explorer caches
+pages, when users of this browser press the "Back" button, MSIE will
+display an annoying alert that prompts the user to reload the page.
+
+When you set "msie hack" to a true value, Gbrowse will use the GET
+request when it detects MSIE in use. This will fix the "Back" button
+issue, but will put very long URLs in the Location box. It is your
+choice which of these is more annoying to your users.
 
 =back
 
@@ -924,11 +1219,17 @@ COMPUTED OPTIONS for details.
 
 =item * title
 
-The title option controls the "tooltips" text that pops up when
-the mouse hovers over a glyph in certain browsers.  The rules
-for generating titles are the same as the "link" option discussed
-above.  The "title" option can also be computed dynamically.
-See COMPUTED OPTIONS for details.
+The title option controls the "tooltips" text that pops up when the
+mouse hovers over a glyph in certain browsers.  The rules for
+generating titles are the same as the "link" option discussed above.
+The "title" option can also be computed dynamically.  See COMPUTED
+OPTIONS for details.
+
+Note HTML characters such as "<", ">" and "&" are not automatically
+escaped from the title. This lets you do neat stuff, such as create
+popup menus, but also means that you need to be careful. The function
+CGI::escapeHTML() is available to properly escape HTML characters in
+dynamically-generated titles.
 
 The special value "AUTO" causes a default description to appear
 describing the name, type and position of the feature.  This is
@@ -1076,7 +1377,13 @@ the [GENERAL] section, but change the rules on a track-by-track basis.
 They can be used to override the global rules.  To force a track not
 to contain any links, use a blank value.
 
-=item 14 feature_low
+=item 14 box_subparts
+
+If this option is true, then gbrowse will generate imagemap rectangles
+for each of the subparts of a feature (e.g. the exons within a
+transcript), allowing you to link each subpart separately.
+
+=item 15 feature_low
 
 If this option is present, GBrowse will use the list of feature types
 listed here at resolution views.  (This is one of the ways that
@@ -1085,7 +1392,7 @@ to switch off detailed exon, UTR, promoters and other within-the-gene
 features, and just show the start and stop of the transcription
 unit.
 
-=item 15 global feature
+=item 16 global feature
 
 If this option is present and set to a true value (e.g. "1"), GBrowse 
 will automatically generate a  pseudo-feature that starts at the 
@@ -1095,20 +1402,32 @@ glyphs in order to display global characteristics of the sequence.
 If this option is set, then you do not need to specify a "feature"
 option.
 
-=item 16 group_pattern
+=item 17 group_pattern
 
 This option lets you connect related features by dotted lines based
 on a pattern match in the features' names.  A typical example is
 connecting the 5' and 3' read pairs from ESTs or plasmids.  See
 GROUPING FEATURES for details.
 
-=item 17 restrict
+=item 18 restrict
 
 This option allows you to restrict who is allowed to view the current
 track by host name, IP address or username/password.  See
 AUTHENTICATION AND AUTHORIZATION for details.
 
-=item 18 das category, das landmark, das subparts, das superparts
+=item 19 category
+
+This option allows you to group tracks into different groups on the
+GBrowse display in addition to the default group called 'General'.
+For example, if you wanted several tracks to be in a separate group
+called "Genes", you would add this to each of the track defintions:
+
+  category = Genes
+
+Note that it is not possible to make subcategories. If all tracks are
+categorized, then the "General" category will not be displayed.
+
+=item 20 das category, das landmark, das subparts, das superparts
 
 All these options pertain to exporting the GBrowse database as a DAS
 data source.  Please see L<DAS_HOWTO> for more information.
@@ -1255,6 +1574,19 @@ source "framework":
  height        = 5
  key           = Mapped Genes
 
+Similarly, you can make a track appear in the region panel by
+appending ":region" to its name:
+
+ [genedensity:region]
+ feature       = gene_density
+ glyph         = xyplot
+ graph_type    = boxes
+ scale         = right
+ bgcolor       = red
+ fgcolor       = red
+ height        = 20
+ key           = SNP Density
+
 =head2 B6. Semantic Zooming
 
 Sometimes you will want to change the appearance of a track when the
@@ -1306,14 +1638,21 @@ genes on segments between 500 and 99,999 bp, you can modify the
 
 It is also possible to display different features at different zoom
 levels, although you should handle this potentially confusing feature
-with care!
+with care.
+
+If you wish to turn off a track entirely, you can use the "hide" flag
+to hide the track when the display exceeds a certain size:
+
+  [6_frame_translation:50000]
+  hide = 1
 
 =head2 B7. Computed Options
 
 Some options can be computed at run time by using Perl subroutines as
-their values.  Currently this works with the values of the "link",
-"title", "header" and "footer" options, and any glyph-specific option
-that appears in a track section.
+their values. These are known as "callbacks." Currently this works
+with the values of the "link", "title", "link_target", "header" and
+"footer" options, and any glyph-specific option that appears in a
+track section.
 
 You need to know the Perl programming language to take advantage of
 this.  The general format of this type of option is:
@@ -1339,20 +1678,14 @@ For options of type "footer" and "header", the subroutine is passed no
 arguments.  It is expected to produce some HTML and return it as a
 string value.
 
-For the "link" option, the subroutine will be called with a single
-argument consisting of a Bio::DB::GFF::Feature object.  The subroutine
-should examine this object to determine what URL to link to and return
-the value of the URL as a string, or undef if no link should be made.
-See the manual page for Bio::DB::GFF::Feature for information on how
-to interrogate the feature object.
-
-For glyph-specific features, the subroutine will be called at run time
-with the feature (a Bio::SeqI-complaint object) as the first argument.
-The subroutine can examine this feature and determine what value to
-return.  The return value is treated as the value of the corresponding
-option.  For example, this bgcolor subroutine will call the feature's
-primary_tag() method, and return "blue" if it is an exon, "orange"
-otherwise:
+For glyph-specific features, such as "bgcolor" the subroutine will be
+called at run time with five arguments consisting of the feature, the
+name of the option, the current part number of the feature, the total
+number of parts in this feature, and the glyph corresponding to the
+feature. Usually you will just look at the first argument.  The return
+value is treated as the value of the corresponding option.  For
+example, this bgcolor subroutine will call the feature's primary_tag()
+method, and return "blue" if it is an exon, "orange" otherwise:
 
   bgcolor = sub {
 	  my $feature = shift;
@@ -1360,9 +1693,44 @@ otherwise:
 	  return "orange";
 	  }
 
-More subroutine arguments are available to the glyph-specific
-subroutines.  See the Bio::Graphics::Panel manual page for the full
-details.
+See the manual page for Bio::DB::GFF::Feature for information on how
+to interrogate the feature object.
+
+For special effects, such as coloring the first and last exons
+differently, you may need access to all five arguments. Here is an
+example that draws the first and last parts of a feature in blue and
+the rest in red:
+
+   sub { 
+	 my($feature,$option_name,$part_no,$total_parts,$glyph) = @_;
+	 return 'blue' if $part_no == 0;                # zero-based indexing!
+	 return 'blue' if $part_no == $total_parts-1;   # zero-based indexing!
+	 return 'red';
+	 }
+
+See the Bio::Graphics::Panel manual page for more details.
+
+Callbacks for the "link", "title", and "link_target" options have a
+slightly different call signature. They receive three arguments
+consisting of the feature, the Bio::Graphics::Panel object, and the
+Bio::Graphics::Glyph object corresponding to the current track within
+the panel:
+
+  link = sub {
+	     my ($feature, $panel, $track) = @_;
+	     ... do something
+	     }
+
+Ordinarily you will only need to use the feature object. The other
+arguments are useful to look up panel-specific settings such as the
+pixel width of the panel or the state of the "flip" setting:
+
+  title = sub {
+	  my ($feature,$panel,$track) = @_;
+	  my $name = $feature->display_name;
+	  return $panel->flip ? "$name (flipped)" : $name;
+       }
+
 
 Named Subroutine References
 ---------------------------
@@ -1415,6 +1783,16 @@ use "no strict 'vars';" at the top of the section:
 Due to the way the configuration file is parsed, there must be no
 empty lines in the init_code section.  Either use comments to
 introduce white space, or "use" a .pm file to do anything fancy.
+
+Subroutines that you define in the init_code section, as well as
+anonymous subroutines, will go into a package that changes
+unpredictably each time you load the page. If you need a predictable
+package name, you can define it this way:
+
+   init_code = package My; sub score_height { .... }
+
+   [EST_ALIGNMENTS]
+   height = \&My::score_height
 
 =head2 B8. Declaring New Aggregators
 
@@ -1540,23 +1918,89 @@ It is entirely possible to create an invalid regular expression, in
 which case gbrowse will crash until you comment out the offending
 option.
 
-=head2 B10. Linking-out from AUTO-generated details
+=head2 B10. Controlling the gbrowse_details page
 
-If the [Track Defaults]-Link (see section B2) or an individual [Track]-
-Link (see section B3) is set to AUTO, the gbrowse_details script will be
-invoked when the user clicks on one of those features.  This will
-generate a simple table of all feature information available in the
-database.  This includes the user-defined tag/value attributes set
-in Column 9 of the GFF for that feature.
+If a track definition's "link" option (see section B2) is set to AUTO,
+the gbrowse_details script will be invoked when the user clicks on a
+feature contained within the track.  This will generate a simple table
+of all feature information available in the database.  This includes
+the user-defined tag/value attributes set in Column 9 of the GFF for
+that feature.
 
-It is possible to configure HTML link-outs for each tag-type in these
-tag/value pairs such that clicking on the value will invoke an external
-script with the tag and value information being passed to that script.
-This is achieved by adding a new stanza for each tag-type you wish to
-associate links to.
+You can control, to some extent, the formatting of the tag value table
+by providing a configuration stanza with the following format:
 
-The format of the stanza header is [TagName:DETAILS], and currently the
-only option allowed within this stanza is URL.
+  [feature_type:details]
+  tag1 = formatting rule
+  tag2 = formatting rule
+  tag3 = formatting rule
+
+"feature_type" is the type of the feature you wish to control. For
+example, "gene:sgd" or simply "gene". You may also specify a
+feature_type of "default" to control the formatting for all
+features. "tag1", "tag2" and so forth are the tags that you wish to
+control the formatting of. The tags "Name," "Class", "Type", "Source",
+"Position", and "Length" are valid for all features, while "Target"
+and "Matches" are valid for all features that have a target
+alignment. In addition, you can use the names of any attributes that
+you have defined. Tags names are NOT case sensitive, and you may use a
+tag named "default" to define a formatting rule that is general to all
+tags (more specific formatting rules will override less specific ones).
+
+A formatting rule can be a string with (possible) substitution values,
+or a callback. If a string, it can contain one or more of the
+substitution variable "$name", "$start", "$end", "$stop", "$strand",
+"$method", "$type", "$description" and "$class", which are replaced
+with the corresponding values from the current feature. In addition,
+the substitution variable "$value" is replaced with the current value
+of the attribute, and the variable "$tag" is replaced with the current
+tag (attribute) name. HTML characters are passed through.
+
+For example, here is a simple way to boldface the Type field,
+italicize the Length field, and turn the Notes into a Google
+search:
+
+ [gene:details]
+ Type   = <b>$value</b>
+ Length = <i>$value</b>
+ Note  = <a href="http://www.google.com/search?q=$value">$value</a>
+
+If you provide a callback, the callback subroutine will be invoked
+with three arguments. WARNING: the three arguments are different from
+the ones passed to other callbacks, and consist of the tag value, the
+tag name, and the current feature:
+
+  Note = sub {
+	     my($value,$tag_name,$feature) = @_;
+	     do something....
+	     }
+
+You can use this feature to format sequence attributes nicely. For
+example, if your features have a Translation attribute which contains
+their protein translations, then you are probably unsatisified with
+the default formatting of these features. You can modify this with a
+callback that word-wraps the value into lines of at most 60
+characters, and puts the whole thing in a <pre> section.
+
+ [gene:details]
+ Translation = sub {
+     		my $value = shift;
+		$value =~ s/(\S{1,60})/$1\n/g;
+		"<pre>$value</pre>";
+	     }
+
+=head2 B11. Linking out from gbrowse_details
+
+The formatting rule mechanism described in the previous section is the
+recommended way of creating a link out from the gbrowse_details
+page. However, an older mechanism is available for backward
+compatibility.
+
+To use this legacy mechanism, create a stanza header named
+[TagName:DETAILS], where TagName is the name of the tag (attribute
+name) whose values you wish to turn into URLs, and where DETAILS must
+be spelled with capital letters. Put the option "URL" inside this
+stanza, containing a string to be transformed into the URL.
 
 For example, to link to a local cgi script from the following GFF line:
     
@@ -1568,7 +2012,6 @@ one might add the following stanza to the configuration file:
     [local_id:DETAILS]
     URL   = http://localhost/cgi-bin/localLookup.cgi?tag=$tag;id=$value
 
-
 The URL option's value should be a URL containing one or more
 variables.  Variables begin with a dollar sign ($), and are
 replaced at run time with the information relating to the selected
@@ -1577,6 +2020,20 @@ feature attribute.  Recognized variables are:
      $tag        The "tag" of the tag/value pair
      $value      The "value" of the tag/value pair
 
+The value of URL can also be an anonymous subroutine, in which case
+the subroutine will be invoked with a two-element argument list
+consisting of the name of the tag and its value. This example,
+provided by Cyril Pommier, will convert Dbxref tags into links to
+NCBI, provided that the value of the tag looks like an NCBI GI number:
+
+ [Dbxref:DETAILS]
+ URL = sub { 
+       my ($tag,$value)=@_;
+       if ($value =~ /NCBI_gi:(.+)/){
+        return "http://www.ncbi.nlm.nih.gov/gquery/gquery.fcgi?term=$1";
+        }
+        return;
+      }
 
 =head1 C. GENERATING HISTOGRAMS
 
@@ -1595,7 +2052,7 @@ There are four steps for making histograms:
 
 =item 1
 
-generate the density data using the generate_histogram.pl script.
+generate the density data using the bp_generate_histogram.pl script.
 
 =item 2
 
@@ -1613,14 +2070,14 @@ add the density aggregator to the appropriate track in the configuration file.
 
 The first step is to generate the density data.  Currently this is
 done by generating a GFF file containing a set of "bin" feature
-types.  Use the generate_histogram.pl script to do this.  You will
+types.  Use the bp_generate_histogram.pl script to do this.  You will
 find it in bioperl under the scripts/Bio-DB-GFF directory.
 
 Assuming that your database is named "dicty", you have a feature named
 SNP, and you wish to generate a density distribution across 10,000 bp
 bins, here is the command you would use:
 
-  generate_histogram.pl -merge -d dicty -bin 10000 SNP >snp_density.gff
+  bp_generate_histogram.pl -merge -d dicty -bin 10000 SNP >snp_density.gff
 
 This is saying to use the "dicty" database (-d) option, to use 10,000
 bp bins (the -bin option) and to count the occurrences of the SNP
@@ -1725,10 +2182,10 @@ GBrowse will still use the end-user's preferred language in preference
 to the default if the preferred language is available.
 
 Although GBrowse automatically changes the text and button language,
-it can't automatically translate the track labels, obviously.  If you
-would like the track labels to localize, you will have to provide your
-own translations in the "key" and "citation" options.  The syntax is
-similar to that used for semantic zooming:
+it can't automatically translate the track labels.  If you would like
+the track labels to localize, you will have to provide your own
+translations in the "key", "citation" and "category" options.  The
+syntax is similar to that used for semantic zooming:
 
   [gene]
   glyph   = transcript
@@ -1738,6 +2195,8 @@ similar to that used for semantic zooming:
   key:fr  = Gènes Nommés
   key:it  = I Geni dati un nome a
   key:sp  = Los Genes denominados
+  category = Genes
+  category:fr = Gènes
 
 The option is followed by a colon and the two-letter language name to
 indicate that when the page is being displayed with this language, to
@@ -2351,6 +2810,15 @@ As noted earlier, you can place numbers in front of the configuration
 file names in order to adjust the order in which they appear in the
 data source menu.
 
+NOTE: For obscure reasons involving Internet Explorer compatibility,
+gbrowse will add an extra slash to the end of the URL, resulting in
+URLs that look like:
+
+  http://www.your.site/cgi-bin/gbrowse/yeast/?q=NAB2
+
+Don't worry about this. The URL works the same with and without the
+terminal slash.
+
 =item q
 
 The argument "q" will set the landmark or search string:
@@ -2375,13 +2843,168 @@ same as in the main search field:
 
    http://www.your.site/cgi-bin/gbrowse/yeast?q=Gene:NAB2:1..5000
 
-=item ref, start, end
+=item ref, start, stop, end
 
-[To come]
+Together the "ref," "start" and "stop" arguments specify the reference
+sequence and the start and end coordinates of the region of
+interest. The "q" argument, if present, overrides these settings.
+
+The "end" argument is a synonym for "stop".
 
 =item label
 
-[To come]
+The tracks to display. This parameter must contain the track names
+(i.e. the names in [brackets] in the config file) separated by "+" or
+"-" characters.  For example:
+
+   http://www.your.site/cgi-bin/gbrowse/yeast?labels=ORFs-tRNAs
+
+To use the "+" character you may have to URL escape it:
+
+   http://www.your.site/cgi-bin/gbrowse/yeast?labels=ORFs%2BtRNAs
+
+All tracks not explicitly given by the label parameter will be closed
+(disabled).
+
+=item enable
+
+Tracks to enable. The tracks indicated by this parameter will be
+opened in addition to any tracks that were previously opened by the
+user.  The format is the same as label:
+
+   http://www.your.site/cgi-bin/gbrowse/yeast?enable=ORFs-tRNAs
+
+=item disable
+
+Tracks to close. The tracks indicated by this parameter will be
+disabled. Tracks not mentioned by this parameter will keep their
+previous state.  The format is the same as label:
+
+   http://www.your.site/cgi-bin/gbrowse/yeast?disable=ORFs-tRNAs
+
+When modifying track state, the "label" parameter is processed first,
+followed by the "enable" parameter and the "disable" parameter.
+
+=item flip
+
+Whether to flip the display. If set to a true value (flip=1), then the
+coordinates will be reversed so that forward strand features become
+reverse strand features. If set to a false value (flip=0) or absent,
+then the forward strand is displayed as per usual.
+
+=item width
+
+Set the width of the overview, region and details images, in pixels.
+
+=item region_size
+
+Set the length of the region covered by the "region" panel, in base
+pairs.
+
+=item h_feat
+
+The name of a feature to highlight in the format
+"<feature_name>@<color_name>". Example:
+
+      h_feat=SKT5@blue
+
+You may omit "@color", in which case the highlight will default to
+yellow. You can specify multiple h_feat arguments in order to
+highlight several features with distinct colors.
+
+Passing an argument of h_feature=_clear_ will clear all feature
+highlighting.
+
+=item h_region
+
+The name of a region to highlight in the format
+"<seq_id>:start..end@color". Example:
+
+      h_region=Chr3:200000..250000@wheat
+
+You may omit "@color" in which case the highlight will default to
+lightgrey. You can specify multiple h_region arguments in order to
+highlight multiple sequence ranges with different colors.
+
+Passing an argument of h_region=_clear_ will clear all region
+highlighting.
+
+=item ks
+
+The position of the key in the detail panel. Possible values are
+"between," "beneath," "left" and "right".
+
+=item sk
+
+The sort order of track names in the "Tracks" panel.  Values are
+"sorted" (alphabetically sorted by name) and "unsorted" (sorted by
+the order of tracks as defined in the config file).
+
+=item track_options
+
+If true, open up the track configuration page.
+
+=item help
+
+Open up the specified help page. Possible values are:
+
+     "general"    open the general help page
+     "citations"  open up the track description & citation page
+     "link_image" open the page that describes how to
+                  generate an embedded image of the current view
+      "svg_image" the page that describes how to generate SVGs
+
+=item id
+
+The id is a unique session ID that will store persistent configuration
+information. You do not typically need to use the id parameter except
+in the circumstance in which you wish to upload an annotation file
+programatically, in which case you should choose some large
+hard-to-guess number.
+
+=item Upload, upload_annotations, id
+
+These three arguments must be present in order to upload a file of
+external annotations to the server. "Upload" must be a true value, and
+"upload_annotations" will contain the content of the uploaded
+file. Note that you must POST the data using MIME type
+"multipart/form-data".
+
+The "id" argument is used to associated the upload with a
+session. Pick some long, hard to guess number. This will be associated
+stably with the uploaded file(s). To see the upload information,
+provide the same number in the "id" argument every time you access
+gbrowse.
+
+=item eurl
+
+Specify the URL of a remote annotation source to load into the
+database. You should also supply an "id" argument as well, as
+described earlier, in order to be able to view the annotations.
+
+=item plugin, plugin_do
+
+These arguments run plugins. The "plugin" argument gives the name of
+the plugin to activate. The name is the last component of the plugin
+package name, e.g. FastaDumper. The "plugin_do" argument selects what
+to do with the plugin. Possible values are "Configure", "Find" and
+"Go". "Configure" launches the plugin's configure page, "Go" runs
+dumper plugins' dump operation, and "Find" activates finder plugins'
+find function. For find operations, you should in most cases pass the
+find string in the "q" argument, but this depends on the particular
+plugin.
+
+Each plugin may have its own set of URL arguments. A plugin's
+arguments are preceded by the plugin's name. For example, the
+FastaDumper plugin has a parameter named "format" which controls the
+output format. So to invoke this plugin and make the output plain
+text, one would provide the arguments:
+
+ http://www.your.site/cgi-bin/gbrowse/yeast?q=NUT21;plugin=FastaDumper;
+             plugin_do=Go;FastaDumper.format=text
+
+Plugins tend not to be well documented, so you may have to read
+through the source code to figure out their arguments.
 
 =back
 

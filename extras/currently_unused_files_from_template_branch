@@ -1,0 +1,46 @@
+# These are files that are held over from when this was the template branch.
+# The files not marked "used" are unused and will potentially be deleted after
+# gbrowse is moved over to templates.
+
+cgi-bin/gbrowse_syn.PLS
+conf/MobyServices/text_xml_renderer.pm
+conf/plugins/SequenceDumper.pm
+conf/templates
+extras/bioperl-102-1.1.patch
+htdocs/css
+htdocs/databases/volvox
+htdocs/js/x_alt.js
+htdocs/js/x_anim.js
+htdocs/js/x_bar.js
+htdocs/js/x_cook.js
+htdocs/js/x_core.js
+htdocs/js/x_core_n4.js
+htdocs/js/x_debug.js
+htdocs/js/x_dom.js
+htdocs/js/x_dom_n4.js
+htdocs/js/x_drag.js
+htdocs/js/x_event.js
+htdocs/js/x_event_n4.js
+htdocs/js/x_img.js
+htdocs/js/x_misc.js
+htdocs/js/x_popup.js
+htdocs/js/x_slide.js
+htdocs/js/x_table.js
+htdocs/js/x_timer.js
+htdocs/js/x_tip.js
+htdocs/js/x_win.js
+install_util/InstallUtil.pm
+lib/Bio/DB/Das/BioSQL/Segment
+lib/Bio/DB/Das/Chado/Type.pm
+lib/Bio/DB/Das/Chado_pf
+lib/Bio/DB/Gadfly
+lib/Bio/DB/GFF/SyntenyBlock.pm
+lib/Bio/DB/GFF/SyntenyIO.pm
+lib/Bio/Graphics/Browser/Constants.pm
+lib/Bio/Graphics/Browser/Options.pm
+lib/Bio/Graphics/GBrowse_run.pm
+lib/WebReports
+pkg_config.in
+README-1.02
+README-BioGraphics
+README.IF.GBROWSE.ISNT.WORKING

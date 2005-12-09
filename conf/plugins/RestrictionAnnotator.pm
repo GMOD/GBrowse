@@ -1,12 +1,12 @@
 package Bio::Graphics::Browser::Plugin::RestrictionAnnotator;
-# $Id: RestrictionAnnotator.pm,v 1.12 2004-06-22 22:32:13 lstein Exp $
+# $Id: RestrictionAnnotator.pm,v 1.13 2005-12-09 22:19:09 mwz444 Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use CGI qw(:standard *table);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.22';
+$VERSION = '0.23';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -75,7 +75,7 @@ sub annotate {
   return unless %$config;
   return unless $config->{on};
 
-  my $ref        = $segment->ref;
+  my $ref        = $segment->seq_id;
   my $abs_start  = $segment->start;
   my $dna        = $segment->seq;
 
@@ -99,7 +99,11 @@ sub annotate {
     while ($dna =~ /($pattern)/ig) {
       my $pos = $abs_start + pos($dna) - length($1) + $offset;
       my $feature = Bio::Graphics::Feature->new(-start=>$pos,-stop=>$pos,
-						-ref=>$ref,-name=>$type,-type=>$type);
+						-ref=>$ref,
+						-name=>$type,
+						-type=>$type,
+						-class=>'RestrictionSite',
+						-source=>'RestrictionAnnotator.pm');
       $feature_list->add_feature($feature,$type);
     }
   }

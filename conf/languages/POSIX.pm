@@ -45,11 +45,11 @@ END
 
    LANDMARK => 'Landmark or Region',
 
-   BOOKMARK => 'Bookmark this view',
+   BOOKMARK => 'Bookmark this',
 
-   IMAGE_LINK => 'Link to an image of this view',
+   IMAGE_LINK => 'Link to Image',
 
-   SVG_LINK   => 'Publication quality image',
+   SVG_LINK   => 'High-res Image',
 
    SVG_DESCRIPTION => <<END,
 <p>
@@ -116,7 +116,7 @@ END
 
    SEARCH   => 'Search',
 
-   DUMP     => 'Dump',
+   DUMP     => 'Download',
 
    HIGHLIGHT   => 'Highlight',
 
@@ -142,7 +142,11 @@ END
 
    OVERVIEW_TRACKS => '<sup>*</sup>Overview track',
 
+   REGION_TRACKS => '<sup>**</sup>Region track',
+
    EXAMPLES => 'Examples',
+
+   REGION_SIZE => 'Region Size (bp)',
 
    HELP     => 'Help',
 
@@ -155,6 +159,8 @@ END
    REDISPLAY   => 'Redisplay',
 
    CONFIGURE   => 'Configure...',
+
+   CONFIGURE_TRACKS   => 'Configure tracks...',
 
    EDIT       => 'Edit File...',
 
@@ -178,13 +184,19 @@ END
 
    VARYING     => 'Varying',
 
-   SET_OPTIONS => 'Set Track Options...',
+   SHOW_GRID    => 'Show grid',
+
+   SET_OPTIONS => 'Configure tracks...',
+
+   CLEAR_HIGHLIGHTING => 'Clear highlighting',
 
    UPDATE      => 'Update Image',
 
-   DUMPS       => 'Dumps, Searches and other Operations',
+   DUMPS       => 'Reports &amp; Analysis',
 
    DATA_SOURCE => 'Data Source',
+
+   UPLOAD_TRACKS=>'Add your own tracks',
 
    UPLOAD_TITLE=> 'Upload your own annotations',
 
@@ -206,6 +218,16 @@ END
 
    PRESETS      => '--Choose Preset URL--',
 
+   FEATURES_TO_HIGHLIGHT => 'Highlight feature(s) (feature1 feature2...)',
+
+   REGIONS_TO_HIGHLIGHT => 'Highlight regions (region1:start..end region2:start..end)',
+
+   FEATURES_TO_HIGHLIGHT_HINT => 'Hint: use feature@color to select the color, as in \'NUT21@lightblue\'',
+
+   REGIONS_TO_HIGHLIGHT_HINT  => 'Hint: use region@color to select the color, as in \'Chr1:10000..20000@lightblue\'',
+
+   NO_TRACKS    => '*none*',
+
    FILE_INFO    => 'Last modified %s.  Annotated landmarks: %s',
 
    FOOTER_1     => <<END,
@@ -214,14 +236,6 @@ No information is shared.
 END
 
    FOOTER_2    => 'Generic genome browser version %s',
-
-   OVERVIEW    => 'Overview',
-
-   DISPLAY_SETTINGS => 'Display Settings', 
-
-   DETAILS     => 'Details',
-
-   ADD_YOUR_OWN_TRACKS => 'Add Your Own Tracks',
 
    #----------------------
    # MULTIPLE MATCHES PAGE
@@ -301,6 +315,22 @@ END
 
    NO_LIMIT    => 'No limit',
 
+   OVERVIEW    => 'Overview',
+
+   EXTERNAL    => 'External',
+
+   ANALYSIS    => 'Analysis',
+
+   GENERAL     => 'General',
+
+   DETAILS     => 'Details',
+
+   REGION      => 'Region',
+
+   ALL_ON      => 'All on',
+
+   ALL_OFF     => 'All off',
+
    #--------------
    # HELP PAGES
    #--------------
@@ -352,5 +382,7 @@ END
  TOO_MANY_LANDMARKS => '%d landmarks.  Too many to list.',
 
  SMALL_INTERVAL    => 'Resizing small interval to %s bp',
+
+ NO_SOURCES        => 'There are no readable data sources configured.  Perhaps you do not have permission to view them.',
 
 };

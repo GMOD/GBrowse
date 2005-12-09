@@ -4,7 +4,6 @@ use File::Basename qw(&basename &dirname);
 use File::Spec;
 use FindBin '$Bin';
 use Cwd;
-
 my %OPTIONS;
 if (open F,"$Bin/../GGB.def") {
   while (<F>) {
@@ -14,12 +13,6 @@ if (open F,"$Bin/../GGB.def") {
   }
   close F;
 }
-
-if($OPTIONS{PREFIXSTRIP}){
-  $OPTIONS{CONF} =~ s/^$OPTIONS{PREFIX}//;
-  $OPTIONS{LIB}  =~ s/^$OPTIONS{PREFIX}//;
-}
-
 $OPTIONS{CONF} ||= '/usr/local/apache/conf';
 
 my $dir = dirname($0);
@@ -46,19 +39,20 @@ use lib "$OPTIONS{CONF}/gbrowse.conf";
 #
 ###################################################################
 \$VERSION   = $OPTIONS{VERSION};
-print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 !GROK!THIS!
 
+print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 print OUT <<'!NO!SUBS!';
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.43 2005-04-26 23:52:31 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.44 2005-12-09 22:19:09 mwz444 Exp $
 ###########################################################
 
 use MOBY::Client::Central;
 use MOBY::Client::Service;
 use MOBY::CommonSubs qw(:all);
+use MOBY::MobyXMLConstants;
 use XML::DOM;
 use File::Temp qw/ tempfile /;
 use MIME::Base64;
@@ -361,6 +355,7 @@ sub init {
     my $output = param('output');
     my $serviceType = param('serviceType');
     my $expandObjects = param('expandObjects');
+    $authority = $authority?$authority:param('authURI');
     
     $Central = MOBY::Client::Central->new();  # CENTRAL is a global variable
 
@@ -547,7 +542,7 @@ sub execute {
     my @colls = @{$collections};  # flatten the list of lists
     foreach my $objlist($objects, @colls){  # we just treat collections as simples here.
         foreach (@{$objlist}){
-            my $MOBYClass = $_->tagName;
+            my $MOBYClass = $_->nodeName;
             my $namespace = $_->getAttributeNode('namespace');
             $namespace = $namespace?($namespace->getValue):"";
             my $short_namespace = $namespace =~ /urn:lsid:biomoby.org:namespacetype:(\S+)/?$1:$namespace; # namespaces may or may not be fully qualified LSID's.  if they are, and if they are MOBY ID's, then we can just take the last field, otherwise we should take the whole thing
@@ -583,7 +578,7 @@ sub execute {
 
 sub printIt {
     my ($this) = @_;
-    my $thisdatatype = $this->tagName;
+    my $thisdatatype = $this->nodeName;
     my $imgdir = $CONFIG->setting('tmpimages');
     my $renderer;
     my @rtypes = keys %RENDERERS;
@@ -600,9 +595,9 @@ sub printIt {
     die "Can't render this information\n" unless $renderer;
     
     # first parse the object to get all of the CrossReference objects out of it.
-    foreach my $subnode($this->getChildNodes){
+    foreach my $subnode($this->childNodes){
         next unless ($subnode->nodeType == ELEMENT_NODE);
-        if (($subnode->tagName =~ /(moby:)?CrossReference/) || ($subnode->tagName =~ /(moby:)?Xref/)){  # if it is one of the two types of Xrefs, then pass it to the Xref parser
+        if (($subnode->nodeName =~ /(moby:)?CrossReference/) || ($subnode->nodeName =~ /(moby:)?Xref/)){  # if it is one of the two types of Xrefs, then pass it to the Xref parser
             &processXrefs($subnode);
             last;
         }
@@ -610,7 +605,7 @@ sub printIt {
 
     my $done=0;  # this is a boolean that indicates whether the renderer handles ALL sub-objects, or if it handles only the top-level content of an object and requires that the sub-nodes (objects) be parsed and rendered
     my $article = $this->getAttributeNode('articleName');  # get the article name
-    $article = $article?($article->getValue):"";
+    $article = $article?($article->nodeValue):"";
     no strict 'refs';
     my $content;
     ($content, $done) = &{$renderer."::render"}($this, $HTML_DIR, $imgdir);  # if the renderer handles everything, then $done is set and we can stop parsing this object
@@ -623,16 +618,16 @@ sub printIt {
     
     return if $done;  # if the renderer said that it handled the entire object, then quit
 
-    foreach my $subnode($this->getChildNodes){  # otherwise, we need to now start unpacking the object and rendering its subcomponents
+    foreach my $subnode($this->childNodes){  # otherwise, we need to now start unpacking the object and rendering its subcomponents
         next unless ($subnode->nodeType == ELEMENT_NODE);
-        next if ($subnode->tagName eq "CrossReference"); 
+        next if ($subnode->nodeName eq "CrossReference"); 
         &printIt($subnode);
     }
 }
 
 sub processXrefs {
     my ($XrefBlock) = @_;
-    foreach my $xref ($XrefBlock->getChildNodes()){
+    foreach my $xref ($XrefBlock->childNodes()){
         next unless $xref->nodeType == ELEMENT_NODE;
         my $ns = $xref->getAttributeNode("namespace");
         next unless $ns;
@@ -653,7 +648,7 @@ sub processXrefs {
 sub setupFilters {
 #<SPAN title=" description here " class="popup">text</SPAN>
     return "<table border=1><tr><td>",checkbox_group(-name => 'expandObjects', -values => ['?'], -checked=>"ON"),
-    "  <SPAN title=' When this box is checked, your input object will be decomposed into its ISA parentage and services that operate on any parent class will also be discovered. ' class='popup' cursor='help'>Decompose Objects?</span> ","</td>",
+    "  <SPAN title=' When this box is checked, your input object will be decomposed into its ISA parentage and services that operate on any parent class will also be discovered. ' class='popup' cursor='help'>Decompose Objects?</span> ",
     "<td>","  <SPAN title=' Enter a comma-delimited list of keywords that should appear in the service description. ' class='popup' cursor='help'>Keywords:</span> ", textfield(-name => 'keyword', -size => 20),"</td>",
     "<td>","  <SPAN title=' Enter the full URI for the authority (service provider) that you want to restrict your search to.  e.g. sgn.cornell.edu ' class='popup' cursor='help'>Authority:</span> ",textfield(-name => 'authURI', -size => 20),"</td>",
     "<td>","  <SPAN title=' Enter a valid term from the Service Type Ontology. ' class='popup' cursor='help'>Service Type:</span> ", textfield(-name => "serviceType", -size => 10),"</td>",

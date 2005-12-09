@@ -16,6 +16,8 @@ Bio::Graphics::Browser::Util -- Exported utilities
   $db       = open_database($config,$dir);
   $string   = html_frag('page_part');
   print_header(@args);
+  print_top($config,$title);
+  print_bottom($config,$version);
   error(@msgs);
   fatal_error(@msgs);
 
@@ -48,6 +50,14 @@ feature type, name and a list of segments in [start,end] format.
 
 The type defaults to 'Your features' and the name defaults to "Feature
 XX" where XX is the number of features parsed so far.
+
+=item print_top($config,$title);
+
+Print the top of the page.
+
+=item print_bottom($config);
+
+Print the bottom of the page.
 
 =item error(@msg)
 
@@ -82,27 +92,55 @@ disclaimers of warranty.
 use strict;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::I18n;
-use Bio::Graphics::Browser::Constants;
 use CGI qw(:standard);
+use CGI::Toggle;
+use Carp 'carp';
 use Text::Shellwords;
 
-use vars qw(@ISA @EXPORT $BROWSER $CONFIG $LANG %DB $HEADER $HTML $ADDED_FEATURES);
+use vars qw(@ISA @EXPORT $CONFIG $LANG %DB $HEADER $HTML $ADDED_FEATURES);
 require Exporter;
 @ISA = 'Exporter';
 @EXPORT = qw(conf_dir open_config open_database
-	     print_header html_frag
+	     print_header print_top print_bottom html_frag
 	     error fatal_error redirect_legacy_url
-	     parse_feature_str
+	     parse_feature_str url2file modperl_request
 	    );
+
+use constant DEBUG => 0;
+use constant JS    => '/gbrowse/js';
 
 sub conf_dir {
   my $default = shift;
-  if ($ENV{MOD_PERL} && Apache->can('request')) {
-    my $conf  = Apache->request->dir_config('GBrowseConf');
-    return Apache->server_root_relative($conf) if $conf;
+  if (my $request = modperl_request()) {
+    my $conf  = $request->dir_config('GBrowseConf') or return $default;
+    return $conf if $conf =~ m!^/!;                # return absolute
+    return (exists $ENV{MOD_PERL_API_VERSION} &&
+	    $ENV{MOD_PERL_API_VERSION} >= 2)
+      ? Apache2::ServerUtil::server_root() . "/$conf"
+      : Apache->server_root_relative($conf);
   }
   return $default;
 }
+
+sub url2file {
+  my $url = shift;
+  my $request = modperl_request();
+
+  for my $l ((map {"$url.$_"} $CONFIG->language->language), $url) {
+    my $file = $request ? $request->lookup_uri($l)->filename
+                        : "$ENV{DOCUMENT_ROOT}/$l";
+    return $file if -e $file;
+  }
+  return;
+}
+
+sub modperl_request {
+  return unless $ENV{MOD_PERL};
+  (exists $ENV{MOD_PERL_API_VERSION} &&
+   $ENV{MOD_PERL_API_VERSION} >= 2 ) ? Apache2::RequestUtil->request
+                                     : Apache->request;
+}
+
 
 sub open_config {
   my $dir    = shift;
@@ -110,10 +148,7 @@ sub open_config {
   $CONFIG ||= Bio::Graphics::Browser->new;
   $CONFIG->read_configuration($dir,$suffix) or die "Can't read configuration files: $!";
   $LANG    ||= Bio::Graphics::Browser::I18n->new("$dir/languages");
-
-  if ( ! $CONFIG->source ) {
-    fatal_error($LANG->tr('NO_SOURCES'));
-  }
+  $CONFIG->source or early_error($LANG,'NO_SOURCES');
 
   set_language($CONFIG,$LANG);
   $CONFIG->language($LANG);
@@ -144,7 +179,7 @@ sub open_database {
 
   ################################################
   # HACK ALERT
-  patch_old_versions_of_bioperl($adaptor);
+  patch_old_versions_of_bioperl($adaptor,@argv);
   ################################################
 
   $DB{$source} = eval {$adaptor->new(@argv)} or warn $@;
@@ -154,9 +189,8 @@ sub open_database {
     eval {$DB{$source}->default_class($refclass)};
   }
 
-  if ($DB{$source}->can('strict_bounds_checking')) {
-    $DB{$source}->strict_bounds_checking(1);
-  }
+  $DB{$source}->strict_bounds_checking(1) if $DB{$source}->can('strict_bounds_checking');
+  $DB{$source}->absolute(1)               if $DB{$source}->can('absolute');
 
   return $DB{$source};
 }
@@ -185,25 +219,69 @@ sub parse_added_feature {
   ($reference,$type,$name,@segments);
 }
 
+sub print_top {
+  my $title     = shift;
+  my $reset_all = shift;
+  local $^W = 0;  # to avoid a warning from CGI.pm
+
+  print_header(-expires=>'+1m');
+  my @args = (-title => $title,
+	      -style  => {src=>$CONFIG->setting('stylesheet')},
+	      -encoding=>$CONFIG->tr('CHARSET'),
+	     );
+  push @args,(-head=>$CONFIG->setting('head'))    if $CONFIG->setting('head');
+  push @args,(-lang=>($CONFIG->language_code)[0]) if $CONFIG->language_code;
+  push @args,(-script=>{src=>($CONFIG->setting('js')||JS) . "/buttons.js"});
+  push @args,(-gbrowse_images => $CONFIG->setting('buttons') || '/gbrowse/images/buttons');
+  push @args,(-gbrowse_js     => $CONFIG->setting('js')      || '/gbrowse/js');
+  push @args,(-reset_toggle   => 1)               if $reset_all;
+  print start_html(@args) unless $HTML++;
+}
+
+sub print_bottom {
+  my ($version) = @_;
+  print
+    $CONFIG->footer || '',
+      p(i(font({-size=>'small'},
+	       $CONFIG->tr('Footer_1'))),br,
+	tt(font({-size=>'small'},$CONFIG->tr('Footer_2',$version)))),
+	  end_html;
+}
+
 sub error {
-  ###FIXME this should be made more graceful by making a header.tt2
-  return fatal_error(@_);
-#  my @msg = @_;
-#  warn "@_" if DEBUG;
-#  print_top();
-#  print h2({-class=>'error'},@msg);
+  my @msg = @_;
+  warn "@_" if DEBUG;
+  print_top();
+  print h2({-class=>'error'},@msg);
 }
 
 sub fatal_error {
   my @msg = @_;
+  warn "@_" if DEBUG;
+  print_top($CONFIG,'GBrowse Error');
+  print h2('An internal error has occurred');
+  print p({-class=>'error'},@msg);
+  my $webmaster = $ENV{SERVER_ADMIN} ?
+   "maintainer (".a({-href=>"mailto:$ENV{SERVER_ADMIN}"},$ENV{SERVER_ADMIN}).')'
+     : 'maintainer';
+  print p("Please contact this site's $webmaster for assistance.");
+  print_bottom($CONFIG);
+  exit 0;
+}
+
+
+sub early_error {
+  my $lang = shift;
+  my $msg  = shift;
+  $msg     = $lang->tr($msg);
+  warn "@_" if DEBUG;
+  local $^W = 0;  # to avoid a warning from CGI.pm
   print_header(-expires=>'+1m');
-  $BROWSER->template->process(
-                              'error.tt2',
-                              {
-                               server_admin  => $ENV{SERVER_ADMIN},
-                               error_message => join("\n",@msg),
-                              }
-                             ) or warn $BROWSER->template->error();
+  my @args = (-title  => 'GBrowse Error');
+  push @args,(-lang=>$lang->language);
+  print start_html();
+  print b($msg);
+  print end_html;
   exit 0;
 }
 
@@ -229,6 +307,108 @@ sub patch_old_versions_of_bioperl {
   my $adaptor = shift;
   my %argv    = @_;
   local $^W = 0;
+  require Bio::Perl;
+  if ($adaptor eq 'Bio::DB::GFF' && $Bio::Perl::VERSION == 1.5) {
+  eval <<'END';
+use Bio::DB::GFF;
+sub Bio::DB::GFF::load_gff {
+  my $self              = shift;
+  my $file_or_directory = shift || '.';
+  my $verbose           = shift;
+
+  local $self->{__verbose__} = $verbose;
+  return $self->do_load_gff($file_or_directory) if ref($file_or_directory) 
+                                                   && tied *$file_or_directory;
+
+  my $tied_stdin = tied(*STDIN);
+  open SAVEIN,"<&STDIN" unless $tied_stdin;
+  local @ARGV = $self->setup_argv($file_or_directory,'gff','gff3') or return;  # to play tricks with reader
+  my $result = $self->do_load_gff('ARGV');
+  open STDIN,"<&SAVEIN" unless $tied_stdin;  # restore STDIN
+  return $result;
+}
+sub Bio::DB::GFF::_load_gff_line {
+  my $self = shift;
+  my $line = shift;
+  my $lineend = $self->{load_data}{lineend};
+
+  $self->{load_data}{gff3_flag}++           if $line =~ /^\#\#\s*gff-version\s+3/;
+  $self->preferred_groups(split(/\s+/,$1))  if $line =~ /^\#\#\s*group-tags?\s+(.+)/;
+
+  if ($line =~ /^\#\#\s*sequence-region\s+(\S+)\s+(\d+)\s+(\d+)/i) { # header line
+    $self->load_gff_line(
+			 {
+			  ref    => $1,
+			  class  => 'Sequence',
+			  source => 'reference',
+			  method => 'Component',
+			  start  => $2,
+			  stop   => $3,
+			  score  => undef,
+			  strand => undef,
+			  phase  => undef,
+			  gclass => 'Sequence',
+			  gname  => $1,
+			  tstart => undef,
+			  tstop  => undef,
+			  attributes  => [],
+			 }
+			);
+    return $self->{load_data}{count}++;
+  }
+
+  return if /^#/;
+
+  my ($ref,$source,$method,$start,$stop,$score,$strand,$phase,$group) = split "\t",$line;
+  return unless defined($ref) && defined($method) && defined($start) && defined($stop);
+  foreach (\$score,\$strand,\$phase) {
+    undef $$_ if $$_ eq '.';
+  }
+
+  print STDERR $self->{load_data}{count}," records$lineend" 
+    if $self->{__verbose__} && $self->{load_data}{count} % 1000 == 0;
+
+  my ($gclass,$gname,$tstart,$tstop,$attributes) = $self->split_group($group,$self->{load_data}{gff3_flag});
+
+  # no standard way in the GFF file to denote the class of the reference sequence -- drat!
+  # so we invoke the factory to do it
+  my $class = $self->refclass($ref);
+
+  # call subclass to do the dirty work
+  if ($start > $stop) {
+    ($start,$stop) = ($stop,$start);
+    if ($strand eq '+') {
+      $strand = '-';
+    } elsif ($strand eq '-') {
+      $strand = '+';
+    }
+  }
+  # GFF2/3 transition stuff
+  $gclass = [$gclass] unless ref $gclass;
+  $gname  = [$gname]  unless ref $gname;
+  for (my $i=0; $i<@$gname;$i++) {
+    $self->load_gff_line({ref    => $ref,
+			  class  => $class,
+			  source => $source,
+			  method => $method,
+			  start  => $start,
+			  stop   => $stop,
+			  score  => $score,
+			  strand => $strand,
+			  phase  => $phase,
+			  gclass => $gclass->[$i],
+			  gname  => $gname->[$i],
+			  tstart => $tstart,
+			  tstop  => $tstop,
+			  attributes  => $attributes}
+			);
+    $self->{load_data}{count}++;
+  }
+}
+END
+  warn $@ if $@;
+  }
+
   if ($adaptor eq 'Bio::DB::GFF' && $argv{-adaptor} eq 'memory' && $Bio::Perl::VERSION <= 1.5) {
     # patch memory.pm inability to handle missing gclass fields
     eval <<'END';
@@ -238,7 +418,7 @@ sub Bio::DB::GFF::Adaptor::memory::load_gff_line {
   my $feature_hash  = shift;
   $feature_hash->{strand} = '' if $feature_hash->{strand} && $feature_hash->{strand} eq '.';
   $feature_hash->{phase}  = ''  if $feature_hash->{phase}  && $feature_hash->{phase} eq '.';
-  $feature_hash->{gclass} = 'Sequence' if length $feature_hash->{gclass} == 0;
+  $feature_hash->{gclass} = 'Sequence' unless length $feature_hash->{gclass} > 0;
   # sort by group please
   push @{$self->{tmp}{$feature_hash->{gclass},$feature_hash->{gname}}},$feature_hash;
 }
@@ -250,18 +430,33 @@ END
 sub redirect_legacy_url {
   my $source      = shift;
   my @more_args   = @_;
-  if ($source && path_info() ne "/$source") {
+  
+  if ($source && path_info() ne "/$source/") {
+
     my $q = new CGI '';
-    $q->path_info($source);
     if (request_method() eq 'GET') {
-      foreach (qw(name ref start stop),@more_args) {
+      foreach (param()) {
+	next if $_ eq 'source';
 	$q->param($_=>param($_)) if param($_);
       }
     }
-    print redirect($q->url(-absolute=>1,-path_info=>1,-query=>1));
+
+    # This is infinitely more difficult due to horrible bug in Apache version 2
+    # It is fixed in CGI.pm versions 3.11 and higher, but this version is not guaranteed
+    # to be available.
+    my ($script_name,$path_info) = _broken_apache_hack();
+    my $query_string = $q->query_string;
+    my $protocol     = $q->protocol;
+
+    my $new_url      = $script_name;
+    $new_url        .= "/$source/";
+    $new_url        .= "?$query_string" if $query_string;
+
+    print redirect(-uri=>$new_url,-status=>"301 Moved Permanently");
     exit 0;
   }
 }
+
 sub parse_feature_str {
   my $f      = shift;
   my ($reference,$type,$name,@position);
@@ -286,6 +481,36 @@ sub parse_feature_str {
   my @segments = map { [/(-?\d+)(?:-|\.\.)(-?\d+)/]} map {split /,/} @position;
   ($reference,$type,$name,@segments);
 }
+
+# workaround for broken Apache 2 and CGI.pm <= 3.10
+sub _broken_apache_hack {
+  my $raw_script_name = $ENV{SCRIPT_NAME} || '';
+  my $raw_path_info   = $ENV{PATH_INFO}   || '';
+  my $uri             = $ENV{REQUEST_URI} || '';
+
+   ## dgg patch; need for what versions? apache 1.x; 
+  if ($raw_script_name =~ m/$raw_path_info$/) {
+    $raw_script_name =~ s/$raw_path_info$//;
+  }
+
+  my @uri_double_slashes  = $uri =~ m^(/{2,}?)^g;
+  my @path_double_slashes = "$raw_script_name $raw_path_info" =~ m^(/{2,}?)^g;
+
+  my $apache_bug      = @uri_double_slashes != @path_double_slashes;
+  return ($raw_script_name,$raw_path_info) unless $apache_bug;
+
+  my $path_info_search = $raw_path_info;
+  # these characters will not (necessarily) be escaped
+  $path_info_search    =~ s/([^a-zA-Z0-9$()':_.,+*\/;?=&-])/uc sprintf("%%%02x",ord($1))/eg;
+  $path_info_search    = quotemeta($path_info_search);
+  $path_info_search    =~ s!/!/+!g;
+  if ($uri =~ m/^(.+)($path_info_search)/) {
+    return ($1,$2);
+  } else {
+    return ($raw_script_name,$raw_path_info);
+  }
+}
+
 
 
 1;

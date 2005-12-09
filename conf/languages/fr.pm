@@ -139,7 +139,11 @@ END
 
    OVERVIEW_TRACKS => '<sup>*</sup>Piste d\'aperçu',
 
+   REGION_TRACKS => '<sup>**</sup>Piste des régions',
+
    EXAMPLES => 'Exemples',
+
+   REGION_SIZE => 'Taille de la région (pb)',
 
    HELP     => 'Aide',
 
@@ -152,6 +156,8 @@ END
    REDISPLAY   => 'Rafraichir l\'affichage',
 
    CONFIGURE   => 'Configurer...',
+
+   CONFIGURE_TRACKS   => 'Configurer les pistes...',
 
    EDIT       => 'Editer le fichier...',
 
@@ -176,6 +182,8 @@ END
    VARYING => 'Pas de tri',
 
    SET_OPTIONS => 'Configurer les pistes...',
+
+   CLEAR_HIGHLIGHTING => 'Supprimer le surlignage',
 
    UPDATE      => 'Mise à jour de l\'image',
 
@@ -205,6 +213,14 @@ END
 
    PRESETS      => "--Choix d'une URL prédéfinie--",
 
+   FEATURES_TO_HIGHLIGHT => 'Surligner les informations (info1 info2...)',
+
+   REGIONS_TO_HIGHLIGHT => 'Surligner les régions (région1:début..fin région2:début..fin)',
+
+   FEATURES_TO_HIGHLIGHT_HINT => 'Astuce : utilisez information@couleur pour choisir la couleur, par exemple \'NUT21@lightblue\'',
+
+   REGIONS_TO_HIGHLIGHT_HINT  => 'Astuce : utilisez région@couleur pour choisir la couleur, par exemple \'Chr1:10000..20000@lightblue\'',
+	    
    NO_TRACKS    => '*aucune*',
 
    FILE_INFO    => 'Dernière modif. %s.  Référentiel annoté : %s',
@@ -306,6 +322,8 @@ END
    GENERAL     => 'Général',
 
    DETAILS     => 'Détails',
+
+   REGION      => 'Région',
 
    ALL_ON      => 'Tout activer',
 

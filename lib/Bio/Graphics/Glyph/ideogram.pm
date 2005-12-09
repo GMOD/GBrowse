@@ -1,181 +1,169 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.6 2005-10-22 20:55:53 mummi Exp $
-# Glyph to draw chromosome ideograms for the overview display
+# $Id: ideogram.pm,v 1.7 2005-12-09 22:19:12 mwz444 Exp $
+# Glyph to draw chromosome ideograms
 
-use strict;
+use strict qw/vars refs/;
 use vars '@ISA';
 use Bio::Graphics::Glyph;
-use Data::Dumper;
+use GD;
+
 @ISA = 'Bio::Graphics::Glyph';
 
-
 sub draw_component {
-  my $self = shift;
-  my $gd = shift;
-  my ($left,$top) = @_;
+    my $self = shift;
+    my $gd = shift;
+    my ($left,$top) = @_;
 
-  use GD;
-  my $arcradius = $self->option('arcradius') || 7;
-  my $feat = $self->feature;
-  my $fake_telomeres = $self->option('fake_telomeres') || 0;
-  #warn "Drawing '$feat', name=",$feat->name,", method='",$feat->method,"' from ",$feat->start," to ", $feat->stop;
+    my $arcradius = $self->option('arcradius') || 7;
 
-  my($x1,$y1,$x2,$y2) = $self->bounds(@_);
+    my $feat = $self->feature;
+    my($x1,$y1,$x2,$y2) = $self->bounds(@_);
+   
+    # make sure arc radius does not exceed the band width
+    my $fwidth = abs($x2 - $x1);
+    $arcradius = $fwidth if $arcradius > $fwidth;
+
+    my $stain = $feat->attributes('stain');
   
-  my $stain = $feat->attributes('stain');
-  
-  # Some genome sequences don't contain substantial telomere sequence (i.e. Arabidopsis)
-      # We can suggest their presence at the tips of the chromosomes by setting fake_telomeres = 1
-      # in the configuration file, resulting in the tips of the chromosome being painted black.
+    # Some genome sequences don't contain substantial telomere sequence (i.e. Arabidopsis)
+    # We can suggest their presence at the tips of the chromosomes by setting fake_telomeres = 1
+    # in the configuration file, resulting in the tips of the chromosome being painted black.
+    my $fake_telomeres = $self->option('fake_telomeres') || 0;
       
-      my ($bgcolor_index)  =  $self->option('bgcolor') =~ /$stain:(\S+)/;
-      $bgcolor_index ||= 'white';
-      my $black = $gd->colorAllocate(0,0,0);
-      my($is_teltop,$is_telbot, $telomere_tip_color);
+    my ($bgcolor_index)  =  $self->option('bgcolor') =~ /$stain:(\S+)/;
+    $bgcolor_index ||= 'white';
+    my $black = $gd->colorAllocate(0,0,0);
 
-      #Different handling for regular bands and the centromere
-      if($feat->method eq 'cytoband')
-      {	 
-	  if($feat->start == 1 || $feat->start == 0)
-	  {
-	      $is_teltop  = 1;
-	      $gd->arc($x1+$arcradius,$y1+$arcradius,
-		       $arcradius*2,$arcradius*2,
-		       180,270,$self->fgcolor);
-	      $gd->arc($x1+$arcradius,$y2-$arcradius,
-		       $arcradius*2,$arcradius*2,
-		       90,180,$self->fgcolor);
-	      $gd->line($x1+$arcradius,$y1,$x2,$y1,$self->fgcolor);
-	      $gd->line($x1+$arcradius,$y2,$x2,$y2,$self->fgcolor);
-	      $gd->line($x1,$y1+$arcradius,$x1,$y2-$arcradius,$self->fgcolor);
-	  }
-	  elsif($feat->stop >= $self->panel->end-1000)
-	  {
-	      $is_telbot = 1;
-	      $gd->arc($x2-$arcradius,$y1+$arcradius,
-		       $arcradius*2,$arcradius*2,
-		       270,0,$self->fgcolor);
-	      $gd->arc($x2-$arcradius,$y2-$arcradius,
-		       $arcradius*2,$arcradius*2,
-		       0,90,$self->fgcolor);
-	      $gd->line($x1,$y1,$x2-$arcradius,$y1,$self->fgcolor);
-	      $gd->line($x1,$y2,$x2-$arcradius,$y2,$self->fgcolor);
-	      $gd->line($x2,$y1+$arcradius,$x2,$y2-$arcradius,$self->fgcolor);
-	  }
-	  else
-	  {
-	      #Just draw a regular box
-	      $gd->rectangle($x1,$y1,$x2,$y2,$self->fgcolor);
-	  }
-	  
-	  #Time to put in the fill color
-	  #Special handling for the background color
-	  my $bgcolor = $self->factory->translate_color($bgcolor_index);
-	  if($bgcolor_index eq 'var')
-	  {
-	      my $var_tile = $self->create_tile('left');
-	      $gd->setTile($var_tile);
-	      $gd->fill($x1+3,$y1+(($y2-$y1)/2),gdTiled); 
-	  }
-	  else
-	  {
-	      if($x2-$x1 > 1)
-	      {
-		  $gd->fill($x1+1,$y1+(($y2-$y1)/2),$bgcolor);
-	      }
-	      #$gd->line($x1+1,$y1+(($y2-$y1)/2),$x1+1,$y1+(($y2-$y1)/2),$black);
-	      if ($fake_telomeres) 
-	      {
-		  #warn "got fake_telomeres";
-		  $telomere_tip_color = $black;
-	      }
-	      else 
-	      {
-		  $telomere_tip_color = $bgcolor;
-	      }
-	      
-	      if ($is_teltop) {
-		  # Fill inside the round part of the telomere...
-		  $gd->fill($x1+($arcradius/2), $y1+(($y2-$y1)/2), $telomere_tip_color);
-		  # and paint over the line between the telomere box and the arc
-		  # We back off the y-coordinates +/- 1 to keep the color inside the bounding
-		  # line sourrounding the feature.
-		  $gd->line($x1+$arcradius, $y1+1, $x1+$arcradius, $y2-1, $telomere_tip_color);
-	      }
-	      if ($is_telbot) {
-		  # Fill inside the round part of the telomere..
-		  $gd->fill($x2-($arcradius/2), $y1+(($y2-$y1)/2), $telomere_tip_color);
-		  # and paint over the line between the telomere box and the arc
-		  # We back off the y-coordinates +/- 1 to keep the color inside the bounding
-		  # line sourrounding the feature.
-		  $gd->line($x2-$arcradius, $y1+1, $x2-$arcradius, $y2-1, $telomere_tip_color);
-	      }
-	      $is_teltop or $gd->line($x1,$y1+1,$x1,$y2-1,$bgcolor);
-	      $is_telbot or $gd->line($x2,$y1+1,$x2,$y2-1,$bgcolor);
-	      $is_teltop or $gd->line($x1,$y1+1,$x1,$y2-1,$bgcolor);
-	      $is_telbot or $gd->line($x2,$y1+1,$x2,$y2-1,$bgcolor);
-	  }
-      }
-      elsif($feat->method eq 'centromere')
-      {
-	  #First do the arcs
-	  $gd->arc(($x1+$x2)/2-$arcradius,$y1+$arcradius,
-	       $arcradius*2,$arcradius*2,
-		   270,0,$self->fgcolor);
-	  $gd->arc(($x1+$x2)/2-$arcradius,$y2-$arcradius,
-		   $arcradius*2,$arcradius*2,
-		   0,90,$self->fgcolor);
-	  $gd->line($x1,$y1,($x1+$x2)/2-$arcradius,$y1,$self->fgcolor);
-	  $gd->line($x1,$y2,($x1+$x2)/2-$arcradius,$y2,$self->fgcolor);
-	  $gd->line(($x1+$x2)/2,$y1+$arcradius,($x1+$x2)/2,$y2-$arcradius,$self->fgcolor);
-	  
-	  $gd->arc(($x1+$x2)/2+$arcradius,$y1+$arcradius,
-		   $arcradius*2,$arcradius*2,
-		   180,270,$self->fgcolor);
-	  $gd->arc(($x1+$x2)/2+$arcradius,$y2-$arcradius,
-		   $arcradius*2,$arcradius*2,
-		   90,180,$self->fgcolor);
-	  $gd->line(($x1+$x2)/2+$arcradius,$y1,$x2,$y1,$self->fgcolor);
-	  $gd->line(($x1+$x2)/2+$arcradius,$y2,$x2,$y2,$self->fgcolor);
-	  
-	  $gd->line(($x1+$x2)/2-1,$y1+$arcradius-1,($x1+$x2)/2-1,$y2-$arcradius+1,$self->fgcolor);
-	  $gd->line(($x1+$x2)/2+1,$y1+$arcradius-1,($x1+$x2)/2+1,$y2-$arcradius+1,$self->fgcolor);
-	  
-	  my $centrom_tile = $self->create_tile('right');
-	  
-	  $gd->setTile($centrom_tile);
-	  $gd->line($x1,$y1,$x1,$y2,$self->fgcolor);
-	  $gd->line($x2,$y1,$x2,$y2,$self->fgcolor);
-	  $gd->fill($x1+1,$y1+(($y2-$y1)/2),gdTiled);
-	  $gd->fill($x2-1,$y1+(($y2-$y1)/2),gdTiled);
-      
-      }
+    # a default centromere color
+    my $cm_color = $self->{cm_color} = $gd->colorAllocate(102,102,153);  
+    my $bgcolor  = $self->factory->translate_color($bgcolor_index);
+    my $fgcolor  = $self->fgcolor;
+
+    if ($feat->method =~ /cytoband/) {
+
+        # are we at the end of the chromosome?
+	if ($feat->start <= 1) {
+	    # left telomere
+	    my $status = $self->panel->flip ? 0 : 1;
+	    $bgcolor = $black if $fake_telomeres;
+	    $self->draw_telomere($gd,$x1,$y1,$x2,$y2,$bgcolor,$fgcolor,$arcradius,$status);
+	}
+	elsif ($feat->stop >= $self->panel->end-1000) {
+	    # right telomere
+	    my $status = $self->panel->flip ? 1 : 0;
+	    $bgcolor = $black if $fake_telomeres;
+	    $self->draw_telomere($gd,$x1,$y1,$x2,$y2,$bgcolor,$fgcolor,$arcradius,$status);
+	}
+
+	# or a regular band?
+	else {
+	    $bgcolor = 'var' if $bgcolor_index eq 'var';
+	    $self->draw_cytoband($gd,$x1,$y1,$x2,$y2,$bgcolor,$fgcolor);
+	}
+    }
+
+    # or a centromere?
+    elsif ($feat->method eq 'centromere') {
+	# patterns not yet supported in GD::SVG?
+	if ($self->panel->{image_class} ne 'GD') {
+	    $self->draw_centromere($gd,$x1,$y1,$x2,$y2,$cm_color,$fgcolor);
+	}
+	else {
+	    my $tile = $self->create_tile('right');
+	    $gd->setTile($tile);
+	    $self->draw_centromere($gd,$x1,$y1,$x2,$y2,gdTiled,$fgcolor);
+	}
+    }
 }
 
-sub create_tile
-{
+sub draw_cytoband {
+    my $self = shift;
+    my ($gd,$x1,$y1,$x2,$y2,$bgcolor,$fgcolor) = @_;
+    
+    my $svg = 1 if $self->panel->{image_class} ne 'GD';
+
+    if ($bgcolor eq 'var' && $svg) {
+	$_[5] = $self->{cm_color};
+    }
+    elsif ($bgcolor eq 'var' && !$svg) {
+	my $var_tile = $self->create_tile('left');
+	$gd->setTile($var_tile);
+	$_[5] = gdTiled;
+	$self->filled_box(@_);
+	return 1;
+    }
+
+    # draw the filled box
+    $self->filled_box(@_);
+
+    return 1 if $svg;
+
+    $gd->line($x1,$y1+1,$x1,$y2-1,$bgcolor);
+    $gd->line($x2,$y1+1,$x2,$y2-1,$bgcolor);
+}
+
+sub draw_centromere {
+    my ($self,$gd,$x1,$y1,$x2,$y2,$bgcolor,$fgcolor) = @_;
+
+    # draw a sort of hour-glass shape to represent the centromere
+    my $poly = GD::Polygon->new;
+    $poly->addPt($x1,$y1);
+    $poly->addPt($x1,$y2);
+    $poly->addPt($x2,$y1);
+    $poly->addPt($x2,$y2);
+
+    $gd->filledPolygon($poly,$bgcolor); # filled
+    $gd->polygon($poly,$fgcolor);       # outline
+}
+
+sub draw_telomere {
+    my ($self,$gd,$x1,$y1,$x2,$y2,$bgcolor,$fgcolor,$arcradius,$state) = @_;
+    my $arcsize = abs($y1 - $y2);
+    my ($x,$y);
+
+    if ($state == 1) { # left telomere
+	$x  = $x1 + $arcradius;
+	$y  = $y1 + $arcsize/2;
+        $self->draw_cytoband($gd,$x,$y1,$x2,$y2,$bgcolor,$fgcolor);
+	$gd->filledArc($x,$y,$arcradius*2,$arcsize,90,270,$bgcolor);
+	$gd->arc($x,$y,$arcradius*2,$arcsize,90,270,$fgcolor);
+    }
+    else {             # right telomere
+	$x  = $x2 - $arcradius;
+        $y  = $y1 + $arcsize/2;
+        $self->draw_cytoband($gd,$x1,$y1,$x,$y2,$bgcolor,$fgcolor);
+	$gd->filledArc($x,$y,$arcradius*2,$arcsize,270,90,$bgcolor);
+	$gd->arc($x,$y,$arcradius*2,$arcsize,270,90,$fgcolor);
+    }
+    
+    # GD::SVG hack :(
+    if ($self->panel->{image_class} ne 'GD') {
+	$self->draw_cytoband($gd,$x-1,$y1+2,$x+1,$y2-2,$bgcolor,$bgcolor);
+    }
+}
+
+sub create_tile {
     my $self = shift;
     my $direction = shift;
 
-    #Prepare tile to use for filling an area
+    # Prepare tile to use for filling an area
     my $tile = new GD::Image(5,5);
     $tile->fill(1,1,$tile->colorAllocate(255,255,255));
-    if($direction eq 'right')
-    {
+    if ($direction eq 'right') {
 	$tile->line(0,0,5,5,$tile->colorAllocate(0,0,0));
     }
-    elsif($direction eq 'left')
-    {
+    elsif ($direction eq 'left') {
 	$tile->line(5,0,0,5,$tile->colorAllocate(0,0,0));
     }
+
     return $tile;
 }
 
-#Disable bumping entirely, since it messes up the nice ideogram 
-sub bump{return 0;}
+# Disable bumping entirely, since it messes up the ideogram 
+sub bump {return 0;}
 
-sub label{return 0;}
+sub label{return 1;}
 
 1;
 
@@ -197,47 +185,49 @@ be used (stain) and whether the segment is a telomere or
 centromere or a regular cytoband. The centromeres and 'var'-marked
 bands get the usual diagonal black-on-white pattern which is 
 hardwired in the glyph, the colors of others is configurable.
+For GD::SVG images, a solid color is substituted for the diagonal
+black-on-white pattern.
 
-  The band features would typically be formatted like this in GFF3:
+The cytobandband features would typically be formatted like this in GFF3:
 
-...
-ChrX    UCSC    cytoband        136700001       139000000       .       .       .       ID=Xq27.1;Name=Xq27.1;Alias=ChrXq27.1;stain=gpos75;
-ChrX    UCSC    cytoband        139000001       140700000       .       .       .       ID=Xq27.2;Name=Xq27.2;Alias=ChrXq27.2;stain=gneg;
-ChrX    UCSC    cytoband        140700001       145800000       .       .       .       ID=Xq27.3;Name=Xq27.3;Alias=ChrXq27.3;stain=gpos100;
-ChrX    UCSC    cytoband        145800001       153692391       .       .       .       ID=Xq28;Name=Xq28;Alias=ChrXq28;stain=gneg;
-ChrY    UCSC    cytoband        1       1300000 .       .       .       ID=Yp11.32;Name=Yp11.32;Alias=ChrYp11.32;stain=gneg;
-ChrY    UCSC    cytoband        1300001 2600000 .       .       .       ID=Yp11.31;Name=Yp11.31;Alias=ChrYp11.31;stain=gpos50;
-ChrY    UCSC    cytoband        2600001 9700000 .       .       .       ID=Yp11.2;Name=Yp11.2;Alias=ChrYp11.2;stain=gneg;
-ChrY    UCSC    cytoband        12800001        14800000        .       .       .       ID=Yq11.21;Name=Yq11.21;Alias=ChrYq11.21;stain=gneg;
-ChrY    UCSC    cytoband        14800001        19300000        .       .       .       ID=Yq11.221;Name=Yq11.221;Alias=ChrYq11.221;stain=gpos50;
-ChrY    UCSC    cytoband        19300001        21800000        .       .       .       ID=Yq11.222;Name=Yq11.222;Alias=ChrYq11.222;stain=gneg;
-ChrY    UCSC    cytoband        21800001        25800000        .       .       .       ID=Yq11.223;Name=Yq11.223;Alias=ChrYq11.223;stain=gpos50;
-ChrY    UCSC    cytoband        25800001        27700000        .       .       .       ID=Yq11.23;Name=Yq11.23;Alias=ChrYq11.23;stain=gneg;
-ChrY    UCSC    cytoband        27700001        50286555        .       .       .       ID=Yq12;Name=Yq12;Alias=ChrYq12;stain=gvar;
-Chr1    UCSC    centromere      120000001       126900000       .       +       .       ID=Chr1_cent
-Chr10   UCSC    centromere      38300001        41800000        .       +       .       ID=Chr10_cent
-Chr11   UCSC    centromere      51600001        56700000        .       +       .       ID=Chr11_cent
-Chr12   UCSC    centromere      33200001        36500000        .       +       .       ID=Chr12_cent
+ ...
+ ChrX    UCSC    cytoband        136700001       139000000       .       .       .       ID=Xq27.1;Name=Xq27.1;Alias=ChrXq27.1;stain=gpos75;
+ ChrX    UCSC    cytoband        139000001       140700000       .       .       .       ID=Xq27.2;Name=Xq27.2;Alias=ChrXq27.2;stain=gneg;
+ ChrX    UCSC    cytoband        140700001       145800000       .       .       .       ID=Xq27.3;Name=Xq27.3;Alias=ChrXq27.3;stain=gpos100;
+ ChrX    UCSC    cytoband        145800001       153692391       .       .       .       ID=Xq28;Name=Xq28;Alias=ChrXq28;stain=gneg;
+ ChrY    UCSC    cytoband        1       1300000 .       .       .       ID=Yp11.32;Name=Yp11.32;Alias=ChrYp11.32;stain=gneg;
+ ChrY    UCSC    cytoband        1300001 2600000 .       .       .       ID=Yp11.31;Name=Yp11.31;Alias=ChrYp11.31;stain=gpos50;
+ ChrY    UCSC    cytoband        2600001 9700000 .       .       .       ID=Yp11.2;Name=Yp11.2;Alias=ChrYp11.2;stain=gneg;
+ ChrY    UCSC    cytoband        12800001        14800000        .       .       .       ID=Yq11.21;Name=Yq11.21;Alias=ChrYq11.21;stain=gneg;
+ ChrY    UCSC    cytoband        14800001        19300000        .       .       .       ID=Yq11.221;Name=Yq11.221;Alias=ChrYq11.221;stain=gpos50;
+ ChrY    UCSC    cytoband        19300001        21800000        .       .       .       ID=Yq11.222;Name=Yq11.222;Alias=ChrYq11.222;stain=gneg;
+ ChrY    UCSC    cytoband        21800001        25800000        .       .       .       ID=Yq11.223;Name=Yq11.223;Alias=ChrYq11.223;stain=gpos50;
+ ChrY    UCSC    cytoband        25800001        27700000        .       .       .       ID=Yq11.23;Name=Yq11.23;Alias=ChrYq11.23;stain=gneg;
+ ChrY    UCSC    cytoband        27700001        50286555        .       .       .       ID=Yq12;Name=Yq12;Alias=ChrYq12;stain=gvar;
+ Chr1    UCSC    centromere      120000001       126900000       .       +       .       ID=Chr1_cent
+ Chr10   UCSC    centromere      38300001        41800000        .       +       .       ID=Chr10_cent
+ Chr11   UCSC    centromere      51600001        56700000        .       +       .       ID=Chr11_cent
+ Chr12   UCSC    centromere      33200001        36500000        .       +       .       ID=Chr12_cent
 
  which in this case is a GFF-ized cytoband coordinate file from UCSC:
 
-http://hgdownload.cse.ucsc.edu/goldenPath/hg16/database/cytoBand.txt.gz
+ http://hgdownload.cse.ucsc.edu/goldenPath/hg16/database/cytoBand.txt.gz
 
-and the corresponding GBrowse config options would be like this to 
-create a  nice ideogram overview track for the whole chromosome:
+ and the corresponding GBrowse config options would be like this to 
+ create a  nice ideogram overview track for the whole chromosome:
 
-[CYT:overview]
-feature       = chromosome
-glyph         = ideogram
-fgcolor       = black
-bgcolor       = gneg:white gpos25:silver gpos50:gray gpos:gray  gpos75:darkgray gpos100:black acen:cen gvar:var
-arcradius     = 6
-height        = 25
-bump          = 0
-label         = 0
+ [CYT:overview]
+ feature       = chromosome
+ glyph         = ideogram
+ fgcolor       = black
+ bgcolor       = gneg:white gpos25:silver gpos50:gray gpos:gray  gpos75:darkgray gpos100:black acen:cen gvar:var
+ arcradius     = 6
+ height        = 25
+ bump          = 0
+ label         = 0
 
-A script to reformat UCSC annotations to  GFF3 format can be found at
-the end of this documentation.
+ A script to reformat UCSC annotations to  GFF3 format can be found at
+ the end of this documentation.
 
 =head2 OPTIONS
 
@@ -371,12 +361,23 @@ L<GD>
 
 =head1 AUTHOR
 
-Gudmundur A. Thorisson<lt>mummi@cshl.orgE<gt>
+Gudmundur A. Thorisson E<lt>mummi@cshl.eduE<gt>
 
-Copyright (c) 2001 Cold Spring Harbor Laboratory
+Copyright (c) 2001-2005 Cold Spring Harbor Laboratory
+
+=head1 CONTRIBUTORS
+
+Sheldon McKay E<lt>mckays@cshl.edu<gt>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.  See DISCLAIMER.txt for
 disclaimers of warranty.
 
 =cut
+
+
+
+
+
+
+

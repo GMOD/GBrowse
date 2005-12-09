@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::allele_tower;
 
-# $Id: allele_tower.pm,v 1.4 2004-06-08 22:04:15 lstein Exp $
+# $Id: allele_tower.pm,v 1.5 2005-12-09 22:19:12 mwz444 Exp $
 # Glyph for drawing each allele found at a SNP position in a column.
 
 use strict;
@@ -11,11 +11,9 @@ use Bio::Graphics::Glyph::generic;
 # Give enough height to fit in the alleles
 sub height {
   my $self = shift;
-  my @alleles;
-  if (my $d = $self->option('alleles')) {
-    @alleles = split /\//, $d;
-  }
-  my $size = 10 * ($#alleles +1);
+  my @alleles = $self->feature->attributes('Alleles');
+  @alleles    = split /\//,$self->option('alleles') unless @alleles >= 2;
+  my $size = 2 + 10 * ($#alleles +1);
   return $size;
 }
 
@@ -124,12 +122,12 @@ polymorphism, the GFF load file should look like:
 
 Alternatively, you can pass an "alleles" callback to the appropriate
 section of the config file.  This option should return the two alleles
-in any way it wishes.
+separated by a slash:
 
   alleles = sub {
 	my $snp = shift;
-	my $d   = $snp->attributes('AllelePair');
-	return split m!/!,$d;
+	my @d   = $snp->attributes('AllelePair');
+	return join "/",@d;
     }
 
 =head2 OPTIONS
@@ -171,7 +169,8 @@ Use the 'maf' option to return the minor allele frequency for the SNP.  If you u
  A______
  C__
 
-Note: The 'label' option must be set to 1 (i.e. on) for this to work.
+Note: The 'label' option must be set to 1 (i.e. on) and the
+'minor_allele' option must return a valid allele for this to work.
 
 =head1 BUGS
 

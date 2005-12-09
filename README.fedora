@@ -1,0 +1,34 @@
+If you have SELinux installed, typically as part of Fedora Core 3 or
+4, then you may experinece difficulties getting GBrowse to work.  The
+default security parameters for SELinux prevent GBrowse from
+performing some fundamental tasks, including reading its configuration
+file in $CONF/gbrowse.conf (where $CONF is typically /etc/httpd/conf
+or /usr/local/apache/conf).  While we are working the developers of
+SELinux to fix this, here are the directions for the current work
+around:
+
+1. Make sure your security policy is up to date:
+
+  % yum update selinux-policy-targeted
+
+2. Open System Settings->Security Level and click on the SELinux tab.
+Click on the HTTPD Service triangle to get the httpd settings, and
+select "Disable SELinux protection for httpd daemon".
+
+2a. Alternatively, uncheck "Enforcing" to set the enforcement level
+to permissive.
+
+2b. If you don't have X11, you can do the same as step 2 via the command line:
+
+      %  setsebool -P httpd_disable_trans 1
+      %  system httpd restart
+
+After you do this, add the --SELINUX=1 tag when exectuting perl Makefile.PL:
+
+  % perl Makefile.PL --SELINUX=1
+
+Please let me know if you have any difficulties with this procedure.
+Scott Cain
+cain@cshl.org
+2/16/05
+

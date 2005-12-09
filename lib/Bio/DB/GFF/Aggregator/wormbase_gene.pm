@@ -20,11 +20,10 @@ Bio::DB::GFF::Aggregator::wormbase_gene -- Wormbase gene aggregator
 
 =head1 DESCRIPTION
 
-Bio::DB::GFF::Aggregator::wormbase_gene is one of the default
-aggregators, and was written to be compatible with the C elegans GFF
-files.  It aggregates raw "CDS", "5'UTR", "3'UTR", "polyA"
-and "TSS" features into "transcript" features.  For compatibility with
-the idiosyncrasies of the Sanger GFF format, it expects that the full
+This aggregator was written to be compatible with the C elegans GFF
+files.  It aggregates raw "CDS", "5'UTR", "3'UTR", "polyA" and "TSS"
+features into "transcript" features.  For compatibility with the
+idiosyncrasies of the Sanger GFF format, it expects that the full
 range of the transcript is contained in a main feature of type
 "Sequence".
 

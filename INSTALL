@@ -1,8 +1,10 @@
 Generic Genome Browser Installation
+
     GBrowse is distributed as binary packages for Windows and Macintosh OS
     X, and as source code for Unix systems.
 
   1. WINDOWS INSTALL
+
     Before installing on Windows systems, you will need to install
     ActiveState Perl and the Apache web server. You may also wish to install
     a database management system such as MySQL.
@@ -29,8 +31,7 @@ Generic Genome Browser Installation
         Go to http://dev.mysql.com/downloads/mysql . Select and download the
         most recent version of the Windows package. Once the package is
         downloaded, you will need to unpack it with the WinZip program. Then
-        launch the installer. Note that there have been problems reported
-        with MySQL 4.1, therefore I suggest the newest release of 4.0.
+        launch the installer.
 
     Install GBrowse
         Apache and ActiveState Perl must be installed before you try this
@@ -61,6 +62,7 @@ Generic Genome Browser Installation
     When this is done, go to step (5) below.
 
   2. MACINTOSH OS X INSTALL
+
     NOTE: The MacOSX installer sited below is quite out of date. Until it is
     brought up to date, please use the SOURCE CODE INSTALL section below for
     Macs.
@@ -76,6 +78,7 @@ Generic Genome Browser Installation
     handle everything else.
 
   3. SOURCE CODE INSTALL
+
     GBrowse runs on top of several software packages. These must be
     installed and configured before you can run GBrowse. Most preconfigured
     Linux systems will have some of these packages installed already.
@@ -85,9 +88,7 @@ Generic Genome Browser Installation
         widely used for web applications. It is required for most real-live
         genome annotation projects. For small projects (a few thousands of
         annotated features), you can skip installing MySQL and use an
-        in-memory database instead. Note that there have been problems
-        reported with MySQL 4.1, therefore I suggest the newest release of
-        4.0.
+        in-memory database instead.
 
     B) Apache Web Server -- <http://www.apache.org>
         The Apache web server is the industry standard open source web
@@ -103,20 +104,13 @@ Generic Genome Browser Installation
 
                 CGI                  (2.56 or higher)
                 GD                   (2.07 or higher)
+                CGI::Session         (4.03 or higher)
                 DBI                  (any version)
                 DBD::mysql           (any version)
                 Digest::MD5          (any version)
                 Text::Shellwords     (any version)
 
     E) Bioperl version 1.5 or higher -- <http://www.bioperl.org>
-        GBrowse requires functionality that exists in bioperl-live (in the
-        cvs repository). Please either use bioperl-live or Bioperl 1.5 when
-        it comes out. Until then, there is a release candidate of Bioperl
-        1.5 that is thought to be stable with regard to GBrowse. It can be
-        found at <http://bioperl.org/DIST/bioperl-1.5.0-RC1.tar.gz>. Other
-        release candidates and the official 1.5 release of Bioperl can also
-        be found in the <http://bioperl.org/DIST/> directory when they are
-        available.
 
     Optional modules:
 
@@ -130,7 +124,8 @@ Generic Genome Browser Installation
 
     H) Bio::Das
         To display remote annotations using the Distributed Annotation
-        System. The current version can be obtained from CPAN.
+        System. The current version is available at
+        http://www.biodas.org/download/Bio::Das/Bio-Das-0.92.tar.gz
 
     I) MOBY
         Needed by gbrowse_moby to fetch and display data from MOBY
@@ -153,11 +148,13 @@ Generic Genome Browser Installation
             perl Makefile.PL
             make
             make test (optional)
-            make install
+            make install UNINST=1
 
     This will install the software in the default location under
     /usr/local/apache. See "Details" to change this, or to install gbrowse
-    into your home directory.
+    into your home directory. The 'UNINST=1' will insure that older versions
+    of perl modules being installed will be removed to help prevent
+    conflicts.
 
     To further configure GBrowse, see CONFIGURE_HOWTO. To run GBrowse on top
     of Oracle and PostgreSQL databases see ORACLE_AND_POSTGRESQL. To run on
@@ -250,6 +247,7 @@ Generic Genome Browser Installation
     whether you wish to reuse the settings stored in the file.
 
   4. INSTALLING INTO YOUR HOME DIRECTORY
+
     Read this section only if you are on a Unix system and do not have root
     privileges. You will need to configure Apache to run out of your home
     directory. One way to do this is to install Apache from source code and
@@ -348,6 +346,7 @@ Generic Genome Browser Installation
     use http://localhost:8000/gbrowse instead.
 
   5. TRY THE BROWSER OUT
+
     The installation procedure will create a small in-memory database of
     yeast chromosome 1 for you to play with. To try the browser out, use
     your favorite browser to open:
@@ -368,6 +367,7 @@ Generic Genome Browser Installation
        http://localhost/gbrowse
 
   6. POPULATING THE DATABASE (MySQL)
+
     This step takes you through populating the database with the full yeast
     genome. You can skip this step if you use the in-memory database for
     small projects (see section 6).
@@ -479,6 +479,7 @@ Generic Genome Browser Installation
     is MySQL password or permissions problems.
 
   7. LOADING OTHER DATA SETS
+
     Genome feature tables for the major model organisms and human can be
     found at www.gmod.org in the downloads section, but these files are not
     guaranteed to be up to date.
@@ -531,6 +532,7 @@ Generic Genome Browser Installation
     contrib/conf_files) is appropriate for data loaded with load_genbank.pl.
 
   8. LOADING DNA
+
     To display the DNA sequence and to run sequence-dependent glyphs such as
     the three-frame translation, you will need to load the DNA as well as
     the annotations. The DNA must be formatted as a series of one or more
@@ -556,11 +558,13 @@ Generic Genome Browser Installation
     recognized automatically and loaded by any of the loaders.
 
   9. CREATING YOUR OWN GENOME DATABASE
+
     See the file doc/pod/CONFIGURE_HOWTO.pod for information on how to
     create new databases from scratch, add new browser tracks, and how to
     get the browser to dump the DNA from the region currently under display.
 
   10. MAKING THE BROWSER RUN FASTER
+
     Three factors are major contributors to the length of time it takes to
     load a gbrowse page:
 
@@ -605,6 +609,7 @@ Generic Genome Browser Installation
     working hard to reduce this performance hit.
 
   11. MAKING THE SERVER RUN SAFER
+
     Whenever you are running a server-side Web script using information
     provided by a web client, there is a risk that maliciously-formatted
     data provided by the use will trick the server-side script into
@@ -631,11 +636,13 @@ Generic Genome Browser Installation
     This will affect all mod_perl scripts globally.
 
   12. BIOPERL VERSIONS
+
     GBrowse is evolving quickly, and some of its features are dependent on
     new features in Bioperl 1.4.0. If you are having trouble making GBrowse
     run, make sure you are using Bioperl 1.4.0!
 
   13. THE GBROWSE_IMG SCRIPT
+
     The gbrowse_img CGI script (a new feature as of version 1.41), is a
     stripped-down version of gbrowse which just generates images. It is
     suitable for incorporating into <img> tags in order to make a thumbnail
@@ -659,6 +666,7 @@ Generic Genome Browser Installation
     http://your.host/cgi-bin/gbrowse_img into your favorite web browser.
 
   14. PLUGINS
+
     Gbrowse has a plugin architecture which makes it easy for third-party
     developers to expand its functionality. The plugins are Perl .pm files
     located in the directory gbrowse.conf/plugins/. To install plugins,
@@ -675,6 +683,7 @@ Generic Genome Browser Installation
     relevant gbrowse configuration file.
 
   15. THE GENBANK/EMBL PROXY
+
     Sample configuration number 5 ("05.embl.conf") corresponds to an
     experimental pass-through proxy for Genbank. At least in theory, if you
     enter a landmark that isn't recognized, gbrowse will go to EMBL using
@@ -706,6 +715,7 @@ Generic Genome Browser Installation
         embl accession number, such as CEF58D5
 
   16. UPDATING THE BROWSER WITHOUT REENTERING YOUR DIRECTORY SETTINGS
+
     When updating GBrowse to a new version of the software, you can
     configure it using your preferred directory settings by making a backup
     copy of the file GGB.def that was generated the first time you installed
@@ -719,6 +729,7 @@ Generic Genome Browser Installation
       make install
 
   17. REMOVING OUT-OF-DATE IMAGE FILES
+
     As GBrowse runs, it creates temporary image files in the gbrowse tmp
     directory (typically /usr/local/apache/htdocs/gbrowse/tmp). These image
     files are relatively small, but if you run GBrowse for a long time they
@@ -733,12 +744,14 @@ Generic Genome Browser Installation
     command in the cron script for "nobody" or "root."
 
   18. KNOWN BUGS
+
     Currently there is one known bug. The navigation buttons do not operate
     properly when the client is using Internet Explorer 5.1 on a Macintosh
     and accessing gbrowse running on a MacOS X server running Apache. Other
     combinations of clients and servers work properly.
 
   19. FEATURE WISH LIST (updated April, 2004)
+
       - Configure data sources on a track-by-track basis.
       - A configurable synteny viewer.
 
@@ -746,6 +759,7 @@ Generic Genome Browser Installation
     contact the developers at the address given in the next section.
 
   20. SUPPORT AND BUG REPORTS
+
     Please send requests for help to gmod-gbrowse@lists.sourceforge.net.
     There is also a formal bug tracking and feature request system in place
     at <http://www.gmod.org/>

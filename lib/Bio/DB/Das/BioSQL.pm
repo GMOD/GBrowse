@@ -112,6 +112,26 @@ use constant ADAPTOR_CLASS => 'Bio::DB::Das::BioSQL::BioDatabaseAdaptor';
 $VERSION = 0.02;
 @ISA     = qw(Bio::Root::Root Bio::DasI);
 
+# Install horrible patch for gbrowse compatibility
+use Bio::SeqFeature::Generic;
+
+
+*Bio::SeqFeature::Generic::attributes = \&Bio::AnnotatableI::get_tag_values;
+*Bio::SeqFeature::Generic::method = \&Bio::SeqFeature::Generic::primary_tag;
+*Bio::SeqFeature::Generic::type = sub {
+    my $feat = shift;
+    my ($method) = $feat->primary_tag;
+    my ($source) = $feat->source_tag;
+    return $method;
+};
+*Bio::SeqFeature::Generic::name = sub {
+    my $feat = shift;
+    my $name = eval {($feat->get_tag_values('name'))[0]};
+    $name ||= eval {($feat->get_tag_values('label'))[0]};
+    $name ||= eval {($feat->get_tag_values('db_xref'))[0]};
+    return $name;
+};
+
 =head2 new
 
  Title   : new

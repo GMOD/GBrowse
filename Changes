@@ -1,13 +1,57 @@
-1.64	Sun Jan 16 08:54:10 PST 2005
-	* Big merge of Allen Day's template toolkit and Log::Log4Perl improvements
-	* Bio::Perl 1.5 now required
+1.65	* Improved support for negative and fractional coordinates, such as those used
+	  in some genetic maps.
 
-1.63	Wed Nov 17 18:06:09 EST 2004
-	* Patch from Eric Just to eliminate unecessary URL arguments.
-	* Fixes from Jack Chen to get colors in multiple alignments "just right."
+1.64	* Revamped state handling to use CGI::Session instead of cookies
+	* Added Russian and Polish language translations
+        * Fixed chado adaptor bug for older chado databases with both 
+          SO and SOFA loaded
+	* Fixed bug to allow multple 'add' parameters 
+	* Added an option to turn on and off the background grid.
+	* Fixed extraneous redirect when calling gbrowse_img.
+
+1.63
+	* Added a new "region" panel which is intermediate in size between the overview
+		and the detail panels. Thanks to Barry Healy for coding this. Use the new 
+		"region segment" configuration option to turn this feature on.
+	* Added ability to open and close sections with a JavaScript toggle.
+	* Added ability to group tracks logically.
+	* Added the "initial landmark" configuration option to bring up a 
+		default region the first time user visits the web page.
+	* Added the "quicklink plugins" option to add selected plugins to
+		the links list underneath the instructions.
+        * Added compatibility with mod_perl version 2 (via ModPerl::Registry)
+	* Added the ability to highlight multiple features using URL arguments.
+	* Added the ability to highlight multiple sequence regions using URL arguments.
+	* Added the ability to turn off the autosearch feature which restores the previous
+	        region when the user revisits the browser.
+	* Added sections on grouping tracks by category, defining
+	        region panels, and loading Berkeleydb databases to tutorial.
+        * Added a "hide" option to use when semantic zooming should turn a track
+                off altogether.
+	* Added README-lucegene.pod, describing the Lucegene GFF adaptor
+	* The link option in the config file can now be used to override the built-in linking
+		rules from DAS sources.
+	* Moved plugins menu to a more prominent position.
+	* Uploaded features can now be placed in details panel, overview panel, or both panels.
+	* init_code subroutines and anonymous callbacks are now placed in the same package so that
+		one can refer to the other.
+	* The feature name search now no longer does a wildcard PREFIX search (*foo*), which was killing
+		performance. It still does a wildcard SUFFIX search (foo*).
+	* You can now use the parameters "enable" and "disable" to
+		selectively open or close a set of tracks without blowing
+		away the settings for all the other tracks the way "label" does.
+        * gbrowse_img now takes a "highlight" parameter that will highlight the indicated
+                named feature(s) in yellow.
+	* gbrowse_details will now evaluate URL options expressed as anonymous subroutines (contributed
+		by Cyril Pommier).
+	* gbrowse_details now accepts a general formatting rule syntax
+		that allows the formatting of each tag value to be precisely
+		controlled.
+        * Changed mainform submission method from POST to GET when MSIE detected,
+                in order to defeat evil "cache has expired" message. This hack is
+		under the control of the "msie hack" option, and is false by default.
 
 1.62    Mon Apr  5 09:43:25 EDT 2004
-        * added support for HTTP/FTP proxies for remote annotations
 	* Added request timeout option for very long requests.
 	* Added additional padding to prevent scales of xyplot glyph from being
 	cut off.
@@ -31,6 +75,11 @@
 	paired blast scores, and other pairwise feature data.
 	* Use can now turn on and off the overview tracks.
         * Fixed chado adaptor to properly render the gbrowse_details page.
+        * Patch from Eric Just to eliminate unecessary URL arguments.
+        * Fixes from Jack Chen to get colors in multiple alignments "just right."
+        * Several fixes, improvements to the chado adaptor.
+        * added code to the chado adaptor to allow it to generate
+        URLs to corresponding cmap features
 
 1.61    Wed Mar 17 21:59:16 EST 2004
         * Moved the BioSQL adaptor to 'experimental'.  It is not guaranteed

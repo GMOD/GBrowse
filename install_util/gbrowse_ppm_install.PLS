@@ -14,12 +14,6 @@ if (open F,"$Bin/../GGB.def") {
   }
   close F;
 }
-
-if($OPTIONS{PREFIXSTRIP}){
-  $OPTIONS{CONF} =~ s/^$OPTIONS{PREFIX}//;
-  $OPTIONS{LIB}  =~ s/^$OPTIONS{PREFIX}//;
-}
-
 $OPTIONS{CONF} ||= '/usr/local/apache/conf';
 
 my $dir = dirname($0);

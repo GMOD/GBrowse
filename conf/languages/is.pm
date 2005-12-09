@@ -2,7 +2,8 @@
 {
 
 #Icelandic translation done by Gudmundur A. Thorisson <mummi@cshl.edu>
-#$Id: is.pm,v 1.4 2004-08-17 16:07:37 mummi Exp $
+
+#$Id: is.pm,v 1.5 2005-12-09 22:19:09 mwz444 Exp $
 
  CHARSET =>   'ISO-8859-1',
 
@@ -103,7 +104,7 @@ END
 
    SEARCH   => 'Leita',
 
-   DUMP     => 'Dumpa',
+   DUMP     => 'Vista',
 
    HIGHLIGHT => 'Merkja',
 
@@ -121,7 +122,7 @@ END
 
    DOWNLOAD         => 'Vista',
 
-   DISPLAY_SETTINGS => 'Stillingar á sýn',
+   DISPLAY_SETTINGS => 'Stillinga glugga',
 
    TRACKS   => 'Brautir',
 
@@ -129,7 +130,11 @@ END
 
    OVERVIEW_TRACKS => '<sup>*</sup>Yfirlitsbraut',
 
+   REGION_TRACKS  => '<sup>**</sup>Svæðisbraut',
+
    EXAMPLES => 'Dæmi',
+
+   REGION_SIZE  => 'Stærð svæðis (bp)',
 
    HELP     => 'Hjálp',
 
@@ -173,6 +178,8 @@ END
 
    DATA_SOURCE => 'Gagnalind',
 
+   UPLOAD_TRACKS  => 'Bæta við eigin brautum',
+
    UPLOAD_TITLE=> 'Vista eigin annoteringar á vef',
 
    UPLOAD_FILE => 'Vista eigin skrá á vef',
@@ -192,6 +199,16 @@ END
    UPDATE_URLS  => 'Uppfæra vefslóðir',
 
    PRESETS      => '--Velja fyrirfram uppsettar vefslóðir--',
+
+   FEATURES_TO_HIGHLIGHT  => 'Kennileiti sem merkja á (kennileiti1, kennileiti2...)',
+     
+   FEATURES_TO_HIGHLIGHT_HINT  => 'Vísbending: notaðu kennileiti@litur til að velja litinn, t.d. \'NUT21@lightblue\' ',
+
+   REGIONS_TO_HIGHLIGHT  => 'Merkja svæði (svæði1:start..end svæði2:start..end)',
+    
+   REGIONS_TO_HIGHLIGHT_HINT  => 'Vísbending: notaðu svæði@litur, t.d. \'Chr1:1000..2000@lightblue\'',
+
+   NO_TRACKS  => '*engar*',
 
    FILE_INFO    => 'Síðast uppfært %s.  Annoteruð kennileiti: %s',
 
@@ -279,6 +296,21 @@ END
    HYPEREXPAND_LABEL =>'Breiða meira úr & merkja',
 
    NO_LIMIT    => 'Engin takmörkun',
+       
+   OVERVIEW  => 'Yfirlit',
+
+  GENERAL => 'Almennt',
+
+   DETAILS  => 'Nánar',
+
+   ALL_OFF => 'Virkja allar',
+
+   ALL_ON  => 'Afvirkja allar',
+
+   ANALYSIS  => 'Greining',
+
+   REGION  => 'Svæði',
+    
 
    #--------------
    # HELP PAGES
@@ -332,6 +364,12 @@ END
  TOO_MANY_LANDMARKS => '%d kennileiti.  Of mörg til að telja upp!.',
 
  SMALL_INTERVAL    => 'Breyti stærð svæðis í %s bp',
+          
+CLEAR_HIGHLIGHTING  => 'Fjarlægja merkingar',
+
+CONFIGURE_TRACKS  => 'Stilla brautir...', 
+     
+NO_SOURCES  => 'Engar aðgengilegar gagnalindir stilltar. Kannske hefur þú ekki leyfi til að skoða þær',
 
 };
 

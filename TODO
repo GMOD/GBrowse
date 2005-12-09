@@ -1,64 +1,22 @@
-NEXT VERSION:
-$Id: TODO,v 1.7 2005-10-06 14:15:25 lstein Exp $
+test change for cvs
 
-Feature               PRE-PORT   POST-PORT
-===============================================================================
-logging               n/a        convert "warn $foo if DEBUG" to Log::Log4perl calls
-
-localization          done       need new translation of "toggle", lowercase of "tracks"
-
-show/hide
-  banner              done       done
-  instructions        done       done
-  tracks              done       partial, colorization is broken
-  image               n/a        partial, no persistence to cookie
-  bookmark view       done       not started
-  image link          done       not started
-  svg link            done       not started
-  help                done       partial -- FIXME
-
-image update w/o      n/a        not started
-  full page reload
-
-navigation
-  zoom                done       done
-  scroll left/right   done       partial -- calculations are off
-  "show" dropdown     done       done
-  flip                done       not started -- control should be moved in UI
-
-options
-  image width         done       not started
-  key position        done       not started
-  track ordering      done       not started
-  features in image   done       not started -- cookie data structure is weird
-  alt. stylesheet     n/a        not started -- should be easy to add
-
-data source selection done       not started
-
-dumps, searches, etc  done       not started
-
-upload annotations    done       not started
-
-cookie                done       partial, no saving of track preference
-
-Makefile.PL convert   n/a        partial -- on branch
- to Package-Tools
-
-Apache::Test          n/a        not started
-  unit tests
-
-
-
-====================================================
-
-
-* Synteny display
+* Add popup menu support using Cyril's code and overlib/overlibmws.
 * More internationalization
 * Limit search results to user-set max
 * Group SVG elements by feature ID
-* Allow annotator plugins to be turned on by default
-* Convert to use a templating system?
-* gbrowse_img should respect external uploaded and DAS tracks
+* Get rid of verbs attached to plugin names so that translations work properly.
+  Will need plugin authors to provide internationalization.
+* Add popup window/hyperlink to track labels in the image.
+* Make boxes/callbacks for gaps between components, such as introns.
+* Move all configuration information into a server-side file using CGI::Session 
+	(or similar).
+* Move toggle section state information into a server-side session.
+* Allow administrator to change track label fonts and sizes.
+* Boolean operations on queries
+* Give access to plugin highlighters (and other plugins?) to
+	gbrowse_details. See Letter from Vince.Forgetta Friday August 26.
+* Add per-track parameter lists as per letter from Russell Smithies, 
+	Monday, Sept 5.
 
-Id: TODO,v 1.4 2004/08/23 15:39:59 lstein Exp
+$Id: TODO,v 1.8 2005-12-09 22:19:08 mwz444 Exp $
 

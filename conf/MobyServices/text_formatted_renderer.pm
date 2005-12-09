@@ -3,6 +3,7 @@ use strict;
 use XML::LibXML;
 use MOBY::MobyXMLConstants;
 our @ISA = qw(Exporter);
+#our @EXPORT = qw(render type);
 our @EXPORT_OK = qw(render type);
 
 
@@ -19,11 +20,7 @@ sub render {
         $content .=$subnode->textContent;
     }
 
-    return ("<pre></pre>", 0) unless $content;
-
-    if ($content =~ /(\S{100})/){
-	    $content =~ s/(\S{100})/$1\<br\>/g;
-    }
+    $content =~ s/(\S{100})/$1\<br\>/g;
     if ($content =~ /\S/){
         return ("<pre>$content</pre>",0);# the 0 indicates that we have only rendered the top-level XML of this object
     } else {
@@ -49,6 +46,7 @@ just put the renderer in your gbrowse.conf/MobyServices folder
 and it will work.
 
 =head1 DESCRIPTION
+
 This renderer returns HTML that fits between the
 <td> tags in a web-page to display the content
 of a text-formatted (or ontological child of) object.

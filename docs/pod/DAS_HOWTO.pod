@@ -94,6 +94,7 @@ be avoided for now.
 
 =back
 
+
 =head2 CONFIGURING GBROWSE TO BE A DAS CLIENT
 
 GBrowse can run as a DAS client as well, either on a track-by-track

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.70 2005-05-14 13:11:17 scottcain Exp $
+# $Id: Chado.pm,v 1.71 2005-12-09 22:19:12 mwz444 Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -131,21 +131,32 @@ sub new {
 
   my $dbh = DBI->connect( $dsn, $username, $password )
     or $self->throw("unable to open db handle");
+  $self->dbh($dbh);
 
     warn "$dbh\n" if DEBUG;
 
+# determine which cv to use for SO terms
+
+  $self->sofa_id(1); 
+
+    warn "SOFA id to use: ",$self->sofa_id() if DEBUG;
+
 # get the cvterm relationships here and save for later use
 
-  my $sth = $dbh->prepare("select ct.cvterm_id,ct.name
-                           from cvterm ct, cv c 
+  my $cvterm_query="select ct.cvterm_id,ct.name
+                           from cvterm ct, cv c
                            where ct.cv_id=c.cv_id and
-                           c.name IN ('SOFA',
-                               'Sequence Ontology Feature Annotation',
-                               'sofa.ontology',
+                           (c.name IN (
                                'relationship',
                                'relationship type','Relationship Ontology',
-                               'autocreated')")
+                               'autocreated')
+                            OR c.cv_id = ".$self->sofa_id().")";
+
+    warn "cvterm query: $cvterm_query\n" if DEBUG;
+
+  my $sth = $self->dbh->prepare($cvterm_query)
     or warn "unable to prepare select cvterms";
+
   $sth->execute or $self->throw("unable to select cvterms");
 
 #  my $cvterm_id  = {}; replaced with better-named variables
@@ -178,9 +189,71 @@ sub new {
 
   $self->term2name(\%term2name);
   $self->name2term(\%name2term);
-  $self->dbh($dbh);
+  #Recursive Mapping
+  $self->recursivMapping($arg{-recursivMapping} ? $arg{-recursivMapping} : 0);
 
   return $self;
+}
+
+=head2 sofa_id
+
+  Title   : sofa_id 
+  Usage   : $obj->sofa_id()
+  Function: get or return the ID to use for SO terms
+  Returns : the cv.cv_id for the SO ontology to use
+  Args    : to return the id, none; to determine the id, 1
+
+=cut
+
+sub sofa_id {
+  my $self = shift;
+  return $self->{'sofa_id'} unless @_;
+
+  my $query = "select cv_id from cv where name in (
+                     'SOFA',
+                     'Sequence Ontology Feature Annotation',
+                     'sofa.ontology')";
+
+  my $sth = $self->dbh->prepare($query);
+  $sth->execute() or $self->throw("trying to find SOFA");
+
+  my $data = $sth->fetchrow_hashref(); 
+  my $sofa_id = $$data{'cv_id'};
+
+  return $self->{'sofa_id'} = $sofa_id if $sofa_id;
+
+  $query = "select cv_id from cv where name in (
+                    'Sequence Ontology',
+                    'sequence')";
+
+  $sth = $self->dbh->prepare($query);
+  $sth->execute() or $self->throw("trying to find SO");
+
+  $data = $sth->fetchrow_hashref();
+  $sofa_id = $$data{'cv_id'};
+
+  return $self->{'sofa_id'} = $sofa_id if $sofa_id;
+
+  $self->throw("unable to find SO or SOFA in the database!");
+}
+
+=head2 recursivMapping
+
+  Title   : recursivMapping
+  Usage   : $obj->recursivMapping($newval)
+  Function: Flag for activating the recursive mapping (desactivated by default)
+  Returns : value of recursivMapping (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+  Goal : When we have a clone mapped on a chromosome, the recursive mapping maps the features of the clone on the chromosome.
+
+=cut
+
+sub  recursivMapping{
+  my $self = shift;
+
+  return $self->{'recursivMapping'} = shift if @_;
+  return $self->{'recursivMapping'};
 }
 
 =head2 dbh
@@ -422,59 +495,76 @@ sub get_feature_by_name {
   my ($name, $class, $ref, $base_start, $stop) 
        = $self->_rearrange([qw(NAME CLASS REF START END)],@_);
 
-   warn "name:$name in get_feature_by_name" if DEBUG;
+  my $wildcard = 0;
+  if ($name =~ /\*/) {
+    $wildcard = 1;
+  }
 
-  $name =~ s/_/\\_/g;  # escape underscores in name
-  $name =~ s/\%/\\%/g; # ditto for percent signs
+  warn "name:$name in get_feature_by_name" if DEBUG;
 
-   warn "name after protecting _ and % in the string:$name\n" if DEBUG;
+#  $name = $self->_search_name_prep($name);
+
+#  warn "name after protecting _ and % in the string:$name\n" if DEBUG;
 
   my (@features,$sth);
   
-  if ($name =~ /^\s*\S+\s*$/) {
-    # get feature_id
-    # foreach feature_id, get the feature info
-    # then get src_feature stuff (chromosome info) and create a parent feature,
+  # get feature_id
+  # foreach feature_id, get the feature info
+  # then get src_feature stuff (chromosome info) and create a parent feature,
 
-    $name =~ s/[?*]\s*$/%/;
+  my $select_part = "select distinct fs.feature_id \n";
+  my $from_part   = "from feature_synonym fs, synonym s ";
 
-    my $select_part = "select distinct fs.feature_id \n";
-    my $from_part   = "from feature_synonym fs, synonym s ";
-    my $where_part  = "where fs.synonym_id = s.synonym_id and\n"
-                    . "s.synonym_sgml ilike ?";
-                    #this ilike should probably be replace with a 'lower' index
-    if ($class) {
-        my $type = $self->name2term($class);
-        return unless $type;
-        $from_part .= ", feature f \n";
-        $where_part.= "\nand fs.feature_id = f.feature_id and\n"
-                    . "f.type_id = $type";
-    }
-
-    my $query = $select_part . $from_part . $where_part;
-
-    warn "first get_feature_by_name query:$query" if DEBUG;
-
-    $sth = $self->dbh->prepare($query);
-    $sth->execute($name) or $self->throw("getting the feature_ids failed");
-
-    if ($sth->rows == 0) {
-        warn "trying a complex search for $name\n" if DEBUG;
-        ($name,$query) = $self->_complex_search($name,$class);
-
-        $sth = $self->dbh->prepare($query);
-        $sth->execute($name) or $self->throw("getting the feature_ids failed");
-    }
-
-  } else { # not a simple wild card search
-    
-    my $query;
-    ($name,$query) = $self->_complex_search($name,$class);
-
-    $sth = $self->dbh->prepare($query);
-    $sth->execute($name) or $self->throw("getting the feature_ids failed");
-
+  my $where_part;
+  if ($wildcard) {
+    $where_part  = "where fs.synonym_id = s.synonym_id and\n"
+                    . "lower(s.synonym_sgml) like ?";
+  } else {
+    $where_part  = "where fs.synonym_id = s.synonym_id and\n"
+                    . "lower(s.synonym_sgml) = ?";
   }
+
+
+  if ($class) {
+      my $type = $self->name2term($class);
+      return unless $type;
+      $from_part .= ", feature f \n";
+      $where_part.= "\nand fs.feature_id = f.feature_id and\n"
+                    . "f.type_id = $type";
+  }
+
+  my $query = $select_part . $from_part . $where_part;
+
+  warn "first get_feature_by_name query:$query" if DEBUG;
+
+  $sth = $self->dbh->prepare($query);
+
+  if ($wildcard) {
+    $name = $self->_search_name_prep($name);
+    warn "name after protecting _ and % in the string:$name\n" if DEBUG;
+  }
+
+  $sth->execute($name) or $self->throw("getting the feature_ids failed");
+
+# this makes performance awful!  It does a wildcard search on a view
+# that has several selects in it.  For any reasonably sized database,
+# this won't work.
+#
+#  if ($sth->rows < 1 and 
+#      $class ne 'chromosome' and
+#      $class ne 'region' and
+#      $class ne 'contig') {  
+#
+#    my $query;
+#    ($name,$query) = $self->_complex_search($name,$class,$wildcard);
+#
+#    warn "complex_search query:$query\n";
+#
+#    $sth = $self->dbh->prepare($query);
+#    $sth->execute($name) or $self->throw("getting the feature_ids failed");
+#
+#  }
+
 
      # prepare sql queries for use in while loops
   my $isth =  $self->dbh->prepare("
@@ -543,32 +633,70 @@ sub get_feature_by_name {
       }
         #now build the feature
 
-      my $interbase_start = $$hashref{'fmin'};
-      $base_start = $interbase_start +1;
+      #Recursive Mapping
+      if ($self->{recursivMapping}){
+      #Fetch the recursively mapped  position
 
-      my $source = $self->dbxref2source($$hashref{dbxref_id}) || "" ;
-      my $type_obj = Bio::DB::GFF::Typename->new(
-             $self->term2name($$hashref{'type_id'}),
-             $source 
-      );
+        my $sql = "select fl.fmin,fl.fmax,fl.strand,fl.phase
+                   from feat_remapping(".$$feature_id_ref{'feature_id'}.")  fl
+                   where fl.rank=0";
+        my $recurs_sth =  $self->dbh->prepare($sql);
+        $sql =~ s/\s+/ /gs ;
+        $recurs_sth->execute();
+        my $hashref2 = $recurs_sth->fetchrow_hashref;
+        my $strand_ = $$hashref{'strand'};
+        my $phase_ = $$hashref{'phase'};
+        my $fmax_ = $$hashref{'fmax'};
+        my $interbase_start;
 
-      my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
-                      $self,
-                      $parent_segment,
-                      $parent_segment->seq_id,
-                      $base_start,$$hashref{'fmax'},
-                      $type_obj,
-                      $$hashref{'score'},
-                      $$hashref{'strand'},
-                      $$hashref{'phase'},
-                      $$hashref{'name'},
-                      $$hashref{'uniquename'},
-                      $$hashref{'feature_id'}
-        );
+      #If unable to recursively map we assume that the feature is
+      # already mapped on the lowest refseq
+
+        if ($recurs_sth->rows != 0){
+          $interbase_start = $$hashref2{'fmin'};
+          $strand_ = $$hashref2{'strand'};
+          $phase_ = $$hashref2{'phase'};
+          $fmax_ = $$hashref2{'fmax'};
+        }else{
+          $interbase_start = $$hashref{'fmin'};
+        }
+        $base_start = $interbase_start +1;
+        my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
+                                        $self,
+                                        $parent_segment,
+                                        $parent_segment->seq_id,
+                                        $base_start,$fmax_,
+                                        $self->term2name($$hashref{'type_id'}),
+                                        $$hashref{'score'},
+                                        $strand_,
+                                        $phase_,
+                                        $$hashref{'name'},
+                                        $$hashref{'uniquename'},
+                                        $$hashref{'feature_id'}
+                                                               );
+        push @features, $feat;
+        #END Recursive Mapping
+      } else {
+      
+        my $interbase_start = $$hashref{'fmin'};
+        $base_start = $interbase_start +1;
+        my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
+                                        $self,
+                                        $parent_segment,
+                                        $parent_segment->seq_id,
+                                        $base_start,$$hashref{'fmax'},
+                                        $self->term2name($$hashref{'type_id'}),
+                                        $$hashref{'score'},
+                                        $$hashref{'strand'},
+                                        $$hashref{'phase'},
+                                        $$hashref{'name'},
+                                        $$hashref{'uniquename'},
+                                        $$hashref{'feature_id'}
+                                                               );
       push @features, $feat;
+      } 
     }
   }
-
   @features;
 }
 
@@ -581,9 +709,6 @@ sub _complex_search {
 
     warn "name before wildcard subs:$name\n" if DEBUG;
 
-    
-
-    $name =~ s/\*/%/g;
     $name = "\%$name" unless (0 == index($name, "%"));
     $name = "$name%"  unless (0 == index(reverse($name), "%"));
 
@@ -591,7 +716,7 @@ sub _complex_search {
 
     my $select_part = "select ga.feature_id ";
     my $from_part   = "from gffatts ga ";
-    my $where_part  = "where ga.attribute ilike ? ";
+    my $where_part  = "where lower(ga.attribute) like ? ";
                                                                                                                           
     if ($class) {
         my $type    = $self->name2term($class);
@@ -602,6 +727,18 @@ sub _complex_search {
     }
     my $query = $select_part . $from_part . $where_part;
     return ($name, $query);
+}
+
+sub _search_name_prep {
+  my $self = shift;
+  my $name = shift;
+
+  $name =~ s/_/\\_/g;  # escape underscores in name
+  $name =~ s/\%/\\%/g; # ditto for percent signs
+
+  $name =~ s/\*/%/g;
+
+  return lc($name);
 }
 
 

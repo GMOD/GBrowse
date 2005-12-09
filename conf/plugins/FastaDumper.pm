@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::FastaDumper;
-# $Id: FastaDumper.pm,v 1.10 2005-01-11 21:58:02 allenday Exp $
+# $Id: FastaDumper.pm,v 1.11 2005-12-09 22:19:09 mwz444 Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -38,7 +38,7 @@ BEGIN {
 	       );
 }
 
-$VERSION = '0.12';
+$VERSION = '0.20';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -52,6 +52,15 @@ sub description {
 sub dump {
     my $self = shift;
     my $segment = shift;
+
+    unless ($segment) {
+      my $mime_type = $self->mime_type;
+      print start_html($self->name) if $mime_type =~ /html/;
+      print "No sequence specified.\n";
+      print end_html if $mime_type =~ /html/;
+      exit 0;
+    }
+
     my $config  = $self->configuration;
     my $dna = lc $segment->dna;
     my $browser = $self->browser_config();
@@ -60,8 +69,13 @@ sub dump {
 
     my %types;
 
+    my $flip   = defined $config->{flip} ? $config->{flip}
+                                         : $self->page_settings->{flip};
+    if ($flip) {
+      $dna = reverse $dna;
+      $dna =~ tr/gatcGATC/ctagCTAG/;
+    }
     my $markup = Bio::Graphics::Browser::Markup->new;
-
 
     while( my ($type,$val) = each %{$config} ) {
 
@@ -69,10 +83,11 @@ sub dump {
       next unless $val;
       next if $type =~ /\.(f|b)gcolor$/i;
       next if $type =~ /format$/;
+      next if $type =~ /orientation$/;
 
       warn "configuring $type => $val\n" if DEBUG;
 
-      my $style = $MARKUPS[$val];
+      my $style = $MARKUPS[$val] || '';
       if ($style =~ /^(F|B)GCOLOR/) {
 	$style = sprintf($style,$config->{"$type.\L$1\Egcolor"});
       }
@@ -89,24 +104,27 @@ sub dump {
       foreach (@types) { $types{$_}++ };
     }
 
-    my @regions_to_markup = $self->make_markup($segment,[keys %types],$markup) if %types;
+    my @regions_to_markup = $self->make_markup($segment,[keys %types],$markup,$flip) if %types;
 
     # add a newline every 60 positions
     $markup->add_style('newline',"\n");
     push @regions_to_markup,map {['newline',60*$_]} (1..length($dna)/60);
     $markup->markup(\$dna,\@regions_to_markup);
 
+    my $label = "$segment";
+    $label .= " (reverse complemented)" if $flip;
+
     # HTML formatting
     if ($config->{format} eq 'html') {
 	
-      print start_html($segment),h1($segment);
-      print pre(">$segment\n$dna");
+      print start_html($segment),h1($label);
+      print pre(">$label\n$dna");
       print end_html;
     }
 
     # text/plain formatting
     else {
-	print ">$segment\n";
+	print ">$label\n";
 	print $dna;
     }
     warn("====== end of dump =====\n") if DEBUG;
@@ -156,6 +174,13 @@ sub configure_form {
 				       -override => 1))
 		       )
 		    );
+  push @choices,TR({-class=>'searchtitle'},
+		   th({-align=>'RIGHT',-width=>'25%'},"Orientation",
+		      td(checkbox(-name    => $self->config_name('flip'),
+				  -label   => 'Flip',
+				  -checked => $self->page_settings->{flip},
+				  -override => 1))));
+
     my $browser = $self->browser_config();
     # this to be fixed as more general
     my @labels;
@@ -199,12 +224,17 @@ sub configure_form {
 
 sub make_markup {
   my $self = shift;
-  my ($segment,$types,$markup) = @_;
+  my ($segment,$types,$markup,$flip) = @_;
+
   my @regions_to_markup;
 
   warn("segment length is ".$segment->length()."\n") if DEBUG;
   my $iterator = $segment->get_seq_stream(-types=>$types,
 					  -automerge=>1) or return;
+  my $segment_start = $segment->start;
+  my $segment_end   = $segment->end;
+  my $segment_length = $segment->length;
+
   while (my $markupregion = $iterator->next_seq) {
 
     warn "got feature $markupregion\n" if DEBUG;
@@ -218,8 +248,10 @@ sub make_markup {
     @parts = ($markupregion) unless @parts;
 
     for my $p (@parts) {
-      my $start = $p->start - $segment->start;
+      my $start = $p->start - $segment_start;
       my $end   = $start + $p->length;
+
+      ($start,$end) = map {$segment_length-$_} ($end,$start) if $flip;
 
       warn("$p ". $p->location->to_FTstring() . " type is ".$p->primary_tag) if DEBUG;
       $start = 0                   if $start < 0;  # this can happen

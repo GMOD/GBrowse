@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.170 2005-12-09 22:19:12 mwz444 Exp $
+# $Id: Browser.pm,v 1.171 2005-12-16 20:53:17 mwz444 Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -63,8 +63,10 @@ use CGI qw(img param escape unescape url);
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use Text::Shellwords;
+use Template;
 use Bio::Graphics::Browser::I18n;
 use Bio::Graphics::Browser::Util 'modperl_request';
+use Data::Dumper;
 
 require Exporter;
 
@@ -2062,6 +2064,29 @@ sub language_code {
   return $lang->language;
 }
 
+=head2 template()
+
+Gets or creates a template tookit object.
+
+=cut
+
+sub template {
+  my($self) = @_;
+  if ( ! $self->{'template'} ) {
+    # User can change template include directory within the config file
+    my $template_dir    = $self->setting(general => 'templates') || 'default';
+    #FIXME this should really be File::Spec::Functions / catfile()
+    $template_dir       = $self->dir()."/templates/$template_dir" unless $template_dir =~ m!^/!;
+    $self->{'template'} = Template->new({
+                                         INCLUDE_PATH => $template_dir,
+                                         ABSOLUTE     => 1,
+                                         EVAL_PERL    => 1,
+                                        }) || die("couldn't create template: $!");
+                                                                                                                             
+  }
+  return $self->{'template'};
+}
+
 =head2 error()
 
   my $error = $browser->error(['new error']);
@@ -2472,7 +2497,6 @@ sub i18n_style {
        keys %options;
   %lang_options;
 }
-
 
 1;
 

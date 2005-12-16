@@ -1,31 +1,32 @@
 <div class="searchtitle" width="100%">
   <!-- Instructions -->
+  <input type="hidden" name="instruction_panel_vis" id="instruction_panel_vis" value="[%- IF div_visibility.instruction_panel_vis == 0 -%]0[%- ELSE -%]1[%- END -%]"/>
   <div class="ctl_hidden" id="instruction_panel_show" onclick="visibility('instruction_panel',1)"
-  [%- PROCESS 'div_inline.tt2' vis_value=instruction_panel_vis vis_default=1 opposite_of_value=1 -%]
+  [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.instruction_panel_vis vis_default=1 opposite_of_value=1 -%]
   ><img src="/gbrowse/images/buttons/plus.png">&nbsp;
-    <span class="tctl"><b>[% browser.translate('instructions') %] </b></span>
+    <span class="tctl"><b>[% config.tr('instructions') %] </b><br/></span>
                                                                                                                              
   </div>
                                                                                                                              
   <div class="ctl_visible" id="instruction_panel_hide" onclick="visibility('instruction_panel',0)"
-  [%- PROCESS 'div_inline.tt2' vis_value=instruction_panel_vis vis_default=1 opposite_of_value=0 -%]
+  [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.instruction_panel_vis vis_default=1 opposite_of_value=0 -%]
   ><img src="/gbrowse/images/buttons/minus.png">&nbsp;
-    <span class="tctl"><b>[% browser.translate('instructions') %] </b></span>
+    <span class="tctl"><b>[% config.tr('instructions') %] </b><br/></span>
                                                                                                                              
   </div>
                                                                                                                              
   <div class="el_visible" id="instruction_panel"
-  [%- PROCESS 'div_inline.tt2' vis_value=instruction_panel_vis vis_default=1 opposite_of_value=0 -%]
-  >[% browser.translate('search_instructions','') %]<br/>
-    [% browser.translate('navigation_instructions') %]<br/>
-    <b>[% browser.translate('examples') %]</b><br/>
+  [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.instruction_panel_vis vis_default=1 opposite_of_value=0 -%]
+  >[% config.tr('search_instructions','') %]<br/>
+    [% config.tr('navigation_instructions') %]<br/>
+    <b>[% config.tr('examples') %]</b><br/>
     [% FOREACH example = examples %]
       <a href="?name=[% example | uri %]">[% example %]</a>[% UNLESS loop.last ; ', ' ; END %]
     [% END %]
   </div>
 
   <!-- menu -->
-  [%- IF browser.options.display_banner == 1 ;
+  [%- IF page_settings.display_banner == 1 ;
        label = 'hide_header';
        toggle_banner = 0;
      ELSE ;
@@ -33,16 +34,17 @@
        toggle_banner = 1;
      END
   -%]
-  <div class="controller" id="controller1">[[% browser.translate( label ) %]]</div>
-
-  [%- IF browser.options.name OR browser.options.ref -%]
-  <div style="text-align: right;">
-    <a href="[% link_bookmark %]">[[% browser.translate('bookmark') %]]</a>
-    <a href="[% link_image    %]" target="_blank">[[% browser.translate('image_link') %]]</a>
-    <a href="[% link_svg      %]" target="_blank">[[% browser.translate('svg_link')   %]]</a>
-    <a href="[% link_help     %]" target="help">[[% browser.translate('help') %]]</a>
-  </div>
-  [% END %]
+  <table border=0>
+    <tr>
+      <td>[[% config.tr( label ) %]]</td>
+      [%- IF page_settings.name OR page_settings.ref -%]
+      <td> <a href="[% link_bookmark %]">[[% config.tr('bookmark') %]]</a></td>
+      <td> <a href="[% link_image    %]" target="_blank">[[% config.tr('image_link') %]]</a></td>
+      <td> <a href="[% link_svg      %]" target="_blank">[[% config.tr('svg_link')   %]]</a></td>
+      <td> <a href="[% link_help     %]" target="help">[[% config.tr('help') %]]</a></td>
+      [% END %]
+    </tr>
+  </table>
 
   <div class="searchbody">
     [% htmlfrag1 %]
@@ -50,24 +52,25 @@
   &nbsp;
 </div>
   <!-- Search -->
+  <input type="hidden" name="search_panel_vis" id="search_panel_vis" value="[%- IF div_visibility.search_panel_vis == 0 -%]0[%- ELSE -%]1[%- END -%]"/>
   <div class="ctl_hidden" id="search_panel_show" onclick="visibility('search_panel',1)"
-    [%- PROCESS 'div_inline.tt2' vis_value=search_panel_vis vis_default=1 opposite_of_value=1 -%]
+    [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.search_panel_vis vis_default=1 opposite_of_value=1 -%]
   ><img src="/gbrowse/images/buttons/plus.png">&nbsp;
-    <span class="tctl"><b>[% browser.translate('search') %] </b></span>
+    <span class="tctl"><b>[% config.tr('search') %] </b></span>
   </div>
                                                                                                                            
   <div class="ctl_visible" id="search_panel_hide" onclick="visibility('search_panel',0)"
-    [%- PROCESS 'div_inline.tt2' vis_value=search_panel_vis vis_default=1 opposite_of_value=0 -%]
+    [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.search_panel_vis vis_default=1 opposite_of_value=0 -%]
   ><img src="/gbrowse/images/buttons/minus.png">&nbsp;
-    <span class="tctl"><b>[% browser.translate('search') %] </b></span>
+    <span class="tctl"><b>[% config.tr('search') %] </b></span>
   </div>
                                                                                                                              
   <div class="el_visible" id="search_panel" 
-    [%- PROCESS 'div_inline.tt2' vis_value=search_panel_vis vis_default=1 opposite_of_value=0 -%]
+    [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.search_panel_vis vis_default=1 opposite_of_value=0 -%]
   >
     <div class="searchbody" style="height: 4em;">
       <div class="searchbody" style="float: left; width: 50%;">[% PROCESS "searchbox.tt2" %]</div>
-      <div class="searchbody" style="margin-left: 50%; width: 50%;">[% IF segment %]<b>[% browser.translate('scroll') %]</b><br/>[% PROCESS "slider.tt2" %][% END %]</div>
+      <div class="searchbody" style="margin-left: 50%; width: 50%;">[% IF segment %]<b>[% config.tr('scroll') %]</b><br/>[% PROCESS "slider.tt2" %][% END %]</div>
     </div>
     <!-- plugins_table -->
     [% PROCESS "pluginstable.tt2" %]

@@ -1,31 +1,76 @@
+<input type="hidden" name="tracks_panel_vis" id="tracks_panel_vis" value="[%- IF div_visibility.tracks_panel_vis == 0 -%]0[%- ELSE -%]1[%- END -%]"/>
 <div class="ctl_hidden" id="tracks_panel_show" onclick="visibility('tracks_panel',1)"
-    [%- PROCESS 'div_inline.tt2' vis_value=tracks_panel_vis vis_default=1 opposite_of_value=1 -%]
+    [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.tracks_panel_vis vis_default=1 opposite_of_value=1 -%]
   ><img src="/gbrowse/images/buttons/plus.png">&nbsp;
-  <span class="tctl"><b>[% browser.translate('tracks') %] </b></span>
+  <span class="tctl"><b>[% config.tr('tracks') %] </b></span>
                                                                                                                              
 </div>
                                                                                                                              
 <div class="ctl_visible" id="tracks_panel_hide" onclick="visibility('tracks_panel',0)"
-    [%- PROCESS 'div_inline.tt2' vis_value=tracks_panel_vis vis_default=1 opposite_of_value=0 -%]
+    [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.tracks_panel_vis vis_default=1 opposite_of_value=0 -%]
   ><img src="/gbrowse/images/buttons/minus.png">&nbsp;
-  <span class="tctl"><b>[% browser.translate('tracks') %] </b></span>
+  <span class="tctl"><b>[% config.tr('tracks') %] </b></span>
                                                                                                                              
 </div>
                                                                                                                              
 <div class="el_visible" id="tracks_panel"
-    [%- PROCESS 'div_inline.tt2' vis_value=tracks_panel_vis vis_default=1 opposite_of_value=0 -%]
+    [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.tracks_panel_vis vis_default=1 opposite_of_value=0 -%]
   >
-<div class="searchbody" id="target3" style="width: 100%;">
-  <!-- sorting tracks by browser.options.sk not ported yet -->
-  <div style="width: 100%">
-  [% i = 0 %]
-  <table border="0"><tr>
-  [% FOREACH tracklabel = browser.options.tracks -%]
-    <td><input type="checkbox" name="label" value="[% tracklabel %]" [% IF selected_tracks.$tracklabel %] checked="checked"/>[% END %][% citation_link(tracklabel,'?help=citations') %]</td>
-    [% i = i + 1 ; IF(i % 3) == 0 ; '</tr><tr>' ; END %]
-  [% END -%]
-  </tr></table>
-  </div>
-</div>
+  <!-- Loop through each category -->
+ <div class="searchbody" id="target3" style="width: 100%;">
+ <div style="padding-left:1em">
+  [% SET id = 'c00000' %]
+  [% FOREACH category = track_categories -%]
+    [% NEXT IF !track_groups.$category %]
+    [% USE String(category) %]
+    [% SET lc_category = String.lower %]
+    [% SET category_vis = lc_category _ "_track_vis" %]
+
+    <input type="hidden" name="[% category_vis %]" id="[% category_vis %]" value="[%- IF div_visibility.$category_vis == 0 -%]0[%- ELSE -%]1[%- END -%]"/>
+
+    <div class="ctl_hidden" id="[% lc_category %]_track_show" onclick="visibility('[% lc_category %]_track',1)"
+        [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.$category_vis vis_default=1 opposite_of_value=1 -%]
+      ><img src="/gbrowse/images/buttons/plus.png">&nbsp;
+      <span class="tctl"><b>[% category | ucfirst %] </b></span>
+                                                                                                                             
+    </div>
+    <div class="ctl_visible" id="[% lc_category %]_track_hide" onclick="visibility('[% lc_category %]_track',0)"
+        [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.$category_vis vis_default=1 opposite_of_value=0 -%]
+      ><img src="/gbrowse/images/buttons/minus.png">&nbsp;
+      <span class="tctl"><b>[% category | ucfirst %] </b></span>
+    </div>
+
+    &nbsp;<i class="nojs">
+      <input type="checkbox" name="[% id %]_a" value="on" onclick="gbCheck(this,1)" id="[% id %]_a" />
+      All on 
+      <input type="checkbox" name="[% id %]_n" value="on" onclick="gbCheck(this,0)" id="[% id %]_n" />
+      All off
+    </i>
+    <br />
+    <span id="[% id %]">
+      <div style="padding-left:1em">
+      <div class="el_visible" id="[% lc_category %]_track"
+        [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.$category_vis vis_default=1 opposite_of_value=0 -%]
+      >
+      <table border="0">
+        <tr class="searchtitle">
+        [%- i = 0 -%]
+        [%- FOREACH tracklabel = track_groups.$category -%]
+          <td>
+            <input type="checkbox" name="label" value="[% tracklabel %]" onclick="gbTurnOff('[% id %]')" 
+              [% IF selected_tracks.$tracklabel %] checked="checked"[% END %]
+            />
+            [%- citation_link(tracklabel,'?help=citations') -%]
+          </td>
+          [% i = i + 1 ; IF(i % 3) == 0 ; '</tr><tr class="searchtitle">' ; END %]
+        [%- END -%]
+        </tr>
+      </table>
+      </div>
+      </div>
+    </span>
+  [%- END -%]
+ </div>
+ </div>
 </div>
 <br/>

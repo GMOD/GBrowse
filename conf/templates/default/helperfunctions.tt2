@@ -1,13 +1,13 @@
 [%- MACRO label2key(label) BLOCK -%]
   [% ###FIXME redo this as one block rather than several %]
   [% key %]
-  [% FOREACH language = browser.config.language.language %]
-    [% key = browser.config.setting(label,"key:${language}") %]
+  [% FOREACH language = config.language.language %]
+    [% key = config.setting(label,"key:${language}") %]
     [% LAST IF key %]
   [% END %]
 
-  [% IF !key ; key = browser.config.setting(label,'key') ; END %]
-  [% IF !key ; key = browser.config.setting(label,'key') ; END %]
+  [% IF !key ; key = config.setting(label,'key') ; END %]
+  [% IF !key ; key = config.setting(label,'key') ; END %]
   [% #FIXME this is supposed to rely on get_external_presets()# IF !key ; key = label ; END %]
   [% IF label.match(':overview$') ; key = "${key}*" ; END %]
 
@@ -16,8 +16,8 @@
 
 [%- MACRO unit_label(value) BLOCK -%]
   [%-
-  unit    = browser.config.setting('units') || 'bp';
-  divider = browser.config.setting('unit_divider') || 1;
+  unit    = config.setting('units') || 'bp';
+  divider = config.setting('unit_divider') || 1;
   IF (value != 1 || divider <= 1) ;
     value = value / divider;
 

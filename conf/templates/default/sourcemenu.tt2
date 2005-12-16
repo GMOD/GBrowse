@@ -1,6 +1,6 @@
-<b>[% browser.translate('data_source') %]</b><br/>
+<b>[% config.tr('data_source') %]</b><br/>
 <select name="source">
-[% FOREACH source = browser.config.sources %]
-  <option value="[% source %]">[% browser.config.description(source) %]</option>
+[% FOREACH source = config.sources %]
+  <option value="[% source %]">[% config.description(source) %]</option>
 [% END %]
 </select>

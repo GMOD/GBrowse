@@ -256,17 +256,16 @@ sub error {
 }
 
 sub fatal_error {
-  my @msg = @_;
-  warn "@_" if DEBUG;
-  print_top($CONFIG,'GBrowse Error');
-  print h2('An internal error has occurred');
-  print p({-class=>'error'},@msg);
-  my $webmaster = $ENV{SERVER_ADMIN} ?
-   "maintainer (".a({-href=>"mailto:$ENV{SERVER_ADMIN}"},$ENV{SERVER_ADMIN}).')'
-     : 'maintainer';
-  print p("Please contact this site's $webmaster for assistance.");
-  print_bottom($CONFIG);
-  exit 0;
+    my @msg = @_;
+    print_header( -expires => '+1m' );
+    $CONFIG->template->process(
+        'error.tt2',
+        {   server_admin  => $ENV{SERVER_ADMIN},
+            error_message => join( "\n", @msg ),
+        }
+        )
+        or warn $CONFIG->template->error();
+    exit 0;
 }
 
 
@@ -437,7 +436,7 @@ sub redirect_legacy_url {
     if (request_method() eq 'GET') {
       foreach (param()) {
 	next if $_ eq 'source';
-	$q->param($_=>param($_)) if param($_);
+	$q->param($_=>param($_)) if defined param($_);
       }
     }
 

@@ -6,14 +6,12 @@ cgi-bin/gbrowse_syn.PLS
 conf/MobyServices/text_xml_renderer.pm
 conf/plugins/SequenceDumper.pm
 conf/templates
+conf/templates/default/help.tt2
 extras/bioperl-102-1.1.patch
-htdocs/css
-htdocs/databases/volvox
 htdocs/js/x_alt.js
 htdocs/js/x_anim.js
 htdocs/js/x_bar.js
 htdocs/js/x_cook.js
-htdocs/js/x_core.js
 htdocs/js/x_core_n4.js
 htdocs/js/x_debug.js
 htdocs/js/x_dom.js

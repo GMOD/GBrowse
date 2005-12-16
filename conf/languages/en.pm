@@ -186,7 +186,7 @@ END
 
    SHOW_GRID    => 'Show grid',
 
-   SET_OPTIONS => 'Configure tracks...',
+   SET_OPTIONS => 'Set Track Options...',
 
    CLEAR_HIGHLIGHTING => 'Clear highlighting',
 
@@ -384,5 +384,7 @@ END
  SMALL_INTERVAL    => 'Resizing small interval to %s bp',
 
  NO_SOURCES        => 'There are no readable data sources configured.  Perhaps you do not have permission to view them.',
+
+ ADD_YOUR_OWN_TRACKS => 'Add Your Own Tracks',
 
 };

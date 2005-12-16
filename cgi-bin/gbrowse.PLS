@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.133 2005-12-09 22:19:09 mwz444 Exp $
+# $Id: gbrowse.PLS,v 1.134 2005-12-16 20:53:16 mwz444 Exp $
 
 use strict;
 use Bio::Graphics;
@@ -65,13 +65,14 @@ use Text::Shellwords;
 use File::Basename 'basename','dirname';
 use File::Spec;
 use Carp qw(:DEFAULT croak);
-use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td);
+use Data::Dumper;
+use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td );
 use CGI::Toggle;
 use CGI::Cookie;
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $BIOGRAPHICS_VERSION $CONF_DIR
 	    $PLUGINS $UPLOADED_SOURCES $REMOTE_SOURCES
-	    $PRESETS $HAVE_SVG
+	    $PRESETS $HAVE_SVG 
 	    %OBJECT_CLASSES %PLUGIN_NAME2LABEL );
 
 
@@ -323,9 +324,6 @@ if ($divisor == 1) {
   }
 }
 
-print_top($title,param('reset'));
-
-
 ## HANDLE TRACK SETTINGS   #######################################################
 if ((param('set_options') || param($CONFIG->tr('Set_options')) || param('revert'))
        && !param($CONFIG->tr('Cancel'))
@@ -355,12 +353,8 @@ elsif ($plugin_action eq $CONFIG->tr('Go') && $plugin_type=~/^(finder|annotator|
 
 ## MAIN DISPLAY
 else {
-  my $header = $CONFIG->header;
-  print $header || h1($description) if $page_settings->{head};
   main_display($segments,$features,$page_settings);
 }
-
-print_bottom($VERSION);
 
 $session->flush;
 exit 0;
@@ -395,12 +389,6 @@ sub main_display {
        $seg_start = unit_label($seg_start);
        $seg_end   = unit_label($seg_end);
     }
-
-    print h2($CONFIG->tr('SHOWING_FROM_TO',
-		       unit_label($segment->length),
-		       $segment->seq_id,
-		       commas($seg_start),
-		       commas($seg_end)));
   }
 
   # force flipping
@@ -413,81 +401,114 @@ sub main_display {
   }
 
   # print the top of the form, with navigation bar, etc
-  my $msie_hack = CGI->user_agent =~ /MSIE/ && $CONFIG->setting('msie hack');
-  my $src       = $CONFIG->source;
-  my $action = $src ? url(-absolute=>1)."/$src/" : url(-absolute=>1);
-  print $msie_hack ? startform(-name   => 'mainform',
-			       -action => $action,
-			       -method => 'GET')
-                   : start_multipart_form(-name   => 'mainform',
-					  -action => $action,
-					  -method => 'POST');
-  print navigation_table($segment,$page_settings);
-  print html_frag('html2',$segment,$page_settings);
+#  my $msie_hack = CGI->user_agent =~ /MSIE/ && $CONFIG->setting('msie hack');
+#  my $src       = $CONFIG->source;
+#  my $action = $src ? url(-absolute=>1)."/$src/" : url(-absolute=>1);
+#  print $msie_hack ? startform(-name   => 'mainform',
+#			       -action => $action,
+#			       -method => 'GET')
+#                   : start_multipart_form(-name   => 'mainform',
+#					  -action => $action,
+#					  -method => 'POST');
 
   # NOTE: we may exit out on the next statement if the user wants to download a previously-
   # uploaded file
   my $feature_files = load_external_sources($segments,$page_settings)
     unless $CONFIG->section_setting('upload_tracks') eq 'off';
 
-  # if more than one segment, then list them all
-  if (@$segments > 1) {
-    multiple_choices($page_settings,$features);
-    # empty sections
-    print toggle('Overview','');
-    print toggle('Region','')     if $page_settings->{region_size};
-    print toggle('Details','');
+#############################################
+
+  my $oligo = $PLUGINS->{'OligoFinder'} ? ', oligonucleotide (15 bp minimum)' : '';
+
+  my %seen; #used to keep track of available ranges for display
+
+  my $detailpanel = detail_panel_with_timeout( $segment, $page_settings, $feature_files );
+
+  my %div_visibility = map {$_ => scalar(param($_))} grep /_vis$/, param();
+
+  # Sort the tracks into categories:
+  # Overview tracks
+  # Region tracks
+  # Regular tracks (which may be further categorized by user)
+  # Plugin tracks
+  # External tracks
+  my %track_groups;
+  foreach my $track ( @{ $page_settings->{'tracks'} || [] } ) {
+    my $category = categorize_track($track);
+    push @{ $track_groups{$category} }, $track;
   }
 
-  elsif ($segment) {
-    # if a plugin passes us back a Feature, rather than a Segment, turn it into a segment
-    # (this shouldn't happen - hah!)
-    $segment = open_database()->segment($segment->seq_id,
-				        $segment->start,$segment->end)
-      unless $segment->can('features');
+  my %exclude = map {$_=>1} map {$CONFIG->tr($_)} qw(OVERVIEW REGION ANALYSIS EXTERNAL);
+                                                                                                                             
+  my @user_keys = grep {!$exclude{$_}} sort keys %track_groups;
 
-    print overview_panel($whole_segment,$segment,$page_settings,$feature_files);
+  my @track_categories = (
+    $CONFIG->tr('OVERVIEW'),
+    $CONFIG->setting('region segment') ? $CONFIG->tr('REGION') : (),
+    $CONFIG->tr('ANALYSIS'),
+    @user_keys,
+    $CONFIG->section_setting('upload_tracks') eq 'off'
+    ? ()
+    : ( $CONFIG->tr('EXTERNAL') ),
+  );
 
-    if ($page_settings->{region_size}) {
-      my ($region_seg_start, $region_seg_end) = get_regionview_seg($page_settings,$segment->start, $segment->end);
-      my $region_segment = open_database()->segment(-name=>$segment->seq_id,
-						    -start=>$region_seg_start,
-						    -end=>$region_seg_end,
-						    -absolute=>1);
-      print region_panel($region_segment,$segment,$page_settings,$feature_files);
-    }
 
-    print detail_panel_with_timeout($segment,$page_settings,$feature_files);
+    my $param = {
+        config        => $CONFIG,
+        page_settings => $page_settings,
+        plugins       => $PLUGINS,
 
-    print table({-width=>'100%'},
-		TR(td({-align=>'left'},
-		      a({-href=>"?name=$page_settings->{name};h_feat=_clear_;h_region=_clear_"},
-			font({-size=>-2},$CONFIG->tr('Clear_highlighting')))),
-		   td({-align=>'right'},
-		      b(submit(-name => $CONFIG->tr('Update'))))));
+        htmlfrag1 => html_frag( 'html1', $segment ) || '',
+        htmlfrag2 => html_frag( 'html2', $segment ) || '',
+        htmlfrag3 => html_frag( 'html3', $segment ) || '',
+        htmlfrag4 => html_frag( 'html4', $segment ) || '',
+        htmlfrag5 => html_frag( 'html5', $segment ) || '',
+        htmlfrag6 => html_frag( 'html6', $segment ) || '',
 
-  } else {
-    # empty overview,region & detail sections
-    print toggle('Overview','');
-    print toggle('Region','')   if $page_settings->{region_size};
-    print toggle('Details');
+        examples => [ shellwords( $CONFIG->setting('examples') ) ],
+
+        citation_link => \&make_citation_link,
+
+        link_bookmark => bookmark_link(),
+        link_image    => image_link(),
+        link_svg      => svg_link(),
+        link_help     => "?display_help=general",
+
+        rand => substr( md5_hex(rand), 0, 5 ),
+
+        action => $CONFIG->source() ? url() . "/" . $CONFIG->source : url(),
+
+        segment         => $segment,
+        whole_segment   => $whole_segment,
+        prevname        => scalar( param('name') ),
+        finezoom        => get_zoomincrement(),
+        track_groups    => \%track_groups,
+        selected_tracks => {
+            map { $_ => $page_settings->{'features'}{$_}{'visible'} }
+                keys %{ $page_settings->{'features'} || {} }
+        },
+
+        #FIXME    multiple_segments => multiple_choices($features),
+        detailpanel => $detailpanel,
+        toggle_cookie_name    => 'GBROWSE_TOGGLE',
+        toggle_cookie_expires => 'EXPIRES',
+        div_visibility => \%div_visibility,
+        track_categories => \@track_categories,
+    };
+
+  if($segment){
+    $param->{ranges}     = [ grep {!$seen{$_}++} sort {$b<=>$a} $segment->length,get_ranges() ];
+    $param->{half}       = int($segment->length/2);
+    $param->{full}       = $segment->length;
   }
 
-  print html_frag('html3',$segment,$page_settings);
-  print html_frag('html4',$segment,$page_settings);
-  print hr();
-  print tracks_table($page_settings,$feature_files);
-  print html_frag('html5',$segment,$page_settings);
-  print settings_table($page_settings);
-  print html_frag('html6',$segment,$page_settings);
-  print end_form();
+  my $show = $CONFIG->tr('Show');
+  my %range_labels = map {$_=>$show.' '.unit_label($_)} @{ $param->{ranges} };
+  $param->{range_labels} = \%range_labels;
 
-  unless ($CONFIG->section_setting('upload_tracks') eq 'off') {
-    print start_multipart_form(-name=>'externalform');
-    print external_table($page_settings,$feature_files);
-    print end_form();
-  }
-
+  my $table = undef;
+  $CONFIG->template->process('main.tt2',$param,\$table) or warn $CONFIG->template->error();
+  print $table;
 
   # clean us up
   # clean us up
@@ -495,33 +516,6 @@ sub main_display {
     $_ && ref($_) && eval{$_->finished};
   }
 }
-
-sub overview_panel {
-  my ($whole_segment,$segment,$page_settings,$feature_files) = @_;
-  return '' if $CONFIG->section_setting('overview') eq 'hide';
-  my $image = overview($whole_segment,$segment,$page_settings,$feature_files);
-  return toggle('Overview',
-		table({-border=>0,-width=>'100%'},
-		      TR({-class=>'databody'},
-			 td({-align=>'center'},$image)
-			)
-		     )
-	       );
-}
-
-sub region_panel {
-  my ($region_segment,$segment,$page_settings,$feature_files) = @_;
-  return '' if $CONFIG->section_setting('region') eq 'hide';
-  my $image = regionview($region_segment,$segment,$page_settings,$feature_files);
-  return toggle('Region',
-		table({-border=>0,-width=>'100%'},
-		      TR({-class=>'databody'},
-			 td({-align=>'center'},$image)
-			)
-		     )
-	       );
-}
-
 
 sub detail_panel_with_timeout {
     my @args    = @_;
@@ -548,55 +542,42 @@ sub detail_panel {
   my $cell = '';
 
   if ($segment->length <= $MAX_SEGMENT) {
+    # this is invoked to force small segments to be larger than the minimum size that can
+    # easily be displayed.  Avoids zooming into 1 bp features like SNPs.
+    #resize(\$segment);
 
-    $CONFIG->width($page_settings->{width});
+    if($page_settings->{'width'}){
+      $CONFIG->width($page_settings->{'width'});
+    }
+
     my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} && !/:(overview|region)$/ }
                                @{$page_settings->{tracks}};
+
     my %options = map {$_=>$page_settings->{features}{$_}{options}} @tracks_to_show;
     my %limit   = map {$_=>$page_settings->{features}{$_}{limit}}   @tracks_to_show;
     my $h_callback = make_hilite_callback($page_settings);
     my $postgrid   = make_postgrid_callback($page_settings);
-    ($img,$map) = $CONFIG->render_html(segment       => $segment,
-				       feature_files => $feature_files,
-				       tracks        => \@tracks_to_show,
-				       options       => \%options,
-				       limit         => \%limit,
-				       do_map        => 1,
-				       do_centering_map => 1,
-				       lang          => $CONFIG->language,
-				       keystyle      => $page_settings->{ks}   || 'between',
-				       flip          => $page_settings->{flip} || undef,
-                                       postgrid      => $postgrid || $CONFIG->setting('postgrid') || '',
-                                       background    => $CONFIG->setting('background') || '',
-				       hilite_callback => $h_callback || undef,
-				       -add_category_labels => $CONFIG->setting('show track categories') || undef,
-				       -grid         => $page_settings->{grid} || 0,
-				      );
-    $cell .= $img;
+    ( $img, $map ) = $CONFIG->render_html(
+        segment          => $segment,
+        feature_files    => $feature_files,
+        tracks           => \@tracks_to_show,
+        options          => \%options,
+        limit            => \%limit,
+        do_map           => 1,
+        do_centering_map => 1,
+        lang             => $CONFIG->language,
+        keystyle         => $page_settings->{ks} || 'between',
+        flip             => $page_settings->{flip} || undef,
+        hilite_callback  => $h_callback,
+        postgrid         => $postgrid || $CONFIG->setting('postgrid') || '',
+        background => $CONFIG->setting('background') || '',
+        hilite_callback => $h_callback || undef,
+        -add_category_labels => $CONFIG->setting('show track categories')
+            || undef,
+        -grid => $page_settings->{grid} || 0,
+    );
+    return $img.$map;
   }
-
-  else {
-    $cell .= i($CONFIG->tr('TOO_BIG',unit_label($MAX_SEGMENT),unit_label($DEFAULT_SEGMENT)));
-  }
-  $cell .= "\n";
-  my $error_msg = $CONFIG->error ? p({-style=>"color: red"},
-				     "An error occurred while processing an uploaded or remote annotation file: ",
-				     b($CONFIG->error) ) : '';
-  my $table = table({-border=>0,-width=>'100%'},
-		    TR({-class=>'databody'},
-		       td({-align=>'center'},$cell)
-		      ),
-		    $error_msg ? (
-				  TR({-class=>'databody'},
-				     td($error_msg)
-				    )
-				  ) : (),
-		   );
-  $table .= "\n";
-  $table .= $map if $map;
-  $table .= join '',unique(hidden('ref')),unique(hidden('start')),unique(hidden('stop'));
-  return div(toggle('Details',
-		    $table));
 }
 
 ###############################################################################################
@@ -845,89 +826,6 @@ sub adjust_settings {
 
 }
 
-# prints the zooming and navigation bar
-sub navigation_table {
-  my $segment = shift;
-  my $settings = shift;
-  my $buttonsDir    = $CONFIG->setting('buttons');
-  my $table        = '';
-  my $svg_link     = $HAVE_SVG? a({-href=>svg_link($settings),-target=>'_blank'},'['.$CONFIG->tr('SVG_LINK').']'):'';
-  my $reset_link   = a({-href=>"?reset=1",-class=>'reset_button'},'['.$CONFIG->tr('RESET').']');
-  my $help_link    =  a({-href=>general_help(),-target=>'help'},'['.$CONFIG->tr('Help').']');
-  my $plugin_link  = plugin_links($PLUGINS);
-  my $oligo        = $PLUGINS->plugin('OligoFinder') ? ', oligonucleotide (15 bp minimum)' : '';
-  my $rand         =   substr(md5_hex(rand),0,5);
-
-  $table .= table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
-		  TR(
-		     td({-align=>'left', -colspan=>2},
-		     toggle('Instructions',
-			    br($CONFIG->setting('search_instructions') ||
-			      $CONFIG->tr('SEARCH_INSTRUCTIONS',$oligo),
-			      $CONFIG->setting('navigation_instructions') ||
-			      $CONFIG->tr('NAVIGATION_INSTRUCTIONS')),
-			    p(show_examples())
-			   )
-		       ),
-		    ),
-		  TR(
-		     th({-align=>'left', -colspan=>2,-class=>'linkmenu'},
-			 $settings->{name} || $settings->{ref} ?
-			 (
-			  a({-href=>"?rand=$rand;head=".((!$settings->{head})||0)},
-			    '['.$CONFIG->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
-			  a({-href=>bookmark_link($settings)},'['.$CONFIG->tr('BOOKMARK').']'),
-			  a({-href=>image_link($settings),-target=>'_blank'},'['.$CONFIG->tr('IMAGE_LINK').']'),
-			  $plugin_link,
-			  $svg_link,
-			 ) : (),
-			$help_link,
-			$reset_link
-		       ),
-		     )
-		 );
-
-  my $searchbox = $CONFIG->setting('no search')
-    ? '' : b($CONFIG->tr('Landmark')).':'.br.
-           textfield(-name=>'name',-size=>25,-default=>$settings->{name}).
-	   submit(-name=>$CONFIG->tr('Search'));
-  my $plugin_menu = plugin_menu($settings,$PLUGINS);
-  my $plugins     = $plugin_menu ? b($CONFIG->tr('Dumps')).':'.br.$plugin_menu : '';
-
-  $table .= toggle('Search',
-		   table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
-			 TR({-class=>'searchbody'},
-			    td({-align=>'left', -colspan=>2},
-			       html_frag('html1',$segment,$settings)||''
-			      )
-			   ),
-
-			 TR({-class=>'searchbody'},
-			    td({-align=>'left'},
-			       $searchbox
-			      ),
-			    td({-colspan=>1,-align=>'left'},
-			       $plugins
-			      )
-			   ),
-			 TR({-class=>'searchbody',-style=>'padding-top: 5 px'},
-			    td({-align=>'left'},source_menu($settings)),
-			    td({-align=>'left'},
-			       $segment ? (
-					   (b($CONFIG->tr('Scroll').': '),slidertable($segment,$buttonsDir)),
-					   b(
-					     checkbox(-name=>'flip',
-						      -checked=>$settings->{flip},-value=>1,
-						      -label=>$CONFIG->tr('Flip'),-override=>1))
-					  )
-			       : '',
-			      ),
-			   ),
-			)
-		  );
-  return $table;
-}
-
 # this generates the callback for highlighting "interesting" features
 sub make_hilite_callback {
   my $settings = shift;
@@ -977,63 +875,6 @@ sub make_postgrid_callback {
   }
 }
 
-# This generates the navigation bar with the arrows
-sub slidertable {
-  my ($segment,$buttonsDir) = @_;
-  my $span      = $segment->length;
-  my $half_title      = unit_label(int $span/2);
-  my $full_title      = unit_label($span);
-  my $half      = int $span/2;
-  my $full      = $span;
-  my $fine_zoom = get_zoomincrement();
-  Delete($_) foreach qw(ref start stop);
-
-  my @lines;
-  push @lines,hidden(-name=>'start',-value=>$segment->start,-override=>1);
-  push @lines,hidden(-name=>'stop',-value=>$segment->end,-override=>1);
-  push @lines,hidden(-name=>'ref',-value=>$segment->seq_id,-override=>1);
-  push @lines,
-    (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>"left $full",
-		  -border=>0,-title=>"left $full_title"),
-     image_button(-src=>"$buttonsDir/green_l1.gif",-name=>"left $half",
-		  -border=>0,-title=>"left $half_title"),
-     '&nbsp;',
-     image_button(-src=>"$buttonsDir/minus.gif",-name=>"zoom out $fine_zoom",
-		  -border=>0,-title=>"zoom out $fine_zoom"),
-     '&nbsp;',
-     zoomBar($segment,$buttonsDir),
-     '&nbsp;',
-     image_button(-src=>"$buttonsDir/plus.gif",-name=>"zoom in $fine_zoom",
-		  -border=>0,-title=>"zoom in $fine_zoom"),
-     '&nbsp;',
-     image_button(-src=>"$buttonsDir/green_r1.gif",-name=>"right $half",
-		  -border=>0,-title=>"right $half_title"),
-     image_button(-src=>"$buttonsDir/green_r2.gif",-name=>"right $full",
-		  -border=>0,-title=>"right $full_title"),
-    );
-
-  my $str	= join('', @lines);
-  return $str;
-}
-
-# this generates the popup zoom menu with the window sizes
-sub zoomBar {
-  my ($segment,$buttonsDir) = @_;
-  my $show = $CONFIG->tr('Show');
-
-  my %seen;
-  my @ranges	= grep {!$seen{$_}++} sort {$b<=>$a} $segment->length,get_ranges();
-  my %labels    = map {$_=>$show.' '.unit_label($_)} @ranges;
-  return popup_menu(-class   => 'searchtitle',
-	       -name    => 'span',
-	       -values  => \@ranges,
-	       -labels  => \%labels,
-	       -default => $segment->length,
-	       -force   => 1,
-	       -onChange => 'document.mainform.submit()',
-	      );
-}
-
 # convert bp into nice Mb/Kb units
 sub unit_label {
   my $value = shift;
@@ -1072,113 +913,6 @@ sub unit_to_value {
   return "$sign$value";
 }
 
-# This subroutine is invoked to draw the checkbox group underneath the main display.
-# It creates a hyperlinked set of feature names.
-sub tracks_table {
-  my $settings = shift;
-  my $additional_features = shift;
-
-  # set up the dumps line.
-  my($ref,$start,$stop) = @{$settings}{qw(ref start stop)};
-  my $source   = $CONFIG->source;
-  my $self_url = "?help=citations";
-
-  my @labels = @{$settings->{tracks}};
-  my %labels     = map {$_ => make_citation_link($_,$self_url) } @labels;
-  my %label_keys = map {$_ => label2key($_)}                     @labels;
-  my @defaults = grep {$settings->{features}{$_}{visible}  }     @labels;
-
-  # Sort the tracks into categories:
-  # Overview tracks
-  # Region tracks
-  # Regular tracks (which may be further categorized by user)
-  # Plugin tracks
-  # External tracks
-  my %track_groups;
-  foreach (@labels) {
-    my $category = categorize_track($_);
-    push @{$track_groups{$category}},$_;
-  }
-
-  autoEscape(0);
-  my @sections;
-
-  my %exclude = map {$_=>1} map {$CONFIG->tr($_)} qw(OVERVIEW REGION ANALYSIS EXTERNAL);
-
-  my @user_keys = grep {!$exclude{$_}} sort keys %track_groups;
-  my $id = "c00000";
-
-  my $all_on  = $CONFIG->tr('ALL_ON');
-  my $all_off = $CONFIG->tr('ALL_OFF');
-
-  # this funny little thing ensures that the dynamic list of tracks
-  # falls into ID space *after* all the other sections.  Otherwise the
-  # toggles get confused as the tracks grow and expand to accomodate
-  # uploaded & third party features.
-  local $CGI::Toggle::next_id = $CGI::Toggle::next_id;
-  for (1..10) { $CGI::Toggle::next_id++ } # Can't do += 10 because next_id isn't a simple number.
-
-  my %seenit;
-  foreach my $category ($CONFIG->tr('OVERVIEW'),
-			$CONFIG->tr('REGION'),
-			$CONFIG->tr('ANALYSIS'),
-			@user_keys,
-			$CONFIG->section_setting('upload_tracks') eq 'off' ? () : ($CONFIG->tr('EXTERNAL')),
-		       ) {
-    next if $seenit{$category}++;
-    my $table;
-
-    if ($category eq $CONFIG->tr('REGION') && !$CONFIG->setting('region segment')) {
-      $CGI::Toggle::next_id++;
-      next;
-    }
-
-    elsif  (exists $track_groups{$category}) {
-      my @track_labels = @{$track_groups{$category}};
-      @track_labels = sort {lc $label_keys{$a} cmp lc $label_keys{$b}} @track_labels
-        if ($settings->{sk} eq "sorted");
-      my @checkboxes = checkbox_group(-name=>'label',
-				      -values     => \@track_labels,
-				      -labels     => \%labels,
-				      -defaults   => \@defaults,
-				      -onClick    => "gbTurnOff('$id')",
-				      -override   => 1,
-				     );
-      $table = tableize(\@checkboxes);
-      $table =~ s/<tr>/<tr class="searchtitle">/g;
-      my ($control,$section)=toggle_section({on=>1,nodiv=>1},
-					    b(ucfirst $category),div({-style=>'padding-left:1em'},$table));
-      $control .= '&nbsp;'.i({-class=>'nojs'},
-			     checkbox(-id=>"${id}_a",-name=>"${id}_a",
-				      -label=>$all_on,-onClick=>"gbCheck(this,1)"),
-			     checkbox(-id=>"${id}_n",-name=>"${id}_n",
-				      -label=>$all_off,onClick=>"gbCheck(this,0)")
-			    ).br()   if exists $track_groups{$category};
-      push @sections,div($control.span({-id=>$id},$section));
-      $id++;
-    }
-
-    else {
-      #$table = table(TR({-class=>'searchtitle',-width=>'100%'},td($CONFIG->tr('NO_TRACKS'))));
-      $CGI::Toggle::next_id++;
-      next;
-    }
-
-  }
-
-  autoEscape(1);
-  return toggle('Tracks',
-		b($CONFIG->tr('Tracks')),
-		div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
-		table({-width=>'100%',-class=>"searchbody"},
-		      TR(td{-align=>'right'},
-			 submit(-name => $CONFIG->tr('Set_options')),
-			 b(submit(-name => $CONFIG->tr('Update'))
-			  )
-			)
-		     ));
-}
-
 sub categorize_track {
   my $label = shift;
   return $CONFIG->tr('OVERVIEW') if $label =~ /:overview$/;
@@ -1193,220 +927,12 @@ sub categorize_track {
   $category        ||= $CONFIG->setting($label => 'category');
   return $category ||= $CONFIG->tr('GENERAL');
 }
-
-
-sub settings_table {
-  my $settings = shift;
-
-  my @widths = split /\s+/,$CONFIG->setting('image widths');
-  @widths = (640,800,1024) unless @widths;
-  my @key_positions   = qw(between bottom);
-  push @key_positions,qw(left right) if Bio::Graphics::Panel->can('auto_pad');
-
-  my $feature_highlights = $settings->{h_feat}   ?
-    join ' ',map { "$_\@$settings->{h_feat}{$_}"   } keys %{$settings->{h_feat}} : '';
-
-  my $region_highlights  = $settings->{h_region} ?
-    join ' ',@{$settings->{h_region}} : '';
-
-  my $content =
-    table({-class=>'searchbody',-border=>0,-width=>'100%'},
-	  TR(
-	     td(
-		b($CONFIG->tr('Image_width')),br,
-		radio_group( -name=>'width',
-			     -values=>\@widths,
-			     -default=>$settings->{width},
-			     -override=>1,
-			   ),
-	       ),
-	     $CONFIG->setting('region segment') ?
-	     (
-	      td(b($CONFIG->tr('Region_size')),br,
-		 textfield(-name=>'region_size',
-			   -default=>$settings->{region_size},
-			   -override=>1,
-			   -size=>20),
-		)
-	     ) : (),
-	     td(
-		b($CONFIG->tr('KEY_POSITION')),br,
-		radio_group( -name=>'ks',
-			     -values=>\@key_positions,
-			     -labels=>{between=>$CONFIG->tr('BETWEEN'),
-				       bottom =>$CONFIG->tr('BENEATH'),
-				       left   =>$CONFIG->tr('LEFT'),
-				       right  =>$CONFIG->tr('RIGHT'),
-				      },
-			     -default=>$settings->{ks},
-			     -override=>1
-			   ),
-	       ),
-             td(
-                b($CONFIG->tr("TRACK_NAMES")),br,
-                radio_group( -name=>"sk",
-                             -values=>["sorted","unsorted"],
-                             -labels=>{sorted   =>$CONFIG->tr("ALPHABETIC"),
-                                       unsorted =>$CONFIG->tr("VARYING")},
-                             -default=>$settings->{sk},
-                             -override=>1
-                           ),
-               ),
-	    ),
-	  TR(
-	     td(
-		span({-title=>$CONFIG->tr('FEATURES_TO_HIGHLIGHT_HINT')},
-		     b(
-		       $CONFIG->tr('FEATURES_TO_HIGHLIGHT')
-		      ),br,
-		     textfield(-name  => 'h_feat',
-			       -value => $feature_highlights,
-			       -size  => 50,
-			       -override=>1,
-			      ),
-		    ),
-	       ),
-	     td(
-		span({-title=>$CONFIG->tr('REGIONS_TO_HIGHLIGHT_HINT')},
-		     b(
-		       $CONFIG->tr('REGIONS_TO_HIGHLIGHT')
-		      ),br,
-		     textfield(-name=>'h_region',
-			       -value=>$region_highlights,
-			       -size=>50,
-			       -override=>1,
-			      ),
-		    ),
-	       ),
-	     td(
-		b(
-		  checkbox(-name=>'grid',
-			   -label=>$CONFIG->tr('SHOW_GRID'),
-			   -override=>1,
-			   -checked=>$settings->{grid}||0)
-		 )
-	       ),
-	    ),
-	  TR(td({-colspan=>4,
-		 -align=>'right'},
-		b(submit(-name => $CONFIG->tr('Update')))))
-	 );
-  return toggle('Display_settings',$content);
-}
-
 sub annotation_help {
   return "?help=annotation";
 }
 
 sub general_help {
   return "?help=general";
-}
-
-sub external_table {
-  my ($settings,$feature_files) = @_;
-  my $upload_table = upload_table($settings,$feature_files);
-  my $das_table    = das_table($settings,$feature_files);
-  toggle('Upload_tracks',
-	 table({-width=>'100%',-class=>'searchbody'},
-	       TR(td($upload_table,$das_table))));
-}
-
-sub upload_table {
-  my $settings      = shift;
-  my $feature_files = shift;
-
-  # start the table.
-  my $cTable = start_table({-border=>0,-width=>'100%'})
-    . TR(
-	 th({-class=>'uploadtitle', -colspan=>4, -align=>'left'},
-	    $CONFIG->tr('Upload_title').':',
-	    a({-href=>annotation_help(),-target=>'help'},'['.$CONFIG->tr('HELP').']'))
-	);
-
-  # now add existing files
-  for my $file ($UPLOADED_SOURCES->files) {
-    (my $name = $file) =~ s/^file://;
-    $name = escape($name);
-    my $download = escape($CONFIG->tr('Download_file'));
-    my $link = a({-href=>"?$download=$file"},"[$name]");
-    my @info =  get_uploaded_file_info($settings->{features}{$file}{visible}
-				       && $feature_files->{$file});
-    $cTable .=  TR({-class=>'uploadbody'},
-		   th($link),
-		   td({-colspan=>3},
-		      submit(-name=>"modify.$file",-value=>$CONFIG->tr('Edit')).'&nbsp;'.
-		      submit(-name=>"modify.$file",-value=>$CONFIG->tr('Download_file')).'&nbsp;'.
-		      submit(-name=>"modify.$file",-value=>$CONFIG->tr('Delete'))));
-    $cTable .= TR({-class=>'uploadbody'},td('&nbsp;'),td({-colspan=>3},@info));
-  }
-
-  # end the table.
-  $cTable .= TR({-class=>'uploadbody'},
-		th({-align=>'right'},$CONFIG->tr('Upload_File')),
-		td({-colspan=>3},
-		   filefield(-size=>40,-name=>'upload_annotations'),
-		   '&nbsp;',
-		   submit(-name=>$CONFIG->tr('Upload')),
-		   '&nbsp;',
-		   submit(-name=>'new_upload',-value=>$CONFIG->tr('New')),
-		  )
-	       );
-  $cTable .= end_table;
-  $cTable;
-}
-
-# URLs for external annotations
-sub das_table {
-  my $settings      = shift;
-  my $feature_files = shift;
-  my (@rows,$count);
-
-  my ($preset_labels,$preset_urls) = get_external_presets($settings);  # (arrayref,arrayref)
-  my $presets = '&nbsp;';
-  if ($preset_labels && @$preset_labels) {  # defined AND non-empty
-    my %presets;
-    @presets{@$preset_urls} = @$preset_labels;
-    unshift @$preset_urls,'';
-    $presets{''} = $CONFIG->tr('PRESETS');
-    $presets = popup_menu(-name   => 'eurl',
-			  -values => $preset_urls,
-			  -labels => \%presets,
-			  -override => 1,
-			  -default  => '',
-			  -onChange => 'document.externalform.submit()'
-			 );
-  }
-  my $segment = "$settings->{ref}:$settings->{start},$settings->{stop}";
-
-  local $^W = 0;
-  for my $url ($REMOTE_SOURCES->sources) {
-
-    (my $f = $url) =~ s!(http:.+/das/\w+)(?:\?(.+))?$!$1/features?segment=$segment;$2!;
-
-    warn "url = $url" if DEBUG_EXTERNAL;
-    # next unless $url =~ /^(ftp|http):/ && $feature_files->{$url};
-    warn "external_table(): url = $url" if DEBUG;
-    push @rows,th({-align=>'right',-valign=>'TOP'},"URL",++$count).
-      td(textfield(-name=>'eurl',-size=>50,-value=>$url,-override=>1),br,
-	 a({-href=>$f,-target=>'help'},'['.$CONFIG->tr('Download').']'),
-	 get_uploaded_file_info($settings->{features}{$url}{visible} && $feature_files->{$url})
-	);
-  }
-  push @rows,th({-align=>'right'},
-		$CONFIG->tr('Remote_url')).
-		  td(textfield(-name=>'eurl',-size=>40,-value=>'',-override=>1),
-		     $presets);
-
-  return table({-border=>0,-width=>'100%'},
-              TR(
-                 th({-class=>'uploadtitle',-align=>'left',-colspan=>2},
-		     $CONFIG->tr('Remote_title').':',
-		     a({-href=>annotation_help().'#remote',-target=>'help'},'['.$CONFIG->tr('Help').']'))),
-	       TR({-class=>'uploadbody'},\@rows),
-	       TR({-class=>'uploadbody'},
-		  th('&nbsp;'),
-		  th({-align=>'left'},submit($CONFIG->tr('Update_urls'))))
-	      );
 }
 
 sub get_external_presets {
@@ -2197,10 +1723,7 @@ sub coordinate_mapper {
     }
 
     unless (exists $segments{$refname}) {
-      my @segments = map {
-	eval{$_->absolute(0)}; $_  # so that rel2abs works properly later
-      }
-	$CONFIG->name2segments($refname,$db,TOO_MANY_SEGMENTS,1);
+      my @segments = $CONFIG->name2segments($refname,$db,TOO_MANY_SEGMENTS,1);
       $segments{$refname} = $segments[0];
       return unless @segments;
     }

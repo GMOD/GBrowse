@@ -1,25 +1,26 @@
 [% IF segment %]
+  <input type="hidden" name="overview_panel_vis" id="overview_panel_vis" value="[%- IF div_visibility.overview_panel_vis == 0 -%]0[%- ELSE -%]1[%- END -%]"/>
   <div class="ctl_hidden" id="overview_panel_show" onclick="visibility('overview_panel',1)"
-    [%- PROCESS 'div_inline.tt2' vis_value=overview_panel_vis vis_default=1 opposite_of_value=1 -%]
+    [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.overview_panel_vis vis_default=1 opposite_of_value=1 -%]
   ><img src="/gbrowse/images/buttons/plus.png">&nbsp;
-    <span class="tctl"><b>[% browser.translate('overview') %] </b></span>
+    <span class="tctl"><b>[% config.tr('overview') %] </b></span>
                                                                                                                              
   </div>
                                                                                                                              
   <div class="ctl_visible" id="overview_panel_hide" onclick="visibility('overview_panel',0)"
-    [%- PROCESS 'div_inline.tt2' vis_value=overview_panel_vis vis_default=1 opposite_of_value=0 -%]
+    [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.overview_panel_vis vis_default=1 opposite_of_value=0 -%]
   ><img src="/gbrowse/images/buttons/minus.png">&nbsp;
-    <span class="tctl"><b>[% browser.translate('overview') %] </b></span>
+    <span class="tctl"><b>[% config.tr('overview') %] </b></span>
                                                                                                                              
   </div>
                                                                                                                              
   <center>
   <div class="el_visible" id="overview_panel" 
-    [%- PROCESS 'div_inline.tt2' vis_value=overview_panel_vis vis_default=1 opposite_of_value=0 -%]
+    [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.overview_panel_vis vis_default=1 opposite_of_value=0 -%]
   >
-    [% ii = browser.config.overview( segment , browser.options.features ) ; image = ii.0 ; length = ii.1 %]
+    [% ii = config.overview( whole_segment,segment , page_settings.features ) ; image = ii.0 ; length = ii.1 %]
     [% ii = image.getBounds ; width = ii.0 ; length = ii.1 %]
-    [% url = browser.config.generate_image(image) %]
+    [% url = config.generate_image(image) %]
     <input
       type="image"
       name="overview"
@@ -27,7 +28,7 @@
       height="[% height %]"
       border="0"
       align="middle"
-      src="[% browser.config.generate_image(image) %]"
+      src="[% config.generate_image(image) %]"
     />
     <input type="hidden" name="seg_length" value="[% length %]" override="1"/>
   </center>

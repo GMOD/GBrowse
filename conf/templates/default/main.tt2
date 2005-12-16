@@ -1,30 +1,30 @@
-<?xml version="1.0" encoding="[% browser.translate('CHARSET') %]"?>
+<?xml version="1.0" encoding="[% config.tr('CHARSET') %]"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <!-- FIXME is EN a language code above? -->
 [% PROCESS "helperfunctions.tt2" %]
 <html>
 <head>
   <title>
-  [% IF browser.config.setting('unit_divider') == 1 %]
-    [% browser.config.setting('description') %][% IF (segment) %]: [% segment.seq_id %]:[% segment.start %]..[% segment.end %][% END %]
+  [% IF config.setting('unit_divider') == 1 %]
+    [% config.setting('description') %][% IF (segment) %]: [% segment.seq_id %]:[% segment.start %]..[% segment.end %][% END %]
   [% ELSE %]
-    [% browser.config.setting('description') %][% IF (segment) %]: [% segment.seq_id %]:[% unit_label(segment.start) %]..[% unit_label(segment.end) %][% END %]
+    [% config.setting('description') %][% IF (segment) %]: [% segment.seq_id %]:[% unit_label(segment.start) %]..[% unit_label(segment.end) %][% END %]
   [% END %]
   </title>
-  <link rel="stylesheet" type="text/css" href="[% browser.config.setting('stylesheet') %]"/>
+  <link rel="stylesheet" type="text/css" href="[% config.setting('stylesheet') %]"/>
 
 [% PROCESS "script.tt2" %]
 </head>
 <!-- FIXME language_code not working -->
-<body en="[% browser.config.setting('language_code') %]" charset="[% browser.translate('CHARSET') %]">
+<body en="[% config.setting('language_code') %]" charset="[% config.tr('CHARSET') %]">
 
 <!-- datasource description and current position -->
 <div class="target" id="target1">
-  <h1>[% browser.config.setting('description') %]</h1>
+  <h1>[% config.setting('description') %]</h1>
   <!-- FIXME need to fix formatting on string below -->
   <h2>[%- IF segment -%]
       [%-
-         browser.translate('SHOWING_FROM_TO',
+         config.tr('SHOWING_FROM_TO',
                            unit_label( segment.length ),
                            segment.seq_id,
                            unit_label( segment.start  ),
@@ -35,16 +35,9 @@
   </h2>
 </div>
 
-<form name="mainform" action="[% action %]" method="POST">
-  <!-- Menu Visibility items -->
-  [% PROCESS "savevisibility.tt2" %]
-
+<form name="mainform" action="[% action %]" method="GET">
   <!-- navigation table -->
   [% PROCESS "navigationtable.tt2" %]
-
-
-
-
 
   [% htmlfrag2 %]
 
@@ -57,7 +50,7 @@
     [% PROCESS "detailpanel.tt2"   %]
     </div>
   [% END %]
-  <input type="submit" name="Update Image" value="[% browser.translate('update') %]"/><br>
+  <input type="submit" name="Update Image" value="[% config.tr('update') %]"/><br>
 
   [% htmlfrag3 %]
 
@@ -87,12 +80,12 @@
   [% #FIXME PROCESS "externaltable.tt2" %]
 </form>
 
-[% browser.config.footer %]
+[% config.footer %]
 <p>
-  <i><font size="small">[% brower.translate('FOOTER_1') %]</font></i>
+  <i><font size="small">[% config.tr('FOOTER_1') %]</font></i>
   <br/>
   <!-- FIXME version number needs to be passed with FOOTER_2 -->
-  <tt><font size="small">[% browser.translate('FOOTER_2') %]</font></tt>
+  <tt><font size="small">[% config.tr('FOOTER_2') %]</font></tt>
 </p>
 </body>
 </html>

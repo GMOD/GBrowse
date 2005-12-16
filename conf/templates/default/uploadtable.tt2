@@ -1,39 +1,40 @@
+<input type="hidden" name="upload_panel_vis" id="upload_panel_vis" value="[%- IF div_visibility.upload_panel_vis == 0 -%]0[%- ELSE -%]1[%- END -%]"/>
 <div class="ctl_hidden" id="upload_panel_show" onclick="visibility('upload_panel',1)"
-    [%- PROCESS 'div_inline.tt2' vis_value=upload_panel_vis vis_default=1 opposite_of_value=1 -%]
+    [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.upload_panel_vis vis_default=1 opposite_of_value=1 -%]
   ><img src="/gbrowse/images/buttons/plus.png">&nbsp;
-  <span class="tctl"><b>[% browser.translate('add_your_own_tracks') %] </b></span>
+  <span class="tctl"><b>[% config.tr('add_your_own_tracks') %] </b></span>
 </div>
                                                                                                                              
 <div class="ctl_visible" id="upload_panel_hide" onclick="visibility('upload_panel',0)"
-    [%- PROCESS 'div_inline.tt2' vis_value=upload_panel_vis vis_default=1 opposite_of_value=0 -%]
+    [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.upload_panel_vis vis_default=1 opposite_of_value=0 -%]
   ><img src="/gbrowse/images/buttons/minus.png">&nbsp;
-  <span class="tctl"><b>[% browser.translate('add_your_own_tracks') %] </b></span>
+  <span class="tctl"><b>[% config.tr('add_your_own_tracks') %] </b></span>
 </div>
                                                                                                                              
 <div class="el_visible" id="upload_panel"
-    [%- PROCESS 'div_inline.tt2' vis_value=upload_panel_vis vis_default=1 opposite_of_value=0 -%]
+    [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.upload_panel_vis vis_default=1 opposite_of_value=0 -%]
   >
 <div>
 
 <table border="0" width="100%">
   <tr>
-    <th class="uploadtitle" colspan="4" align="left">[% browser.translate('upload_title') %]:
-      <a href="?help=annotation" target="help">[[% browser.translate('help') %]]</a>
+    <th class="uploadtitle" colspan="4" align="left">[% config.tr('upload_title') %]:
+      <a href="?help=annotation" target="help">[[% config.tr('help') %]]</a>
     </th>
   </tr>
 
-  [% FOREACH filename = browser.options.tracks %]
+  [% FOREACH filename = page_settings.tracks %]
     [% NEXT UNLESS filename.match('^file:') # && $feature_files->{$filename} %]
     [% file = filename %]
     [% file = file | replace('^file:','') %]
     [% name = file | uri %]
 
     <tr class="uploadbody">
-      <th><a href="?[% browser.translate('download_file') | uri %]=[% name %]">[[% name %]]</a></th>
+      <th><a href="?[% config.tr('download_file') | uri %]=[% name %]">[[% name %]]</a></th>
       <td colspan="3">
-        <submit name="modify.[% file %]" value="[% browser.translate('edit') %]">&nbsp;
-        <submit name="modify.[% file %]" value="[% browser.translate('download_file') %]">&nbsp;
-        <submit name="modify.[% file %]" value="[% browser.translate('delete') %]">&nbsp;
+        <submit name="modify.[% file %]" value="[% config.tr('edit') %]">&nbsp;
+        <submit name="modify.[% file %]" value="[% config.tr('download_file') %]">&nbsp;
+        <submit name="modify.[% file %]" value="[% config.tr('delete') %]">&nbsp;
       </td>
     </tr>
     <tr class="uploadbody">
@@ -42,11 +43,11 @@
   [% END %]
 
   <tr class="uploadbody">
-    <th align="right">[% browser.translate('upload_file') %]</th>
+    <th align="right">[% config.tr('upload_file') %]</th>
     <td colspan="3">
       <input type="file" name="upload_annotations"/>&nbsp;
-      <submit name="[% browser.translate('upload') %]"/>&nbsp;
-      <submit name="new_upload" value="[% browser.translate('new') %]"/>&nbsp;
+      <submit name="[% config.tr('upload') %]"/>&nbsp;
+      <submit name="new_upload" value="[% config.tr('new') %]"/>&nbsp;
     </td>
   </tr>
 </table>

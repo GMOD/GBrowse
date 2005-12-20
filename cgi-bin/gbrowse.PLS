@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.134 2005-12-16 20:53:16 mwz444 Exp $
+# $Id: gbrowse.PLS,v 1.135 2005-12-20 22:58:25 mwz444 Exp $
 
 use strict;
 use Bio::Graphics;
@@ -168,6 +168,9 @@ $CONF_DIR  = conf_dir($CONF_DIR);  # conf_dir() is exported from Util.pm
 ## CONFIGURATION & INITIALIZATION ################################
 # preliminaries -- read and/or refresh the configuration directory
 $CONFIG = open_config($CONF_DIR);  # open_config() is exported from Util.pm
+
+# Set the OVERVIEW_RATIO for the CONFIG to use
+$CONFIG->overview_ratio(OVERVIEW_RATIO); #BF
 
 ## PAGE SETTINGS #################################################
 #

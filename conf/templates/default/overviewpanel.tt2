@@ -30,7 +30,8 @@
       align="middle"
       src="[% config.generate_image(image) %]"
     />
-    <input type="hidden" name="seg_length" value="[% length %]" override="1"/>
+    <input type="hidden" name="seg_min" value="[% whole_segment.start %]" override="1"/>
+    <input type="hidden" name="seg_max" value="[% whole_segment.stop %]" override="1"/>
   </center>
   </div>
 [% ELSE %]

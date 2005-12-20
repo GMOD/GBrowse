@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.172 2005-12-20 18:27:05 mwz444 Exp $
+# $Id: Browser.pm,v 1.173 2005-12-20 22:58:25 mwz444 Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -605,6 +605,22 @@ sub width {
   $self->{width} = shift if @_;
   $d;
 }
+
+=head2 overview_ratio()
+
+  $overview_ratio = $browser->overview_ratio
+
+This is a shortcut method that returns the overview_ratio 
+
+=cut
+
+sub overview_ratio {
+  my $self = shift;
+  my $d = $self->{overview_ratio};
+  $self->{overview_ratio} = shift if @_;
+  $d;
+}
+
 
 =head2 header_template()
 
@@ -1355,7 +1371,7 @@ sub _overview {
   eval "use $image_class";
 
   my $conf           = $self->config;
-  my $width          = $self->width;
+  my $width          = $self->width * $self->overview_ratio();
   my @tracks         = grep {$track_options->{$_}{visible}} 
     $region_name eq 'region' ? $conf->regionview_tracks : $conf->overview_tracks;
 

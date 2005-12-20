@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.171 2005-12-16 20:53:17 mwz444 Exp $
+# $Id: Browser.pm,v 1.172 2005-12-20 18:27:05 mwz444 Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -606,12 +606,34 @@ sub width {
   $d;
 }
 
+=head2 header_template()
+
+  $header_template = $browser->header_template;
+
+This is the recommended way to add a header.
+This is a shortcut method that returns the name of the header template file.
+
+=cut
+
+sub header_template {
+  my $self = shift;
+  my $header_template = $self->config->code_setting(general => 'header_template');
+  if (ref $header_template eq 'CODE') {
+    my $h = eval{$header_template->(@_)};
+    $self->_callback_complain(general=>'header_template') if @_;
+    return $h;
+  }
+  return $header_template;
+}
+
 =head2 header()
 
   $header = $browser->header;
 
 This is a shortcut method that returns the header HTML for the gbrowse
 page.
+
+Left in for backwards compatibility.
 
 =cut
 
@@ -626,12 +648,34 @@ sub header {
   return $header;
 }
 
+=head2 footer_template()
+
+  $footer_template = $browser->footer_template;
+
+This is the recommended way to add a footer.
+This is a shortcut method that returns the name of the footer template file.
+
+=cut
+
+sub footer_template {
+  my $self = shift;
+  my $footer_template = $self->config->code_setting(general => 'footer_template');
+  if (ref $footer_template eq 'CODE') {
+    my $h = eval{$footer_template->(@_)};
+    $self->_callback_complain(general=>'footer_template') if @_;
+    return $h;
+  }
+  return $footer_template;
+}
+
 =head2 footer()
 
   $footer = $browser->footer;
 
 This is a shortcut method that returns the footer HTML for the gbrowse
 page.
+
+Left in for backwards compatibility.
 
 =cut
 

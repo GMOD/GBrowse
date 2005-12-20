@@ -786,7 +786,27 @@ This is content to insert into the HTML <head></head> section.  It is
 the appropriate place to stick JavaScript code, etc.  It can be a code
 reference if you wish.
 
-=item * header
+=item * header_template
+
+This give the name of a Template Toolkit template file to print at the top of
+the browser page.  This file should contain any valid Template Toolkit syntax
+(including regular HTML).  The header template file needs to be placed in the
+gbrowse template folder (ex:
+/usr/local/apache/conf/gbrowse.conf/templates/default/)
+
+It is also possible to place an anonymous Perl subroutine here.  The code will
+be invoked during preparation of the page and must return a string value of the
+header template file name.  See COMPUTED OPTIONS for details.
+
+Example:
+
+    header = header.tt2
+
+=item * header (deprecated)
+
+The header option has been replaced by header_template.  It will still work for
+the time being but it is encouraged that you check out Template Toolkit and
+look at using that instead.
 
 This is a header to print at the top of the browser page.  It is
 any valid HTML, and can span multiple lines provided that the
@@ -801,7 +821,27 @@ Example:
 
     header = <h1>Welcome to the Volvox Sequence Page</h1>
 
-=item * footer
+=item * footer_template
+
+This give the name of a Template Toolkit template file to print at the top of
+the browser page.  This file should contain any valid Template Toolkit syntax
+(including regular HTML).  The footer template file needs to be placed in the
+gbrowse template folder (ex:
+/usr/local/apache/conf/gbrowse.conf/templates/default/)
+
+It is also possible to place an anonymous Perl subroutine here.  The code will
+be invoked during preparation of the page and must return a string value of the
+footer template file name.  See COMPUTED OPTIONS for details.
+
+Example:
+
+    footer = footer.tt2
+
+=item * footer (deprecated)
+
+The footer option has been replaced by footer_template.  It will still work for
+the time being but it is encouraged that you check out Template Toolkit and
+look at using that instead.
 
 This is a footer to print at the top of the browser page.  It is
 any valid HTML, and can span multiple lines provided that the

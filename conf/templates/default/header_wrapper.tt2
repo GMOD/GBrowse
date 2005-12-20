@@ -1,0 +1,13 @@
+<div class="el_visible" id="header_panel"
+  [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.header_panel_vis vis_default=1 opposite_of_value=0 -%]
+  >
+    [%- SET header_template = config.header_template -%]
+    [%- IF header_template -%]
+      [% PROCESS $header_template %]
+    [%- END -%]
+
+    <!-- Print "header" defined in the config file (this is for backwards compatibility) -->
+    [% config.header %]
+
+</div>
+

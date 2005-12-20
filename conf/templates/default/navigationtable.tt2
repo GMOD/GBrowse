@@ -26,17 +26,23 @@
   </div>
 
   <!-- menu -->
-  [%- IF page_settings.display_banner == 1 ;
-       label = 'hide_header';
-       toggle_banner = 0;
-     ELSE ;
-       label = 'show_header';
-       toggle_banner = 1;
-     END
-  -%]
   <table border=0>
     <tr>
-      <td>[[% config.tr( label ) %]]</td>
+      <td>
+        <input type="hidden" name="header_panel_vis" id="header_panel_vis" value="[%- IF div_visibility.header_panel_vis == 0 -%]0[%- ELSE -%]1[%- END -%]"/>
+        <div class="ctl_hidden" id="header_panel_show" onclick="visibility('header_panel',1)" 
+          [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.header_panel_vis vis_default=1 opposite_of_value=1 -%]
+          >
+          [[% config.tr('show_header') %]]</span>
+        </div>
+                                                                                                                           
+        <div class="ctl_visible" id="header_panel_hide" onclick="visibility('header_panel',0)"
+          [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.header_panel_vis vis_default=1 opposite_of_value=0 -%]
+        >
+          [[% config.tr('hide_header') %]]</span>
+        </div>
+      </td>
+                                                                                                                             
       [%- IF page_settings.name OR page_settings.ref -%]
       <td> <a href="[% link_bookmark %]">[[% config.tr('bookmark') %]]</a></td>
       <td> <a href="[% link_image    %]" target="_blank">[[% config.tr('image_link') %]]</a></td>

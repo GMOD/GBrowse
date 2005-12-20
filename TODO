@@ -3,7 +3,6 @@ Template todo's
 * the scripts other than gbrowse, need to be modified.
 * Pages with multiple segment choices don't work
 * CGI::Toggle stuff needs to be purged
-* [Show Banner] doesn't work
 
 test change for cvs
 
@@ -24,5 +23,5 @@ test change for cvs
 * Add per-track parameter lists as per letter from Russell Smithies, 
 	Monday, Sept 5.
 
-$Id: TODO,v 1.9 2005-12-16 20:53:16 mwz444 Exp $
+$Id: TODO,v 1.10 2005-12-20 18:27:05 mwz444 Exp $
 

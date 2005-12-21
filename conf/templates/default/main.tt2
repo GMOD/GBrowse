@@ -26,12 +26,15 @@
   <h1>[% config.setting('description') %]</h1>
   <!-- FIXME need to fix formatting on string below -->
   <h2>[%- IF segment -%]
+      [% SET length_str = unit_label( segment.length ) %]
+      [% SET start_str = unit_label( segment.start ) %]
+      [% SET end_str = unit_label( segment.end ) %]
       [%-
          config.tr('SHOWING_FROM_TO',
-                           unit_label( segment.length ),
+                           length_str,
                            segment.seq_id,
-                           unit_label( segment.start  ),
-                           unit_label( segment.end    )
+                           start_str,
+                           end_str
                           );
       -%]
     [%- END -%]

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.173 2005-12-20 22:58:25 mwz444 Exp $
+# $Id: Browser.pm,v 1.174 2005-12-21 18:38:51 mwz444 Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1776,7 +1776,7 @@ sub name2segments {
   my $max_segment   = $self->get_max_segment;
 
   my (@segments,$class,$start,$stop);
-  if ($name =~ /([\w._\/-]+):(-?[-e\d.]+),(-?[-e\d.]+)$/ or
+    if ( ($name !~ /\.\./ and $name =~ /([\w._\/-]+):(-?[-e\d.]+),(-?[-e\d.]+)$/) or
       $name =~ /([\w._\/-]+):(-?[-e\d,.]+?)(?:-|\.\.)(-?[-e\d,.]+)$/) {
     $name  = $1;
     $start = $2;

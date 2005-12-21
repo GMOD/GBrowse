@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.136 2005-12-21 18:48:27 mwz444 Exp $
+# $Id: gbrowse.PLS,v 1.137 2005-12-21 19:49:05 mwz444 Exp $
 
 use strict;
 use Bio::Graphics;
@@ -455,6 +455,14 @@ sub main_display {
     : ( $CONFIG->tr('EXTERNAL') ),
   );
 
+    my $feature_highlights =
+        $page_settings->{h_feat}
+        ? join ' ', map {"$_\@$page_settings->{h_feat}{$_}"}
+        keys %{ $page_settings->{h_feat} }
+        : '';
+    my $region_highlights = $page_settings->{h_region}
+        ? join ' ', @{ $page_settings->{h_region} }
+        : '';
 
     my $param = {
         config        => $CONFIG,
@@ -479,24 +487,28 @@ sub main_display {
 
         rand => substr( md5_hex(rand), 0, 5 ),
 
-        action => $CONFIG->source() ? url() . "/" . $CONFIG->source . "/" : url(),
+        action => $CONFIG->source()
+        ? url() . "/" . $CONFIG->source . "/"
+        : url(),
 
-        segment         => $segment,
-        whole_segment   => $whole_segment,
-        prevname        => scalar( param('name') ),
-        finezoom        => get_zoomincrement(),
-        track_groups    => \%track_groups,
-        selected_tracks => {
+        segment             => $segment,
+        whole_segment       => $whole_segment,
+        prevname            => scalar( param('name') ),
+        finezoom            => get_zoomincrement(),
+        feature_hightlights => $feature_highlights,
+        region_highlights   => $region_highlights,
+        track_groups        => \%track_groups,
+        selected_tracks     => {
             map { $_ => $page_settings->{'features'}{$_}{'visible'} }
                 keys %{ $page_settings->{'features'} || {} }
         },
 
         #FIXME    multiple_segments => multiple_choices($features),
-        detailpanel => $detailpanel,
+        detailpanel           => $detailpanel,
         toggle_cookie_name    => 'GBROWSE_TOGGLE',
         toggle_cookie_expires => 'EXPIRES',
-        div_visibility => \%div_visibility,
-        track_categories => \@track_categories,
+        div_visibility        => \%div_visibility,
+        track_categories      => \@track_categories,
     };
 
   if($segment){

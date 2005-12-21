@@ -43,6 +43,10 @@
         <input type="radio" name="sk" value="unsorted" [% IF('unsorted' == page_settings.sk) ; 'checked="checked"' ; END %]>[% config.tr('varying')    %]</input>
     </td>
     </tr>
+    <tr>
+    <td><input type="text" name="h_feat" value="[% feature_hightlights %]" </td>
+    <td><input type="text" name="h_region" value="[% region_hightlights %]" </td>
+    </tr>
     <!-- BUTTONS -->
     <tr>
     <td align="right" colspan="4">

@@ -38,7 +38,7 @@
   </h2>
 </div>
 
-<form name="mainform" action="[% action %]" method="GET">
+<form name="mainform" action="[% action %]" method="POST">
   <!-- navigation table -->
   [% PROCESS "navigationtable.tt2" %]
 

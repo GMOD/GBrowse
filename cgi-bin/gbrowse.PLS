@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.139 2005-12-22 04:11:48 mwz444 Exp $
+# $Id: gbrowse.PLS,v 1.140 2005-12-22 20:21:39 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -758,7 +758,13 @@ sub adjust_settings {
   $settings->{width}  = param('width')   if param('width');
   my $divider  = $CONFIG->setting('unit_divider') || 1;
 
+  # adjust coordinates
   local $^W = 0;  # kill uninitialized variable warning
+  $settings->{version} ||= param('version') || '';
+  $settings->{ref}   = param('ref');
+  $settings->{start} = param('start') if defined param('start') && param('start') =~ /^[\d-]+/;
+  $settings->{stop}  = param('end')   if defined param('end')   && param('end')   =~ /^[\d-]+/;
+  $settings->{stop}  = param('stop')  if defined param('stop')  && param('stop')  =~ /^[\d-]+/;
   if ( (request_method() eq 'GET' && param('ref'))
        ||
        (param('span') && $divider*$settings->{stop}-$divider*$settings->{start}+1 != param('span'))
@@ -766,11 +772,6 @@ sub adjust_settings {
        grep {/left|right|zoom|nav|regionview\.[xy]|overview\.[xy]/} param()
      )
     {
-      $settings->{version} ||= param('version') || '';
-      $settings->{ref}   = param('ref');
-      $settings->{start} = param('start') if defined param('start') && param('start') =~ /^[\d-]+/;
-      $settings->{stop}  = param('end')   if defined param('end')   && param('end')   =~ /^[\d-]+/;
-      $settings->{stop}  = param('stop')  if defined param('stop')  && param('stop')  =~ /^[\d-]+/;
       zoomnav($settings);
       $settings->{name} = "$settings->{ref}:$settings->{start}..$settings->{stop}";
       param(name => $settings->{name});

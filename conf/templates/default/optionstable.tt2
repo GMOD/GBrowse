@@ -44,8 +44,8 @@
     </td>
     </tr>
     <tr>
-    <td><input type="text" name="h_feat" value="[% feature_hightlights %]" </td>
-    <td><input type="text" name="h_region" value="[% region_hightlights %]" </td>
+    <td><input type="text" name="h_feat" value="[% feature_highlights %]" </td>
+    <td><input type="text" name="h_region" value="[% region_highlights %]" </td>
     </tr>
     <!-- BUTTONS -->
     <tr>

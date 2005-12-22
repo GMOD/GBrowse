@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.138 2005-12-22 01:47:30 mwz444 Exp $
+# $Id: gbrowse.PLS,v 1.139 2005-12-22 04:11:48 mwz444 Exp $
 
 use strict;
 use Bio::Graphics;
@@ -500,7 +500,7 @@ sub main_display {
         whole_segment       => $whole_segment,
         prevname            => scalar( param('name') ),
         finezoom            => get_zoomincrement(),
-        feature_hightlights => $feature_highlights,
+        feature_highlights  => $feature_highlights,
         region_highlights   => $region_highlights,
         track_groups        => \%track_groups,
         selected_tracks     => {

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.20 2005-12-22 20:21:53 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.21 2005-12-22 20:47:09 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -576,7 +576,7 @@ sub detail_panel {
   }
 
   else {
-    $cell .= i($CONFIG->tr('TOO_BIG',unit_label($MAX_SEGMENT),unit_label($DEFAULT_SEGMENT)));
+    $cell .= i($CONFIG->tr('TOO_BIG',scalar unit_label($MAX_SEGMENT),scalar unit_label($DEFAULT_SEGMENT)));
   }
   $cell .= "\n";
   my $error_msg = $CONFIG->error ? p({-style=>"color: red"},

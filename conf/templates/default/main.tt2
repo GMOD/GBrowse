@@ -48,8 +48,8 @@
   [% htmlfrag2 %]
 
   <!-- genome browser images -->
-  [% IF segments && segments.size() > 1 %]
-    [% multiple_segments %]
+  [% IF multiple_segments %]
+    [% PROCESS "multiple_segments.tt2" %]
   [% ELSE %]
     <div id="target4">
     [% PROCESS "overviewpanel.tt2" %]

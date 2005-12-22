@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.137 2005-12-21 19:49:05 mwz444 Exp $
+# $Id: gbrowse.PLS,v 1.138 2005-12-22 01:47:30 mwz444 Exp $
 
 use strict;
 use Bio::Graphics;
@@ -425,7 +425,12 @@ sub main_display {
 
   my %seen; #used to keep track of available ranges for display
 
-  my $detailpanel = detail_panel_with_timeout( $segment, $page_settings, $feature_files );
+  my $multiple_segments = ( scalar @{ $segments || [] } > 1 ) ? 1 : 0;
+
+  my $detailpanel;
+  if (!$multiple_segments){
+    $detailpanel = detail_panel_with_timeout( $segment, $page_settings, $feature_files );
+  }
 
   my %div_visibility = map {$_ => scalar(param($_))} grep /_vis$/, param();
 
@@ -503,7 +508,8 @@ sub main_display {
                 keys %{ $page_settings->{'features'} || {} }
         },
 
-        #FIXME    multiple_segments => multiple_choices($features),
+        multiple_segment_data => $multiple_segments?multiple_segment_data($page_settings,$features):{},
+        multiple_segments => $multiple_segments,
         detailpanel           => $detailpanel,
         toggle_cookie_name    => 'GBROWSE_TOGGLE',
         toggle_cookie_expires => 'EXPIRES',
@@ -1306,78 +1312,86 @@ sub do_keyword_search {
 }
 
 ################ format keyword search ###################
-sub multiple_choices {
-  my ($settings,$results) = @_;
+sub multiple_segment_data {
+    my ( $settings, $results ) = @_;
 
-  my $db   = open_database();
-  my $name = $settings->{name};
-  my $regexp = join '|',($name =~ /(\w+)/g);
+    my %multiple_segment_data;
+    my %ref_data;
 
-  # sort into bins by reference and version
-  my %refs;
-  foreach (@$results) {
-    my $version = eval {$_->isa('Bio::SeqFeatureI') ? undef : $_->version};
-    my $ref = $_->seq_id;
-    $ref .= " version $version" if defined $version;    
-    push @{$refs{$ref}},$_;
-  }
+    my $db     = open_database();
+    my $name   = $settings->{name};
+    my $regexp = join '|', ( $name =~ /(\w+)/g );
 
-  $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
-  my $overviews = $CONFIG->hits_on_overview($db,$results,$settings->{features});
-  my $count = @$results;
-
-  print start_table();
-  print TR({-class=>'datatitle'},
-	   th({-colspan=>4},
-	      $CONFIG->tr('Hit_count',$count)));
-  print TR({-class=>'datatitle'},
-	   th({-colspan=>4},
-	      $CONFIG->tr('Possible_truncation',MAX_KEYWORD_RESULTS)))
-    if $count >= MAX_KEYWORD_RESULTS;
-
-  local $^W = 0;  # get rid of non-numeric warnings coming out of by_score_and_position
-  for my $ref(sort keys %refs) {
-    my ($id) = split /\s/, $ref; 
-    my @results = @{$refs{$ref}};
-    print TR(th({-class=>'databody',-colspan=>4,-align=>'center'},$CONFIG->tr('Matches_on_ref',$ref),br,
-		$overviews->{$ref}));
-
-    my $padding = $CONFIG->setting(general=>'landmark_padding') || 0;
-    my $units    = $CONFIG->setting(general=>'units') || $CONFIG->tr('bp');
-    my $divisor  = $CONFIG->setting(general=>'unit_divider') || 1;
-
-    for my $r (sort by_score_and_position @results) {
-      my $version = eval {$r->isa('Bio::SeqFeatureI') ? undef : $r->version};
-      my $name        = eval {$r->name}  || $r->primary_tag;
-
-      my $class       = eval {$r->class} || $CONFIG->tr('Sequence');
-      my $score       = eval {$r->score} || $CONFIG->tr('NOT_APPLICABLE');
-      my ($start,$stop) = ($r->start,$r->end);
-      my $padstart = $start - $padding;
-      my $padstop  = $stop  + $padding;
-      my $description = escapeHTML(eval{join ' ',$r->attributes('Note')}
-				   ||eval{$r->method}||eval{$r->source_tag}||$r->{ref});
-      if (my @aliases = eval{$r->attributes('Alias')}) {
-	$description .= escapeHTML " [@aliases]";
-      }
-      my $n           = escape("$name");
-      my $c           = escape($class);
-      $description =~ s/($regexp)/<b class="keyword">$1<\/b>/ig;
-      $description =~ s/(\S{60})/$1 /g;  # wrap way long lines
-
-      my $objref     = $class ? "?name=$c:$n" : "?name=$n";
-      my $posref     = "?ref=$id;start=$padstart;stop=$padstop;version=$version";
-      my $position = format_segment($r);
-      my $length   = unit_label($stop-$start+1);
-      print TR({-class=>'databody',-valign=>'TOP'},
-	       th({-align=>'right'},ref($name) ? a({-href=>$objref},$name):tt($name)),
-	       td($description),
-	       td(a({-href=>$posref},$position . " ($length)")),
-	       td($CONFIG->tr('SCORE',$score)));
+    # sort into bins by reference and version
+    my %refs;
+    foreach my $result (@$results) {
+        my $version = eval {
+            $result->isa('Bio::SeqFeatureI') ? undef: $result->version;
+        };
+        my $ref = $result->seq_id;
+        $ref .= " version $version" if defined $version;
+        push @{ $refs{$ref} }, $result;
     }
-  }
-  print end_table;
 
+    $CONFIG->width( $settings->{width} * OVERVIEW_RATIO );
+    $multiple_segment_data{'overviews'}
+        = $CONFIG->hits_on_overview( $db, $results, $settings->{features} );
+    $multiple_segment_data{'count'}               = scalar @$results;
+    $multiple_segment_data{'max_keyword_results'} = MAX_KEYWORD_RESULTS;
+
+    local $^W = 0; # get rid of non-numeric warnings coming out of by_score_and_position
+    for my $ref ( sort keys %refs ) {
+        my ($id) = split /\s/, $ref;
+        my @results = @{ $refs{$ref} };
+
+        my $padding = $CONFIG->setting( general => 'landmark_padding' ) || 0;
+        my $units = $CONFIG->setting( general => 'units' )
+            || $CONFIG->tr('bp');
+        my $divisor = $CONFIG->setting( general => 'unit_divider' ) || 1;
+
+        for my $r ( sort by_score_and_position @results ) {
+            my $version
+                = eval { $r->isa('Bio::SeqFeatureI') ? undef: $r->version };
+            my $name = eval { $r->name } || $r->primary_tag;
+
+            my $class = eval { $r->class } || $CONFIG->tr('Sequence');
+            my $score = eval { $r->score } || $CONFIG->tr('NOT_APPLICABLE');
+            my ( $start, $stop ) = ( $r->start, $r->end );
+            my $padstart = $start - $padding;
+            my $padstop  = $stop + $padding;
+            my $description
+                = escapeHTML( eval { join ' ', $r->attributes('Note') }
+                    || eval { $r->method }
+                    || eval { $r->source_tag }
+                    || $r->{ref} );
+
+            if ( my @aliases = eval { $r->attributes('Alias') } ) {
+                $description .= escapeHTML " [@aliases]";
+            }
+            my $n = escape("$name");
+            my $c = escape($class);
+            $description =~ s/($regexp)/<b class="keyword">$1<\/b>/ig;
+            $description =~ s/(\S{60})/$1 /g;    # wrap way long lines
+
+            my $objref = $class ? "?name=$c:$n" : "?name=$n";
+            my $posref
+                = "?ref=$id;start=$padstart;stop=$padstop;version=$version";
+            my $position = format_segment($r);
+            my $length   = unit_label( $stop - $start + 1 );
+            push @{ $ref_data{$ref} },
+                {
+                name                 => $name,
+                objref               => $objref,
+                description          => $description,
+                posref               => $posref,
+                position_description => "$position ($length)",
+                score                => $score,
+                };
+        }
+    }
+    $multiple_segment_data{'ref_data'} = \%ref_data;
+
+    return \%multiple_segment_data;
 }
 
 sub by_score_and_position {

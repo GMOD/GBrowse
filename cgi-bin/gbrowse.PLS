@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.19 2005-12-21 20:05:52 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.20 2005-12-22 20:21:53 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -397,10 +397,10 @@ sub main_display {
     }
 
     print h2($CONFIG->tr('SHOWING_FROM_TO',
-		       scalar unit_label($segment->length),
-		       $segment->seq_id,
-		       commas($seg_start),
-		       commas($seg_end)));
+			 scalar unit_label($segment->length),
+			 $segment->seq_id,
+			 commas($seg_start),
+			 commas($seg_end)));
   }
 
   # force flipping
@@ -756,7 +756,14 @@ sub adjust_settings {
   $settings->{width}  = param('width')   if param('width');
   my $divider  = $CONFIG->setting('unit_divider') || 1;
 
+  # Update coordinates.
   local $^W = 0;  # kill uninitialized variable warning
+  $settings->{ref}   = param('ref');
+  $settings->{start} = param('start') if defined param('start') && param('start') =~ /^[\d-]+/;
+  $settings->{stop}  = param('stop')  if defined param('stop')  && param('stop')  =~ /^[\d-]+/;
+  $settings->{stop}  = param('end')   if defined param('end')   && param('end')   =~ /^[\d-]+/;
+  $settings->{version} ||= param('version') || '';
+
   if ( (request_method() eq 'GET' && param('ref'))
        ||
        (param('span') && $divider*$settings->{stop}-$divider*$settings->{start}+1 != param('span'))
@@ -764,11 +771,6 @@ sub adjust_settings {
        grep {/left|right|zoom|nav|regionview\.[xy]|overview\.[xy]/} param()
      )
     {
-      $settings->{version} ||= param('version') || '';
-      $settings->{ref}   = param('ref');
-      $settings->{start} = param('start') if defined param('start') && param('start') =~ /^[\d-]+/;
-      $settings->{stop}  = param('end')   if defined param('end')   && param('end')   =~ /^[\d-]+/;
-      $settings->{stop}  = param('stop')  if defined param('stop')  && param('stop')  =~ /^[\d-]+/;
       zoomnav($settings);
       $settings->{name} = "$settings->{ref}:$settings->{start}..$settings->{stop}";
       param(name => $settings->{name});
@@ -990,8 +992,8 @@ sub slidertable {
 
   my @lines;
   push @lines,hidden(-name=>'start',-value=>$segment->start,-override=>1);
-  push @lines,hidden(-name=>'stop',-value=>$segment->end,-override=>1);
-  push @lines,hidden(-name=>'ref',-value=>$segment->seq_id,-override=>1);
+  push @lines,hidden(-name=>'stop', -value=>$segment->end,-override=>1);
+  push @lines,hidden(-name=>'ref',  -value=>$segment->seq_id,-override=>1);
   push @lines,
     (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>"left $full",
 		  -border=>0,-title=>"left $full_title"),

@@ -1,7 +1,7 @@
 package Bio::Graphics::Browser::PluginSet;
 # API for using plugins
 
-#  $Id: PluginSet.pm,v 1.2 2005-12-09 22:19:12 mwz444 Exp $
+#  $Id: PluginSet.pm,v 1.3 2006-01-05 20:04:47 mwz444 Exp $
 
 use strict;
 use Bio::Graphics::Browser;
@@ -72,7 +72,11 @@ sub configure {
 
     # retrieve persistent configuration
     my $config = $session->plugin_settings($p->name);
-    %$config   = %{$p->config_defaults} unless %$config;
+    unless (%$config) {
+      my $defaults = $p->config_defaults;
+      %$config     = %{$defaults} if $defaults;
+    }
+
     # and tell the plugin about it
     $p->configuration($config);
     $p->filter if ($p->type eq 'filter');

@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.3.6.1.2.2 2005-12-02 19:16:50 sheldon_mckay Exp $
+# $Id: ideogram.pm,v 1.3.6.1.2.3 2006-01-06 19:45:12 sheldon_mckay Exp $
 # Glyph to draw chromosome ideograms
 
 use strict qw/vars refs/;
@@ -115,6 +115,7 @@ sub draw_centromere {
 
     $gd->filledPolygon($poly,$bgcolor); # filled
     $gd->polygon($poly,$fgcolor);       # outline
+    $gd->line($x2-1,$y1+1,$x2-1,$y2-1,$fgcolor);
 }
 
 sub draw_telomere {

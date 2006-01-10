@@ -45,19 +45,21 @@ use lib "$OPTIONS{CONF}/gbrowse.conf";
 print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 print OUT <<'!NO!SUBS!';
 
+
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.44 2005-12-09 22:19:09 mwz444 Exp $
+#$Id: gbrowse_moby.PLS,v 1.45 2006-01-10 19:26:59 markwilkinson Exp $
 ###########################################################
 
+#use SOAP::Lite +trace;
 use MOBY::Client::Central;
 use MOBY::Client::Service;
 use MOBY::CommonSubs qw(:all);
 use MOBY::MobyXMLConstants;
-use XML::DOM;
 use File::Temp qw/ tempfile /;
 use MIME::Base64;
 use LWP;
 use Carp;
+use XML::LibXML;
 use Bio::Graphics::Browser::Util;
 use CGI qw(:standard *table *TR);
 use strict;
@@ -73,8 +75,10 @@ foreach my $file(@files){
     my $rendererclass = "MobyServices::$1";   # create the module name
     no strict 'refs';
     eval "require $rendererclass";          # load it
-    my $type = &{$rendererclass."::type"};  # invoke the sub type {} routine to get the object type rendered
-    $RENDERERS{$type} =   $rendererclass;  # assign this renderer by its object type
+    my $types = &{$rendererclass."::types"};  # invoke the sub type {} routine to get the object type rendered
+    foreach (@$types){
+        $RENDERERS{$_} =   $rendererclass;  # assign this renderer by its object type
+    }
     use strict;
 }
 
@@ -296,7 +300,7 @@ only need to handle the Genbank GFF source as before:
 =head1 HINTS
 
 -The full listing of valid MOBY namespaces is available at:
-    http://mobycentral.cbr.nrc.ca/cgi-bin/types/Namespaces
+    http://mobycentral.icapture.ubc.ca/cgi-bin/types/Namespaces
 
 -A useful mapping to make is to put the organism name into the
 Global_Keyword namespace.  This will trigger discovery of MedLine
@@ -355,7 +359,6 @@ sub init {
     my $output = param('output');
     my $serviceType = param('serviceType');
     my $expandObjects = param('expandObjects');
-    $authority = $authority?$authority:param('authURI');
     
     $Central = MOBY::Client::Central->new();  # CENTRAL is a global variable
 
@@ -394,7 +397,7 @@ sub init {
             my $email = $SERVICE->contactEmail;
             my @outtypes;
             my $collection = 0;
-            if ($SERVICE->output->[0]->isCollection){
+            if ($SERVICE->output->[0]  && $SERVICE->output->[0]->isCollection){
                 $collection = 1;
                 my $simples = $SERVICE->output->[0]->Simples;
                 foreach (@{$simples}){
@@ -404,12 +407,12 @@ sub init {
                     my $link = getObjectDescription($ob);
                     push @outtypes, $link;
                 }
-            } else {
+            } elsif ($SERVICE->output->[0]) {
                 my $ob = $SERVICE->output->[0]->objectType;
                 $ob =~ s/.*\:(\S+)/$1/;
                 my $link = getObjectDescription($ob);
                 push @outtypes, $link;
-            }
+            } 
             print TR({-valign=>'top', -class=>'databody'},
             th({-align => 'left', -valign=>'top', -class=>'datatitle'},"Service Name: "),
             td($SERVICE->name, "provided by: ".($SERVICE->authority)," (<a href='mailto:$email'>contact</a>)")),
@@ -440,11 +443,15 @@ sub init {
 sub getObjectDescription {
     my $ob = shift;
     return unless $ob;
+if ($ob eq 'Object') {
+	return "<a href='http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob' alt='The base BioMoby Object' title='The base BioMoby Object'/>$ob</a>";
+    }
     my $proxy = $CONFIG->setting('http_proxy');
     my $ua = LWP::UserAgent->new;
     $proxy && $ua->proxy(['http'],$proxy);
     
-    my $req = HTTP::Request->new(GET => "http://mobycentral.cbr.nrc.ca/cgi-bin/types/Objects?lsid_name=$ob");
+    my $req = HTTP::Request->new(GET => 
+"http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob");
     
     my $res = $ua->request($req);
     return unless $res->is_success;
@@ -453,7 +460,7 @@ sub getObjectDescription {
     $content = $1;
     $content =~ s/\'//g;
     $content =~ s/\"//g;
-    return "<a href='http://mobycentral.cbr.nrc.ca/cgi-bin/types/Objects?lsid_name=$ob' alt='$content' title='$content'/>$ob</a>";
+    return "<a href='http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob' alt='$content' title='$content'/>$ob</a>";
 }
 
 sub findService {
@@ -481,7 +488,6 @@ sub findService {
     $serviceType && ($args{serviceType} = $serviceType);
     $keyword && ($args{keywords} = [split ",", $keyword]);
     
-    print STDERR keys %args,"\n";
     my ($Services, $REG) = $Central->findService(%args);
     unless ($Services){
             print h2("Service discovery failed with the following errror: ").i($REG->message).p;
@@ -513,6 +519,7 @@ sub execute {
     $SI = $$SI[0]; # there can only be one, since authURI/serviceName is a unique index
 
     my $WSDL = $Central->retrieveService($SI); # get the WSDL
+
     my $SERVICE = MOBY::Client::Service->new(service => $WSDL);  # prepare the connection stubs
     
     print h2("\nBioMOBY Service: ".($SI->name)),i($SI->description),hr,h2("\nResult for $namespace:$id\n");
@@ -542,18 +549,23 @@ sub execute {
     my @colls = @{$collections};  # flatten the list of lists
     foreach my $objlist($objects, @colls){  # we just treat collections as simples here.
         foreach (@{$objlist}){
-            my $MOBYClass = $_->nodeName;
+            my $MOBYClass = $_->tagName; #FIXME - this might be qualified
+            if ($MOBYClass =~ /^(moby:)(.*)/) {
+ 	        $MOBYClass = $2;
+            }
             my $namespace = $_->getAttributeNode('namespace');
+            $namespace = $_->getAttributeNode('moby:namespace') unless $namespace; #FIXME - check for qualified value
             $namespace = $namespace?($namespace->getValue):"";
             my $short_namespace = $namespace =~ /urn:lsid:biomoby.org:namespacetype:(\S+)/?$1:$namespace; # namespaces may or may not be fully qualified LSID's.  if they are, and if they are MOBY ID's, then we can just take the last field, otherwise we should take the whole thing
             my $id = $_->getAttributeNode('id');
+            $id = $_->getAttributeNode('moby:id') unless $id; #FIXME - check for qualified value
             $id = $id ?($id->getValue):"";
             print TR({-valign=>'top', -class=>'databody'},
                 th({-align => 'left', -valign=>'top', -class=>'datatitle'},"ID: "),
                 td(b($short_namespace.":".$id),
                    "  ",
                    start_form(-action => url(-full)),
-                   hidden("object", $_->toString),
+                   hidden("object", $_->toString(2)), #FIXME - print pretty xml
                    hidden("namespace", $namespace),
                    hidden("id",$id),
                    hidden("objectclass",$MOBYClass),
@@ -573,12 +585,13 @@ sub execute {
     print_bottom("of the gbrowse_moby executable written by the <a href='http://www.biomoby.org'>BioMOBY project</a> (http://www.biomoby.org)");    
 }
 
-# the printIt subroutine will print the content of an object
-# in a very particular way. It does the following:
 
 sub printIt {
     my ($this) = @_;
-    my $thisdatatype = $this->nodeName;
+    my $thisdatatype = $this->tagName; #FIXME - this could be qualified
+    if ($thisdatatype =~ /^(moby:)(.*)/) {
+	$thisdatatype = $2;
+    }
     my $imgdir = $CONFIG->setting('tmpimages');
     my $renderer;
     my @rtypes = keys %RENDERERS;
@@ -588,16 +601,18 @@ sub printIt {
     # will compare the in-hand object with the list of renderable objects and
     # chose the parent object type of $thisdatatype that is closest
     # in our list of known object types.
-    my ($renderer_term, $renderer_lsid) = &whichDeepestParentObject($Central, $thisdatatype, \@rtypes); 
+    my ($renderer_term, $renderer_lsid) = ("","");
+    ($renderer_term, $renderer_lsid) = &whichDeepestParentObject($Central, $thisdatatype, \@rtypes); 
+print STDERR "\n\n\n\nCentral $Central term $renderer_term  lsid $renderer_lsid  $thisdatatype \nTYPES: @rtypes\n";
     $renderer_term ||='text-formatted';
     $renderer = $RENDERERS{$renderer_term};
 
     die "Can't render this information\n" unless $renderer;
     
     # first parse the object to get all of the CrossReference objects out of it.
-    foreach my $subnode($this->childNodes){
+    foreach my $subnode($this->getChildNodes){
         next unless ($subnode->nodeType == ELEMENT_NODE);
-        if (($subnode->nodeName =~ /(moby:)?CrossReference/) || ($subnode->nodeName =~ /(moby:)?Xref/)){  # if it is one of the two types of Xrefs, then pass it to the Xref parser
+        if (($subnode->tagName =~ /(moby:)?CrossReference/) || ($subnode->tagName =~ /(moby:)?Xref/)){  # if it is one of the two types of Xrefs, then pass it to the Xref parser
             &processXrefs($subnode);
             last;
         }
@@ -605,35 +620,40 @@ sub printIt {
 
     my $done=0;  # this is a boolean that indicates whether the renderer handles ALL sub-objects, or if it handles only the top-level content of an object and requires that the sub-nodes (objects) be parsed and rendered
     my $article = $this->getAttributeNode('articleName');  # get the article name
-    $article = $article?($article->nodeValue):"";
+    $article = $this->getAttributeNode('moby:articleName') unless $article;  # get the article name
+    $article = $article?($article->getValue):"";
     no strict 'refs';
     my $content;
-    ($content, $done) = &{$renderer."::render"}($this, $HTML_DIR, $imgdir);  # if the renderer handles everything, then $done is set and we can stop parsing this object
+    # pass by ref so that we can delete nodes that we don't need
+    # and what's left will be re-passd to this routine to try rendering it again.
+    my ($HTMLcontent) = &{$renderer."::render"}($this, $HTML_DIR, $imgdir);  # renderer renders what it can, deletes those DOM nodes from the $this reference, and passes back HTML of what it could render
     use strict;
-    if ($article || ($content =~ /\S/)){ # if we have an articlename or any textual content then we want to print this information no matter what came back from the renderer
+    if ($article || ($HTMLcontent =~ /\S/)){ # if we have an articlename or any textual content then we want to print this information no matter what came back from the renderer
         print TR({-valign=>'top', -class=>'databody'}, # print the HTML content that you got back from the renderer
             th({-align => 'left', -valign=>'top', -class=>'datatitle'},"$article "),
-            td("$content"));
+            td("$HTMLcontent"));
     }  # if we have no article name or no textual content, then this is almost certainly a blank node, and we can ignore it
     
-    return if $done;  # if the renderer said that it handled the entire object, then quit
+    #return if $done;  # if the renderer said that it handled the entire object, then quit
 
-    foreach my $subnode($this->childNodes){  # otherwise, we need to now start unpacking the object and rendering its subcomponents
+    foreach my $subnode($this->getChildNodes){  # otherwise, we need to now start unpacking the object and rendering its subcomponents
         next unless ($subnode->nodeType == ELEMENT_NODE);
-        next if ($subnode->nodeName eq "CrossReference"); 
+        next if ($subnode->tagName eq "CrossReference" or $subnode->tagName eq "moby:CrossReference"); #FIXME check for qualified
         &printIt($subnode);
     }
 }
 
 sub processXrefs {
     my ($XrefBlock) = @_;
-    foreach my $xref ($XrefBlock->childNodes()){
+    foreach my $xref ($XrefBlock->getChildNodes()){
         next unless $xref->nodeType == ELEMENT_NODE;
         my $ns = $xref->getAttributeNode("namespace");
+		$ns = $xref->getAttributeNode("moby:namespace") unless $ns; #FIXME - check for qualified name
         next unless $ns;
         $ns = $ns->getValue();
         next unless $ns;
         my $id = $xref->getAttributeNode("id");
+        $id = $xref->getAttributeNode("id") unless $id; #FIXME - check for qualified name
         next unless $id;
         $id = $id->getValue();        
         next unless $id;
@@ -648,7 +668,7 @@ sub processXrefs {
 sub setupFilters {
 #<SPAN title=" description here " class="popup">text</SPAN>
     return "<table border=1><tr><td>",checkbox_group(-name => 'expandObjects', -values => ['?'], -checked=>"ON"),
-    "  <SPAN title=' When this box is checked, your input object will be decomposed into its ISA parentage and services that operate on any parent class will also be discovered. ' class='popup' cursor='help'>Decompose Objects?</span> ",
+    "  <SPAN title=' When this box is checked, your input object will be decomposed into its ISA parentage and services that operate on any parent class will also be discovered. ' class='popup' cursor='help'>Decompose Objects?</span> ","</td>",
     "<td>","  <SPAN title=' Enter a comma-delimited list of keywords that should appear in the service description. ' class='popup' cursor='help'>Keywords:</span> ", textfield(-name => 'keyword', -size => 20),"</td>",
     "<td>","  <SPAN title=' Enter the full URI for the authority (service provider) that you want to restrict your search to.  e.g. sgn.cornell.edu ' class='popup' cursor='help'>Authority:</span> ",textfield(-name => 'authURI', -size => 20),"</td>",
     "<td>","  <SPAN title=' Enter a valid term from the Service Type Ontology. ' class='popup' cursor='help'>Service Type:</span> ", textfield(-name => "serviceType", -size => 10),"</td>",
@@ -683,6 +703,7 @@ sub INITIALIZE {
     end_form;
 
 }
+
 
 
 #=================================================

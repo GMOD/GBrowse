@@ -5,20 +5,37 @@ use MOBY::MobyXMLConstants;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(render type);
 
-sub type {
-    return "text-xml";
+sub types {
+    return ["text-xml"];
 }
 
 sub render {
     my ($DOM, $htmldir,$imgdir) = @_;
     my $content;
-    foreach my $subnode($DOM->childNodes){
-        next unless  (($subnode->nodeType == TEXT_NODE) || ($subnode->nodeType == CDATA_SECTION_NODE));
-        $content .=$subnode->textContent;
-    }
+    $content = &getStringContent($DOM);
     $content =~ s/<!\[cdata\[/&lt;[CDATA[/ig;
     $content =~ s/<([^>]+)>/&lt;$1&gt;/g; # mask '>' and '<' in tags
-    return ("<pre>$content</pre>",0);# the 0 indicates that we have only rendered the top-level XML of this object
+    return ("<pre>$content</pre>");# the 0 indicates that we have only rendered the top-level XML of this object
+}
+sub getStringContent {
+    my ($ROOT) = @_;
+    my $content;
+    my @childnodes = $ROOT->childNodes;
+    foreach (@childnodes){
+	next unless ($_->nodeType == ELEMENT_NODE);
+	next unless ($_->localname eq "String");
+	my $article = $_->getAttributeNode('articleName');
+	$article = $_->getAttributeNode('moby:articleName') unless $article;
+	next unless $article;
+	next unless $article->getValue eq 'content'; # the articleName for String content of a text-xml node
+	foreach my $subnode($_->childNodes){ # if it is correct, then get the text content
+	    next unless  (($subnode->nodeType == TEXT_NODE) || ($subnode->nodeType == CDATA_SECTION_NODE));
+	    $content .=$subnode->textContent;
+	}
+        $ROOT->removeChild($_);
+	last;
+    }
+    return $content;
 }
 
 1;

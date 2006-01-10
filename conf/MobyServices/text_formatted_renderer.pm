@@ -3,29 +3,52 @@ use strict;
 use XML::LibXML;
 use MOBY::MobyXMLConstants;
 our @ISA = qw(Exporter);
-#our @EXPORT = qw(render type);
 our @EXPORT_OK = qw(render type);
 
 
-sub type {
-    return "text-formatted";
+sub types {
+    return ["text-formatted"];
 }
+
 
 sub render {
     my ($DOM, $htmldir,$imgdir) = @_;
     my $content;
-    foreach my $subnode($DOM->childNodes){
-        next unless  (($subnode->nodeType == TEXT_NODE) || ($subnode->nodeType == CDATA_SECTION_NODE));
-        no strict 'refs';
-        $content .=$subnode->textContent;
-    }
+    $content = &getStringContent($DOM);
 
-    $content =~ s/(\S{100})/$1\<br\>/g;
-    if ($content =~ /\S/){
-        return ("<pre>$content</pre>",0);# the 0 indicates that we have only rendered the top-level XML of this object
-    } else {
-        return (" ", 0);
+    return ("<pre></pre>") unless $content;
+
+    if ($content =~ /(\S{100})/){
+	    $content =~ s/(\S{100})/$1\<br\>/g;
     }
+    if ($content =~ /\S/){
+        return ("<pre>$content</pre>");
+    } else {
+        return (" ", );
+    }
+}
+
+
+sub getStringContent {
+    my ($ROOT) = @_;
+
+    my $content;
+    my @childnodes = $ROOT->childNodes;
+    foreach (@childnodes){
+	next unless ($_->nodeType == ELEMENT_NODE);
+	next unless ($_->localname eq "String");
+	my $article = $_->getAttributeNode('articleName');
+	$article = $_->getAttributeNode('moby:articleName') unless $article;
+	next unless $article;
+	next unless $article->getValue eq 'content'; # the articleName for String content of a text-xml node
+	foreach my $subnode($_->childNodes){ # if it is correct, then get the text content
+	    next unless  (($subnode->nodeType == TEXT_NODE) || ($subnode->nodeType == CDATA_SECTION_NODE));
+	    $content .=$subnode->textContent;
+	}
+        $ROOT->removeChild($_);
+	last;
+    }
+    return $content;
 }
 
 1;
@@ -46,7 +69,6 @@ just put the renderer in your gbrowse.conf/MobyServices folder
 and it will work.
 
 =head1 DESCRIPTION
-
 This renderer returns HTML that fits between the
 <td> tags in a web-page to display the content
 of a text-formatted (or ontological child of) object.

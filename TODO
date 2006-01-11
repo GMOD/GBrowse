@@ -1,8 +1,5 @@
 Template todo's
 * not all html is in templates yet.
-** the scripts other than gbrowse, need to be modified.
-* CGI::Toggle stuff needs to be purged
-** LandMark Search doesn't work right. (punted to Lincoln)
 
 test change for cvs
 
@@ -23,5 +20,5 @@ test change for cvs
 * Add per-track parameter lists as per letter from Russell Smithies, 
 	Monday, Sept 5.
 
-$Id: TODO,v 1.12 2005-12-22 01:48:13 mwz444 Exp $
+$Id: TODO,v 1.13 2006-01-11 18:53:23 mwz444 Exp $
 

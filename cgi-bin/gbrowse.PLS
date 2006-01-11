@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.140 2005-12-22 20:21:39 lstein Exp $
+# $Id: gbrowse.PLS,v 1.141 2006-01-11 18:52:27 mwz444 Exp $
 
 use strict;
 use Bio::Graphics;
@@ -67,7 +67,6 @@ use File::Spec;
 use Carp qw(:DEFAULT croak);
 use Data::Dumper;
 use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td );
-use CGI::Toggle;
 use CGI::Cookie;
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $BIOGRAPHICS_VERSION $CONF_DIR
@@ -102,6 +101,8 @@ use constant DEFAULT_RANGES       => q(100 500 1000 5000 10000 25000 100000 2000
 use constant DEFAULT_FINE_ZOOM    => '10%';
 use constant GBROWSE_HELP         => '/gbrowse';
 use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceDumper';
+use constant MAIN_TEMPLATE        => 'main.tt2';
+use constant SET_TRACK_OPTIONS_TEMPLATE => 'set_track_options.tt2';
 
 # if true, turn on surrounding rectangles for debugging the image map
 use constant DEBUG          => 0;
@@ -528,7 +529,7 @@ sub main_display {
   $param->{range_labels} = \%range_labels;
 
   my $table = undef;
-  $CONFIG->template->process('main.tt2',$param,\$table) or warn $CONFIG->template->error();
+  $CONFIG->template->process(MAIN_TEMPLATE,$param,\$table) or warn $CONFIG->template->error();
   print $table;
 
   # clean us up
@@ -726,9 +727,6 @@ sub reset_cookies {
 				   -path => url(-path_info=>1,-absolute=>1),
 				   -expires => '-1y'
 				  );
-    push @cookies,CGI::Cookie->new(-name=>'CGI__Toggle',
-				   -path => '/',         # fix a bug introduced by transitional versions of software
-				   -expires => '-1y');
   }
   return \@cookies;
 }
@@ -1876,104 +1874,28 @@ sub adjust_track_options {
 
 # this controls the "adjust track options" screen
 sub set_track_options {
-  my $settings = shift;
+  my $page_settings = shift;
 
-  my @labels =  @{$settings->{tracks}};
+  my @labels =  @{$page_settings->{tracks}};
 
   my %keys            = map {$_ => $CONFIG->setting($_=>'key') || $_} @labels;
   my @sorted_labels   = ('',sort {lc $keys{$a} cmp lc $keys{$b}} @labels);
 
   my $oc = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR();
 
-  my @rows;
-  for (my $track = 0; $track < @labels; $track++) {
-    my $label = $labels[$track];
-    push @rows,
-      th({-align=>'left',-class=>'searchtitle'},$CONFIG->tr("Track"),$track+1).
-      th({-align=>'left',-class=>'searchbody'},$label=~/:overview$/  ? div({-style=>"background: $oc"},
-									   "$keys{$label}<sup>*</sup>")
-	                                     : $label=~/:region$/? div({-style=>"background: $oc"},
-									   "$keys{$label}<sup>**</sup>")
-	                                     : $keys{$label}).
-      td({-align=>'center',-class=>'searchbody'},
-	     checkbox(-name     => 'track.label',
-		      -value    => $label,
-		      -override => 1,
-		      -checked  => $settings->{features}{$label}{visible},
-		      -label => '')
-	    ).
-      td({-align=>'center',-class=>'searchbody'},
-	     popup_menu( -name     => "option.$track",
-			 -values   => [0..3],
-			 -override => 1,
-			 -default  => $settings->{features}{$label}{options},
-			 -labels   => {0=> $CONFIG->tr('Auto'),
-                                       1=> $CONFIG->tr('Compact'),
-                                       2=> $CONFIG->tr('Expand'),
-				       3=> $CONFIG->tr('Expand_Label'),
-				      })
-	   ).
-	td({-align=>'center',-class=>'searchbody'},
-	   popup_menu(-name    => "limit.$track",
-		      -values  => [0,5,10,25,100],
-		      -labels  => {0=>$CONFIG->tr('No_limit')},
-		      -override => 1,
-		      -default => $settings->{features}{$label}{limit})
-	    ).
-	td({-align=>'center',-class=>'searchbody'},
-	   popup_menu(-name    => "track.$track",
-		      -values  => \@sorted_labels,
-		      -labels  => \%keys,
-		      -override => 1,
-		      -onChange => 'document.settings.submit()',
-		      -default => '')
-	    );
-  }
-  my $controls = TR({-class=>'searchtitle'},
-		    td({-colspan=>3,-align=>'center'},
-		       reset($CONFIG->tr('Undo')).'&nbsp;'.
-		       submit(-name=>'revert', -label=>$CONFIG->tr('Revert')).'&nbsp;'.
-		       submit(-name=>'refresh',-label=>$CONFIG->tr('Refresh')).'&nbsp;'
-		      ),
-		    td({-align=>'center',-colspan=>3},
-		       submit  (-name=>$CONFIG->tr('Cancel'),   -value=>$CONFIG->tr('Cancel_Return')).'&nbsp;'.
-		       b(submit(-name=>$CONFIG->tr('Redisplay'),-value=>$CONFIG->tr('Accept_Return')))
-		      ));
+  my $param = {
+    config           => $CONFIG,
+    page_settings    => $page_settings,
+    labels           => \@labels,
+    track_keys       => \%keys,
+    sorted_labels    => \@sorted_labels,
+    overview_bgcolor => $oc,
+  };
 
-  print h1({-align=>'center'},$CONFIG->tr('Settings',$CONFIG->setting('description')));
-  print start_form(-name=>'settings');
-  print table({-width=>'100%',-border=>0},
-	      $controls,
-	      TR({-class=>'searchtitle'},
-		 th({-colspan=>6},$CONFIG->tr('Options_title'))),
-	      TR({-class=>'searchbody'},
-		 td({-colspan=>6},
-		    $CONFIG->tr('Settings_instructions')
-		   ),
-		),
-	      TR({-class=>'searchtitle'},
-		 th($CONFIG->tr('Track')),
-		 th($CONFIG->tr('Track Type')),
-		 th($CONFIG->tr('Show')),
-		 th($CONFIG->tr('Format')),
-		 th($CONFIG->tr('Limit')),
-		 th($CONFIG->tr('Change_Order')),
-		),
-	      TR(\@rows),
-	      $controls,
-	      hidden(-name=>$CONFIG->tr('Set_options'), -value=>1,-override=>1),
-	      hidden(-name=>$CONFIG->tr('Adjust_order'),-value=>1,-override=>1),
-	     );
-  print $CONFIG->tr('EXTERNAL_TRACKS'),
-    br,
-      div({-style=>"background: $oc"},
-	  $CONFIG->tr('OVERVIEW_TRACKS')
-	 ),
-    br,
-      div({-style=>"background: $oc"},
-	  $CONFIG->tr('REGION_TRACKS')
-	 );
-  print end_form();
+  my $table = undef;
+  $CONFIG->template->process( SET_TRACK_OPTIONS_TEMPLATE, $param, \$table )
+    or warn $CONFIG->template->error();
+  print $table;
 }
 
 sub help {

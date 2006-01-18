@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.143 2006-01-18 18:57:10 mwz444 Exp $
+# $Id: gbrowse.PLS,v 1.144 2006-01-18 21:41:37 mwz444 Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2297,24 +2297,24 @@ sub split_labels {
 sub is_search {
   my $page_settings = shift;
   return 1 if param();
-  return 1 if     $config->setting('initial landmark') && !$page_settings->{name};
-  return 1 unless $config->setting('no autosearch');
+  return 1 if     $CONFIG->setting('initial landmark') && !$page_settings->{name};
+  return 1 unless $CONFIG->setting('no autosearch');
   return undef;
 }
 
 sub version_warning {
-  return if bio::graphics::panel->can('api_version') &&
-	  bio::graphics::panel->api_version >= $biographics_version;
+  return if Bio::Graphics::Panel->can('api_version') &&
+	  Bio::Graphics::Panel->api_version >= $BIOGRAPHICS_VERSION;
 
-    warn <<end;
-gbrowse version mismatch:
-gbrowse version $version requires a compatible version of the bio::graphics library.
-you should either install bioperl (the cvs live version) or reinstall gbrowse,
-which will patch bio::graphics to the latest version.
-end
+    warn <<END;
+GBROWSE VERSION MISMATCH:
+GBrowse version $VERSION requires a compatible version of the Bio::Graphics library.
+You should either install BioPerl (the CVS live version) or reinstall GBrowse,
+which will patch Bio::Graphics to the latest version.
+END
 }
 
-!no!subs!
-close out or die "can't close $file: $!";
-chmod 0755, $file or die "can't reset permissions for $file: $!\n";
-exec("$config{'eunicefix'} $file") if $config{'eunicefix'} ne ':';
+!NO!SUBS!
+close OUT or die "Can't close $file: $!";
+chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
+exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';

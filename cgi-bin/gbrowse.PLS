@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.144 2006-01-18 21:41:37 mwz444 Exp $
+# $Id: gbrowse.PLS,v 1.145 2006-01-18 21:48:00 mwz444 Exp $
 
 use strict;
 use Bio::Graphics;
@@ -479,11 +479,14 @@ sub main_display {
             =~ s!(http:.+/das/\w+)(?:\?(.+))?$!$1/features?segment=$segment_str;$2!;
         $remote_sources_hash{$url} = $f;
     }
+    my $plugin_labels = $PLUGINS->menu_labels();
+    my @plugins = sort {$plugin_labels->{$a} cmp $plugin_labels->{$b}} keys %$plugin_labels;
 
     my $param = {
         config        => $CONFIG,
         page_settings => $page_settings,
-        plugins       => $PLUGINS,
+        plugins       => \@plugins,
+        plugin_labels => $plugin_labels,
 
         htmlfrag1 => html_frag( 'html1', $segment ) || '',
         htmlfrag2 => html_frag( 'html2', $segment ) || '',

@@ -1,26 +1,10 @@
 <b>[% config.tr('dumps') %]:</b><br/>
 <select name="plugin">
-[% FOREACH plugin = plugins.keys %]
-  [% label = 'anonymous label' %]
-  [% name  = 'anonymous name'  %]
-  [% IF plugins.${plugin}.verb %]
-    [% label = config.tr(plugins.${plugin}.verb) || plugins.${plugin}.verb %]
-  [% ELSE %]
-    [% IF    plugins.${plugin}.type == 'dumper'      ; label = config.tr('dump')      %]
-    [% ELSIF plugins.${plugin}.type == 'finder'      ; label = config.tr('find')      %]
-    [% ELSIF plugins.${plugin}.type == 'highlighter' ; label = config.tr('highlight') %]
-    [% ELSIF plugins.${plugin}.type == 'annotator'   ; label = config.tr('annotate')  %]
-    [% END %]
-  [% END %]
-
-  [% IF plugins.${plugin}.type == 'filter' %]
-    [% name = config.setting(plugins.${plugin}.name,'key')%]
-  [% ELSE %]
-    [% name = plugins.${plugin}.name %]
-  [% END %]
-  [% label = label _ ' ' _ name %]
-  [% label = label | replace('^\s+',,'') %]
-
-  <option value="[% plugin %]" [% IF(plugin == page_settings.plugin) ; 'selected="selected"' ; END %]>[% label %]</option>
+[% FOREACH plugin = plugins %]
+  <option value="[% plugin %]" [% IF(plugin == page_settings.plugin) ; 'selected="selected"' ; END %]>[% plugin_labels.$plugin %]</option>
 [% END %]
 </select>
+&nbsp;
+<input type="submit" name="plugin_action" value="[% config.tr('Configure') %]" />
+&nbsp;
+<b><input type="submit" name="plugin_action" value="Go" />

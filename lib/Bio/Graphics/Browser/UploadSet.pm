@@ -86,7 +86,9 @@ sub open_file {
   my ($url,$mode) = @_;
   $mode ||= "<";
   my $config = $self->config;
-  my $path   = $self->url2path($url);
+  my $url_with_file_designation = $url;
+  $url_with_file_designation = 'file:'.$url_with_file_designation unless($url_with_file_designation=~/^file:/);
+  my $path   = $self->url2path($url_with_file_designation);
   warn "path = $path" if DEBUG;
 
   unless (open (F,"${mode}${path}")) {
@@ -103,15 +105,18 @@ sub clear_file {
   my $url      = shift;
   my $settings = $self->page_settings;
 
-  my $path = $self->url2path($url);
+  my $url_with_file_designation = $url;
+  $url_with_file_designation    = 'file:'.$url_with_file_designation unless($url_with_file_designation=~/^file:/);
+  my $path         = $self->url2path($url_with_file_designation);
   unless ($path) {  # unregistered cruft file
     (undef,$path) = $self->name_file($url);
   }
   unlink $path;
-  delete $settings->{features}{$url};
-  $settings->{tracks} = [grep {$_ ne $url} @{$settings->{tracks}}];
+  delete $settings->{features}{$url_with_file_designation}; # Changed from $url
+  $settings->{tracks} = [grep {$_ ne $url_with_file_designation} @{$settings->{tracks}}];
   warn "clear_uploaded_file(): deleting file = $url" if DEBUG;
-  $self->_del_file($url);
+  $url=~s/file://;
+  $self->_del_file($url_with_file_designation);
 }
 
 sub name_file {

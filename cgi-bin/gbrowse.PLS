@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.141 2006-01-11 18:52:27 mwz444 Exp $
+# $Id: gbrowse.PLS,v 1.142 2006-01-18 03:58:40 mwz444 Exp $
 
 use strict;
 use Bio::Graphics;
@@ -470,6 +470,17 @@ sub main_display {
         ? join ' ', @{ $page_settings->{h_region} }
         : '';
 
+    # Das table stuff
+    my ($external_preset_labels,$external_preset_urls) = get_external_presets($page_settings);
+    my $segment_str = "$page_settings->{ref}:$page_settings->{start},$page_settings->{stop}";
+
+    my %remote_sources_hash;
+    for my $url ( $REMOTE_SOURCES->sources ) {
+        ( my $f = $url )
+            =~ s!(http:.+/das/\w+)(?:\?(.+))?$!$1/features?segment=$segment_str;$2!;
+        $remote_sources_hash{$url} = $f;
+    }
+
     my $param = {
         config        => $CONFIG,
         page_settings => $page_settings,
@@ -497,25 +508,33 @@ sub main_display {
         ? url() . "/" . $CONFIG->source . "/"
         : url(),
 
-        segment             => $segment,
-        whole_segment       => $whole_segment,
-        prevname            => scalar( param('name') ),
-        finezoom            => get_zoomincrement(),
-        feature_highlights  => $feature_highlights,
-        region_highlights   => $region_highlights,
-        track_groups        => \%track_groups,
-        selected_tracks     => {
+        segment            => $segment,
+        whole_segment      => $whole_segment,
+        prevname           => scalar( param('name') ),
+        finezoom           => get_zoomincrement(),
+        feature_highlights => $feature_highlights,
+        region_highlights  => $region_highlights,
+        track_groups       => \%track_groups,
+        segment2link       => \&segment2link,
+        selected_tracks    => {
             map { $_ => $page_settings->{'features'}{$_}{'visible'} }
                 keys %{ $page_settings->{'features'} || {} }
         },
 
-        multiple_segment_data => $multiple_segments?multiple_segment_data($page_settings,$features):{},
-        multiple_segments => $multiple_segments,
-        detailpanel           => $detailpanel,
-        toggle_cookie_name    => 'GBROWSE_TOGGLE',
-        toggle_cookie_expires => 'EXPIRES',
-        div_visibility        => \%div_visibility,
-        track_categories      => \@track_categories,
+        multiple_segment_data => $multiple_segments
+        ? multiple_segment_data( $page_settings, $features )
+        : {},
+        multiple_segments      => $multiple_segments,
+        detailpanel            => $detailpanel,
+        too_many_refs          => TOO_MANY_REFS,
+        toggle_cookie_name     => 'GBROWSE_TOGGLE',
+        toggle_cookie_expires  => 'EXPIRES',
+        div_visibility         => \%div_visibility,
+        track_categories       => \@track_categories,
+        feature_files          => $feature_files,
+        external_preset_labels => $external_preset_labels,
+        external_preset_urls   => $external_preset_urls,
+        remote_sources_hash    => \%remote_sources_hash,
     };
 
   if($segment){
@@ -1685,7 +1704,7 @@ sub get_uploaded_file_info {
 }
 
 sub edit_uploaded_file {
-  my ($settings,$file) = @_;
+  my ($page_settings,$file) = @_;
   warn "edit_uploaded_file(): file = $file" if DEBUG;
   print_top("Editing $file");
   print start_form();

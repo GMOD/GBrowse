@@ -32,25 +32,32 @@
     <tr class="uploadbody">
       <th><a href="?[% config.tr('download_file') | uri %]=[% name %]">[[% name %]]</a></th>
       <td colspan="3">
-        <submit name="modify.[% file %]" value="[% config.tr('edit') %]">&nbsp;
-        <submit name="modify.[% file %]" value="[% config.tr('download_file') %]">&nbsp;
-        <submit name="modify.[% file %]" value="[% config.tr('delete') %]">&nbsp;
+        <input type="submit" name="modify.[% file %]" value="[% config.tr('edit') %]">&nbsp;
+        <input type="submit" name="modify.[% file %]" value="[% config.tr('download_file') %]">&nbsp;
+        <input type="submit" name="modify.[% file %]" value="[% config.tr('delete') %]">&nbsp;
       </td>
     </tr>
     <tr class="uploadbody">
-      <td>&nbsp</td><td colspan="3">get_uploaded_file_info($BROWSER->options->{features}{$filename}{visible} && $feature_files->{$filename});</td>
+      <td>&nbsp</td><td colspan="3">
+        [% PROCESS 'uploadedfiles.tt2'
+            feature_file = feature_files.$filename
+            display_file = page_settings.features.$filename.visible
+        %]
+      </td>
     </tr>
   [% END %]
 
   <tr class="uploadbody">
     <th align="right">[% config.tr('upload_file') %]</th>
     <td colspan="3">
-      <input type="file" name="upload_annotations"/>&nbsp;
-      <submit name="[% config.tr('upload') %]"/>&nbsp;
-      <submit name="new_upload" value="[% config.tr('new') %]"/>&nbsp;
+      <input type="file" name="upload_annotations" size="40" />&nbsp;
+      <input type="submit" name="Upload" value="[% config.tr('upload') %]"/>&nbsp;
+      <input type="submit" name="new_upload" value="[% config.tr('new') %]"/>&nbsp;
     </td>
   </tr>
 </table>
+
+[% PROCESS 'dastable.tt2' %]
 
 </div>
 </div>

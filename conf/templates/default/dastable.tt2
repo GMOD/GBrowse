@@ -1,0 +1,46 @@
+<table border=0 width="100%">
+  <tr>
+    <th class='uploadtitle' align='left' colspan=2>[% config.tr("Remote_title") %]:
+      <a href="?help=annotation#remote" target="help">[[% config.tr('help') %]]</a>
+    </th>
+  </tr>
+
+  [%- SET remote_url_count = 0 -%]
+  [%- FOREACH remote_url = remote_sources_hash.keys %]
+    [%- SET remote_url_count = remote_url_count + 1 -%]
+    <tr class="uploadbody">
+      <th align="right" valign="TOP">URL [% remote_url_count %]</th>
+      <td><input type=text name='eurl' size=50 value="[% remote_url %]">
+        <br>
+        <a href="[% remote_sources_hash.$remote_url %]" target="help">[% config.tr("Download") %]</a>
+        [% PROCESS 'uploadedfiles.tt2'
+            feature_file = feature_files.$filename
+            display_file = page_settings.features.$filename.visible
+        %]
+      </td>
+    </tr>
+  [%- END -%]
+
+  <tr class="uploadbody">
+    <th align="right">[% config.tr("Remote_url") %]</th>
+    <td><input type=text name="eurl" size=40 value=''>
+      [%- IF external_preset_labels and external_preset_labels.0 -%]
+        <select name="eurl" onchange="document.externalform.submit()">
+          <option selected="selected" value="">[% config.tr("PRESETS") %]</option>
+          [%- FOREACH external_preset_label = external_preset_labels -%]
+            <option value="[% external_preset_urls.${loop.index} %]">
+              [%- external_preset_label -%]
+            </option>
+          [%- END -%]
+        </select>
+      [%- END -%]
+    </td>
+  </tr>
+  <tr class="uploadbody">
+    <th>&nbsp;</th>
+    <th align="left"><input type=submit name=[% config.tr("Update_urls") %]></th>
+  </tr>
+</table>
+
+     
+

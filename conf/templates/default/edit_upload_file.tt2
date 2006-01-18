@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="[% config.tr('CHARSET') %]"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!-- FIXME is EN a language code above? -->
+<html>
+                                                                                                                             
+<head><title>Editing file:[% file %]</title>
+<link rel="stylesheet" type="text/css" href="/gbrowse/gbrowse.css" />
+</head>
+<body>
+<!-- Process header template defined in config file -->
+[% PROCESS 'header_wrapper.tt2' %]
+
+<form action="[% action %]" enctype="application/x-www-form-urlencoded" method="POST">
+
+  <table width="100%">
+    <tr class="searchbody">
+      <td>[% config.tr("Edit_instructions") %]</td>
+    </tr>
+    <tr class="searchbody">
+      <td>
+        <a target="help" href="?help=annotation#format">
+          <b>[[% config.tr("Help_format") %]]</b>
+        </a>
+      </td>
+    </tr>
+    <tr class="searchtitle">
+      <th>[% config.tr("Edit_title") %]</th>
+    </tr>
+    <tr class="searchbody">
+      <td align="center">
+          <textarea name="a_data" rows="25" cols="100" style="white-space : pre" wrap="off">
+            [%- data -%]
+          </textarea>
+      </td>
+    </tr>
+    <tr class="searchtitle">
+      <th>
+        <input type="reset" name="[% config.tr('Undo') %]" value="[% config.tr('Undo') %]" />
+        &nbsp;
+        <input type="submit" name="[% config.tr('Cancel') %]" value="[% config.tr('Cancel') %]" />
+        &nbsp;
+        <b><input type="submit" name="[% config.tr('Submit_changes') %]" value="[% config.tr('Submit_changes') %]" /></b>
+      </th>
+    </tr>
+  </table>
+
+  <input type="hidden" name="edited file" value="[% file %]" />
+</form>
+
+<!-- Process footer template defined in config file -->
+[% PROCESS 'footer_wrapper.tt2' %]
+
+</body>
+</html>

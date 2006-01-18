@@ -154,6 +154,8 @@ END
 
    CANCEL   => 'Cancel',
 
+   SUBMIT_CHANGES => 'Submit Changes...',
+
    ABOUT    => 'About...',
 
    REDISPLAY   => 'Redisplay',

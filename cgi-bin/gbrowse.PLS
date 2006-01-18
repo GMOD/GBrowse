@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.142 2006-01-18 03:58:40 mwz444 Exp $
+# $Id: gbrowse.PLS,v 1.143 2006-01-18 18:57:10 mwz444 Exp $
 
 use strict;
 use Bio::Graphics;
@@ -92,8 +92,6 @@ use constant DEFAULT_SEGMENT => 100_000;
 use constant DEFAULT_REGION_SIZE => 100_000_000;
 
 use constant OVERVIEW_RATIO  => 0.9;
-use constant ANNOTATION_EDIT_ROWS => 25;
-use constant ANNOTATION_EDIT_COLS => 100;
 use constant URL_FETCH_TIMEOUT    => 5;  # five seconds max!
 use constant URL_FETCH_MAX_SIZE   => 1_000_000;  # don't accept any files larger than 1 Meg
 use constant MAX_KEYWORD_RESULTS  => 1_000;     # max number of results from keyword search
@@ -103,6 +101,7 @@ use constant GBROWSE_HELP         => '/gbrowse';
 use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceDumper';
 use constant MAIN_TEMPLATE        => 'main.tt2';
 use constant SET_TRACK_OPTIONS_TEMPLATE => 'set_track_options.tt2';
+use constant EDIT_UPLOAD_FILE_TEMPLATE  => 'edit_upload_file.tt2';
 
 # if true, turn on surrounding rectangles for debugging the image map
 use constant DEBUG          => 0;
@@ -1555,6 +1554,7 @@ sub handle_uploads {
   }
 
   if ($file_action && param($file_action) eq $CONFIG->tr('Edit')) {
+    print_header();
     edit_uploaded_file($page_settings,$file);
     return 0;   # this will cause it to exit
   }
@@ -1681,68 +1681,22 @@ sub print_uploaded_file_features {
   }
 }
 
-sub get_uploaded_file_info {
-  my $feature_file = shift or return i("Display off");
-  warn "get_uploaded_file_info(): feature_file = $feature_file" if DEBUG;
-
-  my $modified = localtime($feature_file->mtime);
-  my @refs      = sort($feature_file->features)
-    unless $feature_file->name =~ m!/das/!;
-
-  my $db        = open_database();
-
-  my ($landmarks,@landmarks,@links);
-
-  if (@refs > TOO_MANY_REFS) {
-    $landmarks = b($CONFIG->tr('Too_many_landmarks',scalar @refs));
-  } else {
-    @links = map {segment2link($_,$_->display_name)} @refs;
-    $landmarks = tableize(\@links);
-  }
-  warn "get_uploaded_file_info(): modified = $modified, landmarks = $landmarks" if DEBUG;
-  return i($CONFIG->tr('File_info',$modified,$landmarks||''));
-}
-
 sub edit_uploaded_file {
   my ($page_settings,$file) = @_;
   warn "edit_uploaded_file(): file = $file" if DEBUG;
-  print_top("Editing $file");
-  print start_form();
   my $data;
   my $fh = $UPLOADED_SOURCES->open_file($file) or return;
   $data = join '',expand(<$fh>);
-  print table({-width=>'100%'},
-	      TR({-class=>'searchbody'},
-		 td($CONFIG->tr('Edit_instructions')),
-		),
-	      TR({-class=>'searchbody'},
-		 td(
-		    a({-href=>"?help=annotation#format",-target=>'help'},
-		      b('['.$CONFIG->tr('Help_format').']'))
-		   ),
-		),
-	      TR({-class=>'searchtitle'},
-		 th($CONFIG->tr('Edit_title'))),
-	      TR({-class=>'searchbody'},
-		 td({-align=>'center'},
-		    pre(
-			textarea(-name    => 'a_data',
-				 -value   => $data,
-				 -rows    => ANNOTATION_EDIT_ROWS,
-				 -cols    => ANNOTATION_EDIT_COLS,
-				 -wrap    => 'off',
-				 -style   => "white-space : pre"
-				))
-		   )
-		),
-	      TR({-class=>'searchtitle'},
-		 th(reset($CONFIG->tr('Undo')).'&nbsp;'.
-		    submit('Cancel').'&nbsp;'.
-		    b(submit('Submit Changes...'))))
-	     );
-  print hidden(-name=>'edited file',-value=>$file);
-  print end_form();
-  print_bottom($VERSION);
+  my $param = {
+    config => $CONFIG,
+    file   => $file,
+    data   => $data,
+  };
+
+  my $table = undef;
+  $CONFIG->template->process( EDIT_UPLOAD_FILE_TEMPLATE, $param, \$table )
+    or warn $CONFIG->template->error();
+  print $table;
 }
 
 
@@ -2318,24 +2272,6 @@ sub toggle {
 			@body);
 }
 
-
-sub tableize {
-  my $array = shift;
-  return unless @$array;
-  my $rows    = int(sqrt(@$array));
-  my $columns = int(0.99+@$array/$rows);
-  my $html = qq(<table border="0">);
-  for (my $row=0;$row<$rows;$row++) {
-    $html .= "<tr>";
-    for (my $column=0;$column<$columns;$column++) {
-      $html .= "<td>" . $array->[$column*$rows + $row] . "</td>"
-	if defined($array->[$column*$rows + $row]);
-    }
-    $html .= "</tr>\n";
-  }
-  $html .= "</table>\n";
-}
-
 sub get_regionview_seg {
   my ($settings,$detail_start, $detail_end) = @_;
   my $regionview_length = $settings->{region_size};
@@ -2361,24 +2297,24 @@ sub split_labels {
 sub is_search {
   my $page_settings = shift;
   return 1 if param();
-  return 1 if     $CONFIG->setting('initial landmark') && !$page_settings->{name};
-  return 1 unless $CONFIG->setting('no autosearch');
+  return 1 if     $config->setting('initial landmark') && !$page_settings->{name};
+  return 1 unless $config->setting('no autosearch');
   return undef;
 }
 
 sub version_warning {
-  return if Bio::Graphics::Panel->can('api_version') &&
-	  Bio::Graphics::Panel->api_version >= $BIOGRAPHICS_VERSION;
+  return if bio::graphics::panel->can('api_version') &&
+	  bio::graphics::panel->api_version >= $biographics_version;
 
-    warn <<END;
-GBROWSE VERSION MISMATCH:
-GBrowse version $VERSION requires a compatible version of the Bio::Graphics library.
-You should either install BioPerl (the CVS live version) or reinstall GBrowse,
-which will patch Bio::Graphics to the latest version.
-END
+    warn <<end;
+gbrowse version mismatch:
+gbrowse version $version requires a compatible version of the bio::graphics library.
+you should either install bioperl (the cvs live version) or reinstall gbrowse,
+which will patch bio::graphics to the latest version.
+end
 }
 
-!NO!SUBS!
-close OUT or die "Can't close $file: $!";
-chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
-exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
+!no!subs!
+close out or die "can't close $file: $!";
+chmod 0755, $file or die "can't reset permissions for $file: $!\n";
+exec("$config{'eunicefix'} $file") if $config{'eunicefix'} ne ':';

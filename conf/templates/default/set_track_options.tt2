@@ -1,5 +1,11 @@
+<?xml version="1.0" encoding="[% config.tr('CHARSET') %]"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!-- FIXME is EN a language code above? -->
 <html>
 <body>
+
+<!-- Process header template defined in config file -->
+[% PROCESS 'header_wrapper.tt2' %]
 
 <h1 align='center'>[% config.tr('Settings',config.setting('description')) %]</h1>
 <form name='settings'>
@@ -83,6 +89,9 @@
     [% config.tr('REGION_TRACKS') %]
   </div>
 </form>
+
+<!-- Process footer template defined in config file -->
+[% PROCESS 'footer_wrapper.tt2' %]
 
 </body>
 </html>

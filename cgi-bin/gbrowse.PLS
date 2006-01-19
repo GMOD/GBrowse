@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.145 2006-01-18 21:48:00 mwz444 Exp $
+# $Id: gbrowse.PLS,v 1.146 2006-01-19 15:02:03 mwz444 Exp $
 
 use strict;
 use Bio::Graphics;
@@ -102,6 +102,7 @@ use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceD
 use constant MAIN_TEMPLATE        => 'main.tt2';
 use constant SET_TRACK_OPTIONS_TEMPLATE => 'set_track_options.tt2';
 use constant EDIT_UPLOAD_FILE_TEMPLATE  => 'edit_upload_file.tt2';
+use constant PLUGIN_CONFIGURE_TEMPLATE  => 'plugin_configure.tt2';
 
 # if true, turn on surrounding rectangles for debugging the image map
 use constant DEBUG          => 0;
@@ -1694,6 +1695,7 @@ sub edit_uploaded_file {
     config => $CONFIG,
     file   => $file,
     data   => $data,
+    action => $CONFIG->source() ? url() . "/" . $CONFIG->source . "/" : url(),
   };
 
   my $table = undef;
@@ -2219,34 +2221,41 @@ sub do_plugin_find {
 }
 
 sub do_plugin_configure {
-  my $plugin   = shift;
-  my $p = $PLUGINS->plugin($plugin) or return;
-  my $type = $p->type;
-  my @action_labels = ($CONFIG->tr('Cancel'),$CONFIG->tr('Configure_plugin'));
-  push @action_labels,$CONFIG->tr('Find') if $type eq 'finder';
-  push @action_labels,$CONFIG->tr('Go')   if ($type eq 'dumper' or $type eq 'filter');
-  my @buttons = map {submit(-name=>'plugin_action',-value=>$_)} @action_labels;
 
-  print h1($p->type eq 'finder' ? $CONFIG->tr('Find') : $CONFIG->tr('Configure'),$p->name);
-  my $config_html = $p->configure_form;
+    my $plugin = shift;
 
-  print start_multipart_form(),
-    $config_html ? (
-		    $config_html,p(),
-		    join ('&nbsp;',
-			  @buttons[0..@buttons-2],
-			  b($buttons[-1]),
-			  ),
-		    # This is an insurance policy in case user hits return in text field
-		    # in which case the plugin_action is not going to be defined
-		    hidden(-name=>'plugin_action',-value=>$action_labels[-1],-override=>1),
-		   )
-                 : ( p($CONFIG->tr('Boring_plugin')),
-		     b(submit($CONFIG->tr('Back_to_Browser')))
-		   ),
-     hidden(-name=>'plugin_config',-value=>1,-override=>1),
-     hidden('plugin'),
-     end_form();
+    my $p    = $PLUGINS->plugin($plugin) or return;
+    my $type = $p->type;
+
+    my @action_labels
+        = ( $CONFIG->tr('Cancel'), $CONFIG->tr('Configure_plugin') );
+    push @action_labels, $CONFIG->tr('Find') if $type eq 'finder';
+    push @action_labels, $CONFIG->tr('Go')
+        if ( $type eq 'dumper' or $type eq 'filter' );
+    my $title =
+          $p->type eq 'finder'
+        ? $CONFIG->tr('Find')
+        : $CONFIG->tr('Configure');
+    $title .= " " . $p->name;
+
+    my $config_html = $p->configure_form;
+
+    my $param = {
+        config        => $CONFIG,
+        title         => $title,
+        action_labels => \@action_labels,
+        action        => $CONFIG->source()
+        ? url() . "/" . $CONFIG->source . "/"
+        : url(),
+        config_html => $config_html,
+        plugin      => $plugin,
+    };
+
+    my $table = undef;
+    $CONFIG->template->process( PLUGIN_CONFIGURE_TEMPLATE, $param, \$table )
+        or warn $CONFIG->template->error();
+    print $table;
+
 }
 
 # invoke any finder plugins that define the auto_find() method

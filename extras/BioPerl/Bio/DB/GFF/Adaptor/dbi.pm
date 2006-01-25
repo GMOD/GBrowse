@@ -1,4 +1,4 @@
-# $Id: dbi.pm,v 1.1.2.2 2005-07-10 03:01:58 lstein Exp $
+# $Id: dbi.pm,v 1.1.2.2.2.1 2006-01-25 21:05:10 scottcain Exp $
 
 =head1 NAME
 
@@ -406,7 +406,7 @@ sub _feature_by_name {
     }
     $sth->finish;
   }
-  
+
   return $count;
 }
 

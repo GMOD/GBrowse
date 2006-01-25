@@ -1,4 +1,4 @@
-# $Id: RendererI.pm,v 1.1.2.3 2005-07-24 17:18:39 lstein Exp $
+# $Id: RendererI.pm,v 1.1.2.3.2.1 2006-01-25 21:05:11 scottcain Exp $
 
 =head1 NAME
 
@@ -36,10 +36,9 @@ the Bioperl mailing list.  Your participation is much appreciated.
 =head2 Reporting Bugs
 
 Report bugs to the Bioperl bug tracking system to help us keep track
-of the bugs and their resolution. Bug reports can be submitted via
-email or the web:
+of the bugs and their resolution. Bug reports can be submitted via the
+web:
 
-  bioperl-bugs@bioperl.org
   http://bugzilla.bioperl.org/
 
 =head1 AUTHOR

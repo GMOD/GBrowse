@@ -1,5 +1,6 @@
 1.65	* Improved support for negative and fractional coordinates, such as those used
 	  in some genetic maps.
+	* Added fixes to GFF.pm for GFF3 to BioPerl patches
 
 1.64	* Revamped state handling to use CGI::Session instead of cookies
 	* Added Russian and Polish language translations

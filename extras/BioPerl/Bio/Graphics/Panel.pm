@@ -1,6 +1,7 @@
 package Bio::Graphics::Panel;
 
 use strict;
+use threads::shared;
 use Bio::Graphics::Glyph::Factory;
 use Bio::Graphics::Feature;
 
@@ -15,10 +16,11 @@ use constant GRIDCOLOR    => 'lightcyan';
 use constant MISSING_TRACK_COLOR =>'gray';
 use constant EXTRA_RIGHT_PADDING => 30;
 
-my %COLORS;  # translation table for symbolic color names to RGB triple
-my $IMAGEMAP = 'bgmap00001';
+my %COLORS   : shared;  # translation table for symbolic color names to RGB triple
+my $IMAGEMAP : shared = 'bgmap00001';
+read_colors();
 
-sub api_version { 1.636 }
+sub api_version { 1.65 }
 
 # Create a new panel of a given width and height, and add lists of features
 # one by one
@@ -838,7 +840,7 @@ sub ticks {
   my ($length,$minwidth) = @_;
 
   my $img = $self->image_class;
-  $length   = $self->{length}       unless defined $length;
+  $length   = $self->{length}             unless defined $length;
   $minwidth = $img->gdSmallFont->width*7  unless defined $minwidth;
 
   my ($major,$minor);
@@ -858,7 +860,7 @@ sub ticks {
 
   # to make sure a major tick shows up somewhere in the first half
   #
-  $interval *= .5 if ($interval > 0.5*$length);
+  # $interval *= .5 if ($interval > 0.5*$length);
 
   return ($interval,$interval/10);
 }
@@ -1050,12 +1052,14 @@ sub make_title {
 
 sub read_colors {
   my $class = shift;
+  lock %COLORS;
   local ($/) = "\n";
   while (<DATA>) {
     chomp;
     last if /^__END__/;
     my ($name,$r,$g,$b) = split /\s+/;
-    $COLORS{$name} = [hex $r,hex $g,hex $b];
+    $COLORS{$name} = &share([]);
+    @{$COLORS{$name}} = (hex $r,hex $g, hex $b);
   }
 }
 
@@ -1518,6 +1522,10 @@ a set of tag/value pairs as follows:
                background of the image.  Will be 
                invoked I<after> drawing the grid.
 
+  -truecolor   Create a truecolor (24-bit) image.    false
+               Useful when working with the
+               "image" glyph.
+
   -image_class To create output in scalable vector
                graphics (SVG), optionally pass the image
                class parameter 'GD::SVG'. Defaults to
@@ -1661,6 +1669,8 @@ Currently, the following glyphs are available:
 
   group	      A group of related features connected by a dashed line.
 	      This is used internally by Panel.
+
+  image	      A pixmap image that will be layered on top of the graphic.
 
   heterogeneous_segments
               Like segments, but you can use the source field of the feature
@@ -2119,7 +2129,7 @@ different built-in values for changing the default sort order (which
 is by "left" position): "low_score" (or "high_score") will cause
 features to be sorted from lowest to highest score (or vice versa).
 "left" (or "default") and "right" values will cause features to be
-sorted by their position in the sequence.  "longer" (or "shorter")
+sorted by their position in the sequence.  "longest" (or "shortest")
 will cause the longest (or shortest) features to be sorted first, and
 "strand" will cause the features to be sorted by strand: "+1"
 (forward) then "0" (unknown, or NA) then "-1" (reverse).

@@ -440,16 +440,16 @@ table=> q{
  create table fdata (
     fid	                int not null  auto_increment,
     fref                varchar(100) not null,
-    fstart              int unsigned   not null,
-    fstop               int unsigned   not null,
+    fstart              int not null,
+    fstop               int not null,
     fbin                double(20,6)  not null,
     ftypeid             int not null,
     fscore              float,
     fstrand             enum('+','-'),
     fphase              enum('0','1','2'),
     gid                 int not null,
-    ftarget_start       int unsigned,
-    ftarget_stop        int unsigned,
+    ftarget_start       int,
+    ftarget_stop        int,
     primary key(fid),
     unique index(fref,fbin,fstart,fstop,ftypeid,gid),
     index(ftypeid),
@@ -720,7 +720,7 @@ sub insert_sequence {
   my($id,$offset,$seq) = @_;
   my $sth = $self->{_insert_sequence}
     ||= $self->dbh->prepare_delayed('replace into fdna values (?,?,?)');
-  $sth->execute($id,$offset,$seq) or die $sth->errstr;
+  $sth->execute($id,$offset,$seq) or $self->throw($sth->errstr);
 }
 
 

@@ -45,16 +45,20 @@ feature that contains no subfeatures, or a hierarchically nested object.
 
 Arguments are as follows:
 
+  -seq_id      the reference sequence
   -start       the start position of the feature
   -end         the stop position of the feature
   -stop        an alias for end
   -name        the feature name (returned by seqname())
   -type        the feature type (returned by primary_tag())
+  -primary_tag the same as -type
   -source      the source tag
+  -score       the feature score (for GFF compatibility)
   -desc        a description of the feature
   -segments    a list of subfeatures (see below)
   -subtype     the type to use when creating subfeatures
   -strand      the strand of the feature (one of -1, 0 or +1)
+  -phase       the phase of the feature (0..2)
   -id          an alias for -name
   -seqname     an alias for -name
   -primary_id  an alias for -name
@@ -148,6 +152,8 @@ use vars '@ISA';
 *exons       = *sub_SeqFeature = *merged_segments = \&segments;
 *method      = \&type;
 *source      = \&source_tag;
+*get_tag_values = \&each_tag_value;
+*add_SeqFeature = \&add_segment;
 
 # implement Bio::SeqI and FeatureHolderI interface
 
@@ -207,13 +213,13 @@ sub new {
   }
   $self->{name}    = $arg{-name}   || $arg{-seqname} || $arg{-display_id} 
     || $arg{-display_name} || $arg{-id} || $arg{-primary_id};
-  $self->{type}    = $arg{-type}   || 'feature';
+  $self->{type}    = $arg{-type}   || $arg{-primary_tag} || 'feature';
   $self->{subtype} = $arg{-subtype} if exists $arg{-subtype};
   $self->{source}  = $arg{-source} || $arg{-source_tag} || '';
   $self->{score}   = $arg{-score}   if exists $arg{-score};
   $self->{start}   = $arg{-start};
   $self->{stop}    = $arg{-end} || $arg{-stop};
-  $self->{ref}     = $arg{-ref};
+  $self->{ref}     = $arg{-seq_id} || $arg{-ref};
   for my $option (qw(class url seq phase desc attributes factory configurator)) {
     $self->{$option} = $arg{"-$option"} if exists $arg{"-$option"};
   }
@@ -259,7 +265,7 @@ sub add_segment {
 				-type   => $type,
 			        -name   => $name,
 			        -class  => $class);
-    } else {
+    } elsif (ref $seg) {
       push @segments,$seg;
     }
   }
@@ -450,7 +456,7 @@ sub desc {
 }
 
 sub attributes {
-  return;
+  shift->{attributes};
 }
 
 sub notes {

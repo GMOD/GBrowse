@@ -1,4 +1,4 @@
-# $Id: GFF.pm,v 1.2 2005-12-09 22:19:10 mwz444 Exp $
+# $Id: GFF.pm,v 1.3 2006-01-27 14:40:07 scottcain Exp $
 
 =head1 NAME
 
@@ -10,9 +10,7 @@ Bio::DB::GFF -- Storage and retrieval of sequence annotation data
 
   # Open the sequence database
   my $db      = Bio::DB::GFF->new( -adaptor => 'dbi::mysqlopt',
-                                   -dsn     => 'dbi:mysql:elegans',
-				   -fasta   => '/usr/local/fasta_files'
-				 );
+                                   -dsn     => 'dbi:mysql:elegans');
 
   # fetch a 1 megabase segment of sequence starting at landmark "ZK909"
   my $segment = $db->segment('ZK909', 1 => 1000000);
@@ -205,7 +203,7 @@ not stranded.
 
 For annotations that are linked to proteins, this field describes the
 phase of the annotation on the codons.  It is a number from 0 to 2, or
-"." for features that have no phase\.
+"." for features that have no phase.
 
 =item 9. group
 
@@ -420,11 +418,28 @@ specified during Bio::DB::GFF construction.  The adaptor encapsulates
 database-specific information such as the schema, user authentication
 and access methods.
 
-Currently there are two adaptors: 'dbi::mysql' and 'dbi::mysqlopt'.
-The former is an interface to a simple Mysql schema.  The latter is an
-optimized version of dbi::mysql which uses a binning scheme to
-accelerate range queries and the Bio::DB::Fasta module for rapid
-retrieval of sequences.  Note the double-colon between the words.
+There are currently five adaptors recommended for general use:
+
+  Adaptor Name             Description
+  ------------             -----------
+
+  memory                   A simple in-memory database suitable for testing
+                            and small data sets.
+
+  berkeleydb               An indexed file database based on the DB_File module,
+                            suitable for medium-sized read-only data sets.
+
+  dbi::mysql               An interface to a schema implemented in the Mysql
+                            relational database management system.
+
+  dbi::oracle              An interface to a schema implemented in the Oracle
+                            relational database management system.
+
+  dbi::pg                  An interface to a schema implemented in the PostgreSQL
+                            relational database management system.
+
+Check the Bio/DB/GFF/Adaptor directory and subdirectories for other,
+more specialized adaptors, as well as experimental ones.
 
 =item Aggregators
 
@@ -500,7 +515,7 @@ has some limitations.
 
 =item 1. GFF version string is required
 
-The GFF file b<must> contain the version comment:
+The GFF file B<must> contain the version comment:
 
  ##gff-version 3
 
@@ -1657,11 +1672,7 @@ is the same as initialize(-erase=E<gt>1).
 
 sub initialize {
   my $self = shift;
-  #$self->do_initialize(1) if @_ == 1 && $_[0];
-  #why was this line (^) here?  I can't see that it actually does anything
-  #one option would be to execute the line and return, but I don't know
-  #why you would want to do that either.
- 
+
   my ($erase,$meta) = rearrange(['ERASE'],@_);
   $meta ||= {};
 
@@ -1686,7 +1697,7 @@ sub initialize {
 =head2 load_gff
 
  Title   : load_gff
- Usage   : $db->load_gff($file|$directory|$filehandle);
+ Usage   : $db->load_gff($file|$directory|$filehandle [,$verbose]);
  Function: load GFF data into database
  Returns : count of records loaded
  Args    : a directory, a file, a list of files, 
@@ -1726,6 +1737,9 @@ web server can be loaded with an expression like this:
 
 =back
 
+The optional second argument, if true, will turn on verbose status
+reports that indicate the progress.
+
 If successful, the method will return the number of GFF lines
 successfully loaded.
 
@@ -1737,12 +1751,15 @@ old method name is also recognized.
 sub load_gff {
   my $self              = shift;
   my $file_or_directory = shift || '.';
+  my $verbose           = shift;
+
+  local $self->{__verbose__} = $verbose;
   return $self->do_load_gff($file_or_directory) if ref($file_or_directory) 
                                                    && tied *$file_or_directory;
 
   my $tied_stdin = tied(*STDIN);
   open SAVEIN,"<&STDIN" unless $tied_stdin;
-  local @ARGV = $self->setup_argv($file_or_directory,'gff') or return;  # to play tricks with reader
+  local @ARGV = $self->setup_argv($file_or_directory,'gff','gff3') or return;  # to play tricks with reader
   my $result = $self->do_load_gff('ARGV');
   open STDIN,"<&SAVEIN" unless $tied_stdin;  # restore STDIN
   return $result;
@@ -1798,6 +1815,9 @@ web server can be loaded with an expression like this:
 sub load_fasta {
   my $self              = shift;
   my $file_or_directory = shift || '.';
+  my $verbose           = shift;
+
+  local $self->{__verbose__} = $verbose;
   return $self->load_sequence($file_or_directory) if ref($file_or_directory)
                                                      && tied *$file_or_directory;
 
@@ -2202,7 +2222,7 @@ sub _preferred_groups_hash {
 
   # defaults
   if (!@preferred) {
-    @preferred = $self->{gff3_flag} ? qw(Target Parent ID) : qw(Target Sequence Transcript);
+    @preferred = $self->{load_data}{gff3_flag} ? qw(Target Parent ID) : qw(Target Sequence Transcript);
   }
 
   my %preferred = map {lc($_) => @preferred-$count++} @preferred;
@@ -2289,136 +2309,187 @@ about the arguments it accepts.
 
 =cut
 
-# load from <>
 sub do_load_gff {
   my $self      = shift;
   my $io_handle = shift;
 
-  local $self->{gff3_flag} = 0;
-  $self->setup_load();
+  local $self->{load_data} = {
+			      lineend => (-t STDERR && !$ENV{EMACS} ? "\r" : "\n"),
+			      count   => 0
+			     };
 
-  my $fasta_sequence_id;
+  $self->setup_load();
+  my $mode = 'gff';
 
   while (<$io_handle>) {
     chomp;
-    $self->{gff3_flag}++                      if /^\#\#\s*gff-version\s+3/;
-    $self->preferred_groups(split(/\s+/,$1))  if /^\#\#\s*group-tags?\s+(.+)/;
-    if (/^>(\S+)/) {  # uh oh, sequence coming
-      $fasta_sequence_id = $1;
-      last;
-    }
-    if (/^\#\#\s*sequence-region\s+(\S+)\s+(\d+)\s+(\d+)/i) { # header line
-      $self->load_gff_line(
-			   {
-			    ref    => $1,
-			    class  => 'Sequence',
-			    source => 'reference',
-			    method => 'Component',
-			    start  => $2,
-			    stop   => $3,
-			    score  => undef,
-			    strand => undef,
-			    phase  => undef,
-			    gclass => 'Sequence',
-			    gname  => $1,
-			    tstart => undef,
-			    tstop  => undef,
-			    attributes  => [],
-			   }
-			  );
-      next;
-    }
-
-    next if /^\#/;
-    my ($ref,$source,$method,$start,$stop,$score,$strand,$phase,$group) = split "\t";
-    next unless defined($ref) && defined($method) && defined($start) && defined($stop);
-    foreach (\$score,\$strand,\$phase) {
-      undef $$_ if $$_ eq '.';
-    }
-
-    my ($gclass,$gname,$tstart,$tstop,$attributes) = $self->split_group($group,$self->{gff3_flag});
-
-    # no standard way in the GFF file to denote the class of the reference sequence -- drat!
-    # so we invoke the factory to do it
-    my $class = $self->refclass($ref);
-
-    # call subclass to do the dirty work
-    if ($start > $stop) {
-      ($start,$stop) = ($stop,$start);
-      if ($strand eq '+') {
-	$strand = '-';
-      } elsif ($strand eq '-') {
-	$strand = '+';
+    if ($mode eq 'gff') {
+      if (/^>/) {    # Sequence coming
+	$mode = 'fasta';
+	$self->_load_sequence_start;
+	$self->_load_sequence_line($_);
+      } else {
+	$self->_load_gff_line($_);
       }
     }
-    # GFF2/3 transition stuff
-    $gclass = [$gclass] unless ref $gclass;
-    $gname  = [$gname]  unless ref $gname;
-    for (my $i=0; $i<@$gname;$i++) {
-      $self->load_gff_line({ref    => $ref,
-			    class  => $class,
-			    source => $source,
-			    method => $method,
-			    start  => $start,
-			    stop   => $stop,
-			    score  => $score,
-			    strand => $strand,
-			    phase  => $phase,
-			    gclass => $gclass->[$i],
-			    gname  => $gname->[$i],
-			    tstart => $tstart,
-			    tstop  => $tstop,
-			    attributes  => $attributes}
-			  );
+    elsif ($mode eq 'fasta') {
+      if (/^##|\t/) {    # Back to GFF mode
+	$self->_load_sequence_finish;
+	$mode = 'gff';
+	$self->_load_gff_line($_);
+      } else {
+	$self->_load_sequence_line($_);
+      }
     }
   }
+  $self->finish_load();
+  $self->_load_sequence_finish;
 
-  my $result = $self->finish_load();
-  $result += $self->load_sequence($io_handle,$fasta_sequence_id) 
-    if defined $fasta_sequence_id;
-  $result;
+  return $self->{load_data}{count};
+}
+
+sub _load_gff_line {
+  my $self = shift;
+  my $line = shift;
+  my $lineend = $self->{load_data}{lineend};
+
+  $self->{load_data}{gff3_flag}++           if $line =~ /^\#\#\s*gff-version\s+3/;
+  $self->preferred_groups(split(/\s+/,$1))  if $line =~ /^\#\#\s*group-tags?\s+(.+)/;
+
+  if ($line =~ /^\#\#\s*sequence-region\s+(\S+)\s+(\d+)\s+(\d+)/i) { # header line
+    $self->load_gff_line(
+			 {
+			  ref    => $1,
+			  class  => 'Sequence',
+			  source => 'reference',
+			  method => 'Component',
+			  start  => $2,
+			  stop   => $3,
+			  score  => undef,
+			  strand => undef,
+			  phase  => undef,
+			  gclass => 'Sequence',
+			  gname  => $1,
+			  tstart => undef,
+			  tstop  => undef,
+			  attributes  => [],
+			 }
+			);
+    return $self->{load_data}{count}++;
+  }
+
+  return if /^#/;
+
+  my ($ref,$source,$method,$start,$stop,$score,$strand,$phase,$group) = split "\t",$line;
+  return unless defined($ref) && defined($method) && defined($start) && defined($stop);
+  foreach (\$score,\$strand,\$phase) {
+    undef $$_ if $$_ eq '.';
+  }
+
+  print STDERR $self->{load_data}{count}," records$lineend" 
+    if $self->{__verbose__} && $self->{load_data}{count} % 1000 == 0;
+
+  my ($gclass,$gname,$tstart,$tstop,$attributes) = $self->split_group($group,$self->{load_data}{gff3_flag});
+
+  # no standard way in the GFF file to denote the class of the reference sequence -- drat!
+  # so we invoke the factory to do it
+  my $class = $self->refclass($ref);
+
+  # call subclass to do the dirty work
+  if ($start > $stop) {
+    ($start,$stop) = ($stop,$start);
+    if ($strand eq '+') {
+      $strand = '-';
+    } elsif ($strand eq '-') {
+      $strand = '+';
+    }
+  }
+  # GFF2/3 transition stuff
+  $gclass = [$gclass] unless ref $gclass;
+  $gname  = [$gname]  unless ref $gname;
+  for (my $i=0; $i<@$gname;$i++) {
+    $self->load_gff_line({ref    => $ref,
+			  class  => $class,
+			  source => $source,
+			  method => $method,
+			  start  => $start,
+			  stop   => $stop,
+			  score  => $score,
+			  strand => $strand,
+			  phase  => $phase,
+			  gclass => $gclass->[$i],
+			  gname  => $gname->[$i],
+			  tstart => $tstart,
+			  tstop  => $tstop,
+			  attributes  => $attributes}
+			);
+    $self->{load_data}{count}++;
+  }
+}
+
+sub _load_sequence_start {
+  my $self = shift;
+  my $ld   = $self->{load_data};
+  undef $ld->{id};
+  $ld->{offset} = 0;
+  $ld->{seq}    = '';
+}
+sub _load_sequence_finish {
+  my $self = shift;
+  my $ld   = $self->{load_data};
+  $self->insert_sequence($ld->{id},$ld->{offset},$ld->{seq}) if defined $ld->{id};
+}
+
+sub _load_sequence_line {
+  my $self = shift;
+  my $line = shift;
+  my $ld   = $self->{load_data};
+  my $lineend = $ld->{lineend};
+
+  if (/^>(\S+)/) {
+    $self->insert_sequence($ld->{id},$ld->{offset},$ld->{seq}) if defined $ld->{id};
+    $ld->{id}     = $1;
+    $ld->{offset} = 0;
+    $ld->{seq}    = '';
+    $ld->{count}++;
+    print STDERR $ld->{count}," sequences loaded$lineend" if $self->{__verbose__} && $ld->{count} % 1000 == 0;
+  } else {
+    $ld->{seq} .= $_;
+    $self->insert_sequence_chunk($ld->{id},\$ld->{offset},\$ld->{seq});
+  }
 
 }
 
 =head2 load_sequence
 
  Title   : load_sequence
- Usage   : $db->load_sequence($handle [,$id])
+ Usage   : $db->load_sequence($handle)
  Function: load a FASTA data stream
  Returns : number of sequences
- Args    : a filehandle and optionally the ID of
-  the first sequence in the stream.
+ Args    : a filehandle to the FASTA file
  Status  : protected
 
-You probably want to use load_fasta() instead.  The $id argument is a
-hack used to switch from GFF loading to FASTA loading when load_gff()
-discovers FASTA data hiding at the bottom of the GFF file (as Artemis
-does).
+You probably want to use load_fasta() instead.
 
 =cut
 
+# note - there is some repeated code here
 sub load_sequence {
   my $self = shift;
   my $io_handle = shift;
-  my $id        = shift;   # hack for GFF files that contain fasta data
 
-  # read fasta file(s) from ARGV
-  my ($seq,$offset,$loaded) = (undef,0,0);
+  local $self->{load_data} = {
+			      lineend => (-t STDERR && !$ENV{EMACS} ? "\r" : "\n"),
+			      count   => 0
+			     };
+
+  $self->_load_sequence_start;
   while (<$io_handle>) {
     chomp;
-    if (/^>(\S+)/) {
-      $self->insert_sequence($id,$offset,$seq) if $id;
-      $id     = $1;
-      $offset = 0;
-      $seq    = '';
-      $loaded++;
-    } else {
-      $seq .= $_;
-      $self->insert_sequence_chunk($id,\$offset,\$seq);
-    }
+    $self->_load_sequence_line($_);
   }
-  $self->insert_sequence($id,$offset,$seq) if $id;
-  $loaded+0;
+  $self->_load_sequence_finish;
+  return $self->{load_data}{count};
 }
 
 sub insert_sequence_chunk {
@@ -3419,6 +3490,30 @@ sub _split_gff2_group {
   return ($gclass,$gname,$tstart,$tstop,\@attributes);
 }
 
+
+=head2 gff3_name_munging
+
+ Title   : gff3_name_munging
+ Usage   : $db->gff3_name_munging($boolean)
+ Function: get/set gff3_name_munging flag
+ Returns : $current value of flag
+ Args    : new value of flag (optional)
+ Status  : utility
+
+If this is set to true (default false), then features identified in
+gff3 files with an ID in the format foo:bar will be parsed so that
+"foo" is the class and "bar" is the name.  This is mostly for backward
+compatibility with GFF2.
+
+=cut
+
+sub gff3_name_munging {
+  my $self = shift;
+  my $d = $self->{gff3_name_munging};
+  $self->{gff3_name_munging} = shift if @_;
+  $d;
+}
+
 =head2 _split_gff3_group
 
 This is called internally from split_group().
@@ -3442,7 +3537,7 @@ sub _split_gff3_group {
     if ($tag eq 'Parent') {
       my (@names,@classes);
       for (@values) {
-	my ($name,$class) = _gff3_name_munging($_,$dc);
+	my ($name,$class) = $self->gff3_name_munging ? _gff3_name_munging($_,$dc) : ($_,$dc);
 	push @names,$name;
 	push @classes,$class;
       }
@@ -3584,6 +3679,7 @@ L<Bio::DB::GFF::Feature>,
 L<Bio::DB::GFF::Adaptor::dbi::mysqlopt>,
 L<Bio::DB::GFF::Adaptor::dbi::oracle>,
 L<Bio::DB::GFF::Adaptor::memory>
+L<Bio::DB::GFF::Adaptor::berkeleydb>
 
 =head1 AUTHOR
 

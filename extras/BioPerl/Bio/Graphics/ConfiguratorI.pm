@@ -1,4 +1,4 @@
-# $Id: ConfiguratorI.pm,v 1.2 2005-12-09 22:19:11 mwz444 Exp $
+# $Id: ConfiguratorI.pm,v 1.3 2006-01-27 14:40:08 scottcain Exp $
 #
 # BioPerl module for Bio::Graphics::ConfiguratorI
 #
@@ -45,10 +45,9 @@ http://bioperl.org/MailList.shtml  - About the mailing lists
 =head2 Reporting Bugs
 
 Report bugs to the Bioperl bug tracking system to help us keep track
-of the bugs and their resolution. Bug reports can be submitted via
-email or the web:
+of the bugs and their resolution. Bug reports can be submitted via the
+web:
 
-  bioperl-bugs@bioperl.org
   http://bugzilla.bioperl.org/
 
 =head1 AUTHOR - Robert Hubley
@@ -59,7 +58,7 @@ Email rhubley@systemsbiology.org
 
 Paul Edlefsen, pedlefsen@systemsbiology.org
 Lincoln Stein, lstein@cshl.org
-Heikki Lehvaslaiho, heikki@ebi.ac.uk
+Heikki Lehvaslaiho, heikki-at-bioperl-dot-org
 
 =head1 APPENDIX
 

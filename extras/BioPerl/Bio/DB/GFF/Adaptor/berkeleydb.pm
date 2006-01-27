@@ -1,6 +1,6 @@
 package Bio::DB::GFF::Adaptor::berkeleydb;
 
-# $Id: berkeleydb.pm,v 1.2 2005-12-09 22:19:10 mwz444 Exp $
+# $Id: berkeleydb.pm,v 1.3 2006-01-27 14:40:07 scottcain Exp $
 
 =head1 NAME
 
@@ -19,7 +19,7 @@ Bio::DB::GFF::Adaptor::memory -- Bio::DB::GFF database adaptor for in-memory dat
 
   # do queries
   my $segment  = $db->segment(Chromosome => '1R');
-  my $subseg   = $segment->subseq(5000..6000);
+  my $subseg   = $segment->subseq(5000,6000);
   my @features = $subseg->features('gene');
 
 See L<Bio::DB::GFF> for other methods.
@@ -222,7 +222,7 @@ sub _open_databases {
   my $dsn  = $self->dsn;
   unless (-d $dsn) {  # directory does not exist
     $create or $self->throw("Directory $dsn does not exist and you did not specify the -create flag");
-    mkpath($dsn) or die "Couldn't create database directory $dsn: $!";
+    mkpath($dsn) or $self->throw("Couldn't create database directory $dsn: $!");
   }
 
   my %db;
@@ -624,7 +624,7 @@ sub _feature_by_name {
 
   my $count = 0;
   my $id    = -1;
-  my ($use_regexp, $use_glob);
+  my ($use_regexp, $use_glob,$using_alias_search);
 
   if ($name =~ /[*?]/) {  # uh oh regexp time
 	
@@ -656,13 +656,17 @@ sub _feature_by_name {
   }
 
   else {
-    @features = @{$self->retrieve_features(-table => 'name', -key => "$class:$name")};
+    @features = @{$self->retrieve_features(-table=>'name',   -key => "$class:$name")};
+  }
+
+  unless (@features) {
+    $using_alias_search++;
+    @features = @{$self->retrieve_features(-table=>'attr',   -key=>"Alias:$name")};
   }
 
   foreach my $feature (@features){
     $id++;
-    #next unless ($regexp && $feature->{gname} =~ /$name/i);
-    next unless $feature->{gclass} eq $class;
+    next unless $using_alias_search || $feature->{gclass} eq $class;
 
     if ($location) {
       next if $location->[0] ne $feature->{ref};

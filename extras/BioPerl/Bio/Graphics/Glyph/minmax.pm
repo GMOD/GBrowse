@@ -1,5 +1,5 @@
 package Bio::Graphics::Glyph::minmax;
-# $Id: minmax.pm,v 1.2 2005-12-09 22:19:11 mwz444 Exp $
+# $Id: minmax.pm,v 1.3 2006-01-27 14:40:09 scottcain Exp $
 
 use strict;
 use Bio::Graphics::Glyph::segments;
@@ -44,7 +44,7 @@ Bio::Graphics::Glyph::minmax - The minmax glyph
 
 =head1 DESCRIPTION
 
-This glyph is the common base class for
+This glyph is a common base class for
 L<Bio::Graphics::Glyph::graded_segments> and
 L<Bio::Graphics::Glyph::xyplot>.  It adds an internal method named
 minmax() for calculating the upper and lower boundaries of scored
@@ -59,7 +59,7 @@ Please report them.
 L<Bio::Graphics::Panel>,
 L<Bio::Graphics::Track>,
 L<Bio::Graphics::Glyph::graded_segments>,
-L<Bio::Graphics::Glyph::xyplog>,
+L<Bio::Graphics::Glyph::xyplot>,
 
 =head1 AUTHOR
 

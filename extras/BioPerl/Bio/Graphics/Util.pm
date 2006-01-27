@@ -1,6 +1,6 @@
 package Bio::Graphics::Util;
 
-# $Id: Util.pm,v 1.2 2005-12-09 22:19:11 mwz444 Exp $
+# $Id: Util.pm,v 1.3 2006-01-27 14:40:08 scottcain Exp $
 # Non object-oriented utilities used here-and-there in Bio::Graphics modules
 
 use strict;

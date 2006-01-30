@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::image;
 
-# $Id: image.pm,v 1.1.2.2 2005-11-08 22:59:08 lstein Exp $
+# $Id: image.pm,v 1.1.2.3 2006-01-30 19:44:58 lstein Exp $
 
 use strict;
 use GD;
@@ -64,8 +64,13 @@ sub image_path {
   my $basename = $self->option('image');
 
   # can't get it from callback, so try looking for an 'image' attribute
-  if (!$basename && $feature->can('has_tag') && $feature->has_tag('image')) {
-    ($basename)  = $feature->get_tag_values('image');
+  if (!$basename) {
+    if ($feature->can('attributes')) {
+      ($basename) = $feature->attributes('image');
+    }
+    elsif ($feature->can('has_tag') && $feature->has_tag('image')) {
+      ($basename)  = $feature->get_tag_values('image');
+    }
   }
 
   return unless $basename;

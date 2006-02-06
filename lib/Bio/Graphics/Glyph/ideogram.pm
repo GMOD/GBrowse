@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.8 2006-01-06 19:54:17 mwz444 Exp $
+# $Id: ideogram.pm,v 1.9 2006-02-06 19:45:04 sheldon_mckay Exp $
 # Glyph to draw chromosome ideograms
 
 use strict qw/vars refs/;
@@ -12,159 +12,236 @@ use GD;
 
 sub draw_component {
     my $self = shift;
-    my $gd = shift;
-    my ($left,$top) = @_;
+    my $gd   = shift;
+    my ( $left, $top ) = @_;
 
     my $arcradius = $self->option('arcradius') || 7;
 
     my $feat = $self->feature;
-    my($x1,$y1,$x2,$y2) = $self->bounds(@_);
-   
-    # make sure arc radius does not exceed the band width
-    my $fwidth = abs($x2 - $x1);
-    $arcradius = $fwidth if $arcradius > $fwidth;
+    my ( $x1, $y1, $x2, $y2 ) = $self->bounds(@_);
 
     my $stain = $feat->attributes('stain');
-  
-    # Some genome sequences don't contain substantial telomere sequence (i.e. Arabidopsis)
-    # We can suggest their presence at the tips of the chromosomes by setting fake_telomeres = 1
-    # in the configuration file, resulting in the tips of the chromosome being painted black.
+
+# Some genome sequences don't contain substantial telomere sequence (i.e. Arabidopsis)
+# We can suggest their presence at the tips of the chromosomes by setting fake_telomeres = 1
+# in the configuration file, resulting in the tips of the chromosome being painted black.
     my $fake_telomeres = $self->option('fake_telomeres') || 0;
-      
-    my ($bgcolor_index)  =  $self->option('bgcolor') =~ /$stain:(\S+)/;
+
+    my ($bgcolor_index) = $self->option('bgcolor') =~ /$stain:(\S+)/;
     $bgcolor_index ||= 'white';
-    my $black = $gd->colorAllocate(0,0,0);
+    my $black = $gd->colorAllocate( 0, 0, 0 );
 
     # a default centromere color
-    my $cm_color = $self->{cm_color} = $gd->colorAllocate(102,102,153);  
-    my $bgcolor  = $self->factory->translate_color($bgcolor_index);
-    my $fgcolor  = $self->fgcolor;
+    my $cm_color = $self->{cm_color} = $gd->colorAllocate( 102, 102, 153 );
+    my $bgcolor = $self->factory->translate_color($bgcolor_index);
+    my $fgcolor = $self->fgcolor;
 
-    if ($feat->method =~ /cytoband/) {
+    if ( $feat->method =~ /cytoband/ ) {
 
         # are we at the end of the chromosome?
-	if ($feat->start <= 1) {
-	    # left telomere
-	    my $status = $self->panel->flip ? 0 : 1;
-	    $bgcolor = $black if $fake_telomeres;
-	    $self->draw_telomere($gd,$x1,$y1,$x2,$y2,$bgcolor,$fgcolor,$arcradius,$status);
-	}
-	elsif ($feat->stop >= $self->panel->end-1000) {
-	    # right telomere
-	    my $status = $self->panel->flip ? 1 : 0;
-	    $bgcolor = $black if $fake_telomeres;
-	    $self->draw_telomere($gd,$x1,$y1,$x2,$y2,$bgcolor,$fgcolor,$arcradius,$status);
-	}
+        if ( $feat->start <= 1 ) {
 
-	# or a regular band?
-	else {
-	    $bgcolor = 'var' if $bgcolor_index eq 'var';
-	    $self->draw_cytoband($gd,$x1,$y1,$x2,$y2,$bgcolor,$fgcolor);
-	}
+            # left telomere
+            my $status = $self->panel->flip ? 0 : 1;
+            $bgcolor = $black if $fake_telomeres;
+            $self->draw_telomere(
+                $gd,      $x1,      $y1,        $x2, $y2,
+                $bgcolor, $fgcolor, $arcradius, $status
+            );
+        }
+        elsif ( $feat->stop >= $self->panel->end - 1000 ) {
+
+            # right telomere
+            my $status = $self->panel->flip ? 1 : 0;
+            $bgcolor = $black if $fake_telomeres;
+            $self->draw_telomere(
+                $gd,      $x1,      $y1,        $x2, $y2,
+                $bgcolor, $fgcolor, $arcradius, $status
+            );
+        }
+
+        # or a stalk?
+        elsif ( $stain eq 'stalk' ) {
+            $self->draw_stalk( $gd, $x1, $y1, $x2, $y2, $bgcolor, $fgcolor );
+        }
+
+        # or a mouse-style chromosome tip?
+        elsif ( $stain eq 'tip' ) {
+            $self->draw_tip( $gd, $x1, $y1, $x2, $y2, $bgcolor, $fgcolor );
+        }
+
+        # or a regular band?
+        else {
+            my $svg = 1 if $self->panel->image_class =~ /SVG/;
+
+            if ( $bgcolor_index =~ /var/ && $svg ) {
+                $bgcolor = $self->{cm_color};
+            }
+            elsif ( $bgcolor_index =~ /var/ ) {
+                my $var_tile = $self->create_tile('left');
+                $gd->setTile($var_tile);
+                $self->draw_cytoband( $gd, $x1, $y1, $x2, $y2, gdTiled,
+                    $fgcolor );
+            }
+            else {
+                $self->draw_cytoband( $gd, $x1, $y1, $x2, $y2, $bgcolor,
+                    $fgcolor );
+            }
+        }
     }
 
     # or a centromere?
-    elsif ($feat->method eq 'centromere') {
-	# patterns not yet supported in GD::SVG?
-	if ($self->panel->{image_class} ne 'GD') {
-	    $self->draw_centromere($gd,$x1,$y1,$x2,$y2,$cm_color,$fgcolor);
-	}
-	else {
-	    my $tile = $self->create_tile('right');
-	    $gd->setTile($tile);
-	    $self->draw_centromere($gd,$x1,$y1,$x2,$y2,gdTiled,$fgcolor);
-	}
+    elsif ( $feat->method eq 'centromere' ) {
+
+        # patterns not yet supported in GD::SVG
+        if ( $self->panel->image_class =~ /SVG/ ) {
+            $self->draw_centromere( $gd, $x1, $y1, $x2, $y2, $cm_color,
+                $fgcolor );
+        }
+        else {
+            my $tile = $self->create_tile('right');
+            $gd->setTile($tile);
+            $self->draw_centromere( $gd, $x1, $y1, $x2, $y2, gdTiled,
+                $fgcolor );
+        }
     }
 }
 
 sub draw_cytoband {
     my $self = shift;
-    my ($gd,$x1,$y1,$x2,$y2,$bgcolor,$fgcolor) = @_;
-    
-    my $svg = 1 if $self->panel->{image_class} ne 'GD';
+    my ( $gd, $x1, $y1, $x2, $y2, $bgcolor, $fgcolor, $tip ) = @_;
 
-    if ($bgcolor eq 'var' && $svg) {
-	$_[5] = $self->{cm_color};
-    }
-    elsif ($bgcolor eq 'var' && !$svg) {
-	my $var_tile = $self->create_tile('left');
-	$gd->setTile($var_tile);
-	$_[5] = gdTiled;
-	$self->filled_box(@_);
-	return 1;
-    }
+    my $svg = 1 if $self->panel->image_class =~ /SVG/;
 
     # draw the filled box
     $self->filled_box(@_);
 
-    return 1 if $svg;
+    return 1 if $svg || $tip;
 
-    $gd->line($x1,$y1+1,$x1,$y2-1,$bgcolor);
-    $gd->line($x2,$y1+1,$x2,$y2-1,$bgcolor);
+    $gd->line( $x1, $y1 + 1, $x1, $y2 - 1, $bgcolor );
+    $gd->line( $x2, $y1 + 1, $x2, $y2 - 1, $bgcolor );
+}
+
+sub draw_tip {
+    my $self = shift;
+    $self->draw_cytoband( @_, 1 );
 }
 
 sub draw_centromere {
-    my ($self,$gd,$x1,$y1,$x2,$y2,$bgcolor,$fgcolor) = @_;
+    my ( $self, $gd, $x1, $y1, $x2, $y2, $bgcolor, $fgcolor ) = @_;
 
     # draw a sort of hour-glass shape to represent the centromere
     my $poly = GD::Polygon->new;
-    $poly->addPt($x1,$y1);
-    $poly->addPt($x1,$y2);
-    $poly->addPt($x2,$y1);
-    $poly->addPt($x2,$y2);
+    $poly->addPt( $x1, $y1 );
+    $poly->addPt( $x1, $y2 );
+    $poly->addPt( $x2, $y1 );
+    $poly->addPt( $x2, $y2 );
 
-    $gd->filledPolygon($poly,$bgcolor); # filled
-    $gd->polygon($poly,$fgcolor);       # outline
-    $gd->line($x2-1,$y1+1,$x2-1,$y2-1,$fgcolor);
+    $gd->filledPolygon( $poly, $bgcolor );    # filled
+    $gd->line( $x2 - 1, $y1 + 1, $x2 - 1, $y2 - 1, $fgcolor );
+    $gd->polygon( $poly, $fgcolor );          # outline
 }
 
 sub draw_telomere {
-    my ($self,$gd,$x1,$y1,$x2,$y2,$bgcolor,$fgcolor,$arcradius,$state) = @_;
-    my $arcsize = abs($y1 - $y2);
-    my ($x,$y);
+    my ($self, $gd,      $x1,      $y1,        $x2,
+        $y2,   $bgcolor, $fgcolor, $arcradius, $state
+        )
+        = @_;
+    my $arcsize = abs( $y1 - $y2 );
 
-    if ($state == 1) { # left telomere
-	$x  = $x1 + $arcradius;
-	$y  = $y1 + $arcsize/2;
-        $self->draw_cytoband($gd,$x,$y1,$x2,$y2,$bgcolor,$fgcolor);
-	$gd->filledArc($x,$y,$arcradius*2,$arcsize,90,270,$bgcolor);
-	$gd->arc($x,$y,$arcradius*2,$arcsize,90,270,$fgcolor);
+    my $bwidth = $x2 - $x1;
+
+    my ( $x, $y );
+    my $outside_arc = 2 * $arcradius;
+
+    if ( $state == 1 ) {    # left telomere
+        $x = $x1 + $arcradius;
+        $y = $y1 + $arcsize / 2;
+
+        # move the telomere a bit if the terminal band is too narrow
+        if ( $bwidth < $arcradius ) {
+            $x -= $arcradius - $bwidth;
+        }
+
+        # gdArc makes for a slightly smoother telomere arc
+        $self->draw_cytoband( $gd, $x, $y1, $x2, $y2, $bgcolor, $fgcolor );
+        $gd->filledArc( $x, $y, $arcradius * 2,
+            $arcsize, 90, 270, $fgcolor, gdArc );
+        $gd->filledArc(
+            $x, $y,
+            $arcradius * 2 - 1.5,
+            $arcsize - 3,
+            90, 270, $bgcolor, gdArc
+        );
     }
-    else {             # right telomere
-	$x  = $x2 - $arcradius;
-        $y  = $y1 + $arcsize/2;
-        $self->draw_cytoband($gd,$x1,$y1,$x,$y2,$bgcolor,$fgcolor);
-	$gd->filledArc($x,$y,$arcradius*2,$arcsize,270,90,$bgcolor);
-	$gd->arc($x,$y,$arcradius*2,$arcsize,270,90,$fgcolor);
+    else {    # right telomere
+        $x = $x2 - $arcradius;
+        $y = $y1 + $arcsize / 2;
+
+        if ( $bwidth < $arcradius ) {
+            $x += $arcradius - $bwidth;
+        }
+
+        $self->draw_cytoband( $gd, $x1, $y1, $x, $y2, $bgcolor, $fgcolor );
+        $gd->filledArc( $x, $y, $arcradius * 2,
+            $arcsize, 270, 90, $fgcolor, gdArc );
+        $gd->filledArc(
+            $x, $y,
+            $arcradius * 2 - 1.5,
+            $arcsize - 3,
+            270, 90, $bgcolor, gdArc
+        );
     }
-    
+
     # GD::SVG hack :(
-    if ($self->panel->{image_class} ne 'GD') {
-	$self->draw_cytoband($gd,$x-1,$y1+2,$x+1,$y2-2,$bgcolor,$bgcolor);
+    if ( $self->panel->image_class =~ /SVG/ ) {
+        $self->draw_cytoband( $gd, $x - 1, $y1 + 2, $x + 1, $y2 - 2, $bgcolor,
+            $bgcolor );
     }
 }
 
-sub create_tile {
+# for acrocentric stalk structure, draw a narrower cytoband
+sub draw_stalk {
     my $self = shift;
+    my ( $gd, $x1, $y1, $x2, $y2, $bgcolor, $fgcolor ) = @_;
+
+    my $height = $self->height;
+    my $shave_off = $height > 10 ? int( $height / 10 + 0.5 ) : 2;
+    $_[2] += $shave_off;
+    $_[4] -= $shave_off;
+
+    $gd->line( $x1,     $y1,   $x1,     $_[2], $fgcolor );
+    $gd->line( $x1,     $_[4], $x1,     $y2,   $fgcolor );
+    $gd->line( $x2 - 1, $y1,   $x2 - 1, $_[2], $fgcolor );
+    $gd->line( $x2 - 1, $_[4], $x2 - 1, $y2,   $fgcolor );
+
+    $self->draw_cytoband(@_);
+}
+
+sub create_tile {
+    my $self      = shift;
     my $direction = shift;
 
     # Prepare tile to use for filling an area
-    my $tile = new GD::Image(5,5);
-    $tile->fill(1,1,$tile->colorAllocate(255,255,255));
-    if ($direction eq 'right') {
-	$tile->line(0,0,5,5,$tile->colorAllocate(0,0,0));
+    my $tile;
+    if ( $direction eq 'right' ) {
+        $tile = GD::Image->new( 3, 3 );
+        $tile->fill( 1, 1, $tile->colorAllocate( 255, 255, 255 ) );
+        $tile->line( 0, 0, 3, 3, $tile->colorAllocate( 0, 0, 0 ) );
     }
-    elsif ($direction eq 'left') {
-	$tile->line(5,0,0,5,$tile->colorAllocate(0,0,0));
+    elsif ( $direction eq 'left' ) {
+        $tile = GD::Image->new( 5, 5 );
+        $tile->fill( 1, 1, $tile->colorAllocate( 255, 255, 255 ) );
+        $tile->line( 5, 0, 0, 5, $tile->colorAllocate( 0, 0, 0 ) );
     }
 
     return $tile;
 }
 
-# Disable bumping entirely, since it messes up the ideogram 
-sub bump {return 0;}
+# Disable bumping entirely, since it messes up the ideogram
+sub bump { return 0; }
 
-sub label{return 1;}
+sub label { return 1; }
 
 1;
 

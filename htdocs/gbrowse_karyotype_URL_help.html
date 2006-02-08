@@ -1,0 +1,645 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html>
+<head>
+  <title>C. elegans (current release)</title>
+  <link rel="stylesheet" href="tutorial/tutorial.css" type="text/css">
+</head>
+
+<body>
+  <br>
+
+  <h2>gbrowse_karyotype - Annotation File Format</h2>
+
+  <p>Annotation files must be <b>text only</b>. Here is an example:</p>
+
+  <blockquote>
+    <pre>
+## Default display options for gene ##
+[gene]
+glyph   = triangle
+bgcolor = red
+fgcolor = red
+height  = 7
+bump    = 1
+
+[mutation]
+glyph   = lightning
+bgcolor = yellow
+fgcolor = black
+height  = 15
+
+# chromosome 1
+reference=1
+gene gene1 20000001..20006000 "Carbonic Anhydrase gene" 
+gene gene2 20066001..20069000 "ADH gene"
+gene gene3 50000001..50006000 bgcolor=blue;fgcolor=blue;glyph=dot;description="Unknown gene"
+
+# chromosome 5
+reference=5
+gene gene4 20000001..20006000 bgcolor=white
+gene gene5 30006001..30009000
+gene gene6 80000001..80006000
+mutation allele2 30006001..30009000 "cosmic radiation damage"
+   </pre>
+  </blockquote>
+
+  <h3>The Reference Line</h3>
+
+  <p>The annotation file must have at least one <b>reference = <i>landmark name</i></b>
+  line. This line tells the browser what coordinate system you are using.&nbsp; This
+  would typically be a chromosome name.<br></p>
+
+  <p>The word "reference" must be all lower-case. There may or may not be whitespace
+  before and after the "=" sign. Examples:</p>
+
+  <blockquote>
+    <pre>reference = 1</pre>
+  </blockquote>
+
+  <p>You may have several reference lines in the file. Each reference landmark will apply
+  to all data lines located beneath it until the next reference line occurs.</p>
+
+  <h3>The Data Lines</h3>
+
+  <p>Each annotation occupies one or more lines. It contains three to four columns,
+  delimited by tabs or spaces:</p>
+
+  
+    <b>Column 1, the feature type</b>
+
+    The first column is the feature type. Any description is valid, but a short word,
+    like "knockout" is better than a long one, like "Transposon-mediated knockout". Later
+    on you can provide a long descriptive name in the formatting key if you desire. If
+    the feature type contains white space, you must surround it by double or single
+    quotes.
+
+    <b>Column 2, the feature name</b>
+
+    This is the name of the feature. The name will be used as a mousover label unless
+    there is a comment (see below).&nbsp; If the name contains white space, you must
+    surround it by white space. Use empty quotes ("") if there is no name to
+    display.
+
+    <b>Column 3, the feature position</b>
+
+    
+      The third column contains one or more ranges occupied by the feature. A range has a
+      start and a stop, and is expressed either as "start..stop" or "start-stop". Use
+      whichever form you prefer. You can express a feature that occupies a discontinuous
+      set of ranges, such as an mRNA aligned to the genome, by providing a list of ranges
+      separated by commas. Example:
+
+      <blockquote>
+        <pre>1..10,49..80,110..200</pre>
+      </blockquote>
+      There should be no spaces before or after the commas. If there are,
+      enclose the entire range in quotes.&nbsp; All ranges uses the coordinate system of
+      the most recently declared reference landmark.
+    
+
+    <b>Column 4, Description</b> [optional]
+
+    This is the description column.&nbsp; If a description exists, it will be used as
+    a mouseover label for the feature, taking precedence over the feature name from
+    column 2.&nbsp; Descriptions that contain whitespace should be wrapped in
+    quotes.&nbsp; The description column can also be used to specify
+    <i>attribute=value</i> information to override track display options for an
+    individual feature.&nbsp; For example, if the features in a track are normally
+    displayed as triangles, adding glyph=diamond to column 4 will draw a diamond in place
+    of a triangle for just this one feature.&nbsp; Multiple attribute=value pairs should
+    be delimited with semicolons.&nbsp; attribute=value pairs and text descriptions can
+    be mixed by prepending a "decription=" to the text.&nbsp; For example:
+
+    <br>
+  
+
+  <blockquote>
+    <pre>
+      gene gene1 10001..16000 bgcolor=white;glyph=dot;description="a very special gene"
+   </pre>
+  </blockquote>
+
+    <br>
+
+    This feature works only for track drawing options that are specified in the
+    configuration stanza (see below). Supported options are <i>bgcolor, fgcolor, linewidth, 
+    glyph, orient</i> and <i>height</i>
+    
+  
+
+  <h3>Comments</h3>
+
+  <p>You can place a comment in the annotation file by preceding it with a pound sign
+  (#). Everything following the pound sign is ignored:</p>
+
+  <blockquote>
+    <pre>
+# this is a comment<br>
+</pre>
+  </blockquote>
+  <hr>
+  <br>
+
+  <h2>Customizing the Display</h2>
+
+  <p>The browser will generate a reasonable display of your annotations by default.
+  However, you can customize the appearance extensively by including one or more
+  configuration sections in the annotation file.</p>
+
+  <p>Here is an example configuration section. It can appear at the top of the file, at
+  the bottom, or interspersed among data sections:</p>
+
+  <blockquote>
+    <pre>
+[gene]
+glyph   = triangle
+orient  = E
+bgcolor = red
+fgcolor = red
+height  = 7
+bump    = 1
+</pre>
+  </blockquote>
+
+  <p>The configuration section is divided into a set of sections, each one labeled with a
+  <b>[section title]</b>. The <b>[general]</b> section specifies global options for the
+  entire image. Other sections apply to particular feature types.<br></p>
+
+  <p>Inside each section is a series of <b><i>name</i>=<i>value</i></b> pairs, where the
+  name is the name of an option to set. You can put whitespace around the = sign to make
+  it more readable, or even use a colon (:) instead if you prefer. The following option
+  names are recognized:</p>
+
+  <table border="1">
+    <tbody>
+      <tr>
+        <th>Option</th>
+
+        <th>Value</th>
+
+        <th>Example</th>
+      </tr>
+
+      <tr>
+        <th>bgcolor</th>
+
+        <td>Background color of each element</td>
+
+        <td>blue</td>
+      </tr>
+
+      <tr>
+        <th>bump</th>
+
+        <td>Prevent features from colliding (0=no, 1=yes; default 1)</td>
+
+        <td>1</td>
+      </tr>
+
+      <tr>
+        <th>fgcolor</th>
+
+        <td>Foreground color of each element</td>
+
+        <td>yellow</td>
+      </tr>
+
+      <tr>
+        <th>glyph</th>
+
+        <td>Style of each graphical element (see list below)</td>
+
+        <td>triangle</td>
+      </tr>
+
+      <tr>
+        <th>width</th>
+
+        <td>Width of each graphical element (pixels)</td>
+
+        <td>10</td>
+      </tr>
+
+      <tr>
+        <th>linewidth</th>
+
+        <td>Width of lines (pixels)</td>
+
+        <td>1</td>
+      </tr>
+
+      <tr>
+        <th>orient</th>
+
+        <td>Direction in which triangle and lightning glyphs point (N, S, E, W; default
+        E)</td>
+
+        <td>E<br></td>
+      </tr>
+
+      <tr>
+        <th>point</th>
+
+        <td>Place an unscaled glyph in the center of the range. (0=no, 1=yes; default
+        1)</td>
+
+        <td>1</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>The bump option is the most important option for controlling the look of the image.
+  If set to false (the number 0), then the features are allowed to overlap. If set to
+  true (the number 1), then the features will movehorizontally to avoid colliding. If not
+  specified, bump is turned on if the number of any given type of sequence feature is
+  greater than 50.</p>
+
+  <h3>Colors</h3>
+
+  <p>Colors are English-language color names or Web-style #RRGGBB colors (see any book on
+  HTML for an explanation). The following colors are recognized:</p>
+
+  <table border="1">
+    <tbody>
+      <tr>
+        <td>white</td>
+
+        <td>coral</td>
+
+        <td>darkslateblue</td>
+
+        <td>green</td>
+
+        <td>lightpink</td>
+
+        <td>mediumslateblue</td>
+
+        <td>paleturquoise</td>
+
+        <td>sienna</td>
+      </tr>
+
+      <tr>
+        <td>black</td>
+
+        <td>cornflowerblue</td>
+
+        <td>darkslategray</td>
+
+        <td>greenyellow</td>
+
+        <td>lightsalmon</td>
+
+        <td>mediumspringgreen</td>
+
+        <td>palevioletred</td>
+
+        <td>silver</td>
+      </tr>
+
+      <tr>
+        <td>aliceblue</td>
+
+        <td>cornsilk</td>
+
+        <td>darkturquoise</td>
+
+        <td>honeydew</td>
+
+        <td>lightseagreen</td>
+
+        <td>mediumturquoise</td>
+
+        <td>papayawhip</td>
+
+        <td>skyblue</td>
+      </tr>
+
+      <tr>
+        <td>antiquewhite</td>
+
+        <td>crimson</td>
+
+        <td>darkviolet</td>
+
+        <td>hotpink</td>
+
+        <td>lightskyblue</td>
+
+        <td>mediumvioletred</td>
+
+        <td>peachpuff</td>
+
+        <td>slateblue</td>
+      </tr>
+
+      <tr>
+        <td>aqua</td>
+
+        <td>cyan</td>
+
+        <td>deeppink</td>
+
+        <td>indianred</td>
+
+        <td>lightslategray</td>
+
+        <td>midnightblue</td>
+
+        <td>peru</td>
+
+        <td>slategray</td>
+      </tr>
+
+      <tr>
+        <td>aquamarine</td>
+
+        <td>darkblue</td>
+
+        <td>deepskyblue</td>
+
+        <td>indigo</td>
+
+        <td>lightsteelblue</td>
+
+        <td>mintcream</td>
+
+        <td>pink</td>
+
+        <td>snow</td>
+      </tr>
+
+      <tr>
+        <td>azure</td>
+
+        <td>darkcyan</td>
+
+        <td>dimgray</td>
+
+        <td>ivory</td>
+
+        <td>lightyellow</td>
+
+        <td>mistyrose</td>
+
+        <td>plum</td>
+
+        <td>springgreen</td>
+      </tr>
+
+      <tr>
+        <td>beige</td>
+
+        <td>darkgoldenrod</td>
+
+        <td>dodgerblue</td>
+
+        <td>khaki</td>
+
+        <td>lime</td>
+
+        <td>moccasin</td>
+
+        <td>powderblue</td>
+
+        <td>steelblue</td>
+      </tr>
+
+      <tr>
+        <td>bisque</td>
+
+        <td>darkgray</td>
+
+        <td>firebrick</td>
+
+        <td>lavender</td>
+
+        <td>limegreen</td>
+
+        <td>navajowhite</td>
+
+        <td>purple</td>
+
+        <td>tan</td>
+      </tr>
+
+      <tr>
+        <td>blanchedalmond</td>
+
+        <td>darkgreen</td>
+
+        <td>floralwhite</td>
+
+        <td>lavenderblush</td>
+
+        <td>linen</td>
+
+        <td>navy</td>
+
+        <td>red</td>
+
+        <td>teal</td>
+      </tr>
+
+      <tr>
+        <td>blue</td>
+
+        <td>darkkhaki</td>
+
+        <td>forestgreen</td>
+
+        <td>lawngreen</td>
+
+        <td>magenta</td>
+
+        <td>oldlace</td>
+
+        <td>rosybrown</td>
+
+        <td>thistle</td>
+      </tr>
+
+      <tr>
+        <td>blueviolet</td>
+
+        <td>darkmagenta</td>
+
+        <td>fuchsia</td>
+
+        <td>lemonchiffon</td>
+
+        <td>maroon</td>
+
+        <td>olive</td>
+
+        <td>royalblue</td>
+
+        <td>tomato</td>
+      </tr>
+
+      <tr>
+        <td>brown</td>
+
+        <td>darkolivegreen</td>
+
+        <td>gainsboro</td>
+
+        <td>lightblue</td>
+
+        <td>mediumaquamarine</td>
+
+        <td>olivedrab</td>
+
+        <td>saddlebrown</td>
+
+        <td>turquoise</td>
+      </tr>
+
+      <tr>
+        <td>burlywood</td>
+
+        <td>darkorange</td>
+
+        <td>ghostwhite</td>
+
+        <td>lightcoral</td>
+
+        <td>mediumblue</td>
+
+        <td>orange</td>
+
+        <td>salmon</td>
+
+        <td>violet</td>
+      </tr>
+
+      <tr>
+        <td>cadetblue</td>
+
+        <td>darkorchid</td>
+
+        <td>gold</td>
+
+        <td>lightcyan</td>
+
+        <td>mediumorchid</td>
+
+        <td>orangered</td>
+
+        <td>sandybrown</td>
+
+        <td>wheat</td>
+      </tr>
+
+      <tr>
+        <td>chartreuse</td>
+
+        <td>darkred</td>
+
+        <td>goldenrod</td>
+
+        <td>lightgoldenrodyellow</td>
+
+        <td>mediumpurple</td>
+
+        <td>orchid</td>
+
+        <td>seagreen</td>
+
+        <td>whitesmoke</td>
+      </tr>
+
+      <tr>
+        <td>chocolate</td>
+
+        <td>darksalmon</td>
+
+        <td>gray</td>
+
+        <td>lightgreen</td>
+
+        <td>mediumseagreen</td>
+
+        <td>palegoldenrod</td>
+
+        <td>seashell</td>
+
+        <td>yellow</td>
+      </tr>
+
+      <tr>
+        <td>coral</td>
+
+        <td>darkseagreen</td>
+
+        <td>green</td>
+
+        <td>lightgrey</td>
+
+        <td>mediumslateblue</td>
+
+        <td>palegreen</td>
+
+        <td>sienna</td>
+
+        <td>yellowgreen</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Glyphs</h3>
+
+  <p>The <span>option controls how the features are rendered. There are dozens of glyphs
+  available but not all are suitable for drawing features on a chromosome
+  scale.&nbsp;&nbsp;&nbsp; A comprehensive list of available glyphs can be found on the
+  <a href="http://www.bioperl.org/wiki/Special:Search?search=glyph&amp;go=Go">bioperl
+  website.</a>&nbsp; The following glyphs are recommended for best results:</span></p>
+
+  <table border="1">
+    <tbody>
+      <tr>
+        <th>Name</th>
+
+        <th>Descripton</th>
+      </tr>
+
+      <tr>
+        <th>triangle</th>
+
+        <td>A triangle; use the 'orient' option (N,S,E or W) to control where it
+        points.</td>
+      </tr>
+
+      <tr>
+        <th>dot</th>
+
+        <td>A small circle.</td>
+      </tr>
+
+      <tr>
+        <th>diamond</th>
+
+        <td>A diamond shape.</td>
+      </tr>
+
+      <tr>
+        <th>lightning</th>
+
+        <td>For those features who do not take themselves too seriously.<br></td>
+      </tr>
+    </tbody>
+  </table><br>
+  <br>
+  <hr>
+
+  <h2>BUGS IN THIS SOFTWARE</h2>
+
+  <p>Please report them to the author.</p>
+  <hr>
+
+  <h2>AUTHOR</h2>
+
+  <p>Sheldon McKay &lt;<a href="mailto:mckays@cshl.edu">mckays@cshl.edu</a>&gt;</p>
+</body>
+</html>

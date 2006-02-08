@@ -11,6 +11,7 @@ cgi-bin/gbrowse.PLS
 cgi-bin/gbrowse_details.PLS
 cgi-bin/gbrowse_est.PLS
 cgi-bin/gbrowse_img.PLS
+cgi-bin/gbrowse_karyotype.PLS
 cgi-bin/gbrowse_moby.PLS
 cgi-bin/moby_server.PLS
 cgi-bin/README
@@ -67,6 +68,7 @@ contrib/conf_files/05.embl_proxy.conf
 contrib/conf_files/06.biosql.conf
 contrib/conf_files/07.chado.conf
 contrib/conf_files/08.genbank.conf
+contrib/conf_files/09.human_karyotype.conf
 contrib/conf_files/index.html
 contrib/conf_files/wormbase.syn
 contrib/Coverage/INSTALL
@@ -299,8 +301,13 @@ extras/BioPerl/Bio/Graphics/Util.pm
 extras/BioPerl/Makefile.PL
 extras/README
 htdocs/annotation_help.html
+htdocs/gbrowse_karyotype_annotation_help.html
+htdocs/gbrowse_karyotype_URL_help.html
 htdocs/databases/yeast_chr1/chromosome1.fa
 htdocs/databases/yeast_chr1/chromosome1.gff
+htdocs/databases/ideograms/human_cytobands.gff
+htdocs/databases/ideograms/mouse_cytobands.gff
+htdocs/databases/ideograms/rat_cytobands.gff
 htdocs/gbrowse.css
 htdocs/general_help.html
 htdocs/general_help.html.zh

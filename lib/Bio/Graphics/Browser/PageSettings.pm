@@ -1,8 +1,8 @@
 package Bio::Graphics::Browser::PageSettings;
 use strict;
 
-use Text::Shellwords;
-use CGI::Session 'shellwords';
+use Text::Shellwords 'shellwords';
+use CGI::Session;
 
 sub new {
   my $class    = shift;

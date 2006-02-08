@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.12.4.6.2.1 2005-10-26 05:09:49 lstein Exp $
+# $Id: Plugin.pm,v 1.12.4.6.2.2 2006-02-08 21:55:07 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME
@@ -500,6 +500,14 @@ CGI::Session.
 
 You will wish to implement this method if the plugin has
 user-modifiable settings.
+
+NOTE ON FILEHANDLES: You are not allowed to permanently store a
+filehandle in the persistent configuration data structure because the
+session-handling code will try to serialize and store the filehandle,
+which is not allowed by the default serializer. If you must store a
+filehandle in the configuration data structure, be sure to delete it
+within the annotate(), find() or dump() methods once you are finished
+using it.
 
 =item $self->configure_form()
 

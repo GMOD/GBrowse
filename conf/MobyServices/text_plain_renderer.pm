@@ -13,9 +13,9 @@ sub types {
 
 sub render {
     my ($DOM, $htmldir,$imgdir) = @_;
-    my $content;
+    my $content = "";
     my (%union, %isect);
-    foreach my $e ($DOM->nodeName, ("String", "Integer", "DateTime", "Float")) { $union{$e}++ && $isect{$e}++ };  # get intersection of nodename and list of primitive nodes we can handle
+    foreach my $e ($DOM->localname, ("String", "Integer", "DateTime", "Float")) { $union{$e}++ && $isect{$e}++ };  # get intersection of nodename and list of primitive nodes we can handle
     
     if (keys %isect){  # if the incoming node is one of the primitives keys will return something
 	foreach my $subnode($DOM->childNodes){ # if it is correct, then get the text content
@@ -35,7 +35,7 @@ sub getStringContent {
     my @childnodes = $ROOT->childNodes;
     foreach (@childnodes){
 	next unless ($_->nodeType == ELEMENT_NODE);
-	next unless ($_->localname eq "String");
+        next unless (($_->localname eq "String") || ($_->localname eq "Integer") || ($_->localname eq "DateTime") || ($_->localname eq "Float"));
 	my $article = $_->getAttributeNode('articleName');
 	$article = $_->getAttributeNode('moby:articleName') unless $article;
 	next unless $article;

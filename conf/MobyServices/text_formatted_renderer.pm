@@ -13,7 +13,7 @@ sub types {
 
 sub render {
     my ($DOM, $htmldir,$imgdir) = @_;
-    my $content;
+    my $content="";
     $content = &getStringContent($DOM);
 
     return ("<pre></pre>") unless $content;
@@ -36,7 +36,7 @@ sub getStringContent {
     my @childnodes = $ROOT->childNodes;
     foreach (@childnodes){
 	next unless ($_->nodeType == ELEMENT_NODE);
-	next unless ($_->localname eq "String");
+        next unless (($_->localname eq "String") || ($_->localname eq "Integer") || ($_->localname eq "DateTime") || ($_->localname eq "Float"));
 	my $article = $_->getAttributeNode('articleName');
 	$article = $_->getAttributeNode('moby:articleName') unless $article;
 	next unless $article;

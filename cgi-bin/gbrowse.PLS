@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.23 2006-02-14 18:53:36 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.24 2006-02-14 18:55:38 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1757,7 +1757,7 @@ sub do_keyword_search {
 					      -score  => $score,
 					      -ref    => $seg->abs_ref,
 					      -start  => $seg->abs_start,
-					      -end    => $seg->abs_stop,
+					      -end    => $seg->abs_end,
 					      -factory=> $db);
   }
   return @results;
@@ -1815,7 +1815,7 @@ sub multiple_choices {
       my $padstop  = $stop  + $padding;
       my $description = escapeHTML(eval{join ' ',$r->attributes('Note')}
 				   ||eval{$r->method}||eval{$r->source_tag}||$r->{ref});
-      if (my @aliases = eval{$r->attributes('Alias')}) {
+      if (my @aliases = grep {$_ ne ''} eval{$r->attributes('Alias')}) {
 	$description .= escapeHTML(" [@aliases]");
       }
       my $n           = escape("$name");

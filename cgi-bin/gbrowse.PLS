@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.146 2006-01-19 15:02:03 mwz444 Exp $
+# $Id: gbrowse.PLS,v 1.147 2006-02-14 18:55:25 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -648,7 +648,7 @@ sub page_settings {
   # do not change the page settings when the user is changing from one
   # database source to another
   my $page_settings = get_settings($session);
-  adjust_settings($page_settings) unless $old_source and $old_source ne $source;
+  adjust_settings($page_settings); # unless $old_source and $old_source ne $source;
   return ($page_settings,$session);
 }
 
@@ -1325,7 +1325,7 @@ sub do_keyword_search {
 					      -score  => $score,
 					      -ref    => $seg->abs_ref,
 					      -start  => $seg->abs_start,
-					      -end    => $seg->abs_stop,
+					      -end    => $seg->abs_end,
 					      -factory=> $db);
 
   }
@@ -1386,7 +1386,7 @@ sub multiple_segment_data {
                     || eval { $r->source_tag }
                     || $r->{ref} );
 
-            if ( my @aliases = eval { $r->attributes('Alias') } ) {
+            if ( my @aliases = grep {$_ ne ''} eval { $r->attributes('Alias') } ) {
                 $description .= escapeHTML " [@aliases]";
             }
             my $n = escape("$name");

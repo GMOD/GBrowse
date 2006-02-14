@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.22 2006-02-08 21:55:07 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.23 2006-02-14 18:53:36 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1378,9 +1378,9 @@ sub das_table {
 			  -onChange => 'document.externalform.submit()'
 			 );
   }
-  my $segment = "$settings->{ref}:$settings->{start},$settings->{stop}";
 
   local $^W = 0;
+  my $segment = "$settings->{ref}:$settings->{start},$settings->{stop}";
   for my $url ($REMOTE_SOURCES->sources) {
 
     (my $f = $url) =~ s!(http:.+/das/\w+)(?:\?(.+))?$!$1/features?segment=$segment;$2!;
@@ -1622,8 +1622,6 @@ sub resize {
   # error($CONFIG->tr('Small_interval',$resize)); # error message
   return unless $fix;
 
-  warn "new start = $new_start, new end = $new_stop";
-
   my $new_seg = $s->factory->segment(-name  => $s->seq_id,
 				     -start => $new_start,
 				     -end   => $new_stop,
@@ -1761,7 +1759,6 @@ sub do_keyword_search {
 					      -start  => $seg->abs_start,
 					      -end    => $seg->abs_stop,
 					      -factory=> $db);
-
   }
   return @results;
 }
@@ -1819,7 +1816,7 @@ sub multiple_choices {
       my $description = escapeHTML(eval{join ' ',$r->attributes('Note')}
 				   ||eval{$r->method}||eval{$r->source_tag}||$r->{ref});
       if (my @aliases = eval{$r->attributes('Alias')}) {
-	$description .= escapeHTML " [@aliases]";
+	$description .= escapeHTML(" [@aliases]");
       }
       my $n           = escape("$name");
       my $c           = escape($class);

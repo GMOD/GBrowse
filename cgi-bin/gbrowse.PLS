@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.24 2006-02-14 18:55:38 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.25 2006-02-16 17:44:59 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -695,7 +695,7 @@ sub adjust_tracks {
 				    && !$configured_labels{$_}} keys %{$settings->{features}};
   my @extra_plugins = grep {!$PLUGIN_NAME2LABEL{$_}} grep {/^plugin:/} keys %{$settings->{features}};
   # remove extra from tracks && options
-  if (%extra) {
+  if (%extra || @extra_plugins) {
     delete $settings->{features}{$_} foreach (keys %extra,@extra_plugins);
   }
 

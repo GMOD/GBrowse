@@ -1,5 +1,5 @@
 package Bio::Graphics::Glyph::heat_map;
-#$Id: heat_map.pm,v 1.1 2006-02-17 23:20:37 sheldon_mckay Exp $
+#$Id: heat_map.pm,v 1.2 2006-02-17 23:30:18 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics::Glyph::minmax;
@@ -10,7 +10,6 @@ use Data::Dumper;
 # gradient calculated in HSV color space
 
 use vars '@ISA';
-# for minmax and HSVtoRGB methods
 @ISA = qw/Bio::Graphics::Glyph::minmax/;
 
 # set up getter/setter methods
@@ -46,7 +45,6 @@ sub draw {
 
   $self->calculate_gradient(\@parts);
   my $low_rgb = $self->low_rgb;
-  my $panel   = $self->panel;
 
   for my $part (@parts) {
     my $score = $part->feature->score;
@@ -96,8 +94,8 @@ sub color2hsv {
 
 sub calculate_gradient {
   my ($self, $parts) = @_;
-  my $start_color = lc $self->option('start_color') || 'red';
-  my $stop_color  = lc $self->option('end_color')   || 'magenta';
+  my $start_color = lc $self->option('start_color') || 'white';
+  my $stop_color  = lc $self->option('end_color')   || 'red';
   my $hsv_start   = $self->color2hsv($start_color);
   my $hsv_stop    = $self->color2hsv($stop_color);
   
@@ -364,7 +362,7 @@ Bio::Graphics::Glyph::heat_map - The "heat_map" glyph
 
 =head1 SYNOPSIS
 
-  See L<Bio::Graphics::Panel> and L<Bio::Graphics::Glyph>.
+See L<Bio::Graphics::Panel> and L<Bio::Graphics::Glyph>.
 
 =head1 DESCRIPTION
 
@@ -376,7 +374,7 @@ each segment is proportionate to the score.
 
 =head2 Global glyph options:
 
-See L<Bio::Graphics::Glyph>
+See L<Bio::Graphics::Glyph::generic>
 
 =head2 Glyph-specific options:
 
@@ -444,9 +442,11 @@ Using the "pure_hue" option results in a brighter, more vibrant
 color spectrum, Choosing darker start and end colors, such as
 green or maroon, will result in a darker spectrum.  
 A single color spectrum can be created by using black
-or white as the start or end color.  A grayscale spectrum will 
-result if black and white are used as start and end colors.  one
-example of an effective visual heat map is to progress from 
+or white as the start or end color.  
+
+A grayscale spectrum will result if black and white 
+are used as start and end colors.  One example of an
+effective visual heat map is to progress from 
 white->red.
 
 For the start_color and end_color options, 140 named webcolors

@@ -1,4 +1,4 @@
-# $Id: ConfiguratorI.pm,v 1.1.2.3.2.1 2006-01-25 21:05:11 scottcain Exp $
+# $Id: ConfiguratorI.pm,v 1.1.2.3.2.2 2006-02-20 17:26:19 scottcain Exp $
 #
 # BioPerl module for Bio::Graphics::ConfiguratorI
 #

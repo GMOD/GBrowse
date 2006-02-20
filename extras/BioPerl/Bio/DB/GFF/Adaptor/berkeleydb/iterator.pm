@@ -35,7 +35,7 @@ it under the same terms as Perl itself.
 
 package Bio::DB::GFF::Adaptor::berkeleydb::iterator;
 use strict;
-# $Id: iterator.pm,v 1.1.2.1.2.1 2006-01-25 21:05:10 scottcain Exp $
+# $Id: iterator.pm,v 1.1.2.1.2.2 2006-02-20 17:26:18 scottcain Exp $
 use DB_File qw(R_FIRST R_NEXT);
 
 # this module needs to be cleaned up and documented

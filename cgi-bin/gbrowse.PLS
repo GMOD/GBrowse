@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.26 2006-02-16 21:02:47 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.27 2006-02-20 17:26:17 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1735,18 +1735,10 @@ sub do_keyword_search {
   $searchterm = $1;
   $searchterm =~ tr/*?//d;  # get rid of wildcards
 
-  my $match_sub = 'sub {';
-  foreach (split /\s+/,$searchterm) {
-    $match_sub .= "return unless \$_[0] =~ /\Q$_\E/i; ";
-  }
-  $match_sub .= "};";
-  my $match = eval $match_sub;
-
   my $db = open_database();
   my $max_keywords = $CONFIG->setting('keyword search max')
 		    || MAX_KEYWORD_RESULTS;
-  my @matches = grep { $match->($_->[1]) }
-    $db->search_notes($searchterm,$max_keywords);
+  my @matches = $db->search_notes($searchterm,$max_keywords);
 
   my @results;
   for my $r (@matches) {

@@ -1,5 +1,5 @@
 package Bio::Graphics::Glyph::graded_segments;
-#$Id: graded_segments.pm,v 1.1.2.4.2.1 2006-01-25 21:05:11 scottcain Exp $
+#$Id: graded_segments.pm,v 1.1.2.4.2.2 2006-02-20 17:26:19 scottcain Exp $
 
 use strict;
 use Bio::Graphics::Glyph::minmax;

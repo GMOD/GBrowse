@@ -62,7 +62,7 @@ SELECT fref,
        fstrand,
        gname
   FROM fdata,fgroup,fattribute,fattribute_to_feature
-  WHERE fattribute_to_feature.fattribute_value=?
+  WHERE lower(fattribute_to_feature.fattribute_value)=lower(?)
     AND fgroup.gclass=?
     AND fgroup.gid=fdata.gid
     AND fattribute.fattribute_name='Alias'
@@ -80,7 +80,7 @@ SELECT fref,
        fstrand,
        gname
   FROM fdata,fgroup,fattribute,fattribute_to_feature
-  WHERE fattribute_to_feature.fattribute_value LIKE ?
+  WHERE lower(fattribute_to_feature.fattribute_value) LIKE lower(?)
     AND fgroup.gclass=?
     AND fgroup.gid=fdata.gid
     AND fattribute.fattribute_name='Alias'
@@ -372,6 +372,9 @@ CREATE UNIQUE INDEX fgroup_gclass_idx ON fgroup (gclass,gname)
                 fgroup_gname_idx => q{
 CREATE INDEX fgroup_gname_idx ON fgroup(gname)
 },
+                fgroup_lower_gname_idx => q{
+CREATE INDEX fgroup_lower_gname_idx ON fgroup (lower(gname))
+},
 	   }, # fgroup indexes
 
 }, # fgroup
@@ -452,6 +455,9 @@ CREATE  INDEX fattribute_to_feature_fid ON fattribute_to_feature (fid,fattribute
 },
        fattribute_txt_idx => q{
 CREATE INDEX fattribute_txt_idx ON fattribute_to_feature (fattribute_value)
+},
+       fattribute_lower_idx => q{
+CREATE INDEX fattribute_lower_idx ON fattribute_to_feature (lower(fattribute_value))
 },
 	   } # fattribute_to_feature indexes
 } # fattribute_to_feature  
@@ -1096,14 +1102,14 @@ sub make_features_by_name_where_part {
   my $self = shift;
   my ($class,$name) = @_;
 
-  $name =~ tr/*/%/;
-
-  #Have to use ILIKE no matter what unfortunately, unless
-  #we add a lower(gname) index to fgroup. Then we could add
-  #a conditional to use this line with wildcard searches and
-  #this without: 'lower(fgroup.gname) = lower(?)" which should
-  #be faster
-  return ("fgroup.gclass=? AND fgroup.gname ILIKE ?",$class,$name);
+  if ($name !~ /\*/) {
+    #allows utilization of an index on lower(gname)
+    return ("fgroup.gclass=? AND lower(fgroup.gname) = lower(?)",$class,$name);
+  }
+  else {
+    $name =~ tr/*/%/;
+    return ("fgroup.gclass=? AND lower(fgroup.gname) LIKE lower(?)",$class,$name);
+  }
 }
 
 

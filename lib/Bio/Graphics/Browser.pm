@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.175 2006-02-14 14:30:27 scottcain Exp $
+# $Id: Browser.pm,v 1.176 2006-02-21 00:15:49 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1205,6 +1205,7 @@ sub image_and_map {
 			$conf->default_style,
 			$conf->i18n_style($label,$lang),
 			);
+      $track2label{$track} = $label;
     }
 
     else {
@@ -2496,7 +2497,7 @@ sub make_title {
 	   $feature->can('display_name') ? $feature->display_name : $feature->info,
 	   ($feature->can('seq_id')      ? $feature->seq_id : $feature->location->seq_id)
 	   .":".
-	   ($start||'?')."..".($end||'?')
+	   (defined $start ? $start : '?')."..".(defined $end ? $end : '?')
 	  );
     }
   };

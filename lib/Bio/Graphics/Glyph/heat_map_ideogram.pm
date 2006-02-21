@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::heat_map_ideogram;
 
-# $Id: heat_map_ideogram.pm,v 1.1 2006-02-21 04:49:16 sheldon_mckay Exp $
+# $Id: heat_map_ideogram.pm,v 1.2 2006-02-21 05:10:17 sheldon_mckay Exp $
 # Glyph to draw chromosome heat_map ideograms
 
 use lib "/home/smckay/lib";
@@ -47,6 +47,8 @@ sub draw_component {
   my $glyph = shift;
   my $gd    = shift;
   my ( $x1, $y1, $x2, $y2 ) = $glyph->bounds(@_);
+  # force odd width so telomere arcs are centered 
+  $y2 ++ if ($y2 - $y1) % 2;
   
   my $arcradius = $self->option('arcradius') || 7;
   my $feature   = $glyph->feature;

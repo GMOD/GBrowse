@@ -46,7 +46,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_karyotype.PLS,v 1.2 2006-02-21 04:49:15 sheldon_mckay Exp $
+#$Id: gbrowse_karyotype.PLS,v 1.3 2006-02-21 05:10:16 sheldon_mckay Exp $
 
 use strict;
 use CGI::Carp 'fatalsToBrowser';
@@ -733,7 +733,7 @@ sub my_image_and_map {
   # for image mapping
   $panel->unshift_track(\@bands,
 			-bump      => 0,
-			-glyph     => $CONFIG->setting($cytoband => 'ideogram')   || 'ideogram',
+			-glyph     => $CONFIG->setting($cytoband => 'glyph')     || 'ideogram',
 			-height    => $chrom_width,
 			-arcradius => $CONFIG->setting($cytoband => 'arcradius') || $max_height/100,
 			-bgcolor   => $CONFIG->setting($cytoband => 'bgcolor'),

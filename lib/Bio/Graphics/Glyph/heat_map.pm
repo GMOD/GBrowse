@@ -1,10 +1,8 @@
 package Bio::Graphics::Glyph::heat_map;
-#$Id: heat_map.pm,v 1.2 2006-02-17 23:30:18 sheldon_mckay Exp $
+#$Id: heat_map.pm,v 1.3 2006-02-21 04:49:16 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics::Glyph::minmax;
-
-use Data::Dumper;
 
 # A glyph to draw a heat map for scored features along a continuous color
 # gradient calculated in HSV color space
@@ -16,10 +14,8 @@ use vars '@ISA';
 BEGIN {
   no strict 'refs';
 
-  my @subs = qw/ h_start s_start v_start h_range s_range
-                 v_range brightness saturation min_score
-                 max_score low_rgb low_hsv high_rgb 
-                 score_range pure_hue/;
+  my @subs = qw/ h_start   s_start   v_start h_range s_range  v_range
+                 min_score max_score low_rgb low_hsv high_rgb score_range/;
 
   for my $sub ( @subs ) {
     *{$sub} = sub {
@@ -35,7 +31,6 @@ BEGIN {
   }
 }
 
-			    
 sub draw {
   my $self = shift;
 

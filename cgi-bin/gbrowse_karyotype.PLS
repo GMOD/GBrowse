@@ -1,4 +1,5 @@
-#!perl                                                                                                                                                                
+#!perl
+
 use Config;
 use File::Basename qw(&basename &dirname);
 use File::Spec;
@@ -23,9 +24,9 @@ open OUT, ">$file" or die "Can't create $file: $!";
 
 print "Extracting $file (with variable substitutions)\n";
 my $startperl =
-      $Config{startperl} ne '#!perl'
+    $Config{startperl} ne '#!perl'
     ? $Config{startperl}
-    : "#!$Config{perlpath}";
+: "#!$Config{perlpath}";
 
 print OUT <<"!GROK!THIS!";
 $startperl -w
@@ -40,11 +41,12 @@ $startperl -w
 \$VERSION   = $OPTIONS{VERSION};
 
 !GROK!THIS!
+    
 print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_karyotype.PLS,v 1.1 2006-02-08 01:54:31 sheldon_mckay Exp $
+#$Id: gbrowse_karyotype.PLS,v 1.2 2006-02-21 04:49:15 sheldon_mckay Exp $
 
 use strict;
 use CGI::Carp 'fatalsToBrowser';
@@ -72,7 +74,7 @@ $CONFIG   = open_config($CONF_DIR);
 my $src = param('src') || param('source') || path_info();
 $src    =~ s!^/+!!;  # get rid of leading / from path_info()
 $src    =~ s!/+$!!;  # get rid of trailing / from path_info()
-$src ||= 'human';
+$src  ||= 'human';
 
 message("Invalid source $src; you may not have permission to access this data source.")
     unless $CONFIG->source($src);
@@ -91,9 +93,9 @@ my %chr;
 
 # look for name of the cytobands track and ideogram drawing info
 my $cytoband    = $CONFIG->setting('cytoband')  || 'cytoband';
-my $max_height  = param('cheight') || param('h') || $CONFIG->setting('max_height') || 400;
+my $max_height  = param('cheight') || param('h') || $CONFIG->setting('max_height') || 500;
 my $rows        = param('rows')    || param('r') || $CONFIG->setting('rows')       || 'auto';
-my $chrom_width = param('cwidth')  || param('w') || $CONFIG->setting($cytoband => 'height') || 15;
+my $chrom_width = param('cwidth')  || param('w') || $CONFIG->setting($cytoband => 'height') || 20;
 my $band_labels = param('band_labels') || param('b') || $CONFIG->setting('band_labels');
 
 # deployment
@@ -116,8 +118,9 @@ else {
   print header('image/png');
 }
 
-param() || config_form();
-
+if (param('Example') || !param()) {
+   front_page();
+ }
 
 # get options
 my ($options,$labels) = get_options(\@options,\@track_types);
@@ -165,14 +168,11 @@ for my $chr (@chr) {
     }
   }
 
-  my $panel = my_image_and_map( segment       => $seg,
-				tracks        => $labels,
-				feature_files => $feature_list );
+  my ($panel, $boxes) = my_image_and_map( segment       => $seg,
+					  tracks        => $labels,
+					  feature_files => $feature_list );
 
   my $gd = $panel->gd;
-  # $boxes is a ref to a six-element array;
-  # elements 1..4 are the x/y coordinates for image mapping
-  my $boxes = $panel->boxes;
 
   # rotate the image 90 degrees clockwise
   my $img    = $gd->copyRotate90();
@@ -221,7 +221,7 @@ for my $chr (@chr) {
 
     if ($band_labels) {
       my $feature = $box->[0];
-      next unless $feature->class =~ /cytoband/i;
+      next unless $feature->method =~ /cyto\S*band|chromosome\S+/i;
 
       my $x = $box->[1] + 1;
       my $y = $box->[2];
@@ -235,15 +235,15 @@ for my $chr (@chr) {
 	$y -= 2;
       }
       elsif ($band_width > $max_height/40) {
-	$y = $y + $band_width/2 - 4; # 4 is 1/2 the font height
+        $y = $y + $band_width/2 - 4; # 4 is 1/2 the font height                                                                                                       
       }
 
       # only add a label if there is room
       next if ($y - $where_was_i) <= 10;
       $where_was_i = $y;
 
-      my $band_name = q{-} . $feature->name;
-      $img->string(gdTinyFont,$x,$y,$band_name,$black);
+      my $band_name = $feature->attributes('Name');
+      $img->string(gdTinyFont,$x,$y,"-$band_name",$black) if $band_name;
     }
   } 
 
@@ -369,7 +369,7 @@ sub my_make_map {
   my ($boxes,$ff) = @_;
   my $html = qq(<map name="hmap" alt="imagemap" />\n);
 
-  foreach (@$boxes){
+  for (@$boxes){
     my $f = $_->[0];
     my $w = $_->[5]->option('height');    
 
@@ -380,16 +380,19 @@ sub my_make_map {
       $_->[2] = $_->[2] - $w/2;
     }
 
-    my $title;
-    if ($f->method eq 'cytoband') {
-      $title = $title = $f->ref . $f->display_id;
+    my $title; 
+    if ($f->method ne 'centromere') {
+      my $att = $f->attributes;
+      $title  = eval{$att->{Name}->[0] || $att->{Alias}->[0]};
     }
     else {
-      $title = $f->desc || $f->display_id || $f->name || $f->primary_tag;
+      $title = $f->desc || $f->name || $f->display_id || q{};
     }
 
     my ($start,$stop) = ($f->start,$f->end);
-    $html .= qq{<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" title="$title"/>\n};
+    my $coords = join(',',@$_[1..4]);
+    $html .= qq{<area shape="rect" coords="$coords" title="$title"/>\n}
+        if $title;
   }
   $html .= "</map>\n";
 
@@ -407,16 +410,18 @@ sub add_features {
 						     );
 
   for my $f (@features) {
-    if (ref $f) { # Bio::Graphics::Feature objects
+    # feature objects
+    if (ref $f) {
       $feature_list->add_feature($f);
 
       # remove attribute=value pairs from description
-      my $desc = $f->desc;
+      my $desc = $f->desc || '';
       $desc =~ s/\w+=\S+(;|\s+)?//g;
       $desc =~ s/^\s+|\s+$//g;
       $f->desc($desc);
     }
-    else {        # or 'add' strings
+    # or add string
+    else {
       my ($reference,$type,$name,@segments) = parse_feature_str($f);
       my $mapper = coordinate_mapper($segment);
       my ($ref,@parts) = $mapper->($reference,@segments);
@@ -509,7 +514,7 @@ sub add_callbacks {
       my $override = $atts->{$att}->[0] if defined $atts->{$att};
 
       # no illegal characters 
-      return $default_value if $override =~ /[^\#\w]/; 
+      return $default_value unless $override && $override !~ /[^\#\w]/; 
 
       if ($override) {
 	return $att eq 'orient' ? adjust_compass(uc $override) : $override;
@@ -695,98 +700,186 @@ sub my_image_and_map {
     $offset += $inserted-1; # adjust for feature files that insert multiple tracks
   }
 
-  # make sure ideogram is the first track
-  my @bands = $segment->features(-type => [qw/cytoband centromere/]);
+  my $factory    = $segment->clone->factory;
+  my $aggregator = $CONFIG->setting($cytoband => 'aggregator');
 
+  my @features;
+
+  if ($aggregator) {
+    $factory->aggregators($aggregator) if $aggregator;
+    if ($aggregator =~ /^(\S+)\{/) {
+      $aggregator = $1;
+    }
+    elsif ($aggregator =~ /\/(\S+)\}/) {
+      $aggregator = $1;
+    }
+  }
+  else {
+    my $features = $CONFIG->setting($cytoband => 'feature');
+    @features    = split /\s+/, $features;
+  }
+
+  push @features, $aggregator;
+  my @bands = $segment->features( -type => \@features );
+
+  # Make a blank chromosome if there are no cytoband data
+  unless (@bands) {
+    $bands[0] = Bio::Graphics::Feature->new ( -start  => $segment->start,
+					      -stop   => $segment->end,
+					      -type   => 'chromosome' );
+  }
+
+  # -invisible hides unaggregated bands but retains their coordinates
+  # for image mapping
   $panel->unshift_track(\@bands,
-                    -glyph     => 'ideogram',
-                    -bump      => 0,
-                    -height    => $chrom_width,
-                    -arcradius => $CONFIG->setting($cytoband => 'arcradius') || $max_height/100,
-                    -bgcolor   => $CONFIG->setting($cytoband => 'bgcolor'),
-                    -fgcolor   => $CONFIG->setting($cytoband => 'fgcolor'),
-                    );
-  return $panel;
+			-bump      => 0,
+			-glyph     => $CONFIG->setting($cytoband => 'ideogram')   || 'ideogram',
+			-height    => $chrom_width,
+			-arcradius => $CONFIG->setting($cytoband => 'arcradius') || $max_height/100,
+			-bgcolor   => $CONFIG->setting($cytoband => 'bgcolor'),
+			-fgcolor   => $CONFIG->setting($cytoband => 'fgcolor'),
+			-invisible => $bands[0]->method eq 'chromosome' ? 1 : 0,
+			# if we are drawing a heat-map
+			-start_color => $CONFIG->setting($cytoband => 'start_color') || 'white',
+			-end_color   => $CONFIG->setting($cytoband => 'end_color')   || 'red',
+			-min_score   => $CONFIG->setting($cytoband => 'min_score')   || 0,
+			-max_score   => $CONFIG->setting($cytoband => 'max_score')   || 100,
+			);
+
+  # for image mapping, don't save whole chromosome box
+  # if we have aggregated
+  my @boxes = grep {$$_[0]->method ne $aggregator} $panel->boxes
+      if $aggregator;
+
+  return ($panel, \@boxes);
 }
 
-# This is hard-coded as HTML to facilitate eventual transition to templates
-sub config_form {
-  my $sample_text = sample_text();
+sub front_page {
+  my $page_header = html_frag('header')     || page_header();
+  my $page_footer = html_frag('footer')     || page_footer(); 
+  my $input_form  = html_frag('input_form') || input_form();
+  my $html1       = html_frag('html1')      || help_line();
+  my $html2       = html_frag('html2')      || q{};
 
   print <<END;
-<head>
-<title>gbrowse-karyotype</title>
-</head>
-<body>
-<form method="post" enctype="multipart/form-data" name="f1">
-<h2>gbrowse_karyotpe</h2>
-<h3>A CGI script to draw stylized karyotypes via the Generic Genome Browser</h3>
-<p>
-<table border=1 cellpadding=2 cellspacing=2 bgcolor=ivory width=600>
-<tr>
-<th>
-Help
-</th>
-<td align=center>
-<a href="/cgi-bin/gbrowse_karyotype?help=URL" target="_blank">URL annotations</a>
-</td>
-<td align=center>
-<a href="/cgi-bin/gbrowse_karyotype?help=annotation" target="_blank">Uploaded annotations</a>
-</td>
-<td align=center>
-<a href="/cgi-bin/gbrowse_karyotype?help=configuration" target="_blank">Configuration</a>
-</td>
-<td align=center>
-<a href="/cgi-bin/gbrowse_karyotype?help=ideogram" target="_blank">Cytoband data</a>.
-</td>
-</tr>
-</table>
-</p>
-
-<p>
-Species&nbsp;
-<select name=src>
-<option value=human>human</option>
-<option value=mouse>mouse</option>
-<option value=rat>rat</option>
-</select>
-</p>
-<p>Maximum chromosome height (pixels)&nbsp;
-<input name=cheight value=$max_height size=5></p>
-<p>Chromosome width&nbsp;
-<input name=cwidth value=$chrom_width size=5>
-    &nbsp;&nbsp;Number of rows&nbsp;
-<select name=rows>
-<option value=auto>auto</option>
-<option value=1>1</option>
-<option value=2>2</option>
-<option value=3>3</option>
-<option value=4>4</option>
-</select>
-</p>
-<p>
-Label chromosome bands <input type=checkbox name=band_labels value=1 checked>
-&nbsp;&nbsp;&nbsp;
-Add mousover labels to image <input type=checkbox name=embed value=1 checked>
-</p>
-<p>
-Paste annotations below in <a target="_blank" href="/cgi-bin/gbrowse_karyotype?help=annotation">this format</a>
-<br>
-<textarea name="featuretext" rows="15" cols="60">
-$sample_text
-</textarea>
-</p>
-<input type="submit" name="Draw" value="Draw" />&nbsp;&nbsp;
-<input type="button" name="Erase Text" value="Erase Text" onclick="document.f1.featuretext.value=&#39;&#39;" />
-    &nbsp;&nbsp;
-<input type="reset" name="Reset" value="Reset" />
-</form>
-</body>
-</html>
+  <html>
+  <head>
+  <title>gbrowse-karyotype</title>
+  </head>
+  <html>
+  <body>
+  $page_header
+  <p>
+  $html1
+  <p>
+  $input_form
+  </p>
+  $html2
+  <p>
+  $page_footer
+  </p> 
+  </body>
+  </html> 
 END
-
+;
   exit 0;
 }
+
+sub input_form {
+  my $sample_text = param('Example') ? sample_text() : q{};
+  my $source_menu = source_menu();
+  my $cytoband    = $CONFIG->setting('cytoband');
+  my $height      = $CONFIG->setting($cytoband => 'max_height') || 500;
+  my $width       = $CONFIG->setting($cytoband => 'cwidth')     || 20; 
+  return <<END;
+  <form method="post" enctype="multipart/form-data" name="f1">
+  <p>
+  $source_menu
+  </p>
+  <p>Maximum chromosome height (pixels)&nbsp;
+  <input name=cheight value=$max_height size=5></p>
+  <p>Chromosome width&nbsp;
+  <input name=cwidth value=$chrom_width size=5>
+  &nbsp;&nbsp;Number of rows&nbsp;
+  <select name=rows>
+    <option value=auto>auto</option>
+    <option value=1>1</option>
+    <option value=2>2</option>
+    <option value=3>3</option>
+    <option value=4>4</option>
+  </select>
+  </p>
+  <p>
+  Label chromosome bands <input type=checkbox name=band_labels value=1 checked>
+  &nbsp;&nbsp;&nbsp;
+  Add mousover labels to image <input type=checkbox name=embed value=1 checked>
+  </p>
+  <p>
+  Paste your feature data below (optional)
+  <br>
+  <textarea name="featuretext" rows="15" cols="60">
+  $sample_text
+  </textarea>
+  </p>
+  <input type="submit" name="Draw" value="Draw"/>&nbsp;&nbsp;
+  <input type="submit" name="Example" value="Example"/>&nbsp;&nbsp;
+  <input type="button" name="Erase" value="Erase" onclick="document.f1.featuretext.value=&#39;&#39;" />
+    &nbsp;&nbsp;
+  <input type="reset" name="Reset" value="Reset" />
+  </form>
+END
+}
+
+sub page_header {
+  return <<END;
+  <h2>gbrowse_karyotype</h2>
+  <h4>Draw karyotypes and map feature data via the Generic Genome Browser</h3>
+END
+}
+
+sub page_footer {
+  return <<END;
+  <hr>
+  <p>Data and configuration help: &nbsp;&nbsp;
+  <a href="/cgi-bin/gbrowse_karyotype?help=configuration" target="_blank">[Browser configuration]</a>
+  &nbsp;&nbsp;
+  <a href="/cgi-bin/gbrowse_karyotype?help=ideogram" target="_blank">[Chromosomes and banding data]</a>.
+  </p>
+  <p>
+  For the source code for this browser, see the <a href="http://www.gmod.org"> Generic Model Organism Database Project.</a>  
+  <br>
+  For other questions, send mail to <a href="mailto:mckays\@cshl.edu">mckays\@cshl.edu</a>.
+  </p>
+END
+
+}
+
+sub help_line {
+  return <<END;
+  Adding your own data: &nbsp;&nbsp;
+  <a href="/cgi-bin/gbrowse_karyotype?help=URL" target="_blank">[image generator]</a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="/cgi-bin/gbrowse_karyotype?help=annotation" target="_blank">[interactive browser]</a>
+END
+}
+
+sub source_menu {
+  my $html = "<p>Species\&nbsp;\n";
+  my $url = self_url;
+  $url =~ s/karyotype.+/karyotype/;
+  
+  my $onchange = qq{"location = '$url/'+this.options[this.selectedIndex].value;"};
+  $html .= "<select name=src onchange=$onchange>";
+  for my $source ($CONFIG->sources) {
+    $CONFIG->source($source);
+    next unless $CONFIG->setting('cytoband') || $CONFIG->setting('chromosome');
+    my $selected = " selected=selected" if $source eq $src;
+    $html .= "<option value=$source$selected>$source</option>\n</p>";
+  }
+  $html .= "</select>\n";
+  return $html;
+}
+
 
 # remove '-' from option keys
 sub my_style {
@@ -805,10 +898,10 @@ sub my_style {
 sub sample_text {
 
   return <<END;
-##################################
-##  Sample feature file         ##
-##  Hit 'Erase Text' to clear   ##
-##################################
+
+##########################################
+##  Hit 'Erase' to clear this example   ##
+##########################################
 
 ## Default display options for gene ##
 [gene]
@@ -888,9 +981,9 @@ sub help {
     my $evil       = grep { /^$updir$/o } @components;
     return         if $evil;
     
-    print div({-align=>'right'},$do_close);
+    print div({-align=>'left'},$do_close);
     build_help_page("$conf_dir/gbrowse_karyotype_${help_type}_help.html");
-    print div({-align=>'right'},$do_close), end_html;
+    print div({-align=>'left'},$do_close), end_html;
   } 
 
   exit 0;
@@ -906,9 +999,59 @@ sub build_help_page {
 }
 
 sub dump_configuration_help {
-  my $close = div({-align=>'right'},shift);
+  my $close = div(shift);
   return <<END;
-$close
+  $close
+  <h2> gbrowse_karyotype browser customization and configuration </h2>
+  <p>
+   Below is a sample configuration file (see the main Generic Genome Browser
+   documentation for more information on configuration files).  The format
+   is standard except for the following gbrowse_karyotype information:
+  <p>
+  <ul>
+    <li> The front page for the interactive browser can be almost entirely
+         customized with the following keys.
+          <ul>
+             <li> <pre> header     = ... </pre>Page header biolerplate (Visible title, etc.)
+             <li> <pre> html1      = ... </pre>Miscellaneous HTML to insert after header
+             <li> <pre> input_form = ... </pre>HTML to replace eveything between the header
+                  and footer
+             <li> <pre> html2      = ... </pre>Miscellaneous HTML to insert befor footer
+             <li> <pre> footer     = ... </pre>Page footer
+          </ul>
+	  <p>
+ 	  The above fields are optional; reasonable, albeit plain, defaults will be
+          used unless otherwise specified. 
+	  </p>
+     <li> <pre>chromosome = chr1 chr2 chr3</pre>
+          This entry is required to specify which chromosomes to display 
+          and in which order.  The space delimited list should contain 
+          reference sequences that exist in your database or GFF flat file.
+     <li> <pre>cytoband = CYT</pre>
+          This specifies which built-in feature corresponds to the chromosome
+          band data.  If there are no band data, black chromosomes will be
+          drawn.  However, a confuguration stanza is still necessary to specify
+          default chromosome attributes.
+     <li> <pre>feature = cytoband centromere\nOR\naggregator = chromosome</pre>
+          In the feature configuration for the cytoband data, either a
+          list of feature types or an aggregator can be specified. 
+          Either a built-in aggregator such as 'chromosome' or a custom 
+          aggregator, such as
+          <pre> aggregator = my_chr{cytoband,centromere} </pre>  
+	  can be used.  The feature and aggregator keys
+          are mutually exclusive and the latter is preferred. Note that
+          the aggregator key must be used in the cytoband track configuration, 
+          not the 'general' section.
+     <li> <pre> glyph = ideogram </pre>
+          The ideogram glyph would be most commonly used in combination
+	  with cytoband data.  An alternative for scored, non cytoband
+          features (for example local gene densites, recombination rates,
+          etc) is the heat_map_ideogram glyph, which can be used to draw
+          chromosomes with color-coded bands representing scores, frequencies
+          etc. The chromosome-like look can be enhanced by including
+          the centromere amongst the scored "bands".  
+  </ul>
+
 <pre>
 # This is a basic configuration to draw chromosome ideograms for the 
 # human genome.  It is a standalone file but could could also be part
@@ -939,16 +1082,17 @@ chromosome  = 1 2 3 4 5 6 7 8 9 10 11 12 13
 cytoband  = CYT
 
 [CYT]
-feature       = cytoband centromere
+aggregator    = chromosome
+# could also use    
+# feature      = cytoband centromere 
 glyph         = ideogram
 fgcolor       = black
 bgcolor       = gneg:white gpos25:silver gpos50:gray gpos:gray 
                 gpos75:darkgray gpos100:black gvar:var stalk:#666666
-arcradius     = 5
-height        = 15
-bump          = 0
+arcradius     = 7
+height        = 21
 
-# Other built-in feature confuration, if any,  would be added here
+# Other built-in feature configuration, if any,  would be added here
 </pre>
 $close
 END
@@ -956,101 +1100,135 @@ END
 }
 
 sub dump_ideogram_help {
-  my $close = div({-align=>'right'},shift);
+  my $close = div(shift);
+  my $script = join q{}, (<DATA>);
+
   return <<END;
-$close
-<h2>How to get cytoband data</h2>
-<p>
-The starting point for drawing chromosome ideograms is the cytoband data.
-These data can be obtained from the UCSG genome browser, from NCBI and
-from EnsEMBL.  Once obtained, the cytobands are converted to GFF to be
-loaded into a Bio::DB::GFF database or saved as a flatfile.
-</p>
+  $close
+  <h2>How to get cytoband data</h2>
+  <p>
+  The starting point for drawing chromosome ideograms is the cytoband data.
+  These data can be obtained from the UCSG genome browser, from NCBI and
+  from EnsEMBL.  Once obtained, the cytobands are converted to GFF to be
+  loaded into a Bio::DB::GFF database or saved as a flatfile.
+  </p>
 
-<p>
-Ensembl has cytoband data for human, mouse and rat.  Below is an example of a 
-script that retrieves cytoband features from their public mysql database 
-and converts them to GFF:
-</p>
+  <p>
+  Below is an example of GFF3-format cytoband data.  Note that the 
+  Parent= tag is used to facilitate aggregation of bands into their parent 
+  chromosomes.  Preprocessed GFF files for mouse, human and rat can be found
+  in the html (or htdocs) directory at gbrowse/databases/ideogram
+  </p>
+  <pre>
+  ##gff-version 3
+  ##sequence-region 1 1 245522847
+  1       ensembl chromosome_band        1       2300000 .       .       .       Parent=1;Name=p36.33;Alias=1p36.33;Stain=gneg
+  1       ensembl chromosome_band        2300001 5300000 .       .       .       Parent=1;Name=p36.32;Alias=1p36.32;Stain=gpos25
+  1       ensembl chromosome_band        15600001        20200000        .       .       .       Parent=1;Name=p36.13;Alias=1p36.13;Stain=gneg
+  1       ensembl centromere      121000001       127900000       .       .       .       Parent=1;Name=1_cent;Alias=11_cent
+  </pre>
+  
+  <p>
+  Ensembl has cytoband data for human, mouse and rat.  Below is an example of a 
+  script that retrieves cytoband features from the public mysql database 
+  and converts them to GFF.  
+  </p>
+  
+  <table>
+  <tr>
+  <td width=50></td>
+  <td bgcolor="silver">
+  <pre>
+  $script
+  </pre>
+  </td>
+  </tr>
+  </table>
+  
+  <h2>SEE ALSO: Bio::Graphics::Glyph::ideogram</h2>
+  $close
+  </html>
+END
+  
+}
 
-<table>
-<tr>
-<td width=50></td>
-<td bgcolor="ivory">
-<pre>
+sub my_html_frag {
+  my $frag = shift;
+  my $html = $CONFIG->setting($frag);
+  return $html;
+}
+
+
+__DATA__
+
 #!/usr/bin/perl -w
-# you may need to edit the above line
-# This script assumes a unix-like OS with a mysql client installed
 use strict;
 use DBI;
 
-
-my \$message  = 
-  "Supply a database name. Try the command below to check available databases:\\n".
-  "mysql -uanonymous -hensembldb.ensembl.org -e 'show databases' |grep core";
-my \$database = shift or die \$message;
-my \$host     = 'ensembldb.ensembl.org';
-my \$query    = 
- 'SELECT name,seq_region_start,seq_region_end,band,stain '.
- 'FROM seq_region,karyotype '.
- 'WHERE seq_region.seq_region_id = karyotype.seq_region_id';
+my $database = shift;
+my $host     = 'ensembldb.ensembl.org';
+my $query    = 
+'SELECT name,seq_region_start,seq_region_end,band,stain
+ FROM seq_region,karyotype
+ WHERE seq_region.seq_region_id = karyotype.seq_region_id;';
 
 
-my \$dbh = DBI->connect( "dbi:mysql:\$database:\$host", 'anonymous' )
+my $dbh = DBI->connect( "dbi:mysql:$database:$host", 'anonymous' )
     or die DBI->errstr;
 
-my \$sth = \$dbh->prepare(\$query) or die \$dbh->errstr;
-\$sth->execute or die \$sth->errstr;
+my $sth = $dbh->prepare($query) or die $dbh->errstr;
+$sth->execute or die $sth->errstr;
 
-my (\$cent_start,\$prev_chr,\$chr_end,\$segments,\$gff);
-my \$chr_start = 1;
-while (my \@band = \$sth->fetchrow_array ) {
-  my (\$chr,\$start,\$end,\$band,\$stain) = \@band;
-  my \$class;
+my ($cent_start,$prev_chr,$chr_end,$segments,$gff);
+my $chr_start = 1;
+while (my @band = $sth->fetchrow_array ) {
+  my ($chr,$start,$end,$band,$stain) = @band;
+  my $class = 'Chromosome';
+  my $method;
 
-  \$chr =~ s/chr//;
-  if (\$stain eq 'acen' && !\$cent_start) {
-    \$cent_start = \$start;
+  $chr =~ s/chr//;
+  if ($stain eq 'acen' && !$cent_start) {
+    $cent_start = $start;
     next;
   }
-  elsif (\$cent_start) {
-    \$class = 'Centromere';
-    \$band  = "\${chr}_cent";
-    \$start = \$cent_start;
-    \$stain = '';
-    \$cent_start = 0;
+  elsif ($cent_start) {
+    $method = 'centromere';
+    $band   = "$chr\_cent";
+    $start  = $cent_start;
+    $stain  = '';
+    $cent_start = 0;
   }
   else {
-    \$class = 'CytoBand';
+    $method = 'chromosome_band'; # SO term
   }
 
-  \$gff .= join("\\t",\$chr,'ensembl',lc \$class,\$start,\$end,qw/. . ./,"\$class \$band");
-  \$gff .= \$stain ? "; Stain \$stain\\n" : "\\n";
+  $gff .= join("\t", $chr, 'ensembl', lc $method, $start, $end,
+	       qw/. . ./,qq{Parent=$chr;Name=$band;Alias=$chr$band});
+  $gff .= $stain ? ";Stain=$stain\n" : "\n";
 
-  if (\$prev_chr && \$prev_chr ne \$chr) {
-    \$segments .= "\\#\\#sequence-region \$prev_chr \$chr_start \$chr_end\\n";
-    \$chr_start = 1;
+  if ($prev_chr && $prev_chr !~ /$chr/) {
+    $segments .= "\#\#sequence-region $prev_chr $chr_start $chr_end\n";
+    $chr_start = 1;
   }
 
-  \$prev_chr = \$chr;
-  \$chr_end  = \$end;
+  $prev_chr = $chr;
+  $chr_end  = $end;
 }
 
-\$segments .= "\\#\\#sequence-region \$prev_chr \$chr_start \$chr_end\\n";
-print \$segments,\$gff;
-</pre>
-</td>
-</tr>
-</table>
+$segments .= "\#\#sequence-region $prev_chr $chr_start $chr_end\n";
+print "##gff-version 3\n";
+print $segments,$gff;
 
-<h2>SEE ALSO: Bio::Graphics::Glyph::ideogram</h2>
-$close
-</html>
-END
+__END__
+# Currently ideograms for human, rat and mouse are available
+# To see the current database list, try the command:
 
-}
+mysql -uanonymous -hensembldb.ensembl.org -e 'show databases' \ 
+| grep core | grep 'sapiens\|rattus\|mus' | grep -v 'expression'
+
 
 !NO!SUBS!
+
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
 exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';

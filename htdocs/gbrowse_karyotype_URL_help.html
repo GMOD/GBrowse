@@ -1,4 +1,7 @@
-<h2>gbrowse_karyotype - URL based annotations</h2>
+<h2>gbrowse_karyotype - image generator</h2>
+
+<h3>Using the URL query string to draw chromosomes and map sequence features</h3>
+
 <h2>SYNOPSIS</h2>
 <pre>  &lt;img src="http://mckay.cshl.edu/cgi-bin/gbrowse_karyotype?source=human"&gt;<br>
 <br>
@@ -14,15 +17,13 @@
 <iframe
  src="http://mckay.cshl.edu/cgi-bin/gbrowse_karyotype?list=sources"
  width="500">
-iframes not supported by your browser.  
-Follow this &amp;lt;a&amp;gt;link&amp;lt;/a&amp;gt; for an example of this feature.
+iframes not supported; click <a href="http://mckay.cshl.edu/cgi-bin/gbrowse_karyotype?list=sources">here</a>
 </iframe>
 <br>
-  &lt;a href="http://mckay.cshl.edu/cgi-bin/gbrowse_karyotype?list=types"&gt;types&lt;/a&gt;<br>
-<iframe src="http://mckay.cshl.edu/cgi-bin/gbrowse_karyotype?list=types"
+  &lt;a href="http://mckay.cshl.edu/cgi-bin/gbrowse_karyotype/example?list=types"&gt;types&lt;/a&gt;<br>
+<iframe src="http://mckay.cshl.edu/cgi-bin/gbrowse_karyotype/example?list=types"
  width="500">
-iframes not supported by your browser.
-Follow this &amp;lt;a&amp;gt;link&amp;lt;/a&amp;gt; for an example of this feature.
+ iframes not supported; click <a href="http://mckay.cshl.edu/cgi-bin/gbrowse_karyotype?list=types">here</a>
 </iframe>
 <br>
 </pre>
@@ -267,7 +268,7 @@ sources can be found using <i>list=sources</i>.
     <p> </p>
   </dd>
 </dl>
-<p>Putting it all together, here\'s a working (very long) URL:
+<p>Putting it all together, here's a working (very long) URL:
 </p>
 <pre><a
  href="http://mckay.cshl.edu/cgi-bin/gbrowse_karyotype?src=mouse;b=1;c=1+2+3+4;add=1+gene+gene1+10000001..10006000;add=1+gene+gene2+20000005..20000500;s=gene+glyph=triangle+bgcolor=red+fgcolor=red+orient=N+width=6+point=1+bump=1">http://mckay.cshl.edu/cgi-bin/gbrowse_karyotype?src=mouse;b=1;c=1+2+3+4;add=1+gene+gene1+10000001..10006000;add=1+gene+gene2+20000005..20000500;s=gene+glyph=triangle+bgcolor=red+fgcolor=red+orient=N+width=6+point=1+bump=1</a>
@@ -294,6 +295,11 @@ in order to avoid browsers placing scrollbars around the frame.
 </p>
 <h2>AUTHOR</h2>
 <p>Sheldon McKay&nbsp;&nbsp; <a href="mailto:mckays%5C@cshl.edu">mckays@cshl.edu</a>
+</p>
+<p>
+This documentation is based on part on gbrowse_img, written by&nbsp;
+<a href="mailto:lstein%5C@cshl.edu">Lincoln Stein</a>
+
 </p>
 <p>Copyright (c) 2006 Cold Spring Harbor Laboratory
 </p>

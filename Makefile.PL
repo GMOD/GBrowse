@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-
+use lib '/home/smckay/lib/';
 use lib './install_util';
 use ExtUtils::MakeMaker;
 use GuessDirectories;

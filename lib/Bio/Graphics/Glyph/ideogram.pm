@@ -1,8 +1,8 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.10 2006-02-21 04:49:16 sheldon_mckay Exp $
+# $Id: ideogram.pm,v 1.11 2006-02-21 05:21:50 sheldon_mckay Exp $
 # Glyph to draw chromosome ideograms
-use lib "/home/smckay/lib";
+
 use strict qw/vars refs/;
 use vars '@ISA';
 use Bio::Graphics::Glyph;

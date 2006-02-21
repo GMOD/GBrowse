@@ -1,9 +1,8 @@
 package Bio::Graphics::Glyph::heat_map_ideogram;
 
-# $Id: heat_map_ideogram.pm,v 1.2 2006-02-21 05:10:17 sheldon_mckay Exp $
+# $Id: heat_map_ideogram.pm,v 1.3 2006-02-21 05:21:50 sheldon_mckay Exp $
 # Glyph to draw chromosome heat_map ideograms
 
-use lib "/home/smckay/lib";
 use strict qw/vars refs/;
 use vars '@ISA';
 use Bio::Graphics::Glyph::heat_map;

@@ -46,7 +46,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_karyotype.PLS,v 1.3 2006-02-21 05:10:16 sheldon_mckay Exp $
+#$Id: gbrowse_karyotype.PLS,v 1.4 2006-02-22 02:11:31 sheldon_mckay Exp $
 
 use strict;
 use CGI::Carp 'fatalsToBrowser';
@@ -722,34 +722,39 @@ sub my_image_and_map {
   push @features, $aggregator;
   my @bands = $segment->features( -type => \@features );
 
-  # Make a blank chromosome if there are no cytoband data
-  unless (@bands) {
-    $bands[0] = Bio::Graphics::Feature->new ( -start  => $segment->start,
-					      -stop   => $segment->end,
-					      -type   => 'chromosome' );
+ # Make a blank chromosome if there are no cytoband data
+  unless (@bands > 1) {
+    push @bands, Bio::Graphics::Feature->new ( -start  => $segment->start,
+                                               -stop   => $segment->end,
+                                               -type   => 'chromosome' );
   }
 
   # -invisible hides unaggregated bands but retains their coordinates
   # for image mapping
   $panel->unshift_track(\@bands,
-			-bump      => 0,
-			-glyph     => $CONFIG->setting($cytoband => 'glyph')     || 'ideogram',
-			-height    => $chrom_width,
-			-arcradius => $CONFIG->setting($cytoband => 'arcradius') || $max_height/100,
-			-bgcolor   => $CONFIG->setting($cytoband => 'bgcolor'),
-			-fgcolor   => $CONFIG->setting($cytoband => 'fgcolor'),
-			-invisible => $bands[0]->method eq 'chromosome' ? 1 : 0,
-			# if we are drawing a heat-map
-			-start_color => $CONFIG->setting($cytoband => 'start_color') || 'white',
-			-end_color   => $CONFIG->setting($cytoband => 'end_color')   || 'red',
-			-min_score   => $CONFIG->setting($cytoband => 'min_score')   || 0,
-			-max_score   => $CONFIG->setting($cytoband => 'max_score')   || 100,
-			);
+                        -bump      => 0,
+                        -glyph     => $CONFIG->setting($cytoband => 'glyph')     || 'ideogram',
+                        -height    => $chrom_width,
+                        -arcradius => $CONFIG->setting($cytoband => 'arcradius') || $max_height/100,
+                        -bgcolor   => $CONFIG->setting($cytoband => 'bgcolor'),
+                        -fgcolor   => $CONFIG->setting($cytoband => 'fgcolor'),
+                        -invisible => $aggregator ? 1 : 0,
+                        # if we are drawing a heat-map
+                        -start_color => $CONFIG->setting($cytoband => 'start_color') || 'white',
+                        -end_color   => $CONFIG->setting($cytoband => 'end_color')   || 'red',
+                        -min_score   => $CONFIG->setting($cytoband => 'min_score')   || 0,
+                        -max_score   => $CONFIG->setting($cytoband => 'max_score')   || 100,
+                        );
 
   # for image mapping, don't save whole chromosome box
   # if we have aggregated
-  my @boxes = grep {$$_[0]->method ne $aggregator} $panel->boxes
-      if $aggregator;
+  my @boxes;
+  if ($aggregator) {
+    @boxes = grep {$$_[0]->method ne $aggregator} $panel->boxes;
+  }
+  else {
+    @boxes = $panel->boxes;
+  }
 
   return ($panel, \@boxes);
 }

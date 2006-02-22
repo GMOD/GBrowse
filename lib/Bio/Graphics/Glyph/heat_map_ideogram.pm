@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::heat_map_ideogram;
 
-# $Id: heat_map_ideogram.pm,v 1.3 2006-02-21 05:21:50 sheldon_mckay Exp $
+# $Id: heat_map_ideogram.pm,v 1.4 2006-02-22 02:07:31 sheldon_mckay Exp $
 # Glyph to draw chromosome heat_map ideograms
 
 use strict qw/vars refs/;
@@ -123,28 +123,6 @@ sub adjust_bgcolor {
   return $gd->colorResolve(@rgb);
 }
 
-# Paint over any colliding boxes before drawing the centromere.
-# The centromere should be the last feature in the list.
-# This relies on either an aggregate chromosome or the centromere's
-# having been placed at the end of the feature list in the
-# calling script.
-sub draw_centromere {
-  my $self = shift;
-  my ($gd, $x1, $y1, $x2, $y2, $bgcolor, $fgcolor ) = @_;
-  my $whitewash = $self->panel->bgcolor;
-  $self->filled_box(@_[0..4],$whitewash,$whitewash);
-
-  # draw a sort of hour-glass shape to represent the centromere
-  my $poly = GD::Polygon->new;
-  $poly->addPt( $x1, $y1 );
-  $poly->addPt( $x1, $y2 );
-  $poly->addPt( $x2, $y1 );
-  $poly->addPt( $x2, $y2 );
-
-  $gd->filledPolygon( $poly, $bgcolor );
-  $gd->polygon( $poly, $fgcolor );
-}
-
 sub fgcolor {
   my $self = shift;
   my $clr  = $self->option('fgcolor') || 
@@ -168,12 +146,12 @@ Bio::Graphics::Glyph::heat_map_ideogram - The "heat_map_ideogram" glyph
 
 =head1 DESCRIPTION
 
-This glyph draws a chromosome ideogram using scored features instead.
+This glyph draws a chromosome ideogram using scored features instead
 of cytobands.  It is a hybrid of the heat_map and ideograms glyphs
 and accepts options for both.  A typical usage would be to pair this
 glyph with an aggregator that groups scored features such as blast hits
 or gene_density bins, etc with a centromere.  The result is a chromosome
-ideogram that has bands whose color varies porportionate to the feature
+ideogram that has bands whose colors vary porportionate to the feature
 score.
 
 =head2 OPTIONS

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.27 2006-02-20 17:26:17 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.28 2006-02-23 16:31:09 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1558,7 +1558,7 @@ sub get_features {
 
   # sort of hacky way to force keyword search on wildcards
   if (defined $settings->{name} && $settings->{name} =~ /[*?]/) {
-    (my $searchterm = $settings->{name}) =~ tr/*?//d;
+    my $searchterm = $settings->{name};
     push @features,do_keyword_search($searchterm) if length $searchterm > 0;
   }
 
@@ -1733,7 +1733,6 @@ sub do_keyword_search {
   # what is accepted here because we wil be quote-metaing it later.
   $searchterm =~ /([\w .,~!@\#$%^&*()-+=<>?\/]+)/;
   $searchterm = $1;
-  $searchterm =~ tr/*?//d;  # get rid of wildcards
 
   my $db = open_database();
   my $max_keywords = $CONFIG->setting('keyword search max')

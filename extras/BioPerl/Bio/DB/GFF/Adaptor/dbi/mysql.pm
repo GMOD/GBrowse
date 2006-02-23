@@ -402,6 +402,9 @@ Each row of the returned array is a arrayref containing the following fields:
 sub search_notes {
   my $self = shift;
   my ($search_string,$limit) = @_;
+
+  $search_string =~ tr/*?//d;
+
   my $query = FULLTEXTSEARCH;
   $query .= " limit $limit" if defined $limit;
   my $sth = $self->dbh->do_query($query,$search_string,$search_string);
@@ -412,7 +415,20 @@ sub search_notes {
      my $featname = Bio::DB::GFF::Featname->new($class=>$name);
      push @results,[$featname,$note,$relevance];
   }
-  @results;
+
+  #added result filtering so that this method returns the expected results
+  #this section of code used to be in GBrowse's do_keyword_search method
+
+  my $match_sub = 'sub {';
+  foreach (split /\s+/,$search_string) {
+    $match_sub .= "return unless \$_[0] =~ /\Q$_\E/i; ";
+  }
+  $match_sub .= "};";
+  my $match = eval $match_sub;
+
+  my @matches = grep { $match->($_->[1]) } @results;
+
+  return @matches;
 }
 
 

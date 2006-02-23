@@ -1,6 +1,6 @@
 package Bio::DB::GFF::Adaptor::berkeleydb;
 
-# $Id: berkeleydb.pm,v 1.1.2.1.2.2 2006-02-20 17:26:17 scottcain Exp $
+# $Id: berkeleydb.pm,v 1.1.2.1.2.3 2006-02-23 18:35:30 scottcain Exp $
 
 =head1 NAME
 
@@ -10,6 +10,7 @@ Bio::DB::GFF::Adaptor::memory -- Bio::DB::GFF database adaptor for in-memory dat
 
   use Bio::DB::GFF;
   my $db = Bio::DB::GFF->new(-adaptor=> 'berkeleydb',
+                             -create => 1, # on initial build you need this
 			     -dsn    => '/usr/local/share/gff/dmel');
 
   # initialize an empty database, then load GFF and FASTA files
@@ -705,6 +706,9 @@ sub _feature_by_attribute{
 sub search_notes {
   my $self = shift;
   my ($search_string,$limit) = @_;
+
+  $search_notes =~ tr/*?//d;
+
   my @results;
 
   my @words = map {quotemeta($_)} $search_string =~ /(\w+)/g;

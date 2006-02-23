@@ -1,6 +1,6 @@
 package Bio::Graphics::FeatureFile;
 
-# $Id: FeatureFile.pm,v 1.1.2.9.2.2 2006-02-20 17:26:19 scottcain Exp $
+# $Id: FeatureFile.pm,v 1.1.2.9.2.3 2006-02-23 18:35:41 scottcain Exp $
 # This package parses and renders a simple tab-delimited format for features.
 # It is simpler than GFF, but still has a lot of expressive power.
 # See __END__ for the file format
@@ -505,13 +505,11 @@ sub parse_line {
 	my ($key,$value) = @$_;
 	if ($value =~ m!^(http|ftp)://!) { 
 	  $url = $_ 
-	} elsif ($key=~/note/i) { 
-	  push @notes,$value;
 	} else {
 	  push @notes,"$key=$value";
 	}
       }
-      $description = join '; ',@notes if @notes;
+      $description = join '; ',map {_escape($_)} @notes if @notes;
       $score       = $scor if defined $scor && $scor ne '.';
     }
     $name ||= $self->{group}->display_id if $self->{group};
@@ -625,6 +623,12 @@ sub _unescape {
     s/%([0-9a-fA-F]{2})/chr hex($1)/g;
   }
   @_;
+}
+
+sub _escape {
+  my $toencode = shift;
+  $toencode =~ s/([^a-zA-Z0-9_.=-])/uc sprintf("%%%02x",ord($1))/eg;
+  $toencode;
 }
 
 sub _make_feature {
@@ -1122,6 +1126,9 @@ Each row of the returned array is a arrayref containing the following fields:
 sub search_notes {
   my $self = shift;
   my ($search_string,$limit) = @_;
+
+  $search_string =~ tr/*?//d;
+
   my @results;
   my $search = join '|',map {quotemeta($_)} $search_string =~ /(\S+)/g;
 
@@ -1247,7 +1254,8 @@ sub base2package {
 
 sub split_group {
   my $self = shift;
-  return Bio::DB::GFF->split_group(shift, $self->{gff_version} > 2);
+  my $gff = $self->{gff} ||= Bio::DB::GFF->new(-adaptor=>'memory');
+  return $gff->split_group(shift, $self->{gff_version} > 2);
 }
 
 # create a panel if needed

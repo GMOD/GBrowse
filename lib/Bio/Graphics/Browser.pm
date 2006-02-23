@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.177 2006-02-21 04:34:22 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.178 2006-02-23 00:36:01 tharris Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -838,6 +838,7 @@ sub render_html {
   my $segment         = $args{segment};
   my $do_map          = $args{do_map};
   my $do_centering_map= $args{do_centering_map};
+  my $tmpdir          = $args{tmpdir};
 
   return unless $segment;
   my($image,$map,$panel,$tracks) = $self->image_and_map(%args);
@@ -845,7 +846,7 @@ sub render_html {
   $self->debugging_rectangles($image,$map) if DEBUG;
 
   my ($width,$height) = $image->getBounds;
-  my $url     = $self->generate_image($image);
+  my $url     = $self->generate_image($image,$tmpdir);
   my $img     = img({-src=>$url,-align=>'middle',-usemap=>'#hmap',-width=>$width,
 		     -height=>$height,-border=>0,-name=>'detailedView',-alt=>'detailed view'});
   my $img_map = '';
@@ -870,8 +871,10 @@ the physical path of the image.
 =cut
 
 sub generate_image {
-  my $self  = shift;
-  my $image = shift;
+  my $self   = shift;
+  my $image  = shift;
+  my $tmpdir = shift;
+
   my $extension = $image->can('png') ? 'png' : 'gif';
   my $data      = $image->can('png') ? $image->png : $image->gif;
   my $signature = md5_hex($data);
@@ -886,7 +889,7 @@ sub generate_image {
   $signature =~ /^([0-9A-Fa-f]+)$/g or return;
   $signature = $1;
 
-  my ($uri,$path) = $self->tmpdir($self->source.'/img');
+  my ($uri,$path) = $self->tmpdir($self->source.'/img' . ($tmpdir ? "/$tmpdir" : ''));
   my $url         = sprintf("%s/%s.%s",$uri,$signature,$extension);
   my $imagefile   = sprintf("%s/%s.%s",$path,$signature,$extension);
   open (F,">$imagefile") || die("Can't open image file $imagefile for writing: $!\n");

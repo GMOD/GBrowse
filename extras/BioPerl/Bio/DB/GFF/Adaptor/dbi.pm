@@ -1,4 +1,4 @@
-# $Id: dbi.pm,v 1.3 2006-01-27 14:40:07 scottcain Exp $
+# $Id: dbi.pm,v 1.4 2006-02-24 16:50:09 scottcain Exp $
 
 =head1 NAME
 
@@ -803,6 +803,8 @@ Each row of the returned array is a arrayref containing the following fields:
 sub search_notes {
   my $self = shift;
   my ($search_string,$limit) = @_;
+
+  $search_string =~ tr/*?//d; 
 
   my @words  = $search_string =~ /(\w+)/g;
   my $regex  = join '|',@words;

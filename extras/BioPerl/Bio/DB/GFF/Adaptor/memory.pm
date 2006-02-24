@@ -59,7 +59,7 @@ it under the same terms as Perl itself.
 =cut
 
 use strict;
-# $Id: memory.pm,v 1.3 2006-01-27 14:40:07 scottcain Exp $
+# $Id: memory.pm,v 1.4 2006-02-24 16:50:09 scottcain Exp $
 # AUTHOR: Shulamit Avraham
 # This module needs to be cleaned up and documented
 
@@ -262,6 +262,9 @@ sub get_abscoords {
 sub search_notes {
   my $self = shift;
   my ($search_string,$limit) = @_;
+
+  $search_string =~ tr/*?//d;
+
   my @results;
   my @words = map {quotemeta($_)} $search_string =~ /(\w+)/g;
   my $search = join '|',@words;
@@ -285,10 +288,22 @@ sub search_notes {
     $note   = join ' ',map {$_->[1]} grep {$_->[0] eq 'Note'}                @{$feature->{attributes}};
     $note  .= join ' ',grep /$search/,map {$_->[1]} grep {$_->[0] ne 'Note'} @{$feature->{attributes}};
     push @results,[$featname,$note,$relevance];
-    last if @results >= $limit;
+    last if defined $limit && @results >= $limit;
   }
-    
-  @results;
+   
+  #added result filtering so that this method returns the expected results
+  #this section of code used to be in GBrowse's do_keyword_search method
+
+  my $match_sub = 'sub {';
+  foreach (split /\s+/,$search_string) {
+    $match_sub .= "return unless \$_[0] =~ /\Q$_\E/i; ";
+  }
+  $match_sub .= "};";
+  my $match = eval $match_sub;
+
+  my @matches = grep { $match->($_->[1]) } @results;
+
+  return @matches;
 }
 
 sub _delete_features {
@@ -382,7 +397,6 @@ sub _feature_by_attribute{
   }
 
 }
-
 
 
 # This is the low-level method that is called to retrieve GFF lines from

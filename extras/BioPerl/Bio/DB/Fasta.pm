@@ -1,4 +1,4 @@
-# $Id: Fasta.pm,v 1.3 2006-01-27 14:40:07 scottcain Exp $
+# $Id: Fasta.pm,v 1.4 2006-02-24 16:50:09 scottcain Exp $
 #
 # BioPerl module for Bio::DB::Fasta
 #
@@ -97,7 +97,7 @@ The latter creates a tied filehandle which can be used Bio::SeqIO
 style to fetch sequence objects in a stream fashion.  There is also a
 tied hash interface.
 
-=over 4
+=over 1
 
 =item $db = Bio::DB::Fasta-E<gt>new($fasta_path [,%options])
 
@@ -158,8 +158,9 @@ take a scalar argument and return a scalar result, like this:
 
   sub make_my_id {
     my $description_line = shift;
-    # get a new id from the fasta header
-    return $new_id;
+    # get a different id from the fasta header, e.g.
+	 $description_line =~ /(\S+)$/;
+    return $1;
   }
 
 make_my_id() will be called with the full fasta id line (including the
@@ -178,7 +179,7 @@ The -makeid option is ignored after the index is constructed.
 
 The following object methods are provided.
 
-=over 4
+=over 10
 
 =item $raw_seq = $db-E<gt>seq($id [,$start, $stop])
 
@@ -280,7 +281,7 @@ to treat the database as an I/O stream.
 
 The tied hash interface is very straightforward
 
-=over 4
+=over 1
 
 =item $obj = tie %db,'Bio::DB::Fasta','/path/to/fasta/files' [,@args]
 
@@ -328,10 +329,10 @@ object and call its methods.
     print "$id => ",tied(%db)->length($id),"\n";
  }
 
-You may, in addition invoke Bio::DB::Fasta's FIRSTKEY and NEXTKEY tied
+You may, in addition invoke Bio::DB::Fasta the FIRSTKEY and NEXTKEY tied
 hash methods directly.
 
-=over 4
+=over 2
 
 =item $id = $db-E<gt>FIRSTKEY
 
@@ -462,16 +463,16 @@ sub new {
   my %opts  = @_;
 
   my $self = bless { debug      => $opts{-debug},
-		     makeid     => $opts{-makeid},
-		     glob       => $opts{-glob}    || '*.{fa,fasta,FA,FASTA,fast,FAST,dna,fsa}',
-		     maxopen    => $opts{-maxfh}   || 32,
-		     dbmargs    => $opts{-dbmargs} || undef,
-		     fhcache    => {},
-		     cacheseq   => {},
-		     curopen    => 0,
-		     openseq    => 1,
-		     dirname    => undef,
-		     offsets    => undef,
+	  makeid     => $opts{-makeid},
+	  glob       => $opts{-glob} || '*.{fa,fasta,FA,FASTA,fast,FAST,dna,FNA,fna,FAA,faa,FSA,fsa}',
+	  maxopen    => $opts{-maxfh}   || 32,
+	  dbmargs    => $opts{-dbmargs} || undef,
+	  fhcache    => {},
+	  cacheseq   => {},
+	  curopen    => 0,
+	  openseq    => 1,
+	  dirname    => undef,
+	  offsets    => undef,
 		   }, $class;
   my ($offsets,$dirname);
 

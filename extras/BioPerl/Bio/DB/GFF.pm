@@ -1,4 +1,4 @@
-# $Id: GFF.pm,v 1.3 2006-01-27 14:40:07 scottcain Exp $
+# $Id: GFF.pm,v 1.4 2006-02-24 16:50:09 scottcain Exp $
 
 =head1 NAME
 

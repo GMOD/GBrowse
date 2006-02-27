@@ -47,7 +47,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.45 2006-01-10 19:26:59 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.46 2006-02-27 23:34:49 markwilkinson Exp $
 ###########################################################
 
 #use SOAP::Lite +trace;
@@ -517,13 +517,21 @@ sub execute {
     my ($SI, $reg) = $Central->findService(authURI => $auth,
                        serviceName => $service);
     $SI = $$SI[0]; # there can only be one, since authURI/serviceName is a unique index
+    my $inputs = $SI->input;
+    my $articleName;
+    # this code assumes only one input as a primary
+    foreach my $input(@$inputs){
+        next unless $input->isSimple;
+        $articleName = $input->articleName;
+        last;
+    }
 
     my $WSDL = $Central->retrieveService($SI); # get the WSDL
 
     my $SERVICE = MOBY::Client::Service->new(service => $WSDL);  # prepare the connection stubs
     
     print h2("\nBioMOBY Service: ".($SI->name)),i($SI->description),hr,h2("\nResult for $namespace:$id\n");
-    my $result = $SERVICE->execute(XMLinputlist => [['', $OBJECT]]); # execute the service with the given input data; this *assumes* that the arguments are not named!!!
+    my $result = $SERVICE->execute(XMLinputlist => [["$articleName", $OBJECT]]); # execute the service with the given input data; this *assumes* that the arguments are not named!!!
 
     unless ($result){
         print h3("Service returned no response");

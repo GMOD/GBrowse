@@ -1,3 +1,10 @@
+* there are still some reports of disappearing features, that we thought
+was fixed with modifications to the MySQL adaptor.  If you experince
+'disappearing' features (that is, features that are visible at one zoom
+level and disappear (not as a result of sematic zooming) when the zoom
+level is changed slightly), please report it to us at the GBrowse mailing
+list and report the circumstances under which it occurs.
+
 test change for cvs
 
 * Add popup menu support using Cyril's code and overlib/overlibmws.
@@ -18,5 +25,5 @@ test change for cvs
 * Add per-track parameter lists as per letter from Russell Smithies, 
 	Monday, Sept 5.
 
-$Id: TODO,v 1.4.6.16.2.1 2005-11-11 20:59:56 scottcain Exp $
+$Id: TODO,v 1.4.6.16.2.2 2006-02-27 20:38:49 scottcain Exp $
 

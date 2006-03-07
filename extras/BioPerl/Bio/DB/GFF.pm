@@ -1,4 +1,4 @@
-# $Id: GFF.pm,v 1.1.2.1.2.4 2006-03-06 18:43:42 scottcain Exp $
+# $Id: GFF.pm,v 1.1.2.1.2.5 2006-03-07 15:38:23 scottcain Exp $
 
 =head1 NAME
 
@@ -2215,6 +2215,7 @@ sub preferred_groups {
 
 sub _preferred_groups_hash {
   my $self = shift;
+  my $gff3 = shift;
   return $self->{preferred_groups_hash} if exists $self->{preferred_groups_hash};
   my $count = 0;
 
@@ -2222,7 +2223,7 @@ sub _preferred_groups_hash {
 
   # defaults
   if (!@preferred) {
-    @preferred = $self->{load_data}{gff3_flag} ? qw(Target Parent ID) : qw(Target Sequence Transcript);
+    @preferred = $gff3 || $self->{load_data}{gff3_flag} ? qw(Target Parent ID) : qw(Target Sequence Transcript);
   }
 
   my %preferred = map {lc($_) => @preferred-$count++} @preferred;
@@ -3555,8 +3556,8 @@ sub _split_gff3_group {
     }
     push @attributes,[$tag=>$_] foreach @values;
   }
-  
-  my $priorities = $self->_preferred_groups_hash;
+
+  my $priorities = $self->_preferred_groups_hash(1);
   my ($gclass,$gname,$tstart,$tstop);
   for my $preferred (sort {$priorities->{lc $b}<=>$priorities->{lc $a}}
 		     keys %id) {

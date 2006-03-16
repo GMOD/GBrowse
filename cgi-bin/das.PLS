@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.6 2004-08-30 02:11:58 allenday Exp $
+#$Id: das.PLS,v 1.6.8.1 2006-03-16 22:40:41 lstein Exp $
 
 use strict;
 use Bio::DB::GFF 1.02;
@@ -58,7 +58,7 @@ use vars qw($DB $DSN $HEADER %ERRCODES $CONFIG
             $VERSION $DAS_VERSION $CONF_DIR 
             %CACHED_TYPES);
 
-#$Id: das.PLS,v 1.6 2004-08-30 02:11:58 allenday Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
+#$Id: das.PLS,v 1.6.8.1 2006-03-16 22:40:41 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';
@@ -375,6 +375,16 @@ sub print_feature {
       $gtype = qq( type="$class")
     }
   }
+
+  else {  # repeated code here, but not sure of logic
+      my $url = $CONFIG->make_link($parent || $f);
+      $url ||= 'none';
+      if ($url ne 'none') {
+          hack_link(\$url);
+          $link = qq(<LINK href="$url">$type</LINK>);
+      }
+  }
+
   if (@$notes) {
     $group_info = join "\n",map {qq(<NOTE>$_</NOTE>)} @$notes;
   }

@@ -29,8 +29,23 @@ sub end     { shift->{src}[STOP]    }
 sub strand  { shift->{src}[STRAND] }
 
 sub target  { shift->{tgt}[SEQID]  }
-sub tstart  { shift->{tgt}[START]  }
-sub tend    { shift->{tgt}[STOP]    }
+
+# make these getter/setters in case they
+# must be adjusted later
+sub tstart  {
+  my $self = shift;
+  my $value = shift;
+  $self->{tgt}[START] = $value if $value;
+  return $self->{tgt}[START];
+}
+sub tend  { 
+  my $self = shift;
+  my $value = shift;
+  $self->{tgt}[STOP] = $value if $value;
+  return $self->{tgt}[STOP];
+}
+
+
 sub tstrand { shift->{tgt}[STRAND] }
 
 sub parts   { shift->{parts}       }

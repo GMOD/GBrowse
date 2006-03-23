@@ -1,4 +1,4 @@
-#!perl
+#!perl                                                                                                                                                                
 use Config;
 use File::Basename qw(&basename &dirname);
 use File::Spec;
@@ -29,9 +29,9 @@ open OUT,">$file" or die "Can't create $file: $!";
 
 print "Extracting $file (with variable substitutions)\n";
 
-my $startperl = $Config{startperl} ne '#!perl' 
-  ? $Config{startperl}
-  : "#!$Config{perlpath}";
+my $startperl = $Config{startperl} ne '#!perl'
+    ? $Config{startperl}
+: "#!$Config{perlpath}";
 
 print OUT <<"!GROK!THIS!";
 $startperl -w
@@ -40,7 +40,7 @@ $startperl -w
 # Non-modperl users should change this variable if needed to point
 # to the directory in which the configuration files are stored.
 #
-\$CONF_DIR  = '$OPTIONS{CONF}/gbrowse.conf';
+    \$CONF_DIR  = '$OPTIONS{CONF}/gbrowse.conf';
 #
 ###################################################################
 \$VERSION   = $OPTIONS{VERSION};
@@ -54,22 +54,27 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 print OUT <<'!NO!SUBS!';
 use strict;
 use CGI qw(:standard Map Area);
+use CGI::Carp 'fatalsToBrowser';
 use Bio::Graphics;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;
 use Bio::DB::GFF::SyntenyIO;
 use Text::Shellwords;
+use List::Util qw/min max sum/;
 
-use constant IMAGEWIDTH    => 800;
-use constant INTERIMAGE_PAD => 4;
-use constant VERTICAL_PAD => 40;
-use constant IMAGE_PAD     =>  15;
-use constant MAX_REGION    => 100_000;
-use constant BUTTONSDIR    => '/gbrowse/images/buttons/';
-use constant FINEZOOM      => '20%';
-use constant ALIGN_HEIGHT  => 6;
+use constant IMAGEWIDTH     => 800;
+use constant INTERIMAGE_PAD => 3;
+use constant VERTICAL_PAD   => 40;
+use constant IMAGE_PAD      => 4;
+use constant MAX_REGION     => 200_001;
+use constant BUTTONSDIR     => '/gbrowse/images/buttons/';
+use constant FINEZOOM       => '20%';
+use constant ALIGN_HEIGHT   => 6;
+use constant MAX_GAP        => 0.5;
 
 use constant DEBUG => 1;
+
+use Data::Dumper;
 
 use vars qw($CONF_DIR $CONF $SCONF $VERSION $MAP);
 
@@ -144,7 +149,7 @@ sub search {
 sub mainform {
   my $sources = shift;
   print
-    start_multipart_form(-name=>'mainform'),
+    start_form(-name=>'mainform',-method => 'post'),
     search(),
     source_popup(),
     end_form();
@@ -166,33 +171,64 @@ sub draw_image {
   return unless defined $src && defined $landmark;
 
   my $segment = landmark2segment($src,$landmark) or return;
+  if ( $segment->length > MAX_REGION) {
+    print h2("Sorry: the size of region $segment exceeds the maximum (".MAX_REGION." kbp)");
+    exit;
+  }
+
+  my $max_gap = $segment->length * MAX_GAP;
 
   my $io = Bio::DB::GFF::SyntenyIO->new($SCONF->setting('join')) or die;
-  my @hits = $io->get_synteny_by_range(-src=>$src,
-				       -ref=>$segment->abs_ref,
-				       -start=>$segment->abs_start,
-				       -end => $segment->abs_end);
+  my @hits = $io->get_synteny_by_range(-src   => $src,
+				       -ref   => $segment->abs_ref,
+				       -start => $segment->abs_start,
+				       -end   => $segment->abs_end);
+  
   return unless @hits;
+
+  # hits coordinates should be min and max of part coordinates
+  adjust_container(\@hits);
+
 
   # relate hits into "spans" sorted by target contig/chromosomes
   # %span = ( target_database,target_contig => { target, contig, start, end } } )
-  my (%span,%hit2span);
-  for my $h (@hits) {
+  my (%span,%hit2span,%instance);
+  for my $h (sort {$a->tstart <=> $b->tstart} @hits) {
     my $src    = $h->src2;
     my $contig = $h->target;
-    my $key = join $;,$src,$contig;
+    $instance{$src,$contig} ||= 0;
+    my $key = join $;,$src,$contig,$instance{$src,$contig};
+
+    # start a new span if the gap is too large 
+    if ($span{$key} && ($h->tstart >= $span{$key}{end}+$max_gap)) {
+      $key = join $;,$src,$contig,++$instance{$src,$contig};
+    }
 
     $span{$key}{start} = $h->tstart
-      if !defined $span{$key}{start} or $span{$key}{start} > $h->tstart;
+	if !defined $span{$key}{start} or $span{$key}{start} > $h->tstart;
 
     $span{$key}{end}   = $h->tend
-      if !defined $span{$key}{end}   or $span{$key}{end}   < $h->tend;
+	if !defined $span{$key}{end}   or $span{$key}{end}   < $h->tend;
 
     $span{$key}{src}    ||= $src;
     $span{$key}{contig} ||= $contig;
 
     $hit2span{$h} = $key;
   }
+
+
+  # get rid of tiny spans
+  my $fraction = $segment->length/100;
+  my @unused_hits;
+  for my $key (keys %span) {
+    if (($span{$key}{end} - $span{$key}{start}) < $fraction) {
+      delete $span{$key};
+      push @unused_hits, grep { $hit2span{$_} eq $key } @hits;
+      @hits = grep { $hit2span{$_} ne $key } @hits;
+    }
+  }
+
+#  print pre(Dumper \@unused_hits);
 
   # sort hits into upper and lower hits, based on this pattern:
   #
@@ -210,12 +246,15 @@ sub draw_image {
 
   my (%hit_positions);
   my $position = 0;
-  for my $h (sort {$a->start<=>$b->start} @hits) {
+  
+  # on second though, order by hit size to improve display
+  for my $h (sort {($b->end-$b->start)<=>($a->end-$a->start)} @hits) {
     my $span_key = $hit2span{$h};
-    $hit_positions{$h} = ($span{$span_key}{position} ||= $position++);
+    $span{$span_key}{position} ||= $position++;
+    $hit_positions{$h} = $span{$span_key}{position};
   }
 
-
+  
   # we now create feature files for the reference
   my %source_colors;
   for my $key (keys %span) {
@@ -227,10 +266,10 @@ sub draw_image {
   };
 
   # Create the middle (reference) panel
-
+  
   my ($upper_ff,$lower_ff);
   for my $h (@hits) {
-    my $is_upper = $hit_positions{$h} % 2;
+    my $is_upper= $hit_positions{$h} % 2;
     my $ff       = $is_upper ? \$upper_ff : \$lower_ff;
     unless ($$ff) {
       $$ff = Bio::Graphics::FeatureFile->new;
@@ -244,34 +283,58 @@ sub draw_image {
     add_hit_to_ff($$ff,$h);
   }
 
+  my $orphan_hit = 0;
+  for my $h (@unused_hits) {
+    my $is_upper= ++$orphan_hit % 2;
+    my $ff       = $is_upper ? \$upper_ff : \$lower_ff;
+    add_hit_to_ff($$ff,$h);
+  }
+
   my($ref_img,$ref_boxes) = segment2image($segment,$src,{
 							 features_top    => $upper_ff,
 							 features_bottom => $lower_ff,
-							 background => 'peachpuff',
-							}
+							 background => 'white',
+						       }
 					 ) or return;
   my $ref_title = $MAP->{$src}{desc} . ' '.format_segment($segment);
+
+
+  # pad all of the spans a bit for context 
+  for my $key (keys %span) {
+    my $width = $span{$key}{end} - $span{$key}{start};
+    $span{$key}{start} -= int $width/10;
+    $span{$key}{end  } += int $width/10;
+  }
 
   # we now create panels and corresponding hit feature files for each of the small
   # panels
   my $refwidth     = $CONF->width;
   my $panel_count  = keys %span;
-  my $panels_above = grep { $span{$_}{position} % 2 } keys %span;
-  my $panels_below = $panel_count - $panels_above;
+  my $panels_above = my @panels_above = grep { $span{$_}{position} % 2 } keys %span;
+  my $panels_below = my @panels_below = grep {!($span{$_}{position} % 2) } keys %span;
+  my $bases_above  = sum( map {$span{$_}{end} - $span{$_}{start}} @panels_above );
+  my $bases_below  = sum( map {$span{$_}{end} - $span{$_}{start}} @panels_below );
   my ($pad_top,$pad_bottom) = (0,0);
   my ($img,$boxes);
 
   for my $key (keys %span) {
     my $panel_position   = $span{$key}{position};
     my $is_above         = $panel_position % 2;
+    my $total_bases      = $is_above ? $bases_above : $bases_below;
     my $panels_here      = $is_above ? $panels_above : $panels_below;
-    my $width            = ($refwidth-($panels_here-1)*INTERIMAGE_PAD-($panels_here-1)*IMAGE_PAD*2)/$panels_here;
-
+    my $total_width      = $refwidth - ($panels_here-1)*INTERIMAGE_PAD - ($panels_here-1)*IMAGE_PAD*2;
     my $src              = $span{$key}{src};
     my $contig           = $span{$key}{contig};
-    my $start            = $span{$key}{start};
     my $end              = $span{$key}{end};
-    my $name             = "${contig}:$start..$end";
+    my $start            = $span{$key}{start};
+    my $bases            = $end - $start;
+    my $name             = "$contig:$start..$end";
+    my $segment          = landmark2segment($src,$name);
+    my @relevant_hits    = grep {$hit2span{$_} eq $key} @hits;
+
+    # width of inset panels scaled by size of target sequence
+    my $scale      = $bases/$total_bases;
+    my $width      = $scale * $total_width;
 
     my $ff    = Bio::Graphics::FeatureFile->new;
     $ff->add_type(BLOCK => {
@@ -281,16 +344,15 @@ sub draw_image {
 			    glyph=>'segments',
 			    label=>0,
 			    box_subparts=>1});
-    my @relevant_hits    = grep {$_->src2 eq $src && $_->target eq $contig} @hits;
+
     add_hit_to_ff($ff,$_,'invert') foreach @relevant_hits;
 
-    my $segment          = landmark2segment($src,$name);
-    my ($img,$boxes)        = segment2image($segment,
-					    $src,
-					    {
-					     width=>$width,
-					     $is_above ? (features_bottom=>$ff) : (features_top=>$ff)
-					    }) or next;
+    my ($img,$boxes)     = segment2image($segment,
+					 $src,
+					 {
+					   width=>$width,
+					   $is_above ? (features_bottom=>$ff) : (features_top=>$ff)
+					     }) or next;
     $span{$key}{image} = $img;
     $span{$key}{boxes} = $boxes;
     $span{$key}{title} = $MAP->{$src}{desc} . ' ' . format_segment($segment);
@@ -319,9 +381,10 @@ sub draw_image {
 
 
   for my $key (keys %span) {
-    my $color            = $SCONF->setting($MAP->{$span{$key}{src}}{db}=>'color');
-    my $tcolor           = $gd->colorAllocateAlpha(Bio::Graphics::Panel->color_name_to_rgb($color),90);
-    $span{$key}{tcolor}  = $tcolor;
+   my $color            = $SCONF->setting($MAP->{$span{$key}{src}}{db}=>'color');
+    $span{$key}{tcolor}  = $gd->colorAllocateAlpha(Bio::Graphics::Panel->color_name_to_rgb($color),80);
+    $span{$key}{bgcolor} = $gd->colorAllocateAlpha(Bio::Graphics::Panel->color_name_to_rgb($color),110);
+    $span{$key}{border}  = $gd->colorResolve(Bio::Graphics::Panel->color_name_to_rgb($color));
   }
 
   my $ref_top    = $panels_above ? $pad_top + VERTICAL_PAD : INTERIMAGE_PAD;
@@ -330,7 +393,15 @@ sub draw_image {
   # paste the individual panels into the picture
   my @map_items;
   my %x = (above=>INTERIMAGE_PAD,below=>INTERIMAGE_PAD);
-  for my $key (sort {$span{$a}{position} <=> $span{$b}{position}} keys %span) {
+
+  # order the panels by hit order 
+  my (@sorted_spans,%seen_span);
+  for my $h (sort {$a->start <=> $b->start} @hits) {
+    my $span = $hit2span{$h};
+    push @sorted_spans, $span if ++$seen_span{$span} == 1;
+  }
+
+  for my $key (@sorted_spans) {
     my $is_above = $span{$key}{position} % 2;
     my $img = $span{$key}{image};
     my $xi = $is_above ? 'above' : 'below';
@@ -338,17 +409,24 @@ sub draw_image {
     $span{$key}{offsets} = [$x{$xi},$y];
     my @rect = ($x{$xi},$y,$x{$xi}+$img->width,$y+$img->height);
     $gd->copy($img,$x{$xi},$y,0,0,$img->width,$img->height);
-    $gd->rectangle(@rect,$cyan);
+    $gd->filledRectangle(@rect,$span{$key}{bgcolor});
+    $gd->rectangle(@rect,$span{$key}{border});
     $x{$xi} += $img->width + INTERIMAGE_PAD;
+    my $name = "$span{$key}{contig}:$span{$key}{start}..$span{$key}{end}";
     push @map_items,Area({shape=>'rect',
 			  coords=>join(',',@rect),
+			  href=>"?search_src=$span{$key}{src};name=$name",
 			  title=>$span{$key}{title}});
   }
 
   # middle row (reference)
   my @rect = (INTERIMAGE_PAD,$ref_top,INTERIMAGE_PAD+$ref_img->width,$ref_top+$ref_img->height);
   $gd->copy($ref_img,INTERIMAGE_PAD,$ref_top,0,0,$ref_img->width,$ref_img->height);
-  $gd->rectangle(@rect,$cyan);
+  my $color   = $SCONF->setting($MAP->{$src}{db}=>'color');
+  my $bgcolor = $gd->colorAllocateAlpha(Bio::Graphics::Panel->color_name_to_rgb($color),110);
+  my $border  = $gd->colorResolve(Bio::Graphics::Panel->color_name_to_rgb($color));
+  $gd->filledRectangle(@rect,$bgcolor);
+  $gd->rectangle(@rect,$border);
   push @map_items,Area({shape=>'rect',
 			coords=>join(',',@rect),
 			title=>$ref_title});
@@ -382,6 +460,7 @@ sub draw_image {
   }
 
   for my $feature (keys %ref_boxes) {
+    next unless defined $ref_boxes{$feature} && defined $panel_boxes{$feature};
     my ($rx1,$ry1,$rx2,$ry2) = @{$ref_boxes{$feature}};
     my ($px1,$py1,$px2,$py2) = @{$panel_boxes{$feature}};
     my $poly = GD::Polygon->new();
@@ -493,7 +572,7 @@ sub add_hit_to_ff {
   my @attributes = $flip_hit ? (-attributes => {flip=>1}) : ();
 
   if ($invert) { # construct the feature from the target coordinates
-    if (my $p = $hit->parts) {
+    if (my $p = $hit->parts ) {
       my @segments = map {Bio::Graphics::Feature->new(
 						      -name=>$_->name,
 						      -start=>$_->tstart,
@@ -548,6 +627,18 @@ sub add_hit_to_ff {
     }
   }
   $ff->add_feature($feature=>'BLOCK');
+}
+
+sub adjust_container {
+  my $hits = shift;
+  for my $h (@$hits) {
+   if ($h->parts) {
+     my @coords = map {$_->tstart,$_->tend} @{$h->parts};
+     my ($max,$min)  = (max(@coords),min(@coords));
+     $h->tstart($min) if $h->tstart < $min;
+     $h->tend($max)   if $h->tend   > $max;
+    }
+  }
 }
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

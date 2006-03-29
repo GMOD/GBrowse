@@ -69,6 +69,7 @@
       </div>
       </div>
     </span>
+    [% SET id = id + 1 %]
   [%- END -%]
  </div>
  </div>

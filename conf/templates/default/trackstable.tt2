@@ -19,8 +19,9 @@
   <!-- Loop through each category -->
  <div class="searchbody" id="target3" style="width: 100%;">
  <div style="padding-left:1em">
-  [% SET id = 'c00000' %]
+  [% SET idnum = '00000' %]
   [% FOREACH category = track_categories -%]
+    [% SET id = 'c' _ idnum %]
     [% NEXT IF !track_groups.$category %]
     [% USE String(category) %]
     [% SET lc_category = String.lower %]
@@ -69,7 +70,7 @@
       </div>
       </div>
     </span>
-    [% SET id = id + 1 %]
+    [% SET idnum = idnum + 1 %]
   [%- END -%]
  </div>
  </div>

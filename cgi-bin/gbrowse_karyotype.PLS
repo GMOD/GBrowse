@@ -46,7 +46,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_karyotype.PLS,v 1.4 2006-02-22 02:11:31 sheldon_mckay Exp $
+#$Id: gbrowse_karyotype.PLS,v 1.5 2006-04-06 19:20:53 sheldon_mckay Exp $
 
 use strict;
 use CGI::Carp 'fatalsToBrowser';
@@ -1113,7 +1113,7 @@ sub dump_ideogram_help {
   <h2>How to get cytoband data</h2>
   <p>
   The starting point for drawing chromosome ideograms is the cytoband data.
-  These data can be obtained from the UCSG genome browser, from NCBI and
+  These data can be obtained from the UCSC genome browser, from NCBI and
   from EnsEMBL.  Once obtained, the cytobands are converted to GFF to be
   loaded into a Bio::DB::GFF database or saved as a flatfile.
   </p>

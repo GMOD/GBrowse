@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.28 2006-02-23 16:31:09 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.29 2006-04-09 17:48:32 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -404,9 +404,9 @@ sub main_display {
   }
 
   # force flipping
-  if ($segment && $segment->stop < $segment->start) {
+  if ($segment && $segment->end < $segment->start) {
       $segment = $segment->factory->segment(-name  => $segment->seq_id,
-					    -start => $segment->stop,
+					    -start => $segment->end,
 					    -stop  => $segment->start,
 					    -absolute => 1);
       $page_settings->{flip} = 1;
@@ -552,6 +552,12 @@ sub detail_panel {
     $CONFIG->width($page_settings->{width});
     my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} && !/:(overview|region)$/ }
                                @{$page_settings->{tracks}};
+
+#    if ($page_settings->{sk} eq "sorted") {
+#      my %label_keys = map {$_ => label2key($_)}  @tracks_to_show;
+#      @tracks_to_show    = sort {lc $label_keys{$a} cmp lc $label_keys{$b}} @tracks_to_show;
+#    }
+
     my %options = map {$_=>$page_settings->{features}{$_}{options}} @tracks_to_show;
     my %limit   = map {$_=>$page_settings->{features}{$_}{limit}}   @tracks_to_show;
     my $h_callback = make_hilite_callback($page_settings);
@@ -1637,7 +1643,6 @@ sub lookup_features_from_db {
 
   warn "name = $settings->{name}, ref = $settings->{ref}, start = $settings->{start}, stop = $settings->{stop}, version = $settings->{version}" if DEBUG;
 
-  $db->debug(0);
   my $divisor = $CONFIG->setting(general=>'unit_divider')     || 1;
   my $padding = $CONFIG->setting(general=>'landmark_padding') || 0;
 
@@ -1855,7 +1860,10 @@ sub format_segment {
 sub whole_segment {
   my $segment = shift;
   my $factory = $segment->factory;
-  my $class   = eval {$segment->seq_id->class} || $factory->refclass;
+
+  # the segment class has been deprecated, but we still must support it
+  my $class   = eval {$segment->seq_id->class} || eval{$factory->refclass};
+
   my ($whole_segment) = $factory->segment(-class=>$class,
 					  -name=>$segment->seq_id);
   $whole_segment   ||= $segment;  # just paranoia
@@ -1878,7 +1886,7 @@ sub overview {
 		      -border=>0,
 		      -align=>'middle')
     .hidden(-name=>'seg_min',-value=>$whole_segment->start,-override=>1)
-    .hidden(-name=>'seg_max',-value=>$whole_segment->stop,-override=>1);
+    .hidden(-name=>'seg_max',-value=>$whole_segment->end,-override=>1);
 }
 
 sub regionview {

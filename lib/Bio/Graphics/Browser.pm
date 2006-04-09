@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.10 2006-04-06 16:36:54 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.11 2006-04-09 17:48:33 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1197,7 +1197,8 @@ sub image_and_map {
        $pattern =~ s!^/(.+)/$!$1!;  # clean up regexp delimiters
        my %pairs;
        for my $a (@$set) {
-	 (my $base = $a->name) =~ s/$pattern//i;
+	 my $name = $a->name or next;
+	 (my $base = $name) =~ s/$pattern//i;
  	push @{$pairs{$base}},$a;
        }
        my $track = $tracks{$label};
@@ -1920,6 +1921,7 @@ sub _hits_to_html {
   my $ruler   = shift @$boxes;
   return unless $ruler->[0];  # don't know why....
 
+
   my $length  = $ruler->[0]->length/RULER_INTERVALS;
   $width   = ($ruler->[3]-$ruler->[1])/RULER_INTERVALS;
   for my $i (0..RULER_INTERVALS-1) {
@@ -2341,6 +2343,7 @@ sub make_link {
   # general defaults
   $link        = $self->code_setting('TRACK DEFAULTS'=>'link') unless defined $link;
   $link        = $self->code_setting(general=>'link')          unless defined $link;
+
 
   return unless $link;
 

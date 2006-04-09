@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.29 2006-04-09 17:48:32 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.30 2006-04-09 17:51:11 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1749,7 +1749,7 @@ sub do_keyword_search {
     my ($name,$description,$score) = @$r;
     my ($seg) = $db->segment($name) or next;
     push @results,Bio::Graphics::Feature->new(-name   => $name,
-					      -class  => $name->class,
+					      -class  => eval{$name->class}||undef,
 					      -type   => $description,
 					      -score  => $score,
 					      -ref    => $seg->abs_ref,

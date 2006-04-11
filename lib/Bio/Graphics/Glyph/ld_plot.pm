@@ -1,6 +1,6 @@
-# $Id: pairwise_plot.pm,v 1.1.8.1 2006-04-11 21:51:07 lstein Exp $
+# $Id: ld_plot.pm,v 1.1.2.1 2006-04-11 21:51:07 lstein Exp $
 
-package Bio::Graphics::Glyph::pairwise_plot;
+package Bio::Graphics::Glyph::ld_plot;
 
 # Triangle plot for showing pairwise quantitative relationships.
 # Developed for drawing LD.  Might be useful for something else.
@@ -13,10 +13,14 @@ package Bio::Graphics::Glyph::pairwise_plot;
 
 use strict;
 use Math::Trig;
+use LWP::Simple 'get';
 
 use vars '@ISA';
 use Bio::Graphics::Glyph::generic;
 @ISA = 'Bio::Graphics::Glyph::generic';
+
+use constant V_OFFSET=>30;
+use constant PAD_TOP=>10;
 
 # return angle in radians
 sub angle {
@@ -48,15 +52,14 @@ sub intercept {
 # height calculated from width
 sub layout_height {
   my $self = shift;
-  return $self->{height} if exists $self->{height};
-  return $self->{height} = $self->x2y($self->width)/2;
+  return $self->x2y($self->width)/2;
 }
 
 sub calculate_color {
   my $self = shift;
   my ($s,$rgb) = @_;
   return $self->{colors}{$s} if exists $self->{colors}{$s};
-  return $self->{colors}{$s} = 
+  return $self->{colors}{$s} =
     $self->panel->translate_color(map { 255 - (255-$_) * $s} @$rgb);
 }
 
@@ -64,70 +67,91 @@ sub draw {
   my $self = shift;
   my $gd   = shift;
   my ($left,$top,$partno,$total_parts) = @_;
+
   my $fgcolor = $self->fgcolor;
 
   my ($red,$green,$blue) = $self->panel->rgb($self->bgcolor);
 
-  my @points = $self->get_points();
-  $gd->line($self->left+$left, $top+1,
-	    $self->right+$left,$top+1,
+  $self->filled_box($gd,$self->left+$left+1,$top,$self->right+$left-1,$top+PAD_TOP-3,$self->panel->translate_color('red'));
+
+  $top += PAD_TOP;
+  my $points = $self->get_points();
+  $gd->line($self->left+$left, $top+3,
+	    $self->right+$left,$top+3,
 	    $fgcolor);
 
-  my $points = $self->option('point');
+  my @positions = sort {$a<=>$b} keys %$points;
+  my @parts     = map {$self->map_pt($_)} @positions;
 
-  my @parts = sort {$a->left<=>$b->left} $self->parts;
-  $_->draw_component($gd,$left,$top-10) foreach @parts;
+  return unless @parts;
 
-  # assumption: parts are not overlapping
-  my @points;
-  if ($points) {
-    @points = map { int (($parts[$_]->right+$parts[$_+1]->left)/2)} (0..$#parts-1);
-    unshift @points,int($parts[0]->left);
-    push @points,int($parts[-1]->right);
+  # tick marks in genome coordinates
+  for my $pt (@parts) {
+    $gd->line($pt+$left,$top,$pt+$left,$top+6,$fgcolor);
   }
+
+  # choose a width for the parts
+  my $origin = $self->left+$left;
+  my $width = ($self->width)/@parts;
+  my $w2    = $width/2;
+
+  # evenly-spaced positions
+  for (my $i=0; $i<@parts; $i++) {
+    my $center = $origin+$i*$width;
+    $gd->line($parts[$i]+$left,$top+6,$center,$top+V_OFFSET-3,$fgcolor);
+    $gd->line($center,$top+V_OFFSET-3,$center,$top+V_OFFSET,$fgcolor);
+  }
+
 
   for (my $ia=0;$ia<@parts-1;$ia++) {
     for (my $ib=$ia+1;$ib<@parts;$ib++) {
-      my ($l1,$r1,$l2,$r2);
-      if (@points) {
-	($l1,$r1) = ($points[$ia]+1,$points[$ia+1]-1);
-	($l2,$r2) = ($points[$ib]+1,$points[$ib+1]-1);
-      } else {
-	($l1,$r1) = ($parts[$ia]->left,$parts[$ia]->right);
-	($l2,$r2) = ($parts[$ib]->left,$parts[$ib]->right);
-      }
+      my $pos1 = $positions[$ia];
+      my $pos2 = $positions[$ib];
+      next unless exists $points->{$pos1}{$pos2};
 
-      my $intensity = eval{$self->feature->pair_score($parts[$ia],$parts[$ib])};
-      warn $@ if $@;
-      $intensity    = 1.0 unless defined $intensity;
+      my $intensity = $points->{$pos1}{$pos2};
       my $c         = $self->calculate_color($intensity,[$red,$green,$blue]);
+      my ($l1,$r1)  = ($ia*$width,($ia+1)*$width);
+      my ($l2,$r2)  = ($ib*$width,($ib+1)*$width);
 
       # left corner
       my ($lcx,$lcy) = $self->intercept($l1,$l2);
       my ($tcx,$tcy) = $self->intercept($r1,$l2);
       my ($rcx,$rcy) = $self->intercept($r1,$r2);
       my ($bcx,$bcy) = $self->intercept($l1,$r2);
+
       my $poly = GD::Polygon->new();
-      $poly->addPt($lcx+$left,$lcy+$top);
-      $poly->addPt($tcx+$left,$tcy+$top);
-      $poly->addPt($rcx+$left,$rcy+$top);
-      $poly->addPt($bcx+$left,$bcy+$top);
+      $poly->addPt($lcx+$origin,$lcy+V_OFFSET+$top);
+      $poly->addPt($tcx+$origin,$tcy+V_OFFSET+$top);
+      $poly->addPt($rcx+$origin,$rcy+V_OFFSET+$top);
+      $poly->addPt($bcx+$origin,$bcy+V_OFFSET+$top);
       $gd->filledPolygon($poly,$c);
     }
   }
+
 }
 
 sub get_points {
   my $self = shift;
-  my @points;
-  my @parts = $self->parts;
-  return unless @parts;
-
-  for my $g (@parts) {
-    push @points,$g->left;
-    push @points,$g->right;
+  my $url = $self->feature->link;
+  my $start = $self->start;
+  my $end   = $self->end;
+  my $pstart = $self->panel->start;
+  my $pend   = $self->panel->end;
+  $start     = $pstart if $pstart > $start;
+  $end       = $pend   if $pend   < $end;
+  $url =~ s/start=\d+/start=$start/;
+  $url =~ s/stop=\d+/stop=$end/;
+  my $data = get($url);
+  warn "DEBUG: got ",length($data)," bytes from $url";
+  my %points;
+  my @lines = split "\n",$data;
+  for my $line (@lines) {
+    next if $line =~ /^\#/;
+    my ($pos1,$pos2,$population,$rsid1,$rsid2,$d_prime,$r_square,$lod) = split /\s+/,$line;
+    $points{$pos1}{$pos2} = $r_square;
   }
-  @points;
+  return \%points;
 }
 
 # never allow our internal parts to bump;
@@ -139,9 +163,11 @@ __END__
 
 =head1 NAME
 
-Bio::Graphics::Glyph::pairwise_plot - The "pairwise plot" glyph
+Bio::Graphics::Glyph::ld_plot - The HapMap project "LD plot" glyph
 
 =head1 SYNOPSIS
+
+NOTE: this documentation is not accurate. FIX!
 
  use Bio::Graphics;
 
@@ -164,7 +190,7 @@ Bio::Graphics::Glyph::pairwise_plot - The "pairwise plot" glyph
  }
 
  $panel->add_track($block,
- 		   -glyph => 'pairwise_plot',
+ 		   -glyph => 'ld_plot',
 		   -angle => 45,
 		   -bgcolor => 'red',
 		   -point => 1,
@@ -203,7 +229,7 @@ You should then create a feature of this new type and use
 add_SeqFeature() to add to it all the genomic features that you wish
 to compare.
 
-Then add this feature to a track using the pairwise_plot glyph.  When
+Then add this feature to a track using the ld_plot glyph.  When
 the glyph renders the feature, it will interrogate the pair_score()
 method for each pair of subfeatures.
 

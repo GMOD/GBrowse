@@ -167,7 +167,9 @@ sub open_database {
   my $config  = shift || $CONFIG;
   my $source  = $config->source;
   return $DB{$source} if $DB{$source};
+
   my ($adaptor,@argv) = eval{$config->db_settings};
+
   unless ($adaptor) {
     warn "gbrowse: trying to reload config, cache must be stale";
     my $dir = $config->dir;

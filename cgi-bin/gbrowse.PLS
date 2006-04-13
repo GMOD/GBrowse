@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.151 2006-02-23 16:30:03 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.152 2006-04-13 18:27:22 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -396,9 +396,9 @@ sub main_display {
   }
 
   # force flipping
-  if ($segment && $segment->stop < $segment->start) {
+  if ($segment && $segment->end < $segment->start) {
       $segment = $segment->factory->segment(-name  => $segment->seq_id,
-					    -start => $segment->stop,
+					    -start => $segment->end,
 					    -stop  => $segment->start,
 					    -absolute => 1);
       $page_settings->{flip} = 1;
@@ -448,7 +448,6 @@ sub main_display {
   }
 
   my %exclude = map {$_=>1} map {$CONFIG->tr($_)} qw(OVERVIEW REGION ANALYSIS EXTERNAL);
-                                                                                                                             
   my @user_keys = grep {!$exclude{$_}} sort keys %track_groups;
 
   my @track_categories = (
@@ -476,6 +475,7 @@ sub main_display {
 
     my %remote_sources_hash;
     for my $url ( $REMOTE_SOURCES->sources ) {
+        next unless $url =~ /^(ftp|http):/ && $feature_files->{$url};
         ( my $f = $url )
             =~ s!(http:.+/das/\w+)(?:\?(.+))?$!$1/features?segment=$segment_str;$2!;
         $remote_sources_hash{$url} = $f;
@@ -1455,7 +1455,7 @@ sub overview {
 		      -border=>0,
 		      -align=>'middle')
     .hidden(-name=>'seg_min',-value=>$whole_segment->start,-override=>1)
-    .hidden(-name=>'seg_max',-value=>$whole_segment->stop,-override=>1);
+    .hidden(-name=>'seg_max',-value=>$whole_segment->end,-override=>1);
 }
 
 sub regionview {

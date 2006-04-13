@@ -25,8 +25,13 @@ sub new {
 		    sources       => {},
 		   },ref $package || $package;
   for my $track (keys %{$page_settings->{features}}) {
-    next unless $track =~ /^(http|ftp|das):/;
-    $self->add_source($track);
+    if ($track =~ /^(http|ftp|das):/) {
+      $self->add_source($track,$track);
+      next;
+    }
+    my $remote_url = $config->setting($track=>'remote feature') or next;
+    warn "adding remote_url = $remote_url" if DEBUG;
+    $self->add_source($track,$remote_url);
   }
   $self;
 }
@@ -34,17 +39,18 @@ sub new {
 sub config        { shift->{config}          }
 sub page_settings { shift->{page_settings}   }
 sub sources       { keys %{shift->{sources}} }
+sub source2url    { shift->{sources}{shift()}  }
 
 sub add_source {
   my $self   = shift;
-  my $source = shift;
-  $self->{sources}{$source}++;
+  my ($label,$source) = @_;
+  $self->{sources}{$label}=$source;
 }
 
 sub delete_source {
   my $self   = shift;
-  my $source = shift;
-  delete $self->{sources}{$source};
+  my $label = shift;
+  delete $self->{sources}{$label};
 }
 
 sub set_sources {
@@ -54,7 +60,7 @@ sub set_sources {
   my $settings = $self->page_settings;
   for (@$sources) {
     next if $_ eq '';
-    $self->add_source($_);
+    $self->add_source($_,$_);
     $settings->{features}{$_}{visible}++ unless exists $settings->{features}{$_};
   }
 
@@ -70,17 +76,19 @@ sub set_sources {
 
 sub feature_file {
   my $self = shift;
-  my ($source,$segment,$rel2abs) = @_;
+  my ($source_label,$segment,$rel2abs) = @_;
 
   my $config   = $self->config;
   my $settings = $self->page_settings;
 
-  warn "get_remote_feature_data(): fetching $source" if DEBUG;
+  warn "get_remote_feature_data(): fetching $source_label" if DEBUG;
   my $proxy           = $config->setting('proxy') || '';
   my $http_proxy      = $config->setting('http proxy') || $proxy || '';
   my $ftp_proxy       = $config->setting('ftp proxy')  || $proxy || '';
 
   # DAS handling
+  my $source = $self->source2url($source_label);
+
   if ($source =~ m!^(http://.+/das)/([^/?]+)(?:\?(.+))?$!) { # DAS source!
     unless (eval "require Bio::Das; 1;") {
       error($config->tr('NO_DAS'));

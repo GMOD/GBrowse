@@ -25,8 +25,13 @@ sub new {
 		    sources       => {},
 		   },ref $package || $package;
   for my $track (keys %{$page_settings->{features}}) {
-    next unless $track =~ /^(http|ftp|das):/;
-    $self->add_source($track);
+    if ($track =~ /^(http|ftp|das):/) {
+      $self->add_source($track,$track);
+      next;
+    }
+    my $remote_url = $config->setting($track=>'remote feature') or next;
+    warn "adding remote_url = $remote_url" if DEBUG;
+    $self->add_source($track,$remote_url);
   }
   $self;
 }
@@ -34,17 +39,18 @@ sub new {
 sub config        { shift->{config}          }
 sub page_settings { shift->{page_settings}   }
 sub sources       { keys %{shift->{sources}} }
+sub source2url    { shift->{sources}{shift()}  }
 
 sub add_source {
   my $self   = shift;
-  my $source = shift;
-  $self->{sources}{$source}++;
+  my ($label,$source) = @_;
+  $self->{sources}{$label}=$source;
 }
 
 sub delete_source {
   my $self   = shift;
-  my $source = shift;
-  delete $self->{sources}{$source};
+  my $label = shift;
+  delete $self->{sources}{$label};
 }
 
 sub set_sources {
@@ -54,7 +60,7 @@ sub set_sources {
   my $settings = $self->page_settings;
   for (@$sources) {
     next if $_ eq '';
-    $self->add_source($_);
+    $self->add_source($_,$_);
     $settings->{features}{$_}{visible}++ unless exists $settings->{features}{$_};
   }
 
@@ -70,18 +76,21 @@ sub set_sources {
 
 sub feature_file {
   my $self = shift;
-  my ($source,$segment,$rel2abs) = @_;
+  my ($label,$segment,$rel2abs) = @_;
 
   my $config   = $self->config;
   my $settings = $self->page_settings;
 
-  warn "get_remote_feature_data(): fetching $source" if DEBUG;
+  warn "get_remote_feature_data(): fetching $label" if DEBUG;
   my $proxy           = $config->setting('proxy') || '';
   my $http_proxy      = $config->setting('http proxy') || $proxy || '';
   my $ftp_proxy       = $config->setting('ftp proxy')  || $proxy || '';
 
   # DAS handling
-  if ($source =~ m!^(http://.+/das)/([^/?]+)(?:\?(.+))?$!) { # DAS source!
+  my $url = $self->source2url($label);
+  warn "label = $label, url=$url";
+
+  if ($url =~ m!^(http://.+/das)/([^/?]+)(?:\?(.+))?$!) { # DAS source!
     unless (eval "require Bio::Das; 1;") {
       error($config->tr('NO_DAS'));
       return;
@@ -114,7 +123,7 @@ sub feature_file {
     my $segment = $das->segment($segment->abs_ref,$segment->abs_start,$segment->abs_stop);
     # the next step gives the current segment the same name as the DAS source
     # and ensures that the DAS source appears in the list of external sources in the UI
-    $segment->name($source);
+    $segment->name($url);
     return $segment;
   }
 
@@ -131,21 +140,21 @@ sub feature_file {
     $UA->proxy(http => $http_proxy) if $http_proxy && $http_proxy ne 'none';
     $UA->proxy(ftp => $http_proxy)  if $ftp_proxy  && $ftp_proxy  ne 'none';
   }
-  my $id = md5_hex($source);     # turn into a filename
+  my $id = md5_hex($url);     # turn into a filename
   $id =~ /^([0-9a-fA-F]+)$/;  # untaint operation
   $id = $1;
 
   my (undef,$tmpdir) = $config->tmpdir($config->source.'/external');
-  my $response = $UA->mirror($source,"$tmpdir/$id");
+  my $response = $UA->mirror($url,"$tmpdir/$id");
   if ($response->is_error) {
-    error($config->tr('Fetch_failed',$source,$response->message));
+    error($config->tr('Fetch_failed',$url,$response->message));
     return;
   }
   open (F,"<$tmpdir/$id") or return;
   my $feature_file = Bio::Graphics::FeatureFile->new(-file           => \*F,
 						     -map_coords     => $rel2abs,
 						     -smart_features =>1);
-  $feature_file->name($source);
+  $feature_file->name($url);
   warn "get_remote_feature_data(): got $feature_file" if DEBUG;
   return $feature_file;
 }

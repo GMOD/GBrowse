@@ -1297,41 +1297,54 @@ list of the features you want to include.  For example:
 This will include features of type "gene:sgd" and "stRNA:sgd" in the
 same track and display them in a similar fashion.
 
-=item 2 glyph
+=item 2 remote feature
+
+This relates the track to a remote feature track somewhere on the
+Internet. The value is a http: or ftp: URL, and may correspond to a
+static file of features in GFF format, gbrowse upload format, a CGI
+script, or a DAS source. When this option is active, the "feature"
+option and most of the glyph control options described below are
+ignored, but the "citation" and "key" options are honored.
+
+Example:
+
+ remote feature = http://www.wormbase.org/cgi-bin/das/wormbase?type=mRNA
+
+=item 3 glyph
 
 This controls the glyph (graphical icon) that is used to represent
 the feature.  The list of glyphs and glyph-specific options are
 listed in the section GLYPHS AND GLYPH OPTIONS.  The "generic" glyph
 is the default.
 
-=item 3 bgcolor
+=item 4 bgcolor
 
 This controls the background color of the glyph.  The format of
 colors is explained in GLYPHS AND GLYPH OPTIONS.
 
-=item 4 fgcolor
+=item 5 fgcolor
 
 This controls the foreground color (outline color) of the glyph.
 The format of colors is explained in GLYPHS AND GLYPH OPTIONS.
 
-=item 5 fontcolor
+=item 6 fontcolor
 
 This controls the color of the primary font of text drawn in the
 glyph.  This is the font used for the features labels drawn at the
 top of the glyph.
 
-=item 6 font2color
+=item 7 font2color
 
 This controls the color of the secondary font of text drawn in
 the glyph.  This is the font used for the longish feature descriptions
 drawn at the bottom of the glyphs.
 
-=item 7 height
+=item 8 height
 
 This option sets the height of the glyph.  It is expressed in
 pixels.
 
-=item 8 strand_arrow
+=item 9 strand_arrow
 
 This is a true or false value, where true is 1 and false is 0.
 If this option is set to true, then the glyph will indicate the
@@ -1339,26 +1352,26 @@ strandedness of the feature, usually by drawing an arrow of some
 sort.  Some glyphs are inherently stranded, or inherently
 non-stranded and simply ignore this option.
 
-=item 9 label
+=item 10 label
 
 This is a true or false value, where true is 1 and false is 0.  If
 the option is set to true, then the name of the feature (i.e. its
 group name) is printed above the feature, space allowing.
 
-=item 10 description
+=item 11 description
 
 This is a true or false value, where true is 1 and false is 0.  If
 the option is set to true, then the description of the feature (any
 Note fields) is printed below the feature, space allowing.
 
-=item 11 key
+=item 12 key
 
 This option controls the descriptive key that is drawn in the key
 area at the bottom of the image.  It also appears in the checkboxes
 that the end user uses to switch tracks on and off. If not specified, it defaults to
 the track name.
 
-=item 12 citation
+=item 13 citation
 
 If present, this option creates a human-readable descriptive
 paragraph describing the feature and how it was derived.  This is
@@ -1370,20 +1383,20 @@ generates a page containing the text description.  Long paragraphs
 can be continued across multiple lines, provided that continuation
 lines begin with whitespace.
 
-=item 13 link, title, link_target
+=item 14 link, title, link_target
 
 These options are identical to the similarly-named options in 
 the [GENERAL] section, but change the rules on a track-by-track basis.  
 They can be used to override the global rules.  To force a track not
 to contain any links, use a blank value.
 
-=item 14 box_subparts
+=item 15 box_subparts
 
 If this option is true, then gbrowse will generate imagemap rectangles
 for each of the subparts of a feature (e.g. the exons within a
 transcript), allowing you to link each subpart separately.
 
-=item 15 feature_low
+=item 16 feature_low
 
 If this option is present, GBrowse will use the list of feature types
 listed here at resolution views.  (This is one of the ways that
@@ -1392,7 +1405,7 @@ to switch off detailed exon, UTR, promoters and other within-the-gene
 features, and just show the start and stop of the transcription
 unit.
 
-=item 16 global feature
+=item 17 global feature
 
 If this option is present and set to a true value (e.g. "1"), GBrowse 
 will automatically generate a  pseudo-feature that starts at the 
@@ -1402,20 +1415,20 @@ glyphs in order to display global characteristics of the sequence.
 If this option is set, then you do not need to specify a "feature"
 option.
 
-=item 17 group_pattern
+=item 18 group_pattern
 
 This option lets you connect related features by dotted lines based
 on a pattern match in the features' names.  A typical example is
 connecting the 5' and 3' read pairs from ESTs or plasmids.  See
 GROUPING FEATURES for details.
 
-=item 18 restrict
+=item 19 restrict
 
 This option allows you to restrict who is allowed to view the current
 track by host name, IP address or username/password.  See
 AUTHENTICATION AND AUTHORIZATION for details.
 
-=item 19 category
+=item 20 category
 
 This option allows you to group tracks into different groups on the
 GBrowse display in addition to the default group called 'General'.
@@ -1427,7 +1440,7 @@ called "Genes", you would add this to each of the track defintions:
 Note that it is not possible to make subcategories. If all tracks are
 categorized, then the "General" category will not be displayed.
 
-=item 20 das category, das landmark, das subparts, das superparts
+=item 21 das category, das landmark, das subparts, das superparts
 
 All these options pertain to exporting the GBrowse database as a DAS
 data source.  Please see L<DAS_HOWTO> for more information.
@@ -2392,10 +2405,23 @@ For example:
 
 =head1 H. USING DAS (DISTRIBUTED ANNOTATION SYSTEM) DATABASES
 
-GBrowse has limited DAS support, allowing it to visualize data from a
-single DAS source.  To get this support, you must use Bio::Das version
-0.90 or higher, available from http://www.biodas.org (look for the
-"Bio-Das2" library).
+You may insert features from a DAS source into any named track. Create
+a stanza as usual but instead of specifying the feature type using the
+"feature" option, give the desired DAS URL using the "remote feature" option:
+
+ remote feature = http://dev.hapmap.org/cgi-perl/das/t2d_testing?type=ldblock
+
+Because DAS sources specify the glyph and visualization options, most
+of the settings such as bgcolor will be ignored. However, the track
+key and citation options are honored.
+
+You can use the same syntax to load a GFF file or a feature file in
+Gbrowse upload format into a track. Just provide a URL that returns
+the desired data.
+
+You can also run GBrowse entirely off a single DAS source. To get
+this support, you must use Bio::Das version 0.90 or higher, available
+from http://www.biodas.org.
 
 A sample [GENERAL] configuration section looks like this:
 

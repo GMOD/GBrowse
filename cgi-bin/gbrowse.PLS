@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.31 2006-04-13 16:32:50 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.32 2006-04-13 18:00:54 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -582,7 +582,6 @@ sub detail_panel {
   }
 
   else {
-    warn "MAX_SEGMENT = ",unit_label($MAX_SEGMENT),", DEFAULT_SEGMENT = ",unit_label($DEFAULT_SEGMENT);
     $cell .= i($CONFIG->tr('TOO_BIG',scalar unit_label($MAX_SEGMENT),scalar unit_label($DEFAULT_SEGMENT)));
   }
   $cell .= "\n";
@@ -1393,7 +1392,7 @@ sub das_table {
     (my $f = $url) =~ s!(http:.+/das/\w+)(?:\?(.+))?$!$1/features?segment=$segment;$2!;
 
     warn "url = $url" if DEBUG_EXTERNAL;
-    # next unless $url =~ /^(ftp|http):/ && $feature_files->{$url};
+    next unless $url =~ /^(ftp|http):/ && $feature_files->{$url};
     warn "external_table(): url = $url" if DEBUG;
     push @rows,th({-align=>'right',-valign=>'TOP'},"URL",++$count).
       td(textfield(-name=>'eurl',-size=>50,-value=>$url,-override=>1),br,
@@ -2883,7 +2882,6 @@ You should either install BioPerl (the CVS live version) or reinstall GBrowse,
 which will patch Bio::Graphics to the latest version.
 END
 }
-
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

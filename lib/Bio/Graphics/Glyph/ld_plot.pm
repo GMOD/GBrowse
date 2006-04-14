@@ -1,4 +1,4 @@
-# $Id: ld_plot.pm,v 1.1.2.1 2006-04-11 21:51:07 lstein Exp $
+# $Id: ld_plot.pm,v 1.1.2.2 2006-04-14 14:07:24 lstein Exp $
 
 package Bio::Graphics::Glyph::ld_plot;
 
@@ -129,6 +129,14 @@ sub draw {
     }
   }
 
+}
+
+# THIS IS GOING TO BE USED FOR THE NEW PACKED LD FORMAT
+# IN WHICH EACH COLUMN OF THE LD DATA IS FLATTENED AND PACKED
+sub calculate_binary_data_structure_offset {
+  my $self = shift;
+  my ($row,$column,$width) = @_;
+  return $column*($width-1) + $row - ($row/2)*($row+1) - 1;
 }
 
 sub get_points {

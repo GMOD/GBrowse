@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.32 2006-04-13 18:00:54 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.33 2006-04-17 19:06:27 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -70,7 +70,7 @@ use CGI::Toggle;
 use CGI::Cookie;
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $BIOGRAPHICS_VERSION $CONF_DIR
-	    $PLUGINS $UPLOADED_SOURCES $REMOTE_SOURCES
+	    %PLUGINS $PLUGINS $UPLOADED_SOURCES $REMOTE_SOURCES
 	    $PRESETS $HAVE_SVG
 	    %OBJECT_CLASSES %PLUGIN_NAME2LABEL );
 
@@ -194,7 +194,7 @@ my @plugin_path = "$CONF_DIR/plugins";
 unshift @plugin_path,shellwords($CONFIG->setting('plugin_path'))
   if $CONFIG->setting('plugin_path');
 
-$PLUGINS = Bio::Graphics::Browser::PluginSet->new($CONFIG,$page_settings,@plugin_path) unless defined $PLUGINS;
+$PLUGINS = $PLUGINS{$source} ||= Bio::Graphics::Browser::PluginSet->new($CONFIG,$page_settings,@plugin_path);
 $PLUGINS->configure(open_database(),$page_settings,$session);
 
 my $plugin_type   = '';                          # avoid uninit variable warning

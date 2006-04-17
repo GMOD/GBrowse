@@ -1,4 +1,4 @@
-# $Id: ld_plot.pm,v 1.1.2.2 2006-04-14 14:07:24 lstein Exp $
+# $Id: ld_plot.pm,v 1.1.2.3 2006-04-17 19:06:27 lstein Exp $
 
 package Bio::Graphics::Glyph::ld_plot;
 
@@ -102,7 +102,6 @@ sub draw {
     $gd->line($center,$top+V_OFFSET-3,$center,$top+V_OFFSET,$fgcolor);
   }
 
-
   for (my $ia=0;$ia<@parts-1;$ia++) {
     for (my $ib=$ia+1;$ib<@parts;$ib++) {
       my $pos1 = $positions[$ia];
@@ -128,6 +127,7 @@ sub draw {
       $gd->filledPolygon($poly,$c);
     }
   }
+
 
 }
 

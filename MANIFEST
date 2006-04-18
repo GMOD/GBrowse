@@ -233,6 +233,7 @@ extras/BioPerl/Bio/DB/GFF/Util/Rearrange.pm
 extras/BioPerl/Bio/Graphics.pm
 extras/BioPerl/Bio/Graphics/ConfiguratorI.pm
 extras/BioPerl/Bio/Graphics/Feature
+extras/BioPerl/Bio/Graphics/FeatureBase.pm
 extras/BioPerl/Bio/Graphics/Feature.pm
 extras/BioPerl/Bio/Graphics/FeatureFile.pm
 extras/BioPerl/Bio/Graphics/FeatureFile/Iterator.pm

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9 2005-09-09 12:38:57 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.1 2006-04-18 01:56:21 scottcain Exp $
 
 =head1 NAME
 
@@ -829,7 +829,9 @@ Several aliases of features() for backward compatibility
 
 =cut
 
-*get_all_SeqFeature = *get_SeqFeatures = *top_SeqFeatures = *all_SeqFeatures = \&features;
+*get_all_SeqFeature = *top_SeqFeatures = *all_SeqFeatures = \&features;
+
+sub get_SeqFeatures {return}
 
 =head2 seq
 

@@ -231,7 +231,6 @@ extras/BioPerl/Bio/DB/GFF/Typename.pm
 extras/BioPerl/Bio/DB/GFF/Util/Binning.pm
 extras/BioPerl/Bio/DB/GFF/Util/Rearrange.pm
 extras/BioPerl/Bio/Graphics.pm
-extras/BioPerl/Bio/Graphics/.#Panel.pm.1.1.2.12.2.2
 extras/BioPerl/Bio/Graphics/ConfiguratorI.pm
 extras/BioPerl/Bio/Graphics/Feature
 extras/BioPerl/Bio/Graphics/Feature.pm
@@ -241,7 +240,6 @@ extras/BioPerl/Bio/Graphics/Glyph.pm
 extras/BioPerl/Bio/Graphics/Glyph/alignment.pm
 extras/BioPerl/Bio/Graphics/Glyph/anchored_arrow.pm
 extras/BioPerl/Bio/Graphics/Glyph/arrow.pm
-extras/BioPerl/Bio/Graphics/Glyph/bio-graphics-glyph-arrow.diff
 extras/BioPerl/Bio/Graphics/Glyph/box.pm
 extras/BioPerl/Bio/Graphics/Glyph/broken_line.pm
 extras/BioPerl/Bio/Graphics/Glyph/cds.pm

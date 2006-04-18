@@ -1,6 +1,6 @@
 package Bio::DB::GFF::Adaptor::berkeleydb;
 
-# $Id: berkeleydb.pm,v 1.1.2.1.2.5 2006-03-07 15:38:24 scottcain Exp $
+# $Id: berkeleydb.pm,v 1.1.2.1.2.6 2006-04-18 02:37:38 scottcain Exp $
 
 =head1 NAME
 
@@ -707,7 +707,7 @@ sub search_notes {
   my $self = shift;
   my ($search_string,$limit) = @_;
 
-  $search_notes =~ tr/*?//d;
+  $search_string =~ tr/*?//d;
 
   my @results;
 

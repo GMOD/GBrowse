@@ -184,7 +184,7 @@ sub map_pt {
   my @result;
   foreach (@_) {
     my $val = $flip 
-      ? int (0.5 + $self->{width} - ($length - ($_- 1)) * $scale) 
+      ? int (0.5 + $pr - ($length - ($_- 1)) * $scale)
       : int (0.5 + ($_-$offset-1) * $scale);
     $val = -1 if $val < 0;
     $val = $pr+1 if $val > $pr;
@@ -785,7 +785,7 @@ sub draw_grid {
   } else {
     my ($major,$minor) = $self->ticks;
     my $first_tick = $minor * int($self->start/$minor);
-    for (my $i = $first_tick; $i < $self->end; $i += $minor) {
+    for (my $i = $first_tick-1; $i <= $self->end+1; $i += $minor) {
       push @positions,$i;
     }
   }

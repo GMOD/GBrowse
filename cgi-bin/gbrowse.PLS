@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.152 2006-04-13 18:27:22 lstein Exp $
+# $Id: gbrowse.PLS,v 1.153 2006-04-19 21:34:49 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -70,7 +70,7 @@ use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td );
 use CGI::Cookie;
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $BIOGRAPHICS_VERSION $CONF_DIR
-	    $PLUGINS $UPLOADED_SOURCES $REMOTE_SOURCES
+	    %PLUGINS $PLUGINS $UPLOADED_SOURCES $REMOTE_SOURCES
 	    $PRESETS $HAVE_SVG 
 	    %OBJECT_CLASSES %PLUGIN_NAME2LABEL );
 
@@ -199,7 +199,7 @@ my @plugin_path = "$CONF_DIR/plugins";
 unshift @plugin_path,shellwords($CONFIG->setting('plugin_path'))
   if $CONFIG->setting('plugin_path');
 
-$PLUGINS = Bio::Graphics::Browser::PluginSet->new($CONFIG,$page_settings,@plugin_path) unless defined $PLUGINS;
+$PLUGINS = $PLUGINS{$source} ||= Bio::Graphics::Browser::PluginSet->new($CONFIG,$page_settings,@plugin_path);
 $PLUGINS->configure(open_database(),$page_settings,$session);
 
 my $plugin_type   = '';                          # avoid uninit variable warning
@@ -664,6 +664,8 @@ sub get_settings {
 }
 
 sub default_settings {
+  # Does this handle setting the plugin defaults properly? I don't think it does.
+
   my $settings = shift;
   warn "Setting default settings" if DEBUG;
   %$settings = ();

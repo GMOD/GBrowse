@@ -1,4 +1,4 @@
-# $Id: ProteinDumper.pm,v 1.2 2005-12-09 22:19:09 mwz444 Exp $
+# $Id: ProteinDumper.pm,v 1.3 2006-04-19 21:34:49 lstein Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::ProteinDumper
 #
@@ -47,7 +47,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::ProteinDumper;
-# $Id: ProteinDumper.pm,v 1.2 2005-12-09 22:19:09 mwz444 Exp $
+# $Id: ProteinDumper.pm,v 1.3 2006-04-19 21:34:49 lstein Exp $
 # Protein Dumper plugin
 
 use strict;
@@ -164,9 +164,10 @@ sub mime_type {
 
 sub config_defaults {
   my $self = shift;
+  my $default_code = $self->browser_config->plugin_setting('geneticcode') || 1;
   return { format           => 'html',
 	   fileformat       => 'fasta',
-           geneticcode      => 1,
+           geneticcode      => $default_code,
        };
 }
 

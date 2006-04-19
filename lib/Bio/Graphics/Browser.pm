@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.11 2006-04-09 17:48:33 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.12 2006-04-19 21:31:31 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1804,10 +1804,11 @@ sub _feature_get {
     my $method  = eval {$_->method} || '';
     my $fclass  = eval {$_->class}  || '';
     $type eq 'Segment'
-      || $types->{$type}
-	|| $types->{$method}
-	  || $fclass eq $refclass
-	    || $fclass eq $class;
+      || $type eq 'region'
+	|| $types->{$type}
+	  || $types->{$method}
+	    || $fclass eq $refclass
+	      || $fclass eq $class;
   } @segments;
 
   # consolidate features that have same name and same reference sequence

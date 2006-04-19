@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.33 2006-04-17 19:06:27 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.34 2006-04-19 21:31:31 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -184,6 +184,7 @@ my $cookie                   = CGI::Cookie->new(-name    => $CGI::Session::NAME,
 
 my $cookies;
 if (param('reset')) {
+  $session->session->delete() if $session;
   $cookies = reset_cookies($page_settings);
 } else {
   $cookies = [$cookie];

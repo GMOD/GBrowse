@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.34 2006-04-19 21:31:31 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.35 2006-04-20 02:01:15 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2612,6 +2612,7 @@ sub make_citation_link {
   my ($link,$key);
   if ($label =~ /^plugin:/) {
     $key = $label || '';
+    $key =~ s/^plugin://;
     my $about = escape($CONFIG->tr('About')) || '';
     my $plugin = $PLUGIN_NAME2LABEL{$label} ? ";plugin=$PLUGIN_NAME2LABEL{$label}" : '';
     $link = "?plugin_action=${about}${plugin}";

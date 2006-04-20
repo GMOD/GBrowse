@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.35 2006-04-20 02:01:15 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.36 2006-04-20 02:08:54 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1177,7 +1177,6 @@ sub tracks_table {
 
   autoEscape(1);
   return toggle('Tracks',
-		b($CONFIG->tr('Tracks')),
 		div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
 		table({-width=>'100%',-class=>"searchbody"},
 		      TR(td{-align=>'right'},

@@ -3,7 +3,7 @@
 
 #Icelandic translation done by Gudmundur A. Thorisson <mummi@cshl.edu>
 
-#$Id: is.pm,v 1.5 2005-12-09 22:19:09 mwz444 Exp $
+#$Id: is.pm,v 1.6 2006-04-25 13:41:16 scottcain Exp $
 
  CHARSET =>   'ISO-8859-1',
 

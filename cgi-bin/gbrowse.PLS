@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.36 2006-04-20 02:08:54 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.37 2006-05-04 20:14:21 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2221,6 +2221,7 @@ sub coordinate_mapper {
     if ($optimize) {
       my $in_window;
       foreach (@abs_segs) {
+	next unless defined $_->[0] && defined $_->[1];
 	$in_window ||= $_->[0] <= $stop && $_->[1] >= $start;
       }
       return $in_window ? ($absref,@abs_segs) : ();

@@ -226,6 +226,7 @@ WriteMakefile(
 				 'cgi-bin/gbrowse.PLS'  => 'cgi-bin/gbrowse',
 				 'cgi-bin/gbrowse_img.PLS'  => 'cgi-bin/gbrowse_img',
 				 'cgi-bin/gbrowse_details.PLS'  => 'cgi-bin/gbrowse_details',
+				 'cgi-bin/gbrowse_karyotype.PLS'  => 'cgi-bin/gbrowse_karyotype',
 				 'cgi-bin/gbrowse_est.PLS'  => 'cgi-bin/gbrowse_est',
 				 'cgi-bin/gbrowse_moby.PLS'  => 'cgi-bin/gbrowse_moby',
 				 'cgi-bin/moby_server.PLS'  => 'cgi-bin/moby_server',

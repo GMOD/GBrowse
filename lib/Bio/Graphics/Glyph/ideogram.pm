@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.3.6.1.2.4 2006-02-01 16:36:38 sheldon_mckay Exp $
+# $Id: ideogram.pm,v 1.3.6.1.2.5 2006-05-04 22:13:10 lstein Exp $
 # Glyph to draw chromosome ideograms
 
 use strict qw/vars refs/;
@@ -36,7 +36,7 @@ sub draw_component {
     my $bgcolor = $self->factory->translate_color($bgcolor_index);
     my $fgcolor = $self->fgcolor;
 
-    if ( $feat->method =~ /cytoband/ ) {
+    if ( $feat->method =~ /^(cytoband|chromosome_band)$/i ) {
 
         # are we at the end of the chromosome?
         if ( $feat->start <= 1 ) {
@@ -269,19 +269,19 @@ black-on-white pattern.
 The cytobandband features would typically be formatted like this in GFF3:
 
  ...
- ChrX    UCSC    cytoband        136700001       139000000       .       .       .       ID=Xq27.1;Name=Xq27.1;Alias=ChrXq27.1;stain=gpos75;
- ChrX    UCSC    cytoband        139000001       140700000       .       .       .       ID=Xq27.2;Name=Xq27.2;Alias=ChrXq27.2;stain=gneg;
- ChrX    UCSC    cytoband        140700001       145800000       .       .       .       ID=Xq27.3;Name=Xq27.3;Alias=ChrXq27.3;stain=gpos100;
- ChrX    UCSC    cytoband        145800001       153692391       .       .       .       ID=Xq28;Name=Xq28;Alias=ChrXq28;stain=gneg;
- ChrY    UCSC    cytoband        1       1300000 .       .       .       ID=Yp11.32;Name=Yp11.32;Alias=ChrYp11.32;stain=gneg;
- ChrY    UCSC    cytoband        1300001 2600000 .       .       .       ID=Yp11.31;Name=Yp11.31;Alias=ChrYp11.31;stain=gpos50;
- ChrY    UCSC    cytoband        2600001 9700000 .       .       .       ID=Yp11.2;Name=Yp11.2;Alias=ChrYp11.2;stain=gneg;
- ChrY    UCSC    cytoband        12800001        14800000        .       .       .       ID=Yq11.21;Name=Yq11.21;Alias=ChrYq11.21;stain=gneg;
- ChrY    UCSC    cytoband        14800001        19300000        .       .       .       ID=Yq11.221;Name=Yq11.221;Alias=ChrYq11.221;stain=gpos50;
- ChrY    UCSC    cytoband        19300001        21800000        .       .       .       ID=Yq11.222;Name=Yq11.222;Alias=ChrYq11.222;stain=gneg;
- ChrY    UCSC    cytoband        21800001        25800000        .       .       .       ID=Yq11.223;Name=Yq11.223;Alias=ChrYq11.223;stain=gpos50;
- ChrY    UCSC    cytoband        25800001        27700000        .       .       .       ID=Yq11.23;Name=Yq11.23;Alias=ChrYq11.23;stain=gneg;
- ChrY    UCSC    cytoband        27700001        50286555        .       .       .       ID=Yq12;Name=Yq12;Alias=ChrYq12;stain=gvar;
+ ChrX    UCSC    chromosome_band        136700001       139000000       .       .       .       ID=Xq27.1;Name=Xq27.1;Alias=ChrXq27.1;stain=gpos75;
+ ChrX    UCSC    chromosome_band        139000001       140700000       .       .       .       ID=Xq27.2;Name=Xq27.2;Alias=ChrXq27.2;stain=gneg;
+ ChrX    UCSC    chromosome_band        140700001       145800000       .       .       .       ID=Xq27.3;Name=Xq27.3;Alias=ChrXq27.3;stain=gpos100;
+ ChrX    UCSC    chromosome_band        145800001       153692391       .       .       .       ID=Xq28;Name=Xq28;Alias=ChrXq28;stain=gneg;
+ ChrY    UCSC    chromosome_band        1       1300000 .       .       .       ID=Yp11.32;Name=Yp11.32;Alias=ChrYp11.32;stain=gneg;
+ ChrY    UCSC    chromosome_band        1300001 2600000 .       .       .       ID=Yp11.31;Name=Yp11.31;Alias=ChrYp11.31;stain=gpos50;
+ ChrY    UCSC    chromosome_band        2600001 9700000 .       .       .       ID=Yp11.2;Name=Yp11.2;Alias=ChrYp11.2;stain=gneg;
+ ChrY    UCSC    chromosome_band        12800001        14800000        .       .       .       ID=Yq11.21;Name=Yq11.21;Alias=ChrYq11.21;stain=gneg;
+ ChrY    UCSC    chromosome_band        14800001        19300000        .       .       .       ID=Yq11.221;Name=Yq11.221;Alias=ChrYq11.221;stain=gpos50;
+ ChrY    UCSC    chromosome_band        19300001        21800000        .       .       .       ID=Yq11.222;Name=Yq11.222;Alias=ChrYq11.222;stain=gneg;
+ ChrY    UCSC    chromosome_band        21800001        25800000        .       .       .       ID=Yq11.223;Name=Yq11.223;Alias=ChrYq11.223;stain=gpos50;
+ ChrY    UCSC    chromosome_band        25800001        27700000        .       .       .       ID=Yq11.23;Name=Yq11.23;Alias=ChrYq11.23;stain=gneg;
+ ChrY    UCSC    chromosome_band        27700001        50286555        .       .       .       ID=Yq12;Name=Yq12;Alias=ChrYq12;stain=gvar;
  Chr1    UCSC    centromere      120000001       126900000       .       +       .       ID=Chr1_cent
  Chr10   UCSC    centromere      38300001        41800000        .       +       .       ID=Chr10_cent
  Chr11   UCSC    centromere      51600001        56700000        .       +       .       ID=Chr11_cent
@@ -390,7 +390,7 @@ while(<>)
     }
     my $chr_stripped = $chr;
     $chr_stripped =~ s/chr//i;
-    print qq/$chr\tUCSC\tcytoband\t$start\t$stop\t.\t.\t.\tID=$chr_stripped$band;Name=$chr_stripped$band;Alias=$chr$band;stain=$stain;\n/;
+    print qq/$chr\tUCSC\tchromosome_band\t$start\t$stop\t.\t.\t.\tID=$chr_stripped$band;Name=$chr_stripped$band;Alias=$chr$band;stain=$stain;\n/;
 }
 
 foreach my $chr(sort keys %chrom_ends)

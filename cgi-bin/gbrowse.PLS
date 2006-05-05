@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.37 2006-05-04 20:14:21 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.38 2006-05-05 19:42:45 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1628,6 +1628,9 @@ sub resize {
   # error($CONFIG->tr('Small_interval',$resize)); # error message
   return unless $fix;
 
+  $new_start = $whole_segment->start if $new_start < $whole_segment->start;
+  $new_stop  = $whole_segment->end   if $new_stop  > $whole_segment->end;
+
   my $new_seg = $s->factory->segment(-name  => $s->seq_id,
 				     -start => $new_start,
 				     -end   => $new_stop,
@@ -2251,6 +2254,7 @@ sub bookmark_link {
   my @h_feat= map {"$_\@$settings->{h_feat}{$_}"} keys %{$settings->{h_feat}};
   $q->param(-name=>'h_feat',-value=>\@h_feat) if @h_feat;
   $q->param(-name=>'id',-value=>$settings->{id});
+  $q->param(-name=>'grid',-value=>$settings->{grid});
 
   return "?".$q->query_string();
 }

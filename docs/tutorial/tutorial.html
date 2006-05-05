@@ -7,7 +7,7 @@
 <body>
 <h1>Generic Genome Browser: A Tutorial</h1>
 
-<h2>Author: Lincoln Stein, June 16, 2003 (<i>revised 30 November 2005</i>)</h2>
+<h2>Author: Lincoln Stein, June 16, 2003 (<i>revised 5 May 2006</i>)</h2>
 
 <p>
 
@@ -298,14 +298,14 @@ The 9 columns are as follows:
       stranded, it won't hurt to use a "+" here.</li><br>
   <li><b>phase</b><br>
       For CDS features that encode proteins, this field describes
-      which part of the codon the first base of the feature falls on.
+      where the next codon starts.
       The phase is one of the integers 0, 1, or 2, indicating the
       number of bases that should be removed from the beginning of
-      this feature to reach the first base of the next codon. In other
+      this feature in order to reach the first base of the next codon. In other
       words, a phase of "0" indicates that the next codon begins at
       the first base of the region described by the current line, a
       phase of "1" indicates that the next codon begins at the second
-      base of this region, and a phase of "2" indicates that the codon
+      base of this region, and a phase of "2" indicates that the next codon
       begins at the third base of this region. This
       information is used by the "cds" glyph to show how the reading
       frame changes across splice sites.  For all other feature types,
@@ -822,8 +822,8 @@ ctgA    example mRNA    1300    9000    .       +       .       mRNA EDEN.3 ; Ge
 ctgA    example 5'-UTR  1300    1500    .       +       .       mRNA EDEN.3
 ctgA    example 5'-UTR  3000    3300    .       +       .       mRNA EDEN.3
 ctgA    example CDS     3301    3902    .       +       0       mRNA EDEN.3
-ctgA    example CDS     5000    5500    .       +       1       mRNA EDEN.3
-ctgA    example CDS     7000    7600    .       +       1       mRNA EDEN.3
+ctgA    example CDS     5000    5500    .       +       2       mRNA EDEN.3
+ctgA    example CDS     7000    7600    .       +       2       mRNA EDEN.3
 ctgA    example 3'-UTR  7601    9000    .       +       .       mRNA EDEN.3
 </pre></blockquote>
 
@@ -3763,6 +3763,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Wed Nov 30 18:03:59 EST 2005
+Last modified: Fri May  5 15:36:10 EDT 2006
 <!-- hhmts end -->
 </body> </html>

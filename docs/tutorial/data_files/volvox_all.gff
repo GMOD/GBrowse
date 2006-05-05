@@ -219,8 +219,8 @@ ctgA	example	mRNA	1300	9000	.	+	.	mRNA EDEN.3 ; Gene EDEN
 ctgA	example	5'-UTR	1300	1500	.	+	.	mRNA EDEN.3
 ctgA	example	5'-UTR	3000	3300	.	+	.	mRNA EDEN.3
 ctgA	example	CDS	3301	3902	.	+	0	mRNA EDEN.3
-ctgA	example	CDS	5000	5500	.	+	1	mRNA EDEN.3
-ctgA	example	CDS	7000	7600	.	+	1	mRNA EDEN.3
+ctgA	example	CDS	5000	5500	.	+	2	mRNA EDEN.3
+ctgA	example	CDS	7000	7600	.	+	2	mRNA EDEN.3
 ctgA	example	3'-UTR	7601	9000	.	+	.	mRNA EDEN.3
 ctgA	affy	tlevel	1	100	281	.	.	Affy Expt1
 ctgA	affy	tlevel	101	200	183	.	.	Affy Expt1

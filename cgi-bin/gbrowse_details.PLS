@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.30 2005-12-09 22:19:09 mwz444 Exp $
+# $Id: gbrowse_details.PLS,v 1.31 2006-05-05 19:46:16 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -324,7 +324,7 @@ sub position {
     ($start,$end) = ($end,$start) if $f->strand < 0;
     return "<b>$ref</b> $start..$end";
   }
-  my $s = $f->abs_strand;
+  my $s = $f->strand;
   if ($bug) {  # data bug
     ($start,$end) = ($end,$start);
     $s *= -1;

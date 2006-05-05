@@ -1,4 +1,4 @@
-# $Id: Fasta.pm,v 1.1.2.1.2.6 2006-04-18 02:37:37 scottcain Exp $
+# $Id: Fasta.pm,v 1.1.2.1.2.7 2006-05-05 20:21:55 scottcain Exp $
 #
 # BioPerl module for Bio::DB::Fasta
 #

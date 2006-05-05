@@ -1,6 +1,6 @@
 package Bio::Graphics::FeatureFile;
 
-# $Id: FeatureFile.pm,v 1.1.2.9.2.6 2006-04-18 02:37:38 scottcain Exp $
+# $Id: FeatureFile.pm,v 1.1.2.9.2.7 2006-05-05 20:21:56 scottcain Exp $
 # This package parses and renders a simple tab-delimited format for features.
 # It is simpler than GFF, but still has a lot of expressive power.
 # See __END__ for the file format
@@ -305,6 +305,7 @@ sub render {
 
   for my $type (@configured_types,@unconfigured_types) {
     next if defined $selector && !$selector->($self,$type);
+    next unless length $type > 0; # avoid empty ''
     my $f = $self->features($type);
     my @features = grep {$self->{visible}{$_} || $_->type eq 'group'} @$f;
     next unless @features;  # suppress tracks for features that don't appear
@@ -433,7 +434,7 @@ sub parse_line {
   # abort if we see a >FASTA line
   return 0 if /^>/;
 
-  if (/^\s+(.+)/ && $self->{current_tag}) { # continuation line
+  if (/^\s+(.+)/ && $self->{current_tag}) { # configuration continuation line
     my $value = $1;
     my $cc = $self->{current_config} ||= 'general';       # in case no configuration named
     $self->{config}{$cc}{$self->{current_tag}} .= ' ' . $value;
@@ -466,9 +467,10 @@ sub parse_line {
     return 1;
   }
 
+  undef $self->{current_tag};
+
   # parse data lines
   my @tokens = shellwords($_);
-  # my @tokens = split "\t",$_;  # faster?
   unshift @tokens,'' if /^\s+/;
 
   # close any open group
@@ -491,8 +493,11 @@ sub parse_line {
 
   my @parts;
 
-  if (@tokens >= 8) { # conventional GFF file
+  # conventional GFF file, with check for numeric start/end
+  if (@tokens >= 8 && $tokens[3]=~ /^-?\d+$/ && $tokens[4]=~ /^-?\d+$/) {
+    warn "HERE I AM, LINE = $_";
     my ($r,$source,$method,$start,$stop,$scor,$s,$phase,@rest) = @tokens;
+    # sanity checks
     my $group = join ' ',@rest;
     $type   = defined $source && $source ne '.' ? join(':',$method,$source) : $method;
     #$bounds = join '..',$start,$stop;
@@ -544,6 +549,7 @@ sub parse_line {
   }
 
   my $visible = 1;
+
   if ($self->{coordinate_mapper} && $ref) {
     my @remapped = $self->{coordinate_mapper}->($ref,@parts);
     ($ref,@parts) = @remapped if @remapped;

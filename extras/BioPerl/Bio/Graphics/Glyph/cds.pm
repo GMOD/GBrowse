@@ -85,7 +85,7 @@ sub draw {
     my $type = $feature->method;
     next if ($self->option('sub_part') && $type ne $self->option('sub_part'));
 
-    my $pos     = $feature->start;
+    my $pos     = $feature->strand >= 0 ? $feature->start : $feature->end;
     my $phase   = eval {$feature->phase} || 0;
     my $strand  = $feature->strand;
     my ($frame,$offset) = frame_and_offset($pos,
@@ -156,6 +156,7 @@ sub draw_component {
   my $pixels_per_residue = $self->pixels_per_residue;
   my $strand = $feature->strand;
   my $y      = $y1-1;
+  my $fontwidth = $font->width;
 
   $strand *= -1 if $self->{flip};
 
@@ -175,7 +176,7 @@ sub draw_component {
     my $x = $strand > 0 ? $start + $i * $pixels_per_residue
                         : $stop  - $i * $pixels_per_residue;
     next unless ($x >= $x1 && $x <= $x2);
-    $x -= $pixels_per_residue/3 if $self->{flip};
+    $x -= $fontwidth + 1 if $self->{flip}; # align right when flipped
     $gd->char($font,$x+1,$y,$residues[$i],$color);
   }
 }

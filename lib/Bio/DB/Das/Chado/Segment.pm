@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.1 2006-04-18 01:56:21 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.2 2006-05-18 21:33:00 scottcain Exp $
 
 =head1 NAME
 
@@ -93,6 +93,7 @@ use Bio::Root::Root;
 use Bio::Das::SegmentI;
 use Bio::DB::Das::Chado::Segment::Feature;
 use Bio::DB::GFF::Typename;
+use Data::Dumper;
 use constant DEBUG => 0;
 
 use vars '@ISA','$VERSION';
@@ -162,6 +163,11 @@ sub new {
               or Bio::Root::Root->throw("fetching uniquename from feature_id failed") ;
 
             my $hashref = $fetch_uniquename_query->fetchrow_hashref;
+
+            warn "$base_start, $stop\n" if DEBUG;
+
+            warn Dumper($hashref) if DEBUG;
+
             $base_start = $base_start ? $base_start : $$hashref{fmin} + 1;
             $stop       = $stop       ? $stop       : $$hashref{fmax};
             $db_id      = $$hashref{uniquename};
@@ -170,6 +176,11 @@ sub new {
 
             warn "calling factory->segment with name:$name, start:$base_start, stop:$stop, db_id:$db_id\n" if DEBUG;
             push @segments, $factory->segment(-name=>$name,-start=>$base_start,-stop=>$stop,-db_id=>$db_id);
+
+            #reset these variables so subsequent passes through the loop wont be confused
+            $base_start ='';
+            $stop       ='';
+            $db_id      ='';
         }
 
         if (@segments < 2) {
@@ -186,6 +197,8 @@ sub new {
     elsif ( ref $ref eq 'SCALAR' ) {    #one result returned
 
         my $landmark_feature_id = $$ref;
+
+        warn "landmark feature_id:$landmark_feature_id\n" if DEBUG;
 
         $srcfeature_query->execute($landmark_feature_id)
            or Bio::Root::Root->throw("finding srcfeature_id failed");
@@ -852,6 +865,8 @@ sub seq {
   my ($ref,$class,$base_start,$stop,$strand)
     = @{$self}{qw(sourceseq class start end strand)};
 
+  warn "ref:$ref, class:$class, $base_start..$stop, ($strand)\n" if DEBUG;
+
   if($arg{self}){
     my $r_id    = $self->feature_id;
   	 
@@ -865,7 +880,6 @@ sub seq {
   	 
     my $array_ref = $sth->fetchrow_arrayref;
     my $seq = $$array_ref[0];
-  	 
     return $seq;
   }
 

@@ -1,10 +1,10 @@
 package Bio::Graphics::Glyph::trace;
 
-# $Id: trace.pm,v 1.1 2006-04-24 16:31:35 mwz444 Exp $
+# $Id: trace.pm,v 1.2 2006-05-19 20:43:50 mwz444 Exp $
 
 use strict;
 use GD;
-use SCF;
+use Bio::SCF;
 use Data::Dumper;
 use base 'Bio::Graphics::Glyph::generic';
 our @ISA;
@@ -40,14 +40,14 @@ sub get_parsed_trace {
         return;
     }
     my %scf;
-    tie %scf, 'SCF', $trace_file;
+    tie %scf, 'Bio::SCF', $trace_file;
     return \%scf;
 }
 
 sub _guess_format {
     my $self = shift;
     my $path = shift;
-    return 'SCF';
+    return 'Bio::SCF';
 }
 
 sub trace_path {
@@ -101,7 +101,7 @@ sub trace_data {
             print F $data;
             close F;
 
-            return ( 'SCF', $file_name );
+            return ( 'Bio::SCF', $file_name );
 
             #return ($response->content_type,$response->content);
         }
@@ -165,7 +165,6 @@ sub draw_description {
     my $self = shift;
     my ( $gd, $left, $top, $partno, $total_parts ) = @_;
 
-    #$top += $self->{image}->height+$self->vertical_spacing if $self->{image};
     $self->SUPER::draw_description( $gd, $left, $top, $partno, $total_parts );
 }
 
@@ -209,62 +208,100 @@ sub draw_component {
     my $pixels_per_base = $self->scale;
     my $panel           = $self->panel;
     my $strand          = $feature->strand;
-    my $forward         = $self->{flip} ? ( $strand < 1 ) : ( $strand >= 0 );
+    my $forward         = $self->{flip} ? ( $strand < 0 ) : ( $strand >= 0 );
+    my $flipped         = $self->{flip};
+    my $opp_strand      = $strand < 0;
 
     # Get Window Sequence Information
-    my $panel_start_base  = $panel->offset + 1;
-    my $panel_end_base    = $panel_start_base + $panel->length;
-    my $panel_center_base = $panel_start_base + int( $panel->length / 2 );
+    my $panel_start_base = $panel->offset + 1;
+    my $panel_end_base   = $panel_start_base + $panel->length - 1;
+
+    my ( $feature_display_start_base, $feature_display_end_base,
+        $feature_display_center_base );
+
+    if ( $panel_start_base >= $feature->start() ) {
+        $feature_display_start_base = $panel_start_base;
+    }
+    else {
+        $feature_display_start_base = $feature->start();
+    }
+
+    if ( $panel_end_base <= $feature->end() ) {
+        $feature_display_end_base = $panel_end_base;
+    }
+    else {
+        $feature_display_end_base = $feature->end();
+    }
+
+    # We need to know if there are an even number of bases
+    # because the center is going to be off by a bit.
+    my $even_number_of_bases = 0;
+    $feature_display_center_base
+        = ( $feature_display_start_base + $feature_display_end_base ) / 2;
+    unless (
+        $feature_display_center_base == int($feature_display_center_base) )
+    {
+        $even_number_of_bases = 1;
+        $feature_display_center_base
+            = int( 0.5 + $feature_display_center_base );
+    }
 
     my $trace_glyph_top    = $y1 + $self->vertical_spacing + $self->height;
     my $trace_glyph_bottom = $trace_glyph_top + $self->trace_height;
 
     # Find the Center for the Trace Glyph
-    my $trace_center_base =
-        ( $strand >= 0 )
-        ? $panel_center_base - $feature->start
-        : $feature->end - $panel_center_base;
-    if ( !$forward ) {
+    my $trace_center_base_index =
+        ( !$opp_strand )
+        ? $feature_display_center_base - $feature->start
+        : $feature->end - $feature_display_center_base;
 
-        # If the trace is to be reverse complemented, that changes the center
-        $trace_center_base -= 1;
-    }
-    my $trace_center_px
-        = $self->panel->left + $self->trace_map_pt($panel_center_base);
+    my $trace_center_px = $self->panel->left
+        + $self->trace_map_pt($feature_display_center_base);
 
-    # Center test line
-    # $gd->line( $trace_center_px, 0, $trace_center_px, 700, $fgcolor );
+    # Center base test lines
+    #$gd->line( $trace_center_px, 0, $trace_center_px, 700, $fgcolor );
+    #if ( !$flipped ) {
+    #    $gd->line(
+    #        $trace_center_px + $pixels_per_base, 0,
+    #        $trace_center_px + $pixels_per_base, 700,
+    #        $self->factory->translate_color('red')
+    #    );
+    #}
+    #else {
+    #    $gd->line(
+    #        $trace_center_px - $pixels_per_base, 0,
+    #        $trace_center_px - $pixels_per_base, 700,
+    #        $self->factory->translate_color('red')
+    #    );
+    #}
 
     # Figure out the number of bases to display on each side
-    my $five_prime_bases;
-    my $three_prime_bases;
-    if ($forward) {
-        $five_prime_bases  = $panel_center_base - $panel_start_base;
-        $three_prime_bases = $panel_end_base - $panel_center_base - 1;
-    }
-    else {
-        $five_prime_bases  = $panel_center_base - $panel_start_base - 1;
-        $three_prime_bases = $panel_end_base - $panel_center_base;
+    # with respect to the trace.
+    my $five_prime_bases
+        = $feature_display_center_base - $feature_display_start_base;
+    my $three_prime_bases
+        = $feature_display_end_base - $feature_display_center_base;
+    if ($opp_strand) {
+        ( $five_prime_bases, $three_prime_bases )
+            = ( $three_prime_bases, $five_prime_bases );
     }
 
     # Work out the starting base on each side
-    my $trace_start_base = $trace_center_base - $five_prime_bases;
-    if ( $trace_start_base < 0 ) {
-        $five_prime_bases += $trace_start_base; # trace_start_base is negative
-        $trace_start_base = 0;
+    my $trace_start_base_index = $trace_center_base_index - $five_prime_bases;
+    if ( $trace_start_base_index < 0 ) {
+        $five_prime_bases
+            += $trace_start_base_index;   # trace_start_base_index is negative
+        $trace_start_base_index = 0;
     }
-    my $trace_end_base = $trace_center_base + $three_prime_bases;
-    if ( $trace_end_base >= scalar @{ $parsed_trace->{bases} } ) {
+    my $trace_end_base_index = $trace_center_base_index + $three_prime_bases;
+    if ( $trace_end_base_index >= scalar @{ $parsed_trace->{bases} } ) {
         $three_prime_bases
-            += scalar @{ $parsed_trace->{bases} } - $trace_end_base - 1;
-        $trace_end_base = scalar @{ $parsed_trace->{bases} } - 1;
+            += scalar @{ $parsed_trace->{bases} } - $trace_end_base_index - 1;
+        $trace_end_base_index = scalar @{ $parsed_trace->{bases} } - 1;
     }
-
-    # CASES that still need to be delt with.
-    #  - trace section goes off the panel
 
     # Figure out the end points of the trace section
-    my ($trace_left_px,$trace_right_px);
+    my ( $trace_left_px, $trace_right_px );
     if ($forward) {
         $trace_left_px
             = $trace_center_px - ( ( $five_prime_bases * $pixels_per_base ) );
@@ -280,6 +317,12 @@ sub draw_component {
             + $pixels_per_base;
     }
 
+    # Adjust for flipping
+    if ($flipped) {
+        $trace_left_px  -= $pixels_per_base;
+        $trace_right_px -= $pixels_per_base;
+    }
+
     # Get Text Info
     my $font        = $self->font;
     my $text_buffer = 2;
@@ -291,34 +334,50 @@ sub draw_component {
         = ( $self->trace_height - $text_height - 2 ) / $max_trace_val;
     my $total_trace_bases = $three_prime_bases + $five_prime_bases + 1;
 
-    my $trace_start_sample = int( $parsed_trace->{index}[$trace_start_base] );
-    my $trace_end_sample   = int( $parsed_trace->{index}[$trace_end_base] );
-    my $trace_center_sample = $parsed_trace->{index}[$trace_center_base];
+    my $trace_start_sample
+        = int( $parsed_trace->{index}[$trace_start_base_index] );
+    my $trace_end_sample
+        = int( $parsed_trace->{index}[$trace_end_base_index] );
+    my $trace_center_sample
+        = $parsed_trace->{index}[$trace_center_base_index];
 
     my %base_colors = (
-        'A' => $gd->colorAllocate( 0,   255, 0 ),      # green
-        'C' => $gd->colorAllocate( 0,   0,   255 ),    # blue
-        'G' => $gd->colorAllocate( 0,   0,   0 ),      # black
-        'T' => $gd->colorAllocate( 255, 0,   0 ),      # red
+        'A' => $self->factory->translate_color(
+            $self->option('a_color') || 'green'
+        ),
+        'C' => $self->factory->translate_color(
+            $self->option('c_color') || 'blue'
+        ),
+        'G' => $self->factory->translate_color(
+            $self->option('g_color') || 'black'
+        ),
+        'T' => $self->factory->translate_color(
+            $self->option('t_color') || 'red'
+        ),
     );
     my $current_px;
     my $current_height;
 
     my $trace_center_base_px = $trace_center_px + int( $pixels_per_base / 2 );
+    if ($flipped) {
+        $trace_center_base_px -= $pixels_per_base;
+    }
 
     # Draw Trace
-    my $horizontal_scale_5p
-        = ( $pixels_per_base * ( $trace_center_base - $trace_start_base ) ) /
-        ( $parsed_trace->{index}[$trace_center_base]
-            - $parsed_trace->{index}[$trace_start_base] + 1 );
-    my $horizontal_scale_3p
-        = ( $pixels_per_base * ( $trace_end_base - $trace_center_base ) ) /
-        ( $parsed_trace->{index}[$trace_end_base]
-            - $parsed_trace->{index}[$trace_center_base] + 1 );
+    my $horizontal_scale_5p = ( $pixels_per_base
+            * ( $trace_center_base_index - $trace_start_base_index ) ) /
+        ( $parsed_trace->{index}[$trace_center_base_index]
+            - $parsed_trace->{index}[$trace_start_base_index] + 1 );
+    my $horizontal_scale_3p = ( $pixels_per_base
+            * ( $trace_end_base_index - $trace_center_base_index ) ) /
+        ( $parsed_trace->{index}[$trace_end_base_index]
+            - $parsed_trace->{index}[$trace_center_base_index] + 1 );
     $trace_start_sample
-        -= int( ( $pixels_per_base / 2 ) / $horizontal_scale_5p );
+        -= int( ( $pixels_per_base / 2 ) / $horizontal_scale_5p )
+        if $horizontal_scale_5p;
     $trace_end_sample
-        += int( ( $pixels_per_base / 2 ) / $horizontal_scale_3p );
+        += int( ( $pixels_per_base / 2 ) / $horizontal_scale_3p )
+        if $horizontal_scale_3p;
     my $last_px = $self->_get_pixel_position_x(
         current_sample       => $trace_start_sample,
         trace_center_sample  => $trace_center_sample,
@@ -371,28 +430,40 @@ sub draw_component {
     my $base_count = 0;
     my $seq_y      = $trace_glyph_bottom - $text_height + $text_buffer;
     for (
-        my $base_index = $trace_start_base;
-        $base_index <= $trace_end_base;
+        my $base_index = $trace_start_base_index;
+        $base_index <= $trace_end_base_index;
         $base_index++
         )
     {
 
         if ($forward) {
-            my $x    = $trace_left_px + $base_count * $pixels_per_base;
+            my $x;
+            if ($opp_strand) {
+                $x = $trace_left_px + ( $base_count * $pixels_per_base )
+                    + $pixels_per_base - $font->width - 1;
+            }
+            else {
+                $x = $trace_left_px + $base_count * $pixels_per_base;
+            }
             my $base = $parsed_trace->{bases}[$base_index];
-            $gd->char( $font, $x + 2, $seq_y, $base,
-                ( $base_colors{$base} || $fgcolor ) );
+            my $color = $base_colors{$base} || $fgcolor;
+            $gd->char( $font, $x + 2, $seq_y, $base, $color );
         }
         else {
-            #my $x = $trace_right_px - ( ( $base_count + 1 ) * $pixels_per_base );
-            my $x = $trace_right_px - ( ( $base_count +1 ) * $pixels_per_base )
-                + $pixels_per_base - $font->width - 1;
-            #my $x = $trace_left_px + ( $base_count * $pixels_per_base )
-            #    + $pixels_per_base - $font->width - 1;
+            my $x;
+            if ($opp_strand) {
+                $x = $trace_right_px
+                    - ( ( $base_count + 1 ) * $pixels_per_base );
+            }
+            else {
+                $x = $trace_right_px
+                    - ( ( $base_count + 1 ) * $pixels_per_base )
+                    + $pixels_per_base - $font->width - 1;
+            }
             my $base = $parsed_trace->{bases}[$base_index];
             $base = $complement{$base} || $base;
-            $gd->char( $font, $x + 2, $seq_y, $base,
-                ( $base_colors{$base} || $fgcolor ) );
+            my $color = $base_colors{$base} || $fgcolor;
+            $gd->char( $font, $x + 2, $seq_y, $base, $color );
 
         }
 
@@ -668,6 +739,18 @@ The following additional options are available to the "image" glyph:
   -glyph_delegate   Glyph to use for the part of      'generic'
                     the glyph that shows the physical
                     span of the feature.
+
+  -a_color          Color of the line representing    'green'
+                    Adenine on the trace
+
+  -c_color          Color of the line representing    'blue'
+                    Cytosine on the trace
+
+  -g_color          Color of the line representing    'black'
+                    Guanine on the trace
+
+  -t_color          Color of the line representing    'red'
+                    Thymine on the trace
 
 =head2 Specifying the Trace
 

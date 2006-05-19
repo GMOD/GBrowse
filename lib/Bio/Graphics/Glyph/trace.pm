@@ -1,10 +1,10 @@
 package Bio::Graphics::Glyph::trace;
 
-# $Id: trace.pm,v 1.1.2.3 2006-05-15 20:27:06 mwz444 Exp $
+# $Id: trace.pm,v 1.1.2.4 2006-05-19 20:35:03 mwz444 Exp $
 
 use strict;
 use GD;
-use SCF;
+use Bio::SCF;
 use Data::Dumper;
 use base 'Bio::Graphics::Glyph::generic';
 our @ISA;
@@ -40,14 +40,14 @@ sub get_parsed_trace {
         return;
     }
     my %scf;
-    tie %scf, 'SCF', $trace_file;
+    tie %scf, 'Bio::SCF', $trace_file;
     return \%scf;
 }
 
 sub _guess_format {
     my $self = shift;
     my $path = shift;
-    return 'SCF';
+    return 'Bio::SCF';
 }
 
 sub trace_path {
@@ -101,7 +101,7 @@ sub trace_data {
             print F $data;
             close F;
 
-            return ( 'SCF', $file_name );
+            return ( 'Bio::SCF', $file_name );
 
             #return ($response->content_type,$response->content);
         }

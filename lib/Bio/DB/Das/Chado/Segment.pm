@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.2 2006-05-18 21:33:00 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.3 2006-05-23 16:18:46 cpommier_gmod Exp $
 
 =head1 NAME
 
@@ -113,7 +113,10 @@ sub new {
 
     warn "$name, $factory\n"                      if DEBUG;
     warn "base_start = $base_start, stop = $stop\n" if DEBUG;
-
+    #clicking on the help in gbrowse calls this constructor without a name. return to avoid performances issues
+    if (! defined ($name)) {
+      return;
+    }
 #    $self->Bio::Root::Root->throw("start value less than 1\n")
 #      if ( defined $base_start && $base_start < 1 );
     $base_start = $base_start ? int($base_start) : 1;
@@ -712,7 +715,13 @@ sub features {
 
     $where_part   = "where f.feature_id = $feature_id and fl.rank=0 and (fd.dbxref_id is null or fd.dbxref_id in (select dbxref_id from dbxref where db_id=".$factory->gff_source_db_id."))";
   } else {
-    $from_part   = "from (feature f join featureslice($interbase_start, $rend) fl using (feature_id)) "
+    my $featureslice;
+    if ($factory->srcfeatureslice){
+      $featureslice = "featureloc_slice($srcfeature_id,$interbase_start, $rend)";
+    }else{
+      $featureslice = "featureslice($interbase_start, $rend)";
+    }
+    $from_part   = "from (feature f join $featureslice fl using (feature_id)) "
                   ."left join feature_dbxref fd using (feature_id) "
                   ."left join analysisfeature af using (feature_id)";
 

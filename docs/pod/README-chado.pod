@@ -96,6 +96,18 @@ isn't necessary since the relationship between features is clearly
 defined in the feature_relationship table, and that information
 is automatically obtained by the chado adaptor.
 
+=item db_args
+
+You can add db args to fine tune some parameters of the adapter:
+
+  db_args      = -dsn yourConnectString
+                 -enable_seqscan 0
+                 -srcfeatureslice 1
+
+enable_seqscan : set this to force the use of your indexes if your dba hasn't set it globally.
+
+srcfeatureslice : toggle the use of  featureloc_slice(srcfeat_id, int, int) instead of featureslice(int, int). featureloc_slice is part of the 0.01 version of chado
+
 =back
 
 =head2 Bugs

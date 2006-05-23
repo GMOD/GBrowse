@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.1 2005-11-14 17:05:32 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.2 2006-05-23 13:13:47 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -192,7 +192,32 @@ sub new {
   #Recursive Mapping
   $self->recursivMapping($arg{-recursivMapping} ? $arg{-recursivMapping} : 0);
 
+  $self->inferCDS($arg{-inferCDS} ? $arg{-inferCDS} : 0);
+
   return $self;
+}
+
+=head 2 inferCDS
+
+  Title   : inferCDS
+  Usage   : $obj->inferCDS()
+  Function: get or return the inferCDS flag
+  Returns : the value of the inferCDS flag
+  Args    : to return the flag, none; to set, 1
+
+Often, chado databases will be populated without CDS features, since
+they can be inferred from a union of exons and polypeptide features.
+Setting this flag tells the adaptor to do the inferrence to get
+those derived CDS features (at some small performance penatly).
+
+=cut
+
+sub inferCDS {
+    my $self = shift;
+
+    my $flag = shift;
+    return $self->{inferCDS} = $flag if defined($flag);
+    return $self->{inferCDS};
 }
 
 =head2 sofa_id
@@ -526,7 +551,9 @@ sub get_feature_by_name {
 
 
   if ($class) {
-      my $type = $self->name2term($class);
+      my $type = ($class eq 'CDS' && $self->inferCDS)
+                 ? $self->name2term('polypeptide') 
+                 : $self->name2term($class);
       return unless $type;
       $from_part .= ", feature f \n";
       $where_part.= "\nand fs.feature_id = f.feature_id and\n"
@@ -574,8 +601,9 @@ sub get_feature_by_name {
             left join analysisfeature af using (feature_id)
             left join feature_dbxref fd using (feature_id) 
        where
-         f.feature_id = ? and fl.rank=0 and "
-       ."(fd.dbxref_id is null or fd.dbxref_id in (select dbxref_id from dbxref where db_id =".$self->gff_source_db_id."))
+         f.feature_id = ? and fl.rank=0 and 
+         (fd.dbxref_id is null or fd.dbxref_id in
+          (select dbxref_id from dbxref where db_id =".$self->gff_source_db_id."))
        order by fl.srcfeature_id
         ");
 
@@ -677,10 +705,83 @@ sub get_feature_by_name {
         push @features, $feat;
         #END Recursive Mapping
       } else {
-      
-        my $interbase_start = $$hashref{'fmin'};
-        $base_start = $interbase_start +1;
-        my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
+     
+        if ($class eq 'CDS' && $self->inferCDS) {
+            #$hashref holds info for the polypeptide
+            my $poly_min = $$hashref{'fmin'};
+            my $poly_max = $$hashref{'fmax'};
+            my $poly_fid = $$hashref{'feature_id'};
+
+            #get fid of parent transcript
+            my $transcript_query = $self->dbh->prepare("
+                SELECT object_id FROM feature_relationship
+                WHERE type_id = ".$self->term2name('derives_from')
+                ." AND subject_id = $poly_fid"
+            );
+
+            $transcript_query->execute;
+            my ($trans_id) = $transcript_query->fetchrow_array; 
+
+            #now get exons that are part of the transcript
+            my $exon_query = $self->dbh->prepare("
+               SELECT f.feature_id, f.name, f.type_id,f.uniquename,af.significance as score,
+                      fl.fmin,fl.fmax,fl.strand,fl.phase, fl.srcfeature_id, fd.dbxref_id
+               FROM feature f join featureloc fl using (feature_id)
+                    left join analysisfeature af using (feature_id)
+                    left join feature_dbxref fd using (feature_id)
+               WHERE
+                   f.type_id = ".$self->term2name('exon')." and f.feature_id in
+                     (select subject_id from feature_relationship where object_id = $trans_id and
+                             type_id = ".$self->name2term('part_of')." ) and 
+                   fl.rank=0 and
+                   (fd.dbxref_id is null or fd.dbxref_id in
+                     (select dbxref_id from dbxref where db_id =".$self->gff_source_db_id."))        
+            ");
+
+            $exon_query->execute();
+
+            while (my $exonref = $exon_query->fetchrow_hashref) {
+                next if ($$exonref{fmax} < $poly_min);
+                next if ($$exonref{fmin} > $poly_max);
+
+                my ($start,$stop);
+                if ($$exonref{fmin} <= $poly_min && $$exonref{fmax} >= $poly_max) {
+                    #the exon starts before polypeptide start
+                    $start = $poly_min +1; 
+                }
+                else {
+                    $start = $$exonref{fmin} +1;
+                }
+
+                if ($$exonref{fmax} >= $poly_max && $$exonref{fmin} <= $poly_min) {
+                    $stop = $poly_max;
+                }
+                else {
+                    $stop = $$exonref{fmax};
+                }
+
+                        my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
+                                        $self,
+                                        $parent_segment,
+                                        $parent_segment->seq_id,
+                                        $start,$stop,
+                                        'CDS',
+                                        $$hashref{'score'},
+                                        $$hashref{'strand'},
+                                        $$hashref{'phase'},
+                                        $$hashref{'name'},
+                                        $$hashref{'uniquename'},
+                                        $$hashref{'feature_id'}
+                                                               );
+                        push @features, $feat;
+            }
+
+        }
+        else {
+         #the normal case where you don't infer CDS features 
+            my $interbase_start = $$hashref{'fmin'};
+            $base_start = $interbase_start +1;
+            my $feat = Bio::DB::Das::Chado::Segment::Feature->new(
                                         $self,
                                         $parent_segment,
                                         $parent_segment->seq_id,
@@ -693,7 +794,8 @@ sub get_feature_by_name {
                                         $$hashref{'uniquename'},
                                         $$hashref{'feature_id'}
                                                                );
-      push @features, $feat;
+            push @features, $feat;
+        }
       } 
     }
   }

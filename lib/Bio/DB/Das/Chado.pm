@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.2 2006-05-23 13:13:47 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.3 2006-05-24 07:29:50 cpommier_gmod Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -194,6 +194,14 @@ sub new {
 
   $self->inferCDS($arg{-inferCDS} ? $arg{-inferCDS} : 0);
 
+  if (exists($arg{-enable_seqscan}) && ! $arg{-enable_seqscan}){
+    $self->dbh->do("set enable_seqscan=0");
+  }
+
+  $self->srcfeatureslice($arg{-srcfeatureslice} ? $arg{-srcfeatureslice} : 0);
+
+
+
   return $self;
 }
 
@@ -280,6 +288,25 @@ sub  recursivMapping{
   return $self->{'recursivMapping'} = shift if @_;
   return $self->{'recursivMapping'};
 }
+
+=head2 srcfeatureslice
+
+  Title   : srcfeatureslice
+  Usage   : $obj->srcfeatureslice
+  Function: Flag for activating 
+  Returns : value of srcfeatureslice
+  Args    : on set, new value (a scalar or undef, optional)
+  Desc    : Allows to use a featureslice of type featureloc_slice(srcfeat_id, int, int)
+  Important : this and recursivMapping are mutually exclusives
+
+=cut
+
+sub  srcfeatureslice{
+  my $self = shift;
+  return $self->{'srcfeatureslice'} = shift if @_;
+  return $self->{'srcfeatureslice'};
+}
+
 
 =head2 dbh
 

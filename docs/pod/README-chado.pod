@@ -103,10 +103,13 @@ You can add db args to fine tune some parameters of the adapter:
   db_args      = -dsn yourConnectString
                  -enable_seqscan 0
                  -srcfeatureslice 1
+                 -do2Level 1
 
-enable_seqscan : set this to force the use of your indexes if your dba hasn't set it globally.
+enable_seqscan : set this to 0 to force the use of your indexes if your dba hasn't set it globally. It triggers a 'set enable_seqscan=0' sql command if set to 0, and nothing otherwise.
 
 srcfeatureslice : toggle the use of  featureloc_slice(srcfeat_id, int, int) instead of featureslice(int, int). featureloc_slice is part of the 0.01 version of chado
+
+do2Level : prefectchs the direct kids of a feature, thus avoiding subsequents queries. It provides a slight performances boost in most cases. 
 
 =back
 

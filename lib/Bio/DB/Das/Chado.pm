@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.3 2006-05-24 07:29:50 cpommier_gmod Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.4 2006-05-24 09:54:43 cpommier_gmod Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -199,7 +199,7 @@ sub new {
   }
 
   $self->srcfeatureslice($arg{-srcfeatureslice} ? $arg{-srcfeatureslice} : 0);
-
+  $self->do2Level($arg{-do2Level} ? $arg{-do2Level} : 0);
 
 
   return $self;
@@ -305,6 +305,22 @@ sub  srcfeatureslice{
   my $self = shift;
   return $self->{'srcfeatureslice'} = shift if @_;
   return $self->{'srcfeatureslice'};
+}
+
+=head2 do2Level
+
+  Title   : do2Level
+  Usage   : $obj->do2Level
+  Function: Flag for activating the fetching of 2levels in segment->features
+  Returns : value of do2Level
+  Args    : on set, new value (a scalar or undef, optional)
+
+=cut
+
+sub  do2Level{
+  my $self = shift;
+  return $self->{'do2Level'} = shift if @_;
+  return $self->{'do2Level'};
 }
 
 

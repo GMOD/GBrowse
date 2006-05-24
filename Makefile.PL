@@ -209,6 +209,8 @@ WriteMakefile(
 				 IO::String        => 0,
 				 Text::Shellwords  => 1.08,
 				 CGI::Session      => 4.02,
+				 File::Temp        => 0,
+				 Digest::MD5       => 0,
 				}, # e.g., Module::Name => 1.1
 	      PL_FILES       => {
                                  'install_util/htdocs_install.PLS' => 'install_util/htdocs_install.pl',

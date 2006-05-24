@@ -1,11 +1,12 @@
 package Bio::Graphics::Glyph::trace;
 
-# $Id: trace.pm,v 1.2 2006-05-19 20:43:50 mwz444 Exp $
+# $Id: trace.pm,v 1.3 2006-05-24 17:35:37 mwz444 Exp $
 
 use strict;
 use GD;
 use Bio::SCF;
-use Data::Dumper;
+use File::Temp qw( tempdir );
+use Digest::MD5 qw( md5_hex );
 use base 'Bio::Graphics::Glyph::generic';
 our @ISA;
 
@@ -91,8 +92,7 @@ sub trace_data {
             $signature =~ /^([0-9A-Fa-f]+)$/g or return;
             $signature = $1;
 
-            my ( $uri, $dir_path )
-                = $self->tmpdir( $self->source . '/trace' );
+            my $dir_path = tempdir();
             my $file_name
                 = sprintf( "%s/%s.%s", $dir_path, $signature, $extension );
             open( F, ">$file_name" )

@@ -744,3 +744,4 @@ ctgA	est	HSP	5000	5500	.	+	.	Target EST:agt767.5 352 852
 ctgA	est	HSP	7000	7200	.	+	.	Target EST:agt767.5 853 1153
 ctgA	est	match	8000	9000	.	-	.	Target EST:agt767.3 1 1001
 ctgA	est	HSP	8000	9000	.	-	.	Target EST:agt767.3 1 1001
+ctgA	example	trace	44401	45925	.	+	.	name trace; trace volvox_trace.scf

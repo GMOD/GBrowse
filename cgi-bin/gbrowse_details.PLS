@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.31 2006-05-05 19:46:16 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.32 2006-05-30 22:11:24 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -437,6 +437,7 @@ sub format_name {
   my $name = shift;
   b($name)
 }
+
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

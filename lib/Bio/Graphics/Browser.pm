@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.13 2006-05-04 20:14:21 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.14 2006-05-30 22:12:23 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1760,7 +1760,7 @@ sub name2segments {
     push @sloppy_names,"$name*" if length $name > 3 and $name !~ /\*$/;
 
     # automatic classes to try
-    my @classes = $class ? ($class) : (split /\s+/,$self->setting('automatic classes'));
+    my @classes = $class ? ($class) : (split /\s+/,$self->setting('automatic classes')||'');
 
     for my $n (@sloppy_names) {
       for my $c (@classes) {
@@ -1795,7 +1795,6 @@ sub _feature_get {
   }
   return unless @segments;
 
-
   # Deal with multiple hits.  Winnow down to just those that
   # were mentioned in the config file.
   my $types = $self->_all_types($db);
@@ -1803,12 +1802,14 @@ sub _feature_get {
     my $type    = $_->type;
     my $method  = eval {$_->method} || '';
     my $fclass  = eval {$_->class}  || '';
-    $type eq 'Segment'
-      || $type eq 'region'
-	|| $types->{$type}
-	  || $types->{$method}
-	    || $fclass eq $refclass
-	      || $fclass eq $class;
+    $type eq 'Segment'      # ugly stuff accomodates loss of "class" concept in GFF3
+	|| $type eq 'region'
+	    || $types->{$type}
+	      || $types->{$method}
+		|| !$fclass
+		  || $fclass eq $refclass
+		    || $fclass eq $class;
+
   } @segments;
 
   # consolidate features that have same name and same reference sequence
@@ -2407,7 +2408,7 @@ sub make_title {
 	    "$key:",
 	    $feature->seq_id.':'.
 	    $feature->start."..".$feature->end,
-	    $feature->target.':'.
+	    $feature->target->seq_id.':'.
 	    $feature->target->start."..".$feature->target->end);
     } else {
       my ($start,$end) = ($feature->start,$feature->end);

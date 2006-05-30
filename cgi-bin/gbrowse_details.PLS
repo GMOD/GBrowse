@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.32 2006-05-30 22:11:24 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.33 2006-05-30 22:15:31 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -83,8 +83,10 @@ $CONFIG->source(get_source());
 # This populates the %URLS global with link rules from the config file.
 getLinkURLs(\%URLS);
 
-print_top("GBrowse Details: $class:$name");
-print $CONFIG->header || h1("$class:$name Details");
+my $head_name = $class eq 'Sequence' ? $name : "$class:$name";  # gff3 compatibility
+
+print_top("GBrowse Details: $head_name");
+print $CONFIG->header || h1("$head_name Details");
 
 my $db = open_database();
 
@@ -115,12 +117,15 @@ sub print_features {
   for my $f (@$features) {
     warn "index = $INDEX, method = ",$f->primary_tag,"\n" if DEBUG;
     $COLORS{$f->primary_tag} ||= $COLORS[$INDEX++ % @COLORS];
-    my $options = {-bgcolor => $COLORS{$f->primary_tag}} if $subf;
+    my $options;
+    if ($subf) {
+      $options = {-bgcolor => $COLORS{$f->primary_tag}} unless $COLORS{$f->primary_tag} eq 'none';
+    }
 
     $string .= start_table();
     unless ($subf) {
       $string .= PrintMultiple($f,$options,'Name',$f->name);
-      $string .= PrintMultiple($f,$options,'Class',$f->class);
+      $string .= PrintMultiple($f,$options,'Class',$f->class) unless $f->class eq 'Sequence';
     }
     $string .= PrintMultiple($f,$options,'Type',$f->primary_tag);
     $string .= PrintMultiple($f,$options,'Source',$f->source_tag) if $f->source_tag;
@@ -437,7 +442,6 @@ sub format_name {
   my $name = shift;
   b($name)
 }
-
 
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";

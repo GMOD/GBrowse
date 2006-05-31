@@ -47,7 +47,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.48 2006-05-31 21:08:36 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.49 2006-05-31 21:36:17 markwilkinson Exp $
 ###########################################################
 
 #use SOAP::Lite +trace;
@@ -483,6 +483,7 @@ sub findService {
     $args{expandObjects} = 0;
     $expandObjects && ($args{expandObjects} = 1);
     $args{expandServices} = 1;
+    $authority = "" if $authority eq "select";
     $authority && ($args{authURI} = $authority);
     $serviceType && ($args{serviceType} = $serviceType);
     $keyword && ($args{keywords} = [split ",", $keyword]);
@@ -492,7 +493,7 @@ sub findService {
             return
     }
     unless (scalar @{$Services}){
-            print h2("No BioMOBY Services were discovered that could operate on $class data ", @$namespace[0]?"in the @$namespace[0] namespace.  Try enabling Semantics if you have not already":"  Try enabling Semantics if you have not already").p;
+            print h2("No BioMOBY Services were discovered ", $authority?"from $authority ":"", " that could operate on $class data ", @$namespace[0]?"in the @$namespace[0] namespace.  Try enabling Semantics if you have not already":"  Try enabling Semantics if you have not already").p;
             return
     }
     return @$Services

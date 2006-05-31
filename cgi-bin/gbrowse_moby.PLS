@@ -47,7 +47,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.49 2006-05-31 21:36:17 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.50 2006-05-31 21:48:10 markwilkinson Exp $
 ###########################################################
 
 #use SOAP::Lite +trace;
@@ -496,7 +496,14 @@ sub findService {
             print h2("No BioMOBY Services were discovered ", $authority?"from $authority ":"", " that could operate on $class data ", @$namespace[0]?"in the @$namespace[0] namespace.  Try enabling Semantics if you have not already":"  Try enabling Semantics if you have not already").p;
             return
     }
-    return @$Services
+    my @goodServices;
+    while (my $serv = shift @$Services){
+        my @inputs = @{$serv->input};
+        my $bad = 0;
+        map {$bad = 1 if ($_->isCollection)} @inputs;  # weed out collectioninputs because gbrowse_moby cannot create collection inputs
+        push @goodServices, $serv unless $bad;            
+    }
+    return @goodServices;
 }
 
 sub execute {

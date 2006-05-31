@@ -47,7 +47,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.46 2006-02-27 23:34:49 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.47 2006-05-31 20:48:49 markwilkinson Exp $
 ###########################################################
 
 #use SOAP::Lite +trace;
@@ -401,7 +401,6 @@ sub init {
                 $collection = 1;
                 my $simples = $SERVICE->output->[0]->Simples;
                 foreach (@{$simples}){
-                    #print STDERR "\n\nfound simple article\n\n";
                     my $ob = $_->objectType;
                     $ob =~ s/.*\:(\S+)/$1/;
                     my $link = getObjectDescription($ob);
@@ -487,7 +486,6 @@ sub findService {
     $authority && ($args{authURI} = $authority);
     $serviceType && ($args{serviceType} = $serviceType);
     $keyword && ($args{keywords} = [split ",", $keyword]);
-    
     my ($Services, $REG) = $Central->findService(%args);
     unless ($Services){
             print h2("Service discovery failed with the following errror: ").i($REG->message).p;
@@ -514,32 +512,47 @@ sub execute {
     print p;
     
     $Central = MOBY::Client::Central->new();
+    my @providers = $Central->retrieveServiceProviders;  # this will be passed to the form generator later
     my ($SI, $reg) = $Central->findService(authURI => $auth,
                        serviceName => $service);
     $SI = $$SI[0]; # there can only be one, since authURI/serviceName is a unique index
+    my $provider = $SI->contactEmail;
+
     my $inputs = $SI->input;
     my $articleName;
     # this code assumes only one input as a primary
     foreach my $input(@$inputs){
-        next unless $input->isSimple;
-        $articleName = $input->articleName;
-        last;
-    }
+	next unless $input->isSimple;
+	$articleName = $input->articleName;
+	last;
+    }	
 
     my $WSDL = $Central->retrieveService($SI); # get the WSDL
 
     my $SERVICE = MOBY::Client::Service->new(service => $WSDL);  # prepare the connection stubs
     
     print h2("\nBioMOBY Service: ".($SI->name)),i($SI->description),hr,h2("\nResult for $namespace:$id\n");
-    my $result = $SERVICE->execute(XMLinputlist => [["$articleName", $OBJECT]]); # execute the service with the given input data; this *assumes* that the arguments are not named!!!
+    my $result;
+    eval {$result = $SERVICE->execute(XMLinputlist => [["$articleName", $OBJECT]]);};
 
     unless ($result){
-        print h3("Service returned no response");
+        print h3("404 - Service returned no response.  This indicates that this service is currently unavailable.  Try again later.");
         exit 0;
     }
     my ($collections, $objects) = extractResponseArticles($result);
+
+
     unless (scalar @$objects || scalar @$collections){
-        print h3("Service Response contained no data.  Message body contained the following: \n<br><pre>".(escapeHTML($result))."</pre>\n");
+	my $code;
+	my $message;
+	if ($result =~ /\<exceptionCode\>(\d+).*?\<exceptionMessage\>([^<]+)/){
+		$code = $1; $message = $2;
+	} else {
+		$code = "600";
+		$message = "INTERNAL PROCESSING ERROR";
+	}
+        print h3("ERROR $code"), "<br><br>The following information may assist you in determining the cause of the failure: $message<br><br>Please contact your service provider (<a href='mailto:$provider'>$provider</a>) for more 
+assistance.\n";
         exit 0;
     }
     my $service_notes = getServiceNotes($result);
@@ -578,7 +591,7 @@ sub execute {
                    hidden("id",$id),
                    hidden("objectclass",$MOBYClass),
                    submit("Re-query MOBY with This Data"),
-                   &setupFilters,
+                   &setupFilters(providers => \@providers),
                    end_form                   
                    ));
             print TR({-valign=>'top', -class=>'databody'},
@@ -611,9 +624,10 @@ sub printIt {
     # in our list of known object types.
     my ($renderer_term, $renderer_lsid) = ("","");
     ($renderer_term, $renderer_lsid) = &whichDeepestParentObject($Central, $thisdatatype, \@rtypes); 
-print STDERR "\n\n\n\nCentral $Central term $renderer_term  lsid $renderer_lsid  $thisdatatype \nTYPES: @rtypes\n";
     $renderer_term ||='text-formatted';
     $renderer = $RENDERERS{$renderer_term};
+
+#print STDERR "RENDERER $renderer CHOSEN for $thisdatatype\n";
 
     die "Can't render this information\n" unless $renderer;
     
@@ -675,13 +689,22 @@ sub processXrefs {
 
 sub setupFilters {
 #<SPAN title=" description here " class="popup">text</SPAN>
-    return "<table border=1><tr><td>",checkbox_group(-name => 'expandObjects', -values => ['?'], -checked=>"ON"),
-    "  <SPAN title=' When this box is checked, your input object will be decomposed into its ISA parentage and services that operate on any parent class will also be discovered. ' class='popup' cursor='help'>Decompose Objects?</span> ","</td>",
-    "<td>","  <SPAN title=' Enter a comma-delimited list of keywords that should appear in the service description. ' class='popup' cursor='help'>Keywords:</span> ", textfield(-name => 'keyword', -size => 20),"</td>",
-    "<td>","  <SPAN title=' Enter the full URI for the authority (service provider) that you want to restrict your search to.  e.g. sgn.cornell.edu ' class='popup' cursor='help'>Authority:</span> ",textfield(-name => 'authURI', -size => 20),"</td>",
-    "<td>","  <SPAN title=' Enter a valid term from the Service Type Ontology. ' class='popup' cursor='help'>Service Type:</span> ", textfield(-name => "serviceType", -size => 10),"</td>",
-    "<td>","  <SPAN title=' Your search will be restricted to only those services that output this Object.  The ontology is NOT traversed. ' class='popup' cursor='help'>Output Object:</span> ", textfield(-name => "output", -size => 10),"</td>",
-    "</tr></table>"
+    my (%args) = @_;
+    my @providers = @{$args{providers}};
+    my $x = "<table border=1><tr><td>".(checkbox_group(-name => 'expandObjects', -values => ['?'], -checked=>"ON"));
+    $x .= "<SPAN title=' When this box is checked, your input object will be decomposed into its ISA parentage and services that operate on any parent class will also be discovered. ' class='popup' cursor='help'>Semantics Enabled</span></td>";
+    $x .= "<td><SPAN title=' Enter a comma-delimited list of keywords that should appear in the service description. ' class='popup' cursor='help'>Keywords:</span> ".( textfield(-name => 'keyword', -size => 15))."</td>";
+    $x .= "<td><SPAN title=' Enter the full URI for the authority (service provider) that you want to restrict your search to.  e.g. sgn.cornell.edu ' class='popup' cursor='help'>Authority:</span> ";
+    $x .= popup_menu(-name => 'authority',
+        '-values' => ["select", @providers],
+        '-default' => '',
+        '-width' => 18,
+    );
+    $x .= "</td>";
+    $x .= "<td><SPAN title=' Enter a valid term from the Service Type Ontology. ' class='popup' cursor='help'>Service Type:</span> ".(textfield(-name => "serviceType", -size => 10))."</td>";
+    $x .= "<td><SPAN title=' Your search will be restricted to only those services that output this Object.  The ontology is NOT traversed. ' class='popup' cursor='help'>Desired Output:</span> ".(textfield(-name => "output", -size => 10))."</td>";
+    $x .= "</tr></table>";
+    return $x;
 
 }
 
@@ -689,6 +712,7 @@ sub INITIALIZE {
     my $Central = MOBY::Client::Central->new();
     my $NameSpaces = $Central->retrieveNamespaces;
     my @Namespaces = sort keys(%{$NameSpaces});
+    my @providers = $Central->retrieveServiceProviders;
     print start_form(-action => url(-full)),
     "<table border=1><tr><td>",
     "<h2>Select a namespace: </h2>",
@@ -706,11 +730,12 @@ sub INITIALIZE {
     "</td><td>",textfield(-name => 'id',-width=>'15', -value => "431260",),
     "</td></tr>",
     "</table>";
-    print "</h2>",p, &setupFilters,p,
+    print "</h2>",p, &setupFilters(providers => \@providers),p,
     submit("Initialize with this seed data"),
     end_form;
 
 }
+
 
 
 

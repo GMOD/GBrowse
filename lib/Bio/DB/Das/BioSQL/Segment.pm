@@ -1,4 +1,4 @@
-
+# $Id%
 =head1 NAME
 
 Bio::DB::Das::BioSQL::Segment - DAS-style access to a BioSQL database
@@ -476,6 +476,17 @@ sub is_circular {return shift->bioseq->is_circular}
 sub annotation {return shift->bioseq->annotation}
 sub species {return shift->bioseq->species}
 sub version {return shift->bioseq->version}
+
+sub overlaps {
+  my $self          = shift;
+  my $other_segment = shift or return;
+  my $start = $self->start;
+  my $end   = $self->end;
+  my $other_start = $other_segment->start;
+  my $other_end   = $other_segment->end;
+
+  return $end >= $other_start && $start <= $other_end;
+}
 
 # compatibility with Bio::DB::GFF::RelSegment
 *abs_ref = \&accession_number;

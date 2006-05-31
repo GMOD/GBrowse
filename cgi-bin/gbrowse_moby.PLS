@@ -47,7 +47,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.47 2006-05-31 20:48:49 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.48 2006-05-31 21:08:36 markwilkinson Exp $
 ###########################################################
 
 #use SOAP::Lite +trace;
@@ -492,7 +492,7 @@ sub findService {
             return
     }
     unless (scalar @{$Services}){
-            print h2("No BioMOBY Services were discovered that could operate on $class data ", @$namespace[0]?"in the @$namespace[0] namespace.  Try switching 'Decompose Objects' on...":"").p;
+            print h2("No BioMOBY Services were discovered that could operate on $class data ", @$namespace[0]?"in the @$namespace[0] namespace.  Try enabling Semantics if you have not already":"  Try enabling Semantics if you have not already").p;
             return
     }
     return @$Services

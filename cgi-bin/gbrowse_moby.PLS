@@ -47,7 +47,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.50 2006-05-31 21:48:10 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.51 2006-05-31 23:20:10 markwilkinson Exp $
 ###########################################################
 
 #use SOAP::Lite +trace;
@@ -500,8 +500,11 @@ sub findService {
     while (my $serv = shift @$Services){
         my @inputs = @{$serv->input};
         my $bad = 0;
-        map {$bad = 1 if ($_->isCollection)} @inputs;  # weed out collectioninputs because gbrowse_moby cannot create collection inputs
-        push @goodServices, $serv unless $bad;            
+        map {++$bad if ($_->isCollection)} @inputs;  # weed out collectioninputs because gbrowse_moby cannot create collection inputs
+        next if $bad;
+        map {++$bad if ($_->isSimple)} @inputs;  # weed out collectioninputs because gbrowse_moby cannot create collection inputs
+        next if $bad > 1;
+        push @goodServices, $serv;            
     }
     return @goodServices;
 }

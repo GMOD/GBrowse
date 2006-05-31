@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.33 2006-05-30 22:15:31 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.34 2006-05-31 22:14:21 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -112,17 +112,15 @@ exit 0;
 
 sub print_features {
   my $features   = shift;
-  my $subf       = shift;
+  my $subf       = shift || 0;
   my $string;
   for my $f (@$features) {
-    warn "index = $INDEX, method = ",$f->primary_tag,"\n" if DEBUG;
-    $COLORS{$f->primary_tag} ||= $COLORS[$INDEX++ % @COLORS];
-    my $options;
-    if ($subf) {
-      $options = {-bgcolor => $COLORS{$f->primary_tag}} unless $COLORS{$f->primary_tag} eq 'none';
-    }
+    my $method = $f->primary_tag . $subf;
+    warn "index = $INDEX, method = $method" if DEBUG;
+    $COLORS{$method} ||= $COLORS[$INDEX++ % @COLORS];
+    my $options = {-bgcolor => $COLORS{$method}} unless $COLORS{$method} eq 'none';
 
-    $string .= start_table();
+    $string .= start_table({-cellspacing=>0});
     unless ($subf) {
       $string .= PrintMultiple($f,$options,'Name',$f->name);
       $string .= PrintMultiple($f,$options,'Class',$f->class) unless $f->class eq 'Sequence';
@@ -135,23 +133,24 @@ sub print_features {
       # try to correct for common GFF2 error of indicating a -/- alignment
       # using a (-) src strand and a target_start > target_end
       my $bug = $f->abs_strand < 0 && $f->target->abs_strand < 0;
-      $string .= PrintMultiple($f,$options,'Target',$f->target);
+      $string .= PrintMultiple($f,$options,'Target',$f->target->seq_id);
       $string .= PrintMultiple($f,$options,"Matches",$f);
       $string .= PrintMultiple($f,$options,'',print_matches($f,$f->target,$bug)) if $subf;
 
     }
     $string .= PrintMultiple($f,$options,"Score",$f->score) if defined $f->score;
     my %attributes = $f->attributes;
-    for my $a (sort keys %attributes) {
+    for my $a (sort grep {!/Target/} keys %attributes) {
       $string .= PrintMultiple($f,$options,$a,$f->attributes($a));
     }
+    $string   .= TR({-valign=>'top',-class=>'databody'},th({-height=>3},''),td({-height=>3},''));
     my @subfeatures = $f->segments;          # works with old bioperl
-    $string .= PrintMultiple($f,$options,'Parts',print_features(\@subfeatures,1)) if @subfeatures;
+    $string .= PrintMultiple($f,$options,'Parts',print_features(\@subfeatures,$subf+1)) if @subfeatures;
     $string .= end_table();
 
     if (!$subf) {
       my $dna = $f->dna;
-      $string .= print_dna($f,$dna,$f->abs_start,$f->strand,\@subfeatures) if $dna;
+      $string .= print_dna($f,$dna,$f->abs_start,$f->strand,\@subfeatures,$subf+1) if $dna;
     }
 
   }
@@ -159,16 +158,16 @@ sub print_features {
 }
 
 sub print_dna {
-  my ($feature,$dna,$start,$strand,$features) = @_;
+  my ($feature,$dna,$start,$strand,$features,$subf) = @_;
   my %seenit;
   warn "dna=$dna" if DEBUG;
 
   my $markup = Bio::Graphics::Browser::Markup->new;
   for my $f (@$features) {
     warn "f = $f" if DEBUG;
-    my $method = $f->primary_tag;
+    my $method = $f->primary_tag . $subf;
     warn "$method => $COLORS{$method}" if DEBUG;
-    next if $COLORS{$f->primary_tag} eq 'none';
+    next if $COLORS{$method} eq 'none';
     $markup->add_style($method => "BGCOLOR $COLORS{$method}");
   }
   # add a newline every 80 positions
@@ -192,8 +191,9 @@ sub print_dna {
     }
 
     ($s,$e) = ($e,$s) if $s > $e;
-    next if $COLORS{$f->primary_tag} eq 'none';
-    push @markup,[$f->primary_tag,$s,$e+1];  # Duelling off-by-one errors....
+    my $method = $f->primary_tag . $subf;
+    next if $COLORS{$method} eq 'none';
+    push @markup,[$method,$s,$e+1];  # Duelling off-by-one errors....
   }
   push @markup,map {['newline',80*$_]} (1..length($dna)/80);
   $markup->markup(\$dna,\@markup);
@@ -205,6 +205,7 @@ sub print_dna {
 
 sub print_matches {
   my ($src,$tgt,$bug) = @_;
+
   my $sdna = $src->dna or return '';
   my $tdna = $tgt->dna or return '';
   my $top_label = $src->abs_ref;
@@ -302,13 +303,13 @@ sub PrintMultiple {
     if ($isFirst) {
       $isFirst =0 ;
       $string .= join '',TR({-valign=>'top',-class=>'databody'},
-			    th({-align=>'LEFT',-valign=>'top',-class=>'datatitle'},length $label>0 ? "$label: " : ''),
+			    th({-align=>'LEFT',-valign=>'top',-class=>'datatitle',-width=>100},length $label>0 ? "$label: " : ''),
 			    td($options, $LINK ? $LINK : $obj)
 			   );
     } else {
 
       $string .= join '', TR({-class=>'databody'},
-			     th({-align=>'RIGHT',-class=>'datatitle'},'&nbsp;'),
+			     th({-align=>'RIGHT',-class=>'datatitle',-width=>100},'&nbsp;'),
 			     td($options,$LINK?$LINK:$obj)
 			    );
     }

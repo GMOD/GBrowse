@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.14 2006-05-30 22:12:23 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.15 2006-06-01 03:13:44 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1160,7 +1160,7 @@ sub image_and_map {
 
     my $iterator = $segment->get_feature_stream(-type=>\@feature_types);
     warn "feature types = @feature_types\n" if DEBUG;
-    my (%groups,%feature_count,%group_pattern);
+    my (%groups,%feature_count,%group_pattern,%aggregates,%aggregate_field);
 
     while (my $feature = $iterator->next_seq) {
 
@@ -1186,26 +1186,51 @@ sub image_and_map {
 	  next;
 	}
 
+	# Handle aggregation (needed for GFF3 database)
+	warn "$track aggregation => ",$conf->code_setting($label => 'aggregate') if DEBUG;
+	exists $aggregate_field{$label} or $aggregate_field{$label} = $conf->code_setting($label => 'aggregate');
+	
+	if (my $field = $aggregate_field{$label}) {
+	  my $base = eval{$feature->$field};
+	  if (defined $base) {
+	    my $aggregate_object = $aggregates{$label}{$base} ||= Bio::Graphics::Feature->new(-start=>$feature->start,
+											      -end  =>$feature->end,
+											      -strand => $feature->strand,
+											      -type =>$feature->primary_tag);
+	    $aggregate_object->add_SeqFeature($feature);
+	    next;
+	  }
+	}
+
 	$track->add_feature($feature);
       }
     }
 
-    # handle pattern-based group matches
-     for my $label (keys %groups) {
-       my $set     = $groups{$label};
-       my $pattern = $group_pattern{$label} or next;
-       $pattern =~ s!^/(.+)/$!$1!;  # clean up regexp delimiters
-       my %pairs;
-       for my $a (@$set) {
-	 my $name = $a->name or next;
-	 (my $base = $name) =~ s/$pattern//i;
+    # fix up groups and aggregates
+
+    # add aggregated features
+    for my $label (keys %aggregates) {
+      my $track = $tracks{$label};
+      my $aggregates = $aggregates{$label} or next;
+      $track->add_feature($_) foreach values %$aggregates;
+    }
+
+    for my $label (keys %groups) {
+      my $track = $tracks{$label};
+      # fix up groups
+      my $set     = $groups{$label};
+      my $pattern = $group_pattern{$label} or next;
+      $pattern =~ s!^/(.+)/$!$1!;  # clean up regexp delimiters
+      my %pairs;
+      for my $a (@$set) {
+	my $name = $a->name or next;
+	(my $base = $name) =~ s/$pattern//i;
  	push @{$pairs{$base}},$a;
-       }
-       my $track = $tracks{$label};
-       foreach (values %pairs) {
-	 $track->add_group($_);
-       }
-     }
+      }
+      foreach (values %pairs) {
+	$track->add_group($_);
+      }
+    }
 
     # configure the tracks based on their counts
     for my $label (keys %tracks) {

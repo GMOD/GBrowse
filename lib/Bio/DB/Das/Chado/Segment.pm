@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.4 2006-05-24 09:54:45 cpommier_gmod Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.5 2006-06-01 09:46:55 cpommier_gmod Exp $
 
 =head1 NAME
 
@@ -588,9 +588,11 @@ sub features {
   my $self = shift;
 
   warn "Segment->features() args:@_\n" if DEBUG;
-  if ($self->factory->do2Level) {
+
+  #In some cases (url search : ?name=foo) $self isn't a hash ref ie object but a simple scalar ie string. So we need to get the factory the right way before accessing it
+  if (ref ($self) &&  $self->factory->do2Level) {
     return $self->_features2level(@_);
-  }
+  }# should put an else here to try to get the factory from @_
 
   my ($types,$type_placeholder,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,$feature_id,$factory);
   if ($_[0] and $_[0] =~ /^-/) {

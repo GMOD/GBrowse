@@ -832,8 +832,10 @@ sub sub_SeqFeature {
     $self->factory->dbh->trace(2) if DEBUG;
 
     my $partof =  $self->factory->name2term('part_of');
+    my $derivesfrom = $self->factory->name2term('derives_from');
     $self->throw("part_of cvterm wasn't found.  is DB sane?") unless $partof;
     $partof = join ',', @$partof if ref($partof) eq 'ARRAY';
+    $partof .= ",$derivesfrom";
 
     warn "partof = $partof" if DEBUG;
 
@@ -913,6 +915,9 @@ sub sub_SeqFeature {
     my $rows = $sth->rows;
     return if ($rows<1);    #nothing retrieve during query
 
+    my $inferCDS = $self->factory->inferCDS;
+    my @poly_exon_cache;
+
     while (my $hashref = $sth->fetchrow_hashref) {
 
       next unless $$hashref{srcfeature_id} == $self->srcfeature_id;
@@ -954,8 +959,52 @@ sub sub_SeqFeature {
                     $$hashref{feature_id}
                                                             );
       $self->add_subfeature($feat);
+
+      if ($inferCDS && ($feat->type =~ /exon/ or $feat->type =~ /polypeptide/ )) {
+          push @poly_exon_cache, $feat;
+      }
     }
   }
+
+    #now deal with converting polypeptide and exons to CDS
+
+    if (@poly_exon_cache > 0) {
+        #get the polypeptide at the top of the list
+        my @sorted = sort {$b->type cmp $a->type} @poly_exon_cache;
+
+        my ($start,$stop);
+        my $poly = shift @sorted;
+        if ($poly->type->method =~ /poly/) {
+            $start = $poly->start;
+            $stop  = $poly->end;
+        }
+        else {
+            #if there's no polypeptide feature, there's no point in continuing
+            return @{$self->subfeatures()};
+        }
+
+        warn "poly:$poly,start:$start, stop:$stop" if DEBUG;
+        warn $poly->start if DEBUG;
+        warn $poly->end if DEBUG;
+
+        for (@sorted) {
+            my $feat = $_;
+            next if ($feat->start < $start and $feat->end < $start);
+            next if ($feat->start > $stop  and $feat->end > $stop);
+            $feat->type->method('CDS');
+
+            if ($feat->start < $start) {
+                $feat->start($start);
+            }
+            if ($feat->end > $stop) {
+                $feat->end($stop);
+            }
+
+            warn "infering:$feat\n" if DEBUG;
+            $self->add_subfeature($feat);
+        }
+    }
+
 
 #this shouldn't be necessary, as filtering took place via the query
 #  if($types){

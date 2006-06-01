@@ -964,7 +964,6 @@ sub sub_SeqFeature {
           push @poly_exon_cache, $feat;
       }
     }
-  }
 
     #now deal with converting polypeptide and exons to CDS
 
@@ -1004,7 +1003,7 @@ sub sub_SeqFeature {
             $self->add_subfeature($feat);
         }
     }
-
+  }
 
 #this shouldn't be necessary, as filtering took place via the query
 #  if($types){

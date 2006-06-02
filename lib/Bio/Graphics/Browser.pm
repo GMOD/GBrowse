@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.182 2006-06-01 03:17:02 lstein Exp $
+# $Id: Browser.pm,v 1.183 2006-06-02 19:09:36 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1174,7 +1174,12 @@ sub image_and_map {
   push @argv, -flip => 1 if $flip;
   my $p = defined $conf->setting(general=>'image_padding') ? $conf->setting(general=>'image_padding')
                                                            : PAD_DETAIL_SIDES;
-  push @argv,(-pad_left =>$p, -pad_right=>$p) if $p;
+  my $pl = $conf->setting(general=>'pad_left');
+  my $pr = $conf->setting(general=>'pad_right');
+  $pl    = $p unless defined $pl;
+  $pr    = $p unless defined $pr;
+
+  push @argv,(-pad_left =>$pl, -pad_right=>$pr) if $p;
 
   my $panel = Bio::Graphics::Panel->new(@argv);
 
@@ -1433,7 +1438,7 @@ sub _overview {
 		      -glyph     => 'arrow',
 		      -double    => 1,
 		      -label     => "\u$region_name\E of ".$segment->seq_id,
-		      -labelfont => $image_class->gdMediumBoldFont,
+		      -label_font => $image_class->gdMediumBoldFont,
 		      -tick      => 2,
 		      -units_in_label => $no_tick_units,
 		      -units     => $units,
@@ -1683,7 +1688,7 @@ sub _hits_on_overview {
 		      -glyph     => 'arrow',
 		      -double         => 1,
 		      -label          => ($htmlize ? 0 : $segment->seq_id),
-		      -labelfont      => $image_class->gdMediumBoldFont,
+		      -label_font      => $image_class->gdMediumBoldFont,
 		      -units_in_label => $no_tick_units,
 		      -units          => $units,
 		      -unit_divider   => $unit_divider,

@@ -1242,11 +1242,18 @@ to the right and left of all landmarks that are searched for by name.
 
 =item * image_padding = 25
 
+=item * pad_left = 50
+
+=item * pad_right = 30
+
 The image_padding option will add the indicated amount of whitespace
 (in pixels) to the right and left of the detail panel.  The default is
-25 pixels. You may need to adjust this if you are using the xyplot glyph
-and finding that the scale (which is printed outside the graph area) is
-being cut off.
+25 pixels. You may need to adjust this if you are using the xyplot
+glyph and finding that the scale (which is printed outside the graph
+area) is being cut off.
+
+You can individually adjust the left and right padding using pad_left
+and pad_right, which, if present, will supersede image_padding.
 
 =back
 

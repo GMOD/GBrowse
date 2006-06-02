@@ -385,4 +385,8 @@ END
 
  NO_SOURCES        => 'There are no readable data sources configured.  Perhaps you do not have permission to view them.',
 
+ ADD_YOUR_OWN_TRACKS => 'Add Your Own Tracks',
+
+ INVALID_SOURCE    => 'The source named %s is invalid.',
+
 };

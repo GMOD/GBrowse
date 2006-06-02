@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.38 2006-05-05 19:42:45 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.39 2006-06-02 22:13:34 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -614,10 +614,20 @@ sub page_settings {
   my $source = param('source') || param('src') || path_info();
   $source    =~ s!^/+!!;  # get rid of leading & trailing / from path_info()
   $source    =~ s!/+$!!;
-  $config->source($source) if $source;
+
+  my @sources = sort $config->sources;
+  my %sources = map {$_=>1} @sources;
+  if ($source) {
+    if ($sources{$source}) {
+      $config->source($source);
+    } else {
+      error($CONFIG->tr('INVALID_SOURCE',$source));
+    }
+  }
 
   my $session       = Bio::Graphics::Browser::PageSettings->new($config,param('id'));
   $source         ||= $session->source;
+  $source         ||= $sources[0];
   redirect_legacy_url($source); # may cause a redirect and exit!!!
 
   my $old_source    = $session->source($source);
@@ -1386,28 +1396,29 @@ sub das_table {
   }
 
   local $^W = 0;
-  my $segment = "$settings->{ref}:$settings->{start},$settings->{stop}";
-  for my $url ($REMOTE_SOURCES->sources) {
+  if (defined $settings->{ref}) {
+    my $segment = "$settings->{ref}:$settings->{start},$settings->{stop}";
+    for my $url ($REMOTE_SOURCES->sources) {
 
-    (my $f = $url) =~ s!(http:.+/das/\w+)(?:\?(.+))?$!$1/features?segment=$segment;$2!;
-
-    warn "url = $url" if DEBUG_EXTERNAL;
-    next unless $url =~ /^(ftp|http):/ && $feature_files->{$url};
-    warn "external_table(): url = $url" if DEBUG;
-    push @rows,th({-align=>'right',-valign=>'TOP'},"URL",++$count).
-      td(textfield(-name=>'eurl',-size=>50,-value=>$url,-override=>1),br,
-	 a({-href=>$f,-target=>'help'},'['.$CONFIG->tr('Download').']'),
-	 get_uploaded_file_info($settings->{features}{$url}{visible} && $feature_files->{$url})
-	);
+      (my $f = $url) =~ s!(http:.+/das/\w+)(?:\?(.+))?$!$1/features?segment=$segment;$2!;
+      warn "url = $url" if DEBUG_EXTERNAL;
+      next unless $url =~ /^(ftp|http):/ && $feature_files->{$url};
+      warn "external_table(): url = $url" if DEBUG;
+      push @rows,th({-align=>'right',-valign=>'TOP'},"URL",++$count).
+	td(textfield(-name=>'eurl',-size=>50,-value=>$url,-override=>1),br,
+	   a({-href=>$f,-target=>'help'},'['.$CONFIG->tr('Download').']'),
+	   get_uploaded_file_info($settings->{features}{$url}{visible} && $feature_files->{$url})
+	  );
+    }
+    push @rows,th({-align=>'right'},
+		  $CONFIG->tr('Remote_url')).
+		    td(textfield(-name=>'eurl',-size=>40,-value=>'',-override=>1),
+		       $presets);
   }
-  push @rows,th({-align=>'right'},
-		$CONFIG->tr('Remote_url')).
-		  td(textfield(-name=>'eurl',-size=>40,-value=>'',-override=>1),
-		     $presets);
 
   return table({-border=>0,-width=>'100%'},
-              TR(
-                 th({-class=>'uploadtitle',-align=>'left',-colspan=>2},
+	       TR(
+		  th({-class=>'uploadtitle',-align=>'left',-colspan=>2},
 		     $CONFIG->tr('Remote_title').':',
 		     a({-href=>annotation_help().'#remote',-target=>'help'},'['.$CONFIG->tr('Help').']'))),
 	       TR({-class=>'uploadbody'},\@rows),

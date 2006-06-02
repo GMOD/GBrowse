@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.183 2006-06-02 19:09:36 lstein Exp $
+# $Id: Browser.pm,v 1.184 2006-06-02 22:14:27 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -149,7 +149,7 @@ sub read_configuration {
   # get modification times
   my %mtimes     = map { $_ => (stat($_))[9] } @conf_files;
 
-  for my $file (sort {$a cmp $b} @conf_files) {
+  for my $file (@conf_files) {
     my $basename = basename($file,".$suffix");
     $basename =~ s/^\d+\.//;
     next if defined($self->{conf}{$basename}{mtime})
@@ -158,8 +158,14 @@ sub read_configuration {
     $self->{conf}{$basename}{data}  = $config;
     $self->{conf}{$basename}{mtime} = $mtimes{$file};
     $self->{conf}{$basename}{path}  = $file;
-    $self->{source}               ||= $basename if $config->authorized('general');
   }
+
+  my $default_source;
+  for my $basename (sort keys %{$self->{conf}}) {
+    my $config = $self->{conf}{$basename}{data};
+    $default_source  ||= $basename if $config->authorized('general');
+  }
+
   $self->{width} = DEFAULT_WIDTH;
   $self->{dir}   = $conf_dir;
   1;
@@ -199,7 +205,7 @@ sub sources {
   my @sources = keys %$conf;
 
   # don't let unauthorized individuals see the source at all
-  my @authorized = grep {$conf->{$_}{data}->authorized('general')} @sources;
+  my @authorized = grep {exists $conf->{$_}{data} && $conf->{$_}{data}->authorized('general')} @sources;
 
   # alternative: sort by the config file name
   # return sort {$conf->{$a}{path} cmp $conf->{$b}{path}} @authorized;
@@ -717,7 +723,7 @@ to the current source.
 
 sub config {
   my $self = shift;
-  my $source = $self->source;
+  my $source = $self->source or return;
   $self->{conf}{$source}{data};
 }
 
@@ -2289,6 +2295,12 @@ sub authorized {
 		      : croak "$mode is not a valid authorization mode";
   return $allow unless %users;
   $satisfy = 'any'  if !@allow && !@deny;  # no host restrictions
+
+  # prevent unint variable warnings
+  $user         ||= '';
+  $allow        ||= '';
+  $users{$user} ||= '';
+
   return $satisfy eq 'any' ? $allow || $users{$user}
                            : $allow && $users{$user};
 }

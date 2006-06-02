@@ -389,4 +389,6 @@ END
 
  ADD_YOUR_OWN_TRACKS => 'Add Your Own Tracks',
 
+ INVALID_SOURCE    => 'The source named %s is invalid.',
+
 };

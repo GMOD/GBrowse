@@ -916,7 +916,7 @@ sub sub_SeqFeature {
     return if ($rows<1);    #nothing retrieve during query
 
     my $inferCDS = $self->factory->inferCDS;
-    my @poly_exon_cache;
+    my @p_e_cache;
 
     while (my $hashref = $sth->fetchrow_hashref) {
 
@@ -961,15 +961,17 @@ sub sub_SeqFeature {
       $self->add_subfeature($feat);
 
       if ($inferCDS && ($feat->type =~ /exon/ or $feat->type =~ /polypeptide/ )) {
-          push @poly_exon_cache, $feat;
+          #saving an object to an array saves a reference to the object--
+          #we don't want that, so we have to use the clone method to make a copy
+          push @p_e_cache, $feat->clone;
       }
     }
 
     #now deal with converting polypeptide and exons to CDS
 
-    if (@poly_exon_cache > 0) {
+    if (@p_e_cache > 0) {
         #get the polypeptide at the top of the list
-        my @sorted = sort {$b->type cmp $a->type} @poly_exon_cache;
+        my @sorted = sort {$b->type cmp $a->type} @p_e_cache;
 
         my ($start,$stop);
         my $poly = shift @sorted;

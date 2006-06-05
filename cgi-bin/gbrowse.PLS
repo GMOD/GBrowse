@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.39 2006-06-02 22:13:34 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.40 2006-06-05 22:16:53 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1756,7 +1756,14 @@ sub do_keyword_search {
   my $db = open_database();
   my $max_keywords = $CONFIG->setting('keyword search max')
 		    || MAX_KEYWORD_RESULTS;
-  my @matches = $db->search_notes($searchterm,$max_keywords);
+  my @matches;
+  if ($db->can('search_attributes')) {
+    my @attribute_names = shellwords ($CONFIG->setting('search attributes'));
+    @attribute_names = ('Note') unless @attribute_names;
+    @matches = $db->search_attributes($searchterm,\@attribute_names,$max_keywords);
+  } elsif ($db->can('search_notes')) {
+    @matches = $db->search_notes($searchterm,$max_keywords);
+  }
 
   my @results;
   for my $r (@matches) {

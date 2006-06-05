@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.17 2006-06-02 22:13:35 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.18 2006-06-05 22:16:56 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1172,7 +1172,7 @@ sub image_and_map {
 
     my $iterator = $segment->get_feature_stream(-type=>\@feature_types);
     warn "feature types = @feature_types\n" if DEBUG;
-    my (%groups,%feature_count,%group_pattern,%aggregates,%aggregate_field);
+    my (%groups,%feature_count,%group_pattern,%group_on,%group_on_field);
 
     while (my $feature = $iterator->next_seq) {
 
@@ -1198,18 +1198,18 @@ sub image_and_map {
 	  next;
 	}
 
-	# Handle aggregation (needed for GFF3 database)
-	warn "$track aggregation => ",$conf->code_setting($label => 'aggregate') if DEBUG;
-	exists $aggregate_field{$label} or $aggregate_field{$label} = $conf->code_setting($label => 'aggregate');
+	# Handle generic grouping (needed for GFF3 database)
+	warn "$track group_on => ",$conf->code_setting($label => 'group_on') if DEBUG;
+	exists $group_on_field{$label} or $group_on_field{$label} = $conf->code_setting($label => 'group_on');
 	
-	if (my $field = $aggregate_field{$label}) {
+	if (my $field = $group_on_field{$label}) {
 	  my $base = eval{$feature->$field};
 	  if (defined $base) {
-	    my $aggregate_object = $aggregates{$label}{$base} ||= Bio::Graphics::Feature->new(-start=>$feature->start,
+	    my $group_on_object = $group_on{$label}{$base} ||= Bio::Graphics::Feature->new(-start=>$feature->start,
 											      -end  =>$feature->end,
 											      -strand => $feature->strand,
 											      -type =>$feature->primary_tag);
-	    $aggregate_object->add_SeqFeature($feature);
+	    $group_on_object->add_SeqFeature($feature);
 	    next;
 	  }
 	}
@@ -1218,13 +1218,14 @@ sub image_and_map {
       }
     }
 
-    # fix up groups and aggregates
+    # fix up groups and group_on
+    # the former is traditional name-based grouping based on a common prefix/suffix
+    # the latter creates composite features based on an arbitrary method call
 
-    # add aggregated features
-    for my $label (keys %aggregates) {
+    for my $label (keys %group_on) {
       my $track = $tracks{$label};
-      my $aggregates = $aggregates{$label} or next;
-      $track->add_feature($_) foreach values %$aggregates;
+      my $group_on = $group_on{$label} or next;
+      $track->add_feature($_) foreach values %$group_on;
     }
 
     for my $label (keys %groups) {

@@ -308,12 +308,12 @@ care.
 
 =head2 A5. Aggregators
 
-The Bio::DB::GFF module has a feature known as "aggregators".  These
-are small software packages that recognize certain common feature
-types and convert them into complex biological objects.  These
-aggregators make it possible to develop intelligent graphical
-representations of annotations, such as a gene that draws confirmed
-exons differently from predicted ones.
+The Bio::DB::GFF database (and only Bio::DB::GFF!) has a feature known
+as "aggregators".  These are small software packages that recognize
+certain common feature types and convert them into complex biological
+objects.  These aggregators make it possible to develop intelligent
+graphical representations of annotations, such as a gene that draws
+confirmed exons differently from predicted ones.
 
 An aggregator typically creates a new composite feature with a
 different method than any of its components.  For example, the
@@ -387,6 +387,9 @@ GFF3 files found at:
  ftp://ftp.wormbase.org/pub/wormbase/genomes/elegans/genome_feature_tables/GFF3
 
 =back
+
+IT IS NOT NECESSARY TO USE AGGREGATORS WITH THE CHADO, BIOSQL OR
+BIO::DB::SEQFEATURE::STORE (GFF3) DATABASES.
 
 =head1 B. ADDING A NEW DATABASE TO THE BROWSER
 
@@ -533,6 +536,9 @@ To activate the default aggregators of "transcript," "clone,"
 and "alignment," comment this setting out entirely:
 
     # aggregators =
+
+Do not use aggregators with Bio::DB::SeqFeature::Store, BioSQL, or
+Chado.
 
 =item * user
 
@@ -852,6 +858,17 @@ features in Symbol, Gene and Clone.  The search stops when the
 first match is found.  Otherwise, the browser will proceed to a
 full text search of all the comment fields.
 
+=item * search attributes (Bio::DB::SeqFeature::Store adaptor only)
+
+When the browser has searched the name and alias of features without
+success, it will do a whole database keyword search by calling the
+database's search_notes() method. By default this will search the text
+of all attributes, including such things as protein sequence. The
+Bio::DB::SeqFeature::Store database is a bit smarter about searching,
+and will only, by default, search attributes named "Note". You can
+expand the search by giving a list of attribute names to the "search
+attributes" option.
+
 =item * remote sources
 
 This option allows you to add remote annotation sources to the menu of such
@@ -1002,6 +1019,21 @@ grid. See
 http://sourceforge.net/mailarchive/message.php?msg_id=12116755 for an
 example of using this feature to show assembly gaps as vertical gray
 regions.
+
+=item * image_padding = 25
+
+=item * pad_left = 50
+
+=item * pad_right = 30
+
+The image_padding option will add the indicated amount of whitespace
+(in pixels) to the right and left of the detail panel.  The default is
+25 pixels. You may need to adjust this if you are using the xyplot
+glyph and finding that the scale (which is printed outside the graph
+area) is being cut off.
+
+You can individually adjust the left and right padding using pad_left
+and pad_right, which, if present, will supersede image_padding.
 
 =item * show track categories
 
@@ -1240,20 +1272,6 @@ also assumed if the title option is missing or blank.
 The landmark_padding option will add the indicated number of base pairs
 to the right and left of all landmarks that are searched for by name.
 
-=item * image_padding = 25
-
-=item * pad_left = 50
-
-=item * pad_right = 30
-
-The image_padding option will add the indicated amount of whitespace
-(in pixels) to the right and left of the detail panel.  The default is
-25 pixels. You may need to adjust this if you are using the xyplot
-glyph and finding that the scale (which is printed outside the graph
-area) is being cut off.
-
-You can individually adjust the left and right padding using pad_left
-and pad_right, which, if present, will supersede image_padding.
 
 =back
 
@@ -1429,13 +1447,27 @@ on a pattern match in the features' names.  A typical example is
 connecting the 5' and 3' read pairs from ESTs or plasmids.  See
 GROUPING FEATURES for details.
 
-=item 19 restrict
+=item 19 group_on
+
+For Bio::DB::SeqFeature::Store databases I<only>, the group_on field
+allows you to group features together by display_name, target or any
+other method. This is mostly useful for XY-plot data, where you may
+want to dynamically group related data points together so that they
+share the same vertical scaling.
+
+Example:
+
+	group_on = display_name
+
+(this feature is under refinement and may change in the future)
+
+=item 20 restrict
 
 This option allows you to restrict who is allowed to view the current
 track by host name, IP address or username/password.  See
 AUTHENTICATION AND AUTHORIZATION for details.
 
-=item 20 category
+=item 21 category
 
 This option allows you to group tracks into different groups on the
 GBrowse display in addition to the default group called 'General'.
@@ -1447,7 +1479,7 @@ called "Genes", you would add this to each of the track defintions:
 Note that it is not possible to make subcategories. If all tracks are
 categorized, then the "General" category will not be displayed.
 
-=item 21 das category, das landmark, das subparts, das superparts
+=item 22 das category, das landmark, das subparts, das superparts
 
 All these options pertain to exporting the GBrowse database as a DAS
 data source.  Please see L<DAS_HOWTO> for more information.

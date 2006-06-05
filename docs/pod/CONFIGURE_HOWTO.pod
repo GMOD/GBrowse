@@ -388,6 +388,10 @@ GFF3 files found at:
 
 =back
 
+IT IS NOT NECESSARY TO USE AGGREGATORS WITH THE CHADO, BIOSQL OR
+BIO::DB::SEQFEATURE::STORE (GFF3) DATABASES.
+
+
 =head1 B. ADDING A NEW DATABASE TO THE BROWSER
 
 Each data source has a corresponding configuration file in the
@@ -891,6 +895,17 @@ Sequence feature of class hb3, followed in turn by matching
 features in Symbol, Gene and Clone.  The search stops when the
 first match is found.  Otherwise, the browser will proceed to a
 full text search of all the comment fields.
+
+=item * search attributes (Bio::DB::SeqFeature::Store adaptor only)
+
+When the browser has searched the name and alias of features without
+success, it will do a whole database keyword search by calling the
+database's search_notes() method. By default this will search the text
+of all attributes, including such things as protein sequence. The
+Bio::DB::SeqFeature::Store database is a bit smarter about searching,
+and will only, by default, search attributes named "Note". You can
+expand the search by giving a list of attribute names to the "search
+attributes" option.
 
 =item * remote sources
 
@@ -1469,13 +1484,27 @@ on a pattern match in the features' names.  A typical example is
 connecting the 5' and 3' read pairs from ESTs or plasmids.  See
 GROUPING FEATURES for details.
 
-=item 19 restrict
+=item 19 group_on
+
+For Bio::DB::SeqFeature::Store databases I<only>, the group_on field
+allows you to group features together by display_name, target or any
+other method. This is mostly useful for XY-plot data, where you may
+want to dynamically group related data points together so that they
+share the same vertical scaling.
+
+Example:
+
+	group_on = display_name
+
+(this feature is under refinement and may change in the future)
+
+=item 20 restrict
 
 This option allows you to restrict who is allowed to view the current
 track by host name, IP address or username/password.  See
 AUTHENTICATION AND AUTHORIZATION for details.
 
-=item 20 category
+=item 21 category
 
 This option allows you to group tracks into different groups on the
 GBrowse display in addition to the default group called 'General'.
@@ -1487,7 +1516,7 @@ called "Genes", you would add this to each of the track defintions:
 Note that it is not possible to make subcategories. If all tracks are
 categorized, then the "General" category will not be displayed.
 
-=item 21 das category, das landmark, das subparts, das superparts
+=item 22 das category, das landmark, das subparts, das superparts
 
 All these options pertain to exporting the GBrowse database as a DAS
 data source.  Please see L<DAS_HOWTO> for more information.

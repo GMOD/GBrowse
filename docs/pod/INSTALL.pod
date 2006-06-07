@@ -129,15 +129,6 @@ They can be found on the Comprehensive Perl Archive Network
 
 =item E) Bioperl version 1.5 or higher -- L<http://www.bioperl.org>
 
-GBrowse requires functionality that exists in bioperl-live (in the cvs
-repository).  Please either use bioperl-live or Bioperl 1.5 when
-it comes out.  Until then, there is a release candidate of Bioperl 1.5
-that is thought to be stable with regard to GBrowse.  It can
-be found at L<http://bioperl.org/DIST/bioperl-1.5.0-RC1.tar.gz>. 
-Other release candidates and the official 1.5 release of Bioperl can
-also be found in the L<http://bioperl.org/DIST/> directory when they
-are available.
-
 =back
 
 Optional modules:

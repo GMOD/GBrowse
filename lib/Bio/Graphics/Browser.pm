@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.18 2006-06-05 22:16:56 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.19 2006-06-08 16:46:30 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1225,7 +1225,7 @@ sub image_and_map {
     for my $label (keys %group_on) {
       my $track = $tracks{$label};
       my $group_on = $group_on{$label} or next;
-      $track->add_feature($_) foreach values %$group_on;
+      $track->add_feature($_) foreach values %{$group_on{$label}};
     }
 
     for my $label (keys %groups) {
@@ -1467,6 +1467,7 @@ sub _add_landmarks {
   my $iterator = $segment->features(-type=>\@feature_types,-iterator=>1,-rare=>1);
 
   my %count;
+  my (%group_on,%group_on_field);
   while (my $feature = $iterator->next_seq) {
 
     my $track_name = eval{$type2track{lc $feature->type}}
@@ -1475,8 +1476,31 @@ sub _add_landmarks {
 	  || next;
 
     my $track = $track{$track_name} or next;
+
+    # copy-and-pasted from details method. Not very efficient coding.
+    exists $group_on_field{$track_name} or $group_on_field{$track_name} = $conf->code_setting($track_name => 'group_on');
+
+    if (my $field = $group_on_field{$track_name}) {
+      my $base = eval{$feature->$field};
+      if (defined $base) {
+	my $group_on_object = $group_on{$track_name}{$base} ||= Bio::Graphics::Feature->new(-start=>$feature->start,
+											    -end  =>$feature->end,
+											    -strand => $feature->strand,
+											    -type =>$feature->primary_tag);
+	$group_on_object->add_SeqFeature($feature);
+	next;
+      }
+    }
+
     $track->add_feature($feature);
     $count{$track_name}++;
+  }
+
+  # fix up group-on fields
+  for my $track_name (keys %group_on) {
+    my $track = $track{$track_name};
+    my $group_on = $group_on{$track_name} or next;
+    $track->add_feature($_) foreach values %$group_on;
   }
 
   my $max_bump   = $self->bump_density;
@@ -2135,11 +2159,13 @@ sub labels {
 
   # filter out all configured types that correspond to the overview, overview details
   # plugins, or other name:value types
+  # apply restriction rules too
   my @labels =  grep {
     !($_ eq 'TRACK DEFAULTS' || /:(\d+|plugin|DETAILS|details)$/)
-       } $self->configured_types;
-  # apply restriction rules
-  return grep { $self->authorized($_)} @labels;
+      && $self->authorized($_)
+    }
+    $self->configured_types;
+  return @labels;
 }
 
 sub overview_tracks {

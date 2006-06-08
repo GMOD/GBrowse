@@ -421,7 +421,7 @@ in "01.yeast.conf".)
 The configuration file is divided into a number of sections, each one
 introduced by a [SECTION TITLE].  The [GENERAL] section contains
 settings that are applicable to the entire application.  Other
-sections define tracks to display.
+sections define tracks to display.1
 
 I suggest that you begin with one of the example configuration files
 provided with the distribution and modify it to suit your needs.
@@ -1278,7 +1278,7 @@ to the right and left of all landmarks that are searched for by name.
 =head2 B3. Track Sections
 
 Any other [Section] in the configuration file is treated as a
-declaration of a track.  The order of track sections will become the
+declaration of a track. The order of track sections will become the
 default order of tracks on the display (the user can change this
 later).  Here is a typical track declaration from yeast.conf:
 
@@ -1293,9 +1293,15 @@ later).  Here is a typical track declaration from yeast.conf:
  description  = 1
  key          = Named gene
 
-The track is named "Genes".  You may use a short mnemonic if you
-prefer.  As in the general configuration section, the track
-declaration contains multiple name=value option pairs.
+This track is named "Genes". You may use a short mnemonic if you
+prefer; this will make the URL shorter when the user bookmarks a view
+he or she likes. Track names can contain almost any character,
+including whitespace, but cannot contain the "-" or "+" signs because
+these are used to separate track names in the URL when
+bookmarking. [My Genes] is OK, but [My-Genes] is not.
+
+As in the general configuration section, the track declaration
+contains multiple name=value option pairs.
 
 Valid options are as follows:
 

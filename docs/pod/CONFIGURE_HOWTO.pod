@@ -1330,9 +1330,15 @@ later).  Here is a typical track declaration from yeast.conf:
  description  = 1
  key          = Named gene
 
-The track is named "Genes".  You may use a short mnemonic if you
-prefer.  As in the general configuration section, the track
-declaration contains multiple name=value option pairs.
+This track is named "Genes". You may use a short mnemonic if you
+prefer; this will make the URL shorter when the user bookmarks a view
+he or she likes. Track names can contain almost any character,
+including whitespace, but cannot contain the "-" or "+" signs because
+these are used to separate track names in the URL when
+bookmarking. [My Genes] is OK, but [My-Genes] is not.
+
+As in the general configuration section, the track declaration
+contains multiple name=value option pairs.
 
 Valid options are as follows:
 

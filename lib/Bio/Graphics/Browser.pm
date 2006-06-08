@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.185 2006-06-05 22:17:57 lstein Exp $
+# $Id: Browser.pm,v 1.186 2006-06-08 16:46:48 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1539,8 +1539,31 @@ sub _add_landmarks {
 	  || next;
 
     my $track = $track{$track_name} or next;
+
+    # copy-and-pasted from details method. Not very efficient coding.
+    exists $group_on_field{$track_name} or $group_on_field{$track_name} = $conf->code_setting($track_name => 'group_on');
+
+    if (my $field = $group_on_field{$track_name}) {
+      my $base = eval{$feature->$field};
+      if (defined $base) {
+	my $group_on_object = $group_on{$track_name}{$base} ||= Bio::Graphics::Feature->new(-start=>$feature->start,
+											    -end  =>$feature->end,
+											    -strand => $feature->strand,
+											    -type =>$feature->primary_tag);
+	$group_on_object->add_SeqFeature($feature);
+	next;
+      }
+    }
+
     $track->add_feature($feature);
     $count{$track_name}++;
+  }
+
+  # fix up group-on fields
+  for my $track_name (keys %group_on) {
+    my $track = $track{$track_name};
+    my $group_on = $group_on{$track_name} or next;
+    $track->add_feature($_) foreach values %$group_on;
   }
 
   my $max_bump   = $self->bump_density;

@@ -198,8 +198,8 @@ ctgA	example	HSP	48169	48453	.	-	.	Match seg15
 ctgA	example	BAC	1000	20000	.	.	.	BAC b101.2 ; Note "Fingerprinted BAC with end reads"
 ctgA	example	left_end_read	1000	1500	.	+	.	BAC b101.2
 ctgA	example	right_end_read	19500	20000	.	-	.	BAC b101.2
-ctgA	example	gene	1050	9000	.	+	.	Gene EDEN ; Note "protein kinase"
 
+ctgA	example	gene	1050	9000	.	+	.	Gene EDEN ; Note "protein kinase"
 ctgA	example	mRNA	1050	9000	.	+	.	mRNA EDEN.1 ; Gene EDEN
 ctgA	example	5'-UTR	1050	1200	.	+	.	mRNA EDEN.1
 ctgA	example	CDS	1201	1500	.	+	0	mRNA EDEN.1

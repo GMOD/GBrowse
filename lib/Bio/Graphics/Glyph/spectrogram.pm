@@ -125,19 +125,6 @@ sub get_bg_color {
 # make sure bumping is off to get an aligned spectrogram
 sub bump { 0 }
 
-
-# we need at least 45 pixels to label the y-axis
-sub pad_left {
-  my $self = shift;
-  my $pad  = $self->SUPER::pad_left;
-  if ( $pad < 45 ) {
-    $pad = 45;
-  }
-  return $pad;
-}
-
-
-
 1;
 
 =head1 NAME
@@ -187,6 +174,10 @@ If no base has a dominant signal, the weighted average angular
 coordinate is calculated using the relative contribution
 from each channel.  The brightness is calculated from
 the total signal from all four channels.
+
+The y-axis labels require at least 40 pixels of left-padding.
+They will be truncated if less than 40 of padding is specified
+in the configuration file.
 
 
 =head2 OPTIONS

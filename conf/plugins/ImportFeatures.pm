@@ -1,4 +1,4 @@
-# $Id: ImportFeatures.pm,v 1.17 2004-03-16 13:37:42 sheldon_mckay Exp $
+# $Id: ImportFeatures.pm,v 1.18 2006-06-12 13:59:35 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -118,13 +118,13 @@ See the GMOD website for information on bug submission http://www.gmod.org.
 
 =head1 AUTHOR - Sheldon McKay
 
-Email smckay@bcgsc.bc.ca
+Email E<lt>mckays@cshl.eduE<gt>
 
 =head1 CONTRIBUTORS
 
-Scott Cain (cain@cshl.org)
+Scott Cain E<lt>cain@cshl.orgE<gt>
 
-Mark Wilkinson (markw@illuminae.com)
+Mark Wilkinson E<lt>markw@illuminae.comE<lt>
 
 =head1 SEE ALSO
 

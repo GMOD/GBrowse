@@ -1,4 +1,4 @@
-#$Id: ExportFeatures.pm,v 1.12 2004-03-16 13:37:42 sheldon_mckay Exp $
+#$Id: ExportFeatures.pm,v 1.13 2006-06-12 13:59:35 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -140,7 +140,7 @@ See the GMOD website for information on bug submission http://www.gmod.org.
 
 =head1 AUTHOR - Sheldon McKay
 
-Email smckay@bcgsc.bc.ca
+Email E<lt>mckays@cshl.eduE<lt>
 
 =head1 SEE ALSO
 

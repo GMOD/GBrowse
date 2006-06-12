@@ -126,6 +126,18 @@ sub get_bg_color {
 sub bump { 0 }
 
 
+# we need at least 45 pixels to label the y-axis
+sub pad_left {
+  my $self = shift;
+  my $pad  = $self->SUPER::pad_left;
+  if ( $pad < 45 ) {
+    $pad = 45;
+  }
+  return $pad;
+}
+
+
+
 1;
 
 =head1 NAME

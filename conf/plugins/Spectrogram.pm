@@ -1,4 +1,4 @@
-# $Id: Spectrogram.pm,v 1.1 2006-06-12 14:04:09 sheldon_mckay Exp $
+# $Id: Spectrogram.pm,v 1.2 2006-06-12 20:48:28 sheldon_mckay Exp $
 # bioperl module for Bio::Graphics::Browser::Plugin::Spectrogram
 # cared for by Sheldon McKay mckays@cshl.edu
 # Copyright (c) 2006 Cold Spring Harbor Laboratory.
@@ -48,7 +48,7 @@ only base2 numbers (128, 256, 512, etc) can be used for window
 sizes.  This is necessary to make the spectrogram calculation
 fast enough for real-time use.  It should be noted, however,
 that calculating spectrograms dynamically is computationally 
-intensive and will increase latency when the spectromgram
+intensive and will increase latency when the spectrogram
 track is turned on in gbrowse.
 
 The graphical rendering of the spectrogram depends on the
@@ -114,10 +114,10 @@ sub reconfigure {
   my $conf = $self->configuration;
   $conf->{win}  = $self->config_param('win');
   $conf->{inc}  = $self->config_param('inc');
-  $conf->{min}  = $self->config_param('min');
-  $conf->{max}  = $self->config_param('max');
+  $conf->{min}  = $self->config_param('min') || 0;
+  $conf->{max}  = $self->config_param('max') || $conf->{win} - 1;
   $conf->{type} = $self->config_param('measure');
-  $conf->{remove_DC} = $self->config_param('remove_DC');
+  $conf->{filter_01} = $self->config_param('filter_01');
   $conf->{quantile}  = $self->config_param('quantile') || 99.99;
   $conf->{y_unit}    = $self->config_param('y_unit')   || 1;
   $self->configuration($conf);
@@ -133,9 +133,16 @@ sub annotate {
 
   # sanity check for window size
   if ($inc >= $win) {
-    print h2(font( {color => 'red'}, 
-		   "Spectrogram.pm error: window size must be greater than the overlap" ) );
+    complain("Spectrogram.pm error: window size must be greater than the overlap");
     return;
+  }
+  
+  # and for maximum period or frequency
+  if ($conf->{max} && $conf->{max} > $win) {
+    
+    complain("maximum $conf->{type} can not exceed ".
+	     " the window size: resetting to $win.");
+    $conf->{max} = $win;
   }
 
   # extend the segment a bit so we can slide the window
@@ -146,9 +153,6 @@ sub annotate {
   my $offset  = $segment->start;
   my $end     = $segment->length;
  
-  die "Window size $win can not exceed the sequence length $end\n"
-      if $win && $win > $end;
-  
   my (@g,@a,@t,@c,@offsets,@meta_array,@coords);
 
   my ($min_f,$max_f);
@@ -162,6 +166,18 @@ sub annotate {
       $max_f = $min ? int(2*$win/($min)) - 1 : $win-1;
     }
     else {
+ 
+     unless (int $min == $min) {
+       complain("minumum frequency value should be an integer between",
+		"0 and ".($win-2));
+       return;
+     }
+     unless (int $max == $max) {
+       complain("minumum frequency value should be an integer between",
+		"1 and ".($win-1));
+       return;
+     }
+
       $min_f = $min;
       $max_f = $max || $win-1;
     }
@@ -174,9 +190,13 @@ sub annotate {
   $min_f-- unless $min_f == 0;
   $max_f++ unless $max_f == $win;
 
-  my $key = "DNA spectrogram: window size  $win; overlap $inc";
+  my $key = join('; ',"window size $win", "overlap $inc", 
+		 "saturation $conf->{quantile}th percentile");
   if ($conf->{min}) {
     $key .= "; $conf->{type} range $conf->{min}-$conf->{max}";
+  }
+  if ($conf->{filter_01}) {
+    $key .="; 0-1 Hz filter ON";
   }
 
   my $feature_list = $self->new_feature_list;
@@ -192,12 +212,14 @@ sub annotate {
   until ( $start > ( $end - $win ) ) {
     my $sub_seq = substr $seq, $start, $win;
 
-    # Digitize the DNA and calculate the DFT
+    # Digitize the DNA
     my ($g,$a,$t,$c) = make_numeric($sub_seq);
+
+    # take the magnitude of the DFT
     dft(\$_) for ($g,$a,$t,$c);
 
     # get rid of DC component
-    if ($conf->{remove_DC} ) {
+    if ($conf->{filter_01} ) {
       for ($g,$a,$t,$c) {
 	$_->[0] = 0;
 	$_->[1] = 0;
@@ -214,7 +236,7 @@ sub annotate {
   }
 
   # max out the intensity range at the nth
-  # percentile to avoid saturation 
+  # percentile to avoid saturation of color intensity 
   my $stat = Statistics::Descriptive::Full->new;
   $stat->add_data(map {@$_} @g,@a,@t,@c);
   my $max = $stat->percentile($conf->{quantile});
@@ -251,7 +273,6 @@ sub annotate {
     
     $atts->{g} = $G;
     
-
     my $sf = Bio::Graphics::Feature->new( -type   => 'spectrogram',
 					  -source => 'calculated',
 					  -start  => $start,
@@ -267,90 +288,101 @@ sub annotate {
   return $feature_list;
 }
 
+sub complain {
+  my @msg = @_;
+  print h3(font( {color => 'red'}, 'Spectrogram.pm error: ', @msg) );
+}
+
 sub configure_form {
   my $self = shift;
   my $conf = $self->configuration;
   my $msg = <<END;
-Window size = the number of bases in the sliding window used
+Window size and overlap = the width and overlap of sliding window used
 to calculate the spectrogram.\\n
-Increment = the overlap between windows.\\n
+Note: larger window sizes and/or smaller overlaps increase
+computation time.\\n
 END
 ;
-  my $form = p() .p( 'Window size: ', 
-		     popup_menu( -name  => $self->config_name('win'),
-				 -values => [128,256,512,1024,2048,4096,8192],
-				 -default => $conf->{win} ),
-		     'Increment: ',
-		     textfield( -name  => $self->config_name('inc'),
-				-value => $conf->{inc},
-				-size  => 4 ) . _js_help($msg) );
+  my $form = h2('Spectrogram size ', _js_help($msg)) . 
+      p( 'Sliding window size: ', 
+	 popup_menu( -name  => $self->config_name('win'),
+		     -values => [128,256,512,1024,2048,4096,8192],
+		     -default => $conf->{win} ),
+	 ' bp' . br. br . 'Window overlap: ',
+	 textfield( -name  => $self->config_name('inc'),
+		    -value => $conf->{inc},
+		    -size  => 4 ),
+	 'bp');
   
   $msg = <<END;
-Selecting these options will restrict the frequency or
-period range of the spectrogram to reduce the required
-space and computation time.\\n
-period = size (bp) of structure or repeat unit
--- calculated as 2*(window size)/frequency.\\n
-frequency = integer between 0 and window size.
+Restricting the range of periods or frequencies displayed will
+reduce the vertical height of the image and speed up image
+loading.\\n
+period = size (bp) of structure or repeat unit,
+calculated as 2*(window size)/frequency.\\n
+frequency = integer between 0 and (window size - 1).\\n
+Row height = the height of each frequency row in the
+spectrogram (minimum 1 pixel)
 END
 ;
-              
-  $form .=   p( 'Restrict ',
-		popup_menu( -name   => $self->config_name('measure'),
-			    -values => [qw/period frequency/],
-			    -defaults => [$conf->{measure}] ),
-		' to between ',
-		textfield( -name  => $self->config_name('min'),
-			   -value => $conf->{min},
-                           -size  => 4 ),
-		' and ',
-                textfield( -name  => $self->config_name('max'),
-			   -value => $conf->{max},
-                           -size  => 4 ) . ' ' . _js_help($msg) );
+
+  $form .= br .  h2('Display options ', _js_help($msg)) .
+      p( 'Restrict ',
+	 popup_menu( -name   => $self->config_name('measure'),
+		     -values => [qw/period frequency/],
+		     -default => $conf->{type} ),
+	 ' to between ',
+	 textfield( -name  => $self->config_name('min'),
+		    -value => $conf->{min},
+		    -size  => 4 ),
+	 ' and ',
+	 textfield( -name  => $self->config_name('max'),
+		    -value => $conf->{max},
+		    -size  => 4 ),
+	 br . br . 'Row height',
+         textfield( -name => $self->config_name('y_unit'),
+                    -value => $conf->{y_unit},
+                    -size  => 2 ),
+         ' px ' );	 
 
   $msg = <<END;
 Lowering the saturation value will reduce the dominance of very bright
-spots on the spectrogramn by setting an arbitrary maximum value
+colors on the spectrogramn by setting an arbitrary maximum value
 (expressed as a percentile rank).  Setting a lower saturation will
-reduce the effects of stronge signals elsewhere in the spectrogram
-and help to emphasize less intense features.
+reduce the effects of very high amplitude signals elsewhere in 
+the spectrogram and help to emphasize less intense features.\\n
+The higher the saturation value is set, the darker the "background"
+of the spectrogram.
 END
 ;
 
-  $form .=   p( 'Saturate color intensity at the ',
-                textfield( -name   => $self->config_name('quantile'),
-                           -value  => $conf->{quantile},
-                           -size   => 5 ),
-		'th percentile ' . _js_help($msg) );
+  $form .=  br . h2('Image brightness') .
+    p( 'Saturate color intensity at the ',
+       textfield( -name   => $self->config_name('quantile'),
+		  -value  => $conf->{quantile},
+		  -size   => 5 ),
+       'th percentile ' . _js_help($msg) );
 
 
   $msg = <<END;
-The "DC component", in this case, is a very strong strong signal
-at frequency 0 (the very top of the spectrogram), with some bleed
-over to frequency 1.  Removing the DC component noise makes
-fainter spots more visible by decreasing the overall range.  
-The brightness of the spectrogam can be manipulated using this 
+There is a very large amplitude signal at frequency 0 Hz
+(the very top of the spectrogram), with some bleed over to 1 Hz.
+Filtering out these frequencies will help make the fainter
+spots more visible by decreasing the overall range of signal
+magnitudes.\\n
+The brightness of the spectrogram can be manipulated using this 
 option together with the saturation value.
 
 END
 ;
 
-  $form .=    p( checkbox( -name => $self->config_name('remove_DC'),
-			   -checked => 'checked',
-			   -label => 'Remove DC component' ),
+my @checked = (checked => 'checked') if $conf->{filter_01};
+  $form .=    p( checkbox( -name => $self->config_name('filter_01'),
+			   @checked,
+			   -label => 'Filter out 0-1 Hz' ),
 		 ' ' . _js_help($msg) );
 
 
-  $msg = <<END;
-This value controls the height of each frequency bin (default 1 px)
-END
-;
-
-  $form .=     p( 'Row height ',
-		  textfield( -name => $self->config_name('y_unit'),
-			     -value => $conf->{y_unit},
-			     -size  => 2 ),
-			     ' pixels ' . _js_help($msg) );
 }
 
 sub make_numeric {
@@ -365,31 +397,25 @@ sub make_numeric {
   return (\@G,\@A,\@T,\@C);
 }
 
-
-sub remote {
-  my $self = shift;
-  my ($id,$seq,$url,@bases) = @_;
-  unless ($url =~ /^http/i) {
-    $url = "http://$url";
-  }
-  my $ua       = LWP::UserAgent->new;
-  my $request  = HTTP::Request->new('POST', $url);
-  $request->content( "seq_name=$id;seq=$seq;G=$bases[0];A=$bases[1];T=$bases[2];G=$bases[3];" );
-  my $response = $ua->request( $request );
-  my $output   = $response->content;
-
-  die $self->error("Some sort of HTTP error")
-      unless $ua && $request && $response && $output;
-
-  return $output;
-
-}
-
 sub dft {
+#  my $self = shift;
+#  my $conf = $self->configuration;
+#  my $remove_DC = $conf->{remove_DC};
   my $array = shift;
   my $fft   = Math::FFT->new($$array);
+
+  # this is a call to the 'real' DFT (no imaginary numbers)
+  # algorithm, which is actually implented via the FFT 
+  # algorithm
   my $dft = $fft->rdft;
-  $$array = magnitude(@$dft);
+#  print pre(@{$dft}[0..5]);
+ # my $s = Statistics::Descriptive::Full->new;
+ # $s->add_data(@$dft);
+ # my $mean = $s->mean;
+ # @$dft = map {$_ - $mean} @$dft;
+#  print pre(@{$dft}[0..5]);
+  $dft = magnitude(@$dft);
+  $$array = $dft;
 }
 
 sub magnitude {

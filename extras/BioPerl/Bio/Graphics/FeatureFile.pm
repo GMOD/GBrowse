@@ -1,6 +1,6 @@
 package Bio::Graphics::FeatureFile;
 
-# $Id: FeatureFile.pm,v 1.1.2.9.2.7 2006-05-05 20:21:56 scottcain Exp $
+# $Id: FeatureFile.pm,v 1.1.2.9.2.8 2006-06-13 19:55:01 scottcain Exp $
 # This package parses and renders a simple tab-delimited format for features.
 # It is simpler than GFF, but still has a lot of expressive power.
 # See __END__ for the file format
@@ -120,7 +120,7 @@ use Bio::DB::GFF::Util::Rearrange;
 use Carp 'cluck','carp','croak';
 use Bio::DB::GFF;
 use IO::File;
-use Text::Shellwords;
+use Text::ParseWords 'shellwords';
 
 # default colors for unconfigured features
 my @COLORS = qw(cyan blue red yellow green wheat turquoise orange);

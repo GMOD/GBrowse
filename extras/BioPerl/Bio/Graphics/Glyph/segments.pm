@@ -1,5 +1,5 @@
 package Bio::Graphics::Glyph::segments;
-#$Id: segments.pm,v 1.1.2.5.2.7 2006-05-05 20:21:56 scottcain Exp $
+#$Id: segments.pm,v 1.1.2.5.2.8 2006-06-13 19:55:16 scottcain Exp $
 
 use strict;
 use Bio::Location::Simple;
@@ -59,7 +59,7 @@ sub height {
   my $self = shift;
   my $height = $self->SUPER::height;
   return $height unless $self->dna_fits 
-    && ($self->option('draw_target') || $self->option('draw_dna'));
+    && $self->option('draw_target'); # || $self->option('draw_dna'));
   my $fontheight = $self->font->height;
   return $fontheight if $fontheight > $height;
 }
@@ -78,17 +78,24 @@ sub bump {
   return 0;
 }
 
+sub maxdepth {
+  my $self = shift;
+  my $md   = $self->Bio::Graphics::Glyph::maxdepth;
+  return $md if defined $md;
+  return 1;
+}
+
 sub fontcolor {
   my $self = shift;
-  return $self->SUPER::fontcolor unless $self->option('draw_target') || $self->option('draw_dna');
+  return $self->SUPER::fontcolor unless $self->option('draw_target');# || $self->option('draw_dna');
   return $self->SUPER::fontcolor unless $self->dna_fits;
   return $self->bgcolor;
 }
 
 sub draw {
   my $self = shift;
-  my ($draw_dna,$draw_target) = ($self->option('draw_dna'),$self->option('draw_target'));
-  return $self->SUPER::draw(@_) unless $draw_dna || $draw_target;
+  my $draw_target = $self->option('draw_target');
+  return $self->SUPER::draw(@_) unless $draw_target;
   return $self->SUPER::draw(@_) unless $self->dna_fits;
 
   $self->draw_label(@_)       if $self->option('label');
@@ -102,11 +109,6 @@ sub draw {
     $drew_sequence = $self->draw_multiple_alignment(@_);
   }
 
-  elsif ($self->option('draw_dna')) {
-    return $self->SUPER::draw(@_) unless eval {$self->feature->seq};
-    $drew_sequence = $self->draw_dna(@_);
-  }
-
   my ($gd,$x,$y) = @_;
   $y  += $self->top + $self->pad_top if $drew_sequence;  # something is wrong - this is a hack/workaround
   my $connector     =  $self->connector;
@@ -117,7 +119,7 @@ sub draw {
 sub draw_dna {
   my $self = shift;
   my $gd   = shift;
-  my ($left,$top,$partno,$total_parts) = @_;
+  my ($left,$top,$partno,$total_parts,$ref_dna) = @_;
   my $flipped              = $self->flip;
   my $pixels_per_base      = $self->scale;
   my $feature              = $self->feature;
@@ -134,16 +136,17 @@ sub draw_dna {
   my ($bl,$bt,$br,$bb)     = $self->bounds($left,$top);
   $top = $bt;
 
-  my @s                     = $self->_subseq($feature);
+  my @s                     = $self->_subfeat($feature);
 
   my (@segments,%strands);
   for my $s (@s) {
     my ($src_start,$src_end) = ($s->start,$s->end);
+    next if $src_end < $panel_start or $src_start > $panel_end;
     push @segments,[$s,$src_start,$src_end];
   }
 
-  my $ref_dna = lc $feature->seq;
-  $ref_dna    = $self->reversec($ref_dna) if $strand < 0;
+  $ref_dna = lc ref($ref_dna) ? $ref_dna->seq : $ref_dna;
+  $ref_dna = $self->reversec($ref_dna) if $strand < 0;
 
   for my $seg (@segments) {
     # left clipping
@@ -155,10 +158,12 @@ sub draw_dna {
     if ( (my $delta = $panel_end - $seg->[SRC_END]) < 0) {
       $seg->[SRC_END] = $panel_end;
     }
-    warn "Clipping gives [@$seg]\n"if DEBUG;
+    warn "Clipping gives [@$seg]\n" if DEBUG;
 
     $seg->[SRC_START] -= $abs_start - 1;
     $seg->[SRC_END]   -= $abs_start - 1;
+
+    warn "Coordinate translation gives [@$seg]\n" if DEBUG;
   }
 
   # draw
@@ -167,7 +172,7 @@ sub draw_dna {
   my $lineheight = $font->height;
   my $fontwidth  = $font->width;
 
-  my $pink = $self->factory->translate_color('lightpink');
+  my $pink  = $self->factory->translate_color('lightpink');
   my $grey  = $self->factory->translate_color('gray');
 
   my $base2pixel = 
@@ -185,7 +190,7 @@ sub draw_dna {
   my $src_last_end;
   for my $seg (@segments) {
 
-    my $y = $top - $lineheight/4; 
+    my $y = $top;
 
     for (my $i=0; $i<$seg->[SRC_END]-$seg->[SRC_START]+1; $i++) {
 
@@ -235,7 +240,7 @@ sub draw_multiple_alignment {
   my ($bl,$bt,$br,$bb)     = $self->bounds($left,$top);
   $top = $bt;
 
-  my @s                     = $self->_subseq($feature);
+  my @s                     = $self->_subfeat($feature);
 
   my $can_realign = $do_realign && eval { require Bio::Graphics::Browser::Realign; 1 };
 
@@ -304,7 +309,7 @@ sub draw_multiple_alignment {
 
     # add a little rag to the right end - this is complicated because
     # we don't know what the length of the underlying dna is, so we
-    # use the subseq method to find out
+    # use the subfeat method to find out
     my $current_end     = $segments[-1]->[TGT_END];
     $offset_right          = length $segments[-1]->[TARGET]->subseq($current_end+1,$current_end+$ragged_extra)->seq;
     if ($strand >= 0) {
@@ -324,9 +329,9 @@ sub draw_multiple_alignment {
   # the subseq() method
   my $ref_dna = lc $feature->subseq(1-$offset_left,$feature->length+$offset_right)->seq;
   my $tgt_dna = lc $feature->hit->subseq(1-$offset_left,$feature->length+$offset_right)->seq;
-  
+
   # sanity check.  Let's see if they look like they're lining up
-  warn "dna sanity check:\n$ref_dna\n$tgt_dna\n" if DEBUG;
+  warn "$feature dna sanity check:\n$ref_dna\n$tgt_dna\n" if DEBUG;
 
   # now we're all lined up, and we're going to adjust everything to fall within the bounds
   # of the left and right panel coordinates
@@ -405,7 +410,7 @@ sub draw_multiple_alignment {
   my ($tgt_last_end,$src_last_end);
   for my $seg (sort {$a->[SRC_START]<=>$b->[SRC_START]} @segments) {
 
-    my $y = $top - $lineheight/4; 
+    my $y = $top;
 
     for (my $i=0; $i<$seg->[SRC_END]-$seg->[SRC_START]+1; $i++) {
 
@@ -483,21 +488,18 @@ sub realign {
   return Bio::Graphics::Browser::Realign::align_segs($src,$tgt);
 }
 
-# Override _subseq() method to make it appear that a top-level feature that
+# Override _subfeat() method to make it appear that a top-level feature that
 # has no subfeatures appears as a feature that has a single subfeature.
 # Otherwise at high mags gaps will be drawn as components rather than
 # as connectors.  Because of differing representations of split features
 # in Bio::DB::GFF::Feature and Bio::SeqFeature::Generic, there is
 # some breakage of encapsulation here.
-sub _subseq {
+sub _subfeat {
   my $self    = shift;
   my $feature = shift;
-  my @subseq  = $self->SUPER::_subseq($feature);
-  return @subseq if @subseq;
-  if ($self->level == 0 && !@subseq && !eval{$feature->compound}) {
-    # my($start,$end) = ($feature->start,$feature->end);
-    # ($start,$end) = ($end,$start) if $start > $end; # to keep Bio::Location::Simple from bitching
-    # return Bio::Location::Simple->new(-start=>$start,-end=>$end);
+  my @subfeat  = $self->SUPER::_subfeat($feature);
+  return @subfeat if @subfeat;
+  if ($self->level == 0 && !@subfeat && !$self->feature_has_subparts) {
     return $self->feature;
   } else {
     return;

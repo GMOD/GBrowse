@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::transcript2;
 
-# $Id: transcript2.pm,v 1.1.2.4.2.7 2006-05-05 20:21:56 scottcain Exp $
+# $Id: transcript2.pm,v 1.1.2.4.2.8 2006-06-13 19:55:22 scottcain Exp $
 
 use strict;
 use Bio::Graphics::Glyph::transcript;
@@ -9,15 +9,28 @@ use vars '@ISA';
 
 use constant MIN_WIDTH_FOR_ARROW => 8;
 
-sub pad_left  {
+sub extra_arrow_length {
   my $self = shift;
-  my $pad = $self->Bio::Graphics::Glyph::generic::pad_left;
-  return $pad unless ($self->feature->strand||0) < 0;  #uninitialized var warning
+  return 0 unless $self->{level} == 0;
+  my $strand = $self->feature->strand || 0;
+  $strand *= -1 if $self->{flip};
+  return 0 unless $strand < 0;
   my $first = ($self->parts)[0] || $self;
   my @rect  = $first->bounds();
   my $width = abs($rect[2] - $rect[0]);
-  return $self->SUPER::pad_left if $width < MIN_WIDTH_FOR_ARROW;
-  return $pad;
+  return 0 if $width >= MIN_WIDTH_FOR_ARROW;
+  return $self->arrow_length;
+}
+
+sub pad_left  {
+   my $self = shift;
+   my $pad = $self->Bio::Graphics::Glyph::generic::pad_left;
+   my $extra_arrow_length = $self->extra_arrow_length;
+   if ($self->label_position eq 'left' && $self->label) {
+     return $extra_arrow_length+$pad;
+   } else {
+     return $extra_arrow_length > $pad ? $extra_arrow_length : $pad;
+   }
 }
 
 sub pad_right  {
@@ -40,11 +53,13 @@ sub draw_connectors {
   $strand   *= -1 if $self->{flip};  #sigh
   if (my @parts  = $self->parts) {
     $part   = $strand >= 0 ? $parts[-1] : $parts[0];
-  } else {
+  } elsif ($self->feature_has_subparts) {
     # no parts -- so draw an intron spanning whole thing
     my($x1,$y1,$x2,$y2) = $self->bounds(0,0);
     $self->_connector($gd,$dx,$dy,$x1,$y1,$x1,$y2,$x2,$y1,$x2,$y2);
     $part = $self;
+  } else {
+    return;
   }
   my @rect   = $part->bounds();
   my $width  = abs($rect[2] - $rect[0]);

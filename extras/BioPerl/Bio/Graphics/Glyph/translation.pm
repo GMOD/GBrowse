@@ -68,17 +68,6 @@ sub triletter_code {
   return $triletter_code;
 }
 
-sub protein_fits {
-  my $self = shift;
-  return unless $self->show_sequence;
-
-  my $pixels_per_residue = $self->pixels_per_residue;
-  my $font               = $self->font;
-  my $font_width         = $font->width;
-
-  return $pixels_per_residue >= $font_width;
-}
-
 sub longprotein_fits {
   my $self = shift;
   return unless $self->show_sequence;
@@ -142,14 +131,15 @@ sub draw_component {
 sub draw_frame {
   my $self = shift;
   my ($feature,$strand,$base_offset,$phase,$gd,$x1,$y1,$x2,$y2) = @_;
+  my ($seq,$pos);
 
-  return unless $feature->seq;  # no sequence, arggh.
-
+  $seq = $feature->seq or return; # no sequence, arggh.
   $strand *= -1 if $self->{flip};
-  my ($seq,$pos) = $strand < 0 ? ($feature->revcom,$feature->end)
-                               : ($feature,$feature->start);
+
+  $pos = $strand < 0 ? $feature->end : $feature->start;
+
   my ($frame,$offset) = frame_and_offset($pos,$strand,$phase);
-  warn "frame=$frame, phase=$phase";
+  # warn "frame=$frame, phase=$phase";
 
   ($strand >= 0 ? $x1 : $x2) += $self->pixels_per_base * $offset;
   my $lh;
@@ -207,8 +197,6 @@ sub draw_protein {
 		 U => "Sec", V => "Val", W => "Trp", X => "Xaa",
 		 Y => "Tyr", Z => "Glx", '*' => " * ",
 	       );
-
-  warn "protein = $$protein, y1=$y1";
 
   my @residues = split '',$$protein;
   my $fontwidth = $font->width;

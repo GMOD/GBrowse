@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::trace;
 
-# $Id: trace.pm,v 1.1.2.5 2006-05-24 17:31:54 mwz444 Exp $
+# $Id: trace.pm,v 1.1.2.6 2006-06-13 21:24:48 mwz444 Exp $
 
 use strict;
 use GD;
@@ -146,10 +146,13 @@ sub pad_right {
 
 sub pad_bottom {
     my $self = shift;
-    my $pb   = $self->SUPER::pad_bottom;
+    my $pb = 0;
     if ( $self->dna_fits ) {
         $pb += $self->vertical_spacing;
         $pb += $self->trace_height;
+    }
+    else{
+        $pb = $self->SUPER::pad_bottom;
     }
     return $pb;
 }
@@ -186,17 +189,19 @@ sub draw_component {
     my ( $x1, $y1, $x2, $y2 ) = $self->bounds(@_);
 
     # Draw the regular glyph
-    my $delegate = $self->option('glyph_delegate') || 'generic';
-    if ( $delegate eq 'generic' ) {
-        $self->SUPER::draw_component( $gd, @_ );
+    unless ( $self->dna_fits ) {
+        my $delegate = $self->option('glyph_delegate') || 'generic';
+        if ( $delegate eq 'generic' ) {
+            $self->SUPER::draw_component( $gd, @_ );
+        }
+        else {
+            eval "require Bio::Graphics::Glyph::$delegate";
+            local @ISA = ("Bio::Graphics::Glyph::$delegate");
+            my $method = "Bio::Graphics::Glyph::${delegate}::draw_component";
+            $self->$method( $gd, @_ );
+        }
+        return;
     }
-    else {
-        eval "require Bio::Graphics::Glyph::$delegate";
-        local @ISA = ("Bio::Graphics::Glyph::$delegate");
-        my $method = "Bio::Graphics::Glyph::${delegate}::draw_component";
-        $self->$method( $gd, @_ );
-    }
-    return unless ( $self->dna_fits );
 
     # Draw Trace
 
@@ -246,7 +251,7 @@ sub draw_component {
             = int( 0.5 + $feature_display_center_base );
     }
 
-    my $trace_glyph_top    = $y1 + $self->vertical_spacing + $self->height;
+    my $trace_glyph_top    = $y1;
     my $trace_glyph_bottom = $trace_glyph_top + $self->trace_height;
 
     # Find the Center for the Trace Glyph
@@ -470,30 +475,32 @@ sub draw_component {
         $base_count++;
     }
 
-    # Outline Box
-    #  left side
-    $gd->line(
-        $trace_left_px,      $trace_glyph_top, $trace_left_px,
-        $trace_glyph_bottom, $fgcolor
-    );
+    if ( $self->option('show_border') ) {
+        # Outline Box
+        #  left side
+        $gd->line(
+            $trace_left_px,      $trace_glyph_top, $trace_left_px,
+            $trace_glyph_bottom, $fgcolor
+        );
 
-    #  right side
-    $gd->line(
-        $trace_right_px,     $trace_glyph_top, $trace_right_px,
-        $trace_glyph_bottom, $fgcolor
-    );
+        #  right side
+        $gd->line(
+            $trace_right_px,     $trace_glyph_top, $trace_right_px,
+            $trace_glyph_bottom, $fgcolor
+        );
 
-    #  top
-    $gd->line(
-        $trace_left_px,   $trace_glyph_top, $trace_right_px,
-        $trace_glyph_top, $fgcolor
-    );
+        #  top
+        $gd->line(
+            $trace_left_px,   $trace_glyph_top, $trace_right_px,
+            $trace_glyph_top, $fgcolor
+        );
 
-    #  bottom
-    $gd->line(
-        $trace_left_px,      $trace_glyph_bottom, $trace_right_px,
-        $trace_glyph_bottom, $fgcolor
-    );
+        #  bottom
+        $gd->line(
+            $trace_left_px,      $trace_glyph_bottom, $trace_right_px,
+            $trace_glyph_bottom, $fgcolor
+        );
+    }
 
 }
 
@@ -751,6 +758,9 @@ The following additional options are available to the "image" glyph:
 
   -t_color          Color of the line representing    'red'
                     Thymine on the trace
+
+  -show_border      Show the black border from        0
+                    around the trace.
 
 =head2 Specifying the Trace
 

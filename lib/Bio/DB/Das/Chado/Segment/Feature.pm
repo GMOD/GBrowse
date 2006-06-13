@@ -971,7 +971,11 @@ sub sub_SeqFeature {
 
     if (@p_e_cache > 0) {
         #get the polypeptide at the top of the list
-        my @sorted = sort {$b->type cmp $a->type} @p_e_cache;
+        #and get the exons in translation order
+        my @sorted = sort {
+                       $b->type cmp $a->type
+                       || $a->start * $a->strand < $b->start * $b->strand
+                          } @p_e_cache;
 
         my ($start,$stop);
         my $poly = shift @sorted;
@@ -1000,9 +1004,12 @@ sub sub_SeqFeature {
             if ($feat->end > $stop) {
                 $feat->end($stop);
             }
+        }
 
-            warn "infering:$feat\n" if DEBUG;
-            $self->add_subfeature($feat);
+        @sorted=$self->_calc_phases(@sorted) if (!(defined $sorted[0]->phase) );
+
+        for (@sorted) {
+            $self->add_subfeature($_);
         }
     }
   }
@@ -1019,6 +1026,37 @@ sub sub_SeqFeature {
    # warn "subfeature array:@subfeatures\n";
 
   return  @subfeatures;
+}
+
+=head2 _calc_phases
+
+ Title   : add_subfeature
+ Usage   : $feature->_calc_phases(@exons)
+ Function: calculstes phases for exons without phases 
+ Returns : a list of exon feature objects with phases
+ Args    : a list of sorted (by transcription order) exons
+ Status  : private
+
+=cut
+
+sub _calc_phases {
+  my $self = shift;
+  my @exons = @_;
+
+      #  L0 is length of the first segment measured from the start site
+      #  Li is length of the current segment measured from its splice start
+      #  P0 is the phase of the first segment, always 0
+      #  Pi is the phase of the current segment
+      #  P(i+1) = 3 - (Li - Pi) mod 3
+
+  $exons[0]->phase(0);
+
+  for (my $i = 0; $i < (scalar @exons) -1; $i++) {
+    my $phase = 3 - ($exons[$i]->length - $exons[$i]->phase) % 3;
+    $exons[$i+1]->phase($phase);
+  } 
+
+  return @exons;
 }
 
 =head2 add_subfeature()

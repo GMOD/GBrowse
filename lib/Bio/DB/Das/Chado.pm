@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.4 2006-05-24 09:54:43 cpommier_gmod Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.5 2006-06-13 15:00:46 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -205,7 +205,7 @@ sub new {
   return $self;
 }
 
-=head 2 inferCDS
+=head2 inferCDS
 
   Title   : inferCDS
   Usage   : $obj->inferCDS()

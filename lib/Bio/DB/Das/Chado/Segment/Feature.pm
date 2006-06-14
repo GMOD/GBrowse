@@ -974,7 +974,7 @@ sub sub_SeqFeature {
         #and get the exons in translation order
         my @sorted = sort {
                        $b->type cmp $a->type
-                       || $a->start * $a->strand < $b->start * $b->strand
+                       || $a->start * $a->strand <=> $b->start * $b->strand
                           } @p_e_cache;
 
         my ($start,$stop);
@@ -1052,7 +1052,7 @@ sub _calc_phases {
   $exons[0]->phase(0);
 
   for (my $i = 0; $i < (scalar @exons) -1; $i++) {
-    my $phase = 3 - ($exons[$i]->length - $exons[$i]->phase) % 3;
+    my $phase = (3 - ($exons[$i]->length - $exons[$i]->phase) % 3) % 3;
     $exons[$i+1]->phase($phase);
   } 
 

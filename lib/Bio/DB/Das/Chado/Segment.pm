@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.5 2006-06-01 09:46:55 cpommier_gmod Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.6 2006-06-14 18:47:15 scottcain Exp $
 
 =head1 NAME
 
@@ -1140,12 +1140,12 @@ sub get_SeqFeatures {return}
 
  Title   : seq
  Usage   : $s->seq
- Function: get the sequence string for this segment
- Returns : a string
+ Function: get the Bio::Seq object for this segment
+ Returns : a Bio::Seq object
  Args    : none
  Status  : Public
 
-Returns the sequence for this segment as a simple string.
+Returns the sequence for this segment as a Bio::Seq object.
 
 =cut
 
@@ -1216,7 +1216,14 @@ sub seq {
     $seq =~ tr/gatcGATC/ctagCTAG/;
   }
 
-  return $seq;
+  my $seqobj = Bio::Seq->new(
+                              -display_id => $self->display_id
+                                             .":".$self->start
+                                             ."..".$self->end,
+                              -seq        => $seq,
+                            );
+
+  return $seqobj
 }
 
 *protein = *dna = \&seq;

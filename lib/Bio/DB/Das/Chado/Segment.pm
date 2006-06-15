@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.6 2006-06-14 18:47:15 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.7 2006-06-15 18:35:26 scottcain Exp $
 
 =head1 NAME
 
@@ -1217,7 +1217,7 @@ sub seq {
   }
 
   my $seqobj = Bio::Seq->new(
-                              -display_id => $self->display_id
+                              -display_id => $feat_id
                                              .":".$self->start
                                              ."..".$self->end,
                               -seq        => $seq,

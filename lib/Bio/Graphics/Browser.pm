@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.20 2006-06-15 18:07:22 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.21 2006-06-15 21:10:04 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1851,8 +1851,9 @@ sub _feature_get {
     @segments  = grep {$_->length} $db->segment(@argv);
     @segments  = grep {$_->length} $db->get_feature_by_name(@argv) if !@segments;
   } else {
-    @segments  = grep {$_->length} $db->get_feature_by_name(@argv) if !defined($start) && !defined($stop);
-    @segments  = grep {$_->length} $db->segment(@argv)             if !@segments && $name !~ /[*?]/;
+    @segments  = grep {$_->length} $db->get_feature_by_name(@argv)   if !defined($start) && !defined($stop);
+    @segments  = grep {$_->length} $db->get_features_by_alias(@argv) if !@segments && !defined($start) && !defined($stop) && $db->can('get_features_by_alias');
+    @segments  = grep {$_->length} $db->segment(@argv)               if !@segments && $name !~ /[*?]/;
   }
   return unless @segments;
 
@@ -2425,6 +2426,10 @@ sub make_link {
   }
   elsif (!$link || $link eq 'AUTO') {
     my $n     = $feature->display_name;
+    unless (defined $n) {
+      my @aliases = eval {$feature->attributes('Alias')},eval{$feature->load_id},eval{$feature->primary_id};
+      $n = $aliases[0];
+    }
     my $c     = $feature->seq_id;
     my $name  = CGI::escape("$n");  # workaround CGI.pm bug
     my $class = eval {CGI::escape($feature->class)}||'';

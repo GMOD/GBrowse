@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.19 2006-06-08 16:46:30 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.20 2006-06-15 18:07:22 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1192,7 +1192,7 @@ sub image_and_map {
 	# we cache the pattern data.
 	warn "$track group pattern => ",$conf->code_setting($label => 'group_pattern') if DEBUG;
 	exists $group_pattern{$label} or $group_pattern{$label} = $conf->code_setting($label => 'group_pattern');
-	
+
 	if (defined $group_pattern{$label}) {
 	  push @{$groups{$label}},$feature;
 	  next;
@@ -1201,7 +1201,7 @@ sub image_and_map {
 	# Handle generic grouping (needed for GFF3 database)
 	warn "$track group_on => ",$conf->code_setting($label => 'group_on') if DEBUG;
 	exists $group_on_field{$label} or $group_on_field{$label} = $conf->code_setting($label => 'group_on');
-	
+
 	if (my $field = $group_on_field{$label}) {
 	  my $base = eval{$feature->$field};
 	  if (defined $base) {

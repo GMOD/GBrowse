@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.40 2006-06-05 22:16:53 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.41 2006-06-15 18:07:22 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1102,10 +1102,10 @@ sub tracks_table {
   my $source   = $CONFIG->source;
   my $self_url = "?help=citations";
 
-  my @labels = @{$settings->{tracks}};
+  my @labels     = @{$settings->{tracks}};
   my %labels     = map {$_ => make_citation_link($_,$self_url) } @labels;
   my %label_keys = map {$_ => label2key($_)}                     @labels;
-  my @defaults = grep {$settings->{features}{$_}{visible}  }     @labels;
+  my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
 
   # Sort the tracks into categories:
   # Overview tracks
@@ -1156,7 +1156,7 @@ sub tracks_table {
       my @track_labels = @{$track_groups{$category}};
       @track_labels = sort {lc $label_keys{$a} cmp lc $label_keys{$b}} @track_labels
         if ($settings->{sk} eq "sorted");
-      my @checkboxes = checkbox_group(-name=>'label',
+      my @checkboxes = checkbox_group(-name       => 'label',
 				      -values     => \@track_labels,
 				      -labels     => \%labels,
 				      -defaults   => \@defaults,
@@ -2857,8 +2857,11 @@ sub tableize {
   for (my $row=0;$row<$rows;$row++) {
     $html .= "<tr>";
     for (my $column=0;$column<$columns;$column++) {
-      $html .= "<td>" . $array->[$column*$rows + $row] . "</td>"
-	if defined($array->[$column*$rows + $row]);
+      if (defined($array->[$column*$rows + $row])) {
+	$html .= "<td>" . $array->[$column*$rows + $row] . "</td>"
+      } else {
+	$html .= "<td>&nbsp;</td>";
+      }
     }
     $html .= "</tr>\n";
   }

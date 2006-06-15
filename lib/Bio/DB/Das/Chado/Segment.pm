@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.7 2006-06-15 18:35:26 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.8 2006-06-15 19:05:47 scottcain Exp $
 
 =head1 NAME
 
@@ -1217,7 +1217,7 @@ sub seq {
   }
 
   my $seqobj = Bio::Seq->new(
-                              -display_id => $feat_id
+                              -display_id => $ref
                                              .":".$self->start
                                              ."..".$self->end,
                               -seq        => $seq,
@@ -1226,7 +1226,33 @@ sub seq {
   return $seqobj
 }
 
-*protein = *dna = \&seq;
+=head2 seq
+
+ Title   : dna
+ Usage   : $s->dna
+ Function: get the dna string for this segment
+ Returns : a string
+ Args    : none
+ Status  : Public
+
+Returns the sequence for this segment as a string.
+
+=cut
+
+sub dna {
+  my $self = shift;
+  my $seqobj = $self->seq(
+                          sourceseq => $self->seq_id,
+                          class     => $self->class,
+                          start     => $self->start,
+                          end       => $self->stop,
+                          strand    => $self->strand,
+                         );
+
+  return $seqobj->seq;
+}
+
+*protein = \&dna;
 
 =head2 factory
 

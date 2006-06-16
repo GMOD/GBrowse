@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.8 2006-06-15 19:05:47 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.9 2006-06-16 19:52:40 scottcain Exp $
 
 =head1 NAME
 
@@ -1136,20 +1136,20 @@ Several aliases of features() for backward compatibility
 
 sub get_SeqFeatures {return}
 
-=head2 seq
+=head2 dna
 
- Title   : seq
- Usage   : $s->seq
- Function: get the Bio::Seq object for this segment
- Returns : a Bio::Seq object
+ Title   : dna
+ Usage   : $s->dna
+ Function: get the dna string this segment
+ Returns : a string
  Args    : none
  Status  : Public
 
-Returns the sequence for this segment as a Bio::Seq object.
+Returns the sequence for this segment as a string.
 
 =cut
 
-sub seq {
+sub dna {
   my $self = shift;
   my %arg = @_;
   my ($ref,$class,$base_start,$stop,$strand)
@@ -1216,40 +1216,33 @@ sub seq {
     $seq =~ tr/gatcGATC/ctagCTAG/;
   }
 
-  my $seqobj = Bio::Seq->new(
-                              -display_id => $ref
-                                             .":".$self->start
-                                             ."..".$self->end,
-                              -seq        => $seq,
-                            );
-
-  return $seqobj
+  return $seq;
 }
 
 =head2 seq
 
- Title   : dna
- Usage   : $s->dna
- Function: get the dna string for this segment
- Returns : a string
+ Title   : seq
+ Usage   : $s->seq
+ Function: get a Bio::Seq object for this segment
+ Returns : a Bio::Seq object
  Args    : none
  Status  : Public
 
-Returns the sequence for this segment as a string.
+Returns the sequence for this segment as a Bio::Seq object.
 
 =cut
 
-sub dna {
+sub seq {
   my $self = shift;
-  my $seqobj = $self->seq(
-                          sourceseq => $self->seq_id,
-                          class     => $self->class,
-                          start     => $self->start,
-                          end       => $self->stop,
-                          strand    => $self->strand,
-                         );
 
-  return $seqobj->seq;
+  my $seqobj = Bio::Seq->new(
+                              -display_id => $self->seq_id
+                                             .":".$self->start
+                                             ."..".$self->end,
+                              -seq        => $self->dna,
+                            );
+
+  return $seqobj;
 }
 
 *protein = \&dna;

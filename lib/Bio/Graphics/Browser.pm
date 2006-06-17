@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.186 2006-06-08 16:46:48 lstein Exp $
+# $Id: Browser.pm,v 1.187 2006-06-17 18:03:16 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1912,9 +1912,11 @@ sub _feature_get {
   my @segments;
   if ($segments_have_priority) {
     @segments  = grep {$_->length} $db->segment(@argv);
-    @segments  = grep {$_->length} $db->get_feature_by_name(@argv) if !@segments;
+    @segments  = grep {$_->length} $db->get_feature_by_name(@argv)   if !@segments;
+    @segments  = grep {$_->length} $db->get_features_by_alias(@argv) if !@segments && $db->can('get_features_by_alias');
   } else {
     @segments  = grep {$_->length} $db->get_feature_by_name(@argv) if !defined($start) && !defined($stop);
+    @segments  = grep {$_->length} $db->get_features_by_alias(@argv) if !@segments && !defined($start) && !defined($stop) && $db->can('get_features_by_alias');
     @segments  = grep {$_->length} $db->segment(@argv)             if !@segments && $name !~ /[*?]/;
   }
   return unless @segments;

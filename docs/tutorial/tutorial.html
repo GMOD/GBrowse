@@ -150,7 +150,7 @@ and type in "ctgA" in the search box.  The result is shown in Figure
 
 <p>
 <blockquote>
-<img src="figures/figure1.gif"><br>
+<img src="figures/basics1.gif"><br>
 <i>Figure 1: volvox1.gff data with volvox.conf config file.</i>
 </blockquote>
 
@@ -393,7 +393,7 @@ bgcolor option from blue to "orange", save it, and reload the page.
 The features should change immediately as shown in Figure 2.
 
 <blockquote>
-<img src="figures/figure2.gif"><br>
+<img src="figures/basic_conf1.gif"><br>
 <i>Figure 2: A Feature of a Different Color</i>
 </blockquote>
 
@@ -416,7 +416,7 @@ look something like Figure 3.
 
 
 <blockquote>
-<img src="figures/figure3.gif"><br>
+<img src="figures/basic_conf2.gif"><br>
 <i>Figure 3: Using the primers Glyph</i>
 </blockquote>
 
@@ -584,7 +584,7 @@ browser page and turn on the "Example motifs" checkbox below the main
 image. The result is shown in figure 4.
 
 <blockquote>
-<img src="figures/figure4.gif"><br>
+<img src="figures/descriptions1.gif"><br>
 <i>Figure 4: Showing the Notes attribute</i>
 </blockquote>
 
@@ -686,7 +686,7 @@ showing multi-segmented features, the track shows a single solid box
 that spans the entire length of the feature.
 
 <blockquote>
-<img src="figures/figure5.gif"><br>
+<img src="figures/segmented_features1.gif"><br>
 <i>Figure 5: Without activating an aggregator, multisegmented features
 do not displayed properly</i>
 </blockquote>
@@ -710,7 +710,7 @@ This is telling GBrowse to turn on the "match" aggregator.  Now
 reload.  You should see a much-improved image similar to Figure 6.
 
 <blockquote>
-<img src="figures/figure6.gif">
+<img src="figures/segmented_features2.gif">
 <i>Figure 6: Turning on the "match" aggregator allows GBrowse to
 recognize that the match feature has subparts</i>
 </blockquote>
@@ -822,8 +822,8 @@ ctgA    example mRNA    1300    9000    .       +       .       mRNA EDEN.3 ; Ge
 ctgA    example 5'-UTR  1300    1500    .       +       .       mRNA EDEN.3
 ctgA    example 5'-UTR  3000    3300    .       +       .       mRNA EDEN.3
 ctgA    example CDS     3301    3902    .       +       0       mRNA EDEN.3
-ctgA    example CDS     5000    5500    .       +       2       mRNA EDEN.3
-ctgA    example CDS     7000    7600    .       +       2       mRNA EDEN.3
+ctgA    example CDS     5000    5500    .       +       1       mRNA EDEN.3
+ctgA    example CDS     7000    7600    .       +       1       mRNA EDEN.3
 ctgA    example 3'-UTR  7601    9000    .       +       .       mRNA EDEN.3
 </pre></blockquote>
 
@@ -904,7 +904,7 @@ Upon reloading the page, turning on the new "Protein-coding genes"
 track, and viewing the region around 1..10K, you'll see this:
 
 <blockquote>
-<img src="figures/figure7.gif"><br>
+<img src="figures/canonical_gene1.gif"><br>
 <i>Figure 7: The canonical processed_transcript glyph</i>
 </blockquote>
 
@@ -935,7 +935,7 @@ GBrowse to place both feature types in the same track.  If we reload
 the page, it now looks like this:
 
 <blockquote>
-<img src="figures/figure8.gif">
+<img src="figures/canonical_gene2.gif">
 <i>Figure 8: Showing the gene as well as its transcripts</i>
 </blockquote>
 
@@ -989,7 +989,7 @@ key          = Protein-coding genes
 <p>
 
 <blockquote>
-<img src="figures/figure9.gif"><br>
+<img src="figures/canonical_gene3.gif"><br>
 <i>Figure 9: A UCSC Genome Browser lookalike</i>
 </blockquote>
 
@@ -1043,7 +1043,7 @@ can see that the alternative splicing in fact changes the reading
 frame of the second exon.
 
 <blockquote>
-<img src="figures/figure10.gif"><br>
+<img src="figures/cds1.gif"><br>
 <i>Figure 10:  The "cds" glyph shows the reading frame using a musical
 staff notation</i>
 </blockquote>
@@ -1122,7 +1122,7 @@ that GBrowse has correctly picked up and rendered the relationship
 between the whole BAC and its two end reads (Figure 11).
 
 <blockquote>
-<img src="figures/figure11.gif"><br>
+<img src="figures/custom_aggregators1.gif"><br>
 <i>Figure 11: The glyph produced by a custom BAC aggregator</i>
 </blockquote>
 
@@ -1236,7 +1236,7 @@ When you reload the page and turn on the Transcriptional Profile
 track, you should see something like that shown in Figure 12.
 
 <blockquote>
-<img src="figures/figure12.gif"><br>
+<img src="figures/graph1.gif"><br>
 <i>Figure 12: A transcriptional profile rendered with the xyplot glyph</i>
 </blockquote>
 
@@ -1248,7 +1248,7 @@ change graph_type to "boxes."</i> </blockquote>
 
 <hr>
 
-<h2><a name="dna">11. Displaying DNA and 3-frame translations</a></h2>
+<h2><a name="dna">12. Displaying DNA and 3-frame translations</a></h2>
 
 <p>
 
@@ -1367,9 +1367,9 @@ protein translations automatically!
 
 <blockquote>
 <b>(13A)</b><br>
-<img src="figures/figure13a.gif">
+<img src="figures/dna1.gif">
 <br><br><b>(13B)</b><br>
-<img src="figures/figure13b.gif"><br>
+<img src="figures/dna2.gif"><br>
 <i>Figure 13: Viewing DNA/GC content and 6-frame translation. (a) low
 magnification; (b) high magnification</i>
 </blockquote>
@@ -1389,7 +1389,7 @@ DNA track is turned on.
 
 <hr>
 
-<h2><a name="multiple_alignments">12. Displaying ESTs and Other
+<h2><a name="multiple_alignments">13. Displaying ESTs and Other
 Alignments</a></h2>
 
 <p>
@@ -1457,7 +1457,7 @@ key          = ESTs
 This will give a display similar to that shown in Figure 14.
 
 <blockquote>
-<img src="figures/figure14.gif"><br>
+<img src="figures/multiple_alignments1.gif"><br>
 <i>Figure 14:  A simple representation of EST matches.</i>
 </blockquote>
 
@@ -1521,7 +1521,7 @@ except for the terminal .5 or .3, and pair them.  When we reload the
 page, we get Figure 15.
 
 <blockquote>
-<img src="figures/figure15.gif"><br>
+<img src="figures/multiple_alignments2.gif"><br>
 <i>Figure 15: The group_pattern option allows EST pairs to be grouped</i>
 </blockquote>
 
@@ -1602,13 +1602,13 @@ it returns the color "orange."
 The effect is shown in Figure 16.
 
 <blockquote>
-<img src="figures/figure16.gif"><br>
+<img src="figures/multiple_alignments3.gif"><br>
 <i>Figure 16: Using a callback to distinguish 5' and 3' ESTs</i>
 </blockquote>
 
 <hr>
 
-<h2><a name="adding_dna_to_alignments">13. Adding DNA to Alignments</a></h2>
+<h2><a name="adding_dna_to_alignments">14. Adding DNA to Alignments</a></h2>
 
 <p>
 
@@ -1791,7 +1791,7 @@ T's towards the beginning of agt830.5 is highlighted in red, to show
 that it doesn't match the corresponding genomic base.
 
 <blockquote>
-<img src="figures/figure17.gif"><br>
+<img src="figures/adding_dna_to_alignments1.gif"><br>
 <i>Figure 17: Multiple alignments at the DNA level</i>
 </blockquote>
 
@@ -1809,7 +1809,113 @@ reindexed.  In Unix:
 
 <hr>
 
-<h2><a name="plugins">14. Plugins</a></h2>
+<h2><a name="trace">15. Displaying Trace Data</a></h2>
+
+<p>
+
+If you have sequence trace information (in SCF format) associated with
+the reference sequence, this can be displayed in gbrowse using the
+trace glyph. To use this glyph, you must have installed:
+
+<dl>
+  <dt>The Staden io-lib package
+  <dd><a href="http://staden.sourceforge.net">staden.sourceforge.net</a>
+  <dt>zlib
+  <dd><a href="http://www.zlib.net">www.zlib.net</a>
+  <dt>The Bio::SCF perl module
+  <dd>Available from CPAN
+</dl>
+<p>
+
+The data file <a href="data_files/volvox9.gff">volvox9.gff</a> contains an example trace entry.
+
+<p>
+
+<blockquote class="example"><pre>
+ctgA    example trace   44401   45925   .       +       .       name trace; trace volvox_trace.scf
+</pre></blockquote>
+
+<p>
+
+This aligns the full trace sequence to the reference sequence.  The trace file in this case is named "volvox_trace.scf. 
+
+Due to sequence quality, the first few bases of a trace file usually don't align.  Even so, these need bases need to be included in the gff file.  For instance, if the bases 10-700 of the trace file aligns to the bases 100-800 of the reference sequence, the feature would be 90-800 to account for the first 10 bases (starting at base 0).
+
+<p>
+
+<blockquote class="example"> <i> NOTE: The trace glyph currently doesn't deal with insertions or deletions.  If an indel occurs, the alignment after the indel will be off.</i>
+</blockquote>
+
+<p>
+
+To display this first copy the following into the volvox.conf (or copy <a href="conf_files/volvox5.conf">volvox5.conf</a> over the volvox.conf file).
+
+<p>
+
+<blockquote class="example"><pre>
+[Traces]
+feature      = trace
+glyph        = trace
+fgcolor      = black
+bgcolor      = orange
+strand_arrow = 1
+height       = 6
+description  = 1
+a_color      = green
+c_color      = blue
+g_color      = black
+t_color      = red
+trace_height = 80
+trace_prefix = http://localhost/gbrowse/tutorial/data_files/
+show_border  = 1
+key          = Traces
+</pre></blockquote>
+
+<p>
+
+The fgcolor, bgcolor, strand_arrow and height control the bar that shows the location and directionality of the trace.
+
+<p>
+
+<p>
+
+The trace_prefix option is important because it gives the path to the trace files.  This is prepended to the trace file name defined in the gff file.  It can be a direct path to the directory (eg "/usr/local/trace_files/") or a web address (as above). 
+
+<p>
+
+The a/c/g/t_color options allow configuration of the base colors.  The trace_height refers to the height of the trace itself.  Play around with it to find a height that you like.
+
+<p>
+
+If show_border is set to 1, a black box will be drawn around the trace.
+
+<p>
+
+After configuring the trace glyph, reload the browser page and enable traces.  Zoomed out you will see:
+
+<p>
+
+<blockquote>
+<img src="figures/trace1.png"><br>
+<i>Figure 18: The trace glyph zoomed out.</i>
+</blockquote>
+
+<p>
+
+Zooming in will show you the trace diagram:
+
+<p>
+
+<blockquote>
+<img src="figures/trace2.png"><br>
+<i>Figure 19: The trace glyph zoomed in.</i>
+</blockquote>
+
+<p>
+
+<hr>
+
+<h2><a name="plugins">16. Plugins</a></h2>
 
 <p>
 
@@ -1846,8 +1952,8 @@ restriction sites are shown by selecting "Annotate Restriction Sites"
 from the popup menu and pressing the "Configure" button.
 
 <blockquote>
-<img src="figures/figure18.gif"><br>
-<i>Figure 18: The RestrictionAnnotator Plugin</i>
+<img src="figures/plugins1.gif"><br>
+<i>Figure 20: The RestrictionAnnotator Plugin</i>
 </blockquote>
 
 <p>
@@ -1941,8 +2047,8 @@ press Configure.  Turn on uppercasing of the coding region track and
 see how it affects the display (Figure 19).
 
 <blockquote>
-<img src="figures/figure19.gif"><br>
-<i>Figure 19: The Aligner plugin produces multiple alignments.</i>
+<img src="figures/plugins2.gif"><br>
+<i>Figure 21: The Aligner plugin produces multiple alignments.</i>
 </blockquote>
 
 <p>
@@ -2004,7 +2110,7 @@ Here's the list of plugins that come with the standard distribution:
 
 <hr>
 
-<h2><a name="reference_sequence">15. More about the Reference Sequence</a></h2>
+<h2><a name="reference_sequence">17. More about the Reference Sequence</a></h2>
 
 <p>
 
@@ -2099,7 +2205,7 @@ as the default classname.  This means you don't have to have a
 
 <hr>
 
-<h2><a name="semantic_zooming">16. Semantic Zooming</a></h2>
+<h2><a name="semantic_zooming">18. Semantic Zooming</a></h2>
 
 <p>
 
@@ -2203,13 +2309,13 @@ boxes (Figure 20).  At 50K they'll begin to overlap and the feature
 labels will be suppressed.
 
 <blockquote>
-<img src="figures/figure20.gif"><br>
-<i>Figure 20: Semantically zoomed alignments at 40K</i>
+<img src="figures/semantic_zooming1.gif"><br>
+<i>Figure 22: Semantically zoomed alignments at 40K</i>
 </blockquote>
 
 <hr>
 
-<h2><a name="overview">17. Putting Features into the Overview</a></h2>
+<h2><a name="overview">19. Putting Features into the Overview</a></h2>
 
 <p>
 
@@ -2258,8 +2364,8 @@ default features = ExampleFeatures  Motifs:overview
 Reload the page.  Viol&aacute;!  See Figure 21.
 
 <blockquote>
-<img src="figures/figure21.gif"><br>
-<i>Figure 21:</i> Any number of tracks can be placed in the overview
+<img src="figures/overview1.gif"><br>
+<i>Figure 23:</i> Any number of tracks can be placed in the overview
 </blockquote>
 
 <p>
@@ -2272,7 +2378,7 @@ displayed.
 
 <hr>
 
-<h2><a name="linking">18. Linking</a></h2>
+<h2><a name="linking">20. Linking</a></h2>
 
 <p>
 
@@ -2417,7 +2523,7 @@ says "Search Google for SUSHI repeat."  Give it a try!
 
 <hr>
 
-<h2><a name="enhancemengs">19. Enhancements</a></h2>
+<h2><a name="enhancements">21. Enhancements</a></h2>
 
 <p>
 This section will show you how to add two nice user interface
@@ -2449,8 +2555,8 @@ region segment = 20000
 panel labeled "region", as shown in Figure 22:</p>
 
 <blockquote>
-<img src="figures/figure22.gif"><br>
-<i>Figure 22:</i> The "region" panel shows a region intermediate in
+<img src="figures/enhancements1.gif"><br>
+<i>Figure 24:</i> The "region" panel shows a region intermediate in
 size between the overview and the detail panel.
 </blockquote>
 
@@ -2470,12 +2576,12 @@ scale          = right
 key            = Profile
 </pre></blockquote>
 
-<p>Figure 23 shows what the region looks like with its "Profile" track
+<p>Figure 25 shows what the region looks like with its "Profile" track
 turned on.</p>
 
 <blockquote>
-<img src="figures/figure23.gif"><br>
-<i>Figure 23:</i> You can add any number of tracks to the region
+<img src="figures/enhancements2.gif"><br>
+<i>Figure 25:</i> You can add any number of tracks to the region
 panel, just as you would for the overview panel.
 </blockquote>
 
@@ -2525,8 +2631,8 @@ Tracks control section will look something like figure 24:</p>
 
 
 <blockquote>
-<img src="figures/figure24.gif"><br>
-<i>Figure 24:</i> You can add any number of tracks to the region
+<img src="figures/enhancements3.gif"><br>
+<i>Figure 26:</i> You can add any number of tracks to the region
 panel, just as you would for the overview panel.
 </blockquote>
 
@@ -2543,7 +2649,7 @@ entirety of the feature and DNA data.</i>
 
 <hr>
 
-<h2><a name="berkeleydb">19. Setting up a Berkeleydb database</a></h2>
+<h2><a name="berkeleydb">22. Setting up a Berkeleydb database</a></h2>
 
 <p>
 
@@ -2731,7 +2837,7 @@ scratch, erasing whatever was there before. Without this flag, the
 provided GFF and/or sequence data will be incrementally added to the
 indexes.</p>
 
-<h2><a name="mysql">20. Setting up a MySQL database</a></h2>
+<h2><a name="mysql">23. Setting up a MySQL database</a></h2>
 
 <p>
 
@@ -2918,7 +3024,7 @@ see the following perldoc manual pages:
 
 <hr>
 
-<h2><a name="third-party">21. Adding Third Party Features</a></h2>
+<h2><a name="third_party">24. Adding Third Party Features</a></h2>
 
 <p>
 
@@ -2983,8 +3089,8 @@ Confirm that you can browse the database.  Figure 25 is a picture of
 the entire data set with all core tracks turned on.
 
 <blockquote>
-<img src="figures/figure25.gif"><br>
-<i>Figure 25:</i> The core <i>C. elegans</i> dataset.
+<img src="figures/third_party1.gif"><br>
+<i>Figure 27:</i> The core <i>C. elegans</i> dataset.
 </blockquote>
 
 <h3>Uploading an Annotation File</h3>
@@ -3063,8 +3169,8 @@ display like that shown in Figure 26.
 <p>
 
 <blockquote>
-<img src="figures/figure26.gif"><br>
-<i>Figure 26:</i> After uploading four annotation files.
+<img src="figures/third_party2.gif"><br>
+<i>Figure 28:</i> After uploading four annotation files.
 </blockquote>
 
 <p>
@@ -3094,8 +3200,8 @@ named "elegans_sts.gff", and choose "Edit File...".
 <p>
 
 <blockquote>
-<img src="figures/figure27.gif"><br>
-<i>Figure 27:</i> The uploaded files can be edited in place by
+<img src="figures/third_party3.gif"><br>
+<i>Figure 29:</i> The uploaded files can be edited in place by
 clicking the "Edit File..." button.
 </blockquote>
 
@@ -3153,8 +3259,8 @@ With this combination of configurations, the display will now look
 as shown in Figure 28:
 
 <blockquote>
-<img src="figures/figure28.gif"><br>
-<i>Figure 28:</i> After customizing the annotation files.
+<img src="figures/third_party4.gif"><br>
+<i>Figure 30:</i> After customizing the annotation files.
 </blockquote>
 
 <p>
@@ -3283,8 +3389,8 @@ selecting a menu item will have exactly the same effect as typing in
 the URL manually.
 
 <blockquote>
-<img src="figures/figure29.gif"><br>
-<i>Figure 29:</i> The preset remote annotation URL popup menu.
+<img src="figures/third_party5.gif"><br>
+<i>Figure 31:</i> The preset remote annotation URL popup menu.
 </blockquote>
 
 The neat thing about all this is that it works across the
@@ -3302,7 +3408,7 @@ text field and reload.
 
 <hr>
 
-<h2><a name="DAS">22. Using GBrowse as a DAS Server</a></h2>
+<h2><a name="DAS">25. Using GBrowse as a DAS Server</a></h2>
 
 <p>
 
@@ -3575,7 +3681,7 @@ http://localhost/cgi-bin/das/elegans_extra?type=repeat;type=Expression
 (Figure 30).
 
 <blockquote>
-<img src="figures/figure30.gif"><br> <i>Figure 30:</i>
+<img src="figures/DAS1.gif"><br> <i>Figure 32:</i>
 The <i>C. elegans</i> core annotations database with the "repeat" and
 "Expression" tracks  superimposed on it using DAS.
 </blockquote>
@@ -3737,7 +3843,7 @@ needs.
 
 <hr>
 
-<h2><a name="conclusion">23. Conclusion</a></h2>
+<h2><a name="conclusion">26. Conclusion</a></h2>
 
 <p>
 
@@ -3763,6 +3869,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Fri May  5 15:36:10 EDT 2006
+Last modified: Wed Jun 14 21:54:06 EDT 2006
 <!-- hhmts end -->
 </body> </html>

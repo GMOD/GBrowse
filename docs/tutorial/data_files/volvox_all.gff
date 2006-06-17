@@ -198,8 +198,8 @@ ctgA	example	HSP	48169	48453	.	-	.	Match seg15
 ctgA	example	BAC	1000	20000	.	.	.	BAC b101.2 ; Note "Fingerprinted BAC with end reads"
 ctgA	example	left_end_read	1000	1500	.	+	.	BAC b101.2
 ctgA	example	right_end_read	19500	20000	.	-	.	BAC b101.2
-
 ctgA	example	gene	1050	9000	.	+	.	Gene EDEN ; Note "protein kinase"
+
 ctgA	example	mRNA	1050	9000	.	+	.	mRNA EDEN.1 ; Gene EDEN
 ctgA	example	5'-UTR	1050	1200	.	+	.	mRNA EDEN.1
 ctgA	example	CDS	1201	1500	.	+	0	mRNA EDEN.1
@@ -219,8 +219,8 @@ ctgA	example	mRNA	1300	9000	.	+	.	mRNA EDEN.3 ; Gene EDEN
 ctgA	example	5'-UTR	1300	1500	.	+	.	mRNA EDEN.3
 ctgA	example	5'-UTR	3000	3300	.	+	.	mRNA EDEN.3
 ctgA	example	CDS	3301	3902	.	+	0	mRNA EDEN.3
-ctgA	example	CDS	5000	5500	.	+	2	mRNA EDEN.3
-ctgA	example	CDS	7000	7600	.	+	2	mRNA EDEN.3
+ctgA	example	CDS	5000	5500	.	+	1	mRNA EDEN.3
+ctgA	example	CDS	7000	7600	.	+	1	mRNA EDEN.3
 ctgA	example	3'-UTR	7601	9000	.	+	.	mRNA EDEN.3
 ctgA	affy	tlevel	1	100	281	.	.	Affy Expt1
 ctgA	affy	tlevel	101	200	183	.	.	Affy Expt1
@@ -744,3 +744,4 @@ ctgA	est	HSP	5000	5500	.	+	.	Target EST:agt767.5 352 852
 ctgA	est	HSP	7000	7200	.	+	.	Target EST:agt767.5 853 1153
 ctgA	est	match	8000	9000	.	-	.	Target EST:agt767.3 1 1001
 ctgA	est	HSP	8000	9000	.	-	.	Target EST:agt767.3 1 1001
+ctgA	example	trace	44401	45925	.	+	.	name trace; trace volvox_trace.scf

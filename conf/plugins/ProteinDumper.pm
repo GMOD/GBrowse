@@ -1,4 +1,4 @@
-# $Id: ProteinDumper.pm,v 1.1.6.1.2.1 2006-04-19 21:31:31 lstein Exp $
+# $Id: ProteinDumper.pm,v 1.1.6.1.2.2 2006-06-19 04:22:17 lstein Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::ProteinDumper
 #
@@ -47,7 +47,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::ProteinDumper;
-# $Id: ProteinDumper.pm,v 1.1.6.1.2.1 2006-04-19 21:31:31 lstein Exp $
+# $Id: ProteinDumper.pm,v 1.1.6.1.2.2 2006-06-19 04:22:17 lstein Exp $
 # Protein Dumper plugin
 
 use strict;
@@ -113,7 +113,7 @@ sub dump {
   my $ct = Bio::Tools::CodonTable->new;
   $ct->id($config->{geneticcode});
 
-  my @filter  = grep { m/^(?:coding|transcript):/ } $self->selected_features;
+  my @filter  = grep { m/^(?:coding|CDS|transcript):/ } $self->selected_features;
   $segment->absolute(1);
 
   my @seqs;
@@ -247,7 +247,7 @@ sub gff_dump {
   print h1($segment),start_pre() if $html;
   print "##gff-version 2\n";
   print "##date $date\n";
-  print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
+  print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->end),"\n";
   print "##source gbrowse SequenceDumper\n";
   print "##See http://www.sanger.ac.uk/Software/formats/GFF/\n";
   print "##NOTE: Selected features dumped.\n";

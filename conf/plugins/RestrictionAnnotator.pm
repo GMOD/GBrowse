@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::RestrictionAnnotator;
-# $Id: RestrictionAnnotator.pm,v 1.12.6.2 2005-06-16 16:51:05 lstein Exp $
+# $Id: RestrictionAnnotator.pm,v 1.12.6.2.2.1 2006-06-19 04:22:17 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -64,7 +64,6 @@ sub configure_form {
 	       TR({-class=>'searchbody'},
 		  td(@buttons)));
 }
-  
 
 sub annotate {
   my $self = shift;
@@ -78,6 +77,7 @@ sub annotate {
   my $ref        = $segment->seq_id;
   my $abs_start  = $segment->start;
   my $dna        = $segment->seq;
+  $dna           = $dna->seq if ref $dna;  # API changes -darn!
 
   my $feature_list = $self->new_feature_list;
 

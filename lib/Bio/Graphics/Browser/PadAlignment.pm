@@ -12,9 +12,9 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 =head1 VERSION (CVS-info)
 
  $RCSfile: PadAlignment.pm,v $
- $Revision: 1.20 $
+ $Revision: 1.20.6.1 $
  $Author: lstein $
- $Date: 2004-09-09 16:21:06 $
+ $Date: 2006-06-19 04:22:18 $
 
 =head1 SYNOPSIS
 
@@ -291,7 +291,7 @@ sub padded_sequences {
   my @leader = (0);
 
   # alignments must be sorted according to target
-  foreach (sort {$a->[0] cmp $b->[0]
+  foreach (sort {$a->[0]->seq_id cmp $b->[0]->seq_id
 		   || $a->[1] <=> $b->[1]
 		 } @{$self->{aligns}}) {
     my ($targ, $start, $end,

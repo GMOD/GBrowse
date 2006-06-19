@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::trace;
 
-# $Id: trace.pm,v 1.1.2.6 2006-06-13 21:24:48 mwz444 Exp $
+# $Id: trace.pm,v 1.1.2.7 2006-06-19 04:22:18 lstein Exp $
 
 use strict;
 use GD;
@@ -92,7 +92,7 @@ sub trace_data {
             $signature =~ /^([0-9A-Fa-f]+)$/g or return;
             $signature = $1;
 
-            my $dir_path = tempdir();
+            my $dir_path = tempdir(CLEANUP=>1);
             my $file_name
                 = sprintf( "%s/%s.%s", $dir_path, $signature, $extension );
             open( F, ">$file_name" )

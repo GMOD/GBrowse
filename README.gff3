@@ -26,11 +26,10 @@ hacking the FlyBase GFF3 files.
 
 As of June 2006, the bleeding-edge (CVS) version of Bioperl has
 database support for GFF3 format via the Bio::DB::SeqFeature::Store
-module. Currently only a mysql implementation of
-Bio::DB::SeqFeature::Store is available, but BerkeleyDB and in-memory
-versions are in progress. You are encouraged to install this module
-and test it out, but it is still a development project and is not
-guaranteed to be 100% stable.
+module. Currently only Mysql and preliminary in-memory implementations
+are available, but a BerkeleyDB version is in progress. You are
+encouraged to install this module and test it out, but it is still a
+development project and is not guaranteed to be 100% stable.
 
 Here are instructions for bringing up the Fly GFF3 annotations.
 
@@ -82,7 +81,30 @@ modify it if necessary. For example, to add a username and password:
 
 You should be able to browse the database now!
 
-7) For more information:
+7) To use the IN-MEMORY GFF3 database adaptor (very preliminary!) do
+the following:
+
+    mkdir /var/www/htdocs/gbrowse/databases/volvox_gff3
+    cp docs/tutorial/data_files/volvox.gff3 /var/www/htdocs/gbrowse/databases/volvox_gff3
+
+and edit the volvox.gff3.conf file to read:
+
+ db_adaptor    = Bio::DB::SeqFeature::Store
+ db_args       = -adaptor memory
+	         -dsn     /var/www/htdocs/gbrowse/databaess/volvox_gffe
+
+Be sure to change the database path to be appropriate for the location
+of the gbrowse document directory on your system.
+
+If you use the memory adaptor for large sequences, you will see better
+performance if you separate out the DNA part of the GFF3 file from the
+annotation part (the volvox.gff3 file has both annotations and
+DNA). Put the DNA into one or more .fasta files in the same directory
+as the .gff3 file(s). This is the same as the traditional way of
+creating a GFF2 in-memory database.
+
+
+8) For more information:
 
 The 09.fly.gff3.conf file contains brief comments describing the
 changes needed to make GBrowse work well with
@@ -103,4 +125,4 @@ Please report all problems to gmod-gbrowse@lists.sourceforge.net.
 Good luck!
 
 Lincoln Stein
-17 June 2006
+19 June 2006

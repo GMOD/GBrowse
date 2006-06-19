@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.34 2006-05-31 22:14:21 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.35 2006-06-19 04:11:30 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -129,7 +129,7 @@ sub print_features {
     $string .= PrintMultiple($f,$options,'Source',$f->source_tag) if $f->source_tag;
     $string .= PrintMultiple($f,$options,"Position",$f);
     $string .= PrintMultiple($f,$options,"Length",$f->length);
-    if ($f->target) {
+    if ($f->can('target') && $f->target) {
       # try to correct for common GFF2 error of indicating a -/- alignment
       # using a (-) src strand and a target_start > target_end
       my $bug = $f->abs_strand < 0 && $f->target->abs_strand < 0;
@@ -138,20 +138,21 @@ sub print_features {
       $string .= PrintMultiple($f,$options,'',print_matches($f,$f->target,$bug)) if $subf;
 
     }
-    $string .= PrintMultiple($f,$options,"Score",$f->score) if defined $f->score;
-    my %attributes = $f->attributes;
+    $string .= PrintMultiple($f,$options,"Score",$f->score) if $f->can('score') && defined $f->score;
+    my %attributes = $f->attributes if $f->can('attributes');
     for my $a (sort grep {!/Target/} keys %attributes) {
       $string .= PrintMultiple($f,$options,$a,$f->attributes($a));
     }
     $string   .= TR({-valign=>'top',-class=>'databody'},th({-height=>3},''),td({-height=>3},''));
-    my @subfeatures = $f->segments;          # works with old bioperl
-    $string .= PrintMultiple($f,$options,'Parts',print_features(\@subfeatures,$subf+1)) if @subfeatures;
+    my @subfeatures = sort {$a->start <=> $b->start} $f->get_SeqFeatures;          # works with old bioperl
+    my $subtable = PrintMultiple($f,$options,'Parts',print_features(\@subfeatures,$subf+1)) if @subfeatures;
+    $string .= $subtable;
     $string .= end_table();
 
-    if (!$subf) {
+    if ($subtable or $subf==0) {
       my $dna = $f->dna;
       $string .= print_dna($f,$dna,$f->abs_start,$f->strand,\@subfeatures,$subf+1) if $dna;
-    }
+   }
 
   }
   $string;
@@ -172,6 +173,8 @@ sub print_dna {
   }
   # add a newline every 80 positions
   $markup->add_style('newline',"\n");
+  # add a space every 10 positions
+  $markup->add_style('space'," ");
 
   my @markup;
   for my $f (@$features) {
@@ -196,6 +199,8 @@ sub print_dna {
     push @markup,[$method,$s,$e+1];  # Duelling off-by-one errors....
   }
   push @markup,map {['newline',80*$_]} (1..length($dna)/80);
+  push @markup,map {['space',10*$_]}   grep {$_ % 8} (1..length($dna)/10);
+
   $markup->markup(\$dna,\@markup);
   my $position = position($feature);
   my $name     = $feature->name;

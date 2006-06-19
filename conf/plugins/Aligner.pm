@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::Aligner;
-# $Id: Aligner.pm,v 1.8 2005-12-09 22:19:09 mwz444 Exp $
+# $Id: Aligner.pm,v 1.9 2006-06-19 04:11:30 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -128,7 +128,7 @@ sub dump {
   my $flipped = $configuration->{flip} ? " (reverse complemented)" :'';
   print h1("Alignments for $segment$flipped");
 
-  my $ref_dna = lc $segment->seq;
+  my $ref_dna = lc $segment->dna;
 
   if ($segment->strand < 0) {  # don't ask
     $ref_dna    = reversec($ref_dna);

@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.28.4.2.2.6 2006-06-19 04:22:16 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.28.4.2.2.7 2006-06-19 22:12:15 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -146,11 +146,12 @@ sub print_features {
     $string   .= TR({-valign=>'top',-class=>'databody'},th({-height=>3},''),td({-height=>3},''));
     my @subfeatures = sort {$a->start <=> $b->start} $f->get_SeqFeatures;          # works with old bioperl
     my $subtable = PrintMultiple($f,$options,'Parts',print_features(\@subfeatures,$subf+1)) if @subfeatures;
-    $string .= $subtable;
+    $string .= $subtable || '';  # prevent uninit variable warning
     $string .= end_table();
 
     if ($subtable or $subf==0) {
-      my $dna = $f->dna;
+      my $dna = $f->seq;
+      $dna    = $dna->seq if ref $dna;  # compensate for API changes
       $string .= print_dna($f,$dna,$f->abs_start,$f->strand,\@subfeatures,$subf+1) if $dna;
    }
 

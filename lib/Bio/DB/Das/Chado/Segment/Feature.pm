@@ -823,7 +823,6 @@ sub sub_SeqFeature {
 
     my $typewhere = '';
     if ($type) {
-      $type = lc $type;
       $typewhere = " and child.type_id = ".$self->factory->name2term($type) ;
     }
 

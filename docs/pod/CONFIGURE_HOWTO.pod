@@ -1,4 +1,4 @@
-head1 CONFIGURE-HOWTO
+=head1 CONFIGURE-HOWTO
 
 This document provides information on configuring the Generic Genome
 Browser (GBrowse), part of the Generic Model Organism Systems Database
@@ -1533,6 +1533,7 @@ The most popular glyph types are:
   span                  like anchored_arrow, except that the ends are
                         truncated at the edge of the panel, not turned
                         into an arrow
+  trace			reads an SCF trace file and draws a graphic representation
   triangle		a point-like feature represented as a diamond
   transcript		a gene model
   transcript2		a slightly different representation of a gene model
@@ -1574,6 +1575,7 @@ following modules:
   segments			Bio::Graphics::Glyph::segments
   span                          Bio::Graphics::Glyph::span
   toomany			Bio::Graphics::Glyph::toomany
+  trace				Bio::Graphics::Glyph::trace
   transcript			Bio::Graphics::Glyph::transcript
   transcript2			Bio::Graphics::Glyph::transcript2
   translation			Bio::Graphics::Glyph::translation

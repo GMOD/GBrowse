@@ -162,6 +162,12 @@ Directions are at http://www.biomoby.org/GettingTheCode.html.
 To save images as publication-quality editable images in Scalar
 Vector Graphics format.  Available from CPAN.
 
+=item K) Bio::SCF File::Temp io-lib(v1.7+)
+
+Needed by the trace glyph which can parse SCF files and display the trace
+graph.  The io-lib library can be downlowded from
+https://sourceforge.net/project/showfiles.php?group_id=100316&package_id=108243
+which is part of the Staden Package https://sourceforge.net/projects/staden/.
 
 =back
 

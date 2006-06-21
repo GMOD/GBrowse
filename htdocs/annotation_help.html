@@ -543,7 +543,7 @@ recognized:
 
   <P>The ``glyph'' option controls how the features are rendered. The
 following glyphs are implemented:</P>
-<table>
+<table border=1>
   <tr class="searchtitle">
   <th> Name</th><th>Description</th>
 </tr>
@@ -612,6 +612,11 @@ the value you wish to chart, add a score=XXXX note to the description section:
     </pre></blockquote>
     See <a href="#numeric">Displaying Intensity Plots &amp; Other
     Numeric Data</a> for full details.  <td> </tr>
+
+<tr class="searchbody">
+<th>trace</th>
+<td>Reads a SCF sequence file and displays the trace graph.</td>
+</tr>
 
 </table>
 
@@ -718,33 +723,99 @@ the value you wish to chart, add a score=XXXX note to the description section:
 </tr>
 
 <tr class="searchbody">
-  <th class="searchtitle">&nbsp;</th>
+  <td>&nbsp;</td>
   <td>min_score</td>
   <td>Minimum score for feature (will be level 0 on graph)  </td>
 </tr>
 
 <tr class="searchbody">
-  <th class="searchtitle">&nbsp;</th>
+  <td>&nbsp;</td>
   <td>max_score</td>
   <td>Maximum score for feature (will be level 0 on graph)  </td>
 </tr>
 
 <tr class="searchbody">
-  <th class="searchtitle">&nbsp;</th>
+  <td>&nbsp;</td>
   <td>scale</td>
   <td>Where to draw the Y axis scale, if any (left, right, both, none)</td>
 </tr>
 
 <tr class="searchbody">
-<th class="searchtitle">&nbsp;</th>
-<td>point_symbol</td>
-<td>When using points or linepoints graph types, controls the symbol to use for the data points.  One of
+  <td>&nbsp;</td>
+  <td>point_symbol</td>
+  <td>When using points or linepoints graph types, controls the symbol to use for the data points.  One of
     triangle, square, disc, point, or none.</td>
+</tr>
     
-    <tr class="searchbody">
-    <th class="searchtitle">&nbsp;</th>
-<td>point_radius</td>
-<td>The radius of the symbols, if applicable, in pixels</td>
+<tr class="searchbody">
+    <td>&nbsp;</td>
+  <td>point_radius</td>
+  <td>The radius of the symbols, if applicable, in pixels</td>
+</tr>
+
+<tr class="searchbody">
+  <th class="searchtitle">trace</th>
+  <td>trace</td>
+  <td> Specify the trace path or URL to use for this feature.  </td>
+</tr>
+
+<tr class="searchbody">
+  <td>&nbsp;</td>
+  <td>trace_prefix</td>
+  <td>String to prepend to each trace path. You may prepend a directory or a
+      partial URL.
+  </td>
+</tr>
+
+<tr class="searchbody">
+  <td>&nbsp;</td>
+  <td>trace_height</td>
+  <td>The height in pixels that the trace will be drawn.</td>
+</tr>
+
+<tr class="searchbody">
+  <td>&nbsp;</td>
+  <td>vertical_spacing</td>
+  <td>Vertical distance from the box that shows the physical span of the
+      feature to the top of the picture (in pixels).
+  </td>
+</tr>
+
+<tr class="searchbody">
+  <td>&nbsp;</td>
+  <td>glyph_delegate</td>
+  <td>Glyph to use when zoomed out too far for the trace to be drawn.</td>
+</tr>
+
+<tr class="searchbody">
+  <td>&nbsp;</td>
+  <td>a_color</td>
+  <td>Color of the line representing Adenine on the trace.</td>
+</tr>
+
+<tr class="searchbody">
+  <td>&nbsp;</td>
+  <td>c_color</td>
+  <td>Color of the line representing Cytosine on the trace.</td>
+</tr>
+
+<tr class="searchbody">
+  <td>&nbsp;</td>
+  <td>g_color</td>
+  <td>Color of the line representing Guanine on the trace.</td>
+</tr>
+
+<tr class="searchbody">
+  <td>&nbsp;</td>
+  <td>t_color</td>
+  <td>Color of the line representing Thymine on the trace.</td>
+</tr>
+
+<tr class="searchbody">
+  <td>&nbsp;</td>
+  <td>show_border</td>
+  <td>Show the black border from around the trace (0=false, 1=true)</td>
+</tr>
 
 </table>
 

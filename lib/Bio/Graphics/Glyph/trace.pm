@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::trace;
 
-# $Id: trace.pm,v 1.1.2.7 2006-06-19 04:22:18 lstein Exp $
+# $Id: trace.pm,v 1.1.2.8 2006-06-21 16:09:09 mwz444 Exp $
 
 use strict;
 use GD;
@@ -92,7 +92,7 @@ sub trace_data {
             $signature =~ /^([0-9A-Fa-f]+)$/g or return;
             $signature = $1;
 
-            my $dir_path = tempdir(CLEANUP=>1);
+            my $dir_path = tempdir();
             my $file_name
                 = sprintf( "%s/%s.%s", $dir_path, $signature, $extension );
             open( F, ">$file_name" )
@@ -729,23 +729,22 @@ The following additional options are available to the "image" glyph:
   ------            -----------                       -------
 
   -trace            Specify the trace path or URL     none
-                    to use for this feature.
+                    to use for this feature
 
   -trace_prefix     String to prepend to              none
                     each trace path. You may prepend
                     a directory or a partial URL.
 
   -trace_height     The height in pixels that the     90
-                    trace will be drawn.
+                    trace will be drawn
 
   -vertical_spacing Vertical distance from the box    20
                     that shows the physical span of
-                    of the feature to the top of
-                    the picture (in pixels).
+                    the feature to the top of the
+                    picture (in pixels)
 
-  -glyph_delegate   Glyph to use for the part of      'generic'
-                    the glyph that shows the physical
-                    span of the feature.
+  -glyph_delegate   Glyph to use when zoomed out too  'generic'
+                    far for the trace to be drawn
 
   -a_color          Color of the line representing    'green'
                     Adenine on the trace
@@ -760,7 +759,7 @@ The following additional options are available to the "image" glyph:
                     Thymine on the trace
 
   -show_border      Show the black border from        0
-                    around the trace.
+                    around the trace
 
 =head2 Specifying the Trace
 

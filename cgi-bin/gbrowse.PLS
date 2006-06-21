@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.42 2006-06-15 21:10:01 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.43 2006-06-21 07:53:24 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1208,7 +1208,6 @@ sub categorize_track {
   for my $l ($CONFIG->language->language) {
     $category      ||= $CONFIG->setting($label=>"category:$l");
   }
-  $category        ||= $CONFIG->setting($label => 'category');
   $category        ||= $CONFIG->setting($label => 'category');
   $category        ||= '';  # prevent uninit variable warnings
   $category         =~ s/^["']//;  # get rid of leading quotes

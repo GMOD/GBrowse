@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.22 2006-06-21 07:53:26 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.23 2006-06-26 15:01:52 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1095,7 +1095,7 @@ sub image_and_map {
     $flip = 1;
   }
 
-   my @pass_thru_args = map {/^-/ ? ($_=>$config{$_}) : ()} keys %config;
+  my @pass_thru_args = map {/^-/ ? ($_=>$config{$_}) : ()} keys %config;
   my @argv = (
 	      -grid      => 1,
 	      @pass_thru_args,

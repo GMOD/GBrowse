@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph;
 
-# $Id: Glyph.pm,v 1.1.2.11.2.4 2006-06-13 19:55:01 scottcain Exp $
+# $Id: Glyph.pm,v 1.1.2.11.2.5 2006-06-28 20:32:28 scottcain Exp $
 
 use strict;
 use Carp 'croak','cluck';
@@ -58,7 +58,11 @@ sub new {
     my @tmparray;
     foreach (@subfeatures) {
       my $type = $_->method;
-      unless ($type eq $self->option('ignore_sub_part')) {
+
+      my @ignore_list = split /\s+/, $self->option('ignore_sub_part');
+      my $ignore_str  = join('|', @ignore_list);
+
+      unless ($type =~ /$ignore_str/) {
         push @tmparray, $_;
       }
     }
@@ -89,12 +93,14 @@ sub new {
 
   if (@subglyphs) {
       my $l            = $subglyphs[0]->left;
-      $self->{left}    = $l if !defined($self->{left}) || $l < $self->{left};
+      # this clashes with the pad_left calculation and is unecessary
+      # $self->{left}    = $l if !defined($self->{left}) || $l < $self->{left};
       my $right        = (
 			  sort { $b<=>$a } 
 			  map {$_->right} @subglyphs)[0];
       my $w            = $right - $self->{left} + 1;
-      $self->{width}   = $w if !defined($self->{width}) || $w > $self->{width};
+      # this clashes with the pad_right calculation and is unecessary
+      # $self->{width}   = $w if !defined($self->{width}) || $w > $self->{width};
   }
 
   $self->{point} = $arg{-point} ? $self->height : undef;
@@ -1024,11 +1030,11 @@ sub oval {
 
 sub filled_arrow {
   my $self = shift;
-  my $gd  = shift;
+  my $gd   = shift;
   my $orientation = shift;
-  $orientation *= -1 if $self->{flip};
+  my ($x1,$y1,$x2,$y2,$fg,$bg)  = @_;
 
-  my ($x1,$y1,$x2,$y2) = @_;
+  $orientation *= -1 if $self->{flip};
 
   my ($width) = $gd->getBounds;
   my $indent = $y2-$y1 < $x2-$x1 ? $y2-$y1 : ($x2-$x1)/2;
@@ -1040,8 +1046,8 @@ sub filled_arrow {
 	  or ($indent <= 0)
 	    or ($x2 - $x1 < 3);
 
-  my $fg   = $self->fgcolor;
-  my $bg   = $self->bgcolor;
+  $fg   ||= $self->fgcolor;
+  $bg   ||= $self->bgcolor;
   my $pkg  = $self->polygon_package;
   my $poly = $pkg->new();
   if ($orientation >= 0) {
@@ -1204,12 +1210,24 @@ sub make_key_name {
 
 sub all_callbacks {
   my $self = shift;
+  return $self->{all_callbacks} if exists $self->{all_callbacks}; # memoize
+  return $self->{all_callbacks} = $self->_all_callbacks;
+}
+
+sub _all_callbacks {
+  my $self = shift;
   my $track_level = $self->option('all_callbacks');
   return $track_level if defined $track_level;
   return $self->panel->all_callbacks;
 }
 
 sub subpart_callbacks {
+  my $self = shift;
+  return $self->{subpart_callbacks} if exists $self->{subpart_callbacks}; # memoize
+  return $self->{subpart_callbacks} = $self->_subpart_callbacks;
+}
+
+sub _subpart_callbacks {
   my $self = shift;
   return 1 if $self->all_callbacks;
   my $do_subparts = $self->option('subpart_callbacks');
@@ -1555,8 +1573,9 @@ glyph pages for more options.
                 drawing of the subparts
                 of a feature.
 
-  -ignore_sub_part Give the type/method of a   undef
-                subpart to ignore it.
+  -ignore_sub_part Give the types/methods of   undef
+                subparts to ignore (as a 
+                space delimited list).
 
   -maxdepth     Specifies the maximum number   undef (unlimited) 
                 child-generations to decend

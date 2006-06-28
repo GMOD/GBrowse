@@ -19,7 +19,7 @@ my %COLORS;  # translation table for symbolic color names to RGB triple
 my $IMAGEMAP = 'bgmap00001';
 read_colors();
 
-sub api_version { 1.652 }
+sub api_version { 1.653 }
 
 # Create a new panel of a given width and height, and add lists of features
 # one by one
@@ -1139,6 +1139,7 @@ ghostwhite           F8           F8            FF
 gold                 FF           D7            00
 goldenrod            DA           A5            20
 gray                 80           80            80
+grey                 80           80            80
 green                00           80            00
 greenyellow          AD           FF            2F
 honeydew             F0           FF            F0

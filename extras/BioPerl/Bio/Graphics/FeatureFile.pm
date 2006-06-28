@@ -1,6 +1,6 @@
 package Bio::Graphics::FeatureFile;
 
-# $Id: FeatureFile.pm,v 1.1.2.9.2.8 2006-06-13 19:55:01 scottcain Exp $
+# $Id: FeatureFile.pm,v 1.1.2.9.2.9 2006-06-28 20:32:28 scottcain Exp $
 # This package parses and renders a simple tab-delimited format for features.
 # It is simpler than GFF, but still has a lot of expressive power.
 # See __END__ for the file format

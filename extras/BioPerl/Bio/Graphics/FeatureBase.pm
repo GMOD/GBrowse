@@ -76,7 +76,7 @@ sub type {
   my $self = shift;
   my $method = $self->primary_tag;
   my $source = $self->source_tag;
-  return defined $source ? "$method:$source" : $method;
+  return $source ne '' ? "$method:$source" : $method;
 }
 
 # usage:
@@ -233,8 +233,8 @@ sub length {
 
 sub seq {
   my $self = shift;
-  my $dna =  exists $self->{seq} ? $self->{seq} : '';
-  return $dna;
+  my $seq =  exists $self->{seq} ? $self->{seq} : '';
+  return $seq;
 }
 
 sub dna {
@@ -504,7 +504,7 @@ sub introns {
   return;
 }
 
-sub has_tag { }
+sub has_tag { exists shift->{attributes}{shift()} }
 
 sub escape {
   my $toencode = shift;

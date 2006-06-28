@@ -7,7 +7,7 @@ use vars qw(@ISA $VERSION);
 @ISA = qw(Bio::Graphics::Glyph::generic);
 
 my %default_colors = qw(
-			frame0f  cyan
+			frame0f  cornflowerblue
 			frame1f  blue
 			frame2f  darkblue
 			frame0r  magenta
@@ -132,8 +132,9 @@ sub draw_frame {
   my $self = shift;
   my ($feature,$strand,$base_offset,$phase,$gd,$x1,$y1,$x2,$y2) = @_;
   my ($seq,$pos);
-
   $seq = $feature->seq or return; # no sequence, arggh.
+
+  my $strand0 = $strand;
   $strand *= -1 if $self->{flip};
 
   $pos = $strand < 0 ? $feature->end : $feature->start;
@@ -141,7 +142,10 @@ sub draw_frame {
   my ($frame,$offset) = frame_and_offset($pos,$strand,$phase);
   # warn "frame=$frame, phase=$phase";
 
+  my ($x1_orig,$x2_orig) = ($x1,$x2);  # remember this for arrowheads
+
   ($strand >= 0 ? $x1 : $x2) += $self->pixels_per_base * $offset;
+  my $y0 = $y1;
   my $lh;
   if ($self->translation_type eq '6frame') {
     $lh = $self->height / 6;
@@ -152,30 +156,36 @@ sub draw_frame {
     $y1 += $lh * $frame;
   }
 
+  $y1  = $y0 + ($self->height - ($y1-$y0)) - $lh if $self->{flip};
+
   $y2 = $y1;
 
   my $codon_table = $self->option('codontable') || 1;
 
   # the dreaded difference between a Bio::SeqFeature and a Bio::Seq
-  my $realseq     = $seq->can('translate') ? $seq
-                  : $seq->can('seq')       ? $seq->seq
-		  : undef;
+  my $realseq  = $self->get_seq($seq);
   return unless $realseq;
+  $realseq    = $seq->revcom if $strand < 0;
+
   my $protein = $realseq->translate(undef,undef,$base_offset,$codon_table)->seq;
 
-  my $str     = $strand;
-  $str *= -1  if $self->{flip};
-
-  my $k       = $str>=0     ? 'f' : 'r';
+  my $k       = $strand >= 0     ? 'f' : 'r';
 
   my $color   = $self->color("frame$frame$k") ||
                 $self->color("frame$frame") ||
                 $self->default_color("frame$frame$k") || $self->fgcolor;
+
+  my $awo = 0;
   if ($self->protein_fits) {
     $self->draw_protein(\$protein,$strand,$color,$gd,$x1,$y1,$x2,$y2);
+    $awo += $self->font->height/2;
   } else {
     $self->draw_orfs(\$protein,$strand,$color,$gd,$x1,$y1,$x2,$y2);
   }
+
+  $strand0 > 0 ? $self->arrowhead($gd,$x2_orig+5,$y1+$awo,3,+1)
+               : $self->arrowhead($gd,$x1_orig-5,$y1+$awo,3,-1)
+
 }
 
 sub draw_protein {
@@ -274,8 +284,6 @@ sub draw_orfs {
   }
   $strand *= -1 if $flip;
 
-  $strand > 0 ? $self->arrowhead($gd,$x2-1,$y1,3,+1)
-              : $self->arrowhead($gd,$x1,$y1,3,-1)
 }
 
 sub find_codons {

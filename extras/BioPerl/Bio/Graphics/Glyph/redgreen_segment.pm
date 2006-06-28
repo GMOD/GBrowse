@@ -1,5 +1,5 @@
 package Bio::Graphics::Glyph::redgreen_segment;
-#$Id: redgreen_segment.pm,v 1.1.2.4.2.8 2006-06-13 19:55:14 scottcain Exp $
+#$Id: redgreen_segment.pm,v 1.1.2.4.2.9 2006-06-28 20:32:29 scottcain Exp $
 
 use strict;
 use Bio::Graphics::Glyph::graded_segments;

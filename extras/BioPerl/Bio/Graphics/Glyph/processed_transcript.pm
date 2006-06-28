@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::processed_transcript;
 
-# $Id: processed_transcript.pm,v 1.1.2.4.2.8 2006-06-13 19:55:12 scottcain Exp $
+# $Id: processed_transcript.pm,v 1.1.2.4.2.9 2006-06-28 20:32:29 scottcain Exp $
 
 use strict;
 use Bio::Graphics::Glyph::transcript2;
@@ -192,7 +192,6 @@ sub connector {
 
 
 1;
-
 
 __END__
 

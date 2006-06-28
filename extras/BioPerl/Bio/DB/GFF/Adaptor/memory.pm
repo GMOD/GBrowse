@@ -59,7 +59,7 @@ it under the same terms as Perl itself.
 =cut
 
 use strict;
-# $Id: memory.pm,v 1.1.2.3.2.8 2006-06-13 19:54:58 scottcain Exp $
+# $Id: memory.pm,v 1.1.2.3.2.9 2006-06-28 20:32:28 scottcain Exp $
 # AUTHOR: Shulamit Avraham
 # This module needs to be cleaned up and documented
 
@@ -138,7 +138,7 @@ sub get_dna {
   }
   return '' unless $self->{dna};
 
-  return $self->{dna}{$id} if !defined $start || !defined $stop;
+  return $self->{dna}{$id} unless defined $start || defined $stop;
   $start = 1 if !defined $start;
 
   my $reversed = 0;

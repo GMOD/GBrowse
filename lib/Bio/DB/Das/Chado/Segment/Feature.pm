@@ -812,7 +812,7 @@ sub subfeatures {
 =cut
 
 sub sub_SeqFeature {
-  my($self,$type) = @_;
+  my($self,@type) = @_;
 
   #first call, cache subfeatures
 #Bio::SeqFeature::CollectionI?
@@ -820,10 +820,24 @@ sub sub_SeqFeature {
   if(!$self->subfeatures ){
 
     my $parent_id = $self->feature_id();
+    my $inferCDS = $self->factory->inferCDS;
 
     my $typewhere = '';
-    if ($type) {
-      $typewhere = " and child.type_id = ".$self->factory->name2term($type) ;
+    if (@type > 0) {
+      my @id_list = map { $self->factory->name2term($_) } @type;
+
+
+      # if CDS features where requested, and inferCDS is set, add
+      # polypeptide and exon features to the list so they can be fetched too
+      if ($inferCDS &&  grep {'CDS'} @type ) {
+          push @id_list, 
+               ( $self->factory->name2term('exon'), 
+                 $self->factory->name2term('polypeptide') ); 
+      }
+
+      $typewhere = " and child.type_id in (". join(',',@id_list)  .")" ;
+
+      warn "type:@type, type_id:@id_list" if DEBUG;
     }
 
     my $handle = $self->factory->dbh();
@@ -914,9 +928,7 @@ sub sub_SeqFeature {
     my $rows = $sth->rows;
     return if ($rows<1);    #nothing retrieve during query
 
-    my $inferCDS = $self->factory->inferCDS;
     my @p_e_cache;
-
     while (my $hashref = $sth->fetchrow_hashref) {
 
       next unless $$hashref{srcfeature_id} == $self->srcfeature_id;
@@ -978,6 +990,7 @@ sub sub_SeqFeature {
 
         my ($start,$stop);
         my $poly = shift @sorted;
+
         if ($poly->type->method =~ /poly/) {
             $start = $poly->start;
             $stop  = $poly->end;
@@ -991,10 +1004,15 @@ sub sub_SeqFeature {
         warn $poly->start if DEBUG;
         warn $poly->end if DEBUG;
 
-        for (@sorted) {
-            my $feat = $_;
-            next if ($feat->start < $start and $feat->end < $start);
-            next if ($feat->start > $stop  and $feat->end > $stop);
+        my @temp_array;
+        for (my $i=0; $i < scalar @sorted; $i++) {
+            my $feat = $sorted[$i];
+
+            (delete $sorted[$i] && next) 
+                   if ($feat->start < $start and $feat->end < $start);
+            (delete $sorted[$i] && next) 
+                   if ($feat->start > $stop  and $feat->end > $stop);
+
             $feat->type->method('CDS');
 
             if ($feat->start < $start) {
@@ -1003,9 +1021,14 @@ sub sub_SeqFeature {
             if ($feat->end > $stop) {
                 $feat->end($stop);
             }
+
+            push @temp_array, $feat;
         }
 
-        @sorted=$self->_calc_phases(@sorted) if (!(defined $sorted[0]->phase) );
+        return unless scalar @temp_array;
+
+        @sorted=$self->_calc_phases(@temp_array) 
+                 if (!(defined $temp_array[0]->phase) );
 
         for (@sorted) {
             $self->add_subfeature($_);
@@ -1029,7 +1052,7 @@ sub sub_SeqFeature {
 
 =head2 _calc_phases
 
- Title   : add_subfeature
+ Title   : _calc_phases
  Usage   : $feature->_calc_phases(@exons)
  Function: calculstes phases for exons without phases 
  Returns : a list of exon feature objects with phases
@@ -1051,8 +1074,11 @@ sub _calc_phases {
   $exons[0]->phase(0);
 
   for (my $i = 0; $i < (scalar @exons) -1; $i++) {
+    next unless defined $exons[$i];
     my $phase = (3 - ($exons[$i]->length - $exons[$i]->phase) % 3) % 3;
     $exons[$i+1]->phase($phase);
+
+    warn $exons[$i]->parent." ".$exons[$i]." ".$exons[$i]->start." ".$exons[$i]->phase." ".$exons[$i+1]->phase() if DEBUG;
   } 
 
   return @exons;

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.187 2006-06-17 18:03:16 lstein Exp $
+# $Id: Browser.pm,v 1.188 2006-06-29 18:58:36 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1175,6 +1175,7 @@ sub image_and_map {
 	      -image_class  => $image_class,
 	      -postgrid     => $postgrid,
 	      -background   => $background,
+	      -truecolor    => $conf->setting(general=>'truecolor'),
 	     );
 
   push @argv, -flip => 1 if $flip;
@@ -1293,20 +1294,32 @@ sub image_and_map {
     }
 
     # handle pattern-based group matches
-     for my $label (keys %groups) {
-       my $set     = $groups{$label};
-       my $pattern = $group_pattern{$label} or next;
-       $pattern =~ s!^/(.+)/$!$1!;  # clean up regexp delimiters
-       my %pairs;
-       for my $a (@$set) {
-	 (my $base = $a->name) =~ s/$pattern//i;
+    for my $label (keys %groups) {
+      my $track = $tracks{$label};
+      # fix up groups
+      my $set     = $groups{$label};
+      my $pattern = $group_pattern{$label} or next;
+      $pattern =~ s!^/(.+)/$!$1!;  # clean up regexp delimiters
+
+      my $count    = $feature_count{$label};
+      $count       = $limit->{$label} if $limit->{$label} && $limit->{$label} < $count;
+      my $do_bump  = $self->do_bump($label, $options->{$label},$count,$max_bump,$length);
+
+      if (!$do_bump) {  # don't bother grouping if we aren't bumping - no one will see anyway
+	$track->add_feature($_) foreach @$set;
+	next;
+      }
+
+      my %pairs;
+      for my $a (@$set) {
+	my $name = $a->name or next;
+	(my $base = $name) =~ s/$pattern//i;
  	push @{$pairs{$base}},$a;
-       }
-       my $track = $tracks{$label};
-       foreach (values %pairs) {
-	 $track->add_group($_);
-       }
-     }
+      }
+      foreach (values %pairs) {
+	$track->add_group($_);
+      }
+    }
 
     # configure the tracks based on their counts
     for my $label (keys %tracks) {

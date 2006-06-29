@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.23 2006-06-26 15:01:52 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.24 2006-06-29 18:58:01 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1111,6 +1111,7 @@ sub image_and_map {
 	      -image_class  => $image_class,
 	      -postgrid     => $postgrid,
 	      -background   => $background,
+	      -truecolor    => $conf->setting(general=>'truecolor') || 0,
 	     );
 
   push @argv, -flip => 1 if $flip;
@@ -1228,12 +1229,23 @@ sub image_and_map {
       $track->add_feature($_) foreach values %{$group_on{$label}};
     }
 
+    # handle pattern-based group matches
     for my $label (keys %groups) {
       my $track = $tracks{$label};
       # fix up groups
       my $set     = $groups{$label};
       my $pattern = $group_pattern{$label} or next;
       $pattern =~ s!^/(.+)/$!$1!;  # clean up regexp delimiters
+
+      my $count    = $feature_count{$label};
+      $count       = $limit->{$label} if $limit->{$label} && $limit->{$label} < $count;
+      my $do_bump  = $self->do_bump($label, $options->{$label},$count,$max_bump,$length);
+
+      if (!$do_bump) {  # don't bother grouping if we aren't bumping - no one will see anyway
+	$track->add_feature($_) foreach @$set;
+	next;
+      }
+
       my %pairs;
       for my $a (@$set) {
 	my $name = $a->name or next;

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.25 2006-07-06 14:28:07 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.26 2006-07-06 21:51:16 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1783,7 +1783,7 @@ sub do_description {
 # (this used to be in gbrowse executable itself)
 sub name2segments {
   my $self = shift;
-  my ($name,$db,$toomany,$segments_have_priority) = @_;
+  my ($name,$db,$toomany,$segments_have_priority,$dont_merge) = @_;
   $toomany ||= TOO_MANY_SEGMENTS;
 
   my $max_segment   = $self->get_max_segment;
@@ -1809,7 +1809,7 @@ sub name2segments {
 
  SEARCHING: {
     # non-heuristic fetch
-    @segments  = $self->_feature_get($db,$name,$class,$start,$stop,$segments_have_priority);
+    @segments  = $self->_feature_get($db,$name,$class,$start,$stop,$segments_have_priority,$dont_merge);
     last SEARCHING if @segments;
 
     # heuristic fetch. Try various abbreviations and wildcards
@@ -1837,7 +1837,7 @@ sub name2segments {
 
     for my $n (@sloppy_names) {
       for my $c (@classes) {
-	@segments = $self->_feature_get($db,$n,$c,$start,$stop,$segments_have_priority);
+	@segments = $self->_feature_get($db,$n,$c,$start,$stop,$segments_have_priority,$dont_merge);
 	last SEARCHING if @segments;
       }
     }
@@ -1848,7 +1848,7 @@ sub name2segments {
 
 sub _feature_get {
   my $self = shift;
-  my ($db,$name,$class,$start,$stop,$segments_have_priority) = @_;
+  my ($db,$name,$class,$start,$stop,$segments_have_priority,$dont_merge) = @_;
 
   my $refclass = $self->setting('reference class') || 'Sequence';
   $class ||= $refclass;
@@ -1887,6 +1887,8 @@ sub _feature_get {
 		    || $fclass eq $class;
 
   } @segments;
+
+  return @filtered if $dont_merge;
 
   # consolidate features that have same name and same reference sequence
   # and take the largest one.

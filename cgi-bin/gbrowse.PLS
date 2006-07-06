@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.44 2006-06-29 18:57:59 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.45 2006-07-06 21:51:16 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2072,7 +2072,9 @@ sub write_auto {
 sub load_external_sources {
   my ($segments,$page_settings) = @_;
 
-  unless ($segments && ref $segments eq 'ARRAY') {
+  return unless $segments;
+
+  if (ref $segments ne 'ARRAY') {
     $segments = [open_database()->segment($segments)];
   }
   elsif ($segments) {
@@ -2220,10 +2222,11 @@ sub coordinate_mapper {
     }
 
     unless (exists $segments{$refname}) {
-      my @segments = map {
-	eval{$_->absolute(0)}; $_  # so that rel2abs works properly later
-      }
-	$CONFIG->name2segments($refname,$db,TOO_MANY_SEGMENTS,1);
+      my @segments = sort {$a->length<=>$b->length}   # get the longest one
+	map {
+	  eval{$_->absolute(0)}; $_  # so that rel2abs works properly later
+	}
+	  $CONFIG->name2segments($refname,$db,TOO_MANY_SEGMENTS,1);
       $segments{$refname} = $segments[0];
       return unless @segments;
     }
@@ -2451,6 +2454,8 @@ sub set_track_options {
 sub help {
   my ($help_type,$conf_dir,$settings) = @_;
 
+  warn "HERE I AM";
+
   my $ref = referer();
   my $do_close = join('',
 		      start_form(-action=>$ref),
@@ -2496,9 +2501,19 @@ sub make_citation {
 # build a citation page
 sub build_citation_page {
   my $settings = shift;
+  warn "00";
+
   my @features = $CONFIG->labels;
+
+  warn "0001";
+
   my $external_features = load_external_sources(undef,$settings);
+
+  warn "0002";
+
   my (@citations);
+
+  warn "01";  
 
   print h2($CONFIG->tr('Track_descriptions'));
 
@@ -2507,6 +2522,9 @@ sub build_citation_page {
   for my $feature (@features) {
     push @citations,make_citation($CONFIG,$feature);
   }
+
+  warn "02";  
+
   print blockquote(dl(@citations));
 
   # build external features
@@ -2706,7 +2724,6 @@ sub plugin_links {
   for my $p (@plugins) {
     my $plugin = $plugins->plugin($p) or next;
     my $name   = $plugin->name;
-    warn "name = $name";
     my $action = "?plugin=$p;plugin_do=".$CONFIG->tr('Go');
     push @result,a({-href=>$action},"[$name]");
   }

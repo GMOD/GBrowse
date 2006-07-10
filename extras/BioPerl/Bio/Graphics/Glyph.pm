@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph;
 
-# $Id: Glyph.pm,v 1.1.2.11.2.6 2006-07-10 02:28:09 scottcain Exp $
+# $Id: Glyph.pm,v 1.1.2.11.2.7 2006-07-10 03:24:36 scottcain Exp $
 
 use strict;
 use Carp 'croak','cluck';

@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::so_transcript;
 
-# $Id: so_transcript.pm,v 1.1.2.5.2.10 2006-07-10 02:28:11 scottcain Exp $
+# $Id: so_transcript.pm,v 1.1.2.5.2.11 2006-07-10 03:24:37 scottcain Exp $
 
 use strict;
 use Bio::Graphics::Glyph::processed_transcript;

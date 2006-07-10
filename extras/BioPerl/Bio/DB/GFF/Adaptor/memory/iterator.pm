@@ -35,7 +35,7 @@ it under the same terms as Perl itself.
 
 package Bio::DB::GFF::Adaptor::memory::iterator;
 use strict;
-# $Id: iterator.pm,v 1.1.2.1.2.9 2006-06-28 20:32:28 scottcain Exp $
+# $Id: iterator.pm,v 1.1.2.1.2.10 2006-07-10 02:28:08 scottcain Exp $
 # this module needs to be cleaned up and documented
 use Bio::Root::Version;
 

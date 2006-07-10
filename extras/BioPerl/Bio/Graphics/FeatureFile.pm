@@ -1,6 +1,6 @@
 package Bio::Graphics::FeatureFile;
 
-# $Id: FeatureFile.pm,v 1.1.2.9.2.9 2006-06-28 20:32:28 scottcain Exp $
+# $Id: FeatureFile.pm,v 1.1.2.9.2.10 2006-07-10 02:28:09 scottcain Exp $
 # This package parses and renders a simple tab-delimited format for features.
 # It is simpler than GFF, but still has a lot of expressive power.
 # See __END__ for the file format
@@ -544,8 +544,8 @@ sub parse_line {
     if $bounds && !@parts;
 
   foreach (@parts) { # max and min calculation, sigh...
-    $self->{min} = $_->[0] if !defined $self->{min} || $_->[0] < $self->{min};
-    $self->{max} = $_->[1] if !defined $self->{max} || $_->[1] > $self->{max};
+    $self->{min} = $_->[0] if defined $_->[0] && defined $self->{min} ? ($_->[0] < $self->{min}) : 1;
+    $self->{max} = $_->[1] if defined $_->[1] && defined $self->{max} ? ($_->[1] > $self->{max}) : 1;
   }
 
   my $visible = 1;
@@ -565,8 +565,10 @@ sub parse_line {
   # (this is to deal with confusing documentation, actually)
   unless (defined $strand) {
     foreach (@parts) {
-      $strand           ||= $_->[0] <= $_->[1] ? '+' : '-';
-      ($_->[0],$_->[1])   = ($_->[1],$_->[0]) if $_->[0] > $_->[1];
+      if (defined $_ && ref($_) eq 'ARRAY' && defined $_->[0] && defined $_->[1]) {
+        $strand           ||= $_->[0] <= $_->[1] ? '+' : '-';
+        ($_->[0],$_->[1])   = ($_->[1],$_->[0]) if $_->[0] > $_->[1];
+      }
     }
   }
 

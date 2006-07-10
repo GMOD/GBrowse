@@ -91,7 +91,7 @@ SELECT fref,
        fstrand,
        gname
   FROM fdata,fgroup
-  WHERE fgroup.gname=?
+  WHERE lower(fgroup.gname)=lower(?)
     AND fgroup.gclass=?
     AND fgroup.gid=fdata.gid
     GROUP BY fref,fstrand,gclass,gname

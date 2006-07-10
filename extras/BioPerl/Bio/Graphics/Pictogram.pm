@@ -96,8 +96,8 @@ User feedback is an integral part of the evolution of this and other
 Bioperl modules. Send your comments and suggestions preferably to one
 of the Bioperl mailing lists. Your participation is much appreciated.
 
-  bioperl-l@bioperl.org              - General discussion
-  http://bio.perl.org/MailList.html  - About the mailing lists
+  bioperl-l@bioperl.org                  - General discussion
+  http://bioperl.org/wiki/Mailing_lists  - About the mailing lists
 
 =head2 Reporting Bugs
 
@@ -105,7 +105,7 @@ Report bugs to the Bioperl bug tracking system to help us keep track
 the bugs and their resolution.  Bug reports can be submitted via the
 web:
 
-  http://bugzilla.bioperl.org/
+  http://bugzilla.open-bio.org/
 
 =head1 AUTHOR - Shawn Hoon
 

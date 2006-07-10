@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph;
 
-# $Id: Glyph.pm,v 1.1.2.11.2.5 2006-06-28 20:32:28 scottcain Exp $
+# $Id: Glyph.pm,v 1.1.2.11.2.6 2006-07-10 02:28:09 scottcain Exp $
 
 use strict;
 use Carp 'croak','cluck';
@@ -313,12 +313,16 @@ sub boxes {
 
   $self->layout;
   $parent         ||= $self;
+  my $subparts = $self->option('box_subparts');
+
+  my $subparts = $self->box_subparts;
 
   for my $part ($self->parts) {
-    my $type = eval{$part->feature->primary_tag} || '';
+    my $type = $part->feature->primary_tag || '';
     if ($type eq 'group' or
-	($part->level == 0 && $self->option('box_subparts'))) {
+	($part->level == 0 && $subparts)) {
       push @result,$part->boxes($left+$self->left+$self->pad_left,$top+$self->top+$self->pad_top,$parent);
+      next;
     }
     my ($x1,$y1,$x2,$y2) = $part->box;
     push @result,[$part->feature,
@@ -329,6 +333,14 @@ sub boxes {
 
   return wantarray ? @result : \@result;
 }
+
+sub box_subparts {
+  my $self = shift;
+  return $self->{box_subparts} if exists $self->{box_subparts};
+  return $self->{box_subparts} = $self->_box_subparts;
+}
+
+sub _box_subparts { shift->option('box_subparts') }
 
 # this should be overridden for labels, etc.
 # allows glyph to make itself thicker or thinner depending on
@@ -766,12 +778,12 @@ sub draw_connectors {
   if (@parts) {
     my($x1,$y1,$x2,$y2) = $self->bounds(0,0);
     my($xl,$xt,$xr,$xb) = $parts[0]->bounds;
-    $self->_connector($gd,$dx,$dy,$x1,$xt,$x1,$xb,$xl,$xt,$xr,$xb)      if $x1+$self->pad_left < $xl;
+    $self->_connector($gd,$dx,$dy,$x1,$xt,$x1,$xb,$xl,$xt,$xr,$xb)      if $x1 < $xl;
     my ($xl2,$xt2,$xr2,$xb2) = $parts[-1]->bounds;
 
     my $feature = $self->feature;
     my @p       = map {$_->feature} @parts;
-    $self->_connector($gd,$dx,$dy,$parts[-1]->bounds,$x2,$xt2,$x2,$xb2) if $x2-$self->pad_right > $xr2;
+    $self->_connector($gd,$dx,$dy,$parts[-1]->bounds,$x2,$xt2,$x2,$xb2) if $x2 > $xr2;
   } else {
     my ($x1,$y1,$x2,$y2) = $self->bounds($dx,$dy);
     $self->draw_connector($gd,$y1,$y2,$x1,$y1,$y2,$x2);

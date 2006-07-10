@@ -3,11 +3,11 @@ package Bio::Graphics::Glyph::heterogeneous_segments;
 # this glyph acts like graded_segments but the bgcolor of each segment is
 # controlled by the source field of the feature. Use the source field name
 # to set the background color:
-# -waba_strong => 'blue'
-# -waba_weak   => 'red'
-# -waba_coding => 'green' 
+# -waba_strong_color => 'blue'
+# -waba_weak_color   => 'red'
+# -waba_coding_color => 'green' 
 
-# $Id: heterogeneous_segments.pm,v 1.1.2.4.2.9 2006-06-28 20:32:29 scottcain Exp $
+# $Id: heterogeneous_segments.pm,v 1.1.2.4.2.10 2006-07-10 02:28:10 scottcain Exp $
 
 use strict;
 use Bio::Graphics::Glyph::graded_segments;
@@ -31,16 +31,16 @@ sub draw {
   $self->{source2color} ||= {};
   my $fill = $self->bgcolor;
   for my $part (@parts) {
-    if ($self->option('merge_parts')) {
-      $part->{partcolor} = $fill;
-      next;
-    }  
+#    if ($self->option('merge_parts')) {
+#      $part->{partcolor} = $fill;
+#      next;
+#    }  
     my $s = eval { $part->feature->source_tag } or next;
     $self->{source2color}{$s} ||= $self->color(lc($s)."_color") || $fill;
     $part->{partcolor} = $self->{source2color}{$s};
   }
 
-  $self->SUPER::draw(@_);
+  $self->Bio::Graphics::Glyph::segments::draw(@_);
 }
 
 

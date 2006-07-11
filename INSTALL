@@ -18,8 +18,8 @@ Generic Genome Browser Installation
         http://www.activestate.com/Products/Download/Download.plex?id=Active
         Perl
 
-        Choose the "MSI" package for Windows. Once downloaded, launch the
-        package, and it will install automatically.
+        Choose the "MSI" package for Windows for Perl version 5.8. Once
+        downloaded, launch the package, and it will install automatically.
 
     Install the Apache web server
         Go to http://httpd.apache.org/download.cgi . Select the most recent
@@ -35,9 +35,10 @@ Generic Genome Browser Installation
 
     Install GBrowse
         Apache and ActiveState Perl must be installed before you try this
-        step. Launch the Windows command shell by choosing "Run..." and then
-        typing "cmd". Once the command shell appears, type the following
-        commands:
+        step. Also, I have had difficulties with the ppm files for GBrowse
+        and ActiveState Perl 5.6.1. Please use ActiveState Perl 5.8. Launch
+        the Windows command shell by choosing "Run..." and then typing
+        "cmd". Once the command shell appears, type the following commands:
 
                 ppm> rep add gmod http://www.gmod.org/ggb/ppm
                 ppm> rep up gmod
@@ -136,6 +137,13 @@ Generic Genome Browser Installation
     J) GD::SVG
         To save images as publication-quality editable images in Scalar
         Vector Graphics format. Available from CPAN.
+
+    K) Bio::SCF File::Temp io-lib(v1.7+)
+        Needed by the trace glyph which can parse SCF files and display the
+        trace graph. The io-lib library can be downlowded from
+        https://sourceforge.net/project/showfiles.php?group_id=100316&packag
+        e_id=108243 which is part of the Staden Package
+        https://sourceforge.net/projects/staden/.
 
     Once the prerequisites are installed, download the most recent version
     of the Generic-Genome-Browser source code from:

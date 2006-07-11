@@ -3,6 +3,9 @@
 	* Added fixes to GFF.pm for GFF3 to BioPerl patches
 	* Fix the way that plugins are stored in mod_perl environment to prevent them from
 	  appearing and disappearing haphazardly when switching between sources.
+        * Added a trace glyph
+        * Several fixes to the Chado adaptor, mostly to keep up with changes
+          to APIs
 
 1.64	* Revamped state handling to use CGI::Session instead of cookies
 	* Added Russian and Polish language translations

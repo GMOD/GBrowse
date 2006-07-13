@@ -41,8 +41,12 @@ the comments and aliases some other way.
 Options:
 
     -src    <string>   Choose a source for the gene, default "UCSC"
-    -origin <integer>  Choose a relative position to number from, default
-is "1"
+    -origin <integer>  Choose a relative position to number from, default is "1"
+
+The resulting file is in GFF3 format and should be loaded into a
+Bio::DB::GFF database using the following command:
+
+ bp_bulk_load_gff.pl -c -d db1 --maxfeature 1000000000 --gff3_munge file.gff
 
 USAGE
 

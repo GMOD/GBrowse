@@ -3,12 +3,13 @@ use strict;
 
 use Text::Shellwords 'shellwords';
 use CGI::Session;
+use constant COOKIE_NAME => 'gbrowse_sess';
 
 sub new {
   my $class    = shift;
   my $config   = shift;
   my $id       = shift;
-  $CGI::Session::NAME = 'gbrowse_sess';
+  $CGI::Session::NAME = COOKIE_NAME;
   my $dir             = $config->tmpdir('sessions');
   my $driver          = $config->setting('session driver') || 'driver:file';
   my %args            = shellwords $config->setting('session args');

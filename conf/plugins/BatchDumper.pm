@@ -84,13 +84,14 @@ sub dump {
   }
 
   foreach my $segment ( @segments ) {
-    my $seq  = new Bio::Seq::RichSeq(-display_id       => $segment->display_id,
+    my $seq  = new Bio::Seq::RichSeq(-display_id       => $segment->display_name,
 				     -desc             => $segment->desc,
 				     -accession_number => $segment->accession_number,
 				     -alphabet         => $segment->alphabet || 'dna',
 				    );
     $seq->add_date(strftime("%d-%b-%Y",localtime));
-    $seq->primary_seq($segment->primary_seq);
+    my $primary_seq = $segment->seq;
+    $seq->primary_seq($primary_seq);
     $segment->absolute(1);
     my $offset     = $segment->start - 1;
     my $segmentend = $segment->length;
@@ -135,7 +136,7 @@ sub dump {
 	}
 	$nf->location( new Bio::Location::Split(-locations => \@locs,
 						-seq_id    =>
-						$segment->display_id));
+						$segment->display_name));
       } else { 
 	$nf->location(shift @locs);
       }

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.188 2006-06-29 18:58:36 lstein Exp $
+# $Id: Browser.pm,v 1.189 2006-07-13 21:03:00 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1544,6 +1544,7 @@ sub _add_landmarks {
   my $iterator = $segment->features(-type=>\@feature_types,-iterator=>1,-rare=>1);
 
   my %count;
+  my (%group_on,%group_on_field);
   while (my $feature = $iterator->next_seq) {
 
     my $track_name = eval{$type2track{lc $feature->type}}

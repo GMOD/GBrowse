@@ -1,23 +1,8 @@
 [% IF segment %]
-  <input type="hidden" name="overview_panel_vis" id="overview_panel_vis" value="[%- IF div_visibility.overview_panel_vis == 0 -%]0[%- ELSE -%]1[%- END -%]"/>
-  <div class="ctl_hidden" id="overview_panel_show" onclick="visibility('overview_panel',1)"
-    [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.overview_panel_vis vis_default=1 opposite_of_value=1 -%]
-  ><img src="/gbrowse/images/buttons/plus.png">&nbsp;
-    <span class="tctl"><b>[% config.tr('overview') %] </b></span>
-                                                                                                                             
-  </div>
-                                                                                                                             
-  <div class="ctl_visible" id="overview_panel_hide" onclick="visibility('overview_panel',0)"
-    [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.overview_panel_vis vis_default=1 opposite_of_value=0 -%]
-  ><img src="/gbrowse/images/buttons/minus.png">&nbsp;
-    <span class="tctl"><b>[% config.tr('overview') %] </b></span>
-                                                                                                                             
-  </div>
-                                                                                                                             
+
+[%- PROCESS 'start_section.tt2' name='overview_panel' title='overview' -%]
+
   <center>
-  <div class="el_visible" id="overview_panel" 
-    [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.overview_panel_vis vis_default=1 opposite_of_value=0 -%]
-  >
     [% ii = config.overview( whole_segment,segment , page_settings.features, feature_files ) ; image = ii.0 ; length = ii.1 %]
     [% ii = image.getBounds ; width = ii.0 ; length = ii.1 %]
     [% url = config.generate_image(image) %]
@@ -33,9 +18,7 @@
     <input type="hidden" name="seg_min" value="[% whole_segment.start %]" override="1"/>
     <input type="hidden" name="seg_max" value="[% whole_segment.stop %]" override="1"/>
   </center>
-  </div>
-[% ELSE %]
-  <center>
-  no segment
-  </center>
+
+[%- PROCESS 'end_section.tt2' -%]
+
 [% END %]

@@ -5,6 +5,10 @@ function turnOff (element) {
   element.style.display="none";
 }
 
+function setVisState (element_name,is_visible) {
+  xSetCookie("div_visible_" + element_name,is_visible);
+}
+
 function visibility (element_name,is_visible) {
    var element = document.getElementById(element_name);
    var show_control = document.getElementById(element_name + "_show");
@@ -22,8 +26,4 @@ function visibility (element_name,is_visible) {
    return false;
 }
 
-function setVisState (element_name,is_visible) {
-   var hidden_element = document.getElementById(element_name + "_vis");
-   hidden_element.value = is_visible;
-}
 

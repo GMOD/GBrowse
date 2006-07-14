@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.159 2006-06-29 18:58:34 lstein Exp $
+# $Id: gbrowse.PLS,v 1.160 2006-07-14 12:38:52 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -486,6 +486,7 @@ sub main_display {
     my $param = {
         config        => $CONFIG,
         page_settings => $page_settings,
+        session       => $session,
         plugins       => \@plugins,
         plugin_labels => $plugin_labels,
 
@@ -500,9 +501,10 @@ sub main_display {
 
         citation_link => \&make_citation_link,
 
-        link_bookmark => bookmark_link(),
-        link_image    => image_link(),
-        link_svg      => svg_link(),
+	link_header   => header_link($page_settings),
+        link_bookmark => bookmark_link($page_settings),
+        link_image    => image_link($page_settings),
+        link_svg      => svg_link($page_settings),
         link_help     => "?display_help=general",
 
         rand => substr( md5_hex(rand), 0, 5 ),
@@ -517,6 +519,7 @@ sub main_display {
         finezoom           => get_zoomincrement(),
         feature_highlights => $feature_highlights,
         region_highlights  => $region_highlights,
+        show_grid          => $page_settings->{grid},
         track_groups       => \%track_groups,
         segment2link       => \&segment2link,
         selected_tracks    => {
@@ -640,13 +643,15 @@ sub page_settings {
     } else {
       error($CONFIG->tr('INVALID_SOURCE',$source));
     }
+  } else {
+    $config->source($sources[0]); # take first one
   }
 
   my $session       = Bio::Graphics::Browser::PageSettings->new($config,param('id'));
   $source         ||= $session->source;
   redirect_legacy_url($source); # may cause a redirect and exit!!!
 
-  my $old_source    = $session->source($source);
+  # now set to saved source
   $config->source($source);
 
   # NOTE: bad form to set these globals here, but they are needed by adjust_settings();
@@ -876,6 +881,14 @@ sub adjust_settings {
     adjust_track_order($settings);
   }
 
+  # restore the visibility of the division sections
+  # using transient cookies
+  for my $div (grep {/^div_visible_/} CGI::cookie()) {
+    my ($section)   = $div =~ /^div_visible_(\w+)/ or next;
+    my $visibility  = CGI::cookie($div);
+    $settings->{section_visible}{$section} = $visibility;
+  }
+
 }
 
 # this generates the callback for highlighting "interesting" features
@@ -1009,6 +1022,7 @@ sub get_external_presets {
 sub zoomnav {
   my $settings = shift;
   return unless $settings->{ref};
+
   my $start = $settings->{start};
   my $stop  = $settings->{stop};
   my $span  = $stop - $start + 1;
@@ -1022,7 +1036,10 @@ sub zoomnav {
   my $selected_span  = param('span');
   my ($zoom)         = grep {/^zoom (out|in) \S+/} param();
   my ($nav)          = grep {/^(left|right) \S+/}  param();
-  my $overview_x     = param('overview.x');
+
+  warn "zoom=$zoom, nav=$nav" if DEBUG;
+
+  my $overview_x       = param('overview.x');
   my $regionview_x     = param('regionview.x');
   my $regionview_size  = $settings->{region_size};
   my $seg_min          = param('seg_min');
@@ -1450,7 +1467,7 @@ sub format_segment {
 sub whole_segment {
   my $segment = shift;
   my $factory = $segment->factory;
-  my $class   = eval {$segment->seq_id->class} || $factory->refclass;
+  my $class   = eval {$segment->seq_id->class} || eval{$factory->refclass};
   my ($whole_segment) = $factory->segment(-class=>$class,
 					  -name=>$segment->seq_id);
   $whole_segment   ||= $segment;  # just paranoia
@@ -1770,6 +1787,12 @@ sub coordinate_mapper {
     }
   };
   return $closure;
+}
+
+sub header_link {
+  my $settings = shift;
+  my $rand         =   substr(md5_hex(rand),0,5);
+  return "?rand=$rand;head=".(!$settings->{head})||0;
 }
 
 sub bookmark_link {

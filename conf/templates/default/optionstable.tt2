@@ -1,19 +1,5 @@
-<input type="hidden" name="options_panel_vis" id="options_panel_vis" value="[%- IF div_visibility.options_panel_vis == 0 -%]0[%- ELSE -%]1[%- END -%]"/>
-<div class="ctl_hidden" id="options_panel_show" onclick="visibility('options_panel',1)"
-    [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.options_panel_vis vis_default=1 opposite_of_value=1 -%]
-  ><img src="/gbrowse/images/buttons/plus.png">&nbsp;
-  <span class="tctl"><b>[% config.tr('display_settings') %] </b></span>
-</div>
-                                                                                                                             
-<div class="ctl_visible" id="options_panel_hide" onclick="visibility('options_panel',0)"
-    [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.options_panel_vis vis_default=1 opposite_of_value=0 -%]
-  ><img src="/gbrowse/images/buttons/minus.png">&nbsp;
-  <span class="tctl"><b>[% config.tr('display_settings') %] </b></span>
-</div>
-                                                                                                                             
-<div class="el_visible" id="options_panel"
-    [%- PROCESS 'div_inline.tt2' vis_value=div_visibility.options_panel_vis vis_default=1 opposite_of_value=0 -%]
-  >
+[%- PROCESS 'start_section.tt2' name='options_panel' title='display_settings' -%]
+
   <table class="searchbody" border="0">
     <tr>
     <td>
@@ -44,12 +30,22 @@
     </td>
     </tr>
     <tr>
-    <td><input type="text" name="h_feat" value="[% feature_highlights %]" </td>
-    <td><input type="text" name="h_region" value="[% region_highlights %]" </td>
+    <td><span title="[% config.tr('features_to_highlight_hint') %]">
+	<b>[% config.tr('features_to_highlight') %]</b><br />
+	<input type="text" name="h_feat"   value="[% feature_highlights %]" size=30 />
+        </span>
+    </td>
+    <td><span title="[% config.tr('regions_to_highlight_hint') %]">
+         <b>[% config.tr('regions_to_highlight') %]</b><br />
+	<input type="text" name="h_region" value="[% region_highlights %]" size=30 />
+         </span>
+    </td>
+    <td><b>[% config.tr('show_grid') %]</b><input type="checkbox" name="grid" checked="[% show_grid %]" />
+    </td>
     </tr>
     <!-- BUTTONS -->
     <tr>
-    <td align="right" colspan="4">
+    <td align="right" colspan="3">
 
         <!-- FIXME do these button names need to be translated? -->
         <input type="submit" name="Set Track Options..." value="[% config.tr('set_options') %]"/>
@@ -58,5 +54,6 @@
     </tr>
   </table>
     
-</div>
+[%- PROCESS 'end_section.tt2' -%]
+
 

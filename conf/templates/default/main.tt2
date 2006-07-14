@@ -23,7 +23,9 @@
 
 <!-- datasource description and current position -->
 <div class="target" id="target1">
+  [% IF page_settings.head %]
   <h1>[% config.setting('description') %]</h1>
+  [% END %]
   <!-- FIXME need to fix formatting on string below -->
   <h2>[%- IF segment -%]
       [% SET length_str = unit_label( segment.length ) %]
@@ -56,7 +58,17 @@
     [% PROCESS "detailpanel.tt2"   %]
     </div>
   [% END %]
-  <input type="submit" name="Update Image" value="[% config.tr('update') %]"/><br>
+
+  <table width="100%">
+  <tr>
+    <td align="left"><a href="?name=[% page_settings.name %];h_feat=_clear_;h_region=_clear_">
+	<font size="-2">[% config.tr('clear_highlighting') %]</font></a>
+    </td>
+    <td align="right">
+      <b><input type="submit" name="Update Image" value="[% config.tr('update') %]"/></b>
+    </td>
+  </tr>
+  </table>
 
   [% htmlfrag3 %]
 

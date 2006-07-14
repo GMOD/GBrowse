@@ -154,8 +154,6 @@ END
 
    CANCEL   => 'Cancel',
 
-   SUBMIT_CHANGES => 'Submit Changes...',
-
    ABOUT    => 'About...',
 
    REDISPLAY   => 'Redisplay',
@@ -188,7 +186,7 @@ END
 
    SHOW_GRID    => 'Show grid',
 
-   SET_OPTIONS => 'Set Track Options...',
+   SET_OPTIONS => 'Configure tracks...',
 
    CLEAR_HIGHLIGHTING => 'Clear highlighting',
 
@@ -220,9 +218,9 @@ END
 
    PRESETS      => '--Choose Preset URL--',
 
-   FEATURES_TO_HIGHLIGHT => 'Highlight feature(s) (feature1 feature2...)',
+   FEATURES_TO_HIGHLIGHT => 'Highlight feature(s) (feat1 feat2...)',
 
-   REGIONS_TO_HIGHLIGHT => 'Highlight regions (region1:start..end region2:start..end)',
+   REGIONS_TO_HIGHLIGHT => 'Highlight regions (region1:start..end ...)',
 
    FEATURES_TO_HIGHLIGHT_HINT => 'Hint: use feature@color to select the color, as in \'NUT21@lightblue\'',
 
@@ -390,5 +388,7 @@ END
  ADD_YOUR_OWN_TRACKS => 'Add Your Own Tracks',
 
  INVALID_SOURCE    => 'The source named %s is invalid.',
+
+ NO_SEGMENT        => 'No genomic region selected.',
 
 };

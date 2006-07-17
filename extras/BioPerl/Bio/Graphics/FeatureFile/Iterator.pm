@@ -1,6 +1,6 @@
 package Bio::Graphics::FeatureFile::Iterator;
 
-# $Id: Iterator.pm,v 1.1.2.2.2.11 2006-07-10 03:24:37 scottcain Exp $
+# $Id: Iterator.pm,v 1.1.2.2.2.12 2006-07-17 21:05:42 scottcain Exp $
 
 =head1 NAME
 

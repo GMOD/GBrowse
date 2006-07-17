@@ -169,6 +169,7 @@ docs/tutorial/figures/dna1.gif
 docs/tutorial/figures/dna2.gif
 docs/tutorial/figures/enhancements1.gif
 docs/tutorial/figures/enhancements2.gif
+docs/tutorial/figures/enhancements3.gif
 docs/tutorial/figures/figure7a.gif
 docs/tutorial/figures/figure7b.gif
 docs/tutorial/figures/graph1.gif
@@ -407,7 +408,6 @@ lib/Bio/Graphics/Glyph/trace.pm
 lib/Bio/Graphics/Glyph/wormbase_transcript.pm
 lib/CGI/Session/ID/salted_md5.pm
 lib/CGI/Toggle.pm
-libalign/CAlign.c
 libalign/CAlign.pm
 libalign/CAlign.xs
 libalign/Changes

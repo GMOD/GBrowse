@@ -1,5 +1,5 @@
 package Bio::Graphics::Glyph::redgreen_box;
-#$Id: redgreen_box.pm,v 1.1.2.4.2.11 2006-07-10 03:24:37 scottcain Exp $
+#$Id: redgreen_box.pm,v 1.1.2.4.2.12 2006-07-17 21:05:44 scottcain Exp $
 
 use strict;
 use Bio::Graphics::Glyph::generic;

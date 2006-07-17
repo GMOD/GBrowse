@@ -1,5 +1,5 @@
 package Bio::DB::GFF::Adaptor::biofetch;
-#$Id: biofetch.pm,v 1.1.2.1.2.11 2006-07-10 03:24:35 scottcain Exp $
+#$Id: biofetch.pm,v 1.1.2.1.2.12 2006-07-17 21:05:37 scottcain Exp $
 =head1 NAME
 
 Bio::DB::GFF::Adaptor::biofetch -- Cache BioFetch objects in a Bio::DB::GFF database

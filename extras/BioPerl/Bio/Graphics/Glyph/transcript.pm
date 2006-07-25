@@ -1,5 +1,5 @@
 package Bio::Graphics::Glyph::transcript;
-# $Id: transcript.pm,v 1.1.2.5.2.12 2006-07-17 21:05:44 scottcain Exp $
+# $Id: transcript.pm,v 1.1.2.5.2.13 2006-07-25 18:58:39 scottcain Exp $
 
 use strict;
 use Bio::Graphics::Glyph::segments;

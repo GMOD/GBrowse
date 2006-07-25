@@ -1,6 +1,6 @@
 package Bio::DB::GFF::Adaptor::berkeleydb;
 
-# $Id: berkeleydb.pm,v 1.1.2.1.2.12 2006-07-17 21:05:37 scottcain Exp $
+# $Id: berkeleydb.pm,v 1.1.2.1.2.13 2006-07-25 18:58:37 scottcain Exp $
 
 =head1 NAME
 

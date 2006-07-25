@@ -7,7 +7,7 @@ package Bio::Graphics::Glyph::heterogeneous_segments;
 # -waba_weak_color   => 'red'
 # -waba_coding_color => 'green' 
 
-# $Id: heterogeneous_segments.pm,v 1.1.2.4.2.12 2006-07-17 21:05:43 scottcain Exp $
+# $Id: heterogeneous_segments.pm,v 1.1.2.4.2.13 2006-07-25 18:58:39 scottcain Exp $
 
 use strict;
 use Bio::Graphics::Glyph::graded_segments;

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.47 2006-07-13 16:31:56 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.48 2006-08-02 18:26:58 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2453,8 +2453,6 @@ sub set_track_options {
 
 sub help {
   my ($help_type,$conf_dir,$settings) = @_;
-
-  warn "HERE I AM";
 
   my $ref = referer();
   my $do_close = join('',

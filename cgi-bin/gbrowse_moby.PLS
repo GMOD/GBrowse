@@ -46,8 +46,9 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 print OUT <<'!NO!SUBS!';
 
 
+
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.51 2006-05-31 23:20:10 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.52 2006-08-02 21:58:34 markwilkinson Exp $
 ###########################################################
 
 #use SOAP::Lite +trace;
@@ -62,8 +63,13 @@ use Carp;
 use XML::LibXML;
 use Bio::Graphics::Browser::Util;
 use CGI qw(:standard *table *TR);
+use LS::ID;
+use LS::Locator;
+#use Compress::LZW;
+
 use strict;
 use vars qw($Central %RENDERERS $CONFIG $VERSION $CONF_DIR $HTML_DIR);
+
 
 # get ready to use the renderers
 opendir (DIR, "$CONF_DIR/MobyServices") || die "Can't open directory $CONF_DIR/MobyServices for directory parsing $!\n";
@@ -320,6 +326,8 @@ our %source2namespace = (
 
                     );
 
+if (param('getscufl')){&retrieveSCUFL(); exit 0}  # calls to retrieve scufl simply retrieve scufl and stop
+
 param('action')?&execute:&init;
 
 
@@ -337,15 +345,7 @@ sub init {
     my $id = param('name');  # name is a Gbrowse variable    
     $id ||= param('id'); # for MOBY calls we call it "id" not "name", but they are ~the same thing
 
-    unless (defined($namespace) && defined($id)){
-        print_top("MOBY-S Client Initialization");
-        print $CONFIG->header || h1("MOBY-S Client Initialization");
-        print h1("Initialization Required");
-        print h2("This browsing session must be primed with a Namespace and ID:");
-        &INITIALIZE;
-        print $CONFIG->footer;
-        return;
-    }
+    unless (defined($namespace) && defined($id)){ &firstTimeInit(); exit 1;}   # this is a real first-time initlialization
 
     my $authority = param('authority');
     my $servicename = param('servicename');
@@ -359,6 +359,9 @@ sub init {
     my $output = param('output');
     my $serviceType = param('serviceType');
     my $expandObjects = param('expandObjects');
+    my $oldPortName = param('portname');
+    my $scufl = param('scufl');
+    my $sid = param('sid');   # unique service id iterator - every service has to be suffixed with a unique id because it may be re-used in the workflow, causing it to be circular rather than linear
     
     $Central = MOBY::Client::Central->new();  # CENTRAL is a global variable
 
@@ -388,9 +391,12 @@ sub init {
             my $form= join "", (start_form(-action => url(-full)),
             hidden('namespace',$namespace[0]),
             hidden('id',$id),
+            hidden('sid',$sid),
             hidden('servicename',$SERVICE->name),
             hidden('authority',$SERVICE->authority),
             hidden('object', $XML_Object),
+            hidden('scufl', $scufl),
+            hidden('portname', $oldPortName),
             hidden('action',"execute"),
             submit("Execute This Service"),
             end_form());
@@ -439,18 +445,38 @@ sub init {
     print_bottom($CONFIG,"BioMOBY project:  http://www.biomoby.org");
 }
 
+sub firstTimeInit {
+        print_top("MOBY-S Client Initialization");
+        print $CONFIG->header || h1("MOBY-S Client Initialization");
+        print h1("Initialization Required");
+        print h2("This browsing session must be primed with a Namespace and ID:");
+        &INITIALIZE;
+	print h2("Instructions");
+	print "
+This browser utilizes BioMoby as a data-driven Web Service discovery system - it discovers bioinformatics resources that can consume whatever data-type is currently displayed in your browser window.  
+To begin your browsing session you must provide a starting point for your exploration in the form of a <b>Namespace</b> <i>(the common abbreviation for a particular category of identifiers)</i>, and an <b>ID</b> <i>(the identifier itself)</i>.  
+For example, the Genbank record for the <i>Arabidopsis</i> ubiquitin conjugating enzyme (gi|431260) is in the Namespace NCBI_gi with the ID 431260.  After selecting the Namespace and ID that you are interested in, click the 
+<b>Initialize</b> button below to begin searching for appropriate bioinformatics services.  An example Namespace and ID have been selected for you already if you want to start exploring quickly!";
+	print "<br><br>After initialization, you will be presented with a selection of services that consume the data-type you initialized.  The services description includes the <b>Service Name</b>, the Web domain of the 
+service provider, the <b>Service Type</b> (the function that the Service will execute on your data, e.g. 'Retrieval' or 'Blast'), the type of output data that the Service </b>Provides</b>, and a textual description of the Service 
+as provided by the author of that Service.  Once you find the one you need, click the <b>Execute This Service</b> button.  Your results (one or more, depending on what the Service does) will be displayed.  For each result, you 
+will have the opportunity to re-initialize the system using that piece of data, in order to discover BioMoby services that operate on it.  This discover/execute cycle continues until you decide to quit.<br><br>Have fun swimming 
+in the BioMoby ocean!";
+        print $CONFIG->footer;
+        return;
+}
+
 sub getObjectDescription {
     my $ob = shift;
     return unless $ob;
-if ($ob eq 'Object') {
+    if ($ob eq 'Object') {
 	return "<a href='http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob' alt='The base BioMoby Object' title='The base BioMoby Object'/>$ob</a>";
     }
     my $proxy = $CONFIG->setting('http_proxy');
     my $ua = LWP::UserAgent->new;
     $proxy && $ua->proxy(['http'],$proxy);
     
-    my $req = HTTP::Request->new(GET => 
-"http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob");
+    my $req = HTTP::Request->new(GET => "http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob");
     
     my $res = $ua->request($req);
     return unless $res->is_success;
@@ -461,6 +487,7 @@ if ($ob eq 'Object') {
     $content =~ s/\"//g;
     return "<a href='http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob' alt='$content' title='$content'/>$ob</a>";
 }
+
 
 sub findService {
     my ($class, $namespace, $keyword, $authority, $output, $serviceType, $expandObjects) = @_;  # class is scalar, $namespace is listref    
@@ -504,10 +531,29 @@ sub findService {
         next if $bad;
         map {++$bad if ($_->isSimple)} @inputs;  # weed out collectioninputs because gbrowse_moby cannot create collection inputs
         next if $bad > 1;
-        push @goodServices, $serv;            
+        
+	my $ls = $serv->LSID;  # get the LSID of the service instance
+	my $lsid = LS::ID->new($ls);
+        my $locator = LS::Locator->new if $ls;
+        my $authority = $locator->resolveAuthority($lsid) if $locator;
+        my $resource = $authority->getResource($lsid) if $authority;
+        my $data = $resource->getMetadata if $resource;
+	my $filehandle =  $data->response if $data;
+	my $content = join "", (<$filehandle>);
+	if ($content =~ /isAlive(.*?)isAlive/s){
+		my $alive = $1;
+		next unless ($alive =~ /true/i);
+	}
+	push @goodServices, $serv;
+     }
+    unless (scalar @goodServices){
+            print h2("No BioMOBY Services were discovered ", $authority?"from $authority ":"", " that could operate on $class data ", @$namespace[0]?"in the @$namespace[0] namespace.  Try enabling Semantics if you have not already":"  Try enabling Semantics if you have not already").p;
+            return
     }
-    return @goodServices;
+    my @sorted = sort {$a->authority cmp $b->authority} @goodServices;
+     return @sorted;
 }
+
 
 sub execute {
     
@@ -515,7 +561,9 @@ sub execute {
     my $id = param('id');
     my $service = param('servicename');
     my $auth = param('authority');
+    my $sid = generateUniqueServiceID();
     my $OBJECT = param('object');  # this is XML
+    my $oldOutputPortName = param('portname');  # the port of the last service executed - needed for SCUFL connection
     $OBJECT ||= "<Object namespace='$namespace' id='$id'/>";  # this should never happen, but just in case... make a default base object
 
     print_top("BioMOBY Details: $namespace:$id");
@@ -530,28 +578,46 @@ sub execute {
     my $provider = $SI->contactEmail;
 
     my $inputs = $SI->input;
-    my $articleName;
+    my $outputs = $SI->output;
+    my ($articleName, $outputArticleName, $outputObjectType, $isCollection);
+
     # this code assumes only one input as a primary
     foreach my $input(@$inputs){
 	next unless $input->isSimple;
 	$articleName = $input->articleName;
 	last;
-    }	
+    }		    
+
+    foreach my $output(@$outputs){
+	next unless ($output->isSimple || $output->isCollection);
+	$outputArticleName = $output->articleName;
+        ($isCollection = 1) if $output->isCollection;
+	if ($isCollection){($output) = @{$output->Simples}} # just take the first one since we can't deal with collections of different types of simples
+        $outputObjectType = $output->objectType;  # only simples have objectTypes, so we have to do this after extracting the simple from the collection
+	last;
+    }
+
+    my $newOutputPortName;  # need to know the name of the output port for the current service to send to the getSCUFL Button routine so that it can append an output sink if necessary
+    if ($isCollection){
+	$newOutputPortName = "$service"."__$sid:$outputObjectType(Collection - '$outputArticleName' As Simples)";  # SCUFL needs this to connect ports together.  This is a record of the last 
+    } else {
+	$newOutputPortName = "$service"."__$sid:$outputObjectType($outputArticleName)";  # SCUFL needs this to connect ports together.  This is a record of the last 
+    }
+    my $scufl = &addSCUFLService($SI, $oldOutputPortName, $sid);    # append the selected service to the SCUFL document, connect old port name to the input of this new service
+
 
     my $WSDL = $Central->retrieveService($SI); # get the WSDL
-
     my $SERVICE = MOBY::Client::Service->new(service => $WSDL);  # prepare the connection stubs
     
     print h2("\nBioMOBY Service: ".($SI->name)),i($SI->description),hr,h2("\nResult for $namespace:$id\n");
     my $result;
-    eval {$result = $SERVICE->execute(XMLinputlist => [["$articleName", $OBJECT]]);};
 
+    eval {$result = $SERVICE->execute(XMLinputlist => [["$articleName", $OBJECT]]);};
     unless ($result){
         print h3("404 - Service returned no response.  This indicates that this service is currently unavailable.  Try again later.");
         exit 0;
     }
     my ($collections, $objects) = extractResponseArticles($result);
-
 
     unless (scalar @$objects || scalar @$collections){
 	my $code;
@@ -559,11 +625,12 @@ sub execute {
 	if ($result =~ /\<exceptionCode\>(\d+).*?\<exceptionMessage\>([^<]+)/){
 		$code = $1; $message = $2;
 	} else {
-		$code = "600";
-		$message = "INTERNAL PROCESSING ERROR";
+		$code = "200";
+		$message = "UNKNOWN NAME";
 	}
         print h3("ERROR $code"), "<br><br>The following information may assist you in determining the cause of the failure: $message<br><br>Please contact your service provider (<a href='mailto:$provider'>$provider</a>) for more 
-assistance.\n";
+assistance.  Error codes are derived from the Life Sciences Analysis Engine specification <a href='http://www.omg.org/cgi-bin/doc?dtc/2005-04-01'>http://www.omg.org/cgi-bin/doc?dtc/2005-04-01</a>.  This may assist you if you 
+have further difficulties\n";
         exit 0;
     }
     my $service_notes = getServiceNotes($result);
@@ -599,9 +666,12 @@ assistance.\n";
                    start_form(-action => url(-full)),
                    hidden("object", $_->toString(2)), #FIXME - print pretty xml
                    hidden("namespace", $namespace),
+                   hidden("scufl", $scufl),
                    hidden("id",$id),
+                   hidden("sid",$sid),   # attach the next number
                    hidden("objectclass",$MOBYClass),
-                   submit("Re-query MOBY with This Data"),
+                   hidden("portname", $newOutputPortName),
+                   submit("Re-Initialize MOBY Search with This Data"),
                    &setupFilters(providers => \@providers),
                    end_form                   
                    ));
@@ -614,6 +684,9 @@ assistance.\n";
         }
     }
     print end_table;
+
+    &getSCUFLButton($scufl, $newOutputPortName);  # note that this routine collects the new port name, so if you move this button be sure that the NEW port name is available!
+
     print_bottom("of the gbrowse_moby executable written by the <a href='http://www.biomoby.org'>BioMOBY project</a> (http://www.biomoby.org)");    
 }
 
@@ -638,7 +711,6 @@ sub printIt {
     $renderer_term ||='text-formatted';
     $renderer = $RENDERERS{$renderer_term};
 
-#print STDERR "RENDERER $renderer CHOSEN for $thisdatatype\n";
 
     die "Can't render this information\n" unless $renderer;
     
@@ -674,6 +746,8 @@ sub printIt {
         next if ($subnode->tagName eq "CrossReference" or $subnode->tagName eq "moby:CrossReference"); #FIXME check for qualified
         &printIt($subnode);
     }
+    print "<tr><td colspan=2><hr width = 25%></td></tr>";
+
 }
 
 sub processXrefs {
@@ -699,7 +773,6 @@ sub processXrefs {
 }
 
 sub setupFilters {
-#<SPAN title=" description here " class="popup">text</SPAN>
     my (%args) = @_;
     my @providers = @{$args{providers}};
     my $x = "<table border=1><tr><td>".(checkbox_group(-name => 'expandObjects', -values => ['?'], -checked=>"ON"));
@@ -707,7 +780,7 @@ sub setupFilters {
     $x .= "<td><SPAN title=' Enter a comma-delimited list of keywords that should appear in the service description. ' class='popup' cursor='help'>Keywords:</span> ".( textfield(-name => 'keyword', -size => 15))."</td>";
     $x .= "<td><SPAN title=' Enter the full URI for the authority (service provider) that you want to restrict your search to.  e.g. sgn.cornell.edu ' class='popup' cursor='help'>Authority:</span> ";
     $x .= popup_menu(-name => 'authority',
-        '-values' => ["select", @providers],
+        '-values' => ["select", sort(@providers)],
         '-default' => '',
         '-width' => 18,
     );
@@ -726,7 +799,7 @@ sub INITIALIZE {
     my @providers = $Central->retrieveServiceProviders;
     print start_form(-action => url(-full)),
     "<table border=1><tr><td>",
-    "<h2>Select a namespace: </h2>",
+    "<h2>Select a <SPAN title=' Namespaces are, usually, the abbreviation for a particular database, e.g. PDB is the abbreviation for the Protein Data Bank ' class='popup' cursor='help'>Namespace</span>: </h2>",
     "</td>",
     "<td>";
     print popup_menu(-name => 'namespace',
@@ -737,17 +810,134 @@ sub INITIALIZE {
 
     print "<tr>",
     "<td>",
-    "<h2>Which ID within this namespace?: </h2>",   
+    "<h2>Which <SPAN title=' The ID is the identifier for a particular piece of data within the namespace above.  For example, the Genbank record gi|163483 would have the ID 163483 ' class='popup' cursor='help'>ID</span> within this namespace?: </h2>",   
     "</td><td>",textfield(-name => 'id',-width=>'15', -value => "431260",),
     "</td></tr>",
     "</table>";
     print "</h2>",p, &setupFilters(providers => \@providers),p,
-    submit("Initialize with this seed data"),
+    submit("Initialize"),
     end_form;
 
 }
 
+sub addSCUFLService {
+    my ($SI, $oldOutputPortName, $newsid) = @_;
+    my $inputs = $SI->input;
+    my ($articleName, $datatype);
+    # this code assumes only one input as a primary
+    foreach my $input(@$inputs){
+	next unless $input->isSimple;
+	$articleName = $input->articleName;
+	$datatype = $input->objectType;
+	last;
+    }		    
+    my $description =  $SI->description;  
+    my $name  =$SI->name;
+    my $authority  =$SI->authority;
+    my $oldscufl = param('scufl');
 
+    $oldscufl = &addSCUFLSource unless $oldscufl;  # if this is an initialization, then add the source namespace and id
+
+    my $servicename = $name."__$newsid";  # this is the name of the service with its unique id attached
+    $oldOutputPortName = "Object:mobyData" unless $oldOutputPortName;
+    my $SCUFL = qq{
+
+  <s:processor name="$servicename">
+    <s:description><![CDATA[$description]]></s:description>
+    <s:biomobywsdl>
+      <s:mobyEndpoint>http://mobycentral.icapture.ubc.ca/cgi-bin/MOBY05/mobycentral.pl</s:mobyEndpoint>
+      <s:serviceName>$name</s:serviceName>
+      <s:authorityName>$authority</s:authorityName>
+    </s:biomobywsdl>
+  </s:processor>
+
+
+  <s:link source="$oldOutputPortName" sink="$servicename:$datatype($articleName)" />
+
+	};
+
+	return $oldscufl.$SCUFL;
+
+}
+
+sub addSCUFLSource {
+
+  my $namespace = param('namespace');
+  my $id = param('id');
+
+  my $source = qq{    
+  <s:processor name="namespace" boring="true">
+    <s:stringconstant>$namespace</s:stringconstant>
+  </s:processor>
+  <s:processor name="id" boring="true">
+    <s:stringconstant>$id</s:stringconstant>
+  </s:processor>
+
+  <s:processor name="Object">
+    <s:description>an identifier</s:description>
+    <s:biomobyobject>
+      <s:mobyEndpoint>http://mobycentral.icapture.ubc.ca/cgi-bin/MOBY05/mobycentral.pl</s:mobyEndpoint>
+      <s:serviceName>Object</s:serviceName>
+      <s:authorityName />
+    </s:biomobyobject>
+  </s:processor>
+
+  <s:link source="namespace:value" sink="Object:namespace" />
+  <s:link source="id:value" sink="Object:id" />
+
+   };
+
+   return $source;
+
+}
+
+sub retrieveSCUFL {
+
+   my $scufl = param('scufl');
+#   $scufl = decompress($scufl);
+   my $head = qq{<?xml version="1.0" encoding="UTF-8"?>
+                 <s:scufl xmlns:s="http://org.embl.ebi.escience/xscufl/0.1alpha" version="0.2" log="0">
+                 <s:workflowdescription lsid="urn:lsid:www.mygrid.org.uk:operation:FXBCXOWFFC0" author="" title="" />
+                 };
+
+  my $oldport = param('portname');
+
+  my $finalcontent = qq{ 
+   <s:link source="$oldport" sink="output" />
+   <s:sink name="output" />
+   };
+
+   my $foot = qq{</s:scufl>};
+
+   print header(-type=>'text/xml'), $head.$scufl.$finalcontent.$foot;
+  
+
+}
+
+
+sub getSCUFLButton {
+
+	my ($scufl, $portname) = @_;
+
+	print      "<center>",
+			start_form(-action => url(-full)),
+                   hidden("scufl", $scufl),
+                   hidden("portname", $portname),
+                   hidden("getscufl", "true"),
+                   submit("Retrieve Current SCUFL Workflow"),
+                   end_form, "</center>";
+
+
+}
+
+sub generateUniqueServiceID {
+	my ($null) = @_;
+	my $id = param('sid');
+
+	++$id;	
+	return $id;
+
+}
 
 
 #=================================================
@@ -758,3 +948,7 @@ sub INITIALIZE {
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
 exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
+
+
+
+

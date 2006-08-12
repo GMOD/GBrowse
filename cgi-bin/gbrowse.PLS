@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.160 2006-07-14 12:38:52 lstein Exp $
+# $Id: gbrowse.PLS,v 1.161 2006-08-12 21:08:52 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -832,7 +832,7 @@ sub adjust_settings {
     $settings->{h_region} = [];
     foreach (@regions) {
       last if $_ eq '_clear_';
-      $_ = "$settings->{ref}:$_" if /^\d+/; # add reference if not there
+      $_ = "$settings->{ref}:$_" unless /^[^:]+:-?\d/; # add reference if not there
       push @{$settings->{h_region}},$_;
     }
   }

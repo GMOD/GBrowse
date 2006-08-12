@@ -119,7 +119,7 @@ sub feature_file {
     # set up proxy
     $das->proxy($http_proxy) if $http_proxy && $http_proxy ne 'none';
 
-    my $segment = $das->segment($segment->abs_ref,$segment->abs_start,$segment->abs_stop);
+    my $segment = $das->segment($segment->abs_ref,$segment->abs_start,$segment->abs_end);
     # the next step gives the current segment the same name as the DAS source
     # and ensures that the DAS source appears in the list of external sources in the UI
     $segment->name($source);

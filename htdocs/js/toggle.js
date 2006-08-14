@@ -6,7 +6,7 @@ function turnOff (element) {
 }
 
 function setVisState (element_name,is_visible) {
-  xSetCookie("div_visible_" + element_name,is_visible);
+  xSetCookie("div_visible_" + element_name,is_visible,null,location.pathname);
 }
 
 function visibility (element_name,is_visible) {

@@ -55,6 +55,9 @@
   [% ELSE %]
     <div id="target4">
     [% PROCESS "overviewpanel.tt2" %]
+    [% IF region_size %]
+      [% PROCESS "regionviewpanel.tt2" %]
+    [% END %]
     [% PROCESS "detailpanel.tt2"   %]
     </div>
   [% END %]
@@ -85,14 +88,11 @@
 
   [%- htmlfrag6 -%]
 
-  [%- PROCESS "script_input.tt2" -%]
 </form>
 
 <form method="POST" action="[% action %]" name="externalform" enctype="multipart/form-data" ><p/>
   <!-- upload table -->
   [% PROCESS "uploadtable.tt2" %]
-
-  <p/>
 
   <!-- external table -->
   [% #FIXME PROCESS "externaltable.tt2" %]

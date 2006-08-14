@@ -225,6 +225,7 @@ WriteMakefile(
 				 'bin/register_moby_services.PLS' => 'bin/register_moby_services.pl',
 				 'install_util/gbrowse_ppm_install.PLS' => 'install_util/gbrowse_ppm_install.pl',
 				 'cgi-bin/gbrowse.PLS'  => 'cgi-bin/gbrowse',
+				 'cgi-bin/gbrowse_not.PLS'  => 'cgi-bin/gbrowse_not',
 				 'cgi-bin/gbrowse_img.PLS'  => 'cgi-bin/gbrowse_img',
 				 'cgi-bin/gbrowse_karyotype.PLS'  => 'cgi-bin/gbrowse_karyotype',
 				 'cgi-bin/gbrowse_details.PLS'  => 'cgi-bin/gbrowse_details',

@@ -1,26 +1,28 @@
 [%- PROCESS 'start_section.tt2' name='tracks_panel' title='tracks' -%]
 
   <!-- Loop through each category -->
- <div class="searchbody" id="target3" style="width: 100%;">
- <div style="padding-left:1em">
+ <div class="searchbody" id="target3" style="width: 100%; padding-left: 1em">
   [% SET idnum = '00000' %]
   [% FOREACH category = track_categories -%]
     [% SET id = 'c' _ idnum %]
     [% NEXT IF !track_groups.$category %]
-    [% USE String(category) %]
-    [% SET lc_category = String.lower %]
 
-    [%- PROCESS 'start_section.tt2' name=category title=category -%]
-
+    [% buttons = BLOCK %]
     &nbsp;<i class="nojs">
-      <input type="checkbox" name="[% id %]_a" value="on" onclick="gbCheck(this,1)" id="[% id %]_a" />
-      All on 
-      <input type="checkbox" name="[% id %]_n" value="on" onclick="gbCheck(this,0)" id="[% id %]_n" />
-      All off
+      <label>
+        <input type="checkbox" name="[% id %]_a" value="on" onclick="gbCheck(this,1)" id="[% id %]_a" />
+        [% config.tr('all_on') %]
+      </label>
+      <label>
+        <input type="checkbox" name="[% id %]_n" value="on" onclick="gbCheck(this,0)" id="[% id %]_n" />
+        [% config.tr('all_off') %]
+      </label>
     </i>
-    <br />
+    [% END %]
+
+   [%- INCLUDE 'start_section.tt2' name=category title=category inline_content=buttons -%]
+
     <span id="[% id %]">
-      <div style="padding-left:1em">
       <table border="0">
         <tr class="searchtitle">
         [%- i = 0 -%]
@@ -35,12 +37,9 @@
         [%- END -%]
         </tr>
       </table>
-    </div>
+     </span>
     [%- PROCESS 'end_section.tt2' -%]
-    </span>
     [% SET idnum = idnum + 1 %]
   [%- END -%]
  </div>
 [%- PROCESS 'end_section.tt2' -%]
-<br/>
-

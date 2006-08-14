@@ -43,6 +43,9 @@
     <td><b>[% config.tr('show_grid') %]</b><input type="checkbox" name="grid" checked="[% show_grid %]" />
     </td>
     </tr>
+    <tr>
+    <td colspan="3"><b>[% config.tr('region_size') %]</b><input type="text" name="region_size" value="[% region_size %]" /></td>
+    </tr>
     <!-- BUTTONS -->
     <tr>
     <td align="right" colspan="3">

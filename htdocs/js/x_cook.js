@@ -5,9 +5,10 @@
 
 function xSetCookie(name, value, expire, path)
 {
-  document.cookie = name + "=" + escape(value) +
+  var cook = name + "=" + escape(value) +
                     ((!expire) ? "" : ("; expires=" + expire.toGMTString())) +
                     "; path=" + ((!path) ? "/" : path);
+  document.cookie = cook;
 }
 
 function xGetCookie(name)

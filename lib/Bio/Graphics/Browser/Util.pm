@@ -430,14 +430,14 @@ END
 sub redirect_legacy_url {
   my $source      = shift;
   my @more_args   = @_;
-  
+
   if ($source && path_info() ne "/$source/") {
 
     my $q = new CGI '';
     if (request_method() eq 'GET') {
       foreach (param()) {
 	next if $_ eq 'source';
-	$q->param($_=>param($_)) if param($_);
+	$q->param($_=>param($_)) if defined param($_);
       }
     }
 

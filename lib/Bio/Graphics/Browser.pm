@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.26 2006-07-06 21:51:16 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.27 2006-08-15 17:17:42 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1783,11 +1783,12 @@ sub do_description {
 # (this used to be in gbrowse executable itself)
 sub name2segments {
   my $self = shift;
-  my ($name,$db,$toomany,$segments_have_priority,$dont_merge) = @_;
+  my ($literal_name,$db,$toomany,$segments_have_priority,$dont_merge) = @_;
   $toomany ||= TOO_MANY_SEGMENTS;
 
   my $max_segment   = $self->get_max_segment;
 
+  my $name = $literal_name;
   my (@segments,$class,$start,$stop);
   if ( ($name !~ /\.\./ and $name =~ /([\w._\/-]+):(-?[-e\d.]+),(-?[-e\d.]+)$/) or
       $name =~ /([\w._\/-]+):(-?[-e\d,.]+?)(?:-|\.\.)(-?[-e\d,.]+)$/) {
@@ -1807,14 +1808,23 @@ sub name2segments {
   $start *= $divisor if defined $start;
   $stop  *= $divisor if defined $stop;
 
- SEARCHING: {
-    # non-heuristic fetch
-    @segments  = $self->_feature_get($db,$name,$class,$start,$stop,$segments_have_priority,$dont_merge);
+  # automatic classes to try
+  my @classes = $class ? ($class) : (split /\s+/,$self->setting('automatic classes')||'');
+  my $refclass = $self->setting('reference class') || 'Sequence';
+
+ SEARCHING:
+  for my $n ([$name,$class,$start,$stop],[$literal_name,$refclass,undef,undef]) {
+
+    my ($name_to_try,$class_to_try,$start_to_try,$stop_to_try) = @$n;
+
+    # first try the non-heuristic search
+    @segments  = $self->_feature_get($db,$name_to_try,$class_to_try,$start_to_try,$stop_to_try,
+				     $segments_have_priority,$dont_merge);
     last SEARCHING if @segments;
 
     # heuristic fetch. Try various abbreviations and wildcards
-    my @sloppy_names = $name;
-    if ($name =~ /^([\dIVXA-F]+)$/) {
+    my @sloppy_names = $name_to_try;
+    if ($name_to_try =~ /^([\dIVXA-F]+)$/) {
       my $id = $1;
       foreach (qw(CHROMOSOME_ Chr chr)) {
 	my $n = "${_}${id}";
@@ -1823,21 +1833,18 @@ sub name2segments {
     }
 
     # try to remove the chr CHROMOSOME_I
-    if ($name =~ /^(chromosome_?|chr)/i) {
-      (my $chr = $name) =~ s/^(chromosome_?|chr)//i;
+    if ($name_to_try =~ /^(chromosome_?|chr)/i) {
+      (my $chr = $name_to_try) =~ s/^(chromosome_?|chr)//i;
       push @sloppy_names,$chr;
     }
 
     # try the wildcard  version, but only if the name is of significant length
     # IMPORTANT CHANGE: we used to put stars at the beginning and end, but this killed performance!
-    push @sloppy_names,"$name*" if length $name > 3 and $name !~ /\*$/;
-
-    # automatic classes to try
-    my @classes = $class ? ($class) : (split /\s+/,$self->setting('automatic classes')||'');
+    push @sloppy_names,"$name_to_try*" if length $name_to_try > 3 and $name_to_try !~ /\*$/;
 
     for my $n (@sloppy_names) {
       for my $c (@classes) {
-	@segments = $self->_feature_get($db,$n,$c,$start,$stop,$segments_have_priority,$dont_merge);
+	@segments = $self->_feature_get($db,$n,$c,$start_to_try,$stop_to_try,$segments_have_priority,$dont_merge);
 	last SEARCHING if @segments;
       }
     }
@@ -1857,8 +1864,10 @@ sub _feature_get {
   push @argv,(-class => $class) if defined $class;
   push @argv,(-start => $start) if defined $start;
   push @argv,(-end   => $stop)  if defined $stop;
-  push @argv,(-absolute=>1)     if $class eq $refclass;
+  # I'm not sure why this is here and it was causing bugs with relative addressing (e.g. f08:-500..1000)
+  #  push @argv,(-absolute=>1)     if $class eq $refclass;
   warn "\@argv = @argv" if DEBUG;
+
   my @segments;
   if ($segments_have_priority) {
     @segments  = grep {$_->length} $db->segment(@argv);

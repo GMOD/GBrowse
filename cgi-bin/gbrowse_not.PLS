@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_not.PLS,v 1.2 2006-08-15 03:25:32 lstein Exp $
+# $Id: gbrowse_not.PLS,v 1.3 2006-08-15 17:18:05 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -551,7 +551,7 @@ sub detail_panel {
   my ($img,$map);
   my $cell = '';
 
-  if ($segment->length <= $MAX_SEGMENT) {
+  if ($segment && $segment->length <= $MAX_SEGMENT) {
 
     $CONFIG->width($page_settings->{width});
     my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} && !/:(overview|region)$/ }

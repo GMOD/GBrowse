@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.163 2006-08-15 03:25:32 lstein Exp $
+# $Id: gbrowse.PLS,v 1.164 2006-08-15 17:18:05 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -596,7 +596,7 @@ sub detail_panel {
   my ($img,$map);
   my $cell = '';
 
-  if ($segment->length <= $MAX_SEGMENT) {
+  if ($segment && $segment->length <= $MAX_SEGMENT) {
     # this is invoked to force small segments to be larger than the minimum size that can
     # easily be displayed.  Avoids zooming into 1 bp features like SNPs.
     #resize(\$segment);

@@ -44,7 +44,13 @@
     </td>
     </tr>
     <tr>
-    <td colspan="3"><b>[% config.tr('region_size') %]</b><input type="text" name="region_size" value="[% region_size %]" /></td>
+    <td colspan="3"><b>[% config.tr('region_size') %]</b>
+    <select name="region_size">
+    [% FOREACH size=regionsizes %]
+      <option value="[% size %]" [% IF (size == page_settings.region_size) ; 'selected="selected"' ; END %]>[% size %]</option>
+    [% END %]
+    </select>
+    </td>
     </tr>
     <!-- BUTTONS -->
     <tr>

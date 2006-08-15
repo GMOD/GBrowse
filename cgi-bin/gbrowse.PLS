@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.162 2006-08-14 16:32:28 lstein Exp $
+# $Id: gbrowse.PLS,v 1.163 2006-08-15 03:25:32 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -96,6 +96,7 @@ use constant URL_FETCH_TIMEOUT    => 5;  # five seconds max!
 use constant URL_FETCH_MAX_SIZE   => 1_000_000;  # don't accept any files larger than 1 Meg
 use constant MAX_KEYWORD_RESULTS  => 1_000;     # max number of results from keyword search
 use constant DEFAULT_RANGES       => q(100 500 1000 5000 10000 25000 100000 200000 400000);
+use constant DEFAULT_REGION_SIZES   => q(1000 5000 10000 20000);
 use constant DEFAULT_FINE_ZOOM    => '10%';
 use constant GBROWSE_HELP         => '/gbrowse';
 use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceDumper';
@@ -484,6 +485,9 @@ sub main_display {
     my $plugin_labels = $PLUGINS->menu_labels();
     my @plugins = sort {$plugin_labels->{$a} cmp $plugin_labels->{$b}} keys %$plugin_labels;
 
+    my @region_sizes = split /\s+/,$CONFIG->setting('region sizes') || DEFAULT_REGION_SIZES;
+    unshift @region_sizes,0;
+
     my $param = {
         config        => $CONFIG,
         page_settings => $page_settings,
@@ -522,6 +526,7 @@ sub main_display {
         feature_highlights => $feature_highlights,
         region_highlights  => $region_highlights,
         region_size        => $page_settings->{region_size},
+        regionsizes        => \@region_sizes,
         show_grid          => $page_settings->{grid},
         track_groups       => \%track_groups,
         segment2link       => \&segment2link,

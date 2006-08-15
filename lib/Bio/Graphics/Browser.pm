@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.189 2006-07-13 21:03:00 lstein Exp $
+# $Id: Browser.pm,v 1.190 2006-08-15 03:25:32 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -66,7 +66,6 @@ use Text::Shellwords;
 use Template;
 use Bio::Graphics::Browser::I18n;
 use Bio::Graphics::Browser::Util 'modperl_request';
-use Data::Dumper;
 
 require Exporter;
 
@@ -166,7 +165,9 @@ sub read_configuration {
     $default_source  ||= $basename if $config->authorized('general');
   }
 
+  $self->{source} = $default_source;
   $self->{width} = DEFAULT_WIDTH;
+  $self->{overview_ratio} = 0.8;
   $self->{dir}   = $conf_dir;
   1;
 }
@@ -1175,7 +1176,7 @@ sub image_and_map {
 	      -image_class  => $image_class,
 	      -postgrid     => $postgrid,
 	      -background   => $background,
-	      -truecolor    => $conf->setting(general=>'truecolor'),
+	      -truecolor    => $conf->setting(general=>'truecolor') || 0,
 	     );
 
   push @argv, -flip => 1 if $flip;
@@ -1907,6 +1908,7 @@ sub name2segments {
       }
     }
   }
+
   @segments;
 }
 
@@ -1921,7 +1923,10 @@ sub _feature_get {
   push @argv,(-class => $class) if defined $class;
   push @argv,(-start => $start) if defined $start;
   push @argv,(-end   => $stop)  if defined $stop;
-  push @argv,(-absolute=>1)     if $class eq $refclass;
+
+  # I'm not sure why this is here and it was causing bugs with relative addressing (e.g. f08:-500..1000)
+  #  push @argv,(-absolute=>1)     if $class eq $refclass;
+
   warn "\@argv = @argv" if DEBUG;
   my @segments;
   if ($segments_have_priority) {
@@ -1929,9 +1934,9 @@ sub _feature_get {
     @segments  = grep {$_->length} $db->get_feature_by_name(@argv)   if !@segments;
     @segments  = grep {$_->length} $db->get_features_by_alias(@argv) if !@segments && $db->can('get_features_by_alias');
   } else {
-    @segments  = grep {$_->length} $db->get_feature_by_name(@argv) if !defined($start) && !defined($stop);
+    @segments  = grep {$_->length} $db->get_feature_by_name(@argv)   if !defined($start) && !defined($stop);
     @segments  = grep {$_->length} $db->get_features_by_alias(@argv) if !@segments && !defined($start) && !defined($stop) && $db->can('get_features_by_alias');
-    @segments  = grep {$_->length} $db->segment(@argv)             if !@segments && $name !~ /[*?]/;
+    @segments  = grep {$_->length} $db->segment(@argv)               if !@segments && $name !~ /[*?]/;
   }
   return unless @segments;
 
@@ -2224,7 +2229,6 @@ sub template {
                                          ABSOLUTE     => 1,
                                          EVAL_PERL    => 1,
                                         }) || die("couldn't create template: $!");
-                                                                                                                             
   }
   return $self->{'template'};
 }

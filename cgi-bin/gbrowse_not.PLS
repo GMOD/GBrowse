@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_not.PLS,v 1.1 2006-08-14 16:32:28 lstein Exp $
+# $Id: gbrowse_not.PLS,v 1.2 2006-08-15 03:25:32 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -97,7 +97,8 @@ use constant ANNOTATION_EDIT_COLS => 100;
 use constant URL_FETCH_TIMEOUT    => 5;  # five seconds max!
 use constant URL_FETCH_MAX_SIZE   => 1_000_000;  # don't accept any files larger than 1 Meg
 use constant MAX_KEYWORD_RESULTS  => 1_000;     # max number of results from keyword search
-use constant DEFAULT_RANGES       => q(100 500 1000 5000 10000 25000 100000 200000 400000);
+use constant DEFAULT_RANGES         => q(100 500 1000 5000 10000 25000 100000 200000 500000 1000000);
+use constant DEFAULT_REGION_SIZES   => q(1000 5000 10000 20000);
 use constant DEFAULT_FINE_ZOOM    => '10%';
 use constant GBROWSE_HELP         => '/gbrowse';
 use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceDumper';
@@ -819,7 +820,7 @@ sub adjust_settings {
   }
 
   if ($CONFIG->setting('region segment')) {
-    $settings->{region_size} = param('region_size') if defined param('region_size');
+    $settings->{region_size} = param('region_size')+0             if defined param('region_size');
     $settings->{region_size} = $CONFIG->setting('region segment') unless defined $settings->{region_size};
   } else {
     delete $settings->{region_size};
@@ -1235,6 +1236,9 @@ sub settings_table {
   my $region_highlights  = $settings->{h_region} ?
     join ' ',@{$settings->{h_region}} : '';
 
+  my @region_sizes = split /\s+/,$CONFIG->setting('region sizes') || DEFAULT_REGION_SIZES;
+  unshift @region_sizes,0;
+
   my $content =
     table({-class=>'searchbody',-border=>0,-width=>'100%'},
 	  TR(
@@ -1246,15 +1250,6 @@ sub settings_table {
 			     -override=>1,
 			   ),
 	       ),
-	     $CONFIG->setting('region segment') ?
-	     (
-	      td(b($CONFIG->tr('Region_size')),br,
-		 textfield(-name=>'region_size',
-			   -default=>$settings->{region_size},
-			   -override=>1,
-			   -size=>20),
-		)
-	     ) : (),
 	     td(
 		b($CONFIG->tr('KEY_POSITION')),br,
 		radio_group( -name=>'ks',
@@ -1313,6 +1308,18 @@ sub settings_table {
 		 )
 	       ),
 	    ),
+	  $CONFIG->setting('region segment') ?
+	     (
+	      TR(
+		 td({-colspan=>3},
+		    b($CONFIG->tr('Region_size')),
+		    popup_menu(-name=>'region_size',
+			       -default =>$settings->{region_size},
+			       -override=> 1,
+			       -values  => \@region_sizes),
+		   )
+		)
+	     ) : (),
 	  TR(td({-colspan=>4,
 		 -align=>'right'},
 		b(submit(-name => $CONFIG->tr('Update')))))

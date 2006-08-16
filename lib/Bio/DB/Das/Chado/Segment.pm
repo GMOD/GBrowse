@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.9 2006-06-16 19:52:40 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.10 2006-08-16 22:09:35 scottcain Exp $
 
 =head1 NAME
 
@@ -109,7 +109,9 @@ sub new {
 
     my $self = shift;
 
-    my ( $name, $factory, $base_start, $stop, $db_id ) = @_;
+    my ( $name, $factory, $base_start, $stop, $db_id, $target ) = @_;
+
+    $target ||=0;
 
     warn "$name, $factory\n"                      if DEBUG;
     warn "base_start = $base_start, stop = $stop\n" if DEBUG;
@@ -126,9 +128,11 @@ sub new {
 
     warn "quoted name:$quoted_name\n" if DEBUG;
 
+#need to change this query to allow for Target queries
+
     my $srcfeature_query = $factory->dbh->prepare( "
        select srcfeature_id from featureloc
-       where feature_id = ?
+       where feature_id = ? and rank = $target
          " );
 
     my $landmark_is_src_query = $factory->dbh->prepare( "

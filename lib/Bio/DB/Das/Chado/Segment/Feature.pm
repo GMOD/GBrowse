@@ -706,13 +706,43 @@ sub score {
 =cut
 
 sub target {
-  my ($self) = @_;
+  my ($self) = shift;
 
-  #my $group = $self->group or return;
-  #return unless $group->can('start');
-  #$group;
+  my $self_id = $self->feature_id;
 
-  return;
+#so, we need to construct a segment that corresponds to to the 
+#target sequence.  So, what do I need from chado:
+#
+#  - the feature_id of the target (from featureloc.srcfeature_id
+#      where featureloc.rank > 0
+#  - featureloc.fmin and fmax for the targeth
+#  - feature.name
+
+  my $query = "SELECT fl.srcfeature_id,fl.fmin,fl.fmax,f.name,f.uniquename
+               FROM featureloc fl JOIN feature f 
+                    ON (fl.feature_id = ? AND fl.srcfeature_id=f.feature_id)
+               WHERE fl.rank > 0";
+
+  my $sth = $self->factory->dbh->prepare($query);
+  $sth->execute($self_id);
+
+# While it is theoretically possible for there to be more than 
+# on target per feature, Bio::Graphics::Browser doesn't support it
+
+  my $hashref = $sth->fetchrow_hashref;
+
+  if ($$hashref{'name'}) {
+      my $segment = Bio::DB::Das::Chado::Segment->new(
+                $$hashref{'name'},
+                $self->factory,
+                $$hashref{'fmin'}+1,
+                $$hashref{'fmax'},
+                $$hashref{'uniquename'},
+                1,  #new arg to tell Segment this is a Target
+           );
+      return $segment;
+  }
+  return; #didn't get anything
 }
 
 #####################################################################

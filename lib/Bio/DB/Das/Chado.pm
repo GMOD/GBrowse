@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.5 2006-06-13 15:00:46 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.6 2006-08-17 17:45:40 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -613,6 +613,11 @@ sub get_feature_by_name {
     $name = $self->_search_name_prep($name);
     warn "name after protecting _ and % in the string:$name\n" if DEBUG;
   }
+
+# what the hell happened to the lower casing!!!
+# left over bug from making the adaptor case insensitive?
+
+  $name = lc($name);
 
   $sth->execute($name) or $self->throw("getting the feature_ids failed");
 

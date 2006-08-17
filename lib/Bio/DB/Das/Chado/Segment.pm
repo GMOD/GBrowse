@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.10 2006-08-16 22:09:35 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.11 2006-08-17 18:49:01 scottcain Exp $
 
 =head1 NAME
 
@@ -112,6 +112,7 @@ sub new {
     my ( $name, $factory, $base_start, $stop, $db_id, $target ) = @_;
 
     $target ||=0;
+    my $strand;
 
     warn "$name, $factory\n"                      if DEBUG;
     warn "base_start = $base_start, stop = $stop\n" if DEBUG;
@@ -142,7 +143,7 @@ sub new {
          " );
 
     my $feature_query = $factory->dbh->prepare( "
-       select f.name,f.feature_id,f.seqlen,f.type_id,fl.fmin,fl.fmax
+       select f.name,f.feature_id,f.seqlen,f.type_id,fl.fmin,fl.fmax,fl.strand
        from feature f, featureloc fl
        where fl.feature_id = ? and
              ? = f.feature_id
@@ -188,6 +189,7 @@ sub new {
             $base_start ='';
             $stop       ='';
             $db_id      ='';
+            $strand     ='';
         }
 
         if (@segments < 2) {
@@ -233,6 +235,7 @@ sub new {
                 $interbase_start = $$hash_ref{'fmin'};
                 $base_start      = $interbase_start + 1;
                 $stop            = $$hash_ref{'fmax'};
+                $strand          = $$hash_ref{'strand'};
             }
 
             warn "base_start:$base_start, stop:$stop, length:$length" if DEBUG;
@@ -262,6 +265,7 @@ sub new {
                 srcfeature_id => $srcfeature_id,
                 class         => $type,
                 name          => $name,
+                strand        => $strand,
               },
               ref $self || $self;
         }
@@ -271,7 +275,8 @@ sub new {
                           -feature_id => $landmark_feature_id,
                           -factory    => $factory,
                           -start      => $base_start,
-                          -stop       => $stop, );
+                          -stop       => $stop,
+                          -strand     => $strand, );
             return $feat;
         }
     }
@@ -296,6 +301,29 @@ sub name {
   my $self = shift;
   return $self->{'name'}
 }
+
+=head2 strand()
+
+  Title   : strand
+  Usage   : $obj->strand()
+  Function: Returns the strand of the feature.  Unlike the other
+            methods, the strand cannot be changed once the object is
+            created (due to coordinate considerations).
+            corresponds to featureloc.strand
+  Returns : -1, 0, or 1
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub strand { 
+  my $self = shift;
+  
+  return $self->{'strand'} = shift if @_;
+  return $self->{'strand'} || 0;
+}
+
+*abs_strand = \&strand;
 
 =head2 _search_by_name
 
@@ -1186,7 +1214,7 @@ sub dna {
   if ($has_start && $has_stop && $base_start > $stop) {
     $reversed++;
     ($base_start,$stop) = ($stop,$base_start);
-  } elsif ($strand < 0 ) {
+  } elsif ($strand && $strand < 0 ) {
     $reversed++;
   }
 

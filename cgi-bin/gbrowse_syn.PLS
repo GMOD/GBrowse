@@ -1,4 +1,5 @@
-#!perl                                                                                                                                                                
+#!perl
+
 use Config;
 use File::Basename qw(&basename &dirname);
 use File::Spec;
@@ -41,8 +42,7 @@ $startperl -w
 # to the directory in which the configuration files are stored.
 #
     \$CONF_DIR  = '$OPTIONS{CONF}/gbrowse.conf';
-#
-###################################################################
+####################################################################
 \$VERSION   = $OPTIONS{VERSION};
 
 !GROK!THIS!
@@ -52,112 +52,162 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
+
 use strict;
 use CGI qw(:standard Map Area);
 use CGI::Carp 'fatalsToBrowser';
+use CGI::Toggle;
+use CGI::Pretty 'html3';
+use lib '/home/smckay/lib';
 use Bio::Graphics;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;
+use Bio::Graphics::Browser::Render;
+use Bio::Graphics::Browser::PageSettings;
 use Bio::DB::GFF::SyntenyIO;
 use Text::Shellwords;
 use List::Util qw/min max sum/;
+use Digest::MD5 'md5_hex';
 
-use constant IMAGEWIDTH     => 800;
-use constant INTERIMAGE_PAD => 3;
-use constant VERTICAL_PAD   => 40;
-use constant IMAGE_PAD      => 4;
-use constant MAX_REGION     => 200_001;
-use constant BUTTONSDIR     => '/gbrowse/images/buttons/';
-use constant FINEZOOM       => '20%';
-use constant ALIGN_HEIGHT   => 6;
-use constant MAX_GAP        => 0.5;
-
-use constant DEBUG => 1;
 
 use Data::Dumper;
 
-use vars qw($CONF_DIR $CONF $SCONF $VERSION $MAP);
+use constant OVERVIEW_RATIO     => 0.6;
+use constant DEBUG_EXTERNAL     => 0;
+use constant DEFAULT_FINE_ZOOM  => '10%';
+use constant IMAGEWIDTH         => 800;
+use constant INTERIMAGE_PAD     => 5;
+use constant VERTICAL_PAD       => 40;
+use constant IMAGE_PAD          => 10;
+use constant MIN_SEG_SIZE       => 10_000;
+use constant BUTTONSDIR         => '/gbrowse/images/buttons/';
+use constant FINEZOOM           => '20%';
+use constant ALIGN_HEIGHT       => 6;
+use constant MAX_GAP            => 0.3;
+use constant MAX_SEGMENT        => 200_001;
+
+use constant DEBUG => 1;
+
+use vars qw($CONF_DIR $CONF $CONFIG $VERSION $MAP $DEFAULT_SEGMENT $MAX_SEGMENT $HEADER);
+
+
+$HEADER = 0;
 
 # initialization
 $CONF_DIR  = conf_dir($CONF_DIR);    # conf_dir() is exported from Util.pm
 
 # open_config() is exported from Util.pm
-$CONF   = open_config($CONF_DIR,'conf');
-$SCONF  = Bio::Graphics::Browser->new;
-$SCONF->read_configuration($CONF_DIR,'syn');
+$CONF    = open_config($CONF_DIR,'conf');
+$CONFIG  = Bio::Graphics::Browser::Render->new;
+$CONFIG->read_configuration($CONF_DIR,'syn');
 
-my ($source,$old_source) = get_source($SCONF);
-redirect_legacy_url($source);
-$SCONF->source($source);
+my ($source, $old_source) = $CONFIG->get_source();
+my ($page_settings, $session) = $CONFIG->page_settings();
 
 $MAP = db_map();
 
-print header(-cookie=>[make_cookie()],);
+#print pre(Dumper $page_settings);
+my $is_search = $CONFIG->is_search;
+#my $features  = $is_search ? $CONFIG->get_features($page_settings) : [];
 
-print start_html($SCONF->setting('description'));
-print h1($SCONF->setting('description'));
-mainform();
-draw_image();
-print hr();
-print end_html();
+#my $is_search = is_search($page_settings);
+my $features  = $is_search ? $CONFIG->get_features($page_settings) : [];
+
+if (!@$features && $page_settings->{name} && $is_search) {
+  @$features = do_keyword_search($page_settings->{name});
+}
+
+my $segments = $CONFIG->features2segments($features);
+my @segments = @$segments;
+
+#if (!@$features && $page_settings->{name} && $is_search) {
+#  @$features = do_keyword_search($page_settings->{name});
+#}
+
+#my $segments = features2segments($features);
+#my @segments = @$segments;
+
+my $segment;
+if ($is_search) {
+  if (my $search_src  = param('search_src') )  {
+    $CONFIG->setting('general', search_src => $search_src);
+    my $landmark = param('name');
+    $segment    = landmark2segment($search_src,$landmark) or fatal_error("no segment");
+    $CONFIG->current_segment($segment);
+  }
+}
+
+my %cookie = (-cookie => $CONFIG->make_cookie('gbrowse_syn_src' => $CONFIG->setting('gbrowse_syn_src')));
+my $banner = $CONFIG->setting('header');
+if (ref $banner) {
+  $banner = &$banner;
+}
+
+my $style  = $CONFIG->setting('stylesheet');
+
+print_header( %cookie, -style => $CONFIG->setting('stylesheet') );
+print start_html( -title => $CONFIG->setting('description'),
+		  -style => $style );
+print $banner if $banner;
+
+
+print h1("Synteny Browser for ".$CONFIG->setting('description'));
+search_form($segment);
+print $CONFIG->overview_panel($page_settings);
+
+draw_image($segment) if $segment;
+
+print $CONFIG->footer || end_html();
 
 exit 0;
 
-sub get_source {
-  my $new_source = param('source') || param('src') || path_info();
-  $new_source    =~ s!^/+!!;  # get rid of leading & trailing / from path_info()
-  $new_source    =~ s!/+$!!;
-  my $old_source = cookie('sbrowse_source') unless $new_source && param('.cgifields');
-  my $source   = $new_source || $old_source;
-  $source    ||= $SCONF->source;  # the default, whatever it is
-  return ($source,$old_source);
-}
-
-sub make_cookie {
-  my $cookie = cookie(-name  => 'gbrowse_syn_src',
-		      -value => $SCONF->source);
-  return $cookie;
-}
-
 sub source_popup {
-  my @sources = $SCONF->sources;
+  my @sources = $CONFIG->sources;
   if (@sources > 1) {
     return popup_menu(-name=>'source',
 		      -values=>\@sources,
-		      -labels => { map {$_ => $SCONF->description($_)} $SCONF->sources},
-		      -default => $SCONF->source,
+		      -labels => { map {$_ => $CONFIG->description($_)} $CONFIG->sources},
+		      -default => $CONFIG->source,
 		      -override=>1,
 		      -onChange => 'document.mainform.submit()'
 		     );
   } else {
-    return $SCONF->description($SCONF->source);
+    return $CONFIG->description($CONFIG->source);
   }
 }
 
-sub search {
-  my %labels = map {$_=>$MAP->{$_}{desc}} keys %$MAP;
-  return p('Search',
-	   popup_menu(-name=>'search_src',
-		      -values=>[sort {$MAP->{$a}{desc} cmp $MAP->{$b}{desc}} keys %labels],
-		      -labels=>\%labels,
-		     ),
-	   'with',
-	   textfield(-name=>'name'),
-	  );
+sub landmark_search {
+  my $settings = shift;
+  return $CONFIG->setting('no search')
+      ? '' : b($CONFIG->tr('Landmark')).':'.br.
+      textfield(-name=>'name',-size=>25,-default=>$settings->{name});
 }
 
-sub mainform {
+sub species_search {
+  my %labels = map {$_=>$MAP->{$_}{desc}} keys %$MAP;
+  return b($CONFIG->tr('Species')).':'.br.
+      popup_menu(-name=>'search_src',
+		 -values=>[sort {$MAP->{$a}{desc} cmp $MAP->{$b}{desc}} keys %labels],
+		 -labels=>\%labels,
+		 -default=>$CONFIG->setting('search_src')
+		 );
+}
+
+sub species_chooser {
+  
+
+}
+
+sub search_form {
+  my $segment = shift;
   my $sources = shift;
-  print
-    start_form(-name=>'mainform',-method => 'post'),
-    search(),
-    source_popup(),
-    end_form();
+  print start_form(-name=>'mainform',-method => 'post');
+  navigation_table($segment,$page_settings);
 }
 
 sub db_map {
   my %map;
-  my @map = shellwords($SCONF->setting('source_map'));
+  my @map = shellwords($CONFIG->setting('source_map'));
   while (my($symbol,$db,$desc) = splice(@map,0,3)) {
     $map{$symbol}{db}   = $db;
     $map{$symbol}{desc} = $desc;
@@ -166,29 +216,32 @@ sub db_map {
 }
 
 sub draw_image {
-  my $src = param('search_src');
-  my $landmark = param('name');
-  return unless defined $src && defined $landmark;
+  my $segment = $CONFIG->current_segment or error("no segment");
+  my $src     = $CONFIG->setting('search_src');
+  my $max_segment = MAX_SEGMENT;
 
-  my $segment = landmark2segment($src,$landmark) or return;
-  if ( $segment->length > MAX_REGION) {
-    print h2("Sorry: the size of region $segment exceeds the maximum (".MAX_REGION." kbp)");
+  if ( $segment->length > $max_segment) {
+    my $units = $CONFIG->unit_label($max_segment);
+    print h2("Sorry: the size of region $segment exceeds the maximum ($max_segment $units)");
     exit;
   }
 
   my $max_gap = $segment->length * MAX_GAP;
 
-  my $io = Bio::DB::GFF::SyntenyIO->new($SCONF->setting('join')) or die;
+  my $io = Bio::DB::GFF::SyntenyIO->new($CONFIG->setting('join')) or die;
+
   my @hits = $io->get_synteny_by_range(-src   => $src,
 				       -ref   => $segment->abs_ref,
 				       -start => $segment->abs_start,
 				       -end   => $segment->abs_end);
   
-  return unless @hits;
+  unless (@hits) {
+  #  die("No hits were found for segment $segment");
+  }
+
 
   # hits coordinates should be min and max of part coordinates
   adjust_container(\@hits);
-
 
   # relate hits into "spans" sorted by target contig/chromosomes
   # %span = ( target_database,target_contig => { target, contig, start, end } } )
@@ -212,16 +265,21 @@ sub draw_image {
 
     $span{$key}{src}    ||= $src;
     $span{$key}{contig} ||= $contig;
-
+    $span{$key}{tstart} ||= $h->start;
+    $span{$key}{tend}   ||= $h->end;
+    ($span{$key}{tstart}) = sort {$a<=>$b} ($h->start,$span{$key}{tstart});
+    ($span{$key}{tend})   = sort {$b<=>$a} ($h->end,$span{$key}{tend});
     $hit2span{$h} = $key;
   }
 
-
   # get rid of tiny spans
-  my $fraction = $segment->length/100;
+  my $src_fraction = $segment->length/20;
   my @unused_hits;
   for my $key (keys %span) {
-    if (($span{$key}{end} - $span{$key}{start}) < $fraction) {
+
+    my $too_short = ($span{$key}{end} - $span{$key}{start}) < $src_fraction;
+#	|| ($span{$key}{tend} - $span{$key}{tstart}) < $src_fraction;
+    if ($too_short) {
       delete $span{$key};
       push @unused_hits, grep { $hit2span{$_} eq $key } @hits;
       @hits = grep { $hit2span{$_} ne $key } @hits;
@@ -246,19 +304,24 @@ sub draw_image {
 
   my (%hit_positions);
   my $position = 0;
+  my %position; 
+  # on second thought, order by hit size to improve display
+  # actually let's try sorting by species
   
-  # on second though, order by hit size to improve display
   for my $h (sort {($b->end-$b->start)<=>($a->end-$a->start)} @hits) {
+    my $src = $h->src2;
+    $position{$src} ||= $position++;
     my $span_key = $hit2span{$h};
-    $span{$span_key}{position} ||= $position++;
-    $hit_positions{$h} = $span{$span_key}{position};
+    $span{$span_key}{position} ||= $position{$src};
+    $hit_positions{$h} ||= $span{$span_key}{position};
   }
 
   
+
   # we now create feature files for the reference
   my %source_colors;
   for my $key (keys %span) {
-    $source_colors{$span{$key}{src}} ||= $SCONF->setting($MAP->{$span{$key}{src}}{db}=>'color');
+    $source_colors{$span{$key}{src}} ||= $CONFIG->setting($MAP->{$span{$key}{src}}{db}=>'color');
   }
   my $setcolor = sub {
     my $feature = shift;
@@ -266,11 +329,11 @@ sub draw_image {
   };
 
   # Create the middle (reference) panel
-  
-  my ($upper_ff,$lower_ff);
+  my ($upper_ff,$lower_ff,%is_upper);
   for my $h (@hits) {
-    my $is_upper= $hit_positions{$h} % 2;
-    my $ff       = $is_upper ? \$upper_ff : \$lower_ff;
+    my $src = $h->src2;
+    $is_upper{$src} ||= $hit_positions{$h} % 2;
+    my $ff       = $is_upper{$src} ? \$upper_ff : \$lower_ff;
     unless ($$ff) {
       $$ff = Bio::Graphics::FeatureFile->new;
       $$ff->add_type(BLOCK => {bgcolor=>$setcolor,
@@ -283,32 +346,39 @@ sub draw_image {
     add_hit_to_ff($$ff,$h);
   }
 
+
   my $orphan_hit = 0;
   for my $h (@unused_hits) {
-    my $is_upper= ++$orphan_hit % 2;
+    warn "I am an orphan! ".$h->start."..".$h->end."\n" if DEBUG;
+    my $is_upper = ++$orphan_hit % 2;
     my $ff       = $is_upper ? \$upper_ff : \$lower_ff;
     add_hit_to_ff($$ff,$h);
   }
 
-  my($ref_img,$ref_boxes) = segment2image($segment,$src,{
-							 features_top    => $upper_ff,
-							 features_bottom => $lower_ff,
-							 background => 'white',
-						       }
-					 ) or return;
+  my $width = $CONFIG->width || IMAGEWIDTH;
+
+  my ($ref_img,$ref_boxes) = segment2image($segment,
+					   $src,
+					   { width           => $width,
+					     features_top    => $upper_ff,
+					     features_bottom => $lower_ff,
+					     background      => 'white',
+					   }
+					   ) or die("no image");
+  
+
   my $ref_title = $MAP->{$src}{desc} . ' '.format_segment($segment);
 
-
-  # pad all of the spans a bit for context 
+  # pad all of the span coordinates for a bit of regional context 
   for my $key (keys %span) {
     my $width = $span{$key}{end} - $span{$key}{start};
-    $span{$key}{start} -= int $width/10;
-    $span{$key}{end  } += int $width/10;
+    $span{$key}{start} -= int $width/50;
+    $span{$key}{end  } += int $width/50;
   }
 
   # we now create panels and corresponding hit feature files for each of the small
   # panels
-  my $refwidth     = $CONF->width;
+  my $refwidth     = $CONFIG->width - INTERIMAGE_PAD;
   my $panel_count  = keys %span;
   my $panels_above = my @panels_above = grep { $span{$_}{position} % 2 } keys %span;
   my $panels_below = my @panels_below = grep {!($span{$_}{position} % 2) } keys %span;
@@ -322,7 +392,11 @@ sub draw_image {
     my $is_above         = $panel_position % 2;
     my $total_bases      = $is_above ? $bases_above : $bases_below;
     my $panels_here      = $is_above ? $panels_above : $panels_below;
-    my $total_width      = $refwidth - ($panels_here-1)*INTERIMAGE_PAD - ($panels_here-1)*IMAGE_PAD*2;
+    my $total_width      = $refwidth - $panels_here*INTERIMAGE_PAD + 2*INTERIMAGE_PAD;
+    
+    # make it just a bit smaller to be on the safe side...
+#    $total_width        -= 10;
+
     my $src              = $span{$key}{src};
     my $contig           = $span{$key}{contig};
     my $end              = $span{$key}{end};
@@ -334,7 +408,8 @@ sub draw_image {
 
     # width of inset panels scaled by size of target sequence
     my $scale      = $bases/$total_bases;
-    my $width      = $scale * $total_width;
+    my $width      = ($scale * $total_width);
+
 
     my $ff    = Bio::Graphics::FeatureFile->new;
     $ff->add_type(BLOCK => {
@@ -349,10 +424,9 @@ sub draw_image {
 
     my ($img,$boxes)     = segment2image($segment,
 					 $src,
-					 {
-					   width=>$width,
-					   $is_above ? (features_bottom=>$ff) : (features_top=>$ff)
-					     }) or next;
+					 { width => $width,
+					   $is_above ? (features_bottom => $ff) 
+                                                     : (features_top    => $ff) }) or next;
     $span{$key}{image} = $img;
     $span{$key}{boxes} = $boxes;
     $span{$key}{title} = $MAP->{$src}{desc} . ' ' . format_segment($segment);
@@ -367,10 +441,9 @@ sub draw_image {
   $total_height   += VERTICAL_PAD  if $panels_below;
   $total_height   += INTERIMAGE_PAD;
 
-  # total width is width of reference + INTERIMAGE_PAD pixels of padding on each side
-  my $total_width = $ref_img->width + INTERIMAGE_PAD*2;
 
-  my $gd = GD::Image->new($total_width+INTERIMAGE_PAD+1,$total_height+1,1) or return;
+  # create a master image for all panels
+  my $gd = GD::Image->new($ref_img->width+2*INTERIMAGE_PAD,$total_height+1,1) or return;
   $gd->saveAlpha(0);
   $gd->alphaBlending(1);
   my $white       = $gd->colorAllocate(255,255,255);
@@ -379,9 +452,8 @@ sub draw_image {
   $gd->filledRectangle(0,0,$gd->width,$gd->height,$white);
   my $translucent = $gd->colorAllocateAlpha(0,0,255,90);
 
-
   for my $key (keys %span) {
-   my $color            = $SCONF->setting($MAP->{$span{$key}{src}}{db}=>'color');
+    my $color            = $CONFIG->setting($MAP->{$span{$key}{src}}{db}=>'color');
     $span{$key}{tcolor}  = $gd->colorAllocateAlpha(Bio::Graphics::Panel->color_name_to_rgb($color),80);
     $span{$key}{bgcolor} = $gd->colorAllocateAlpha(Bio::Graphics::Panel->color_name_to_rgb($color),110);
     $span{$key}{border}  = $gd->colorResolve(Bio::Graphics::Panel->color_name_to_rgb($color));
@@ -392,7 +464,7 @@ sub draw_image {
 
   # paste the individual panels into the picture
   my @map_items;
-  my %x = (above=>INTERIMAGE_PAD,below=>INTERIMAGE_PAD);
+  my %x = ( above => INTERIMAGE_PAD, below => INTERIMAGE_PAD);
 
   # order the panels by hit order 
   my (@sorted_spans,%seen_span);
@@ -403,7 +475,7 @@ sub draw_image {
 
   for my $key (@sorted_spans) {
     my $is_above = $span{$key}{position} % 2;
-    my $img = $span{$key}{image};
+    my $img = $span{$key}{image} or next;
     my $xi = $is_above ? 'above' : 'below';
     my $y  = $is_above ? $ref_top-VERTICAL_PAD()-$img->height : $ref_bottom+VERTICAL_PAD;
     $span{$key}{offsets} = [$x{$xi},$y];
@@ -422,7 +494,7 @@ sub draw_image {
   # middle row (reference)
   my @rect = (INTERIMAGE_PAD,$ref_top,INTERIMAGE_PAD+$ref_img->width,$ref_top+$ref_img->height);
   $gd->copy($ref_img,INTERIMAGE_PAD,$ref_top,0,0,$ref_img->width,$ref_img->height);
-  my $color   = $SCONF->setting($MAP->{$src}{db}=>'color');
+  my $color   = $CONFIG->setting($MAP->{$src}{db}=>'color');
   my $bgcolor = $gd->colorAllocateAlpha(Bio::Graphics::Panel->color_name_to_rgb($color),110);
   my $border  = $gd->colorResolve(Bio::Graphics::Panel->color_name_to_rgb($color));
   $gd->filledRectangle(@rect,$bgcolor);
@@ -447,6 +519,7 @@ sub draw_image {
   # now for the hits in each individual panel
   my (%tcolors,%flip);
   for my $key (keys %span) {
+    defined $span{$key}{offsets} or next;
     my ($left,$top) = @{$span{$key}{offsets}};
     my $boxes  = $span{$key}{boxes};
     for my $box (@$boxes) {
@@ -465,7 +538,9 @@ sub draw_image {
     my ($px1,$py1,$px2,$py2) = @{$panel_boxes{$feature}};
     my $poly = GD::Polygon->new();
     my $upper = $py2 < $ry1;
-    if ($upper) { # an upper panel          # This works - but can be simplified!
+    if ($upper) { 
+      # an upper panel
+      # This works - but can be simplified!
       $poly->addPt($px1,$py2);
       $poly->addPt($px2,$py2);
       if ($flip{$feature}) {
@@ -490,35 +565,54 @@ sub draw_image {
   }
 
   my $url = $CONF->generate_image($gd);
-  print img({-src=>$url,-border=>0,-usemap=>'#mymap'});
+  $CONFIG->section_setting(Details => 'open');
+  print $CONFIG->toggle( 'Details',
+			 table( {-width=>'100%'},
+				Tr( td( {-align=>'center', -class => 'databody'},
+					img({-src=>$url,-border=>0,-usemap=>'#mymap'} )))
+				),
+			 );
+
+
   print Map({-name=>'mymap'},@map_items);
 }
 
 sub segment2image {
   my ($segment,$src,$options) = @_;
-  return unless $segment;
+  $segment or error("no segment");
 
   my $width           = $options->{width};
   my $features_top    = $options->{features_top};
   my $features_bottom = $options->{features_bottom};
   my $background      = $options->{background} || 'white';
 
+
   my $dsn = $MAP->{$src}{db} or return;
-  my @tracks    = shellwords($SCONF->setting($dsn => 'tracks'));
+
+  my @tracks    = shellwords($CONFIG->setting($dsn => 'tracks'));
   my $ff_scale  = Bio::Graphics::FeatureFile->new;
-  $ff_scale->add_type(SCALE=>{fgcolor=>'black',glyph=>'arrow',tick=>2,double=>1,description=>0});
+  $ff_scale->add_type( SCALE => { fgcolor=> 'black', 
+				  glyph  => 'arrow',
+				  tick   => 2,
+				  double => 1,
+				  description => 0 } );
+
   $ff_scale->add_feature($segment=>'SCALE');
 
   my @labels;
   if ($features_top && $features_bottom) {
     @labels = ('ff_top','ff_scale',@tracks,'ff_bottom');
-  } elsif ($features_top) {
+  } 
+  elsif ($features_top) {
     @labels = ('ff_top',@tracks,'ff_scale');
-  } elsif ($features_bottom) {
+  } 
+  elsif ($features_bottom) {
     @labels = ('ff_scale',@tracks,'ff_bottom');
-  } else {
+  } 
+  else {
     @labels = ('ff_scale',@tracks);
   }
+
   my %ff_hash;
   $ff_hash{ff_top}    = $features_top    if $features_top;
   $ff_hash{ff_bottom} = $features_bottom if $features_bottom;
@@ -528,19 +622,19 @@ sub segment2image {
 #  my ($old_width,$old_pad,$old_bgcolor) = ($CONF->width($width),
 #					   $CONF->setting('general','image_padding'),
 #					   $CONF->setting('general','detail bgcolor'));
-  $CONF->width($width) if defined $width;
-  $CONF->setting('general','image_padding' => IMAGE_PAD);
-  $CONF->setting('general','detail bgcolor'=> $background);
+  $CONFIG->width($width) if defined $width;
+  $CONFIG->setting('general','image_padding' => INTERIMAGE_PAD);
+  $CONFIG->setting('general','detail bgcolor'=> $background);
 
-  my ($img,$boxes) = $CONF->image_and_map(
-					  keystyle  => 'none',
-					  segment   => $segment,
-					  tracks    => \@labels,
-					  title     => $MAP->{$src}{desc}.': '.format_segment($segment),
-					  do_map    => 0,
-					  noscale=>1,
-					  feature_files=>\%ff_hash,
-					 );
+  my ($img,$boxes) = $CONFIG->image_and_map(
+					    keystyle  => 'none',
+					    segment   => $segment,
+					    tracks    => \@labels,
+					    title     => $MAP->{$src}{desc}.': '.format_segment($segment),
+					    do_map    => 0,
+					    noscale=>1,
+					    feature_files=>\%ff_hash,
+					    );
 
   # because of the mod_perl environment, we MUST put things back the way we found
   # them - there is probably a better way to do this.
@@ -558,7 +652,7 @@ sub format_segment {
 
 sub landmark2segment {
   my ($src,$landmark) = @_;
-  my $dsn = $MAP->{$src}{db} or return;
+  my $dsn = $MAP->{$src}{db} or die "no database\n";
   $CONF->source($dsn);
   my $db = open_database();
   my ($segment) = $CONF->name2segments($landmark,$db);
@@ -588,7 +682,8 @@ sub add_hit_to_ff {
 					     -segments=> \@segments,
 					     @attributes,
 					    );
-    } else {
+    } 
+    else {
       $feature = Bio::Graphics::Feature->new(-type => 'BLOCK',
 					     -name => $hit->name,
 					     -seqid=> $hit->target,
@@ -599,7 +694,8 @@ sub add_hit_to_ff {
 					    );
     }
 
-  } else { # construct the feature from the src coordinates
+  } 
+  else { # construct the feature from the src coordinates
     if (my $p = $hit->parts) {
       my @segments = map {Bio::Graphics::Feature->new(-start=>$_->start,
 						      -end=>$_->end,
@@ -615,7 +711,8 @@ sub add_hit_to_ff {
 					     -segments=>\@segments,
 					     @attributes,
 					    );
-    } else {
+    } 
+    else {
       $feature = Bio::Graphics::Feature->new(-type=>'BLOCK',
 					     -name=>$hit->name,
 					     -seqid=>$hit->seqid,
@@ -640,7 +737,79 @@ sub adjust_container {
     }
   }
 }
+
+sub navigation_table {
+  my $segment = shift;
+  my $settings = shift;
+
+  my ($table,$whole_segment);
+
+  my $slidertable = '';
+  if ($segment) {
+    my $whole_segment = $CONFIG->whole_segment();
+    my ($label)  = $CONFIG->tr('Scroll');
+    $slidertable = $CONFIG->slidertable;
+  }
+
+  $CONFIG->section_setting(Instructions => 'open');
+  $CONFIG->section_setting(Search => 'open');
+
+  $table .= $CONFIG->toggle('Intructions',p($CONFIG->show_examples('search_src=mel')));
+
+  $table .= $CONFIG->toggle($CONFIG->tr('Search'),
+			  table({-border=>0, -width => '100%', -cellspacing=>0},
+				TR({-class=>'searchtitle'},
+				   td({-align=>'left', -colspan=>3},
+				      html_frag('html1',$segment,$settings)||''
+				      )
+				   ),
+				
+				TR({-class=>'searchtitle'},
+				   td({-align=>'left', -width=>'30%'},
+				      landmark_search($settings)
+				      ).
+				   td({-align=>'left', colspan => 2},
+				      species_search()
+				      ),
+				),
+				TR({-class=>'searchtitle',-style=>'padding-top: 10 px', -valign => 'bottom'},
+				   td({-align=>'left', -width => '30%'},
+				      source_menu($settings)
+				      ).
+				   td({-align=>'left'},                                                                   
+                                       submit(-name=>$CONFIG->tr('Search'))
+                                      ).
+				   td({-align => 'center'},
+				      $slidertable
+				      ),
+				   ),
+				)
+			  );
+  
+  print $table;
+}
+
+sub source_menu {
+  my $settings = shift;
+  my @sources      = $CONFIG->sources;
+  my $show_sources = $CONFIG->setting('show sources');
+  $show_sources    = 1 unless defined $show_sources;   # default to true
+  my $sources = $show_sources && @sources > 1;
+  return b($CONFIG->tr('Data Source')).br.
+    ( $sources ?
+      popup_menu(-name   => 'source',
+		 -values => \@sources,
+		 -labels => { map {$_ => $CONFIG->description($_)} $CONFIG->sources},
+		 -default => $CONFIG->source,
+		 -onChange => 'document.mainform.submit()',
+		)
+	: $CONFIG->description($CONFIG->source)
+      );
+}
+
 !NO!SUBS!
+
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
 exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
+

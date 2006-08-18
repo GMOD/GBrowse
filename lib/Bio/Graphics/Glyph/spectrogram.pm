@@ -1,4 +1,5 @@
 package Bio::Graphics::Glyph::spectrogram;
+# $Id: spectrogram.pm,v 1.4 2006-08-18 02:31:37 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics::Glyph::generic;
@@ -6,13 +7,14 @@ use GD::Simple;
 use GD;
 use List::Util qw/sum max/;
 
+use Data::Dumper;
+
 use vars '@ISA';
 @ISA = 'Bio::Graphics::Glyph::generic';
 
 # saturation value is fixed at the maximum
-my $sat    = 255;
-
-my $gds    = GD::Simple->new(1,1);
+use constant SAT  => 255;
+use constant GDS  => GD::Simple->new(1,1);
 
 
 # each spectrogram feature will be a standalone
@@ -22,14 +24,23 @@ sub draw {
   my $gd = shift;
   my ( $x1, $y1, $x2, $y2 ) = $self->bounds(@_);
   my $v_offset = $y1;
-  my $last_y = 0;
+  my $last_y   = 0;
   my $last_label;
-  my $height = $self->option('height');
-  my $win    = $self->option('win');
-  my $feat   = $self->feature;
-  my $att    = $feat->attributes;
-  my $max    = $att->{max};
-  my $black  = $gd->colorResolve(0,0,0);
+  my $height   = $self->option('height');
+  my $win      = $self->option('win');
+  my $feat     = $self->feature;
+
+  # API change?
+  my $att;
+  if (ref $feat->attributes) {
+    $att = $feat->attributes;
+  } 
+  else {
+    $att = {$feat->attributes};
+  }
+
+  my $max      = $att->{max};
+  my $black    = $gd->colorResolve(0,0,0);
 
   my %seen;
 
@@ -48,8 +59,7 @@ sub draw {
     $hue += 255 if $hue < 0;
     $hue -= 255 if $hue > 255;
     $bri = int(($bri/$max) * 255);
-    
-    my @rgb = $gds->HSVtoRGB($hue,$sat,$bri);
+    my @rgb = GDS->HSVtoRGB($hue,SAT,$bri);
     my $bgcolor = $gd->colorResolve(@rgb);
     $self->filled_box($gd, $x1, $y1, $x2, $y1+$step, $bgcolor, $bgcolor);
 

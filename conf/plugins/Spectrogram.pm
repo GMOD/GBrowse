@@ -1,4 +1,4 @@
-# $Id: Spectrogram.pm,v 1.2 2006-06-12 20:48:28 sheldon_mckay Exp $
+# $Id: Spectrogram.pm,v 1.3 2006-08-18 02:31:37 sheldon_mckay Exp $
 # bioperl module for Bio::Graphics::Browser::Plugin::Spectrogram
 # cared for by Sheldon McKay mckays@cshl.edu
 # Copyright (c) 2006 Cold Spring Harbor Laboratory.
@@ -63,8 +63,12 @@ See the GMOD website for information on bug submission http://www.gmod.org.
 Email E<lt>mckays@cshl.eduE<gt>
 
 =cut
+;
 
 package Bio::Graphics::Browser::Plugin::Spectrogram;
+
+use lib '/home/smckay/lib';
+
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use CGI ':standard';
@@ -73,6 +77,8 @@ use GD;
 use Math::FFT;
 use Statistics::Descriptive;
 use List::Util qw/shuffle max/;
+
+use Data::Dumper;
 
 use vars '$VERSION','@ISA';
 $VERSION = '0.01';
@@ -98,15 +104,19 @@ sub mime_type {
 sub description {
   p("This plugin calculates a spectrogram from digitized DNA sequences",
     " using Discrete Fourier Transforms") . 
-  p("The plugin was written by Sheldon McKay");
+  p("The plugin was written by Sheldon McKay <mckays\@cshl.edu>");
 }
 
 sub config_defaults {
-  { win => 1024,
-    inc => 512,
-    binsize => 1,
-    y_unit  => 1,
-    quantile => 99.99 }
+  { win       => 512,
+    inc       => 256,
+    binsize   => 1,
+    y_unit    => 1,
+    quantile  => 99.99, 
+    filter_01 => 1,
+    min       => 2,
+    max       => 4,
+    type      => 'period'}
 }
 
 sub reconfigure {
@@ -127,6 +137,7 @@ sub annotate {
   my $self    = shift;
   my $segment = shift or die "No segment";
   my $conf    = $self->configuration;
+
   my $win     = $conf->{win};
   my $inc     = $conf->{inc};
   my $ltype   = $conf->{ltype};
@@ -148,8 +159,20 @@ sub annotate {
   # extend the segment a bit so we can slide the window
   # all the way to the end of the sequence
   my $db = $segment->factory;
-  $segment = $db->segment( $segment->ref, $segment->start, ($segment->end + $win) );
-  my $seq     = lc eval{$segment->seq} or die "No sequence found for $segment $@";  
+  ($segment) = $db->segment( $segment->ref, $segment->start, ($segment->end + $win) );
+
+  # API-change alert!
+  my $seq_obj = $segment->seq;
+  my $seq;
+  if ($seq_obj && ref $seq_obj) {
+    $seq = lc eval{$seq_obj->seq};
+  }
+  elsif ($seq_obj) {
+    $seq = lc $seq_obj;
+  }
+
+  $seq ||  die "No sequence found for $segment $@";
+
   my $offset  = $segment->start;
   my $end     = $segment->length;
  
@@ -296,6 +319,8 @@ sub complain {
 sub configure_form {
   my $self = shift;
   my $conf = $self->configuration;
+  my $banner = $self->browser_config->header || '';;
+
   my $msg = <<END;
 Window size and overlap = the width and overlap of sliding window used
 to calculate the spectrogram.\\n
@@ -303,10 +328,10 @@ Note: larger window sizes and/or smaller overlaps increase
 computation time.\\n
 END
 ;
-  my $form = h2('Spectrogram size ', _js_help($msg)) . 
+  my $form = h3({-class => 'searchtitle'}, 'Spectrogram size ', _js_help($msg)) . 
       p( 'Sliding window size: ', 
 	 popup_menu( -name  => $self->config_name('win'),
-		     -values => [128,256,512,1024,2048,4096,8192],
+		     -values => [8,16,32,64,128,256,512,1024,2048,4096,8192],
 		     -default => $conf->{win} ),
 	 ' bp' . br. br . 'Window overlap: ',
 	 textfield( -name  => $self->config_name('inc'),
@@ -326,7 +351,7 @@ spectrogram (minimum 1 pixel)
 END
 ;
 
-  $form .= br .  h2('Display options ', _js_help($msg)) .
+  $form .= br .  h3({-class => 'searchtitle'}, 'Display options ', _js_help($msg)) .
       p( 'Restrict ',
 	 popup_menu( -name   => $self->config_name('measure'),
 		     -values => [qw/period frequency/],
@@ -356,7 +381,7 @@ of the spectrogram.
 END
 ;
 
-  $form .=  br . h2('Image brightness') .
+  $form .=  br . h3({-class => 'searchtitle'}, 'Image brightness') .
     p( 'Saturate color intensity at the ',
        textfield( -name   => $self->config_name('quantile'),
 		  -value  => $conf->{quantile},
@@ -376,12 +401,14 @@ option together with the saturation value.
 END
 ;
 
-my @checked = (checked => 'checked') if $conf->{filter_01};
-  $form .=    p( checkbox( -name => $self->config_name('filter_01'),
+  my @checked = (checked => 'checked') if $conf->{filter_01};
+   $form .=    p( checkbox( -name => $self->config_name('filter_01'),
 			   @checked,
 			   -label => 'Filter out 0-1 Hz' ),
 		 ' ' . _js_help($msg) );
 
+  $form .= hidden( -name => 'configured', -value => 1 );
+  return $banner.$form;
 
 }
 

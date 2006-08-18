@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.11 2006-08-17 18:49:01 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.12 2006-08-18 18:29:50 scottcain Exp $
 
 =head1 NAME
 
@@ -1249,6 +1249,21 @@ sub dna {
   }
 
   return $seq;
+}
+
+sub subseq {
+  my $self = shift;
+  my ($start, $stop) = @_;
+
+  my $dna = $self->dna;
+  my $length = $stop - $start + 1;
+
+  my $substr = substr($dna, $start, $length);
+
+  my $subseqobj = Bio::Seq->new( -display_id => $self->seq_id,
+                                 -seq        => $substr);
+
+  return $subseqobj;
 }
 
 =head2 seq

@@ -187,7 +187,26 @@ sub srcfeature_id {
   return $self->{'srcfeature_id'};
 }
 
-#strand and abs_strand moved to Segment object
+=head2 strand()
+
+  Title   : strand
+  Usage   : $obj->strand()
+  Function: Returns the strand of the feature.  Unlike the other
+            methods, the strand cannot be changed once the object is
+            created (due to coordinate considerations).
+            corresponds to featureloc.strand
+  Returns : -1, 0, or 1
+  Args    : on set, new value (a scalar or undef, optional)
+
+
+=cut
+
+sub strand {
+  my $self = shift;
+
+  return $self->{'strand'} = shift if @_;
+  return $self->{'strand'} || 0;
+}
 
 =head2 phase
 
@@ -533,6 +552,18 @@ methods described below, L<Bio::RangeI> for details.
 
 =head1 other get/setters
 
+=cut
+
+=head2 abs_strand()
+
+  Title   : abs_strand
+  Usage   : $obj->abs_strand($newval)
+  Function: aliased to strand() for backward compatibility
+
+=cut
+
+*abs_strand = \&strand;
+
 =head2 class()
 
   Title   : class
@@ -713,6 +744,8 @@ sub target {
   }
   return; #didn't get anything
 }
+
+*hit = \&target;
 
 #####################################################################
 # other methods

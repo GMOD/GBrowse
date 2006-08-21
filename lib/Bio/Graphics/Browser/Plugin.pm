@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.13 2005-12-09 22:19:12 mwz444 Exp $
+# $Id: Plugin.pm,v 1.14 2006-08-21 15:36:32 sheldon_mckay Exp $
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME
@@ -187,12 +187,19 @@ contain HTML tags, and should describe what the plugin does and who
 wrote it.  This text is displayed when the user presses the "About..."
 button.
 
-=item $verb = $self->verb
+=item $verb = $self->verb()
 
 This method returns a verb to be used in the plugin popup menu
 in cases where the main three don't fit.  This method should
-be set return whitespace (not undefined) if you do not want a 
-descriptive verb for the menu
+be set return whitespace or an empty string (not undefined) 
+if you do not want a descriptive verb for the menu
+
+=item $suppress_title = $self->suppress_title()
+
+The purpose of this methods is to suppress the 'Configure...'
+or 'Find...' title that is printed at the top of the page when the 
+plugin is loaded.  It will return false unless overriden by a plugin where
+this behaviour is desired.
 
 =item $type = $self->type()
 
@@ -575,7 +582,7 @@ sub new {
   return bless {},$class;
 }
 
-# initialize other globals
+# initiaxlize other globals
 sub init {
   my $self = shift;
   # do nothing
@@ -592,6 +599,11 @@ sub verb {
   return '';
 }
 
+# return nothing unless the plugin overrides this method
+sub suppress_title {
+  my $self = shift;
+  return '';
+}
 
 sub description {
   my $self = shift;
@@ -745,6 +757,7 @@ sub new_feature_list {
   return Bio::Graphics::FeatureFile->new(-smart_features=>1,
 					 -safe => 1);
 }
+
 
 1;
 

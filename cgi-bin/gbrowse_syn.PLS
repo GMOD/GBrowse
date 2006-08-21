@@ -94,8 +94,8 @@ use vars qw($CONF_DIR $CONF $CONFIG $VERSION $MAP $DEFAULT_SEGMENT $MAX_SEGMENT 
 $HEADER = 0;
 
 # initialization
-$CONF_DIR  = conf_dir($CONF_DIR);    # conf_dir() is exported from Util.pm
-
+$CONF_DIR  = conf_dir($CONF_DIR);    
+# conf_dir() is exported from Util.pm
 # open_config() is exported from Util.pm
 $CONF    = open_config($CONF_DIR,'conf');
 $CONFIG  = Bio::Graphics::Browser::Render->new;

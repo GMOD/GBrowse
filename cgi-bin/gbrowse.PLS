@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.164 2006-08-15 17:18:05 lstein Exp $
+# $Id: gbrowse.PLS,v 1.165 2006-08-21 15:36:32 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2288,11 +2288,16 @@ sub do_plugin_configure {
     push @action_labels, $CONFIG->tr('Find') if $type eq 'finder';
     push @action_labels, $CONFIG->tr('Go')
         if ( $type eq 'dumper' or $type eq 'filter' );
-    my $title =
+
+
+    my $title;
+    unless ($p->suppress_title) {
+      $title =
           $p->type eq 'finder'
-        ? $CONFIG->tr('Find')
-        : $CONFIG->tr('Configure');
-    $title .= " " . $p->name;
+          ? $CONFIG->tr('Find')
+          : $CONFIG->tr('Configure');
+      $title .= " " . $p->name;
+    }
 
     my $config_html = $p->configure_form;
 

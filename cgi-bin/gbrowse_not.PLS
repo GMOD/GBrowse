@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_not.PLS,v 1.3 2006-08-15 17:18:05 lstein Exp $
+# $Id: gbrowse_not.PLS,v 1.4 2006-08-21 15:36:32 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2819,7 +2819,11 @@ sub do_plugin_configure {
   push @action_labels,$CONFIG->tr('Go')   if ($type eq 'dumper' or $type eq 'filter');
   my @buttons = map {submit(-name=>'plugin_action',-value=>$_)} @action_labels;
 
-  print h1($p->type eq 'finder' ? $CONFIG->tr('Find') : $CONFIG->tr('Configure'),$p->name);
+  # turn this off if requested by the plugin
+  unless ($p->suppress_title) {
+    print h1($p->type eq 'finder' ? $CONFIG->tr('Find') : $CONFIG->tr('Configure'),$p->name);
+  }
+
   my $config_html = $p->configure_form;
 
   print start_multipart_form(),

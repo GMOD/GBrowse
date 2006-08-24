@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.165 2006-08-21 15:36:32 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.166 2006-08-24 21:13:50 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1677,7 +1677,7 @@ sub load_external_sources {
     $segments = [open_database()->segment($segments)];
   }
   elsif ($segments) {
-    return if @$segments > 1;
+    return {} if @$segments > 1;
   }
 
   my $segment = $segments->[0] if $segments;
@@ -1981,6 +1981,8 @@ sub build_citation_page {
   my $settings = shift;
   my @features = $CONFIG->labels;
   my $external_features = load_external_sources(undef,$settings);
+  $external_features ||= {};
+
   my (@citations);
 
   print h2($CONFIG->tr('Track_descriptions'));

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.166 2006-08-24 21:13:50 lstein Exp $
+# $Id: gbrowse.PLS,v 1.167 2006-08-25 02:40:00 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -552,7 +552,10 @@ sub main_display {
     };
 
   if($segment){
-    $param->{ranges}     = [ grep {!$seen{$_}++} sort {$b<=>$a} $segment->length,get_ranges() ];
+    my $max              = $whole_segment->length;
+    my @ranges           = sort {$a<=>$b} get_ranges();
+    $param->{ranges}     = [ grep {!$seen{$_}++ && $_<=$max} sort {$b<=>$a} $segment->length,@ranges ];
+    unshift @{$param->{ranges}},$max if $ranges[-1] > $max;
     $param->{half}       = int($segment->length/2);
     $param->{full}       = $segment->length;
   }

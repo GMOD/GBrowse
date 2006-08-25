@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_not.PLS,v 1.5 2006-08-24 21:13:50 lstein Exp $
+# $Id: gbrowse_not.PLS,v 1.6 2006-08-25 02:40:00 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -424,7 +424,7 @@ sub main_display {
                    : start_multipart_form(-name   => 'mainform',
 					  -action => $action,
 					  -method => 'POST');
-  print navigation_table($segment,$page_settings);
+  print navigation_table($segment,$whole_segment,$page_settings);
   print html_frag('html2',$segment,$page_settings);
 
   # NOTE: we may exit out on the next statement if the user wants to download a previously-
@@ -876,8 +876,7 @@ sub adjust_settings {
 
 # prints the zooming and navigation bar
 sub navigation_table {
-  my $segment = shift;
-  my $settings = shift;
+  my ($segment,$whole_segment,$settings) = @_;
   my $buttonsDir    = $CONFIG->setting('buttons');
   my $table        = '';
   my $svg_link     = $HAVE_SVG? a({-href=>svg_link($settings),-target=>'_blank'},'['.$CONFIG->tr('SVG_LINK').']'):'';
@@ -947,7 +946,7 @@ sub navigation_table {
 			    td({-align=>'left'},source_menu($settings)),
 			    td({-align=>'left'},
 			       $segment ? (
-					   (b($CONFIG->tr('Scroll').': '),slidertable($segment,$buttonsDir)),
+					   (b($CONFIG->tr('Scroll').': '),slidertable($segment,$whole_segment,$buttonsDir)),
 					   b(
 					     checkbox(-name=>'flip',
 						      -checked=>$settings->{flip},-value=>1,
@@ -1012,7 +1011,7 @@ sub make_postgrid_callback {
 
 # This generates the navigation bar with the arrows
 sub slidertable {
-  my ($segment,$buttonsDir) = @_;
+  my ($segment,$whole_segment,$buttonsDir) = @_;
   my $span      = $segment->length;
   my $half_title      = unit_label(int $span/2);
   my $full_title      = unit_label($span);
@@ -1034,7 +1033,7 @@ sub slidertable {
      image_button(-src=>"$buttonsDir/minus.gif",-name=>"zoom out $fine_zoom",
 		  -border=>0,-title=>"zoom out $fine_zoom"),
      '&nbsp;',
-     zoomBar($segment,$buttonsDir),
+     zoomBar($segment,$whole_segment,$buttonsDir),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/plus.gif",-name=>"zoom in $fine_zoom",
 		  -border=>0,-title=>"zoom in $fine_zoom"),
@@ -1051,17 +1050,22 @@ sub slidertable {
 
 # this generates the popup zoom menu with the window sizes
 sub zoomBar {
-  my ($segment,$buttonsDir) = @_;
+  my ($segment,$whole_segment,$buttonsDir) = @_;
   my $show = $CONFIG->tr('Show');
+  my $length = $segment->length;
+  my $max    = $whole_segment->length;
 
   my %seen;
-  my @ranges	= grep {!$seen{$_}++} sort {$b<=>$a} $segment->length,get_ranges();
+  my @r         = sort {$a<=>$b} get_ranges();
+  my @ranges	= grep {!$seen{$_}++ && $_<=$max} sort {$b<=>$a} $segment->length,@r;
+  unshift @ranges,$max if $r[-1]>$max;
+
   my %labels    = map {$_=>$show.' '.unit_label($_)} @ranges;
   return popup_menu(-class   => 'searchtitle',
 	       -name    => 'span',
 	       -values  => \@ranges,
 	       -labels  => \%labels,
-	       -default => $segment->length,
+	       -default => $length,
 	       -force   => 1,
 	       -onChange => 'document.mainform.submit()',
 	      );

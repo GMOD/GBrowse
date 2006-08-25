@@ -1,4 +1,6 @@
 1.66    * The popup zoom menu will never show a region larger than the overview.
+	* Fixed collapsible sections so that they store their state in transient named cookies
+	  rather than in a single bit vector.
 
 1.65	* Improved support for negative and fractional coordinates, such as those used
 	  in some genetic maps.

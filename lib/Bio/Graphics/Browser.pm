@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.192 2006-08-21 14:40:27 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.193 2006-08-26 18:23:19 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1136,8 +1136,7 @@ sub image_and_map {
   my $background    = $config{background} || '';
 
   $segment->factory->debug(1) if DEBUG;
-  
-  #$self->error('');
+  $self->error('');
 
   # Bring in the appropriate package - just for the fonts. Ugh.
   eval "use $image_class";
@@ -1370,7 +1369,7 @@ sub image_and_map {
 			     $select
 			    )
 	     };
-    $self->error($@) if $@;
+    $self->error("$name: $@") if $@;
     foreach (@$new_tracks) {
       $track2label{$_} = $file;
     }
@@ -2508,7 +2507,10 @@ sub make_link {
   my $self     = shift;
   my ($feature,$panel,$label,$data_source,$track)  = @_;
 
-  return $feature->url if $feature->can('url');
+  if ($feature->can('url')) {
+    my $link = $feature->url;
+    return $link if defined $link;
+  }
   return $label->make_link($feature) if $label && $label->isa('Bio::Graphics::FeatureFile');
 
   $panel ||= 'Bio::Graphics::Panel';

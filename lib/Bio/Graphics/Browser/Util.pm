@@ -94,7 +94,7 @@ use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::I18n;
 use CGI qw(:standard);
 use CGI::Toggle;
-use Carp 'carp';
+use Carp 'carp','cluck';
 use Text::Shellwords;
 
 use vars qw(@ISA @EXPORT $CONFIG $LANG %DB $HEADER $HTML $ADDED_FEATURES);
@@ -251,7 +251,7 @@ sub print_bottom {
 
 sub error {
   my @msg = @_;
-  warn "@_" if DEBUG;
+  cluck "@_" if DEBUG;
   print_top();
   print h2({-class=>'error'},@msg);
 }

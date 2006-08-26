@@ -204,14 +204,14 @@ WriteMakefile(
 	      'VERSION'      => $VERSION,
 	      'PREREQ_PM'    => {
 				 Bio::Perl         => 1.5,
-                                 #Bio::Root::Version => 1.5,
 				 GD                => 2.07,
 				 IO::String        => 0,
 				 Text::Shellwords  => 1.08,
 				 CGI::Session      => 4.02,
 				 File::Temp        => 0,
-				 Digest::MD5       => 0,
-				}, # e.g., Module::Name => 1.1
+				 Class::Base       => 0,
+				 Digest::MD5       => 0,	
+				},
 	      PL_FILES       => {
                                  'install_util/htdocs_install.PLS' => 'install_util/htdocs_install.pl',
                                  'install_util/cgi_install.PLS' => 'install_util/cgi_install.pl',

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.27 2006-08-15 17:17:42 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.28 2006-08-26 17:58:18 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -58,7 +58,6 @@ use strict;
 use File::Basename 'basename';
 use Bio::Graphics;
 use Carp qw(carp croak);
-#use GD 'gdMediumBoldFont','gdLargeFont';
 use CGI qw(img param escape unescape url);
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
@@ -298,6 +297,7 @@ sub setting {
       if $args[0] ne 'general' && lc($args[0]) eq 'general';  # buglet
   }
   my $config = $self->config or return;
+  
   $config->setting(@args);
 }
 
@@ -322,6 +322,7 @@ sub plugin_setting {
   my $caller_package = caller();
   my ($last_name)    = $caller_package =~ /(\w+)$/;
   my $option_name    = "${last_name}:plugin";
+  #warn "$option_name @_ ".$self->setting($option_name => @_);
   $self->setting($option_name => @_);
 }
 
@@ -1304,7 +1305,7 @@ sub image_and_map {
 			     $select
 			    )
 	     };
-    $self->error($@) if $@;
+    $self->error("$name: $@") if $@;
     foreach (@$new_tracks) {
       $track2label{$_} = $file;
     }

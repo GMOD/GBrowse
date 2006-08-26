@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.194 2006-08-26 20:58:36 lstein Exp $
+# $Id: Browser.pm,v 1.195 2006-08-26 23:12:35 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -848,7 +848,7 @@ sub render_html {
   my $tmpdir          = $args{tmpdir};
 
   return unless $segment;
-  my($image,$map,$panel,$tracks,$track2track) = $self->image_and_map(%args);
+  my($image,$map,$panel,$tracks) = $self->image_and_map(%args);
 
   $self->debugging_rectangles($image,$map) if DEBUG;
 
@@ -859,7 +859,7 @@ sub render_html {
   my $img_map = '';
   if ($do_map) {
     $self->_load_aggregator_types($segment);
-    $img_map = $self->make_map($map,$do_centering_map,$panel,$tracks,$track2track)
+    $img_map = $self->make_map($map,$do_centering_map,$panel,$tracks)
   }
   eval {$panel->finished};  # should quash memory leaks when used in conjunction with bioperl 1.4
   return wantarray ? ($img,$img_map) : join "<br>",$img,$img_map;
@@ -1017,7 +1017,7 @@ sub tmpdir {
 
 sub make_map {
   my $self = shift;
-  my ($boxes,$centering_map,$panel,$track2label,$track2track) = @_;
+  my ($boxes,$centering_map,$panel,$track2label) = @_;
   my $map = qq(<map name="hmap" id="hmap">\n);
 
   my $flip = $panel->flip;
@@ -1048,21 +1048,21 @@ sub make_map {
 
   # now add links for the track labels
   if ($panel->can('key_boxes') && (my $keys = $panel->key_boxes)) {
-    # A bit awkward here. The panel only knows about the human-readable keys, and nothing about the
-    # internal names we use for the tracks (the "labels"), so we have to create a reverse mapping
-    # between the two.
-    my %links;
-    for my $track_name (keys %$track2label) {
-      my $track    = $track2track->{$track_name} or next;
-      my $label    = $track2label->{$track_name};
-      my $key_name = $track->make_key_name;
-      $links{$key_name} = "?Download%20File=$key_name" if $label =~ /^file:/;
-      next if $label =~ /^\w+:/; # can't handle any other special format
-      $links{$key_name} = "?help=citations#$label";
-    }
-    for my $key (keys %$keys) {
-      my $box  = $keys->{$key};
-      $map .= qq(<area shape="rect" coords="$box->[0],$box->[1],$box->[2],$box->[3]" href="$links{$key}" target="citation"/>\n);
+    for my $key (@$keys) {
+      my ($key_text,$x1,$y1,$x2,$y2,$track) = @$key;
+      my $label = $track2label->{$track} or next;
+      my $link;
+      if ($label =~ /^file:/) {
+	$link = "?Download%20File=$key_text";
+      }
+      elsif ($label =~ /^w+:/) {
+	next;
+      }
+      else {
+	$link = "?help=citations#$label";
+      }
+      my $citation = $self->citation($label,$self->language);
+      $map .= qq(<area shape="rect" coords="$x1,$y1,$x2,$y2" href="$link" target="citation" title="$citation"/>\n);
     }
   }
 
@@ -1220,7 +1220,7 @@ sub image_and_map {
 		    -unit_divider => $conf->setting(general=>'unit_divider') || 1,
 		   ) unless $suppress_scale;
 
-  my (%track2label,%tracks,%track2track,@blank_tracks);
+  my (%track2label,%tracks,@blank_tracks);
 
   for (my $i= 0; $i < @$tracks; $i++) {
 
@@ -1252,7 +1252,6 @@ sub image_and_map {
     }
 
     $track2label{$track} = $label;
-    $track2track{$track} = $track;
     $tracks{$label}      = $track;
   }
 
@@ -1394,7 +1393,6 @@ sub image_and_map {
     $self->error("$name: $@") if $@;
     foreach (@$new_tracks) {
       $track2label{$_} = $file;
-      $track2track{$_} = $_;
     }
     $offset += $inserted-1; # adjust for feature files that insert multiple tracks
   }
@@ -1409,7 +1407,7 @@ sub image_and_map {
 
   my $boxes    = $panel->boxes;
 
-  return ($gd,$boxes,$panel,\%track2label,\%track2track);
+  return ($gd,$boxes,$panel,\%track2label);
 }
 
 =head2 overview()

@@ -23,7 +23,16 @@ to permissive.
       %  setsebool -P httpd_disable_trans 1
       %  system httpd restart
 
-After you do this, add the --SELINUX=1 tag when exectuting perl Makefile.PL:
+3. Make sure that all directories in the path to the gbrowse config
+directory are set to be world readable and executable. Either run:
+
+      % chmod +rx -R /etc/httpd/conf
+
+or
+
+      % chmod +rx -R /usr/local/apache/conf
+
+4. After you do this, add the --SELINUX=1 tag when exectuting perl Makefile.PL:
 
   % perl Makefile.PL --SELINUX=1
 

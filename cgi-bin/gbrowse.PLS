@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.169 2006-08-26 20:58:36 lstein Exp $
+# $Id: gbrowse.PLS,v 1.170 2006-08-26 23:12:35 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2157,8 +2157,9 @@ sub make_citation_link {
     $link = $self_url.'#'.escapeHTML($anchor);
   }
 
+  my $citation = $CONFIG->citation($label,$CONFIG->language);
   my $overview_color = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR();
-  my @args = (-href=>$link,-target=>'citation');
+  my @args = (-href=>$link,-title=>$citation, -target=>'citation');
   push @args,-style=>'Font-style: italic' if $label =~ /^(http|ftp|file):/;
   # push @args,-style=>"background: $overview_color" if $label =~ /:overview$/;
   return a({@args},$key);

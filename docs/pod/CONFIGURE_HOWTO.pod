@@ -3013,6 +3013,17 @@ Set the width of the overview, region and details images, in pixels.
 Set the length of the region covered by the "region" panel, in base
 pairs.
 
+=item add
+
+A feature to superimpose on top of the current image as a new
+track. Multiple add arguments are allowed. The format is:
+
+  reference+type+name+start..stop,start..stop,start..stop
+
+example:
+
+  add=chr3+EST+yk802.1+500000..500010,500100..500180
+
 =item h_feat
 
 The name of a feature to highlight in the format

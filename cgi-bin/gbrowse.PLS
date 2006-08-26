@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.167 2006-08-25 02:40:00 lstein Exp $
+# $Id: gbrowse.PLS,v 1.168 2006-08-26 19:46:14 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1599,8 +1599,9 @@ sub handle_uploads {
     handle_edit($page_settings,$data);
   }
 
-  elsif (my @data = (param('auto'),param('add'))) {
-    handle_quickie($page_settings,\@data);
+  elsif (my @data = (param('auto'),param('add'),param('a'))) {
+    my @style = (param('style'),param('s'));
+    handle_quickie($page_settings,\@data,\@style);
   }
 
   if ($file_action && param($file_action) eq 'Delete File') {
@@ -1629,7 +1630,7 @@ sub handle_edit {
 }
 
 sub handle_quickie {
-  my ($settings,$data) = @_;
+  my ($settings,$data,$styles) = @_;
   return unless $data;
 
   # format of quickie data is reference+type+name+start..end,start..end,start..end
@@ -1643,14 +1644,14 @@ sub handle_quickie {
   					    -segments => \@segments,
   					    );
    }
-  write_auto($settings,\@features);
+  write_auto($settings,\@features,$styles);
 }
 
 sub write_auto {
-  my ($settings,$features) = @_;
+  my ($settings,$features,$styles) = @_;
   return unless @$features;
 
-  my $basename = 'search_results';
+  my $basename = 'my_data';
   $UPLOADED_SOURCES->clear_file("file:${basename}");  # in case it's already there
   my $file = $UPLOADED_SOURCES->new_file($basename);
 
@@ -1659,6 +1660,14 @@ sub write_auto {
   warn "opening $file...\n" if DEBUG;
   my $out = $UPLOADED_SOURCES->open_file($file,">>") or return;
   warn "writing $file...\n" if DEBUG;
+
+  $styles ||= [];
+  for my $style (@$styles) {
+    my ($type,@options) = shellwords($style);
+    print $out "[$type]\n";
+    print $out join "\n",@options;
+    print $out "\n";
+  }
 
   for my $f (@$features) {
     my $reference = $f->can('seq_id') ? $f->seq_id : $f->seq_id;
@@ -2036,8 +2045,11 @@ sub build_help_page {
   my $helpfile = shift or return;
   my $file = url2file($helpfile) or return;
   my $root = $CONFIG->setting('help') || GBROWSE_HELP;
+  my $url  = url(-abs=>1,-path=>1);
   open(F,$file) or return;
   while (<F>) { # fix up relative addressing of images
+    s/\$GBROWSE\b/$url/g
+      or
     s/(href|src)=\"([^\"\#\$]+)\"/$1=\"$root\/$2\"/g;
     s/<!--\s*\#include-classes\s*-->/object_classes_for_help()/e;
     print;

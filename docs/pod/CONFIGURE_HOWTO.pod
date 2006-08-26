@@ -1564,12 +1564,14 @@ The most popular glyph types are:
                         this works with the waba_alignment aggregator.
   idiogram              this takes specially-formatted feature data and turns it
 			into an idiogram of a Giemsa-stained metaphase chromosome
+  image                 this embeds photographic images and/or diagrams on features
   processed_transcript  multi-purpose representation of a spliced mRNA, including
                         positions of UTRs
   segments		a multi-segmented feature such as an alignment
   span                  like anchored_arrow, except that the ends are
                         truncated at the edge of the panel, not turned
                         into an arrow
+  trace			reads an SCF trace file and draws a graphic representation
   triangle		a point-like feature represented as a diamond
   transcript		a gene model
   transcript2		a slightly different representation of a gene model
@@ -1589,8 +1591,8 @@ following modules:
 
   (common options for all)      Bio::Graphics::Glyph
   allele_tower                  Bio::Graphics::Glyph::allele_tower
-  arrow				Bio::Graphics::Glyph::arrow
   anchored_arrow                Bio::Graphics::Glyph::anchored_arrow
+  arrow				Bio::Graphics::Glyph::arrow
   box                           Bio::Graphics::Glyph::box
   cds				Bio::Graphics::Glyph::cds
   crossbox			Bio::Graphics::Glyph::crossbox
@@ -1603,6 +1605,7 @@ following modules:
   graded_segments		Bio::Graphics::Glyph::graded_segments
   heterogeneous_segments	Bio::Graphics::Glyph::heterogeneous_segments
   idiogram			Bio::Graphics::Glyph::idiogram
+  image 			Bio::Graphics::Glyph::image
   line				Bio::Graphics::Glyph::line
   primers			Bio::Graphics::Glyph::primers
   processed_transcript          Bio::Graphics::Glyph::processed_transcript
@@ -1611,6 +1614,7 @@ following modules:
   segments			Bio::Graphics::Glyph::segments
   span                          Bio::Graphics::Glyph::span
   toomany			Bio::Graphics::Glyph::toomany
+  trace				Bio::Graphics::Glyph::trace
   transcript			Bio::Graphics::Glyph::transcript
   transcript2			Bio::Graphics::Glyph::transcript2
   translation			Bio::Graphics::Glyph::translation
@@ -3062,6 +3066,37 @@ Open up the specified help page. Possible values are:
                   generate an embedded image of the current view
       "svg_image" the page that describes how to generate SVGs
 
+=item add
+
+Upload a feature and add it in its own track. The format is
+"reference+type+name+start..end", where reference is the landmark for
+the coordinates (e.g. a named gene or chromosome), type is the type of
+the feature, name is the name of the feature, and start..end are the
+start and end coordinates. For a feature that has multiple segments,
+you may use multiple start..end ranges, separated by commas. Example:
+
+  add=chr3+miRNA+mir144+2309229..2309300,2309501..2309589
+
+Pass multiple "add" parameters to upload several features.
+
+"add" can be abbreviated to "a" for terseness.
+
+=item style
+
+Specify the style for features uploaded using "add". It is a flattened
+version of the style configuration sections described in this
+document. Lines are separated by "+" symbols rather than newlines. The
+first word in the argument is the feature type to configure, for
+example "miRNA." Subsequent option=value pairs control the glyph and
+glyph options.
+
+For example, if you have added a "miRNA" annotation, then you can tell
+the renderer to use a red arrow for this glyph in this way:
+
+   style=miRNA+glyph=arrow+fgcolor=red
+
+"style" can be abbreviated to "s" for terseness.
+
 =item id
 
 The id is a unique session ID that will store persistent configuration
@@ -3073,10 +3108,10 @@ hard-to-guess number.
 =item Upload, upload_annotations, id
 
 These three arguments must be present in order to upload a file of
-external annotations to the server. "Upload" must be a true value, and
-"upload_annotations" will contain the content of the uploaded
-file. Note that you must POST the data using MIME type
-"multipart/form-data".
+external annotations to the server. "Upload" must be a true value
+(such as "1"), and "upload_annotations" will contain the content of
+the uploaded file. Note that you must POST the data using MIME type
+"multipart/form-data" and that the "U" in upload is capitalized.
 
 The "id" argument is used to associated the upload with a
 session. Pick some long, hard to guess number. This will be associated

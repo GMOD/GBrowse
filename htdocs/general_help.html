@@ -7,6 +7,7 @@
     <th><a href="#navigation">Overview Panel</a></th>
     <th><a href="#detail">Detail Panel</a></th>
     <th><a href="#upload">Adding Annotations</a></th>
+    <th><a href="#quicky">Quick Uploads</a></th>
   </tr>
 </table>
 
@@ -346,6 +347,62 @@ be alerted with an error message.
 
 You may add as many remote URLs as you wish.  To delete one, simply
 erase it and press "Update URLs" again.
+
+<hr>
+
+<h2><a name="quicky">Quick Uploads</a></h2>
+
+<p>
+
+Another way to upload your own features is by adding an "add" argument
+to the gbrowse URL. For example, this URL will create a track named
+"MyDeletions" containing a feature named "Deletion3". Deletion3
+occupies the region on chromosome 3 between 10,050,000 and 10,051,000:
+
+</p>
+
+<blockquote>
+$GBROWSE?add=chr3+MyDeletions+Deletion3+10050000..10051000
+</blockquote>
+
+<p>
+You can have as many "add" options as you like:
+</p>
+
+<blockquote>
+$GBROWSE?add=chr3+MyDeletions+Deletion3+10050000..10051000;add=chr3+MyDeletions+Deletion4+950000..960000
+</blockquote>
+
+<p>The format is:</p>
+
+<blockquote>
+reference+trackName+featureName+start..stop,start..stop,start..stop ...
+</blockquote>
+
+<p>where "reference" is the name of the landmark that start and stop are
+relative to. You can use a chromosome name, a contig name, a gene
+name, or anything else that this browser recognizes in the search
+box. "trackName" is the name of the track to upload, "featureName" is
+the name of the feature you are uploading, and "start..stop" are the
+start and end coordinates relative to "reference". For multisegmented
+features, specify multiple start..stop pairs separated by commas.</p>
+
+<p>For more control over the way quick upload features appear, specify the "style" option to the URL:</p>
+
+<blockquote>
+$GBROWSE?style=MyDeletions+glyph=arrow+double=1+fgcolor=blue
+</blockquote>
+
+<p>This says to configure the "MyDeletions" track with the following options:
+
+<blockquote><pre>
+glyph=arrow
+double=1
+fgcolor=blue
+</pre></blockquote>
+
+<p>See <a href="$GBROWSE?help=annotation">the uploaded annotation help
+file</a> for more details</p>.
 
 <hr>
 

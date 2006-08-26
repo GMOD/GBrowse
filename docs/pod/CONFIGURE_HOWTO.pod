@@ -1527,6 +1527,7 @@ The most popular glyph types are:
                         this works with the waba_alignment aggregator.
   idiogram              this takes specially-formatted feature data and turns it
 			into an idiogram of a Giemsa-stained metaphase chromosome
+  image                 this embeds photographic images and/or diagrams on features
   processed_transcript  multi-purpose representation of a spliced mRNA, including
                         positions of UTRs
   segments		a multi-segmented feature such as an alignment
@@ -1567,6 +1568,7 @@ following modules:
   graded_segments		Bio::Graphics::Glyph::graded_segments
   heterogeneous_segments	Bio::Graphics::Glyph::heterogeneous_segments
   idiogram			Bio::Graphics::Glyph::idiogram
+  image 			Bio::Graphics::Glyph::image
   line				Bio::Graphics::Glyph::line
   primers			Bio::Graphics::Glyph::primers
   processed_transcript          Bio::Graphics::Glyph::processed_transcript
@@ -3012,6 +3014,37 @@ The position of the key in the detail panel. Possible values are
 The sort order of track names in the "Tracks" panel.  Values are
 "sorted" (alphabetically sorted by name) and "unsorted" (sorted by
 the order of tracks as defined in the config file).
+
+=item add
+
+Upload a feature and add it in its own track. The format is
+"reference+type+name+start..end", where reference is the landmark for
+the coordinates (e.g. a named gene or chromosome), type is the type of
+the feature, name is the name of the feature, and start..end are the
+start and end coordinates. For a feature that has multiple segments,
+you may use multiple start..end ranges, separated by commas. Example:
+
+  add=chr3+miRNA+mir144+2309229..2309300,2309501..2309589
+
+Pass multiple "add" parameters to upload several features.
+
+"add" can be abbreviated to "a" for terseness.
+
+=item style
+
+Specify the style for features uploaded using "add". It is a flattened
+version of the style configuration sections described in this
+document. Lines are separated by "+" symbols rather than newlines. The
+first word in the argument is the feature type to configure, for
+example "miRNA." Subsequent option=value pairs control the glyph and
+glyph options.
+
+For example, if you have added a "miRNA" annotation, then you can tell
+the renderer to use a red arrow for this glyph in this way:
+
+   style=miRNA+glyph=arrow+fgcolor=red
+
+"style" can be abbreviated to "s" for terseness.
 
 =item track_options
 

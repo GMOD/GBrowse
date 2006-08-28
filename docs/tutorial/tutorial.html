@@ -1837,7 +1837,7 @@ ctgA    example trace   44401   45925   .       +       .       name trace; trac
 
 <p>
 
-This aligns the full trace sequence to the reference sequence.  The trace file in this case is named "volvox_trace.scf. 
+This aligns the full trace sequence to the reference sequence.  The trace file in this case is named "volvox_trace.scf". 
 
 Due to sequence quality, the first few bases of a trace file usually don't align.  Even so, these need bases need to be included in the gff file.  For instance, if the bases 10-700 of the trace file aligns to the bases 100-800 of the reference sequence, the feature would be 90-800 to account for the first 10 bases (starting at base 0).
 
@@ -2272,6 +2272,7 @@ key          = Example alignments
 
 [Alignments:30000]
 glyph        = box
+label        = 0
 
 [Alignments:45000]
 glyph        = box

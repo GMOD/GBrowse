@@ -6,7 +6,7 @@ use FindBin '$Bin';
 use Cwd;
 require 5.005003;
 
-my $VERSION     = '1.65';
+my $VERSION     = '1.67';
 my $working_dir = cwd;
 
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN

@@ -1,29 +1,29 @@
 [%- IF vis_default == 1 -%]
     [%- IF vis_value != 0 -%]
         [%- IF opposite_of_value == 1 -%]
-            STYLE="display:none"
+            style="display:none"
         [%- ELSE -%]
-            STYLE="display:inline"
+            style="display:inline"
         [%- END -%]
     [%- ELSE -%]
         [%- IF opposite_of_value == 1 -%]
-            STYLE="display:inline"
+            style="display:inline"
         [%- ELSE -%]
-            STYLE="display:none"
+            style="display:none"
         [%- END -%]
     [%- END -%]
 [%- ELSE -%]
     [%- IF vis_value != 1 -%]
         [%- IF opposite_of_value == 1 -%]
-            STYLE="display:none"
+            style="display:none"
         [%- ELSE -%]
-            STYLE="display:inline"
+            style="display:inline"
         [%- END -%]
     [%- ELSE -%]
         [%- IF opposite_of_value == 1 -%]
-            STYLE="display:inline"
+            style="display:inline"
         [%- ELSE -%]
-            STYLE="display:none"
+            style="display:none"
         [%- END -%]
     [%- END -%]
 [%- END -%]

@@ -57,4 +57,3 @@ function tOnClick()
 <script src="/gbrowse/js/x_cook.js" type="text/javascript" />
 <script src="/gbrowse/js/toggle.js" type="text/javascript"/>
 <script src="/gbrowse/js/buttons.js" type="text/javascript"/>
-</head>

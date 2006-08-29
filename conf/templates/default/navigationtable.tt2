@@ -1,4 +1,4 @@
-<div class="searchtitle" width="100%">
+<div class="searchtitle">
   <!-- Instructions -->
   [%- PROCESS 'start_section.tt2' name='instruction_panel' title='instructions' -%]
   [% config.tr('search_instructions','') %]
@@ -39,6 +39,5 @@
     </div>
     <!-- plugins_table -->
     [% PROCESS "pluginstable.tt2" %]
-  </div>
 
   [%- PROCESS 'end_section.tt2' -%]

@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::trace;
 
-# $Id: trace.pm,v 1.1.2.8 2006-06-21 16:09:09 mwz444 Exp $
+# $Id: trace.pm,v 1.1.2.9 2006-08-29 14:53:32 mwz444 Exp $
 
 use strict;
 use GD;
@@ -40,15 +40,48 @@ sub get_parsed_trace {
         warn $@ if $@;
         return;
     }
-    my %scf;
-    tie %scf, 'Bio::SCF', $trace_file;
-    return \%scf;
+
+    if ($self->{'content_type'} eq "ABI"){
+        require ABI;
+        my $abi = ABI->new(-file=>$trace_file);
+        my %scf;
+        @{$scf{'bases'}}        = split //, $abi->get_sequence();
+        @{$scf{'index'}}        = $abi->get_base_calls();
+        @{$scf{'samples'}{'A'}} = $abi->get_trace('A');
+        @{$scf{'samples'}{'C'}} = $abi->get_trace('C');
+        @{$scf{'samples'}{'G'}} = $abi->get_trace('G');
+        @{$scf{'samples'}{'T'}} = $abi->get_trace('T');
+
+        my $scale_factor = $self->option('abi_scale') || 1;
+        $self->{'max_trace'} = $scale_factor * $abi->get_max_trace();
+
+        return \%scf;
+    }
+    else{
+        my %scf;
+        tie %scf, 'Bio::SCF', $trace_file;
+        $self->{'max_trace'} = 1600;
+        return \%scf;
+    }
 }
 
 sub _guess_format {
     my $self = shift;
     my $path = shift;
-    return 'Bio::SCF';
+
+    my $modded_path = $path;
+    $self->{'gzipped'} = ($modded_path =~ s/\.gz\s*$// );
+    if ($modded_path =~ /\.scf/){
+        $self->{'content_type'} = 'Bio::SCF';
+    }
+    elsif ($modded_path =~ /\.ab1/){
+        $self->{'content_type'} = 'ABI';
+    }
+    else{
+        die "$path: Trace file not of recognized format\n"
+    }
+
+    return;
 }
 
 sub trace_path {
@@ -76,6 +109,7 @@ sub trace_path {
 sub trace_data {
     my $self = shift;
     my $path = $self->trace_path;
+    $self->_guess_format($path);
 
     if ( $path =~ m!^\w+:/! ) {                    # looks like a URL
         require LWP::UserAgent;
@@ -86,7 +120,16 @@ sub trace_data {
             # In the future, make extensible to ABI format
             my $data      = $response->content;
             my $signature = md5_hex($data);
-            my $extension = 'scf';
+            my $extension;
+            if ($self->{'content_type'} eq 'ABI'){
+                $extension = 'ab1';
+            }
+            else{
+                $extension = 'scf';
+            }
+            if ($self->{'gzipped'}){
+                $extension .= '.gz';
+            }
 
             # untaint signature for use in open
             $signature =~ /^([0-9A-Fa-f]+)$/g or return;
@@ -100,10 +143,12 @@ sub trace_data {
             binmode(F);
             print F $data;
             close F;
+            
+            if ($self->{'gzipped'}){
+                $file_name = $self->gunzip_file( $file_name );
+            }
 
-            return ( 'Bio::SCF', $file_name );
-
-            #return ($response->content_type,$response->content);
+            return ( $self->{'content_type'}, $file_name );
         }
         else {
             die $response->status_line;
@@ -111,9 +156,25 @@ sub trace_data {
 
     }
     else {
-        my $content_type = $self->_guess_format($path);
-        return ( $content_type, $path );
+        if ($self->{'gzipped'}){
+            $path = $self->gunzip_file( $path );
+        }
+        return ( $self->{'content_type'}, $path );
     }
+}
+
+sub gunzip_file {
+    my $self      = shift;
+    my $file_name = shift;
+
+    $file_name =~ /(.+)\.gz$/;
+    my $new_file_name = $1;
+
+    unless ( -e $new_file_name ){
+        `gunzip -c $file_name > $new_file_name`;
+    }
+
+    return $new_file_name;
 }
 
 sub trace_height {
@@ -334,7 +395,7 @@ sub draw_component {
     my $text_height = $font->height + ( $text_buffer * 2 );
 
     my $trace_base_line = $trace_glyph_bottom - $text_height;
-    my $max_trace_val   = 1600;
+    my $max_trace_val   = $self->{'max_trace'} ;
     my $vertical_scale
         = ( $self->trace_height - $text_height - 2 ) / $max_trace_val;
     my $total_trace_bases = $three_prime_bases + $five_prime_bases + 1;
@@ -761,6 +822,13 @@ The following additional options are available to the "image" glyph:
   -show_border      Show the black border from        0
                     around the trace
 
+  -abi_scale        The scale factor for abi          1
+                    formatted files.  This is 
+                    multiplied against the max 
+                    trace value to determine the
+                    hight of peaks.
+                    
+
 =head2 Specifying the Trace
 
 The path to the trace file can be specified in two ways. First, you can place
@@ -820,11 +888,18 @@ CVS checkout of Bio::Perl to work properly with the "arrow", "span" and
 See the L<DESCRIPTION> for an explaination of how to align the trace with the
 reference.
 
-The trace looks a little off when the feature is on the negative strand of the reference.  This is because the letters are on the oppisite side of the position line.  This issue should be addressed.
+The trace looks a little off when the feature is on the negative strand of the
+reference.  This is because the letters are on the oppisite side of the
+position line.  This issue should be addressed.
 
 This glyph uses it's own version of the Bio::Graphics::Panel method, map_pt(),
 due to that method not behaving as needed.  The new copied method is called
 "trace_map_pt".  
+
+If the trace file is gzipped, it will unzip it without destroying the gzipped
+file.  However, it will also not remove the newly created file.  This will only
+be an issue when the files are stored locally, since web accessed trace files
+are stored as temp files anyway. 
 
 =head1 SEE ALSO
 

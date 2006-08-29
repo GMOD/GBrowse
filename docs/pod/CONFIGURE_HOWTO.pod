@@ -719,8 +719,17 @@ width of each level, in bp.  For example:
 
 If this configuration option is set, a new "region panel" will appear
 that is intermediate in size between the overview and the detail
-panel. The value of this option becomes the size of the region panel
-in base pairs.
+panel. The value of this option becomes the initial size of the region
+panel in base pairs.
+
+     region segment = 10000
+
+=item * region sizes
+
+This contains a space-delimited list of region panel sizes to present
+to the user in a popup menu:
+
+     region sizes   = 5000 10000 20000
 
 =item * show sources
 

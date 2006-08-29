@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.195 2006-08-26 23:12:35 lstein Exp $
+# $Id: Browser.pm,v 1.196 2006-08-29 03:39:14 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1062,7 +1062,7 @@ sub make_map {
 	$link = "?help=citations#$label";
       }
       my $citation = $self->citation($label,$self->language);
-      $map .= qq(<area shape="rect" coords="$x1,$y1,$x2,$y2" href="$link" target="citation" title="$citation"/>\n);
+      $map .= qq(<area shape="rect" coords="$x1,$y1,$x2,$y2" href="$link" target="citation" title="$citation" alt="$label"/>\n);
     }
   }
 

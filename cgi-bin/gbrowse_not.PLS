@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_not.PLS,v 1.9 2006-08-26 23:12:35 lstein Exp $
+# $Id: gbrowse_not.PLS,v 1.10 2006-08-29 03:39:13 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -868,7 +868,6 @@ sub adjust_settings {
   for my $div (grep {/^div_visible_/} CGI::cookie()) {
     my ($section)   = $div =~ /^div_visible_(\w+)/ or next;
     my $visibility  = CGI::cookie($div);
-    warn "$div = $visibility";
     $settings->{section_visible}{$section} = $visibility;
   }
 
@@ -1026,22 +1025,22 @@ sub slidertable {
   push @lines,hidden(-name=>'ref',  -value=>$segment->seq_id,-override=>1);
   push @lines,
     (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>"left $full",
-		  -border=>0,-title=>"left $full_title"),
+		  -title=>"left $full_title"),
      image_button(-src=>"$buttonsDir/green_l1.gif",-name=>"left $half",
-		  -border=>0,-title=>"left $half_title"),
+		  -title=>"left $half_title"),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/minus.gif",-name=>"zoom out $fine_zoom",
-		  -border=>0,-title=>"zoom out $fine_zoom"),
+		  -title=>"zoom out $fine_zoom"),
      '&nbsp;',
      zoomBar($segment,$whole_segment,$buttonsDir),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/plus.gif",-name=>"zoom in $fine_zoom",
-		  -border=>0,-title=>"zoom in $fine_zoom"),
+		  -title=>"zoom in $fine_zoom"),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/green_r1.gif",-name=>"right $half",
-		  -border=>0,-title=>"right $half_title"),
+		  -title=>"right $half_title"),
      image_button(-src=>"$buttonsDir/green_r2.gif",-name=>"right $full",
-		  -border=>0,-title=>"right $full_title"),
+		  -title=>"right $full_title"),
     );
 
   my $str	= join('', @lines);
@@ -1183,7 +1182,7 @@ sub tracks_table {
 			     checkbox(-id=>"${id}_n",-name=>"${id}_n",
 				      -label=>$all_off,onClick=>"gbCheck(this,0)")
 			    ).br()   if exists $track_groups{$category};
-      push @sections,div($control.span({-id=>$id},$section));
+      push @sections,div($control.div({-id=>$id},$section));
       $id++;
     }
 
@@ -1923,9 +1922,9 @@ sub overview {
   my $url             = $CONFIG->generate_image($image);
   return image_button(-name=>'overview',
 		      -src=>$url,
-		      -width=>$width,
-		      -height=>$height,
-		      -border=>0,
+#		      -width=>$width,
+#		      -height=>$height,
+#		      -border=>0,
 		      -align=>'middle')
     .hidden(-name=>'seg_min',-value=>$whole_segment->start,-override=>1)
     .hidden(-name=>'seg_max',-value=>$whole_segment->end,-override=>1);
@@ -1940,9 +1939,9 @@ sub regionview {
   my $url             = $CONFIG->generate_image($image);
   return image_button(-name=>'regionview',
  		      -src=>$url,
- 		      -width=>$width,
- 		      -height=>$height,
- 		      -border=>0,
+# 		      -width=>$width,
+# 		      -height=>$height,
+# 		      -border=>0,
  		      -align=>'middle');
 }
 

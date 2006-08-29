@@ -5,18 +5,19 @@
 <html>
 <head>
   <title>
-  [% IF config.setting('unit_divider') == 1 %]
+  [%- IF config.setting('unit_divider') == 1 %]
     [% config.setting('description') %][% IF (segment) %]: [% segment.seq_id %]:[% segment.start %]..[% segment.end %][% END %]
   [% ELSE %]
     [% config.setting('description') %][% IF (segment) %]: [% segment.seq_id %]:[% unit_label(segment.start) %]..[% unit_label(segment.end) %][% END %]
-  [% END %]
+  [% END -%]
   </title>
+
   <link rel="stylesheet" type="text/css" href="[% config.setting('stylesheet') %]"/>
 
 [% PROCESS "script.tt2" %]
 </head>
-<!-- FIXME language_code not working -->
-<body en="[% config.setting('language_code') %]" charset="[% config.tr('CHARSET') %]">
+
+<body lang="[% config.language_code.list.0 %]">
 
 <!-- Process header template defined in config file -->
 [% PROCESS 'header_wrapper.tt2' %]

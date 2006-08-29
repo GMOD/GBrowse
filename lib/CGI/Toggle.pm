@@ -32,21 +32,14 @@ my $style = <<'END';
 .tctl      {  text-decoration:underline; }
 END
 
-my $noscript = <<'END';
-<style>
-.el_hidden { }
-.nojs      { }
-</style>
-END
-
 sub start_html {
   my %args = @_ == 1 ? (-title=>shift) : @_;
 
-  $args{-noscript}     = $noscript;
-  $args{-onLoad}       = "startPage()";
-
   $image_dir           = $args{-gbrowse_images} if defined $args{-gbrowse_images};
   $js_dir              = $args{-gbrowse_js}     if defined $args{-gbrowse_js};
+
+  delete $args{-gbrowse_images};
+  delete $args{-gbrowse_js};
 
   # earlier versions of CGI.pm don't support multiple -style and -script args.
   if ($CGI::VERSION >= 3.05) {
@@ -91,13 +84,13 @@ sub toggle_section {
 		       -style=>$visible ? 'display:none' : 'display:inline',
 		       -onClick=>"visibility('$name',1)"
                      },
-		     img({-src=>$plus}).'&nbsp;'.span({-class=>'tctl'},$section_title));
+		     img({-src=>$plus,-alt=>'+'}).'&nbsp;'.span({-class=>'tctl'},$section_title));
   my $hide_ctl = div({-id=>"${name}_hide",
 		       -class=>'ctl_visible',
 		       -style=>$visible ? 'display:inline' : 'display:none',
 		       -onClick=>"visibility('$name',0)"
                      },
-		     img({-src=>$minus}).'&nbsp;'.span({-class=>'tctl'},$section_title));
+		     img({-src=>$minus,-alt=>'-'}).'&nbsp;'.span({-class=>'tctl'},$section_title));
   my $content  = div({-id    => $name,
 		      -style=>$visible ? 'display:inline' : 'display:none',
 		      -class => 'el_visible'},

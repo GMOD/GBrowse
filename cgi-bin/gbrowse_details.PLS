@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.28.4.2.2.7 2006-06-19 22:12:15 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.28.4.2.2.8 2006-08-30 02:41:00 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -276,7 +276,7 @@ sub PrintMultiple {
   $options ||= {};
 
   my @a = formatValues($feature,$label,@_);
-  return unless @a;
+  return '' unless @a;
 
   my $LINK = "";
   my $isFirst=1;

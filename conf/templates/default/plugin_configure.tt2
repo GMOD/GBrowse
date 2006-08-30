@@ -4,6 +4,8 @@
 <html>
 <head>
 <title>[% title %]</title>
+<link rel="stylesheet" type="text/css" href="[% config.setting('stylesheet') %]"/>
+[% PROCESS "script.tt2" %]
 </head>
 
 <body>
@@ -12,7 +14,7 @@
 [% PROCESS 'header_wrapper.tt2' %]
 
 <h1>[% title %]</h1>
-<form method="post" action="/cgi-bin/gbrowse/yeast_chr1/" enctype="multipart/form-data">
+<form method="post" action="[% referer %]"  enctype="multipart/form-data">
 [% IF config_html %]
   [% config_html %]
   <p>

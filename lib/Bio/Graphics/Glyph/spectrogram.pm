@@ -1,5 +1,5 @@
 package Bio::Graphics::Glyph::spectrogram;
-# $Id: spectrogram.pm,v 1.4 2006-08-18 02:31:37 sheldon_mckay Exp $
+# $Id: spectrogram.pm,v 1.5 2006-08-30 09:59:22 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics::Glyph::generic;
@@ -15,7 +15,6 @@ use vars '@ISA';
 # saturation value is fixed at the maximum
 use constant SAT  => 255;
 use constant GDS  => GD::Simple->new(1,1);
-
 
 # each spectrogram feature will be a standalone
 # (unaggregated) feature.
@@ -82,8 +81,7 @@ sub draw {
     }
   
     if ($lbl) {
-      my $y = $lbl_type eq 'period' ? int $y2-($height/2) : $v_offset + 50;
-      $gd->stringUp(gdSmallFont, $x1-27, $y, $lbl_type, $black);
+      $gd->stringUp(gdSmallFont, $x1-27, $y2-5, $lbl_type, $black);
     }
 
     $y1 += $step;

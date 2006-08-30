@@ -2,4 +2,3 @@
 <input type="text" name="name" value="[% page_settings.name %]" size="25"/>
 <input type="submit" name="search" value="[% config.tr('search') %]"/>
 <input type="submit" name="reset" value="[% config.tr('reset') %]" class="reset_button"/>
-<input type="checkbox" name="flip" value="1" [% IF page_settings.flip ; "checked" ; END %]/>[% config.tr('flip') %]

@@ -91,7 +91,7 @@
 
 </form>
 
-<form method="POST" action="[% action %]" name="externalform" enctype="multipart/form-data" ><p/>
+<form method="post" action="[% action %]" name="externalform" enctype="multipart/form-data" ><p/>
   <!-- upload table -->
   [% PROCESS "uploadtable.tt2" %]
 

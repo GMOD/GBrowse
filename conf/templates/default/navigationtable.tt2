@@ -16,12 +16,15 @@
         [% ELSE %]
 	   [% label='show_header' %]
         [% END %]
+        <div style="font-size: 10pt">
         <a href="[% link_header   %]">[<b>[% config.tr(label) %]</b>]</a>
 	<a href="[% link_bookmark %]">[<b>[% config.tr('bookmark') %]</b>]</a>
         <a href="[% link_image    %]" target="_blank">[<b>[% config.tr('image_link') %]</b>]</a>
 	<a href="[% link_svg      %]" target="_blank">[<b>[% config.tr('svg_link')   %]</b>]</a>
+        <b>[% link_plugins %]</b>
 	<a href="[% link_help     %]" target="help">[<b>[% config.tr('help') %]</b>]</a>
 	<a href="?reset=1" class="reset_button">    [<b>[% config.tr('reset') %]</b>]</a>
+        </div>
    [% END %]
 </div>
 
@@ -33,11 +36,28 @@
   <!-- Search -->
   [%- PROCESS 'start_section.tt2' name='search_panel' title='search' -%]
 
-    <div class="searchbody" style="height: 4em;">
-      <div class="searchbody" style="float: left; width: 50%;">[% PROCESS "searchbox.tt2" %]</div>
-      <div class="searchbody" style="float: right; width: 50%;">[% IF segment %]<b>[% config.tr('scroll') %]</b><br/>[% PROCESS "slider.tt2" %][% END %]</div>
-    </div>
+
+  <div class="searchbody" style="height: 4em;">
+
+    <!-- search box -->
+    <div style="float: left; width: 50%;">[% PROCESS "searchbox.tt2" %]</div>
+
     <!-- plugins_table -->
-    [% PROCESS "pluginstable.tt2" %]
+    <div style="float: right; width:50%">[% PROCESS "pluginmenu.tt2" %]</div>
+    <br />
+
+    <!-- source menu -->
+    <div class="searchbody" style="float: left; width: 50%">[% PROCESS "sourcemenu.tt2" %]</div>
+
+     [% IF segment %]
+       <div class="searchbody" style="float: right; width: 50%">
+        <b>[% config.tr('scroll') %]</b><br />[% PROCESS "slider.tt2" %]
+        <input type="checkbox" name="flip" value="1" [% IF page_settings.flip ; "checked" ; END %]/><b>[% config.tr('flip') %]</b>
+
+        </div>
+     [% END %]
+  </div>
 
   [%- PROCESS 'end_section.tt2' -%]
+
+<br />

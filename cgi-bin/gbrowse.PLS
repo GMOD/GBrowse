@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.171 2006-08-30 02:37:07 lstein Exp $
+# $Id: gbrowse.PLS,v 1.172 2006-08-30 03:29:01 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -511,6 +511,7 @@ sub main_display {
         link_image    => image_link($page_settings),
         link_svg      => svg_link($page_settings),
         link_help     => "?display_help=general",
+	link_plugins  => plugin_links($PLUGINS),
 
         rand => substr( md5_hex(rand), 0, 5 ),
 

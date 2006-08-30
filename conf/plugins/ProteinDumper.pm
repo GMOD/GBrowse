@@ -1,4 +1,4 @@
-# $Id: ProteinDumper.pm,v 1.1.6.1.2.2 2006-06-19 04:22:17 lstein Exp $
+# $Id: ProteinDumper.pm,v 1.1.6.1.2.3 2006-08-30 02:36:41 lstein Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::ProteinDumper
 #
@@ -47,7 +47,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::ProteinDumper;
-# $Id: ProteinDumper.pm,v 1.1.6.1.2.2 2006-06-19 04:22:17 lstein Exp $
+# $Id: ProteinDumper.pm,v 1.1.6.1.2.3 2006-08-30 02:36:41 lstein Exp $
 # Protein Dumper plugin
 
 use strict;
@@ -81,7 +81,7 @@ my @ORDER = grep {
 my %FORMATS = @FORMATS;
 my %LABELS  = map { $_ => $FORMATS{$_}[0] } keys %FORMATS;
 
-$VERSION = '0.01';
+$VERSION = '1.00';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -164,7 +164,25 @@ sub mime_type {
 
 sub config_defaults {
   my $self = shift;
-  my $default_code = $self->browser_config->plugin_setting('geneticcode') || 1;
+  my $browser_config = $self->browser_config;
+
+  # try to get the codon table to use
+  # first priority is the geneticcode or codontabe setting in the plugin config section
+  my $default_code = $browser_config->plugin_setting('geneticcode') || $browser_config->plugin_setting('codontable');
+
+  # second priority is the setting in any "translation" track.
+  unless (defined $default_code) { # search config file for a translation track
+    for my $label ($browser_config->labels) {
+      next unless $browser_config->setting($label => 'glyph') eq 'translation';
+      $default_code ||= $browser_config->setting($label => 'geneticcode')
+	|| $browser_config->setting($label => 'codontable');
+      last if $default_code;
+    }
+  }
+
+  # last try, set to 1
+  $default_code ||= 1;
+
   return { format           => 'html',
 	   fileformat       => 'fasta',
            geneticcode      => $default_code,

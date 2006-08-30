@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.6 2006-08-17 17:45:40 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.7 2006-08-30 20:09:41 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -754,7 +754,7 @@ sub get_feature_by_name {
         #END Recursive Mapping
       } else {
      
-        if ($class eq 'CDS' && $self->inferCDS) {
+        if ($class && $class eq 'CDS' && $self->inferCDS) {
             #$hashref holds info for the polypeptide
             my $poly_min = $$hashref{'fmin'};
             my $poly_max = $$hashref{'fmax'};

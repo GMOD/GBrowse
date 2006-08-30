@@ -698,10 +698,11 @@ sub score {
 =head2 target()
 
   Title   : target
-  Usage   : unimplemented
-  Function: ???
-  Returns : undef
-  Args    :
+  Usage   : $feature->target
+  Function: returns a Bio::DB::Das::Chado::Segment that corresponds
+            to the target of a similarity pair
+  Returns : a Bio::DB::Das::Chado::Segment object
+  Args    : none
 
 =cut
 
@@ -714,8 +715,9 @@ sub target {
 #target sequence.  So, what do I need from chado:
 #
 #  - the feature_id of the target (from featureloc.srcfeature_id
-#      where featureloc.rank > 0
-#  - featureloc.fmin and fmax for the targeth
+#      where featureloc.rank > 0 ; when rank = 0, it corresponds
+#      to the feature's coords on the 'main' sequence)
+#  - featureloc.fmin and fmax for the target
 #  - feature.name
 
   my $query = "SELECT fl.srcfeature_id,fl.fmin,fl.fmax,f.name,f.uniquename

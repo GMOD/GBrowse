@@ -1,4 +1,4 @@
-# $Id: Spectrogram.pm,v 1.5 2006-08-30 10:21:59 sheldon_mckay Exp $
+# $Id: Spectrogram.pm,v 1.6 2006-08-30 20:04:31 sheldon_mckay Exp $
 # bioperl module for Bio::Graphics::Browser::Plugin::Spectrogram
 # cared for by Sheldon McKay mckays@cshl.edu
 # Copyright (c) 2006 Cold Spring Harbor Laboratory.
@@ -17,7 +17,7 @@ plugin for gbrowse.
 The Spectrogram plugin builds up a spectrogram for
 digitized DNA sequence using the short-time fourier
 transform (STFT) method, adapted from classical digital signal
-processing world.  A sliding window of variable size and overlap
+processing methods.  A sliding window of variable size and overlap
 is used to calculate each "column" of the spectrogram, where the column
 width is equal to the step, or overlap between windows.
 
@@ -54,6 +54,9 @@ track is turned on in gbrowse.
 The graphical rendering of the spectrogram depends on the
 glyph module Bio::Graphics::Glyph::spectrogram.  
 
+The plugin is discussed in more detail in the plugin's help
+links.
+
 =head1 FEEDBACK
 
 See the GMOD website for information on bug submission http://www.gmod.org.
@@ -66,9 +69,9 @@ Email E<lt>mckays@cshl.eduE<gt>
 ;
 
 package Bio::Graphics::Browser::Plugin::Spectrogram;
-use Data::Dumper;
 use strict;
 use Bio::Graphics::Browser::Plugin;
+use Bio::Graphics::Browser::Util qw/error/;
 use CGI ':standard';
 use CGI::Carp 'fatalsToBrowser';
 use CGI::Toggle;
@@ -79,6 +82,8 @@ use Statistics::Descriptive;
 use List::Util qw/shuffle max/;
 
 use vars qw/@ISA $CONFIG/;
+
+use constant IMAGE_DIR => '/gbrowse/images/';
 
 @ISA = qw/ Bio::Graphics::Browser::Plugin /;
 
@@ -318,7 +323,7 @@ sub configure_form {
 
   my $description = $self->description;
   my $state       = { on => 0, override => 1 };
-  my $form = toggle($state, 'What is this plugin for?', $description);
+  my $form = toggle($state, 'What is a DNA spectrogram?', $description);
  
   my $msg = $self->_help_message( $state, 'Sliding window size', split "NL", <<'END;');
 Window size is the number of bases to include in each calculation.NL
@@ -450,48 +455,57 @@ sub _process_msg {
 }
 
 sub description {
+  my $image_dir = IMAGE_DIR;
   return table( {-width => 800}, Tr( td({-class => 'databody'},
 	   p(<<END) . 
 The Spectrogram plugin builds up a spectrogram for digitized DNA sequence using the short-time fourier transform (STFT) method,
-adapted from classical digital signal processing methods.
+adapted from classical digital signal processing.
+Spectrogram analysis of DNA can help uncover non-random structures in DNA sequences, some examples of which are coding DNA
+and repeats  (For example, see <a href="http://www.hindawi.com/GetPDF.aspx?doi=10.1155/S1110865704310048"> this article</a>).
 </p>
+<h3>Coding DNA examples</h3>
 <p>
-A sliding window of variable size and overlap is used to calculate each
-'column' of the spectrogram, where the column width is equal to the step, or overlap between windows.
+This is an example of a spectrogram of a genic region of yeast chromosome I.  Note the linear feature at period 3 (codon size).
+<img border=1 src="$image_dir/yeast_I_genes_spec.png">
 </p>
+<br>
 <p>
-Spectral analysis reveals non-random structures in DNA sequence, some examples of which are coding DNA and repeats.  
+This is an example of a portion of <i>C. elegans</i> predicted gene Y38C1AB.4.  Note the differences between exons and introns.
+<img border=1 src="$image_dir/worm_exons_spec.png"> 
+</p>
+
+<h3>Repeats</h3>
 <p>
-<ul>
-<li>Coding DNA appears as a linear feature at period 3 (codon size).  It is especially visible in prokaryotic and viral genomes.
-In Eukaryotes, due to intron and other non-coding sequence, genes are most visible with larger window 
-sizes.  
-<br><br>
-<li>Repeats cause a ladder-like series of horizontal lines.  Short repeats, such as telomeric repeats, are most visible with small
+Repeats cause a ladder-like series of horizontal lines.  Short repeats, such as telomeric repeats, are most visible with small
 window sizes.  Longer repeats, such as minisatellites, are best seen with larger window sizes.
-</ul><br>
+</p>
+<p>
+This is an example of telomeric repeats on <i>C. elegans</i> chromosome I.
+<img border=1 src="$image_dir/worm_telomeric_spec.png"> 
+</p>
 END
 
 	   p(<<END) .
 <h3>How is the DNA spectrogram calculated?</h3>
 <p>
+A sliding window of variable size and overlap is used to calculate the spectrogram, which is displayed graphically as a track in the
+genome browser.  Each window is a subsegment of DNA and corresponds to a 'column' in the graphical display of the spectrogram.  The 
+window slides along the sequence, from left to right, at a set increment, which corresponds to the column width.
+</p>
+<p>
 The spectrogram refers collectively to all of the rows and columns seen in the graphical display.
 </p>
 <p>
-Each window is a column of height n rows, where n is the number of bases in the window. Each row corresponds
-to a discrete 'frequency' from 0 -> n-1.
-<p>
-Arguably, a more intuitive way to relate this to DNA sequence to calculate the 'period'.
+The spectrogram has <i>n</i> rows, where <i>n</i> is the number of bases in the window. Each row corresponds
+to a discrete 'frequency' from 0 -> <i>n</i>-1.
 </p>
 <p>
-In this case, if we see a feature in the spectrogram at period <i>x</i>, there is a non-random structure
+An arguably more intuitive way to relate this to DNA sequence to calculate the 'period' (<i>n</i>/frequency*2).
+If we see a feature in the spectrogram at period <i>x</i>, there is a non-random structure
 with a periodicity of <i>x</i> nucleotides.  The chief example of this would be coding DNA at period 3.  
 </p>
 <br>
-For each window, we:
-<br>
-<ul>
-<li> digitize the DNA by creating four binary indicator sequences:
+The DNA sequence is converted from analog to digital by creating four binary four binary indicator sequences:
 
 <pre>
            G A T C C T C T G A T T C C A A
@@ -501,24 +515,26 @@ For each window, we:
          C 0 0 0 1 1 0 1 0 0 0 0 0 1 1 0 0
 </pre>
 <br>
-<li> take the discrete fourier transform (DFT) for each of the four indicator sequences and square the values to get the magnitude.
-<br><br>
-<li> graphically render the data as a track in the main gbrowse display.
-</ul><br>
-END
-
-           p(<<END) .
 <p>
-The actual algorithm used is the fast fourier transfrom (FFT), which is much faster than the original DFT algorithm but
-is limited in that only base2 numbers (128, 256, 512, etc) can be used for window sizes.  This is necessary to make the
-spectrogram calculation fast enough for real-time use.  
+The magnitude of the discrete fourier transform (DFT) is calculated seperately for each of the four indicator sequences.
+The algorithm used is the fast fourier transfrom (FFT; via Math::FFT), which is much faster than the original DFT algorithm 
+but is limited in that only base2 numbers (128, 256, 512, etc) can be used for window sizes.  This is necessary to make the
+spectrogram calculation fast enough for real-time use.
 </p>
-<p>However, it should be noted that calculating spectrograms dynamically is computationally intensive and will cause the gbrowse
-display to load more slowly than usual, especially with larger sequence regions and/or small increments for the sliding
+
+<p>
+For graphical rendering, each transformed sequence is assigned a color (A=blue; T=red; C=green; G=yellow).  The colors for each
+base are superimposed on the image.  In a given spot on the spectrogram, the brightness corresponds to the magnitide (signal intensity)
+and the color corresponds to the dominant base at that frequency/period.  If no single base predominates, an intermediate color 
+is calculated based on the relative magnitudes.
+</p>
+<p>
+The spectrogram is visible as a track in the generic genome browser.  Please note that the calculations and graphical rendering are computationally
+intensive, so the image will take a while to load, especially with larger sequence regions and/or small increments for the sliding
 window.
 </p>
 <p>
-After you have launched this plugin, the spectrogram will continue to be calculated in the main gbrowse display until you turn off the 'Spectrogram' track.
+After you have launched this plugin, the spectrogram will continue to be calculated in the main gbrowse display until you turn off the 'Spectrogram' track. 
 </p>
 END
 
@@ -528,6 +544,11 @@ END
 
 sub toggle {
   my ($state,$section_head,@body) = @_;
+
+  $state ||= {};
+  $state->{plus_img}  = '/gbrowse/images/buttons/query.png';
+  $state->{minus_img} = '/gbrowse/images/buttons/minus12.png';
+
   my ($label) = $CONFIG->tr($section_head) || $section_head;
   return toggle_section($state,$label,b($label),@body);
 }

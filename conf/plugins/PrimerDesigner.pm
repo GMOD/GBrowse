@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.9 2006-08-30 20:01:53 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.10 2006-08-30 20:04:31 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -298,8 +298,6 @@ sub make_boundary_map {
 
 package Bio::Graphics::Browser::Plugin::PrimerDesigner;
 
-use lib "/home/smckay/lib";
-
 use strict;
 use Bio::PrimerDesigner;
 use Bio::PrimerDesigner::Tables;
@@ -313,8 +311,6 @@ use CGI::Pretty 'html3';
 use CGI::Carp 'fatalsToBrowser';
 use CGI::Toggle;
 use Math::Round 'nearest';
-
-use Data::Dumper;
 
 use constant BINARY            => 'primer3';
 use constant BINPATH           => '/usr/local/bin';

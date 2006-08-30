@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.12 2006-08-18 18:29:50 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.13 2006-08-30 17:26:11 lstein Exp $
 
 =head1 NAME
 
@@ -116,12 +116,13 @@ sub new {
 
     warn "$name, $factory\n"                      if DEBUG;
     warn "base_start = $base_start, stop = $stop\n" if DEBUG;
-    #clicking on the help in gbrowse calls this constructor without a name. return to avoid performances issues
+    # clicking on the help in gbrowse calls this constructor without a
+    # name. return to avoid performances issues
     if (! defined ($name)) {
       return;
     }
-#    $self->Bio::Root::Root->throw("start value less than 1\n")
-#      if ( defined $base_start && $base_start < 1 );
+    # $self->Bio::Root::Root->throw("start value less than 1\n")
+    #   if ( defined $base_start && $base_start < 1 );
     $base_start = $base_start ? int($base_start) : 1;
     my $interbase_start = $base_start - 1;
 
@@ -129,7 +130,7 @@ sub new {
 
     warn "quoted name:$quoted_name\n" if DEBUG;
 
-#need to change this query to allow for Target queries
+    # need to change this query to allow for Target queries
 
     my $srcfeature_query = $factory->dbh->prepare( "
        select srcfeature_id from featureloc
@@ -318,7 +319,7 @@ sub name {
 
 sub strand { 
   my $self = shift;
-  
+
   return $self->{'strand'} = shift if @_;
   return $self->{'strand'} || 0;
 }
@@ -362,7 +363,7 @@ sub _search_by_name {
         ");
     $isth->execute or Bio::Root::Root->throw("query for name in synonym failed");
     $rows_returned = $isth->rows;
-    
+
     if ($rows_returned == 0) { #look in dbxref for accession number match
       $isth = $factory->dbh->prepare ("
          select feature_id from feature_dbxref fd, dbxref d
@@ -370,7 +371,7 @@ sub _search_by_name {
                lower(d.accession) = $quoted_name ");
       $isth->execute or Bio::Root::Root->throw("query for accession failed");
       $rows_returned = $isth->rows;
-      
+
       return if $rows_returned == 0;
 
       if ($rows_returned == 1) {
@@ -621,7 +622,9 @@ sub features {
 
   warn "Segment->features() args:@_\n" if DEBUG;
 
-  #In some cases (url search : ?name=foo) $self isn't a hash ref ie object but a simple scalar ie string. So we need to get the factory the right way before accessing it
+  # In some cases (url search : ?name=foo) $self isn't a hash ref ie
+  # object but a simple scalar ie string. So we need to get the
+  # factory the right way before accessing it
   if (ref ($self) &&  $self->factory->do2Level) {
     return $self->_features2level(@_);
   }# should put an else here to try to get the factory from @_
@@ -660,27 +663,27 @@ sub features {
   unless ($feature_id) {
     $rangetype ||='overlaps';
 
-# set range variable 
+    # set range variable
 
     $base_start = $self->start;
     $interbase_start = $base_start -1;
     $rend       = $self->end;
-#    my $sql_range;
-#    if ($rangetype eq 'contains') {
-#
-#      $sql_range = " fl.fmin >= $interbase_start and fl.fmax <= $rend ";
-#
-#    } elsif ($rangetype eq 'contained_in') {
-#
-#      $sql_range = " fl.fmin <= $interbase_start and fl.fmax >= $rend ";
-#
-#    } else { #overlaps is the default
-#
-#      $sql_range = " fl.fmin <= $rend and fl.fmax >= $interbase_start ";
-#
-#    }
+    #    my $sql_range;
+    #    if ($rangetype eq 'contains') {
+    #
+    #      $sql_range = " fl.fmin >= $interbase_start and fl.fmax <= $rend ";
+    #
+    #    } elsif ($rangetype eq 'contained_in') {
+    #
+    #      $sql_range = " fl.fmin <= $interbase_start and fl.fmax >= $rend ";
+    #
+    #    } else { #overlaps is the default
+    #
+    #      $sql_range = " fl.fmin <= $rend and fl.fmax >= $interbase_start ";
+    #
+    #    }
 
-# set type variable 
+    # set type variable 
 
     $sql_types = '';
 
@@ -708,7 +711,7 @@ sub features {
 
       if (scalar @$types > 1) {
         for(my $i=1;$i<(scalar @$types);$i++) {
-      
+
           $temp_type   = $$types[$i]; 
           $temp_source = '';
           if ($$types[$i] =~ /(.*):(.*)/) {
@@ -731,7 +734,7 @@ sub features {
       $sql_types .= ") and ";
     }
 
-#  $factory->dbh->trace(1) if DEBUG;
+    #  $factory->dbh->trace(1) if DEBUG;
 
     $srcfeature_id = $self->{srcfeature_id};
 
@@ -769,9 +772,9 @@ sub features {
 
   my $query       = "$select_part\n$from_part\n$where_part\n$order_by\n";
 
-#Recursive Mapping
-#  Construct a query that recursively maps clone's features on
-#  the underlying chromosome
+  #Recursive Mapping
+  #  Construct a query that recursively maps clone's features on
+  #  the underlying chromosome
   if ($factory->recursivMapping && ! $feature_id){
     my $qFrom=$from_part;
     $qFrom =~ s/featureslice/recurs_featureslice/g;
@@ -779,30 +782,30 @@ sub features {
   }
   $query =~ s/\s+/ /gs  if DEBUG;
   warn $query if DEBUG;
-#END Recursive Mapping
+  #END Recursive Mapping
 
 
   $factory->dbh->do("set enable_seqscan=0");
-#  $factory->dbh->do("set enable_hashjoin=0");
+  #  $factory->dbh->do("set enable_hashjoin=0");
 
   warn "Segement->features query:$query" if DEBUG;
 
   my $sth = $factory->dbh->prepare($query);
 
    $sth->execute or $self->throw("feature query failed"); 
-#   $factory->dbh->do("set enable_hashjoin=1");
+  #   $factory->dbh->do("set enable_hashjoin=1");
    $factory->dbh->do("set enable_seqscan=1");
 
-# Old query (doesn't use RTree index):
-#
-#    select distinct f.name,fl.fmin,fl.fmax,fl.strand,f.type_id,f.feature_id
-#    from feature f, featureloc fl
-#    where
-#      $sql_types
-#      fl.srcfeature_id = $srcfeature_id and
-#      f.feature_id  = fl.feature_id and
-#      $sql_range
-#    order by type_id
+  # Old query (doesn't use RTree index):
+  #
+  #    select distinct f.name,fl.fmin,fl.fmax,fl.strand,f.type_id,f.feature_id
+  #    from feature f, featureloc fl
+  #    where
+  #      $sql_types
+  #      fl.srcfeature_id = $srcfeature_id and
+  #      f.feature_id  = fl.feature_id and
+  #      $sql_range
+  #    order by type_id
 
 
 
@@ -845,7 +848,6 @@ sub features {
                        $feature_id? undef :$self, #only give the segment as the
                                             # parent if the feature_id wasn't 
                                             # provided
-                                 
                        $feature_id ?
                            $factory->srcfeature2name($$hashref{'srcfeature_id'})
                           :$self->seq_id,
@@ -879,9 +881,15 @@ sub features {
 
   See: features
 
-Its a crude copy past from feature + additionnal code to handle prefetching of 2 levels features. The generated query is ~ as performant as the one generated by features, and the calls to Bio::DB::Das::Chado::Segment->sub_SeqFeatures are avoided, but this doesn't lead to a huge performace boost.
+Its a crude copy past from feature + additionnal code to handle
+prefetching of 2 levels features. The generated query is ~ as
+performant as the one generated by features, and the calls to
+Bio::DB::Das::Chado::Segment->sub_SeqFeatures are avoided, but this
+doesn't lead to a huge performace boost.
 
-If a further developpement increases the performances provided by this 2 level prefetch, we will need to refactor features and _features2level to avoid code duplication
+If a further development increases the performances provided by this 2
+level prefetch, we will need to refactor features and _features2level
+to avoid code duplication
 
 =cut
 
@@ -1078,7 +1086,6 @@ sub _features2level(){
 							 $feature_id? undef :$self, #only give the segment as the
 							 # parent if the feature_id wasn't 
 							 # provided
-                                 
 							 $feature_id ?
 							 $factory->srcfeature2name($$hashref{'srcfeature_id'})
 							 :$self->seq_id,
@@ -1152,7 +1159,7 @@ sub _features2level(){
 
 
 =head2 get_all_SeqFeature, get_SeqFeatures, top_SeqFeatures, all_SeqFeatures
-                                                                                      
+
  Title   : get_all_SeqFeature, get_SeqFeatures, top_SeqFeatures, all_SeqFeatures
  Usage   : $s->get_all_SeqFeature()
  Function: get the sequence string for this segment
@@ -1467,21 +1474,21 @@ Alias of sourceseq for backward compatibility
 *abs_end   = \&end;
 
 =head2 asString
-                                                                                
+
  Title   : asString
  Usage   : $s->asString
  Function: human-readable string for segment
  Returns : a string
  Args    : none
  Status  : Public
-                                                                                
+
 Returns a human-readable string representing this sequence.  Format
 is:
-                                                                                
+
    sourceseq:start,stop
-                                                                                
+
 =cut
-                                                                                
+
 sub asString {
   my $self = shift;
   my $label = $self->refseq;

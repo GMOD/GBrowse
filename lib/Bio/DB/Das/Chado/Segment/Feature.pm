@@ -847,8 +847,8 @@ sub sub_SeqFeature {
   my($self,@type) = @_;
 
   #first call, cache subfeatures
-#Bio::SeqFeature::CollectionI?
-#like SeqFeature::Generic?
+  #Bio::SeqFeature::CollectionI?
+  #like SeqFeature::Generic?
   if(!$self->subfeatures ){
 
     my $parent_id = $self->feature_id();
@@ -859,7 +859,7 @@ sub sub_SeqFeature {
       my @id_list = map { $self->factory->name2term($_) } @type;
 
 
-      # if CDS features where requested, and inferCDS is set, add
+      # if CDS features were requested, and inferCDS is set, add
       # polypeptide and exon features to the list so they can be fetched too
       if ($inferCDS &&  grep {'CDS'} @type ) {
           push @id_list, 
@@ -965,9 +965,9 @@ sub sub_SeqFeature {
 
       next unless $$hashref{srcfeature_id} == $self->srcfeature_id;
 
-#this problem can't be solved this way--group really needs to return 'name'
-#in order for the adaptor to work with gbrowse
-    #  next unless $$hashref{locgroup} eq $self->group; #look out, subfeatures may reside on other segments
+      # this problem can't be solved this way--group really needs to return 'name'
+      # in order for the adaptor to work with gbrowse
+      # next unless $$hashref{locgroup} eq $self->group; #look out, subfeatures may reside on other segments
 
       my $stop  = $$hashref{fmax};
       my $interbase_start = $$hashref{fmin};

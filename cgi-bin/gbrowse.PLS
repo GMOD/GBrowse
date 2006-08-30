@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.52 2006-08-30 02:36:40 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.53 2006-08-30 17:26:11 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -450,7 +450,8 @@ sub main_display {
     print overview_panel($whole_segment,$segment,$page_settings,$feature_files);
 
     if ($page_settings->{region_size}) {
-      my ($region_seg_start, $region_seg_end) = get_regionview_seg($page_settings,$segment->start, $segment->end);
+      my ($region_seg_start, $region_seg_end) = get_regionview_seg($page_settings,$segment->start, $segment->end,
+								   $whole_segment->start,$whole_segment->end);
       my $region_segment = open_database()->segment(-name=>$segment->seq_id,
 						    -start=>$region_seg_start,
 						    -end=>$region_seg_end,
@@ -1506,7 +1507,9 @@ sub zoomnav {
   }
 
   elsif (defined $regionview_x) {
-    my ($regionview_start, $regionview_end) = get_regionview_seg($settings,$start, $stop); 
+    my $whole_start = param('seg_min');
+    my $whole_stop  = param('seg_max');
+    my ($regionview_start, $regionview_end) = get_regionview_seg($settings,$start, $stop, $whole_start, $whole_stop);
     my @regionview_tracks = grep {$settings->{features}{$_}{visible}} 
       $CONFIG->config->regionview_tracks;
     my ($padl,$padr) = $CONFIG->overview_pad(\@regionview_tracks);
@@ -2888,7 +2891,7 @@ sub tableize {
 }
 
 sub get_regionview_seg {
-  my ($settings,$detail_start, $detail_end) = @_;
+  my ($settings,$detail_start, $detail_end, $whole_start, $whole_end) = @_;
   my $regionview_length = $settings->{region_size};
   if ($detail_end - $detail_start + 1 > $regionview_length) { # region can't be smaller than detail
     $regionview_length = $detail_end - $detail_start + 1;
@@ -2896,6 +2899,14 @@ sub get_regionview_seg {
   my $midpoint = ($detail_end + $detail_start) / 2;
   my $regionview_start = int($midpoint - $regionview_length/2 + 1);
   my $regionview_end = int($midpoint + $regionview_length/2);
+  if ($regionview_start < $whole_start) {
+    $regionview_start = 1;
+    $regionview_end   = $regionview_length;
+  }
+  if ($regionview_end > $whole_end) {
+    $regionview_start = $whole_end - $regionview_length + 1;
+    $regionview_end   = $whole_end;
+  }
   return ($regionview_start, $regionview_end);
 }
 

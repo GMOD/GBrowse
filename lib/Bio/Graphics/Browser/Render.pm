@@ -3,7 +3,7 @@ package Bio::Graphics::Browser::Render;
 # a package of shared drawing and HTML rendering methods
 # for gbrowse and related applications
 
-# $Id: Render.pm,v 1.1 2006-08-18 02:26:26 sheldon_mckay Exp $
+# $Id: Render.pm,v 1.2 2006-08-30 09:57:06 sheldon_mckay Exp $
 
 =head1 NAME
     
@@ -45,8 +45,8 @@ package Bio::Graphics::Browser::Render;
 
 use strict;
 use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::I18n;
-use Bio::Graphics::Browser::Util;
+#use Bio::Graphics::Browser::I18n;
+#use Bio::Graphics::Browser::Util;
 use Bio::Root::RootI;
 use CGI qw/:standard escape/;
 use CGI::Toggle;
@@ -55,6 +55,8 @@ use GD;
 use Text::Shellwords;
 use vars qw/$VERSION @ISA/;
 @ISA = ('Bio::Graphics::Browser');
+
+use Data::Dumper;
 
 $VERSION = 0.01;
 
@@ -225,7 +227,7 @@ sub show_examples {
 =head2 toggle
  
  Title   : toggle 
- Usage   : my $toggle_section = $self->toggle( $tile, @body );
+ Usage   : my $toggle_section = $self->toggle( $title, @body );
  Function: creates a show/hide section via CGI::Toggle 
  Returns : html-formatted string 
  Args    : The section title and a list of strings for section content
@@ -234,10 +236,21 @@ sub show_examples {
 
 sub toggle {
   my ( $self, $section, @body ) = @_;
-  my ($label) = $self->tr($section);# or return '';
-  my $state = $self->section_setting($section);# or return '';
-  my $on = $state eq 'open';# or return '';
-  return toggle_section( { on => $on, -override => 1 }, b($label), @body );
+  my $config;
+  if (ref $section && ref $section eq 'HASH') {
+    $config = $section;
+    $section = shift @body;
+  }
+  my ($label) = $self->tr($section) || ($section);
+  my $state = $self->section_setting($section);
+  my $on = $state eq 'open';
+
+  $config ||= {};
+  # config as argument overrides section_setting
+  $config->{on} = $on if $on && !exists $config->{on};
+
+  my $id = $label;
+  return toggle_section( $config, $id, b($label), @body );
 }
 
 =pod
@@ -284,10 +297,11 @@ sub source_menu {
 =cut
 
 sub slidertable {
-  my $self    = shift;
-  my $buttons = $self->setting('buttons') || BUTTONSDIR;
-  my $segment = $self->current_segment or fatal_error("No segment defined");
-  my $span    = $segment->length;
+  my $self       = shift;
+  my $small_pan  = shift;    
+  my $buttons    = $self->setting('buttons') || BUTTONSDIR;
+  my $segment    = $self->current_segment or fatal_error("No segment defined");
+  my $span       = $small_pan ? int $segment->length/2 : $segment->length;
   my $half_title = $self->unit_label( int $span / 2 );
   my $full_title = $self->unit_label($span);
   my $half       = int $span / 2;
@@ -395,9 +409,7 @@ sub unit_label {
 
 sub get_zoomincrement {
   my $self = shift;
-  my $zoom = $self->setting('fine zoom')
-      || $self->setting('DEFAULT_FINE_ZOOM')
-      || DEFAULT_FINE_ZOOM;
+  my $zoom = $self->setting('fine zoom') || DEFAULT_FINE_ZOOM;
   $zoom;
 }
 

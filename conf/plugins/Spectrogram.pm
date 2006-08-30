@@ -1,4 +1,4 @@
-# $Id: Spectrogram.pm,v 1.6 2006-08-30 20:04:31 sheldon_mckay Exp $
+# $Id: Spectrogram.pm,v 1.7 2006-08-30 20:20:36 sheldon_mckay Exp $
 # bioperl module for Bio::Graphics::Browser::Plugin::Spectrogram
 # cared for by Sheldon McKay mckays@cshl.edu
 # Copyright (c) 2006 Cold Spring Harbor Laboratory.
@@ -83,7 +83,8 @@ use List::Util qw/shuffle max/;
 
 use vars qw/@ISA $CONFIG/;
 
-use constant IMAGE_DIR => '/gbrowse/images/';
+use constant IMAGE_DIR   => '/gbrowse/images/help';
+use constant BUTTONS_DIR => '/gbrowse/images/buttons'; 
 
 @ISA = qw/ Bio::Graphics::Browser::Plugin /;
 
@@ -544,10 +545,10 @@ END
 
 sub toggle {
   my ($state,$section_head,@body) = @_;
-
+  my $buttons_dir = $CONFIG->setting('buttons') || BUTTONS_DIR;
   $state ||= {};
-  $state->{plus_img}  = '/gbrowse/images/buttons/query.png';
-  $state->{minus_img} = '/gbrowse/images/buttons/minus12.png';
+  $state->{plus_img}  = "$buttons_dir/query.png";
+  $state->{minus_img} = "$buttons_dir/minus12.png";
 
   my ($label) = $CONFIG->tr($section_head) || $section_head;
   return toggle_section($state,$label,b($label),@body);

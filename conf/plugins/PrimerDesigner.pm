@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.8 2006-08-30 10:21:59 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.9 2006-08-30 20:01:53 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -135,8 +135,8 @@ sub make_map {
     my ( $feat, $x1, $y1, $x2, $y2, $track ) = @$box;
     next unless $feat->can('primary_tag');
     next if $feat->primary_tag eq 'Primer';
-    my $fclass = $feat->class;
-    my $fname  = $feat->name;
+    my $fclass = $feat->class || 'feature';
+    my $fname  = $feat->name  || 'unnamed';
     my $fstart = $feat->start;
     my $fend   = $feat->stop;
     my $pl     = $panel->pad_left;
@@ -298,6 +298,8 @@ sub make_boundary_map {
 
 package Bio::Graphics::Browser::Plugin::PrimerDesigner;
 
+use lib "/home/smckay/lib";
+
 use strict;
 use Bio::PrimerDesigner;
 use Bio::PrimerDesigner::Tables;
@@ -311,6 +313,8 @@ use CGI::Pretty 'html3';
 use CGI::Carp 'fatalsToBrowser';
 use CGI::Toggle;
 use Math::Round 'nearest';
+
+use Data::Dumper;
 
 use constant BINARY            => 'primer3';
 use constant BINPATH           => '/usr/local/bin';
@@ -428,9 +432,8 @@ sub configure_form {
   my $name   = $conf->{name} || "$ref:$start..$end";
 
   my $length = unit_label( $segment->length );
-  my $html  = h2("Showing $length from $ref, positions $start to $end");
 
-
+  my $html   =  h2("Showing $length from $ref, positions $start to $end");
 
   $html .= hidden( -name => 'plugin',        -value => 'PrimerDesigner' )
         . hidden( -name => 'plugin_action', -value => 'Go' )
@@ -517,10 +520,10 @@ sub configure_form {
   # if this is the first config, exit before form and buttons
   # are printed by gbrowse
   if ($no_buttons && !$feats) {
-    my $style = $browser->setting('stylesheet') || STYLE;
-    print start_html( -style => $style, -title => 'PCR Primers'),
-      $html, $map, $browser->footer;
-    exit;
+    #my $style = $browser->setting('stylesheet') || STYLE;
+    #print start_html( -style => $style, -title => 'PCR Primers'),
+    #  $html, $map;#, $browser->footer;
+    #exit;
   }
 
   return $feats ? ($html,$map) : $html.$map;
@@ -548,7 +551,8 @@ sub dump {
   my $conf = $self->configuration;
   $self->reconfigure;
 
-  # boiler plate
+  # dumpers provide their own headers, so make sure boiler plate
+  # stuff is included
   my $style_sheet = $self->browser_config->setting('stylesheet') || STYLE;
   print start_html( -style => $style_sheet, -title => 'PCR Primers' );
   print $self->browser_config->header;
@@ -668,7 +672,7 @@ sub primer_results {
   fatal_error "No primers found:".pre($raw_output) unless $res->left;
 
   my @attributes = qw/ left right startleft startright tmleft tmright
-      qual lqual rqual leftgc rightgc /;
+      qual lqual rqual leftgc rightgc lselfany lselfend rselfany rselfend/;
   
   my ( @rows, @feats );
   
@@ -880,6 +884,7 @@ sub primer3_report {
 
   # print sequence and alignments
   while ( $i <= $#dna_bits ) {
+    $alignment_bits[$i] ||= '';
     $rs .= sprintf( "%3d %s\n", ( $i * 60 + 1 ), $dna_bits[$i] );
     $rs .= "    " . $alignment_bits[$i] . "\n";
     $rs .= "\n";

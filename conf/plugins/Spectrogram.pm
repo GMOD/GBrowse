@@ -1,4 +1,4 @@
-# $Id: Spectrogram.pm,v 1.4 2006-08-30 10:01:35 sheldon_mckay Exp $
+# $Id: Spectrogram.pm,v 1.5 2006-08-30 10:21:59 sheldon_mckay Exp $
 # bioperl module for Bio::Graphics::Browser::Plugin::Spectrogram
 # cared for by Sheldon McKay mckays@cshl.edu
 # Copyright (c) 2006 Cold Spring Harbor Laboratory.
@@ -74,7 +74,6 @@ use CGI::Carp 'fatalsToBrowser';
 use CGI::Toggle;
 use GD;
 
-use lib '/home/smckay/lib';
 use Math::FFT;
 use Statistics::Descriptive;
 use List::Util qw/shuffle max/;

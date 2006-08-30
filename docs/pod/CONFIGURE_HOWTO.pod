@@ -1469,9 +1469,13 @@ to contain any links, use a blank value.
 
 =item 15 box_subparts
 
-If this option is true, then gbrowse will generate imagemap rectangles
-for each of the subparts of a feature (e.g. the exons within a
-transcript), allowing you to link each subpart separately.
+If this option is greater than zero, then gbrowse will generate
+imagemap rectangles for each of the subparts of a feature (e.g. the
+exons within a transcript), allowing you to link each subpart
+separately. The numeric value will control the number of levels of
+subfeatures that the boxes will descend into. For example, if using
+the "gene" glyph, set -box_subparts to 2 to create boxes for the whole
+gene (level 0), the mRNAs (level 1) and the exons (level 2).
 
 =item 16 feature_low
 

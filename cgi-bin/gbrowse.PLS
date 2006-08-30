@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.170 2006-08-26 23:12:35 lstein Exp $
+# $Id: gbrowse.PLS,v 1.171 2006-08-30 02:37:07 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -361,7 +361,7 @@ else {
   main_display($segments,$features,$page_settings);
 }
 
-$session->flush or die $session->errstr;
+$session->flush or die $session->session->errstr;
 exit 0;
 
 #################################################################################

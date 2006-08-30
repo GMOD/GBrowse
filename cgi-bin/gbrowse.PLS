@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.172 2006-08-30 03:29:01 lstein Exp $
+# $Id: gbrowse.PLS,v 1.173 2006-08-30 17:26:27 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -91,7 +91,7 @@ use constant TOO_MANY_REFS     => TOO_MANY_FEATURES;
 use constant DEFAULT_SEGMENT => 100_000;
 use constant DEFAULT_REGION_SIZE => 100_000_000;
 
-use constant OVERVIEW_RATIO  => 0.9;
+use constant OVERVIEW_RATIO  => 0.9; # for the time being, don't touch this
 use constant URL_FETCH_TIMEOUT    => 5;  # five seconds max!
 use constant URL_FETCH_MAX_SIZE   => 1_000_000;  # don't accept any files larger than 1 Meg
 use constant MAX_KEYWORD_RESULTS  => 1_000;     # max number of results from keyword search
@@ -382,7 +382,7 @@ sub main_display {
     $segment = $segments->[0];
 
     $whole_segment  = whole_segment($segment,$page_settings);
-    $region_segment = region_segment($segment,$page_settings);
+    $region_segment = region_segment($segment,$whole_segment,$page_settings);
 
     # truncate the segment to fit within min and max segment boundaries
     resize(\$segment,$whole_segment);
@@ -1079,7 +1079,7 @@ sub zoomnav {
          $CONFIG->config->overview_tracks;
     my ($padl,$padr) = $CONFIG->overview_pad(\@overview_tracks);
 
-    my $overview_width = ($settings->{width} * OVERVIEW_RATIO);
+    my $overview_width = ($settings->{width} * $CONFIG->overview_ratio);
 
     # adjust for padding in pre 1.6 versions of bioperl
     $overview_width -= ($padl+$padr) unless Bio::Graphics::Panel->can('auto_pad');
@@ -1091,12 +1091,14 @@ sub zoomnav {
   }
 
   elsif (defined $regionview_x) {
-    my ($regionview_start, $regionview_end) = get_regionview_seg($settings,$start, $stop); 
+    my $whole_start = param('seg_min');
+    my $whole_stop  = param('seg_max');
+    my ($regionview_start, $regionview_end) = get_regionview_seg($settings,$start, $stop, $whole_start,$whole_stop);
     my @regionview_tracks = grep {$settings->{features}{$_}{visible}} 
       $CONFIG->config->regionview_tracks;
     my ($padl,$padr) = $CONFIG->overview_pad(\@regionview_tracks);
 
-    my $regionview_width = ($settings->{width} * OVERVIEW_RATIO);
+    my $regionview_width = ($settings->{width} * $CONFIG->overview_ratio);
 
     # adjust for padding in pre 1.6 versions of bioperl
     $regionview_width -= ($padl+$padr) unless Bio::Graphics::Panel->can('auto_pad');
@@ -1393,7 +1395,7 @@ sub multiple_segment_data {
         push @{ $refs{$ref} }, $result;
     }
 
-    $CONFIG->width( $settings->{width} * OVERVIEW_RATIO );
+    $CONFIG->width( $settings->{width} * $CONFIG->overview_ratio );
     $multiple_segment_data{'overviews'}
         = $CONFIG->hits_on_overview( $db, $results, $settings->{features} );
     $multiple_segment_data{'count'}               = scalar @$results;
@@ -1488,9 +1490,11 @@ sub whole_segment {
 
 sub region_segment {
   my $segment       = shift;
+  my $whole_segment = shift;
   my $page_settings = shift;
   return unless $page_settings->{region_size};
-  my ($region_seg_start, $region_seg_end) = get_regionview_seg($page_settings,$segment->start, $segment->end);
+  my ($region_seg_start, $region_seg_end) = get_regionview_seg($page_settings,$segment->start, $segment->end, 
+							       $whole_segment->start,$whole_segment->end);
   return open_database()->segment(-name=>$segment->seq_id,
 				  -start=>$region_seg_start,
 				  -end=>$region_seg_end,
@@ -1501,7 +1505,7 @@ sub region_segment {
 sub overview {
   my ($whole_segment,$segment,$settings,$feature_files) = @_;
   return unless $segment;
-  $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
+  $CONFIG->width($settings->{width}*$CONFIG->overview_ratio);
 
 
   my ($image,$length) = $CONFIG->overview($whole_segment,$segment,$settings->{features},$feature_files) or return;
@@ -2211,7 +2215,6 @@ sub plugin_links {
   for my $p (@plugins) {
     my $plugin = $plugins->plugin($p) or next;
     my $name   = $plugin->name;
-    warn "name = $name";
     my $action = "?plugin=$p;plugin_do=".$CONFIG->tr('Go');
     push @result,a({-href=>$action},"[$name]");
   }
@@ -2368,7 +2371,7 @@ sub toggle {
 }
 
 sub get_regionview_seg {
-  my ($settings,$detail_start, $detail_end) = @_;
+  my ($settings,$detail_start, $detail_end, $whole_start, $whole_end) = @_;
   my $regionview_length = $settings->{region_size};
   if ($detail_end - $detail_start + 1 > $regionview_length) { # region can't be smaller than detail
     $regionview_length = $detail_end - $detail_start + 1;
@@ -2376,6 +2379,14 @@ sub get_regionview_seg {
   my $midpoint = ($detail_end + $detail_start) / 2;
   my $regionview_start = int($midpoint - $regionview_length/2 + 1);
   my $regionview_end = int($midpoint + $regionview_length/2);
+  if ($regionview_start < $whole_start) {
+    $regionview_start = 1;
+    $regionview_end   = $regionview_length;
+  }
+  if ($regionview_end > $whole_end) {
+    $regionview_start = $whole_end - $regionview_length + 1;
+    $regionview_end   = $whole_end;
+  }
   return ($regionview_start, $regionview_end);
 }
 

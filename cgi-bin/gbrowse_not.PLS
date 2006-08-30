@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_not.PLS,v 1.11 2006-08-30 02:37:07 lstein Exp $
+# $Id: gbrowse_not.PLS,v 1.12 2006-08-30 17:26:27 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -91,7 +91,7 @@ use constant TOO_MANY_REFS     => TOO_MANY_FEATURES;
 use constant DEFAULT_SEGMENT => 100_000;
 use constant DEFAULT_REGION_SIZE => 100_000_000;
 
-use constant OVERVIEW_RATIO  => 0.9;
+use constant OVERVIEW_RATIO  => 1.0;    # for the time being, don't touch this -- the ratio calculation isn't working
 use constant ANNOTATION_EDIT_ROWS => 25;
 use constant ANNOTATION_EDIT_COLS => 100;
 use constant URL_FETCH_TIMEOUT    => 5;  # five seconds max!
@@ -168,6 +168,9 @@ $CONF_DIR  = conf_dir($CONF_DIR);  # conf_dir() is exported from Util.pm
 ## CONFIGURATION & INITIALIZATION ################################
 # preliminaries -- read and/or refresh the configuration directory
 $CONFIG = open_config($CONF_DIR);  # open_config() is exported from Util.pm
+
+# Set the OVERVIEW_RATIO for the CONFIG to use
+$CONFIG->overview_ratio(OVERVIEW_RATIO); #BF
 
 ## PAGE SETTINGS #################################################
 #
@@ -451,7 +454,8 @@ sub main_display {
     print overview_panel($whole_segment,$segment,$page_settings,$feature_files);
 
     if ($page_settings->{region_size}) {
-      my ($region_seg_start, $region_seg_end) = get_regionview_seg($page_settings,$segment->start, $segment->end);
+      my ($region_seg_start, $region_seg_end) = get_regionview_seg($page_settings,$segment->start, $segment->end,
+								   $whole_segment->start,$whole_segment->end);
       my $region_segment = open_database()->segment(-name=>$segment->seq_id,
 						    -start=>$region_seg_start,
 						    -end=>$region_seg_end,
@@ -868,6 +872,7 @@ sub adjust_settings {
   for my $div (grep {/^div_visible_/} CGI::cookie()) {
     my ($section)   = $div =~ /^div_visible_(\w+)/ or next;
     my $visibility  = CGI::cookie($div);
+    warn "$div = $visibility";
     $settings->{section_visible}{$section} = $visibility;
   }
 
@@ -1025,22 +1030,22 @@ sub slidertable {
   push @lines,hidden(-name=>'ref',  -value=>$segment->seq_id,-override=>1);
   push @lines,
     (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>"left $full",
-		  -title=>"left $full_title"),
+		  -border=>0,-title=>"left $full_title"),
      image_button(-src=>"$buttonsDir/green_l1.gif",-name=>"left $half",
-		  -title=>"left $half_title"),
+		  -border=>0,-title=>"left $half_title"),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/minus.gif",-name=>"zoom out $fine_zoom",
-		  -title=>"zoom out $fine_zoom"),
+		  -border=>0,-title=>"zoom out $fine_zoom"),
      '&nbsp;',
      zoomBar($segment,$whole_segment,$buttonsDir),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/plus.gif",-name=>"zoom in $fine_zoom",
-		  -title=>"zoom in $fine_zoom"),
+		  -border=>0,-title=>"zoom in $fine_zoom"),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/green_r1.gif",-name=>"right $half",
-		  -title=>"right $half_title"),
+		  -border=>0,-title=>"right $half_title"),
      image_button(-src=>"$buttonsDir/green_r2.gif",-name=>"right $full",
-		  -title=>"right $full_title"),
+		  -border=>0,-title=>"right $full_title"),
     );
 
   my $str	= join('', @lines);
@@ -1182,7 +1187,7 @@ sub tracks_table {
 			     checkbox(-id=>"${id}_n",-name=>"${id}_n",
 				      -label=>$all_off,onClick=>"gbCheck(this,0)")
 			    ).br()   if exists $track_groups{$category};
-      push @sections,div($control.div({-id=>$id},$section));
+      push @sections,div($control.span({-id=>$id},$section));
       $id++;
     }
 
@@ -1511,24 +1516,32 @@ sub zoomnav {
          $CONFIG->config->overview_tracks;
     my ($padl,$padr) = $CONFIG->overview_pad(\@overview_tracks);
 
-    my $overview_width = ($settings->{width} * OVERVIEW_RATIO);
+    my $overview_width = ($settings->{width} * $CONFIG->overview_ratio);
+
+    warn "width = $settings->{width}";
 
     # adjust for padding in pre 1.6 versions of bioperl
     $overview_width -= ($padl+$padr) unless Bio::Graphics::Panel->can('auto_pad');
+
+    warn "overview_width = $overview_width";
     my $click_position = $seg_min + $segment_length * ($overview_x-$padl)/$overview_width;
+
 
     $span = $DEFAULT_SEGMENT if $span > $MAX_SEGMENT;
     $start = int($click_position - $span/2);
     $stop  = $start + $span - 1;
+    warn "click position = $click_position, span = $span";
   }
 
   elsif (defined $regionview_x) {
-    my ($regionview_start, $regionview_end) = get_regionview_seg($settings,$start, $stop); 
+    my $whole_start = param('seg_min');
+    my $whole_stop  = param('seg_max');
+    my ($regionview_start, $regionview_end) = get_regionview_seg($settings,$start, $stop, $whole_start,$whole_stop);
     my @regionview_tracks = grep {$settings->{features}{$_}{visible}} 
       $CONFIG->config->regionview_tracks;
     my ($padl,$padr) = $CONFIG->overview_pad(\@regionview_tracks);
 
-    my $regionview_width = ($settings->{width} * OVERVIEW_RATIO);
+    my $regionview_width = ($settings->{width} * $CONFIG->overview_ratio);
 
     # adjust for padding in pre 1.6 versions of bioperl
     $regionview_width -= ($padl+$padr) unless Bio::Graphics::Panel->can('auto_pad');
@@ -1818,7 +1831,7 @@ sub multiple_choices {
     push @{$refs{$ref}},$_;
   }
 
-  $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
+  $CONFIG->width($settings->{width}*$CONFIG->overview_ratio);
   my $overviews = $CONFIG->hits_on_overview($db,$results,$settings->{features});
   my $count = @$results;
 
@@ -1914,7 +1927,7 @@ sub whole_segment {
 sub overview {
   my ($whole_segment,$segment,$settings,$feature_files) = @_;
   return unless $segment;
-  $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
+  $CONFIG->width($settings->{width}*$CONFIG->overview_ratio);
 
 
   my ($image,$length) = $CONFIG->overview($whole_segment,$segment,$settings->{features},$feature_files) or return;
@@ -1922,9 +1935,9 @@ sub overview {
   my $url             = $CONFIG->generate_image($image);
   return image_button(-name=>'overview',
 		      -src=>$url,
-#		      -width=>$width,
-#		      -height=>$height,
-#		      -border=>0,
+		      -width=>$width,
+		      -height=>$height,
+		      -border=>0,
 		      -align=>'middle')
     .hidden(-name=>'seg_min',-value=>$whole_segment->start,-override=>1)
     .hidden(-name=>'seg_max',-value=>$whole_segment->end,-override=>1);
@@ -1939,9 +1952,9 @@ sub regionview {
   my $url             = $CONFIG->generate_image($image);
   return image_button(-name=>'regionview',
  		      -src=>$url,
-# 		      -width=>$width,
-# 		      -height=>$height,
-# 		      -border=>0,
+ 		      -width=>$width,
+ 		      -height=>$height,
+ 		      -border=>0,
  		      -align=>'middle');
 }
 
@@ -2691,7 +2704,6 @@ sub make_citation_link {
     (my $anchor  = $label) =~ tr/ /-/;
     $link = $self_url.'#'.escapeHTML($anchor);
   }
-
   my $citation = $CONFIG->citation($label,$CONFIG->language);
   my $overview_color = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR();
   my @args = (-href=>$link,-title=>$citation,-target=>'citation');
@@ -2917,7 +2929,7 @@ sub tableize {
 }
 
 sub get_regionview_seg {
-  my ($settings,$detail_start, $detail_end) = @_;
+  my ($settings,$detail_start, $detail_end, $whole_start, $whole_end) = @_;
   my $regionview_length = $settings->{region_size};
   if ($detail_end - $detail_start + 1 > $regionview_length) { # region can't be smaller than detail
     $regionview_length = $detail_end - $detail_start + 1;
@@ -2925,6 +2937,14 @@ sub get_regionview_seg {
   my $midpoint = ($detail_end + $detail_start) / 2;
   my $regionview_start = int($midpoint - $regionview_length/2 + 1);
   my $regionview_end = int($midpoint + $regionview_length/2);
+  if ($regionview_start < $whole_start) {
+    $regionview_start = 1;
+    $regionview_end   = $regionview_length;
+  }
+  if ($regionview_end > $whole_end) {
+    $regionview_start = $whole_end - $regionview_length + 1;
+    $regionview_end   = $whole_end;
+  }
   return ($regionview_start, $regionview_end);
 }
 

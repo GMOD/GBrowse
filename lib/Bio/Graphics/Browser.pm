@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.196 2006-08-29 03:39:14 lstein Exp $
+# $Id: Browser.pm,v 1.197 2006-08-30 17:26:27 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -167,7 +167,9 @@ sub read_configuration {
 
   $self->{source} = $default_source;
   $self->{width} = DEFAULT_WIDTH;
-  $self->{overview_ratio} = 0.8;
+
+  # BUG: Something is wrong with overview size calculation - ratio probably being applied in two places.
+  $self->{overview_ratio} = 1.0;
   $self->{dir}   = $conf_dir;
   1;
 }

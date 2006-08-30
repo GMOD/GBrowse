@@ -1,4 +1,4 @@
-# $Id: Spectrogram.pm,v 1.3 2006-08-18 02:31:37 sheldon_mckay Exp $
+# $Id: Spectrogram.pm,v 1.4 2006-08-30 10:01:35 sheldon_mckay Exp $
 # bioperl module for Bio::Graphics::Browser::Plugin::Spectrogram
 # cared for by Sheldon McKay mckays@cshl.edu
 # Copyright (c) 2006 Cold Spring Harbor Laboratory.
@@ -16,7 +16,7 @@ plugin for gbrowse.
 
 The Spectrogram plugin builds up a spectrogram for
 digitized DNA sequence using the short-time fourier
-transform (STFT) method, adapted from the digital signal
+transform (STFT) method, adapted from classical digital signal
 processing world.  A sliding window of variable size and overlap
 is used to calculate each "column" of the spectrogram, where the column
 width is equal to the step, or overlap between windows.
@@ -66,24 +66,27 @@ Email E<lt>mckays@cshl.eduE<gt>
 ;
 
 package Bio::Graphics::Browser::Plugin::Spectrogram;
-
-use lib '/home/smckay/lib';
-
+use Data::Dumper;
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use CGI ':standard';
 use CGI::Carp 'fatalsToBrowser';
+use CGI::Toggle;
 use GD;
+
+use lib '/home/smckay/lib';
 use Math::FFT;
 use Statistics::Descriptive;
 use List::Util qw/shuffle max/;
 
-use Data::Dumper;
-
-use vars '$VERSION','@ISA';
-$VERSION = '0.01';
+use vars qw/@ISA $CONFIG/;
 
 @ISA = qw/ Bio::Graphics::Browser::Plugin /;
+
+sub init {
+  my $self = shift;
+  $CONFIG = $self->browser_config;
+}
 
 sub name { 
   'DNA spectrogram';
@@ -99,12 +102,6 @@ sub verb {
 
 sub mime_type {
   'text/html';
-}
-
-sub description {
-  p("This plugin calculates a spectrogram from digitized DNA sequences",
-    " using Discrete Fourier Transforms") . 
-  p("The plugin was written by Sheldon McKay <mckays\@cshl.edu>");
 }
 
 sub config_defaults {
@@ -144,24 +141,28 @@ sub annotate {
 
   # sanity check for window size
   if ($inc >= $win) {
-    complain("Spectrogram.pm error: window size must be greater than the overlap");
+    error("Spectrogram.pm error: window size must be greater than the overlap");
     return;
   }
   
   # and for maximum period or frequency
   if ($conf->{max} && $conf->{max} > $win) {
-    
-    complain("maximum $conf->{type} can not exceed ".
+    error("maximum $conf->{type} can not exceed ".
 	     " the window size: resetting to $win.");
     $conf->{max} = $win;
   }
 
-  # extend the segment a bit so we can slide the window
-  # all the way to the end of the sequence
+  my $slide_offset = 0;
   my $db = $segment->factory;
-  ($segment) = $db->segment( $segment->ref, $segment->start, ($segment->end + $win) );
+  unless ($segment->start == 1) {
+    my $original_start = $segment->start;
+    ($segment) = $db->segment( $segment->ref, ($segment->start - $win), ($segment->end + $win) );
+    $slide_offset = $original_start - $segment->start - $inc;
+  }
+  else {
+    ($segment) = $db->segment( $segment->ref, $segment->start, ($segment->end + $win) );
+  }
 
-  # API-change alert!
   my $seq_obj = $segment->seq;
   my $seq;
   if ($seq_obj && ref $seq_obj) {
@@ -170,7 +171,6 @@ sub annotate {
   elsif ($seq_obj) {
     $seq = lc $seq_obj;
   }
-
   $seq ||  die "No sequence found for $segment $@";
 
   my $offset  = $segment->start;
@@ -189,18 +189,16 @@ sub annotate {
       $max_f = $min ? int(2*$win/($min)) - 1 : $win-1;
     }
     else {
- 
      unless (int $min == $min) {
-       complain("minumum frequency value should be an integer between",
+       error("minimum frequency value should be an integer between",
 		"0 and ".($win-2));
        return;
      }
      unless (int $max == $max) {
-       complain("minumum frequency value should be an integer between",
+       error("maximum frequency value should be an integer between",
 		"1 and ".($win-1));
        return;
      }
-
       $min_f = $min;
       $max_f = $max || $win-1;
     }
@@ -211,7 +209,7 @@ sub annotate {
   }
 
   $min_f-- unless $min_f == 0;
-  $max_f++ unless $max_f == $win;
+  $max_f++ unless $max_f == $win-1;
 
   my $key = join('; ',"window size $win", "overlap $inc", 
 		 "saturation $conf->{quantile}th percentile");
@@ -225,7 +223,7 @@ sub annotate {
   my $feature_list = $self->new_feature_list;
   my $link = sub { shift->url || 0 };
   $feature_list->add_type( spectrogram => { glyph  => 'spectrogram',
-					    bump   => 0,
+					    bump   => 0, # must be zero
 					    height => $conf->{y_unit} * ($max_f - $min_f + 1),
 					    key    => $key,
 					    win    => $win,
@@ -241,7 +239,7 @@ sub annotate {
     # take the magnitude of the DFT
     dft(\$_) for ($g,$a,$t,$c);
 
-    # get rid of DC component
+    # get rid of DC 'component'
     if ($conf->{filter_01} ) {
       for ($g,$a,$t,$c) {
 	$_->[0] = 0;
@@ -270,7 +268,7 @@ sub annotate {
     my ($start, $end) = @$coords;
     
     # make a link for zooming in
-    my $url = url;
+    (my $url = self_url) =~ s/\?.+//;;
     my $pad = int $segment->length/20;
     my $z_start = $start - $pad;
     my $z_stop  = $end   + $pad;
@@ -295,11 +293,14 @@ sub annotate {
     }
     
     $atts->{g} = $G;
-    
+
+    # create a column for the spectrogram.  Offset the seuquence
+    # coordinates so that features in the specrogam are directly below
+    # the corresponding DNA 
     my $sf = Bio::Graphics::Feature->new( -type   => 'spectrogram',
 					  -source => 'calculated',
-					  -start  => $start,
-					  -end    => $end,
+					  -start  => $start + $slide_offset,
+					  -end    => $end   + $slide_offset,
 					  -ref    => $segment->ref,
 					  -url    => $url,
 					  -attributes    => $atts );
@@ -311,47 +312,42 @@ sub annotate {
   return $feature_list;
 }
 
-sub complain {
-  my @msg = @_;
-  print h3(font( {color => 'red'}, 'Spectrogram.pm error: ', @msg) );
-}
-
 sub configure_form {
-  my $self = shift;
-  my $conf = $self->configuration;
-  my $banner = $self->browser_config->header || '';;
+  my $self    = shift;
+  my $conf    = $self->configuration;
+  my $segment = ($self->segments)[0];
 
-  my $msg = <<END;
-Window size and overlap = the width and overlap of sliding window used
-to calculate the spectrogram.\\n
-Note: larger window sizes and/or smaller overlaps increase
-computation time.\\n
-END
-;
-  my $form = h3({-class => 'searchtitle'}, 'Spectrogram size ', _js_help($msg)) . 
-      p( 'Sliding window size: ', 
+  my $description = $self->description;
+  my $state       = { on => 0, override => 1 };
+  my $form = toggle($state, 'What is this plugin for?', $description);
+ 
+  my $msg = $self->_help_message( $state, 'Sliding window size', split "NL", <<'END;');
+Window size is the number of bases to include in each calculation.NL
+Overlap is the increment by which the window slides (amount of overlap).NL
+<font color=red>Note: </font>larger window sizes and/or smaller
+overlaps increase computation time.
+END;
+
+  $form .= h4({-class => 'searchtitle'}, $msg) .
+      p( 'Window: size ',
 	 popup_menu( -name  => $self->config_name('win'),
 		     -values => [8,16,32,64,128,256,512,1024,2048,4096,8192],
 		     -default => $conf->{win} ),
-	 ' bp' . br. br . 'Window overlap: ',
+	 ' bp' . br. br . ' overlap ',
 	 textfield( -name  => $self->config_name('inc'),
 		    -value => $conf->{inc},
 		    -size  => 4 ),
-	 'bp');
+	 'bp' );
   
-  $msg = <<END;
-Restricting the range of periods or frequencies displayed will
-reduce the vertical height of the image and speed up image
-loading.\\n
-period = size (bp) of structure or repeat unit,
-calculated as 2*(window size)/frequency.\\n
-frequency = integer between 0 and (window size - 1).\\n
-Row height = the height of each frequency row in the
-spectrogram (minimum 1 pixel)
-END
-;
-
-  $form .= br .  h3({-class => 'searchtitle'}, 'Display options ', _js_help($msg)) .
+  $msg = $self->_help_message( $state, 'Display options', split "NL", <<'END;');
+The allowed range of periods or frequencies controls spectrogram height
+and calculation time.NL 
+period = size (bp) of structure or repeat unit, calculated as 
+2*(window size)/frequency.NL
+row height = the height (pixels) of each frequency row in the spectrogram.
+END;
+  
+  $form .= br .  h4({-class => 'searchtitle'}, $msg) .
       p( 'Restrict ',
 	 popup_menu( -name   => $self->config_name('measure'),
 		     -values => [qw/period frequency/],
@@ -370,48 +366,50 @@ END
                     -size  => 2 ),
          ' px ' );	 
 
-  $msg = <<END;
+
+  $msg = $self->_help_message( $state, 'Image saturation', split "NL", <<'END;');
 Lowering the saturation value will reduce the dominance of very bright
-colors on the spectrogramn by setting an arbitrary maximum value
-(expressed as a percentile rank).  Setting a lower saturation will
-reduce the effects of very high amplitude signals elsewhere in 
-the spectrogram and help to emphasize less intense features.\\n
+colors on the spectrogram by setting an arbitrary maximum value
+(expressed as a percentile rank).NL
+Setting a lower saturation will reduce the effects of very high 
+amplitude signals elsewhere in the spectrogram and help to 
+emphasize less intense features.NL
 The higher the saturation value is set, the darker the "background"
-of the spectrogram.
-END
-;
-
-  $form .=  br . h3({-class => 'searchtitle'}, 'Image brightness') .
-    p( 'Saturate color intensity at the ',
-       textfield( -name   => $self->config_name('quantile'),
-		  -value  => $conf->{quantile},
-		  -size   => 5 ),
-       'th percentile ' . _js_help($msg) );
-
-
-  $msg = <<END;
+of the spectrogram.NL
 There is a very large amplitude signal at frequency 0 Hz
-(the very top of the spectrogram), with some bleed over to 1 Hz.
+(the very top of the spectrogram), with some bleed over to 1 Hz.NL
 Filtering out these frequencies will help make the fainter
 spots more visible by decreasing the overall range of signal
-magnitudes.\\n
-The brightness of the spectrogram can be manipulated using this 
-option together with the saturation value.
+magnitudes.
+END;
 
-END
-;
+  $form .=  br . h4({-class => 'searchtitle'}, $msg) .
+     p( 'Saturate color intensity at the ',
+        textfield( -name   => $self->config_name('quantile'),
+	 	  -value  => $conf->{quantile},
+		   -size   => 5 ),
+       'th percentile' );
 
   my @checked = (checked => 'checked') if $conf->{filter_01};
-   $form .=    p( checkbox( -name => $self->config_name('filter_01'),
+  $form .=    p( checkbox( -name => $self->config_name('filter_01'),
 			   @checked,
-			   -label => 'Filter out 0-1 Hz' ),
-		 ' ' . _js_help($msg) );
+			   -label => 'Filter out 0-1 Hz' ));
 
-  $form .= hidden( -name => 'configured', -value => 1 );
-  return $banner.$form;
-
+  return $form;
 }
 
+sub _help_message {
+  my $self    = shift;
+  my $state   = shift;
+  my $section = shift;
+  my @items = map li($_).br, @_;
+  
+  my $details = table( {-width => 800},
+		      Tr( td( {-class => 'databody'}, ul(@items))));
+  
+  toggle( $state, $section, $details );
+}
+  
 sub make_numeric {
   my $seq = lc shift;
   my @seq = split q{}, $seq;
@@ -435,12 +433,6 @@ sub dft {
   # algorithm, which is actually implented via the FFT 
   # algorithm
   my $dft = $fft->rdft;
-#  print pre(@{$dft}[0..5]);
- # my $s = Statistics::Descriptive::Full->new;
- # $s->add_data(@$dft);
- # my $mean = $s->mean;
- # @$dft = map {$_ - $mean} @$dft;
-#  print pre(@{$dft}[0..5]);
   $dft = magnitude(@$dft);
   $$array = $dft;
 }
@@ -450,19 +442,95 @@ sub magnitude {
   return \@_;
 }
 
-sub _js_help {
-  my $msg = _process_msg(shift);
-  a( { -href    => 'javascript:void(0)',
-         -title   => 'help',
-       -onclick => "alert('$msg')" }, "[?]" );
-}
-
 sub _process_msg {
   my $msg = shift;
   $msg =~ s/\\n|\n\n/BREAK/gm;
   $msg =~ s/\n/ /gm;
   $msg =~ s/BREAK/\\n/g;
   $msg;
+}
+
+sub description {
+  return table( {-width => 800}, Tr( td({-class => 'databody'},
+	   p(<<END) . 
+The Spectrogram plugin builds up a spectrogram for digitized DNA sequence using the short-time fourier transform (STFT) method,
+adapted from classical digital signal processing methods.
+</p>
+<p>
+A sliding window of variable size and overlap is used to calculate each
+'column' of the spectrogram, where the column width is equal to the step, or overlap between windows.
+</p>
+<p>
+Spectral analysis reveals non-random structures in DNA sequence, some examples of which are coding DNA and repeats.  
+<p>
+<ul>
+<li>Coding DNA appears as a linear feature at period 3 (codon size).  It is especially visible in prokaryotic and viral genomes.
+In Eukaryotes, due to intron and other non-coding sequence, genes are most visible with larger window 
+sizes.  
+<br><br>
+<li>Repeats cause a ladder-like series of horizontal lines.  Short repeats, such as telomeric repeats, are most visible with small
+window sizes.  Longer repeats, such as minisatellites, are best seen with larger window sizes.
+</ul><br>
+END
+
+	   p(<<END) .
+<h3>How is the DNA spectrogram calculated?</h3>
+<p>
+The spectrogram refers collectively to all of the rows and columns seen in the graphical display.
+</p>
+<p>
+Each window is a column of height n rows, where n is the number of bases in the window. Each row corresponds
+to a discrete 'frequency' from 0 -> n-1.
+<p>
+Arguably, a more intuitive way to relate this to DNA sequence to calculate the 'period'.
+</p>
+<p>
+In this case, if we see a feature in the spectrogram at period <i>x</i>, there is a non-random structure
+with a periodicity of <i>x</i> nucleotides.  The chief example of this would be coding DNA at period 3.  
+</p>
+<br>
+For each window, we:
+<br>
+<ul>
+<li> digitize the DNA by creating four binary indicator sequences:
+
+<pre>
+           G A T C C T C T G A T T C C A A
+         G 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0
+         A 0 1 0 0 0 0 0 0 0 1 0 0 0 0 1 1
+         T 0 0 1 0 0 1 0 1 0 0 1 1 0 0 0 0
+         C 0 0 0 1 1 0 1 0 0 0 0 0 1 1 0 0
+</pre>
+<br>
+<li> take the discrete fourier transform (DFT) for each of the four indicator sequences and square the values to get the magnitude.
+<br><br>
+<li> graphically render the data as a track in the main gbrowse display.
+</ul><br>
+END
+
+           p(<<END) .
+<p>
+The actual algorithm used is the fast fourier transfrom (FFT), which is much faster than the original DFT algorithm but
+is limited in that only base2 numbers (128, 256, 512, etc) can be used for window sizes.  This is necessary to make the
+spectrogram calculation fast enough for real-time use.  
+</p>
+<p>However, it should be noted that calculating spectrograms dynamically is computationally intensive and will cause the gbrowse
+display to load more slowly than usual, especially with larger sequence regions and/or small increments for the sliding
+window.
+</p>
+<p>
+After you have launched this plugin, the spectrogram will continue to be calculated in the main gbrowse display until you turn off the 'Spectrogram' track.
+</p>
+END
+
+    p("The plugin was written by Sheldon McKay (mckays\@cshl.edu)"))));
+
+}
+
+sub toggle {
+  my ($state,$section_head,@body) = @_;
+  my ($label) = $CONFIG->tr($section_head) || $section_head;
+  return toggle_section($state,$label,b($label),@body);
 }
 
 1;

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.13 2006-08-30 17:26:11 lstein Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.14 2006-08-31 13:27:56 scottcain Exp $
 
 =head1 NAME
 
@@ -688,7 +688,7 @@ sub features {
     $sql_types = '';
 
     my $valid_type = undef;
-    if (scalar @$types != 0) {
+    if ($types && scalar @$types != 0) {
 
       warn "first type:$$types[0]\n" if DEBUG;
 
@@ -1261,6 +1261,7 @@ sub dna {
 sub subseq {
   my $self = shift;
   my ($start, $stop) = @_;
+  $start--;
 
   my $dna = $self->dna;
   my $length = $stop - $start + 1;

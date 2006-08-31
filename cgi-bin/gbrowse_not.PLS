@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_not.PLS,v 1.12 2006-08-30 17:26:27 lstein Exp $
+# $Id: gbrowse_not.PLS,v 1.13 2006-08-31 02:36:25 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -922,44 +922,74 @@ sub navigation_table {
 		     )
 		 );
 
+  my $autocomplete = $CONFIG->setting('autocomplete');
+  my $searchfield;
+  if ($autocomplete) {
+    $searchfield = div({-id=>'autocomplete'},
+		       textfield(-name=>'name',
+				 -size=>25,
+				 -default=>$settings->{name},
+				 -id=>'autoCompleteInput1',
+				 -autocomplete=>'off'),
+		       submit(-name=>$CONFIG->tr('Search')),
+		       div({-id=>'autoCompleteContainer1',-style=>'position:relative;top:-1.5em'},''));
+    $searchfield .= script({-type=>'text/javascript'},<<END);
+var autoCompleteServer  = "$autocomplete";
+var autoCompleteSchema  = ["\\n"];
+var autoCompleteData1 = new YAHOO.widget.DS_XHR(autoCompleteServer, autoCompleteSchema); 
+autoCompleteData1.responseType = autoCompleteData1.TYPE_FLAT;
+
+var autoComplete1 = new YAHOO.widget.AutoComplete("autoCompleteInput1","autoCompleteContainer1",autoCompleteData1);
+autoComplete1.allowBrowserAutocomplete = false;
+autoComplete1.typeAhead = true;
+autoComplete1.useShadow = true;
+autoComplete1.queryDelay = 0;
+autoComplete1.minQueryLength = 1;
+END
+  } else {
+    $searchfield = textfield(-name=>'name',
+			     -size=>25,
+			     -default=>$settings->{name}).
+	           submit(-name=>$CONFIG->tr('Search'));
+  }
+
   my $searchbox = $CONFIG->setting('no search')
-    ? '' : b($CONFIG->tr('Landmark')).':'.br.
-           textfield(-name=>'name',-size=>25,-default=>$settings->{name}).
-	   submit(-name=>$CONFIG->tr('Search'));
+    ? '' : b($CONFIG->tr('Landmark')).':'.$searchfield;
+
   my $plugin_menu = plugin_menu($settings,$PLUGINS);
   my $plugins     = $plugin_menu ? b($CONFIG->tr('Dumps')).':'.br.$plugin_menu : '';
 
+  my $slider = '';
+  if ($segment) {
+    $slider =  b($CONFIG->tr('Scroll').': ').
+      slidertable($segment,$whole_segment,$buttonsDir).
+	b(
+	  checkbox(-name=>'flip',
+		   -checked=>$settings->{flip},-value=>1,
+		   -label=>$CONFIG->tr('Flip'),-override=>1)
+	 );
+  }
+
+
   $table .= toggle($settings,
 		   'Search',
-		   table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
-			 TR({-class=>'searchbody'},
-			    td({-align=>'left', -colspan=>2},
-			       html_frag('html1',$segment,$settings)||''
-			      )
-			   ),
-
-			 TR({-class=>'searchbody'},
-			    td({-align=>'left'},
-			       $searchbox
-			      ),
-			    td({-colspan=>1,-align=>'left'},
-			       $plugins
-			      )
-			   ),
-			 TR({-class=>'searchbody',-style=>'padding-top: 5 px'},
-			    td({-align=>'left'},source_menu($settings)),
-			    td({-align=>'left'},
-			       $segment ? (
-					   (b($CONFIG->tr('Scroll').': '),slidertable($segment,$whole_segment,$buttonsDir)),
-					   b(
-					     checkbox(-name=>'flip',
-						      -checked=>$settings->{flip},-value=>1,
-						      -label=>$CONFIG->tr('Flip'),-override=>1))
-					  )
-			       : '',
-			      ),
-			   ),
-			)
+		   div({-class=>'searchbody'},
+		       html_frag('html1',$segment,$settings)||'',
+		       div({-style=>'float:left; width:50%'},
+			   $searchbox),
+		       div({-style=>'float:right; width:50%'},
+			   $plugins),
+		       br({-clear=>'all'}),
+		       table({-class=>'searchbody'},
+			     TR(td({-align=>'left'},
+				   source_menu($settings)
+				  ),
+				td({-align=>'left'},
+				   $slider || '&nbsp;'
+				  )
+			       )
+			    )
+		      )
 		  );
   return $table;
 }
@@ -1030,22 +1060,22 @@ sub slidertable {
   push @lines,hidden(-name=>'ref',  -value=>$segment->seq_id,-override=>1);
   push @lines,
     (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>"left $full",
-		  -border=>0,-title=>"left $full_title"),
+		  -title=>"left $full_title"),
      image_button(-src=>"$buttonsDir/green_l1.gif",-name=>"left $half",
-		  -border=>0,-title=>"left $half_title"),
+		  -title=>"left $half_title"),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/minus.gif",-name=>"zoom out $fine_zoom",
-		  -border=>0,-title=>"zoom out $fine_zoom"),
+		  -title=>"zoom out $fine_zoom"),
      '&nbsp;',
      zoomBar($segment,$whole_segment,$buttonsDir),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/plus.gif",-name=>"zoom in $fine_zoom",
-		  -border=>0,-title=>"zoom in $fine_zoom"),
+		  -title=>"zoom in $fine_zoom"),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/green_r1.gif",-name=>"right $half",
-		  -border=>0,-title=>"right $half_title"),
+		  -title=>"right $half_title"),
      image_button(-src=>"$buttonsDir/green_r2.gif",-name=>"right $full",
-		  -border=>0,-title=>"right $full_title"),
+		  -title=>"right $full_title"),
     );
 
   my $str	= join('', @lines);
@@ -1163,7 +1193,7 @@ sub tracks_table {
     my $table;
 
     if ($category eq $CONFIG->tr('REGION') && !$CONFIG->setting('region segment')) {
-      next;
+     next;
     }
     elsif  (exists $track_groups{$category}) {
       my @track_labels = @{$track_groups{$category}};
@@ -1187,7 +1217,7 @@ sub tracks_table {
 			     checkbox(-id=>"${id}_n",-name=>"${id}_n",
 				      -label=>$all_off,onClick=>"gbCheck(this,0)")
 			    ).br()   if exists $track_groups{$category};
-      push @sections,div($control.span({-id=>$id},$section));
+      push @sections,div($control.div({-id=>$id},$section));
       $id++;
     }
 
@@ -1935,9 +1965,6 @@ sub overview {
   my $url             = $CONFIG->generate_image($image);
   return image_button(-name=>'overview',
 		      -src=>$url,
-		      -width=>$width,
-		      -height=>$height,
-		      -border=>0,
 		      -align=>'middle')
     .hidden(-name=>'seg_min',-value=>$whole_segment->start,-override=>1)
     .hidden(-name=>'seg_max',-value=>$whole_segment->end,-override=>1);
@@ -1952,9 +1979,6 @@ sub regionview {
   my $url             = $CONFIG->generate_image($image);
   return image_button(-name=>'regionview',
  		      -src=>$url,
- 		      -width=>$width,
- 		      -height=>$height,
- 		      -border=>0,
  		      -align=>'middle');
 }
 
@@ -2706,7 +2730,7 @@ sub make_citation_link {
   }
   my $citation = $CONFIG->citation($label,$CONFIG->language);
   my $overview_color = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR();
-  my @args = (-href=>$link,-title=>$citation,-target=>'citation');
+  my @args = (-href=>$link,-target=>'citation');
   push @args,-style=>'Font-style: italic' if $label =~ /^(http|ftp|file):/;
   # push @args,-style=>"background: $overview_color" if $label =~ /:overview$/;
   return a({@args},$key);

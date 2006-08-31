@@ -47,15 +47,14 @@
     <br />
 
     <!-- source menu -->
-    <div class="searchbody" style="float: left; width: 50%">[% PROCESS "sourcemenu.tt2" %]</div>
+    <div class="searchbody" style="float: left; width: 50%; height: 75%">[% PROCESS "sourcemenu.tt2" %]</div>
 
+     <div class="searchbody" style="float: right; width: 50%; height: 75%">
      [% IF segment %]
-       <div class="searchbody" style="float: right; width: 50%">
         <b>[% config.tr('scroll') %]</b><br />[% PROCESS "slider.tt2" %]
         <input type="checkbox" name="flip" value="1" [% IF page_settings.flip ; "checked" ; END %]/><b>[% config.tr('flip') %]</b>
-
-        </div>
      [% END %]
+     </div>
   </div>
 
   [%- PROCESS 'end_section.tt2' -%]

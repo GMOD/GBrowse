@@ -233,6 +233,8 @@ WriteMakefile(
 				 'cgi-bin/gbrowse_est.PLS'  => 'cgi-bin/gbrowse_est',
 				 'cgi-bin/gbrowse_moby.PLS'  => 'cgi-bin/gbrowse_moby',
 				 'cgi-bin/moby_server.PLS'  => 'cgi-bin/moby_server',
+				 'cgi-bin/gbrowse_gff_autocomplete.PLS'  => 'cgi-bin/gbrowse_gff_autocomplete',
+				 'cgi-bin/gbrowse_seqfeature_autocomplete.PLS'  => 'cgi-bin/gbrowse_seqfeature_autocomplete',
 				 'cgi-bin/das.PLS'          => 'cgi-bin/das',
 				 'conf/MobyServices/GbrowseServices.PMS'  => 'conf/MobyServices/GbrowseServices.pm',
 				 },

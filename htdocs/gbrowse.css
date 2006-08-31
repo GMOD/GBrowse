@@ -89,4 +89,10 @@ TH.linkmenu       {
                     TEXT-DECORATION: none
                   }
  
-
+#autoComplete { position:relative }
+#autoCompleteContainer1 {position:absolute;top:0em;width:75%;}
+#autoCompleteContainer1 .yui-ac-content {position:absolute;top:1.5em;width:100%;; border:1px solid #404040;background:#fff;overflow:hidden;z-index:9050;}
+#autoCompleteContainer1 .yui-ac-shadow {position:absolute;top:1.5em;margin:0.5em;width:100%; background:#a0a0a0;z-index:9049;}
+#autoCompleteContainer1 ul {width:100%;padding:0px;margin:0px}
+#autoCompleteContainer1 li {cursor:default;white-space:nowrap;padding:0px}
+#autoCompleteContainer1 li.yui-ac-highlight {background:#ff0;padding:0px}

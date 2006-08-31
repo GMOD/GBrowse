@@ -668,6 +668,43 @@ Example:
 
        initial landmark = Chr1
 
+=item * autocomplete
+
+This turns on the autocomplete functionality, which is very
+rudimentary at the moment. The argument to this option is the relative
+path of a "nameserver" script that is expected to respond to queries
+of the type:
+
+  http://your.server/cgi-bin/nameserver?query=NNNN
+
+where "NNNN" is the partial name that the user has typed into the
+search box. The nameserver should return a line-delimited list of
+completed names to suggest to the user.
+
+Included in this distribution are two example nameserver scripts,
+gbrowse_gff_autocomplete and gbrowse_seqfeature_autocomplete, which
+work with the mysql versions of the Bio::DB::GFF and
+Bio::DB::SeqFeature::Store adaptors, respectively. To have them
+invoked properly, add the name of the database to the end of the
+path. For example, if you are using the Bio::DB::GFF adaptor with a
+database named "dbi:mysql:volvox", then this is what you should put
+into the configuration file:
+
+  autocomplete = /cgi-bin/gbrowse_gff_autocomplete/volvox
+
+Change this if as appropriate if gbrowse_gff_autocomplete is not
+installed in /cgi-bin.
+
+For javascript security reasons, the nameserver script MUST be running
+on the same machine as gbrowse. You can work around this using a
+proxy, if need be. Also note that the scripts do not (currently) allow
+you to pass a username or password, and do not check that the user is
+authorized to connect to the database. Please check and change the
+source code if this is of concern to you (the scripts are *VERY*
+simple).
+
+These scripts will be made more sophisticated in the future.
+
 =item * truecolor
 
 If this option is present and true, then GBrowse will create 24-bit

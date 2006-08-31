@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.173 2006-08-30 17:26:27 lstein Exp $
+# $Id: gbrowse.PLS,v 1.174 2006-08-31 02:36:24 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -370,11 +370,11 @@ exit 0;
 
 sub main_display {
   my ($segments,$features,$page_settings) = @_;
-  my ($segment,$whole_segment,$region_segment);
+  my ($segment,$whole_segment,$region_segment,$error);
 
   # first of all, if there are no segments, then try a keyword search and store the results
   if (param() && (@$segments == 0) && (my $n = $page_settings->{name})) {
-      error($CONFIG->tr('NOT_FOUND',escapeHTML($n)));
+    $error = $CONFIG->tr('NOT_FOUND',escapeHTML($n));
   }
 
   # if there's a single segment, then print a message and store the segment into a scalar
@@ -550,6 +550,7 @@ sub main_display {
         external_preset_labels => $external_preset_labels,
         external_preset_urls   => $external_preset_urls,
         remote_sources_hash    => \%remote_sources_hash,
+	error                  => $error,
     };
 
   if($segment){

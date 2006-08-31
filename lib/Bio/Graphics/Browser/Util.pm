@@ -225,6 +225,12 @@ sub print_top {
   my $reset_all = shift;
   local $^W = 0;  # to avoid a warning from CGI.pm
 
+  my $js = $CONFIG->setting('js')||JS;
+  my @scripts = {src=>"$js/buttons.js"};
+  if ($CONFIG->setting('autocomplete')) {
+    push @scripts,{src=>"$js/$_"} foreach qw(yahoo.js dom.js event.js connection.js autocomplete.js);
+  }
+
   print_header(-expires=>'+1m');
   my @args = (-title => $title,
 	      -style  => {src=>$CONFIG->setting('stylesheet')},
@@ -232,7 +238,7 @@ sub print_top {
 	     );
   push @args,(-head=>$CONFIG->setting('head'))    if $CONFIG->setting('head');
   push @args,(-lang=>($CONFIG->language_code)[0]) if $CONFIG->language_code;
-  push @args,(-script=>{src=>($CONFIG->setting('js')||JS) . "/buttons.js"});
+  push @args,(-script=>\@scripts);
   push @args,(-gbrowse_images => $CONFIG->setting('buttons') || '/gbrowse/images/buttons');
   push @args,(-gbrowse_js     => $CONFIG->setting('js')      || '/gbrowse/js');
   push @args,(-reset_toggle   => 1)               if $reset_all;

@@ -19,6 +19,10 @@
 
 <body lang="[% config.language_code.list.0 %]">
 
+[% IF error %]
+<h2 class="error">[% error %]</h1>
+[% END %]
+
 <!-- Process header template defined in config file -->
 [% PROCESS 'header_wrapper.tt2' %]
 
@@ -60,19 +64,8 @@
       [% PROCESS "regionviewpanel.tt2" %]
     [% END %]
     [% PROCESS "detailpanel.tt2"   %]
-    </div>
+   </div>
   [% END %]
-
-  <table width="100%">
-  <tr>
-    <td align="left"><a href="?name=[% page_settings.name %];h_feat=_clear_;h_region=_clear_">
-	<font size="-2">[% config.tr('clear_highlighting') %]</font></a>
-    </td>
-    <td align="right">
-      <b><input type="submit" name="Update Image" value="[% config.tr('update') %]"/></b>
-    </td>
-  </tr>
-  </table>
 
   [% htmlfrag3 %]
 

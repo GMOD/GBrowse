@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.7 2006-08-30 20:09:41 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.8 2006-09-01 14:37:47 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -209,7 +209,7 @@ sub new {
 
   Title   : inferCDS
   Usage   : $obj->inferCDS()
-  Function: get or return the inferCDS flag
+  Function: set or return the inferCDS flag
   Returns : the value of the inferCDS flag
   Args    : to return the flag, none; to set, 1
 
@@ -553,15 +553,113 @@ sub types {
   #if lincoln didn't need to implement it, neither do I!
 }
 
-=head2 get_feature_by_name
+=head2 get_feature_by_alias, get_features_by_alias 
+
+ Title   : get_features_by_alias
+ Usage   : $db->get_feature_by_alias(@args)
+ Function: return list of feature whose name or synonyms match
+ Returns : a list of Bio::Das::Chado::Segment::Feature objects
+ Args    : See below
+
+This method finds features matching the criteria outlined by the
+supplied arguments.  Wildcards (*) are allowed.  Valid arguments are:
+
+=over
+
+=item -name
+
+=item -class
+
+=item -ref (refrence sequence)
+
+=item -start
+
+=item -end 
+
+=back
 
 =cut
 
+
+sub get_feature_by_alias {
+  my $self = shift;
+  my @args = @_;
+
+  if ( @args == 1 ) {
+      @args = (-name => $args[0]);
+  }
+
+  push @args, -operation => 'by_alias';
+
+  return $self->_by_alias_by_name(@args);
+} 
+
+*get_features_by_alias = \&get_feature_by_alias;
+
+=head2 get_feature_by_name, get_features_by_name
+
+ Title   : get_features_by_name
+ Usage   : $db->get_features_by_name(@args)
+ Function: return list of feature whose names match
+ Returns : a list of Bio::Das::Chado::Segment::Feature objects
+ Args    : See below
+
+This method finds features matching the criteria outlined by the
+supplied arguments.  Wildcards (*) are allowed.  Valid arguments are:
+
+=over
+
+=item -name
+
+=item -class
+
+=item -ref (refrence sequence)
+
+=item -start
+
+=item -end
+
+=back
+
+=cut
+
+
+*get_features_by_name  = \&get_feature_by_name; 
+
 sub get_feature_by_name {
   my $self = shift;
+  my @args = @_;
 
-  my ($name, $class, $ref, $base_start, $stop) 
-       = $self->_rearrange([qw(NAME CLASS REF START END)],@_);
+  if ( @args == 1 ) {
+      @args = (-name => $args[0]);
+  }
+
+  push @args, -operation => 'by_name';
+
+  return $self->_by_alias_by_name(@args);
+}
+
+=head2 _by_alias_by_name
+
+ Title   : _by_alias_by_name
+ Usage   : $db->_by_alias_by_name(@args)
+ Function: return list of feature whose names match
+ Returns : a list of Bio::Das::Chado::Segment::Feature objects
+ Args    : See below
+
+A private method that implements the get_features_by_name and
+get_features_by_alias methods.  It accepts the same args as
+those methods, plus an addtional on (-operation) which is 
+either 'by_alias' or 'by_name' to indicate what rule it is to
+use for finding features.
+
+=cut
+
+sub _by_alias_by_name {
+  my $self = shift;
+
+  my ($name, $class, $ref, $base_start, $stop, $operation) 
+       = $self->_rearrange([qw(NAME CLASS REF START END OPERATION)],@_);
 
   my $wildcard = 0;
   if ($name =~ /\*/) {
@@ -580,18 +678,32 @@ sub get_feature_by_name {
   # foreach feature_id, get the feature info
   # then get src_feature stuff (chromosome info) and create a parent feature,
 
-  my $select_part = "select distinct fs.feature_id \n";
-  my $from_part   = "from feature_synonym fs, synonym s ";
+  my ($select_part,$from_part,$where_part);
 
-  my $where_part;
-  if ($wildcard) {
-    $where_part  = "where fs.synonym_id = s.synonym_id and\n"
+  if ( $operation eq 'by_alias') {
+    $select_part = "select distinct fs.feature_id \n";
+    $from_part   = "from feature_synonym fs, synonym s ";
+
+    if ($wildcard) {
+      $where_part  = "where fs.synonym_id = s.synonym_id and\n"
                     . "lower(s.synonym_sgml) like ?";
-  } else {
-    $where_part  = "where fs.synonym_id = s.synonym_id and\n"
+    } 
+    else {
+      $where_part  = "where fs.synonym_id = s.synonym_id and\n"
                     . "lower(s.synonym_sgml) = ?";
+    }
   }
+  else { #searching by name only
+    $select_part = "select feature_id ";
+    $from_part   = "from feature ";
 
+    if ($wildcard) {
+      $where_part = "where lower(name) like ?";
+    }
+    else {
+      $where_part = "where lower(name) = ?";
+    }
+  }
 
   if ($class) {
       my $type = ($class eq 'CDS' && $self->inferCDS)

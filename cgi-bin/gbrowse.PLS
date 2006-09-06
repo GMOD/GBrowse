@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.54 2006-09-06 18:47:30 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.55 2006-09-06 18:49:09 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2498,6 +2498,9 @@ sub make_citation {
   my $config  = shift;
   my $feature = shift;
   my $citation = eval {$config->citation($feature,$CONFIG->language)};
+  if (ref $citation && ref $citation eq 'CODE') {
+    $citation = $citation->();
+  }
   # BUG: here's where we should remove "bad" HTML, but we don't!
   # should remove active content and other nasties
   (my $link     = $feature) =~ tr/ /-/;

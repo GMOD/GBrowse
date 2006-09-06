@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_not.PLS,v 1.14 2006-09-06 22:36:07 lstein Exp $
+# $Id: gbrowse_not.PLS,v 1.15 2006-09-06 22:37:53 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1549,19 +1549,15 @@ sub zoomnav {
 
     my $overview_width = ($settings->{width} * $CONFIG->overview_ratio);
 
-    warn "width = $settings->{width}";
-
     # adjust for padding in pre 1.6 versions of bioperl
     $overview_width -= ($padl+$padr) unless Bio::Graphics::Panel->can('auto_pad');
 
-    warn "overview_width = $overview_width";
     my $click_position = $seg_min + $segment_length * ($overview_x-$padl)/$overview_width;
 
 
     $span = $DEFAULT_SEGMENT if $span > $MAX_SEGMENT;
     $start = int($click_position - $span/2);
     $stop  = $start + $span - 1;
-    warn "click position = $click_position, span = $span";
   }
 
   elsif (defined $regionview_x) {

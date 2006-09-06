@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.53 2006-08-30 17:26:11 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.54 2006-09-06 18:47:30 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2084,7 +2084,7 @@ sub write_auto {
 sub load_external_sources {
   my ($segments,$page_settings) = @_;
 
-  return unless $segments;
+  return {} unless $segments;
 
   if (ref $segments ne 'ARRAY') {
     $segments = [open_database()->segment($segments)];

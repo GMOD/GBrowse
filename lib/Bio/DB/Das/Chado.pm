@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.8 2006-09-01 14:37:47 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.9 2006-09-06 18:47:30 lstein Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -717,7 +717,7 @@ sub _by_alias_by_name {
 
   my $query = $select_part . $from_part . $where_part;
 
-  warn "first get_feature_by_name query:$query" if DEBUG;
+  warn "first get_feature_by_name query:$query"; # if DEBUG;
 
   $sth = $self->dbh->prepare($query);
 
@@ -730,8 +730,10 @@ sub _by_alias_by_name {
 # left over bug from making the adaptor case insensitive?
 
   $name = lc($name);
-
+  
+  warn "about to execute";
   $sth->execute($name) or $self->throw("getting the feature_ids failed");
+  warn "done";
 
 # this makes performance awful!  It does a wildcard search on a view
 # that has several selects in it.  For any reasonably sized database,

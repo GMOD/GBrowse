@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.174 2006-08-31 02:36:24 lstein Exp $
+# $Id: gbrowse.PLS,v 1.175 2006-09-06 22:36:07 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -473,6 +473,7 @@ sub main_display {
 
     # Das table stuff
     my ($external_preset_labels,$external_preset_urls) = get_external_presets($page_settings);
+    local $^W = 0;
     my $segment_str = "$page_settings->{ref}:$page_settings->{start},$page_settings->{stop}";
 
     my %remote_sources_hash;
@@ -650,6 +651,9 @@ sub page_settings {
   $source    =~ s!/+$!!;
   my @sources = sort $config->sources;
   my %sources = map {$_=>1} @sources;
+
+  redirect_legacy_url($source) if $source && $sources{$source}; # may cause a redirect and exit!!!
+
   if ($source) {
     if ($sources{$source}) {
       $config->source($source);
@@ -662,7 +666,6 @@ sub page_settings {
 
   my $session       = Bio::Graphics::Browser::PageSettings->new($config,param('id'));
   $source         ||= $session->source;
-  redirect_legacy_url($source); # may cause a redirect and exit!!!
 
   # now set to saved source
   $config->source($source);

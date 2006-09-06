@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.87 2005-12-09 22:19:12 mwz444 Exp $
+# $Id: Segment.pm,v 1.88 2006-09-06 22:36:08 lstein Exp $
 
 =head1 NAME
 
@@ -302,9 +302,9 @@ sub _search_by_name {
              select name,feature_id,seqlen from feature
              where lower(name) = $quoted_name  ");
   }
- 
+
   $sth->execute or Bio::Root::Root->throw("unable to validate name/length");
-  
+
   my $rows_returned = $sth->rows;
   if ($rows_returned == 0) { #look in synonym for an exact match
     my $isth = $factory->dbh->prepare ("

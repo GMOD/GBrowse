@@ -434,9 +434,8 @@ END
 }
 
 sub redirect_legacy_url {
-  my $source      = shift;
-  my @more_args   = @_;
-  
+  my $source        = shift;
+
   if ($source && path_info() ne "/$source/") {
 
     my $q = new CGI '';

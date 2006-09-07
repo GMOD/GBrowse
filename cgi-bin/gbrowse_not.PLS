@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_not.PLS,v 1.15 2006-09-06 22:37:53 lstein Exp $
+# $Id: gbrowse_not.PLS,v 1.16 2006-09-07 14:34:22 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -871,6 +871,7 @@ sub adjust_settings {
   # restore the visibility of the division sections
   # using transient cookies
   for my $div (grep {/^div_visible_/} CGI::cookie()) {
+    warn "div = $div";
     my ($section)   = $div =~ /^div_visible_(\w+)/ or next;
     my $visibility  = CGI::cookie($div);
     warn "$div = $visibility";
@@ -955,7 +956,7 @@ END
   }
 
   my $searchbox = $CONFIG->setting('no search')
-    ? '' : b($CONFIG->tr('Landmark')).':'.$searchfield;
+    ? '' : b($CONFIG->tr('Landmark')).':'.br().$searchfield;
 
   my $plugin_menu = plugin_menu($settings,$PLUGINS);
   my $plugins     = $plugin_menu ? b($CONFIG->tr('Dumps')).':'.br.$plugin_menu : '';
@@ -1209,8 +1210,12 @@ sub tracks_table {
 				     );
       $table = tableize(\@checkboxes);
       $table =~ s/<tr>/<tr class="searchtitle">/g;
-      my ($control,$section)=toggle_section({on=>1,nodiv=>1},
-					    "${category}_section",
+
+      my $id = "${category}_section";
+      my $visible = exists $page_settings->{section_visible}{$id} ? $page_settings->{section_visible}{$id} : 1;
+
+      my ($control,$section)=toggle_section({on=>$visible,nodiv=>1},
+					    $id,
 					    b(ucfirst $category),div({-style=>'padding-left:1em'},$table));
       $control .= '&nbsp;'.i({-class=>'nojs'},
 			     checkbox(-id=>"${id}_a",-name=>"${id}_a",
@@ -1218,7 +1223,7 @@ sub tracks_table {
 			     checkbox(-id=>"${id}_n",-name=>"${id}_n",
 				      -label=>$all_off,onClick=>"gbCheck(this,0)")
 			    ).br()   if exists $track_groups{$category};
-      push @sections,div($control.div({-id=>$id},$section));
+      push @sections,div($control.$section);
       $id++;
     }
 

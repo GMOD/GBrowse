@@ -1143,7 +1143,7 @@ the proxy:
 =item * session args
 
 These options fine-tune how gbrowse manages its state-maintaining
-sessions. GBrowse uses L<CGI::Session> to store session data on the
+sessions. GBrowse uses CGI::Session to store session data on the
 server. By default (if neither of these options is present), it uses
 CGI::Session's "file" driver and "default" serializer. The session
 files are stored in the "sessions" directory underneath the directory
@@ -1152,10 +1152,10 @@ specified by the "tmpimages" option
 
 The "session driver" option will be passed to CGI::Session->new() as
 the first argument. It specifies the driver, serializer and ID
-generator according to the syntax described in L<CGI::Session>. The
-"session args" option will be passed to CGI::Session->new() as the
-third argument. It specifies additional parameters to be passed to the
-selected driver.
+generator according to the syntax described in the CGI::Session manual
+page. The "session args" option will be passed to CGI::Session->new()
+as the third argument. It specifies additional parameters to be passed
+to the selected driver.
 
 For example, here is how to create session data that is stored in the
 MySQL "test" database under a table named "gbrowse_sessions." The
@@ -1168,7 +1168,7 @@ session args   = DataSource test
 See the CGI::Session documentation for information about setting up
 the MySQL table and appropriate permissions. 
 
-You might also want to read about L<CGI::Session::ID::salted_md5> for
+You might also want to read about CGI::Session::ID::salted_md5 for
 an ID generation algorithm that should be more secure (but slightly
 slower) than the default one.
 
@@ -1189,7 +1189,8 @@ to visit the site within the time specified.
 
 The default value is 1 month.
 
-See L<CGI> for more information on the time format.
+See the CGI module's manual page for more information on the time
+format.
 
 =item remember source time
 

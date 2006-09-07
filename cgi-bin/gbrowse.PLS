@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.55 2006-09-06 18:49:09 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.56 2006-09-07 14:32:27 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -435,9 +435,9 @@ sub main_display {
   if (@$segments > 1) {
     multiple_choices($page_settings,$features);
     # empty sections
-    print toggle('Overview','');
-    print toggle('Region','')     if $page_settings->{region_size};
-    print toggle('Details','');
+    # print toggle('Overview','');
+    # print toggle('Region','')     if $page_settings->{region_size};
+    # print toggle('Details','');
   }
 
   elsif ($segment) {
@@ -470,9 +470,9 @@ sub main_display {
 
   } else {
     # empty overview,region & detail sections
-    print toggle('Overview','');
-    print toggle('Region','')   if $page_settings->{region_size};
-    print toggle('Details');
+    # print toggle('Overview','');
+    # print toggle('Region','')   if $page_settings->{region_size};
+    # print toggle('Details');
   }
 
   print html_frag('html3',$segment,$page_settings);
@@ -502,7 +502,8 @@ sub overview_panel {
   my ($whole_segment,$segment,$page_settings,$feature_files) = @_;
   return '' if $CONFIG->section_setting('overview') eq 'hide';
   my $image = overview($whole_segment,$segment,$page_settings,$feature_files);
-  return toggle('Overview',
+  return toggle($page_settings,
+		'Overview',
 		table({-border=>0,-width=>'100%'},
 		      TR({-class=>'databody'},
 			 td({-align=>'center'},$image)
@@ -515,7 +516,8 @@ sub region_panel {
   my ($region_segment,$segment,$page_settings,$feature_files) = @_;
   return '' if $CONFIG->section_setting('region') eq 'hide';
   my $image = regionview($region_segment,$segment,$page_settings,$feature_files);
-  return toggle('Region',
+  return toggle($page_settings,
+		'Region',
 		table({-border=>0,-width=>'100%'},
 		      TR({-class=>'databody'},
 			 td({-align=>'center'},$image)
@@ -603,7 +605,8 @@ sub detail_panel {
   $table .= "\n";
   $table .= $map if $map;
   $table .= join '',unique(hidden('ref')),unique(hidden('start')),unique(hidden('stop'));
-  return div(toggle('Details',
+  return div(toggle($page_settings,
+		    'Details',
 		    $table));
 }
 
@@ -863,6 +866,14 @@ sub adjust_settings {
     adjust_track_order($settings);
   }
 
+  # restore the visibility of the division sections
+  # using transient cookies
+  for my $div (grep {/^div_visible_/} CGI::cookie()) {
+    my ($section)   = $div =~ /^div_visible_(\w+)/ or next;
+    my $visibility  = CGI::cookie($div);
+    $settings->{section_visible}{$section} = $visibility;
+  }
+
 }
 
 # prints the zooming and navigation bar
@@ -881,11 +892,14 @@ sub navigation_table {
   $table .= table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
 		  TR(
 		     td({-align=>'left', -colspan=>2},
-		     toggle('Instructions',
-			    br($CONFIG->setting('search_instructions') ||
-			      $CONFIG->tr('SEARCH_INSTRUCTIONS',$oligo),
-			      $CONFIG->setting('navigation_instructions') ||
-			      $CONFIG->tr('NAVIGATION_INSTRUCTIONS')),
+		     toggle($settings,
+			    'Instructions',
+			    br(),
+			    $CONFIG->setting('search_instructions') ||
+			    $CONFIG->tr('SEARCH_INSTRUCTIONS',$oligo),
+			    $CONFIG->setting('navigation_instructions') ||
+			    $CONFIG->tr('NAVIGATION_INSTRUCTIONS'),
+			    br(),
 			    p(show_examples())
 			   )
 		       ),
@@ -914,7 +928,8 @@ sub navigation_table {
   my $plugin_menu = plugin_menu($settings,$PLUGINS);
   my $plugins     = $plugin_menu ? b($CONFIG->tr('Dumps')).':'.br.$plugin_menu : '';
 
-  $table .= toggle('Search',
+  $table .= toggle($settings,
+		   'Search',
 		   table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
 			 TR({-class=>'searchbody'},
 			    td({-align=>'left', -colspan=>2},
@@ -1014,22 +1029,22 @@ sub slidertable {
   push @lines,hidden(-name=>'ref',  -value=>$segment->seq_id,-override=>1);
   push @lines,
     (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>"left $full",
-		  -border=>0,-title=>"left $full_title"),
+		  -title=>"left $full_title"),
      image_button(-src=>"$buttonsDir/green_l1.gif",-name=>"left $half",
-		  -border=>0,-title=>"left $half_title"),
+		  -title=>"left $half_title"),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/minus.gif",-name=>"zoom out $fine_zoom",
-		  -border=>0,-title=>"zoom out $fine_zoom"),
+		  -title=>"zoom out $fine_zoom"),
      '&nbsp;',
      zoomBar($segment,$buttonsDir),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/plus.gif",-name=>"zoom in $fine_zoom",
-		  -border=>0,-title=>"zoom in $fine_zoom"),
+		  -title=>"zoom in $fine_zoom"),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/green_r1.gif",-name=>"right $half",
-		  -border=>0,-title=>"right $half_title"),
+		  -title=>"right $half_title"),
      image_button(-src=>"$buttonsDir/green_r2.gif",-name=>"right $full",
-		  -border=>0,-title=>"right $full_title"),
+		  -title=>"right $full_title"),
     );
 
   my $str	= join('', @lines);
@@ -1166,7 +1181,11 @@ sub tracks_table {
 				     );
       $table = tableize(\@checkboxes);
       $table =~ s/<tr>/<tr class="searchtitle">/g;
-      my ($control,$section)=toggle_section({on=>1,nodiv=>1},
+      my $id = "${category}_section";
+      my $visible = exists $page_settings->{section_visible}{$id} ? $page_settings->{section_visible}{$id} : 1;
+
+      my ($control,$section)=toggle_section({on=>$visible,nodiv=>1},
+					    $id,
 					    b(ucfirst $category),div({-style=>'padding-left:1em'},$table));
       $control .= '&nbsp;'.i({-class=>'nojs'},
 			     checkbox(-id=>"${id}_a",-name=>"${id}_a",
@@ -1174,7 +1193,7 @@ sub tracks_table {
 			     checkbox(-id=>"${id}_n",-name=>"${id}_n",
 				      -label=>$all_off,onClick=>"gbCheck(this,0)")
 			    ).br()   if exists $track_groups{$category};
-      push @sections,div($control.span({-id=>$id},$section));
+      push @sections,div($control.$section);
       $id++;
     }
 
@@ -1187,7 +1206,8 @@ sub tracks_table {
   }
 
   autoEscape(1);
-  return toggle('Tracks',
+  return toggle($settings,
+		'Tracks',
 		div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
 		table({-width=>'100%',-class=>"searchbody"},
 		      TR(td{-align=>'right'},
@@ -1313,7 +1333,8 @@ sub settings_table {
 		 -align=>'right'},
 		b(submit(-name => $CONFIG->tr('Update')))))
 	 );
-  return toggle('Display_settings',$content);
+  return toggle($settings,
+		'Display_settings',$content);
 }
 
 sub annotation_help {
@@ -1328,7 +1349,8 @@ sub external_table {
   my ($settings,$feature_files) = @_;
   my $upload_table = upload_table($settings,$feature_files);
   my $das_table    = das_table($settings,$feature_files);
-  toggle('Upload_tracks',
+  toggle($settings,
+	 'Upload_tracks',
 	 table({-width=>'100%',-class=>'searchbody'},
 	       TR(td($upload_table,$das_table))));
 }
@@ -1908,9 +1930,6 @@ sub overview {
   my $url             = $CONFIG->generate_image($image);
   return image_button(-name=>'overview',
 		      -src=>$url,
-		      -width=>$width,
-		      -height=>$height,
-		      -border=>0,
 		      -align=>'middle')
     .hidden(-name=>'seg_min',-value=>$whole_segment->start,-override=>1)
     .hidden(-name=>'seg_max',-value=>$whole_segment->end,-override=>1);
@@ -1925,9 +1944,6 @@ sub regionview {
   my $url             = $CONFIG->generate_image($image);
   return image_button(-name=>'regionview',
  		      -src=>$url,
- 		      -width=>$width,
- 		      -height=>$height,
- 		      -border=>0,
  		      -align=>'middle');
 }
 
@@ -2860,18 +2876,21 @@ sub do_plugin_autofind {
 }
 
 sub toggle {
-  my $section = shift;
-  my @body    = @_;
+  my $page_settings = shift;
+  my $title         = shift;
+  my @body           = @_;
 
-  my $label = $CONFIG->tr($section)               or return '';
-  my $state = $CONFIG->section_setting($section)  or return '';
+  my $id    = "\L${title}_panel\E";
+  my $label = $CONFIG->tr($title)                 or return '';
+  my $state = $CONFIG->section_setting($title)    or return '';
   return '' if $state eq 'off';
+  my $visible = exists $page_settings->{section_visible}{$id} ? $page_settings->{section_visible}{$id} : $state eq 'open';
 
-  return toggle_section({on=>($state eq 'open')},
+  return toggle_section({on=>$visible},
+			$id,
 			b($label),
 			@body);
 }
-
 
 sub tableize {
   my $array = shift;

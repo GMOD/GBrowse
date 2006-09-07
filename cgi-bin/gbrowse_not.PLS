@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_not.PLS,v 1.16 2006-09-07 14:34:22 lstein Exp $
+# $Id: gbrowse_not.PLS,v 1.17 2006-09-07 14:36:18 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -871,10 +871,8 @@ sub adjust_settings {
   # restore the visibility of the division sections
   # using transient cookies
   for my $div (grep {/^div_visible_/} CGI::cookie()) {
-    warn "div = $div";
     my ($section)   = $div =~ /^div_visible_(\w+)/ or next;
     my $visibility  = CGI::cookie($div);
-    warn "$div = $visibility";
     $settings->{section_visible}{$section} = $visibility;
   }
 

@@ -3,7 +3,7 @@ package Bio::Graphics::Browser::Render;
 # a package of shared drawing and HTML rendering methods
 # for gbrowse and related applications
 
-# $Id: Render.pm,v 1.2 2006-08-30 09:57:06 sheldon_mckay Exp $
+# $Id: Render.pm,v 1.3 2006-09-11 01:13:14 lstein Exp $
 
 =head1 NAME
     
@@ -740,14 +740,14 @@ sub bookmark_link {
 }
 
 =pod
-    
+
 =head2 click_bar
-    
+
  Title   : click_bar 
  Usage   : my $click_bar = $render->click_bar($red,$green,$blue);
  Function: creates an image the same with as the panel. The
           purpose of this image is to make a button for clicking
-          on sequence coordinates.                                                                                                                                                                              
+          on sequence coordinates.
  Returns : a formatted URL 
  Args    : a hashref containing page settings
 

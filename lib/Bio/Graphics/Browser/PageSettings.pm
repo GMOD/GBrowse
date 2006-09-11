@@ -14,9 +14,6 @@ sub new {
   my %args            = shellwords $config->setting('session args');
   %args               = (Directory => $dir) unless %args;
   my $session         = CGI::Session->new($driver,$id,\%args);
-  $session->expire($config->source,
-		   $config->remember_settings_time);
-
   my $self = bless {
 		    session => $session,
 		   },$class;
@@ -24,7 +21,8 @@ sub new {
 }
 
 sub flush {
-  shift->{session}->flush;
+  my $self = shift;
+  $self->{session}->flush or warn "session error: ",$self->{session}->errstr;
 }
 
 sub id {

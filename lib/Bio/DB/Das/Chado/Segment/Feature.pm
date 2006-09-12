@@ -848,13 +848,20 @@ sub subfeatures {
 sub sub_SeqFeature {
   my($self,@type) = @_;
 
+  my @features;
+
+  #warn "starting subfeatures";
+
   #first call, cache subfeatures
   #Bio::SeqFeature::CollectionI?
   #like SeqFeature::Generic?
-  if(!$self->subfeatures ){
+
+#  if(!$self->subfeatures ){
 
     my $parent_id = $self->feature_id();
     my $inferCDS = $self->factory->inferCDS;
+
+    #warn "inferCDS:$inferCDS";
 
     my $typewhere = '';
     if (@type > 0) {
@@ -871,7 +878,9 @@ sub sub_SeqFeature {
 
       $typewhere = " and child.type_id in (". join(',',@id_list)  .")" ;
 
-      warn "type:@type, type_id:@id_list" if DEBUG;
+      #warn $typewhere;
+
+      warn "type:@type, type_id:@id_list";# if DEBUG;
     }
 
     my $handle = $self->factory->dbh();
@@ -1003,7 +1012,7 @@ sub sub_SeqFeature {
                     $$hashref{uniquename},
                     $$hashref{feature_id}
                                                             );
-      $self->add_subfeature($feat);
+      push @features, $feat;
 
       if ($inferCDS && ($feat->type =~ /exon/ or $feat->type =~ /polypeptide/ )) {
           #saving an object to an array saves a reference to the object--
@@ -1031,7 +1040,7 @@ sub sub_SeqFeature {
         }
         else {
             #if there's no polypeptide feature, there's no point in continuing
-            return @{$self->subfeatures()};
+            return @features;
         }
 
         warn "poly:$poly,start:$start, stop:$stop" if DEBUG;
@@ -1065,23 +1074,26 @@ sub sub_SeqFeature {
                  if (!(defined $temp_array[0]->phase) );
 
         for (@sorted) {
-            $self->add_subfeature($_);
+            push @features, $_;
         }
     }
-  }
+#  } #closes if !subfeatures
 
 #this shouldn't be necessary, as filtering took place via the query
-#  if($types){
-#    my %oktypes;
-#    my %ok = map {$oktypes{$_} => 1} @$types;
-#    return grep { $ok{ $_->type } } $self->subfeatures();
-#  }
+#except that is now that infering of CDS features is a possibility
 
-  my @subfeatures = @{$self->subfeatures()};
-
-   # warn "subfeature array:@subfeatures\n";
-
-  return  @subfeatures;
+  if(@type && $inferCDS){
+    my @ok_feats;
+    
+    my $type_str = join("|", @type);
+    for my $feat (@features) {
+        if ($feat->method =~ /$type_str/) {
+            push @ok_feats, $feat;
+        }
+    }
+    return @ok_feats;
+  }
+  return  @features;
 }
 
 =head2 _calc_phases
@@ -1117,6 +1129,24 @@ sub _calc_phases {
 
   return @exons;
 }
+
+
+=head2 notes
+
+ Title   : notes
+ Usage   : @notes = $feature->notes
+ Function: get the "notes" on a particular feature
+ Returns : an array of string
+ Args    : feature ID
+ Status  : public
+
+=cut
+
+sub notes {
+  my $self = shift;
+  $self->attributes('Note');
+}
+
 
 =head2 add_subfeature()
 

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.9 2006-09-06 18:47:30 lstein Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.10 2006-09-12 15:04:59 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -680,42 +680,54 @@ sub _by_alias_by_name {
 
   my ($select_part,$from_part,$where_part);
 
+  if ($class) {
+      my $type = ($class eq 'CDS' && $self->inferCDS)
+                 ? $self->name2term('polypeptide')
+                 : $self->name2term($class);
+      return unless $type;
+      $from_part =  " feature f ";
+      $where_part.= " f.type_id = $type ";
+  }
+
+
   if ( $operation eq 'by_alias') {
     $select_part = "select distinct fs.feature_id \n";
-    $from_part   = "from feature_synonym fs, synonym s ";
+    $from_part   = $from_part ?
+                     "$from_part, feature_synonym fs, synonym s " 
+                   : "feature_synonym fs, synonym s ";
 
+    my $alias_only_where;
     if ($wildcard) {
-      $where_part  = "where fs.synonym_id = s.synonym_id and\n"
+      $alias_only_where  = "where fs.synonym_id = s.synonym_id and\n"
                     . "lower(s.synonym_sgml) like ?";
     } 
     else {
-      $where_part  = "where fs.synonym_id = s.synonym_id and\n"
+      $alias_only_where  = "where fs.synonym_id = s.synonym_id and\n"
                     . "lower(s.synonym_sgml) = ?";
     }
+
+    $where_part = $where_part ?
+                    "$alias_only_where AND $where_part"
+                  : $alias_only_where;
   }
   else { #searching by name only
-    $select_part = "select feature_id ";
-    $from_part   = "from feature ";
+    $select_part = "select f.feature_id ";
+    $from_part   = " feature f ";
 
+    my $name_only_where;
     if ($wildcard) {
-      $where_part = "where lower(name) like ?";
+      $name_only_where = "where lower(f.name) like ?";
     }
     else {
-      $where_part = "where lower(name) = ?";
+      $name_only_where = "where lower(f.name) = ?";
     }
+
+    $where_part = $where_part ?
+                    "$name_only_where AND $where_part" 
+                  : $name_only_where;
   }
 
-  if ($class) {
-      my $type = ($class eq 'CDS' && $self->inferCDS)
-                 ? $self->name2term('polypeptide') 
-                 : $self->name2term($class);
-      return unless $type;
-      $from_part .= ", feature f \n";
-      $where_part.= "\nand fs.feature_id = f.feature_id and\n"
-                    . "f.type_id = $type";
-  }
-
-  my $query = $select_part . $from_part . $where_part;
+  my $query = $select_part . ' FROM ' . $from_part . $where_part;
 
   warn "first get_feature_by_name query:$query"; # if DEBUG;
 

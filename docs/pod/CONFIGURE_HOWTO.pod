@@ -724,6 +724,13 @@ that is intermediate in size between the overview and the detail
 panel. The value of this option becomes the size of the region panel
 in base pairs.
 
+=item * region sizes
+
+This contains a space-delimited list of region panel sizes to present
+to the user in a popup menu:
+
+     region sizes   = 5000 10000 20000
+
 =item * show sources
 
 A 0 (false) or 1 (true) value which controls whether or not to show

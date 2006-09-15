@@ -3824,8 +3824,22 @@ time <b>redirect</b> its output into a new configuration file named
 % <b>make_das_conf.pl http://genome.cse.ucsc.edu/cgi-bin/das/hg16 &gt;$CONF/gbrowse.conf/ucsc_hg16.conf</b>
 </pre></blockquote>
 
-That should be all you need to do!  Try browsing the new data source
-by requesting <a
+That should be all you need to do, unless you are behind a firewall
+that uses an HTTP proxy. In this case, you will need to edit the
+"db_args" option in the generated configuration file to include a
+-proxy option. This tells gbrowse to fetch the remote data using the
+indicated proxy. For example:
+
+<blockquote><pre>
+[GENERAL]
+description   = Human July 2003 Genome at UCSC
+db_adaptor    = Bio::Das
+db_args       = -source http://genome.cse.ucsc.edu/cgi-bin/das
+	        -dsn    hg16
+                -proxy  http://my.proxy.address
+</pre></blockquote>
+
+Try browsing the new data source by requesting <a
 href="/cgi-bin/gbrowse/ucsc_hg16"
 target="_new">http://localhost/cgi-bin/gbrowse/ucsc_hg16</a>, and you
 should be able to browse through a rudimentary version of the Human
@@ -3870,6 +3884,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Wed Jun 14 21:54:06 EDT 2006
+Last modified: Fri Sep 15 07:13:47 EDT 2006
 <!-- hhmts end -->
 </body> </html>

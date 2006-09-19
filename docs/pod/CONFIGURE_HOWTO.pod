@@ -1078,6 +1078,7 @@ the proxy:
    proxy = http://myproxy.myorg.com:9000
 
 =item * session driver
+
 =item * session args
 
 These options fine-tune how gbrowse manages its state-maintaining
@@ -1099,9 +1100,9 @@ For example, here is how to create session data that is stored in the
 MySQL "test" database under a table named "gbrowse_sessions." The
 session data will be stored in binary form by the Storable module:
 
-session driver = driver:mysql;serializer:storable
-session args   = DataSource test
-		 TableName  gbrowse_sessions
+ session driver = driver:mysql;serializer:storable
+ session args   = DataSource test
+		  TableName  gbrowse_sessions
 
 See the CGI::Session documentation for information about setting up
 the MySQL table and appropriate permissions. 

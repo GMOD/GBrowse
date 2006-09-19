@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.29 2006-08-26 18:24:10 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.30 2006-09-19 14:43:01 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -148,6 +148,7 @@ sub read_configuration {
 
   for my $file (@conf_files) {
     my $basename = basename($file,".$suffix");
+    next if $basename eq 'GBrowse';  # global settings -- used in main branch
     $basename =~ s/^\d+\.//;
     next if defined($self->{conf}{$basename}{mtime})
       && ($self->{conf}{$basename}{mtime} >= $mtimes{$file});

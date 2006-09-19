@@ -5,7 +5,7 @@ function gbTurnOff (a) {
 
 function gbCheck (button,state) {
   var a         = button.id;
-  a             = a.substring(0,a.indexOf("_"));
+  a             = a.substring(0,a.lastIndexOf("_"));
   var container = document.getElementById(a);
   if (!container) { return false; }
   var checkboxes = container.getElementsByTagName('input');

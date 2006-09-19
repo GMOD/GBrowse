@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.56 2006-09-07 14:32:27 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.57 2006-09-19 21:23:18 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1141,17 +1141,9 @@ sub tracks_table {
   my %exclude = map {$_=>1} map {$CONFIG->tr($_)} qw(OVERVIEW REGION ANALYSIS EXTERNAL);
 
   my @user_keys = grep {!$exclude{$_}} sort keys %track_groups;
-  my $id = "c00000";
 
   my $all_on  = $CONFIG->tr('ALL_ON');
   my $all_off = $CONFIG->tr('ALL_OFF');
-
-  # this funny little thing ensures that the dynamic list of tracks
-  # falls into ID space *after* all the other sections.  Otherwise the
-  # toggles get confused as the tracks grow and expand to accomodate
-  # uploaded & third party features.
-  local $CGI::Toggle::next_id = $CGI::Toggle::next_id;
-  for (1..10) { $CGI::Toggle::next_id++ } # Can't do += 10 because next_id isn't a simple number.
 
   my %seenit;
   foreach my $category ($CONFIG->tr('OVERVIEW'),
@@ -1162,12 +1154,11 @@ sub tracks_table {
 		       ) {
     next if $seenit{$category}++;
     my $table;
+    my $id = "${category}_section";
 
     if ($category eq $CONFIG->tr('REGION') && !$CONFIG->setting('region segment')) {
-      $CGI::Toggle::next_id++;
-      next;
+     next;
     }
-
     elsif  (exists $track_groups{$category}) {
       my @track_labels = @{$track_groups{$category}};
       @track_labels = sort {lc $label_keys{$a} cmp lc $label_keys{$b}} @track_labels
@@ -1181,25 +1172,23 @@ sub tracks_table {
 				     );
       $table = tableize(\@checkboxes);
       $table =~ s/<tr>/<tr class="searchtitle">/g;
-      my $id = "${category}_section";
+
       my $visible = exists $page_settings->{section_visible}{$id} ? $page_settings->{section_visible}{$id} : 1;
 
       my ($control,$section)=toggle_section({on=>$visible,nodiv=>1},
 					    $id,
-					    b(ucfirst $category),div({-style=>'padding-left:1em'},$table));
+					    b(ucfirst $category),div({-style=>'padding-left:1em'},span({-id=>$id},$table)));
       $control .= '&nbsp;'.i({-class=>'nojs'},
 			     checkbox(-id=>"${id}_a",-name=>"${id}_a",
 				      -label=>$all_on,-onClick=>"gbCheck(this,1)"),
 			     checkbox(-id=>"${id}_n",-name=>"${id}_n",
-				      -label=>$all_off,onClick=>"gbCheck(this,0)")
+				      -label=>$all_off,-onClick=>"gbCheck(this,0)")
 			    ).br()   if exists $track_groups{$category};
       push @sections,div($control.$section);
       $id++;
     }
 
     else {
-      #$table = table(TR({-class=>'searchtitle',-width=>'100%'},td($CONFIG->tr('NO_TRACKS'))));
-      $CGI::Toggle::next_id++;
       next;
     }
 

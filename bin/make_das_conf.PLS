@@ -19,10 +19,11 @@ $Config{startperl}
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: make_das_conf.PLS,v 1.3 2005-12-09 22:19:08 mwz444 Exp $
+# $Id: make_das_conf.PLS,v 1.4 2006-09-21 19:39:29 lstein Exp $
 
 use strict;
-use Bio::Das 0.96;
+use Bio::Das 1.03;
+use Getopt::Long;
 
 my @COLORS = qw(cyan blue red yellow green wheat turquoise orange);  # default colors
 my $color = 0;      # position in color cycle
@@ -32,10 +33,14 @@ my %known_aggregators = map {$_=>1} qw(clone match processed_transcript wormbase
                                        ucsc_assembly ucsc_ensgene ucsc_refgene
                                        ucsc_sanger22 ucsc_sanger22pseudo
                                        ucsc_softberry ucsc_twinscan ucsc_unigene);
+my $proxy;
+
+GetOptions('proxy=s' => \$proxy) or usage_statement();
 
 my $url = shift;
 $url or usage_statement();
 $url =~ m!^http:.+das(/\w+)?$! or usage_statement("This doesn't look like a DAS URL to me.");
+$ENV{HTTP_PROXY} ||= $proxy;
 
 list_sources($url) && exit 0 if $url =~ m!das/?$!;
 generate_config_file($url);
@@ -49,16 +54,23 @@ sub usage_statement {
 die <<END;
 ${error}Usage: $0 <das URL to load>
 
+Options: -proxy  <http proxy to use>
+
 This utility attempts to contact a DAS source and to create a starter
 configuration file for gbrowse.  If you don\'t know the list of data sources
 it will retrieve them and ask you to select one.
+
+If you need an HTTP proxy, set the HTTP_PROXY environment variable to
+the host and port number, in the form "http://proxy.host:port/", or
+pass the proxy URL to the -proxy option.
 END
-;
-}
+; }
 
 sub list_sources {
   my $url     = shift;
   my $das = Bio::Das->new($url);
+  warn "proxy = $ENV{HTTP_PROXY}";
+  $das->proxy($ENV{HTTP_PROXY}) if $ENV{HTTP_PROXY};
   my @sources = $das->sources or bad_request_exit($das);
   print "The following DAS URLs are available at this server.  Please call the script again\n";
   print "using one of the following URLs:\n\n";
@@ -73,6 +85,8 @@ sub generate_config_file {
   my $url           = shift;
   my ($server,$dsn) = $url=~ m[^(.+/das)/(\w+)];
   my $das   = Bio::Das->new($server=>$dsn);
+
+  $das->proxy($ENV{HTTP_PROXY}) if $ENV{HTTP_PROXY};
 
   my @sources  = $das->sources or bad_request_exit($das);
   my ($source) = grep {$_->id eq $das->default_dsn} @sources;
@@ -95,6 +109,8 @@ sub generate_config_file {
     s/:\d+,\d+$//;
   }
 
+  my $proxy = $ENV{HTTP_PROXY} ? "-proxy  $ENV{HTTP_PROXY}" : '';
+
   # top part of the config file
   print <<END;
 [GENERAL]
@@ -102,6 +118,7 @@ description   = $description
 db_adaptor    = Bio::Das
 db_args       = -source $server
 	        -dsn    $dsn
+                $proxy
 
 # examples to show in the introduction
 examples = @entry_points

@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.38 2006-09-28 12:12:55 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.39 2006-09-28 15:45:39 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -144,7 +144,15 @@ sub print_features {
       $string .= PrintMultiple($f,$options,$a,$f->attributes($a));
     }
     $string   .= TR({-valign=>'top',-class=>'databody'},th({-height=>3},''),td({-height=>3},''));
-    my @subfeatures = sort {$a->start <=> $b->start} $f->get_SeqFeatures;          # works with old bioperl
+
+    my @subfeatures;
+    # sort features with targets so that target is in order
+    if ($f->can('target') && $f->target) {
+      @subfeatures  = sort {$a->target->start <=> $b->target->start} $f->get_SeqFeatures;
+    } else {
+      @subfeatures = sort {$a->start <=> $b->start} $f->get_SeqFeatures;
+    }
+
     my $subtable = PrintMultiple($f,$options,'Parts',print_features(\@subfeatures,$subf+1)) if @subfeatures;
     $string .= $subtable || '';  # prevent uninit variable warning
     $string .= end_table();
@@ -214,6 +222,7 @@ sub print_matches {
 
   my $sdna = $src->dna or return '';
   my $tdna = $tgt->dna or return '';
+
   my $top_label = $src->abs_ref;
   my $bot_label = $tgt->abs_ref;
 
@@ -243,6 +252,8 @@ sub print_matches {
   my @top    = $top    =~ /(.{1,60})/g;
   my @middle = $middle =~ /(.{1,60})/g;
   my @bottom = $bottom =~ /(.{1,60})/g;
+
+  $src_x = $src_y if $sdir < 0;
 
   for (my $i=0; $i<@top; $i++) {
     my $src_delta = $sdir * (length($top[$i]) - $top[$i]=~tr/-/-/);

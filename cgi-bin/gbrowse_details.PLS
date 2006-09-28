@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.28.4.2.2.8 2006-08-30 02:41:00 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.28.4.2.2.9 2006-09-28 12:12:38 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -221,8 +221,10 @@ sub print_matches {
   my $src_y = $src->abs_end;
   my $tgt_x = $tgt->abs_start;
   my $tgt_y = $tgt->abs_end;
-  my $tdir  = $tgt->abs_strand || +1;
-  my $sdir  = $src->abs_strand || +1;
+#  my $tdir  = $tgt->abs_strand || +1;
+#  my $sdir  = $src->abs_strand || +1;
+  my $tdir  = $tgt->strand || +1;
+  my $sdir  = $src->strand || +1;
 
   if ($bug) { # correct for buggy data files that show -/- alignments; really -/+
     $tdir = +1;

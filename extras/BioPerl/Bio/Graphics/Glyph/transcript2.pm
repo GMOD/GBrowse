@@ -1,11 +1,9 @@
 package Bio::Graphics::Glyph::transcript2;
 
-# $Id: transcript2.pm,v 1.1.2.4.2.13 2006-07-25 18:58:40 scottcain Exp $
+# $Id: transcript2.pm,v 1.1.2.4.2.14 2006-09-28 18:00:12 scottcain Exp $
 
 use strict;
-use Bio::Graphics::Glyph::transcript;
-use vars '@ISA';
-@ISA = 'Bio::Graphics::Glyph::transcript';
+use base qw(Bio::Graphics::Glyph::transcript);
 
 use constant MIN_WIDTH_FOR_ARROW => 8;
 

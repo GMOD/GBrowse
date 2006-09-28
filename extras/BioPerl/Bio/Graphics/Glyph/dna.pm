@@ -1,9 +1,7 @@
 package Bio::Graphics::Glyph::dna;
 
 use strict;
-use Bio::Graphics::Glyph::generic;
-use vars '@ISA';
-@ISA = qw(Bio::Graphics::Glyph::generic);
+use base qw(Bio::Graphics::Glyph::generic);
 
 my %complement = (g=>'c',a=>'t',t=>'a',c=>'g',n=>'n',
 		  G=>'C',A=>'T',T=>'A',C=>'G',N=>'N');
@@ -338,7 +336,7 @@ options are recognized:
               and strandless features will
               show both
 
-NOTE: -gc_window=>'auto' gives nice results and is recommended for
+NOTE: -gc_window=E<gt>'auto' gives nice results and is recommended for
 drawing GC content. The GC content axes draw slightly outside the
 panel, so you may wish to add some extra padding on the right and
 left.

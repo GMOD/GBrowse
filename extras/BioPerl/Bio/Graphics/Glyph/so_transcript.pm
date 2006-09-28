@@ -1,11 +1,9 @@
 package Bio::Graphics::Glyph::so_transcript;
 
-# $Id: so_transcript.pm,v 1.1.2.5.2.13 2006-07-25 18:58:39 scottcain Exp $
+# $Id: so_transcript.pm,v 1.1.2.5.2.14 2006-09-28 18:00:12 scottcain Exp $
 
 use strict;
-use Bio::Graphics::Glyph::processed_transcript;
-use vars '@ISA','$VERSION';
-@ISA = 'Bio::Graphics::Glyph::processed_transcript';
+use base qw(Bio::Graphics::Glyph::processed_transcript);
 $VERSION = '1.0';
 
 1;

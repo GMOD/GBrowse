@@ -1,11 +1,8 @@
 package Bio::Graphics::Glyph::segments;
-#$Id: segments.pm,v 1.1.2.5.2.13 2006-07-25 18:58:39 scottcain Exp $
+#$Id: segments.pm,v 1.1.2.5.2.14 2006-09-28 18:00:12 scottcain Exp $
 
 use strict;
 use Bio::Location::Simple;
-use Bio::Graphics::Glyph::generic;
-use Bio::Graphics::Glyph::segmented_keyglyph;
-use vars '@ISA';
 
 use constant INSERTION_CHARACTER => '!'; # what to draw to show an insertion
 use constant RAGGED_START_FUZZ => 25;  # will show ragged ends of alignments
@@ -20,9 +17,7 @@ use constant SRC_END   => 2;
 use constant TGT_START => 3;
 use constant TGT_END   => 4;
 
-@ISA = qw( Bio::Graphics::Glyph::segmented_keyglyph
-	   Bio::Graphics::Glyph::generic
-	 );
+use base qw(Bio::Graphics::Glyph::segmented_keyglyph Bio::Graphics::Glyph::generic);
 
 my %complement = (g=>'c',a=>'t',t=>'a',c=>'g',n=>'n',
 		  G=>'C',A=>'T',T=>'A',C=>'G',N=>'N');
@@ -35,7 +30,7 @@ sub pad_left {
     : $self->option('ragged_extra');
 
   return $self->SUPER::pad_left 
-    unless $self->option('draw_target') && $ragged && $self->dna_fits;
+    unless $self->draw_target && $ragged && $self->dna_fits;
   my $target = eval {$self->feature->hit} or return $self->SUPER::pad_left;
 
   return $self->SUPER::pad_left unless $target->start<$target->end && $target->start < $ragged;
@@ -49,17 +44,22 @@ sub pad_right {
     ? RAGGED_START_FUZZ 
     : $self->option('ragged_extra');
   return $self->SUPER::pad_right 
-    unless $self->option('draw_target') && $ragged && $self->dna_fits;
+    unless $self->draw_target && $ragged && $self->dna_fits;
   my $target = eval {$self->feature->hit} or return $self->SUPER::pad_right;
   return $self->SUPER::pad_right unless $target->end < $target->start && $target->start < $ragged;
   return ($target->end-1) * $self->scale;
 }
 
+sub draw_target {
+  my $self = shift;
+  return if $self->option('draw_dna');
+  return $self->option('draw_target');
+}
+
 sub height {
   my $self = shift;
   my $height = $self->SUPER::height;
-  return $height unless $self->dna_fits 
-    && $self->option('draw_target'); # || $self->option('draw_dna'));
+  return $height unless $self->dna_fits && $self->draw_target; # || $self->option('draw_dna'));
   my $fontheight = $self->font->height;
   return $fontheight if $fontheight > $height;
 }
@@ -87,14 +87,15 @@ sub maxdepth {
 
 sub fontcolor {
   my $self = shift;
-  return $self->SUPER::fontcolor unless $self->option('draw_target');# || $self->option('draw_dna');
+  return $self->SUPER::fontcolor unless $self->draw_target;# || $self->option('draw_dna');
   return $self->SUPER::fontcolor unless $self->dna_fits;
   return $self->bgcolor;
 }
 
 sub draw {
   my $self = shift;
-  my $draw_target = $self->option('draw_target');
+
+  my $draw_target = $self->draw_target;
   return $self->SUPER::draw(@_) unless $draw_target;
   return $self->SUPER::draw(@_) unless $self->dna_fits;
 
@@ -104,7 +105,7 @@ sub draw {
 
   my $drew_sequence;
 
-  if ($self->option('draw_target')) {
+  if ($draw_target) {
     return $self->SUPER::draw(@_) unless eval {$self->feature->hit->seq};
     $drew_sequence = $self->draw_multiple_alignment(@_);
   }
@@ -112,108 +113,10 @@ sub draw {
   my ($gd,$x,$y) = @_;
   $y  += $self->top + $self->pad_top if $drew_sequence;  # something is wrong - this is a hack/workaround
   my $connector     =  $self->connector;
-  $self->draw_connectors($gd,$x,$y) if $connector && $connector ne 'none';
+  $self->draw_connectors($gd,$x,$y)
+    if $connector && $connector ne 'none' && $self->level == 0;
 
 }
-
-sub draw_dna {
-  my $self = shift;
-  my $gd   = shift;
-  my ($left,$top,$partno,$total_parts,$ref_dna) = @_;
-  my $flipped              = $self->flip;
-  my $pixels_per_base      = $self->scale;
-  my $feature              = $self->feature;
-  my $panel                = $self->panel;
-  my ($abs_start,$abs_end)     = ($feature->start,$feature->end);
-  my ($tgt_start,$tgt_end)     = ($feature->hit->start,$feature->hit->end);
-  my ($panel_start,$panel_end) = ($self->panel->start,$self->panel->end);
-  my $strand               = $feature->strand;
-  my $panel_left           = $self->panel->left;
-  my $panel_right          = $self->panel->right;
-  my $true_target          = $self->option('true_target');
-  my $drew_sequence;
-
-  my ($bl,$bt,$br,$bb)     = $self->bounds($left,$top);
-  $top = $bt;
-
-  my @s                     = $self->_subfeat($feature);
-
-  my (@segments,%strands);
-  for my $s (@s) {
-    my ($src_start,$src_end) = ($s->start,$s->end);
-    next if $src_end < $panel_start or $src_start > $panel_end;
-    push @segments,[$s,$src_start,$src_end];
-  }
-
-  $ref_dna = lc ref($ref_dna) ? $ref_dna->seq : $ref_dna;
-  $ref_dna = $self->reversec($ref_dna) if $strand < 0;
-
-  for my $seg (@segments) {
-    # left clipping
-    if ( (my $delta = $seg->[SRC_START] - $panel_start) < 0 ) {
-      $seg->[SRC_START] = $panel_start;
-    }
-
-    # right clipping
-    if ( (my $delta = $panel_end - $seg->[SRC_END]) < 0) {
-      $seg->[SRC_END] = $panel_end;
-    }
-    warn "Clipping gives [@$seg]\n" if DEBUG;
-
-    $seg->[SRC_START] -= $abs_start - 1;
-    $seg->[SRC_END]   -= $abs_start - 1;
-
-    warn "Coordinate translation gives [@$seg]\n" if DEBUG;
-  }
-
-  # draw
-  my $color = $self->fgcolor;
-  my $font  = $self->font;
-  my $lineheight = $font->height;
-  my $fontwidth  = $font->width;
-
-  my $pink  = $self->factory->translate_color('lightpink');
-  my $grey  = $self->factory->translate_color('gray');
-
-  my $base2pixel = 
-    $self->flip ?
-      sub {
-	my ($src,$tgt) = @_;
-	my $a = $fontwidth + ($abs_start + $src-$panel_start-1 + $tgt) * $pixels_per_base - 1;    
-	$panel_right - $a;
-      }
-      : sub {
-	my ($src,$tgt) = @_;
-	$fontwidth/2 + $left + ($abs_start + $src-$panel_start-1 + $tgt) * $pixels_per_base - 1;    
-      };
-
-  my $src_last_end;
-  for my $seg (@segments) {
-
-    my $y = $top;
-
-    for (my $i=0; $i<$seg->[SRC_END]-$seg->[SRC_START]+1; $i++) {
-
-      my $src_base = $self->_subsequence($ref_dna,$seg->[SRC_START]+$i,$seg->[SRC_START]+$i);
-      my $x = $base2pixel->($seg->[SRC_START],$i);
-      $gd->char($font,$x,$y,$src_base,$src_base =~ /[nN]/ ? $grey : $color);
-    }
-
-    # add dashes to fill src alignment gaps
-    if ( defined $src_last_end && (my $delta = $seg->[SRC_START] - $src_last_end) > 1) {
-      for (my $i=0;$i<$delta-1;$i++) {
-	my $x = $base2pixel->($src_last_end,$i+1);
-	$gd->char($font,$x,$y,'-',$color);
-      }
-    }
-
-    $src_last_end  = $seg->[SRC_END];
-    $drew_sequence++;
-  }
-
-  return $drew_sequence;
-}
-
 sub draw_multiple_alignment {
   my $self = shift;
   my $gd   = shift;
@@ -237,10 +140,26 @@ sub draw_multiple_alignment {
   my $panel_right          = $self->panel->right;
   my $drew_sequence;
 
+  warn "TGT_START..TGT_END = $tgt_start..$tgt_end" if DEBUG;
+
   my ($bl,$bt,$br,$bb)     = $self->bounds($left,$top);
   $top = $bt;
 
+  for my $p ($self->parts) {
+    my @bounds = $p->bounds($left,$top);
+    $self->filled_box($gd,@bounds,$self->bgcolor,$self->bgcolor);
+  }
+
   my @s                     = $self->_subfeat($feature);
+
+  # FIX ME
+  # workaround for features in which top level feature does not have a hit but
+  # subfeatures do. There is total breakage of encapsulation here because sometimes
+  # a chado alignment places the aligned segment in the top-level feature, and sometimes
+  # in the child feature.
+  if (!@s && $feature->isa('Bio::DB::Das::Chado::Segment::Feature')) {
+    @s = ($feature);
+  }
 
   my $can_realign = $do_realign && eval { require Bio::Graphics::Browser::Realign; 1 };
 
@@ -251,6 +170,7 @@ sub draw_multiple_alignment {
     next unless $src_start <= $panel_end && $src_end >= $panel_start;
 
     my ($tgt_start,$tgt_end) = ($target->start,$target->end);
+
     unless (exists $strands{$target}) {
       my $strand = $feature->strand;
       if ($tgt_start > $tgt_end) { #correct for data problems
@@ -268,7 +188,6 @@ sub draw_multiple_alignment {
     else {  # unfortunately if this isn't the case, then we have to realign the segment a bit
       warn   "Realigning [$target,$src_start,$src_end,$tgt_start,$tgt_end].\n" if DEBUG;
       my ($sdna,$tdna) = ($s->dna,$target->dna);
-      warn   $sdna,"\n",$tdna,"\n" if DEBUG;
       my @result = $self->realign($sdna,$tdna);
       foreach (@result) {
 	next unless $_->[1]+$src_start >= $abs_start && $_->[0]+$src_start <= $abs_end;
@@ -327,8 +246,15 @@ sub draw_multiple_alignment {
 
   # get the DNAs now - a little complicated by the necessity of using
   # the subseq() method
-  my $ref_dna = lc $feature->subseq(1-$offset_left,$feature->length+$offset_right)->seq;
-  my $tgt_dna = lc $feature->hit->subseq(1-$offset_left,$feature->length+$offset_right)->seq;
+  my $ref_dna = $feature->subseq(1-$offset_left,$feature->length+$offset_right)->seq;
+  my $tgt_dna = $feature->hit->subseq(1-$offset_left,$feature->length+$offset_right)->seq;
+
+  # work around changes in the API
+  $ref_dna    = $ref_dna->seq if ref $ref_dna and $ref_dna->can('seq');
+  $tgt_dna    = $tgt_dna->seq if ref $tgt_dna and $tgt_dna->can('seq');
+
+  $ref_dna    = lc $ref_dna;
+  $tgt_dna    = lc $tgt_dna;
 
   # sanity check.  Let's see if they look like they're lining up
   warn "$feature dna sanity check:\n$ref_dna\n$tgt_dna\n" if DEBUG;
@@ -337,6 +263,7 @@ sub draw_multiple_alignment {
   # of the left and right panel coordinates
   my %clip;
   for my $seg (@segments) {
+
     my $target = $seg->[TARGET];
     warn "preclip [@$seg]\n" if DEBUG;
 
@@ -362,7 +289,7 @@ sub draw_multiple_alignment {
       }
     }
 
-    warn "Clipping gives [@$seg]\n"if DEBUG;
+    warn "Clipping gives [@$seg], tgt_start = $tgt_start\n" if DEBUG;
   }
 
   # relativize coordinates
@@ -376,6 +303,8 @@ sub draw_multiple_alignment {
     $seg->[SRC_END]   -= $abs_start - 1;
     $seg->[TGT_START] -= $tgt_start - 1;
     $seg->[TGT_END]   -= $tgt_start - 1;
+
+    warn $seg->[TGT_START],"..",$seg->[TGT_END] if DEBUG;
     if ($strand < 0) {
       ($seg->[TGT_START],$seg->[TGT_END]) = (length($tgt_dna)-$seg->[TGT_END]+1,length($tgt_dna)-$seg->[TGT_START]+1);
     }
@@ -392,8 +321,8 @@ sub draw_multiple_alignment {
   my $lineheight = $font->height;
   my $fontwidth  = $font->width;
 
-  my $pink = $self->factory->translate_color('lightpink');
-  my $grey  = $self->factory->translate_color('gray');
+  my $mismatch = $self->factory->translate_color($self->option('mismatch_color') || 'lightgrey');
+  my $grey     = $self->factory->translate_color('gray');
 
   my $base2pixel = 
     $self->flip ?
@@ -409,18 +338,18 @@ sub draw_multiple_alignment {
 
   my ($tgt_last_end,$src_last_end);
   for my $seg (sort {$a->[SRC_START]<=>$b->[SRC_START]} @segments) {
-
-    my $y = $top;
+    my $y = $top-1;
 
     for (my $i=0; $i<$seg->[SRC_END]-$seg->[SRC_START]+1; $i++) {
 
       my $src_base = $self->_subsequence($ref_dna,$seg->[SRC_START]+$i,$seg->[SRC_START]+$i);
       my $tgt_base = $self->_subsequence($tgt_dna,$seg->[TGT_START]+$i,$seg->[TGT_START]+$i);
+      # warn $seg->[TGT_START]+$i,' ',$seg->[TGT_START]+$i;
       my $x = $base2pixel->($seg->[SRC_START],$i);
 
       next unless $tgt_base && $x >= $panel_left && $x <= $panel_right;
 
-      $self->filled_box($gd,$x,$y+3,$x+$fontwidth-1,$y+$lineheight-2,$pink,$pink) 
+      $self->filled_box($gd,$x-$pixels_per_base/2+2,$y+1,$x+$pixels_per_base/2+1,$y+$lineheight,$mismatch,$mismatch)
 	if $show_mismatch && $tgt_base && $src_base ne $tgt_base && $tgt_base !~ /[nN]/;
       $tgt_base = $complement{$tgt_base} if $true_target && $strand < 0;
       $gd->char($font,$x,$y,$tgt_base,$tgt_base =~ /[nN]/ ? $grey : $color);
@@ -436,25 +365,38 @@ sub draw_multiple_alignment {
 	my $gap_left  = $fontwidth + $base2pixel->($src_last_end,0);
 	my $gap_right = $base2pixel->($seg->[SRC_START],0);
 	($gap_left,$gap_right) = ($gap_right+$fontwidth,$gap_left-$fontwidth) if $self->flip;
-	warn "delta=$delta, gap_left=$gap_left, gap_right=$gap_right"  if DEBUG;
+	warn "delta=$delta, gap_left=$gap_left, gap_right=$gap_right" if DEBUG;
+
+	if ($delta == $src_delta) {
+	  $gap_left  += $pixels_per_base/2-2;
+	  $gap_right -= $pixels_per_base/2-2;
+	}
+
+	$self->filled_box($gd,$gap_left,$y+1,
+			      $gap_right-2,$y+$lineheight,$mismatch,$mismatch) if 
+				$show_mismatch && $gap_left >= $panel_left && $gap_right <= $panel_right;
+
 
 	my $gap_distance             = $gap_right - $gap_left + 1;
 	my $pixels_per_inserted_base = $gap_distance/($delta-1);
 
  	if ($pixels_per_inserted_base >= $fontwidth) {  # Squeeze the insertion in
  	  for (my $i = 0; $i<$delta-1; $i++) {
- 	    my $x = $gap_left + (1 + $pixels_per_inserted_base-$fontwidth)/2 + $pixels_per_inserted_base * $i;
+ 	    my $x = $gap_left + ($pixels_per_inserted_base-$fontwidth)/2 + $pixels_per_inserted_base * $i;
  	    my $bp = $self->_subsequence($tgt_dna,$tgt_last_end+$i+1,$tgt_last_end+$i+1);
- 	    $gd->char($font,$x,$y,$bp,$grey) unless $x < $panel_left;
+	    next if $x < $panel_left;
+ 	    $gd->char($font,$x,$y,$bp,$color);
  	  }
  	} else {  # doesn't fit, so stick in a blob
 	  $self->_draw_insertion_point($gd,($gap_left+$gap_right)/2,$y+3,$color);
  	}
-      } 
+      }
       # deal with gaps in the alignment
       elsif ( (my $delta = $seg->[SRC_START] - $src_last_end) > 1) {
 	for (my $i=0;$i<$delta-1;$i++) {
 	  my $x = $base2pixel->($src_last_end,$i+1);
+	  $self->filled_box($gd,$x-$pixels_per_base/2+2,$y,$x+$pixels_per_base/2+1,$y+$lineheight,$mismatch,$mismatch)
+	    if $show_mismatch;
 	  $gd->char($font,$x,$y,'-',$color);
 	}
 	
@@ -544,6 +486,13 @@ This glyph is used for drawing features that consist of discontinuous
 segments.  Unlike "graded_segments" or "alignment", the segments are a
 uniform color and not dependent on the score of the segment.
 
+=head2 METHODS
+
+This module overrides the maxdepth() method to return 1 unless
+explicitly specified by the -maxdepth option. This means that modules
+inheriting from segments will only be presented with one level of
+subfeatures. Override the maxdepth() method to get more levels.
+
 =head2 OPTIONS
 
 The following options are standard among all Glyphs.  See
@@ -603,7 +552,10 @@ In addition, the following glyph-specific options are recognized:
 
   -show_mismatch When combined with -draw_target,     0 (false)
                  highlights mismatched bases in
-                 pink.  See "Displaying Alignments".
+                 the mismatch color.  
+                 See "Displaying Alignments".
+
+  -mismatch_color The mismatch color to use           'lightgrey'
 
   -true_target   Show the target DNA in its native    0 (false)
                  (plus strand) orientation, even if
@@ -616,7 +568,8 @@ In addition, the following glyph-specific options are recognized:
 
 If the -draw_dna flag is set to a true value, then when the
 magnification is high enough, the underlying DNA sequence will be
-shown.  This option is mutually exclusive with -draw_target.
+shown.  This option is mutually exclusive with -draw_target. See
+Bio::Graphics::Glyph::generic for more details.
 
 The -draw_target, -ragged_extra, and -show_mismatch options only work
 with seqfeatures that implement the hit() method
@@ -626,13 +579,18 @@ to allow individual bases to be drawn. The -ragged_extra option will
 cause the alignment to be extended at the extreme ends by the
 indicated number of bases, and is useful for looking for polyAs and
 cloning sites at the ends of ESTs and cDNAs. -show_mismatch will cause
-mismatched bases to be highlighted in pink.
+mismatched bases to be highlighted in with the color indicated by
+-mismatch_color (default lightgray).
 
 At high magnifications, minus strand matches will automatically be
 shown as their reverse complement (so that the match has the same
 sequence as the plus strand of the source dna).  If you prefer to see
 the actual sequence of the target as it appears on the minus strand,
 then set -true_target to true.
+
+Note that -true_target has the opposite meaning from
+-canonical_strand, which is used in conjunction with -draw_dna to draw
+minus strand features as if they appear on the plus strand.
 
 =head2 Displaying Alignments
 

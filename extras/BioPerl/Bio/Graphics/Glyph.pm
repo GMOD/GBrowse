@@ -1,12 +1,13 @@
 package Bio::Graphics::Glyph;
 
-# $Id: Glyph.pm,v 1.1.2.11.2.9 2006-07-25 18:58:39 scottcain Exp $
+# $Id: Glyph.pm,v 1.1.2.11.2.10 2006-09-28 18:00:07 scottcain Exp $
 
 use strict;
 use Carp 'croak','cluck';
 use constant BUMP_SPACING => 2; # vertical distance between bumped glyphs
 use Bio::Root::Version;
-use Bio::Root::Root;
+
+use base qw(Bio::Root::Root);
 
 my %LAYOUT_COUNT;
 
@@ -30,7 +31,7 @@ sub new {
   my $class = shift;
   my %arg = @_;
 
-  my $feature = $arg{-feature} or die "No feature $class";
+  my $feature = $arg{-feature} or $class->throw("No feature $class");
   my $factory = $arg{-factory} || $class->default_factory;
   my $level   = $arg{-level} || 0;
   my $flip    = $arg{-flip};
@@ -52,7 +53,7 @@ sub new {
   warn $self if DEBUG;
   warn $feature if DEBUG;
 
-  my @subfeatures         = $self->subfeat($feature);
+  @subfeatures         = $self->subfeat($feature);
 
   if ($self->option('ignore_sub_part')) {
     my @tmparray;
@@ -313,18 +314,16 @@ sub boxes {
 
   $self->layout;
   $parent         ||= $self;
-  my $subparts = $self->option('box_subparts');
-
-  my $subparts = $self->box_subparts;
+  my $subparts = $self->box_subparts || 0;
 
   for my $part ($self->parts) {
     my $type = $part->feature->primary_tag || '';
-    if ($type eq 'group' or
-	($part->level == 0 && $subparts)) {
-      push @result,$part->boxes($left+$self->left+$self->pad_left,$top+$self->top+$self->pad_top,$parent);
-      next;
+    if ($type eq 'group' or $subparts > $part->level) {
+      push @result,$part->boxes($left,$top+$self->top+$self->pad_top,$parent);
+      next if $type eq 'group';
     }
     my ($x1,$y1,$x2,$y2) = $part->box;
+    $x2++ if $x1==$x2;
     push @result,[$part->feature,
 		  $left + $x1,$top+$self->top+$self->pad_top+$y1,
 		  $left + $x2,$top+$self->top+$self->pad_top+$y2,
@@ -534,7 +533,7 @@ sub layout_sort {
     if (!$opt) {
        $sortfunc = sub { $a->left <=> $b->left };
     } elsif (ref $opt eq 'CODE') {
-      Bio::Root::Root->throw('sort_order subroutines must use the $$ prototype') unless prototype($opt) eq '$$';
+      $self->throw('sort_order subroutines must use the $$ prototype') unless prototype($opt) eq '$$';
       $sortfunc = $opt;
     } elsif ($opt =~ /^sub\s+\{/o) {
        $sortfunc = eval $opt;
@@ -577,7 +576,8 @@ sub layout_sort {
     # cache this
     # $self->factory->set_option(sort_order => $sortfunc);
 
-    return sort $sortfunc @_;
+    my @things = sort $sortfunc @_;
+    return @things;
 }
 
 # handle collision detection
@@ -722,7 +722,6 @@ sub draw {
   my $self = shift;
   my $gd = shift;
   my ($left,$top,$partno,$total_parts) = @_;
-
 
   my $connector = $self->connector;
 
@@ -1169,7 +1168,8 @@ sub _subfeat {
 
   my @split = eval { my $id   = $feature->location->seq_id;
 		     my @subs = $feature->location->sub_Location;
-		     grep {$id eq $_->seq_id} @subs};
+		     grep {$id eq $_->seq_id} @subs;
+		   };
 
   return @split if @split;
 
@@ -1524,6 +1524,23 @@ the GD::Image object.
 Draw the label for the glyph onto the provided GD::Image object,
 optionally offsetting by the amounts indicated in $left and $right.
 
+=item $glyph-E<gt>maxdepth()
+
+This returns the maximum number of levels of feature subparts that the
+glyph will recurse through. For example, returning 0 indicates that
+the glyph will only draw the top-level feature. Returning 1 indicates
+that it will only draw the top-level feature and one level of
+subfeatures. Returning 2 will descend down two levels. Overriding this
+method will speed up rendering by avoiding creating of a bunch of
+subglyphs that will never be drawn.
+
+The default behavior is to return undef (unlimited levels of descent)
+unless the -maxdepth option is passed, in which case this number is
+returned.
+
+Note that Bio::Graphics::Glyph::generic overrides maxdepth() to return
+0, meaning no descent into subparts will be performed.
+
 =back
 
 These methods are useful utility routines:
@@ -1544,6 +1561,11 @@ the provided rectangle coordinates.
 =item $glyph-E<gt>filled_oval($gd,$x1,$y1,$x2,$y2)
 
 As above, but draws an oval inscribed on the rectangle.
+
+=item $glyph-E<gt>exceeds_depth
+
+Returns true if descending into another level of subfeatures will
+exceed the value returned by maxdepth().
 
 =back
 
@@ -1717,8 +1739,7 @@ with a preamble like this one:
  package Bio::Graphics::Glyph::crossbox;
 
  use strict;
- use vars '@ISA';
- @ISA = 'Bio::Graphics::Glyph';
+ use base qw(Bio::Graphics::Glyph);
 
 Then override the methods you need to.  Typically, just the draw()
 method will need to be overridden.  However, if you need additional

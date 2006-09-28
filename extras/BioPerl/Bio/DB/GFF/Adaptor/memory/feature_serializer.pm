@@ -1,10 +1,18 @@
 package Bio::DB::GFF::Adaptor::memory::feature_serializer;
 
+# $Id: feature_serializer.pm,v 1.1.2.1.2.2 2006-09-28 18:00:05 scottcain Exp $
+
+=head1 NAME
+
+Bio::DB::GFF::Adaptor::memory::feature_serializer
+
+=cut
+
 use strict;
 
 require Exporter;
-use vars qw(@ISA @EXPORT @EXPORT_OK @hash2array_map);
-@ISA = 'Exporter';
+use vars qw(@EXPORT @EXPORT_OK @hash2array_map);
+use base qw(Exporter);
 @EXPORT_OK = qw(feature2string string2feature @hash2array_map);
 @EXPORT = @EXPORT_OK;
 

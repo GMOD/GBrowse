@@ -15,6 +15,8 @@ use constant GRIDCOLOR    => 'lightcyan';
 use constant MISSING_TRACK_COLOR =>'gray';
 use constant EXTRA_RIGHT_PADDING => 30;
 
+use base qw(Bio::Root::Root);
+
 my %COLORS;  # translation table for symbolic color names to RGB triple
 my $IMAGEMAP = 'bgmap00001';
 read_colors();
@@ -67,7 +69,7 @@ sub new {
      if defined $options{-start} && defined $options{-stop};
 
   # bring in the image generator class, since we will need it soon anyway
-  eval "require $image_class; 1" or die $@;
+  eval "require $image_class; 1" or $class->throw($@);
 
   return bless {
 		tracks => [],
@@ -102,6 +104,7 @@ sub new {
 		image_package => $image_class . '::Image',     # Accessors
 		polygon_package => $image_class . '::Polygon',
 		add_category_labels => $add_categories,
+		key_boxes  => [],
 	       },$class;
 }
 
@@ -470,7 +473,7 @@ sub gd {
 
   unless ($existing_gd) {
     my $image_class = $self->image_class;
-    eval "require $image_class; 1" or die $@;
+    eval "require $image_class; 1" or $self->throw($@);
   }
 
   my $height = $self->height;
@@ -614,6 +617,7 @@ sub draw_between_key {
   # Key color hard-coded. Should be configurable for the control freaks.
   my $color = $self->translate_color('black');
   $gd->string($self->{key_font},$x,$offset,$key,$color);
+  $self->add_key_box($track,$key,$x,$offset);
   return $self->{key_font}->height;
 }
 
@@ -629,6 +633,7 @@ sub draw_side_key {
 		 $pos+$self->{key_font}->width*CORE::length($key),$offset,#-$self->{key_font}->height)/2,
 		 $self->bgcolor);
   $gd->string($self->{key_font},$pos,$offset,$key,$color);
+  $self->add_key_box($track,$key,$pos,$offset);
   return $self->{key_font}->height;
 }
 
@@ -643,7 +648,6 @@ sub draw_bottom_key {
   my $text_color = $self->translate_color('black');
   $gd->string($self->{key_font},$left,KEYPADTOP+$top,"KEY:",$text_color);
   $top += $self->{key_font}->height + KEYPADTOP;
-
   $_->draw($gd,$left,$top) foreach @$key_glyphs;
 }
 
@@ -741,6 +745,18 @@ sub format_key {
   else {  # no known key style, neither "between" nor "bottom"
     return $self->{key_height} = 0;
   }
+}
+
+sub add_key_box {
+  my $self = shift;
+  my ($track,$label,$x,$y) = @_;
+  my $value = [$label,$x,$y,$x+$self->{key_font}->width*CORE::length($label),$y+$self->{key_font}->height,$track];
+  push @{$self->{key_boxes}},$value;
+}
+
+sub key_boxes {
+  my $ref  = shift->{key_boxes};
+  return wantarray ? @$ref : $ref;
 }
 
 sub add_category_labels {
@@ -976,12 +992,12 @@ sub create_web_image {
   my $path = $1;
   unless (-d $path) {
     require File::Path unless defined &File::Path::mkpath;
-    File::Path::mkpath($path,0,0777) or die "Couldn't create temporary image directory $path: $!";
+    File::Path::mkpath($path,0,0777) or $self->throw("Couldn't create temporary image directory $path: $!");
   }
 
   unless (defined &Digest::MD5::md5_hex) {
     eval "require Digest::MD5; 1"
-      or die "Sorry, but the image_and_map() method requires the Digest::MD5 module.";
+      or $self->throw("Sorry, but the image_and_map() method requires the Digest::MD5 module.");
   }
   my $data      = $self->png;
   my $signature = Digest::MD5::md5_hex($data);
@@ -994,7 +1010,7 @@ sub create_web_image {
   my $url         = sprintf("%s/%s.%s",$tmpurl,$signature,$extension);
   my $imagefile   = sprintf("%s/%s.%s",$tmpdir,$signature,$extension);
 
-  open (F,">$imagefile") || die("Can't open image file $imagefile for writing: $!\n");
+  open (F,">$imagefile") || $self->throw("Can't open image file $imagefile for writing: $!\n");
   binmode(F);
   print F $data;
   close F;
@@ -1889,6 +1905,15 @@ bottomright corners of the glyph, including any space allocated for
 labels. The track is the Bio::Graphics::Glyph object corresponding to
 the track that the feature is rendered inside.
 
+=item $boxes = $panel-E<gt>key_boxes
+
+=item @boxes = $panel-E<gt>key_boxes
+
+Returns the positions of the track keys as an arrayref or a list,
+depending on context. Each value in the list is an arrayref of format:
+
+ [ $key_text, $x1, $y1, $x2, $y2, $track ]
+
 =item $position = $panel-E<gt>track_position($track)
 
 After calling gd() or boxes(), you can learn the resulting Y
@@ -2095,7 +2120,11 @@ retrieve the rectangles surrounding the glyphs (which you need to do
 to create clickable imagemaps, for example), the rectangles will
 surround the top level features.  If you wish for the rectangles to
 surround subpieces of the glyph, such as the exons in a transcript,
-set box_subparts to a true value.
+set box_subparts to a true numeric value. The value you specify will
+control the number of levels of subfeatures that the boxes will
+descend into. For example, if using the "gene" glyph, set
+-box_subparts to 2 to create boxes for the whole gene (level 0), the
+mRNAs (level 1) and the exons (level 2).
 
 B<part_labels:> If set to true, each subpart of a multipart feature
 will be labeled with a number starting with 1 at the 5'-most
@@ -2447,11 +2476,17 @@ There are three ways to specify the link destination:
 
 =over 4
 
-=item 1. By configuring one or more tracks with a -link argument.
+=item 1.
 
-=item 2. By configuring the panel with a -link argument.
+By configuring one or more tracks with a -link argument.
 
-=item 3. By passing a -link argument in the call to image_and_map().
+=item 2.
+
+By configuring the panel with a -link argument.
+
+=item 3.
+
+By passing a -link argument in the call to image_and_map().
 
 =back
 

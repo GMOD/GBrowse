@@ -1,4 +1,4 @@
-# $Id: dbi.pm,v 1.1.2.2.2.13 2006-07-25 18:58:37 scottcain Exp $
+# $Id: dbi.pm,v 1.1.2.2.2.14 2006-09-28 18:00:04 scottcain Exp $
 
 =head1 NAME
 
@@ -22,14 +22,12 @@ package Bio::DB::GFF::Adaptor::dbi;
 use strict;
 
 use DBI;
-use Bio::DB::GFF;
 use Bio::DB::GFF::Util::Rearrange; # for rearrange()
 use Bio::DB::GFF::Util::Binning;
 use Bio::DB::GFF::Adaptor::dbi::iterator;
 use Bio::DB::GFF::Adaptor::dbi::caching_handle;
-use vars qw(@ISA);
 
-@ISA =  qw(Bio::DB::GFF);
+use base qw(Bio::DB::GFF);
 
 # constants for choosing
 

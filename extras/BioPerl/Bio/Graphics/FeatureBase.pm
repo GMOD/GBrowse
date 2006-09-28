@@ -19,14 +19,8 @@ L<Bio::Graphics::Feature> for full documentation.
 =cut
 
 use strict;
-use Bio::Root::Root;
-use Bio::SeqFeatureI;
-use Bio::SeqI;
-use Bio::LocationI;
-use Bio::RangeI;
 
-use vars '@ISA';
-@ISA  = qw(Bio::Root::Root Bio::SeqFeatureI Bio::LocationI Bio::SeqI Bio::RangeI);
+use base qw(Bio::Root::Root Bio::SeqFeatureI Bio::LocationI Bio::SeqI Bio::RangeI);
 
 *stop        = \&end;
 *info        = \&name;
@@ -561,6 +555,29 @@ sub format_attributes {
 sub DESTROY { }
 
 1;
+
+=head2 clone
+
+ Title   : clone
+ Usage   : my $feature = $seqfeature->clone
+ Function: Create a deep copy of the feature
+ Returns : A copy of the feature
+ Args    : none
+
+=cut
+
+sub clone {
+  my $self  = shift;
+  my %clone  = %$self;
+  # overwrite attributes
+  my $clone = bless \%clone,CORE::ref($self);
+  $clone{attributes} = {};
+  for my $k (keys %{$self->{attributes}}) {
+    @{$clone{attributes}{$k}} = @{$self->{attributes}{$k}};
+  }
+  return $clone;
+}
+
 
 __END__
 

@@ -1,10 +1,8 @@
 package Bio::Graphics::Glyph::transcript;
-# $Id: transcript.pm,v 1.1.2.5.2.13 2006-07-25 18:58:39 scottcain Exp $
+# $Id: transcript.pm,v 1.1.2.5.2.14 2006-09-28 18:00:12 scottcain Exp $
 
 use strict;
-use Bio::Graphics::Glyph::segments;
-use vars '@ISA';
-@ISA = qw( Bio::Graphics::Glyph::segments);
+use base qw(Bio::Graphics::Glyph::segments);
 
 sub pad_left  {
   my $self = shift;

@@ -1,10 +1,9 @@
 package Bio::Graphics::Glyph::translation;
 
 use strict;
-use Bio::Graphics::Glyph::generic;
 use Bio::Graphics::Util qw(frame_and_offset);
-use vars qw(@ISA $VERSION);
-@ISA = qw(Bio::Graphics::Glyph::generic);
+use vars qw($VERSION);
+use base qw(Bio::Graphics::Glyph::generic);
 
 my %default_colors = qw(
 			frame0f  cornflowerblue
@@ -160,7 +159,7 @@ sub draw_frame {
 
   $y2 = $y1;
 
-  my $codon_table = $self->option('codontable') || 1;
+  my $codon_table = $self->option('codontable') || $self->option('geneticcode') || 1;
 
   # the dreaded difference between a Bio::SeqFeature and a Bio::Seq
 

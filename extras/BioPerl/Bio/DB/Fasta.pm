@@ -1,4 +1,4 @@
-# $Id: Fasta.pm,v 1.1.2.1.2.13 2006-07-25 18:58:36 scottcain Exp $
+# $Id: Fasta.pm,v 1.1.2.1.2.14 2006-09-28 18:00:03 scottcain Exp $
 #
 # BioPerl module for Bio::DB::Fasta
 #
@@ -408,17 +408,15 @@ use IO::File;
 use AnyDBM_File;
 use Fcntl;
 use File::Basename qw(basename dirname);
-use Bio::DB::SeqI;
-use Bio::Root::Root;
-use vars qw(@ISA);
 
-@ISA = qw(Bio::DB::SeqI Bio::Root::Root);
+use base qw(Bio::DB::SeqI Bio::Root::Root);
 
 *seq = *sequence = \&subseq;
 *ids = \&get_all_ids;
 *get_seq_by_primary_id = *get_Seq_by_acc  = \&get_Seq_by_id;
 
 use constant STRUCT =>'NNnnCa*';
+use constant STRUCTBIG =>'QQnnCa*'; # 64-bit file offset and seq length
 use constant DNA     => 1;
 use constant RNA     => 2;
 use constant PROTEIN => 3;
@@ -568,6 +566,7 @@ sub index_dir {
   # get the most recent modification time of any of the contents
   my $modtime = 0;
   my %modtime;
+  $self->set_pack_method( @files );
   foreach (@files) {
     my $m = (stat($_))[9];
     $modtime{$_} = $m;
@@ -612,6 +611,32 @@ sub get_Seq_by_id {
   return Bio::PrimarySeq::Fasta->new($self,$id);
 }
 
+=head2 set_pack_method
+
+ Title   : set_pack_method
+ Usage   : $db->set_pack_method( @files )
+ Function: Determines whether data packing uses 32 or 64 bit integers
+ Returns :
+ Args    : one or more file paths
+
+=cut
+
+sub set_pack_method {
+  my $self = shift;
+  # Find the maximum file size:
+  my ($maxsize) = sort { $b <=> $a } map { -s $_ } @_;
+  my $fourGB    = (2 ** 32) - 1;
+
+  if ($maxsize > $fourGB) {
+      # At least one file exceeds 4Gb - we will need to use 64 bit ints
+      $self->{packmeth}   = \&_packBig;
+      $self->{unpackmeth} = \&_unpackBig;
+  } else {
+      $self->{packmeth}   = \&_pack;
+      $self->{unpackmeth} = \&_unpack;
+  }
+}
+
 =head2 index_file
 
  Title   : index_file
@@ -629,6 +654,7 @@ sub index_file {
   my $file = shift;
   my $force_reindex = shift;
 
+  $self->set_pack_method( $file );
   my $index = $self->index_name($file);
   # if caller has requested reindexing, then unlink the index
   unlink $index if $force_reindex;
@@ -716,7 +742,7 @@ sub calculate_offsets {
       if ($id) {
 	my $seqlength    = $pos - $offset - length($_);
 	$seqlength      -= $termination_length * $seq_lines;
-	$offsets->{$id}  = $self->_pack($offset,$seqlength,
+	$offsets->{$id}  = &{$self->{packmeth}}($offset,$seqlength,
 					$linelength,$firstline,
 					$type,$base);
       }
@@ -746,10 +772,10 @@ sub calculate_offsets {
       }
       $seqlength -= $termination_length * $seq_lines;
     };
-    $offsets->{$id} = $self->_pack($offset,$seqlength,
+    $offsets->{$id} = &{$self->{packmeth}}($offset,$seqlength,
 				   $linelength,$firstline,
 				   $type,$base);
-  }
+}
   $offsets->{__termination_length} = $termination_length;
   return \%offsets;
 }
@@ -770,35 +796,35 @@ sub offset {
   my $self = shift;
   my $id   = shift;
   my $offset = $self->{offsets}{$id} or return;
-  ($self->_unpack($offset))[0];
+  (&{$self->{unpackmeth}}($offset))[0];
 }
 
 sub length {
   my $self = shift;
   my $id   = shift;
   my $offset = $self->{offsets}{$id} or return;
-  ($self->_unpack($offset))[1];
+  (&{$self->{unpackmeth}}($offset))[1];
 }
 
 sub linelen {
   my $self = shift;
   my $id   = shift;
   my $offset = $self->{offsets}{$id} or return;
-  ($self->_unpack($offset))[2];
+  (&{$self->{unpackmeth}}($offset))[2];
 }
 
 sub headerlen {
   my $self = shift;
   my $id   = shift;
   my $offset = $self->{offsets}{$id} or return;
-  ($self->_unpack($offset))[3];
+  (&{$self->{unpackmeth}}($offset))[3];
 }
 
 sub alphabet {
   my $self = shift;
   my $id   = shift;
   my $offset = $self->{offsets}{$id} or return;
-  my $type = ($self->_unpack($offset))[4];
+  my $type = (&{$self->{unpackmeth}}($offset))[4];
   return $type == DNA ? 'dna'
          : $type == RNA ? 'rna'
          : 'protein';
@@ -818,7 +844,7 @@ sub file {
   my $self = shift;
   my $id   = shift;
   my $offset = $self->{offsets}{$id} or return;
-  $self->fileno2path(($self->_unpack($offset))[5]);
+  $self->fileno2path((&{$self->{unpackmeth}}($offset))[5]);
 }
 
 sub fileno2path {
@@ -899,7 +925,7 @@ sub header {
   my $self = shift;
   my $id   = shift;
   my ($offset,$seqlength,$linelength,$firstline,$type,$file) 
-    = $self->_unpack($self->{offsets}{$id}) or return;
+    = &{$self->{unpackmeth}}($self->{offsets}{$id}) or return;
   $offset -= $firstline;
   my $data;
   my $fh = $self->fh($id) or return;
@@ -914,7 +940,7 @@ sub caloffset {
   my $self = shift;
   my $id   = shift;
   my $a    = shift()-1;
-  my ($offset,$seqlength,$linelength,$firstline,$type,$file) = $self->_unpack($self->{offsets}{$id});
+  my ($offset,$seqlength,$linelength,$firstline,$type,$file) = &{$self->{unpackmeth}}($self->{offsets}{$id});
   $a = 0            if $a < 0;
   $a = $seqlength-1 if $a >= $seqlength;
   my $tl = $self->{offsets}{__termination_length};
@@ -940,13 +966,19 @@ sub fhcache {
 }
 
 sub _pack {
-  shift;
   pack STRUCT,@_;
 }
 
+sub _packBig {
+  pack STRUCTBIG,@_;
+}
+
 sub _unpack {
-  shift;
   unpack STRUCT,shift;
+}
+
+sub _unpackBig {
+  unpack STRUCTBIG,shift;
 }
 
 sub _type {
@@ -1010,11 +1042,7 @@ sub DESTROY {
 package Bio::PrimarySeq::Fasta;
 use overload '""' => 'display_id';
 
-use vars '@ISA';
-eval {
-  require Bio::PrimarySeqI;
-  require Bio::Root::Root;
-} && (@ISA = ('Bio::Root::Root','Bio::PrimarySeqI'));
+use base qw(Bio::Root::Root Bio::PrimarySeqI);
 
 sub new {
   my $class = shift;
@@ -1103,12 +1131,7 @@ sub description  {
 # stream-based access to the database
 #
 package Bio::DB::Fasta::Stream;
-use Tie::Handle;
-use vars qw(@ISA);
-@ISA = qw(Tie::Handle);
-eval {
-  require Bio::DB::SeqI;
-} && (push @ISA,'Bio::DB::SeqI');
+use base qw(Tie::Handle Bio::DB::SeqI);
 
 
 sub new {

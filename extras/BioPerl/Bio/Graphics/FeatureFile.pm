@@ -1,6 +1,6 @@
 package Bio::Graphics::FeatureFile;
 
-# $Id: FeatureFile.pm,v 1.1.2.9.2.13 2006-07-25 18:58:39 scottcain Exp $
+# $Id: FeatureFile.pm,v 1.1.2.9.2.14 2006-09-28 18:00:07 scottcain Exp $
 # This package parses and renders a simple tab-delimited format for features.
 # It is simpler than GFF, but still has a lot of expressive power.
 # See __END__ for the file format
@@ -495,7 +495,6 @@ sub parse_line {
 
   # conventional GFF file, with check for numeric start/end
   if (@tokens >= 8 && $tokens[3]=~ /^-?\d+$/ && $tokens[4]=~ /^-?\d+$/) {
-    warn "HERE I AM, LINE = $_";
     my ($r,$source,$method,$start,$stop,$scor,$s,$phase,@rest) = @tokens;
     # sanity checks
     my $group = join ' ',@rest;

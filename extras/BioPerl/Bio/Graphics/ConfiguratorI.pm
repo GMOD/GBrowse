@@ -1,4 +1,4 @@
-# $Id: ConfiguratorI.pm,v 1.1.2.3.2.13 2006-07-25 18:58:38 scottcain Exp $
+# $Id: ConfiguratorI.pm,v 1.1.2.3.2.14 2006-09-28 18:00:07 scottcain Exp $
 #
 # BioPerl module for Bio::Graphics::ConfiguratorI
 #
@@ -70,12 +70,10 @@ Internal methods are usually preceded with a _
 # Let the code begin...
 
 package Bio::Graphics::ConfiguratorI;
-use vars qw( @ISA );
 use strict;
-use Bio::Root::RootI;
 use Carp;
 
-@ISA = qw( Bio::Root::RootI );
+use base qw(Bio::Root::RootI);
 
 =head2 get_sections
 

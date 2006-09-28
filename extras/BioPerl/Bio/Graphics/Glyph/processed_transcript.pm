@@ -1,11 +1,9 @@
 package Bio::Graphics::Glyph::processed_transcript;
 
-# $Id: processed_transcript.pm,v 1.1.2.4.2.13 2006-07-25 18:58:39 scottcain Exp $
+# $Id: processed_transcript.pm,v 1.1.2.4.2.14 2006-09-28 18:00:11 scottcain Exp $
 
 use strict;
-use Bio::Graphics::Glyph::transcript2;
-use vars '@ISA';
-@ISA = 'Bio::Graphics::Glyph::transcript2';
+use base qw(Bio::Graphics::Glyph::transcript2);
 use constant DEFAULT_UTR_COLOR => '#D0D0D0';
 
 sub new {

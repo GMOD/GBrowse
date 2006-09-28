@@ -1,11 +1,8 @@
 package Bio::Graphics::Glyph::graded_segments;
-#$Id: graded_segments.pm,v 1.1.2.4.2.13 2006-07-25 18:58:39 scottcain Exp $
+#$Id: graded_segments.pm,v 1.1.2.4.2.14 2006-09-28 18:00:09 scottcain Exp $
 
 use strict;
-use Bio::Graphics::Glyph::minmax;
-use Bio::Graphics::Glyph::merge_parts;
-use vars '@ISA';
-@ISA = qw/Bio::Graphics::Glyph::minmax Bio::Graphics::Glyph::merge_parts/;
+use base qw(Bio::Graphics::Glyph::minmax Bio::Graphics::Glyph::merge_parts);
 
 # override draw method to calculate the min and max values for the components
 sub draw {

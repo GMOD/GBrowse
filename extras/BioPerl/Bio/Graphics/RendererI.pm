@@ -1,4 +1,4 @@
-# $Id: RendererI.pm,v 1.1.2.3.2.13 2006-07-25 18:58:39 scottcain Exp $
+# $Id: RendererI.pm,v 1.1.2.3.2.14 2006-09-28 18:00:08 scottcain Exp $
 
 =head1 NAME
 
@@ -61,11 +61,9 @@ Internal methods are usually preceded with a _
 # Let the code begin...
 
 package Bio::Graphics::RendererI;
-use vars qw( @ISA );
 use strict;
-use Bio::Root::RootI;
 
-@ISA = qw( Bio::Root::RootI );
+use base qw(Bio::Root::RootI);
 
 =head2 render
 

@@ -1,10 +1,10 @@
 package Bio::DB::GFF::Adaptor::berkeleydb;
 
-# $Id: berkeleydb.pm,v 1.1.2.1.2.13 2006-07-25 18:58:37 scottcain Exp $
+# $Id: berkeleydb.pm,v 1.1.2.1.2.14 2006-09-28 18:00:04 scottcain Exp $
 
 =head1 NAME
 
-Bio::DB::GFF::Adaptor::memory -- Bio::DB::GFF database adaptor for in-memory databases
+Bio::DB::GFF::Adaptor::berkeleydb -- Bio::DB::GFF database adaptor for in-memory databases
 
 =head1 SYNOPSIS
 
@@ -335,7 +335,8 @@ sub classes {
     my ($class) = $key =~ /^__class__(.+)/ or last;
     $classes{$class}++ if $value > 0;
   }
-  return sort keys %classes;
+  my @classes = sort keys %classes;
+  return @classes;
 }
 
 sub do_initialize {

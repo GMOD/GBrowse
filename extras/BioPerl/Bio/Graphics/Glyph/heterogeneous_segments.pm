@@ -7,12 +7,10 @@ package Bio::Graphics::Glyph::heterogeneous_segments;
 # -waba_weak_color   => 'red'
 # -waba_coding_color => 'green' 
 
-# $Id: heterogeneous_segments.pm,v 1.1.2.4.2.13 2006-07-25 18:58:39 scottcain Exp $
+# $Id: heterogeneous_segments.pm,v 1.1.2.4.2.14 2006-09-28 18:00:10 scottcain Exp $
 
 use strict;
-use Bio::Graphics::Glyph::graded_segments;
-use vars '@ISA';
-@ISA = 'Bio::Graphics::Glyph::graded_segments';
+use base qw(Bio::Graphics::Glyph::graded_segments);
 
 # override draw method to calculate the min and max values for the components
 sub draw {

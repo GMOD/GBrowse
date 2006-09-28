@@ -1,10 +1,8 @@
 package Bio::Graphics::Glyph::minmax;
-# $Id: minmax.pm,v 1.1.2.4.2.13 2006-07-25 18:58:39 scottcain Exp $
+# $Id: minmax.pm,v 1.1.2.4.2.14 2006-09-28 18:00:10 scottcain Exp $
 
 use strict;
-use Bio::Graphics::Glyph::segments;
-use vars '@ISA';
-@ISA = 'Bio::Graphics::Glyph::segments';
+use base qw(Bio::Graphics::Glyph::segments);
 
 sub minmax {
   my $self = shift;

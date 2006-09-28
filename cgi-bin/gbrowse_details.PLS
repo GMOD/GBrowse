@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.28.4.2.2.9 2006-09-28 12:12:38 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.28.4.2.2.10 2006-09-28 13:28:19 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -243,6 +243,9 @@ sub print_matches {
   my @top    = $top    =~ /(.{1,60})/g;
   my @middle = $middle =~ /(.{1,60})/g;
   my @bottom = $bottom =~ /(.{1,60})/g;
+
+  $src_x = $src_y if $sdir < 0;
+  $tgt_x = $tgt_y if $tdir < 0;
 
   for (my $i=0; $i<@top; $i++) {
     my $src_delta = $sdir * (length($top[$i]) - $top[$i]=~tr/-/-/);

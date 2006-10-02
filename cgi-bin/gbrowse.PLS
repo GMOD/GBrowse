@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.57 2006-09-19 21:23:18 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.58 2006-10-02 02:12:57 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1173,7 +1173,7 @@ sub tracks_table {
       $table = tableize(\@checkboxes);
       $table =~ s/<tr>/<tr class="searchtitle">/g;
 
-      my $visible = exists $page_settings->{section_visible}{$id} ? $page_settings->{section_visible}{$id} : 1;
+      my $visible = exists $settings->{section_visible}{$id} ? $settings->{section_visible}{$id} : 1;
 
       my ($control,$section)=toggle_section({on=>$visible,nodiv=>1},
 					    $id,

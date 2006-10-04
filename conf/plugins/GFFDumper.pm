@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.23.4.1 2005-03-03 21:59:29 lstein Exp $
+# $Id: GFFDumper.pm,v 1.23.4.1.2.1 2006-10-04 15:16:12 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -21,7 +21,7 @@ sub description {
 sub config_defaults {
   my $self = shift;
   return { 
-	  version     => 2,
+	  version     => 3,
 	  mode        => 'selected',
 	  disposition => 'view',
 	  coords      => 'absolute',
@@ -117,7 +117,7 @@ sub dump {
   my $page_settings = $self->page_settings;
   my $conf          = $self->browser_config;
   my $config        = $self->configuration;
-  my $version       = $config->{version} || 2;
+  my $version       = $config->{version} || 3;
   my $mode          = $config->{mode}    || 'selected';
   my $db            = $self->database;
   my $whole_segment = $db->segment(Accession => $segment->ref) ||

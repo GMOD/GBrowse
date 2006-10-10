@@ -880,8 +880,6 @@ sub sub_SeqFeature {
       $typewhere = " and child.type_id in (". join(',',@id_list)  .")" ;
 
       #warn $typewhere;
-
-      warn "type:@type, type_id:@id_list";# if DEBUG;
     }
 
     my $handle = $self->factory->dbh();
@@ -1173,7 +1171,6 @@ sub _do_the_inferring {
                 else {
                     $utr->type->method('UTR');
                 }
-                warn $stop+1;
                 $utr->start($stop+1);
                 
                 $feat->type->method('CDS');
@@ -1183,7 +1180,6 @@ sub _do_the_inferring {
                 warn "this should never happen";
             }
             push @temp_array, $utr;
-            warn @temp_array;
         }
 
         push @temp_array, $feat;

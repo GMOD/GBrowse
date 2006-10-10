@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.28.4.2.2.11 2006-09-28 15:45:27 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12 2006-10-10 21:14:46 scottcain Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -317,7 +317,7 @@ sub PrintMultiple {
       $LINK = "$obj : (<a href='$LINK'>Aligned Sequence</a>)";
     }
 
-    $obj =~ s/([^<>\s'"]{60})/$1 /g;  # wrap way long lines. Note : ading '" prevent this regexp from wrapping html tags
+    $obj =~ s/([^<>\s'"\/;&]{60})/$1 /g;  # wrap way long lines. Note : ading '" prevent this regexp from wrapping html tags
 
     if ($isFirst) {
       $isFirst =0 ;

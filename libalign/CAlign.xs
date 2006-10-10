@@ -27,7 +27,6 @@ int realign (const char* src, const char* tgt,
 	     const MatchMatrixPtr matrix,
 	     AlignmentPtr *align_out) {
   int                 src_len,tgt_len;
-  int                 max_score,max_row,max_col;
   int                 row,col,score;
   char                src_chr,tgt_chr;
   int                 extend_score,gap_src_score,gap_tgt_score,i;

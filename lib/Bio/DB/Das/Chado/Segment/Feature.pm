@@ -870,7 +870,8 @@ sub sub_SeqFeature {
 
       # if CDS features were requested, and inferCDS is set, add
       # polypeptide and exon features to the list so they can be fetched too
-      if ($inferCDS &&  grep {'CDS'} @type ) {
+      if ($inferCDS &&  grep {'CDS|UTR'} @type ) {
+          #warn "adding exon and polypeptide to type list\n";
           push @id_list, 
                ( $self->factory->name2term('exon'), 
                  $self->factory->name2term('polypeptide') ); 
@@ -1023,62 +1024,10 @@ sub sub_SeqFeature {
 
     #now deal with converting polypeptide and exons to CDS
 
-    if (@p_e_cache > 0) {
-        #get the polypeptide at the top of the list
-        #and get the exons in translation order
-        my @sorted = sort {
-                       $b->type cmp $a->type
-                       || $a->start * $a->strand <=> $b->start * $b->strand
-                          } @p_e_cache;
-
-        my ($start,$stop);
-        my $poly = shift @sorted;
-
-        if ($poly->type->method =~ /poly/) {
-            $start = $poly->start;
-            $stop  = $poly->end;
-        }
-        else {
-            #if there's no polypeptide feature, there's no point in continuing
-            return @features;
-        }
-
-        warn "poly:$poly,start:$start, stop:$stop" if DEBUG;
-        warn $poly->start if DEBUG;
-        warn $poly->end if DEBUG;
-
-        my @temp_array;
-        for (my $i=0; $i < scalar @sorted; $i++) {
-            my $feat = $sorted[$i];
-
-            (delete $sorted[$i] && next) 
-                   if ($feat->start < $start and $feat->end < $start);
-            (delete $sorted[$i] && next) 
-                   if ($feat->start > $stop  and $feat->end > $stop);
-
-            $feat->type->method('CDS');
-
-            if ($feat->start < $start) {
-                $feat->start($start);
-            }
-            if ($feat->end > $stop) {
-                $feat->end($stop);
-            }
-
-            push @temp_array, $feat;
-        }
-
-        return unless scalar @temp_array;
-
-        @sorted=$self->_calc_phases(@temp_array) 
-                 if (!(defined $temp_array[0]->phase) );
-
-        for (@sorted) {
-            push @features, $_;
-        }
-    }
-#  } #closes if !subfeatures
-
+    my @cds_utr_features 
+          = $self->_do_the_inferring(@p_e_cache) if (@p_e_cache > 0);
+    push @features, @cds_utr_features;
+    
 #this shouldn't be necessary, as filtering took place via the query
 #except that is now that infering of CDS features is a possibility
 
@@ -1095,6 +1044,159 @@ sub sub_SeqFeature {
   }
   return  @features;
 }
+
+=head2 _do_the_inferring
+
+=over
+
+=item Usage
+
+  $obj->_do_the_inferring(@features)
+
+=item Function
+
+Takes a list of polypeptide and exon features and infers CDS and UTR 
+features from them.
+
+=item Returns
+
+A list of CDS and UTR features
+
+=item Arguments
+
+A list of polypeptide and exon features
+
+=item Caveats
+
+This function will break with polycistronic genes, as there
+will be more than one polypeptide per set of exons, and this
+function assumes that there is only one.
+
+=back
+
+=cut
+
+sub _do_the_inferring {
+    my ($self, @p_e_feats) = @_;
+
+    #get the polypeptide at the top of the list
+    #and get the exons in translation order
+    my @sorted = sort {
+                   $b->type cmp $a->type
+                   || $a->start * $a->strand <=> $b->start * $b->strand
+                      } @p_e_feats;
+
+    my ($start,$stop);
+    my $poly = shift @sorted;
+
+    if ($poly->type->method =~ /poly/) {
+        $start = $poly->start;
+        $stop  = $poly->end;
+    }
+    else {
+        #if there's no polypeptide feature, there's no point in continuing
+        return;
+    }
+
+    warn "poly:$poly,start:$start, stop:$stop" if DEBUG;
+    warn $poly->start if DEBUG;
+    warn $poly->end   if DEBUG;
+
+    my @temp_array;
+    for (my $i=0; $i < scalar @sorted; $i++) {
+        my $feat = $sorted[$i];
+
+        if ($feat->start < $start and $feat->end < $start) {
+        #this is a 'left' utr
+            if ( $feat->strand ) {
+                if ( $feat->strand > 0 ) {
+                    $feat->type->method('five_prime_UTR');
+                }
+                elsif ( $feat->strand < 0 ) {
+                    $feat->type->method('three_prime_UTR');
+                }
+            }
+            else {
+                $feat->type->method('UTR');
+            }
+        }
+        elsif ($feat->start > $stop  and $feat->end > $stop) {
+        #this is a 'right' utr
+            if ( $feat->strand ) {
+                if ( $feat->strand > 0 ) {
+                    $feat->type->method('three_prime_UTR');
+                }
+                elsif ( $feat->strand < 0 ) {
+                    $feat->type->method('five_prime_UTR');
+                }
+            }
+            else {
+                $feat->type->method('UTR');
+            }
+        }
+        elsif ($feat->start >= $start and $feat->end <= $stop) {
+        #this is an 'internal' cds
+            $feat->type->method('CDS');
+        }
+        else {
+        #this exon needs to be split into two features (CDS & UTR)
+            my $utr = $feat->clone;
+            #check for left utr/CDS split
+            if ( $feat->start < $start and $feat->end > $start  ) {
+            #this on stradles the left end
+                if ( $utr->strand ) {
+                    if ( $utr->strand > 0 ) {
+                         $utr->type->method('five_prime_UTR');
+                    }
+                    elsif ( $utr->strand < 0 ) {
+                        $utr->type->method('three_prime_UTR');
+                    }
+                }
+                else {
+                    $utr->type->method('UTR');
+                }
+                $utr->end($start -1);
+
+                $feat->type->method('CDS');
+                $feat->start($start);
+            }
+            elsif ( $feat->start > $start and $feat->end > $stop  ) {
+            #this one stradles the right end
+                if ( $utr->strand ) {
+                    if ( $feat->strand > 0 ) {
+                        $utr->type->method('three_prime_UTR');
+                    }
+                    elsif ( $feat->strand < 0 ) {
+                        $utr->type->method('five_prime_UTR');
+                    }
+                }
+                else {
+                    $utr->type->method('UTR');
+                }
+                warn $stop+1;
+                $utr->start($stop+1);
+                
+                $feat->type->method('CDS');
+                $feat->end($stop);
+            }    
+            else {
+                warn "this should never happen";
+            }
+            push @temp_array, $utr;
+            warn @temp_array;
+        }
+
+        push @temp_array, $feat;
+    }
+
+    return unless scalar @temp_array;
+
+    @sorted=$self->_calc_phases(@temp_array)
+                 if (!(defined $temp_array[0]->phase) );
+
+    return @sorted;
+}
+
 
 =head2 _calc_phases
 

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::Aligner;
-# $Id: Aligner.pm,v 1.6.4.1.2.1 2006-06-19 04:22:17 lstein Exp $
+# $Id: Aligner.pm,v 1.6.4.1.2.2 2006-10-11 13:35:17 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -12,7 +12,7 @@ use constant DEBUG => 0;
 use constant DEFAULT_RAGGED_ENDS => (0,10,25,50,100,150,500);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.20';
+$VERSION = '0.21';
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
 use constant TARGET    => 0;
@@ -179,26 +179,20 @@ sub dump {
 	$strands{$target} = $strand;
       }
 
-      # If the source and target length match, then we are home free
-      if ($s->length == $target->length) {
-	push @segments,[$target,$src_start,$src_end,$tgt_start,$tgt_end];
-      }
-
-      else {  # unfortunately if this isn't the case, then we have to realign the segment a bit
-	warn   "Realigning [$target,$src_start,$src_end,$tgt_start,$tgt_end].\n" if DEBUG;
-	my ($sdna,$tdna) = ($s->dna,$target->dna);
-	warn   $sdna,"\n",$tdna,"\n" if DEBUG;
-	my @result = $self->realign($sdna,$tdna);
-	foreach (@result) {
-	  next unless $_->[1]+$src_start >= $abs_start && $_->[0]+$src_start <= $abs_end;
-	  warn "=========> [$target,@$_]\n" if DEBUG;
-	  my $a = $strands{$target} >= 0 ? [$target,$_->[0]+$src_start,$_->[1]+$src_start,$_->[2]+$tgt_start,$_->[3]+$tgt_start]
-	                                 : [$target,$_->[0]+$src_start,$_->[1]+$src_start,$tgt_end-$_->[3],$tgt_end-$_->[2]];
-	  warn "=========> [@$a]\n" if DEBUG;
-	  warn substr($sdna,     $_->[0],$_->[1]-$_->[0]+1),"\n" if DEBUG;
-	  warn substr($tdna,$_->[2],$_->[3]-$_->[2]+1),"\n" if DEBUG;
-	  push @segments,$a;
-	}
+      # Realign the segment a bit
+      warn   "Realigning [$target,$src_start,$src_end,$tgt_start,$tgt_end].\n" if DEBUG;
+      my ($sdna,$tdna) = ($s->dna,$target->dna);
+      warn   $sdna,"\n",$tdna,"\n" if DEBUG;
+      my @result = $self->realign($sdna,$tdna);
+      foreach (@result) {
+	next unless $_->[1]+$src_start >= $abs_start && $_->[0]+$src_start <= $abs_end;
+	warn "=========> [$target,@$_]\n" if DEBUG;
+	my $a = $strands{$target} >= 0 ? [$target,$_->[0]+$src_start,$_->[1]+$src_start,$_->[2]+$tgt_start,$_->[3]+$tgt_start]
+	                               : [$target,$_->[0]+$src_start,$_->[1]+$src_start,$tgt_end-$_->[3],$tgt_end-$_->[2]];
+	warn "=========> [@$a]\n" if DEBUG;
+	warn substr($sdna,     $_->[0],$_->[1]-$_->[0]+1),"\n" if DEBUG;
+	warn substr($tdna,$_->[2],$_->[3]-$_->[2]+1),"\n" if DEBUG;
+	push @segments,$a;
       }
     }
   }
@@ -214,8 +208,6 @@ sub dump {
       $seg->[SRC_START] = $abs_start;
       if ($strands{$target} >= 0) {
 	$seg->[TGT_START] -= $delta;
-      } else {
-	$seg->[TGT_END]  +=  $delta;
       }
       warn "Left clipping gives [@$seg]\n" if DEBUG;
     }
@@ -224,13 +216,15 @@ sub dump {
     if ( (my $delta = $abs_end - $seg->[SRC_END]) < 0) {
       warn "clip right $delta" if DEBUG;
       $seg->[SRC_END] = $abs_end;
-      if ($strands{$target} >= 0) {
-	$seg->[TGT_END]   += $delta;
-      } else {
+      if ($strands{$target} < 0) {
 	$seg->[TGT_START] -= $delta;
       }
       warn "Right clipping gives [@$seg]\n" if DEBUG;
     }
+
+    my $length = $seg->[SRC_END]-$seg->[SRC_START]+1;
+    $seg->[TGT_END] = $seg->[TGT_START]+$length-1;
+
     $clip{$target}{low} = $seg->[TGT_START]
       if !defined $clip{$target}{low} || $clip{$target}{low} > $seg->[TGT_START];
     $clip{$target}{high} = $seg->[TGT_END]

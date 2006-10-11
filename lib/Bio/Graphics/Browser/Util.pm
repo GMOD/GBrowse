@@ -250,7 +250,7 @@ sub print_bottom {
 
 sub error {
   my @msg = @_;
-  cluck "@msg";
+  cluck "@_" if DEBUG;
   print_top();
   print h2({-class=>'error'},@msg);
 }

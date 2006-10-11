@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::Aligner;
-# $Id: Aligner.pm,v 1.10 2006-10-10 13:27:00 lstein Exp $
+# $Id: Aligner.pm,v 1.11 2006-10-11 13:33:33 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -8,7 +8,7 @@ use Text::Shellwords;
 use Bio::Graphics::Browser::Realign 'align_segs';
 use Bio::Graphics::Browser::PadAlignment;
 
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 use constant DEFAULT_RAGGED_ENDS => (0,10,25,50,100,150,500);
 
 use vars '$VERSION','@ISA';

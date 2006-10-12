@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.200 2006-10-02 17:30:18 lstein Exp $
+# $Id: Browser.pm,v 1.201 2006-10-12 15:29:20 sheldon_mckay Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -298,7 +298,11 @@ sub setting {
   my @args = @_;
   if (@args == 1) {
     unshift @args,'general';
-  } else {
+  }
+  elsif (!@args) {
+    $args[0] = 'general';
+  }
+  else {
     $args[0] = 'general'
       if $args[0] ne 'general' && lc($args[0]) eq 'general';  # buglet
   }
@@ -328,6 +332,28 @@ sub plugin_setting {
   my ($last_name)    = $caller_package =~ /(\w+)$/;
   my $option_name    = "${last_name}:plugin";
   $self->setting($option_name => @_);
+}
+
+=head2 karyotype_setting()
+
+    $value = $browser->karyotype_setting("option_name");
+
+When called in the context of gbrowse_karyotype, returns the setting for the
+requested option.  The option must be placed in a [karyotype]
+configuration file section:
+
+  [karyotype]
+  foo = bar
+
+Now within gbrowse_karyotype, you may call
+$browser->karyotype_setting('foo') to return value "bar".
+
+=cut
+
+sub karyotype_setting {
+  my $self           = shift;
+  my $caller_package = caller();
+  $self->setting('karyotype' => @_);
 }
 
 =head2 db_settings()
@@ -2314,6 +2340,11 @@ sub overview_tracks {
 sub regionview_tracks {
   my $self = shift;
   grep { ($_ eq 'region' || /:region$/) && $self->authorized($_) } $self->configured_types;
+}
+
+sub karyotype_tracks {
+  my $self = shift;
+  grep { ($_ eq 'karyotype' || /:karyotype$/) && $self->authorized($_) } $self->configured_types;
 }
 
 # implement the "restrict" option

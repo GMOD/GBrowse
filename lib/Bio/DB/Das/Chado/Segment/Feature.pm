@@ -880,11 +880,13 @@ sub sub_SeqFeature {
       $typewhere = " and child.type_id in (". join(',',@id_list)  .")" ;
 
       #warn $typewhere;
+
+      warn "type:@type, type_id:@id_list" if DEBUG;
     }
 
     my $handle = $self->factory->dbh();
 
-    $self->factory->dbh->trace(2) if DEBUG;
+    #$self->factory->dbh->trace(2) if DEBUG;
 
     my $partof =  $self->factory->name2term('part_of');
     my $derivesfrom = $self->factory->name2term('derives_from');

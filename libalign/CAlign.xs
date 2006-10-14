@@ -204,17 +204,17 @@ _do_alignment(packname="Bio::Graphics::Browser::CAlign",src,tgt,options=NULL)
 	 if (!SvROK(options) || (SvTYPE(SvRV(options)) != SVt_PVHV))
 	   croak("_do_alignment(): third argument must be a hashref");
 	 optionh = (HV*) SvRV(options);
-	 if (value = hv_fetch(optionh,"match",strlen("match"),0))
+	 if ((value = hv_fetch(optionh,"match",strlen("match"),0)))
 	   matrix.match = SvIV(*value);
-	 if (value = hv_fetch(optionh,"mismatch",strlen("mismatch"),0))
+	 if ((value = hv_fetch(optionh,"mismatch",strlen("mismatch"),0)))
 	   matrix.mismatch = SvIV(*value);
-	 if (value = hv_fetch(optionh,"gap",strlen("gap"),0))
+	 if ((value = hv_fetch(optionh,"gap",strlen("gap"),0)))
 	   matrix.gap = SvIV(*value);
-	 if (value = hv_fetch(optionh,"gap_extend",strlen("gap_extend"),0))
+	 if ((value = hv_fetch(optionh,"gap_extend",strlen("gap_extend"),0)))
 	   matrix.gap_extend = SvIV(*value);
-	 if (value = hv_fetch(optionh,"wildcard_match",strlen("wildcard_match"),0))
+	 if ((value = hv_fetch(optionh,"wildcard_match",strlen("wildcard_match"),0)))
 	   matrix.wcmatch = SvIV(*value);
-	 if (value = hv_fetch(optionh,"wildcard",strlen("wildcard"),0))
+	 if ((value = hv_fetch(optionh,"wildcard",strlen("wildcard"),0)))
 	   matrix.wildcard   = *SvPV_nolen(*value);
        }
 

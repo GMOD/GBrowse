@@ -111,7 +111,10 @@ Generic Genome Browser Installation
                 Digest::MD5          (any version)
                 Text::Shellwords     (any version)
 
-    E) Bioperl version 1.5 or higher -- <http://www.bioperl.org>
+    E) Bioperl version 1.5.2 or higher -- <http://www.bioperl.org>
+        At the time of writing this document, release candidate 2 of Bioperl
+        1.5.2 is available on the Bioperl website, with the final 1.5.2
+        release expected any time now.
 
     Optional modules:
 

@@ -129,7 +129,11 @@ They can be found on the Comprehensive Perl Archive Network
 	Digest::MD5          (any version)
 	Text::Shellwords     (any version)
 
-=item E) Bioperl version 1.5 or higher -- L<http://www.bioperl.org>
+=item E) Bioperl version 1.5.2 or higher -- L<http://www.bioperl.org>
+
+At the time of writing this document, release candidate 2 of 
+Bioperl 1.5.2 is available on the Bioperl website, with the 
+final 1.5.2 release expected any time now.
 
 =back
 

@@ -998,7 +998,7 @@ sub sub_SeqFeature {
            $source
       );
 
-      warn "creating new subfeat, $$hashref{name}, $base_start, $stop" if DEBUG;
+      warn "creating new subfeat, $$hashref{name}, $base_start, $stop, $$hashref{phase}" if DEBUG;
 
       my $feat = Bio::DB::Das::Chado::Segment::Feature->new (
                     $self->factory,
@@ -1102,7 +1102,10 @@ sub _do_the_inferring {
     warn $poly->start if DEBUG;
     warn $poly->end   if DEBUG;
 
-    my @temp_array;
+
+    #keep two arrays: one with exons that are coding, one noncoding
+    my @coding_array;
+    my @noncoding_array;
     for (my $i=0; $i < scalar @sorted; $i++) {
         my $feat = $sorted[$i];
 
@@ -1119,6 +1122,7 @@ sub _do_the_inferring {
             else {
                 $feat->type->method('UTR');
             }
+            push @noncoding_array, $feat;
         }
         elsif ($feat->start > $stop  and $feat->end > $stop) {
         #this is a 'right' utr
@@ -1133,10 +1137,12 @@ sub _do_the_inferring {
             else {
                 $feat->type->method('UTR');
             }
+            push @noncoding_array, $feat;
         }
         elsif ($feat->start >= $start and $feat->end <= $stop) {
         #this is an 'internal' cds
             $feat->type->method('CDS');
+            push @coding_array, $feat;
         }
         else {
         #this exon needs to be split into two features (CDS & UTR)
@@ -1181,18 +1187,24 @@ sub _do_the_inferring {
             else {
                 warn "this should never happen";
             }
-            push @temp_array, $utr;
+            push @noncoding_array, $utr;
+            push @coding_array, $feat;
         }
-
-        push @temp_array, $feat;
     }
 
-    return unless scalar @temp_array;
+    return unless (@coding_array > 0 or @noncoding_array > 0);
 
-    @sorted=$self->_calc_phases(@temp_array)
-                 if (!(defined $temp_array[0]->phase) );
+    my @features;
+    if (defined $coding_array[0]->phase) {
+        push @features, @coding_array;
+    }
+    else {
+        push @features, $self->_calc_phases(@coding_array);
+    }
 
-    return @sorted;
+    push @features, @noncoding_array;
+
+    return @features;
 }
 
 

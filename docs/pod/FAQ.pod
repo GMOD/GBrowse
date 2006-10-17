@@ -49,7 +49,7 @@ First consult the mailing lists at
 L<http://sourceforge.net/mailarchive/forum.php?forum_id=31947>. Your
 problem may already have been reported and discussed. If you find no
 help there, then send email to
-L<gmod-gbrowse@lists.sourceforge.net>. If you are pretty
+<a href="mailto:gmod-gbrowse@lists.sourceforge.net">gmod-gbrowse@lists.sourceforge.net</a>. If you are pretty
 certain you have found a bug, please report it to the bug report
 tracking system at
 L<http://sourceforge.net/tracker/?func=add&group_id=27707&atid=511474>.
@@ -213,6 +213,6 @@ Because I just started this document.
 
 =back
 
-$Id: FAQ.pod,v 1.1.2.6.2.1 2006-10-17 03:06:23 scottcain Exp $
+$Id: FAQ.pod,v 1.1.2.6.2.2 2006-10-17 15:47:30 scottcain Exp $
 
 

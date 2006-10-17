@@ -284,7 +284,6 @@ lib/Bio/Graphics/Glyph/connector.pm
 lib/Bio/Graphics/Glyph/drosophila_arrow.pm
 lib/Bio/Graphics/Glyph/genscan_transcript.pm
 lib/Bio/Graphics/Glyph/ideogram.pm
-lib/Bio/Graphics/Glyph/image.pm
 lib/Bio/Graphics/Glyph/insertion_chromosome.pm
 lib/Bio/Graphics/Glyph/ld_plot.pm
 lib/Bio/Graphics/Glyph/pairwise_plot.pm

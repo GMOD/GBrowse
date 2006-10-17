@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.11 2006-02-21 05:21:50 sheldon_mckay Exp $
+# $Id: ideogram.pm,v 1.12 2006-10-17 20:36:43 sheldon_mckay Exp $
 # Glyph to draw chromosome ideograms
 
 use strict qw/vars refs/;
@@ -8,6 +8,8 @@ use vars '@ISA';
 use Bio::Graphics::Glyph;
 use Bio::Graphics::Glyph::heat_map;
 use GD;
+
+use Data::Dumper;
 
 @ISA = qw/Bio::Graphics::Glyph Bio::Graphics::Glyph::heat_map/;
 
@@ -39,13 +41,17 @@ sub draw_component {
   my $self = shift;
   my $gd   = shift;
   my $feat = $self->feature;
-
   my $arcradius = $self->option('arcradius') || 7;
   my ( $x1, $y1, $x2, $y2 ) = $self->bounds(@_);
+  
+  # nudge the top of the chromosome down to remove
+  # double telomere artifact
+  $x1 += 5 if $self->parts;
+
   # force odd width so telomere arcs are centered
   $y2 ++ if ($y2 - $y1) % 2;
   
-  my $stain = $feat->attributes('stain');
+  my ($stain) = $feat->attributes('stain') || $feat->attributes('Stain');
 
   # Some genome sequences don't contain substantial telomere sequence (i.e. Arabidopsis)
   # We can suggest their presence at the tips of the chromosomes by setting fake_telomeres = 1
@@ -67,7 +73,7 @@ sub draw_component {
   elsif ( $bgcolor_index =~ /var/ ) {
     $bgcolor = gdTiled;
   }
-  if ( $feat->method ne 'centromere' ) {
+  if ( $feat->method !~ /centromere/i && $stain ne 'acen') {
     # are we at the end of the chromosome?
     if ( $feat->start <= 1 && $stain ne 'tip') {
       # left telomere

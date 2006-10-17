@@ -41,157 +41,269 @@ $startperl -w
 \$VERSION   = $OPTIONS{VERSION};
 
 !GROK!THIS!
-    
+
 print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_karyotype.PLS,v 1.5 2006-04-06 19:20:53 sheldon_mckay Exp $
+#$Id: gbrowse_karyotype.PLS,v 1.6 2006-10-17 20:36:42 sheldon_mckay Exp $
 
 use strict;
 use CGI::Carp 'fatalsToBrowser';
-use CGI ':standard';
+use CGI qw/:standard delete/;
+use CGI::Pretty 'html3';
 use GD;
 use GD::Image;
 use Bio::DB::GFF::Feature;
 use Bio::Graphics::Browser::Util;
+use Bio::Graphics::Browser;
 use Bio::Graphics::Panel;
 use Bio::Graphics::FeatureFile;
 use Text::Shellwords;
 use File::Spec;
+use List::Util qw/min max/;
+use IO::Socket;
 
-use vars qw($CONFIG $CONF_DIR);
+use vars qw($CONFIG $CONF_DIR $STANDALONE);
 
-use constant PAD_TOP   => 10;
-use constant PAD_BOT   => 20;
-use constant PAD_RIGHT => 40; # space for band labels
-use constant HELP      => '/gbrowse';
+use constant PAD_TOP           => 10;
+use constant PAD_BOT           => 20;
+use constant PAD_RIGHT         => 40; # space for band labels
+use constant PAD_RIGHT_NOLABEL => 10;
+use constant HELP_DIR          => "$ENV{DOCUMENT_ROOT}/gbrowse";
+use constant BGCOLOR           => 'gneg:white gpos25:silver gpos50:grey gpos:grey '.
+                                  'gpos75:darkgray gpos100:black gvar:var stalk:#666666 tip:black';
 
+# This may be wrong if non-standard HTDOCS config
+use constant HELP_URL          => "/gbrowse/gbrowse_karyotype_help.html";
+
+
+use Data::Dumper;
+
+$| = 1;
+
+# set the database source (OK not to have one)
+my $src = param('src') || param('source') || path_info() || 'none';
+$src    =~ s!^/+!!;  # get rid of leading / from path_info()
+$src    =~ s!/+$!!;  # get rid of trailing / from path_info()
+
+#if ($src eq 'none') {
+$STANDALONE = 1 if $src eq 'none';
 $CONF_DIR = conf_dir($CONF_DIR);
 $CONFIG   = open_config($CONF_DIR);
 
-# set the database source
-my $src = param('src') || param('source') || path_info();
-$src    =~ s!^/+!!;  # get rid of leading / from path_info()
-$src    =~ s!/+$!!;  # get rid of trailing / from path_info()
-$src  ||= 'human';
-
-message("Invalid source $src; you may not have permission to access this data source.")
-    unless $CONFIG->source($src);
+$CONFIG->source($src eq 'none' ? 'Gbrowse_karyotype' : $src);
 
 my $feature_text  = param('featuretext');
-my @add_features  = (param('add'), param('a'));    # overlay features
-my @add_style     = (param('style'),  param('s')); # overlay features style
-my @options       = (param('options'),param('o')); # various track options, such as bumping
-my @track_types   = (param('type'),   param('t')); # built in track types to turn on
-my $embed         = 1 if param('embed');
-
-# identity and order of chromosomes to draw
-my $chr_data = param('chromosome') || param('c') || $CONFIG->setting('chromosome');
-my @chr = split /\s+|,/, $chr_data;
-my %chr;
+my @add_features  = (param('add'),   param('a')); # overlay features
+my @add_style     = (param('style'), param('s')); # overlay features style
+my @track_types   = (param('type'),  param('t')); # built in track types to turn on
+my $labels        = \@track_types;
+my $embed         = 1 if param('embed') || param('e'); # binary image or HTML output
+my %configured;
+my %styled;
 
 # look for name of the cytobands track and ideogram drawing info
-my $cytoband    = $CONFIG->setting('cytoband')  || 'cytoband';
-my $max_height  = param('cheight') || param('h') || $CONFIG->setting('max_height') || 500;
-my $rows        = param('rows')    || param('r') || $CONFIG->setting('rows')       || 'auto';
-my $chrom_width = param('cwidth')  || param('w') || $CONFIG->setting($cytoband => 'height') || 20;
-my $band_labels = param('band_labels') || param('b') || $CONFIG->setting('band_labels');
+# CGI params take precedence over the config file
 
-# deployment
+# Is there a configuration for the chromosome ideogram?
+my $cytoband    = $CONFIG->karyotype_setting('cytoband_track') || 'null';
+
+# How tall should the biggest chromosome be?
+my $max_height  = param('cheight') || param('h') 
+               || $CONFIG->karyotype_setting('max_height') 
+               || $CONFIG->karyotype_setting('cheight') || 500;
+
+# How many rows in the karyotype?
+my $rows        = param('rows')    || param('r') 
+               || $CONFIG->karyotype_setting('rows') || 'auto';
+
+# Chromosomw width?
+my $chrom_width = param('cwidth')  || param('w') 
+               || $CONFIG->setting($cytoband => 'height') 
+               || $CONFIG->karyotype_setting('cwidth') || 20;
+
+# Add labels to chromosome bands?
+my $band_labels = param('band_labels') || param('b') 
+               || $CONFIG->karyotype_setting('band_labels');
+
+# Make background transparent?
+my $transparent = param('transparent') || param('tr')
+               || $CONFIG->karyotype_setting('transparent');
+
+# What feature types are to be considered chromosome parts?
+# It must be defined somehow
+my $band_feats  = lc (param('bands') || param('ba')
+               || $CONFIG->karyotype_setting('bands')
+               || $CONFIG->setting($cytoband => 'feature'))
+               || 'chromosome_band centromere cytoband';
+
+my $useform     = param('useform') || param('f')
+               || $CONFIG->karyotype_setting('useform');
+
+
+# Clear certain CGI parameters to avoid confusing deployment cases
+CGI::delete('useform');
+CGI::delete('f');
+CGI::delete('src');
+CGI::delete('source');
+
+
+###################################
+# Deployment
+###################################
+
 if (param('list')) {
   dump_sources() if param('list') eq 'sources';
   dump_types()   if param('list') eq 'types';
   exit 0;
 }
-
-if (param('help')) {
-  my $type = param('help');
-  print header(), start_html(-title => "gbrowse_karyotype $type help");
-  help(param('help'),$CONFIG->setting('help') || HELP);
+elsif ($embed) {
+  print header(), start_html( -title => 'gbrowse-karyotype');
 }
-
-if (param('embed') || !param()) {
-  print header(), start_html(-title => 'gbrowse-karyotype');
+elsif ($useform && !param()) {
+  print header;
+  front_page();
 }
-else {
+elsif ((!param() && $STANDALONE) || param('help')) {
+  print header, start_html('gbrowse_karyotype');
+  build_help_page();
+}
+else { # I guess we are drawing then
   print header('image/png');
 }
 
-if (param('Example') || !param()) {
-   front_page();
- }
+# identity and order of chromosomes to draw
+my $chr_data = param('chromosome') || param('c') || $CONFIG->karyotype_setting('chromosome');
+#$chr_data or  die "No chromosomes specified for $src";
+my ($chrom_length,@chr) = chromosome_data($chr_data);
+my %chr;
 
-# get options
-my ($options,$labels) = get_options(\@options,\@track_types);
+my $feature_file;
+if ($feature_text) {
+  # no leading whitespace
+  $feature_text =~ s/^\s+//gm;
+  $feature_file = Bio::Graphics::FeatureFile->new( -text => $feature_text,
+						   -smart_features => 1,
+						   -safe => undef
+						   );
+}
 
+# Last resort, see if we can find chromosomes in the external annotations
+if (!@chr && defined $feature_file) {
+  unless (@chr) {
+    ($chrom_length,@chr) = look_for_chromosomes($feature_text);
+  }
+}
+
+if (!@chr) {
+  fatal_error('No chromosome data');
+}
+
+
+# Find the longest chromosome in the set
 my $longest = 0;
 my $master_seg;
 for my $chr (@chr) {
-  my $seg = get_segment($CONFIG,$chr)
-      || message("Could not find chromosome $chr in the database");
+  my $seg = get_segment($chr) || die "$chr not found in the database";
+
   if ($seg->length > $longest) {
     $longest = $seg->length;
   }
   $chr{$chr} = $seg;
 }
 
-my (%img,$feature_file,$styles,$black,$title);
+my (%img,$styles,$black,$white,$title);
 my $max_width = 0;
 
+my $band_regex = join('|',shellwords($band_feats));
+$band_regex    = qr/$band_regex/;
+my $chr_regex  = join('|',@chr);
+
+# check for unmappable features
+my @bad_feats = grep { !/^$chr_regex\s+/ } @add_features;
+if (@bad_feats) {
+  my $bad = join "\n", @bad_feats;
+  fatal_error("The following add features are improperly formatted:", pre($bad));
+}
+
+my $fw = gdMediumBoldFont->width;
+my $max_string_width;
 for my $chr (@chr) {
   my $seg = $chr{$chr};
 
+  # How wide will the chromosome label be?
+  my $str_width = (length $chr) * $fw;
+  $max_string_width = $max_string_width 
+                    ? max($str_width,$max_string_width)
+                    : $str_width; 
+
   my $feature_list = {};
-  
+  my @local_features;
+  my @band_features;
+  my @styles;
+
   # features supplied by URL
   if (@add_features && !$feature_text) {
-
     # just worry about the features on this chromosome
-    my @local_features = grep { (split)[0] eq $chr } @add_features;
-    if (@local_features) {
-      add_features($seg,\@local_features,\@add_style,$feature_list);
+    @local_features = grep { (split)[0] eq $chr } @add_features;
+
+    if ($band_regex) {
+      @band_features  = grep { /$band_regex/ } @local_features;
+      @local_features = grep {!/$band_regex/ } @local_features;
     }
+
+    @styles         = @add_style;
   }
   # or as a Bio::Graphics::FeatureFile
   elsif ($feature_text) {
-    $feature_file ||= Bio::Graphics::FeatureFile->new( -text => $feature_text,
-						       -smart_features => 1,
-						       -safe => undef
-						       );
-
     # just worry about the features on this chromosome
-    my @local_features = grep { $_->ref eq $chr } $feature_file->features;
-    if (@local_features) {
-      my @styles  = map  { [$_, my_style($_)] } $feature_file->configured_types;
-      add_features($seg,\@local_features,\@styles,$feature_list);
-    }
+    my @this_chromosome = grep { $_->ref eq $chr } $feature_file->features;
+    @local_features  = grep {$_->method !~ /$band_regex/i} @this_chromosome;
+    @band_features   = grep {$_->method =~ /$band_regex/i} @this_chromosome;
+    @styles          = map  { [$_, my_style($_)] } $feature_file->configured_types;
   }
+
+  if (@local_features) {
+    add_features($seg,\@local_features,\@styles,$feature_list,'add');
+  }
+
+  my $bands = [];
+  if (@band_features) {
+    add_features($seg,\@band_features,\@styles,$feature_list,'band');
+    @$bands = map {$_->type} grep {ref $_} @band_features;
+    push @$bands, grep {!ref $_} @band_features;
+  }
+  else {
+    @$bands = shellwords($band_feats);
+  }
+
 
   my ($panel, $boxes) = my_image_and_map( segment       => $seg,
 					  tracks        => $labels,
-					  feature_files => $feature_list );
+					  feature_files => $feature_list,
+					  bands         => $bands);
 
   my $gd = $panel->gd;
+  $black ||= $panel->translate_color('black');
+  $white ||= $panel->translate_color('white');
 
   # rotate the image 90 degrees clockwise
   my $img    = $gd->copyRotate90();
   my ($w,$h) = $img->getBounds();
   $max_width = $w if $w > $max_width;
-
-  # chromosome label
-  $black ||= $panel->translate_color('black');  
-  my $mid  = $w - $chrom_width/2;
-  my $x    = $mid - 5;
-  my $y    = $h - 15;
-  $img->string(gdMediumBoldFont,$x,$y,$chr,$black);
+  
+  if ($max_width < $max_string_width + 5) {
+    $max_width = $max_string_width + 5;
+  }
 
   # reorient the boxes for image mapping by
   # flipping x + y and adjusting horizontal offsets
   for my $box (@$boxes) {
-    my ($y1,$x1,$y2,$x2) = @$box[1,2,3,4];
+    my ($y1,$x1,$y2,$x2) = @$box[1..4];
     $x1 = $w - $x1;
     $x2 = $w - $x2;
+    ($x2,$x1) = ($x1,$x2);
     @$box[1..4] = ($x1,$y1,$x2,$y2);
   }
 
@@ -199,7 +311,7 @@ for my $chr (@chr) {
 }
 
 # dynamic row calculation if required;
-$max_width += PAD_RIGHT if $band_labels;
+$max_width += $band_labels ? PAD_RIGHT : PAD_RIGHT_NOLABEL;
 $rows = int(($max_width/1024 * @chr)+1) if $rows eq 'auto';
 my $new_row = int @chr/$rows;
 
@@ -209,53 +321,76 @@ for my $chr (@chr) {
   my ($gd,$boxes) = @{$img{$chr}};
   my ($w,$h)  = $gd->getBounds();
   my $offset = $max_width - $w;
-  $offset -= PAD_RIGHT if $band_labels;
-
+  $offset -= $band_labels ? PAD_RIGHT : PAD_RIGHT_NOLABEL;
   my $img = GD::Image->new($max_width,$h);
   $img->copy($gd,$offset,0,0,0,$w,$h);
 
   my $where_was_i = 0;
+  my $chr_offset;
   for my $box (@$boxes) {
     $box->[1] += $offset;
     $box->[3] += $offset;
 
+    if ($box->[0]->method =~ /$band_regex|synthetic_chromosome/) {
+      $chr_offset = $box->[1];
+    }
+
     if ($band_labels) {
       my $feature = $box->[0];
-      next unless $feature->method =~ /cyto\S*band|chromosome\S+/i;
+      next unless $feature->method =~ /$band_regex/i;
+      next if $feature->method =~ /centromere/i;
 
-      my $x = $box->[1] + 1;
+      my $x = $box->[3] + 2;
       my $y = $box->[2];
-
+      
       # skip very narrow bands
       my $band_width = $box->[4] - $box->[2];
-      next if $band_width < $max_height/100;
-
+      next if $band_width < $max_height/200;
+      
       # adjust vertical label placement
       if ($band_width < $max_height/50) {
 	$y -= 2;
       }
       elsif ($band_width > $max_height/40) {
-        $y = $y + $band_width/2 - 4; # 4 is 1/2 the font height                                                                                                       
+	$y = $y + $band_width/2 - 4; # 4 is 1/2 the font height                                                                                                       
       }
-
+    
       # only add a label if there is room
-      next if ($y - $where_was_i) <= 10;
+      next if ($y - $where_was_i) <= 8;
       $where_was_i = $y;
+      my ($band_name) = $feature->attributes('Name');
 
-      my $band_name = $feature->attributes('Name');
       $img->string(gdTinyFont,$x,$y,"-$band_name",$black) if $band_name;
     }
+
   } 
+
+  # There is something wrong if we have no chromosome offset
+  fatal_error('No chromosome offset') unless $chr_offset;
+
+  # chromosome label
+  my $string_width = $fw * (length $chr);
+  my $mid  = $chr_offset + int($chrom_width/2);
+  my $x    = $mid - int($string_width/2 + 0.5);
+  my $y    = $h - 12;
+  $img->string(gdMediumBoldFont,$x,$y,$chr,$black);
+
+  if ($transparent) {
+    my $almost_white = $img->colorResolve(255,255,254);
+    $img->fill(0,0,$almost_white);
+    $img->transparent($almost_white);
+    $img->interlaced('true');
+  }
 
   $img{$chr} = [$img,$boxes];
 }
 
 # now consolidate all of the images
-my ($new_img,$new_boxes) = consolidate_images(\%img,$rows,$max_width);
+my ($new_img,$new_boxes) = consolidate_images(\%img,$rows,$max_width,$transparent);
 my $map = my_make_map($new_boxes,$feature_file);
 
 if ($embed) {
-  print h2({-align => 'center'}, ucfirst $src);
+  #print h2({-align => 'center'}, ucfirst $src);
   print img( 
 	     { -src => $CONFIG->generate_image($new_img), 
 	       -usemap => '#hmap', 
@@ -271,28 +406,29 @@ else {
 ## several were borrowed and modified from gbrowse and gbrowse_img ##
 
 # avoid multiple segment hangups, just return the first
+
 sub get_segment {
-  my ($CONFIG,$name) = @_;
-  my $db = open_database($CONFIG);
-  my @segments;
-  my @matches = $CONFIG->name2segments($name,$db);
-  push @segments,@matches;
-  $_->absolute(1) foreach @matches;
-  return $segments[0];
-}
+  my $name = shift;
+  
+  unless ($STANDALONE) {
+    my $db = open_database($CONFIG);
+    my @segments;
+    my @matches = $CONFIG->name2segments($name,$db);
+    push @matches, $CONFIG->name2segments(ucfirst $name,$db);
+    push @segments,@matches;
+    $_->absolute(1) foreach @matches;
+    my ($segment_to_return) = grep {defined $_} @segments;
+    return $segment_to_return;
+  }
+  else {
+    my $end = $chrom_length->{$name};
+    $end or die "No length information for chromosome $name";
+    return Bio::Graphics::Feature->new( -start  => 1, 
+					-stop   => $end,
+					-type   => 'chromosome',
+					-seq_id => $name);
+  }
 
-sub get_options {
-  my ($options,$track_types) = @_;
-
-  # get the options
-  my %options = shellwords(@$options);
-
-  # set the track types to display.
-  my @labels  = shellwords(@$track_types);
-
-  @labels     = $CONFIG->default_labels unless @labels;
-
-  return (\%options,\@labels);
 }
 
 sub message {
@@ -308,7 +444,7 @@ sub message {
 # put all of the chromosomes into one image and
 # adjust the image maps accordingly
 sub consolidate_images {
-  my ($images,$rows,$max_width) = @_;
+  my ($images,$rows,$max_width,$trans) = @_;
 
   # maximum chromosome height for each row
   my $new_row = int @chr/$rows;
@@ -332,7 +468,11 @@ sub consolidate_images {
   $overall_width = $overall_width/$rows;
 
   my $composite = GD::Image->new($overall_width,$overall_height);
-  $composite->colorAllocate(255,255,255);
+  my $almost_white = $composite->colorResolve(255,255,254);
+  $composite->fill(0,0,$almost_white);
+  $composite->transparent($almost_white) if $trans;
+  $composite->interlaced('true');
+
   my @boxes;
 
   ($row,$idx) = (0,0);
@@ -352,7 +492,7 @@ sub consolidate_images {
     }
 
     $composite->copy($gd,$xoffset,$yoffset,0,0,$w,$h);
-
+    
     # re-fit boxes
     for my $box (@$boxes) {
       $box->[1] += $xoffset;
@@ -362,6 +502,7 @@ sub consolidate_images {
       push @boxes,$box;
     }
   }
+
   return ($composite,\@boxes);
 }
 
@@ -369,30 +510,45 @@ sub my_make_map {
   my ($boxes,$ff) = @_;
   my $html = qq(<map name="hmap" alt="imagemap" />\n);
 
+  my $last_y = 0;
   for (@$boxes){
     my $f = $_->[0];
+   
+    # skip the whole-chromosome box
+    next if $f->method eq 'synthetic_chromosome';
+    next if $f->method eq 'Component';
+
     my $w = $_->[5]->option('height');    
 
     # repair zero-height boxes ?!
     my $h = $_->[4] - $_->[2];
     if ($h == 0) {
-      $_->[4] = $_->[2] + $w/2;
-      $_->[2] = $_->[2] - $w/2;
+      $_->[4] = int($_->[2] + $w/2 + 0.5);
+      $_->[2] = int($_->[2] - $w/2 + 0.5);
     }
 
-    my $title; 
-    if ($f->method ne 'centromere') {
-      my $att = $f->attributes;
-      $title  = eval{$att->{Name}->[0] || $att->{Alias}->[0]};
-    }
-    else {
-      $title = $f->desc || $f->name || $f->display_id || q{};
-    }
+    $_->[2]++ if $_->[2] == $last_y;
+    $last_y = $_->[4];
 
+    my %att = $f->attributes;
+    my $title  = $att{Name} ||$att{Alias} || $f->desc || $f->name || $f->display_id;
+    #Bio::Graphics::Featurefile returns array refs
+    $title = $title->[0] if ref $title;
+
+    if ($title =~ /(\S+)_cent/) {
+      $title = "centromere:$1";
+    }
+    $title = $title ? qq(title="$title") : '';
+
+    my $url = eval{$f->url} || $att{url} || $att{link};
+    $url = $url->[0] if ref $url; 
+    my $href = $url ? qq(href="$url" target="_parent") : q{};
+
+    
     my ($start,$stop) = ($f->start,$f->end);
-    my $coords = join(',',@$_[1..4]);
-    $html .= qq{<area shape="rect" coords="$coords" title="$title"/>\n}
-        if $title;
+    my $coords = join(',',map {int($_+0.5)} @{$_}[1..4]);
+    $html .= qq{<area $href $title shape="rect" coords="$coords"/>\n}
+        if $title || $href;
   }
   $html .= "</map>\n";
 
@@ -400,7 +556,7 @@ sub my_make_map {
 }
 
 sub add_features {
-  my ($segment,$features,$styles,$feature_hash) = @_;
+  my ($segment,$features,$styles,$feature_hash,$category) = @_;
   my @features = @$features;
   my @styles   = @$styles;
 
@@ -409,38 +565,35 @@ sub add_features {
 						     -safe => undef 
 						     );
 
-  for my $f (@features) {
-    # feature objects
-    if (ref $f) {
-      $feature_list->add_feature($f);
-
-      # remove attribute=value pairs from description
-      my $desc = $f->desc || '';
-      $desc =~ s/\w+=\S+(;|\s+)?//g;
-      $desc =~ s/^\s+|\s+$//g;
-      $f->desc($desc);
-    }
-    # or add string
-    else {
-      my ($reference,$type,$name,@segments) = parse_feature_str($f);
-      my $mapper = coordinate_mapper($segment);
-      my ($ref,@parts) = $mapper->($reference,@segments);
-      next unless $ref;
+  # we need some style info for bands
+  my @band_styles;
+  OUTER: for my $t (shellwords($band_feats)) {
+    my $have_style;
+    INNER: for my $s (@styles) {
+      if (ref $s) {
+	next INNER if $s->[0] ne $t;
+	next OUTER if $s->[1]->{bgcolor};
+	$s->[1]->{bgcolor} = BGCOLOR;
+	$have_style++;
+      }
+      else {
+	my ($type,@options) = shellwords($s);
+	next INNER unless $type eq $t;
+	my %options ={ map {split /=/} @options };
+	next OUTER if $options{bgcolor};
+	$options{bgcolor} = BGCOLOR;
+	$s = [$type,\%options];
+	$have_style++;
+      }
       
-      my $feature = Bio::Graphics::Feature->new(
-						-ref      => $ref||'',
-						-type     => $type||'',
-						-name     => $name||'',
-						-strand   => $parts[0][0]<=$parts[0][1] ? +1 : -1,
-						-segments => \@parts
-						);
-      $feature_list->add_feature($feature);
+      unless ($have_style) {
+	push @styles, [$t,{bgcolor=>BGCOLOR}];
+      }
     }
   }
 
-  push @$labels, 'add' unless grep { $_ eq 'add' } @$labels;
-
-  for my $s (@styles) {
+ my %add_style; 
+ for my $s (@styles) {
     my ($type, $options);
     if (ref $s) { # already parsed
       ($type,$options) = @$s;
@@ -448,31 +601,121 @@ sub add_features {
     else {
       ($type,my @options) = shellwords($s);
       $options ={ map {split /=/} @options };
+      $s = [$type,$options];
     }
+    $add_style{$type} = $options;
+  }
     
-    # adjust pointy glyph orientation to allow for 
-    # horizontal to vertical rotation.  The default is to
-    # point toward the chromosome.
-    $options->{orient} = adjust_compass($options->{orient});
+  my $td = 'TRACK DEFAULT';
+  my %default_style = ( 
+			label       => $CONFIG->setting($td => 'label') || 0,
+			description => $CONFIG->setting($td => 'description') || 0,
+			bgcolor     => $CONFIG->setting($td => 'bgcolor') || 'black',
+			glyph       => $CONFIG->setting($td => 'glyph') || 'triangle',
+			fgcolor     => $CONFIG->setting($td => 'fgcolor') || 'black',
+			height      => $CONFIG->setting($td => 'height') ||10,
+			linewidth   => $CONFIG->setting($td => 'linewidth') || 1,
+			orient      => $CONFIG->setting($td => 'orient') || 'E',
+			point       => $CONFIG->setting($td => 'point') || 1,
+			link        => $CONFIG->setting($td => 'link') || 0
+		       );
 
-    # Most features are very small relative to whole
-    # chromosomes.  Glyphs should not be scaled by default
-    $options->{point} = 1 unless exists $options->{point};
-
-    # Suppress feature labels and descriptions (for now).
-    # They don't work well for vertical rendering
-    unless ($options->{glyph} eq 'xyplot') {
-      $options->{label} = 0;
-      $options->{description} = 0;
+  for my $f (@features) {
+    my $type;
+    # feature objects
+    if (ref $f) {
+      $feature_list->add_feature($f);
+      # remove attribute=value pairs from description
+      my $desc = $f->desc || '';
+      $desc =~ s/\w+=\S+(;|\s+)?//g;
+      $desc =~ s/^\s+|\s+$//g;
+      $f->desc($desc);
+      $type = $f->type;
     }
-    
-    # add some mix and match magic
-    add_callbacks($options);
+    # or add string
+    else {
+      my ($ref,$t,$name,$segments,$tag) = my_parse_feature_str($f);
 
-    $feature_list->add_type($type => $options);
+      $type = $t;
+
+      my @parts = @$segments;  
+
+      my @other_args = ();
+      
+      if ($tag && ref $tag) {
+	if (my ($d) = grep {/desc/} keys %$tag) {
+	  push @other_args, (-desc => $tag->{$d});
+	}
+	if (my ($url) = grep {/url|link/} keys %$tag) {
+	  push @other_args, (-url => $tag->{$url});
+	  delete $tag->{$url};
+	}
+	if (%$tag) {
+	  push @other_args, (-attributes => $tag);
+	} 
+      }
+
+      my $strand = $parts[0][0]<=$parts[0][1] ? +1 : -1;
+      push @other_args, (-strand => $strand);
+
+      if (@parts == 1) {
+	push @other_args, ( -start => min(@{$parts[0]}),
+			    -end  => max(@{$parts[0]}) );
+      }
+      else {
+	push @other_args, ( -segments => \@parts );
+      }
+
+      $type = 'chromosome_band' if $category eq 'band' && $type ne 'centromere';       
+      my $feature = Bio::Graphics::Feature->new(
+						-ref      => $ref||'',
+						-type     => $type||'',
+						-name     => $name||'',
+						@other_args
+						);
+      $feature_list->add_feature($feature);
+    }
+
+    
+   unless ( defined $styled{$segment}{$type} ) { 
+      my ($type_style) = grep {$_->[0] eq $type} @styles;
+      $type_style ||= [$type,{}];
+      my $options = $type_style->[1];
+      for my $k (keys %default_style) {
+	$options->{$k} = $add_style{$type}{$k} || $default_style{$k};
+      }
+      push @styles, $type_style;
+      $styled{$segment}{$type}++;
+    }
   }
   
-  $feature_hash->{add} = $feature_list;
+  
+  for my $s (@styles) {
+    my ($type,$options) = @$s;
+
+    for my $option (keys %default_style) {
+      $options->{$option}  ||= $add_style{$type}{$option} || $default_style{$option};
+    }
+
+    # adjust pointy glyph orientation to allow for
+    # horizontal to vertical rotation.
+    #$options->{orient} = adjust_compass($options->{orient});
+
+    if ($options->{glyph} eq 'xyplot') {
+      $options->{label} = 1;
+      $options->{description} = 1;
+    }
+
+    # add some mix and match capability
+    add_callbacks($type,$segment,$options);
+
+    $feature_list->add_type($type => $options);
+
+  }
+
+  push @$labels, 'add' unless grep { $_ eq 'add' } @$labels;
+
+  $feature_hash->{$category} = $feature_list;
 }
 
 # adjust perspective for a 90 degree clockwise rotation
@@ -488,83 +731,54 @@ sub adjust_compass {
 # feature-specific attributes to allow mixing
 # of colors, glyphs, etc, within a single track
 sub add_callbacks {
+  my $type = shift;
+  my $segment = shift;
+  return 0 if ++$configured{$type}{$segment} > 1;
   my $options_ref = shift;
-  my @attributes = qw( bgcolor glyph fgcolor height linewidth orient );
+
+  my @attributes = qw( point label bgcolor glyph fgcolor height linewidth orient );
+
   for my $att (@attributes) {
-    # only do this for configured options
-    my $default_value = $options_ref->{$att} || next;
+    my $default_value = $options_ref->{$att} || 0;
+
+    $default_value = adjust_compass($default_value) if $att eq 'orient';
 
     # Intercept suspicious attribute values; 
     # only pass letters, numbers or hexadecimal color codes
-    if ( $default_value =~ /^sub|[^\#\w]/) {
-      message( 
+    if ( $default_value =~ /^sub|[^ \#\w\:]/ ) {
+      fatal_error(
 	       h1( "$att $default_value for attribute $att contains invalid characters. ",
 		   " Please consult the documentation.")
 	       );
       
     }
 
-    # create a coderef 
-    # the attribute:value pairs are alreadt parsed
-    # by Bio::Graphics::FeatureFile
-    $options_ref->{$att} = sub {
+    # The callback
+    $options_ref->{$att} = sub { 
       my $f = shift;
-      my $desc = $f->desc;
-      my $atts = $f->attributes;
-      my $override = $atts->{$att}->[0] if defined $atts->{$att};
-
-      # no illegal characters 
-      return $default_value unless $override && $override !~ /[^\#\w]/; 
-
-      if ($override) {
-	return $att eq 'orient' ? adjust_compass(uc $override) : $override;
-      }
-      return $default_value;
+      my ($override) = $f->attributes("$att");
+      # careful about shell characters
+      undef $override if $override && $override =~ /^sub|[^\#\w]/; 
+      return $override || $default_value;
     }
   }
-}
 
-sub coordinate_mapper {
-  my $current_segment = shift;
-  my $db              = open_database();
-
-  my ($ref,$start,$stop) = ($current_segment->seq_id,
-                            $current_segment->start,$current_segment->end);
-  my %segments;
-
-  my $closure = sub {
-    my ($refname,@ranges) = @_;
-
-    unless (exists $segments{$refname}) {
-      my @segments = map {
-        eval{$_->absolute(0)}; $_  # so that rel2abs works properly later
-	  }
-      $CONFIG->name2segments($refname,$db,undef,1);
-      $segments{$refname} = $segments[0];
-      return unless @segments;
-    }
-
-    my $mapper   = $segments{$refname} || return;
-    my $absref   = $mapper->abs_ref;
-    my $cur_ref  = eval {$current_segment->abs_ref}
-    || eval{$current_segment->ref};  # account for api changes in Bio::SeqI
-    return unless $absref eq $cur_ref;
-
-    my @abs_segs;
-    if ($absref eq $refname) {  # doesn't need remapping
-      @abs_segs = @ranges;
-    } else {
-      @abs_segs = map {[$mapper->rel2abs($_->[0],$_->[1])]} @ranges;
-    }
-    
-    return ($absref,@abs_segs);
+  $options_ref->{url} = sub {
+    my $f = shift;
+    my @url = ($f->attributes('url'),f->attributes('link'));
+    return $f->url || $url[0];
   };
- 
-  return $closure;
+
 }
 
-# Can't use Bio::Graphics::Browser image_and_map method
-# due to gbrowse display-specific defaults/assumptions
+
+# give the URL a onceover
+sub check_url {
+  my $url = shift;
+  return 1 if $url =~ m|(https?://)?([-\w\.]+)+(:\d+)?(/([\w/_\.]*(\?[^ \w\#\.;~&]+)?)?)?|;
+  die "invalid URL: $url";
+}
+
 sub my_image_and_map {
   my %config  = @_;
 
@@ -574,8 +788,9 @@ sub my_image_and_map {
   my $options       = $config{options}       || {};
   my $length        = $segment->length;
   my $conf          = $CONFIG->config;
+  my $band_feats    = $config{bands}         || [];
 
-  my @feature_types = map { $CONFIG->label2type($_,$length) } @$tracks;
+  my @feature_types = $STANDALONE ? @$tracks : map { $CONFIG->label2type($_,$length) } @$tracks;
 
   # scale horizontal panel width by chromosome size
   my $width = int(($segment->length/$longest)*$max_height);
@@ -584,11 +799,11 @@ sub my_image_and_map {
               -grid      => 0,
               -start     => 1,
               -end       => $segment->length,
-              -bgcolor   => 'white',
+              -bgcolor   => '#FFFFFE',
               -width     => $width,
               -pad_left  => PAD_TOP,
 	      -pad_right => PAD_BOT,
-	      -key_style => 'none'
+	      -key_style => 'none',
 	      );
 
   my $panel = Bio::Graphics::Panel->new(@argv);
@@ -614,7 +829,7 @@ sub my_image_and_map {
     $tracks{$label}      = $track;
   }
 
-  if (@feature_types) {  # don't do anything unless we have features to fetch!
+  if (@feature_types && !$STANDALONE) {  # don't do anything unless we have features to fetch!
       
     my $iterator = $segment->get_feature_stream(-type=>\@feature_types);
     my (%groups,%feature_count,%group_pattern);
@@ -699,103 +914,81 @@ sub my_image_and_map {
     }
     $offset += $inserted-1; # adjust for feature files that insert multiple tracks
   }
-
-  my $factory    = $segment->clone->factory;
-  my $aggregator = $CONFIG->setting($cytoband => 'aggregator');
-
-  my @features;
-
-  if ($aggregator) {
-    $factory->aggregators($aggregator) if $aggregator;
-    if ($aggregator =~ /^(\S+)\{/) {
-      $aggregator = $1;
-    }
-    elsif ($aggregator =~ /\/(\S+)\}/) {
-      $aggregator = $1;
+  
+  # Be agnostic about aggregation
+  my @bands;
+  if (defined $feature_files->{band}) {
+    for my $f ($feature_files->{band}->features) {
+      if (my @sf = $f->segments) {
+        push @bands, @sf;
+      }
+      else {
+        push @bands, $f;
+      }
     }
   }
-  else {
-    my $features = $CONFIG->setting($cytoband => 'feature');
-    @features    = split /\s+/, $features;
+  if ($segment->can('features')) {
+    for my $f ($segment->features(-type => $band_feats)) {
+      if (my @sf = $f->segments) {
+	push @bands, @sf;
+      }
+      else {
+	push @bands, $f;
+      }
+    }
   }
 
-  push @features, $aggregator;
-  my @bands = $segment->features( -type => \@features );
+  # Add a whole chromosome in case there are no bands or the band coverage
+  # is not complete.  The bands are subfeats
+  my   $chrom = Bio::Graphics::Feature->new ( -start  => $segment->start,
+					      -stop   => $segment->end,
+					      -type   => 'synthetic_chromosome',
+					      -segments => (@bands ? \@bands : []));
 
- # Make a blank chromosome if there are no cytoband data
-  unless (@bands > 1) {
-    push @bands, Bio::Graphics::Feature->new ( -start  => $segment->start,
-                                               -stop   => $segment->end,
-                                               -type   => 'chromosome' );
-  }
 
-  # -invisible hides unaggregated bands but retains their coordinates
-  # for image mapping
+  # need to pass along the subfeatures for band-labelling/image mapping
+  my $bands = $band_labels ? [$chrom,@bands] : [$chrom];
+
   $panel->unshift_track(\@bands,
-                        -bump      => 0,
-                        -glyph     => $CONFIG->setting($cytoband => 'glyph')     || 'ideogram',
-                        -height    => $chrom_width,
-                        -arcradius => $CONFIG->setting($cytoband => 'arcradius') || $max_height/100,
-                        -bgcolor   => $CONFIG->setting($cytoband => 'bgcolor'),
-                        -fgcolor   => $CONFIG->setting($cytoband => 'fgcolor'),
-                        -invisible => $aggregator ? 1 : 0,
-                        # if we are drawing a heat-map
+                        -bump        => 0,
+                        -glyph       => $CONFIG->setting($cytoband => 'glyph')     || 'ideogram',
+                        -height      => $chrom_width,
+                        -arcradius   => $CONFIG->setting($cytoband => 'arcradius') || $max_height/100,
+                        -bgcolor     => $CONFIG->setting($cytoband => 'bgcolor')   || BGCOLOR,
+                        -fgcolor     => $CONFIG->setting($cytoband => 'fgcolor')   || 'black',
+                        -invisible   => ($band_labels ? 1 : 0),
+			# These options only apply to a heat_map_ideogram
                         -start_color => $CONFIG->setting($cytoband => 'start_color') || 'white',
                         -end_color   => $CONFIG->setting($cytoband => 'end_color')   || 'red',
                         -min_score   => $CONFIG->setting($cytoband => 'min_score')   || 0,
                         -max_score   => $CONFIG->setting($cytoband => 'max_score')   || 100,
                         );
 
-  # for image mapping, don't save whole chromosome box
-  # if we have aggregated
-  my @boxes;
-  if ($aggregator) {
-    @boxes = grep {$$_[0]->method ne $aggregator} $panel->boxes;
-  }
-  else {
-    @boxes = $panel->boxes;
-  }
-
-  return ($panel, \@boxes);
+  return ($panel, [$panel->boxes]);
 }
 
 sub front_page {
-  my $page_header = html_frag('header')     || page_header();
-  my $page_footer = html_frag('footer')     || page_footer(); 
-  my $input_form  = html_frag('input_form') || input_form();
-  my $html1       = html_frag('html1')      || help_line();
-  my $html2       = html_frag('html2')      || q{};
+  my $page_header = my_html_frag('header')     || page_header();
+  my $page_footer = my_html_frag('footer')     || page_footer(); 
+  my $input_form  = my_html_frag('input_form') || input_form();
+  my $html_header = '';
+  my $script      = example_script();
 
-  print <<END;
-  <html>
-  <head>
-  <title>gbrowse-karyotype</title>
-  </head>
-  <html>
-  <body>
-  $page_header
-  <p>
-  $html1
-  <p>
-  $input_form
-  </p>
-  $html2
-  <p>
-  $page_footer
-  </p> 
-  </body>
-  </html> 
-END
-;
+  $page_header = start_html(-titel => 'gbrowse_karyotype', -script => $script) . $page_header 
+      unless $page_header =~ /<html/i;
+  $page_footer = end_html . $page_footer 
+      unless $page_footer =~ /<\/html/i;
+
+  print join("\n",$page_header,$input_form,$page_footer);
   exit 0;
 }
 
 sub input_form {
-  my $sample_text = param('Example') ? sample_text() : q{};
   my $source_menu = source_menu();
-  my $cytoband    = $CONFIG->setting('cytoband');
-  my $height      = $CONFIG->setting($cytoband => 'max_height') || 500;
-  my $width       = $CONFIG->setting($cytoband => 'cwidth')     || 20; 
+  my $cytoband    = $CONFIG->karyotype_setting('cytoband');
+  my $height      = $CONFIG->setting($cytoband => 'max_height') 
+                 || $CONFIG->karyotype_setting('max_height') || 500;
+
   return <<END;
   <form method="post" enctype="multipart/form-data" name="f1">
   <p>
@@ -823,34 +1016,33 @@ sub input_form {
   Paste your feature data below (optional)
   <br>
   <textarea name="featuretext" rows="15" cols="60">
-  $sample_text
   </textarea>
   </p>
   <input type="submit" name="Draw" value="Draw"/>&nbsp;&nbsp;
-  <input type="submit" name="Example" value="Example"/>&nbsp;&nbsp;
-  <input type="button" name="Erase" value="Erase" onclick="document.f1.featuretext.value=&#39;&#39;" />
-    &nbsp;&nbsp;
+  <input type="button" value="Example" onclick="showExample()"/>&nbsp;&nbsp;
+  <input type="button" value="Erase"   onclick="hideExample()"/>&nbsp;&nbsp;
   <input type="reset" name="Reset" value="Reset" />
   </form>
 END
 }
 
 sub page_header {
+  my $text = sample_text();
+  my $helpfile = HELP_URL;
+
   return <<END;
+  <div id="exampleText" style="display:none">
+  $text
+  </div>
   <h2>gbrowse_karyotype</h2>
-  <h4>Draw karyotypes and map feature data via the Generic Genome Browser</h3>
+  <h3>Draw karyotypes and map feature data via the Generic Genome Browser</h3>
+  <a style="cursor:help" title="help and program description" href=$helpfile>help and program description</a>
 END
 }
 
 sub page_footer {
   return <<END;
   <hr>
-  <p>Data and configuration help: &nbsp;&nbsp;
-  <a href="/cgi-bin/gbrowse_karyotype?help=configuration" target="_blank">[Browser configuration]</a>
-  &nbsp;&nbsp;
-  <a href="/cgi-bin/gbrowse_karyotype?help=ideogram" target="_blank">[Chromosomes and banding data]</a>.
-  </p>
-  <p>
   For the source code for this browser, see the <a href="http://www.gmod.org"> Generic Model Organism Database Project.</a>  
   <br>
   For other questions, send mail to <a href="mailto:mckays\@cshl.edu">mckays\@cshl.edu</a>.
@@ -872,13 +1064,12 @@ sub source_menu {
   my $html = "<p>Species\&nbsp;\n";
   my $url = self_url;
   $url =~ s/karyotype.+/karyotype/;
-  
-  my $onchange = qq{"location = '$url/'+this.options[this.selectedIndex].value;"};
-  $html .= "<select name=src onchange=$onchange>";
+  $html .= "<select name=src>";
   for my $source ($CONFIG->sources) {
     $CONFIG->source($source);
-    next unless $CONFIG->setting('cytoband') || $CONFIG->setting('chromosome');
-    my $selected = " selected=selected" if $source eq $src;
+    next unless $CONFIG->karyotype_setting('cytoband_track')
+	     || $CONFIG->karyotype_setting('chromosome');
+    my $selected = $source eq $src ? " selected=selected" : '';
     $html .= "<option value=$source$selected>$source</option>\n</p>";
   }
   $html .= "</select>\n";
@@ -933,7 +1124,7 @@ reference=5
 gene gene4 20000001..20006000 bgcolor=white
 gene gene5 30006001..30009000
 gene gene6 80000001..80006000
-mutation allele2 30006001..30009000 "cosmic radiation damage"
+mutation allele2 30006001..30009000 link=http://www.nasa.gov;description="cosmic radiation damage"
 END
 
 }
@@ -943,7 +1134,8 @@ sub dump_sources {
   print "## Sources\n";
   for my $source ($CONFIG->sources) {
     $CONFIG->source($source);
-    next unless $CONFIG->setting('cytoband') || $CONFIG->setting('chromosome');
+    next unless $CONFIG->setting('karyotype' => 'cytoband_track') 
+             || $CONFIG->setting('karyotype' => 'chromosome');
     print "$source\n";
   }
 }
@@ -961,279 +1153,137 @@ sub dump_types {
   }
 }
 
-sub help {
-  my ($help_type,$conf_dir) = @_;
-
-  my $ref = referer();
-  my $do_close = join('',
-		      start_form(-action=>$ref),
-		      button(-onClick=>'window.close()',-label=>$CONFIG->tr('Close_Window')),
-		      end_form());
-  
-  if ($help_type eq 'configuration') {
-    print dump_configuration_help($do_close);
-    exit 0;
-  }
-  elsif ($help_type eq 'ideogram') {
-    print dump_ideogram_help($do_close);
-    exit 0;
-  }
-  else {
-    my @components = File::Spec->splitdir($help_type);
-    my $updir      = File::Spec->updir;
-    
-    # don't let evil people get into root directory
-    my $evil       = grep { /^$updir$/o } @components;
-    return         if $evil;
-    
-    print div({-align=>'left'},$do_close);
-    build_help_page("$conf_dir/gbrowse_karyotype_${help_type}_help.html");
-    print div({-align=>'left'},$do_close), end_html;
-  } 
-
-  exit 0;
-}
-  
 sub build_help_page {
-  my $helpfile = shift or return;
-  my $file = url2file($helpfile) or return;
-  my $root = $CONFIG->setting('help') || HELP;
+  my $helpfile = shift || "gbrowse_karyotype_help.html";
+  my $file = HELP_DIR . "/$helpfile";
   open(F,$file) or return;
   print while (<F>);
   close F;
-}
-
-sub dump_configuration_help {
-  my $close = div(shift);
-  return <<END;
-  $close
-  <h2> gbrowse_karyotype browser customization and configuration </h2>
-  <p>
-   Below is a sample configuration file (see the main Generic Genome Browser
-   documentation for more information on configuration files).  The format
-   is standard except for the following gbrowse_karyotype information:
-  <p>
-  <ul>
-    <li> The front page for the interactive browser can be almost entirely
-         customized with the following keys.
-          <ul>
-             <li> <pre> header     = ... </pre>Page header biolerplate (Visible title, etc.)
-             <li> <pre> html1      = ... </pre>Miscellaneous HTML to insert after header
-             <li> <pre> input_form = ... </pre>HTML to replace eveything between the header
-                  and footer
-             <li> <pre> html2      = ... </pre>Miscellaneous HTML to insert befor footer
-             <li> <pre> footer     = ... </pre>Page footer
-          </ul>
-	  <p>
- 	  The above fields are optional; reasonable, albeit plain, defaults will be
-          used unless otherwise specified. 
-	  </p>
-     <li> <pre>chromosome = chr1 chr2 chr3</pre>
-          This entry is required to specify which chromosomes to display 
-          and in which order.  The space delimited list should contain 
-          reference sequences that exist in your database or GFF flat file.
-     <li> <pre>cytoband = CYT</pre>
-          This specifies which built-in feature corresponds to the chromosome
-          band data.  If there are no band data, black chromosomes will be
-          drawn.  However, a confuguration stanza is still necessary to specify
-          default chromosome attributes.
-     <li> <pre>feature = cytoband centromere\nOR\naggregator = chromosome</pre>
-          In the feature configuration for the cytoband data, either a
-          list of feature types or an aggregator can be specified. 
-          Either a built-in aggregator such as 'chromosome' or a custom 
-          aggregator, such as
-          <pre> aggregator = my_chr{cytoband,centromere} </pre>  
-	  can be used.  The feature and aggregator keys
-          are mutually exclusive and the latter is preferred. Note that
-          the aggregator key must be used in the cytoband track configuration, 
-          not the 'general' section.
-     <li> <pre> glyph = ideogram </pre>
-          The ideogram glyph would be most commonly used in combination
-	  with cytoband data.  An alternative for scored, non cytoband
-          features (for example local gene densites, recombination rates,
-          etc) is the heat_map_ideogram glyph, which can be used to draw
-          chromosomes with color-coded bands representing scores, frequencies
-          etc. The chromosome-like look can be enhanced by including
-          the centromere amongst the scored "bands".  
-  </ul>
-
-<pre>
-# This is a basic configuration to draw chromosome ideograms for the 
-# human genome.  It is a standalone file but could could also be part
-# of a normal gbrowse configuration file. 
-[GENERAL]
-description   = human
-db_adaptor    = Bio::DB::GFF
-# this configuration just uses a simple flatfile 
-db_args       = -adaptor memory
-                -gff    'usr/local/apache/htdocs/gbrowse/databases/ideograms/human_cytobands.gff'
-
-
-# Where temporary images are stored
-tmpimages   = /gbrowse/tmp
-
-# chromosome dimensions (in pixels)
-max_height  = 400
-cwidth      = 15
-
-# number of rows to draw
-rows        = auto
-
-# chromosomes names and order
-chromosome  = 1 2 3 4 5 6 7 8 9 10 11 12 13
-              14 15 16 17 18 19 20 21 22 X Y
-
-# which track contains the cytoband configuration
-cytoband  = CYT
-
-[CYT]
-aggregator    = chromosome
-# could also use    
-# feature      = cytoband centromere 
-glyph         = ideogram
-fgcolor       = black
-bgcolor       = gneg:white gpos25:silver gpos50:gray gpos:gray 
-                gpos75:darkgray gpos100:black gvar:var stalk:#666666
-arcradius     = 7
-height        = 21
-
-# Other built-in feature configuration, if any,  would be added here
-</pre>
-$close
-END
-
-}
-
-sub dump_ideogram_help {
-  my $close = div(shift);
-  my $script = join q{}, (<DATA>);
-
-  return <<END;
-  $close
-  <h2>How to get cytoband data</h2>
-  <p>
-  The starting point for drawing chromosome ideograms is the cytoband data.
-  These data can be obtained from the UCSC genome browser, from NCBI and
-  from EnsEMBL.  Once obtained, the cytobands are converted to GFF to be
-  loaded into a Bio::DB::GFF database or saved as a flatfile.
-  </p>
-
-  <p>
-  Below is an example of GFF3-format cytoband data.  Note that the 
-  Parent= tag is used to facilitate aggregation of bands into their parent 
-  chromosomes.  Preprocessed GFF files for mouse, human and rat can be found
-  in the html (or htdocs) directory at gbrowse/databases/ideogram
-  </p>
-  <pre>
-  ##gff-version 3
-  ##sequence-region 1 1 245522847
-  1       ensembl chromosome_band        1       2300000 .       .       .       Parent=1;Name=p36.33;Alias=1p36.33;Stain=gneg
-  1       ensembl chromosome_band        2300001 5300000 .       .       .       Parent=1;Name=p36.32;Alias=1p36.32;Stain=gpos25
-  1       ensembl chromosome_band        15600001        20200000        .       .       .       Parent=1;Name=p36.13;Alias=1p36.13;Stain=gneg
-  1       ensembl centromere      121000001       127900000       .       .       .       Parent=1;Name=1_cent;Alias=11_cent
-  </pre>
-  
-  <p>
-  Ensembl has cytoband data for human, mouse and rat.  Below is an example of a 
-  script that retrieves cytoband features from the public mysql database 
-  and converts them to GFF.  
-  </p>
-  
-  <table>
-  <tr>
-  <td width=50></td>
-  <td bgcolor="silver">
-  <pre>
-  $script
-  </pre>
-  </td>
-  </tr>
-  </table>
-  
-  <h2>SEE ALSO: Bio::Graphics::Glyph::ideogram</h2>
-  $close
-  </html>
-END
-  
+  print end_html;
+  exit 0;
 }
 
 sub my_html_frag {
   my $frag = shift;
-  my $html = $CONFIG->setting($frag);
+  my $html = $CONFIG->karyotype_setting($frag);
   return $html;
 }
 
 
-__DATA__
+sub my_parse_feature_str {
+  my $f      = shift;
 
-#!/usr/bin/perl -w
-use strict;
-use DBI;
+  # less flexible than gbrowse_img, but we need to have some structure
+  # to be analogous to Bio::Graphics::Featurefile
+  my ($reference,$type,$name,$position,@desc) = shellwords($f);
 
-my $database = shift;
-my $host     = 'ensembldb.ensembl.org';
-my $query    = 
-'SELECT name,seq_region_start,seq_region_end,band,stain
- FROM seq_region,karyotype
- WHERE seq_region.seq_region_id = karyotype.seq_region_id;';
+  return unless $reference && $type && $name && $position;
 
+  my @segments = map { [/(-?\d+)(?:-|\.\.)(-?\d+)/]} map {split /,/} $position;
 
-my $dbh = DBI->connect( "dbi:mysql:$database:$host", 'anonymous' )
-    or die DBI->errstr;
+  my %tag;
 
-my $sth = $dbh->prepare($query) or die $dbh->errstr;
-$sth->execute or die $sth->errstr;
+  if ( grep /\w+=\S+/, @desc ) { 
 
-my ($cent_start,$prev_chr,$chr_end,$segments,$gff);
-my $chr_start = 1;
-while (my @band = $sth->fetchrow_array ) {
-  my ($chr,$start,$end,$band,$stain) = @band;
-  my $class = 'Chromosome';
-  my $method;
+    my @attributes = map {split /,\s*/} @desc;
+    
+    for (@attributes) {
+      my ($k,$v) = grep {s/^\s*|\s*$//g} /(.+?)=(.+)/;
+      $v =~ s/[\'\"]//g;
+      next if $k =~ /url|link/ && !check_url($v);
+      $tag{$k}   = $v if $v;
+      $tag{desc} = $k if !$v;
+    }
 
-  $chr =~ s/chr//;
-  if ($stain eq 'acen' && !$cent_start) {
-    $cent_start = $start;
-    next;
-  }
-  elsif ($cent_start) {
-    $method = 'centromere';
-    $band   = "$chr\_cent";
-    $start  = $cent_start;
-    $stain  = '';
-    $cent_start = 0;
-  }
-  else {
-    $method = 'chromosome_band'; # SO term
   }
 
-  $gff .= join("\t", $chr, 'ensembl', lc $method, $start, $end,
-	       qw/. . ./,qq{Parent=$chr;Name=$band;Alias=$chr$band});
-  $gff .= $stain ? ";Stain=$stain\n" : "\n";
+  my $tag = \%tag if %tag;
 
-  if ($prev_chr && $prev_chr !~ /$chr/) {
-    $segments .= "\#\#sequence-region $prev_chr $chr_start $chr_end\n";
-    $chr_start = 1;
-  }
-
-  $prev_chr = $chr;
-  $chr_end  = $end;
+  ($reference,$type,$name,\@segments,$tag);
 }
 
-$segments .= "\#\#sequence-region $prev_chr $chr_start $chr_end\n";
-print "##gff-version 3\n";
-print $segments,$gff;
 
-__END__
-# Currently ideograms for human, rat and mouse are available
-# To see the current database list, try the command:
+sub example_script {
 
-mysql -uanonymous -hensembldb.ensembl.org -e 'show databases' \ 
-| grep core | grep 'sapiens\|rattus\|mus' | grep -v 'expression'
+ return <<END;
+function hideExample() {
+  document.f1.featuretext.value = '';
+}
 
+function showExample() {
+  var text = xInnerHtml('exampleText');
+  document.f1.featuretext.value = text;
+}
+
+
+// xGetElementById, Copyright 2001-2006 Michael Foster (Cross-Browser.com)
+// Part of X, a Cross-Browser Javascript Library, Distributed under the terms of the GNU LGPL
+
+function xGetElementById(e)
+{
+  if(typeof(e)=='string') {
+    if(document.getElementById) e=document.getElementById(e);
+    else if(document.all) e=document.all[e];
+    else e=null;
+  }
+  return e;
+}
+  
+// xInnerHtml, Copyright 2001-2006 Michael Foster (Cross-Browser.com)
+// Part of X, a Cross-Browser Javascript Library, Distributed under the terms of the GNU LGPL
+
+function xInnerHtml(e,h)
+{
+  if(!(e=xGetElementById(e)) || !xStr(e.innerHTML)) return null;
+  var s = e.innerHTML;
+  if (xStr(h)) {e.innerHTML = h;}
+  return s;
+}
+
+// xStr, Copyright 2001-2006 Michael Foster (Cross-Browser.com)
+// Part of X, a Cross-Browser Javascript Library, Distributed under the terms of the GNU LGPL
+
+function xStr(s)
+{
+  for(var i=0; i<arguments.length; ++i){if(typeof(arguments[i])!='string') return false;}
+  return true;
+}
+
+END
+}
+
+sub chromosome_data {
+  my $d = shift or return ();
+  $d =~ s/,/ /g;
+  my @chr = shellwords($d);
+  my $len = {};
+  for (@chr) {
+    ($_,my $length) = split ':';
+    $len->{$_} = $length if $length;
+  }
+  return $len,@chr;
+}
+
+sub look_for_chromosomes {
+  my $str = shift or return ();
+  my @chr;
+  my $clen = {};
+  my @lines = grep {/\#\#sequence-region/} split "\n", $str;
+  for (@lines) {
+    my ($chr,$len) = /region\s+(\S+)\s+\d+\s+(\d+)/;
+    if ($chr && $len) {
+      push @chr, $chr;
+      $clen->{$chr} = $len;
+    }
+  }
+
+  return $clen, @chr if @chr;
+  return 0;
+}
 
 !NO!SUBS!
 
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
 exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
+

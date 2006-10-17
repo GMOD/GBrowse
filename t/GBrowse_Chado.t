@@ -8,7 +8,7 @@ use strict;
 use ExtUtils::MakeMaker;
 use Bio::Root::IO;
 use FindBin '$Bin';
-use constant TEST_COUNT => 43;
+use constant TEST_COUNT => 29;
 use Data::Dumper;
 
 BEGIN {

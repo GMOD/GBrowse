@@ -1,167 +1,460 @@
-package Bio::Graphics::Browser::Render;
+package Bio::Graphics::Browser::Run;
+# $Id: Render.pm,v 1.4 2006-10-18 18:38:35 sheldon_mckay Exp $
+#
+# this library will supersedes Bio::Graphics::Browser::Util and much of
+# the rendering code in the CGI scripts and Bio::Graphics::Browser
 
-# a package of shared drawing and HTML rendering methods
-# for gbrowse and related applications
-
-# $Id: Render.pm,v 1.3 2006-09-11 01:13:14 lstein Exp $
-
-=head1 NAME
-    
- Bio::Graphics::Browser::Render -- Shared drawing and page-rendering methods
-
-=head1 SYNOPSIS
-
- $CONFIG  = Bio::Graphics::Browser::Render->new;
- $CONFIG->read_configuration($CONF_DIR); 
-
-=head1 DESCRIPTION
- 
- This package provides drawing and HTML rendering support for the
- Generic GenomeBrowser and related applications.  It inherits from
- Bio::Graphics::Browser and also provides many methods that were formerly
- subroutines of gbrowse, gbrowse_img, gbrowse_syn, etc.  
-
-=head1 SEE ALSO
- 
- L<Bio::Graphics::Browser>,
- L<Bio::Graphics::Panel>,
- L<Bio::Graphics::Glyph>,
- L<Bio::Graphics::Feature>,
- L<Bio::Graphics::FeatureFile>
-
-=head1 AUTHOR
-
- Sheldon McKay 
- Email: mckays@cshl.edu
-
- Copyright (c) 2006 Cold Spring Harbor Laboratory
-
- This library is free software;
- you can redistribute it and/or modifyit under the same terms as Perl itself.  
-
-=head1 APPENDIX: METHODS
-
-=cut
+# Re: setting()
+#
+# Don't get confused! This object has a setting() method. There is also a
+# $browser_run->config->setting() method. Thhis object's setting() method
+# is used only for getting [GENERAL] information. It first queries the
+# the GBrowse.conf global file, and if the setting isn't there it queries
+# the current datasource-specific config object. It cannot be used to retrieve
+# track-specific data.
+#
+# $browser_run->config->setting() returns information about the currently-active
+# data source.
 
 use strict;
+use Carp 'croak','cluck';
 use Bio::Graphics::Browser;
-#use Bio::Graphics::Browser::I18n;
-#use Bio::Graphics::Browser::Util;
-use Bio::Root::RootI;
-use CGI qw/:standard escape/;
-use CGI::Toggle;
-use CGI::Carp 'fatalsToBrowser';
-use GD;
+
+# the following are singletons which are used for web in-memory caching
+my $CONFIG;
+my $LANG;
+
+# if true, turn on surrounding rectangles for debugging the image map
+use constant DEBUG          => 0;
+use constant DEBUG_EXTERNAL => 0;
+use constant DEBUG_PLUGINS  => 0;
+
+use constant GLOBAL_TIMEOUT => 60;  # 60 seconds to failure unless overridden in config
+
+# probably all this stuff should go
+use Bio::Graphics::Browser::PluginSet;
+use Bio::Graphics::Browser::UploadSet;
+use Bio::Graphics::Browser::RemoteSet;
+use Bio::Graphics::Browser::PageSettings;
+use Digest::MD5 'md5_hex';
+use File::Path 'mkpath';
+use Text::Tabs;
 use Text::Shellwords;
-use vars qw/$VERSION @ISA/;
-@ISA = ('Bio::Graphics::Browser');
+use File::Basename 'basename','dirname';
+use File::Spec;
+use Carp qw(:DEFAULT croak);
+use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td);
+use CGI::Toggle;
+use CGI::Cookie;
 
-use Data::Dumper;
-
+use vars qw/$VERSION/;
 $VERSION = 0.01;
 
-use constant DEFAULT_FINE_ZOOM => '20%';
-use constant BUTTONSDIR        => '/gbrowse/images/buttons';
-use constant OVERVIEW_RATIO    => 0.9;
-use constant DEBUG             => 1;
+# if you change the zoom/nav icons, you must change this as well.
+use constant MAG_ICON_HEIGHT => 20;
+use constant MAG_ICON_WIDTH  => 8;
 
-=pod
+# had-coded values for segment sizes
+# many of these can be overridden by configuration file entries
+use constant MAX_SEGMENT     => 1_000_000;
+use constant MIN_SEG_SIZE         => 20;
+use constant TINY_SEG_SIZE        => 2;
+use constant EXPAND_SEG_SIZE      => 5000;
+use constant TOO_MANY_SEGMENTS => 5_000;
+use constant TOO_MANY_FEATURES => 100;
+use constant TOO_MANY_REFS     => TOO_MANY_FEATURES;
+use constant DEFAULT_SEGMENT => 100_000;
+use constant DEFAULT_REGION_SIZE => 100_000_000;
 
-=head2   new
- 
- Title   : new 
+use constant OVERVIEW_RATIO  => 1.0;    # for the time being, don't touch this -- the ratio calculation isn't working
+use constant ANNOTATION_EDIT_ROWS => 25;
+use constant ANNOTATION_EDIT_COLS => 100;
+use constant URL_FETCH_TIMEOUT    => 5;  # five seconds max!
+use constant URL_FETCH_MAX_SIZE   => 1_000_000;  # don't accept any files larger than 1 Meg
+use constant MAX_KEYWORD_RESULTS  => 1_000;     # max number of results from keyword search
+use constant DEFAULT_RANGES         => q(100 500 1000 5000 10000 25000 100000 200000 500000 1000000);
+use constant DEFAULT_REGION_SIZES   => q(1000 5000 10000 20000);
+use constant DEFAULT_FINE_ZOOM    => '10%';
+use constant GBROWSE_HELP         => '/gbrowse';
+use constant IMAGES               => '/gbrowse/images';
+use constant JS                   => '/gbrowse/js';
+use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceDumper';
+use constant BUTTONSDIR           => '/gbrowse/images/buttons';
 
- Usage   : my $render = Bio::Graphics::Browser::Render->new( -config  => $browser_obj,
-                                                            -segment => $segment_obj );
-          my $render = Bio::Graphics::Browser::Render->new( $browser );
- Function: Creates an object for page rendering methods.  May be used
-           as a wrapper around an existing Bio::Graphics::Browser object. 
- Returns : a Bio::Graphics::Browser::Render object 
- Args    : a hash of named parameters or a Bio::Graphics::Browser object
+# amount of time to remember persistent settings
+use constant REMEMBER_SOURCE_TIME   => '+3M';   # 3 months
+use constant REMEMBER_SETTINGS_TIME => '+1M';   # 1 month
 
-=cut
+
+
+
+$ENV{PATH} = '/bin:/usr/bin:/usr/local/bin';
+local $CGI::USE_PARAM_SEMICOLONS = 1;
+my $HAVE_SVG = eval {require GD::SVG; 1};
+
+BEGIN {
+    eval "use Apache";
+    warn <<END if Apache::DBI->can('connect_on_init');
+WARNING: APACHE::DBI DETECTED.
+THIS WILL CAUSE THE GFF DUMP TO FAIL INTERMITTENTLY.
+THIS SCRIPT DOES NOT BENEFIT FROM APACHE::DBI
+END
+;
+};
+
+##########################################################
+# Initialization
+# -- Base class for general config and rendering
+# -- HTML or template specific subclasses
+##########################################################
 
 sub new {
+  my $class       = shift;
+  my $config_dir  = shift;
+  my $html_method = shift;
+  my $self       = bless {},ref $class || $class;
+  $self->config_dir($self->apache_conf_dir($config_dir));
+  $self->init($html_method);
+  $self;
+}
 
-  my ( $class, @options ) = @_;
-  my $self = {};
-  return bless $self, $class unless @options;
-  if ( @options == 1 ) {
-    my $browser = shift @options;
-    return bless $browser, $class if ref $browser;
+sub init {
+  my $self = shift;
+  my $method = lc shift;
+  $method && $method =~ /html|template/
+     or $self->fatal_error('invalid rendering method: options are HTML or template');
+
+  $self->open_config_files;
+  
+  $self = "Bio::Graphics::Browser::Run::$method"->new($self);
+
+  $self->{header}         = 0;
+  $self->{html}           = 0;
+  $self->{added_features} = 0;
+}
+
+
+##########################################################
+# Session and Page Settings Management                   #
+##########################################################
+
+sub restore_session {
+  my $self     = shift;
+  my $globals  = $self->globals or croak "no globals!";
+  my $id       = param('id');
+  my $page_settings = Bio::Graphics::Browser::PageSettings->new($self,$id);
+  $self->page_settings($page_settings);
+}
+
+sub update_session {
+  my $self     = shift;
+  my $config         = $self->config;
+  my $page_settings  = $self->page_settings;
+
+  $self->set_data_source();
+  $self->update_settings();
+
+  # Make sure that we expire the data source according to the
+  # policy in globals.
+  $page_settings->session->expire($config->source,
+				  $config->remember_settings_time);
+}
+
+sub update_settings {
+  my $settings = shift;
+
+  $settings->{grid} = 1 unless exists $settings->{grid};  # to upgrade from older settings
+
+  if (param('width') || param('label')) { # just looking to see if the settings form was submitted
+    my @selected = split_labels (param('label'));
+    $settings->{features}{$_}{visible} = 0 foreach keys %{$settings->{features}};
+    $settings->{features}{$_}{visible} = 1 foreach @selected;
+    $settings->{flip}                  = param('flip');
+    $settings->{grid}                  = param('grid');
   }
-  my %options = @options;
-  for my $key ( keys %options ) {
-    my $val = $options{$key};
-    $key =~ s/^-//;
-    $self->{$key} = $val;
+
+  if (my @selected = split_labels(param('enable'))) {
+    $settings->{features}{$_}{visible} = 1 foreach @selected;
   }
-  return bless $self, $class;
+
+  if (my @selected = split_labels(param('disable'))) {
+    $settings->{features}{$_}{visible} = 0 foreach @selected;
+  }
+
+  $settings->{width}  = param('width')   if param('width');
+  my $divider  = $CONFIG->setting('unit_divider') || 1;
+
+  # Update coordinates.
+  local $^W = 0;  # kill uninitialized variable warning
+  $settings->{ref}   = param('ref');
+  $settings->{start} = param('start') if defined param('start') && param('start') =~ /^[\d-]+/;
+  $settings->{stop}  = param('stop')  if defined param('stop')  && param('stop')  =~ /^[\d-]+/;
+  $settings->{stop}  = param('end')   if defined param('end')   && param('end')   =~ /^[\d-]+/;
+  $settings->{version} ||= param('version') || '';
+
+  if ( (request_method() eq 'GET' && param('ref'))
+       ||
+       (param('span') && $divider*$settings->{stop}-$divider*$settings->{start}+1 != param('span'))
+       ||
+       grep {/left|right|zoom|nav|regionview\.[xy]|overview\.[xy]/} param()
+     )
+    {
+      zoomnav($settings);
+      $settings->{name} = "$settings->{ref}:$settings->{start}..$settings->{stop}";
+      param(name => $settings->{name});
+    }
+
+  foreach (qw(name source plugin stp ins head
+	      ks sk version)) {
+    $settings->{$_} = param($_) if defined param($_);
+  }
+  $settings->{name} =~ s/^\s+//; # strip leading
+  $settings->{name} =~ s/\s+$//; # and trailing whitespace
+
+  if (my @features = shellwords(param('h_feat'))) {
+    $settings->{h_feat} = {};
+    for my $hilight (@features) {
+      last if $hilight eq '_clear_';
+      my ($featname,$color) = split '@',$hilight;
+      $settings->{h_feat}{$featname} = $color || 'yellow';
+    }
+  }
+
+  if (my @regions = shellwords(param('h_region'))) {
+    $settings->{h_region} = [];
+    foreach (@regions) {
+      last if $_ eq '_clear_';
+      $_ = "$settings->{ref}:$_" unless /^[^:]+:-?\d/; # add reference if not there
+      push @{$settings->{h_region}},$_;
+    }
+  }
+
+  if ($CONFIG->setting('region segment')) {
+    $settings->{region_size} = param('region_size')+0             if defined param('region_size');
+    $settings->{region_size} = $CONFIG->setting('region segment') unless defined $settings->{region_size};
+  } else {
+    delete $settings->{region_size};
+  }
+
+  if (my @external = param('eurl')) {
+    my %external = map {$_=>1} @external;
+    foreach (@external) {
+      warn "eurl = $_" if DEBUG_EXTERNAL;
+      next if exists $settings->{features}{$_};
+      $settings->{features}{$_} = {visible=>1,options=>0,limit=>0};
+      push @{$settings->{tracks}},$_;
+    }
+    # remove any URLs that aren't on the list
+    foreach (keys %{$settings->{features}}) {
+      next unless /^(http|ftp):/;
+      delete $settings->{features}{$_} unless exists $external{$_};
+    }
+  }
+
+  # the "q" request overrides name, ref, and h_feat
+  if (my @q = param('q')) {
+    delete $settings->{$_} foreach qw(name ref h_feat h_region);
+    $settings->{q} = [map {split /[+-]/} @q];
+  }
+
+  if (param('revert')) {
+    warn "resetting defaults..." if DEBUG;
+    set_default_tracks($settings);
+  }
+
+  elsif (param('reset')) {
+    %$settings = ();
+    #    Delete_all();
+    default_settings($settings);
+  }
+
+  elsif (param($CONFIG->tr('Adjust_Order')) && !param($CONFIG->tr('Cancel'))) {
+    adjust_track_options($settings);
+    adjust_track_order($settings);
+  }
+
+  # restore the visibility of the division sections
+  # using transient cookies
+  for my $div (grep {/^div_visible_/} CGI::cookie()) {
+    warn "div = $div";
+    my ($section)   = $div =~ /^div_visible_(\w+)/ or next;
+    my $visibility  = CGI::cookie($div);
+    warn "$div = $visibility";
+    $settings->{section_visible}{$section} = $visibility;
+  }
+}
+
+sub page_settings {
+  my $self = shift;
+  my $d    = $self->{page_settings};
+  $self->{page_settings} = shift if @_;
+  $d;
+}
+
+##########################################################
+# General Configuration                                  #
+##########################################################
+
+# set the data source
+# it may come from any of several places
+# - from the legacy "source" CGI parameter -- this causes a redirect to gbrowse/source/
+# - from the legacy "/source" path info -- this causes a redirect to gbrowse/source/
+# - from the "/source/" path info
+# - from the user's saved session
+# - from the default source
+sub set_data_source {
+  my $self = shift;
+  my $config = $self->config;
+
+  # list of all the possible sources
+  my @sources = sort $config->sources;
+  my %sources = map {$_=>1} @sources;
+
+  my $source = param('source') || param('src') || path_info();
+  $source    =~ s!^/+!!;  # get rid of leading & trailing / from path_info()
+  $source    =~ s!/+$!!;
+
+  # not present in the URL, or CGI parameters so get it from the session
+  $source      ||=  $self->page_settings->source;
+  $source      ||= $self->setting('default source');
+
+  # not present there so get it from the first configured source
+  $source      ||= $sources[0];
+
+  # check that this is a correct source
+  unless ($sources{$source}) {
+    $self->warning($config->tr('INVALID_SOURCE',$source));
+    $source = $self->setting('default source') || $sources[0];
+  }
+
+  # this call checks whether our path_info() is consistent with the
+  # provided source. It may cause a redirect and exit!!!
+  $self->redirect_legacy_url($source);
+
+  # now set the source
+  $config->source($source);                # in the current config
+  $self->page_settings->source($source);   # in the page settings
+}
+
+
+sub config { return $CONFIG }
+sub lang   { return $LANG   }
+
+sub open_config_files {
+  my $self   = shift;
+  my $dir    = $self->config_dir;
+
+  $CONFIG ||= Bio::Graphics::Browser->new;
+  $LANG   ||= Bio::Graphics::Browser::I18n->new("$dir/languages");
+
+  # don't use ugly-looking globals unless we have to
+  my $conf = $self->config;
+  my $lang = $self->lang;
+
+  $conf->read_configuration($dir) or croak "Can't read configuration files: $!";
+  $self->set_language;
+  $conf->language($lang);
+  $conf->dir($dir);
+  $conf->clear_cache();  # remove cached information
+
+  my $globals = Bio::Graphics::FeatureFile->new(-file=>"$dir/GBrowse.conf")
+    or croak "no GBrowse.conf global config file found";
+  $self->globals($globals);
+}
+
+sub set_language {
+  my $self = shift;
+  my $conf = $self->config;
+  my $lang = $self->lang;
+  my $default_language   = $conf->setting('language');
+  my $accept             = http('Accept-language') || '';
+  my @languages          = $accept =~ /([a-z]{2}-?[a-z]*)/ig;
+  push @languages,$default_language if $default_language;
+  return unless @languages;
+  $lang->language(@languages);
+}
+
+# pass through source to the config object
+sub source { shift->config->source(@_) }
+
+# REMOVE FROM BROWSER.pm
+sub remember_settings_time {
+  my $self = shift;
+  return $self->setting('remember settings time') || REMEMBER_SETTINGS_TIME;
+}
+
+sub config_dir {
+  my $self = shift;
+  my $d    = $self->{config_dir};
+  $self->{config_dir} = shift if @_;
+  $d;
+}
+
+sub globals {
+  my $self = shift;
+  my $d    = $self->{globals};
+  $self->{globals} = shift if @_;
+  $d;
+}
+
+
+# setting will search in globals first and then in currently configured source
+sub setting {
+  my $self   = shift;
+  my $option = shift;
+  my $global = $self->globals or return;
+  my $result = $global->setting(general => $option);
+  return $result if defined $result;
+  my $conf   = $self->config or return;
+  return $conf->setting(general => $option);
+}
+
+# REMOVE FROM BROWSER.pm
+sub tmpdir {
+  my $self = shift;
+  my $path = shift || '';
+
+  my ($tmpuri,$tmpdir) = shellwords($self->setting('tmpimages'))
+    or die "no tmpimages option defined, can't generate a picture";
+
+  $tmpuri .= "/$path" if $path;
+
+  if ($ENV{MOD_PERL} ) {
+    my $r          = $self->modperl_request();
+    my $subr       = $r->lookup_uri($tmpuri);
+    $tmpdir        = $subr->filename;
+    my $path_info  = $subr->path_info;
+    $tmpdir       .= $path_info if $path_info;
+  } elsif ($tmpdir) {
+    $tmpdir .= "/$path" if $path;
+  }
+  else {
+    $tmpdir = "$ENV{DOCUMENT_ROOT}/$tmpuri";
+  }
+
+  # we need to untaint tmpdir before calling mkpath()
+  return unless $tmpdir =~ /^(.+)$/;
+  $path = $1;
+
+  mkpath($path,0,0777) unless -d $path;
+  return ($tmpuri,$path);
+}
+
+sub apache_conf_dir {
+  my $self    = shift;
+  my $default = shift;
+  if (my $request = $self->modperl_request()) {
+    my $conf  = $request->dir_config('GBrowseConf') or return $default;
+    return $conf if $conf =~ m!^/!;                # return absolute
+    return (exists $ENV{MOD_PERL_API_VERSION} &&
+	    $ENV{MOD_PERL_API_VERSION} >= 2)
+      ? Apache2::ServerUtil::server_root() . "/$conf"
+      : Apache->server_root_relative($conf);
+  }
+  return $default;
 }
 
 =pod
-
-=head2   setting
- 
- Title   : setting 
- Usage   : my $thing1 = $render->setting('thing1')
-           my $thing2 = $render->setting( cat => 'hat' )
- Function: setting getter/setter 
- Returns : a string 
- Args    : a key string and an optional value
-
-=cut
-
-#sub setting {
-#  my $self = shift;
-#  my ( $key, $val, $type );
-#  if ( @_ > 2 ) {
-#    ( $type, $key, $val ) = @_;
-#  }
-#  else {
-#    ( $key, $val ) = @_;
-#  }
-#  unless ($type) {
-#    $self->{$key} = $val if $val;
-#  }
-#  if ( $type =~ /general/i ) {
-#    $self->{key} = $self->SUPER::setting( 'general', $key );
-#  }
-#  else {
-#    $val = $self->SUPER::setting( 'general', $key );
-#  }
-#  return $self->{$key} || $val;
-#}
-
-sub current_config {
-  die "current_config not implemented";
-}
-
-=pod
-
-=head2 current_segment
- 
- Title   : current_segment 
- Usage   : my $segment = $render->current_segment;
-           $render->current_segment($my_segment);
- Function: setter/getter for the current segment 
- Returns : a Bio::DB::GFF::RelSegment object, if one exists 
- Args    : a Bio::DB::GFF::RelSegment object 
- Note    : the alias 'segment' also works
-
-=cut
-
-*segment = \&current_segment;
-
-sub current_segment {
-  my ( $self, $segment ) = @_;
-  $self->{current_segment} = $segment if $segment;
-  $self->{current_segment} ||= $self->{segment};
-  return $self->{current_segment};
-}
-
-=pod
-
 =head2 get_source
  
  Title   : get_source 
@@ -196,6 +489,45 @@ sub get_source {
     return $new_source;
   }
 }
+
+
+#################################################################
+# HTTP functions                
+#################################################################
+
+sub redirect_legacy_url {
+  my $self          = shift;
+  my $source        = shift;
+
+  if ($source && path_info() ne "/$source/") {
+
+    my $q = new CGI '';
+    if (request_method() eq 'GET') {
+      foreach (param()) {
+	next if $_ eq 'source';
+	$q->param($_=>param($_)) if defined param($_);
+      }
+    }
+
+    # This is infinitely more difficult due to horrible bug in Apache version 2
+    # It is fixed in CGI.pm versions 3.11 and higher, but this version is not guaranteed
+    # to be available.
+    my ($script_name,$path_info) = _broken_apache_hack();
+    my $query_string = $q->query_string;
+    my $protocol     = $q->protocol;
+
+    my $new_url      = $script_name;
+    $new_url        .= "/$source/";
+    $new_url        .= "?$query_string" if $query_string;
+
+    print redirect(-uri=>$new_url,-status=>"301 Moved Permanently");
+    exit 0;
+  }
+}
+
+#################################################################
+# HTML rendering -- General 
+#################################################################
 
 =pod
 
@@ -235,128 +567,23 @@ sub show_examples {
 =cut
 
 sub toggle {
-  my ( $self, $section, @body ) = @_;
-  my $config;
-  if (ref $section && ref $section eq 'HASH') {
-    $config = $section;
-    $section = shift @body;
+  my $self = shift;
+  my ($tconf,$id, $section_head,@body);
+  if (ref $_[0] eq 'HASH') {
+    ($tconf,$id, $section_head,@body) eq @_;
   }
-  my ($label) = $self->tr($section) || ($section);
-  my $state = $self->section_setting($section);
+  else {
+    ($tconf,$id, $section_head,@body) eq ({},@_);
+  }
+
+  my ($label) = $self->tr($section_head) || ($section_head);
+  my $state = $self->section_setting($section_head);
   my $on = $state eq 'open';
 
-  $config ||= {};
   # config as argument overrides section_setting
-  $config->{on} = $on if $on && !exists $config->{on};
+  $tconf->{on} ||= $on;
 
-  my $id = $label;
-  return toggle_section( $config, $id, b($label), @body );
-}
-
-=pod
-
-=head2  source_menu
- 
- Title   : source_menu 
- Usage   : my $source_menu = $render->source_menu;
- Function: creates a popup menu of available data sources 
- Returns : html-formatted string 
- Args    : none
-
-=cut
-
-sub source_menu {
-  my $self         = shift;
-  my @sources      = $self->sources;
-  my $show_sources = $self->setting('show sources');
-  $show_sources ||= 1;
-
-  # default to true  
-  my $sources = $show_sources && @sources > 1;
-  my $popup = popup_menu(
-			 -name     => 'source',
-			 -values   => \@sources,
-			 -labels   => { map { $_ => $self->description($_) } $self->sources },
-			 -default  => $self->source,
-			 -onChange => 'document.mainform.submit()'
-			 );
-  return b( $self->tr('DATA_SOURCE') ) . br
-      . ( $sources ? $popup : $self->description( $self->source ) );
-}
-
-=pod
-
-=head2 slidertable
- 
- Title   : slidertable 
- Usage   : my $navigation_bar = $render->slidertable;
- Function: makes the zoom menu with pan buttons 
- Returns : html-formatted text 
- Args    : path to button images (optional)
-
-=cut
-
-sub slidertable {
-  my $self       = shift;
-  my $small_pan  = shift;    
-  my $buttons    = $self->setting('buttons') || BUTTONSDIR;
-  my $segment    = $self->current_segment or fatal_error("No segment defined");
-  my $span       = $small_pan ? int $segment->length/2 : $segment->length;
-  my $half_title = $self->unit_label( int $span / 2 );
-  my $full_title = $self->unit_label($span);
-  my $half       = int $span / 2;
-  my $full       = $span;
-  my $fine_zoom  = $self->get_zoomincrement();
-  Delete($_) foreach qw(ref start stop);
-  my @lines;
-  push @lines,
-  hidden( -name => 'start', -value => $segment->start, -override => 1 );
-  push @lines,
-  hidden( -name => 'stop', -value => $segment->end, -override => 1 );
-  push @lines,
-  hidden( -name => 'ref', -value => $segment->seq_id, -override => 1 );
-  push @lines, (
-		image_button(
-			     -src    => "$buttons/green_l2.gif",
-			     -name   => "left $full",
-			     -border => 0,
-			     -title  => "left $full_title"
-			     ),
-		image_button(
-			     -src    => "$buttons/green_l1.gif",
-			     -name   => "left $half",
-			     -border => 0,
-			     -title  => "left $half_title"
-			     ),
-		'&nbsp;',
-		image_button(
-			     -src    => "$buttons/minus.gif",
-			     -name   => "zoom out $fine_zoom",
-			     -border => 0,
-			     -title  => "zoom out $fine_zoom"
-			     ),
-		'&nbsp;', $self->zoomBar, '&nbsp;',
-		image_button(
-			     -src    => "$buttons/plus.gif",
-			     -name   => "zoom in $fine_zoom",
-			     -border => 0,
-			     -title  => "zoom in $fine_zoom"
-			     ),
-		'&nbsp;',
-		image_button(
-			     -src    => "$buttons/green_r1.gif",
-			     -name   => "right $half",
-			     -border => 0,
-			     -title  => "right $half_title"
-			     ),
-		image_button(
-			     -src    => "$buttons/green_r2.gif",
-			     -name   => "right $full",
-			     -border => 0,
-			     -title  => "right $full_title"
-			     ),
-		);
-  return join( '', @lines );
+  return toggle_section( $tconf, $id, b($label), @body );
 }
 
 =pod
@@ -415,277 +642,6 @@ sub get_zoomincrement {
 
 =pod
 
-=head2 zoomBar
- 
- Title   : zoomBar 
- Usage   : my $zoombar = $self->zoonBar;
- Function: creates the zoom bar 
- Returns : an html popup menu 
- Args    : none
-
-=cut
-
-sub zoomBar {
-  my $self    = shift;
-  my $segment = $self->current_segment;
-  my ($show)  = $self->tr('Show');
-  my %seen;
-  my @ranges = grep { !$seen{$_}++ } sort { $b <=> $a } ($segment->length, $self->get_ranges());
-  my %labels = map { $_ => $show . ' ' . $self->unit_label($_) } @ranges;
-  return popup_menu(
-    -class    => 'searchtitle',
-    -name     => 'span',
-    -values   => \@ranges,
-    -labels   => \%labels,
-    -default  => $segment->length,
-    -force    => 1,
-    -onChange => 'document.mainform.submit()',
-  );
-}
-
-=pod
-
-=head2 page_settings
- 
- Title   : page_settings 
- Usage   : my ($page_settings, $session) = $render->page_settings;
- Function: gets the settings and saved state for the current data source 
- Returns : a hashref and a Bio::Graphics::Browser::PageSettings object 
- Args    : none
-
-=cut
-
-sub page_settings {
-  my $self   = shift;
-  my $source = $self->get_source;
-  my $session
-      = Bio::Graphics::Browser::PageSettings->new( $self, param('id') );
-  $source ||= $session->source;
-  redirect_legacy_url($source);
-
-  # may cause a redirect and exit!!!  
-  my $old_source    = $session->source($source);
-  $self->source($source);
-
-  # do not change the page settings when the user is changing from one
-  # database source to another
-  my $page_settings = $self->get_settings($session);
-  $self->adjust_settings($page_settings);
-  return wantarray ? ( $page_settings, $session ) : $page_settings;
-}
-
-=pod
-
-=head2 get_settings
- 
- Title   : get_settings 
- Usage   : my $settings = $render->get_settings;
- Function: gets a hashref containing page settings 
- Returns : a hashref 
- Args    : a Bio::Graphics::Browser::PageSettings object
-
-=cut
-
-sub get_settings {
-  my ( $self, $session ) = @_;
-  my $hash = $session->page_settings;
-  delete $hash->{flip};
-
-  # obnoxious for this to persist
-  $self->default_settings($hash) if param('reset') or !%$hash;
-  $hash->{id} = $session->id;
-  $hash;
-}
-
-=pod
-
-=head2 default_settings
- 
- Title   : default_settings 
- Usage   : $render->default_settings($session);
- Function: sets or resets default session settings 
- Returns : nothing 
- Args    : a hashref containing page settings
-
-=cut
-
-sub default_settings {
-  my ( $self, $settings ) = @_;
-  warn "Setting default settings" if DEBUG;
-  $settings ||= {};
-  %$settings = ();
-  @$settings{ 'name', 'ref', 'start', 'stop', 'flip', 'version' }
-      = ( '', '', '', '', '', 100 );
-  $settings->{width}       = $self->setting('default width') || $self->width;
-  $settings->{source}      = $self->source;
-  $settings->{region_size} = $self->setting('region segment');
-  $settings->{v}           = $VERSION;
-  $settings->{stp}         = 1;
-  $settings->{ins}         = 1;
-  $settings->{head}        = 1;
-  $settings->{ks}          = 'between';
-  $settings->{grid}        = 1;
-  $settings->{sk} = $self->setting("default varying") ? "unsorted" : "sorted";
-  $self->set_default_tracks($settings);
-}
-
-=pod
-
-=head2 set_default_tracks
- 
- Title   : set_default_tracks 
- Usage   : $render->set_default_tracks($settings);
- Function: sets the default tracks to be displayed 
- Returns : nothing 
- Args    : a hashref containing page settings
-
-=cut
-
-sub set_default_tracks {
-  my ( $self, $settings ) = @_;
-  my @labels = $self->labels;
-  $settings->{tracks} = \@labels;
-  warn "order = @labels" if DEBUG;
-  foreach (@labels) {
-    $settings->{features}{$_} = { visible => 0, options => 0, limit => 0 };
-  }
-  foreach ( $self->default_labels ) {
-    $settings->{features}{$_}{visible} = 1;
-  }
-}
-
-=pod
-
-=head2 adjust_settings
- 
- Title   : adjust_settings 
- Usage   : $render->adjust_settings($settings)
- Function: updates session settings from CGI parameters 
- Returns : nothing 
- Args    : a hashref containing page settings
-
-=cut
-
-sub adjust_settings {
-  my ( $self, $settings ) = @_;
-  $settings->{grid} = 1 unless exists $settings->{grid};
-
-  # to upgrade from older settings  
-  if (param('width') || param('label')) {
-    # just looking to see if the settings form was submitted
-    my @selected = $self->split_labels( param('label') );
-    $settings->{features}{$_}{visible} = 0
-	foreach keys %{ $settings->{features} };
-    $settings->{features}{$_}{visible} = 1 foreach @selected;
-    $settings->{flip} = param('flip');
-    $settings->{grid} = param('grid');
-  }
-  if ( my @selected = $self->split_labels( param('enable') ) ) {
-    $settings->{features}{$_}{visible} = 1 foreach @selected;
-  }
-  if ( my @selected = $self->split_labels( param('disable') ) ) {
-    $settings->{features}{$_}{visible} = 0 foreach @selected;
-  }
-  $settings->{width} = param('width') if param('width');
-  my $divider = $self->setting('unit_divider') || 1;
-  
-  # Update coordinates.
-  local $^W = 0; # kill uninitialized variable warning
-  $settings->{ref}   = param('ref');
-  $settings->{start} = param('start')
-      if defined param('start') && param('start') =~ /^[\d-]+/;
-  $settings->{stop} = param('stop')
-      if defined param('stop') && param('stop') =~ /^[\d-]+/;
-  $settings->{stop} = param('end')
-      if defined param('end') && param('end') =~ /^[\d-]+/;
-  $settings->{version} ||= param('version') || '';
-  if (
-      ( request_method() eq 'GET' && param('ref') )
-      || ( param('span')
-	   && $divider * $settings->{stop} - $divider * $settings->{start} + 1
-	   != param('span') )
-      || grep {/left|right|zoom|nav|regionview\.[xy]|overview\.[xy]/} param()
-      ) {
-    $self->zoomnav($settings);
-    $settings->{name} = "$settings->{ref}:$settings->{start}..$settings->{stop}";
-    param( name => $settings->{name} );
-  }
-  
-  foreach (qw(name source plugin stp ins head ks sk version)) {
-    $settings->{$_} = param($_) if defined param($_);
-  }
-  
-  $settings->{name} =~ s/^\s+//;
-
-  # strip leading  
-  $settings->{name} =~ s/\s+$//; # and trailing whitespace
-  if (my @features = shellwords(param('h_feat'))) {
-    $settings->{h_feat} = {};
-    for my $hilight (@features) {
-      last if $hilight eq '_clear_';
-      my ( $featname, $color ) = split '@', $hilight;
-      $settings->{h_feat}{$featname} = $color || 'yellow';
-    }
-  }
-  if ( my @regions = shellwords( param('h_region') ) ) {
-    $settings->{h_region} = [];
-    foreach (@regions) {
-      last if $_ eq '_clear_';
-      $_ = "$settings->{ref}:$_" if /^\d+/;
-
-      # add reference if not there
-      push @{
-	$settings->{h_region};
-      }, $_;
-    }
-  }
-  if ( $self->setting('region segment') ) {
-    $settings->{region_size} = param('region_size')
-        if defined param('region_size');
-    $settings->{region_size} = $self->setting('region segment')
-        unless defined $settings->{region_size};
-  }
-  else {
-    delete $settings->{region_size};
-  }
-  
-  if ( my @external = param('eurl') ) {
-    my %external = map { $_ => 1 } @external;
-    foreach (@external) {
-      warn "eurl = $_" if $self->setting('DEBUG_EXTERNAL');
-      next             if exists $settings->{features}{$_};
-      $settings->{features}{$_} = { visible => 1, options => 0, limit => 0 };
-      push @{ $settings->{tracks} }, $_;
-    } 
-    # remove any URLs that aren't on the list
-    foreach (keys %{$settings->{features}}) {      next unless /^(http|ftp):/;
-						   delete $settings->{features}{$_} unless exists $external{$_};
-						 }
-  } # the "q" request overrides name, ref, and h_feat
-  if (my @q = param('q')) {
-    delete $settings->{$_} foreach qw(name ref h_feat h_region);
-    $settings->{q} = [ map { split /[+-]/ } @q ];
-  }
-  
-  if ( param('revert') ) {
-    warn "resetting defaults..." if DEBUG;
-    $self->set_default_tracks($settings);
-  }
-  elsif ( param('reset') ) {
-    %$settings = ();
-    
-    #    Delete_all();
-    $self->default_settings($settings);
-  }
-  elsif ( param( $self->tr('Adjust_Order') )
-	  && !param( $self->tr('Cancel') ) ) {
-    $self->adjust_track_options($settings);
-    $self->adjust_track_order($settings);
-  }
-}
-
-=pod
-
 =head2 split_labels
  
  Title   : split_labels 
@@ -737,49 +693,6 @@ sub bookmark_link {
   $q->param( -name => 'id',   -value => $settings->{id} );
   $q->param( -name => 'grid', -value => $settings->{grid} );
   return "?" . $q->query_string();
-}
-
-=pod
-
-=head2 click_bar
-
- Title   : click_bar 
- Usage   : my $click_bar = $render->click_bar($red,$green,$blue);
- Function: creates an image the same with as the panel. The
-          purpose of this image is to make a button for clicking
-          on sequence coordinates.
- Returns : a formatted URL 
- Args    : a hashref containing page settings
-
-=cut
-
-sub click_bar {
-  my $self  = shift;
-  my $width = $self->width;
-  my @rgb   = $_[0] ? @_ : qw/255 255 255/;
-  @rgb == 3 or fatal_error("usage: \$browser->click_bar(\$width,\$R,\$G,\$B)");
-  my $gd = GD::Image->new( $width, 20 );
-  my $bg = $gd->colorAllocate(@rgb);
-  $gd->fill( 1, 1, $gd );
-  my $image = $self->generate_image($gd);
-}
-
-=pod
-
-=head2 image_link
- 
- Title   : image_link 
- Usage   : my $image_link = $render->image_link($settings);
- Function: creates an image link 
- Returns : a formatted URL 
- Args    : a hashref containing page settings
-
-=cut
-
-sub image_link {
-  my ( $self, $settings ) = @_;
-  return "?help=link_image;
-flip=" . ( $settings->{flip} || 0 );
 }
 
 =pod
@@ -923,81 +836,50 @@ sub unit_to_value {
   return "$sign$value";
 }
 
+#################################################################
+# HTML rendering -- HTML/template specific methods
+# Must be in a subclass so that template
+# and non-template versions coexist
+# template methods are in Bio::Graphics::Run::template
+# non-template methods are in Bio::Graphics::Run::html
+#################################################################
+
+sub template_error {shift->fatal_error('Not implemented')}
+sub render {shift->fatal_error('Not implemented')}
+sub finish {shift->fatal_error('Not implemented')}
+sub print_top {shift->fatal_error('Not implemented')}
+sub print_bottom {shift->fatal_error('Not implemented')}
+sub source_menu {shift->fatal_error('Not implemented')}
+sub slidertable {shift->fatal_error('Not implemented')}
+sub zoomBar {shift->fatal_error('Not implemented')}
+sub make_overview {shift->fatal_error('Not implemented')}
+sub overview_panel {shift->fatal_error('Not implemented')}
+
+##################################################################
+# Bio::DB::GFF Utilities
+##################################################################
+
 =pod
 
-=head2 make_overview
+=head2 current_segment
  
- Title   : make_overview 
- Usage   : my $overview = $render->overview($settings,$featurefiles);
- Function: creates an overview image as an image_button 
- Returns : html-formatted text 
- Args    : a settings hashref and an (optional) array_ref of featurefile objects
+ Title   : current_segment 
+ Usage   : my $segment = $render->current_segment;
+           $render->current_segment($my_segment);
+ Function: setter/getter for the current segment 
+ Returns : a Bio::DB::GFF::RelSegment object, if one exists 
+ Args    : a Bio::DB::GFF::RelSegment object 
+ Note    : the alias 'segment' also works
 
 =cut
 
-sub make_overview {
-  my ( $self, $settings, $feature_files ) = @_;
-  my $segment       = $self->current_segment || return;
-  my $whole_segment = $self->whole_segment;
+*segment = \&current_segment;
 
-  $self->width( $settings->{width} * OVERVIEW_RATIO );
-
-  my ( $image, $length )
-      = $self->overview( $whole_segment, $segment, $settings->{features},
-			 $feature_files )
-      or return;
-
-  # restore the original width!
-  my $restored_width = $self->width/OVERVIEW_RATIO;
-  $self->width($restored_width);
-
-  my ( $width, $height ) = $image->getBounds;
-  my $url = $self->generate_image($image);
-
-  return image_button(
-		      -name   => 'overview',
-		      -src    => $url,
-		      -width  => $width,
-		      -height => $height,
-		      -border => 0,
-		      -align  => 'middle'
-		      )
-      . hidden(
-	       -name     => 'seg_min',
-	       -value    => $whole_segment->start,
-	       -override => 1
-	       )
-      . hidden(
-	       -name     => 'seg_max',
-	       -value    => $whole_segment->end,
-	       -override => 1
-	       );
-}
-
-=pod
-    
-=head2 overview_panel
- 
- Title   : overview_panel 
- Usage   : my $overview_panel = $render->overview_panel($settings,$featurefiles);
- Function: creates a DHTML-toggle panel with the overview image 
- Returns : HTML-formatted text 
- Args    : a settings hashref and an (optional) array_ref of featurefile objects
-
-=cut
-
-sub overview_panel {
-  my ( $self, $page_settings, $feature_files ) = @_;
-  my $segment = $self->current_segment || return;
-  return '' if $self->section_setting('overview') eq 'hide';
-  my $image = $self->make_overview( $page_settings, $feature_files );
-  return $self->toggle(
-		       'Overview',
-		       table(
-			     { -border => 0, -width => '100%', },
-			     TR( { -class => 'databody' }, td( { -align => 'center' }, $image ) )
-			     )
-		       );
+sub current_segment {
+  my ( $self, $segment ) = @_;
+  $self->{current_segment} = $segment if $segment;
+  $self->{current_segment} ||= $self->{segment};
+  return $self->{current_segment};
 }
 
 =pod
@@ -1047,8 +929,7 @@ sub resize {
   my $segment       = $self->current_segment;
   my $whole_segment = $self->whole_segment;
   my $divider       = $self->setting('unit_divider') || 1;
-  my $min_seg_size  = $self->setting('min segment')
-      || $self->setting('MIN_SEG_SIZE');
+  my $min_seg_size  = $self->setting('min segment')  || MIN_SEG_SIZE;
   $min_seg_size /= $divider;
 
   my ( $new_start, $new_stop, $fix ) = ( $segment->start, $segment->end, 0 );
@@ -1078,8 +959,6 @@ sub resize {
     $new_stop = $whole_segment->start + $min_seg_size;
     $fix++;
   }    
-  # error($self->tr('Small_interval',$resize));
-  # error message  return unless $fix;
   
   $new_start = $whole_segment->start if $new_start < $whole_segment->start;
   $new_stop  = $whole_segment->end   if $new_stop > $whole_segment->end;
@@ -1158,7 +1037,7 @@ sub get_features {
   my ( $self, $settings, $db ) = @_;
   $db ||= open_database();
   unless ($db) {
-    fatal_error(
+    $self->fatal_error(
       "ERROR: Unable to open database",
       $self->setting('description'),
       pre($@)
@@ -1360,6 +1239,49 @@ sub do_keyword_search {
 
 =cut
 
+
+########################################################
+# Things that might be utils and/or
+# things migrated from Bio::Graphics::Browser::Util
+########################################################
+
+sub modperl_request {
+  my $self = shift;
+  return unless $ENV{MOD_PERL};
+  (exists $ENV{MOD_PERL_API_VERSION} &&
+   $ENV{MOD_PERL_API_VERSION} >= 2 ) ? Apache2::RequestUtil->request
+                                     : Apache->request;
+}
+
+# workaround for broken Apache 2 and CGI.pm <= 3.10
+sub _broken_apache_hack {
+  my $raw_script_name = $ENV{SCRIPT_NAME} || '';
+  my $raw_path_info   = $ENV{PATH_INFO}   || '';
+  my $uri             = $ENV{REQUEST_URI} || '';
+
+   ## dgg patch; need for what versions? apache 1.x; 
+  if ($raw_script_name =~ m/$raw_path_info$/) {
+    $raw_script_name =~ s/$raw_path_info$//;
+  }
+
+  my @uri_double_slashes  = $uri =~ m^(/{2,}?)^g;
+  my @path_double_slashes = "$raw_script_name $raw_path_info" =~ m^(/{2,}?)^g;
+
+  my $apache_bug      = @uri_double_slashes != @path_double_slashes;
+  return ($raw_script_name,$raw_path_info) unless $apache_bug;
+
+  my $path_info_search = $raw_path_info;
+  # these characters will not (necessarily) be escaped
+  $path_info_search    =~ s/([^a-zA-Z0-9$()\':_.,+*\/;?=&-])/uc sprintf("%%%02x",ord($1))/eg;
+  $path_info_search    = quotemeta($path_info_search);
+  $path_info_search    =~ s!/!/+!g;
+  if ($uri =~ m/^(.+)($path_info_search)/) {
+    return ($1,$2);
+  } else {
+    return ($raw_script_name,$raw_path_info);
+  }
+}
+
 sub make_cookie {
   my $self = shift;
   my ( $name, $val ) = @_;
@@ -1368,6 +1290,44 @@ sub make_cookie {
     -value => $val
   );
   return $cookie;
+}
+
+sub error {
+  my $self = shift;
+  my @msg = @_;
+  cluck "@_" if DEBUG;
+  print_top();
+  print h2({-class=>'error'},@msg);
+}
+
+sub fatal_error {
+  my $self = shift;
+  my @msg = @_;
+  print_header( -expires => '+1m' );
+    $CONFIG->template->process(
+        'error.tt2',
+			       {   server_admin  => $ENV{SERVER_ADMIN},
+            error_message => join( "\n", @msg ),
+				 }
+        )
+        or warn $CONFIG->template->error();
+  exit 0;
+}
+
+sub early_error {
+  my $self = shift;
+  my $lang = shift;
+  my $msg  = shift;
+  $msg     = $lang->tr($msg);
+  warn "@_" if DEBUG;
+  local $^W = 0;  # to avoid a warning from CGI.pm                                                                                                                                                               
+  print_header(-expires=>'+1m');
+  my @args = (-title  => 'GBrowse Error');
+  push @args,(-lang=>$lang->language);
+  print start_html();
+  print b($msg);
+  print end_html;
+  exit 0;
 }
 
 1;

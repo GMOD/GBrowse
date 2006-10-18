@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::heat_map_ideogram;
 
-# $Id: heat_map_ideogram.pm,v 1.4 2006-02-22 02:07:31 sheldon_mckay Exp $
+# $Id: heat_map_ideogram.pm,v 1.5 2006-10-18 01:46:14 sheldon_mckay Exp $
 # Glyph to draw chromosome heat_map ideograms
 
 use strict qw/vars refs/;

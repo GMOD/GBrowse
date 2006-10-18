@@ -46,7 +46,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_karyotype.PLS,v 1.6 2006-10-17 20:36:42 sheldon_mckay Exp $
+#$Id: gbrowse_karyotype.PLS,v 1.7 2006-10-18 01:46:14 sheldon_mckay Exp $
 
 use strict;
 use CGI::Carp 'fatalsToBrowser';
@@ -939,7 +939,8 @@ sub my_image_and_map {
   }
 
   # Add a whole chromosome in case there are no bands or the band coverage
-  # is not complete.  The bands are subfeats
+  # is not complete.  The bands are subfeats so that overlapping features,
+  # telomeres, etc can be drawn nicely
   my   $chrom = Bio::Graphics::Feature->new ( -start  => $segment->start,
 					      -stop   => $segment->end,
 					      -type   => 'synthetic_chromosome',
@@ -949,7 +950,7 @@ sub my_image_and_map {
   # need to pass along the subfeatures for band-labelling/image mapping
   my $bands = $band_labels ? [$chrom,@bands] : [$chrom];
 
-  $panel->unshift_track(\@bands,
+  $panel->unshift_track($bands,
                         -bump        => 0,
                         -glyph       => $CONFIG->setting($cytoband => 'glyph')     || 'ideogram',
                         -height      => $chrom_width,

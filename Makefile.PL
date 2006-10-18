@@ -216,7 +216,6 @@ WriteMakefile(
                                  'install_util/htdocs_install.PLS' => 'install_util/htdocs_install.pl',
                                  'install_util/cgi_install.PLS' => 'install_util/cgi_install.pl',
                                  'install_util/conf_install.PLS' => 'install_util/conf_install.pl',
-				 'bin/bp_load_gff.PLS' => 'bin/bp_load_gff.pl',
 				 'bin/make_das_conf.PLS' => 'bin/make_das_conf.pl',
 				 'bin/process_sgd.PLS' => 'bin/process_sgd.pl',
 				 'bin/process_gadfly.PLS' => 'bin/process_gadfly.pl',

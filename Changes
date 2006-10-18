@@ -1,3 +1,13 @@
+1.66    * Improved support in Chado adaptor for inferring CDS and UTR
+          features from exons and polypeptides (at the expense of speed).
+        * Added a visual test for verifying that images produced by GBrowse
+          agree with what is in the tutorial.
+        * Fixed a bug in the CAlign module for doing alignments.
+        * Fixed several minor bugs that were inadvertanly included in the
+          1.65 release.
+        * CGI now produces valid XHTML 1.0.
+        * Added the ability to use a callback as a citation.
+
 1.65	* Improved support for negative and fractional coordinates, such as those used
 	  in some genetic maps.
 	* Added fixes to GFF.pm for GFF3 to BioPerl patches

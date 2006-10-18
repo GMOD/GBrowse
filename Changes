@@ -1,7 +1,7 @@
 1.66    * Improved support in Chado adaptor for inferring CDS and UTR
           features from exons and polypeptides (at the expense of speed).
-        * Added support to the Chado adaptor for showing alignments in
-          the display panel as well as gbrowse_details.
+        * Added support to the Chado adaptor for showing alignments with
+          sequence residues in the display panel as well as gbrowse_details.
         * Added a visual test for verifying that images produced by GBrowse
           agree with what is in the tutorial.
         * Fixed a bug in the CAlign module for doing alignments.

@@ -302,8 +302,7 @@ extras/BioPerl/Bio/Graphics/Util.pm
 extras/BioPerl/Makefile.PL
 extras/README
 htdocs/annotation_help.html
-htdocs/gbrowse_karyotype_annotation_help.html
-htdocs/gbrowse_karyotype_URL_help.html
+htdocs/gbrowse_karyotype_help.html
 htdocs/databases/yeast_chr1/chromosome1.fa
 htdocs/databases/yeast_chr1/chromosome1.gff
 htdocs/databases/ideograms/human_cytobands.gff

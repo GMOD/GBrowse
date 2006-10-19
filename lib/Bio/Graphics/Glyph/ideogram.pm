@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.12 2006-10-17 20:36:43 sheldon_mckay Exp $
+# $Id: ideogram.pm,v 1.13 2006-10-19 13:34:29 sheldon_mckay Exp $
 # Glyph to draw chromosome ideograms
 
 use strict qw/vars refs/;
@@ -15,7 +15,6 @@ use Data::Dumper;
 
 sub draw {
   my $self = shift;
-
   my @parts = $self->parts;
   @parts = $self if !@parts && $self->level == 0;
   return $self->SUPER::draw(@_) unless @parts;
@@ -30,9 +29,30 @@ sub draw {
   $self->{invisible} ||= $self->option('invisible') 
       unless @parts > 1;
 
+  $parts[0]->{single}++ if @parts == 1;
+
+
+  # if the bands are subfeatures of an aggregate chromosome,
+  # we can draw the centomere and telomeres last to improve
+  # the appearance
+  my @last;
   for my $part (@parts) {
-    $part->{single}++ if @parts == 1;
+    push @last, $part and next if
+        $part->feature->method =~ /centromere/i ||
+        $part->feature->start <= 1 ||
+        $part->feature->stop >= $self->panel->end - 1000;
     my $tile = $part->create_tile('left');
+    $part->draw_component(@_);
+  }
+
+  for my $part (@last) {
+    my $tile;
+    if ($part->feature->method =~ /centromere/) {
+      $tile = $self->create_tile('right');
+    }
+    else {
+      $tile = $part->create_tile('left'); 
+    }
     $part->draw_component(@_);
   }
 }
@@ -44,10 +64,6 @@ sub draw_component {
   my $arcradius = $self->option('arcradius') || 7;
   my ( $x1, $y1, $x2, $y2 ) = $self->bounds(@_);
   
-  # nudge the top of the chromosome down to remove
-  # double telomere artifact
-  $x1 += 5 if $self->parts;
-
   # force odd width so telomere arcs are centered
   $y2 ++ if ($y2 - $y1) % 2;
   
@@ -58,8 +74,9 @@ sub draw_component {
   # in the configuration file, resulting in the tips of the chromosome being painted black.
   my $fake_telomeres = $self->option('fake_telomeres') || 0;
 
-  my ($bgcolor_index) = $self->option('bgcolor') =~ /$stain:(\S+)/;
-  $bgcolor_index ||= 'white';
+  my ($bgcolor_index) = $self->option('bgcolor') =~ /$stain:(\S+)/ if $stain;
+  ($bgcolor_index,$stain) = qw/white none/ if !$stain;
+
   my $black = $gd->colorAllocate( 0, 0, 0 );
   my $cm_color = $self->{cm_color} = $gd->colorAllocate( 102, 102, 153 );
   my $bgcolor = $self->factory->translate_color($bgcolor_index);
@@ -150,6 +167,7 @@ sub draw_centromere {
 
 sub draw_telomere {
   my $self = shift;
+  #warn "telomere\n";
   my ($gd, $x1, $y1, $x2, $y2,
       $bgcolor, $fgcolor, $arcradius, $state ) = @_;
   
@@ -205,6 +223,7 @@ sub draw_telomere {
 
     # remove that little blip at the vertex
     $gd->line($x1-1,$y-1,$x1-1,$y+1,$bg);
+     
   }
   
   if ( $state < 1 ) {    # right telomere
@@ -224,7 +243,6 @@ sub draw_telomere {
     $gd->arc( $x, $y, $arcradius * 2,
               $arcsize, 270, 90, $fgcolor);
     $gd->line($x2,$y-1,$x2,$y+1,$bg);
-
   }
 
   # GD::SVG hack :(

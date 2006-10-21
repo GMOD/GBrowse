@@ -30,6 +30,7 @@ conf/languages/pl.pm
 conf/languages/POSIX.pm
 conf/languages/ru.pm
 conf/languages/zh.pm
+conf/languages/zh_cn.pm
 conf/log4perl.conf
 conf/MobyServices/b64_encoded_gif_renderer.pm
 conf/MobyServices/b64_encoded_jpeg_renderer.pm

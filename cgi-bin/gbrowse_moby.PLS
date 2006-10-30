@@ -48,10 +48,9 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.52 2006-08-02 21:58:34 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.53 2006-10-30 16:16:33 markwilkinson Exp $
 ###########################################################
-
-#use SOAP::Lite +trace;
+use SOAP::Lite;
 use MOBY::Client::Central;
 use MOBY::Client::Service;
 use MOBY::CommonSubs qw(:all);
@@ -319,6 +318,7 @@ searches for papers about that organism.
 
 my $conf_dir  = conf_dir($CONF_DIR);  # conf_dir() is exported from Util.pm
 $CONFIG = open_config($CONF_DIR);  # open_config() is exported from Util.pm
+my $nextFormID = 1;  # an incremental counter for forms
 
 our %source2namespace = (
 #   GFF-source      MOBY-namespace
@@ -370,6 +370,9 @@ sub init {
     my $XML_Object = param('object');  # a recursive MOBY call may pass the current MOBY Object (XML) as a hidden field
     
     print_top("BioMOBY Details: $objectclass - $class:$id");
+#    print qq{<script language="JavaScript" type="text/javascript" src="http://mobycentral.icapture.ubc.ca/secondaries.js">
+#    </script>};
+    print getJSCode();   #this is the secondary parameter code
     print $CONFIG->header || h1("$objectclass - $class:$id Details");
     print p;
     
@@ -384,22 +387,31 @@ sub init {
     Delete_all();  # reset all CGI parameters
     my @Services = &findService($objectclass, \@namespace, $keyword, $authority, $output, $serviceType, $expandObjects);
     return unless scalar(@Services);
-
     print start_table();
     foreach my $SERVICE(@Services){
-        
-            my $form= join "", (start_form(-action => url(-full)),
-            hidden('namespace',$namespace[0]),
-            hidden('id',$id),
-            hidden('sid',$sid),
-            hidden('servicename',$SERVICE->name),
-            hidden('authority',$SERVICE->authority),
-            hidden('object', $XML_Object),
-            hidden('scufl', $scufl),
-            hidden('portname', $oldPortName),
-            hidden('action',"execute"),
-            submit("Execute This Service"),
-            end_form());
+            my $formName = &getNextFormID();
+            my $secondaryParams = serviceHasParameters(service => $SERVICE, formName => $formName);  # does the service consume secondaries?
+            my $serviceName = $SERVICE->name;
+            my $form= join "",
+                start_form(-action => url(-full), -name=> $formName ),
+                hidden('namespace',$namespace[0]),
+                hidden('id',$id),
+                hidden('sid',$sid),
+                hidden('servicename', $serviceName),
+                hidden('authority',$SERVICE->authority),
+                hidden('object', $XML_Object),
+                hidden('scufl', $scufl),
+                hidden('portname', $oldPortName),
+                hidden('action',"execute"),
+                $secondaryParams, 
+                submit("Execute This Service");
+            foreach my $sec(@{$SERVICE->secondary}){
+                my $an = $sec->articleName;
+                $an =~ s/\s/\_mobydelimiter\_/g;
+                my $def = $sec->default || "";
+                $form .= hidden("secondary_$an", $def);
+            }
+            $form .= end_form();
             my $email = $SERVICE->contactEmail;
             my @outtypes;
             my $collection = 0;
@@ -440,6 +452,8 @@ sub init {
 
             TR({-valign=>'top', -class=>'databody'},
             th({-colspan=>3,-align => 'left', -valign=>'top', -class=>'datatitle'},"")),
+            "<tr><td colspan=2><hr width = 25%></td></tr>";
+
     }
     print end_table();
     print_bottom($CONFIG,"BioMOBY project:  http://www.biomoby.org");
@@ -448,13 +462,17 @@ sub init {
 sub firstTimeInit {
         print_top("MOBY-S Client Initialization");
         print $CONFIG->header || h1("MOBY-S Client Initialization");
-        print h1("Initialization Required");
-        print h2("This browsing session must be primed with a Namespace and ID:");
+        print h1("Please select a starting-point for your exploration.");
+        print h3("(First-time users please see the full instructions below)");
         &INITIALIZE;
-	print h2("Instructions");
+	print br, br, "<center>", h2("Instructions"), "</center>";
 	print "
-This browser utilizes BioMoby as a data-driven Web Service discovery system - it discovers bioinformatics resources that can consume whatever data-type is currently displayed in your browser window.  
-To begin your browsing session you must provide a starting point for your exploration in the form of a <b>Namespace</b> <i>(the common abbreviation for a particular category of identifiers)</i>, and an <b>ID</b> <i>(the identifier itself)</i>.  
+The purple-coloured labels on all interface buttons and boxes will provide pop-up help windows if you forget how to use them.
+
+<br><br>This browser utilizes BioMoby as a data-driven Web Service discovery system - it 
+discovers bioinformatics resources that can consume whatever data-type is currently displayed in your browser window.  
+To begin your browsing session you must provide a starting point for your exploration - the piece of data you are interested in knowing something more about.  This takes the form of a <b>Namespace</b> 
+<i>(the common abbreviation for a particular database)</i>, and an <b>ID</b> <i>(the identifier itself)</i>.  
 For example, the Genbank record for the <i>Arabidopsis</i> ubiquitin conjugating enzyme (gi|431260) is in the Namespace NCBI_gi with the ID 431260.  After selecting the Namespace and ID that you are interested in, click the 
 <b>Initialize</b> button below to begin searching for appropriate bioinformatics services.  An example Namespace and ID have been selected for you already if you want to start exploring quickly!";
 	print "<br><br>After initialization, you will be presented with a selection of services that consume the data-type you initialized.  The services description includes the <b>Service Name</b>, the Web domain of the 
@@ -566,6 +584,16 @@ sub execute {
     my $oldOutputPortName = param('portname');  # the port of the last service executed - needed for SCUFL connection
     $OBJECT ||= "<Object namespace='$namespace' id='$id'/>";  # this should never happen, but just in case... make a default base object
 
+    my @paramnames = param();
+    my %serviceParams;
+    foreach my $param(@paramnames){
+        next unless $param =~/secondary_(\S+)/;
+        my $paramname = $1;
+        $paramname =~ s/\_mobydelimiter\_/ /g;
+        my $value = param($param);
+        $serviceParams{"$paramname"} = "<Value>$value</Value>";
+    }
+
     print_top("BioMOBY Details: $namespace:$id");
     print $CONFIG->header || h1("$namespace:$id Details");
     print p;
@@ -603,7 +631,10 @@ sub execute {
     } else {
 	$newOutputPortName = "$service"."__$sid:$outputObjectType($outputArticleName)";  # SCUFL needs this to connect ports together.  This is a record of the last 
     }
-    my $scufl = &addSCUFLService($SI, $oldOutputPortName, $sid);    # append the selected service to the SCUFL document, connect old port name to the input of this new service
+    my $scufl = &addSCUFLService(instance => $SI,
+                                 oldPort => $oldOutputPortName,
+                                 serviceID => $sid,
+                                 params => \%serviceParams);    # append the selected service to the SCUFL document, connect old port name to the input of this new service
 
 
     my $WSDL = $Central->retrieveService($SI); # get the WSDL
@@ -612,7 +643,8 @@ sub execute {
     print h2("\nBioMOBY Service: ".($SI->name)),i($SI->description),hr,h2("\nResult for $namespace:$id\n");
     my $result;
 
-    eval {$result = $SERVICE->execute(XMLinputlist => [["$articleName", $OBJECT]]);};
+    eval {$result = $SERVICE->execute(XMLinputlist => [["$articleName", $OBJECT, %serviceParams]]);};
+
     unless ($result){
         print h3("404 - Service returned no response.  This indicates that this service is currently unavailable.  Try again later.");
         exit 0;
@@ -628,8 +660,8 @@ sub execute {
 		$code = "200";
 		$message = "UNKNOWN NAME";
 	}
-        print h3("ERROR $code"), "<br><br>The following information may assist you in determining the cause of the failure: $message<br><br>Please contact your service provider (<a href='mailto:$provider'>$provider</a>) for more 
-assistance.  Error codes are derived from the Life Sciences Analysis Engine specification <a href='http://www.omg.org/cgi-bin/doc?dtc/2005-04-01'>http://www.omg.org/cgi-bin/doc?dtc/2005-04-01</a>.  This may assist you if you 
+        print h3("ERROR $code $message"), "<br><br><br>Please contact this service provider (<a href='mailto:$provider'>$provider</a>) for more 
+assistance.  <br><br>Error codes are derived from the Life Sciences Analysis Engine specification <a href='http://www.omg.org/cgi-bin/doc?dtc/2005-04-01'>http://www.omg.org/cgi-bin/doc?dtc/2005-04-01</a>.  This may assist you if you 
 have further difficulties\n";
         exit 0;
     }
@@ -646,9 +678,10 @@ have further difficulties\n";
     Delete_all();  # reset all CGI parameters so we don't conflict
     print start_table;
     my @colls = @{$collections};  # flatten the list of lists
+    my $MOBYClass;  # need to retain this to pass to the SCUFL in case it is a child of a base64-encoded
     foreach my $objlist($objects, @colls){  # we just treat collections as simples here.
         foreach (@{$objlist}){
-            my $MOBYClass = $_->tagName; #FIXME - this might be qualified
+            $MOBYClass = $_->tagName; #FIXME - this might be qualified
             if ($MOBYClass =~ /^(moby:)(.*)/) {
  	        $MOBYClass = $2;
             }
@@ -681,11 +714,17 @@ have further difficulties\n";
                 print "<!-- SCRAPE_ME_START -->";
             &printIt($_);
                 print "<!-- SCRAPE_ME_END -->";
+		print "<tr><td colspan=2><hr width = 25%></td></tr>";
+
         }
     }
     print end_table;
 
-    &getSCUFLButton($scufl, $newOutputPortName);  # note that this routine collects the new port name, so if you move this button be sure that the NEW port name is available!
+    &getSCUFLButton(scufl => $scufl,
+                    outPort => $newOutputPortName,
+                    objectType => $MOBYClass,
+                    articleName => $outputArticleName,
+                    );  # note that this routine collects the new port name, so if you move this button be sure that the NEW port name is available!
 
     print_bottom("of the gbrowse_moby executable written by the <a href='http://www.biomoby.org'>BioMOBY project</a> (http://www.biomoby.org)");    
 }
@@ -746,7 +785,6 @@ sub printIt {
         next if ($subnode->tagName eq "CrossReference" or $subnode->tagName eq "moby:CrossReference"); #FIXME check for qualified
         &printIt($subnode);
     }
-    print "<tr><td colspan=2><hr width = 25%></td></tr>";
 
 }
 
@@ -776,7 +814,9 @@ sub setupFilters {
     my (%args) = @_;
     my @providers = @{$args{providers}};
     my $x = "<table border=1><tr><td>".(checkbox_group(-name => 'expandObjects', -values => ['?'], -checked=>"ON"));
-    $x .= "<SPAN title=' When this box is checked, your input object will be decomposed into its ISA parentage and services that operate on any parent class will also be discovered. ' class='popup' cursor='help'>Semantics Enabled</span></td>";
+    $x .= "<SPAN title=' When this box is checked, your input object will be more deeply analysed and services that operate on related data-types will also be discovered and presented for execution.  
+Effectively, selecting this option expands your search to include more simplistic data-types, while de-selecting this option restricts your search to ONLY those services that consume EXACTLY the data-type 
+displayed on the screen at that moment. ' class='popup' cursor='help'>Semantics Enabled</span></td>";
     $x .= "<td><SPAN title=' Enter a comma-delimited list of keywords that should appear in the service description. ' class='popup' cursor='help'>Keywords:</span> ".( textfield(-name => 'keyword', -size => 15))."</td>";
     $x .= "<td><SPAN title=' Enter the full URI for the authority (service provider) that you want to restrict your search to.  e.g. sgn.cornell.edu ' class='popup' cursor='help'>Authority:</span> ";
     $x .= popup_menu(-name => 'authority',
@@ -787,7 +827,8 @@ sub setupFilters {
     $x .= "</td>";
     $x .= "<td><SPAN title=' Enter a valid term from the Service Type Ontology. ' class='popup' cursor='help'>Service Type:</span> ".(textfield(-name => "serviceType", -size => 10))."</td>";
     $x .= "<td><SPAN title=' Your search will be restricted to only those services that output this Object.  The ontology is NOT traversed. ' class='popup' cursor='help'>Desired Output:</span> ".(textfield(-name => "output", -size => 10))."</td>";
-    $x .= "</tr></table>";
+    $x .= "</tr>";
+    $x .= "</table>";
     return $x;
 
 }
@@ -815,13 +856,18 @@ sub INITIALIZE {
     "</td></tr>",
     "</table>";
     print "</h2>",p, &setupFilters(providers => \@providers),p,
-    submit("Initialize"),
+    submit("Explore"),
     end_form;
 
 }
 
 sub addSCUFLService {
-    my ($SI, $oldOutputPortName, $newsid) = @_;
+    my (%args) = @_;
+    my $SI = $args{instance};
+    my $oldOutputPortName = $args{oldPort};
+    my $newsid = $args{serviceID};
+    my %serviceParams = %{$args{params}};
+    
     my $inputs = $SI->input;
     my ($articleName, $datatype);
     # this code assumes only one input as a primary
@@ -847,7 +893,16 @@ sub addSCUFLService {
     <s:biomobywsdl>
       <s:mobyEndpoint>http://mobycentral.icapture.ubc.ca/cgi-bin/MOBY05/mobycentral.pl</s:mobyEndpoint>
       <s:serviceName>$name</s:serviceName>
-      <s:authorityName>$authority</s:authorityName>
+      <s:authorityName>$authority</s:authorityName>};
+      
+      while (my ($name, $value) = each %serviceParams){
+        $value =~ /\<Value\>(.*?)\<\/Value\>/;
+        $value = $1;
+        $SCUFL .= qq{
+       <s:Parameter s:name="$name">$value</s:Parameter>
+        };
+      }
+      $SCUFL .= qq{
     </s:biomobywsdl>
   </s:processor>
 
@@ -894,22 +949,66 @@ sub addSCUFLSource {
 sub retrieveSCUFL {
 
    my $scufl = param('scufl');
+   my $oldport = param('portname');
+   my $objectType = param('objectType');
+   my $articleName = param('articleName');
+   # we need to check if the current objectType is a child of text-base64
+   # if so, then we will add a parser and base64-to-binary widget to the workflow
+   # before completing it.
+   my $CENTRAL = MOBY::Client::Central->new;
+   my ($term, $lsid) = whichDeepestParentObject($CENTRAL, $objectType, ['text-base64']);
+   my $additionalWidgets = "";
+   my $finalContent = "";
+   if ($term){  # special case for binary data
+        $finalContent = qq{
+  
+  <s:processor name="Parse_Moby_Data_$objectType">
+    <s:description>Processor to parse the datatype $objectType</s:description>
+    <s:biomobyparser>
+      <s:endpoint>http://mobycentral.icapture.ubc.ca/cgi-bin/MOBY05/mobycentral.pl</s:endpoint>
+      <s:datatype>$objectType</s:datatype>
+      <s:articleName>$articleName</s:articleName>
+      <s:description>Processor to parse the datatype $objectType</s:description>
+    </s:biomobyparser>
+  </s:processor>
+  <s:link source="$oldport" sink="Parse_Moby_Data_$objectType:mobyData('$objectType')" />
+
+  <s:processor name="Decode_base64_to_byte">
+    <s:local>org.embl.ebi.escience.scuflworkers.java.DecodeBase64</s:local>
+  </s:processor>
+  <s:link source="Parse_Moby_Data_$objectType:$articleName}.qq{_'content'" sink="Decode_base64_to_byte:base64" />
+
+  <s:sink name="output">
+    <s:metadata>
+      <s:mimeTypes>
+        <s:mimeType>image/gif</s:mimeType>
+        <s:mimeType>image/jpeg</s:mimeType>
+      </s:mimeTypes>
+    </s:metadata>
+   </s:sink>
+   
+  <s:link source="Decode_base64_to_byte:bytes" sink="output" />
+        
+        };
+   } else {
+        $finalContent = qq{ 
+   <s:link source="$oldport" sink="output" />
+   <s:sink name="output"></s:sink>
+   };
+   }
+
+
 #   $scufl = decompress($scufl);
    my $head = qq{<?xml version="1.0" encoding="UTF-8"?>
                  <s:scufl xmlns:s="http://org.embl.ebi.escience/xscufl/0.1alpha" version="0.2" log="0">
-                 <s:workflowdescription lsid="urn:lsid:www.mygrid.org.uk:operation:FXBCXOWFFC0" author="" title="" />
+                 <s:workflowdescription lsid="urn:lsid:www.mygrid.org.uk:operation:generated_by_gbrowse_moby" author="Gbrowse Moby" title="" />
                  };
 
-  my $oldport = param('portname');
 
-  my $finalcontent = qq{ 
-   <s:link source="$oldport" sink="output" />
-   <s:sink name="output" />
-   };
 
    my $foot = qq{</s:scufl>};
 
-   print header(-type=>'text/xml'), $head.$scufl.$finalcontent.$foot;
+   print header(-type=>'text/xml'), $head.$scufl.$finalContent.$foot;
   
 
 }
@@ -917,13 +1016,18 @@ sub retrieveSCUFL {
 
 sub getSCUFLButton {
 
-	my ($scufl, $portname) = @_;
-
+	my (%args) = @_;
+        my $portname = $args{outPort};
+        my $scufl = $args{scufl};
+        my $objectType = $args{objectType};
+        my $articleName = $args{articleName};
 	print      "<center>",
 			start_form(-action => url(-full)),
                    hidden("scufl", $scufl),
                    hidden("portname", $portname),
                    hidden("getscufl", "true"),
+                   hidden("objectType", $objectType),
+                   hidden("articleName", $articleName),
                    submit("Retrieve Current SCUFL Workflow"),
                    end_form, "</center>";
 
@@ -939,7 +1043,188 @@ sub generateUniqueServiceID {
 
 }
 
+sub getNextFormID {
+    my $id = $nextFormID;
+    ++$nextFormID;
+    return "form$id";
+}
 
+sub serviceHasParameters {
+    my (%args)= @_;
+    my $SERVICE = $args{'service'};
+    my $formName = $args{'formName'};
+    my $serviceName = $SERVICE->name;
+    
+    my $secParamString = "";
+    
+    $secParamString= qq{
+                    <input type="button" tabindex="1"
+                    name="configure" value="Configure Parameters"
+                    title="Click here to configure secondary parameters"
+                    onclick="return open_window('parameter_configure','$serviceName',new Array(};
+    foreach (@{$SERVICE->secondary}){
+        my $min = $_->min || "";
+        my $max = $_->max || "";
+        my $def = $_->default || "";
+        my $desc = $_->description || "";
+        my $datatype = $_->datatype || "";
+        my @enum = @{$_->enum};
+        my $name = $_->articleName;
+        my $label = $name;
+        $name =~ s/\s/\_mobydelimiter\_/g;
+        $secParamString .= qq{new Array('$datatype','secondary_$name','$def','$min','$max',new Array(};
+            foreach my $en(@enum){
+                $secParamString .= qq{'$en',};
+            }
+            chop $secParamString if scalar(@enum);
+            $secParamString .= qq{),'$desc', '$label'),}
+    }
+    chop $secParamString;  # get rid of trailing comma
+    $secParamString .= qq{ ),document.$formName);"/>},
+                    
+                    
+    return $secParamString if scalar(@{$SERVICE->secondary});
+    return "";   
+}   
+
+
+sub getJSCode {
+    
+    return qq{
+    
+<script language="JavaScript" type="text/javascript">
+/*
+ * This function takes as input an array with the following:
+ * position 0: Type 	-> Float, Integer, Boolean, String, DataTime
+ * position 1: Name 	-> the article name of the parameter
+ * position 2: Default 	-> Value that parameter defaults to
+ * position 3: Min	 	-> Min value (makes sense only for Floats and Integers)
+ * position 4: Max	 	-> Max value (makes sense only for Floats and Integers)
+ * position 5: Enum 	-> An array of enum values
+ * position 6: Desc 	-> The parameters description
+ * 
+ * This function returns HTML representing a way to edit the parameter 
+ */
+ function createSecondaryWidget(array) {
+	var type = array[0];
+	var name = array[1];
+	var def = array[2];
+	var minimum = array[3];
+	var maximum = array[4];
+	var enums = array[5];
+	var desc = array[6];
+        var label = array[7];
+	if (type.toLowerCase() == 'boolean') {
+		// create a checkbox and return it
+		var html = ' <span>'+label+': </span><input type="checkbox" id="'+name+'" name="'+name+'" ' + (def == 'true' || def == 1 || def == true ? ' checked="checked" ' : ' ')+ (desc ? ' title="'+desc+'"' : '') +'/>';
+		return html;
+	} else if (type.toLowerCase() == 'integer' || type.toLowerCase() == 'float') {
+		if (enums && enums.length > 0) {
+			// create a drop down
+			var html =  '<span>'+label+': </span><select id="'+name+'" name="'+name+'" title="' + (desc ? desc : '') + ' ">';
+			for (var i = 0; i < enums.length; i++) {
+				if (enums[i] == def)
+					html+= '<option selected="selected" value="'+enums[i]+'">'+enums[i]+'</option>';
+				else
+					html+= '<option value="'+enums[i]+'">'+enums[i]+'</option>';
+			}
+			html+= '</select>';
+			return html;
+		} else if (minimum && maximum && type.toLowerCase() != 'float') {
+			var html =  '<span>'+label+': </span><select id="'+name+'" name="'+name+'" title="' + (desc ? desc : '') + ' ">';
+			for (var i = minimum; i <= maximum; i++) {
+				if (i == def)
+					html+= '<option selected="selected" value="'+i+'">'+i+'</option>';
+				else
+					html+= '<option value="'+i+'">'+i+'</option>';
+			}
+			html+= '</select>';
+			return html;
+		} else {
+			// create a text field
+			var html = '<span>'+label+': </span><input type="text" id="'+name+'" name="'+name+' "' +  (desc ? ' title="'+desc+'"' : '') + (def ? ' value="'+def+'" ' : '') + ' onchange="alert_check_value(\\''+name+'\\','+(minimum ? minimum : 'null')+','+(maximum ? maximum : 'null')+',\\''+type+'\\',\\''+ def +'\\');" />';
+			return html;
+		}
+	} else {
+		if (enums && enums.length > 0) {
+			// create a drop down
+			var html =  '<span>'+label+': </span><select id="'+name+'" name="'+name+'" title="' + (desc ? desc : '') + ' ">';
+			for (var i = 0; i < enums.length; i++) {
+				if (enums[i] == def)
+					html+= '<option selected="selected" value="'+enums[i]+'">'+enums[i]+'</option>';
+				else
+					html+= '<option value="'+enums[i]+'">'+enums[i]+'</option>';
+			}
+			html+= '</select>';
+			return html;
+		} else {
+			// create a text field
+			var html = '<span>'+label+': </span><input type="text" id="'+name+'" name="'+name+' "' + (desc ? ' title="'+desc+'"' : '') + (def ? ' value="'+def+' " ' : '') + '/>';
+			return html;
+		}
+	} 
+ }
+ 
+ function done(name) {
+	for (var i=0; i < document.forms[0].length; i++) {
+			if ('__SUBMIT__' != document.forms[0][i].name) {
+				eval ('this.opener.document.forms[name].' + document.forms[0][i].name).value = document.forms[0][i].value;
+			}
+	}
+    self.close();   
+}
+ function open_window(name, desc, array, form) {
+	OpenWindow=window.open("", name, "height=250, width=250");
+	if (!OpenWindow.opener) 
+		OpenWindow.opener = self;
+	OpenWindow.document.write("<TITLE>Configure "+desc+ "</TITLE>")
+	OpenWindow.document.write('<BODY>')
+        OpenWindow.document.write("<script>function done(name) {for (var i=0; i < document.forms[0].length; i++) {if ('__SUBMIT__' != document.forms[0][i].name) {try {eval ('this.opener.document.forms[name].' + document.forms[0][i].name).value = document.forms[0][i].value; } catch (e) {}}}self.close();}")
+        OpenWindow.document.write(" function alert_check_value(name, minimum, maximum, type, def) {"+
+"	var value2 = document.getElementById(name).value;"+
+"	if (type.toLowerCase() == 'integer') {"+
+"		if (!document.getElementById(name).value.match(/^[+|-]?\\\\d+\$/)) {"+
+"	    	alert('Invalid input: ' + value2 + ' is not an integer! Please enter an integer!' );"+
+"		    document.getElementById(name).value = (def?def:'');"+
+"   		document.getElementById(name).focus();"+
+"		    return;"+
+"		}"+
+"	} else {"+
+"		if (!document.getElementById(name).value.match(/^[+|-]?\\\\d+\\\\.?\\\\d*\$/)) {"+
+"	    	alert('Invalid input: ' + value2 + ' is not a float. Please enter a float!' );"+
+"		    document.getElementById(name).value = (def?def:'');"+
+"   		document.getElementById(name).focus();"+
+"		    return;"+
+"		}"+
+"	}"+
+"	if (maximum && value2 > maximum) {"+
+"		alert('Please make sure that the value is less than ' + maximum);"+
+"		document.getElementById(name).value = (def?def:'');"+
+"  		document.getElementById(name).focus();"+
+"		return;"+
+"	}"+
+"	if (minimum && value2 < minimum) {"+
+"		alert('Please make sure that the value is greater than ' + minimum);"+
+"		document.getElementById(name).value = (def?def:'');"+
+"  		document.getElementById(name).focus();"+
+"		return;"+
+"	}"+
+" }<\\/script>");
+	OpenWindow.document.write('<form>')
+	for (var i=0; i < array.length; i++) {
+		OpenWindow.document.write(createSecondaryWidget(array[i])+ "<p>")
+	}
+	OpenWindow.document.write('<p><input type="button" name="__SUBMIT__" value="Done" onclick="done(\\''+form.name+'\\');"/>');
+	OpenWindow.document.write('</form>')
+	OpenWindow.document.write("</BODY>")
+	OpenWindow.document.write("</HTML>")
+	OpenWindow.document.close()
+	return false;
+ }
+ </script>
+};
+    
+}
 #=================================================
 
 

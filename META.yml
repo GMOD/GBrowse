@@ -1,12 +1,15 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Generic-Genome-Browser
-version:      1.65
+version:      1.66
 version_from: 
 installdirs:  site
 requires:
     Bio::Perl:                     1.5
     CGI::Session:                  4.02
+    Class::Base:                   0
+    Digest::MD5:                   0
+    File::Temp:                    0
     GD:                            2.07
     IO::String:                    0
     Text::Shellwords:              1.08

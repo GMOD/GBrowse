@@ -14,7 +14,7 @@ cgi-bin/gbrowse_karyotype.PLS
 cgi-bin/gbrowse_moby.PLS
 cgi-bin/moby_server.PLS
 cgi-bin/README
-tutorial_test.pl
+cgi-bin/tutorial_test.pl
 Changes
 conf/enzymes.txt
 conf/languages/de.pm

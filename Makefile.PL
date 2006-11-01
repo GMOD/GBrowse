@@ -203,7 +203,7 @@ WriteMakefile(
 	      'NAME'	     => 'Generic-Genome-Browser',
 	      'VERSION'      => $VERSION,
 	      'PREREQ_PM'    => {
-				 Bio::Perl         => 1.5,
+				 Bio::Perl         => 1.52,
 				 GD                => 2.07,
 				 IO::String        => 0,
 				 Text::Shellwords  => 1.08,

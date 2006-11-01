@@ -5,7 +5,7 @@ version:      1.66
 version_from: 
 installdirs:  site
 requires:
-    Bio::Perl:                     1.5
+    Bio::Perl:                     1.52
     CGI::Session:                  4.02
     Class::Base:                   0
     Digest::MD5:                   0

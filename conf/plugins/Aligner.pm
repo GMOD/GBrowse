@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::Aligner;
-# $Id: Aligner.pm,v 1.6.4.1.2.3 2006-10-11 22:34:40 lstein Exp $
+# $Id: Aligner.pm,v 1.6.4.1.2.4 2006-11-01 17:28:39 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -165,31 +165,40 @@ sub dump {
     warn "f strand = ",$f->strand if DEBUG;
     my @s = $f->segments;
     @s    = $f unless @s;
+    @s    = grep {$abs_start<=$_->abs_end && $abs_end>=$_->abs_start} @s;
 
     for my $s (@s) {
       my $target = $s->target;
       my ($src_start,$src_end) = ($s->start,$s->end);
       my ($tgt_start,$tgt_end) = ($target->start,$target->end);
 
+      my $flip_bug;
+
       unless (exists $strands{$target}) {
 	my $strand = $f->strand;
 	if ($tgt_start > $tgt_end) {
 	  $strand    = -1;
 	  ($tgt_start,$tgt_end) = ($tgt_end,$tgt_start);
+	  $flip_bug++;
 	}
-	$strands{$target} = $strand;
+	$strands{$target}         = $strand;
+	$strands{$target->seq_id} = $strand;
       }
 
       # Realign the segment a bit
       my ($sdna,$tdna) = ($s->dna,$target->dna);
+      if ($flip_bug) {
+	$sdna = reversec($sdna);
+	$tdna = reversec($tdna);
+      }
       warn "raw alignment:\n" if DEBUG;
       warn   $sdna,"\n",$tdna,"\n" if DEBUG;
       warn   "Realigning [$target,$src_start,$src_end,$tgt_start,$tgt_end].\n" if DEBUG;
       my @result = $self->realign($sdna,$tdna);
       foreach (@result) {
 	warn "=========> [$target,@$_]\n" if DEBUG;
-	my $a = $strands{$target} >= 0 ? [$target,$_->[0]+$src_start,$_->[1]+$src_start,$_->[2]+$tgt_start,$_->[3]+$tgt_start]
-	                               : [$target,$src_end-$_->[1],$src_end-$_->[0],$_->[2]+$tgt_start,$_->[3]+$tgt_start];
+	my $a = $strands{$target} >= 0 ? [$target->seq_id,$_->[0]+$src_start,$_->[1]+$src_start,$_->[2]+$tgt_start,$_->[3]+$tgt_start]
+	                               : [$target->seq_id,$src_end-$_->[1],$src_end-$_->[0],$_->[2]+$tgt_start,$_->[3]+$tgt_start];
 	warn "[$target,$_->[0]+$src_start,$_->[1]+$src_start,$tgt_end-$_->[3],$tgt_end-$_->[2]]" if DEBUG;
 	warn "=========> [@$a]\n" if DEBUG;
 	warn substr($sdna,     $_->[0],$_->[1]-$_->[0]+1),"\n" if DEBUG;
@@ -234,12 +243,11 @@ sub dump {
       if !defined $clip{$target}{high} || $seg->[TGT_END] > $clip{$target}{high};
   }
 
-
   my $ragged = $configuration->{ragged} || 0;
 
   # sort aligned sequences from left to right and store them in the data structure
   # needed by Bio::Graphics::Browser::PadAlignment
-  my @sequences = ($segment->display_name => $ref_dna);
+  my @sequences = ($segment->seq_id => $ref_dna);
 
   my %seqs;
   for my $t (sort {$clip{$a}{low}<=>$clip{$b}{low}} keys %clip) {

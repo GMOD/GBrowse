@@ -3,7 +3,10 @@ package GuessDirectories;
 # this package never gets installed - it's just used by Makefile.PL
 sub conf {
   if ($^O =~ /mswin/i) {  # windows system
-    for ('C:/Program Files/Apache Group/Apache2/conf',
+    for ('C:/Program Files/Apache Software Foundation/Apache2.3/conf',
+	 'C:/Program Files/Apache Software Foundation/Apache2.2/conf',
+	 'C:/Program Files/Apache Software Foundation/Apache2.1/conf',
+	 'C:/Program Files/Apache Group/Apache2/conf',
 	 'C:/Program Files/Apache Group/Apache/conf',
 	 'C:/Apache/conf',
 	 'C:/Apache2/conf') {
@@ -23,7 +26,11 @@ sub conf {
 
 sub htdocs {
   if ($^O =~ /mswin/i) {  # windows system
-    for ('C:/Program Files/Apache Group/Apache2/htdocs',
+    for (
+	 'C:/Program Files/Apache Software Foundation/Apache2.3/htdocs',
+	 'C:/Program Files/Apache Software Foundation/Apache2.2/htdocs',
+	 'C:/Program Files/Apache Software Foundation/Apache2.1/htdocs',
+	 'C:/Program Files/Apache Group/Apache2/htdocs',
 	 'C:/Program Files/Apache Group/Apache/htdocs',
 	 'C:/Apache/htdocs',
 	 'C:/Apache2/htdocs') {
@@ -43,7 +50,11 @@ sub htdocs {
 
 sub cgibin {
   if ($^O =~ /mswin/i) {  # windows system
-    for ('C:/Program Files/Apache Group/Apache2/cgi-bin',
+    for (
+	 'C:/Program Files/Apache Software Foundation/Apache2.3/cgi-bin',
+	 'C:/Program Files/Apache Software Foundation/Apache2.2/cgi-bin',
+	 'C:/Program Files/Apache Software Foundation/Apache2.1/cgi-bin',
+	 'C:/Program Files/Apache Group/Apache2/cgi-bin',
 	 'C:/Program Files/Apache Group/Apache/cgi-bin',
 	 'C:/Apache/cgi-bin',
 	 'C:/Apache2/cgi-bin') {

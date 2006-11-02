@@ -1,0 +1,98 @@
+/*-----------------------------------------------------
+   Written by Andrew Uzilov, November 2005 - current
+   Laboratory of Dr. Ian Holmes
+   Department of Bioengineering
+   University of California - Berkeley
+   Berkeley, CA, USA
+-----------------------------------------------------*/
+
+/* general stuff */
+
+.header1 {
+     font: 16pt sans-serif;
+     }
+.header2 {
+     font: 14pt sans-serif;
+     }
+
+b { 
+    font: bold 11pt sans-serif;
+    }
+p { 
+    font: 11pt sans-serif;
+    }
+ul { 
+     font: 11pt sans-serif;
+     }
+
+/* ViewerComponent */
+
+.outerDiv { 
+            border: 1px solid black;
+            overflow: hidden;
+            position: relative;  /* DO NOT CHANGE THE 'position' ATTRIBUTE!
+                                    The entire draggable setup depends on it being 'relative'
+                                    ('static' doesn't work, probably because it's not DHTML).
+                                    */
+            }
+#outerDivPanel { 
+                 width: 25px;
+                 height: 500px;  /* outerDivMain height will also be equal to this */
+                 }
+
+.dragDiv { 
+           position: absolute;
+           }
+#dragDivRuler { 
+                top: 0px;
+                }
+#dragDivPanel { 
+                left: 0px;
+                }
+
+.panelDiv { 
+            position: relative;
+            width: 25px;
+            }
+
+#dragDivTrackLabels {
+                      width: 300px;  /* need to keep to prevent wrapping of labels */
+                      }
+.trackLabelDiv {
+                 position: absolute;
+                 z-index: 1;
+                 font: 10pt sans-serif;
+                 font-weight: bold;
+                 color: white;
+                 padding: 2px 2px 2px 2px;
+                 opacity: 0.80;  /* this will only work in Firefox */
+                 }
+
+.innerDiv { 
+            position: absolute;
+            top: 0px;
+           }
+
+.trackDiv { 
+            position: relative;  /* DO NOT CHANGE (very important for correct layout) */
+            }
+
+.tileDiv { 
+           position: absolute;
+           top: 0px;
+           }
+
+.tileImg { 
+           position: absolute;
+           left: 0px;
+           top: 0px;
+           z-index: 0;
+           }
+
+/* NavigationComponent */
+
+.trackControlElement { 
+                       color: #FFFFFF;
+                       border: #999999;  /* this actually makes the border disappear... WHY? !!! */
+                       margin: 1px 1px 1px 1px;
+                       }

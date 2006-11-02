@@ -326,7 +326,7 @@ sub MY::postamble {
   }
 qq{
 conf_install ::
-	\$(PERL) \"$working_dir/install_util/conf_install.pl\" $paths
+	\$(PERL) \"$working_dir/install_util/conf_install.pl\" $paths 
 
 htdocs_install ::
 	\$(PERL) \"$working_dir/install_util/htdocs_install.pl\" $paths
@@ -335,7 +335,7 @@ cgi_install ::
 	\$(PERL) \"$working_dir/install_util/cgi_install.pl\" $paths
 
 };
-}
+} 
 
 sub MY::libscan {
   package MY;

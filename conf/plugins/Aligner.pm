@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::Aligner;
-# $Id: Aligner.pm,v 1.11 2006-10-11 13:33:33 lstein Exp $
+# $Id: Aligner.pm,v 1.12 2006-11-02 03:19:56 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -12,7 +12,7 @@ use constant DEBUG => 0;
 use constant DEFAULT_RAGGED_ENDS => (0,10,25,50,100,150,500);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.21';
+$VERSION = '0.23';
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
 use constant TARGET    => 0;
@@ -137,7 +137,6 @@ sub dump {
 
   my ($abs_start,$abs_end) = ($segment->start,$segment->end);
 
-
   # do upcasing
   if (my $upcase_track  = $configuration->{upcase}) {
     my @upcase_types    = shellwords($browser->setting($upcase_track=>'feature'));
@@ -162,36 +161,47 @@ sub dump {
   my (@segments,%strands);
 
   for my $f (@features) {
+    warn "f strand = ",$f->strand if DEBUG;
     my @s = $f->segments;
     @s    = $f unless @s;
+    @s    = grep {$abs_start<=$_->abs_end && $abs_end>=$_->abs_start} @s;
 
     for my $s (@s) {
       my $target = $s->target;
       my ($src_start,$src_end) = ($s->start,$s->end);
       my ($tgt_start,$tgt_end) = ($target->start,$target->end);
 
+      my $flip_bug;
+
       unless (exists $strands{$target}) {
 	my $strand = $f->strand;
 	if ($tgt_start > $tgt_end) {
 	  $strand    = -1;
 	  ($tgt_start,$tgt_end) = ($tgt_end,$tgt_start);
+	  $flip_bug++;
 	}
-	$strands{$target} = $strand;
+	$strands{$target}         = $strand;
+	$strands{$target->seq_id} = $strand;
       }
 
       # Realign the segment a bit
-      warn   "Realigning [$target,$src_start,$src_end,$tgt_start,$tgt_end].\n" if DEBUG;
       my ($sdna,$tdna) = ($s->dna,$target->dna);
+      if ($flip_bug) {
+	$sdna = reversec($sdna);
+	$tdna = reversec($tdna);
+      }
+      warn "raw alignment:\n" if DEBUG;
       warn   $sdna,"\n",$tdna,"\n" if DEBUG;
+      warn   "Realigning [$target,$src_start,$src_end,$tgt_start,$tgt_end].\n" if DEBUG;
       my @result = $self->realign($sdna,$tdna);
       foreach (@result) {
-	next unless $_->[1]+$src_start >= $abs_start && $_->[0]+$src_start <= $abs_end;
 	warn "=========> [$target,@$_]\n" if DEBUG;
-	my $a = $strands{$target} >= 0 ? [$target,$_->[0]+$src_start,$_->[1]+$src_start,$_->[2]+$tgt_start,$_->[3]+$tgt_start]
-	                               : [$target,$_->[0]+$src_start,$_->[1]+$src_start,$tgt_end-$_->[3],$tgt_end-$_->[2]];
+	my $a = $strands{$target} >= 0 ? [$target->seq_id,$_->[0]+$src_start,$_->[1]+$src_start,$_->[2]+$tgt_start,$_->[3]+$tgt_start]
+	                               : [$target->seq_id,$src_end-$_->[1],$src_end-$_->[0],$_->[2]+$tgt_start,$_->[3]+$tgt_start];
+	warn "[$target,$_->[0]+$src_start,$_->[1]+$src_start,$tgt_end-$_->[3],$tgt_end-$_->[2]]" if DEBUG;
 	warn "=========> [@$a]\n" if DEBUG;
 	warn substr($sdna,     $_->[0],$_->[1]-$_->[0]+1),"\n" if DEBUG;
-	warn substr($tdna,$_->[2],$_->[3]-$_->[2]+1),"\n" if DEBUG;
+	warn substr($tdna,$_->[2],$_->[3]-$_->[2]+1),"\n"      if DEBUG;
 	push @segments,$a;
       }
     }
@@ -200,6 +210,8 @@ sub dump {
   # We're now going to do all the alignments
   my %clip;
   for my $seg (@segments) {
+
+    warn "clipping [@$seg]\n" if DEBUG;
     my $target = $seg->[TARGET];
 
     # left clipping
@@ -225,6 +237,7 @@ sub dump {
     my $length = $seg->[SRC_END]-$seg->[SRC_START]+1;
     $seg->[TGT_END] = $seg->[TGT_START]+$length-1;
 
+    warn "Clipping gives [@$seg]\n" if DEBUG;
     $clip{$target}{low} = $seg->[TGT_START]
       if !defined $clip{$target}{low} || $clip{$target}{low} > $seg->[TGT_START];
     $clip{$target}{high} = $seg->[TGT_END]
@@ -235,7 +248,7 @@ sub dump {
 
   # sort aligned sequences from left to right and store them in the data structure
   # needed by Bio::Graphics::Browser::PadAlignment
-  my @sequences = ($segment->display_name => $ref_dna);
+  my @sequences = ($segment->seq_id => $ref_dna);
 
   my %seqs;
   for my $t (sort {$clip{$a}{low}<=>$clip{$b}{low}} keys %clip) {
@@ -258,9 +271,11 @@ sub dump {
 
   for my $seg (@segments) {
     my ($target,$src_start,$src_end,$tgt_start,$tgt_end) = @$seg;
+    warn "clip high = $clip{$target}{high}" if DEBUG;
     warn "was [$target,$src_start,$src_end,$tgt_start,$tgt_end]" if DEBUG;
     $seg->[SRC_START] -= $abs_start;
     $seg->[SRC_END]   -= $abs_start;
+
     if ($strands{$target} >= 0) {
       $seg->[TGT_START] -= $clip{$target}{low};
       $seg->[TGT_END]   -= $clip{$target}{low};
@@ -272,10 +287,15 @@ sub dump {
     warn "is  [$target,$src_start,$src_end,$tgt_start,$tgt_end]" if DEBUG;
   }
 
+  # remove segments that got clipped out of existence
+  @segments = grep { $_->[SRC_START]<=$_->[SRC_END] } @segments;
+
   if (DEBUG) {
+    warn "DEBUG:";
     my %sequences = @sequences;
     foreach (@segments) {
       my ($t,$s,$e,$ts,$te) = @$_;
+      warn "[@$_]\n";
       warn substr($sequences{$segment->display_name},$s,$e-$s+1),"\n";
       warn substr($sequences{$t},$ts,$te-$ts+1),"\n";
     }
@@ -288,12 +308,12 @@ sub dump {
   print pre($align->alignment(\%offsets,{show_mismatches => 1,
 					 flip            => $configuration->{flip}}
 			     ));
-  				 
 }
 
 sub realign {
   my $self = shift;
   my ($src,$tgt) = @_;
+  warn join "\n",Bio::Graphics::Browser::Realign::align($src,$tgt) if DEBUG;
   return align_segs($src,$tgt);
 }
 

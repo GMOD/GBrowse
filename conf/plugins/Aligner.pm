@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::Aligner;
-# $Id: Aligner.pm,v 1.6.4.1.2.4 2006-11-01 17:28:39 lstein Exp $
+# $Id: Aligner.pm,v 1.6.4.1.2.5 2006-11-02 03:19:12 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -12,7 +12,7 @@ use constant DEBUG => 0;
 use constant DEFAULT_RAGGED_ENDS => (0,10,25,50,100,150,500);
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.22';
+$VERSION = '0.23';
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
 use constant TARGET    => 0;
@@ -20,7 +20,6 @@ use constant SRC_START => 1;
 use constant SRC_END   => 2;
 use constant TGT_START => 3;
 use constant TGT_END   => 4;
-use constant TGT_LEN   => 5;
 
 sub name { "Alignments" }
 
@@ -211,6 +210,8 @@ sub dump {
   # We're now going to do all the alignments
   my %clip;
   for my $seg (@segments) {
+
+    warn "clipping [@$seg]\n" if DEBUG;
     my $target = $seg->[TARGET];
 
     # left clipping
@@ -269,8 +270,8 @@ sub dump {
   }
 
   for my $seg (@segments) {
-    my ($target,$src_start,$src_end,$tgt_start,$tgt_end,$tgt_len) = @$seg;
-    warn "clip high = $clip{$target}{high}, length = $tgt_len" if DEBUG;
+    my ($target,$src_start,$src_end,$tgt_start,$tgt_end) = @$seg;
+    warn "clip high = $clip{$target}{high}" if DEBUG;
     warn "was [$target,$src_start,$src_end,$tgt_start,$tgt_end]" if DEBUG;
     $seg->[SRC_START] -= $abs_start;
     $seg->[SRC_END]   -= $abs_start;
@@ -286,10 +287,15 @@ sub dump {
     warn "is  [$target,$src_start,$src_end,$tgt_start,$tgt_end]" if DEBUG;
   }
 
+  # remove segments that got clipped out of existence
+  @segments = grep { $_->[SRC_START]<=$_->[SRC_END] } @segments;
+
   if (DEBUG) {
+    warn "DEBUG:";
     my %sequences = @sequences;
     foreach (@segments) {
       my ($t,$s,$e,$ts,$te) = @$_;
+      warn "[@$_]\n";
       warn substr($sequences{$segment->display_name},$s,$e-$s+1),"\n";
       warn substr($sequences{$t},$ts,$te-$ts+1),"\n";
     }

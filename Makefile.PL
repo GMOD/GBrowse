@@ -146,7 +146,7 @@ unless ($OPTIONS{CGIBIN}) {
   $OPTIONS{CGIBIN} = GuessDirectories->cgibin || "$OPTIONS{APACHE}/cgi-bin";
 }
 unless (defined $OPTIONS{DO_XS}) {
-  $OPTIONS{DO_XS}  = $^O =~ /^(MSWin|dos)/i ? '' : 1;
+  $OPTIONS{DO_XS}  = $^O =~ /^(MSWin|dos)/i ? 0 : 1;
 }
 
 # look for non-root installation 

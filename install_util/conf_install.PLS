@@ -29,7 +29,7 @@ my $homedir = "$Bin/..";
 chdir $homedir or die "couldn't cd to $homedir: $!\n";
 
 foreach (@ARGV) {
-  $_ =~ s/^\'(.*)\'$/$1/;
+  $_ =~ s/^\"(.*)\"$/$1/;
 }
 
 # get configuration stuff from command line

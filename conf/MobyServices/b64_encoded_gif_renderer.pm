@@ -4,21 +4,17 @@ use XML::LibXML;
 use MOBY::MobyXMLConstants;
 our @ISA = qw(Exporter);
 use File::Temp qw/ tempfile /;
-#our @EXPORT = qw(render type);
 our @EXPORT_OK = qw(render type);
 use MIME::Base64;
 
-sub type {
-    return "b64_encoded_gif";
+sub types {
+    return ["b64_encoded_gif"];
 }
 
 sub render {
     my ($DOM, $htmldir,$imgdir) = @_;
     my $content;
-    foreach my $subnode($DOM->childNodes){
-        next unless  (($subnode->nodeType == TEXT_NODE) || ($subnode->nodeType == CDATA_SECTION_NODE));
-        $content .=$subnode->textContent;
-    }
+    $content = &getStringContent($DOM);
     $content =~ s/^\s+//; $content =~ s/\s+$//;
     my $bindata = decode_base64($content);
     my ($fh, $filename) = tempfile( DIR => "$htmldir/$imgdir/", SUFFIX=> ".gif" );
@@ -27,7 +23,28 @@ sub render {
     binmode($fh);
     print $fh $bindata;
     close $fh;
-    return ("<img src='$imgdir/$filename'>", 0);  # the 0 indicates that we have only rendered the top-level XML of this object
+    return ("<img src='$imgdir/$filename'>");
+}
+
+sub getStringContent {
+    my ($ROOT) = @_;
+    my $content;
+    my @childnodes = $ROOT->childNodes;
+    foreach (@childnodes){
+	next unless ($_->nodeType == ELEMENT_NODE);
+	next unless ($_->localname eq "String");
+	my $article = $_->getAttributeNode('articleName');
+	$article = $_->getAttributeNode('moby:articleName') unless $article;
+	next unless $article;
+	next unless $article->getValue eq 'content'; # the articleName for String content of a text-xml node
+	foreach my $subnode($_->childNodes){ # if it is correct, then get the text content
+	    next unless  (($subnode->nodeType == TEXT_NODE) || ($subnode->nodeType == CDATA_SECTION_NODE));
+	    $content .=$subnode->textContent;
+	}
+        $ROOT->removeChild($_);
+	last;
+    }
+    return $content;
 }
 
 1;

@@ -3,24 +3,53 @@ use strict;
 use XML::LibXML;
 use MOBY::MobyXMLConstants;
 our @ISA = qw(Exporter);
-#our @EXPORT = qw(render type);
 our @EXPORT_OK = qw(render type);
 
 
-sub type {
-    return "text-plain";
+sub types {
+    return ["text-plain", "String", "Integer", "DateTime", "Float"];
 }
+
 
 sub render {
     my ($DOM, $htmldir,$imgdir) = @_;
-    my $content;
-    foreach my $subnode($DOM->childNodes){
-        next unless  (($subnode->nodeType == TEXT_NODE) || ($subnode->nodeType == CDATA_SECTION_NODE));
-        $content .=$subnode->textContent;
+    my $content = "";
+    my (%union, %isect);
+    foreach my $e ($DOM->localname, ("String", "Integer", "DateTime", "Float")) { $union{$e}++ && $isect{$e}++ };  # get intersection of nodename and list of primitive nodes we can handle
+    
+    if (keys %isect){  # if the incoming node is one of the primitives keys will return something
+	foreach my $subnode($DOM->childNodes){ # if it is correct, then get the text content
+	    next unless  (($subnode->nodeType == TEXT_NODE) || ($subnode->nodeType == CDATA_SECTION_NODE));
+	    $content .=$subnode->textContent;
+	}
+    } else {
+        $content = &getStringContent($DOM);
+        $content =~ s/^\s+//; $content =~ s/\s$//;  # get rid of leading and trailing spaces since they are meaningless in a plaintext object
     }
-    $content =~ s/^\s+//; $content =~ s/\s$//;  # get rid of leading and trailing spaces since they are meaningless in a plaintext object
-    return ("$content",0);# the 0 indicates that we have only rendered the top-level XML of this object
+    return ("$content");# the 0 indicates that we have only rendered the top-level XML of this object
 }
+
+sub getStringContent {
+    my ($ROOT) = @_;
+    my $content;
+    my @childnodes = $ROOT->childNodes;
+    foreach (@childnodes){
+	next unless ($_->nodeType == ELEMENT_NODE);
+        next unless (($_->localname eq "String") || ($_->localname eq "Integer") || ($_->localname eq "DateTime") || ($_->localname eq "Float"));
+	my $article = $_->getAttributeNode('articleName');
+	$article = $_->getAttributeNode('moby:articleName') unless $article;
+	next unless $article;
+	next unless $article->getValue eq 'content'; # the articleName for String content of a text-xml node
+	foreach my $subnode($_->childNodes){ # if it is correct, then get the text content
+	    next unless  (($subnode->nodeType == TEXT_NODE) || ($subnode->nodeType == CDATA_SECTION_NODE));
+	    $content .=$subnode->textContent;
+	}
+        $ROOT->removeChild($_);
+	last;
+    }
+    return $content;
+}
+
 
 1;
 

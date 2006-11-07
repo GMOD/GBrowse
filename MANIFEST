@@ -10,7 +10,6 @@ cgi-bin/gbrowse.PLS
 cgi-bin/gbrowse_details.PLS
 cgi-bin/gbrowse_est.PLS
 cgi-bin/gbrowse_img.PLS
-cgi-bin/gbrowse_karyotype.PLS
 cgi-bin/gbrowse_moby.PLS
 cgi-bin/moby_server.PLS
 cgi-bin/README
@@ -39,6 +38,7 @@ conf/MobyServices/moby.conf
 conf/MobyServices/text_formatted_renderer.pm
 conf/MobyServices/text_html_renderer.pm
 conf/MobyServices/text_plain_renderer.pm
+conf/MobyServices/text_xml_renderer.pm
 conf/plugins/Aligner.pm
 conf/plugins/AlignTwoSequences.pm
 conf/plugins/AttributeHiliter.pm
@@ -100,6 +100,17 @@ contrib/install_macosx/README.pod
 contrib/install_macosx/scripts/build-gbrowse.pl
 contrib/install_macosx/scripts/build-libraries.pl
 contrib/README
+contrib/SynView.tar
+contrib/SynView/cgi-lib/DAS/GUS.pm
+contrib/SynView/cgi-lib/DAS/GUS/Segment.pm
+contrib/SynView/cgi-lib/DAS/GUS/Segment/Feature.pm
+contrib/SynView/cgi-lib/DAS/Util/SqlParser.pm
+contrib/SynView/gbrowse.conf/plasmodb.conf
+contrib/SynView/gbrowse.conf/plasmodb.xml
+contrib/SynView/MAL11/MAL11.conf
+contrib/SynView/MAL11/MAL11.fa
+contrib/SynView/MAL11/MAL11.gff3
+contrib/SynView/README.SynView
 contrib/TextDumper/README
 contrib/TextDumper/TextDumper.pm
 DISCLAIMER
@@ -194,7 +205,6 @@ docs/tutorial/tutorial.css
 docs/tutorial/tutorial.html
 docs/tutorial/tutorial.txt
 extras/gbrowse.PLS_mapping
-extras/README
 History
 htdocs/annotation_help.html
 htdocs/databases/yeast_chr1/chromosome1.fa

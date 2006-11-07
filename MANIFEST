@@ -100,7 +100,6 @@ contrib/install_macosx/README.pod
 contrib/install_macosx/scripts/build-gbrowse.pl
 contrib/install_macosx/scripts/build-libraries.pl
 contrib/README
-contrib/SynView.tar
 contrib/SynView/cgi-lib/DAS/GUS.pm
 contrib/SynView/cgi-lib/DAS/GUS/Segment.pm
 contrib/SynView/cgi-lib/DAS/GUS/Segment/Feature.pm

@@ -109,7 +109,7 @@ contrib/SynView/gbrowse.conf/plasmodb.xml
 contrib/SynView/MAL11/MAL11.conf
 contrib/SynView/MAL11/MAL11.fa
 contrib/SynView/MAL11/MAL11.gff3
-contrib/SynView/README.SynView
+contrib/SynView/README
 contrib/TextDumper/README
 contrib/TextDumper/TextDumper.pm
 DISCLAIMER

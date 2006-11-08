@@ -22,8 +22,13 @@ contains a GFF3 file, fasta file and a GBrowse configuration file set
 up to use the memory adaptor.
 
 This of course is a very brief introduction to SynView, for more
-information, please see http://www.apidb.org/apps/SynView/ or contact
-Jessica or Haiming.
+information, please see http://www.apidb.org/apps/SynView/, contact
+Jessica or Haiming, or see their paper in Bioinformatics:
+
+Wang, H., Su, Y., Mackey, A., Kraemer, E., and *Kissinger, J.C.* (2006)
+SynView: A GBrowse-compatible Approach to Visualizing Comparative Genome
+Data. Bioinformatics 22(18), 2308-2309
+<http://bioinformatics.oxfordjournals.org/cgi/content/abstract/22/18/2308>
 
 Thanks,
 Scott Cain

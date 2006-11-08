@@ -21,6 +21,9 @@ Generic Genome Browser Installation
         Choose the "MSI" package for Windows for Perl version 5.8. Once
         downloaded, launch the package, and it will install automatically.
 
+        Note that due to differences in how ActiveState implemented Perl
+        between Perl 5.6.1 and 5.8, we can only support Perl 5.8.
+
     Install the Apache web server
         Go to http://httpd.apache.org/download.cgi . Select the most recent
         version of Apache, and choose the download marked "Win32 Binary (MSI
@@ -33,32 +36,32 @@ Generic Genome Browser Installation
         downloaded, you will need to unpack it with the WinZip program. Then
         launch the installer.
 
+        After installing MySQL, install DBD::mysql; the easiste way to do
+        that is via ActiveState's ppm utility.
+
     Install GBrowse
-        Apache and ActiveState Perl must be installed before you try this
-        step. Also, I have had difficulties with the ppm files for GBrowse
-        and ActiveState Perl 5.6.1. Please use ActiveState Perl 5.8. Launch
-        the Windows command shell by choosing "Run..." and then typing
-        "cmd". Once the command shell appears, type the following commands:
+        The easiest way to install GBrowse on Windows is to use an installer
+        script that can be obtained from the GMOD website:
+        http://www.gmod.org/gbrowse/windows .
 
-                ppm> rep add gmod http://www.gmod.org/ggb/ppm
-                ppm> rep up gmod
-                ppm> rep up gmod
-                ppm> install DBD::mysql   (OPTIONAL)
-                ppm> install Generic-Genome-Browser
+        After downloading the windows_install.pl script, open a DOS command
+        shell, change directories to where the script was downloaded to, and
+        execute the command:
 
-        The binary distribution of GBrowse is at
-        <http://www.gmod.org/ggb/ppm>. Add this repository to the list of
-        active repositories, and then move the repository to the top to
-        ensure that you get the most up to date versions of the modules.
+          perl windows_install.pl
 
-        If you wish to use a MySQL database, install DBD::mysql if you have
-        not already done so. Then install Generic-Genome-Browser.
+        This script will:
 
-        At the end of the install, the automatic installation script will
-        ask you to confirm the locations of your Apache conf
-        (configuration), htdocs (document root) and cgi-bin (CGI executable)
-        directories. Usually it will guess right, but if it doesn't, just
-        type in the correct path.
+        Install MicroSoft's nmake utility
+        Add a third party ppm repository for install GD.pm
+        Install GD.pm
+        Use CPAN tools to install other prerequisites
+        Download and install BioPerl
+        Download and install the Generic Genome Browser
+
+        During the course of the install, you will prompted to answer a few
+        questions; accepting the defaults is almost always the right thing
+        to do.
 
     When this is done, go to step (5) below.
 

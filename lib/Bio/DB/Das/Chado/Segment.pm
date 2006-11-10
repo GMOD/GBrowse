@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.14 2006-08-31 13:27:56 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.15 2006-11-10 17:58:27 scottcain Exp $
 
 =head1 NAME
 
@@ -132,10 +132,40 @@ sub new {
 
     # need to change this query to allow for Target queries
 
+    ##URGI - Changed the request to be sure we are getting the srcfeature_id of type 'reference class'
+    ##from gbrowse configuration file
+    ##We also check if we are not in the recursive call from feactory->segment, in this case we already set the ref feature_id
+    ##for reference class feature.
+
+    ##minor change: calling name2term with no arg returna a hashref (as documented)
+    ##so if $factory->default_class() is empty, you would get a hashref in $refclass
+
+    my $refclass = $factory->default_class() 
+                 ? $factory->name2term($factory->default_class()) 
+                 : undef;
+
+    my $ref_feature_id = $factory->refclass_feature_id() || undef;
+
+    my ($where_part, $join_part) = ("","");
+    $where_part = " and rank = $target " if(defined($target));
+
+    if(defined($ref_feature_id)){
+        $where_part .= " and fl.srcfeature_id = $ref_feature_id ";
+    }
+    else{
+        $join_part   = " join feature srcf on (fl.srcfeature_id = srcf.feature_id) ";
+        $where_part .= " and srcf.type_id = $refclass " if(defined($refclass));
+    }
+
     my $srcfeature_query = $factory->dbh->prepare( "
-       select srcfeature_id from featureloc
-       where feature_id = ? and rank = $target
-         " );
+        select srcfeature_id from featureloc fl
+        $join_part where fl.feature_id = ? " . $where_part
+       );
+
+    #my $srcfeature_query = $factory->dbh->prepare( "
+    #   select srcfeature_id from featureloc
+    #   where feature_id = ? and rank = $target
+    #     " );
 
     my $landmark_is_src_query = $factory->dbh->prepare( "
        select f.name,f.feature_id,f.seqlen,f.type_id
@@ -220,6 +250,9 @@ sub new {
           : $landmark_feature_id;
 
         warn "srcfeature_id:$srcfeature_id" if DEBUG;
+
+	###URGI Is it the right place to set it?
+        $factory->refclass_feature_id($srcfeature_id);
 
         if ( $landmark_feature_id == $srcfeature_id ) {
 
@@ -754,6 +787,31 @@ sub features {
                    ."left join analysisfeature af using (feature_id)";
 
     $where_part   = "where f.feature_id = $feature_id and fl.rank=0 and (fd.dbxref_id is null or fd.dbxref_id in (select dbxref_id from dbxref where db_id=".$factory->gff_source_db_id."))";
+
+    ##URGI Added a sub request to get the refclass srcfeature id to map all the features from this reference region.
+    ##We then filter and are sure that we are getting the features located on the reference feature with the good
+    ##coordinates.
+    my $refclass = $factory->name2term($factory->default_class());
+    my $refclass_feature_id = $factory->refclass_feature_id() || undef;
+
+    #In case we already have the reference class feature_id
+    if(defined($refclass_feature_id)){
+      $where_part .= " and fl.srcfeature_id = $refclass_feature_id ";
+    }
+    elsif($refclass){
+      #From the type_id of the reference class and the feature_id we are working with
+      #we get the srcfeature_id of the reference class feature
+      my $srcquery = "select srcfeature_id ";
+      $srcquery   .= "from featureloc fl join feature f on (fl.srcfeature_id = f.feature_id) ";
+      $srcquery   .= "where fl.feature_id = ? and f.type_id = $refclass";
+
+      my $sth = $factory->dbh->prepare($srcquery);
+      $sth->execute($feature_id) or $self->throw("refclass_srcfeature query failed");
+      my $hashref = $sth->fetchrow_hashref();
+      my $srcfeature_id = $hashref->{srcfeature_id} || undef;
+      $where_part .= " and fl.srcfeature_id = $srcfeature_id " if(defined($srcfeature_id));
+    }
+
   } else {
     my $featureslice;
     if ($factory->srcfeatureslice){
@@ -1007,6 +1065,31 @@ sub _features2level(){
 	."left join analysisfeature af using (feature_id)";
 
     $where_part   = "where f.feature_id = $feature_id and fl.rank=0 and (fd.dbxref_id is null or fd.dbxref_id in (select dbxref_id from dbxref where db_id=".$factory->gff_source_db_id."))";
+
+    ##URGI Added a sub request to get the refclass srcfeature id to map all the features from this reference region.
+    ##We then filter and are sure that we are getting the features located on the reference feature with the good
+    ##coordinates.
+    my $refclass = $factory->name2term($factory->default_class());
+    my $refclass_feature_id = $factory->refclass_feature_id() || undef;
+
+    #In case we already have the reference class feature_id
+    if(defined($refclass_feature_id)){
+      $where_part .= " and fl.srcfeature_id = $refclass_feature_id ";
+    }
+    elsif($refclass){
+      #From the type_id of the reference class and the feature_id we are working with
+      #we get the srcfeature_id of the reference class feature
+      my $srcquery = "select srcfeature_id ";
+      $srcquery   .= "from featureloc fl join feature f on (fl.srcfeature_id = f.feature_id) ";
+      $srcquery   .= "where fl.feature_id = ? and f.type_id = $refclass";
+
+      my $sth = $factory->dbh->prepare($srcquery);
+      $sth->execute($feature_id) or $self->throw("refclass_srcfeature query failed");
+      my $hashref = $sth->fetchrow_hashref();
+      my $srcfeature_id = $hashref->{srcfeature_id} || undef;
+      $where_part .= " and fl.srcfeature_id = $srcfeature_id " if(defined($srcfeature_id));
+    }
+
   } else {
  my $featureslice;
     if ($factory->srcfeatureslice){

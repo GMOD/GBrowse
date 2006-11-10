@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.11 2006-09-13 14:03:26 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.12 2006-11-10 17:58:27 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -1323,7 +1323,40 @@ sub attributes {
 
 =cut
 
-sub default_class {return 'Sequence' }
+#sub default_class {return 'Sequence' }
+## URGI changes
+sub default_class {
+
+    my $self = shift;
+
+    $self->{'reference_class'} = shift || 'Sequence' if(@_);
+
+    return $self->{'reference_class'};
+
+}
+
+=head2 refclass_feature_id
+
+ Title   : refclass_feature_id
+ Usage   : $self->refclass_srcfeature_id()
+ Function: Used to store the feature_id of the reference class feature we are working on (e.g. contig, supercontig)
+           With this feature we can filter out all the request to be sure we are extracting a feature located on 
+           the reference class feature.
+ Returns : A scalar
+ Args    : The feature_id on setting
+
+=cut
+
+sub refclass_feature_id {
+
+    my $self = shift;
+
+    $self->{'refclass_feature_id'} = shift if(@_);
+
+    return $self->{'refclass_feature_id'};
+
+}
+
 
 sub _segclass { return SEGCLASS }
 

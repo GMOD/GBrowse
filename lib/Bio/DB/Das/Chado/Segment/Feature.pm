@@ -863,7 +863,16 @@ sub sub_SeqFeature {
 
     #warn "inferCDS:$inferCDS";
 
+    ##URGI - We get the reference_class feature_id to filter out the sub_features results
+    my $refclass_feature_id = $self->factory->refclass_feature_id() || undef;
+    my($join_part, $where_part);
+    if(defined($refclass_feature_id)){
+      $join_part = " inner join featureloc as parentloc on (parent.feature_id = parentloc.feature_id) ";
+      $where_part = "and childloc.srcfeature_id = $refclass_feature_id and parentloc.srcfeature_id = $refclass_feature_id ";
+    }
+
     my $typewhere = '';
+
     if (@type > 0) {
       my @id_list = map { $self->factory->name2term($_) } @type;
 
@@ -913,9 +922,11 @@ sub sub_SeqFeature {
     left join
        analysisfeature as af on
         (child.feature_id = af.feature_id)
+    $join_part
     where parent.feature_id = $parent_id
           and childloc.rank = 0
           and fr0.type_id in ($partof)
+          $where_part
           $typewhere
     ";
 
@@ -956,6 +967,7 @@ sub sub_SeqFeature {
        where parent.feature_id = $parent_id
              and childloc.rank = 0
              and fr0.type_id in ($partof)
+             $where_part
              $typewhere";
   }
 

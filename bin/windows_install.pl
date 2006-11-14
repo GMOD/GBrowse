@@ -47,8 +47,10 @@ if ($Config{osname} =~ /mswin/i) {
   print STDERR "Installing GD via ppm and the Theory repository at UWinnipeg;\n";
   print STDERR "(This may take a while...\n";
   system("ppm rep delete Theory");
+  system("ppm rep off 1");
   system("ppm rep add Theory http://theoryx5.uwinnipeg.ca/ppms/");
   system("ppm install GD");
+  system("ppm rep on 1");
 }
 else {
   print STDERR "Installing GD via CPAN...\n";

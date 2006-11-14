@@ -246,7 +246,7 @@ file should have an entry for it similar to this one:
 This indicates that the reference sequence named "Chr1" has length
 14972282 bp, method "chromosome" and source "assembly".  In addition,
 as indicated by the group field, Chr1 has class "Sequence" and name
-"Chr".
+"Chr1".
 
 It is suggested that you use "Sequence" as the class name for all
 reference sequences, since this is the default class used by the
@@ -1026,6 +1026,12 @@ grid. See
 http://sourceforge.net/mailarchive/message.php?msg_id=12116755 for an
 example of using this feature to show assembly gaps as vertical gray
 regions.
+
+For a clever example of how to use postgrid calls, see the SynView
+synteny browser in the contrib directory of the GBrowse distribution.
+It uses a standard GBrowse configuration file with postgrid calls to
+draw trapezoids between glyphs to show synteny.  For an example of
+how this looks, see L<http://www.plasmodb.org/cgi-bin/gbrowse/plasmodb/?start=101357;stop=121356;ref=MAL12;width=800;version=100;label=AnnotatedGenes-SyntenySpansVivaxMC-SyntenyGenesVivaxMC>.
 
 =item * image_padding = 25
 

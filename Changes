@@ -5,7 +5,7 @@
           in the conf file (previously, the adaptor would infer the
           reference class from the database structure).  If the 
           reference class is not provided in the database, the old
-          behavior still works. Thanks to Emanuel Quevillon for
+          behavior still works. Thanks to Emmanuel Quevillon for
           the patch that implements this change.
         * Improved support in Chado adaptor for inferring CDS and UTR
           features from exons and polypeptides (at the expense of speed).

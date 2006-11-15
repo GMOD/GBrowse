@@ -42,7 +42,7 @@ $VERSION = '1.00';
  Title   : method
  Usage   : $aggregator->method
  Function: return the method for the composite object
- Returns : the string "coding"
+ Returns : the string "orf"
  Args    : none
  Status  : Public
 

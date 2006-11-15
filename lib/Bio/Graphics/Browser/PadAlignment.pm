@@ -12,9 +12,9 @@ Bio::Graphics::Browser::PadAlignment - Insert pads into a multiple alignment
 =head1 VERSION (CVS-info)
 
  $RCSfile: PadAlignment.pm,v $
- $Revision: 1.20.6.2 $
+ $Revision: 1.20.6.3 $
  $Author: lstein $
- $Date: 2006-11-01 17:28:39 $
+ $Date: 2006-11-15 02:31:49 $
 
 =head1 SYNOPSIS
 
@@ -299,6 +299,8 @@ sub padded_sequences {
 
     defined ($targ = $self->{names}{$targ}) or next;
 
+    warn "$start $end $tstart $tend\n" if DEBUG;
+
     my $src = 0;   # first DNA is the reference
 
     # position in src coordinates where we last stopped
@@ -307,29 +309,24 @@ sub padded_sequences {
     # position in target coordinates where we last stopped
     my $last_target = $last_end[$targ][$targ] ||= -1;
 
-    if ($last_src >= 0) {
+    if ($last_src >= 0 && $last_target >= 0) {
       # This section adds the unaligned region between the last place that
       # we stopped and the current alignment
       my $gap       = 0;
-      for (my $targ_pos=$tstart-1, my $j=$start-1; $targ_pos > $last_target; $targ_pos--, $j--) {
-	if ($j > $last_src) { # still room
-	  my $pos = $gap_map[$j];
-	  eval {substr($lines[$targ],$pos,1) = substr($dnas[$targ],$targ_pos,1)};
+      my $tpos      = $last_target+ 1;
+      my $spos      = $gap_map[$last_src]+1;
+      warn "last_src=$last_src, spos=$spos" if DEBUG;
+      my $deficit   = ($tstart-$last_target) - ($gap_map[$start] - $gap_map[$last_src]);
+      warn "add $deficit gaps" if DEBUG;
+      if ($deficit > 0) {
+	for (my $i=0; $i<@lines; $i++) {
+	  eval {substr($lines[$i],$spos,0) = '-'x$deficit};
 	}
-	else {  # we've overrun -- start gapping above
-	  my $pos = $gap_map[$start];
-	  for (my $i=0; $i<@lines; $i++) {
-	    eval {substr($lines[$i],$pos,0) = '-'} unless $i==$targ;  # gap all segments
-	  }
-	  eval {substr($lines[$targ],$pos,0) = substr($dnas[$targ],$targ_pos,1) };
-	  $gap++;
-	}
+	@gap_map[$start..$#gap_map] = map {$_+$deficit} @gap_map[$start..$#gap_map];
       }
-      if ($gap > 0) {
-	# for (@gap_map[$start..$#gap_map]) { $_ += $gap }  # update gap map
-	@gap_map[$start..$#gap_map] = map {$_+$gap} @gap_map[$start..$#gap_map];
+      while ($tpos < $tstart) {
+	eval { substr($lines[$targ],$spos++,1) = substr($dnas[$targ],$tpos++,1) };
       }
-
     }
 
     else {  # remember to add the extra stuff at beginning
@@ -341,6 +338,7 @@ sub padded_sequences {
     for (my $pos = $start; $pos <= $end; $pos++) {
       my $gap_pos = $gap_map[$pos];
       defined $gap_pos or next;
+      warn "inserting $gap_pos with ",substr($dnas[$targ],$tstart,1),"\n" if DEBUG;
       eval {substr($lines[$targ],$gap_pos,1) = substr($dnas[$targ],$tstart++,1) };
     }
 

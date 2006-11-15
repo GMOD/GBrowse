@@ -227,9 +227,13 @@ sub print_top {
 
   my $js = $CONFIG->setting('js')||JS;
   my @scripts = {src=>"$js/buttons.js"};
-  if ($CONFIG->setting('autocomplete')) {
+
+ if ($CONFIG->setting('autocomplete')) {
     push @scripts,{src=>"$js/$_"} foreach qw(yahoo.js dom.js event.js connection.js autocomplete.js);
   }
+
+  # drag-and-drop functions from scriptabulous
+    push @scripts,{src=>"$js/$_"}  foreach qw(prototype.js scriptaculous.js);
 
   print_header(-expires=>'+1m');
   my @args = (-title => $title,

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.9 2006-03-16 22:39:56 lstein Exp $
+#$Id: das.PLS,v 1.10 2006-11-15 02:26:30 lstein Exp $
 
 use strict;
 use Bio::DB::GFF 1.02;
@@ -58,7 +58,7 @@ use vars qw($DB $DSN $HEADER %ERRCODES $CONFIG
             $VERSION $DAS_VERSION $CONF_DIR 
             %CACHED_TYPES);
 
-#$Id: das.PLS,v 1.9 2006-03-16 22:39:56 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
+#$Id: das.PLS,v 1.10 2006-11-15 02:26:30 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';
@@ -291,7 +291,7 @@ sub dump_segment {
   my $toplevel      = shift;
   my $type2category = shift;
 
-  my $r = $seq->refseq;
+  my $r = $seq->seq_id;
   my $s = $seq->start;
   my $e = $seq->stop;
   ($s,$e) = ($e,$s) if $s > $e;
@@ -310,25 +310,28 @@ sub dump_segment {
   }
   print qq(<SEGMENT id="$r" start="$s" stop="$e" version="$version">\n);
 
-  my %agg_map = map {($_->get_method||'') => ($_->main_name||'')} $DB->aggregators;
+  my %agg_map;
+  if ($DB->can('aggregators')) {
+    %agg_map = map {($_->get_method||'') => ($_->main_name||'')} $DB->aggregators;
+  }
 
   my $iterator = $seq->features(-types=>$filter,-merge=>1,-iterator=>1);
   while (my $f = $iterator->next_seq) {
     my @subparts = $f->get_SeqFeatures;
-    my @notes =  $f->notes;
-    print_feature($f,undef,$type2category,\@notes,\%agg_map); # unless @subparts;
-    print_feature($_,$f,$type2category,\@notes,\%agg_map) foreach @subparts;
+    print_feature($f,undef,$type2category,\%agg_map); # unless @subparts;
+    my $count = 0;
+    print_feature($_,$f,$type2category,\%agg_map,++$count)     foreach @subparts;
   }
 
   print qq(</SEGMENT>\n);
 }
 
 sub print_feature {
-  my $f      = shift;
-  my $parent = shift;
+  my $f             = shift;
+  my $parent        = shift;
   my $type2category = shift;
-  my $notes         = shift;
   my $agg_map       = shift || {};
+  my $count         = shift;
 
   my $type        = $f->type;
   my $flabel      = $f->info || $f->type;
@@ -337,12 +340,20 @@ sub print_feature {
   my $start       = $f->start;
   my $end         = $f->stop;
   my $score       = $f->score;
-  my $orientation = $f->strand;
+  my $orientation = $f->strand || 0;
   my $phase       = $f->phase;
-  my $group       = $f->group;
-  my $gclass      = (ref($group) && $group->can('class')) ? $group->class : 'anonymous';
-  my $id          = $f->id;
+  my $id          = $f->id || $parent->id . "/$count";
   my $fid         = $id;
+  my @notes       = $f->notes if $f->can('notes');
+
+  my ($group,$gclass);
+  if ($f->can('group')) { # Bio::DB::GFF feature
+    $group       = $f->group;
+    $gclass      = (ref($group) && $group->can('class')) ? $group->class : 'anonymous';
+  } else {
+    $group       = defined $parent ? $parent->id : $id;
+    $gclass      = '';
+  }
 
   # This is way nasty.  The aggregator may have changed the method of the
   # main feature, so we need to change it back to what it was originally
@@ -359,7 +370,7 @@ sub print_feature {
   ($start,$end) = ($end,$start) if defined($start) && defined($end) && $start > $end;
 
   # group stuff
-  my $groupid       = "$gclass:$group";
+  my $groupid       = length($gclass) ? "$gclass:$group" : $group;
   my $info       = $f->info;
   my ($group_info,$link,$gtype);
 
@@ -380,13 +391,13 @@ sub print_feature {
       my $url = $CONFIG->make_link($parent || $f);
       $url ||= 'none';
       if ($url ne 'none') {
-          hack_link(\$url);
-          $link = qq(<LINK href="$url">$type</LINK>);
+	hack_link(\$url);
+	$link = qq(<LINK href="$url">$type</LINK>);
       }
-  }
+    }
 
-  if (@$notes) {
-    $group_info = join "\n",map {qq(<NOTE>$_</NOTE>)} @$notes;
+  if (@notes) {
+    $group_info = join "\n",map {qq(<NOTE>$_</NOTE>)} @notes;
   }
 
   my ($target,$target_info);
@@ -429,7 +440,7 @@ END
   print qq(      $link\n) if $link;
   print qq(      $target_info\n) if $target_info;
 
-  if ($info) {
+  if ($info || $groupid) {
     $gtype ||= '';
     $groupid   ||= '';
     if ($group_info) {
@@ -920,17 +931,20 @@ sub categories {
     $category ||= 'structural' if $structural;
     next unless $category;  # skip sections without a category marked
 
-    my (@composite_types) = $config->label2type($label);
+    my @composite_types = $config->label2type($label);
     push @types,@composite_types;
-    my $types   = $DB->parse_types(@composite_types);
-    $_->disaggregate($types,$DB) foreach $DB->aggregators;
-    my @types = map {defined($_->[1]) ? join(':',@$_) : $_->[0]} @$types;
+    my $t   = Bio::DB::GFF->parse_types(@composite_types);
+    if ($DB->can('aggregators')) {
+      $_->disaggregate($t,$DB) foreach $DB->aggregators;
+    }
+    my @t = map {defined($_->[1]) ? join(':',@$_) : $_->[0]} @$t;
 
     my %seenit;
-    my @all_types = grep {!$seenit{$_}++} @types;
+    my @all_types = grep {!$seenit{$_}++} @t;
 
     push @{$category2type{$category}},(@composite_types,@all_types);
     $type2category{$_} = $category foreach @composite_types;
+
     for my $type (@all_types) {
       $type2category{$type} = $category;
       my $typeobj      = Bio::DB::GFF::Typename->new($type);
@@ -951,7 +965,8 @@ sub hack_link {
   return unless $$url_ref =~ /^\.\./;
   my $self_url = url(-full=>1);
   $self_url =~ s!/das(/.+)?!!;
-  $$url_ref =~ s!^\.\./!$self_url/!g;
+  $$url_ref =~ s!^(\.\.\/)+!!;
+  $$url_ref = $self_url."/$$url_ref";
 }
 
 !NO!SUBS!

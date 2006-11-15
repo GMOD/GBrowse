@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.202 2006-10-12 15:45:29 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.203 2006-11-15 02:26:30 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -59,7 +59,7 @@ use File::Basename 'basename';
 use Bio::Graphics;
 use Carp qw(carp croak);
 #use GD 'gdMediumBoldFont','gdLargeFont';
-use CGI qw(img param escape unescape url);
+use CGI qw(img param escape unescape url div span);
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use Text::Shellwords;
@@ -812,7 +812,7 @@ sub make_link {
 
 =head2 render_html()
 
-  ($image,$image_map) = $browser->render_html(%args);
+  @panels = $browser->render_html(%args);
 
 Render an image and an image map according to the options in %args.
 Returns a two-element list.  The first element is a URL that refers to
@@ -869,29 +869,309 @@ through to Bio::Graphics::Panel->new() directly
 
 sub render_html {
   my $self = shift;
-  my %args = @_;
+  my $args = shift;
 
-  my $segment         = $args{segment};
-  my $do_map          = $args{do_map};
-  my $do_centering_map= $args{do_centering_map};
-  my $tmpdir          = $args{tmpdir};
+  my $segment         = $args->{segment};
+  my $do_map          = $args->{do_map};
+  my $do_centering_map= $args->{do_centering_map};
+  my $tmpdir          = $args->{tmpdir};
 
   return unless $segment;
-  my($image,$map,$panel,$tracks) = $self->image_and_map(%args);
 
-  $self->debugging_rectangles($image,$map) if DEBUG;
+  $self->_load_aggregator_types($segment) if $do_map;
+  my $panels = $self->generate_panels($args);
+  my @result;
 
-  my ($width,$height) = $image->getBounds;
-  my $url     = $self->generate_image($image,$tmpdir);
-  my $img     = img({-src=>$url,-align=>'middle',-usemap=>'#hmap',-width=>$width,
-		     -height=>$height,-border=>0,-name=>'detailedView',-alt=>'detailed view'});
-  my $img_map = '';
-  if ($do_map) {
-    $self->_load_aggregator_types($segment);
-    $img_map = $self->make_map($map,$do_centering_map,$panel,$tracks)
+  my $images = $self->setting('buttons');
+  my $plus   = "$images/plus.png";
+  my $minus  = "$images/minus.png";
+
+  for my $label ('__scale__',@{$args->{labels}}) {
+    my $panel = $panels->{$label} or next;
+    my $image = $panel->gd;
+
+    my ($width,$height) = $image->getBounds;
+    my $url             = $self->generate_image($image,$tmpdir);
+    my $img             = img({-src=>$url,-align=>'middle',-usemap=>"#${label}_map",-width=>$width,
+			       -height=>$height,-border=>0,-name=>"detailedView_${label}",-alt=>'detailed view'});
+    my $class   = $label eq '__scale__' ? 'scale' : 'track';
+
+    if ($do_map) {
+      my $boxes = $panel->boxes;
+      $self->debugging_rectangles($image,$boxes) if DEBUG;
+      my $img_map = $label eq '__scale__' ? $self->make_centering_map($boxes->[0],$panel)
+                                          : $self->make_map($boxes,$panel,$label);
+      my $titlebar    = $label eq '__scale__' ? '' 
+                                              : span({-class=>'titlebar'},
+						     img({-src=>$plus}),img({-src=>$minus}),
+						     $self->config->setting($label=>'key'));
+      push @result,div({-id=>"track_${label}",-class=>$class},
+		       $titlebar,
+		       $img,
+		       $img_map);
+    } else {
+      push @result,div({-id=>"track_${label}",-class=>$class},$img);
+    }
+
+    eval {$panel->finished};  # should quash memory leaks when used in conjunction with bioperl 1.4
   }
-  eval {$panel->finished};  # should quash memory leaks when used in conjunction with bioperl 1.4
-  return wantarray ? ($img,$img_map) : join "<br>",$img,$img_map;
+
+
+  return wantarray ? @result : join "<br>",@result;
+}
+
+# Generate the image and the box list, and return the GD object, the boxes() list, the panel object and
+# a hashref that maps track objects to track labels or feature files.
+# arguments: a key=>value list
+#    'segment'       A feature iterator that responds to next_seq() methods
+#    'feature_files' A hash of Bio::Graphics::FeatureFile objects containing 3d party features
+#    'options'       An hashref of options, where 0=auto, 1=force no bump, 2=force bump, 3=force label
+#                       4=force fast bump, 5=force fast bump and label
+#    'limit'         Place a limit on the number of features of each type to show.
+#    'labels'        List of named tracks, in the order in which they are to be shown
+#    'tracks'        List of named tracks, in the order in which they are to be shown (deprecated)
+#    'label_scale'   If true, prints chromosome name next to scale
+#    'title'         A title for the image
+#    'noscale'       Suppress scale entirely
+#    'image_class'   Optional image class for generating SVG output (by passing GD::SVG)
+#
+# any arguments that begin with an initial - (hyphen) are passed through to Panel->new
+# directly
+#
+sub generate_panels {
+  my $self    = shift;
+  my $args  = shift;
+
+  my $segment       = $args->{segment};
+  my $feature_files = $args->{feature_files} || {};
+  my $labels        = $args->{labels} || $args->{tracks} || []; # legacy
+  my $options       = $args->{options}       || {};
+  my $limit         = $args->{limit}         || {};
+  my $lang          = $args->{lang} || $self->language;
+  my $keystyle      = $args->{keystyle};
+  my $title         = $args->{title};
+  my $flip          = $args->{flip};
+  my $suppress_scale= $args->{noscale};
+  my $hilite_callback = $args->{hilite_callback};
+  my $image_class   = $args->{image_class} || 'GD';
+  my $postgrid      = $args->{postgrid} || '';
+  my $background    = $args->{background} || '';
+
+  $segment->factory->debug(1) if DEBUG;
+  $self->error('');
+
+  # Bring in the appropriate package - just for the fonts. Ugh.
+  eval "use $image_class";
+
+  my $width = $self->width;
+  my $conf  = $self->config;
+  my $max_labels     = $self->label_density;
+  my $max_bump       = $self->bump_density;
+  my $length         = $segment->length;
+
+  my @feature_types = map { $conf->label2type($_,$length) } @$labels;
+  my %filters = map { my %conf =  $conf->style($_); 
+		      $conf{'-filter'} ? ($_ => $conf{'-filter'})
+			               : ()
+		      } @$labels;
+
+  # Create the tracks that we will need
+  my ($seg_start,$seg_stop ) = ($segment->start,$segment->end);
+  if ($seg_stop < $seg_start) {
+    ($seg_start,$seg_stop)     = ($seg_stop,$seg_start);
+    $flip = 1;
+  }
+
+  my @pass_thru_args = map {/^-/ ? ($_=>$args->{$_}) : ()} keys %$args;
+  my @argv = (
+	      -grid      => 1,
+	      @pass_thru_args,
+	      -start     => $seg_start,
+	      -end       => $seg_stop,
+	      -stop      => $seg_stop,  #backward compatibility with old bioperl
+	      -key_color => $self->setting('key bgcolor')     || 'moccasin',
+	      -bgcolor   => $self->setting('detail bgcolor')  || 'white',
+	      -width     => $width,
+#	      -key_style    => $keystyle || $conf->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
+	      -key_style    => 'none',
+	      -empty_tracks => $conf->setting(general=>'empty_tracks') 	        || DEFAULT_EMPTYTRACKS,
+	      -pad_top      => $title ? $image_class->gdMediumBoldFont->height : 0,
+	      -image_class  => $image_class,
+	      -postgrid     => $postgrid,
+	      -background   => $background,
+	      -truecolor    => $conf->setting(general=>'truecolor') || 0,
+	     );
+
+  push @argv, -flip => 1 if $flip;
+  my $p = defined $conf->setting(general=>'image_padding') ? $conf->setting(general=>'image_padding')
+                                                           : PAD_DETAIL_SIDES;
+  my $pl = $conf->setting(general=>'pad_left');
+  my $pr = $conf->setting(general=>'pad_right');
+  $pl    = $p unless defined $pl;
+  $pr    = $p unless defined $pr;
+
+  push @argv,(-pad_left =>$pl, -pad_right=>$pr) if $p;
+
+  # here is where we begin to build the results up
+  my @results;
+
+  my $panel = Bio::Graphics::Panel->new(@argv);
+
+  $panel->add_track($segment   => 'arrow',
+		    -double    => 1,
+		    -tick      => 2,
+		    -label     => $args->{label_scale} ? $segment->seq_id : 0,
+		    -units     => $conf->setting(general=>'units') || '',
+		    -unit_divider => $conf->setting(general=>'unit_divider') || 1,
+		   ) unless $suppress_scale;
+
+  #---------------------------------------------------------------------------------
+  # Track and panel creation
+
+  # we create two hashes:
+  #        the %panels hash maps label names to panels
+  #        the %tracks hash maps label names to tracks within the panels
+
+  my %panels;
+  $panels{__scale__} = $panel;
+  my %tracks;
+
+  for my $label (@$labels) {
+    next if $panels{$label};  # already created for some reason
+
+    # if "hide" is set to true, then skip panel
+    next if $conf->semantic_setting($label=>'hide',$length);
+
+    $panels{$label} = Bio::Graphics::Panel->new(@argv,-pad_top=>16,-extend_grid=>1);
+    if ($conf->semantic_setting($label=>'global feature',$length)) {
+      $tracks{$label} = $panels{$label}->add_track($segment,
+						   $conf->default_style,
+						   $conf->i18n_style($label,$lang)
+						  );
+    } else {
+      my @settings = ($conf->default_style,$conf->i18n_style($label,$lang,$length));
+      push @settings,(-hilite => $hilite_callback) if $hilite_callback;
+      $tracks{$label} = $panels{$label}->add_track(-glyph => 'generic',@settings);
+    }
+  }
+  #---------------------------------------------------------------------------------
+
+  #---------------------------------------------------------------------------------
+  # Adding features from the database
+
+  my (%groups,%feature_count,%group_pattern,%group_field);
+  if (@feature_types) {
+    my $iterator = $segment->get_feature_stream(-type=>\@feature_types);
+
+    while (my $feature = $iterator->next_seq) {
+      my @labels = $self->feature2label($feature,$length);
+
+      for my $label (@labels) {
+
+	my $track = $tracks{$label}  or next;
+	$filters{$label}->($feature) or next if $filters{$label};
+	$feature_count{$label}++;
+
+
+	# ------------------------------------------------------------------------------------------
+	# GROUP CODE
+	# Handle name-based groupings.
+	unless (exists $group_pattern{$label}) {
+	  $group_pattern{$label} = $conf->code_setting($label => 'group_pattern');
+	  $group_pattern{$label} =~ s!^/(.+)/$!$1! if $group_pattern{$label}; # clean up regexp delimiters
+	}
+
+	# Handle generic grouping (needed for GFF3 database)
+	$group_field{$label} = $conf->code_setting($label => 'group_on') unless exists $group_field{$label};
+	
+	if (my $pattern = $group_pattern{$label}) {
+	  my $name = $feature->name or next;
+	  (my $base = $name) =~ s/$pattern//i;
+	  $groups{$label}{$base} ||= Bio::Graphics::Feature->new(-type   => 'group');
+	  $groups{$label}{$base}->add_segment($feature);
+	  next;
+	}
+	
+	if (my $field = $group_field{$label}) {
+	  my $base = eval{$feature->$field};
+	  if (defined $base) {
+	    $groups{$label}{$base} ||= Bio::Graphics::Feature->new(-start  =>$feature->start,
+								   -end    =>$feature->end,
+								   -strand => $feature->strand,
+								   -type   =>$feature->primary_tag);
+	    $groups{$label}{$base}->add_SeqFeature($feature);
+	    next;
+	  }
+	}
+	# ------------------------------------------------------------------------------------------
+
+	$track->add_feature($feature);
+      }
+    }
+
+    # ------------------------------------------------------------------------------------------
+    # fixups
+
+    # fix up %group features
+    # the former creates composite features based on an arbitrary method call
+    # the latter is traditional name-based grouping based on a common prefix/suffix
+
+    for my $label (keys %groups) {
+      my $track  = $tracks{$label};
+      my $g      = $groups{$label} or next;
+      $track->add_feature($_) foreach values %$g;
+      $feature_count{$label} += keys %$g;
+    }
+
+    # configure the tracks based on their counts
+    for my $label (keys %tracks) {
+      next unless $feature_count{$label};
+
+      $options->{$label} ||= 0;
+
+      my $count = $feature_count{$label};
+      $count    = $limit->{$label} if $limit->{$label} && $limit->{$label} < $count;
+
+      my $do_bump  = $self->do_bump($label, $options->{$label},$count,$max_bump,$length);
+      my $do_label = $self->do_label($label,$options->{$label},$count,$max_labels,$length);
+      my $do_description = $self->do_description($label,$options->{$label},$count,$max_labels,$length);
+
+      $tracks{$label}->configure(-bump  => $do_bump,
+				 -label => $do_label,
+				 -description => $do_description,
+				);
+      $tracks{$label}->configure(-connector  => 'none') if !$do_bump;
+      $tracks{$label}->configure(-bump_limit => $limit->{$label}) 
+	if $limit->{$label} && $limit->{$label} > 0;
+    }
+  }
+  # ------------------------------------------------------------------------------------------
+
+  # add additional features, if any
+  my $offset = 0;
+  my $select = sub {
+    my $file  = shift;
+    my $type  = shift;
+    my $section = $file->setting($type=>'section') || $file->setting(general=>'section');
+    return 1 unless defined $section;
+    return $section =~ /detail/;
+  };
+
+  my $extra_tracks = $args->{noscale} ? 0 : 1;
+
+  # ---------------------------------------------------------------------------------------
+  # feature files
+
+  for my $label (keys %$feature_files) {
+    my $file = $feature_files->{$label} or next;
+    ref $file or next;
+    my $name = $file->name || '';
+    $options->{$name}      ||= 0;
+    eval {$file->render($panels{$label},0,$options->{$name},$max_bump,$max_labels,$select)};
+    $self->error("$name: $@") if $@;
+  }
+
+  return \%panels;
 }
 
 =head2 generate_image
@@ -1046,8 +1326,8 @@ sub tmpdir {
 
 sub make_map {
   my $self = shift;
-  my ($boxes,$centering_map,$panel,$track2label) = @_;
-  my $map = qq(<map name="hmap" id="hmap">\n);
+  my ($boxes,$panel,$label) = @_;
+  my $map = qq(<map name="${label}_map" id="${label}_map">\n);
 
   my $flip = $panel->flip;
 
@@ -1057,17 +1337,6 @@ sub make_map {
 
   foreach (@$boxes){
     next unless $_->[0]->can('primary_tag');
-
-    # use the scale as a centering mechanism
-    # potential fragility here: we are depending on the arrow being
-    # the very first box that is returned to us.
-    if ($centering_map && !$did_map++) {
-      $map .= $self->make_centering_map($_,$flip) if $centering_map;
-      next;
-    }
-
-    my $label  = $_->[5] ? $track2label->{$_->[5]} : '';
-
     my $href   = $self->make_href($_->[0],$panel,$label,$_->[5]) or next;
     my $alt    = unescape($self->make_title($_->[0],$panel,$label,$_->[5]));
     my $target = $self->config->make_link_target($_->[0],$panel,$label,$_->[5]);
@@ -1079,7 +1348,6 @@ sub make_map {
   if ($panel->can('key_boxes') && (my $keys = $panel->key_boxes)) {
     for my $key (@$keys) {
       my ($key_text,$x1,$y1,$x2,$y2,$track) = @$key;
-      my $label = $track2label->{$track} or next;
       my $link;
       if ($label =~ /^file:/) {
 	$link = "?Download%20File=$key_text";
@@ -1105,7 +1373,9 @@ sub make_map {
 sub make_centering_map {
   my $self   = shift;
   my $ruler  = shift;
-  my $flip   = shift;
+  my $panel  = shift;
+
+  my $flip   = $panel->flip;
 
   return if $ruler->[3]-$ruler->[1] == 0;
 
@@ -1139,7 +1409,7 @@ sub make_centering_map {
     push @lines,
       qq(<area shape="rect" coords="$x1,$ruler->[2],$x2,$ruler->[4]" href="$url" title="recenter" alt="recenter" />\n);
   }
-  return join '',@lines;
+  return join '',qq(<map name="__scale___map" id="__scale___map">\n),@lines,"</map>";
 }
 
 sub make_href {

@@ -1,3 +1,7 @@
+1.67    * Templates now the norm, use gbrowse_not to get the "no templates" version.
+	* The das script now works (more or less) with Bio::DB::SeqFeature::Store adaptor. Not tested
+	with chado adaptor.
+
 1.66    * The popup zoom menu will never show a region larger than the overview.
 	* Fixed collapsible sections so that they store their state in transient named cookies
 	  rather than in a single bit vector.

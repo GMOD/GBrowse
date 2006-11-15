@@ -44,13 +44,15 @@ if ($Config{osname} =~ /mswin/i && !-e "$binaries/${make}.exe") {
 }
 
 if ($Config{osname} =~ /mswin/i) {
-  print STDERR "Installing GD via ppm and the Theory repository at UWinnipeg;\n";
-  print STDERR "(This may take a while...\n";
-  system("ppm rep delete Theory");
-  system("ppm rep off 1");
-  system("ppm rep add Theory http://theoryx5.uwinnipeg.ca/ppms/");
-  system("ppm install GD");
-  system("ppm rep on 1");
+  unless ( eval "use GD 2.31; 1" ) {
+    print STDERR "Installing GD via ppm and the Theory repository at UWinnipeg;\n";
+    print STDERR "(This may take a while...\n";
+    system("ppm rep delete Theory");
+    system("ppm rep off 1");
+    system("ppm rep add Theory http://theoryx5.uwinnipeg.ca/ppms/");
+    system("ppm install GD");
+    system("ppm rep on 1");
+  }
 }
 else {
   print STDERR "Installing GD via CPAN...\n";
@@ -68,6 +70,9 @@ CPAN::Shell->install('Digest::MD5');
 unless (eval "use Bio::Perl 1.005002; 1") {
   print STDERR "Installing BioPerl...\n";
   do_install(BIOPERL,'bioperl-1.52.tar.gz','bioperl-live');
+}
+else {
+  print STDERR "BioPerl is up to date\n";
 }
 
 print STDERR "Installing Generic-Genome-Browser...\n";

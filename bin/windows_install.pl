@@ -65,7 +65,7 @@ CPAN::Shell->install('File::Temp');
 CPAN::Shell->install('Class::Base');
 CPAN::Shell->install('Digest::MD5');
 
-unless (eval "use Bio::Perl 1.52; 1") {
+unless (eval "use Bio::Perl 1.005002; 1") {
   print STDERR "Installing BioPerl...\n";
   do_install(BIOPERL,'bioperl-1.52.tar.gz','bioperl-live');
 }

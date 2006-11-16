@@ -136,15 +136,12 @@ if ($OPTIONS{APACHE} && !(defined $OPTIONS{CGIBIN})) {
 
 # set hard-coded values
 $OPTIONS{APACHE} ||= '/usr/local/apache';
-unless ($OPTIONS{CONF}) {
-  $OPTIONS{CONF} = GuessDirectories->conf || "$OPTIONS{APACHE}/conf";
-}
-unless ($OPTIONS{HTDOCS}) {
-  $OPTIONS{HTDOCS} = GuessDirectories->htdocs || "$OPTIONS{APACHE}/htdocs";
-}
-unless ($OPTIONS{CGIBIN}) {
-  $OPTIONS{CGIBIN} = GuessDirectories->cgibin || "$OPTIONS{APACHE}/cgi-bin";
-}
+$OPTIONS{CONF}   ||= prompt('Apache conf directory?', 
+                        GuessDirectories->conf   || "$OPTIONS{APACHE}/conf");
+$OPTIONS{HTDOCS} ||= prompt('Apache htdocs directory?',
+                        GuessDirectories->htdocs || "$OPTIONS{APACHE}/htdocs");
+$OPTIONS{CGIBIN} ||= prompt('Apache cgibin directory?',
+                        GuessDirectories->cgibin || "$OPTIONS{APACHE}/cgi-bin");
 unless (defined $OPTIONS{DO_XS}) {
   $OPTIONS{DO_XS}  = $^O =~ /^(MSWin|dos)/i ? 0 : 1;
 }
@@ -203,7 +200,7 @@ WriteMakefile(
 	      'NAME'	     => 'Generic-Genome-Browser',
 	      'VERSION'      => $VERSION,
 	      'PREREQ_PM'    => {
-				 Bio::Perl         => 1.52,
+				 Bio::Perl         => 1.005002,
 				 GD                => 2.07,
 				 IO::String        => 0,
 				 Text::Shellwords  => 1.08,

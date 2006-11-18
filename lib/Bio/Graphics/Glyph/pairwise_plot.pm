@@ -1,4 +1,4 @@
-# $Id: pairwise_plot.pm,v 1.1 2004-05-14 19:14:58 lstein Exp $
+# $Id: pairwise_plot.pm,v 1.2 2006-11-18 17:44:57 lstein Exp $
 
 package Bio::Graphics::Glyph::pairwise_plot;
 
@@ -17,6 +17,13 @@ use Math::Trig;
 use vars '@ISA';
 use Bio::Graphics::Glyph::generic;
 @ISA = 'Bio::Graphics::Glyph::generic';
+
+sub maxdepth {
+  my $self = shift;
+  my $md   = $self->Bio::Graphics::Glyph::maxdepth;
+  return $md if defined $md;
+  return 1;
+}
 
 # return angle in radians
 sub angle {
@@ -85,7 +92,6 @@ sub draw {
     unshift @points,int($parts[0]->left);
     push @points,int($parts[-1]->right);
   }
-  warn "@points";
 
   for (my $ia=0;$ia<@parts-1;$ia++) {
     for (my $ib=$ia+1;$ib<@parts;$ib++) {

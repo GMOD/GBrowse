@@ -82,6 +82,10 @@ var inFirstDiv;
 // (keeps the view in bounds; max is always 0, but only checked when 'inFirstDiv' is on)
 var leftmostBound;
 
+// Flag to specify to use Ajax.Updater to download the html data for generating images and image maps
+// setting this to 0 means it is backwards compatible with tile sources that have not had the html generated 
+// by generate-tiles.pl
+var htmlFiles=0;
 
 //---------------------------------------
 //     CONSTRUCTORS AND INITIALIZERS
@@ -326,7 +330,6 @@ function ViewerComponent_renderComponent () {
     cif.setDisplayedViewHeight (stripPx (panelHeightPx));
 
     /* construct DOM node */
-
     var domNode = document.createElement ('table');
     domNode.id = 'ViewerComponent';
 
@@ -338,8 +341,11 @@ function ViewerComponent_renderComponent () {
     var row2col1 = document.createElement ('td');
     var row2col2 = document.createElement ('td');
 
-    /* aggregate parts into the node subtree */
-    
+    /* description id for pop-up feature menu */
+    var descDiv = document.createElement('div')
+    descDiv.id = 'description';
+
+    /* aggregate parts into the node subtree */    
     this.addTrackDivs (this.pDivMain);
 
     this.dragDivMain.appendChild (this.pDivMain);
@@ -359,6 +365,8 @@ function ViewerComponent_renderComponent () {
     row2.appendChild (row2col1);  row2.appendChild (row2col2);
 
     domNode.appendChild (row1);  domNode.appendChild (row2);
+    
+    domNode.appendChild(descDiv);
 
     /* initialize tile caching things (NB: make sure this is consistent with updateHorizontal()!) */
 
@@ -1460,15 +1468,35 @@ function ViewerComponent_updateTiles () {
 			    tileDiv.id = tileNum + '_' + trackName + '_tileDiv';
 			    tileDiv.className = 'tileDiv';
 			    
+
 			    tileDiv.style.left = ((tileNum * taz.tileWidth) % divWidth) + 'px';
+		            track.appendChild (tileDiv);			    
 
-			    var img = document.createElement ('img');
-			    img.id = tileNum + '_' + trackName + '_tileImg';
-			    img.className = 'tileImg';
-			    img.src = tilePrefix + 'tile' + tileNum + '.png';
-
-			    tileDiv.appendChild (img);
-			    track.appendChild (tileDiv);
+			    
+			    if (htmlFiles==1) {
+			    	    // update the div element with html generate from generate tiles
+				    var pars = '';
+				    var url = tilePrefix + 'tile' + tileNum + '.html';
+				    var imgURL = tilePrefix + 'tile' + tileNum + '.png';
+				    var myAjax = new Ajax.Updater(
+					tileDiv, 
+					url, 
+					{
+						method: 'get', 
+						parameters: pars,
+						onComplete:ViewerComponent_UpdateData(),
+						onFailure:ViewerComponent_Error(),
+					}
+				    );
+			   } else {
+				    var img = document.createElement ('img');
+                        	    img.id = tileNum + '_' + trackName + '_tileImg';
+                        	    img.className = 'tileImg';
+                        	    img.src = tilePrefix + 'tile' + tileNum + '.png';
+                        	    tileDiv.appendChild (img);
+                        	    track.appendChild (tileDiv)
+			    }
+			    
 			}
 		}
 
@@ -1478,7 +1506,7 @@ function ViewerComponent_updateTiles () {
     this.lastCachedTile = newLastCachedTile;
 
     view.updateView();
-
+ 
     /*
     // for profiling
     var end = new Date ();
@@ -1487,7 +1515,18 @@ function ViewerComponent_updateTiles () {
     */
 }
 
+function ViewerComponent_Error (url) {
+    /* Place holder for something to do when handling errors using the updater*/
+}
 
+function ViewerComponent_UpdateData (tile) {
+   /*
+   Place holder for further actions on loading the map data 
+   One idea is to load in only the minimum image map data (the area info and coords)
+   and then append the mouseover events etc
+   */   
+
+}
 //------------------------
 //     EVENT HANDLERS
 //------------------------
@@ -1737,3 +1776,4 @@ function ViewerComponent_ntToPixel (nt) {
     // units / (units/tile) * (pixels/tile) = pixels
     return Math.floor ((nt / taz.getUnitsPerTile()) * taz.tileWidth);
 }
+

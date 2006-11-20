@@ -26,6 +26,8 @@ use Bio::Graphics::Browser::Util;
 use GD::SVG;                       # this may be necessary later !!!
 use TiledImagePanel;               # our clone of 'Panel.pm' that returns TiledImage object instead of GD::Image
 use BatchTiledImage;
+use Data::Dumper;
+
 
 # --- BEGIN MANUAL PARAMETER SPECIFICATIONS ---
 my $VERSION = 1.62;               # I have no idea if this is even necessary (it certainly never gets used) !!!
@@ -521,7 +523,7 @@ print XMLFILE "  <tracks>\n" unless $no_xml;
 # iterate over tracks (i.e. labels)
 for (my $label_num = 0; $label_num < @track_labels; $label_num++) {
     next if ($track_labels[$label_num] eq 'ruler');  # skip ruler, we render it above - TEST THIS !!!!!!!
-
+    my $track_num=$label_num; # steve same thing really...
     my $label = ($track_labels[$label_num]); # used to be @labels in 'gbrowse_img'
     
     # get track name, record to XML file
@@ -603,20 +605,6 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++) {
 
 	my $tile_prefix = "${current_outdir}/tile";
 
-	my %tiledImageArgs = (
-			      # BatchTiledImage options
-			      -renderTiles => $render_tiles,
-			      -firstTile => $tile_ranges_to_render{$label}{$zoom_level_name}->[0] - 1,  # NB change from 1-based to 0-based coords
-			      -lastTile  => $tile_ranges_to_render{$label}{$zoom_level_name}->[1] - 1,  # NB change from 1-based to 0-based coords
-			      -tileWidth => $tilewidth_pixels,
-			      -renderWidth => $rendering_tilewidth,
-			      -tilePrefix => $tile_prefix,
-			      
-			      # TiledImage options
-			      -persistent => $persistent,
-			      -verbose => $verbose,
-			      );
-
 	my @argv = (-start => $landmark_start,
 		    -end => $landmark_end,
 		    -stop => $landmark_end,  # backward compatability with old BioPerl
@@ -644,6 +632,8 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++) {
 
 	my $panel = TiledImagePanel->new(@argv);  # create our clone of 'Panel.pm' that returns
                                                   # pseudo-GD::Image objects (TiledImage objects)
+
+
 
         # if the glyph is the magic "dna" glyph (for backward compatibility), or if the section
         # is marked as being a "global feature", then we apply the glyph to the entire segment
@@ -694,9 +684,33 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++) {
 	#	"do_bump = $do_bump \n do_label = $do_label \n",
 	#	"bump_density = ", $CONFIG->
 	}
+
+		#my $boxes    = $panel->boxes;
+	#print Dumper($boxes);
 	
 	# output image
 	my $image_height = $panel->height;  # get image height, now that the panel is fully constructed
+	my $boxes    = $panel->boxes;
+	#print Dumper($boxes);
+
+	my %tiledImageArgs = (
+			      # BatchTiledImage options
+			      -renderTiles => $render_tiles,
+			      -firstTile => $tile_ranges_to_render{$label}{$zoom_level_name}->[0] - 1,  # NB change from 1-based to 0-based coords
+			      -lastTile  => $tile_ranges_to_render{$label}{$zoom_level_name}->[1] - 1,  # NB change from 1-based to 0-based coords
+			      -tileWidth => $tilewidth_pixels,
+			      -renderWidth => $rendering_tilewidth,
+			      -tilePrefix => $tile_prefix,
+			      -annotate => $boxes,
+			      -htmlOutdir => $html_current_outdir,
+			      # TiledImage options
+			      -persistent => $persistent,
+			      -verbose => $verbose,
+			      -trackNum => $track_num
+			      );
+
+       #print "HTML = $html_current_outdir\n";
+       print "Track num ".$track_num."\n";
 
 	my $fakegd;
 	if ($fill_database) {
@@ -709,7 +723,7 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++) {
 	}
 
 	# render all tiles (code moved into BatchTiledImage.pm - IH, 4/11/2006)
-	$fakegd->renderAllTiles;
+	$fakegd->renderAllTiles();
 	
 	# if we got this far, we must have rendered the tiles at this zoom level without egregeous error
 	# (or didn't render them at all), so output the tile info to the XML file

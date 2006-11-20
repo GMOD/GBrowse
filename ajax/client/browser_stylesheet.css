@@ -96,3 +96,43 @@ ul {
                        border: #999999;  /* this actually makes the border disappear... WHY? !!! */
                        margin: 1px 1px 1px 1px;
                        }
+		      
+
+#description {
+	position: absolute;
+	width: 250px;
+  	visibility: hidden;
+}
+
+.menuTitle {
+	font-family: sans-serif;
+	font-size: 10pt;
+	text-align: center;
+	color: #EEEEEE;
+	background: #245DDB;
+}
+.menuButton {
+	text-align: right;
+	background: #EFBA56;
+}
+.menuDisplay {
+	font-family: sans-serif;
+	font-size: 10pt;
+	text-align: left;
+	padding-left: 2px;
+	padding-right: 2px;
+	color: #000000;
+	background: #EEEEEE;
+}
+a.menuLink:link {
+	text-decoration: underline;
+	color: #006699;
+}
+a.menuLink:visited {
+	text-decoration: underline;
+	color: #006699;
+}
+a.menuLink:hover {
+	text-decoration: underline;
+	color: red;
+}

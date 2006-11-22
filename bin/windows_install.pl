@@ -69,19 +69,19 @@ CPAN::Shell->install('Digest::MD5');
 
 unless (eval "use Bio::Perl 1.005002; 1") {
   print STDERR "Installing BioPerl...\n";
-  do_install(BIOPERL,'bioperl-1.52.tar.gz','bioperl-live');
+  do_install(BIOPERL,'bioperl-1.52.tar.gz','bioperl-live','Build');
 }
 else {
   print STDERR "BioPerl is up to date\n";
 }
 
 print STDERR "Installing Generic-Genome-Browser...\n";
-do_install(GBROWSE,'gbrowse.tgz','Generic-Genome-Browser-1.66');
+do_install(GBROWSE,'gbrowse.tgz','Generic-Genome-Browser-1.66','make');
 
 exit 0;
 
 sub do_install {
-  my ($download,$local_name,$distribution) = @_;
+  my ($download,$local_name,$distribution,$method) = @_;
 
   chdir $tmpdir;
 
@@ -97,7 +97,15 @@ sub do_install {
             or die "Couldn't extract $distribution archive: $@";
   chdir $distribution
             or die "Couldn't enter $distribution directory: $@";
-  system("perl Makefile.PL") == 0
+  
+  if ($method eq 'make') {
+      system("perl Makefile.PL") == 0
             or die "Couldn't run perl Makefile.PL command\n";
-  system("$make install")    == 0  ;#        or die "Couldn't install\n";
+      system("make install")    == 0  ;#        or die "Couldn't install\n";
+  }
+  elsif ($method eq 'Build') {
+      system("perl Build.PL")
+            or die "Couldn't run perl Build.PL command\n";
+      system("./Build install") == 0;
+  }
 }

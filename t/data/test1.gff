@@ -25,8 +25,8 @@
 # gmod_bulk_load_gff3.pl -a -g data/test2.gff
 #
 #source features for use with targets
-CEESC13F	.	EST	1	250	.	.	.	ID=CEESC13F
-AL12345.1	.	clone	1	2000	.	.	.	ID=AL12345.1
+CEESC13F	.	EST	1	250	.	.	.	ID=CEESC13F;Dbxref=genbank:U29244,refseq:fake_refseq
+AL12345.1	.	clone	1	2000	.	.	.	ID=AL12345.1;Dbxref=genbank:fake
 AL11111.1	.	clone	1	6000	.	.	.	ID=AL11111.1
 AC13221.2	.	clone	1	15000	.	.	.	ID=AC13221.2
 M7.3	.	clone	1	36450	.	.	.	ID=M7.3

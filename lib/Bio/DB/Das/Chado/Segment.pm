@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.16 2006-11-30 04:16:11 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.17 2006-11-30 17:39:51 scottcain Exp $
 
 =head1 NAME
 
@@ -782,11 +782,12 @@ sub features {
   my $where_part;
   my $from_part;
   if ($feature_id) {
-    $from_part    = "from (feature f join featureloc fl using (feature_id)) "
-                   ."left join feature_dbxref fd using (feature_id) "
-                   ."left join analysisfeature af using (feature_id)";
+    $from_part    = "from (feature f join featureloc fl ON (f.feature_id = fl.feature_id)) "
+                   ."left join feature_dbxref fd ON (f.feature_id = fd.feature_id
+                         AND fd.dbxref_id in (select dbxref_id from dbxref where db_id=".$factory->gff_source_db_id.")) "
+                   ."left join analysisfeature af ON (f.feature_id = af.feature_id)";
 
-    $where_part   = "where f.feature_id = $feature_id and fl.rank=0 and (fd.dbxref_id is null or fd.dbxref_id in (select dbxref_id from dbxref where db_id=".$factory->gff_source_db_id."))";
+    $where_part   = "where f.feature_id = $feature_id and fl.rank=0 ";
 
     ##URGI Added a sub request to get the refclass srcfeature id to map all the features from this reference region.
     ##We then filter and are sure that we are getting the features located on the reference feature with the good
@@ -819,13 +820,13 @@ sub features {
     }else{
       $featureslice = "featureslice($interbase_start, $rend)";
     }
-    $from_part   = "from (feature f join $featureslice fl using (feature_id)) "
-                  ."left join feature_dbxref fd using (feature_id) "
-                  ."left join analysisfeature af using (feature_id)";
+    $from_part   = "from (feature f join $featureslice fl ON (f.feature_id = fl.feature_id)) "
+                  ."left join feature_dbxref fd ON (f.feature_id = fd.feature_id 
+                        AND fd.dbxref_id in (select dbxref_id from dbxref where db_id=".$factory->gff_source_db_id.")) "
+                  ."left join analysisfeature af ON (f.feature_id = af.feature_id)";
 
     $where_part  = "where $sql_types "
-                  ."fl.srcfeature_id = $srcfeature_id and fl.rank=0 "
-                  ."and (fd.dbxref_id is null or fd.dbxref_id in (select dbxref_id from dbxref where db_id=".$factory->gff_source_db_id."))";
+                  ."fl.srcfeature_id = $srcfeature_id and fl.rank=0 ";
   }
 
   my $query       = "$select_part\n$from_part\n$where_part\n$order_by\n";

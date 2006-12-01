@@ -2,6 +2,27 @@ package Bio::Graphics::Browser::Util;
 
 # a package of useful internal routines for GBrowse
 
+
+# NOTE: This library is going to be deprecated.
+
+## Moved to Bio::Graphics::Render::html:
+## print_top
+## print_bottom
+##
+## Moved to Bio::Graphics::Render:
+## modperl_request
+## open_config
+## error
+## fatal_error
+## early_error
+## set_language
+## redirect_legacy_url
+## _broken_apache_hack
+##
+
+
+
+
 =head1 NAME
 
 Bio::Graphics::Browser::Util -- Exported utilities
@@ -223,7 +244,8 @@ sub parse_added_feature {
 sub print_top {
   my $title     = shift;
   my $reset_all = shift;
-  local $^W = 0;  # to avoid a warning from CGI.pm
+  my @args      = @_;
+  local $^W = 0;  # to avoid a warning from CGI.pm                                                                                            
 
   my $js = $CONFIG->setting('js')||JS;
   my @scripts = {src=>"$js/buttons.js"};
@@ -236,17 +258,17 @@ sub print_top {
     push @scripts,{src=>"$js/$_"}  foreach qw(prototype.js scriptaculous.js);
 
   print_header(-expires=>'+1m');
-  my @args = (-title => $title,
-	      -style  => {src=>$CONFIG->setting('stylesheet')},
-	      -encoding=>$CONFIG->tr('CHARSET'),
-	     );
+  push @args,(-title => $title,
+              -style  => {src=>$CONFIG->setting('stylesheet')},
+              -encoding=>$CONFIG->tr('CHARSET'),
+	      );
   push @args,(-head=>$CONFIG->setting('head'))    if $CONFIG->setting('head');
   push @args,(-lang=>($CONFIG->language_code)[0]) if $CONFIG->language_code;
   push @args,(-script=>\@scripts);
   push @args,(-gbrowse_images => $CONFIG->setting('buttons') || '/gbrowse/images/buttons');
   push @args,(-gbrowse_js     => $CONFIG->setting('js')      || '/gbrowse/js');
   push @args,(-reset_toggle   => 1)               if $reset_all;
-  print start_html(@args) unless $HTML++;
+  print start_gbrowse_html(@args) unless $HTML++;
 }
 
 sub print_bottom {

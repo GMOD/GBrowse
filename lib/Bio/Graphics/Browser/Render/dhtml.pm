@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Render::dhtml;
-#$Id: dhtml.pm,v 1.1 2006-10-18 18:38:35 sheldon_mckay Exp $
+#$Id: dhtml.pm,v 1.2 2006-12-01 11:20:24 sheldon_mckay Exp $
 #
 # A package for adding DHTML functionality to gbrowse
 # This served mainly as a wrapper for CGI::Toggle to add javascript and
@@ -15,7 +15,7 @@ our @EXPORT = ('toggle_section',
 	       'start_gbrowse_html',
 	       'selectable_detail_panel');
 
-use constant JSFILES   => ('rubber.js');
+use constant JSFILES   => ('rubber.js', 'cross-browser.js');
 use constant JSDIR     => '/gbrowse/js';
 
 sub start_gbrowse_html {
@@ -55,14 +55,13 @@ sub selectable_detail_panel {
   my ($r,$s,$e) = map {$seg->$_} qw/ref start stop/;
   $map_id =~ s/\#//;  
 
-  my $result =  <<END;
-      <div ID="imageData" style="display:none">$w $h $pl $r $s $e $map_id</div>
-      <div ID="imageLoc" style="width:100%;text-align:center" class="databody">
-        <input type="image" id="detailPanel" src="$img_url" onload="loadImageData()" onclick="return false" \>
-      </div>
-      <div ID="cssMap">$map</div>
-END
-;
+  my $result;
+  # pass the image stats to the javasript function
+  $result .= qq(<div ID="imageData" style="display:none">$w $h $pl $r $s $e $map_id</div>\n);
+  # parent layer for the image -- gives dynamic top position
+  $result .= qq(<div style="width:100%;text-align:center" class="databody" ID="imageLoc">\n);
+  $result .= qq(<input type="image" id="detailPanel" src="$img_url" onload="loadImageData()" onclick="return false" \>\n);
+  $result .= qq(<div ID="cssMap">$map</div>\n<\div>\n);
 
   return $result;
 }

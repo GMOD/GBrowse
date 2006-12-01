@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_not.PLS,v 1.19 2006-12-01 10:53:53 sheldon_mckay Exp $
+# $Id: gbrowse_not.PLS,v 1.20 2006-12-01 11:24:33 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -377,7 +377,7 @@ exit 0;
 # in their new location
 ##################################################################################
 
-### Moved to Bio::Graphics::Render::html: ###
+## Moved to Bio::Graphics::Render::html:
 ## overview_panel
 ## navigation_table
 ## slidertable
@@ -389,21 +389,14 @@ exit 0;
 ## das_table
 ## multiple_choices
 ## overview
+## regionview
 ## segment2link
 ## get_uploaded_file_info
 ## edit_uploaded_file
 ## tableize
 ##
-
-### Moved to Bio::Graphics::Render: ###
+## Moved to Bio::Graphics::Render:
 ## page_settings
-## get_settings
-## default_settings
-## set_default_tracks
-## adjust_tracks
-## auto_open
-## reset_cookies
-## adjust_settings
 ## make_hilite_callback
 ## make_postgrid_callback
 ## unit_label
@@ -420,23 +413,13 @@ exit 0;
 ## do_keyword_search
 ## format_segment
 ## whole_segment
-## regionview
 ## get_zoomincrement
 ## show_examples
-## handle_uploads
-## handle_edit
-## handle_quickie
-## write_auto
-## load_external_sources
 ## line_end
-## load_plugin_annotators
 ## print_uploaded_file_features
 ## bookmark_link
 ## image_link
 ## svg_link
-## adjust_track_order
-## adjust_track_options
-## set_track_options
 ## help
 ## make_citation
 ## build_citation_page
@@ -459,11 +442,11 @@ exit 0;
 ## do_plugin_autofind
 ## toggle
 ## get_regionview_seg
-## unique
 ## split_labels
 ## is_search
 ## version_warning
 ##
+
 
 #################################################################################
 

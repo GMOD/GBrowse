@@ -268,7 +268,7 @@ sub print_top {
   push @args,(-gbrowse_images => $CONFIG->setting('buttons') || '/gbrowse/images/buttons');
   push @args,(-gbrowse_js     => $CONFIG->setting('js')      || '/gbrowse/js');
   push @args,(-reset_toggle   => 1)               if $reset_all;
-  print start_gbrowse_html(@args) unless $HTML++;
+  print start_html(@args) unless $HTML++;
 }
 
 sub print_bottom {

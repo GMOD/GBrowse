@@ -1,25 +1,6 @@
-Template todo's
-* not all html is in templates yet.
+* Implement README.rearchitecture.
+* Support correct parsing of uploaded GFF3 files using Bio::DB::SeqFeature::Store.
+* Create architecture for image servers to distribute rendering load.
 
-test change for cvs
-
-* Build a conf file editor (suggestion from a GBrowse tutorial at PAG)
-* Add popup menu support using Cyril's code and overlib/overlibmws.
-* More internationalization
-* Limit search results to user-set max
-* Group SVG elements by feature ID
-* Get rid of verbs attached to plugin names so that translations work properly.
-  Will need plugin authors to provide internationalization.
-* Add popup window/hyperlink to track labels in the image.
-* Make boxes/callbacks for gaps between components, such as introns.
-* Move all configuration information into a server-side file using CGI::Session 
-	(or similar).
-* Allow administrator to change track label fonts and sizes.
-* Boolean operations on queries
-* Give access to plugin highlighters (and other plugins?) to
-	gbrowse_details. See Letter from Vince.Forgetta Friday August 26.
-* Add per-track parameter lists as per letter from Russell Smithies, 
-	Monday, Sept 5.
-
-$Id: TODO,v 1.14 2006-01-16 21:56:46 scottcain Exp $
+$Id: TODO,v 1.15 2006-12-02 21:34:26 lstein Exp $
 

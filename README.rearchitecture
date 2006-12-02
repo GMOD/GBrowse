@@ -14,8 +14,8 @@ Typical flow for CGI scripts
 
  my $globals     = Bio::Graphics::Browser->new('/path/to/globals.txt');  # new globals object
  my $session     = $globals->session;
- my $dsn         = $session->update_data_source;
- my $data_source = $globals->new_data_source($dsn);
+ my $dsn         = $globals->update_data_source($session);
+ my $data_source = $globals->create_data_source($dsn);
  my $render      = Bio::Graphics::Browser::Render::HTML->new($globals,$data_source,$session);
  $render->run;
 
@@ -36,14 +36,14 @@ $globals = Bio::Graphics::Browser->new('/path/to/globals.txt');
 Get the IDs of all valid data sources:
 @data_sources = $globals->data_sources;
 
-Create or retrieve the persistent settings:
+Create or retrieve the persistent settings (optionally forcing the ID):
 
-$session      = $globals->session;
+$session      = $globals->session ([$id]);
 
 Create the data source-specific configuration, a
 Bio::Graphics::Browser::DataSource object:
 
-$data_source  = $globals->new_data_source($dsn);
+$data_source  = $globals->create_data_source($dsn);
 
 Get the value of an option in a section name ('general' by default):
 
@@ -54,12 +54,22 @@ Examples of using setting():
 $label = $globals->setting($data_sources[0] => 'description');
 $path  = $globals->setting($data_sources[0] => 'path');
 
+Find the new data source based on CGI path information and/our the
+'source' parameter. This will return the current source if the
+requested new source is invalid.
+
+ $dsn = $globals->update_data_source($session);
+
 The globals file lists all the data sources as well as browser-wide
 globals. Some of the globals, such as the stylesheet path, can be
 overridden by specific data sources. Others can't. This needs to be
-determined on a case-by-case basis. To simplify organization, there
-will be two top-level paths, one for config files, and one for htdocs
-files that other paths are relative to.
+determined on a case-by-case basis and the logic for this should be
+embedded in Bio::Graphics::Browser::Render.
+
+To simplify organization, there will be two top-level paths, one for
+config files, and one for htdocs files. If any path configs are given
+as relative paths, then these top-level paths are used to make them
+absolute.
 
 Note that for efficiency's sake, the Bio::Graphics::Browser object may
 be cached and reused, provided that its config file hasn't been
@@ -67,8 +77,8 @@ updated.
 
 [GENERAL]
 # path globals
-config_base   = /etc/gbrowse
-docs_base     = /var/www/htdocs/gbrowse
+config base   = /etc/gbrowse
+htdocs base   = /var/www/htdocs/gbrowse
 stylesheet    = /absolute/path or ./relative/to/docs_base
 icons         = /absolute/path or ./relative/to/docs_base
 plugins       = /absolute/path or ./relative/to/config_base
@@ -124,13 +134,6 @@ Retrieve a hash of persistent page settings:
 Get or set the data source DSN:
 
  $dsn =  $session->source([$new_dsn]);
-
-There is also a new method called update_data_source(), which changes
-the data source DSN based on the CGI path or else retrieves its
-previously-stored value (or defaults to the default DSN if none of the
-above applies):
-
- $dsn = $session->update_data_source();
 
 =================================================================
 

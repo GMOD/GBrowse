@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.17 2006-11-30 17:39:51 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.18 2006-12-06 17:07:34 scottcain Exp $
 
 =head1 NAME
 
@@ -113,6 +113,7 @@ sub new {
 
     $target ||=0;
     my $strand;
+
 
     warn "$name, $factory\n"                      if DEBUG;
     warn "base_start = $base_start, stop = $stop\n" if DEBUG;
@@ -955,7 +956,7 @@ to avoid code duplication
 sub _features2level(){
   my $self = shift;
 
-  warn "Segment->features() args:@_\n" if DEBUG;
+  warn "Segment->_features2level() args:@_\n" if DEBUG;
 
   my ($types,$type_placeholder,$attributes,$rangetype,$iterator,$callback,$base_start,$stop,$feature_id,$factory);
   if ($_[0] and $_[0] =~ /^-/) {
@@ -1131,7 +1132,6 @@ sub _features2level(){
   #   $factory->dbh->do("set enable_hashjoin=1");
 
 
-
   #2Level Optimisation
   #each feature is spaned over several tuples, each of which store a different SUBfeature (only one tuple if no subfeat of course)
 
@@ -1183,7 +1183,9 @@ sub _features2level(){
 							 $$hashref{strand},
 							 $$hashref{phase},
 							 $$hashref{name},
-							 $$hashref{uniquename},$$hashref{feature_id});
+							 $$hashref{uniquename},
+                                                         $$hashref{feature_id});
+      print STDERR "Created Feature obj $$hashref{name}][[$$hashref{feature_id}][$$hashref{'srcfeature_id'}]\n" if DEBUG;
     }
     #handling sub feat, if any
     if ($$hashref{sfeature_id}) {
@@ -1233,6 +1235,11 @@ sub _features2level(){
     #  warn "$feat->{annotation}, $$hashref{nbeg}, $fstart, $$hashref{nend}, $fend\n" if DEBUG;
 
   }				#end while hashref loop
+
+  #We check if the last feature creatd is the same as the last pushed in the array
+  if($features[-1]->feature_id() ne $feat->feature_id()){
+      push @features, $feat;
+  }
 
   if ($iterator) {
     warn "using Bio::DB::Das::ChadoIterator\n" if DEBUG;

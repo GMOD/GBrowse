@@ -187,12 +187,13 @@ END
 
 
 if ($bioperl_needs_patching) {
-  print STDERR "\nInstalled Bio::Graphics version $biographics_version is less than desired version $patch_version.  I will update to latest versions of the BioGraphics and GFF libraries.\n";
+  print STDERR "\nInstalled Bio::Graphics version $biographics_version is less than desired version $patch_version.\nYou need to update your BioPerl installation to version 1.5.2.\n\n";
+  die;
 }
 
 my @dir = ();
 push @dir,'libalign'         if $OPTIONS{DO_XS};
-push @dir,'extras/BioPerl'   if $bioperl_needs_patching;
+#push @dir,'extras/BioPerl'   if $bioperl_needs_patching;
 
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
@@ -261,12 +262,7 @@ END
 }
 
 sub biographics_patch_version {
-  delete $INC{'Bio/Graphics/Panel.pm'};
-  my @inc = @INC;
-  local @INC = @inc;
-  unshift @INC,'./extras/BioPerl';
-  require Bio::Graphics::Panel;
-  Bio::Graphics::Panel->api_version;
+  return 1.654; # what is in bioperl 1.5.2
 }
 
 

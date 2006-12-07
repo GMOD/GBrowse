@@ -13,8 +13,8 @@ use File::Copy 'cp';
 use CPAN '!get';
 
 use constant GBROWSE=>'http://gmod.cshl.edu/Generic-Genome-Browser-1.66.tar.gz';
-use constant BIOPERL=>'http://gmod.cshl.edu/bioperl-1.52.tar.gz';
-#use constant BIOPERL=>'http://bioperl.org/DIST/current_core_unstable.tar.gz';
+#use constant BIOPERL=>'http://gmod.cshl.edu/bioperl-1.52.tar.gz';
+use constant BIOPERL=>'http://bioperl.org/DIST/current_core_unstable.tar.gz';
 use constant NMAKE  =>'http://download.microsoft.com/download/vc15/patch/1.52/w95/en-us/nmake15.exe';
 
 my $binaries = $Config{'binexp'};
@@ -69,7 +69,7 @@ CPAN::Shell->install('Digest::MD5');
 
 unless (eval "use Bio::Perl 1.005002; 1") {
   print STDERR "Installing BioPerl...\n";
-  do_install(BIOPERL,'bioperl-1.52.tar.gz','bioperl-live','Build');
+  do_install(BIOPERL,'current_core_unstable.tar.gz','bioperl-1.5.2_100','Build');
 }
 else {
   print STDERR "BioPerl is up to date\n";

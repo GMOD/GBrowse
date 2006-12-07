@@ -53,7 +53,7 @@ Generic Genome Browser Installation
         This script will:
 
         Install MicroSoft's nmake utility
-        Add a third party ppm repository for install GD.pm
+        Add a third party ppm repository to install GD.pm
         Install GD.pm
         Use CPAN tools to install other prerequisites
         Download and install BioPerl

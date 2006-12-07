@@ -62,7 +62,7 @@ This script will:
 
 =item Install MicroSoft's nmake utility 
 
-=item Add a third party ppm repository for install GD.pm
+=item Add a third party ppm repository to install GD.pm
 
 =item Install GD.pm
 

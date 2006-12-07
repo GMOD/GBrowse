@@ -59,6 +59,7 @@ else {
   CPAN::Shell->install('GD') unless eval "use GD 2.31; 1";
 }
 print STDERR "Installing other prerequisites via CPAN...\n";
+CPAN::Shell->install('Module::Build');
 CPAN::Shell->install('GD::SVG');
 CPAN::Shell->install('IO::String');
 CPAN::Shell->install('Text::Shellwords');
@@ -72,7 +73,7 @@ unless (eval "use Bio::Perl 1.005002; 1") {
   do_install(BIOPERL,'current_core_unstable.tar.gz','bioperl-1.5.2_100','Build');
 }
 else {
-  print STDERR "BioPerl is up to date\n";
+  print STDERR "BioPerl is up to date.\n";
 }
 
 print STDERR "Installing Generic-Genome-Browser...\n";
@@ -101,11 +102,11 @@ sub do_install {
   if ($method eq 'make') {
       system("perl Makefile.PL") == 0
             or die "Couldn't run perl Makefile.PL command\n";
-      system("make install")    == 0  ;#        or die "Couldn't install\n";
+      system("nmake install")    == 0  ;#        or die "Couldn't install\n";
   }
   elsif ($method eq 'Build') {
-      system("perl Build.PL")
+      system("perl Build.PL")   == 0
             or die "Couldn't run perl Build.PL command\n";
-      system("./Build install") == 0;
+      system("Build install") == 0;
   }
 }

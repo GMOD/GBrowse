@@ -1,4 +1,4 @@
-q#!perl
+#!perl
 use Config;
 use File::Basename qw(&basename &dirname);
 use File::Spec;
@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_not.PLS,v 1.21 2006-12-07 21:04:15 sheldon_mckay Exp $
+# $Id: gbrowse_not.PLS,v 1.22 2006-12-07 21:07:10 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;

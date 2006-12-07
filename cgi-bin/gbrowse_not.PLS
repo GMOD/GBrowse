@@ -1,4 +1,4 @@
-#!perl
+q#!perl
 use Config;
 use File::Basename qw(&basename &dirname);
 use File::Spec;
@@ -48,13 +48,12 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_not.PLS,v 1.20 2006-12-01 11:24:33 sheldon_mckay Exp $
+# $Id: gbrowse_not.PLS,v 1.21 2006-12-07 21:04:15 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;
-use Bio::Graphics::Browser::Render::dhtml;
 use Bio::Graphics::Browser::PluginSet;
 use Bio::Graphics::Browser::UploadSet;
 use Bio::Graphics::Browser::RemoteSet;
@@ -67,6 +66,7 @@ use File::Basename 'basename','dirname';
 use File::Spec;
 use Carp qw(:DEFAULT croak);
 use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td);
+use CGI::Toggle;
 use CGI::Cookie;
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $BIOGRAPHICS_VERSION $CONF_DIR
@@ -372,86 +372,7 @@ exit 0;
 
 #################################################################################
 #--------------------------------- lots of subroutines --------------------------
-# Note: Most of the following subroutines are being migrated to external libraries
-# They will be removed from this script,  so please make changes to the subroutines
-# in their new location
-##################################################################################
-
-## Moved to Bio::Graphics::Render::html:
-## overview_panel
-## navigation_table
-## slidertable
-## zoomBar
-## tracks_table
-## settings_table
-## external_table
-## upload_table
-## das_table
-## multiple_choices
-## overview
-## regionview
-## segment2link
-## get_uploaded_file_info
-## edit_uploaded_file
-## tableize
-##
-## Moved to Bio::Graphics::Render:
-## page_settings
-## make_hilite_callback
-## make_postgrid_callback
-## unit_label
-## unit_to_value
-## categorize_track
-## annotation_help
-## general_help
-## zoomnav
-## get_features
-## features2segments
-## resize
-## lookup_features_from_db
-## lookup_features_from_external_sources
-## do_keyword_search
-## format_segment
-## whole_segment
-## get_zoomincrement
-## show_examples
-## line_end
-## print_uploaded_file_features
-## bookmark_link
-## image_link
-## svg_link
-## help
-## make_citation
-## build_citation_page
-## build_help_page
-## build_link_image_page
-## build_svg_image_page
-## _build_image_page
-## add_hilites
-## object_classes_for_help
-## make_citation_link
-## label2key
-## plugin_menu
-## plugin_links
-## source_menu
-## do_plugin_header
-## do_plugin_dump
-## do_plugin_about
-## do_plugin_find
-## do_plugin_configure
-## do_plugin_autofind
-## toggle
-## get_regionview_seg
-## split_labels
-## is_search
-## version_warning
-##
-
-
 #################################################################################
-
-
-
 
 sub main_display {
   my ($segments,$features,$page_settings) = @_;
@@ -631,61 +552,67 @@ sub detail_panel {
   my ($segment,$page_settings,$feature_files) = @_;
   return '' if $CONFIG->section_setting('details') eq 'hide';
 
-  my ($img,$map,$error_msg);
+  my ($img,$map);
+  my $cell = '';
 
   if ($segment && $segment->length <= $MAX_SEGMENT) {
 
     $CONFIG->width($page_settings->{width});
     my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} && !/:(overview|region)$/ }
-    @{$page_settings->{tracks}};
+                               @{$page_settings->{tracks}};
+
+#    if ($page_settings->{sk} eq "sorted") {
+#      my %label_keys = map {$_ => label2key($_)}  @tracks_to_show;
+#      @tracks_to_show    = sort {lc $label_keys{$a} cmp lc $label_keys{$b}} @tracks_to_show;
+#    }
 
     my %options = map {$_=>$page_settings->{features}{$_}{options}} @tracks_to_show;
     my %limit   = map {$_=>$page_settings->{features}{$_}{limit}}   @tracks_to_show;
     my $h_callback = make_hilite_callback($page_settings);
     my $postgrid   = make_postgrid_callback($page_settings);
     ($img,$map) = $CONFIG->render_html(segment       => $segment,
-                                       feature_files => $feature_files,
-                                       tracks        => \@tracks_to_show,
-                                       options       => \%options,
-                                       limit         => \%limit,
-                                       do_map        => 1,
-                                       do_centering_map => 1,
-                                       lang          => $CONFIG->language,
-                                       keystyle      => $page_settings->{ks}   || 'between',
-                                       flip          => $page_settings->{flip} || undef,
+				       feature_files => $feature_files,
+				       tracks        => \@tracks_to_show,
+				       options       => \%options,
+				       limit         => \%limit,
+				       do_map        => 1,
+				       do_centering_map => 1,
+				       lang          => $CONFIG->language,
+				       keystyle      => $page_settings->{ks}   || 'between',
+				       flip          => $page_settings->{flip} || undef,
                                        postgrid      => $postgrid || $CONFIG->setting('postgrid') || '',
                                        background    => $CONFIG->setting('background') || '',
-                                       hilite_callback => $h_callback || undef,
-                                       -add_category_labels => $CONFIG->setting('show track categories') || undef,
-                                       -grid         => $page_settings->{grid} || 0,
-				       );
+				       hilite_callback => $h_callback || undef,
+				       -add_category_labels => $CONFIG->setting('show track categories') || undef,
+				       -grid         => $page_settings->{grid} || 0,
+				      );
+    $cell .= $img;
   }
 
   else {
-    $error_msg  .= i($CONFIG->tr('TOO_BIG',scalar unit_label($MAX_SEGMENT),scalar unit_label($DEFAULT_SEGMENT)));
+    $cell .= i($CONFIG->tr('TOO_BIG',scalar unit_label($MAX_SEGMENT),scalar unit_label($DEFAULT_SEGMENT)));
   }
-
-  $error_msg .= p({-style=>"color: red"},
-                  "An error occurred while processing an uploaded or remote annotation file: ",
-                  b($CONFIG->error) ) if $CONFIG->error;
-
-  my ($table,$map_id,$image_url);
-  if ($error_msg) {
-    $table = table({-border=>0,-width=>'100%'}, TR({-class=>'databody'}, td({-align=>'center'},$error_msg)));
-  }
-  else {
-    $table = selectable_detail_panel($img,$map,$segment,25);
-  }
-
+  $cell .= "\n";
+  my $error_msg = $CONFIG->error ? p({-style=>"color: red"},
+				     "An error occurred while processing an uploaded or remote annotation file: ",
+				     b($CONFIG->error) ) : '';
+  my $table = table({-border=>0,-width=>'100%'},
+		    TR({-class=>'databody'},
+		       td({-align=>'center'},$cell)
+		      ),
+		    $error_msg ? (
+				  TR({-class=>'databody'},
+				     td($error_msg)
+				    )
+				  ) : (),
+		   );
   $table .= "\n";
+  $table .= $map if $map;
   $table .= join '',unique(hidden('ref')),unique(hidden('start')),unique(hidden('stop'));
-
   return div(toggle($page_settings,
-                     'Details',
+		    'Details',
 		    $table));
 }
-
-
 
 ###############################################################################################
 

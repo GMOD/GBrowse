@@ -1,5 +1,5 @@
 package Bio::Graphics::Glyph::heat_map;
-#$Id: heat_map.pm,v 1.3 2006-02-21 04:49:16 sheldon_mckay Exp $
+#$Id: heat_map.pm,v 1.4 2006-12-07 14:33:11 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics::Glyph::minmax;
@@ -93,7 +93,7 @@ sub calculate_gradient {
   my $stop_color  = lc $self->option('end_color')   || 'red';
   my $hsv_start   = $self->color2hsv($start_color);
   my $hsv_stop    = $self->color2hsv($stop_color);
-  
+
   my ($h_start,$s_start,$v_start) = @$hsv_start;
   my ($h_stop,$s_stop,$v_stop )   = @$hsv_stop;
   my $h_range = $h_stop - $h_start;
@@ -136,6 +136,7 @@ sub calculate_gradient {
       $s_start = 0;
       $v_range = 0;
       $v_start = 255;
+      $h_start = $h_stop;
     }
     elsif ( _isa_color($start_color) && $stop_color eq 'white' ) {
       $s_range = -255;
@@ -226,7 +227,7 @@ sub calculate_color {
   my $bri = $self->v_start;
   $bri += $score_diff * $self->v_range;
   $bri = int($bri + 0.5);
-  
+
   return $self->HSVtoRGB($hue,$sat,$bri);
 }
 

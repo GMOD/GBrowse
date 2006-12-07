@@ -85,7 +85,13 @@ When this is done, go to step (5) below.
 
 NOTE: The MacOSX installer sited below is quite out of date.  Until it
 is brought up to date, please use the SOURCE CODE INSTALL section below
-for Macs.
+for Macs.  The thing that generally trips up installs on Macs is getting
+libgd (a prerequisite for GD.pm) installed.  I have usually had success
+with fink getting it installed:
+
+  fink install gd2
+
+will do the trick.
 
 Go to the following URL:
 
@@ -139,11 +145,9 @@ They can be found on the Comprehensive Perl Archive Network
 	Digest::MD5          (any version)
 	Text::Shellwords     (any version)
 
-=item E) Bioperl version 1.5.2 or higher -- L<http://www.bioperl.org>
+=item E) BioPerl version 1.5.2 or higher -- L<http://www.bioperl.org>
 
-At the time of writing this document, release candidate 2 of 
-Bioperl 1.5.2 is available on the Bioperl website, with the 
-final 1.5.2 release expected any time now.
+Get 'current_core_unstable'.
 
 =back
 

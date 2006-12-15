@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.175 2006-09-06 22:36:07 lstein Exp $
+# $Id: gbrowse.PLS,v 1.176 2006-12-15 18:40:31 tharris Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2086,8 +2086,11 @@ sub _build_image_page {
   my $flip   = $settings->{flip} || param('flip') || 0;
   my $keystyle = $settings->{ks};
   my $grid     = $settings->{grid} || 0;
-  my $url = url(-base=>1);
-  $url   .= url(-absolute=>1);
+
+  # Breaks proxy-driven sites...
+  #  my $url = url(-base=>1);
+  # $url   .= url(-absolute=>1);
+  my $url = url(-absolute=>1);
   $url    = dirname($url) . "/gbrowse_img/".escape($source);
   my $tracks = $settings->{tracks};
   my $width  = $CONFIG->width;

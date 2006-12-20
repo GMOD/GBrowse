@@ -119,6 +119,7 @@ Generic Genome Browser Installation
                 DBD::mysql           (any version)
                 Digest::MD5          (any version)
                 Text::Shellwords     (any version)
+                Class::Base          (any version)
 
     E) BioPerl version 1.5.2 or higher -- <http://www.bioperl.org>
         Get 'current_core_unstable'.

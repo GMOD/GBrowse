@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_not.PLS,v 1.22 2006-12-07 21:07:10 sheldon_mckay Exp $
+# $Id: gbrowse_not.PLS,v 1.23 2006-12-30 22:48:11 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -102,6 +102,7 @@ use constant DEFAULT_REGION_SIZES   => q(1000 5000 10000 20000);
 use constant DEFAULT_FINE_ZOOM    => '10%';
 use constant GBROWSE_HELP         => '/gbrowse';
 use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceDumper';
+use constant CHECKBOX_COLUMNS     => 4;
 
 # if true, turn on surrounding rectangles for debugging the image map
 use constant DEBUG          => 0;
@@ -2931,26 +2932,26 @@ sub toggle {
 			@body);
 }
 
-
 sub tableize {
   my $array = shift;
   return unless @$array;
-  my $rows    = int(sqrt(@$array));
-  my $columns = int(0.99+@$array/$rows);
-  my $html = qq(<table border="0">);
-  for (my $row=0;$row<$rows;$row++) {
-    $html .= "<tr>";
-    for (my $column=0;$column<$columns;$column++) {
-      if (defined($array->[$column*$rows + $row])) {
-	$html .= "<td>" . $array->[$column*$rows + $row] . "</td>"
-      } else {
-	$html .= "<td>&nbsp;</td>";
-      }
+
+  my $columns = CHECKBOX_COLUMNS;
+  my $rows    = int( @$array/$columns + 1 );
+  my $html    = start_table( {-border => 0 } );
+  my $cwidth  = 100/$columns . '%';
+
+  for (my $row=1;$row<=$rows;$row++) {
+    my $td;
+    for (my $column=1;$column<=$columns;$column++) {
+      $td .= td({-width => $cwidth}, (shift @$array || '&nbsp;'));
     }
-    $html .= "</tr>\n";
+    $html .= TR($td);
   }
-  $html .= "</table>\n";
+
+  $html .= end_table;
 }
+
 
 sub get_regionview_seg {
   my ($settings,$detail_start, $detail_end, $whole_start, $whole_end) = @_;

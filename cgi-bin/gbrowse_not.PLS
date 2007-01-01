@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_not.PLS,v 1.23 2006-12-30 22:48:11 sheldon_mckay Exp $
+# $Id: gbrowse_not.PLS,v 1.24 2007-01-01 00:19:29 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2937,8 +2937,8 @@ sub tableize {
   return unless @$array;
 
   my $columns = CHECKBOX_COLUMNS;
-  my $rows    = int( @$array/$columns + 1 );
-  my $html    = start_table( {-border => 0 } );
+  my $rows    = int( @$array/$columns + 0.99 );
+  my $html    = start_table( {-border => 0, -width => '100%' } );
   my $cwidth  = 100/$columns . '%';
 
   for (my $row=1;$row<=$rows;$row++) {
@@ -2951,7 +2951,6 @@ sub tableize {
 
   $html .= end_table;
 }
-
 
 sub get_regionview_seg {
   my ($settings,$detail_start, $detail_end, $whole_start, $whole_end) = @_;

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.1 2006-12-02 21:34:26 lstein Exp $
+# $Id: Browser.pm,v 1.2 2007-01-04 18:54:09 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -10,6 +10,7 @@ use File::Path 'mkpath';
 use Text::ParseWords 'shellwords';
 use Bio::Graphics::Browser::DataSource;
 use Bio::Graphics::Browser::Session;
+use Carp 'croak','carp';
 use CGI '';
 
 my %CONFIG_CACHE;
@@ -18,7 +19,7 @@ sub new {
   my $class            = shift;
   my $config_file_path = shift;
 
-  # this code caches the config info so that we don't need to repearse in persistent (e.g. modperl) environment
+  # this code caches the config info so that we don't need to reparse in persistent (e.g. modperl) environment
   my $mtime            = (stat($config_file_path))[9];
   if (exists $CONFIG_CACHE{$config_file_path}
       && $CONFIG_CACHE{$config_file_path}{mtime} >= $mtime) {
@@ -163,7 +164,7 @@ sub create_data_source {
   my $self = shift;
   my $dsn = shift;
   my $path = $self->data_source_path($dsn) or return;
-  return Bio::Graphics::Browser::DataSource->new($path,$dsn,$self->data_source_description($dsn));
+  return Bio::Graphics::Browser::DataSource->new($path,$dsn,$self->data_source_description($dsn),$self);
 }
 
 sub default_source {
@@ -196,7 +197,7 @@ sub update_data_source {
     $session->source($new_source);
     return $new_source;
   } else {
-    warn "Invalid source $new_source";
+    carp "Invalid source $new_source";
     $session->source($old_source);
     return $old_source;
   }

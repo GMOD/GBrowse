@@ -10,7 +10,7 @@ use Bio::Root::IO;
 use File::Path 'rmtree';
 use FindBin '$Bin';
 
-use constant TEST_COUNT => 7;
+use constant TEST_COUNT => 100;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 BEGIN {
@@ -26,7 +26,7 @@ BEGIN {
 }
 
 chdir $Bin;
-use lib "../libnew";
+use lib "$Bin/../libnew";
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Render;
 
@@ -86,7 +86,11 @@ ok($session->source eq 'yeast_chr1');
 # try whether we can update the data source via CGI
 $ENV{REQUEST_METHOD} = 'GET';
 $ENV{QUERY_STRING}   = 'source=volvox';
-ok($globals->update_data_source($session),'volvox');
+ok($globals->update_data_source($session));
+ok($session->source eq 'volvox');
+
+ok($globals->update_data_source($session,'yeast_chr1'),'yeast_chr1');
+ok($session->source eq 'yeast_chr1');
 
 $CGI::Q->delete('source');
 $ENV{PATH_INFO}      = '/yeast_chr1';
@@ -98,11 +102,11 @@ ok($globals->update_data_source($session),'yeast_chr1');
 ok($globals->update_data_source($session,'volvox'),'volvox');
 
 # see whether the singleton caching system is working
-ok($globals,Bio::Graphics::Browser->new(CONF_FILE));
- 
+ok(Bio::Graphics::Browser->new(CONF_FILE),$globals);
+
 my $time = time;
 utime($time,$time,CONF_FILE); # equivalent to "touch"
-ok($globals ne Bio::Graphics::Browser->new(CONF_FILE));
+ok(Bio::Graphics::Browser->new(CONF_FILE) ne $globals);
 
 # test data source creation
 my $source = $globals->create_data_source($session->source);
@@ -110,7 +114,44 @@ ok($source);
 ok($source->name eq 'volvox');
 ok($source->description eq 'Volvox Example Database');
 
+# is it cached correctly?
+# we should get exactly the same object each time we call create_data_source....
+ok($globals->create_data_source($session->source),$source);
+
+# ... unless the config file has been updated more recently
+$time = time();
+utime($time,$time,$globals->data_source_path($session->source));
+ok($globals->create_data_source($session->source) ne $source);
+
+# Is data inherited? 
+ok($source->html1,'This is inherited');
+ok($source->html2,'This is overridden');
+
+# Do semantic settings work?
+ok($source->semantic_setting(Alignments=>'glyph'),'segments_new');
+ok($source->semantic_setting(Alignments=>'glyph',30000),'box');
+ok($source->type2label('match',0),'Alignments');
+
+# Do callbacks work (or at least, do we get a CODE reference back)?
+ok(ref($source->code_setting(EST=>'bgcolor')),'CODE');
+
+# Test other modifiers
+my @types = sort $source->overview_tracks;
+ok("@types","Motifs:overview Transcripts:overview");
+
+# Test restrictions/authorization
+my %tracks = map {$_=>1} $source->labels;
+ok(! exists $tracks{Variation});
+
+$ENV{REMOTE_HOST} = 'foo.cshl.edu';
+%tracks = map {$_=>1} $source->labels;
+ok(! exists $tracks{Variation});
+
+$ENV{REMOTE_USER} = 'lstein';
+%tracks = map {$_=>1} $source->labels;
+ok(exists $tracks{Variation});
+
+# test that make_link should produce a fatal error
+ok(!eval{$source->make_link();1});
+
 exit 0;
-
-
-

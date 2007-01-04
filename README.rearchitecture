@@ -168,7 +168,7 @@ provided that their corresponding config files have not been updated.
 This is the base class for driving the browser. It contains all
 methods common to the template, HTML and Ajax versions.
 
- $render = Bio::Graphics::Browser::Render->new($globals,$data_source,$session)
+ $render = Bio::Graphics::Browser::Render->new($data_source,$session)
 
 The global configuration, the data source configuration, and the
 session are passed in as separate objects and stored as instance

@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Bio::Graphics::Browser::I18n;
 use Text::ParseWords 'shellwords';
-use CGI '';
+use CGI qw(param request_method);
 use Carp 'croak';
 
 use constant VERSION => 2.0;
@@ -248,10 +248,9 @@ sub db_settings {
 sub update_state {
   my $self = shift;
   my $state = $self->state;
-  $self->default_state unless %$state;
-  $self->update_segments();
-  $self->update_tracks();
-  $self->update_options();
+  $self->default_state if !%$state or param('reset');
+  $self->update_state_from_cgi;
+  $self->fetch_segments();
 }
 
 sub default_state {
@@ -269,6 +268,11 @@ sub default_state {
   $state->{ks}           = 'between';
   $state->{grid}         = 1;
   $state->{sk}           = $self->setting("default varying") ? "unsorted" : "sorted";
+
+  # if no name is specified but there is a "initial landmark" defined in the
+  # config file, then we default to that.
+  $state->{name} = $self->setting('initial landmark') if defined $state->setting('initial landmark');
+
   $self->default_tracks();
 }
 
@@ -282,22 +286,278 @@ sub default_tracks {
   foreach (@labels) {
     $state->{features}{$_} = {visible=>0,options=>0,limit=>0};
   }
-  foreach ($CONFIG->default_labels) {
+  foreach ($self->default_labels) {
     $state->{features}{$_}{visible} = 1;
   }
 }
 
-sub update_segments {
-  my $self = shift;
-  
+sub update_state_from_cgi {
+  my $self  = shift;
+  my $state = $self->state;
+
+  $self->update_options($state);
+  if (param('revert')) {
+    $self->default_tracks($state);
+  }
+  else {
+    $self->update_tracks($state);
+  }
+  $self->update_coordinates($state);
+  $self->update_region($state);
+  $self->update_external_annotations($state);
+  $self->update_section_visibility($state);
+}
+
+sub update_options {
+  my $self  = shift;
+  my $state = shift;
+  return unless param('width'); # not submitted
+
+  $state->{grid} = 1 unless exists $state->{grid};  # to upgrade from older settings
+  $state->{flip} = 0;  # obnoxious for this to persist
+
+  $state->{flip}   = param('flip');
+  $state->{grid}   = param('grid');
+  $state->{width}  = param('width');
+
+  $state->{version} ||= param('version') || '';
+  $state->{$_} = param($_) if defined param($_) foreach qw(name source plugin stp ins head  ks sk version);
+
+  # Process the magic "q" parameter, which overrides everything else.
+  if (my @q = param('q')) {
+    delete $state->{$_} foreach qw(name ref h_feat h_region);
+    $state->{q} = [map {split /[+-]/} @q];
+  }
+
+  else  {
+    $state->{name} =~ s/^\s+//; # strip leading
+    $state->{name} =~ s/\s+$//; # and trailing whitespace
+  }
 }
 
 sub update_tracks {
   my $self = shift;
+  my $state = shift;
+
+  if (my @selected = $self->split_labels (param('label'))) {
+    $state->{features}{$_}{visible} = 0 foreach $self->data_source->labels;
+    $state->{features}{$_}{visible} = 1 foreach @selected;
+  }
+
+  if (my @selected = split_labels(param('enable'))) {
+    $state->{features}{$_}{visible} = 1 foreach @selected;
+  }
+
+  if (my @selected = split_labels(param('disable'))) {
+    $state->{features}{$_}{visible} = 0 foreach @selected;
+  }
+
+  $self->update_track_options($state) if param('adjust_order') && !param('cancel');
 }
 
-sub update_options {
+sub update_coordinates {
   my $self = shift;
+  my $state = shift;
+
+  my $divider  = $self->setting('unit_divider') || 1;
+
+  # Update coordinates.
+  $state->{ref}   = param('ref');
+  $state->{start} = param('start') if defined param('start') && param('start') =~ /^[\d-]+/;
+  $state->{stop}  = param('stop')  if defined param('stop')  && param('stop')  =~ /^[\d-]+/;
+  $state->{stop}  = param('end')   if defined param('end')   && param('end')   =~ /^[\d-]+/;
+
+  if ( (request_method() eq 'GET' && param('ref'))
+       ||
+       (param('span') && $divider*$state->{stop}-$divider*$state->{start}+1 != param('span'))
+       ||
+       grep {/left|right|zoom|nav|regionview\.[xy]|overview\.[xy]/} param()
+     )
+    {
+      $self->zoomnav($state);
+      $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}";
+      param(name => $state->{name});
+    }
+}
+
+sub update_region {
+  my $self  = shift;
+  my $state = shift;
+
+  if (my @features = shellwords(param('h_feat'))) {
+    $state->{h_feat} = {};
+    for my $hilight (@features) {
+      last if $hilight eq '_clear_';
+      my ($featname,$color) = split '@',$hilight;
+      $state->{h_feat}{$featname} = $color || 'yellow';
+    }
+  }
+
+  if (my @regions = shellwords(param('h_region'))) {
+    $state->{h_region} = [];
+    foreach (@regions) {
+      last if $_ eq '_clear_';
+      $_ = "$state->{ref}:$_" unless /^[^:]+:-?\d/; # add reference if not there
+      push @{$state->{h_region}},$_;
+    }
+  }
+
+  if ($self->setting('region segment')) {
+    $state->{region_size} = param('region_size') if defined param('region_size');
+    $state->{region_size} = $CONFIG->setting('region segment') unless defined $state->{region_size};
+  }
+  else {
+    delete $state->{region_size};
+  }
+}
+
+sub update_external_annotations {
+  my $self  = shift;
+  my $state = shift;
+
+  my @external = param('eurl') or return;
+
+  my %external = map {$_=>1} @external;
+  foreach (@external) {
+    next if exists $state->{features}{$_};
+    $state->{features}{$_} = {visible=>1,options=>0,limit=>0};
+    push @{$state->{tracks}},$_;
+  }
+
+  # remove any URLs that aren't on the list
+  foreach (keys %{$state->{features}}) {
+    next unless /^(http|ftp):/;
+    delete $state->{features}{$_} unless exists $external{$_};
+  }
+}
+
+sub update_section_visibility {
+  my $self = shift;
+  my $state = shift;
+
+  for my $div (grep {/^div_visible_/} CGI::cookie()) {
+    my ($section)   = $div =~ /^div_visible_(\w+)/ or next;
+    my $visibility  = CGI::cookie($div);
+    $state->{section_visible}{$section} = $visibility;
+  }
+}
+
+sub zoomnav {
+  my $self  = shift;
+  my $state = shift;
+
+  my $config = $self->data_source;
+
+  return unless $state->{ref};
+  my $start = $state->{start};
+  my $stop  = $state->{stop};
+  my $span  = $stop - $start + 1;
+  my $divisor = $self->setting(general=>'unit_divider') || 1;
+
+  warn "before adjusting, start = $start, stop = $stop, span=$span" if DEBUG;
+  my $flip  = $state->{flip} ? -1 : 1;
+
+  # get zoom parameters
+  my $selected_span    = param('span');
+  my ($zoom)           = grep {/^zoom (out|in) \S+/} param();
+  my ($nav)            = grep {/^(left|right) \S+/}  param();
+  my $overview_x       = param('overview.x');
+  my $regionview_x     = param('regionview.x');
+  my $regionview_size  = $state->{region_size};
+  my $seg_min          = param('seg_min');
+  my $seg_max          = param('seg_max');
+  my $segment_length   = $seg_max - $seg_min + 1 if defined $seg_min && defined $seg_max;
+
+  my $zoomlevel = $self->unit_to_value($1) if $zoom && $zoom =~ /((?:out|in) .+)\.[xy]/;
+  my $navlevel  = $self->unit_to_value($1) if $nav  && $nav  =~ /((?:left|right) .+)/;
+
+  if (defined $zoomlevel) {
+    warn "zoom = $zoom, zoomlevel = $zoomlevel" if DEBUG;
+    my $center	    = int($span / 2) + $start;
+    my $range	    = int($span * (1-$zoomlevel)/2);
+    $range          = 1 if $range < 1;
+    ($start, $stop) = ($center - $range , $center + $range - 1);
+  }
+
+  elsif (defined $navlevel){
+    $start += $flip * $navlevel;
+    $stop  += $flip * $navlevel;
+  }
+
+  elsif (defined $overview_x && defined $segment_length) {
+    my @overview_tracks = grep {$state->{features}{$_}{visible}} 
+         $self->data_source->overview_tracks;
+
+    my ($padl,$padr) = $self->overview_pad(\@overview_tracks);
+
+    my $overview_width = $state->{width} * $self->overview_ratio;
+
+    # adjust for padding in pre 1.6 versions of bioperl
+    $overview_width -= ($padl+$padr) unless Bio::Graphics::Panel->can('auto_pad');
+
+    my $click_position = $seg_min + $segment_length * ($overview_x-$padl)/$overview_width;
+
+    $span = $config->default_segment if $span > $config->max_segment;
+    $start = int($click_position - $span/2);
+    $stop  = $start + $span - 1;
+  }
+
+  elsif (defined $regionview_x) {
+    my $whole_start = param('seg_min');
+    my $whole_stop  = param('seg_max');
+    my ($regionview_start, $regionview_end) = get_regionview_seg($state,$start, $stop, $whole_start,$whole_stop);
+    my @regionview_tracks = grep {$state->{features}{$_}{visible}} 
+      $$config->regionview_tracks;
+    my ($padl,$padr) = $self->overview_pad(\@regionview_tracks);
+
+    my $regionview_width = ($state->{width} * $self->overview_ratio);
+
+    # adjust for padding in pre 1.6 versions of bioperl
+    $regionview_width -= ($padl+$padr) unless Bio::Graphics::Panel->can('auto_pad');
+    my $click_position = $regionview_size  * ($regionview_x-$padl)/$regionview_width;
+
+    $span = $config->default_segment if $span > $config->max_segment;
+    $start = int($click_position - $span/2 + $regionview_start);
+    $stop  = $start + $span - 1;
+  }
+
+  elsif ($selected_span) {
+    warn "selected_span = $selected_span" if DEBUG;
+    my $center	    = int(($span / 2)) + $start;
+    my $range	    = int(($selected_span)/2);
+    $start          = $center - $range;
+    $stop           = $start + $selected_span - 1;
+  }
+
+  warn "after adjusting for navlevel, start = $start, stop = $stop, span=$span" if DEBUG;
+
+  # to prevent from going off left end
+  if (defined $seg_min && $start < $seg_min) {
+    warn "adjusting left because $start < $seg_min" if DEBUG;
+    ($start,$stop) = ($seg_min,$seg_min+$stop-$start);
+  }
+
+  # to prevent from going off right end
+  if (defined $seg_max && $stop > $seg_max) {
+    warn "adjusting right because $stop > $seg_max" if DEBUG;
+    ($start,$stop) = ($seg_max-($stop-$start),$seg_max);
+  }
+
+  # to prevent divide-by-zero errors when zoomed down to a region < 2 bp
+  # $stop  = $start + ($span > 4 ? $span - 1 : 4) if $stop <= $start+2;
+
+  warn "start = $start, stop = $stop\n" if DEBUG;
+
+  $state->{start} = $start/$divisor;
+  $state->{stop}  = $stop/$divisor;
+}
+
+sub fetch_segments {
+  my $self  = shift;
+  my $db    = $self->db;
+  my $state = $self->state;
+
+  # do something
 }
 
 ##################################################################3
@@ -305,6 +565,37 @@ sub update_options {
 # SHARED RENDERING CODE HERE
 #
 ##################################################################3
+
+sub overview_ration {
+  my $self = shift;
+  return 1.0;   # for now
+}
+
+sub overview_pad {
+  my $self = shift;
+  my $tracks = shift;
+
+  my $config = $self->data_source;
+
+  $tracks ||= [$config->overview_tracks];
+  my $max = 0;
+  foreach (@$tracks) {
+    my $key = $self->setting($_=>'key');
+    next unless defined $key;
+    $max = length $key if length $key > $max;
+  }
+  foreach (@_) {  #extra
+    $max = length if length > $max;
+  }
+
+  # Tremendous kludge!  Not able to generate overview maps in GD yet
+  # This needs to be cleaned...
+  my $image_class = 'GD';
+  eval "use $image_class";
+  my $pad = $config->min_overview_pad;
+  return ($pad,$pad) unless $max;
+  return ($max * $image_class->gdMediumBoldFont->width + 3,$pad);
+}
 
 # override make_link to allow for code references
 sub make_link {

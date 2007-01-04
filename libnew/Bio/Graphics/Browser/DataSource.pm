@@ -77,6 +77,7 @@ sub html6            { shift->global_setting('html6')                    }
 
 sub max_segment      { shift->global_setting('max segment')              }
 sub default_segment  { shift->global_setting('max segment')              }
+sub min_overview_pad { shift->global_setting('min overview pad') || 0    }
 
 sub plugins        { shellwords(shift->global_setting('plugins'))      }
 

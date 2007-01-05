@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.2 2007-01-04 18:54:09 lstein Exp $
+# $Id: Browser.pm,v 1.3 2007-01-05 22:34:04 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -204,7 +204,7 @@ sub update_data_source {
 }
 
 ## methods for dealing with the session
-sub session {
+sub new_session {
   my $self = shift;
   my $id   = shift;
   return Bio::Graphics::Browser::Session->new($self->session_driver,

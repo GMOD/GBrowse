@@ -13,7 +13,7 @@ Typical flow for CGI scripts
  use Bio::Graphics::Browser::Render::HTML;  # UI driver
 
  my $globals     = Bio::Graphics::Browser->new('/path/to/globals.txt');  # new globals object
- my $session     = $globals->session;
+ my $session     = $globals->new_session;
  my $dsn         = $globals->update_data_source($session);
  my $data_source = $globals->create_data_source($dsn);
  my $render      = Bio::Graphics::Browser::Render::HTML->new($globals,$data_source,$session);

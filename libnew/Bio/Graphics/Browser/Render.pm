@@ -3,6 +3,9 @@ package Bio::Graphics::Browser::Render;
 use strict;
 use warnings;
 use Bio::Graphics::Browser::I18n;
+use Bio::Graphics::Browser::PluginSet;
+use Bio::Graphics::Browser::UploadSet;
+use Bio::Graphics::Browser::RemoteSet;
 use Text::ParseWords 'shellwords';
 use CGI qw(param request_method);
 use Carp 'croak';
@@ -86,6 +89,13 @@ sub segments {
   return @$d;
 }
 
+sub plugins {
+  my $self = shift;
+  my $d = $self->{plugins};
+  $self->{plugins} = shift if @_;
+  $d;
+}
+
 
 ###################################################################################
 #
@@ -125,6 +135,7 @@ sub init_database {
   eval {$DB{$key}->biosql->version($state->{version})};
 
   $self->db($DB{$key});
+  $DB{$key};
 }
 
 sub init_plugins {
@@ -136,6 +147,8 @@ sub init_plugins {
     ||= Bio::Graphics::Browser::PluginSet->new($self->data_source,$self->state,@plugin_path);
   $self->fatal_error("Could not initialize plugins") unless $plugins;
   $plugins->configure($self->db,$self->state,$self->session);
+  $self->plugins($plugins);
+  $plugins;
 }
 
 sub init_remote_sources {
@@ -144,6 +157,7 @@ sub init_remote_sources {
   my $remote_sources   = Bio::Graphics::Browser::RemoteSet->new($self->data_source,$self->state);
   $self->uploaded_sources($uploaded_sources);
   $self->remote_sources($remote_sources);
+  $uploaded_sources && $remote_sources;
 }
 
 sub render {
@@ -183,20 +197,6 @@ sub setting {
     # otherwise we get the data_source-specific settings
     return $data_source->setting(@_);
   }
-}
-
-sub plugin_setting {
-  my $self           = shift;
-  my $caller_package = caller();
-  my ($last_name)    = $caller_package =~ /(\w+)$/;
-  my $option_name    = "${last_name}:plugin";
-  $self->setting($option_name => @_);
-}
-
-sub karyotype_setting {
-  my $self           = shift;
-  my $caller_package = caller();
-  $self->setting('karyotype' => @_);
 }
 
 sub db_settings {
@@ -271,7 +271,8 @@ sub default_state {
 
   # if no name is specified but there is a "initial landmark" defined in the
   # config file, then we default to that.
-  $state->{name} = $self->setting('initial landmark') if defined $state->setting('initial landmark');
+  $state->{name} = $self->setting('initial landmark') 
+    if defined $self->setting('initial landmark');
 
   $self->default_tracks();
 }
@@ -286,7 +287,7 @@ sub default_tracks {
   foreach (@labels) {
     $state->{features}{$_} = {visible=>0,options=>0,limit=>0};
   }
-  foreach ($self->default_labels) {
+  foreach ($self->data_source->default_labels) {
     $state->{features}{$_}{visible} = 1;
   }
 }
@@ -310,18 +311,15 @@ sub update_state_from_cgi {
 
 sub update_options {
   my $self  = shift;
-  my $state = shift;
+  my $state = shift || $self->state;
   return unless param('width'); # not submitted
 
   $state->{grid} = 1 unless exists $state->{grid};  # to upgrade from older settings
   $state->{flip} = 0;  # obnoxious for this to persist
 
-  $state->{flip}   = param('flip');
-  $state->{grid}   = param('grid');
-  $state->{width}  = param('width');
-
   $state->{version} ||= param('version') || '';
-  $state->{$_} = param($_) if defined param($_) foreach qw(name source plugin stp ins head  ks sk version);
+  do {$state->{$_} = param($_) if defined param($_) } 
+    foreach qw(name source plugin stp ins head  ks sk version grid flip width);
 
   # Process the magic "q" parameter, which overrides everything else.
   if (my @q = param('q')) {
@@ -330,6 +328,7 @@ sub update_options {
   }
 
   else  {
+    $state->{name} ||= '';
     $state->{name} =~ s/^\s+//; # strip leading
     $state->{name} =~ s/\s+$//; # and trailing whitespace
   }
@@ -356,8 +355,8 @@ sub update_tracks {
 }
 
 sub update_coordinates {
-  my $self = shift;
-  my $state = shift;
+  my $self  = shift;
+  my $state = shift || $self->state;
 
   my $divider  = $self->setting('unit_divider') || 1;
 
@@ -382,7 +381,7 @@ sub update_coordinates {
 
 sub update_region {
   my $self  = shift;
-  my $state = shift;
+  my $state = shift || $self->state;
 
   if (my @features = shellwords(param('h_feat'))) {
     $state->{h_feat} = {};
@@ -404,7 +403,7 @@ sub update_region {
 
   if ($self->setting('region segment')) {
     $state->{region_size} = param('region_size') if defined param('region_size');
-    $state->{region_size} = $CONFIG->setting('region segment') unless defined $state->{region_size};
+    $state->{region_size} = $self->setting('region segment') unless defined $state->{region_size};
   }
   else {
     delete $state->{region_size};
@@ -413,7 +412,7 @@ sub update_region {
 
 sub update_external_annotations {
   my $self  = shift;
-  my $state = shift;
+  my $state = shift || $self->state;
 
   my @external = param('eurl') or return;
 
@@ -444,7 +443,7 @@ sub update_section_visibility {
 
 sub zoomnav {
   my $self  = shift;
-  my $state = shift;
+  my $state = shift || $self->state;
 
   my $config = $self->data_source;
 
@@ -787,6 +786,50 @@ sub tra {
   my $self = shift;
   my $lang = $self->language or return @_;
   $lang->tr(@_);
+}
+
+####################################333
+# Unit conversion
+####################################333
+# convert bp into nice Mb/Kb units
+sub unit_label {
+  my $self = shift;
+  my $value = shift;
+  my $unit     = $self->setting('units')        || 'bp';
+  my $divider  = $self->setting('unit_divider') || 1;
+  $value /= $divider;
+  my $abs = abs($value);
+
+  my $label;
+  $label = $abs >= 1e9  ? sprintf("%.4g G%s",$value/1e9,$unit)
+         : $abs >= 1e6  ? sprintf("%.4g M%s",$value/1e6,$unit)
+         : $abs >= 1e3  ? sprintf("%.4g k%s",$value/1e3,$unit)
+	 : $abs >= 1    ? sprintf("%.4g %s", $value,    $unit)
+	 : $abs >= 1e-2 ? sprintf("%.4g c%s",$value*100,$unit)
+	 : $abs >= 1e-3 ? sprintf("%.4g m%s",$value*1e3,$unit)
+	 : $abs >= 1e-6 ? sprintf("%.4g u%s",$value*1e6,$unit)
+	 : $abs >= 1e-9 ? sprintf("%.4g n%s",$value*1e9,$unit)
+         : sprintf("%.4g p%s",$value*1e12,$unit);
+  if (wantarray) {
+    return split ' ',$label;
+  } else {
+    return $label;
+  }
+}
+
+# convert Mb/Kb back into bp... or a ratio
+sub unit_to_value {
+  my $self = shift;
+  my $string = shift;
+  my $sign           = $string =~ /out|left/ ? '-' : '+';
+  my ($value,$units) = $string =~ /([\d.]+) ?(\S+)/;
+  return unless defined $value;
+  $units ||= 'bp';
+  $value /= 100   if $units eq '%';  # percentage;
+  $value *= 1000  if $units =~ /kb/i;
+  $value *= 1e6   if $units =~ /mb/i;
+  $value *= 1e9   if $units =~ /gb/i;
+  return "$sign$value";
 }
 
 1;

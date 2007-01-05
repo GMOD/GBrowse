@@ -57,4 +57,8 @@ sub config_hash {
   return $session->param($source);
 }
 
+sub DESTROY {
+  shift->flush;
+}
+
 1;

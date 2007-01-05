@@ -8,6 +8,7 @@ use warnings;
 use Module::Build;
 use Bio::Root::IO;
 use File::Path 'rmtree';
+use CGI;
 use FindBin '$Bin';
 
 use constant TEST_COUNT => 100;
@@ -23,6 +24,11 @@ BEGIN {
   }
   use Test;
   plan test => TEST_COUNT;
+
+  rmtree '/tmp/gbrowse_testing';
+}
+END {
+  rmtree '/tmp/gbrowse_testing';
 }
 
 chdir $Bin;
@@ -33,8 +39,11 @@ use Bio::Graphics::Browser::Render;
 my $globals = Bio::Graphics::Browser->new(CONF_FILE);
 ok($globals);
 
-my $session     = $globals->session;
-my $dsn         = $globals->update_data_source($session,'volvox');
+ok(my $session     = $globals->new_session());
+ok(my $id = $session->id);
+undef $session;
+ok($session  = $globals->new_session($id));
+ok($id,$session->id);
 
 my $source      = $globals->create_data_source($session->source);
 ok($source);
@@ -49,6 +58,8 @@ my $feature = Bio::Graphics::Feature->new(-name=>'fred',
 ok($render->make_link($feature),"../../gbrowse_details/volvox?name=fred;class=Sequence;ref=A;start=1;end=1000");
 
 $ENV{REQUEST_URI} = 'http://localhost/cgi-bin/gbrowse/volvox/';
+$ENV{REQUEST_METHOD} = 'GET';
+
 ok($render->make_link($feature),"http://localhost/cgi-bin/gbrowse_details/volvox?name=fred;class=Sequence;ref=A;start=1;end=1000");
 
 ############### testing language features #############
@@ -59,6 +70,65 @@ $ENV{'HTTP_ACCEPT_LANGUAGE'} = 'fr';
 $render      = Bio::Graphics::Browser::Render->new($source,$session);
 ok(($render->language->language)[0],'fr');
 ok($render->tra('IMAGE_LINK','Lien vers une image de cet affichage'));
+
+############### testing initialization code #############
+ok(!$render->db);
+ok(my $db = $render->init_database);
+ok($render->db,$db);
+ok($db,$render->db); # should return same thing each time
+ok(ref($db),'Bio::DB::GFF::Adaptor::memory');
+ok(scalar $db->features,16);
+
+ok($render->init_plugins);
+ok(my $plugins = $render->plugins);
+my @plugins = $plugins->plugins;
+ok(scalar @plugins,3);
+
+ok($render->init_remote_sources);
+ok(!$render->uploaded_sources->files);
+ok(!$render->remote_sources->sources);
+
+############### testing update code #############
+$render->default_state;
+ok($render->state->{width},800);
+ok($render->state->{grid},1);
+$CGI::Q = new CGI('width=1024;grid=0');
+$render->update_options;
+ok($render->state->{width},1024);
+ok($render->state->{grid},0);
+
+# is session management working? 
+# (Need to undef both the session and the renderer in order to call session's destroy method)
+undef $session;
+undef $render;
+
+$session = $globals->new_session($id);
+ok($session->id,$id);
+$render  = Bio::Graphics::Browser::Render->new($source,$session);
+ok($render->state->{width},1024);
+
+# test navigation - first we pretend that we are setting position to I:1..1000
+$CGI::Q = new CGI('ref=I;start=1;end=1000');
+$render->update_coordinates;
+ok($render->state->{name},'I:1..1000');
+ok($render->state->{ref},'I');
+ok($render->state->{start},1);
+ok($render->state->{stop},1000);
+
+# now we pretend that we've pressed the right button
+$CGI::Q = new CGI('span=1000;right+500.x=yes;ref=I;start=1;stop=1000');
+$render->update_coordinates;
+ok($render->state->{name},'I:501..1500');
+
+# pretend we want to zoom in 50%
+$CGI::Q = new CGI('span=1000;zoom+in+50%.x=yes;ref=I;start=501;stop=1500');
+$render->update_coordinates;
+ok($render->state->{name},'I:751..1250');
+
+# pretend that we've selected the popup menu to go to 100 bp
+$CGI::Q = new CGI('span=100;ref=I;start=751;stop=1250');
+$render->update_coordinates;
+ok($render->state->{name},'I:951..1050');
 
 exit 0;
 

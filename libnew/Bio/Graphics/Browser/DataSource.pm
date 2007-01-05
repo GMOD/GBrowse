@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use base 'Bio::Graphics::FeatureFile';
 use Text::ParseWords 'shellwords';
+use File::Basename 'dirname';
 use Carp 'croak';
 use Socket 'AF_INET';  # for inet_aton() call
 use CGI '';
@@ -26,6 +27,7 @@ sub new {
   $self->name($name);
   $self->description($description);
   $self->globals($globals);
+  $self->dir(dirname($config_file_path));
   $CONFIG_CACHE{$config_file_path}{object} = $self;
   $CONFIG_CACHE{$config_file_path}{mtime}  = $mtime;
   return $self;
@@ -41,6 +43,13 @@ sub description {
   my $self = shift;
   my $d    = $self->{description};
   $self->{description} = shift if @_;
+  $d;
+}
+
+sub dir {
+  my $self = shift;
+  my $d    = $self->{dir};
+  $self->{dir} = shift if @_;
   $d;
 }
 
@@ -79,7 +88,7 @@ sub max_segment      { shift->global_setting('max segment')              }
 sub default_segment  { shift->global_setting('max segment')              }
 sub min_overview_pad { shift->global_setting('min overview pad') || 0    }
 
-sub plugins        { shellwords(shift->global_setting('plugins'))      }
+sub plugins          { shellwords(shift->global_setting('plugins'))      }
 
 
 sub labels {
@@ -119,6 +128,27 @@ sub style {
   my ($self,$label,$length) = @_;
   my $l = $self->semantic_label($label,$length);
   return $l eq $label ? $self->SUPER::style($l) : ($self->SUPER::style($label),$self->SUPER::style($l));
+}
+
+# like setting, but defaults to 'general'
+sub setting {
+  my $self = shift;
+  my ($label,$option,@rest) = @_ >= 2 ? @_ : ('general',@_);
+  $self->SUPER::setting($label,$option,@rest);
+}
+
+sub plugin_setting {
+  my $self           = shift;
+  my $caller_package = caller();
+  my ($last_name)    = $caller_package =~ /(\w+)$/;
+  my $option_name    = "${last_name}:plugin";
+  $self->setting($option_name => @_);
+}
+
+sub karyotype_setting {
+  my $self           = shift;
+  my $caller_package = caller();
+  $self->setting('karyotype' => @_);
 }
 
 # like code_setting, but obeys semantic hints

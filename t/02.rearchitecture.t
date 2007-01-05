@@ -128,6 +128,8 @@ ok($source->html1,'This is inherited');
 ok($source->html2,'This is overridden');
 
 # Do semantic settings work?
+ok($source->setting(general => 'plugins'),'Aligner RestrictionAnnotator ProteinDumper');
+ok($source->setting('plugins'),'Aligner RestrictionAnnotator ProteinDumper');
 ok($source->semantic_setting(Alignments=>'glyph'),'segments_new');
 ok($source->semantic_setting(Alignments=>'glyph',30000),'box');
 ok($source->type2label('match',0),'Alignments');

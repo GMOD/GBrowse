@@ -202,8 +202,7 @@ WriteMakefile(
 	      'NAME'	     => 'Generic-Genome-Browser',
 	      'VERSION'      => $VERSION,
 	      'PREREQ_PM'    => {
-				 Bio::Perl         => 1.5,
-                                 #Bio::Root::Version => 1.5,
+				 Bio::Perl         => 1.0050021,
 				 GD                => 2.07,
 				 IO::String        => 0,
 				 Text::Shellwords  => 1.08,
@@ -228,6 +227,7 @@ WriteMakefile(
 				 'cgi-bin/gbrowse.PLS'  => 'cgi-bin/gbrowse',
 				 'cgi-bin/gbrowse_not.PLS'  => 'cgi-bin/gbrowse_not',
 				 'cgi-bin/gbrowse_img.PLS'  => 'cgi-bin/gbrowse_img',
+				 'cgi-bin/gbrowse_drag.PLS'  => 'cgi-bin/gbrowse_drag',
 				 'cgi-bin/gbrowse_karyotype.PLS'  => 'cgi-bin/gbrowse_karyotype',
 				 'cgi-bin/gbrowse_details.PLS'  => 'cgi-bin/gbrowse_details',
 				 'cgi-bin/gbrowse_est.PLS'  => 'cgi-bin/gbrowse_est',

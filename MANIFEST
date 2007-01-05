@@ -9,6 +9,7 @@ bin/ucsc_genes2gff.PLS
 cgi-bin/das.PLS
 cgi-bin/gbrowse.PLS
 cgi-bin/gbrowse_not.PLS
+cgi-bin/gbrowse_drag.PLS
 cgi-bin/gbrowse_details.PLS
 cgi-bin/gbrowse_est.PLS
 cgi-bin/gbrowse_img.PLS

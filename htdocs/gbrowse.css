@@ -88,7 +88,9 @@ TH.linkmenu       {
                     CURSOR: help;
                     TEXT-DECORATION: none
                   }
- 
+.titlebar         {  background-color: khaki; 
+                     cursor: crosshair;
+                  }
 #autoComplete { position:relative }
 #autoCompleteContainer1 {position:absolute;top:0em;width:75%;}
 #autoCompleteContainer1 .yui-ac-content {position:absolute;top:1.5em;width:100%;; border:1px solid #404040;background:#fff;overflow:hidden;z-index:9050;}

@@ -90,7 +90,12 @@ TH.linkmenu       {
                   }
 .titlebar         {  background-color: khaki; 
                      cursor: crosshair;
+                     position: absolute;
+                     left: 0em;
+                     font-size: 9pt;
+                     font-weight: bold;
                   }
+ 
 #autoComplete { position:relative }
 #autoCompleteContainer1 {position:absolute;top:0em;width:75%;}
 #autoCompleteContainer1 .yui-ac-content {position:absolute;top:1.5em;width:100%;; border:1px solid #404040;background:#fff;overflow:hidden;z-index:9050;}
@@ -98,3 +103,4 @@ TH.linkmenu       {
 #autoCompleteContainer1 ul {width:100%;padding:0px;margin:0px}
 #autoCompleteContainer1 li {cursor:default;white-space:nowrap;padding:0px}
 #autoCompleteContainer1 li.yui-ac-highlight {background:#ff0;padding:0px}
+

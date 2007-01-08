@@ -354,29 +354,164 @@ sub update_tracks {
   $self->update_track_options($state) if param('adjust_order') && !param('cancel');
 }
 
+# update coordinates logic
+# 1. A fresh session will have a null {ref,start,stop} state, a previous session will have {ref,start,stop,seg_min,seg_max} defined
+# 2. If param('ref'),param('start') and param('stop') are defined, or if param('q') is defined, then we
+#    reset {ref,start,stop}
+# 3. Otherwise, if {ref,start,stop} are defined, then
+#    2a. interrogate param('span'). If span != (stop-start+1) then user has changed the zoom popup menu and we do a zoom.
+#    2b. interrogate /left|right|zoom|nav|regionview|overview/, which define the various zoom and scroll buttons.
+#        If any of them exist, then we do the appropriate coordinate adjustment
+# 3. If we did NOT change the coordinates, then we look for param('name') and use that to set the coordinates
+#    using a database search.
+# 4. set {name} to "ref:start..stop"
+
 sub update_coordinates {
   my $self  = shift;
   my $state = shift || $self->state;
 
-  my $divider  = $self->setting('unit_divider') || 1;
+  my $position_updated;
 
-  # Update coordinates.
-  $state->{ref}   = param('ref');
-  $state->{start} = param('start') if defined param('start') && param('start') =~ /^[\d-]+/;
-  $state->{stop}  = param('stop')  if defined param('stop')  && param('stop')  =~ /^[\d-]+/;
-  $state->{stop}  = param('end')   if defined param('end')   && param('end')   =~ /^[\d-]+/;
+  # I really don't know if this belongs here. Divider should only be used for displaying
+  # numbers, not for doing calculations with them.
+  # my $divider  = $self->setting('unit_divider') || 1;
 
-  if ( (request_method() eq 'GET' && param('ref'))
-       ||
-       (param('span') && $divider*$state->{stop}-$divider*$state->{start}+1 != param('span'))
-       ||
-       grep {/left|right|zoom|nav|regionview\.[xy]|overview\.[xy]/} param()
-     )
-    {
-      $self->zoomnav($state);
-      $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}";
-      param(name => $state->{name});
+  if (param('ref')) {
+    $state->{ref}   = param('ref');
+    $state->{start} = param('start') if defined param('start') && param('start') =~ /^[\d-]+/;
+    $state->{stop}  = param('stop')  if defined param('stop')  && param('stop')  =~ /^[\d-]+/;
+    $state->{stop}  = param('end')   if defined param('end')   && param('end')   =~ /^[\d-]+/;
+    $position_updated++;
+  }
+
+  elsif (param('q')) {
+    @{$state}{'ref','start','stop'} = $self->parse_feature_name(param('q'));
+    $position_updated++;
+  }
+
+  elsif ($state->{ref}) {
+
+    die "inconsistency: \$state->{ref,start,stop} should only be defined if \$state->{seg_min,seg_max} are defined"
+      if defined $state->{ref} && defined $state->{start} && !(defined $state->{seg_min} && defined $state->{seg_max});
+
+    my $current_span = $state->{stop} - $state->{start} + 1;
+    my $new_span     = param('span');
+    if ($new_span && $current_span != $new_span) {
+      $self->zoom_to_span($state,$new_span);
+      $position_updated++;
     }
+    elsif (my ($scroll_data) = grep {/^(?:left|right) \S+/} param()) {
+      $self->scroll($state,$scroll_data);
+      $position_updated++;
+    }
+    elsif (my ($zoom_data)   = grep {/^zoom (?:out|in) \S+/} param()) {
+      $self->zoom($state,$zoom_data);
+      $position_updated++;
+    }
+    elsif (my $position_data = param('overview.x')) {
+      $self->position_from_overview($state,$position_data);
+      $position_updated++;
+    }
+    elsif ($position_data = param('regionview.x')) {
+      $self->position_from_regionview($state,$position_data);
+      $position_updated++;
+    }
+  }
+
+  if ($position_updated) { # clip
+    $state->{start} = $state->{seg_min} if defined $state->{seg_min} && $state->{start} < $state->{seg_min};
+    $state->{stop}  = $state->{seg_max} if defined $state->{seg_max} && $state->{stop}  > $state->{seg_max};
+    $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}";
+    param(name => $state->{name});
+  }
+
+  return $position_updated;
+}
+
+sub zoom_to_span {
+  my $self = shift;
+  my ($state,$new_span) = @_;
+
+  my $current_span = $state->{stop} - $state->{start} + 1;
+  my $center	    = int(($current_span / 2)) + $state->{start};
+  my $range	    = int(($new_span)/2);
+  $state->{start}   = $center - $range;
+  $state->{stop }   = $state->{start} + $new_span - 1;
+}
+
+sub scroll {
+  my $self = shift;
+  my $state       = shift;
+  my $scroll_data = shift;
+
+  my $flip        = $state->{flip} ? -1 : 1;
+
+  $scroll_data    =~ s/\.[xy]$//; # get rid of imagemap button cruft
+  my $scroll_distance = $self->unit_to_value($scroll_data);
+
+  $state->{start} += $flip * $scroll_distance;
+  $state->{stop}  += $flip * $scroll_distance;
+}
+
+sub zoom {
+  my $self = shift;
+  my $state     = shift;
+  my $zoom_data = shift;
+
+  $zoom_data    =~ s/\.[xy]$//; # get rid of imagemap button cruft
+  my $zoom_distance = $self->unit_to_value($zoom_data);
+  my $span          = $state->{stop} - $state->{start} + 1;
+  my $center	    = int($span / 2) + $state->{start};
+  my $range	    = int($span * (1-$zoom_distance)/2);
+  $range            = 1 if $range < 1;
+
+  $state->{start}   = $center - $range;
+  $state->{stop}    = $center + $range - 1;
+}
+
+sub position_from_overview {
+  my $self = shift;
+  my $state         = shift;
+  my $position_data = shift;
+
+  return unless defined $state->{seg_max} && defined $state->{seg_min};
+
+  my $segment_length = $state->{seg_max} - $state->{seg_min} + 1;
+  return unless $segment_length > 0;
+
+  my @overview_tracks = grep {$state->{features}{$_}{visible}} 
+    $self->data_source->overview_tracks;
+
+  my ($padl,$padr)   = $self->overview_pad(\@overview_tracks);
+  my $overview_width = $state->{width} * $self->overview_ratio;
+
+  my $click_position = $state->{seg_min} + $segment_length * ($position_data-$padl)/$overview_width;
+  my $span           = $state->{stop} - $state->{start} + 1;
+
+  $state->{start}    = int($click_position - $span/2);
+  $state->{stop}     = $state->{start} + $span - 1;
+}
+
+sub position_from_regionview {
+  my $self = shift;
+  my $state         = shift;
+  my $position_data = shift;
+  return unless defined $state->{seg_max} && defined $state->{seg_min};
+  return unless $state->{region_size};
+
+  my @regionview_tracks = grep {$state->{features}{$_}{visible}}
+    $self->data_source->regionview_tracks;
+
+  my ($padl,$padr) = $self->overview_pad(\@regionview_tracks) or return;
+  my $regionview_width = ($state->{width} * $self->overview_ratio);
+
+  my $click_position = $state->{region_size}  * ($position_data-$padl)/$regionview_width;
+  my $span           = $state->{stop} - $state->{start} + 1;
+
+  my ($regionview_start, $regionview_end) = $self->regionview_bounds();
+
+  $state->{start} = int($click_position - $span/2 + $regionview_start);
+  $state->{stop}  = $state->{start} + $span - 1;
 }
 
 sub update_region {
@@ -439,116 +574,6 @@ sub update_section_visibility {
     my $visibility  = CGI::cookie($div);
     $state->{section_visible}{$section} = $visibility;
   }
-}
-
-sub zoomnav {
-  my $self  = shift;
-  my $state = shift || $self->state;
-
-  my $config = $self->data_source;
-
-  return unless $state->{ref};
-  my $start = $state->{start};
-  my $stop  = $state->{stop};
-  my $span  = $stop - $start + 1;
-  my $divisor = $self->setting(general=>'unit_divider') || 1;
-
-  warn "before adjusting, start = $start, stop = $stop, span=$span" if DEBUG;
-  my $flip  = $state->{flip} ? -1 : 1;
-
-  # get zoom parameters
-  my $selected_span    = param('span');
-  my ($zoom)           = grep {/^zoom (out|in) \S+/} param();
-  my ($nav)            = grep {/^(left|right) \S+/}  param();
-  my $overview_x       = param('overview.x');
-  my $regionview_x     = param('regionview.x');
-  my $regionview_size  = $state->{region_size};
-  my $seg_min          = param('seg_min');
-  my $seg_max          = param('seg_max');
-  my $segment_length   = $seg_max - $seg_min + 1 if defined $seg_min && defined $seg_max;
-
-  my $zoomlevel = $self->unit_to_value($1) if $zoom && $zoom =~ /((?:out|in) .+)\.[xy]/;
-  my $navlevel  = $self->unit_to_value($1) if $nav  && $nav  =~ /((?:left|right) .+)/;
-
-  if (defined $zoomlevel) {
-    warn "zoom = $zoom, zoomlevel = $zoomlevel" if DEBUG;
-    my $center	    = int($span / 2) + $start;
-    my $range	    = int($span * (1-$zoomlevel)/2);
-    $range          = 1 if $range < 1;
-    ($start, $stop) = ($center - $range , $center + $range - 1);
-  }
-
-  elsif (defined $navlevel){
-    $start += $flip * $navlevel;
-    $stop  += $flip * $navlevel;
-  }
-
-  elsif (defined $overview_x && defined $segment_length) {
-    my @overview_tracks = grep {$state->{features}{$_}{visible}} 
-         $self->data_source->overview_tracks;
-
-    my ($padl,$padr) = $self->overview_pad(\@overview_tracks);
-
-    my $overview_width = $state->{width} * $self->overview_ratio;
-
-    # adjust for padding in pre 1.6 versions of bioperl
-    $overview_width -= ($padl+$padr) unless Bio::Graphics::Panel->can('auto_pad');
-
-    my $click_position = $seg_min + $segment_length * ($overview_x-$padl)/$overview_width;
-
-    $span = $config->default_segment if $span > $config->max_segment;
-    $start = int($click_position - $span/2);
-    $stop  = $start + $span - 1;
-  }
-
-  elsif (defined $regionview_x) {
-    my $whole_start = param('seg_min');
-    my $whole_stop  = param('seg_max');
-    my ($regionview_start, $regionview_end) = get_regionview_seg($state,$start, $stop, $whole_start,$whole_stop);
-    my @regionview_tracks = grep {$state->{features}{$_}{visible}} 
-      $$config->regionview_tracks;
-    my ($padl,$padr) = $self->overview_pad(\@regionview_tracks);
-
-    my $regionview_width = ($state->{width} * $self->overview_ratio);
-
-    # adjust for padding in pre 1.6 versions of bioperl
-    $regionview_width -= ($padl+$padr) unless Bio::Graphics::Panel->can('auto_pad');
-    my $click_position = $regionview_size  * ($regionview_x-$padl)/$regionview_width;
-
-    $span = $config->default_segment if $span > $config->max_segment;
-    $start = int($click_position - $span/2 + $regionview_start);
-    $stop  = $start + $span - 1;
-  }
-
-  elsif ($selected_span) {
-    warn "selected_span = $selected_span" if DEBUG;
-    my $center	    = int(($span / 2)) + $start;
-    my $range	    = int(($selected_span)/2);
-    $start          = $center - $range;
-    $stop           = $start + $selected_span - 1;
-  }
-
-  warn "after adjusting for navlevel, start = $start, stop = $stop, span=$span" if DEBUG;
-
-  # to prevent from going off left end
-  if (defined $seg_min && $start < $seg_min) {
-    warn "adjusting left because $start < $seg_min" if DEBUG;
-    ($start,$stop) = ($seg_min,$seg_min+$stop-$start);
-  }
-
-  # to prevent from going off right end
-  if (defined $seg_max && $stop > $seg_max) {
-    warn "adjusting right because $stop > $seg_max" if DEBUG;
-    ($start,$stop) = ($seg_max-($stop-$start),$seg_max);
-  }
-
-  # to prevent divide-by-zero errors when zoomed down to a region < 2 bp
-  # $stop  = $start + ($span > 4 ? $span - 1 : 4) if $stop <= $start+2;
-
-  warn "start = $start, stop = $stop\n" if DEBUG;
-
-  $state->{start} = $start/$divisor;
-  $state->{stop}  = $stop/$divisor;
 }
 
 sub fetch_segments {
@@ -822,7 +847,7 @@ sub unit_to_value {
   my $self = shift;
   my $string = shift;
   my $sign           = $string =~ /out|left/ ? '-' : '+';
-  my ($value,$units) = $string =~ /([\d.]+) ?(\S+)/;
+  my ($value,$units) = $string =~ /([\d.]+)(\s*\S+)?/;
   return unless defined $value;
   $units ||= 'bp';
   $value /= 100   if $units eq '%';  # percentage;
@@ -830,6 +855,61 @@ sub unit_to_value {
   $value *= 1e6   if $units =~ /mb/i;
   $value *= 1e9   if $units =~ /gb/i;
   return "$sign$value";
+}
+
+#############################################################################
+#
+# HANDLING SEGMENTS
+#
+#############################################################################
+sub regionview_bounds {
+  my $self  = shift;
+
+  my $state             = $self->state;
+  my $regionview_length = $state->{region_size};
+
+  my ($detail_start,$detail_stop) = (@{$state}{'start','stop'})      or return;
+  my ($whole_start,$whole_stop)   = (@{$state}{'seg_min','seg_max'}) or return;
+
+
+  if ($detail_stop - $detail_start + 1 > $regionview_length) { # region can't be smaller than detail
+    $regionview_length = $detail_stop - $detail_start + 1;
+  }
+  my $midpoint = ($detail_stop + $detail_start) / 2;
+  my $regionview_start = int($midpoint - $regionview_length/2 + 1);
+  my $regionview_end = int($midpoint + $regionview_length/2);
+
+  if ($regionview_start < $whole_start) {
+    $regionview_start = 1;
+    $regionview_end   = $regionview_length;
+  }
+  if ($regionview_end > $whole_stop) {
+    $regionview_start = $whole_stop - $regionview_length + 1;
+    $regionview_end   = $whole_stop;
+  }
+  return ($regionview_start, $regionview_end);
+}
+
+
+sub parse_feature_name {
+  my $self = shift;
+  my $name = shift;
+
+  my ($class,$ref,$start,$stop);
+  if ( ($name !~ /\.\./ and $name =~ /([\w._\/-]+):(-?[-e\d.]+),(-?[-e\d.]+)$/) or
+      $name =~ /([\w._\/-]+):(-?[-e\d,.]+?)(?:-|\.\.)(-?[-e\d,.]+)$/) {
+    $ref  = $1;
+    $start = $2;
+    $stop  = $3;
+    $start =~ s/,//g; # get rid of commas
+    $stop  =~ s/,//g;
+  }
+
+  elsif ($name =~ /^(\w+):(.+)$/) {
+    $class = $1;
+    $ref   = $2;
+  }
+  return ($ref,$start,$stop,$class);
 }
 
 1;

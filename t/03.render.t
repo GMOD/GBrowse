@@ -115,18 +115,22 @@ ok($render->state->{ref},'I');
 ok($render->state->{start},1);
 ok($render->state->{stop},1000);
 
+# lie a little bit to test things
+$render->state->{seg_min} = 1;
+$render->state->{seg_max} = 5000;
+
 # now we pretend that we've pressed the right button
-$CGI::Q = new CGI('span=1000;right+500.x=yes;ref=I;start=1;stop=1000');
+$CGI::Q = new CGI('right+500.x=yes');
 $render->update_coordinates;
 ok($render->state->{name},'I:501..1500');
 
 # pretend we want to zoom in 50%
-$CGI::Q = new CGI('span=1000;zoom+in+50%.x=yes;ref=I;start=501;stop=1500');
+$CGI::Q = new CGI('zoom+in+50%.x=yes');
 $render->update_coordinates;
 ok($render->state->{name},'I:751..1250');
 
 # pretend that we've selected the popup menu to go to 100 bp
-$CGI::Q = new CGI('span=100;ref=I;start=751;stop=1250');
+$CGI::Q = new CGI('span=100');
 $render->update_coordinates;
 ok($render->state->{name},'I:951..1050');
 

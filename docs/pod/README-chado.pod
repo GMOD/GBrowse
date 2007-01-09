@@ -17,23 +17,6 @@ distribution:
 These files are installed the in the BioPerl infastructure when 'make install' 
 is run.
 
-In addition to the standard chado schema, this adaptor requires a few
-additional views and functions.  These are found in two files in the
-chado CVS or in a gmod distribution.  These are:
-
-  schema/chado/modules/sequence/gff-bridge/sequence-gff-views.sql
-  schema/chado/modules/sequence/gff-bridge/sequence-gff-funcs.plpgsql
-
-The easiest way to get these into the chado schema is include them when 
-building the chado schema from a gmod release during `perl Makefile.PL`.
-It is currently included by default when the schema is built this way.
-If you already have a chado instance and want to add these items,
-the easiest way to do that is to cat the files
-to stdout and pipe that to a psql command:
-
-  % cat sequence-gff-views.sql   | psql <chado-database-name>
-  % cat sequence-gff-funcs.pgsql | psql <chado-database-name>
-
 A sample chado configuration file is included in contrib/conf_files/.  
 Since chado uses the Sequence Ontology for its controlled vocabulary, it
 is quite likely that this configuration file should work for any

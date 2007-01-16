@@ -102,7 +102,7 @@ sub do_install {
   if ($method eq 'make') {
       system("perl Makefile.PL") == 0
             or die "Couldn't run perl Makefile.PL command\n";
-      system("nmake install")    == 0  ;#        or die "Couldn't install\n";
+      system("$make install")    == 0  ;#        or die "Couldn't install\n";
   }
   elsif ($method eq 'Build') {
       system("perl Build.PL")   == 0

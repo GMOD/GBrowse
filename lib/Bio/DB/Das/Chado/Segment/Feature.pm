@@ -150,6 +150,51 @@ sub feature_id {
   return $self->{'feature_id'};
 }
 
+=head2 organism
+
+=over
+
+=item Usage
+
+  $obj->organism()        #get existing value
+  $obj->organism($newval) #set new value
+
+=item Function
+
+=item Returns
+
+value of organism (a scalar)
+
+=item Arguments
+
+new value of organism (to set)
+
+=back
+
+=cut
+
+sub organism {
+    my $self = shift;
+    my $organism = shift if defined(@_);
+    return $self->{'organism'} = $organism if defined($organism);
+
+    #if it isn't passed in, we need to try to go get it
+
+    my $dbh = $self->factory->dbh;
+
+    my $organism_query = $dbh->prepare("
+        SELECT genus, species FROM organism WHERE organism_id IN
+          (SELECT organism_id FROM feature WHERE feature_id = ?)
+    ");
+    $organism_query->execute($self->feature_id);
+
+    my ($genus, $species) = $organism_query->fetchrow_array;
+
+    $self->{'organism'} = "$genus $species";
+    return $self->{'organism'};
+}
+
+
 =head2 group()
 
   Title   : group

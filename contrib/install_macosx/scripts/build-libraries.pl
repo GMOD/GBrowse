@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: build-libraries.pl,v 1.1.8.1 2007-01-17 17:41:21 scottcain Exp $
+# $Id: build-libraries.pl,v 1.1.8.2 2007-01-17 19:42:30 scottcain Exp $
 
 =pod
 
@@ -55,7 +55,7 @@ Finally, the backup directories are restored to their original name.
 =head1 AUTHOR
 
   Todd Harris (harris@cshl.org)
-  Version: $Id: build-libraries.pl,v 1.1.8.1 2007-01-17 17:41:21 scottcain Exp $
+  Version: $Id: build-libraries.pl,v 1.1.8.2 2007-01-17 19:42:30 scottcain Exp $
   Copyright @ 2003 Cold Spring Harbor Laboratory
   $Z<>Revision$
 
@@ -110,6 +110,8 @@ my @EASY_INSTALLS = (qw/
 		     Log::Agent
 		     SVG
 		     CGI::Cache
+                     CGI::Session
+                     Class::Base
 		     /);
 
 my @XML_MODULES = (qw/

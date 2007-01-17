@@ -25,7 +25,7 @@ use Bio::LocationI;
 use Data::Dumper;
 use URI::Escape;
 
-use constant DEBUG => 0;
+use constant DEBUG => 1;
 
 use vars qw($VERSION @ISA $AUTOLOAD %CONSTANT_TAGS);
 @ISA = qw(Bio::DB::Das::Chado::Segment Bio::SeqFeatureI
@@ -900,7 +900,8 @@ sub sub_SeqFeature {
     my $partof =  $self->factory->name2term('part_of');
     my $derivesfrom = $self->factory->name2term('derives_from');
     $self->throw("part_of cvterm wasn't found.  is DB sane?") unless $partof;
-    $partof = join ',', @$partof if ref($partof) eq 'ARRAY';
+    $partof      = join ',', @$partof      if ref($partof)      eq 'ARRAY';
+    $derivesfrom = join ',', @$derivesfrom if ref($derivesfrom) eq 'ARRAY';
     $partof .= ",$derivesfrom";
 
     warn "partof = $partof" if DEBUG;

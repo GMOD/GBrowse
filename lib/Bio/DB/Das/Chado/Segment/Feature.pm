@@ -25,7 +25,7 @@ use Bio::LocationI;
 use Data::Dumper;
 use URI::Escape;
 
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 use vars qw($VERSION @ISA $AUTOLOAD %CONSTANT_TAGS);
 @ISA = qw(Bio::DB::Das::Chado::Segment Bio::SeqFeatureI

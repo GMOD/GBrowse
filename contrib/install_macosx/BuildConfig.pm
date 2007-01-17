@@ -45,19 +45,19 @@ packages.
 my %VERSIONS = (
 		ace        => '1.86',
 		acedb      => '4_9t',
-		bioperl    => '1.2.3',
+		bioperl    => '1.5.2_100',
 		dbd        => '2.9002',
-		expat      => '1.95.6',
+		expat      => '2.0.0',
 		libfreetype=> '2.0.9',
-		gbrowse    => '1.54',
-		gd         => '2.06',		
+		gbrowse    => '1.66',
+		gd         => '2.35',		
 		libiconv   => '1.8',
 		libjpeg    => '6b',
-		libpng     => '1.2.5',
-		libgd      => '2.0.15',
+		libpng     => '1.2.15',
+		libgd      => '2.0.33',
 		mysql      => '4.0.14',
 		readline   => '4.3',
-		zlib       => '1.1.4',
+		zlib       => '1.2.3',
 	       );
 
 my %URLS = (
@@ -65,17 +65,17 @@ my %URLS = (
 	    acedb       => 'http://www.acedb.org/Software/Downloads/SUPPORTED',
 	    bioperl     => 'http://www.bioperl.org/DIST',
 	    dbd         => 'http://cpan.org/modules/by-module/DBD',
-	    expat       => 'http://easynews.dl.sourceforge.net/sourceforge/expat',
+	    expat       => 'http://downloads.sourceforge.net/expat',
 	    gbrowse     => 'http://umn.dl.sourceforge.net/sourceforge/gmod',
 	    gd          => 'http://stein.cshl.org/WWW/software/GD',
 	    libfreetype => 'http://umn.dl.sourceforge.net/sourceforge/freetype',
 	    libiconv    => 'http://mirrors.usc.edu/pub/gnu/libiconv',
 	    libjpeg     => 'ftp://ftp.uu.net/graphics/jpeg',
-	    libpng      => 'http://download.sourceforge.net/libpng',
+	    libpng      => 'http://downloads.sourceforge.net/libpng',
 	    libgd       => 'http://www.boutell.com/gd/http',
 	    mysql       => 'ftp://ftp.orst.edu/pub/mysql/Downloads/MySQL-4.0',
 	    readline    => 'ftp://ftp.cwru.edu/pub/bash',
-	    zlib        => 'http://www.libpng.org/pub/png/src',
+	    zlib        => 'http://www.zlib.net',
 	   );
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: build-libraries.pl,v 1.1 2003-11-19 01:49:18 tharris Exp $
+# $Id: build-libraries.pl,v 1.1.8.1 2007-01-17 17:41:21 scottcain Exp $
 
 =pod
 
@@ -55,7 +55,7 @@ Finally, the backup directories are restored to their original name.
 =head1 AUTHOR
 
   Todd Harris (harris@cshl.org)
-  Version: $Id: build-libraries.pl,v 1.1 2003-11-19 01:49:18 tharris Exp $
+  Version: $Id: build-libraries.pl,v 1.1.8.1 2007-01-17 17:41:21 scottcain Exp $
   Copyright @ 2003 Cold Spring Harbor Laboratory
   $Z<>Revision$
 
@@ -63,13 +63,14 @@ Finally, the backup directories are restored to their original name.
 
 #'
 
-use CPANPLUS::backend;
+use CPANPLUS::Backend;
 use CPANPLUS::Configure;
 use Getopt::Long;
 use Pod::Usage;
 use lib '../';
 use BuildConfig;
 use strict;
+use Data::Dumper;
 
 my ($self_contained,$package,$version,$help);
 GetOptions('self_contained=s'=> \$self_contained,
@@ -94,6 +95,7 @@ my @EASY_INSTALLS = (qw/
 		     HTML::Tagset
 		     HTML::TokeParser
 		     Bundle::LWP
+                     Tie::Restore
 		     IO::Scalar
 		     IO::String
                      URI
@@ -141,12 +143,11 @@ my $FLUSH     = 0;
 
 my $cpan_config = new CPANPLUS::Configure;
 # Most mods will just ignore the EXPAT directives...
-$cpan_config->set_conf('makemakerflags'  => { INSTALLMAN3DIR => $config->man3,
-					      INSTALLMAN1DIR => $config->man1,
-					      LIB            => $config->perllib,
-					      EXPATLIBPATH   => $config->lib,
-					      EXPATINCPATH   => $config->include,
-					    },
+$cpan_config->set_conf('makemakerflags'  => "INSTALLMAN3DIR=".$config->man3.
+					    " INSTALLMAN1DIR=".$config->man1.
+					    " LIB=".$config->perllib.
+					    " EXPATLIBPATH=".$config->lib.
+					    " EXPATINCPATH=".$config->include ,
 		       'flush'           => $FLUSH,
 		       'prereqs'         => 1,
 		      );
@@ -194,12 +195,20 @@ sub build_libraries {
 sub cpan_installs {
   my ($modules,$type) = @_;
   foreach my $module (@$modules) {
-    my $module_obj = $cpan->module_tree()->{$module};
+    my $module_obj = $cpan->module_tree($module);
+
+    #added for api changes?  sjc--1/16/07
+    my $fetch = $module_obj->fetch;
+    warn $fetch;
+    my $extract = $module_obj->extract;
+    warn $extract;
     
     # force install, because the package list might just say it is
     # already there...
-    my $result  = $module_obj->install(force=>1);
-    my $path    = $module_obj->pathname();
+
+    my $result  = $module_obj->install(force=>1);# target=>'install',force=>1,verbose=>1);
+    #my $path    = $module_obj->pathname();
+    my $path    = $module_obj->path(); #api change in CPANPLUS??
     my $version = $module_obj->version();
     
     # Flush the perl5lib cache to ensure that newly installed modules

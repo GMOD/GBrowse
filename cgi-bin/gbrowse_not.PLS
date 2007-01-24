@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_not.PLS,v 1.24 2007-01-01 00:19:29 sheldon_mckay Exp $
+# $Id: gbrowse_not.PLS,v 1.25 2007-01-24 14:47:18 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -887,7 +887,7 @@ sub navigation_table {
   my $svg_link     = $HAVE_SVG? a({-href=>svg_link($settings),-target=>'_blank'},'['.$CONFIG->tr('SVG_LINK').']'):'';
   my $reset_link   = a({-href=>"?reset=1",-class=>'reset_button'},'['.$CONFIG->tr('RESET').']');
   my $help_link    =  a({-href=>general_help(),-target=>'help'},'['.$CONFIG->tr('Help').']');
-  my $plugin_link  = plugin_links($PLUGINS);
+  my $plugin_link  = plugin_links($PLUGINS,$segment);
   my $oligo        = $PLUGINS->plugin('OligoFinder') ? ', oligonucleotide (15 bp minimum)' : '';
   my $rand         =   substr(md5_hex(rand),0,5);
 
@@ -2776,13 +2776,13 @@ sub plugin_menu {
 # for the subset of plugins that are named in the 'quicklink plugins' option, create
 # quick links for them.
 sub plugin_links {
-  my $plugins = shift;
+  my ($plugins,$segment) = @_;
   my @plugins = shellwords($CONFIG->setting('quicklink plugins')) or return '';
   my @result;
   for my $p (@plugins) {
     my $plugin = $plugins->plugin($p) or next;
     my $name   = $plugin->name;
-    my $action = "?plugin=$p;plugin_do=".$CONFIG->tr('Go');
+    my $action = "?plugin=$p;plugin_do=".$CONFIG->tr('Go').";name=$segment";
     push @result,a({-href=>$action},"[$name]");
   }
   return join ' ',@result;

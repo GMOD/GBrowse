@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.176 2006-12-15 18:40:31 tharris Exp $
+# $Id: gbrowse.PLS,v 1.177 2007-01-24 14:47:18 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -512,7 +512,7 @@ sub main_display {
         link_image    => image_link($page_settings),
         link_svg      => svg_link($page_settings),
         link_help     => "?display_help=general",
-	link_plugins  => plugin_links($PLUGINS),
+	link_plugins  => plugin_links($PLUGINS,$segment),
 
         rand => substr( md5_hex(rand), 0, 5 ),
 
@@ -2216,13 +2216,13 @@ sub plugin_menu {
 # for the subset of plugins that are named in the 'quicklink plugins' option, create
 # quick links for them.
 sub plugin_links {
-  my $plugins = shift;
+  my ($plugins,$segment) = @_;
   my @plugins = shellwords($CONFIG->setting('quicklink plugins')) or return '';
   my @result;
   for my $p (@plugins) {
     my $plugin = $plugins->plugin($p) or next;
     my $name   = $plugin->name;
-    my $action = "?plugin=$p;plugin_do=".$CONFIG->tr('Go');
+    my $action = "?plugin=$p;plugin_do=".$CONFIG->tr('Go').";name=$segment";
     push @result,a({-href=>$action},"[$name]");
   }
   return join ' ',@result;

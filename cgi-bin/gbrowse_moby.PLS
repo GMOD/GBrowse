@@ -48,7 +48,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.58 2007-01-25 17:57:31 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.59 2007-01-25 18:18:52 markwilkinson Exp $
 ###########################################################
 use SOAP::Lite;
 use MOBY::Client::Central;
@@ -501,7 +501,7 @@ sub getObjectDescription {
     my $filehandle =  $data->response if $data;
     my $content = join "", (<$filehandle>);
     my $desc = "";
-    if ($content =~ /mygrid\:hasServiceDescriptionText>(.*?)<\/mygrid\:hasServiceDescriptionText/s){
+    if ($content =~ m|MOBY-S/Objects#$ob">.*?<rdfs:comment>(.*?)</rdfs:comment>|s){
             $desc = $1;
     }
 
@@ -518,7 +518,7 @@ sub getObjectDescription {
     #$content = $1;
     #$content =~ s/\'//g;
     #$content =~ s/\"//g;
-    return "<a href='http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob' alt='$desc' title='$content'/>$ob</a>";
+    return "<a href='http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob' alt='$desc' title='$desc'/>$ob</a>";
 }
 
 

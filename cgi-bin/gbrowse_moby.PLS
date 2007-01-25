@@ -48,7 +48,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.59 2007-01-25 18:18:52 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.60 2007-01-25 18:21:43 markwilkinson Exp $
 ###########################################################
 use SOAP::Lite;
 use MOBY::Client::Central;
@@ -504,20 +504,6 @@ sub getObjectDescription {
     if ($content =~ m|MOBY-S/Objects#$ob">.*?<rdfs:comment>(.*?)</rdfs:comment>|s){
             $desc = $1;
     }
-
-    #my $proxy = $CONFIG->setting('http_proxy');
-    #my $ua = LWP::UserAgent->new;
-    #$ua->agent("Gbrowse-Moby");
-    #$proxy && $ua->proxy(['http'],$proxy);
-    #
-    #my $req = HTTP::Request->new(GET => "http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob");    
-    #my $res = $ua->request($req);
-    #return unless $res->is_success;
-    #my $content = $res->content;
-    #return unless $content =~ /\S+\t\S+\t\S+\t(.*)/;
-    #$content = $1;
-    #$content =~ s/\'//g;
-    #$content =~ s/\"//g;
     return "<a href='http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob' alt='$desc' title='$desc'/>$ob</a>";
 }
 

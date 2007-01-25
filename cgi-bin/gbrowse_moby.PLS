@@ -48,11 +48,12 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.57 2007-01-25 17:49:26 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.58 2007-01-25 17:57:31 markwilkinson Exp $
 ###########################################################
 use SOAP::Lite;
 use MOBY::Client::Central;
 use MOBY::Client::Service;
+use MOBY::Client::OntologyServer;
 use MOBY::CommonSubs qw(:all);
 use MOBY::MobyXMLConstants;
 use File::Temp qw/ tempfile /;
@@ -490,10 +491,12 @@ sub getObjectDescription {
     if ($ob eq 'Object') {
 	return "<a href='http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob' alt='The base BioMoby Object' title='The base BioMoby Object'/>$ob</a>";
     }
-    my $lsid = LS::ID->new($ob);
+    my $OS = MOBY::Client::OntologyServer->new();   
+    my ($success, $message, $oblsid) = $OS->objectExists(term => $ob);
+    my $lsid = LS::ID->new($oblsid);
     my $locator = LS::Locator->new if $lsid;
-    my $authority = $locator->resolveAuthority($ob) if $locator;
-    my $resource = $authority->getResource($ob) if $authority;
+    my $authority = $locator->resolveAuthority($lsid) if $locator;
+    my $resource = $authority->getResource($lsid) if $authority;
     my $data = $resource->getMetadata if $resource;
     my $filehandle =  $data->response if $data;
     my $content = join "", (<$filehandle>);

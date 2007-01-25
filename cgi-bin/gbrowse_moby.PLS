@@ -48,7 +48,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.53 2006-10-30 16:16:33 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.54 2007-01-25 16:43:04 markwilkinson Exp $
 ###########################################################
 use SOAP::Lite;
 use MOBY::Client::Central;
@@ -363,7 +363,7 @@ sub init {
     my $scufl = param('scufl');
     my $sid = param('sid');   # unique service id iterator - every service has to be suffixed with a unique id because it may be re-used in the workflow, causing it to be circular rather than linear
     
-    $Central = MOBY::Client::Central->new();  # CENTRAL is a global variable
+    $Central = MOBY::Client::Central->new(user_agent => "Gbrowse-Moby");  # CENTRAL is a global variable
 
     my $objectclass =param('objectclass');  # for MOBY calls we may have a data class (e.g. VirtualSequence)
     $objectclass ||="Object";  # by default, the base object class is "Object"
@@ -598,7 +598,7 @@ sub execute {
     print $CONFIG->header || h1("$namespace:$id Details");
     print p;
     
-    $Central = MOBY::Client::Central->new();
+    $Central = MOBY::Client::Central->new(user_agent => "Gbrowse-Moby");
     my @providers = $Central->retrieveServiceProviders;  # this will be passed to the form generator later
     my ($SI, $reg) = $Central->findService(authURI => $auth,
                        serviceName => $service);
@@ -834,7 +834,7 @@ displayed on the screen at that moment. ' class='popup' cursor='help'>Semantics 
 }
 
 sub INITIALIZE {	
-    my $Central = MOBY::Client::Central->new();
+    my $Central = MOBY::Client::Central->new(user_agent => "Gbrowse-Moby");
     my $NameSpaces = $Central->retrieveNamespaces;
     my @Namespaces = sort keys(%{$NameSpaces});
     my @providers = $Central->retrieveServiceProviders;
@@ -955,7 +955,7 @@ sub retrieveSCUFL {
    # we need to check if the current objectType is a child of text-base64
    # if so, then we will add a parser and base64-to-binary widget to the workflow
    # before completing it.
-   my $CENTRAL = MOBY::Client::Central->new;
+   my $CENTRAL = MOBY::Client::Central->new(user_agent => "Gbrowse-Moby");
    my ($term, $lsid) = whichDeepestParentObject($CENTRAL, $objectType, ['text-base64']);
    my $additionalWidgets = "";
    my $finalContent = "";

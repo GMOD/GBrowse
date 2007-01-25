@@ -48,7 +48,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.56 2007-01-25 17:48:21 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.57 2007-01-25 17:49:26 markwilkinson Exp $
 ###########################################################
 use SOAP::Lite;
 use MOBY::Client::Central;
@@ -491,7 +491,7 @@ sub getObjectDescription {
 	return "<a href='http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob' alt='The base BioMoby Object' title='The base BioMoby Object'/>$ob</a>";
     }
     my $lsid = LS::ID->new($ob);
-    my $locator = LS::Locator->new if $ls;
+    my $locator = LS::Locator->new if $lsid;
     my $authority = $locator->resolveAuthority($ob) if $locator;
     my $resource = $authority->getResource($ob) if $authority;
     my $data = $resource->getMetadata if $resource;

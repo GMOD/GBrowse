@@ -48,7 +48,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.54 2007-01-25 16:43:04 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.55 2007-01-25 17:45:05 markwilkinson Exp $
 ###########################################################
 use SOAP::Lite;
 use MOBY::Client::Central;
@@ -490,20 +490,33 @@ sub getObjectDescription {
     if ($ob eq 'Object') {
 	return "<a href='http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob' alt='The base BioMoby Object' title='The base BioMoby Object'/>$ob</a>";
     }
-    my $proxy = $CONFIG->setting('http_proxy');
-    my $ua = LWP::UserAgent->new;
-    $proxy && $ua->proxy(['http'],$proxy);
-    
-    my $req = HTTP::Request->new(GET => "http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob");
-    
-    my $res = $ua->request($req);
-    return unless $res->is_success;
-    my $content = $res->content;
-    return unless $content =~ /\S+\t\S+\t\S+\t(.*)/;
-    $content = $1;
-    $content =~ s/\'//g;
-    $content =~ s/\"//g;
-    return "<a href='http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob' alt='$content' title='$content'/>$ob</a>";
+    my $ls = $serv->LSID;  # get the LSID of the service instance
+    my $lsid = LS::ID->new($ls);
+    my $locator = LS::Locator->new if $ls;
+    my $authority = $locator->resolveAuthority($ob) if $locator;
+    my $resource = $authority->getResource($ob) if $authority;
+    my $data = $resource->getMetadata if $resource;
+    my $filehandle =  $data->response if $data;
+    my $content = join "", (<$filehandle>);
+    my $desc = "";
+    if ($content =~ /mygrid\:hasServiceDescriptionText>(.*?)<\/mygrid\:hasServiceDescriptionText/s){
+            $desc = $1;
+    }
+
+    #my $proxy = $CONFIG->setting('http_proxy');
+    #my $ua = LWP::UserAgent->new;
+    #$ua->agent("Gbrowse-Moby");
+    #$proxy && $ua->proxy(['http'],$proxy);
+    #
+    #my $req = HTTP::Request->new(GET => "http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob");    
+    #my $res = $ua->request($req);
+    #return unless $res->is_success;
+    #my $content = $res->content;
+    #return unless $content =~ /\S+\t\S+\t\S+\t(.*)/;
+    #$content = $1;
+    #$content =~ s/\'//g;
+    #$content =~ s/\"//g;
+    return "<a href='http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob' alt='$desc' title='$content'/>$ob</a>";
 }
 
 

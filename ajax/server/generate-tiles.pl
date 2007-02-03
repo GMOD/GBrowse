@@ -78,7 +78,7 @@ if (exists $args{'-m'}) {
 
 print " XML file will NOT be generated...\n" if $no_xml;
 
-my ($persistent,  $verbose);  # these get passed to TiledImage
+my ($persistent,  $verbose, $primdb);  # these get passed to TiledImage
 
 if (exists $args{'-p'}) {
     if    ($args{'-p'} == 0) { $persistent = 0; }
@@ -88,6 +88,8 @@ if (exists $args{'-p'}) {
     print " Using default setting: database primitives will NOT be deleted...\n" if $fill_database or $render_tiles;
     $persistent = 1;
 }
+
+$primdb = $args{'-primdb'};
 
 if (exists $args{'-v'}) {
     if    ($args{'-v'} == 2) { $verbose = 2; }
@@ -448,6 +450,7 @@ foreach my $zoom_level (@zoom_levels) {
 			  # TiledImage options
 			  -persistent => $persistent,
 			  -verbose => $verbose,
+	                  -primdb => $primdb,
 			  );
 
     my @argv = (-start => $landmark_start,
@@ -706,7 +709,8 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++) {
 			      # TiledImage options
 			      -persistent => $persistent,
 			      -verbose => $verbose,
-			      -trackNum => $track_num
+			      -trackNum => $track_num,
+                              -primdb => $primdb
 			      );
 
        #print "HTML = $html_current_outdir\n";
@@ -803,6 +807,11 @@ sub print_usage {
 	"        end of execution:\n",
 	"          0 = delete primitives\n",
 	"          1 = keep primitives (default)\n",
+	"  -primdb <dsn>\n",
+	"        optional parameter to use a database to store graphical\n",
+	"        primitives.  Slower, but uses less memory and allows for\n",
+	"        rendering on demand.\n",
+	"        example: -primdb DBI:mysql:gdtile\n",
 	"  -v <verbose>\n",
 	"        sets whether to run in verbose mode (that is, output activities of the\n",
 	"        program's internals to standard error):\n",

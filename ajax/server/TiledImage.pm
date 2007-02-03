@@ -2,11 +2,9 @@ package TiledImage;
 
 use GD::Image;
 use Data::Dumper;
-use DBI;
 use Carp;
-
-# DBI path to database
-my $gdtile_database =  "DBI:mysql:gdtile";
+use MemoryPrimStorage;
+use DBPrimStorage;
 
 # Global table of TiledImage's for cleanup
 my %tiledImageCleanup;
@@ -101,18 +99,12 @@ my %intercept =
      'arc' => {'translator' => $xyTranslate, 'boundsGetter' => \&GDEllipseBounds},
      'filledArc' => {'translator' => $xyTranslate, 'boundsGetter' => \&GDEllipseBounds},
 
-     'copy' => {'translator' => $copyTranslate, 'boundsGetter' => \&GDCopyBounds,
-		'imageStorer' => \&GDStoreImage, 'imageRetriever' => \&GDRetrieveImage},
-     'copyMerge' => {'translator' => $copyTranslate, 'boundsGetter' => \&GDCopyBounds,
-		'imageStorer' => \&GDStoreImage, 'imageRetriever' => \&GDRetrieveImage},
-     'copyMergeGray' => {'translator' => $copyTranslate, 'boundsGetter' => \&GDCopyBounds,
-		'imageStorer' => \&GDStoreImage, 'imageRetriever' => \&GDRetrieveImage},
-     'copyResized' => {'translator' => $copyTranslate, 'boundsGetter' => \&GDCopyBounds,
-		'imageStorer' => \&GDStoreImage, 'imageRetriever' => \&GDRetrieveImage},
-     'copyResampled' => {'translator' => $copyTranslate, 'boundsGetter' => \&GDCopyBounds,
-		'imageStorer' => \&GDStoreImage, 'imageRetriever' => \&GDRetrieveImage},
-     'copyRotated' => {'translator' => $copyTranslate, 'boundsGetter' => \&GDCopyBounds,
-		'imageStorer' => \&GDStoreImage, 'imageRetriever' => \&GDRetrieveImage},
+     'copy' => {'translator' => $copyTranslate, 'boundsGetter' => \&GDCopyBounds},
+     'copyMerge' => {'translator' => $copyTranslate, 'boundsGetter' => \&GDCopyBounds},
+     'copyMergeGray' => {'translator' => $copyTranslate, 'boundsGetter' => \&GDCopyBounds},
+     'copyResized' => {'translator' => $copyTranslate, 'boundsGetter' => \&GDCopyBounds},
+     'copyResampled' => {'translator' => $copyTranslate, 'boundsGetter' => \&GDCopyBounds},
+     'copyRotated' => {'translator' => $copyTranslate, 'boundsGetter' => \&GDCopyBounds},
 
      'string' => {'translator' => $stringTranslate, 'boundsGetter' => \&GDStringBounds},
      'stringUp' => {'translator' => $stringTranslate, 'boundsGetter' => \&GDStringUpBounds},
@@ -122,7 +114,7 @@ my %intercept =
      'stringFT' => {'translator' => $stringFTTranslate, 'boundsGetter' => \&GDStringFTBounds},
      'stringFTcircle' => {'translator' => $stringFTTranslate, 'boundsGetter' => \&GDStringFTBounds},
 
-     'setBrush' => {'imageStorer' => \&GDStoreImage, 'imageRetriever' => \&GDRetrieveImage},
+     'setBrush' => 1,
 
     );
 
@@ -167,26 +159,6 @@ sub getBoundingBox {
     return defined($boundsGetter) ? &$boundsGetter ($self, @args) : ();
 }
 
-# $self->storeImages ($subroutine, @argument_list)
-# stores any GD::Image objects in the argument list, and replaces them with database image IDs.
-# Control is dispatched to an "image storer" via the %intercept hash.
-sub storeImages {
-    my ($self, $sub, @args) = @_;
-    my $imageStorer = $intercept{$sub}->{'imageStorer'};
-    @args = &$imageStorer ($self, @args) if defined $imageStorer;
-    return @args;
-}
-
-# $self->retrieveImages ($subroutine, @argument_list)
-# replaces any database image IDs the argument list with references to GD::Image objects.
-# Control is dispatched to an "image retriever" via the %intercept hash.
-sub retrieveImages {
-    my ($self, $sub, @args) = @_;
-    my $imageRetriever = $intercept{$sub}->{'imageRetriever'};
-    @args = &$imageRetriever ($self, @args) if defined $imageRetriever;
-    return @args;
-}
-
 # Special-case interceptions of specific GD::Image methods
 # intercept clone
 sub clone {
@@ -211,148 +183,6 @@ sub can {
     my ($self, $method_name) = @_;
     #warn "CHECKING FOR $method_name IN can()...\n"; #D!!!
     return $self->intercepts($method_name);
-}
-
-# Database access
-sub GDConnect {
-    my $gdtile = DBI->connect ($gdtile_database, "") or die "Couldn't connect to database: " . DBI->errstr;
-    return $gdtile;
-}
-
-sub GDFetchTiledImageDimensions {
-    my ($gdtile, $tiledimage_id) = @_;
-    my $sth = $gdtile->prepare("SELECT width, height FROM tiledimage WHERE tiledimage_id = " . $tiledimage_id);
-    $sth->execute()
-	or die "Couldn't execute statement: " . $sth->errstr;
-    my ($width, $height) = $sth->fetchrow_array;
-    return ($width, $height);
-}
-
-sub GDCreateTiledImage {
-    my ($gdtile, $width, $height) = @_;
-    $gdtile->do ("INSERT INTO tiledimage (width, height) VALUES ($width, $height)");
-    my $sth = $gdtile->prepare("SELECT LAST_INSERT_ID()");
-    $sth->execute()
-	or die "Couldn't execute statement: " . $sth->errstr;
-    my ($tiledimage_id) = $sth->fetchrow_array;
-    return $tiledimage_id;
-}
-
-sub GDPrepareQueries {
-    my ($gdtile) = @_;
-    my $global_sth = $gdtile->prepare('SELECT command_order, command FROM global_primitive WHERE tiledimage_id = ?')
-	or die ("Couldn't prepare statement: " . $gdtile->errstr);
-
-    my $bb_sth = $gdtile->prepare('SELECT command_order, command FROM primitive WHERE x0 <= ? AND y0 <= ? AND x1 >= ? AND y1 >= ? AND tiledimage_id = ?')
-	or die ("Couldn't prepare statement: " . $gdtile->errstr);
-    return ($global_sth, $bb_sth);
-}
-
-sub GDDeletePrimitives {
-    my ($self) = @_;
-    # use explicit hashrefs instead of AUTOLOAD'ed accessors,
-    # so that this method can be called by the signal handlers
-    $self->{'gdtile'}->do ("DELETE FROM primitive WHERE tiledimage_id = " . $self->{'id'});
-}
-
-sub GDDisconnect {
-    my ($self) = @_;
-    # use explicit hashrefs instead of AUTOLOAD'ed accessors,
-    # so that this method can be called by the signal handlers
-    $self->{'gdtile'}->disconnect if defined $self->{'gdtile'};
-}
-
-sub GDStoreImage {
-    my ($self, $image, @otherArgs) = @_;
-
-    # get PNG data
-    croak "Not a GD::Image" unless ref($image) eq "GD::Image";
-    my $image_data = $image->png;
-    croak "Bad image data" unless defined $image_data;
-
-    # INSERT PNG data into image table
-#    warn "inserting: INSERT INTO image (image_data) VALUES (?)" if $self->verbose == 2;
-    my $sth = $self->gdtile->prepare("INSERT INTO image (image_data) VALUES (?)")
-	or die "Couldn't prepare statement: " . $self->gdtile->errstr;
-
-    $sth->execute ($image_data)
-	or die "Couldn't execute statement: " . $sth->errstr;
-
-    # get image ID
-    my $id_sth = $self->gdtile->prepare("SELECT LAST_INSERT_ID()");
-    $id_sth->execute()
-	or die "Couldn't execute statement: " . $id_sth->errstr;
-    my ($image_id) = $id_sth->fetchrow_array;
-
-    # return
-    return ($image_id, @otherArgs);
-}
-
-sub GDRetrieveImage {
-    my ($self, $image_id, @otherArgs) = @_;
-
-    # get PNG data from image table
-    my $sth = $self->gdtile->prepare("SELECT image_data FROM image WHERE image_id = $image_id")
-	or die "Couldn't prepare statement: " . $self->gdtile->errstr;
-
-    $sth->execute()
-	or die "Couldn't execute statement: " . $sth->errstr;
-
-    # create image from PNG data & remember it in image_cache.
-    # NB if we just create a GD::Image object here, bugs occur in setBrush,
-    # maybe cos Perl thinks it can safely delete the brush image (due to absence of refs to object?)
-    # keeping the image in image_cache seems to work (because it fool Perls into keeping the GD::Image around?)
-    while (my ($image_data) = $sth->fetchrow_array) {
-	$self->image_cache->{$image_id} = GD::Image->newFromPngData ($image_data);
-    }
-
-    # return
-    return ($self->image_cache->{$image_id}, @otherArgs);
-}
-
-sub GDRecordPrimitive {
-    my ($self, $command, @bb) = @_;
-
-    # which table should this go into?
-    my @cols = qw(tiledimage_id command_order command);
-    my $table;
-    if (@bb) {
-	push @cols, qw(x0 y0 x1 y1);
-	$table = 'primitive';
-    } else {
-	$table = 'global_primitive';
-    }
-
-    # INSERT subroutine & argument list into table
-    my $command_order = $self->n_primitives ($self->n_primitives + 1);
-    $self->gdtile->do ("INSERT INTO $table ("
-		       . join (',', @cols)
-		       . ") VALUES ("
-		       . join (',', $self->id, $command_order, "\"$command\"", @bb)
-		       . ")");
-}
-
-sub GDEraseLeftmostPrimitives {
-    my ($self, $x) = @_;
-    $self->gdtile->do ("DELETE FROM global_primitive WHERE x1 < $x");
-}
-
-# The following two methods for querying tables of GD primitives both
-# return a coderef that's an iterator over (command_order, command) pairs
-sub GDGetGlobalPrimitives {
-    my ($self) = @_;
-    $self->global_sth->execute ($self->id)
-	or die "Couldn't execute statement: " . $self->global_sth->errstr;
-    
-    return sub { $self->global_sth->fetchrow_array};
-}
-
-sub GDGetBoundedPrimitives {
-    my ($self, $xmin, $ymin, $xmax, $ymax) = @_;
-    $self->bb_sth->execute($xmax,$ymax,$xmin,$ymin,$self->id)
-	or die "Couldn't execute statement: " . $self->bb_sth->errstr;
-
-    return sub { $self->bb_sth->fetchrow_array };
 }
 
 # AUTOLOAD method: catches all methods by default
@@ -385,7 +215,6 @@ sub AUTOLOAD {
     my @bb;
     if ($self->intercepts($sub)) {
 	@bb =  $self->getBoundingBox ($sub, @args);
-	@args = $self->storeImages ($sub, @args);
 
 	# update global bounding box
 	if (@bb) {
@@ -396,14 +225,8 @@ sub AUTOLOAD {
 	}
     }
 
-    # get string representation and store in SQL database
-    my $dumper = Data::Dumper->new ([[$sub,@args]]);
-    $dumper->Indent(0)->Terse(1)->Purity(1);
-    my $command = $dumper->Dump;
-    $command =~ s/\\/\\\\/g;  # escape backslashes
-
     # record primitive
-    $self->GDRecordPrimitive ($command, @bb);
+    $self->primstorage->GDRecordPrimitive ($sub, \@args, @bb);
 
     # log primitive
     warn "Recorded $sub (@originalArgs) with ", (@bb>0 ? "bounding box (@bb)" : "no bounding box"), "\n" if $self->verbose == 2;
@@ -418,7 +241,6 @@ sub AUTOLOAD {
 # MAYBE TAKE THIS METHOD OUT AND MAKE INSTANTIATING SCRIPT CALL 'cleanup' DIRECTLY ANYWAY? !!!
 sub finish {
     my $self = shift;
-    warn "TiledImage.pm IS CLEANING UP AND DISCONNECTING FROM DATABASE in finish()...\n" if $self->verbose; 
     $self->cleanup;
     # there was stuff here, but now it is gone... call 'cleanup' directly? !!!
 }
@@ -435,13 +257,13 @@ sub finish {
 # Constructor
 sub new {
     my ($class, %args) = @_;
-    my ($width, $height, $tiledimage_id);
+    my ($width, $height);
 
     #warn "ENTERING TiledImage CONSTRUCTOR; arguments are:\n"; #D!!!
     #foreach my $key (sort keys %args) { warn "$key => ", $args{$key}, "\n"; } #D!!!
     #warn "-------------------------------------------------\n"; #D!!!
     
-    # correctness check
+    # can specify (width, height) OR tiledimage_id, but not both
     if ($args{'-tiledimage_id'} && ($args{'-width'} || $args{'-height'})) {
 	my $hash_contents;
 	foreach my $key (sort keys %args) {
@@ -450,7 +272,13 @@ sub new {
         croak "You are not allowed to specify -tiledimage_id with a -width or with a -height parameter or vice versa (your params were parsed as: $hash_contents)";
     }
 
-    my %allowed_args = ('-tiledimage_id' => 1, '-width' => 1, '-height' => 1, '-persistent' => 1, '-verbose' => 1);
+    my %allowed_args = ('-primdb' => 1,
+			'-tiledimage_id' => 1,
+			'-width' => 1,
+			'-height' => 1,
+			'-persistent' => 1,
+			'-verbose' => 1,
+			'-tile_width_hint' => 1);
     foreach my $param (keys %args) {
         if (! $allowed_args{$param}) {
 	    my $hash_contents;
@@ -459,27 +287,11 @@ sub new {
 	    }
             croak "Invalid parameter ($param) in TiledImage constructor (your params were parsed as: $hash_contents)";
         }
-        if (! exists $args{$param}) {
-	    my $hash_contents;
-	    foreach my $key (sort keys %args) {
-	        $hash_contents .= $key . '=>' . $args{$key} . ' ';
-	    }
-            croak "No value for parameter ($param) in TiledImage constructor (your params were parsed as: $hash_contents)";
-        }
     }
-
-    # connect to database
-    my $gdtile = GDConnect();
 
     # parse required constructor args
-    if (exists $args{'-tiledimage_id'}) {
-	($tiledimage_id) = $args{'-tiledimage_id'};
-	($width, $height) = GDFetchTiledImageDimensions ($gdtile, $tiledimage_id);
 
-    } elsif ( (exists $args{'-width'}) && (exists $args{'-height'}) ) {
-	($width, $height) = ($args{'-width'}, $args{'-height'});
-	($tiledimage_id) = GDCreateTiledImage ($gdtile, $width, $height);
-    }
+    ($width, $height) = ($args{'-width'}, $args{'-height'});
 
     my ($persistent, $verbose) = (1, 0);  # defaults
 
@@ -487,11 +299,29 @@ sub new {
     ($verbose) = $args{'-verbose'} if exists $args{'-verbose'} ;
     ($persistent) = $args{'-persistent'} if exists $args{'-persistent'};
 
+    my $primstorage;
+    if ($args{'-primdb'}) {
+	if ($args{'-tiledimage_id'}) {
+	    $primstorage = DBPrimStorage->new(
+		-primdb => $args{'-primdb'},
+		-tiledimage_id => $args{'-tiledimage_id'},
+		-verbose => $args{'-verbose'});
+	} else {
+	    $primstorage = DBPrimStorage->new(
+		-primdb => $args{'-primdb'},
+		-width => $width,
+		-height => $height,
+		-verbose => $args{'-verbose'});
+	}
+    } else {
+	$primstorage = MemoryPrimStorage->new(
+	    -width => $width, -height => $height,
+	    -tile_width_hint => $args{'-tile_width_hint'} || 1000,
+	    -verbose => $args{'-verbose'});
+    }
+
     # create dummy GD image
     my $im = GD::Image->new (1, 1);
-
-    # prepare SQL queries
-    my ($global_sth, $bb_sth) = GDPrepareQueries ($gdtile);
 
     # create the proxy object
     my $self = { 'im' => $im,
@@ -507,14 +337,7 @@ sub new {
 		 'verbose' => $verbose,
 		 'persistent' => $persistent,
 
-		 'image_cache' => {},
-
-		 'gdtile' => $gdtile,
-		 'global_sth' => $global_sth,
-		 'bb_sth' => $bb_sth,
-
-		 'id' => $tiledimage_id,
-		 'n_primitives' => 0,
+		 'primstorage' => $primstorage,
 	     };
 
     # bless it, and add to global table
@@ -537,69 +360,41 @@ sub renderTile {
     # create GD image
     my $im = GD::Image->new ($width, $height);
 
-    # create index hash of primitives
-    my %sub_args;
+    my @prims = ($self->primstorage->GDGetGlobalPrimitives,
+		 $self->primstorage->GDGetBoundedPrimitives($xmin, $ymin,
+							    $xmax, $ymax));
 
-    # Query database for stored GD::Image primitives that are global, affecting all tiles
-    my $globalIterator = $self->GDGetGlobalPrimitives;
-    while (my ($command_order, $command) = &$globalIterator()) {
+    # sort by command_order
+    @prims = sort { $a->[0] <=> $b->[0] } @prims;
 
-	# recreate [$subroutine,@argument_list] primitive using 'eval' on Data::Dumper string
-	my ($sub, @args) = @{eval $command};
-	unless (defined $sub) {  # check subroutine is defined
-	    warn $!;
-	    die "Offending 'eval': $command\n";
-	}
+    my $prev_command = -1;
+    foreach my $primitive (@prims) {
+	my ($command_order, $sub, @args) = @{$primitive};
 
-	# retrieve images
-	@args = $self->retrieveImages ($sub, @args);
+	# GDGetBoundedPrimitives might in some cases
+	# return more than one copy of the same
+	# primitive; here we ignore repeated
+	# primitives.
+	next if $command_order == $prev_command;
+	$prev_command = $command_order;
 
-	# store primitive
-	$sub_args{$command_order} = [$sub, @args];
-    }
-
-    # Query database for stored GD::Image primitives overlapping this tile
-    my $boundedIterator = $self->GDGetBoundedPrimitives ($xmin, $ymin, $xmax, $ymax);
-    while (my ($command_order, $command) = &$boundedIterator()) {
-
-	# recreate [$subroutine,@argument_list] primitive using 'eval' on Data::Dumper string
-	my ($sub, @args) = @{eval $command};
-	unless (defined $sub) {  # check subroutine is defined
-	    warn $!;
-	    die "Offending 'eval': $command\n";
-	}
-
-	# check for interception: if so, retrieve images & translate coords
 	if ($self->intercepts ($sub)) {
-	    @args = $self->retrieveImages ($sub, @args);
 	    @args = $self->translate ($xmin, $ymin, $sub, @args);
-
-	    # store primitive
-	    $sub_args{$command_order} = [$sub, @args];
 	}
-    }
-
-    # Execute primitives
-    my @command_order = sort { $a <=> $b } keys %sub_args;
-    foreach my $command_order (@command_order) {
-	my ($sub, @args) = @{$sub_args{$command_order}};
 
 	warn "Replaying $sub (@args)\n" if $self->verbose == 2;
-	$im->$sub (@args);
 
+	$im->$sub (@args);
     }
 
-    # flush image cache
-    $self->image_cache ({});
+    $self->primstorage->perTileCleanup();
 
     # return
     return $im;
 }
 
-# cleanup:--
-# method to purge the database of primitives
 sub cleanup {
-    my ($self) = @_;
+    my $self = shift;
 
     #warn "the keys are: ", keys %$self, "\n";  #D!!!
     #foreach my $key (sort keys %$self) {
@@ -609,15 +404,14 @@ sub cleanup {
     # use explicit hashrefs instead of AUTOLOAD'ed accessors,
     # so that this method can be called by the signal handlers
     if ($self->{'persistent'} == 0) {
-
 	warn "Deleting primitives from database\n"; # if $self->verbose;
-	$self->GDDeletePrimitives;
+	$self->primstorage->GDDeletePrimitives;
     }
+
+    $self->primstorage->cleanup();
 
     # drop from cleanup list
     delete $tiledImageCleanup{$self} if exists $tiledImageCleanup{$self};
-
-    $self->GDDisconnect;
 }
 
 # THERE IS CLEARLY A PROBLEM WITH THESE SIGNAL HANDLERS, SO I'M TAKING THEM

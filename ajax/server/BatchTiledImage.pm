@@ -176,7 +176,6 @@ sub renderAndWipe {
     my $lastTileToRender = int ($x / $self->tileWidth) - 1;
 
     $self->renderTileRange ($lastTileRendered + 1, $lastTileToRender);
-    $self->GDEraseLeftmostPrimitives ($x) unless $self->persistent;
 
     $self->lastTileRendered ($lastTileToRender);
 }
@@ -186,6 +185,7 @@ sub renderAndWipe {
 sub renderAllTiles {
     my ($self) = @_;
     $self->renderAndWipe ($self->width);
+    $self->primstorage->GDDeletePrimitives ($x) unless $self->persistent;
 }
 
 # --- HELPER FUNCTIONS ----

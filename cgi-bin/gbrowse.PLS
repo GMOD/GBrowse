@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.177 2007-01-24 14:47:18 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.178 2007-02-05 18:28:52 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1862,12 +1862,16 @@ sub bookmark_link {
 
 sub image_link {
   my $settings = shift;
-  return "?help=link_image;flip=".($settings->{flip}||0);
+  # rand() is a workaround to avoid image caching on browser side
+  my $rand     = rand(); 
+  return "?help=link_image;flip=".($settings->{flip}||0).";cache=$rand";
 }
 
 sub svg_link {
   my $settings = shift;
-  return "?help=svg_image;flip=".($settings->{flip}||0);
+  # rand() is a workaround to avoid image caching on browser side
+  my $rand     = rand(); 
+  return "?help=svg_image;flip=".($settings->{flip}||0).";cache=$rand"; 
 }
 
 # reorder @labels based on settings in the 'track.XXX' parameters

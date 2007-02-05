@@ -66,8 +66,7 @@ while (<>) {
   chomp;
   next if /^\#/;;
   next if /random/;  ## added line
-  my
-($id,$chrom,$strand,$txStart,$txEnd,$cdsStart,$cdsEnd,$exons,$exonStarts,$exonEnds)
+  my (undef,$id,$chrom,$strand,$txStart,$txEnd,$cdsStart,$cdsEnd,$exons,$exonStarts,$exonEnds)
 = split /\t/;
   my ($utr5_start,$utr5_end,$utr3_start,$utr3_end);
 

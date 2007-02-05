@@ -134,6 +134,12 @@ $CGI::Q = new CGI('span=100');
 $render->update_coordinates;
 ok($render->state->{name},'I:951..1050');
 
+# Do we clip properly? If I scroll right 5000 bp, then we should stick at 4901..5000
+$CGI::Q = new CGI('right+5000+bp.x=yes');
+$render->update_coordinates;
+ok($render->state->{name},'I:4901..5000');
+
+
 exit 0;
 
 

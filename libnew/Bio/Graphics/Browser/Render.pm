@@ -418,9 +418,20 @@ sub update_coordinates {
     }
   }
 
-  if ($position_updated) { # clip
-    $state->{start} = $state->{seg_min} if defined $state->{seg_min} && $state->{start} < $state->{seg_min};
-    $state->{stop}  = $state->{seg_max} if defined $state->{seg_max} && $state->{stop}  > $state->{seg_max};
+  if ($position_updated) { # clip and update param
+    if (defined $state->{seg_min} && $state->{start} < $state->{seg_min}) {
+      my $delta = $state->{seg_min} - $state->{start};
+      $state->{start} += $delta;
+      $state->{stop}  += $delta;
+    }
+
+    if (defined $state->{seg_max} && $state->{stop}  > $state->{seg_max}) {
+      my $delta = $state->{stop} - $state->{seg_max};
+      $state->{start} -= $delta;
+      $state->{stop}  -= $delta;
+    }
+
+    # update our "name" state and the CGI parameter
     $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}";
     param(name => $state->{name});
   }

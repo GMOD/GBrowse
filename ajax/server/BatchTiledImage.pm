@@ -23,6 +23,10 @@ sub new {
 	}
     }
 
+    if ($args{'-renderWidth'}) {
+	$baseClassArgs{'-tile_width_hint'} = $args{'-renderWidth'};
+    }
+
     my $self = TiledImage->new (%baseClassArgs);
     while (my ($arg, $val) = each %myArgs) {
 	$self->{$arg} = $val;

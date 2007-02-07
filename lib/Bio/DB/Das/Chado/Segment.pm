@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.18 2006-12-06 17:07:34 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.19 2007-02-07 03:57:40 scottcain Exp $
 
 =head1 NAME
 
@@ -1237,7 +1237,7 @@ sub _features2level(){
   }				#end while hashref loop
 
   #We check if the last feature creatd is the same as the last pushed in the array
-  if($features[-1]->feature_id() ne $feat->feature_id()){
+  if(@features > 0 && $features[-1]->feature_id() ne $feat->feature_id()){
       push @features, $feat;
   }
 

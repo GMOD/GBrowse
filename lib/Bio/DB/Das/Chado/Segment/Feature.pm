@@ -1023,7 +1023,7 @@ sub sub_SeqFeature {
     warn $sql if DEBUG;
 
     my $sth = $self->factory->dbh->prepare($sql);
-    $sth->execute or $self->throw("subfeature query failed");
+    $sth->execute or $self->throw("subfeature query failed; here's the sql:$sql");
 
     #$self->factory->dbh->trace(0) if DEBUG;
 

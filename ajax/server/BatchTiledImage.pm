@@ -8,6 +8,14 @@ use Data::Dumper;
 
 @ISA = qw(TiledImage);
 
+foreach my $field (qw(renderTiles tileWidth renderWidth firstTile lastTile lastTileRendered tilePrefix annotate htmlOutdir trackNum)) {
+    *$field = sub {
+	my $self = shift;
+	$self->{$field} = shift if @_;
+	return $self->{$field};
+    }
+}
+
 # Constructor
 sub new {
     my ($class, %args) = @_;

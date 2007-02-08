@@ -114,9 +114,10 @@ my %intercept =
      'stringFT' => {'translator' => $stringFTTranslate, 'boundsGetter' => \&GDStringFTBounds},
      'stringFTcircle' => {'translator' => $stringFTTranslate, 'boundsGetter' => \&GDStringFTBounds},
 
-     'setBrush' => 1,
-
     );
+
+@globalPrimNames = qw(colorAllocate setBrush rgb);
+@dummyGDMethods = qw(getBounds);
 
 # List of unimplemented functions:-- these will throw an error if called
 # (all others are silently passed to a dummy GD object)
@@ -126,6 +127,70 @@ my %unimplemented = map (($_=>1),
 			     copyReverseTranspose rotate180
 			     flipHorizontal flipVertical
 			     fill fillToBorder));
+
+foreach my $sub (keys %intercept) {
+    no strict "refs";
+    *$sub = sub  {
+	my ($self, @args) = @_;
+	
+	# check for intercept: if so, get bounding box & store any images
+	my @bb = $self->getBoundingBox ($sub, @args);
+	
+	# update global bounding box
+	if (@bb) {
+	    $self->xmin ($bb[0]) if !defined ($self->xmin) || $bb[0] < $self->xmin;
+	    $self->ymin ($bb[1]) if !defined ($self->ymin) || $bb[1] < $self->ymin;
+	    $self->xmax ($bb[2]) if !defined ($self->xmax) || $bb[2] >= $self->xmax;
+	    $self->ymax ($bb[3]) if !defined ($self->ymax) || $bb[3] >= $self->ymax;
+	}
+	
+	# record primitive
+	$self->primstorage->GDRecordPrimitive ($sub, \@args, @bb);
+	
+	# log primitive
+	warn "Recorded $sub (@args) with ", (@bb>0 ? "bounding box (@bb)" : "no bounding box"), "\n" if $self->verbose == 2;
+    }
+}
+
+foreach my $sub (@globalPrimNames) {
+    no strict "refs";
+    *$sub = sub  {
+	my ($self, @args) = @_;
+
+	# record primitive
+	$self->primstorage->GDRecordPrimitive ($sub, \@args);
+
+	# log primitive
+	warn "Recorded global primitive $sub (@args)\n" if $self->verbose == 2;
+
+	# delegate
+	$self->im->$sub (@args);
+    }
+}
+
+foreach my $sub (@dummyGDMethods) {
+    no strict "refs";
+    *$sub = sub  {
+	my ($self, @args) = @_;
+	# delegate
+	$self->im->$sub (@args);
+    }
+}
+
+foreach my $sub (keys %unimplemented) {
+    no strict "refs";
+    *$sub = sub {
+	croak "Subroutine $sub unimplemented";
+    }
+}
+
+foreach my $field (qw(im width height xmin xmax ymin ymax verbose persistent primstorage)) {
+    *$field = sub {
+	my $self = shift;
+	$self->{$field} = shift if @_;
+	return $self->{$field};
+    }
+}
 
 # Subroutine interceptions.
 # Each of the following can take a ($subroutine, @argument_list) array,
@@ -188,7 +253,6 @@ sub can {
 # AUTOLOAD method: catches all methods by default
 sub AUTOLOAD {
     my ($self, @args) = @_;
-    my @originalArgs = @args;
 
     # get subroutine name
     my $sub = our $AUTOLOAD;
@@ -197,42 +261,15 @@ sub AUTOLOAD {
     # check for DESTROY
     return if $sub eq "DESTROY";
 
-    # check for unimplemented methods
-    if ($unimplemented{$sub}) {
-	croak "Subroutine $sub unimplemented";
-    }
-
-    # check for accessors
-    if (exists $self->{$sub}) {
-	croak "Usage: $sub() or $sub(newValue)" if @args > 1;
-	return
-	    @args
-	    ? $self->{$sub} = $args[0]
-	    : $self->{$sub};
-    }
-
-    # check for intercept: if so, get bounding box & store any images
-    my @bb;
-    if ($self->intercepts($sub)) {
-	@bb =  $self->getBoundingBox ($sub, @args);
-
-	# update global bounding box
-	if (@bb) {
-	    $self->xmin ($bb[0]) if !defined ($self->xmin) || $bb[0] < $self->xmin;
-	    $self->ymin ($bb[1]) if !defined ($self->ymin) || $bb[1] < $self->ymin;
-	    $self->xmax ($bb[2]) if !defined ($self->xmax) || $bb[2] >= $self->xmax;
-	    $self->ymax ($bb[3]) if !defined ($self->ymax) || $bb[3] >= $self->ymax;
-	}
-    }
+    warn "unhandled sub $sub";
 
     # record primitive
-    $self->primstorage->GDRecordPrimitive ($sub, \@args, @bb);
-
-    # log primitive
-    warn "Recorded $sub (@originalArgs) with ", (@bb>0 ? "bounding box (@bb)" : "no bounding box"), "\n" if $self->verbose == 2;
+    # we don't need to worry about the bounding box here because
+    # all of the primitives with bounding boxes are handled above.
+    $self->primstorage->GDRecordPrimitive ($sub, \@args);
 
     # delegate
-    $self->im->$sub (@originalArgs);
+    $self->im->$sub (@args);
 }
 
 # This needs to be called manually to cleanup and disconnect from database after done with the object;

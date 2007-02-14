@@ -9,6 +9,7 @@ use Module::Build;
 use Bio::Root::IO;
 use File::Path 'rmtree';
 use FindBin '$Bin';
+use File::Spec;
 
 use constant TEST_COUNT => 100;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
@@ -28,7 +29,6 @@ BEGIN {
 chdir $Bin;
 use lib "$Bin/../libnew";
 use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::Render;
 
 my $globals = Bio::Graphics::Browser->new(CONF_FILE);
 ok($globals);
@@ -38,7 +38,7 @@ ok($globals->config_base,'./testdata/conf');
 ok($globals->htdocs_base,'./testdata/htdocs/gbrowse');
 ok($globals->url_base,'/gbrowse');
 
-ok($globals->plugin_path,'./testdata/conf/plugins');
+ok($globals->plugin_path,'./testdata/conf/../../../conf/plugins');
 ok($globals->language_path,'./testdata/conf/languages');
 ok($globals->templates_path,'./testdata/conf/templates');
 ok($globals->moby_path,'./testdata/conf/MobyServices');
@@ -128,8 +128,8 @@ ok($source->html1,'This is inherited');
 ok($source->html2,'This is overridden');
 
 # Do semantic settings work?
-ok($source->setting(general => 'plugins'),'Aligner RestrictionAnnotator ProteinDumper');
-ok($source->setting('plugins'),'Aligner RestrictionAnnotator ProteinDumper');
+ok($source->setting(general => 'plugins'),'Aligner RestrictionAnnotator ProteinDumper TestFinder');
+ok($source->setting('plugins'),'Aligner RestrictionAnnotator ProteinDumper TestFinder');
 ok($source->semantic_setting(Alignments=>'glyph'),'segments_new');
 ok($source->semantic_setting(Alignments=>'glyph',30000),'box');
 ok($source->type2label('match',0),'Alignments');

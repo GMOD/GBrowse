@@ -6,8 +6,8 @@ use Bio::Graphics::Browser::I18n;
 use Bio::Graphics::Browser::PluginSet;
 use Bio::Graphics::Browser::UploadSet;
 use Bio::Graphics::Browser::RemoteSet;
-use Text::ParseWords 'shellwords';
-use CGI qw(param request_method);
+use Text::ParseWords ();
+use CGI qw(param request_method header url);
 use Carp 'croak';
 
 use constant VERSION => 2.0;
@@ -86,7 +86,7 @@ sub segments {
       $self->{segments} = \@_;
     }
   }
-  return @$d;
+  return wantarray ? @$d : $d;
 }
 
 sub plugins {
@@ -104,12 +104,50 @@ sub plugins {
 ###################################################################################
 sub run {
   my $self = shift;
-  $self->update_state();
+  my $fh   = shift || \*STDOUT;
+  my $old_fh = select($fh);
+
   $self->init_database();
   $self->init_plugins();
   $self->init_remote_sources();
-  $self->render();
+  $self->update_state();
+  my $features = $self->fetch_features;
+  $self->render($features);
   $self->clean_up();
+  select($old_fh);
+}
+
+sub render {
+  my $self           = shift;
+  my $features       = shift;
+
+  # NOTE: these handle_* methods will return true
+  # if they want us to exit before printing the header
+  $self->handle_plugins()   && return;
+  $self->handle_downloads() && return;
+  $self->handle_uploads()   && return;
+
+  $self->render_header();
+  $self->render_body($features);
+}
+
+sub render_header {
+  my $self    = shift;
+  my $session = $self->session;
+  my $cookie = CGI::Cookie->new(-name => $CGI::Session::NAME,
+				-value => $session->id,
+				-path   => url(-absolute=>1),
+				-expires => $self->globals->remember_settings_time
+				);
+  print header(-cookie  => $cookie,
+	       -charset => $self->tr('CHARSET')
+	      );
+}
+
+sub render_body {
+  my $self     = shift;
+  my $features = shift;
+  print "rendering ",scalar @$features," features";
 }
 
 sub init_database {
@@ -138,10 +176,11 @@ sub init_database {
   $DB{$key};
 }
 
+# ========================= plugins =======================
 sub init_plugins {
   my $self        = shift;
   my $source      = $self->data_source->name;
-  my @plugin_path = shellwords($self->data_source->globals->plugin_path);
+  my @plugin_path = $self->shellwords($self->data_source->globals->plugin_path);
 
   my $plugins = $PLUGINS{$source} 
     ||= Bio::Graphics::Browser::PluginSet->new($self->data_source,$self->state,@plugin_path);
@@ -151,6 +190,51 @@ sub init_plugins {
   $plugins;
 }
 
+# for activating plugins
+sub plugin_action {
+  my $self = shift;
+  my $action;
+
+  # the logic of this is obscure to me, but seems to have to do with activating plugins
+  # via the URL versus via fill-out forms, which may go through a translation.
+  if (param('plugin_do')) {
+    $action = $self->tr(param('plugin_do')) || $self->tr('Go');
+  }
+  $action ||= param('plugin_action');
+  return $action;
+}
+
+sub current_plugin {
+  my $self = shift;
+  my $plugin_name = param('plugin') or return;
+  $self->plugins->plugin($plugin_name);
+}
+
+sub plugin_find {
+  my $self = shift;
+  my ($plugin,$search_string) = @_;
+
+  my $settings = $self->state;
+  my $plugin_name = $plugin->name;
+  my $results = $plugin->can('auto_find') && defined $search_string
+              ? $plugin->auto_find($search_string)
+              : $plugin->find();
+  return unless $results;
+  return unless @$results;
+
+  $settings->{name} = defined($search_string) ? $self->tr('Plugin_search_1',$search_string,$plugin_name)
+                                              : $self->tr('Plugin_search_2',$plugin_name);
+  $self->write_auto($results);
+  return $results;
+}
+
+sub handle_plugins {
+  my $self = shift;
+  warn "handle_plugins() not implemented\n";
+  return;
+}
+
+#======================== remote sources ====================
 sub init_remote_sources {
   my $self = shift;
   my $uploaded_sources = Bio::Graphics::Browser::UploadSet->new($self->data_source,$self->state);
@@ -158,11 +242,6 @@ sub init_remote_sources {
   $self->uploaded_sources($uploaded_sources);
   $self->remote_sources($remote_sources);
   $uploaded_sources && $remote_sources;
-}
-
-sub render {
-  my $self = shift;
-  croak 'Please call render() for a subclass of Bio::Graphics::Browser::Render';
 }
 
 sub clean_up {
@@ -175,6 +254,26 @@ sub fatal_error {
   croak 'Please call fatal_error() for a subclass of Bio::Graphics::Browser::Render';
 }
 
+sub write_auto {
+  my $self = shift;
+  my $result_set = shift;
+  warn "write_auto() not implemented\n";
+}
+
+sub handle_downloads {
+  my $self = shift;
+  warn "handle_downloads() not implemented\n";
+  # return 1 to exit
+  return;
+}
+
+sub handle_uploads {
+  my $self = shift;
+  warn "handle_uploads() not implemented\n";
+  # return 1 to exit
+  return;
+}
+
 
 ###################################################################################
 #
@@ -182,11 +281,15 @@ sub fatal_error {
 #
 ###################################################################################
 
+sub globals {
+  my $self = shift;
+  $self->data_source->globals;
+}
+
 # the setting method either calls the DATA_SOURCE's global_setting or setting(), depending
 # on the number of arguments used.
 sub setting {
   my $self = shift;
-
   my $data_source = $self->data_source;
 
   if (@_ == 1) {
@@ -208,7 +311,7 @@ sub db_settings {
   my $args    = $self->setting('db_args');
   my @argv = ref $args eq 'CODE'
         ? $args->()
-	: shellwords($args||'');
+	: $self->shellwords($args||'');
 
   # for compatibility with older versions of the browser, we'll hard-code some arguments
   if (my $adaptor = $self->setting('adaptor')) {
@@ -232,7 +335,7 @@ sub db_settings {
   }
 
   if (defined (my $a = $self->setting('aggregators'))) {
-    my @aggregators = shellwords($a||'');
+    my @aggregators = $self->shellwords($a||'');
     push @argv,(-aggregator => \@aggregators);
   }
 
@@ -250,7 +353,6 @@ sub update_state {
   my $state = $self->state;
   $self->default_state if !%$state or param('reset');
   $self->update_state_from_cgi;
-  $self->fetch_segments();
 }
 
 sub default_state {
@@ -307,6 +409,8 @@ sub update_state_from_cgi {
   $self->update_region($state);
   $self->update_external_annotations($state);
   $self->update_section_visibility($state);
+  $self->update_external_sources();
+  $self->update_plugins();
 }
 
 sub update_options {
@@ -435,6 +539,9 @@ sub update_coordinates {
     $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}";
     param(name => $state->{name});
   }
+  elsif (param('name')) {
+    $state->{name} = param('name');
+  }
 
   return $position_updated;
 }
@@ -529,7 +636,7 @@ sub update_region {
   my $self  = shift;
   my $state = shift || $self->state;
 
-  if (my @features = shellwords(param('h_feat'))) {
+  if (my @features = $self->shellwords(param('h_feat'))) {
     $state->{h_feat} = {};
     for my $hilight (@features) {
       last if $hilight eq '_clear_';
@@ -538,7 +645,7 @@ sub update_region {
     }
   }
 
-  if (my @regions = shellwords(param('h_region'))) {
+  if (my @regions = $self->shellwords(param('h_region'))) {
     $state->{h_region} = [];
     foreach (@regions) {
       last if $_ eq '_clear_';
@@ -587,12 +694,225 @@ sub update_section_visibility {
   }
 }
 
+sub update_external_sources {
+  my $self = shift;
+  $self->remote_sources->set_sources([param('eurl')]) if param('eurl');
+}
+
+sub update_plugins {
+  my $self = shift;
+  $self->plugins->configure($self->db,$self->state,$self->session);
+}
+
+# fetch_segments() actually should be deprecated, but it is stuck here
+# because it is convenient for the regression tests
 sub fetch_segments {
+  my $self = shift;
+  my $features = $self->fetch_features;
+  my $segments = $self->features2segments($features);
+  $self->plugins->set_segments($segments) if $self->plugins;
+  $self->segments($segments);
+}
+
+sub features2segments {
+  my $self     = shift;
+  my $features = shift;
+  my $refclass = $self->setting('reference class');
+  my $db       = $self->db;
+  my @segments = map {
+    my $version = $_->isa('Bio::SeqFeatureI') ? undef : $_->version;
+    $db->segment(-class => $refclass,
+		 -name  => $_->ref,
+		 -start => $_->start,
+		 -stop  => $_->end,
+		 -absolute => 1,
+		 defined $version ? (-version => $version) : ())} @$features;
+  return \@segments;
+}
+
+sub fetch_features {
   my $self  = shift;
   my $db    = $self->db;
   my $state = $self->state;
 
-  # do something
+  # avoid doing anything if no parameters and no autosearch set
+  return if $self->setting('no autosearch') && !param();
+
+  return unless defined $state->{name};
+  my $features;
+
+  # run any "find" plugins
+  my $plugin_action  = $self->plugin_action || '';
+  my $current_plugin = $self->current_plugin;
+  if ($current_plugin && $plugin_action eq $self->tr('Find') || $plugin_action eq 'Find') {
+    $features = $self->plugin_find($current_plugin,$state->{name});
+  }
+  else {
+    $features = $self->search_db($state->{name});
+  }
+  return $features;
+}
+
+sub search_db {
+  my $self = shift;
+  my $name = shift;
+
+  my $db    = $self->db;
+
+  my ($ref,$start,$stop,$class) = $self->parse_feature_name($name);
+
+  my $features = $self->lookup_features($ref,$start,$stop,$class,$name);
+  return $features;
+}
+
+sub lookup_features {
+  my $self  = shift;
+  my ($name,$start,$stop,$class,$literal_name) = @_;
+  my $refclass = $self->setting('reference class') || 'Sequence';
+
+  my $db     = $self->db;
+  my $divisor = $self->setting('unit_divider') || 1;
+  $start *= $divisor if defined $start;
+  $stop  *= $divisor if defined $stop;
+
+  # automatic classes to try
+  my @classes = $class ? ($class) : (split /\s+/,$self->setting('automatic classes')||'');
+
+  my $features;
+
+ SEARCHING:
+  for my $n ([$name,$class,$start,$stop],[$literal_name,$refclass,undef,undef]) {
+
+    my ($name_to_try,$class_to_try,$start_to_try,$stop_to_try) = @$n;
+
+    # first try the non-heuristic search
+    $features  = $self->_feature_get($db,$name_to_try,$class_to_try,$start_to_try,$stop_to_try);
+    last SEARCHING if @$features;
+
+    # heuristic fetch. Try various abbreviations and wildcards
+    my @sloppy_names = $name_to_try;
+    if ($name_to_try =~ /^([\dIVXA-F]+)$/) {
+      my $id = $1;
+      foreach (qw(CHROMOSOME_ Chr chr)) {
+	my $n = "${_}${id}";
+	push @sloppy_names,$n;
+      }
+    }
+
+    # try to remove the chr CHROMOSOME_I
+    if ($name_to_try =~ /^(chromosome_?|chr)/i) {
+      (my $chr = $name_to_try) =~ s/^(chromosome_?|chr)//i;
+      push @sloppy_names,$chr;
+    }
+
+    # try the wildcard  version, but only if the name is of significant length
+    # IMPORTANT CHANGE: we used to put stars at the beginning and end, but this killed performance!
+    push @sloppy_names,"$name_to_try*" if length $name_to_try > 3 and $name_to_try !~ /\*$/;
+
+    for my $n (@sloppy_names) {
+      for my $c (@classes) {
+	$features = $self->_feature_get($db,$n,$c,$start_to_try,$stop_to_try);
+	last SEARCHING if @$features;
+      }
+    }
+
+  }
+
+  unless (@$features) {
+    # if we get here, try the keyword search
+    $features = $self->_feature_keyword_search($literal_name);
+  }
+
+  return $features;
+}
+
+sub _feature_get {
+  my $self = shift;
+  my ($db,$name,$class,$start,$stop) = @_;
+
+  my $refclass = $self->setting('reference class') || 'Sequence';
+  $class ||= $refclass;
+
+  my @argv = (-name  => $name);
+  push @argv,(-class => $class) if defined $class;
+  push @argv,(-start => $start) if defined $start;
+  push @argv,(-end   => $stop)  if defined $stop;
+
+  my @features;
+  @features  = grep {$_->length} $db->get_feature_by_name(@argv)   if !defined($start) && !defined($stop);
+  @features  = grep {$_->length} $db->get_features_by_alias(@argv) if !@features &&
+    !defined($start) &&
+      !defined($stop) &&
+	$db->can('get_features_by_alias');
+
+  @features  = grep {$_->length} $db->segment(@argv)               if !@features && $name !~ /[*?]/;
+  return [] unless @features;
+
+  # Deal with multiple hits.  Winnow down to just those that
+  # were mentioned in the config file.
+  my $types = $self->data_source->_all_types($db);
+  my @filtered = grep {
+    my $type    = $_->type;
+    my $method  = eval {$_->method} || '';
+    my $fclass  = eval {$_->class}  || '';
+    $type eq 'Segment'      # ugly stuff accomodates loss of "class" concept in GFF3
+      || $type eq 'region'
+	|| $types->{$type}
+	  || $types->{$method}
+	    || !$fclass
+	      || $fclass eq $refclass
+		|| $fclass eq $class;
+  } @features;
+
+  # consolidate features that have same name and same reference sequence
+  # and take the largest one.
+  my %longest;
+  foreach (@filtered) {
+    my $n = $_->display_name.$_->abs_ref.(eval{$_->version}||'').(eval{$_->class}||'');
+    $longest{$n} = $_ if !defined($longest{$n}) || $_->length > $longest{$n}->length;
+  }
+
+  return [values %longest];
+}
+
+sub _feature_keyword_search {
+  my $self       = shift;
+  my $searchterm = shift;
+
+  # if they wanted something specific, don't give them non-specific results.
+  return if $searchterm =~ /^[\w._-]+:/;
+
+  # Need to untaint the searchterm.  We are very lenient about
+  # what is accepted here because we wil be quote-metaing it later.
+  $searchterm =~ /([\w .,~!@\#$%^&*()-+=<>?\/]+)/;
+  $searchterm = $1;
+
+  my $db = $self->db;
+  my $max_keywords = $self->setting('max keyword results');
+  my @matches;
+  if ($db->can('search_attributes')) {
+    my @attribute_names = $self->shellwords ($self->setting('search attributes'));
+    @attribute_names = ('Note') unless @attribute_names;
+    @matches = $db->search_attributes($searchterm,\@attribute_names,$max_keywords);
+  } elsif ($db->can('search_notes')) {
+    @matches = $db->search_notes($searchterm,$max_keywords);
+  }
+
+  my @results;
+  for my $r (@matches) {
+    my ($name,$description,$score) = @$r;
+    my ($seg) = $db->segment($name) or next;
+    push @results,Bio::Graphics::Feature->new(-name   => $name,
+					      -class  => $name->class,
+					      -type   => $description,
+					      -score  => $score,
+					      -ref    => $seg->abs_ref,
+					      -start  => $seg->abs_start,
+					      -end    => $seg->abs_end,
+					      -factory=> $db);
+
+  }
+  return \@results;
 }
 
 ##################################################################3
@@ -601,7 +921,7 @@ sub fetch_segments {
 #
 ##################################################################3
 
-sub overview_ration {
+sub overview_ratio {
   my $self = shift;
   return 1.0;   # for now
 }
@@ -818,15 +1138,9 @@ sub i18n_style {
   %lang_options;
 }
 
-sub tra {
-  my $self = shift;
-  my $lang = $self->language or return @_;
-  $lang->tr(@_);
-}
-
-####################################333
+####################################
 # Unit conversion
-####################################333
+####################################
 # convert bp into nice Mb/Kb units
 sub unit_label {
   my $self = shift;
@@ -920,7 +1234,30 @@ sub parse_feature_name {
     $class = $1;
     $ref   = $2;
   }
+
+  else {
+    $ref = $name;
+  }
   return ($ref,$start,$stop,$class);
+}
+
+sub split_labels {
+  my $self = shift;
+  map {/^(http|ftp|das)/ ? $_ : split /[+-]/} @_;
+}
+
+sub shellwords {
+  my $self = shift;
+  return unless @_;
+  return Text::ParseWords::shellwords(@_);
+}
+
+
+########## note: "sub tr()" makes emacs' syntax coloring croak, so place this function at end
+sub tr {
+  my $self = shift;
+  my $lang = $self->language or return @_;
+  $lang->tr(@_);
 }
 
 1;

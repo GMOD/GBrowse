@@ -31,6 +31,8 @@ END {
   rmtree '/tmp/gbrowse_testing';
 }
 
+%ENV = ();
+
 chdir $Bin;
 use lib "$Bin/../libnew";
 use Bio::Graphics::Browser;
@@ -39,10 +41,10 @@ use Bio::Graphics::Browser::Render;
 my $globals = Bio::Graphics::Browser->new(CONF_FILE);
 ok($globals);
 
-ok(my $session     = $globals->new_session());
+ok(my $session     = $globals->session());
 ok(my $id = $session->id);
 undef $session;
-ok($session  = $globals->new_session($id));
+ok($session  = $globals->session($id));
 ok($id,$session->id);
 
 my $source      = $globals->create_data_source($session->source);
@@ -50,6 +52,8 @@ ok($source);
 
 my $render      = Bio::Graphics::Browser::Render->new($source,$session);
 ok($render);
+
+ok($render->globals,$globals);
 
 # test the make_{link,title,target} functionality my $feature =
 my $feature = Bio::Graphics::Feature->new(-name=>'fred',
@@ -64,12 +68,12 @@ ok($render->make_link($feature),"http://localhost/cgi-bin/gbrowse_details/volvox
 
 ############### testing language features #############
 ok(($render->language->language)[0],'posix');
-ok($render->tra('IMAGE_LINK','Link to Image'));
+ok($render->tr('IMAGE_LINK','Link to Image'));
 
 $ENV{'HTTP_ACCEPT_LANGUAGE'} = 'fr';
 $render      = Bio::Graphics::Browser::Render->new($source,$session);
 ok(($render->language->language)[0],'fr');
-ok($render->tra('IMAGE_LINK','Lien vers une image de cet affichage'));
+ok($render->tr('IMAGE_LINK','Lien vers une image de cet affichage'));
 
 ############### testing initialization code #############
 ok(!$render->db);
@@ -77,12 +81,12 @@ ok(my $db = $render->init_database);
 ok($render->db,$db);
 ok($db,$render->db); # should return same thing each time
 ok(ref($db),'Bio::DB::GFF::Adaptor::memory');
-ok(scalar $db->features,16);
+ok(scalar $db->features,36);
 
 ok($render->init_plugins);
 ok(my $plugins = $render->plugins);
 my @plugins = $plugins->plugins;
-ok(scalar @plugins,3);
+ok(scalar @plugins,4);
 
 ok($render->init_remote_sources);
 ok(!$render->uploaded_sources->files);
@@ -102,16 +106,16 @@ ok($render->state->{grid},0);
 undef $session;
 undef $render;
 
-$session = $globals->new_session($id);
+$session = $globals->session($id);
 ok($session->id,$id);
 $render  = Bio::Graphics::Browser::Render->new($source,$session);
 ok($render->state->{width},1024);
 
-# test navigation - first we pretend that we are setting position to I:1..1000
-$CGI::Q = new CGI('ref=I;start=1;end=1000');
+# test navigation - first we pretend that we are setting position to ctgA:1..1000
+$CGI::Q = new CGI('ref=ctgA;start=1;end=1000');
 $render->update_coordinates;
-ok($render->state->{name},'I:1..1000');
-ok($render->state->{ref},'I');
+ok($render->state->{name},'ctgA:1..1000');
+ok($render->state->{ref},'ctgA');
 ok($render->state->{start},1);
 ok($render->state->{stop},1000);
 
@@ -122,24 +126,121 @@ $render->state->{seg_max} = 5000;
 # now we pretend that we've pressed the right button
 $CGI::Q = new CGI('right+500.x=yes');
 $render->update_coordinates;
-ok($render->state->{name},'I:501..1500');
+ok($render->state->{name},'ctgA:501..1500');
 
 # pretend we want to zoom in 50%
 $CGI::Q = new CGI('zoom+in+50%.x=yes');
 $render->update_coordinates;
-ok($render->state->{name},'I:751..1250');
+ok($render->state->{name},'ctgA:751..1250');
 
 # pretend that we've selected the popup menu to go to 100 bp
 $CGI::Q = new CGI('span=100');
 $render->update_coordinates;
-ok($render->state->{name},'I:951..1050');
+ok($render->state->{name},'ctgA:951..1050');
 
 # Do we clip properly? If I scroll right 5000 bp, then we should stick at 4901..5000
 $CGI::Q = new CGI('right+5000+bp.x=yes');
 $render->update_coordinates;
-ok($render->state->{name},'I:4901..5000');
+ok($render->state->{name},'ctgA:4901..5000');
+
+# Try to fetch the segment.
+ok($render->init_database);
+ok($render->init_plugins);
+$render->fetch_segments;
+my $s = $render->segments;
+ok($s && @$s);
+
+my $skipit = !($s && @$s) ? "segments() failed entirely, so can't check results" : 0;
+skip($skipit,scalar @$s,1);
+skip($skipit,eval{$s->[0]->seq_id},'ctgA');
+skip($skipit,eval{$s->[0]->start},4901);
+skip($skipit,eval{$s->[0]->end},5000);
+
+# now pretend we're fetching whole contig
+$CGI::Q = new CGI('name=ctgA');
+$render->update_coordinates;
+ok($render->state->{name},'ctgA');
+$render->fetch_segments;
+$s = $render->segments;
+ok($s && @$s);
+$skipit = !($s && @$s) ? "segments() failed entirely, so can't check results" : 0;
+skip($skipit,scalar @$s,1);
+skip($skipit,eval{$s->[0]->seq_id},'ctgA');
+skip($skipit,eval{$s->[0]->start},1);
+skip($skipit,eval{$s->[0]->end},50000);
+
+# try fetching a feature by name
+$CGI::Q = new CGI('name=My_feature:f13');
+$render->update_coordinates;
+ok($render->state->{name},'My_feature:f13');
+$render->fetch_segments;
+$s = $render->segments;
+ok($s && @$s);
+$skipit = !($s && @$s) ? "segments() failed entirely, so can't check results" : 0;
+skip($skipit,scalar @$s,1);
+skip($skipit,eval{$s->[0]->seq_id},'ctgA');
+skip($skipit,eval{$s->[0]->start},19157);
+skip($skipit,eval{$s->[0]->end},22915);
+
+# try automatic class munging
+$CGI::Q = new CGI('name=f13');
+$render->update_coordinates;
+$render->fetch_segments;
+ok($s = $render->segments);
+$skipit = !($s && @$s) ? "segments() failed entirely, so can't check results" : 0;
+skip($skipit,scalar @$s,1);
+skip($skipit,eval{$s->[0]->seq_id},'ctgA');
+skip($skipit,eval{$s->[0]->start},19157);
+skip($skipit,eval{$s->[0]->end},22915);
+
+# try fetching something that shouldn't match
+$CGI::Q = new CGI('name=Foo:f13');
+$render->update_coordinates;
+$render->fetch_segments;
+ok($s = $render->segments);
+ok(@$s,0,"Searching for Foo:f13 should have returned 0 results");
+
+# try fetching something that  matches more than once twice
+# m02 is interesting because there are three entries, two of which are on the same
+# chromosome. Using somewhat dubious logic, we keep the longest of the two.
+$CGI::Q = new CGI('name=Motif:m02');
+$render->update_coordinates;
+$render->fetch_segments;
+ok($s = $render->segments);
+ok(scalar @$s,2,"Motif:m02 should have matched exactly twice, but didn't");
+
+# try the * match
+$CGI::Q = new CGI('name=Motif:m0*');
+$render->update_coordinates;
+$render->fetch_segments;
+ok($s = $render->segments);
+ok(scalar @$s,6,"Motif:m0* should have matched exactly 6 times, but didn't");
+
+# try keyword search
+$CGI::Q = new CGI('name=kinase');
+$render->update_coordinates;
+$render->fetch_segments;
+ok($s = $render->segments);
+ok(scalar @$s,4,"'kinase' should have matched 4 times, but didn't");
+
+# Exercise the plugin "find" interface.
+# The "TestFinder" plugin treats the name as a feature type and returns all instances
+$CGI::Q = new CGI('name=motif;plugin_action=Find;plugin=TestFinder');
+$render->update_coordinates;
+$render->fetch_segments;
+ok($s = $render->segments);
+ok(scalar @$s,11);
+
+# now try the run() call, using an IO::String to collect what was printed
+my $data;
+my $io = IO::String->new($data);
+$CGI::Q = new CGI('name=kinase');
+
+# start with a fresh renderer!
+$render      = Bio::Graphics::Browser::Render->new($source,$session);
+$render->run($io);
+ok($data =~ /Set-Cookie/);
+ok($data =~ /rendering 4 features/);
 
 
 exit 0;
-
-

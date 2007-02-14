@@ -18,7 +18,7 @@ sub new {
 
 sub flush {
   my $self = shift;
-  $self->{session}->flush or warn "session error: ",$self->{session}->errstr;
+  $self->{session}->flush;
 }
 
 sub id {

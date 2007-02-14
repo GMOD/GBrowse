@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.3 2007-01-05 22:34:04 lstein Exp $
+# $Id: Browser.pm,v 1.4 2007-02-14 23:54:39 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -137,7 +137,7 @@ sub url_fetch_max_size     { shift->setting(general=>'url_fetch_max_size')     }
 sub session_driver         { shift->setting(general=>'session driver') || 'driver:file;serializer:default' }
 sub session_args    {
   my $self = shift;
-  my %args = shellwords($self->setting(general=>'session_args'));
+  my %args = shellwords($self->setting(general=>'session args'));
   return \%args if %args;
   my ($url,$path) = $self->tmpdir('sessions');
   return {Directory=>$path};
@@ -204,7 +204,7 @@ sub update_data_source {
 }
 
 ## methods for dealing with the session
-sub new_session {
+sub session {
   my $self = shift;
   my $id   = shift;
   return Bio::Graphics::Browser::Session->new($self->session_driver,

@@ -367,4 +367,16 @@ sub make_link {
   croak "Do not call make_link() on the DataSource. Call it on the Render object";
 }
 
+# this is an aggregator-aware way of retrieving all the named types
+sub _all_types {
+  my $self  = shift;
+  my $db    = shift;
+  return $self->{_all_types} if exists $self->{_all_types}; # memoize
+  my %types = map {$_=>1} (
+			   (map {$_->get_method}        eval {$db->aggregators}),
+			   (map {$self->label2type($_)} $self->labels)
+			   );
+  return $self->{_all_types} = \%types;
+}
+
 1;

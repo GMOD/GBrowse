@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.14 2006-08-21 15:36:32 sheldon_mckay Exp $
+# $Id: Plugin.pm,v 1.15 2007-02-14 23:54:39 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME
@@ -382,21 +382,18 @@ described in this section.
 
 =over 4
 
-=item $features = $self->find($segment);
+=item $features = $self->find();
 
-The find() method will be passed a Bio::Das::SegmentI segment object,
-as described earlier for the dump() method.  Your code should search
-the segment for features of interest, and return an arrayref of
-Bio::SeqFeatureI objects (see L<Bio::SeqFeatureI>).  These synthetic
-feature objects should indicate the position, name and type of the
-features found.
+The find() method is called to search for features of interest. It
+should return an arrayref of Bio::SeqFeatureI objects (see
+L<Bio::SeqFeatureI>).  These synthetic feature objects should indicate
+the position, name and type of the features found.
 
-Depending on the type of find you are performing, you might search the
-preexisting features on the segment for matches, or create your own
-features from scratch in the way that the annotator plugins do.  You
-may choose to ignore the passed segment and perform the search on the
-entire database, which you can obtain using the database() method
-call.
+Depending on the type of find you are performing, you might search for
+preexisting features on the currently named segment for matches, or
+create your own features from scratch in the way that the annotator
+plugins do.  In most cases you'll do the search on the entire
+database, which you can obtain using the database() method call.
 
 To create features from scratch I suggest you use either
 Bio::Graphics::Feature, or Bio::SeqFeature::Generic to generate the
@@ -412,7 +409,6 @@ case, a gene ontology term:
 
   sub find {
      my $self = shift;
-     my $segment  = shift;  # we ignore this!
      my $config   = $self->configuration;
      my $query    = $config->{query} or return undef;  # PROMPT FOR INPUT
      my $database = $self->database;

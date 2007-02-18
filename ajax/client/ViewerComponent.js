@@ -29,7 +29,7 @@
 //   'first' (i.e. leftmost), 'last' (i.e. rightmost) are well-defined and consistenly used (also
 //   types of divs: drag, track, tile, etc...)
 //
-// * am I using "landmark" consistently with what BioPerl uses it for?
+// * am I using "landmark" consistently with what BioPerl uses it for? NO - need to fix!
 //
 // IMPLEMENTATION ANNOYANCES TO FIX (non-essential):
 //
@@ -122,6 +122,7 @@ function ViewerComponent () {
     this.setCenter = ViewerComponent_setCenter;
     this.showTrack = ViewerComponent_showTrack;
     this.hideTrack = ViewerComponent_hideTrack;
+    this.moveTrack = ViewerComponent_moveTrack;
     this.popupTrackLabel = ViewerComponent_popupTrackLabel;
     this.unpopupTrackLabel = ViewerComponent_unpopupTrackLabel;
     this.toggleTrackLabels = ViewerComponent_toggleTrackLabels;
@@ -702,8 +703,7 @@ function ViewerComponent_showTrack (trackName) {
 		break;
 
 	    // maintain last visible track, which is the one we will insert after
-	    if (taz.isTrackVisible (tracks[i]))
-		insertAfterTrack = tracks[i];
+	    insertAfterTrack = tracks[i];
 	}
 
     /* insert track parts into DOM tree */
@@ -773,6 +773,74 @@ function ViewerComponent_hideTrack (trackName) {
     // update state
     taz.setTrackHidden (trackName);
     this.updateVertical ();
+}
+
+//
+// Move the track to a new position (i.e. change track order).
+// 'newPos' is 1-based indexing.
+//
+// NB: this function does not error check any arguments passed to it, so the caller
+// is responsible for verifying their validity.
+//
+function ViewerComponent_moveTrack (trackName, newPos)
+{
+    // if track is hidden, don't need to modify DOM - just change the track ordering in 'taz',
+    // and the track will be placed in the new location when it is made visible
+
+    taz.moveTrack (trackName, newPos);
+    newPos--;  // convert to 0-based indexing AFTER passing to 'taz'
+
+    if (taz.isTrackVisible (trackName)) {
+	var movedTrackP = findAndRemoveChild (this.pDivMain, trackName + '_trackDivP');
+	if (this.oDivMain)
+	    var movedTrackO = findAndRemoveChild (this.oDivMain, trackName + '_trackDivO');
+
+	var movedPanel = findAndRemoveChild (this.dragDivPanel, trackName + '_panelDiv');
+	var trackLabel = findAndRemoveChild (this.dragDivTrackLabels, trackName + '_trackLabelDiv');
+	
+	if (newPos == 0) {
+	    // insert at the very beginning
+	    this.pDivMain.insertBefore (movedTrackP, this.pDivMain.childNodes[0]);
+	    if (movedTrackO)
+		this.oDivMain.insertBefore (movedTrackO, this.oDivMain.childNodes[0]);
+	    this.dragDivPanel.insertBefore (movedPanel, this.dragDivPanel.childNodes[0]);
+	    this.dragDivTrackLabels.insertBefore (trackLabel,
+						  this.dragDivTrackLabels.childNodes[0]);
+	}
+	else {
+	    // find the last visible track after which we can insert the moved one
+	    var insertAfterTrack = null;
+	    var tracks = taz.getTrackNames();
+	    for (var i = newPos - 1; i >= 0; i--)
+		if (taz.isTrackVisible (tracks[i])) {
+		    insertAfterTrack = tracks[i];  break;
+		}
+	    
+	    if (insertAfterTrack) {
+		// insert after some track
+		insertAfter (this.pDivMain, movedTrackP,
+			     getChild (this.pDivMain, (insertAfterTrack + '_trackDivP')));
+		if (movedTrackO)
+		    insertAfter (this.oDivMain, movedTrackO,
+				 getChild (this.oDivMain, (insertAfterTrack + '_trackDivO')));
+		insertAfter (this.dragDivPanel, movedPanel,
+			     getChild (this.dragDivPanel, (insertAfterTrack + '_panelDiv')));
+		insertAfter (this.dragDivTrackLabels, trackLabel,
+			     getChild (this.dragDivTrackLabels, (insertAfterTrack + '_trackLabelDiv')));
+	    }
+	    else {
+		// insert at the very beginning
+		this.pDivMain.insertBefore (movedTrackP, this.pDivMain.childNodes[0]);
+		if (movedTrackO)
+		    this.oDivMain.insertBefore (movedTrackO, this.oDivMain.childNodes[0]);
+		this.dragDivPanel.insertBefore (movedPanel, this.dragDivPanel.childNodes[0]);
+		this.dragDivTrackLabels.insertBefore (trackLabel,
+						      this.dragDivTrackLabels.childNodes[0]);
+	    }
+	}
+
+	this.updateVertical();
+    }
 }
 
 //

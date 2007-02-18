@@ -91,9 +91,7 @@ function DebugComponent_stupidTestBoxHandler (event) {
     var input = document.getElementById('stupidTestBox').value;
 
     /* now comes the "whatever I feel like" testing phase... */
-
-    //debug ('cif.getAbsLeft () returns: ' + cif.getAbsLeft ());
-    //debug ('setting absLeft to ' + value);    
+    debug ('no function at the moment');
 }
 
 

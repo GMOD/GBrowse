@@ -47,6 +47,29 @@ function TrackControlComponent () {
     document.getElementById('trackLabelToggle').onclick =
 	function (event) { cif.toggleTrackLabels (event); }
 
+    // populate the menus for track order controls
+    var moveTrackMenu   = $('moveTrackMenu');
+    var newLocationMenu = $('newLocationMenu');
+    var trackNum = 1;
+    trackNames.each (
+	function (trackName) {
+	    var menuOptFrom = document.createElement ('option');
+	    var menuOptTo   = document.createElement ('option');
+
+	    menuOptFrom.setAttribute ('value', trackName);
+	    menuOptTo.setAttribute   ('value', trackNum);
+
+	    menuOptFrom.text = menuOptTo.text = trackNum + '. ' + trackName;
+
+	    moveTrackMenu.appendChild   (menuOptFrom);
+	    newLocationMenu.appendChild (menuOptTo);
+
+	    trackNum++;
+	});
+
+    // button for changing track order
+    $('moveTrackButton').onclick = TrackControlComponent_moveTrack;
+
     // track label transparency controls
     document.getElementById('raiseTransp').onclick = TrackControlComponent_raiseTransp;
     document.getElementById('lowerTransp').onclick = TrackControlComponent_lowerTransp;
@@ -140,6 +163,66 @@ function TrackControlComponent_openClassicGBrowse(event) {
     window.open(cif.getClassicURL () + '?name=' + view.landmarkID + ':' + view.leftmostNt +
 		'..' + view.rightmostNt);
     //		+ ';type=Transp');// + openTracksString);
+}
+
+//
+// Move track to a new position (i.e. change track order).
+// Track positions use 1-based indexing.
+//
+function TrackControlComponent_moveTrack (event)
+{
+    var moveTrackMenu   = $('moveTrackMenu');
+    var newLocationMenu = $('newLocationMenu');
+
+    var movedTrack = moveTrackMenu.options[moveTrackMenu.selectedIndex].value;
+    var newPos = newLocationMenu.options[newLocationMenu.selectedIndex].value;
+
+    cif.moveTrack (movedTrack, newPos);
+    message ('moved track [' + movedTrack + '] to position ' + newPos);
+
+    /* reorder track hiding buttons per the new track order */
+
+    var trackControls = $('trackControls');
+    var movedButton = findAndRemoveChild (trackControls, movedTrack + '_tracktoggle');
+
+    if (newPos == 1) {
+	trackControls.insertBefore (movedButton, trackControls.childNodes[0]);
+    }
+    else {
+	insertAfter (trackControls, movedButton,
+		     getChild (trackControls, taz.getTrackNames()[newPos-2] + '_tracktoggle'));
+    }
+
+    // TODO: recolor them, too?
+
+    /* wipe and re-build menus for track order controls per the new track order */
+
+    $A (moveTrackMenu.childNodes).each (
+	function (menuOpt) {
+	    moveTrackMenu.removeChild (menuOpt);
+	});
+
+    $A (newLocationMenu.childNodes).each (
+	function (menuOpt) {
+	    newLocationMenu.removeChild (menuOpt);
+	});
+
+    var trackNum = 1;
+    taz.getTrackNames ().each (
+	function (trackName) {
+	    var menuOptFrom = document.createElement ('option');
+	    var menuOptTo   = document.createElement ('option');
+
+	    menuOptFrom.setAttribute ('value', trackName);
+	    menuOptTo.setAttribute   ('value', trackNum);
+
+	    menuOptFrom.text = menuOptTo.text = trackNum + '. ' + trackName;
+
+	    moveTrackMenu.appendChild   (menuOptFrom);
+	    newLocationMenu.appendChild (menuOptTo);
+
+	    trackNum++;
+	});
 }
 
 //

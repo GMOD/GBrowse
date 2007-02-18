@@ -45,7 +45,7 @@
     
     <!-- TODO: CHECK FOR JAVASCRIPT >= v1.3 and DOM Level >= 2 - OTHERWISE REDIRECT TO ERROR PAGE !!! -->
     
-    <p class="header1">AJAX Generic Genome Browser (GBrowse) prototype demo</p>
+    <p class="header1">AJAX Generic Genome Browser (GBrowse) prototype demo - CHANGE HEIGHT BEFORE COMITTING!!!1!!!</p>
     
     <div>
       <text class="header2" id="landmarkname" />
@@ -82,7 +82,18 @@
     
     <div id="TrackControlComponentPlaceholder">
       <button id="goToClassic">View this in the original GBrowse</button>
-      <p><b id="trackControls">Toggle Tracks On/Off:<br /></b></p>
+      <p>
+	<b>Toggle Tracks On/Off:</b><br />
+	<span id="trackControls" />
+      </p>
+
+      <p><b>Move track
+	  <select id="moveTrackMenu"></select>
+	  to position
+	  <select id="newLocationMenu"></select>
+	</b>
+	<button id="moveTrackButton">Move</button>
+      </p>
    
       <p><b>Track Label Controls:</b>
 	<br />
@@ -103,10 +114,10 @@
     <div>
       <b>Message Console</b><br />
       <textarea id="debugMessage" cols="120" rows="10" readonly="readonly" wrap="virtual"></textarea>
-    </div>      
+    </div>
     
     <!-- FOR DEBUGGING ONLY - *REMOVE* before public release !!! -->
-    <!--
+
     <div id="DebugComponentPlaceholder">
       <b>Debugging Tools/Options</b><br />
       
@@ -118,7 +129,7 @@
       <textarea id="stupidTestBox" cols="30" rows="1"></textarea>
       <button onclick="stupidTestBoxHandler(); return false;">Gwan Test?</button>
     </div>
-    -->
+
     <!-- END DEBUGGING ONLY SECTION -->
     
     <div id="information">  <!-- TODO: this should really be a separate page... -->

@@ -9,8 +9,6 @@
 //   - properties;
 //   - visibility (visible or hidden) and order of layout (from top to bottom);
 //   - tile dimensions and paths;
-//   - the offset of each track from top of inner div;
-//   - [TODO: what else?]
 //
 // This also provides accessor and modifier methods.
 //
@@ -21,8 +19,13 @@
 //
 // TODO:
 //
-// - A lot of this crap should be pulled, or replaced with getting state info directy from the DOM
-//   itself.  E.g., why isn't track ordering done this way?
+// - The 'tracksNumbered' array (to store track ordering) will become unnecessary if I ever
+//   change track hiding to be done using CSS - that is, set div height to 0 to hide a track.
+//   This way, tracks will never be detached/reappended to {p,o}DivMain, and the track ordering
+//   would always be stored in the DOM.  The current problem that makes 'tracksNumbered'
+//   necessary is that there is no way to figure out where to re-insert a hide->show track, so
+//   we need to keep ordering here.  But if tracks are never detached/reappended, all ordering
+//   could be maintained in the children of {p,o}DivMain (or the track label div or something).
 //
 // - We should make sure that zoom levels are sorted from highest to lowest, as some methods (such
 //   as 'searchHandler()') depend on that ordering to work correctly.  We can't trust the XML to have
@@ -152,6 +155,9 @@ function TracksAndZooms(xmlDoc) {
     // paths
     this.getTilePrefix        = TracksAndZooms_getTilePrefix;
 
+    // other
+    this.getTrackNum          = TracksAndZooms_getTrackNum;
+
     // Modifier methods
 
     // visibility
@@ -191,11 +197,6 @@ function TracksAndZooms_getTrackNames() {
 function TracksAndZooms_getZoomLevelNames() {
     return this.zoomsNumbered;  // should copy to a separate array, and return THAT?
 }
-
-// TODO:
-// - Are the methods for returning hidden/visible tracks necessary?  Can't I just bypass them by
-//   getting all the children of innerDivMain (that is, the track divs) for visible tracks, and
-//   stuff stored in ViewerComponent.hiddenTrackDivs?
 
 //
 // Returns an array of names of all the tracks that are hidden (collapsed) in the order they
@@ -252,6 +253,14 @@ function TracksAndZooms_getHeightOfTrack(trackName) {
 }
 
 //
+// Returns order number of a track (from 1 to N inclusive, where N is the number of all tracks).
+//
+function TracksAndZooms_getTrackNum (trackName) {
+    alert ('THIS FUNCTION (getTrackNum()) IS UNTESTED! (but how bad can it be?...)');
+    return (this.tracksNamed[trackName]['tracknum'] + 1);  // convert to 1-based indexing
+}
+
+//
 // Get filepath/name prefix for the tiles for the specified track at the current zoom level
 //
 function TracksAndZooms_getTilePrefix(trackName) {
@@ -278,65 +287,38 @@ function TracksAndZooms_setTrackVisible(trackName) {
 }
 
 //
-// Moves a track to the specified position, and adjusts the track order numbering and the offsets
-// to compensate.
+// Updates the track order numbering; ALWAYS call this after you move a track.
+// 'newPosition' is 1-based indexing, but 'tracksNamed', etc. store 0-based indexing.
 //
-// This is useful anytime you want to change the track order.
-//
-// TODO: this needs to be rewritten... right?
-//
-function TracksAndZooms_moveTrack(trackName, newPosition) {
+function TracksAndZooms_moveTrack (trackName, newPosition)
+{
     var oldPosition = this.tracksNamed[trackName]['tracknum'];
+    newPosition--;  // convert to 0-based indexing
 
-    // Go through tracks between the old and new positions and adjust their order number and offset
+    // NB: updates only apply to tracks between/including oldPosition and newPosition
 
-    if (oldPosition < newPosition) {  // shift tracks left
-	for (var i = oldPosition; i < newPosition; i++) {
-	    // move track at 'i + 1' to 'i' (shift left)
-	    var newTrack = tracksNumbered[i + 1];
-	    tracksNumbered[i] = newTrack;
-	    tracksNamed[newTrack]['tracknum'] = i;
-
-	    // the offset needs to be lowered by the height of the moved track at each zoom level
-	    for (var j in this.zoomsNumbered)
-		tracksNamed[newTrack]['zoomlevels'][this.zoomsNumbered[j]]['offset'] -=
-		    tracksNamed[trackName]['zoomlevels'][this.zoomsNumbered[j]]['height'];
+    if (oldPosition < newPosition)  // shift tracks left
+    {
+	for (var i = oldPosition; i < newPosition; i++)
+	{
+	    var newTrack = this.tracksNumbered[i + 1];
+	    this.tracksNumbered[i] = newTrack;
+	    this.tracksNamed[newTrack]['tracknum'] = i;
 	}
     }
-    else if (oldPosition > newPosition) {  // shift tracks right
-	for (var i = oldPosition; i > newPosition; i--) {
-	    // move track at 'i - 1' to 'i' (shift right)
-	    var newTrack = tracksNumbered[i - 1];
-	    tracksNumbered[i] = newTrack;
-	    tracksNamed[newTrack]['tracknum'] = i;
-
-	    // the offset needs to be raised by the height of the moved track at each zoom level
-	    for (var j in this.zoomsNumbered)
-		tracksNamed[newTrack]['zoomlevels'][this.zoomsNumbered[j]]['offset'] +=
-		    tracksNamed[trackName]['zoomlevels'][this.zoomsNumbered[j]]['height'];
+    else if (oldPosition > newPosition)  // shift tracks right
+    {
+	for (var i = oldPosition; i > newPosition; i--)
+	{
+	    var newTrack = this.tracksNumbered[i - 1];
+	    this.tracksNumbered[i] = newTrack;
+	    this.tracksNamed[newTrack]['tracknum'] = i;
 	}
     }
+    else { return;  /* old = new, nothing to do */ }
 
     // put the moved track in its final place
-    tracksNumbered[newPosition] = trackName;
-    tracksNamed[trackName]['tracknum'] = newPosition;
-
-    // the offset needs to be adjusted for each zoom level;
-    if (newPosition == 0) {
-	// first track, offset is always 0
-	for (var i in this.zoomsNumbered)
-	    tracksNamed[trackName]['zoomlevels'][zoomsNumbered[i]]['offset'] = 0;
-    }
-    else {
-	// base current offset on the offset of the first track to the left (i.e. above, in the browser
-	// view), plus that track's height
-	for (var i in this.zoomsNumbered) {
-	    var trackToLeft = tracksNamed[trackName]['tracknum'] - 1;
-	    var currentZoom = zoomsNumbered[i];
-	    tracksNamed[trackName]['zoomlevels'][currentZoom]['offset'] =
-		tracksNamed[trackToLeft]['zoomlevels'][currentZoom]['offset'] +
-		tracksNamed[trackToLeft]['zoomlevels'][currentZoom]['height'];
-	}
-    }
+    this.tracksNumbered[newPosition] = trackName;
+    this.tracksNamed[trackName]['tracknum'] = newPosition;
 }
 

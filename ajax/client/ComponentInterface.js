@@ -84,6 +84,9 @@ function ComponentInterface_createRefs () {
     this.setCenter = function (center) { this.viewerComponent.setCenter (center); };
     this.showTrack = function (trackName) { this.viewerComponent.showTrack (trackName); };
     this.hideTrack = function (trackName) { this.viewerComponent.hideTrack (trackName); };
+    this.moveTrack = function (trackName, newPos) {
+	this.viewerComponent.moveTrack (trackName, newPos);
+    }
     this.popupTrackLabel =
 	function (trackName) { this.viewerComponent.popupTrackLabel (trackName); };
     this.unpopupTrackLabel =

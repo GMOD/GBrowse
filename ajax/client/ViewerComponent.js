@@ -779,18 +779,20 @@ function ViewerComponent_hideTrack (trackName) {
 // Move the track to a new position (i.e. change track order).
 // 'newPos' is 1-based indexing.
 //
-// NB: this function does not error check any arguments passed to it, so the caller
-// is responsible for verifying their validity.
+// NB:
+// - This function requires that the track ordering in 'taz' has been updated already.
+// - This function does not error check any arguments passed to it, so the caller
+//   is responsible for verifying their validity.
 //
 function ViewerComponent_moveTrack (trackName, newPos)
 {
-    // if track is hidden, don't need to modify DOM - just change the track ordering in 'taz',
-    // and the track will be placed in the new location when it is made visible
-
-    taz.moveTrack (trackName, newPos);
-    newPos--;  // convert to 0-based indexing AFTER passing to 'taz'
+    // if track is hidden, don't need to modify DOM - because the track ordering in 'taz'
+    // has been updated already, the track will be placed in the new location when it is
+    // made visible
 
     if (taz.isTrackVisible (trackName)) {
+	newPos--;  // convert to 0-based indexing
+
 	var movedTrackP = findAndRemoveChild (this.pDivMain, trackName + '_trackDivP');
 	if (this.oDivMain)
 	    var movedTrackO = findAndRemoveChild (this.oDivMain, trackName + '_trackDivO');

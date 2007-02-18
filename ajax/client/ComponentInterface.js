@@ -84,9 +84,20 @@ function ComponentInterface_createRefs () {
     this.setCenter = function (center) { this.viewerComponent.setCenter (center); };
     this.showTrack = function (trackName) { this.viewerComponent.showTrack (trackName); };
     this.hideTrack = function (trackName) { this.viewerComponent.hideTrack (trackName); };
-    this.moveTrack = function (trackName, newPos) {
-	this.viewerComponent.moveTrack (trackName, newPos);
-    }
+    this.moveTrack =
+	function (trackName, newPos)
+	{
+	    // update track ordering data structure
+	    taz.moveTrack (trackName, newPos);
+
+	    // move the track itself, track labels, etc.
+	    this.viewerComponent.moveTrack (trackName, newPos);
+	    
+	    // move the track button, update track control menus, etc.
+	    this.trackControlComponent.moveTrack (trackName, newPos);
+	    
+	    message ('moved track [' + trackName + '] to position ' + newPos);
+	}
     this.popupTrackLabel =
 	function (trackName) { this.viewerComponent.popupTrackLabel (trackName); };
     this.unpopupTrackLabel =

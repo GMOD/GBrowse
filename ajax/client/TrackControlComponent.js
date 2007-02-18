@@ -68,7 +68,7 @@ function TrackControlComponent () {
 	});
 
     // button for changing track order
-    $('moveTrackButton').onclick = TrackControlComponent_moveTrack;
+    $('moveTrackButton').onclick = TrackControlComponent_moveTrackButtonHandler;
 
     // track label transparency controls
     document.getElementById('raiseTransp').onclick = TrackControlComponent_raiseTransp;
@@ -88,6 +88,7 @@ function TrackControlComponent () {
     this.renderComponent = TrackControlComponent_renderComponent;
     this.getState = TrackControlComponent_getState;
     this.setState = TrackControlComponent_setState;
+    this.moveTrack = TrackControlComponent_moveTrack;
     this.setDisplayedViewHeight = TrackControlComponent_setDisplayedViewHeight;
 }
 
@@ -134,6 +135,64 @@ function TrackControlComponent_setDisplayedViewHeight (height) {
     document.getElementById ('viewHeight').value = height;
 }
 
+//
+// Move track to a new position (i.e. change track order).
+// Track positions use 1-based indexing.
+//
+// NB:
+// - This function requires that the track ordering in 'taz' has been updated already.
+// - This function does not error check any arguments passed to it, so the caller
+//   is responsible for verifying their validity.
+//
+function TrackControlComponent_moveTrack (movedTrack, newPos)
+{
+    /* reorder track hiding buttons per the new track order */
+
+    var trackControls = $('trackControls');
+    var movedButton = findAndRemoveChild (trackControls, movedTrack + '_tracktoggle');
+
+    if (newPos == 1) {
+	trackControls.insertBefore (movedButton, trackControls.childNodes[0]);
+    }
+    else {
+	insertAfter (trackControls, movedButton,
+		     getChild (trackControls, taz.getTrackNames()[newPos-2] + '_tracktoggle'));
+    }
+
+    // TODO: recolor them, too?
+
+    /* wipe and re-build menus for track order controls per the new track order */
+
+    var moveTrackMenu   = $('moveTrackMenu');
+    var newLocationMenu = $('newLocationMenu');
+
+    $A (moveTrackMenu.childNodes).each (
+	function (menuOpt) {
+	    moveTrackMenu.removeChild (menuOpt);
+	});
+
+    $A (newLocationMenu.childNodes).each (
+	function (menuOpt) {
+	    newLocationMenu.removeChild (menuOpt);
+	});
+
+    var trackNum = 1;
+    taz.getTrackNames ().each (
+	function (trackName) {
+	    var menuOptFrom = document.createElement ('option');
+	    var menuOptTo   = document.createElement ('option');
+
+	    menuOptFrom.setAttribute ('value', trackName);
+	    menuOptTo.setAttribute   ('value', trackNum);
+
+	    menuOptFrom.text = menuOptTo.text = trackNum + '. ' + trackName;
+
+	    moveTrackMenu.appendChild   (menuOptFrom);
+	    newLocationMenu.appendChild (menuOptTo);
+
+	    trackNum++;
+	});
+}
 
 
 //------------------------
@@ -166,10 +225,12 @@ function TrackControlComponent_openClassicGBrowse(event) {
 }
 
 //
-// Move track to a new position (i.e. change track order).
-// Track positions use 1-based indexing.
+// Handler for "move track" button.
 //
-function TrackControlComponent_moveTrack (event)
+// TODO: this should be replaced with a pretty drag-and-drop GUI (i.e. drag track buttons
+// in the TrackControlComponent around to rearrange tracks).
+//
+function TrackControlComponent_moveTrackButtonHandler (event)
 {
     var moveTrackMenu   = $('moveTrackMenu');
     var newLocationMenu = $('newLocationMenu');
@@ -178,51 +239,6 @@ function TrackControlComponent_moveTrack (event)
     var newPos = newLocationMenu.options[newLocationMenu.selectedIndex].value;
 
     cif.moveTrack (movedTrack, newPos);
-    message ('moved track [' + movedTrack + '] to position ' + newPos);
-
-    /* reorder track hiding buttons per the new track order */
-
-    var trackControls = $('trackControls');
-    var movedButton = findAndRemoveChild (trackControls, movedTrack + '_tracktoggle');
-
-    if (newPos == 1) {
-	trackControls.insertBefore (movedButton, trackControls.childNodes[0]);
-    }
-    else {
-	insertAfter (trackControls, movedButton,
-		     getChild (trackControls, taz.getTrackNames()[newPos-2] + '_tracktoggle'));
-    }
-
-    // TODO: recolor them, too?
-
-    /* wipe and re-build menus for track order controls per the new track order */
-
-    $A (moveTrackMenu.childNodes).each (
-	function (menuOpt) {
-	    moveTrackMenu.removeChild (menuOpt);
-	});
-
-    $A (newLocationMenu.childNodes).each (
-	function (menuOpt) {
-	    newLocationMenu.removeChild (menuOpt);
-	});
-
-    var trackNum = 1;
-    taz.getTrackNames ().each (
-	function (trackName) {
-	    var menuOptFrom = document.createElement ('option');
-	    var menuOptTo   = document.createElement ('option');
-
-	    menuOptFrom.setAttribute ('value', trackName);
-	    menuOptTo.setAttribute   ('value', trackNum);
-
-	    menuOptFrom.text = menuOptTo.text = trackNum + '. ' + trackName;
-
-	    moveTrackMenu.appendChild   (menuOptFrom);
-	    newLocationMenu.appendChild (menuOptTo);
-
-	    trackNum++;
-	});
 }
 
 //

@@ -16,7 +16,7 @@ Typical flow for CGI scripts
  my $session     = $globals->new_session;
  my $dsn         = $globals->update_data_source($session);
  my $data_source = $globals->create_data_source($dsn);
- my $render      = Bio::Graphics::Browser::Render::HTML->new($globals,$data_source,$session);
+ my $render      = Bio::Graphics::Browser::Render::HTML->new($data_source,$session);
  $render->run;
 
  exit 0;

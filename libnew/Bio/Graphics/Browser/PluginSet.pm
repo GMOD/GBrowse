@@ -1,7 +1,7 @@
 package Bio::Graphics::Browser::PluginSet;
 # API for using plugins
 
-#  $Id: PluginSet.pm,v 1.1 2007-01-04 18:54:09 lstein Exp $
+#  $Id: PluginSet.pm,v 1.2 2007-02-19 16:03:35 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser;
@@ -26,7 +26,11 @@ sub new {
       my $plugin_with_path = "$search_path/$plugin.pm";
       if (eval {require $plugin_with_path}) {
 	warn "plugin $plugin loaded successfully" if DEBUG;
-	my $obj = $class->new;
+	my $obj = eval{$class->new};
+	unless ($obj) {
+	  warn "$plugin: $@";
+	  next PLUGIN;
+	}
 	warn "plugin name = ",$obj->name," base = $plugin" if DEBUG;
 	$plugin_list{$plugin} = $obj;
 	next PLUGIN;
@@ -63,33 +67,37 @@ sub configure {
 
   for my $name (keys %$plugins) {
 
-    my $p = $plugins->{$name};
-    $p->database($database);
-    $p->browser_config($conf);
-    $p->config_path($conf_dir);
-    $p->page_settings($page_settings);
-    $p->init();  # other initialization
+    eval {
+      my $p = $plugins->{$name};
+      $p->database($database);
+      $p->browser_config($conf);
+      $p->config_path($conf_dir);
+      $p->page_settings($page_settings);
+      $p->init();  # other initialization
 
-    # retrieve persistent configuration
-    my $config = $session->plugin_settings($p->name);
-    unless (%$config) {
-      my $defaults = $p->config_defaults;
-      %$config     = %{$defaults} if $defaults;
-    }
+      # retrieve persistent configuration
+      my $config = $session->plugin_settings($p->name);
+      unless (%$config) {
+	my $defaults = $p->config_defaults;
+	%$config     = %{$defaults} if $defaults;
+      }
 
-    # and tell the plugin about it
-    $p->configuration($config);
-    $p->filter if ($p->type eq 'filter');
+      # and tell the plugin about it
+      $p->configuration($config);
+      $p->filter if ($p->type eq 'filter');
 
-    # if there are any CGI parameters from the
-    # plugin's configuration screen, set it here
-    my @params = grep {/^$name\./} param() or next;
-    $p->reconfigure unless param('plugin_action') eq $conf->tra('Cancel');
-    $p->filter if ($p->type eq 'filter');
+      # if there are any CGI parameters from the
+      # plugin's configuration screen, set it here
+      my @params = grep {/^$name\./} param() or next;
+      $p->reconfigure unless param('plugin_action') eq $conf->tra('Cancel');
+      $p->filter if ($p->type eq 'filter');
 
-    # turn the plugin on
-    my $setting_name = 'plugin:'.$p->name;
-    $p->page_settings->{features}{$setting_name}{visible} = 1;
+      # turn the plugin on
+      my $setting_name = 'plugin:'.$p->name;
+      $p->page_settings->{features}{$setting_name}{visible} = 1;
+    };
+
+    warn "$name: $@" if $@;
   }
 }
 

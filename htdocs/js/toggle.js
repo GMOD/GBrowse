@@ -6,7 +6,9 @@ function turnOff (element) {
 }
 
 function setVisState (element_name,is_visible) {
-  xSetCookie("div_visible_" + element_name,is_visible,null,location.pathname);
+  // xSetCookie("div_visible_" + element_name,is_visible,null,location.pathname);
+  var postData = 'div_visible_'+ element_name + '=' + is_visible;
+  new Ajax.Request(document.URL,{method:'post',postBody:postData});
 }
 
 function visibility (element_name,is_visible) {

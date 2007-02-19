@@ -107,6 +107,7 @@ sub run {
   my $fh   = shift || \*STDOUT;
   my $old_fh = select($fh);
 
+  return if $self->asynchronous_event;
   $self->init_database();
   $self->init_plugins();
   $self->init_remote_sources();
@@ -115,6 +116,23 @@ sub run {
   $self->render($features);
   $self->clean_up();
   select($old_fh);
+}
+
+sub asynchronous_event {
+  my $self = shift;
+  my $settings = $self->state;
+  my $events;
+
+  for my $p (grep {/^div_visible_/} param()) {
+    my $visibility = param($p);
+    $p =~ s/^div_visible_//;
+    $settings->{section_visible}{$p} = $visibility;
+    $events++;
+  }
+  return unless $events;
+  print CGI::header('204 No Content');
+  $self->session->flush;
+  1;
 }
 
 sub render {
@@ -147,7 +165,50 @@ sub render_header {
 sub render_body {
   my $self     = shift;
   my $features = shift;
-  print "rendering ",scalar @$features," features";
+
+  warn "have to handle special pages (like track editing) here";
+  $self->render_top($features);
+
+  if ($features && @$features > 1) {
+    $self->render_multiple_choices($features);
+  }
+
+  elsif ($features && @$features == 1) {
+    my $segments = $self->features2segments($features);
+    $self->segments($segments);
+    my $seg = $segments->[0];
+    $self->render_navbar($seg);
+    $self->render_panels($seg);
+    $self->render_config($seg);
+  }
+  else {
+    $self->render_navbar();
+    $self->render_config();
+  }
+
+  $self->render_bottom($features);
+}
+
+sub render_top    {
+  my $self     = shift;
+  my $features = shift;
+}
+
+sub render_navbar {
+  my $self = shift;
+  my $seg  = shift;
+}
+sub render_panels {
+  my $self = shift;
+  my $seg  = shift;
+}
+sub render_config {
+  my $self = shift;
+  my $seg = shift;
+}
+sub render_bottom {
+  my $self = shift;
+  my $features = shift;
 }
 
 sub init_database {
@@ -185,7 +246,7 @@ sub init_plugins {
   my $plugins = $PLUGINS{$source} 
     ||= Bio::Graphics::Browser::PluginSet->new($self->data_source,$self->state,@plugin_path);
   $self->fatal_error("Could not initialize plugins") unless $plugins;
-  $plugins->configure($self->db,$self->state,$self->session);
+   $plugins->configure($self->db,$self->state,$self->session);
   $self->plugins($plugins);
   $plugins;
 }
@@ -1104,6 +1165,15 @@ sub set_language {
   return unless @languages;
   $lang->language(@languages);
   $self->language($lang);
+}
+
+# Returns the language code, but only if we have a translate table for it.
+sub language_code {
+  my $self = shift;
+  my $lang = $self->language;
+  my $table= $lang->tr_table($lang->language);
+  return unless %$table;
+  return $lang->language;
 }
 
 # return language-specific options

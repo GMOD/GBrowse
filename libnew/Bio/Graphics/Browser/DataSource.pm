@@ -68,6 +68,12 @@ sub global_setting {
   return $self->globals->setting(general=>$option);
 }
 
+# this method is for compatibility with some plugins
+sub config {
+  my $self = shift;
+  return $self;
+}
+
 sub overview_bgcolor { shift->global_setting('overview bgcolor')         }
 sub detailed_bgcolor { shift->global_setting('detailed bgcolor')         }
 sub key_bgcolor      { shift->global_setting('key bgcolor')              }
@@ -175,6 +181,31 @@ sub semantic_label {
     }
   $label
 }
+
+=head2 $section_setting = $data_source->section_setting($section_name)
+
+Returns "open" "closed" or "off" for the named section. Named sections are:
+
+ instructions
+ search
+ overview
+ details
+ tracks
+ display
+ add tracks
+
+=cut
+
+sub section_setting {
+  my $self = shift;
+  my $section = shift;
+  my $config_setting = "\L$section\E section";
+  my $s = $self->setting($config_setting);
+  return 'open' unless defined $s;
+  return $s;
+}
+
+
 
 # override inherited in order to be case insensitive
 # and to account for semantic zooming

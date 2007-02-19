@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.4 2007-02-14 23:54:39 lstein Exp $
+# $Id: Browser.pm,v 1.5 2007-02-19 16:03:35 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -7,11 +7,12 @@ use warnings;
 use base 'Bio::Graphics::FeatureFile';
 
 use File::Path 'mkpath';
+use File::Basename 'dirname';
 use Text::ParseWords 'shellwords';
 use Bio::Graphics::Browser::DataSource;
 use Bio::Graphics::Browser::Session;
 use Carp 'croak','carp';
-use CGI '';
+use CGI 'redirect','url';
 
 my %CONFIG_CACHE;
 
@@ -27,6 +28,14 @@ sub new {
   }
 
   my $self = $class->SUPER::new(-file=>$config_file_path);
+
+  # a little trick here -- force the setting of "config_base" from the config file
+  # base if not explicitly overridden
+  unless ($self->setting('general' => 'config_base')) {
+    my $dir = dirname($config_file_path);
+    $self->setting('general' => 'config_base',$dir);
+  }
+
   $CONFIG_CACHE{$config_file_path}{object} = $self;
   $CONFIG_CACHE{$config_file_path}{mtime}  = $mtime;
   return $self;
@@ -131,7 +140,7 @@ sub moby_path      { shift->config_path('moby_path')       }
 sub global_timeout         { shift->setting(general=>'global_timeout')         }
 sub remember_source_time   { shift->setting(general=>'remember_source_time')   }
 sub remember_settings_time { shift->setting(general=>'remember_settings_time') }
-sub url_fetch_timeout      { shift->setting(general=>'url_fetch_timeout')      }
+sub url_fetc_htimeout      { shift->setting(general=>'url_fetch_timeout')      }
 sub url_fetch_max_size     { shift->setting(general=>'url_fetch_max_size')     }
 
 sub session_driver         { shift->setting(general=>'session driver') || 'driver:file;serializer:default' }
@@ -177,12 +186,13 @@ sub default_source {
 sub valid_source {
   my $self            = shift;
   my $proposed_source = shift;
-  return defined $self->setting($proposed_source=>'path');
+  my $path =  $self->data_source_path($proposed_source) or return;
+  return -e $path;
 }
 
 sub update_data_source {
   my $self    = shift;
-  my $session = shift;
+  my $session    = shift;
   my $new_source = shift;
   my $old_source = $session->source || $self->default_source;
 
@@ -193,14 +203,27 @@ sub update_data_source {
     $new_source = $source;
   }
 
+  my $source;
+
   if ($self->valid_source($new_source)) {
     $session->source($new_source);
-    return $new_source;
+    $source = $new_source;
   } else {
     carp "Invalid source $new_source";
     $session->source($old_source);
-    return $old_source;
+    $source = $old_source;
   }
+
+  unless (CGI::path_info() eq "/$source") {
+    my $args = CGI::query_string();
+    my $url  = url(-absolute=>1);
+    $url .= "/$source";
+    $url .= "?$args" if $args;
+    print redirect($url);
+    exit 0;
+  }
+
+  return $source;
 }
 
 ## methods for dealing with the session

@@ -1,0 +1,6 @@
+# make sure to:
+#  - rename this file to .htaccess
+#  - move it to the same dir where you want to have the "tiles" dir
+#  - change the path to CGI below as appropriate (make sure "get-tile"
+#    can load the appropriate AJAX-GBrowse Perl modules, too!)
+ErrorDocument 404 /cgi-bin/server/get-tile.pl

@@ -111,7 +111,7 @@ sub renderTileRange {
 
 		    		print TILE $small_tile_gd->png or die "ERROR: could not write to ${outfile}!\n";
 
-		    		warn "done printing ${outfile}\n" if $self->verbose;
+		    		warn "done printing ${outfile}\n" if $self->verbose >= 2;
 
 					# have to check that all the coords are in the rectangles
 					my $lower_limit=$y * $tilewidth_pixels;

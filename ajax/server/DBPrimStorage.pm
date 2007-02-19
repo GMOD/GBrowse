@@ -1,11 +1,15 @@
 package DBPrimStorage;
 
+# TODO:
+# - doesn't clean up 'image' table when 'persistent' set to off, but should
+
+use strict;
 use Data::Dumper;
 use DBI;
 use Carp;
 
 BEGIN {
-    foreach my $field (qw(gdtile global_sth bb_sth id image_cache verbose n_primitives)) {
+    foreach my $field (qw(gdtile global_sth bb_sth id image_cache n_primitives)) {
 	no strict "refs";
 	*$field = sub {
 	    my $self = shift;
@@ -51,6 +55,15 @@ sub GDConnect {
     return $gdtile;
 }
 
+sub GDFetchExistingTiledImage {
+  my ($gdtile, $tiledimage_name) = @_;
+  my $query = "SELECT tiledimage_id FROM tiledimage WHERE tiledimage_name = '$tiledimage_name'";
+  my $sth = $gdtile->prepare ($query);
+  $sth->execute () or die "Couldn't execute statement: " . $sth->errstr;
+  my ($tiledimage_id) = $sth->fetchrow_array;
+  return $tiledimage_id;
+}
+
 sub GDFetchTiledImageDimensions {
     my ($gdtile, $tiledimage_id) = @_;
     my $sth = $gdtile->prepare("SELECT width, height FROM tiledimage WHERE tiledimage_id = " . $tiledimage_id);
@@ -61,8 +74,8 @@ sub GDFetchTiledImageDimensions {
 }
 
 sub GDCreateTiledImage {
-    my ($gdtile, $width, $height) = @_;
-    $gdtile->do ("INSERT INTO tiledimage (width, height) VALUES ($width, $height)");
+    my ($gdtile, $tiledimage_name, $width, $height) = @_;
+    $gdtile->do ("INSERT INTO tiledimage (tiledimage_name, width, height) VALUES ('$tiledimage_name', $width, $height)");
     my $sth = $gdtile->prepare("SELECT LAST_INSERT_ID()");
     $sth->execute()
 	or die "Couldn't execute statement: " . $sth->errstr;
@@ -104,7 +117,6 @@ sub GDStoreImage {
     croak "Bad image data" unless defined $image_data;
 
     # INSERT PNG data into image table
-#    warn "inserting: INSERT INTO image (image_data) VALUES (?)" if $self->verbose == 2;
     my $sth = $self->gdtile->prepare("INSERT INTO image (image_data) VALUES (?)")
 	or die "Couldn't prepare statement: " . $self->gdtile->errstr;
 
@@ -146,7 +158,7 @@ sub GDRetrieveImage {
 sub GDRecordPrimitive {
     my ($self, $sub, $subargs, @bb) = @_;
 
-    @args = $self->storeImages ($sub, @$subargs);
+    my @args = $self->storeImages ($sub, @$subargs);
 
     # get string representation and store in SQL database
     my $dumper = Data::Dumper->new ([[$sub,@args]]);
@@ -230,7 +242,6 @@ sub perTileCleanup {
 # disconnects from the database
 sub cleanup {
     my $self = shift;
-
     $self->GDDisconnect;
 }
 
@@ -238,20 +249,26 @@ sub cleanup {
 # Constructor
 sub new {
     my ($class, %args) = @_;
+    my ($verbose, $tiledimage_name) = ($args{'-verbose'}, $args{'-tiledimage_name'});
     my ($width, $height, $tiledimage_id);
-    my $verbose = $args{'-verbose'};
 
-    print "connecting to prim database " . $args{'-primdb'} . "\n" if $verbose;
+    warn "connecting to prim database " . $args{'-primdb'} . "\n" if $verbose;
 
     # connect to database
-    my $gdtile = GDConnect($args{'-primdb'});
+    my $gdtile = GDConnect ($args{'-primdb'});
 
-    if (exists $args{'-tiledimage_id'}) {
-	$tiledimage_id = $args{'-tiledimage_id'};
-	($width, $height) = GDFetchTiledImageDimensions ($gdtile, $tiledimage_id);
-    } else {
-	($width, $height) = ($args{'-width'}, $args{'-height'});
-	$tiledimage_id = GDCreateTiledImage($gdtile, $width, $height);
+    if ($tiledimage_id = GDFetchExistingTiledImage ($gdtile, $tiledimage_name))
+    {
+      # we already have stuff for this TiledImage, so use its dimensions
+      ($width, $height) = GDFetchTiledImageDimensions ($gdtile, $tiledimage_id);
+      warn "reusing existing TiledImage (id = $tiledimage_id)\n" if $verbose;
+    }
+    else
+    {
+      # need to create new TiledImage
+      ($width, $height) = ($args{'-width'}, $args{'-height'});
+      $tiledimage_id = GDCreateTiledImage ($gdtile, $tiledimage_name, $width, $height);
+      warn "creating new TiledImage (id = $tiledimage_id)\n" if $verbose;
     }
 
     # prepare SQL queries
@@ -262,16 +279,19 @@ sub new {
 		 'bb_sth' => $bb_sth,
 
 		 'id' => $tiledimage_id,
+		 'name' => $tiledimage_name,
+
+		 'verbose' => $verbose,
+
+		 'width' => $width,
+		 'height' => $height,
 
 		 'image_cache' => {},
-		 
-		 'verbose' => $args{'-verbose'},
 
 		 'n_primitives' => 0,
     };
 
     bless $self, $class;
-
     return $self;
 }
 

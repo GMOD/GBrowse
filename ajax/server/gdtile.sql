@@ -4,6 +4,7 @@ USE gdtile;
 
 CREATE TABLE tiledimage (
 	tiledimage_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+	tiledimage_name TEXT,
 	width INT UNSIGNED,
 	height INT UNSIGNED,
 	PRIMARY KEY (tiledimage_id)

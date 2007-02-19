@@ -492,7 +492,7 @@ sub gd {
   my $height = $self->height;
   my $width  = $self->width + $self->pad_left + $self->pad_right;
 
-  #warn "HEIGHT: ", $self->height, " WIDTH: ", $self->width, "\n";  # D!!!
+  #warn "Panel HEIGHT: ", $self->height, " WIDTH: ", $self->width, "\n";  # D!!!
 
   my $pkg = $self->image_package;
 #  my $gd  = $existing_gd || $pkg->new($width,$height,
@@ -570,8 +570,6 @@ sub gd {
   $self->draw_background($gd,$self->{background})  if $self->{background};
   $self->draw_grid($gd)                            if $self->{grid};
   $self->draw_background($gd,$self->{postgrid})    if $self->{postgrid};
-
-  warn "Whoa... we're here?\n";  # D!!!
 
   $offset = $pt;
   for my $track (@{$self->{tracks}}) {

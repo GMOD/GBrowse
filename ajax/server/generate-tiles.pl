@@ -11,10 +11,8 @@
 #
 # !!! NOTES:
 # - Remember that 'arrow.pm' had to be hacked!
-# - Load settings from a config file?
-# - TODO: Need to save number fo tiles (PROPERLY, adjusted for out-of-bounds text) to the XML file
+# - Load args to this program from a config file?
 # - TODO: Make script check for nonexistent/not implemented arguments
-# - TODO: Incorporate a "bases per tile" parameter!
 #
 ###########################################################################
 
@@ -30,8 +28,6 @@ use Data::Dumper;
 
 
 # --- BEGIN MANUAL PARAMETER SPECIFICATIONS ---
-my $VERSION = 1.62;               # I have no idea if this is even necessary (it certainly never gets used) !!!
-
 my $rendering_tilewidth = 32000;  # tile width (in pixels) for RENDERING via TiledImage (bigger tiles
                                   # render faster, so we render big chunks, then break them up into pieces)
 my $tilewidth_pixels = 1000;      # actual width (in pixels) of tiles for client; the TiledImage tiles get
@@ -40,9 +36,25 @@ my $tilewidth_pixels = 1000;      # actual width (in pixels) of tiles for client
                                   # otherwise we will have leftover, unrendered pixels!
 
 my $xmlfile = 'tileinfo.xml';     # XML file name to save settings/etc. to
-my $default_confdir = '/usr/local/apache2/conf/gbrowse.conf';
-   $default_confdir = '/Library/WebServer/conf/gbrowse.conf' unless -e $default_confdir;  # IH - patch to work on default GBrowse installation directory for Apple OS X
-my $default_outdir = `pwd`;  chomp $default_outdir;  # default output is to current directory
+
+# default output is to the current directory
+my $default_outdir = `pwd`;
+chomp $default_outdir;
+$default_outdir .= '/';
+
+# try to find a configuration file directory (check the usual suspects)
+my $default_confdir;
+foreach my $dir (qw [
+		     /usr/local/apache2/conf/gbrowse.conf/
+		     /usr/local/conf/gbrowse.conf/
+		     /etc/httpd/conf/gbrowse.conf/
+		     /Library/WebServer/conf/gbrowse.conf/
+		    ]) {
+  if (-e $dir) {
+    $default_confdir = $dir;
+    last;
+  }
+}
 # --- END MANUAL PARAMETER SPECIFICATIONS ---
 
 # Parse command line arguments and load configuration data
@@ -68,7 +80,7 @@ my ($fill_database, $render_tiles);
 if (exists $args{'-m'}) {
     if    ($args{'-m'} == 0) { ($fill_database, $render_tiles) = (1, 1); }
     elsif ($args{'-m'} == 1) { ($fill_database, $render_tiles) = (1, 0); }
-    #elsif ($args{'-m'} == 2) { ($fill_database, $render_tiles) = (0, 1); }  # NOT YET IMPLEMENTED !!!
+    elsif ($args{'-m'} == 2) { ($fill_database, $render_tiles) = (0, 1); }
     elsif ($args{'-m'} == 3) { ($fill_database, $render_tiles) = (0, 0); }
     else                     { die "ERROR: invalid '-m' parameter!\n"; }
 } else {
@@ -85,7 +97,7 @@ if (exists $args{'-p'}) {
     elsif ($args{'-p'} == 1) { $persistent = 1; }
     else                     { die "ERROR: invalid '-p' parameter!\n"; }
 } else {
-    print " Using default setting: database primitives will NOT be deleted...\n" if $fill_database or $render_tiles;
+    print " Using default setting: primitives will NOT be deleted...\n" if $fill_database or $render_tiles;
     $persistent = 1;
 }
 
@@ -97,22 +109,15 @@ if (exists $args{'-v'}) {
     elsif ($args{'-v'} == 0) { $verbose = 0; }
     else                     { die "ERROR: invalid '-v' parameter!\n"; }
 } else {
-    print " Using default setting: TiledImage is NOT in verbose mode...\n" if $fill_database or $render_tiles;
+    print " Using default setting: NOT in verbose mode...\n" if $fill_database or $render_tiles;
     $verbose = 0;
 }
 
 # do output directory and XML file stuff
 my $outdir = $args{'-o'};
-if (!$outdir) {
+unless ($outdir) {
     $outdir = $default_outdir;
     print " Using default output directory (${outdir})...\n" unless !$render_tiles and $no_xml;
-}
-
-my ($html_outdir, $html_outdir_tiles);
-unless ($no_xml) {
-    $html_outdir = $args{'-h'};
-    die "ERROR: you must provide an HTML path!" if !$html_outdir;
-    $html_outdir_tiles = "${html_outdir}/tiles/";
 }
 
 unless (-e $outdir || !$render_tiles) {
@@ -123,20 +128,18 @@ unless ($no_xml) {
     open XMLFILE, ">${outdir}/${xmlfile}" or die "ERROR: cannot open '${outdir}/${xmlfile}' ($!)\n";
 }
 
-my $outdir_tiles = "${outdir}/tiles/";
-unless (-e $outdir_tiles || !$render_tiles) {
-    mkdir $outdir_tiles or die "ERROR: cannot make tile output directory ${outdir_tiles}! ($!)\n";
-}
-
-print " Output directory: ${outdir}\n" unless !$render_tiles and $no_xml;
-
 # do database '.conf' directory stuff
 my $CONF_DIR = $args{'-c'};
-if (!$CONF_DIR) {
+if ($CONF_DIR) {
+  die "ERROR: cannot access '.conf' directory (${CONF_DIR})!\n" unless -e $CONF_DIR;
+} else {
+  if ($default_confdir) {
     $CONF_DIR = $default_confdir;
-    print " Using default '.conf' directory (${CONF_DIR})...\n";
+    print " Using a default '.conf' directory (${CONF_DIR})...\n";
+  } else {
+    die "ERROR: no default '.conf' directory found and you did not provide one explicitly (-c option)... cannot continue!\n";
+  }
 }
-die "ERROR: cannot access '.conf' directory (${CONF_DIR})!\n" unless -e $CONF_DIR;
 
 # load stuff from config file
 $CONF_DIR = conf_dir($CONF_DIR);
@@ -187,7 +190,29 @@ my $landmark = "${landmark_name}:${landmark_start}..${landmark_end}";
 
 print
     " Landmark: ${landmark} (${source_name})\n",
-    " Landmark length: ${landmark_length} bases\n",
+    " Landmark length: ${landmark_length} bases\n";
+
+# NB: the following paths are landmark specific (TODO: when we implement looping over multiple
+# landmarks, the following will have to be in the loop body)
+
+my $outdir_tiles = "${outdir}/tiles/";
+unless (-e $outdir_tiles || !$render_tiles) {
+    mkdir $outdir_tiles or die "ERROR: cannot make tile output directory ${outdir_tiles}! ($!)\n";
+}
+$outdir_tiles .= "${landmark_name}/";  # append landmark-specific subdir
+unless (-e $outdir_tiles || !$render_tiles) {
+    mkdir $outdir_tiles or die "ERROR: cannot make tile output directory ${outdir_tiles}! ($!)\n";
+}
+print " Output directory: ${outdir}\n" unless !$render_tiles and $no_xml;
+
+my ($html_outdir, $html_outdir_tiles);
+unless ($no_xml) {
+    $html_outdir = $args{'-h'};
+    die "ERROR: you must provide an HTML path!" if !$html_outdir;
+    $html_outdir_tiles = "${html_outdir}/tiles/${landmark_name}/";
+}
+
+print
     "-------------------------------------------------------------------------\n";
 
 my @track_labels = ('ruler', $CONFIG->labels); # get all the labels (i.e. tracks) possible, add the genomic ruler track
@@ -347,113 +372,64 @@ unless ($no_xml) {
 	"  <tile width=\"${tilewidth_pixels}\" />\n";
 }
 
-# [DELETE?]
-# I'm not sure what this does, I'm just trying to parallel 'gbrowse_img' code
-#my %visible = map {$_ => {visible=>0}} @labels;
-#
-# Later note: apparently, for our purposes, it does nothing.
-# [/DELETE?]
-    
-# [DELETE?]
-# As far as I can tell, $wildcard is absolutely worthless
-#my $wildcard = $landmark =~ /[*?]/;  # what the hell does this do?
-#print "___", $wildcard, "___", !$wildcard, "___\n";
-# [/DELETE?]
-    
-# [DELETE EVENTUALLY]
-#my (%options, $flip);  # empty placeholders for the 'image_and_map' function to work
-                       # properly; perhaps '%options' will actually be used later
+## Render the genomic ruler for all zoom levels
 
-# in the following, '$boxes', '$panel', and '$track' are really unnecessary for our
-# purposes, as far as I can tell... and I'm not quite sure what some of the parameters
-# mean, so I'm just stealing defaults from 'gbrowse_img';
-#
-# additionally, what is 'do_map'?  do we want that?  (it seems to do nothing)
-#my ($img, $boxes, $panel, $track) = $CONFIG->image_and_map(segment => $segment,
-#							   tracks => \@labels,
-							   #options => \%options,
-							   #feature_files => undef,
-#							   label_scale => 1,
-#							   image_class => "GD",
-#							   keystyle => "between",
-							   #do_map => 1,
-							   #flip => $flip,
-#							  );
-# [/DELETE EVENTUALLY]
+my $ruler_dir = "${outdir_tiles}/ruler";
+unless (-e $ruler_dir || !$render_tiles) {
+  mkdir $ruler_dir or die "ERROR: problem with output directory ${outdir_tiles}! ($!)\n";
+}
 
-# [BEGIN CODE TAKEN PIECEMEAL FROM Browser.pm]
-
-#eval "use $image_class";  # do we need this? !!!
-
-# [DELETE?]
-# what the hell is the point of this?  the hash 'filters' is not used ANYWHERE in
-# the following code!  is this worth keeping for any reason? !!!
-#my %filters = map { my %conf =  $conf->style($_); 
-#		    $conf{'-filter'} ? ($_ => $conf{'-filter'}) : ($_ => \&true)
-#		  } @labels;  # NOTE that if you're bringing this back to life, we moved
-                              # @labels down into a loop now !!!
-# [/DELETE?]
-
-# Render the genomic ruler for all zoom levels
-my $ruler_dir = "${outdir_tiles}/ruler/";
 my $html_ruler_dir = "${html_outdir_tiles}/ruler" unless $no_xml;
 
-my $ruler_image_height;
 foreach my $zoom_level (@zoom_levels) {
     my $zoom_level_name = $zoom_level->[0];
 
     next unless $print_track_and_zoom{'ruler'}{$zoom_level_name};  # skip zoom levels we're not filling or rendering
 
-    unless (-e $ruler_dir || !$render_tiles) {
-	mkdir $ruler_dir or die "ERROR: problem with output directory ${outdir_tiles}! ($!)\n";
-    }
-    
     my $tilewidth_bases = $zoom_level->[1];
-
-    # [RETHINK !!!]
-    # Ok, we have to figure out some sort of way to replace this code with a less half-assed way of
-    # computing the total image width and tile number for writing to the XML file... because this does
-    # not explicitly account for the over-run of text across the border of the last tile... and we
-    # have to have some way to compute where the ACTUAL LAST PIXEL of the entire image is, and set the
-    # border THERE, then pass the total width to the browser in PIXELS so that the browser knows how far
-    # to let the user scroll (yes, this is a problem for the ruler too, because ruler labels CAN overrun)
 
     my $num_tiles = ceiling($landmark_length / $tilewidth_bases) + 1;  # 1 extra tile for the overrun
     my $image_width = ceiling($tilewidth_pixels * $landmark_length / $tilewidth_bases);  # in pixels
-    
-    # I'm really not sure how palatable setting this option here will be... but we can't
-    # set it any earlier...
-    $CONFIG->width($image_width);  # set image width (in pixels)
-    # [/RETHINK !!!]
+
+    $CONFIG->width ($image_width);  # set image width (in pixels) - necessary?
 
     warn "----- GENERATING RULER TRACK AT ZOOM LEVEL $zoom_level_name... -----\n" if $verbose;
 
     # check/create output dir here, to pass to BatchTiledImage... IH 4/11/2006
-    my $current_ruler_dir;
-    if ($render_tiles) {
-	$current_ruler_dir = "${ruler_dir}/${zoom_level_name}/";  # ruler tile path for this zoom level
-	unless (-e $current_ruler_dir) {
-	    mkdir $current_ruler_dir or die "ERROR: could not make ${current_ruler_dir}!\n";
-	}
+    my $current_ruler_dir = "${ruler_dir}/${zoom_level_name}/";
+    if ($render_tiles and !(-e $current_ruler_dir)) {
+      mkdir $current_ruler_dir or die "ERROR: could not make ${current_ruler_dir}!\n";
     }
     my $tile_prefix = "${current_ruler_dir}/rulertile";
+    my $tiledimage_name = join ('__', $landmark_name, 'ruler', $zoom_level_name);
 
+    ## Construct fake GD (i.e. BatchTiledImage) object; how to do this depends on whether
+    ## the graphics primitives are already in the database or not
+
+    # TODO: safety check to make sure -primdb is specified if we're using existing primitives?
+
+    my ($ruler_fake_gd, $track_height);
     my %tiledImageArgs = (
-			  # BatchTiledImage options
-			  -renderTiles => $render_tiles,
-			  -firstTile => $tile_ranges_to_render{'ruler'}{$zoom_level_name}->[0] - 1,  # NB change from 1-based to 0-based coords
-			  -lastTile  => $tile_ranges_to_render{'ruler'}{$zoom_level_name}->[1] - 1,  # NB change from 1-based to 0-based coords
-			  -tileWidth => $tilewidth_pixels,
-			  -renderWidth => $rendering_tilewidth,
-			  -tilePrefix => $tile_prefix,
+	# args to BatchTiledImage constructor
+	-renderTiles => $render_tiles,
+	-firstTile => $tile_ranges_to_render{'ruler'}{$zoom_level_name}->[0] - 1,  # NB change from 1-based to 0-based coords
+	-lastTile  => $tile_ranges_to_render{'ruler'}{$zoom_level_name}->[1] - 1,  # NB change from 1-based to 0-based coords
+	-tileWidth => $tilewidth_pixels,
+	-renderWidth => $rendering_tilewidth,
+	-tilePrefix => $tile_prefix,
 
-			  # TiledImage options
-			  -persistent => $persistent,
-			  -verbose => $verbose,
-	                  -primdb => $primdb,
-			  );
+	# args to TiledImage constructor
+	-persistent => $persistent,
+	-verbose => $verbose,
+	-primdb => $primdb,
+	-tiledimage_name => $tiledimage_name,
+    );
 
-    my @argv = (-start => $landmark_start,
+    if ($fill_database) {
+      # create our clone of 'Panel.pm' that returns pseudo-GD::Image objects
+      my $ruler_panel =
+          TiledImagePanel->new (
+		-start => $landmark_start,
 		-end => $landmark_end,
 		-stop => $landmark_end,  # backward compatability with old BioPerl
 		-bgcolor => $CONFIG->setting('detail bgcolor') || 'white',
@@ -462,97 +438,72 @@ foreach my $zoom_level (@zoom_levels) {
 		-gridcolor => 'linen',
 		-key_style => 'none',  # don't want no key
 		-empty_tracks => $conf->setting(general => 'empty_tracks') || 'key',
-                  # I really don't know what 'empty_tracks' does (so maybe remove it?), so I'm just copying the code from
-                  # 'Browser.pm' verbatim !!!  (note that 'key' is the value of DEFAULT_EMPTYTRACKS in 'Browser.pm')
-		-pad_top => 0,  # padding is probably 0 by default, but we will specify just in case
+		-pad_top => 0,  # probably 0 by default, but we will specify just in case
 		-pad_left => 0,
-		-pad_right => $tilewidth_pixels,  # to accomodate for stuff overruning borders of "last" tile - TEMP FIX !!!
-	       );
+		-pad_right => $tilewidth_pixels,  # to accomodate for stuff overruning borders of last tile
+          );
 
-    my $ruler_panel = TiledImagePanel->new(@argv);
+      # add genomic ruler (i.e. arrow segment); there is a description of the track options at the end of:
+      #   /usr/local/share/perl/5.8.4/Bio/Graphics/Glyph/arrow.pm (for a default BioPerl installation) - NOTE THAT IT IS HACKED !!!
+      $ruler_panel->add_track (
+			       $segment => 'arrow',
+			       # double-headed arrow:
+			       -double => 1,
 
-    # add genomic ruler (i.e. arrow segment); there is a description of the track options at the end of:
-    #   /usr/local/share/perl/5.8.4/Bio/Graphics/Glyph/arrow.pm (for a default BioPerl installation) - NOTE THAT IT IS HACKED !!!
-    $ruler_panel->add_track($segment => 'arrow',
-			    # double-headed arrow:
-			    -double => 1,
-			    
-			    # draw major and minor ticks:
-			    -tick => 2,
-			    
-			    # if we ever want unit labels, we may want to bring this back into action...!!!
-			    #-units => $conf->setting(general => 'units') || '',
-			    -unit_label => '',
+			       # draw major and minor ticks:
+			       -tick => 2,
 
-			    # if we ever want unit dividers to be loaded from $conf, we'll have to use
-			    # the commented-out option below, instead of hardcoding...!!!
-			    #-unit_divider => $conf->setting(general => 'unit_divider') || 1,
-			    #-unit_divider => 1,
+			       # if we ever want unit labels, we may want to bring this back into action...!!!
+			       #-units => $conf->setting(general => 'units') || '',
+			       -unit_label => '',
 
-			    # forcing the proper unit use for major tick marks
-			    -units_forced => $zoom_level->[2]
-			   );
+			       # if we ever want unit dividers to be loaded from $conf, we'll have to use
+			       # the commented-out option below, instead of hardcoding...!!!
+			       #-unit_divider => $conf->setting(general => 'unit_divider') || 1,
+			       #-unit_divider => 1,
 
-    # output ruler
-    $ruler_image_height = $ruler_panel->height;  # needed for XML file
+			       # forcing the proper unit use for major tick marks
+			       -units_forced => $zoom_level->[2]
+			      );
 
-    my $ruler_fake_gd;
-    if ($fill_database) {
-	$ruler_fake_gd = $ruler_panel->gd(%tiledImageArgs);
-    } else {
-	# !!! NOT YET IMPLEMENTED - need to get the TiledImage ID from the database (need to have user
-	# pass this in):
-	#$ruler_fake_gd = TiledImage->new('-tiledimageid' => $GET_THIS_ID_SOMEWHERE);
+      $ruler_fake_gd = $ruler_panel->gd (%tiledImageArgs);
+      $track_height = $ruler_panel->height;
+    }
+    else {
+      # if we're not filling database, primitives must be there already, so just create a
+      # pseudo-GD::Image object through which to fetch them
+      $ruler_fake_gd = BatchTiledImage->new (%tiledImageArgs);
+      $track_height = $ruler_fake_gd->height;
     }
 
-    # render all tiles (code moved into BatchTiledImage.pm - IH, 4/11/2006)
-    $ruler_fake_gd->renderAllTiles;
+    $ruler_fake_gd->renderAllTiles if $render_tiles;
+    $ruler_fake_gd->finish;  # clean up
 
-    # !!! TODO: the number of tiles for each zoom level of ruler needs to be written to XML file somehow,
-    # because ruler text on the last tick mark can run out of bounds... this is really a minor annoyance,
-    # so save this until the zoom level info XML scheme is reworked (see the RETHINK note above)
-
-    # ruler image height should be the same for all zoom levels (YES, the same thing will print an excessive number
-    # of times... but that's because eventually the tile number will be written into this !!!
-    print XMLFILE "  <ruler tiledir=\"${html_ruler_dir}/\" height=\"${ruler_image_height}\" />\n" unless $no_xml;
-   
-    $ruler_fake_gd->finish if $render_tiles or $fill_database;  # disconnect from database and clean up
+    # if we got this far with no fatal error, we can print info about this track to XML file
+    print XMLFILE ("  <ruler tiledir=\"${html_ruler_dir}/\" height=\"${track_height}\" />\n") unless $no_xml;
 }
-
 
 # Render the genomic tiles for all tracks and zoom levels
 print XMLFILE "  <tracks>\n" unless $no_xml;
 
 # iterate over tracks (i.e. labels)
-for (my $label_num = 0; $label_num < @track_labels; $label_num++) {
-    next if ($track_labels[$label_num] eq 'ruler');  # skip ruler, we render it above - TEST THIS !!!!!!!
-    my $track_num=$label_num; # steve same thing really...
-    my $label = ($track_labels[$label_num]); # used to be @labels in 'gbrowse_img'
-    
-    # get track name, record to XML file
+for (my $label_num = 0; $label_num < @track_labels; $label_num++)
+{
+    next if ($track_labels[$label_num] eq 'ruler');  # skip ruler, we render it above
+
+    my $label = ($track_labels[$label_num]);
     my %track_properties = $conf->style($label);
     my $track_name = $track_properties{"-key"};
-   
-    unless ($track_name) { # sometimes the track name is unspecified, so use the label instead
-        $track_name = $label;
-    }
-   
-    warn "=== GENERATING TRACK $label ($track_name)... ===\n" if $verbose;
-    
+
+    # sometimes the track name is unspecified, so use the label instead
+    $track_name = $label unless $track_name;
+
     print XMLFILE "    <track name=\"${track_name}\">\n" unless $no_xml;
 
+    warn "=== GENERATING TRACK $label ($track_name)... ===\n" if $verbose;
+
     # get feature types in form suitable for Bio::DB::GFF
-#    my @feature_types = map { $conf->label2type($_, $landmark_length) } @labels;  OLD AND BUSTED !!!
     my @feature_types = $conf->label2type($label, $landmark_length);
-
-#    my $label = $labels[0];  # silly  OLD AND BUSTED !!!
-#    my %tracks;  # rendered useless, since we are explicitly using one and only one track
-
-    #my @blank_tracks;  # WE MAY NEED THIS later, for 3rd party annotations... so leave here for now !!!
-    #if (my $ff = $feature_files->{$label}) {
-    #    push @blank_tracks, $label_num;
-    #    next;
-    #}
 
     my $lang = $CONFIG->language;
 
@@ -564,14 +515,6 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++) {
 
         next unless $print_track_and_zoom{$label}{$zoom_level_name};  # skip if not printing
 
-	# [RETHINK !!!]
-	# Ok, we have to figure out some sort of way to replace this code with a less half-assed way of
-	# computing the total image width and tile number for writing to the XML file... because this does
-	# not explicitly account for the over-run of text across the border of the last tile... and we
-	# have to have some way to compute where the ACTUAL LAST PIXEL of the entire image is, and set the
-	# border THERE, then pass the total width to the browser in PIXELS so that the browser knows how far
-	# to let the user scroll (yes, this is a problem for the ruler too, because ruler labels CAN overrun)
-
 	my $tilewidth_bases = $zoom_level->[1] * $tilewidth_pixels / 1000;
 	my $num_tiles = ceiling($landmark_length / $tilewidth_bases) + 1;  # give it an extra tile for a temp half-assed fix
 	my $image_width = ceiling($tilewidth_pixels * $landmark_length / $tilewidth_bases);  # in pixels
@@ -579,26 +522,22 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++) {
 	# I'm really not sure how palatable setting this option here will be... but we can't
 	# set it any earlier...
 	$CONFIG->width($image_width);  # set image width (in pixels)
-	# [/RETHINK !!!]
 
 	warn "----- GENERATING ZOOM LEVEL ${zoom_level_name}... -----\n" if $verbose;
 
 	# create the track that we will need
 
-	# make output directories here, to pass to BatchTiledImage... IH 4/11/2006
 	# replace spaces and slashes in track name with underscores for writing file path prefixes
 	my $track_name_underscores = $track_name;
-	$track_name_underscores =~ s/ /_/g;
-	$track_name_underscores =~ s/\//_/g;
-	$track_name_underscores =~ s/\\/_/g;
-	
+	$track_name_underscores =~ s/[ \/]/_/g;
+
 	# make output directories
 	my $current_outdir = "${outdir_tiles}/${track_name_underscores}/";
 	unless (-e $current_outdir || !$render_tiles) {
 	    mkdir $current_outdir or die "ERROR: problem making output directory ${current_outdir}! ($!)\n";
 	}
 	my $html_current_outdir = "${html_outdir_tiles}/${track_name_underscores}/" unless $no_xml;
-	
+
 	$current_outdir = "${current_outdir}/${zoom_level_name}/";
 	unless (-e $current_outdir || !$render_tiles) {
 	    mkdir $current_outdir or die "ERROR: problem making output directory ${current_outdir} ($!)\n";
@@ -607,8 +546,37 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++) {
 	$html_current_outdir = "${html_current_outdir}/${zoom_level_name}/" unless $no_xml;
 
 	my $tile_prefix = "${current_outdir}/tile";
+	my $tiledimage_name = join ('__', $landmark_name, $track_name_underscores, $zoom_level_name);
 
-	my @argv = (-start => $landmark_start,
+	## Construct fake GD (i.e. BatchTiledImage) object; how to do this depends on whether
+	## the graphics primitives are already in the database or not
+
+	# TODO: safety check to make sure -primdb is specified if we're using existing primitives?
+
+	my ($fake_gd, $track_height);
+	my %tiledImageArgs = (
+		# args to BatchTiledImage constructor
+		-renderTiles => $render_tiles,
+		-firstTile => $tile_ranges_to_render{$label}{$zoom_level_name}->[0] - 1,  # NB change from 1-based to 0-based coords
+		-lastTile  => $tile_ranges_to_render{$label}{$zoom_level_name}->[1] - 1,  # NB change from 1-based to 0-based coords
+		-tileWidth => $tilewidth_pixels,
+		-renderWidth => $rendering_tilewidth,
+		-tilePrefix => $tile_prefix,
+		-htmlOutdir => $html_current_outdir,
+
+		# args to TiledImage constructor
+		-persistent => $persistent,
+		-verbose => $verbose,
+		-trackNum => $label_num,
+                -primdb => $primdb,
+		-tiledimage_name => $tiledimage_name
+	);
+
+	if ($fill_database) {
+	  # create our clone of 'Panel.pm' that returns pseudo-GD::Image objects
+	  my $panel =
+	      TiledImagePanel->new (
+	            -start => $landmark_start,
 		    -end => $landmark_end,
 		    -stop => $landmark_end,  # backward compatability with old BioPerl
 		    -key_color => $CONFIG->setting('key bgcolor') || 'moccasin',
@@ -618,124 +586,68 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++) {
 		    -gridcolor => 'linen',
 		    -key_style => 'none',  # we don't want no key, client will render that for us
 		    -empty_tracks => $conf->setting(general => 'empty_tracks') || 'key',
-                      # I really don't know what 'empty_tracks' does, so I'm just copying the code from
-                      # 'Browser.pm' verbatim !!!  (note that 'key' is the value of DEFAULT_EMPTYTRACKS in 'Browser.pm')
 		    -pad_top => 0,  # padding is probably 0 by default, but we will specify just in case
 		    -pad_left => 0,
 		    -pad_right => $tilewidth_pixels,  # to accomodate overrun of elements in "last" tile
-		    -image_class => 'GD',  # this is quite useless as we will overwrite this in our
-		                           # TiledImagePanel.pm class anyway, but I'll keep it here 
-	                                   # for fond memories of how things used to be... and as a placeholder for adding SVG compatability later
+		    -image_class => 'GD'
+	      );
 
-		   );
-
-	#my $line=0;
-	#print "contents of \@argv:";
-	#for (@argv) { print "$_ "; print "\n" if $line++ % 2 == 1; }  # D!!!
-
-	my $panel = TiledImagePanel->new(@argv);  # create our clone of 'Panel.pm' that returns
-                                                  # pseudo-GD::Image objects (TiledImage objects)
-
-
-
-        # if the glyph is the magic "dna" glyph (for backward compatibility), or if the section
-        # is marked as being a "global feature", then we apply the glyph to the entire segment
-	my $track;
-	if ($conf->setting($label=>'global feature')) {
+	  # if the glyph is the magic "dna" glyph (for backward compatibility), or if the section
+	  # is marked as being a "global feature", then we apply the glyph to the entire segment
+	  my $track;
+	  if ($conf->setting($label=>'global feature')) {
 	    $panel->add_track($segment,
 			      $conf->default_style,
 			      $conf->i18n_style($label,$lang),
 			     );
-	}
-	else {
+	  }
+	  else {
 	    my @settings = ($conf->default_style, $conf->i18n_style($label, $lang, $landmark_length));
-	    #    push @settings,(-hilite => $hilite_callback) if $hilite_callback;  # I think this is useless for our purposes !!!
-	    $track = $panel->add_track(-glyph => 'generic', @settings);
-	    #$tracks{$label}  = $track;  # this will be really quite useless, methinks... !!!
-	}
+	    $track = $panel->add_track(-glyph => 'generic', @settings);  # $track is a Bio::Graphics::Glyph::track object
+	  }
 
-	# NOTE: $track is a Bio::Graphics::Glyph::track object
-
-	# go through all the features and add them (but only if we have features)
-	if (@feature_types) {
+	  # go through all the features and add them (but only if we have features)
+	  if (@feature_types) {
 	    my $iterator = $segment->get_feature_stream(-type => \@feature_types);
 
             while (my $feature = $iterator->next_seq) {
-		warn " adding feature ${feature}...\n" if $verbose == 2;
-		$track->add_feature($feature);
+	      warn " adding feature ${feature}...\n" if $verbose == 2;
+	      $track->add_feature($feature);
 	    }
 
-	    # configure the tracks (does this need to be done if tracks are global features? !!!)
-	    
-	    #my %options;  $options->{$label} = 0;  # unnecessary for our purposes
-	    
-	    my $count = 1;  # I assume $count is 1 always? !!!
-	    
+	    # configure the tracks (does this need to be done if tracks are global features?)
+	    my $count = 1;
 	    my $do_bump = $CONFIG->do_bump($label, 0, $count, $CONFIG->bump_density);
 	    my $do_label = $CONFIG->do_label($label, 0, $count, $CONFIG->label_density, $landmark_length);
 	    my $do_description =
 		$CONFIG->do_description($label, 0, $count, $CONFIG->label_density, $landmark_length);
 
-	    # BUT THE REAL QUESTION IS... WILL THIS WORK? !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	    if ($zoom_level_num <= $max_label_zoom) {
 	        $track->configure(-bump => $do_bump, -label => $do_label, -description => $do_description);
 	    } else {
 	        $track->configure(-bump => 0, -label => 0, -description => 0);
 	    }
+	  }
 
-	    #warn
-	#	"do_bump = $do_bump \n do_label = $do_label \n",
-	#	"bump_density = ", $CONFIG->
-	}
-
-		#my $boxes    = $panel->boxes;
-	#print Dumper($boxes);
-	
-	# output image
-	my $image_height = $panel->height;  # get image height, now that the panel is fully constructed
-	my $boxes    = $panel->boxes;
-	#print Dumper($boxes);
-
-	my %tiledImageArgs = (
-			      # BatchTiledImage options
-			      -renderTiles => $render_tiles,
-			      -firstTile => $tile_ranges_to_render{$label}{$zoom_level_name}->[0] - 1,  # NB change from 1-based to 0-based coords
-			      -lastTile  => $tile_ranges_to_render{$label}{$zoom_level_name}->[1] - 1,  # NB change from 1-based to 0-based coords
-			      -tileWidth => $tilewidth_pixels,
-			      -renderWidth => $rendering_tilewidth,
-			      -tilePrefix => $tile_prefix,
-			      -annotate => $boxes,
-			      -htmlOutdir => $html_current_outdir,
-			      # TiledImage options
-			      -persistent => $persistent,
-			      -verbose => $verbose,
-			      -trackNum => $track_num,
-                              -primdb => $primdb
-			      );
-
-       #print "HTML = $html_current_outdir\n";
-       print "Track num ".$track_num."\n";
-
-	my $fakegd;
-	if ($fill_database) {
-	    $fakegd = $panel->gd(%tiledImageArgs);
+	  my $boxes = $panel->boxes;
+	  $fake_gd = $panel->gd (%tiledImageArgs, -annotate => $boxes);
+	  $track_height = $panel->height;
 	}
 	else {
-            # !!! NOT YET IMPLEMENTED - need to get the TiledImage ID from the database (need to have user
-	    # pass this in):
-	    #$fakegd = TiledImage->new('-tiledimageid' => $GET_THIS_ID_SOMEWHERE);
+	  # if we're not filling database, primitives must be there already, so just create a
+	  # pseudo-GD::Image object through which to fetch them
+	  $fake_gd = BatchTiledImage->new (%tiledImageArgs);
+	  $track_height = $fake_gd->height;
 	}
 
-	# render all tiles (code moved into BatchTiledImage.pm - IH, 4/11/2006)
-	$fakegd->renderAllTiles();
-	
-	# if we got this far, we must have rendered the tiles at this zoom level without egregeous error
-	# (or didn't render them at all), so output the tile info to the XML file
-	unless ($no_xml) {
-	    print XMLFILE
-		"      <zoomlevel tileprefix=\"${html_current_outdir}\" name=\"${zoom_level_name}\" ",
-		"unitspertile=\"${tilewidth_bases}\" height=\"${image_height}\" numtiles=\"${num_tiles}\" />\n";
-	}
+	$fake_gd->renderAllTiles if $render_tiles;
+	$fake_gd->finish;  # clean up
+
+	# if we got this far with no fatal error, we can print info about this track to XML file
+	print XMLFILE
+	    "      <zoomlevel tileprefix=\"${html_current_outdir}\" name=\"${zoom_level_name}\" ",
+	    "unitspertile=\"${tilewidth_bases}\" height=\"${track_height}\" numtiles=\"${num_tiles}\" />\n"
+	    	unless ($no_xml);
 
     } # ends loop iterating through zoom levels
 
@@ -745,7 +657,7 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++) {
 
 unless ($no_xml) {
     print XMLFILE "  </tracks>\n";
-    print XMLFILE "  <classicurl url=\"http://128.32.184.78/cgi-bin/gbrowse\" />\n";  # TEMP INFO FOR DEMO TO LINK TO CLASSIC GBROWSE !!!
+    print XMLFILE "  <classicurl url=\"http://genome.biowiki.org/cgi-bin/gbrowse\" />\n";  # TEMP INFO FOR DEMO TO LINK TO CLASSIC GBROWSE !!!
     print XMLFILE "</settings>\n";  # close out XML file
     close(XMLFILE);
 }
@@ -790,7 +702,7 @@ sub print_usage {
 	"        written to (default is '${default_outdir}')\n",
 	"  -h <HTML path>\n",
 	"        complete HTML path to the location that will contain '${xmlfile}'\n",
-	"        and the 'tiles' directory\n",
+	"        and the 'tiles' directory for your genome\n",
 	"  -s <source>\n",
 	"        source of configuration info in <config dir> (is there is more than\n",
 	"        one '.conf' file)\n",

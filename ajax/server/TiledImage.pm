@@ -275,7 +275,6 @@ sub AUTOLOAD {
 # This needs to be called manually to cleanup and disconnect from database after done with the object;
 # otherwise, database connections remain open and clog database until instantiating script exits
 #
-# MAYBE TAKE THIS METHOD OUT AND MAKE INSTANTIATING SCRIPT CALL 'cleanup' DIRECTLY ANYWAY? !!!
 sub finish {
     my $self = shift;
     $self->cleanup;
@@ -294,67 +293,40 @@ sub finish {
 # Constructor
 sub new {
     my ($class, %args) = @_;
-    my ($width, $height);
+    my %allowed_args = map {$_ => 1} qw (-primdb -tiledimage_name -width -height -persistent -verbose -tile_width_hint);
+    my @required_args = qw (-tiledimage_name);
 
-    #warn "ENTERING TiledImage CONSTRUCTOR; arguments are:\n"; #D!!!
-    #foreach my $key (sort keys %args) { warn "$key => ", $args{$key}, "\n"; } #D!!!
-    #warn "-------------------------------------------------\n"; #D!!!
-    
-    # can specify (width, height) OR tiledimage_id, but not both
-    if ($args{'-tiledimage_id'} && ($args{'-width'} || $args{'-height'})) {
-	my $hash_contents;
-	foreach my $key (sort keys %args) {
-	    $hash_contents .= $key . '=>' . $args{$key} . ' ';
-	}
-        croak "You are not allowed to specify -tiledimage_id with a -width or with a -height parameter or vice versa (your params were parsed as: $hash_contents)";
+    foreach my $arg (keys %args) {
+      unless ($allowed_args{$arg}) {
+	croak ("You specified an invalid arg ($arg) to TiledImage constructor (you passed in: ",
+	       join (' ', map { $_ . '=>' . $args{$_} } sort keys %args), ")");
+      }
     }
 
-    my %allowed_args = ('-primdb' => 1,
-			'-tiledimage_id' => 1,
-			'-width' => 1,
-			'-height' => 1,
-			'-persistent' => 1,
-			'-verbose' => 1,
-			'-tile_width_hint' => 1);
-    foreach my $param (keys %args) {
-        if (! $allowed_args{$param}) {
-	    my $hash_contents;
-	    foreach my $key (sort keys %args) {
-	        $hash_contents .= $key . '=>' . $args{$key} . ' ';
-	    }
-            croak "Invalid parameter ($param) in TiledImage constructor (your params were parsed as: $hash_contents)";
-        }
+    foreach my $arg (@required_args) {
+      unless (defined $args{$arg}) {
+	croak ("You did not specify a required arg ($arg) to TiledImage constructor (you passed in: ",
+	       join (' ', map { $_ . '=>' . $args{$_} } sort keys %args), ")");
+      }
     }
-
-    # parse required constructor args
-
-    ($width, $height) = ($args{'-width'}, $args{'-height'});
 
     my ($persistent, $verbose) = (1, 0);  # defaults
-
-    # parse optional constructor args
-    ($verbose) = $args{'-verbose'} if exists $args{'-verbose'} ;
-    ($persistent) = $args{'-persistent'} if exists $args{'-persistent'};
+    $verbose    = $args{'-verbose'}    if exists $args{'-verbose'} ;
+    $persistent = $args{'-persistent'} if exists $args{'-persistent'};
 
     my $primstorage;
     if ($args{'-primdb'}) {
-	if ($args{'-tiledimage_id'}) {
-	    $primstorage = DBPrimStorage->new(
-		-primdb => $args{'-primdb'},
-		-tiledimage_id => $args{'-tiledimage_id'},
-		-verbose => $args{'-verbose'});
-	} else {
-	    $primstorage = DBPrimStorage->new(
-		-primdb => $args{'-primdb'},
-		-width => $width,
-		-height => $height,
-		-verbose => $args{'-verbose'});
-	}
+	$primstorage = DBPrimStorage->new(
+            -primdb => $args{'-primdb'},
+	    -tiledimage_name => $args{'-tiledimage_name'},
+	    -width => $args{'-width'} || '',
+	    -height => $args{'-height'} || '',
+	    -verbose => $verbose);
     } else {
 	$primstorage = MemoryPrimStorage->new(
-	    -width => $width, -height => $height,
+	    -width => $args{-width}, -height => $args{-height},
 	    -tile_width_hint => $args{'-tile_width_hint'} || 1000,
-	    -verbose => $args{'-verbose'});
+	    -verbose => $verbose);
     }
 
     # create dummy GD image
@@ -363,13 +335,13 @@ sub new {
     # create the proxy object
     my $self = { 'im' => $im,
 
-		 'width' => $width,
-		 'height' => $height,
-
 		 'xmin' => undef,
 		 'xmax' => undef,
 		 'ymin' => undef,
 		 'ymax' => undef,
+
+		 'width' => $primstorage->{width},
+		 'height' => $primstorage->{height},
 
 		 'verbose' => $verbose,
 		 'persistent' => $persistent,
@@ -433,15 +405,10 @@ sub renderTile {
 sub cleanup {
     my $self = shift;
 
-    #warn "the keys are: ", keys %$self, "\n";  #D!!!
-    #foreach my $key (sort keys %$self) {
-    #	warn "it is said that once upon a time $key = ", $self->{$key}, "\n";
-    #}
-
     # use explicit hashrefs instead of AUTOLOAD'ed accessors,
     # so that this method can be called by the signal handlers
     if ($self->{'persistent'} == 0) {
-	warn "Deleting primitives from database\n"; # if $self->verbose;
+	warn "Deleting primitives from database\n";
 	$self->primstorage->GDDeletePrimitives;
     }
 

@@ -91,8 +91,8 @@ sub cleanup {
 sub new {
     my ($class, %args) = @_;
 
-    my $width = $args{'width'};
-    my $height = $args{'height'};
+    my $width = $args{'-width'};
+    my $height = $args{'-height'};
     my $tileWidthHint = $args{'-tile_width_hint'} || 1000;
     my $lastTile = int($width / $tileWidthHint);
     my $verbose = $args{'-verbose'};

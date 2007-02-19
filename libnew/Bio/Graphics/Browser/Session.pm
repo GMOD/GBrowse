@@ -21,6 +21,11 @@ sub flush {
   $self->{session}->flush;
 }
 
+sub modified {
+  my $self = shift;
+  $self->{session}->_set_status(CGI::Session::STATUS_MODIFIED());
+}
+
 sub id {
   shift->{session}->id;
 }

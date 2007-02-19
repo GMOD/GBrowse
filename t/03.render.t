@@ -102,7 +102,7 @@ ok($render->state->{width},1024);
 ok($render->state->{grid},0);
 
 # is session management working? 
-# (Need to undef both the session and the renderer in order to call session's destroy method)
+# (Need to undef the renderer in order to call session's destroy method)
 undef $session;
 undef $render;
 
@@ -124,22 +124,22 @@ $render->state->{seg_min} = 1;
 $render->state->{seg_max} = 5000;
 
 # now we pretend that we've pressed the right button
-$CGI::Q = new CGI('right+500.x=yes');
+$CGI::Q = new CGI('right+500.x=yes;navigate=1');
 $render->update_coordinates;
 ok($render->state->{name},'ctgA:501..1500');
 
 # pretend we want to zoom in 50%
-$CGI::Q = new CGI('zoom+in+50%.x=yes');
+$CGI::Q = new CGI('zoom+in+50%.x=yes;navigate=1');
 $render->update_coordinates;
 ok($render->state->{name},'ctgA:751..1250');
 
 # pretend that we've selected the popup menu to go to 100 bp
-$CGI::Q = new CGI('span=100');
+$CGI::Q = new CGI('span=100;navigate=1');
 $render->update_coordinates;
 ok($render->state->{name},'ctgA:951..1050');
 
 # Do we clip properly? If I scroll right 5000 bp, then we should stick at 4901..5000
-$CGI::Q = new CGI('right+5000+bp.x=yes');
+$CGI::Q = new CGI('right+5000+bp.x=yes;navigate=1');
 $render->update_coordinates;
 ok($render->state->{name},'ctgA:4901..5000');
 

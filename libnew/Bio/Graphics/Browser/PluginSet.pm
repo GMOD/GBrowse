@@ -1,7 +1,7 @@
 package Bio::Graphics::Browser::PluginSet;
 # API for using plugins
 
-#  $Id: PluginSet.pm,v 1.2 2007-02-19 16:03:35 lstein Exp $
+#  $Id: PluginSet.pm,v 1.3 2007-02-19 19:20:17 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser;
@@ -57,13 +57,20 @@ sub plugin        {
   my $plugin_name = shift;
   $self->plugins->{$plugin_name};
 }
+sub language {
+  my $self = shift;
+  my $d = $self->{language};
+  $self->{language} = shift if @_;
+  $d;
+}
 
 sub configure {
   my $self     = shift;
-  my ($database,$page_settings,$session) = @_;
+  my ($database,$page_settings,$language,$session) = @_;
   my $conf     = $self->config;
   my $plugins  = $self->plugins;
   my $conf_dir = $conf->dir;
+  $self->language($language);
 
   for my $name (keys %$plugins) {
 
@@ -72,6 +79,7 @@ sub configure {
       $p->database($database);
       $p->browser_config($conf);
       $p->config_path($conf_dir);
+      $p->language($language);
       $p->page_settings($page_settings);
       $p->init();  # other initialization
 
@@ -150,11 +158,12 @@ sub menu_labels {
   my $self = shift;
   my $plugins = $self->plugins;
   my $config  = $self->config;
+  my $lang    = $self->language;
 
-  my %verbs = (dumper       => $config->tra('Dump'),
-	       finder       => $config->tra('Find'),
-	       highlighter  => $config->tra('Highlight'),
-	       annotator    => $config->tra('Annotate'));
+  my %verbs = (dumper       => $lang->tr('Dump'),
+	       finder       => $lang->tr('Find'),
+	       highlighter  => $lang->tr('Highlight'),
+	       annotator    => $lang->tr('Annotate'));
   my %labels = ();
 
   # Adjust plugin menu labels
@@ -162,7 +171,7 @@ sub menu_labels {
 
     # plugin-defined verb
     if ( $plugins->{$_}->verb ) {
-      $labels{$_} = $config->tra($plugins->{$_}->verb) ||
+      $labels{$_} = $lang->tr($plugins->{$_}->verb) ||
         ucfirst $plugins->{$_}->verb;
     }
     # default verb

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.5 2007-02-19 16:03:35 lstein Exp $
+# $Id: Browser.pm,v 1.6 2007-02-19 19:20:16 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -186,6 +186,7 @@ sub default_source {
 sub valid_source {
   my $self            = shift;
   my $proposed_source = shift;
+  return unless exists $self->{config}{$proposed_source};
   my $path =  $self->data_source_path($proposed_source) or return;
   return -e $path;
 }
@@ -212,15 +213,6 @@ sub update_data_source {
     carp "Invalid source $new_source";
     $session->source($old_source);
     $source = $old_source;
-  }
-
-  unless (CGI::path_info() eq "/$source") {
-    my $args = CGI::query_string();
-    my $url  = url(-absolute=>1);
-    $url .= "/$source";
-    $url .= "?$args" if $args;
-    print redirect($url);
-    exit 0;
   }
 
   return $source;

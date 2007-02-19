@@ -16,9 +16,29 @@ use constant DEBUG   => 0;
 my %DB;      # cache opened database connections
 my %PLUGINS; # cache initialized plugins
 
+# new() can be called with two arguments: ($data_source,$session)
+# or with one argument: ($globals)
+# in the latter case, it will invoke this code:
+#   $session = $globals->session()
+#   $globals->update_data_source($session)
+#   $source = $globals->create_data_source($session->source)
+
 sub new {
   my $class = shift;
-  my ($data_source,$session) = @_;
+
+  my ($data_source,$session);
+
+  if (@_ == 2) {
+    ($data_source,$session) = @_;
+  } elsif (@_ == 1) {
+    my $globals = shift;
+    $session = $globals->session();
+    $globals->update_data_source($session);
+    $data_source = $globals->create_data_source($session->source);
+  } else {
+    croak "usage: ".__PACKAGE__."->new(\$globals) or ->new(\$data_source,\$session)";
+  }
+
   my $self = bless {},ref $class || $class;
   $self->data_source($data_source);
   $self->session($session);
@@ -76,6 +96,7 @@ sub db {
   $d;
 }
 
+# DEPRECATED! We will not hold a series of segments, but features and current segment
 sub segments {
   my $self = shift;
   my $d = $self->{segments} ||= [];
@@ -87,6 +108,40 @@ sub segments {
     }
   }
   return wantarray ? @$d : $d;
+}
+
+sub set_segment {
+  my $self = shift;
+  my $seg  = shift;
+
+  my $whole_seg  = $self->get_whole_segment($seg);
+  $self->seg($seg);
+  $self->whole_seg($whole_seg);
+
+  my $state = $self->state;
+  $state->{ref}   = $seg->seq_id;
+  $state->{start} = $seg->start;
+  $state->{stop}  = $seg->end;
+
+  $state->{seg_min} = $whole_seg->start;
+  $state->{seg_max} = $whole_seg->end;
+}
+
+
+# this holds the segment we're currently working on
+sub seg {
+  my $self = shift;
+  my $d    = $self->{segment};
+  $self->{segment} = shift if @_;
+  $d;
+}
+
+# this holds the segment object corresponding to the seqid of the segment we're currently working on
+sub whole_seg {
+  my $self = shift;
+  my $d    = $self->{whole_segment};
+  $self->{whole_segment} = shift if @_;
+  $d;
 }
 
 sub plugins {
@@ -108,6 +163,17 @@ sub run {
   my $old_fh = select($fh);
 
   return if $self->asynchronous_event;
+
+  my $source = $self->session->source;
+  if (CGI::path_info() ne "/$source") {
+    my $args = CGI::query_string();
+    my $url  = CGI::url(-absolute=>1);
+    $url .= "/$source";
+    $url .= "?$args" if $args;
+    print CGI::redirect($url);
+    exit 0;
+  }
+
   $self->init_database();
   $self->init_plugins();
   $self->init_remote_sources();
@@ -116,6 +182,7 @@ sub run {
   $self->render($features);
   $self->clean_up();
   select($old_fh);
+  $self->session->flush;
 }
 
 sub asynchronous_event {
@@ -175,8 +242,8 @@ sub render_body {
 
   elsif ($features && @$features == 1) {
     my $segments = $self->features2segments($features);
-    $self->segments($segments);
-    my $seg = $segments->[0];
+    $self->set_segment(my $seg = $segments->[0]);
+
     $self->render_navbar($seg);
     $self->render_panels($seg);
     $self->render_config($seg);
@@ -244,9 +311,9 @@ sub init_plugins {
   my @plugin_path = $self->shellwords($self->data_source->globals->plugin_path);
 
   my $plugins = $PLUGINS{$source} 
-    ||= Bio::Graphics::Browser::PluginSet->new($self->data_source,$self->state,@plugin_path);
+    ||= Bio::Graphics::Browser::PluginSet->new($self->data_source,$self->state,$self->language,@plugin_path);
   $self->fatal_error("Could not initialize plugins") unless $plugins;
-   $plugins->configure($self->db,$self->state,$self->session);
+  $plugins->configure($self->db,$self->state,$self->language,$self->session);
   $self->plugins($plugins);
   $plugins;
 }
@@ -403,6 +470,30 @@ sub db_settings {
   ($adaptor,@argv);
 }
 
+=head2 plugin_setting()
+
+   $value = = $browser->plugin_setting("option_name");
+
+When called in the context of a plugin, returns the setting for the
+requested option.  The option must be placed in a [PluginName:plugin]
+configuration file section:
+
+  [MyPlugin:plugin]
+  foo = bar
+
+Now within the MyPlugin.pm plugin, you may call
+$browser->plugin_setting('foo') to return value "bar".
+
+=cut
+
+sub plugin_setting {
+  my $self           = shift;
+  my $caller_package = caller();
+  my ($last_name)    = $caller_package =~ /(\w+)$/;
+  my $option_name    = "${last_name}:plugin";
+  $self->setting($option_name => @_);
+}
+
 ##################################################################3
 #
 # STATE CODE HERE
@@ -471,7 +562,6 @@ sub update_state_from_cgi {
   $self->update_external_annotations($state);
   $self->update_section_visibility($state);
   $self->update_external_sources();
-  $self->update_plugins();
 }
 
 sub update_options {
@@ -497,6 +587,7 @@ sub update_options {
     $state->{name} =~ s/^\s+//; # strip leading
     $state->{name} =~ s/\s+$//; # and trailing whitespace
   }
+  $self->session->modified;
 }
 
 sub update_tracks {
@@ -540,7 +631,6 @@ sub update_coordinates {
   # I really don't know if this belongs here. Divider should only be used for displaying
   # numbers, not for doing calculations with them.
   # my $divider  = $self->setting('unit_divider') || 1;
-
   if (param('ref')) {
     $state->{ref}   = param('ref');
     $state->{start} = param('start') if defined param('start') && param('start') =~ /^[\d-]+/;
@@ -554,7 +644,7 @@ sub update_coordinates {
     $position_updated++;
   }
 
-  elsif ($state->{ref}) {
+  elsif (param('navigate')) {
 
     die "inconsistency: \$state->{ref,start,stop} should only be defined if \$state->{seg_min,seg_max} are defined"
       if defined $state->{ref} && defined $state->{start} && !(defined $state->{seg_min} && defined $state->{seg_max});
@@ -760,11 +850,6 @@ sub update_external_sources {
   $self->remote_sources->set_sources([param('eurl')]) if param('eurl');
 }
 
-sub update_plugins {
-  my $self = shift;
-  $self->plugins->configure($self->db,$self->state,$self->session);
-}
-
 # fetch_segments() actually should be deprecated, but it is stuck here
 # because it is convenient for the regression tests
 sub fetch_segments {
@@ -789,6 +874,21 @@ sub features2segments {
 		 -absolute => 1,
 		 defined $version ? (-version => $version) : ())} @$features;
   return \@segments;
+}
+
+sub get_whole_segment {
+  my $self = shift;
+
+  my $segment = shift;
+  my $factory = $segment->factory;
+
+  # the segment class has been deprecated, but we still must support it
+  my $class   = eval {$segment->seq_id->class} || eval{$factory->refclass};
+
+  my ($whole_segment) = $factory->segment(-class=>$class,
+					  -name=>$segment->seq_id);
+  $whole_segment   ||= $segment;  # just paranoia
+  $whole_segment;
 }
 
 sub fetch_features {
@@ -1252,6 +1352,13 @@ sub unit_to_value {
   return "$sign$value";
 }
 
+sub get_zoomincrement {
+  my $self = shift;
+  my $zoom = $self->setting('fine zoom');
+  $zoom;
+}
+
+
 #############################################################################
 #
 # HANDLING SEGMENTS
@@ -1322,6 +1429,10 @@ sub shellwords {
   return Text::ParseWords::shellwords(@_);
 }
 
+sub DESTROY {
+   my $self = shift;
+   if ($self->session) { $self->session->flush; }
+}
 
 ########## note: "sub tr()" makes emacs' syntax coloring croak, so place this function at end
 sub tr {

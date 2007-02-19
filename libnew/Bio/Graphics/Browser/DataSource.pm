@@ -6,7 +6,7 @@ use base 'Bio::Graphics::FeatureFile';
 use Text::ParseWords 'shellwords';
 use File::Basename 'dirname';
 use Carp 'croak';
-use Socket 'AF_INET';  # for inet_aton() call
+use Socket 'AF_INET','inet_aton';  # for inet_aton() call
 use CGI '';
 
 my %CONFIG_CACHE;
@@ -205,7 +205,16 @@ sub section_setting {
   return $s;
 }
 
-
+sub get_ranges {
+  my $self      = shift;
+  my $divisor   = $self->setting('unit_divider') || 1;
+  my $rangestr  = $self->setting('zoom levels')  || '100 1000 10000 100000 1000000 10000000';
+  if ($divisor == 1 ) {
+    return split /\s+/,$rangestr;
+  } else {
+    return map {$_ * $divisor} split /\s+/,$rangestr;
+  }
+}
 
 # override inherited in order to be case insensitive
 # and to account for semantic zooming

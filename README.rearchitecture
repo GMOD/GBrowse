@@ -21,6 +21,12 @@ Typical flow for CGI scripts
 
  exit 0;
 
+There is also a shortcut that lets Render do the session management
+
+ my $globals     = Bio::Graphics::Browser->new('/path/to/globals.txt');  # new globals object
+ my $render      = Bio::Graphics::Browser::Render::HTML->new($globals);
+ $render->run;
+
 =================================================================
 
 2) Bio::Graphics::Browser

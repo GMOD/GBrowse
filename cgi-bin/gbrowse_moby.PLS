@@ -48,7 +48,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.60 2007-01-25 18:21:43 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.61 2007-02-20 23:42:54 markwilkinson Exp $
 ###########################################################
 use SOAP::Lite;
 use MOBY::Client::Central;
@@ -65,8 +65,6 @@ use Bio::Graphics::Browser::Util;
 use CGI qw(:standard *table *TR);
 use LS::ID;
 use LS::Locator;
-#use Compress::LZW;
-
 use strict;
 use vars qw($Central %RENDERERS $CONFIG $VERSION $CONF_DIR $HTML_DIR);
 
@@ -414,6 +412,10 @@ sub init {
             }
             $form .= end_form();
             my $email = $SERVICE->contactEmail;
+            my $sync_async = $SERVICE->category;
+            $sync_async = "Synchronous" if $sync_async eq "moby";
+            $sync_async = "Asynchronous" if $sync_async eq "moby-async";
+            
             my @outtypes;
             my $collection = 0;
             if ($SERVICE->output->[0]  && $SERVICE->output->[0]->isCollection){
@@ -438,6 +440,10 @@ sub init {
             TR({-valign=>'top', -class=>'databody'},
             th({-align => 'left', -valign=>'top', -class=>'datatitle'},"Service Type: "),
             td(b($SERVICE->type))),
+
+            TR({-valign=>'top', -class=>'databody'},
+            th({-align => 'left', -valign=>'top', -class=>'datatitle'},"Execution: "),
+            td(b($sync_async))),
                
             TR({-valign=>'top', -class=>'databody'},
             th({-align => 'left', -valign=>'top', -class=>'datatitle'},"Provides: "),
@@ -605,7 +611,7 @@ sub execute {
                        serviceName => $service);
     $SI = $$SI[0]; # there can only be one, since authURI/serviceName is a unique index
     my $provider = $SI->contactEmail;
-
+    my $sync_async = $SI->category;
     my $inputs = $SI->input;
     my $outputs = $SI->output;
     my ($articleName, $outputArticleName, $outputObjectType, $isCollection);
@@ -639,13 +645,31 @@ sub execute {
 
 
     my $WSDL = $Central->retrieveService($SI); # get the WSDL
-    my $SERVICE = MOBY::Client::Service->new(service => $WSDL);  # prepare the connection stubs
-    
+    my $SERVICE; my $async = 0;  # not asynchronous as default 
+    if ($sync_async eq "moby"){
+      $SERVICE = MOBY::Client::Service->new(service => $WSDL);  # prepare the connection stubs
+    } elsif ($sync_async eq "moby-async"){
+      $async = "true";
+      $SERVICE = MOBY::Async::Service->new(service => $WSDL);  # prepare the connection stubs
+    }      
     print h2("\nBioMOBY Service: ".($SI->name)),i($SI->description),hr,h2("\nResult for $namespace:$id\n");
     my $result;
 
-    eval {$result = $SERVICE->execute(XMLinputlist => [["$articleName", $OBJECT, %serviceParams]]);};
-
+    if ($async){
+      my ($EPR, @queryids);
+      eval {($EPR, @queryids) = $SERVICE->submit(XMLinputlist => [["$articleName", $OBJECT, %serviceParams]]);};
+      print h4("Asynchronous service started"), "<br>waiting for output... this might take a while!\n";
+      my @e = $SERVICE->poll($EPR, @queryids);
+      while ($e[0]->new_state eq "running"){
+        print "...";
+        sleep 2;
+        @e = $SERVICE->poll($EPR, @queryids);
+      }
+      my ($result) = $SERVICE->result($EPR, @queryids);
+      $SERVICE->destroy($EPR);
+    } else {
+      eval {$result = $SERVICE->execute(XMLinputlist => [["$articleName", $OBJECT, %serviceParams]]);};
+    }
     unless ($result){
         print h3("404 - Service returned no response.  This indicates that this service is currently unavailable.  Try again later.");
         exit 0;

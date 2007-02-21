@@ -48,11 +48,12 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.61 2007-02-20 23:42:54 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.62 2007-02-21 21:31:53 markwilkinson Exp $
 ###########################################################
 use SOAP::Lite;
 use MOBY::Client::Central;
 use MOBY::Client::Service;
+use MOBY::Async::Service;
 use MOBY::Client::OntologyServer;
 use MOBY::CommonSubs qw(:all);
 use MOBY::MobyXMLConstants;
@@ -658,10 +659,10 @@ sub execute {
     if ($async){
       my ($EPR, @queryids);
       eval {($EPR, @queryids) = $SERVICE->submit(XMLinputlist => [["$articleName", $OBJECT, %serviceParams]]);};
-      print h4("Asynchronous service started"), "<br>waiting for output... this might take a while!\n";
+      print h4("Asynchronous service started"), "<br><b>waiting for output... this might take a while!</b>\n";
       my @e = $SERVICE->poll($EPR, @queryids);
       while ($e[0]->new_state eq "running"){
-        print "...";
+        print "<b>...</b>";
         sleep 2;
         @e = $SERVICE->poll($EPR, @queryids);
       }
@@ -670,6 +671,7 @@ sub execute {
     } else {
       eval {$result = $SERVICE->execute(XMLinputlist => [["$articleName", $OBJECT, %serviceParams]]);};
     }
+
     unless ($result){
         print h3("404 - Service returned no response.  This indicates that this service is currently unavailable.  Try again later.");
         exit 0;

@@ -117,7 +117,6 @@ my %intercept =
     );
 
 @globalPrimNames = qw(colorAllocate setBrush rgb);
-@dummyGDMethods = qw(getBounds);
 
 # List of unimplemented functions:-- these will throw an error if called
 # (all others are silently passed to a dummy GD object)
@@ -127,6 +126,11 @@ my %unimplemented = map (($_=>1),
 			     copyReverseTranspose rotate180
 			     flipHorizontal flipVertical
 			     fill fillToBorder));
+
+sub getBounds {
+    my ($self) = @_;
+    return ($self->width, $self->height);
+}
 
 foreach my $sub (keys %intercept) {
     no strict "refs";
@@ -163,15 +167,6 @@ foreach my $sub (@globalPrimNames) {
 	# log primitive
 	warn "Recorded global primitive $sub (@args)\n" if $self->verbose == 2;
 
-	# delegate
-	$self->im->$sub (@args);
-    }
-}
-
-foreach my $sub (@dummyGDMethods) {
-    no strict "refs";
-    *$sub = sub  {
-	my ($self, @args) = @_;
 	# delegate
 	$self->im->$sub (@args);
     }

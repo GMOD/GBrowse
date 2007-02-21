@@ -1,6 +1,0 @@
-* Implement README.rearchitecture.
-* Support correct parsing of uploaded GFF3 files using Bio::DB::SeqFeature::Store.
-* Create architecture for image servers to distribute rendering load.
-
-$Id: TODO,v 1.15 2006-12-02 21:34:26 lstein Exp $
-

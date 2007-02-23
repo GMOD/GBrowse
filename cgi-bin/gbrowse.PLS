@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59 2007-02-05 18:28:36 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.60 2007-02-23 20:04:22 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -783,11 +783,13 @@ sub adjust_settings {
   $settings->{start} = param('start') if defined param('start') && param('start') =~ /^[\d-]+/;
   $settings->{stop}  = param('stop')  if defined param('stop')  && param('stop')  =~ /^[\d-]+/;
   $settings->{stop}  = param('end')   if defined param('end')   && param('end')   =~ /^[\d-]+/;
+
+  warn "span = ",param('span'), " and $divider*$settings->{stop}-$divider*$settings->{start}+1";
   $settings->{version} ||= param('version') || '';
 
   if ( (request_method() eq 'GET' && param('ref'))
        ||
-       (param('span') && $divider*$settings->{stop}-$divider*$settings->{start}+1 != param('span'))
+       (param('span') && $settings->{stop}-$settings->{start}+1 != param('span'))
        ||
        grep {/left|right|zoom|nav|regionview\.[xy]|overview\.[xy]/} param()
      )
@@ -1678,7 +1680,6 @@ sub lookup_features_from_db {
   my $padding = $CONFIG->setting(general=>'landmark_padding') || 0;
 
   if (my $name = $settings->{name}) {
-    warn "name = $name" if DEBUG;
     @segments = $CONFIG->name2segments($name,$db,TOO_MANY_SEGMENTS);
   }
 

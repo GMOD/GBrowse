@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10 2005-12-08 22:38:37 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.11 2007-02-23 20:04:23 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -269,7 +269,7 @@ elsif ($image_class =~ /SVG/) {
   } else {
     print_cached (
 		  $newpagecache,
-		  header('image/svg-xml'),
+		  header('image/svg+xml'),
 		  $img->svg
 		 );
   }

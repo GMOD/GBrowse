@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32 2006-10-04 15:17:35 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.33 2007-02-23 20:04:23 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1871,9 +1871,10 @@ sub _feature_get {
   push @argv,(-class => $class) if defined $class;
   push @argv,(-start => $start) if defined $start;
   push @argv,(-end   => $stop)  if defined $stop;
-  # I'm not sure why this is here and it was causing bugs with relative addressing (e.g. f08:-500..1000)
-  #  push @argv,(-absolute=>1)     if $class eq $refclass;
-  warn "\@argv = @argv" if DEBUG;
+  # This step is a hack to turn off relative addressing when getting absolute coordinates on the
+  # reference molecule.
+  push @argv,(-absolute=>1)     if $class eq $refclass;
+  warn "\@argv = @argv";# if DEBUG;
 
   my @segments;
   if ($segments_have_priority) {
@@ -1884,6 +1885,8 @@ sub _feature_get {
     @segments  = grep {$_->length} $db->get_features_by_alias(@argv) if !@segments && !defined($start) && !defined($stop) && $db->can('get_features_by_alias');
     @segments  = grep {$_->length} $db->segment(@argv)               if !@segments && $name !~ /[*?]/;
   }
+
+  warn "segments = @segments";
 
   return unless @segments;
 

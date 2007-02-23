@@ -2,6 +2,21 @@ The Generic Genome Browser (GBrowse) is a simple but highly
 configurable web-based genome browser.  It is a component of the
 Generic Model Organism Systems Database project (GMOD).
 
+******* WARNING ******
+
+The HEAD of CVS (including this file) is undergoing rapid change and
+is not stable. Do not use this version of GBrowse unless you are
+actively developing it. Either use one of the released tarballs, or
+check out the "stable" cvs branch:
+
+ cvs -d pserver:anonymous@gmod.cvs.sourceforge.net:/cvsroot/gmod login
+ cvs -d :pserver:anonymous@gmod.cvs.sourceforge.net:/cvsroot/gmod co -r stable Generic-Genome-Browser
+
+You have been warned!!!
+
+
+**********************
+
  - For a demo, go to http://www.gmod.org/ggb.
 
  - To install on your own system, please see the INSTALL file.

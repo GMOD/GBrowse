@@ -7,7 +7,7 @@ use Bio::Graphics::Browser::PluginSet;
 use Bio::Graphics::Browser::UploadSet;
 use Bio::Graphics::Browser::RemoteSet;
 use Text::ParseWords ();
-use CGI qw(param request_method header url);
+use CGI qw(param request_method header url iframe img span div br center);
 use Carp 'croak';
 
 use constant VERSION => 2.0;
@@ -196,7 +196,15 @@ sub asynchronous_event {
     $settings->{section_visible}{$p} = $visibility;
     $events++;
   }
+
+  if (my @labels = param('label[]')) {
+    my %seen;
+    @{$settings->{tracks}} = grep {length()>0 && !$seen{$_}++} (@labels,@{$settings->{tracks}});
+    $events++;
+  }
+
   return unless $events;
+  warn "processing asynchronous event(s)";
   print CGI::header('204 No Content');
   $self->session->flush;
   1;
@@ -233,19 +241,31 @@ sub render_body {
   my $self     = shift;
   my $features = shift;
 
-  warn "have to handle special pages (like track editing) here";
-  $self->render_top($features);
+  my $segments;
+  if ($features && @$features == 1) {
+    $segments = $self->features2segments($features);
+    $self->set_segment($segments->[0]);
+  }
+
+  my $title = $self->render_top($features);
+
+  # THIS IS AN ASYNCHRONOUS CALL
+  warn "param() =",join ' ',param();
+  if (param('render') && param('render') eq 'detailview') {
+    $self->render_tracks($self->seg);
+    print "</html>";
+    return;
+  }
+
+  $self->render_instructions($title);
 
   if ($features && @$features > 1) {
     $self->render_multiple_choices($features);
   }
 
-  elsif ($features && @$features == 1) {
-    my $segments = $self->features2segments($features);
-    $self->set_segment(my $seg = $segments->[0]);
-
+  elsif (my $seg = $self->seg) {
     $self->render_navbar($seg);
-    $self->render_panels($seg);
+    $self->render_panels($seg,{overview=>1,regionview=>1,detailview=>1});
     $self->render_config($seg);
   }
   else {
@@ -268,11 +288,43 @@ sub render_navbar {
 sub render_panels {
   my $self = shift;
   my $seg  = shift;
+  my $section = shift;
+
+  $self->render_overview($seg)   if $section->{overview};
+  $self->render_regionview($seg) if $section->{regionview};
+  $self->render_detailview($seg) if $section->{detailview};
 }
-sub render_config {
+
+sub render_overview {
+  my $self = shift;
+  my $seg  = shift;
+}
+
+sub render_regionview {
   my $self = shift;
   my $seg = shift;
 }
+
+sub render_config {
+  my $self = shift;
+  my $seg = shift;
+  $self->render_track_table();
+  $self->render_global_config();
+  $self->render_uploads();
+}
+
+sub render_track_table {
+  my $self = shift;
+}
+
+sub render_global_config {
+  my $self = shift;
+}
+
+sub render_uploads {
+  my $self = shift;
+}
+
 sub render_bottom {
   my $self = shift;
   my $features = shift;
@@ -358,7 +410,6 @@ sub plugin_find {
 
 sub handle_plugins {
   my $self = shift;
-  warn "handle_plugins() not implemented\n";
   return;
 }
 
@@ -390,14 +441,12 @@ sub write_auto {
 
 sub handle_downloads {
   my $self = shift;
-  warn "handle_downloads() not implemented\n";
   # return 1 to exit
   return;
 }
 
 sub handle_uploads {
   my $self = shift;
-  warn "handle_uploads() not implemented\n";
   # return 1 to exit
   return;
 }
@@ -492,6 +541,25 @@ sub plugin_setting {
   my ($last_name)    = $caller_package =~ /(\w+)$/;
   my $option_name    = "${last_name}:plugin";
   $self->setting($option_name => @_);
+}
+
+# dealing with external DAS sources?
+sub get_external_presets {
+  my $self = shift;
+  my $presets  = $self->setting('remote sources') or return;
+  my @presets  = $self->shellwords($presets||'');
+  my (@labels,@urls);
+  while (@presets) {
+    my ($label,$url) = splice(@presets,0,2);
+    next unless $url && $url =~ /^(http|ftp)/;
+    push @labels,$label;
+    push @urls,$url;
+  }
+  return unless @labels;
+  return (\@labels,\@urls) if wantarray;
+  my %presets;
+  @presets{@urls} = @labels;
+  return \%presets;
 }
 
 ##################################################################3
@@ -644,33 +712,27 @@ sub update_coordinates {
     $position_updated++;
   }
 
-  elsif (param('navigate')) {
-
-    die "inconsistency: \$state->{ref,start,stop} should only be defined if \$state->{seg_min,seg_max} are defined"
-      if defined $state->{ref} && defined $state->{start} && !(defined $state->{seg_min} && defined $state->{seg_max});
-
-    my $current_span = $state->{stop} - $state->{start} + 1;
-    my $new_span     = param('span');
-    if ($new_span && $current_span != $new_span) {
-      $self->zoom_to_span($state,$new_span);
-      $position_updated++;
-    }
-    elsif (my ($scroll_data) = grep {/^(?:left|right) \S+/} param()) {
-      $self->scroll($state,$scroll_data);
-      $position_updated++;
-    }
-    elsif (my ($zoom_data)   = grep {/^zoom (?:out|in) \S+/} param()) {
-      $self->zoom($state,$zoom_data);
-      $position_updated++;
-    }
-    elsif (my $position_data = param('overview.x')) {
-      $self->position_from_overview($state,$position_data);
-      $position_updated++;
-    }
-    elsif ($position_data = param('regionview.x')) {
-      $self->position_from_regionview($state,$position_data);
-      $position_updated++;
-    }
+  my $current_span = $state->{stop} - $state->{start} + 1;
+  my $new_span     = param('span');
+  if ($new_span && $current_span != $new_span) {
+    $self->zoom_to_span($state,$new_span);
+    $position_updated++;
+  }
+  elsif (my ($scroll_data) = grep {/^(?:left|right) \S+/} param()) {
+    $self->scroll($state,$scroll_data);
+    $position_updated++;
+  }
+  elsif (my ($zoom_data)   = grep {/^zoom (?:out|in) \S+/} param()) {
+    $self->zoom($state,$zoom_data);
+    $position_updated++;
+  }
+  elsif (my $position_data = param('overview.x')) {
+    $self->position_from_overview($state,$position_data);
+    $position_updated++;
+  }
+  elsif ($position_data = param('regionview.x')) {
+    $self->position_from_regionview($state,$position_data);
+    $position_updated++;
   }
 
   if ($position_updated) { # clip and update param
@@ -1276,6 +1338,21 @@ sub language_code {
   return $lang->language;
 }
 
+sub label2key {
+  my $self  = shift;
+  my $label = shift;
+  my $source = $self->data_source;
+  my $key;
+  my $presets = $self->get_external_presets || {};
+  for my $l ($self->language->language) {
+    $key     ||= $source->setting($label=>"key:$l");
+  }
+  $key     ||= $source->setting($label => 'key');
+  $key     ||= $key if defined $key;
+  $key     ||= $label;
+  $key;
+}
+
 # return language-specific options
 sub i18n_style {
   my $self      = shift;
@@ -1422,6 +1499,127 @@ sub split_labels {
   my $self = shift;
   map {/^(http|ftp|das)/ ? $_ : split /[+-]/} @_;
 }
+
+sub detail_tracks {
+  my $self = shift;
+  my $state = $self->state;
+  return grep {$state->{features}{$_}{visible} && !/:(overview|region)$/ }
+    @{$state->{tracks}};
+}
+
+################## image rendering code #############
+sub render_detailview {
+  my $self   = shift;
+  my $seg    = shift;
+
+  my $load_script = <<END;
+  <script type="text/javascript"> // <![CDATA[
+update_segment();
+// ]]>
+</script>
+END
+  print div($self->toggle('Details',div({-id=>'panels'},'loading...'))),$load_script;
+}
+
+
+sub render_tracks {
+  my $self = shift;
+  my ($seg,$options) = @_;
+  return unless $seg;
+  my @labels = $self->detail_tracks;
+
+  my $buttons = $self->globals->button_url;
+  my $plus   = "$buttons/plus.png";
+  my $minus  = "$buttons/minus.png";
+
+  # dummy code
+  my @results;
+  for my $label (@labels) {
+    my $title    = $self->setting($label=>'key');
+    my $titlebar = span({-class=>'titlebar'},
+			img({-src=>$plus},img({-src=>$minus}),
+			    $title." $seg"));
+    my $content  = '/test.png';
+    my $class   = $label eq '__scale__' ? 'scale' : 'track';
+    push @results,div({id=>"track_${label}",-class=>$class},
+		      center(
+			     $titlebar,
+			     img({-src=>$content,-border=>0})
+			     ),
+		     );
+  }
+  my $state = $self->state;
+  print div({-id=>'tracks'},@results),$self->drag_script('tracks'),$self->update_controls_script;
+}
+
+
+# returns the fragment we need to use the scriptaculous drag 'n drop code
+sub drag_script {
+  my $self = shift;
+  my $div_name = shift;
+
+  return <<END;
+  <script type="text/javascript">
+ // <![CDATA[
+   Sortable.create(
+     "$div_name",
+     {
+      constraint: 'vertical',
+      tag: 'div',
+      only: 'track',
+      handle: 'titlebar',
+      onUpdate: function() {
+         var postData = Sortable.serialize('$div_name',{name:'label'});
+         new Ajax.Request(document.URL,{method:'post',postBody:postData});
+      }
+     }
+   );
+ // ]]>
+ </script>
+END
+}
+
+sub update_controls_script {
+  my $self = shift;
+  my $state = $self->state;
+  my $title = $self->data_source->description;
+  $title   .= ": ".$self->seg->seq_id . ' ('.$self->unit_label($self->seg->length).')' if $self->seg;
+  my $zoom = $self->zoomBar($self->seg,$self->whole_seg);
+  $zoom =~ s/\n//g;
+
+  return <<END;
+  <script type="text/javascript">
+ // <![CDATA[
+document.searchform.name.value='$state->{name}';
+document.getElementById('page_title').innerHTML='$title';
+var zoom_menu = document.sliderform.span;
+zoom_menu.parentElement.innerHTML='$zoom';
+// ]]>
+ </script>
+END
+}
+
+##################### utilities #####################
+
+sub categorize_track {
+  my $self  = shift;
+  my $label = shift;
+  return $self->tr('OVERVIEW') if $label =~ /:overview$/;
+  return $self->tr('REGION')   if $label =~ /:region$/;
+  return $self->tr('EXTERNAL') if $label =~ /^(http|ftp|file):/;
+  return $self->tr('ANALYSIS') if $label =~ /^plugin:/;
+
+  my $category;
+  for my $l ($self->language->language) {
+    $category      ||= $self->setting($label=>"category:$l");
+  }
+  $category        ||= $self->setting($label => 'category');
+  $category        ||= '';  # prevent uninit variable warnings
+  $category         =~ s/^["']//;  # get rid of leading quotes
+  $category         =~ s/["']$//;  # get rid of trailing quotes
+  return $category ||= $self->tr('GENERAL');
+}
+
 
 sub shellwords {
   my $self = shift;

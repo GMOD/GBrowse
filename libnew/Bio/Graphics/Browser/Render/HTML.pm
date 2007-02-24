@@ -5,7 +5,7 @@ use warnings;
 use base 'Bio::Graphics::Browser::Render';
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
-use CGI qw(:standard escape);
+use CGI qw(:standard escape start_table end_table);
 eval { use GD::SVG };
 
 use constant JS    => '/gbrowse/js';
@@ -20,13 +20,11 @@ sub render_top {
   my $feature     = $features->[0] if $features && @$features == 1;
   my $title;
 
-  $title = $features ? "$description: ".$feature->seq_id.":".$feature->start.'..'.$feature->end
+  $title = $feature ? "$description: ".$feature->seq_id.":".$feature->start.'..'.$feature->end
     : $description;
 
-
   $self->render_html_head($dsn,$title);
-  print h1($title);
-  $self->render_instructions();
+  return $title;
 }
 
 sub render_bottom {
@@ -43,7 +41,7 @@ sub render_navbar {
   my $settings = $self->state;
 
   my $searchform = join '',(
-			    start_form(-name=>'searchform'),
+			    start_form(-name=>'searchform',-id=>'searchform',-onSubmit=>'update_segment(Form.serialize(this)); return false'),
 			    textfield(-name=>'name',
 				      -size=>25,
 				      -default=>$settings->{name}),
@@ -55,12 +53,12 @@ sub render_navbar {
     ? '' : b($self->tr('Landmark')).':'.br().$searchform;
 
   my $plugin_form = join '',(
-			     start_form(-name=>'pluginform'),
+			     start_form(-name=>'pluginform',-id=>'pluginform',-onSubmit=>'update_segment(Form.serialize(this)); return false'),
 			     $self->plugin_menu(),
 			     end_form);
 
   my $source_form = join '',(
-			     start_form(-name=>'sourceform'),
+			     start_form(-name=>'sourceform',-id=>'sourceform',-onSubmit=>'update_segment(this); return false'),
 			     $self->source_menu(),
 			     end_form
 			    );
@@ -69,7 +67,7 @@ sub render_navbar {
   if ($segment) {
     $sliderform =
       join '',(
-	       start_form(-name=>'sliderform'),
+	       start_form(-name=>'sliderform',-id=>'sliderform',-onSubmit=>'return false'),
 	       b($self->tr('Scroll').': '),
 	       $self->slidertable($segment),
 	       b(
@@ -98,6 +96,26 @@ sub render_navbar {
 			 )
 		     ).br({-clear=>'all'});
 }
+
+# sub render_detailview {
+#   my $self   = shift;
+#   my $seg    = shift;
+
+#   my @panels;
+#   my $source = $self->data_source;
+#   if ($seg->length > $source->max_segment) {
+#     @panels = div($self->tr('TOO_BIG',
+# 			    scalar $self->unit_label($source->max_segment),
+# 			    scalar $self->unit_label($source->default_segment)
+# 			   )
+# 		 );
+#   } else {
+#     @panels = $self->render_segment($seg);
+#   }
+
+#   my $drag_script = $self->drag_script('panels');
+#   print div($self->toggle('Details',div({-id=>'panels'},@panels))),$drag_script;
+# }
 
 sub render_html_head {
   my $self = shift;
@@ -135,6 +153,7 @@ sub render_html_head {
 sub render_instructions {
   my $self = shift;
   my $settings = $self->session->page_settings;
+  my $title    = shift;
 
   my $svg_link     = GD::SVG::Image->can('new') ?
     a({-href=>$self->svg_link($settings),-target=>'_blank'},'['.$self->tr('SVG_LINK').']'):'';
@@ -174,7 +193,126 @@ sub render_instructions {
 			),
 		     )
 		  );
-  print $html;
+  print h1({-id=>'page_title'},$title),$html;
+}
+
+# this draws the various config options
+  # This subroutine is invoked to draw the checkbox group underneath the main display.
+# It creates a hyperlinked set of feature names.
+sub render_track_table {
+  my $self     = shift;
+  my $settings = $self->state;
+  my $source   = $self->data_source;
+
+  my @labels     = @{$settings->{tracks}};
+  my %labels     = map {$_ => $self->label2key($_)}              @labels;
+  my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
+
+
+  # Sort the tracks into categories:
+  # Overview tracks
+  # Region tracks
+  # Regular tracks (which may be further categorized by user)
+  # Plugin tracks
+  # External tracks
+  my %track_groups;
+  foreach (@labels) {
+    my $category = $self->categorize_track($_);
+    push @{$track_groups{$category}},$_;
+  }
+
+  autoEscape(0);
+  my @sections;
+
+  my %exclude = map {$_=>1} map {$self->tr($_)} qw(OVERVIEW REGION ANALYSIS EXTERNAL);
+
+  my @user_keys = grep {!$exclude{$_}} sort keys %track_groups;
+
+  my $all_on  = $self->tr('ALL_ON');
+  my $all_off = $self->tr('ALL_OFF');
+
+  my %seenit;
+  foreach my $category ($self->tr('OVERVIEW'),
+			$self->tr('REGION'),
+			$self->tr('ANALYSIS'),
+			@user_keys,
+			$source->section_setting('upload_tracks') eq 'off' ? () : ($self->tr('EXTERNAL')),
+		       ) {
+    next if $seenit{$category}++;
+    my $table;
+    my $id = "${category}_section";
+
+    if ($category eq $self->tr('REGION') && !$self->setting('region segment')) {
+     next;
+    }
+    elsif  (exists $track_groups{$category}) {
+      my @track_labels = @{$track_groups{$category}};
+      @track_labels = sort {lc $labels{$a} cmp lc $labels{$b}} @track_labels
+        if ($settings->{sk} eq "sorted");
+      my @checkboxes = checkbox_group(-name       => 'label',
+				      -values     => \@track_labels,
+				      -labels     => \%labels,
+				      -defaults   => \@defaults,
+				      -onClick    => "gbTurnOff('$id');gbToggleTrack(this)",
+				      -override   => 1,
+				     );
+      $table = $self->tableize(\@checkboxes);
+      my $visible = exists $settings->{section_visible}{$id} ? $settings->{section_visible}{$id} : 1;
+
+      my ($control,$section)=$self->toggle_section({on=>$visible,nodiv => 1},
+						   $id,
+						   b(ucfirst $category),
+						   div({-style=>'padding-left:1em'},
+						       span({-id=>$id},$table))
+						  );
+      $control .= '&nbsp;'.i({-class=>'nojs'},
+			     checkbox(-id=>"${id}_a",-name=>"${id}_a",
+				      -label=>$all_on,-onClick=>"gbCheck(this,1)"),
+			     checkbox(-id=>"${id}_n",-name=>"${id}_n",
+				      -label=>$all_off,-onClick=>"gbCheck(this,0)")
+			    ).br()   if exists $track_groups{$category};
+      push @sections,div($control.$section);
+    }
+
+    else {
+      next;
+    }
+
+  }
+
+  autoEscape(1);
+  print $self->toggle('Tracks',
+		      div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
+		      table({-width=>'100%',-class=>"searchbody"},
+			    TR(td{-align=>'right'},
+			       submit(-name => $self->tr('Set_options')),
+			       b(submit(-name => $self->tr('Update'))
+				)
+			      )
+			   )
+		     );
+}
+
+sub tableize {
+  my $self  = shift;
+  my $array = shift;
+  return unless @$array;
+
+  my $columns = $self->data_source->global_setting('config table columns');
+  my $rows    = int( @$array/$columns + 0.99 );
+
+  my $cwidth = 100/$columns . '%';
+
+  my $html = start_table({-border=>0,-width=>'100%'});
+  for (my $row=0;$row<$rows;$row++) {
+    # do table headers
+    $html .= qq(<tr class="searchtitle">);
+    for (my $column=0;$column<$columns;$column++) {
+      $html .= td({-width=>$cwidth},$array->[$column*$rows + $row] || '&nbsp;');
+    }
+    $html .= "</tr>\n";
+  }
+  $html .= end_table();
 }
 
 
@@ -286,22 +424,22 @@ sub slidertable {
 
   my @lines = 
     (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>"left $full",
-		  -title=>"left $full_title"),
+		  -title=>"left $full_title",-onClick=>"update_segment(this.name+'=1')"),
      image_button(-src=>"$buttonsDir/green_l1.gif",-name=>"left $half",
 		  -title=>"left $half_title"),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/minus.gif",-name=>"zoom out $fine_zoom",
-		  -title=>"zoom out $fine_zoom"),
+		  -title=>"zoom out $fine_zoom",-onClick=>"update_segment(this.name+'=1')"),
      '&nbsp;',
-     $self->zoomBar($segment,$whole_segment,$buttonsDir),
+     span({-id=>'span_menu'},$self->zoomBar($segment,$whole_segment,$buttonsDir)),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/plus.gif",-name=>"zoom in $fine_zoom",
-		  -title=>"zoom in $fine_zoom"),
+		  -title=>"zoom in $fine_zoom",-onClick=>"update_segment(this.name+'=1')"),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/green_r1.gif",-name=>"right $half",
-		  -title=>"right $half_title"),
+		  -title=>"right $half_title",-onClick=>"update_segment(this.name+'=1')"),
      image_button(-src=>"$buttonsDir/green_r2.gif",-name=>"right $full",
-		  -title=>"right $full_title"),
+		  -title=>"right $full_title",-onClick=>"update_segment(this.name+'=1')"),
     );
 
   my $str	= join('', @lines);
@@ -312,7 +450,7 @@ sub slidertable {
 sub zoomBar {
   my $self = shift;
 
-  my ($segment,$whole_segment,$buttonsDir) = @_;
+  my ($segment,$whole_segment) = @_;
 
   my $show   = $self->tr('Show');
   my $length = $segment->length;
@@ -325,11 +463,12 @@ sub zoomBar {
   my %labels    = map {$_=>$show.' '.$self->unit_label($_)} @ranges;
   return popup_menu(-class   => 'searchtitle',
 		    -name    => 'span',
+		    -id      => 'span',
 		    -values  => \@ranges,
 		    -labels  => \%labels,
 		    -default => $length,
 		    -force   => 1,
-		    -onChange => 'this.form.submit()',
+		    -onChange => 'update_segment(this.name+"="+this.value)',
 		   );
 }
 
@@ -369,8 +508,8 @@ sub html_frag {
 ############################## toggle code ########################
 sub toggle {
   my $self = shift;
-  my $title         = shift;
-  my @body           = @_;
+  my $title = shift;
+  my @body  = @_;
 
   my $page_settings = $self->state;
 
@@ -389,13 +528,12 @@ sub toggle {
 
 sub toggle_section {
   my $self = shift;
-
   my %config = ref $_[0] eq 'HASH' ? %{shift()} : ();
   my ($name,$section_title,@section_body) = @_;
 
   my $visible = $config{on};
 
-  my $buttons = $self->data_source->globals->button_url;
+  my $buttons = $self->globals->button_url;
   my $plus  = "$buttons/plus.png";
   my $minus = "$buttons/minus.png";
 

@@ -22,13 +22,15 @@ use Bio::Graphics;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;
 use GD::SVG;                       # this may be necessary later !!!
-use TiledImagePanel;               # our clone of 'Panel.pm' that returns TiledImage object instead of GD::Image
-use BatchTiledImage;
+use Bio::Graphics::Panel;
 use Data::Dumper;
+use Carp 'croak','cluck';
+use Time::HiRes qw( gettimeofday tv_interval );
 
+my $start_time = [gettimeofday];
 
 # --- BEGIN MANUAL PARAMETER SPECIFICATIONS ---
-my $rendering_tilewidth = 32000;  # tile width (in pixels) for RENDERING via TiledImage (bigger tiles
+my $rendering_tilewidth = 4000;  # tile width (in pixels) for RENDERING via TiledImage (bigger tiles
                                   # render faster, so we render big chunks, then break them up into pieces)
 my $tilewidth_pixels = 1000;      # actual width (in pixels) of tiles for client; the TiledImage tiles get
                                   # broken up into these after rendering; note that it must be true that:
@@ -55,6 +57,8 @@ foreach my $dir (qw [
     last;
   }
 }
+
+my $global_padding = 100; #pixels
 # --- END MANUAL PARAMETER SPECIFICATIONS ---
 
 # Parse command line arguments and load configuration data
@@ -90,18 +94,7 @@ if (exists $args{'-m'}) {
 
 print " XML file will NOT be generated...\n" if $no_xml;
 
-my ($persistent,  $verbose, $primdb);  # these get passed to TiledImage
-
-if (exists $args{'-p'}) {
-    if    ($args{'-p'} == 0) { $persistent = 0; }
-    elsif ($args{'-p'} == 1) { $persistent = 1; }
-    else                     { die "ERROR: invalid '-p' parameter!\n"; }
-} else {
-    print " Using default setting: primitives will NOT be deleted...\n" if $fill_database or $render_tiles;
-    $persistent = 1;
-}
-
-$primdb = $args{'-primdb'};
+my ($verbose);  # these get passed to TiledImage
 
 if (exists $args{'-v'}) {
     if    ($args{'-v'} == 2) { $verbose = 2; }
@@ -286,7 +279,7 @@ die "ERROR: -z parameter is out of allowed range 1 to ${num_zooms}! (you specifi
 my %tile_ranges_to_render;
 foreach my $track (@track_labels) {                    # go through each track...
     foreach my $zoom_level_name (@zoom_level_names) {  # ...and each zoom level, save maximum range of tiles
-	$tile_ranges_to_render{$track}{$zoom_level_name} = [1, ceiling($landmark_length / $zoom_levels{$zoom_level_name}->[0])];
+        $tile_ranges_to_render{$track}{$zoom_level_name} = [1, ceiling($landmark_length / ($zoom_levels{$zoom_level_name}->[0] * ($tilewidth_pixels / 1000)))];
     }
 }
 
@@ -329,6 +322,10 @@ if (exists $args{'-r'}) {
 	$tile_ranges_to_render{$track_labels[$track_num-1]}{$zoom_level_names[$zoom_level_num-1]}->[0] = $first_tile;
 	$tile_ranges_to_render{$track_labels[$track_num-1]}{$zoom_level_names[$zoom_level_num-1]}->[1] = $last_tile;
     }
+} elsif (exists $args{'-t'}) {
+    foreach my $zoom_level_name (@zoom_level_names) {
+        $print_track_and_zoom{$track_labels[$args{'-t'} - 1]}{$zoom_level_name} = 1;
+    }
 } else {
     # no subset specified, so we print EVERYTHING
     foreach my $track (@track_labels) {
@@ -341,6 +338,8 @@ if (exists $args{'-r'}) {
 if ($print_tile_nums) {  # output track names, zoom level names, and tile ranges
     if (exists $args{'-r'}) {
 	print " The script will be applied to the following tiles:\n";
+    } elsif (exists $args{'-t'}) {
+        print " The script will be applied to track " . $args{'-t'} . ": " . $track_labels[$args{'-t'} - 1] . "\n";
     } else {
 	print " The script will be applied to ALL tiles:\n";
     }
@@ -381,19 +380,20 @@ unless (-e $ruler_dir || !$render_tiles) {
 
 my $html_ruler_dir = "${html_outdir_tiles}/ruler" unless $no_xml;
 
+my $ruler_image_height;
 foreach my $zoom_level (@zoom_levels) {
     my $zoom_level_name = $zoom_level->[0];
 
     next unless $print_track_and_zoom{'ruler'}{$zoom_level_name};  # skip zoom levels we're not filling or rendering
 
-    my $tilewidth_bases = $zoom_level->[1];
+    my $tilewidth_bases = $zoom_level->[1] * ($tilewidth_pixels / 1000);
 
     my $num_tiles = ceiling($landmark_length / $tilewidth_bases) + 1;  # 1 extra tile for the overrun
-    my $image_width = ceiling($tilewidth_pixels * $landmark_length / $tilewidth_bases);  # in pixels
+    my $image_width = ($landmark_length / $zoom_level->[1]) * 1000;  # in pixels
 
     $CONFIG->width ($image_width);  # set image width (in pixels) - necessary?
 
-    warn "----- GENERATING RULER TRACK AT ZOOM LEVEL $zoom_level_name... -----\n" if $verbose;
+    warn "----- GENERATING RULER TRACK AT ZOOM LEVEL $zoom_level_name... -----  " . tv_interval($start_time) . "\n" if $verbose;
 
     # check/create output dir here, to pass to BatchTiledImage... IH 4/11/2006
     my $current_ruler_dir = "${ruler_dir}/${zoom_level_name}/";
@@ -401,38 +401,11 @@ foreach my $zoom_level (@zoom_levels) {
       mkdir $current_ruler_dir or die "ERROR: could not make ${current_ruler_dir}!\n";
     }
     my $tile_prefix = "${current_ruler_dir}/rulertile";
-    my $tiledimage_name = join ('__', $landmark_name, 'ruler', $zoom_level_name);
 
-    ## Construct fake GD (i.e. BatchTiledImage) object; how to do this depends on whether
-    ## the graphics primitives are already in the database or not
-
-    # TODO: safety check to make sure -primdb is specified if we're using existing primitives?
-
-    my ($ruler_fake_gd, $track_height);
-    my %tiledImageArgs = (
-	# args to BatchTiledImage constructor
-	-renderTiles => $render_tiles,
-	-firstTile => $tile_ranges_to_render{'ruler'}{$zoom_level_name}->[0] - 1,  # NB change from 1-based to 0-based coords
-	-lastTile  => $tile_ranges_to_render{'ruler'}{$zoom_level_name}->[1] - 1,  # NB change from 1-based to 0-based coords
-	-tileWidth => $tilewidth_pixels,
-	-renderWidth => $rendering_tilewidth,
-	-tilePrefix => $tile_prefix,
-
-	# args to TiledImage constructor
-	-persistent => $persistent,
-	-verbose => $verbose,
-	-primdb => $primdb,
-	-tiledimage_name => $tiledimage_name,
-    );
-
-    if ($fill_database) {
-      # create our clone of 'Panel.pm' that returns pseudo-GD::Image objects
-      my $ruler_panel =
-          TiledImagePanel->new (
-		-start => $landmark_start,
+    my @argv = (-start => $landmark_start,
 		-end => $landmark_end,
 		-stop => $landmark_end,  # backward compatability with old BioPerl
-		-bgcolor => $CONFIG->setting('detail bgcolor') || 'white',
+                -bgcolor => "",
 		-width => $image_width,
 		-grid => $render_gridlines,
 		-gridcolor => 'linen',
@@ -443,10 +416,14 @@ foreach my $zoom_level (@zoom_levels) {
 		-pad_right => $tilewidth_pixels,  # to accomodate for stuff overruning borders of last tile
           );
 
+    my $ruler_panel = Bio::Graphics::Panel->new(@argv);
+    # we use a dummy gd object to set up the main panel palette
+    $ruler_panel->{gd} = GD::Image->new(1, 1);
+    setupPalette($ruler_panel);
+
       # add genomic ruler (i.e. arrow segment); there is a description of the track options at the end of:
       #   /usr/local/share/perl/5.8.4/Bio/Graphics/Glyph/arrow.pm (for a default BioPerl installation) - NOTE THAT IT IS HACKED !!!
-      $ruler_panel->add_track (
-			       $segment => 'arrow',
+    my @track_settings = ($segment, => 'arrow',
 			       # double-headed arrow:
 			       -double => 1,
 
@@ -465,22 +442,37 @@ foreach my $zoom_level (@zoom_levels) {
 			       # forcing the proper unit use for major tick marks
 			       -units_forced => $zoom_level->[2]
 			      );
+    my $ruler_track = $ruler_panel->add_track(@track_settings);
 
-      $ruler_fake_gd = $ruler_panel->gd (%tiledImageArgs);
-      $track_height = $ruler_panel->height;
+    # output ruler
+    $ruler_image_height = $ruler_panel->height;  # needed for XML file
+    if ($render_tiles) {
+        renderTileRange(
+                # NB change from 1-based to 0-based coords
+                $tile_ranges_to_render{'ruler'}{$zoom_level_name}->[0] - 1,
+                $tile_ranges_to_render{'ruler'}{$zoom_level_name}->[1] - 1,
+                $tilewidth_pixels,
+                $rendering_tilewidth,
+                $tile_prefix,
+                1,
+                $ruler_panel,
+                $ruler_track,
+                $ruler_image_height,
+                {@argv},
+                \@track_settings,
+                "",
+                # make track_num zero-based
+                0,
+                $segment,
+            );
     }
-    else {
-      # if we're not filling database, primitives must be there already, so just create a
-      # pseudo-GD::Image object through which to fetch them
-      $ruler_fake_gd = BatchTiledImage->new (%tiledImageArgs);
-      $track_height = $ruler_fake_gd->height;
-    }
-
-    $ruler_fake_gd->renderAllTiles if $render_tiles;
-    $ruler_fake_gd->finish;  # clean up
+    $ruler_panel->finished();
+    $ruler_panel = undef;
 
     # if we got this far with no fatal error, we can print info about this track to XML file
-    print XMLFILE ("  <ruler tiledir=\"${html_ruler_dir}/\" height=\"${track_height}\" />\n") unless $no_xml;
+    print XMLFILE "  <ruler tiledir=\"${html_ruler_dir}/\" height=\"${ruler_image_height}\" />\n" unless $no_xml;
+   
+    warn "done rendering ruler: " . tv_interval($start_time) . "\n" if $render_tiles && $verbose;
 }
 
 # Render the genomic tiles for all tracks and zoom levels
@@ -490,8 +482,8 @@ print XMLFILE "  <tracks>\n" unless $no_xml;
 for (my $label_num = 0; $label_num < @track_labels; $label_num++)
 {
     next if ($track_labels[$label_num] eq 'ruler');  # skip ruler, we render it above
-
     my $label = ($track_labels[$label_num]);
+    
     my %track_properties = $conf->style($label);
     my $track_name = $track_properties{"-key"};
 
@@ -515,15 +507,15 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
 
         next unless $print_track_and_zoom{$label}{$zoom_level_name};  # skip if not printing
 
-	my $tilewidth_bases = $zoom_level->[1] * $tilewidth_pixels / 1000;
+        my $tilewidth_bases = $zoom_level->[1] * ($tilewidth_pixels / 1000);
 	my $num_tiles = ceiling($landmark_length / $tilewidth_bases) + 1;  # give it an extra tile for a temp half-assed fix
-	my $image_width = ceiling($tilewidth_pixels * $landmark_length / $tilewidth_bases);  # in pixels
+        my $image_width = ($landmark_length / $zoom_level->[1]) * 1000; # in pixels
 
 	# I'm really not sure how palatable setting this option here will be... but we can't
 	# set it any earlier...
 	$CONFIG->width($image_width);  # set image width (in pixels)
 
-	warn "----- GENERATING ZOOM LEVEL ${zoom_level_name}... -----\n" if $verbose;
+        warn "----- GENERATING ZOOM LEVEL ${zoom_level_name}... ----- " . tv_interval($start_time) . "\n" if $verbose;
 
 	# create the track that we will need
 
@@ -546,41 +538,13 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
 	$html_current_outdir = "${html_current_outdir}/${zoom_level_name}/" unless $no_xml;
 
 	my $tile_prefix = "${current_outdir}/tile";
-	my $tiledimage_name = join ('__', $landmark_name, $track_name_underscores, $zoom_level_name);
 
-	## Construct fake GD (i.e. BatchTiledImage) object; how to do this depends on whether
-	## the graphics primitives are already in the database or not
-
-	# TODO: safety check to make sure -primdb is specified if we're using existing primitives?
-
-	my ($fake_gd, $track_height);
-	my %tiledImageArgs = (
-		# args to BatchTiledImage constructor
-		-renderTiles => $render_tiles,
-		-firstTile => $tile_ranges_to_render{$label}{$zoom_level_name}->[0] - 1,  # NB change from 1-based to 0-based coords
-		-lastTile  => $tile_ranges_to_render{$label}{$zoom_level_name}->[1] - 1,  # NB change from 1-based to 0-based coords
-		-tileWidth => $tilewidth_pixels,
-		-renderWidth => $rendering_tilewidth,
-		-tilePrefix => $tile_prefix,
-		-htmlOutdir => $html_current_outdir,
-
-		# args to TiledImage constructor
-		-persistent => $persistent,
-		-verbose => $verbose,
-		-trackNum => $label_num,
-                -primdb => $primdb,
-		-tiledimage_name => $tiledimage_name
-	);
-
-	if ($fill_database) {
-	  # create our clone of 'Panel.pm' that returns pseudo-GD::Image objects
-	  my $panel =
-	      TiledImagePanel->new (
-	            -start => $landmark_start,
+        my @argv = (-start => $landmark_start,
 		    -end => $landmark_end,
 		    -stop => $landmark_end,  # backward compatability with old BioPerl
 		    -key_color => $CONFIG->setting('key bgcolor') || 'moccasin',
-		    -bgcolor => $CONFIG->setting('detail bgcolor') || 'white',
+                    #-bgcolor => $CONFIG->setting('detail bgcolor') || 'white',
+                    -bgcolor => "",
 		    -width => $image_width,
 		    -grid => $render_gridlines,
 		    -gridcolor => 'linen',
@@ -592,19 +556,23 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
 		    -image_class => 'GD'
 	      );
 
-	  # if the glyph is the magic "dna" glyph (for backward compatibility), or if the section
-	  # is marked as being a "global feature", then we apply the glyph to the entire segment
+        my $panel = Bio::Graphics::Panel->new(@argv);
+
+        # we use a dummy gd object to set up the main panel palette
+        $panel->{gd} = GD::Image->new(1, 1);
+        setupPalette($panel);
+
 	  my $track;
+        my $is_global = 0;
+        my @track_settings = ($conf->default_style, $conf->i18n_style($label, $lang, $landmark_length));
 	  if ($conf->setting($label=>'global feature')) {
-	    $panel->add_track($segment,
-			      $conf->default_style,
-			      $conf->i18n_style($label,$lang),
-			     );
+            $track = $panel->add_track($segment, @track_settings);
+            $is_global = 1;
 	  }
 	  else {
-	    my @settings = ($conf->default_style, $conf->i18n_style($label, $lang, $landmark_length));
-	    $track = $panel->add_track(-glyph => 'generic', @settings);  # $track is a Bio::Graphics::Glyph::track object
-	  }
+            $track = $panel->add_track(-glyph => 'generic', @track_settings);
+
+            # NOTE: $track is a Bio::Graphics::Glyph::track object
 
 	  # go through all the features and add them (but only if we have features)
 	  if (@feature_types) {
@@ -615,7 +583,6 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
 	      $track->add_feature($feature);
 	    }
 
-	    # configure the tracks (does this need to be done if tracks are global features?)
 	    my $count = 1;
 	    my $do_bump = $CONFIG->do_bump($label, 0, $count, $CONFIG->bump_density);
 	    my $do_label = $CONFIG->do_label($label, 0, $count, $CONFIG->label_density, $landmark_length);
@@ -628,25 +595,44 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
 	        $track->configure(-bump => 0, -label => 0, -description => 0);
 	    }
 	  }
-
-	  my $boxes = $panel->boxes;
-	  $fake_gd = $panel->gd (%tiledImageArgs, -annotate => $boxes);
-	  $track_height = $panel->height;
 	}
-	else {
-	  # if we're not filling database, primitives must be there already, so just create a
-	  # pseudo-GD::Image object through which to fetch them
-	  $fake_gd = BatchTiledImage->new (%tiledImageArgs);
-	  $track_height = $fake_gd->height;
-	}
+        
+        warn "features added: " . tv_interval($start_time) . "\n" if ($render_tiles && $verbose);
 
-	$fake_gd->renderAllTiles if $render_tiles;
-	$fake_gd->finish;  # clean up
+        # get image height, now that the panel is fully constructed
+        my $image_height = $panel->height;
+
+        warn "track has been laid out: " . tv_interval($start_time) . "\n" if ($render_tiles && ($verbose >= 1));
+
+        if ($render_tiles) {
+            renderTileRange(
+                # NB change from 1-based to 0-based coords
+                $tile_ranges_to_render{$label}{$zoom_level_name}->[0] - 1,
+                $tile_ranges_to_render{$label}{$zoom_level_name}->[1] - 1,
+                $tilewidth_pixels,
+                $rendering_tilewidth,
+                $tile_prefix,
+                $is_global,
+                $panel,
+                $track,
+                $image_height,
+                {@argv},
+                \@track_settings,
+                $html_current_outdir || "",
+                # make track_num zero-based
+                $label_num - 1,
+                $segment,
+                );
+	}
+        $panel->finished();
+        $panel = undef;
+
+        warn "tiles for track $label_num zoom $zoom_level_name rendered: " . tv_interval($start_time) . "\n" if ($render_tiles && ($verbose >= 1));
 
 	# if we got this far with no fatal error, we can print info about this track to XML file
 	print XMLFILE
 	    "      <zoomlevel tileprefix=\"${html_current_outdir}\" name=\"${zoom_level_name}\" ",
-	    "unitspertile=\"${tilewidth_bases}\" height=\"${track_height}\" numtiles=\"${num_tiles}\" />\n"
+            "unitspertile=\"${tilewidth_bases}\" height=\"${image_height}\" numtiles=\"${num_tiles}\" />\n"
 	    	unless ($no_xml);
 
     } # ends loop iterating through zoom levels
@@ -657,12 +643,297 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
 
 unless ($no_xml) {
     print XMLFILE "  </tracks>\n";
-    print XMLFILE "  <classicurl url=\"http://genome.biowiki.org/cgi-bin/gbrowse\" />\n";  # TEMP INFO FOR DEMO TO LINK TO CLASSIC GBROWSE !!!
+    print XMLFILE "  <classicurl url=\"http://128.32.184.78/cgi-bin/gbrowse/${source}/\" />\n";  # TEMP INFO FOR DEMO TO LINK TO CLASSIC GBROWSE !!!
     print XMLFILE "</settings>\n";  # close out XML file
     close(XMLFILE);
 }
 
-exit;
+sub area {
+        # writes out the area html 
+        # since using this I am less happy with fact that all changes (even javascript) then have to be pre rendered including mouseovers etc
+        # a better way would be upload the area/coordinate data and then update the area element with the parameters
+    my ($x1,$y1,$x2,$y2)=@_;
+    my $str="<area shape=rect coords=\"$x1,$y1,$x2,$y2\" href=\"#\" onmouseover=\"MenuComponent_showDescription('<b>Feature</b>','<b>Name:</b>&nbsp;Gene XYZ<br><b>Description:</b>&nbsp;blah blah blah<br><b>Aliases:</b>&nbsp;ABC,GEF</b><br> <b>Link:</b>&nbsp;&nbsp;<a class=ggbmenu_link href=http://genome.ucsc.edu/cgi-bin/hgGene?db=hg17&hgg_gene=NM_016310&hgg_chrom=chr16&hgg_start=36999&hgg_end=43625 target=_blank>to this feature</a>');return false\" onmouseout=\"MenuComponent_outLink();\">\n";
+    return $str;
+}
+
+sub writeHTML {
+    my ($tile_prefix,
+        $large_tile_num,
+        $small_index,
+        $small_tile_num,
+        $tilewidth_pixels,
+        $image_height,
+        $track_num,
+        $html_current_outdir,
+        $small_tile_glyphs) = @_;
+
+    # have to check that all the coords are in the rectangles
+    my $lower_limit=$large_tile_num * $tilewidth_pixels;
+    my $upper_limit=($large_tile_num+1) * $tilewidth_pixels;
+    my $lower_limit_y=$image_height*$track_num;
+    my $upper_limit_y=$image_height*($track_num+1);
+
+
+    # make the image map per tile, including all the html that will be imported into the div element
+    # big problem I can see here is how to not make storing the features so redundant
+    my $xhtmlfile = "${tile_prefix}${small_tile_num}.html";
+    open (HTMLTILE, ">${xhtmlfile}") or die "ERROR: could not open ${xhtmlfile}!\n";
+
+    print HTMLTILE "<img src=\"".$html_current_outdir."tile".${small_tile_num}.".png\" ismap usemap=\"#tilemap${large_tile_num}${small_index}${track_num}\" border=0>";
+    print HTMLTILE "<map name=\"tilemap${large_tile_num}${small_index}${track_num}\">";
+    foreach my $box (@{$small_tile_glyphs}) {
+        next unless $box->[0]->can('primary_tag');
+        my $x1=$box->[1];
+        my $y1=$box->[2];
+        my $x2=$box->[3];
+        my $y2=$box->[4];
+
+        # adjust coordinates to what should be the correct tile
+        $x1=$x1-$lower_limit;
+        $x2=$x2-$lower_limit;   
+
+
+        # if he tfeature looks like it is the next tile skip
+        if ( $x1 > $tilewidth_pixels and $x2 > $tilewidth_pixels ) {
+            next;
+        }
+
+        # if the feature looks like it is the previous tile skip
+        if ( $x1 < 0 and $x2 < 0 ) {
+            next;
+        }
+
+        # tidy up coord edges
+        if ( $x2 > $tilewidth_pixels ) {
+            $x2=$tilewidth_pixels;
+        }
+
+        if ( $x1 < 0 ) {
+            $x1=0;
+        }
+        # for debugging
+        #print &Dumper($label); 
+        print HTMLTILE &area($x1,$y1,$x2,$y2);
+    }
+
+    print HTMLTILE "</map>\n";
+
+    close HTMLTILE || die "couldn't close HTMLTILE: $!\n";
+}
+
+sub setupPalette {
+    my ($panel) = @_;
+    my $gd = $panel->{gd};
+    my %translation_table;
+    foreach my $name ('white','black', $panel->color_names) {
+        my @rgb = $panel->color_name_to_rgb($name);
+        my $idx = $gd->colorAllocate(@rgb);
+        $translation_table{$name} = $idx;
+    }
+    $panel->{translations} = \%translation_table;
+}
+
+# method to render a range of tiles
+# NB tiles used 0-based indexing
+sub renderTileRange {
+    my ($first_tile,
+        $last_tile,
+        $tilewidth_pixels,
+        $rendering_tilewidth,
+        $tile_prefix,
+        $is_global,
+        $big_panel,
+        $big_track,
+        $image_height,
+        $panel_args,
+        $track_settings,
+        $html_current_outdir,
+        $track_num,
+        $segment) = @_;
+
+
+    # these should really divide evenly, and of course no one will MISUSE
+    # the script, right? !!!
+
+    # small tiles per large tile
+    my $small_per_large = int ($rendering_tilewidth / $tilewidth_pixels);
+    if ($small_per_large * $tilewidth_pixels != $rendering_tilewidth) {
+        croak "Error: -renderWidth needs to be an integer multiple of -tileWidth";
+    }
+
+    my $first_large_tile = floor($first_tile / $small_per_large);
+    my $last_large_tile = ceiling($last_tile / $small_per_large);
+
+    # @per_tile_glyphs is a list with one element per rendering tile,
+    # each of which is a list of the glyphs that overlap that tile.
+    # @nonempty_smalltiles is a list with one element per rendering
+    # tile, each of which is a hash where each key is the index of
+    # a non-blank small tile.
+    my @per_tile_glyphs;
+    my @nonempty_smalltiles;
+    if (!$is_global) {
+        foreach my $glyph ($big_track->parts) {
+            my @box = $glyph->box;
+            my @rtile_indices =
+                floor($box[0] / $rendering_tilewidth)
+                ..ceiling($box[2] / $rendering_tilewidth);
+
+            foreach my $rtile_index (@rtile_indices) {
+                push @{$per_tile_glyphs[$rtile_index]}, $glyph;
+            }
+            my @tile_indices =
+                floor($box[0] / $tilewidth_pixels)
+                ..ceiling($box[2] / $tilewidth_pixels);
+            foreach my $tile_index (@tile_indices) {
+                ${$nonempty_smalltiles[int($tile_index / $small_per_large)]}
+                {$tile_index % $small_per_large} = 1
+            }
+        }
+    }
+
+#    $Data::Dumper::Maxdepth = 3;
+#    print "Nonempty tiles " . Dumper(@nonempty_smalltiles[0..30]) . "\n";
+#    print "per tile glyphs " . Dumper(@per_tile_glyphs[0..30]) . "\n";
+
+    my $blankTile;
+
+    local *TILE;
+    for (my $x = $first_large_tile; $x <= $last_large_tile; $x++) {
+        my $large_tile_gd;
+        my $pixel_offset = (0 == $x) ? 0 : $global_padding;
+
+        # we want to skip rendering whole tile if it's blank, but only if
+        # there's a blank tile to which to hardlink that's already rendered
+        if (defined($per_tile_glyphs[$x]) || (!defined($blankTile))) {
+
+            # rendering tile bounds in pixel coordinates
+            my $rtile_left = ($x * $rendering_tilewidth) 
+		- $pixel_offset;
+            my $rtile_right = (($x + 1) * $rendering_tilewidth)
+		+ $global_padding - 1;
+
+            # rendering tile bounds in bp coordinates
+            my $first_base = int($rtile_left / $big_panel->scale) + 1;
+            my $last_base = int(($rtile_right + 1) / $big_panel->scale);
+
+            #print "scale: " . $big_panel->scale . " pixel_offset: $pixel_offset first_base: $first_base last_base: $last_base rtile_left: $rtile_left rtile_right: $rtile_right " . tv_interval($start_time) . "\n";
+
+            # set up the per-rendering-tile panel, with the right
+            # bp coordinates and pixel width
+            my %tpanel_args = %$panel_args;
+            $tpanel_args{-start} = $first_base;
+            $tpanel_args{-end} = $last_base;
+            $tpanel_args{-stop} = $last_base;
+            $tpanel_args{-width} = $rtile_right - $rtile_left + 1;
+            my $tile_panel = Bio::Graphics::Panel->new(%tpanel_args);
+            my $scale_diff = $tile_panel->scale - $big_panel->scale;
+            printf "scale difference: %e\n", $scale_diff
+                if abs($scale_diff) > 1e-11;
+
+            if ($is_global) {
+                # for global features we can just render everything
+                # using the per-tile panel
+                my @segments = $CONFIG->name2segments($landmark_name . ":" 
+                                                      . $first_base . ".." 
+                                                      . $last_base,
+                                                      $db, undef, 1);
+                my $small_segment = $segments[0];
+                $tile_panel->add_track($small_segment, @$track_settings);
+                $large_tile_gd = $tile_panel->gd();
+            } else {
+                # add generic track to the tile panel, so that the
+                # gridlines have the right height
+                $tile_panel->add_track(-glyph => 'generic', 
+                                       @$track_settings,
+                                       -height => $image_height);
+                $large_tile_gd = $tile_panel->gd();
+                #print "got tile panel gd " . tv_interval($start_time) . "\n";
+
+                if (defined $per_tile_glyphs[$x]) {
+                    # some glyphs call set_pen on the big_panel;
+                    # we want that to go to the right GD object
+                    $big_panel->{gd} = $large_tile_gd;
+                    
+                    #move rendering onto the tile
+                    $big_panel->pad_left(-$rtile_left);
+
+                    # draw the glyphs for the current rendering tile
+                    foreach my $glyph (@{$per_tile_glyphs[$x]}) {
+                        # some positions are calculated
+                        # using the panel's pad_left, and sometimes
+                        # they're calculated using the x-coordinate
+                        # passed into the draw method.  We want them
+                        # both to be -$rtile_left.
+                        $glyph->draw($large_tile_gd, -$rtile_left, 0);
+                    }
+                }
+            }
+            $tile_panel->finished;
+            $tile_panel = undef;
+        }
+
+        # now to break up the large tile into small tiles and write them to PNG on disk...
+
+        my @small_tile_boxes;
+        foreach my $glyph (@{$per_tile_glyphs[$x]}) {
+            my $box = [$glyph->feature, $glyph->box];
+            my $first_small = floor($box->[1] / $tilewidth_pixels);
+            my $last_small = floor($box->[3] / $tilewidth_pixels);
+            my $small_begin = $x * $small_per_large;
+            $first_small = $small_begin
+                if $first_small < $small_begin;
+            $last_small = ($small_begin + $small_per_large) - 1
+                if $last_small > ($small_begin + $small_per_large) - 1;
+
+            $first_small -= $small_begin;
+            $last_small -= $small_begin;
+            my @tile_indices = $first_small .. $last_small;
+
+            foreach my $tile_index (@tile_indices) {
+                push @{$small_tile_boxes[$tile_index]}, $box;
+            }
+        }
+        
+      SMALLTILE:
+        for (my $y = 0; $y < $small_per_large; $y++) {
+            my $small_tile_num = $x * $small_per_large + $y;
+            if ( ($small_tile_num >= $first_tile) && ($small_tile_num <= $last_tile) ) { # do we print it?
+                my $outfile = "${tile_prefix}${small_tile_num}.png";
+
+                writeHTML($tile_prefix, $x, $y, $small_tile_num,
+                          $tilewidth_pixels, $image_height,
+                          $track_num, $html_current_outdir,
+                          $small_tile_boxes[$y] || []);
+                if (!$is_global) {
+                    if (!defined($nonempty_smalltiles[$x]{$y})) {
+                        if (defined($blankTile)) {
+                            link $blankTile, $outfile
+                                || die "could not link blank tile: $!\n";
+                            next SMALLTILE;
+                        } else {
+                            $blankTile = $outfile;
+                        }
+                    }
+                }
+                open (TILE, ">${outfile}") or die "ERROR: could not open ${outfile}!\n";
+
+                my $small_tile_gd = GD::Image->new($tilewidth_pixels,
+                                                   $image_height,
+                                                   0);
+                $small_tile_gd->copy($large_tile_gd,
+                                     0, 0,
+                                     $y * $tilewidth_pixels + $pixel_offset, 0,
+                                     $tilewidth_pixels, $image_height);
+
+                print TILE $small_tile_gd->png(4) 
+                    or die "ERROR: could not write to ${outfile}!\n";
+
+                warn "done printing ${outfile}\n" if $verbose >= 2;
+            }
+        }
+    }
+}
 
 # --- HELPER FUNCTIONS ----
 
@@ -714,16 +985,6 @@ sub print_usage {
 	"          2 = render tiles and generate XML file only ('gdtile' MySQL database\n",
 	"              must be filled already)\n",
 	"          3 = do nothing except generate XML file and dump info\n",
-	"  -p <persistent>\n",
-	"        sets whether GD primitives get deleted from MySQL 'gdtile' database at\n",
-	"        end of execution:\n",
-	"          0 = delete primitives\n",
-	"          1 = keep primitives (default)\n",
-	"  -primdb <dsn>\n",
-	"        optional parameter to use a database to store graphical\n",
-	"        primitives.  Slower, but uses less memory and allows for\n",
-	"        rendering on demand.\n",
-	"        example: -primdb DBI:mysql:gdtile\n",
 	"  -v <verbose>\n",
 	"        sets whether to run in verbose mode (that is, output activities of the\n",
 	"        program's internals to standard error):\n",
@@ -732,6 +993,8 @@ sub print_usage {
 	"          2 = verbose on (extreem - prints trace of every instance of\n",
 	"              recording or replaying database primitives and of every tile\n",
 	"              that is rendered - WARNING, VERY VERBOSE!)\n",
+        "  -t <track number>\n",
+        "        Specify the track number to render (default: render all tracks)\n",
 	"  -r <selection>\n",
 	"        Use this to render only a subset of all possible tiles, tracks and\n",
 	"        zoom levels (default is render ALL tiles); note that CURRENTLY, the\n",

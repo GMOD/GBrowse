@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.61 2007-02-24 00:01:52 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.62 2007-02-27 15:30:39 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1183,14 +1183,15 @@ sub tracks_table {
       }
     }
 
-    my @checkboxes = checkbox_group(-name       => 'label',
-				    -values     => \@track_labels,
-				    -labels     => \%labels,
-				    -defaults   => \@defaults,
-				    -onClick    => "gbTurnOff('$id')",
-				    -override   => 1,
-				    -disabled   => \@disabled_list
-				     );
+    my @args = (-name       => 'label',
+		-values     => \@track_labels,
+		-labels     => \%labels,
+		-defaults   => \@defaults,
+		-onClick    => "gbTurnOff('$id')",
+		-override   => 1);
+    push @args,(-disabled=>\@disabled_list) if $CGI::VERSION >= 3.27;
+
+    my @checkboxes = checkbox_group(@args);
 
     $table = tableize(\@checkboxes,$category);
     $table =~ s/<tr>/<tr class="searchtitle">/g;

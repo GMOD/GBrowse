@@ -806,6 +806,12 @@ unit.
 
 This is the color for the background of the birds-eye view.
 
+=item * selection rectangle color
+
+This is the color of the rectangle in the overview and region
+panels that shows where on the overview the detail panel represents.
+The default is red.
+
 =item * cache_overview
 
 This option will cause the overview images to be cached on disk for a

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.34 2007-02-24 00:01:54 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.35 2007-02-27 16:34:37 scottcain Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1430,7 +1430,8 @@ sub _overview {
     $self->gd_cache_write($cache_path,$gd) if $cache_path;
   }
 
-  my $red = $gd->colorClosest(255,0,0);
+  my $rect_color = $panel->translate_color(
+                      $self->setting('selection rectangle color' )||'red');
   my ($x1,$x2) = $panel->map_pt($partial_segment->start,$partial_segment->end);
   my ($y1,$y2) = (0,($gd->getBounds)[1]);
   $x2 = $panel->right-1 if $x2 >= $panel->right;
@@ -1438,7 +1439,7 @@ sub _overview {
 
   $gd->rectangle($pl+$x1,$y1,
 		 $pl+$x2,$y2-1,
-		 $red);
+		 $rect_color);
 
   eval {$panel->finished};  # should quash memory leaks when used in conjunction with bioperl 1.4
 

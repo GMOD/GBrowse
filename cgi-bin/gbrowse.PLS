@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59 2007-02-05 18:28:36 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.1 2007-03-01 22:25:55 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -101,6 +101,7 @@ use constant DEFAULT_RANGES       => q(100 500 1000 5000 10000 25000 100000 2000
 use constant DEFAULT_FINE_ZOOM    => '10%';
 use constant GBROWSE_HELP         => '/gbrowse';
 use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceDumper';
+use constant CHECKBOX_COLUMNS     => 4;
 
 # if true, turn on surrounding rectangles for debugging the image map
 use constant DEBUG          => 0;
@@ -783,11 +784,12 @@ sub adjust_settings {
   $settings->{start} = param('start') if defined param('start') && param('start') =~ /^[\d-]+/;
   $settings->{stop}  = param('stop')  if defined param('stop')  && param('stop')  =~ /^[\d-]+/;
   $settings->{stop}  = param('end')   if defined param('end')   && param('end')   =~ /^[\d-]+/;
+
   $settings->{version} ||= param('version') || '';
 
   if ( (request_method() eq 'GET' && param('ref'))
        ||
-       (param('span') && $divider*$settings->{stop}-$divider*$settings->{start}+1 != param('span'))
+       (param('span') && $settings->{stop}-$settings->{start}+1 != param('span'))
        ||
        grep {/left|right|zoom|nav|regionview\.[xy]|overview\.[xy]/} param()
      )
@@ -1113,6 +1115,10 @@ sub tracks_table {
   my $settings = shift;
   my $additional_features = shift;
 
+
+  # read category table information
+  my %category_table_labels=%{category_table()};
+
   # set up the dumps line.
   my($ref,$start,$stop) = @{$settings}{qw(ref start stop)};
   my $source   = $CONFIG->source;
@@ -1160,33 +1166,50 @@ sub tracks_table {
      next;
     }
     elsif  (exists $track_groups{$category}) {
-      my @track_labels = @{$track_groups{$category}};
+    my @track_labels = @{$track_groups{$category}};
+
+
+    # stop the grid display elements being sorted since this destroys the order of the grid 
+    if ( ! defined $category_table_labels{$category} ) { 
       @track_labels = sort {lc $label_keys{$a} cmp lc $label_keys{$b}} @track_labels
-        if ($settings->{sk} eq "sorted");
-      my @checkboxes = checkbox_group(-name       => 'label',
-				      -values     => \@track_labels,
-				      -labels     => \%labels,
-				      -defaults   => \@defaults,
-				      -onClick    => "gbTurnOff('$id')",
-				      -override   => 1,
-				     );
-      $table = tableize(\@checkboxes);
-      $table =~ s/<tr>/<tr class="searchtitle">/g;
-
-      my $visible = exists $settings->{section_visible}{$id} ? $settings->{section_visible}{$id} : 1;
-
-      my ($control,$section)=toggle_section({on=>$visible,nodiv=>1},
-					    $id,
-					    b(ucfirst $category),div({-style=>'padding-left:1em'},span({-id=>$id},$table)));
-      $control .= '&nbsp;'.i({-class=>'nojs'},
-			     checkbox(-id=>"${id}_a",-name=>"${id}_a",
-				      -label=>$all_on,-onClick=>"gbCheck(this,1)"),
-			     checkbox(-id=>"${id}_n",-name=>"${id}_n",
-				      -label=>$all_off,-onClick=>"gbCheck(this,0)")
-			    ).br()   if exists $track_groups{$category};
-      push @sections,div($control.$section);
-      $id++;
+	if ($settings->{sk} eq "sorted");
     }
+
+    my @disabled_list=();
+    foreach my $l (@track_labels) {
+      if ($CONFIG->setting($l=>'disabled')) {
+	push(@disabled_list,$l);
+	$labels{$l} = label2key($l);
+      }
+    }
+
+    my @args = (-name       => 'label',
+		-values     => \@track_labels,
+		-labels     => \%labels,
+		-defaults   => \@defaults,
+		-onClick    => "gbTurnOff('$id')",
+		-override   => 1);
+    push @args,(-disabled=>\@disabled_list) if $CGI::VERSION >= 3.27;
+
+    my @checkboxes = checkbox_group(@args);
+
+    $table = tableize(\@checkboxes,$category);
+    $table =~ s/<tr>/<tr class="searchtitle">/g;
+
+    my $visible = exists $settings->{section_visible}{$id} ? $settings->{section_visible}{$id} : 1;
+
+    my ($control,$section)=toggle_section({on=>$visible,nodiv=>1},
+					  $id,
+					  b(ucfirst $category),div({-style=>'padding-left:1em'},span({-id=>$id},$table)));
+    $control .= '&nbsp;'.i({-class=>'nojs'},
+			   checkbox(-id=>"${id}_a",-name=>"${id}_a",
+				    -label=>$all_on,-onClick=>"gbCheck(this,1)"),
+			   checkbox(-id=>"${id}_n",-name=>"${id}_n",
+				    -label=>$all_off,-onClick=>"gbCheck(this,0)")
+			  ).br()   if exists $track_groups{$category};
+    push @sections,div($control.$section);
+    $id++;
+  }
 
     else {
       next;
@@ -1678,7 +1701,6 @@ sub lookup_features_from_db {
   my $padding = $CONFIG->setting(general=>'landmark_padding') || 0;
 
   if (my $name = $settings->{name}) {
-    warn "name = $name" if DEBUG;
     @segments = $CONFIG->name2segments($name,$db,TOO_MANY_SEGMENTS);
   }
 
@@ -2887,22 +2909,47 @@ sub toggle {
 
 sub tableize {
   my $array = shift;
+  my $category = shift;
   return unless @$array;
-  my $rows    = int(sqrt(@$array));
-  my $columns = int(0.99+@$array/$rows);
-  my $html = qq(<table border="0">);
-  for (my $row=0;$row<$rows;$row++) {
-    $html .= "<tr>";
+
+  my $columns = CHECKBOX_COLUMNS;
+  my $rows    = int( @$array/$columns + 0.99 );
+
+  my @column_labels=();
+  my @row_labels=();
+
+  # gets the data for the defined 'category table(s)'
+  my %categorytable=%{category_table()};
+
+  # checks if this is about to rendered and if it is set the correct row/columns lengths
+  if ( defined $categorytable{$category} ) {
+    @column_labels=@{$categorytable{$category}{row_labels}};
+    @row_labels=@{$categorytable{$category}{col_labels}};
+    $rows    =$#row_labels+1;
+    $columns =$#column_labels+1;
+  }
+
+  my $cwidth = 100/$columns . '%';
+
+  my $html = start_table({-border=>0,-width=>'100%'});
+  if (@column_labels) {
+    $html.="<tr><td></td>";
     for (my $column=0;$column<$columns;$column++) {
-      if (defined($array->[$column*$rows + $row])) {
-	$html .= "<td>" . $array->[$column*$rows + $row] . "</td>"
-      } else {
-	$html .= "<td>&nbsp;</td>";
-      }
+      $html .= "<td><b>$column_labels[$column]</b></td>";
+    }
+    $html.="</tr>";
+  }
+
+  for (my $row=0;$row<$rows;$row++) {
+    # do table headers
+    $html .= "<tr>";
+    $html .= "<td><b>$row_labels[$row]</b></td>" if @row_labels;
+    for (my $column=0;$column<$columns;$column++) {
+      $html .= td({-width=>$cwidth},$array->[$column*$rows + $row] || '&nbsp;');
     }
     $html .= "</tr>\n";
   }
-  $html .= "</table>\n";
+  $html .= end_table;
 }
 
 sub get_regionview_seg {
@@ -2941,6 +2988,23 @@ sub is_search {
   return 1 if     $CONFIG->setting('initial landmark') && !$page_settings->{name};
   return 1 unless $CONFIG->setting('no autosearch');
   return undef;
+}
+
+sub category_table {
+  my $tabledata  = $CONFIG->setting('general'=>'category tables');
+  my @tabledata  = shellwords($tabledata||'');
+  my %categorytable=();
+  while (@tabledata) {
+     my $category=shift(@tabledata);
+     my $rows=shift(@tabledata);
+     my @rows=split(/\s+/,$rows);
+     my $cols=shift(@tabledata);
+     my @cols=split(/\s+/,$cols);
+     $categorytable{$category}{row_labels}=\@rows;
+     $categorytable{$category}{col_labels}=\@cols;
+  }
+   
+  return (\%categorytable); 
 }
 
 sub version_warning {

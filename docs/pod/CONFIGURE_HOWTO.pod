@@ -907,6 +907,39 @@ gbrowse. Instead, the previous search will be pasted into the
 "Landmark or Region" box and the user will have to press "Search" to
 reexecute it.
 
+=item * category tables
+
+This option allows you to group the on/off checkboxes for set of
+tracks into a rectangular M x N table. It can be used to highlight the
+experimental design of a microarray or ChIP-on-Chip experiment. 
+
+The format is:
+
+ category tables = 'category name' 'columnlabel1 columnlabel2 columnlabel3' 'rowlabel1 rowlabel2 rowlabel3'
+
+Where "category name" is the name of the track category (described in
+more detail below), "columnlabelN" is the label of the Nth column, and
+"rowlabelN" is the label of the Nth row. For example:
+
+ category tables = 'ArrayExpts' 'strain-A strain-B strain-C' 'temperature anaerobic aerobic'
+
+This will set up all the tracks labeled with category "ArrayExpts" so
+that they are displayed in a 2x3 table like this:
+
+                 temperature     anaerobic      aerobic
+   strain-A      track 1          track 4       track 7
+   strain-B      track 2          track 5       track 8
+   strain-C      track 3          track 6       track 9
+
+"track N" will be replaced with the name you selected for the track.
+
+Additional category tables can be specified using continuation lines:
+
+ category tables = 'ArrayExpts' 'strain-A strain-B strain-C' 'temperature anaerobic aerobic'
+                   'CHiP-Chip'  'TFX1 ONE-CUT PHA4' '16-cell-stage 320-cell-stage adult'
+
+See the tutorial for more details.
+
 =item * instructions section
 =item * search section
 =item * overview section
@@ -1504,6 +1537,15 @@ called "Genes", you would add this to each of the track defintions:
 
 Note that it is not possible to make subcategories. If all tracks are
 categorized, then the "General" category will not be displayed.
+
+If you have used a "category tables" option in the [GENERAL] section
+of the configuration file, then the names of the tracks labeled with
+this category will be placed into a table of the appropriate
+dimensions. Tracks will be placed into the table in column-major
+format: you should first list stanzas for all rows of column 1, then
+all rows of column 2, etc.
+
+See the tutorial for more details.
 
 =item 22 das category, das landmark, das subparts, das superparts
 

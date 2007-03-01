@@ -1,3 +1,7 @@
+1.67-pre
+        * Added patch from Steve Taylor that allows one to group track labels into
+          a pretty MxN table.
+
 1.66    * Added files from SynView to the contrib directory; these files
           include a GUSdb adaptor and configuration files and sample
           data for a 'in-gbrowse' synteny viewer.

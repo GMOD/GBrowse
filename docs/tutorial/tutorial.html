@@ -7,7 +7,7 @@
 <body>
 <h1>Generic Genome Browser: A Tutorial</h1>
 
-<h2>Author: Lincoln Stein, June 16, 2003 (<i>revised 5 May 2006</i>)</h2>
+<h2>Author: Lincoln Stein, June 16, 2003 (<i>revised 23 Feb 2007</i>)</h2>
 
 <p>
 
@@ -2651,6 +2651,191 @@ href="data_files/volvox_all.fa">volvox_all.fa</a> likewise contain the
 entirety of the feature and DNA data.</i>
 </blockquote>
 
+<a name="cg"><h3>Display tracks within a group category as a table</h3>
+
+<p>A further refinement to display track information within the category
+ is a table display with headings for the rows and columns (see figure 27 for an example). 
+ This layout is useful for displaying data that highlights the experimental design as in
+ microarray or ChIP-on-Chip experiments.</p>
+
+<blockquote>
+<img src="figures/categorytable.png"><br>
+<i>Figure 27:</i> An example of a category table containing a 9 track table,  
+organized as 3 rows x 3 columns each with a heading. 
+</blockquote>
+
+<p>This was constructed using the option 'category tables' that is written at towards the top of 
+the conf file. The first parameter refers to the category you wish to add the table to, the 
+second is a space separated list of column headings, the third a 
+space separated list of row headings.</p>
+
+<blockquote class="example"><pre>
+# category table configuration
+category tables = 'ArrayExpts' 'strain-A strain-B strain-C' 'temperature anaerobic aerobic'
+</blockquote>
+
+<p>You can have any number of category tables. So to define an additional 2 x 3 
+table with category 'AnotherCategory' you would do the following:</p>
+
+<blockquote class="example"><pre>
+# category table configuration
+category tables = 'ArrayExpts' 'strain-A strain-B strain-C' 'temperature anaerobic aerobic', 'AnotherCategory' 'head1 head2', 'rowhead1 rowhead2 rowhead3'
+</blockquote>
+
+It is then important that your stanzas within the category are in
+column followed by row order (see example below and compare with
+figure 27). So stanza 1 is column 1/row 1, stanza 2 is column 1/row 2,
+stanza 3 is column 1/row 3, stanza 4 is column 2/row 1, stanza 5 is
+column 2/row 2 etc. This means each cell in the table must have a
+stanza. Any surplus tracks within that category will be ignored. For
+example if there was a stanza 10, this would not be shown.  If there
+are empty tracks they can be disabled using the 'disabled = 1' option
+in the stanza. So to display the category table in figure 27 you would
+use the following configuration.
+
+<blockquote class="example"><pre>
+[temp_strainA]
+category       = ArrayExpts
+feature        = temp_strainA_agg
+glyph          = xyplot
+bgcolor        = red
+neg_color      = green
+fgcolor        = black
+graph_type     = boxes
+height         = 80
+min_score      = -2.0
+max_score      = 2.0
+scale          = both
+key            = Temp strain A (1 expt)
+
+[anaerobic_strainA]
+category       = ArrayExpts
+feature        = anaerobic_strainA_agg
+glyph          = xyplot
+bgcolor        = red
+neg_color      = green
+fgcolor        = black
+graph_type     = boxes
+height         = 80
+min_score      = -2.0
+max_score      = 2.0
+scale          = both
+key            = Anaerobic Strain A (0 expt)
+disabled       = 1
+
+[aerobic_strainA]
+category       = ArrayExpts
+feature        = aerobic_strainA_agg
+glyph          = xyplot
+bgcolor        = red
+neg_color      = green
+fgcolor        = black
+graph_type     = boxes
+height         = 80
+min_score      = -2.0
+max_score      = 2.0
+scale          = both
+key            = Aerobic Strain A (0 expt)
+disabled       = 1
+
+
+[temp_strainB]
+category       = ArrayExpts
+feature        = temp_strainB_agg
+glyph          = xyplot
+bgcolor        = red
+neg_color      = green
+fgcolor        = black
+graph_type     = boxes
+height         = 80
+min_score      = -2.0
+max_score      = 2.0
+scale          = both
+key            = Temp strain B (2 expts)
+
+[anaerobic_strainB]
+category       = ArrayExpts
+feature        = anaerobic_strainB_agg
+glyph          = xyplot
+bgcolor        = red
+neg_color      = green
+fgcolor        = black
+graph_type     = boxes
+height         = 80
+min_score      = -2.0
+max_score      = 2.0
+scale          = both
+key            = Anaerobic Strain B (0 expt)
+disabled       = 1
+
+[aerobic_strainB]
+category       = ArrayExpts
+feature        = aerobic_strainB_agg
+glyph          = xyplot
+bgcolor        = red
+neg_color      = green
+fgcolor        = black
+graph_type     = boxes
+height         = 80
+min_score      = -2.0
+max_score      = 2.0
+scale          = both
+title          = blah
+key            = Aerobic strain B (3 expts)
+
+[temp_strainC]
+category       = ArrayExpts
+feature        = temp_strainC_agg
+glyph          = xyplot
+bgcolor        = red
+neg_color      = green
+fgcolor        = black
+graph_type     = boxes
+height         = 80
+min_score      = -2.0
+max_score      = 2.0
+scale          = both
+key            = Temp strain C (1 expt)
+
+[anaerobic_strainC]
+category       = ArrayExpts
+feature        = anaerobic_strainC_agg
+glyph          = xyplot
+bgcolor        = red
+neg_color      = green
+fgcolor        = black
+graph_type     = boxes
+height         = 80
+min_score      = -2.0
+max_score      = 2.0
+scale          = both
+key            = Anaerobic strain C (3 expts)
+
+[aerobic_strainC]
+category       = ArrayExpts
+feature        = aerobic_strainC_agg
+glyph          = xyplot
+bgcolor        = red
+neg_color      = green
+fgcolor        = black
+graph_type     = boxes
+height         = 80
+min_score      = -2.0
+max_score      = 2.0
+scale          = both
+key            = Aerobic strain C 3 (2 expts)
+</blockquote>
+
+<p>
+
+If you need to have multiple category tables, simply use continuation
+lines for the "category tables" option:
+
+<blockquote class="example"><pre>
+# category table configuration
+category tables = 'ArrayExpts' 'strain-A strain-B strain-C' 'temperature anaerobic aerobic'
+                  'CHiP-Chip'  'TFX1 ONE-CUT PHA4' '16-cell-stage 320-cell-stage adult'
+</blockquote>
 
 <hr>
 
@@ -3090,12 +3275,12 @@ href="file:///$CONF/gbrowse.conf">$CONF/gbrowse.conf/</a>.
 
 <p>
 
-Confirm that you can browse the database.  Figure 25 is a picture of
+Confirm that you can browse the database.  Figure 28 is a picture of
 the entire data set with all core tracks turned on.
 
 <blockquote>
 <img src="figures/third_party1.gif"><br>
-<i>Figure 27:</i> The core <i>C. elegans</i> dataset.
+<i>Figure 28:</i> The core <i>C. elegans</i> dataset.
 </blockquote>
 
 <h3>Uploading an Annotation File</h3>
@@ -3169,13 +3354,13 @@ button.  Select one of the annotation files, and then press the
 "Upload" button to upload the file to the server.  The annotations
 contained in the file should now appear on the display.  If you now do
 this for all five of the annotation files, you will eventually get a
-display like that shown in Figure 26.
+display like that shown in Figure 29.
 
 <p>
 
 <blockquote>
 <img src="figures/third_party2.gif"><br>
-<i>Figure 28:</i> After uploading four annotation files.
+<i>Figure 29:</i> After uploading four annotation files.
 </blockquote>
 
 <p>
@@ -3206,7 +3391,7 @@ named "elegans_sts.gff", and choose "Edit File...".
 
 <blockquote>
 <img src="figures/third_party3.gif"><br>
-<i>Figure 29:</i> The uploaded files can be edited in place by
+<i>Figure 30:</i> The uploaded files can be edited in place by
 clicking the "Edit File..." button.
 </blockquote>
 
@@ -3261,11 +3446,11 @@ key     = Microarray expression probe
 <p>
 
 With this combination of configurations, the display will now look
-as shown in Figure 28:
+as shown in Figure 31:
 
 <blockquote>
 <img src="figures/third_party4.gif"><br>
-<i>Figure 30:</i> After customizing the annotation files.
+<i>Figure 31:</i> After customizing the annotation files.
 </blockquote>
 
 <p>
@@ -3388,14 +3573,14 @@ remote sources = "ORFeome STSs"      http://localhost/elegans_sts.gff
 <p>
 
 When you reload the web page, you will see a popup menu appear next to
-the remote annotation URL textfield (Figure 29).  The menu will
+the remote annotation URL textfield (Figure 32).  The menu will
 contain options to load "ORFeome STSs" and "Expression probes", and
 selecting a menu item will have exactly the same effect as typing in
 the URL manually.
 
 <blockquote>
 <img src="figures/third_party5.gif"><br>
-<i>Figure 31:</i> The preset remote annotation URL popup menu.
+<i>Figure 32:</i> The preset remote annotation URL popup menu.
 </blockquote>
 
 The neat thing about all this is that it works across the
@@ -3683,10 +3868,10 @@ What if we want to see two of the four tracks?  We just add additional
 type= sections, separated by semicolons.  To see both the "repeat" and
 "Expression" tracks, we could request
 http://localhost/cgi-bin/das/elegans_extra?type=repeat;type=Expression
-(Figure 30).
+(Figure 33).
 
 <blockquote>
-<img src="figures/DAS1.gif"><br> <i>Figure 32:</i>
+<img src="figures/DAS1.gif"><br> <i>Figure 33:</i>
 The <i>C. elegans</i> core annotations database with the "repeat" and
 "Expression" tracks  superimposed on it using DAS.
 </blockquote>
@@ -3888,6 +4073,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Fri Sep 15 07:13:00 EDT 2006
+Last modified: Fri Feb 23 19:00:17 EST 2007
 <!-- hhmts end -->
 </body> </html>

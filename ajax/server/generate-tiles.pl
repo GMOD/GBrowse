@@ -17,9 +17,6 @@
 ###########################################################################
 
 use strict;
-use lib '/home/mitch/software/gmod/Generic-Genome-Browser/lib';
-use FindBin;
-use lib $FindBin::Bin;
 use Bio::DB::GFF;
 use Bio::Graphics;
 use Bio::Graphics::Browser;

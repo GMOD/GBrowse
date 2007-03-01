@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.1 2007-03-01 22:25:55 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.2 2007-03-01 23:00:42 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1632,15 +1632,24 @@ sub features2segments {
   my $features = shift;
   my $refclass = $CONFIG->setting('reference class') || 'Sequence';
   my $db = open_database();
-  my @segments = map {
-    my $version = eval {$_->isa('Bio::SeqFeatureI') ? undef : $_->version};
-    $db->segment(-class => $refclass,
-		 -name  => $_->ref,
-		 -start => $_->start,
- 		 -stop  => $_->end,
-		 -absolute => 1,
-                  defined $version ? (-version => $version) : ())} @$features;
+  my @segments = 
+    map {
+      my $version = eval {$_->isa('Bio::SeqFeatureI') ? undef : $_->version};
+      $db->segment(-class => $refclass,
+		   -name  => $_->ref,
+		   -start => $_->start,
+		   -stop  => $_->end,
+		   -absolute => 1,
+		   defined $version ? (-version => $version) : ())} @$features;
   warn "segments = @segments\n" if DEBUG;
+
+  # Filter out redundant segments; this can happen when the same basic feature is
+  # present under several names, such as "genes" and "frameworks"
+  my %seenit;
+  my $version = eval {$_->isa('Bio::SeqFeatureI') ? undef : $_->version};
+  $version ||= 0;
+  @segments = grep {!$seenit{$_->seq_id,$_->start,$_->end,$version}++} @segments;
+
   \@segments;
 }
 
@@ -1693,6 +1702,7 @@ sub resize {
 # interesting heuristic way of fetching sequence segments based on educated guesses
 sub lookup_features_from_db {
   my ($db,$settings) = @_;
+
   my @segments;
 
   warn "name = $settings->{name}, ref = $settings->{ref}, start = $settings->{start}, stop = $settings->{stop}, version = $settings->{version}" if DEBUG;
@@ -1729,6 +1739,7 @@ sub lookup_features_from_db {
   eval {$_->absolute(1)} foreach @segments;
 
   return unless @segments;
+
   # Filter out redundant segments; this can happen when the same basic feature is
   # present under several names, such as "genes" and "frameworks"
   my %seenit;
@@ -2777,7 +2788,7 @@ sub source_menu {
     ( $sources ?
       popup_menu(-name   => 'source',
 		 -values => \@sources,
-		 -labels => { map {$_ => $CONFIG->description($_)} $CONFIG->sources},
+		 -labels => { map {$_ => ($CONFIG->description($_)||'')} $CONFIG->sources},
 		 -default => $CONFIG->source,
 		 -onChange => 'document.mainform.submit()',
 		)

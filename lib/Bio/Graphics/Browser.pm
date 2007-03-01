@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.1 2007-03-01 22:25:56 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.2 2007-03-01 23:00:43 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1856,8 +1856,7 @@ sub name2segments {
       }
     }
   }
-
-  @segments;
+  return @segments;
 }
 
 sub _feature_get {
@@ -1887,25 +1886,25 @@ sub _feature_get {
   }
 
   warn "segments = @segments" if DEBUG;
-
   return unless @segments;
 
   # Deal with multiple hits.  Winnow down to just those that
   # were mentioned in the config file.
   my $types = $self->_all_types($db);
-  my @filtered = grep {
-    my $type    = $_->type;
-    my $method  = eval {$_->method} || '';
-    my $fclass  = eval {$_->class}  || '';
-    $type eq 'Segment'      # ugly stuff accomodates loss of "class" concept in GFF3
-	|| $type eq 'region'
+
+  my @filtered = 
+      grep {
+	my $type    = $_->type;
+	my $method  = eval {$_->method} || '';
+	my $fclass  = eval {$_->class}  || '';
+	$type eq 'Segment'      # ugly stuff accomodates loss of "class" concept in GFF3
+	  || $type eq 'region'
 	    || $types->{$type}
 	      || $types->{$method}
 		|| !$fclass
 		  || $fclass eq $refclass
 		    || $fclass eq $class;
-
-  } @segments;
+      } @segments;
 
   return @filtered if $dont_merge;
 

@@ -151,7 +151,9 @@ sub draw_parallel {
     my $minlen = $width * length($model);
 
     my ($major_interval,$minor_interval) = $self->panel->ticks(($stop-$start+1)/$unit_divider,$minlen);
-
+    $major_interval = $self->option('major_interval') || $major_interval;
+    $minor_interval = $self->option('minor_interval') || $minor_interval;
+    
     my $left  = $sw ? $x1+$height : $x1;
     my $right = $ne ? $x2-$height : $x2;
 

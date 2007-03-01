@@ -17,6 +17,9 @@
 ###########################################################################
 
 use strict;
+use lib '/home/mitch/software/gmod/Generic-Genome-Browser/lib';
+use FindBin;
+use lib $FindBin::Bin;
 use Bio::DB::GFF;
 use Bio::Graphics;
 use Bio::Graphics::Browser;
@@ -371,131 +374,33 @@ unless ($no_xml) {
 	"  <tile width=\"${tilewidth_pixels}\" />\n";
 }
 
-## Render the genomic ruler for all zoom levels
-
-my $ruler_dir = "${outdir_tiles}/ruler";
-unless (-e $ruler_dir || !$render_tiles) {
-  mkdir $ruler_dir or die "ERROR: problem with output directory ${outdir_tiles}! ($!)\n";
-}
-
-my $html_ruler_dir = "${html_outdir_tiles}/ruler" unless $no_xml;
-
-my $ruler_image_height;
-foreach my $zoom_level (@zoom_levels) {
-    my $zoom_level_name = $zoom_level->[0];
-
-    next unless $print_track_and_zoom{'ruler'}{$zoom_level_name};  # skip zoom levels we're not filling or rendering
-
-    my $tilewidth_bases = $zoom_level->[1] * ($tilewidth_pixels / 1000);
-
-    my $num_tiles = ceiling($landmark_length / $tilewidth_bases) + 1;  # 1 extra tile for the overrun
-    my $image_width = ($landmark_length / $zoom_level->[1]) * 1000;  # in pixels
-
-    $CONFIG->width ($image_width);  # set image width (in pixels) - necessary?
-
-    warn "----- GENERATING RULER TRACK AT ZOOM LEVEL $zoom_level_name... -----  " . tv_interval($start_time) . "\n" if $verbose;
-
-    # check/create output dir here, to pass to BatchTiledImage... IH 4/11/2006
-    my $current_ruler_dir = "${ruler_dir}/${zoom_level_name}/";
-    if ($render_tiles and !(-e $current_ruler_dir)) {
-      mkdir $current_ruler_dir or die "ERROR: could not make ${current_ruler_dir}!\n";
-    }
-    my $tile_prefix = "${current_ruler_dir}/rulertile";
-
-    my @argv = (-start => $landmark_start,
-		-end => $landmark_end,
-		-stop => $landmark_end,  # backward compatability with old BioPerl
-                -bgcolor => "",
-		-width => $image_width,
-		-grid => $render_gridlines,
-		-gridcolor => 'linen',
-		-key_style => 'none',  # don't want no key
-		-empty_tracks => $conf->setting(general => 'empty_tracks') || 'key',
-		-pad_top => 0,  # probably 0 by default, but we will specify just in case
-		-pad_left => 0,
-		-pad_right => $tilewidth_pixels,  # to accomodate for stuff overruning borders of last tile
-          );
-
-    my $ruler_panel = Bio::Graphics::Panel->new(@argv);
-    # we use a dummy gd object to set up the main panel palette
-    $ruler_panel->{gd} = GD::Image->new(1, 1);
-    setupPalette($ruler_panel);
-
-      # add genomic ruler (i.e. arrow segment); there is a description of the track options at the end of:
-      #   /usr/local/share/perl/5.8.4/Bio/Graphics/Glyph/arrow.pm (for a default BioPerl installation) - NOTE THAT IT IS HACKED !!!
-    my @track_settings = ($segment, => 'arrow',
-			       # double-headed arrow:
-			       -double => 1,
-
-			       # draw major and minor ticks:
-			       -tick => 2,
-
-			       # if we ever want unit labels, we may want to bring this back into action...!!!
-			       #-units => $conf->setting(general => 'units') || '',
-			       -unit_label => '',
-
-			       # if we ever want unit dividers to be loaded from $conf, we'll have to use
-			       # the commented-out option below, instead of hardcoding...!!!
-			       #-unit_divider => $conf->setting(general => 'unit_divider') || 1,
-			       #-unit_divider => 1,
-
-			       # forcing the proper unit use for major tick marks
-			       -units_forced => $zoom_level->[2]
-			      );
-    my $ruler_track = $ruler_panel->add_track(@track_settings);
-
-    # output ruler
-    $ruler_image_height = $ruler_panel->height;  # needed for XML file
-    if ($render_tiles) {
-        renderTileRange(
-                # NB change from 1-based to 0-based coords
-                $tile_ranges_to_render{'ruler'}{$zoom_level_name}->[0] - 1,
-                $tile_ranges_to_render{'ruler'}{$zoom_level_name}->[1] - 1,
-                $tilewidth_pixels,
-                $rendering_tilewidth,
-                $tile_prefix,
-                1,
-                $ruler_panel,
-                $ruler_track,
-                $ruler_image_height,
-                {@argv},
-                \@track_settings,
-                "",
-                # make track_num zero-based
-                0,
-                $segment,
-            );
-    }
-    $ruler_panel->finished();
-    $ruler_panel = undef;
-
-    # if we got this far with no fatal error, we can print info about this track to XML file
-    print XMLFILE "  <ruler tiledir=\"${html_ruler_dir}/\" height=\"${ruler_image_height}\" />\n" unless $no_xml;
-   
-    warn "done rendering ruler: " . tv_interval($start_time) . "\n" if $render_tiles && $verbose;
-}
-
 # Render the genomic tiles for all tracks and zoom levels
 print XMLFILE "  <tracks>\n" unless $no_xml;
 
 # iterate over tracks (i.e. labels)
 for (my $label_num = 0; $label_num < @track_labels; $label_num++)
 {
-    next if ($track_labels[$label_num] eq 'ruler');  # skip ruler, we render it above
     my $label = ($track_labels[$label_num]);
-    
-    my %track_properties = $conf->style($label);
-    my $track_name = $track_properties{"-key"};
+
+    my $image_height;
+    my $track_name;
+    my @feature_types;
+
+    if ($label ne 'ruler') {
+        my %track_properties = $conf->style($label);
+        $track_name = $track_properties{"-key"};
+
+        # get feature types in form suitable for Bio::DB::GFF
+        @feature_types = $conf->label2type($label, $landmark_length);
+    }
 
     # sometimes the track name is unspecified, so use the label instead
     $track_name = $label unless $track_name;
 
-    print XMLFILE "    <track name=\"${track_name}\">\n" unless $no_xml;
-
     warn "=== GENERATING TRACK $label ($track_name)... ===\n" if $verbose;
 
-    # get feature types in form suitable for Bio::DB::GFF
-    my @feature_types = $conf->label2type($label, $landmark_length);
+    print XMLFILE "    <track name=\"${track_name}\">\n"
+        unless $no_xml || ($label eq 'ruler');
 
     my $lang = $CONFIG->language;
 
@@ -538,12 +443,12 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
 	$html_current_outdir = "${html_current_outdir}/${zoom_level_name}/" unless $no_xml;
 
 	my $tile_prefix = "${current_outdir}/tile";
+        $tile_prefix = "${current_outdir}/rulertile"
+            if $track_name eq 'ruler';
 
         my @argv = (-start => $landmark_start,
 		    -end => $landmark_end,
 		    -stop => $landmark_end,  # backward compatability with old BioPerl
-		    -key_color => $CONFIG->setting('key bgcolor') || 'moccasin',
-                    #-bgcolor => $CONFIG->setting('detail bgcolor') || 'white',
                     -bgcolor => "",
 		    -width => $image_width,
 		    -grid => $render_gridlines,
@@ -562,14 +467,42 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
         $panel->{gd} = GD::Image->new(1, 1);
         setupPalette($panel);
 
-	  my $track;
+        my $track;
         my $is_global = 0;
         my @track_settings = ($conf->default_style, $conf->i18n_style($label, $lang, $landmark_length));
-	  if ($conf->setting($label=>'global feature')) {
+        if ($track_name eq 'ruler') {
+            my ($major, $minor) = $panel->ticks;
+            @track_settings = (-glyph => 'arrow',
+			       # double-headed arrow:
+			       -double => 1,
+
+			       # draw major and minor ticks:
+			       -tick => 2,
+
+			       # if we ever want unit labels, we may 
+                               # want to bring this back into action...!!!
+			       #-units => $conf->setting(general => 'units') || '',
+			       -unit_label => '',
+
+			       # if we ever want unit dividers to be
+                               # loaded from $conf, we'll have to use
+			       # the commented-out option below, 
+                               # instead of hardcoding...!!!
+			       #-unit_divider => $conf->setting(general => 'unit_divider') || 1,
+			       #-unit_divider => 1,
+
+			       # forcing the proper unit use for
+                               # major tick marks
+			       -units_forced => $zoom_level->[2],
+                               -major_interval => $major,
+                               -minor_interval => $minor
+			      );
             $track = $panel->add_track($segment, @track_settings);
             $is_global = 1;
-	  }
-	  else {
+        } elsif ($conf->setting($label=>'global feature')) {
+            $track = $panel->add_track($segment, @track_settings);
+            $is_global = 1;
+        } else {
             $track = $panel->add_track(-glyph => 'generic', @track_settings);
 
             # NOTE: $track is a Bio::Graphics::Glyph::track object
@@ -597,12 +530,12 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
 	  }
 	}
         
-        warn "features added: " . tv_interval($start_time) . "\n" if ($render_tiles && $verbose);
+        warn "track is set up: " . tv_interval($start_time) . "\n" if ($render_tiles && $verbose);
 
         # get image height, now that the panel is fully constructed
-        my $image_height = $panel->height;
+        $image_height = $panel->height;
 
-        warn "track has been laid out: " . tv_interval($start_time) . "\n" if ($render_tiles && ($verbose >= 1));
+        warn "track is laid out: " . tv_interval($start_time) . "\n" if ($render_tiles && ($verbose >= 1));
 
         if ($render_tiles) {
             renderTileRange(
@@ -619,26 +552,28 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
                 {@argv},
                 \@track_settings,
                 $html_current_outdir || "",
-                # make track_num zero-based
-                $label_num - 1,
-                $segment,
+                # track_num doesn't include the ruler
+                $label_num - 1
                 );
 	}
         $panel->finished();
         $panel = undef;
 
-        warn "tiles for track $label_num zoom $zoom_level_name rendered: " . tv_interval($start_time) . "\n" if ($render_tiles && ($verbose >= 1));
+        warn "tiles for track $label zoom $zoom_level_name rendered: " . tv_interval($start_time) . "\n" if ($render_tiles && ($verbose >= 1));
 
 	# if we got this far with no fatal error, we can print info about this track to XML file
-	print XMLFILE
-	    "      <zoomlevel tileprefix=\"${html_current_outdir}\" name=\"${zoom_level_name}\" ",
+        print XMLFILE
+            "      <zoomlevel tileprefix=\"${html_current_outdir}\" name=\"${zoom_level_name}\" ",
             "unitspertile=\"${tilewidth_bases}\" height=\"${image_height}\" numtiles=\"${num_tiles}\" />\n"
-	    	unless ($no_xml);
+            unless $no_xml || ($label eq 'ruler');
 
     } # ends loop iterating through zoom levels
 
-    print XMLFILE "    </track>\n" unless $no_xml;
-
+    if ($label eq 'ruler') {
+        print XMLFILE "  <ruler tiledir=\"${html_outdir_tiles}/ruler/\" height=\"${image_height}\" />\n" unless $no_xml;
+    } else {
+        print XMLFILE "    </track>\n" unless $no_xml;
+    }
 }  # ends the 'for' loop iterating through @track_labels
 
 unless ($no_xml) {
@@ -749,9 +684,7 @@ sub renderTileRange {
         $panel_args,
         $track_settings,
         $html_current_outdir,
-        $track_num,
-        $segment) = @_;
-
+        $track_num) = @_;
 
     # these should really divide evenly, and of course no one will MISUSE
     # the script, right? !!!
@@ -904,7 +837,8 @@ sub renderTileRange {
                 writeHTML($tile_prefix, $x, $y, $small_tile_num,
                           $tilewidth_pixels, $image_height,
                           $track_num, $html_current_outdir,
-                          $small_tile_boxes[$y] || []);
+                          $small_tile_boxes[$y] || [])
+                    if $track_num >= 0;
                 if (!$is_global) {
                     if (!defined($nonempty_smalltiles[$x]{$y})) {
                         if (defined($blankTile)) {

@@ -1243,7 +1243,7 @@ sub _do_the_inferring {
                 $feat->end($stop);
             }    
             else {
-                warn "this should never happen";
+                warn "this should never happen; try setting -inferCDS = 1";
             }
             push @noncoding_array, $utr;
             push @coding_array, $feat;

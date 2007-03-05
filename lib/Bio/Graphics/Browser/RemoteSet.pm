@@ -88,7 +88,6 @@ sub feature_file {
 
   # DAS handling
   my $url = $self->source2url($label);
-  warn "label = $label, url=$url";
 
   if ($url =~ m!^(http://.+/das)/([^/?]+)(?:\?(.+))?$!) { # DAS source!
     unless (eval "require Bio::Das; 1;") {

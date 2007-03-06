@@ -1,6 +1,8 @@
-1.67-pre
+1.67
         * Added patch from Steve Taylor that allows one to group track labels into
           a pretty MxN table.
+	* Fixed problems with displaying remote DAS tracks which
+	  manifested itself as links not working correctly.
 
 1.66    * Added files from SynView to the contrib directory; these files
           include a GUSdb adaptor and configuration files and sample

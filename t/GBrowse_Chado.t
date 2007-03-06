@@ -53,11 +53,18 @@ my %args = (
           -inferCDS => 0,
 );
 
-
+open (SAVEERR,">&STDERR");
+my $foo = \*SAVEERR;
+open (STDERR,">/dev/null");
 my $db = eval { Bio::DB::Das::Chado->new(%args) };
-warn $@ if $@;
+open (STDERR,">&SAVERR");
+
+unless ($db) {
+  skip('No test database running',1) for 1..TEST_COUNT;
+  exit 0;
+}
+
 ok($db);
-fail(TEST_COUNT - 1) unless $db;
 
 # there should be one gene named 'abc-1'
 @f = $db->get_feature_by_name('abc-1');

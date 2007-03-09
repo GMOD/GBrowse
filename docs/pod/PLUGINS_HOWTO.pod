@@ -71,7 +71,7 @@ setting:
 
       plugin_path = /usr/local/gbrowse_plugins
 
-GBrowse currently recognizes four distinct types of plugins:
+GBrowse currently recognizes five distinct types of plugins:
 
 =over
 
@@ -191,7 +191,7 @@ who wrote it. This text is displayed when the user presses the
 =item     $type = $self->type()
 
 This tells gbrowse what the plugin's type is. It must return one of
-the scripts "dumper," "finder," "annotator" or "highlighter" as
+the scripts "dumper", "finder", "annotator", "highlighter" or "filter" as
 described in the introduction to this documentation. If the method is
 not overridden, type() will return "dumper."
 

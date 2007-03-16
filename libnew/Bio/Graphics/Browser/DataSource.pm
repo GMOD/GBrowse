@@ -109,6 +109,11 @@ sub labels {
   return grep { $self->authorized($_)} @labels;
 }
 
+sub detail_tracks {
+  my $self = shift;
+  return grep { !/:.+$/ } $self->labels;
+}
+
 sub overview_tracks {
   my $self = shift;
   grep { ($_ eq 'overview' || /:overview$/) && $self->authorized($_) } $self->configured_types;

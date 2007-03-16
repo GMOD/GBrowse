@@ -180,11 +180,42 @@ The global configuration, the data source configuration, and the
 session are passed in as separate objects and stored as instance
 variables.
 
+
 =================================================================
 
-5) Bio::Graphics::Browser::Render
+6) Bio::Graphics::Browser::View
 
-This is the base class for driving the browser. It contains all
-methods common to the template, HTML and Ajax versions.
+This class provides methods for generating the images and imagemaps
+themselves (the core of the application!).
 
+ $view = Bio::Graphics::Browser::View->new($datasource,$page_settings);
+
+Create a new view object using information from the provided data
+source and settings.
+
+ @maps = $view->image_and_map(\%options);
+
+Generate a list of [GD object,clickable imagemap] from the current
+settings. The idea is that each GD object is turned into a PNG or SVG
+image for display. Options are:
+
+ segment  => [$ref,$start,$end,$flip]   # segment to render
+ tracks   => \@tracks                   # list of tracks to render
+ panel    => overview|region|detail     # which panel to generate
+ features => Bio::Graphics::FeatureFile # additional features
+ map_type => feature|center             # whether to generate a map
+                                           for each feature or a
+                                           centering map
+
+ $track_map = $view->tracks(\%options);
+
+Generate a hashref in which keys are the track names and values are an
+array of [$gd,$map]. The idea here is to facilitate distribution of
+track generation across multiple machines. The server will serialize
+this data structure.
+
+Random Notes:
+
+1. for remote invocation, the page_settings hash will be sent as a
+serialized request to the image generator
 

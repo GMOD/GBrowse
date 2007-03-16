@@ -249,7 +249,7 @@ sub render_body {
 
   my $title = $self->render_top($features);
 
-  # THIS IS AN ASYNCHRONOUS CALL
+  # THIS IS AN ASYNCHRONOUS CALL AND NEEDS TO BE MOVED OUT OF THE RENDER_* TREE
   warn "param() =",join ' ',param();
   if (param('render') && param('render') eq 'detailview') {
     $self->render_tracks($self->seg);

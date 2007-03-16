@@ -163,7 +163,12 @@ sub render_instructions {
   my $oligo        = $self->plugins->plugin('OligoFinder') ? ', oligonucleotide (15 bp minimum)' : '';
   my $rand         = substr(md5_hex(rand),0,5);
 
-  my $html = table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
+  # standard status bar
+  my $html =  div({-id=>'ajaxStatus',
+		   -style=>'position:absolute; width:100px; height:20px; top:5px; left: 5px; display:block; background-color:khaki',
+		   },'Loading...');
+
+  $html .= table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
 		   TR(
 		      td({-align=>'left', -colspan=>2},
 			 $self->toggle('Instructions',

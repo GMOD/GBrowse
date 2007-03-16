@@ -289,6 +289,7 @@ lib/Bio/Graphics/Browser/Realign.pm
 lib/Bio/Graphics/Browser/RemoteSet.pm
 lib/Bio/Graphics/Browser/UploadSet.pm
 lib/Bio/Graphics/Browser/Util.pm
+lib/Bio/Graphics/FeatureFile.pm
 lib/Bio/Graphics/Glyph/allele_tower.pm
 lib/Bio/Graphics/Glyph/connector.pm
 lib/Bio/Graphics/Glyph/drosophila_arrow.pm

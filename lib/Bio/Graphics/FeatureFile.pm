@@ -1,6 +1,6 @@
 package Bio::Graphics::FeatureFile;
 
-# $Id: FeatureFile.pm,v 1.1.2.1 2007-03-16 21:22:39 lstein Exp $
+# $Id: FeatureFile.pm,v 1.1.2.2 2007-03-19 15:42:03 lstein Exp $
 # This package parses and renders a simple tab-delimited format for features.
 # It is simpler than GFF, but still has a lot of expressive power.
 # See __END__ for the file format
@@ -629,7 +629,7 @@ sub parse_line {
 
 sub _closegroup {
   my $self = shift;
-  push @{$self->{features}{$self->{grouptype}}},$self->{group};
+  push @{$self->{features}{$self->{grouptype}}},$self->{group} if $self->{group};
   undef $self->{group};
   undef $self->{grouptype};
 }

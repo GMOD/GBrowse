@@ -1,11 +1,3 @@
-#!/usr/bin/perl
-
-# ===============================================
-# Author: Todd Harris (harris@cshl.org)
-# gbrowse_on_osx.pod
-# Revision $Id: INSTALL.MacOSX.pod,v 1.3 2003-12-01 18:15:08 scottcain Exp $
-# Copyright @ 2003 Cold Spring Harbor Laboratory
-# ===============================================
 
 =pod
 
@@ -117,14 +109,14 @@ additional libraries.
 
   http://www.apple.com/macosx/x11/
 
-=item 3. The MySQL database, version 3.23.39 or higher
+=item 3. The MySQL database, version 3.23.39 or higher (optional)
 
 The MySQL database is a fast open source relational database that is
 widely used for web applications.
 
   http://www.mysql.com
 
-=item 4. Perl, version 5.005 or higher
+=item 4. Perl, version 5.6 or higher
 
 Preinstalled on MacOS X.
 
@@ -161,11 +153,11 @@ annotations.
     4. libgd 2.0.15 or higher
     5. expat 1.95.6 or higher
 
-=item 6. BioPerl package, vers 1.2.3 or higher
+=item 6. BioPerl package, vers 1.5.2 or higher
 
   http://www.bioperl.org/
 
-=item 7. Apache 1.3.26 or higher (http://www.apache.org)
+=item 7. Apache 1.3* or 2.0* (http://www.apache.org)
 
 The Apache web server is the industry standard open source web server
 for Unix and Windows systems. Preinstalled on Mac OS X.
@@ -202,7 +194,7 @@ X11 can be installed in a variety of ways.  This document only
 describes installations with Apple's X11 package because it is the
 fastest and easiest way to install X.
 
-NOTE: X11 will come preinstalled with OS X.3 and greater.
+NOTE: X11 will come preinstalled with OS X 10.3 and greater.
 
 Fetch the Apple X11 and X11 SDK installer packages.
 
@@ -213,9 +205,10 @@ right-hand corner.  First intall the X11 package, followed by the X11
 SDK by double clicking each package icon and following the onscreen
 instructions.
 
-=item 2. Creating users for MySQL
+=item 2. Creating users for MySQL (optional)
 
-Since we are going to be installing MySQL, it's appropriate to create
+Mysql is a popular database option, though not the only one.
+If you install MySQL you will have to create
 specific users and groups for the database.
 
 User and group management under Mac OS X is handled by the NetInfo
@@ -265,7 +258,7 @@ more closely mirrors mysql installations on unix systems.
 
 =over 4
 
-=item Installing MySQL from source
+=item Installing MySQL from source (optional)
 
 =over 4
 
@@ -293,7 +286,7 @@ more closely mirrors mysql installations on unix systems.
 
 =back
 
-=item Installing MySQL from a precompiled package
+=item Installing MySQL from a precompiled package (optional)
 
 =over 4
 
@@ -328,7 +321,7 @@ paths (ie the mysql.sock is found in /etc/).
     % sudo /sw/bin/mysqld_safe &
 
 =item 2. Set a root user for the MySQL installation
-   
+
     % mysqladmin -u root password 'new_password'
 
 =item 3. Finally, be sure to add the mysql/bin directory to your path.
@@ -346,7 +339,11 @@ GBrowse installation.  Although GD and GD.pm can both be installed by
 fink, there are path and versioning difficulties that have yet to be
 worked out.  In addition to <little> gd, there is <big> GD, a perl
 library for interacting with little gd.
-  
+
+See http://www.paginar.net/matias/articles/gd_x_howto.html for
+another description of installing these libraries manually if you
+run into difficulties.
+
 Install jpegsrc and libpng
 
   % curl -O  ftp://ftp.uu.net/graphics/jpeg/jpegsrc.v6b.tar.gz
@@ -430,7 +427,7 @@ GBrowse proper.
         11. Parse::RecDescent                      CPAN
         12. Bundle::Bioperl                        CPAN
 
-=item 7. Installing DBD::mysql
+=item 7. Installing DBD::mysql (optional)
 
 If you have problems installing DBD via CPAN, read this, and check the
 paths to your mysql/include and mysql/lib libraries. There are some
@@ -530,7 +527,7 @@ required modifying the DocumentRoot, adding a ScriptAlias, or creating
 a VirtualHost. See the Apache documentation for more information.
 
 You can start Apache by:
-  
+
   % sudo /usr/sbin/apachectl start
 
 =head2 --- Testing the Browser
@@ -570,8 +567,8 @@ Material in this document is copyright 2001-2003 by the Cold Spring
 Harbor Laboratory. This information is provided "AS-IS" without any
 warranty, expressed or implied.
 
-$Id: INSTALL.MacOSX.pod,v 1.3 2003-12-01 18:15:08 scottcain Exp $
+Author: Todd Harris (harris@cshl.org)
+
+$Id: INSTALL.MacOSX.pod,v 1.3.14.1 2007-03-20 13:41:48 briano Exp $
 
 =cut
-
-

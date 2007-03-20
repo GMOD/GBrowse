@@ -1547,7 +1547,7 @@ all rows of column 2, etc.
 
 See the tutorial for more details.
 
-=item 22 das category, das landmark, das subparts, das superparts
+=item 22 das category, das landmark, das subparts, das superparts, das glyph, das type
 
 All these options pertain to exporting the GBrowse database as a DAS
 data source.  Please see L<DAS_HOWTO> for more information.

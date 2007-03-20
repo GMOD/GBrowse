@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.6.8.1.2.2 2007-03-05 23:27:47 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.3 2007-03-20 23:30:51 lstein Exp $
 
 use Bio::DB::GFF;
 use File::Basename 'basename';
@@ -55,9 +55,9 @@ use Bio::Graphics::Browser::Util;
 use Text::Shellwords;
 use vars qw($DB $DSN $HEADER %ERRCODES $CONFIG
             $VERSION $DAS_VERSION $CONF_DIR 
-            %CACHED_TYPES);
+            %CACHED_TYPES %FORCED_GROUP);
 
-#$Id: das.PLS,v 1.6.8.1.2.2 2007-03-05 23:27:47 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
+#$Id: das.PLS,v 1.6.8.1.2.3 2007-03-20 23:30:51 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';
@@ -82,13 +82,14 @@ use constant CAPABILITIES => join '; ',qw(error-segment/1.0 unknown-segment/1.0 
 	     );
 $CONFIG = open_config($CONF_DIR) or error_header('Could not read config files'=> 500);
 $HEADER = 0;
+%FORCED_GROUP = ();
 
 my ($junk,$dsn,$operation) = split '/',path_info();
 $DSN = $dsn;
 $operation ||= '';
 my %sources = map {$_=>1} $CONFIG->sources;
 
-do { error_header('invalid request',400); exit 0 } unless $DSN;
+do { error_header('please append a command such as /types, to this URL',400); exit 0 } unless $DSN;
 do { list_dsns();   exit 0 } if $dsn eq 'dsn' or $operation eq 'dsn';
 do { error_header('invalid data source, use the dsn command to get list',401); exit 0 } 
       unless $sources{$DSN};
@@ -103,7 +104,7 @@ do { features();     exit 0 }      if $operation eq 'features';
 do { stylesheet();   exit 0 }      if $operation eq 'stylesheet';
 do { dna();          exit 0 }      if $operation eq 'dna';
 
-error_header('invalid request',400);
+error_header('invalid request; please append a command such as /types to this URL',400);
 exit 0;
 
 # -----------------------------------------------------------------
@@ -236,10 +237,16 @@ sub features {
     }
   }
 
-  my ($category2type,$type2category) = categories($CONFIG);
-  push @filter,map {exists $category2type->{$_} ? @{$category2type->{$_}} : $_ }
-    @ordinary_categories;
-  @filter = map {$CONFIG->label2type($_)} $CONFIG->labels unless @filter;
+  my ($category2type,$type2category,$top_types) = categories($CONFIG);
+  my %valid_types = map {$_=>1} @$top_types;
+
+  unless (@filter || @category) {
+    @filter = @$top_types;
+  }
+
+  push @filter,map {exists $category2type->{$_} ? @{$category2type->{$_}} : $_ } @ordinary_categories;
+  @filter = map {$CONFIG->setting(feature=>$_)} $CONFIG->labels unless @filter;
+  @filter = grep {$valid_types{$_}} @filter;
 
   ok_header();
   print <<END
@@ -314,12 +321,14 @@ sub dump_segment {
     %agg_map = map {($_->get_method||'') => ($_->main_name||'')} $DB->aggregators;
   }
 
-  my $iterator = $seq->features(-types=>$filter,-merge=>1,-iterator=>1);
-  while (my $f = $iterator->next_seq) {
-    my @subparts = $f->get_SeqFeatures;
-    print_feature($f,undef,$type2category,\%agg_map); # unless @subparts;
-    my $count = 0;
-    print_feature($_,$f,$type2category,\%agg_map,++$count)     foreach @subparts;
+  if (@$filter) {
+    my $iterator = $seq->features(-types=>$filter,-merge=>1,-iterator=>1);
+    while (my $f = $iterator->next_seq) {
+      my @subparts = $f->get_SeqFeatures;
+      print_feature($f,undef,$type2category,\%agg_map); # unless @subparts;
+      my $count = 0;
+      print_feature($_,$f,$type2category,\%agg_map,++$count)     foreach @subparts;
+    }
   }
 
   print qq(</SEGMENT>\n);
@@ -345,6 +354,8 @@ sub print_feature {
   my $phase       = $f->phase;
   my $pid         = eval{$parent->id}||'';
   my $id          = $f->id || $pid . "/$count";
+  # to avoid binary IDs!
+  $id             = unpack('L',$id) if ref($DB) eq 'Bio::DB::GFF::Adaptor::berkeleydb';
   my $fid         = $id;
   my @notes       = $f->notes if $f->can('notes');
 
@@ -356,6 +367,9 @@ sub print_feature {
     $group       = defined $parent ? $parent->id : $id;
     $gclass      = '';
   }
+
+  my $group_type    = forced_group($parent||$f) || $type;
+  $group_type =~ s/\:\w+$//;
 
   # This is way nasty.  The aggregator may have changed the method of the
   # main feature, so we need to change it back to what it was originally
@@ -385,7 +399,7 @@ sub print_feature {
     if($url ne 'none') {
       hack_link(\$url);
       $link = qq(<LINK href="$url">$info</LINK>);
-      $gtype = qq( type="$class")
+      $gtype = qq( type="$group_type")
     }
   }
 
@@ -748,26 +762,30 @@ END
     print qq(  <CATEGORY id="$cat">\n);
 
     my @types = exists $category2type->{$cat} ? @{$category2type->{$cat}} : 'default';
+    my %doneit;
 
     for my $type (@types) {
       my $label =  $cat eq 'default' ? 'TRACK DEFAULTS'
 	                             : $type2category->{__label__}{$type} || $CONFIG->type2label($type);
+      my $forced_type = $CONFIG->setting($label=>'das type');
+      my $typeid = $forced_type || $type;
+      next if $doneit{$typeid}++;
 
-      print qq(     <TYPE id="$type">\n);
+      print qq(     <TYPE id="$typeid">\n);
       my %type_style = $config->config->style($label);
 
       my %style = (%default_style,map {ref $type_style{$_}?():($_=>$type_style{$_})} keys %type_style);
       delete $style{-feature};
       delete $style{-feature_low};
       delete $style{-link} if $style{-link} eq 'AUTO';
-      my $glyph = $style{-glyph};
+      my $glyph = $style{'-das glyph'} || $style{-glyph} || 'box';
 
       print qq(        <GLYPH>\n);
       print qq(           <\U$glyph\E>\n);
       for my $attribute (keys %style) {
 	(my $name = $attribute) =~ s/^-//;
 	$name =~ s/\s/_/g;
-	next if $name eq 'glyph';
+	next if $name =~ /glyph|category/;
 	my $value = escapeHTML($style{$attribute});
 	print qq(              <\U$name\E>$value<\U/$name\E>\n);
       }
@@ -785,7 +803,7 @@ END
 ;
 }
 
-# calculate type and category from acedb type and method
+# calculate type and category from type and method
 sub transmute {
   my $type = shift;
   my $map  = shift;
@@ -803,6 +821,22 @@ sub transmute {
     }
   }
   return 'miscellaneous';  # no success
+}
+
+# -----------------------------------------------------------------
+sub forced_group {
+  my $feature = shift;
+  return unless $feature;
+  my $type = $feature->type;
+  return $FORCED_GROUP{$type} if exists $FORCED_GROUP{$type};
+  my $forced_group;
+  my $label = $CONFIG->type2label($type);
+  unless ($label) {
+    $type =~ s/:\w+//;
+    $label = $CONFIG->type2label($type);
+  }
+  $forced_group = $CONFIG->setting($label => 'das type') if $label;
+  return $FORCED_GROUP{$type} = $forced_group;
 }
 
 # -----------------------------------------------------------------

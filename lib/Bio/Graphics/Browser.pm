@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.2 2007-03-01 23:00:43 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.3 2007-03-20 23:30:54 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1420,7 +1420,7 @@ sub _overview {
 	return defined $section && $section =~ /$region_name/;
       };
       foreach (keys %$feature_files) {
-	my $ff = $feature_files->{$_};
+	my $ff = $feature_files->{$_} or next;
 	next unless $ff->isa('Bio::Graphics::FeatureFile'); #only FeatureFile supports this
 	$ff->render($panel,-1,$track_options->{$_},undef,undef,$select);
       }

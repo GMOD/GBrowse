@@ -7,7 +7,7 @@
 <body>
 <h1>Generic Genome Browser: A Tutorial</h1>
 
-<h2>Author: Lincoln Stein, June 16, 2003 (<i>revised 23 Feb 2007</i>)</h2>
+<h2>Author: Lincoln Stein, June 16, 2003 (<i>revised 20 Mar 2007</i>)</h2>
 
 <p>
 
@@ -3896,6 +3896,49 @@ When you reload, the page will now show a popup menu of pre-defined
 DAS sources that users can choose.  The DAS sources can be local, as
 shown here, or located on one or more remote web sites.
 
+<h3>Exporting DAS Tracks to Ensembl and other Genome Browsers</h3>
+
+<p>
+
+GBrowse DAS tracks can be layered onto <a
+href="http://www.ensembl.org">Ensembl</a> and other DAS-aware genome
+browsers. There are a couple of things to bear in mind:
+
+</p>
+
+<ol>
+  <li>Only the tracks explicitly labeled with "das category" will be
+      exported.
+  <li>The range of glyphs supported by Ensembl is more limited than GBrowse.
+</ol>
+
+<p>The last is a gotcha. The official list of DAS-recognized glyphs
+can be found <a
+href="http://www.biodas.org/documents/spec.html#glyphid">here</a>, but
+gbrowse has a larger number of glyphs. Because of this, DAS-exported
+features may not look on Ensembl the way they look on GBrowse. There
+are two workarounds for this:
+
+<dl>
+  <dt>The <i>das glyph</i> option
+  <dd>Set this option in an exported track stanza in order to force
+  the glyph
+      to a standard DAS glyph, such as "box". For example:
+      <blockquote><pre>
+      das glyph = box
+      </pre></blockquote>
+  <dt>The <i>das type</i> option
+  <dd>Ensembl and possibly other browsers treat certain feature types
+      specially. In particular, if a feature has a type of "gene" then
+      Ensembl will display it with angled introns. Set <i>das type</i>
+      in a track stanza to force the reported type to one of these
+      special values. Example:
+      <blockquote><pre>
+      das type = gene
+      </pre></blockquote>
+</dl>
+
+
 <h3>Running GBrowse off DAS Entirely</h3>
 
 <p>
@@ -4065,6 +4108,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Tue Mar 13 12:31:08 EDT 2007
+Last modified: Tue Mar 20 18:28:06 EDT 2007
 <!-- hhmts end -->
 </body> </html>

@@ -5,14 +5,9 @@ protocol for sharing and integrating genomic annotations.  GBrowse can
 act both as a DAS front end for visualization and as a DAS server for
 sharing your annotations.
 
-For a good introduction to the DAS features of GBrowse, see the online
-tutorial at http://www.gmod.org/ggb/tutorial/tutorial.html#DAS.  This
-document is a concise reference to the DAS integration features.
-
 You will need to install the Perl Bio::Das module before you can use
 any of the DAS features.  This module is available from CPAN
-( http://www.cpan.org ), or via the ActiveState PPM tool in the
-repository http://www.gmod.org/ggb/ppm .
+(L<http://www.cpan.org>), or via the ActiveState PPM tool.
 
 =head2 CONFIGURING GBROWSE TO BE A DAS SERVER
 
@@ -123,30 +118,25 @@ errors.
 
 You can display individual DAS tracks in GBrowse just by typing in the
 URL of a DAS server in the "Add remote annotations" section of the
-GBrowse main web page.  The syntax of the URL is simple:
+GBrowse main web page.  The syntax of the URL is simple - some examples:
 
 =over 4
 
-=item http://genome.cse.ucsc.edu/cgi-bin/das/hg16
+=item http://www.wormbase.org/db/das/elegans/features?segment=I
 
-Insert all features defined in database hg16 (human genome release
-from July 2003) from the DAS server located at genome.cse.ucsc.edu.
+Insert all features of C. elegans chromosome I
 
-=item http://genome.cse.ucsc.edu/cgi-bin/das/hg16?type=genscan
+=item http://www.wormbase.org/db/das/elegans/features?segment=I:1000,2000
 
-Insert all features of type "genscan" from the UCSC database.
+Insert all features of a given segment of C. elegans chromosome I.
 
-=item http://genome.cse.ucsc.edu/cgi-bin/das/hg16?type=genscan;type=mgcFullMrna
+=item http://www.wormbase.org/db/das/elegans/features?segment=I:1000,2000;category=SAGE_tag:SAGE_tag_genomic_unique
 
-Insert all features of type "genscan" and of type "mgcFullMrna."
+Insert all unique SAGE tags from the given segment of chromosome I.
 
-=item http://genome.cse.ucsc.edu/cgi-bin/das/hg16?category=variation
+=item http://genome.cse.ucsc.edu/cgi-bin/das/hg18/types
 
-Insert all features of category "variation."
-
-=item http://genome.cse.ucsc.edu/cgi-bin/das/hg16?category=variation;type=genscan
-
-Insert all features of category "variation" or of type "genscan."
+Insert all known types in human genome build 18.
 
 =back
 

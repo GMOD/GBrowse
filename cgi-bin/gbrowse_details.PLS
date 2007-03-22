@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12 2006-10-10 21:14:46 scottcain Exp $
+# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.1 2007-03-22 02:24:24 scottcain Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -74,6 +74,7 @@ my $class = param('class');
 my $ref   = param('ref');
 my $start = param('start');
 my $end   = param('end');
+my $f_id  = param('feature_id');
 
 # Migrate from 1.56 way of specifying source to 1.57 way
 # This may cause a redirect and exit 0 at this point!
@@ -90,9 +91,15 @@ print $CONFIG->header || h1("$head_name Details");
 
 my $db = open_database();
 
-my @features = sort {$b->length<=>$a->length} $CONFIG->_feature_get($db,$name,$class);
-@features    = sort {$b->length<=>$a->length} $CONFIG->_feature_get($db,$ref,$class,$start,$end,1)
-  unless @features;
+my @features;
+if ($f_id) {
+  @features = $CONFIG->_feature_get($db,$name,$class,$start,$end,1,0,$f_id);
+}
+else {
+  @features = sort {$b->length<=>$a->length} $CONFIG->_feature_get($db,$name,$class);
+  @features    = sort {$b->length<=>$a->length} $CONFIG->_feature_get($db,$ref,$class,$start,$end,1)
+    unless @features;
+}
 
 warn "features = @features" if DEBUG;
 

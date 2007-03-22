@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.19 2007-02-07 03:57:40 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.19.2.1 2007-03-22 02:24:25 scottcain Exp $
 
 =head1 NAME
 
@@ -109,7 +109,7 @@ sub new {
 
     my $self = shift;
 
-    my ( $name, $factory, $base_start, $stop, $db_id, $target ) = @_;
+    my ( $name,$factory,$base_start,$stop,$db_id,$target,$feature_id ) = @_;
 
     $target ||=0;
     my $strand;
@@ -187,7 +187,7 @@ sub new {
              f.feature_id = fl.feature_id 
          ");
 
-    my $ref = _search_by_name( $factory, $quoted_name, $db_id );
+    my $ref = $self->_search_by_name( $factory, $quoted_name, $db_id, $feature_id );
 
     #returns either a feature_id scalar (if there is only one result)
     #or an arrayref (of feature_ids) if there is more than one result
@@ -372,15 +372,22 @@ sub strand {
 =cut
 
 sub _search_by_name {
-  my ($factory,$quoted_name,$db_id) = @_;
+  my $self = shift;
+  my ($factory,$quoted_name,$db_id,$feature_id) = @_;
 
   my $sth; 
-  if ($db_id) {
+  if ($feature_id) {
+    $sth = $factory->dbh->prepare("
+             select name,feature_id,seqlen from feature
+             where feature_id = $feature_id");
+  }
+  elsif ($db_id) {
     $sth = $factory->dbh->prepare ("
              select name,feature_id,seqlen from feature
              where uniquename = \'$db_id\'  ");
 
-  } else {
+  }
+  else {
     $sth = $factory->dbh->prepare ("
              select name,feature_id,seqlen from feature
              where lower(name) = $quoted_name  ");

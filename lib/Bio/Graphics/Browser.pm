@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.3 2007-03-20 23:30:54 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.4 2007-03-22 02:24:25 scottcain Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1861,7 +1861,7 @@ sub name2segments {
 
 sub _feature_get {
   my $self = shift;
-  my ($db,$name,$class,$start,$stop,$segments_have_priority,$dont_merge) = @_;
+  my ($db,$name,$class,$start,$stop,$segments_have_priority,$dont_merge,$f_id) = @_;
 
   my $refclass = $self->setting('reference class') || 'Sequence';
   $class ||= $refclass;
@@ -1870,6 +1870,7 @@ sub _feature_get {
   push @argv,(-class => $class) if defined $class;
   push @argv,(-start => $start) if defined $start;
   push @argv,(-end   => $stop)  if defined $stop;
+  push @argv,(-feature_id => $f_id) if defined $f_id;
   # This step is a hack to turn off relative addressing when getting absolute coordinates on the
   # reference molecule.
   push @argv,(-absolute=>1)     if $class eq $refclass;
@@ -2476,7 +2477,14 @@ sub make_link {
     my $start = CGI::escape($feature->start);
     my $end   = CGI::escape($feature->end);
     my $src   = CGI::escape(eval{$feature->source} || '');
-    return "../../gbrowse_details/$data_source?name=$name;class=$class;ref=$ref;start=$start;end=$end";
+    my $f_id  = CGI::escape($feature->feature_id) if $feature->can('feature_id');
+
+    if ($f_id) {
+      return "../../gbrowse_details/$data_source?name=$name;class=$class;ref=$ref;start=$start;end=$end;feature_id=$f_id";
+    }
+    else {
+      return "../../gbrowse_details/$data_source?name=$name;class=$class;ref=$ref;start=$start;end=$end";
+    }
   }
   return $self->link_pattern($link,$feature,$panel);
 }

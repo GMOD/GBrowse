@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.12 2006-11-10 17:58:27 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.12.2.1 2007-03-22 02:24:25 scottcain Exp $
 # Das adaptor for Chado
 
 =head1 NAME
@@ -447,18 +447,19 @@ Otherwise, the method must throw a "multiple segment exception".
 
 sub segment {
   my $self = shift;
-  my ($name,$base_start,$stop,$end,$class,$version,$db_id) 
+  my ($name,$base_start,$stop,$end,$class,$version,$db_id,$feature_id) 
                                          = $self->_rearrange([qw(NAME
-								 START
-                                                                 STOP
-								 END
-								 CLASS
-								 VERSION
-                                                                 DB_ID)],@_);
+							     START
+                                                             STOP
+							     END
+							     CLASS
+							     VERSION
+                                                             DB_ID
+                                                             FEATURE_ID )],@_);
   # lets the Segment class handle all the lifting.
 
   $end ||= $stop;
-  return $self->_segclass->new($name,$self,$base_start,$end,$db_id);
+  return $self->_segclass->new($name,$self,$base_start,$end,$db_id,0,$feature_id);
 }
 
 =head2 features

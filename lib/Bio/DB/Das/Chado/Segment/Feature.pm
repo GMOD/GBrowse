@@ -1098,8 +1098,17 @@ sub sub_SeqFeature {
             push @ok_feats, $feat;
         }
     }
+    warn @ok_feats if DEBUG;
     return @ok_feats;
   }
+  elsif ($inferCDS) {
+    #just remove polypeptide features
+    my @ok_feats = grep {$_->type->method ne 'polypeptide'} @features;
+    warn @ok_feats if DEBUG;
+    return @ok_feats;
+  }
+
+
   return  @features;
 }
 

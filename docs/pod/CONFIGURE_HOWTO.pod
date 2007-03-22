@@ -71,9 +71,9 @@ used for the source field, as in "tRNAScan-SE/1.2".
 
 =item 3 method
 
-The annotation method.  This field describes the type of the
-annotation, such as "CDS".  Together the method and source describe
-the annotation type.
+The annotation method, also known as type. This field describes the 
+type of the annotation, such as "CDS".  Together the method and source 
+describe the annotation type.
 
 =item 4 start position
 
@@ -90,7 +90,7 @@ For annotations that are associated with a numeric score (for
 example, a sequence similarity), this field describes the score.
 The score units are completely unspecified, but for sequence
 similarities, it is typically percent identity.  Annotations that
-don't have a score can use "."
+do not have a score can use "."
 
 =item 7 strand
 
@@ -1155,7 +1155,7 @@ seem to work well. If you change these defaults, be sure to change
 them in B<all> configuration files; otherwise weird stuff will happen
 when moving from one data source to another.
 
-=item remember settings time
+=item * remember settings time
 
 The length of time to remember page-specific settings in the format
 "+NNNu", where NNN is a number and "u" is a unit ("w" = weeks, "d" =
@@ -1171,7 +1171,7 @@ The default value is 1 month.
 
 See the CGI manual page for more information on the time format.
 
-=item remember source time
+=item * remember source time
 
 Like "remember settings time" but applies to remembering the user's
 preferred data source. "remember source time" should be greater or
@@ -1181,7 +1181,7 @@ should be the same for each one.
 
 The default value is 3 months.
 
-=item msie hack
+=item * msie hack
 
 GBrowse uses HTTP POST to transfer the current page settings to the
 web server. Because of the way that Microsoft Internet Explorer caches
@@ -2127,12 +2127,12 @@ be spelled with capital letters. Put the option "URL" inside this
 stanza, containing a string to be transformed into the URL.
 
 For example, to link to a local cgi script from the following GFF line:
-    
+
  IV	curated	exon	518	550	. + .   Transcript B0273.1; local_id 11723
 
 
 one might add the following stanza to the configuration file:
-    
+
     [local_id:DETAILS]
     URL   = http://localhost/cgi-bin/localLookup.cgi?tag=$tag;id=$value
 
@@ -2437,7 +2437,7 @@ password.  In addition, the hostname will only be defined if
 HostnameLookups have been turned on in httpd.conf.  In the latter
 case, you can convert the IP address into a hostname using this piece
 of code:
-    
+
     use Socket;
     $host = gethostbyaddr(inet_aton($addr),AF_INET);
 
@@ -2593,7 +2593,7 @@ in detail below:
 =item 1 SYNOPSIS 
 
 In 0X.organism.conf, for example:
-     
+
  [ORIGIN]
  link         = http://yoursite.com/cgi-bin/gbrowse_moby?source=$source&name=$name&class=$class&method=$method&ref=$ref&description=$description
  feature      = origin:Sequence
@@ -2632,7 +2632,7 @@ is derived from the Gene Ontology Database Cross-Reference
 Abbreviations list).  Currently, this requires editing of the
 gbrowse_moby code, where a Perl hash named %source2namespace
 maps the GFF source (column 2) to a MOBY namespace:
-    
+
   $source2namespace{$source} = moby_namespace
 
 
@@ -2641,7 +2641,7 @@ maps the GFF source (column 2) to a MOBY namespace:
 This script requires libraries from the BioMOBY project.  Currently
 these are only available from the CVS.  Anonymous checkout of the
 BioMOBY project can be accomplished as follows:
-    
+
   cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/moby login
 
 When prompted for a password, type "cvs".
@@ -2685,9 +2685,9 @@ call.
 If your GFF were:
 
       A22344  Genbank  origin  1000  2000  87  +  .
- 
+
 You would set your configuration file as follows:
- 
+
      [ORIGIN]
      link         = http://yoursite.com/cgi-bin/gbrowse_moby?source=$source&name=$name&class=$class
      feature      = origin:Genbank
@@ -2709,7 +2709,7 @@ If your GFF were:
       A22344  Genbank origin  1000  2000 87 + . Locus CDC23
 
 You would set your configuration file as follows:
- 
+
      [ORIGIN]
      link         = http://yoursite.com/cgi-bin/gbrowse_moby?source=$source&name=$name&class=$class
      feature      = origin:Genbank
@@ -2739,7 +2739,7 @@ If your GFF were (NCBI_gi is a valid MOBY namespace):
       A22344  Genbank origin  1000  2000 87 + . NCBI_gi 118746
 
 You would set your configuration file as follows:
- 
+
      [ORIGIN]
      link         = http://yoursite.com/cgi-bin/gbrowse_moby?source=$source&name=$name&class=$class
      feature      = origin:Genbank
@@ -2835,7 +2835,7 @@ between various entities in your database (e.g. Genes, Transcripts)
 and their equivalent BioMOBY namespaces.  For example, if you are
 TAIR, and you have entities in your database called "Locus", you 
 would add the line:
-	
+
 	Locus = TAIR_Locus
 
 to this section of the config file.  This will allow people who
@@ -2913,7 +2913,7 @@ features is done based on the primary_tag
                   $feat->primary_tag =~ /region/i;
                  }
   key          = RefSeq Protein Domains
-                                                                                
+
   [SIGPEPTIDE]
   feature      = EMBL/GenBank/SwissProt
   filter       = sub {

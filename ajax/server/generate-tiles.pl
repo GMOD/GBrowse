@@ -163,12 +163,6 @@ my $source_name = $CONFIG->setting('description');  # get human-readable descrip
 my $db = open_database($CONFIG);      # create Bio::DB::GFF::Adaptor::<adaptor name> object, where
                                       # <adaptor name> is what is specified in the '.conf' file
 
-#my @segs = $db->segment(-name => '4');
-#my @segs = $CONFIG->name2segments('4', $db, 1, 0);
-#$Data::Dumper::Maxdepth = 2;
-#print "types: " . Dumper($db->types) . "\n";
-#print "segs: " . Dumper(@segs) . "\n";
-
 print " Source: ${source} (${source_name})\n";
 
 # get landmark info
@@ -185,7 +179,6 @@ my @segments = $db->segment(-name => $landmark_name);
 my $segment = $segments[0];
 
 $Data::Dumper::Maxdepth = 2;
-#print "types: " . Dumper($db->types) . "\n";
 print "segs: " . Dumper(@segments) . "\n";
 
 die "ERROR: problem loading landmark! (are you sure the name is correct? you provided: ${landmark_name})\n"
@@ -280,11 +273,9 @@ print
     " There are $num_tracks tracks, $num_zooms zoom levels total\n",
     "-------------------------------------------------------------------------\n";
 
-# parse the "maximum zoom level to print labels for" parameter (eventually, we will make this determination
-# automatic, but for now... !!!)
-my $max_label_zoom = exists $args{'-z'} ? int($args{'-z'}) : $num_zooms;
-die "ERROR: -z parameter is out of allowed range 1 to ${num_zooms}! (you specified $max_label_zoom)\n"
-    if ($max_label_zoom < 1) or ($max_label_zoom > $num_zooms);
+# threshold of the average number of features per tile
+# above this threshold we won't print labels
+my $feature_thresh = $args{'-f'} || 50;
 
 # build a hash of hashes of tuples (arrays) storing the range of tiles that are going to be printed for
 # each track and zoom level combination; initialize this to print everything, which may be overridden
@@ -337,8 +328,11 @@ if (exists $args{'-r'}) {
 	$tile_ranges_to_render{$track_labels[$track_num-1]}{$zoom_level_names[$zoom_level_num-1]}->[1] = $last_tile;
     }
 } elsif (exists $args{'-t'}) {
+    my @tracklist = map {$_ - 1} split(",", $args{'-t'});
     foreach my $zoom_level_name (@zoom_level_names) {
-        $print_track_and_zoom{$track_labels[$args{'-t'} - 1]}{$zoom_level_name} = 1;
+        foreach my $track (@tracklist) {
+            $print_track_and_zoom{$track_labels[$track]}{$zoom_level_name} = 1;
+        }
     }
 } else {
     # no subset specified, so we print EVERYTHING
@@ -393,9 +387,12 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
 {
     my $label = ($track_labels[$label_num]);
 
+    next unless $print_track_and_zoom{$label};
+
     my $image_height;
     my $track_name;
     my @feature_types;
+    my @features;
 
     if ($label ne 'ruler') {
         my %track_properties = $conf->style($label);
@@ -403,6 +400,8 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
 
         # get feature types in form suitable for Bio::DB::GFF
         @feature_types = $conf->label2type($label, $landmark_length);
+        @features = $segment->features(-type => \@feature_types)
+          if (@feature_types);
     }
 
     # sometimes the track name is unspecified, so use the label instead
@@ -506,7 +505,7 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
                                # major tick marks
 			       -units_forced => $zoom_level->[2],
                                -major_interval => $major,
-                               -minor_interval => $minor
+                               -minor_interval => $minor,
 			      );
             $track = $panel->add_track($segment, @track_settings);
             $is_global = 1;
@@ -519,28 +518,22 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
             # NOTE: $track is a Bio::Graphics::Glyph::track object
 
 	  # go through all the features and add them (but only if we have features)
-	  if (@feature_types) {
-	    my $iterator = $segment->get_feature_stream(-type => \@feature_types);
-
-            while (my $feature = $iterator->next_seq) {
+	  if (@features) {
+            foreach my $feature (@features) {
 	      warn " adding feature ${feature}...\n" if $verbose == 2;
 	      $track->add_feature($feature);
 	    }
 
-	    my $count = 1;
-	    my $do_bump = $CONFIG->do_bump($label, 0, $count, $CONFIG->bump_density);
-	    my $do_label = $CONFIG->do_label($label, 0, $count, $CONFIG->label_density, $landmark_length);
-	    my $do_description =
-		$CONFIG->do_description($label, 0, $count, $CONFIG->label_density, $landmark_length);
-
-	    if ($zoom_level_num <= $max_label_zoom) {
-	        $track->configure(-bump => $do_bump, -label => $do_label, -description => $do_description);
+            # if the average number of features per tile is
+            # less than $feature_thresh, we print labels
+            if (($#features  / $num_tiles) < $feature_thresh) {
+	        $track->configure(-bump => 1, -label => 1, -description => 1);
 	    } else {
-	        $track->configure(-bump => 0, -label => 0, -description => 0);
+	        $track->configure(-bump => 1, -label => 0, -description => 0);
 	    }
 	  }
 	}
-        
+
         warn "track is set up: " . tv_interval($start_time) . "\n" if ($render_tiles && $verbose);
 
         # get image height, now that the panel is fully constructed
@@ -710,11 +703,7 @@ sub renderTileRange {
 
     # @per_tile_glyphs is a list with one element per rendering tile,
     # each of which is a list of the glyphs that overlap that tile.
-    # @nonempty_smalltiles is a list with one element per rendering
-    # tile, each of which is a hash where each key is the index of
-    # a non-blank small tile.
     my @per_tile_glyphs;
-    my @nonempty_smalltiles;
     if (!$is_global) {
         foreach my $glyph ($big_track->parts) {
             my @box = $glyph->box;
@@ -725,18 +714,10 @@ sub renderTileRange {
             foreach my $rtile_index (@rtile_indices) {
                 push @{$per_tile_glyphs[$rtile_index]}, $glyph;
             }
-            my @tile_indices =
-                floor($box[0] / $tilewidth_pixels)
-                ..ceiling($box[2] / $tilewidth_pixels);
-            foreach my $tile_index (@tile_indices) {
-                ${$nonempty_smalltiles[int($tile_index / $small_per_large)]}
-                {$tile_index % $small_per_large} = 1
-            }
         }
     }
 
 #    $Data::Dumper::Maxdepth = 3;
-#    print "Nonempty tiles " . Dumper(@nonempty_smalltiles[0..30]) . "\n";
 #    print "per tile glyphs " . Dumper(@per_tile_glyphs[0..30]) . "\n";
 
     my $blankHtml;
@@ -764,8 +745,8 @@ sub renderTileRange {
 		+ $global_padding - 1;
 
             # rendering tile bounds in bp coordinates
-            my $first_base = int($rtile_left / $big_panel->scale) + 1;
-            my $last_base = int(($rtile_right + 1) / $big_panel->scale);
+            my $first_base = int($rtile_left / $big_panel->scale) + $big_panel->start;
+            my $last_base = int(($rtile_right + 1) / $big_panel->scale) + $big_panel->start - 1;
 
             # set up the per-rendering-tile panel, with the right
             # bp coordinates and pixel width
@@ -778,21 +759,22 @@ sub renderTileRange {
             my $scale_diff = $tile_panel->scale - $big_panel->scale;
             if (abs($scale_diff) > 1e-11) {
                 printf "scale difference: %e\n", $scale_diff;
-                print "big panel scale: " . $big_panel->scale . " big panel start: " . $big_panel->start . " big panel end: " . $big_panel->end . " big panel width: " . $big_panel->width . " small panel scale: " . $tile_panel->scale . " pixel_offset: $pixel_offset first_base: $first_base last_base: $last_base rtile_left: $rtile_left rtile_right: $rtile_right\n";
+                print "big panel scale: " . $big_panel->scale . " big panel start: " . $big_panel->start . " big panel end: " . $big_panel->end . " big panel width: " . $big_panel->width . " small panel scale: " . $tile_panel->scale . " pixel_offset: $pixel_offset first_base: $first_base last_base: $last_base rtile_left: $rtile_left rtile_right: $rtile_right small panel width: " . $tile_panel->width . "\n";
             }
 
             if ($is_global) {
                 # for global features we can just render everything
                 # using the per-tile panel
-                my @segments = $db->segment(-name => $landmark_name, -start => $first_base, -end => $last_base);
-                #my @segments = $CONFIG->name2segments($landmark_name . ":" 
-                #                                      . $first_base . ".." 
-                #                                      . $last_base,
-                #                                      $db, undef, 1);
+                my @segments = $db->segment(-name => $landmark_name, -start => $first_base - $big_panel->start + 1, -end => $last_base - $big_panel->start + 1);
                 my $small_segment = $segments[0];
-                $tile_panel->add_track($small_segment,
-                                       @$track_settings,
-                                       -height => $image_height);
+                my $small_track = $tile_panel->add_track($small_segment,
+                                                         @$track_settings);
+                if ($tile_panel->height < $big_panel->height) {
+                    $tile_panel->pad_bottom($tile_panel->pad_bottom
+                                            + ($big_panel->height
+                                               - $tile_panel->height));
+                    $tile_panel->extend_grid(1);
+                }
                 $large_tile_gd = $tile_panel->gd();
             } else {
                 # add generic track to the tile panel, so that the
@@ -972,8 +954,9 @@ sub print_usage {
 	"          2 = verbose on (extreem - prints trace of every instance of\n",
 	"              recording or replaying database primitives and of every tile\n",
 	"              that is rendered - WARNING, VERY VERBOSE!)\n",
-        "  -t <track number>\n",
-        "        Specify the track number to render (default: render all tracks)\n",
+        "  -t <track list>\n",
+        "        Specify the tracks to render (e.g. -t 1,2,3,4)\n",
+        "        default: render all tracks\n",
 	"  -r <selection>\n",
 	"        Use this to render only a subset of all possible tiles, tracks and\n",
 	"        zoom levels (default is render ALL tiles); note that CURRENTLY, the\n",
@@ -996,12 +979,10 @@ sub print_usage {
 	"        EXAMPLE: t1z5r100-500,t2z5r100-500 (print tiles 100 through 500,\n",
 	"                                            inclusive, for tracks 1 and 2,\n",
 	"                                            zoom level 5)\n",
-	"  -z <zoom level number>\n",
-	"        the zoom level above which we will not print feature labels, as\n",
-	"        feature labels can get very dense when we zoom out and clutter the\n",
-	"        view; eventually, this will be set automatically, but is hardcoded\n",
-	"        for now... zoom level numbers can be obtained with by running with\n",
-	"        the --print-tile-nums parameter\n",
+	"  -f <number of features>\n",
+	"        threshold for the average number of features per tile.\n",
+	"        above this threshold, we won't print labels for features\n",
+	"        default: 50\n",
 	"  --exit-early\n",
 	"        a debug option; when enabled, the script exits after loading and\n",
 	"        outputting database info, but before doing anything else\n",

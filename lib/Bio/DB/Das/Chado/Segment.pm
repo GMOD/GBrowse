@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.19.2.1 2007-03-22 02:24:25 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.19.2.2 2007-03-22 02:57:02 scottcain Exp $
 
 =head1 NAME
 
@@ -1471,10 +1471,13 @@ just giving back the name.
 =head2 get_feature_stream
 
   Title   : get_feature_stream
-  Usage   :
-  Function: undocumented method by Scott Cain
-  Returns :
-  Args    :
+  Usage   : $db->get_feature_stream(@args)
+  Function: creates a feature iterator
+  Returns : A Bio::DB::Das::ChadoIterator object
+  Args    : The same arguments as the feature method
+
+get_feature_stream has an alias called get_seq_stream for backward
+compatability.
 
 =cut
 
@@ -1488,6 +1491,9 @@ sub get_feature_stream {
     warn "first feature: $$features[0]\n" if DEBUG;
   return Bio::DB::Das::ChadoIterator->new($features);
 }
+
+#dgg patch for DasI need
+*get_seq_stream = \&get_feature_stream;
 
 =head2 clone
 

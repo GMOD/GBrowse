@@ -9,11 +9,11 @@ perl import_ncbi_mv_hs.pl --type type [options]
 
 =head2 A QUICK RUN
 
-Download from ftp://ftp.ncbi.nih.gov/genomes/H_sapiens/maps/mapview/BUILD.34.3/
+Download from ftp://ftp.ncbi.nih.gov/genomes/H_sapiens/mapview/
 (or the most current directory) the files
 
  seq_gene.md.gz
- gene.q.gz
+ seq_gene.q.gz
 
 to the same directory as import_ncbi_mv_hs.pl and execute the command
 
@@ -27,10 +27,10 @@ gbrowse database using bp_load_gff.pl.
 This script reads two kinds of input files from the NCBI Map Viewer FTP site. The
 source for human input files is
 
- ftp://ftp.ncbi.nih.gov/genomes/H_sapiens/maps/mapview
+ ftp://ftp.ncbi.nih.gov/genomes/H_sapiens/mapview
 
 which contains subdirectories for the various builds. For example,
-mapview/BUILD.34.3/seq_gene.md.gz would be an input file for use with
+mapview/seq_gene.md.gz would be an input file for use with
 the subroutine mk_seq_gene.
 
 At the moment this script will import the files seq_gene.md

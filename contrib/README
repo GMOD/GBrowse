@@ -11,19 +11,6 @@ TextDumper  Don Jackson's plugin for dumping out current region of
 bulk_load_win.pl, pg_bulk_load_gff.PLS
 	    Early versions of windows and PostGres loaders.
 
-install_macosx
-	    Scripts that streamline the installation of GBrowse
-            and its dependencies on Mac OS X. Contributed by Todd
-            Harris.
-
-import_ncbi_mv_hs.pl
-	    Scott Saccone's script for importing NCBI gene builds
-	    into GFF format.
-
-blast2gff.pl
-	    Justin Reese's script for formatting BLAST output into
-	    loadable GFF files.
-
 conf_files  Configuration files for:
  01.yeast.conf		yeast data
  02.wormbase.conf	c. elegans data

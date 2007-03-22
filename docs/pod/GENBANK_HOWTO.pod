@@ -10,7 +10,7 @@ will use the RefSeq record for M. bovis, accession NC_002945.
 
 Download the Genbank record and convert it into GFF format.  You can
 do this easily using the bp_genbank2gff.pl script, which is part of
-bioperl:
+Bioperl (scripts/Bio-DB-GFF/genbank2gff.pl):
 
    bp_genbank2gff.pl -stdout -accession NC_002945 > mbovis.gff
 
@@ -66,7 +66,7 @@ will be sluggish unless you have a fast machine with lots of memory.
 So you might wish to view it using a MySQL, PostgreSQL or Oracle
 database.  The following are instructions for doing this.
 
-=head1 Using the GBrowse in-memory database
+=head1 Using the GBrowse GFF database with Mysql
 
 We will assume that you are using a MySQL database.
 
@@ -76,7 +76,7 @@ Create the database using mysqladmin:
 
   mysqladmin create mbovis
 
-As described in the tutorial, give yourself write permission for the
+As described in the GBrowse tutorial, give yourself write permission for the
 database, and give the web server user (e.g. "nobody") select
 permission.
 
@@ -88,7 +88,7 @@ into GFF and load the database directly in one smooth step:
   bp_genbank2gff.pl -create -dsn mbovis -accession NC_002945
 
 If you prefer, you can do this in two steps by first creating the gff
-file as described for the in-memory adaptor, and then using
+file as described for the in-memory adaptor, and then using Bioperl's
 bp_bulk_load_gff.pl or bp_fast_load_gff.pl.
 
 If you are using a PostgreSQL or Oracle database, you must specify the
@@ -129,5 +129,3 @@ That should be it!
 You can load as many accessions into the database as you like.
 Each one will appear as a "chromosome" named after the accession
 number of the entry.
-
-

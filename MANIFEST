@@ -93,7 +93,7 @@ contrib/GeneFinder/nematode_gftables/zk637.intron3
 contrib/GeneFinder/nematode_gftables/zk637.intron5
 contrib/GeneFinder/nematode_gftables/zk637.trinuc
 contrib/import_ncbi_mv_hs.pl
-contrib/index.txt
+contrib/README
 contrib/install_macosx/BuildConfig.pm
 contrib/install_macosx/README.html
 contrib/install_macosx/README.pod

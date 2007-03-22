@@ -1,22 +1,33 @@
 This directory contains various individuals' contributions to the
 gbrowse project, as well as some optional packages.
 
-Coverage    Marco Valtas' plugin for displaying clone coverage.
+Coverage    
 
-GeneFinder  A plugin for Phil Green's GeneFinder Program
+Marco Valtas' plugin for displaying clone coverage.
 
-TextDumper  Don Jackson's plugin for dumping out current region of
-		interest as a tab-delimited table.
+GeneFinder  
 
-bulk_load_win.pl, pg_bulk_load_gff.PLS
-	    Early versions of windows and PostGres loaders.
+A plugin for Phil Green's GeneFinder Program.
 
-conf_files  Configuration files for:
- 01.yeast.conf		yeast data
- 02.wormbase.conf	c. elegans data
- 03.fly.conf		fly data
- 04.human.conf		human data
- 05.embl.conf		data automatically loaded from Genbank/EMBL
- 06.biosql.conf         biosql database schema
- 07.chado.conf		chado database schema
- 08.genbank.conf	data manually loaded from Genbank/EMBL
+TextDumper  
+
+Don Jackson's plugin for dumping out current region of interest as a 
+tab-delimited table.
+
+SynView
+
+A synteny viewer for GBrowse. See http://www.apidb.org/apps/SynView/
+for more.
+
+Configuration Files
+
+conf_files/01.yeast.conf		   yeast data
+conf_files/02.wormbase.conf	C. elegans data
+conf_files/03.fly.conf		         fly data
+conf_files/04.human.conf		   human data
+conf_files/05.embl.conf		      data automatically loaded from Genbank/EMBL
+conf_files/06.biosql.conf        biosql database schema
+conf_files/07.chado.conf		   chado database schema
+conf_files/08.genbank.conf	   data manually loaded from Genbank/EMBL
+conf_files/09.fly.gff3.conf      for gff mysql-indexed gene features
+conf_files/wormbase.syn

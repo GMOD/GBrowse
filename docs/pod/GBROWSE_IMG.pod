@@ -143,7 +143,7 @@ tRNA and NG tracks should always be expanded and labeled, but that the
 WABA track should be compact, use:
 
   options=tRNA+3+NG+3+WABA+1
-      
+
 
 The alias "o" can be used to shorten the length of the URL.
 
@@ -161,7 +161,7 @@ Features are specified as space ("+") delimited lists in the following
 format:
 
   add=Landmark+Type+Name+start..end,start..end,start..end
-      
+
 "Landmark" is the landmark name, "Type" is a descriptive type that
 will be printed in the image caption, "Name" is a name for the feature
 to be printed above it, and start..end is a comma-delimited list of
@@ -178,7 +178,7 @@ default to "Your Features" and the name will default to "Feature XX"
 where XX is an integer. This allows for a very simple feature line:
 
   add=III+20000..21000,21550..22000
-      
+
 Multiple add= arguments are allowed. The alias "a" can be used to
 shorten the length of the URL.
 
@@ -270,4 +270,4 @@ Copyright (c) 2002-2004 Cold Spring Harbor Laboratory
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
-For additional help, see The GMOD Project pages.
+For additional help, see The GMOD and GBrowse pages at L<http://gmod.org>.

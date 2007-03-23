@@ -29,7 +29,7 @@ between Perl 5.6.1 and 5.8, we can only support Perl 5.8.
 
 =item Install the Apache web server
 
-Go to http://httpd.apache.org/download.cgi .  Select the most recent
+Go to http://httpd.apache.org/download.cgi . Select the most recent
 version of Apache, and choose the download marked "Win32 Binary (MSI
 Installer)."  Once downloaded, launch the package and it will install
 automatically.
@@ -42,15 +42,16 @@ downloaded, you will need to unpack it with the WinZip program.  Then
 launch the installer. 
 
 After installing MySQL, install DBD::mysql; the easiste way to do
-that is via ActiveState's ppm utility.
+that is via the ActiveState ppm utility.
 
 =item Install GBrowse
 
 The easiest way to install GBrowse on Windows is to use an
-installer script that can be obtained from the GMOD website:
-http://www.gmod.org/gbrowse/windows .
+installer script:
 
-After downloading the windows_install.pl script, open a DOS command
+http://wiki.gmod.org/index.php/GBrowse_Windows_HOWTO
+
+After downloading the Windows_install.pl script, open a DOS command
 shell, change directories to where the script was downloaded to,
 and execute the command:
 
@@ -60,7 +61,7 @@ This script will:
 
 =over
 
-=item Install MicroSoft's nmake utility 
+=item Install the MicroSoft nmake utility 
 
 =item Add a third party ppm repository to install GD.pm
 
@@ -86,7 +87,7 @@ When this is done, go to step (5) below.
 NOTE: The MacOSX installer sited below is quite out of date.  Until it
 is brought up to date, please use the SOURCE CODE INSTALL section below
 for Macs.  The thing that generally trips up installs on Macs is getting
-libgd (a prerequisite for GD.pm) installed.  I have usually had success
+libgd (a prerequisite for GD.pm) installed. Some have success
 with fink getting it installed:
 
   fink install gd2
@@ -116,8 +117,7 @@ already.
 =item A) MySQL -- L<http://www.mysql.com>
 
 The MySQL database is a fast open source relational database
-that is widely used for web applications.  It is required for
-most real-live genome annotation projects.  For small projects
+that is widely used for web applications. For small projects
 (a few thousands of annotated features), you can skip installing
 MySQL and use an in-memory database instead.
 
@@ -137,18 +137,18 @@ The following Perl modules must be installed for GBrowse to work.
 They can be found on the Comprehensive Perl Archive Network
 (CPAN):
 
-        CGI                  (2.56 or higher)
+   CGI                  (2.56 or higher)
 	GD                   (2.07 or higher)
-        CGI::Session         (4.03 or higher)
-        DBI                  (any version)
-        DBD::mysql           (any version)
+   CGI::Session         (4.03 or higher)
+   DBI                  (any version)
+   DBD::mysql           (any version)
 	Digest::MD5          (any version)
 	Text::Shellwords     (any version)
-        Class::Base          (any version)
+   Class::Base          (any version)
 
 =item E) BioPerl version 1.5.2 or higher -- L<http://www.bioperl.org>
 
-Get 'current_core_unstable'.
+Or 'bioperl-live'.
 
 =back
 
@@ -202,7 +202,7 @@ unpacked.  Then run the following commands (in brief):
 
 	perl Makefile.PL
 	make
-        make test (optional)
+   make test (optional)
 	make install UNINST=1
 
 This will install the software in the default location under
@@ -210,7 +210,6 @@ This will install the software in the default location under
 into your home directory.   The 'UNINST=1' will insure that older
 versions of perl modules being installed will be removed to
 help prevent conflicts.
-
 
 To further configure GBrowse, see L<CONFIGURE_HOWTO>.  To run
 GBrowse on top of Oracle and PostgreSQL databases see
@@ -242,15 +241,15 @@ This will cause the configuration files to be installed in
 
 The following arguments are recognized:
 
-   CONF            Configuration file directory
-   HTDOCS          Static files directory
-   CGIBIN          CGI script directory
-   APACHE          Base directory for Apache's conf, htdocs and cgibin directories
-   LIB             Perl site-specific modules directory
-   BIN             Perl executable scripts directory
-   NONROOT         If set to a non-zero value (e.g. NONROOT=1) then install
+   CONF          Configuration file directory
+   HTDOCS        Static files directory
+   CGIBIN        CGI script directory
+   APACHE        Base directory for the Apache conf, htdocs and cgibin directories
+   LIB           Perl site-specific modules directory
+   BIN           Perl executable scripts directory
+   NONROOT       If set to a non-zero value (e.g. NONROOT=1) then install
 	              gbrowse in a way that does not require root access.
-   DO_XS           Compile fast alignment algorithm (XS C extension)
+   DO_XS         Compile fast alignment algorithm (XS C extension)
 
 For example, if you are on a RedHat system, where the default Apache
 installation uses /var/www/html for HTML files, /var/www/cgi-bin for
@@ -327,7 +326,7 @@ with
 
 so that Apache will listen for connections to the unprivileged port
 8000 rather than the usual port 80.  If you also see a "Port 80"
-directive, change it to read "Port 8000." You'll now be able to talk
+directive, change it to read "Port 8000." You will now be able to talk
 to Apache using URLs like http://your.host.edu:8000/.
 
 You may not need to install Apache from scratch if your Unix
@@ -348,7 +347,7 @@ series of commands:
 
 Now copy the system-wide httpd.conf into ~/apache/conf.  You may need
 to search around a bit to find out where the system-wide httpd.conf
-lives (try running the command "locate httpd.conf):
+lives (try running the command "locate httpd.conf"):
 
   % cp /etc/httpd/conf/httpd.conf ~/apache/conf
 
@@ -362,7 +361,7 @@ home directory (for example "/home/fred"):
   SetEnv       PERL5LIB $HOME/lib  
 
 You should search the httpd.conf file for older versions of these
-directives, and delete them if they're there.  If you see a Port
+directives, and delete them if they are there.  If you see a Port
 directive, change it to read "Port 8000".
 
 Somewhere in httpd.conf there will be a ScriptAlias directives, as
@@ -409,7 +408,7 @@ use http://localhost:8000/gbrowse instead.
 The installation procedure will create a small in-memory database of
 yeast chromosome 1 for you to play with.  To try the browser out, use
 your favorite browser to open:
- 	 
+
   http://localhost/cgi-bin/gbrowse
 
 Try searching for "I" (the name of the first chromosome of yeast), or
@@ -417,9 +416,9 @@ a gene such as NUT21 or TCF3.  Then try searching for "membrane
 trafficking."
 
 For your interest, the feature and DNA files for this database is
-located in the web server's document root at
+located in the Apache document root at
 gbrowse/databases/yeast_chr1.  The configuration file is in the web
-server's configuration directory under gbrowse.conf/yeast1.conf.
+server configuration directory under gbrowse.conf/yeast1.conf.
 
 More configuration information and a short tutorial are located at:
 
@@ -433,10 +432,14 @@ This step takes you through populating the database with the full
 yeast genome.  You can skip this step if you use the in-memory
 database for small projects (see section 6).
 
+Remember as well that there are other datbase possibilities. For
+example you could also use BioSQL (Mysql, Postgres, Oracle) or
+Chado (Postgres). This example uses Mysql as it is relatively 
+easy to set up.
+
 Synopsis:
 
   mysql -uroot -p password -e 'create database yeast'
-
   mysql -uroot -p password -e 'grant all privileges on yeast.* to me@localhost'
   mysql -uroot -p password -e 'grant file on *.* to me@localhost'
   mysql -uroot -p password -e 'grant select on yeast.* to nobody@localhost'
@@ -460,7 +463,7 @@ The example above assumes that you have a username of "me" and that
 you will allow updates from the local machine only.  It also gives all
 privileges to "me".  You may be comfortable with a more restricted set
 of privileges, but be sure to provide at least SELECT, UPDATE and
-INSERT privileges.  You will need to provide the administrator's name
+INSERT privileges.  You will need to provide the administrator name
 and correct password for these commands to succeed.
 
 In addition, grant the "nobody" user the SELECT privilege.  The web
@@ -570,7 +573,8 @@ They are:
   process_sgd.pl        For SGD S. cerevisiae flat files
   process_wormbase.pl   For WormBase C. elegans flat files
 
-In Bioperl 1.3, these scripts are named bp_process_gadfly.pl, and so forth.
+These scripts are renamed to names like bp_process_gadfly.pl if you have 
+chosen the "install scripts" option when you installed Bioperl.
 
 Run the script with the -h option to get some data-specific help:
 
@@ -624,7 +628,6 @@ ftp://genome-ftp.stanford.edu/pub/yeast/)
 
 Run "bp_bulk_load_gff.pl -h" to see usage instructions.
 
-                                                                                
 Newer versions of GFF (the so-called "GFF2.5" and "GFF3" formats) include
 the DNA at the bottom of the file, following the sequence annotations.
 If you are loading one of these GFF files, the DNA will be recognized
@@ -660,7 +663,7 @@ objects for rendering.
 
 =back
 
-To improve (1), I recommend that you install the mod_perl module for
+To improve (1), we recommend that you install the mod_perl module for
 Apache. (L<http://perl.apache.org>).  By configuring an Apache::Registry
 directory and placing gbrowse inside it (rather than in the default
 cgi-bin directory). The overhead for loading Perl and its libraries
@@ -679,7 +682,7 @@ Database query performance (2) is also a major factor.  If you are
 using MySQL as the backend, you will see dramatic performance
 increases by increasing the amount of memory available to the key
 buffer, sort buffer, table cache and other in-memory data structures.
-I suggest that you replace the default MySQL configuration file
+we suggest that you replace the default MySQL configuration file
 (usually stored in /etc/my.cnf) with one of the large-memory sample
 configuration files provided in the support-files subdirectory of the
 MySQL distribution.  Of course, if you tell MySQL to use more memory

@@ -5,24 +5,30 @@ Bio::DB::Das::BioSQL::PartialSeqAdaptor - class that helps to use custom object 
 =head1 SYNOPSIS
 
     This is a private class.
-  
+
 =head1 DESCRIPTION
 
 This is a custom driver class for sequence objects retrieved from BioDB.
 We don't want to retrieve all the features at initialization time, because
-it may be slow. Thus, they are fetched by calling slow_attach_children if necessary.
+it may be slow. Thus, they are fetched by calling slow_attach_children 
+if necessary.
 
 =head1 CHANGES
 
 =head2 Mon Mar 15 10:21:17 EST 2004
 
+=over 1
+
 =item Fixed slow_attach_children() to retrieve partially overlapping features.
+
+=back
 
 =head1 AUTHOR - Vsevolod (Simon) Ilyushchenko
 
 Email simonf@cshl.edu
 
 =cut
+
 package Bio::DB::Das::BioSQL::PartialSeqAdaptor;
 
 use strict;

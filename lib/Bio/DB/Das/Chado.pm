@@ -1,5 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.12.2.1 2007-03-22 02:24:25 scottcain Exp $
-# Das adaptor for Chado
+# $Id: Chado.pm,v 1.68.4.9.2.12.2.2 2007-03-23 21:02:38 briano Exp $
 
 =head1 NAME
 
@@ -27,7 +26,6 @@ Bio::DB::Das::Chado - DAS-style access to a chado database
   $db->features(-type=>['type1','type2','type3'],
                 -callback => sub { ... }
 		);
-
 
   # get all feature types
   @types   = $db->types;
@@ -1184,12 +1182,9 @@ attributes depend on implementation) and returns a list of
 $description is a human-readable description such as a locus line, and
 $score is the match strength.
 
-=cut
-
-=head2
-
 search_notes is the sub to support keyword wildcard searching
 
+=cut
 
 sub search_notes {
   my $self = shift;

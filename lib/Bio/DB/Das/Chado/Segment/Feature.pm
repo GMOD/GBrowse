@@ -324,7 +324,7 @@ sub uniquename {
 =head1 SeqFeatureI methods
 
 Bio::DB::Das::Chado::Segment::Feature implements the Bio::SeqFeatureI
-interface.  Methods described below, L<Bio:SeqFeatureI> for more
+interface.  Methods described below, see Bio:SeqFeatureI for more
 details.
 
 =cut

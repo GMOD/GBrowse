@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::trace;
 
-# $Id: trace.pm,v 1.1.2.9 2006-08-29 14:53:32 mwz444 Exp $
+# $Id: trace.pm,v 1.1.2.9.2.1 2007-03-23 21:02:39 briano Exp $
 
 use strict;
 use GD;
@@ -827,7 +827,7 @@ The following additional options are available to the "image" glyph:
                     multiplied against the max 
                     trace value to determine the
                     hight of peaks.
-                    
+
 
 =head2 Specifying the Trace
 

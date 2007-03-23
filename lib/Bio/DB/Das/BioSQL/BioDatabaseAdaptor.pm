@@ -1,7 +1,5 @@
 # BioPerl module for Bio::DB::BioSQL::BioDatabaseAdaptor
 #
-# Cared for by Ewan Birney <birney@ebi.ac.uk>
-#
 # Modified by Vsevolod (Simon) Ilyushchenko (simonf@cshl.edu)
 #
 # Copyright Ewan Birney
@@ -28,7 +26,7 @@ Private class.
 
 User feedback is an integral part of the evolution of this
 and other Bioperl modules. Send your comments and suggestions preferably
- to one of the Bioperl mailing lists.
+to one of the Bioperl mailing lists.
 Your participation is much appreciated.
 
   bioperl-l@bio.perl.org
@@ -36,11 +34,10 @@ Your participation is much appreciated.
 =head2 Reporting Bugs
 
 Report bugs to the Bioperl bug tracking system to help us keep track
- the bugs and their resolution.
- Bug reports can be submitted via email or the web:
+the bugs and their resolution.
+Bug reports can be submitted via email or the web:
 
-  bioperl-bugs@bio.perl.org
-  http://bio.perl.org/bioperl-bugs/
+ http://bugzilla.bioperl.org
 
 =head1 AUTHORS - Ewan Birney, Vsevolod (Simon) Ilyushchenko
 

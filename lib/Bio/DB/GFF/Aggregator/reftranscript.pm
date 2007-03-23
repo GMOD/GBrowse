@@ -6,18 +6,19 @@ package Bio::DB::GFF::Aggregator::reftranscript -- Aggregates references transcr
 
 use Bio::DB::GFF::Aggregator;
 
-
 =head1 DESCRIPTION
 
-Bio::DB::GFF::Aggregator::retranscript was written to make the compound feature,
-"reftranscript" for use with Gbrowse editing software developed outside of the GMOD
-development group.  It can be used to aggregate "reftranscripts" from "refexons",
-loaded as second copy features.  These features, in contrast to "transcripts",
-are usually implemented as features which cannot be edited and serve as starting
-point references for annotations added using Gbrowse for feature visualization.
+Bio::DB::GFF::Aggregator::retranscript was written to make the compound 
+feature, "reftranscript" for use with Gbrowse editing software 
+developed outside of the GMOD development group.  It can be used to 
+aggregate "reftranscripts" from "refexons", loaded as second copy 
+features.  These features, in contrast to "transcripts", are usually 
+implemented as features which cannot be edited and serve as starting
+point references for annotations added using Gbrowse for feature 
+visualization.
 
-Adding features to the compound feature, "reftranscript", can be done by adding
-to the "part_names" call (i.e. "refCDS").
+Adding features to the compound feature, "reftranscript", can be done 
+by adding to the "part_names" call (i.e. "refCDS").
 
 =cut
 
@@ -69,6 +70,7 @@ sub part_names {
  Status  : Public
 
 =cut
+
 sub main_name {
     return 'reftranscript';
 }

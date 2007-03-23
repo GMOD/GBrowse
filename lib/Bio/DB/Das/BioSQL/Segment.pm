@@ -1,4 +1,4 @@
-# $Id%
+
 =head1 NAME
 
 Bio::DB::Das::BioSQL::Segment - DAS-style access to a BioSQL database
@@ -8,7 +8,7 @@ Bio::DB::Das::BioSQL::Segment - DAS-style access to a BioSQL database
   # Get a Bio::Das::SegmentI object from a Bio::DB::Das::BioSQL database...
 
   #Should be created through Bio::DB::Das::BioSQL.
-  
+
   @features = $segment->overlapping_features(-type=>['type1','type2']);
   # each feature is a Bio::SeqFeatureI-compliant object
 
@@ -20,7 +20,6 @@ Bio::DB::Das::BioSQL::Segment - DAS-style access to a BioSQL database
   while (my $feature = $stream->next_seq) {
      # do something with feature
   }
-
 
 =head1 DESCRIPTION
 
@@ -314,7 +313,7 @@ sub features {
   }
 }
 
-=head2 seq
+=head2 top_SeqFeatures
 
  Title   : top_SeqFeatures
  Usage   : $s->top_SeqFeatures
@@ -327,6 +326,7 @@ First, make the adaptor retrieve the feature objects from the database.
 Then, get the actual objects and adjust the features' locations if necessary.
 
 =cut
+
 sub top_SeqFeatures
 {
     my ($self) = @_;
@@ -490,4 +490,5 @@ sub overlaps {
 
 # compatibility with Bio::DB::GFF::RelSegment
 *abs_ref = \&accession_number;
+
 1;

@@ -1,18 +1,18 @@
-# $Id: GFFhelper.pm,v 1.22 2004-06-15 18:03:04 sheldon_mckay Exp $
+# $Id: GFFhelper.pm,v 1.22.14.1 2007-03-23 21:02:39 briano Exp $
 
 =head1 NAME
 
 Bio::Graphics::Browser::GFFhelper -- Helps gbrowse plugins handle GFF
 
 =head1 SYNOPSIS
-  
+
   package Bio::Graphics::Browser::Plugin::MyPlugin;
 
   use vars qw/@ISA $ROLLBACK/;
 
   @ISA = qw/ Bio::Graphics::Browser::Plugin 
              Bio::Graphics::Browser::GFFhelper /;
-  
+
   $ROLLBACK = '/tmp/';
 
   # other plugin subs skipped...
@@ -31,9 +31,9 @@ Bio::Graphics::Browser::GFFhelper -- Helps gbrowse plugins handle GFF
 
     # don't save a persistent rb_id, look for a CGI param each time
     my $rollback = $self->config_param('rb_id');
-    
+
     my $gff = $self->rollback($rollback);
-    
+
     # this is a rollback to an earlier version of an existing segment
     # we don't need DNA, just the GFF
     $gff;
@@ -49,12 +49,12 @@ Bio::Graphics::Browser::GFFhelper -- Helps gbrowse plugins handle GFF
 
     # set sequence name in case the GFF does not have it
     $self->refseq('L16622');
-  
+
     # process the GFF, convert it to GFF3, get the sequence
     my ($newGFF, $dna) = $self->read_gff($gff);
     return ($newGFF, $dna);
   }
-  
+
 =head1 DESCRIPTION
 
 This modules helps process GFF prior to loading into the database and provides
@@ -69,17 +69,20 @@ feature and attribute handling across different input/output formats.
 
 =head2 Sequence Extraction
 
-If DNA is appended to the GFF, it will be extracted.  The read_gff method returns a 
-string containing processed GFF and also a sequence string
+If DNA is appended to the GFF, it will be extracted.  The read_gff 
+method returns a string containing processed GFF and also a sequence 
+string.
 
 =head2 Rollbacks
 
-The state of a segment can be captured and saved in case the user wishes to revert 
-to an earlier version of the segment after editing/deleting features.  The last 
-10 modified segments are saved in a round-robin rotation.  In plugins that inherit 
-methods from this module, the $ROLLBACK variable must be defined with a string 
-containing the path to a directory where the web user ('apache', 'nobody', etc.) 
-has write access.  If $ROLLBACK is undefined, the rollback functionality is disabled.
+The state of a segment can be captured and saved in case the user 
+wishes to revert to an earlier version of the segment after 
+editing/deleting features.  The last 10 modified segments are saved 
+in a round-robin rotation.  In plugins that inherit 
+methods from this module, the $ROLLBACK variable must be defined 
+with a string containing the path to a directory where the web 
+user ('apache', 'nobody', etc.) has write access.  If $ROLLBACK 
+is undefined, the rollback functionality is disabled.
 
 =head1 FEEDBACK
 

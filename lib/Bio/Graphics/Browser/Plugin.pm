@@ -1,6 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.12.4.6.2.2 2006-02-08 21:55:07 lstein Exp $
-# base class for plugins for the Generic Genome Browser
+# $Id: Plugin.pm,v 1.12.4.6.2.2.2.1 2007-03-23 21:02:39 briano Exp $
 
 =head1 NAME
 
@@ -105,13 +104,13 @@ and allows the user to select among them. Example: BLAST search.
 
 =item 3) annotators 
 
-These plugins receive the genomic segment object and either 1) return a list 
-of features which are overlayed on top of the detailed view (Example: restriction 
-site annotator) or 2) update the database with new or modified features 
-and return nothing (Example: basic editor)
+These plugins receive the genomic segment object and either 1) return 
+a list of features which are overlayed on top of the detailed view 
+(Example: restriction site annotator) or 2) update the database with 
+new or modified features and return nothing (Example: basic editor)
 
 =back
-	
+
 All plug-ins inherit from Bio::Graphics::Browser::Plugin, which
 defines reasonable (but uninteresting) defaults for each of the
 methods.  Specific behavior is then implemented by selectively
@@ -431,7 +430,7 @@ and reconfigure() methods.
 NOTE: If you need to use auxiliary files like BLAST files, you can
 store the location of those files in the gbrowse .conf file under the
 stanza [YourPlugin:plugin]:
-   
+
    [YourPlugin:plugin]
    blast_path = /usr/local/blast/databases
 

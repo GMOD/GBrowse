@@ -1,6 +1,6 @@
 =head1 Oracle and PostgreSQL
 
-Support for various databases and database schemas are coming.  Right
+GBrowse supports various databases and database schemas.  Right
 now, there is full support for the Bio::DB::GFF schema running on
 MySQL, preliminary support for the Bio::DB::GFF schema running on top
 of Oracle,  preliminary support for the Bio::DB::GFF schema running
@@ -8,6 +8,10 @@ on top of PostgreSQL, and preliminary support for the BioSQL schema running
 on top of MySQL.  There is also support for the GadFly schema running on
 top of MySQL and PostgreSQL, but this uses an earlier (forked) version
 of GBrowse.  See L<README-berkeley-gadfly> for more details.
+
+There is also support for the Chado schema (using Postgres) and the
+BioSQL schema (Mysql, Postgres, Oracle). You will find more information
+on these databases and schemas at L<http://www.gmod.org>.
 
 =head2 Bio::DB::GFF on Oracle
 
@@ -24,7 +28,7 @@ Replace <service> with the service definition for your database, as
 well as the username, password and host fields.
 
 If you haven't already, you must configure Apache so that various
-Oracle environment variables are available to CGI scripts.  My
+Oracle environment variables are available to CGI scripts. An example
 httpd.conf file contains these declarations:
 
  <Directory "/var/www/cgi-bin">
@@ -125,6 +129,6 @@ following commands in psql as the database owner:
   GRANT SELECT ON TABLE fattribute            TO nobody;
   GRANT SELECT ON TABLE ftype                 TO nobody;
 
-That should be it.  If you encounter problems, please let Scott Cain
-(cain@cshl.org) know.
+That should be it.  If you encounter problems, please contact the
+gmod-gbrowse mailing list.
 

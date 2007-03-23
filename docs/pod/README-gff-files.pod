@@ -4,7 +4,7 @@ The .gff and .fasta files located in the files download area of the
 GMOD web site correspond to feature and dna information for the model
 organism systems drosophila, C. elegans, and yeast.  They are
 designed to be loaded into the Generic Genome Browser (GBrowse) for
-browsing.  You can think of them as a starter's kit for your own
+browsing.  You can think of them as a starter kit for your own
 genome browser. 
 
 These files are *not* necessarily kept up to date, but are imported
@@ -36,15 +36,13 @@ http://www.cpan.org) to use it.
 
 =item a)
 
-Go to ftp://www.wormbase.org/pub/wormbase/GENE_DUMPS/ and download
-the CHROMOSOME_?.gff.gz files that you find there.  Put them all into
+Go to ftp://ftp.wormbase.org/pub/wormbase/genomes/elegans/genome_feature_tables/GFF3 and download
+the current.gff3.gz file that you find there.  Put them all into
 one local directory named "wormbase_orig".
 
 =item b)
 
-While you're there, go to ftp://www.wormbase.org/pub/wormbase/DNA_DUMPS/unpacked
-and download the six CHROMOSOME_?.fa files that you find there.  Put them
-into wormbase_orig too.
+While you're there, go to ftp://www.wormbase.org/pub/wormbase/genomes/elegans/sequences/dna/ and download the current.dna.fa.gz file that you find there.  Put them into wormbase_orig too.
 
 =item c)
 
@@ -66,7 +64,7 @@ Copy the DNA files to wormbase_new
 
 Load everything -- see gbrowse instructions for how this works.
 
-        fast_load_gff.pl -d elegans -f wormbase_new wormbase_new/wormbase.gff
+  fast_load_gff.pl -d elegans -f wormbase_new wormbase_new/wormbase.gff
 
 =back
 
@@ -131,12 +129,11 @@ Run the GFF loader
 =item a)
 
 Go to ftp://genome-ftp.stanford.edu/pub/yeast/data_download/chromosomal_feature/
-and download the files chromosomal_feature.tab.
+and download the files SGF_features.tab.
 
 =item b)
 
-Go to ftp://genome-ftp.stanford.edu/pub/yeast/data_download/sequence/genomic_sequence/chromosomes/fasta
-and download all the .fsa files.
+Go to ftp://genome-ftp.stanford.edu/pub/yeast/data_download/sequence/genomic_sequence/chromosomes/fasta and download all the .fsa files.
 
 =item c)
 

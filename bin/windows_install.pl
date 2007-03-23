@@ -1,6 +1,19 @@
 #!/usr/bin/perl
 
-# This script should do a Windows install from the command line.
+=head1 NAME
+
+windows_install.pl
+
+=head1 SYNOPSIS
+
+ >perl windows_install.pl
+
+=head1 DESCRIPTION
+
+This script should do a Windows install from the command line. See 
+L<http://gmod.org/index.php/GBrowse_Windows_HOWTO> for more information.
+
+=cut
 
 use warnings;
 use strict;

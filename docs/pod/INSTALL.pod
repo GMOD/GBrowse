@@ -434,7 +434,9 @@ database for small projects (see section 6).
 
 Remember as well that there are other datbase possibilities. For
 example you could also use BioSQL (Mysql, Postgres, Oracle) or
-Chado (Postgres). This example uses Mysql as it is relatively 
+Chado (Postgres). See L<ORACLE_AND_POSTGRESQL> for more.
+
+This example uses Mysql as it is relatively 
 easy to set up.
 
 Synopsis:

@@ -130,5 +130,5 @@ following commands in psql as the database owner:
   GRANT SELECT ON TABLE ftype                 TO nobody;
 
 That should be it.  If you encounter problems, please contact the
-gmod-gbrowse mailing list.
+<a href="mailto:gmod-gbrowse@lists.sourceforge.net">gmod-gbrowse@lists.sourceforge.net</a>.
 

@@ -113,8 +113,7 @@ Chado for use with GBrowse.
 =head2 Bugs
 
 If you encounter any bugs or problems with this chado adaptor, please
-contact the gmod-schema or gmod-gbrowse mailing lists 
-(http://sourceforge.net/mail/?group_id=27707).
+contact the <a href="mailto:gmod-gbrowse@lists.sourceforge.net">gmod-gbrowse@lists.sourceforge.net</a>.
 
 Scott Cain
 cain@cshl.edu

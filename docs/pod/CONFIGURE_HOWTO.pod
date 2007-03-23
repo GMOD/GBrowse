@@ -3180,7 +3180,7 @@ through the source code to figure out their arguments.
 
 For further information, bug reports, etc, please consult the mailing
 lists at www.gmod.org.  The main mailing list for gbrowse support is
-gmod-gbrowse@lists.sourceforge.net.
+<a href="mailto:gmod-gbrowse@lists.sourceforge.net">gmod-gbrowse@lists.sourceforge.net</a>.
 
 Have fun!
 

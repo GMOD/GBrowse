@@ -179,7 +179,7 @@ used in the track definitions, and the aggregators.
 
 For further information, bug reports, etc, please consult the mailing
 lists at www.gmod.org.  The main mailing list for gbrowse support is
-gmod-gbrowse@lists.sourceforge.net.
+<a href="mailto:gmod-gbrowse@lists.sourceforge.net">gmod-gbrowse@lists.sourceforge.net</a>.
 
 For support with DAS, please subscribe to the biodas mailing list.
 Details can be found at http://www.biodas.org/

@@ -865,11 +865,9 @@ Apache.  Other combinations of clients and servers work properly.
 If you are interested in working on any of these features, please
 contact the developers at the address given in the next section.
 
-=head2 20. SUPPORT AND BUG REPORTS
+=head2 20. SUPPORT
 
-Please send requests for help to gmod-gbrowse@lists.sourceforge.net.
-There is also a formal bug tracking and feature request system in
-place at L<http://www.gmod.org/>
+Please send requests for help to <a href="mailto:gmod-gbrowse@lists.sourceforge.net">gmod-gbrowse@lists.sourceforge.net</a>.
 
 
 Have fun!

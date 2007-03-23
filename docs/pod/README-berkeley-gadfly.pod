@@ -13,4 +13,4 @@ lib directory is incomplete and nonfunctional.
 
 =head1 Questions
 
-Chris Mungall <cjm@fruitfly.org> or the gmod-gbrowse mailing list.
+Chris Mungall <cjm@fruitfly.org> or the <a href="mailto:gmod-gbrowse@lists.sourceforge.net">gmod-gbrowse@lists.sourceforge.net</a>.

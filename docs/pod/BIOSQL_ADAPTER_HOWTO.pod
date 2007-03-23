@@ -67,7 +67,7 @@ into /usr/lib/perl5/site_perl/5.8.1/
 
 =head2 3. SUPPORT AND BUG REPORTS
 
-Please send requests for help to simonf@cshl.edu
+Please send requests for help to simonf@cshl.edu or <a href="mailto:gmod-gbrowse@lists.sourceforge.net">gmod-gbrowse@lists.sourceforge.net</a>.
 
 
 Vsevolod (Simon) Ilyushchenko

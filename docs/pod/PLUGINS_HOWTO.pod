@@ -105,7 +105,6 @@ These plugins take filtering options from the user and are converted into
 a filter closure. Every feature from the track is passed to this closure.
 All features for which a true value is returned by the filter closure show
 up in the track.  
- 
 
 =back
 
@@ -153,9 +152,10 @@ template for front-ends to gene prediction programs.
 
 =item FilterTest.pm
 
-An example filter that filters the features from the 'ORFs' track (yeast example database).
-The user can pass options to filter the ORFs based on strand or length.
-Only those ORFs meeting the passed criteria are displayed.
+An example filter that filters the features from the 'ORFs' track 
+(yeast example database). The user can pass options to filter 
+the ORFs based on strand or length. Only those ORFs meeting the 
+passed criteria are displayed.
 
 =back
 
@@ -277,9 +277,9 @@ configuration section.
 You can now access these settings from within the plugin by using
 the following idiom:
 
-           my $browser_config = $self->browser_config; 
-           my $traverse_isa = $browser_config->plugin_setting('traverse_isa');
-           my $server       = $browser_config->plugin_setting('use_server');
+   my $browser_config = $self->browser_config; 
+   my $traverse_isa = $browser_config->plugin_setting('traverse_isa');
+   my $server       = $browser_config->plugin_setting('use_server');
 
 This facility is intended to be used for any settings that should
 not be changed by the end user. Persistent user preferences should
@@ -530,7 +530,7 @@ To make this easier to do right, the Plugin module provides a method
 named config_name() which will add the prefix for you. Here is how
 to use it with the "query" example:
 
-           $html .= textfield(-name  => $self->config_name('query'));
+      $html .= textfield(-name  => $self->config_name('query'));
 
 =item     $self->reconfigure()
 
@@ -546,11 +546,11 @@ config_param() method that manages the namespaces transparently.
 
 Here is a working example:
 
-          sub reconfigure {
-              my $self = shift;
-              my $current_configuration = $self->configuration;
-              $current_configuration->{query} = $self->config_param('query');
-          }
+   sub reconfigure {
+     my $self = shift;
+     my $current_configuration = $self->configuration;
+     $current_configuration->{query} = $self->config_param('query');
+   }
 
 All this does is to retrieve the current configuration by calling
 the configuration() method. The value of the "query" key is then
@@ -562,7 +562,7 @@ function.
 
 =head1 SEE ALSO
 
-the Bio::Graphics::Browser manpage
+The Bio::Graphics::Browser manpage.
 
 =head1 AUTHOR
 

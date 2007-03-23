@@ -14,8 +14,8 @@ distribution:
   lib/Bio/DB/Das/Chado/Segment.pm
   lib/Bio/DB/Das/Chado/Segment/Feature.pm
 
-These files are installed the in the BioPerl infastructure when 'make install' 
-is run.
+These files are installed the in the BioPerl infastructure when 
+'make install' is run.
 
 In addition to the standard chado schema, this adaptor requires a few
 additional views and functions.  These are found in two files in the
@@ -39,9 +39,6 @@ A sample chado configuration file is included in contrib/conf_files/.
 Since chado uses the Sequence Ontology for its controlled vocabulary, it
 is quite likely that this configuration file should work for any
 instance of chado once the database-specific parameters are set.
-Also, depending on what the "reference type" is (usually something
-like 'chromosome' or 'contig'), the line in the configuration for 
-reference class will need to be modified to agree with your data.
 
 After the tables are created, the user that is running Apache must
 be granted privileges to select on several tables.  Usually that
@@ -79,10 +76,17 @@ Two items specific to chado that must go into the configuration file:
 
 =item Reference class
 
-The reference class in configuration file must be the Sequence Ontology-
-Feature Annotation (SOFA) type that is the feature type in chado that
-is the foundation type, like 'chromosome', 'region' or 'contig', the 
-the other features in the database are on.
+The reference class in the configuration file must be the same 
+Sequence Ontology Feature Annotation (SOFA) type as the feature type 
+in chado of the reference sequence, like 'chromosome', 
+'region' or 'contig'.
+
+The SOFA type is usually found on line 2 of your GFF file, if
+you are using GFF for loading. For example:
+
+  #sequence-region NC_001133 1 230210
+
+This indicates that the reference class is "region".
 
 =item Aggregators
 
@@ -100,6 +104,11 @@ Once you are properly configured you should be able to use GBrowse
 with an URL like http://localhost/cgi-bin/gbrowse/chado/.
 
 =back
+
+=head2 More Information
+
+See L<http://www.gmod.org> for more information on Chado and loading
+Chado for use with GBrowse.
 
 =head2 Bugs
 

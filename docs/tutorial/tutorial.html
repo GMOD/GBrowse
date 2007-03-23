@@ -3917,9 +3917,14 @@ can be found <a
 href="http://www.biodas.org/documents/spec.html#glyphid">here</a>, but
 gbrowse has a larger number of glyphs. Because of this, DAS-exported
 features may not look on Ensembl the way they look on GBrowse. There
-are two workarounds for this:
+are three workarounds for this:
 
 <dl>
+  <dt>The <i>das flatten</i> option
+  <dd>Set this option to flatten a multi-part feature, such as a gene,
+  into a simpler "flat" structure that will display correctly on the
+      Ensembl contig viewer. Also be sure to specify "grouping true"
+      when you configure Ensembl for this DAS source.
   <dt>The <i>das glyph</i> option
   <dd>Set this option in an exported track stanza in order to force
   the glyph
@@ -4108,6 +4113,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Tue Mar 20 18:28:06 EDT 2007
+Last modified: Wed Mar 21 20:41:27 EDT 2007
 <!-- hhmts end -->
 </body> </html>

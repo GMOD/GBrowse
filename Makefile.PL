@@ -265,7 +265,6 @@ sub biographics_patch_version {
   return 1.654; # what is in bioperl 1.5.2
 }
 
-
 sub interpolate {
   my $path = shift;
   my ($to_expand,$homedir);
@@ -281,6 +280,12 @@ sub interpolate {
     $path =~ s!^~[^/]*!$homedir!;
   };
   return $path;
+}
+
+sub MY::dist {
+  package MY;
+  my $inherited = shift->SUPER::dist(@_);
+  $inherited;
 }
 
 sub MY::clean {

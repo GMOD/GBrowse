@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.6.8.1.2.3 2007-03-20 23:30:51 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.4 2007-03-23 17:02:00 lstein Exp $
 
 use Bio::DB::GFF;
 use File::Basename 'basename';
@@ -55,9 +55,9 @@ use Bio::Graphics::Browser::Util;
 use Text::Shellwords;
 use vars qw($DB $DSN $HEADER %ERRCODES $CONFIG
             $VERSION $DAS_VERSION $CONF_DIR 
-            %CACHED_TYPES %FORCED_GROUP);
+            %CACHED_TYPES %FORCED_GROUP %NO_PARENT);
 
-#$Id: das.PLS,v 1.6.8.1.2.3 2007-03-20 23:30:51 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
+#$Id: das.PLS,v 1.6.8.1.2.4 2007-03-23 17:02:00 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';
@@ -83,6 +83,7 @@ use constant CAPABILITIES => join '; ',qw(error-segment/1.0 unknown-segment/1.0 
 $CONFIG = open_config($CONF_DIR) or error_header('Could not read config files'=> 500);
 $HEADER = 0;
 %FORCED_GROUP = ();
+%NO_PARENT    = ();
 
 my ($junk,$dsn,$operation) = split '/',path_info();
 $DSN = $dsn;
@@ -324,8 +325,8 @@ sub dump_segment {
   if (@$filter) {
     my $iterator = $seq->features(-types=>$filter,-merge=>1,-iterator=>1);
     while (my $f = $iterator->next_seq) {
-      my @subparts = $f->get_SeqFeatures;
-      print_feature($f,undef,$type2category,\%agg_map); # unless @subparts;
+      my @subparts  = $f->get_SeqFeatures;
+      print_feature($f,undef,$type2category,\%agg_map) unless (@subparts && no_parent_wanted($f));
       my $count = 0;
       print_feature($_,$f,$type2category,\%agg_map,++$count)     foreach @subparts;
     }
@@ -785,7 +786,7 @@ END
       for my $attribute (keys %style) {
 	(my $name = $attribute) =~ s/^-//;
 	$name =~ s/\s/_/g;
-	next if $name =~ /glyph|category/;
+	next if $name =~ /glyph|category|das/;
 	my $value = escapeHTML($style{$attribute});
 	print qq(              <\U$name\E>$value<\U/$name\E>\n);
       }
@@ -837,6 +838,22 @@ sub forced_group {
   }
   $forced_group = $CONFIG->setting($label => 'das type') if $label;
   return $FORCED_GROUP{$type} = $forced_group;
+}
+
+sub no_parent_wanted {
+  my $feature = shift;
+  return unless $feature;
+  my $type = $feature->type;
+  return $NO_PARENT{$type} if exists $NO_PARENT{$type};
+  my $no_parent;
+  my $label = $CONFIG->type2label($type);
+  unless ($label) {
+    $type =~ s/:\w+//;
+    $label = $CONFIG->type2label($type);
+  }
+  $no_parent = $CONFIG->setting($label => 'das flatten') ||
+               $CONFIG->setting('TRACK DEFAULTS' => 'das flatten') if $label;
+  return $NO_PARENT{$type} = $no_parent;
 }
 
 # -----------------------------------------------------------------

@@ -231,10 +231,15 @@ sub print_top {
 	     );
   push @args,(-head=>$CONFIG->setting('head'))    if $CONFIG->setting('head');
   push @args,(-lang=>($CONFIG->language_code)[0]) if $CONFIG->language_code;
-  push @args,(-script=>{src=>($CONFIG->setting('js')||JS) . "/buttons.js"});
   push @args,(-gbrowse_images => $CONFIG->setting('buttons') || '/gbrowse/images/buttons');
   push @args,(-gbrowse_js     => $CONFIG->setting('js')      || '/gbrowse/js');
   push @args,(-reset_toggle   => 1)               if $reset_all;
+
+  # push all needed javascript files onto top of page
+  my $js = $CONFIG->setting('js')||JS;
+  my @scripts = map { {src=> "$js/$_" } } qw(buttons.js);
+  push @args,(-script=>\@scripts);
+
   print start_html(@args) unless $HTML++;
 }
 

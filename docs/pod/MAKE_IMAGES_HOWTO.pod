@@ -128,7 +128,6 @@ when URL-escaped). For example:
 
       <img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;
                    type=tRNA+NG+WABA+CG+ESTB">
-      
 
 Multiple type= arguments will be combined to form a single
 space-delimited list. The alias "t" can be used to shorten the length
@@ -137,7 +136,6 @@ of the URL.
 If the track name has a space in it, put quotes around the name:
 
           type="microbe tRNA"+NG+WABA+CG+ESTB
-      
 
 =item width (Alias: w)
 
@@ -153,7 +151,6 @@ tracks should always be expanded and labeled, but that the WABA track
 should be compact, use:
 
       options=tRNA+3+NG+3+WABA+1
-      
 
 The alias "o" can be used to shorten the length of the URL.
 
@@ -171,7 +168,6 @@ Features are specified as space ("+") delimited lists in the following
 format:
 
       add=Landmark+Type+Name+start..end,start..end,start..end
-      
 
 "Landmark" is the landmark name, "Type" is a descriptive type that
 will be printed in the image caption, "Name" is a name for the feature
@@ -182,15 +178,13 @@ URL-escaped, so an additional feature named "Your Sequence", type
 "Blast Hit", that is located on chromosome III in a gapped range
 between 20000 and 22000, will be formatted as:
 
-      add=III+%22Blast%20Hit%22+%22Your%20Sequence%22+20000..21000,21550..22000
-      
+   add=III+%22Blast%20Hit%22+%22Your%20Sequence%22+20000..21000,21550..22000
 
 One or both of the type and name can be omitted. If omitted, type will
 default to "Your Features" and the name will default to "Feature XX"
 where XX is an integer. This allows for a very simple feature line:
 
-      add=III+20000..21000,21550..22000
-      
+      add=III+20000..21000,21550..22000     
 
 Multiple add= arguments are allowed. The alias "a" can be used to
 shorten the length of the URL.

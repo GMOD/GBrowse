@@ -1823,7 +1823,7 @@ trace glyph. To use this glyph, you must have installed:
   <dt>zlib
   <dd><a href="http://www.zlib.net">www.zlib.net</a>
   <dt>The Bio::SCF perl module
-  <dd>Available from CPAN
+  <dd>Available from <a href="http://search.cpan.org/perldoc?Bio::SCF">CPAN</a>
 </dl>
 <p>
 
@@ -2076,11 +2076,39 @@ Here's the list of plugins that come with the standard distribution:
     <td>Dump multiple alignments</td>
   </tr>
   <tr>
+    <td>AlignTwoSequences</td>
+    <td>Take a sequence and BLAST it against the current display, show
+  hits as new sequence features</td>
+  </tr>
+  <tr>
+    <td>AttributeHiliter</td>
+    <td>Highlights features whose properties match certain criteria,
+  only works with <a href="http://search.cpan.org/perldoc?Bio::DB::GFF">Bio::DB::GFF</a> databases</td>
+  </tr>
+  <tr>
+    <td>BasicEditor</td>
+    <td>Allows basic editing of features in the GFF database</td>
+  </tr>
+  <tr>
     <td>BatchDumper</td>
     <td>Allows the user to cut and paste a series of landmarks on the
 	genome and dumps out all overlapping features using a variety
 	of formats (e.g. GenBank format)
     </td>
+  </tr>
+  <tr>
+    <td>CMapDumper</td>
+    <td>Dumps a <a href="http://wiki.gmod.org/index.php/CMap">CMap</a> readable file</td>
+  </tr>
+  <tr>
+    <td>CreateBlastDB</td>
+    <td>Take a sequence database and create a Blast-formatted database in the folder configured in
+an organism.conf file</td>
+  </tr>
+  <tr>
+    <td>ExportFeatures</td>
+    <td>Dumps annotations to the Artemis and <a href="http://fruitfly.org/annot/apollo">Apollo</a> 
+genome annotation browser/editors</td>
   </tr>
   <tr>
     <td>FastaDumper</td>
@@ -2089,13 +2117,45 @@ Here's the list of plugins that come with the standard distribution:
     </td>
   </tr>
   <tr>
+    <td>FBTableDumper</td>
+    <td>FlyBase table view dumper</td>
+  </tr>
+  <tr>
+    <td>FilterTest</td>
+    <td>Filter features from the ORFs track</td>
+  </tr>
+  <tr>
+    <td>GeneFinder</td>
+    <td>Front end to Phil Green's GeneFinder program, uses gfcode in
+  the contrib/GeneFinder/ directory</td>
+  </tr>
+  <tr>
     <td>GFFDumper</td>
     <td>Dump out the current region in GFF format (redundant with BatchDumper).</td>
+  </tr>
+  <tr>
+    <td>ImportFeatures</td>
+    <td>Processes files and loads their features 
+into the GFF database (GenBank, 
+EMBL, GFF2/3 or GAME-XML formats)</td>
   </tr>
   <tr>
     <td>OligoFinder</td>
     <td>Lets the user search for landmarks on the basis of unique
 	11-mers or greater.</td>
+  </tr>
+  <tr>
+    <td>PrimerDesigner</td>
+    <td>Use primer3 to design
+PCR primers for features or target coordinates</td>
+  </tr>
+  <tr>
+    <td>ProteinDumper</td>
+    <td>Dump translated protein sequences in various formats</td>
+  </tr>
+  <tr>
+    <td>RandomGene</td>
+    <td>Generates random genes on the current view</td>
   </tr>
   <tr>
     <td>RestrictionAnnotator</td>
@@ -2105,6 +2165,12 @@ Here's the list of plugins that come with the standard distribution:
     <td>SequenceDumper</td>
     <td>The same functionality as BatchDumper, but just shows features
 	that overlap the current region on view.</td>
+  </tr>
+  <tr>
+    <td>Spectrogram</td>
+    <td>Builds a spectrogram for
+digitized DNA sequence using the short-time fourier
+transform (STFT) method</td>
   </tr>
 </table>
 

@@ -17,8 +17,6 @@ You have been warned!!!
 
 **********************
 
- - For a demo, go to http://www.gmod.org/ggb.
-
  - To install on your own system, please see the INSTALL file.
 
  - To learn how to use the system, please see docs/tutorial.  After
@@ -30,6 +28,9 @@ You have been warned!!!
 
  - To initialize the database from one or more Genbank records, see
    docs/pod/GENBANK_HOWTO.txt.
+
+- For more information and to see GBrowse in use see the GMOD Wiki
+  at http://wiki.gmod.org/index.php/GBrowse
 
  - This software is free.  You can use it under the terms of the Perl
    Artistic License Please.  Please see DISCLAIMER for limitations of

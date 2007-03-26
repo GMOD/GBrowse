@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::AlignTwoSequences;
-# $Id: AlignTwoSequences.pm,v 1.2 2003-08-27 21:17:46 markwilkinson Exp $
+# $Id: AlignTwoSequences.pm,v 1.2.14.1 2007-03-26 14:10:54 briano Exp $
 
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -14,11 +14,9 @@ Bio::Graphics::Browser::Plugin::AlignTwoSequences -- a plugin that executes NCBI
 =head1 SYNOPSIS
 
  in 0X.organism.conf:
-     
- [AlignTwoSequences:plugin]
- bl2seq_executable = /usr/local/BLAST/bl2seq
- 
 
+ [AlignTwoSequences:plugin]
+ bl2seq_executable = /usr/local/BLAST/bl2seq 
 
 =head1 DESCRIPTION
 
@@ -28,11 +26,11 @@ and BLAST it against the current display, with hits as new sequence features.
 You must, of course, have the NCBI Blast suite of programs installed,
 you must have configured the plugin to be visible, and you must
 set a single plugin parameter in the 0X.organism.conf file:
+
     [AlignTwoSequences:plugin]
     bl2seq_executable = /path/to/your/bl2seq
 
 =cut
-
 
 $blast_executable = "";
 

@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1 2005-09-28 09:53:51 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.1 2007-03-26 14:10:54 briano Exp $
 
 =head1 NAME
 
@@ -14,7 +14,7 @@ PrimerDesigner.pm uses the Bio::PrimerDesigner API for primer3 to design
 PCR primers for features or target coordinates in gbrowse.
 
 =head1 PRIMER3 is *nix-specific
-  
+
 On unix-like systems, compile a primer3 (v. 0.9) binary executable for your 
 OS and copy it to the default path 'usr/local/bin'.  An alternate path can be 
 specified as follows
@@ -69,8 +69,6 @@ Bio::PrimerDesigner (www.cpan.org)
 primer3 (http://frodo.wi.mit.edu/primer3/primer3_code.html)
 
 =cut
-
-
 
 package Bio::Graphics::Browser::Plugin::PrimerDesigner;
 

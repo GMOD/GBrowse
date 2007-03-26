@@ -5,12 +5,10 @@ DAS::GUS::Segment - DAS-style access to a GUS database
 =head1 SYNOPSIS
 
   # Get a Bio::Das::SegmentI object from a DAS::GUS database
-  
+
   $segment = $das->segment( -name  => 'Landmark',
    						    -start => $start,
 							-stop  => $stop );
-
-=head1 DESCRIPTION
 
 =head1 AUTHOR
 
@@ -278,8 +276,8 @@ parameter form, the arguments are a series of -name=E<gt>value pairs.
 
 	Argument		Description
    -------------------------------------
-   	-types			An array reference to type names in the format "method:source"
-	
+   -types			An array reference to type names in the format "method:source"
+
 	-attributes		A hashref containing a set of attributes to match
 
 	-rangetype		One of "overlaps", "contains", or "contained_in".

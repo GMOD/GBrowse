@@ -1,14 +1,16 @@
 #!/usr/bin/perl
 #
-# $Id: Coverage.pm,v 1.1 2002-10-23 21:43:19 mavcunha Exp $
-#
+# $Id: Coverage.pm,v 1.1.16.1 2007-03-26 14:10:54 briano Exp $
 #
 
 =head1 NAME 
 
-=head1 SYNOPSIS
+Coverage
 
 =head1 DESCRIPTION
+
+This is a plugin to find the Coverage of a feature (query) in other 
+feature (anchor).
 
 =head1 TODO
 
@@ -26,7 +28,6 @@ disclaimers of warranty.
 
 =cut
 
-
 package Bio::Graphics::Browser::Plugin::Coverage;
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -43,7 +44,7 @@ sub name { "Coverage" }
 
 sub description {
     p("This is a plugin to find the Coverage of a feature (query) in other feature (anchor).").
-    p(q[ Revision: $Revision: 1.1 $]).
+    p(q[ Revision: $Revision: 1.1.16.1 $]).
     p("Author: Marco Valtas (mavcunha\@bit.fmrp.usp.br)");
 }
 

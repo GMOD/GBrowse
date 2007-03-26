@@ -1,4 +1,4 @@
-#$Id: ExportFeatures.pm,v 1.12 2004-03-16 13:37:42 sheldon_mckay Exp $
+#$Id: ExportFeatures.pm,v 1.12.14.1 2007-03-26 14:10:54 briano Exp $
 
 =head1 NAME
 
@@ -111,7 +111,7 @@ Setting the aggregator to 'off' will turn off transcript
 aggregation (Artemis only).
 
 For a simple viral or prokaryotic genome, the optimal setting would be
-  
+
   [ExportFeatures:plugin]
   editor     = Artemis
   aggregator = off

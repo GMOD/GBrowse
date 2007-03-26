@@ -11,13 +11,13 @@ DAS::GUS - DAS-style accession to a gus database
 			-dsn  => 'dbi:Oracle:sid=GUSDEV;host=localhost;port=1521',
 						-user => 'user',
 						-pass => 'pass', );
-	
+
 	@segments = $db->segment ( -name  => 'AAEE01000001',
 							   -start => 1,
 							   -end   => 1000000 );
-	
+
 	# segments are Bio::Das::SegmentI - compliant objects
-	
+
 	# fetch a list of features
 	@features = $db->features( -type=>['type1', 'type2', 'type3'] );
 
@@ -168,7 +168,7 @@ Arguments are -option=E<gt>value pairs as follows:
   -start	Start of the segment relative to landmark. Positions 
   			follow standard 1-based sequence rules.  If not 
 			specified, defaults to the beginning of the landmark.
-	
+
   -end 		End of the segment relative to the landmark. If not 
   		    specified, defaults to the end of the landmark.
 

@@ -86,8 +86,8 @@ This is called when creating a feature from scratch. It does not have
 an inherited coordinate system.
 
 =cut
-sub new {
 
+sub new {
 	my $package = shift;
 	my ($factory,
 		$parent,
@@ -1078,7 +1078,7 @@ sub asString {
 Two attributes have special meaning: "Note" is for backward 
 compatibility and is used for unstructured text remarks. 
 "Alias" is considered as a synonym for the feature name.
-  
+
   @gene_names = $feature->attributes('Gene');
   @aliases    = $feature->attributes('Alias');
 

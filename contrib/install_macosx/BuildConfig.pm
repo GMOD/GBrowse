@@ -2,7 +2,7 @@ package BuildConfig;
 
 =pod
 
-=head2 BuildConfig.pm - subroutines for building packages on Mac OS X
+=head1 BuildConfig.pm - subroutines for building packages on Mac OS X
 
 =cut
 
@@ -19,9 +19,9 @@ require Exporter;
 
 =pod
 
-=head2 Global Variables
+=head1 Global Variables
 
-=over4
+=over 3
 
 =item %VERSIONS
 

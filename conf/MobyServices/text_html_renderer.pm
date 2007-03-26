@@ -80,7 +80,7 @@ will be passed to this renderer.
 
 This is called with three pieces of data which may or may not
 be useful to your script:
-    
+
 =over
 
 =item 1)  $data - an XML::DOM object
@@ -90,14 +90,14 @@ representing the deserialized MOBY object
 =item 2)  $htmldir - the full path to the directory serving your html
 
  e.g. /usr/local/apache/htdocs/
- 
+
  (this is the HTDOCS parameter you specified
   when you installed Gbrowse)
 
 =item 3)  $imgdir - the additional path information to a writable directory for images
 
  e.g. /gbrowse/tmp
- 
+
  (this is the folder specified in the tmpimages parameter
   in your organism.conf file)
 

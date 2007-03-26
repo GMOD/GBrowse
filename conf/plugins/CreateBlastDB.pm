@@ -1,7 +1,5 @@
 package Bio::Graphics::Browser::Plugin::CreateBlastDB;
-# $Id: CreateBlastDB.pm,v 1.1 2003-11-17 22:01:38 markwilkinson Exp $
-
-
+# $Id: CreateBlastDB.pm,v 1.1.14.1 2007-03-26 14:10:54 briano Exp $
 
 =head1 NAME
 
@@ -10,7 +8,7 @@ Bio::Graphics::Browser::Plugin::CreateBlastDB -- a plugin that creates a Blast-f
 =head1 SYNOPSIS
 
  in 0X.organism.conf:
-     
+
  [CreateBlastDB:plugin]
  formatdb_executable = /usr/local/BLAST/formatdb
  blast_db_folder = /home/username/my/blast_db/folder 
@@ -29,7 +27,6 @@ set two parameters in the 0X.organism.conf file:
      formatdb_executable = /usr/local/BLAST/formatdb
      blast_db_folder = /home/username/my/blast_db/folder 
      blast_db_name = myname.fas
-
 
 =cut
 

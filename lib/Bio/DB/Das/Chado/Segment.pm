@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.19.2.2 2007-03-22 02:57:02 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.19.2.3 2007-03-27 23:21:39 dongilbert Exp $
 
 =head1 NAME
 
@@ -90,10 +90,14 @@ package Bio::DB::Das::Chado::Segment;
 use strict;
 use Carp qw(carp croak cluck);
 use Bio::Root::Root;
+use Bio::SeqI;
 use Bio::Das::SegmentI;
+use Bio::DB::Das::Chado;
 use Bio::DB::Das::Chado::Segment::Feature;
 use Bio::DB::GFF::Typename;
 use Data::Dumper;
+#dgg;not working# use Bio::Species;
+
 use constant DEBUG => 0;
 
 use vars '@ISA','$VERSION';
@@ -115,7 +119,7 @@ sub new {
     my $strand;
 
 
-    warn "$name, $factory\n"                      if DEBUG;
+    warn "na:$name, id:$db_id, $factory\n"                      if DEBUG;
     warn "base_start = $base_start, stop = $stop\n" if DEBUG;
     # clicking on the help in gbrowse calls this constructor without a
     # name. return to avoid performances issues
@@ -376,18 +380,18 @@ sub _search_by_name {
   my ($factory,$quoted_name,$db_id,$feature_id) = @_;
 
   my $sth; 
-  if ($feature_id) {
+   if ($feature_id) {
     $sth = $factory->dbh->prepare("
              select name,feature_id,seqlen from feature
              where feature_id = $feature_id");
-  }
-  elsif ($db_id) {
+   }
+   elsif ($db_id) {
     $sth = $factory->dbh->prepare ("
              select name,feature_id,seqlen from feature
              where uniquename = \'$db_id\'  ");
 
-  }
-  else {
+   } 
+   else {
     $sth = $factory->dbh->prepare ("
              select name,feature_id,seqlen from feature
              where lower(name) = $quoted_name  ");
@@ -1466,7 +1470,36 @@ just giving back the name.
 
 =cut
 
-*display_id = *display_name = *accession_number = *desc = \&name;
+*display_id = *display_name = *accession_number =  \&name;
+# *desc =
+
+#dgg patch for SeqI.desc -- use ref segment Note property for description
+sub desc {
+  my $self= shift;
+  return $self->{'desc'} if defined $self->{'desc'};
+
+  my $sth = $self->factory->dbh->prepare( "select value from featureprop 
+    where feature_id =  ? and type_id = (select cvterm_id from cvterm where name = 'Note') ");
+  $sth->execute( $self->srcfeature_id );
+  my $hashref = $sth->fetchrow_hashref();
+  return $self->{'desc'}= $hashref->{value};
+}
+
+#dgg patch for SeqI -- Bio::SeqI::species
+sub species { 
+  my $self= shift;
+  return $self->{'species'} if defined $self->{'species'};
+
+  my $sth = $self->factory->dbh->prepare( "select genus,species from organism 
+    where organism_id = (select organism_id from feature where feature_id = ?) ");
+  $sth->execute( $self->srcfeature_id );
+  my $hashref = $sth->fetchrow_hashref();
+## this is dying; why? dgg
+#  my $spp= Bio::Species->new( -classification => [ $hashref->{species}, $hashref->{genus} ]  );
+  
+  my $spp= $hashref->{genus}.' '.$hashref->{species}; # works for display uses
+  return $self->{'species'}= $spp;
+}
 
 =head2 get_feature_stream
 

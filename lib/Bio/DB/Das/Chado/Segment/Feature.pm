@@ -1101,13 +1101,24 @@ sub sub_SeqFeature {
     warn @ok_feats if DEBUG;
     return @ok_feats;
   }
-  elsif ($inferCDS) {
+  
+=item Argh...! DONT DROP THE PROTEIN FEATURE
+
+  dgg: polypeptide or protein is a most important feature, don't drop it!
+  
+  This is the part of a gene that has lots of attached critical info:
+  protein ID, translation, GO terms, Dbxrefs to other proteins)
+  While this exclusion fixes a display bug, e.g. Glyph/processed_transcript 
+  it is much less problematic to patch the glyph displayers.
+  
+  elsif ( 0 && $inferCDS) {
     #just remove polypeptide features
     my @ok_feats = grep {$_->type->method ne 'polypeptide'} @features;
     warn @ok_feats if DEBUG;
     return @ok_feats;
   }
-
+  
+=cut
 
   return  @features;
 }

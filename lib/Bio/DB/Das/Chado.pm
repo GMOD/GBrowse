@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.12.2.2 2007-03-23 21:02:38 briano Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.12.2.3 2007-03-27 23:21:39 dongilbert Exp $
 
 =head1 NAME
 
@@ -95,6 +95,7 @@ use Carp qw(longmess);
 use vars qw($VERSION @ISA);
 
 use constant SEGCLASS => 'Bio::DB::Das::Chado::Segment';
+use constant MAP_REFERENCE_TYPE => 'MapReferenceType'; #dgg
 use constant DEBUG => 0;
 
 $VERSION = 0.11;
@@ -141,7 +142,7 @@ sub new {
 
 # get the cvterm relationships here and save for later use
 
-  my $cvterm_query="select ct.cvterm_id,ct.name
+  my $cvterm_query="select ct.cvterm_id,ct.name as name, c.name as cvname
                            from cvterm ct, cv c
                            where ct.cv_id=c.cv_id and
                            (c.name IN (
@@ -161,13 +162,18 @@ sub new {
 #  my $cvname = {};
 
   my(%term2name,%name2term) = ({},{});
-
+  my %termcv=();
+  
   while (my $hashref = $sth->fetchrow_hashref) {
     $term2name{ $hashref->{cvterm_id} } = $hashref->{name};
-
+    $termcv{ $hashref->{cvterm_id} } = $hashref->{cvname}; # dgg
+    
     #this addresses a bug in gmod_load_gff3 (Scott!), which creates a 'part_of'
     #term in addition to the OBO_REL one that already exists!  this will also
     #help with names that exist in both GO and SO, like 'protein'.
+    # dgg: but this array is bad for callers of name2term() who expect scalar result 
+    #    mostly want only sofa terms
+    
     if(defined($name2term{ $hashref->{name} })){ #already seen this name
 
       if(ref($name2term{ $hashref->{name} }) ne 'ARRAY'){ #already array-converted
@@ -186,7 +192,7 @@ sub new {
   }
 
   $self->term2name(\%term2name);
-  $self->name2term(\%name2term);
+  $self->name2term(\%name2term, \%termcv);
   #Recursive Mapping
   $self->recursivMapping($arg{-recursivMapping} ? $arg{-recursivMapping} : 0);
 
@@ -389,11 +395,23 @@ Note: Should be replaced by Bio::GMOD::Util->name2term
 sub name2term {
   my $self = shift;
   my $arg = shift;
+  my $cvnames = shift;
 
+  if(ref($cvnames) eq 'HASH'){ $self->{'termcvs'} = $cvnames; }
   if(ref($arg) eq 'HASH'){
     return $self->{'name2term'} = $arg;
   } elsif($arg) {
-    return $self->{'name2term'}{$arg};
+    my $val= $self->{'name2term'}{$arg};
+    if(ref($val)) {
+      #? use $cvnames scalar here to pick which cv?
+      my @val= @$val; 
+      foreach $val (@val) {
+        my $cv=  $self->{'termcvs'}{$val};
+        return $val if($cv =~ /^(SO|sequence)/i); # want sofa_id
+        }
+      return $val[0]; #? 1st is best guess
+      }
+    return $val;
   } else {
     return $self->{'name2term'};
   }
@@ -447,13 +465,13 @@ sub segment {
   my $self = shift;
   my ($name,$base_start,$stop,$end,$class,$version,$db_id,$feature_id) 
                                          = $self->_rearrange([qw(NAME
-							     START
-                                                             STOP
-							     END
-							     CLASS
-							     VERSION
-                                                             DB_ID
-                                                             FEATURE_ID )],@_);
+								 START
+                 STOP
+								 END
+								 CLASS
+								 VERSION
+                 DB_ID
+                 FEATURE_ID )],@_);
   # lets the Segment class handle all the lifting.
 
   $end ||= $stop;
@@ -1182,9 +1200,9 @@ attributes depend on implementation) and returns a list of
 $description is a human-readable description such as a locus line, and
 $score is the match strength.
 
-search_notes is the sub to support keyword wildcard searching
-
 =cut
+
+=head2 ** NOT YET ACTIVE: search_notes IS IN TESTING STAGE **
 
 sub search_notes {
   my $self = shift;
@@ -1286,6 +1304,31 @@ sub attributes {
   my @array = @$arrayref;
   return () if scalar @array == 0;
 
+## dgg; ugly patch to copy polypeptide/protein residues into 'translation' attribute
+# need to add to gfffeatureatts ..
+  if (!defined $tag || $tag eq 'translation') {
+    $sth = $self->dbh->prepare("select type_id from feature where feature_id = ?");
+    $sth->execute($feature_id); # or $self->throw("failed to get feature_id in attributes"); 
+    $hashref = $sth->fetchrow_hashref;
+    my $type_id = $$hashref{'type_id'};
+    ## warn("DEBUG: dgg ugly prot. patch; type=$type_id for ftid=$feature_id\n");
+    
+    if(  $type_id == $self->name2term('polypeptide') 
+      || $type_id == $self->name2term('protein')
+      ) {
+      $sth = $self->dbh->prepare("select residues from feature where feature_id = ?");
+      $sth->execute($feature_id); # or $self->throw("failed to get feature_id in attributes"); 
+      $hashref = $sth->fetchrow_hashref;
+      my $aa = $$hashref{'residues'};
+      if($aa) {
+    ## warn("DEBUG: dgg ugly prot. patch; aalen=",length($aa),"\n");
+    ## this wasn't working till I added in a featureprop 'translation=dummy' .. why?
+        if($tag) { push( @array, [ $aa]); }
+        else { push( @array, ['translation', $aa]); }
+        }
+      }
+  }
+  
   my @result;
    foreach my $lineref (@array) {
       my @la = @$lineref;
@@ -1325,11 +1368,78 @@ sub default_class {
 
     my $self = shift;
 
+#dgg 
+    unless( $self->{'reference_class'} || @_ ) {
+      $self->{'reference_class'} = $self->chado_reference_class();
+      }
+      
+    if(@_) {
+      my $checkref = $self->check_chado_reference_class(@_);
+      unless($checkref) {
+        $self->throw("unable to find reference_class '$_[0]' feature in the database");
+        }
+      }
+      
     $self->{'reference_class'} = shift || 'Sequence' if(@_);
 
     return $self->{'reference_class'};
 
 }
+
+sub check_chado_reference_class {
+  my $self = shift;
+  if(@_) {
+    my $refclass= shift;
+    my $type_id = $self->name2term($refclass);
+    my $query = "select feature_id from feature where type_id = ?";
+    my $sth = $self->dbh->prepare($query);
+    $sth->execute($type_id) or $self->throw("trying to find chado_reference_class");
+    my $data = $sth->fetchrow_hashref();
+    my $refid= $$data{'feature_id'};
+    ## warn("check_chado_reference_class: $refclass = $type_id -> $refid"); # DEBUG
+    return $refid;
+  }
+}
+
+=head2 chado_reference_class
+
+  Title   : chado_reference_class 
+  Usage   : $obj->chado_reference_class()
+  Function: get or return the ID to use for Gbrowse map reference class 
+            using cvtermprop table, value = MAP_REFERENCE_TYPE 
+  Returns : the cvterm.name 
+  Args    : to return the id, none; to determine the id, 1
+  See also: default_class, refclass_feature_id
+
+  Optionally test that user/config supplied ref class is indeed a proper
+  chado feature type.
+  
+=cut
+
+
+sub chado_reference_class {
+  my $self = shift;
+  return $self->{'chado_reference_class'} if($self->{'chado_reference_class'});
+
+  my $chado_reference_class='Sequence'; # default ?
+  
+  my $query = "select cvterm_id from cvtermprop where value = ?";
+  my $sth = $self->dbh->prepare($query);
+  $sth->execute(MAP_REFERENCE_TYPE) or $self->throw("trying to find chado_reference_class");
+  my $data = $sth->fetchrow_hashref(); #? FIXME: could be many values *?
+  my $ref_cvtermid = $$data{'cvterm_id'};
+  
+  if($ref_cvtermid) {
+    $query = "select name from cvterm where cvterm_id = ?";
+    $sth = $self->dbh->prepare($query);
+    $sth->execute($ref_cvtermid) or $self->throw("trying to find chado_reference_class");
+    $data = $sth->fetchrow_hashref();
+    $chado_reference_class = $$data{'name'} if ($$data{'name'});
+    # warn("chado_reference_class: $chado_reference_class = $ref_cvtermid"); # DEBUG
+  }
+  return $self->{'chado_reference_class'} = $chado_reference_class;
+}
+
 
 =head2 refclass_feature_id
 

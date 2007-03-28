@@ -274,8 +274,12 @@ print
     "-------------------------------------------------------------------------\n";
 
 # threshold of the average number of features per tile
-# above this threshold we won't print labels
-my $feature_thresh = $args{'-f'} || 50;
+# above which we won't print labels
+my $label_thresh = $args{'-p'} || 50;
+
+# threshold of the average number of features per tile
+# above which we switch to a density histogram
+my $hist_thresh = $args{'-d'} || 300;
 
 # build a hash of hashes of tuples (arrays) storing the range of tiles that are going to be printed for
 # each track and zoom level combination; initialize this to print everything, which may be overridden
@@ -479,6 +483,7 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
 
         my $track;
         my $is_global = 0;
+        my $is_hist = 0;
         my @track_settings = ($conf->default_style, $conf->i18n_style($label, $lang, $landmark_length));
         if ($track_name eq 'ruler') {
             my ($major, $minor) = $panel->ticks;
@@ -512,8 +517,45 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
         } elsif ($conf->setting($label=>'global feature')) {
             $track = $panel->add_track($segment, @track_settings);
             $is_global = 1;
+        } elsif (($#features  / $num_tiles) > $hist_thresh) {
+            my @bins;
+            my $binsize = $tilewidth_bases / 100;
+            foreach my $feat (@features) {
+                foreach my $bin (($feat->start / $binsize)
+                                 ..($feat->end / $binsize)) {
+                    $bins[$bin]++;
+                }
+            }
+            my @histfeatures;
+            foreach my $bin (0..$#bins) {
+                next unless $bins[$bin];
+                push @histfeatures, new Bio::Graphics::Feature ( 
+                    -start        => $bin * $binsize, 
+                    -end          => ($bin + 1) * $binsize - 1,
+                    -strand       => 1, 
+                    -primary      => 'bin',
+                    -score        => $bins[$bin]
+                    );
+            }
+
+            my $bigFeature = new Bio::Graphics::Feature ( 
+                    -start        => $landmark_start, 
+                    -end          => $landmark_end,
+                    -strand       => 1, 
+                    -primary      => 'binAgg',
+                    -segments     => \@histfeatures
+                    );
+
+            $track = $panel->add_track([$bigFeature],
+                                       @track_settings,
+                                       -glyph => "xyplot",
+                                       -graph_type=>"boxes",
+                                       -scale=>"both",
+                                       -height=>200,
+                                       -bump => 0);
+            $is_hist = 1;
         } else {
-            $track = $panel->add_track(-glyph => 'generic', @track_settings);
+            $track = $panel->add_track(@track_settings);
 
             # NOTE: $track is a Bio::Graphics::Glyph::track object
 
@@ -525,12 +567,12 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
 	    }
 
             # if the average number of features per tile is
-            # less than $feature_thresh, we print labels
-            if (($#features  / $num_tiles) < $feature_thresh) {
-	        $track->configure(-bump => 1, -label => 1, -description => 1);
-	    } else {
-	        $track->configure(-bump => 1, -label => 0, -description => 0);
-	    }
+            # less than $label_thresh, we print labels
+            if (($#features  / $num_tiles) < $label_thresh) {
+                $track->configure(-bump => 1, -label => 1, -description => 1);
+            } else {
+                $track->configure(-bump => 1, -label => 0, -description => 0);
+            }
 	  }
 	}
 
@@ -550,6 +592,7 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
                 $rendering_tilewidth,
                 $tile_prefix,
                 $is_global,
+                $is_hist,
                 $panel,
                 $track,
                 $image_height,
@@ -625,6 +668,8 @@ sub writeHTML {
             my $x2=$box->[3];
             my $y2=$box->[4];
 
+            next if ($x2 - $x1) < 2;
+
             # adjust coordinates to what should be the correct tile
             $x1=$x1-$lower_limit;
             $x2=$x2-$lower_limit;   
@@ -681,6 +726,7 @@ sub renderTileRange {
         $rendering_tilewidth,
         $tile_prefix,
         $is_global,
+        $is_hist,
         $big_panel,
         $big_track,
         $image_height,
@@ -837,7 +883,7 @@ sub renderTileRange {
                 my $outfile = "${tile_prefix}${small_tile_num}.png";
                 my $outhtml = "${tile_prefix}${small_tile_num}.html";
                 my $tileURL = $html_current_outdir."tile".${small_tile_num}.".png";
-                if (!$is_global) {
+                if (!$is_global && !$is_hist) {
                     if (!defined($small_tile_boxes[$y])) {
                         if (defined($blankHtml)) {
                             #link $blankTile, $outfile
@@ -864,7 +910,7 @@ sub renderTileRange {
 
                 my $pngData = $small_tile_gd->png(4);
                 my $writePng = 0;
-                if (!$is_global) {
+                if (!$is_global && !$is_hist) {
                     # many tiles are identical (especially at high zoom)
                     # so we're not generating the tile if we've seen
                     # one with the same md5 already
@@ -876,9 +922,12 @@ sub renderTileRange {
                         $tileHash{$pngMD5} = $tileURL;
                         $writePng = 1;
                     }
+                } else {
+                    $writePng = 1;
+                    $small_tile_boxes[$y] = undef;
                 }
 
-                if ($is_global || $writePng) {
+                if ($writePng) {
                     open (TILE, ">${outfile}")
                       or die "ERROR: could not open ${outfile}!\n";
                     print TILE $pngData
@@ -915,87 +964,92 @@ sub floor {
 }
 
 sub print_usage {
-    print
-	"USAGE:\n",
-	"  generate-tiles.pl -l <landmark> [-c <config dir>] [-o <output dir>]\n",
-	"                    [-h <HTML path>] [-s <source>] [-m <mode>]\n",
-	"                    [-p <persistent>] [-v <verbose>] [-r <selection>]\n",
-	"                    [-z <zoom level number>]",
-	"                    [--exit-early] [--print-tile-nums] [--no-xml]\n",
-	"                    [--render-gridlines]\n",
-	"where the options are:\n",
-	"  -l <landmark>\n",
-	"        name of landmark you want to render\n",
-	"  -c <config dir>\n",
-	"        directory containing browser and track info in the '.conf' file\n",
-	"        (default is '${default_confdir}')\n",
-	"  -o <output directory>\n",
-	"        directory to which '${xmlfile}' and the 'tiles' directory will be\n",
-	"        written to (default is '${default_outdir}')\n",
-	"  -h <HTML path>\n",
-	"        complete HTML path to the location that will contain '${xmlfile}'\n",
-	"        and the 'tiles' directory for your genome\n",
-	"  -s <source>\n",
-	"        source of configuration info in <config dir> (is there is more than\n",
-	"        one '.conf' file)\n",
-	"  -m <mode>\n",
-	"        specifies what you want this script to do:\n",
-	"          0 = fill database with GD primitives, render tiles, generate XML\n",
-	"              file (default)\n",
-	"          1 = fill database with GD primitives and generate XML file only\n",
-	"          2 = render tiles and generate XML file only ('gdtile' MySQL database\n",
-	"              must be filled already)\n",
-	"          3 = do nothing except generate XML file and dump info\n",
-	"  -v <verbose>\n",
-	"        sets whether to run in verbose mode (that is, output activities of the\n",
-	"        program's internals to standard error):\n",
-	"          0 = verbose off (default)\n",
-	"          1 = verbose on (regular)\n",
-	"          2 = verbose on (extreem - prints trace of every instance of\n",
-	"              recording or replaying database primitives and of every tile\n",
-	"              that is rendered - WARNING, VERY VERBOSE!)\n",
-        "  -t <track list>\n",
-        "        Specify the tracks to render (e.g. -t 1,2,3,4)\n",
-        "        default: render all tracks\n",
-	"  -r <selection>\n",
-	"        Use this to render only a subset of all possible tiles, tracks and\n",
-	"        zoom levels (default is render ALL tiles); note that CURRENTLY, the\n",
-	"        RANGE part of this option DOES NOT apply to loading the database with\n",
-	"        primitives or generating the XML file - i.e you can select which\n",
-	"        tracks and zoom levels to load into database or write to XML file with\n",
-	"        this, but NOT which tile ranges, since the range feature works for\n",
-	"        RENDERING only.\n",
-	"\n",
-	"        <selection> is a comma-delimited concatenation (no whitespace) of any\n",
-	"        number of strings of the form:\n",
-	"          t<track number>z<zoom level number>r<tile number range>\n",
-	"        where <tile number range> is in the form:\n",
-	"          <start>-<end>\n",
-	"        and <track number>, <zoom level number>, and the full range of tiles\n",
-	"        for each track and zoom level can be obtained by running this script\n",
-	"        with the --print-tile-nums option (ALSO: please specify only ONE range\n",
-	"        per track and zoom level combination!)\n",
-	"\n",
-	"        EXAMPLE: t1z5r100-500,t2z5r100-500 (print tiles 100 through 500,\n",
-	"                                            inclusive, for tracks 1 and 2,\n",
-	"                                            zoom level 5)\n",
-	"  -f <number of features>\n",
-	"        threshold for the average number of features per tile.\n",
-	"        above this threshold, we won't print labels for features\n",
-	"        default: 50\n",
-	"  --exit-early\n",
-	"        a debug option; when enabled, the script exits after loading and\n",
-	"        outputting database info, but before doing anything else\n",
-	"  --print-tile-nums\n",
-	"        print how many tiles will be in each track at each zoom level (useful\n",
-	"        for getting tile ranges for '-r' option)\n",
-	"  --no-xml\n",
-	"        do not generate the XML file in any of the modes\n",
-	"  --render-gridlines\n",
-	"        render gridlines (default is do not render gridlines, since it\n",
-	"        increases the rendering time)\n",
-	"\n",
-	"Use global paths everywhere for the least surprises.\n";
+    print <<ENDUSAGE;
+USAGE
+  generate-tiles.pl -l <landmark> [-c <config dir>] [-o <output dir>]
+                    [-h <HTML path>] [-s <source>] [-m <mode>]
+                    [-p <persistent>] [-v <verbose>] [-r <selection>]
+                    [-t <track list>]
+                    [-d <density plot threshold>] [-p <label threshold>]
+                    [--exit-early] [--print-tile-nums] [--no-xml]
+                    [--render-gridlines]
+where the options are:
+  -l <landmark>
+        name of landmark you want to render
+  -c <config dir>
+        directory containing browser and track info in the '.conf' file
+        (default is '${default_confdir}')
+  -o <output directory>
+        directory to which '${xmlfile}' and the 'tiles' directory will be
+        written to (default is '${default_outdir}')
+  -h <HTML path>
+        complete HTML path to the location that will contain '${xmlfile}'
+        and the 'tiles' directory for your genome
+  -s <source>
+        source of configuration info in <config dir> (is there is more than
+        one '.conf' file)
+  -m <mode>
+        specifies what you want this script to do:
+          0 = fill database with GD primitives, render tiles, generate XML
+              file (default)
+          1 = fill database with GD primitives and generate XML file only
+          2 = render tiles and generate XML file only ('gdtile' MySQL database
+              must be filled already)
+          3 = do nothing except generate XML file and dump info
+  -v <verbose>
+        sets whether to run in verbose mode (that is, output activities of the
+        program's internals to standard error):
+          0 = verbose off (default)
+          1 = verbose on (regular)
+          2 = verbose on (extreem - prints trace of every instance of
+              recording or replaying database primitives and of every tile
+              that is rendered - WARNING, VERY VERBOSE!)
+  -t <track list>
+        Specify the tracks to render (e.g. -t 1,2,3,4)
+        default: render all tracks
+  -r <selection>
+        Use this to render only a subset of all possible tiles, tracks and
+        zoom levels (default is render ALL tiles); note that CURRENTLY, the
+        RANGE part of this option DOES NOT apply to loading the database with
+        primitives or generating the XML file - i.e you can select which
+        tracks and zoom levels to load into database or write to XML file with
+        this, but NOT which tile ranges, since the range feature works for
+        RENDERING only.
+
+        <selection> is a comma-delimited concatenation (no whitespace) of any
+        number of strings of the form:
+          t<track number>z<zoom level number>r<tile number range>
+        where <tile number range> is in the form:
+          <start>-<end>
+        and <track number>, <zoom level number>, and the full range of tiles
+        for each track and zoom level can be obtained by running this script
+        with the --print-tile-nums option (ALSO: please specify only ONE range
+        per track and zoom level combination!)
+
+        EXAMPLE: t1z5r100-500,t2z5r100-500 (print tiles 100 through 500,
+                                            inclusive, for tracks 1 and 2,
+                                            zoom level 5)
+  -d <number of features>
+        average number of features per tile above which we switch to a
+        density histogram
+        default: 200
+  -p <number of features>
+        average number of features per tile above which we won't print labels
+        default: 50
+  --exit-early
+        a debug option; when enabled, the script exits after loading and
+        outputting database info, but before doing anything else
+  --print-tile-nums
+        print how many tiles will be in each track at each zoom level (useful
+        for getting tile ranges for '-r' option)
+  --no-xml
+        do not generate the XML file in any of the modes
+  --render-gridlines
+        render gridlines (default is do not render gridlines, since it
+        increases the rendering time)
+
+Use global paths everywhere for the least surprises.
+ENDUSAGE
     
     exit 0;
 }

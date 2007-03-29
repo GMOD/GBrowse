@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.2 2007-03-01 23:00:42 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.3 2007-03-29 15:48:09 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1691,7 +1691,7 @@ sub resize {
   $new_start = $whole_segment->start if $new_start < $whole_segment->start;
   $new_stop  = $whole_segment->end   if $new_stop  > $whole_segment->end;
 
-  my $new_seg = $s->factory->segment(-name  => $s->seq_id,
+  my ($new_seg) = $s->factory->segment(-name  => $s->seq_id,
 				     -start => $new_start,
 				     -end   => $new_stop,
 				     -absolute => 1

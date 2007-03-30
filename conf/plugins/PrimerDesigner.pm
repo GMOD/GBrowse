@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.2 2007-03-30 02:52:03 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.3 2007-03-30 03:19:11 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -989,7 +989,7 @@ use constant DEBUG             => 1;
 sub new {
   my $class    = shift;
   my $browser  = shift;
-  my %browser_data = %{$browser};
+  my %browser_data = %{$browser};  # just the config data, not the object
   return bless \%browser_data, $class;
 }
 

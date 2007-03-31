@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.3 2007-03-30 03:19:11 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.4 2007-03-31 14:16:38 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -328,10 +328,12 @@ sub dump {
   print $self->browser_config->header;
 
   # reset off-scale target if required
-  delete $conf->{target}
-    if $conf->{target} > $segment->end - 1000 || $conf->{target} < $segment->start + 1000;
-  delete $conf->{lb} if $conf->{lb} > $segment->end - 1000 || $conf->{lb} < $segment->start;
-  delete $conf->{rb} if $conf->{rb} < $segment->start + 1000 || $conf->{rb} > $segment->end;
+  delete $conf->{target} if $conf->{target} 
+    && ($conf->{target} > $segment->end - 1000 || $conf->{target} < $segment->start + 1000);
+  delete $conf->{lb} if $conf->{lb} 
+    && ($conf->{lb} > $segment->end - 1000 || $conf->{lb} < $segment->start);
+  delete $conf->{rb} if $conf->{rb} 
+    && ($conf->{rb} < $segment->start + 1000 || $conf->{rb} > $segment->end);
   delete $conf->{target} unless $conf->{lb} && $conf->{rb};
   
   my $target = $self->focus($segment);
@@ -1145,7 +1147,9 @@ sub make_centering_map {
 
     my $p = 'PrimerDesigner';
     my $rb = param("$p.rb");
+    $rb = $1 if $rb && $rb =~ /\=(\d+)/;
     my $lb = param("$p.lb");
+    $lb = $1 if $lb && $lb =~ /\=(\d+)/;
     my $target = param("$p.target");
     
     # left side of the lower ruler

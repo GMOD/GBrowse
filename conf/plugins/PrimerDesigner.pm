@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.10 2006-08-30 20:04:31 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.11 2007-03-31 14:33:36 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -65,237 +65,6 @@ Bio::PrimerDesigner (www.cpan.org)
 primer3 (http://frodo.wi.mit.edu/primer3/primer3_code.html)
 
 =cut
-
-# A package to override some Bio::Graphics::Browser
-# image mapping methods
-package Bio::Graphics::Browser::faux;
-use Bio::Graphics::Browser::Render;
-use CGI qw/:standard unescape/;
-use warnings;
-use strict;
-
-use vars '@ISA';
-
-# controls the resolution of the recentering map
-use constant RULER_INTERVALS => 100;
-use constant DEFAULT_SEG_SIZE  => 10000;
-
-@ISA = qw/Bio::Graphics::Browser::Render/;
-
-sub new {
-  my $class = shift;
-  my $self  = shift || {};
-  return bless $self, $class;
-}
-
-sub error {
-  '';
-}
-
-sub make_feat_link {
-  my $self = shift;
-  my $feat = shift;
-  my ($start, $end ) = @_;
-  my $fref   = $feat->ref;
-  my $fstart = $feat->start;
-  my $fend   = $feat->stop;
-  $start ||= $fstart;
-  $end   ||= $fend;
-
-  # segment >= DEFAULT_SEG_SIZE
-  my $padding = int((DEFAULT_SEG_SIZE - $feat->length)/2) + 1;
-  my ($pad) = sort {$b<=>$a} 1000, $padding;
-
-  $start  -= $pad;
-  $end    += $pad;
-
-  my $p = 'PrimerDesigner';
-  my $url = "?plugin=$p;plugin_action=Go;ref=$fref;start=$start;stop=$end;";
-  $url   .= "$p.lb=$fstart;$p.rb=$fend";
-  
-  return $url;
-}
-
-sub make_map {
-  my $self = shift;
-  my ( $boxes, $centering_map, $panel ) = @_;
-
-  my $map = qq(\n<map name="hmap" id="hmap">\n);
-
-  my $topruler = shift @$boxes;
-  $map .= $self->make_centering_map($topruler);
-
-  my $bottomruler = pop @$boxes;
-  $map .= $self->make_boundary_map($bottomruler);
-
-  my @link_sets;
-  my $link_set_idx = 0;
-
-  for my $box (@$boxes) {
-    my ( $feat, $x1, $y1, $x2, $y2, $track ) = @$box;
-    next unless $feat->can('primary_tag');
-    next if $feat->primary_tag eq 'Primer';
-    my $fclass = $feat->class || 'feature';
-    my $fname  = $feat->name  || 'unnamed';
-    my $fstart = $feat->start;
-    my $fend   = $feat->stop;
-    my $pl     = $panel->pad_left;
-    my $half   = int(($topruler->[5]->length/2) + 0.5);
-
-    my $link = $self->make_feat_link( $feat );
-    my $href = qq{href="$link"};
-
-    # give each subfeature its own link
-    my @parts = $feat->sub_SeqFeature if $feat->can('sub_SeqFeature');
-    if ( @parts > 1 ) {
-      my $last_end;
-      for my $part (sort {$a->start <=> $b->start} @parts) {
-        my $pstart = $part->start;
-        my $pend   = $part->end;
-	my $ptype  = lc $part->primary_tag;
-
-	my $no_overlap = 0;
-	# intervals between parts select the whole (aggregate) feature
-	$last_end ||= $pend;
-	if ($pstart > $last_end) {
-	  my $istart    = $last_end + 1;
-	  my $iend      = $pstart   - 1;
-	  my ($ix1,$ix2) = map { $_ + $pl } $panel->location2pixel( $istart, $iend );
-
-	  # skip it if the box will be less than 2 pixels wide
-	  if ($ix2 - $ix1 > 1) {
-	    my $title = qq{title="select $fclass $fname"};
-	    $map .= qq(<area shape="rect" coords="$ix1,$y1,$ix2,$y2" $href $title/>\n);
-	    $no_overlap   = $ix2;
-	  }
-	}
-
-        my ( $px1, $px2 ) = map { $_ + $pl } $panel->location2pixel( $pstart, $pend );
-	$px1++ if $px1 == $no_overlap;
-
-        my $phref = $self->make_feat_link( $part, $pstart, $pend );
-        $phref     = qq{href="$phref"};
-	my $title  = qq{title="select this $ptype"};
-	$map .= qq(<area shape="rect" coords="$px1,$y1,$px2,$y2" $phref $title/>\n);
-
-	$last_end = $pend;
-      }
-    }
-    else {
-      my $title = qq{title="select $fclass $fname"};
-      $map .= qq(<area shape="rect" coords="$x1,$y1,$x2,$y2" $href $title/>\n);
-    }
-  }
-
-  $map .= "</map>\n";
-
-  return $map;
-}
-
-sub make_centering_map {
-  my $self   = shift;
-  my $ruler  = shift;
-  my $bottom = shift; # true if this is the lower scale-bar
-
-  my ( $rfeat, $x1, $y1, $x2, $y2, $track ) = @$ruler;
-
-  my $rlength = $x2 - $x1 or return;
-  my $length  = $rfeat->length;
-  my $start   = $rfeat->start;
-  my $stop    = $rfeat->stop;
-  my $panel   = $track->panel;
-  my $pl      = $panel->pad_left;
-  my $middle;
-
-  if ($bottom) {
-    $middle = param('PrimerDesigner.target');
-    $middle ||= int(($start+$stop)/2 + 0.5);
-  }
-
-  # divide into RULER_INTERVAL intervals
-  my $portion  = $length / RULER_INTERVALS;
-  my $rportion = $rlength / RULER_INTERVALS;
-
-  my $ref    = $rfeat->seq_id;
-  my $source = $self->source;
-  my $plugin = 'PrimerDesigner';
-  my $offset = $start - int( $length / 2 );
-
-  my @lines;
-
-  while (1) {
-    my $end    = $offset + $length;
-    my $center = $offset + $length/2;
-    my $sstart = $center - $portion/2;
-    my $send   = $center + $portion/2;
-    
-    $_ = int $_ for ($start,$end,$center,$sstart,$send);
-
-    my ( $X1, $X2 )
-        = map { $_ + $pl } $panel->location2pixel( $sstart, $send );
-
-    # fall of the end...
-    last if $center >= $stop + ($length / 2);
-
-    my ($url,$title_text);
-
-    my $p = 'PrimerDesigner';
-    my $rb = param("$p.rb");
-    my $lb = param("$p.lb");
-    my $target = param("$p.target");
-    
-    # left side of the lower ruler
-    if ($middle && $sstart <= $middle) {
-      $url = "?ref=$ref;start=$start;stop=$stop;plugin=$plugin;plugin_action=Go;$p.lb=$center;";
-      $url .= "$p.rb=$rb;" if $rb;
-      $url .= "$p.target=$target;" if $target;
-      $url = qq(href="$url");
-      $title_text = "set left target boundary to $center";
-    }
-    # right side of the lower ruler
-    elsif ($middle) {
-      $url = "?ref=$ref;start=$start;stop=$stop;plugin=$plugin;plugin_action=Go;$p.rb=$center";
-      $url .= ";$p.lb=$lb" if $lb;
-      $url .= "$p.target=$target;" if $target;
-      $url = qq(href="$url");
-      $title_text = "set right target boundary to $center";
-    }
-    # top ruler
-    else {
-      $url = "?ref=$ref;start=$offset;stop=$end;plugin=$plugin;plugin_action=Go;";
-
-      # We can retain an off-center target if it is still reasonable
-      if ($target && $target > $offset + 1000 && $target < $end - 1000 ) {
-	$url .= "$p.target=$target;";
-      }
-      if ($lb  && $lb > $offset + 500) {
-	$url .= "$p.lb=$lb;";
-      }
-      if ($rb  && $rb < $end - 500) {
-        $url .= "$p.rb=$rb;";
-      }
-
-      $url = qq(href="$url");
-      $title_text = "recenter at $center";
-    }
-    my $map_line
-        = qq(<area shape="rect" coords="$X1,$y1,$X2,$y2" $url );
-    $map_line .= qq(title="$title_text" alt="recenter" />\n);
-    push @lines, $map_line;
-
-    $offset += int $portion;
-  }
-
-  return join '', @lines;
-}
-
-sub make_boundary_map {
-  my $self = shift;
-  $self->make_centering_map(@_, 1);
-}
-
-1;
-
 package Bio::Graphics::Browser::Plugin::PrimerDesigner;
 
 use strict;
@@ -303,7 +72,7 @@ use Bio::PrimerDesigner;
 use Bio::PrimerDesigner::Tables;
 use Bio::Graphics::Browser::Plugin;
 use Bio::Graphics::Browser::Util;
-use Bio::Graphics::Browser::Render;
+use Bio::Graphics::Browser;
 use Bio::Graphics::Feature;
 use Bio::Graphics::FeatureFile;
 use CGI qw/:standard escape/;
@@ -324,6 +93,11 @@ use constant STYLE             => '/gbrowse/gbrowse.css';
 use vars '@ISA';
 
 @ISA = qw / Bio::Graphics::Browser::Plugin /;
+
+# Arg, modperl
+END {
+  CGI::Delete_all();
+}
 
 sub name {
   'PCR primers';
@@ -516,10 +290,10 @@ sub configure_form {
   # if this is the first config, exit before form and buttons
   # are printed by gbrowse
   if ($no_buttons && !$feats) {
-    #my $style = $browser->setting('stylesheet') || STYLE;
-    #print start_html( -style => $style, -title => 'PCR Primers'),
-    #  $html, $map;#, $browser->footer;
-    #exit;
+    my $style = $browser->setting('stylesheet') || STYLE;
+    print start_html( -style => $style, -title => 'PCR Primers'),
+      $html, $map, $browser->footer;
+    exit;
   }
 
   return $feats ? ($html,$map) : $html.$map;
@@ -554,10 +328,12 @@ sub dump {
   print $self->browser_config->header;
 
   # reset off-scale target if required
-  delete $conf->{target}
-    if $conf->{target} > $segment->end - 1000 || $conf->{target} < $segment->start + 1000;
-  delete $conf->{lb} if $conf->{lb} > $segment->end - 1000 || $conf->{lb} < $segment->start;
-  delete $conf->{rb} if $conf->{rb} < $segment->start + 1000 || $conf->{rb} > $segment->end;
+  delete $conf->{target} if $conf->{target} 
+    && ($conf->{target} > $segment->end - 1000 || $conf->{target} < $segment->start + 1000);
+  delete $conf->{lb} if $conf->{lb} 
+    && ($conf->{lb} > $segment->end - 1000 || $conf->{lb} < $segment->start);
+  delete $conf->{rb} if $conf->{rb} 
+    && ($conf->{rb} < $segment->start + 1000 || $conf->{rb} > $segment->end);
   delete $conf->{target} unless $conf->{lb} && $conf->{rb};
   
   my $target = $self->focus($segment);
@@ -673,7 +449,7 @@ sub primer_results {
   my ( @rows, @feats );
   
   my $text = "This value should be less than 1 for best results but don\'t worry too much";
-  my $Primer_Pair_Quality = 'Primer_Pair_Quality '.a( { -href => '#', -title => $text}, '[?]'); 
+  my $Primer_Pair_Quality = 'Primer_Pair_Quality '.a( { -href => 'javascript:void(0)', -title => $text}, '[?]'); 
   my $spacer = td( {-width => 25}, '&nbsp;');
   
   for my $n ( 1 .. $num ) {
@@ -1185,6 +961,364 @@ sub back_button {
   my $url = shift->my_url;
   button( -onclick => "window.location='$url'",
           -name    => 'Return to Browser' );
+}
+
+1;
+
+
+# A package to override some Bio::Graphics::Browser
+# image mapping methods
+package Bio::Graphics::Browser::faux;
+use Bio::Graphics::Browser;
+use CGI qw/:standard unescape/;
+use warnings;
+use strict;
+use Bio::Root::Storable;
+use Data::Dumper;
+
+use vars '@ISA';
+
+# controls the resolution of the recentering map
+use constant RULER_INTERVALS => 100;
+use constant DEFAULT_SEG_SIZE  => 10000;
+use constant DEFAULT_FINE_ZOOM => '20%';
+use constant BUTTONSDIR        => '/gbrowse/images/buttons';
+use constant OVERVIEW_RATIO    => 0.9;
+use constant DEBUG             => 1;
+
+@ISA = qw/Bio::Graphics::Browser/;
+
+sub new {
+  my $class    = shift;
+  my $browser  = shift;
+  my %browser_data = %{$browser};  # just the config data, not the object
+  return bless \%browser_data, $class;
+}
+
+sub error {
+  '';
+}
+
+sub make_feat_link {
+  my $self = shift;
+  my $feat = shift;
+  my ($start, $end ) = @_;
+  my $fref   = $feat->ref;
+  my $fstart = $feat->start;
+  my $fend   = $feat->stop;
+  $start ||= $fstart;
+  $end   ||= $fend;
+
+  # segment >= DEFAULT_SEG_SIZE
+  my $padding = int((DEFAULT_SEG_SIZE - $feat->length)/2) + 1;
+  my ($pad) = sort {$b<=>$a} 1000, $padding;
+
+  $start  -= $pad;
+  $end    += $pad;
+
+  my $p = 'PrimerDesigner';
+  my $url = "?plugin=$p;plugin_action=Go;ref=$fref;start=$start;stop=$end;";
+  $url   .= "$p.lb=$fstart;$p.rb=$fend";
+  
+  return $url;
+}
+
+sub make_map {
+  my $self = shift;
+  my ( $boxes, $centering_map, $panel ) = @_;
+  my $map = qq(\n<map name="hmap" id="hmap">\n);
+
+  my $topruler = shift @$boxes;
+  $map .= $self->make_centering_map($topruler);
+
+  my $bottomruler = pop @$boxes;
+  $map .= $self->make_boundary_map($bottomruler);
+
+  my @link_sets;
+  my $link_set_idx = 0;
+
+  for my $box (@$boxes) {
+    my ( $feat, $x1, $y1, $x2, $y2, $track ) = @$box;
+    next unless $feat->can('primary_tag');
+    next if $feat->primary_tag eq 'Primer';
+    my $fclass = $feat->class || 'feature';
+    my $fname  = $feat->name  || 'unnamed';
+    my $fstart = $feat->start;
+    my $fend   = $feat->stop;
+    my $pl     = $panel->pad_left;
+    my $half   = int(($topruler->[5]->length/2) + 0.5);
+
+    my $link = $self->make_feat_link( $feat );
+    my $href = qq{href="$link"};
+
+    # give each subfeature its own link
+    my @parts = $feat->sub_SeqFeature if $feat->can('sub_SeqFeature');
+    if ( @parts > 1 ) {
+      my $last_end;
+      for my $part (sort {$a->start <=> $b->start} @parts) {
+        my $pstart = $part->start;
+        my $pend   = $part->end;
+	my $ptype  = lc $part->primary_tag;
+
+	my $no_overlap = 0;
+	# intervals between parts select the whole (aggregate) feature
+	$last_end ||= $pend;
+	if ($pstart > $last_end) {
+	  my $istart    = $last_end + 1;
+	  my $iend      = $pstart   - 1;
+	  my ($ix1,$ix2) = map { $_ + $pl } $panel->location2pixel( $istart, $iend );
+
+	  # skip it if the box will be less than 2 pixels wide
+	  if ($ix2 - $ix1 > 1) {
+	    my $title = qq{title="select $fclass $fname"};
+	    $map .= qq(<area shape="rect" coords="$ix1,$y1,$ix2,$y2" $href $title/>\n);
+	    $no_overlap   = $ix2;
+	  }
+	}
+
+        my ( $px1, $px2 ) = map { $_ + $pl } $panel->location2pixel( $pstart, $pend );
+	$px1++ if $px1 == $no_overlap;
+
+        my $phref = $self->make_feat_link( $part, $pstart, $pend );
+        $phref     = qq{href="$phref"};
+	my $title  = qq{title="select this $ptype"};
+	$map .= qq(<area shape="rect" coords="$px1,$y1,$px2,$y2" $phref $title/>\n);
+
+	$last_end = $pend;
+      }
+    }
+    else {
+      my $title = qq{title="select $fclass $fname"};
+      $map .= qq(<area shape="rect" coords="$x1,$y1,$x2,$y2" $href $title/>\n);
+    }
+  }
+
+  $map .= "</map>\n";
+
+  return $map;
+}
+
+sub make_centering_map {
+  my $self   = shift;
+  my $ruler  = shift;
+  my $bottom = shift; # true if this is the lower scale-bar
+
+  my ( $rfeat, $x1, $y1, $x2, $y2, $track ) = @$ruler;
+
+  my $rlength = $x2 - $x1 or return;
+  my $length  = $rfeat->length;
+  my $start   = $rfeat->start;
+  my $stop    = $rfeat->stop;
+  my $panel   = $track->panel;
+  my $pl      = $panel->pad_left;
+  my $middle;
+
+  if ($bottom) {
+    $middle = param('PrimerDesigner.target');
+    $middle ||= int(($start+$stop)/2 + 0.5);
+  }
+
+  # divide into RULER_INTERVAL intervals
+  my $portion  = $length / RULER_INTERVALS;
+  my $rportion = $rlength / RULER_INTERVALS;
+
+  my $ref    = $rfeat->seq_id;
+  my $source = $self->source;
+  my $plugin = 'PrimerDesigner';
+  my $offset = $start - int( $length / 2 );
+
+  my @lines;
+
+  while (1) {
+    my $end    = $offset + $length;
+    my $center = $offset + $length/2;
+    my $sstart = $center - $portion/2;
+    my $send   = $center + $portion/2;
+    
+    $_ = int $_ for ($start,$end,$center,$sstart,$send);
+
+    my ( $X1, $X2 )
+        = map { $_ + $pl } $panel->location2pixel( $sstart, $send );
+
+    # fall of the end...
+    last if $center >= $stop + ($length / 2);
+
+    my ($url,$title_text);
+
+    my $p = 'PrimerDesigner';
+    my $rb = param("$p.rb");
+    $rb = $1 if $rb && $rb =~ /\=(\d+)/;
+    my $lb = param("$p.lb");
+    $lb = $1 if $lb && $lb =~ /\=(\d+)/;
+    my $target = param("$p.target");
+    
+    # left side of the lower ruler
+    if ($middle && $sstart <= $middle) {
+      $url = "?ref=$ref;start=$start;stop=$stop;plugin=$plugin;plugin_action=Go;$p.lb=$center;";
+      $url .= "$p.rb=$rb;" if $rb;
+      $url .= "$p.target=$target;" if $target;
+      $url = qq(href="$url");
+      $title_text = "set left target boundary to $center";
+    }
+    # right side of the lower ruler
+    elsif ($middle) {
+      $url = "?ref=$ref;start=$start;stop=$stop;plugin=$plugin;plugin_action=Go;$p.rb=$center";
+      $url .= ";$p.lb=$lb" if $lb;
+      $url .= "$p.target=$target;" if $target;
+      $url = qq(href="$url");
+      $title_text = "set right target boundary to $center";
+    }
+    # top ruler
+    else {
+      $url = "?ref=$ref;start=$offset;stop=$end;plugin=$plugin;plugin_action=Go;";
+
+      # We can retain an off-center target if it is still reasonable
+      if ($target && $target > $offset + 1000 && $target < $end - 1000 ) {
+	$url .= "$p.target=$target;";
+      }
+      if ($lb  && $lb > $offset + 500) {
+	$url .= "$p.lb=$lb;";
+      }
+      if ($rb  && $rb < $end - 500) {
+        $url .= "$p.rb=$rb;";
+      }
+
+      $url = qq(href="$url");
+      $title_text = "recenter at $center";
+    }
+    my $map_line
+        = qq(<area shape="rect" coords="$X1,$y1,$X2,$y2" $url );
+    $map_line .= qq(title="$title_text" alt="recenter" />\n);
+    push @lines, $map_line;
+
+    $offset += int $portion;
+  }
+
+  return join '', @lines;
+}
+
+sub make_boundary_map {
+  my $self = shift;
+  $self->make_centering_map(@_, 1);
+}
+
+sub current_segment {
+  my $self = shift;
+  my $segment = shift;
+  return $self->{segment} = $segment if $segment;
+  return $self->{segment};
+}
+
+sub unit_label {
+  my ( $self, $value ) = @_;
+  my $unit    = $self->setting('units')        || 'bp';
+  my $divider = $self->setting('unit_divider') || 1;
+  $value /= $divider;
+  my $abs = abs($value);
+  my $label;
+        $label = $abs >= 1e9 ? sprintf( "%.4g G%s", $value / 1e9, $unit )
+      : $abs >= 1e6  ? sprintf( "%.4g M%s", $value / 1e6, $unit )
+      : $abs >= 1e3  ? sprintf( "%.4g k%s", $value / 1e3, $unit )
+      : $abs >= 1    ? sprintf( "%.4g %s",  $value,       $unit )
+      : $abs >= 1e-2 ? sprintf( "%.4g c%s", $value * 100, $unit )
+      : $abs >= 1e-3 ? sprintf( "%.4g m%s", $value * 1e3, $unit )
+      : $abs >= 1e-6 ? sprintf( "%.4g u%s", $value * 1e6, $unit )
+      : $abs >= 1e-9 ? sprintf( "%.4g n%s", $value * 1e9, $unit )
+      : sprintf( "%.4g p%s", $value * 1e12, $unit );
+  if (wantarray) {
+    return split ' ', $label;
+  }
+  else {
+    return $label;
+  }
+}
+
+sub slidertable {
+  my $self       = shift;
+  my $small_pan  = shift;    
+  my $buttons    = $self->setting('buttons') || BUTTONSDIR;
+  my $segment    = $self->current_segment or fatal_error("No segment defined");
+  my $span       = $small_pan ? int $segment->length/2 : $segment->length;
+  my $half_title = $self->unit_label( int $span / 2 );
+  my $full_title = $self->unit_label($span);
+  my $half       = int $span / 2;
+  my $full       = $span;
+  my $fine_zoom  = $self->get_zoomincrement();
+  Delete($_) foreach qw(ref start stop);
+  my @lines;
+  push @lines,
+  hidden( -name => 'start', -value => $segment->start, -override => 1 );
+  push @lines,
+  hidden( -name => 'stop', -value => $segment->end, -override => 1 );
+  push @lines,
+  hidden( -name => 'ref', -value => $segment->seq_id, -override => 1 );
+  push @lines, (
+		image_button(
+			     -src    => "$buttons/green_l2.gif",
+			     -name   => "left $full",
+			     -border => 0,
+			     -title  => "left $full_title"
+			     ),
+		image_button(
+			     -src    => "$buttons/green_l1.gif",
+			     -name   => "left $half",
+			     -border => 0,
+			     -title  => "left $half_title"
+			     ),
+		'&nbsp;',
+		image_button(
+			     -src    => "$buttons/minus.gif",
+			     -name   => "zoom out $fine_zoom",
+			     -border => 0,
+			     -title  => "zoom out $fine_zoom"
+			     ),
+		'&nbsp;', $self->zoomBar, '&nbsp;',
+		image_button(
+			     -src    => "$buttons/plus.gif",
+			     -name   => "zoom in $fine_zoom",
+			     -border => 0,
+			     -title  => "zoom in $fine_zoom"
+			     ),
+		'&nbsp;',
+		image_button(
+			     -src    => "$buttons/green_r1.gif",
+			     -name   => "right $half",
+			     -border => 0,
+			     -title  => "right $half_title"
+			     ),
+		image_button(
+			     -src    => "$buttons/green_r2.gif",
+			     -name   => "right $full",
+			     -border => 0,
+			     -title  => "right $full_title"
+			     ),
+		);
+  return join( '', @lines );
+}
+
+sub get_zoomincrement {
+  my $self = shift;
+  my $zoom = $self->setting('fine zoom') || DEFAULT_FINE_ZOOM;
+  $zoom;
+}
+
+sub zoomBar {
+  my $self    = shift;
+  my $segment = $self->current_segment;
+  my ($show)  = $self->tr('Show');
+  my %seen;
+  my @ranges = grep { !$seen{$_}++ } sort { $b <=> $a } ($segment->length, $self->get_ranges());
+  my %labels = map { $_ => $show . ' ' . $self->unit_label($_) } @ranges;
+
+  return popup_menu(
+    -class    => 'searchtitle',
+    -name     => 'span',
+    -values   => \@ranges,
+    -labels   => \%labels,
+    -default  => $segment->length,
+    -force    => 1,
+    -onChange => 'document.mainform.submit()',
+  );
 }
 
 1;

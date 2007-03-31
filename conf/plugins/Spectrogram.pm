@@ -1,4 +1,4 @@
-# $Id: Spectrogram.pm,v 1.7 2006-08-30 20:20:36 sheldon_mckay Exp $
+# $Id: Spectrogram.pm,v 1.8 2007-03-31 14:33:36 sheldon_mckay Exp $
 # bioperl module for Bio::Graphics::Browser::Plugin::Spectrogram
 # cared for by Sheldon McKay mckays@cshl.edu
 # Copyright (c) 2006 Cold Spring Harbor Laboratory.
@@ -10,7 +10,7 @@ Bio::Graphics::Browser::Plugin::Spectrogram
 =head1 SYNOPSIS
 
 This module is not used directly.  It is an 'annotator'
-plugin for gbrowse.
+plugin for tehe Generic Genome Browser.
 
 =head1 DESCRIPTION
 
@@ -80,6 +80,9 @@ use GD;
 use Math::FFT;
 use Statistics::Descriptive;
 use List::Util qw/shuffle max/;
+
+use Data::Dumper;
+
 
 use vars qw/@ISA $CONFIG/;
 
@@ -190,8 +193,8 @@ sub annotate {
     my $type = $conf->{type}; 
 
     if ($type eq 'period') {
-      $min_f = int(2*$win/($max)) - 1;
-      $max_f = $min ? int(2*$win/($min)) - 1 : $win-1;
+      $min_f = $min && $max && $max > 1 ? int(2*$win/($max)) - 1 : $win - 1;
+      $max_f = $min ? int(2*$win/($min)) - 1  : $win - 1;
     }
     else {
      unless (int $min == $min) {
@@ -235,36 +238,57 @@ sub annotate {
 					    link   => $link } );
 
   my $start = 0;
+
+  my $skipped;
+
   until ( $start > ( $end - $win ) ) {
     my $sub_seq = substr $seq, $start, $win;
 
-    # Digitize the DNA
-    my ($g,$a,$t,$c) = make_numeric($sub_seq);
+    # runs of N's will screw things up.
+    $sub_seq =~ s/[^gatcGATC]/N/g;
+    my $has_Ns = $sub_seq =~ tr/N/a/;
 
-    # take the magnitude of the DFT
-    dft(\$_) for ($g,$a,$t,$c);
+    unless ( $has_Ns > $win/10 ) {
+      # Digitize the DNA
+      my ($g,$a,$t,$c) = make_numeric($sub_seq);
 
-    # get rid of DC 'component'
-    if ($conf->{filter_01} ) {
-      for ($g,$a,$t,$c) {
-	$_->[0] = 0;
-	$_->[1] = 0;
+      # take the magnitude of the DFT
+      dft(\$_) for ($g,$a,$t,$c);
+
+      # get rid of DC 'component'
+      if ($conf->{filter_01} ) {
+	for ($g,$a,$t,$c) {
+	  $_->[0] = 0;
+	  $_->[1] = 0;
+	}
       }
+      
+      push @g, [@{$g}[$min_f..$max_f]];
+      push @a, [@{$a}[$min_f..$max_f]];
+      push @t, [@{$t}[$min_f..$max_f]];
+      push @c, [@{$c}[$min_f..$max_f]];
+      push @coords, [$start + $offset + 1, $start + $offset + $inc];
     }
-    
-    push @g, [@{$g}[$min_f..$max_f]];
-    push @a, [@{$a}[$min_f..$max_f]];
-    push @t, [@{$t}[$min_f..$max_f]];
-    push @c, [@{$c}[$min_f..$max_f]];
-    push @coords, [$start + $offset + 1, $start + $offset + $inc];
+    else {
+      $skipped++;
+    }
 
     $start += $inc;
   }
 
+
+  # warn if there are a lot of 'N's
+  if ($skipped) {
+    error("Spectrogram: blank areas correspond to ambiguous sequence regions  with > 10% 'N's");
+  }
+
+
   # max out the intensity range at the nth
   # percentile to avoid saturation of color intensity 
   my $stat = Statistics::Descriptive::Full->new;
-  $stat->add_data(map {@$_} @g,@a,@t,@c);
+  my @data = grep {defined $_} map {@$_} @g,@a,@t,@c;
+
+  $stat->add_data(@data);
   my $max = $stat->percentile($conf->{quantile});
   my @labels = $min_f .. $max_f;
   @labels = map {$_ ? 2*$win/$_ : $win} @labels if $conf->{type} eq 'period';
@@ -279,12 +303,12 @@ sub annotate {
     my $z_stop  = $end   + $pad;
     my $name = $segment->ref .":$z_start..$z_stop";
     $url .= "?name=$name";
-
+    
     my $G = shift @g;
     my $A = shift @a;
     my $T = shift @t;
     my $C = shift @c;
-
+    
     my $atts = { g   => $G,
 		 a   => $A,
 		 t   => $T,
@@ -297,8 +321,6 @@ sub annotate {
       $first = 0;
     }
     
-    $atts->{g} = $G;
-
     # create a column for the spectrogram.  Offset the seuquence
     # coordinates so that features in the specrogam are directly below
     # the corresponding DNA 
@@ -506,7 +528,7 @@ If we see a feature in the spectrogram at period <i>x</i>, there is a non-random
 with a periodicity of <i>x</i> nucleotides.  The chief example of this would be coding DNA at period 3.  
 </p>
 <br>
-The DNA sequence is converted from analog to digital by creating four binary four binary indicator sequences:
+The DNA sequence is converted from analog to digital by creating four binary indicator sequences:
 
 <pre>
            G A T C C T C T G A T T C C A A

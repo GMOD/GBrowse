@@ -156,6 +156,24 @@ Generic Genome Browser Installation
         e_id=108243 which is part of the Staden Package
         https://sourceforge.net/projects/staden/.
 
+    L) Math::FFT Statistics::Descriptive
+        Needed by the Spectrogram.pm plugin to calculate Fast Fourier Transforms.
+        This module is available from CPAN.
+
+    M) Bio::PrimerDesigner Math::Round primer3
+        Needed by the PrimerDesigner.pm plugin.  The perl modules are available
+        from CPAN.  The linux primer3 binary is packaged with the Bio::PrimerDesigner
+        distribution.  The binary (or source code) can also be obtained from
+        http://frodo.wi.mit.edu/primer3/primer3_code.html.  
+        If you are using this plugin, the primer3 binary must be installed
+        if /usr/local/bin and named 'primer3'.  If it is installed in another
+        path, edit the followinf section in the PrimerDesigner plugin:
+
+          use constant BINARY            => 'primer3';
+          use constant BINPATH           => '/usr/local/bin';
+
+
+
     Once the prerequisites are installed, download the most recent version
     of the Generic-Genome-Browser source code from:
 

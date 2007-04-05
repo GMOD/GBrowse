@@ -27,7 +27,10 @@ use Data::Dumper;
 use Carp 'croak','cluck';
 use Time::HiRes qw( gettimeofday tv_interval );
 use Digest::MD5 qw(md5);
+use XML::DOM;
+use Fcntl qw( :DEFAULT :flock :seek );
 
+# max number of hardlinks to a single file, minus some margin
 use constant MAX_LINKS => 30000;
 
 my $start_time = [gettimeofday];
@@ -120,10 +123,6 @@ unless (-e $outdir || !$render_tiles) {
     mkdir $outdir or die "ERROR: cannot make output directory ${outdir}! ($!)\n";
 }
 
-unless ($no_xml) {
-    open XMLFILE, ">${outdir}/${xmlfile}" or die "ERROR: cannot open '${outdir}/${xmlfile}' ($!)\n";
-}
-
 # do database '.conf' directory stuff
 my $CONF_DIR = $args{'-c'};
 if ($CONF_DIR) {
@@ -205,12 +204,7 @@ unless (-e $outdir_tiles || !$render_tiles) {
 }
 print " Output directory: ${outdir}\n" unless !$render_tiles and $no_xml;
 
-my ($html_outdir, $html_outdir_tiles);
-unless ($no_xml) {
-    $html_outdir = $args{'-h'};
-    die "ERROR: you must provide an HTML path!" if !$html_outdir;
-    $html_outdir_tiles = "${html_outdir}/tiles/${landmark_name}/";
-}
+my $html_outdir_tiles = "tiles/${landmark_name}/";
 
 print
     "-------------------------------------------------------------------------\n";
@@ -373,19 +367,6 @@ if ($print_tile_nums) {  # output track names, zoom level names, and tile ranges
 
 exit if $exit_early;  # bail out if the user just wanted results of parsing the '.conf' file
 
-# start generating the XML file
-unless ($no_xml) {
-    print XMLFILE
-	"<?xml version=\"1.0\"?>\n",
-	"<settings>\n",
-	"  <defaults zoomlevelname=\"${default_zoom_level_name}\" />\n",
-	"  <landmark name=\"${source_name}\" start=\"${landmark_start}\" end=\"${landmark_end}\" id=\"${landmark_name}\" />\n",
-	"  <tile width=\"${tilewidth_pixels}\" />\n";
-}
-
-# Render the genomic tiles for all tracks and zoom levels
-print XMLFILE "  <tracks>\n" unless $no_xml;
-
 # iterate over tracks (i.e. labels)
 for (my $label_num = 0; $label_num < @track_labels; $label_num++)
 {
@@ -412,9 +393,6 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
     $track_name = $label unless $track_name;
 
     warn "=== GENERATING TRACK $label ($track_name)... ===\n" if $verbose;
-
-    print XMLFILE "    <track name=\"${track_name}\">\n"
-        unless $no_xml || ($label eq 'ruler');
 
     my $lang = $CONFIG->language;
 
@@ -606,28 +584,95 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
         $panel->finished();
         $panel = undef;
 
+        unless ($no_xml) {
+            my $xml = new IO::File;
+            $xml->open("${outdir}/${xmlfile}", O_RDWR | O_CREAT)
+                or die "ERROR: cannot open '${outdir}/${xmlfile}' ($!)\n";
+            flock($xml, LOCK_EX)
+                or die "couldn't lock XML: $!";
+            my $doc;
+            if (-z "${outdir}/${xmlfile}") {
+                $doc = initXml($default_zoom_level_name, $source_name, 
+                                $landmark_start, $landmark_end, $landmark_name,
+                                $tilewidth_pixels, $source);
+            } else {
+                my $parser = new XML::DOM::Parser;
+                $doc = $parser->parse($xml) or die "couldn't parse XML: $!";
+            }
+            my $root = $doc->getDocumentElement;
+            if ($label eq 'ruler') {
+                setAtts(ensureChild($root, "ruler"),
+                        "tiledir" => "${html_outdir_tiles}/ruler/",
+                        "height" => $image_height);
+            } else {
+                my @tracks = ensureChild($root, "tracks");
+                my @this_track = ensureChild($tracks[0], "track",
+                                             "name" => $track_name);
+                my @this_zoom = ensureChild($this_track[0], "zoomlevel",
+                                            "name" => $zoom_level_name);
+                setAtts($this_zoom[0],
+                        "tileprefix" => $html_current_outdir,
+                        "name" => $zoom_level_name,
+                        "unitspertile" => $tilewidth_bases,
+                        "height" => $image_height,
+                        "numtiles" => $num_tiles);
+            }
+            $xml->truncate(0) or die "couldn't truncate XML: $!";
+            $xml->seek(0, SEEK_SET) or die "couldn't seek to XML start: $!";
+            $xml->print($doc->toString . "\n") or die "couldn't write XML: $!";
+            $xml->close or die "couldn't close XML: $!";
+        }
+
         warn "tiles for track $label zoom $zoom_level_name rendered: " . tv_interval($start_time) . "\n" if ($render_tiles && ($verbose >= 1));
 
-	# if we got this far with no fatal error, we can print info about this track to XML file
-        print XMLFILE
-            "      <zoomlevel tileprefix=\"${html_current_outdir}\" name=\"${zoom_level_name}\" ",
-            "unitspertile=\"${tilewidth_bases}\" height=\"${image_height}\" numtiles=\"${num_tiles}\" />\n"
-            unless $no_xml || ($label eq 'ruler');
-
     } # ends loop iterating through zoom levels
-
-    if ($label eq 'ruler') {
-        print XMLFILE "  <ruler tiledir=\"${html_outdir_tiles}/ruler/\" height=\"${image_height}\" />\n" unless $no_xml;
-    } else {
-        print XMLFILE "    </track>\n" unless $no_xml;
-    }
 }  # ends the 'for' loop iterating through @track_labels
 
-unless ($no_xml) {
-    print XMLFILE "  </tracks>\n";
-    print XMLFILE "  <classicurl url=\"http://128.32.184.78/cgi-bin/gbrowse/${source}/\" />\n";  # TEMP INFO FOR DEMO TO LINK TO CLASSIC GBROWSE !!!
-    print XMLFILE "</settings>\n";  # close out XML file
-    close(XMLFILE);
+# checks that the given parent element has at least one
+# child with the given tag name and (optional) attribute values.
+# if there's no such child, creates one.
+sub ensureChild {
+    my ($parent, $tag, %atts) = @_;
+    my $filter = sub {
+        my $node = shift;
+        foreach my $key (keys %atts) {
+            return 0 if $node->getAttribute($key) ne $atts{$key};
+        }
+        return 1;
+    };
+    my @children = grep &$filter($_), $parent->getElementsByTagName($tag);
+    return @children if @children;
+    my $child = $parent->appendChild($parent->getOwnerDocument->createElement($tag));
+    setAtts($child, %atts);
+    return $child;
+}
+
+# sets multiple attributes on a given element
+sub setAtts {
+    my ($node, %atts) = @_;
+    $node->setAttribute($_, $atts{$_}) foreach keys %atts;
+    return $node;
+}
+
+sub initXml {
+    my ($default_zoom_level_name, $source_name, 
+        $landmark_start, $landmark_end, $landmark_name,
+        $tilewidth_pixels, $source) = @_;
+    my $doc = new XML::DOM::Document();
+    $doc->setXMLDecl($doc->createXMLDecl("1.0"));
+    my $root = $doc->appendChild($doc->createElement("settings"));
+    $root->appendChild($doc->createElement("defaults"))
+        ->setAttribute("zoomlevelname", $default_zoom_level_name);
+    setAtts($root->appendChild($doc->createElement("landmark")), 
+            "name" => $source_name, "start" => $landmark_start,
+            "end" => $landmark_end, "id" => $landmark_name);
+    $root->appendChild($doc->createElement("tile"))
+        ->setAttribute("width", $tilewidth_pixels);
+    $root->appendChild($doc->createElement("tracks"));
+
+    $root->appendChild($doc->createElement("classicurl"))
+        ->setAttribute("url", "http://128.32.184.78/cgi-bin/gbrowse/${source}/");
+    return $doc;
 }
 
 sub area {
@@ -793,6 +838,10 @@ sub renderTileRange {
             # rendering tile bounds in bp coordinates
             my $first_base = int($rtile_left / $big_panel->scale) + $big_panel->start;
             my $last_base = int(($rtile_right + 1) / $big_panel->scale) + $big_panel->start - 1;
+            # not sure why we need this
+            $last_base++
+                if ($big_panel->start == $first_base)
+                && ($last_base > $big_panel->end);
 
             # set up the per-rendering-tile panel, with the right
             # bp coordinates and pixel width
@@ -968,7 +1017,7 @@ sub print_usage {
 USAGE
   generate-tiles.pl -l <landmark> [-c <config dir>] [-o <output dir>]
                     [-h <HTML path>] [-s <source>] [-m <mode>]
-                    [-p <persistent>] [-v <verbose>] [-r <selection>]
+                    [-v <verbose>] [-r <selection>]
                     [-t <track list>]
                     [-d <density plot threshold>] [-p <label threshold>]
                     [--exit-early] [--print-tile-nums] [--no-xml]
@@ -982,11 +1031,8 @@ where the options are:
   -o <output directory>
         directory to which '${xmlfile}' and the 'tiles' directory will be
         written to (default is '${default_outdir}')
-  -h <HTML path>
-        complete HTML path to the location that will contain '${xmlfile}'
-        and the 'tiles' directory for your genome
   -s <source>
-        source of configuration info in <config dir> (is there is more than
+        source of configuration info in <config dir> (if there is more than
         one '.conf' file)
   -m <mode>
         specifies what you want this script to do:

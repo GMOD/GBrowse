@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.19.2.3 2007-03-27 23:21:39 dongilbert Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.19.2.4 2007-04-06 18:05:10 scottcain Exp $
 
 =head1 NAME
 
@@ -88,7 +88,7 @@ methods. Internal methods are usually preceded with a _
 package Bio::DB::Das::Chado::Segment;
 
 use strict;
-use Carp qw(carp croak cluck);
+use Carp qw(carp croak cluck confess);
 use Bio::Root::Root;
 use Bio::SeqI;
 use Bio::Das::SegmentI;
@@ -111,9 +111,14 @@ sub new {
  #validate that the name/accession is valid, and start and end are valid,
  #then return a new segment
 
-    my $self = shift;
+    my $self = {};
+    my $class_type = shift;
 
     my ( $name,$factory,$base_start,$stop,$db_id,$target,$feature_id ) = @_;
+
+    bless $self, ref $class_type || $class_type;
+    $self->{'factory'} = $factory;
+    $self->{'name'} = $name;
 
     $target ||=0;
     my $strand;
@@ -151,20 +156,21 @@ sub new {
 
     my $ref_feature_id = $factory->refclass_feature_id() || undef;
 
-    my ($where_part, $join_part) = ("","");
-    $where_part = " and rank = $target " if(defined($target));
+    my $where_part = " and rank = $target " if(defined($target));
 
     if(defined($ref_feature_id)){
         $where_part .= " and fl.srcfeature_id = $ref_feature_id ";
     }
     else{
-        $join_part   = " join feature srcf on (fl.srcfeature_id = srcf.feature_id) ";
         $where_part .= " and srcf.type_id = $refclass " if(defined($refclass));
     }
 
+    $where_part .= " and srcf.is_obsolete = false " unless $self->factory->allow_obsolete;
+
     my $srcfeature_query = $factory->dbh->prepare( "
         select srcfeature_id from featureloc fl
-        $join_part where fl.feature_id = ? " . $where_part
+          join feature srcf on (fl.srcfeature_id = srcf.feature_id) 
+        where fl.feature_id = ? " . $where_part
        );
 
     #my $srcfeature_query = $factory->dbh->prepare( "
@@ -173,20 +179,20 @@ sub new {
     #     " );
 
     my $landmark_is_src_query = $factory->dbh->prepare( "
-       select f.name,f.feature_id,f.seqlen,f.type_id
+       select f.name,f.feature_id,f.seqlen,f.type_id,f.is_obsolete
        from feature f
        where f.feature_id = ?
          " );
 
     my $feature_query = $factory->dbh->prepare( "
        select f.name,f.feature_id,f.seqlen,f.type_id,fl.fmin,fl.fmax,fl.strand
-       from feature f, featureloc fl
+       from feature f, featureloc fl,f.is_obsolete
        where fl.feature_id = ? and
              ? = f.feature_id
          " );
 
     my $fetch_uniquename_query = $factory->dbh->prepare( "
-       select f.name,fl.fmin,fl.fmax,f.uniquename from feature f, featureloc fl
+       select f.name,fl.fmin,fl.fmax,f.uniquename,f.is_obsolete from feature f, featureloc fl
        where f.feature_id = ? and
              f.feature_id = fl.feature_id 
          ");
@@ -207,6 +213,8 @@ sub new {
               or Bio::Root::Root->throw("fetching uniquename from feature_id failed") ;
 
             my $hashref = $fetch_uniquename_query->fetchrow_hashref;
+
+            next if ($$hashref{'is_obsolete'} and !$self->factory->allow_obsolete);
 
             warn "$base_start, $stop\n" if DEBUG;
 
@@ -243,7 +251,7 @@ sub new {
 
         my $landmark_feature_id = $$ref;
 
-        warn "landmark feature_id:$landmark_feature_id\n" if DEBUG;
+        warn "landmark feature_id:$landmark_feature_id" if DEBUG;
 
         $srcfeature_query->execute($landmark_feature_id)
            or Bio::Root::Root->throw("finding srcfeature_id failed");
@@ -264,6 +272,12 @@ sub new {
             $landmark_is_src_query->execute($landmark_feature_id)
               or Bio::Root::Root->throw("something else failed");
             $hash_ref = $landmark_is_src_query->fetchrow_hashref;
+
+            warn "skipping feature_id $$hash_ref{feature_id}" 
+                        if (DEBUG and 
+                            $$hash_ref{'is_obsolete'} and 
+                            !$self->factory->allow_obsolete);
+            next if ($$hash_ref{'is_obsolete'} and !$self->factory->allow_obsolete);
 
             $name = $$hash_ref{'name'};
 
@@ -296,17 +310,17 @@ sub new {
 
             warn "base_start:$base_start, stop:$stop, length:$length" if DEBUG;
 
-            return bless {
-                factory       => $factory,
-                start         => $base_start,
-                end           => $stop,
-                length        => $length,
-                srcfeature_id => $srcfeature_id,
-                class         => $type,
-                name          => $name,
-                strand        => $strand,
-              },
-              ref $self || $self;
+            $self->start($base_start);
+            $self->end($stop);
+            $self->{'length'} = $length;
+            $self->srcfeature_id($srcfeature_id);
+            $self->class($type);
+            $self->name($name);
+            $self->strand($strand);
+
+
+            warn $self if DEBUG;
+            return $self;
         }
 
         else { #return a Feature object for the feature_id
@@ -379,41 +393,71 @@ sub _search_by_name {
   my $self = shift;
   my ($factory,$quoted_name,$db_id,$feature_id) = @_;
 
+  warn "_search_by_name args:@_" if DEBUG;
+
+  my $obsolete_part = "";
+  $obsolete_part = " and is_obsolete = false " unless $self->factory->allow_obsolete;
+
   my $sth; 
    if ($feature_id) {
     $sth = $factory->dbh->prepare("
              select name,feature_id,seqlen from feature
-             where feature_id = $feature_id");
+             where feature_id = $feature_id $obsolete_part");
    }
    elsif ($db_id) {
     $sth = $factory->dbh->prepare ("
              select name,feature_id,seqlen from feature
-             where uniquename = \'$db_id\'  ");
+             where uniquename = \'$db_id\' $obsolete_part ");
 
    } 
    else {
     $sth = $factory->dbh->prepare ("
              select name,feature_id,seqlen from feature
-             where lower(name) = $quoted_name  ");
+             where lower(name) = $quoted_name $obsolete_part ");
   }
  
   $sth->execute or Bio::Root::Root->throw("unable to validate name/length");
   
   my $rows_returned = $sth->rows;
   if ($rows_returned == 0) { #look in synonym for an exact match
-    my $isth = $factory->dbh->prepare ("
-       select fs.feature_id from feature_synonym fs, synonym s
-       where fs.synonym_id = s.synonym_id and
-       lower(s.synonym_sgml) = $quoted_name
+    warn "looking for a synonym to $quoted_name" if DEBUG;
+    my $isth;
+    if ($self->factory->allow_obsolete) {
+        $isth = $factory->dbh->prepare ("
+          select fs.feature_id from feature_synonym fs, synonym s
+          where fs.synonym_id = s.synonym_id and
+          lower(s.synonym_sgml) = $quoted_name
         ");
+    }
+    else {
+        $isth = $factory->dbh->prepare ("
+          select fs.feature_id from feature_synonym fs, synonym s, feature f
+          where fs.synonym_id = s.synonym_id and
+          f.feature_id = fs.feature_id and
+          f.is_obsolete = 'false' and 
+          lower(s.synonym_sgml) = $quoted_name
+        ");
+    }
     $isth->execute or Bio::Root::Root->throw("query for name in synonym failed");
     $rows_returned = $isth->rows;
 
     if ($rows_returned == 0) { #look in dbxref for accession number match
-      $isth = $factory->dbh->prepare ("
-         select feature_id from feature_dbxref fd, dbxref d
-         where fd.dbxref_id = d.dbxref_id and
-               lower(d.accession) = $quoted_name ");
+      warn "looking in dbxref for $quoted_name" if DEBUG;
+
+      if ($self->factory->allow_obsolete) {
+          $isth = $factory->dbh->prepare ("
+             select feature_id from feature_dbxref fd, dbxref d
+             where fd.dbxref_id = d.dbxref_id and
+                   lower(d.accession) = $quoted_name ");
+      }
+      else {
+          $isth = $factory->dbh->prepare ("
+             select fd.feature_id from feature_dbxref fd, dbxref d, feature f
+             where fd.dbxref_id = d.dbxref_id and
+                   f.feature_id = fd.feature_id and
+                   f.is_obsolete = 'false' and
+                   lower(d.accession) = $quoted_name ");
+      }
       $isth->execute or Bio::Root::Root->throw("query for accession failed");
       $rows_returned = $isth->rows;
 
@@ -434,6 +478,7 @@ sub _search_by_name {
     } elsif ($rows_returned == 1) {
       my $hashref = $isth->fetchrow_hashref;
       my $feature_id = $$hashref{'feature_id'};
+      warn "found $feature_id in feature_synonym" if DEBUG;
       return \$feature_id;
     } else {
        my @feature_ids;
@@ -446,6 +491,7 @@ sub _search_by_name {
   } elsif ($rows_returned == 1) {
     my $hashref = $sth->fetchrow_hashref;
     my $feature_id = $$hashref{'feature_id'};
+    warn "feature_id in _search_by_name:$feature_id" if DEBUG;
     return \$feature_id;
   } else {
      my @feature_ids;
@@ -787,7 +833,7 @@ sub features {
   my $select_part = "select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.phase,"
                    ."fl.locgroup,fl.srcfeature_id,f.type_id,f.uniquename,"
                    ."f.feature_id, af.significance as score, "
-                   ."fd.dbxref_id ";
+                   ."fd.dbxref_id,f.is_obsolete ";
 
   my $order_by    = "order by f.type_id,fl.fmin ";
 
@@ -893,6 +939,11 @@ sub features {
     warn "dbstart:$$hashref{fmim}, dbstop:$$hashref{fmax}" if DEBUG;
     warn "start:$base_start, stop:$stop\n" if DEBUG;
 
+    warn "skipping feature_id $$hashref{feature_id} because it is obsolete"
+            if (DEBUG and
+                $$hashref{is_obsolete} and !$self->factory->allow_obsolete);
+    next if ($$hashref{is_obsolete} and !$self->factory->allow_obsolete);
+
     if ($feature_id && 
         defined($stop) && $stop != $$hashref{fmax} ) {
       $stop = $$hashref{fmin} + $stop + 1;  
@@ -943,8 +994,10 @@ sub features {
     return Bio::DB::Das::ChadoIterator->new(\@features);
   } elsif (wantarray) {
     return @features;
-  } else {
+  } elsif (@features >0) {
     return \@features;
+  } else {
+    return;
   }
 }
 
@@ -1066,7 +1119,7 @@ sub _features2level(){
   my $select_part = "select distinct f.name,fl.fmin,fl.fmax,fl.strand,fl.phase,"
     ."fl.locgroup,fl.srcfeature_id,f.type_id,f.uniquename,"
       ."f.feature_id, af.significance as score, "
-	."fd.dbxref_id ";
+	."fd.dbxref_id,f.is_obsolete ";
 
   my $order_by    = "order by f.type_id,fl.fmin ";
 
@@ -1150,6 +1203,8 @@ sub _features2level(){
 
     warn "dbstart:$$hashref{fmim}, dbstop:$$hashref{fmax}" if DEBUG;
     warn "start:$base_start, stop:$stop\n" if DEBUG;
+
+    next if ($$hashref{is_obsolete} and !$self->factory->allow_obsolete);
 
     if ( !defined ($feat->feature_id) || $feat->feature_id != $$hashref{feature_id}) {
       #either first feature or new feature

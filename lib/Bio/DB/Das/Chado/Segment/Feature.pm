@@ -786,6 +786,7 @@ sub target {
                 $$hashref{'fmax'},
                 $$hashref{'uniquename'},
                 1,  #new arg to tell Segment this is a Target
+                $$hashref{'srcfeature_id'},
            );
       return $segment;
   }
@@ -952,7 +953,7 @@ sub sub_SeqFeature {
     warn "partof = $partof" if DEBUG;
 
     my $sql = "
-    select child.feature_id, child.name, child.type_id, child.uniquename, parent.name as pname,
+    select child.feature_id, child.name, child.type_id, child.uniquename, parent.name as pname, child.is_obsolete,
       childloc.fmin, childloc.fmax, childloc.strand, childloc.locgroup, childloc.phase, af.significance as score,
       childloc.srcfeature_id
     from feature as parent
@@ -983,7 +984,7 @@ sub sub_SeqFeature {
     #Notes on the interbase computation :
     #$self->start is already converted to base coordinates, so  we need to substract the unit which has been added by this conversion
     $sql="
-   select child.feature_id, child.name, child.type_id, child.uniquename, parent.name as pname,
+   select child.feature_id, child.name, child.type_id, child.uniquename, parent.name as pname,child.is_obsolete,
          (childloc.fmin + ".$self->start." - parentloc.fmin -1)  AS fmin,
         (childloc.fmax + ".$self->start." - parentloc.fmin -1)  AS fmax,
           (childloc.strand * ".$self->strand." * parentloc.strand)  AS strand,
@@ -1033,6 +1034,7 @@ sub sub_SeqFeature {
     my @p_e_cache;
     while (my $hashref = $sth->fetchrow_hashref) {
 
+      next if ($$hashref{is_obsolete} and !$self->factory->allow_obsolete);
       next unless $$hashref{srcfeature_id} == $self->srcfeature_id;
 
       # this problem can't be solved this way--group really needs to return 'name'
@@ -1085,7 +1087,7 @@ sub sub_SeqFeature {
     my @cds_utr_features 
           = $self->_do_the_inferring(@p_e_cache) if (@p_e_cache > 0);
     push @features, @cds_utr_features;
-    
+   
 #this shouldn't be necessary, as filtering took place via the query
 #except that is now that infering of CDS features is a possibility
 

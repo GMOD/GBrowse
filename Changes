@@ -1,6 +1,9 @@
 1.68
         * Added patched copy of Bio::Graphics::FeatureFile that fixes bug in the display of groups.
           Remember to remove this file when bioperl 1.5.3 is out.
+        * Added support to Chado adapter for feature.is_obsolete column:
+            now, unless the -allow_obsolete flag is used, obsoleted features
+            will not appear in GBrowse displays
 1.67
         * Added patch from Steve Taylor that allows one to group track labels into
           a pretty MxN table.

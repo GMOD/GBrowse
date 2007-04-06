@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.12.2.3 2007-03-27 23:21:39 dongilbert Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.12.2.4 2007-04-06 18:05:10 scottcain Exp $
 
 =head1 NAME
 
@@ -197,6 +197,7 @@ sub new {
   $self->recursivMapping($arg{-recursivMapping} ? $arg{-recursivMapping} : 0);
 
   $self->inferCDS($arg{-inferCDS} ? $arg{-inferCDS} : 0);
+  $self->allow_obsolete($arg{-allow_obsolete} ? $arg{-allow_obsolete} : 0);
 
   if (exists($arg{-enable_seqscan}) && ! $arg{-enable_seqscan}){
     $self->dbh->do("set enable_seqscan=0");
@@ -231,6 +232,29 @@ sub inferCDS {
     return $self->{inferCDS} = $flag if defined($flag);
     return $self->{inferCDS};
 }
+
+=head2 allow_obsolete
+
+  Title   : allow_obsolete
+  Usage   : $obj->allow_obsolete()
+  Function: set or return the allow_obsolete flag
+  Returns : the value of the allow_obsolete flag
+  Args    : to return the flag, none; to set, 1
+
+The chado feature table has a flag column called 'is_obsolete'.  
+Normally, these features should be ignored by GBrowse, but
+the -allow_obsolete method is provided to allow displaying
+obsolete features.
+
+=cut
+
+sub allow_obsolete {
+    my $self = shift;
+    my $allow_obsolete = shift if defined(@_);
+    return $self->{'allow_obsolete'} = $allow_obsolete if defined($allow_obsolete);
+    return $self->{'allow_obsolete'};
+}
+
 
 =head2 sofa_id
 
@@ -783,9 +807,11 @@ sub _by_alias_by_name {
 
 
      # prepare sql queries for use in while loops
+
   my $isth =  $self->dbh->prepare("
        select f.feature_id, f.name, f.type_id,f.uniquename,af.significance as score,
-              fl.fmin,fl.fmax,fl.strand,fl.phase, fl.srcfeature_id, fd.dbxref_id
+              fl.fmin,fl.fmax,fl.strand,fl.phase, fl.srcfeature_id, fd.dbxref_id,
+              f.is_obsolete
        from feature f join featureloc fl using (feature_id)
             left join analysisfeature af using (feature_id)
             left join feature_dbxref fd using (feature_id) 
@@ -839,6 +865,8 @@ sub _by_alias_by_name {
     my $old_srcfeature_id=-1;
     my $parent_segment;
     while (my $hashref = $isth->fetchrow_hashref) {
+
+      next if ($$hashref{'is_obsolete'} and !$self->allow_obsolete);
 
       if ($$hashref{'srcfeature_id'} != $old_srcfeature_id) {
         $jsth->execute($$hashref{'srcfeature_id'})
@@ -913,8 +941,9 @@ sub _by_alias_by_name {
 
             #now get exons that are part of the transcript
             my $exon_query = $self->dbh->prepare("
-               SELECT f.feature_id, f.name, f.type_id,f.uniquename,af.significance as score,
-                      fl.fmin,fl.fmax,fl.strand,fl.phase, fl.srcfeature_id, fd.dbxref_id
+               SELECT f.feature_id,f.name,f.type_id,f.uniquename,
+                      af.significance as score,fl.fmin,fl.fmax,fl.strand,
+                      fl.phase, fl.srcfeature_id, fd.dbxref_id,f.is_obsolete
                FROM feature f join featureloc fl using (feature_id)
                     left join analysisfeature af using (feature_id)
                     left join feature_dbxref fd using (feature_id)
@@ -932,6 +961,7 @@ sub _by_alias_by_name {
             while (my $exonref = $exon_query->fetchrow_hashref) {
                 next if ($$exonref{fmax} < $poly_min);
                 next if ($$exonref{fmin} > $poly_max);
+                next if ($$exonref{is_obsolete} and !$self->allow_obsolete);
 
                 my ($start,$stop);
                 if ($$exonref{fmin} <= $poly_min && $$exonref{fmax} >= $poly_max) {

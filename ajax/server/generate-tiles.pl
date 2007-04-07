@@ -36,7 +36,7 @@ use constant MAX_LINKS => 30000;
 my $start_time = [gettimeofday];
 
 # --- BEGIN MANUAL PARAMETER SPECIFICATIONS ---
-my $rendering_tilewidth = 4000;  # tile width (in pixels) for RENDERING via TiledImage (bigger tiles
+my $rendering_tilewidth = 24000;  # tile width (in pixels) for RENDERING via TiledImage (bigger tiles
                                   # render faster, so we render big chunks, then break them up into pieces)
 my $tilewidth_pixels = 1000;      # actual width (in pixels) of tiles for client; the TiledImage tiles get
                                   # broken up into these after rendering; note that it must be true that:
@@ -204,7 +204,7 @@ unless (-e $outdir_tiles || !$render_tiles) {
 }
 print " Output directory: ${outdir}\n" unless !$render_tiles and $no_xml;
 
-my $html_outdir_tiles = "tiles/${landmark_name}/";
+my $html_outdir_tiles = "tiles/${landmark_name}";
 
 print
     "-------------------------------------------------------------------------\n";
@@ -421,11 +421,11 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
 	$track_name_underscores =~ s/[ \/]/_/g;
 
 	# make output directories
-	my $current_outdir = "${outdir_tiles}/${track_name_underscores}/";
+	my $current_outdir = "${outdir_tiles}/${track_name_underscores}";
 	unless (-e $current_outdir || !$render_tiles) {
 	    mkdir $current_outdir or die "ERROR: problem making output directory ${current_outdir}! ($!)\n";
 	}
-	my $html_current_outdir = "${html_outdir_tiles}/${track_name_underscores}/" unless $no_xml;
+	my $html_current_outdir = "${html_outdir_tiles}/${track_name_underscores}" unless $no_xml;
 
 	$current_outdir = "${current_outdir}/${zoom_level_name}/";
 	unless (-e $current_outdir || !$render_tiles) {
@@ -496,6 +496,7 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
             $track = $panel->add_track($segment, @track_settings);
             $is_global = 1;
         } elsif (($#features  / $num_tiles) > $hist_thresh) {
+            # generate a feature density histogram
             my @bins;
             my $binsize = $tilewidth_bases / 100;
             foreach my $feat (@features) {
@@ -561,6 +562,36 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
 
         warn "track is laid out: " . tv_interval($start_time) . "\n" if ($render_tiles && ($verbose >= 1));
 
+        my $blankHtml;
+        my $linkCount = 0;
+        my $tile_callback = sub {
+            my ($tile_prefix, $tile_num, $tileURL, $tile_boxes) = @_;
+
+            if ($linkCount > MAX_LINKS) {
+                undef $blankHtml;
+                $linkCount = 0;
+            }
+
+            my $outhtml = "${tile_prefix}${tile_num}.html";
+            if (!$is_global && !$is_hist && !defined($tile_boxes)) {
+                if (defined($blankHtml)) {
+                    link $blankHtml, $outhtml
+                        || die "could not link blank tile: $!\n";
+                    $linkCount++;
+                    return;
+                } else {
+                    $blankHtml = $outhtml;
+                }
+            }
+
+            $tile_boxes = () if ($is_global || $is_hist);
+
+            writeHTML($outhtml, $tile_num, $tilewidth_pixels, $image_height,
+                      $label_num - 1, $tileURL, $tile_boxes);
+        };
+        
+        $tile_callback = sub {} if $track_name eq 'ruler';
+
         if ($render_tiles) {
             renderTileRange(
                 # NB change from 1-based to 0-based coords
@@ -570,15 +601,13 @@ for (my $label_num = 0; $label_num < @track_labels; $label_num++)
                 $rendering_tilewidth,
                 $tile_prefix,
                 $is_global,
-                $is_hist,
                 $panel,
                 $track,
                 $image_height,
                 {@argv},
                 \@track_settings,
                 $html_current_outdir || "",
-                # track_num doesn't include the ruler
-                $label_num - 1
+                $tile_callback
                 );
 	}
         $panel->finished();
@@ -676,19 +705,24 @@ sub initXml {
 }
 
 sub area {
-        # writes out the area html 
-        # since using this I am less happy with fact that all changes (even javascript) then have to be pre rendered including mouseovers etc
-        # a better way would be upload the area/coordinate data and then update the area element with the parameters
+    # writes out the area html 
+    # since using this I am less happy with fact that all changes
+    # (even javascript) then have to be pre rendered including mouseovers etc
+    # a better way would be upload the area/coordinate data and then
+    # update the area element with the parameters
     my ($x1,$y1,$x2,$y2,$feat)=@_;
-    my $str="<area shape=rect coords=\"$x1,$y1,$x2,$y2\" href=\"#\" onmouseover=\"MenuComponent_showDescription('<b>Feature</b>','<b>Name:</b>&nbsp;" . $feat->display_name . "<br><b>Description:</b>&nbsp;blah blah blah<br><b>Aliases:</b>&nbsp;ABC,GEF</b><br> <b>Link:</b>&nbsp;&nbsp;<a class=ggbmenu_link href=http://genome.ucsc.edu/cgi-bin/hgGene?db=hg17&hgg_gene=NM_016310&hgg_chrom=chr16&hgg_start=36999&hgg_end=43625 target=_blank>to this feature</a>');return false\" onmouseout=\"MenuComponent_outLink();\">\n";
-    return $str;
+    my $str="<area shape=rect coords=\"$x1,$y1,$x2,$y2\" href=\"javascript:MenuComponent_showDescription('<b>Feature</b>','<b>Name:</b>&nbsp;" . $feat->display_name . "<br><b>ID:</b>&nbsp;" . $feat->primary_id . "<br><b>Type:</b>&nbsp;" . $feat->primary_tag . "<br><b>Source:</b>&nbsp;" . $feat->source_tag . "<br>";
+    foreach my $key ( $feat->get_all_tags() ) {
+        foreach my $value ( $feat->get_tag_values($key) ) {
+            $str .= "<b>$key</b>&nbsp;" . $value . "<br>";
+        }
+    }
+    return $str . "')\">\n";
 }
 
 sub writeHTML {
     my ($xhtmlfile,
-        $large_tile_num,
-        $small_index,
-        $small_tile_num,
+        $tile_num,
         $tilewidth_pixels,
         $image_height,
         $track_num,
@@ -696,58 +730,37 @@ sub writeHTML {
         $small_tile_glyphs) = @_;
 
     # have to check that all the coords are in the rectangles
-    my $lower_limit=$small_tile_num * $tilewidth_pixels;
-    my $upper_limit=($small_tile_num+1) * $tilewidth_pixels;
+    my $lower_limit = $tile_num * $tilewidth_pixels;
+    my $upper_limit = ($tile_num + 1) * $tilewidth_pixels;
 
-    # make the image map per tile, including all the html that will be imported into the div element
-    # big problem I can see here is how to not make storing the features so redundant
-    #my $xhtmlfile = "${tile_prefix}${small_tile_num}.html";
-    open (HTMLTILE, ">${xhtmlfile}") or die "ERROR: could not open ${xhtmlfile}!\n";
+    # make the image map per tile, including all the html that will be
+    # imported into the div element big problem I can see here is how
+    # to not make storing the features so redundant
+    open (HTMLTILE, ">${xhtmlfile}")
+        or die "ERROR: could not open ${xhtmlfile}!\n";
+
     if ($small_tile_glyphs) {
-        print HTMLTILE "<img src=\"$tileURL\" ismap usemap=\"#tilemap${large_tile_num}${small_index}${track_num}\" border=0>";
-        print HTMLTILE "<map name=\"tilemap${large_tile_num}${small_index}${track_num}\">";
+        print HTMLTILE "<img src=\"$tileURL\" ismap usemap=\"#tilemap_${track_num}_${tile_num}\" border=0>\n";
+        print HTMLTILE "<map name=\"tilemap_${track_num}_${tile_num}\">\n";
         foreach my $box (@{$small_tile_glyphs}) {
             next unless $box->[0]->can('primary_tag');
-            my $x1=$box->[1];
-            my $y1=$box->[2];
-            my $x2=$box->[3];
-            my $y2=$box->[4];
+            my ($x1, $y1, $x2, $y2) = @{$box}[1..4];
 
-            next if ($x2 - $x1) < 2;
-
-            # adjust coordinates to what should be the correct tile
+            # adjust coordinates to the correct tile
             $x1=$x1-$lower_limit;
             $x2=$x2-$lower_limit;   
 
-            # if the feature looks like it is the next tile skip
-            if ( $x1 > $tilewidth_pixels and $x2 > $tilewidth_pixels ) {
-                next;
-            }
-
-            # if the feature looks like it is the previous tile skip
-            if ( $x1 < 0 and $x2 < 0 ) {
-                next;
-            }
-
             # tidy up coord edges
-            if ( $x2 > $tilewidth_pixels ) {
-                $x2=$tilewidth_pixels;
-            }
+            $x2=$tilewidth_pixels if ( $x2 > $tilewidth_pixels );
+            $x1=0 if ( $x1 < 0 );
 
-            if ( $x1 < 0 ) {
-                $x1=0;
-            }
-            # for debugging
-            #print &Dumper($label); 
-            print HTMLTILE &area($x1,$y1,$x2,$y2,$box->[0]);
+            print HTMLTILE area($x1,$y1,$x2,$y2,$box->[0]);
         }
-
         print HTMLTILE "</map>\n";
     } else {
         print HTMLTILE "<img src=\"$tileURL\" border=0>";
     }
-
-    close HTMLTILE || die "couldn't close HTMLTILE: $!\n";
+    close HTMLTILE or die "couldn't close HTMLTILE: $!\n";
 }
 
 sub setupPalette {
@@ -771,14 +784,13 @@ sub renderTileRange {
         $rendering_tilewidth,
         $tile_prefix,
         $is_global,
-        $is_hist,
         $big_panel,
         $big_track,
         $image_height,
         $panel_args,
         $track_settings,
         $html_current_outdir,
-        $track_num) = @_;
+        $tile_callback) = @_;
 
     # these should really divide evenly, and of course no one will MISUSE
     # the script, right? !!!
@@ -811,9 +823,9 @@ sub renderTileRange {
 #    $Data::Dumper::Maxdepth = 3;
 #    print "per tile glyphs " . Dumper(@per_tile_glyphs[0..30]) . "\n";
 
-    my $blankHtml;
+    my $blankTile;
     my $linkCount = 0;
-    my %tileHash;
+    my (%tileHash, %tileLinkCount);
 
     local *TILE;
     for (my $x = $first_large_tile; $x <= $last_large_tile; $x++) {
@@ -821,13 +833,13 @@ sub renderTileRange {
         my $pixel_offset = (0 == $x) ? 0 : $global_padding;
 
         if ($linkCount > MAX_LINKS) {
-            undef $blankHtml;
+            undef $blankTile;
             $linkCount = 0;
         }
 
         # we want to skip rendering whole tile if it's blank, but only if
         # there's a blank tile to which to hardlink that's already rendered
-        if (defined($per_tile_glyphs[$x]) || (!defined($blankHtml))) {
+        if (defined($per_tile_glyphs[$x]) || (!defined($blankTile))) {
 
             # rendering tile bounds in pixel coordinates
             my $rtile_left = ($x * $rendering_tilewidth) 
@@ -838,69 +850,75 @@ sub renderTileRange {
             # rendering tile bounds in bp coordinates
             my $first_base = int($rtile_left / $big_panel->scale) + $big_panel->start;
             my $last_base = int(($rtile_right + 1) / $big_panel->scale) + $big_panel->start - 1;
-            # not sure why we need this
-            $last_base++
-                if ($big_panel->start == $first_base)
-                && ($last_base > $big_panel->end);
 
-            # set up the per-rendering-tile panel, with the right
-            # bp coordinates and pixel width
-            my %tpanel_args = %$panel_args;
-            $tpanel_args{-start} = $first_base;
-            $tpanel_args{-end} = $last_base;
-            $tpanel_args{-stop} = $last_base;
-            $tpanel_args{-width} = $rtile_right - $rtile_left + 1;
-            my $tile_panel = Bio::Graphics::Panel->new(%tpanel_args);
-            my $scale_diff = $tile_panel->scale - $big_panel->scale;
-            if (abs($scale_diff) > 1e-11) {
-                printf "scale difference: %e\n", $scale_diff;
-                print "big panel scale: " . $big_panel->scale . " big panel start: " . $big_panel->start . " big panel end: " . $big_panel->end . " big panel width: " . $big_panel->width . " small panel scale: " . $tile_panel->scale . " pixel_offset: $pixel_offset first_base: $first_base last_base: $last_base rtile_left: $rtile_left rtile_right: $rtile_right small panel width: " . $tile_panel->width . "\n";
-            }
-
-            if ($is_global) {
-                # for global features we can just render everything
-                # using the per-tile panel
-                my @segments = $db->segment(-name => $landmark_name, -start => $first_base - $big_panel->start + 1, -end => $last_base - $big_panel->start + 1);
-                my $small_segment = $segments[0];
-                my $small_track = $tile_panel->add_track($small_segment,
-                                                         @$track_settings);
-                if ($tile_panel->height < $big_panel->height) {
-                    $tile_panel->pad_bottom($tile_panel->pad_bottom
-                                            + ($big_panel->height
-                                               - $tile_panel->height));
-                    $tile_panel->extend_grid(1);
-                }
-                $large_tile_gd = $tile_panel->gd();
+            if (($big_panel->start == $first_base)
+                && ($last_base > $big_panel->end)) {
+                $big_panel->{gd} = undef;
+                $large_tile_gd = $big_panel->gd();
             } else {
-                # add generic track to the tile panel, so that the
-                # gridlines have the right height
-                $tile_panel->add_track(-glyph => 'generic', 
-                                       @$track_settings,
-                                       -height => $image_height);
-                $large_tile_gd = $tile_panel->gd();
-                #print "got tile panel gd " . tv_interval($start_time) . "\n";
+                # set up the per-rendering-tile panel, with the right
+                # bp coordinates and pixel width
+                my %tpanel_args = %$panel_args;
+                $tpanel_args{-start} = $first_base;
+                $tpanel_args{-end} = $last_base;
+                $tpanel_args{-stop} = $last_base;
+                $tpanel_args{-width} = $rtile_right - $rtile_left + 1;
+                my $tile_panel = Bio::Graphics::Panel->new(%tpanel_args);
+                my $scale_diff = $tile_panel->scale - $big_panel->scale;
+                if (abs($scale_diff) > 1e-11) {
+                    printf "scale difference: %e\n", $scale_diff;
+                    print "big panel scale: " . $big_panel->scale . " big panel start: " . $big_panel->start . " big panel end: " . $big_panel->end . " big panel width: " . $big_panel->width . " small panel scale: " . $tile_panel->scale . " pixel_offset: $pixel_offset first_base: $first_base last_base: $last_base rtile_left: $rtile_left rtile_right: $rtile_right small panel width: " . $tile_panel->width . "\n";
+                }
 
-                if (defined $per_tile_glyphs[$x]) {
-                    # some glyphs call set_pen on the big_panel;
-                    # we want that to go to the right GD object
-                    $big_panel->{gd} = $large_tile_gd;
+                if ($is_global) {
+                    # for global features we can just render everything
+                    # using the per-tile panel
+                    # this arithmetic has been double checked
+                    my @segments = 
+                        $db->segment(-name => $landmark_name,
+                                     -start => $first_base - $big_panel->start + 1,
+                                     -end => $last_base - $big_panel->start + 1);
+                    my $small_segment = $segments[0];
+                    my $small_track = $tile_panel->add_track($small_segment,
+                                                             @$track_settings);
+                    if ($tile_panel->height < $big_panel->height) {
+                        $tile_panel->pad_bottom($tile_panel->pad_bottom
+                                                + ($big_panel->height
+                                                   - $tile_panel->height));
+                        $tile_panel->extend_grid(1);
+                    }
+                    $large_tile_gd = $tile_panel->gd();
+                } else {
+                    # add generic track to the tile panel, so that the
+                    # gridlines have the right height
+                    $tile_panel->add_track(-glyph => 'generic', 
+                                           @$track_settings,
+                                           -height => $image_height);
+                    $large_tile_gd = $tile_panel->gd();
+                    #print "got tile panel gd " . tv_interval($start_time) . "\n";
                     
-                    #move rendering onto the tile
-                    $big_panel->pad_left(-$rtile_left);
+                    if (defined $per_tile_glyphs[$x]) {
+                        # some glyphs call set_pen on the big_panel;
+                        # we want that to go to the right GD object
+                        $big_panel->{gd} = $large_tile_gd;
+                    
+                        #move rendering onto the tile
+                        $big_panel->pad_left(-$rtile_left);
 
-                    # draw the glyphs for the current rendering tile
-                    foreach my $glyph (@{$per_tile_glyphs[$x]}) {
-                        # some positions are calculated
-                        # using the panel's pad_left, and sometimes
-                        # they're calculated using the x-coordinate
-                        # passed into the draw method.  We want them
-                        # both to be -$rtile_left.
-                        $glyph->draw($large_tile_gd, -$rtile_left, 0);
+                        # draw the glyphs for the current rendering tile
+                        foreach my $glyph (@{$per_tile_glyphs[$x]}) {
+                            # some positions are calculated
+                            # using the panel's pad_left, and sometimes
+                            # they're calculated using the x-coordinate
+                            # passed into the draw method.  We want them
+                            # both to be -$rtile_left.
+                            $glyph->draw($large_tile_gd, -$rtile_left, 0);
+                        }
                     }
                 }
+                $tile_panel->finished;
+                $tile_panel = undef;
             }
-            $tile_panel->finished;
-            $tile_panel = undef;
         }
 
         # now to break up the large tile into small tiles and write them to PNG on disk...
@@ -928,67 +946,65 @@ sub renderTileRange {
       SMALLTILE:
         for (my $y = 0; $y < $small_per_large; $y++) {
             my $small_tile_num = $x * $small_per_large + $y;
-            if ( ($small_tile_num >= $first_tile) && ($small_tile_num <= $last_tile) ) { # do we print it?
+            if ( ($small_tile_num >= $first_tile)
+                 && ($small_tile_num <= $last_tile) ) { # do we print it?
+
                 my $outfile = "${tile_prefix}${small_tile_num}.png";
-                my $outhtml = "${tile_prefix}${small_tile_num}.html";
                 my $tileURL = $html_current_outdir."tile".${small_tile_num}.".png";
-                if (!$is_global && !$is_hist) {
-                    if (!defined($small_tile_boxes[$y])) {
-                        if (defined($blankHtml)) {
-                            #link $blankTile, $outfile
-                            #    || die "could not link blank tile: $!\n";
-                            link $blankHtml, $outhtml
-                                || die "could not link blank tile: $!\n";
-                            $linkCount++;
-                            next SMALLTILE;
-                        } else {
-                            #$blankTile = $outfile;
-                            $blankHtml = $outhtml;
-                        }
+                &$tile_callback($tile_prefix, $small_tile_num,
+                                $tileURL, $small_tile_boxes[$y]);
+
+                if (!$is_global && !defined($small_tile_boxes[$y])) {
+                    if (defined($blankTile)) {
+                        link $blankTile, $outfile
+                            || die "could not link blank tile: $!\n";
+                        $linkCount++;
+                        next SMALLTILE;
+                    } else {
+                        $blankTile = $outfile;
                     }
                 }
 
                 my $small_tile_gd = GD::Image->new($tilewidth_pixels,
                                                    $image_height,
                                                    0);
-
+                
+                # can copy beyond panel width because of pad_right
                 $small_tile_gd->copy($large_tile_gd,
                                      0, 0,
                                      $y * $tilewidth_pixels + $pixel_offset, 0,
                                      $tilewidth_pixels, $image_height);
 
                 my $pngData = $small_tile_gd->png(4);
-                my $writePng = 0;
-                if (!$is_global && !$is_hist) {
+                if (!$is_global) {
                     # many tiles are identical (especially at high zoom)
                     # so we're not generating the tile if we've seen
                     # one with the same md5 already
+                    # TODO: consider collisions in more depth (sha1?)
                     my $pngMD5 = md5($pngData);
 
                     if ($tileHash{$pngMD5}) {
-                        $tileURL = $tileHash{$pngMD5};
+                        if ($tileLinkCount{$pngMD5} > MAX_LINKS) {
+                            $tileLinkCount{$pngMD5} = 0;
+                            undef $tileHash{$pngMD5};
+                        } else {
+                            link $tileHash{$pngMD5}, $outfile;
+                            $tileLinkCount{$pngMD5} += 1;
+                            next SMALLTILE;
+                        }
                     } else {
-                        $tileHash{$pngMD5} = $tileURL;
-                        $writePng = 1;
+                        $tileHash{$pngMD5} = $outfile;
+                        $tileLinkCount{$pngMD5} = 1;
                     }
                 } else {
-                    $writePng = 1;
                     $small_tile_boxes[$y] = undef;
                 }
 
-                if ($writePng) {
-                    open (TILE, ">${outfile}")
-                      or die "ERROR: could not open ${outfile}!\n";
-                    print TILE $pngData
-                      or die "ERROR: could not write to ${outfile}!\n";
-                    warn "done printing ${outfile}\n" if $verbose >= 2;
-                }
-
-                writeHTML($outhtml, $x, $y, $small_tile_num,
-                          $tilewidth_pixels, $image_height,
-                          $track_num, $tileURL,
-                          $small_tile_boxes[$y])
-                    if $track_num >= 0;
+                open (TILE, ">${outfile}")
+                    or die "ERROR: could not open ${outfile}!\n";
+                print TILE $pngData
+                    or die "ERROR: could not write to ${outfile}!\n";
+                warn "done printing ${outfile}\n" if $verbose >= 2;
             }
         }
     }

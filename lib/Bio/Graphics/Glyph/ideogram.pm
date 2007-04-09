@@ -1,17 +1,16 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.3.6.1.2.5.2.1 2007-03-30 13:38:23 sheldon_mckay Exp $ 
+# $Id: ideogram.pm,v 1.3.6.1.2.5.2.2 2007-04-09 16:04:34 sheldon_mckay Exp $
 # Glyph to draw chromosome ideograms
 
 use strict qw/vars refs/;
 use vars '@ISA';
 use Bio::Graphics::Glyph;
-use Bio::Graphics::Glyph::heat_map;
 use GD;
 
 use Data::Dumper;
 
-@ISA = qw/Bio::Graphics::Glyph Bio::Graphics::Glyph::heat_map/;
+@ISA = qw/Bio::Graphics::Glyph/;
 
 sub draw {
   my $self = shift;
@@ -37,7 +36,9 @@ sub draw {
   # the appearance
   my @last;
   for my $part (@parts) {
+    my ($stain) = $part->feature->attributes('stain') || $part->feature->attributes('Stain');
     push @last, $part and next if
+	$stain eq 'stalk' ||
         $part->feature->method =~ /centromere/i ||
         $part->feature->start <= 1 ||
         $part->feature->stop >= $self->panel->end - 1000;
@@ -269,7 +270,7 @@ sub draw_stalk {
   $self->draw_cytoband(@_);
 
   $gd->line( $x1, $y1, $x1, $y2, $fgcolor );
-  $gd->line( $x2-1, $y1, $x2-1, $y2, $fgcolor );
+  $gd->line( $x2, $y1, $x2, $y2, $fgcolor );
 }
 
 sub create_tile {
@@ -348,6 +349,13 @@ The cytobandband features would typically be formatted like this in GFF3:
  ChrX    UCSC    cytoband        145800001       153692391       .       .       .       Parent=ChrX;Name=Xq28;Alias=ChrXq28;stain=gneg;
  ChrY    UCSC    cytoband        1       1300000 .       .       .       Parent=ChrY;Name=Yp11.32;Alias=ChrYp11.32;stain=gneg;
 
+ which in this case is a GFF-ized cytoband coordinate file from UCSC:
+
+ http://hgdownload.cse.ucsc.edu/goldenPath/hg16/database/cytoBand.txt.gz
+
+ and the corresponding GBrowse config options would be like this to 
+ create an ideogram overview track for the whole chromosome:
+
  The 'chromosome' feature below would aggregated from bands and centromere using the default 
  chromosome aggregator
 
@@ -360,6 +368,9 @@ The cytobandband features would typically be formatted like this in GFF3:
  height        = 25
  bump          = 0
  label         = 0
+
+ A script to reformat UCSC annotations to  GFF3 format can be found at
+ the end of this documentation.
 
 =head2 OPTIONS
 
@@ -391,6 +402,66 @@ L<Bio::Graphics::Glyph> for a full explanation.
   -label        Whether to draw a label	       0 (false)
 
   -description  Whether to draw a description  0 (false)
+
+=head1 UCSC TO GFF CONVERSION SCRIPT
+
+The following short script can be used to convert a UCSC cytoband annotation file
+into GFF format.  If you have the lynx web-browser installed you can
+call it like this in order to download and convert the data in a
+single operation:
+
+  fetchideogram.pl http://hgdownload.cse.ucsc.edu/goldenPath/hg16/database/cytoBand.txt.gz
+
+Otherwise you will need to download the file first. Note the difference between this script
+and input data from previous versions of ideogram.pm: UCSC annotations are used in place
+of NCBI annotations.
+
+
+#!/usr/bin/perl
+
+use strict;
+my %stains;
+my %centros;
+my %chrom_ends;
+
+
+foreach (@ARGV) {
+    if (/^(ftp|http|https):/) {
+	$_ = "lynx --dump $_ |gunzip -c|";
+    } elsif (/\.gz$/) {
+	$_ = "gunzip -c $_ |";
+    }
+    print STDERR "Processing $_\n";
+}
+
+print "##gff-version 3\n";
+while(<>)
+{
+    chomp;
+    my($chr,$start,$stop,$band,$stain) = split /\t/;
+    $start++;
+    $chr = ucfirst($chr);
+    if(!(exists($chrom_ends{$chr})) || $chrom_ends{$chr} < $stop)
+    {
+	$chrom_ends{$chr} = $stop;
+    }
+    my ($arm) = $band =~ /(p|q)\d+/;
+    $stains{$stain} = 1;
+    if ($stain eq 'acen')
+    {
+	$centros{$chr}->{$arm}->{start} = $stop;
+	$centros{$chr}->{$arm}->{stop} = $start;
+	next;
+    }
+    $chr =~ s/chr//i;
+    print qq/$chr\tUCSC\tcytoband\t$start\t$stop\t.\t.\t.\tParent=$chr_stripped;Name=$chr;Alias=$chr$band;stain=$stain;\n/;
+}
+
+foreach my $chr(sort keys %chrom_ends)
+{
+    print qq/$chr\tUCSC\tcentromere\t$centros{$chr}->{p}->{stop}\t$centros{$chr}->{q}->{start}\t.\t+\t.\tParent=$chr;Name=$chr\_cent\n/;
+}
+
 
 
 =head1 BUGS

@@ -713,9 +713,8 @@ sub area {
     my ($x1,$y1,$x2,$y2,$feat)=@_;
     my $str="<area shape=rect coords=\"$x1,$y1,$x2,$y2\" href=\"javascript:MenuComponent_showDescription('<b>Feature</b>','<b>Name:</b>&nbsp;" . $feat->display_name . "<br><b>ID:</b>&nbsp;" . $feat->primary_id . "<br><b>Type:</b>&nbsp;" . $feat->primary_tag . "<br><b>Source:</b>&nbsp;" . $feat->source_tag . "<br>";
     foreach my $key ( $feat->get_all_tags() ) {
-        foreach my $value ( $feat->get_tag_values($key) ) {
-            $str .= "<b>$key</b>&nbsp;" . $value . "<br>";
-        }
+        $str .= "<b>$key</b>&nbsp;"
+                . join(", ", $feat->get_tag_values($key)) . "<br>";
     }
     return $str . "')\">\n";
 }
@@ -879,8 +878,13 @@ sub renderTileRange {
                                      -start => $first_base - $big_panel->start + 1,
                                      -end => $last_base - $big_panel->start + 1);
                     my $small_segment = $segments[0];
-                    my $small_track = $tile_panel->add_track($small_segment,
-                                                             @$track_settings);
+                    my $small_track;
+                    if ($small_segment) {
+                        $small_track = $tile_panel->add_track($small_segment,
+                                                              @$track_settings);
+                    } else {
+                        $small_track = $tile_panel->add_track(@$track_settings);
+                    }                        
                     if ($tile_panel->height < $big_panel->height) {
                         $tile_panel->pad_bottom($tile_panel->pad_bottom
                                                 + ($big_panel->height

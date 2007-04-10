@@ -145,7 +145,6 @@ contrib/conf_files/index.html
 contrib/conf_files/wormbase.syn
 contrib/Coverage/INSTALL
 contrib/Coverage/plugin/Coverage.pm
-contrib/Coverage/README
 contrib/gdump.pl
 contrib/GeneFinder/genefinder/gfcode.c
 contrib/GeneFinder/genefinder/README

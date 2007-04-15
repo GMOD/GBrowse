@@ -8,21 +8,15 @@ will use the RefSeq record for M. bovis, accession NC_002945.
 
 =head2 1. Convert from Genbank format into GFF format
 
-Download the Genbank record and convert it into GFF format.  You can
-do this easily using the bp_genbank2gff.pl script, which is part of
+First download the Genbank record. Then you can create a GFF version
+of the file easily using the bp_genbank2gff3.pl script, which is part of
 bioperl:
 
-   bp_genbank2gff.pl -stdout -accession NC_002945 > mbovis.gff
+   bp_genbank2gff3.pl NC_002945
 
-This will download the record for M. bovis (refseq NC_002945)
-and save it to the file mbovis.gff.
+This command will create a file called NC_002945.gff.
 
-If you already have the genbank record available as a file named
-NC_002945.gb, you can convert it like this:
-
-   bp_genbank2gff.pl -stdout -file NC_002945.gb > mbovis.gff
-
-The newly-converted file uses GFF3 format, which combines feature data
+The newly-converted file will be in GFF3 format, which combines feature data
 with sequence/DNA data.  This means that you do not need a separate
 FASTA file for the sequence.
 
@@ -34,7 +28,7 @@ described in the tutorial.  We will assume
 
   mkdir /usr/local/apache/htdocs/gbrowse/databases/mbovis
   chmod o+rwx /usr/local/apache/htdocs/gbrowse/databases/mbovis
-  cp mbovis.gff /usr/local/apache/htdocs/gbrowse/databases/mbovis
+  cp NC_002945.gff /usr/local/apache/htdocs/gbrowse/databases/mbovis
 
 =head2 3. Set up the configuration file
 
@@ -52,7 +46,7 @@ adaptor and to point to the location of the M. bovis GFF file:
  description   = Mycobacterium Bovis In-Memory
  db_adaptor    = Bio::DB::GFF
  db_args       = -adaptor memory
-	         -dir     /usr/local/apache/htdocs/gbrowse/databases/mbovis
+	              -dir /usr/local/apache/htdocs/gbrowse/databases/mbovis
 
 You might also want to change the "examples" tag to introduce the
 accession number for the whole genome, and a few choice gene names and
@@ -60,7 +54,7 @@ search terms:
 
   examples = NC_002945 Mb1800 galT glucose
 
-That's all there is to it, but since this is a pretty big chunk of DNA
+That is all there is to it, but since this is a pretty big chunk of DNA
 (> 4 Mbp), it uses a considerable amount of memory and performance
 will be sluggish unless you have a fast machine with lots of memory.
 So you might wish to view it using a MySQL, PostgreSQL or Oracle
@@ -80,21 +74,12 @@ As described in the tutorial, give yourself write permission for the
 database, and give the web server user (e.g. "nobody") select
 permission.
 
-=head2 2. Convert from Genbank format into GFF format and load it into the database
+=head2 2. Load the GFF3 into the database
 
-The bp_genbank2gff.pl script can download the accession, convert it
-into GFF and load the database directly in one smooth step:
+You can load the GFF3 into your Mysql database using the bp_bulk_load_gff.pl
+script from Bioperl:
 
-  bp_genbank2gff.pl -create -dsn mbovis -accession NC_002945
-
-If you prefer, you can do this in two steps by first creating the gff
-file as described for the in-memory adaptor, and then using
-bp_bulk_load_gff.pl or bp_fast_load_gff.pl.
-
-If you are using a PostgreSQL or Oracle database, you must specify the
-appropriate adaptor to bp_genbank2gff.pl:
-
-  bp_genbank2gff.pl -create -dsn mbovis -adaptor dbi::oracle -accession NC_002945
+ bp_bulk_load_gff.pl -d mbovis NC_002945.gff
 
 =head2 3. Set up the configuration file
 
@@ -112,9 +97,9 @@ database adaptor:
  description   = Mycobacterium Bovis Database
  db_adaptor    = Bio::DB::GFF
  db_args       = -adaptor dbi::mysql
-	        -dsn     dbi:mysql:database=mbovis;host=localhost
-                -user    nobody
-		-passwd  ""
+	              -dsn     dbi:mysql:database=mbovis;host=localhost
+                 -user    nobody
+		           -passwd  ""
 
 You might also want to change the "examples" tag to introduce the
 accession number for the whole genome, and a few choice gene names and
@@ -129,5 +114,3 @@ That should be it!
 You can load as many accessions into the database as you like.
 Each one will appear as a "chromosome" named after the accession
 number of the entry.
-
-

@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 
-# This script should do a Windows install from the command line.
+# Universal Net-based installer
+# Save this to disk as "gbrowse_netinstall.pl" and run:
+#   perl gbrowse_netinstall.pl
 
 use warnings;
 use strict;

@@ -16,6 +16,7 @@ sub conf {
     for ('/usr/local/apache/conf',   # standard apache install
 	 '/etc/httpd/conf',          # RedHat linux
 	 '/etc/apache',              # Slackware linux
+	 '/etc/apache2',             # Ubuntu
 	 '/etc/httpd',               # MacOSX
 	) {
       return $_ if -d $_;
@@ -40,6 +41,7 @@ sub htdocs {
     for ('/usr/local/apache/htdocs',       # standard apache install
 	 '/var/www/html',                  # RedHat linux
 	 '/var/www/htdocs',                # Slackware linux
+	 '/var/www',                       # Ubuntu
 	 '/Library/Webserver/Documents',  # MacOSX
 	) {
       return $_ if -d $_;
@@ -64,6 +66,7 @@ sub cgibin {
     for ('/usr/local/apache/cgi-bin',      # standard apache install
 	 '/var/www/cgi-bin',               # RedHat & Slackware linux
 	 '/Library/Webserver/CGI-Executables',  # MacOSX
+	 '/usr/lib/cgi-bin',               # Ubuntu
 	) {
       return $_ if -d $_;
     }

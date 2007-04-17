@@ -42,7 +42,7 @@ Generic Genome Browser Installation
     Install GBrowse
         The easiest way to install GBrowse on Windows is to use an installer
         script that can be obtained from the GMOD website:
-        http://www.gmod.org/gbrowse/windows .
+        http://www.gmod.org/gbrowse/gbrowse .
 
         After downloading the windows_install.pl script, open a DOS command
         shell, change directories to where the script was downloaded to, and

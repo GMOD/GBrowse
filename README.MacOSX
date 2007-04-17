@@ -1,87 +1,189 @@
-Courtesy of Yair Benita <y.benita@wanadoo.nl>
-May 5, 2005
+		  RUNNING GBROWSE ON MACOSX SYSTEMS
 
-A while ago I posted detailed instruction on how to install GBrowse  
-on Mac OS X Panther (10.3) using Fink. See 
+GBrowse runs well on both PowerPC and Intel Macs running OS X. These
+instructions describe how to install and configure GBrowse on these
+platforms.
 
-  http://sourceforge.net/forum/forum.php?thread_id=1162893&forum_id=87358
+Installation
+------------
 
-Last night I installed GBrowse on Mac OS X Tiger (10.4) and I am  
-happy to report that everything works. Here is a detailed how to:
+GBrowse has a number of prerequisites, including BioPerl, GD, and the
+MySQL database. You can install these prerequisites using the Fink
+precompiled binary package manager, or from source code.
 
-1. Make sure you have installed Mac OS X Developer tools that come  
-with Tiger. Include X11 and X11 sdk in the installation.
+A) The Fink Way
 
-2. Install Fink version 0.23-9 which is Tiger compatible: http:// 
-fink.sourceforge.net
+ 1. Make sure you have installed the most recent version of Fink,
+    available from http://fink.sourceforge.net.
 
-3. Tiger comes with perl 5.8.6 so we will install pm586 packages.  
-Install the following Fink packages one after the other (I use -> to  
-indicate the prompt of the Terminal application):
+ 2. Open up a command window, and install the following Fink packages:
 
-MySQL -> fink install mysql
-DBI -> fink install dbi-pm586
-GD -> fink install gd-pm586
+  % fink install mysql  (optional, only if you want to to run a mysql backend)
+  % fink install gd2
 
-At this point I had to switch to the FINK unstable package because  
-dbd-mysql and svg were still not moved into the stable packages:
-Open the file /sw/etc/fink.conf, and edit the trees line to look like  
-this:
+  You will need to be logged in as the superuser ("root"), or to
+  use "sudo" for the commands: e.g. "sudo fink install mysql".
 
-Trees: local/main stable/main stable/crypto unstable/main unstable/crypto
+You do not need to install BioPerl, GD, or any other Perl packages
+using fink. Go directly to step (C).
 
-Now go back to the terminal and type: fink selfupdate. Once that is  
-done you don't need to reconfigure Fink and DO NOT update all  
-package, that will convert everything you have installed to the  
-unstable versions.
+B) The Manual Way
 
-DBD::MySQL -> fink install dbd-mysql-pm586
-SVG -> fink install gd-svg-pm586
+ 1. Make sure you have installed Mac OS X Developer tools that come  
+    on the distribution CD. Include X11 and the X11 SDK in the
+    tools you install. To confirm that you have the tools, open
+    a command window and type:
 
-at this point you should go back to the Fink stable packages by  
-editing the Trees line again to look like this:
+      % which gcc
+      % which autoconf
+      % which xmkmf
+      % which pkg-config
+    
+    If any of these commands returns with the error message "command
+    not found," then you should (re)install the developer tools.
 
-Trees: local/main stable/main stable/crypto
+ 2. Install MySQL (optional; only if you want to run a mysql backend)
 
-In the terminal window type: fink index
-Only stable packages are available now.
+    Go to http://www.mysql.org/downloads/mysql/5.0.html#macosx-dmg,
+    download and run the appropriate OSX installer for your version of
+    the operating system. Note that there are separate installers for
+    OS X versions 10.3 and upward on PowerPC 32-bit, 64-bit and Intel
+    platforms.
 
-continue with installing fink packages:
-bioperl -> fink install bioperl-pm586
+ 3. Install libgd
 
-4. Download GBrowse version 1.62 and do the following in the Terminal  
-window:
+    This is where many people get stuck because MacOSX is ships with
+    an older version of libgd that does not work properly with
+    GBrowse. To add to the confusion, OSX 10.3 and earlier has older
+    developer tools that can't build the new libgd correctly.
 
-bzip2 -d Generic-Genome-Browser-1.62.tar.bz2
-tar -xvf Generic-Genome-Browser-1.62.tar
-cd Generic-Genome-Browser-1.62
-perl Makefile.PL HTDOCS=/Library/WebServer/Documents \
-CONF=/Library/WebServer/conf \
-CGIBIN=/Library/WebServer/CGI-Executables \
-LIB=/sw/lib/perl5
-make
-make test
-sudo make intall
+    Worry not; just follow the recipe.
 
-5. Activate the local web sever: Apple Menu -> System Preferences ->  
-Sharing. Activate "Personal Web Sharing". If you constantly work with  
-GBrowse like I do you may want to look into configuring your Firewall  
-so that only you can access GBrowse and not all other users on the  
-internet.
+    1. Make sure your PATH environment variable includes
+    /usr/local/bin by running the command:
 
-6. Test the browser:
-http://localhost/cgi-bin/gbrowse/yeast_chr1
+      % echo $PATH
 
-There is one other issue to take care of if you want to work with a  
-MySql database rather than with a gff file: The bp_bulk_load_gff.pl
-file, which is used to load gff files into a mysql database is now
-loacated in /sw/bin/. The script uses /usr/tmp as the temporary
-directory, which doesn't exist on the Mac. Edit line 204 of
-bp_bulk_load_gff.pl to look like this: 
+    If you do not see /usr/local/bin listed, either create or edit a
+    file called .bash_login in your home folder (note the leading ".",
+    which hides this file from directory listings), and add the
+    following line to the bottom:
+
+      export PATH="/usr/local/bin:$PATH"
+
+    2. Make sure that you have at least version 2.58 of the autoconf
+    tool installed. Run the command:
+
+      % autoconf -V
+
+    This will print out the version number. It must be 2.58 or higher.
+    If the version is too low, then upgrade autoconf like this:
+
+       a. Download version 2.58 or higher from
+	  http://ftp.gnu.org/gnu/autoconf/. It's best to use 2.58,
+	  because it is known to work.
+ 
+       b. Unpack autoconf, enter the distribution directory and type:
+          % ./configure --prefix=/usr
+          % make
+          % sudo make install
+
+    3. Install libpng
+
+       a. Get the latest libpng from http://www.libpng.org. Look for
+          the version "with config script."
+
+       b. Unpack libpng, enter the distribution directory and type:
+          % ./configure
+          % make
+          % sudo make install
+
+    4. Install libgd
+    
+       a. Get the latest libgd from http://www.libgd.org.
+
+       b. Unpack libgd, enter the distribution directory and type:
+          % ./configure
+          % make
+          % sudo make install
+
+       c. If "make" fails with errors about not being able to compile
+          gdft.c, then reconfigure with the following commands:
+
+          % ./configure --without-fontconfig --without-freetype
+          % make
+          % sudo make install
+
+          (Do not try to fix this problem by reinstalling freetype
+          unless you are very brave; you will likely to make things
+          worse.)
+
+Now go directly to step (C).
+
+C) Installing GBrowse using the net installer.
+
+Whether you installed the non-Perl prerequisites with Fink or
+manually, you will now use the GBrowse net installer to install
+BioPerl, GD and other perl-based prerequisites. You will need a
+working Internet connection for this step.
+
+Find the gbrowse_netinstall.pl script in the bin/ subdirectory of the
+GBrowse distribution, or get it off the web from the "GBrowse network
+install script" located here:
+
+   http://www.gmod.org/wiki/index.php/GBrowse#Installation
+
+Download the script to your home directory, name it
+"gbrowse_netinstall.pl" and run the following command as the root user
+or using "sudo":
+
+   % perl gbrowse_netinstall.pl
+
+This will install the correct versions of GD, BioPerl, and all
+dependencies. During the process you will be asked to respond to
+various questions. It is safe to choose the defaults.
+
+D) Activate Apache
+
+   You may need to turn on the local web server if it isn't activated
+   already: 
+  
+     Apple Menu -> System Preferences ->  Sharing. 
+     Activate "Personal Web Sharing".
+
+     You may wish to adjust your firewall settings to control 
+     access to your machine's web server from the Internet.
+
+E) Test the browser
+
+   Open http://localhost/gbrowse and click the link for the example
+   yeast chromosome 1 database.
+
+F) Install Perl MySQL driver (optional; only if you want to run the
+   mysql backend)
+
+  If you have Mysql running and wish to take advantage of the GBrowse
+  Mysql interface, then you will need to install the Perl DBD::mysql
+  driver.
+
+  From the command line, type:
+
+  % perl -MCPAN -e 'install DBD::mysql'
+
+  If you get a lot of errors about not having read/write privileges on
+  the test database, download the DBD::mysql package from CPAN
+  (http://www.cpan.org), unpack it, and follow the directions for
+  building it manually.
+
+  There is one other issue to take care of. The bp_bulk_load_gff.pl
+  file, which is used to load gff files into a mysql database is
+  located in /usr/local/bin/. The script uses /usr/tmp as the
+  temporary directory; but this doesn't exist on the Mac. Edit line
+  347 of  bp_bulk_load_gff.pl to look like this:
 
   my $tmpdir = $ENV{TMPDIR} || $ENV{TMP} || '/tmp';
 
-Everything should be working now.
-Good luck.
-Yair Benita
+AUTHORS:
 
+Lincoln Stein <lstein@cshl.edu>. Adapted from instructions contributed
+by Yair Benita <y.benita@wanadoo.nl>.

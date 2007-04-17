@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::FastaDumper;
-# $Id: FastaDumper.pm,v 1.8.6.2 2005-04-14 20:24:05 lstein Exp $
+# $Id: FastaDumper.pm,v 1.8.6.2.6.1 2007-04-17 17:47:50 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -252,6 +252,10 @@ sub make_markup {
       my $end   = $start + $p->length;
 
       ($start,$end) = map {$segment_length-$_} ($end,$start) if $flip;
+
+      # don't mark up features parts that do not appear in window
+      next if ($start > $segment->length && $end > $segment->length());
+      next if ($start < 0 && $end < 0 ); 
 
       warn("$p ". $p->location->to_FTstring() . " type is ".$p->primary_tag) if DEBUG;
       $start = 0                   if $start < 0;  # this can happen

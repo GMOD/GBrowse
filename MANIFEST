@@ -43,6 +43,7 @@ conf/plugins/Aligner.pm
 conf/plugins/AlignTwoSequences.pm
 conf/plugins/AttributeHiliter.pm
 conf/plugins/BatchDumper.pm
+conf/plugins/Blat.pm
 conf/plugins/CMapDumper.pm
 conf/plugins/CreateBlastDB.pm
 conf/plugins/FastaDumper.pm
@@ -91,12 +92,6 @@ contrib/GeneFinder/nematode_gftables/zk637.intron3
 contrib/GeneFinder/nematode_gftables/zk637.intron5
 contrib/GeneFinder/nematode_gftables/zk637.trinuc
 contrib/import_ncbi_mv_hs.pl
-contrib/README
-contrib/install_macosx/BuildConfig.pm
-contrib/install_macosx/README.html
-contrib/install_macosx/README.pod
-contrib/install_macosx/scripts/build-gbrowse.pl
-contrib/install_macosx/scripts/build-libraries.pl
 contrib/README
 contrib/SynView/cgi-lib/DAS/GUS.pm
 contrib/SynView/cgi-lib/DAS/GUS/Segment.pm

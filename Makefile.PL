@@ -23,7 +23,7 @@ foreach (@argv) {
   if (/^--?h/i) {
     die <<END;
 To customize install locations, provide one or more of the options
-APACHE, CONF, HTDOCS, or CGIBIN, as in CONF=/usr/local/apache/conf.
+CONF, HTDOCS, or CGIBIN, as in CONF=/usr/local/apache/conf.
 
 For RedHat Linux, you will want to use:
     perl Makefile.PL CONF=/etc/httpd/conf \\
@@ -43,9 +43,14 @@ For Slackware systems, you will want to use:
                      CGIBIN=/var/www/cgi-bin \\
                      DO_XS=1
 
-For most versions of Apache built from source code, use:
+You can also supply the argument APACHE to specify the prefix of the
+Apache installation tree, for systems in which you installed Apache
+from scratch. For example:
+
     perl Makefile.PL APACHE=/usr/local/apache DO_XS=1
 
+This will set CONF to /usr/local/apache/conf, HTDOCS to
+/usr/local/apache/htdocs, and CGIBIN to /usr/local/apache/cgi-bin.
 
 To install as a user without root privileges, in addition to 
 the arguments above, provide the arguments NONROOT=1,
@@ -176,7 +181,7 @@ print STDERR <<END;
 END
 ;
 foreach (@OPTIONS) {
-  printf STDERR "%7s %s\n",$_,$OPTIONS{$_};
+  printf STDERR "%7s %s\n",$_,$OPTIONS{$_} unless $_ eq 'APACHE'; #this confuses people
 }
 print STDERR <<END;
 

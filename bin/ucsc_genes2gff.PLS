@@ -67,7 +67,7 @@ while (<>) {
   next if /^\#/;;
   next if /random/;  ## added line
   my
-(undef,$id,$chrom,$strand,$txStart,$txEnd,$cdsStart,$cdsEnd,$exons,$exonStarts,$exonEnds)
+($id,$chrom,$strand,$txStart,$txEnd,$cdsStart,$cdsEnd,$exons,$exonStarts,$exonEnds)
 = split /\t/;
   my ($utr5_start,$utr5_end,$utr3_start,$utr3_end);
 

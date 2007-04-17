@@ -9,8 +9,7 @@ Frequently asked questions - with answers.
 =item How do I get the most recent version of this FAQ?
 
 The most recent version of this FAQ can be downloaded at
-L<http://www.gmod.org/ggb/FAQ.html> and
-L<http://www.gmod.org/ggb/FAQ.pod>.
+L<http://www.gmod.org/wiki/index.php/GBrowse_FAQ>
 
 =item What is GBrowse good for?
 
@@ -203,16 +202,6 @@ and will be fixed in a later release.
 
 =back
 
-=head1 OTHER
-
-=over
-
-=item Why are there so few questions in the FAQ?
-
-Because I just started this document.
-
-=back
-
-$Id: FAQ.pod,v 1.1.2.6.2.2 2006-10-17 15:47:30 scottcain Exp $
+$Id: FAQ.pod,v 1.1.2.6.2.2.2.1 2007-04-17 22:29:30 lstein Exp $
 
 

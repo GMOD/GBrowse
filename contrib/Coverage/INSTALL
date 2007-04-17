@@ -1,8 +1,8 @@
-$Id: INSTALL,v 1.2 2002-10-24 14:14:27 mavcunha Exp $
+$Id: INSTALL,v 1.2.16.1 2007-04-17 22:29:30 lstein Exp $
 
 How to install the Coverage plugin.
 
- MANUAL INSTALL
+MANUAL INSTALL
 
 To install the plugin, copy the file "Coverage.pm" in plugin directory
 to your "gbrowse.conf/plugins/" directory. 
@@ -14,8 +14,8 @@ Then you have to add the Coverage word on your plugin list in each
 configuration file that you want use the plugin. See CONFIGURE_HOWTO.txt
 on plugins section.
 
- MORE INFO
+MORE INFO
 
- Problems, information and sugestions please contact me.
+Problems, information and sugestions please contact me.
 
- Marco Valtas <mavcunha@bit.fmrp.usp.br>
+Marco Valtas <mavcunha@bit.fmrp.usp.br>

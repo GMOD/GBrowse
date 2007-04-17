@@ -4,6 +4,7 @@ bin/process_gadfly.PLS
 bin/process_sgd.PLS
 bin/process_wormbase.PLS
 bin/register_moby_services.PLS
+bin/sync-bioperl.sh
 bin/ucsc_genes2gff.PLS
 cgi-bin/das.PLS
 cgi-bin/gbrowse.PLS
@@ -73,7 +74,6 @@ contrib/conf_files/index.html
 contrib/conf_files/wormbase.syn
 contrib/Coverage/INSTALL
 contrib/Coverage/plugin/Coverage.pm
-contrib/Coverage/README
 contrib/gdump.pl
 contrib/GeneFinder/genefinder/gfcode.c
 contrib/GeneFinder/genefinder/README
@@ -118,7 +118,6 @@ docs/pod/INSTALL.pod
 docs/pod/MAKE_IMAGES_HOWTO.pod
 docs/pod/ORACLE_AND_POSTGRESQL.pod
 docs/pod/PLUGINS_HOWTO.pod
-docs/pod/README-berkeley-gadfly.pod
 docs/pod/README-chado.pod
 docs/pod/README-gff-files.pod
 docs/pod/README-lucegene.pod
@@ -287,9 +286,9 @@ lib/Bio/Graphics/Glyph/allele_tower.pm
 lib/Bio/Graphics/Glyph/connector.pm
 lib/Bio/Graphics/Glyph/drosophila_arrow.pm
 lib/Bio/Graphics/Glyph/genscan_transcript.pm
-lib/Bio/Graphics/Glyph/ideogram.pm
 lib/Bio/Graphics/Glyph/heat_map.pm
 lib/Bio/Graphics/Glyph/heat_map_ideogram.pm
+lib/Bio/Graphics/Glyph/ideogram.pm
 lib/Bio/Graphics/Glyph/insertion_chromosome.pm
 lib/Bio/Graphics/Glyph/ld_plot.pm
 lib/Bio/Graphics/Glyph/pairwise_plot.pm
@@ -316,7 +315,11 @@ README.fedora
 README.gff3
 README.MacOSX
 README.sessions
+README.Ubuntu
 sample_data/yeast_data.gff
 t/01yeast.t
+t/data/test1.gff
+t/data/test2.gff
+t/GBrowse_Chado.t
 t/Test.pm
 TODO

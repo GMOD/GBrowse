@@ -4,6 +4,10 @@
         * Added support to Chado adapter for feature.is_obsolete column:
             now, unless the -allow_obsolete flag is used, obsoleted features
             will not appear in GBrowse displays
+	* Documentation updates
+	* "universal" net installer now lives in bin/gbrowse_netinstall.pl
+	* Updated GuessDirectories.pm for Ubuntu
+
 1.67
         * Added patch from Steve Taylor that allows one to group track labels into
           a pretty MxN table.

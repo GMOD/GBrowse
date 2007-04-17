@@ -1,11 +1,13 @@
 =head1 Generic Genome Browser Installation
 
 GBrowse is distributed as binary packages for Windows and Macintosh OS
-X, and as source code for Unix systems. These installation
-instructions are for a source code (manual) build. For binary
+X, and as source code for Unix systems. For binary
 installations, please see the online instructions located at
 
 L<http://www.gmod.org/wiki/index.php/GBrowse#Installation>
+
+The remainder of this documentation contains instructions are for a
+source code (manual) build.
 
 =head1 Source Code (Manual) Build
 

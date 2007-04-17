@@ -24,26 +24,22 @@ This data model is encouraged by GFF3 and is used by FlyBase;
 unfortunately Bio::DB::GFF cannot store such gene features without
 hacking the FlyBase GFF3 files.
 
-As of June 2006, the bleeding-edge (CVS) version of Bioperl has
-database support for GFF3 format via the Bio::DB::SeqFeature::Store
-module. Currently only Mysql and preliminary in-memory implementations
-are available, but a BerkeleyDB version is in progress. You are
-encouraged to install this module and test it out, but it is still a
-development project and is not guaranteed to be 100% stable.
+Bioperl version 1.5.2 has database support for GFF3 format via the
+Bio::DB::SeqFeature::Store module. Currently only MySQL, BerkeleyDB
+and in-memory implementations are available. Other implementations
+(PostgreSQL, etc) may be written at a future data.
 
 Here are instructions for bringing up the Fly GFF3 annotations.
 
-1) Get the most recent version of Bioperl via CVS:
+1) Make sure you are using Bioperl 1.5.2 or higher:
+	
+   % perl -MBio::Perl -e 'print $Bio::Perl::VERSION'
+   1.005002
 
-   cvs -d :pserver:cvs@code.open-bio.org:/home/repository/bioperl co bioperl-live
-
-2) perl Makefile.PL, make and make install in the bioperl-live
-directory.
-
-3) Download the GFF3 files and FASTA files to load and put them in a
+2) Download the GFF3 files and FASTA files to load and put them in a
 directory somewhere.
 
-4) Create a mysql database to hold the data, and set up the
+3) Create a mysql database to hold the data, and set up the
 appropriate privileges:
 
  mysqladmin -uroot -p<passwd> create database flygff3
@@ -51,7 +47,7 @@ appropriate privileges:
  mysql -uroot -p<passwd> -e 'grant select on flygff3.* to nobody@localhost'
 
 
-5) Use the bp_seqfeature_load.pl script to load the GFF3 and FASTA
+4) Use the bp_seqfeature_load.pl script to load the GFF3 and FASTA
 data:
 
  cd <directory_containing_the_files>
@@ -65,7 +61,7 @@ You may see a small number of warnings about features with the same
 IDs not occurring in contiguous order. You can safely ignore these
 warnings.
 
-6) Copy the 09.fly.gff3.conf config file into your gbrowse.conf
+5) Copy the 09.fly.gff3.conf config file into your gbrowse.conf
 directory. This file can be found in the Generic-Genome-Browser
 distribution directory under contrib/conf_files/.
 
@@ -81,17 +77,16 @@ modify it if necessary. For example, to add a username and password:
 
 You should be able to browse the database now!
 
-7) To use the IN-MEMORY GFF3 database adaptor (very preliminary!) do
-the following:
+6) To use the in-memory GFF3 database adaptor do the following:
 
-    mkdir /var/www/htdocs/gbrowse/databases/volvox_gff3
-    cp docs/tutorial/data_files/volvox.gff3 /var/www/htdocs/gbrowse/databases/volvox_gff3
+ % mkdir /var/www/htdocs/gbrowse/databases/volvox_gff3
+ % cp docs/tutorial/data_files/volvox.gff3 /var/www/htdocs/gbrowse/databases/volvox_gff3
 
 and edit the volvox.gff3.conf file to read:
 
  db_adaptor    = Bio::DB::SeqFeature::Store
  db_args       = -adaptor memory
-	         -dsn     /var/www/htdocs/gbrowse/databaess/volvox_gffe
+	         -dsn     /var/www/htdocs/gbrowse/databaess/volvox_gff3
 
 Be sure to change the database path to be appropriate for the location
 of the gbrowse document directory on your system.
@@ -102,7 +97,6 @@ annotation part (the volvox.gff3 file has both annotations and
 DNA). Put the DNA into one or more .fasta files in the same directory
 as the .gff3 file(s). This is the same as the traditional way of
 creating a GFF2 in-memory database.
-
 
 8) For more information:
 
@@ -115,7 +109,7 @@ A version of the tutorial files adapted for GFF3 use can be found in
 docs/tutorial/data_files/volvox.gff3 and
 docs/tutorial/conf_files/volvox.gff3.conf. To load the data, simply:
 
- bp_seqfeature_load.pl -d volvoxgff3 -c -f docs/tutorial/data_files/volvox.gff3
+ % bp_seqfeature_load.pl -d volvoxgff3 -c -f docs/tutorial/data_files/volvox.gff3
 
 and install the volvox.gff3.conf file. This file is heavily annotated
 with instructions on how to use the GFF3 database with GBrowse.
@@ -125,4 +119,4 @@ Please report all problems to gmod-gbrowse@lists.sourceforge.net.
 Good luck!
 
 Lincoln Stein
-19 June 2006
+

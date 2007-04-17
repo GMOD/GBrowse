@@ -1,0 +1,57 @@
+GBrowse does not have a .deb package, but many of its prerequisites
+are distributed in this way. This document describes how to install
+GBrowse on Ubuntu and other Linux distributions that use the Debian
+packaging system.
+
+Prerequisites
+-------------
+
+* Install Apache and Apache-modperl 
+
+  % sudo apt-get install libapache2-mod-perl2
+  % sudo apt-get install libapache2-mod-perl2-dev
+  % sudo apt-get install libapache2-mod-perl2-doc
+  % sudo apt-get install apache2-doc
+
+* Make the missing cgi-bin directory 
+
+When you install the Apache2 package, for some reason, the cgi-bin
+directory is not created (at least in Feisty Fawn beta, as of
+mid-April 2007). You should create it before you try to install
+GBrowse.
+
+  % sudo mkdir /usr/lib/cgi-bin
+
+* Install libgd 
+  % sudo apt-get install libgd2-dev
+
+* Install MySQL database (optional, but recommended) 
+  % sudo apt-get install mysql-server
+
+Installing GBrowse with the Net Installer
+----------------------------------------
+
+Get the netinstaller script from
+Generic-Genome-Browser/bin/gbrowse_netinstall.pl and save it to disk
+as "gbrowse_netinstall.pl". Then run:
+
+  % sudo perl gbrowse_netinstall.pl
+
+Be sure to double-check the paths that GBrowse guesses for the Apache
+configuration, htdocs, and cgibin directories, as these may have
+changed.
+
+The script will download and install all the Perl modules on which
+GBrowse depends. During the installation process, some of these
+modules will ask you questions. You can almost always accept the
+defaults. If you change your mind later, you can simply run the script
+again.
+
+When the installer is finished, you can browse the documentation and
+example database at http://localhost/gbrowse.
+
+Author
+------
+
+Lincoln Stein 12:36, 17 April 2007 (EDT)
+lstein@cshl.edu

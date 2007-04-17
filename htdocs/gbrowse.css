@@ -89,9 +89,9 @@ TH.linkmenu       {
                     TEXT-DECORATION: none
                   }
 .titlebar         {  background-color: khaki; 
-                     cursor: crosshair;
                      position: absolute;
-                     left: 0em;
+                     cursor: crosshair;
+                     text-align: right;
                      font-size: 9pt;
                      font-weight: bold;
                   }

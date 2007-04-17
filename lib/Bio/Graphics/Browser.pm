@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.205 2007-02-27 16:38:52 scottcain Exp $
+# $Id: Browser.pm,v 1.206 2007-04-17 12:33:41 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -892,7 +892,7 @@ sub render_html {
 
     my ($width,$height) = $image->getBounds;
     my $url             = $self->generate_image($image,$tmpdir);
-    my $img             = img({-src=>$url,-align=>'left',-usemap=>"#${label}_map",-width=>$width,
+    my $img             = img({-src=>$url,-usemap=>"#${label}_map",-width=>$width,
 			       -height=>$height,-border=>0,-name=>"detailedView_${label}",-alt=>'detailed view'});
     my $class   = $label eq '__scale__' ? 'scale' : 'track';
 
@@ -905,7 +905,7 @@ sub render_html {
                                               : span({-class=>'titlebar'},
 						     img({-src=>$plus}),img({-src=>$minus}),
 						     $self->config->setting($label=>'key'));
-      push @result,div({-id=>"track_${label}",-class=>$class},
+      push @result,div({-id=>"track_${label}",-align=>'center',-class=>$class},
 		       $titlebar,
 		       $img,
 		       $img_map);

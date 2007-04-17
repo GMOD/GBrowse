@@ -1,7 +1,7 @@
 package Bio::Graphics::Browser::PluginSet;
 # API for using plugins
 
-#  $Id: PluginSet.pm,v 1.4 2007-02-19 16:03:35 lstein Exp $
+#  $Id: PluginSet.pm,v 1.5 2007-04-17 12:33:42 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser;
@@ -26,7 +26,7 @@ sub new {
       my $plugin_with_path = "$search_path/$plugin.pm";
       if (eval {require $plugin_with_path}) {
 	warn "plugin $plugin loaded successfully" if DEBUG;
-	$obj = 	$class->new;
+	my $obj = 	$class->new;
 	warn "plugin name = ",$obj->name," base = $plugin" if DEBUG;
 	$plugin_list{$plugin} = $obj;
 	next PLUGIN;

@@ -2,7 +2,8 @@ The Generic Genome Browser (GBrowse) is a simple but highly
 configurable web-based genome browser.  It is a component of the
 Generic Model Organism Systems Database project (GMOD).
 
- - For a demo, go to http://www.gmod.org/ggb.
+ - For a description of features and a demo, go to 
+   http://www.gmod.org/wiki/index.php/GBrowse
 
  - To install on your own system, please see the INSTALL file.
 
@@ -10,11 +11,15 @@ Generic Model Organism Systems Database project (GMOD).
    installing on your system, the tutorial will also be available at
    http://localhost/gbrowse/tutorial.
 
- - To load your own data and configure GBrowse to display it, please
-   see the file docs/pod/CONFIGURE_HOWTO.txt.
+ - To load your own data and configure GBrowse to display it, 
+   run the command: 
 
- - To initialize the database from one or more Genbank records, see
-   docs/pod/GENBANK_HOWTO.txt.
+       perldoc docs/pod/CONFIGURE_HOWTO.pod.
+
+ - To initialize the database from one or more Genbank records, run the
+   command:
+ 
+       perldoc docs/pod/GENBANK_HOWTO.pod.
 
  - This software is free.  You can use it under the terms of the Perl
    Artistic License Please.  Please see DISCLAIMER for limitations of
@@ -25,7 +30,7 @@ www.gmod.org.
 
 Lincoln Stein & the GMOD team
 lstein@cshl.org
-January 1, 2007
+April 18, 2007
 
 
 --- AUTHORS ---
@@ -36,7 +41,7 @@ Scott Cain <cain@cshl.edu>
 Vsevolod (Simon) Ilyushchenko <simonf@cshl.edu>
 Marc Logghe <Marc.Logghe@devgen.com>
 Aaron Mackey <amackey@pcbi.upenn.edu>
-Sheldon McKay <smckay@bcgsc.ca>
+Sheldon McKay <mckays@cshl.edu>
 Nathan O. Siemers <Nathan.Siemers@bms.com>
 Lincoln Stein <lstein@cshl.edu>
 
@@ -50,3 +55,5 @@ Marco Mangone <mangone@cshl.edu> (Italian)
 Linus Taejoon Kwon <linusben <at> bawi <dot> org> (Korean)
 Marcela Tello-Ruiz <marcela@broad.mit.edu> (Spanish)
 Gudmundur Thorisson <mummi@cshl.edu> (Icelandic)
+
+Also, many thanks to Brian Osborne for his maintenance of the GMOD WIKI and documentation pages.

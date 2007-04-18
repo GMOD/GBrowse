@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.3 2007-03-29 15:48:09 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.4 2007-04-18 19:31:57 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -326,7 +326,6 @@ if ($divisor == 1) {
 }
 
 print_top($title,param('reset'));
-
 
 ## HANDLE TRACK SETTINGS   #######################################################
 if ((param('set_options') || param($CONFIG->tr('Set_options')) || param('revert'))
@@ -1503,7 +1502,7 @@ sub zoomnav {
   my ($nav)          = grep {/^(left|right) \S+/}  param();
   my $overview_x     = param('overview.x');
   my $regionview_x     = param('regionview.x');
-  my $regionview_size  = $settings->{region_size};
+  my $regionview_size  = $settings->{region_size} * $divisor;
   my $seg_min          = param('seg_min');
   my $seg_max          = param('seg_max');
   my $segment_length   = $seg_max - $seg_min + 1 if defined $seg_min && defined $seg_max;
@@ -1630,18 +1629,21 @@ sub get_features {
 
 sub features2segments {
   my $features = shift;
+
   my $refclass = $CONFIG->setting('reference class') || 'Sequence';
   my $db = open_database();
   my @segments = 
     map {
       my $version = eval {$_->isa('Bio::SeqFeatureI') ? undef : $_->version};
-      $db->segment(-class => $refclass,
+      my @args = (-class => $refclass,
 		   -name  => $_->ref,
 		   -start => $_->start,
 		   -stop  => $_->end,
 		   -absolute => 1,
-		   defined $version ? (-version => $version) : ())} @$features;
-  warn "segments = @segments\n" if DEBUG;
+		   defined $version ? (-version => $version) : ());
+      $db->segment(@args);
+    } @$features;
+  warn "segments = @segments" if DEBUG;
 
   # Filter out redundant segments; this can happen when the same basic feature is
   # present under several names, such as "genes" and "frameworks"
@@ -2965,7 +2967,10 @@ sub tableize {
 
 sub get_regionview_seg {
   my ($settings,$detail_start, $detail_end, $whole_start, $whole_end) = @_;
-  my $regionview_length = $settings->{region_size};
+
+  my $divisor = $CONFIG->setting(general=>'unit_divider') || 1;
+  my $regionview_length = $settings->{region_size} * $divisor;
+
   if ($detail_end - $detail_start + 1 > $regionview_length) { # region can't be smaller than detail
     $regionview_length = $detail_end - $detail_start + 1;
   }

@@ -32,13 +32,14 @@ use Archive::Tar;
 use File::Copy 'cp';
 use CPAN '!get';
 
-use constant BIOPERL_VERSION     => 'bioperl-1.5.2_102';
-use constant BIOPERL_REQUIRES    => '1.005002';  # sorry for the redundancy
-use constant GBROWSE_DEFAULT     => '1.68';
-use constant SOURCEFORGE_MIRROR  => 'http://easynews.dl.sourceforge.net/sourceforge/gmod/';
-use constant SOURCEFORGE_GBROWSE => 'http://sourceforge.net/project/showfiles.php?group_id=27707&package_id=34513';
-use constant BIOPERL             => 'http://bioperl.org/DIST/'.BIOPERL_VERSION.'.tar.gz';
-use constant NMAKE               => 'http://download.microsoft.com/download/vc15/patch/1.52/w95/en-us/nmake15.exe';
+use constant BIOPERL_VERSION      => 'bioperl-1.5.2_102';
+use constant BIOPERL_REQUIRES     => '1.005002';  # sorry for the redundancy
+use constant GBROWSE_DEFAULT      => '1.68';
+use constant SOURCEFORGE_MIRROR1  => 'http://superb-west.dl.sourceforge.net/sourceforge/gmod/';
+use constant SOURCEFORGE_MIRROR2  => 'http://easynews.dl.sourceforge.net/sourceforge/gmod/';
+use constant SOURCEFORGE_GBROWSE  => 'http://sourceforge.net/project/showfiles.php?group_id=27707&package_id=34513';
+use constant BIOPERL              => 'http://bioperl.org/DIST/'.BIOPERL_VERSION.'.tar.gz';
+use constant NMAKE                => 'http://download.microsoft.com/download/vc15/patch/1.52/w95/en-us/nmake15.exe';
 
 my %REPOSITORIES = ('BioPerl-Release-Candidates' => 'http://bioperl.org/DIST/RC',
 		    'BioPerl-Regular-Releases'   => 'http://bioperl.org/DIST',
@@ -116,8 +117,13 @@ else {
 print STDERR "\n *** Installing Generic-Genome-Browser ***\n";
 
 my $latest_version = find_gbrowse_latest();
-my $gbrowse        = SOURCEFORGE_MIRROR.$latest_version.'.tar.gz';
-do_install($gbrowse,'gbrowse.tgz',$latest_version,'make');
+my $gbrowse        = SOURCEFORGE_MIRROR1.$latest_version.'.tar.gz';
+eval {do_install($gbrowse,'gbrowse.tgz',$latest_version,'make')};
+if ($@ =~ /Could not download/) {
+  print STDERR "Could not download: server down? Trying a different server...\n";
+  $gbrowse        = SOURCEFORGE_MIRROR2.$latest_version.'.tar.gz';
+  do_install($gbrowse,'gbrowse.tgz',$latest_version,'make');
+}
 
 exit 0;
 
@@ -199,8 +205,10 @@ sub find_bioperl_ppm {
 sub find_gbrowse_latest {
   print STDERR "Looking up most recent version...";
   my $download_page = get(SOURCEFORGE_GBROWSE);
-  my @versions      = sort {$b<=>$a} $download_page =~ /GBrowse-(\d+\.\d+)/g;
+  my @files         = $download_page =~ /(Generic-Genome-Browser--?\d+\.\d+)/g;
+  my %versions      = map {/(\d+\.\d+)/ => $_} @files;
+  my @versions      = sort {$b<=>$a} keys %versions;
   my $version = $versions[0] || '1.67';
   print STDERR $version,"\n";
-  return "Generic-Genome-Browser-$version";
+  return $versions{$version};
 }

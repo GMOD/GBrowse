@@ -34,7 +34,7 @@ use CPAN '!get';
 
 use constant BIOPERL_VERSION     => 'bioperl-1.5.2_102';
 use constant BIOPERL_REQUIRES    => '1.005002';  # sorry for the redundancy
-use constant GBROWSE_DEFAULT     => '1.66';
+use constant GBROWSE_DEFAULT     => '1.68';
 use constant SOURCEFORGE_MIRROR  => 'http://easynews.dl.sourceforge.net/sourceforge/gmod/';
 use constant SOURCEFORGE_GBROWSE => 'http://sourceforge.net/project/showfiles.php?group_id=27707&package_id=34513';
 use constant BIOPERL             => 'http://bioperl.org/DIST/'.BIOPERL_VERSION.'.tar.gz';

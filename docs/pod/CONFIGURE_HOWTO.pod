@@ -2158,6 +2158,43 @@ NCBI, provided that the value of the tag looks like an NCBI GI number:
         }
         return;
       }
+      
+=head2 B12. CONFIGURE BALLOON TOOLTIPS
+
+The style of the balloon tooltip can be configured by modifying the 
+configuration files located in the folder:
+
+conf/gbrowse.conf
+
+Open the file using any text editor and find the [TRACK DEFAULTS]
+section.For the title option, three arguments are provided:
+
+		html	Provide the html content contained in the balloon_html tag
+		url		Provide the content retrived from the url contained in the 
+					balloon_url tag
+
+If you don¡¯t want any balloon tooltips, just leave it blank as:
+
+title = 
+
+You can modify the content of either the balloon_html tag or the 
+balloon_url tag to get what you want in the balloon tooltip.
+
+Customized balloon images are also supported. You can specify the path
+to your images in the following lines:
+
+balloon_use_defaultsetting = 1
+balloon_upleftconnector  =
+balloon_uprightconnector =
+balloon_downleftconnector  =
+balloon_downrightconnector =
+alloon_upballoon   =
+balloon_downballoon =
+
+Be sure to set the balloon_use_defaultsetting to 0 if you use your own
+images. For more information about changing the balloon images, please
+visit http://www.wormbase.org/wiki/index.php/Balloon_Tooltips
+
 
 =head1 C. GENERATING HISTOGRAMS
 

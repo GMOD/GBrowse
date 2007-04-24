@@ -708,7 +708,27 @@ document root directory. You might want to run this command under
 cron, but be sure that the user that the cron job runs under has the
 proper permissions. You may need to install it in root's cron script.
 
-=head2 17. BUG REPORTS AND SUPPORT REQUESTS
+=head2 17. THE BALLOON TOOLTIPS
+
+The balloon tooltip effect requires the balloon javascript files and the
+background balloon images files. You can download them from:
+
+http://www.wormbase.org/wiki/index.php/Balloon_Tooltips
+
+Copy balloon.js, yahoo-dom-event.js and prototype.js into the folder: 
+
+%apache%/htdocs/gbrowse/js 
+
+where %apache% is the path to your apache installation folder. For example,
+if your apache installation path is D:/apache, copy those js files into:
+
+D:/apache/htdocs/gbrowse/js
+
+And then copy all balloon image files into the folder:
+
+%apache%/htdocs/images/balloons
+
+=head2 18. BUG REPORTS AND SUPPORT REQUESTS
 
 Please report bugs to the GMOD project bug tracking system at
 L<http://sourceforge.net/tracker/?group_id=27707&atid=391291>. EMail

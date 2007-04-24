@@ -1301,10 +1301,10 @@ COMPUTED OPTIONS for details.
 =item * title
 
 The title option controls the "tooltips" text that pops up when the
-mouse hovers over a glyph in certain browsers.  The rules for
-generating titles are the same as the "link" option discussed above.
-The "title" option can also be computed dynamically.  See COMPUTED
-OPTIONS for details.
+mouse hovers over a glyph in certain browsers.  See CONFIGURE BALLOON TOOLTIPS
+for details.The rules for generating titles are the same as the "link" 
+option discussed above.The "title" option can also be computed dynamically. 
+See COMPUTED OPTIONS for details.
 
 Note HTML characters such as "<", ">" and "&" are not automatically
 escaped from the title. This lets you do neat stuff, such as create

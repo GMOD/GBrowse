@@ -241,6 +241,35 @@ sub print_top {
   push @args,(-script=>\@scripts);
 
   print start_html(@args) unless $HTML++;
+  
+  # Construct a customized balloon object according
+  # to the conf. file
+  my $balloon_use_default = $CONFIG->setting('TRACK DEFAULTS'=>'balloon_use_defaultsetting');
+ 	my $balloon_up					= $CONFIG->setting('TRACK DEFAULTS'=>'balloon_upballoon');
+ 	my $balloon_down				= $CONFIG->setting('TRACK DEFAULTS'=>'balloon_downballoon');
+  my $balloon_upleft			= $CONFIG->setting('TRACK DEFAULTS'=>'balloon_upleftconnector');
+  my $balloon_upright			= $CONFIG->setting('TRACK DEFAULTS'=>'balloon_upleftconnector');
+ 	my $balloon_downleft		= $CONFIG->setting('TRACK DEFAULTS'=>'balloon_uprightconnector');
+ 	my $balloon_downright		= $CONFIG->setting('TRACK DEFAULTS'=>'balloon_uprightconnector');
+ 
+ 	print "<script>
+ 	
+ 		   var customizedballoon = new Balloon;
+ 		   
+ 		   </script>";
+ 		   
+ 	if ($balloon_use_default != 1){
+	   print "<script>
+
+	   customizedballoon.upLeftConnector  	= '$balloon_upleft';
+		 customizedballoon.upRightConnector 	= '$balloon_upleft';
+		 customizedballoon.downLeftConnector 	= '$balloon_downleft';
+	   customizedballoon.downRightConnector = '$balloon_downright'; 
+	   customizedballoon.upBalloon   				= '$balloon_up';
+	   customizedballoon.downBalloon				= '$balloon_down';
+	   
+	   </script>"; 
+	}
 }
 
 sub print_bottom {

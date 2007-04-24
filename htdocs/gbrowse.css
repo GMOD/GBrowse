@@ -88,5 +88,7 @@ TH.linkmenu       {
                     CURSOR: help;
                     TEXT-DECORATION: none
                   }
- 
+                  
+ ul								{	list-style-type:none
+ 									}
 

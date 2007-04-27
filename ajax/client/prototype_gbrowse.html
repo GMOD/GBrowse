@@ -45,17 +45,20 @@
     
     <!-- TODO: CHECK FOR JAVASCRIPT >= v1.3 and DOM Level >= 2 - OTHERWISE REDIRECT TO ERROR PAGE !!! -->
     
+    <h3 style="float: right"><a href="../../upload/start">Upload your own track</a></h3>
+
     <p class="header1">AJAX Generic Genome Browser (GBrowse) prototype demo</p>
     
     <div>
       <text class="header2" id="landmarkname" />
       <p />
     </div>
-    
+
     <div id="NavigationComponentPlaceholder">
       <table width="100%" border="0" cellspacing="0" cellpadding="0">
 	<tr>
 	  <td width="40%">
+	    <b>Reference Sequence:</b><br /><select id="landmarks"></select><br />
 	    <b>Region or Nucleotide (<a onclick="var w=window.open('search_help.html');w.resizeTo(750,750);return false;" href="">syntax help</a>):</b>
 	    <br />
 	  <input id="searchInputBox" type="text" size="25"></input>
@@ -78,21 +81,21 @@
     </div>
     
     <!-- for some reason, <div /> doesn't work... but it ought to, right? -->
-    <div id="ViewerComponentPlaceholder"></div>
+    <div id="ViewerComponent"></div>
     
     <div id="TrackControlComponentPlaceholder">
       <button id="goToClassic">View this in the original GBrowse</button>
       <p>
-	<b>Toggle Tracks On/Off:</b><br />
-	<span id="trackControls" />
+       <b>Toggle Tracks On/Off:</b><br />
+       <span id="trackControls" />
       </p>
 
       <p><b>Move track
-	  <select id="moveTrackMenu"></select>
-	  to position
-	  <select id="newLocationMenu"></select>
-	</b>
-	<button id="moveTrackButton">Move</button>
+         <select id="moveTrackMenu"></select>
+         to position
+         <select id="newLocationMenu"></select>
+       </b>
+       <button id="moveTrackButton">Move</button>
       </p>
    
       <p><b>Track Label Controls:</b>
@@ -114,10 +117,10 @@
     <div>
       <b>Message Console</b><br />
       <textarea id="debugMessage" cols="120" rows="10" readonly="readonly" wrap="virtual"></textarea>
-    </div>
+    </div>      
     
     <!-- FOR DEBUGGING ONLY - *REMOVE* before public release !!! -->
-
+    <!--
     <div id="DebugComponentPlaceholder">
       <b>Debugging Tools/Options</b><br />
       
@@ -129,7 +132,7 @@
       <textarea id="stupidTestBox" cols="30" rows="1"></textarea>
       <button onclick="stupidTestBoxHandler(); return false;">Gwan Test?</button>
     </div>
-
+    -->
     <!-- END DEBUGGING ONLY SECTION -->
     
     <div id="information">  <!-- TODO: this should really be a separate page... -->

@@ -11,7 +11,7 @@
   declare globals here, cuz this "library" gets "included" first
   (until I can figure out a better way to do this)
 */
-var view, taz, cif;
+var view, taz, cif, landmarks;
 var xmlFilePath = "tileinfo.xml";  // stores track and tile info, and other settings
 
 // color gradient for the track control panel backgrounds (THIS IS TEMPORARY !!! - we intend to make the track

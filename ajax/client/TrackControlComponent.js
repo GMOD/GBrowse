@@ -16,6 +16,8 @@ function TrackControlComponent () {
 
     // TODO: this should be added to DOM dynamically instead of getting it from XHTML
     this.trackControls = document.getElementById('trackControls');  // track control elements (buttons, or whatever may be...)
+    var tc = this.trackControls;
+    $A(tc.childNodes).each(function(n) {tc.removeChild(n)});
 
     // set up/lay out track control elements (TODO: how much should be in renderComponent()?)
     var trackNames = taz.getTrackNames();
@@ -47,29 +49,31 @@ function TrackControlComponent () {
     document.getElementById('trackLabelToggle').onclick =
 	function (event) { cif.toggleTrackLabels (event); }
 
-    // populate the menus for track order controls
+    // wipe and rebuild the menus for track order controls
     var moveTrackMenu   = $('moveTrackMenu');
     var newLocationMenu = $('newLocationMenu');
+    $A(moveTrackMenu.childNodes).each(function(n) {moveTrackMenu.removeChild(n)});
+    $A(newLocationMenu.childNodes).each(function(n) {newLocationMenu.removeChild(n)});
     var trackNum = 1;
     trackNames.each (
-	function (trackName) {
-	    var menuOptFrom = document.createElement ('option');
-	    var menuOptTo   = document.createElement ('option');
+       function (trackName) {
+           var menuOptFrom = document.createElement ('option');
+           var menuOptTo   = document.createElement ('option');
 
-	    menuOptFrom.setAttribute ('value', trackName);
-	    menuOptTo.setAttribute   ('value', trackNum);
+           menuOptFrom.setAttribute ('value', trackName);
+           menuOptTo.setAttribute   ('value', trackNum);
 
-	    menuOptFrom.text = menuOptTo.text = trackNum + '. ' + trackName;
+           menuOptFrom.text = menuOptTo.text = trackNum + '. ' + trackName;
 
-	    moveTrackMenu.appendChild   (menuOptFrom);
-	    newLocationMenu.appendChild (menuOptTo);
+           moveTrackMenu.appendChild   (menuOptFrom);
+           newLocationMenu.appendChild (menuOptTo);
 
-	    trackNum++;
-	});
-
+           trackNum++;
+       });
+ 
     // button for changing track order
     $('moveTrackButton').onclick = TrackControlComponent_moveTrackButtonHandler;
-
+ 
     // track label transparency controls
     document.getElementById('raiseTransp').onclick = TrackControlComponent_raiseTransp;
     document.getElementById('lowerTransp').onclick = TrackControlComponent_lowerTransp;
@@ -152,11 +156,11 @@ function TrackControlComponent_moveTrack (movedTrack, newPos)
     var movedButton = findAndRemoveChild (trackControls, movedTrack + '_tracktoggle');
 
     if (newPos == 1) {
-	trackControls.insertBefore (movedButton, trackControls.childNodes[0]);
+       trackControls.insertBefore (movedButton, trackControls.childNodes[0]);
     }
     else {
-	insertAfter (trackControls, movedButton,
-		     getChild (trackControls, taz.getTrackNames()[newPos-2] + '_tracktoggle'));
+       insertAfter (trackControls, movedButton,
+                    getChild (trackControls, taz.getTrackNames()[newPos-2] + '_tracktoggle'));
     }
 
     // TODO: recolor them, too?
@@ -167,31 +171,31 @@ function TrackControlComponent_moveTrack (movedTrack, newPos)
     var newLocationMenu = $('newLocationMenu');
 
     $A (moveTrackMenu.childNodes).each (
-	function (menuOpt) {
-	    moveTrackMenu.removeChild (menuOpt);
-	});
+       function (menuOpt) {
+           moveTrackMenu.removeChild (menuOpt);
+       });
 
     $A (newLocationMenu.childNodes).each (
-	function (menuOpt) {
-	    newLocationMenu.removeChild (menuOpt);
-	});
+       function (menuOpt) {
+           newLocationMenu.removeChild (menuOpt);
+       });
 
     var trackNum = 1;
     taz.getTrackNames ().each (
-	function (trackName) {
-	    var menuOptFrom = document.createElement ('option');
-	    var menuOptTo   = document.createElement ('option');
+       function (trackName) {
+           var menuOptFrom = document.createElement ('option');
+           var menuOptTo   = document.createElement ('option');
 
-	    menuOptFrom.setAttribute ('value', trackName);
-	    menuOptTo.setAttribute   ('value', trackNum);
+           menuOptFrom.setAttribute ('value', trackName);
+           menuOptTo.setAttribute   ('value', trackNum);
 
-	    menuOptFrom.text = menuOptTo.text = trackNum + '. ' + trackName;
+           menuOptFrom.text = menuOptTo.text = trackNum + '. ' + trackName;
 
-	    moveTrackMenu.appendChild   (menuOptFrom);
-	    newLocationMenu.appendChild (menuOptTo);
+           moveTrackMenu.appendChild   (menuOptFrom);
+           newLocationMenu.appendChild (menuOptTo);
 
-	    trackNum++;
-	});
+           trackNum++;
+       });
 }
 
 

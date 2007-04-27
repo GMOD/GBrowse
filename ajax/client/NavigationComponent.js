@@ -21,7 +21,10 @@ function NavigationComponent () {
 
     document.getElementById("searchInputBox").value = '';  // reset search input box
 
-    // render the zoom levels menu contents based on XML file info
+    // zoom levels menu
+    $A(this.zoomLevelsMenu.childNodes).each(function(n) {  // clear old entries first
+            $('zoomLevelsMenu').removeChild(n);
+        });
     var zoomLevelNames = taz.getZoomLevelNames();
     for (var i = 0; i < zoomLevelNames.length; i++) {
 	var menuOption = document.createElement("option");
@@ -34,6 +37,19 @@ function NavigationComponent () {
 	    menuOption.defaultSelected = false;
 	this.zoomLevelsMenu.appendChild(menuOption);
     }
+
+    // landmark-switching menu
+    $A($("landmarks").childNodes).each(function(n) {  // clear old entries first
+            $("landmarks").removeChild(n);
+        });
+    landmarks.each(function(l) {
+            var menuOption = document.createElement("option");
+            menuOption.setAttribute("name", l.getAttribute("id"));
+            menuOption.text = l.getAttribute("id");
+            menuOption.onclick = NavigationComponent_makeLandmarkHandler(l);
+	    if (l.getAttribute("id") == view.landmarkID) menuOption.defaultSelected = true;
+            $("landmarks").appendChild(menuOption);
+        });
 
     /* register event handlers */
 
@@ -60,6 +76,7 @@ function NavigationComponent () {
     this.getState = NavigationComponent_getState;
     this.setState = NavigationComponent_setState;
 }
+
 
 //
 // TODO: stub for constructing the DOM node for this Component; currently, things are
@@ -272,3 +289,10 @@ function NavigationComponent_zoomIn () {
 function NavigationComponent_makeZoomHandler(zoomLevel) {
     return function () { cif.changeZoomLevel (zoomLevel) };
 }
+
+function NavigationComponent_makeLandmarkHandler(landmark) {
+    return function() {
+        configureBrowser(taz.config, landmark);
+    };
+}
+

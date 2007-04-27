@@ -44,21 +44,21 @@
 // where 'getElementsByTagName()' should return one thing? (also, should I make sure numerical values
 // are actually numerical... am I too paranoid?)
 //
-function TracksAndZooms(xmlDoc) {
+function TracksAndZooms(config, landmark) {
 
-    // save a ref to the XML document for whoever wants it... JUST in case...
-    this.xmlDoc = xmlDoc;
+    // save a ref to the config XML node for whoever wants it... JUST in case...
+    this.config = config;
 
     // tile width in pixels
-    this.tileWidth = parseInt (xmlDoc.getElementsByTagName('tile')[0].getAttribute('width'), 10);
+    this.tileWidth = parseInt (config.getElementsByTagName('tile')[0].getAttribute('width'), 10);
 
     // get ruler info
-    this.rulerCellHeight = parseInt (xmlDoc.getElementsByTagName("ruler")[0].getAttribute("height"), 10);
-    this.rulerTilePath = xmlDoc.getElementsByTagName("ruler")[0].getAttribute("tiledir");   // path of the zoom level directories
+    this.rulerCellHeight = parseInt (landmark.getElementsByTagName("ruler")[0].getAttribute("height"), 10);
+    this.rulerTilePath = landmark.getElementsByTagName("ruler")[0].getAttribute("tiledir");   // path of the zoom level directories
 
     // Convert XML track and zoom level info to internal data structures
 
-    var trackNodes = xmlDoc.getElementsByTagName('tracks')[0].getElementsByTagName('track');
+    var trackNodes = landmark.getElementsByTagName('tracks')[0].getElementsByTagName('track');
 
     // load zoom level info that is the same for all tracks; it is stored in two data structures:
     //   - an associative array, indexed by zoom level name, stores:
@@ -90,6 +90,8 @@ function TracksAndZooms(xmlDoc) {
 	this.zoomsNamed[zoomLevelName]['unitsperpixel'] =
 	    this.zoomsNamed[zoomLevelName]['unitspertile'] / this.tileWidth;
     }
+    var zooms = this.zoomsNamed;
+    this.zoomsNumbered.sort(function(a,b) {return zooms[a].unitspertile - zooms[b].unitspertile;});
 
     // track info is stored in two data structures:
     //   - a named (associative) array, indexed by track name, that stores:
@@ -119,6 +121,7 @@ function TracksAndZooms(xmlDoc) {
 
 	var zoomLevelNodes = trackNodes[i].getElementsByTagName('zoomlevel');  // shadows earlier declaration
 	for (var j = 0; j < this.zoomsNumbered.length; j++) {
+            if (j >= zoomLevelNodes.length) break;
 	    var zoomLevelName = zoomLevelNodes[j].getAttribute('name');
 		
 	    // each zoom level has the following track-specific info stored about it in an
@@ -154,9 +157,6 @@ function TracksAndZooms(xmlDoc) {
 
     // paths
     this.getTilePrefix        = TracksAndZooms_getTilePrefix;
-
-    // other
-    this.getTrackNum          = TracksAndZooms_getTrackNum;
 
     // Modifier methods
 
@@ -253,14 +253,6 @@ function TracksAndZooms_getHeightOfTrack(trackName) {
 }
 
 //
-// Returns order number of a track (from 1 to N inclusive, where N is the number of all tracks).
-//
-function TracksAndZooms_getTrackNum (trackName) {
-    alert ('THIS FUNCTION (getTrackNum()) IS UNTESTED! (but how bad can it be?...)');
-    return (this.tracksNamed[trackName]['tracknum'] + 1);  // convert to 1-based indexing
-}
-
-//
 // Get filepath/name prefix for the tiles for the specified track at the current zoom level
 //
 function TracksAndZooms_getTilePrefix(trackName) {
@@ -287,7 +279,8 @@ function TracksAndZooms_setTrackVisible(trackName) {
 }
 
 //
-// Updates the track order numbering; ALWAYS call this after you move a track.
+// Updates the track order numbering; ALWAYS call this BEFORE you move a track,
+// as DOM-changing functions depend on this data structure being up-to-date.
 // 'newPosition' is 1-based indexing, but 'tracksNamed', etc. store 0-based indexing.
 //
 function TracksAndZooms_moveTrack (trackName, newPosition)
@@ -299,21 +292,21 @@ function TracksAndZooms_moveTrack (trackName, newPosition)
 
     if (oldPosition < newPosition)  // shift tracks left
     {
-	for (var i = oldPosition; i < newPosition; i++)
-	{
-	    var newTrack = this.tracksNumbered[i + 1];
-	    this.tracksNumbered[i] = newTrack;
-	    this.tracksNamed[newTrack]['tracknum'] = i;
-	}
+        for (var i = oldPosition; i < newPosition; i++)
+        {
+            var newTrack = this.tracksNumbered[i + 1];
+            this.tracksNumbered[i] = newTrack;
+            this.tracksNamed[newTrack]['tracknum'] = i;
+        }
     }
     else if (oldPosition > newPosition)  // shift tracks right
     {
-	for (var i = oldPosition; i > newPosition; i--)
-	{
-	    var newTrack = this.tracksNumbered[i - 1];
-	    this.tracksNumbered[i] = newTrack;
-	    this.tracksNamed[newTrack]['tracknum'] = i;
-	}
+        for (var i = oldPosition; i > newPosition; i--)
+        {
+            var newTrack = this.tracksNumbered[i - 1];
+            this.tracksNumbered[i] = newTrack;
+            this.tracksNamed[newTrack]['tracknum'] = i;
+        }
     }
     else { return;  /* old = new, nothing to do */ }
 

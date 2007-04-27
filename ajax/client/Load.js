@@ -60,7 +60,11 @@ function loadXML(xmlURL, handlerFunction) {
 	xmlDoc = document.implementation.createDocument("", "", null);
 
 	// specify what to do when it finishes loading
-	xmlDoc.onload = function () { handlerFunction(xmlDoc, xmlURL) }
+	xmlDoc.onload = function () { 
+            landmarks = $A(xmlDoc.getElementsByTagName('landmark'));
+            configs = $A(xmlDoc.getElementsByTagName('config'));
+            handlerFunction(configs[0], landmarks[0], xmlURL) 
+        }
 
 	// load the XML document
 	xmlDoc.load(xmlURL);
@@ -69,7 +73,11 @@ function loadXML(xmlURL, handlerFunction) {
     else if (window.ActiveXObject) {
 	xmlDoc = new ActiveXObject("Microsoft.XMLDOM");  // create doc
 	xmlDoc.onreadystatechange = function() {  // specify onload
-	    if (xmlDoc.readyState == 4) handlerFunction(xmlDoc, xmlURL);
+	    if (xmlDoc.readyState == 4) {
+                landmarks = $A(xmlDoc.getElementsByTagName('landmark'));
+                configs = $A(xmlDoc.getElementsByTagName('config'));
+                handlerFunction(configs[0], landmarks[0], xmlURL) 
+            }
 	}
 	xmlDoc.load(xmlURL);  // load the XML document
     }
@@ -89,10 +97,10 @@ function loadXML(xmlURL, handlerFunction) {
 // and/or to using XHR, this clearly will need to change, as the point of this function is to
 // execute ONLY WHEN ALL THE BROWSER CONFIGURATION DATA IS LOADED!
 //
-function configureBrowser(xmlDoc, xmlURL) {
+function configureBrowser(config, landmark, xmlURL) {
 
     // test to see if the page actually loaded by checking for the expected head node
-    if (xmlDoc.getElementsByTagName("settings").length != 1) {
+    if (config.getElementsByTagName("tile").length == 0) {
 	debug("ERROR: cannot load " + xmlURL + " (error reading file)!");
 	// TODO: this should really instead redirect to a detailed error/bug report page
 	// (or at least render a "error" on the main page by appending to DOM)
@@ -107,8 +115,8 @@ function configureBrowser(xmlDoc, xmlURL) {
 
     /* instantiate globals that are dependent on XML */
 
-    view = new View (xmlDoc);
-    taz = new TracksAndZooms (xmlDoc);
+    view = new View (config, landmark);
+    taz = new TracksAndZooms (config, landmark);
     cif = new ComponentInterface ();
 
     /* instantiate all the components */
@@ -129,7 +137,7 @@ function configureBrowser(xmlDoc, xmlURL) {
     // so we run them here (TODO: this will be replaced by an automated call to renderComponent()
     // of ALL Components, which will return the DOM tree node to be appended to document)
 
-    var placeholder = document.getElementById ('ViewerComponentPlaceholder');
+    var placeholder = document.getElementById ('ViewerComponent');
 
     placeholder.parentNode.replaceChild (cif.viewerComponent.renderComponent (),
 					 placeholder);

@@ -40,14 +40,14 @@
 // This constructor should only load stuff into 'View' object data members; it should NOT
 // have any active function (i.e. do not cause other things to execute, just load data).
 //
-function View (xmlDoc) {
+function View (config, landmark) {
 
     /* initialize data members based on XML file data */
 
     // landmark dimensions ("name" is the human-readable name, "id" is the GFF(?)/etc.
     // landmark identifier)
-    var landmark = xmlDoc.getElementsByTagName ("landmark")[0];
-    this.landmarkName   = landmark.getAttribute ("name");
+    //var landmark = xmlDoc;
+    this.landmarkName   = config.getAttribute ("name");
     this.landmarkStart  = parseInt (landmark.getAttribute ("start"), 10);
     this.landmarkEnd    = parseInt (landmark.getAttribute ("end"), 10);
     this.landmarkID     = landmark.getAttribute ("id")
@@ -55,7 +55,7 @@ function View (xmlDoc) {
 
     // default zoom level specified by XML
     this.currentZoomLevel =
-	xmlDoc.getElementsByTagName("defaults")[0].getAttribute("zoomlevelname");
+	config.getElementsByTagName("defaults")[0].getAttribute("zoomlevelname");
 
     // what's visible in the genome view box (to to be initialized later)
     this.leftmostNt;

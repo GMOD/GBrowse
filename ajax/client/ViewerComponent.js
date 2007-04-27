@@ -85,7 +85,7 @@ var leftmostBound;
 // Flag to specify to use Ajax.Updater to download the html data for generating images and image maps
 // setting this to 0 means it is backwards compatible with tile sources that have not had the html generated 
 // by generate-tiles.pl
-var htmlFiles=0;
+var htmlFiles=1;
 
 //---------------------------------------
 //     CONSTRUCTORS AND INITIALIZERS
@@ -95,7 +95,7 @@ function ViewerComponent () {
 
     /* do "classic GBrowse" stuff (for demo only; TODO: remove when done) */
 
-    var classicURLObj = taz.xmlDoc.getElementsByTagName("classicurl")[0];
+    var classicURLObj = taz.config.getElementsByTagName("classicurl")[0];
     if (classicURLObj === undefined) {  // just in case
 	message ("PROBLEM! CANNOT GET URL OF CLASSIC GBROWSE! Bailing out... (check your XML file)");
 	return;
@@ -791,57 +791,57 @@ function ViewerComponent_moveTrack (trackName, newPos)
     // made visible
 
     if (taz.isTrackVisible (trackName)) {
-	newPos--;  // convert to 0-based indexing
+       newPos--;  // convert to 0-based indexing
 
-	var movedTrackP = findAndRemoveChild (this.pDivMain, trackName + '_trackDivP');
-	if (this.oDivMain)
-	    var movedTrackO = findAndRemoveChild (this.oDivMain, trackName + '_trackDivO');
+       var movedTrackP = findAndRemoveChild (this.pDivMain, trackName + '_trackDivP');
+       if (this.oDivMain)
+           var movedTrackO = findAndRemoveChild (this.oDivMain, trackName + '_trackDivO');
 
-	var movedPanel = findAndRemoveChild (this.dragDivPanel, trackName + '_panelDiv');
-	var trackLabel = findAndRemoveChild (this.dragDivTrackLabels, trackName + '_trackLabelDiv');
-	
-	if (newPos == 0) {
-	    // insert at the very beginning
-	    this.pDivMain.insertBefore (movedTrackP, this.pDivMain.childNodes[0]);
-	    if (movedTrackO)
-		this.oDivMain.insertBefore (movedTrackO, this.oDivMain.childNodes[0]);
-	    this.dragDivPanel.insertBefore (movedPanel, this.dragDivPanel.childNodes[0]);
-	    this.dragDivTrackLabels.insertBefore (trackLabel,
-						  this.dragDivTrackLabels.childNodes[0]);
-	}
-	else {
-	    // find the last visible track after which we can insert the moved one
-	    var insertAfterTrack = null;
-	    var tracks = taz.getTrackNames();
-	    for (var i = newPos - 1; i >= 0; i--)
-		if (taz.isTrackVisible (tracks[i])) {
-		    insertAfterTrack = tracks[i];  break;
-		}
-	    
-	    if (insertAfterTrack) {
-		// insert after some track
-		insertAfter (this.pDivMain, movedTrackP,
-			     getChild (this.pDivMain, (insertAfterTrack + '_trackDivP')));
-		if (movedTrackO)
-		    insertAfter (this.oDivMain, movedTrackO,
-				 getChild (this.oDivMain, (insertAfterTrack + '_trackDivO')));
-		insertAfter (this.dragDivPanel, movedPanel,
-			     getChild (this.dragDivPanel, (insertAfterTrack + '_panelDiv')));
-		insertAfter (this.dragDivTrackLabels, trackLabel,
-			     getChild (this.dragDivTrackLabels, (insertAfterTrack + '_trackLabelDiv')));
-	    }
-	    else {
-		// insert at the very beginning
-		this.pDivMain.insertBefore (movedTrackP, this.pDivMain.childNodes[0]);
-		if (movedTrackO)
-		    this.oDivMain.insertBefore (movedTrackO, this.oDivMain.childNodes[0]);
-		this.dragDivPanel.insertBefore (movedPanel, this.dragDivPanel.childNodes[0]);
-		this.dragDivTrackLabels.insertBefore (trackLabel,
-						      this.dragDivTrackLabels.childNodes[0]);
-	    }
-	}
+       var movedPanel = findAndRemoveChild (this.dragDivPanel, trackName + '_panelDiv');
+       var trackLabel = findAndRemoveChild (this.dragDivTrackLabels, trackName + '_trackLabelDiv');
 
-	this.updateVertical();
+       if (newPos == 0) {
+           // insert at the very beginning
+           this.pDivMain.insertBefore (movedTrackP, this.pDivMain.childNodes[0]);
+           if (movedTrackO)
+               this.oDivMain.insertBefore (movedTrackO, this.oDivMain.childNodes[0]);
+           this.dragDivPanel.insertBefore (movedPanel, this.dragDivPanel.childNodes[0]);
+           this.dragDivTrackLabels.insertBefore (trackLabel,
+                                                 this.dragDivTrackLabels.childNodes[0]);
+       }
+       else {
+           // find the last visible track after which we can insert the moved one
+           var insertAfterTrack = null;
+           var tracks = taz.getTrackNames();
+           for (var i = newPos - 1; i >= 0; i--)
+               if (taz.isTrackVisible (tracks[i])) {
+                   insertAfterTrack = tracks[i];  break;
+               }
+           
+           if (insertAfterTrack) {
+               // insert after some track
+               insertAfter (this.pDivMain, movedTrackP,
+                            getChild (this.pDivMain, (insertAfterTrack + '_trackDivP')));
+               if (movedTrackO)
+                   insertAfter (this.oDivMain, movedTrackO,
+                                getChild (this.oDivMain, (insertAfterTrack + '_trackDivO')));
+               insertAfter (this.dragDivPanel, movedPanel,
+                            getChild (this.dragDivPanel, (insertAfterTrack + '_panelDiv')));
+               insertAfter (this.dragDivTrackLabels, trackLabel,
+                            getChild (this.dragDivTrackLabels, (insertAfterTrack + '_trackLabelDiv')));
+           }
+           else {
+               // insert at the very beginning
+               this.pDivMain.insertBefore (movedTrackP, this.pDivMain.childNodes[0]);
+               if (movedTrackO)
+                   this.oDivMain.insertBefore (movedTrackO, this.oDivMain.childNodes[0]);
+               this.dragDivPanel.insertBefore (movedPanel, this.dragDivPanel.childNodes[0]);
+               this.dragDivTrackLabels.insertBefore (trackLabel,
+                                                     this.dragDivTrackLabels.childNodes[0]);
+           }
+       }
+
+       this.updateVertical();
     }
 }
 

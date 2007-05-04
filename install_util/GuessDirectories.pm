@@ -13,11 +13,14 @@ sub conf {
       return $_ if -d $_;
     }
   } else {
-    for ('/usr/local/apache/conf',   # standard apache install
+    for (
+	 '/usr/local/apache/conf',   # standard apache install
 	 '/etc/httpd/conf',          # RedHat linux
 	 '/etc/apache',              # Slackware linux
 	 '/etc/apache2',             # Ubuntu
 	 '/etc/httpd',               # MacOSX
+	 '/etc/apache2',             # Ubuntu/debian
+	 '/etc/apache-perl',         # Ubuntu/debian
 	) {
       return $_ if -d $_;
     }
@@ -27,8 +30,7 @@ sub conf {
 
 sub htdocs {
   if ($^O =~ /mswin/i) {  # windows system
-    for (
-	 'C:/Program Files/Apache Software Foundation/Apache2.3/htdocs',
+    for ('C:/Program Files/Apache Software Foundation/Apache2.3/htdocs',
 	 'C:/Program Files/Apache Software Foundation/Apache2.2/htdocs',
 	 'C:/Program Files/Apache Software Foundation/Apache2.1/htdocs',
 	 'C:/Program Files/Apache Group/Apache2/htdocs',
@@ -41,6 +43,7 @@ sub htdocs {
     for ('/usr/local/apache/htdocs',       # standard apache install
 	 '/var/www/html',                  # RedHat linux
 	 '/var/www/htdocs',                # Slackware linux
+	 '/var/www',                       # Ubuntu/debian
 	 '/var/www',                       # Ubuntu
 	 '/Library/Webserver/Documents',  # MacOSX
 	) {
@@ -65,6 +68,7 @@ sub cgibin {
   } else {
     for ('/usr/local/apache/cgi-bin',      # standard apache install
 	 '/var/www/cgi-bin',               # RedHat & Slackware linux
+	 '/usr/lib/cgi-bin',               # Ubuntu/debian
 	 '/Library/Webserver/CGI-Executables',  # MacOSX
 	 '/usr/lib/cgi-bin',               # Ubuntu
 	) {

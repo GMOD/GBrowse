@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.4 2007-04-18 19:31:57 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.5 2007-05-04 10:03:00 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -946,7 +946,7 @@ sub navigation_table {
 			       $plugins
 			      )
 			   ),
-			 TR({-class=>'searchbody',-style=>'padding-top: 5 px'},
+			 TR({-class=>'searchbody',-style=>'padding-top: 5px'},
 			    td({-align=>'left'},source_menu($settings)),
 			    td({-align=>'left'},
 			       $segment ? (

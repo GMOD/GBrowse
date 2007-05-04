@@ -22,11 +22,11 @@ my $style = <<'END';
 .el_hidden  {display:none}
 .el_visible {display:inline}
 .ctl_hidden {
-             cursor:hand;
+             cursor:pointer;
              display:none;
             }
 .ctl_visible {
-             cursor:hand;
+             cursor:pointer;
              display:inline;
             }
 .tctl      {  text-decoration:underline; }

@@ -1512,6 +1512,7 @@ sub render_detailview {
   my $self   = shift;
   my $seg    = shift;
 
+
   my $load_script = <<END;
   <script type="text/javascript"> // <![CDATA[
 update_segment();
@@ -1532,20 +1533,28 @@ sub render_tracks {
   my $plus   = "$buttons/plus.png";
   my $minus  = "$buttons/minus.png";
 
-  # dummy code
+  my $renderer = Bio::Graphics::Browser::RenderTracks->new($self->data_source,
+							   $self->state);
+  my $tracks   = $renderer->render_tracks(tracks       => \@labels,
+					  third_party  => $self->remote_sources);
+
   my @results;
   for my $label (@labels) {
     my $title    = $self->setting($label=>'key');
     my $titlebar = span({-class=>'titlebar'},
 			img({-src=>$plus},img({-src=>$minus}),
 			    $title." $seg"));
-    my $content  = '/test.png';
+    next unless $tracks->{$label}; # not there for some reason
+    my ($gd,$imagemap) = @{$tracks->{$label}};
+    my $url = $self->generate_image($gd);
+
     my $class   = $label eq '__scale__' ? 'scale' : 'track';
     push @results,div({id=>"track_${label}",-class=>$class},
 		      center(
 			     $titlebar,
-			     img({-src=>$content,-border=>0})
-			     ),
+			     img({-src=>$url,-border=>0,-usemap=>"#${label}_map"}),
+			     $imagemap,
+			    ),
 		     );
   }
   my $state = $self->state;
@@ -1626,6 +1635,47 @@ sub shellwords {
   return unless @_;
   return Text::ParseWords::shellwords(@_);
 }
+
+=head2 generate_image
+
+  ($url,$path) = $browser->generate_image($gd)
+
+Given a GD::Image object, this method calls its png() or gif() methods
+(depending on GD version), stores the output into the temporary
+directory given by the "tmpimages" option in the configuration file,
+and returns a two element list consisting of the URL to the image and
+the physical path of the image.
+
+=cut
+
+sub generate_image {
+  my $self   = shift;
+  my $image  = shift;
+
+  my $extension = $image->can('png') ? 'png' : 'gif';
+  my $data      = $image->can('png') ? $image->png : $image->gif;
+  my $signature = md5_hex($data);
+
+  warn ((CGI::param('ref')||'')   . ':' .
+	(CGI::param('start')||'') . '..'.
+	(CGI::param('stop')||'')
+	,
+	" sig $signature\n") if DEBUG;
+
+  # untaint signature for use in open
+  $signature =~ /^([0-9A-Fa-f]+)$/g or return;
+  $signature = $1;
+
+  my ($uri,$path) = $self->globals->tmpdir($self->source.'/img');
+  my $url         = sprintf("%s/%s.%s",$uri,$signature,$extension);
+  my $imagefile   = sprintf("%s/%s.%s",$path,$signature,$extension);
+  open (F,">$imagefile") || die("Can't open image file $imagefile for writing: $!\n");
+  binmode(F);
+  print F $data;
+  close F;
+  return $url;
+}
+
 
 sub DESTROY {
    my $self = shift;

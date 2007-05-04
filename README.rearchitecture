@@ -183,12 +183,12 @@ variables.
 
 =================================================================
 
-6) Bio::Graphics::Browser::View
+6) Bio::Graphics::Browser::RenderTracks
 
 This class provides methods for generating the images and imagemaps
 themselves (the core of the application!).
 
- $view = Bio::Graphics::Browser::View->new($datasource,$page_settings);
+ $view = Bio::Graphics::Browser::RenderTracks->new($datasource,$page_settings);
 
 Create a new view object using information from the provided data
 source and settings.

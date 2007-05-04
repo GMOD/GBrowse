@@ -5,13 +5,17 @@ use warnings;
 
 use Bio::Graphics;
 
+use constant GBROWSE_RENDER => 'gbrowse_render';  # name of the CGI-based image renderer
+
 # when we load, we set a global indicating the LWP::Parallel::UserAgent is available
 my $LPU_AVAILABLE;
 my $STO_AVAILABLE;
 
 sub new {
-  my $class = shift;
-  my ($data_source,$page_settings) = @_;
+  my $class       = shift;
+  my %options     = @_;
+  my $data_source   = $options{data_source};
+  my $page_settings = $options{state};
 
   my $self  = bless {},ref $class || $class;
   $self->source($data_source);
@@ -34,10 +38,10 @@ sub settings {
 }
 
 # This renders the named tracks and returns the images and image maps
-# input:
-#   options hash: { tracks         => [array of track names],
-#                   third_party    => [third party annotations (Bio::DasI objects)],
-#                 }
+# input args:
+#           (-tracks         => [array of track names],
+#            -third_party    => [third party annotations (Bio::DasI objects)],
+#           );
 # output:
 # a hash of 
 # { $track_name => { gd   => $gd_object,
@@ -46,13 +50,13 @@ sub settings {
 #
 sub render_tracks {
   my $self    = shift;
-  my $options = shift;
+  my %options = @_;
 
   my $source   = $self->source;
   my $settings = $self->settings;
 
-  my @tracks                  = @{$options->{tracks}};
-  my @third_party             = @{$options->{third_party}};
+  my @tracks                  = $options{-tracks};
+  my @third_party             = $options{-third_party};
 
   my $results = {};
 
@@ -77,17 +81,17 @@ sub render_tracks {
       $remote{$host}{$track}++;
     }
 
-    $results    = $self->render_remotely(renderers   => \%remote,
-					 source      => $source,
-					 settings    => $settings,
+    $results    = $self->render_remotely(-renderers   => \%remote,
+					 -source      => $source,
+					 -settings    => $settings,
 					);
   }
 
   else {
     for my $track_label (@tracks) {
-      my ($gd,$map) = $self->render_local(track => $track_label,
-					  source   => $source,
-					  settings => $settings);
+      my ($gd,$map) = $self->render_local(-track => $track_label,
+					  -source   => $source,
+					  -settings => $settings);
       $results->{$track_label}{gd}  = $gd;
       $results->{$track_label}{map} = $map;
     }
@@ -96,9 +100,9 @@ sub render_tracks {
   # add third-party data (currently always handled locally and serialized)
   for my $third_party (@third_party) {
     my $name = $third_party->name or next;  # every third party feature has to have a name now
-    $results->{$name} = $self->render_third_party(feature_file => $third_party,
-						  source       => $source,
-						  settings     => $settings);
+    $results->{$name} = $self->render_third_party(-feature_file => $third_party,
+						  -source       => $source,
+						  -settings     => $settings);
   }
 
   # oh, ouch, we've got to do something with the plugins... or maybe they're handled by the third party hash?
@@ -129,13 +133,13 @@ sub render_tracks {
 # reminder: segment can be found in the settings as $settings->{ref,start,stop,flip}
 sub render_remotely {
   my $self    = shift;
-  my $options = shift;
+  my %options = @_;
 
   eval { require 'HTTP::Request::Common' } unless HTTP::Request::Common->can('POST');
 
-  my $renderers= $options->{renderers};  # format: {$remote_url}{$track}
-  my $dsn      = $options->{source};
-  my $settings = $options->{settings};
+  my $renderers= $options{-renderers};  # format: {$remote_url}{$track}
+  my $dsn      = $options{-source};
+  my $settings = $options{-settings};
 
   # serialize the data source and settings
   my $s_dsn = Storable::freeze($dsn);
@@ -179,13 +183,18 @@ sub render_remotely {
 sub local_renderer_url {
   my $self     = shift;
   my $self_uri = CGI::url(-absolute=>1);
-  $self_uri    =~ s/[^\/]+$/gbrowse_render/;  # BUG? hard-coded renderer name here - maybe not a great idea
+  my $render   = GBROWSE_RENDER;
+  $self_uri    =~ s/[^\/]+$/$render/;
   return $self_uri;
 }
 
 sub render_local {
-  my $self = shift;
-  my $track_renderer = 
+  my $self    = shift;
+  my %options = @_;
+  my $track    = $options{-track};
+  my $source   = $options{-source};
+  my $settings = $options{-settings};
+  
 }
 
 1;

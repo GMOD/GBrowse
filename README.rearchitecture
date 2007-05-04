@@ -167,6 +167,13 @@ Note that for efficiency's sake, the
 Bio::Graphics::Browser::DataSource objects may be cached and reused,
 provided that their corresponding config files have not been updated.
 
+ADDED 5/4/07 -- I think that the DataSource should be able to manage a
+cache of database objects. The syntax is:
+
+ my $biodas_style_handle = $datasource->database('track_label')
+
+If track_label is null or not found, the default database is opened.
+
 =================================================================
 
 5) Bio::Graphics::Browser::Render

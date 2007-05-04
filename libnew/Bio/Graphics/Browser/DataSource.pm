@@ -3,13 +3,26 @@ package Bio::Graphics::Browser::DataSource;
 use strict;
 use warnings;
 use base 'Bio::Graphics::FeatureFile';
-use Text::ParseWords 'shellwords';
+
+use Bio::Graphics::Browser::Shellwords;
 use File::Basename 'dirname';
 use Carp 'croak';
 use Socket 'AF_INET','inet_aton';  # for inet_aton() call
 use CGI '';
 
-my %CONFIG_CACHE;
+my %CONFIG_CACHE; # cache parsed config files
+my %DB_SETTINGS;  # cache database settings
+my %DB;           # cache opened database connections
+
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
+
+=head2 METHODS
+
+=over 4
+
+=cut
 
 sub new {
   my $class            = shift;
@@ -412,6 +425,96 @@ sub make_link {
   croak "Do not call make_link() on the DataSource. Call it on the Render object";
 }
 
+
+=item ($adaptor,@argv) = $dsn->db_settings('track_label')
+
+Return the adaptor and arguments suitable for the database identified
+by the given track label. If no track label is given then the
+"general" default database is used.
+
+=cut
+
+# get the db settings for a track or from [general]
+sub db_settings {
+  my $self  = shift;
+  my $track = shift;
+
+  $track ||= 'general';
+
+  # caching to avoid calling setting() too many times
+  return @{$DB_SETTINGS{$self,$track}} if $DB_SETTINGS{$self,$track};
+
+  my $adaptor = $self->setting($track => 'db_adaptor') or die "No db_adaptor specified";
+  eval "require $adaptor; 1" or die $@;
+
+  my $args    = $self->setting($track => 'db_args');
+  my @argv = ref $args eq 'CODE'
+        ? $args->()
+	: shellwords($args||'');
+
+  # for compatibility with older versions of the browser, we'll hard-code some arguments
+  if (my $adaptor = $self->setting($track => 'adaptor')) {
+    push @argv,(-adaptor => $adaptor);
+  }
+
+  if (my $dsn = $self->setting($track => 'database')) {
+    push @argv,(-dsn => $dsn);
+  }
+
+  if (my $fasta = $self->setting($track => 'fasta_files')) {
+    push @argv,(-fasta=>$fasta);
+  }
+
+  if (my $user = $self->setting($track => 'user')) {
+    push @argv,(-user=>$user);
+  }
+
+  if (my $pass = $self->setting($track => 'pass')) {
+    push @argv,(-pass=>$pass);
+  }
+
+  if (defined (my $a = $self->setting($track => 'aggregators'))) {
+    my @aggregators = shellwords($a||'');
+    push @argv,(-aggregator => \@aggregators);
+  }
+
+  my @result = ($adaptor,@argv);
+
+  # cache settings
+  $DB_SETTINGS{$self,$track} = \@result;
+
+  return @result;
+}
+
+=item $db = $dsn->open_database('track')
+
+Return the database handle specified by the given track label or
+'general' if not given. The databases are cached and so it is ok to
+call repeatedly.
+
+=cut
+
+sub open_database {
+  my $self  = shift;
+  my $track = shift;
+
+  my ($adaptor,@argv) = $self->db_settings($track);
+  my $key             = join ':',$adaptor,@argv;
+  return $DB{$key}    if exists $DB{$key};
+
+  $DB{$key} = eval {$adaptor->new(@argv)} or warn $@;
+  $self->fatal_error("Could not open database: ",pre("$@")) unless $DB{$key};
+
+  if (my $refclass = $self->setting('reference class')) {
+    eval {$DB{$key}->default_class($refclass)};
+  }
+
+  $DB{$key}->strict_bounds_checking(1) if $DB{$key}->can('strict_bounds_checking');
+  $DB{$key}->absolute(1)               if $DB{$key}->can('absolute');
+
+  $DB{$key};
+}
+
 # this is an aggregator-aware way of retrieving all the named types
 sub _all_types {
   my $self  = shift;
@@ -425,3 +528,4 @@ sub _all_types {
 }
 
 1;
+

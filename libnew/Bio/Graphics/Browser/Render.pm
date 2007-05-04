@@ -6,14 +6,13 @@ use Bio::Graphics::Browser::I18n;
 use Bio::Graphics::Browser::PluginSet;
 use Bio::Graphics::Browser::UploadSet;
 use Bio::Graphics::Browser::RemoteSet;
-use Text::ParseWords ();
+use Bio::Graphics::Browser::Shellwords;
 use CGI qw(param request_method header url iframe img span div br center);
 use Carp 'croak';
 
 use constant VERSION => 2.0;
 use constant DEBUG   => 0;
 
-my %DB;      # cache opened database connections
 my %PLUGINS; # cache initialized plugins
 
 # new() can be called with two arguments: ($data_source,$session)
@@ -330,37 +329,24 @@ sub render_bottom {
   my $features = shift;
 }
 
+
 sub init_database {
   my $self = shift;
-  my ($adaptor,@argv) = $self->db_settings;
-  my $key             = join ':',$adaptor,@argv;
-  return $DB{$key}    if exists $DB{$key};
+  my $dsn = $self->data_source;
+  my $db  = $dsn->open_database();
 
-  my $state = $self->state;
+  # I don't know what this is for, but it was there in gbrowse and looks like an important hack.
+  eval {$db->biosql->version($self->state->{version})};
 
-  $DB{$key} = eval {$adaptor->new(@argv)} or warn $@;
-  $self->fatal_error("Could not open database: ",pre("$@")) unless $DB{$key};
-
-  if (my $refclass = $self->setting('reference class')) {
-    eval {$DB{$key}->default_class($refclass)};
-  }
-
-  $DB{$key}->strict_bounds_checking(1) if $DB{$key}->can('strict_bounds_checking');
-  $DB{$key}->absolute(1)               if $DB{$key}->can('absolute');
-
-  # I don't know what this is for, but it was there in gbrowse and looks
-  # like an important hack.
-  eval {$DB{$key}->biosql->version($state->{version})};
-
-  $self->db($DB{$key});
-  $DB{$key};
+  $self->db($db);
+  $db;
 }
 
 # ========================= plugins =======================
 sub init_plugins {
   my $self        = shift;
   my $source      = $self->data_source->name;
-  my @plugin_path = $self->shellwords($self->data_source->globals->plugin_path);
+  my @plugin_path = shellwords($self->data_source->globals->plugin_path);
 
   my $plugins = $PLUGINS{$source} 
     ||= Bio::Graphics::Browser::PluginSet->new($self->data_source,$self->state,$self->language,@plugin_path);
@@ -479,46 +465,6 @@ sub setting {
   }
 }
 
-sub db_settings {
-  my $self = shift;
-
-  my $adaptor = $self->setting('db_adaptor') or die "No db_adaptor specified";
-  eval "require $adaptor; 1" or die $@;
-
-  my $args    = $self->setting('db_args');
-  my @argv = ref $args eq 'CODE'
-        ? $args->()
-	: $self->shellwords($args||'');
-
-  # for compatibility with older versions of the browser, we'll hard-code some arguments
-  if (my $adaptor = $self->setting('adaptor')) {
-    push @argv,(-adaptor => $adaptor);
-  }
-
-  if (my $dsn = $self->setting('database')) {
-    push @argv,(-dsn => $dsn);
-  }
-
-  if (my $fasta = $self->setting('fasta_files')) {
-    push @argv,(-fasta=>$fasta);
-  }
-
-  if (my $user = $self->setting('user')) {
-    push @argv,(-user=>$user);
-  }
-
-  if (my $pass = $self->setting('pass')) {
-    push @argv,(-pass=>$pass);
-  }
-
-  if (defined (my $a = $self->setting('aggregators'))) {
-    my @aggregators = $self->shellwords($a||'');
-    push @argv,(-aggregator => \@aggregators);
-  }
-
-  ($adaptor,@argv);
-}
-
 =head2 plugin_setting()
 
    $value = = $browser->plugin_setting("option_name");
@@ -547,7 +493,7 @@ sub plugin_setting {
 sub get_external_presets {
   my $self = shift;
   my $presets  = $self->setting('remote sources') or return;
-  my @presets  = $self->shellwords($presets||'');
+  my @presets  = shellwords($presets||'');
   my (@labels,@urls);
   while (@presets) {
     my ($label,$url) = splice(@presets,0,2);
@@ -849,7 +795,7 @@ sub update_region {
   my $self  = shift;
   my $state = shift || $self->state;
 
-  if (my @features = $self->shellwords(param('h_feat'))) {
+  if (my @features = shellwords(param('h_feat'))) {
     $state->{h_feat} = {};
     for my $hilight (@features) {
       last if $hilight eq '_clear_';
@@ -858,7 +804,7 @@ sub update_region {
     }
   }
 
-  if (my @regions = $self->shellwords(param('h_region'))) {
+  if (my @regions = shellwords(param('h_region'))) {
     $state->{h_region} = [];
     foreach (@regions) {
       last if $_ eq '_clear_';
@@ -1114,7 +1060,7 @@ sub _feature_keyword_search {
   my $max_keywords = $self->setting('max keyword results');
   my @matches;
   if ($db->can('search_attributes')) {
-    my @attribute_names = $self->shellwords ($self->setting('search attributes'));
+    my @attribute_names = shellwords ($self->setting('search attributes'));
     @attribute_names = ('Note') unless @attribute_names;
     @matches = $db->search_attributes($searchterm,\@attribute_names,$max_keywords);
   } elsif ($db->can('search_notes')) {
@@ -1627,13 +1573,6 @@ sub categorize_track {
   $category         =~ s/^["']//;  # get rid of leading quotes
   $category         =~ s/["']$//;  # get rid of trailing quotes
   return $category ||= $self->tr('GENERAL');
-}
-
-
-sub shellwords {
-  my $self = shift;
-  return unless @_;
-  return Text::ParseWords::shellwords(@_);
 }
 
 =head2 generate_image

@@ -146,6 +146,7 @@ sub do_install {
             or die "Couldn't open $distribution archive: $@";
   $z->extract()
             or die "Couldn't extract $distribution archive: $@";
+  $distribution =~ s/--/-/;#lets try not to include extra '-' in the future :-)
   chdir $distribution
             or die "Couldn't enter $distribution directory: $@";
 

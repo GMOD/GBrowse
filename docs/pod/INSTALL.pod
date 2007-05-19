@@ -698,10 +698,11 @@ As GBrowse runs, it creates temporary image files in the gbrowse tmp
 directory (typically HTDOCS/gbrowse/tmp). These image files are
 relatively small, but if you run GBrowse for a long time they may
 begin consuming significant amounts of disk space. The following Unix
-shell commands will remove old image files:
+shell commands will remove old image files and unused directories:
 
    cd HTDOCS/gbrowse/tmp
    find . -type f -atime +20 -print -exec rm {} \;
+   find . -type d -empty -depth -exec rmdir {} \;
 
 Be sure to replace HTDOCS with the path to your web server HTML
 document root directory. You might want to run this command under

@@ -56,6 +56,7 @@ sub new {
 sub fh     { shift->{fh}    }
 sub seek   { shift->fh->seek(shift,0) }
 sub tell   { shift->fh->tell()        }
+sub append { shift->fh->seek(0,2)     }
 
 # args
 # (seqid,start,end)

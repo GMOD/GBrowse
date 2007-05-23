@@ -237,39 +237,38 @@ sub print_top {
 
   # push all needed javascript files onto top of page
   my $js = $CONFIG->setting('js')||JS;
-  my @scripts = map { {src=> "$js/$_" } } qw(buttons.js);
+  my @js = 'buttons.js';
+  push @js,qw(yahoo-dom-event.js prototype.js balloon.js) if $CONFIG->setting('balloon_tips');
+  my @scripts = map { {src=> "$js/$_" } } @js;
   push @args,(-script=>\@scripts);
 
   print start_html(@args) unless $HTML++;
-  
-  # Construct a customized balloon object according
-  # to the conf. file
-  my $balloon_use_default = $CONFIG->setting('TRACK DEFAULTS'=>'balloon_use_defaultsetting');
- 	my $balloon_up					= $CONFIG->setting('TRACK DEFAULTS'=>'balloon_upballoon');
- 	my $balloon_down				= $CONFIG->setting('TRACK DEFAULTS'=>'balloon_downballoon');
-  my $balloon_upleft			= $CONFIG->setting('TRACK DEFAULTS'=>'balloon_upleftconnector');
-  my $balloon_upright			= $CONFIG->setting('TRACK DEFAULTS'=>'balloon_upleftconnector');
- 	my $balloon_downleft		= $CONFIG->setting('TRACK DEFAULTS'=>'balloon_uprightconnector');
- 	my $balloon_downright		= $CONFIG->setting('TRACK DEFAULTS'=>'balloon_uprightconnector');
- 
- 	print "<script>
- 	
- 		   var customizedballoon = new Balloon;
- 		   
- 		   </script>";
- 		   
- 	if ($balloon_use_default != 1){
-	   print "<script>
 
+  if ($CONFIG->setting('balloon_tips')) {
+
+    # Construct a customized balloon object according to the conf. file
+    my $balloon_use_default = $CONFIG->setting('TRACK DEFAULTS'=>'balloon_use_defaultsetting');
+    my $balloon_up	  = $CONFIG->setting('TRACK DEFAULTS'=>'balloon_upballoon');
+    my $balloon_down	  = $CONFIG->setting('TRACK DEFAULTS'=>'balloon_downballoon');
+    my $balloon_upleft	  = $CONFIG->setting('TRACK DEFAULTS'=>'balloon_upleftconnector');
+    my $balloon_upright	  = $CONFIG->setting('TRACK DEFAULTS'=>'balloon_upleftconnector');
+    my $balloon_downleft	  = $CONFIG->setting('TRACK DEFAULTS'=>'balloon_uprightconnector');
+    my $balloon_downright	  = $CONFIG->setting('TRACK DEFAULTS'=>'balloon_uprightconnector');
+
+    print "<script>
+ 		   var customizedballoon = new Balloon;
+ 	   </script>";
+    if ($balloon_use_default != 1){
+      print "<script>
 	   customizedballoon.upLeftConnector  	= '$balloon_upleft';
 		 customizedballoon.upRightConnector 	= '$balloon_upleft';
 		 customizedballoon.downLeftConnector 	= '$balloon_downleft';
 	   customizedballoon.downRightConnector = '$balloon_downright'; 
-	   customizedballoon.upBalloon   				= '$balloon_up';
-	   customizedballoon.downBalloon				= '$balloon_down';
-	   
-	   </script>"; 
-	}
+	   customizedballoon.upBalloon          = '$balloon_up';
+	   customizedballoon.downBalloon	= '$balloon_down';
+	   </script>\n";
+    }
+  }
 }
 
 sub print_bottom {

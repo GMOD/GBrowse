@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.5 2007-04-24 14:10:37 drestion Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.6 2007-05-23 22:41:37 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -980,36 +980,18 @@ sub make_map {
     my $alt    = unescape($self->make_title($_->[0],$panel,$label,$_->[5]));
     my $target = $self->config->make_link_target($_->[0],$panel,$label,$_->[5]);
     my $t      = defined($target) ? qq(target="$target") : '';
-    
-    #get the name of the gene 
-    my $item_name = $_->[0];
-    $item_name=~/.*?(\(.*?\))/;
-		$item_name = $1;
-		$item_name=~s/\(//;
-		$item_name=~s/\)//;
-	
-		#determine the tooltip style
-		my $tooltipConfValue		= $self->setting('TRACK DEFAULTS'=>'title');
-    my $tooltip_style_html	= $tooltipConfValue=~m/html/;
-    my $tooltip_style_url		= $tooltipConfValue=~m/url/;
-    
-    #retrive the content of the balloon from configuration files
-    my $tooltip_url		= $self->setting('TRACK DEFAULTS'=>'balloon_url');
-    my $tooltip_html	= $self->setting('TRACK DEFAULTS'=>'balloon_html'); 
-    
-    #substitute the $name in the configuration file with the gene's name
-    $tooltip_url	=~ s/\$name/$item_name/g;
-    $tooltip_html	=~ s/\$name/$item_name/g;
-    
-    if ($tooltip_style_html == 1){
-   		 $map .= qq(<area href="$href" onmouseover="customizedballoon.showTooltip(event,'$tooltip_html',1)" coords="$_->[1],$_->[2],$_->[3],$_->[4]" $t/>);
-  	}
-  	if ($tooltip_style_url == 1){
-   		 $map .= qq(<area href="$href" onmouseover="customizedballoon.showTooltip(event,'<iframe width=270 height=300 frameborder=0 src=$tooltip_url></iframe>',1)" coords="$_->[1],$_->[2],$_->[3],$_->[4]" $t/>);
-  	}
-  	else{
-  		 $map .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href" alt="$alt" $t/>\n);
-  	}
+
+    #retrieve the content of the balloon from configuration files
+    # if it looks like a URL, we treat it as a URL.
+    my $tooltip	   = $self->config->balloon_tip_setting($label,'balloon_tip',$_->[0],$panel,$_->[5]);
+
+    if ($tooltip =~ /^(http|ftp)/) {
+      $map .= qq(<area href="$href" onmouseover="customizedballoon.showTooltip(event,'<iframe width=270 height=300 frameborder=0 src=$tooltip></iframe>',1)" coords="$_->[1],$_->[2],$_->[3],$_->[4]" $t/>);
+    } elsif ($tooltip) {
+      $map .= qq(<area href="$href" onmouseover="customizedballoon.showTooltip(event,'$tooltip',1)" coords="$_->[1],$_->[2],$_->[3],$_->[4]" $t/>);
+    } else{
+      $map .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href" alt="$alt" $t/>\n);
+    }
   }
   $map .= "</map>\n";
   $map;
@@ -2575,6 +2557,23 @@ sub make_title {
   warn $@ if $@;
 
   return $title;
+}
+
+sub balloon_tip_setting {
+  my $self = shift;
+  my ($label,$option,$feature,$panel,$track) = @_;
+  my $value = $self->code_setting($label=>$option);
+  $value    = $self->code_setting('TRACK DEFAULTS' => $option) unless defined $value;
+  $value    = $self->code_setting('general' => $option)        unless defined $value;
+
+  return unless $value;
+
+  if (ref($value) eq 'CODE') {
+    my $val = eval {$value->($feature,$panel,$track)};
+    $self->_callback_complain($label=>$option) if $@;
+    return $val;
+  }
+  return $self->link_pattern($value,$feature,$panel);
 }
 
 sub make_link_target {

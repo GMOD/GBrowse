@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::wiggle_density;
 
-# $Id: wiggle_density.pm,v 1.1.2.1 2007-05-19 21:01:16 lstein Exp $
+# $Id: wiggle_density.pm,v 1.1.2.2 2007-05-23 22:41:38 lstein Exp $
 
 use strict;
 use base 'Bio::Graphics::Glyph::box';
@@ -87,9 +87,9 @@ sub draw_segment {
   my @data = $seg->values($start-1,$span);
 
   # number of data points should be equal to length/step...
-  @data == $span/$step
-    or die "number of data points should be equal to length/step: span=$span, step=$step, datapoints = ",
-      scalar @data;
+#  @data == $span/$step
+#    or die "number of data points should be equal to length/step: span=$span, step=$step, datapoints = ",
+#      scalar @data;
 
   my $min_value = $self->min_score;
   my $max_value = $self->max_score;

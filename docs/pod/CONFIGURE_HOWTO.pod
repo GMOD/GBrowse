@@ -2170,10 +2170,10 @@ Open the file using any text editor and find the [TRACK DEFAULTS]
 section.For the title option, three arguments are provided:
 
 		html	Provide the html content contained in the balloon_html tag
-		url		Provide the content retrived from the url contained in the 
+		url	Provide the content retrived from the url contained in the 
 					balloon_url tag
 
-If you don¡¯t want any balloon tooltips, just leave it blank as:
+If you don't want any balloon tooltips, just leave it blank as:
 
 title = 
 

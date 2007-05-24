@@ -154,6 +154,38 @@ sub style {
   return $l eq $label ? $self->SUPER::style($l) : ($self->SUPER::style($label),$self->SUPER::style($l));
 }
 
+# return language-specific options
+# MOVE THIS LOGIC INTO DataSource
+sub i18n_style {
+  my $self      = shift;
+  my ($label,$lang,$length) = @_;
+
+  return $self->style($label,$length) unless $lang;
+
+  my $charset   = $lang->tr('CHARSET');
+
+  # GD can't handle non-ASCII/LATIN scripts transparently
+  return $self->style($label,$length) 
+    if $charset && $charset !~ /^(us-ascii|iso-8859)/i;
+
+  my @languages = $lang->language;
+
+  push @languages,'';
+  # ('fr_CA','fr','en_BR','en','')
+
+  my $idx = 1;
+  my %priority = map {$_=>$idx++} @languages;
+  # ('fr-ca'=>1, 'fr'=>2, 'en-br'=>3, 'en'=>4, ''=>5)
+
+  my %options  = $self->style($label,$length);
+  my %lang_options = map { $_->[1] => $options{$_->[0]} }
+    sort { $b->[2]<=>$a->[2] }
+      map { my ($option,undef,$lang) = /^(-[^:]+)(:(\w+))?$/; [$_ => $option, $priority{$lang||''}||99] }
+	keys %options;
+  %lang_options;
+}
+
+
 # like setting, but defaults to 'general'
 sub setting {
   my $self = shift;

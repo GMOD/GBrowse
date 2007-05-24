@@ -6,6 +6,7 @@ use warnings;
 use Bio::Graphics;
 
 use constant GBROWSE_RENDER => 'gbrowse_render';  # name of the CGI-based image renderer
+use constant TRUE => 1;
 
 # when we load, we set a global indicating the LWP::Parallel::UserAgent is available
 my $LPU_AVAILABLE;
@@ -14,13 +15,22 @@ my $STO_AVAILABLE;
 sub new {
   my $class       = shift;
   my %options     = @_;
-  my $data_source   = $options{data_source};
-  my $page_settings = $options{state};
+  my $segment       = $options{-segment};
+  my $data_source   = $options{-source};
+  my $page_settings = $options{-settings};
 
   my $self  = bless {},ref $class || $class;
+  $self->segment($segment);
   $self->source($data_source);
   $self->settings($page_settings);
   return $self;
+}
+
+sub segment {
+  my $self = shift;
+  my $d = $self->{segment};
+  $self->{segment} = shift if @_;
+  return $d;
 }
 
 sub source {
@@ -50,59 +60,30 @@ sub settings {
 #
 sub render_tracks {
   my $self    = shift;
-  my %options = @_;
+  my %args    = @_;
 
   my $source   = $self->source;
   my $settings = $self->settings;
 
-  my @tracks                  = $options{-tracks};
-  my @third_party             = $options{-third_party};
+  my $tracks              = $args{-tracks};
+  my $third_party         = $args{-third_party};
+  my $render_options      = $args{-options};
 
   my $results = {};
 
   # if the "renderfarm" option is set, then we scatter the requests across multiple remote URLs
-  my $renderfarm;
-  if ($source->global_setting('renderfarm')) {
-    $LPU_AVAILABLE = eval { require LWP::Parallel::UserAgent; } unless defined $LPU_AVAILABLE;
-    $STO_AVAILABLE = eval { require Storable; 1; }              unless defined $STO_AVAILABLEL;
-    if ($LPU_AVAILABLE && $STO_AVAILABLE) {
-      $renderfarm = 1;
-    } else {
-      warn "The renderfarm setting requires the LWP::Parallel::UserAgent and Storable modules, but one or both are missing. Reverting to local rendering.\n";
-    }
-  }
-
-  if ($renderfarm) {
-    my %remote;
-
-    for my $track (@tracks) {
-      my $host  = $source->semantic_setting($track => 'remote renderer');
-      $host   ||= $self->local_renderer_url;
-      $remote{$host}{$track}++;
-    }
-
-    $results    = $self->render_remotely(-renderers   => \%remote,
-					 -source      => $source,
-					 -settings    => $settings,
-					);
+  if ($self->use_renderfarm($source)) {
+    $results = $self->render_remotely($tracks,$render_options);
   }
 
   else {
-    for my $track_label (@tracks) {
-      my ($gd,$map) = $self->render_local(-track => $track_label,
-					  -source   => $source,
-					  -settings => $settings);
-      $results->{$track_label}{gd}  = $gd;
-      $results->{$track_label}{map} = $map;
-    }
+    $results = $self->render_locally($tracks,$render_options);
   }
 
   # add third-party data (currently always handled locally and serialized)
   for my $third_party (@third_party) {
     my $name = $third_party->name or next;  # every third party feature has to have a name now
-    $results->{$name} = $self->render_third_party(-feature_file => $third_party,
-						  -source       => $source,
-						  -settings     => $settings);
+    $results->{$name} = $self->render_third_party($third_party,$render_options);
   }
 
   # oh, ouch, we've got to do something with the plugins... or maybe they're handled by the third party hash?
@@ -110,13 +91,42 @@ sub render_tracks {
   return $results;
 }
 
+sub use_renderfarm {
+  my $self   = shift;
+
+  $self->source->global_setting('renderfarm') or return;
+
+  $LPU_AVAILABLE = eval { require LWP::Parallel::UserAgent; } unless defined $LPU_AVAILABLE;
+  $STO_AVAILABLE = eval { require Storable; 1; }              unless defined $STO_AVAILABLEL;
+  return 1 if $LPU_AVAILABLE && $STO_AVAILABLE;
+  warn "The renderfarm setting requires the LWP::Parallel::UserAgent and Storable modules, but one or both are missing. Reverting to local rendering.\n";
+  return;
+}
+
+
+sub render_remotely {
+  my $self    = shift;
+  my $tracks  = shift;
+  my $options = shift;
+
+  my $source = $self->source;
+
+  my %remote;
+  for my $track (@$tracks) {
+    my $host  = $source->semantic_setting($track => 'remote renderer');
+    $host   ||= $self->local_renderer_url;
+    $remote{$host}{$track}++;
+  }
+
+  return $self->call_remote_renderers(\%remote);
+}
+
+
 # This routine is called to hand off the rendering to a remote renderer. The remote processor does not have to
 # have a copy of the config file installed; the entire DataSource object is sent to it in serialized form via
 # POST. It returns a serialized hash consisting of the GD object and the imagemap.
-# INPUT
-#    {renderers => {$remote_url}{$track},
-#     source    => $datasource
-#     settings  => $page_settings }
+# INPUT $renderers_hashref
+#    $renderers_hashref->{$remote_url}{$track}
 #
 # RETURN
 #    hash of { $track_label => { gd => $gd object, map => $imagemap } }
@@ -131,15 +141,14 @@ sub render_tracks {
 #    [[$track,$gd,$imagemap],[$track,$gd,$imagemap],...]
 #
 # reminder: segment can be found in the settings as $settings->{ref,start,stop,flip}
-sub render_remotely {
+sub call_remote_renderers {
   my $self    = shift;
-  my %options = @_;
+  my $renderers = shift;
 
   eval { require 'HTTP::Request::Common' } unless HTTP::Request::Common->can('POST');
 
-  my $renderers= $options{-renderers};  # format: {$remote_url}{$track}
-  my $dsn      = $options{-source};
-  my $settings = $options{-settings};
+  my $dsn      = $self->source;
+  my $settings = $self->settings;
 
   # serialize the data source and settings
   my $s_dsn = Storable::freeze($dsn);
@@ -188,14 +197,317 @@ sub local_renderer_url {
   return $self_uri;
 }
 
-sub render_local {
+# This is entry point for rendering a series of tracks given their labels
+# input is (\@track_names_to_render)
+#
+# output is $results hashref:
+#   $results->{$track_label}{gd} = $gd_object
+#   $results->{$track_label{map} = $imagemap
+#
+sub render_locally {
   my $self    = shift;
-  my %options = @_;
-  my $track    = $options{-track};
-  my $source   = $options{-source};
-  my $settings = $options{-settings};
+  my $tracks  = shift;
+  my $options = shift;
+
+  my $source = $self->source;
+
+  # sort tracks by the database they come from
+  my (%track2db,%db2db);
+
+  for my $track (@$tracks) { 
+    my $db = eval { $source->open_database($track)};
+    unless ($db) { warn "Couldn't open database for $_: $@"; next; }
+    $track2db{$db}{$track}++;
+    $db2db{$db}  =  $db;  # cache database object
+  }
+
+  my %merged_results;
+
+  for my $dbname (keys %track2db) {
+    my $db     = $db2db{$dbname};              # database object
+    my @tracks = keys %{$track2db{$dbname}};   # all tracks that use this database
+    my $results_for_this_db = $self->image_and_map(-db      => $db,
+						   -tracks  => \@tracks,
+						   -options  => $options);
+    %merged_results = (%merged_results,%$results_for_this_db);
+  }
+  return \%merged_results;
+}
+
+
+# finally....
+# this is the routine that actually does the work!!!!
+sub image_and_map {
+  my $self    = shift;
+  my %args    = @_;
+  my $db      = $args{-db};
+  my $tracks  = $args{-tracks};
+  my $options = $args{-options};
+
+  my $source         = $self->source;
+  my $settings       = $self->settings;
+  my $f_options      = $settings->{features};  # feature options, such as "visible" and "bump"
+  my $lang           = $settings->{lang};
+
+  my $keystyle        = $options->{keystyle};
+  my $flip            = $options->{flip};
+  my $suppress_scale  = $options->{noscale};
+  my $hilite_callback = $options->{hilite_callback};
+  my $image_class     = $options->{image_class} || 'GD';
+  my $postgrid        = $options->{postgrid} || '';
+  my $background      = $options->{background} || '';
+
+  my $segment  = $self->segment;
+
+  # Bring in the appropriate package - just for the fonts. Ugh.
+  eval "use $image_class";
+
+  my $width          = $settings->{width};
+
+  my $max_labels     = $source->setting('label density');
+  my $max_bump       = $source->setting('bump density');
+  my $length         = $segment->length;
+
+  my @feature_types  = map { $source->label2type($_,$length) } @$tracks;
+  my %filters = map { my %conf =  $source->style($_); 
+		      $conf{'-filter'} ? ($_ => $conf{'-filter'})
+			               : ($_ => \&TRUE)
+		      } @$tracks;
+
+  # Create the tracks that we will need
+  my ($seg_start,$seg_stop ) = ($segment->start,$segment->end);
+
+  # BUG: This looks like a bug; is it?
+  if ($seg_stop < $seg_start) {
+    ($seg_start,$seg_stop)     = ($seg_stop,$seg_start);
+    $flip = 1;
+  }
+
+  my @pass_thru_args = map {/^-/ ? ($_=>$options{$_}) : ()} keys %options;
+  my @argv = (
+	      -grid      => 1,
+	      @pass_thru_args,
+	      -start     => $seg_start,
+	      -end       => $seg_stop,
+	      -stop      => $seg_stop,  #backward compatibility with old bioperl
+	      -key_color => $self->setting('key bgcolor')     || 'moccasin',
+	      -bgcolor   => $self->setting('detail bgcolor')  || 'white',
+	      -width     => $width,
+	      -key_style    => $keystyle || $source->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
+	      -empty_tracks => $source->setting(general=>'empty_tracks') 	  || DEFAULT_EMPTYTRACKS,
+	      -pad_top      => $title ? $image_class->gdMediumBoldFont->height : 0,
+	      -image_class  => $image_class,
+	      -postgrid     => $postgrid,
+	      -background   => $background,
+	      -truecolor    => $source->setting(general=>'truecolor') || 0,
+	     );
+
+  push @argv, -flip => 1 if $flip;
+  my $p = defined $source->setting(general=>'image_padding') ? $source->setting(general=>'image_padding')
+                                                           : PAD_DETAIL_SIDES;
+  my $pl = $source->setting(general=>'pad_left');
+  my $pr = $source->setting(general=>'pad_right');
+  $pl    = $p unless defined $pl;
+  $pr    = $p unless defined $pr;
+
+  push @argv,(-pad_left =>$pl, -pad_right=>$pr) if $p;
+
+  my $panel = Bio::Graphics::Panel->new(@argv);
+
+  $panel->add_track($segment      => 'arrow',
+		    -double       => 1,
+		    -tick         => 2,
+		    -label        => $options->{label_scale} ? $segment->seq_id : 0,
+		    -units        => $source->setting(general=>'units') || '',
+		    -unit_divider => $source->setting(general=>'unit_divider') || 1,
+		   ) unless $suppress_scale;
+
+  my (%track2label,%tracks,@blank_tracks);
+
+  for (my $i= 0; $i < @$tracks; $i++) {
+
+    my $label = $tracks->[$i];
+
+    # if "hide" is set to true, then track goes away
+    next if $source->semantic_setting($label=>'hide',$length);
+
+    my $track;
+
+    # if the section is marked as being a "global feature", then we apply the glyph to the entire segment
+    if ($source->semantic_setting($label=>'global feature',$length)) {
+      $track = $panel->add_track($segment,
+				 $source->default_style,
+				 $source->i18n_style($label,$lang),
+				);
+    }
+
+    else {
+      my @settings = ($source->default_style,$source->i18n_style($label,$lang,$length));
+      push @settings,(-hilite => $hilite_callback) if $hilite_callback;
+      $track = $panel->add_track(-glyph => 'generic',@settings);
+    }
+
+    $track2label{$track} = $label;
+    $tracks{$label}      = $track;
+  }
+
+  if (@feature_types) {  # don't do anything unless we have features to fetch!
+
+    my $iterator = $segment->get_feature_stream(-type=>\@feature_types);
+    warn "feature types = @feature_types\n" if DEBUG;
+    my (%groups,%feature_count,%group_pattern,%group_on,%group_on_field);
+
+    while (my $feature = $iterator->next_seq) {
+
+      warn "next feature = $feature, type = ",$feature->type,' method = ',$feature->method,
+	' start = ',$feature->start,' end = ',$feature->end,"\n" if DEBUG;
+
+      # allow a single feature to live in multiple tracks
+      for my $label ($self->feature2label($feature,$length)) {
+	my $track = $tracks{$label}  or next;
+	$filters{$label}->($feature) or next;
+
+	warn "feature = $feature, label = $label, track = $track\n" if DEBUG;
+
+	$feature_count{$label}++;
+
+	# Handle name-based groupings.  Since this occurs for every feature
+	# we cache the pattern data.
+	warn "$track group pattern => ",$source->code_setting($label => 'group_pattern') if DEBUG;
+	exists $group_pattern{$label} or $group_pattern{$label} = $source->code_setting($label => 'group_pattern');
+	
+	if (defined $group_pattern{$label}) {
+	  push @{$groups{$label}},$feature;
+	  next;
+	}
+
+	# Handle generic grouping (needed for GFF3 database)
+	warn "$track group_on => ",$source->code_setting($label => 'group_on') if DEBUG;
+	exists $group_on_field{$label} or $group_on_field{$label} = $source->code_setting($label => 'group_on');
+	
+	if (my $field = $group_on_field{$label}) {
+	  my $base = eval{$feature->$field};
+	  if (defined $base) {
+	    my $group_on_object = $group_on{$label}{$base} ||= Bio::Graphics::Feature->new(-start=>$feature->start,
+											      -end  =>$feature->end,
+											      -strand => $feature->strand,
+											      -type =>$feature->primary_tag);
+	    $group_on_object->add_SeqFeature($feature);
+	    next;
+	  }
+	}
+
+	$track->add_feature($feature);
+      }
+    }
+
+    # fix up groups and group_on
+    # the former is traditional name-based grouping based on a common prefix/suffix
+    # the latter creates composite features based on an arbitrary method call
+
+    for my $label (keys %group_on) {
+      my $track = $tracks{$label};
+      my $group_on = $group_on{$label} or next;
+      $track->add_feature($_) foreach values %$group_on;
+    }
+
+    # handle pattern-based group matches
+    for my $label (keys %groups) {
+      my $track = $tracks{$label};
+      # fix up groups
+      my $set     = $groups{$label};
+      my $pattern = $group_pattern{$label} or next;
+      $pattern =~ s!^/(.+)/$!$1!;  # clean up regexp delimiters
+
+      my $count    = $feature_count{$label};
+      $count       = $limit->{$label} if $limit->{$label} && $limit->{$label} < $count;
+      my $do_bump  = $self->do_bump($label, $options->{$label},$count,$max_bump,$length);
+
+      if (!$do_bump) {  # don't bother grouping if we aren't bumping - no one will see anyway
+	$track->add_feature($_) foreach @$set;
+	next;
+      }
+
+      my %pairs;
+      for my $a (@$set) {
+	my $name = $a->name or next;
+	(my $base = $name) =~ s/$pattern//i;
+ 	push @{$pairs{$base}},$a;
+      }
+      foreach (values %pairs) {
+	$track->add_group($_);
+      }
+    }
+
+    # configure the tracks based on their counts
+    for my $label (keys %tracks) {
+      next unless $feature_count{$label};
+
+      $options->{$label} ||= 0;
+
+      my $count = $feature_count{$label};
+      $count    = $limit->{$label} if $limit->{$label} && $limit->{$label} < $count;
+
+      my $do_bump  = $self->do_bump($label, $options->{$label},$count,$max_bump,$length);
+      my $do_label = $self->do_label($label,$options->{$label},$count,$max_labels,$length);
+      my $do_description = $self->do_description($label,$options->{$label},$count,$max_labels,$length);
+
+      $tracks{$label}->configure(-bump  => $do_bump,
+				 -label => $do_label,
+				 -description => $do_description,
+				);
+      $tracks{$label}->configure(-connector  => 'none') if !$do_bump;
+      $tracks{$label}->configure(-bump_limit => $limit->{$label}) 
+	if $limit->{$label} && $limit->{$label} > 0;
+    }
+  }
+
+  # add additional features, if any
+  my $offset = 0;
+  my $select = sub {
+    my $file  = shift;
+    my $type  = shift;
+    my $section = $file->setting($type=>'section') || $file->setting(general=>'section');
+    return 1 unless defined $section;
+    return $section =~ /detail/;
+  };
+
+  my $extra_tracks = $config{noscale} ? 0 : 1;
+
+  for my $track (@blank_tracks) {
+    my $file = $feature_files->{$tracks->[$track]} or next;
+    ref $file or next;
+    $track += $offset + $extra_tracks;
+    my $name = $file->name || '';
+    $options->{$name} ||= 0;
+    my ($inserted,undef,$new_tracks)
+      = eval { $file->render($panel,$track,$options->{$name},
+			     $max_bump,$max_labels,
+			     $select
+			    )
+	     };
+    $self->error("$name: $@") if $@;
+    foreach (@$new_tracks) {
+      $track2label{$_} = $file;
+    }
+    $offset += $inserted-1; # adjust for feature files that insert multiple tracks
+  }
+
+  my $gd = $panel->gd;
+
+  if ($title) {
+    my $x = ($width - length($title) * $image_class->gdMediumBoldFont->width)/2;
+    $gd->string($image_class->gdMediumBoldFont,$x,0,$title,$panel->translate_color('black'));
+  }
+  return $gd   unless wantarray;
+
+  my $boxes    = $panel->boxes;
+
+  return ($gd,$boxes,$panel,\%track2label);
+
   
 }
+
 
 1;
 

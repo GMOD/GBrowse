@@ -83,9 +83,7 @@ sub remote_sources {
 
 sub language {
   my $self = shift;
-  my $d = $self->{language};
-  $self->{language} = shift if @_;
-  $d;
+  $self->state->{lang};
 }
 
 sub db {
@@ -1272,7 +1270,7 @@ sub set_language {
 
   return unless @languages;
   $lang->language(@languages);
-  $self->language($lang);
+  $self->state->{lang} = $lang;
 }
 
 # Returns the language code, but only if we have a translate table for it.
@@ -1297,38 +1295,6 @@ sub label2key {
   $key     ||= $key if defined $key;
   $key     ||= $label;
   $key;
-}
-
-# return language-specific options
-sub i18n_style {
-  my $self      = shift;
-  my ($label,$lang,$length) = @_;
-
-  my $data_source = $self->data_source;
-
-  return $data_source->style($label,$length) unless $lang;
-
-  my $charset   = $lang->tr('CHARSET');
-
-  # GD can't handle non-ASCII/LATIN scripts transparently
-  return $data_source->style($label,$length) 
-    if $charset && $charset !~ /^(us-ascii|iso-8859)/i;
-
-  my @languages = $lang->language;
-
-  push @languages,'';
-  # ('fr_CA','fr','en_BR','en','')
-
-  my $idx = 1;
-  my %priority = map {$_=>$idx++} @languages;
-  # ('fr-ca'=>1, 'fr'=>2, 'en-br'=>3, 'en'=>4, ''=>5)
-
-  my %options  = $self->style($label,$length);
-  my %lang_options = map { $_->[1] => $options{$_->[0]} }
-    sort { $b->[2]<=>$a->[2] }
-      map { my ($option,undef,$lang) = /^(-[^:]+)(:(\w+))?$/; [$_ => $option, $priority{$lang||''}||99] }
-	keys %options;
-  %lang_options;
 }
 
 ####################################
@@ -1479,8 +1445,9 @@ sub render_tracks {
   my $plus   = "$buttons/plus.png";
   my $minus  = "$buttons/minus.png";
 
-  my $renderer = Bio::Graphics::Browser::RenderTracks->new($self->data_source,
-							   $self->state);
+  my $renderer = Bio::Graphics::Browser::RenderTracks->new(-segment  => $seg,
+							   -source   => $self->data_source,
+							   -settings => $self->state);
   my $tracks   = $renderer->render_tracks(tracks       => \@labels,
 					  third_party  => $self->remote_sources);
 
@@ -1491,8 +1458,9 @@ sub render_tracks {
 			img({-src=>$plus},img({-src=>$minus}),
 			    $title." $seg"));
     next unless $tracks->{$label}; # not there for some reason
-    my ($gd,$imagemap) = @{$tracks->{$label}};
-    my $url = $self->generate_image($gd);
+    my ($gd,$boxes) = @{$tracks->{$label}};
+    my $url      = $self->generate_image($gd);
+    my $imagemap = $renderer->boxes2imagemap($boxes);
 
     my $class   = $label eq '__scale__' ? 'scale' : 'track';
     push @results,div({id=>"track_${label}",-class=>$class},

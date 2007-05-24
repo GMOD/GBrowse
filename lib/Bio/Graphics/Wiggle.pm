@@ -36,9 +36,10 @@ Bio::Graphics::Wiggle -- Binary storage for dense genomic features
 use strict;
 use warnings;
 use IO::File;
+use Carp 'croak','carp','confess';
 
 use constant HEADER_LEN => 256;
-use constant HEADER => '(Z50LLLl)@'.HEADER_LEN; # seqid, start, step, span, next_block
+use constant HEADER => '(Z50LLLLl)@'.HEADER_LEN; # seqid, start, end, step, span, next_block
 use constant BODY   => 'f';
 
 sub new {
@@ -76,22 +77,21 @@ sub find_segment {
   my $self = shift;
   my ($offset,$seqid,$start,$end) = @_;
 
-  warn "start = $start, end = $end";
-
-  $offset ||= 0;
+  $offset||= 0;
 
   $start ||= 0;
   $end   ||= 999_999_999_999;
 
   my $fh   = $self->fh;
 
-  my ($seqname,$strt,$step,$span,$next,$found);
+  my ($seqname,$strt,$nd, $step,$span,$next,$found);
   while ($offset >= 0 && !defined $found) {
+    warn "offset = $offset";
     $fh->seek($offset,0)                                   or last;
-    ($seqname,$strt,$step,$span,$next) = $self->readheader or last;
+    ($seqname,$strt,$nd, $step,$span,$next) = $self->readheader or last;
     next if defined $seqid && $seqid ne $seqname;
     next unless $end > $strt;
-    next if $span && $start >= $strt+$span;
+    next if $span && $start >= $nd;
     $found = $offset;
   } continue {
     $offset = $next;
@@ -100,30 +100,63 @@ sub find_segment {
 }
 
 sub writable { shift->{write} }
-sub last_offset {
+sub current_offset {
   my $self = shift;
-  $self->{last_offset} = shift if @_;
-  $self->{last_offset};
+  $self->{offset} = shift if @_;
+  $self->{offset};
+}
+sub current_header {
+  my $self = shift;
+  my $d    = $self->{current_header} || [];
+  if (@_) {
+    my ($seqname,$start, $end, $step, $span, $next) = @_;
+    $self->{current_header} = [$seqname,$start, $end, $step, $span, $next];
+  }
+  return wantarray ? @$d : $d;
+}
+sub end {
+  my $self = shift;
+  $self->{end} = shift if @_;
+  $self->{end};
+}
+sub span {
+  my $self = shift;
+  $self->{span} = shift if @_;
+  $self->{span};
 }
 
 sub add_segment {
   my $self = shift;
+  die "usage: \$wig->add_segment(\$seqname,\$start,\$step,\$span)" unless @_ >= 3;
   my ($seqname,$start,$step,$span) = @_;
+  $span ||= $step;
   die "file not open for writing" unless $self->writable;
-  my $fh = $self->fh;
-  my $current = $fh->tell;
-
-  if ($current > 0) { # need to update the next pointer
-    $self->seek($self->last_offset,0);
-    my ($sn,$strt,$stp,$spn,$next) = $self->readheader();
-    $self->seek($self->last_offset,0);
-    $self->writeheader($sn,$strt,$stp,$spn,$current);
-    $self->seek($current);
-  }
-
-  $self->last_offset($current);
-  $self->writeheader($seqname,$start,$step,$span,-1);
+  my $fh      = $self->fh;
+  my $current = $self->update_current(1);
+  $self->writeheader($seqname,$start, $start, $step, $span,-1);
+  $self->current_offset($current);
+  $self->current_header($seqname,$start, $start, $step, $span,-1);
   return $current;
+}
+
+sub update_current {
+  my $self = shift;
+  my $adding_segment = shift;
+
+  my $fh   = $self->fh;
+  my $here = $fh->tell;
+  return $here unless $here > 0;
+
+  my ($seqname,$start,$end,$step,$span,$next) = $self->current_header;
+  return $here unless $seqname;
+
+  $end = $start + ($here - ($self->current_offset + HEADER_LEN))/4 * $step + $span;
+  $next = $here if $adding_segment;
+
+  $self->seek($self->current_offset,0);
+  $self->writeheader($seqname,$start,$end,$step,$span,$next);
+  $self->seek($here);
+  return $here;
 }
 
 sub add_values {
@@ -139,7 +172,7 @@ sub add_values {
 
 sub end_segment {
   my $self = shift;
-  return $self->fh->tell;
+  $self->update_current;
 }
 
 sub readheader {
@@ -152,10 +185,14 @@ sub readheader {
 
 sub writeheader {
   my $self = shift;
-  my ($seqname,$start,$step,$span,$next) = @_;
+  my ($seqname,$start,$end, $step,$span,$next) = @_;
   my $fh = $self->fh;
-  my $header = pack(HEADER,$seqname,$start,$step,$span,$next);
+  my $header = pack(HEADER,$seqname,$start,$end, $step,$span,$next);
   $fh->print($header) or die "write failed: $!";
+}
+
+sub DESTROY {
+  shift->end_segment;
 }
 
 package Bio::Graphics::WiggleIterator;
@@ -187,10 +224,11 @@ sub new {
   my $self = shift;
   my ($wig_file,$header_pos) = @_;
   $wig_file->seek($header_pos);
-  my ($seqid,$start,$step,$span,$next) = $wig_file->readheader() or return;
+  my ($seqid,$start,$end,$step,$span,$next) = $wig_file->readheader() or return;
   return bless {
 		seqid   => $seqid,
 		start   => $start,
+		end     => $end,
 		step    => $step,
 		span    => $span,
 		next    => $next,
@@ -201,25 +239,32 @@ sub new {
 
 sub seqid  { shift->{seqid} }
 sub seq_id { shift->{seqid} }
-sub start { shift->{start} }
-sub step  { shift->{step}  }
-sub span  { shift->{span}  }
-sub next  { shift->{next}  }
-sub wig   { shift->{wig}   }
+sub start  { shift->{start} }
+sub end    { shift->{end}   }
+sub step   { shift->{step}  }
+sub span   { shift->{span}  }
+sub next   { shift->{next}  }
+sub wig    { shift->{wig}   }
 sub value_offset { shift->{value_offset} }
 
 sub values {
   my $self = shift;
-  my ($start,$span) = @_;
+  my ($start,$end) = @_;
+
+  warn "values($start,$end)";
 
   $start ||= $self->start;
-  $span  ||= $self->span - $start;
+  $end   ||= $self->end;
 
   my $step        = $self->step;
+  my $span        = $self->span;
   my $block_start = int (($start - $self->start)/$step);
+  warn "block_start = $block_start";
 
   my $read_start  = $self->value_offset + $block_start * 4;
-  my $read_length = $span/$step * 4;
+  my $read_length = int(($end-$start+1)/$step) * 4;
+  return unless $read_length;
+  warn "read_start = $read_start, read_length=$read_length";
   my $data;
   $self->wig->seek($read_start);
   $self->wig->fh->read($data,$read_length) or die "read error: $!";

@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::wiggle_density;
 
-# $Id: wiggle_density.pm,v 1.1.2.2 2007-05-23 22:41:38 lstein Exp $
+# $Id: wiggle_density.pm,v 1.1.2.3 2007-05-24 04:18:44 lstein Exp $
 
 use strict;
 use base 'Bio::Graphics::Glyph::box';
@@ -37,10 +37,10 @@ sub draw {
 
   # find all overlapping segments in the wig file
   warn "\nsearching for $start->$end";
-  my $iterator = $wig->segment_iterator($chr,$start-1,$end);
+  my $iterator = $wig->segment_iterator($chr,$start,$end);
   my $idx = 0;
   while (my $seg = $iterator->next_segment) {
-    warn "got ",$seg->start,"->",$seg->span;
+    warn "got ",$seg->start,"->",$seg->end;
     $self->draw_segment($gd,$seg,$start,$end,$x1,$y1,$x2,$y2,$idx++);
   }
 
@@ -51,9 +51,10 @@ sub draw {
 sub draw_segment {
   my $self = shift;
   my ($gd,$seg,$start,$end,$x1,$y1,$x2,$y2,$idx) = @_;
-  my $seg_start = $seg->start + 1;   # adjust for zero-based coordinates
-  my $seg_end   = $seg_start  + $seg->span - 1;
+  my $seg_start = $seg->start;   # adjust for zero-based coordinates
+  my $seg_end   = $seg->end;
   my $step      = $seg->step;
+  my $span      = $seg->span;
 
   # clip, because wig files do no clipping
   $seg_start = $start      if $seg_start < $start;
@@ -61,6 +62,7 @@ sub draw_segment {
 
   # figure out where we're going to start
   my $scale  = $self->scale;  # pixels per base pair
+  my $pixels_per_span = $scale * $span;
   my $pixels_per_step = $scale * $step;
 
   # if the feature starts before the data starts, then we need to draw
@@ -83,13 +85,14 @@ sub draw_segment {
   return unless $start < $end;
 
   # get data values across the area
-  my $span = $end - $start + 1;
-  my @data = $seg->values($start-1,$span);
+  my @data = $seg->values($start,$end);
 
   # number of data points should be equal to length/step...
 #  @data == $span/$step
 #    or die "number of data points should be equal to length/step: span=$span, step=$step, datapoints = ",
 #      scalar @data;
+
+  warn scalar(@data)," data points";
 
   my $min_value = $self->min_score;
   my $max_value = $self->max_score;
@@ -99,11 +102,12 @@ sub draw_segment {
   my %color_cache;
   for (my $i = $start; $i <= $end ; $i += $step) {
     my $data_point = shift @data;
+    next unless defined $data_point;
     $data_point    = $min_value if $min_value > $data_point;
     $data_point    = $max_value if $max_value < $data_point;
     my ($r,$g,$b)  = $self->calculate_color($data_point,\@rgb,$min_value,$max_value);
     my $idx        = $color_cache{$r,$g,$b} ||= $self->panel->translate_color($r,$g,$b);
-    $self->filled_box($gd,$x1,$y1,$x1+$pixels_per_step,$y2,$idx,$idx);
+    $self->filled_box($gd,$x1,$y1,$x1+$pixels_per_span,$y2,$idx,$idx) unless $idx == 0;
     $x1 += $pixels_per_step;
   }
 

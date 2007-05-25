@@ -56,11 +56,12 @@ while (my $file = readdir(HTDOCS) ) {
 }
 closedir HTDOCS; 
 
-my $imagedir  = Bio::Root::IO->catfile($ht_target, "images");
-my $buttondir = Bio::Root::IO->catfile($imagedir, "buttons");
+my $imagedir   = Bio::Root::IO->catfile($ht_target, "images");
+my $buttondir  = Bio::Root::IO->catfile($imagedir, "buttons");
+my $balloondir = Bio::Root::IO->catfile($imagedir, "balloons");
 my $jsdir  = Bio::Root::IO->catfile($ht_target, "js");
 
-for my $ddir ( $imagedir,$buttondir,$jsdir ) {
+for my $ddir ( $imagedir,$buttondir,$balloondir,$jsdir ) {
     if (! (-e $ddir) ) {
 	print "Making $ddir...\n";
 	mkdir($ddir,0777) or die "unable to make $ddir\n";

@@ -236,39 +236,32 @@ sub print_top {
   push @args,(-reset_toggle   => 1)               if $reset_all;
 
   # push all needed javascript files onto top of page
+  my $b_tips = $CONFIG->setting('balloon tips');
   my $js = $CONFIG->setting('js')||JS;
   my @js = 'buttons.js';
-  push @js,qw(yahoo-dom-event.js prototype.js balloon.js) if $CONFIG->setting('balloon_tips');
+  push @js,qw(yahoo-dom-event.js prototype.js balloon.js) if $b_tips;
+
   my @scripts = map { {src=> "$js/$_" } } @js;
   push @args,(-script=>\@scripts);
 
   print start_html(@args) unless $HTML++;
 
-  if ($CONFIG->setting('balloon_tips')) {
+  if ($b_tips) {
 
-    # Construct a customized balloon object according to the conf. file
-    my $balloon_use_default = $CONFIG->setting('TRACK DEFAULTS'=>'balloon_use_defaultsetting');
-    my $balloon_up	  = $CONFIG->setting('TRACK DEFAULTS'=>'balloon_upballoon');
-    my $balloon_down	  = $CONFIG->setting('TRACK DEFAULTS'=>'balloon_downballoon');
-    my $balloon_upleft	  = $CONFIG->setting('TRACK DEFAULTS'=>'balloon_upleftconnector');
-    my $balloon_upright	  = $CONFIG->setting('TRACK DEFAULTS'=>'balloon_upleftconnector');
-    my $balloon_downleft	  = $CONFIG->setting('TRACK DEFAULTS'=>'balloon_uprightconnector');
-    my $balloon_downright	  = $CONFIG->setting('TRACK DEFAULTS'=>'balloon_uprightconnector');
-
+    my $balloon_images = $CONFIG->setting('balloon images') || '/gbrowse/images/balloons/';
+    my $balloon_config = $CONFIG->setting('balloon settings') || '';
     print "<script>
- 		   var customizedballoon = new Balloon;
- 	   </script>";
-    if ($balloon_use_default != 1){
-      print "<script>
-	   customizedballoon.upLeftConnector  	= '$balloon_upleft';
-		 customizedballoon.upRightConnector 	= '$balloon_upleft';
-		 customizedballoon.downLeftConnector 	= '$balloon_downleft';
-	   customizedballoon.downRightConnector = '$balloon_downright'; 
-	   customizedballoon.upBalloon          = '$balloon_up';
-	   customizedballoon.downBalloon	= '$balloon_down';
+	   var balloon = new Balloon;
+	   balloon.upLeftConnector  	= '$balloon_images/balloon_up_bottom_left.png';
+	   balloon.upRightConnector 	= '$balloon_images/balloon_up_bottom_right.png';
+	   balloon.downLeftConnector 	= '$balloon_images/balloon_down_top_left.png';
+	   balloon.downRightConnector      = '$balloon_images/balloon_down_top_right.png';
+	   balloon.upBalloon               = '$balloon_images/balloon_up_top.png';
+	   balloon.downBalloon	        = '$balloon_images/balloon_down_bottom.png';
+           balloon.hOffset                 = 'right';
+           $balloon_config
 	   </script>\n";
     }
-  }
 }
 
 sub print_bottom {

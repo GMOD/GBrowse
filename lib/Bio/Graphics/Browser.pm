@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.6 2007-05-23 22:41:37 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.7 2007-05-25 00:29:38 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -976,22 +976,39 @@ sub make_map {
 
     my $label  = $_->[5] ? $track2label->{$_->[5]} : '';
 
-    my $href   = $self->make_href($_->[0],$panel,$label,$_->[5]) or next;
-    my $alt    = unescape($self->make_title($_->[0],$panel,$label,$_->[5]));
+    my $href   = $self->make_href($_->[0],$panel,$label,$_->[5]);
+    my $title  = unescape($self->make_title($_->[0],$panel,$label,$_->[5]));
     my $target = $self->config->make_link_target($_->[0],$panel,$label,$_->[5]);
     my $t      = defined($target) ? qq(target="$target") : '';
 
+    $href      = qq(href="$href");
+    $title     = qq(title="$title");
+
     #retrieve the content of the balloon from configuration files
     # if it looks like a URL, we treat it as a URL.
-    my $tooltip	   = $self->config->balloon_tip_setting($label,'balloon_tip',$_->[0],$panel,$_->[5]);
+    my $balloonhover	   = $self->config->balloon_tip_setting('balloon hover',$label,$_->[0],$panel,$_->[5]);
+    my $balloonclick	   = $self->config->balloon_tip_setting('balloon click',$label,$_->[0],$panel,$_->[5]);
+    my $sticky             = $self->setting($label,'balloon sticky');
+    my $width              = $self->setting($label,'balloon width')  || 270;
+    my $time               = $self->setting($label,'balloon delay')  || 500;
 
-    if ($tooltip =~ /^(http|ftp)/) {
-      $map .= qq(<area href="$href" onmouseover="customizedballoon.showTooltip(event,'<iframe width=270 height=300 frameborder=0 src=$tooltip></iframe>',1)" coords="$_->[1],$_->[2],$_->[3],$_->[4]" $t/>);
-    } elsif ($tooltip) {
-      $map .= qq(<area href="$href" onmouseover="customizedballoon.showTooltip(event,'$tooltip',1)" coords="$_->[1],$_->[2],$_->[3],$_->[4]" $t/>);
-    } else{
-      $map .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href" alt="$alt" $t/>\n);
+    my ($mouseover,$mousedown);
+    if ($balloonhover) {
+      my $stick = defined $sticky ? $sticky : 0;
+      $mouseover = $balloonhover =~ /^(https?|ftp):/
+	? qq(onmouseover="balloon.delayTime=$time; balloon.showTooltip(event,'<iframe width=$width height=300 frameborder=0 src=$balloonhover></iframe>',$stick)")
+	: qq(onmouseover="balloon.delayTime=$time; balloon.showTooltip(event,'$balloonhover',$stick)");
+      undef $title;
     }
+    if ($balloonclick) {
+      my $stick = defined $sticky ? $sticky : 1;
+      $mousedown = $balloonclick =~ /^(http|ftp):/
+	? qq(onmousedown="balloon.delayTime=0; balloon.showTooltip(event,'<iframe width=$width height=300 frameborder=0 src=$balloonclick></iframe>',$stick)")
+	: qq(onmousedown="balloon.delayTime=0; balloon.showTooltip(event,'$balloonclick',$stick)");
+      undef $href;
+    }
+
+    $map .= qq(<area $href $mouseover $mousedown coords="$_->[1],$_->[2],$_->[3],$_->[4]" $t $title/>);
   }
   $map .= "</map>\n";
   $map;
@@ -2561,19 +2578,25 @@ sub make_title {
 
 sub balloon_tip_setting {
   my $self = shift;
-  my ($label,$option,$feature,$panel,$track) = @_;
+  my ($option,$label,$feature,$panel,$track) = @_;
+  $option ||= 'balloon tip';
   my $value = $self->code_setting($label=>$option);
   $value    = $self->code_setting('TRACK DEFAULTS' => $option) unless defined $value;
   $value    = $self->code_setting('general' => $option)        unless defined $value;
 
   return unless $value;
+  my $val;
 
   if (ref($value) eq 'CODE') {
-    my $val = eval {$value->($feature,$panel,$track)};
+    $val = eval {$value->($feature,$panel,$track)};
     $self->_callback_complain($label=>$option) if $@;
-    return $val;
+  } else {
+    $val = $self->link_pattern($value,$feature,$panel);
   }
-  return $self->link_pattern($value,$feature,$panel);
+  # escape quotes
+  $val =~ s/'/\\'/g;
+  $val =~ s/"/&quot;/g;
+  $val;
 }
 
 sub make_link_target {

@@ -1301,20 +1301,25 @@ COMPUTED OPTIONS for details.
 =item * title
 
 The title option controls the "tooltips" text that pops up when the
-mouse hovers over a glyph in certain browsers.  See CONFIGURE BALLOON TOOLTIPS
-for details.The rules for generating titles are the same as the "link" 
-option discussed above.The "title" option can also be computed dynamically. 
-See COMPUTED OPTIONS for details.
+mouse hovers over a glyph in certain browsers.  The rules for
+generating titles are the same as the "link" option discussed
+above.The "title" option can also be computed dynamically.  See
+COMPUTED OPTIONS for details.
 
 Note HTML characters such as "<", ">" and "&" are not automatically
 escaped from the title. This lets you do neat stuff, such as create
-popup menus, but also means that you need to be careful. The function
+popup menus, but also means that you need to be careful. In
+particular, you must not use the quote character (") in the title, but
+either use the &quot; entity, or the single quote ('). The function
 CGI::escapeHTML() is available to properly escape HTML characters in
 dynamically-generated titles.
 
 The special value "AUTO" causes a default description to appear
 describing the name, type and position of the feature.  This is
 also assumed if the title option is missing or blank.
+
+See CONFIGURE BALLOON TOOLTIPS for the ability to created rich
+tooltips including images and links.
 
 =item * landmark_padding = 1000
 
@@ -2161,40 +2166,86 @@ NCBI, provided that the value of the tag looks like an NCBI GI number:
       
 =head2 B12. CONFIGURE BALLOON TOOLTIPS
 
-The style of the balloon tooltip can be configured by modifying the 
-configuration files located in the folder:
+GBrowse can display popup balloons when the user hovers over or clicks
+on a feature. The balloons can display arbitrary HTML, either provided
+in the config file, or fetched remotely via a URL. You can use this
+feature to create multiple choice menus when the user clicks on the
+feature, to pop up images on mouse hovers, or even to create little
+embedded query forms. See http://mckay.cshl.edu/balloons.html for
+examples.
 
-conf/gbrowse.conf
+Balloon tooltips require a third-party package written by Sheldon
+McKay of CSHL. First go to
 
-Open the file using any text editor and find the [TRACK DEFAULTS]
-section.For the title option, three arguments are provided:
+  http://www.wormbase.org/wiki/index.php/Balloon_Tooltips
 
-		html	Provide the html content contained in the balloon_html tag
-		url	Provide the content retrived from the url contained in the 
-					balloon_url tag
+Download the files prototype.js, balloon.js and yahoo-dom-event.js
+into $HTDOCS/gbrowse/js, where $HTDOCS is the directory in which your
+web server keeps its HTML documents.
 
-If you don't want any balloon tooltips, just leave it blank as:
+Now, in the config file for the database you wish to modify, set
+"balloon tips" to a true value:
 
-title = 
+      [GENERAL]
+      ...
+      balloon tips = 1
 
-You can modify the content of either the balloon_html tag or the 
-balloon_url tag to get what you want in the balloon tooltip.
+Then add "balloon hover" and/or "balloon click" options to the track
+stanzas that you wish to add buttons to. You can also place these
+options in [TRACK DEFAULTS] to create a default balloon.
 
-Customized balloon images are also supported. You can specify the path
-to your images in the following lines:
+"balloon hover" specifies HTML or a URL that will be displayed when
+the user hovers over a feature. "balloon click" specifies HTML or a
+URL that will appear when the user clicks on a feature. Examples:
 
-balloon_use_defaultsetting = 1
-balloon_upleftconnector  =
-balloon_uprightconnector =
-balloon_downleftconnector  =
-balloon_downrightconnector =
-alloon_upballoon   =
-balloon_downballoon =
+  balloon hover = <h2>Gene $name</h2>
+  balloon click = <h2>Gene $name</h2>
+        <a href=\'http://www.google.com/search?q=$name\'>Search Google</a><br>
+        <a href=\'http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=pubmed&term=$name\'>Search NCBI</a><br>
 
-Be sure to set the balloon_use_defaultsetting to 0 if you use your own
-images. For more information about changing the balloon images, please
-visit http://www.wormbase.org/wiki/index.php/Balloon_Tooltips
+Alternatively you can provide a URL to either option, in which case
+the contents of the URL will be fetched and displayed in the
+balloon. The balloon distinguishes URLs by looking for text beginning
+with "http:" "https:" or "ftp:"
 
+ balloon hover = http://www.wormbase.org/db/get?name=$name;class=gene
+
+The usual option value substitution rules ($name, $start, etc) work
+with balloons, as do callbacks. GBrowse automatically escapes single
+(') and double (") quotes in the values returned by balloon hover and
+balloon click so that you don't have to worry about them messing up
+the HTML.
+
+To customize the balloon, you may add a series of balloon config
+statements with "balloon settings" option as described in
+http://www.wormbase.org/wiki/index.php/Balloon_Tooltips#Customization
+using "balloon" as the name of the balloon. For example:
+
+ [General]
+ ... other settings ...
+
+ balloon settings = balloon.balloonWidth     = '308px';
+                    balloon.paddingTop       = '20px';
+                    balloon.paddingLeft      = '15px';
+                    balloon.paddingRight     = '15px';
+                    balloon.paddingBottom    = '20px';
+                    balloon.paddingConnector = '48px';
+
+You may also change the images used to generate the balloon, for
+example to make the balloon wider than the default. You do that this
+way:
+
+ balloon settings =  balloon.balloonWidth = '500px'
+                     balloon_upballoon    = /images/balloons/big_up_balloon.png
+                     balloon_downballoon  = /images/balloons/big_down_balloon.png
+
+The process of customizing the balloon appearance is described well in
+the Balloon_Tooltips pages at 
+
+  http://www.wormbase.org/wiki/index.php/Balloon_Tooltips
+
+Currently there is no way of customizing balloons on a per-track
+basis. All balloons are affected in all tracks.
 
 =head1 C. GENERATING HISTOGRAMS
 

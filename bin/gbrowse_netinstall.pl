@@ -18,6 +18,7 @@ BEGIN {
   eval << 'END';
     use CPAN '!get';
     use CPAN::Config;
+    CPAN::Shell->install('HTML::Tagset');
     CPAN::Shell->install('LWP::Simple');
     CPAN::Shell->install('Archive::Zip');
     CPAN::Shell->install('Archive::Tar');

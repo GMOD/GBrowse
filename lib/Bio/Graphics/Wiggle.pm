@@ -8,19 +8,19 @@ Bio::Graphics::Wiggle -- Binary storage for dense genomic features
 
  my $wig = Bio::Graphics::Wiggle->new('./test.wig','writable') or die;
 
- $offset = $wig->add_segment('chr1',0,100,1000),"\n";
+ $offset = $wig->add_segment('chr1',1,100,100),"\n";
  $wig->add_values(1..10);
 
- $offset = $wig->add_segment('chr1',2000,100,1000),"\n";
+ $offset = $wig->add_segment('chr1',2000,100,100),"\n";
  $wig->add_values([map {$_*10.1} (1..10)]);
 
- $offset = $wig->add_segment('chr2',0,100,1000),"\n";
+ $offset = $wig->add_segment('chr2',1,100,100),"\n";
  $wig->add_values(1..10);
 
  undef $wig;
  $wig = Bio::Graphics::Wiggle->new('./test.wig');
 
- my $iterator = $wig->segment_iterator('chr1',0,500);
+ my $iterator = $wig->segment_iterator('chr1',1,500);
  while (my $seg = $iterator->next_segment) {
     print $seg->seqid," ",$seg->start,' ',$seg->step,' ',$seg->span,"\n";
     print "\t",join ' ',$seg->values,"\n";
@@ -79,14 +79,13 @@ sub find_segment {
 
   $offset||= 0;
 
-  $start ||= 0;
+  $start ||= 1;
   $end   ||= 999_999_999_999;
 
   my $fh   = $self->fh;
 
   my ($seqname,$strt,$nd, $step,$span,$next,$found);
   while ($offset >= 0 && !defined $found) {
-    warn "offset = $offset";
     $fh->seek($offset,0)                                   or last;
     ($seqname,$strt,$nd, $step,$span,$next) = $self->readheader or last;
     next if defined $seqid && $seqid ne $seqname;
@@ -150,7 +149,7 @@ sub update_current {
   my ($seqname,$start,$end,$step,$span,$next) = $self->current_header;
   return $here unless $seqname;
 
-  $end = $start + ($here - ($self->current_offset + HEADER_LEN))/4 * $step + $span;
+  $end = $start + ($here - ($self->current_offset + HEADER_LEN))/4 * $step + $span - 1;
   $next = $here if $adding_segment;
 
   $self->seek($self->current_offset,0);
@@ -209,6 +208,13 @@ sub new {
 		},ref $self || $self;
 }
 
+sub offset {
+  my $self = shift;
+  my $d    = $self->{offset};
+  $self->{offset} = shift if @_;
+  $d;
+}
+
 sub next_segment {
   my $self = shift;
   my $offset = $self->{wiggle_file}->find_segment($self->{offset},@{$self->{search_args}});
@@ -251,20 +257,16 @@ sub values {
   my $self = shift;
   my ($start,$end) = @_;
 
-  warn "values($start,$end)";
-
   $start ||= $self->start;
   $end   ||= $self->end;
 
   my $step        = $self->step;
   my $span        = $self->span;
   my $block_start = int (($start - $self->start)/$step);
-  warn "block_start = $block_start";
 
   my $read_start  = $self->value_offset + $block_start * 4;
   my $read_length = int(($end-$start+1)/$step) * 4;
   return unless $read_length;
-  warn "read_start = $read_start, read_length=$read_length";
   my $data;
   $self->wig->seek($read_start);
   $self->wig->fh->read($data,$read_length) or die "read error: $!";

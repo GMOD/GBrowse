@@ -251,13 +251,12 @@ sub upload_ucsc_file {
     if ($next_line =~ /variableStep\s+chrom=(\S+)(?:\s+span=(\d+))?/) {
       $format         = 'variableStep';
       my $reference   = $1;
-      my $span        = $2 || 1;  # point-valued data? I am confused
+      my $span        = $2 || 1;
       print $out "reference=$reference\n";
       while ($next_line = $self->readline($in)) {
 	last if $next_line =~ /^track/;  # a track line
 	my ($start,$score) =  $next_line =~ /^(\d+)\s+(.+)/;
-	my $end = $start + $span;
-	$start++;  # correct for interbase coordinates
+	my $end = $start + $span - 1;
 	$track_options{min_score} = $score if !exists $track_options{min_score} || $track_options{min_score} > $score;
 	$track_options{max_score} = $score if !exists $track_options{max_score} || $track_options{max_score} < $score;
 	print $out "DATASET$count","\t","'$track_options{name}'","\t","$start-$end","\t","score=$score\n"
@@ -272,23 +271,16 @@ sub upload_ucsc_file {
       my $start     = $2;
       my $step      = $3;
       my $span      = $4;
-      my $end;
-      # span is a problem, because it is optional. If it is not given, then we have
-      # to figure it out from stepping through the file and fill it in later.
-      if ($span) {
-	$end = $start+$span;
-      }
-      else {
-	$end = 'XXXXXXXXXXXX'; # 12 digits, enough for 30 human genomes
-      }
+
+      # End is a problem, because we don't know how many values there are. So we put a placeholder here and fill it in later
+      my $end ='XXXXXXXXXXXX'; # 12 digits, enough for 30 human genomes
 
       # start populating the wig binary file - we may need to fill in the span
       # after we fill the file
       $wigfile ||= Bio::Graphics::Wiggle->new($wigfilename,'writable') or die "Couldn't create wigfile";
-      my $offset = $wigfile->add_segment($reference,$start-1,$step,$span||0);
+      my $offset = $wigfile->add_segment($reference,$start,$step,$span||$step);
 
       my $end_filepos;  # this will be fill-in position
-      $start++;  # correct for interbase coordinates
       print $out "reference=$reference\n";
       print $out "DATASET$count","\t","'$track_options{name}'","\t","$start-";
       $end_filepos = tell($out);

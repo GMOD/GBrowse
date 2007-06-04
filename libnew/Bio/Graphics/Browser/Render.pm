@@ -83,7 +83,9 @@ sub remote_sources {
 
 sub language {
   my $self = shift;
-  $self->state->{lang};
+  my $d = $self->{lang};
+  $self->{lang} = shift if @_;
+  $d;
 }
 
 sub db {
@@ -1261,7 +1263,7 @@ sub set_language {
 
   my $data_source = $self->data_source;
 
-  my $lang        = Bio::Graphics::Browser::I18n->new($data_source->globals->language_path);
+  my $lang             = Bio::Graphics::Browser::I18n->new($data_source->globals->language_path);
   my $default_language = $data_source->setting('language') || 'POSIX';
 
   my $accept           = CGI::http('Accept-language') || '';
@@ -1270,7 +1272,7 @@ sub set_language {
 
   return unless @languages;
   $lang->language(@languages);
-  $self->state->{lang} = $lang;
+  $self->language($lang);
 }
 
 # Returns the language code, but only if we have a translate table for it.

@@ -3,6 +3,8 @@ package Bio::Graphics::Browser::Render::HTML;
 use strict;
 use warnings;
 use base 'Bio::Graphics::Browser::Render';
+use Bio::Graphics::Browser::Shellwords;
+use Bio::Graphics::Browser::RenderTracks;
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
 use CGI qw(:standard escape start_table end_table);
@@ -303,7 +305,7 @@ sub tableize {
   my $array = shift;
   return unless @$array;
 
-  my $columns = $self->data_source->global_setting('config table columns');
+  my $columns = $self->data_source->global_setting('config table columns') || 3;
   my $rows    = int( @$array/$columns + 0.99 );
 
   my $cwidth = 100/$columns . '%';
@@ -362,7 +364,7 @@ sub plugin_links {
   my $self    = shift;
   my $plugins = shift;
 
-  my @plugins = $self->shellwords($self->setting('quicklink plugins')) or return '';
+  my @plugins = shellwords($self->setting('quicklink plugins')) or return '';
   my @result;
   for my $p (@plugins) {
     my $plugin = $plugins->plugin($p) or next;
@@ -385,8 +387,8 @@ sub svg_link {
 
 sub examples {
   my $self = shift;
-  my $examples = $self->setting('examples') or return;;
-  my @examples = $self->shellwords($examples);
+  my $examples = $self->setting('examples') or return;
+  my @examples = shellwords($examples);
   return unless @examples;
   my @urls = map { a({-href=>"?name=".escape($_)},$_) } @examples;
   return b($self->tr('Examples')).': '.join(', ',@urls).". ";
@@ -495,7 +497,7 @@ sub source_menu {
 		 -default => $self->session->source,
 		 -onChange => 'this.form.submit()',
 		)
-	: $self->data_source_description($self->session->source)
+	: $globals->data_source_description($self->session->source)
       );
 }
 

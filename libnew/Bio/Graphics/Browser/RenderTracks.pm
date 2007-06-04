@@ -7,6 +7,11 @@ use Bio::Graphics;
 
 use constant GBROWSE_RENDER => 'gbrowse_render';  # name of the CGI-based image renderer
 use constant TRUE => 1;
+use constant DEBUG => 1;
+
+use constant DEFAULT_KEYSTYLE => 'between';
+use constant DEFAULT_EMPTYTRACKS => 0;
+use constant PAD_DETAIL_SIDES    => 10;
 
 # when we load, we set a global indicating the LWP::Parallel::UserAgent is available
 my $LPU_AVAILABLE;
@@ -81,7 +86,7 @@ sub render_tracks {
   }
 
   # add third-party data (currently always handled locally and serialized)
-  for my $third_party (@third_party) {
+  for my $third_party (@$third_party) {
     my $name = $third_party->name or next;  # every third party feature has to have a name now
     $results->{$name} = $self->render_third_party($third_party,$render_options);
   }
@@ -97,7 +102,7 @@ sub use_renderfarm {
   $self->source->global_setting('renderfarm') or return;
 
   $LPU_AVAILABLE = eval { require LWP::Parallel::UserAgent; } unless defined $LPU_AVAILABLE;
-  $STO_AVAILABLE = eval { require Storable; 1; }              unless defined $STO_AVAILABLEL;
+  $STO_AVAILABLE = eval { require Storable; 1; }              unless defined $STO_AVAILABLE;
   return 1 if $LPU_AVAILABLE && $STO_AVAILABLE;
   warn "The renderfarm setting requires the LWP::Parallel::UserAgent and Storable modules, but one or both are missing. Reverting to local rendering.\n";
   return;
@@ -163,7 +168,7 @@ sub call_remote_renderers {
     my $s_track  = Storable::freeze(\@tracks);
     my $request = POST($url,
 		       [tracks     => $s_track,
-			settings   => $s_set
+			settings   => $s_set,
 			datasource => $s_dsn]);
     my $error = $ua->register($request);
     if ($error) { warn "Could not send request to $url: ",$error->as_string }
@@ -224,7 +229,7 @@ sub render_locally {
   my %merged_results;
 
   for my $dbname (keys %track2db) {
-    my $db     = $db2db{$dbname};              # database object
+    my $db        = $db2db{$dbname};              # database object
     my @tracks = keys %{$track2db{$dbname}};   # all tracks that use this database
     my $results_for_this_db = $self->image_and_map(-db      => $db,
 						   -tracks  => \@tracks,
@@ -256,6 +261,10 @@ sub image_and_map {
   my $image_class     = $options->{image_class} || 'GD';
   my $postgrid        = $options->{postgrid} || '';
   my $background      = $options->{background} || '';
+  my $title           = $options->{title} || '';
+  my $limit           = $options->{limit}         || {};
+
+  my $feature_files   = $options->{feature_files} || {};
 
   my $segment  = $self->segment;
 
@@ -283,7 +292,7 @@ sub image_and_map {
     $flip = 1;
   }
 
-  my @pass_thru_args = map {/^-/ ? ($_=>$options{$_}) : ()} keys %options;
+  my @pass_thru_args = map {/^-/ ? ($_=>$options->{$_}) : ()} keys %$options;
   my @argv = (
 	      -grid      => 1,
 	      @pass_thru_args,
@@ -472,7 +481,7 @@ sub image_and_map {
     return $section =~ /detail/;
   };
 
-  my $extra_tracks = $config{noscale} ? 0 : 1;
+  my $extra_tracks = $options->{noscale} ? 0 : 1;
 
   for my $track (@blank_tracks) {
     my $file = $feature_files->{$tracks->[$track]} or next;

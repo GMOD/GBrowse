@@ -718,16 +718,19 @@ http://www.wormbase.org/wiki/index.php/Balloon_Tooltips
 
 Copy balloon.js, yahoo-dom-event.js and prototype.js into the folder: 
 
-%apache%/htdocs/gbrowse/js 
+  $HTDOCS/gbrowse/js 
 
-where %apache% is the path to your apache installation folder. For example,
-if your apache installation path is D:/apache, copy those js files into:
+where $HTDOCS is the path to your apache HTML files. For example, if
+your apache installation path is D:/apache, copy those js files into:
 
 D:/apache/htdocs/gbrowse/js
 
 And then copy all balloon image files into the folder:
 
-%apache%/htdocs/images/balloons
+  $HTDOCS/images/balloons
+
+Please read CONFIGURE BALLOON TOOLTIPS in CONFIGURE_HOWTO.pod for
+information on how to use this feature.
 
 =head2 18. BUG REPORTS AND SUPPORT REQUESTS
 

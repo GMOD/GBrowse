@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::allele_tower;
 
-# $Id: allele_tower.pm,v 1.4.6.2 2005-10-24 19:02:41 scottcain Exp $
+# $Id: allele_tower.pm,v 1.4.6.2.6.1 2007-06-06 19:37:30 lstein Exp $
 # Glyph for drawing each allele found at a SNP position in a column.
 
 use strict;
@@ -21,7 +21,9 @@ sub height {
 sub pad_right {
   my $self = shift;
   my $right = $self->SUPER::pad_right;
-  return $right > 55 ? $right: 55 if $self->label;
+  return $right > 55 ? $right : 55 if $self->label;
+  my $width = GD::Font->Small->width * 2.5;
+  return $width > $right ? $width : $right;
 }
 
 sub draw_component {

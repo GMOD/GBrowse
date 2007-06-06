@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.5 2007-05-04 10:03:00 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.6 2007-06-06 19:37:30 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2569,6 +2569,7 @@ sub build_citation_page {
   # build native features
   print h3($CONFIG->tr('Built_in'));
   for my $feature (@features) {
+    next if $feature =~ /:(overview|region)/i;
     push @citations,make_citation($CONFIG,$feature);
   }
 

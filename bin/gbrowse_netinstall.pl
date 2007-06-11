@@ -15,15 +15,19 @@ BEGIN {
   print STDERR "\nPress return when you are ready to start!\n";
   my $h = <>;
   print STDERR "*** Installing Perl files needed for a net-based install ***\n";
-  eval << 'END';
-    use CPAN '!get';
-    use CPAN::Config;
+  eval {
+    use CPAN qw{install};
+    eval "use CPAN::Config;"; 
+    if ($@) {
+        CPAN::Shell->Config();
+    }
+
+    CPAN::Shell->install('Archive::Zip');
     CPAN::Shell->install('HTML::Tagset');
     CPAN::Shell->install('LWP::Simple');
-    CPAN::Shell->install('Archive::Zip');
     CPAN::Shell->install('Archive::Tar');
     CPAN::HandleConfig->commit;
-END
+  }
 }
 
 use File::Temp qw(tempdir);

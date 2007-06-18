@@ -234,6 +234,7 @@ sub print_top {
   push @args,(-gbrowse_images => $CONFIG->setting('buttons') || '/gbrowse/images/buttons');
   push @args,(-gbrowse_js     => $CONFIG->setting('js')      || '/gbrowse/js');
   push @args,(-reset_toggle   => 1)               if $reset_all;
+  push @args,(-onload         => $CONFIG->setting('onload')) if $CONFIG->setting('onload');
 
   # push all needed javascript files onto top of page
   my $b_tips = $CONFIG->setting('balloon tips');
@@ -255,10 +256,10 @@ sub print_top {
 	   balloon.upLeftConnector  	= '$balloon_images/balloon_up_bottom_left.png';
 	   balloon.upRightConnector 	= '$balloon_images/balloon_up_bottom_right.png';
 	   balloon.downLeftConnector 	= '$balloon_images/balloon_down_top_left.png';
-	   balloon.downRightConnector      = '$balloon_images/balloon_down_top_right.png';
-	   balloon.upBalloon               = '$balloon_images/balloon_up_top.png';
+	   balloon.downRightConnector   = '$balloon_images/balloon_down_top_right.png';
+	   balloon.upBalloon            = '$balloon_images/balloon_up_top.png';
 	   balloon.downBalloon	        = '$balloon_images/balloon_down_bottom.png';
-           balloon.hOffset                 = 'right';
+           balloon.hOffset              = 'right';
            $balloon_config
 	   </script>\n";
     }

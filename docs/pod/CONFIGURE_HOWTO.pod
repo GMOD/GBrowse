@@ -814,6 +814,25 @@ Example:
 
     header = <h1>Welcome to the Volvox Sequence Page</h1>
 
+
+=item * onload
+
+This is the name of javascript function(s) to be called via the page
+body's onload event handler.  Any text included here will be used to
+mark-up the <body> element of the html printed by the gbrowse script.
+The onload event handler will fire *after* the page is finished loading, so
+this setting will be useful for running javascript functions that rely on
+all or part of the HTML having been loaded and interpreted by the browser.
+The onload text must use correct javascript syntax.  For example:
+
+  onload = alert('I am about to do something');doSomething('arg1','arg2')
+
+will result in
+
+ <body onload="alert('I am about to do something');doSomething('arg1','arg2')">
+
+
+
 =item * footer
 
 This is a footer to print at the top of the browser page.  It is

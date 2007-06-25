@@ -148,6 +148,14 @@ sub label2type {
   return shellwords($self->setting($l,'feature')||$self->setting($label,'feature')||'');
 }
 
+
+#FIX ME! (4)
+#Suggestion: insert this into the code
+#sub default_style {
+#  my $self = shift;
+#  return $self->SUPER::style('TRACK DEFAULTS');
+#}
+
 sub style {
   my ($self,$label,$length) = @_;
   my $l = $self->semantic_label($label,$length);
@@ -476,10 +484,10 @@ sub db_settings {
   # caching to avoid calling setting() too many times
   return @{$DB_SETTINGS{$self,$track}} if $DB_SETTINGS{$self,$track};
 
-  my $adaptor = $self->setting($track => 'db_adaptor') or die "No db_adaptor specified";
+  my $adaptor = $self->setting($track => 'db_adaptor') or die "No db_adaptor specified";  #FIX ME! (2) Suggestion: do a "or $self->setting('general' => 'db_adaptor') or die "..""
   eval "require $adaptor; 1" or die $@;
 
-  my $args    = $self->setting($track => 'db_args');
+  my $args    = $self->setting($track => 'db_args');  #FIX ME! (2) Suggestion: do a "or $self->setting('general' => 'db_args') or die "..""
   my @argv = ref $args eq 'CODE'
         ? $args->()
 	: shellwords($args||'');

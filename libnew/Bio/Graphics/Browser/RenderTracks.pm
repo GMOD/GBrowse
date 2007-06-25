@@ -86,7 +86,7 @@ sub render_tracks {
   }
 
   # add third-party data (currently always handled locally and serialized)
-  for my $third_party (@$third_party) {
+  for my $third_party (@$third_party) {   #FIX ME! (9) $third_party is a reference to a hash element, not array
     my $name = $third_party->name or next;  # every third party feature has to have a name now
     $results->{$name} = $self->render_third_party($third_party,$render_options);
   }
@@ -231,10 +231,10 @@ sub render_locally {
   for my $dbname (keys %track2db) {
     my $db        = $db2db{$dbname};              # database object
     my @tracks = keys %{$track2db{$dbname}};   # all tracks that use this database
-    my $results_for_this_db = $self->image_and_map(-db      => $db,
+    my $results_for_this_db = $self->image_and_map(-db      => $db,   #FIX ME! (8) Not returning a hash element, only a single GD object
 						   -tracks  => \@tracks,
 						   -options  => $options);
-    %merged_results = (%merged_results,%$results_for_this_db);
+    %merged_results = (%merged_results,%$results_for_this_db);  #FIX ME! (8) Can't add to hash as it's a single GD object
   }
   return \%merged_results;
 }
@@ -299,8 +299,8 @@ sub image_and_map {
 	      -start     => $seg_start,
 	      -end       => $seg_stop,
 	      -stop      => $seg_stop,  #backward compatibility with old bioperl
-	      -key_color => $self->setting('key bgcolor')     || 'moccasin',
-	      -bgcolor   => $self->setting('detail bgcolor')  || 'white',
+	      -key_color => $self->setting('key bgcolor')     || 'moccasin',   #FIX ME! (3) Suggestion: $source->setting ...
+	      -bgcolor   => $self->setting('detail bgcolor')  || 'white',      #FIX ME! (3) Suggestion: $source->setting ...
 	      -width     => $width,
 	      -key_style    => $keystyle || $source->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
 	      -empty_tracks => $source->setting(general=>'empty_tracks') 	  || DEFAULT_EMPTYTRACKS,
@@ -372,7 +372,7 @@ sub image_and_map {
 	' start = ',$feature->start,' end = ',$feature->end,"\n" if DEBUG;
 
       # allow a single feature to live in multiple tracks
-      for my $label ($self->feature2label($feature,$length)) {
+      for my $label ($self->feature2label($feature,$length)) {    #FIX ME! (5) Suggestion: $source->feature2label ...
 	my $track = $tracks{$label}  or next;
 	$filters{$label}->($feature) or next;
 
@@ -516,6 +516,78 @@ sub image_and_map {
 
   
 }
+
+
+#FIX ME! (6,7)  I've copied and modified the following 3 methods from the original Browser to fit
+#with the current implementation. (June24)
+#
+#copied from Bio::Graphics::Browser (lib)
+sub do_bump {
+  my $self = shift;
+  my ($track_name,$option,$count,$max,$length) = @_;
+
+  my $conf              = $self->source;
+  my $maxb              = $conf->code_setting($track_name => 'bump density');# ||
+#  				$conf->code_setting("TRACK DEFAULTS"=> 'bump density');#warn"maxb is $maxb"; 
+  $maxb                 = $max unless defined $maxb;
+
+  my $maxed_out = $count <= $maxb;
+  my $conf_bump = $conf->semantic_setting($track_name => 'bump',$length);
+  $option ||= 0;
+  return defined $conf_bump ? $conf_bump
+      :  $option == 0 ? $maxed_out
+      :  $option == 1 ? 0
+      :  $option == 2 ? 1
+      :  $option == 3 ? 1
+      :  $option == 4 ? 2
+      :  $option == 5 ? 2
+      :  0;
+}
+
+#copied from Bio::Graphics::Browser (lib)
+sub do_label {
+  my $self = shift;
+  my ($track_name,$option,$count,$max_labels,$length) = @_;
+
+  my $conf = $self->source;
+
+  my $maxl              = $conf->code_setting($track_name => 'label density');
+  $maxl                 = $max_labels unless defined $maxl;
+  my $maxed_out         = $count <= $maxl;
+
+  my $conf_label        = $conf->semantic_setting($track_name => 'label',$length);
+  $conf_label           = 1 unless defined $conf_label;
+
+  $option ||= 0;
+  return  $option == 0 ? $maxed_out && $conf_label
+        : $option == 3 ? $conf_label || 1
+	: $option == 5 ? $conf_label || 1
+        : 0;
+}
+
+#copied from Bio::Graphics::Browser (lib)
+sub do_description {
+  my $self = shift;
+  my ($track_name,$option,$count,$max_labels,$length) = @_;
+
+  my $conf              = $self->source;
+
+  my $maxl              = $conf->code_setting($track_name => 'label density');
+  $maxl                 = $max_labels unless defined $maxl;
+  my $maxed_out = $count <= $maxl;
+
+  my $conf_description  = $conf->semantic_setting($track_name => 'description',$length);
+  $conf_description     = 0 unless defined $conf_description;
+  $option ||= 0;
+  return  $option == 0 ? $maxed_out && $conf_description
+        : $option == 3 ? $conf_description || 1
+        : $option == 5 ? $conf_description || 1
+        : 0;
+}
+
+
+
+
 
 
 1;

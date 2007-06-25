@@ -1450,8 +1450,8 @@ sub render_tracks {
   my $renderer = Bio::Graphics::Browser::RenderTracks->new(-segment  => $seg,
 							   -source   => $self->data_source,
 							   -settings => $self->state);
-  my $tracks   = $renderer->render_tracks(tracks       => \@labels,
-					  third_party  => $self->remote_sources);
+  my $tracks   = $renderer->render_tracks(tracks       => \@labels,          #FIX ME! (1)  Suggestion: change 'tracks' to '-tracks'
+					  third_party  => $self->remote_sources);                 #FIX ME! (1)  Suggestion: change 'third_party' to '-third_party'
 
   my @results;
   for my $label (@labels) {

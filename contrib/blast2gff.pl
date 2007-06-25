@@ -1,39 +1,36 @@
 #!/usr/local/bin/perl -w
 
-use strict;
-use Getopt::Long;
-use Bio::SeqIO;
-use Bio::SearchIO;
-
-
 =head1 NAME
 
 blast2gff.pl - Convert a BLAST result file into a GFF file
 
 =head1 SYNOPSIS
 
-  % blast2gff.pl --blast_result_file [blast result file] --reference_sequence_file [file with reference sequences (optional)] --gff_output_file [gff file name (optional)]
+  % blast2gff.pl --blast_result_file [blast result file] 
+      --reference_sequence_file  [file with reference sequences (optional)] 
+      --gff_output_file [gff file name (optional)]
 
 =head1 DESCRIPTION
 
-This script takes a blast result file and a set of reference sequences and generates                                 
-a GFF file from it, with the following form:                                                                         
+This script takes a blast result file and a set of reference sequences and 
+generates a GFF file from it, with the following form:                                                                                      
 
- GroupUn.1786  tblastn drosophila_HSP  880     1035    .       +       .       Drosophila_Match P91685               
+ GroupUn.1786  tblastn drosophila_HSP 880 1035  .  +  . Drosophila_Match P91685                             
 
-It also adds entries for reference sequences, if the --reference_sequence_file flag is used:                                      
+It also adds entries for reference sequences, if the --reference_sequence_file 
+flag is used:                                      
 
- Group1.2      sequence        sequence        1       265115  .       +       .       Sequence Group1.2                           
+ Group1.2  sequence  sequence  1  265115  .  + .  Sequence Group1.2                           
 
-Also, if the --make_dumpable flag is used, it adds information to the 9th column
+If the --make_dumpable flag is used, it adds information to the 9th column
 ("Class name") to make the alignments dumpable, e.g. Target EST:actg5.3  5 300
 the query start and end sites
 
 =head2 NOTES
 
-This code should be considered beta. Be especially skeptical of the --make_dumpable 
-feature, as it is it untested. Please report all bugs to jtr4v at 
-nospam alumni.zerospam.virginia.edu
+This code should be considered beta. Be especially skeptical of the 
+--make_dumpable feature, as it is it untested. Please report all bugs to
+the gmod-gbrowse mailing list.
 
 =head1 COMMAND-LINE OPTIONS
 
@@ -43,23 +40,22 @@ nospam alumni.zerospam.virginia.edu
 
     --reference_sequence_file <file with reference sequences>    
 
-(Optional) FASTA formatted file with reference ("database")
-sequences that BLAST was run against. If specified, GFF entries
-for the reference sequences are created.
+(Optional) FASTA formatted file with reference ("database") sequences that BLAST was 
+run against. If specified, GFF entries for the reference sequences are created.
 
     --gff_output_file <gff file name>                            
-(Optional) Name for GFF output file. If not supplied, we will
-write to STDOUT.
 
-    --make_dumpable 
+(Optional) Name for GFF output file. If not supplied, we will write to STDOUT.
 
-(Optional) Add information to the 9th column to make the 
-alignments dumpable, e.g. Target EST:actg5.3  5 300
-(where 5 and 300 are the query start and end sites)
+    --make_dumpable                                              
+
+(Optional) Add information to the 9th column to make the alignments dumpable, 
+e.g. Target EST:actg5.3  5 300 (where 5 and 300 are the query start and end sites)
 
 =head1 SEE ALSO
 
-The script scripts/Bio-DB-GFF/search2gff.PLS from Bioperl.
+Bioperl also provides BLAST to GFF capability with its 
+scripts//utilities/search2gff.PLS script.
 
 =head1 AUTHOR
 
@@ -68,10 +64,14 @@ Justin Reese
 jtr4v at nospam alumni.zerospam.virginia.edu
 
 This program is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.  See DISCLAIMER.txt for
-disclaimers of warranty.
+it under the same terms as Perl itself.
 
 =cut
+
+use strict;
+use Getopt::Long;
+use Bio::SeqIO;
+use Bio::SearchIO;
 
 my $usage = "$0 [--make_dumpable] --blast_result_file [blast result file] --reference_sequence_file [file with reference sequences (optional)] --gff_output_file [gff file name (optional)]";
 
@@ -271,7 +271,7 @@ while( my $result = $blast_result_stream->next_result ) {
 		    replace_undef($hsp->query->end);
 	    }
 	    else {
-		$hsp_col9_class_name = upper_case_first_letter(replace_undef($default_hsp_col3_feature_type))." ".
+		$hsp_col9_class_name = upper_case_first_letter(replace_undef($default_match_col3_feature_type))." ".
 		    replace_undef($result->query_name);
 	    }
 

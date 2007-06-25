@@ -271,7 +271,7 @@ while( my $result = $blast_result_stream->next_result ) {
 		    replace_undef($hsp->query->end);
 	    }
 	    else {
-		$hsp_col9_class_name = upper_case_first_letter(replace_undef($default_hsp_col3_feature_type))." ".
+		$hsp_col9_class_name = upper_case_first_letter(replace_undef($default_match_col3_feature_type))." ".
 		    replace_undef($result->query_name);
 	    }
 

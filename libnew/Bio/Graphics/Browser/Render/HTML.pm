@@ -166,9 +166,9 @@ sub render_instructions {
   my $rand         = substr(md5_hex(rand),0,5);
 
   # standard status bar
-  my $html =  div({-id=>'ajaxStatus',
-		   -style=>'position:absolute; width:100px; height:20px; top:5px; left: 5px; display:block; background-color:khaki',
-		   },'Loading...');
+  my $html =  ''; #div({-id=>'ajaxStatus',
+		   #-style=>'position:absolute; width:100px; height:20px; top:5px; left: 5px; display:block; background-color:khaki',
+		   #},'Loading...');
 
   $html .= table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
 		   TR(

@@ -376,9 +376,11 @@ sub generate_panels {
 	      -key_color => $source->setting('key bgcolor')     || 'moccasin',   #FIX ME! (3) Suggestion: $source->setting ...
 	      -bgcolor   => $source->setting('detail bgcolor')  || 'white',      #FIX ME! (3) Suggestion: $source->setting ...
 	      -width     => $width,
-	      -key_style    => $keystyle || $source->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
+#	      -key_style    => $keystyle || $source->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
+	      -key_style    => 'none',
 	      -empty_tracks => $source->setting(general=>'empty_tracks') 	  || DEFAULT_EMPTYTRACKS,
-	      -pad_top      => $title ? $image_class->gdMediumBoldFont->height : 0,
+#	      -pad_top      => $title ? $image_class->gdMediumBoldFont->height : 0,
+	      -pad_top      => 5,
 	      -image_class  => $image_class,
 	      -postgrid     => $postgrid,
 	      -background   => $background,

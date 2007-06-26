@@ -1298,7 +1298,7 @@ update_segment();
 // ]]>
 </script>
 END
-  print div($self->toggle('Details',div({-id=>'panels'},'loading...'))),$load_script;
+  print div($self->toggle('Details',div({-id=>'panels'},'Loading...'))),$load_script;
 }
 
 

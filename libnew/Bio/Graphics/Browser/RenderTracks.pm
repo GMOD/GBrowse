@@ -4,10 +4,11 @@ use strict;
 use warnings;
 
 use Bio::Graphics;
+use CGI 'unescape';
 
 use constant GBROWSE_RENDER => 'gbrowse_render';  # name of the CGI-based image renderer
 use constant TRUE => 1;
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 use constant DEFAULT_KEYSTYLE => 'between';
 use constant DEFAULT_EMPTYTRACKS => 0;
@@ -23,11 +24,13 @@ sub new {
   my $segment       = $options{-segment};
   my $data_source   = $options{-source};
   my $page_settings = $options{-settings};
+  my $renderer      = $options{-renderer};
 
   my $self  = bless {},ref $class || $class;
   $self->segment($segment);
   $self->source($data_source);
   $self->settings($page_settings);
+  $self->page_renderer($renderer);
   return $self;
 }
 
@@ -43,6 +46,13 @@ sub source {
   my $d = $self->{source};
   $self->{source} = shift if @_;
   return $d;
+}
+
+sub page_renderer {
+  my $self = shift;
+  my $d    =$self->{renderer};
+  $self->{renderer} = shift if @_;
+  return $self->{renderer};
 }
 
 sub settings {
@@ -86,9 +96,11 @@ sub render_tracks {
   }
 
   # add third-party data (currently always handled locally and serialized)
-  for my $third_party (@$third_party) {   #FIX ME! (9) $third_party is a reference to a hash element, not array
-    my $name = $third_party->name or next;  # every third party feature has to have a name now
-    $results->{$name} = $self->render_third_party($third_party,$render_options);
+  my $segment  = $self->segment;
+  for my $sourcename ($third_party->sources) {
+    my $ff = $third_party->feature_file($sourcename,$segment);
+    my $name = $ff->name or next;  # every third party feature has to have a name now
+    $results->{$name} = $self->render_third_party($ff,$render_options);
   }
 
   # oh, ouch, we've got to do something with the plugins... or maybe they're handled by the third party hash?
@@ -216,6 +228,9 @@ sub render_locally {
 
   my $source = $self->source;
 
+  my $lang    = $self->page_renderer->language;
+  warn "language = $lang";
+
   # sort tracks by the database they come from
   my (%track2db,%db2db);
 
@@ -226,25 +241,82 @@ sub render_locally {
     $db2db{$db}  =  $db;  # cache database object
   }
 
-  my %merged_results;
+  my %merge;
 
   for my $dbname (keys %track2db) {
     my $db        = $db2db{$dbname};              # database object
     my @tracks = keys %{$track2db{$dbname}};   # all tracks that use this database
-    my $results_for_this_db = $self->image_and_map(-db      => $db,   #FIX ME! (8) Not returning a hash element, only a single GD object
-						   -tracks  => \@tracks,
-						   -options  => $options);
-    %merged_results = (%merged_results,%$results_for_this_db);  #FIX ME! (8) Can't add to hash as it's a single GD object
+    my $results_for_this_db = $self->generate_panels(-db      => $db,
+						     -tracks  => \@tracks,
+						     -options  => $options);
+    %merge = (%merge,%$results_for_this_db);
   }
-  return \%merged_results;
+
+  my %results;
+  for my $label (keys %merge) {
+    my $panel    = $merge{$label} or next;
+    my $gd       = $panel->gd;
+    my $imagemap = $self->make_map($panel,$label,$lang);
+    $results{$label}{gd} = $gd;
+    $results{$label}{map} = $imagemap;
+  }
+
+  return \%results;
+}
+
+sub make_map {
+  my $self  = shift;
+  my ($panel,$label) = @_;
+
+  my $boxes = $panel->boxes;
+
+  my $map = qq(<map name="${label}_map" id="${label}_map">\n);
+  my $flip = $panel->flip;
+
+  my $did_map;
+
+  local $^W = 0; # avoid uninit variable warnings due to poor coderefs
+
+  foreach (@$boxes){
+    next unless $_->[0]->can('primary_tag');
+    my $href   = $self->make_link($_->[0],$panel,$label,$_->[5]) or next;
+    my $alt    = unescape($self->make_title($_->[0],$panel,$label,$_->[5]));
+    my $target = $self->make_link_target($_->[0],$panel,$label,$_->[5]);
+    my $t      = defined($target) ? qq(target="$target") : '';
+    $map .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href" title="$alt" alt="$alt" $t/>\n);
+  }
+
+  # now add links for the track labels
+  if ($panel->can('key_boxes') && (my $keys = $panel->key_boxes)) {
+    for my $key (@$keys) {
+      my ($key_text,$x1,$y1,$x2,$y2,$track) = @$key;
+      my $link;
+      if ($label =~ /^file:/) {
+	$link = "?Download%20File=$key_text";
+      }
+      elsif ($label =~ /^w+:/) {
+	next;
+      }
+      else {
+	$link = "?help=citations#$label";
+      }
+      my $citation = $self->citation($label,$self->page_renderer->language);
+      my $cite     = defined $citation ? qq(title="$citation") : '';
+      $map .= qq(<area shape="rect" coords="$x1,$y1,$x2,$y2" href="$link" target="citation" $cite alt="$label"/>\n);
+    }
+  }
+
+  $map .= "</map>\n";
+  $map;
 }
 
 
 # finally....
 # this is the routine that actually does the work!!!!
-sub image_and_map {
+sub generate_panels {
   my $self    = shift;
   my %args    = @_;
+
   my $db      = $args{-db};
   my $tracks  = $args{-tracks};
   my $options = $args{-options};
@@ -268,6 +340,8 @@ sub image_and_map {
 
   my $segment  = $self->segment;
 
+  $segment->factory->debug(1) if DEBUG;
+
   # Bring in the appropriate package - just for the fonts. Ugh.
   eval "use $image_class";
 
@@ -277,10 +351,10 @@ sub image_and_map {
   my $max_bump       = $source->setting('bump density');
   my $length         = $segment->length;
 
-  my @feature_types  = map { $source->label2type($_,$length) } @$tracks;
+  my @feature_types = map { $source->label2type($_,$length) } @$tracks;
   my %filters = map { my %conf =  $source->style($_); 
 		      $conf{'-filter'} ? ($_ => $conf{'-filter'})
-			               : ($_ => \&TRUE)
+			               : ()
 		      } @$tracks;
 
   # Create the tracks that we will need
@@ -299,8 +373,8 @@ sub image_and_map {
 	      -start     => $seg_start,
 	      -end       => $seg_stop,
 	      -stop      => $seg_stop,  #backward compatibility with old bioperl
-	      -key_color => $self->setting('key bgcolor')     || 'moccasin',   #FIX ME! (3) Suggestion: $source->setting ...
-	      -bgcolor   => $self->setting('detail bgcolor')  || 'white',      #FIX ME! (3) Suggestion: $source->setting ...
+	      -key_color => $source->setting('key bgcolor')     || 'moccasin',   #FIX ME! (3) Suggestion: $source->setting ...
+	      -bgcolor   => $source->setting('detail bgcolor')  || 'white',      #FIX ME! (3) Suggestion: $source->setting ...
 	      -width     => $width,
 	      -key_style    => $keystyle || $source->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
 	      -empty_tracks => $source->setting(general=>'empty_tracks') 	  || DEFAULT_EMPTYTRACKS,
@@ -321,6 +395,9 @@ sub image_and_map {
 
   push @argv,(-pad_left =>$pl, -pad_right=>$pr) if $p;
 
+  # here is where we begin to build the results up
+  my @results;
+
   my $panel = Bio::Graphics::Panel->new(@argv);
 
   $panel->add_track($segment      => 'arrow',
@@ -331,121 +408,102 @@ sub image_and_map {
 		    -unit_divider => $source->setting(general=>'unit_divider') || 1,
 		   ) unless $suppress_scale;
 
-  my (%track2label,%tracks,@blank_tracks);
+  #---------------------------------------------------------------------------------
+  # Track and panel creation
 
-  for (my $i= 0; $i < @$tracks; $i++) {
+  # we create two hashes:
+  #        the %panels hash maps label names to panels
+  #        the %tracks hash maps label names to tracks within the panels
 
-    my $label = $tracks->[$i];
+  my %panels;
+  $panels{__scale__} = $panel;
+  my %tracks;
 
-    # if "hide" is set to true, then track goes away
+  for my $label (@$tracks) {
+    next if $panels{$label};  # already created for some reason
+
+    # if "hide" is set to true, then skip panel
     next if $source->semantic_setting($label=>'hide',$length);
 
-    my $track;
-
-    # if the section is marked as being a "global feature", then we apply the glyph to the entire segment
+    $panels{$label} = Bio::Graphics::Panel->new(@argv,-pad_top=>16,-extend_grid=>1);
     if ($source->semantic_setting($label=>'global feature',$length)) {
-      $track = $panel->add_track($segment,
-				 $source->default_style,
-				 $source->i18n_style($label,$lang),
-				);
-    }
-
-    else {
+      $tracks{$label} = $panels{$label}->add_track($segment,
+						   $source->default_style,
+						   $source->i18n_style($label,$lang)
+						  );
+    } else {
       my @settings = ($source->default_style,$source->i18n_style($label,$lang,$length));
       push @settings,(-hilite => $hilite_callback) if $hilite_callback;
-      $track = $panel->add_track(-glyph => 'generic',@settings);
+      $tracks{$label} = $panels{$label}->add_track(-glyph => 'generic',@settings);
     }
-
-    $track2label{$track} = $label;
-    $tracks{$label}      = $track;
   }
+  #---------------------------------------------------------------------------------
 
-  if (@feature_types) {  # don't do anything unless we have features to fetch!
+  #---------------------------------------------------------------------------------
+  # Adding features from the database
 
+  my (%groups,%feature_count,%group_pattern,%group_field);
+  if (@feature_types) {
     my $iterator = $segment->get_feature_stream(-type=>\@feature_types);
-    warn "feature types = @feature_types\n" if DEBUG;
-    my (%groups,%feature_count,%group_pattern,%group_on,%group_on_field);
 
     while (my $feature = $iterator->next_seq) {
+      my @labels = $source->feature2label($feature,$length);
 
-      warn "next feature = $feature, type = ",$feature->type,' method = ',$feature->method,
-	' start = ',$feature->start,' end = ',$feature->end,"\n" if DEBUG;
+      for my $label (@labels) {
 
-      # allow a single feature to live in multiple tracks
-      for my $label ($self->feature2label($feature,$length)) {    #FIX ME! (5) Suggestion: $source->feature2label ...
 	my $track = $tracks{$label}  or next;
-	$filters{$label}->($feature) or next;
-
-	warn "feature = $feature, label = $label, track = $track\n" if DEBUG;
-
+	$filters{$label}->($feature) or next if $filters{$label};
 	$feature_count{$label}++;
 
-	# Handle name-based groupings.  Since this occurs for every feature
-	# we cache the pattern data.
-	warn "$track group pattern => ",$source->code_setting($label => 'group_pattern') if DEBUG;
-	exists $group_pattern{$label} or $group_pattern{$label} = $source->code_setting($label => 'group_pattern');
-	
-	if (defined $group_pattern{$label}) {
-	  push @{$groups{$label}},$feature;
-	  next;
+
+	# ------------------------------------------------------------------------------------------
+	# GROUP CODE
+	# Handle name-based groupings.
+	unless (exists $group_pattern{$label}) {
+	  $group_pattern{$label} = $source->code_setting($label => 'group_pattern');
+	  $group_pattern{$label} =~ s!^/(.+)/$!$1! if $group_pattern{$label}; # clean up regexp delimiters
 	}
 
 	# Handle generic grouping (needed for GFF3 database)
-	warn "$track group_on => ",$source->code_setting($label => 'group_on') if DEBUG;
-	exists $group_on_field{$label} or $group_on_field{$label} = $source->code_setting($label => 'group_on');
+	$group_field{$label} = $source->code_setting($label => 'group_on') unless exists $group_field{$label};
 	
-	if (my $field = $group_on_field{$label}) {
+	if (my $pattern = $group_pattern{$label}) {
+	  my $name = $feature->name or next;
+	  (my $base = $name) =~ s/$pattern//i;
+	  $groups{$label}{$base} ||= Bio::Graphics::Feature->new(-type   => 'group');
+	  $groups{$label}{$base}->add_segment($feature);
+	  next;
+	}
+	
+	if (my $field = $group_field{$label}) {
 	  my $base = eval{$feature->$field};
 	  if (defined $base) {
-	    my $group_on_object = $group_on{$label}{$base} ||= Bio::Graphics::Feature->new(-start=>$feature->start,
-											      -end  =>$feature->end,
-											      -strand => $feature->strand,
-											      -type =>$feature->primary_tag);
-	    $group_on_object->add_SeqFeature($feature);
+	    $groups{$label}{$base} ||= Bio::Graphics::Feature->new(-start  =>$feature->start,
+								   -end    =>$feature->end,
+								   -strand => $feature->strand,
+								   -type   =>$feature->primary_tag);
+	    $groups{$label}{$base}->add_SeqFeature($feature);
 	    next;
 	  }
 	}
+	# ------------------------------------------------------------------------------------------
 
 	$track->add_feature($feature);
       }
     }
 
-    # fix up groups and group_on
-    # the former is traditional name-based grouping based on a common prefix/suffix
-    # the latter creates composite features based on an arbitrary method call
+    # ------------------------------------------------------------------------------------------
+    # fixups
 
-    for my $label (keys %group_on) {
-      my $track = $tracks{$label};
-      my $group_on = $group_on{$label} or next;
-      $track->add_feature($_) foreach values %$group_on;
-    }
+    # fix up %group features
+    # the former creates composite features based on an arbitrary method call
+    # the latter is traditional name-based grouping based on a common prefix/suffix
 
-    # handle pattern-based group matches
     for my $label (keys %groups) {
-      my $track = $tracks{$label};
-      # fix up groups
-      my $set     = $groups{$label};
-      my $pattern = $group_pattern{$label} or next;
-      $pattern =~ s!^/(.+)/$!$1!;  # clean up regexp delimiters
-
-      my $count    = $feature_count{$label};
-      $count       = $limit->{$label} if $limit->{$label} && $limit->{$label} < $count;
-      my $do_bump  = $self->do_bump($label, $options->{$label},$count,$max_bump,$length);
-
-      if (!$do_bump) {  # don't bother grouping if we aren't bumping - no one will see anyway
-	$track->add_feature($_) foreach @$set;
-	next;
-      }
-
-      my %pairs;
-      for my $a (@$set) {
-	my $name = $a->name or next;
-	(my $base = $name) =~ s/$pattern//i;
- 	push @{$pairs{$base}},$a;
-      }
-      foreach (values %pairs) {
-	$track->add_group($_);
-      }
+      my $track  = $tracks{$label};
+      my $g      = $groups{$label} or next;
+      $track->add_feature($_) foreach values %$g;
+      $feature_count{$label} += keys %$g;
     }
 
     # configure the tracks based on their counts
@@ -470,6 +528,7 @@ sub image_and_map {
 	if $limit->{$label} && $limit->{$label} > 0;
     }
   }
+  # ------------------------------------------------------------------------------------------
 
   # add additional features, if any
   my $offset = 0;
@@ -483,40 +542,20 @@ sub image_and_map {
 
   my $extra_tracks = $options->{noscale} ? 0 : 1;
 
-  for my $track (@blank_tracks) {
-    my $file = $feature_files->{$tracks->[$track]} or next;
+  # ---------------------------------------------------------------------------------------
+  # feature files
+
+  for my $label (keys %$feature_files) {
+    my $file = $feature_files->{$label} or next;
     ref $file or next;
-    $track += $offset + $extra_tracks;
     my $name = $file->name || '';
-    $options->{$name} ||= 0;
-    my ($inserted,undef,$new_tracks)
-      = eval { $file->render($panel,$track,$options->{$name},
-			     $max_bump,$max_labels,
-			     $select
-			    )
-	     };
+    $options->{$name}      ||= 0;
+    eval {$file->render($panels{$label},0,$options->{$name},$max_bump,$max_labels,$select)};
     $self->error("$name: $@") if $@;
-    foreach (@$new_tracks) {
-      $track2label{$_} = $file;
-    }
-    $offset += $inserted-1; # adjust for feature files that insert multiple tracks
   }
 
-  my $gd = $panel->gd;
-
-  if ($title) {
-    my $x = ($width - length($title) * $image_class->gdMediumBoldFont->width)/2;
-    $gd->string($image_class->gdMediumBoldFont,$x,0,$title,$panel->translate_color('black'));
-  }
-  return $gd   unless wantarray;
-
-  my $boxes    = $panel->boxes;
-
-  return ($gd,$boxes,$panel,\%track2label);
-
-  
+  return \%panels;
 }
-
 
 #FIX ME! (6,7)  I've copied and modified the following 3 methods from the original Browser to fit
 #with the current implementation. (June24)
@@ -528,8 +567,11 @@ sub do_bump {
 
   my $conf              = $self->source;
   my $maxb              = $conf->code_setting($track_name => 'bump density');# ||
-#  				$conf->code_setting("TRACK DEFAULTS"=> 'bump density');#warn"maxb is $maxb"; 
+#  				$conf->code_setting("TRACK DEFAULTS"=> 'bump density');#warn"maxb is $maxb";
   $maxb                 = $max unless defined $maxb;
+
+  $count ||= 0;
+  $maxb  ||= 0;
 
   my $maxed_out = $count <= $maxb;
   my $conf_bump = $conf->semantic_setting($track_name => 'bump',$length);
@@ -586,9 +628,151 @@ sub do_description {
 }
 
 
+# override make_link to allow for code references
+sub make_link {
+  my $self     = shift;
+  my ($feature,$panel,$label,$track)  = @_;
 
+  my $data_source = $self->source;
+  my $ds_name     = $data_source->name;
 
+  if ($feature->can('url')) {
+    my $link = $feature->url;
+    return $link if defined $link;
+  }
+  return $label->make_link($feature) if $label && $label->isa('Bio::Graphics::FeatureFile');
 
+  $panel ||= 'Bio::Graphics::Panel';
+  $label ||= $data_source->feature2label($feature);
 
+  # most specific -- a configuration line
+  my $link     = $data_source->code_setting($label,'link');
+
+  # less specific - a smart feature
+  $link        = $feature->make_link if $feature->can('make_link') && !defined $link;
+
+  # general defaults
+  $link        = $data_source->code_setting('TRACK DEFAULTS'=>'link') unless defined $link;
+  $link        = $data_source->code_setting(general=>'link')          unless defined $link;
+
+  return unless $link;
+
+  if (ref($link) eq 'CODE') {
+    my $val = eval {$link->($feature,$panel,$track)};
+    $data_source->_callback_complain($label=>'link') if $@;
+    return $val;
+  }
+  elsif (!$link || $link eq 'AUTO') {
+    my $n     = $feature->display_name;
+    my $c     = $feature->seq_id;
+    my $name  = CGI::escape("$n");  # workaround CGI.pm bug
+    my $class = eval {CGI::escape($feature->class)}||'';
+    my $ref   = CGI::escape("$c");  # workaround again
+    my $start = CGI::escape($feature->start);
+    my $end   = CGI::escape($feature->end);
+    my $src   = CGI::escape(eval{$feature->source} || '');
+    my $url   = CGI->request_uri || '../..';
+    $url      =~ s!/gbrowse.*!!;
+    $url      .= "/gbrowse_details/$ds_name?name=$name;class=$class;ref=$ref;start=$start;end=$end";
+    return $url;
+  }
+  return $data_source->link_pattern($link,$feature,$panel);
+}
+
+# make the title for an object on a clickable imagemap
+sub make_title {
+  my $self = shift;
+  my ($feature,$panel,$label,$track) = @_;
+  local $^W = 0;  # tired of uninitialized variable warnings
+  my $data_source = $self->source;
+
+  my ($title,$key) = ('','');
+
+ TRY: {
+    if ($label && $label->isa('Bio::Graphics::FeatureFile')) {
+      $key = $label->name;
+      $title = $label->make_title($feature) or last TRY;
+      return $title;
+    }
+
+    else {
+      $label     ||= $data_source->feature2label($feature) or last TRY;
+      $key       ||= $data_source->setting($label,'key') || $label;
+      $key         =~ s/s$//;
+      $key         = $feature->segment->dsn if $feature->isa('Bio::Das::Feature');  # for DAS sources
+
+      my $link     = $data_source->code_setting($label,'title')
+	|| $data_source->code_setting('TRACK DEFAULTS'=>'title')
+	  || $data_source->code_setting(general=>'title');
+      if (defined $link && ref($link) eq 'CODE') {
+	$title       = eval {$link->($feature,$panel,$track)};
+	$self->_callback_complain($label=>'title') if $@;
+	return $title if defined $title;
+      }
+      return $data_source->link_pattern($link,$feature) if $link && $link ne 'AUTO';
+    }
+  }
+
+  # otherwise, try it ourselves
+  $title = eval {
+    if ($feature->can('target') && (my $target = $feature->target)) {
+      join (' ',
+	    "$key:",
+	    $feature->seq_id.':'.
+	    $feature->start."..".$feature->end,
+	    $feature->target->seq_id.':'.
+	    $feature->target->start."..".$feature->target->end);
+    } else {
+      my ($start,$end) = ($feature->start,$feature->end);
+      ($start,$end)    = ($end,$start) if $feature->strand < 0;
+      join(' ',
+	   "$key:",
+	   $feature->can('display_name') ? $feature->display_name : $feature->info,
+	   ($feature->can('seq_id')      ? $feature->seq_id : $feature->location->seq_id)
+	   .":".
+	   (defined $start ? $start : '?')."..".(defined $end ? $end : '?')
+	  );
+    }
+  };
+  warn $@ if $@;
+
+  return $title;
+}
+
+sub make_link_target {
+  my $self = shift;
+  my ($feature,$panel,$label,$track) = @_;
+  my $data_source = $self->source;
+
+  if ($feature->isa('Bio::Das::Feature')) { # new window
+    my $dsn = $feature->segment->dsn;
+    $dsn =~ s/^.+\///;
+    return $dsn;
+  }
+
+  $label    ||= $data_source->feature2label($feature) or return;
+  my $link_target = $data_source->code_setting($label,'link_target')
+    || $data_source->code_setting('LINK DEFAULTS' => 'link_target')
+    || $data_source->code_setting(general => 'link_target');
+  $link_target = eval {$link_target->($feature,$panel,$track)} if ref($link_target) eq 'CODE';
+  $data_source->_callback_complain($label=>'link_target') if $@;
+  return $link_target;
+}
+
+# FIXME - belongs in Render.pm, not here
+sub citation {
+  my $self = shift;
+  my $label     = shift;
+  my $language  = shift;
+  my $config = $self->source;
+  my $c;
+  if ($language) {
+    for my $l ($language->language) {
+      $c ||= $config->setting($label=>"citation:$l");
+    }
+  }
+  $c ||= $config->setting($label=>'citation');
+  $c;
+}
 1;
 

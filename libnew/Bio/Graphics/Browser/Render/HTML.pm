@@ -260,7 +260,7 @@ sub render_track_table {
 				      -values     => \@track_labels,
 				      -labels     => \%labels,
 				      -defaults   => \@defaults,
-				      -onClick    => "gbTurnOff('$id');gbToggleTrack(this)",
+				      -onClick    => "gbTurnOff('$id');gbToggleTrack(this);update_segment(Form.serialize(document.getElementById('trackform')))",
 				      -override   => 1,
 				     );
       $table = $self->tableize(\@checkboxes);
@@ -289,6 +289,7 @@ sub render_track_table {
 
   autoEscape(1);
   print $self->toggle('Tracks',
+		      start_form(-name=>'trackform',-id=>'trackform',-onSubmit=>'update_segment(Form.serialize(this)); return false'),
 		      div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
 		      table({-width=>'100%',-class=>"searchbody"},
 			    TR(td{-align=>'right'},
@@ -296,7 +297,8 @@ sub render_track_table {
 			       b(submit(-name => $self->tr('Update'))
 				)
 			      )
-			   )
+			   ),
+		      end_form
 		     );
 }
 

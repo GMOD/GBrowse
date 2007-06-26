@@ -148,13 +148,10 @@ sub label2type {
   return shellwords($self->setting($l,'feature')||$self->setting($label,'feature')||'');
 }
 
-
-#FIX ME! (4)
-#Suggestion: insert this into the code
-#sub default_style {
-#  my $self = shift;
-#  return $self->SUPER::style('TRACK DEFAULTS');
-#}
+sub default_style {
+  my $self = shift;
+  return $self->SUPER::style('TRACK DEFAULTS');
+}
 
 sub style {
   my ($self,$label,$length) = @_;
@@ -199,6 +196,14 @@ sub setting {
   my $self = shift;
   my ($label,$option,@rest) = @_ >= 2 ? @_ : ('general',@_);
   $self->SUPER::setting($label,$option,@rest);
+}
+
+sub fallback_setting {
+  my $self = shift;
+  my ($label,$option,@rest) = @_;
+  my $setting = $self->SUPER::setting($label,$option,@rest);
+  return $setting if defined $setting;
+  return $self->SUPER::setting('general',$option,@rest);
 }
 
 sub plugin_setting {
@@ -484,36 +489,36 @@ sub db_settings {
   # caching to avoid calling setting() too many times
   return @{$DB_SETTINGS{$self,$track}} if $DB_SETTINGS{$self,$track};
 
-  my $adaptor = $self->setting($track => 'db_adaptor') or die "No db_adaptor specified";  #FIX ME! (2) Suggestion: do a "or $self->setting('general' => 'db_adaptor') or die "..""
+  my $adaptor = $self->fallback_setting($track => 'db_adaptor') or die "No db_adaptor specified";
   eval "require $adaptor; 1" or die $@;
 
-  my $args    = $self->setting($track => 'db_args');  #FIX ME! (2) Suggestion: do a "or $self->setting('general' => 'db_args') or die "..""
+  my $args    = $self->fallback_setting($track => 'db_args');
   my @argv = ref $args eq 'CODE'
         ? $args->()
 	: shellwords($args||'');
 
   # for compatibility with older versions of the browser, we'll hard-code some arguments
-  if (my $adaptor = $self->setting($track => 'adaptor')) {
+  if (my $adaptor = $self->fallback_setting($track => 'adaptor')) {
     push @argv,(-adaptor => $adaptor);
   }
 
-  if (my $dsn = $self->setting($track => 'database')) {
+  if (my $dsn = $self->fallback_setting($track => 'database')) {
     push @argv,(-dsn => $dsn);
   }
 
-  if (my $fasta = $self->setting($track => 'fasta_files')) {
+  if (my $fasta = $self->fallback_setting($track => 'fasta_files')) {
     push @argv,(-fasta=>$fasta);
   }
 
-  if (my $user = $self->setting($track => 'user')) {
+  if (my $user = $self->fallback_setting($track => 'user')) {
     push @argv,(-user=>$user);
   }
 
-  if (my $pass = $self->setting($track => 'pass')) {
+  if (my $pass = $self->fallback_setting($track => 'pass')) {
     push @argv,(-pass=>$pass);
   }
 
-  if (defined (my $a = $self->setting($track => 'aggregators'))) {
+  if (defined (my $a = $self->fallback_setting($track => 'aggregators'))) {
     my @aggregators = shellwords($a||'');
     push @argv,(-aggregator => \@aggregators);
   }

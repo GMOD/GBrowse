@@ -7,6 +7,7 @@ use Bio::Graphics::Browser::PluginSet;
 use Bio::Graphics::Browser::UploadSet;
 use Bio::Graphics::Browser::RemoteSet;
 use Bio::Graphics::Browser::Shellwords;
+use Digest::MD5 'md5_hex';
 use CGI qw(param request_method header url iframe img span div br center);
 use Carp 'croak';
 
@@ -249,8 +250,8 @@ sub render_body {
   my $title = $self->render_top($features);
 
   # THIS IS AN ASYNCHRONOUS CALL AND NEEDS TO BE MOVED OUT OF THE RENDER_* TREE
-  warn "param() =",join ' ',param();
   if (param('render') && param('render') eq 'detailview') {
+    warn "calling render tracks...";
     $self->render_tracks($self->seg);
     print "</html>";
     return;
@@ -406,7 +407,7 @@ sub init_remote_sources {
   my $remote_sources   = Bio::Graphics::Browser::RemoteSet->new($self->data_source,$self->state);
   $self->uploaded_sources($uploaded_sources);
   $self->remote_sources($remote_sources);
-  $uploaded_sources && $remote_sources;
+  return $uploaded_sources && $remote_sources;  # true if both defined
 }
 
 sub clean_up {
@@ -658,7 +659,7 @@ sub update_coordinates {
     $position_updated++;
   }
 
-  my $current_span = $state->{stop} - $state->{start} + 1;
+  my $current_span = defined $state->{stop} ? $state->{stop} - $state->{start} + 1 : 0;
   my $new_span     = param('span');
   if ($new_span && $current_span != $new_span) {
     $self->zoom_to_span($state,$new_span);
@@ -1121,142 +1122,6 @@ sub overview_pad {
   return ($max * $image_class->gdMediumBoldFont->width + 3,$pad);
 }
 
-# override make_link to allow for code references
-sub make_link {
-  my $self     = shift;
-  my ($feature,$panel,$label,$track)  = @_;
-
-  my $data_source = $self->data_source;
-  my $ds_name     = $data_source->name;
-
-  if ($feature->can('url')) {
-    my $link = $feature->url;
-    return $link if defined $link;
-  }
-  return $label->make_link($feature) if $label && $label->isa('Bio::Graphics::FeatureFile');
-
-  $panel ||= 'Bio::Graphics::Panel';
-  $label ||= $data_source->feature2label($feature);
-
-  # most specific -- a configuration line
-  my $link     = $data_source->code_setting($label,'link');
-
-  # less specific - a smart feature
-  $link        = $feature->make_link if $feature->can('make_link') && !defined $link;
-
-  # general defaults
-  $link        = $data_source->code_setting('TRACK DEFAULTS'=>'link') unless defined $link;
-  $link        = $data_source->code_setting(general=>'link')          unless defined $link;
-
-  return unless $link;
-
-  if (ref($link) eq 'CODE') {
-    my $val = eval {$link->($feature,$panel,$track)};
-    $data_source->_callback_complain($label=>'link') if $@;
-    return $val;
-  }
-  elsif (!$link || $link eq 'AUTO') {
-    my $n     = $feature->display_name;
-    my $c     = $feature->seq_id;
-    my $name  = CGI::escape("$n");  # workaround CGI.pm bug
-    my $class = eval {CGI::escape($feature->class)}||'';
-    my $ref   = CGI::escape("$c");  # workaround again
-    my $start = CGI::escape($feature->start);
-    my $end   = CGI::escape($feature->end);
-    my $src   = CGI::escape(eval{$feature->source} || '');
-    my $url   = CGI->request_uri || '../..';
-    $url      =~ s!/gbrowse.*!!;
-    $url      .= "/gbrowse_details/$ds_name?name=$name;class=$class;ref=$ref;start=$start;end=$end";
-    return $url;
-  }
-  return $data_source->link_pattern($link,$feature,$panel);
-}
-
-# make the title for an object on a clickable imagemap
-sub make_title {
-  my $self = shift;
-  my ($feature,$panel,$label,$track) = @_;
-  local $^W = 0;  # tired of uninitialized variable warnings
-  my $data_source = $self->data_source;
-
-  my ($title,$key) = ('','');
-
- TRY: {
-    if ($label && $label->isa('Bio::Graphics::FeatureFile')) {
-      $key = $label->name;
-      $title = $label->make_title($feature) or last TRY;
-      return $title;
-    }
-
-    else {
-      $label     ||= $data_source->feature2label($feature) or last TRY;
-      $key       ||= $data_source->setting($label,'key') || $label;
-      $key         =~ s/s$//;
-      $key         = $feature->segment->dsn if $feature->isa('Bio::Das::Feature');  # for DAS sources
-
-      my $link     = $data_source->code_setting($label,'title')
-	|| $data_source->code_setting('TRACK DEFAULTS'=>'title')
-	  || $data_source->code_setting(general=>'title');
-      if (defined $link && ref($link) eq 'CODE') {
-	$title       = eval {$link->($feature,$panel,$track)};
-	$self->_callback_complain($label=>'title') if $@;
-	return $title if defined $title;
-      }
-      return $data_source->link_pattern($link,$feature) if $link && $link ne 'AUTO';
-    }
-  }
-
-  # otherwise, try it ourselves
-  $title = eval {
-    if ($feature->can('target') && (my $target = $feature->target)) {
-      join (' ',
-	    "$key:",
-	    $feature->seq_id.':'.
-	    $feature->start."..".$feature->end,
-	    $feature->target->seq_id.':'.
-	    $feature->target->start."..".$feature->target->end);
-    } else {
-      my ($start,$end) = ($feature->start,$feature->end);
-      ($start,$end)    = ($end,$start) if $feature->strand < 0;
-      join(' ',
-	   "$key:",
-	   $feature->can('display_name') ? $feature->display_name : $feature->info,
-	   ($feature->can('seq_id')      ? $feature->seq_id : $feature->location->seq_id)
-	   .":".
-	   (defined $start ? $start : '?')."..".(defined $end ? $end : '?')
-	  );
-    }
-  };
-  warn $@ if $@;
-
-  return $title;
-}
-
-sub make_link_target {
-  my $self = shift;
-  my ($feature,$panel,$label,$track) = @_;
-  my $data_source = $self->data_source;
-
-  if ($feature->isa('Bio::Das::Feature')) { # new window
-    my $dsn = $feature->segment->dsn;
-    $dsn =~ s/^.+\///;
-    return $dsn;
-  }
-
-  $label    ||= $data_source->feature2label($feature) or return;
-  my $link_target = $data_source->code_setting($label,'link_target')
-    || $data_source->code_setting('LINK DEFAULTS' => 'link_target')
-    || $data_source->code_setting(general => 'link_target');
-  $link_target = eval {$link_target->($feature,$panel,$track)} if ref($link_target) eq 'CODE';
-  $data_source->_callback_complain($label=>'link_target') if $@;
-  return $link_target;
-}
-
-sub default_style {
-  my $self = shift;
-  return $self->SUPER::style('TRACK DEFAULTS');
-}
-
 ##### language stuff
 sub set_language {
   my $self = shift;
@@ -1449,9 +1314,10 @@ sub render_tracks {
 
   my $renderer = Bio::Graphics::Browser::RenderTracks->new(-segment  => $seg,
 							   -source   => $self->data_source,
-							   -settings => $self->state);
-  my $tracks   = $renderer->render_tracks(tracks       => \@labels,          #FIX ME! (1)  Suggestion: change 'tracks' to '-tracks'
-					  third_party  => $self->remote_sources);                 #FIX ME! (1)  Suggestion: change 'third_party' to '-third_party'
+							   -settings => $self->state,
+							   -renderer => $self);
+  my $tracks   = $renderer->render_tracks(-tracks       => \@labels,
+					  -third_party  => $self->remote_sources);
 
   my @results;
   for my $label (@labels) {
@@ -1460,9 +1326,9 @@ sub render_tracks {
 			img({-src=>$plus},img({-src=>$minus}),
 			    $title." $seg"));
     next unless $tracks->{$label}; # not there for some reason
-    my ($gd,$boxes) = @{$tracks->{$label}};
-    my $url      = $self->generate_image($gd);
-    my $imagemap = $renderer->boxes2imagemap($boxes);
+    my $gd        = $tracks->{$label}{gd};
+    my $imagemap  = $tracks->{$label}{map};
+    my $url       = $self->generate_image($gd);
 
     my $class   = $label eq '__scale__' ? 'scale' : 'track';
     push @results,div({id=>"track_${label}",-class=>$class},
@@ -1472,6 +1338,7 @@ sub render_tracks {
 			     $imagemap,
 			    ),
 		     );
+    warn "results = @results";
   }
   my $state = $self->state;
   print div({-id=>'tracks'},@results),$self->drag_script('tracks'),$self->update_controls_script;
@@ -1575,7 +1442,7 @@ sub generate_image {
   $signature =~ /^([0-9A-Fa-f]+)$/g or return;
   $signature = $1;
 
-  my ($uri,$path) = $self->globals->tmpdir($self->source.'/img');
+  my ($uri,$path) = $self->globals->tmpdir($self->data_source->name.'/img');
   my $url         = sprintf("%s/%s.%s",$uri,$signature,$extension);
   my $imagefile   = sprintf("%s/%s.%s",$path,$signature,$extension);
   open (F,">$imagefile") || die("Can't open image file $imagefile for writing: $!\n");

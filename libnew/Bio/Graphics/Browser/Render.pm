@@ -281,6 +281,7 @@ sub render_top    {
   my $features = shift;
 }
 
+#never called, method in HTML.pm with same name is called run instead
 sub render_navbar {
   my $self = shift;
   my $seg  = shift;
@@ -313,6 +314,7 @@ sub render_config {
   $self->render_uploads();
 }
 
+#never called, method in HTML.pm with same name is called run instead
 sub render_track_table {
   my $self = shift;
 }
@@ -1210,7 +1212,8 @@ sub unit_to_value {
 
 sub get_zoomincrement {
   my $self = shift;
-  my $zoom = $self->setting('fine zoom');
+# my $zoom = $self->setting('fine zoom');
+  my $zoom = $self->setting('default fine zoom');
   $zoom;
 }
 
@@ -1320,9 +1323,10 @@ sub render_tracks {
 					  -third_party  => $self->remote_sources);
 
   my @results;
-  for my $label (@labels) {
+  for my $label ('__scale__',@labels) {
     my $title    = $self->setting($label=>'key');
-    my $titlebar = span({-class=>'titlebar'},
+    my $titlebar = $label eq '__scale__' ? ""
+    	:	span({-class=>'titlebar'},
 			img({-src=>$plus},img({-src=>$minus}),
 			    $title." $seg"));
     next unless $tracks->{$label}; # not there for some reason

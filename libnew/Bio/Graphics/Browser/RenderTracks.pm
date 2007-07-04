@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Bio::Graphics;
-use CGI 'unescape';
+use CGI qw(param escape unescape);
 
 use constant GBROWSE_RENDER => 'gbrowse_render';  # name of the CGI-based image renderer
 use constant TRUE => 1;
@@ -13,6 +13,7 @@ use constant DEBUG => 0;
 use constant DEFAULT_KEYSTYLE => 'between';
 use constant DEFAULT_EMPTYTRACKS => 0;
 use constant PAD_DETAIL_SIDES    => 10;
+use constant RULER_INTERVALS     => 20;
 
 # when we load, we set a global indicating the LWP::Parallel::UserAgent is available
 my $LPU_AVAILABLE;
@@ -256,7 +257,8 @@ sub render_locally {
   for my $label (keys %merge) {
     my $panel    = $merge{$label} or next;
     my $gd       = $panel->gd;
-    my $imagemap = $self->make_map($panel,$label,$lang);
+    my $imagemap = $label eq '__scale__' ? $self->make_centering_map($panel) 
+    	: $self->make_map($panel,$label,$lang);
     $results{$label}{gd} = $gd;
     $results{$label}{map} = $imagemap;
   }
@@ -308,6 +310,51 @@ sub make_map {
 
   $map .= "</map>\n";
   $map;
+}
+
+# this creates image map for rulers and scales, where clicking on the scale
+# should center the image on the scale.
+sub make_centering_map {
+  my $self   = shift;
+  my $panel  = shift;
+  my $ruler  = $panel->boxes->[0];
+  
+
+  my $flip   = $panel->flip;
+
+  return if $ruler->[3]-$ruler->[1] == 0;
+
+  my $length = $ruler->[0]->length;
+  my $offset = $ruler->[0]->start;
+  my $end    = $ruler->[0]->end;
+  my $scale  = $length/($ruler->[3]-$ruler->[1]);
+  my $pl     = $ruler->[-1]->panel->pad_left;
+
+  # divide into RULER_INTERVAL intervals
+  my $portion = ($ruler->[3]-$ruler->[1])/RULER_INTERVALS;
+  my $ref    = $ruler->[0]->seq_id;
+  my $source = $self->source;
+  my $plugin = escape(param('plugin')||'');
+
+  my @lines;
+  for my $i (0..RULER_INTERVALS-1) {
+    my $x1 = int($portion * $i+0.5);
+    my $x2 = int($portion * ($i+1)+0.5);
+
+    # put the middle of the sequence range into the middle of the picture
+    my $middle = $flip ? $end - $scale * ($x1+$x2)/2 : $offset + $scale * ($x1+$x2)/2;
+    my $start  = int($middle - $length/2);
+    my $stop   = int($start  + $length - 1);
+
+    $x1 += $pl;
+    $x2 += $pl;
+
+    my $url = "?ref=$ref;start=$start;stop=$stop;nav4=1;plugin=$plugin";
+    $url .= ";flip=1" if $flip;
+    push @lines,
+      qq(<area shape="rect" coords="$x1,$ruler->[2],$x2,$ruler->[4]" href="$url" title="recenter" alt="recenter" />\n);
+  }
+  return join '',qq(<map name="__scale___map" id="__scale___map">\n),@lines,"</map>";
 }
 
 
@@ -376,11 +423,11 @@ sub generate_panels {
 	      -key_color => $source->setting('key bgcolor')     || 'moccasin',   #FIX ME! (3) Suggestion: $source->setting ...
 	      -bgcolor   => $source->setting('detail bgcolor')  || 'white',      #FIX ME! (3) Suggestion: $source->setting ...
 	      -width     => $width,
-#	      -key_style    => $keystyle || $source->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
-	      -key_style    => 'none',
+	      -key_style    => $keystyle || $source->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
+#	      -key_style    => 'none',
 	      -empty_tracks => $source->setting(general=>'empty_tracks') 	  || DEFAULT_EMPTYTRACKS,
-#	      -pad_top      => $title ? $image_class->gdMediumBoldFont->height : 0,
-	      -pad_top      => 5,
+	      -pad_top      => $title ? $image_class->gdMediumBoldFont->height : 0,
+#	      -pad_top      => 5,
 	      -image_class  => $image_class,
 	      -postgrid     => $postgrid,
 	      -background   => $background,
@@ -568,8 +615,8 @@ sub do_bump {
   my ($track_name,$option,$count,$max,$length) = @_;
 
   my $conf              = $self->source;
-  my $maxb              = $conf->code_setting($track_name => 'bump density');# ||
-#  				$conf->code_setting("TRACK DEFAULTS"=> 'bump density');#warn"maxb is $maxb";
+  my $maxb              = $conf->code_setting($track_name => 'bump density')
+                       || $conf->code_setting("TRACK DEFAULTS"=> 'bump density');#warn"maxb is $maxb";
   $maxb                 = $max unless defined $maxb;
 
   $count ||= 0;
@@ -595,7 +642,8 @@ sub do_label {
 
   my $conf = $self->source;
 
-  my $maxl              = $conf->code_setting($track_name => 'label density');
+  my $maxl              = $conf->code_setting($track_name => 'label density')
+                       || $conf->code_setting("TRACK DEFAULTS" => 'label density');
   $maxl                 = $max_labels unless defined $maxl;
   my $maxed_out         = $count <= $maxl;
 
@@ -616,7 +664,8 @@ sub do_description {
 
   my $conf              = $self->source;
 
-  my $maxl              = $conf->code_setting($track_name => 'label density');
+  my $maxl              = $conf->code_setting($track_name => 'label density')
+                       || $conf->code_setting("TRACK DEFAULTS" => 'label density');
   $maxl                 = $max_labels unless defined $maxl;
   my $maxed_out = $count <= $maxl;
 

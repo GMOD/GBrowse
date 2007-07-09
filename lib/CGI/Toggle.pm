@@ -78,24 +78,25 @@ sub toggle_section {
 
   my $plus  = $config{plus_img}  || "$image_dir/".PLUS;
   my $minus = $config{minus_img} || "$image_dir/".MINUS;
+  my $class = $config{class}     || 'tctl';
 
   my $show_ctl = div({-id=>"${name}_show",
 		       -class=>'ctl_hidden',
 		       -style=>$visible ? 'display:none' : 'display:inline',
 		       -onClick=>"visibility('$name',1)"
                      },
-		     img({-src=>$plus,-alt=>'+'}).'&nbsp;'.span({-class=>'tctl'},$section_title));
+		     img({-src=>$plus,-alt=>'+'}).'&nbsp;'.span({-class=>$class},$section_title));
   my $hide_ctl = div({-id=>"${name}_hide",
 		       -class=>'ctl_visible',
 		       -style=>$visible ? 'display:inline' : 'display:none',
 		       -onClick=>"visibility('$name',0)"
                      },
-		     img({-src=>$minus,-alt=>'-'}).'&nbsp;'.span({-class=>'tctl'},$section_title));
+		     img({-src=>$minus,-alt=>'-'}).'&nbsp;'.span({-class=>$class},$section_title));
   my $content  = div({-id    => $name,
 		      -style=>$visible ? 'display:inline' : 'display:none',
 		      -class => 'el_visible'},
 		     @section_body);
-  my @result = $config{nodiv} ? ($show_ctl.$hide_ctl,$content) : div(($show_ctl.$hide_ctl,$content));
+  my @result = $config{nodiv} ? ($show_ctl.$hide_ctl,$content) : div($show_ctl.$hide_ctl,$content);
   return wantarray ? @result : "@result";
 }
 

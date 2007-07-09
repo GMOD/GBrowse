@@ -238,9 +238,11 @@ sub print_top {
 
   # push all needed javascript files onto top of page
   my $b_tips = $CONFIG->setting('balloon tips');
+  my $drag_and_drop = $CONFIG->setting('drag and drop');
   my $js = $CONFIG->setting('js')||JS;
   my @js = 'buttons.js';
   push @js,qw(yahoo-dom-event.js prototype.js balloon.js) if $b_tips;
+  push @js,qw(prototype.js scriptaculous.js)              if $drag_and_drop;
 
   my @scripts = map { {src=> "$js/$_" } } @js;
   push @args,(-script=>\@scripts);

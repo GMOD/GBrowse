@@ -112,7 +112,7 @@ sub render_tracks {
 sub use_renderfarm {
   my $self   = shift;
 
-  $self->source->global_setting('renderfarm') or return;
+  $self->source->global_setting('renderfarm') or return;	#comment out to force remote rendering (kludge)
 
   $LPU_AVAILABLE = eval { require LWP::Parallel::UserAgent; } unless defined $LPU_AVAILABLE;
   $STO_AVAILABLE = eval { require Storable; 1; }              unless defined $STO_AVAILABLE;
@@ -162,8 +162,9 @@ sub render_remotely {
 sub call_remote_renderers {
   my $self    = shift;
   my $renderers = shift;
-
-  eval { require 'HTTP::Request::Common' } unless HTTP::Request::Common->can('POST');
+  
+  #eval { require 'HTTP::Request::Common' } unless HTTP::Request::Common->can('POST');
+  eval { use HTTP::Request::Common; } unless HTTP::Request::Common->can('POST');
 
   my $dsn      = $self->source;
   my $settings = $self->settings;
@@ -177,12 +178,13 @@ sub call_remote_renderers {
   $ua->nonblock(1);
 
   for my $url (keys %$renderers) {
+    $url = "http://localhost" . $url;				#fix absolute path later
     my @tracks  = keys %{$renderers->{$url}};
     my $s_track  = Storable::freeze(\@tracks);
-    my $request = POST($url,
-		       [tracks     => $s_track,
-			settings   => $s_set,
-			datasource => $s_dsn]);
+    my $request = POST ($url,
+    		       [tracks     => escape($s_track),
+			settings   => escape($s_set),
+			datasource => escape($s_dsn)]);
     my $error = $ua->register($request);
     if ($error) { warn "Could not send request to $url: ",$error->as_string }
   }
@@ -201,9 +203,11 @@ sub call_remote_renderers {
     my $tracks = Storable::thaw($content);
     for my $track_tuple (@$tracks) {
       my ($track_name,$gd,$imagemap) = @$track_tuple;
-      $track_results{$track_name} = [$gd,$imagemap];
+      $track_results{$track_name}{gd} = $gd;
+      $track_results{$track_name}{map} = $imagemap;
     }
   }
+  #warn"track results are:".Dumper(%track_results);
   return \%track_results;
 }
 
@@ -261,6 +265,7 @@ sub render_locally {
     	: $self->make_map($panel,$label,$lang);
     $results{$label}{gd} = $gd;
     $results{$label}{map} = $imagemap;
+#use Storable;store([$label,$gd,$imagemap],'/Users/mokada/development/testing/temp/triplets.dat');return\%results;
   }
 
   return \%results;

@@ -1,88 +1,54 @@
-package Bio::Graphics::Glyph::wiggle_density;
-
-# $Id: wiggle_density.pm,v 1.1.2.5 2007-07-11 23:20:30 lstein Exp $
+package Bio::Graphics::Glyph::wiggle_xyplot;
 
 use strict;
-use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing);
+use base qw(Bio::Graphics::Glyph::xyplot Bio::Graphics::Glyph::smoothing);
+use IO::File;
 
-sub min_score {
-  shift->option('min_score');
-}
-
-sub max_score {
-  shift->option('max_score');
-}
-
+# we override the draw method so that it dynamically creates the parts needed
+# from the wig file rather than trying to fetch them from the database
 sub draw {
   my $self = shift;
-  my ($gd,$left,$top,$partno,$total_parts) = @_;
-  my $feature   = $self->feature;
+  my ($gd,$dx,$dy) = @_;
 
-  my ($wigfile) = $feature->attributes('wigfile');
-  if ($wigfile) {
-    $self->draw_wigfile($feature,$wigfile,@_);
-    $self->draw_label(@_)       if $self->option('label');
-    $self->draw_description(@_) if $self->option('description');
-    return;
-  }
+  my $feature     = $self->feature;
+  my ($wigfile)   = $feature->attributes('wigfile');
+  return $self->draw_wigfile($feature,$wigfile,@_) if $wigfile;
 
   my ($densefile) = $feature->attributes('densefile');
-  if ($densefile) {
-    $self->draw_densefile($feature,$densefile,@_);
-    $self->draw_label(@_)       if $self->option('label');
-    $self->draw_description(@_) if $self->option('description');
-    return;
-  }
+  return $self->draw_densefile($feature,$densefile,@_) if $densefile;
 
   return $self->SUPER::draw(@_);
-
 }
 
 sub draw_wigfile {
-
-  my $self    = shift;
+  my $self = shift;
   my $feature = shift;
   my $wigfile = shift;
-  my ($gd,$left,$top) = @_;
-
   my ($wigoffset) = $feature->attributes('wigstart');
 
   eval "require Bio::Graphics::Wiggle" unless Bio::Graphics::Wiggle->can('new');
   my $wig = Bio::Graphics::Wiggle->new($wigfile) or die;
 
-  my ($x1,$y1,$x2,$y2) = $self->bounds($left,$top);
-  my $chr              = $feature->seq_id;
+  my $chr         = $feature->seq_id;
   my $panel_start = $self->panel->start;
   my $panel_end   = $self->panel->end;
   my $start       = $feature->start > $panel_start ? $feature->start : $panel_start;
   my $end         = $feature->end   < $panel_end   ? $feature->end   : $panel_end;
 
-  # filler -- this will get erased by the real data when it comes
-  my $middle = ($y1+$y2)/2;
-  my $fgcolor = $self->fgcolor;
-  $gd->line($x1,$middle-3,$x1,$middle+3,$fgcolor);   # vertical span
-  $gd->line($x1,$middle,$x2,$middle,$fgcolor); # horizontal span
-  $gd->line($x2,$middle-3,$x2,$middle+3,$fgcolor);   # vertical span
-
   # find all overlapping segments in the wig file
   my $iterator = $wig->segment_iterator($chr,$start,$end);
   $iterator->offset($wigoffset) if $wigoffset;
   while (my $seg = $iterator->next_segment) {
-    $self->draw_segment($gd,
-			$start,$end,
-			$seg,
-			$seg->start,$seg->end,
-			$seg->step,$seg->span,
-			$x1,$y1,$x2,$y2);
+    $self->create_parts_for_segment($seg,$start,$end);
   }
 
+  $self->SUPER::draw(@_);
 }
 
 sub draw_densefile {
   my $self = shift;
-  my $feature   = shift;
+  my $feature = shift;
   my $densefile = shift;
-  my ($gd,$left,$top) = @_;
 
   my ($denseoffset) = $feature->attributes('denseoffset');
   my ($densesize)   = $feature->attributes('densesize');
@@ -107,104 +73,77 @@ sub draw_densefile {
 					       -recsize   => $densesize,
 					       -window    => $smooth_window,
 					      ) or die "Can't initialize DenseFeature: $!";
-
-  my ($x1,$y1,$x2,$y2) = $self->bounds($left,$top);
-  $self->draw_segment($gd,
-		      $start,$end,
-		      $dense,$start,$end,
-		      1,1,
-		      $x1,$y1,$x2,$y2);
+  $self->create_parts_for_dense_feature($dense,$start,$end);
+  $self->SUPER::draw(@_);
 }
 
-sub draw_segment {
+sub create_parts_for_dense_feature {
   my $self = shift;
-  my ($gd,
-      $start,$end,
-      $seg,
-      $seg_start,$seg_end,
-      $step,$span,
-      $x1,$y1,$x2,$y2) = @_;
+  my ($dense,$start,$end) = @_;
+
+  my @data = $dense->values($start,$end);
+  my @parts;
+
+  if ($dense->window > 1) {  # can't show all the data, so we average it
+    @parts = $self->subsample(\@data,$start,$self->width);
+  }
+
+  else {
+    for my $i (0..@data-1) {
+      push @parts,Bio::Graphics::Feature->new(-score => $data[$i],
+					      -start => $start + $i,
+					      -end   => $start + $i);
+    }
+  }
+  $self->{parts} = [];
+  warn "added ",scalar @parts," to feature";
+  $self->add_feature(@parts);
+}
+
+sub subsample {
+  my $self = shift;
+  my ($data,$start,$span) = @_;
+  my $points_per_span = @$data/$span;
+  my @parts;
+  for (my $i=0; $i<$span;$i++) {
+    my $offset = $i * $points_per_span;
+    my $value  = $data->[$offset + $points_per_span/2];
+    push @parts,Bio::Graphics::Feature->new(-score => $value,
+					    -start => int($start + $i * $points_per_span),
+					    -end   => int($start + $i * $points_per_span));
+  }
+  return @parts;
+}
+
+sub create_parts_for_segment {
+  my $self = shift;
+  my ($seg,$start,$end) = @_;
+  my $seg_start = $seg->start;
+  my $seg_end   = $seg->end;
+  my $step      = $seg->step;
+  my $span      = $seg->span;
 
   # clip, because wig files do no clipping
   $seg_start = $start      if $seg_start < $start;
   $seg_end   = $end        if $seg_end   > $end;
-
-  # figure out where we're going to start
-  my $scale  = $self->scale;  # pixels per base pair
-  my $pixels_per_span = $scale * $span + 1;
-  my $pixels_per_step = $scale * $step;
-
-  # if the feature starts before the data starts, then we need to draw
-  # a line indicating missing data (this only happens if something went
-  # wrong upstream)
-  if ($seg_start > $start) {
-    my $terminus = $self->map_pt($seg_start);
-    $start = $seg_start;
-    $x1    = $terminus;
-  }
-  # if the data ends before the feature ends, then we need to draw
-  # a line indicating missing data (this only happens if something went
-  # wrong upstream)
-  if ($seg_end < $end) {
-    my $terminus = $self->map_pt($seg_end);
-    $end = $seg_end;
-    $x2    = $terminus;
-  }
 
   return unless $start < $end;
 
   # get data values across the area
   my @data = $seg->values($start,$end);
 
-  my $min_value = $self->min_score;
-  my $max_value = $self->max_score;
-
-  unless (defined $min_value && defined $max_value) {
-    ($min_value,$max_value) = $self->minmax(\@data);
-  }
-
-  # allocate colors
-  my @rgb = $self->panel->rgb($self->bgcolor);
-  my %color_cache;
+  # create a series of parts
+  my @parts;
   for (my $i = $start; $i <= $end ; $i += $step) {
     my $data_point = shift @data;
-    next unless defined $data_point;
-    $data_point    = $min_value if $min_value > $data_point;
-    $data_point    = $max_value if $max_value < $data_point;
-    my ($r,$g,$b)  = $self->calculate_color($data_point,\@rgb,$min_value,$max_value);
-    my $idx        = $color_cache{$r,$g,$b} ||= $self->panel->translate_color($r,$g,$b);
-    $self->filled_box($gd,$x1,$y1,$x1+$pixels_per_span,$y2,$idx,$idx); # unless $idx == 0;
-    $x1 += $pixels_per_step;
+    push @parts,Bio::Graphics::Feature->new(-score => $data_point,
+					   -start => $i,
+					   -end   => $i + $step - 1);
   }
-
+  $self->{parts} = [];
+  $self->add_feature(@parts);
 }
 
-sub calculate_color {
-  my $self = shift;
-  my ($s,$rgb,$min_score,$max_score) = @_;
-  return map { int(255 - (255-$_) * min(max( ($s-$min_score)/($max_score-$min_score), 0), 1)) } @$rgb;
-}
-
-sub min { $_[0] < $_[1] ? $_[0] : $_[1] }
-sub max { $_[0] > $_[1] ? $_[0] : $_[1] }
-
-sub minmax {
-  my $self = shift;
-  my $data = shift;
-  my $min  = +999_999_999;
-  my $max  = -999_999_999;
-  for (@$data) {
-    $min = $_ if $_ < $min;
-    $max = $_ if $_ > $max;
-  }
-  return ($min,$max);
-}
-
-sub get_description {
-  my $self = shift;
-  my $feature = shift;
-  return join '',"wigFile = ",$feature->attributes('wigfile'),'; wig_offset=',$feature->attributes('wigstart');
-}
 
 1;
 
@@ -212,7 +151,7 @@ __END__
 
 =head1 NAME
 
-Bio::Graphics::Glyph::wiggle_density - A density plot compatible with dense "wig"data
+Bio::Graphics::Glyph::wiggle_xyplot - An xyplot plot compatible with dense "wig"data
 
 =head1 SYNOPSIS
 
@@ -220,8 +159,10 @@ Bio::Graphics::Glyph::wiggle_density - A density plot compatible with dense "wig
 
 =head1 DESCRIPTION
 
-This glyph works like the regular density but takes value data in
+This glyph works like the regular xyplot but takes value data in
 Bio::Graphics::Wiggle file format:
+
+TODO! UPDATE DOCUMENTATION FOR DENSE FILES
 
  reference = chr1
  ChipCHIP Feature1 1..10000 wigfile=./test.wig;wigstart=0
@@ -237,8 +178,10 @@ step such as present in tiling array data.
 
 =head2 OPTIONS
 
-The same as the regular graded_segments glyph, except that the
-"wigfile" and "wigstart" options are also recognized.
+The same as the regular xyplot glyph, except that the "wigfile" and
+"wigstart" options are also recognized.
+
+TODO: add "smoothing" "densefile", "denseoffset", and "densesize" options.
 
 =head1 BUGS
 

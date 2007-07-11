@@ -1,15 +1,13 @@
-* Add popup menu support using Cyril's code and overlib/overlibmws.
-* More internationalization
+* Change labeling and appearance of user-initiated DAS tracks, as per request from Matt Hobbs, July 10, 2007.
 * Limit search results to user-set max
 * Group SVG elements by feature ID
 * Get rid of verbs attached to plugin names so that translations work properly.
   Will need plugin authors to provide internationalization.
-* Add popup window/hyperlink to track labels in the image.
-* Make boxes/callbacks for gaps between components, such as introns.
 * Allow administrator to change track label fonts and sizes.
 * Boolean operations on queries
 * Add per-track parameter lists as per letter from Russell Smithies, 
-	Monday, Sept 5.
+	Monday, Sept 5, 2006
+* More internationalization
 
-$Id: TODO,v 1.4.6.16.2.2.2.1 2007-04-17 22:29:29 lstein Exp $
+$Id: TODO,v 1.4.6.16.2.2.2.2 2007-07-11 23:20:29 lstein Exp $
 

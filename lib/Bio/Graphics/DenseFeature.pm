@@ -14,7 +14,7 @@ Bio::Graphics::DenseFeature -- Low-level access to dense quantitative data
                                               -window     => $smoothing_window,     # defaults to 1/100 of (stop-start)
                                               -unpack     => $unpack_pattern);      # defaults to 'C'
 
- my @data  = $dense->get_data($start,$end);  # one-based coordinates!
+ my @data  = $dense->values($start,$end);  # one-based coordinates!
 
 =cut
 
@@ -82,13 +82,13 @@ sub window {
   $d;
 }
 
-sub get_data {
+sub values {
   my $self          = shift;
   my ($start,$end)  = @_;
   my $size          = $self->recsize;
   my $read_start    = $self->offset + ($start-1) * $size;
   my $bytes_to_read = ($end-$start+1) * $size;
-  $self->seek($read_start);
+  $self->seek($read_start,0);
   my $data;
   my $bytes = $self->fh->read($data,$bytes_to_read);
   die "read error: $!" unless $bytes == $bytes_to_read;
@@ -104,57 +104,105 @@ sub smooth {
   my $smoothing = $self->smoothing;
   return $data if $smoothing eq 'none';
   my $window    = $self->window;
-  my @window    = splice(@$data,0,$window);
-  my $value     = $self->_smooth(\@window,$smoothing);
-  my @result;
-  push @result,$value;
-  while (@$data) {
-    shift @window;
-    push @window,shift @$data;
-    push @result,$self->_smooth(\@window,$smoothing);
-  }
-  return \@result;
-}
 
-sub _smooth {
-  my $self = shift;
-  my ($data,$smooth_func) = @_;
-  my $func = $smooth_funcs{$smooth_func} or die "unknown smooth function: $smooth_func";
-  return $func->($data);
+  my $func = $smooth_funcs{$smoothing} 
+    or die "unknown smooth function: $smoothing";
+  $func->($data,$window);  # changes $data in situ
+  return $data;
 }
 
 sub _mean {
-  my $data = shift;
-  my $value = 0;
-  $value += $_ foreach (@$data);
-  return $value/@$data;
+  my ($data,$window) = @_;
+  my @data = @{$data}[0..$window-1];
+
+  my $rolling_value = 0;
+  $rolling_value += $_ foreach @data;
+  $data->[0] = $rolling_value / $window;
+
+  for (my $i=1; $i<@$data-$window; $i++) {
+    my $previous = shift @data;
+    my $new      = $data->[$i+$window];
+    push @data,$new;
+    $rolling_value -= $previous;
+    $rolling_value += $new;
+    $data->[$i] = $rolling_value/$window;
+  }
 }
 
 sub _median {
-  my $data = shift;
-  if (@$data % 2 == 0) {
-    return ($data->[@$data/2] + $data->[@$data/2+1])/2;
-  } else {
-    return $data->[@$data/2];
+  my ($data,$window) = @_;
+  my @data = @{$data}[0..$window-1];
+
+  my $rolling_value = find_median(\@data);
+
+  for (my $i=1; $i<@$data-$window; $i++) {
+    my $previous = shift @data;
+    my $new      = $data->[$i+$window];
+    push @data,$new;
+    $rolling_value = find_median(\@data);
+    $data->[$i] = $rolling_value;
+  }
+}
+
+sub _max {
+  my ($data,$window) = @_;
+  my @data = @{$data}[0..$window-1];
+
+  my $rolling_value = find_max(\@data);
+  $data->[0] = $rolling_value;
+
+  for (my $i=1; $i<@$data-$window; $i++) {
+    my $previous = shift @data;
+    my $new      = $data->[$i+$window];
+    push @data,$new;
+    $rolling_value = find_max(\@data) if $previous == $rolling_value;
+    $data->[$i]    = $rolling_value;
   }
 }
 
 sub _min {
-  my $data = shift;
-  my $value = $data->[0];
-  for (1..@$data-1) {
-    $value = $_ if $_ < $value;
+  my ($data,$window) = @_;
+  my @data = @{$data}[0..$window-1];
+
+  my $rolling_value = find_min(\@data);
+  $data->[0] = $rolling_value;
+
+  for (my $i=1; $i<@$data-$window; $i++) {
+    my $previous = shift @data;
+    my $new      = $data->[$i+$window];
+    push @data,$new;
+    $rolling_value = find_min(\@data) if $previous == $rolling_value;
+    $data->[$i]    = $rolling_value;
   }
-  return $value;
 }
 
-sub _max {
+sub find_max {
   my $data = shift;
-  my $value = $data->[0];
-  for (1..@$data-1) {
-    $value = $_ if $_ > $value;
+  my $val = $data->[0];
+  foreach (@$data) {
+    $val = $_ if $_ > $val;
   }
-  return $value;
+  $val
+}
+
+sub find_min {
+  my $data = shift;
+  my $val = $data->[0];
+  foreach (@$data) {
+    $val = $_ if $_ < $val;
+  }
+  $val
+}
+
+sub find_median {
+  my $data = shift;
+  my @data = sort {$a <=> $b} @$data;
+  my $middle = @data/2;
+  if (@data % 2) {
+    return $data[$middle];
+  } else {
+    return ($data[$middle-1]+$data[$middle])/2;
+  }
 }
 
 1;

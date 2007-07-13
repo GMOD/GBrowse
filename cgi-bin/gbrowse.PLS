@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.6 2007-06-06 19:37:30 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.7 2007-07-13 22:14:59 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -190,6 +190,42 @@ if (param('reset')) {
 } else {
   $cookies = [$cookie];
 }
+
+# ASYNCHRONOUS EVENTS HANDLED HERE
+# we get here on the AJAX-style asynchronous setting of labels
+my $asynchronous;
+if (my @ajax_labels = param('label[]')) {
+  my %seen;
+  @{$page_settings->{tracks}} = grep {length()>0 && !$seen{$_}++} (@ajax_labels,@{$page_settings->{tracks}});
+  $asynchronous++;
+}
+
+for my $p (grep {/^div_visible_/} param()) {
+  my $visibility = param($p);
+  $p =~ s/^div_visible_//;
+  $page_settings->{section_visible}{$p} = $visibility;
+  $asynchronous++;
+}
+
+for my $p (grep {/^track_collapse_/} param()) {
+  my $collapsed = param($p);
+  $p =~ s/^track_collapse_//;
+  $page_settings->{track_collapsed}{$p} = $collapsed;
+  $asynchronous++;
+}
+
+if ($asynchronous) {
+  print CGI::header(-status=>'204 No Content');
+  $session->session->flush;
+  exit 0;
+}
+
+if (my $track_info = param('get_citation')) {
+  warn "got get_citation event";
+  print CGI::header,start_html(),h1($track_info);
+  exit 0;
+}
+
 
 ### PLUGINS #################################################################
 my @plugin_path = "$CONF_DIR/plugins";
@@ -548,8 +584,8 @@ sub detail_panel {
   my ($segment,$page_settings,$feature_files) = @_;
   return '' if $CONFIG->section_setting('details') eq 'hide';
 
-  my ($img,$map);
-  my $cell = '';
+  my @panels;
+  my $drag_n_drop = $CONFIG->setting(general => 'drag and drop');
 
   if ($segment->length <= $MAX_SEGMENT) {
 
@@ -557,57 +593,81 @@ sub detail_panel {
     my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} && !/:(overview|region)$/ }
                                @{$page_settings->{tracks}};
 
-#    if ($page_settings->{sk} eq "sorted") {
-#      my %label_keys = map {$_ => label2key($_)}  @tracks_to_show;
-#      @tracks_to_show    = sort {lc $label_keys{$a} cmp lc $label_keys{$b}} @tracks_to_show;
-#    }
-
     my %options = map {$_=>$page_settings->{features}{$_}{options}} @tracks_to_show;
     my %limit   = map {$_=>$page_settings->{features}{$_}{limit}}   @tracks_to_show;
     my $h_callback = make_hilite_callback($page_settings);
     my $postgrid   = make_postgrid_callback($page_settings);
-    ($img,$map) = $CONFIG->render_html(segment       => $segment,
-				       feature_files => $feature_files,
-				       tracks        => \@tracks_to_show,
-				       options       => \%options,
-				       limit         => \%limit,
-				       do_map        => 1,
-				       do_centering_map => 1,
-				       lang          => $CONFIG->language,
-				       keystyle      => $page_settings->{ks}   || 'between',
-				       flip          => $page_settings->{flip} || undef,
-                                       postgrid      => $postgrid || $CONFIG->setting('postgrid') || '',
-                                       background    => $CONFIG->setting('background') || '',
-				       hilite_callback => $h_callback || undef,
-				       -add_category_labels => $CONFIG->setting('show track categories') || undef,
-				       -grid         => $page_settings->{grid} || 0,
-				      );
-    $cell .= $img;
+    my $ks         = $drag_n_drop ? 'none' : $page_settings->{ks};
+    @panels      = $CONFIG->render_html({segment       => $segment,
+					 feature_files => $feature_files,
+					 labels        => \@tracks_to_show,
+					 drag_n_drop   => $drag_n_drop,
+					 options       => \%options,
+					 limit         => \%limit,
+					 do_map        => 1,
+					 do_centering_map => 1,
+					 lang          => $CONFIG->language,
+					 keystyle      => $ks || 'between',
+					 flip          => $page_settings->{flip} || undef,
+					 postgrid      => $postgrid || $CONFIG->setting('postgrid') || '',
+					 background    => $CONFIG->setting('background') || '',
+					 hilite_callback => $h_callback || undef,
+					 settings        => $page_settings,
+					 -add_category_labels => $CONFIG->setting('show track categories') || undef,
+					 -grid         => $page_settings->{grid} || 0,
+					}
+				       );
   }
 
   else {
-    $cell .= i($CONFIG->tr('TOO_BIG',scalar unit_label($MAX_SEGMENT),scalar unit_label($DEFAULT_SEGMENT)));
+    @panels = div($CONFIG->tr('TOO_BIG',
+			      scalar unit_label($MAX_SEGMENT),
+			      scalar unit_label($DEFAULT_SEGMENT)));
   }
-  $cell .= "\n";
-  my $error_msg = $CONFIG->error ? p({-style=>"color: red"},
-				     "An error occurred while processing an uploaded or remote annotation file: ",
-				     b($CONFIG->error) ) : '';
-  my $table = table({-border=>0,-width=>'100%'},
-		    TR({-class=>'databody'},
-		       td({-align=>'center'},$cell)
-		      ),
-		    $error_msg ? (
-				  TR({-class=>'databody'},
-				     td($error_msg)
-				    )
-				  ) : (),
-		   );
-  $table .= "\n";
-  $table .= $map if $map;
-  $table .= join '',unique(hidden('ref')),unique(hidden('start')),unique(hidden('stop'));
+  my $error_msg = $CONFIG->error 
+    ? p({-style=>"color: red"},
+	"An error occurred while processing an uploaded or remote annotation file: ",
+	b($CONFIG->error) ) 
+    : '';
+  my $hints = join '',unique(hidden('ref')),unique(hidden('start')),unique(hidden('stop'));
+
+  unless ($drag_n_drop) {
+    return div(toggle($page_settings,
+		      'Details',
+		      div({-id=>'panels',-class=>'track'},
+			  @panels
+			 )
+		     )
+	      )
+  }
+
+  my $drag_script = <<END;
+ <script type="text/javascript">
+ // <![CDATA[
+   Sortable.create(
+     "panels",
+     {
+      constraint: 'vertical',
+      tag: 'div',
+      only: 'track',
+      handle: 'titlebar',
+      onUpdate: function() {
+         var postData = Sortable.serialize('panels',{name:'label'});
+         new Ajax.Request(document.URL,{method:'post',postBody:postData});
+      }
+     }
+   );
+ // ]]>
+ </script>
+END
+
   return div(toggle($page_settings,
 		    'Details',
-		    $table));
+		    div({-id=>'panels',-class=>'track'},
+			@panels
+		       )
+		   )
+	    ).$drag_script;
 }
 
 ###############################################################################################
@@ -865,14 +925,6 @@ sub adjust_settings {
   elsif (param($CONFIG->tr('Adjust_Order')) && !param($CONFIG->tr('Cancel'))) {
     adjust_track_options($settings);
     adjust_track_order($settings);
-  }
-
-  # restore the visibility of the division sections
-  # using transient cookies
-  for my $div (grep {/^div_visible_/} CGI::cookie()) {
-    my ($section)   = $div =~ /^div_visible_(\w+)/ or next;
-    my $visibility  = CGI::cookie($div);
-    $settings->{section_visible}{$section} = $visibility;
   }
 
 }
@@ -1949,7 +2001,10 @@ sub overview {
   $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
 
 
-  my ($image,$length) = $CONFIG->overview($whole_segment,$segment,$settings->{features},$feature_files) or return;
+  my ($image,$length) = $CONFIG->overview($whole_segment,
+					  $segment,
+					  $settings->{features},
+					  $feature_files) or return;
   my ($width,$height) = $image->getBounds;
   my $url             = $CONFIG->generate_image($image);
   return image_button(-name=>'overview',

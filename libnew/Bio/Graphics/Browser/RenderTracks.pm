@@ -63,6 +63,7 @@ sub settings {
   return $d;
 }
 
+
 # This renders the named tracks and returns the images and image maps
 # input args:
 #           (-tracks         => [array of track names],
@@ -168,23 +169,37 @@ sub call_remote_renderers {
 
   my $dsn      = $self->source;
   my $settings = $self->settings;
+  my $lang     = $self->page_renderer->language->{lang};
+  my $session  = $self->page_renderer->session;
+  my $paramargs= {};
+  $paramargs->{'plugin_do'} 	= param('plugin_do')	if param('plugin_do'); 
+  $paramargs->{'plugin_action'}	= param('plugin_action')if param('plugin_action'); 
+  $paramargs->{'plugin'}	= param('plugin')	if param('plugin'); 
+  $paramargs->{'.source'}	= param('.source')	if param('.source'); 
+  $paramargs->{'render'}	= param('render')	if param('render'); 
 
   # serialize the data source and settings
-  my $s_dsn = Storable::freeze($dsn);
-  my $s_set = Storable::freeze($settings);
+  my $s_dsn	= Storable::freeze($dsn);
+  my $s_set	= Storable::freeze($settings);
+  my $s_lang	= Storable::freeze($lang);
+  my $s_sess	= Storable::freeze($session);
+  my $s_p_args	= Storable::freeze($paramargs);
 
   my $ua = LWP::Parallel::UserAgent->new;
   $ua->in_order(0);
   $ua->nonblock(1);
 
   for my $url (keys %$renderers) {
-    $url = "http://localhost" . $url;				#fix absolute path later
     my @tracks  = keys %{$renderers->{$url}};
+    $url = "http://localhost" . $url . ".pl/";				#fix absolute path later
     my $s_track  = Storable::freeze(\@tracks);
     my $request = POST ($url,
-    		       [tracks     => escape($s_track),
-			settings   => escape($s_set),
-			datasource => escape($s_dsn)]);
+    		       [tracks     => $s_track,
+			settings   => $s_set,
+			datasource => $s_dsn,
+			language   => $s_lang,
+			session    => $s_sess,
+			paramargs  => $s_p_args]);
     my $error = $ua->register($request);
     if ($error) { warn "Could not send request to $url: ",$error->as_string }
   }

@@ -40,7 +40,6 @@ INPUT             { background-color: white; }
 P                 { font-family: sans-serif; }
 SELECT            { background-color: white; }
 TABLE             { padding: 0;
-                    spacing: 0;
                     width: 100%;
                   }
 TD                { font-family: sans-serif; 

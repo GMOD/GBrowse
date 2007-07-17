@@ -2219,8 +2219,8 @@ URL that will appear when the user clicks on a feature. Examples:
 
   balloon hover = <h2>Gene $name</h2>
   balloon click = <h2>Gene $name</h2>
-        <a href=\'http://www.google.com/search?q=$name\'>Search Google</a><br>
-        <a href=\'http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=pubmed&term=$name\'>Search NCBI</a><br>
+        <a href='http://www.google.com/search?q=$name'>Search Google</a><br>
+        <a href='http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=pubmed&term=$name'>Search NCBI</a><br>
 
 Alternatively you can provide a URL to either option, in which case
 the contents of the URL will be fetched and displayed in the

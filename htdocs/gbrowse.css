@@ -40,6 +40,7 @@ INPUT             { background-color: white; }
 P                 { font-family: sans-serif; }
 SELECT            { background-color: white; }
 TABLE             { padding: 0;
+                    spacing: 0;
                     width: 100%;
                   }
 TD                { font-family: sans-serif; 
@@ -87,7 +88,11 @@ TH.linkmenu       {
                     CURSOR: help;
                     TEXT-DECORATION: none
                   }
-                  
- ul								{	list-style-type:none
- 									}
-
+.titlebar         {  background-color: khaki; 
+                     position: absolute;
+                     cursor: crosshair;
+                     text-align: right;
+                     font-size: 9pt;
+                     font-weight: bold;
+                  }
+.track            {  text-align: center }

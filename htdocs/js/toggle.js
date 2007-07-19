@@ -38,10 +38,12 @@ function collapse(element_name) {
      icon.src = src.replace(/minus/,'plus');
      body.style.display = 'none';
      pad.style.display = 'inline';
+     control.className = 'titlebar_inactive';
    } else {
      icon.src = src.replace(/plus/,'minus');
      body.style.display = 'inline';
      pad.style.display = 'none';
+     control.className = 'titlebar';
    }
    var postData = 'track_collapse_'+ element_name + '=' + (closeit ? 1 : 0);
    new Ajax.Request(document.URL,{method:'post',postBody:postData});

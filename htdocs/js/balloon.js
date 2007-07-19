@@ -2,7 +2,7 @@
  balloon.js -- a DHTML library for balloon tooltips
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: balloon.js,v 1.1.2.1 2007-07-13 22:15:01 lstein Exp $
+ $Id: balloon.js,v 1.1.2.2 2007-07-19 22:38:44 lstein Exp $
 
  See http://www.wormbase.org/wiki/index.php/Balloon_Tooltips
  for documentation.
@@ -223,7 +223,7 @@ Balloon.prototype.doShowTooltip = function() {
     }
 
     helpText = '\
-    <a onClick="Balloon.prototype.hideStaticTooltip()" title="close this balloon" href=#\
+    <a onClick="Balloon.prototype.hideStaticTooltip()" title="close this balloon" \
     style="float:right;font-size:12px;text-decoration:none">\
     Close [X]</a><br>' + helpText;
   }
@@ -354,6 +354,7 @@ Balloon.prototype.justAppend = function(child,parent) {
 Balloon.prototype.showBalloon = function(orient,left,top)  {
   YAHOO.util.Dom.setY(this.activeBalloon,999999999);
   this.setStyle(this.activeBalloon,'display','inline');
+  this.setStyle(this.activeBalloon,'z-index',10000);
 
   if (orient == 'up') {
     var height = this.getLoc(this.activeBalloon,'height');

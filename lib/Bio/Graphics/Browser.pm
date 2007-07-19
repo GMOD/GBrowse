@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.9 2007-07-13 22:15:02 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.10 2007-07-19 22:38:44 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -827,7 +827,6 @@ sub render_draggable_tracks {
 
     my $collapsed     =  $settings->{track_collapsed}{$label};
     my $img_style     = $collapsed ? "display:none" : "display:inline";
-    my $title_style   = 'cursor:pointer; position:absolute';
 
     my ($width,$height) = $image->getBounds;
     my $url             = $self->generate_image($image,
@@ -836,7 +835,6 @@ sub render_draggable_tracks {
 			       -usemap=>"#${label}_map",
 			       -width => $width,
 			       -id    => "${label}_image",
-			       -align => 'center',
 			       -height=> $height,
 			       -border=> 0,
 			       -name  => "detailedView_${label}",
@@ -852,39 +850,38 @@ sub render_draggable_tracks {
       my $img_map = $label eq '__scale__'
 	                   ? $self->make_centering_map(shift @$boxes,$args->{flip},$label)
 			   : $self->make_map($boxes,$panel,$label);
-
-      #my $help_url    = "url:?get_citation=$label";
+      my $help_url    = "url:?get_citation=$label";
       my $title       = $label =~ /\w+:(.+)/   # a plugin
                         ? $1
-                        : $self->config->setting($label=>'key'); # configured
-      my $help_url    = "url:/cgi-bin/test.cgi";
+                        : $self->config->setting($label=>'key') || $label; # configured
 
       my $titlebar    = $label eq '__scale__' || $label eq '__all__'
 	                 ? ''
-			 : span({-class=>'titlebar',-id=>"${label}_title",-style=>$title_style},
+			 : span({-class=>$collapsed ? 'titlebar_inactive' : 'titlebar',-id=>"${label}_title"},
 				img({-src=>$icon,
 				     -id => "${label}_icon",
 				     -onClick=>"collapse('$label')",
+				     -style  => 'cursor:pointer',
 				    }),
 				img({-src         => $help,
-				     -onmouseover => "balloon.showTooltip(event,'$help_url',0)"
+				     -style  => 'cursor:pointer',
+				     -onmousedown => "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)"
 				    }),
 				$title
 			       );
 
       my $pad_img  = img({-src   => $pad_url,
-			  -align => 'center',
 			  -width => $pw,
 			  -height=> $ph,
 			  -border=> 0,
 			  -id    => "${label}_pad",
-			  -style => $collapsed ? "display:inline" : "display:none"
+			  -style => $collapsed ? "display:inline" : "display:none",
 			 });
 
-      push @result,div({-id=>"track_${label}",-class=>$class},
-		       $titlebar,
-		       $img.$pad_img,
-		       $img_map);
+      push @result,"\n".div({-id=>"track_${label}",-class=>$class},
+			    $titlebar,
+			    div({-align=>'center',-style=>'margin-top: -16px'},$img.$pad_img),
+			    $img_map);
 
     }
 
@@ -1041,7 +1038,7 @@ sub generate_panels {
   # create another special track for padding to be used when we "collapse" a track, but only
   # if $drag_n_drop is false.
   $panels{__pad__} = Bio::Graphics::Panel->new(@argv,
-					       -pad_top     => 18,
+					       -pad_top     => 20,
 					       -extend_grid => 1)
     if $drag_n_drop;
 
@@ -1061,7 +1058,7 @@ sub generate_panels {
       $panel_key = $label;
       my @keystyle = (-key_style=>'between') if $label =~ /^\w+:/;  # a plugin
       $panels{$panel_key} = Bio::Graphics::Panel->new(@argv,
-						      -pad_top     => 18,
+						      -pad_top     => 20,
 						      -extend_grid => 1,
 						      @keystyle,
 						     );

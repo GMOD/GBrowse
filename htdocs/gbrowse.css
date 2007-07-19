@@ -89,10 +89,25 @@ TH.linkmenu       {
                     TEXT-DECORATION: none
                   }
 .titlebar         {  background-color: khaki; 
-                     position: absolute;
                      cursor: crosshair;
-                     text-align: right;
+                     position: relative;
+                     z-index: 1;
+                     right: -100px;
+                     opacity: 1.0;
                      font-size: 9pt;
                      font-weight: bold;
                   }
-.track            {  text-align: center }
+.titlebar_inactive {  background-color: lightblue; 
+                     cursor: crosshair;
+                     position: relative;
+                     z-index: 1;
+                     right: -100px;
+                     opacity: 1.0;
+                     font-size: 9pt;
+                     font-weight: bold;
+                  }
+.track            {  text-align: left }
+IMG.trackimg      {  
+                       margin-top: -10px;
+                       text-align: center;
+                  }

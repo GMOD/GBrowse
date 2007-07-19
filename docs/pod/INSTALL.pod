@@ -493,6 +493,7 @@ L<ftp://genome-ftp.stanford.edu/pub/yeast/chromosomal_feature/>
 =item FlyBase (D. melanogaster) 
 
 L<ftp://ftp.flybase.net/genomes/Drosophila_melanogaster/current/gff/ >
+
 =back
 
 In addition, the bin/ subdirectory of the GBrowse distribution
@@ -737,7 +738,7 @@ information on how to use this feature.
 Please report bugs to the GMOD project bug tracking system at
 L<http://sourceforge.net/tracker/?group_id=27707&atid=391291>. EMail
 support is available by sending requests for help to
-L<mailto:gmod-gbrowse@lists.sourceforge.net>. 
+gmod-gbrowse@lists.sourceforge.net. 
 
 Have fun!
 

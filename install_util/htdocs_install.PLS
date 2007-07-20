@@ -81,6 +81,21 @@ while (my $file = readdir(BUTTONS) ) {
 }
 closedir BUTTONS;
 
+my $localballoondir = "htdocs/images/balloons";
+opendir BALLOONS, $localballoondir or die "unable to open $localballoondir\n";
+while (my $file = readdir(BALLOONS) ) {
+  my $localfile = Bio::Root::IO->catfile($localballoondir,$file);
+  if (-f $localfile) {
+    my $installfile = Bio::Root::IO->catfile($balloondir, $file);
+    chmod (0666, $installfile);
+        copy_with_substitutions($localfile, $installfile)
+            or die "unable to copy to $installfile\n";
+    chmod (0444, $installfile);
+  }
+}
+closedir BALLOONS;
+
+
 my $helpdir = Bio::Root::IO->catfile($imagedir, "help");
 if (! (-e $helpdir) ) {
     print "Making $helpdir...\n";
@@ -163,7 +178,6 @@ copy_tree("./htdocs/js",$ht_target);
 print "Installing sample data files...\n";
 copy_tree("./htdocs/databases",$ht_target);
 chmod 0777,glob("$ht_target/databases/*");
-
 
 print "\n\n#############################################################################\n";
 print "GBrowse is now installed.  Read INSTALL for further setup instructions.\n";

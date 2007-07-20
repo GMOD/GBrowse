@@ -326,6 +326,15 @@ sub MY::postamble {
   for my $key (keys %OPTIONS) {
     $paths .= qq("$key=$OPTIONS{$key}" ) if defined $OPTIONS{$key};
   }
+
+  # get the relative URL for HTDOCS for variable substitution in conf files
+  if ($OPTIONS{HTDOCS} && $OPTIONS{HTDOCS} =~ /htdocs|html|Documents/) {
+    my $rel_url = $OPTIONS{HTDOCS};
+    $rel_url =~ s/^\S+?(htdocs|html|Documents)//;
+    $paths .= qq("HTDOCS_REL=$rel_url" );
+  }
+  
+  
 qq{
 conf_install ::
 	\$(PERL) \"$working_dir/install_util/conf_install.pl\" $paths 

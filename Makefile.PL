@@ -326,14 +326,24 @@ sub MY::postamble {
   for my $key (keys %OPTIONS) {
     $paths .= qq("$key=$OPTIONS{$key}" ) if defined $OPTIONS{$key};
   }
-
-  # get the relative URL for HTDOCS for variable substitution in conf files
-  if ($OPTIONS{HTDOCS} && $OPTIONS{HTDOCS} =~ /htdocs|html|Documents/) {
-    my $rel_url = $OPTIONS{HTDOCS};
-    $rel_url =~ s/^\S+?(htdocs|html|Documents)//;
-    $paths .= qq("HTDOCS_REL=$rel_url" );
-  }
   
+  my $default_dir = GuessDirectories::htdocs;
+  if ($OPTIONS{HTDOCS} ne $default_dir) {
+    my $rel_prompt = '/';
+
+    if ($OPTIONS{HTDOCS} =~ /^$default_dir\S+/) {
+      $rel_prompt = $OPTIONS{HTDOCS}; 
+      $rel_prompt =~ s/$default_dir//;
+      $OPTIONS{HTDOCS_REL} = $rel_prompt;
+    }
+    else { # prompt for a relative URL ($rel_prompt default)
+      $OPTIONS{HTDOCS_REL} = prompt("\nYou appear to be using a non-standard docroot; If gbrowse is going to go\nin a directory below the docroot, enter the path below docroot here:"," ");
+    }
+  }
+
+  $OPTIONS{HTDOCS_REL} ||= ' ';
+ 
+  $paths .= qq{"HTDOCS_REL=$OPTIONS{HTDOCS_REL}"}; 
   
 qq{
 conf_install ::

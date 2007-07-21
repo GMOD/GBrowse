@@ -10,7 +10,7 @@ use Storable qw(freeze thaw retrieve);
 use lib '/Users/mokada/development/gsoc/head/Generic-Genome-Browser/libnew',
 '/Users/mokada/development/gsoc/head/Generic-Genome-Browser/lib';
 #use Bio::Graphics::Browser::Render;
-use Bio::Graphics::Browser::PluginSet;
+#use Bio::Graphics::Browser::PluginSet;
 use Bio::Graphics::Browser::RenderTracks;
 use Bio::Graphics::Browser::DataSource;
 
@@ -31,33 +31,43 @@ my $tracks	= $args{'tracks'};
 my $settings	= $args{'settings'};
 my $datasource	= $args{'datasource'};
 my $language	= $args{'language'};
-my $session	= $args{'session'};
-my $paramargs	= $args{'paramargs'};
+#my $session	= $args{'session'};
+#my $paramargs	= $args{'paramargs'};
 
-print fatal_error("Missing arguments") unless (keys(%args) == 6);
+print fatal_error("Missing arguments") unless $tracks && $settings && $datasource && $language;
 
 my @result_tracks;
-
-
 
 # extract db
 my $db = init_database($datasource, $settings);
 
-# extract plugins
-my $plugins = init_plugins($datasource, $settings, $language, $db, $session);
-
-# extract features
-my $features = fetch_features($db, $settings);
-
 # extract segments
-my $segments = get_segments();
+my $segments = $db->segment(-name	=> $settings->{'ref'},
+			    -start	=> $settings->{'start'},
+			    -stop	=> $settings->{'stop'});
 
+# generate the panels
+my $renderer = Bio::Graphics::Browser::RenderTracks->new(-segment  => $segments,
+							  -source   => $datasource,
+							  -settings => $settings);
+
+my $panels = $renderer->generate_panels(-db      => $db,
+						     -tracks  => $tracks);
+
+# create the gd object and maps
+for my $track (keys %$panels) {
+  my $panel = $panels->{$track};
+  my $image_map = $track eq '__scale__' ? $renderer->make_centering_map($panel)
+  	: $renderer->make_map($panel, $track, $language);
+  
+  push @result_tracks, [$track, $panel->gd, $image_map];
+}
 
 
 #for debugging, return still image and map
-my $var = retrieve ('/Users/mokada/development/testing/temp/triplets.dat');
-my ($track_name, $gd, $image_map) = @$var;
-push @result_tracks, [$track_name, $gd, $image_map];
+#my $var = retrieve ('/Users/mokada/development/testing/temp/triplets.dat');
+#my ($track_name, $gd, $image_map) = @$var;
+#push @result_tracks, [$track_name, $gd, $image_map];
 
 
 
@@ -99,21 +109,6 @@ sub init_plugins {
   $plugins;
 }
 
-sub fetch_features {
-  my $db = shift;
-  my $settings = shift;
-  
-  my $features;
-  
-  
-  $features;
-}
-
-sub get_segments {
-  
-}
-
-
 sub fatal_error {
   print shift;
   print "<br>\n";
@@ -125,4 +120,3 @@ sub print_usage {
   print "Pass in frozen args through url, get back frozen track images and maps.";
   ## print instructions later
 }
-

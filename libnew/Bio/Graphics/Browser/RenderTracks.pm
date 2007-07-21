@@ -170,20 +170,11 @@ sub call_remote_renderers {
   my $dsn      = $self->source;
   my $settings = $self->settings;
   my $lang     = $self->page_renderer->language->{lang};
-  my $session  = $self->page_renderer->session;
-  my $paramargs= {};
-  $paramargs->{'plugin_do'} 	= param('plugin_do')	if param('plugin_do'); 
-  $paramargs->{'plugin_action'}	= param('plugin_action')if param('plugin_action'); 
-  $paramargs->{'plugin'}	= param('plugin')	if param('plugin'); 
-  $paramargs->{'.source'}	= param('.source')	if param('.source'); 
-  $paramargs->{'render'}	= param('render')	if param('render'); 
-
+  
   # serialize the data source and settings
   my $s_dsn	= Storable::freeze($dsn);
   my $s_set	= Storable::freeze($settings);
   my $s_lang	= Storable::freeze($lang);
-  my $s_sess	= Storable::freeze($session);
-  my $s_p_args	= Storable::freeze($paramargs);
 
   my $ua = LWP::Parallel::UserAgent->new;
   $ua->in_order(0);
@@ -191,15 +182,19 @@ sub call_remote_renderers {
 
   for my $url (keys %$renderers) {
     my @tracks  = keys %{$renderers->{$url}};
-    $url = "http://localhost" . $url . ".pl/";				#fix absolute path later
     my $s_track  = Storable::freeze(\@tracks);
+    my $args = {tracks     => \@tracks,
+			settings   => $settings,
+			datasource => $dsn,
+			language   => $lang
+    };
+
     my $request = POST ($url,
     		       [tracks     => $s_track,
 			settings   => $s_set,
 			datasource => $s_dsn,
-			language   => $s_lang,
-			session    => $s_sess,
-			paramargs  => $s_p_args]);
+			language   => $s_lang
+    ]);
     my $error = $ua->register($request);
     if ($error) { warn "Could not send request to $url: ",$error->as_string }
   }
@@ -222,13 +217,14 @@ sub call_remote_renderers {
       $track_results{$track_name}{map} = $imagemap;
     }
   }
-  #warn"track results are:".Dumper(%track_results);
+
   return \%track_results;
 }
 
 sub local_renderer_url {
   my $self     = shift;
-  my $self_uri = CGI::url(-absolute=>1);
+  #my $self_uri = CGI::url(-absolute=>1);
+  my $self_uri = CGI::url(-full=>1);
   my $render   = GBROWSE_RENDER;
   $self_uri    =~ s/[^\/]+$/$render/;
   return $self_uri;
@@ -625,6 +621,7 @@ sub generate_panels {
 
   return \%panels;
 }
+
 
 #FIX ME! (6,7)  I've copied and modified the following 3 methods from the original Browser to fit
 #with the current implementation. (June24)

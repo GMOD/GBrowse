@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.11 2007-07-23 19:49:14 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.12 2007-07-23 22:36:41 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -827,23 +827,16 @@ sub render_draggable_tracks {
   my $help   = "$images/query.png";
 
   # get the pad image, which we use to fill up space between collapsed tracks
-  my $pi       = $panels->{__pad__}{gd};
-  my ($pw,$ph) = $pi->getBounds;
-  my $pad_url  = $self->generate_image(
-				       $pi,
-				       $tmpdir
-				      );
+  my $pad_url  = $panels->{__pad__}{image};
+  my ($pw,$ph) = @{$panels->{__pad__}}{'width','height'};
 
   my @result;
   for my $label ('__scale__',@{$args->{labels}}) {
-    my $image = $panels->{$label}{gd} or next;
+    my ($url,$img_map,$width,$height) = @{$panels->{$label}}{qw(image map width height)};
 
     my $collapsed     =  $settings->{track_collapsed}{$label};
     my $img_style     = $collapsed ? "display:none" : "display:inline";
 
-    my ($width,$height) = $image->getBounds;
-    my $url             = $self->generate_image($image,
-						$tmpdir);
     my $img             = img({-src=>$url,
 			       -usemap=>"#${label}_map",
 			       -width => $width,
@@ -856,12 +849,8 @@ sub render_draggable_tracks {
     my $class     = $label eq '__scale__' ? 'scale' : 'track';
     my $icon      = $collapsed ? $plus : $minus;
 
-    if ($do_map) {
-      my $img_map = $panels->{$label}{map};
+    if ($img_map) {
       my $help_url    = "url:?get_citation=$label";
-
-      my $boxes = $panel->boxes;
-      $self->debugging_rectangles($image,$boxes) if DEBUG;
 
       my $title       = $label =~ /\w+:(.+)/   # a plugin
                         ? $1
@@ -978,12 +967,6 @@ sub generate_panels {
   my $conf     = $self->config;
   my $length   = $segment->length;
 
-  my @feature_types = map { $conf->label2type($_,$length) } @$labels;
-  my %filters = map { my %conf =  $conf->style($_); 
-		      $conf{'-filter'} ? ($_ => $conf{'-filter'})
-			               : ()
-		      } @$labels;
-
   #---------------------------------------------------------------------------------
   # Track and panel creation
 
@@ -993,25 +976,39 @@ sub generate_panels {
   # in the case of no drag_n_drop, then %panels will contain a single key named "__scale__"
   my %panels;
   my %tracks;
-  my %seenit;  # used to avoid possible upstream error of putting track on list multiple times
-  my %results; # hash of {gd} and {map}
+  my %seenit;    # used to avoid possible upstream error of putting track on list multiple times
+  my %results;   # hash of {$label}{gd} and {$label}{map}
+  my %cached;    # list of labels that have cached data on disk
+  my %cache_key; # list that maps labels to cache keys
 
   my $panel_key = $drag_n_drop ? '__scale__' : '__all__';
 
   # one special track for the scale
-  $panels{$panel_key} = Bio::Graphics::Panel->new(@panel_args);
-  $panels{$panel_key}->add_track($segment      => 'arrow',
-				 -double       => 1,
-				 -tick         => 2,
-				 -label        => $args->{label_scale} ? $segment->seq_id : 0,
-				 -units        => $conf->setting(general=>'units') || '',
-				 -unit_divider => $conf->setting(general=>'unit_divider') || 1,
-				) unless $suppress_scale;
+  $cache_key{$panel_key}   = $self->create_cache_key($panel_key,@panel_args);
+  unless ($cached{$panel_key} =
+	  $self->panel_is_cached($cache_key{$panel_key})
+	 ) {
+    $panels{$panel_key}      = Bio::Graphics::Panel->new(@panel_args);
+    $panels{$panel_key}->add_track($segment      => 'arrow',
+				   -double       => 1,
+				   -tick         => 2,
+				   -label        => $args->{label_scale} ? $segment->seq_id : 0,
+				   -units        => $conf->setting(general=>'units') || '',
+				   -unit_divider => $conf->setting(general=>'unit_divider') || 1,
+				  ) unless $suppress_scale;
+  }
 
   # create another special track for padding to be used when we "collapse" a track, but only
   # if $drag_n_drop is false.
-  $panels{__pad__} = Bio::Graphics::Panel->new(@panel_args)
-    if $drag_n_drop;
+  if ($drag_n_drop) {
+    $panel_key = '__pad__';
+    $cache_key{$panel_key}   = $self->create_cache_key($panel_key,@panel_args);
+    unless ($cached{$panel_key} =
+	    $self->panel_is_cached($cache_key{$panel_key})
+	   ) {
+      $panels{$panel_key} = Bio::Graphics::Panel->new(@panel_args)
+    }
+  }
 
   # this will keep track of numbering of the tracks; only used when inserting
   # feature files into one big panel.
@@ -1024,11 +1021,15 @@ sub generate_panels {
     # if "hide" is set to true, then skip panel
     next if $conf->semantic_setting($label=>'hide',$length);
 
+    my @track_args          = $self->create_track_args($label,$args);
+    $cache_key{$label}      = $self->create_cache_key(@panel_args,@track_args);
+    next if $cached{$label} = $self->panel_is_cached($cache_key{$label});
+
     # create a new panel if we are in drag_n_drop mode
     if ($drag_n_drop) {
       $panel_key = $label;
       my @keystyle = (-key_style=>'between') if $label =~ /^\w+:/;  # a plugin
-      $panels{$panel_key} = Bio::Graphics::Panel->new(@panel_args,@keystyle);
+      $panels{$panel_key}         = Bio::Graphics::Panel->new(@panel_args,@keystyle);
     }
 
     # case of a third-party feature or plugin, in which case we defer creation of a track
@@ -1038,12 +1039,7 @@ sub generate_panels {
       next;
     }
 
-    my @track_args = $self->create_track_args($label,$args);
     $tracks{$label} = $panels{$panel_key}->add_track(@track_args);
-
-    # DEBUG
-    my ($path,$uri) = $self->get_cache_base(@panel_args,@track_args);
-    warn "CACHE = $path, URI = $uri";
   }
   continue {
     $trackno++;
@@ -1051,6 +1047,11 @@ sub generate_panels {
 
   #---------------------------------------------------------------------------------
   # Add features to the database
+  my @feature_types = map { $conf->label2type($_,$length) } grep {!$cached{$_}} @$labels;
+  my %filters = map { my %conf =  $conf->style($_); 
+		      $conf{'-filter'} ? ($_ => $conf{'-filter'})
+			               : ()
+		      } @$labels;
   $self->add_features_to_detail_track(-types   => \@feature_types,
 				      -tracks  => \%tracks,
 				      -filters => \%filters,
@@ -1059,10 +1060,10 @@ sub generate_panels {
 				      -limits  => $limits,
 				      ) if @feature_types;
 
-
   # ------------------------------------------------------------------------------------------
   # Add feature files, including remote annotations
   for my $l (keys %$feature_files) {
+    next if $cached{$l};
     my $file = $feature_files->{$l} or next;
     ref $file or next;
     $panel_key = $l if $drag_n_drop;
@@ -1072,22 +1073,27 @@ sub generate_panels {
 			    -options    => $options);
   }
 
+  # uncached panels need to be generated and cached
   for my $l (keys %panels) {
-    $results{$l}{gd} = $panels{$l}->gd;
-    next unless $do_map;
-    next if $l eq '__pad__';
+    my $gd = $panels{$l}->gd;
+    my $map    =   !$do_map            ? undef
+	           : $l eq '__pad__'   ? undef
+	           : $l eq '__scale__' ? $self->make_centering_map(shift @{$panels{$l}->boxes},
+								   $args->{flip},$l)
+		   : $l eq '__all__'   ? $self->make_map(scalar $panels{$l}->boxes,
+							 $panels{$l},
+							 'tracks',
+							 'add_centering_map')
+		   :                     $self->make_map(scalar $panels{$l}->boxes,
+							 $panels{$l},
+							 $l);
+      @{$results{$l}}{qw(image map width height)} = $self->set_cached_panel($cache_key{$l},$gd,$map);
+      eval {$panels{$l}->finished};
+  }
 
-    my $boxes = $panels{$l}->boxes;
-    $self->debugging_rectangles($results{$l}{gd},$boxes) if DEBUG;
-    my $img_map =   $l eq '__scale__' ? $self->make_centering_map(shift @$boxes,
-								  $args->{flip},$l)
-	          : $l eq '__all__'   ? $self->make_map($boxes,$panels{$l},
-							'tracks','add_centering_map')
-		  : $self->make_map($boxes,$panels{$l},$l);
-    $results{$l}{map} = $img_map;
-  } continue {
-    # should quash memory leaks when used in conjunction with bioperl 1.4
-    eval {$panels{$l}->finished};
+  # cached panels need to be retrieved
+  for my $l (keys %cached) {
+    @{$results{$l}}{qw(image map width height)} = $self->get_cached_panel($cache_key{$l});
   }
 
   return \%results;
@@ -1400,7 +1406,7 @@ sub tmpdir {
     $tmpdir .= "/$path" if $path;
   }
   else {
-    $tmpdir = "$ENV{DOCUMENT_ROOT}/$tmpuri";
+    $tmpdir = "$ENV{DOCUMENT_ROOT}$tmpuri";
   }
 
   # we need to untaint tmpdir before calling mkpath()
@@ -2519,18 +2525,103 @@ sub create_cache_key {
 }
 
 sub get_cache_base {
-  my $self        = shift;
-  my $key         = $self->create_cache_key(@_);
+  my $self            = shift;
+  my ($key,$filename) = @_;
   my @comp        = $key =~ /(..)/g;
-  my $rel_path    = join '/',@comp[0..3],$key;
-  my ($path,$uri) = $self->tmpdir($rel_path);
+  my $rel_path    = join '/',$self->source,'panel_cache',@comp[0..2],$key;
+  my ($uri,$path) = $self->tmpdir($rel_path);
+  return wantarray ? ("$path/$filename","$uri/$filename") : "$path/$filename";
 }
 
-sub get_cached_track {
+sub panel_is_cached {
+  my $self  = shift;
+  my $key   = shift;
+  my $image_file = $self->get_cache_base($key,'image');
+  return -e "$image_file.png" || -e "$image_file.gif" || -e "$image_file.jpg";
+}
+
+=head2 get_cached_panel()
+
+  ($image_uri,$map,$width,$height) = $self->get_cached_panel($cache_key)
+
+Return cached image url, imagemap data, width and height of image.
+
+=cut
+
+sub get_cached_panel {
   my $self = shift;
-  my @args = @_;
-  warn "get_cached_track() not implemented";
-  return;
+  my $key  = shift;
+
+  my $map_file                = $self->get_cache_base($key,'map')   or return;
+  my $size_file               = $self->get_cache_base($key,'size')  or return;
+  my ($image_file,$image_uri) = $self->get_cache_base($key,'image') or return;
+
+  # get map data
+  my $map_data;
+  if (-e $map_file) {
+    my $f = IO::File->new($map_file) or return;
+    $map_data = join '',$f->getlines;
+    $f->close;
+  }
+
+  # get size data
+  my ($width,$height);
+  if (-e $size_file) {
+    my $f = IO::File->new($size_file) or return;
+    chomp($width = $f->getline);
+    chomp($height = $f->getline);
+    $f->close;
+  }
+
+  return ($image_uri,$map_data,$width,$height);
+}
+
+sub set_cached_panel {
+  my $self = shift;
+  my ($key,$gd,$map_data) = @_;
+
+  my $map_file                = $self->get_cache_base($key,'map')   or return;
+  my $size_file               = $self->get_cache_base($key,'size')  or return;
+  my ($image_file,$image_uri) = $self->get_cache_base($key,'image') or return;
+
+  # write the map data
+  if ($map_data) {
+    my $f = IO::File->new(">$map_file") or die "$map_file: $!";
+    $f->print($map_data);
+    $f->close;
+  }
+
+  return unless $gd;
+
+  # get the width and height and write the size data
+  my ($width,$height) = $gd->getBounds;
+  my $f = IO::File->new(">$size_file") or die "$size_file: $!";
+  $f->print($width,"\n");
+  $f->print($height,"\n");
+  $f->close;
+
+  my $image_data;
+
+  if ($gd->can('png')) {
+    $image_file .= ".png";
+    $image_data = $gd->png;
+  }
+
+  elsif ($gd->can('gif')) {
+    $image_file .= ".gif";
+    $image_data  = $gd->gif;
+  }
+
+  elsif ($gd->can('jpeg')) {
+    $image_file .= ".jpg";
+    $image_data  = $gd->jpeg;
+  }
+
+  $f = IO::File->new(">$image_file") or die "$image_file: $!";
+  $f->print($image_data);
+  $f->close;
+
+  return ($image_uri,$map_data,$width,$height);
 }
 
 package Bio::Graphics::BrowserConfig;

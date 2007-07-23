@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.10 2007-07-19 22:38:44 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.11 2007-07-23 19:49:14 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -799,6 +799,20 @@ sub render_html {
                       : $self->render_composite_track($args,$panels->{'__all__'});
 }
 
+=head2 drag_and_drop()
+
+Return true if drag_and_drop tracks should be enabled on this
+datasource. Looks at the "drag and drop" option and also consults a
+series of user agents known to support drag_and_drop.
+
+=cut
+
+sub drag_and_drop {
+  my $self = shift;
+  return $self->setting(general => 'drag and drop');
+}
+
+
 sub render_draggable_tracks {
   my $self = shift;
   my ($args,$panels) = @_;
@@ -813,7 +827,7 @@ sub render_draggable_tracks {
   my $help   = "$images/query.png";
 
   # get the pad image, which we use to fill up space between collapsed tracks
-  my $pi       = $panels->{__pad__}->gd;
+  my $pi       = $panels->{__pad__}{gd};
   my ($pw,$ph) = $pi->getBounds;
   my $pad_url  = $self->generate_image(
 				       $pi,
@@ -822,8 +836,7 @@ sub render_draggable_tracks {
 
   my @result;
   for my $label ('__scale__',@{$args->{labels}}) {
-    my $panel = $panels->{$label} or next;
-    my $image = $panel->gd;
+    my $image = $panels->{$label}{gd} or next;
 
     my $collapsed     =  $settings->{track_collapsed}{$label};
     my $img_style     = $collapsed ? "display:none" : "display:inline";
@@ -844,13 +857,12 @@ sub render_draggable_tracks {
     my $icon      = $collapsed ? $plus : $minus;
 
     if ($do_map) {
+      my $img_map = $panels->{$label}{map};
+      my $help_url    = "url:?get_citation=$label";
+
       my $boxes = $panel->boxes;
       $self->debugging_rectangles($image,$boxes) if DEBUG;
 
-      my $img_map = $label eq '__scale__'
-	                   ? $self->make_centering_map(shift @$boxes,$args->{flip},$label)
-			   : $self->make_map($boxes,$panel,$label);
-      my $help_url    = "url:?get_citation=$label";
       my $title       = $label =~ /\w+:(.+)/   # a plugin
                         ? $1
                         : $self->config->setting($label=>'key') || $label; # configured
@@ -889,7 +901,6 @@ sub render_draggable_tracks {
       push @result,div({-id=>"track_${label}",-class=>$class},$img);
     }
 
-    eval {$panel->finished};  # should quash memory leaks when used in conjunction with bioperl 1.4
   }
   return wantarray ? @result : join "<br>",@result;
 }
@@ -901,7 +912,7 @@ sub render_composite_track {
   my $do_map = $args->{do_map};
   my $tmpdir = $args->{tmpdir};
 
-  my $image = $panel->gd;
+  my $image = $panel->{gd};
   my ($width,$height) = $image->getBounds;
   my $url             = $self->generate_image($image,
 					      $tmpdir);
@@ -914,103 +925,64 @@ sub render_composite_track {
 			     -border=> 0,
 			     -name  => "detailedView",
 			     -alt   => 'detailed view'});
-  return $img unless $do_map;
-
-  my $boxes = $panel->boxes;
-  $self->debugging_rectangles($image,$boxes) if DEBUG;
-  my $img_map = $self->make_map($boxes,$panel,'tracks','add_centering_map');
-  return $img.$img_map;
+  return wantarray ? ($img,$panel->{map})
+                   : $img;
 }
 
-# Generate the image and the box list, and return the GD object, the boxes() list, the panel object and
-# a hashref that maps track objects to track labels or feature files.
-# arguments: a key=>value list
-#    'segment'       A feature iterator that responds to next_seq() methods
-#    'feature_files' A hash of Bio::Graphics::FeatureFile objects containing 3d party features
-#    'options'       An hashref of options, where 0=auto, 1=force no bump, 2=force bump, 3=force label
-#                       4=force fast bump, 5=force fast bump and label
-#    'limit'         Place a limit on the number of features of each type to show.
-#    'labels'        List of named tracks, in the order in which they are to be shown
-#    'tracks'        List of named tracks, in the order in which they are to be shown (deprecated)
-#    'label_scale'   If true, prints chromosome name next to scale
-#    'title'         A title for the image
-#    'noscale'       Suppress scale entirely
-#    'image_class'   Optional image class for generating SVG output (by passing GD::SVG)
-#
-# any arguments that begin with an initial - (hyphen) are passed through to Panel->new
-# directly
-#
+=head2 generate_panels()
+
+Generate the GD object and the imagemap and returns a hashref in the format
+
+  $results->{track_label} = {gd=>$gd, map=>$img_map}
+
+arguments: a key=>value list
+   'segment'       A feature iterator that responds to next_seq() methods
+   'feature_files' A hash of Bio::Graphics::FeatureFile objects containing 3d party features
+   'options'       An hashref of options, where 0=auto, 1=force no bump, 2=force bump, 3=force label
+                      4=force fast bump, 5=force fast bump and label
+   'limit'         Place a limit on the number of features of each type to show.
+   'labels'        List of named tracks, in the order in which they are to be shown
+   'tracks'        List of named tracks, in the order in which they are to be shown (deprecated)
+   'label_scale'   If true, prints chromosome name next to scale
+   'title'         A title for the image
+   'noscale'       Suppress scale entirely
+   'image_class'   Optional image class for generating SVG output (by passing GD::SVG)
+any arguments that begin with an initial - (hyphen) are passed through to Panel->new
+directly
+
+=cut
+
 sub generate_panels {
-  my $self    = shift;
+  my $self  = shift;
   my $args  = shift;
 
+  my @panel_args     = $self->create_panel_args('details',$args);
+
   my $segment       = $args->{segment};
+  my ($seg_start,$seg_stop,$flip) = $self->segment_coordinates($segment,
+							       $args->{flip});
+
   my $feature_files = $args->{feature_files} || {};
   my $labels        = $args->{labels} || $args->{tracks} || []; # legacy
   my $options       = $args->{options}       || {};
   my $limits        = $args->{limit}         || {};
   my $lang          = $args->{lang} || $self->language;
-  my $keystyle      = $args->{keystyle};
-  my $title         = $args->{title};
-  my $flip          = $args->{flip};
   my $suppress_scale= $args->{noscale};
   my $hilite_callback = $args->{hilite_callback};
-  my $image_class   = $args->{image_class} || 'GD';
-  my $postgrid      = $args->{postgrid} || '';
-  my $background    = $args->{background} || '';
-  my $drag_n_drop   = $args->{drag_n_drop};
+  my $drag_n_drop   = $self->drag_and_drop;
+  my $do_map        = $args->{do_map};
 
   $segment->factory->debug(1) if DEBUG;
   $self->error('');
 
-  # Bring in the appropriate package - just for the fonts. Ugh.
-  eval "use $image_class";
-
-  my $width = $self->width;
-  my $conf  = $self->config;
-  my $length         = $segment->length;
+  my $conf     = $self->config;
+  my $length   = $segment->length;
 
   my @feature_types = map { $conf->label2type($_,$length) } @$labels;
   my %filters = map { my %conf =  $conf->style($_); 
 		      $conf{'-filter'} ? ($_ => $conf{'-filter'})
 			               : ()
 		      } @$labels;
-
-  # Create the tracks that we will need
-  my ($seg_start,$seg_stop ) = ($segment->start,$segment->end);
-  if ($seg_stop < $seg_start) {
-    ($seg_start,$seg_stop)     = ($seg_stop,$seg_start);
-    $flip = 1;
-  }
-
-  my @pass_thru_args = map {/^-/ ? ($_=>$args->{$_}) : ()} keys %$args;
-  my @argv = (
-	      -grid         => 1,
-	      -start        => $seg_start,
-	      -end          => $seg_stop,
-	      -stop         => $seg_stop,  #backward compatibility with old bioperl
-	      -key_color    => $self->setting('key bgcolor')     || 'moccasin',
-	      -bgcolor      => $self->setting('detail bgcolor')  || 'white',
-	      -width        => $width,
-	      -key_style    => $keystyle || $conf->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
-	      -empty_tracks => $conf->setting(general=>'empty_tracks') 	        || DEFAULT_EMPTYTRACKS,
-	      -pad_top      => $title ? $image_class->gdMediumBoldFont->height : 0,
-	      -image_class  => $image_class,
-	      -postgrid     => $postgrid,
-	      -background   => $background,
-	      -truecolor    => $conf->setting(general=>'truecolor') || 0,
-	      @pass_thru_args,   # position is important here to allow user to override settings
-	     );
-
-  push @argv, -flip => 1 if $flip;
-  my $p = defined $conf->setting(general=>'image_padding') ? $conf->setting(general=>'image_padding')
-                                                           : PAD_DETAIL_SIDES;
-  my $pl = $conf->setting(general=>'pad_left');
-  my $pr = $conf->setting(general=>'pad_right');
-  $pl    = $p unless defined $pl;
-  $pr    = $p unless defined $pr;
-
-  push @argv,(-pad_left =>$pl, -pad_right=>$pr) if $p;
 
   #---------------------------------------------------------------------------------
   # Track and panel creation
@@ -1022,24 +994,23 @@ sub generate_panels {
   my %panels;
   my %tracks;
   my %seenit;  # used to avoid possible upstream error of putting track on list multiple times
+  my %results; # hash of {gd} and {map}
 
   my $panel_key = $drag_n_drop ? '__scale__' : '__all__';
 
   # one special track for the scale
-  $panels{$panel_key} = Bio::Graphics::Panel->new(@argv);
-  $panels{$panel_key}->add_track($segment   => 'arrow',
-				 -double    => 1,
-				 -tick      => 2,
-				 -label     => $args->{label_scale} ? $segment->seq_id : 0,
-				 -units     => $conf->setting(general=>'units') || '',
+  $panels{$panel_key} = Bio::Graphics::Panel->new(@panel_args);
+  $panels{$panel_key}->add_track($segment      => 'arrow',
+				 -double       => 1,
+				 -tick         => 2,
+				 -label        => $args->{label_scale} ? $segment->seq_id : 0,
+				 -units        => $conf->setting(general=>'units') || '',
 				 -unit_divider => $conf->setting(general=>'unit_divider') || 1,
 				) unless $suppress_scale;
 
   # create another special track for padding to be used when we "collapse" a track, but only
   # if $drag_n_drop is false.
-  $panels{__pad__} = Bio::Graphics::Panel->new(@argv,
-					       -pad_top     => 20,
-					       -extend_grid => 1)
+  $panels{__pad__} = Bio::Graphics::Panel->new(@panel_args)
     if $drag_n_drop;
 
   # this will keep track of numbering of the tracks; only used when inserting
@@ -1057,11 +1028,7 @@ sub generate_panels {
     if ($drag_n_drop) {
       $panel_key = $label;
       my @keystyle = (-key_style=>'between') if $label =~ /^\w+:/;  # a plugin
-      $panels{$panel_key} = Bio::Graphics::Panel->new(@argv,
-						      -pad_top     => 20,
-						      -extend_grid => 1,
-						      @keystyle,
-						     );
+      $panels{$panel_key} = Bio::Graphics::Panel->new(@panel_args,@keystyle);
     }
 
     # case of a third-party feature or plugin, in which case we defer creation of a track
@@ -1071,16 +1038,12 @@ sub generate_panels {
       next;
     }
 
-    if ($conf->semantic_setting($label=>'global feature',$length)) {
-      $tracks{$label} = $panels{$panel_key}->add_track($segment,
-						       $conf->default_style,
-						       $conf->i18n_style($label,$lang)
-						      );
-    } else {
-      my @settings = ($conf->default_style,$conf->i18n_style($label,$lang,$length));
-      push @settings,(-hilite => $hilite_callback) if $hilite_callback;
-      $tracks{$label} = $panels{$panel_key}->add_track(-glyph => 'generic',@settings);
-    }
+    my @track_args = $self->create_track_args($label,$args);
+    $tracks{$label} = $panels{$panel_key}->add_track(@track_args);
+
+    # DEBUG
+    my ($path,$uri) = $self->get_cache_base(@panel_args,@track_args);
+    warn "CACHE = $path, URI = $uri";
   }
   continue {
     $trackno++;
@@ -1109,8 +1072,27 @@ sub generate_panels {
 			    -options    => $options);
   }
 
-  return \%panels;
+  for my $l (keys %panels) {
+    $results{$l}{gd} = $panels{$l}->gd;
+    next unless $do_map;
+    next if $l eq '__pad__';
+
+    my $boxes = $panels{$l}->boxes;
+    $self->debugging_rectangles($results{$l}{gd},$boxes) if DEBUG;
+    my $img_map =   $l eq '__scale__' ? $self->make_centering_map(shift @$boxes,
+								  $args->{flip},$l)
+	          : $l eq '__all__'   ? $self->make_map($boxes,$panels{$l},
+							'tracks','add_centering_map')
+		  : $self->make_map($boxes,$panels{$l},$l);
+    $results{$l}{map} = $img_map;
+  } continue {
+    # should quash memory leaks when used in conjunction with bioperl 1.4
+    eval {$panels{$l}->finished};
+  }
+
+  return \%results;
 }
+
 
 
 sub add_features_to_detail_track {
@@ -1223,8 +1205,8 @@ sub add_features_to_detail_track {
 					       $length);
 
     $tracks->{$l}->configure(-bump  => $do_bump,
-			       -label => $do_label,
-			       -description => $do_description,
+			     -label => $do_label,
+			     -description => $do_description,
 			      );
     $tracks->{$l}->configure(-connector  => 'none') if !$do_bump;
     $tracks->{$l}->configure(-bump_limit => $limits->{$l}) 
@@ -1323,6 +1305,8 @@ option in the config file (currently only 'cache_overview'), and @keys
 are settings that make the file unique, such as the list of tracks
 that are activated.
 
+NOTE: this is going to be made obsolete by the track caching mechanism.
+
 =cut
 
 sub gd_cache_path {
@@ -1340,6 +1324,8 @@ sub gd_cache_path {
  my $gd = $browser->gd_cache_check($cache_name,$path)
 
 Returns a GD file if its cached version is still valid.
+
+NOTE: this is going to be made obsolete by the track caching mechanism.
 
 =cut
 
@@ -1364,6 +1350,8 @@ sub gd_cache_check {
  my $gd = $browser->gd_cache_write($cache_path,$gd)
 
 Write a GD file into the indicated path.
+
+NOTE: this is going to be made obsolete by the track caching mechanism.
 
 =cut
 
@@ -2386,6 +2374,163 @@ sub error {
   my $self = shift; # do nothing
   $self->{'.err_msg'} = shift if @_;
   $self->{'.err_msg'};
+}
+
+=head2 create_panel_args()
+
+  @args = $self->create_panel_args($panel_type,$args);
+
+Return arguments need to create a Bio::Graphics::Panel.
+$panel_type is one of 'detail','overview', or 'region'
+$args is a hashref that contains the keys:
+
+   keystyle
+   title
+   image_class
+   postgrid
+   background
+
+=cut
+
+sub create_panel_args {
+  my $self               = shift;
+  my ($panel_type,$args) = @_;
+
+  my $segment       = $args->{segment};
+  my ($seg_start,$seg_stop,$flip) = $self->segment_coordinates($segment,
+							       $args->{flip});
+
+  my $image_class = $args->{image_class} || 'GD';
+  eval "use $image_class" unless "${image_class}::Image"->can('new');
+
+  my @pass_thru_args = map {/^-/ ? ($_=>$args->{$_}) : ()} keys %$args;
+  my @argv = (
+	      -grid         => 1,
+	      -start        => $seg_start,
+	      -end          => $seg_stop,
+	      -stop         => $seg_stop,  #backward compatibility with old bioperl
+	      -key_color    => $self->setting('key bgcolor')     || 'moccasin',
+	      -bgcolor      => $self->setting('detail bgcolor')  || 'white',
+	      -width        => $self->width,
+	      -key_style    => $args->{keystyle} || $self->setting('keystyle') || DEFAULT_KEYSTYLE,
+	      -empty_tracks => $self->setting('empty_tracks') 	               || DEFAULT_EMPTYTRACKS,
+	      -pad_top      => $args->{title} ? $image_class->gdMediumBoldFont->height : 0,
+	      -image_class  => $image_class,
+	      -postgrid     => $args->{postgrid} || '',
+	      -background   => $args->{background} || '',
+	      -truecolor    => $self->setting('truecolor') || 0,
+	      @pass_thru_args,   # position is important here to allow user to override settings
+	     );
+
+  push @argv, -flip => 1 if $flip;
+  my $p = defined $self->setting('image_padding') ? $self->setting('image_padding')
+                                                           : PAD_DETAIL_SIDES;
+  my $pl = $self->setting('pad_left');
+  my $pr = $self->setting('pad_right');
+  $pl    = $p unless defined $pl;
+  $pr    = $p unless defined $pr;
+
+  push @argv,(-pad_left =>$pl, -pad_right=>$pr) if $p;
+
+
+  return (@argv,
+	  -pad_top     => 18,
+	  -extend_grid => 1)
+    if $self->drag_and_drop;
+
+  return @argv if $panel_type eq 'detail';
+
+  return @argv;
+}
+
+=head2 create_track_args()
+
+  @args = $self->create_track_args($label,$args);
+
+Return arguments need to create a Bio::Graphics::Track.
+$label is a config file stanza label for the track.
+
+=cut
+
+sub create_track_args {
+  my $self = shift;
+  my ($label,$args) = @_;
+
+  my $segment = $args->{segment};
+  my $lang    = $args->{lang};
+  my $hilite_callback = $args->{hilite_callback};
+
+  my $length = $segment->length;
+  my $conf   = $self->config;
+  my @args;
+
+  if ($conf->semantic_setting($label=>'global feature',$length)) {
+    @args = ($segment,
+	     $conf->default_style,
+	     $conf->i18n_style($label,$lang)
+	    );
+  } else {
+    my @settings = ($conf->default_style,
+		    $conf->i18n_style($label,
+				      $lang,
+				      $length)
+		   );
+
+    push @settings,(-hilite => $hilite_callback) if $hilite_callback;
+    @args = (-glyph => 'generic',@settings);
+  }
+  return @args;
+}
+
+=head2 segment_coordinates()
+
+   ($start,$stop,$flip) = $self->segment_coordinates($segment,$flip)
+
+Method to correct for rare case in which start and stop are flipped.
+
+=cut
+
+sub segment_coordinates {
+  my $self    = shift;
+  my $segment = shift;
+  my $flip    = shift;
+
+  # Create the tracks that we will need
+  my ($seg_start,$seg_stop ) = ($segment->start,$segment->end);
+  if ($seg_stop < $seg_start) {
+    ($seg_start,$seg_stop)     = ($seg_stop,$seg_start);
+    $flip = 1;
+  }
+  return ($seg_start,$seg_stop,$flip);
+}
+
+=head2 create_cache_key()
+
+  $cache_key = $self->create_cache_key(@args)
+
+Create a unique cache key for the given args.
+
+=cut
+
+sub create_cache_key {
+  my $self = shift;
+  my @args = map {$_ || ''} grep {!ref($_)} @_;  # the map gets rid of uninit variable warnings
+  return md5_hex(@args);
+}
+
+sub get_cache_base {
+  my $self        = shift;
+  my $key         = $self->create_cache_key(@_);
+  my @comp        = $key =~ /(..)/g;
+  my $rel_path    = join '/',@comp[0..3],$key;
+  my ($path,$uri) = $self->tmpdir($rel_path);
+}
+
+sub get_cached_track {
+  my $self = shift;
+  my @args = @_;
+  warn "get_cached_track() not implemented";
+  return;
 }
 
 package Bio::Graphics::BrowserConfig;

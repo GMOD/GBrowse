@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.13 2007-07-23 22:47:08 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.14 2007-07-23 22:54:26 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1022,10 +1022,10 @@ sub generate_panels {
     next if $conf->semantic_setting($label=>'hide',$length);
 
     my @track_args          = $self->create_track_args($label,$args);
-    $cache_key{$label}      = $self->create_cache_key(@panel_args,@track_args);
+    my @extra_args          = eval {$feature_files->{$label}->types};  # disambiguate plugins
+    $cache_key{$label}      = $self->create_cache_key(@panel_args,@track_args,@extra_args);
 
-    next if !$feature_files->{$label} &&
-      ($cached{$label} = $self->panel_is_cached($cache_key{$label}));
+    next if $cached{$label} = $self->panel_is_cached($cache_key{$label});
 
     # create a new panel if we are in drag_n_drop mode
     if ($drag_n_drop) {

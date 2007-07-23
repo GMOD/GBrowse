@@ -117,6 +117,191 @@ sub fatal_error {
 }
 
 sub print_usage {
-  print "Pass in frozen args through url, get back frozen track images and maps.";
-  ## print instructions later
+  
+  print <<'END';
+<html>
+<h1>gbrowse_render - Script to generate genome images and map objects for the Generic Genome Browser</h1>
+
+<h2>SYNOPSIS</h2>
+
+<pre>
+  
+  
+  
+  use strict;
+  use Storable qw(freeze thaw);
+  use LWP::Parallel::UserAgent;
+  use HTTP::Request::Common qw(POST);
+  
+  use Bio::Graphics::Browser;
+  use Bio::Graphics::Browser::Render;
+  use Bio::Graphics::Browser::Render::HTML;
+  use Bio::Graphics::Browser::DataSource;
+  
+  my $conf_dir = '/etc/httpd/gbrowse.conf/GBrowse.conf';
+  my $url = 'http://localhost/cgi-bin.dev/gbrowse_render.pl';
+  
+  my $globals = Bio::Graphics::Browser->new($conf_dir);
+  my $render = Bio::Graphics::Browser::Render::HTML->new($globals);
+  
+  
+  #    ...     SET UP $render object
+  
+  
+  my $session = $globals->session();
+  $globals->update_data_source($session);
+  
+  my @tracks = ('ORFs','Genes','tRNAs');
+  my $dsn = $globals->create_data_source($session->source);
+  my $lang = $render->language->{lang};
+  my $settings = $session->page_settings;
+
+
+
+  #create LWP, a class for parallel User Agents
+  my $ua = LWP::Parallel::UserAgent->new;
+  $ua->in_order(0);
+  $ua->nonblock(1);
+  
+  my $request = POST ($url,
+    		       [tracks     => Storable::freeze(\@tracks),
+			settings   => Storable::freeze($settings),
+			datasource => Storable::freeze($dsn),
+			language   => Storable::freeze($lang)
+    ]);
+  my $error = $ua->register($request);
+  
+  if ($error) { warn "Could not send request to $url: ",$error->as_string }
+
+  my $results = $ua->wait(20);
+
+  my %track_results;
+  foreach (keys %$results) {
+    my $response = $results->{$_}->response;
+    unless ($response->is_success) {
+      warn $results->request->uri,"; fetch failed: ",$response->status_line;
+      next;
+    }
+    my $content = $response->content;
+
+    my $tracks = Storable::thaw($content);
+    for my $track_tuple (@$tracks) {
+      my ($track_name,$gd,$imagemap) = @$track_tuple;
+      $track_results{$track_name}{gd} = $gd;
+      $track_results{$track_name}{map} = $imagemap;
+    }
+  }
+  
+</pre>
+
+
+<h2>DESCRIPTION</h2>
+
+<p>
+This script is a small component of the Generic Genome Browser which will
+extract the necessary data to create the images and their corresponding maps
+remotely.  A central Genome Browser will call on multiple copies of this script
+on remote servers to allow parallel processing of data.  Parameters and data
+objects are passed in a specific manner as illustrated in the above synopsis.
+When the remote scripts have completed running, it will return the GD and map
+objects to the central caller.<p>
+
+<h2>CGI arguments</h2>
+
+<p>
+
+The script recognizes the following CGI arguments, which must be passed as a
+single POST argument wrapped around a hash containing the following
+argument=value pairs.
+
+<table border="1">
+<tr><th>Argument</th><th>Description</th></tr>
+<tr> <td>tracks</td>      <td>List of tracks to be rendered</td></tr>
+<tr> <td>settings</td>    <td>Page settings of the portion of the genome to view</td></tr>
+<tr> <td>datasource</td>  <td>Bio::Graphics::Browser::DataSource object containing configurations</td></tr>
+<tr> <td>language</td>    <td>List of languages the current browser is being run in</td></tr>
+</table>
+
+
+<p>The arguments are explained in more detail here</p>
+
+<dl>
+  <dt><b>tracks</b>
+  <dd>An array of the track names to be rendered by gbrowse_render.<br>
+      Note that plugins must be rendered locally and cannot rely on this script
+      to render the images.
+      <p>
+      
+  <dt><b>settings</b> (also known as page settings, or state)
+  <dd>This data structure contains the current page settings of the browser.
+      It lives in the Bio::Graphics::Browser::Render object.
+      <p>
+      
+  <dt><b>datasource</b>
+  <dd>A Bio::Graphics::Browser::DataSource object containing the configurations
+      set by the configuration files.
+      <p>
+      
+  <dt><b>language</b>
+  <dd>A list of languages the current browser is being run in.  It is a subset
+      of the Bio::Graphics::Browser::Render object.  An example would be the
+      array:
+      <p>
+      <pre>
+      [
+         'en-us',
+         'en',
+         'en',
+         'posix'
+      ],
+
+</dl>
+
+
+<h2>OBJECTS RETURNED</h2>
+
+<p>
+
+This script will return a hash containing the GD and map objects organized by
+their track name.  This is done by printing out the frozen results (via
+Storables) and thus must be thawed by the central browser script.
+<p>
+Using the UserAgent object, the data is to be extracted by th econtent method:
+
+<pre>
+    my $ua;   #set up UserAgent object
+    my $results = $ua->wait(20);
+    
+    my $content = $response->content;
+    my $tracks = Storable::thaw($content);
+    for my $track_tuple (@$tracks) {
+      my ($track_name,$gd,$imagemap) = @$track_tuple;
+      
+      #store or use the $gd, $imagemap objects for the track $track_name
+      
+    }
+
+</pre>
+
+<h2>NOTES</h2>
+
+<p> Plugins are only to be rendered locally and thus are not to be used by this script.</p>
+
+<h2>AUTHOR</h2>
+
+<p>Lincoln Stein <a href="mailto:lstein@cshl.org">lstein@cshl.org</a>
+<p> with acknowledgements to H. Mark Okada
+<p>
+Copyright (c) 2002-2004 Cold Spring Harbor Laboratory
+<p>
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+<p>
+
+For additional help, see <a href="http://www.gmod.org">The GMOD Project</a> pages.
+
+END
+;
 }
+
+

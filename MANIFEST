@@ -251,6 +251,7 @@ htdocs/images/help/upload+remote.gif
 htdocs/images/help/upload.gif
 htdocs/index.html
 htdocs/js/buttons.js
+htdocs/js/rubber.js
 htdocs/js/toggle.js
 htdocs/js/x_cook.js
 INSTALL

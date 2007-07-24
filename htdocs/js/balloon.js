@@ -2,7 +2,7 @@
  balloon.js -- a DHTML library for balloon tooltips
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: balloon.js,v 1.1.2.2 2007-07-19 22:38:44 lstein Exp $
+ $Id: balloon.js,v 1.1.2.3 2007-07-24 19:21:24 sheldon_mckay Exp $
 
  See http://www.wormbase.org/wiki/index.php/Balloon_Tooltips
  for documentation.
@@ -72,7 +72,7 @@ var Balloon = function() {
   this.hOffset = 'left';
 
   // Location of optional ajax handler that returns tooltip contents
-  this.helpUrl = null;//'/db/misc/help';
+  //this.helpUrl = '/db/misc/help';
 
   // Default tooltip text size
   this.balloonTextSize = '90%';
@@ -176,7 +176,7 @@ Balloon.prototype.doShowTooltip = function() {
     bSelf.activeUrl = urlArray[1];
   }
   // or if the text is a bare hyperlink
-  else if (bSelf.currentHelpText.match(/^(http:|\/)\S+$/i)) {
+  else if (bSelf.currentHelpText.match(/^(https?:|\/|ftp:)\S+$/i)) {
     bSelf.activeUrl = bSelf.currentHelpText;
     bSelf.currentHelpText = '';
   }	
@@ -223,7 +223,7 @@ Balloon.prototype.doShowTooltip = function() {
     }
 
     helpText = '\
-    <a onClick="Balloon.prototype.hideStaticTooltip()" title="close this balloon" \
+    <a onClick="Balloon.prototype.hideStaticTooltip()" title="close this balloon" href=javascrip:void(0)\
     style="float:right;font-size:12px;text-decoration:none">\
     Close [X]</a><br>' + helpText;
   }
@@ -354,7 +354,6 @@ Balloon.prototype.justAppend = function(child,parent) {
 Balloon.prototype.showBalloon = function(orient,left,top)  {
   YAHOO.util.Dom.setY(this.activeBalloon,999999999);
   this.setStyle(this.activeBalloon,'display','inline');
-  this.setStyle(this.activeBalloon,'z-index',10000);
 
   if (orient == 'up') {
     var height = this.getLoc(this.activeBalloon,'height');

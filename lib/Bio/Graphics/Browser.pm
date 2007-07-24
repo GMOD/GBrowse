@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.15 2007-07-24 12:50:05 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.16 2007-07-24 13:58:16 sheldon_mckay Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -2533,10 +2533,6 @@ sub get_cache_base {
   my $rel_path    = join '/',$self->source,'panel_cache',@comp[0..2],$key;
   my ($uri,$path) = $self->tmpdir($rel_path);
 
-  unless ($filename =~ /\.(gif|jpg|png)$/) {
-    $filename .= -e "$path/filename.gif" ? '.gif' : -e "$path/filename.jpg" ? '.jpg' : '.png';
-  }
-
   return wantarray ? ("$path/$filename","$uri/$filename") : "$path/$filename";
 }
 
@@ -2580,6 +2576,8 @@ sub get_cached_panel {
     $f->close;
   }
 
+
+  $image_uri .= -e "$image_file.png" ? '.png' : -e "$image_file.jpg" ? '.jpg' : '.gif';
   return ($image_uri,$map_data,$width,$height);
 }
 

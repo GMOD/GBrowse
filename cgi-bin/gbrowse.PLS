@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.7 2007-07-13 22:14:59 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.8 2007-07-24 18:26:47 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -585,7 +585,6 @@ sub detail_panel {
   return '' if $CONFIG->section_setting('details') eq 'hide';
 
   my @panels;
-  my $drag_n_drop = $CONFIG->setting(general => 'drag and drop');
 
   if ($segment->length <= $MAX_SEGMENT) {
 
@@ -597,17 +596,15 @@ sub detail_panel {
     my %limit   = map {$_=>$page_settings->{features}{$_}{limit}}   @tracks_to_show;
     my $h_callback = make_hilite_callback($page_settings);
     my $postgrid   = make_postgrid_callback($page_settings);
-    my $ks         = $drag_n_drop ? 'none' : $page_settings->{ks};
     @panels      = $CONFIG->render_html({segment       => $segment,
 					 feature_files => $feature_files,
 					 labels        => \@tracks_to_show,
-					 drag_n_drop   => $drag_n_drop,
 					 options       => \%options,
 					 limit         => \%limit,
 					 do_map        => 1,
 					 do_centering_map => 1,
 					 lang          => $CONFIG->language,
-					 keystyle      => $ks || 'between',
+					 keystyle      => $page_settings->{ks},
 					 flip          => $page_settings->{flip} || undef,
 					 postgrid      => $postgrid || $CONFIG->setting('postgrid') || '',
 					 background    => $CONFIG->setting('background') || '',
@@ -631,7 +628,7 @@ sub detail_panel {
     : '';
   my $hints = join '',unique(hidden('ref')),unique(hidden('start')),unique(hidden('stop'));
 
-  unless ($drag_n_drop) {
+  unless ($CONFIG->drag_and_drop) {
     return div(toggle($page_settings,
 		      'Details',
 		      div({-id=>'panels',-class=>'track'},

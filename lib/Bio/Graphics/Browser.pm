@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.16 2007-07-24 13:58:16 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.17 2007-07-24 18:26:49 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -788,7 +788,7 @@ sub render_html {
   my $do_centering_map= $args->{do_centering_map};
   my $tmpdir          = $args->{tmpdir};
   my $settings        = $args->{settings};
-  my $drag_n_drop     = $args->{drag_n_drop};
+  my $drag_n_drop     = $self->drag_and_drop;
 
   return unless $segment;
 
@@ -901,21 +901,21 @@ sub render_composite_track {
   my $do_map = $args->{do_map};
   my $tmpdir = $args->{tmpdir};
 
-  my $image = $panel->{gd};
-  my ($width,$height) = $image->getBounds;
-  my $url             = $self->generate_image($image,
-					      $tmpdir);
+  my $url             = $panel->{image};
+  my $map             = $panel->{map};
+  my ($width,$height) = @{$panel}{'width','height'};
+
   my $img             = img({-src=>$url,
 			     -usemap=>"#tracks_map",
 			     -width => $width,
 			     -id    => "tracks_image",
-			     -align => 'center',
 			     -height=> $height,
 			     -border=> 0,
 			     -name  => "detailedView",
 			     -alt   => 'detailed view'});
-  return wantarray ? ($img,$panel->{map})
-                   : $img;
+  my $html    = div({-align=>'center'},$img);
+  return wantarray ? ($html,$map)
+                   : $html;
 }
 
 =head2 generate_panels()
@@ -983,11 +983,14 @@ sub generate_panels {
 
   my $panel_key = $drag_n_drop ? '__scale__' : '__all__';
 
-  # one special track for the scale
-  $cache_key{$panel_key}   = $self->create_cache_key($panel_key,@panel_args);
-  unless ($cached{$panel_key} =
-	  $self->panel_is_cached($cache_key{$panel_key})
-	 ) {
+  # caching doesn't work for the monolithic picture, so ignore the cache code when drag-n-drop is off
+  # in fact, panel_is_cached() always returns false for non-drag-n-drop
+  # one special track for the scale or (in monolithic picture mode), the whole thing ('__all__')
+  my @cache_args           = ($panel_key,@panel_args);
+  $cache_key{$panel_key}   = $self->create_cache_key(@cache_args);
+  $cached{$panel_key}      = $self->panel_is_cached($cache_key{$panel_key});
+
+  unless ($cached{$panel_key}) {
     $panels{$panel_key}      = Bio::Graphics::Panel->new(@panel_args);
     $panels{$panel_key}->add_track($segment      => 'arrow',
 				   -double       => 1,
@@ -1002,7 +1005,7 @@ sub generate_panels {
   # if $drag_n_drop is false.
   if ($drag_n_drop) {
     $panel_key = '__pad__';
-    $cache_key{$panel_key}   = $self->create_cache_key($panel_key,@panel_args);
+    $cache_key{$panel_key}   = $self->create_cache_key($panel_key,@panel_args,$drag_n_drop);
     unless ($cached{$panel_key} =
 	    $self->panel_is_cached($cache_key{$panel_key})
 	   ) {
@@ -1022,15 +1025,21 @@ sub generate_panels {
     next if $conf->semantic_setting($label=>'hide',$length);
 
     my @track_args          = $self->create_track_args($label,$args);
-    my @extra_args          = eval {$feature_files->{$label}->types};  # disambiguate plugins
-    $cache_key{$label}      = $self->create_cache_key(@panel_args,@track_args,@extra_args);
-
-    next if $cached{$label} = $self->panel_is_cached($cache_key{$label});
 
     # create a new panel if we are in drag_n_drop mode
     if ($drag_n_drop) {
       $panel_key = $label;
+
+      my @extra_args          = eval {$feature_files->{$label}->types};  # disambiguate plugins
+      $cache_key{$label}      = $self->create_cache_key(@panel_args,
+							@track_args,
+							@extra_args,
+							$drag_n_drop,
+							$options->{$label});
+      next if $cached{$label} = $self->panel_is_cached($cache_key{$label});
+
       my @keystyle = (-key_style=>'between') if $label =~ /^\w+:/;  # a plugin
+
       $panels{$panel_key}         = Bio::Graphics::Panel->new(@panel_args,@keystyle);
     }
 
@@ -1071,7 +1080,7 @@ sub generate_panels {
     $panel_key = $l if $drag_n_drop;
     $self->add_feature_file(-file       => $file,
 			    -panel      => $panels{$panel_key},
-			    -position   => $feature_file_offsets{$l} || 0,
+			    -position   => $feature_file_offsets{$l} || 1,
 			    -options    => $options);
   }
 
@@ -1089,8 +1098,9 @@ sub generate_panels {
 		   :                     $self->make_map(scalar $panels{$l}->boxes,
 							 $panels{$l},
 							 $l);
-      @{$results{$l}}{qw(image map width height)} = $self->set_cached_panel($cache_key{$l},$gd,$map);
-      eval {$panels{$l}->finished};
+    my $key = $drag_n_drop ? $cache_key{$l} : $cache_key{'__all__'};
+    @{$results{$l}}{qw(image map width height)} = $self->set_cached_panel($key,$gd,$map);
+    eval {$panels{$l}->finished};
   }
 
   # cached panels need to be retrieved
@@ -2411,6 +2421,9 @@ sub create_panel_args {
   my $image_class = $args->{image_class} || 'GD';
   eval "use $image_class" unless "${image_class}::Image"->can('new');
 
+  my $keystyle = $self->drag_and_drop ?  'none'
+                                      :  $args->{keystyle} || $self->setting('keystyle') || DEFAULT_KEYSTYLE,
+
   my @pass_thru_args = map {/^-/ ? ($_=>$args->{$_}) : ()} keys %$args;
   my @argv = (
 	      -grid         => 1,
@@ -2420,7 +2433,7 @@ sub create_panel_args {
 	      -key_color    => $self->setting('key bgcolor')     || 'moccasin',
 	      -bgcolor      => $self->setting('detail bgcolor')  || 'white',
 	      -width        => $self->width,
-	      -key_style    => $args->{keystyle} || $self->setting('keystyle') || DEFAULT_KEYSTYLE,
+	      -key_style    => $keystyle,
 	      -empty_tracks => $self->setting('empty_tracks') 	               || DEFAULT_EMPTYTRACKS,
 	      -pad_top      => $args->{title} ? $image_class->gdMediumBoldFont->height : 0,
 	      -image_class  => $image_class,
@@ -2470,22 +2483,25 @@ sub create_track_args {
 
   my $length = $segment->length;
   my $conf   = $self->config;
-  my @args;
 
+  my @default_args = (-glyph => 'generic');
+  push @default_args,(-key   => $label)        unless $label =~ /^\w+:/;
+  push @default_args,(-hilite => $hilite_callback) if $hilite_callback;
+
+  my @args;
   if ($conf->semantic_setting($label=>'global feature',$length)) {
     @args = ($segment,
+	     @default_args,
 	     $conf->default_style,
 	     $conf->i18n_style($label,$lang)
 	    );
   } else {
-    my @settings = ($conf->default_style,
-		    $conf->i18n_style($label,
-				      $lang,
-				      $length)
-		   );
-
-    push @settings,(-hilite => $hilite_callback) if $hilite_callback;
-    @args = (-glyph => 'generic',@settings);
+    @args = (@default_args,
+	     $conf->default_style,
+	     $conf->i18n_style($label,
+			       $lang,
+			       $length)
+	    );
   }
   return @args;
 }
@@ -2539,8 +2555,20 @@ sub get_cache_base {
 sub panel_is_cached {
   my $self  = shift;
   my $key   = shift;
-  my $image_file = $self->get_cache_base($key,'image');
-  return -e "$image_file.png" || -e "$image_file.gif" || -e "$image_file.jpg";
+  return if param('nocache');
+  return unless $self->drag_and_drop;
+  return unless (my $cache_time = $self->cache_time);
+  my $size_file = $self->get_cache_base($key,'size');
+  return unless -e $size_file;
+  return unless -M _ < ($cache_time/24);
+  1;
+}
+
+sub cache_time {
+  my $self = shift;
+  my $ct   = $self->setting('cache time');
+  return $ct if defined $ct;  # hours
+  return 1;                   # cache for one hour by default
 }
 
 =head2 get_cached_panel()

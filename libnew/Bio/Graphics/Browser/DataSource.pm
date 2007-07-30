@@ -87,6 +87,82 @@ sub config {
   return $self;
 }
 
+#copy over from Render.pm to provide wider availability?
+#sub overview_ratio {
+#  my $self = shift;
+#  return 1.0;   # for now
+#}
+
+#copied from lib/ .. / Browser.pm
+sub gd_cache_path {
+  my $self = shift;
+  my ($cache_name,@keys) = @_;
+  return unless $self->setting(general=>$cache_name);
+  my $signature = md5_hex(@keys);
+  my ($uri,$path) = $self->tmpdir($self->source.'/cache_overview');
+  my $extension   = 'gd';
+  return "$path/$signature.$extension";
+}
+
+##untested
+sub gd_cache_check {
+  my $self = shift;
+  my ($cache_name,$path) = @_;
+  return if param('nocache');
+  my $cache_file_mtime   = (stat($path))[9] || 0;
+  my $conf_file_mtime    = $self->mtime;
+  my $cache_expiry       = $self->config->setting(general=>$cache_name) * 60*60;  # express expiry time as seconds
+  if ($cache_file_mtime && ($cache_file_mtime > $conf_file_mtime) && (time() - $cache_file_mtime < $cache_expiry)) {
+    my $gd = GD::Image->newFromGd($path);
+    return $gd;
+  }
+  else {
+    return;
+  }
+}
+
+
+sub gd_cache_write {
+  my $self = shift;
+  my $path = shift or return;
+  my $gd   = shift;
+  my $file = IO::File->new(">$path") or return;
+  print $file $gd->gd;
+  close $file;
+}
+
+sub tmpdir {
+  my $self = shift;
+  my $path = shift || '';
+
+  my ($tmpuri,$tmpdir) = shellwords($self->setting('tmpimages'))
+    or die "no tmpimages option defined, can't generate a picture";
+
+  $tmpuri .= "/$path" if $path;
+
+  if ($ENV{MOD_PERL} ) {
+    my $r          = modperl_request();
+    my $subr       = $r->lookup_uri($tmpuri);
+    $tmpdir        = $subr->filename;
+    my $path_info  = $subr->path_info;
+    $tmpdir       .= $path_info if $path_info;
+  } elsif ($tmpdir) {
+    $tmpdir .= "/$path" if $path;
+  }
+  else {
+    $tmpdir = "$ENV{DOCUMENT_ROOT}/$tmpuri";
+  }
+
+  # we need to untaint tmpdir before calling mkpath()
+  return unless $tmpdir =~ /^(.+)$/;
+  $path = $1;
+
+  mkpath($path,0,0777) unless -d $path;
+  return ($tmpuri,$path);
+}
+
+
+
 sub overview_bgcolor { shift->global_setting('overview bgcolor')         }
 sub detailed_bgcolor { shift->global_setting('detailed bgcolor')         }
 sub key_bgcolor      { shift->global_setting('key bgcolor')              }
@@ -105,7 +181,7 @@ sub html6            { shift->global_setting('html6')                    }
 
 sub max_segment      { shift->global_setting('max segment')              }
 sub default_segment  { shift->global_setting('max segment')              }
-sub min_overview_pad { shift->global_setting('min overview pad') || 0    }
+sub min_overview_pad { shift->global_setting('min overview pad') || 10    }
 
 sub plugins          { shellwords(shift->global_setting('plugins'))      }
 
@@ -225,6 +301,7 @@ sub semantic_setting {
   my ($self,$label,$option,$length) = @_;
   my $slabel = $self->semantic_label($label,$length);
   my $val = $self->code_setting($slabel => $option) if defined $slabel;
+  
   return $val if defined $val;
   return $self->code_setting($label => $option);
 }

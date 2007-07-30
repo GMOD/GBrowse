@@ -3,6 +3,8 @@ package Bio::Graphics::Browser::RenderTracks;
 use strict;
 use warnings;
 
+use Data::Dumper;
+
 use Bio::Graphics;
 use CGI qw(param escape unescape);
 
@@ -62,6 +64,23 @@ sub settings {
   $self->{settings} = shift if @_;
   return $d;
 }
+
+#sub render_overview {
+#  my $self = shift;
+#  my ($region_name,$segment,$partial_segment,$track_options,$feature_files) = @_;
+#  my $gd;
+  
+  #track option is same as state
+  
+#  my $source         = $self->source;
+#  my $width          = $track_options->{'width'} * $source->overview_ratio();
+#  my @tracks         = grep {$track_options->{'features'}{$_}{visible}} 
+#    $region_name eq 'region' ? $source->regionview_tracks : $source->overview_tracks;
+
+#  my ($padl,$padr)   = $self->overview_pad(\@tracks);
+  
+#  2;
+#}
 
 
 # This renders the named tracks and returns the images and image maps
@@ -136,7 +155,7 @@ sub render_remotely {
     $host   ||= $self->local_renderer_url;
     $remote{$host}{$track}++;
   }
-
+  
   return $self->call_remote_renderers(\%remote);
 }
 
@@ -182,19 +201,19 @@ sub call_remote_renderers {
 
   for my $url (keys %$renderers) {
     my @tracks  = keys %{$renderers->{$url}};
+    #$url .= ".pl/";
+    #$url = "http://cgi.sfu.ca/~hmokada/cgi-bin/gsoc/render.cgi";
+    
+    warn"calling remote rendering $url for tracks: @tracks";
     my $s_track  = Storable::freeze(\@tracks);
-    my $args = {tracks     => \@tracks,
-			settings   => $settings,
-			datasource => $dsn,
-			language   => $lang
-    };
-
+    
     my $request = POST ($url,
     		       [tracks     => $s_track,
 			settings   => $s_set,
 			datasource => $s_dsn,
 			language   => $s_lang
     ]);
+    
     my $error = $ua->register($request);
     if ($error) { warn "Could not send request to $url: ",$error->as_string }
   }
@@ -217,7 +236,7 @@ sub call_remote_renderers {
       $track_results{$track_name}{map} = $imagemap;
     }
   }
-
+  
   return \%track_results;
 }
 
@@ -623,15 +642,15 @@ sub generate_panels {
 }
 
 
-#FIX ME! (6,7)  I've copied and modified the following 3 methods from the original Browser to fit
 #with the current implementation. (June24)
 #
 #copied from Bio::Graphics::Browser (lib)
+#July30/07: added $source option, which allows $conf come from external source 
 sub do_bump {
   my $self = shift;
-  my ($track_name,$option,$count,$max,$length) = @_;
-
-  my $conf              = $self->source;
+  my ($track_name,$option,$count,$max,$length, $source) = @_;
+  
+  my $conf              = $source || $self->source;
   my $maxb              = $conf->code_setting($track_name => 'bump density')
                        || $conf->code_setting("TRACK DEFAULTS"=> 'bump density');#warn"maxb is $maxb";
   $maxb                 = $max unless defined $maxb;
@@ -655,9 +674,9 @@ sub do_bump {
 #copied from Bio::Graphics::Browser (lib)
 sub do_label {
   my $self = shift;
-  my ($track_name,$option,$count,$max_labels,$length) = @_;
+  my ($track_name,$option,$count,$max_labels,$length, $source) = @_;
 
-  my $conf = $self->source;
+  my $conf = $source || $self->source;
 
   my $maxl              = $conf->code_setting($track_name => 'label density')
                        || $conf->code_setting("TRACK DEFAULTS" => 'label density');
@@ -677,9 +696,9 @@ sub do_label {
 #copied from Bio::Graphics::Browser (lib)
 sub do_description {
   my $self = shift;
-  my ($track_name,$option,$count,$max_labels,$length) = @_;
+  my ($track_name,$option,$count,$max_labels,$length, $source) = @_;
 
-  my $conf              = $self->source;
+  my $conf              = $source || $self->source;
 
   my $maxl              = $conf->code_setting($track_name => 'label density')
                        || $conf->code_setting("TRACK DEFAULTS" => 'label density');

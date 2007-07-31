@@ -6,7 +6,7 @@ use warnings;
 use Data::Dumper;
 
 use Bio::Graphics;
-use CGI qw(param escape unescape);
+use CGI qw(:standard param escape unescape);
 
 use constant GBROWSE_RENDER => 'gbrowse_render';  # name of the CGI-based image renderer
 use constant TRUE => 1;
@@ -16,6 +16,8 @@ use constant DEFAULT_KEYSTYLE => 'between';
 use constant DEFAULT_EMPTYTRACKS => 0;
 use constant PAD_DETAIL_SIDES    => 10;
 use constant RULER_INTERVALS     => 20;
+use constant PAD_OVERVIEW_BOTTOM => 5;
+
 
 # when we load, we set a global indicating the LWP::Parallel::UserAgent is available
 my $LPU_AVAILABLE;
@@ -239,6 +241,246 @@ sub call_remote_renderers {
   
   return \%track_results;
 }
+
+#moved from Render.pm
+sub overview_ratio {
+  my $self = shift;
+  return 1.0;   # for now
+}
+
+sub overview_pad {
+  my $self = shift;
+  my $tracks = shift;
+  
+  my $renderer = $self->page_renderer;
+  my $config = $self->source;
+
+  $tracks ||= [$config->overview_tracks];
+  my $max = 0;
+  foreach (@$tracks) {
+    my $key = $renderer->setting($_=>'key');
+    next unless defined $key;
+    $max = length $key if length $key > $max;
+  }
+  foreach (@_) {  #extra
+    $max = length if length > $max;
+  }
+
+  # Tremendous kludge!  Not able to generate overview maps in GD yet
+  # This needs to be cleaned...
+  my $image_class = 'GD';
+  eval "use $image_class";
+  my $pad = $config->min_overview_pad;
+  return ($pad,$pad) unless $max;
+  return ($max * $image_class->gdMediumBoldFont->width + 3,$pad);
+}
+
+sub render_overview {
+  my $self = shift;
+  my ($region_name,$whole_segment,$segment,$state,$feature_files) = @_;
+  my $gd;
+  
+  my $renderer = $self->page_renderer;
+  
+  #track option is same as state
+  
+  # Temporary kludge until I can figure out a more
+  # sane way of rendering overview with SVG...
+  my $image_class = 'GD';
+  eval "use $image_class";
+  
+  my $source         = $self->source;
+  my $width          = $state->{'width'} * $self->overview_ratio();
+  my @tracks         = grep {$state->{'features'}{$_}{visible}} 
+    $region_name eq 'region' ? $source->regionview_tracks : $source->overview_tracks;
+
+  my ($padl,$padr)   = $self->overview_pad(\@tracks);
+  
+  my $panel = Bio::Graphics::Panel->new(-segment => $whole_segment,
+					-width   => $width,
+					-bgcolor => $renderer->setting('overview bgcolor')
+					|| 'wheat',
+					-key_style => 'left',
+					-pad_left  => $padl,
+					-pad_right => $padr,
+					-pad_bottom => PAD_OVERVIEW_BOTTOM,
+					-image_class=> $image_class,
+					-auto_pad   => 0,
+				       );
+  
+  # cache check so that we can cache the overview images
+  my $cache_path;
+  $cache_path = $source->gd_cache_path('cache_overview',$whole_segment,
+				     @tracks,$width,
+				     map {@{$state->{'features'}{$_}}{'options','limit','visible'}
+					} @tracks);
+
+  # no cached data, so do it ourselves
+  unless ($gd) {
+    my $units         = $source->setting(general=>'units') || '';
+    my $no_tick_units = $source->setting(general=>'no tick units');
+    
+    
+    $panel->add_track($whole_segment,
+		      -glyph     => 'arrow',
+		      -double    => 1,
+		      -label     => "\u$region_name\E of ".$whole_segment->seq_id,
+		      -label_font => $image_class->gdMediumBoldFont,
+		      -tick      => 2,
+		      -units_in_label => $no_tick_units,
+		      -units     => $units,
+		      -unit_divider => $source->setting(general=>'unit_divider') || 1,
+		     );
+    
+    
+    $self->_add_landmarks(\@tracks,$panel,$whole_segment,$state);
+    
+    # add uploaded files that have the "(over|region)view" option set
+    if ($feature_files) {
+      my $select = sub {
+	my $file  = shift;
+	my $type  = shift;
+	my $section = $file->setting($type=>'section')  || $file->setting(general=>'section') || '';
+	return defined $section && $section =~ /$region_name/;
+      };
+      foreach (keys %$feature_files) {
+	my $ff = $feature_files->{$_};
+	next unless $ff->isa('Bio::Graphics::FeatureFile'); #only FeatureFile supports this
+	$ff->render($panel,-1,$state->{'features'}{$_},undef,undef,$select);
+      }
+    }
+
+    $gd = $panel->gd;
+    $source->gd_cache_write($cache_path,$gd) if $cache_path;
+  } 
+  
+  my $rect_color = $panel->translate_color(
+                      $renderer->setting('selection rectangle color' )||'red');
+  my ($x1,$x2) = $panel->map_pt($segment->start,$segment->end);
+  my ($y1,$y2) = (0,($gd->getBounds)[1]);
+  $x2 = $panel->right-1 if $x2 >= $panel->right;
+  my $pl = $panel->can('auto_pad') ? $panel->pad_left : 0;
+  
+  
+  $gd->rectangle($pl+$x1,$y1,
+		 $pl+$x2,$y2-1,
+		 $rect_color);
+
+  eval {$panel->finished};  # should quash memory leaks when used in conjunction with bioperl 1.4
+  
+  my $url       = $renderer->generate_image($gd);
+
+  my $image = img({-src=>$url,-border=>0});#,-usemap=>"#${label}_map"});7;#overview($whole_segment,$segment,$page_settings,$feature_files);
+  
+}
+
+#$self->_add_landmarks(\@tracks,$panel,$whole_segment,$state);
+sub _add_landmarks {
+  my $self = shift;
+  my ($tracks_to_add,$panel,$segment,$options) = @_;
+  my $renderer = $self->page_renderer;
+  my $conf = $self->source;
+  my @tracks = grep {$options->{'features'}{$_}{visible}} @$tracks_to_add;
+
+  my (@feature_types,%type2track,%track);
+
+  for my $overview_track (@tracks) {
+    my @types = $conf->label2type($overview_track);
+    my $track = $panel->add_track(-glyph  => 'generic',
+				  -height  => 3,
+				  -fgcolor => 'black',
+				  -bgcolor => 'black',
+				  $conf->style($overview_track),
+				 );
+    foreach (@types) {
+      $type2track{lc $_} = $overview_track
+    }
+    $track{$overview_track} = $track;
+    push @feature_types,@types;
+  }
+  return unless @feature_types;
+
+  my $iterator = $segment->features(-type=>\@feature_types,-iterator=>1,-rare=>1);
+
+  my %count;
+  my (%group_on,%group_on_field);
+  while (my $feature = $iterator->next_seq) {
+
+    my $track_name = eval{$type2track{lc $feature->type}}
+      || $type2track{lc $feature->primary_tag}
+	|| eval{$type2track{lc $feature->method}}
+	  || next;
+
+    my $track = $track{$track_name} or next;
+
+    # copy-and-pasted from details method. Not very efficient coding.
+    exists $group_on_field{$track_name} or $group_on_field{$track_name} = $conf->code_setting($track_name => 'group_on');
+
+    if (my $field = $group_on_field{$track_name}) {
+      my $base = eval{$feature->$field};
+      if (defined $base) {
+	my $group_on_object = $group_on{$track_name}{$base} ||= Bio::Graphics::Feature->new(-start=>$feature->start,
+											    -end  =>$feature->end,
+											    -strand => $feature->strand,
+											    -type =>$feature->primary_tag);
+	$group_on_object->add_SeqFeature($feature);
+	next;
+      }
+    }
+
+    $track->add_feature($feature);
+    $count{$track_name}++;
+  }
+
+  # fix up group-on fields
+  for my $track_name (keys %group_on) {
+    my $track = $track{$track_name};
+    my $group_on = $group_on{$track_name} or next;
+    $track->add_feature($_) foreach values %$group_on;
+  }
+
+  my $max_bump   = $self->bump_density;
+  my $max_label  = $self->label_density;
+
+  for my $track_name (keys %count) {
+    my $track = $track{$track_name};
+
+    my $bump  = $self->do_bump($track_name,$options->{'features'}{$track_name}{options},$count{$track_name},$max_bump);
+    my $label = $self->do_label($track_name,$options->{'features'}{$track_name}{options},$count{$track_name},
+				$max_label,$segment->length);
+    my $description = $self->do_description($track_name,$options->{'features'}{$track_name}{options},$count{$track_name},
+				$max_label,$segment->length);
+     
+
+    $track->configure(-bump  => $bump,
+		      -label => $label,
+		      -description => $description,
+		     );
+  }
+  return \%track;
+}
+
+sub bump_density {
+  my $self = shift;
+  my $conf = $self->source;
+  return $conf->setting(general=>'bump density')
+      || $conf->setting('TRACK DEFAULTS' =>'bump density')
+      || 50;
+}
+
+sub label_density {
+  my $self = shift;
+  my $conf = $self->source;
+  return $conf->setting(general=>'label density')
+      || $conf->setting('TRACK DEFAULTS' =>'label density')
+      || 10;
+}
+
+
+
+
+
+
 
 sub local_renderer_url {
   my $self     = shift;

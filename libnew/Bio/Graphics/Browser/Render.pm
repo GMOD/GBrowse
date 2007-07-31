@@ -8,14 +8,13 @@ use Bio::Graphics::Browser::UploadSet;
 use Bio::Graphics::Browser::RemoteSet;
 use Bio::Graphics::Browser::Shellwords;
 use Digest::MD5 'md5_hex';
-use CGI qw(:standard param request_method header url iframe img span div br center start_table end_table);
+use CGI qw(:standard param request_method header url iframe img span div br center);
 use Carp 'croak';
 
 use Data::Dumper;
 
 use constant VERSION => 2.0;
 use constant DEBUG   => 0;
-use constant PAD_OVERVIEW_BOTTOM => 5;
 
 
 my %PLUGINS; # cache initialized plugins
@@ -255,8 +254,6 @@ sub render_body {
   my $self     = shift;
   my $features = shift;
 
-#print "All params:<br>\n".allparams;
-  
   my $segments;
   if ($features && @$features == 1) {
     $segments = $self->features2segments($features);
@@ -269,7 +266,7 @@ sub render_body {
   if (param('render') && param('render') eq 'detailview') {
     warn "calling render tracks...";
     $self->render_tracks($self->seg);
-#print div({-id=>'Overview'},[2,4,8]),$self->drag_script('tracks'),$self->update_controls_script;
+
     print "</html>";
     return;
   }
@@ -318,132 +315,24 @@ sub render_overview {
   my $self = shift;
   my $seg  = shift;
   
-#  my $source			= $self->source;
+  
+  my $source			= $self->data_source;
   my $whole_segment 	= $self->whole_seg;
   my $segment			= $self->seg || return;
   my $state				= $self->state;
   my $features			= $self->fetch_features;
   my $feature_files		= {};						#fill in code later, is usually blank anyways
   
+  my $renderer = Bio::Graphics::Browser::RenderTracks->new(-segment  => $seg,
+							   -source   => $source,
+							   -settings => $state,
+							   -renderer => $self);
+  my $image   = $renderer->render_overview(('Overview',
+  					   $whole_segment,
+  					   $seg,
+  					   $state,
+  					   $feature_files));
   
-  #warn"args:\n".Dumper($whole_segment, $segment, $state, $features, $feature_files);
-  
-  #my ($image, $length) = _overview('overview', $whole_segment, $segment, $features, $feature_files)
-  
-#print"page settings:\n".Dumper($state);
-  
-  #return '' unless $state->{'section_visible'}->{'overview_panel'};
-  
-  
-  #run from RenderTracks??  <- problems with accessing some methods: overview_pad, etc.
-#  my $renderer = Bio::Graphics::Browser::RenderTracks->new(-segment  => $seg,
-#							   -source   => $self->data_source,
-#							   -settings => $state,
-#							   -renderer => $self);
-#  my $image   = $renderer->render_overview(('Overview',
-#  					   $whole_segment,
-#  					   $seg,
-#  					   $state,
-#  					   $feature_files));
-  
-  
-  
-  
-  #my ($region_name,$segment,$partial_segment,$track_options,$feature_files) = @_;
-  my $region_name = 'Overview';
-  my $gd;
-  
-  #track option is same as state
-  
-  # Temporary kludge until I can figure out a more
-  # sane way of rendering overview with SVG...
-  my $image_class = 'GD';
-  eval "use $image_class";
-  
-  my $source         = $self->data_source;
-  my $width          = $state->{'width'} * $self->overview_ratio();
-  my @tracks         = grep {$state->{'features'}{$_}{visible}} 
-    $region_name eq 'region' ? $source->regionview_tracks : $source->overview_tracks;
-
-  my ($padl,$padr)   = $self->overview_pad(\@tracks);
-  
-  my $panel = Bio::Graphics::Panel->new(-segment => $whole_segment,
-					-width   => $width,
-					-bgcolor => $self->setting('overview bgcolor')
-					|| 'wheat',
-					-key_style => 'left',
-					-pad_left  => $padl,
-					-pad_right => $padr,
-					-pad_bottom => PAD_OVERVIEW_BOTTOM,
-					-image_class=> $image_class,
-					-auto_pad   => 0,
-				       );
-  
-  # cache check so that we can cache the overview images
-  my $cache_path;
-  $cache_path = $source->gd_cache_path('cache_overview',$whole_segment,
-				     @tracks,$width,
-				     map {@{$state->{'features'}{$_}}{'options','limit','visible'}
-					} @tracks);
-
-  # no cached data, so do it ourselves
-  unless ($gd) {
-    my $units         = $source->setting(general=>'units') || '';
-    my $no_tick_units = $source->setting(general=>'no tick units');
-    
-    
-    $panel->add_track($whole_segment,
-		      -glyph     => 'arrow',
-		      -double    => 1,
-		      -label     => "\u$region_name\E of ".$whole_segment->seq_id,
-		      -label_font => $image_class->gdMediumBoldFont,
-		      -tick      => 2,
-		      -units_in_label => $no_tick_units,
-		      -units     => $units,
-		      -unit_divider => $source->setting(general=>'unit_divider') || 1,
-		     );
-    
-    
-    $self->_add_landmarks(\@tracks,$panel,$whole_segment,$state);
-    
-    # add uploaded files that have the "(over|region)view" option set
-    if ($feature_files) {
-      my $select = sub {
-	my $file  = shift;
-	my $type  = shift;
-	my $section = $file->setting($type=>'section')  || $file->setting(general=>'section') || '';
-	return defined $section && $section =~ /$region_name/;
-      };
-      foreach (keys %$feature_files) {
-	my $ff = $feature_files->{$_};
-	next unless $ff->isa('Bio::Graphics::FeatureFile'); #only FeatureFile supports this
-	$ff->render($panel,-1,$state->{'features'}{$_},undef,undef,$select);
-      }
-    }
-
-    $gd = $panel->gd;
-    $self->gd_cache_write($cache_path,$gd) if $cache_path;
-  } 
-  
-  #warn $self->setting(general=>'solection rectangle color') ." and ". $source->setting(general=>'solection rectangle color');
-  
-  my $rect_color = $panel->translate_color(
-                      $self->setting('selection rectangle color' )||'red');
-  my ($x1,$x2) = $panel->map_pt($segment->start,$segment->end);
-  my ($y1,$y2) = (0,($gd->getBounds)[1]);
-  $x2 = $panel->right-1 if $x2 >= $panel->right;
-  my $pl = $panel->can('auto_pad') ? $panel->pad_left : 0;
-  
-  
-  $gd->rectangle($pl+$x1,$y1,
-		 $pl+$x2,$y2-1,
-		 $rect_color);
-
-  eval {$panel->finished};  # should quash memory leaks when used in conjunction with bioperl 1.4
-  
-  my $url       = $self->generate_image($gd);
-
-  my $image = img({-src=>$url,-border=>0});#,-usemap=>"#${label}_map"});7;#overview($whole_segment,$segment,$page_settings,$feature_files);
   print $self->toggle('Overview',
 		table({-border=>0,-width=>'100%'},
 		      TR({-class=>'databody'},
@@ -454,134 +343,7 @@ sub render_overview {
   
   
   
-  #print 'd' . div({-id=>"vvvvv"});#warn div($self->toggle('Details',div({-id=>'panels'},'Loading...'))),$load_script;
-  #print div($self->toggle('Overview',div({-id=>'overview'},'Loading...'))),$load_script;
-  
-  
 }
-
-
-#$self->_add_landmarks(\@tracks,$panel,$whole_segment,$state);
-sub _add_landmarks {
-  my $self = shift;
-  my ($tracks_to_add,$panel,$segment,$options) = @_;
-  my $conf = $self->data_source;
-  my @tracks = grep {$options->{'features'}{$_}{visible}} @$tracks_to_add;
-
-  my (@feature_types,%type2track,%track);
-
-  for my $overview_track (@tracks) {
-    my @types = $conf->label2type($overview_track);
-    my $track = $panel->add_track(-glyph  => 'generic',
-				  -height  => 3,
-				  -fgcolor => 'black',
-				  -bgcolor => 'black',
-				  $conf->style($overview_track),
-				 );
-    foreach (@types) {
-      $type2track{lc $_} = $overview_track
-    }
-    $track{$overview_track} = $track;
-    push @feature_types,@types;
-  }
-  return unless @feature_types;
-
-  my $iterator = $segment->features(-type=>\@feature_types,-iterator=>1,-rare=>1);
-
-  my %count;
-  my (%group_on,%group_on_field);
-  while (my $feature = $iterator->next_seq) {
-
-    my $track_name = eval{$type2track{lc $feature->type}}
-      || $type2track{lc $feature->primary_tag}
-	|| eval{$type2track{lc $feature->method}}
-	  || next;
-
-    my $track = $track{$track_name} or next;
-
-    # copy-and-pasted from details method. Not very efficient coding.
-    exists $group_on_field{$track_name} or $group_on_field{$track_name} = $conf->code_setting($track_name => 'group_on');
-
-    if (my $field = $group_on_field{$track_name}) {
-      my $base = eval{$feature->$field};
-      if (defined $base) {
-	my $group_on_object = $group_on{$track_name}{$base} ||= Bio::Graphics::Feature->new(-start=>$feature->start,
-											    -end  =>$feature->end,
-											    -strand => $feature->strand,
-											    -type =>$feature->primary_tag);
-	$group_on_object->add_SeqFeature($feature);
-	next;
-      }
-    }
-
-    $track->add_feature($feature);
-    $count{$track_name}++;
-  }
-
-  # fix up group-on fields
-  for my $track_name (keys %group_on) {
-    my $track = $track{$track_name};
-    my $group_on = $group_on{$track_name} or next;
-    $track->add_feature($_) foreach values %$group_on;
-  }
-
-  my $max_bump   = $self->bump_density;
-  my $max_label  = $self->label_density;
-
-  for my $track_name (keys %count) {
-    my $track = $track{$track_name};
-
-#    my $bump  = $self->do_bump($track_name,$options->{'features'}{$track_name}{options},$count{$track_name},$max_bump);
-#    my $label = $self->do_label($track_name,$options->{'features'}{$track_name}{options},$count{$track_name},
-#				$max_label,$segment->length);
-#    my $description = $self->do_description($track_name,$options->{'features'}{$track_name}{options},$count{$track_name},
-#				$max_label,$segment->length);
-     
-    #very ugly and kludgish, need to move to move all of render overview to RenderTracks.pm
-    my $bump  = Bio::Graphics::Browser::RenderTracks::do_bump(undef,$track_name,$options->{'features'}{$track_name}{options},$count{$track_name},$max_bump,0,$conf);
-    my $label = Bio::Graphics::Browser::RenderTracks::do_label(undef,$track_name,$options->{'features'}{$track_name}{options},$count{$track_name},
-				$max_label,$segment->length,$conf);
-    my $description = Bio::Graphics::Browser::RenderTracks::do_description(undef,$track_name,$options->{'features'}{$track_name}{options},$count{$track_name},
-				$max_label,$segment->length,$conf);
-
-    $track->configure(-bump  => $bump,
-		      -label => $label,
-		      -description => $description,
-		     );
-  }
-  return \%track;
-}
-
-
-sub bump_density {
-  my $self = shift;
-  my $conf = $self->data_source;
-  return $conf->setting(general=>'bump density')
-      || $conf->setting('TRACK DEFAULTS' =>'bump density')
-      || 50;
-}
-
-sub label_density {
-  my $self = shift;
-  my $conf = $self->data_source;
-  return $conf->setting(general=>'label density')
-      || $conf->setting('TRACK DEFAULTS' =>'label density')
-      || 10;
-}
-
-#####MERGING PASTED CODE #######
-
-sub _overview {
-  my $self = shift;
-  my ($region_name,$segment,$partial_segment,$track_options,$feature_files) = @_;
-  my $gd;
-
-  # Temporary kludge until I can figure out a more
-  # sane way of rendering overview with SVG...
-  my $image_class = 'GD';
-  eval "use $image_class";
-}
-
 
 sub render_regionview {
   my $self = shift;
@@ -1375,37 +1137,7 @@ sub _feature_keyword_search {
 #
 ##################################################################3
 
-#move to Datasource.pm along with overview_pad??
-sub overview_ratio {
-  my $self = shift;
-  return 1.0;   # for now
-}
-
-sub overview_pad {
-  my $self = shift;
-  my $tracks = shift;
-
-  my $config = $self->data_source;
-
-  $tracks ||= [$config->overview_tracks];
-  my $max = 0;
-  foreach (@$tracks) {
-    my $key = $self->setting($_=>'key');
-    next unless defined $key;
-    $max = length $key if length $key > $max;
-  }
-  foreach (@_) {  #extra
-    $max = length if length > $max;
-  }
-
-  # Tremendous kludge!  Not able to generate overview maps in GD yet
-  # This needs to be cleaned...
-  my $image_class = 'GD';
-  eval "use $image_class";
-  my $pad = $config->min_overview_pad;
-  return ($pad,$pad) unless $max;
-  return ($max * $image_class->gdMediumBoldFont->width + 3,$pad);
-}
+# overview_ratio and overview_pad moved to RenderTracks.pm
 
 ##### language stuff
 sub set_language {

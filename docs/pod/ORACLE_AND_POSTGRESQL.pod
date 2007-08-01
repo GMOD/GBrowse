@@ -17,11 +17,11 @@ on these databases and schemas at L<http://www.gmod.org>.
 
 To run GBrowse on top of Oracle, you will need a recent version of
 BioPerl that contains Shuly Avraham's
-Bio::DB::GFF::Adaptor::dbi::oracleopt adaptor.  Create the database,
+Bio::DB::GFF::Adaptor::dbi::oracle adaptor.  Create the database,
 name it, and set access permissions.  Then run the load_gff.pl script
 to initialize and load it with the GFF data:
 
- load_gff.pl -c -adaptor dbi::oracleopt -user <user> -pass <pass> \
+ load_gff.pl -c -adaptor dbi::oracle -user <user> -pass <pass> \
              -dsn 'dbi:oracle:sid=<service>;host=<host>' yeast_data.gff
 
 Replace <service> with the service definition for your database, as
@@ -51,7 +51,7 @@ db_args:
 
     db_adaptor = Bio::DB::GFF
     db_args = -dsn     dbi:Oracle:sid=<service>;host=<host>
-              -adaptor dbi::oracleopt
+              -adaptor dbi::oracle
               -user    <username>
               -pass    <password>
 

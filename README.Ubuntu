@@ -20,7 +20,7 @@ directory is not created (at least in Feisty Fawn beta, as of
 mid-April 2007). You should create it before you try to install
 GBrowse.
 
-  % sudo mkdir /usr/lib/cgi-bin
+  % sudo mkdir /usr/lib/cgi-bin 
 
 * Install libgd 
   % sudo apt-get install libgd2-dev

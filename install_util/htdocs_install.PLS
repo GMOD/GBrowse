@@ -42,6 +42,20 @@ if (! (-e $ht_target) ) {
     mkpath($ht_target,0,0777) or die "unable to make $ht_target directory\n";
 }
 
+my $localreadmedir = ".";
+opendir README, $localreadmedir or die "unable to opendir $localreadmedir\n";
+while (my $file = readdir(README)) {
+    my $localfile = Bio::Root::IO->catfile($localreadmedir, $file);
+    if (-f $localfile and $file =~ /^README/) {
+        my $installfile = Bio::Root::IO->catfile($ht_target, $file);
+        chmod (0666, $installfile);
+        copy_with_substitutions($localfile, $installfile)
+           or die "unable to copy to $installfile\n";
+        chmod (0444, $installfile); 
+    }
+}
+closedir README;
+
 my $localhtdocsdir = "htdocs";
 opendir HTDOCS, $localhtdocsdir or die "unable to opendir $localhtdocsdir\n";
 while (my $file = readdir(HTDOCS) ) {

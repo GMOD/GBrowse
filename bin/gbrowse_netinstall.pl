@@ -199,12 +199,12 @@ sub do_install {
   if ($method eq 'make') {
       system("perl Makefile.PL") == 0
             or die "Couldn't run perl Makefile.PL command\n";
-      system("$make install $build_param_string")    == 0 ;
+      system("$make install UNINST=1 $build_param_string")    == 0 ;
   }
   elsif ($method eq 'Build') {
       system("perl ./Build.PL")   == 0
             or die "Couldn't run perl Build.PL command\n";
-      system("./Build install") == 0;
+      system("./Build install --uninst 1") == 0;
   }
 }
 

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.17 2007-07-24 18:26:49 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.18 2007-08-03 01:53:29 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -809,7 +809,9 @@ series of user agents known to support drag_and_drop.
 
 sub drag_and_drop {
   my $self = shift;
-  return $self->setting(general => 'drag and drop');
+  return unless $self->setting(general => 'drag and drop'); # drag and drop turned off
+  return if     $self->setting(general => 'postgrid');      # postgrid forces drag and drop off
+  1;
 }
 
 
@@ -1084,6 +1086,9 @@ sub generate_panels {
 			    -options    => $options);
   }
 
+  # map tracks (stringified track objects) to corresponding labels
+  my %trackmap = reverse %tracks;
+
   # uncached panels need to be generated and cached
   for my $l (keys %panels) {
     my $gd = $panels{$l}->gd;
@@ -1094,10 +1099,13 @@ sub generate_panels {
 		   : $l eq '__all__'   ? $self->make_map(scalar $panels{$l}->boxes,
 							 $panels{$l},
 							 'tracks',
+							 \%trackmap,
 							 'add_centering_map')
 		   :                     $self->make_map(scalar $panels{$l}->boxes,
 							 $panels{$l},
-							 $l);
+							 $l,
+							 \%trackmap,
+							 0);
     my $key = $drag_n_drop ? $cache_key{$l} : $cache_key{'__all__'};
     @{$results{$l}}{qw(image map width height)} = $self->set_cached_panel($key,$gd,$map);
     eval {$panels{$l}->finished};
@@ -1431,10 +1439,11 @@ sub tmpdir {
 
 sub make_map {
   my $self = shift;
-  my ($boxes,$panel,$label,$first_box_is_scale) = @_;
-  my $map = qq(<map name="${label}_map" id="${label}_map">\n);
+  my ($boxes,$panel,$map_name,$trackmap,$first_box_is_scale) = @_;
+  my $map = qq(<map name="${map_name}_map" id="${map_name}_map">\n);
 
   my $flip = $panel->flip;
+  my $tips = $self->setting('balloon tips');
 
   my $did_map;
 
@@ -1445,6 +1454,8 @@ sub make_map {
   foreach (@$boxes){
     next unless $_->[0]->can('primary_tag');
 
+    my $label  = $_->[5] ? $trackmap->{$_->[5]} : '';
+
     my $href   = $self->make_href($_->[0],$panel,$label,$_->[5]);
     my $title  = unescape($self->make_title($_->[0],$panel,$label,$_->[5]));
     my $target = $self->config->make_link_target($_->[0],$panel,$label,$_->[5]);
@@ -1453,28 +1464,31 @@ sub make_map {
     $href      = qq(href="$href");
     $title     = qq(title="$title");
 
-    #retrieve the content of the balloon from configuration files
-    # if it looks like a URL, we treat it as a URL.
-    my $balloonhover	   = $self->config->balloon_tip_setting('balloon hover',$label,$_->[0],$panel,$_->[5]);
-    my $balloonclick	   = $self->config->balloon_tip_setting('balloon click',$label,$_->[0],$panel,$_->[5]);
-    my $sticky             = $self->setting($label,'balloon sticky');
-    my $width              = $self->setting($label,'balloon width')  || 270;
-    my $time               = $self->setting($label,'balloon delay')  || 500;
-
     my ($mouseover,$mousedown);
-    if ($balloonhover) {
-      my $stick = defined $sticky ? $sticky : 0;
-      $mouseover = $balloonhover =~ /^(https?|ftp):/
-	? qq(onmouseover="balloon.delayTime=$time; balloon.showTooltip(event,'<iframe width=$width height=300 frameborder=0 src=$balloonhover></iframe>',$stick)")
-	: qq(onmouseover="balloon.delayTime=$time; balloon.showTooltip(event,'$balloonhover',$stick)");
-      undef $title;
-    }
-    if ($balloonclick) {
-      my $stick = defined $sticky ? $sticky : 1;
-      $mousedown = $balloonclick =~ /^(http|ftp):/
-	? qq(onmousedown="balloon.delayTime=0; balloon.showTooltip(event,'<iframe width=$width height=300 frameborder=0 src=$balloonclick></iframe>',$stick)")
-	: qq(onmousedown="balloon.delayTime=0; balloon.showTooltip(event,'$balloonclick',$stick)");
-      undef $href;
+
+    if ($tips) {
+      #retrieve the content of the balloon from configuration files
+      # if it looks like a URL, we treat it as a URL.
+      my $balloonhover	   = $self->config->balloon_tip_setting('balloon hover',$label,$_->[0],$panel,$_->[5]);
+      my $balloonclick	   = $self->config->balloon_tip_setting('balloon click',$label,$_->[0],$panel,$_->[5]);
+      my $sticky             = $self->setting($label,'balloon sticky');
+      my $width              = $self->setting($label,'balloon width')  || 270;
+      my $time               = $self->setting($label,'balloon delay')  || 500;
+
+      if ($balloonhover) {
+	my $stick = defined $sticky ? $sticky : 0;
+	$mouseover = $balloonhover =~ /^(https?|ftp):/
+	  ? qq(onmouseover="balloon.delayTime=$time; balloon.showTooltip(event,'<iframe width=$width height=300 frameborder=0 src=$balloonhover></iframe>',$stick)")
+	    : qq(onmouseover="balloon.delayTime=$time; balloon.showTooltip(event,'$balloonhover',$stick)");
+	undef $title;
+      }
+      if ($balloonclick) {
+	my $stick = defined $sticky ? $sticky : 1;
+	$mousedown = $balloonclick =~ /^(http|ftp):/
+	  ? qq(onmousedown="balloon.delayTime=0; balloon.showTooltip(event,'<iframe width=$width height=300 frameborder=0 src=$balloonclick></iframe>',$stick)")
+	    : qq(onmousedown="balloon.delayTime=0; balloon.showTooltip(event,'$balloonclick',$stick)");
+	undef $href;
+      }
     }
 
     $map .= qq(<area $href $mouseover $mousedown coords="$_->[1],$_->[2],$_->[3],$_->[4]" $t $title/>);
@@ -2962,6 +2976,7 @@ sub make_link {
       return "../../gbrowse_details/$data_source?name=$name;class=$class;ref=$ref;start=$start;end=$end";
     }
   }
+
   return $self->link_pattern($link,$feature,$panel);
 }
 

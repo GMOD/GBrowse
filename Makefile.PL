@@ -10,7 +10,7 @@ require 5.005003;
 my $VERSION     = '1.68';
 my $working_dir = cwd;
 
-my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN
+my @OPTIONS = qw(APACHE CONF HTDOCS HTDOCS_REL CGIBIN
 		 LIB BIN
 		 DO_XS NONROOT SELINUX);
 my $OPTIONS = join ('|',@OPTIONS);
@@ -174,6 +174,41 @@ print F "VERSION=$VERSION\n";
 print F "BIOGRAPHICS_VERSION=$biographics_version\n";
 close F;
 
+
+# Deal with relative URLs 
+my $default_dir = GuessDirectories::htdocs;
+if ($OPTIONS{HTDOCS} ne $default_dir) {
+  my $rel_prompt = '/';
+
+  if ($OPTIONS{HTDOCS} =~ /^$default_dir\S+/) {
+    $rel_prompt = $OPTIONS{HTDOCS};
+    $rel_prompt =~ s/$default_dir//;
+    $OPTIONS{HTDOCS_REL} = $rel_prompt;
+  }
+  else {
+    print <<END;
+
+NOTE: You appear to be using a non-standard document root: ($OPTIONS{HTDOCS})
+
+The relative URL for gbrowse components would normally be '/'.
+If your document root contains extra path information (see examples below),
+enter the relative URL for gbrowse here.
+
+Examples:
+Absolute path                      Relative URL
+----------------------------------------------
+/var/www/html/custom              /custom
+/usr/local/apache/htdocs/~me      /~me
+/users/some/other/path            ??
+
+END
+;
+    $OPTIONS{HTDOCS_REL} = prompt('Relative URL?', $rel_prompt);
+    $OPTIONS{HTDOCS_REL} = '/' . $OPTIONS{HTDOCS_REL} unless $OPTIONS{HTDOCS_REL} =~ /^\//;
+  }
+}
+
+
 print STDERR <<END;
 ----------------------------------------------
                 File Paths
@@ -327,22 +362,6 @@ sub MY::postamble {
     $paths .= qq("$key=$OPTIONS{$key}" ) if defined $OPTIONS{$key};
   }
   
-  my $default_dir = GuessDirectories::htdocs;
-  if ($OPTIONS{HTDOCS} ne $default_dir) {
-    my $rel_prompt = '/';
-
-    if ($OPTIONS{HTDOCS} =~ /^$default_dir\S+/) {
-      $rel_prompt = $OPTIONS{HTDOCS}; 
-      $rel_prompt =~ s/$default_dir//;
-      $OPTIONS{HTDOCS_REL} = $rel_prompt;
-    }
-    else { # prompt for a relative URL ($rel_prompt default)
-      $OPTIONS{HTDOCS_REL} = prompt("\nYou appear to be using a non-standard docroot; If gbrowse is going to go\nin a directory below the docroot, enter the path below docroot here:"," ");
-    }
-  }
-
-  $OPTIONS{HTDOCS_REL} ||= ' ';
- 
   $paths .= qq{"HTDOCS_REL=$OPTIONS{HTDOCS_REL}"}; 
   
 qq{

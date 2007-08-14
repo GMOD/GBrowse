@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.18 2007-08-03 01:53:29 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.19 2007-08-14 18:26:29 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -58,13 +58,13 @@ use strict;
 use File::Basename 'basename';
 use Bio::Graphics;
 use Carp qw(carp croak);
-use CGI qw(img param escape unescape url div span);
+use CGI qw(img param escape unescape url div span image_button);
 use CGI::Toggle 'toggle_section';
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use Text::Shellwords;
 use Bio::Graphics::Browser::I18n;
-use Bio::Graphics::Browser::Util 'modperl_request';
+use Bio::Graphics::Browser::Util 'modperl_request','is_safari';
 
 require Exporter;
 
@@ -722,9 +722,9 @@ sub make_link {
   return wantarray ? @results : $results[0];
 }
 
-=head2 render_html()
+=head2 render_panels()
 
-  ($image,$image_map) = $browser->render_html(%args);
+  ($image,$image_map) = $browser->render_panels(%args);
 
 Render an image and an image map according to the options in %args.
 Returns a two-element list.  The first element is a URL that refers to
@@ -752,7 +752,7 @@ The arguments are a series of tag=>value pairs, where tags are:
                         rendered onto the display (optional).  The keys
                         are labels assigned to the 3d party
                         features.  These labels must appear in the
-                        tracks arrayref in order for render_html() to
+                        tracks arrayref in order for render_panels() to
                         determine the order in which to render them.
 
   do_map              This argument is a flag that controls whether or not
@@ -779,7 +779,7 @@ through to Bio::Graphics::Panel->new() directly
 
 =cut
 
-sub render_html {
+sub render_panels {
   my $self = shift;
   my $args = shift;
 
@@ -814,7 +814,6 @@ sub drag_and_drop {
   1;
 }
 
-
 sub render_draggable_tracks {
   my $self = shift;
   my ($args,$panels) = @_;
@@ -823,6 +822,10 @@ sub render_draggable_tracks {
   my $do_map   = $args->{do_map};
   my $tmpdir   = $args->{tmpdir};
   my $settings = $args->{settings};
+  my $do_drag  = $args->{do_drag};
+  my $button   = $args->{image_button};
+  my $panel_type = $args->{panel_type};
+  my $section    = $args->{section};
 
   my $plus   = "$images/plus.png";
   my $minus  = "$images/minus.png";
@@ -839,35 +842,42 @@ sub render_draggable_tracks {
     my $collapsed     =  $settings->{track_collapsed}{$label};
     my $img_style     = $collapsed ? "display:none" : "display:inline";
 
-    my $img             = img({-src=>$url,
-			       -usemap=>"#${label}_map",
-			       -width => $width,
-			       -id    => "${label}_image",
-			       -height=> $height,
-			       -border=> 0,
-			       -name  => "detailedView_${label}",
-			       -alt   => 'detailed view',
-			       -style => $img_style});
+    my $img = $button
+      ? image_button(-src   => $url,
+		     -name  => $panel_type,
+		     -id    => "${label}_image",
+		     -style => $img_style
+		    )
+      : img({-src=>$url,
+	     -usemap=>"#${label}_map",
+	     -width => $width,
+	     -id    => "${label}_image",
+	     -height=> $height,
+	     -border=> 0,
+	     -name  => "${panel_type}_${label}",
+	     -alt   => "${label} $panel_type",
+	     -style => $img_style});
+
     my $class     = $label eq '__scale__' ? 'scale' : 'track';
     my $icon      = $collapsed ? $plus : $minus;
 
-    if ($img_map) {
+    if ($do_drag || $img_map) {
       my $help_url    = "url:?get_citation=$label";
 
-      my $title       = $label =~ /\w+:(.+)/   # a plugin
+      my $title       = $label =~ /\w+:(.+)/ && $label !~ /:(overview|region)/  # a plugin
                         ? $1
                         : $self->config->setting($label=>'key') || $label; # configured
 
       my $titlebar    = $label eq '__scale__' || $label eq '__all__'
 	                 ? ''
 			 : span({-class=>$collapsed ? 'titlebar_inactive' : 'titlebar',-id=>"${label}_title"},
-				img({-src=>$icon,
-				     -id => "${label}_icon",
-				     -onClick=>"collapse('$label')",
-				     -style  => 'cursor:pointer',
+				img({-src         =>$icon,
+				     -id          => "${label}_icon",
+				     -onClick     =>"collapse('$label')",
+				     -style       => 'cursor:pointer',
 				    }),
 				img({-src         => $help,
-				     -style  => 'cursor:pointer',
+				     -style       => 'cursor:pointer',
 				     -onmousedown => "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)"
 				    }),
 				$title
@@ -881,10 +891,17 @@ sub render_draggable_tracks {
 			  -style => $collapsed ? "display:inline" : "display:none",
 			 });
 
-      push @result,"\n".div({-id=>"track_${label}",-class=>$class},
-			    $titlebar,
-			    div({-align=>'center',-style=>'margin-top: -16px'},$img.$pad_img),
-			    $img_map);
+      push @result, (is_safari()
+		     ?
+		     "\n".div({-id=>"${section}_track_${label}",-class=>$class},
+			      $titlebar,
+			      div({-align=>'center',-style=>'margin-top: -18px'},$img.$pad_img),
+			      $img_map||'')
+		     :
+		     "\n".div({-id=>"${section}_track_${label}",-class=>$class},
+			      div({-align=>'center'},$titlebar.$img.$pad_img),
+			      $img_map||'')
+		     );
 
     }
 
@@ -893,6 +910,7 @@ sub render_draggable_tracks {
     }
 
   }
+
   return wantarray ? @result : join "<br>",@result;
 }
 
@@ -900,24 +918,33 @@ sub render_composite_track {
   my $self   = shift;
   my ($args,$panel) = @_;
 
-  my $do_map = $args->{do_map};
-  my $tmpdir = $args->{tmpdir};
+  my $do_map  = $args->{do_map};
+  my $tmpdir  = $args->{tmpdir};
+  my $section = $args->{section};
+  my $button  = $args->{image_button};
+  my $panel_type = $args->{panel_type};
+  $section    =~ s/^\?//;
 
   my $url             = $panel->{image};
   my $map             = $panel->{map};
   my ($width,$height) = @{$panel}{'width','height'};
+  my $map_name = "${section}_map";
 
-  my $img             = img({-src=>$url,
-			     -usemap=>"#tracks_map",
-			     -width => $width,
-			     -id    => "tracks_image",
-			     -height=> $height,
-			     -border=> 0,
-			     -name  => "detailedView",
-			     -alt   => 'detailed view'});
+  my $img = $button
+      ? image_button(-src   => $url,
+		     -name  => $panel_type
+		    )
+      : img({-src=>$url,
+	     -usemap=>'#'.$map_name,
+	     -width => $width,
+	     -id    => "tracks_image",
+	     -height=> $height,
+	     -border=> 0,
+	     -name  => $section,
+	     -alt   => $section});
   my $html    = div({-align=>'center'},$img);
-  return wantarray ? ($html,$map)
-                   : $html;
+
+  return $html;
 }
 
 =head2 generate_panels()
@@ -938,6 +965,7 @@ arguments: a key=>value list
    'title'         A title for the image
    'noscale'       Suppress scale entirely
    'image_class'   Optional image class for generating SVG output (by passing GD::SVG)
+   'cache_extra'   Extra cache args needed to make this image unique
 any arguments that begin with an initial - (hyphen) are passed through to Panel->new
 directly
 
@@ -947,7 +975,7 @@ sub generate_panels {
   my $self  = shift;
   my $args  = shift;
 
-  my @panel_args     = $self->create_panel_args('details',$args);
+  my @panel_args     = $self->create_panel_args($args->{panel_type} || 'details',$args);
 
   my $segment       = $args->{segment};
   my ($seg_start,$seg_stop,$flip) = $self->segment_coordinates($segment,
@@ -962,6 +990,8 @@ sub generate_panels {
   my $hilite_callback = $args->{hilite_callback};
   my $drag_n_drop   = $self->drag_and_drop;
   my $do_map        = $args->{do_map};
+  my $cache_extra   = $args->{cache_extra} || [];
+  my $section       = $args->{section}     || '?detail';
 
   $segment->factory->debug(1) if DEBUG;
   $self->error('');
@@ -988,7 +1018,7 @@ sub generate_panels {
   # caching doesn't work for the monolithic picture, so ignore the cache code when drag-n-drop is off
   # in fact, panel_is_cached() always returns false for non-drag-n-drop
   # one special track for the scale or (in monolithic picture mode), the whole thing ('__all__')
-  my @cache_args           = ($panel_key,@panel_args);
+  my @cache_args           = ($args->{panel_type},$panel_key,@panel_args,@$cache_extra);
   $cache_key{$panel_key}   = $self->create_cache_key(@cache_args);
   $cached{$panel_key}      = $self->panel_is_cached($cache_key{$panel_key});
 
@@ -1007,7 +1037,8 @@ sub generate_panels {
   # if $drag_n_drop is false.
   if ($drag_n_drop) {
     $panel_key = '__pad__';
-    $cache_key{$panel_key}   = $self->create_cache_key($panel_key,@panel_args,$drag_n_drop);
+    @cache_args              = ($args->{panel_type},$panel_key,@panel_args,@$cache_extra,$drag_n_drop);
+    $cache_key{$panel_key}   = $self->create_cache_key(@cache_args);
     unless ($cached{$panel_key} =
 	    $self->panel_is_cached($cache_key{$panel_key})
 	   ) {
@@ -1036,11 +1067,12 @@ sub generate_panels {
       $cache_key{$label}      = $self->create_cache_key(@panel_args,
 							@track_args,
 							@extra_args,
+							@$cache_extra,
 							$drag_n_drop,
 							$options->{$label});
       next if $cached{$label} = $self->panel_is_cached($cache_key{$label});
 
-      my @keystyle = (-key_style=>'between') if $label =~ /^\w+:/;  # a plugin
+      my @keystyle = (-key_style=>'between') if $label =~ /^\w+:/ && $label !~ /:(overview|region)/;  # a plugin
 
       $panels{$panel_key}         = Bio::Graphics::Panel->new(@panel_args,@keystyle);
     }
@@ -1065,31 +1097,36 @@ sub generate_panels {
 		      $conf{'-filter'} ? ($_ => $conf{'-filter'})
 			               : ()
 		      } @$labels;
-  $self->add_features_to_detail_track(-types   => \@feature_types,
-				      -tracks  => \%tracks,
-				      -filters => \%filters,
-				      -segment => $segment,
-				      -options => $options,
-				      -limits  => $limits,
-				      ) if @feature_types;
+  $self->add_features_to_track(-types   => \@feature_types,
+			       -tracks  => \%tracks,
+			       -filters => \%filters,
+			       -segment => $segment,
+			       -options => $options,
+			       -limits  => $limits,
+			      ) if @feature_types;
 
   # ------------------------------------------------------------------------------------------
   # Add feature files, including remote annotations
+  my $featurefile_select = $self->feature_file_select($section);
   for my $l (keys %$feature_files) {
     next if $cached{$l};
     my $file = $feature_files->{$l} or next;
     ref $file or next;
     $panel_key = $l if $drag_n_drop;
-    $self->add_feature_file(-file       => $file,
+    $self->add_feature_file(
+			    -file       => $file,
 			    -panel      => $panels{$panel_key},
 			    -position   => $feature_file_offsets{$l} || 1,
-			    -options    => $options);
+			    -options    => $options,
+			    -select     => $featurefile_select,
+			   );
   }
 
   # map tracks (stringified track objects) to corresponding labels
   my %trackmap = reverse %tracks;
 
   # uncached panels need to be generated and cached
+  (my $map_name = $section) =~ s/^\?//;
   for my $l (keys %panels) {
     my $gd = $panels{$l}->gd;
     my $map    =   !$do_map            ? undef
@@ -1098,7 +1135,7 @@ sub generate_panels {
 								   $args->{flip},$l)
 		   : $l eq '__all__'   ? $self->make_map(scalar $panels{$l}->boxes,
 							 $panels{$l},
-							 'tracks',
+							 $map_name,
 							 \%trackmap,
 							 'add_centering_map')
 		   :                     $self->make_map(scalar $panels{$l}->boxes,
@@ -1121,7 +1158,7 @@ sub generate_panels {
 
 
 
-sub add_features_to_detail_track {
+sub add_features_to_track {
   my $self = shift;
   my %args = @_;
 
@@ -1130,7 +1167,7 @@ sub add_features_to_detail_track {
   my $tracks          = $args{-tracks}  or die "programming error";
   my $filters         = $args{-filters} or die "programming error";
   my $options         = $args{-options} or die "programming error";
-  my $limits          = $args{-limits} or die "programming error";
+  my $limits          = $args{-limits}  or die "programming error";
 
   my $max_labels      = $self->label_density;
   my $max_bump        = $self->bump_density;
@@ -1142,6 +1179,7 @@ sub add_features_to_detail_track {
   my $iterator = $segment->get_feature_stream(-type=>$feature_types);
 
   while (my $feature = $iterator->next_seq) {
+
     my @labels = $self->feature2label($feature,$length);
 
     for my $l (@labels) {
@@ -1175,9 +1213,9 @@ sub add_features_to_detail_track {
 	my $base = eval{$feature->$field};
 	if (defined $base) {
 	  $groups{$l}{$base} ||= Bio::Graphics::Feature->new(-start  => $feature->start,
-								 -end    => $feature->end,
-								 -strand => $feature->strand,
-								 -type   => $feature->primary_tag);
+							     -end    => $feature->end,
+							     -strand => $feature->strand,
+							     -type   => $feature->primary_tag);
 	  $groups{$l}{$base}->add_SeqFeature($feature);
 	  next;
 	}
@@ -1252,6 +1290,7 @@ sub add_feature_file {
 
   my $file    = $args{-file}    or return;
   my $options = $args{-options} or return;
+  my $select  = $args{-select}  or return;
 
   my $name = $file->name || '';
   $options->{$name}      ||= 0;
@@ -1263,25 +1302,30 @@ sub add_feature_file {
 		  $options,
 		  $self->bump_density,
 		  $self->label_density,
-		  \&feature_file_select);
+		  $select);
   };
 
   $self->error("error while rendering ",$args{-file}->name,": $@") if $@;
 }
 
-=head2 add_feature_file
-
-Internal use: render a feature file into a panel
-
-=cut
-
 sub feature_file_select {
-  my $file  = shift;
-  my $type  = shift;
-  my $section = $file->setting($type=>'section') || $file->setting(general=>'section');
-  return 1 unless defined $section;
-  return $section =~ /detail/;
-};
+  my $self             = shift;
+  my $required_section = shift;
+
+  my $undef_defaults_to_true;
+  if ($required_section =~ /^\?(.+)/) {
+    $undef_defaults_to_true++;
+    $required_section = $1;
+  }
+
+  return sub {
+    my $file  = shift;
+    my $type  = shift;
+    my $section = $file->setting($type=>'section') || $file->setting(general=>'section');
+    return $undef_defaults_to_true if !defined$section;
+    return $section =~ /$required_section/;
+  };
+}
 
 =head2 generate_image
 
@@ -1465,7 +1509,6 @@ sub make_map {
     $title     = qq(title="$title");
 
     my ($mouseover,$mousedown);
-
     if ($tips) {
       #retrieve the content of the balloon from configuration files
       # if it looks like a URL, we treat it as a URL.
@@ -1568,6 +1611,8 @@ will be added to the overview panel.
 =cut
 
 # generate the overview, if requested, and return it as a GD
+
+###### OVERVIEW AND REGIONVIEW CODE IS NOW OFFICIALLY DEAD! #####
 sub overview {
   my $self = shift;
   $self->_overview('overview',@_);
@@ -1591,7 +1636,7 @@ sub _overview {
 
   my $conf           = $self->config;
   my $width          = $self->width;
-  my @tracks         = grep {$track_options->{$_}{visible}} 
+  my @tracks         = grep {$track_options->{$_}{visible}}
     $region_name eq 'region' ? $conf->regionview_tracks : $conf->overview_tracks;
 
   my ($padl,$padr)   = $self->overview_pad(\@tracks);
@@ -2353,6 +2398,12 @@ sub _low_merge {
 sub overview_pad {
   my $self   = shift;
   my $tracks = shift;
+
+  if ($self->drag_and_drop) { # not relevant when drag and drop is active
+    my $padding = $self->image_padding;
+    return ($padding,$padding);
+  }
+
   $tracks ||= [$self->config->overview_tracks];
   my $max = 0;
   foreach (@$tracks) {
@@ -2448,18 +2499,17 @@ sub create_panel_args {
 	      -bgcolor      => $self->setting('detail bgcolor')  || 'white',
 	      -width        => $self->width,
 	      -key_style    => $keystyle,
-	      -empty_tracks => $self->setting('empty_tracks') 	               || DEFAULT_EMPTYTRACKS,
+	      -empty_tracks => $self->setting('empty_tracks')    || DEFAULT_EMPTYTRACKS,
 	      -pad_top      => $args->{title} ? $image_class->gdMediumBoldFont->height : 0,
 	      -image_class  => $image_class,
-	      -postgrid     => $args->{postgrid} || '',
+	      -postgrid     => $args->{postgrid}   || '',
 	      -background   => $args->{background} || '',
 	      -truecolor    => $self->setting('truecolor') || 0,
 	      @pass_thru_args,   # position is important here to allow user to override settings
 	     );
 
   push @argv, -flip => 1 if $flip;
-  my $p = defined $self->setting('image_padding') ? $self->setting('image_padding')
-                                                           : PAD_DETAIL_SIDES;
+  my $p = $self->image_padding;
   my $pl = $self->setting('pad_left');
   my $pr = $self->setting('pad_right');
   $pl    = $p unless defined $pl;
@@ -2476,6 +2526,12 @@ sub create_panel_args {
   return @argv if $panel_type eq 'detail';
 
   return @argv;
+}
+
+sub image_padding {
+  my $self = shift;
+  return defined $self->setting('image_padding') ? $self->setting('image_padding')
+                                                 : PAD_DETAIL_SIDES;
 }
 
 =head2 create_track_args()
@@ -2852,7 +2908,8 @@ sub type2label {
     my @array  = $self->SUPER::type2label(lc $type) or return;
     my %label_groups;
     for my $label (@array) {
-      my ($label_base,$minlength) = $label =~ /([^:]+)(?::(\d+))?/;
+      my ($label_base,$minlength) = $label =~ /([^:]+):(\d+)/;
+      $label_base ||= $label;
       $minlength ||= 0;
       next if defined $length && $minlength > $length;
       $label_groups{$label_base}++;
@@ -2893,7 +2950,7 @@ sub invert_types {
   my $config  = $self->{config} or return;
   my %inverted;
   for my $label (keys %{$config}) {
-    next if $label=~/:?(overview|region)$/;   # special case
+#    next if $label=~/:?(overview|region)$/;   # special case
     my $feature = $config->{$label}{'feature'} or next;
     foreach (shellwords($feature||'')) {
       $inverted{lc $_}{$label}++;

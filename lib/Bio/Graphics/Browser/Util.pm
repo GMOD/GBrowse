@@ -103,7 +103,7 @@ require Exporter;
 @EXPORT = qw(conf_dir open_config open_database
 	     print_header print_top print_bottom html_frag
 	     error fatal_error redirect_legacy_url
-	     parse_feature_str url2file modperl_request
+	     parse_feature_str url2file modperl_request is_safari
 	    );
 
 use constant DEBUG => 0;
@@ -224,9 +224,12 @@ sub print_top {
   my $reset_all = shift;
   local $^W = 0;  # to avoid a warning from CGI.pm
 
+  my $titlebar = is_safari() ? 'titlebar-safari.css' : 'titlebar.css';
+
   print_header(-expires=>'+1m');
   my @args = (-title => $title,
-	      -style  => {src=>$CONFIG->setting('stylesheet')},
+	      -style  => [{src=>$CONFIG->setting('stylesheet')},
+			  {src=>"/gbrowse/$titlebar"}],
 	      -encoding=>$CONFIG->tr('CHARSET'),
 	     );
   push @args,(-head=>$CONFIG->setting('head'))    if $CONFIG->setting('head');
@@ -240,9 +243,9 @@ sub print_top {
   my $b_tips = $CONFIG->setting('balloon tips');
   my $drag_and_drop = $CONFIG->setting('drag and drop');
   my $js = $CONFIG->setting('js')||JS;
-  my @js = 'buttons.js';
+  my @js = ('buttons.js','prototype.js');
   push @js,qw(yahoo-dom-event.js balloon.js)     if $b_tips;
-  push @js,qw(prototype.js scriptaculous.js)     if $drag_and_drop;
+  push @js,qw(scriptaculous.js)     if $drag_and_drop;
 
   my @scripts = map { {src=> "$js/$_" } } @js;
   push @args,(-script=>\@scripts);
@@ -540,6 +543,8 @@ sub _broken_apache_hack {
   }
 }
 
-
+sub is_safari {
+  return CGI::user_agent =~ /safari/i;
+}
 
 1;

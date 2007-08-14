@@ -88,20 +88,16 @@ TH.linkmenu       {
                     CURSOR: help;
                     TEXT-DECORATION: none
                   }
-.titlebar         {  background-color: khaki; 
+.titlebar         {  background-color: wheat;
                      cursor: crosshair;
-                     position: relative;
                      z-index: 1;
-                     right: -100px;
                      opacity: 1.0;
                      font-size: 9pt;
                      font-weight: bold;
                   }
-.titlebar_inactive {  background-color: lightblue; 
+.titlebar_inactive { background-color: lightblue; 
                      cursor: crosshair;
-                     position: relative;
                      z-index: 1;
-                     right: -100px;
                      opacity: 1.0;
                      font-size: 9pt;
                      font-weight: bold;

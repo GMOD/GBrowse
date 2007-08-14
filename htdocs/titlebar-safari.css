@@ -1,0 +1,8 @@
+.titlebar         {
+                     position: relative;
+                     right: -100px;
+                  }
+.titlebar_inactive {
+                     position: relative;
+                     right: -100px;
+                  }

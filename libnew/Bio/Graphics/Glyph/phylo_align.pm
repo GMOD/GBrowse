@@ -1,8 +1,9 @@
 package Bio::Graphics::Glyph::phylo_align;
 
 use strict;
-use base qw(Bio::Graphics::Glyph::generic);
+use base qw(Bio::Graphics::Glyph::generic Bio::Graphics::Glyph::xyplot);
 use Bio::TreeIO;
+use POSIX qw(log10);
 
 use Carp 'croak','cluck';
 use Data::Dumper;
@@ -30,7 +31,7 @@ sub height {
   #$height = ($self->draw_cladeo + 1) * 2 * $font->height;
   
   #Height = NumSpecies x Spacing/species x FontHeight
-  $height = ($self->known_species + $self->unknown_species)
+  $height = ($self->known_species + $self->unknown_species + 1)
             * $self->factory->get_option('species_spacing') 
             * $font->height;
   
@@ -238,13 +239,13 @@ sub draw_cladeo {
     $gd->filledRectangle(@coords2, $self->color('cladeo_bg'));
     #$gd->filledRectangle(0, $y1, $start_x+$xoffset+$self->font->width-1, $y2, $self->color('bg_color'));
     #$gd->filledRectangle($x1, $y1, $start_x+$xoffset/2, $y2, $self->color('cladeo_bg'));
-    $gd->filledRectangle($x2, $x1, $bounds[0], $bounds[1], $self->color('bg_color'));
+    $gd->filledRectangle($x2, $x1, $bounds[0], $bounds[1], $self->color('bg_color')) if $self->dna_fits;
   } else {
     $gd->filledRectangle($bounds[0]-$coords[2], $coords[1], $bounds[0]-$coords[0], $coords[3],
   			 $self->color('bg_color'));
     $gd->filledRectangle($bounds[0]-$coords2[2], $coords2[1], $bounds[0]-$coords2[0], $coords2[3],
 			 $self->color('cladeo_bg'));  
-    $gd->filledRectangle(0, $y1, $x1, $y2+1, $self->color('bg_color'));
+    $gd->filledRectangle(0, $y1, $x1, $y2+1, $self->color('bg_color')) if $self->dna_fits;
   }
 
   
@@ -398,6 +399,25 @@ sub get_n_set_next_treenode {
    
 }
 
+sub get_legend_and_scale {
+  my $yscale = shift;
+  my $height = shift;
+#  my @order = (@_, 1);
+  my @order = sort {$a <=> $b} (1, @_);
+#    my @order = sort {$a <=> $b} (1, $min_score, 5.3e-487);
+  my $graph_scale = - ($yscale - $height) / (log10($order[2]) - log10($order[0]));
+  my $graph_legend = {1 => $graph_scale * (log10(1) - log10($order[2])),
+  		   $order[0] => $graph_scale * (log10($order[0]) - log10($order[2])),
+    		   $order[2] => 0};
+    
+  print "order is @order and the yscale is $yscale and height is $height<br>";
+#  print"<pre>".Dumper($graph_scale, $graph_legend)."</pre>";
+  #$graph_scale 
+  
+  return ($graph_legend, $graph_scale);
+
+}
+
 sub draw {
   my $self = shift;
 #  my @feats = $self->extract_features;
@@ -410,8 +430,9 @@ sub draw {
   my ($left,$top,$partno,$total_parts) = @_;
   my ($x1,$y1,$x2,$y2) = $self->bounds($left, $top);
   
-  my @bounds = $gd->getBounds;
   
+  my @bounds = $gd->getBounds;
+print "$x1,$y1,$x2,$y2 , $left,$top @bounds";  
   ######### control by default setting and by coordinate
   my $draw_cladeo_left = $self->factory->get_option('draw_cladeo_left');
   
@@ -454,7 +475,13 @@ warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature-
   
   #all species having alignments in viewing window (key=name, val=feat obj)
   my %alignments = $self->extract_features;
-#print"alignments:\n".Dumper(%alignments);  
+#print"<pre>alignments:\n".Dumper(%alignments)."</pre>";
+  
+  my ($min_score, $max_score) = $self->get_score_bounds(%alignments);
+#$max_score = 300000000000000000000000000000000;
+  my ($graph_legend, $graph_scale) = get_legend_and_scale($yscale, $height, $min_score, $max_score);
+#  print"<pre>".Dumper($graph_scale, $graph_legend, $min_score, $max_score, $graph_legend->{$min_score}, $graph_legend->{$max_score})."</pre>";
+  
   
   
   my $refspecies = $self->factory->get_option('reference');
@@ -471,12 +498,17 @@ warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature-
   #print"my current are: @current_species<br>\n";
   #print"my known are:   @known_species<br>\n";
   #print"my unknown are: @unknown_species<br>\n";
-
-
-
-
-
-
+  
+  
+  my @allfeats;
+  for my $species (keys %alignments) {
+    push @allfeats, @{$alignments{$species}};
+  }
+  #print"<pre>alignments:\n".Dumper(@allfeats)."</pre>";
+  
+  ##not really working right now
+  #$self->draw_xy($gd,$left,$top,\@allfeats,$min_score, $max_score);
+  
   
   
   #exit;
@@ -484,9 +516,10 @@ warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature-
   
   my $y = $y1;
   
-  
   #for my $species (keys %alignments) {
   for my $species (@known_species,@unknown_species) {
+    my $y_track_top = $y + $height;
+    my $y_track_bottom = $y + $yscale-2;
     
     #make label
     if ($self->factory->get_option('label_species')) {
@@ -497,7 +530,7 @@ warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature-
       	$gd->string($self->font, $write_pos, $y, $species, $self->fgcolor);
       }
     }
-    			;
+    
     
 #    next unless $alignments{$species};
     
@@ -509,8 +542,10 @@ warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature-
     #process the reference sequence differently
     if ($species eq $refspecies) {
       #draw DNA alignments if zoomed close enough
-        my ($fx1,$fy1) = ($x1, $y+$height);
-      	my ($fx2,$fy2) = ($x2,$y+2*$height);
+        my ($fx1,$fy1) = ($x1, $y_track_top);
+      	my ($fx2,$fy2) = ($x2,$y_track_bottom);
+      	#my ($fx2,$fy2) = ($x2,$y+2*$height);
+      	
       
 
       if ($self->dna_fits) {
@@ -520,6 +555,7 @@ warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature-
 	$self->_draw_dna($gd,$dna,$fx1,$fy1,$fx2,$fy2, $self->fgcolor, $bg_color);
 	#print "draw the source $species with DNA:<br>$dna";
       } else {
+      	#$self->pairwise_draw_graph($gd, $fx1, $fy1+$height/2, $fx2, $fy1+$height/2, $self->fgcolor);
       	$gd->line($fx1, $fy1+$height/2, $fx2, $fy1+$height/2, $self->fgcolor);
       }
       
@@ -531,37 +567,76 @@ warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature-
     
     
     
+    #skip if the there is no alignments for this species in this window
     unless ($alignments{$species}) {
       $y += $yscale;
       next;
     }
-
+    
+    
     
     my @features = @{$alignments{$species}};
-
+    
+    
+    
+    
+    
+    
+    
+    #draw the axis for the plots
+    if (! $self->dna_fits) {
+      my $axis_color = $self->color('axis_color') || $self->fgcolor;
+#print"$x1,$y,$x2,$y <br>";
+      
+      
+      
+      
+      $gd->string($self->font, 0, $y+$graph_legend->{1}, 1, $self->fgcolor);
+      $gd->string($self->font, 0, $y+$graph_legend->{$min_score}, $min_score, $self->fgcolor) if exists $graph_legend->{$min_score};
+      $gd->string($self->font, 0, $y+$graph_legend->{$max_score}, $max_score, $self->fgcolor) if exists $graph_legend->{$max_score};
+      
+      $gd->line($x1, $y_track_top+$graph_legend->{1}, $x2, $y_track_top+$graph_legend->{1}, $axis_color);
+      $gd->line(0, $y_track_top+$graph_legend->{1}, $x1, $y_track_top+$graph_legend->{1}, $self->fgcolor);
+      $gd->line(0, $y_track_top+$graph_legend->{$min_score}, $x1, $y_track_top+$graph_legend->{$min_score}, $self->fgcolor) if exists $graph_legend->{$min_score};
+      $gd->line(0, $y_track_top+$graph_legend->{$max_score}, $x1, $y_track_top+$graph_legend->{$max_score}, $self->fgcolor) if exists $graph_legend->{$max_score};
+      
+      
+      $gd->line($x1,$y_track_top,$x2,$y_track_top,$axis_color);
+      $gd->line($x1,$y_track_bottom,$x2,$y_track_bottom,$axis_color);
+      $gd->line($x1,$y_track_top,$x1,$y_track_bottom,$self->fgcolor);
+#      $gd->line($x1,$y2,$x2,$y2,$axis_color);
+      
+      
+      
+      
+    }
+    
+    
+    
     
     
     for my $feat (@features) {
       my ($start, $stop, %attributes) = ($feat->start, $feat->stop, $feat->attributes);
       #warn"-- $start to $stop ; ".Dumper(%attributes);
       
-      my ($fx1,$fy1) = ($x1 + ($start-$self->start)*$scale, $y+$height);
-      my ($fx2,$fy2) = ($x1 + ($stop-$self->start)*$scale,$y+2*$height);
+      my ($fx1,$fy1) = ($x1 + ($start-$self->start)*$scale, $y_track_top);
+      my ($fx2,$fy2) = ($x1 + ($stop-$self->start)*$scale,$y_track_bottom);
+      #my ($fx2,$fy2) = ($x1 + ($stop-$self->start)*$scale,$y+2*$height);
       
-      
+      my $gapstr = $attributes{'Gap'} || return;
+      my @gapstr = split " ", $gapstr;
+      my @gaps;
+      for my $gap (@gapstr) {
+        my ($type, $num) = $gap =~ /^(.)(\d+)/; 
+#warn"$gap has $type and $num";
+      	push @gaps, [$type, $num+0];
+      }
+#warn"gap is:".Dumper(@gaps);#@gaps";
       
       
       #draw DNA alignments if zoomed close enough
       if ($self->dna_fits) {
-      	my $gapstr = $attributes{'Gap'} || return;
-      	my @gapstr = split " ", $gapstr;
-      	my @gaps;
-      	for my $gap (@gapstr) {
-      	  my ($type, $num) = $gap =~ /^(.)(\d+)/; 
-#warn"$gap has $type and $num";
-      	  push @gaps, [$type, $num+0];
-      	}
-#warn"gap is:".Dumper(@gaps);#@gaps";
+
 	my $dna = $feat->seq->seq;
 	my $offset = $feat->start - $self->start;
 #	if ($offset < 0) {
@@ -581,47 +656,22 @@ warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature-
 	#$self->draw_component($gd, $fx1, $fy1, $fx2, $fy2);
 	$self->draw_dna($gd,$dna,$fx1,$fy1,$fx2,$fy2,\@gaps);
       } else {
-      	$gd->line($fx1, $fy1+$height/2, $fx2, $fy1+$height/2, $self->fgcolor);
+      	$self->pairwise_draw_graph($gd, $feat, $x1, $scale, \@gaps, $graph_legend->{1}, $graph_scale, $fx1, $fy1, $fx2, $fy2);
+      	#$self->pairwise_draw_graph($gd, $feat, $x1, $scale, \@gaps, $min_score, $max_score, $graph_legend->{1}, $graph_scale, $fx1, $fy1, $fx2, $fy2, $self->fgcolor);
+#print"$fx1<pre>".Dumper($feat->score, $min_score, $max_score, $graph_legend->{1}, $graph_scale, $fx1, $fy1, $fx2, $fy2)."</pre>";
+      	#$self->pairwise_draw_graph($gd, $fx1, $fy1+$height/2, $fx2, $fy1+$height/2, $self->fgcolor)
+      	#$gd->line($fx1, $fy1+$height/2, $fx2, $fy1+$height/2, $self->fgcolor);
       }
     }
+    
+    
+    
     $y += $yscale;
   }
   
     $self->draw_cladeo($tree, $gd, $x1, $y1, $x2, $y2, $self->fgcolor,
   		     $xscale, $yscale, $xoffset, $yoffset, $start_x, $draw_cladeo_left);
   
-
-return;
-
-
-
-  if (my @parts = $self->parts) {
-
-warn"central";
-    # invoke sorter if user wants to sort always and we haven't already sorted
-    # during bumping.
-    @parts = $self->layout_sort(@parts) if !$self->bump && $self->option('always_sort');
-
-    my $x = $left;
-    my $y = $top  + $self->top + $self->pad_top;
-
-    $self->draw_connectors($gd,$x,$y) if $connector && $connector ne 'none';
-
-    my $last_x;
-    for (my $i=0; $i<@parts; $i++) {
-      # lie just a little bit to avoid lines overlapping and make the picture prettier
-      my $fake_x = $x;
-      $fake_x-- if defined $last_x && $parts[$i]->left - $last_x == 1;
-      $parts[$i]->draw($gd,$fake_x,$y,$i,scalar(@parts));
-      $last_x = $parts[$i]->right;
-    }
-  }
-
-  else {  # no part
-    $self->draw_connectors($gd,$left,$top)
-      if $connector && $connector ne 'none'; # && $self->{level} == 0;
-    $self->draw_component($gd,$left,$top,$partno,$total_parts) unless $self->feature_has_subparts;
-  }
 
 }
 
@@ -646,6 +696,193 @@ sub draw_component {
     $self->draw_gc_content($gd,$dna,$x1,$y1,$x2,$y2);
   }
 }
+
+
+sub get_score_bounds {
+  my $self = shift;
+  my %alignments = @_;
+  
+  my $min = -1;
+  my $max = -1;
+  
+  for my $species (keys %alignments) {
+    for my $feature (@{$alignments{$species}}) {
+      my $score = $feature->score;
+      $min = $score if $min == -1 || $score < $min;
+      $max = $score if $max == -1 || $max < $score;
+    }
+  }
+  
+  
+  my @parts = $self->parts;
+  print "<pre>Parts are:\n".Dumper(@parts)."</pre>";
+  
+  return ($min, $max)
+}
+
+
+
+sub pairwise_draw_graph {
+  my $self = shift;
+  my $gd = shift;
+  my $feat = shift;		# current feature object
+  my $x_edge = shift;		# x start position of the track
+  my $scale = shift;		# pixels / bp
+  my $gaps = shift;		# gap data for insertions, deletions and matches
+#  my $min_score = shift;
+#  my $max_score = shift;
+  my $zero_y = shift;		# y coordinate of 0 position
+  my $graph_scale = shift;	# scale for the graph. y_coord = graph_scale x log(score)
+  
+  my ($x1,$y1,$x2,$y2) = @_;
+  my $fgcolor = $self->fgcolor;
+  my $errcolor  = $self->color('errcolor');# || $fgcolor;
+  
+  my $score = $feat->score;
+  my %attributes = $feat->attributes;
+  
+  
+  #print"AAAA<pre>".Data::Dumper::Dumper($gaps)."</pre>BBBBB<br>scale is $xscale";
+  
+  
+  my $log_y = log10($score);
+  my $y_bottom = log10($score) * $graph_scale + $zero_y + $y1;
+  my $y_top = $zero_y+$y1;
+  
+  my @y = sort {$a <=> $b} ($y_bottom, $y_top);
+  
+  
+  
+  #missing gap data
+  unless ($gaps) {
+    $x1 = $x_edge if $x1 < $x_edge;
+    return if $x2 < $x_edge;
+    #$gd->filledRectangle($x1,$y[0],$x2,$y[1],$fgcolor);
+    return;
+  }
+  
+  my $bp = 0;
+  
+#  warn"gaps are:\n".Dumper($gaps);
+  for my $tuple (@$gaps) {
+    my ($type, $num) = @$tuple;
+    
+    #warn"$type and $num";
+    if ($type eq "M") {
+      my $x_left  = $x1 + ($bp*$scale);
+      my $x_right = $x_left + $num*$scale;
+      
+      $bp += $num;
+      
+      $x_left = $x_edge if $x_left < $x_edge;
+      next if $x_right < $x_edge;
+      $gd->filledRectangle($x_left,$y[0],$x_right,$y[1],$fgcolor);
+    } elsif ($type eq "D") {
+      #$bp += $num;
+      
+      #my $x_left  = $x1 + ($bp*$xscale);
+      #my $x_right = $x_left + $num*$xscale;
+      
+      #warn"Deletion: $bp + $num => $x_left - $x_right";
+      
+      $bp += $num;
+      
+      #$x_left = $x_edge if $x_left < $x_edge;
+      #next if $x_right < $x_edge;
+      #$gd->filledRectangle($x_left,$y[0]+20,$x_right,$y[0]+25,$fgcolor);
+      
+      
+    } elsif ($type eq "I") {
+      my $x_left  = $x1 + ($bp*$scale);
+      $gd->line($x_left-2, $y1-4, $x_left, $y1, $errcolor);
+      $gd->line($x_left, $y1, $x_left+2, $y1-4, $errcolor);
+    }
+    
+
+  }
+  
+  
+  
+  #  print "My feat with score $score from [$min_score , $max_score] at pos $x1,$y1,$x2,$y2\t y pos: $zero_y to $y with log of $log_y and scale $graph_scale<br>";
+  
+  #$x1 = $x_edge if $x1 < $x_edge;
+  #return if $x2 < $x_edge;
+  #$gd->filledRectangle($x1,$y[0],$x2,$y[1],$fgcolor);
+  #$gd->filledRectangle($x1,$zero_y+$y1,$x2,$y,$fgcolor);
+  
+  
+  
+#  $gd->line($x1,$y1,$x2,$y1,$fgcolor);
+#  $gd->line($x1,$y2,$x2,$y2,$fgcolor);
+  
+  #$gd->rectangle($x1,$y1,$x2,$y2, $fgcolor);
+  
+}
+
+
+#copied from xyplot.pm, it's not really working because the @parts variable and $self->parts aren't compatible
+sub draw_xy {
+  my $self = shift;
+
+  my ($gd,$dx,$dy,$prt,$min_score,$max_score) = @_;
+  my ($left,$top,$right,$bottom) = $self->calculate_boundaries($dx,$dy);
+  my @parts = @$prt;#$self->parts;
+#$self->{parts} = \@parts;
+print"$left,$top,$right,$bottom ".Dumper($dx,$dy);
+  return $self->SUPER::draw(@_) unless @parts > 0;
+print"gggg";$right -= 100;
+print"<pre>".Data::Dumper::Dumper(@parts)."</pre>";
+
+##  my ($min_score,$max_score) = $self->minmax(\@parts);
+print"minmax is :".Dumper($min_score,$max_score);
+  my $side = $self->_determine_side();
+
+  # if a scale is called for, then we adjust the max and min to be even
+  # multiples of a power of 10.
+  if ($side) {
+    $max_score = Bio::Graphics::Glyph::xyplot::max10($max_score);
+    $min_score = Bio::Graphics::Glyph::xyplot::min10($min_score);
+  }
+
+  my $height = $self->height;
+  my $scale  = $max_score > $min_score ? $height/($max_score-$min_score)
+                                       : 1;
+print"scale is $scale<br>";
+  my $x = $left;
+  my $y = $top + $self->pad_top;
+
+  # position of "0" on the scale
+  my $y_origin = $min_score <= 0 ? $bottom - (0 - $min_score) * $scale : $bottom;
+  $y_origin    = $top if $max_score < 0;
+
+  my $clip_ok = $self->option('clip');
+  $self->{_clip_ok}   = $clip_ok;
+  $self->{_scale}     = $scale;
+  $self->{_min_score} = $min_score;
+  $self->{_max_score} = $max_score;
+  $self->{_top}       = $top;
+  $self->{_bottom}    = $bottom;
+
+  # now seed all the parts with the information they need to draw their positions
+  foreach (@parts) {
+    my $s = $_->score;
+    next unless defined $s;
+    $_->{_y_position}   = $self->score2position($s);
+    print "score for processing: $s ".$_->{_y_position}."<br>";
+  }
+
+  my $type        = $self->option('graph_type') || $self->option('graphtype') || 'boxes';
+  my $draw_method = $self->lookup_draw_method($type);
+print"<pre>".Data::Dumper::Dumper($draw_method)."</pre>";
+  $self->throw("Invalid graph type '$type'") unless $draw_method;
+  $self->$draw_method($gd,$x,$y,$y_origin);
+#$gd->rectangle();
+
+#  $self->_draw_scale($gd,$scale,$min_score,$max_score,$dx,$dy,$y_origin);
+#  $self->draw_label(@_)       if $self->option('label');
+#  $self->draw_description(@_) if $self->option('description');
+}
+
 
 sub draw_dna {
   my $self = shift;
@@ -695,6 +932,7 @@ sub draw_dna {
 
 sub _draw_dna {
   my $self = shift;
+
 #print"<pre>".Data::Dumper::Dumper($self)."</pre>";
   my ($gd,$dna,$x1,$y1,$x2,$y2, $color, $bg_color) = @_;
   

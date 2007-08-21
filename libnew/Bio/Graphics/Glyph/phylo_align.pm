@@ -20,7 +20,6 @@ sub description { 0 }
 
 sub height {
   my $self = shift;
-#warn"self is:\n".Data::Dumper::Dumper($self);
   my $font = $self->font;
 #  return ($self->extract_features + 1) * 2 * $font->height;
   #return $height if $height;
@@ -62,13 +61,6 @@ sub height {
 #  return $self->dna_fits ? ($self->extract_features + 1) * 2 * $font->height
 #       : $self->do_gc    ? $self->SUPER::height
 #       : 0;
-}
-
-sub do_gc {
-  my $self = shift;
-  my $do_gc = $self->option('do_gc');
-  return  if defined($do_gc) && !$do_gc;
-  return  1;
 }
 
 
@@ -304,7 +296,7 @@ sub draw_cladeo {
       }
       
     }
-    #for my $child_x (@{$node->{'_description'}{'child_x'}}) {
+    #for my $child_x (@{$node->{'_description'}{'child_pos'}}) {
     #  print"  > $child_x\n";
     #}
     
@@ -355,11 +347,11 @@ sub flip_xy {
       }
     } else {
       $node->{'_description'} = {
-        'x'        => $node->{'_description'}{'y'},
-        'y'        => $node->{'_description'}{'x'},
-        'child_y'  => $node->{'_description'}{'child_x'},
-        'childmin' => $node->{'_description'}{'childmin'},
-        'childmax' => $node->{'_description'}{'childmax'}
+        'x'         => $node->{'_description'}{'y'},
+        'y'         => $node->{'_description'}{'x'},
+        'child_pos' => $node->{'_description'}{'child_pos'},
+        'childmin'  => $node->{'_description'}{'childmin'},
+        'childmax'  => $node->{'_description'}{'childmax'}
       }
     }
   }
@@ -395,7 +387,7 @@ sub get_n_set_next_treenode {
     #$x += $child->discription->{'x'};  #cannot do this for intermediate nodes
     
     #store the x values of all children
-    push @{$node->{'_description'}{'child_x'}}, $child_x;
+    push @{$node->{'_description'}{'child_pos'}}, $child_x;
     
     
   }
@@ -828,28 +820,6 @@ sub draw_pairwisegraph_axis {
   #$gd->line($x1,$y_track_bottom,$x2,$y_track_bottom,$axis_color);
 }
 
-
-sub draw_component {
-  my $self = shift;
-  my $gd = shift;
-  my ($x1,$y1,$x2,$y2) = $self->bounds(@_);
-#warn"self is:\n".Data::Dumper::Dumper($self);
-#warn"feature dump:\n".Data::Dumper::Dumper($self->feature->seq);
-#warn"feature is:".$self->feature;
-  my $dna        = eval { $self->feature->seq };
-  $dna           = $dna->seq if ref($dna) and $dna->can('seq'); # to catch Bio::PrimarySeqI objects
-  $dna or return;
-
-  # workaround for my misreading of interface -- LS
-  $dna = $dna->seq if ref($dna) && $dna->can('seq');
-
-  if ($self->dna_fits) {
-    $self->draw_dna($gd,$dna,$x1,$y1,$x2,$y2);
-#$self->draw_dna($gd,$dna,$x1,$y1+10,$x2,$y2-2);   #can make it draw dna based on the xy coordinate and seq!
-  } elsif ($self->do_gc) {
-    $self->draw_gc_content($gd,$dna,$x1,$y1,$x2,$y2);
-  }
-}
 
 
 sub get_score_bounds {

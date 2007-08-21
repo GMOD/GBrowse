@@ -11,8 +11,6 @@ use Data::Dumper;
 my %complement = (g=>'c',a=>'t',t=>'a',c=>'g',n=>'n',
 		  G=>'C',A=>'T',T=>'A',C=>'G',N=>'N');
 
-my $height;
-
 
 # turn off description
 sub description { 0 }
@@ -25,19 +23,37 @@ sub height {
 #warn"self is:\n".Data::Dumper::Dumper($self);
   my $font = $self->font;
 #  return ($self->extract_features + 1) * 2 * $font->height;
-  return $height if $height;
+  #return $height if $height;
   
+  
+  
+#  warn Dumper($self->option('tree_format'),$self->option('targ_color'),$self->option('do_gc'),$self->option('fgcolor'),$self->option('species_spacing_score'));
+  
+  #adjust the space to take if conservation scores are drawn instead
+  if (! $self->dna_fits) {
+#    warn"dna fits!";
+    #print "<pre>".Dumper($self->factory->{'options'})."</pre>";
+    my $species_spacing_score = $self->option('species_spacing_score') || 5;
+    $self->factory->set_option('species_spacing', $species_spacing_score);
+#    $self->factory->set_option('species_spacing') = $self->option('species_spacing_score');
+#    $self->factory->{'options'}->{'species_spacing'} = $self->factory->get_option('species_spacing_score');
+#    warn"new value is ".$self->option('species_spacing');
+  }
+  
+  my $species_spacing = $self->option('species_spacing') || 1;
   
   #$height = ($self->draw_cladeo + 1) * 2 * $font->height;
   
   #Height = NumSpecies x Spacing/species x FontHeight
-  $height = ($self->known_species + $self->unknown_species + 1)
-            * $self->factory->get_option('species_spacing') 
+  my $height = ($self->known_species + $self->unknown_species + 1)
+            * $species_spacing
             * $font->height;
   
   
   #use this if you want to show only those species that have alignments in the viewing window
   #$height = ($self->extract_features + 1) * 2 * $font->height;
+  
+  $self->factory->set_option('height', $height);
   
   
   return $height;
@@ -92,7 +108,7 @@ sub known_species {
   } else {
   	
   	
-    my $tree_file = $self->factory->get_option('tree_file');
+    my $tree_file = $self->option('tree_file');
     
     open (FH, $tree_file);
     my $newick = <FH>;
@@ -122,7 +138,7 @@ sub unknown_species {
     @unknown_species;
   } else {
     %alignments = $self->extract_features;
-    $refspecies = $self->factory->get_option('reference');
+    $refspecies = $self->option('reference');
     @current_species =  keys %alignments;     #all species in viewing window
     @known_species = $self->known_species;  #all species from cladeogram info
     @unknown_species;                                 #species in GFF but not in cladeo
@@ -144,8 +160,8 @@ sub set_tree {
   
   #warn"My species are ".Dumper(@species);
   
-  my $tree_file   = $self->factory->get_option('tree_file');
-  my $tree_format = $self->factory->get_option('tree_format');
+  my $tree_file   = $self->option('tree_file');
+  my $tree_format = $self->option('tree_format') || 'newick';
   
   my $treeio = new Bio::TreeIO(-file   => $tree_file,
                                -format => $tree_format);
@@ -231,11 +247,11 @@ sub draw_cladeo {
   my @nodes = $root->get_all_Descendents;
   
   #draw bg for cladeogram
-  my $cladeo_bg = $self->color('cladeo_bg');
+  my $cladeo_bg = $self->color('cladeo_bg') || $self->bgcolor;
   my @coords = (0, $y1, $start_x+$xoffset+$self->font->width-1, $y2+1);
   my @coords2 = ($x1, $y1, $start_x+$xoffset/2, $y2);
   if ($draw_cladeo_left) {
-    $gd->filledRectangle(@coords, $self->color('bg_color'));
+    $gd->filledRectangle(@coords, $cladeo_bg);
     $gd->filledRectangle(@coords2, $self->color('cladeo_bg'));
     #$gd->filledRectangle(0, $y1, $start_x+$xoffset+$self->font->width-1, $y2, $self->color('bg_color'));
     #$gd->filledRectangle($x1, $y1, $start_x+$xoffset/2, $y2, $self->color('cladeo_bg'));
@@ -244,7 +260,7 @@ sub draw_cladeo {
     $gd->filledRectangle($bounds[0]-$coords[2], $coords[1], $bounds[0]-$coords[0], $coords[3],
   			 $self->color('bg_color'));
     $gd->filledRectangle($bounds[0]-$coords2[2], $coords2[1], $bounds[0]-$coords2[0], $coords2[3],
-			 $self->color('cladeo_bg'));  
+			 $cladeo_bg);  
     $gd->filledRectangle(0, $y1, $x1, $y2+1, $self->color('bg_color')) if $self->dna_fits;
   }
 
@@ -402,6 +418,13 @@ sub get_n_set_next_treenode {
 sub get_legend_and_scale {
   my $yscale = shift;
   my $height = shift;
+  
+  if ($yscale < 2*$height - 1) {
+    $height = 0;
+  }
+  
+  #chage scale later so that the base can  be anything!!
+  
 #  my @order = (@_, 1);
   my @order = sort {$a <=> $b} (1, @_);
 #    my @order = sort {$a <=> $b} (1, $min_score, 5.3e-487);
@@ -410,7 +433,7 @@ sub get_legend_and_scale {
   		   $order[0] => $graph_scale * (log10($order[0]) - log10($order[2])),
     		   $order[2] => 0};
     
-  print "order is @order and the yscale is $yscale and height is $height<br>";
+  #print "order is @order and the yscale is $yscale and height is $height<br>";
 #  print"<pre>".Dumper($graph_scale, $graph_legend)."</pre>";
   #$graph_scale 
   
@@ -432,15 +455,17 @@ sub draw {
   
   
   my @bounds = $gd->getBounds;
-print "$x1,$y1,$x2,$y2 , $left,$top @bounds";  
+#print "$x1,$y1,$x2,$y2 , $left,$top @bounds";  
   ######### control by default setting and by coordinate
-  my $draw_cladeo_left = $self->factory->get_option('draw_cladeo_left');
+  my $draw_cladeo_left = $self->option('draw_cladeo_left');
   
   
 #$gd->rectangle($x1, $y1, $x2, $y2, $self->fgcolor); 
 
-warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature->refseq." ; height $height"
-	." ; scale:".$self->scale . " ; coords:($x1,$y1,$x2,$y2)";
+
+# The start / stop and other info using the warn command 
+#warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature->refseq." ; height $height"
+#	." ; scale:".$self->scale . " ; coords:($x1,$y1,$x2,$y2)";
 
 #$gd->rectangle(($x1+$scale*(2000-$self->start)), 25, ($x1+$scale*(3000-$self->start)), 30, $self->fgcolor);
 #warn ($x1+$scale*(2000-$self->start));
@@ -455,9 +480,13 @@ warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature-
 #  $self->SUPER::draw(@_);
   
   
+  my $species_spacing = $self->option('species_spacing') || 1;
+  
   my $xscale = $self->font->width;
-  my $yscale = $height * $self->factory->get_option('species_spacing');	
-
+  my $yscale = $height * $species_spacing;
+  
+  
+  
   #method that reads the NEWICK formatted file to create the tree objects
   my $xoffset = $x1;
   my $yoffset = $y1 + 0.5*$self->font->height;
@@ -484,7 +513,7 @@ warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature-
   
   
   
-  my $refspecies = $self->factory->get_option('reference');
+  my $refspecies = $self->option('reference');
   
   my @current_species = keys %alignments;    #all species in viewing window
   my @known_species = $self->known_species($tree);  #all species from cladeogram info
@@ -516,20 +545,41 @@ warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature-
   
   my $y = $y1;
   
+  ####$#%@#$%@#$%@#$%@#$%
+  #demo?
+  #http://localhost/cgi-bin.dev/gbrowse_run/volvox?start=1100;stop=11200;ref=ctgA;width=800;version=100;flip=;label=ExampleFeatures-PhyloAlignment-TransChip%3Aregion-Motifs%3Aoverview;grid=1
+  #http://localhost/cgi-bin.dev/gbrowse_run/volvox?start=3550;stop=3650;ref=ctgA;width=800;version=100;flip=;label=ExampleFeatures-PhyloAlignment-TransChip%3Aregion-Motifs%3Aoverview;grid=1
+  
+  
+  #http://localhost/cgi-bin.dev/gbrowse_run/volvox?start=1100;stop=11200;ref=ctgA;width=800;version=100;flip=;label=ExampleFeatures-EST-PhyloAlignment-TransChip%3Aregion-Motifs%3Aoverview;grid=1
+  
+  #http://localhost/cgi-bin.dev/gbrowse_run/volvox?start=1100;stop=11200;ref=ctgA;width=800;version=100;flip=;label=ExampleFeatures-EST-PhyloAlignment-TransChip%3Aregion-Motifs%3Aoverview;grid=1
+  
   #for my $species (keys %alignments) {
   for my $species (@known_species,@unknown_species) {
     my $y_track_top = $y + $height;
-    my $y_track_bottom = $y + $yscale-2;
+#    $y_track_top += $height unless ($y_track_bottom - $y_track_top < $height);
+    my $y_track_bottom = $y + $yscale;
+    #$y_track_top += $height unless ($y_track_bottom - $y_track_top < 2*$height-1);
     
-    #make label
-    if ($self->factory->get_option('label_species')) {
-      if ($draw_cladeo_left) {
-      	$gd->string($self->font, $start_x + $xoffset + $self->font->width, $y, $species, $self->fgcolor);
-      } else {
-      	my $write_pos = $bounds[0] - ($start_x + $xoffset) - $self->font->width * (length($species)+1);
-      	$gd->string($self->font, $write_pos, $y, $species, $self->fgcolor);
-      }
+    
+    if ($yscale < 2*$height-1) {
+      #print "small scale";
+      $y_track_top = $y;# + $height;
+#      $y_track_top += $height unless ($y_track_bottom - $y_track_top < $height);
+      my $y_track_bottom = $y + $height;
+      #$y_track_top += $height unless ($y_track_bottom - $y_track_top < 2*$height-1);
     }
+    
+    #print"$y_track_top, $y_track_bottom  ,  $yscale, height $height<br>";
+    
+    
+    
+#    $gd->line(250,250,300,$y_track_top,$self->fgcolor);
+#    print"height is $height<br>";
+    
+    
+    
     
     
 #    next unless $alignments{$species};
@@ -551,13 +601,20 @@ warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature-
       if ($self->dna_fits) {
 	my $dna = eval { $self->feature->seq };
         $dna    = $dna->seq if ref($dna) and $dna->can('seq'); # to catch Bio::PrimarySeqI objects
-        my $bg_color = $self->color('ref_color');
+        my $bg_color = $self->color('ref_color') || $self->bgcolor;
+        
+        $fy2 = $fy1 + $self->font->height || $y2;
+  
+        
 	$self->_draw_dna($gd,$dna,$fx1,$fy1,$fx2,$fy2, $self->fgcolor, $bg_color);
 	#print "draw the source $species with DNA:<br>$dna";
       } else {
       	#$self->pairwise_draw_graph($gd, $fx1, $fy1+$height/2, $fx2, $fy1+$height/2, $self->fgcolor);
-      	$gd->line($fx1, $fy1+$height/2, $fx2, $fy1+$height/2, $self->fgcolor);
+      	##$gd->line($fx1, $fy1+$height/2, $fx2, $fy1+$height/2, $self->fgcolor);
       }
+      
+      my $x_label_start = $start_x + $xoffset + $self->font->width;
+      $self->species_label($gd, $draw_cladeo_left, $x_label_start, $y, $species) unless ($self->option('hide_label'));
       
       $y += $yscale;
       next;
@@ -569,6 +626,9 @@ warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature-
     
     #skip if the there is no alignments for this species in this window
     unless ($alignments{$species}) {
+      my $x_label_start = $start_x + $xoffset + $self->font->width;
+      $self->species_label($gd, $draw_cladeo_left, $x_label_start, $y, $species) unless ($self->option('hide_label'));
+      
       $y += $yscale;
       next;
     }
@@ -584,34 +644,15 @@ warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature-
     
     
     #draw the axis for the plots
-    if (! $self->dna_fits) {
-      my $axis_color = $self->color('axis_color') || $self->fgcolor;
-#print"$x1,$y,$x2,$y <br>";
+    $self->draw_pairwisegraph_axis($gd,
+    				    $graph_legend,
+    				    $x1,
+    				    $x2,
+    				    $y_track_top,
+    				    $y_track_bottom,
+    				    $draw_cladeo_left,
+    				    @bounds) unless $self->dna_fits;
       
-      
-      
-      
-      $gd->string($self->font, 0, $y+$graph_legend->{1}, 1, $self->fgcolor);
-      $gd->string($self->font, 0, $y+$graph_legend->{$min_score}, $min_score, $self->fgcolor) if exists $graph_legend->{$min_score};
-      $gd->string($self->font, 0, $y+$graph_legend->{$max_score}, $max_score, $self->fgcolor) if exists $graph_legend->{$max_score};
-      
-      $gd->line($x1, $y_track_top+$graph_legend->{1}, $x2, $y_track_top+$graph_legend->{1}, $axis_color);
-      $gd->line(0, $y_track_top+$graph_legend->{1}, $x1, $y_track_top+$graph_legend->{1}, $self->fgcolor);
-      $gd->line(0, $y_track_top+$graph_legend->{$min_score}, $x1, $y_track_top+$graph_legend->{$min_score}, $self->fgcolor) if exists $graph_legend->{$min_score};
-      $gd->line(0, $y_track_top+$graph_legend->{$max_score}, $x1, $y_track_top+$graph_legend->{$max_score}, $self->fgcolor) if exists $graph_legend->{$max_score};
-      
-      
-      $gd->line($x1,$y_track_top,$x2,$y_track_top,$axis_color);
-      $gd->line($x1,$y_track_bottom,$x2,$y_track_bottom,$axis_color);
-      $gd->line($x1,$y_track_top,$x1,$y_track_bottom,$self->fgcolor);
-#      $gd->line($x1,$y2,$x2,$y2,$axis_color);
-      
-      
-      
-      
-    }
-    
-    
     
     
     
@@ -634,10 +675,29 @@ warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature-
 #warn"gap is:".Dumper(@gaps);#@gaps";
       
       
+#print "Species $species<br><pre>";
+#for my $key (keys %{$feat->hit}) {
+# next if $key eq "factory";
+# print "$key : ".Dumper($feat->hit->{$key})
+#}
+#print"source seq: ".$feat->hit->seq->seq;
+#print"==<br>";
+#for my $key (keys %{$feat}) {
+#  next if $key eq "factory";
+#  print "$key : ".Dumper($feat->hit->{$key})
+#}
+#print "</pre>";
+#print"-------------------------------<br>";
+      
+      
       #draw DNA alignments if zoomed close enough
       if ($self->dna_fits) {
 
-	my $dna = $feat->seq->seq;
+	my $ref_dna = $feat->seq->seq;
+	my $targ_dna = $feat->hit->seq->seq;
+	
+#$print"DNA!!:<br>$ref_dna<br>$targ_dna<p>";
+	
 	my $offset = $feat->start - $self->start;
 #	if ($offset < 0) {
 #	  $dna = substr($dna, -$offset);
@@ -654,7 +714,7 @@ warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature-
 #	}
 #warn ($fx1+$scale*($feat->start-$self->start));
 	#$self->draw_component($gd, $fx1, $fy1, $fx2, $fy2);
-	$self->draw_dna($gd,$dna,$fx1,$fy1,$fx2,$fy2,\@gaps);
+	$self->draw_dna($gd,$ref_dna, $targ_dna,$fx1,$fy1,$fx2,$fy2,\@gaps);
       } else {
       	$self->pairwise_draw_graph($gd, $feat, $x1, $scale, \@gaps, $graph_legend->{1}, $graph_scale, $fx1, $fy1, $fx2, $fy2);
       	#$self->pairwise_draw_graph($gd, $feat, $x1, $scale, \@gaps, $min_score, $max_score, $graph_legend->{1}, $graph_scale, $fx1, $fy1, $fx2, $fy2, $self->fgcolor);
@@ -665,6 +725,9 @@ warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature-
     }
     
     
+    #label the species in the cladeogram
+    my $x_label_start = $start_x + $xoffset + $self->font->width;
+    $self->species_label($gd, $draw_cladeo_left, $x_label_start, $y, $species) unless ($self->option('hide_label'));
     
     $y += $yscale;
   }
@@ -674,6 +737,97 @@ warn "DRAW::".$self->feature->start."-".$self->feature->stop.",".$self->feature-
   
 
 }
+
+
+
+sub species_label {
+  my $self = shift;
+  my $gd = shift;
+  my $draw_cladeo_left = shift;
+  my $x_start = shift;
+  my $y_start = shift;
+  my $species = shift;
+  
+  $x_start += 2;
+  my $text_width = $self->font->width * length($species);
+  my $bgcolor = $self->color('bg_color');
+  
+  #make label
+  if ($draw_cladeo_left) {
+#    $gd->string($self->font, $start_x + $xoffset + $self->font->width, $y, $species, $self->fgcolor);
+#print "$x_start, $y_start, $species<br>";
+    
+    $gd->filledRectangle($x_start-2, $y_start, $x_start + $text_width, $y_start+$self->font->height, $bgcolor);
+    $gd->rectangle($x_start-2, $y_start, $x_start + $text_width, $y_start+$self->font->height, $self->fgcolor);
+    $gd->string($self->font, $x_start, $y_start, $species, $self->fgcolor);
+    
+  } else {
+    my ($x_max, $y_max) = $gd->getBounds;
+    #my $write_pos = $x_max - $x_start - $self->font->width * length($species);
+    my $write_pos = $x_max - $x_start - $text_width;
+#print "$x_max - $y_max, $x_start, $write_pos, $y_start, $species<br>";
+    
+#    my $write_pos = $bounds[0] - ($start_x + $xoffset) - $self->font->width * (length($species)+1);
+#    $gd->string($self->font, $write_pos, $y, $species, $self->fgcolor);
+    
+    $gd->filledRectangle($write_pos, $y_start, $write_pos + $text_width+2, $y_start+$self->font->height, $bgcolor);
+    $gd->rectangle($write_pos, $y_start, $write_pos + $text_width+2, $y_start+$self->font->height, $self->fgcolor);
+    $gd->string($self->font, $write_pos+2, $y_start, $species, $self->fgcolor);
+    
+
+  }
+}
+
+
+# draws the legends on the conservation scale
+sub draw_pairwisegraph_axis {
+  my $self = shift;
+  my ($gd, $graph_legend, $x1, $x2, $y_track_top, $y_track_bottom, $draw_cladeo_left, @bounds) = @_;
+  
+  
+  my $axis_color = $self->color('axis_color') || $self->fgcolor;
+  my $mid_axis_color = $self->color('mid_axis_color') || $axis_color;
+#print"$x1,$y,$x2,$y <br>";
+  
+  for my $label (keys %$graph_legend) {
+    my $y_label = $graph_legend->{$label} + $y_track_top;
+
+
+#  print "$y_track_top , $y_track_bottom  currently $y_label<br>";
+    
+    my $col = $axis_color;
+    $col = $mid_axis_color if ($y_label != $y_track_top && $y_label != $y_track_bottom);
+    $gd->line($x1,$y_label,$x2,$y_label,$col);
+    
+    my @coords = (0, $y_label, $x1, $y_label);
+    
+    
+    if ($draw_cladeo_left) {
+      #draw the legend on the right
+      $coords[0] = $bounds[0] - $coords[0];
+      $coords[2] = $bounds[0] - $coords[2];
+      
+      my $x_text_offset = length($label) * $self->font->width;
+      
+      $gd->string($self->font, $coords[0]-$x_text_offset, $coords[1], $label, $self->fgcolor);
+      $gd->line(@coords, $self->fgcolor);
+      
+      $gd->line($x2,$y_track_top,$x2,$y_track_bottom,$self->fgcolor);
+    } else {
+      #draw the legned on the left
+      $gd->string($self->font, @coords[0..1], $label, $self->fgcolor);
+      $gd->line(@coords, $self->fgcolor);
+      
+      $gd->line($x1,$y_track_top,$x1,$y_track_bottom,$self->fgcolor);
+    }
+  
+  }
+  
+  #draw the top and bottom axis
+  #$gd->line($x1,$y_track_top,$x2,$y_track_top,$axis_color);
+  #$gd->line($x1,$y_track_bottom,$x2,$y_track_bottom,$axis_color);
+}
+
 
 sub draw_component {
   my $self = shift;
@@ -715,7 +869,7 @@ sub get_score_bounds {
   
   
   my @parts = $self->parts;
-  print "<pre>Parts are:\n".Dumper(@parts)."</pre>";
+  #print "<pre>Parts are:\n".Dumper(@parts)."</pre>";
   
   return ($min, $max)
 }
@@ -736,7 +890,7 @@ sub pairwise_draw_graph {
   
   my ($x1,$y1,$x2,$y2) = @_;
   my $fgcolor = $self->fgcolor;
-  my $errcolor  = $self->color('errcolor');# || $fgcolor;
+  my $errcolor  = $self->color('errcolor') || $fgcolor;
   
   my $score = $feat->score;
   my %attributes = $feat->attributes;
@@ -820,82 +974,25 @@ sub pairwise_draw_graph {
 }
 
 
-#copied from xyplot.pm, it's not really working because the @parts variable and $self->parts aren't compatible
-sub draw_xy {
-  my $self = shift;
-
-  my ($gd,$dx,$dy,$prt,$min_score,$max_score) = @_;
-  my ($left,$top,$right,$bottom) = $self->calculate_boundaries($dx,$dy);
-  my @parts = @$prt;#$self->parts;
-#$self->{parts} = \@parts;
-print"$left,$top,$right,$bottom ".Dumper($dx,$dy);
-  return $self->SUPER::draw(@_) unless @parts > 0;
-print"gggg";$right -= 100;
-print"<pre>".Data::Dumper::Dumper(@parts)."</pre>";
-
-##  my ($min_score,$max_score) = $self->minmax(\@parts);
-print"minmax is :".Dumper($min_score,$max_score);
-  my $side = $self->_determine_side();
-
-  # if a scale is called for, then we adjust the max and min to be even
-  # multiples of a power of 10.
-  if ($side) {
-    $max_score = Bio::Graphics::Glyph::xyplot::max10($max_score);
-    $min_score = Bio::Graphics::Glyph::xyplot::min10($min_score);
-  }
-
-  my $height = $self->height;
-  my $scale  = $max_score > $min_score ? $height/($max_score-$min_score)
-                                       : 1;
-print"scale is $scale<br>";
-  my $x = $left;
-  my $y = $top + $self->pad_top;
-
-  # position of "0" on the scale
-  my $y_origin = $min_score <= 0 ? $bottom - (0 - $min_score) * $scale : $bottom;
-  $y_origin    = $top if $max_score < 0;
-
-  my $clip_ok = $self->option('clip');
-  $self->{_clip_ok}   = $clip_ok;
-  $self->{_scale}     = $scale;
-  $self->{_min_score} = $min_score;
-  $self->{_max_score} = $max_score;
-  $self->{_top}       = $top;
-  $self->{_bottom}    = $bottom;
-
-  # now seed all the parts with the information they need to draw their positions
-  foreach (@parts) {
-    my $s = $_->score;
-    next unless defined $s;
-    $_->{_y_position}   = $self->score2position($s);
-    print "score for processing: $s ".$_->{_y_position}."<br>";
-  }
-
-  my $type        = $self->option('graph_type') || $self->option('graphtype') || 'boxes';
-  my $draw_method = $self->lookup_draw_method($type);
-print"<pre>".Data::Dumper::Dumper($draw_method)."</pre>";
-  $self->throw("Invalid graph type '$type'") unless $draw_method;
-  $self->$draw_method($gd,$x,$y,$y_origin);
-#$gd->rectangle();
-
-#  $self->_draw_scale($gd,$scale,$min_score,$max_score,$dx,$dy,$y_origin);
-#  $self->draw_label(@_)       if $self->option('label');
-#  $self->draw_description(@_) if $self->option('description');
-}
-
 
 sub draw_dna {
   my $self = shift;
 #print"<pre>".Data::Dumper::Dumper($self)."</pre>";
-  my ($gd,$dna,$x1,$y1,$x2,$y2, $gaps) = @_;
+  my ($gd,$ref_dna, $dna,$x1,$y1,$x2,$y2, $gaps) = @_;
   my $pixels_per_base = $self->scale;
   
-  my $fontcolor = $self->fgcolor;
-  my $bg_color = $self->color('targ_color') || $self->fgcolor;
-  my $errcolor  = $self->color('errcolor');# || $fgcolor;
+  my $fgcolor = $self->fgcolor;
+  my $bg_color = $self->color('targ_color') || $self->bgcolor;
+  my $errcolor  = $self->color('errcolor') || $fgcolor;
   #print"colors are: $fontcolor, $bg_color $errcolor black:".$self->fgcolor;
   
-  #missing gap data, weird
+  
+  $y2 = $y1 + $self->font->height || $y2;
+  
+#print"$dna<br>$ref_dna<br>".Dumper($gaps)."<br>";
+  
+  
+  #missing gap data, draw as is
   unless ($gaps) {
     warn"no gap data for DNA sequence $dna";
     $self->_draw_dna($gd, $dna, $x1, $y1, $x2, $y2);
@@ -903,19 +1000,24 @@ sub draw_dna {
   }
   
 #  warn"gaps are:\n".Dumper($gaps);
+  #parse the DNA segments by the gaps
   for my $tuple (@$gaps) {
     my ($type, $num) = @$tuple;
     
     #warn"$type and $num";
     if ($type eq "M") {
       my $dnaseg = substr($dna, 0, $num);
-      $self->_draw_dna($gd,$dnaseg, $x1, $y1, $x2, $y2, $fontcolor, $bg_color);
+      my $ref_dnaseg = substr($ref_dna, 0, $num);
+#print"$dnaseg<br>$ref_dnaseg<br>";
+      $self->_draw_dna($gd,$dnaseg, $x1, $y1, $x2, $y2, $fgcolor, $bg_color,$ref_dnaseg);
       $dna = substr($dna, $num);
+      $ref_dna = substr($ref_dna, $num);
       $x1 += $num * $pixels_per_base;
     } elsif ($type eq "D") {
       my $dnaseg = '-' x $num;
-      $self->_draw_dna($gd, $dnaseg, $x1, $y1, $x2, $y2, $fontcolor); 
+      $self->_draw_dna($gd, $dnaseg, $x1, $y1, $x2, $y2, $fgcolor); 
       $gd->rectangle($x1, $y1-1, $x1+$num * $pixels_per_base, $y2+1, $errcolor);
+      $ref_dna = substr($ref_dna, $num);
       $x1 += $num * $pixels_per_base;
     } elsif ($type eq "I") {
       $dna = substr($dna, $num);
@@ -924,8 +1026,10 @@ sub draw_dna {
       $gd->line($x1-2, $y2+1, $x1+2, $y2+1, $errcolor);
     }
     
+#print"$type - $num<br>$dna<br>$ref_dna<br>";
 
   }
+#  print"<p>";
   
   
 }
@@ -934,12 +1038,15 @@ sub _draw_dna {
   my $self = shift;
 
 #print"<pre>".Data::Dumper::Dumper($self)."</pre>";
-  my ($gd,$dna,$x1,$y1,$x2,$y2, $color, $bg_color) = @_;
+  #the last argument is optional.  If the reference seq is given, it will check it
+  my ($gd,$dna,$x1,$y1,$x2,$y2, $color, $bg_color, $ref_dna) = @_;
   
   my $pixels_per_base = $self->scale;
   my $feature = $self->feature;
   
-  $gd->filledRectangle($x1+1, $y1, $x2, $y2, $bg_color);
+  unless ($ref_dna) {
+    $gd->filledRectangle($x1+1, $y1, $x2, $y2, $bg_color);
+  }
   
 
 my $feature = $self->feature;
@@ -965,14 +1072,18 @@ my $feature = $self->feature;
   $strand *= -1 if $self->{flip};
 
   my @bases = split '',$strand >= 0 ? $dna : $self->reversec($dna);
-
+  my @refbases = split '',$strand >= 0 ? $ref_dna : $self->reversec($ref_dna);
+  
+#print "<pre>@bases\n@refbases</pre><p>";
+  
+  
 #print "bases are:<br>\n<pre>".Data::Dumper::Dumper(@bases)."</pre>";
   #$color |= $self->fgcolor;
   $color = $self->fgcolor unless $color;
   $bg_color = 0 unless $bg_color;
   my $font  = $self->font;
   my $lineheight = $font->height;
-  $y1 -= $lineheight/2 - 3;
+#  $y1 -= $lineheight/2 - 3;          ##################NOT SURE WHY THIS WAS HERE BEFORE
   my $strands = $self->option('strand') || 'auto';
 
   my ($forward,$reverse);
@@ -990,168 +1101,24 @@ my $feature = $self->feature;
   $x1 += $pixels_per_base - $font->width - 1 if $strand < 0;
   for (my $i=0;$i<@bases;$i++) {
     my $x = $x1 + $i * $pixels_per_base;
+    
+    my $x_next = $x + $pixels_per_base;
+
+#print "pixels per base $pixels_per_base<br>";    
+#    print "$bases[$i]=$refbases[$i]<br>" if $bases[$i] eq $refbases[$i];
+    
+    #draw background if DNA base aligns with reference (if ref given)
+    $gd->filledRectangle($x+1, $y1, $x_next, $y2, $bg_color) 
+    			if ( ($forward && $bases[$i] eq $refbases[$i]) ||
+    			     ($reverse && $complement{$bases[$i]} eq $refbases[$i]) );
+    
     $gd->char($font,$x+2,$y1,$bases[$i],$color)                                   if $forward;
-#$gd->char($font,$x+2,$y1+10,$complement{$bases[$i]},$color)                       if $forward;
     $gd->char($font,$x+2,$y1+($forward ? $lineheight:0),
 	      $complement{$bases[$i]}||$bases[$i],$color)                         if $reverse;
   }
 #$gd->rectangle($x1,$y1,$x2,$y2,$self->fgcolor);
 }
 
-sub draw_gc_content {
-  my $self     = shift;
-  my $gd       = shift;
-  my $dna      = shift;
-  my ($x1,$y1,$x2,$y2) = @_;
-
-# get the options that tell us how to draw the GC content
-
-  my $bin_size = length($dna) / ($self->option('gc_bins') || 100);
-  $bin_size = 10 if $bin_size < 10;
-  my $gc_window = $self->option('gc_window');
-  if ($gc_window && $gc_window eq 'auto' or $gc_window <= length($dna)) {
-    $gc_window = length($dna)/100;
-  }
-
-# Calculate the GC content...
-
-  my @bins;
-  my @datapoints;
-  my $maxgc = -1000;
-  my $mingc = +1000;
-  if ($gc_window)
-  {
-
-# ...using a sliding window...
-    for (my $i=$gc_window/2; $i <= length($dna) - $gc_window/2; $i++)
-      {
-	my $subseq = substr($dna, $i-$gc_window/2, $gc_window);
-	my $gc = $subseq =~ tr/gcGC/gcGC/;
-	my $content = $gc / $gc_window;
-	push @datapoints, $content;
-	$maxgc = $content if ($content > $maxgc);
-	$mingc = $content if ($content < $mingc);
-      }
-    push @datapoints, 0.5 unless @datapoints;
-
-    my $scale = $maxgc - $mingc;
-    foreach (my $i; $i < @datapoints; $i++)
-      {
-	$datapoints[$i] = ($datapoints[$i] - $mingc) / $scale;
-      }
-    $maxgc = int($maxgc * 100);
-    $mingc = int($mingc * 100);
-  }
-  else
-  {
-
-# ...or a fixed number of bins.
-
-    for (my $i = 0; $i < length($dna) - $bin_size; $i+= $bin_size) {
-      my $subseq  = substr($dna,$i,$bin_size);
-      my $gc      = $subseq =~ tr/gcGC/gcGC/;
-      my $content = $gc/$bin_size;
-      $maxgc = $content if ($content > $maxgc);
-      $mingc = $content if ($content < $mingc);
-      push @bins,$content;
-    }
-
-    my $scale = $maxgc - $mingc;
-    foreach (my $i; $i < @bins; $i++)
-      {
-	$bins[$i] = ($bins[$i] - $mingc) / $scale;
-      }
-    $maxgc = int($maxgc * 100);
-    $mingc = int($mingc * 100);
-
-  }
-
-# Calculate values that will be used in the layout
-  
-  push @bins,0.5 unless @bins;  # avoid div by zero
-  my $bin_width  = ($x2-$x1)/@bins;
-  my $bin_height = $y2-$y1;
-  my $fgcolor    = $self->fgcolor;
-  my $bgcolor    = $self->factory->translate_color($self->panel->gridcolor);
-  my $axiscolor  = $self->color('axis_color') || $fgcolor;
-
-# Draw the axes
-  my $fontwidth = $self->font->width;
-  $gd->line($x1,  $y1,        $x1,  $y2,        $axiscolor);
-  $gd->line($x2-2,$y1,        $x2-2,$y2,        $axiscolor);
-  $gd->line($x1,  $y1,        $x1+3,$y1,        $axiscolor);
-  $gd->line($x1,  $y2,        $x1+3,$y2,        $axiscolor);
-  $gd->line($x1,  ($y2+$y1)/2,$x1+3,($y2+$y1)/2,$axiscolor);
-  $gd->line($x2-4,$y1,        $x2-1, $y1,       $axiscolor);
-  $gd->line($x2-4,$y2,        $x2-1, $y2,       $axiscolor);
-  $gd->line($x2-4,($y2+$y1)/2,$x2-1,($y2+$y1)/2,$axiscolor);
-  $gd->line($x1+5,$y2,        $x2-5,$y2,        $bgcolor);
-  $gd->line($x1+5,($y2+$y1)/2,$x2-5,($y2+$y1)/2,$bgcolor);
-  $gd->line($x1+5,$y1,        $x2-5,$y1,        $bgcolor);
-  $gd->string($self->font,$x1-length('% gc')*$fontwidth,$y1,'% gc',$axiscolor) if $bin_height > $self->font->height*2;
-
-# If we are using a sliding window, the GC graph will be scaled to use the full
-# height of the glyph, so label the right vertical axis to show the scaling that# is in effect
-
-  $gd->string($self->font,$x2+3,$y1,"${maxgc}%",$axiscolor) 
-    if $bin_height > $self->font->height*2.5;
-  $gd->string($self->font,$x2+3,$y2-$self->font->height,"${mingc}%",$axiscolor) 
-    if $bin_height > $self->font->height*2.5;
-
-# Draw the GC content graph itself
-
-  if ($gc_window)
-  {
-    my $graphwidth = $x2 - $x1;
-    my $scale = $graphwidth / @datapoints;
-    my $gc_window_width = $gc_window/2 * $self->panel->scale;
-    for (my $i = 1; $i < @datapoints; $i++)
-      {
-	my $x = $i + $gc_window_width;
-	my $xlo = $x1 + ($x - 1) * $scale;
-	my $xhi = $x1 + $x * $scale;
-	last if $xhi >= $self->panel->right-$gc_window_width;
-	my $y = $y2 - ($bin_height*$datapoints[$i]);
-	$gd->line($xlo, $y2 - ($bin_height*$datapoints[$i-1]), 
-		  $xhi, $y, 
-		  $fgcolor);
-      }
-  }
-  else
-  {
-    for (my $i = 0; $i < @bins; $i++) 
-      {
-	  my $bin_start  = $x1+$i*$bin_width;
-	  my $bin_stop   = $bin_start + $bin_width;
-	  my $y          = $y2 - ($bin_height*$bins[$i]);
-	  $gd->line($bin_start,$y,
-		    $bin_stop,$y,
-		    $fgcolor);
-	  $gd->line($bin_stop,$y,
-		    $bin_stop,$y2 - ($bin_height*$bins[$i+1]),
-		    $fgcolor)
-	      if $i < @bins-1;
-      }
-  }
-}
-
-sub make_key_feature {
-  my $self = shift;
-  my @gatc = qw(g a t c);
-  my $offset = $self->panel->offset;
-  my $scale = 1/$self->scale;  # base pairs/pixel
-
-  my $start = $offset+1;
-  my $stop  = $offset+100*$scale;
-  my $feature =
-    Bio::Graphics::Feature->new(-start=> $start,
-				-stop => $stop,
-				-seq  => join('',map{$gatc[rand 4]} (1..500)),
-				-name => $self->option('key'),
-				-strand => '+1',
-			       );
-  $feature;
-}
 
 1;
 
@@ -1159,7 +1126,7 @@ __END__
 
 =head1 NAME
 
-Bio::Graphics::Glyph::dna - The "dna" glyph
+Bio::Graphics::Glyph::phylo_align - The "phylogenetic alignment" glyph
 
 =head1 SYNOPSIS
 
@@ -1167,15 +1134,19 @@ Bio::Graphics::Glyph::dna - The "dna" glyph
 
 =head1 DESCRIPTION
 
-This glyph draws DNA sequences.  At high magnifications, this glyph
-will draw the actual base pairs of the sequence (both strands).  At
-low magnifications, the glyph will plot the GC content.  By default,
-the GC calculation will use non-overlapping bins, but this can be
-changed by specifying the gc_window option, in which case, a 
-sliding window calculation will be used.
+
+This glyph draws a cladogram for any set of species along with their
+alignment data in relation to the reference species.  At high
+magnification, base pair alignements will be displayed.  At lower
+magnification, a conservation score plot will be drawn.  Gaps as
+specified by CIGAR are supported.  Currently the scores are drawn to
+a log plot with the restriction that the score will be the same
+across all base pairs within an alignment.  It is hoped that this
+restriction can be addressed in the future.
 
 For this glyph to work, the feature must return a DNA sequence string
-in response to the dna() method.
+in response to the dna() method.  Also, a valid tree file must be
+available in a format readable by the Bio::Tree library.
 
 =head2 OPTIONS
 
@@ -1216,42 +1187,45 @@ options are recognized:
   Option      Description               Default
   ------      -----------               -------
 
-  -do_gc      Whether to draw the GC      true
-              graph at low mags
+  -draw_cladeo_left
+              Draws the Cladogram on left 0
 
-  -gc_window  Size of the sliding window  E<lt>noneE<gt>
-  	      to use in the GC content 
-	      calculation.  If this is 
-	      not defined, non-
-	      overlapping bins will be 
-	      used. If this is set to
-              "auto", then the glyph will
-              choose a window equal to
-              1% of the interval.
+  -species_spacing
+              Spacing of species in DNA   1
+              mode in units of font height
 
-  -gc_bins    Fixed number of intervals   100
-              to sample across the
-              panel.
+  -species_spacing_score
+              Spacing of spcies in        5
+              conservation view in units
+              of font height
+
+  -hide_label Whether to label spcies     0
+
+  -tree_file  Path of file containing     undef
+              cladogram tree information
+  -tree_format Format of tree file	   newick
 
   -axis_color Color of the vertical axes  fgcolor
               in the GC content graph
 
-  -strand      Show both forward and      auto
-              reverse strand, one of
-              "forward", "reverse",
-              "both" or "auto".
-              In "auto" mode,
-              +1 strand features will
-              show the plus strand
-              -1 strand features will
-              show the reverse complement
-              and strandless features will
-              show both
+  -errcolor   Color of all misalignment   fgcolor
+              indicators
 
-NOTE: -gc_window=E<gt>'auto' gives nice results and is recommended for
-drawing GC content. The GC content axes draw slightly outside the
-panel, so you may wish to add some extra padding on the right and
-left.
+  -mid_axis_color
+              Color of the middle axis of
+              the conservation score graph axis_color
+
+  -cladeo_bg  Color of the clado bg       bgcolor
+              indicators
+
+  -ref_color  Color of base pair bg for   bgcolor
+              the reference sequence
+
+  -targ_color Color of base pair bg for   bgcolor
+              all base pairs that match
+              reference
+
+
 
 =head1 BUGS
 
@@ -1289,11 +1263,10 @@ L<Bio::SeqFeatureI>,
 L<Bio::Das>,
 L<GD>
 
-=head1 AUTHOR
+=head1 AUTHORS
 
+Hisanaga Mark Okada
 Lincoln Stein E<lt>lstein@cshl.orgE<gt>.
-
-Sliding window GC calculation added by Peter Ashton E<lt>pda@sanger.ac.ukE<gt>.
 
 Copyright (c) 2001 Cold Spring Harbor Laboratory
 

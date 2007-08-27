@@ -1,11 +1,18 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- Sheldon McKay <mckays@cshl.edu>
- $Id: balloon.js,v 1.1.2.4 2007-07-26 10:53:15 lstein Exp $
+ $Id: balloon.js,v 1.1.2.5 2007-08-27 21:00:28 lstein Exp $
 
  See http://www.wormbase.org/wiki/index.php/Balloon_Tooltips
  for documentation.
+
+ Copyright (c) 2007 Sheldon McKay, Cold Spring Harbor Laboratory
+
+ This balloon tooltip package and associated files not otherwise copyrighted are 
+ distributed under the MIT-style license:
+ 
+ http://opensource.org/licenses/mit-license.php
+
 
  Copyright (c) 2007 Sheldon McKay, Cold Spring Harbor Laboratory
 
@@ -27,15 +34,17 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
 
+ If publications result from research using this SOFTWARE, we ask that
+ CSHL and the author be acknowledged as scientifically appropriate.
+
 */
 
 
-// Only two global variables.  These are necessary to avoid losing
-// scope when setting the balloon timeout and so that multiple instances
-// of the balloon class know if a balloon is currently visible on the
-// page.
+// Only three global variables.  These are necessary to avoid losing
+// scope when setting the balloon timeout and for cross-object communication
 var currentBalloonClass;
 var balloonIsVisible;
+var reallySticky;
 
 
 // constructor for balloon class
@@ -61,7 +70,7 @@ var Balloon = function() {
   // Balloon dimensions and text placement
   // the default width 300px images (8 pixel shadow)
   this.balloonWidth     = '308px';
-  this.paddingTop       = '20px';
+  this.paddingTop       = '30px';
   this.paddingLeft      = '15px';
   this.paddingRight     = '15px';
   this.paddingBottom    = '20px';
@@ -96,7 +105,8 @@ var Balloon = function() {
 /////////////////////////////////////////////////////////////////////////
 
 Balloon.prototype.showTooltip = function(evt,caption,sticky) {
-  if (balloonIsVisible) return false;
+  if (balloonIsVisible && reallySticky) return false;
+
   var el = this.getEventTarget(evt);
   
   // attach a mousout event to the target element
@@ -189,7 +199,7 @@ Balloon.prototype.doShowTooltip = function() {
     var upConnector = hOrient == 'left' ?  bSelf.upLeftConnector : bSelf.upRightConnector; 
     bSelf.setStyle(bSelf.activeBalloon,'background','url('+upConnector+') bottom left no-repeat');
     bSelf.setStyle(bSelf.activeBalloon,'padding-bottom',bSelf.paddingConnector);
-    bSelf.setStyle(bSelf.activeBalloon,'padding-top',bSelf.paddingTop);
+    bSelf.setStyle(bSelf.activeBalloon,'padding-top',bSelf.paddingTop+5);
     bSelf.setStyle(bSelf.activeBody,'background','url('+bSelf.upBalloon+') top left no-repeat');
     bSelf.setStyle(bSelf.activeBody,'padding-top',bSelf.paddingTop);    
     bSelf.setStyle(bSelf.activeBody,'padding-bottom',1);
@@ -223,7 +233,7 @@ Balloon.prototype.doShowTooltip = function() {
     }
 
     helpText = '\
-    <a onClick="Balloon.prototype.hideStaticTooltip()" title="close this balloon" href=javascript:void(0)\
+    <a onClick="Balloon.prototype.hideStaticTooltip(1)" title="close this balloon" href=javascript:void(0)\
     style="float:right;font-size:12px;text-decoration:none">\
     Close [X]</a><br>' + helpText;
   }
@@ -362,7 +372,7 @@ Balloon.prototype.showBalloon = function(orient,left,top)  {
 
   YAHOO.util.Dom.setY(this.activeBalloon,top);
   YAHOO.util.Dom.setX(this.activeBalloon,left);
-  balloonIsVisble = true;
+  balloonIsVisible = true;
   this.showHideSelect();
 }
 
@@ -379,9 +389,19 @@ Balloon.prototype.hideTooltip = function() {
   }
 }
 
-Balloon.prototype.hideStaticTooltip = function() {
+Balloon.prototype.hideStaticTooltip = function(override) {
   var bSelf = currentBalloonClass;
+
   currentBalloonClass = null;
+
+  // if reallySticky is defined, the user must
+  // click on 'close' to hide static balloons
+  // (and open others).  The default is to hide sticky
+  // balloons if another showTooltip is fired.
+  if (reallySticky && !override) {
+    if (bSelf) window.clearTimeout(bSelf.timeoutTooltip);
+    return false;
+  }
 
   if (!bSelf) {
     var hideBalloon  = document.getElementById('balloon');
@@ -402,7 +422,7 @@ hideAllTooltips = function() {
   if (!bSelf) return;
   window.clearTimeout(bSelf.timeoutTooltip);
   if (bSelf.activeBalloon) bSelf.setStyle(bSelf.activeBalloon,'display','none');
-  balloonIsVisble = false;
+  balloonIsVisible = false;
   currentBalloonClass = null;
 }
 

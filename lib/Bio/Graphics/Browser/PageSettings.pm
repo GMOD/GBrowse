@@ -14,10 +14,11 @@ sub new {
   my $driver          = $config->setting('session driver') || 'driver:file';
   my %args            = shellwords $config->setting('session args');
   %args               = (Directory => $dir) unless %args;
+
+
   my $session         = CGI::Session->new($driver,$id,\%args);
   $session->expire($config->source,
 		   $config->remember_settings_time);
-
   my $self = bless {
 		    session => $session,
 		   },$class;
@@ -41,9 +42,9 @@ sub page_settings {
 }
 
 sub plugin_settings {
-  my $self = shift;
+  my $self        = shift;
   my $plugin_name = shift;
-  my $hash = $self->config_hash;
+  my $hash        = $self->config_hash;
   return $hash->{plugins}{$plugin_name} ||= {};
 }
 

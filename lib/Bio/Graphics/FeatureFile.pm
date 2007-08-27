@@ -1,6 +1,6 @@
 package Bio::Graphics::FeatureFile;
 
-# $Id: FeatureFile.pm,v 1.1.2.2 2007-03-19 15:42:03 lstein Exp $
+# $Id: FeatureFile.pm,v 1.1.2.3 2007-08-27 21:00:28 lstein Exp $
 # This package parses and renders a simple tab-delimited format for features.
 # It is simpler than GFF, but still has a lot of expressive power.
 # See __END__ for the file format
@@ -268,7 +268,7 @@ objects created.
 #"
 
 sub render {
-  my $self = shift;
+  my $self  = shift;
   my $panel = shift;
   my ($position_to_insert,$options,$max_bump,$max_label,$selector) = @_;
 

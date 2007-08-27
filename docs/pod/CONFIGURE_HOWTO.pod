@@ -2250,13 +2250,17 @@ using "balloon" as the name of the balloon. For example:
                     balloon.paddingBottom    = '20px';
                     balloon.paddingConnector = '48px';
 
-You may also change the images used to generate the balloon, for
-example to make the balloon wider than the default. You do that this
-way:
+++++++++++!!!
+TODO: Add description of balloon images option
 
- balloon settings =  balloon.balloonWidth = '500px'
-                     balloon_upballoon    = /images/balloons/big_up_balloon.png
-                     balloon_downballoon  = /images/balloons/big_down_balloon.png
+  balloon images  = balloon        /gbrowse/images/balloons/
+                    balloon_wide   /gbrowse/images/balloons_wide/
+
+and how you can select which balloon to use with this syntax:
+
+   balloon hover   =  [balloon_wide] some text here
+++++++++++!!!
+
 
 The process of customizing the balloon appearance is described well in
 the Balloon_Tooltips pages at 

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.8 2007-07-24 18:26:47 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.9 2007-08-27 21:00:26 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -185,7 +185,6 @@ my $cookie                   = CGI::Cookie->new(-name    => $CGI::Session::NAME,
 
 my $cookies;
 if (param('reset')) {
-  $session->session->delete() if $session;
   $cookies = reset_cookies($page_settings);
 } else {
   $cookies = [$cookie];
@@ -220,9 +219,8 @@ if ($asynchronous) {
   exit 0;
 }
 
-if (my $track_info = param('get_citation')) {
-  warn "got get_citation event";
-  print CGI::header,start_html(),h1($track_info);
+if (my $label = param('configure_track')) {
+  track_config($page_settings,$label);
   exit 0;
 }
 
@@ -244,6 +242,7 @@ warn "plugin_action = $plugin_action" if DEBUG_PLUGINS;
 if (param('plugin_do')) {
   $plugin_action = $CONFIG->tr(param('plugin_do')) || $CONFIG->tr('Go');
 }
+
 
 # For uploaded files
 $UPLOADED_SOURCES = Bio::Graphics::Browser::UploadSet->new($CONFIG,$page_settings);
@@ -366,7 +365,9 @@ print_top($title,param('reset'));
 ## HANDLE TRACK SETTINGS   #######################################################
 if ((param('set_options') || param($CONFIG->tr('Set_options')) || param('revert'))
        && !param($CONFIG->tr('Cancel'))
-       && !param($CONFIG->tr('Redisplay'))) {
+       && !param($CONFIG->tr('Redisplay'))
+       && !param('adjust_one_track')
+   ) {
   set_track_options($page_settings);
 }
 
@@ -591,29 +592,30 @@ sub detail_panel {
     $CONFIG->width($page_settings->{width});
     my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} && !/:(overview|region)$/ }
                                @{$page_settings->{tracks}};
+    my ($options,$limits) = get_options(\@tracks_to_show);
+    my $h_callback     = make_hilite_callback($page_settings);
+    my $postgrid       = make_postgrid_callback($page_settings);
 
-    my %options = map {$_=>$page_settings->{features}{$_}{options}} @tracks_to_show;
-    my %limit   = map {$_=>$page_settings->{features}{$_}{limit}}   @tracks_to_show;
-    my $h_callback = make_hilite_callback($page_settings);
-    my $postgrid   = make_postgrid_callback($page_settings);
-    @panels      = $CONFIG->render_html({segment       => $segment,
-					 feature_files => $feature_files,
-					 labels        => \@tracks_to_show,
-					 options       => \%options,
-					 limit         => \%limit,
-					 do_map        => 1,
-					 do_centering_map => 1,
-					 lang          => $CONFIG->language,
-					 keystyle      => $page_settings->{ks},
-					 flip          => $page_settings->{flip} || undef,
-					 postgrid      => $postgrid || $CONFIG->setting('postgrid') || '',
-					 background    => $CONFIG->setting('background') || '',
-					 hilite_callback => $h_callback || undef,
-					 settings        => $page_settings,
-					 -add_category_labels => $CONFIG->setting('show track categories') || undef,
-					 -grid         => $page_settings->{grid} || 0,
-					}
-				       );
+    @panels      = $CONFIG->render_panels({segment       => $segment,
+					   feature_files => $feature_files,
+					   labels        => \@tracks_to_show,
+					   options       => $options,
+					   limit         => $limits,
+					   panel_type    => 'details',
+					   do_map        => 1,
+					   do_centering_map => 1,
+					   lang          => $CONFIG->language,
+					   keystyle      => $page_settings->{ks},
+					   flip          => $page_settings->{flip} || undef,
+					   postgrid      => $postgrid || $CONFIG->setting('postgrid') || '',
+					   background    => $CONFIG->setting('background') || '',
+					   hilite_callback => $h_callback || undef,
+					   settings        => $page_settings,
+					   section         => '?detail',
+					   -add_category_labels => $CONFIG->setting('show track categories') || undef,
+					   -grid         => $page_settings->{grid} || 0,
+					  }
+					 );
   }
 
   else {
@@ -638,18 +640,30 @@ sub detail_panel {
 	      )
   }
 
-  my $drag_script = <<END;
- <script type="text/javascript">
+  my $drag_script = drag_script('panels','track');
+  return div(toggle($page_settings,
+		    'Details',
+		    div({-id=>'panels',-class=>'track'},
+			@panels
+		       )
+		   )
+	    ).$drag_script;
+}
+
+sub drag_script {
+  my ($container_id,$part_id) = @_;
+  return <<END;
+<script type="text/javascript">
  // <![CDATA[
    Sortable.create(
-     "panels",
+     "$container_id",
      {
       constraint: 'vertical',
-      tag: 'div',
-      only: 'track',
-      handle: 'titlebar',
+      tag:      'div',
+      only:     '$part_id',
+      handle:   'draghandle',
       onUpdate: function() {
-         var postData = Sortable.serialize('panels',{name:'label'});
+         var postData = Sortable.serialize('$container_id',{name:'label'});
          new Ajax.Request(document.URL,{method:'post',postBody:postData});
       }
      }
@@ -658,13 +672,6 @@ sub detail_panel {
  </script>
 END
 
-  return div(toggle($page_settings,
-		    'Details',
-		    div({-id=>'panels',-class=>'track'},
-			@panels
-		       )
-		   )
-	    ).$drag_script;
 }
 
 ###############################################################################################
@@ -847,7 +854,7 @@ sub adjust_settings {
        ||
        (param('span') && $settings->{stop}-$settings->{start}+1 != param('span'))
        ||
-       grep {/left|right|zoom|nav|regionview\.[xy]|overview\.[xy]/} param()
+       grep {/left|right|zoom|nav|region\.[xy]|overview\.[xy]/} param()
      )
     {
       zoomnav($settings);
@@ -922,6 +929,10 @@ sub adjust_settings {
   elsif (param($CONFIG->tr('Adjust_Order')) && !param($CONFIG->tr('Cancel'))) {
     adjust_track_options($settings);
     adjust_track_order($settings);
+  }
+
+  elsif (param('adjust_one_track')) { # newstyle configuration
+    adjust_one_track($settings);
   }
 
 }
@@ -1038,14 +1049,25 @@ sub make_hilite_callback {
 # this generates the callback for highlighting a region
 sub make_postgrid_callback {
   my $settings = shift;
-  my @h_regions;
   return unless ref $settings->{h_region};
-  for my $r (@{$settings->{h_region}}) {
-    my ($h_ref,$h_start,$h_end,$h_color) = $r =~ /^(.+):(\d+)\.\.(\d+)(?:@(\S+))?/ or next;
-    next unless $h_ref eq $settings->{ref};
-    push @h_regions,[$h_start,$h_end,$h_color||'lightgrey'];
+
+  my @h_regions = map {
+    my ($h_ref,$h_start,$h_end,$h_color) = /^(.+):(\d+)\.\.(\d+)(?:@(\S+))?/;
+    defined($h_ref) && $h_ref eq $settings->{ref} 
+                 ? [$h_start,$h_end,$h_color||'lightgrey']
+		 : ()
   }
-  @h_regions or return;
+    @{$settings->{h_region}};
+
+  return unless @h_regions;
+  return hilite_regions_closure(@h_regions);
+}
+
+# this subroutine generates a Bio::Graphics::Panel callback closure 
+# suitable for hilighting a region of a panel.
+# The args are a list of [start,end,color]
+sub hilite_regions_closure {
+  my @h_regions = @_;
 
   return sub {
     my $gd     = shift;
@@ -1056,10 +1078,12 @@ sub make_postgrid_callback {
     for my $r (@h_regions) {
       my ($h_start,$h_end,$h_color) = @$r;
       my ($start,$end) = $panel->location2pixel($h_start,$h_end);
-      $gd->filledRectangle($left+$start,$top,$left+$end,$bottom,
+      if ($end-$start <= 1) { $end++; $start-- } # so that we always see something
+      # assuming top is 0 so as to ignore top padding
+      $gd->filledRectangle($left+$start,0,$left+$end,$bottom,
 			   $panel->translate_color($h_color));
     }
-  }
+  };
 }
 
 # This generates the navigation bar with the arrows
@@ -1297,6 +1321,122 @@ sub categorize_track {
 }
 
 
+# this is the content of the popup balloon that describes the track and gives configuration settings
+sub track_config {
+  my ($settings,$label) = @_;
+
+  eval 'require Bio::Graphics::Browser::OptionPick; 1' 
+    unless Bio::Graphics::Browser::OptionPick->can('new');
+
+  my $picker = Bio::Graphics::Browser::OptionPick->new($CONFIG);
+
+  my $key   = label2key($label);
+  my $override = $settings->{features}{$label}{override_settings};
+
+  print CGI::header,start_html();
+
+  my $citation = h4($key).p($CONFIG->citation($label,$CONFIG->language)||$CONFIG->tr('NO_CITATION'));
+  my $height   = $CONFIG->fallback_setting($label=>'height')    || 5;
+  my $width    = $CONFIG->fallback_setting($label=>'linewidth') || 1;
+  my $glyph    = $CONFIG->fallback_setting($label=>'glyph')     || 'box';
+  my @glyph_select = shellwords($CONFIG->fallback_setting($label=>'glyph select'));
+  @glyph_select    = qw(arrow anchored_arrow box crossbox dashed_line diamond dna dot dumbbell ellipse
+			ex line primers saw_teeth segments span splice_site translation triangle
+			two_bolts wave) unless @glyph_select;
+  my %glyphs   = map {$_=>1} ($glyph,@glyph_select);
+
+  my $self_url = url(-absolute=>1,-path=>1);
+  my $form = start_form(-action=>$self_url,-method=>'POST');
+  $form .= table(
+		 TR(
+		    th({-align=>'right'},$CONFIG->tr('Show')),
+		    td(checkbox(-name     => 'show',
+				-value    => $label,
+				-override => 1,
+				-checked  => $settings->{features}{$label}{visible},
+				-label => '')
+		      ),
+		   ),
+		 TR(
+		    th({-align=>'right'},$CONFIG->tr('Packing')),
+		    td(popup_menu( -name     => 'format option',
+				   -values   => [0..3],
+				   -override => 1,
+				   -default  => $settings->{features}{$label}{options},
+				   -labels   => {0=> $CONFIG->tr('Auto'),
+						 1=> $CONFIG->tr('Compact'),
+						 2=> $CONFIG->tr('Expand'),
+						 3=> $CONFIG->tr('Expand_Label'),
+						})
+		      )
+		   ),
+		 TR(
+		    th({-align=>'right'},$CONFIG->tr('GLYPH')),
+		    td(
+		       $picker->popup_menu(-name   => 'glyph',
+					   -values => [sort keys %glyphs],
+					   -default=> $glyph,
+					   -current=>$override->{'glyph'},
+					  )
+		      )
+		   ),
+		 TR(
+		    th({-align=>'right'},$CONFIG->tr('BACKGROUND_COLOR')),
+		    td(
+		       $picker->color_pick('bgcolor',
+					   $CONFIG->fallback_setting($label=>'bgcolor'),
+					   $override->{'bgcolor'}
+					  )
+		      )
+		   ),
+		 TR(
+		    th({-align=>'right'},$CONFIG->tr('FG_COLOR')),
+		    td(
+		       $picker->color_pick('fgcolor',
+					   $CONFIG->fallback_setting($label=>'fgcolor'),
+					   $override->{'fgcolor'})
+		      )
+		   ),
+		 TR(
+		    th({-align=>'right'},$CONFIG->tr('LINEWIDTH')),
+		    td(
+		       $picker->popup_menu(-name    => 'linewidth',
+					   -current => $override->{'linewidth'},
+					   -default=> $width||1,
+					   -values => [sort {$a<=>$b} ($width, 1..5)]
+					  )
+		      )
+		   ),
+		 TR(
+		    th({-align=>'right'},$CONFIG->tr('HEIGHT')),
+		    td(
+		       $picker->popup_menu(-name    => 'height',
+					   -current => $override->{'height'},
+					   -default => $height,
+					   -values  => [sort {$a<=>$b} ($height, map {$_ * 5} (1..20))],
+					  )
+		      )
+		   ),
+		 TR(
+		    th({-align=>'right'},$CONFIG->tr('Limit')),
+		    td(popup_menu(-name    => 'limit',
+				  -values  => [0,5,10,25,100],
+				  -labels  => {0=>$CONFIG->tr('No_limit')},
+				  -override => 1,
+				  -default => $settings->{features}{$label}{limit})
+		      )
+		   ),
+		);
+  $form .= hidden(-name=>'adjust_one_track',-value=>$label) .
+           button(-name=>$CONFIG->tr('Cancel'),-onClick=>'Balloon.prototype.hideStaticTooltip(1)').
+	   b(submit(-name=>$CONFIG->tr('Change')));
+  $form .= end_form();
+  print div(
+	    table(TR(td({-valign=>'top'},$citation),td({-valign=>'top'},$form)))
+	   );
+  print end_html();
+}
+
 sub settings_table {
   my $settings = shift;
 
@@ -1331,19 +1471,6 @@ sub settings_table {
 			   -size=>20),
 		)
 	     ) : (),
-	     td(
-		b($CONFIG->tr('KEY_POSITION')),br,
-		radio_group( -name=>'ks',
-			     -values=>\@key_positions,
-			     -labels=>{between=>$CONFIG->tr('BETWEEN'),
-				       bottom =>$CONFIG->tr('BENEATH'),
-				       left   =>$CONFIG->tr('LEFT'),
-				       right  =>$CONFIG->tr('RIGHT'),
-				      },
-			     -default=>$settings->{ks},
-			     -override=>1
-			   ),
-	       ),
              td(
                 b($CONFIG->tr("TRACK_NAMES")),br,
                 radio_group( -name=>"sk",
@@ -1354,6 +1481,22 @@ sub settings_table {
                              -override=>1
                            ),
                ),
+	     td(
+		$CONFIG->drag_and_drop
+                ? '&nbsp;'
+		: (b($CONFIG->tr('KEY_POSITION')),br,
+		   radio_group( -name=>'ks',
+				-values=>\@key_positions,
+				-labels=>{between=>$CONFIG->tr('BETWEEN'),
+					  bottom =>$CONFIG->tr('BENEATH'),
+					  left   =>$CONFIG->tr('LEFT'),
+					  right  =>$CONFIG->tr('RIGHT'),
+					 },
+				-default=>$settings->{ks},
+				-override=>1
+			      )
+		  ),
+	       ),
 	    ),
 	  TR(
 	     td(
@@ -1550,7 +1693,7 @@ sub zoomnav {
   my ($zoom)         = grep {/^zoom (out|in) \S+/} param();
   my ($nav)          = grep {/^(left|right) \S+/}  param();
   my $overview_x     = param('overview.x');
-  my $regionview_x     = param('regionview.x');
+  my $regionview_x     = param('region.x');
   my $regionview_size  = $settings->{region_size} * $divisor;
   my $seg_min          = param('seg_min');
   my $seg_max          = param('seg_max');
@@ -1581,6 +1724,7 @@ sub zoomnav {
 
     # adjust for padding in pre 1.6 versions of bioperl
     $overview_width -= ($padl+$padr) unless Bio::Graphics::Panel->can('auto_pad');
+
     my $click_position = $seg_min + $segment_length * ($overview_x-$padl)/$overview_width;
 
     $span = $DEFAULT_SEGMENT if $span > $MAX_SEGMENT;
@@ -1591,6 +1735,8 @@ sub zoomnav {
   elsif (defined $regionview_x) {
     my $whole_start = param('seg_min');
     my $whole_stop  = param('seg_max');
+
+    warn "I'm here, regionview_x = $regionview_x; ($whole_start,$whole_stop)";
     my ($regionview_start, $regionview_end) = get_regionview_seg($settings,$start, $stop, $whole_start, $whole_stop);
     my @regionview_tracks = grep {$settings->{features}{$_}{visible}} 
       $CONFIG->config->regionview_tracks;
@@ -1919,7 +2065,7 @@ sub multiple_choices {
     print TR(th({-class=>'databody',-colspan=>4,-align=>'center'},$CONFIG->tr('Matches_on_ref',$ref),br,
 		$overviews->{$ref}));
 
-    my $padding = $CONFIG->setting(general=>'landmark_padding') || 0;
+    my $padding  = $CONFIG->setting(general=>'landmark_padding') || 0;
     my $units    = $CONFIG->setting(general=>'units') || $CONFIG->tr('bp');
     my $divisor  = $CONFIG->setting(general=>'unit_divider') || 1;
 
@@ -1993,36 +2139,67 @@ sub whole_segment {
 }
 
 sub overview {
-  my ($whole_segment,$segment,$settings,$feature_files) = @_;
-  return unless $segment;
-  $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
-
-
-  my ($image,$length) = $CONFIG->overview($whole_segment,
-					  $segment,
-					  $settings->{features},
-					  $feature_files) or return;
-  my ($width,$height) = $image->getBounds;
-  my $url             = $CONFIG->generate_image($image);
-  return image_button(-name=>'overview',
-		      -src=>$url,
-		      -align=>'middle')
-    .hidden(-name=>'seg_min',-value=>$whole_segment->start,-override=>1)
-    .hidden(-name=>'seg_max',-value=>$whole_segment->end,-override=>1);
+  my ($region_segment,$segment,$settings,$feature_files) = @_;
+  return _region_panel('overview',$region_segment,$segment,$settings,$feature_files);
 }
 
 sub regionview {
   my ($region_segment,$segment,$settings,$feature_files) = @_;
-  return unless $region_segment;
-
-  my ($image,$length) = $CONFIG->regionview($region_segment,$segment,$settings->{features},$feature_files) or return;
-  my ($width,$height) = $image->getBounds;
-  my $url             = $CONFIG->generate_image($image);
-  return image_button(-name=>'regionview',
- 		      -src=>$url,
- 		      -align=>'middle');
+  return _region_panel('region',$region_segment,$segment,$settings,$feature_files);
 }
 
+sub _region_panel {
+  my ($panel_name,$region,$segment,$settings,$feature_files) = @_;
+  return unless $segment;
+
+  $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
+
+  my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} &&  /:$panel_name$/i}  @{$page_settings->{tracks}};
+
+  # these hashes map label names to packing option values and limit values
+  my ($options,$limits) = get_options(\@tracks_to_show);
+
+  # the postgrid will be invoked to hilite the currently selected region
+  my $postgrid = hilite_regions_closure([$segment->start,$segment->end,'yellow']);
+
+  my @panels   = $CONFIG->render_panels({
+					 panel_type    => $panel_name,
+					 segment       => $region,
+					 postgrid      => $postgrid,
+					 labels        => \@tracks_to_show,
+					 options       => $options,
+					 limit         => $limits,
+					 lang          => $CONFIG->language,
+					 keystyle      => 'left',
+					 settings      => $settings,
+					 feature_files => $feature_files,
+					 cache_extra   => [$segment->start,$segment->end],
+					 do_map        => 0,
+					 do_drag        => 1,
+					 image_button   => 1,
+					 section        => $panel_name,
+					 -grid          => 0,
+					 -pad_top       => 5,
+					 -bgcolor      => $CONFIG->setting("overview bgcolor") || DEFAULT_OVERVIEW_BGCOLOR,
+					});
+
+  my $hidden = hidden(-name=>'seg_min',-value=>$region->start,-override=>1) .
+    hidden(-name=>'seg_max',-value=>$region->end,-override=>1);
+
+   if ($CONFIG->drag_and_drop) {
+     return div({-id=>$panel_name,-class=>'track'},@panels) . drag_script($panel_name,'track') .$hidden;
+   } else {
+     return div({-id=>$panel_name,-class=>'track'},@panels).$hidden;
+   }
+}
+
+# create hashes that map track label names into options and limit values
+sub get_options {
+  my $tracks_to_show = shift;
+  my %options    = map {$_=>$page_settings->{features}{$_}{options}} @$tracks_to_show;
+  my %limits     = map {$_=>$page_settings->{features}{$_}{limit}}   @$tracks_to_show;
+  return (\%options,\%limits);
+}
 
 sub get_ranges {
   return $CONFIG->get_ranges;
@@ -2432,6 +2609,20 @@ sub adjust_track_order {
     splice(@labels,$track,0,$label);
   }
   $settings->{tracks} = \@labels;
+}
+
+sub adjust_one_track {
+  my $settings = shift;
+  my $label    = param('adjust_one_track') or return;
+  $settings->{features}{$label}{visible} = param('show') ? 1 : 0;
+  $settings->{features}{$label}{options} = param('format option');
+  $settings->{features}{$label}{limit}   = param('limit');
+  my $dynamic = $CONFIG->tr('DYNAMIC_VALUE');
+  for my $s ('bgcolor','fgcolor','height','glyph','linewidth') {
+    my $value = param($s);
+    delete $settings->{features}{$label}{override_settings}{$s},next if $value eq $dynamic;
+    $settings->{features}{$label}{override_settings}{$s} = $value;
+  }
 }
 
 sub adjust_track_options {
@@ -2914,6 +3105,7 @@ sub do_plugin_find {
 
 sub do_plugin_configure {
   my $plugin   = shift;
+  $plugin      = $PLUGIN_NAME2LABEL{$plugin} if $plugin =~ /^plugin:/;
   my $p = $PLUGINS->plugin($plugin) or return;
   my $type = $p->type;
   my @action_labels = ($CONFIG->tr('Cancel'),$CONFIG->tr('Configure_plugin'));
@@ -2924,13 +3116,14 @@ sub do_plugin_configure {
   print h1($p->type eq 'finder' ? $CONFIG->tr('Find') : $CONFIG->tr('Configure'),$p->name);
   my $config_html = $p->configure_form;
 
+  my $buttons =	join ('&nbsp;',
+		      @buttons[0..@buttons-2],
+		      b($buttons[-1]),
+		     );
+
   print start_multipart_form(),
     $config_html ? (
-		    $config_html,p(),
-		    join ('&nbsp;',
-			  @buttons[0..@buttons-2],
-			  b($buttons[-1]),
-			  ),
+		    $buttons,$config_html,p(),$buttons,
 		    # This is an insurance policy in case user hits return in text field
 		    # in which case the plugin_action is not going to be defined
 		    hidden(-name=>'plugin_action',-value=>$action_labels[-1],-override=>1),
@@ -2988,7 +3181,7 @@ sub tableize {
   my %categorytable=%{category_table()};
 
   # checks if this is about to rendered and if it is set the correct row/columns lengths
-  if ( defined $categorytable{$category} ) {
+  if (defined $category and exists $categorytable{$category} ) {
     @column_labels=@{$categorytable{$category}{row_labels}};
     @row_labels=@{$categorytable{$category}{col_labels}};
     $rows    =$#row_labels+1;

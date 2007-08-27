@@ -254,20 +254,37 @@ sub print_top {
 
   if ($b_tips) {
 
-    my $balloon_images = $CONFIG->setting('balloon images') || '/gbrowse/images/balloons/';
-    my $balloon_config = $CONFIG->setting('balloon settings') || '';
-    print "<script>
-	   var balloon = new Balloon;
-	   balloon.upLeftConnector  	= '$balloon_images/balloon_up_bottom_left.png';
-	   balloon.upRightConnector 	= '$balloon_images/balloon_up_bottom_right.png';
-	   balloon.downLeftConnector 	= '$balloon_images/balloon_down_top_left.png';
-	   balloon.downRightConnector   = '$balloon_images/balloon_down_top_right.png';
-	   balloon.upBalloon            = '$balloon_images/balloon_up_top.png';
-	   balloon.downBalloon	        = '$balloon_images/balloon_down_bottom.png';
-           balloon.hOffset              = 'right';
-           $balloon_config
-	   </script>\n";
+    my %balloons            = (balloon       => '/gbrowse/images/balloons',
+			       balloon_wide  => '/gbrowse/images/balloons_wide',
+			       shellwords($CONFIG->setting('balloon images'))
+			      );
+
+    my $balloon_settings    =<<END;
+reallySticky = true;
+balloon.delayTime         = 500;
+balloon.balloonWidth      = '308px';
+balloon_wide.delayTime    = 500;
+balloon_wide.balloonWidth = '608px';
+END
+    $balloon_settings      .= $CONFIG->setting('balloon settings') || '';
+    my $balloon_script      = "<script>\n";
+    for my $balloon (keys %balloons) {
+      $balloon_script .= <<END;
+      var $balloon = new Balloon;
+      $balloon.upLeftConnector     = '$balloons{$balloon}/up_left_connector.png';
+      $balloon.upRightConnector    = '$balloons{$balloon}/up_right_connector.png';
+      $balloon.downLeftConnector   = '$balloons{$balloon}/down_left_connector.png';
+      $balloon.downRightConnector  = '$balloons{$balloon}/down_right_connector.png';
+      $balloon.upBalloon           = '$balloons{$balloon}/up_body.png';
+      $balloon.downBalloon	   = '$balloons{$balloon}/down_body.png';
+      $balloon.hOffset             = 'right';
+
+END
     }
+    $balloon_script .= $balloon_settings;
+    $balloon_script .= "</script>\n";
+    print $balloon_script;
+  }
 }
 
 sub print_bottom {

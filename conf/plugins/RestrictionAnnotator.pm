@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::RestrictionAnnotator;
-# $Id: RestrictionAnnotator.pm,v 1.12.6.2.2.1 2006-06-19 04:22:17 lstein Exp $
+# $Id: RestrictionAnnotator.pm,v 1.12.6.2.2.1.2.1 2007-08-27 21:00:26 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -29,7 +29,11 @@ sub init {shift->configure_enzymes}
 
 sub config_defaults {
   my $self = shift;
-  return { on => 1};
+  return { on      => 1,
+	   EcoRI   => 1,
+	   HindIII => 1,
+	   SalI    => 1,
+	 };
 }
 
 sub reconfigure {

@@ -389,4 +389,24 @@ END
 
  INVALID_SOURCE    => 'The source named %s is invalid.',
 
+ INVALID_SOURCE    => 'The source named %s is invalid.',
+
+ BACKGROUND_COLOR  => 'Fill color',
+
+ FG_COLOR          => 'Line color',
+
+ HEIGHT           => 'Height',
+
+ PACKING          => 'Packing',
+
+ GLYPH            => 'Shape',
+
+ LINEWIDTH        => 'Line width',
+
+ DEFAULT          => '(default)',
+
+ DYNAMIC_VALUE    => 'Dynamically calculated',
+
+ CHANGE           => 'Change',
+
 };

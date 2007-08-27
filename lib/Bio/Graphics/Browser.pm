@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.19 2007-08-14 18:26:29 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.20 2007-08-27 21:00:28 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -299,8 +299,26 @@ sub setting {
       if $args[0] ne 'general' && lc($args[0]) eq 'general';  # buglet
   }
   my $config = $self->config or return;
-  
   $config->setting(@args);
+}
+
+=head2 fallback_setting()
+
+  $value = $browser->setting(gene => 'fgcolor');
+
+Tries to find the setting for designated label (e.g. "gene") first. If
+this fails, looks in [TRACK DEFAULTS]. If this fails, looks in [GENERAL].
+
+=cut
+
+sub fallback_setting {
+  my $self = shift;
+  my ($label,$option) = @_;
+  for my $key ($label,'TRACK DEFAULTS','GENERAL') {
+    my $value = $self->setting($key,$option);
+    return $value if defined $value;
+  }
+  return;
 }
 
 =head2 plugin_setting()
@@ -835,6 +853,7 @@ sub render_draggable_tracks {
   my $pad_url  = $panels->{__pad__}{image};
   my ($pw,$ph) = @{$panels->{__pad__}}{'width','height'};
 
+
   my @result;
   for my $label ('__scale__',@{$args->{labels}}) {
     my ($url,$img_map,$width,$height) = @{$panels->{$label}}{qw(image map width height)};
@@ -862,7 +881,22 @@ sub render_draggable_tracks {
     my $icon      = $collapsed ? $plus : $minus;
 
     if ($do_drag || $img_map) {
-      my $help_url    = "url:?get_citation=$label";
+      my $config_click;
+      if ($label =~ /^plugin:/) {
+	my $help_url = "url:?plugin=".CGI::escape($label).';plugin_do=Configure';
+	$config_click = "balloon_wide.delayTime=0; balloon_wide.showTooltip(event,'$help_url',1)";
+      }
+
+      elsif ($label =~ /^file:/) {
+	my $url  = "?modify.${label}=".$self->tr('Edit');
+	$config_click = "window.location='$url'";
+      }
+
+      else {
+	my $help_url = "url:?configure_track=".CGI::escape($label);
+	$config_click = "balloon_wide.delayTime=0; balloon_wide.showTooltip(event,'$help_url',1)";
+      }
+
 
       my $title       = $label =~ /\w+:(.+)/ && $label !~ /:(overview|region)/  # a plugin
                         ? $1
@@ -878,9 +912,9 @@ sub render_draggable_tracks {
 				    }),
 				img({-src         => $help,
 				     -style       => 'cursor:pointer',
-				     -onmousedown => "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)"
+				     -onmousedown => $config_click
 				    }),
-				$title
+				span({-class=>'draghandle'},$title)
 			       );
 
       my $pad_img  = img({-src   => $pad_url,
@@ -980,7 +1014,6 @@ sub generate_panels {
   my $segment       = $args->{segment};
   my ($seg_start,$seg_stop,$flip) = $self->segment_coordinates($segment,
 							       $args->{flip});
-
   my $feature_files = $args->{feature_files} || {};
   my $labels        = $args->{labels} || $args->{tracks} || []; # legacy
   my $options       = $args->{options}       || {};
@@ -1063,13 +1096,18 @@ sub generate_panels {
     if ($drag_n_drop) {
       $panel_key = $label;
 
-      my @extra_args          = eval {$feature_files->{$label}->types};  # disambiguate plugins
+      # get config data from the feature files
+      my @extra_args          = eval {
+	$feature_files->{$label}->types,
+	$feature_files->{$label}->mtime,
+	};
       $cache_key{$label}      = $self->create_cache_key(@panel_args,
 							@track_args,
 							@extra_args,
 							@$cache_extra,
 							$drag_n_drop,
-							$options->{$label});
+							$options->{$label},
+						       );
       next if $cached{$label} = $self->panel_is_cached($cache_key{$label});
 
       my @keystyle = (-key_style=>'between') if $label =~ /^\w+:/ && $label !~ /:(overview|region)/;  # a plugin
@@ -1113,6 +1151,7 @@ sub generate_panels {
     my $file = $feature_files->{$l} or next;
     ref $file or next;
     $panel_key = $l if $drag_n_drop;
+    next unless $panels{$panel_key};
     $self->add_feature_file(
 			    -file       => $file,
 			    -panel      => $panels{$panel_key},
@@ -1512,8 +1551,10 @@ sub make_map {
     if ($tips) {
       #retrieve the content of the balloon from configuration files
       # if it looks like a URL, we treat it as a URL.
-      my $balloonhover	   = $self->config->balloon_tip_setting('balloon hover',$label,$_->[0],$panel,$_->[5]);
-      my $balloonclick	   = $self->config->balloon_tip_setting('balloon click',$label,$_->[0],$panel,$_->[5]);
+      my ($balloon_ht,$balloonhover)	     = $self->config->balloon_tip_setting('balloon hover',$label,$_->[0],$panel,$_->[5]);
+      my ($balloon_ct,$balloonclick)	     = $self->config->balloon_tip_setting('balloon click',$label,$_->[0],$panel,$_->[5]);
+      # balloon_ht = type of balloon to use for hovering -- usually "balloon"
+      # balloon_ct = type of balloon to use for clicking -- usually "balloon"
       my $sticky             = $self->setting($label,'balloon sticky');
       my $width              = $self->setting($label,'balloon width')  || 270;
       my $time               = $self->setting($label,'balloon delay')  || 500;
@@ -1521,15 +1562,15 @@ sub make_map {
       if ($balloonhover) {
 	my $stick = defined $sticky ? $sticky : 0;
 	$mouseover = $balloonhover =~ /^(https?|ftp):/
-	  ? qq(onmouseover="balloon.delayTime=$time; balloon.showTooltip(event,'<iframe width=$width height=300 frameborder=0 src=$balloonhover></iframe>',$stick)")
-	    : qq(onmouseover="balloon.delayTime=$time; balloon.showTooltip(event,'$balloonhover',$stick)");
+	  ? qq(onmouseover="$balloon_ht.delayTime=$time; $balloon_ht.showTooltip(event,'<iframe width=$width height=300 frameborder=0 src=$balloonhover></iframe>',$stick)")
+	    : qq(onmouseover="$balloon_ht.delayTime=$time; $balloon_ht.showTooltip(event,'$balloonhover',$stick)");
 	undef $title;
       }
       if ($balloonclick) {
 	my $stick = defined $sticky ? $sticky : 1;
 	$mousedown = $balloonclick =~ /^(http|ftp):/
-	  ? qq(onmousedown="balloon.delayTime=0; balloon.showTooltip(event,'<iframe width=$width height=300 frameborder=0 src=$balloonclick></iframe>',$stick)")
-	    : qq(onmousedown="balloon.delayTime=0; balloon.showTooltip(event,'$balloonclick',$stick)");
+	  ? qq(onmousedown="$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'<iframe width=$width height=300 frameborder=0 src=$balloonclick></iframe>',$stick)")
+	    : qq(onmousedown="$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'$balloonclick',$stick)");
 	undef $href;
       }
     }
@@ -1611,106 +1652,6 @@ will be added to the overview panel.
 =cut
 
 # generate the overview, if requested, and return it as a GD
-
-###### OVERVIEW AND REGIONVIEW CODE IS NOW OFFICIALLY DEAD! #####
-sub overview {
-  my $self = shift;
-  $self->_overview('overview',@_);
-}
-
-# generate the regionview, if requested, and return it as a GD
-sub regionview {
-  my $self = shift;
-  $self->_overview('region',@_);
-}
-
-sub _overview {
-  my $self = shift;
-  my ($region_name,$segment,$partial_segment,$track_options,$feature_files) = @_;
-  my $gd;
-
-  # Temporary kludge until I can figure out a more
-  # sane way of rendering overview with SVG...
-  my $image_class = 'GD';
-  eval "use $image_class";
-
-  my $conf           = $self->config;
-  my $width          = $self->width;
-  my @tracks         = grep {$track_options->{$_}{visible}}
-    $region_name eq 'region' ? $conf->regionview_tracks : $conf->overview_tracks;
-
-  my ($padl,$padr)   = $self->overview_pad(\@tracks);
-
-  my $panel = Bio::Graphics::Panel->new(-segment => $segment,
-					-width   => $width,
-					-bgcolor => $self->setting('overview bgcolor') || 'wheat',
-					-key_style => 'left',
-					-pad_left  => $padl,
-					-pad_right => $padr,
-					-pad_bottom => PAD_OVERVIEW_BOTTOM,
-					-image_class=> $image_class,
-					-auto_pad   => 0,
-				       );
-
-  # cache check so that we can cache the overview images
-  my $cache_path;
-  $cache_path = $self->gd_cache_path('cache_overview',$segment,
-				     @tracks,$width,
-				     map {@{$track_options->{$_}}{'options','limit','visible'}
-					} @tracks);
-  $gd         = $self->gd_cache_check('cache_overview',$cache_path) if $cache_path;
-
-  # no cached data, so do it ourselves
-  unless ($gd) {
-
-    my $units         = $self->setting(general=>'units') || '';
-    my $no_tick_units = $self->setting(general=>'no tick units');
-    $panel->add_track($segment,
-		      -glyph     => 'arrow',
-		      -double    => 1,
-		      -label     => "\u$region_name\E of ".$segment->seq_id,
-		      -label_font => 'gdMediumBoldFont',
-		      -tick      => 2,
-		      -units_in_label => $no_tick_units,
-		      -units     => $units,
-		      -unit_divider => $conf->setting(general=>'unit_divider') || 1,
-		     );
-
-    $self->_add_landmarks(\@tracks,$panel,$segment,$track_options);
-
-    # add uploaded files that have the "(over|region)view" option set
-    if ($feature_files) {
-      my $select = sub {
-	my $file  = shift;
-	my $type  = shift;
-	my $section = $file->setting($type=>'section') || $file->setting('general'=>'section') || '';
-	return defined $section && $section =~ /$region_name/;
-      };
-      foreach (keys %$feature_files) {
-	my $ff = $feature_files->{$_} or next;
-	next unless $ff->isa('Bio::Graphics::FeatureFile'); #only FeatureFile supports this
-	$ff->render($panel,-1,$track_options->{$_},undef,undef,$select);
-      }
-    }
-
-    $gd = $panel->gd;
-    $self->gd_cache_write($cache_path,$gd) if $cache_path;
-  }
-
-  my $red = $gd->colorClosest(255,0,0);
-  my ($x1,$x2) = $panel->map_pt($partial_segment->start,$partial_segment->end);
-  my ($y1,$y2) = (0,($gd->getBounds)[1]);
-  $x2 = $panel->right-1 if $x2 >= $panel->right;
-  my $pl = $panel->can('auto_pad') ? $panel->pad_left : 0;
-
-  $gd->rectangle($pl+$x1,$y1,
-		 $pl+$x2,$y2-1,
-		 $red);
-
-  eval {$panel->finished};  # should quash memory leaks when used in conjunction with bioperl 1.4
-
-  return ($gd,$segment->length);
-}
 
 sub add_overview_landmarks {
   my $self = shift;
@@ -2547,9 +2488,11 @@ sub create_track_args {
   my $self = shift;
   my ($label,$args) = @_;
 
-  my $segment = $args->{segment};
-  my $lang    = $args->{lang};
+  my $segment         = $args->{segment};
+  my $lang            = $args->{lang};
   my $hilite_callback = $args->{hilite_callback};
+  my $override        = $args->{settings}{features}{$label}{override_settings} || {};   # user-set override settings for tracks
+  my @override        = map {'-'.$_ => $override->{$_}} keys %$override;
 
   my $length = $segment->length;
   my $conf   = $self->config;
@@ -2563,14 +2506,17 @@ sub create_track_args {
     @args = ($segment,
 	     @default_args,
 	     $conf->default_style,
-	     $conf->i18n_style($label,$lang)
+	     $conf->i18n_style($label,
+			       $lang),
+	     @override,
 	    );
   } else {
     @args = (@default_args,
 	     $conf->default_style,
 	     $conf->i18n_style($label,
 			       $lang,
-			       $length)
+			       $length),
+	     @override,
 	    );
   }
   return @args;
@@ -3106,6 +3052,7 @@ sub balloon_tip_setting {
 
   return unless $value;
   my $val;
+  my $balloon_type = 'balloon';
 
   if (ref($value) eq 'CODE') {
     $val = eval {$value->($feature,$panel,$track)};
@@ -3113,10 +3060,16 @@ sub balloon_tip_setting {
   } else {
     $val = $self->link_pattern($value,$feature,$panel);
   }
+
+  if ($val=~ /^\s*\[([\w\s]+)\]\s+(.+)/s) {
+    $balloon_type = $1;
+    $val          = $2;
+  }
   # escape quotes
   $val =~ s/'/\\'/g;
   $val =~ s/"/&quot;/g;
-  $val;
+
+  return ($balloon_type,$val);
 }
 
 sub make_link_target {

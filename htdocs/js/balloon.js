@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.5 2007-08-27 21:00:28 lstein Exp $
+ $Id: balloon.js,v 1.1.2.6 2007-08-28 20:15:52 lstein Exp $
 
  See http://www.wormbase.org/wiki/index.php/Balloon_Tooltips
  for documentation.
@@ -45,6 +45,7 @@
 var currentBalloonClass;
 var balloonIsVisible;
 var reallySticky;
+var balloonInvisibleSelects;
 
 
 // constructor for balloon class
@@ -105,7 +106,12 @@ var Balloon = function() {
 /////////////////////////////////////////////////////////////////////////
 
 Balloon.prototype.showTooltip = function(evt,caption,sticky) {
-  if (balloonIsVisible && reallySticky) return false;
+
+  if (sticky) this.hideStaticTooltip(1);
+
+  if (balloonIsVisible && 
+      currentBalloonClass.balloonIsStatic && 
+      reallySticky) return false;
 
   var el = this.getEventTarget(evt);
   
@@ -118,7 +124,7 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky) {
   // Opera tooltip workaround
   if (this.isOpera && (el.getAttribute('title') || el.getAttribute('href')) ) 
     sticky = true;
- 
+
   this.balloonIsStatic ? this.hideStaticTooltip() : this.hideTooltip();  
   this.balloonIsStatic = sticky;
   this.currentHelpText = caption;
@@ -378,13 +384,13 @@ Balloon.prototype.showBalloon = function(orient,left,top)  {
 
 Balloon.prototype.hideTooltip = function() {
   var bSelf = currentBalloonClass;
+
   if (!bSelf) return;
   currentBalloonClass = null;
   window.clearTimeout(bSelf.timeoutTooltip);
   if (bSelf.balloonIsStatic) return false;
   balloonIsVisible = false;
   if (bSelf.activeBalloon) {
-    bSelf.showHideSelect(1);
     bSelf.setStyle(bSelf.activeBalloon,'display','none');
   }
 }
@@ -405,6 +411,7 @@ Balloon.prototype.hideStaticTooltip = function(override) {
 
   if (!bSelf) {
     var hideBalloon  = document.getElementById('balloon');
+    Balloon.prototype.showHideSelect(1);
     if (hideBalloon) Balloon.prototype.setStyle(hideBalloon,'display','none');
   }
   else if (bSelf.activeBalloon) {
@@ -428,14 +435,39 @@ hideAllTooltips = function() {
 
 // IE select z-index bug
 Balloon.prototype.showHideSelect = function(visible) {
-  if (!this.isIE) return false;
-  var sel = document.getElementsByTagName('select');
-  if (!sel) return false;
-  visible = visible ? 'visible' : 'hidden';
-  for (var i=0; i<sel.length; i++) {
-    if (this.isOverlap(sel[i]))
-      this.setStyle(sel[i],'visibility',visible);
+  if (!this.hasSelectBug())   return false;
+  if (!visible) {
+    var balloonSelects = currentBalloonClass.getElement('text').getElementsByTagName('select');
+    var myHash = new Object();
+    for (var i=0; i<balloonSelects.length; i++) {
+      var id = balloonSelects[i].id || balloonSelects[i].name;
+      myHash[id] = 1;
+    }
+    balloonInvisibleSelects = new Array();
+    var allSelects = document.getElementsByTagName('select');
+    for (var i=0; i<allSelects.length; i++) {
+      var id = allSelects[i].id || allSelects[i].name;
+      if (this.isOverlap(allSelects[i])
+			 && !myHash[id]) {
+	balloonInvisibleSelects.push(allSelects[i]);
+	this.setStyle(allSelects[i],'visibility','hidden');
+      }
+    }
   }
+  else {
+    for (var i=0; i < balloonInvisibleSelects.length; i++) {
+      this.setStyle(balloonInvisibleSelects[i],'visibility','visible');
+    }
+    balloonInvisibleSelects = undefined;
+  }
+}
+
+Balloon.prototype.hasSelectBug = function() {
+  if (navigator.appVersion.indexOf("MSIE") == -1)
+    return false;
+
+  var temp=navigator.appVersion.split("MSIE");
+  return parseFloat(temp[1]) < 7;
 }
 
 // Try to find overlap 

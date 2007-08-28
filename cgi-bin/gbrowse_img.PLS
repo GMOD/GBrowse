@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.1 2007-03-01 22:25:55 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.2 2007-08-28 20:12:37 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -134,7 +134,7 @@ my @add_style       = (param('style'),  param('s'));        # overlay features s
 my @options         = (param('options'),param('o'));        # various track options, such as bumping
 my $show_overview   = param('overview');                    # force an overview-style display
 my $width           = param('width')||param('w');           # width of the image in pixels
-my $abs             = param('abs');                         # absolute rather than relative coordinates
+my $abs             = param('abs');                         # absolute rather than relative coordinates - BROKEN 28 Aug 07 LS
 $abs                = param('b') unless defined $abs;
 my $image_class     = param('image_class') || param('format') || 'GD';        # image type
 my $keystyle        = param('keystyle')    || param('k') || 'between';
@@ -181,8 +181,10 @@ $PLUGINS->configure($db,$page_settings,$session);
 $UPLOADS = Bio::Graphics::Browser::UploadSet->new($CONFIG,$page_settings);
 $REMOTES = Bio::Graphics::Browser::RemoteSet->new($CONFIG,$page_settings);
 
-my ($img,$boxes,$panel,$tracks,$detailed_view);
+my ($img,$map,$boxes,$panel,$tracks,$detailed_view);
 
+# this part uses the old API for generating the overview, and does not take advantage
+# of caching (well)
 if (@segments > 1 or $show_overview or
     $segments[0]->length > $max_segment) {   # summary view
 
@@ -194,7 +196,10 @@ if (@segments > 1 or $show_overview or
   }
 
   my $images    = $CONFIG->hits_on_overview_raw($db,\@segments,$visible,$hitkey);
-  ($img,$boxes) = consolidate_images($images,$image_class);
+  ($img,$boxes) = consolidate_images($images,$image_class,[sort keys %$images]);
+  my $map       = my_make_map($boxes,$CONFIG->source,scalar @add_features);
+  my ($image_uri,$image_file) = $CONFIG->generate_image($img);
+  $panel = {file=>$image_file,image=>$image_uri,map=>$map};
 }
 
 else {  # detailed view
@@ -207,53 +212,46 @@ else {  # detailed view
   my $feature_hilighting = make_hilite_callback(\@h_feat);
   my $region_hilighting  = make_postgrid_callback(\@h_region,$segment);
 
-  ($img,$boxes,$panel,$tracks)
-    = $CONFIG->image_and_map(segment       => $segment,
-			     tracks        => $labels,
-			     options       => $options,
-			     feature_files => $feature_list||undef,
-			     label_scale   => 1,
-			     image_class   => $image_class,
-			     keystyle      => $keystyle,
-			     do_map        => 1,
-			     flip          => $flip,
-			     noscale       => $noscale,
-			     $feature_hilighting ? (hilite_callback => $feature_hilighting) : (),
-			     $region_hilighting  ? (postgrid        => $region_hilighting)  : (),
-                             -truecolor    => $CONFIG->setting('truecolor') || 0,
-			     -grid         => $grid,
-			    );
+  my $panels
+    = $CONFIG->generate_panels({segment       => $segment,
+				labels        => $labels,
+				options       => $options,
+				feature_files => $feature_list||undef,
+				label_scale   => 1,
+				image_class   => $image_class,
+				keystyle      => $keystyle,
+				do_map        => 1,
+				flip          => $flip,
+				noscale       => $noscale,
+				drag_n_drop   => 0,
+				$feature_hilighting ? (hilite_callback => $feature_hilighting) : (),
+				$region_hilighting  ? (postgrid        => $region_hilighting)  : (),
+				-truecolor    => $CONFIG->setting('truecolor') || 0,
+				-grid         => $grid,
+			       }
+			      );
+  $panel = $panels->{__all__};
   $detailed_view++;
 }
 
 if ($embed) {
-  my $url             = $CONFIG->generate_image($img);
-  my ($width,$height) = $img->getBounds;
-  my $img             = img({-src=>$url,-align=>'middle',-usemap=>'#hmap',-width=>$width,
-			     -height=>$height,-border=>0,-name=>'detailedView',-alt=>'detailed view'});
-  my $source          = $CONFIG->source;
-  my $map;
-
-  if ($detailed_view) {
-    my $ruler           = shift @$boxes;
-    $map                = $CONFIG->make_map($boxes,0,$panel,$tracks);
-    my $coords          = join ',',@{$ruler}[1,2,3,4];
-    my $gbrowse         = "../../gbrowse/$source/?name=$segments[0]"; # dgg; was  "../gbrowse/$source?"
-    my $rect            = qq(<area shape="rect" coords="$coords" href="$gbrowse" title="Browse Region" />);
-    $map                =~ s!</map>!$rect</map>!;
-  } else {
-    $map                = my_make_map($boxes,$source,scalar @add_features);
-  }
-
-  $map =~ s/href/target="_top" href/g;  # add appropriate target tags
-
+  my $html            = $CONFIG->render_composite_track(
+							{section    => 'detail',
+							 panel_type => 'detail',
+							},
+							$panel
+						       );
+  my $source = $CONFIG->source;
+  $html =~ s!href="\?ref=([^"]+)"!href="../../gbrowse/$source?ref=$1"!g;
+  $html =~ s!href="!target="_top" href="!g;
+  print_top('');
   print_cached (
 		$newpagecache,
-		header('text/html'),start_html(''),$img,$map,end_html()
+		$html
 	       );
+  print end_html();
 }
 
-#elsif ($image_class eq 'GD::SVG') {
 elsif ($image_class =~ /SVG/) {
   # This is a kludge to alert users that their system does not have
   # GD::SVG installed
@@ -266,26 +264,21 @@ elsif ($image_class =~ /SVG/) {
     message('SVG output from GBrowse requires that the GD::SVG Perl
     module be installed. Please advise your system administrator of
     this error.');
-  } else {
-    print_cached (
-		  $newpagecache,
-		  header('image/svg+xml'),
-		  $img->svg
-		 );
   }
-} elsif ($img->can('png')) {
-  print_cached (
-		$newpagecache,
-		header('image/png'),
-		$img->png
-	       );
-} else {
-  print_cached (
-		$newpagecache,
-		header('image/gif'),
-		$img->gif
-	       );
 }
+
+my $type =  $panel->{file} =~ /\.png/ ? 'image/png'
+            : $panel->{file} =~ /\.gif/ ? 'image/gif'
+            : $panel->{file} =~ /\.jpg/ ? 'image/jpeg'
+	    : $panel->{file} =~ /\.svg/ ? 'image/svg+xml'
+	    : 'binary/octet-stream';
+print header($type);
+open F,$panel->{file} or die "$panel->{file}: $!";
+my $buffer;
+while (read(F,$buffer,1024) > 0) {
+    print $buffer;
+  }
+close F;
 
 exit 0;
 
@@ -322,10 +315,13 @@ sub segments {
   my $was = $db->absolute($abs) if $db->can('absolute');
   my @segments = get_segments($db,@$landmarks);
   @segments      or message("No matching regions found.");
-  if ($abs) {
-    $_->absolute(1) foreach @segments;
-  }
+  eval {
+    if ($abs) {
+      $_->absolute(1) foreach @segments;
+    }
+  };
   $db->absolute($was) if $db->can('absolute');
+  @segments = map {$_->can('get_feature_stream') ? $_ : $_->segment} @segments;
   @segments;
 }
 
@@ -334,7 +330,8 @@ sub get_segments {
   my @segments;
   for my $name (@names) {
     my $wildcard = $name =~ /[*?]/;
-    my @matches = $CONFIG->name2segments($name,$db,undef,!$wildcard);
+#    my @matches = $CONFIG->name2segments($name,$db,undef,!$wildcard);
+    my @matches = $CONFIG->name2segments($name,$db,5000);
     push @segments,@matches;
     next unless $wildcard;
     $_->absolute(1) foreach @matches;
@@ -448,11 +445,9 @@ sub make_postgrid_callback {
   }
 }
 
-
-
 sub consolidate_images {
-  my ($images,$image_class) = @_;
-  my @gds = map {$images->{$_}[1]} sort keys %$images;
+  my ($images,$image_class,$labels) = @_;
+  my @gds = map {$images->{$_}[0]} @$labels;
 
   unless ($gds[0]->can('copy')) { # workaround for GD::SVG
      my @refs  = sort keys %$images;
@@ -476,8 +471,8 @@ sub consolidate_images {
 
   my $offset = 0;
 
-  for my $ref (sort keys %$images) {
-    my ($gd,$boxes)     = @{$images->{$ref}}[1,2];
+  for my $ref (@$labels) {
+    my ($gd,$boxes)     = @{$images->{$ref}}[0,1];
     my ($width,$height) = $gd->getBounds;
     $composite->copy($gd,0,$offset,0,0,$width,$height);
     # fix boxes
@@ -519,7 +514,7 @@ sub coordinate_mapper {
   my $current_segment = shift or return;
   my $db              = open_database();
 
-  my $absolute = $current_segment->absolute;
+  my $absolute = eval{$current_segment->absolute};
 
   my ($absref,$ref,$start,$stop) = ($current_segment->abs_ref,
 				    $current_segment->ref,
@@ -797,11 +792,6 @@ lengths.
       </pre>
       <p>
        The alias "o" can be used to shorten the length of the URL.
-      <p>
-  <dt><b>abs</b>
-  <dd>Use absolute (chromosome) coordinates when displaying the image.  An argument of
-      <i>abs=1</i> will turn on absolute coordinate addressing.  An argument of
-      <i>abs=0</i> will use relative coordinate addressing (this is the default).
       <p>
   <dt><b>add</b> (Alias: <b>a</b>)
   <dd>Superimpose one or more additional features on top of the view.  Features are specified

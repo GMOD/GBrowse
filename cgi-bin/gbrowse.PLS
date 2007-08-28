@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.9 2007-08-27 21:00:26 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.10 2007-08-28 20:12:36 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1270,9 +1270,15 @@ sub tracks_table {
 
     my $visible = exists $settings->{section_visible}{$id} ? $settings->{section_visible}{$id} : 1;
 
+# The original version of this section has a mysterious div() in it, with extra left padding. This seems to break
+# IE 6.0 and removing the div didn't seem to hurt.
+#     my ($control,$section)=toggle_section({on=>$visible,nodiv=>1},
+# 					  $id,
+# 					  b(ucfirst $category),div({-style=>'padding-left:1em'},span({-id=>$id},$table)));
+
     my ($control,$section)=toggle_section({on=>$visible,nodiv=>1},
 					  $id,
-					  b(ucfirst $category),div({-style=>'padding-left:1em'},span({-id=>$id},$table)));
+					  b(ucfirst $category),span({-id=>$id},$table));
     $control .= '&nbsp;'.i({-class=>'nojs'},
 			   checkbox(-id=>"${id}_a",-name=>"${id}_a",
 				    -label=>$all_on,-onClick=>"gbCheck(this,1)"),
@@ -1426,14 +1432,18 @@ sub track_config {
 				  -default => $settings->{features}{$label}{limit})
 		      )
 		   ),
+		 TR(
+		    td({-align=>'right'},
+		       button(-name=>$CONFIG->tr('Cancel'),
+			      -onClick=>'Balloon.prototype.hideStaticTooltip(1)')),
+		    th({-align=>'right'},
+		       submit(-name=>$CONFIG->tr('Change'))
+		      )
+		   )
 		);
-  $form .= hidden(-name=>'adjust_one_track',-value=>$label) .
-           button(-name=>$CONFIG->tr('Cancel'),-onClick=>'Balloon.prototype.hideStaticTooltip(1)').
-	   b(submit(-name=>$CONFIG->tr('Change')));
+  $form .= hidden(-name=>'adjust_one_track',-value=>$label);
   $form .= end_form();
-  print div(
-	    table(TR(td({-valign=>'top'},$citation),td({-valign=>'top'},$form)))
-	   );
+  print table(TR(td({-valign=>'top'},$citation),td({-valign=>'top'},$form)));
   print end_html();
 }
 

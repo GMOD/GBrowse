@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.20 2007-08-27 21:00:28 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.21 2007-08-28 20:12:38 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -894,6 +894,7 @@ sub render_draggable_tracks {
 
       else {
 	my $help_url = "url:?configure_track=".CGI::escape($label);
+	$help_url   .= ";rand=".rand() if CGI->user_agent =~ /MSIE/;  # work around an IE caching bug
 	$config_click = "balloon_wide.delayTime=0; balloon_wide.showTooltip(event,'$help_url',1)";
       }
 
@@ -952,15 +953,13 @@ sub render_composite_track {
   my $self   = shift;
   my ($args,$panel) = @_;
 
-  my $do_map  = $args->{do_map};
-  my $tmpdir  = $args->{tmpdir};
   my $section = $args->{section};
   my $button  = $args->{image_button};
   my $panel_type = $args->{panel_type};
   $section    =~ s/^\?//;
 
   my $url             = $panel->{image};
-  my $map             = $panel->{map};
+  my $map             = $panel->{map} || '';
   my ($width,$height) = @{$panel}{'width','height'};
   my $map_name = "${section}_map";
 
@@ -976,7 +975,7 @@ sub render_composite_track {
 	     -border=> 0,
 	     -name  => $section,
 	     -alt   => $section});
-  my $html    = div({-align=>'center'},$img);
+  my $html    = div({-align=>'center'},$img).$map;
 
   return $html;
 }
@@ -985,7 +984,7 @@ sub render_composite_track {
 
 Generate the GD object and the imagemap and returns a hashref in the format
 
-  $results->{track_label} = {gd=>$gd, map=>$img_map}
+  $results->{track_label} = {image=>$uri, map=>$map_data, width=>$w, height=>$h, file=>$img_path)
 
 arguments: a key=>value list
    'segment'       A feature iterator that responds to next_seq() methods
@@ -1021,7 +1020,7 @@ sub generate_panels {
   my $lang          = $args->{lang} || $self->language;
   my $suppress_scale= $args->{noscale};
   my $hilite_callback = $args->{hilite_callback};
-  my $drag_n_drop   = $self->drag_and_drop;
+  my $drag_n_drop   = exists $args->{drag_n_drop} ? $args->{drag_n_drop} : $self->drag_and_drop;
   my $do_map        = $args->{do_map};
   my $cache_extra   = $args->{cache_extra} || [];
   my $section       = $args->{section}     || '?detail';
@@ -1051,9 +1050,9 @@ sub generate_panels {
   # caching doesn't work for the monolithic picture, so ignore the cache code when drag-n-drop is off
   # in fact, panel_is_cached() always returns false for non-drag-n-drop
   # one special track for the scale or (in monolithic picture mode), the whole thing ('__all__')
-  my @cache_args           = ($args->{panel_type},$panel_key,@panel_args,@$cache_extra);
-  $cache_key{$panel_key}   = $self->create_cache_key(@cache_args);
-  $cached{$panel_key}      = $self->panel_is_cached($cache_key{$panel_key});
+  my @cache_args        = ($args->{panel_type},$panel_key,@panel_args,@$cache_extra);
+  $cache_key{$panel_key}  = $self->create_cache_key(@cache_args);
+  $cached{$panel_key}     = $self->panel_is_cached($cache_key{$panel_key});
 
   unless ($cached{$panel_key}) {
     $panels{$panel_key}      = Bio::Graphics::Panel->new(@panel_args);
@@ -1183,13 +1182,13 @@ sub generate_panels {
 							 \%trackmap,
 							 0);
     my $key = $drag_n_drop ? $cache_key{$l} : $cache_key{'__all__'};
-    @{$results{$l}}{qw(image map width height)} = $self->set_cached_panel($key,$gd,$map);
+    @{$results{$l}}{qw(image map width height file)} = $self->set_cached_panel($key,$gd,$map);
     eval {$panels{$l}->finished};
   }
 
   # cached panels need to be retrieved
   for my $l (keys %cached) {
-    @{$results{$l}}{qw(image map width height)} = $self->get_cached_panel($cache_key{$l});
+    @{$results{$l}}{qw(image map width height file)} = $self->get_cached_panel($cache_key{$l});
   }
 
   return \%results;
@@ -1402,7 +1401,7 @@ sub generate_image {
   binmode(F);
   print F $data;
   close F;
-  return $url;
+  return wantarray ? ($url,$imagefile) : $url;
 }
 
 =head2 gd_cache_path()
@@ -1568,9 +1567,10 @@ sub make_map {
       }
       if ($balloonclick) {
 	my $stick = defined $sticky ? $sticky : 1;
+	my $style = qq(style="cursor:pointer");
 	$mousedown = $balloonclick =~ /^(http|ftp):/
-	  ? qq(onmousedown="$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'<iframe width=$width height=300 frameborder=0 src=$balloonclick></iframe>',$stick)")
-	    : qq(onmousedown="$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'$balloonclick',$stick)");
+	  ? qq(onmousedown="$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'<iframe width=$width height=300 frameborder=0 src=$balloonclick></iframe>',$stick)" $style)
+	    : qq(onmousedown="$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'$balloonclick',$stick)" $style);
 	undef $href;
       }
     }
@@ -1809,6 +1809,9 @@ sub hits_on_overview_raw {
    my ($db,$hits,$options,$keyname) = @_;
    $self->_hits_on_overview($db,$hits,$options,$keyname,undef);
 }
+
+# BUG: the following code should be retired and replace with a call to generate_panels()
+# but it is just a little too involved for me to do right now -- 28 Aug 07 LS
 
 # Return an HTML showing where multiple hits fall on the genome.
 # Can either provide a list of objects that provide the ref() method call, or
@@ -2621,8 +2624,13 @@ sub get_cached_panel {
   }
 
 
-  $image_uri .= -e "$image_file.png" ? '.png' : -e "$image_file.jpg" ? '.jpg' : '.gif';
-  return ($image_uri,$map_data,$width,$height);
+  my $base = -e "$image_file.png" ? '.png'
+           : -e "$image_file.jpg" ? '.jpg'
+	   : -e "$image_file.svg" ? '.svg'
+           : '.gif';
+  $image_uri  .= $base;
+  $image_file .= $base;
+  return ($image_uri,$map_data,$width,$height,$image_file);
 }
 
 sub set_cached_panel {
@@ -2651,7 +2659,11 @@ sub set_cached_panel {
 
   my $image_data;
 
-  if ($gd->can('png')) {
+  if ($gd->can('svg')) {
+    $image_file .= ".svg";
+    $image_data = $gd->svg;
+  }
+  elsif ($gd->can('png')) {
     $image_file .= ".png";
     $image_data = $gd->png;
   }
@@ -2670,7 +2682,7 @@ sub set_cached_panel {
   $f->print($image_data);
   $f->close;
 
-  return ($image_uri,$map_data,$width,$height);
+  return ($image_uri,$map_data,$width,$height,$image_file);
 }
 
 package Bio::Graphics::BrowserConfig;

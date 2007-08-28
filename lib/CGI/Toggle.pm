@@ -10,13 +10,9 @@ our @EXPORT = ('toggle_section',
 use constant PLUS    => 'plus.png';
 use constant MINUS   => 'minus.png';
 use constant JS      => 'toggle.js';
-use constant XCOOK   => 'x_cook.js';
 
 my $image_dir = '/gbrowse/images/buttons';
 my $js_dir    = '/gbrowse/js';
-
-my $cookie_name = __PACKAGE__;
-$cookie_name    =~ s/:/_/g;
 
 my $style = <<'END';
 .el_hidden  {display:none}
@@ -55,7 +51,6 @@ sub start_html {
     }
 
     push @{$args{-script}},{src=>"$js_dir/".JS};
-    push @{$args{-script}},{src=>"$js_dir/".XCOOK};
   }
 
   my $result = CGI::start_html(%args);
@@ -69,8 +64,6 @@ sub start_html {
   return $result;
 }
 
-# The weird playing around with class names is to accomodate the need to have
-# a default setting of visibility that can be overridden by a stored cookie.
 sub toggle_section {
   my %config = ref $_[0] eq 'HASH' ? %{shift()} : ();
   my ($name,$section_title,@section_body) = @_;
@@ -166,8 +159,8 @@ is expanded..  The default is /gbrowse/images/minus.png.
 =item b<override>
 
 If false (default), the state of the section will be remembered in a
-cookie.  If true, the initial state will be taken from the b<on>
-option, ignoring the cookie (which will, however, still be generated).
+session variable.  If true, the initial state will be taken from the
+b<on> option, ignoring the session.
 
 =back
 
@@ -187,9 +180,5 @@ Copyright (c) 2005 Cold Spring Harbor Laboratory
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.  See DISCLAIMER.txt for
 disclaimers of warranty.
-
-The xGetCookie() and xSetCookie() JavaScript functions were derived
-from www.cross-browser.com, and are copyright (c) 2004 Michael Foster,
-and licensed under the LGPL (gnu.org).
 
 =cut

@@ -254,7 +254,8 @@ sub print_top {
 
   if ($b_tips) {
 
-    my %balloons            = (balloon       => '/gbrowse/images/balloons',
+    my %balloons            = (
+			       balloon       => '/gbrowse/images/balloons',
 			       balloon_wide  => '/gbrowse/images/balloons_wide',
 			       shellwords($CONFIG->setting('balloon images'))
 			      );

@@ -252,40 +252,41 @@ sub print_top {
 
   print start_html(@args) unless $HTML++;
 
-  if ($b_tips) {
+  print_balloon_settings()  if $b_tips;
+}
 
-    my %balloons            = (
-			       balloon       => '/gbrowse/images/balloons',
-			       balloon_wide  => '/gbrowse/images/balloons_wide',
-			       shellwords($CONFIG->setting('custom balloons'))
-			      );
+sub print_balloon_settings {
+  my $custom_balloons    = $CONFIG->setting('custom balloons');
 
-    my $balloon_settings    =<<END;
+  my %config_values = $custom_balloons =~ /\[([^]]+)\]([^[]+)/g;
+  $config_values{'balloon'} ||= <<END;
+images    =  /gbrowse/images/balloons
+delayTime =  500
+END
+
+  my $balloon_settings    =<<END;
 reallySticky = true;
-balloon.delayTime         = 500;
-balloon.balloonWidth      = '308px';
-balloon_wide.delayTime    = 500;
-balloon_wide.balloonWidth = '608px';
 END
-    $balloon_settings      .= $CONFIG->setting('balloon settings') || '';
-    my $balloon_script      = "<script>\n";
-    for my $balloon (keys %balloons) {
-      $balloon_script .= <<END;
-      var $balloon = new Balloon;
-      $balloon.upLeftConnector     = '$balloons{$balloon}/up_left_connector.png';
-      $balloon.upRightConnector    = '$balloons{$balloon}/up_right_connector.png';
-      $balloon.downLeftConnector   = '$balloons{$balloon}/down_left_connector.png';
-      $balloon.downRightConnector  = '$balloons{$balloon}/down_right_connector.png';
-      $balloon.upBalloon           = '$balloons{$balloon}/up_body.png';
-      $balloon.downBalloon	   = '$balloons{$balloon}/down_body.png';
-      $balloon.hOffset             = 'right';
 
+  for my $balloon (keys %config_values) {
+    my %config = $config_values{$balloon} =~ /(\w+)\s*=\s*(\S+)/g;
+    my $img    = $config{images} || '/gbrowse/images/balloons';
+    $balloon_settings .= <<END;
+var $balloon = new Balloon;
+$balloon.balloonImage        = '$img/balloon.png';
+$balloon.ieImage             = '$img/balloon_ie.png';
+$balloon.upLeftStem          = '$img/up_left.png';
+$balloon.downLeftStem        = '$img/down_left.png';
+$balloon.upRightStem         = '$img/up_right.png';
+$balloon.downRightStem       = '$img/down_right.png';
+$balloon.closeButton         = '$img/close.png';
 END
+    for my $option (keys %config) {
+      next if $option eq 'images';
+      $balloon_settings .= "$balloon.$option = '$config{$option}'\n";
     }
-    $balloon_script .= $balloon_settings;
-    $balloon_script .= "</script>\n";
-    print $balloon_script;
   }
+  print "<script>\n$balloon_settings\n</script>\n";
 }
 
 sub print_bottom {

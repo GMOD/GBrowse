@@ -2255,101 +2255,77 @@ single (') and double (") quotes in the values returned by the
 "balloon hover" and "balloon click" options so that you don't have to
 worry about them messing up the HTML.
 
+There is a limited amount of balloon customization that you can
+perform within the [track] section. If you wish the balloon to be
+sticky (require the user to press the close button) even if it is a
+hover balloon, then place this option in the [track section]:
+
+  balloon sticky = 1
+
+Setting "balloon sticky" to 0 will have the effect of making balloons
+disappear as soon as the mouse leaves them, even if it was created by
+a mouse click event.
+
+If you are displaying content from a remote web or FTP server and you
+do not like the height of the balloon, you can adjust the height with
+the "balloon height" option:
+
+  balloon height = 400
+
 Customizing Balloons
 --------------------
 
 GBrowse supports multiple balloons with different shapes, sizes,
-background images and timing properties. Two built-in balloons are
-defined, "balloon" and "balloon_wide." The first is 308 pixels wide
-and is the standard balloon that appears when for mouse click and
-hover events. "Balloon_wide" is 612 pixels wide and is the one that
-appears when the user clicks on the configure "[?]" icon in the
-draggable track title.
+background images and timing properties. There is one built-in
+balloon, named "balloon", which should meet most peoples'
+needs. However, you can configure any number of custom balloons.
 
-To use the wide balloon rather than the standard one, format the
+To declare two new balloons, create a "custom balloons" option in the [GENERAL]
+section:
+
+ custom balloons = [blue_balloon]
+                   images   =  /gbrowse/images/blue_balloons
+                   maxWidth = 300
+		   shadow   = 0
+
+                   [wide_balloon]
+  		   maxWidth = 800
+
+This creates two new balloons. The first, named "blue_balloon" will
+look for its images and icons at the local URL
+/gbrowse/images/blue_balloons. It will have a maximum width of 300
+pixels, and will cast no shadow. The second, named "wide_balloon"
+takes all the defaults for the default balloon, including the location
+of its images in the directory /gbrowse/images/balloons, except that
+it has a maximum width of 800 pixels. The various balloon options are
+described well at http://www.gmod.org/wiki/index.php/Popup_Balloons.
+
+To use the blue balloon rather than the standard one, format the
 "balloon hover" and/or "balloon click" options like this:
 
-  balloon click = [balloon_wide] /cgi-bin/get_gene_data?gene=$name
+  balloon click = [blue_balloon] /cgi-bin/get_gene_data?gene=$name
 
-The [balloon_wide] keyword tells gbrowse to use the wide balloon
-("balloon_wide") for clicks on these features. The standard balloon is
-called "balloon", and so the following two options are equivalent:
+The [blue_balloon] keyword tells gbrowse to use the blue balloon for
+clicks on these features. The standard balloon is called "balloon",
+and so the following two options are equivalent:
 
   balloon click = /cgi-bin/get_gene_data?gene=$name
   balloon click = [balloon] /cgi-bin/get_gene_data?gene=$name
 
-To create your own balloons, you need to create six PNG images that
-describe the sides of the balloon and the connectors. To make these
-images go to http://www.wormbase.org/wiki/index.php/Balloon_Tooltips
-and follow the link to a CGI script that will let you design balloons
-of various styles and sizes. Choose the "download all images" option
-to get a tar archive containing the six images. The archive will be
-named XXXXX.tar.gz, where XXXXX is a random number.
+The images for custom balloons reside in the default location of
+/gbrowse/images/balloons, unless indicated otherwise using the
+"images" config option.  To use custom balloon images, point "images"
+to a a web-accessible directory in your document tree which contains
+the seven PNG images described at
+http://www.gmod.org/wiki/index.php/Popup_Balloons. These images must
+be named as follows:
 
-Now create a directory for the images in your web server's document
-tree. We recommend placing it in $HTDOCS/gbrowse/images, where $HTDOCS
-is the top of the document tree. Give the directory a good descriptive
-name, such as "blue_balloon". Enter the directory and unpack the tar
-archive. This will create six PNG images with names like
-"down_body_XXXXX.png" where "XXXXX" is a string of numbers. Rename
-each of these files to remove the _XXXXX part. Here is a complete
-example:
+  balloon.png	  down_right.png  up_right.png
+  balloon_ie.png  down_left.png   up_left.png
+  close.png
 
- % cd /var/www/htdocs/gbrowse/images
- % mkdir blue_balloons
- % cd blue_balloons
- % tar zxvf ~/15855.tar.gz
-   down_body_15855.png
-   down_left_connector_15855.png
-   down_right_connector_15855.png
-   up_body_15855.png
-   up_left_connector_15855.png
-   up_right_connector_15855.png
- % rename _15855 '' *.png
-
-If you do not have the rename utility on your system, you will have to
-change the names manually.
-
-Now tell GBrowse about the new balloon by adding a "custom balloons"
-option to the [GENERAL] section of the config file:
-
- custom balloons = big_blue /gbrowse/images/blue_balloon
-
-The format is "balloon name" "URL path to the balloon images
-directory", with the two separated by whitespace. You can define
-multiple custom balloons this way:
-
- custom balloons = big_blue /gbrowse/images/blue_balloon
-                   gradient /gbrowse/images/gradient_balloon
-                   psychedelic /gbrowse/images/swirly_balloon
-
-This declares three balloons named "big_blue," "gradient" and
-"psychedelic." You can now use these balloon names in track stanzas:
-
- [genes]
- feature = gene:curated
- glyph   = gene
- balloon hover = [gradient] <h1>Gene $name</h1> <p>$description</p>
-
-Balloons can be customized even further with respect to their width,
-height, internal padding, and the length of time they wait before
-popping up. These options are described in
-http://www.wormbase.org/wiki/index.php/Balloon_Tooltips#Customization.
-To change the default settings, create a "balloon settings" option in
-the [GENERAL] section, and configure each balloon using its name. For
-example:
-
- [General]
-
- balloon settings = gradient.balloonWidth     = '308px';
-                    gradient.paddingTop       = '20px';
-                    gradient.paddingLeft      = '15px';
-                    gradient.paddingRight     = '15px';
-                    gradient.paddingBottom    = '20px';
-                    gradient.paddingConnector = '48px';
-
-You can also change the standard "balloon" and "balloon_wide"
-balloons in the same way.
+Tips for creating these images can be found at the www.gmod.org WIKI
+described earlier.
 
 =head1 C. GENERATING HISTOGRAMS
 

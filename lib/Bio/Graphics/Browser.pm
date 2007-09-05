@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.22 2007-09-05 14:20:14 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.23 2007-09-05 17:43:21 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -884,7 +884,7 @@ sub render_draggable_tracks {
       my $config_click;
       if ($label =~ /^plugin:/) {
 	my $help_url = "url:?plugin=".CGI::escape($label).';plugin_do=Configure';
-	$config_click = "balloon_wide.delayTime=0; balloon_wide.showTooltip(event,'$help_url',1)";
+	$config_click = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)";
       }
 
       elsif ($label =~ /^file:/) {
@@ -895,7 +895,7 @@ sub render_draggable_tracks {
       else {
 	my $help_url = "url:?configure_track=".CGI::escape($label);
 	$help_url   .= ";rand=".rand() if CGI->user_agent =~ /MSIE/;  # work around an IE caching bug
-	$config_click = "balloon_wide.delayTime=0; balloon_wide.showTooltip(event,'$help_url',1)";
+	$config_click = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)";
       }
 
 
@@ -1575,21 +1575,20 @@ sub make_map {
       # balloon_ht = type of balloon to use for hovering -- usually "balloon"
       # balloon_ct = type of balloon to use for clicking -- usually "balloon"
       my $sticky             = $self->setting($label,'balloon sticky');
-      my $width              = $self->setting($label,'balloon width')  || 270;
-      my $time               = $self->setting($label,'balloon delay')  || 500;
+      my $height             = $self->setting($label,'balloon height') || 300;
 
       if ($balloonhover) {
 	my $stick = defined $sticky ? $sticky : 0;
 	$mouseover = $balloonhover =~ /^(https?|ftp):/
-	  ? qq(onmouseover="$balloon_ht.delayTime=$time; $balloon_ht.showTooltip(event,'<iframe width=$width height=300 frameborder=0 src=$balloonhover></iframe>',$stick)")
-	    : qq(onmouseover="$balloon_ht.delayTime=$time; $balloon_ht.showTooltip(event,'$balloonhover',$stick)");
+	  ? qq(onmouseover="$balloon_ht.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height frameborder=0 src=$balloonhover></iframe>',$stick)")
+	    : qq(onmouseover="$balloon_ht.showTooltip(event,'$balloonhover',$stick)");
 	undef $title;
       }
       if ($balloonclick) {
 	my $stick = defined $sticky ? $sticky : 1;
 	my $style = qq(style="cursor:pointer");
 	$mousedown = $balloonclick =~ /^(http|ftp):/
-	  ? qq(onmousedown="$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'<iframe width=$width height=300 frameborder=0 src=$balloonclick></iframe>',$stick)" $style)
+	  ? qq(onmousedown="$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height frameborder=0 src=$balloonclick></iframe>',$stick,$balloon_ct.maxWidth)" $style)
 	    : qq(onmousedown="$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'$balloonclick',$stick)" $style);
 	undef $href;
       }

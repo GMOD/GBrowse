@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.11 2007-09-05 14:20:11 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.12 2007-09-05 22:28:25 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2057,7 +2057,8 @@ sub multiple_choices {
   }
 
   $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
-  my $overviews = $CONFIG->hits_on_overview($db,$results,$settings->{features});
+#  my $overviews = $CONFIG->hits_on_overview($db,$results,$settings->{features});
+  my $overviews = $CONFIG->new_hits_on_overview($db,$results,$settings);
   my $count = @$results;
 
   print start_table();

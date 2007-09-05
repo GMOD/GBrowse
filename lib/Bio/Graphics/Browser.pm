@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.23 2007-09-05 17:43:21 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.24 2007-09-05 22:28:26 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -803,10 +803,7 @@ sub render_panels {
 
   my $segment         = $args->{segment};
   my $do_map          = $args->{do_map};
-  my $do_centering_map= $args->{do_centering_map};
-  my $tmpdir          = $args->{tmpdir};
-  my $settings        = $args->{settings};
-  my $drag_n_drop     = $self->drag_and_drop;
+  my $drag_n_drop     = $self->drag_and_drop($args->{drag_n_drop});
 
   return unless $segment;
 
@@ -826,7 +823,9 @@ series of user agents known to support drag_and_drop.
 =cut
 
 sub drag_and_drop {
-  my $self = shift;
+  my $self     = shift;
+  my $override = shift;
+  return if defined $override && !$override;
   return unless $self->setting(general => 'drag and drop'); # drag and drop turned off
   return if     $self->setting(general => 'postgrid');      # postgrid forces drag and drop off
   1;
@@ -1002,6 +1001,9 @@ Arguments: a key=>value list
    'noscale'       Suppress scale entirely
    'image_class'   Optional image class for generating SVG output (by passing GD::SVG)
    'cache_extra'   Extra cache args needed to make this image unique
+   'scale_map_type' If equal to "centering_map" adds an imagemap to the ruler that recenters.
+                    If equal to "interval_map" creates an imagemap that jumps to a small interval in map
+   'featurefile_select' callback for selecting features to be rendered from a featurefile onto a panel
 any arguments that begin with an initial - (hyphen) are passed through to Panel->new
 directly
 
@@ -1021,7 +1023,7 @@ sub generate_panels {
   my $lang          = $args->{lang} || $self->language;
   my $suppress_scale= $args->{noscale};
   my $hilite_callback = $args->{hilite_callback};
-  my $drag_n_drop   = exists $args->{drag_n_drop} ? $args->{drag_n_drop} : $self->drag_and_drop;
+  my $drag_n_drop   = $self->drag_and_drop($args->{drag_n_drop});
   my $do_map        = $args->{do_map};
   my $cache_extra   = $args->{cache_extra} || [];
   my $section       = $args->{section}     || '?detail';
@@ -1154,7 +1156,7 @@ sub generate_panels {
 
   # ------------------------------------------------------------------------------------------
   # Add feature files, including remote annotations
-  my $featurefile_select = $self->feature_file_select($section);
+  my $featurefile_select = $args->{featurefile_select} || $self->feature_file_select($section);
   for my $l (keys %$feature_files) {
     next if $cached{$l};
     my $file = $feature_files->{$l} or next;
@@ -1174,18 +1176,22 @@ sub generate_panels {
   my %trackmap = reverse %tracks;
 
   # uncached panels need to be generated and cached
+  $args->{scale_map_type} ||= 'centering_map';
   (my $map_name = $section) =~ s/^\?//;
   for my $l (keys %panels) {
     my $gd = $panels{$l}->gd;
     my $map    =   !$do_map            ? undef
 	           : $l eq '__pad__'   ? undef
 	           : $l eq '__scale__' ? $self->make_centering_map(shift @{$panels{$l}->boxes},
-								   $args->{flip},$l)
+								   $args->{flip},
+								   $l,
+								   $args->{scale_map_type},
+								  )
 		   : $l eq '__all__'   ? $self->make_map(scalar $panels{$l}->boxes,
 							 $panels{$l},
 							 $map_name,
 							 \%trackmap,
-							 'add_centering_map')
+							 $args->{scale_map_type})
 		   :                     $self->make_map(scalar $panels{$l}->boxes,
 							 $panels{$l},
 							 $l,
@@ -1551,7 +1557,7 @@ sub make_map {
 
   local $^W = 0; # avoid uninit variable warnings due to poor coderefs
 
-  $map .= $self->make_centering_map(shift @$boxes,$flip) if $first_box_is_scale;
+  $map .= $self->make_centering_map(shift @$boxes,$flip,0,$first_box_is_scale) if $first_box_is_scale;
 
   foreach (@$boxes){
     next unless $_->[0]->can('primary_tag');
@@ -1604,7 +1610,7 @@ sub make_map {
 # should center the image on the scale.
 sub make_centering_map {
   my $self   = shift;
-  my ($ruler,$flip,$label)  = @_;
+  my ($ruler,$flip,$label,$scale_map_type)  = @_;
 
   return if $ruler->[3]-$ruler->[1] == 0;
 
@@ -1614,26 +1620,40 @@ sub make_centering_map {
   my $scale  = $length/($ruler->[3]-$ruler->[1]);
   my $pl     = $ruler->[-1]->panel->pad_left;
 
+  my $ruler_intervals = RULER_INTERVALS;
+
+  if ($scale_map_type eq 'interval_map' && $length/RULER_INTERVALS > $self->get_max_segment) {
+    my $max = $self->get_max_segment/5;  # usually a safe guess
+    $ruler_intervals = int($length/$max);
+  }
+
   # divide into RULER_INTERVAL intervals
-  my $portion = ($ruler->[3]-$ruler->[1])/RULER_INTERVALS;
+  my $portion = ($ruler->[3]-$ruler->[1])/$ruler_intervals;
   my $ref    = $ruler->[0]->seq_id;
   my $source = $self->source;
-  my $plugin = escape(param('plugin')||'');
 
   my @lines;
-  for my $i (0..RULER_INTERVALS-1) {
+  for my $i (0..$ruler_intervals-1) {
     my $x1 = int($portion * $i+0.5);
     my $x2 = int($portion * ($i+1)+0.5);
 
-    # put the middle of the sequence range into the middle of the picture
-    my $middle = $flip ? $end - $scale * ($x1+$x2)/2 : $offset + $scale * ($x1+$x2)/2;
-    my $start  = int($middle - $length/2);
-    my $stop   = int($start  + $length - 1);
+    my ($start,$stop);
+    if ($scale_map_type eq 'centering_map') {
+      # put the middle of the sequence range into the middle of the picture
+      my $middle = $flip ? $end - $scale * ($x1+$x2)/2 : $offset + $scale * ($x1+$x2)/2;
+      $start  = int($middle - $length/2);
+      $stop   = int($start  + $length - 1);
+    }
+    elsif ($scale_map_type eq 'interval_map') {
+      # center on the interval
+      $start = int($flip ? $end - $scale * $x1 : $offset + $scale * $x1);
+      $stop  = int($start + $portion * $scale);
+    }
 
     $x1 += $pl;
     $x2 += $pl;
 
-    my $url = "?ref=$ref;start=$start;stop=$stop;nav4=1;plugin=$plugin";
+    my $url = "?ref=$ref;start=$start;stop=$stop";
     $url .= ";flip=1" if $flip;
     push @lines,
       qq(<area shape="rect" coords="$x1,$ruler->[2],$x2,$ruler->[4]" href="$url" title="recenter" alt="recenter" />\n);
@@ -1778,7 +1798,8 @@ sub _add_landmarks {
 }
 
 
-=head2 hits_on_overview()
+###### attempted substitution; unfortunately runs slower than original!! #######
+=head2 new_hits_on_overview()
 
   $hashref = $browser->hits_on_overview($db,$hits,$options,$keyname);
 
@@ -1806,145 +1827,285 @@ reference sequence names and the values are HTML to be emitted.
 
 =cut
 
-sub hits_on_overview {
-   my $self = shift;
-   my ($db,$hits,$options,$keyname) = @_;
-   $self->_hits_on_overview($db,$hits,$options,$keyname,'htmlize');
-}
-
-=head2 hits_on_overview_raw()
-
-  $hashref = $browser->hits_on_overview_raw($db,$hits,$options,$keyname);
-
-This behaves the same as hits_on_overview() except that the values of
-the returned hashref are a three-element array consisting of
-a segment ref name, a GD image showing the segment and its hits, and the
-array of hit coordinates returned by the panel->boxes() call.
-
-=cut
-
-sub hits_on_overview_raw {
-   my $self = shift;
-   my ($db,$hits,$options,$keyname) = @_;
-   $self->_hits_on_overview($db,$hits,$options,$keyname,undef);
-}
-
-# BUG: the following code should be retired and replace with a call to generate_panels()
-# but it is just a little too involved for me to do right now -- 28 Aug 07 LS
-
-# Return an HTML showing where multiple hits fall on the genome.
-# Can either provide a list of objects that provide the ref() method call, or
-# a list of arrayrefs in the form [ref,start,stop,[name]]
-sub _hits_on_overview {
+sub new_hits_on_overview {
   my $self = shift;
-  my ($db,$hits,$options,$keyname,$htmlize) = @_;
+  my ($db,$hits,$page_settings,$keyname) = @_;
 
-  my %html; # results are a hashref sorted by chromosome
 
-  my $conf  = $self->config;
-  my $width = $self->width;
+  my %overviews; # results are a hashref sorted by chromosome
 
-  my $units         = $conf->setting(general=>'units');
-  my $no_tick_units = $conf->setting(general=>'no tick units');
-  my $unit_divider  = $conf->setting(general=>'unit_divider') || 1;
+  $keyname ||= 'Matches';
 
-  my $class      = eval{$hits->[0]->factory->default_class} || 'Sequence';
-  my ($padl,$padr)  = $self->overview_pad([grep { $options->{$_}{visible}}
+  my $class         = eval{$hits->[0]->factory->default_class} || 'Sequence';
+  my ($padl,$padr)  = $self->overview_pad([grep { $page_settings->{$_}{visible}}
 					   $self->config->overview_tracks],
 					  'Matches');
 
   # sort hits out by reference and version
-  my (%refs);
+  my (%featurefiles);
+
   for my $hit (@$hits) {
     if (ref($hit) eq 'ARRAY') {
       my ($ref,$start,$stop,$name) = @$hit;
-      push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$start,
-						      -end=>$stop,
-						      -name=>$name||'');
-    } elsif (UNIVERSAL::can($hit,'seq_id')) {
-      my $name = $hit->can('seq_name') ? $hit->seq_name : $hit->name;
+      $featurefiles{$ref} ||= Bio::Graphics::FeatureFile->new(-smart_features  => 1);
+      $featurefiles{$ref}->add_feature(Bio::Graphics::Feature->new(-seq_id=>$ref,
+								   -start=>$start,
+								   -end=>$stop,
+								   -name=>$name||'',
+								   -type=>'hit',
+								  )
+				      );
+    }
+    elsif (UNIVERSAL::can($hit,'seq_id')) {
+      my $name        = $hit->can('seq_name') ? $hit->seq_name : $hit->name;
       eval {$hit->absolute(1)};
-      my $ref  = my $id = $hit->seq_id;
-      my $version = eval {$hit->isa('Bio::SeqFeatureI') ? undef : $hit->version};
-      $ref .= " version $version" if defined $version;
+      my $ref         = my $id = $hit->seq_id;
+      my $version     = eval {$hit->isa('Bio::SeqFeatureI') ? undef : $hit->version};
+      $ref           .= " version $version" if defined $version;
       my($start,$end) = ($hit->start,$hit->end);
-      $name =~ s/\:\d+,\d+$//;  # remove coordinates if they're there
-      $name = substr($name,0,7).'...' if length $name > 10;
-      my $feature = Bio::Graphics::Feature->new(-start=>$start,
-						-end=>$end,
-						-name=>$name,
-					       );
-      push @{$refs{$ref}},$feature;
+      $name           =~ s/\:\d+,\d+$//;  # remove coordinates if they're there
+      $name           = substr($name,0,7).'...' if length $name > 10;
+      $featurefiles{$ref} ||= Bio::Graphics::FeatureFile->new(-smart_features  => 1);
+      my $f =Bio::Graphics::Feature->new(-seq_id=>$ref,
+					 -start=>$start,
+					 -end=>$end,
+					 -name=>$name,
+					 -type=>'hit',
+					);
+      $featurefiles{$ref}->add_feature($f);
     } elsif (UNIVERSAL::can($hit,'location')) {
-      my $location = $hit->location;
+      my $location                 = $hit->location;
       my ($ref,$start,$stop,$name) = ($location->seq_id,$location->start,
 				      $location->end,$location->primary_tag);
-      push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$start,
-						      -end=>$stop,
-						      -name=>$name||'');
+      $featurefiles{$ref} ||= Bio::Graphics::FeatureFile->new(-smart_features  => 1);
+      $featurefiles{$ref}->add_feature(Bio::Graphics::Feature->new(-seq_id=>$ref,
+								   -start=>$start,
+								   -end=>$stop,
+								   -name=>$name||'',
+								   -type=>'hit')
+				      );
     }
   }
 
-  # Temporary kludge until I can figure out a more
-  # sane way of rendering overview with SVG...
-  # Should be handled by being passed a $image_class param
-  my $image_class = 'GD';
-  eval "use $image_class";
+  # We now have a feature list. Create an overview for each unique ref
+  my @refs = sort keys %featurefiles;
 
-  $keyname = 'Matches' unless defined $keyname;
+  my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} && /:overview$/ }
+    @{$page_settings->{tracks}};
+  push @tracks_to_show,'my_data';
 
-  for my $ref (sort keys %refs) {
+  for my $ref (@refs) {
     my ($name, $version) = split /\sversion\s/i, $ref;
     my $segment = ($db->segment(-class=>$class,-name=>$name,
 				defined $version ? (-version => $version):()))[0] or next;
-    my $panel = Bio::Graphics::Panel->new(-segment => $segment,
-					  -width   => $width,
-					  -bgcolor => $self->setting('overview bgcolor') || 'wheat',
-					  -pad_left  => $padl,
-					  -pad_right => $padr,
-					  -pad_bottom => PAD_OVERVIEW_BOTTOM,
-					  -key_style => 'left',
-					  -image_class => $image_class
-					 );
 
-    # add the arrow
-    $panel->add_track($segment,
-		      -glyph     => 'arrow',
-		      -double         => 1,
-		      -label          => ($htmlize ? 0 : $segment->seq_id),
-		      -label_font      => 'gdMediumBoldFont',
-		      -units_in_label => $no_tick_units,
-		      -units          => $units,
-		      -unit_divider   => $unit_divider,
-		      -tick           => 2
-		     );
-
-    # add the landmarks
-    $self->add_overview_landmarks($panel,$segment,$options);
-
-    # add the hits
-    $panel->add_track($refs{$ref},
-		      -glyph     => 'diamond',
-		      -height    => 8,
-		      -fgcolor   => 'red',
-		      -bgcolor   => 'red',
-		      -fallback_to_rectangle => 1,
-		      -connector => 'solid',
-		      -no_subparts => 1,
-		      -key       => $keyname,
-		      -bump      => @{$refs{$ref}} <= $self->bump_density,
-		      -label     => @{$refs{$ref}} <= $self->bump_density,  # deliberate
-		     );
-
-    my $gd    = $panel->gd;
-    my $boxes = $panel->boxes;
-
-    eval {$panel->finished};
-    $html{$ref} = $htmlize? $self->_hits_to_html($ref,$gd,$boxes) : [$ref,$gd,$boxes];
+    my @cache_extra = (time);  # this will never cache
+    my $count = scalar (my @h = $featurefiles{$ref}->features);
+    $featurefiles{$ref}->add_type(hit => {
+					  glyph  => 'diamond',
+					  bgcolor=> 'red',
+					  fgcolor=> 'red',
+					  key    => $keyname,
+					  fallback_to_rectangle => 1,
+					  no_subparts    => 1,
+					  bump      => $count <= $self->bump_density,
+					  label     => $count <= $self->bump_density,  # deliberate
+					  link   => sub {my $f = shift; 
+							 return "?name=".$f->display_name}
+					  }
+				  );
+    my $html = $self->render_panels({
+				     section       => "overview_${ref}",
+				     segment       => $segment,
+				     labels        => \@tracks_to_show,
+				     feature_files => {my_data => $featurefiles{$ref}},
+				     drag_n_drop   => 0,
+				     do_map        => 1,
+				     scale_map_type=> 'interval_map',
+				     keystyle      => 'left',
+				     label_scale   => 1,
+				     cache_extra   => \@cache_extra,
+				     image_class   => 'GD',
+				     featurefile_select => sub { 1 } ,
+				     -grid         => 0,
+				     -pad_left     => $padl,
+				     -pad_right    => $padr,
+				     -bgcolor      => $self->setting("overview bgcolor") || DEFAULT_OVERVIEW_BGCOLOR,
+					 }
+					);
+    $overviews{$ref} = $html;
   }
 
-  return \%html;
+  return \%overviews;
 }
+
+# =head2 hits_on_overview()
+
+#   $hashref = $browser->hits_on_overview($db,$hits,$options,$keyname);
+
+# This method is used to render a series of genomic positions ("hits")
+# into a graphical summary of where they hit on the genome in a
+# segment-by-segment (e.g. chromosome) manner.
+
+# The first argument is a Bio::DB::GFF (or Bio::DasI) database.  
+
+# The second argument is an array ref containing one of:
+
+#   1) a set of array refs in the form [ref,start,stop,name], where
+#      name is optional.
+
+#   2) a Bio::DB::GFF::Feature object
+
+#   3) a Bio::SeqFeatureI object.
+
+# The third argument is the page settings hash from gbrowse.
+
+# The fourth option is the key to use for the "hits" track.
+
+# The returned HTML is stored in a hashref, where the keys are the
+# reference sequence names and the values are HTML to be emitted.
+
+# =cut
+
+# sub hits_on_overview {
+#    my $self = shift;
+#    my ($db,$hits,$options,$keyname) = @_;
+#    $self->_hits_on_overview($db,$hits,$options,$keyname,'htmlize');
+# }
+
+# =head2 hits_on_overview_raw()
+
+#   $hashref = $browser->hits_on_overview_raw($db,$hits,$options,$keyname);
+
+# This behaves the same as hits_on_overview() except that the values of
+# the returned hashref are a three-element array consisting of
+# a segment ref name, a GD image showing the segment and its hits, and the
+# array of hit coordinates returned by the panel->boxes() call.
+
+# =cut
+
+# sub hits_on_overview_raw {
+#    my $self = shift;
+#    my ($db,$hits,$options,$keyname) = @_;
+#    $self->_hits_on_overview($db,$hits,$options,$keyname,undef);
+# }
+
+# # BUG: the following code should be retired and replace with a call to generate_panels()
+# # but it is just a little too involved for me to do right now -- 28 Aug 07 LS
+
+# # Return an HTML showing where multiple hits fall on the genome.
+# # Can either provide a list of objects that provide the ref() method call, or
+# # a list of arrayrefs in the form [ref,start,stop,[name]]
+# sub _hits_on_overview {
+#   my $self = shift;
+#   my ($db,$hits,$options,$keyname,$htmlize) = @_;
+
+#   my %html; # results are a hashref sorted by chromosome
+
+#   my $conf  = $self->config;
+#   my $width = $self->width;
+
+#   my $units         = $conf->setting(general=>'units');
+#   my $no_tick_units = $conf->setting(general=>'no tick units');
+#   my $unit_divider  = $conf->setting(general=>'unit_divider') || 1;
+
+#   my $class      = eval{$hits->[0]->factory->default_class} || 'Sequence';
+#   my ($padl,$padr)  = $self->overview_pad([grep { $options->{$_}{visible}}
+# 					   $self->config->overview_tracks],
+# 					  'Matches');
+
+#   # sort hits out by reference and version
+#   my (%refs);
+#   for my $hit (@$hits) {
+#     if (ref($hit) eq 'ARRAY') {
+#       my ($ref,$start,$stop,$name) = @$hit;
+#       push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$start,
+# 						      -end=>$stop,
+# 						      -name=>$name||'');
+#     } elsif (UNIVERSAL::can($hit,'seq_id')) {
+#       my $name = $hit->can('seq_name') ? $hit->seq_name : $hit->name;
+#       eval {$hit->absolute(1)};
+#       my $ref  = my $id = $hit->seq_id;
+#       my $version = eval {$hit->isa('Bio::SeqFeatureI') ? undef : $hit->version};
+#       $ref .= " version $version" if defined $version;
+#       my($start,$end) = ($hit->start,$hit->end);
+#       $name =~ s/\:\d+,\d+$//;  # remove coordinates if they're there
+#       $name = substr($name,0,7).'...' if length $name > 10;
+#       my $feature = Bio::Graphics::Feature->new(-start=>$start,
+# 						-end=>$end,
+# 						-name=>$name,
+# 					       );
+#       push @{$refs{$ref}},$feature;
+#     } elsif (UNIVERSAL::can($hit,'location')) {
+#       my $location = $hit->location;
+#       my ($ref,$start,$stop,$name) = ($location->seq_id,$location->start,
+# 				      $location->end,$location->primary_tag);
+#       push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$start,
+# 						      -end=>$stop,
+# 						      -name=>$name||'');
+#     }
+#   }
+
+#   # Temporary kludge until I can figure out a more
+#   # sane way of rendering overview with SVG...
+#   # Should be handled by being passed a $image_class param
+#   my $image_class = 'GD';
+#   eval "use $image_class";
+
+#   $keyname = 'Matches' unless defined $keyname;
+
+#   for my $ref (sort keys %refs) {
+#     my ($name, $version) = split /\sversion\s/i, $ref;
+#     my $segment = ($db->segment(-class=>$class,-name=>$name,
+# 				defined $version ? (-version => $version):()))[0] or next;
+#     my $panel = Bio::Graphics::Panel->new(-segment => $segment,
+# 					  -width   => $width,
+# 					  -bgcolor => $self->setting('overview bgcolor') || 'wheat',
+# 					  -pad_left  => $padl,
+# 					  -pad_right => $padr,
+# 					  -pad_bottom => PAD_OVERVIEW_BOTTOM,
+# 					  -key_style => 'left',
+# 					  -image_class => $image_class
+# 					 );
+
+#     # add the arrow
+#     $panel->add_track($segment,
+# 		      -glyph     => 'arrow',
+# 		      -double         => 1,
+# 		      -label          => ($htmlize ? 0 : $segment->seq_id),
+# 		      -label_font      => 'gdMediumBoldFont',
+# 		      -units_in_label => $no_tick_units,
+# 		      -units          => $units,
+# 		      -unit_divider   => $unit_divider,
+# 		      -tick           => 2
+# 		     );
+
+#     # add the landmarks
+#     $self->add_overview_landmarks($panel,$segment,$options);
+
+#     # add the hits
+#     $panel->add_track($refs{$ref},
+# 		      -glyph     => 'diamond',
+# 		      -height    => 8,
+# 		      -fgcolor   => 'red',
+# 		      -bgcolor   => 'red',
+# 		      -fallback_to_rectangle => 1,
+# 		      -connector => 'solid',
+# 		      -no_subparts => 1,
+# 		      -key       => $keyname,
+# 		      -bump      => @{$refs{$ref}} <= $self->bump_density,
+# 		      -label     => @{$refs{$ref}} <= $self->bump_density,  # deliberate
+# 		     );
+
+#     my $gd    = $panel->gd;
+#     my $boxes = $panel->boxes;
+
+#     eval {$panel->finished};
+#     $html{$ref} = $htmlize? $self->_hits_to_html($ref,$gd,$boxes) : [$ref,$gd,$boxes];
+#   }
+
+#   return \%html;
+# }
 
 sub bump_density {
   my $self = shift;
@@ -2464,7 +2625,7 @@ sub create_panel_args {
   my $image_class = $args->{image_class} || 'GD';
   eval "use $image_class" unless "${image_class}::Image"->can('new');
 
-  my $keystyle = $self->drag_and_drop && (!exists $args->{drag_n_drop} || $args->{drag_n_drop})
+  my $keystyle = $self->drag_and_drop($args->{drag_n_drop})
                  ? 'none'
 		 : $args->{keystyle} || $self->setting('keystyle') || DEFAULT_KEYSTYLE;
 

@@ -93,7 +93,7 @@ sub new_file {
   $filename =~ s/^file://;
   my ($url,$path) = $self->name_file($filename);
   warn "url = $url" if DEBUG;
-  push @{$settings->{tracks}},$url unless $settings->{features}{$url};
+  unshift @{$settings->{tracks}},$url unless $settings->{features}{$url};
   $settings->{features}{$url} = {visible=>1,options=>0,limit=>0};
   $self->_add_file($url=>$path);
   return $url;

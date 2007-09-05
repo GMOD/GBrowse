@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.21 2007-08-28 20:12:38 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.22 2007-09-05 14:20:14 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -57,7 +57,7 @@ programmer.
 use strict;
 use File::Basename 'basename';
 use Bio::Graphics;
-use Carp qw(carp croak);
+use Carp qw(carp croak cluck);
 use CGI qw(img param escape unescape url div span image_button);
 use CGI::Toggle 'toggle_section';
 use Digest::MD5 'md5_hex';
@@ -842,8 +842,8 @@ sub render_draggable_tracks {
   my $settings = $args->{settings};
   my $do_drag  = $args->{do_drag};
   my $button   = $args->{image_button};
-  my $panel_type = $args->{panel_type};
   my $section    = $args->{section};
+  $section    =~ s/^\?//;
 
   my $plus   = "$images/plus.png";
   my $minus  = "$images/minus.png";
@@ -863,7 +863,7 @@ sub render_draggable_tracks {
 
     my $img = $button
       ? image_button(-src   => $url,
-		     -name  => $panel_type,
+		     -name  => $section,
 		     -id    => "${label}_image",
 		     -style => $img_style
 		    )
@@ -873,8 +873,8 @@ sub render_draggable_tracks {
 	     -id    => "${label}_image",
 	     -height=> $height,
 	     -border=> 0,
-	     -name  => "${panel_type}_${label}",
-	     -alt   => "${label} $panel_type",
+	     -name  => "${section}_${label}",
+	     -alt   => "${label} $section",
 	     -style => $img_style});
 
     my $class     = $label eq '__scale__' ? 'scale' : 'track';
@@ -954,9 +954,8 @@ sub render_composite_track {
   my ($args,$panel) = @_;
 
   my $section = $args->{section};
-  my $button  = $args->{image_button};
-  my $panel_type = $args->{panel_type};
   $section    =~ s/^\?//;
+  my $button  = $args->{image_button};
 
   my $url             = $panel->{image};
   my $map             = $panel->{map} || '';
@@ -965,7 +964,7 @@ sub render_composite_track {
 
   my $img = $button
       ? image_button(-src   => $url,
-		     -name  => $panel_type
+		     -name  => $section,
 		    )
       : img({-src=>$url,
 	     -usemap=>'#'.$map_name,
@@ -986,11 +985,15 @@ Generate the GD object and the imagemap and returns a hashref in the format
 
   $results->{track_label} = {image=>$uri, map=>$map_data, width=>$w, height=>$h, file=>$img_path)
 
-arguments: a key=>value list
+If the "drag_n_drop" argument is false, then returns a single track named "__all__".
+
+Arguments: a key=>value list
+   'section'       Section type to draw; one of "overview", "region" or "detail"
    'segment'       A feature iterator that responds to next_seq() methods
    'feature_files' A hash of Bio::Graphics::FeatureFile objects containing 3d party features
    'options'       An hashref of options, where 0=auto, 1=force no bump, 2=force bump, 3=force label
                       4=force fast bump, 5=force fast bump and label
+   'drag_n_drop'   Force drag-and-drop behavior on or off
    'limit'         Place a limit on the number of features of each type to show.
    'labels'        List of named tracks, in the order in which they are to be shown
    'tracks'        List of named tracks, in the order in which they are to be shown (deprecated)
@@ -1008,8 +1011,6 @@ sub generate_panels {
   my $self  = shift;
   my $args  = shift;
 
-  my @panel_args     = $self->create_panel_args($args->{panel_type} || 'details',$args);
-
   my $segment       = $args->{segment};
   my ($seg_start,$seg_stop,$flip) = $self->segment_coordinates($segment,
 							       $args->{flip});
@@ -1025,6 +1026,8 @@ sub generate_panels {
   my $cache_extra   = $args->{cache_extra} || [];
   my $section       = $args->{section}     || '?detail';
 
+  my @panel_args     = $self->create_panel_args($section,$args);
+
   $segment->factory->debug(1) if DEBUG;
   $self->error('');
 
@@ -1038,19 +1041,24 @@ sub generate_panels {
   #        the %panels hash maps label names to panels
   #        the %tracks hash maps label names to tracks within the panels
   # in the case of no drag_n_drop, then %panels will contain a single key named "__scale__"
-  my %panels;
-  my %tracks;
-  my %seenit;    # used to avoid possible upstream error of putting track on list multiple times
-  my %results;   # hash of {$label}{gd} and {$label}{map}
-  my %cached;    # list of labels that have cached data on disk
-  my %cache_key; # list that maps labels to cache keys
+  my %panels;           # map label names to Bio::Graphics::Panel objects
+  my %tracks;           # map label names to Bio::Graphics::Track objects
+  my %track_args;       # map label names to track-specificic arguments (for caching)
+  my %seenit;           # used to avoid possible upstream error of putting track on list multiple times
+  my %results;          # hash of {$label}{gd} and {$label}{map}
+  my %cached;           # list of labels that have cached data on disk
+  my %cache_key;        # list that maps labels to cache keys
 
   my $panel_key = $drag_n_drop ? '__scale__' : '__all__';
 
-  # caching doesn't work for the monolithic picture, so ignore the cache code when drag-n-drop is off
-  # in fact, panel_is_cached() always returns false for non-drag-n-drop
-  # one special track for the scale or (in monolithic picture mode), the whole thing ('__all__')
-  my @cache_args        = ($args->{panel_type},$panel_key,@panel_args,@$cache_extra);
+  # When running in monolithic mode, we need to be very careful about the cache key. This key
+  # is the combination of the panel type, the panel args, and all the individual track args!
+  my @cache_args          = ($section,$panel_key,@panel_args,@$cache_extra);
+  if ($panel_key eq '__all__') {
+    $track_args{$_} ||= [$self->create_track_args($_,$args)] foreach @$labels;
+    push @cache_args,map {@$_} values %track_args;
+  }
+
   $cache_key{$panel_key}  = $self->create_cache_key(@cache_args);
   $cached{$panel_key}     = $self->panel_is_cached($cache_key{$panel_key});
 
@@ -1069,7 +1077,7 @@ sub generate_panels {
   # if $drag_n_drop is false.
   if ($drag_n_drop) {
     $panel_key = '__pad__';
-    @cache_args              = ($args->{panel_type},$panel_key,@panel_args,@$cache_extra,$drag_n_drop);
+    my @cache_args           = ($section,$panel_key,@panel_args,@$cache_extra,$drag_n_drop);
     $cache_key{$panel_key}   = $self->create_cache_key(@cache_args);
     unless ($cached{$panel_key} =
 	    $self->panel_is_cached($cache_key{$panel_key})
@@ -1089,7 +1097,7 @@ sub generate_panels {
     # if "hide" is set to true, then skip panel
     next if $conf->semantic_setting($label=>'hide',$length);
 
-    my @track_args          = $self->create_track_args($label,$args);
+    $track_args{$label} ||= [$self->create_track_args($label,$args)];
 
     # create a new panel if we are in drag_n_drop mode
     if ($drag_n_drop) {
@@ -1101,7 +1109,7 @@ sub generate_panels {
 	$feature_files->{$label}->mtime,
 	};
       $cache_key{$label}      = $self->create_cache_key(@panel_args,
-							@track_args,
+							@{$track_args{$label}},
 							@extra_args,
 							@$cache_extra,
 							$drag_n_drop,
@@ -1109,7 +1117,8 @@ sub generate_panels {
 						       );
       next if $cached{$label} = $self->panel_is_cached($cache_key{$label});
 
-      my @keystyle = (-key_style=>'between') if $label =~ /^\w+:/ && $label !~ /:(overview|region)/;  # a plugin
+      my @keystyle = (-key_style=>'between') 
+	if $label =~ /^\w+:/ && $label !~ /:(overview|region)/;  # a plugin
 
       $panels{$panel_key}         = Bio::Graphics::Panel->new(@panel_args,@keystyle);
     }
@@ -1121,7 +1130,8 @@ sub generate_panels {
       next;
     }
 
-    $tracks{$label} = $panels{$panel_key}->add_track(@track_args);
+    $tracks{$label} = $panels{$panel_key}->add_track(@{$track_args{$label}})
+      unless $cached{$panel_key};
   }
   continue {
     $trackno++;
@@ -1152,11 +1162,11 @@ sub generate_panels {
     $panel_key = $l if $drag_n_drop;
     next unless $panels{$panel_key};
     $self->add_feature_file(
-			    -file       => $file,
-			    -panel      => $panels{$panel_key},
-			    -position   => $feature_file_offsets{$l} || 1,
-			    -options    => $options,
-			    -select     => $featurefile_select,
+			    file       => $file,
+			    panel      => $panels{$panel_key},
+			    position   => $feature_file_offsets{$l} || 1,
+			    options    => $options,
+			    select     => $featurefile_select,
 			   );
   }
 
@@ -1193,8 +1203,6 @@ sub generate_panels {
 
   return \%results;
 }
-
-
 
 sub add_features_to_track {
   my $self = shift;
@@ -1326,26 +1334,30 @@ sub add_feature_file {
   my $self = shift;
   my %args = @_;
 
-  my $file    = $args{-file}    or return;
-  my $options = $args{-options} or return;
-  my $select  = $args{-select}  or return;
+  my $file    = $args{file}    or return;
+  my $options = $args{options} or return;
+  my $select  = $args{select}  or return;
 
   my $name = $file->name || '';
   $options->{$name}      ||= 0;
 
   eval {
     $file->render(
-		  $args{-panel},
-		  $args{-position},
+		  $args{panel},
+		  $args{position},
 		  $options,
 		  $self->bump_density,
 		  $self->label_density,
 		  $select);
   };
 
-  $self->error("error while rendering ",$args{-file}->name,": $@") if $@;
+  $self->error("error while rendering ",$args{file}->name,": $@") if $@;
 }
 
+
+# this returns a coderef that will indicate whether an added (external) feature is placed
+# in the overview, region or detailed panel. If the section name begins with a "?", then
+# if not otherwise stated, the feature will be placed in this section.
 sub feature_file_select {
   my $self             = shift;
   my $required_section = shift;
@@ -1380,8 +1392,16 @@ the physical path of the image.
 sub generate_image {
   my $self  = shift;
   my $image = shift;
-  my $extension = $image->can('png') ? 'png' : 'gif';
-  my $data      = $image->can('png') ? $image->png : $image->gif;
+  my ($extension,$data);
+
+  if (!ref $image) { # possibly raw SVG data -- this is a workaround
+    $extension = 'svg';
+    $data      = $image;
+  } else {
+    $extension = $image->can('png') ? 'png' : 'gif';
+    $data      = $image->can('png') ? $image->png : $image->gif;
+  }
+
   my $signature = md5_hex($data);
 
   warn ((CGI::param('ref')||'')   . ':' .
@@ -1798,8 +1818,8 @@ sub hits_on_overview {
   $hashref = $browser->hits_on_overview_raw($db,$hits,$options,$keyname);
 
 This behaves the same as hits_on_overview() except that the values of
-the returned hashref are a three-element array consisting of 
-a segment, a GD image showing the segment and its hits, and the
+the returned hashref are a three-element array consisting of
+a segment ref name, a GD image showing the segment and its hits, and the
 array of hit coordinates returned by the panel->boxes() call.
 
 =cut
@@ -2001,6 +2021,21 @@ sub do_description {
         : $option == 3 ? $conf_description || 1
         : $option == 5 ? $conf_description || 1
         : 0;
+}
+
+# given a feature, return the segment (e.g. chromosome) that it is contained in.
+sub whole_segment {
+  my $self    = shift;
+  my $segment = shift;
+  my $factory = $segment->factory;
+
+  # the segment class has been deprecated, but we still must support it
+  my $class   = eval {$segment->seq_id->class} || eval{$factory->refclass};
+
+  my ($whole_segment) = $factory->segment(-class=>$class,
+					  -name=>$segment->seq_id);
+  $whole_segment   ||= $segment;  # just paranoia
+  $whole_segment;
 }
 
 # fetch a list of Segment objects given a name or range
@@ -2405,10 +2440,10 @@ sub error {
 
 =head2 create_panel_args()
 
-  @args = $self->create_panel_args($panel_type,$args);
+  @args = $self->create_panel_args($section,$args);
 
 Return arguments need to create a Bio::Graphics::Panel.
-$panel_type is one of 'detail','overview', or 'region'
+$section is one of 'detail','overview', or 'region'
 $args is a hashref that contains the keys:
 
    keystyle
@@ -2421,7 +2456,7 @@ $args is a hashref that contains the keys:
 
 sub create_panel_args {
   my $self               = shift;
-  my ($panel_type,$args) = @_;
+  my ($section,$args) = @_;
 
   my $segment       = $args->{segment};
   my ($seg_start,$seg_stop,$flip) = $self->segment_coordinates($segment,
@@ -2430,8 +2465,9 @@ sub create_panel_args {
   my $image_class = $args->{image_class} || 'GD';
   eval "use $image_class" unless "${image_class}::Image"->can('new');
 
-  my $keystyle = $self->drag_and_drop ?  'none'
-                                      :  $args->{keystyle} || $self->setting('keystyle') || DEFAULT_KEYSTYLE,
+  my $keystyle = $self->drag_and_drop && (!exists $args->{drag_n_drop} || $args->{drag_n_drop})
+                 ? 'none'
+		 : $args->{keystyle} || $self->setting('keystyle') || DEFAULT_KEYSTYLE;
 
   my @pass_thru_args = map {/^-/ ? ($_=>$args->{$_}) : ()} keys %$args;
   my @argv = (
@@ -2466,8 +2502,6 @@ sub create_panel_args {
 	  -pad_top     => 18,
 	  -extend_grid => 1)
     if $self->drag_and_drop;
-
-  return @argv if $panel_type eq 'detail';
 
   return @argv;
 }
@@ -2575,11 +2609,11 @@ sub panel_is_cached {
   my $self  = shift;
   my $key   = shift;
   return if param('nocache');
-  return unless $self->drag_and_drop;
   return unless (my $cache_time = $self->cache_time);
   my $size_file = $self->get_cache_base($key,'size');
   return unless -e $size_file;
   return unless -M _ < ($cache_time/24);
+  warn "cache hit for $key" if DEBUG;
   1;
 }
 

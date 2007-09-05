@@ -2193,17 +2193,8 @@ feature, to pop up images on mouse hovers, or even to create little
 embedded query forms. See http://mckay.cshl.edu/balloons.html for
 examples.
 
-Balloon tooltips require a third-party package written by Sheldon
-McKay of CSHL. First go to
-
-  http://www.wormbase.org/wiki/index.php/Balloon_Tooltips
-
-Download the files prototype.js, balloon.js and yahoo-dom-event.js
-into $HTDOCS/gbrowse/js, where $HTDOCS is the directory in which your
-web server keeps its HTML documents.
-
-Now, in the config file for the database you wish to modify, set
-"balloon tips" to a true value:
+In the config file for the database you wish to modify, set "balloon
+tips" to a true value:
 
       [GENERAL]
       ...
@@ -2215,60 +2206,150 @@ options in [TRACK DEFAULTS] to create a default balloon.
 
 "balloon hover" specifies HTML or a URL that will be displayed when
 the user hovers over a feature. "balloon click" specifies HTML or a
-URL that will appear when the user clicks on a feature. Examples:
+URL that will appear when the user clicks on a feature. The HTML can
+contain images, formatted text, and even controls. Examples:
 
   balloon hover = <h2>Gene $name</h2>
   balloon click = <h2>Gene $name</h2>
         <a href='http://www.google.com/search?q=$name'>Search Google</a><br>
         <a href='http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=pubmed&term=$name'>Search NCBI</a><br>
 
-Alternatively you can provide a URL to either option, in which case
-the contents of the URL will be fetched and displayed in the
-balloon. The balloon distinguishes URLs by looking for text beginning
-with "http:" "https:" or "ftp:"
+Alternatively, you can populate the balloon using data from an HTML
+page or dynamic CGI script running on the same server as GBrowse. This
+uses AJAX; it can often speed up page loading by reducing the amount
+of text that must be downloaded by the client. To dynamically load
+the balloon contents from the server, use a balloon hover or balloon
+click option like this:
+
+  balloon click = /cgi-bin/get_gene_data?gene=$name
+
+In this case, when the user clicks on the feature, it creates a
+balloon whose content contains the HTML returned by the CGI script
+"get_gene_data". GBrowse knows that this is a URL rather than the
+contents of the balloon by looking for the leading slash. However, to
+reduce ambiguity, we recommend that you prefix the URL with "url:" as
+so:
+
+  balloon click = url:/cgi-bin/get_gene_data?gene=$name
+
+This also allows you to refer to relative URLs:
+
+  balloon click = url:../../get_gene_data?gene=$name
+
+It is also possible to fill the balloon with content from a remote
+source.  Simply specify a full URL beginning with "http:" "https:" or
+"ftp:"
 
  balloon hover = http://www.wormbase.org/db/get?name=$name;class=gene
 
-The usual option value substitution rules ($name, $start, etc) work
-with balloons, as do callbacks. GBrowse automatically escapes single
-(') and double (") quotes in the values returned by balloon hover and
-balloon click so that you don't have to worry about them messing up
-the HTML.
+Note that the balloon library uses an internal <iframe> to populate
+the balloon with the content of external URLs. This means that
+vertical and horizontal scrollbars will appear if the content is too
+large to be contained within the balloon. If the formatting does not
+look right, you can design a custom balloon of the proper size as
+described in the next section.
 
-To customize the balloon, you may add a series of balloon config
-statements with "balloon settings" option as described in
-http://www.wormbase.org/wiki/index.php/Balloon_Tooltips#Customization
-using "balloon" as the name of the balloon. For example:
+The usual option value substitution rules ($name, $start, etc) work
+with balloons, as do callbacks. GBrowse will automatically escapes
+single (') and double (") quotes in the values returned by the
+"balloon hover" and "balloon click" options so that you don't have to
+worry about them messing up the HTML.
+
+Customizing Balloons
+--------------------
+
+GBrowse supports multiple balloons with different shapes, sizes,
+background images and timing properties. Two built-in balloons are
+defined, "balloon" and "balloon_wide." The first is 308 pixels wide
+and is the standard balloon that appears when for mouse click and
+hover events. "Balloon_wide" is 612 pixels wide and is the one that
+appears when the user clicks on the configure "[?]" icon in the
+draggable track title.
+
+To use the wide balloon rather than the standard one, format the
+"balloon hover" and/or "balloon click" options like this:
+
+  balloon click = [balloon_wide] /cgi-bin/get_gene_data?gene=$name
+
+The [balloon_wide] keyword tells gbrowse to use the wide balloon
+("balloon_wide") for clicks on these features. The standard balloon is
+called "balloon", and so the following two options are equivalent:
+
+  balloon click = /cgi-bin/get_gene_data?gene=$name
+  balloon click = [balloon] /cgi-bin/get_gene_data?gene=$name
+
+To create your own balloons, you need to create six PNG images that
+describe the sides of the balloon and the connectors. To make these
+images go to http://www.wormbase.org/wiki/index.php/Balloon_Tooltips
+and follow the link to a CGI script that will let you design balloons
+of various styles and sizes. Choose the "download all images" option
+to get a tar archive containing the six images. The archive will be
+named XXXXX.tar.gz, where XXXXX is a random number.
+
+Now create a directory for the images in your web server's document
+tree. We recommend placing it in $HTDOCS/gbrowse/images, where $HTDOCS
+is the top of the document tree. Give the directory a good descriptive
+name, such as "blue_balloon". Enter the directory and unpack the tar
+archive. This will create six PNG images with names like
+"down_body_XXXXX.png" where "XXXXX" is a string of numbers. Rename
+each of these files to remove the _XXXXX part. Here is a complete
+example:
+
+ % cd /var/www/htdocs/gbrowse/images
+ % mkdir blue_balloons
+ % cd blue_balloons
+ % tar zxvf ~/15855.tar.gz
+   down_body_15855.png
+   down_left_connector_15855.png
+   down_right_connector_15855.png
+   up_body_15855.png
+   up_left_connector_15855.png
+   up_right_connector_15855.png
+ % rename _15855 '' *.png
+
+If you do not have the rename utility on your system, you will have to
+change the names manually.
+
+Now tell GBrowse about the new balloon by adding a "custom balloons"
+option to the [GENERAL] section of the config file:
+
+ custom balloons = big_blue /gbrowse/images/blue_balloon
+
+The format is "balloon name" "URL path to the balloon images
+directory", with the two separated by whitespace. You can define
+multiple custom balloons this way:
+
+ custom balloons = big_blue /gbrowse/images/blue_balloon
+                   gradient /gbrowse/images/gradient_balloon
+                   psychedelic /gbrowse/images/swirly_balloon
+
+This declares three balloons named "big_blue," "gradient" and
+"psychedelic." You can now use these balloon names in track stanzas:
+
+ [genes]
+ feature = gene:curated
+ glyph   = gene
+ balloon hover = [gradient] <h1>Gene $name</h1> <p>$description</p>
+
+Balloons can be customized even further with respect to their width,
+height, internal padding, and the length of time they wait before
+popping up. These options are described in
+http://www.wormbase.org/wiki/index.php/Balloon_Tooltips#Customization.
+To change the default settings, create a "balloon settings" option in
+the [GENERAL] section, and configure each balloon using its name. For
+example:
 
  [General]
- ... other settings ...
 
- balloon settings = balloon.balloonWidth     = '308px';
-                    balloon.paddingTop       = '20px';
-                    balloon.paddingLeft      = '15px';
-                    balloon.paddingRight     = '15px';
-                    balloon.paddingBottom    = '20px';
-                    balloon.paddingConnector = '48px';
+ balloon settings = gradient.balloonWidth     = '308px';
+                    gradient.paddingTop       = '20px';
+                    gradient.paddingLeft      = '15px';
+                    gradient.paddingRight     = '15px';
+                    gradient.paddingBottom    = '20px';
+                    gradient.paddingConnector = '48px';
 
-++++++++++!!!
-TODO: Add description of balloon images option
-
-  balloon images  = balloon        /gbrowse/images/balloons/
-                    balloon_wide   /gbrowse/images/balloons_wide/
-
-and how you can select which balloon to use with this syntax:
-
-   balloon hover   =  [balloon_wide] some text here
-++++++++++!!!
-
-
-The process of customizing the balloon appearance is described well in
-the Balloon_Tooltips pages at 
-
-  http://www.wormbase.org/wiki/index.php/Balloon_Tooltips
-
-Currently there is no way of customizing balloons on a per-track
-basis. All balloons are affected in all tracks.
+You can also change the standard "balloon" and "balloon_wide"
+balloons in the same way.
 
 =head1 C. GENERATING HISTOGRAMS
 

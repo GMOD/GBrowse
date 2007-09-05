@@ -228,7 +228,7 @@ sub print_top {
 
   print_header(-expires=>'+1m');
   my @args = (-title => $title,
-	      -style  => [{src=>$CONFIG->setting('stylesheet')},
+	      -style  => [{src=>$CONFIG->setting('stylesheet') || '/gbrowse/gbrowse.css'},
 			  {src=>"/gbrowse/$titlebar"}],
 	      -encoding=>$CONFIG->tr('CHARSET'),
 	     );
@@ -240,8 +240,8 @@ sub print_top {
   push @args,(-onload         => $CONFIG->setting('onload')) if $CONFIG->setting('onload');
 
   # push all needed javascript files onto top of page
-  my $b_tips = $CONFIG->setting('balloon tips');
   my $drag_and_drop = $CONFIG->setting('drag and drop');
+  my $b_tips = $CONFIG->setting('balloon tips') || $drag_and_drop;
   my $js = $CONFIG->setting('js')||JS;
   my @js = ('buttons.js','prototype.js');
   push @js,qw(yahoo-dom-event.js balloon.js)     if $b_tips;
@@ -257,7 +257,7 @@ sub print_top {
     my %balloons            = (
 			       balloon       => '/gbrowse/images/balloons',
 			       balloon_wide  => '/gbrowse/images/balloons_wide',
-			       shellwords($CONFIG->setting('balloon images'))
+			       shellwords($CONFIG->setting('custom balloons'))
 			      );
 
     my $balloon_settings    =<<END;

@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.2 2007-08-28 20:12:37 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.3 2007-09-05 14:20:14 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -111,19 +111,7 @@ if (param('list')) {
   dump_sources() if param('list') eq 'sources';
   dump_types()   if param('list') eq 'types';
   exit 0;
-}
 
-## dgg here; cache of all this so dont regen slow images for each browser-back 
-my ($pagecache,$newpagecache)= checkCachedPage('cachedir', CGI::query_string());
-if ($pagecache) {
-  if (open(CP,$pagecache)) {
-    flock(CP,LOCK_SH);
-    #warn "gbrowse_img cached: $pagecache\n" ; #if DEBUG;
-    print <CP>;
-    flock(CP,LOCK_UN);
-    close(CP);
-    exit 0;
-  }
 }
 
 # get all parameters
@@ -169,7 +157,22 @@ my $max_segment = $CONFIG->setting('max segment')*$divider  || MAX_SEGMENT;
 my $session       = Bio::Graphics::Browser::PageSettings->new($CONFIG,$id);
 $session->source($src);
 
-my $page_settings = {features=>$visible,tracks=>$labels,id=>$session->id};
+my $session_settings = $session->page_settings;
+
+# This is unecessarily complicated. What we are doing is defaulting to the session
+# settings, but then overriding with the track list and visible hash. This is better
+# than updating the session settings, which would then have repercussions in the gbrowse
+# as well.
+my $feature_options = $session_settings->{features} ? {
+						       %{$session_settings->{features}},
+						       visible=>$visible
+						      }
+                                                     : {
+						       visible=>$visible
+						     };
+my $page_settings = {%$session_settings,
+		     features=>$feature_options,
+		     tracks=>$labels};
 
 # plugin initialization - should be easier
 my @plugin_path = "$CONF_DIR/plugins";
@@ -181,49 +184,83 @@ $PLUGINS->configure($db,$page_settings,$session);
 $UPLOADS = Bio::Graphics::Browser::UploadSet->new($CONFIG,$page_settings);
 $REMOTES = Bio::Graphics::Browser::RemoteSet->new($CONFIG,$page_settings);
 
-my ($img,$map,$boxes,$panel,$tracks,$detailed_view);
+my ($section,$panel,$tracks,$detailed_view,%list_of_panels);
 
-# this part uses the old API for generating the overview, and does not take advantage
-# of caching (well)
 if (@segments > 1 or $show_overview or
     $segments[0]->length > $max_segment) {   # summary view
+  $section = 'overview';
 
-  foreach (@segments) { $_->absolute(0) }
+  my @labels = grep {/:overview$/} @$labels;
 
-  if (@add_features) {
-    my $list = add_features($labels,undef,\@add_features,\@add_style);
-    @segments = $list->{add}->features;
+  my %seenit;
+  my @whole_segments = grep {!$seenit{$_}++} map {$CONFIG->whole_segment($_)} @segments;
+
+  # trying to use new API here...
+  for my $segment (@whole_segments) {
+
+    my $feature_list = {};
+    add_features('overview',$labels,$segment,\@add_features,\@add_style,$feature_list) if @add_features;
+    my @cache_extra = map {$_->mtime} values %$feature_list;
+
+    my $panels
+      = $CONFIG->generate_panels({
+				  section       => $section,
+				  segment       => $segment,
+				  labels        => \@labels,
+				  options       => $options,
+				  feature_files => $feature_list||undef,
+				  label_scale   => 1,
+				  image_class   => $image_class,
+				  keystyle      => $keystyle,
+				  do_map        => $embed,
+				  flip          => $flip,
+				  noscale       => $noscale,
+				  settings      => $page_settings,
+				  drag_n_drop   => 0,
+				  cache_extra   => \@cache_extra,
+				  -truecolor    => $CONFIG->setting('truecolor') || 0,
+				  -grid         => 0,   # $grid,
+				  -bgcolor      => $CONFIG->setting("overview bgcolor") || DEFAULT_OVERVIEW_BGCOLOR,
+			       }
+			      );
+    $list_of_panels{$segment->ref}{panel}   = $panels->{__all__};
+    $list_of_panels{$segment->ref}{segment} = $segment;
   }
 
-  my $images    = $CONFIG->hits_on_overview_raw($db,\@segments,$visible,$hitkey);
-  ($img,$boxes) = consolidate_images($images,$image_class,[sort keys %$images]);
-  my $map       = my_make_map($boxes,$CONFIG->source,scalar @add_features);
-  my ($image_uri,$image_file) = $CONFIG->generate_image($img);
-  $panel = {file=>$image_file,image=>$image_uri,map=>$map};
+  # generate one big image to return
+  my ($gd,$width,$height,$map) = consolidate_images($image_class,\%list_of_panels);
+  my ($image_uri,$image_file)  = $CONFIG->generate_image($gd);
+#  warn "map = $map";
+  $panel = {file=>$image_file,image=>$image_uri,width=>$width,height=>$height,map=>$map};
 }
 
 else {  # detailed view
   my $segment = $segments[0];
   my $feature_list = {};
+  $section = 'detail';
 
-  add_features($labels,$segment,\@add_features,\@add_style,$feature_list) if @add_features;
+  add_features('details',$labels,$segment,\@add_features,\@add_style,$feature_list) if @add_features;
   external_features($segment,$feature_list);
 
   my $feature_hilighting = make_hilite_callback(\@h_feat);
   my $region_hilighting  = make_postgrid_callback(\@h_region,$segment);
 
+  my @labels = grep {!/:\w+$/} @$labels;
+
   my $panels
     = $CONFIG->generate_panels({segment       => $segment,
-				labels        => $labels,
+				labels        => \@labels,
 				options       => $options,
 				feature_files => $feature_list||undef,
 				label_scale   => 1,
 				image_class   => $image_class,
 				keystyle      => $keystyle,
-				do_map        => 1,
+				do_map        => $embed,
 				flip          => $flip,
 				noscale       => $noscale,
+				settings      => $page_settings,
 				drag_n_drop   => 0,
+				cache_extra   => [map {$_->mtime} values %$feature_list],
 				$feature_hilighting ? (hilite_callback => $feature_hilighting) : (),
 				$region_hilighting  ? (postgrid        => $region_hilighting)  : (),
 				-truecolor    => $CONFIG->setting('truecolor') || 0,
@@ -234,25 +271,7 @@ else {  # detailed view
   $detailed_view++;
 }
 
-if ($embed) {
-  my $html            = $CONFIG->render_composite_track(
-							{section    => 'detail',
-							 panel_type => 'detail',
-							},
-							$panel
-						       );
-  my $source = $CONFIG->source;
-  $html =~ s!href="\?ref=([^"]+)"!href="../../gbrowse/$source?ref=$1"!g;
-  $html =~ s!href="!target="_top" href="!g;
-  print_top('');
-  print_cached (
-		$newpagecache,
-		$html
-	       );
-  print end_html();
-}
-
-elsif ($image_class =~ /SVG/) {
+if ($image_class =~ /SVG/) {
   # This is a kludge to alert users that their system does not have
   # GD::SVG installed
   my ($version) = (0);
@@ -267,18 +286,33 @@ elsif ($image_class =~ /SVG/) {
   }
 }
 
-my $type =  $panel->{file} =~ /\.png/ ? 'image/png'
-            : $panel->{file} =~ /\.gif/ ? 'image/gif'
-            : $panel->{file} =~ /\.jpg/ ? 'image/jpeg'
-	    : $panel->{file} =~ /\.svg/ ? 'image/svg+xml'
-	    : 'binary/octet-stream';
-print header($type);
-open F,$panel->{file} or die "$panel->{file}: $!";
-my $buffer;
-while (read(F,$buffer,1024) > 0) {
+if ($embed) {
+  my $html            = $CONFIG->render_composite_track(
+							{section    => $section},
+							$panel
+						       );
+  my $source = $CONFIG->source;
+  $html =~ s!href="\?ref=([^"]+)"!href="../../gbrowse/$source?ref=$1"!g;
+  $html =~ s!href="!target="_top" href="!g;
+  print_top('');
+  print $html;
+  print end_html();
+}
+
+else {
+  my $type =  $panel->{file} =~ /\.png/ ? 'image/png'
+    : $panel->{file} =~ /\.gif/ ? 'image/gif'
+    : $panel->{file} =~ /\.jpg/ ? 'image/jpeg'
+    : $panel->{file} =~ /\.svg/ ? 'image/svg+xml'
+    : 'binary/octet-stream';
+  print header($type);
+  open F,$panel->{file} or die "$panel->{file}: $!";
+  my $buffer;
+  while (read(F,$buffer,1024) > 0) {
     print $buffer;
   }
-close F;
+  close F;
+}
 
 exit 0;
 
@@ -303,7 +337,7 @@ sub get_options {
 
   @labels     = $CONFIG->default_labels unless @labels;
   # remove overview tracks
-  @labels     = grep {!/:overview$/} @labels;
+  # @labels     = grep {!/:overview$/} @labels;
   my %visible = map {$_ => {visible=>1}} @labels;
 
   return (\%options,\@labels,\%visible);
@@ -312,7 +346,7 @@ sub get_options {
 sub segments {
   my ($CONFIG,$abs,$landmarks) = @_;
   my $db       = open_database($CONFIG);
-  my $was = $db->absolute($abs) if $db->can('absolute');
+  my $was      = $db->absolute($abs) if $db->can('absolute');
   my @segments = get_segments($db,@$landmarks);
   @segments      or message("No matching regions found.");
   eval {
@@ -330,7 +364,6 @@ sub get_segments {
   my @segments;
   for my $name (@names) {
     my $wildcard = $name =~ /[*?]/;
-#    my @matches = $CONFIG->name2segments($name,$db,undef,!$wildcard);
     my @matches = $CONFIG->name2segments($name,$db,5000);
     push @segments,@matches;
     next unless $wildcard;
@@ -349,7 +382,7 @@ sub external_features {
 }
 
 sub add_features {
-  my ($labels,$master_segment,$features,$styles,$feature_hash) = @_;
+  my ($section,$labels,$master_segment,$features,$styles,$feature_hash) = @_;
   my @features = @$features;
   my @styles   = @$styles;
   my %mappers;
@@ -357,6 +390,7 @@ sub add_features {
   $mappers{$master_segment->ref} = $master_mapper        if $master_mapper;
 
   my $feature_list = Bio::Graphics::FeatureFile->new(-smart_features  => 1);
+  $feature_list->mtime(time);
   my $fcount = 0;
   my $db     = open_database($CONFIG);
 
@@ -380,6 +414,7 @@ sub add_features {
 					      -strand   => $parts[0][0]<=$parts[0][1] ? +1 : -1,
 					      -segments => \@parts
 					     );
+
     $feature_list->{'visible'}->{$feature} = 1;
     $feature_list->add_feature($feature);
   }
@@ -390,9 +425,35 @@ sub add_features {
     my %options = map {split /=/} @options;
     $feature_list->add_type($type=>\%options);
   }
+  $feature_list->setting('general'=>'section',$section);
   $feature_hash= {} unless(ref $feature_hash);## dgg; fix missing hash:
   $feature_hash->{add} = $feature_list;
+
+  my $callback;
+  for my $type ($feature_list->types) {
+    $feature_list->setting($type=>'link',($callback ||= make_added_feature_callback()))
+      unless $feature_list->setting($type=>'link');
+  }
+
   return $feature_hash; # dgg; caller expects valid return
+}
+
+sub make_added_feature_callback {
+  my $source = $CONFIG->source;
+  my $base   = "../../gbrowse/$source/";
+  return sub {
+    my $feature = shift;
+    my $ref     = $feature->ref;
+    my ($refname, $version) = split /\sversion\s/i, $ref;
+    my ($name,$start,$stop) = ($feature->display_id,$feature->start,$feature->end);
+    my $href               = $base . "?ref=$refname;start=$start;stop=$stop";
+    $href                 .= ";version=$version" if defined $version;
+    $href                 .= ";add=".join "+",
+                              map {CGI::escape(qq("$_"))} ($refname,$feature->type,$feature->name,
+						     $feature->can('location_string')
+						     ? $feature->location_string
+						     : $feature->to_FTstring);
+  }
 }
 
 # this generates the callback for highlighting "interesting" features
@@ -446,66 +507,101 @@ sub make_postgrid_callback {
 }
 
 sub consolidate_images {
-  my ($images,$image_class,$labels) = @_;
-  my @gds = map {$images->{$_}[0]} @$labels;
-
-  unless ($gds[0]->can('copy')) { # workaround for GD::SVG
-     my @refs  = sort keys %$images;
-     my $first = $images->{$refs[0]};
-     my ($gd,$boxes) = @{$first}[1,2];
-     return $gd,$boxes;
-  }
+  my ($image_class,$panels) = @_;
 
   my $overall_height = 0;
   my $max_width      = 0;
-  for my $gd (@gds) {
-    my ($width,$height)  = $gd->getBounds;
+  my @refs           = sort keys %$panels;
+  for my $ref (@refs) {
+    my $panel            = $panels->{$ref}{panel};
+    my ($width,$height)  = @{$panel}{'width','height'};
     $overall_height     += $height;
     $max_width = $width if $max_width < $width;
+   }
+
+  $overall_height += PANEL_GAP * ((keys %$panels) - 1);
+
+  if ($image_class eq 'GD::SVG') {  # GD::SVG doesn't support the copy command so we workaround
+    return consolidate_svg($overall_height,$max_width,map {$panels->{$_}{panel}{file}} @refs);
   }
 
-  $overall_height += PANEL_GAP * (@gds-1);
   my $composite = "$image_class\:\:Image"->new($max_width,$overall_height);
   $composite->colorAllocate(255,255,255);
-  my @boxes;
 
   my $offset = 0;
+  my $fixed_map = qq(<map name="overview_map" id="overview_map">\n);
 
-  for my $ref (@$labels) {
-    my ($gd,$boxes)     = @{$images->{$ref}}[0,1];
-    my ($width,$height) = $gd->getBounds;
+  for my $ref (@refs) {
+    my $panel            = $panels->{$ref}{panel};
+    my $segment          = $panels->{$ref}{segment};
+    my $gd               = "$image_class\:\:Image"->new($panel->{file}) or next;
+
+    my ($width,$height)  = $gd->getBounds;
     $composite->copy($gd,0,$offset,0,0,$width,$height);
-    # fix boxes
-    for my $box (@$boxes) {
-      $box->[2] += $offset;
-      $box->[4] += $offset;
-      $box->[6] =  $ref;
-      push @boxes,$box;
-    }
-    $offset            += $height + PANEL_GAP;
+    my $map              = $panel->{map};
+    $fixed_map          .= fix_map($map,$segment,$offset) if $map;
+    $offset             += $height + PANEL_GAP;
   }
-  ($composite,\@boxes);
+
+  $fixed_map .= qq(</map>\n);
+
+  return ($composite,$max_width,$overall_height,$fixed_map);
 }
 
-sub my_make_map {
-  my ($boxes,$source,$add_features) = @_;
-  my $url = "../../gbrowse/$source/";  # dgg; was"../gbrowse/$source";
-  my $html = qq(<map name="hmap" alt="imagemap" />\n);
-  foreach (@$boxes){
-    my $feature = $_->[0];
-    my $ref     = $_->[6];  # consolidate_images() sets this slot
-    my ($refname, $version) = split /\sversion\s/i, $ref;
-    my ($name,$start,$stop) = ($feature->display_id,$feature->start,$feature->end);
-    my $href               = $url . "?ref=$refname;start=$start;stop=$stop";
-    $href                 .= ";version=$version" if defined $version;
-    $href                 .= ";add=".join "+",($refname,$feature->type,$feature->name,
-					       $feature->can('location_string') ? $feature->location_string
-                                                                                : $feature->to_FTstring)
-      if $add_features && $feature->isa('Bio::Graphics::Feature');
-    $html .= qq(<area shape="rect" coords="$_->[1],$_->[2],$_->[3],$_->[4]" href="$href"/>\n);
+sub consolidate_svg {
+  my ($height,$width,@files) = @_;
+  my $svg = qq(<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n\n);
+  $svg   .= qq(<svg height="$height" width="$width" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n);
+  my $offset = 0;
+  for my $file (@files) {
+    open F,$file or next;
+    my $current_height = 0;
+    while (<F>) {
+      if (m!</svg>!) {
+	last;
+      }
+      elsif (/<svg height="(\d+)"/) {
+	$current_height = $1;
+	$svg .= qq(<g transform="translate(0,$offset)">\n);
+      }
+      elsif ($current_height) {
+	$svg .= $_;
+      }
+    }
+    close F;
+    $svg .= "</g>\n" if $current_height;
+    $offset += $current_height;
   }
-  $html .= "</map>\n";
-  $html;
+  $svg   .= qq(</svg>\n);
+  return $svg;
+}
+
+sub fix_map {
+  my ($map,$segment,$offset) = @_;
+
+  # remove the opening and closing <map> sections
+  $map          =~ s/<\/?map.+//g;
+
+  # then we fix the image slider so that it invokes gbrowse over the selected region
+  my @intervals = $map =~ /title="recenter"/g;
+  my $intervals = @intervals;
+  my $length    = $segment->length;
+  my $interval  = $length/$intervals;
+  my $start     = 1;
+  my $source    = $CONFIG->source;
+  $map          =~ s[href="\?ref=([^;]+);start=[-\d]+;stop=[-\d]+[^"]+"]
+                    [qq(href="../../gbrowse/$source/?ref=$1).
+                     ';start='.int($start).
+                     ';stop='.int($start+=$interval).'"'
+                    ]exg;
+  $map          =~ s/recenter/browse/g;
+  $map          =~ s/\/>/ target="_new" \/>/g;
+
+  # now we fix the coordinates according to the offset
+  $map          =~ s[coords="(\d+),(\d+),(\d+),(\d+)"]
+                    [qq(coords="$1,).($2+$offset).qq(,$3,).($4+$offset).'"']exg;
+
+  return $map;
 }
 
 # IMPORTANT NOTE: this should be unified with gbrowse::coordinate_mapper()
@@ -599,46 +695,6 @@ sub minmax {
     $max = $_ if !defined $max || $max < $_;
   }
   ($min,$max);
-}
-
-sub checkCachedPage {
-  #sub gd_cache_path
-  my ($cache_name,@keys) = @_;
-  my $cachetime= $CONFIG->setting(general=>'image cachetime')
-    || $CONFIG->setting(general=>$cache_name);
-  return unless($cachetime);
-  my $signature = md5_hex(@keys);
-  my ($uri,$path) = $CONFIG->tmpdir($CONFIG->source.'/'.$cache_name); #'cache_overview'
-  $path= "$path/$signature";
-
-  #sub gd_cache_check
-  return if param('nocache');
-  my $cache_file_mtime   = (stat($path))[9] || 0;
-  my $conf_file_mtime    = $CONFIG->mtime;
-  my $cache_expiry       = $cachetime * 60*60;
-  if ($cache_file_mtime && ($cache_file_mtime > $conf_file_mtime) 
-      && (time() - $cache_file_mtime < $cache_expiry)) {
-    return ($path,$path);
-  }
-  else {
-    return (undef,$path); # return missing/expired path for writing to
-  }
-}
-
-sub print_cached {
-  my $newpagecache = shift;
-  if ($newpagecache) {
-    if (open(CP,"+>$newpagecache")) {
-      flock(CP,LOCK_EX);
-      print CP @_;
-      seek(CP,0,0);
-      print <CP>;
-      flock(CP,LOCK_UN);
-      close(CP);
-    }
-  } else {
-    print @_;
-  }
 }
 
 sub print_usage {

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.10 2007-08-28 20:12:36 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.11 2007-09-05 14:20:11 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -420,7 +420,7 @@ sub main_display {
   elsif (@$segments == 1) {
     $segment = $segments->[0];
 
-    $whole_segment = whole_segment($segment);
+    $whole_segment = $CONFIG->whole_segment($segment);
 
     # truncate the segment to fit within min and max segment boundaries
     resize(\$segment,$whole_segment);
@@ -592,6 +592,7 @@ sub detail_panel {
     $CONFIG->width($page_settings->{width});
     my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} && !/:(overview|region)$/ }
                                @{$page_settings->{tracks}};
+
     my ($options,$limits) = get_options(\@tracks_to_show);
     my $h_callback     = make_hilite_callback($page_settings);
     my $postgrid       = make_postgrid_callback($page_settings);
@@ -601,7 +602,7 @@ sub detail_panel {
 					   labels        => \@tracks_to_show,
 					   options       => $options,
 					   limit         => $limits,
-					   panel_type    => 'details',
+					   section       => '?details',
 					   do_map        => 1,
 					   do_centering_map => 1,
 					   lang          => $CONFIG->language,
@@ -2135,19 +2136,6 @@ sub format_segment {
   return "<b>$ref</b>:$pos";
 }
 
-sub whole_segment {
-  my $segment = shift;
-  my $factory = $segment->factory;
-
-  # the segment class has been deprecated, but we still must support it
-  my $class   = eval {$segment->seq_id->class} || eval{$factory->refclass};
-
-  my ($whole_segment) = $factory->segment(-class=>$class,
-					  -name=>$segment->seq_id);
-  $whole_segment   ||= $segment;  # just paranoia
-  $whole_segment;
-}
-
 sub overview {
   my ($region_segment,$segment,$settings,$feature_files) = @_;
   return _region_panel('overview',$region_segment,$segment,$settings,$feature_files);
@@ -2164,7 +2152,8 @@ sub _region_panel {
 
   $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
 
-  my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} &&  /:$panel_name$/i}  @{$page_settings->{tracks}};
+  my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} &&  /:$panel_name$/i}
+    @{$page_settings->{tracks}};
 
   # these hashes map label names to packing option values and limit values
   my ($options,$limits) = get_options(\@tracks_to_show);
@@ -2173,12 +2162,13 @@ sub _region_panel {
   my $postgrid = hilite_regions_closure([$segment->start,$segment->end,'yellow']);
 
   my @panels   = $CONFIG->render_panels({
-					 panel_type    => $panel_name,
+					 section       => $panel_name,
 					 segment       => $region,
 					 postgrid      => $postgrid,
 					 labels        => \@tracks_to_show,
 					 options       => $options,
 					 limit         => $limits,
+					 label_scale   => 1,
 					 lang          => $CONFIG->language,
 					 keystyle      => 'left',
 					 settings      => $settings,
@@ -2187,7 +2177,6 @@ sub _region_panel {
 					 do_map        => 0,
 					 do_drag        => 1,
 					 image_button   => 1,
-					 section        => $panel_name,
 					 -grid          => 0,
 					 -pad_top       => 5,
 					 -bgcolor      => $CONFIG->setting("overview bgcolor") || DEFAULT_OVERVIEW_BGCOLOR,
@@ -2329,7 +2318,7 @@ sub write_auto {
   my ($settings,$features,$styles) = @_;
   return unless @$features;
 
-  my $basename = 'my_data';
+  my $basename = "Custom_Track";
   $UPLOADED_SOURCES->clear_file("file:${basename}");  # in case it's already there
   my $file = $UPLOADED_SOURCES->new_file($basename);
 

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.6.8.1.2.4 2007-03-23 17:02:00 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.5 2007-09-06 10:27:07 lstein Exp $
 
 use Bio::DB::GFF;
 use File::Basename 'basename';
@@ -57,7 +57,7 @@ use vars qw($DB $DSN $HEADER %ERRCODES $CONFIG
             $VERSION $DAS_VERSION $CONF_DIR 
             %CACHED_TYPES %FORCED_GROUP %NO_PARENT);
 
-#$Id: das.PLS,v 1.6.8.1.2.4 2007-03-23 17:02:00 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
+#$Id: das.PLS,v 1.6.8.1.2.5 2007-09-06 10:27:07 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';
@@ -86,6 +86,7 @@ $HEADER = 0;
 %NO_PARENT    = ();
 
 my ($junk,$dsn,$operation) = split '/',path_info();
+
 $DSN = $dsn;
 $operation ||= '';
 my %sources = map {$_=>1} $CONFIG->sources;
@@ -183,6 +184,8 @@ sub entry_points {
   } else {
     @parts = $DB->features(-types=>\@type_filter) if @type_filter;
     push @parts,$DB->get_feature_by_name($refclass=>'*');
+    # last ditch effort if we've got nothing
+    push @parts,$DB->features(-type=>$refclass) unless @parts;
   }
 
   my $url = get_url();
@@ -359,6 +362,7 @@ sub print_feature {
   $id             = unpack('L',$id) if ref($DB) eq 'Bio::DB::GFF::Adaptor::berkeleydb';
   my $fid         = $id;
   my @notes       = $f->notes if $f->can('notes');
+  my $attributes  = $f->attributes if $f->can('attributes');
 
   my ($group,$gclass);
   if ($f->can('group')) { # Bio::DB::GFF feature
@@ -415,6 +419,13 @@ sub print_feature {
 
   if (@notes) {
     $group_info = join "\n",map {qq(<NOTE>$_</NOTE>)} @notes;
+  }
+
+  if ($attributes) {
+    for my $tag (keys %$attributes) {
+      my @values = ref($attributes->{$tag}) ? @{$attributes->{$tag}} : $attributes->{$tag};
+      $group_info .= qq(\n\t<NOTE tag="$tag">$_</NOTE>) foreach @values;
+    }
   }
 
   my ($target,$target_info);
@@ -716,7 +727,7 @@ END
 
   for my $id (@$types) {
     my $category = transmute($id,$type2category);
-    my $typeobj      = Bio::DB::GFF::Typename->new($id);
+    my $typeobj  = Bio::DB::GFF::Typename->new($id);
     my $method   = $typeobj->method;
     my $source   = $typeobj->source;
     print qq(\t<TYPE id="$id" category="$category" method="$method" source="$source" />\n);

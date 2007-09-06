@@ -19,7 +19,7 @@ $Config{startperl}
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: make_das_conf.PLS,v 1.2.6.1.2.1 2006-09-21 19:39:14 lstein Exp $
+# $Id: make_das_conf.PLS,v 1.2.6.1.2.1.2.1 2007-09-06 10:27:07 lstein Exp $
 
 use strict;
 use Bio::Das 1.03;
@@ -69,7 +69,6 @@ END
 sub list_sources {
   my $url     = shift;
   my $das = Bio::Das->new($url);
-  warn "proxy = $ENV{HTTP_PROXY}";
   $das->proxy($ENV{HTTP_PROXY}) if $ENV{HTTP_PROXY};
   my @sources = $das->sources or bad_request_exit($das);
   print "The following DAS URLs are available at this server.  Please call the script again\n";

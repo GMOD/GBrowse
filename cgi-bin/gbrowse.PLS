@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.12 2007-09-05 22:28:25 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.13 2007-09-12 15:06:16 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1327,7 +1327,6 @@ sub categorize_track {
   return $category ||= $CONFIG->tr('GENERAL');
 }
 
-
 # this is the content of the popup balloon that describes the track and gives configuration settings
 sub track_config {
   my ($settings,$label) = @_;
@@ -1338,7 +1337,13 @@ sub track_config {
   my $picker = Bio::Graphics::Browser::OptionPick->new($CONFIG);
 
   my $key   = label2key($label);
+
+  if (param('track_defaults')) {
+    $settings->{features}{$label}{override_settings} = {};
+  }
+
   my $override = $settings->{features}{$label}{override_settings};
+
 
   print CGI::header,start_html();
 
@@ -1352,9 +1357,21 @@ sub track_config {
 			two_bolts wave) unless @glyph_select;
   my %glyphs   = map {$_=>1} ($glyph,@glyph_select);
 
+  my $url = url(-absolute=>1,-path=>1);
+  my $reset_js = <<END;
+new Ajax.Request('$url',
+                  { method: 'get',
+                    asynchronous: false,
+                    parameters: 'configure_track=$label;track_defaults=1',
+                    onSuccess: function(t) { document.getElementById('contents').innerHTML=t.responseText },
+                    onFailure: function(t) { alert('AJAX Failure! '+t.statusText)}
+                  }
+                );
+END
+
   my $self_url = url(-absolute=>1,-path=>1);
   my $form = start_form(-action=>$self_url,-method=>'POST');
-  $form .= table(
+  $form .= table({-border=>0},
 		 TR(
 		    th({-align=>'right'},$CONFIG->tr('Show')),
 		    td(checkbox(-name     => 'show',
@@ -1435,10 +1452,17 @@ sub track_config {
 		   ),
 		 TR(
 		    td({-align=>'right'},
-		       button(-name=>$CONFIG->tr('Cancel'),
-			      -onClick=>'Balloon.prototype.hideStaticTooltip(1)')),
+		       button(-style => 'background:pink',
+			      -name=>$CONFIG->tr('Revert'),
+			      -onClick=>$reset_js,
+			     ),
+		      ),
 		    th({-align=>'right'},
-		       submit(-name=>$CONFIG->tr('Change'))
+		       button(-style=>'float:left',
+			      -name=>$CONFIG->tr('Cancel'),
+			      -onClick=>'Balloon.prototype.hideTooltip(1)'),
+		       submit(-style =>'background:wheat',
+			      -name=>$CONFIG->tr('Change'))
 		      )
 		   )
 		);
@@ -1838,7 +1862,10 @@ sub features2segments {
 
   my $refclass = $CONFIG->setting('reference class') || 'Sequence';
   my $db = open_database();
-  my @segments = 
+
+  return $features if $db->isa('Bio::Das'); # avoid redundant network call
+
+  my @segments =
     map {
       my $version = eval {$_->isa('Bio::SeqFeatureI') ? undef : $_->version};
       my @args = (-class => $refclass,

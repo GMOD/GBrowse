@@ -1,10 +1,9 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.8 2007-09-12 14:33:26 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.9 2007-09-12 14:36:38 sheldon_mckay Exp $
 
- See http://www.wormbase.org/wiki/index.php/Balloon_Tooltips
- for documentation.
+ See http://www.gmod.org/wiki/index.php/Popup_Balloons for documentation.
 
  Copyright (c) 2007 Sheldon McKay, Cold Spring Harbor Laboratory
 

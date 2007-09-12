@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.7 2007-09-05 17:43:21 lstein Exp $
+ $Id: balloon.js,v 1.1.2.8 2007-09-12 14:33:26 sheldon_mckay Exp $
 
  See http://www.wormbase.org/wiki/index.php/Balloon_Tooltips
  for documentation.
@@ -39,7 +39,7 @@
 // These global variables are necessary to avoid losing scope when
 //setting the balloon timeout and for inter-object communication
 var currentBalloonClass;
-var balloonIsVisible;
+var balloonIsVisible
 var balloonIsSticky;
 var balloonInvisibleSelects;
 
@@ -50,11 +50,14 @@ var balloonInvisibleSelects;
 ///////////////////////////////////////////////////
 var Balloon = function() {
 
+  // Location of optional ajax handler that returns tooltip contents
+  //this.helpUrl = '/db/misc/help';
+
   // maxium allowed balloon width
   this.minWidth = 150;
 
   // minimum allowed balloon width
-  this.maxWidth = 600;
+  this.maxWidth = 350	;
 
   // Default tooltip text size
   this.balloonTextSize = '90%';
@@ -226,9 +229,8 @@ Balloon.prototype.doShowTooltip = function() {
   var pageWidth  = YAHOO.util.Dom.getViewportWidth();
   var pageCen    = Math.round(pageWidth/2);
   var pageHeight = YAHOO.util.Dom.getViewportHeight();
-  var pageTop    = bSelf.isIE() ? document.body.scrollTop : window.pageYOffset;
+  var pageTop    = YAHOO.util.Dom.getDocumentScrollTop();
   var pageMid    = pageTop + Math.round(pageHeight/2);
-  var pageBottom = pageTop + pageHeight;
 
   // balloon orientation
   var vOrient = bSelf.activeTop > pageMid ? 'up' : 'down';
@@ -248,7 +250,7 @@ Balloon.prototype.doShowTooltip = function() {
   document.getElementById('contents').innerHTML = helpText;
 
   // how and where to draw the balloon
-  bSelf.setBalloonStyle(vOrient,hOrient,pageWidth,pageHeight);
+  bSelf.setBalloonStyle(vOrient,hOrient,pageWidth);
 
   balloonIsVisible = true;
   
@@ -280,7 +282,7 @@ Balloon.prototype.makeBalloon = function() {
 }
 
 
-Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageHeight) {
+Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth) {
   var bSelf = currentBalloonClass;
   var balloon = bSelf.activeBalloon;
 
@@ -383,9 +385,8 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageHeigh
   if (hOverlap) bSelf.setStyle('bottomLeft','width',lineWidth-hOverlap[0]);
 
   if (vOrient == 'up') {
-    bSelf.setStyle(balloon,'top','');
-    var activeBottom = pageHeight - bSelf.activeTop + bSelf.vOffset + bSelf.stemHeight;
-    bSelf.setStyle(balloon,'bottom',activeBottom);
+    var activeTop = bSelf.activeTop - bSelf.vOffset - bSelf.stemHeight - lineHeight;
+    bSelf.setStyle(balloon,'top',activeTop);
     bSelf.setStyle(balloon,'display','inline');
   }
   else {

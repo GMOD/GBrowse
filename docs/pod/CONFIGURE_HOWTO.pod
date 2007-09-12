@@ -2255,6 +2255,15 @@ single (') and double (") quotes in the values returned by the
 "balloon hover" and "balloon click" options so that you don't have to
 worry about them messing up the HTML.
 
+You might also wish to specify "titles are balloons" in the [GENERAL] 
+section:
+
+  [GENERAL]
+  titles are balloons = 1
+
+This will generate balloons on all mouse hover events, using the
+content that would otherwise have been placed in the built-in browser tooltip.
+
 There is a limited amount of balloon customization that you can
 perform within the [track] section. If you wish the balloon to be
 sticky (require the user to press the close button) even if it is a

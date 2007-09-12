@@ -90,9 +90,9 @@ sub popup_menu {
   my $default = $args{-default};
   my $values  = $args{-values};
 
-  my $dynamic =  $self->translate('DEFAULT');
+  my $dynamic =  $self->translate('DYNAMIC_VALUE');
   my %seen;
-  my @values = grep {!$seen{$_}++} map { ref($_) ? $dynamic : $_ } @$values;
+  my @values = grep {!$seen{$_}++} map { ref($_) || /^CODE\(/ ? $dynamic : $_ } @$values;
 
   $current ||= $default;
   my $def = $self->translate('DEFAULT');

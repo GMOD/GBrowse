@@ -226,7 +226,7 @@ sub print_top {
 
   my $titlebar = is_safari() ? 'titlebar-safari.css' : 'titlebar.css';
 
-  print_header(-expires=>'+1m');
+  print_header(-expires=>'now');
   my @args = (-title => $title,
 	      -style  => [{src=>$CONFIG->setting('stylesheet') || '/gbrowse/gbrowse.css'},
 			  {src=>"/gbrowse/$titlebar"}],
@@ -280,6 +280,7 @@ $balloon.downLeftStem        = '$img/down_left.png';
 $balloon.upRightStem         = '$img/up_right.png';
 $balloon.downRightStem       = '$img/down_right.png';
 $balloon.closeButton         = '$img/close.png';
+$balloon.padding             = 0;
 END
     for my $option (keys %config) {
       next if $option eq 'images';

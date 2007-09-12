@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.25 2007-09-06 10:27:07 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.26 2007-09-12 20:02:30 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -893,7 +893,7 @@ sub render_draggable_tracks {
 
       else {
 	my $help_url = "url:?configure_track=".CGI::escape($label);
-	$help_url   .= ";rand=".rand() if CGI->user_agent =~ /MSIE/;  # work around an IE caching bug
+	$help_url   .= ";rand=".rand(); # work around caching bugs... # if CGI->user_agent =~ /MSIE/;
 	$config_click = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)";
       }
 
@@ -1552,6 +1552,7 @@ sub make_map {
 
   my $flip = $panel->flip;
   my $tips = $self->setting('balloon tips');
+  my $use_titles_for_balloons = $self->setting('titles are balloons');
 
   my $did_map;
 
@@ -1564,13 +1565,13 @@ sub make_map {
 
     my $label  = $_->[5] ? $trackmap->{$_->[5]} : '';
 
-    my $href   = $self->make_href($_->[0],$panel,$label,$_->[5]);
-    my $title  = unescape($self->make_title($_->[0],$panel,$label,$_->[5]));
-    my $target = $self->config->make_link_target($_->[0],$panel,$label,$_->[5]);
-    my $t      = defined($target) ? qq(target="$target") : '';
+    my $href       = $self->make_href($_->[0],$panel,$label,$_->[5]);
+    my $titletext  = unescape($self->make_title($_->[0],$panel,$label,$_->[5]));
+    my $target     = $self->config->make_link_target($_->[0],$panel,$label,$_->[5]);
+    my $t          = defined($target) ? qq(target="$target") : '';
 
-    $href      = qq(href="$href");
-    $title     = qq(title="$title");
+    $href         = qq(href="$href");
+    my $title     = qq(title="$titletext");
 
     my ($mouseover,$mousedown);
     if ($tips) {
@@ -1582,6 +1583,11 @@ sub make_map {
       # balloon_ct = type of balloon to use for clicking -- usually "balloon"
       my $sticky             = $self->setting($label,'balloon sticky');
       my $height             = $self->setting($label,'balloon height') || 300;
+
+      if ($use_titles_for_balloons) {
+	  $balloonhover ||= $titletext;
+	  $balloon_ht   ||= 'balloon';
+      }
 
       if ($balloonhover) {
 	my $stick = defined $sticky ? $sticky : 0;

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.13 2007-09-12 15:06:16 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.14 2007-09-13 17:03:11 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -593,7 +593,7 @@ sub detail_panel {
     my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} && !/:(overview|region)$/ }
                                @{$page_settings->{tracks}};
 
-    my ($options,$limits) = get_options(\@tracks_to_show);
+    my ($options,$limits) = get_options($page_settings,\@tracks_to_show);
     my $h_callback     = make_hilite_callback($page_settings);
     my $postgrid       = make_postgrid_callback($page_settings);
 
@@ -1380,6 +1380,16 @@ END
 				-checked  => $settings->{features}{$label}{visible},
 				-label => '')
 		      ),
+		    td({-rowspan=>8,-valign=>'middle'},
+		       button(-style => 'background:pink',
+			      -name=>$CONFIG->tr('Revert'),
+			      -onClick=>$reset_js,
+			     ),
+		       button(-name=>$CONFIG->tr('Cancel'),
+			      -onClick=>'Balloon.prototype.hideTooltip(1)'),
+		       submit(-style =>'background:wheat',
+			      -name=>$CONFIG->tr('Change'))
+		      )
 		   ),
 		 TR(
 		    th({-align=>'right'},$CONFIG->tr('Packing')),
@@ -1450,25 +1460,10 @@ END
 				  -default => $settings->{features}{$label}{limit})
 		      )
 		   ),
-		 TR(
-		    td({-align=>'right'},
-		       button(-style => 'background:pink',
-			      -name=>$CONFIG->tr('Revert'),
-			      -onClick=>$reset_js,
-			     ),
-		      ),
-		    th({-align=>'right'},
-		       button(-style=>'float:left',
-			      -name=>$CONFIG->tr('Cancel'),
-			      -onClick=>'Balloon.prototype.hideTooltip(1)'),
-		       submit(-style =>'background:wheat',
-			      -name=>$CONFIG->tr('Change'))
-		      )
-		   )
 		);
   $form .= hidden(-name=>'adjust_one_track',-value=>$label);
   $form .= end_form();
-  print table(TR(td({-valign=>'top'},$citation),td({-valign=>'top'},$form)));
+  print $citation,$form;
   print end_html();
 }
 
@@ -2180,8 +2175,8 @@ sub _region_panel {
 
   $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
 
-  my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} &&  /:$panel_name$/i}
-    @{$page_settings->{tracks}};
+  my @tracks_to_show = grep {$settings->{features}{$_}{visible} &&  /:$panel_name$/i}
+    @{$settings->{tracks}};
 
   # these hashes map label names to packing option values and limit values
   my ($options,$limits) = get_options(\@tracks_to_show);
@@ -2222,6 +2217,7 @@ sub _region_panel {
 
 # create hashes that map track label names into options and limit values
 sub get_options {
+  my $page_settings  = shift;
   my $tracks_to_show = shift;
   my %options    = map {$_=>$page_settings->{features}{$_}{options}} @$tracks_to_show;
   my %limits     = map {$_=>$page_settings->{features}{$_}{limit}}   @$tracks_to_show;

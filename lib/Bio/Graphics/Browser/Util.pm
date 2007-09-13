@@ -280,7 +280,6 @@ $balloon.downLeftStem        = '$img/down_left.png';
 $balloon.upRightStem         = '$img/up_right.png';
 $balloon.downRightStem       = '$img/down_right.png';
 $balloon.closeButton         = '$img/close.png';
-$balloon.padding             = 0;
 END
     for my $option (keys %config) {
       next if $option eq 'images';

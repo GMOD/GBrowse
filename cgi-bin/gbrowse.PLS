@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.14 2007-09-13 17:03:11 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.15 2007-09-13 21:00:41 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -190,10 +190,11 @@ if (param('reset')) {
   $cookies = [$cookie];
 }
 
+
 # ASYNCHRONOUS EVENTS HANDLED HERE
 # we get here on the AJAX-style asynchronous setting of labels
 my $asynchronous;
-if (my @ajax_labels = param('label[]')) {
+if (my @ajax_labels = map {CGI::unescape($_)} param('label[]')) {
   my %seen;
   @{$page_settings->{tracks}} = grep {length()>0 && !$seen{$_}++} (@ajax_labels,@{$page_settings->{tracks}});
   $asynchronous++;
@@ -215,7 +216,7 @@ for my $p (grep {/^track_collapse_/} param()) {
 
 if ($asynchronous) {
   print CGI::header(-status=>'204 No Content');
-  $session->session->flush;
+  $session->session->flush();
   exit 0;
 }
 
@@ -324,6 +325,7 @@ load_plugin_annotators($page_settings);
 warn "ANNOTATOR TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 
 adjust_tracks($page_settings);
+
 auto_open($page_settings,$features) if @$features;
 
 warn "ADJUSTED TRACKS = @{$page_settings->{tracks}}" if DEBUG;
@@ -774,6 +776,7 @@ sub adjust_tracks {
     $settings->{features}{$_}{options} = 0;  # automatic
     push @{$settings->{tracks}},$_;           # at the end
   }
+
   # Remove any feature types that are not mentioned in the
   # config file, excepting Uploaded and remote URL features.
   # This may happen if a stanza is removed from the config file.
@@ -1340,6 +1343,7 @@ sub track_config {
 
   if (param('track_defaults')) {
     $settings->{features}{$label}{override_settings} = {};
+    $settings->{features}{$label}{options} = 0;
   }
 
   my $override = $settings->{features}{$label}{override_settings};

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.26 2007-09-12 20:02:30 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.27 2007-09-13 21:00:41 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -925,14 +925,16 @@ sub render_draggable_tracks {
 			  -style => $collapsed ? "display:inline" : "display:none",
 			 });
 
+      (my $munge_label = $label) =~ s/_/%5F/g;  # freakin' scriptaculous uses _ as a delimiter!!!
+
       push @result, (is_safari()
 		     ?
-		     "\n".div({-id=>"${section}_track_${label}",-class=>$class},
+		     "\n".div({-id=>"${section}_track_${munge_label}",-class=>$class},
 			      $titlebar,
 			      div({-align=>'center',-style=>'margin-top: -18px'},$img.$pad_img),
 			      $img_map||'')
 		     :
-		     "\n".div({-id=>"${section}_track_${label}",-class=>$class},
+		     "\n".div({-id=>"${section}_track_${munge_label}",-class=>$class},
 			      div({-align=>'center'},$titlebar.$img.$pad_img),
 			      $img_map||'')
 		     );

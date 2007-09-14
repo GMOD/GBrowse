@@ -264,9 +264,7 @@ images    =  /gbrowse/images/balloons
 delayTime =  500
 END
 
-  my $balloon_settings    =<<END;
-reallySticky = true;
-END
+  my $balloon_settings;
 
   for my $balloon (keys %config_values) {
     my %config = $config_values{$balloon} =~ /(\w+)\s*=\s*(\S+)/g;

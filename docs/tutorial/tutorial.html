@@ -2836,8 +2836,8 @@ on a feature. The balloons can display arbitrary HTML, either provided
 in the config file, or fetched remotely via a URL. You can use this
 feature to create multiple choice menus when the user clicks on the
 feature, to pop up images on mouse hovers, or even to create little
-embedded query forms. See http://mckay.cshl.edu/balloons.html for
-examples.</p>
+embedded query forms. See <a href="http://mckay.cshl.edu/balloons.html">
+http://mckay.cshl.edu/balloons.html</a> for examples.</p>
 
 <p>In the config file for the database you wish to modify, set ``balloon
 tips'' to a true value:</p>
@@ -2846,19 +2846,42 @@ tips'' to a true value:</p>
      ...
      balloon tips = 1
 </pre></blockquote>
+
 <p>Then add ``balloon hover'' and/or ``balloon click'' options to the track
 stanzas that you wish to add buttons to. You can also place these
 options in [TRACK DEFAULTS] to create a default balloon.</p>
+
 <p>``balloon hover'' specifies HTML or a URL that will be displayed when
 the user hovers over a feature. ``balloon click'' specifies HTML or a
 URL that will appear when the user clicks on a feature. The HTML can
 contain images, formatted text, and even controls. Examples:</p>
+
 <blockquote class="example"><pre>
  balloon hover = &lt;h2&gt;Gene $name&lt;/h2&gt;
  balloon click = &lt;h2&gt;Gene $name&lt;/h2&gt;
        &lt;a href='<a href="http://www.google.com/search?q=">http://www.google.com/search?q=</a>$name'&gt;Search Google&lt;/a&gt;&lt;br&gt;
        &lt;a href='<a href="http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=pubmed&amp;term=">http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=pubmed&amp;term=</a>$name'&gt;Search NCBI&lt;/a&gt;&lt;br&gt;
 </pre></blockquote>
+
+<p>For example, to add a balloon to the motifs track of the Volvox browser,
+add "balloon tips = 1" near the top of the volvox.conf file, and then
+add balloon hover and balloon click options like this: </p>
+
+<blockquote class="example"><pre>
+[Motifs]
+feature      = motif
+glyph        = span
+height       = 5
+description  = 1
+category     = Proteins
+balloon hover = &lt;h2&gt;Gene $name&lt;/h2&gt;
+balloon click = &lt;h2&gt;Gene $name&lt;/h2&gt;
+       &lt;a href='<a href="http://www.google.com/search?q=">http://www.google.com/search?q=</a>$name'&gt;Search Google&lt;/a&gt;&lt;br&gt;
+       &lt;a href='<a href="http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=pubmed&amp;term=">http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=pubmed&amp;term=</a>$name'&gt;Search NCBI&lt;/a&gt;&lt;br&gt;
+key          = Example motifs
+</pre></blockquote>
+
+
 <p>Alternatively, you can populate the balloon using data from an HTML
 page or dynamic CGI script running on the same server as GBrowse. This
 uses AJAX; it can often speed up page loading by reducing the amount

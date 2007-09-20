@@ -670,6 +670,16 @@ Example:
 
        initial landmark = Chr1
 
+=item * drag and drop
+
+If this is set to true, then code will be activated that lets the 
+user pick up and drag individual tracks in order to change their
+vertical stacking order. For this to work, the user must have a
+relatively recent browser (IE 5 or higher, Firefox 1.5 or higher)
+and must have JavaScript activated.
+
+It is off by default for compatibility with older browsers.
+
 =item * truecolor
 
 If this option is present and true, then GBrowse will create 24-bit
@@ -2182,7 +2192,7 @@ NCBI, provided that the value of the tag looks like an NCBI GI number:
         }
         return;
       }
-      
+
 =head2 B12. CONFIGURE BALLOON TOOLTIPS
 
 GBrowse can display popup balloons when the user hovers over or clicks

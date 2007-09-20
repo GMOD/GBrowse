@@ -224,11 +224,12 @@ sub print_top {
   my $reset_all = shift;
   local $^W = 0;  # to avoid a warning from CGI.pm
 
-  my $titlebar = is_safari() ? 'titlebar-safari.css' : 'titlebar.css';
+  my $titlebar = is_safari() ? 'titlebar-safari.css' : 'titlebar-default.css';
 
   print_header(-expires=>'now');
   my @args = (-title => $title,
 	      -style  => [{src=>$CONFIG->setting('stylesheet') || '/gbrowse/gbrowse.css'},
+			  {src=>"/gbrowse/tracks.css"},
 			  {src=>"/gbrowse/$titlebar"}],
 	      -encoding=>$CONFIG->tr('CHARSET'),
 	     );

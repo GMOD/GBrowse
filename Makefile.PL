@@ -7,10 +7,10 @@ use FindBin '$Bin';
 use Cwd;
 require 5.005003;
 
-my $VERSION     = '1.68';
+my $VERSION     = '1.69';
 my $working_dir = cwd;
 
-my @OPTIONS = qw(APACHE CONF HTDOCS HTDOCS_REL CGIBIN
+my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN
 		 LIB BIN
 		 DO_XS NONROOT SELINUX);
 my $OPTIONS = join ('|',@OPTIONS);
@@ -23,7 +23,17 @@ foreach (@argv) {
   if (/^--?h/i) {
     die <<END;
 To customize install locations, provide one or more of the options
-CONF, HTDOCS, or CGIBIN, as in CONF=/usr/local/apache/conf.
+CONF, HTDOCS, or CGIBIN as in CONF=/usr/local/apache/conf.
+
+CONF is the directory in which you will place the gbrowse configuration
+files. Usually this is the same as the Apache configuration directory, but
+it doesn't have to be.
+
+CGIBIN is the directory in which to place the GBrowse CGI scripts. This must
+be the same as, or a subdirectory of, your Apache server's CGI executable
+directory.
+
+HTDOCS is the top level directory in which the HTML files for your web server go.
 
 For RedHat Linux, you will want to use:
     perl Makefile.PL CONF=/etc/httpd/conf \\
@@ -140,13 +150,14 @@ if ($OPTIONS{APACHE} && !(defined $OPTIONS{CGIBIN})) {
 }
 
 # set hard-coded values
-$OPTIONS{APACHE} ||= '/usr/local/apache';
-$OPTIONS{CONF}   ||= prompt('Apache conf directory?', 
-                        GuessDirectories->conf   || "$OPTIONS{APACHE}/conf");
+$OPTIONS{APACHE} ||= prompt('Apache root directory (enter \'\' for none)?',
+			    GuessDirectories->root);
+$OPTIONS{CONF}   ||= prompt('Apache conf directory?',
+			    GuessDirectories->conf($OPTIONS{APACHE}));
 $OPTIONS{HTDOCS} ||= prompt('Apache htdocs directory?',
-                        GuessDirectories->htdocs || "$OPTIONS{APACHE}/htdocs");
+			    GuessDirectories->htdocs($OPTIONS{APACHE}));
 $OPTIONS{CGIBIN} ||= prompt('Apache cgibin directory?',
-                        GuessDirectories->cgibin || "$OPTIONS{APACHE}/cgi-bin");
+			    GuessDirectories->cgibin($OPTIONS{APACHE}));
 unless (defined $OPTIONS{DO_XS}) {
   $OPTIONS{DO_XS}  = $^O =~ /^(MSWin|dos)/i ? 0 : 1;
 }
@@ -173,40 +184,6 @@ foreach (keys %OPTIONS) {
 print F "VERSION=$VERSION\n";
 print F "BIOGRAPHICS_VERSION=$biographics_version\n";
 close F;
-
-
-# Deal with relative URLs 
-my $default_dir = GuessDirectories::htdocs;
-if ($OPTIONS{HTDOCS} ne $default_dir) {
-  my $rel_prompt = '/';
-
-  if ($OPTIONS{HTDOCS} =~ /^$default_dir\S+/) {
-    $rel_prompt = $OPTIONS{HTDOCS};
-    $rel_prompt =~ s/$default_dir//;
-    $OPTIONS{HTDOCS_REL} = $rel_prompt;
-  }
-  else {
-    print <<END;
-
-NOTE: You appear to be using a non-standard document root: ($OPTIONS{HTDOCS})
-
-The relative URL for gbrowse components would normally be '/'.
-If your document root contains extra path information (see examples below),
-enter the relative URL for gbrowse here.
-
-Examples:
-Absolute path                      Relative URL
-----------------------------------------------
-/var/www/html/custom              /custom
-/usr/local/apache/htdocs/~me      /~me
-/users/some/other/path            ??
-
-END
-;
-    $OPTIONS{HTDOCS_REL} = prompt('Relative URL?', $rel_prompt);
-    $OPTIONS{HTDOCS_REL} = '/' . $OPTIONS{HTDOCS_REL} unless $OPTIONS{HTDOCS_REL} =~ /^\//;
-  }
-}
 
 
 print STDERR <<END;
@@ -362,9 +339,7 @@ sub MY::postamble {
   for my $key (keys %OPTIONS) {
     $paths .= qq("$key=$OPTIONS{$key}" ) if defined $OPTIONS{$key};
   }
-  
-  $paths .= qq{"HTDOCS_REL=$OPTIONS{HTDOCS_REL}"}; 
-  
+
 qq{
 conf_install ::
 	\$(PERL) \"$working_dir/install_util/conf_install.pl\" $paths 
@@ -416,11 +391,12 @@ sub MY::ppd {
     } 
   }
 
+  my $impl58;
   if ($oldMM and $inherited =~ /(\s*\<IMPLEMENTATION\>.*\<\/IMPLEMENTATION\>)/m) {
     $implementation = $newimp = $1;
     $newimp      =~ s/ARCHITECTURE NAME=\\"\S+\\"/ARCHITECTURE NAME=\\"$arch\\"/;
     $newimp      =~ s/\$\(OSNAME\)/MSWin32/;
-    my $impl58   = $newimp;
+    $impl58      = $newimp;
     $impl58      =~ s/\Q$arch\E/$arch\-5\.8/;
     $newimp      .= "\\n\\t\\t$impl58";
     $inherited   =~ s/\Q$implementation\E/$newimp/;
@@ -428,10 +404,10 @@ sub MY::ppd {
     $newimp      = $implementation;
     $newimp      =~ s/ARCHITECTURE NAME="\S+"/ARCHITECTURE NAME="$arch"/;
     $newimp      =~ s/\$\(OSNAME\)/MSWin32/;
-    my $impl58   = $newimp;
+    $impl58      = $newimp;
     $impl58      =~ s/\Q$arch\E/$arch\-5\.8/;
     $newimp      .= $impl58;
-    my @la       = split /\n/, $newimp;
+    @la          = split /\n/, $newimp;
     for my $line (@la) {
       $line = qq{\t\$(NOECHO) \$(ECHO) '$line' >> \$(DISTNAME).ppd}; 
     }

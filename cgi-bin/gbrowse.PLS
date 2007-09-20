@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.15 2007-09-13 21:00:41 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.16 2007-09-20 19:27:37 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -491,10 +491,11 @@ sub main_display {
     if ($page_settings->{region_size}) {
       my ($region_seg_start, $region_seg_end) = get_regionview_seg($page_settings,$segment->start, $segment->end,
 								   $whole_segment->start,$whole_segment->end);
-      my $region_segment = open_database()->segment(-name=>$segment->seq_id,
-						    -start=>$region_seg_start,
-						    -end=>$region_seg_end,
-						    -absolute=>1);
+
+      my ($region_segment) = open_database()->segment(-name=>$segment->seq_id,
+						      -start=>$region_seg_start,
+						      -end=>$region_seg_end,
+						      -absolute=>1);
       print region_panel($region_segment,$segment,$page_settings,$feature_files);
     }
 
@@ -1191,7 +1192,6 @@ sub tracks_table {
   my $settings = shift;
   my $additional_features = shift;
 
-
   # read category table information
   my %category_table_labels=%{category_table()};
 
@@ -1770,7 +1770,6 @@ sub zoomnav {
     my $whole_start = param('seg_min');
     my $whole_stop  = param('seg_max');
 
-    warn "I'm here, regionview_x = $regionview_x; ($whole_start,$whole_stop)";
     my ($regionview_start, $regionview_end) = get_regionview_seg($settings,$start, $stop, $whole_start, $whole_stop);
     my @regionview_tracks = grep {$settings->{features}{$_}{visible}} 
       $CONFIG->config->regionview_tracks;
@@ -2108,7 +2107,7 @@ sub multiple_choices {
     my $divisor  = $CONFIG->setting(general=>'unit_divider') || 1;
 
     for my $r (sort by_score_and_position @results) {
-      my $version = eval {$r->isa('Bio::SeqFeatureI') ? undef : $r->version};
+      my $version = eval {$r->isa('Bio::SeqFeatureI') ? '' : $r->version};
       my $name        = eval {$r->name}  || $r->primary_tag;
 
       my $class       = eval {$r->class} || $CONFIG->tr('Sequence');
@@ -2142,7 +2141,7 @@ sub multiple_choices {
 }
 
 sub by_score_and_position {
-  my $result = eval{$b->score <=> $a->score};
+  my $result = eval{($b->score||0) <=> ($a->score||0)};
   return $result unless $result == 0;
 
   return $a->seq_id cmp $b->seq_id

@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.11 2007-09-14 21:15:54 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.12 2007-09-20 15:18:40 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -258,11 +258,15 @@ Balloon.prototype.doShowTooltip = function() {
 
   // sticky balloons need a close control
   if (balloonIsSticky) {
-    var close = '<a onclick="Balloon.prototype.hideTooltip(1)" title="Close">';
-    close    += '<img src="'+bSelf.closeButton+'" style="float:right;cursor:pointer"></a><br>';
-    helpText = close + helpText; 
-  }
+    var style = 
+    'margin-right:-'+Math.round(bSelf.padding/2 - 1)+'px;float:right;'+
+    'cursor:pointer;margin-top:-'+Math.round(bSelf.padding/2 - 1)+'px;float:right'; 
 
+    helpText = 
+    '<img onclick="Balloon.prototype.hideTooltip(1)" title="Close" '+
+    'src="'+bSelf.closeButton+'" style="'+style+'">'+helpText;
+  }
+ 
   // add the contents to balloon
   document.getElementById('contents').innerHTML = helpText;
 
@@ -330,6 +334,7 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
   bSelf.setStyle('topRight','right',0-fullPadding);
   bSelf.setStyle('topRight','top',0);
   bSelf.setStyle('topRight','width',fullPadding);
+  bSelf.setStyle('topRight','z-index',-1);
 
   bSelf.setStyle('bottomLeft','background','url('+bSelf.balloonImage+') bottom left no-repeat');
   bSelf.setStyle('bottomLeft','position','absolute');

@@ -137,7 +137,6 @@ Source Code (Manual) Build
 
       perl Makefile.PL APACHE=/home/www
 
-
     Note that the configuration files are always placed in a subdirectory
     named gbrowse.conf. You cannot change this. Similarly, the static files
     are placed in a directory named gbrowse. The install script will detect
@@ -149,23 +148,6 @@ Source Code (Manual) Build
     so be careful to copy the new copies somewhere safe if you have modified
     them.
 
-    By default Gbrowse uses the relative URL "/gbrowse" to find static
-    files such as images, javascript, styleshets, etc. If you install the
-    static files into a subdirectory of your document root, you will need
-    to include this information the configuration file.  For example, if 
-    you have installed into the directory "version2":
-     
-      perl Makefile.PL HTDOCS=/home/www/htdocs/version2
-
-    edit the configuration file to include 'version2' in the relative URLs
-    for various static components.
-
-      stylesheet  = /version2/gbrowse/gbrowse.css
-      css         = /version2/gbrowse
-      buttons     = /version2/gbrowse/images/buttons
-      js          = /version2/gbrowse/js
-      tmpimages   = /version2/gbrowse/tmp
-      
     The DO_XS flag, if true (perl Makefile.PL DO_XS=1), will compile a small
     C subroutine for nucleotide alignments. This will vastly improve the
     performance of the gbrowse_details script when displaying alignments. To

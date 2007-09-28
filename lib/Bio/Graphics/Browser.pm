@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.28 2007-09-28 08:03:31 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.29 2007-09-28 08:36:37 sheldon_mckay Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -65,9 +65,6 @@ use File::Path 'mkpath';
 use Text::Shellwords;
 use Bio::Graphics::Browser::I18n;
 use Bio::Graphics::Browser::Util 'modperl_request','is_safari';
-use Storable qw/store retrieve/;
-
-use Data::Dumper;
 
 require Exporter;
 
@@ -1606,7 +1603,7 @@ sub make_map {
       }
 
       $balloon_ht ||= 'balloon';
-      $balloon_ct ||= 'balloon';;
+      $balloon_ct ||= 'balloon';
 
       if ($balloonhover) {
         my $stick = defined $sticky ? $sticky : 0;

@@ -225,7 +225,7 @@ sub print_top {
   local $^W = 0;  # to avoid a warning from CGI.pm
 
   my $titlebar = is_safari() ? 'titlebar-safari.css' : 'titlebar-default.css';
-  my $css = $CONFIG->setting('css') || '/gbrowse';;
+  my $css = $CONFIG->setting('css') || '/gbrowse';
 
   print_header(-expires=>'now');
   my @args = (-title => $title,

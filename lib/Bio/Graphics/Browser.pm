@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.30 2007-09-28 18:11:36 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.31 2007-09-28 18:22:41 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1116,7 +1116,7 @@ sub generate_panels {
 
   # When running in monolithic mode, we need to be very careful about the cache key. This key
   # is the combination of the panel type, the panel args, and all the individual track args!
-  my @cache_args          = ($section,$panel_key,@panel_args,@$cache_extra);
+  my @cache_args          = ($section,$panel_key,@panel_args,@$cache_extra,$do_map);
   if ($panel_key eq '__all__') {
     $track_args{$_} ||= [$self->create_track_args($_,$args)] foreach @$labels;
     push @cache_args,map {@$_} values %track_args;

@@ -24,7 +24,7 @@ use FindBin '$Bin';
 
 my $origdir = cwd;
 my $homedir = "$Bin/..";
-                                                                                
+
 chdir $homedir or die "couldn't cd to $homedir: $!\n";
 
 foreach (@ARGV) {
@@ -32,7 +32,8 @@ foreach (@ARGV) {
 }
 
 my %options = map {split /=/} @ARGV;
-my $ht_target = "$options{HTDOCS}/gbrowse";
+my $root      =  $options{GBROWSE_ROOT} || 'gbrowse';
+my $ht_target = "$options{HTDOCS}/$root";
 
 print "Installing stylesheet and images...\n";
 
@@ -193,7 +194,7 @@ chmod 0777,glob("$ht_target/databases/*");
 
 print "\n\n#############################################################################\n";
 print "GBrowse is now installed.  Read INSTALL for further setup instructions.\n";
-print "Go to http://localhost/gbrowse/ for the online tutorial and reference manual.\n";
+print "Go to http://localhost/$root for the online tutorial and reference manual.\n";
 print "#############################################################################\n";
 
 chdir $origdir or die "couldn't cd to $origdir: $!\n";

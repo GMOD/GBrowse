@@ -225,26 +225,25 @@ sub print_top {
   local $^W = 0;  # to avoid a warning from CGI.pm
 
   my $titlebar = is_safari() ? 'titlebar-safari.css' : 'titlebar-default.css';
-  my $css = $CONFIG->setting('css') || '/gbrowse';
 
   print_header(-expires=>'now');
   my @args = (-title => $title,
-	      -style  => [{src=>$CONFIG->setting('stylesheet') || '/gbrowse/gbrowse.css'},
-			  {src=>"$css/tracks.css"},
-			  {src=>"$css/$titlebar"}],
+	      -style  => [{src=>$CONFIG->relative_path_setting('stylesheet') || '/gbrowse/gbrowse.css'},
+			  {src=>$CONFIG->relative_path('tracks.css')},
+			  {src=>$CONFIG->relative_path($titlebar)}],
 	      -encoding=>$CONFIG->tr('CHARSET'),
 	     );
   push @args,(-head=>$CONFIG->setting('head'))    if $CONFIG->setting('head');
   push @args,(-lang=>($CONFIG->language_code)[0]) if $CONFIG->language_code;
-  push @args,(-gbrowse_images => $CONFIG->setting('buttons') || '/gbrowse/images/buttons');
-  push @args,(-gbrowse_js     => $CONFIG->setting('js')      || '/gbrowse/js');
+  push @args,(-gbrowse_images => $CONFIG->relative_path_setting('buttons') || '/gbrowse/images/buttons');
+  push @args,(-gbrowse_js     => $CONFIG->relative_path_setting('js')      || '/gbrowse/js');
   push @args,(-reset_toggle   => 1)               if $reset_all;
   push @args,(-onload         => $CONFIG->setting('onload')) if $CONFIG->setting('onload');
 
   # push all needed javascript files onto top of page
   my $drag_and_drop = $CONFIG->setting('drag and drop');
   my $b_tips = $CONFIG->setting('balloon tips') || $drag_and_drop;
-  my $js = $CONFIG->setting('js')||JS;
+  my $js = $CONFIG->relative_path_setting('js')||JS;
   my @js = ('buttons.js','prototype.js');
   push @js,qw(yahoo-dom-event.js balloon.js)     if $b_tips;
   push @js,qw(scriptaculous.js)     if $drag_and_drop;
@@ -259,10 +258,11 @@ sub print_top {
 
 sub print_balloon_settings {
   my $custom_balloons    = $CONFIG->setting('custom balloons');
+  my $images             = $CONFIG->relative_path('images');
 
   my %config_values = $custom_balloons =~ /\[([^]]+)\]([^[]+)/g;
   $config_values{'balloon'} ||= <<END;
-images    =  /gbrowse/images/balloons
+images    =  $images/balloons
 delayTime =  500
 END
 
@@ -270,7 +270,7 @@ END
 
   for my $balloon (keys %config_values) {
     my %config = $config_values{$balloon} =~ /(\w+)\s*=\s*(\S+)/g;
-    my $img    = $config{images} || '/gbrowse/images/balloons';
+    my $img    = $config{images} || "$images/balloons";
     $balloon_settings .= <<END;
 var $balloon = new Balloon;
 $balloon.balloonImage        = '$img/balloon.png';

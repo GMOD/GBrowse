@@ -1,5 +1,5 @@
 # do not remove the { } from the top and bottom of this page!!!
-#Simple_Chinese language module by lidaof@cau.edu.cn
+#Simple_Chinese language module by Li DaoFeng <lidaof@cau.edu.cn>
 #Modified from Tradition_Chinese version by Jack Chen <chenn@cshl.edu>
 {
 

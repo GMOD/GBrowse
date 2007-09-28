@@ -10,7 +10,7 @@ require 5.005003;
 my $VERSION     = '1.69';
 my $working_dir = cwd;
 
-my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN
+my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN GBROWSE_ROOT
 		 LIB BIN
 		 DO_XS NONROOT SELINUX);
 my $OPTIONS = join ('|',@OPTIONS);
@@ -33,21 +33,40 @@ CGIBIN is the directory in which to place the GBrowse CGI scripts. This must
 be the same as, or a subdirectory of, your Apache server's CGI executable
 directory.
 
-HTDOCS is the top level directory in which the HTML files for your web server go.
+HTDOCS is the document root in which the HTML files for your web server reside.
+If you are using a virtual server, use the appropriate HTDOCS directory
+for the virtual server's document root.
 
-For RedHat Linux, you will want to use:
+GBROWSE_ROOT (optional) is the location under HTDOCS in which you would like
+GBrowse's static files (stylesheets, images, documentation) to be stored. For
+example, if you specify
+    HTDOCS=/var/www/html
+  and
+    GBROWSE_ROOT=genomes/gbrowse
+then the static files will be stored at /var/www/html/genomes/gbrowse. The
+default location is "gbrowse".
+
+Examples:
+
+For RedHat Linux:
     perl Makefile.PL CONF=/etc/httpd/conf \\
                      HTDOCS=/var/www/html \\
                      CGIBIN=/var/www/cgi-bin \\
                      DO_XS=1
 
-For Macintosh OS X, you will want to use:
+For Ubuntu Linux (running Apache version 2):
+    perl Makefile.PL CONF=/etc/apache2 \\
+                     HTDOCS=/var/www \\
+                     CGIBIN=/usr/lib/cgi-bin \\
+                     DO_XS=1
+
+For Macintosh OS X:
     perl Makefile.PL CONF=/etc/httpd \\
                      HTDOCS=/Library/WebServer/Documents \\
                      CGIBIN=/Library/WebServer/CGI-Executables \\
                      DO_XS=1
 
-For Slackware systems, you will want to use:
+For Slackware Linux systems:
     perl Makefile.PL CONF=/etc/apache \\
                      HTDOCS=/var/www/htdocs \\
                      CGIBIN=/var/www/cgi-bin \\
@@ -110,7 +129,7 @@ if (-e 'GGB.def' && !%OPTIONS) {
     while (<F>) {
       chomp;
       next if /^\#/;
-      next unless /^($OPTIONS)=(.+)/o;
+      next unless /^($OPTIONS)=(.*)/o;
       $OPTIONS{$1} = interpolate($2);
     }
     close F;
@@ -151,16 +170,19 @@ if ($OPTIONS{APACHE} && !(defined $OPTIONS{CGIBIN})) {
 
 # set hard-coded values
 $OPTIONS{APACHE} ||= prompt('Apache root directory (enter \'\' for none)?',
-			    GuessDirectories->root);
+			    GuessDirectories->root) unless exists $OPTIONS{APACHE};
 $OPTIONS{CONF}   ||= prompt('Apache conf directory?',
 			    GuessDirectories->conf($OPTIONS{APACHE}));
 $OPTIONS{HTDOCS} ||= prompt('Apache htdocs directory?',
 			    GuessDirectories->htdocs($OPTIONS{APACHE}));
 $OPTIONS{CGIBIN} ||= prompt('Apache cgibin directory?',
 			    GuessDirectories->cgibin($OPTIONS{APACHE}));
+$OPTIONS{GBROWSE_ROOT}   ||= prompt('GBrowse root for static files?',
+			    'gbrowse');
 unless (defined $OPTIONS{DO_XS}) {
   $OPTIONS{DO_XS}  = $^O =~ /^(MSWin|dos)/i ? 0 : 1;
 }
+$OPTIONS{APACHE} ||= '/';
 
 # look for non-root installation 
 if (defined $OPTIONS{NONROOT}) {
@@ -193,7 +215,7 @@ print STDERR <<END;
 END
 ;
 foreach (@OPTIONS) {
-  printf STDERR "%7s %s\n",$_,$OPTIONS{$_} unless $_ eq 'APACHE'; #this confuses people
+  printf STDERR "%13s %s\n",$_,$OPTIONS{$_} unless $_ eq 'APACHE'; #this confuses people
 }
 print STDERR <<END;
 

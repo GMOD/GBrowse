@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.29 2007-09-28 08:36:37 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.30 2007-09-28 18:11:36 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -395,6 +395,55 @@ sub db_settings {
   }
 
   ($adaptor,@argv);
+}
+
+=head2 gbrowse_root()
+
+  $root = $browser->gbrowse_root()
+
+Return the setting of "gbrowse root"
+
+=cut
+
+sub gbrowse_root {
+  my $self = shift;
+  my $root = $self->setting('general' => 'gbrowse root') || '/gbrowse';
+  $root    = "/$root" unless $root =~ /^\//;
+  $root;
+}
+
+=head2 relative_path()
+
+  $relative_path = $browser->relative_path('gbrowse.css');
+
+Add the setting of "gbrowse root" to the indicated path, if
+relative. Otherwise pass through unchanged.
+
+=cut
+
+sub relative_path {
+  my $self = shift;
+  my $path = shift;
+  return $path if $path =~ /^\//; # already absolute
+  my $root = $self->gbrowse_root;
+  return "$root/$path";
+}
+
+=head2 relative_path_setting()
+
+  $relative_path = $browser->relative_path_setting('stylesheet');
+
+Like relative_path(), but works on a named setting rather than an
+actual path or directory.
+
+=cut
+
+sub relative_path_setting {
+  my $self    = shift;
+  my $setting = shift;
+  my $path    = $self->setting('general' => $setting);
+  return unless $path;
+  return $self->relative_path($path);
 }
 
 =head2 version()
@@ -840,7 +889,7 @@ sub render_draggable_tracks {
   my $self = shift;
   my ($args,$panels) = @_;
 
-  my $images   = $self->setting('buttons');
+  my $images   = $self->relative_path_setting('buttons');
   my $do_map   = $args->{do_map};
   my $tmpdir   = $args->{tmpdir};
   my $settings = $args->{settings};
@@ -1537,6 +1586,7 @@ sub tmpdir {
   my ($tmpuri,$tmpdir) = shellwords($self->setting('tmpimages'))
     or die "no tmpimages option defined, can't generate a picture";
 
+  $tmpuri  = $self->relative_path($tmpuri);
   $tmpuri .= "/$path" if $path;
 
   if ($ENV{MOD_PERL} ) {
@@ -1549,7 +1599,7 @@ sub tmpdir {
     $tmpdir .= "/$path" if $path;
   }
   else {
-    $tmpdir = "$ENV{DOCUMENT_ROOT}$tmpuri";
+    $tmpdir = "$ENV{DOCUMENT_ROOT}/$tmpuri";
   }
 
   # we need to untaint tmpdir before calling mkpath()

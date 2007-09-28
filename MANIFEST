@@ -336,3 +336,4 @@ t/data/test2.gff
 t/GBrowse_Chado.t
 t/Test.pm
 TODO
+LICENSE

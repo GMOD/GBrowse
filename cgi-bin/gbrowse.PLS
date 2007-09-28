@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.17 2007-09-28 08:03:31 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.18 2007-09-28 18:11:35 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -190,11 +190,10 @@ if (param('reset')) {
   $cookies = [$cookie];
 }
 
-
 # ASYNCHRONOUS EVENTS HANDLED HERE
 # we get here on the AJAX-style asynchronous setting of labels
 my $asynchronous;
-if (my @ajax_labels = map {CGI::unescape($_)} param('label[]')) {
+if (my @ajax_labels = param('label[]')) {
   my %seen;
   @{$page_settings->{tracks}} = grep {length()>0 && !$seen{$_}++} (@ajax_labels,@{$page_settings->{tracks}});
   $asynchronous++;
@@ -216,7 +215,7 @@ for my $p (grep {/^track_collapse_/} param()) {
 
 if ($asynchronous) {
   print CGI::header(-status=>'204 No Content');
-  $session->session->flush();
+  $session->session->flush;
   exit 0;
 }
 
@@ -325,7 +324,6 @@ load_plugin_annotators($page_settings);
 warn "ANNOTATOR TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 
 adjust_tracks($page_settings);
-
 auto_open($page_settings,$features) if @$features;
 
 warn "ADJUSTED TRACKS = @{$page_settings->{tracks}}" if DEBUG;
@@ -491,11 +489,10 @@ sub main_display {
     if ($page_settings->{region_size}) {
       my ($region_seg_start, $region_seg_end) = get_regionview_seg($page_settings,$segment->start, $segment->end,
 								   $whole_segment->start,$whole_segment->end);
-
-      my ($region_segment) = open_database()->segment(-name=>$segment->seq_id,
-						      -start=>$region_seg_start,
-						      -end=>$region_seg_end,
-						      -absolute=>1);
+      my $region_segment = open_database()->segment(-name=>$segment->seq_id,
+						    -start=>$region_seg_start,
+						    -end=>$region_seg_end,
+						    -absolute=>1);
       print region_panel($region_segment,$segment,$page_settings,$feature_files);
     }
 
@@ -596,7 +593,7 @@ sub detail_panel {
     my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} && !/:(overview|region)$/ }
                                @{$page_settings->{tracks}};
 
-    my ($options,$limits) = get_options($page_settings,\@tracks_to_show);
+    my ($options,$limits) = get_options(\@tracks_to_show);
     my $h_callback     = make_hilite_callback($page_settings);
     my $postgrid       = make_postgrid_callback($page_settings);
 
@@ -777,7 +774,6 @@ sub adjust_tracks {
     $settings->{features}{$_}{options} = 0;  # automatic
     push @{$settings->{tracks}},$_;           # at the end
   }
-
   # Remove any feature types that are not mentioned in the
   # config file, excepting Uploaded and remote URL features.
   # This may happen if a stanza is removed from the config file.
@@ -946,7 +942,7 @@ sub adjust_settings {
 sub navigation_table {
   my $segment = shift;
   my $settings = shift;
-  my $buttonsDir    = $CONFIG->setting('buttons');
+  my $buttonsDir    = $CONFIG->relative_path_setting('buttons');
   my $table        = '';
   my $svg_link     = $HAVE_SVG? a({-href=>svg_link($settings),-target=>'_blank'},'['.$CONFIG->tr('SVG_LINK').']'):'';
   my $reset_link   = a({-href=>"?reset=1",-class=>'reset_button'},'['.$CONFIG->tr('RESET').']');
@@ -1192,6 +1188,7 @@ sub tracks_table {
   my $settings = shift;
   my $additional_features = shift;
 
+
   # read category table information
   my %category_table_labels=%{category_table()};
 
@@ -1343,7 +1340,6 @@ sub track_config {
 
   if (param('track_defaults')) {
     $settings->{features}{$label}{override_settings} = {};
-    $settings->{features}{$label}{options} = 0;
   }
 
   my $override = $settings->{features}{$label}{override_settings};
@@ -1385,16 +1381,6 @@ END
 				-checked  => $settings->{features}{$label}{visible},
 				-label => '')
 		      ),
-		    td({-rowspan=>8,-valign=>'middle'},
-		       button(-style => 'background:pink',
-			      -name=>$CONFIG->tr('Revert'),
-			      -onClick=>$reset_js,
-			     ),
-		       button(-name=>$CONFIG->tr('Cancel'),
-			      -onClick=>'Balloon.prototype.hideTooltip(1)'),
-		       submit(-style =>'background:wheat',
-			      -name=>$CONFIG->tr('Change'))
-		      )
 		   ),
 		 TR(
 		    th({-align=>'right'},$CONFIG->tr('Packing')),
@@ -1465,10 +1451,25 @@ END
 				  -default => $settings->{features}{$label}{limit})
 		      )
 		   ),
+		 TR(
+		    td({-align=>'right'},
+		       button(-style => 'background:pink',
+			      -name=>$CONFIG->tr('Revert'),
+			      -onClick=>$reset_js,
+			     ),
+		      ),
+		    th({-align=>'right'},
+		       button(-style=>'float:left',
+			      -name=>$CONFIG->tr('Cancel'),
+			      -onClick=>'Balloon.prototype.hideTooltip(1)'),
+		       submit(-style =>'background:wheat',
+			      -name=>$CONFIG->tr('Change'))
+		      )
+		   )
 		);
   $form .= hidden(-name=>'adjust_one_track',-value=>$label);
   $form .= end_form();
-  print $citation,$form;
+  print table(TR(td({-valign=>'top'},$citation),td({-valign=>'top'},$form)));
   print end_html();
 }
 
@@ -1771,6 +1772,7 @@ sub zoomnav {
     my $whole_start = param('seg_min');
     my $whole_stop  = param('seg_max');
 
+    warn "I'm here, regionview_x = $regionview_x; ($whole_start,$whole_stop)";
     my ($regionview_start, $regionview_end) = get_regionview_seg($settings,$start, $stop, $whole_start, $whole_stop);
     my @regionview_tracks = grep {$settings->{features}{$_}{visible}} 
       $CONFIG->config->regionview_tracks;
@@ -2108,7 +2110,7 @@ sub multiple_choices {
     my $divisor  = $CONFIG->setting(general=>'unit_divider') || 1;
 
     for my $r (sort by_score_and_position @results) {
-      my $version = eval {$r->isa('Bio::SeqFeatureI') ? '' : $r->version};
+      my $version = eval {$r->isa('Bio::SeqFeatureI') ? undef : $r->version};
       my $name        = eval {$r->name}  || $r->primary_tag;
 
       my $class       = eval {$r->class} || $CONFIG->tr('Sequence');
@@ -2142,7 +2144,7 @@ sub multiple_choices {
 }
 
 sub by_score_and_position {
-  my $result = eval{($b->score||0) <=> ($a->score||0)};
+  my $result = eval{$b->score <=> $a->score};
   return $result unless $result == 0;
 
   return $a->seq_id cmp $b->seq_id
@@ -2179,8 +2181,8 @@ sub _region_panel {
 
   $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
 
-  my @tracks_to_show = grep {$settings->{features}{$_}{visible} &&  /:$panel_name$/i}
-    @{$settings->{tracks}};
+  my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} &&  /:$panel_name$/i}
+    @{$page_settings->{tracks}};
 
   # these hashes map label names to packing option values and limit values
   my ($options,$limits) = get_options(\@tracks_to_show);
@@ -2221,7 +2223,6 @@ sub _region_panel {
 
 # create hashes that map track label names into options and limit values
 sub get_options {
-  my $page_settings  = shift;
   my $tracks_to_show = shift;
   my %options    = map {$_=>$page_settings->{features}{$_}{options}} @$tracks_to_show;
   my %limits     = map {$_=>$page_settings->{features}{$_}{limit}}   @$tracks_to_show;

@@ -32,7 +32,9 @@ Project (L<http://www.gmod.org/>).
 
 =item L. INVOKING GBROWSE URLs
 
-=item M. FURTHER INFORMATION
+=item M. IMPORTANT MAINTENANCE
+
+=item N. FURTHER INFORMATION
 
 =back
 
@@ -551,10 +553,54 @@ option to db_args, and is deprecated.
 The password to use if the database is password protected.  This is
 the same as providing the -pass option to db_args, and is deprecated.
 
+=item * gbrowse root
+
+This specifies the URL of GBrowse's static files on your server, such
+as stylesheets, images and JavaScript files. The default is /gbrowse.
+
 =item * stylesheet
 
-Location of the stylesheet used to create the GBrowse look and feel.
-(You probably will not need to change this.)
+Location of the stylesheet used to create the GBrowse look and
+feel. You can give a relative address (e.g. "gbrowse.css"), in which
+case GBrowse will look relative to the URL specified by "gbrowse
+root." Alternatively, you can specify an absolute URL
+(e.g. "/stylesheets/mysite.css").
+
+=item * buttons
+
+URL in which the various graphical buttons used by GBrowse are
+located. The relative and absolute addressing rules described for
+"stylesheet" apply here as well. (You will probably not need to change
+this.)
+
+=item * js
+
+URL in which the gbrowse javascript helper function files are located.
+The relative and absolute addressing rules described for "stylesheet"
+apply here as well.  (You will probably not need to change this).
+
+=item * tmpimages
+
+URL of a writable directory in which GBrowse can write its temporary
+images. The format is:
+
+  tmpimages = <tmpimages_url> <tmpimages_path>
+
+Where <tmpimages_url> is the directory as it appears as a URL and
+<tmpimages_path> is the physical path to the directory as it appears
+to the filesystem. Usually the physical path is just the URL with the
+DocumentRoot configuration variable prepended to it, in which case
+only the URL is needed. However, if the URL is defined using an Alias
+directive, then the path argument is mandatory.
+
+The tmpimages option is mandatory.
+
+The relative and absolute addressing rules described for "stylesheet"
+apply here as well.
+
+NOTE: The path argument is ignored if gbrowse is running under
+modperl, because modperl allows the URL to be translated into a
+physical directory programatically.
 
 =item * plugins
 
@@ -583,44 +629,6 @@ to appear in the popup menu.
 By default gbrowse searches for plugins in its standard location of conf/plugins.
 You can store plugins in a non-standard location by providing this option
 with a space-delimited list of additional directories to search in.
-
-=item * buttons
-
-URL in which the various graphical buttons used by GBrowse are located.
-(You will probably not need to change this.)
-
-=item * js
-
-URL in which the gbrowse javascript helper function files are located.
-(You will probably not need to change this).
-
-=item * tmpimages
-
-URL of a writable directory in which GBrowse can write its temporary
-images. The format is:
-
-  tmpimages = <tmpimages_url> <tmpimages_path>
-
-Where <tmpimages_url> is the directory as it appears as a URL and
-<tmpimages_path> is the physical path to the directory as it appears
-to the filesystem. Usually the physical path is just the URL with the
-DocumentRoot configuration variable prepended to it, in which case
-only the URL is needed. However, if the URL is defined using an Alias
-directive, then the path argument is mandatory.
-
-The tmpimages option is mandatory.
-
-NOTE: The path argument is ignored if gbrowse is running under
-modperl, because modperl allows the URL to be translated into a
-physical directory programatically.
-
-=item * cachedir
-
-This is a writable directory that can be used for caching
-gbrowse_img-generated images. Defining it will speed up some
-operations. If not defined gbrowse_img will still work, but will
-regenerate images from scratch even if they've been used before. It is
-OK to use the same path as the tmpimages directory.
 
 =item * image widths
 
@@ -774,22 +782,19 @@ the birds-eye view display.  Possible values are "bp" (base pairs),
 option is omitted, the browser will guess the most appropriate
 unit.
 
-
 =item * overview bgcolor
 
 This is the color for the background of the birds-eye view.
 
-=item * cache_overview
+=item * cache time
 
-This option will cause the overview images to be cached on disk for a
-period of time.  This may improve performance if you are placing many
-complex tracks into the overview.  The value is the number of hours to
-keep the cached copy of the overview image before refreshing it
-(default = don't cache).
+The server will cache track images for a period of time in order to
+speed up performance. After the time has expired, the cached version
+of the image will not be used. This option specifies the time, in
+hours, that images will be cached. The default is 1 hour.
 
-You can freshen the cache and force cached copies to be ignored by
-touching the configuration file or by calling gbrowse with the CGI
-option nocache=1.
+If you are debugging your config file and want to see uncached images,
+call gbrowse with the CGI option nocache=1.
 
 =item * detailed bgcolor
 
@@ -3363,7 +3368,20 @@ through the source code to figure out their arguments.
 
 =back
 
-=head1 M. FURTHER INFORMATION
+=head1 M. IMPORTANT MAINTENANCE
+
+GBrowse creates lots of cache files as it operates, and it does not
+garbage collect them automatically. To keep the cache files under
+control, you should run the following cron job at regular intervals:
+
+	 cd HTDOCS/gbrowse/tmp
+         find . -type f -atime +20 -print -exec rm {} \;
+
+Be sure to replace HTDOCS with the path to your web server HTML
+document root directory, and make sure that the cron job runs under
+has the proper permissions to delete the files in this directory.
+
+=head1 N. FURTHER INFORMATION
 
 For further information, bug reports, etc, please consult the mailing
 lists at www.gmod.org.  The main mailing list for gbrowse support is

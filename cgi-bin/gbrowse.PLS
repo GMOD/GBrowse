@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.16 2007-09-20 19:27:37 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.17 2007-09-28 08:03:31 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1351,7 +1351,8 @@ sub track_config {
 
   print CGI::header,start_html();
 
-  my $citation = h4($key).p($CONFIG->citation($label,$CONFIG->language)||$CONFIG->tr('NO_CITATION'));
+  my $citation = b({-style => "color:\#3366FF;font-family:sans-serif"},$key).
+                 p($CONFIG->citation($label,$CONFIG->language)||$CONFIG->tr('NO_CITATION'));
   my $height   = $CONFIG->fallback_setting($label=>'height')    || 5;
   my $width    = $CONFIG->fallback_setting($label=>'linewidth') || 1;
   my $glyph    = $CONFIG->fallback_setting($label=>'glyph')     || 'box';

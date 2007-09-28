@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.27 2007-09-13 21:00:41 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.28 2007-09-28 08:03:31 sheldon_mckay Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -65,6 +65,9 @@ use File::Path 'mkpath';
 use Text::Shellwords;
 use Bio::Graphics::Browser::I18n;
 use Bio::Graphics::Browser::Util 'modperl_request','is_safari';
+use Storable qw/store retrieve/;
+
+use Data::Dumper;
 
 require Exporter;
 
@@ -255,7 +258,7 @@ sub source {
   $value = $browser->setting(gene => 'fgcolor');
   $value = $browser->setting('stylesheet');
 
-The setting() method returns the value of one of the current source's
+The setting() method returns the value of one of the current source
 configuration settings.  setting() takes two arguments.  The first
 argument is the name of the stanza in which the configuration option
 is located.  The second argument is the name of the setting.  Stanza
@@ -342,7 +345,6 @@ sub plugin_setting {
   my $caller_package = caller();
   my ($last_name)    = $caller_package =~ /(\w+)$/;
   my $option_name    = "${last_name}:plugin";
-  #warn "$option_name @_ ".$self->setting($option_name => @_);
   $self->setting($option_name => @_);
 }
 
@@ -789,6 +791,12 @@ The arguments are a series of tag=>value pairs, where tags are:
 
   hilite_callback     Callback for performing hilighting
 
+  image_and_map       This argument will cause render_panels to emulate 
+                        the legacy method image_and_map() and return a 
+                        GD::Image object and a 'boxes' array reference rather
+                        than rendered html.  This argument applies only to composite
+                        (non-draggable) panel images.  
+
 Any arguments names that begin with an initial - (hyphen) are passed
 through to Bio::Graphics::Panel->new() directly
 
@@ -954,13 +962,18 @@ sub render_composite_track {
   my $self   = shift;
   my ($args,$panel) = @_;
 
-  my $section = $args->{section};
+  my $section = $args->{section} || '?detail';
   $section    =~ s/^\?//;
   my $button  = $args->{image_button};
 
-  my $url             = $panel->{image};
-  my $map             = $panel->{map} || '';
-  my ($width,$height) = @{$panel}{'width','height'};
+  my ($width,$height,$url,$map,$gd,$boxes) = @{$panel}{qw/width height image map gd boxes/};
+
+  if ($args->{image_and_map}) {
+    my $map_array = $self->map_array($boxes);
+    return $gd, $map_array;
+  }
+
+  $map ||= '';
   my $map_name = "${section}_map";
 
   my $img = $button
@@ -1068,6 +1081,7 @@ sub generate_panels {
 
   unless ($cached{$panel_key}) {
     $panels{$panel_key}      = Bio::Graphics::Panel->new(@panel_args);
+
     $panels{$panel_key}->add_track($segment      => 'arrow',
 				   -double       => 1,
 				   -tick         => 2,
@@ -1168,7 +1182,7 @@ sub generate_panels {
     $self->add_feature_file(
 			    file       => $file,
 			    panel      => $panels{$panel_key},
-			    position   => $feature_file_offsets{$l} || 1,
+			    position   => $feature_file_offsets{$l} || 0,
 			    options    => $options,
 			    select     => $featurefile_select,
 			   );
@@ -1180,33 +1194,35 @@ sub generate_panels {
   # uncached panels need to be generated and cached
   $args->{scale_map_type} ||= 'centering_map';
   (my $map_name = $section) =~ s/^\?//;
+
   for my $l (keys %panels) {
     my $gd = $panels{$l}->gd;
-    my $map    =   !$do_map            ? undef
-	           : $l eq '__pad__'   ? undef
-	           : $l eq '__scale__' ? $self->make_centering_map(shift @{$panels{$l}->boxes},
-								   $args->{flip},
-								   $l,
-								   $args->{scale_map_type},
-								  )
-		   : $l eq '__all__'   ? $self->make_map(scalar $panels{$l}->boxes,
-							 $panels{$l},
-							 $map_name,
-							 \%trackmap,
-							 $args->{scale_map_type})
-		   :                     $self->make_map(scalar $panels{$l}->boxes,
-							 $panels{$l},
-							 $l,
-							 \%trackmap,
-							 0);
+    my $map  = !$do_map          ? (undef,undef)
+	     : $l eq '__pad__'   ? (undef,undef)
+	     : $l eq '__scale__' ? $self->make_centering_map(shift @{$panels{$l}->boxes},
+							     $args->{flip},
+							     $l,
+							     $args->{scale_map_type},
+							     )
+	     : $l eq '__all__'   ? $self->make_map(scalar $panels{$l}->boxes,
+						   $panels{$l},
+						   $map_name,
+						   \%trackmap,
+						   $args->{scale_map_type})
+	     : $self->make_map(scalar $panels{$l}->boxes,
+			       $panels{$l},
+			       $l,
+			       \%trackmap,
+			       0);
+    
     my $key = $drag_n_drop ? $cache_key{$l} : $cache_key{'__all__'};
-    @{$results{$l}}{qw(image map width height file)} = $self->set_cached_panel($key,$gd,$map);
+    $self->set_cached_panel($key,$gd,$map);
     eval {$panels{$l}->finished};
   }
 
   # cached panels need to be retrieved
   for my $l (keys %cached) {
-    @{$results{$l}}{qw(image map width height file)} = $self->get_cached_panel($cache_key{$l});
+    @{$results{$l}}{qw(image map width height file gd boxes)} = $self->get_cached_panel($cache_key{$l});
   }
 
   return \%results;
@@ -1547,10 +1563,11 @@ sub tmpdir {
   return ($tmpuri,$path);
 }
 
+
 sub make_map {
   my $self = shift;
   my ($boxes,$panel,$map_name,$trackmap,$first_box_is_scale) = @_;
-  my $map = qq(<map name="${map_name}_map" id="${map_name}_map">\n);
+  my @map = ($map_name);
 
   my $flip = $panel->flip;
   my $tips = $self->setting('balloon tips');
@@ -1560,58 +1577,81 @@ sub make_map {
 
   local $^W = 0; # avoid uninit variable warnings due to poor coderefs
 
-  $map .= $self->make_centering_map(shift @$boxes,$flip,0,$first_box_is_scale) if $first_box_is_scale;
+  if ($first_box_is_scale) {
+    push @map, $self->make_centering_map(shift @$boxes,$flip,0,$first_box_is_scale);
+  }
 
   foreach (@$boxes){
     next unless $_->[0]->can('primary_tag');
 
     my $label  = $_->[5] ? $trackmap->{$_->[5]} : '';
 
-    my $href       = $self->make_href($_->[0],$panel,$label,$_->[5]);
-    my $titletext  = unescape($self->make_title($_->[0],$panel,$label,$_->[5]));
-    my $target     = $self->config->make_link_target($_->[0],$panel,$label,$_->[5]);
-    my $t          = defined($target) ? qq(target="$target") : '';
+    my $href   = $self->make_href($_->[0],$panel,$label,$_->[5]);
+    my $title  = unescape($self->make_title($_->[0],$panel,$label,$_->[5]));
+    my $target = $self->config->make_link_target($_->[0],$panel,$label,$_->[5]);
 
-    $href         = qq(href="$href");
-    my $title     = qq(title="$titletext");
-
-    my ($mouseover,$mousedown);
+    my ($mouseover,$mousedown,$style);
     if ($tips) {
       #retrieve the content of the balloon from configuration files
       # if it looks like a URL, we treat it as a URL.
-      my ($balloon_ht,$balloonhover)	     = $self->config->balloon_tip_setting('balloon hover',$label,$_->[0],$panel,$_->[5]);
-      my ($balloon_ct,$balloonclick)	     = $self->config->balloon_tip_setting('balloon click',$label,$_->[0],$panel,$_->[5]);
+      my ($balloon_ht,$balloonhover)     = $self->config->balloon_tip_setting('balloon hover',$label,$_->[0],$panel,$_->[5]);
+      my ($balloon_ct,$balloonclick)     = $self->config->balloon_tip_setting('balloon click',$label,$_->[0],$panel,$_->[5]);
       # balloon_ht = type of balloon to use for hovering -- usually "balloon"
       # balloon_ct = type of balloon to use for clicking -- usually "balloon"
       my $sticky             = $self->setting($label,'balloon sticky');
       my $height             = $self->setting($label,'balloon height') || 300;
-
+      
       if ($use_titles_for_balloons) {
-	  $balloonhover ||= $titletext;
-	  $balloon_ht   ||= 'balloon';
+	$balloonhover ||= $title;
       }
 
+      $balloon_ht ||= 'balloon';
+      $balloon_ct ||= 'balloon';;
+
       if ($balloonhover) {
-	my $stick = defined $sticky ? $sticky : 0;
-	$mouseover = $balloonhover =~ /^(https?|ftp):/
-	  ? qq(onmouseover="$balloon_ht.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height frameborder=0 src=$balloonhover></iframe>',$stick)")
-	    : qq(onmouseover="$balloon_ht.showTooltip(event,'$balloonhover',$stick)");
+        my $stick = defined $sticky ? $sticky : 0;
+        $mouseover = $balloonhover =~ /^(https?|ftp):/
+	    ? "$balloon_ht.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height frameborder=0 " .
+	      "src=$balloonhover></iframe>',$stick)"
+	    : "$balloon_ht.showTooltip(event,'$balloonhover',$stick)";
 	undef $title;
       }
       if ($balloonclick) {
 	my $stick = defined $sticky ? $sticky : 1;
-	my $style = qq(style="cursor:pointer");
+        $style = "cursor:pointer";
 	$mousedown = $balloonclick =~ /^(http|ftp):/
-	  ? qq(onmousedown="$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height frameborder=0 src=$balloonclick></iframe>',$stick,$balloon_ct.maxWidth)" $style)
-	    : qq(onmousedown="$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'$balloonclick',$stick)" $style);
+	    ? "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height " .
+	      "frameborder=0 src=$balloonclick></iframe>',$stick,$balloon_ct.maxWidth)"
+	    : "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'$balloonclick',$stick)";
 	undef $href;
       }
     }
+    
+    
+    my %attributes = (
+		      title       => $title,
+		      href        => $href,
+		      target      => $target,
+		      onmouseover => $mouseover,
+		      onmousedown => $mousedown,
+		      style       => $style
+		      );
 
-    $map .= qq(<area $href $mouseover $mousedown coords="$_->[1],$_->[2],$_->[3],$_->[4]" $t $title/>);
+    my $ftype = $_->[0]->primary_tag || 'feature';
+    my $fname = $_->[0]->display_name if $_->[0]->can('display_name');
+    $fname  ||= $_->[0]->name if $_->[0]->can('name');
+    $fname  ||= 'unnamed';
+    $ftype = "$ftype:$fname";
+    my $line = join("\t",$ftype,@{$_}[1..4]);
+    for my $att (keys %attributes) {
+      next unless defined $attributes{$att};
+      $line .= "\t$att\t$attributes{$att}";
+    }
+    push @map, $line;
   }
-  $map .= "</map>\n";
-  $map;
+
+  return \@map;
+
 }
 
 # this creates image map for rulers and scales, where clicking on the scale
@@ -1619,6 +1659,7 @@ sub make_map {
 sub make_centering_map {
   my $self   = shift;
   my ($ruler,$flip,$label,$scale_map_type)  = @_;
+  my @map = $label ? ($label) : ();
 
   return if $ruler->[3]-$ruler->[1] == 0;
 
@@ -1640,7 +1681,6 @@ sub make_centering_map {
   my $ref    = $ruler->[0]->seq_id;
   my $source = $self->source;
 
-  my @lines;
   for my $i (0..$ruler_intervals-1) {
     my $x1 = int($portion * $i+0.5);
     my $x2 = int($portion * ($i+1)+0.5);
@@ -1663,12 +1703,12 @@ sub make_centering_map {
 
     my $url = "?ref=$ref;start=$start;stop=$stop";
     $url .= ";flip=1" if $flip;
-    push @lines,
-      qq(<area shape="rect" coords="$x1,$ruler->[2],$x2,$ruler->[4]" href="$url" title="recenter" alt="recenter" />\n);
+    
+    push @map, join("\t",'ruler',$x2, $ruler->[2], $x2, $ruler->[4], 
+		    href  => $url, title => 'recenter', alt   => 'recenter');
   }
-  my $map = join '',@lines;
-  $map    = qq(<map name="${label}_map" id="${label}_map">\n).$map."</map>\n" if $label;
-  return $map;
+  
+  return $label ? \@map : @map;
 }
 
 sub make_href {
@@ -2522,10 +2562,12 @@ sub get_cached_panel {
   my ($image_file,$image_uri) = $self->get_cache_base($key,'image') or return;
 
   # get map data
-  my $map_data;
+  my $map_data = [];
   if (-e $map_file) {
     my $f = IO::File->new($map_file) or return;
-    $map_data = join '',$f->getlines;
+    while (my $line = $f->getline) {
+      push @$map_data, $line;
+    }   
     $f->close;
   }
 
@@ -2538,14 +2580,58 @@ sub get_cached_panel {
     $f->close;
   }
 
-
   my $base = -e "$image_file.png" ? '.png'
            : -e "$image_file.jpg" ? '.jpg'
 	   : -e "$image_file.svg" ? '.svg'
            : '.gif';
   $image_uri  .= $base;
   $image_file .= $base;
-  return ($image_uri,$map_data,$width,$height,$image_file);
+  
+  my $gd = GD::Image->new($image_file) unless $image_file =~ /svg$/;
+  my $map_html  = $self->map_html($map_data);
+  return ($image_uri,$map_html,$width,$height,$image_file,$gd,$map_data);
+}
+
+# Convert the cached image map data
+# into an array structure analogous to
+# Bio::Graphics::Panel->boxes
+sub map_array {
+  my $self = shift;
+  my $data = shift;
+  chomp @$data;
+  my $name = shift @$data or return;
+  my $map = [$name];
+
+  for (@$data) {
+    my ($type,$x1,$y1,$x2,$y2,%atts) = split "\t";
+    push @$map, [$type,$x1,$y1,$x2,$y2,\%atts];    
+  }
+  return $map;
+}
+
+# Convert the cached image map data
+# into HTML. 
+sub map_html {
+  my $self = shift;
+  my $data = shift;
+  chomp @$data;
+  my $name = shift @$data or return '';
+
+  my $html  = qq(\n<map name="${name}_map" id="${name}_map">\n);
+  
+  for (@$data) {
+    my (undef,$x1,$y1,$x2,$y2,%atts) = split "\t";
+    $x1 or next;
+    my $coords = join(',',$x1,$y1,$x2,$y2);
+    $html .= qq(<area shape="rect" coords="$coords" );
+    for my $att (keys %atts) {
+      $html .= qq($att="$atts{$att}" );
+    }
+    $html .= qq(/>\n);
+  }
+  
+  $html .= qq(</map>\n);
+  return $html;
 }
 
 sub set_cached_panel {
@@ -2556,10 +2642,10 @@ sub set_cached_panel {
   my $size_file               = $self->get_cache_base($key,'size')  or return;
   my ($image_file,$image_uri) = $self->get_cache_base($key,'image') or return;
 
-  # write the map data
+  # write the map data 
   if ($map_data) {
     my $f = IO::File->new(">$map_file") or die "$map_file: $!";
-    $f->print($map_data);
+    $f->print(join("\n", @$map_data),"\n");
     $f->close;
   }
 

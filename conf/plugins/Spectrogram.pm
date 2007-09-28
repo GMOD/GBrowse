@@ -1,4 +1,4 @@
-# $Id: Spectrogram.pm,v 1.7.2.2 2007-03-30 03:19:11 sheldon_mckay Exp $
+# $Id: Spectrogram.pm,v 1.7.2.3 2007-09-28 08:03:31 sheldon_mckay Exp $
 # bioperl module for Bio::Graphics::Browser::Plugin::Spectrogram
 # cared for by Sheldon McKay mckays@cshl.edu
 # Copyright (c) 2006 Cold Spring Harbor Laboratory.
@@ -346,7 +346,7 @@ sub configure_form {
 
   my $description = $self->description;
   my $state       = { on => 0, override => 1 };
-  my $form = toggle($state, 'What is a DNA spectrogram?', $description);
+  my $form = p(toggle($state, 'What is a DNA spectrogram?', $description));
  
   my $msg = $self->_help_message( $state, 'Sliding window size', split "NL", <<'END;');
 Window size is the number of bases to include in each calculation.NL

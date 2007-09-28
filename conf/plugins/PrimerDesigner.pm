@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.4 2007-03-31 14:16:38 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.5 2007-09-28 08:03:31 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -192,7 +192,7 @@ sub configure_form {
   my $atts = $self->primer3_params($lb,$rb) unless $no_buttons;
 
   my $table_width = IMAGEWIDTH + 50;
-  my ( $image, $map, $zoom_menu )
+  my ( $image, $zoom_menu )
       = $self->segment_map( \$segment, $feats, $lb, $rb );
   my $message = '';
 
@@ -206,17 +206,19 @@ sub configure_form {
   my $html   =  h2("Showing $length from $ref, positions $start to $end");
 
   $html .= hidden( -name => 'plugin',        -value => 'PrimerDesigner' )
-        . hidden( -name => 'plugin_action', -value => 'Go' )
-        . hidden( -name => 'ref', -value => $segment->ref )
-        . hidden( -name => 'start', -value => $segment->start )
-        . hidden( -name => 'stop', -value => $segment->stop );
-  $html .= hidden( -name => $self->config_name('lb'), -value => $lb) if $lb;
-  $html .= hidden( -name => $self->config_name('rb'), -value => $rb) if $rb;
-  $html .= hidden( -name => $self->config_name('target'), -value => $target) if $target;
+        .  hidden( -name => 'plugin_action', -value => 'Go' )
+        .  hidden( -name => 'ref',           -value => $segment->ref )
+        .  hidden( -name => 'start',         -value => $segment->start )
+        .  hidden( -name => 'stop',          -value => $segment->stop )
+	.  hidden( -name => 'nocache',       -value => 1 );
+  
+  $html .=  hidden( -name => $self->config_name('lb'), -value => $lb) if $lb;
+  $html .=  hidden( -name => $self->config_name('rb'), -value => $rb) if $rb;
+  $html .=  hidden( -name => $self->config_name('target'), -value => $target) if $target;
 
   my $map_text = $self->map_header;
 
-  my $on = 1 unless $feats;
+  my $on = $feats ? 0 : 1;
   my $no_target = li("There currently is no target region selected.")
       if ($rb - $lb) < 3;
   my $has_buttons = li("The size of potential PCR products can be adjusted via the 'Product size range' option below")
@@ -231,11 +233,11 @@ sub configure_form {
   my $zone = $self->toggle( { on => $on, override => 0 },
 		     'Targetting information',
 		     font( {-size => -1},
-			   ul( $no_target, 
+			   ul( $no_target || '', 
 			       li("PCR primers will flank the $flanked."),
-			       $click_feat,
-			       $boundaries,
-			       $has_buttons
+			       $click_feat || '',
+			       $boundaries || '',
+			       $has_buttons || ''
 			   ) )
 		     ) . br;
 
@@ -286,17 +288,16 @@ sub configure_form {
 		     $html.
 		     end_form;
 
-
   # if this is the first config, exit before form and buttons
   # are printed by gbrowse
   if ($no_buttons && !$feats) {
     my $style = $browser->setting('stylesheet') || STYLE;
     print start_html( -style => $style, -title => 'PCR Primers'),
-      $html, $map, $browser->footer;
+      $html, $browser->footer;
     exit;
   }
 
-  return $feats ? ($html,$map) : $html.$map;
+  return ($html);
 }
 
 sub map_header {
@@ -540,7 +541,7 @@ sub primer_results {
   unshift @rows, $back if @rows > 3;
 
   my $tlength = $rb - $lb;
-  my ($config_html, $map) = $self->configure_form($segment,$target,$lb,$rb,$featurefile);
+  my $config_html = $self->configure_form($segment,$target,$lb,$rb,$featurefile);
 
   unshift @rows, Tr( [ $spacer . td(h1({-align => 'center'},"Predicted PCR primers ") ),
 		    $spacer . td($config_html) ] );
@@ -553,7 +554,7 @@ sub primer_results {
 		    ),
 		$back
 		]
-	      ), $map;
+	      );
   exit(0);
 }
 
@@ -769,19 +770,23 @@ sub segment_map {
   unshift @tracks, 'topscale';
   push @tracks, 'bottomscale';
 
-  my @options = ( segment          => $$segment,
-		  do_map           => 1,
-		  do_centering_map => 1,
-		  tracks           => \@tracks,
-		  postgrid         => $postgrid_callback,
-		  noscale          => 1,
-		  keystyle         => 'none');
+  my $panel_options = { 
+    section          => '',
+    segment          => $$segment,
+    do_map           => 1,
+    do_centering_map => 1,
+    tracks           => \@tracks,
+    postgrid         => $postgrid_callback,
+    noscale          => 1,
+    keystyle         => 'none',
+    drag_n_drop      => 0,
+    box_subparts     => 1,
+    feature_files    => \%feature_files
+      };
   
-  push @options, ( feature_files => \%feature_files );
-  
-  my ( $image, $image_map ) = $render->render_html(@options);
+  my $html = $render->render_panels($panel_options);
 
-  return ( $image, $image_map, $zoom_menu );
+  return ($html, $zoom_menu);
 }
 
 # center the segment on the target coordinate
@@ -1017,7 +1022,7 @@ sub make_feat_link {
   $end    += $pad;
 
   my $p = 'PrimerDesigner';
-  my $url = "?plugin=$p;plugin_action=Go;ref=$fref;start=$start;stop=$end;";
+  my $url = "?nocache=1;plugin=$p;plugin_action=Go;ref=$fref;start=$start;stop=$end;";
   $url   .= "$p.lb=$fstart;$p.rb=$fend";
   
   return $url;
@@ -1025,77 +1030,28 @@ sub make_feat_link {
 
 sub make_map {
   my $self = shift;
-  my ( $boxes, $centering_map, $panel ) = @_;
-  my $map = qq(\n<map name="hmap" id="hmap">\n);
+  my ($boxes,$panel,$map_name) = @_;
+  my @map = ($map_name);
 
   my $topruler = shift @$boxes;
-  $map .= $self->make_centering_map($topruler);
+  push @map, $self->make_centering_map($topruler);
 
   my $bottomruler = pop @$boxes;
-  $map .= $self->make_boundary_map($bottomruler);
-
-  my @link_sets;
-  my $link_set_idx = 0;
+  push @map, $self->make_boundary_map($bottomruler);
 
   for my $box (@$boxes) {
     my ( $feat, $x1, $y1, $x2, $y2, $track ) = @$box;
     next unless $feat->can('primary_tag');
     next if $feat->primary_tag eq 'Primer';
-    my $fclass = $feat->class || 'feature';
-    my $fname  = $feat->name  || 'unnamed';
-    my $fstart = $feat->start;
-    my $fend   = $feat->stop;
-    my $pl     = $panel->pad_left;
-    my $half   = int(($topruler->[5]->length/2) + 0.5);
-
-    my $link = $self->make_feat_link( $feat );
-    my $href = qq{href="$link"};
-
-    # give each subfeature its own link
-    my @parts = $feat->sub_SeqFeature if $feat->can('sub_SeqFeature');
-    if ( @parts > 1 ) {
-      my $last_end;
-      for my $part (sort {$a->start <=> $b->start} @parts) {
-        my $pstart = $part->start;
-        my $pend   = $part->end;
-	my $ptype  = lc $part->primary_tag;
-
-	my $no_overlap = 0;
-	# intervals between parts select the whole (aggregate) feature
-	$last_end ||= $pend;
-	if ($pstart > $last_end) {
-	  my $istart    = $last_end + 1;
-	  my $iend      = $pstart   - 1;
-	  my ($ix1,$ix2) = map { $_ + $pl } $panel->location2pixel( $istart, $iend );
-
-	  # skip it if the box will be less than 2 pixels wide
-	  if ($ix2 - $ix1 > 1) {
-	    my $title = qq{title="select $fclass $fname"};
-	    $map .= qq(<area shape="rect" coords="$ix1,$y1,$ix2,$y2" $href $title/>\n);
-	    $no_overlap   = $ix2;
-	  }
-	}
-
-        my ( $px1, $px2 ) = map { $_ + $pl } $panel->location2pixel( $pstart, $pend );
-	$px1++ if $px1 == $no_overlap;
-
-        my $phref = $self->make_feat_link( $part, $pstart, $pend );
-        $phref     = qq{href="$phref"};
-	my $title  = qq{title="select this $ptype"};
-	$map .= qq(<area shape="rect" coords="$px1,$y1,$px2,$y2" $phref $title/>\n);
-
-	$last_end = $pend;
-      }
-    }
-    else {
-      my $title = qq{title="select $fclass $fname"};
-      $map .= qq(<area shape="rect" coords="$x1,$y1,$x2,$y2" $href $title/>\n);
-    }
+    my $fclass = $feat->primary_tag   || 'feature';
+    my $fname  = $feat->display_name  || $feat->name || 'unnamed';
+    my $ftype  = "$fclass:$fname";
+    my $href   = $self->make_feat_link( $feat );
+    my $title  = "select $fclass $fname";
+    push @map, join("\t",$ftype,$x1,$y1,$x2,$y2,'href',$href,'title',$title);
   }
 
-  $map .= "</map>\n";
-
-  return $map;
+  return \@map;
 }
 
 sub make_centering_map {
@@ -1143,7 +1099,7 @@ sub make_centering_map {
     # fall of the end...
     last if $center >= $stop + ($length / 2);
 
-    my ($url,$title_text);
+    my ($url,$title);
 
     my $p = 'PrimerDesigner';
     my $rb = param("$p.rb");
@@ -1154,23 +1110,21 @@ sub make_centering_map {
     
     # left side of the lower ruler
     if ($middle && $sstart <= $middle) {
-      $url = "?ref=$ref;start=$start;stop=$stop;plugin=$plugin;plugin_action=Go;$p.lb=$center;";
+      $url = "?nocache=1;ref=$ref;start=$start;stop=$stop;plugin=$plugin;plugin_action=Go;$p.lb=$center;";
       $url .= "$p.rb=$rb;" if $rb;
       $url .= "$p.target=$target;" if $target;
-      $url = qq(href="$url");
-      $title_text = "set left target boundary to $center";
+      $title = "set left target boundary to $center";
     }
     # right side of the lower ruler
     elsif ($middle) {
-      $url = "?ref=$ref;start=$start;stop=$stop;plugin=$plugin;plugin_action=Go;$p.rb=$center";
+      $url = "?nocache=1;ref=$ref;start=$start;stop=$stop;plugin=$plugin;plugin_action=Go;$p.rb=$center";
       $url .= ";$p.lb=$lb" if $lb;
       $url .= "$p.target=$target;" if $target;
-      $url = qq(href="$url");
-      $title_text = "set right target boundary to $center";
+      $title = "set right target boundary to $center";
     }
     # top ruler
     else {
-      $url = "?ref=$ref;start=$offset;stop=$end;plugin=$plugin;plugin_action=Go;";
+      $url = "?nocache=1;ref=$ref;start=$offset;stop=$end;plugin=$plugin;plugin_action=Go;";
 
       # We can retain an off-center target if it is still reasonable
       if ($target && $target > $offset + 1000 && $target < $end - 1000 ) {
@@ -1183,18 +1137,15 @@ sub make_centering_map {
         $url .= "$p.rb=$rb;";
       }
 
-      $url = qq(href="$url");
-      $title_text = "recenter at $center";
+      $title = "recenter at $center";
     }
-    my $map_line
-        = qq(<area shape="rect" coords="$X1,$y1,$X2,$y2" $url );
-    $map_line .= qq(title="$title_text" alt="recenter" />\n);
+    my $map_line = join("\t",'ruler:ruler',$X1,$y1,$X2,$y2,'href',$url,'title',$title);
     push @lines, $map_line;
 
     $offset += int $portion;
   }
 
-  return join '', @lines;
+  return @lines;
 }
 
 sub make_boundary_map {

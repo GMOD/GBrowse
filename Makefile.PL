@@ -267,7 +267,7 @@ WriteMakefile(
                                 ) : (),
               'INSTALLSITEMAN1DIR' => $OPTIONS{INSTALLSITEMAN1DIR}, # don't install man pages for 
               'INSTALLSITEMAN3DIR' => $OPTIONS{INSTALLSITEMAN3DIR}, # non-root user
-	      'INSTALLSITESCRIPT'  => $OPTIONS{BIN} || $OPTIONS{INSTALLSCRIPT},
+	      #'INSTALLSITESCRIPT'  => $OPTIONS{BIN} || $OPTIONS{INSTALLSCRIPT},
 	      'INSTALLSITEBIN'     => $OPTIONS{BIN},
 );
 

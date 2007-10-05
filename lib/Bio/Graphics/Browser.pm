@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.206 2007-04-17 12:33:41 lstein Exp $
+# $Id: Browser.pm,v 1.207 2007-10-05 17:23:30 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -992,8 +992,7 @@ sub generate_panels {
 	      -key_color => $self->setting('key bgcolor')     || 'moccasin',
 	      -bgcolor   => $self->setting('detail bgcolor')  || 'white',
 	      -width     => $width,
-#	      -key_style    => $keystyle || $conf->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
-	      -key_style    => 'none',
+	      -key_style    => $keystyle || $conf->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
 	      -empty_tracks => $conf->setting(general=>'empty_tracks') 	        || DEFAULT_EMPTYTRACKS,
 	      -pad_top      => $title ? $image_class->gdMediumBoldFont->height : 0,
 	      -image_class  => $image_class,
@@ -1496,7 +1495,8 @@ sub image_and_map {
 	      -key_color => $self->setting('key bgcolor')     || 'moccasin',
 	      -bgcolor   => $self->setting('detail bgcolor')  || 'white',
 	      -width     => $width,
-	      -key_style    => $keystyle || $conf->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
+#	      -key_style    => $keystyle || $conf->setting(general=>'keystyle') || DEFAULT_KEYSTYLE,
+	      -key_style    => 'none',
 	      -empty_tracks => $conf->setting(general=>'empty_tracks') 	        || DEFAULT_EMPTYTRACKS,
 	      -pad_top      => $title ? $image_class->gdMediumBoldFont->height : 0,
 	      -image_class  => $image_class,

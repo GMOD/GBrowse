@@ -9,7 +9,9 @@ $file = basename($0, '.PL','.PLS');
 $file .= $^O eq 'VMS' ? '.com' : '.pl';
 
 open OUT,">$file" or die "Can't create $file: $!";
+
 print "Extracting $file (with variable substitutions)\n";
+
 print OUT "$Config{startperl}\n";
 
 print OUT <<'!NO!SUBS!';

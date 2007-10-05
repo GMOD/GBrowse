@@ -506,7 +506,6 @@ sub render_locally {
   my $source = $self->source;
 
   my $lang    = $self->page_renderer->language;
-  warn "language = $lang";
 
   # sort tracks by the database they come from
   my (%track2db,%db2db);

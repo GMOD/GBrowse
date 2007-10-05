@@ -272,7 +272,7 @@ sub render_body {
   }
 
   $self->render_instructions($title);
-  
+
   if ($features && @$features > 1) {
   	#search not implemented yet
     $self->render_multiple_choices($features);
@@ -1318,7 +1318,6 @@ update_segment();
 END
 
   print div($self->toggle('Details',div({-id=>'panels'},'Loading...'))),$load_script;
-  
 }
 
 

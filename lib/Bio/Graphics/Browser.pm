@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.31 2007-09-28 18:22:41 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.32 2007-10-05 17:38:23 sheldon_mckay Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1238,7 +1238,7 @@ sub generate_panels {
   my %trackmap = reverse %tracks;
 
   # uncached panels need to be generated and cached
-  $args->{scale_map_type} ||= 'centering_map';
+  $args->{scale_map_type} ||= 'centering_map' unless $suppress_scale;
   (my $map_name = $section) =~ s/^\?//;
 
   for my $l (keys %panels) {
@@ -2635,7 +2635,7 @@ sub get_cached_panel {
   $image_file .= $base;
   
   my $gd = GD::Image->new($image_file) unless $image_file =~ /svg$/;
-  my $map_html  = $self->map_html($map_data);
+  my $map_html  = $self->map_html(@$map_data);
   return ($image_uri,$map_html,$width,$height,$image_file,$gd,$map_data);
 }
 
@@ -2660,13 +2660,13 @@ sub map_array {
 # into HTML. 
 sub map_html {
   my $self = shift;
-  my $data = shift;
-  chomp @$data;
-  my $name = shift @$data or return '';
+  my @data = @_;
+  chomp @data;
+  my $name = shift @data or return '';
 
   my $html  = qq(\n<map name="${name}_map" id="${name}_map">\n);
   
-  for (@$data) {
+  for (@data) {
     my (undef,$x1,$y1,$x2,$y2,%atts) = split "\t";
     $x1 or next;
     my $coords = join(',',$x1,$y1,$x2,$y2);

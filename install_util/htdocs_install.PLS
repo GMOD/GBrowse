@@ -2,16 +2,16 @@
 use Config;
 use File::Basename qw(&basename &dirname);
 use Cwd;
-                                                                                
+
 $origdir = cwd;
 chdir dirname($0);
 $file = basename($0, '.PL','.PLS');
 $file .= $^O eq 'VMS' ? '.com' : '.pl';
-                                                                                
+
 open OUT,">$file" or die "Can't create $file: $!";
-                                                                                
+
 print "Extracting $file (with variable substitutions)\n";
-                                                                                
+
 print OUT "$Config{startperl}\n";
 
 print OUT <<'!NO!SUBS!';
@@ -26,21 +26,36 @@ use FindBin '$Bin';
 
 my $origdir = cwd;
 my $homedir = "$Bin/..";
-                                                                                
+
 chdir $homedir or die "couldn't cd to $homedir: $!\n";
-                                                                                
+
 foreach (@ARGV) {
-  $_ =~ s/^\'(.*)\'$/$1/;
+  $_ =~ s/^\"(.*)\"$/$1/;
 }
 
 my %options = map {split /=/} @ARGV;
-my $ht_target = "$options{HTDOCS}/gbrowse";
+my $root      =  $options{GBROWSE_ROOT} || 'gbrowse';
+my $ht_target = "$options{HTDOCS}/$root";
 
 print "Installing stylesheet and images...\n";
 
 if (! (-e $ht_target) ) {
     mkpath($ht_target,0,0777) or die "unable to make $ht_target directory\n";
 }
+
+my $localreadmedir = ".";
+opendir README, $localreadmedir or die "unable to opendir $localreadmedir\n";
+while (my $file = readdir(README)) {
+    my $localfile = Bio::Root::IO->catfile($localreadmedir, $file);
+    if (-f $localfile and $file =~ /^README/) {
+        my $installfile = Bio::Root::IO->catfile($ht_target, $file);
+        chmod (0666, $installfile);
+        copy_with_substitutions($localfile, $installfile)
+           or die "unable to copy to $installfile\n";
+        chmod (0444, $installfile); 
+    }
+}
+closedir README;
 
 my $localhtdocsdir = "htdocs";
 opendir HTDOCS, $localhtdocsdir or die "unable to opendir $localhtdocsdir\n";
@@ -56,11 +71,12 @@ while (my $file = readdir(HTDOCS) ) {
 }
 closedir HTDOCS; 
 
-my $imagedir  = Bio::Root::IO->catfile($ht_target, "images");
-my $buttondir = Bio::Root::IO->catfile($imagedir, "buttons");
+my $imagedir   = Bio::Root::IO->catfile($ht_target, "images");
+my $buttondir  = Bio::Root::IO->catfile($imagedir, "buttons");
+my $balloondir = Bio::Root::IO->catfile($imagedir, "balloons");
 my $jsdir  = Bio::Root::IO->catfile($ht_target, "js");
 
-for my $ddir ( $imagedir,$buttondir,$jsdir ) {
+for my $ddir ( $imagedir,$buttondir,$balloondir,$jsdir ) {
     if (! (-e $ddir) ) {
 	print "Making $ddir...\n";
 	mkdir($ddir,0777) or die "unable to make $ddir\n";
@@ -79,6 +95,21 @@ while (my $file = readdir(BUTTONS) ) {
     }
 }
 closedir BUTTONS;
+
+my $localballoondir = "htdocs/images/balloons";
+opendir BALLOONS, $localballoondir or die "unable to open $localballoondir\n";
+while (my $file = readdir(BALLOONS) ) {
+  my $localfile = Bio::Root::IO->catfile($localballoondir,$file);
+  if (-f $localfile) {
+    my $installfile = Bio::Root::IO->catfile($balloondir, $file);
+    chmod (0666, $installfile);
+        copy_with_substitutions($localfile, $installfile)
+            or die "unable to copy to $installfile\n";
+    chmod (0444, $installfile);
+  }
+}
+closedir BALLOONS;
+
 
 my $helpdir = Bio::Root::IO->catfile($imagedir, "help");
 if (! (-e $helpdir) ) {
@@ -163,10 +194,9 @@ print "Installing sample data files...\n";
 copy_tree("./htdocs/databases",$ht_target);
 chmod 0777,glob("$ht_target/databases/*");
 
-
 print "\n\n#############################################################################\n";
 print "GBrowse is now installed.  Read INSTALL for further setup instructions.\n";
-print "Go to http://localhost/gbrowse/ for the online tutorial and reference manual.\n";
+print "Go to http://localhost/$root for the online tutorial and reference manual.\n";
 print "#############################################################################\n";
 
 chdir $origdir or die "couldn't cd to $origdir: $!\n";

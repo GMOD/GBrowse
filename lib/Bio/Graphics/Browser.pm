@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.32 2007-10-05 17:38:23 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.33 2007-10-08 18:15:32 lstein Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -790,9 +790,10 @@ sub make_link {
 
 =head2 render_panels()
 
-  ($image,$image_map) = $browser->render_panels(%args);
+  $panels = $browser->render_panels(%args);
 
 Render an image and an image map according to the options in %args.
+In a
 Returns a two-element list.  The first element is a URL that refers to
 the image which can be used as the SRC for an <IMG> tag.  The second
 is a complete image map, including the <MAP> and </MAP> sections.
@@ -1001,7 +1002,7 @@ sub render_draggable_tracks {
 
   }
 
-  return wantarray ? @result : join "<br>",@result;
+  return wantarray ? @result : join '',@result;
 }
 
 sub render_composite_track {

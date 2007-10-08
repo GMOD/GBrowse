@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.18 2007-09-28 18:11:35 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.19 2007-10-08 18:15:31 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -585,7 +585,7 @@ sub detail_panel {
   my ($segment,$page_settings,$feature_files) = @_;
   return '' if $CONFIG->section_setting('details') eq 'hide';
 
-  my @panels;
+  my $panels = '';
 
   if ($segment->length <= $MAX_SEGMENT) {
 
@@ -597,7 +597,7 @@ sub detail_panel {
     my $h_callback     = make_hilite_callback($page_settings);
     my $postgrid       = make_postgrid_callback($page_settings);
 
-    @panels      = $CONFIG->render_panels({segment       => $segment,
+    $panels      = $CONFIG->render_panels({segment       => $segment,
 					   feature_files => $feature_files,
 					   labels        => \@tracks_to_show,
 					   options       => $options,
@@ -620,7 +620,7 @@ sub detail_panel {
   }
 
   else {
-    @panels = div($CONFIG->tr('TOO_BIG',
+    $panels = div($CONFIG->tr('TOO_BIG',
 			      scalar unit_label($MAX_SEGMENT),
 			      scalar unit_label($DEFAULT_SEGMENT)));
   }
@@ -635,7 +635,7 @@ sub detail_panel {
     return div(toggle($page_settings,
 		      'Details',
 		      div({-id=>'panels',-class=>'track'},
-			  @panels
+			  $panels
 			 )
 		     )
 	      )
@@ -645,7 +645,7 @@ sub detail_panel {
   return div(toggle($page_settings,
 		    'Details',
 		    div({-id=>'panels',-class=>'track'},
-			@panels
+			$panels
 		       )
 		   )
 	    ).$drag_script;
@@ -1347,8 +1347,7 @@ sub track_config {
 
   print CGI::header,start_html();
 
-  my $citation = b({-style => "color:\#3366FF;font-family:sans-serif"},$key).
-                 p($CONFIG->citation($label,$CONFIG->language)||$CONFIG->tr('NO_CITATION'));
+  my $citation = h4($key).p($CONFIG->citation($label,$CONFIG->language)||$CONFIG->tr('NO_CITATION'));
   my $height   = $CONFIG->fallback_setting($label=>'height')    || 5;
   my $width    = $CONFIG->fallback_setting($label=>'linewidth') || 1;
   my $glyph    = $CONFIG->fallback_setting($label=>'glyph')     || 'box';
@@ -2190,7 +2189,7 @@ sub _region_panel {
   # the postgrid will be invoked to hilite the currently selected region
   my $postgrid = hilite_regions_closure([$segment->start,$segment->end,'yellow']);
 
-  my @panels   = $CONFIG->render_panels({
+  my $panels   = $CONFIG->render_panels({
 					 section       => $panel_name,
 					 segment       => $region,
 					 postgrid      => $postgrid,
@@ -2215,9 +2214,9 @@ sub _region_panel {
     hidden(-name=>'seg_max',-value=>$region->end,-override=>1);
 
    if ($CONFIG->drag_and_drop) {
-     return div({-id=>$panel_name,-class=>'track'},@panels) . drag_script($panel_name,'track') .$hidden;
+     return div({-id=>$panel_name,-class=>'track'},$panels) . drag_script($panel_name,'track') .$hidden;
    } else {
-     return div({-id=>$panel_name,-class=>'track'},@panels).$hidden;
+     return div({-id=>$panel_name,-class=>'track'},$panels).$hidden;
    }
 }
 

@@ -40,7 +40,7 @@ use Getopt::Long;
 use Pod::Usage;
 
 my ( $show_help, $get_from_cvs, $build_param_string, 
-     $get_gbrowse_cvs, $get_bioperl_cvs );
+     $get_gbrowse_cvs, $get_bioperl_cvs, $is_cygwin );
 
 BEGIN {
 
@@ -56,9 +56,7 @@ BEGIN {
 
 
   print STDERR "\nAbout to install GBrowse and all its prerequisites.\n";
-  print STDERR "\nYou will be asked various questions during this process. You can almost always";
-  print STDERR "\naccept the default answer (with a notable exception of libgd on MacOSX;\n";
-  print STDERR "see the documetation on the GMOD website for more information.)\n";
+  print STDERR "\nYou will be asked various questions during this process. You can almost always accept the default answer.\n";
   print STDERR "The whole process will take several minutes and will generate lots of messages.\n";
   print STDERR "\nPress return when you are ready to start!\n";
   my $h = <>;
@@ -84,6 +82,8 @@ use Archive::Zip ':ERROR_CODES';
 use Archive::Tar;
 use File::Copy 'cp';
 use CPAN '!get';
+
+$is_cygwin = 1 if ( $^O eq 'cygwin' );
 
 if ($get_from_cvs) {
     $get_bioperl_cvs = $get_gbrowse_cvs = 1;
@@ -219,11 +219,13 @@ sub do_get_distro {
             $distribution_dir = 'Generic-Genome-Browser';
             print STDERR "\n\nPlease press return when prompted for a password.\n";
             unless (
-            system(
-                'cvs -d:pserver:anonymous@gmod.cvs.sourceforge.net:/cvsroot/gmod login'
-                    . ' && '
-                    . 'cvs -z3 -d:pserver:anonymous@gmod.cvs.sourceforge.net:/cvsroot/gmod co -P -r stable Generic-Genome-Browser'
-            ) == 0
+              (system(
+    'cvs -d:pserver:anonymous@gmod.cvs.sourceforge.net:/cvsroot/gmod login')==0
+                or $is_cygwin)
+              &&
+              (system(
+    'cvs -z3 -d:pserver:anonymous@gmod.cvs.sourceforge.net:/cvsroot/gmod co -P -r stable Generic-Genome-Browser') == 0
+                or $is_cygwin)
             )
             {
                 print STDERR "Failed to check out the GBrowse from CVS: $!\n";
@@ -235,12 +237,14 @@ sub do_get_distro {
             $distribution_dir = 'bioperl-live';
             print STDERR "\n\nPlease enter 'cvs' when prompted for a password.\n";
             unless (
-            system(
-                'cvs -d :pserver:cvs@code.open-bio.org:/home/repository/bioperl login'
-                    . ' && '
-                    . 'cvs -z3 -d:pserver:cvs@code.open-bio.org:/home/repository/bioperl checkout bioperl-live'
-            ) == 0
-            )
+              (system(
+    'cvs -d :pserver:cvs@code.open-bio.org:/home/repository/bioperl login') ==0
+                or $is_cygwin)
+             &&
+              (system( 
+    'cvs -z3 -d:pserver:cvs@code.open-bio.org:/home/repository/bioperl checkout bioperl-live') == 0 
+                or $is_cygwin)  #cygwin system calls not always 0 on success
+            ) 
             {
                 print STDERR "Failed to check out the GBrowse from CVS: $!\n";
                 return undef;

@@ -56,7 +56,9 @@ BEGIN {
 
 
   print STDERR "\nAbout to install GBrowse and all its prerequisites.\n";
-  print STDERR "\nYou will be asked various questions during this process. You can almost always accept the default answer.\n";
+  print STDERR "\nYou will be asked various questions during this process. You can almost always";
+  print STDERR "\naccept the default answer (with a notable exception of libgd on MacOSX;\n";
+  print STDERR "see the documentation on the GMOD website for more information.)\n";
   print STDERR "The whole process will take several minutes and will generate lots of messages.\n";
   print STDERR "\nPress return when you are ready to start!\n";
   my $h = <>;

@@ -21,7 +21,7 @@ sub conf {
 	 '/usr/local/apache2/conf',  # standard apache2 install
 	 '/etc/httpd/conf',          # RedHat linux
 	 '/etc/apache',              # Slackware linux
-	 '/etc/apache2',             # Ubuntu
+	 '/etc/apache2',             # Ubuntu and Cygwin
 	 '/etc/httpd',               # MacOSX
 	 '/etc/apache2',             # Ubuntu/debian
 	 '/etc/apache-perl',         # Ubuntu/debian
@@ -75,13 +75,14 @@ sub htdocs {
       return $_ if -d $_;
     }
   } else {
-    for ('/usr/local/apache/htdocs',       # standard apache install
-	 '/usr/local/apache2/htdocs',       # standard apache2 install
+    for ('/srv/www/htdocs',                # Cygwin
+         '/usr/local/apache/htdocs',       # standard apache install
+	 '/usr/local/apache2/htdocs',      # standard apache2 install
 	 '/var/www/html',                  # RedHat linux
 	 '/var/www/htdocs',                # Slackware linux
 	 '/var/www',                       # Ubuntu/debian
 	 '/var/www',                       # Ubuntu
-	 '/Library/Webserver/Documents',  # MacOSX
+	 '/Library/Webserver/Documents',   # MacOSX
 	) {
       return $_ if -d $_;
     }
@@ -108,7 +109,8 @@ sub cgibin {
       return $_ if -d $_;
     }
   } else {
-    for ('/usr/local/apache/cgi-bin',      # standard apache install
+    for ('/srv/www/cgi-bin',               # Cygwin
+         '/usr/local/apache/cgi-bin',      # standard apache install
 	 '/usr/local/apache2/cgi-bin',     # standard apache2 install
 	 '/var/www/cgi-bin',               # RedHat & Slackware linux
 	 '/usr/lib/cgi-bin',               # Ubuntu/debian

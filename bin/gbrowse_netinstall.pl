@@ -301,7 +301,7 @@ sub find_bioperl_ppm {
     my ($number)     = /^(\d+): bioperl/m;
     my ($version)    = /^\s+Version: (.+)/m;
     my ($repository) = /^\s+Repo: (.+)/m;
-    my $multiplier = 1000000;
+    my $multiplier = 10000000;
     my $magnitude  = 0;
     # this dumb thing converts 1.5.1 into a real number
     foreach (split /[._]/,$version) {

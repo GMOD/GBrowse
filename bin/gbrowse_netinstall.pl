@@ -38,9 +38,16 @@ use strict;
 use Config;
 use Getopt::Long;
 use Pod::Usage;
+use LWP::Simple;
+use File::Copy 'cp';
+use File::Temp qw(tempdir);
+
+
+use constant NMAKE => 'http://download.microsoft.com/download/vc15/patch/1.52/w95/en-us/nmake15.exe';
 
 my ( $show_help, $get_from_cvs, $build_param_string, 
-     $get_gbrowse_cvs, $get_bioperl_cvs, $is_cygwin );
+     $get_gbrowse_cvs, $get_bioperl_cvs, $is_cygwin, $windows,
+     $binaries, $make, $tmpdir );
 
 BEGIN {
 
@@ -53,7 +60,6 @@ BEGIN {
         )
         or pod2usage(2);
   pod2usage(2) if $show_help;
-
 
   print STDERR "\nAbout to install GBrowse and all its prerequisites.\n";
   print STDERR "\nYou will be asked various questions during this process. You can almost always";
@@ -70,19 +76,47 @@ BEGIN {
         CPAN::Shell->Config();
     }
 
+    $tmpdir = tempdir(CLEANUP=>1) 
+      or die "Could not create temporary directory: $!";
+
+    $windows = $Config{osname} =~ /mswin/i;
+
+    $binaries = $Config{'binexp'};
+    $make     = $Config{'make'};
+
     CPAN::Shell->install('Archive::Zip');
+    CPAN::Shell->install('YAML');
     CPAN::Shell->install('HTML::Tagset');
     CPAN::Shell->install('LWP::Simple');
+    use Archive::Zip ':ERROR_CODES';
+
+    if ($windows && !-e "$binaries/${make}.exe") {
+
+      print STDERR "Installing make utility...\n";
+
+      -w $binaries or die "$binaries directory is not writeable. Please re-login as Admin.\n";
+
+      chdir $tmpdir;
+
+      my $rc = mirror(NMAKE,"nmake.zip");
+      die "Could not download nmake executable from Microsoft web site."
+        unless $rc == RC_OK or $rc == RC_NOT_MODIFIED;
+
+      my $zip = Archive::Zip->new('nmake.zip') or die "Couldn't open nmake zip file for decompression: $!";
+      $zip->extractTree == AZ_OK or die "Couldn't unzip file: $!";
+      -e 'NMAKE.EXE' or die "Couldn't extract nmake.exe";
+
+      cp('NMAKE.EXE',"$binaries/${make}.EXE") or die "Couldn't install nmake.exe: $!";
+      cp('NMAKE.ERR',"$binaries/${make}.ERR"); # or die "Couldn't install nmake.err: $!"; # not fatal
+    }
+
     CPAN::Shell->install('Archive::Tar');
     CPAN::HandleConfig->commit;
   }
 }
 
-use File::Temp qw(tempdir);
-use LWP::Simple;
-use Archive::Zip ':ERROR_CODES';
+
 use Archive::Tar;
-use File::Copy 'cp';
 use CPAN '!get';
 
 $is_cygwin = 1 if ( $^O eq 'cygwin' );
@@ -90,6 +124,11 @@ $is_cygwin = 1 if ( $^O eq 'cygwin' );
 if ($get_from_cvs) {
     $get_bioperl_cvs = $get_gbrowse_cvs = 1;
 }
+
+if ($windows and ($get_bioperl_cvs or $get_gbrowse_cvs) ) {
+    die "\n\nThe development/cvs tags are not supported on Windows; exiting...\n";
+}
+
 $build_param_string ||="";
 
 use constant BIOPERL_VERSION      => 'bioperl-1.5.2_102';
@@ -99,43 +138,16 @@ use constant SOURCEFORGE_MIRROR1  => 'http://superb-west.dl.sourceforge.net/sour
 use constant SOURCEFORGE_MIRROR2  => 'http://easynews.dl.sourceforge.net/sourceforge/gmod/';
 use constant SOURCEFORGE_GBROWSE  => 'http://sourceforge.net/project/showfiles.php?group_id=27707&package_id=34513';
 use constant BIOPERL              => 'http://bioperl.org/DIST/'.BIOPERL_VERSION.'.tar.gz';
-use constant NMAKE                => 'http://download.microsoft.com/download/vc15/patch/1.52/w95/en-us/nmake15.exe';
 
 my %REPOSITORIES = ('BioPerl-Release-Candidates' => 'http://bioperl.org/DIST/RC',
 		    'BioPerl-Regular-Releases'   => 'http://bioperl.org/DIST',
 	            'Kobes'                      => 'http://theoryx5.uwinnipeg.ca/ppms',
                     'Bribes'                     => 'http://www.Bribes.org/perl/ppm');
 
-my $binaries = $Config{'binexp'};
-my $make     = $Config{'make'};
 
 # this is so that ppm can be called in a pipe
 $ENV{COLUMNS} = 80; # why do we have to do this?
 $ENV{LINES}   = 24;
-
-my $tmpdir = tempdir(CLEANUP=>1) 
-    or die "Could not create temporary directory: $!";
-my $windows = $Config{osname} =~ /mswin/i;
-
-if ($windows && !-e "$binaries/${make}.exe") {
-
-  print STDERR "Installing make utility...\n";
-
-  -w $binaries or die "$binaries directory is not writeable. Please re-login as Admin.\n";
-
-  chdir $tmpdir;
-
-  my $rc = mirror(NMAKE,"nmake.zip");
-  die "Could not download nmake executable from Microsoft web site." 
-    unless $rc == RC_OK or $rc == RC_NOT_MODIFIED;
-
-  my $zip = Archive::Zip->new('nmake.zip') or die "Couldn't open nmake zip file for decompression: $!";
-  $zip->extractTree == AZ_OK or die "Couldn't unzip file: $!";
-  -e 'NMAKE.EXE' or die "Couldn't extract nmake.exe";
-
-  cp('NMAKE.EXE',"$binaries/${make}.EXE") or die "Couldn't install nmake.exe: $!";
-  cp('NMAKE.ERR',"$binaries/${make}.ERR"); # or die "Couldn't install nmake.err: $!"; # not fatal
-}
 
 setup_ppm() if $windows;
 
@@ -165,7 +177,7 @@ if (!(eval "use Bio::Perl $version; 1") or $get_bioperl_cvs) {
   print STDERR "\n*** Installing BioPerl ***\n";
   if ($windows) {
     my $bioperl_index = find_bioperl_ppm();
-    system("ppm install $bioperl_index");
+    system("ppm install --force $bioperl_index");
   } else {
       CPAN::Shell->install('Module::Build');
       do_install(BIOPERL,'bioperl.tgz',BIOPERL_VERSION,'Build',$get_bioperl_cvs);

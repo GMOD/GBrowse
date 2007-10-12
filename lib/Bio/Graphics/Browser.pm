@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.34 2007-10-08 20:04:16 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.35 2007-10-12 16:06:51 tharris Exp $
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -1583,8 +1583,12 @@ sub clear_cache {
 sub tmpdir {
   my $self = shift;
   my $path = shift || '';
+       
+  # Original code; retain while testing new "callback_setting" method below
+  #  my ($tmpuri,$tmpdir) = shellwords($self->setting('tmpimages'))
+  #   or die "no tmpimages option defined, can't generate a picture";
 
-  my ($tmpuri,$tmpdir) = shellwords($self->setting('tmpimages'))
+  my ($tmpuri,$tmpdir) = shellwords($self->callback_setting('tmpimages'))
     or die "no tmpimages option defined, can't generate a picture";
 
   $tmpuri  = $self->relative_path($tmpuri);
@@ -1611,6 +1615,12 @@ sub tmpdir {
   return ($tmpuri,$path);
 }
 
+# Check if a configuration setting is a coderef or simple variable
+sub callback_setting {
+    my $self = shift;
+    my $val  = $self->setting(@_);
+    return ref $val eq 'CODE' ? $val->() : $val;
+}
 
 sub make_map {
   my $self = shift;

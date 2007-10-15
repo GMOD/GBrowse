@@ -1205,15 +1205,15 @@ The default value is 1 month.
 
 See the CGI manual page for more information on the time format.
 
+=item * remember cookie time
+
+This is the length of time before the user's session cookie will stay
+on disk before it expires.  It should be significantly longer than
+"remember settings time." The default is 12 months.
+
 =item * remember source time
 
-Like "remember settings time" but applies to remembering the user's
-preferred data source. "remember source time" should be greater or
-equal to "remember settings time" because the settings will expire
-when the source expires. If you have multiple sources, this option
-should be the same for each one.
-
-The default value is 3 months.
+Deprecated. Use "remember cookie time" instead.
 
 =item * msie hack
 

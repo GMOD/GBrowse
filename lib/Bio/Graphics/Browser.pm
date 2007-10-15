@@ -1,5 +1,8 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.35 2007-10-12 16:06:51 tharris Exp $
+
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.36 2007-10-15 19:19:51 lstein Exp $
+
+# GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
 # Its main utility for plugin writers is to access the configuration file information
 
@@ -89,8 +92,8 @@ use constant PAD_DETAIL_SIDES    => 25;
 use constant DEFAULT_OVERVIEW_BGCOLOR => 'wheat';
 
 # amount of time to remember persistent settings
-use constant REMEMBER_SOURCE_TIME   => '+3M';   # 3 months
-use constant REMEMBER_SETTINGS_TIME => '+1M';   # 1 month
+use constant REMEMBER_SOURCE_TIME   => '+12M';   # 12 months
+use constant REMEMBER_SETTINGS_TIME => '+1M';    # 1 month
 
 use constant DEBUG => 0;
 
@@ -503,7 +506,7 @@ on which source the user is viewing.
 
 sub remember_source_time {
   my $self = shift;
-  return $self->setting('remember source time') || REMEMBER_SOURCE_TIME;
+  return $self->setting('remember cookie time') || $self->setting('remember source time') || REMEMBER_SOURCE_TIME;
 }
 
 =head2 $language = $browser->language([$new_language])
@@ -2578,7 +2581,7 @@ sub get_cache_base {
   my $self            = shift;
   my ($key,$filename) = @_;
   my @comp        = $key =~ /(..)/g;
-  my $rel_path    = join '/',$self->source,'panel_cache',@comp[0..2],$key;
+  my $rel_path    = join '/',$self->source,'panel_cache',@comp[0..1],$key;
   my ($uri,$path) = $self->tmpdir($rel_path);
 
   return wantarray ? ("$path/$filename","$uri/$filename") : "$path/$filename";
@@ -2625,7 +2628,7 @@ sub get_cached_panel {
     my $f = IO::File->new($map_file) or return;
     while (my $line = $f->getline) {
       push @$map_data, $line;
-    }   
+    }
     $f->close;
   }
 
@@ -2644,7 +2647,7 @@ sub get_cached_panel {
            : '.gif';
   $image_uri  .= $base;
   $image_file .= $base;
-  
+
   my $gd = GD::Image->new($image_file) unless $image_file =~ /svg$/;
   my $map_html  = $self->map_html(@$map_data);
   return ($image_uri,$map_html,$width,$height,$image_file,$gd,$map_data);

@@ -1,6 +1,7 @@
 # do not remove the { } from the top and bottom of this page!!!
 #Simple_Chinese language module by Li DaoFeng <lidaof@cau.edu.cn>
 #Modified from Tradition_Chinese version by Jack Chen <chenn@cshl.edu>
+#translation updated 2007.10.16
 {
 
  CHARSET =>   'GB2312',
@@ -21,7 +22,7 @@ END
 
    EDIT_INSTRUCTIONS => <<END,
 在此编辑你上传的注释数据。
-你可以利用表格键(tabs) 或 空格键(spaces) 来分界,
+你可以利用制表符(tabs) 或 空格键(spaces) 来分界,
 但对于数据已有的空白区域，则必须用单引号或双引号包括它们。
 END
 
@@ -47,7 +48,7 @@ END
 
    IMAGE_LINK => '图像链接',
 
-   SVG_LINK   => '高质量图像',
+   SVG_LINK   => '高质量SVG图像',
 
    SVG_DESCRIPTION => <<END,
 <p>
@@ -56,7 +57,7 @@ END
 <ul>
 <li>不影响图像质量的情况下改变图像大小
 <li>可以用普通图像软件进行编辑
-<li>如果有需要可以转换成EPS格式拱发表之用。
+<li>如果有需要可以转换成EPS格式供发表之用。
 </ul>
 <p>
 要显示SVG图像, 需要浏览器支持SVG, 例如可以使用Adobe SVG 浏览器插件, 或者 Adobe Illustrator的SVG的查看和编辑软件。
@@ -79,7 +80,7 @@ END
 
    IMAGE_DESCRIPTION => <<END,
 <p>
-生成嵌手网页的图像, 剪切并粘贴图像的URL到HTML页面:
+生成内嵌于网页的图像, 剪切并粘贴图像的URL到HTML页面:
 </p>
 <pre>
 &lt;IMAGE src="%s" /&gt;
@@ -98,7 +99,7 @@ END
 
    TIMEOUT  => <<'END',
 请求超时。您选择显示的区域可能太大而不能显示。
-尝试关掉一些数据道 或 选择稍小的区域.  如果仍然超时，请按红色的 "重置" 按钮。
+尝试关掉一些数据通道 或 选择稍小的区域.  如果仍然过大，请按红色的 "重置" 按钮。
 END
 
    GO       => '执行',
@@ -127,13 +128,13 @@ END
 
    DISPLAY_SETTINGS => '显示设置',
 
-   TRACKS   => '数据道',
+   TRACKS   => '数据通道',
 
-   EXTERNAL_TRACKS => '<i>外部数据道（斜体）</i>',
+   EXTERNAL_TRACKS => '<i>外部数据通道（斜体）</i>',
 
-   OVERVIEW_TRACKS => '<sup>*</sup>数据道概要',
+   OVERVIEW_TRACKS => '<sup>*</sup>数据通道概要',
 
-   REGION_TRACKS => '<sup>**</sup>数据道区域',
+   REGION_TRACKS => '<sup>**</sup>数据通道区域',
 
    EXAMPLES => '范例',
 
@@ -151,7 +152,7 @@ END
 
    CONFIGURE   => '配置...',
 
-   CONFIGURE_TRACKS   => '配置数据道...',
+   CONFIGURE_TRACKS   => '配置数据通道...',
 
    EDIT       => '编辑文件...',
 
@@ -169,7 +170,7 @@ END
 
    RIGHT       => '右面',
 
-   TRACK_NAMES => '数据道名称表',
+   TRACK_NAMES => '数据通道名称表',
 
    ALPHABETIC  => '字母',
 
@@ -177,7 +178,7 @@ END
 
    SHOW_GRID    => '显示网格',
 
-   SET_OPTIONS => '设定特征数据选项...',
+   SET_OPTIONS => '设定数据通道选项...',
 
    CLEAR_HIGHLIGHTING => '清除高亮',
 
@@ -187,7 +188,7 @@ END
 
    DATA_SOURCE => '数据来源',
 
-   UPLOAD_TRACKS=>'上传您自己的数据道',
+   UPLOAD_TRACKS=>'上传您自己的数据通道',
 
    UPLOAD_TITLE=> '上传您自己的注释',
 
@@ -222,11 +223,11 @@ END
    FILE_INFO    => '最后修改 %s.  注释标志: %s',
 
    FOOTER_1     => <<END,
-Note: This page uses cookies to save and restore preference information.
-No information is shared.
+注意: 此页面使用cookies来保存和恢复用户偏好信息。
+用户信息不会泄露。
 END
 
-   FOOTER_2    => 'Generic genome browser version %s',
+   FOOTER_2    => '通用基因组浏览器版本 %s',
 
    #----------------------
    # MULTIPLE MATCHES PAGE
@@ -262,20 +263,20 @@ END
 
    ACCEPT_RETURN   => '接受更改并返回...',
 
-   OPTIONS_TITLE => '特征数据选项',
+   OPTIONS_TITLE => '数据通道选项',
 
    SETTINGS_INSTRUCTIONS => <<END,
-<i>显示</i> 复选框可以执行数据道的打开和关闭。 The
-<i>紧缩</i> 选项强制紧缩数据道，所以有些注释会重叠。<i>扩展</i> 和 <i>通过链接</i>
+<i>显示</i> 复选框可以执行数据通道的打开和关闭。
+<i>紧缩</i> 选项强制紧缩数据通道，所以有些注释会重叠。<i>扩展</i> 和 <i>通过链接</i>
 选项利用快速或慢速规划算法开启碰控制。<i>扩展</i> 和 <i>标记</i> 以及 <i>通过链接的扩展和标记 </i> 选项强制注释被标记。
 如果选择了<i>自动</i> 选项, 空间允许的条件下碰撞控制和标记选项将会设置为自动。
-要改变数据道的顺序可以使用 <i>更改数据道顺序</i> 弹出菜单 并为数据道分配一个注释. 要限制注释的数目, 更改
+要改变数据通道的顺序可以使用 <i>更改数据通道顺序</i> 弹出菜单 并为数据通道分配一个注释. 要限制注释的数目, 更改
  <i>限制</i> 菜单的值。
 END
 
-   TRACK  => '数据道',
+   TRACK  => '数据通道',
 
-   TRACK_TYPE => '数据道类型',
+   TRACK_TYPE => '数据通道类型',
 
    SHOW => '显示',
 
@@ -285,7 +286,7 @@ END
 
    ADJUST_ORDER => '顺序调整',
 
-   CHANGE_ORDER => '更改数据道顺序',
+   CHANGE_ORDER => '更改数据通道顺序',
 
    AUTO => '自动',
 
@@ -323,13 +324,13 @@ END
 
    CLOSE_WINDOW => '关闭窗口',
 
-   TRACK_DESCRIPTIONS => '特征数据的描述和引用',
+   TRACK_DESCRIPTIONS => '数据通道的描述和引用',
 
-   BUILT_IN           => '这个服务器内在的特征数据',
+   BUILT_IN           => '这个服务器内在的数据通道',
 
-   EXTERNAL           => '外部注释特征数据',
+   EXTERNAL           => '外部注释数据通道',
 
-   ACTIVATE           => '请激活此特征数据并查看相关信息',
+   ACTIVATE           => '请激活此数据通道并查看相关信息',
 
    NO_EXTERNAL        => '没有载入外部特征',
 
@@ -369,6 +370,6 @@ END
 
  SMALL_INTERVAL    => '将区域缩小到 %s bp',
 
- NO_SOURCES        => '没有配置可读的数据源.  或者你没有权限查看它们',
+ NO_SOURCES        => '没有配置可读的数据源.  或者您没有权限查看它们',
 
 };

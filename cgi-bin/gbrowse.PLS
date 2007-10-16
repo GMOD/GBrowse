@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.21 2007-10-16 15:01:50 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.22 2007-10-16 15:05:39 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1774,7 +1774,6 @@ sub zoomnav {
     my $whole_start = param('seg_min');
     my $whole_stop  = param('seg_max');
 
-    warn "I'm here, regionview_x = $regionview_x; ($whole_start,$whole_stop)";
     my ($regionview_start, $regionview_end) = get_regionview_seg($settings,$start, $stop, $whole_start, $whole_stop);
     my @regionview_tracks = grep {$settings->{features}{$_}{visible}} 
       $CONFIG->config->regionview_tracks;

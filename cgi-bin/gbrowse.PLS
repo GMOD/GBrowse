@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.22 2007-10-16 15:05:39 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.23 2007-10-16 15:27:52 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -593,7 +593,7 @@ sub detail_panel {
     my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} && !/:(overview|region)$/ }
                                @{$page_settings->{tracks}};
 
-    my ($options,$limits) = get_options(\@tracks_to_show);
+    my ($options,$limits) = get_options(\@tracks_to_show,$page_settings);
     my $h_callback        = make_hilite_callback($page_settings);
     my $postgrid          = make_postgrid_callback($page_settings);
 
@@ -2182,11 +2182,11 @@ sub _region_panel {
 
   $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
 
-  my @tracks_to_show = grep {$page_settings->{features}{$_}{visible} &&  /:$panel_name$/i}
-    @{$page_settings->{tracks}};
+  my @tracks_to_show = grep {$settings->{features}{$_}{visible} &&  /:$panel_name$/i}
+    @{$settings->{tracks}};
 
   # these hashes map label names to packing option values and limit values
-  my ($options,$limits) = get_options(\@tracks_to_show);
+  my ($options,$limits) = get_options(\@tracks_to_show,$settings);
 
   # the postgrid will be invoked to hilite the currently selected region
   my $postgrid = hilite_regions_closure([$segment->start,$segment->end,'yellow']);
@@ -2225,6 +2225,7 @@ sub _region_panel {
 # create hashes that map track label names into options and limit values
 sub get_options {
   my $tracks_to_show = shift;
+  my $page_settings  = shift;
   my %options    = map {$_=>$page_settings->{features}{$_}{options}} @$tracks_to_show;
   my %limits     = map {$_=>$page_settings->{features}{$_}{limit}}   @$tracks_to_show;
   return (\%options,\%limits);

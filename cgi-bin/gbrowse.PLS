@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.23 2007-10-16 15:27:52 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.24 2007-10-16 16:44:12 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -443,11 +443,11 @@ sub main_display {
 
   # force flipping
   if ($segment && $segment->end < $segment->start) {
-      $segment = $segment->factory->segment(-name  => $segment->seq_id,
+    ($segment) = $segment->factory->segment(-name  => $segment->seq_id,
 					    -start => $segment->end,
 					    -stop  => $segment->start,
 					    -absolute => 1);
-      $page_settings->{flip} = 1;
+    $page_settings->{flip} = 1;
   }
 
   # print the top of the form, with navigation bar, etc
@@ -480,8 +480,8 @@ sub main_display {
   elsif ($segment) {
     # if a plugin passes us back a Feature, rather than a Segment, turn it into a segment
     # (this shouldn't happen - hah!)
-    $segment = open_database()->segment($segment->seq_id,
-				        $segment->start,$segment->end)
+    ($segment) = open_database()->segment($segment->seq_id,
+					  $segment->start,$segment->end)
       unless $segment->can('features');
 
     print overview_panel($whole_segment,$segment,$page_settings,$feature_files);
@@ -489,10 +489,10 @@ sub main_display {
     if ($page_settings->{region_size}) {
       my ($region_seg_start, $region_seg_end) = get_regionview_seg($page_settings,$segment->start, $segment->end,
 								   $whole_segment->start,$whole_segment->end);
-      my $region_segment = open_database()->segment(-name=>$segment->seq_id,
-						    -start=>$region_seg_start,
-						    -end=>$region_seg_end,
-						    -absolute=>1);
+      my ($region_segment) = open_database()->segment(-name=>$segment->seq_id,
+						      -start=>$region_seg_start,
+						      -end=>$region_seg_end,
+						      -absolute=>1);
       print region_panel($region_segment,$segment,$page_settings,$feature_files);
     }
 
@@ -2130,6 +2130,7 @@ sub multiple_choices {
       $description =~ s/(\S{60})/$1 /g;  # wrap way long lines
 
       my $objref     = $class ? "?name=$c:$n" : "?name=$n";
+      $id ||= ''; $padstart ||= 0; $padstop ||= 0; $version ||= ''; # get rid of uninit variables
       my $posref     = "?ref=$id;start=$padstart;stop=$padstop;version=$version";
       my $position = format_segment($r);
       my $length   = unit_label($stop-$start+1);
@@ -2145,7 +2146,7 @@ sub multiple_choices {
 }
 
 sub by_score_and_position {
-  my $result = eval{$b->score <=> $a->score};
+  my $result = eval{($b->score||0) <=> ($a->score||0)};
   return $result unless $result == 0;
 
   return $a->seq_id cmp $b->seq_id

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.20 2007-10-15 19:33:57 tharris Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.21 2007-10-16 15:01:50 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -594,8 +594,10 @@ sub detail_panel {
                                @{$page_settings->{tracks}};
 
     my ($options,$limits) = get_options(\@tracks_to_show);
-    my $h_callback     = make_hilite_callback($page_settings);
-    my $postgrid       = make_postgrid_callback($page_settings);
+    my $h_callback        = make_hilite_callback($page_settings);
+    my $postgrid          = make_postgrid_callback($page_settings);
+
+    my @cache_extra       = ();
 
     $panels      = $CONFIG->render_panels({segment       => $segment,
 					   feature_files => $feature_files,
@@ -613,6 +615,7 @@ sub detail_panel {
 					   hilite_callback => $h_callback || undef,
 					   settings        => $page_settings,
 					   section         => '?detail',
+                                           cache_extra     => \@cache_extra,
 					   -add_category_labels => $CONFIG->setting('show track categories') || undef,
 					   -grid         => $page_settings->{grid} || 0,
 					  }
@@ -3048,6 +3051,15 @@ sub plugin_links {
     push @result,a({-href=>$action},"[$name]");
   }
   return join ' ',@result;
+}
+
+# get plugin annotators
+sub get_plugin_annotators {
+  my $page_settings = shift;
+  return grep {
+      $_->type eq 'annotator' &&
+      $page_settings->{features}{$PLUGIN_NAME2LABEL{$_}}{visible}
+  } $PLUGINS->plugins;
 }
 
 sub source_menu {

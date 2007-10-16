@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.36 2007-10-15 19:19:51 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.37 2007-10-16 15:01:50 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1156,7 +1156,7 @@ sub generate_panels {
 
   # this will keep track of numbering of the tracks; only used when inserting
   # feature files into one big panel.
-  my $trackno = 0;
+  my $trackno = $suppress_scale ? 0 : 1;
   my %feature_file_offsets;
 
   for my $label (@$labels) {
@@ -1174,8 +1174,9 @@ sub generate_panels {
       # get config data from the feature files
       my @extra_args          = eval {
 	$feature_files->{$label}->types,
-	$feature_files->{$label}->mtime,
-	};
+        $feature_files->{$label}->mtime,
+	} if $feature_files->{$label};
+
       $cache_key{$label}      = $self->create_cache_key(@panel_args,
 							@{$track_args{$label}},
 							@extra_args,
@@ -1223,19 +1224,22 @@ sub generate_panels {
   # ------------------------------------------------------------------------------------------
   # Add feature files, including remote annotations
   my $featurefile_select = $args->{featurefile_select} || $self->feature_file_select($section);
-  for my $l (keys %$feature_files) {
+  my $feature_file_extra_offset = 0;
+  for my $l (sort { ($feature_file_offsets{$a}||1) <=> ($feature_file_offsets{$b}||1) } keys %$feature_files) {
     next if $cached{$l};
     my $file = $feature_files->{$l} or next;
     ref $file or next;
     $panel_key = $l if $drag_n_drop;
     next unless $panels{$panel_key};
-    $self->add_feature_file(
-			    file       => $file,
-			    panel      => $panels{$panel_key},
-			    position   => $feature_file_offsets{$l} || 0,
-			    options    => $options,
-			    select     => $featurefile_select,
-			   );
+    my $nr_tracks_added =
+      $self->add_feature_file(
+			      file   => $file,
+			      panel    => $panels{$panel_key},
+			      position => ($feature_file_offsets{$l} || 1) + $feature_file_extra_offset,
+			      options  => $options,
+			      select   => $featurefile_select,
+			     );
+    $feature_file_extra_offset += $nr_tracks_added-1;
   }
 
   # map tracks (stringified track objects) to corresponding labels
@@ -1264,7 +1268,7 @@ sub generate_panels {
 			       $l,
 			       \%trackmap,
 			       0);
-    
+
     my $key = $drag_n_drop ? $cache_key{$l} : $cache_key{'__all__'};
     $self->set_cached_panel($key,$gd,$map);
     eval {$panels{$l}->finished};
@@ -1415,19 +1419,20 @@ sub add_feature_file {
   my $name = $file->name || '';
   $options->{$name}      ||= 0;
 
-  eval {
-    $file->render(
-		  $args{panel},
-		  $args{position},
-		  $options,
-		  $self->bump_density,
-		  $self->label_density,
-		  $select);
-  };
+  my $nr_tracks_added =
+    eval {
+      $file->render(
+		    $args{panel},
+		    $args{position},
+		    $options,
+		    $self->bump_density,
+		    $self->label_density,
+		    $select);
+    };
 
   $self->error("error while rendering ",$args{file}->name,": $@") if $@;
+  return $nr_tracks_added;
 }
-
 
 # this returns a coderef that will indicate whether an added (external) feature is placed
 # in the overview, region or detailed panel. If the section name begins with a "?", then

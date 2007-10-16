@@ -1,9 +1,10 @@
 package Bio::Graphics::Browser::PluginSet;
 # API for using plugins
 
-#  $Id: PluginSet.pm,v 1.1.2.7.2.2 2005-12-22 17:12:31 lstein Exp $
+#  $Id: PluginSet.pm,v 1.1.2.7.2.2.2.1 2007-10-16 15:01:51 lstein Exp $
 
 use strict;
+use Digest::MD5;
 use Bio::Graphics::Browser;
 use CGI 'param';
 use Text::Shellwords;
@@ -108,8 +109,23 @@ sub annotate {
     warn "Plugin $name is visible, so running it on segment $segment" if DEBUG;
     my $features = $p->annotate($segment,$coordinate_mapper) or next;
     $features->name($name);
+    $features->mtime($self->config_hash($p));
     $feature_files->{$name} = $features;
   }
+}
+
+# generate a unique md5hash for the configuration of a plugin
+sub config_hash {
+  my $self   = shift;
+  my $plugin = shift;
+  my $config = $plugin->configuration;
+  my $hash   = Digest::MD5->new;
+  for my $key (sort keys %$config) {
+    my @values = ref $config->{$key} ? @{$config->{$key}} : $config->{$key};
+    $hash->add($key,@values);
+  }
+
+  return $hash->hexdigest;
 }
 
 sub set_segments {

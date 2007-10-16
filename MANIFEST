@@ -201,6 +201,9 @@ htdocs/annotation_help.html
 htdocs/databases/yeast_chr1/chromosome1.fa
 htdocs/databases/yeast_chr1/chromosome1.gff
 htdocs/gbrowse.css
+htdocs/tracks.css
+htdocs/titlebar-default.css
+htdocs/titlebar-safari.css
 htdocs/general_help.html
 htdocs/general_help.html.zh
 htdocs/gmod_cog.jpeg

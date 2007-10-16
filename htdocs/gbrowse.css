@@ -88,3 +88,14 @@ TH.linkmenu       {
                     CURSOR: help;
                     TEXT-DECORATION: none
                   }
+#autoComplete1 {  position:relative;text-align:left;z-index:9050; }
+#autoCompleteSearch1 { position:relative; }
+#autoCompleteInput1     { position:relative;width:20em;height:1.7em}
+#autoCompleteContainer1 { position:absolute;text-align:left;left:0;top:1.7em;disp
+lay:inline;}
+#autoCompleteContainer1 .yui-ac-content { position:absolute;padding:0;left:0;top:0;width:20em; border:1px solid #404040;background:#fff;overflow:hidden;z-index:9050}
+#autoCompleteContainer1 .yui-ac-shadow { position:absolute;left:0;top:0;margin:0.3em;background:#a0a0a0;z-index:9049}
+#autoCompleteContainer1 ul { padding:5px 0;margin:0;width:100%; }
+#autoCompleteContainer1 li { padding:0 5 px;cursor:default;white-space:nowrap; }
+#autoCompleteContainer1 li.yui-ac-highlight { background:#ff0; }
+#autoCompleteSubmit1 { position:relative; }

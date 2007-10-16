@@ -48,7 +48,8 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.24 2007-10-16 16:44:12 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.25 2007-10-16 19:27:14 lstein Exp $
+
 
 use strict;
 use Bio::Graphics;
@@ -597,7 +598,13 @@ sub detail_panel {
     my $h_callback        = make_hilite_callback($page_settings);
     my $postgrid          = make_postgrid_callback($page_settings);
 
-    my @cache_extra       = ();
+    # additional information that helps determine whether to use a panel from the cache
+    $page_settings->{h_feat}   ||= {};
+    $page_settings->{h_region} ||= [];
+    my @cache_extra       = (
+			     sort keys %{$page_settings->{h_feat}},
+			     sort @{$page_settings->{h_region}},
+			    );
 
     $panels      = $CONFIG->render_panels({segment       => $segment,
 					   feature_files => $feature_files,
@@ -800,6 +807,7 @@ sub auto_open {
     my $desired_label = $CONFIG->feature2label($feature) or next;
     if (exists $tracks->{$desired_label}) {
       $tracks->{$desired_label}{visible} = 1;
+      $settings->{track_collapsed}{$desired_label} = 0;
       $settings->{h_feat} = {};
       $settings->{h_feat}{$feature->display_name} = 'yellow' unless param('h_feat') && param('h_feat') eq '_clear_';
     }
@@ -2054,11 +2062,12 @@ sub do_keyword_search {
 
   my @results;
   for my $r (@matches) {
-    my ($name,$description,$score) = @$r;
+    my ($name,$description,$score,$type) = @$r;
     my ($seg) = $db->segment($name) or next;
     push @results,Bio::Graphics::Feature->new(-name   => $name,
 					      -class  => eval{$name->class}||undef,
-					      -type   => $description,
+					      -type   => $type || 'feature',
+					      -desc   => $description,
 					      -score  => $score,
 					      -ref    => $seg->abs_ref,
 					      -start  => $seg->abs_start,
@@ -2119,7 +2128,9 @@ sub multiple_choices {
       my ($start,$stop) = ($r->start,$r->end);
       my $padstart = $start - $padding;
       my $padstop  = $stop  + $padding;
-      my $description = escapeHTML(eval{join ' ',$r->attributes('Note')}
+      my $description = escapeHTML(eval{join ' ',
+					  $r->desc(),
+					  $r->attributes('Note')}
 				   ||eval{$r->method}||eval{$r->source_tag}||$r->{ref});
       if (my @aliases = grep {$_ ne ''} eval{$r->attributes('Alias')}) {
 	$description .= escapeHTML(" [@aliases]");
@@ -2135,7 +2146,8 @@ sub multiple_choices {
       my $position = format_segment($r);
       my $length   = unit_label($stop-$start+1);
       print TR({-class=>'databody',-valign=>'TOP'},
-	       th({-align=>'right'},ref($name) ? a({-href=>$objref},$name):tt($name)),
+#	       th({-align=>'right'},ref($name) ? a({-href=>$objref},$name):tt($name)),  # what was this for?
+	       th({-align=>'right'},a({-href=>$objref},$name)),
 	       td($description),
 	       td(a({-href=>$posref},$position . " ($length)")),
 	       td($CONFIG->tr('SCORE',$score)));
@@ -3304,7 +3316,6 @@ sub category_table {
      $categorytable{$category}{row_labels}=\@rows;
      $categorytable{$category}{col_labels}=\@cols;
   }
-   
   return (\%categorytable); 
 }
 

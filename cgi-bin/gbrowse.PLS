@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.25 2007-10-16 19:27:14 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.26 2007-10-16 23:26:29 lstein Exp $
 
 
 use strict;
@@ -776,13 +776,16 @@ sub adjust_tracks {
   my $settings = shift;
 
   my %configured_labels = map {$_=>1} $CONFIG->labels;
+  my %stored_labels     = map {$_=>1} @{$settings->{tracks}};
+  my %forced_on         = map {$_=>1} param('label'),shellwords($CONFIG->setting('default features'));
 
   # tracks added to the config file recently that are not contained in
   # user's stored settings.
-  foreach (grep {!$settings->{features}{$_}} keys %configured_labels) {
-    $settings->{features}{$_}{visible} = 0;  # not visible
-    $settings->{features}{$_}{options} = 0;  # automatic
-    push @{$settings->{tracks}},$_;           # at the end
+  foreach (grep {!$stored_labels{$_}} keys %configured_labels) {
+    $settings->{features}{$_}{visible} ||=  $forced_on{$_};  # visible if requested or default
+    $settings->{track_collapsed}{$_}   ||= 0;                # not collapsed
+    $settings->{features}{$_}{options} ||= 0;  # automatic
+    push @{$settings->{tracks}},$_;          # at the end
   }
   # Remove any feature types that are not mentioned in the
   # config file, excepting Uploaded and remote URL features.
@@ -797,6 +800,8 @@ sub adjust_tracks {
 
   # make sure that tracks are completely consistent with options
   $settings->{tracks} = [grep {exists $settings->{features}{$_}} @{$settings->{tracks}}];
+
+  warn "@{$settings->{tracks}}";
 }
 
 # auto-open any tracks that match the search term
@@ -3316,6 +3321,7 @@ sub category_table {
      $categorytable{$category}{row_labels}=\@rows;
      $categorytable{$category}{col_labels}=\@cols;
   }
+   
   return (\%categorytable); 
 }
 

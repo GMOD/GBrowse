@@ -383,4 +383,26 @@ END
 
  NO_SOURCES        => 'Vous n\'avez pas configuré de sources de données. Peut-être n\'avez-vous pas les droits pour les voir.',
 
+ ADD_YOUR_OWN_TRACKS => 'Ajout de vos propres pistes',
+
+ INVALID_SOURCE    => 'La source %s n\'est pas valide.',
+
+ BACKGROUND_COLOR  => 'Couleur de remplissage',
+
+ FG_COLOR          => 'Couleur de tracé',
+
+ HEIGHT           => 'Hauteur',
+
+ PACKING          => 'Disposition',
+
+ GLYPH            => 'Forme',
+
+ LINEWIDTH        => 'Largeur de ligne',
+
+ DEFAULT          => '(par défaut)',
+
+ DYNAMIC_VALUE    => 'Calcul dynamique',
+
+ CHANGE           => 'Changement',
+
 };

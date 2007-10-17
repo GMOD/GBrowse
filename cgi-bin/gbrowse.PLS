@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.26 2007-10-16 23:26:29 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.27 2007-10-17 00:29:34 lstein Exp $
 
 
 use strict;
@@ -800,8 +800,6 @@ sub adjust_tracks {
 
   # make sure that tracks are completely consistent with options
   $settings->{tracks} = [grep {exists $settings->{features}{$_}} @{$settings->{tracks}}];
-
-  warn "@{$settings->{tracks}}";
 }
 
 # auto-open any tracks that match the search term

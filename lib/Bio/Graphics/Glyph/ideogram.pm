@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.3.6.1.2.5.2.2 2007-04-09 16:04:34 sheldon_mckay Exp $
+# $Id: ideogram.pm,v 1.3.6.1.2.5.2.3 2007-10-17 01:48:22 lstein Exp $
 # Glyph to draw chromosome ideograms
 
 use strict qw/vars refs/;
@@ -510,9 +510,11 @@ Copyright (c) 2001-2006 Cold Spring Harbor Laboratory
 
 Sheldon McKay E<lt>mckays@cshl.edu<gt>
 
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.  See DISCLAIMER.txt for
-disclaimers of warranty.
+This package and its accompanying libraries is free software; you can
+redistribute it and/or modify it under the terms of the GPL (either
+version 1, or at your option, any later version) or the Artistic
+License 2.0.  Refer to LICENSE for the full license text. In addition,
+please see DISCLAIMER.txt for disclaimers of warranty.
 
 =cut
 

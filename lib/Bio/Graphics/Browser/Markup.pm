@@ -11,9 +11,9 @@ Bio::Graphics::Browser::Markup - Markup routines for sequences in text form
 =head1 VERSION (CVS-info)
 
  $RCSfile: Markup.pm,v $
- $Revision: 1.3 $
- $Author: markwilkinson $
- $Date: 2003-08-27 17:50:21 $
+ $Revision: 1.3.14.1 $
+ $Author: lstein $
+ $Date: 2007-10-17 01:48:21 $
 
 =head1 SYNOPSIS
 
@@ -590,9 +590,11 @@ Lincoln Stein E<lt>lstein@cshl.orgE<gt>.
 
 Copyright (c) 2002 Cold Spring Harbor Laboratory
 
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.  See DISCLAIMER.txt for
-disclaimers of warranty.
+This package and its accompanying libraries is free software; you can
+redistribute it and/or modify it under the terms of the GPL (either
+version 1, or at your option, any later version) or the Artistic
+License 2.0.  Refer to LICENSE for the full license text. In addition,
+please see DISCLAIMER.txt for disclaimers of warranty.
 
 =cut
 

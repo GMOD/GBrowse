@@ -121,6 +121,12 @@ docs/pod/PLUGINS_HOWTO.pod
 docs/pod/README-chado.pod
 docs/pod/README-gff-files.pod
 docs/pod/README-lucegene.pod
+docs/tutorial/bin/expression_levels.pl
+docs/tutorial/bin/make_exon.pl
+docs/tutorial/bin/random_dna.pl
+docs/tutorial/bin/random_feature.pl
+docs/tutorial/bin/random_segments.pl
+docs/tutorial/bin/reformat.pl
 docs/tutorial/conf_files/elegans_core.conf
 docs/tutorial/conf_files/elegans_extra.conf
 docs/tutorial/conf_files/HEADER.html
@@ -201,9 +207,6 @@ htdocs/annotation_help.html
 htdocs/databases/yeast_chr1/chromosome1.fa
 htdocs/databases/yeast_chr1/chromosome1.gff
 htdocs/gbrowse.css
-htdocs/tracks.css
-htdocs/titlebar-default.css
-htdocs/titlebar-safari.css
 htdocs/general_help.html
 htdocs/general_help.html.zh
 htdocs/gmod_cog.jpeg
@@ -212,8 +215,8 @@ htdocs/images/balloons/balloon_ie.png
 htdocs/images/balloons/close.png
 htdocs/images/balloons/down_left.png
 htdocs/images/balloons/down_right.png
-htdocs/images/balloons/up_right.png
 htdocs/images/balloons/up_left.png
+htdocs/images/balloons/up_right.png
 htdocs/images/buttons/green.gif
 htdocs/images/buttons/green1.gif
 htdocs/images/buttons/green2.gif
@@ -232,6 +235,7 @@ htdocs/images/buttons/minus.png
 htdocs/images/buttons/mplus.gif
 htdocs/images/buttons/plus.gif
 htdocs/images/buttons/plus.png
+htdocs/images/buttons/query.png
 htdocs/images/buttons/red.gif
 htdocs/images/buttons/red1.gif
 htdocs/images/buttons/red2.gif
@@ -254,13 +258,26 @@ htdocs/images/help/upload+edit.gif
 htdocs/images/help/upload+remote.gif
 htdocs/images/help/upload.gif
 htdocs/index.html
+htdocs/js/animation.js
+htdocs/js/autocomplete.js
 htdocs/js/balloon.js
+htdocs/js/builder.js
 htdocs/js/buttons.js
+htdocs/js/controls.js
+htdocs/js/dragdrop.js
+htdocs/js/effects.js
+htdocs/js/event.js
 htdocs/js/prototype.js
 htdocs/js/rubber.js
+htdocs/js/scriptaculous.js
+htdocs/js/slider.js
 htdocs/js/toggle.js
 htdocs/js/x_cook.js
 htdocs/js/yahoo-dom-event.js
+htdocs/titlebar-default.css
+htdocs/titlebar-safari.css
+htdocs/titlebar.css
+htdocs/tracks.css
 INSTALL
 install_util/cgi_install.PLS
 install_util/conf_install.PLS
@@ -287,6 +304,7 @@ lib/Bio/Graphics/Browser.pm
 lib/Bio/Graphics/Browser/GFFhelper.pm
 lib/Bio/Graphics/Browser/I18n.pm
 lib/Bio/Graphics/Browser/Markup.pm
+lib/Bio/Graphics/Browser/OptionPick.pm
 lib/Bio/Graphics/Browser/PadAlignment.pm
 lib/Bio/Graphics/Browser/PageSettings.pm
 lib/Bio/Graphics/Browser/Plugin.pm
@@ -295,6 +313,7 @@ lib/Bio/Graphics/Browser/Realign.pm
 lib/Bio/Graphics/Browser/RemoteSet.pm
 lib/Bio/Graphics/Browser/UploadSet.pm
 lib/Bio/Graphics/Browser/Util.pm
+lib/Bio/Graphics/DenseFeature.pm
 lib/Bio/Graphics/FeatureFile.pm
 lib/Bio/Graphics/Glyph/allele_tower.pm
 lib/Bio/Graphics/Glyph/connector.pm
@@ -307,9 +326,11 @@ lib/Bio/Graphics/Glyph/insertion_chromosome.pm
 lib/Bio/Graphics/Glyph/ld_plot.pm
 lib/Bio/Graphics/Glyph/pairwise_plot.pm
 lib/Bio/Graphics/Glyph/phased_exons.pm
+lib/Bio/Graphics/Glyph/smoothing.pm
 lib/Bio/Graphics/Glyph/spectrogram.pm
 lib/Bio/Graphics/Glyph/trace.pm
 lib/Bio/Graphics/Glyph/wiggle_density.pm
+lib/Bio/Graphics/Glyph/wiggle_xyplot.pm
 lib/Bio/Graphics/Glyph/wormbase_transcript.pm
 lib/Bio/Graphics/Wiggle.pm
 lib/CGI/Session/ID/salted_md5.pm
@@ -322,6 +343,7 @@ libalign/MANIFEST
 libalign/README
 libalign/realign.h
 libalign/test.pl
+LICENSE
 Makefile.PL
 MANIFEST
 META.yml			Module meta-data (added by MakeMaker)
@@ -339,4 +361,3 @@ t/data/test2.gff
 t/GBrowse_Chado.t
 t/Test.pm
 TODO
-LICENSE

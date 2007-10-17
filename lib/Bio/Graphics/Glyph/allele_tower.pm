@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::allele_tower;
 
-# $Id: allele_tower.pm,v 1.4.6.2.6.1 2007-06-06 19:37:30 lstein Exp $
+# $Id: allele_tower.pm,v 1.4.6.2.6.2 2007-10-17 01:48:21 lstein Exp $
 # Glyph for drawing each allele found at a SNP position in a column.
 
 use strict;
@@ -216,8 +216,10 @@ Fiona Cunningham E<lt>cunningh@cshl.eduE<gt> in Lincoln Stein's lab E<lt>steinl@
 
 Copyright (c) 2003 Cold Spring Harbor Laboratory
 
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.  See DISCLAIMER.txt for
-disclaimers of warranty.
+This package and its accompanying libraries is free software; you can
+redistribute it and/or modify it under the terms of the GPL (either
+version 1, or at your option, any later version) or the Artistic
+License 2.0.  Refer to LICENSE for the full license text. In addition,
+please see DISCLAIMER.txt for disclaimers of warranty.
 
 =cut

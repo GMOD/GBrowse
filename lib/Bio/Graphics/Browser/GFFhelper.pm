@@ -1,4 +1,4 @@
-# $Id: GFFhelper.pm,v 1.22.14.1 2007-03-23 21:02:39 briano Exp $
+# $Id: GFFhelper.pm,v 1.22.14.2 2007-10-17 01:48:21 lstein Exp $
 
 =head1 NAME
 
@@ -91,6 +91,13 @@ See the GMOD website for information on bug submission http://www.gmod.org
 =head1 AUTHOR - Sheldon McKay
 
 Email smckay@bcgsc.bc.ca
+
+This package and its accompanying libraries is free software; you can
+redistribute it and/or modify it under the terms of the GPL (either
+version 1, or at your option, any later version) or the Artistic
+License 2.0.  Refer to LICENSE for the full license text. In addition,
+please see DISCLAIMER.txt for disclaimers of warranty.
+
 
 =cut
 

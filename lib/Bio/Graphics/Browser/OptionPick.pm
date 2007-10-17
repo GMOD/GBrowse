@@ -15,7 +15,15 @@ Bio::Graphics::Browser::OptionPick -- Pick options
   end_form(),
   end_html();
 
+=head1 Author
 
+Copyright 2007 Cold Spring Harbor Laboratory.
+
+This package and its accompanying libraries is free software; you can
+redistribute it and/or modify it under the terms of the GPL (either
+version 1, or at your option, any later version) or the Artistic
+License 2.0.  Refer to LICENSE for the full license text. In addition,
+please see DISCLAIMER.txt for disclaimers of warranty.
 
 =cut
 

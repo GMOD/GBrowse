@@ -1,5 +1,5 @@
 package Bio::Graphics::Glyph::genscan_transcript;
-# $Id: genscan_transcript.pm,v 1.1 2004-03-30 15:33:38 lstein Exp $
+# $Id: genscan_transcript.pm,v 1.1.14.1 2007-10-17 01:48:22 lstein Exp $
 
 use strict;
 use Bio::Graphics::Glyph::transcript;
@@ -182,8 +182,11 @@ Simon Ilyushchenko E<lt>simonf@simonf.comE<gt>
 
 Copyright (c) 2003 Cold Spring Harbor Laboratory
 
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.  See DISCLAIMER.txt for
-disclaimers of warranty.
+This package and its accompanying libraries is free software; you can
+redistribute it and/or modify it under the terms of the GPL (either
+version 1, or at your option, any later version) or the Artistic
+License 2.0.  Refer to LICENSE for the full license text. In addition,
+please see DISCLAIMER.txt for disclaimers of warranty.
+
 
 =cut

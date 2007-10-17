@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.5 2007-09-28 08:03:31 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.6 2007-10-17 18:27:21 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -94,7 +94,7 @@ use vars '@ISA';
 
 @ISA = qw / Bio::Graphics::Browser::Plugin /;
 
-# Arg, modperl
+# modperl cleanup
 END {
   CGI::Delete_all();
 }
@@ -203,7 +203,7 @@ sub configure_form {
 
   my $length = unit_label( $segment->length );
 
-  my $html   =  h2("Showing $length from $ref, positions $start to $end");
+  my $html = h2("Showing $length from $ref, positions $start to $end");
 
   $html .= hidden( -name => 'plugin',        -value => 'PrimerDesigner' )
         .  hidden( -name => 'plugin_action', -value => 'Go' )
@@ -293,7 +293,7 @@ sub configure_form {
   if ($no_buttons && !$feats) {
     my $style = $browser->setting('stylesheet') || STYLE;
     print start_html( -style => $style, -title => 'PCR Primers'),
-      $html, $browser->footer;
+      $html;
     exit;
   }
 
@@ -415,7 +415,7 @@ sub design_primers {
 				      method  => METHOD );
   $pcr or fatal_error  pre(Bio::PrimerDesigner->error);
 
-  my $binpath = BINPATH;
+  my $binpath = $self->browser_config->plugin_setting('binpath') || BINPATH;
   my $method = $binpath =~ /http/i ? 'remote' : METHOD;
 
   if ( $method eq 'local' && $binpath ) {

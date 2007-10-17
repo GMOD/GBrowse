@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.12.2.4 2007-04-06 18:05:10 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.12.2.5 2007-10-17 17:51:03 scottcain Exp $
 
 =head1 NAME
 
@@ -734,8 +734,8 @@ sub _by_alias_by_name {
   if ( $operation eq 'by_alias') {
     $select_part = "select distinct fs.feature_id \n";
     $from_part   = $from_part ?
-                     "$from_part, feature_synonym fs, synonym s " 
-                   : "feature_synonym fs, synonym s ";
+            "$from_part join feature_synonym fs using (feature_id), synonym s " 
+          : "feature_synonym fs, synonym s ";
 
     my $alias_only_where;
     if ($wildcard) {

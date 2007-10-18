@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.38 2007-10-17 01:48:20 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.39 2007-10-18 16:41:28 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1250,20 +1250,22 @@ sub generate_panels {
   (my $map_name = $section) =~ s/^\?//;
 
   for my $l (keys %panels) {
-    my $gd = $panels{$l}->gd;
+    my $gd    = $panels{$l}->gd;
+    my $boxes = $panels{$l}->boxes;
+    $self->debugging_rectangles($gd,$boxes) if DEBUG;
     my $map  = !$do_map          ? (undef,undef)
 	     : $l eq '__pad__'   ? (undef,undef)
-	     : $l eq '__scale__' ? $self->make_centering_map(shift @{$panels{$l}->boxes},
+	     : $l eq '__scale__' ? $self->make_centering_map(shift @{$boxes},
 							     $args->{flip},
 							     $l,
 							     $args->{scale_map_type},
 							     )
-	     : $l eq '__all__'   ? $self->make_map(scalar $panels{$l}->boxes,
+	     : $l eq '__all__'   ? $self->make_map($boxes,
 						   $panels{$l},
 						   $map_name,
 						   \%trackmap,
 						   $args->{scale_map_type})
-	     : $self->make_map(scalar $panels{$l}->boxes,
+	     : $self->make_map($boxes,
 			       $panels{$l},
 			       $l,
 			       \%trackmap,
@@ -1666,7 +1668,7 @@ sub make_map {
       # balloon_ct = type of balloon to use for clicking -- usually "balloon"
       my $sticky             = $self->setting($label,'balloon sticky');
       my $height             = $self->setting($label,'balloon height') || 300;
-      
+
       if ($use_titles_for_balloons) {
 	$balloonhover ||= $title;
       }
@@ -2394,10 +2396,10 @@ sub true { 1 }
 sub debugging_rectangles {
   my $self = shift;
   my ($image,$boxes) = @_;
-  my $black = $image->colorClosest(0,0,0);
+  my $red = $image->colorClosest(255,0,0);
   foreach (@$boxes) {
     my @rect = @{$_}[1,2,3,4];
-    $image->rectangle(@{$_}[1,2,3,4],$black);
+    $image->rectangle(@{$_}[1,2,3,4],$red);
   }
 }
 

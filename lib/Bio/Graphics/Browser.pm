@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.39 2007-10-18 16:41:28 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.40 2007-10-21 18:23:45 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1150,7 +1150,7 @@ sub generate_panels {
     unless ($cached{$panel_key} =
 	    $self->panel_is_cached($cache_key{$panel_key})
 	   ) {
-      $panels{$panel_key} = Bio::Graphics::Panel->new(@panel_args)
+      $panels{$panel_key} = Bio::Graphics::Panel->new(@panel_args);
     }
   }
 
@@ -2601,7 +2601,9 @@ sub panel_is_cached {
   return unless (my $cache_time = $self->cache_time);
   my $size_file = $self->get_cache_base($key,'size');
   return unless -e $size_file;
-  return unless -M _ < ($cache_time/24);
+  my $mtime    = (stat(_))[9];   # _ is not a bug, but an automatic filehandle
+  my $hours_since_last_modified = (time()-$mtime)/(60*60);
+  return unless $hours_since_last_modified < $cache_time;
   warn "cache hit for $key" if DEBUG;
   1;
 }

@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.40 2007-10-21 18:23:45 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.41 2007-10-23 19:39:29 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -881,8 +881,8 @@ series of user agents known to support drag_and_drop.
 =cut
 
 sub drag_and_drop {
-  my $self     = shift;
-  my $override = shift;
+  my $self          = shift;
+  my $override      = shift;
   return if defined $override && !$override;
   return unless $self->setting(general => 'drag and drop'); # drag and drop turned off
   return if     $self->setting(general => 'postgrid');      # postgrid forces drag and drop off
@@ -1091,6 +1091,7 @@ sub generate_panels {
   my $drag_n_drop   = $self->drag_and_drop($args->{drag_n_drop});
   my $do_map        = $args->{do_map};
   my $cache_extra   = $args->{cache_extra} || [];
+  my $cache         = $args->{cache};
   my $section       = $args->{section}     || '?detail';
 
   my @panel_args     = $self->create_panel_args($section,$args);
@@ -1127,7 +1128,7 @@ sub generate_panels {
   }
 
   $cache_key{$panel_key}  = $self->create_cache_key(@cache_args);
-  $cached{$panel_key}     = $self->panel_is_cached($cache_key{$panel_key});
+  $cached{$panel_key}     = $cache && $self->panel_is_cached($cache_key{$panel_key});
 
   unless ($cached{$panel_key}) {
     $panels{$panel_key}      = Bio::Graphics::Panel->new(@panel_args);
@@ -1148,7 +1149,7 @@ sub generate_panels {
     my @cache_args           = ($section,$panel_key,@panel_args,@$cache_extra,$drag_n_drop);
     $cache_key{$panel_key}   = $self->create_cache_key(@cache_args);
     unless ($cached{$panel_key} =
-	    $self->panel_is_cached($cache_key{$panel_key})
+	    $cache && $self->panel_is_cached($cache_key{$panel_key})
 	   ) {
       $panels{$panel_key} = Bio::Graphics::Panel->new(@panel_args);
     }
@@ -1184,7 +1185,7 @@ sub generate_panels {
 							$drag_n_drop,
 							$options->{$label},
 						       );
-      next if $cached{$label} = $self->panel_is_cached($cache_key{$label});
+      next if $cached{$label} = $cache && $self->panel_is_cached($cache_key{$label});
 
       my @keystyle = (-key_style=>'between') 
 	if $label =~ /^\w+:/ && $label !~ /:(overview|region)/;  # a plugin
@@ -1505,95 +1506,10 @@ sub generate_image {
   return wantarray ? ($url,$imagefile) : $url;
 }
 
-=head2 gd_cache_path()
-
- my $path = $browser->gd_cache_path($cache_name,@keys)
-
-Return path to a GD cache file.  $cache_name is a cache expiration
-option in the config file (currently only 'cache_overview'), and @keys
-are settings that make the file unique, such as the list of tracks
-that are activated.
-
-NOTE: this is going to be made obsolete by the track caching mechanism.
-
-=cut
-
-sub gd_cache_path {
-  my $self = shift;
-  my ($cache_name,@keys) = @_;
-  return unless $self->config->setting(general=>$cache_name);
-  my $signature = md5_hex(@keys);
-  my ($uri,$path) = $self->tmpdir($self->source.'/cache_overview');
-  my $extension   = 'gd';
-  return "$path/$signature.$extension";
-}
-
-=head2 gd_cache_check()
-
- my $gd = $browser->gd_cache_check($cache_name,$path)
-
-Returns a GD file if its cached version is still valid.
-
-NOTE: this is going to be made obsolete by the track caching mechanism.
-
-=cut
-
-sub gd_cache_check {
-  my $self = shift;
-  my ($cache_name,$path) = @_;
-  return if param('nocache');
-  my $cache_file_mtime   = (stat($path))[9] || 0;
-  my $conf_file_mtime    = $self->mtime;
-  my $cache_expiry       = $self->config->setting(general=>$cache_name) * 60*60;  # express expiry time as seconds
-  if ($cache_file_mtime && ($cache_file_mtime > $conf_file_mtime) && (time() - $cache_file_mtime < $cache_expiry)) {
-    my $gd = GD::Image->newFromGd($path);
-    return $gd;
-  }
-  else {
-    return;
-  }
-}
-
-=head2 gd_cache_write()
-
- my $gd = $browser->gd_cache_write($cache_path,$gd)
-
-Write a GD file into the indicated path.
-
-NOTE: this is going to be made obsolete by the track caching mechanism.
-
-=cut
-
-sub gd_cache_write {
-  my $self = shift;
-  my $path = shift or return;
-  my $gd   = shift;
-  my $file = IO::File->new(">$path") or return;
-  print $file $gd->gd;
-  close $file;
-}
-
-=head2 clear_cache()
-
- $browser->clear_cache;
-
-Clears out cached per-request values that might take some time to
-compute, such as per-track authorization information.  This is only
-relevant when gbrowse is run under a persistent environment such as
-mod_perl.  It is ordinarily called internally by the open_config()
-routine in Bio::Graphics::Browser::Util.
-
-=cut
-
-sub clear_cache {
-  my $self = shift;
-  delete $self->{cached_data};
-}
-
 sub tmpdir {
   my $self = shift;
   my $path = shift || '';
-       
+
   # Original code; retain while testing new "callback_setting" method below
   #  my ($tmpuri,$tmpdir) = shellwords($self->setting('tmpimages'))
   #   or die "no tmpimages option defined, can't generate a picture";
@@ -2597,7 +2513,6 @@ sub get_cache_base {
 sub panel_is_cached {
   my $self  = shift;
   my $key   = shift;
-  return if param('nocache');
   return unless (my $cache_time = $self->cache_time);
   my $size_file = $self->get_cache_base($key,'size');
   return unless -e $size_file;
@@ -2755,302 +2670,6 @@ sub set_cached_panel {
 
   return ($image_uri,$map_data,$width,$height,$image_file);
 }
-
-########### deleted code #######
-# this whole chunk of code for generating the overview was deleted during
-# reorganization of September 2007. It should be removed after sufficient
-# testing
-#################################
-
-# =head2 hits_on_overview()
-
-#   $hashref = $browser->hits_on_overview($db,$hits,$options,$keyname);
-
-# This method is used to render a series of genomic positions ("hits")
-# into a graphical summary of where they hit on the genome in a
-# segment-by-segment (e.g. chromosome) manner.
-
-# The first argument is a Bio::DB::GFF (or Bio::DasI) database.  
-
-# The second argument is an array ref containing one of:
-
-#   1) a set of array refs in the form [ref,start,stop,name], where
-#      name is optional.
-
-#   2) a Bio::DB::GFF::Feature object
-
-#   3) a Bio::SeqFeatureI object.
-
-# The third argument is the page settings hash from gbrowse.
-
-# The fourth option is the key to use for the "hits" track.
-
-# The returned HTML is stored in a hashref, where the keys are the
-# reference sequence names and the values are HTML to be emitted.
-
-# =cut
-
-# sub hits_on_overview {
-#    my $self = shift;
-#    my ($db,$hits,$options,$keyname) = @_;
-#    $self->_hits_on_overview($db,$hits,$options,$keyname,'htmlize');
-# }
-
-# =head2 hits_on_overview_raw()
-
-#   $hashref = $browser->hits_on_overview_raw($db,$hits,$options,$keyname);
-
-# This behaves the same as hits_on_overview() except that the values of
-# the returned hashref are a three-element array consisting of
-# a segment ref name, a GD image showing the segment and its hits, and the
-# array of hit coordinates returned by the panel->boxes() call.
-
-# =cut
-
-# sub hits_on_overview_raw {
-#    my $self = shift;
-#    my ($db,$hits,$options,$keyname) = @_;
-#    $self->_hits_on_overview($db,$hits,$options,$keyname,undef);
-# }
-
-# # BUG: the following code should be retired and replace with a call to generate_panels()
-# # but it is just a little too involved for me to do right now -- 28 Aug 07 LS
-
-# # Return an HTML showing where multiple hits fall on the genome.
-# # Can either provide a list of objects that provide the ref() method call, or
-# # a list of arrayrefs in the form [ref,start,stop,[name]]
-# sub _hits_on_overview {
-#   my $self = shift;
-#   my ($db,$hits,$options,$keyname,$htmlize) = @_;
-
-#   my %html; # results are a hashref sorted by chromosome
-
-#   my $conf  = $self->config;
-#   my $width = $self->width;
-
-#   my $units         = $conf->setting(general=>'units');
-#   my $no_tick_units = $conf->setting(general=>'no tick units');
-#   my $unit_divider  = $conf->setting(general=>'unit_divider') || 1;
-
-#   my $class      = eval{$hits->[0]->factory->default_class} || 'Sequence';
-#   my ($padl,$padr)  = $self->overview_pad([grep { $options->{$_}{visible}}
-# 					   $self->config->overview_tracks],
-# 					  'Matches');
-
-#   # sort hits out by reference and version
-#   my (%refs);
-#   for my $hit (@$hits) {
-#     if (ref($hit) eq 'ARRAY') {
-#       my ($ref,$start,$stop,$name) = @$hit;
-#       push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$start,
-# 						      -end=>$stop,
-# 						      -name=>$name||'');
-#     } elsif (UNIVERSAL::can($hit,'seq_id')) {
-#       my $name = $hit->can('seq_name') ? $hit->seq_name : $hit->name;
-#       eval {$hit->absolute(1)};
-#       my $ref  = my $id = $hit->seq_id;
-#       my $version = eval {$hit->isa('Bio::SeqFeatureI') ? undef : $hit->version};
-#       $ref .= " version $version" if defined $version;
-#       my($start,$end) = ($hit->start,$hit->end);
-#       $name =~ s/\:\d+,\d+$//;  # remove coordinates if they're there
-#       $name = substr($name,0,7).'...' if length $name > 10;
-#       my $feature = Bio::Graphics::Feature->new(-start=>$start,
-# 						-end=>$end,
-# 						-name=>$name,
-# 					       );
-#       push @{$refs{$ref}},$feature;
-#     } elsif (UNIVERSAL::can($hit,'location')) {
-#       my $location = $hit->location;
-#       my ($ref,$start,$stop,$name) = ($location->seq_id,$location->start,
-# 				      $location->end,$location->primary_tag);
-#       push @{$refs{$ref}},Bio::Graphics::Feature->new(-start=>$start,
-# 						      -end=>$stop,
-# 						      -name=>$name||'');
-#     }
-#   }
-
-#   # Temporary kludge until I can figure out a more
-#   # sane way of rendering overview with SVG...
-#   # Should be handled by being passed a $image_class param
-#   my $image_class = 'GD';
-#   eval "use $image_class";
-
-#   $keyname = 'Matches' unless defined $keyname;
-
-#   for my $ref (sort keys %refs) {
-#     my ($name, $version) = split /\sversion\s/i, $ref;
-#     my $segment = ($db->segment(-class=>$class,-name=>$name,
-# 				defined $version ? (-version => $version):()))[0] or next;
-#     my $panel = Bio::Graphics::Panel->new(-segment => $segment,
-# 					  -width   => $width,
-# 					  -bgcolor => $self->setting('overview bgcolor') || 'wheat',
-# 					  -pad_left  => $padl,
-# 					  -pad_right => $padr,
-# 					  -pad_bottom => PAD_OVERVIEW_BOTTOM,
-# 					  -key_style => 'left',
-# 					  -image_class => $image_class
-# 					 );
-
-#     # add the arrow
-#     $panel->add_track($segment,
-# 		      -glyph     => 'arrow',
-# 		      -double         => 1,
-# 		      -label          => ($htmlize ? 0 : $segment->seq_id),
-# 		      -label_font      => 'gdMediumBoldFont',
-# 		      -units_in_label => $no_tick_units,
-# 		      -units          => $units,
-# 		      -unit_divider   => $unit_divider,
-# 		      -tick           => 2
-# 		     );
-
-#     # add the landmarks
-#     $self->add_overview_landmarks($panel,$segment,$options);
-
-#     # add the hits
-#     $panel->add_track($refs{$ref},
-# 		      -glyph     => 'diamond',
-# 		      -height    => 8,
-# 		      -fgcolor   => 'red',
-# 		      -bgcolor   => 'red',
-# 		      -fallback_to_rectangle => 1,
-# 		      -connector => 'solid',
-# 		      -no_subparts => 1,
-# 		      -key       => $keyname,
-# 		      -bump      => @{$refs{$ref}} <= $self->bump_density,
-# 		      -label     => @{$refs{$ref}} <= $self->bump_density,  # deliberate
-# 		     );
-
-#     my $gd    = $panel->gd;
-#     my $boxes = $panel->boxes;
-
-#     eval {$panel->finished};
-#     $html{$ref} = $htmlize? $self->_hits_to_html($ref,$gd,$boxes) : [$ref,$gd,$boxes];
-#   }
-
-#   return \%html;
-# }
-
-
-# =head2 overview()
-
-#   ($gd,$length) = $browser->overview($segment,$track_options);
-
-# This method generates a GD::Image object containing the image data for
-# the overview panel.  Its argument is a Bio::DB::GFF::Segment (or
-# Bio::Das::SegmentI) object. It returns a two element list consisting
-# of the image data and the length of the segment (in bp).
-
-# In the configuration file, any section labeled "[something:overview]"
-# will be added to the overview panel.
-
-# =cut
-
-# # generate the overview, if requested, and return it as a GD
-
-# sub add_overview_landmarks {
-#   my $self = shift;
-#   my ($panel,$segment,$options) = @_;
-#   my @tracks = $self->config->overview_tracks;
-#   $self->_add_landmarks(\@tracks,$panel,$segment,$options);
-# }
-
-# sub add_regionview_landmarks {
-#   my $self = shift;
-#   my ($panel,$segment,$options) = @_;
-#   my @tracks = $self->config->regionview_tracks;
-#   $self->_add_landmarks(\@tracks,$panel,$segment,$options);
-# }
-
-# sub _add_landmarks {
-#   my $self = shift;
-#   my ($tracks_to_add,$panel,$segment,$options) = @_;
-#   my $conf = $self->config;
-#   my @tracks = grep {$options->{$_}{visible}} @$tracks_to_add;
-
-#   my (@feature_types,%type2track,%track);
-
-#   for my $overview_track (@tracks) {
-#     my @types = $conf->label2type($overview_track);
-#     my $track = $panel->add_track(-glyph  => 'generic',
-# 				  -height  => 3,
-# 				  -fgcolor => 'black',
-# 				  -bgcolor => 'black',
-# 				  $conf->style($overview_track),
-# 				 );
-#     foreach (@types) {
-#       $type2track{lc $_} = $overview_track
-#     }
-#     $track{$overview_track} = $track;
-#     push @feature_types,@types;
-#   }
-#   return unless @feature_types;
-
-#   my $iterator = $segment->features(-type=>\@feature_types,-iterator=>1,-rare=>1);
-
-#   my %count;
-#   my (%group_on,%group_on_field);
-#   while (my $feature = $iterator->next_seq) {
-
-#     my $track_name = eval{$type2track{lc $feature->type}}
-#       || $type2track{lc $feature->primary_tag}
-# 	|| eval{$type2track{lc $feature->method}}
-# 	  || next;
-
-#     my $track = $track{$track_name} or next;
-
-#     # copy-and-pasted from details method. Not very efficient coding.
-#     exists $group_on_field{$track_name} or $group_on_field{$track_name} = $conf->code_setting($track_name => 'group_on');
-
-#     if (my $field = $group_on_field{$track_name}) {
-#       my $base = eval{$feature->$field};
-#       if (defined $base) {
-# 	my $group_on_object = $group_on{$track_name}{$base} ||= Bio::Graphics::Feature->new(-start=>$feature->start,
-# 											    -end  =>$feature->end,
-# 											    -strand => $feature->strand,
-# 											    -type =>$feature->primary_tag);
-# 	$group_on_object->add_SeqFeature($feature);
-# 	next;
-#       }
-#     }
-
-#     $track->add_feature($feature);
-#     $count{$track_name}++;
-#   }
-
-#   # fix up group-on fields
-#   for my $track_name (keys %group_on) {
-#     my $track = $track{$track_name};
-#     my $group_on = $group_on{$track_name} or next;
-#     $track->add_feature($_) foreach values %$group_on;
-#   }
-
-#   for my $track_name (keys %count) {
-#     my $track = $track{$track_name};
-
-#     my $do_bump  = $self->do_bump($track_name,
-# 				  $options->{$track_name}{options},
-# 				  $count{$track_name},
-# 				  $self->bump_density);
-
-#     my $do_label = $self->do_label($track_name,
-# 				   $options->{$track_name}{options},
-# 				   $count{$track_name},
-# 				   $self->label_density,
-# 				   $segment->length);
-
-#     my $do_description = $self->do_description($track_name,
-# 					       $options->{$track_name}{options},
-# 					       $count{$track_name},
-# 					       $self->label_density,
-# 					       $segment->length);
-
-#     $track->configure(-bump        => $do_bump,
-# 		      -label       => $do_label,
-# 		      -description => $do_description,
-# 		     );
-#   }
-#   return \%track;
-# }
 
 
 package Bio::Graphics::BrowserConfig;

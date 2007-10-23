@@ -3,7 +3,7 @@ IMG.trackimg      {
                        margin-top: -10px;
                        text-align: center;
                   }
-.titlebar         {  background-color: burlywood1;
+.titlebar         {  background-color: #FFD39B;
                      cursor: crosshair;
                      z-index: 1;
                      opacity: 1.0;

@@ -50,4 +50,9 @@ function collapse(element_name) {
    return false;
 }
 
-
+function enable_keypos (checkbox) {
+  var checked = checkbox.checked;
+  var ks      = document.getElementsByName('ks');
+  for (var i=0;i<ks.length;i++) {ks[i].disabled= checked}
+  document.getElementById('ks_label').style.color=checked ? 'lightgray' : 'black';
+}

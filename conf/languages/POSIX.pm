@@ -409,4 +409,8 @@ END
 
  CHANGE           => 'Change',
 
+ DRAGGABLE_TRACKS  => 'Draggable tracks',
+
+ CACHE_TRACKS      => 'Cache tracks',
+
 };

@@ -48,8 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.28 2007-10-23 09:25:53 sheldon_mckay Exp $
-
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.29 2007-10-23 19:39:25 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -623,8 +622,10 @@ sub detail_panel {
 					   settings        => $page_settings,
 					   section         => '?detail',
                                            cache_extra     => \@cache_extra,
+					   cache         => $page_settings->{cache} || 0,
 					   -add_category_labels => $CONFIG->setting('show track categories') || undef,
 					   -grid         => $page_settings->{grid} || 0,
+					   drag_n_drop => $page_settings->{drag_and_drop}||0,
 					  }
 					 );
   }
@@ -641,7 +642,7 @@ sub detail_panel {
     : '';
   my $hints = join '',unique(hidden('ref')),unique(hidden('start')),unique(hidden('stop'));
 
-  unless ($CONFIG->drag_and_drop) {
+  unless ($CONFIG->drag_and_drop()) {
     return div(toggle($page_settings,
 		      'Details',
 		      div({-id=>'panels',-class=>'track'},
@@ -741,7 +742,9 @@ sub default_settings {
   @$settings{'name','ref','start','stop','flip','version'} = ('','','','','',100);
   $settings->{width}   = $CONFIG->setting('default width');
   $settings->{source}  = $CONFIG->source;
-  $settings->{region_size}  = $CONFIG->setting('region segment');
+  $settings->{region_size}   = $CONFIG->setting('region segment');
+  $settings->{cache}         = defined $CONFIG->setting('cache time') ? $CONFIG->setting('cache time') : 1;
+  $settings->{drag_and_drop} = $CONFIG->setting('drag and drop');
   $settings->{v}       = $VERSION;
   $settings->{stp}     = 1;
   $settings->{ins}     = 1;
@@ -843,6 +846,9 @@ sub adjust_settings {
     $settings->{features}{$_}{visible} = 1 foreach @selected;
     $settings->{flip}                  = param('flip');
     $settings->{grid}                  = param('grid');
+    $settings->{cache}                 = param('cache');
+    $settings->{cache}                 = !param('nocache') if defined param('nocache');
+    $settings->{drag_and_drop}         = param('drag_and_drop');
   }
 
   if (my @selected = split_labels(param('enable'))) {
@@ -1285,12 +1291,6 @@ sub tracks_table {
 
     my $visible = exists $settings->{section_visible}{$id} ? $settings->{section_visible}{$id} : 1;
 
-# The original version of this section has a mysterious div() in it, with extra left padding. This seems to break
-# IE 6.0 and removing the div didn't seem to hurt.
-#     my ($control,$section)=toggle_section({on=>$visible,nodiv=>1},
-# 					  $id,
-# 					  b(ucfirst $category),div({-style=>'padding-left:1em'},span({-id=>$id},$table)));
-
     my ($control,$section)=toggle_section({on=>$visible,nodiv=>1},
 					  $id,
 					  b(ucfirst $category),span({-id=>$id},$table));
@@ -1315,7 +1315,8 @@ sub tracks_table {
 		'Tracks',
 		div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
 		table({-width=>'100%',-class=>"searchbody"},
-		      TR(td{-align=>'right'},
+		      TR({-class=>'searchbody'},
+			 td{-align=>'right'},
 			 submit(-name => $CONFIG->tr('Set_options')),
 			 b(submit(-name => $CONFIG->tr('Update'))
 			  )
@@ -1491,7 +1492,7 @@ sub settings_table {
   my @widths = split /\s+/,$CONFIG->setting('image widths');
   @widths = (640,800,1024) unless @widths;
   my @key_positions   = qw(between bottom);
-  push @key_positions,qw(left right) if Bio::Graphics::Panel->can('auto_pad');
+  push   @key_positions,qw(left right) if Bio::Graphics::Panel->can('auto_pad');
 
   my $feature_highlights = $settings->{h_feat}   ?
     join ' ',map { "$_\@$settings->{h_feat}{$_}"   } keys %{$settings->{h_feat}} : '';
@@ -1499,9 +1500,23 @@ sub settings_table {
   my $region_highlights  = $settings->{h_region} ?
     join ' ',@{$settings->{h_region}} : '';
 
+  my @region_sizes   = sort {$b<=>$a} shellwords($CONFIG->setting('region segments'));
+  my %region_labels  = map  {$_=>scalar unit_label($_)} @region_sizes;
+  my $region_default = $settings->{region_size} || $CONFIG->setting('region segment');
+
+  my ($ks_style,@ks_disabled) = $settings->{drag_and_drop} ? ("color:lightgray",(-disabled=>1)) : ('color:black',());
+  CGI::autoEscape(0);
   my $content =
     table({-class=>'searchbody',-border=>0,-width=>'100%'},
-	  TR(
+	  TR({-class=>'searchtitle'},
+	     td(
+		b(
+		  checkbox(-name=>'grid',
+			   -label=>$CONFIG->tr('SHOW_GRID'),
+			   -override=>1,
+			   -checked=>$settings->{grid}||0)
+		 )
+	       ),
 	     td(
 		b($CONFIG->tr('Image_width')),br,
 		radio_group( -name=>'width',
@@ -1510,43 +1525,6 @@ sub settings_table {
 			     -override=>1,
 			   ),
 	       ),
-	     $CONFIG->setting('region segment') ?
-	     (
-	      td(b($CONFIG->tr('Region_size')),br,
-		 textfield(-name=>'region_size',
-			   -default=>$settings->{region_size},
-			   -override=>1,
-			   -size=>20),
-		)
-	     ) : (),
-             td(
-                b($CONFIG->tr("TRACK_NAMES")),br,
-                radio_group( -name=>"sk",
-                             -values=>["sorted","unsorted"],
-                             -labels=>{sorted   =>$CONFIG->tr("ALPHABETIC"),
-                                       unsorted =>$CONFIG->tr("VARYING")},
-                             -default=>$settings->{sk},
-                             -override=>1
-                           ),
-               ),
-	     td(
-		$CONFIG->drag_and_drop
-                ? '&nbsp;'
-		: (b($CONFIG->tr('KEY_POSITION')),br,
-		   radio_group( -name=>'ks',
-				-values=>\@key_positions,
-				-labels=>{between=>$CONFIG->tr('BETWEEN'),
-					  bottom =>$CONFIG->tr('BENEATH'),
-					  left   =>$CONFIG->tr('LEFT'),
-					  right  =>$CONFIG->tr('RIGHT'),
-					 },
-				-default=>$settings->{ks},
-				-override=>1
-			      )
-		  ),
-	       ),
-	    ),
-	  TR(
 	     td(
 		span({-title=>$CONFIG->tr('FEATURES_TO_HIGHLIGHT_HINT')},
 		     b(
@@ -1559,6 +1537,27 @@ sub settings_table {
 			      ),
 		    ),
 	       ),
+	    ),
+	  TR({-class=>'searchtitle'},
+	     td(
+		b(
+		  checkbox(-name     => 'cache',
+			   -label    => $CONFIG->tr('CACHE_TRACKS'),
+			   -override => 1,
+			   -checked  => $settings->{cache})
+		 )
+	       ),
+             td(
+                b($CONFIG->tr("TRACK_NAMES")),br,
+                radio_group( -name=>"sk",
+                             -values=>["sorted","unsorted"],
+                             -labels=>{sorted   =>$CONFIG->tr("ALPHABETIC"),
+                                       unsorted =>$CONFIG->tr("VARYING")},
+                             -default=>$settings->{sk},
+                             -override=>1
+                           ),
+               ),
+
 	     td(
 		span({-title=>$CONFIG->tr('REGIONS_TO_HIGHLIGHT_HINT')},
 		     b(
@@ -1571,19 +1570,53 @@ sub settings_table {
 			      ),
 		    ),
 	       ),
+	    ),
+	  TR({-class=>'searchtitle'},
 	     td(
 		b(
-		  checkbox(-name=>'grid',
-			   -label=>$CONFIG->tr('SHOW_GRID'),
-			   -override=>1,
-			   -checked=>$settings->{grid}||0)
+		  checkbox(-name     => 'drag_and_drop',
+			   -label    => $CONFIG->tr('DRAGGABLE_TRACKS'),
+			   -override => 1,
+			   -checked  => $settings->{drag_and_drop},
+			   -onClick  => "enable_keypos(this)",
+			  ),
 		 )
 	       ),
+	     td({-id=>'ks_label',-style=>$ks_style},
+		b($CONFIG->tr('KEY_POSITION')),br,
+		radio_group(
+			    -name=>'ks',
+			    -values=>\@key_positions,
+			    -labels=>{
+				      between=>$CONFIG->tr('BETWEEN'),
+				      bottom =>$CONFIG->tr('BENEATH'),
+				      left   =>$CONFIG->tr('LEFT'),
+				      right  =>$CONFIG->tr('RIGHT'),
+				     },
+			    -default=>$settings->{ks},
+			    -override=>1,
+			    -id  => 'key positions',
+			    @ks_disabled,
+			   )
+	       ),
+	     td(
+		$CONFIG->setting('region segment')
+		? ( b($CONFIG->tr('Region_size')),br,
+		  popup_menu(-name=>'region_size',
+			     -default=>$region_default,
+			     -values => \@region_sizes,
+			     -labels => \%region_labels,
+			     -override=>1),
+		)
+		: ()
+	       ),
 	    ),
-	  TR(td({-colspan=>4,
+	  TR({-class=>'searchtitle'},
+	     td({-colspan=>3,
 		 -align=>'right'},
 		b(submit(-name => $CONFIG->tr('Update')))))
 	 );
+  CGI::autoEscape(1);
   return toggle($settings,
 		'Display_settings',$content);
 }
@@ -2219,9 +2252,11 @@ sub _region_panel {
 					 settings      => $settings,
 					 feature_files => $feature_files,
 					 cache_extra   => [$segment->start,$segment->end],
+					 cache         => $page_settings->{cache},
 					 do_map        => 0,
 					 do_drag        => 1,
 					 image_button   => 1,
+					 drag_n_drop    => $page_settings->{drag_and_drop} || 0,
 					 -grid          => 0,
 					 -pad_top       => 5,
 					 -bgcolor      => $CONFIG->setting("overview bgcolor") || DEFAULT_OVERVIEW_BGCOLOR,

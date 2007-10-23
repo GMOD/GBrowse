@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.27 2007-10-17 00:29:34 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.28 2007-10-23 09:25:53 sheldon_mckay Exp $
 
 
 use strict;
@@ -1336,8 +1336,8 @@ sub categorize_track {
   }
   $category        ||= $CONFIG->setting($label => 'category');
   $category        ||= '';  # prevent uninit variable warnings
-  $category         =~ s/^["']//;  # get rid of leading quotes
-  $category         =~ s/["']$//;  # get rid of trailing quotes
+  $category         =~ s/^[\"\']//;  # get rid of leading quotes
+  $category         =~ s/[\"\']$//;  # get rid of trailing quotes
   return $category ||= $CONFIG->tr('GENERAL');
 }
 
@@ -1464,25 +1464,24 @@ END
 				  -default => $settings->{features}{$label}{limit})
 		      )
 		   ),
-		 TR(
-		    td({-align=>'right'},
-		       button(-style => 'background:pink',
-			      -name=>$CONFIG->tr('Revert'),
-			      -onClick=>$reset_js,
-			     ),
-		      ),
-		    th({-align=>'right'},
-		       button(-style=>'float:left',
-			      -name=>$CONFIG->tr('Cancel'),
-			      -onClick=>'Balloon.prototype.hideTooltip(1)'),
-		       submit(-style =>'background:wheat',
-			      -name=>$CONFIG->tr('Change'))
-		      )
-		   )
-		);
+                 TR(
+                    td({-align=>'center', -colspan=>2},
+                       join(br,
+                       button(-style => 'background:pink',
+                              -name=>$CONFIG->tr('Revert'),
+                              -onClick=>$reset_js,
+                             ),
+                       button(-name=>$CONFIG->tr('Cancel'),
+                              -onClick=>'Balloon.prototype.hideTooltip(1)').
+                       submit(-style =>'background:wheat',
+                              -name=>$CONFIG->tr('Change'))
+                            )
+                       )
+                    )
+                 );
   $form .= hidden(-name=>'adjust_one_track',-value=>$label);
   $form .= end_form();
-  print table(TR(td({-valign=>'top'},$citation),td({-valign=>'top'},$form)));
+  print table(TR(td({-valign=>'middle'},$citation),td({-valign=>'bottom'},$form)));
   print end_html();
 }
 

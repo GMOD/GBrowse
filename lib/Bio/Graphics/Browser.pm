@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.41 2007-10-23 19:39:29 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.42 2007-10-24 21:35:24 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -884,9 +884,19 @@ sub drag_and_drop {
   my $self          = shift;
   my $override      = shift;
   return if defined $override && !$override;
-  return unless $self->setting(general => 'drag and drop'); # drag and drop turned off
-  return if     $self->setting(general => 'postgrid');      # postgrid forces drag and drop off
-  1;
+  my $dnd           = $self->setting(general => 'drag and drop'); # dexplicit drag-and-drop setting
+  $dnd              = 1 unless defined $dnd;
+  my $pg            = $self->setting(general => 'postgrid');      # postgrid forces drag and drop off
+  return $dnd && !$pg;
+}
+
+sub cache_time {
+  my $self = shift;
+  my $override = shift;
+  return $override if defined $override;
+  my $ct = $self->setting(general => 'cache time');
+  return $ct if defined $ct;  # may return zero
+  return 1; # 1 hour default
 }
 
 sub render_draggable_tracks {
@@ -2521,13 +2531,6 @@ sub panel_is_cached {
   return unless $hours_since_last_modified < $cache_time;
   warn "cache hit for $key" if DEBUG;
   1;
-}
-
-sub cache_time {
-  my $self = shift;
-  my $ct   = $self->setting('cache time');
-  return $ct if defined $ct;  # hours
-  return 1;                   # cache for one hour by default
 }
 
 =head2 get_cached_panel()

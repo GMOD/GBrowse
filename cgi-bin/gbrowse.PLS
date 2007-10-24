@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.29 2007-10-23 19:39:25 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.30 2007-10-24 21:35:24 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -743,8 +743,8 @@ sub default_settings {
   $settings->{width}   = $CONFIG->setting('default width');
   $settings->{source}  = $CONFIG->source;
   $settings->{region_size}   = $CONFIG->setting('region segment');
-  $settings->{cache}         = defined $CONFIG->setting('cache time') ? $CONFIG->setting('cache time') : 1;
-  $settings->{drag_and_drop} = $CONFIG->setting('drag and drop');
+  $settings->{cache}         = defined $CONFIG->cache_time ? $CONFIG->cache_time : 1;
+  $settings->{drag_and_drop} = $CONFIG->drag_and_drop;
   $settings->{v}       = $VERSION;
   $settings->{stp}     = 1;
   $settings->{ins}     = 1;
@@ -838,7 +838,11 @@ sub reset_cookies {
 sub adjust_settings {
   my $settings = shift;
 
-  $settings->{grid} = 1 unless exists $settings->{grid};  # to upgrade from older settings
+  # upgrade from older settings configs
+  $settings->{grid}          = 1 unless exists $settings->{grid};
+  $settings->{cache}         = 1 unless exists $settings->{cache};
+  $settings->{drag_and_drop} = $CONFIG->setting('drag and drop')
+                                unless exists $settings->{drag_and_drop};
 
   if (param('width') || param('label')) { # just looking to see if the settings form was submitted
     my @selected = split_labels (param('label'));
@@ -846,9 +850,16 @@ sub adjust_settings {
     $settings->{features}{$_}{visible} = 1 foreach @selected;
     $settings->{flip}                  = param('flip');
     $settings->{grid}                  = param('grid');
-    $settings->{cache}                 = param('cache');
-    $settings->{cache}                 = !param('nocache') if defined param('nocache');
-    $settings->{drag_and_drop}         = param('drag_and_drop');
+
+    unless (defined $CONFIG->setting('cache time') && $CONFIG->setting('cache time') == 0) {
+      $settings->{cache}      = param('cache');
+      $settings->{cache}      = !param('nocache') if defined param('nocache');
+    }
+
+    if ($CONFIG->setting('drag and drop')) {
+      $settings->{drag_and_drop}         = param('drag_and_drop');
+    }
+
   }
 
   if (my @selected = split_labels(param('enable'))) {
@@ -1337,8 +1348,8 @@ sub categorize_track {
   }
   $category        ||= $CONFIG->setting($label => 'category');
   $category        ||= '';  # prevent uninit variable warnings
-  $category         =~ s/^[\"\']//;  # get rid of leading quotes
-  $category         =~ s/[\"\']$//;  # get rid of trailing quotes
+  $category         =~ s/^["']//;  # get rid of leading quotes
+  $category         =~ s/["']$//;  # get rid of trailing quotes
   return $category ||= $CONFIG->tr('GENERAL');
 }
 
@@ -1465,24 +1476,25 @@ END
 				  -default => $settings->{features}{$label}{limit})
 		      )
 		   ),
-                 TR(
-                    td({-align=>'center', -colspan=>2},
-                       join(br,
-                       button(-style => 'background:pink',
-                              -name=>$CONFIG->tr('Revert'),
-                              -onClick=>$reset_js,
-                             ),
-                       button(-name=>$CONFIG->tr('Cancel'),
-                              -onClick=>'Balloon.prototype.hideTooltip(1)').
-                       submit(-style =>'background:wheat',
-                              -name=>$CONFIG->tr('Change'))
-                            )
-                       )
-                    )
-                 );
+		 TR(
+		    td({-align=>'right'},
+		       button(-style => 'background:pink',
+			      -name=>$CONFIG->tr('Revert'),
+			      -onClick=>$reset_js,
+			     ),
+		      ),
+		    th({-align=>'right'},
+		       button(-style=>'float:left',
+			      -name=>$CONFIG->tr('Cancel'),
+			      -onClick=>'Balloon.prototype.hideTooltip(1)'),
+		       submit(-style =>'background:wheat',
+			      -name=>$CONFIG->tr('Change'))
+		      )
+		   )
+		);
   $form .= hidden(-name=>'adjust_one_track',-value=>$label);
   $form .= end_form();
-  print table(TR(td({-valign=>'middle'},$citation),td({-valign=>'bottom'},$form)));
+  print table(TR(td({-valign=>'top'},$citation),td({-valign=>'top'},$form)));
   print end_html();
 }
 
@@ -1504,8 +1516,9 @@ sub settings_table {
   my %region_labels  = map  {$_=>scalar unit_label($_)} @region_sizes;
   my $region_default = $settings->{region_size} || $CONFIG->setting('region segment');
 
-  my ($ks_style,@ks_disabled) = $settings->{drag_and_drop} ? ("color:lightgray",(-disabled=>1)) : ('color:black',());
-  CGI::autoEscape(0);
+  my ($ks_style,@ks_disabled) = $CONFIG->drag_and_drop($settings->{drag_and_drop})
+    ? ("color:gray",(-disabled=>1))
+    : ('color:black',());
   my $content =
     table({-class=>'searchbody',-border=>0,-width=>'100%'},
 	  TR({-class=>'searchtitle'},
@@ -1540,12 +1553,16 @@ sub settings_table {
 	    ),
 	  TR({-class=>'searchtitle'},
 	     td(
-		b(
-		  checkbox(-name     => 'cache',
-			   -label    => $CONFIG->tr('CACHE_TRACKS'),
-			   -override => 1,
-			   -checked  => $settings->{cache})
-		 )
+		$CONFIG->cache_time
+		? (
+		   b(
+		     checkbox(-name     => 'cache',
+			      -label    => $CONFIG->tr('CACHE_TRACKS'),
+			      -override => 1,
+			      -checked  => $settings->{cache})
+		    )
+		   )
+		: ()
 	       ),
              td(
                 b($CONFIG->tr("TRACK_NAMES")),br,
@@ -1573,14 +1590,18 @@ sub settings_table {
 	    ),
 	  TR({-class=>'searchtitle'},
 	     td(
-		b(
-		  checkbox(-name     => 'drag_and_drop',
-			   -label    => $CONFIG->tr('DRAGGABLE_TRACKS'),
-			   -override => 1,
-			   -checked  => $settings->{drag_and_drop},
-			   -onClick  => "enable_keypos(this)",
-			  ),
-		 )
+		$CONFIG->drag_and_drop
+		? (
+		   b(
+		     checkbox(-name     => 'drag_and_drop',
+			      -label    => $CONFIG->tr('DRAGGABLE_TRACKS'),
+			      -override => 1,
+			      -checked  => $settings->{drag_and_drop},
+			      -onClick  => "enable_keypos(this)",
+			     ),
+		    )
+		  )
+		: ()
 	       ),
 	     td({-id=>'ks_label',-style=>$ks_style},
 		b($CONFIG->tr('KEY_POSITION')),br,
@@ -1616,7 +1637,6 @@ sub settings_table {
 		 -align=>'right'},
 		b(submit(-name => $CONFIG->tr('Update')))))
 	 );
-  CGI::autoEscape(1);
   return toggle($settings,
 		'Display_settings',$content);
 }

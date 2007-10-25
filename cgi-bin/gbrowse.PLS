@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.30 2007-10-24 21:35:24 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.31 2007-10-25 22:07:09 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -352,15 +352,20 @@ if ($divisor == 1) {
     : $description;
 } else {
   if (@segments == 1) {
-  my $seg_start = unit_label($segments[0]->start);
-  my $seg_end   = unit_label($segments[0]->end);
+  my $seg_start = $CONFIG->unit_label($segments[0]->start);
+  my $seg_end   = $CONFIG->unit_label($segments[0]->end);
   $title = "$description: ".$segments[0]->seq_id.":".$seg_start.'..'.$seg_end;
   } else {
   $title = $description;
   }
 }
 
-print_top($title,param('reset'));
+# PAGE STARTS HERE
+my $alert = param('reset')                ? $CONFIG->tr('Options_reset')
+           : $page_settings->{upgraded}   ? $CONFIG->tr('Options_updated')
+           : '';
+
+print_top($title,scalar param('reset'),$alert);
 
 ## HANDLE TRACK SETTINGS   #######################################################
 if ((param('set_options') || param($CONFIG->tr('Set_options')) || param('revert'))
@@ -430,12 +435,12 @@ sub main_display {
     my $seg_start = $segment->start;
     my $seg_end   = $segment->end;
     if ($divider != 1 ) {
-       $seg_start = unit_label($seg_start);
-       $seg_end   = unit_label($seg_end);
+       $seg_start = $CONFIG->unit_label($seg_start);
+       $seg_end   = $CONFIG->unit_label($seg_end);
     }
 
     print h2($CONFIG->tr('SHOWING_FROM_TO',
-			 scalar unit_label($segment->length),
+			 scalar $CONFIG->unit_label($segment->length),
 			 $segment->seq_id,
 			 commas($seg_start),
 			 commas($seg_end)));
@@ -632,8 +637,8 @@ sub detail_panel {
 
   else {
     $panels = div($CONFIG->tr('TOO_BIG',
-			      scalar unit_label($MAX_SEGMENT),
-			      scalar unit_label($DEFAULT_SEGMENT)));
+			      scalar $CONFIG->unit_label($MAX_SEGMENT),
+			      scalar $CONFIG->unit_label($DEFAULT_SEGMENT)));
   }
   my $error_msg = $CONFIG->error 
     ? p({-style=>"color: red"},
@@ -717,10 +722,8 @@ sub page_settings {
   $MAX_SEGMENT     = $CONFIG->get_max_segment;
   $DEFAULT_SEGMENT = $CONFIG->get_default_segment;
 
-  # do not change the page settings when the user is changing from one
-  # database source to another
   my $page_settings = get_settings($session);
-  adjust_settings($page_settings);  # unless $old_source and $old_source ne $source; # no longer needed?
+  adjust_settings($page_settings);
   return ($page_settings,$session);
 }
 
@@ -740,18 +743,19 @@ sub default_settings {
   warn "Setting default settings" if DEBUG;
   %$settings = ();
   @$settings{'name','ref','start','stop','flip','version'} = ('','','','','',100);
-  $settings->{width}   = $CONFIG->setting('default width');
-  $settings->{source}  = $CONFIG->source;
+  $settings->{width}         = $CONFIG->setting('default width');
+  $settings->{source}        = $CONFIG->source;
   $settings->{region_size}   = $CONFIG->setting('region segment');
   $settings->{cache}         = defined $CONFIG->cache_time ? $CONFIG->cache_time : 1;
   $settings->{drag_and_drop} = $CONFIG->drag_and_drop;
-  $settings->{v}       = $VERSION;
-  $settings->{stp}     = 1;
-  $settings->{ins}     = 1;
-  $settings->{head}    = 1;
-  $settings->{ks}      = 'between';
-  $settings->{grid}    = 1;
-  $settings->{sk}      = $CONFIG->setting("default varying") ? "unsorted" : "sorted";
+  $settings->{v}             = $VERSION;
+  $settings->{stp}           = 1;
+  $settings->{ins}           = 1;
+  $settings->{head}          = 1;
+  $settings->{ks}            = 'between';
+  $settings->{grid}          = 1;
+  $settings->{sk}            = $CONFIG->setting("default varying") ? "unsorted" : "sorted";
+  $settings->{config_file_version} = $CONFIG->setting('version') || 0;
   set_default_tracks($settings);
 }
 
@@ -838,11 +842,8 @@ sub reset_cookies {
 sub adjust_settings {
   my $settings = shift;
 
-  # upgrade from older settings configs
-  $settings->{grid}          = 1 unless exists $settings->{grid};
-  $settings->{cache}         = 1 unless exists $settings->{cache};
-  $settings->{drag_and_drop} = $CONFIG->setting('drag and drop')
-                                unless exists $settings->{drag_and_drop};
+  # this is called to bring the settings hash up to the correct gbrowse version
+  return if upgrade_settings($settings);
 
   if (param('width') || param('label')) { # just looking to see if the settings form was submitted
     my @selected = split_labels (param('label'));
@@ -857,7 +858,7 @@ sub adjust_settings {
     }
 
     if ($CONFIG->setting('drag and drop')) {
-      $settings->{drag_and_drop}         = param('drag_and_drop');
+      $settings->{drag_and_drop} = param('drag_and_drop');
     }
 
   }
@@ -967,6 +968,36 @@ sub adjust_settings {
     adjust_one_track($settings);
   }
 
+}
+
+# return true if settings have been reset to their defaults, false otherwise
+sub upgrade_settings {
+  my $settings = shift;
+
+  # return settings to their defaults if the admin explicitly 
+  # bumps up the "config version" option.
+  my $settings_version     = $settings->{config_file_version}   || 0;
+  my $config_file_version  = $CONFIG->setting('version') || 0;
+  warn "version = $config_file_version, settings version = $settings_version" if DEBUG;
+  if ($settings_version < $config_file_version) {
+    default_settings($settings);
+    $settings->{upgraded}++;
+    return 1;  # tells caller that we've ret things to their defaults
+  } else {
+    delete $settings->{upgraded};
+  }
+
+  # check on a few options that have changed, which we want to turn on
+  # by default.
+  $settings->{grid}          = 1 unless exists $settings->{grid};
+  $settings->{cache}         = 1 unless exists $settings->{cache};
+
+  # This "clever" bit of code checks whether the "drag and drop" setting is defined
+  # in the config file but not in the $settings hash, and if so, forces the value.
+  $settings->{drag_and_drop} = $CONFIG->setting('drag and drop')
+                              if defined $CONFIG->setting('drag and drop') &&
+				! exists $settings->{drag_and_drop};
+  return;
 }
 
 # prints the zooming and navigation bar
@@ -1122,8 +1153,8 @@ sub hilite_regions_closure {
 sub slidertable {
   my ($segment,$buttonsDir) = @_;
   my $span      = $segment->length;
-  my $half_title      = unit_label(int $span/2);
-  my $full_title      = unit_label($span);
+  my $half_title      = $CONFIG->unit_label(int $span/2);
+  my $full_title      = $CONFIG->unit_label($span);
   my $half      = int $span/2;
   my $full      = $span;
   my $fine_zoom = get_zoomincrement();
@@ -1164,7 +1195,7 @@ sub zoomBar {
 
   my %seen;
   my @ranges	= grep {!$seen{$_}++} sort {$b<=>$a} $segment->length,get_ranges();
-  my %labels    = map {$_=>$show.' '.unit_label($_)} @ranges;
+  my %labels    = map {$_=>$show.' '.$CONFIG->unit_label($_)} @ranges;
   return popup_menu(-class   => 'searchtitle',
 	       -name    => 'span',
 	       -values  => \@ranges,
@@ -1173,44 +1204,6 @@ sub zoomBar {
 	       -force   => 1,
 	       -onChange => 'document.mainform.submit()',
 	      );
-}
-
-# convert bp into nice Mb/Kb units
-sub unit_label {
-  my $value = shift;
-  my $unit     = $CONFIG->setting('units')        || 'bp';
-  my $divider  = $CONFIG->setting('unit_divider') || 1;
-  $value /= $divider;
-  my $abs = abs($value);
-
-  my $label;
-  $label = $abs >= 1e9  ? sprintf("%.4g G%s",$value/1e9,$unit)
-         : $abs >= 1e6  ? sprintf("%.4g M%s",$value/1e6,$unit)
-         : $abs >= 1e3  ? sprintf("%.4g k%s",$value/1e3,$unit)
-	 : $abs >= 1    ? sprintf("%.4g %s", $value,    $unit)
-	 : $abs >= 1e-2 ? sprintf("%.4g c%s",$value*100,$unit)
-	 : $abs >= 1e-3 ? sprintf("%.4g m%s",$value*1e3,$unit)
-	 : $abs >= 1e-6 ? sprintf("%.4g u%s",$value*1e6,$unit)
-	 : $abs >= 1e-9 ? sprintf("%.4g n%s",$value*1e9,$unit)
-         : sprintf("%.4g p%s",$value*1e12,$unit);
-  if (wantarray) {
-    return split ' ',$label;
-  } else {
-    return $label;
-  }
-}
-
-# convert Mb/Kb back into bp... or a ratio
-sub unit_to_value {
-  my $string = shift;
-  my $sign           = $string =~ /out|left/ ? '-' : '+';
-  my ($value,$units) = $string =~ /([\d.]+) ?(\S+)/;
-  return unless defined $value;
-  $value /= 100   if $units eq '%';  # percentage;
-  $value *= 1000  if $units =~ /kb/i;
-  $value *= 1e6   if $units =~ /mb/i;
-  $value *= 1e9   if $units =~ /gb/i;
-  return "$sign$value";
 }
 
 # This subroutine is invoked to draw the checkbox group underneath the main display.
@@ -1512,9 +1505,8 @@ sub settings_table {
   my $region_highlights  = $settings->{h_region} ?
     join ' ',@{$settings->{h_region}} : '';
 
-  my @region_sizes   = sort {$b<=>$a} shellwords($CONFIG->setting('region segments'));
-  my %region_labels  = map  {$_=>scalar unit_label($_)} @region_sizes;
-  my $region_default = $settings->{region_size} || $CONFIG->setting('region segment');
+  my ($region_sizes,$region_labels,$region_default) = $CONFIG->region_sizes;
+
 
   my ($ks_style,@ks_disabled) = $CONFIG->drag_and_drop($settings->{drag_and_drop})
     ? ("color:gray",(-disabled=>1))
@@ -1624,9 +1616,9 @@ sub settings_table {
 		$CONFIG->setting('region segment')
 		? ( b($CONFIG->tr('Region_size')),br,
 		  popup_menu(-name=>'region_size',
-			     -default=>$region_default,
-			     -values => \@region_sizes,
-			     -labels => \%region_labels,
+			     -default=> $settings->{region_size},
+			     -values => $region_sizes,
+			     -labels => $region_labels,
 			     -override=>1),
 		)
 		: ()
@@ -1800,8 +1792,8 @@ sub zoomnav {
   my $seg_max          = param('seg_max');
   my $segment_length   = $seg_max - $seg_min + 1 if defined $seg_min && defined $seg_max;
 
-  my $zoomlevel = unit_to_value($1) if $zoom && $zoom =~ /((?:out|in) .+)\.[xy]/;
-  my $navlevel  = unit_to_value($1) if $nav  && $nav  =~ /((?:left|right) .+)/;
+  my $zoomlevel = $CONFIG->unit_to_value($1) if $zoom && $zoom =~ /((?:out|in) .+)\.[xy]/;
+  my $navlevel  = $CONFIG->unit_to_value($1) if $nav  && $nav  =~ /((?:left|right) .+)/;
 
   if (defined $zoomlevel) {
     warn "zoom = $zoom, zoomlevel = $zoomlevel" if DEBUG;
@@ -2199,7 +2191,7 @@ sub multiple_choices {
       $id ||= ''; $padstart ||= 0; $padstop ||= 0; $version ||= ''; # get rid of uninit variables
       my $posref     = "?ref=$id;start=$padstart;stop=$padstop;version=$version";
       my $position = format_segment($r);
-      my $length   = unit_label($stop-$start+1);
+      my $length   = $CONFIG->unit_label($stop-$start+1);
       print TR({-class=>'databody',-valign=>'TOP'},
 #	       th({-align=>'right'},ref($name) ? a({-href=>$objref},$name):tt($name)),  # what was this for?
 	       th({-align=>'right'},a({-href=>$objref},$name)),
@@ -2226,8 +2218,8 @@ sub by_score_and_position {
 sub format_segment {
   my $s = shift or return $CONFIG->tr('Not_applicable');
   my $ref = $s->seq_id;
-  my ($start,$s_units) = unit_label($s->start);
-  my ($end,$e_units)   = unit_label($s->end);
+  my ($start,$s_units) = $CONFIG->unit_label($s->start);
+  my ($end,$e_units)   = $CONFIG->unit_label($s->end);
   $start  = commas($start);
   $end    = commas($end);
   my $pos = $s_units eq $e_units ? "$start..$end $s_units" : "$start $s_units..$end $e_units";

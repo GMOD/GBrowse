@@ -223,6 +223,7 @@ sub parse_added_feature {
 sub print_top {
   my $title     = shift;
   my $reset_all = shift;
+  my $alert     = shift;
   local $^W = 0;  # to avoid a warning from CGI.pm
 
   my $titlebar = is_safari() ? 'titlebar-safari.css' : 'titlebar-default.css';
@@ -239,7 +240,8 @@ sub print_top {
   push @args,(-gbrowse_images => $CONFIG->relative_path_setting('buttons') || '/gbrowse/images/buttons');
   push @args,(-gbrowse_js     => $CONFIG->relative_path_setting('js')      || '/gbrowse/js');
   push @args,(-reset_toggle   => 1)               if $reset_all;
-  push @args,(-onload         => $CONFIG->setting('onload')) if $CONFIG->setting('onload');
+  push @args,(-onLoad         => $CONFIG->setting('onload')) if $CONFIG->setting('onload');
+  push @args,(-onLoad         => "alert('$alert')")          if $alert;
 
   # push all needed javascript files onto top of page
   my $drag_and_drop = $CONFIG->setting('drag and drop');

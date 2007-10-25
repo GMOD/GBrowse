@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.42 2007-10-24 21:35:24 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.43 2007-10-25 22:07:15 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -2673,6 +2673,78 @@ sub set_cached_panel {
 
   return ($image_uri,$map_data,$width,$height,$image_file);
 }
+
+# convert bp into nice Mb/Kb units
+sub unit_label {
+  my $self  = shift;
+  my $value = shift;
+
+  my $unit     = $self->setting('units')        || 'bp';
+  my $divider  = $self->setting('unit_divider') || 1;
+  $value /= $divider;
+  my $abs = abs($value);
+
+  my $label;
+  $label = $abs >= 1e9  ? sprintf("%.4g G%s",$value/1e9,$unit)
+         : $abs >= 1e6  ? sprintf("%.4g M%s",$value/1e6,$unit)
+         : $abs >= 1e3  ? sprintf("%.4g k%s",$value/1e3,$unit)
+	 : $abs >= 1    ? sprintf("%.4g %s", $value,    $unit)
+	 : $abs >= 1e-2 ? sprintf("%.4g c%s",$value*100,$unit)
+	 : $abs >= 1e-3 ? sprintf("%.4g m%s",$value*1e3,$unit)
+	 : $abs >= 1e-6 ? sprintf("%.4g u%s",$value*1e6,$unit)
+	 : $abs >= 1e-9 ? sprintf("%.4g n%s",$value*1e9,$unit)
+         : sprintf("%.4g p%s",$value*1e12,$unit);
+  if (wantarray) {
+    return split ' ',$label;
+  } else {
+    return $label;
+  }
+}
+
+# convert Mb/Kb back into bp... or a ratio
+sub unit_to_value {
+  my $self   = shift;
+  my $string = shift;
+  my $sign           = $string =~ /out|left/ ? '-' : '+';
+  my ($value,$units) = $string =~ /([\d.]+) ?(\S+)/;
+  return unless defined $value;
+  $value /= 100   if $units eq '%';  # percentage;
+  $value *= 1000  if $units =~ /kb/i;
+  $value *= 1e6   if $units =~ /mb/i;
+  $value *= 1e9   if $units =~ /gb/i;
+  return "$sign$value";
+}
+
+
+=head2
+
+   ($region_sizes,$region_labels,$region_default) = $config->region_sizes()
+
+Return information about the region panel:
+
+   1. list of valid region sizes (@$region_sizes)
+   2. mapping of size to label   (%$region_labels)
+   3. default size               ($region_default)
+
+=cut
+
+sub region_sizes {
+  my $self     = shift;
+  my $settings = shift;
+
+  my @region_sizes   = sort {$b<=>$a} shellwords($self->setting('region segments'));
+  unless (@region_sizes) {
+    my $default      = $self->setting('default segment') || 50000;
+    @region_sizes    = ($default * 2, $default, int $default/2);
+  }
+
+  my %region_labels  = map  {$_=>scalar $self->unit_label($_)} @region_sizes;
+  my $region_default = $settings->{region_size} || $self->setting('region segment');
+  $region_default  ||= $self->setting('default segment');
+
+  return (\@region_sizes,\%region_labels,$region_default);
+}
+
 
 
 package Bio::Graphics::BrowserConfig;

@@ -796,6 +796,20 @@ hours, that images will be cached. The default is 1 hour.
 If you are debugging your config file and want to see uncached images,
 call gbrowse with the CGI option nocache=1.
 
+=item * version
+
+An optional numeric version for this configuration file. Every time
+gbrowse runs a user's request, it checks the value of the config file
+version against a version number saved in the user's settings. Of the
+current version is higher than the saved version, then gbrowse will
+reset the user's page session to its default values. Use this if you
+want to reset all users sessions to a known working state, or to draw
+their attention to a new feature you've added.
+
+Example:
+
+   version = 1.1
+
 =item * detailed bgcolor
 
 This is the color for the background of the detailed view.

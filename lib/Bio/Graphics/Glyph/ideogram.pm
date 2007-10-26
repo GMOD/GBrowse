@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.3.6.1.2.5.2.3 2007-10-17 01:48:22 lstein Exp $
+# $Id: ideogram.pm,v 1.3.6.1.2.5.2.4 2007-10-26 15:06:32 sheldon_mckay Exp $
 # Glyph to draw chromosome ideograms
 
 use strict qw/vars refs/;
@@ -18,18 +18,11 @@ sub draw {
   @parts = $self if !@parts && $self->level == 0;
   return $self->SUPER::draw(@_) unless @parts;
 
-  # Draw the sides for the whole chromosome (in case
+  # Draw the whole chromosome first (in case
   # there are missing data).
   $self->draw_component(@_) unless @parts == 1;
 
-  # Make unaggregated bands invisible if requested.
-  # This is for making image maps for individual
-  # bands of whole aggregate chromosomes.
-  $self->{invisible} ||= $self->option('invisible') 
-      unless @parts > 1;
-
   $parts[0]->{single}++ if @parts == 1;
-
 
   # if the bands are subfeatures of an aggregate chromosome,
   # we can draw the centomere and telomeres last to improve
@@ -342,35 +335,6 @@ black-on-white pattern.
 
 The cytobandband features would typically be formatted like this in GFF3:
 
- ...
- ChrX    UCSC    cytoband        136700001       139000000       .       .       .       Parent=ChrX;Name=Xq27.1;Alias=ChrXq27.1;stain=gpos75;
- ChrX    UCSC    cytoband        139000001       140700000       .       .       .       Parent=ChrX;Name=Xq27.2;Alias=ChrXq27.2;stain=gneg;
- ChrX    UCSC    cytoband        140700001       145800000       .       .       .       Parent=ChrX;Name=Xq27.3;Alias=ChrXq27.3;stain=gpos100;
- ChrX    UCSC    cytoband        145800001       153692391       .       .       .       Parent=ChrX;Name=Xq28;Alias=ChrXq28;stain=gneg;
- ChrY    UCSC    cytoband        1       1300000 .       .       .       Parent=ChrY;Name=Yp11.32;Alias=ChrYp11.32;stain=gneg;
-
- which in this case is a GFF-ized cytoband coordinate file from UCSC:
-
- http://hgdownload.cse.ucsc.edu/goldenPath/hg16/database/cytoBand.txt.gz
-
- and the corresponding GBrowse config options would be like this to 
- create an ideogram overview track for the whole chromosome:
-
- The 'chromosome' feature below would aggregated from bands and centromere using the default 
- chromosome aggregator
-
- [CYT:overview]
- feature       = chromosome
- glyph         = ideogram
- fgcolor       = black
- bgcolor       = gneg:white gpos25:silver gpos50:gray gpos:gray  gpos75:darkgray gpos100:black acen:cen gvar:var
- arcradius     = 6
- height        = 25
- bump          = 0
- label         = 0
-
- A script to reformat UCSC annotations to  GFF3 format can be found at
- the end of this documentation.
 
 =head2 OPTIONS
 
@@ -403,124 +367,122 @@ L<Bio::Graphics::Glyph> for a full explanation.
 
   -description  Whether to draw a description  0 (false)
 
-=head1 UCSC TO GFF CONVERSION SCRIPT
+=head1 Where to get cytoband data
 
-The following short script can be used to convert a UCSC cytoband annotation file
-into GFF format.  If you have the lynx web-browser installed you can
-call it like this in order to download and convert the data in a
-single operation:
+Below is a perl script to retrieve cytoband data from ensembl
 
-  fetchideogram.pl http://hgdownload.cse.ucsc.edu/goldenPath/hg16/database/cytoBand.txt.gz
-
-Otherwise you will need to download the file first. Note the difference between this script
-and input data from previous versions of ideogram.pm: UCSC annotations are used in place
-of NCBI annotations.
-
-
-#!/usr/bin/perl
-
-use strict;
-my %stains;
-my %centros;
-my %chrom_ends;
+ #!/usr/bin/perl -w
+ # This script will query the ensembl public ftp site to
+ # get cytoband data.
+ # NOTE: a mysql client must be installed on your system
+ #
+ # Sheldon McKay <mckays@cshl.edu>
+ #
+ #$Id: ideogram.pm,v 1.3.6.1.2.5.2.4 2007-10-26 15:06:32 sheldon_mckay Exp $
 
 
-foreach (@ARGV) {
-    if (/^(ftp|http|https):/) {
-	$_ = "lynx --dump $_ |gunzip -c|";
-    } elsif (/\.gz$/) {
-	$_ = "gunzip -c $_ |";
-    }
-    print STDERR "Processing $_\n";
-}
+ use strict;
+ use DBI;
 
-print "##gff-version 3\n";
-while(<>)
-{
-    chomp;
-    my($chr,$start,$stop,$band,$stain) = split /\t/;
-    $start++;
-    $chr = ucfirst($chr);
-    if(!(exists($chrom_ends{$chr})) || $chrom_ends{$chr} < $stop)
-    {
-	$chrom_ends{$chr} = $stop;
-    }
-    my ($arm) = $band =~ /(p|q)\d+/;
-    $stains{$stain} = 1;
-    if ($stain eq 'acen')
-    {
-	$centros{$chr}->{$arm}->{start} = $stop;
-	$centros{$chr}->{$arm}->{stop} = $start;
-	next;
-    }
-    $chr =~ s/chr//i;
-    print qq/$chr\tUCSC\tcytoband\t$start\t$stop\t.\t.\t.\tParent=$chr_stripped;Name=$chr;Alias=$chr$band;stain=$stain;\n/;
-}
+ my $database = shift;
 
-foreach my $chr(sort keys %chrom_ends)
-{
-    print qq/$chr\tUCSC\tcentromere\t$centros{$chr}->{p}->{stop}\t$centros{$chr}->{q}->{start}\t.\t+\t.\tParent=$chr;Name=$chr\_cent\n/;
-}
+ unless ($database) {
+   print "No database specified: Usage: ./get_ensembl_cytoband_data.pl database\n";
+   print "This is a list of ensembl databases\n";
+   open IN, "mysql -uanonymous -hensembldb.ensembl.org -e 'show databases' | grep core | grep -v 'expression' |";
+   my @string;
+   while (<IN>) {
+     chomp;
+     push @string, $_;
+     if (@string == 4) {
+       print join("\t", @string), "\n";
+       @string = ();
+     }
+   }
+  
+  print join("\t", @string), "\n" if @string;
+   exit;
+ }
+
+ my $host     = 'ensembldb.ensembl.org';
+ my $query    = 
+ 'SELECT name,seq_region_start,seq_region_end,band,stain
+  FROM seq_region,karyotype
+  WHERE seq_region.seq_region_id = karyotype.seq_region_id;';  
 
 
+ my $dbh = DBI->connect( "dbi:mysql:$database:$host", 'anonymous' )
+     or die DBI->errstr;
 
-=head1 BUGS
+ my $sth = $dbh->prepare($query) or die $dbh->errstr;
+ $sth->execute or die $sth->errstr;
 
-Please report them.
+ my ($cent_start,$prev_chr,$chr_end,$segments,$gff);
+ my $chr_start = 1;
+ while (my @band = $sth->fetchrow_array ) {
+   my ($chr,$start,$end,$band,$stain) = @band;
+   my $class = 'Chromosome';
+   my $method;
 
-=head1 SEE ALSO
+   $chr =~ s/chr//;
+   if ($stain eq 'acen' && !$cent_start) {
+     $cent_start = $start;
+     next;
+   }
+   elsif ($cent_start) {
+     $method = 'centromere';
+     $band   = "$chr\_cent";
+     $start  = $cent_start;
+     $stain  = '';
+     $cent_start = 0;
+   }
+   else {
+     $method = 'chromosome_band';
+   }
 
-L<Bio::Graphics::Panel>,
-L<Bio::Graphics::Glyph>,
-L<Bio::Graphics::Glyph::arrow>,
-L<Bio::Graphics::Glyph::cds>,
-L<Bio::Graphics::Glyph::crossbox>,
-L<Bio::Graphics::Glyph::diamond>,
-L<Bio::Graphics::Glyph::dna>,
-L<Bio::Graphics::Glyph::dot>,
-L<Bio::Graphics::Glyph::ellipse>,
-L<Bio::Graphics::Glyph::extending_arrow>,
-L<Bio::Graphics::Glyph::generic>,
-L<Bio::Graphics::Glyph::graded_segments>,
-L<Bio::Graphics::Glyph::heterogeneous_segments>,
-L<Bio::Graphics::Glyph::line>,
-L<Bio::Graphics::Glyph::pinsertion>,
-L<Bio::Graphics::Glyph::primers>,
-L<Bio::Graphics::Glyph::rndrect>,
-L<Bio::Graphics::Glyph::segments>,
-L<Bio::Graphics::Glyph::ruler_arrow>,
-L<Bio::Graphics::Glyph::toomany>,
-L<Bio::Graphics::Glyph::transcript>,
-L<Bio::Graphics::Glyph::transcript2>,
-L<Bio::Graphics::Glyph::translation>,
-L<Bio::Graphics::Glyph::triangle>,
-L<Bio::DB::GFF>,
-L<Bio::SeqI>,
-L<Bio::SeqFeatureI>,
-L<Bio::Das>,
-L<GD>
+   $gff .= join("\t", $chr, 'ensembl', lc $method, $start, $end, 
+	       qw/. . ./,qq{Parent $chr;label $band;Alias $band});
+   $gff .= $stain ? ";stain $stain\n" : "\n";
 
-=head1 AUTHOR
+   if ($prev_chr && $prev_chr !~ /$chr/) {
+      $segments .= "\#\#sequence-region $prev_chr $chr_start $chr_end\n";
+      $chr_start = 1;
+   }
 
-Gudmundur A. Thorisson E<lt>mummi@cshl.eduE<gt>
+   $prev_chr = $chr;
+   $chr_end  = $end;
+ }
 
-Copyright (c) 2001-2006 Cold Spring Harbor Laboratory
+ if (!$gff) {
+   print "\nSorry, there are no cytoband data for $database\n\n";
+   exit;
+ }
 
-=head1 CONTRIBUTORS
+ $segments .= "\#\#sequence-region $prev_chr $chr_start $chr_end\n";
+ print "##gff-version 2\n";
+ print "#Source ENSEMBL database: $database\n";
+ print $segments,$gff;
 
-Sheldon McKay E<lt>mckays@cshl.edu<gt>
+ __END__
+ # Currently ideograms for human, rat and mouse are available
+ # To see the current database list, try the command:
+ 
+ mysql -uanonymous -hensembldb.ensembl.org -e 'show databases' \ 
+ | grep core | grep 'sapiens\|rattus\|mus' | grep -v 'expression'
+ 
 
-This package and its accompanying libraries is free software; you can
-redistribute it and/or modify it under the terms of the GPL (either
-version 1, or at your option, any later version) or the Artistic
-License 2.0.  Refer to LICENSE for the full license text. In addition,
-please see DISCLAIMER.txt for disclaimers of warranty.
+=head1 AUTHORS
 
+Sheldon McKay  E<lt>mckays@cshl.eduE<gt>
+ 
+Copyright (c) 2001-2007 Cold Spring Harbor Laboratory
+   
+=head1 CONTRIBUTORS 
+  
+Gudmundur A. Thorisson E<lt>mummi@cshl.eduE<gt> 
+  
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.  See DISCLAIMER.txt for
+disclaimers of warranty.
+    
 =cut
-
-
-
-
-
-
-

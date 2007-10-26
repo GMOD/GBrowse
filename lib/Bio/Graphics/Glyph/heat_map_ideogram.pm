@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::heat_map_ideogram;
 
-# $Id: heat_map_ideogram.pm,v 1.5.2.3 2007-10-17 01:48:22 lstein Exp $
+# $Id: heat_map_ideogram.pm,v 1.5.2.4 2007-10-26 15:06:32 sheldon_mckay Exp $
 # Glyph to draw chromosome heat_map ideograms
 
 use strict qw/vars refs/;
@@ -15,27 +15,28 @@ sub draw {
   my $self = shift;
 
   my @parts = $self->parts;
-
   @parts = $self if !@parts && $self->level == 0;
   return $self->SUPER::draw(@_) unless @parts;
-
   $self->{single}++ if @parts == 1;
-
   $self->calculate_gradient(\@parts);
+
+  # Draw the whole chromosome first (in case 
+  # there are missing data).
+  $self->draw_component($parts[0],@_) unless @parts == 1;
 
   # Draw centromeres and telomeres last
   my @last;
   for my $part (@parts) {
-    push @last, $part and next if 
-	$part->feature->method eq 'centromere' ||
-	$part->feature->start <= 10000 ||
-	$part->feature->stop >= $self->panel->end - 10000;
-
+    my ($stain) = $part->feature->attributes('stain') || $part->feature->attributes('Stain');
+    push @last, $part and next if
+        $stain eq 'stalk' ||
+        $part->feature->method =~ /centromere/i ||
+        $part->feature->start <= 1 ||
+        $part->feature->stop >= $self->panel->end - 1000;
     $self->draw_component($part,@_);
   }
 
   for my $part (@last) {
-    warn "last: ".$part->feature->method."\n";
     my $tile = $self->create_tile('right') 
 	if $part->feature->method eq 'centromere';
     $self->draw_component($part,@_);
@@ -58,7 +59,8 @@ sub draw_component {
   my $bgcolor;
 
   # skip normal cytobands
-  return if $feature->attributes('stain') && !$is_cent;
+  my ($stain) = $glyph->feature->attributes('stain') || $glyph->feature->attributes('Stain');
+  return if $stain && $stain ne 'stalk' && !$is_cent;
      
   # Set the bgcolor
   unless ($is_cent || defined $score || defined $self->score_range ) {
@@ -183,11 +185,9 @@ Sheldon McKay E<lt>mckays@cshl.eduE<gt>
 
 Copyright (c) 2006 Cold Spring Harbor Laboratory
 
-This package and its accompanying libraries is free software; you can
-redistribute it and/or modify it under the terms of the GPL (either
-version 1, or at your option, any later version) or the Artistic
-License 2.0.  Refer to LICENSE for the full license text. In addition,
-please see DISCLAIMER.txt for disclaimers of warranty.
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.  See DISCLAIMER.txt for
+disclaimers of warranty.
 
 =cut
 

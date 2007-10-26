@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.3.6.1.2.5.2.4 2007-10-26 15:06:32 sheldon_mckay Exp $
+# $Id: ideogram.pm,v 1.3.6.1.2.5.2.5 2007-10-26 20:24:59 sheldon_mckay Exp $
 # Glyph to draw chromosome ideograms
 
 use strict qw/vars refs/;
@@ -378,7 +378,7 @@ Below is a perl script to retrieve cytoband data from ensembl
  #
  # Sheldon McKay <mckays@cshl.edu>
  #
- #$Id: ideogram.pm,v 1.3.6.1.2.5.2.4 2007-10-26 15:06:32 sheldon_mckay Exp $
+ #$Id: ideogram.pm,v 1.3.6.1.2.5.2.5 2007-10-26 20:24:59 sheldon_mckay Exp $
 
 
  use strict;
@@ -473,13 +473,10 @@ Below is a perl script to retrieve cytoband data from ensembl
 
 =head1 AUTHORS
 
-Sheldon McKay  E<lt>mckays@cshl.eduE<gt>
- 
-Copyright (c) 2001-2007 Cold Spring Harbor Laboratory
-   
-=head1 CONTRIBUTORS 
-  
+Sheldon McKay  E<lt>mckays@cshl.eduE<gt>,
 Gudmundur A. Thorisson E<lt>mummi@cshl.eduE<gt> 
+
+
   
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.  See DISCLAIMER.txt for

@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::heat_map_ideogram;
 
-# $Id: heat_map_ideogram.pm,v 1.5.2.4 2007-10-26 15:06:32 sheldon_mckay Exp $
+# $Id: heat_map_ideogram.pm,v 1.5.2.5 2007-10-26 20:24:59 sheldon_mckay Exp $
 # Glyph to draw chromosome heat_map ideograms
 
 use strict qw/vars refs/;
@@ -183,7 +183,7 @@ L<GD>
 
 Sheldon McKay E<lt>mckays@cshl.eduE<gt>
 
-Copyright (c) 2006 Cold Spring Harbor Laboratory
+Copyright (c) 2006,2007 Cold Spring Harbor Laboratory
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.  See DISCLAIMER.txt for

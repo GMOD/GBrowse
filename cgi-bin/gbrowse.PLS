@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.31 2007-10-25 22:07:09 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.32 2007-10-26 17:21:05 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1469,25 +1469,24 @@ END
 				  -default => $settings->{features}{$label}{limit})
 		      )
 		   ),
-		 TR(
-		    td({-align=>'right'},
-		       button(-style => 'background:pink',
-			      -name=>$CONFIG->tr('Revert'),
-			      -onClick=>$reset_js,
-			     ),
-		      ),
-		    th({-align=>'right'},
-		       button(-style=>'float:left',
-			      -name=>$CONFIG->tr('Cancel'),
-			      -onClick=>'Balloon.prototype.hideTooltip(1)'),
-		       submit(-style =>'background:wheat',
-			      -name=>$CONFIG->tr('Change'))
-		      )
-		   )
-		);
+                 TR(
+                    td({-align=>'center', -colspan=>2},
+                       join(br,
+                       button(-style => 'background:pink',
+                              -name=>$CONFIG->tr('Revert'),
+                              -onClick=>$reset_js,
+                             ),
+                       button(-name=>$CONFIG->tr('Cancel'),
+                              -onClick=>'Balloon.prototype.hideTooltip(1)').
+                       submit(-style =>'background:wheat',
+                              -name=>$CONFIG->tr('Change'))
+                            )
+                       )
+                    )
+                 );
   $form .= hidden(-name=>'adjust_one_track',-value=>$label);
   $form .= end_form();
-  print table(TR(td({-valign=>'top'},$citation),td({-valign=>'top'},$form)));
+  print table(TR(td({-valign=>'middle'},$citation),td({-valign=>'bottom'},$form)));
   print end_html();
 }
 

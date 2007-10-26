@@ -954,7 +954,7 @@ sub sub_SeqFeature {
 
     my $sql = "
     select child.feature_id, child.name, child.type_id, child.uniquename, parent.name as pname, child.is_obsolete,
-      childloc.fmin, childloc.fmax, childloc.strand, childloc.locgroup, childloc.phase, af.significance as score,
+      childloc.fmin, childloc.fmax, childloc.strand, childloc.locgroup, childloc.phase, COALESCE(af.significance,af.identity,af.normscore,af.rawscore) as score,
       childloc.srcfeature_id
     from feature as parent
     inner join

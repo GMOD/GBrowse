@@ -136,6 +136,22 @@ if (-e 'GGB.def' && !%OPTIONS) {
   }
 }
 
+if (-e 'GGB.def' && !$OPTIONS{GBROWSE_ROOT} && $OPTIONS{HTDOCS} ) {
+    print STDERR <<END;
+
+--------------WARNING--------------------
+You may have already installed GBrowse in this directory because you have
+the HTDOCS variable set but not the GBROWSE_ROOT variable.  Please see
+the help document for how these variables have changed.  You probably
+want to have GBROWSE_ROOT equal to 'gbrowse' and remove 'gbrowse' from
+the end of your HTDOCS.
+
+Please check the file paths that are printed out at the end of this
+output for sanity.
+
+END
+}
+
 
 if(-e '/proc/filesystems' 
    && `grep selinux /proc/filesystems`

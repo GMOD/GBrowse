@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::heat_map_ideogram;
 
-# $Id: heat_map_ideogram.pm,v 1.5.2.5 2007-10-26 20:24:59 sheldon_mckay Exp $
+# $Id: heat_map_ideogram.pm,v 1.5.2.6 2007-10-29 20:08:46 sheldon_mckay Exp $
 # Glyph to draw chromosome heat_map ideograms
 
 use strict qw/vars refs/;
@@ -22,7 +22,7 @@ sub draw {
 
   # Draw the whole chromosome first (in case 
   # there are missing data).
-  $self->draw_component($parts[0],@_) unless @parts == 1;
+  $self->draw_component($self,@_) unless @parts == 1;
 
   # Draw centromeres and telomeres last
   my @last;

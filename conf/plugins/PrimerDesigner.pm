@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.6 2007-10-17 18:27:21 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.7 2007-10-29 20:08:46 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -780,7 +780,7 @@ sub segment_map {
     noscale          => 1,
     keystyle         => 'none',
     drag_n_drop      => 0,
-    box_subparts     => 1,
+    -box_subparts     => 1,
     feature_files    => \%feature_files
       };
   

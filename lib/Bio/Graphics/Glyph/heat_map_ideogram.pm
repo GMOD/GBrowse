@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::heat_map_ideogram;
 
-# $Id: heat_map_ideogram.pm,v 1.5.2.6 2007-10-29 20:08:46 sheldon_mckay Exp $
+# $Id: heat_map_ideogram.pm,v 1.5.2.7 2007-10-30 08:10:44 sheldon_mckay Exp $
 # Glyph to draw chromosome heat_map ideograms
 
 use strict qw/vars refs/;
@@ -63,8 +63,8 @@ sub draw_component {
   return if $stain && $stain ne 'stalk' && !$is_cent;
      
   # Set the bgcolor
-  unless ($is_cent || defined $score || defined $self->score_range ) {
-    my @rgb = @{$self->low_rgb};
+  unless ($is_cent || defined $score) {
+    my @rgb = (255,255,255);
     $bgcolor = $self->color_index(@rgb);
   }
   else {
@@ -72,6 +72,7 @@ sub draw_component {
     $bgcolor = $self->color_index(@rgb);
   }
 
+  
   # bgcolorindex must return true
   $bgcolor ||= $self->adjust_bgcolor;
 
@@ -183,7 +184,7 @@ L<GD>
 
 Sheldon McKay E<lt>mckays@cshl.eduE<gt>
 
-Copyright (c) 2006,2007 Cold Spring Harbor Laboratory
+Copyright (c) 2006 Cold Spring Harbor Laboratory
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.  See DISCLAIMER.txt for

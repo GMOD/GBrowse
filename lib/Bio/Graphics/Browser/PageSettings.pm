@@ -36,7 +36,7 @@ sub id {
 sub session { shift->{session} }
 
 sub page_settings {
-  my $self   = shift;
+  my $self = shift;
   my $hash = $self->config_hash;
   return $hash->{page_settings} ||= {};
 }
@@ -59,7 +59,7 @@ sub source {
 
 sub config_hash {
   my $self = shift;
-  my $source = $self->source;
+  my $source  = $self->source;
   my $session = $self->{session};
   $session->param($source=>{}) unless $session->param($source);
   return $session->param($source);

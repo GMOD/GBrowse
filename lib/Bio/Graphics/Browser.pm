@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.43 2007-10-25 22:07:15 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.44 2007-11-02 23:58:06 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -162,15 +162,16 @@ sub read_configuration {
     $self->{conf}{$basename}{path}  = $file;
   }
 
-  my $default_source;
+ my $default_source;
   for my $basename (sort keys %{$self->{conf}}) {
     my $config = $self->{conf}{$basename}{data};
     $default_source  ||= $basename if $config->authorized('general');
   }
 
+
   $self->{source} = $default_source;
-  $self->{width} = DEFAULT_WIDTH;
-  $self->{dir}   = $conf_dir;
+  $self->{width}  = DEFAULT_WIDTH;
+  $self->{dir}    = $conf_dir;
   1;
 }
 
@@ -573,8 +574,10 @@ order to retrieve track-specific options.
 sub labels {
   my $self  = shift;
   my $order = shift;
-  $self->{cached_data}{labels} ||= [$self->config->labels];
-  my @labels = @{$self->{cached_data}{labels}};
+  my @labels = $self->config->labels;
+  # who wrote this???!
+  #  $self->{cached_data}{labels} ||= [$self->config->labels];
+  #  my @labels = @{$self->{cached_data}{labels}};
   if ($order) { # custom order
     return @labels[@$order];
   } else {

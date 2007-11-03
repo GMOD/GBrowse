@@ -12,9 +12,9 @@ sub new {
   $CGI::Session::NAME = COOKIE_NAME;
   my $dir             = $config->tmpdir('sessions');
   my $driver          = $config->setting('session driver') || 'driver:file';
-  my %args            = shellwords $config->setting('session args');
-  %args               = (Directory => $dir) unless %args;
-
+  my $session_args    = $config->setting('session args');
+  my %args            = $session_args ? shellwords($session_args)
+                                      : (Directory => $dir);
 
   my $session         = CGI::Session->new($driver,$id,\%args);
   $session->expire($config->source,

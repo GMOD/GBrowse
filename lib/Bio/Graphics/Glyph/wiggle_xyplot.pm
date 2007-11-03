@@ -55,21 +55,17 @@ sub draw_densefile {
   $denseoffset ||= 0;
   $densesize   ||= 1;
 
-  my $panel_start = $self->panel->start;
-  my $panel_end   = $self->panel->end;
-  my $start       = $feature->start > $panel_start ? $feature->start : $panel_start;
-  my $end         = $feature->end   < $panel_end   ? $feature->end   : $panel_end;
-
-  my $smooth_window = int (($end - $start)/$self->width);
-  $smooth_window    = 1 unless $smooth_window > 2;
-  my $smoothing     = $self->get_smoothing;
+  my $smoothing      = $self->get_smoothing;
+  my $smooth_window  = $self->smooth_window;
+  my $start          = $self->smooth_start;
+  my $end            = $self->smooth_end;
 
   my $fh         = IO::File->new($densefile) or die "can't open $densefile: $!";
   eval "require Bio::Graphics::DenseFeature" unless Bio::Graphics::DenseFeature->can('new');
   my $dense = Bio::Graphics::DenseFeature->new(-fh=>$fh,
 					       -fh_offset => $denseoffset,
 					       -start     => $feature->start,
-					       -smooth    => $smooth_window > 1 ? 'mean' : 'none',
+					       -smooth    => $smoothing,
 					       -recsize   => $densesize,
 					       -window    => $smooth_window,
 					      ) or die "Can't initialize DenseFeature: $!";

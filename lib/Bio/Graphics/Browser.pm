@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.44 2007-11-02 23:58:06 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.45 2007-11-03 21:22:26 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1607,21 +1607,16 @@ sub make_map {
 
       if ($balloonhover) {
         my $stick = defined $sticky ? $sticky : 0;
-        $mouseover = $balloonhover =~ /^(https?|ftp):/
-	    ? "$balloon_ht.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height frameborder=0 " .
-	      "src=$balloonhover></iframe>',$stick)"
-	    : "$balloon_ht.showTooltip(event,'$balloonhover',$stick)";
-	undef $title;
+        $mouseover = "$balloon_ht.showTooltip(event,'$balloonhover',$stick)";
+        undef $title;
       }
       if ($balloonclick) {
-	my $stick = defined $sticky ? $sticky : 1;
+        my $stick = defined $sticky ? $sticky : 1;
         $style = "cursor:pointer";
-	$mousedown = $balloonclick =~ /^(http|ftp):/
-	    ? "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'<iframe width='+$balloon_ct.maxWidth+' height=$height " .
-	      "frameborder=0 src=$balloonclick></iframe>',$stick,$balloon_ct.maxWidth)"
-	    : "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'$balloonclick',$stick)";
+        $mousedown = "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'$balloonclick',$stick)";
 	undef $href;
       }
+
     }
     
     

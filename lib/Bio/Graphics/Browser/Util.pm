@@ -286,7 +286,7 @@ $balloon.closeButton         = '$img/close.png';
 END
     for my $option (keys %config) {
       next if $option eq 'images';
-      $balloon_settings .= "$balloon.$option = '$config{$option}'\n";
+      $balloon_settings .= "$balloon.$option = '$config{$option}';\n";
     }
   }
   print "<script>\n$balloon_settings\n</script>\n";

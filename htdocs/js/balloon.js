@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.12 2007-09-20 15:18:40 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.13 2007-11-03 21:22:28 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -386,7 +386,7 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
 
   if (!bSelf.width) {
     var width = bSelf.getLoc(balloon,'width');
-    if (width > bSelf.maxWidth) width = bSelf.maxWidth;
+    if (width > bSelf.maxWidth) width = bSelf.maxWidth + 50;
     if (width < bSelf.minWidth) width = bSelf.minWidth;
     bSelf.setStyle(balloon,'width',width);
   }
@@ -544,12 +544,15 @@ Balloon.prototype.getLoc = function(el,request) {
 // We don't know if numbers are overridden with strings
 // so play it safe
 Balloon.prototype.parseIntAll = function() {
-  this.padding     = parseInt(this.padding);
-  this.shadow      = parseInt(this.shadow);
-  this.stemHeight  = parseInt(this.stemHeight);
-  this.stemOverlap = parseInt(this.stemOverlap);
-  this.vOffset     = parseInt(this.vOffset);
-  this.delayTime   = parseInt(this.delayTime);
+    this.padding     = parseInt(this.padding);
+    this.shadow      = parseInt(this.shadow);
+    this.stemHeight  = parseInt(this.stemHeight);
+    this.stemOverlap = parseInt(this.stemOverlap);
+    this.vOffset     = parseInt(this.vOffset);
+    this.delayTime   = parseInt(this.delayTime);
+    this.width       = parseInt(this.width);
+    this.maxWidth    = parseInt(this.maxWidth);
+    this.minWidth    = parseInt(this.minWidth);
 }
 
 

@@ -1,8 +1,10 @@
 .titlebar         {
                      position: relative;
                      right: -100px;
+		     cursor: move;
                   }
 .titlebar_inactive {
                      position: relative;
                      right: -100px;
+		     cursor: move;
                   }

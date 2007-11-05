@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser;
 
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.45 2007-11-03 21:22:26 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.46 2007-11-05 05:58:22 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -664,9 +664,11 @@ sub citation {
   if ($language) {
     for my $l ($language->language) {
       $c ||= $config->setting($label=>"citation:$l");
+      $c = &$c if ref $c eq 'CODE';
     }
   }
   $c ||= $config->setting($label=>'citation');
+  $c = &$c if ref $c eq 'CODE';
   $c;
 }
 
@@ -954,7 +956,7 @@ sub render_draggable_tracks {
       my $config_click;
       if ($label =~ /^plugin:/) {
 	my $help_url = "url:?plugin=".CGI::escape($label).';plugin_do=Configure';
-	$config_click = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)";
+	$config_click = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1,650)";
       }
 
       elsif ($label =~ /^file:/) {
@@ -965,7 +967,7 @@ sub render_draggable_tracks {
       else {
 	my $help_url = "url:?configure_track=".CGI::escape($label);
 	$help_url   .= ";rand=".rand(); # work around caching bugs... # if CGI->user_agent =~ /MSIE/;
-	$config_click = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)";
+	$config_click = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1,650)";
       }
 
 

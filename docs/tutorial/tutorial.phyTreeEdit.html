@@ -1820,7 +1820,7 @@ This section will guide you through the Phylogenetic Tree Viewer.  It is a track
 
 There are three main types of data required for this view: the GFF alignment data, alignment sequence data, and the species tree file.<p>
 
-The tree file is read with the use Bio::TreeIO module and all formats compatible with this can be used with this track.  Note that all species do not have to be included in this file.  All organisims not included in this file but included in the GFF alignment data will appear as disconnected branches in the cladogram.  Here is an example using the NEWICK format:<br>
+The tree file is read with the use Bio::TreeIO module and all formats compatible with this can be used with this track.  Note that all species do not have to be included in this file.  All organisims not included in this file but included in the GFF alignment data will appear as disconnected branches in the cladogram (Figure AAA and AAB).  Here is an example using the NEWICK format:<br>
 <blockquote class="example"><pre>
 ((((kangaroo,rabbit),(cat)),(rat,mouse)),volvox);
 </pre></blockquote>
@@ -1867,18 +1867,16 @@ tree_format  = newick
 <p>
 
 
-With everthing done these are the images that should be produced depending on the zoom level:<p>
-image 1: zoomed out<br>
+If everything is running correctly, you should see the images shown in Figures AAA and AAB, depending on the zoom level.<p>
 <blockquote>
 <img src="figures/phylo_align1.gif"><br>
-<i>Figure AAA: Phylogenetic alignments scoring level</i>
+<i>Figure AAA: Phylogenetic alignments scoring level.  Note that as 'dog' is not included in the original tree file, it will be placed as a disconnected member of the cladogram.</i>
 </blockquote>
 <p>
 
-image 2: zoomed in<br>
 <blockquote>
 <img src="figures/phylo_align2.gif"><br>
-<i>Figure AAB: Phylogenetic alignments at the DNA level</i>
+<i>Figure AAB: Phylogenetic alignments at the DNA level.  Note that as 'dog' is not included in the original tree file, it will be placed as a disconnected member of the cladogram.</i>
 </blockquote>
 <p>
 

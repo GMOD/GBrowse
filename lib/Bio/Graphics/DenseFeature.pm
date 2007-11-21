@@ -113,16 +113,17 @@ sub smooth {
 
 sub _mean {
   my ($data,$window) = @_;
+  my $offset = int($window/2 + 1);
   my @data = @{$data}[0..$window-1];
 
   my $rolling_value = 0;
   $rolling_value += $_ foreach @data;
-  $data->[0] = $rolling_value / $window;
+  $data->[$offset] = $rolling_value / $window;
 
-  for (my $i=1; $i<@$data-$window; $i++) {
+  for (my $i=$offset+1; $i<@$data-$offset; $i++) {
     my $previous = shift @data;
-    my $new      = $data->[$i+$window];
-    push @data,$new;
+    my $new      = $data->[$i+$offset];
+    push @data, $new;
     $rolling_value -= $previous;
     $rolling_value += $new;
     $data->[$i] = $rolling_value/$window;

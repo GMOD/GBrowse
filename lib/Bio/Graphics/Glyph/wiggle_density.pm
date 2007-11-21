@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::wiggle_density;
 
-# $Id: wiggle_density.pm,v 1.1.2.7 2007-11-03 19:44:24 sheldon_mckay Exp $
+# $Id: wiggle_density.pm,v 1.1.2.8 2007-11-21 16:14:14 sheldon_mckay Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing);
@@ -156,21 +156,51 @@ sub draw_segment {
   my $max_value = $self->max_score;
 
   unless (defined $min_value && defined $max_value) {
-    ($min_value,$max_value) = $self->minmax(\@data);
+    my ($min,$max) = $self->minmax(\@data);
+    $min_value = $min unless defined $min;
+    $max_value ||= $max;
   }
 
   # allocate colors
   my @rgb = $self->panel->rgb($self->bgcolor);
   my %color_cache;
-  for (my $i = $start; $i <= $end ; $i += $step) {
-    my $data_point = shift @data;
-    next unless defined $data_point;
-    $data_point    = $min_value if $min_value > $data_point;
-    $data_point    = $max_value if $max_value < $data_point;
-    my ($r,$g,$b)  = $self->calculate_color($data_point,\@rgb,$min_value,$max_value);
-    my $idx        = $color_cache{$r,$g,$b} ||= $self->panel->translate_color($r,$g,$b);
-    $self->filled_box($gd,$x1,$y1,$x1+$pixels_per_span,$y2,$idx,$idx); # unless $idx == 0;
-    $x1 += $pixels_per_step;
+  my $pixels = 0;
+
+  # only draw boxes 2 pixels wide, so take the mean value
+  # for n data points that span a 2 pxel interval
+  my $binsize = 2/$pixels_per_step;
+  my $pixelstep = $pixels_per_step;
+  $pixels_per_step *= $binsize;
+  $pixels_per_span = 2;
+
+  my $scores = 0;
+  my $defined;
+ 
+  for (my $i = $start; $i < $end ; $i += $step) {
+    # draw the box if we have accumulated >= 2 pixel's worth of data.
+    if ($pixels >= 2) {
+      my $data_point = $defined ? $scores/$defined : 0;
+      $scores  = 0;
+      $defined = 0;
+
+      $data_point    = $min_value if $min_value > $data_point;
+      $data_point    = $max_value if $max_value < $data_point;
+      my ($r,$g,$b)  = $self->calculate_color($data_point,\@rgb,$min_value,$max_value);
+      my $idx        = $color_cache{$r,$g,$b} ||= $self->panel->translate_color($r,$g,$b);
+      $self->filled_box($gd,$x1,$y1,$x1+$pixels_per_span,$y2,$idx,$idx);
+      $x1 += $pixels;
+      $pixels = 0;
+    }
+
+    my $val = shift @data;
+    # don't include undef scores in the mean calculation
+    # $scores is the numerator; $defined is the denominator
+    $scores += $val if defined $val;
+    $defined++ if defined $val;
+
+    # keep incrementing until we exceed 2 pixels
+    # the step is a fracction of a pixel, not a integer
+    $pixels += $pixelstep;
   }
 
 }

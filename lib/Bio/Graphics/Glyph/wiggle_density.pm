@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::wiggle_density;
 
-# $Id: wiggle_density.pm,v 1.1.2.8 2007-11-21 16:14:14 sheldon_mckay Exp $
+# $Id: wiggle_density.pm,v 1.1.2.9 2007-11-21 16:21:35 sheldon_mckay Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing);
@@ -167,7 +167,7 @@ sub draw_segment {
   my $pixels = 0;
 
   # only draw boxes 2 pixels wide, so take the mean value
-  # for n data points that span a 2 pxel interval
+  # for n data points that span a 2 pixel interval
   my $binsize = 2/$pixels_per_step;
   my $pixelstep = $pixels_per_step;
   $pixels_per_step *= $binsize;
@@ -199,7 +199,7 @@ sub draw_segment {
     $defined++ if defined $val;
 
     # keep incrementing until we exceed 2 pixels
-    # the step is a fracction of a pixel, not a integer
+    # the step is a fraction of a pixel, not an integer
     $pixels += $pixelstep;
   }
 

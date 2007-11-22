@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.1 2007-03-22 02:24:24 scottcain Exp $
+# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.2 2007-11-22 01:26:23 sheldon_mckay Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -75,6 +75,7 @@ my $ref   = param('ref');
 my $start = param('start');
 my $end   = param('end');
 my $f_id  = param('feature_id');
+my $rmt   = param('remote');
 
 # Migrate from 1.56 way of specifying source to 1.57 way
 # This may cause a redirect and exit 0 at this point!
@@ -85,9 +86,6 @@ $CONFIG->source(get_source());
 getLinkURLs(\%URLS);
 
 my $head_name = $class eq 'Sequence' ? $name : "$class:$name";  # gff3 compatibility
-
-print_top("GBrowse Details: $head_name");
-print $CONFIG->header || h1("$head_name Details");
 
 my $db = open_database();
 
@@ -104,6 +102,17 @@ else {
 warn "features = @features" if DEBUG;
 
 warn "segments = ",join ' ',$features[0]->segments if (DEBUG && @features);
+
+# provide customized content for popup balloons
+if (defined $rmt) {
+  print header,start_html;
+  print remote_content($rmt,$features[0]);
+  print end_html;
+  exit 0;
+}
+
+print_top("GBrowse Details: $head_name");
+print $CONFIG->header || h1("$head_name Details");
 
 if (@features) {
   print print_features(\@features);
@@ -468,6 +477,27 @@ sub format_matches {
 sub format_name {
   my $name = shift;
   b($name)
+}
+
+# do something for popup balloons
+sub remote_content {
+  my $key = shift; # the key for the text or code-ref in the gbrowse config file
+  my $feat = shift;
+  my $contents = $CONFIG->config->code_setting('TOOLTIPS',$key) or die "$key is empty";
+  my $coderef = (ref $contents||'') eq 'CODE';
+  return $contents unless $coderef;
+
+  # paranoia?
+  die "Error: $key is not a CODE-REF" if ref $contents && !$coderef;
+
+  # pass feature, other args are user-defined
+  my %args = (feature => $feat) if $feat;
+  for my $arg (param()) {
+    my @vals = param($arg);
+    my $val  = @vals > 1 ? \@vals : $vals[0];
+    $args{$arg} = $val;
+  }
+  return $contents->(\%args);
 }
 
 !NO!SUBS!

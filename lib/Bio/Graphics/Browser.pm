@@ -1,6 +1,5 @@
 package Bio::Graphics::Browser;
-
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.46 2007-11-05 05:58:22 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.47 2007-11-22 01:26:23 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1242,6 +1241,7 @@ sub generate_panels {
   my $featurefile_select = $args->{featurefile_select} || $self->feature_file_select($section);
   my $feature_file_extra_offset = 0;
   for my $l (sort { ($feature_file_offsets{$a}||1) <=> ($feature_file_offsets{$b}||1) } keys %$feature_files) {
+    
     next if $cached{$l};
     my $file = $feature_files->{$l} or next;
     ref $file or next;
@@ -1599,6 +1599,7 @@ sub make_map {
       # balloon_ct = type of balloon to use for clicking -- usually "balloon"
       my $sticky             = $self->setting($label,'balloon sticky');
       my $height             = $self->setting($label,'balloon height') || 300;
+      my $width              = $self->setting($label,'balloon width')  || 0;
 
       if ($use_titles_for_balloons) {
 	$balloonhover ||= $title;
@@ -1608,20 +1609,24 @@ sub make_map {
       $balloon_ct ||= 'balloon';
 
       if ($balloonhover) {
-        my $stick = defined $sticky ? $sticky : 0;
-        $mouseover = "$balloon_ht.showTooltip(event,'$balloonhover',$stick)";
-        undef $title;
+	my $stick = defined $sticky ? $sticky : 0;
+	$mouseover = $balloonhover =~ /^(https?|ftp):|^\//
+	    ? "$balloon_ht.showTooltip(event,\&#39;<iframe width=100% height=$height frameborder=0 " .
+	      "src=$balloonhover></iframe>\&#39;,$stick,$width)"
+	    : "$balloon_ht.showTooltip(event,\&#39;$balloonhover\&#39;,$stick,$width)";
+	undef $title;
       }
       if ($balloonclick) {
-        my $stick = defined $sticky ? $sticky : 1;
-        $style = "cursor:pointer";
-        $mousedown = "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'$balloonclick',$stick)";
+	my $stick = defined $sticky ? $sticky : 1;
+	$style = "cursor:pointer";
+	$mousedown = $balloonclick =~ /^(https?|ftp):|^\//
+	    ? "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,\&#39;<iframe width=100% " .
+	      "height=$height frameborder=0 src=$balloonclick></iframe>\&#39;,$stick,$width)"
+	    : "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,\&#39;$balloonclick\&#39;,$stick,$width)";
 	undef $href;
       }
-
     }
-    
-    
+
     my %attributes = (
 		      title       => $title,
 		      href        => $href,

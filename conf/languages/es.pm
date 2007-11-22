@@ -1,5 +1,5 @@
 # do not remove the { } from the top and bottom of this page!!!
-# Translation by Marcela Tello-Ruiz
+# Translation by Marcela K. Tello-Ruiz
 {
 
  CHARSET =>   'ISO-8859-1',
@@ -169,6 +169,8 @@ END
    ALPHABETIC  => 'Alfabético',
 
    VARYING     => 'Variando/Variante',
+
+   SHOW_GRID    => 'Mostrar Cuadr’cula',
 
    SET_OPTIONS => 'Definir Opciones para pistas...',
 
@@ -357,5 +359,27 @@ END
  SMALL_INTERVAL    => 'Ajustando el tamaño pequeño del intervalo a %s pares de bases',
 
  NO_SOURCES        => 'No hay fuentes de datos legibles configuradas. Es posible que no tengas permiso para verlas.',
+
+ ADD_YOUR_OWN_TRACKS => 'Agrega tus propias anotaciones',
+
+ INVALID_SOURCE    => 'La fuente denominada %s es inv‡lida',
+
+ BACKGROUND_COLOR  => 'Color de llenado',
+
+ FG_COLOR          => 'Color de l’nea',
+
+ HEIGHT           => 'Altura',
+
+ PACKING          => 'Embalaje',
+
+ GLYPH            => 'Forma (glifo)',
+
+ LINEWIDTH        => 'Ancho de l’nea',
+
+ DEFAULT          => '(Por default)',
+
+ DYNAMIC_VALUE    => 'Calculado din‡micamente',
+
+ CHANGE           => 'Cambiar',
 
 };

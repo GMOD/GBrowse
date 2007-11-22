@@ -389,8 +389,6 @@ END
 
  INVALID_SOURCE    => 'The source named %s is invalid.',
 
- INVALID_SOURCE    => 'The source named %s is invalid.',
-
  BACKGROUND_COLOR  => 'Fill color',
 
  FG_COLOR          => 'Line color',

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.47 2007-11-22 01:26:23 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.48 2007-11-26 06:08:01 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1247,11 +1247,12 @@ sub generate_panels {
     ref $file or next;
     $panel_key = $l if $drag_n_drop;
     next unless $panels{$panel_key};
+    my $ff_offset = defined $feature_file_offsets{$l} ? $feature_file_offsets{$l} : 1;
     my $nr_tracks_added =
       $self->add_feature_file(
 			      file   => $file,
 			      panel    => $panels{$panel_key},
-			      position => ($feature_file_offsets{$l} || 1) + $feature_file_extra_offset,
+			      position => $ff_offset + $feature_file_extra_offset,
 			      options  => $options,
 			      select   => $featurefile_select,
 			     );
@@ -1609,6 +1610,12 @@ sub make_map {
       $balloon_ct ||= 'balloon';
 
       if ($balloonhover) {
+        if ($balloonhover =~ /sub\s*(\(\$\$\))*\s*\{/) {
+	  my $package         = $self->config->base2package;
+	  my $coderef         = eval "package $package; $balloonhover";
+	  $self->config->_callback_complain($label,'balloon hover') if $@;
+	  $balloonhover = $coderef;
+	}
 	my $stick = defined $sticky ? $sticky : 0;
 	$mouseover = $balloonhover =~ /^(https?|ftp):|^\//
 	    ? "$balloon_ht.showTooltip(event,\&#39;<iframe width=100% height=$height frameborder=0 " .
@@ -1617,6 +1624,12 @@ sub make_map {
 	undef $title;
       }
       if ($balloonclick) {
+        if ($balloonclick =~ /sub\s*(\(\$\$\))*\s*\{/) {
+          my $package         = $self->config->base2package;
+          my $coderef         = eval "package $package; $balloonclick";
+          $self->config->_callback_complain($label,'balloon click') if $@;
+          $balloonclick = $coderef;
+        }
 	my $stick = defined $sticky ? $sticky : 1;
 	$style = "cursor:pointer";
 	$mousedown = $balloonclick =~ /^(https?|ftp):|^\//
@@ -2769,7 +2782,7 @@ sub labels {
   # plugins, or other name:value types
   # apply restriction rules too
   my @labels =  grep {
-    !($_ eq 'TRACK DEFAULTS' || /:(\d+|plugin|DETAILS|details)$/)
+    !($_ eq 'TRACK DEFAULTS' || $_ eq 'TOOLTIPS' || /:(\d+|plugin|DETAILS|details)$/)
       && $self->authorized($_)
     }
     $self->configured_types;

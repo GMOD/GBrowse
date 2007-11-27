@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.3 2007-09-05 14:20:14 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.4 2007-11-27 17:15:38 sheldon_mckay Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -707,10 +707,10 @@ sub print_usage {
 
 <pre>
 
-  &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;width=400"&gt;
+  &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/elegans?name=mec-3;width=400"&gt;
 <blockquote>
   <i>Will generate this picture:</i>
- <img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;width=400">
+ <img src="http://www.wormbase.org/db/seq/gbrowse_img/elegans?name=mec-3;width=400">
 </blockquote>
 
   &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img?list=sources"&gt;list&lt;/a&gt;
@@ -722,7 +722,7 @@ sub print_usage {
   wormbase
 </blockquote>
 
-  &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?list=types"&gt;types&lt;/a&gt;
+  &lt;a href="http://www.wormbase.org/db/seq/gbrowse_img/elegans?list=types"&gt;types&lt;/a&gt;
 <blockquote>
   <i>Will return this document:</i>
   ## Feature types for source wormbase
@@ -753,7 +753,7 @@ can be used as the destination of an &lt;img&gt; tag like this:
 </p>
 
 <blockquote><pre>
-&lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=III:1..1000"&gt;
+&lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/elegans?name=III:1..1000"&gt;
 </pre></blockquote>
 
 <p>
@@ -821,7 +821,7 @@ lengths.
       a list of track names separated by spaces ("+" characters when URL-escaped).  For example:
       <p>
       <pre>
-      &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=mec-3;
+      &lt;img src="http://www.wormbase.org/db/seq/gbrowse_img/elegans?name=mec-3;
                    type=tRNA+NG+WABA+CG+ESTB"&gt;
       </pre>
       Multiple <i>type=</i> arguments will be combined to form a single space-delimited list.
@@ -954,7 +954,7 @@ lengths.
 </dl>
 <p>
 Putting it all together, here's a working (very long) URL:
-<pre><a href="http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/db/seq/gbrowse_img/wormbase?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
+<pre><a href="http://www.wormbase.org/db/seq/gbrowse_img/elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1">http://www.wormbase.org/db/seq/gbrowse_img/elegans?name=B0001;add=B0001+pcr+pcr1+20000..333000;add=B0001+%22cool%20knockout%22+kn2+30000..20000,10000..5000;type=add+CG+WTP;style=pcr+glyph=primers;style=%22cool%20knockout%22+glyph=transcript2+bgcolor=orange;abs=1</a>
 </pre>
 
 <p>
@@ -966,8 +966,8 @@ gbrowse config file, you may do so by placing the URL in an
 </p>
 
 <pre>
-&lt;iframe src="http://localhost/cgi-bin/gbrowse_img/wormbase?name=B0001;embed=1" width="100%" height="250"&gt;
-   &lt;img src="http://localhost/cgi-bin/gbrowse_img/wormbase?name=B0001"/&gt;
+&lt;iframe src="http://localhost/cgi-bin/gbrowse_img/elegans?name=B0001;embed=1" width="100%" height="250"&gt;
+   &lt;img src="http://localhost/cgi-bin/gbrowse_img/elegans?name=B0001"/&gt;
 &lt;/iframe&gt;
 </pre>
 

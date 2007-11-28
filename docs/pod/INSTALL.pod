@@ -118,8 +118,7 @@ help prevent conflicts.
 To further configure GBrowse, see L<CONFIGURE_HOWTO>.  To run GBrowse
 on top of Oracle and PostgreSQL databases see
 L<ORACLE_AND_POSTGRESQL>.  To run on top of a BioSQL database, see
-L<BIOSQL_ADAPTER_HOWTO>. To run GBrowse on top of Gadfly, see
-L<README-berkeley-gadfly>.
+L<BIOSQL_ADAPTER_HOWTO>.
 
 Details:
 

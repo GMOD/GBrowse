@@ -48,7 +48,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.63 2007-11-30 23:39:24 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.64 2007-11-30 23:43:59 markwilkinson Exp $
 ###########################################################
 use SOAP::Lite;
 use MOBY::Client::Central;
@@ -506,7 +506,7 @@ sub getObjectDescription {
     my ($success, $def, $uri) = $os->objectExists(term => $ob);
     return undef unless $success;  
 
-    return "<a href='URL?objectExists=$ob' alt='$def' title='$def'/>$ob</a>";
+    return "<a href='$URL?objectExists=$ob' alt='$def' title='$def'/>$ob</a>";
 }
  
 

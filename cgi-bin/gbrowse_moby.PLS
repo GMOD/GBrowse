@@ -48,7 +48,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.62 2007-02-21 21:31:53 markwilkinson Exp $
+#$Id: gbrowse_moby.PLS,v 1.63 2007-11-30 23:39:24 markwilkinson Exp $
 ###########################################################
 use SOAP::Lite;
 use MOBY::Client::Central;
@@ -495,25 +495,20 @@ in the BioMoby ocean!";
 sub getObjectDescription {
     my $ob = shift;
     return unless $ob;
+    if ($ob =~ /urn:lsid:[^:]+:([^:]+)/i){
+        $ob = $1;
+    }
+    my $os = MOBY::Client::OntologyServer->new();
+    my $URL = $os->host;
     if ($ob eq 'Object') {
-	return "<a href='http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob' alt='The base BioMoby Object' title='The base BioMoby Object'/>$ob</a>";
+        return "<a href='$URL?objectExists=$ob' alt='The base BioMoby Object' title='The base BioMoby Object'/>$ob</a>";
     }
-    my $OS = MOBY::Client::OntologyServer->new();   
-    my ($success, $message, $oblsid) = $OS->objectExists(term => $ob);
-    my $lsid = LS::ID->new($oblsid);
-    my $locator = LS::Locator->new if $lsid;
-    my $authority = $locator->resolveAuthority($lsid) if $locator;
-    my $resource = $authority->getResource($lsid) if $authority;
-    my $data = $resource->getMetadata if $resource;
-    my $filehandle =  $data->response if $data;
-    my $content = join "", (<$filehandle>);
-    my $desc = "";
-    if ($content =~ m|MOBY-S/Objects#$ob">.*?<rdfs:comment>(.*?)</rdfs:comment>|s){
-            $desc = $1;
-    }
-    return "<a href='http://mobycentral.icapture.ubc.ca/types/Objects?lsid=$ob' alt='$desc' title='$desc'/>$ob</a>";
-}
+    my ($success, $def, $uri) = $os->objectExists(term => $ob);
+    return undef unless $success;  
 
+    return "<a href='URL?objectExists=$ob' alt='$def' title='$def'/>$ob</a>";
+}
+ 
 
 sub findService {
     my ($class, $namespace, $keyword, $authority, $output, $serviceType, $expandObjects) = @_;  # class is scalar, $namespace is listref    

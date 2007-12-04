@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.19.2.4 2007-04-06 18:05:10 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.19.2.5 2007-12-04 19:06:10 scottcain Exp $
 
 =head1 NAME
 
@@ -423,13 +423,30 @@ sub _search_by_name {
     warn "looking for a synonym to $quoted_name" if DEBUG;
     my $isth;
     if ($self->factory->allow_obsolete) {
+      if ($self->factory->use_all_feature_names()) {
+        $isth = $factory->dbh->prepare ("
+          select afn.feature_id from all_feature_names 
+          where lower(name) = $quoted_name
+        ");
+      }
+      else {
         $isth = $factory->dbh->prepare ("
           select fs.feature_id from feature_synonym fs, synonym s
           where fs.synonym_id = s.synonym_id and
           lower(s.synonym_sgml) = $quoted_name
         ");
+      }
     }
-    else {
+    else { #only look in current (not obsolete) features
+      if ($self->factory->use_all_feature_names()) {
+        $isth = $factory->dbh->prepare ("
+          select afn.feature_id from all_feature_names afn, feature f
+          where afn.feature_id = f.feature_id and
+          f.is_obsolete = 'false' and
+          lower(afn.name) = $quoted_name
+        ");
+      }
+      else {
         $isth = $factory->dbh->prepare ("
           select fs.feature_id from feature_synonym fs, synonym s, feature f
           where fs.synonym_id = s.synonym_id and
@@ -437,6 +454,7 @@ sub _search_by_name {
           f.is_obsolete = 'false' and 
           lower(s.synonym_sgml) = $quoted_name
         ");
+      }
     }
     $isth->execute or Bio::Root::Root->throw("query for name in synonym failed");
     $rows_returned = $isth->rows;
@@ -1534,8 +1552,8 @@ sub desc {
   return $self->{'desc'} if defined $self->{'desc'};
 
   my $sth = $self->factory->dbh->prepare( "select value from featureprop 
-    where feature_id =  ? and type_id = (select cvterm_id from cvterm where name = 'Note') ");
-  $sth->execute( $self->srcfeature_id );
+    where feature_id =  ? and type_id in (select cvterm_id from cvterm where name = 'Note') ");
+  $sth->execute( $self->feature_id );
   my $hashref = $sth->fetchrow_hashref();
   return $self->{'desc'}= $hashref->{value};
 }

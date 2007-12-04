@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.12.2.5 2007-10-17 17:51:03 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.12.2.6 2007-12-04 19:06:08 scottcain Exp $
 
 =head1 NAME
 
@@ -206,9 +206,53 @@ sub new {
   $self->srcfeatureslice($arg{-srcfeatureslice} ? $arg{-srcfeatureslice} : 0);
   $self->do2Level($arg{-do2Level} ? $arg{-do2Level} : 0);
 
+  #determine if all_feature_names view or table exist
+  #$self->use_all_feature_names();
 
   return $self;
 }
+
+=head2 use_all_feature_names
+
+  Title   : use_all_feature_names
+  Usage   : $obj->use_all_feature_names()
+  Function: set or return flag indicating that all_feature_names view is present
+  Returns : 1 if all_feature_names present, 0 if not
+  Args    : to return the flag, none; to set, 1
+
+
+=cut
+
+sub use_all_feature_names {
+    my ($self, $flag) = @_;
+
+    return $self->{use_all_feature_names} = $flag 
+        if defined($flag);
+    return $self->{use_all_feature_names} 
+        if defined $self->{use_all_feature_names};
+
+    #now determine if either a view or table named all_feature_names is present
+    my $query 
+        = "SELECT relkind FROM pg_class WHERE relname = 'all_feature_names'";
+
+    my $exists = $self->dbh->prepare($query);
+    $exists->execute or warn "all_feature_names query failed: $!";
+
+    my ($kind) = $exists->fetchrow_array; 
+    if ($kind and ($kind eq 'r' or $kind eq 'v')) {
+        $self->{use_all_feature_names} = 1;
+    }
+    elsif ($kind) {
+        warn "all_feature_names: This option shouldn't happen--setting use_all_feature_names to zero.";
+        $self->{use_all_feature_names} = 0;
+    }
+    else {
+        $self->{use_all_feature_names} = 0;
+    }
+
+    return $self->{use_all_feature_names};
+}
+
 
 =head2 inferCDS
 
@@ -732,6 +776,26 @@ sub _by_alias_by_name {
 
 
   if ( $operation eq 'by_alias') {
+   if ($self->use_all_feature_names()) {
+    $select_part = "select distinct afn.feature_id \n";
+    $from_part   = $from_part ?
+            "$from_part join all_feature_names afn using (feature_id) "
+          : "all_feature_names afn ";
+
+    my $alias_only_where;
+    if ($wildcard) {
+      $alias_only_where = "where lower(afn.name) like ?";
+    }
+    else {
+      $alias_only_where = "where lower(afn.name) = ?";
+    }
+
+    $where_part = $where_part ?
+                    "$alias_only_where AND $where_part"
+                  : $alias_only_where;
+
+   }
+   else { #need to use the synonym table
     $select_part = "select distinct fs.feature_id \n";
     $from_part   = $from_part ?
             "$from_part join feature_synonym fs using (feature_id), synonym s " 
@@ -750,6 +814,7 @@ sub _by_alias_by_name {
     $where_part = $where_part ?
                     "$alias_only_where AND $where_part"
                   : $alias_only_where;
+   }
   }
   else { #searching by name only
     $select_part = "select f.feature_id ";

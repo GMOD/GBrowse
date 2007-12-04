@@ -1639,11 +1639,19 @@ sub synonyms {
   my $self = shift;
   my $dbh = $self->factory->dbh();
  
-  my $sth = $dbh->prepare("
+  my $sth;
+  if ($self->factory->use_all_feature_names()) {
+    $sth = $dbh->prepare("
+    select name from all_feature_names where ? = feature_id
+    ");
+  }
+  else {
+    $sth = $dbh->prepare("
     select s.name from synonym s, feature_synonym fs
     where ? = fs.feature_id and
           fs.synonym_id = s.synonym_id
-  ");
+    ");
+  }
   $sth->execute($self->feature_id()) or $self->throw("synonym query failed");
  
   my $name = $self->display_name;

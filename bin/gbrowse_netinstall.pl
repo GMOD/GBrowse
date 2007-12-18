@@ -327,12 +327,12 @@ sub find_bioperl_ppm {
 }
 
 sub find_gbrowse_latest {
-  print STDERR "Looking up most recent version...";
+#  print STDERR "Looking up most recent version...";
   my $download_page = get(SOURCEFORGE_GBROWSE);
   my @files         = $download_page =~ /(Generic-Genome-Browser--?\d+\.\d+)/g;
   my %versions      = map {/(\d+\.\d+)/ => $_} @files;
   my @versions      = sort {$b<=>$a} keys %versions;
-  my $version = $versions[0] || '1.67';
-  print STDERR $version,"\n";
+  my $version = $versions[0] || GBROWSE_DEFAULT ;
+#  print STDERR $version,"\n";
   return $versions{$version};
 }

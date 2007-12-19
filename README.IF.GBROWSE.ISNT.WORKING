@@ -3,13 +3,12 @@ because you checked out from cvs HEAD, which is the main development
 branch.  Unfortunately, that branch is currently unstable due to some 
 major reworking which will make GBrowse so much better.  In the mean time
 (that is, until this README disappears), please check out from the
-release_1_62-bugfixes branch.  You can use the same cvs commands with 
-an added flag:
+stable branch.  You can use the same cvs commands with an added flag:
 
 cvs -d:pserver:anonymous@cvs.sourceforge.net:/cvsroot/gmod login
-cvs -d:pserver:anonymous@cvs.sourceforge.net:/cvsroot/gmod co -r release_1_62-bugfixes Generic-Genome-Browser
+cvs -d:pserver:anonymous@cvs.sourceforge.net:/cvsroot/gmod co -r stable Generic-Genome-Browser
 
-We plan on making a 1.63 release soon which will be based on 1.62 while
+We plan on making a 1.69 release soon which will be based on 1.68 while
 we continue to work on the major changes in cvs HEAD.
 
 Thanks,

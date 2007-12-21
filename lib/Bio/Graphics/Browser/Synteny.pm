@@ -1,10 +1,8 @@
 package Bio::Graphics::Browser::Synteny;
 
-# $Id: Synteny.pm,v 1.1.2.1 2007-12-21 21:52:10 sheldon_mckay Exp $
+# $Id: Synteny.pm,v 1.1.2.2 2007-12-21 21:58:19 sheldon_mckay Exp $
 
 use strict;
-
-use lib '/home/smckay/lib/stable2';
 
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;

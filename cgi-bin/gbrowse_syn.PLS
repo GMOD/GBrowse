@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-$Id: gbrowse_syn.PLS,v 1.9.2.2 2007-12-21 21:52:12 sheldon_mckay Exp $
+#$Id: gbrowse_syn.PLS,v 1.9.2.3 2007-12-21 21:53:54 sheldon_mckay Exp $
 
 use strict;
 

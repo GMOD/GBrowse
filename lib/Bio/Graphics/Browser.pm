@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.48 2007-11-26 06:08:01 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.49 2007-12-28 22:30:25 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -927,6 +927,7 @@ sub render_draggable_tracks {
 
   my @result;
   for my $label ('__scale__',@{$args->{labels}}) {
+    next unless $panels->{$label};
     my ($url,$img_map,$width,$height) = @{$panels->{$label}}{qw(image map width height)};
 
     my $collapsed     =  $settings->{track_collapsed}{$label};
@@ -1241,13 +1242,17 @@ sub generate_panels {
   my $featurefile_select = $args->{featurefile_select} || $self->feature_file_select($section);
   my $feature_file_extra_offset = 0;
   for my $l (sort { ($feature_file_offsets{$a}||1) <=> ($feature_file_offsets{$b}||1) } keys %$feature_files) {
-    
+
     next if $cached{$l};
     my $file = $feature_files->{$l} or next;
+
     ref $file or next;
     $panel_key = $l if $drag_n_drop;
+
     next unless $panels{$panel_key};
+
     my $ff_offset = defined $feature_file_offsets{$l} ? $feature_file_offsets{$l} : 1;
+
     my $nr_tracks_added =
       $self->add_feature_file(
 			      file   => $file,
@@ -1256,6 +1261,13 @@ sub generate_panels {
 			      options  => $options,
 			      select   => $featurefile_select,
 			     );
+
+    do { eval {$panels{$panel_key}->finished};
+	 delete $panels{$panel_key};
+	 delete $cached{$panel_key};
+       }
+      if $drag_n_drop && $nr_tracks_added==0;
+
     $feature_file_extra_offset += $nr_tracks_added-1;
   }
 

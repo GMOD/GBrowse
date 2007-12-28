@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.34 2007-12-28 21:00:49 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.35 2007-12-28 22:30:24 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2142,7 +2142,7 @@ sub multiple_choices {
   }
 
   $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
-#  my $overviews = $CONFIG->hits_on_overview($db,$results,$settings->{features});
+
   my $overviews = $CONFIG->new_hits_on_overview($db,$results,$settings);
   my $count = @$results;
 
@@ -2193,7 +2193,6 @@ sub multiple_choices {
       my $position = format_segment($r);
       my $length   = $CONFIG->unit_label($stop-$start+1);
       print TR({-class=>'databody',-valign=>'TOP'},
-#	       th({-align=>'right'},ref($name) ? a({-href=>$objref},$name):tt($name)),  # what was this for?
 	       th({-align=>'right'},a({-href=>$objref},$name)),
 	       td($description),
 	       td(a({-href=>$posref},$position . " ($length)")),
@@ -2242,7 +2241,12 @@ sub _region_panel {
 
   $CONFIG->width($settings->{width}*OVERVIEW_RATIO);
 
-  my @tracks_to_show = grep {$settings->{features}{$_}{visible} &&  /:$panel_name$/i}
+  my @tracks_to_show = grep {
+    my $visible             = $settings->{features}{$_}{visible};
+    my ($requested_section) = /:(overview|region)$/i;
+    my $is_a_plugin         = /^(plugin|file|http|ftp):/;
+    $visible and ($requested_section && $requested_section eq $panel_name) or $is_a_plugin;
+  }
     @{$settings->{tracks}};
 
   # these hashes map label names to packing option values and limit values
@@ -2314,6 +2318,7 @@ sub segment2link {
   my $s  = commas($start) || '';
   my $e  = commas($stop)  || '';
   $label ||= "$ref:$s..$e";
+  $ref||='';  # get rid of uninit warnings
   return a({-href=>"?ref=$ref;start=$start;stop=$stop"},$label);
 }
 

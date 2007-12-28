@@ -1,6 +1,6 @@
 package Bio::Graphics::FeatureFile;
 
-# $Id: FeatureFile.pm,v 1.1.2.6 2007-10-17 01:48:21 lstein Exp $
+# $Id: FeatureFile.pm,v 1.1.2.7 2007-12-28 21:00:50 lstein Exp $
 # This package parses and renders a simple tab-delimited format for features.
 # It is simpler than GFF, but still has a lot of expressive power.
 # See __END__ for the file format
@@ -429,7 +429,7 @@ sub parse_line {
 
   # Remove comments but rescue anchors and hex-code colors.
   # Comments must begin a line or be preceded by whitespace
-  s/(?:^|\s+)\#.+$//;
+  s/^\s*#.+$//;
 
   # skip on blank lines
   return 1 if /^\s*$/;

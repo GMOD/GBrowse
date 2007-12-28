@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.33 2007-10-30 17:31:27 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.34 2007-12-28 21:00:49 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1469,24 +1469,25 @@ END
 				  -default => $settings->{features}{$label}{limit})
 		      )
 		   ),
-                 TR(
-                    td({-align=>'center', -colspan=>2},
-                       join(br,
-                       button(-style => 'background:pink',
-                              -name=>$CONFIG->tr('Revert'),
-                              -onClick=>$reset_js,
-                             ),
-                       button(-name=>$CONFIG->tr('Cancel'),
-                              -onClick=>'Balloon.prototype.hideTooltip(1)').
-                       submit(-style =>'background:wheat',
-                              -name=>$CONFIG->tr('Change'))
-                            )
-                       )
-                    )
-                 );
+		 TR(
+		    td({-align=>'right'},
+		       button(-style => 'background:pink',
+			      -name=>$CONFIG->tr('Revert'),
+			      -onClick=>$reset_js,
+			     ),
+		      ),
+		    th({-align=>'right'},
+		       button(-style=>'float:left',
+			      -name=>$CONFIG->tr('Cancel'),
+			      -onClick=>'Balloon.prototype.hideTooltip(1)'),
+		       submit(-style =>'background:wheat',
+			      -name=>$CONFIG->tr('Change'))
+		      )
+		   )
+		);
   $form .= hidden(-name=>'adjust_one_track',-value=>$label);
   $form .= end_form();
-  print table(TR(td({-valign=>'middle'},$citation),td({-valign=>'bottom'},$form)));
+  print table(TR(td({-valign=>'top'},$citation),td({-valign=>'top'},$form)));
   print end_html();
 }
 
@@ -2263,11 +2264,11 @@ sub _region_panel {
 					 settings      => $settings,
 					 feature_files => $feature_files,
 					 cache_extra   => [$segment->start,$segment->end],
-					 cache         => $settings->{cache},
+					 cache         => $page_settings->{cache},
 					 do_map        => 0,
 					 do_drag        => 1,
 					 image_button   => 1,
-					 drag_n_drop    => $settings->{drag_and_drop} || 0,
+					 drag_n_drop    => $page_settings->{drag_and_drop} || 0,
 					 -grid          => 0,
 					 -pad_top       => 5,
 					 -bgcolor      => $CONFIG->setting("overview bgcolor") || DEFAULT_OVERVIEW_BGCOLOR,

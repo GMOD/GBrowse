@@ -12,6 +12,7 @@ sub draw {
 
   my $feature     = $self->feature;
   my ($wigfile)   = $feature->attributes('wigfile');
+
   return $self->draw_wigfile($feature,$wigfile,@_) if $wigfile;
 
   my ($densefile) = $feature->attributes('densefile');
@@ -24,7 +25,6 @@ sub draw_wigfile {
   my $self = shift;
   my $feature = shift;
   my $wigfile = shift;
-  my ($wigoffset) = $feature->attributes('wigstart');
 
   eval "require Bio::Graphics::Wiggle" unless Bio::Graphics::Wiggle->can('new');
   my $wig = Bio::Graphics::Wiggle->new($wigfile) or die;
@@ -35,14 +35,17 @@ sub draw_wigfile {
   my $start       = $feature->start > $panel_start ? $feature->start : $panel_start;
   my $end         = $feature->end   < $panel_end   ? $feature->end   : $panel_end;
 
-  # find all overlapping segments in the wig file
-  my $iterator = $wig->segment_iterator($chr,$start,$end);
-  $iterator->offset($wigoffset) if $wigoffset;
-  while (my $seg = $iterator->next_segment) {
-    $self->create_parts_for_segment($seg,$start,$end);
-  }
+  $self->wig($wig);
+  $self->create_parts_for_dense_feature($wig,$start,$end);
 
   $self->SUPER::draw(@_);
+}
+
+sub wig {
+  my $self = shift;
+  my $d = $self->{wig};
+  $self->{wig} = shift if @_;
+  $d;
 }
 
 sub draw_densefile {
@@ -77,23 +80,34 @@ sub create_parts_for_dense_feature {
   my $self = shift;
   my ($dense,$start,$end) = @_;
 
-  my @data = $dense->values($start,$end);
+  my $span = $self->width;
+  my $data = $dense->values($start,$end,$span);
+  my $points_per_span = ($end-$start+1)/$span;
   my @parts;
 
-  if ($dense->window > 1) {  # can't show all the data, so we average it
-    @parts = $self->subsample(\@data,$start,$self->width);
-  }
-
-  else {
-    for my $i (0..@data-1) {
-      push @parts,Bio::Graphics::Feature->new(-score => $data[$i],
-					      -start => $start + $i,
-					      -end   => $start + $i);
-    }
+  for (my $i=0; $i<$span;$i++) {
+    my $offset = $i * $points_per_span;
+    my $value  = shift @$data;
+    push @parts,Bio::Graphics::Feature->new(-score => $value,
+					    -start => int($start + $i * $points_per_span),
+					    -end   => int($start + $i * $points_per_span));
   }
   $self->{parts} = [];
-  warn "added ",scalar @parts," to feature";
   $self->add_feature(@parts);
+}
+
+sub minmax {
+  my $self  = shift;
+  my $parts = shift;
+  if (my $wig = $self->wig) {
+    my $max = $self->option('max_score');
+    my $min = $self->option('min_score');
+    $max = $wig->max unless defined $max;
+    $min = $wig->min unless defined $min;
+    return ($min,$max);
+  } else {
+    return $self->SUPER::minmax($parts);
+  }
 }
 
 sub subsample {

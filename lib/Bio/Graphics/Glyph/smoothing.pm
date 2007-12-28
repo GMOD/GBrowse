@@ -4,7 +4,6 @@ use strict;
 
 use constant SMOOTHING  => 'mean';
 
-
 sub get_smoothing {
   my $self = shift;
   return 'none' if $self->smooth_window == 1;
@@ -18,7 +17,7 @@ sub smooth_window {
   return $smooth_window if defined $smooth_window; 
 
   my $start = $self->smooth_start;
-  my $end   = $self->smoooth_end;
+  my $end   = $self->smooth_end;
 
   $smooth_window = int (($end - $start)/$self->width);
   $smooth_window = 1 unless $smooth_window > 2;

@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::wiggle_density;
 
-# $Id: wiggle_density.pm,v 1.1.2.9 2007-11-21 16:21:35 sheldon_mckay Exp $
+# $Id: wiggle_density.pm,v 1.1.2.10 2007-12-28 21:00:50 lstein Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing);
@@ -38,44 +38,35 @@ sub draw {
 
 }
 
-sub draw_wigfile {
+sub wig {
+  my $self = shift;
+  my $d = $self->{wig};
+  $self->{wig} = shift if @_;
+  $d;
+}
 
+sub draw_wigfile {
   my $self    = shift;
   my $feature = shift;
   my $wigfile = shift;
   my ($gd,$left,$top) = @_;
 
-  my ($wigoffset) = $feature->attributes('wigstart');
-
   eval "require Bio::Graphics::Wiggle" unless Bio::Graphics::Wiggle->can('new');
   my $wig = Bio::Graphics::Wiggle->new($wigfile) or die;
 
+  $self->wig($wig);
+
+  my $smoothing      = $self->get_smoothing;
+  my $smooth_window  = $self->smooth_window;
+  my $start          = $self->smooth_start;
+  my $end            = $self->smooth_end;
+
   my ($x1,$y1,$x2,$y2) = $self->bounds($left,$top);
-  my $chr              = $feature->seq_id;
-  my $panel_start = $self->panel->start;
-  my $panel_end   = $self->panel->end;
-  my $start       = $feature->start > $panel_start ? $feature->start : $panel_start;
-  my $end         = $feature->end   < $panel_end   ? $feature->end   : $panel_end;
-
-  # filler -- this will get erased by the real data when it comes
-  my $middle = ($y1+$y2)/2;
-  my $fgcolor = $self->fgcolor;
-  $gd->line($x1,$middle-3,$x1,$middle+3,$fgcolor);   # vertical span
-  $gd->line($x1,$middle,$x2,$middle,$fgcolor); # horizontal span
-  $gd->line($x2,$middle-3,$x2,$middle+3,$fgcolor);   # vertical span
-
-  # find all overlapping segments in the wig file
-  my $iterator = $wig->segment_iterator($chr,$start,$end);
-  $iterator->offset($wigoffset) if $wigoffset;
-  while (my $seg = $iterator->next_segment) {
-    $self->draw_segment($gd,
-			$start,$end,
-			$seg,
-			$seg->start,$seg->end,
-			$seg->step,$seg->span,
-			$x1,$y1,$x2,$y2);
-  }
-
+  $self->draw_segment($gd,
+		      $start,$end,
+		      $wig,$start,$end,
+		      1,1,
+		      $x1,$y1,$x2,$y2);
 }
 
 sub draw_densefile {
@@ -128,7 +119,8 @@ sub draw_segment {
   # figure out where we're going to start
   my $scale  = $self->scale;  # pixels per base pair
   my $pixels_per_span = $scale * $span + 1;
-  my $pixels_per_step = $scale * $step;
+  # my $pixels_per_step = $scale * $step;
+  my $pixels_per_step = 1;
 
   # if the feature starts before the data starts, then we need to draw
   # a line indicating missing data (this only happens if something went
@@ -150,57 +142,27 @@ sub draw_segment {
   return unless $start < $end;
 
   # get data values across the area
-  my @data = $seg->values($start,$end);
+  my $data = $seg->values($start,$end,$self->width);
 
   my $min_value = $self->min_score;
   my $max_value = $self->max_score;
 
   unless (defined $min_value && defined $max_value) {
-    my ($min,$max) = $self->minmax(\@data);
-    $min_value = $min unless defined $min;
-    $max_value ||= $max;
+    ($min_value,$max_value) = $self->minmax($data);
   }
 
   # allocate colors
   my @rgb = $self->panel->rgb($self->bgcolor);
   my %color_cache;
-  my $pixels = 0;
-
-  # only draw boxes 2 pixels wide, so take the mean value
-  # for n data points that span a 2 pixel interval
-  my $binsize = 2/$pixels_per_step;
-  my $pixelstep = $pixels_per_step;
-  $pixels_per_step *= $binsize;
-  $pixels_per_span = 2;
-
-  my $scores = 0;
-  my $defined;
- 
-  for (my $i = $start; $i < $end ; $i += $step) {
-    # draw the box if we have accumulated >= 2 pixel's worth of data.
-    if ($pixels >= 2) {
-      my $data_point = $defined ? $scores/$defined : 0;
-      $scores  = 0;
-      $defined = 0;
-
-      $data_point    = $min_value if $min_value > $data_point;
-      $data_point    = $max_value if $max_value < $data_point;
-      my ($r,$g,$b)  = $self->calculate_color($data_point,\@rgb,$min_value,$max_value);
-      my $idx        = $color_cache{$r,$g,$b} ||= $self->panel->translate_color($r,$g,$b);
-      $self->filled_box($gd,$x1,$y1,$x1+$pixels_per_span,$y2,$idx,$idx);
-      $x1 += $pixels;
-      $pixels = 0;
-    }
-
-    my $val = shift @data;
-    # don't include undef scores in the mean calculation
-    # $scores is the numerator; $defined is the denominator
-    $scores += $val if defined $val;
-    $defined++ if defined $val;
-
-    # keep incrementing until we exceed 2 pixels
-    # the step is a fraction of a pixel, not an integer
-    $pixels += $pixelstep;
+  for (my $i = $start; $i <= $end ; $i += $step) {
+    my $data_point = shift @$data;
+    next unless defined $data_point;
+    $data_point    = $min_value if $min_value > $data_point;
+    $data_point    = $max_value if $max_value < $data_point;
+    my ($r,$g,$b)  = $self->calculate_color($data_point,\@rgb,$min_value,$max_value);
+    my $idx        = $color_cache{$r,$g,$b} ||= $self->panel->translate_color($r,$g,$b);
+    $self->filled_box($gd,$x1,$y1,$x1+$pixels_per_span,$y2,$idx,$idx); # unless $idx == 0;
+    $x1 += $pixels_per_step;  # currently always 1
   }
 
 }
@@ -214,22 +176,24 @@ sub calculate_color {
 sub min { $_[0] < $_[1] ? $_[0] : $_[1] }
 sub max { $_[0] > $_[1] ? $_[0] : $_[1] }
 
-sub minmax {
-  my $self = shift;
-  my $data = shift;
-  my $min  = +999_999_999;
-  my $max  = -999_999_999;
-  for (@$data) {
-    $min = $_ if $_ < $min;
-    $max = $_ if $_ > $max;
-  }
-  return ($min,$max);
-}
-
 sub get_description {
   my $self = shift;
   my $feature = shift;
   return join '',"wigFile = ",$feature->attributes('wigfile'),'; wig_offset=',$feature->attributes('wigstart');
+}
+
+sub minmax {
+  my $self  = shift;
+  my $parts = shift;
+  if (my $wig = $self->wig) {
+    my $max = $self->option('max_score');
+    my $min = $self->option('min_score');
+    $max = $wig->max unless defined $max;
+    $min = $wig->min unless defined $min;
+    return ($min,$max);
+  } else {
+    return $self->SUPER::minmax($parts);
+  }
 }
 
 1;

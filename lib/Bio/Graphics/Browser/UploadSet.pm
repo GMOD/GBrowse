@@ -69,7 +69,7 @@ sub upload_file {
     my $first_line = $self->readline($filehandle);
     warn "first_line = $first_line";
     return unless defined $first_line;
-    if ($first_line =~ /^track/) {
+    if ($first_line =~ /^(track|browser)/) {
       $self->upload_ucsc_file($first_line,$filehandle,$fh_out);
     } else {
       $self->upload_feature_file($first_line,$filehandle,$fh_out);
@@ -210,152 +210,16 @@ sub upload_ucsc_file {
   my $self = shift;
   my ($track_line,$in,$out) = @_;
 
-  my $done;
+  eval "require Bio::Graphics::Wiggle::Loader" unless Bio::Graphics::Wiggle::Loader->can('new');
+  my $dummy_name = $self->name_file('foo');
+  $dummy_name    =~ s/foo$//; # get the directory part only!
 
-  my $date = localtime();
-  print $out "#Automatically converted on $date from wiggle format.\n";
-  print $out "#Scroll down to the bottom to see track configuration sections.\n";
+  my $loader = Bio::Graphics::Wiggle::Loader->new($dummy_name);
+  $loader->process_track_line($track_line) if $track_line =~ /^track/;
+  $loader->load($in);
 
-  my $count  = 0;
-  while (!$done) {
-
-    warn "TRACKLINE = $track_line";
-
-    my %options = $track_line =~ /(\S+)=(\S+)/g;
-    unless ($options{type} eq 'wiggle_0') {
-      carp "not a track definition: $track_line";
-      return;
-    }
-    my %track_options;
-    $track_options{key}   = $options{name}              || "your data";
-    $track_options{description} = $options{description} || "uploaded data";
-    $track_options{name}        = $options{name}     || "your data";
-    $track_options{bgcolor}     = $options{color}    || 'black';
-    $track_options{fgcolor}     = $options{altColor} || 'black';
-    if ($options{maxHeightPixels}) {
-      my ($height) = $options{maxHeightPixels} =~ /\d+:(\d+):\d+/;
-      $track_options{height} = $height if $height;
-    }
-    $track_options{graph_type} = exists $options{graphType}
-      && $options{graphType} eq 'points' ? 'points' : 'boxes';
-
-    my $wigfile;  # used later
-    my $format;
-    my (undef,$wigfilename)= $self->name_file("wigfile.".md5_hex(rand));
-
-    # process the declaration line
-    defined(my $next_line = $self->readline($in)) or return;
-    warn "next_line = $next_line";
-
-    # variable-step data
-    if ($next_line =~ /variableStep\s+chrom=(\S+)(?:\s+span=(\d+))?/) {
-      $format         = 'variableStep';
-      my $reference   = $1;
-      my $span        = $2 || 1;
-      print $out "reference=$reference\n";
-      while ($next_line = $self->readline($in)) {
-	last if $next_line =~ /^track/;  # a track line
-	my ($start,$score) =  $next_line =~ /^(\d+)\s+(.+)/;
-	my $end = $start + $span - 1;
-	$track_options{min_score} = $score if !exists $track_options{min_score} || $track_options{min_score} > $score;
-	$track_options{max_score} = $score if !exists $track_options{max_score} || $track_options{max_score} < $score;
-	print $out "DATASET$count","\t","'$track_options{name}'","\t","$start-$end","\t","score=$score\n"
-      }
-    }
-
-    # constant-step data
-    elsif ($next_line =~ /fixedStep\s+chrom=(\S+)\s+start=(\d+)\s+step=(\d+)(?:\s+span=(\d+))?/) {
-      warn "HERE I AM in fixedStep";
-      $format       = 'fixedStep';
-      my $reference = $1;
-      my $start     = $2;
-      my $step      = $3;
-      my $span      = $4;
-
-      # End is a problem, because we don't know how many values there are. So we put a placeholder here and fill it in later
-      my $end ='XXXXXXXXXXXX'; # 12 digits, enough for 30 human genomes
-
-      # start populating the wig binary file - we may need to fill in the span
-      # after we fill the file
-      $wigfile ||= Bio::Graphics::Wiggle->new($wigfilename,'writable') or die "Couldn't create wigfile";
-      my $offset = $wigfile->add_segment($reference,$start,$step,$span||$step);
-
-      my $end_filepos;  # this will be fill-in position
-      print $out "reference=$reference\n";
-      print $out "DATASET$count","\t","'$track_options{name}'","\t","$start-";
-      $end_filepos = tell($out);
-      print $out $end,"\t","wigfile=$wigfilename;wigstart=$offset","\n";
-
-      $span = 0;
-      while ($next_line = $self->readline($in)) {
-	last if $next_line =~ /^track/;  # track line
-	$wigfile->add_values($next_line);  # add a binary value
-	$span += $step;
-	$track_options{min_score} = $next_line if !exists $track_options{min_score} || $track_options{min_score} > $next_line;
-	$track_options{max_score} = $next_line if !exists $track_options{max_score} || $track_options{max_score} < $next_line;
-      }
-
-      # now we can go back and fill in the missing data
-      if ($end =~ /XXXX/) { # check for the filler
-	$end = $start + $span - 1;
-	seek($out,$end_filepos,0); # seek to the place where the filler is
-	print $out sprintf("%012d",$end);
-	seek($out,0,2);            # seek to end of the file, for next line
-
-	$wigfile->seek($offset);       # back to header position in wig file
-	my($a,$b,$c,undef,$d) = $wigfile->readheader();
-	$wigfile->seek($offset);
-	$wigfile->writeheader($a,$b,$c,$span,$d);
-	$wigfile->append;  # seek to end
-      }
-    }
-    elsif ($next_line =~ /^(\S+)\s+(\d+)\s+(\d+)\s+(\S+)/) {  # handle BED lines here
-      $format       = 'BED';
-      my $reference = $1;
-      my $start     = $2;
-      my $end       = $3;
-      my $score     = $4;
-      my $ref       = '';
-      print $out "reference=$reference\n";
-      print $out join("\t","DATASET$count","'$track_options{name}'",($start+1).'-'.$end,"score=$score"),"\n";
-      while (defined ($next_line = $self->readline($in))) {
-	last if $next_line =~ /^track/;
-	($ref,$start,$end,$score) = split /\s+/,$next_line;
-	print $out "reference=$ref" unless $reference eq $ref;
-	$reference = $ref;
-	print $out join("\t","DATASET$count","'$track_options{name}'",($start+1).'-'.$end,"score=$score"),"\n";	
-	$track_options{min_score} = $score if !exists $track_options{min_score} || $track_options{min_score} > $score;
-	$track_options{max_score} = $score if !exists $track_options{max_score} || $track_options{max_score} < $score;
-      }
-    }
-
-    # print track description
-    $options{visibility} ||= 'dense';
-    if ($format =~ /variableStep|BED/) {
-      $track_options{glyph} = 'xyplot'          if     $options{visibility} eq 'full';
-      $track_options{glyph} = 'graded_segments' unless $options{visibility} eq 'full';
-    } elsif ($format eq 'fixedStep') {
-      $track_options{glyph} = 'wiggle_plot'     if     $options{visibility} eq 'full';
-      $track_options{glyph} = 'wiggle_density'  unless $options{visibility} eq 'full';
-    }
-    if (my ($low,$high) = split /:/,$options{viewLimits}) {
-      $track_options{min_score}  = $low;
-      $track_options{max_score}  = $high;
-    }
-    print $out "\n";
-    print $out "[DATASET$count]\n";
-    for (keys %track_options) {
-      print $out $_,'=',$track_options{$_},"\n";
-    }
-    print $out "\n\n";
-    $count++;
-
-    if ($next_line =~ /^track/) {
-      $track_line  = $next_line;
-    } else {
-      $done++;
-    }
-  }
+  my $featurefile = $loader->featurefile('featurefile');
+  print $out $featurefile;
 }
 
 1;

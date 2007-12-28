@@ -1,8 +1,8 @@
-package Bio::Graphics::Wiggle;
+package Bio::Graphics::WiggleBlockFile;
 
 =head1 NAME
 
-Bio::Graphics::Wiggle -- Binary storage for dense genomic features
+Bio::Graphics::WiggleBlockFile -- Binary storage for dense genomic features
 
 =head1 SYNOPSIS
 
@@ -51,10 +51,6 @@ following format:
 The remainder of the file consists of 8-bit unsigned scaled integer
 values. This means that all quantitative data will be scaled to 8-bit
 precision!
-
-For a convenient method of creating Wiggle files from UCSC-type WIG
-input and creating GFF3 output, please see
-L<Bio::Graphics::Wiggle::Loader>.
 
 =head1 METHODS
 
@@ -397,7 +393,7 @@ sub scale {
     } @$values;
     return \@return;
   } else {
-    return 1 + int (($values - $min)/$scale);
+    return int (($values - $min)/$scale);
   }
 }
 
@@ -411,7 +407,7 @@ sub unscale {
     my @return = map {$_ ? (($_-1) * $scale + $min) : 0} @$values;
     return \@return;
   } else {
-    return $values ? ($values-1) * $scale + $min : 0;
+    return $values * $scale + $min;
   }
 }
 
@@ -433,7 +429,6 @@ __END__
 
 =head1 SEE ALSO
 
-L<Bio::Graphics::Wiggle::Loader>,
 L<Bio::Graphics::Panel>,
 L<Bio::Graphics::Glyph>,
 L<Bio::Graphics::Feature>,

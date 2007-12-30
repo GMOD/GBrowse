@@ -408,10 +408,10 @@ sub unscale {
   my $min   = $self->{options}{min};
 
   if (ref $values && ref $values eq 'ARRAY') {
-    my @return = map {$_ ? (($_-1) * $scale + $min) : 0} @$values;
+    my @return = map {$_ ? (($_-1) * $scale + $min) : undef} @$values;
     return \@return;
   } else {
-    return $values ? ($values-1) * $scale + $min : 0;
+    return $values ? ($values-1) * $scale + $min : undef;
   }
 }
 

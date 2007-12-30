@@ -84,31 +84,17 @@ sub window {
 
 sub values {
   my $self          = shift;
-  my ($start,$end,$samples)  = @_;
-
-  # generate list of positions to sample from
-  my $span = ($end-$start+1);
-  $samples ||= $span;
-
+  my ($start,$end)  = @_;
   my $size          = $self->recsize;
   my $read_start    = $self->offset + ($start-1) * $size;
   my $bytes_to_read = ($end-$start+1) * $size;
   $self->seek($read_start,0);
-
   my $data;
   my $bytes = $self->fh->read($data,$bytes_to_read);
   die "read error: $!" unless $bytes == $bytes_to_read;
   my $pattern = "(".$self->unpack_pattern.")*";
   my @data = unpack $pattern,$data;
-
-  my @samples;
-  my $interval = $span/$samples;
-  for (my $i=0; $i<$samples; $i++) {
-    my $index = int($i*$interval);
-    $samples[$i] = $data[$index];
-  }
-
-  my $result = $self->smooth(\@samples);
+  my $result = $self->smooth(\@data);
   return wantarray ? @$result: $result;
 }
 

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.35 2007-12-28 22:30:24 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.36 2007-12-30 19:45:03 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -195,7 +195,7 @@ if (param('reset')) {
 my $asynchronous;
 if (my @ajax_labels = param('label[]')) {
   my %seen;
-  @{$page_settings->{tracks}} = grep {length()>0 && !$seen{$_}++} (@ajax_labels,@{$page_settings->{tracks}});
+  @{$page_settings->{tracks}} = map {CGI::unescape($_)} grep {length()>0 && !$seen{$_}++} (@ajax_labels,@{$page_settings->{tracks}});
   $asynchronous++;
 }
 
@@ -790,7 +790,7 @@ sub adjust_tracks {
   # user's stored settings.
   foreach (grep {!$stored_labels{$_}} keys %configured_labels) {
     $settings->{features}{$_}{visible} ||=  $forced_on{$_};  # visible if requested or default
-    $settings->{track_collapsed}{$_}   ||= 0;                # not collapsed
+    $settings->{track_collapsed}{$_}   ||= 0;              # not collapsed
     $settings->{features}{$_}{options} ||= 0;  # automatic
     push @{$settings->{tracks}},$_;          # at the end
   }
@@ -2244,7 +2244,7 @@ sub _region_panel {
   my @tracks_to_show = grep {
     my $visible             = $settings->{features}{$_}{visible};
     my ($requested_section) = /:(overview|region)$/i;
-    my $is_a_plugin         = /^(plugin|file|http|ftp):/;
+    my $is_a_plugin         = /^(file|http|ftp):/;
     $visible and ($requested_section && $requested_section eq $panel_name) or $is_a_plugin;
   }
     @{$settings->{tracks}};
@@ -2270,12 +2270,13 @@ sub _region_panel {
 					 cache_extra   => [$segment->start,$segment->end],
 					 cache         => $page_settings->{cache},
 					 do_map        => 0,
-					 do_drag        => 1,
-					 image_button   => 1,
-					 drag_n_drop    => $page_settings->{drag_and_drop} || 0,
-					 -grid          => 0,
-					 -pad_top       => 5,
-					 -bgcolor      => $CONFIG->setting("overview bgcolor") || DEFAULT_OVERVIEW_BGCOLOR,
+					 do_drag       => 1,
+					 image_button  => 1,
+					 drag_n_drop   => $page_settings->{drag_and_drop} || 0,
+					 -grid         => 0,
+					 -pad_top      => 5,
+					 -bgcolor      => $CONFIG->setting("overview bgcolor")
+					                  || DEFAULT_OVERVIEW_BGCOLOR,
 					});
 
   my $hidden = hidden(-name=>'seg_min',-value=>$region->start,-override=>1) .
@@ -2464,11 +2465,11 @@ sub load_external_sources {
   # $f will hold a feature file hash in which keys are human-readable names of
   # feature files and values are FeatureFile objects.
   my $f       = {};
-  if ($segment && $segment->length <= $MAX_SEGMENT) {
+  if ($segment) {
     my $rel2abs      = coordinate_mapper($segment,1);
     my $rel2abs_slow = coordinate_mapper($segment,0);
     for my $featureset ($PLUGINS,$UPLOADED_SOURCES,$REMOTE_SOURCES) {
-      $featureset->annotate($segment,$f,$rel2abs,$rel2abs_slow);
+      $featureset->annotate($segment,$f,$rel2abs,$rel2abs_slow,$MAX_SEGMENT);
     }
   }
   return $f;

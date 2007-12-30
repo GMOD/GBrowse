@@ -165,14 +165,24 @@ sub feature_file {
 
 sub annotate {
   my $self              = shift;
-  my ($segment,$feature_files,$fast_mapper,$slow_mapper) = @_;  # $segment is not actually used
+  my ($segment,$feature_files,
+      $fast_mapper,$slow_mapper,
+      $max_segment_length
+     ) = @_;  # $segment is not actually used
 
+  my $possibly_too_big  = $segment->length > $max_segment_length;
   my $settings          = $self->page_settings;
 
   for my $url ($self->files) {
     next unless $settings->{features}{$url}{visible};
     my $has_overview_sections = $self->probe_for_overview_sections($url);
-    my $feature_file = $self->feature_file($url,$has_overview_sections ? $slow_mapper : $fast_mapper) or next;
+    next if $possibly_too_big && !$has_overview_sections;
+    my $feature_file = $self->feature_file($url,
+					   ($has_overview_sections
+					    ? $slow_mapper
+					    : $fast_mapper)
+					  )
+      or next;
     $feature_file->name($url);
     $feature_files->{$url} = $feature_file;
   }

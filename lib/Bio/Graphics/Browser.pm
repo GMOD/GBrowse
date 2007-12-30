@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.49 2007-12-28 22:30:25 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.50 2007-12-30 19:45:07 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -927,22 +927,27 @@ sub render_draggable_tracks {
 
   my @result;
   for my $label ('__scale__',@{$args->{labels}}) {
+
     next unless $panels->{$label};
     my ($url,$img_map,$width,$height) = @{$panels->{$label}}{qw(image map width height)};
 
-    my $collapsed     =  $settings->{track_collapsed}{$label};
+    # this complication is due to the fact that a plugin or uploaded file can be
+    # in several sections at the same time
+    my $element_id    = $label =~ /^(file|plugin):/ ? "${section}_${label}" : $label;
+
+    my $collapsed     =  $settings->{track_collapsed}{$element_id};
     my $img_style     = $collapsed ? "display:none" : "display:inline";
 
     my $img = $button
       ? image_button(-src   => $url,
 		     -name  => $section,
-		     -id    => "${label}_image",
+		     -id    => "${element_id}_image",
 		     -style => $img_style
 		    )
       : img({-src=>$url,
-	     -usemap=>"#${label}_map",
+	     -usemap=>"#${element_id}_map",
 	     -width => $width,
-	     -id    => "${label}_image",
+	     -id    => "${element_id}_image",
 	     -height=> $height,
 	     -border=> 0,
 	     -name  => "${section}_${label}",
@@ -977,10 +982,10 @@ sub render_draggable_tracks {
 
       my $titlebar    = $label eq '__scale__' || $label eq '__all__'
 	                 ? ''
-			 : span({-class=>$collapsed ? 'titlebar_inactive' : 'titlebar',-id=>"${label}_title"},
+			 : span({-class=>$collapsed ? 'titlebar_inactive' : 'titlebar',-id=>"${element_id}_title"},
 				img({-src         =>$icon,
-				     -id          => "${label}_icon",
-				     -onClick     =>"collapse('$label')",
+				     -id          => "${element_id}_icon",
+				     -onClick     =>"collapse('$element_id')",
 				     -style       => 'cursor:pointer',
 				    }),
 				img({-src         => $help,
@@ -994,7 +999,7 @@ sub render_draggable_tracks {
 			  -width => $pw,
 			  -height=> $ph,
 			  -border=> 0,
-			  -id    => "${label}_pad",
+			  -id    => "${element_id}_pad",
 			  -style => $collapsed ? "display:inline" : "display:none",
 			 });
 
@@ -1193,13 +1198,15 @@ sub generate_panels {
         $feature_files->{$label}->mtime,
 	} if $feature_files->{$label};
 
-      $cache_key{$label}      = $self->create_cache_key(@panel_args,
-							@{$track_args{$label}},
-							@extra_args,
-							@$cache_extra,
-							$drag_n_drop,
-							$options->{$label},
-						       );
+      my @args = (
+		  @panel_args,
+		  @{$track_args{$label}},
+		  @extra_args,
+		  @$cache_extra,
+		  $drag_n_drop,
+		  $options->{$label});
+
+      $cache_key{$label}      = $self->create_cache_key(@args);
       next if $cached{$label} = $cache && $self->panel_is_cached($cache_key{$label});
 
       my @keystyle = (-key_style=>'between') 
@@ -1239,8 +1246,20 @@ sub generate_panels {
 
   # ------------------------------------------------------------------------------------------
   # Add feature files, including remote annotations
+
+  # Start by removing uploaded files mentioned in the list of labels, but
+  # not in the feature_files list. This is a workaround for an upstream bug.
+  for my $l (grep {/^(file|http|ftp):/} @$labels) {
+    next if $feature_files->{$l};
+    next unless $drag_n_drop;
+    eval {$panels{$l}->finished};
+    delete $panels{$l};
+    delete $cached{$l};
+  }
+
   my $featurefile_select = $args->{featurefile_select} || $self->feature_file_select($section);
   my $feature_file_extra_offset = 0;
+
   for my $l (sort { ($feature_file_offsets{$a}||1) <=> ($feature_file_offsets{$b}||1) } keys %$feature_files) {
 
     next if $cached{$l};
@@ -1255,7 +1274,7 @@ sub generate_panels {
 
     my $nr_tracks_added =
       $self->add_feature_file(
-			      file   => $file,
+			      file     => $file,
 			      panel    => $panels{$panel_key},
 			      position => $ff_offset + $feature_file_extra_offset,
 			      options  => $options,
@@ -1266,7 +1285,7 @@ sub generate_panels {
 	 delete $panels{$panel_key};
 	 delete $cached{$panel_key};
        }
-      if $drag_n_drop && $nr_tracks_added==0;
+      if $drag_n_drop && $nr_tracks_added==0;  # suppress display of empty uploaded file tracks
 
     $feature_file_extra_offset += $nr_tracks_added-1;
   }
@@ -2417,6 +2436,7 @@ sub create_panel_args {
   my @pass_thru_args = map {/^-/ ? ($_=>$args->{$_}) : ()} keys %$args;
   my @argv = (
 	      -grid         => 1,
+	      -seq_id       => $segment->seq_id,
 	      -start        => $seg_start,
 	      -end          => $seg_stop,
 	      -stop         => $seg_stop,  #backward compatibility with old bioperl

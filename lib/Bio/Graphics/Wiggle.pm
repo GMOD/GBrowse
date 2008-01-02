@@ -209,7 +209,7 @@ sub start {
 
 sub end {
   my $self = shift;
-  my $size = $self->{fsize} ||= stat($self->fh)[7];
+  my $size = $self->{fsize} ||= ${stat($self->fh)}[7];
   return $size - HEADER_LEN();
 }
 

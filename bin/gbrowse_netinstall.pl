@@ -243,7 +243,7 @@ sub do_get_distro {
                 or $is_cygwin)
               &&
               (system(
-    'cvs -z3 -d:pserver:anonymous@gmod.cvs.sourceforge.net:/cvsroot/gmod co -P -r stable Generic-Genome-Browser') == 0
+    'cvs -z3 -d:pserver:anonymous@gmod.cvs.sourceforge.net:/cvsroot/gmod co -kb -P -r stable Generic-Genome-Browser') == 0
                 or $is_cygwin)
             )
             {

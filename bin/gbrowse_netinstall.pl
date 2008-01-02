@@ -16,6 +16,7 @@ gbrowse_netinstall.pl
   --gbrowse_dev        : Use the development version of GBrowse from CVS
   -b|--build_param_str : Use this string to predefine Makefile.PL parameters
                          such as CONF or PREFIX for GBrowse installation
+  --wincvs             : WinCVS is present--allow cvs installs on Windows
 
 =head1 DESCRIPTION
 
@@ -47,7 +48,7 @@ use constant NMAKE => 'http://download.microsoft.com/download/vc15/patch/1.52/w9
 
 my ( $show_help, $get_from_cvs, $build_param_string, 
      $get_gbrowse_cvs, $get_bioperl_cvs, $is_cygwin, $windows,
-     $binaries, $make, $tmpdir );
+     $binaries, $make, $tmpdir, $wincvs );
 
 BEGIN {
 
@@ -57,6 +58,7 @@ BEGIN {
         'b|build_param_str=s' => \$build_param_string,    # Build parameters
         'bioperl_dev'         => \$get_bioperl_cvs,
         'gbrowse_dev'         => \$get_gbrowse_cvs,
+        'wincvs'              => \$wincvs,
         )
         or pod2usage(2);
   pod2usage(2) if $show_help;
@@ -125,8 +127,9 @@ if ($get_from_cvs) {
     $get_bioperl_cvs = $get_gbrowse_cvs = 1;
 }
 
-if ($windows and ($get_bioperl_cvs or $get_gbrowse_cvs) ) {
-    die "\n\nThe development/cvs tags are not supported on Windows; exiting...\n";
+if ($windows and !$wincvs and ($get_bioperl_cvs or $get_gbrowse_cvs) ) {
+    die "\n\nThe development/cvs tags are not supported on Windows when\n"
+        ."WinCVS is not installed; exiting...\n";
 }
 
 $build_param_string ||="";

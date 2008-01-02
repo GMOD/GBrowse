@@ -27,6 +27,8 @@ Bio::Graphics::Wiggle -- Binary storage for dense genomic features
 
  my $value = $wig->value($position);      # fetch value from position
  my $values = $wig->values($start,$end);  # fetch range of data from $start to $end
+
+ $wig->smoothing('mean');                 # when sampling, compute the mean value across sample window
  my $values = $wig->values($start,$end,$samples);  # fetch $samples data points from $start to $end
 
 
@@ -46,6 +48,7 @@ following format:
       4  byte long integer, value of "step" (explained later)
       4  byte perl native float, the "min" value
       4  byte perl native float, the "max" value
+      4  byte long integer, value of "span"
       null padding to 256 bytes for future use
 
 The remainder of the file consists of 8-bit unsigned scaled integer
@@ -78,14 +81,14 @@ Open/create a wiggle-format data file:
           seqid        name/id of sequence          empty name
           min          minimum value of data points 0
           max          maximum value of data points 255
-          step         data density                 1
+          step         interval between data points 1
+          span         width of data points         value of "step"
 
 The "step" can be used to create sparse files to save space. By
-default, step is set to 1, in which case a data value will be stored at
-each base of the sequence. By setting step to 10, data values will be
-stored at every 10th position; when retrieving data, the value stored
-at the closest lower step position will be extended through the entire
-step interval. For example, consider this step 5 data set:
+default, step is set to 1, in which case a data value will be stored
+at each base of the sequence. By setting step to 10, then each value
+is taken to correspond to 10 bp, and the file will be 10x smaller.
+For example, consider this step 5 data set:
 
     1  2  3  4  5  6  7  8  9 10 11 12 13 14
    20  .  .  .  . 60  .  .  .  . 80  .  .  .
@@ -93,7 +96,8 @@ step interval. For example, consider this step 5 data set:
 We have stored the values "20" "60" and "80" at positions 1, 6 and 11,
 respectively. When retrieving this data, it will appear as if
 positions 1 through 5 have a value of 20, positions 6-10 have a value
-of 60, and positions 11-14 have a value of 80.
+of 60, and positions 11-14 have a value of 80. In the data file, we
+store, positions 1,6,and 11 in adjacent bytes.
 
 Note that no locking is performed by this module. If you wish to allow
 multi-user write access to the databases files, you will need to
@@ -103,12 +107,13 @@ flock() the files yourself.
 =item $max   = $wig->max([$new_max])
 =item $min   = $wig->min([$new_min])
 =item $step  = $wig->step([$new_step])
+=item $span  = $wig->span([$new_span])
 
 These accessors get or set the corresponding values. Setting is only
 allowed if the file was opened for writing. Note that changing the
 min, max and step after writing data to the file under another
-parameter set may produce unexpected results, as the existing data is
-not automatically updated to be consistent.
+parameter set will produce unexpected (and invalid) results, as the
+existing data is not automatically updated to be consistent.
 
 =back
 
@@ -153,9 +158,10 @@ will be filled in.
 
 Retrieve a sampling of the values between $start and $end. Nothing
 very sophisticated is done here; the code simply returns the number of
-values indicated in $samples, selected at even intervals from the
-range $start to $end. The return value is an arrayref of exactly
-$samples values.
+values indicated in $samples, smoothed according to the smoothing
+method selected (default to "mean"), then selected at even intervals
+from the range $start to $end. The return value is an arrayref of
+exactly $samples values.
 
 =back
 
@@ -169,7 +175,7 @@ use IO::File;
 use Carp 'croak','carp','confess';
 
 use constant HEADER_LEN => 256;
-use constant HEADER => '(Z50LFF)@'.HEADER_LEN; # seqid, step, min, max
+use constant HEADER => '(Z50LFFL)@'.HEADER_LEN; # seqid, step, min, max, step
 use constant BODY   => 'C';
 
 sub new {
@@ -191,8 +197,20 @@ sub new {
   $merged_options{min}   ||= 0;
   $merged_options{max}   ||= 255;
   $merged_options{step}  ||= 1;
-  $self->{options} = \%merged_options;
+  $merged_options{span}  ||= $merged_options{step};
+  $self->{options}    = \%merged_options;
   return $self;
+}
+
+sub start {
+  my $self = shift;
+  return 1;
+}
+
+sub end {
+  my $self = shift;
+  my $size = $self->{fsize} ||= stat($self->fh)[7];
+  return $size - HEADER_LEN();
 }
 
 sub DESTROY {
@@ -227,15 +245,24 @@ sub seqid { shift->_option('seqid',@_) }
 sub min   { shift->_option('min',@_) }
 sub max   { shift->_option('max',@_) }
 sub step  { shift->_option('step',@_) }
+sub span  { shift->_option('span',@_) }
+
+sub smoothing {
+  my $self = shift;
+  my $d    = $self->{smoothing} || 'mean';
+  $self->{smoothing} = shift if @_;
+  $d;
+}
 
 sub _readoptions {
   my $self = shift;
   my $fh = $self->fh;
   my $header;
   $fh->read($header,HEADER_LEN) == HEADER_LEN or die "read failed: $!";
-  my ($seqid,$step,$min,$max) = unpack(HEADER,$header);
+  my ($seqid,$step,$min,$max,$span) = unpack(HEADER,$header);
   return { seqid => $seqid,
 	   step  => $step,
+	   span  => $span,
 	   min   => $min,
 	   max   => $max };
 }
@@ -244,7 +271,7 @@ sub _writeoptions {
   my $self    = shift;
   my $options = shift;
   my $fh = $self->fh;
-  my $header = pack(HEADER,@{$options}{qw(seqid step min max)});
+  my $header = pack(HEADER,@{$options}{qw(seqid step min max span)});
   $fh->seek(0,0);
   $fh->print($header) or die "write failed: $!";
 }
@@ -273,18 +300,9 @@ sub value {
   if (@_ == 2) {
     my $end       = shift;
     my $new_value = shift;
-    my $scaled_value  = $self->scale($new_value);
     my $step      = $self->step;
-
-    if ($step == 1) { # special efficient case
-      $self->fh->print(pack('C*',($scaled_value)x($end-$position+1))) or die "Write failed: $!";
-    } else {
-      for (my $i=$position; $i<=$end; $i+=$step) {
-	$self->seek($offset)                      or die "Seek failed: $!";
-	$self->fh->print(pack('C',$scaled_value)) or die "Write failed: $!";
-	$offset += 5;
-      }
-    }
+    my $scaled_value  = $self->scale($new_value);
+    $self->fh->print(pack('C*',($scaled_value)x(($end-$position+1)/$step))) or die "Write failed: $!";
   }
 
   elsif (@_==1) {
@@ -298,6 +316,19 @@ sub value {
     my $buffer;
     $self->fh->read($buffer,1) or die "Read failed: $!";
     my $scaled_value = unpack('C',$buffer);
+
+    if ($scaled_value == 0 && (my $span = $self->span) > 1) {  # missing data, so look back at most span values to get it
+      $offset = $self->_calculate_offset($position-$span+1);
+      $self->seek($offset) or die "Seek failed: $!";
+      $self->fh->read($buffer,$span/$self->step);
+      for (my $i=length($buffer)-2;$i>=0;$i--) {
+	my $val = substr($buffer,$i,1);
+	next if $val eq "\0";
+	$scaled_value = unpack('C',$val);
+	last;
+      }
+
+    }
     return $self->unscale($scaled_value);
   }
 }
@@ -306,7 +337,7 @@ sub _calculate_offset {
   my $self     = shift;
   my $position = shift;
   my $step = $self->step;
-  return HEADER_LEN + $step * int(($position-1)/$step);
+  return HEADER_LEN + int(($position-1)/$step);
 }
 
 sub set_values {
@@ -331,28 +362,116 @@ sub _retrieve_values {
   my $self = shift;
   my ($start,$end,$samples) = @_;
 
-  # generate list of positions to sample from
-  my $span = ($end-$start+1);
-  $samples ||= $span;
+  return unless $start >= 1;
+  return unless $end   <= $self->end;
 
-  my $offset   = $self->_calculate_offset($start);
-  my $step     = $self->step;
-  my $interval = $span/$samples;
+  # generate list of positions to sample from
+  my $length = $end-$start+1;
+  $samples ||= $length;
+
+  my $offset            = $self->_calculate_offset($start);
+  my $step              = $self->step;
+  my $sampling_interval = $length/$samples;
 
   $self->seek($offset);
   my $packed_data;
-  $self->fh->read($packed_data,$span);
+  $self->fh->read($packed_data,$length/$step);
 
   # pad data up to required amount
-  $packed_data .= "\0" x ($span-length($packed_data)) if length $packed_data < $span;
+  $packed_data .= "\0" x ($length/$step-length($packed_data))
 
-  my @data;
-  $#data = $samples-1; # preextend array -- did you know that Perl can do this?
-  for (my $i=0; $i<$samples; $i++) {
-    my $index = $step * int($i*$interval/$step);
-    $data[$i] = unpack('C',substr($packed_data,$index,1));
+
+    if length $packed_data < $length/$step;
+
+  my $span = $self->span;
+
+  my @bases;
+  $#bases = $length-1;
+
+  if ($step == $span) {
+    # in this case, we do not have any partially-empty
+    # steps, so can operate on the step-length data structure
+    # directly
+    @bases = unpack('C*',$packed_data);
   }
-  return $self->unscale(\@data);
+
+  else {
+    # In this case some regions may have partially missing missing, 
+    # so we create an array equal to the length of the requested region, 
+    # fill it in, and then sample it
+    for (my $i=0; $i<length $packed_data; $i++) {
+      my $index = $i * $step;
+      my $value = unpack('C',substr($packed_data,$i,1));
+      next unless $value;  # ignore 0 values
+      @bases[$index..$index+$span-1] = ($value) x $span;
+    }
+  }
+
+  my $result = $self->sample(\@bases,$samples);
+  return $self->unscale($result);
+}
+
+sub sample {
+  my $self = shift;
+  my ($values,$samples) = @_;
+  my $length = @$values;
+  my $window_size = $length/$samples;
+
+  my @samples;
+  $#samples = $samples-1;
+
+  if ($window_size < 2) { # no data smoothing needed
+    @samples = map { $values->[$_*$window_size] } (0..$samples-1);
+  }
+
+  else {
+    my $smoothing = $self->smoothing;
+    my $smoothsub   = $smoothing eq 'mean' ? \&sample_mean
+                     :$smoothing eq 'max'  ? \&sample_max
+		     :$smoothing eq 'min'  ? \&sample_min
+		     :croak("invalid smoothing type '$smoothing'");
+    for (my $i=0; $i<$samples; $i++) {
+      my $start    = $i * $window_size;
+      my $end      = $start + $window_size - 1;
+      my @window   = @{$values}[$start..$end];
+
+      my $value    =  $smoothsub->(\@window);
+      $samples[$i] = $value;
+    }
+  }
+
+  return \@samples;
+}
+
+sub sample_mean {
+  my $values = shift;
+  my ($total,$items);
+  for my $v (@$values) {
+    next unless defined $v;
+    $items++;
+    $total+=$v;
+  }
+  return $items ? $total/$items : undef;
+}
+
+sub sample_max {
+  my $values = shift;
+  my $max;
+  for my $v (@$values) {
+    next unless defined $v;
+    $max = $v if !defined $max or $max < $v;
+  }
+  return $max;
+}
+
+sub sample_min {
+  my $values = shift;
+  my $min;
+  for my $v (@$values) {
+    next unless defined $v;
+    $min = $v if !defined $min or $min > $v;
+  }
+  return $min;
 }
 
 sub _store_values {
@@ -366,19 +485,9 @@ sub _store_values {
 
   my $scaled = $self->scale($data);
 
-  if ($step == 1) { # special case
-    $self->seek($offset);
-    my $packed_data = pack('C*',@$scaled);
-    $fh->print($packed_data);
-  }
-
-  else {
-    for my $value (@$data) {
-      $self->seek($offset);
-      $fh->print(pack('C',$scaled));
-      $offset += $step;
-    }
-  }
+  $self->seek($offset);
+  my $packed_data = pack('C*',@$scaled);
+  $fh->print($packed_data);
 }
 
 # zero means "no data"
@@ -390,14 +499,14 @@ sub scale {
   my $min   = $self->{options}{min};
   if (ref $values && ref $values eq 'ARRAY') {
     my @return = map {
-      my $v = 1 + int (($_ - $min)/$scale);
+      my $v = 1 + round (($_ - $min)/$scale);
       $v = 1 if $v < 1;
       $v = 255 if $v > 255;
       $v;
     } @$values;
     return \@return;
   } else {
-    return 1 + int (($values - $min)/$scale);
+    return 1 + round (($values - $min)/$scale);
   }
 }
 
@@ -420,10 +529,14 @@ sub _get_scale {
   unless ($self->{scale}) {
     my $min  = $self->{options}{min};
     my $max  = $self->{options}{max};
-    my $span = $max - $min;
-    $self->{scale} = $span/254;
+    my $range = $max - $min;
+    $self->{scale} = $range/254;
   }
   return $self->{scale};
+}
+
+sub round {
+  return int($_[0]+0.5*($_[0]<=>0));
 }
 
 

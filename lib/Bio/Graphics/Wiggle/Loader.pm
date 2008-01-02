@@ -367,18 +367,17 @@ sub process_variableline {
     next if /^#/;
     chomp;
     my ($start,$value) = split /\s+/;
-    $wigfile->set_range($start=>$start+$span-1,$value);
+    $wigfile->set_value($start=>$value);
 
     # update span
     $self->current_track->{seqids}{$seqid}{start} = $start
       unless exists $self->current_track->{seqids}{$seqid}{start}
 	and $self->current_track->{seqids}{$seqid}{start} < $start;
 
-    $self->current_track->{seqids}{$seqid}{end} = $start + $self->{track_options}{span}-1
-      if exists $self->{track_options}{span}
-	and $self->current_track->{seqids}{$seqid}{end} < $start + $self->{track_options}{span}-1;
+    $self->current_track->{seqids}{$seqid}{end} = $start + ($span-1)
+      if $self->current_track->{seqids}{$seqid}{end} < $start + ($span-1);
   }
-  $self->current_track->{seqids}{$seqid}{end} ||= $self->current_track->{seqids}{$seqid}{start}+1;
+  $self->current_track->{seqids}{$seqid}{end} ||= $self->current_track->{seqids}{$seqid}{start};
 }
 
 sub wigfile {
@@ -396,6 +395,7 @@ sub wigfile {
 					      min  => $self->current_track->{seqids}{$seqid}{min},
 					      max  => $self->current_track->{seqids}{$seqid}{max},
 					      step => $self->{track_options}{step} || 1,
+					      span => $self->{track_options}{span} || $self->{track_options}{step} || 1,
 					     },
 					    );
     $wigfile or croak "Couldn't create wigfile $wigfile: $!";

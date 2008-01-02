@@ -178,7 +178,7 @@ CPAN::Shell->install('Digest::MD5');
 my $version = BIOPERL_REQUIRES;
 if (!(eval "use Bio::Perl $version; 1") or $get_bioperl_cvs) {
   print STDERR "\n*** Installing BioPerl ***\n";
-  if ($windows) {
+  if ($windows and !$get_bioperl_cvs) {
     my $bioperl_index = find_bioperl_ppm();
     system("ppm install --force $bioperl_index");
   } else {
@@ -215,15 +215,17 @@ sub do_install {
 
   do_get_distro($download,$local_name,$distribution,$from_cvs);
 
+  my $build_str = $windows ? "Build" : "./Build";
+
   if ($method eq 'make') {
       system("perl Makefile.PL") == 0
             or die "Couldn't run perl Makefile.PL command\n";
       system("$make install UNINST=1 $build_param_string")    == 0 ;
   }
   elsif ($method eq 'Build') {
-      system("perl ./Build.PL")   == 0
+      system("perl $build_str.PL")   == 0
             or die "Couldn't run perl Build.PL command\n";
-      system("./Build install --uninst 1") == 0;
+      system("$build_str install --uninst 1") == 0;
   }
 }
 

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.51 2008-01-02 18:45:26 scottcain Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.52 2008-01-02 19:28:40 scottcain Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -2718,7 +2718,7 @@ sub set_cached_panel {
   }
 
   $f = IO::File->new(">$image_file") or die "$image_file: $!";
-  $f->binmode(1);
+  $f->binmode;
   $f->print($image_data);
   $f->close;
 

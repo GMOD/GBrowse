@@ -14,9 +14,13 @@ gbrowse_netinstall.pl
                          bioperl from CVS
   --bioperl_dev        : Use the development version of BioPerl from CVS
   --gbrowse_dev        : Use the development version of GBrowse from CVS
-  -b|--build_param_str : Use this string to predefine Makefile.PL parameters
+  --build_param_str    : Use this string to predefine Makefile.PL parameters
                          such as CONF or PREFIX for GBrowse installation
   --wincvs             : WinCVS is present--allow cvs installs on Windows
+  --gbrowse_path       : Path to GBrowse tarball (will not download GBrowse)
+                         Assumes resulting 'Generic-Genome-Browser' directory
+  --bioperl_path       : Path to BioPerl tarball (will not download BioPerl)
+                         Assumes resulting 'bioperl-live' directory
 
 =head1 DESCRIPTION
 
@@ -48,17 +52,19 @@ use constant NMAKE => 'http://download.microsoft.com/download/vc15/patch/1.52/w9
 
 my ( $show_help, $get_from_cvs, $build_param_string, 
      $get_gbrowse_cvs, $get_bioperl_cvs, $is_cygwin, $windows,
-     $binaries, $make, $tmpdir, $wincvs );
+     $binaries, $make, $tmpdir, $wincvs, $gbrowse_path,$bioperl_path, );
 
 BEGIN {
 
   GetOptions(
         'h|help'              => \$show_help,             # Show help and exit
         'd|dev'               => \$get_from_cvs,          # Use the dev cvs
-        'b|build_param_str=s' => \$build_param_string,    # Build parameters
+        'build_param_str=s'   => \$build_param_string,    # Build parameters
         'bioperl_dev'         => \$get_bioperl_cvs,
         'gbrowse_dev'         => \$get_gbrowse_cvs,
         'wincvs'              => \$wincvs,
+        'gbrowse_path=s'      => \$gbrowse_path,
+        'bioperl_path=s'      => \$bioperl_path,
         )
         or pod2usage(2);
   pod2usage(2) if $show_help;
@@ -176,14 +182,14 @@ CPAN::Shell->install('Class::Base');
 CPAN::Shell->install('Digest::MD5');
 
 my $version = BIOPERL_REQUIRES;
-if (!(eval "use Bio::Perl $version; 1") or $get_bioperl_cvs) {
+if (!(eval "use Bio::Perl $version; 1") or $get_bioperl_cvs or $bioperl_path) {
   print STDERR "\n*** Installing BioPerl ***\n";
-  if ($windows and !$get_bioperl_cvs) {
+  if ($windows and !$get_bioperl_cvs and !$bioperl_path) {
     my $bioperl_index = find_bioperl_ppm();
     system("ppm install --force $bioperl_index");
   } else {
       CPAN::Shell->install('Module::Build');
-      do_install(BIOPERL,'bioperl.tgz',BIOPERL_VERSION,'Build',$get_bioperl_cvs);
+      do_install(BIOPERL,'bioperl.tgz',BIOPERL_VERSION,'Build',$get_bioperl_cvs,'',$bioperl_path);
   }
 }
 else {
@@ -194,7 +200,7 @@ print STDERR "\n *** Installing Generic-Genome-Browser ***\n";
 
 my $latest_version = find_gbrowse_latest();
 my $gbrowse        = SOURCEFORGE_MIRROR1.$latest_version.'.tar.gz';
-eval {do_install($gbrowse,'gbrowse.tgz',$latest_version,'make',$get_gbrowse_cvs,$build_param_string)};
+eval {do_install($gbrowse,'gbrowse.tgz',$latest_version,'make',$get_gbrowse_cvs,$build_param_string,$gbrowse_path)};
 if ($@ =~ /Could not download/) {
   print STDERR "Could not download: server down? Trying a different server...\n";
   $gbrowse        = SOURCEFORGE_MIRROR2.$latest_version.'.tar.gz';
@@ -209,11 +215,11 @@ END {
 
 sub do_install {
   my ($download,$local_name,$distribution,$method,
-                     $from_cvs,$build_param_string) = @_;
+                     $from_cvs,$build_param_string,$file_path) = @_;
 
   chdir $tmpdir;
 
-  do_get_distro($download,$local_name,$distribution,$from_cvs);
+  do_get_distro($download,$local_name,$distribution,$from_cvs,$file_path);
 
   my $build_str = $windows ? "Build" : "./Build";
 
@@ -230,9 +236,15 @@ sub do_install {
 }
 
 sub do_get_distro {
-    my ($download,$local_name,$distribution,$from_cvs) = @_;
+    my ($download,$local_name,$distribution,$from_cvs,$file_path) = @_;
 
-    if ($from_cvs) {
+    if ($file_path) {
+        cp($file_path, "$tmpdir/$local_name");
+        $distribution = ($local_name =~ /gbrowse/)
+                      ? "Generic-Genome-Browser" : "bioperl-live"; 
+        extract_tarball($local_name,$distribution);
+    }
+    elsif ($from_cvs) {
         my $distribution_dir;
         if ($local_name =~ /gbrowse/) {
             $distribution_dir = 'Generic-Genome-Browser';
@@ -278,16 +290,23 @@ sub do_get_distro {
         die "Could not download $distribution distribution from $download."
             unless $rc == RC_OK or $rc == RC_NOT_MODIFIED;
 
-        print STDERR "Unpacking $local_name...\n";
-        my $z = Archive::Tar->new($local_name,1)
-            or die "Couldn't open $distribution archive: $@";
-        $z->extract()
-            or die "Couldn't extract $distribution archive: $@";
-        $distribution =~ s/--/-/;
-        chdir $distribution
-            or die "Couldn't enter $distribution directory: $@";
+        extract_tarball($local_name,$distribution);
     }
     return 1;
+}
+
+sub extract_tarball {
+  my ($local_name,$distribution) = @_;
+
+  print STDERR "Unpacking $local_name...\n";
+  my $z = Archive::Tar->new($local_name,1)
+        or die "Couldn't open $distribution archive: $@";
+  $z->extract()
+        or die "Couldn't extract $distribution archive: $@";
+  $distribution =~ s/--/-/;
+  chdir $distribution
+        or die "Couldn't enter $distribution directory: $@";
+  return;
 }
 
 # make sure ppm repositories are correct!

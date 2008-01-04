@@ -126,6 +126,9 @@ BEGIN {
 
 use Archive::Tar;
 use CPAN '!get';
+use Cwd;
+
+my $working_dir = getcwd;
 
 $is_cygwin = 1 if ( $^O eq 'cygwin' );
 
@@ -239,7 +242,16 @@ sub do_get_distro {
     my ($download,$local_name,$distribution,$from_cvs,$file_path) = @_;
 
     if ($file_path) {
-        cp($file_path, "$tmpdir/$local_name");
+        if (-e $file_path) { #must be an absolute path
+            cp($file_path, "$tmpdir/$local_name");
+        }
+        elsif (-e "$working_dir/$file_path") { #assume it's a rel path from the original directory
+            cp("$working_dir/$file_path", "$tmpdir/$local_name");
+        }
+        else {
+            print "Couldn't find $file_path; nothing to do so quitting...\n";
+            exit(-1);
+        }
         $distribution = ($local_name =~ /gbrowse/)
                       ? "Generic-Genome-Browser" : "bioperl-live"; 
         extract_tarball($local_name,$distribution);

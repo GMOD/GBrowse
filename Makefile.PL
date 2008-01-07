@@ -11,7 +11,7 @@ my $VERSION     = '1.69';
 my $working_dir = cwd;
 
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN GBROWSE_ROOT
-		 LIB BIN
+		 LIB BIN YES
 		 DO_XS NONROOT SELINUX);
 my $OPTIONS = join ('|',@OPTIONS);
 my %OPTIONS;
@@ -23,7 +23,9 @@ foreach (@argv) {
   if (/^--?h/i) {
     die <<END;
 To customize install locations, provide one or more of the options
-CONF, HTDOCS, or CGIBIN as in CONF=/usr/local/apache/conf.
+CONF, HTDOCS, or CGIBIN as in CONF=/usr/local/apache/conf.  To accept
+the default values without being prompted for them, provide YES=1 as
+an argument.
 
 CONF is the directory in which you will place the gbrowse configuration
 files. Usually this is the same as the Apache configuration directory, but
@@ -185,16 +187,26 @@ if ($OPTIONS{APACHE} && !(defined $OPTIONS{CGIBIN})) {
 }
 
 # set hard-coded values
-$OPTIONS{APACHE} ||= prompt('Apache root directory (enter \'\' for none)?',
+if ($OPTIONS{YES}) {
+  print "Accepting default install locations.\n";
+  $OPTIONS{APACHE} ||= GuessDirectories->root;
+  $OPTIONS{CONF}   ||= GuessDirectories->conf($OPTIONS{APACHE});
+  $OPTIONS{HTDOCS} ||= GuessDirectories->htdocs($OPTIONS{APACHE});
+  $OPTIONS{CGIBIN} ||= GuessDirectories->cgibin($OPTIONS{APACHE});
+  $OPTIONS{GBROWSE_ROOT}   ||= 'gbrowse';
+}
+else {
+  $OPTIONS{APACHE} ||= prompt('Apache root directory (enter \'\' for none)?',
 			    GuessDirectories->root) unless exists $OPTIONS{APACHE};
-$OPTIONS{CONF}   ||= prompt('Apache conf directory?',
+  $OPTIONS{CONF}   ||= prompt('Apache conf directory?',
 			    GuessDirectories->conf($OPTIONS{APACHE}));
-$OPTIONS{HTDOCS} ||= prompt('Apache htdocs directory?',
+  $OPTIONS{HTDOCS} ||= prompt('Apache htdocs directory?',
 			    GuessDirectories->htdocs($OPTIONS{APACHE}));
-$OPTIONS{CGIBIN} ||= prompt('Apache cgibin directory?',
+  $OPTIONS{CGIBIN} ||= prompt('Apache cgibin directory?',
 			    GuessDirectories->cgibin($OPTIONS{APACHE}));
-$OPTIONS{GBROWSE_ROOT}   ||= prompt('GBrowse root for static files?',
+  $OPTIONS{GBROWSE_ROOT}   ||= prompt('GBrowse root for static files?',
 			    'gbrowse');
+}
 unless (defined $OPTIONS{DO_XS}) {
   $OPTIONS{DO_XS}  = $^O =~ /^(MSWin|dos)/i ? 0 : 1;
 }

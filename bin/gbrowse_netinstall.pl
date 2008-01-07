@@ -8,19 +8,19 @@ gbrowse_netinstall.pl
 
   gbrowse_netinstall.pl -b|--build_param_str BUILD_STRING [options]
 
-  options:
-  -h|--help            : Show this message
-  -d|--dev             : Use the developement version of both GBrowse and
-                         bioperl from CVS
-  --bioperl_dev        : Use the development version of BioPerl from CVS
-  --gbrowse_dev        : Use the development version of GBrowse from CVS
-  --build_param_str    : Use this string to predefine Makefile.PL parameters
-                         such as CONF or PREFIX for GBrowse installation
-  --wincvs             : WinCVS is present--allow cvs installs on Windows
-  --gbrowse_path       : Path to GBrowse tarball (will not download GBrowse)
-                         Assumes resulting 'Generic-Genome-Browser' directory
-  --bioperl_path       : Path to BioPerl tarball (will not download BioPerl)
-                         Assumes resulting 'bioperl-live' directory
+  options: 
+
+  -h|--help                 Show this message 
+  -d|--dev                  Use the developement version of both GBrowse and bioperl from CVS
+  --bioperl_dev             Use the development version of BioPerl from CVS
+  --gbrowse_dev             Use the development version of GBrowse from CVS
+  --build_param_str=<args>  Use this string to set Makefile.PL
+                             parameters such as CONF or PREFIX for GBrowse installation
+  --wincvs                  WinCVS is present--allow cvs installs on Windows 
+  --gbrowse_path            Path to GBrowse tarball (will not download GBrowse) Assumes
+                              resulting 'Generic-Genome-Browser' directory 
+  --bioperl_path            Path to BioPerl tarball (will not download BioPerl) Assumes 
+                              resulting'bioperl-live' directory
 
 =head1 DESCRIPTION
 

@@ -1,4 +1,24 @@
-#!/usr/bin/perl -w
+#!perl
+use Config;
+use File::Basename qw(&basename &dirname);
+use Cwd;
+
+$origdir = cwd;
+chdir dirname($0);
+$file = basename($0, '.PL','.PLS');
+$file .= $^O eq 'VMS' ? '.com' : '.pl';
+
+open OUT,">$file" or die "Can't create $file: $!";
+
+print "Extracting $file (with variable substitutions)\n";
+
+print OUT <<"!GROK!THIS!";
+$Config{startperl}
+!GROK!THIS!
+
+# In the following, perl variables are not expanded during extraction.
+
+print OUT <<'!NO!SUBS!';
 
 =head1 NAME
 
@@ -29,8 +49,8 @@ Typical usage is as follows:
 
 The following options are accepted:
 
- --method=<method name>   Set the Sequence Ontology method for the GFF3 lines
-                           representing the quantitative features in this file. 
+ --method=<method name>   Set the method for the GFF3 lines representing 
+                           each quantitative data point in the track.
                            The default is "microarray_oligo."
 
  --source=<source>        Set the source field for the GFF3 file. The default is
@@ -133,12 +153,16 @@ L<http://genome.ucsc.edu/goldenPath/help/wiggle.html>:
 You can convert this into a loadable GFF3 file with the following
 command:
 
- wiggle2gff3 --meth=example --so=example --base=/var/gbrowse/db example.wig \
+ wiggle2gff3.pl --meth=example --so=example --base=/var/gbrowse/db example.wig \
               > example.gff3
 
 The output will look like this:
 
-[ TO COME ]
+ ##gff-version 3
+
+ chr19	example	example	59302001	59304700	.	.	.	Name=Bed Format;wigfile=/var/gbrowse/db/track001.chr19.1199828298.wig
+ chr19	example	example	59304701	59308020	.	.	.	Name=variableStep;wigfile=/var/gbrowse/db/track002.chr19.1199828298.wig
+ chr19	example	example	59307401	59310400	.	.	.	Name=fixedStep;wigfile=/var/gbrowse/db/track003.chr19.1199828298.wig
 
 =head1 SEE ALSO
 
@@ -165,8 +189,9 @@ use strict;
 use Bio::Graphics::Wiggle::Loader;
 use Getopt::Long;
 use Pod::Usage;
+use File::Spec;
 
-my ( $show_help, $method, $source, $use_gff3, $use_featurefile, $base_directory);
+my ($show_help, $method, $source, $use_gff3, $use_featurefile, $base_directory);
 
 GetOptions(
 	   'h|help'              => \$show_help,             # Show help and exit	
@@ -174,9 +199,40 @@ GetOptions(
 	   'source=s'            => \$source,
 	   'gff3'                => \$use_gff3,
 	   'featurefile'         => \$use_featurefile,
-	   'base'                => \$base_directory
+	   'base=s'              => \$base_directory
 	  )
-  or pod2usage(2);
-pod2usage(2) if $show_help;
+  or pod2usage(-verbose=>2);
+pod2usage(-verbose=>2) if $show_help;
+
+die "Only one of -gff3 or -featurefile options is allowed. Use -h for help"
+  if $use_gff3 && $use_featurefile;
+
+unless (defined $base_directory) {
+  $base_directory = File::Spec->tmpdir();
+  warn "Using $base_directory as base directory for binary files";
+}
+
+-d $base_directory && -w _
+  or die "$base_directory is not a writeable directory. Use -h for more help";
+
+my $loader = Bio::Graphics::Wiggle::Loader->new($base_directory)
+  or die "could not create loader";
+
+my $type = $use_featurefile ? 'featurefile' : 'gff3';
+
+while (my $file = shift) {
+  my $fh   = IO::File->new($file) or die "could not open $file: $!";
+  print STDERR "Processing $file...";
+  $loader->load($fh);
+  print STDERR "done.\n";
+  print $loader->featurefile($type,$method,$source);
+}
+
+1;
 
 
+!NO!SUBS!
+close OUT or die "Can't close $file: $!";
+chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
+exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
+chdir $origdir;

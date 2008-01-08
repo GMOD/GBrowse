@@ -294,6 +294,16 @@ Chr1 are composed of LINK_H06O01 from bp 1 to bp 254826.  The region
 of LINK_H0601 between 32386 and 64122 is, in turn, composed of the
 bases 5 to 31742 of cosmid F49B2.
 
+=head2 A5. Dense quantitative data
+
+If you have dense quantitative data, such as tiling array data,
+microarray expression data, ChIP-chip or ChIP-seq chromatin
+immunoprecipitation data, then you will probably want to create
+"Wiggle" format binary files, which represent the quantitative data in
+a compact format in external files. Use the "wiggle2gff3.pl" script,
+included in this distribution, to format and load this data. Run
+"wiggle2gff3.pl -h" for instructions.
+
 =head2 A6. Loading the GFF file into the database
 
 Use the BioPerl script utilities bulk_load_gff.pl, load_gff.pl or (if

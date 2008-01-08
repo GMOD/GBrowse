@@ -288,6 +288,7 @@ WriteMakefile(
 				 'bin/ucsc_genes2gff.PLS' => 'bin/ucsc_genes2gff.pl',
 				 'bin/load_genbank.PLS' => 'bin/load_genbank.pl',
 				 'bin/register_moby_services.PLS' => 'bin/register_moby_services.pl',
+				 'bin/wiggle2gff3.PLS' => 'bin/wiggle2gff3.pl',
 				 'install_util/gbrowse_ppm_install.PLS' => 'install_util/gbrowse_ppm_install.pl',
 				 'cgi-bin/gbrowse.PLS'  => 'cgi-bin/gbrowse',
 				 'cgi-bin/gbrowse_img.PLS'  => 'cgi-bin/gbrowse_img',

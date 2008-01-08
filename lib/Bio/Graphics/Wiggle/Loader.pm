@@ -88,13 +88,14 @@ sub featurefile {
   my @lines;
   my $tracks = $self->{tracks};
 
+  my $gff3_header;
+
   for my $track (sort keys %$tracks) {
     my $options    = $tracks->{$track}{display_options};
     my $name       = $options->{name} ||= $track;
 
     if ($type eq 'gff3') {
-
-      push @lines,"##gff-version 3";
+      push @lines,"##gff-version 3","" unless $gff3_header++;
     }
 
     else {
@@ -113,11 +114,11 @@ sub featurefile {
       if (my $color = $options->{altColor}) {
 	push @lines,"bgcolor   = ".format_color($color);
       }
-      if (my ($low,$hi) = split /:/,$options->{viewLimits}) {
+      if (exists $options->{viewLimits} and my ($low,$hi) = split /:/,$options->{viewLimits}) {
 	push @lines,"min_score   =  $low";
 	push @lines,"max_score   =  $hi";
       }
-      if (my ($max,$default,$min) = split/:/,$options->{maxHeightPixels}) {
+      if (exists $options->{maxHeightPixels} and my ($max,$default,$min) = split/:/,$options->{maxHeightPixels}) {
 	push @lines,"height  = $default";
       }
       push @lines,"smoothing        = $options->{windowingFunction}"
@@ -126,7 +127,6 @@ sub featurefile {
 	if $options->{smoothingWindow};
       push @lines,'';
     }
-    push @lines,'';
   }
 
 
@@ -171,17 +171,17 @@ sub load {
     next unless /\S/;
 
     if (/^track/) {
-      $self->process_track_line();
+      $self->process_track_line($_);
       next;
     }
 
     if (/^fixedStep/) {
-      $self->process_fixed_step_declaration();
+      $self->process_fixed_step_declaration($_);
       $format = 'fixed';
     }
 
     if (/^variableStep/) {
-      $self->process_variable_step_declaration();
+      $self->process_variable_step_declaration($_);
       $format = 'variable';
     }
 
@@ -202,7 +202,7 @@ sub load {
       $format = 'none';
     }
 
-    redo LINE if /^track/;
+    redo LINE if defined $_ && /^track/;
   }
 
   return 1;
@@ -210,7 +210,8 @@ sub load {
 
 sub process_track_line {
   my $self      = shift;
-  my @tokens    = shellwords($_);
+  my $line      = shift;
+  my @tokens    = shellwords($line);
   shift @tokens;
   my %options = map {split/=/} @tokens;
   $options{type} eq 'wiggle_0' or croak "invalid/unknown wiggle track type $options{type}";
@@ -221,7 +222,8 @@ sub process_track_line {
 
 sub process_fixed_step_declaration {
   my $self  = shift;
-  my @tokens    = shellwords($_);
+  my $line  = shift;
+  my @tokens    = shellwords($line);
   shift @tokens;
   my %options = map {split/=/} @tokens;
   exists $options{chrom}        or croak "invalid fixedStep line: need a chrom option";
@@ -232,7 +234,8 @@ sub process_fixed_step_declaration {
 
 sub process_variable_step_declaration {
   my $self  = shift;
-  my @tokens    = shellwords($_);
+  my $line  = shift;
+  my @tokens    = shellwords($line);
   shift @tokens;
   my %options = map {split/=/} @tokens;
   exists $options{chrom}        or croak "invalid variableStep line: need a chrom option";
@@ -375,7 +378,8 @@ sub process_variableline {
 	and $self->current_track->{seqids}{$seqid}{start} < $start;
 
     $self->current_track->{seqids}{$seqid}{end} = $start + ($span-1)
-      if $self->current_track->{seqids}{$seqid}{end} < $start + ($span-1);
+      if !defined $self->current_track->{seqids}{$seqid}{end}
+	|| $self->current_track->{seqids}{$seqid}{end} < $start + ($span-1);
   }
   $self->current_track->{seqids}{$seqid}{end} ||= $self->current_track->{seqids}{$seqid}{start};
 }

@@ -1,3 +1,4 @@
+
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 <html> <head>
 <title>GBrowse Tutorial</title>
@@ -7,7 +8,7 @@
 <body>
 <h1>Generic Genome Browser: A Tutorial</h1>
 
-<h2>Author: Lincoln Stein, June 16, 2003 (<i>revised 20 Mar 2007</i>)</h2>
+<h2>Author: Lincoln Stein, June 16, 2003 (<i>revised 10 Jan 2008</i>)</h2>
 
 <p>
 
@@ -1134,7 +1135,7 @@ in <a href="conf_files/volvox3.conf">volvox3.conf</a>.
 
 <hr>
 
-<h2><a name="graph">11. Showing Quantitative Data</a></h2>
+<h2><a name="graph">11. Showing Quantitative Data (basic)</a></h2>
 
 <p>
 
@@ -1248,7 +1249,19 @@ change graph_type to "boxes."</i> </blockquote>
 
 <hr>
 
-<h2><a name="dna">12. Displaying DNA and 3-frame translations</a></h2>
+<h2><a name="wiggle">12. Showing Quantitative Data (advanced)</a></h2>
+
+The recipe in <a ref="#graph">11</a> works well for several thousand
+data points, but if you have very dense data, such as that produced by
+genomic tiling arrays, then you will want to use a specialized binary
+    representation known as "wiggle" format. A wiggle track consists of
+    a file that contains the quantitative data, and a single feature
+    in the database proper that points at that data file. To create
+    the 
+
+<hr>
+
+<h2><a name="dna">13. Displaying DNA and 3-frame translations</a></h2>
 
 <p>
 
@@ -1389,7 +1402,7 @@ DNA track is turned on.
 
 <hr>
 
-<h2><a name="multiple_alignments">13. Displaying ESTs and Other
+<h2><a name="multiple_alignments">14. Displaying ESTs and Other
 Alignments</a></h2>
 
 <p>
@@ -1608,7 +1621,7 @@ The effect is shown in Figure 16.
 
 <hr>
 
-<h2><a name="adding_dna_to_alignments">14. Adding DNA to Alignments</a></h2>
+<h2><a name="adding_dna_to_alignments">15. Adding DNA to Alignments</a></h2>
 
 <p>
 
@@ -1809,7 +1822,7 @@ reindexed.  In Unix:
 
 <hr>
 
-<h2><a name="trace">15. Displaying Trace Data</a></h2>
+<h2><a name="trace">16. Displaying Trace Data</a></h2>
 
 <p>
 
@@ -1919,7 +1932,7 @@ Zooming in will show you the trace diagram:
 
 <hr>
 
-<h2><a name="plugins">16. Plugins</a></h2>
+<h2><a name="plugins">17. Plugins</a></h2>
 
 <p>
 
@@ -2114,7 +2127,7 @@ Here's the list of plugins that come with the standard distribution:
 
 <hr>
 
-<h2><a name="reference_sequence">17. More about the Reference Sequence</a></h2>
+<h2><a name="reference_sequence">18. More about the Reference Sequence</a></h2>
 
 <p>
 
@@ -2209,7 +2222,7 @@ as the default classname.  This means you don't have to have a
 
 <hr>
 
-<h2><a name="semantic_zooming">18. Semantic Zooming</a></h2>
+<h2><a name="semantic_zooming">19. Semantic Zooming</a></h2>
 
 <p>
 
@@ -2320,7 +2333,7 @@ labels will be suppressed.
 
 <hr>
 
-<h2><a name="overview">19. Putting Features into the Overview</a></h2>
+<h2><a name="overview">20. Putting Features into the Overview</a></h2>
 
 <p>
 
@@ -2383,7 +2396,7 @@ displayed.
 
 <hr>
 
-<h2><a name="linking">20. Linking</a></h2>
+<h2><a name="linking">21. Linking</a></h2>
 
 <p>
 
@@ -2528,7 +2541,7 @@ says "Search Google for SUSHI repeat."  Give it a try!
 
 <hr>
 
-<h2><a name="enhancements">21. Enhancements</a></h2>
+<h2><a name="enhancements">22. Enhancements</a></h2>
 
 <p>
 This section will show you how to add two nice user interface
@@ -3000,7 +3013,7 @@ href="http://www.gmod.org/wiki/index.php/Popup_Balloons#Customization">here</a>.
 
 <hr>
 
-<h2><a name="berkeleydb">22. Setting up a Berkeleydb database</a></h2>
+<h2><a name="berkeleydb">23. Setting up a Berkeleydb database</a></h2>
 
 <p>
 
@@ -3188,7 +3201,7 @@ scratch, erasing whatever was there before. Without this flag, the
 provided GFF and/or sequence data will be incrementally added to the
 indexes.</p>
 
-<h2><a name="mysql">23. Setting up a MySQL database</a></h2>
+<h2><a name="mysql">24. Setting up a MySQL database</a></h2>
 
 <p>
 
@@ -3375,7 +3388,7 @@ see the following perldoc manual pages:
 
 <hr>
 
-<h2><a name="third_party">24. Adding Third Party Features</a></h2>
+<h2><a name="third_party">25. Adding Third Party Features</a></h2>
 
 <p>
 
@@ -3759,7 +3772,7 @@ text field and reload.
 
 <hr>
 
-<h2><a name="DAS">25. Using GBrowse as a DAS Server</a></h2>
+<h2><a name="DAS">26. Using GBrowse as a DAS Server</a></h2>
 
 <p>
 
@@ -4256,7 +4269,7 @@ needs.
 
 <hr>
 
-<h2><a name="conclusion">26. Conclusion</a></h2>
+<h2><a name="conclusion">27. Conclusion</a></h2>
 
 <p>
 
@@ -4282,6 +4295,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Wed Mar 21 20:41:27 EDT 2007
+Last modified: Tue Jan  8 16:57:57 EST 2008
 <!-- hhmts end -->
 </body> </html>

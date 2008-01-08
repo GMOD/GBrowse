@@ -40,13 +40,13 @@ Save this to disk as "gbrowse_netinstall.pl" and run:
 
 use warnings;
 use strict;
+use CPAN;
 use Config;
 use Getopt::Long;
 use Pod::Usage;
-use LWP::Simple;
 use File::Copy 'cp';
 use File::Temp qw(tempdir);
-
+use LWP::Simple;
 
 use constant NMAKE => 'http://download.microsoft.com/download/vc15/patch/1.52/w95/en-us/nmake15.exe';
 
@@ -77,52 +77,50 @@ BEGIN {
   print STDERR "\nPress return when you are ready to start!\n";
   my $h = <>;
   print STDERR "*** Installing Perl files needed for a net-based install ***\n";
-  eval {
-    use CPAN qw{install};
-    eval "use CPAN::Config;"; 
-    if ($@) {
-        CPAN::Shell->Config();
-    }
 
-    $tmpdir = tempdir(CLEANUP=>1) 
-      or die "Could not create temporary directory: $!";
+  eval "CPAN::Config->load";
+  eval "CPAN::Config->commit";
 
-    $windows = $Config{osname} =~ /mswin/i;
+  $tmpdir = tempdir(CLEANUP=>1) 
+    or die "Could not create temporary directory: $!";
 
-    $binaries = $Config{'binexp'};
-    $make     = $Config{'make'};
+  $windows = $Config{osname} =~ /mswin/i;
 
-    CPAN::Shell->install('Archive::Zip');
-    CPAN::Shell->install('YAML');
-    CPAN::Shell->install('HTML::Tagset');
-    CPAN::Shell->install('LWP::Simple');
-    use Archive::Zip ':ERROR_CODES';
+  $binaries = $Config{'binexp'};
+  $make     = $Config{'make'};
 
-    if ($windows && !-e "$binaries/${make}.exe") {
+  CPAN::Shell->install('Archive::Zip');
+  CPAN::Shell->install('YAML');
+  CPAN::Shell->install('HTML::Tagset');
+  CPAN::Shell->install('LWP::Simple');
+  eval "use Archive::Zip ':ERROR_CODES',':CONSTANTS'";
 
-      print STDERR "Installing make utility...\n";
+  if ($windows && !-e "$binaries/${make}.exe") {
 
-      -w $binaries or die "$binaries directory is not writeable. Please re-login as Admin.\n";
+    print STDERR "Installing make utility...\n";
+    -w $binaries or die "$binaries directory is not writeable. Please re-login as Admin.\n";
+    chdir $tmpdir;
 
-      chdir $tmpdir;
+    my $rc = mirror(NMAKE,"nmake.zip");
+    die "Could not download nmake executable from Microsoft web site."
+      unless $rc == RC_OK() or $rc == RC_NOT_MODIFIED();
 
-      my $rc = mirror(NMAKE,"nmake.zip");
-      die "Could not download nmake executable from Microsoft web site."
-        unless $rc == RC_OK or $rc == RC_NOT_MODIFIED;
+    my $zip = Archive::Zip->new('nmake.zip') or die "Couldn't open nmake zip file for decompression: $!";
+    $zip->extractTree == AZ_OK() or die "Couldn't unzip file: $!";
+    -e 'NMAKE.EXE' or die "Couldn't extract nmake.exe";
 
-      my $zip = Archive::Zip->new('nmake.zip') or die "Couldn't open nmake zip file for decompression: $!";
-      $zip->extractTree == AZ_OK or die "Couldn't unzip file: $!";
-      -e 'NMAKE.EXE' or die "Couldn't extract nmake.exe";
-
-      cp('NMAKE.EXE',"$binaries/${make}.EXE") or die "Couldn't install nmake.exe: $!";
-      cp('NMAKE.ERR',"$binaries/${make}.ERR"); # or die "Couldn't install nmake.err: $!"; # not fatal
-    }
-
-    CPAN::Shell->install('Archive::Tar');
-    CPAN::HandleConfig->commit;
+    cp('NMAKE.EXE',"$binaries/${make}.EXE") or die "Couldn't install nmake.exe: $!";
+    cp('NMAKE.ERR',"$binaries/${make}.ERR"); # or die "Couldn't install nmake.err: $!"; # not fatal
   }
-}
 
+  CPAN::Shell->install('Archive::Tar');
+  print STDERR $@;
+  print STDERR "at end of BEGIN{}\n";
+  1;
+};
+
+print STDERR "here i am\n";
+print STDERR $@;
 
 use Archive::Tar;
 use CPAN '!get';

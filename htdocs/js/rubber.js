@@ -3,7 +3,7 @@
  rubber.js -- a DHTML library for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.1.2.2 2008-01-09 01:33:15 sheldon_mckay Exp $
+ $Id: rubber.js,v 1.1.2.3 2008-01-09 19:15:19 sheldon_mckay Exp $
 
 */
 
@@ -40,7 +40,6 @@ SelectArea.prototype.initialize = function() {
 
   // disable text selection 
   self.disableSelection(p);
-
 
   // We replace the scale-bar image with a <span> that has the image as its background
   // This relieves the image drag side-effect and also helps with getting
@@ -130,6 +129,7 @@ SelectArea.prototype.eventLocation = function(event,request) {
 // of the selectable image -- horizontal position does not matter
 SelectArea.prototype.startRubber = function(event) {
   var self = currentSelectArea;
+  self.addSelectBox();
 
   // disable help balloon after first selection is made.
   if (balloon) {
@@ -275,7 +275,11 @@ SelectArea.prototype.addSelectMenu = function() {
 SelectArea.prototype.addSelectBox = function() {
   var self = currentSelectArea;
 
-  if (self.selectBox = document.getElementById('selectBox')) {
+  if (self.selectBox) {
+    // Adjust the vertical offset (in case page geometry has been changed
+    // by collapsible sections)  
+    var newTop = self.elementLocation(self.panels,'y1');
+    YAHOO.util.Dom.setStyle(self.selectBox,'top',newTop+'px');
     return false;
   }
  

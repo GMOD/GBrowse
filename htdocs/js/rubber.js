@@ -3,7 +3,7 @@
  rubber.js -- a DHTML library for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.1.2.1 2007-07-24 17:14:27 sheldon_mckay Exp $
+ $Id: rubber.js,v 1.1.2.2 2008-01-09 01:33:15 sheldon_mckay Exp $
 
 */
 
@@ -13,59 +13,78 @@ var selectAreaIsActive;
 
 // Constructor
 var SelectArea = function () {
-  this.imageName  = 'detailedView';
+
+  this.imageName  = 'detail___scale__'; 
   this.padLeft    = 25;
   this.padRight   = 25;
+
   currentSelectArea = this;
+  return currentSelectArea;
 }
 
-SelectArea.prototype.getSelectArea = function() {
-  var images = document.getElementsByName(this.imageName);
+SelectArea.prototype.initialize = function() {
+  var self = new SelectArea;
+
+  var images = document.getElementsByName(self.imageName);
   var i = images[0];
+  if (!i) return false;
+
+  var p = document.getElementById('panels');
+  var details = document.getElementById('details_panel_hide');
   this.height = this.elementLocation(i,'height');
+  this.panelHeight = this.elementLocation(p,'height');
   this.width  = this.elementLocation(i,'width');
   var src    = i.src
   var parent = i.parentNode;
+  this.panels = p;
 
-  // We replace the image with a <span> that has the image as its background
+  // disable text selection 
+  self.disableSelection(p);
+
+
+  // We replace the scale-bar image with a <span> that has the image as its background
   // This relieves the image drag side-effect and also helps with getting
   // the proper image coordinates
   parent.removeChild(i);
-  var newImage = this.createAndAppend('span',parent,this.imageName);
+  var newImage = self.createAndAppend('span',parent,self.imageName);
 
-  YAHOO.util.Dom.setStyle(newImage,'width',this.width+'px');
-  YAHOO.util.Dom.setStyle(newImage,'height',this.height+'px');
+  YAHOO.util.Dom.setStyle(newImage,'width',self.width+'px');
+  YAHOO.util.Dom.setStyle(newImage,'height',self.height+'px');
   YAHOO.util.Dom.setStyle(newImage,'background', 'url('+src+') top left no-repeat');
   //YAHOO.util.Dom.setStyle(newImage,'border','5px solid purple'); // temporary tracer
   YAHOO.util.Dom.setStyle(newImage,'display','block');
 
-  this.top     = this.elementLocation(newImage,'y1');
-  this.bottom  = this.elementLocation(newImage,'y2');
-  this.left    = this.elementLocation(newImage,'x1');
-  this.right   = this.elementLocation(newImage,'x2');
+  self.top     = self.elementLocation(newImage,'y1');
+  self.bottom  = self.elementLocation(p,'y2');
+  self.left    = self.elementLocation(newImage,'x1');
+  self.right   = self.elementLocation(newImage,'x2');
 
-  this.getSegment();
-  this.addSelectMenu();
-  this.addSelectBox();
+  if (balloon) {
+    var helpFunction = function(event) { 
+      if (!event) {
+        event = window.event;
+      }
+      var help = '<b>Scalebar:</b> Click here and drag left or right to select a region';
+      balloon.showTooltip(event,help,0,250);
+    }
+    newImage.onmouseover = helpFunction;
+  }
+  else {
+    newImage.setAttribute('title','click and drag to select a region');
+  }
+
+  self.scalebar = newImage;  
+
+  self.getSegment();
+  self.addSelectMenu();
+  self.addSelectBox();
 }
 
 SelectArea.prototype.getSegment = function () {
-  // get the segment from the boilerplate.  We can;t rely on the 'name' input element
-  var segment;
-  var allH2 = document.getElementsByTagName('h2');
-  var i=0;
-  while (!segment) {
-    var text = allH2[i].innerHTML;
-    segment = text.match(/from\s+(\S+),\s+positions\s+(\S+)\s+to\s+(\S+)/);
-    i++
-  }
- 
-  if (!segment) return false;
-
-  this.ref   = segment[1];
-  // remove commas and convert to numbers
-  this.segmentStart = segment[2].replace(/\D/g,'') * 1;
-  this.segmentEnd   = segment[3].replace(/\D/g,'') * 1; 
+  // get the segment from gbrowse CGI parameters
+  this.ref          = document.mainform.ref.value;
+  this.segmentStart = document.mainform.start.value.replace(/\D+/g, '') * 1;
+  this.segmentEnd   = document.mainform.stop.value.replace(/\D+/g, '') * 1;
 
   // pixel to base-pair conversion factor
   this.pixelStart   = this.left  + this.padLeft;
@@ -74,8 +93,8 @@ SelectArea.prototype.getSegment = function () {
   var segmentLength = this.segmentEnd - this.segmentStart;
   this.pixelToDNA   = segmentLength/pixelLength; 
 
-  // remeber the original lanmark so it can be reset
-  this.originalLandmark = document.mainform.name.value;
+  // remember the original landmark so it can be reset
+  this.originalLandmark = this.ref + ':' + this.segmentStart + '..' + this.segmentEnd;
 }
 
 
@@ -107,15 +126,31 @@ SelectArea.prototype.eventLocation = function(event,request) {
   }
 }
 
-
 // Fired when there is a mousedown between the top and bottom
 // of the selectable image -- horizontal position does not matter
 SelectArea.prototype.startRubber = function(event) {
   var self = currentSelectArea;
+
+  // disable help balloon after first selection is made.
+  if (balloon) {
+    balloon.hideTooltip();
+    var nullfunc = function(){return false};
+    self.scalebar.onmouseover = nullfunc;
+  }
+
   self.selectPixelStart = self.eventLocation(event,'x');
   YAHOO.util.Dom.setStyle(self.selectBox,'visibility','hidden');
-  YAHOO.util.Dom.setStyle(self.selectMenu,'visibility','hidden');
   YAHOO.util.Dom.setStyle(self.selectBox,'left',self.selectPixelStart+'px');
+  YAHOO.util.Dom.setStyle(self.selectBox,'width','2px');
+  YAHOO.util.Dom.setStyle(self.selectBox,'padding-top','35px');
+  YAHOO.util.Dom.setStyle(self.selectBox,'text-align', 'center');	
+  YAHOO.util.Dom.setStyle(self.selectBox,'visibility','visible');
+  YAHOO.util.Dom.setStyle(self.selectMenu,'visibility','hidden');
+
+  // height of select box to match height of detail panel
+  var h = self.elementLocation(self.panels,'height');
+  YAHOO.util.Dom.setStyle(self.selectBox,'height',h+'px');
+  
   self.selectBox.innerHTML = ' ';
   selectAreaIsActive = true;
 }
@@ -134,16 +169,21 @@ SelectArea.prototype.moveRubber = function(event) {
 
   var self = currentSelectArea;
   var selectPixelStart = self.selectPixelStart;
-
-  var selectPixelEnd = self.eventLocation(event,'x');
+  var selectPixelEnd   = self.eventLocation(event,'x');
   var selectPixelWidth = Math.abs(selectPixelStart - selectPixelEnd);
+
+  var rev, left;
   if (selectPixelStart > selectPixelEnd) {
-    selectPixelStart = selectPixelEnd;
-    selectPixelEnd = selectPixelStart + selectPixelWidth;
-  } 
+    rev  = true;
+    left = selectPixelEnd;
+    self.selectPixelStart = left;
+  }
+  else {
+    left = selectPixelStart;
+  }
 
   // Coordinates of selected sequence
-  var deltaPixelStart      = selectPixelStart - self.pixelStart;
+  var deltaPixelStart      = left - self.pixelStart;
   var deltaSequenceStart   = deltaPixelStart * self.pixelToDNA;
   self.selectSequenceStart = Math.round(self.segmentStart + deltaSequenceStart);
   var selectSequenceWidth  = Math.round(selectPixelWidth * self.pixelToDNA);
@@ -155,13 +195,13 @@ SelectArea.prototype.moveRubber = function(event) {
 
   // size and appearance of the "rubber band" select box
   YAHOO.util.Dom.setStyle(self.selectBox,'width','1px');
-  YAHOO.util.Dom.setStyle(self.selectBox,'left',selectPixelStart+'px');
+  YAHOO.util.Dom.setStyle(self.selectBox,'left',left+'px');
   YAHOO.util.Dom.setStyle(self.selectBox,'width',selectPixelWidth+'px');
   YAHOO.util.Dom.setStyle(self.selectBox,'visibility','visible');
 
-  if (selectPixelWidth > 40) {
+  if (selectPixelWidth > 75) {
     self.selectBox.innerHTML = '\
-      <br><h2 style="text-align:center">'+selectSequenceWidth+' bp</h3>';
+      <h2>'+selectSequenceWidth+' bp</h2>';
   }
   else {
     self.selectBox.innerHTML = ' ' ;
@@ -170,6 +210,16 @@ SelectArea.prototype.moveRubber = function(event) {
   self.selectPixelStart = selectPixelStart;
 }
 
+// taken from http://ajaxcookbook.org/disable-text-selection/
+// prevents ugly drag select side-effects
+SelectArea.prototype.disableSelection = function(el) {
+    el.onselectstart = function() {
+        return false;
+    };
+    el.unselectable = "on";
+    el.style.MozUserSelect = "none";
+    el.style.cursor = "default";
+}
 
 
 // Builds the popup menu that appears when selection is complete
@@ -184,20 +234,21 @@ SelectArea.prototype.addSelectMenu = function() {
   YAHOO.util.Dom.setStyle(menu,'position','absolute');
   YAHOO.util.Dom.setStyle(menu,'display','block');
   YAHOO.util.Dom.setStyle(menu,'z-index','101');
-  //YAHOO.util.Dom.setStyle(menu,'width','150px');
+  YAHOO.util.Dom.setStyle(menu,'width','200px');
   YAHOO.util.Dom.setStyle(menu,'font-family','sans-serif');
   YAHOO.util.Dom.setStyle(menu,'font-size','12px');
   YAHOO.util.Dom.setStyle(menu,'background-color','lightyellow');
+  YAHOO.util.Dom.setStyle(menu,'border','1px solid #003366');
+  YAHOO.util.Dom.setStyle(menu,'visibility','visible');
   self.selectMenu = menu;
 
   var URL = window.location; 
   URL = new String(URL);
   URL = URL.replace(/\?\S+/, ''); 
   var FASTA  = '?plugin=FastaDumper;plugin_action=Go;name=SELECTION'
-  var GFF    = '?plugin=GFFDumper;plugin_action=Go;name=SELECTION'
 
   self.menuHTML = '\
-  <table style="font-size:small">\
+  <table>\
    <tr>\
     <th style="background-color:lightgrey;cell-padding:5">SELECTION</th>\
    </tr>\
@@ -205,10 +256,9 @@ SelectArea.prototype.addSelectMenu = function() {
      <td><a href="javascript:void()">Zoom in</a></td>\
    </tr>\
    <tr>\
-     <td><a href="'+FASTA+'" target="_new">Dump as FASTA</a></td>\
-   </tr>\
-   <tr>\
-     <td><a href="'+GFF+'" target="_new">Dump as GFF</a></td>\
+     <td onmouseup="SelectArea.prototype.cancelRubber()">\
+       <a href="'+FASTA+'" target="_new">Dump sequence as FASTA</a>\
+     </td>\
    </tr>\
    <tr onmousedown="SelectArea.prototype.clearAndRecenter()">\
      <td><a href="javascript:void()">Recenter</a></td>\
@@ -228,37 +278,32 @@ SelectArea.prototype.addSelectBox = function() {
   if (self.selectBox = document.getElementById('selectBox')) {
     return false;
   }
-  
-  var box = self.createAndAppend('div',document.body,'selectBox');
+ 
+  var box = self.createAndAppend('div',this.panels,'selectBox');
 
   YAHOO.util.Dom.setStyle(box,'position','absolute');
   YAHOO.util.Dom.setStyle(box,'display', 'inline');
+  YAHOO.util.Dom.setStyle(box,'visibility', 'hidden');
   YAHOO.util.Dom.setStyle(box,'top',self.top+'px');
-  YAHOO.util.Dom.setStyle(box,'height',self.height+'px');
   YAHOO.util.Dom.setStyle(box,'left','0px');
   YAHOO.util.Dom.setStyle(box,'border-left','2px solid blue');
   YAHOO.util.Dom.setStyle(box,'border-right','2px solid blue');
-  YAHOO.util.Dom.setStyle(box,'visibility','hidden');
   YAHOO.util.Dom.setStyle(box,'background-color','#BABABA');
   YAHOO.util.Dom.setStyle(box,'z-index',100);
   self.setOpacity(box,0.5);
 
-
-  // Also create a 100% width box that will have the event handlers
-  var outerBox = self.createAndAppend('div',document.body,'outerBox');
-  YAHOO.util.Dom.setStyle(outerBox,'position','absolute');
-  YAHOO.util.Dom.setStyle(outerBox,'top',self.top+'px');
-  YAHOO.util.Dom.setStyle(outerBox,'height',self.height+'px');
-  YAHOO.util.Dom.setStyle(outerBox,'left','0px');
-  YAHOO.util.Dom.setStyle(outerBox,'width','100%');
-  //YAHOO.util.Dom.setStyle(outerBox,'border','2px solid red');
-
-  outerBox.onmousedown = self.startRubber;
-  outerBox.onmousemove = self.moveRubber;
+  this.scalebar.onmousedown = self.startRubber;
+  this.panels.onmousemove = self.moveRubber;
   document.onmouseup   = self.stopRubber;  
 
+  // the select box itself also needs a mousemove event handler 
+  box.onmousemove = self.moveRubber;
+
+  // get rid of nasty drag select in non-Mozilla browsers
+  //var disabled = function(){return false;}
+  //document.onmousemove = disabled;;
+
   self.selectBox = box;
-  self.outerBox  = outerBox;
 }
 
 
@@ -341,7 +386,7 @@ SelectArea.prototype.showMenu = function(event) {
     YAHOO.util.Dom.setStyle(self.selectMenu,'left', boxLeft+'px');
   }   
 
-  YAHOO.util.Dom.setStyle(self.selectMenu,'visibility','visible');  
+  YAHOO.util.Dom.setStyle(self.selectMenu,'visibility','visible');
 
 }
 

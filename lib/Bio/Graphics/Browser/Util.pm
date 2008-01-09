@@ -249,7 +249,10 @@ sub print_top {
   my $js = $CONFIG->relative_path_setting('js')||JS;
   my @js = ('buttons.js','prototype.js');
   push @js,qw(yahoo-dom-event.js balloon.js)     if $b_tips;
-  push @js,qw(scriptaculous.js)     if $drag_and_drop;
+  if ($drag_and_drop) {
+    push @js,qw(scriptaculous.js rubber.js);
+    push @args, (-onLoad => 'SelectArea.prototype.initialize()');
+  }
 
   my @scripts = map { {src=> "$js/$_" } } @js;
   push @args,(-script=>\@scripts);

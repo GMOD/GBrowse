@@ -3,7 +3,7 @@
  rubber.js -- a DHTML library for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.1.2.3 2008-01-09 19:15:19 sheldon_mckay Exp $
+ $Id: rubber.js,v 1.1.2.4 2008-01-09 21:57:08 sheldon_mckay Exp $
 
 */
 
@@ -142,7 +142,7 @@ SelectArea.prototype.startRubber = function(event) {
   YAHOO.util.Dom.setStyle(self.selectBox,'visibility','hidden');
   YAHOO.util.Dom.setStyle(self.selectBox,'left',self.selectPixelStart+'px');
   YAHOO.util.Dom.setStyle(self.selectBox,'width','2px');
-  YAHOO.util.Dom.setStyle(self.selectBox,'padding-top','35px');
+  YAHOO.util.Dom.setStyle(self.selectBox,'padding-top','40px');
   YAHOO.util.Dom.setStyle(self.selectBox,'text-align', 'center');	
   YAHOO.util.Dom.setStyle(self.selectBox,'visibility','visible');
   YAHOO.util.Dom.setStyle(self.selectMenu,'visibility','hidden');
@@ -156,13 +156,25 @@ SelectArea.prototype.startRubber = function(event) {
 }
 
 SelectArea.prototype.cancelRubber = function() {
-  var self = currentSelectArea;
+  var self = currentSelectArea || new SelectArea;
 
+  if (!self.selectBox) return false;
+  
   YAHOO.util.Dom.setStyle(self.selectBox,'visibility','hidden');
   YAHOO.util.Dom.setStyle(self.selectMenu,'visibility','hidden');
   selectAreaIsActive = false;
-  document.mainform.name.value = self.originalLandmark;
+
+  if (self.originalLandmark) {
+    document.mainform.name.value = self.originalLandmark;
+  }
 }
+
+SelectArea.prototype.round = function(nearest,num) {
+  if (num > nearest) {
+    num = Math.round(num/nearest)*nearest;
+  }
+  return num;
+} 
 
 SelectArea.prototype.moveRubber = function(event) {
   if (!selectAreaIsActive) return false;
@@ -188,6 +200,29 @@ SelectArea.prototype.moveRubber = function(event) {
   self.selectSequenceStart = Math.round(self.segmentStart + deltaSequenceStart);
   var selectSequenceWidth  = Math.round(selectPixelWidth * self.pixelToDNA);
   self.selectSequenceEnd   = self.selectSequenceStart + selectSequenceWidth;
+
+  var segmentLength = Math.abs(self.segmentEnd - self.segmentStart);
+  
+  // Round the sequence coordinates to the nearest appropriate 10x
+  if (segmentLength > 1000000) {
+    self.selectSequenceStart = self.round(10000,self.selectSequenceStart);
+    self.selectSequenceEnd = self.round(10000,self.selectSequenceEnd);
+  }
+  else if (segmentLength > 50000) {
+    self.selectSequenceStart = self.round(1000,self.selectSequenceStart);
+    self.selectSequenceEnd = self.round(1000,self.selectSequenceEnd);
+  }
+  else if (segmentLength > 5000) {
+    self.selectSequenceStart = self.round(100,self.selectSequenceStart);
+    self.selectSequenceEnd = self.round(100,self.selectSequenceEnd);
+  }
+  else if (segmentLength > 500) {
+    self.selectSequenceStart = self.round(10,self.selectSequenceStart);
+    self.selectSequenceEnd = self.round(10,self.selectSequenceEnd);
+  }
+  
+  selectSequenceWidth = Math.abs(self.selectSequenceEnd - self.selectSequenceStart);
+
 
   // reset the value of the 'name' input box
   self.currentSegment = self.ref +':'+self.selectSequenceStart+'..'+self.selectSequenceEnd;
@@ -250,7 +285,7 @@ SelectArea.prototype.addSelectMenu = function() {
   self.menuHTML = '\
   <table>\
    <tr>\
-    <th style="background-color:lightgrey;cell-padding:5">SELECTION</th>\
+    <th style="background:lightgrey;cell-padding:5">SELECTION</td>\
    </tr>\
    <tr onmousedown="SelectArea.prototype.clearAndSubmit()">\
      <td><a href="javascript:void()">Zoom in</a></td>\
@@ -296,9 +331,23 @@ SelectArea.prototype.addSelectBox = function() {
   YAHOO.util.Dom.setStyle(box,'z-index',100);
   self.setOpacity(box,0.5);
 
+  // click on scalebar initializes selection
   this.scalebar.onmousedown = self.startRubber;
-  this.panels.onmousemove = self.moveRubber;
-  document.onmouseup   = self.stopRubber;  
+
+  // drag and mouseup on details panel fires menu
+  this.panels.onmousemove   = self.moveRubber;
+  this.panels.onmouseup     = self.stopRubber;  
+
+  // allows drag-back
+  box.onmousemove           = self.moveRubber;
+
+  // 'esc' key aborts
+  var abort = function(event){
+    var evt = event || window.event;
+    if (evt.keyCode == 27) self.cancelRubber();
+    return true;
+  }
+  document.onkeydown        = abort;
 
   // the select box itself also needs a mousemove event handler 
   box.onmousemove = self.moveRubber;
@@ -345,7 +394,7 @@ SelectArea.prototype.stopRubber = function(event) {
 
 SelectArea.prototype.showMenu = function(event) {
   var self = currentSelectArea;
-
+  
   self.selectMenu.innerHTML = self.menuHTML.replace(/SELECTION/g,self.currentSegment);
 
   // Center the popup menu on the cursor
@@ -429,6 +478,10 @@ SelectArea.prototype.clearAndRecenter = function() {
 // background color
 SelectArea.prototype.setOpacity = function(el,opc) {
   if (!(el && opc)) return false;
+
+  // Don't do anything for Konqueror
+  if (navigator.userAgent.indexOf( 'Konqueror' ) != -1) return false;
+
   opc = parseFloat(opc);
   YAHOO.util.Dom.setStyle(el,'opacity',opc);
   YAHOO.util.Dom.setStyle(el,'filter','alpha(opacity= '+(100*opc)+')');

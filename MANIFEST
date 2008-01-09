@@ -12,6 +12,7 @@ cgi-bin/gbrowse_details.PLS
 cgi-bin/gbrowse_est.PLS
 cgi-bin/gbrowse_img.PLS
 cgi-bin/gbrowse_moby.PLS
+cgi-bin/gbrowse_syn.PLS
 cgi-bin/moby_server.PLS
 cgi-bin/README
 cgi-bin/tutorial_test.pl
@@ -300,6 +301,8 @@ lib/Bio/DB/GFF/Aggregator/orf.pm
 lib/Bio/DB/GFF/Aggregator/reftranscript.pm
 lib/Bio/DB/GFF/Aggregator/waba_alignment.pm
 lib/Bio/DB/GFF/Aggregator/wormbase_gene.pm
+lib/Bio/DB/GFF/SyntenyBlock.pm
+lib/Bio/DB/GFF/SyntenyIO.pm
 lib/Bio/Graphics/Browser.pm
 lib/Bio/Graphics/Browser/GFFhelper.pm
 lib/Bio/Graphics/Browser/I18n.pm
@@ -311,6 +314,7 @@ lib/Bio/Graphics/Browser/Plugin.pm
 lib/Bio/Graphics/Browser/PluginSet.pm
 lib/Bio/Graphics/Browser/Realign.pm
 lib/Bio/Graphics/Browser/RemoteSet.pm
+lib/Bio/Graphics/Browser/Synteny.pm
 lib/Bio/Graphics/Browser/UploadSet.pm
 lib/Bio/Graphics/Browser/Util.pm
 lib/Bio/Graphics/DenseFeature.pm

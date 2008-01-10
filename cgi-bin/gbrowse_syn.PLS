@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_syn.PLS,v 1.9.2.3 2007-12-21 21:53:54 sheldon_mckay Exp $
+#$Id: gbrowse_syn.PLS,v 1.9.2.4 2008-01-10 14:51:34 sheldon_mckay Exp $
 
 use strict;
 
@@ -402,11 +402,11 @@ sub draw_image {
   my $ref_title = $MAP->{$src}{desc} . ' ' . format_segment($segment);
 
   # pad all of the span coordinates for a bit of regional context 
-  #for my $key (keys %span) {
-  #  my $width = $span{$key}{end} - $span{$key}{start};
-  #  $span{$key}{start} -= int $width/20;
-  #  $span{$key}{end  } += int $width/20;
-  #}
+  for my $key (keys %span) {
+    my $width = $span{$key}{end} - $span{$key}{start};
+    $span{$key}{start} -= int $width/20;
+    $span{$key}{end  } += int $width/20;
+  }
 
 
   # we now create panels and corresponding hit feature files for each of the small
@@ -747,7 +747,7 @@ sub segment2image {
     @labels = ('ff_top','ff_scale',@tracks,'ff_bottom');
   }
   elsif ($hits_top) {
-    @labels = ('ff_top',@tracks);
+    @labels = ('ff_top','zz_scale',@tracks);
   }
   elsif ($hits_bottom) {
     @labels = (@tracks,'ff_scale','ff_bottom');
@@ -759,7 +759,10 @@ sub segment2image {
   my %ff_hash;
   $ff_hash{ff_top}    = $hits_top    if $hits_top;
   $ff_hash{ff_bottom} = $hits_bottom if $hits_bottom;
-  $ff_hash{ff_scale}  = $ff_scale;
+
+  # coerce correct track order in bottom panel
+  my $scale_label = $hits_bottom && !$hits_bottom ? 'zz_scale' : 'ff_scale';
+  $ff_hash{$scale_label}  = $ff_scale;
 
   $SCONF->width($width) if defined $width;
   $SCONF->setting('general','image_padding' => INTERIMAGE_PAD);

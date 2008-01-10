@@ -3,7 +3,7 @@
  rubber.js -- a DHTML library for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.1.2.5 2008-01-10 13:44:31 sheldon_mckay Exp $
+ $Id: rubber.js,v 1.1.2.6 2008-01-10 14:34:16 sheldon_mckay Exp $
 
 */
 
@@ -96,7 +96,7 @@ SelectArea.prototype.getSegment = function() {
   this.ref          = document.mainform.ref.value;
   this.segmentStart = document.mainform.start.value.replace(/\D+/g, '') * 1;
   this.segmentEnd   = document.mainform.stop.value.replace(/\D+/g, '') * 1;
-  this.flip         = document.mainform.flip.value ? 'on' : false;
+  this.flip         = document.mainform.flip.checked;
 
   // pixel to base-pair conversion factor
   this.pixelStart   = this.left  + this.padLeft;
@@ -244,8 +244,7 @@ SelectArea.prototype.moveRubber = function(event) {
 
 
   // reset the value of the 'name' input box
-  self.currentSegment = self.flip ? self.ref +':'+self.selectSequenceStart+'..'+self.selectSequenceEnd
-                                  : self.ref +':'+self.selectSequenceEnd+'..'+self.selectSequenceStart;
+  self.currentSegment = self.ref +':'+self.selectSequenceStart+'..'+self.selectSequenceEnd;
   document.mainform.name.value = self.currentSegment;
 
   // size and appearance of the "rubber band" select box

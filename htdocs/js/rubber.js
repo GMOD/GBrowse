@@ -3,7 +3,7 @@
  rubber.js -- a DHTML library for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.1.2.7 2008-01-10 15:40:56 sheldon_mckay Exp $
+ $Id: rubber.js,v 1.1.2.8 2008-01-10 16:29:15 sheldon_mckay Exp $
 
 */
 
@@ -63,7 +63,7 @@ SelectArea.prototype.initialize = function() {
       if (!event) {
         event = window.event;
       }
-      var help = '<b>Scalebar:</b> Click here and drag left or right to select a region';
+      var help = '<b>Scalebar:</b> Click here to recenter or click and drag left or right to select a region';
       balloon.showTooltip(event,help,0,250);
     }
     newImage.onmouseover = helpFunction;
@@ -87,9 +87,10 @@ SelectArea.prototype.recenter = function(event) {
   var coord  = self.flip ? Math.round(self.segmentEnd - deltaSequenceStart)
                          : Math.round(self.segmentStart + deltaSequenceStart);
   var half   = Math.abs((self.segmentEnd - self.segmentStart)/2);
-  var start  = self.flip ? coord + half : coord - half;
-  var end    = self.flip ? coord - half : coord + half;
-  document.location  = '?ref=' + self.ref + ';start=' +  start + ';stop=' + end;
+  var start  = coord - half;
+  var end    = coord + half;
+  document.mainform.name.value = self.ref + ':' + start + '..' + end;
+  document.mainform.submit();
 }
 
 SelectArea.prototype.getSegment = function() {
@@ -304,7 +305,7 @@ SelectArea.prototype.addSelectMenu = function() {
   var FASTA  = '?plugin=FastaDumper;plugin_action=Go;name=SELECTION'
 
   self.menuHTML = '\
-  <table>\
+  <table style="width:100%">\
    <tr>\
     <th style="background:lightgrey;cell-padding:5">SELECTION</td>\
    </tr>\

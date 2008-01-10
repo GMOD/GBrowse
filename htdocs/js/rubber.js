@@ -3,7 +3,7 @@
  rubber.js -- a DHTML library for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.1.2.6 2008-01-10 14:34:16 sheldon_mckay Exp $
+ $Id: rubber.js,v 1.1.2.7 2008-01-10 15:40:56 sheldon_mckay Exp $
 
 */
 
@@ -84,7 +84,8 @@ SelectArea.prototype.recenter = function(event) {
   var deltaPixelStart      = self.selectPixelStart - self.pixelStart;
   var deltaSequenceStart   = deltaPixelStart * self.pixelToDNA;
 
-  var coord  = Math.round(self.segmentStart + deltaSequenceStart);
+  var coord  = self.flip ? Math.round(self.segmentEnd - deltaSequenceStart)
+                         : Math.round(self.segmentStart + deltaSequenceStart);
   var half   = Math.abs((self.segmentEnd - self.segmentStart)/2);
   var start  = self.flip ? coord + half : coord - half;
   var end    = self.flip ? coord - half : coord + half;

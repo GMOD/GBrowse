@@ -3,7 +3,7 @@
  rubber.js -- a DHTML library for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.1.2.4 2008-01-09 21:57:08 sheldon_mckay Exp $
+ $Id: rubber.js,v 1.1.2.5 2008-01-10 13:44:31 sheldon_mckay Exp $
 
 */
 
@@ -79,11 +79,24 @@ SelectArea.prototype.initialize = function() {
   self.addSelectBox();
 }
 
-SelectArea.prototype.getSegment = function () {
+SelectArea.prototype.recenter = function(event) {
+  var self = currentSelectArea;
+  var deltaPixelStart      = self.selectPixelStart - self.pixelStart;
+  var deltaSequenceStart   = deltaPixelStart * self.pixelToDNA;
+
+  var coord  = Math.round(self.segmentStart + deltaSequenceStart);
+  var half   = Math.abs((self.segmentEnd - self.segmentStart)/2);
+  var start  = self.flip ? coord + half : coord - half;
+  var end    = self.flip ? coord - half : coord + half;
+  document.location  = '?ref=' + self.ref + ';start=' +  start + ';stop=' + end;
+}
+
+SelectArea.prototype.getSegment = function() {
   // get the segment from gbrowse CGI parameters
   this.ref          = document.mainform.ref.value;
   this.segmentStart = document.mainform.start.value.replace(/\D+/g, '') * 1;
   this.segmentEnd   = document.mainform.stop.value.replace(/\D+/g, '') * 1;
+  this.flip         = document.mainform.flip.value ? 'on' : false;
 
   // pixel to base-pair conversion factor
   this.pixelStart   = this.left  + this.padLeft;
@@ -129,7 +142,6 @@ SelectArea.prototype.eventLocation = function(event,request) {
 // of the selectable image -- horizontal position does not matter
 SelectArea.prototype.startRubber = function(event) {
   var self = currentSelectArea;
-  self.addSelectBox();
 
   // disable help balloon after first selection is made.
   if (balloon) {
@@ -144,13 +156,17 @@ SelectArea.prototype.startRubber = function(event) {
   YAHOO.util.Dom.setStyle(self.selectBox,'width','2px');
   YAHOO.util.Dom.setStyle(self.selectBox,'padding-top','40px');
   YAHOO.util.Dom.setStyle(self.selectBox,'text-align', 'center');	
-  YAHOO.util.Dom.setStyle(self.selectBox,'visibility','visible');
+  //YAHOO.util.Dom.setStyle(self.selectBox,'visibility','visible');
   YAHOO.util.Dom.setStyle(self.selectMenu,'visibility','hidden');
 
   // height of select box to match height of detail panel
   var h = self.elementLocation(self.panels,'height');
   YAHOO.util.Dom.setStyle(self.selectBox,'height',h+'px');
   
+  // vertical offset may also need adjusting
+  var t = self.elementLocation(self.panels,'y1');
+  YAHOO.util.Dom.setStyle(self.selectBox,'top',t+'px');
+
   self.selectBox.innerHTML = ' ';
   selectAreaIsActive = true;
 }
@@ -167,6 +183,7 @@ SelectArea.prototype.cancelRubber = function() {
   if (self.originalLandmark) {
     document.mainform.name.value = self.originalLandmark;
   }
+  self.moved = false;
 }
 
 SelectArea.prototype.round = function(nearest,num) {
@@ -197,9 +214,11 @@ SelectArea.prototype.moveRubber = function(event) {
   // Coordinates of selected sequence
   var deltaPixelStart      = left - self.pixelStart;
   var deltaSequenceStart   = deltaPixelStart * self.pixelToDNA;
-  self.selectSequenceStart = Math.round(self.segmentStart + deltaSequenceStart);
+  self.selectSequenceStart = self.flip ? Math.round(self.segmentEnd - deltaSequenceStart) 
+                                       : Math.round(self.segmentStart + deltaSequenceStart);
   var selectSequenceWidth  = Math.round(selectPixelWidth * self.pixelToDNA);
-  self.selectSequenceEnd   = self.selectSequenceStart + selectSequenceWidth;
+  self.selectSequenceEnd   = self.flip ? self.selectSequenceStart - selectSequenceWidth 
+                                       : self.selectSequenceStart + selectSequenceWidth;
 
   var segmentLength = Math.abs(self.segmentEnd - self.segmentStart);
   
@@ -225,7 +244,8 @@ SelectArea.prototype.moveRubber = function(event) {
 
 
   // reset the value of the 'name' input box
-  self.currentSegment = self.ref +':'+self.selectSequenceStart+'..'+self.selectSequenceEnd;
+  self.currentSegment = self.flip ? self.ref +':'+self.selectSequenceStart+'..'+self.selectSequenceEnd
+                                  : self.ref +':'+self.selectSequenceEnd+'..'+self.selectSequenceStart;
   document.mainform.name.value = self.currentSegment;
 
   // size and appearance of the "rubber band" select box
@@ -243,6 +263,7 @@ SelectArea.prototype.moveRubber = function(event) {
   }
 
   self.selectPixelStart = selectPixelStart;
+  self.moved = true;
 }
 
 // taken from http://ajaxcookbook.org/disable-text-selection/
@@ -310,13 +331,7 @@ SelectArea.prototype.addSelectMenu = function() {
 SelectArea.prototype.addSelectBox = function() {
   var self = currentSelectArea;
 
-  if (self.selectBox) {
-    // Adjust the vertical offset (in case page geometry has been changed
-    // by collapsible sections)  
-    var newTop = self.elementLocation(self.panels,'y1');
-    YAHOO.util.Dom.setStyle(self.selectBox,'top',newTop+'px');
-    return false;
-  }
+  if (self.selectBox) return false;
  
   var box = self.createAndAppend('div',this.panels,'selectBox');
 
@@ -327,7 +342,6 @@ SelectArea.prototype.addSelectBox = function() {
   YAHOO.util.Dom.setStyle(box,'left','0px');
   YAHOO.util.Dom.setStyle(box,'border-left','2px solid blue');
   YAHOO.util.Dom.setStyle(box,'border-right','2px solid blue');
-  YAHOO.util.Dom.setStyle(box,'background-color','#BABABA');
   YAHOO.util.Dom.setStyle(box,'z-index',100);
   self.setOpacity(box,0.5);
 
@@ -348,13 +362,6 @@ SelectArea.prototype.addSelectBox = function() {
     return true;
   }
   document.onkeydown        = abort;
-
-  // the select box itself also needs a mousemove event handler 
-  box.onmousemove = self.moveRubber;
-
-  // get rid of nasty drag select in non-Mozilla browsers
-  //var disabled = function(){return false;}
-  //document.onmousemove = disabled;;
 
   self.selectBox = box;
 }
@@ -385,10 +392,15 @@ SelectArea.prototype.justAppend = function(child,parent) {
 
 SelectArea.prototype.stopRubber = function(event) {
   if (!selectAreaIsActive) return false;
-
   var self = currentSelectArea;
+  if (!self.moved) {
+    self.cancelRubber();
+    self.recenter();
+    return false;
+  }
 
   selectAreaIsActive = false;
+  self.moved = false;
   self.showMenu(event);
 }
 
@@ -483,6 +495,7 @@ SelectArea.prototype.setOpacity = function(el,opc) {
   if (navigator.userAgent.indexOf( 'Konqueror' ) != -1) return false;
 
   opc = parseFloat(opc);
+  YAHOO.util.Dom.setStyle(el,'background-color','#BABABA');
   YAHOO.util.Dom.setStyle(el,'opacity',opc);
   YAHOO.util.Dom.setStyle(el,'filter','alpha(opacity= '+(100*opc)+')');
   YAHOO.util.Dom.setStyle(el,'MozOpacity',opc);

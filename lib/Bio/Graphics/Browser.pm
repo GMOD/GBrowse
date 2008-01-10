@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.52 2008-01-02 19:28:40 scottcain Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.53 2008-01-10 15:02:25 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -2398,7 +2398,9 @@ errors involving uploaded/remote annotation files.
 
 sub error {
   my $self = shift; # do nothing
-  $self->{'.err_msg'} = shift if @_;
+  my $err_msg = shift;
+  $err_msg = '' if ref $err_msg;
+  $self->{'.err_msg'} = $err_msg;
   $self->{'.err_msg'};
 }
 

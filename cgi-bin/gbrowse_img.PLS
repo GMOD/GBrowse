@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.4 2007-11-27 17:15:38 sheldon_mckay Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.5 2008-01-11 16:41:39 scottcain Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -307,6 +307,8 @@ else {
     : 'binary/octet-stream';
   print header($type);
   open F,$panel->{file} or die "$panel->{file}: $!";
+  binmode(F);
+  binmode(STDOUT);
   my $buffer;
   while (read(F,$buffer,1024) > 0) {
     print $buffer;

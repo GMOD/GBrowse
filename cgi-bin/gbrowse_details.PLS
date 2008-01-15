@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.3 2008-01-09 15:42:11 sheldon_mckay Exp $
+# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.4 2008-01-15 22:57:45 scottcain Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -419,7 +419,10 @@ sub formatValues {
   $formatter =~ s/\$type/$type/g;
   $formatter =~ s/\$class/$class/g;
   $formatter =~ s/\$description/$description/g;
-  return map {$formatter =~ s/\$value/$_/g; $formatter} @values;
+
+  return map {my $tmp_formatter = $formatter;
+              $tmp_formatter =~ s/\$value/$_/g;      
+              $tmp_formatter} @values;
 }
 
 sub getFormatter {

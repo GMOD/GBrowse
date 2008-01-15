@@ -58,6 +58,7 @@ conf/plugins/ProteinDumper.pm
 conf/plugins/RandomGene.pm
 conf/plugins/RestrictionAnnotator.pm
 conf/plugins/Spectrogram.pm
+conf/plugins/Submitter.pm
 conf/plugins/test.pm
 conf/yeast_chr1.conf
 contrib/ace2gff.pl

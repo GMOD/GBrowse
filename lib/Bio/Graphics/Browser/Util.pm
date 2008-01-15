@@ -240,8 +240,10 @@ sub print_top {
   push @args,(-gbrowse_images => $CONFIG->relative_path_setting('buttons') || '/gbrowse/images/buttons');
   push @args,(-gbrowse_js     => $CONFIG->relative_path_setting('js')      || '/gbrowse/js');
   push @args,(-reset_toggle   => 1)               if $reset_all;
-  push @args,(-onLoad         => $CONFIG->setting('onload')) if $CONFIG->setting('onload');
-  push @args,(-onLoad         => "alert('$alert')")          if $alert;
+
+  my @onload;
+  push @onload, $CONFIG->setting('onload') if $CONFIG->setting('onload');
+  push @onload, "alert('$alert')"          if $alert;
 
   # push all needed javascript files onto top of page
   my $drag_and_drop = $CONFIG->setting('drag and drop');
@@ -249,17 +251,42 @@ sub print_top {
   my $js = $CONFIG->relative_path_setting('js')||JS;
   my @js = ('buttons.js','prototype.js');
   push @js,qw(yahoo-dom-event.js balloon.js)     if $b_tips;
+  my $menu;
   if ($drag_and_drop) {
-    push @js,qw(scriptaculous.js rubber.js);
-    push @args, (-onLoad => 'SelectArea.prototype.initialize()');
+    # rubber-band stuff and drag_and_drop libs
+    push @js, qw(scriptaculous.js rubber.js);
+    push @onload, 'SelectArea.prototype.initialize()';
   }
 
   my @scripts = map { {src=> "$js/$_" } } @js;
-  push @args,(-script=>\@scripts);
+  push @args, (-script => \@scripts);
+  push @args, (-onLoad => join('; ',@onload));
 
   print start_html(@args) unless $HTML++;
-
   print_balloon_settings()  if $b_tips;
+  print_select_menu() if $drag_and_drop;
+}
+
+sub print_select_menu {
+  # HTML for the custom menu is required
+  my $menu_html =  $CONFIG->setting('SELECT MENU' => 'HTML') 
+                || $CONFIG->setting('SELECT MENU' => 'html') 
+                || return;
+
+  # optional style settings
+  my %style = (display => 'none');
+  for my $att (qw/width font background background-color border/) {
+    my $val = $CONFIG->setting('SELECT MENU' => $att) || next;
+    $style{$att} = $val;
+  } 
+  my $style = join('; ', map {"$_:$style{$_}"} keys %style);
+
+  # clean up the HTML just a bit
+  $menu_html =~ s/\</\n\</g;
+
+  print div( { -style => $style, 
+	       -id    => 'selectMenu' }, 
+	     $menu_html );
 }
 
 sub print_balloon_settings {

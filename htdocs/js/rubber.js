@@ -3,7 +3,7 @@
  rubber.js -- a DHTML library for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.1.2.8 2008-01-10 16:29:15 sheldon_mckay Exp $
+ $Id: rubber.js,v 1.1.2.9 2008-01-15 01:46:56 sheldon_mckay Exp $
 
 */
 
@@ -283,48 +283,54 @@ SelectArea.prototype.disableSelection = function(el) {
 SelectArea.prototype.addSelectMenu = function() {
   var self = currentSelectArea;
 
-  if (self.selectMenu = document.getElementById('selectMenu')) {
-    return false;
-  }
+  var menu =  document.getElementById('selectMenu') 
+           || self.createAndAppend('div',document.body,'selectMenu');
 
-  var menu  = self.createAndAppend('div',document.body,'selectMenu');
+  // required style 
   YAHOO.util.Dom.setStyle(menu,'position','absolute');
   YAHOO.util.Dom.setStyle(menu,'display','block');
   YAHOO.util.Dom.setStyle(menu,'z-index','101');
-  YAHOO.util.Dom.setStyle(menu,'width','200px');
-  YAHOO.util.Dom.setStyle(menu,'font-family','sans-serif');
-  YAHOO.util.Dom.setStyle(menu,'font-size','12px');
-  YAHOO.util.Dom.setStyle(menu,'background-color','lightyellow');
-  YAHOO.util.Dom.setStyle(menu,'border','1px solid #003366');
-  YAHOO.util.Dom.setStyle(menu,'visibility','visible');
-  self.selectMenu = menu;
+  YAHOO.util.Dom.setStyle(menu,'visibility','hidden');
+  //YAHOO.util.Dom.setStyle(menu,'width','200px');
 
+  // optional style -- check if a custom menu has styles set already
+  var existingStyle = menu.getAttribute('style');
+  if (!existingStyle.match(/width/i))      YAHOO.util.Dom.setStyle(menu,'width','200px');
+  if (!existingStyle.match(/font/i))       YAHOO.util.Dom.setStyle(menu,'font','12px sans-serif');
+  if (!existingStyle.match(/background/i)) YAHOO.util.Dom.setStyle(menu,'background-color','lightyellow');
+  if (!existingStyle.match(/border/i))     YAHOO.util.Dom.setStyle(menu,'border','1px solid #003366');
+
+  self.selectMenu = menu;
+  self.menuHTML   = menu.innerHTML;
+
+  if (self.menuHTML) return true;
+
+  //The default menu   
   var URL = window.location; 
   URL = new String(URL);
   URL = URL.replace(/\?\S+/, ''); 
   var FASTA  = '?plugin=FastaDumper;plugin_action=Go;name=SELECTION'
 
   self.menuHTML = '\
-  <table style="width:100%">\
-   <tr>\
-    <th style="background:lightgrey;cell-padding:5">SELECTION</td>\
-   </tr>\
-   <tr onmousedown="SelectArea.prototype.clearAndSubmit()">\
-     <td><a href="javascript:void()">Zoom in</a></td>\
-   </tr>\
-   <tr>\
-     <td onmouseup="SelectArea.prototype.cancelRubber()">\
-       <a href="'+FASTA+'" target="_new">Dump sequence as FASTA</a>\
-     </td>\
-   </tr>\
-   <tr onmousedown="SelectArea.prototype.clearAndRecenter()">\
-     <td><a href="javascript:void()">Recenter</a></td>\
-   </tr>\
-   <tr onmousedown="SelectArea.prototype.cancelRubber()">\
-     <td><a href="javascript:void()">Clear selection</a></td>\
-   </tr>\
-  </table>';
-
+    <table style="width:100%">\
+     <tr>\
+      <th style="background:lightgrey;cell-padding:5">SELECTION</td>\
+     </tr>\
+     <tr onmousedown="SelectArea.prototype.clearAndSubmit()">\
+       <td><a href="javascript:void()">Zoom in</a></td>\
+     </tr>\
+     <tr>\
+       <td onmouseup="SelectArea.prototype.cancelRubber()">\
+         <a href="'+FASTA+'" target="_new">Dump sequence as FASTA</a>\
+       </td>\
+     </tr>\
+     <tr onmousedown="SelectArea.prototype.clearAndRecenter()">\
+       <td><a href="javascript:void()">Recenter</a></td>\
+     </tr>\
+     <tr onmousedown="SelectArea.prototype.cancelRubber()">\
+       <td><a href="javascript:void()">Clear selection</a></td>\
+     </tr>\
+    </table>';
 }
 
 

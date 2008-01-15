@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.36 2007-12-30 19:45:03 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.37 2008-01-15 01:46:55 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -100,7 +100,7 @@ use constant MAX_KEYWORD_RESULTS  => 1_000;     # max number of results from key
 use constant DEFAULT_RANGES       => q(100 500 1000 5000 10000 25000 100000 200000 400000);
 use constant DEFAULT_FINE_ZOOM    => '10%';
 use constant GBROWSE_HELP         => '/gbrowse';
-use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceDumper';
+use constant DEFAULT_PLUGINS      => 'FastaDumper RestrictionAnnotator SequenceDumper Submitter';
 use constant CHECKBOX_COLUMNS     => 4;
 
 # if true, turn on surrounding rectangles for debugging the image map
@@ -3092,7 +3092,9 @@ sub plugin_menu {
 
   my $labels = $plugins->menu_labels;
 
-  my @plugins = sort {$labels->{$a} cmp $labels->{$b}} keys %$labels;
+  my @visible_plugins = grep {!$plugins->plugin($_)->hide} keys %$labels;
+  my @plugins = sort {$labels->{$a} cmp $labels->{$b}} @visible_plugins;
+  
   return unless @plugins;
   return join('',
 	      popup_menu(-name=>'plugin',

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.53 2008-01-10 15:02:25 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.54 2008-01-15 01:46:56 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -2813,12 +2813,16 @@ use vars '@ISA';
 sub labels {
   my $self   = shift;
 
-  # filter out all configured types that correspond to the overview, overview details
-  # plugins, or other name:value types
-  # apply restriction rules too
+  # Filter out all configured types that correspond to the overview, overview details
+  # other non-track configuration and plugins, or other name:value types.
+  # Apply restriction rules too
   my @labels =  grep {
-    !($_ eq 'TRACK DEFAULTS' || $_ eq 'TOOLTIPS' || /:(\d+|plugin|DETAILS|details)$/)
-      && $self->authorized($_)
+    !( $_ eq 'TRACK DEFAULTS' ||          # general track config
+       $_ eq 'TOOLTIPS'       ||          # ajax balloon config
+       $_ eq 'SELECT MENU'    ||          # rubber-band selection menu config     
+       /:(\d+|plugin|DETAILS|details)$/   # plugin, etc config
+     )
+       && $self->authorized($_)
     }
     $self->configured_types;
   return @labels;

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.12.4.6.2.2.2.2 2007-10-17 01:48:21 lstein Exp $
+# $Id: Plugin.pm,v 1.12.4.6.2.2.2.3 2008-01-15 01:46:56 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -752,6 +752,10 @@ sub new_feature_list {
   return Bio::Graphics::FeatureFile->new(-smart_features=>1,
 					 -safe => 1);
 }
+
+# install the plugin but do not show it in the "Reports & Analysis" menu
+# off by default
+sub hide {}
 
 1;
 

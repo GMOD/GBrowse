@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Plugin::Submitter;
 
-# $Id: Submitter.pm,v 1.1.2.1 2008-01-15 01:33:20 sheldon_mckay Exp $  
+# $Id: Submitter.pm,v 1.1.2.2 2008-01-15 01:44:11 sheldon_mckay Exp $  
 # Submitter is an invisible plugin (Does not appear in the "Reports and Analysis" menu)
 # designed to support rubber-band select menu items that submit sequence data and
 # other parameters to external web sites such as NCBI blast.  Check the GMOD wiki
@@ -28,6 +28,26 @@ sub hide {1}
 
 sub mime_type {'text/html'}
 
+# Gets the configuration for inidivual web site "targets"
+# in a config stanze that looks like this:
+#[Submitter:plugin]
+#submitter = [UCSC_BLAT]
+#            confirm    = 1
+#            url        = http://genome.ucsc.edu/cgi-bin/hgBlat
+#            seq_label  = userSeq
+#            output     = hyperlink
+#            type       = DNA
+#            org        = Human
+#
+#            [NCBI_BLAST]
+#            confirm   = 1
+#            url       = http://www.ncbi.nlm.nih.gov/blast/Blast.cgi
+#            seq_label = QUERY
+#            PAGE      = Nucleotides
+#            PROGRAM   = blastn
+#            DATABASE  = nr
+#            CLIENT    = web
+#            CMD       = put
 sub targets {
   my $self = shift;
   return $self->{targets} if $self->{targets};
@@ -48,6 +68,11 @@ sub targets {
   $self->{targets}
 }
 
+# The text needs a bit of pre-processing to 
+# make sure the sub-stanza key-value pairs are
+# respected and and embedded HTML is escaped
+# Bio::Graphics FeatureFile.pm is not used for parsing
+# because it does not respect case-sensitive keys
 sub _prepare_text {
   my $text = shift;
   my @html = $text =~ /(\<.+\>)\[?/;
@@ -58,6 +83,7 @@ sub _prepare_text {
   $text =~ s/(\w+\s*=)/\n$1/g;
   $text;
 }
+
 
 sub dump {
   my $self = shift;
@@ -82,9 +108,10 @@ sub dump {
   # Other form elements to include
   my $extra_html = unescape($config->{extra_html});
 
+  # Whether to print a confirmation page before external submission
   my $confirm = $config->{confirm};
 
-  # Whether to format the sequence as fasta
+  # Format the display sequence as fasta
   my $fasta = $seq;
   $fasta =~ s/(\S{60})/$1\n/g;
   $fasta = ">$name\n$fasta\n";
@@ -100,7 +127,9 @@ sub dump {
     $args{$arg} = unescape($config->{$arg});
   }
 
-  # print a hidden form
+  # print a hidden form and a summary of the data.  The "extra_html"
+  # configuration key will trigger inclusion of other form input
+  # elemants if required.
   print start_form(-name=>'f1', -method=>'POST', -action=>$url), "\n";
   for my $arg (keys %args) {
     print hidden($arg => $args{$arg}), "\n";

@@ -273,12 +273,14 @@ sub print_select_menu {
                 || $CONFIG->setting('SELECT MENU' => 'html') 
                 || return;
 
-  # optional style settings
+  # should not be visible
   my %style = (display => 'none');
+  # optional style attributes
   for my $att (qw/width font background background-color border/) {
     my $val = $CONFIG->setting('SELECT MENU' => $att) || next;
     $style{$att} = $val;
   } 
+  $style{width} .= 'px';
   my $style = join('; ', map {"$_:$style{$_}"} keys %style);
 
   # clean up the HTML just a bit

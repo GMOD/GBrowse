@@ -13,6 +13,8 @@ sub draw {
   my $feature     = $self->feature;
   my ($wigfile)   = $feature->attributes('wigfile');
 
+  warn "wigfile = $wigfile";
+
   return $self->draw_wigfile($feature,$wigfile,@_) if $wigfile;
 
   my ($densefile) = $feature->attributes('densefile');

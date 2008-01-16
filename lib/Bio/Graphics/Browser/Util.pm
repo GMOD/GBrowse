@@ -246,10 +246,10 @@ sub print_top {
   push @onload, "alert('$alert')"          if $alert;
 
   # push all needed javascript files onto top of page
-  my $drag_and_drop = $CONFIG->setting('drag and drop');
-  my $b_tips = $CONFIG->setting('balloon tips') || $drag_and_drop;
-  my $js = $CONFIG->relative_path_setting('js')||JS;
-  my @js = ('buttons.js','prototype.js');
+  my $drag_and_drop = $CONFIG->drag_and_drop;
+  my $b_tips        = $CONFIG->setting('balloon tips') || $drag_and_drop;
+  my $js            = $CONFIG->relative_path_setting('js')||JS;
+  my @js            = ('buttons.js','prototype.js');
   push @js,qw(yahoo-dom-event.js balloon.js)     if $b_tips;
   my $menu;
   if ($drag_and_drop) {

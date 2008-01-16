@@ -62,9 +62,11 @@ The following options are accepted:
                            simplified format used for GBrowse uploads. This
                            option is incompatible with the --gff3 option.
 
- --base=<path>            Specify the directory in which to place the binary wiggle
+ --path=<path>            Specify the directory in which to place the binary wiggle
                            files. The default is the current temporary directory
                            (/tmp or whatever is appropriate for your operating system).
+
+ --base=<path>            Same as "--path".
 
  --help                   This documentation.
 
@@ -153,7 +155,7 @@ L<http://genome.ucsc.edu/goldenPath/help/wiggle.html>:
 You can convert this into a loadable GFF3 file with the following
 command:
 
- wiggle2gff3.pl --meth=example --so=example --base=/var/gbrowse/db example.wig \
+ wiggle2gff3.pl --meth=example --so=example --path=/var/gbrowse/db example.wig \
               > example.gff3
 
 The output will look like this:
@@ -199,7 +201,7 @@ GetOptions(
 	   'source=s'            => \$source,
 	   'gff3'                => \$use_gff3,
 	   'featurefile'         => \$use_featurefile,
-	   'base=s'              => \$base_directory
+	   'base|path=s'         => \$base_directory
 	  )
   or pod2usage(-verbose=>2);
 pod2usage(-verbose=>2) if $show_help;

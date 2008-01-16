@@ -60,6 +60,7 @@ use Carp 'croak';
 use IO::Seekable;
 use Bio::Graphics::Wiggle;
 use Text::Shellwords;
+use CGI 'escape';
 
 sub new {
   my $class = shift;
@@ -133,31 +134,35 @@ sub featurefile {
   for my $track (sort keys %$tracks) {
     my $seqids     = $tracks->{$track}{seqids};
     my $options    = $tracks->{$track}{display_options};
-    my $name       = $options->{name};
+    my $name       = escape($options->{name});
+    my $note       = escape($options->{description});
+    my @attributes;
+    push @attributes,qq(Name=$name)        if defined $name;
+    push @attributes,qq(Note=$note)        if defined $note;
 
     # data, sorted by chromosome
     my @seqid  = sort keys %$seqids;
 
     for my $seqid (@seqid) {
-
+      my $attributes = join ';',(@attributes,"wigfile=$seqids->{$seqid}{wigpath}");
       if ($type eq 'gff3') {
 	push @lines,join "\t",($seqid,$source,$method,
 			       $seqids->{$seqid}{start},
 			       $seqids->{$seqid}{end},
 			       '.','.','.',
-			       "Name=$name;wigfile=$seqids->{$seqid}{wigpath}"
+			       $attributes
 			      );
       } else {
 	push @lines,'';
 	push @lines,"reference=$seqid";
-	push @lines,"$track $seqid.data $seqids->{$seqid}{start}..$seqids->{$seqid}{end} wigfile=$seqids->{$seqid}{wigpath}";
+	push @lines,"$track $seqid.data $seqids->{$seqid}{start}..$seqids->{$seqid}{end} $attributes";
       }
 
     }
 
   }
 
-  return join "\n",@lines;
+  return join("\n",@lines)."\n";
 }
 
 sub load {
@@ -202,7 +207,7 @@ sub load {
       $format = 'none';
     }
 
-    redo LINE if defined $_ && /^track/;
+    redo LINE if defined $_ && /^(track|variableStep|fixedStep)/;
   }
 
   return 1;
@@ -346,7 +351,7 @@ sub process_fixedline {
   $self->current_track->{seqids}{$seqid}{end}   =
     $self->current_track->{seqids}{$seqid}{start} + $self->{track_options}{span} - 1;
   while (<$infh>) {
-    last if /^track/;
+    last if /^(track|variableStep|fixedStep)/;
     next if /^#/;
     chomp;
     my $value = $_;
@@ -366,7 +371,7 @@ sub process_variableline {
   my $span    = $self->{track_options}{span} || 1;
   my $wigfile = $self->wigfile($seqid);
   while (<$infh>) {
-    last if /^track/;
+    last if /^(track|variableStep|fixedStep)/;
     next if /^#/;
     chomp;
     my ($start,$value) = split /\s+/;

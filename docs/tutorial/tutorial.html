@@ -1254,10 +1254,194 @@ change graph_type to "boxes."</i> </blockquote>
 The recipe in <a ref="#graph">11</a> works well for several thousand
 data points, but if you have very dense data, such as that produced by
 genomic tiling arrays, then you will want to use a specialized binary
-    representation known as "wiggle" format. A wiggle track consists of
-    a file that contains the quantitative data, and a single feature
-    in the database proper that points at that data file. To create
-    the 
+representation known as "wiggle" format. A wiggle track consists of a
+file that contains all the quantitative data, and a single feature in the
+database proper that points at that data file. Loading this data is a
+three-step process:
+
+<ol>
+  <li>Create a WIG file.
+  <li>Convert the WIG file into the wiggle binary file and a gff3
+      line.
+  <li>Load the gff3 line.
+</ol>
+
+<p>
+
+<a href="http://genome.ucsc.edu/goldenPath/help/wiggle.html">WIG
+format</a> is a specialized format for describing quantitative
+data. It was created by Jim Kent for use in the UCSC genome
+browser. Details on creating WIG files are described at <a
+href="http://genome.ucsc.edu/goldenPath/help/wiggle.html">http://genome.ucsc.edu/goldenPath/help/wiggle.html</a>.
+
+<p>
+
+WIG files are plain text files. They always begin with a "track"
+header, which, at a minimum, looks like this:
+
+<blockquote class="example"><pre>
+track type=wiggle_0 name="ArrayExpt1" description="20 degrees, 2 hr"
+</pre></blockquote>
+
+<p>The "type" attribute is required, and must have a value of
+"wiggle_0". "name" and "description" are optional, but suggested, and
+indicate the name and description of the data series -- these will
+become the "Name" and "Note" fields of the generated GFF3 feature.
+
+Following the track line comes the data for one or more chromosomal
+regions. As described in the UCSC documentation, there are three ways
+of formatting the data: (1)"Bed Format", (2) "variableStep", and (3)
+"fixedStep" format. The first format is essentially the same as GFF3
+and does not give you any performance advantages over using straight
+GFF3. variableStep format describes intervals of the genome that have
+a fixed width, but begin at arbitrary locations, while fixedStep
+format describes features of the genome that are evenly spaced and
+have a fixed width (e.g. tiling array features).
+
+<p>
+
+For <i>variableStep</i> data, the format is:
+
+<blockquote class="example"><pre>
+ variableStep chrom=chr19 span=150
+ 59304701 10.0
+ 59304901 12.5
+ 59305401 15.0
+ 59305601 17.5
+ 59305901 20.0
+ 59306081 17.5
+ 59306301 15.0
+ 59306691 12.5
+ 59307871 10.0
+</pre></blockquote>
+
+<p> The data is introduced by a line beginning with the keyword
+"variableStep", and the arguments "chrom" and "span", which indicate
+the chromosome on which the features are located, and the width of
+each feature, in base pairs. This is followed by a series of
+two-element lines indicating the start position of each feature, and
+its quantitative value. Values can be any sort of numeric data,
+including integers, negative numbers and floating point.
+
+<p>
+
+For <i>fixedStep</i> data, the format is:
+
+<blockquote class="example"><pre>
+fixedStep chrom=chr19 start=59307401 step=300 span=200
+1000
+ 900
+ 800
+ 700
+ 600
+ 500
+ 400
+ 300
+ 200
+ 100
+</pre></blockquote>
+
+<p> The data is introduced by a line beginning with the keyword
+"fixedStep", and the arguments "chrom", "span", "start" and "step".
+The first two arguments are the same as before, while "start" and
+"step" indicate the starting position of the first feature, and the
+spacing between each feature. This is followed by a numeric value for
+each step. In this case, we have described 10 features beginning at
+position 59307401. Each feature begins 300 bp from the next and is 200
+bp wide. In practice, this means that the first 200 bp of each
+interval is filled with known data, while information on the last 100
+bp is "missing."
+
+<p>
+
+To see how this works in practice, let us reformat our example
+microarray data using the fixedStep version of WIG format. The
+complete data for this is in the file <a
+href="data_files/volvox_microarray.wig">volvox_microarray.wig</a>. It
+begins like this:
+
+<blockquote class="example"><pre>
+track type=wiggle_0 name="example" description="3d instar"
+fixedStep chrom=ctgA start=1 step=100 span=100
+281
+183
+213
+191
+288
+...
+</pre></blockquote>
+
+<p>
+
+Compare this to the microarray data in <a href="#graph">Showing
+Quantitative Data (basic)</a>, and you will see that the five entries
+in the WIG file correspond to the first five features in the GFF3
+files.
+
+<p>
+
+We'll now create the binary file for the data using the wiggle2gff3.pl
+script. We want it to live in the volvox database directory, so we
+have to specify this path when creating it:
+
+<blockquote class="example"><pre>
+% wiggle2gff3.pl --path=$HTDOCS/databases/volvox volvox_microarray.wig \
+                 > volvox_microarray.gff3
+</pre></blockquote>
+
+
+<p>
+
+After this script runs, it will write out a line of GFF3 data, which
+we save to volvox_microarray.gff3. This file will look like this:
+
+<blockquote class="example"><pre>
+##gff-version 3
+
+ctgA . microarray_oligo 1 50000 . . . Name=example;Note=20%20degrees%2C%202%20hr;wigfile=$HTDOCS/gbrowse/databases/volvox/track001.ctgA.1200440492.wig
+</pre></blockquote>
+
+<p>
+
+This file contains a single feature that spans the region indicated by
+the WIG file. The feature has the indicated name and description, and
+has a new attribute "wigfile" that points to the place where the
+quantitative data within the region can be found. You are free to edit
+this file to change the source or type, You can also set the source
+and type in wiggle2gff3.pl by passing it --source and --type options
+on the command line. If you move the binary wiggle file, please change
+the value of the "wigfile" attribute to indicate its new location.
+
+<p>
+
+You can now move this GFF3 file into
+$HTDOCS/gbrowse/databases/volvox, overwriting the existing
+volvox_microarray.gff3 file.
+
+<p>
+
+One last step is needed to make the data display properly,
+however. You must set the glyph type to either "wiggle_xyplot" or
+"wiggle_density." These are the only glyphs that recognize and
+properly format wiggle-style data. In the config file, change the
+[TransChip] stanza to look like this:
+
+<blockquote class="example"><pre>
+[TransChip]
+feature        = microarray_oligo
+glyph          = wiggle_xyplot
+graph_type     = boxes
+height         = 50
+#min_score      = 0
+#max_score      = 1000
+scale          = right
+category       = Genes
+key            = Transcriptional Profile
+</pre></blockquote>
+
+When you reload the page, the quantitative data should display
+correctly. You might notice a speed improvement; this becomes much
+more noticeable on large data sets.
 
 <hr>
 
@@ -4295,6 +4479,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Tue Jan  8 16:57:57 EST 2008
+Last modified: Tue Jan 15 18:52:40 EST 2008
 <!-- hhmts end -->
 </body> </html>

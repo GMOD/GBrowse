@@ -266,10 +266,13 @@ htdocs/js/balloon.js
 htdocs/js/builder.js
 htdocs/js/buttons.js
 htdocs/js/controls.js
+htdocs/js/detailSelect.js
 htdocs/js/dragdrop.js
 htdocs/js/effects.js
 htdocs/js/event.js
+htdocs/js/overviewSelect.js
 htdocs/js/prototype.js
+htdocs/js/regionSelect.js
 htdocs/js/rubber.js
 htdocs/js/scriptaculous.js
 htdocs/js/slider.js

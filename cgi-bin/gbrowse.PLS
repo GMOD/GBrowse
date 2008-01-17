@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.38 2008-01-16 15:47:39 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.39 2008-01-17 22:11:31 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -489,6 +489,9 @@ sub main_display {
 					  $segment->start,$segment->end)
       unless $segment->can('features');
 
+    # display some additional info for the rubber-band select libraries
+    print segment_info($page_settings,$segment,$whole_segment);
+
     print overview_panel($whole_segment,$segment,$page_settings,$feature_files);
 
     if ($page_settings->{region_size}) {
@@ -537,6 +540,35 @@ sub main_display {
   # clean us up
   foreach (values %$feature_files) {
     $_ && ref($_) && eval{$_->finished};
+  }
+}
+
+sub hide {
+  my ($name,$value) = @_;
+  print hidden( -name     => $name,
+                -value    => $value,
+                -override => 1 ), "\n";
+}
+
+sub segment_info {
+  my ($settings,$segment,$whole_segment) = @_;
+  my $pad   = $CONFIG->image_padding;
+  my $width = ($settings->{width} * OVERVIEW_RATIO);
+
+  hide(image_padding        => $pad);
+  hide(overview_start       => $whole_segment->start);
+  hide(overview_stop        => $whole_segment->end);
+  hide(overview_pixel_ratio => $whole_segment->length/$width);
+  hide(details_pixel_ratio  => $segment->length/$settings->{width});
+
+  if ($page_settings->{region_size}) {
+    my ($rstart, $rend) = get_regionview_seg($settings,$segment->start, $segment->end,
+                                             $whole_segment->start,$whole_segment->end);
+    my $rlen  = abs($rend - $rstart);
+    my $ratio = $rlen/$width;
+    hide(region_start       => $rstart);
+    hide(region_stop        => $rend);
+    hide(region_pixel_ratio => $rlen/$width);
   }
 }
 
@@ -3094,8 +3126,10 @@ sub plugin_menu {
 
   my $labels = $plugins->menu_labels;
 
-  my @plugins = sort {$labels->{$a} cmp $labels->{$b}} keys %$labels;
+  my @visible_plugins = grep {!$plugins->plugin($_)->hide} keys %$labels;
+  my @plugins = sort {$labels->{$a} cmp $labels->{$b}} @visible_plugins;
   return unless @plugins;
+
   return join('',
 	      popup_menu(-name=>'plugin',
 			 -values=>\@plugins,

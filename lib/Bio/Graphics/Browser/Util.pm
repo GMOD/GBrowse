@@ -254,8 +254,14 @@ sub print_top {
   my $menu;
   if ($drag_and_drop) {
     # rubber-band stuff and drag_and_drop libs
-    push @js, qw(scriptaculous.js rubber.js);
-    push @onload, 'SelectArea.prototype.initialize()';
+    push @js, qw(scriptaculous.js rubber.js overviewSelect.js detailSelect.js);
+    push @onload, 'Overview.prototype.initialize()';
+    push @onload, 'Details.prototype.initialize()'; 
+    
+    if ($CONFIG->setting('region segment')) {
+      push @js, 'regionSelect.js';
+      push @onload, 'Region.prototype.initialize()';
+    }
   }
 
   my @scripts = map { {src=> "$js/$_" } } @js;
@@ -267,17 +273,21 @@ sub print_top {
   print_select_menu() if $drag_and_drop;
 }
 
+# prepare custom menu(s) for rubber-band selection
 sub print_select_menu {
+  my $view = shift || 'DETAIL';
+  my $config_label = uc($view).' SELECT MENU';
+
   # HTML for the custom menu is required
-  my $menu_html =  $CONFIG->setting('SELECT MENU' => 'HTML') 
-                || $CONFIG->setting('SELECT MENU' => 'html') 
+  my $menu_html =  $CONFIG->setting($config_label => 'HTML') 
+                || $CONFIG->setting($config_label => 'html') 
                 || return;
 
   # should not be visible
   my %style = (display => 'none');
   # optional style attributes
   for my $att (qw/width font background background-color border/) {
-    my $val = $CONFIG->setting('SELECT MENU' => $att) || next;
+    my $val = $CONFIG->setting($config_label => $att) || next;
     $style{$att} = $val;
   } 
   $style{width} .= 'px';
@@ -287,7 +297,7 @@ sub print_select_menu {
   $menu_html =~ s/\</\n\</g;
 
   print div( { -style => $style, 
-	       -id    => 'selectMenu' }, 
+	       -id    => lc($view).'SelectMenu' }, 
 	     $menu_html );
 }
 

@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.14 2008-01-09 01:18:44 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.15 2008-01-17 22:11:32 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -42,6 +42,7 @@ var currentBalloonClass;
 var balloonIsVisible
 var balloonIsSticky;
 var balloonInvisibleSelects;
+var balloonIsSuppressed;
 
 
 ///////////////////////////////////////////////////
@@ -106,6 +107,9 @@ var Balloon = function() {
 // delay time to avoid balloons popping up on rapid mouseover events     //
 //////////////////////////////////////////////////////////////////////////
 Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
+  // Balloons have been suppressed by an external application
+  if (balloonIsSuppressed) return false;
+
   // Awful IE bug, page load aborts if the balloon is fired
   // before the page is fully loaded.
   if (this.isIE() && !document.readyState == "complete") return false;

@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::wiggle_density;
 
-# $Id: wiggle_density.pm,v 1.1.2.11 2007-12-30 20:12:01 lstein Exp $
+# $Id: wiggle_density.pm,v 1.1.2.12 2008-01-17 20:30:18 lstein Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing);
@@ -218,12 +218,6 @@ sub calculate_color {
 
 sub min { $_[0] < $_[1] ? $_[0] : $_[1] }
 sub max { $_[0] > $_[1] ? $_[0] : $_[1] }
-
-sub get_description {
-  my $self = shift;
-  my $feature = shift;
-  return join '',"wigFile = ",$feature->attributes('wigfile'),'; wig_offset=',$feature->attributes('wigstart');
-}
 
 sub minmax {
   my $self  = shift;

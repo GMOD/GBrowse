@@ -116,7 +116,7 @@ click on the new folder and grant write privileges to all.
 You'll now put the first of several data files into the volvox
 database directory.  In the <a href="data_files/">data_files</a>
 subdirectory of this tutorial you will find the file <a
-href="data_files/volvox1.gff">volvox1.gff</a>.  Copy this into the
+href="data_files/volvox1.gff">volvox1.gff3</a>.  Copy this into the
 volvox database directory.  On Unix systems:
 
 <blockquote class="example">
@@ -226,17 +226,17 @@ editor, you will see that it contains a series of 15 genome "features"
 that look like this:
 
 <blockquote class="example"><pre>
-ctgA   example   contig       1      50000   .   .   .   Contig ctgA
-ctgA   example   my_feature   1659   1984    .   +   .   My_feature f07
-ctgA   example   my_feature   3014   6130    .   +   .   My_feature f06
-ctgA   example   my_feature   4715   5968    .   -   .   My_feature f05
-ctgA   example	 my_feature   13280  16394   .   +   .   My_feature f08
+ctgA example contig 1     50000 . . . Name=ctgA
+ctgA example remark 1659  1984  . + . Name=f07;Note=This is an example
+ctgA example remark 3014  6130  . + . Name=f06;Note=This is another example
+ctgA example remark 4715  5968  . - . Name=f05;Note=Ok! Ok! I get the message.
+ctgA example remark 13280 16394 . + . Name=f08
 ...
 </pre></blockquote>
 
 <p>
 
-Each feature has a "source" of example, a type of "my_feature", and
+Each feature has a "source" of "example", a type of "remark", and
 occupies a short range (roughly 1.5k) on a contig named "ctgA."  In
 addition to the features themselves, there is an entry for the contig
 itself (type "contig").  This entry is needed to tell GBrowse what the
@@ -244,9 +244,10 @@ length of ctgA is.
 
 <p>
 
-The load file uses a semi-standard known as GFF (General Feature
-Format).  Each line of the file corresponds to a feature on the
-genome, and the nine columns are separated by tabs.
+The load file uses a standard known as <a
+href="http://www.sequenceontology.org/gff3.shtml">GFF3 (General
+Feature Format version 3)</a>.  Each line of the file corresponds to a
+feature on the genome, and the nine columns are separated by tabs.
 
 <p>
 
@@ -269,15 +270,14 @@ The 9 columns are as follows:
       leave this column blank by replacing the source with a single
       dot (".").</li><br>
   <li><b>type</b><br>
-      This column describes the feature type.  You can choose anything
-      you like to describe the feature type, but common names are
-      "gene", "repeat", "exon", and "CDS."  A good source of commonly
-      recognized names is
-      the <a
-      href="http://song.cvs.sourceforge.net/song/ontology/sofa.ontology?rev=HEAD&content-type=text/vnd.viewcvs-markup">Sequence
-      Ontology Lite</a>, located at http://song.sourceforge.net.  For
+      This column describes the feature type. Although, you can choose anything
+      you like to describe the feature type, you are strongly encouraged to use
+      well-recognized sequence ontology (SO) terms such as "gene", "repeat_region", "exon",
+      and "CDS."  You can find a list of the recognized SO terms at
+      <a
+      href="http://song.cvs.sourceforge.net/song/ontology/sofa.ontology?rev=HEAD&content-type=text/vnd.viewcvs-markup">the Sequence Ontology Project web site</a>. For
       lack of a better name, the features in the volvox example are of
-      type "my_feature."</li><br>
+      type "remark." Another </li><br>
   <li><b>start position</b><br>
       The position that the feature starts at, relative to the
       reference sequence.  The first base of the reference sequence
@@ -311,29 +311,35 @@ The 9 columns are as follows:
       information is used by the "cds" glyph to show how the reading
       frame changes across splice sites.  For all other feature types,
       use a dot here.</li><br>
-  <li><b>group</b><br>
-      The ninth and last column has multiple purposes.  Its main use
-      is to give features a name for searching and display.  It can
-      also be used to group related features together by giving them a
-      common name.  We'll see later how the exons of a gene can be grouped together
-      with this field. <br><br>
-      The format of the group field is  "<i>class</i> <i>name</i>",
-      where <i>class</i> describes the
-      class of the feature and <i>name</i> describes its name.  The
-      class and the name are separated by a space <b>not</b> a tab.
-      The feature class is a funny concept, because it is almost, but not
-      quite, the same as the feature type.  The idea is to distinguish
-      among features that might share the same name by giving them a
-      distinctive prefix.  For example, the class distinguishes
-      "Transcript M1.2" from "Gene M1.2".  Most people find this
-      confusing, and a proposed update to the GFF format promises to do away
-      with the class entirely.  For now, I suggest that you reuse the type
-      field here.  In the examples, I've used an initial capital
-      letter in the class field in order to distinguish when I'm
-      talking about the class field from when I'm talking about the
-      type field.
+  <li><b>attributes</b><br>
+      A list of feature attributes in the format tag=value.  Multiple
+      tag=value pairs are separated by semicolons.  URL escaping rules are
+      used for tags or values containing the following characters: ",=;".
+      Spaces are allowed in this field, but tabs must be replaced with the
+      %09 URL escape.
+
+      These tags have predefined meanings:
+
+      ID   Gives the feature a unique identifier. Useful when grouping features
+           together (such as all the exons in a transcript).
+
+      Name Display name for the feature.  This is the name to be
+           displayed to the user.
+
+      Alias A secondary name for the feature.  It is suggested that
+	    this tag be used whenever a secondary identifier for the
+	    feature is needed, such as locus names and
+	    accession numbers.
+
+      Note  A descriptive note to be attached to the feature. This will be displayed
+           as the feature's description.
       <br><br>
-      Other good stuff can go into the group field, as we shall see later.</li>
+
+      Alias and Note fields can have multiple values separated by commas.
+      For example:
+      <blockquote>Alias=M19211,gna-12,GAMMA-GLOBULIN</blockquote>
+      
+      Other good stuff can go into the attributes field, as we shall see later.</li>
 </ol>
 
 <hr>
@@ -357,7 +363,7 @@ little bit, which starts with the line: <code>### TRACK CONFIGURATION
 
 <blockquote class="example"><pre>
 [ExampleFeatures]
-feature      = my_feature
+feature      = remark
 glyph        = generic
 stranded     = 1
 bgcolor      = blue
@@ -377,7 +383,7 @@ enclosed by square brackets.
 Following the track name are a series of
 options that configure the track.  The "feature" option indicates what
 feature type(s) to display inside the track.  It's currently set to
-display the "my_feature" feature type.  The "glyph" option specifies
+display the "remark" feature type.  The "glyph" option specifies
 the shape of the rendered feature.  The default is "generic", which is
 a simple filled box, but there are dozens of glyphs to choose from.
 The "stranded" option tells the generic glyph to try to display the
@@ -391,12 +397,16 @@ track a human-readable label.
 Let's experiment with changing the track definition.  First, let's
 change the color of the glyph.  With your text editor, change the
 bgcolor option from blue to "orange", save it, and reload the page.
-The features should change immediately as shown in Figure 2.
+The features should change immediately as shown in Figure 2
 
 <blockquote>
 <img src="figures/basic_conf1.gif"><br>
 <i>Figure 2: A Feature of a Different Color</i>
 </blockquote>
+
+<p style="font-size:9pt;font-style:italic">Note: Many of the
+screenshots in this tutorial are from earlier versions of GBrowse and
+may not look exactly the same as the current version.</p>
 
 <p>
 
@@ -445,14 +455,6 @@ be able to deduce the GBrowse equivalents.
 
 <p>
 
-Now we'll look at the interaction between feature names and GBrowse's
-search box.  If you look through the <a
-href="data_files/volvox1.gff">volvox1.gff</a> data file, you'll see
-that all the example features are named, and that their class is
-"My_feature."
-
-<p>
-
 GBrowse has a very flexible search feature.  You can type in the name
 of a reference sequence, such as "ctgA", and it will display the
 entire thing, or you can type in a range in the format
@@ -460,51 +462,129 @@ entire thing, or you can type in a range in the format
 
 <p>
 
-In addition, GBrowse can search for features by name.  By default, the
-name of the object must be preceded by its class in the format
-<i>Class:name</i>.  For example, if we are searching for My_feature
-"f07", we could type "My_feature:f07" into the search box.  Try this
-now.
+In addition, GBrowse can search for features by name. Anything that
+has a Name or Alias attribute in the GFF3 file can be searched for by
+name. For example, try searching for "f10" or even "f1*".
+
+The only drawback to this is that you may have name collisions. For
+example, some research communities distinguish genes from their
+products using differences in capitalization, for example hga
+and HGA. However, GBrowse's searches are case insensitive. To
+avoid name collisions, you can give each type of feature a distinctive
+naming prefix, for example "Gene:hga" and "Protein:HGB".
 
 <p>
 
-You probably don't want to remember to enter the class of the object
-to search for a feature.  Fortunately, it is easy to declare one or
-more classes "automatic" and specify the order in which GBrowse will
-search for them.  To do this with our example database, open up the
-volvox.conf config file, find the option named "automatic classes",
-and change it to read:
+To illustrate how this works, have a look at <a
+href="data_files/volvox_geneproducts.gff3">volvox_geneproducts.gff3:</a>
 
 <blockquote class="example"><pre>
-automatic classes = My_feature
+ctgA example remark 1000 2000 . . . Name=HGA
+ctgA example gene   1100 2000 . + . Name=Gene:hga
+ctgA example CDS    1200 1900 . + . Name=Protein:HGA
+ctgA example gene   1600 3000 . - . Name=Gene:hgb
+ctgA example CDS    1800 2900 . - . Name=Protein:HGB
 </pre></blockquote>
 
 <p>
 
-This tells GBrowse that when the user types in an unqualified feature
-name, it should search the My_feature class for a match.  You can now
-type "f07" directly into the search field and GBrowse will find and
-display it.  If you wish, you may list several (or many!) automatic classes on
-this line.  Just separate them by spaces:
+Copy this file into the databases/volvox folder. Note that as you add
+new files to the database folder, you may need to disable caching in
+to see the new features show up immediately. To do this, simply scroll
+down to the "Display Settings" portion of the GBrowse display and
+unselect "Cache tracks."
 
-<blockquote class="example"><pre>
-automatic classes = My_feature Gene Transcript Contig Chromosome
+<p>
+
+Now add the following configuration stanza to volvox.conf to create a
+track that displays both gene and CDS features:
+
+<blockquote><pre>
+[NameTest]
+feature      = gene CDS
+glyph        = generic
+stranded     = 1
+bgcolor      = green
+height       = 10
+key          = Name test track
 </pre></blockquote>
 
 <p>
 
-For fun, try searching for the following:
-
-<ul>
-  <li>f1*
-  <li>f07:-5000..5000
-  <li>*3
-</ul>
-<small><sup>Note</sup>These searches may not work as expected
-when using the memory adaptor due to a bug in bioperl 1.2.3.  It is fixed in 
-bioperl 1.4.</small>
+This stanza creates a new track named "Name test track" and displays
+features of type "gene" and "CDS" using green generic glyphs that are
+10 pixels high. When you look at the data file, you'll see that there
+are three things potentially named "HGA", a remark which uses the
+unqualified name, a gene which uses the qualified name "Gene:hga", and
+a CDS (coding designated segment) region which uses the qualified name
+"Protein:HGA." There is also a gene named "Gene:hgb" and a protein
+named "Protein:HGB."
 
 <p>
+
+To see how GBrowse searches for names, type "HGA" (either
+upper or lowercase) in the search textbox and press "Search." Because
+the search term matches the remark whose unqualified name is HGA,
+GBrowse will bring up the region between 1000..2000 and highlight the
+HGA remark.
+
+<p>
+
+Now search for "Protein:HGA." Because you searched with the qualified
+name, GBrowse will find and highlight the protein (CDS) feature.
+
+<p>
+
+Now try to search for "HGB." This search fails because HGB only exists
+in qualified form in the database. You can still, however, search for
+"Gene:HGB" or "Protein:Hgb" (capitalization doesn't matter). This may
+or may not be the behavior that you desire. If you would like GBrowse
+to search through qualified names when the user types the unqualified
+version, you can configure this easily by adding the following line to
+volvox.conf under the [General] section:
+
+<blockquote class="example"><pre>
+automatic classes = Gene Protein
+</pre></blockquote>
+
+<p>
+
+This option directs GBrowse to search for the unqualified name first,
+followed by names prefixed with "Gene:" and then names prefixed with
+"Protein:". Whichever is found first will be displayed. Now searching
+for "HGB" will find "Gene:hgb". Swapping the order of Gene and Protein
+on this line will cause the "Protein:HGB" to be found.
+
+<p>
+
+Another way to approach this is to make liberal use of the Alias
+attribute. For example:
+
+<blockquote class="example"><pre>
+ctgA example remark 1000 2000 . . . Name=Remark:HGA;Alias=hga
+ctgA example gene   1100 2000 . + . Name=Gene:hga;Alias=hga
+ctgA example CDS    1200 1900 . + . Name=Protein:HGA;Alias=hga
+ctgA example gene   1600 3000 . - . Name=Gene:hgb;Alias=hga
+ctgA example CDS    1800 2900 . - . Name=Protein:HGB;Alias=hga
+</pre></blockquote>
+
+<p>
+
+This assigns the alias of "hga" to each of the three HGA features, and
+an alias of "hgb" to each of the two HGB features. This keeps the
+identities of these features distinct so that you can find particular
+ones by typing in the fully qualified name ("Gene:hga"), but find all
+candidates when you type in the unqualified name. For instance, when
+you search with "hga", GBrowse will now offer you three matches:
+
+<blockquote>
+<img src="figures/aliases.gif"><br>
+<i>Figure 4: Searching for aliases</i>
+</blockquote>
+
+<p>
+
+Finally, you may not want the ....
 
 <hr>
 
@@ -1361,7 +1441,7 @@ href="data_files/volvox_microarray.wig">volvox_microarray.wig</a>. It
 begins like this:
 
 <blockquote class="example"><pre>
-track type=wiggle_0 name="example" description="3d instar"
+track type=wiggle_0 name="example" description="20 degrees, 2 hr"
 fixedStep chrom=ctgA start=1 step=100 span=100
 281
 183
@@ -1432,16 +1512,43 @@ feature        = microarray_oligo
 glyph          = wiggle_xyplot
 graph_type     = boxes
 height         = 50
-#min_score      = 0
-#max_score      = 1000
 scale          = right
 category       = Genes
+description    = 1
 key            = Transcriptional Profile
 </pre></blockquote>
 
 When you reload the page, the quantitative data should display
 correctly. You might notice a speed improvement; this becomes much
 more noticeable on large data sets.
+
+<p>
+
+Now, for some fun, change the [TransChip] section to use the
+"wiggle_density" glyph. Also set the bgcolor to "blue" and delete the
+unneeded graph_type and scale options.
+
+<blockquote class="example"><pre>
+[TransChip]
+feature        = microarray_oligo
+glyph          = wiggle_density
+height         = 30
+bgcolor        = blue
+category       = Genes
+description    = 1
+key            = Transcriptional Profile
+</pre></blockquote>
+
+<p>
+
+This
+
+<blockquote>
+<img src="figures/wiggle_density.png"><br>
+<i>Figure 13: A transcriptional profile rendered with the wiggle_density glyph</i>
+</blockquote>
+
+
 
 <hr>
 
@@ -1563,11 +1670,11 @@ notices that the DNA is available and generates the transcripts'
 protein translations automatically!
 
 <blockquote>
-<b>(13A)</b><br>
+<b>(14A)</b><br>
 <img src="figures/dna1.gif">
-<br><br><b>(13B)</b><br>
+<br><br><b>(14B)</b><br>
 <img src="figures/dna2.gif"><br>
-<i>Figure 13: Viewing DNA/GC content and 6-frame translation. (a) low
+<i>Figure 14: Viewing DNA/GC content and 6-frame translation. (a) low
 magnification; (b) high magnification</i>
 </blockquote>
 
@@ -1651,11 +1758,11 @@ key          = ESTs
 
 <p>
 
-This will give a display similar to that shown in Figure 14.
+This will give a display similar to that shown in Figure 15.
 
 <blockquote>
 <img src="figures/multiple_alignments1.gif"><br>
-<i>Figure 14:  A simple representation of EST matches.</i>
+<i>Figure 15:  A simple representation of EST matches.</i>
 </blockquote>
 
 <p>
@@ -1715,11 +1822,11 @@ way:
 
 What this is saying is to look for pairs of EST names that are similar
 except for the terminal .5 or .3, and pair them.  When we reload the
-page, we get Figure 15.
+page, we get Figure 16.
 
 <blockquote>
 <img src="figures/multiple_alignments2.gif"><br>
-<i>Figure 15: The group_pattern option allows EST pairs to be grouped</i>
+<i>Figure 16: The group_pattern option allows EST pairs to be grouped</i>
 </blockquote>
 
 <p>
@@ -1796,11 +1903,11 @@ it returns the color "orange."
 
 <p>
 
-The effect is shown in Figure 16.
+The effect is shown in Figure 17.
 
 <blockquote>
 <img src="figures/multiple_alignments3.gif"><br>
-<i>Figure 16: Using a callback to distinguish 5' and 3' ESTs</i>
+<i>Figure 17: Using a callback to distinguish 5' and 3' ESTs</i>
 </blockquote>
 
 <hr>
@@ -1983,13 +2090,13 @@ sequence even when the EST matches the minus strand.
 
 To see this work, reload the page, turn on the EST track and search
 for region "ctgA:1065..1165".  This will show the aligned 5' ends of
-agt221.5, agt830.5 and agt767.5 (Figure 17).  Notice that one of the
+agt221.5, agt830.5 and agt767.5 (Figure 18).  Notice that one of the
 T's towards the beginning of agt830.5 is highlighted in red, to show
 that it doesn't match the corresponding genomic base.
 
 <blockquote>
 <img src="figures/adding_dna_to_alignments1.gif"><br>
-<i>Figure 17: Multiple alignments at the DNA level</i>
+<i>Figure 18: Multiple alignments at the DNA level</i>
 </blockquote>
 
 <p>
@@ -2098,7 +2205,7 @@ After configuring the trace glyph, reload the browser page and enable traces.  Z
 
 <blockquote>
 <img src="figures/trace1.png"><br>
-<i>Figure 18: The trace glyph zoomed out.</i>
+<i>Figure 19: The trace glyph zoomed out.</i>
 </blockquote>
 
 <p>
@@ -2148,7 +2255,7 @@ When you reload the page, you will see a new popup menu appear under
 the image labeled "Dumps, searches and other operations."  You will
 also see an automatic track labeled "plugin:Restriction Sites" appear
 in the track list.  When you turn on this track, you will be presented
-with a restriction map (Figure 18).  You can then adjust which
+with a restriction map (Figure 20).  You can then adjust which
 restriction sites are shown by selecting "Annotate Restriction Sites"
 from the popup menu and pressing the "Configure" button.
 
@@ -2245,7 +2352,7 @@ Aligner plugin, the configuration options are:
 
 With the changes in place, select the aligner from the popup menu and
 press Configure.  Turn on uppercasing of the coding region track and
-see how it affects the display (Figure 19).
+see how it affects the display (Figure 21).
 
 <blockquote>
 <img src="figures/plugins2.gif"><br>
@@ -2507,7 +2614,7 @@ to "segments."
 Make these changes to volvox.conf, turn on the "Example Alignments"
 track, and view the contig at 20K, 40K and 50K.  At 40K, you'll see
 the alignments lose their internal structure and be replaced by solid
-boxes (Figure 20).  At 50K they'll begin to overlap and the feature
+boxes (Figure 22).  At 50K they'll begin to overlap and the feature
 labels will be suppressed.
 
 <blockquote>
@@ -2563,7 +2670,7 @@ default features = ExampleFeatures  Motifs:overview
 
 <p>
 
-Reload the page.  Viol&aacute;!  See Figure 21.
+Reload the page.  Viol&aacute;!  See Figure 23.
 
 <blockquote>
 <img src="figures/overview1.gif"><br>
@@ -2754,7 +2861,7 @@ region segment = 20000
 </pre></blockquote>
 
 <p>Now when you reload the volvox page, you will see an intermediate
-panel labeled "region", as shown in Figure 22:</p>
+panel labeled "region", as shown in Figure 24:</p>
 
 <blockquote>
 <img src="figures/enhancements1.gif"><br>
@@ -2829,7 +2936,7 @@ key          = 6-frame translation
 
 <p>In this way we can create sections named "Alignments," "Examples,"
 "Genes" and "Proteins" and assign the appropriate tracks to them. The
-Tracks control section will look something like figure 24:</p>
+Tracks control section will look something like figure 26:</p>
 
 
 <blockquote>
@@ -4479,6 +4586,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Tue Jan 15 18:52:40 EST 2008
+Last modified: Thu Jan 17 15:29:00 EST 2008
 <!-- hhmts end -->
 </body> </html>

@@ -271,6 +271,7 @@ WriteMakefile(
 				 Bio::Perl         => 1.005002,
 				 GD                => 2.07,
 				 IO::String        => 0,
+                                 IO::File          => 1.2301,
 				 Text::Shellwords  => 1.08,
 				 CGI::Session      => 4.02,
 				 File::Temp        => 0,
@@ -307,6 +308,7 @@ WriteMakefile(
 				 'bin/process_sgd.pl',
 				 'bin/process_gadfly.pl',
                                  'bin/load_genbank.pl',
+                                 'bin/wiggle2gff3.pl',
 				],
 	      'LIBS'	     => [''], # e.g., '-lm'
 	      'LIB'          => $OPTIONS{LIB}, # custom location for perl modules

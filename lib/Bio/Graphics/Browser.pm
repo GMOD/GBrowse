@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.54 2008-01-15 01:46:56 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.55 2008-01-21 21:08:52 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1641,12 +1641,6 @@ sub make_map {
       $balloon_ct ||= 'balloon';
 
       if ($balloonhover) {
-        if ($balloonhover =~ /sub\s*(\(\$\$\))*\s*\{/) {
-	  my $package         = $self->config->base2package;
-	  my $coderef         = eval "package $package; $balloonhover";
-	  $self->config->_callback_complain($label,'balloon hover') if $@;
-	  $balloonhover = $coderef;
-	}
 	my $stick = defined $sticky ? $sticky : 0;
 	$mouseover = $balloonhover =~ /^(https?|ftp):|^\//
 	    ? "$balloon_ht.showTooltip(event,\&#39;<iframe width=100% height=$height frameborder=0 " .
@@ -1655,12 +1649,6 @@ sub make_map {
 	undef $title;
       }
       if ($balloonclick) {
-        if ($balloonclick =~ /sub\s*(\(\$\$\))*\s*\{/) {
-          my $package         = $self->config->base2package;
-          my $coderef         = eval "package $package; $balloonclick";
-          $self->config->_callback_complain($label,'balloon click') if $@;
-          $balloonclick = $coderef;
-        }
 	my $stick = defined $sticky ? $sticky : 1;
 	$style = "cursor:pointer";
 	$mousedown = $balloonclick =~ /^(https?|ftp):|^\//
@@ -3177,9 +3165,12 @@ sub balloon_tip_setting {
   my $self = shift;
   my ($option,$label,$feature,$panel,$track) = @_;
   $option ||= 'balloon tip';
-  my $value = $self->code_setting($label=>$option);
-  $value    = $self->code_setting('TRACK DEFAULTS' => $option) unless defined $value;
-  $value    = $self->code_setting('general' => $option)        unless defined $value;
+  my $value;
+  
+  for $label ($label, 'TRACK DEFAULTS','general') {
+    $value = $self->code_setting($label=>$option);
+    last if $value;
+  }
 
   return unless $value;
   my $val;
@@ -3188,7 +3179,16 @@ sub balloon_tip_setting {
   if (ref($value) eq 'CODE') {
     $val = eval {$value->($feature,$panel,$track)};
     $self->_callback_complain($label=>$option) if $@;
-  } else {
+  }
+  # catch callbacks for custom balloons
+  elsif (my($text,$callback) = $value =~ /^(.+?)(sub\s*(\(\$\$\))*\s*\{.+)/) {
+    my $package         = $self->base2package;
+    my $coderef         = eval "package $package; $callback";
+    $self->_callback_complain($label,$option) if $@;
+    my $callback_text = $coderef->($feature,$panel,$track);
+    $val = join(' ',$text,$callback_text);
+  }
+  else {
     $val = $self->link_pattern($value,$feature,$panel);
   }
 

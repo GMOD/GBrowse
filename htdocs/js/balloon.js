@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.15 2008-01-17 22:11:32 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.16 2008-01-21 21:08:53 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -192,7 +192,7 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
     this.setStyle(this.container,'display','inline');
   }
 
-  this.container.innerHTML = this.currentHelpText;
+  this.container.innerHTML = unescape(this.currentHelpText);
 
   // Also preload the balloon images
   if (!this.images) {

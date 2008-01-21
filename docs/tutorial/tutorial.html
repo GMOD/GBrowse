@@ -166,8 +166,9 @@ pico or vi on Unix systems) and confirm that the path to the volvox
 database directory in this section is correct:
 
 <pre>
+db_adaptor    = Bio::DB::SeqFeature::Store
 db_args       = -adaptor memory
-		-gff    '$HTDOCS/gbrowse/databases/volvox'
+		-dir     '$HTDOCS/gbrowse/databases/volvox'
 </pre>
 
 <p>
@@ -221,7 +222,7 @@ href="mailto:gmod-gbrowse@lists.sourceforge.net">gmod-gbrowse@lists.sourceforge.
 
 
 Let's look at the data file we loaded in detail now.  If you open the
-<a href="data_files/volvox1.gff">volvox1.gff</a> file in a text
+<a href="data_files/volvox1.gff">volvox1.gff3</a> file in a text
 editor, you will see that it contains a series of 15 genome "features"
 that look like this:
 
@@ -318,27 +319,32 @@ The 9 columns are as follows:
       Spaces are allowed in this field, but tabs must be replaced with the
       %09 URL escape.
 
+      <br><br>
       These tags have predefined meanings:
+      <dl>
+	<dt>ID</dt>
+	<dd>Gives the feature a unique identifier. Useful when grouping features
+	    together (such as all the exons in a transcript).</dd>
+	    
+	<dt>Name</dt>
+	<dd>Display name for the feature.  This is the name to be
+	    displayed to the user.</dd>
 
-      ID   Gives the feature a unique identifier. Useful when grouping features
-           together (such as all the exons in a transcript).
-
-      Name Display name for the feature.  This is the name to be
-           displayed to the user.
-
-      Alias A secondary name for the feature.  It is suggested that
+	<dt>Alias</dt>
+	<dd>
+	    A secondary name for the feature.  It is suggested that
 	    this tag be used whenever a secondary identifier for the
 	    feature is needed, such as locus names and
-	    accession numbers.
-
-      Note  A descriptive note to be attached to the feature. This will be displayed
-           as the feature's description.
-      <br><br>
+	    accession numbers.</dd>
+	    
+	<dt>Note</dt>
+	<dd>A descriptive note to be attached to the feature. This will be displayed
+	    as the feature's description.</dd>
+      </dl>
 
       Alias and Note fields can have multiple values separated by commas.
       For example:
       <blockquote>Alias=M19211,gna-12,GAMMA-GLOBULIN</blockquote>
-      
       Other good stuff can go into the attributes field, as we shall see later.</li>
 </ol>
 
@@ -451,144 +457,7 @@ be able to deduce the GBrowse equivalents.
 
 <hr>
 
-<h2><a name="naming">4. Searching for Named Features</a></h2>
-
-<p>
-
-GBrowse has a very flexible search feature.  You can type in the name
-of a reference sequence, such as "ctgA", and it will display the
-entire thing, or you can type in a range in the format
-"ctgA:start..stop".  Try "ctgA:5000..8000" to see this at work.
-
-<p>
-
-In addition, GBrowse can search for features by name. Anything that
-has a Name or Alias attribute in the GFF3 file can be searched for by
-name. For example, try searching for "f10" or even "f1*".
-
-The only drawback to this is that you may have name collisions. For
-example, some research communities distinguish genes from their
-products using differences in capitalization, for example hga
-and HGA. However, GBrowse's searches are case insensitive. To
-avoid name collisions, you can give each type of feature a distinctive
-naming prefix, for example "Gene:hga" and "Protein:HGB".
-
-<p>
-
-To illustrate how this works, have a look at <a
-href="data_files/volvox_geneproducts.gff3">volvox_geneproducts.gff3:</a>
-
-<blockquote class="example"><pre>
-ctgA example remark 1000 2000 . . . Name=HGA
-ctgA example gene   1100 2000 . + . Name=Gene:hga
-ctgA example CDS    1200 1900 . + . Name=Protein:HGA
-ctgA example gene   1600 3000 . - . Name=Gene:hgb
-ctgA example CDS    1800 2900 . - . Name=Protein:HGB
-</pre></blockquote>
-
-<p>
-
-Copy this file into the databases/volvox folder. Note that as you add
-new files to the database folder, you may need to disable caching in
-to see the new features show up immediately. To do this, simply scroll
-down to the "Display Settings" portion of the GBrowse display and
-unselect "Cache tracks."
-
-<p>
-
-Now add the following configuration stanza to volvox.conf to create a
-track that displays both gene and CDS features:
-
-<blockquote><pre>
-[NameTest]
-feature      = gene CDS
-glyph        = generic
-stranded     = 1
-bgcolor      = green
-height       = 10
-key          = Name test track
-</pre></blockquote>
-
-<p>
-
-This stanza creates a new track named "Name test track" and displays
-features of type "gene" and "CDS" using green generic glyphs that are
-10 pixels high. When you look at the data file, you'll see that there
-are three things potentially named "HGA", a remark which uses the
-unqualified name, a gene which uses the qualified name "Gene:hga", and
-a CDS (coding designated segment) region which uses the qualified name
-"Protein:HGA." There is also a gene named "Gene:hgb" and a protein
-named "Protein:HGB."
-
-<p>
-
-To see how GBrowse searches for names, type "HGA" (either
-upper or lowercase) in the search textbox and press "Search." Because
-the search term matches the remark whose unqualified name is HGA,
-GBrowse will bring up the region between 1000..2000 and highlight the
-HGA remark.
-
-<p>
-
-Now search for "Protein:HGA." Because you searched with the qualified
-name, GBrowse will find and highlight the protein (CDS) feature.
-
-<p>
-
-Now try to search for "HGB." This search fails because HGB only exists
-in qualified form in the database. You can still, however, search for
-"Gene:HGB" or "Protein:Hgb" (capitalization doesn't matter). This may
-or may not be the behavior that you desire. If you would like GBrowse
-to search through qualified names when the user types the unqualified
-version, you can configure this easily by adding the following line to
-volvox.conf under the [General] section:
-
-<blockquote class="example"><pre>
-automatic classes = Gene Protein
-</pre></blockquote>
-
-<p>
-
-This option directs GBrowse to search for the unqualified name first,
-followed by names prefixed with "Gene:" and then names prefixed with
-"Protein:". Whichever is found first will be displayed. Now searching
-for "HGB" will find "Gene:hgb". Swapping the order of Gene and Protein
-on this line will cause the "Protein:HGB" to be found.
-
-<p>
-
-Another way to approach this is to make liberal use of the Alias
-attribute. For example:
-
-<blockquote class="example"><pre>
-ctgA example remark 1000 2000 . . . Name=Remark:HGA;Alias=hga
-ctgA example gene   1100 2000 . + . Name=Gene:hga;Alias=hga
-ctgA example CDS    1200 1900 . + . Name=Protein:HGA;Alias=hga
-ctgA example gene   1600 3000 . - . Name=Gene:hgb;Alias=hga
-ctgA example CDS    1800 2900 . - . Name=Protein:HGB;Alias=hga
-</pre></blockquote>
-
-<p>
-
-This assigns the alias of "hga" to each of the three HGA features, and
-an alias of "hgb" to each of the two HGB features. This keeps the
-identities of these features distinct so that you can find particular
-ones by typing in the fully qualified name ("Gene:hga"), but find all
-candidates when you type in the unqualified name. For instance, when
-you search with "hga", GBrowse will now offer you three matches:
-
-<blockquote>
-<img src="figures/aliases.gif"><br>
-<i>Figure 4: Searching for aliases</i>
-</blockquote>
-
-<p>
-
-Finally, you may not want the ....
-
-<hr>
-
-<h2><a name="descriptions">5. Adding Descriptions to a Feature</a></h2>
+<h2><a name="descriptions">4. Adding Descriptions to a Feature</a></h2>
 
 <p>
 
@@ -601,38 +470,31 @@ will be displayed below the feature, and can also be searched.
 
 You can place descriptions, notes and other comments into the ninth
 column of the GFF load file.  The example file <a
-href="data_files/volvox2.gff">volvox2.gff</a> shows how this is done.
+href="data_files/volvox2.gff3">volvox2.gff3</a> shows how this is done.
 An excerpt from the top of the file looks like this:
 
 <blockquote class="example"><pre>
-ctgA   example   motif   11911   15561   .   +   .   Motif m11 ; Note "kinase"
-ctgA   example   motif   13801   14007   .   -   .   Motif m05 ; Note "helix loop helix"
-ctgA   example   motif   14731   17239   .   -   .   Motif m14 ; Note "kinase"
-ctgA   example   motif   15396   16159   .   +   .   Motif m03 ; Note "zinc finger"
+ctgA example polypeptide_domain 11911 15561 . + . Name=m11;Note=kinase
+ctgA example polypeptide_domain 13801 14007 . - . Name=m05;Note=helix loop helix
+ctgA example polypeptide_domain 14731 17239 . - . Name=m14;Note=kinase
+ctgA example polypeptide_domain 15396 16159 . + . Name=m03;Note=zinc finger
 </pre></blockquote>
 
 <p>
 
-This defines several new features of type "motif".  The ninth column,
-in addition to giving each of the motifs names (e.g. "Motif m11"),
-adds a "Note" <i>attribute</i> to each feature.  Attributes are
-name/value pairs, where the attribute name is a single word, and the
-value is a piece of text.  If the value text contains white space
-(spaces or tabs), the text must be enclosed by double quotes as shown
-above.  It doesn't hurt to enclose the text in quotes even if it
-doesn't contain white space, which is what we've done here.  Attribute
-pairs are separated from the Class/name pair by a semicolon, as shown
-above.
+This defines several new features of type "polypeptide_domain".  The
+ninth column, in addition to giving each of the motifs names adds a
+"Note" attribute to each feature. As described earlier, each attribute
+is a name=value pair separated by semicolons.
 
 <p>
 
-We will see later how to take advantage of different types of
-attributes.  For now, it is only important to know that an attribute
-named <i>Note</i> is automatically displayed and made searchable.  To
-see this work, add <a href="data_files/volvox2.gff">volvox2.gff</a>
-to the volvox database.  You can do this just by copying the file
-into <b>$HTDOCS/gbrowse/databases/volvox</b> so that the directory
-contains both the original volvox1.gff and the new volvox2.gff files.
+The attribute named <i>Note</i> is automatically displayed and made
+searchable.  To see this work, add <a
+href="data_files/volvox2.gff3">volvox2.gff3</a> to the volvox database.
+You can do this just by copying the file into
+<b>$HTDOCS/gbrowse/databases/volvox</b> so that the directory contains
+both the original volvox1.gff3 and the new volvox2.gff3 files.
 
 <p>
 
@@ -641,7 +503,7 @@ following new stanza to the config file:
 
 <blockquote class="example"><pre>
 [Motifs]
-feature      = motif
+feature      = polypeptide_domain
 glyph        = span
 height       = 5
 description  = 1
@@ -682,6 +544,145 @@ motifs whose Note attribute contains the word "kinase."
 
 <hr>
 
+<h2><a name="naming">5. Adjusting GBrowse Name Searches</a></h2>
+
+<p>
+
+GBrowse has a very flexible search feature.  You can type in the name
+of a reference sequence, such as "ctgA", and it will display the
+entire thing, or you can type in a range in the format
+"ctgA:start..stop".  Try "ctgA:5000..8000" to see this at work.
+
+<p>
+
+In addition, GBrowse can search for features by name. Anything that
+has a Name or Alias attribute in the GFF3 file can be searched for by
+name. For example, try searching for "f10" or even "f1*".
+
+The only drawback to this is that you may have name collisions. For
+example, some research communities distinguish genes from their
+products using differences in capitalization, for example hga
+and HGA. However, GBrowse's searches are case insensitive. To
+avoid name collisions, you can give each type of feature a distinctive
+naming prefix, for example "Gene:hga" and "Protein:HGB".
+
+<p>
+
+To illustrate how this works, have a look at <a
+href="data_files/volvox_geneproducts.gff3">volvox_geneproducts.gff3:</a>
+
+<blockquote class="example"><pre>
+ctgA example remark                             1000 2000 . . . Name=Remark
+ctgA example protein_coding_primary_transcript  1100 2000 . + . Name=Gene:hga
+ctgA example polypeptide                        1200 1900 . + . Name=Protein:HGA
+ctgA example protein_coding_primary_transcript  1600 3000 . - . Name=Gene:hgb
+ctgA example polypeptide                        1800 2900 . - . Name=Protein:HGB
+</pre></blockquote>
+
+<p>
+
+Copy this file into the databases/volvox folder. Note that as you add
+new files to the database folder, you may need to disable caching in
+to see the new features show up immediately. To do this, simply scroll
+down to the "Display Settings" portion of the GBrowse display and
+unselect "Cache tracks."
+
+<p>
+
+Now add the following configuration stanza to volvox.conf to create a
+track that displays both protein_coding_primary_transcript and
+polypeptide features:
+
+<blockquote><pre>
+[NameTest]
+feature      = protein_coding_primary_transcript polypeptide
+glyph        = generic
+stranded     = 1
+bgcolor      = green
+height       = 10
+key          = Name test track
+</pre></blockquote>
+
+<p>
+
+This stanza creates a new track named "Name test track" and displays
+features of type "protein_coding_primary_transcript" and "polypeptide"
+using green generic glyphs that are 10 pixels high. When you look at
+the data file, you'll see that there are three things potentially
+named "HGA", a remark which uses the unqualified name, a gene which
+uses the qualified name "Gene:hga", and a polypeptide region which
+uses the qualified name "Protein:HGA." There is also a
+protein_coding_primary_transcript named "Gene:hgb" and a protein named
+"Protein:HGB." (<i>Note, in this track we are using slightly awkward
+sequence ontology terms, like "protein_coding_primary_transcript,"
+rather than more natural terms like "gene" in order to avoid these
+example features from appearing in the real "gene" track that we
+create later on in this tutorial.</i>)
+
+<p>
+
+To see how GBrowse searches for names, type "HGA" (either
+upper or lowercase) in the search textbox and press "Search." Because
+the search term matches the remark whose unqualified name is HGA,
+GBrowse will bring up the region between 1000..2000 and highlight the
+HGA remark.
+
+<p>
+
+Now search for "Protein:HGA." Because you searched with the qualified
+name, GBrowse will find and highlight the protein feature.
+
+<p>
+
+Now try to search for "HGB." This search fails because HGB only exists
+in qualified form in the database. You can still, however, search for
+"Gene:HGB" or "Protein:Hgb" (capitalization doesn't matter). This may
+or may not be the behavior that you desire. If you would like GBrowse
+to search through qualified names when the user types the unqualified
+version, you can configure this easily by adding the following line to
+volvox.conf under the [General] section:
+
+<blockquote class="example"><pre>
+automatic classes = Gene Protein
+</pre></blockquote>
+
+<p>
+
+This option directs GBrowse to search for the unqualified name first,
+followed by names prefixed with "Gene:" and then names prefixed with
+"Protein:". Whichever is found first will be displayed. Now searching
+for "HGB" will find "Gene:hgb". Swapping the order of Gene and Protein
+on this line will cause the "Protein:HGB" to be found.
+
+<p>
+
+Another way to approach this is to make liberal use of the Alias
+attribute. For example:
+
+<blockquote class="example"><pre>
+ctgA example remark                             1000 2000 . . . Name=Remark:HGA;Alias=hga
+ctgA example protein_coding_primary_transcript  1100 2000 . + . Name=Gene:hga;Alias=hga
+ctgA example polypeptide                        1200 1900 . + . Name=Protein:HGA;Alias=hga
+ctgA example protein_coding_primary_transcript  1600 3000 . - . Name=Gene:hgb;Alias=hga
+ctgA example polypeptide                        1800 2900 . - . Name=Protein:HGB;Alias=hga
+</pre></blockquote>
+
+<p>
+
+This assigns the alias of "hga" to each of the three HGA features, and
+an alias of "hgb" to each of the two HGB features. This keeps the
+identities of these features distinct so that you can find particular
+ones by typing in the fully qualified name ("Gene:hga"), but find all
+candidates when you type in the unqualified name. For instance, when
+you search with "hga", GBrowse will now offer you three matches:
+
+<blockquote>
+<img src="figures/aliases.gif"><br>
+<i>Figure 4: Searching for aliases</i>
+</blockquote>
+
+<hr>
+
 <h2><a name="segmented_features">6. Showing multi-segmented features</a></h2>
 
 <p>
@@ -698,52 +699,50 @@ contains a simulated data set of a series of gapped nucleotide
 alignments.  An excerpt from the file is here:
 
 <blockquote class="example"><pre>
-ctgA   example   match 6885   8999   .   -   .   Match seg03
-ctgA   example   HSP   6885   7241   .   -   .   Match seg03
-ctgA   example   HSP   7410   7737   .   -   .   Match seg03
-ctgA   example   HSP   8055   8080   .   -   .   Match seg03
-ctgA   example   HSP   8306   8999   .   -   .   Match seg03
-ctgA   example   match 5233   9825   .   -   .   Match seg04
-ctgA   example   HSP   5233   5302   .   -   .   Match seg04
-ctgA   example   HSP   5800   6101   .   -   .   Match seg04
-ctgA   example   HSP   6442   6854   .   -   .   Match seg04
-ctgA   example   HSP   7106   7211   .   -   .   Match seg04
-ctgA   example   HSP   7695   8177   .   -   .   Match seg04
-ctgA   example   HSP   8545   8783   .   -   .   Match seg04
-ctgA   example   HSP   8869   8935   .   -   .   Match seg04
-ctgA   example   HSP   9404   9825   .   -   .   Match seg04
+ctgA example match 32329 32359 . + . ID=match-seg01;Name=seg01
+ctgA example match 26122 26126 . + . ID=match-seg02;Name=seg02
+ctgA example match 26497 26869 . + . ID=match-seg02;Name=seg02
+ctgA example match 27201 27325 . + . ID=match-seg02;Name=seg02
+ctgA example match 27372 27433 . + . ID=match-seg02;Name=seg02
+ctgA example match 27565 27565 . + . ID=match-seg02;Name=seg02
+ctgA example match 27813 28091 . + . ID=match-seg02;Name=seg02
+ctgA example match 28093 28201 . + . ID=match-seg02;Name=seg02
+ctgA example match 28329 28377 . + . ID=match-seg02;Name=seg02
+ctgA example match 28829 29194 . + . ID=match-seg02;Name=seg02
+ctgA example match  6885  7241 . - . ID=match-seg03;Name=seg03
+ctgA example match  7410  7737 . - . ID=match-seg03;Name=seg03
+ctgA example match  8055  8080 . - . ID=match-seg03;Name=seg03
+ctgA example match  8306  8999 . - . ID=match-seg03;Name=seg03
 </pre></blockquote>
 
 <p>
 
-Each segmented feature is represented by several lines in the GFF file
-that share the same feature name.  Each feature has a single GFF line
-of type "match" whose start and end coordinates correspond to the full
-length of the alignment.  Following this are one or more lines of type
-"HSP" with start and end coordinates indicating a section of the
-match.  You will recognize this terminology from the standard BLAST
-report.
+This file uses a new GFF3 attribute, "ID". The ID attribute is used to
+group features together and to indicate when a single feature occupies
+multiple discontinuous locations. In the case of a gapped alignment,
+each ungapped segment is represented by a single GFF3 line. The
+segments of a single alignment are then grouped together by using the
+same ID.  For example "match-seg03" starts at position 6885 and ends
+at 8999.  It has four subsegments, one from 6885..7241, another from
+7410..7737, and so forth.
 
 <p>
 
-For example "Match seg03" starts at position 6885 and ends at 8999.
-It has four subsegments, one from 6885..7241, another from 7410..7737,
-and so forth.
+The ID attribute is not the same as the Name attribute. If you give
+three lines the same ID, they will be grouped together into a single
+displayed feature. If you give three lines the same Name you will end
+up with three distinct features that all happen to share the same
+name. Also note that except for the coordinates and the score (which
+we'll discuss later) all columns for each of the parts of a
+multisegmented feature should be the same. For example, you can't have
+one part of a feature on the (+) strand and another part on the (-)
+strand.
 
 <p>
 
-The types "match" and "HSP" are not arbitrary, but are needed to tell
-the GBrowse database what the relationship between the full-length
-feature and its subparts are.  The specific type names expected are
-mediated by a series of "aggregators" -- code modules that are loaded
-when GBrowse starts up.  We will see later in this section how to
-manipulate these aggregators and to define custom ones.
-
-<p>
-
-Add <a href="data_files/volvox3.gff">volvox3.gff</a> into the volvox
-database by copying it into the volvox database directory.  Then edit
-volvox.conf to add the following track definition:
+Copy <a href="data_files/volvox3.gff">volvox3.gff</a> into the volvox
+database directory.  Then edit volvox.conf to add the following track
+definition:
 
 <blockquote class="example"><pre>
 [Alignments]
@@ -756,228 +755,127 @@ key          = Example alignments
 
 This is declaring a new track named "Alignments" which displays
 features of type "match" using a glyph named "segments".  The segments
-glyph is specialized for displaying objects that have multiple
-similar subparts.
-
-<p>
-
-Save the modified config file and reload the page in the browser.
-Disappointingly, you'll see something like Figure 5.  Instead of
-showing multi-segmented features, the track shows a single solid box
-that spans the entire length of the feature.
-
-<blockquote>
-<img src="figures/segmented_features1.gif"><br>
-<i>Figure 5: Without activating an aggregator, multisegmented features
-do not displayed properly</i>
-</blockquote>
-
-<p>
-
-To make multipart features display correctly, you must activate or
-define an appropriate aggregator.  This is very easy for the
-similarity/match relationship, because there's already a predefined
-aggregator named "match."  Reopen the volvox.conf configuration file,
-and find the option line near the top of the file that reads
-"aggregators = ".  Change this to read as follows:
-
-<blockquote class="example"><pre>
-aggregators = match
-</pre></blockquote>
-
-<p>
-
-This is telling GBrowse to turn on the "match" aggregator.  Now
-reload.  You should see a much-improved image similar to Figure 6.
+glyph is specialized for displaying objects that have multiple similar
+subparts. Reload the page and activate the "Example alignments"
+track. You should see a track similar to Figure 5.
 
 <blockquote>
 <img src="figures/segmented_features2.gif">
-<i>Figure 6: Turning on the "match" aggregator allows GBrowse to
-recognize that the match feature has subparts</i>
+<i>Figure 5: Use the "segments" glyph to display discontinuous
+multipart features.</i>
 </blockquote>
 
 <hr>
 
-<h2><a name="aggregators">7. Using Aggregators</a></h2>
-
-There are several predefined aggregators, each of which expects a
-particular combinations of feature type names. The table below
-summarizes the most useful ones:
-
-<table border="1">
-  <tr>
-    <th>Aggregator name</th>
-    <th>Main type</th>
-    <th>Subtype(s)</th>
-    <th>Purpose</th>
-  </tr>
-  <tr>
-    <th>alignment</th>
-    <td>(none)</td>
-    <td>similarity</td>
-    <td>nucleotide and protein alignments where the full extent of the
-    match is unknown</td>
-  </tr>
-  <tr>
-    <th>coding</th>
-    <td>mRNA</td>
-    <td>CDS</td>
-    <td>Used in concert with the "cds" glyph to display the reading
-	frame used by the coding portion of each exon.</td>
-  </tr>
-  <tr>
-    <th>clone</th>
-    <td>(none)</td>
-    <td>Clone_left_end Clone_right_end</td>
-    <td>Used for cases in which clone ends have been mapped to the
-	genome, but one of the ends may be missing.</td>
-  </tr>
-  <tr>
-    <th>match</th>
-    <td>match</td>
-    <td>similarity, HSP</td>
-    <td>nucleotide and protein alignments</td>
-  </tr>
-  <tr>
-    <th>processed_transcript</th>
-    <td>mRNA</td>
-    <td>CDS, UTR, 5'-UTR, 3'-UTR transcription_start_site, polyA_site</td>
-    <td>the canonical spliced gene</td>
-  </tr>
-  <tr>
-    <th>transcript</th>
-    <td>transcript</td>
-    <td>exon TSS PolyA</td>
-    <td>a spliced transcript that expects exon features</td>
-  </tr>
-</table>
-
-<p>
-
-To use any of these aggregators, follow this recipe:
-
-<ol>
-  <li>Give your features and their subparts the specific type names
-      expected by the aggregators.
-  <li>Add the aggregator to the list of aggregators in the config
-      file, e.g. <code>aggregators = match processed_transcript
-      clone</code>.
-  <li>In the appropriate track definition, use the aggregator's name
-      as the argument for <code>feature</code>.  For example
-      <code>feature=processed_transcript</code>.
-</ol>
-
-<hr>
-
-<h2><a name="canonical_gene">8. Showing Protein Coding Genes</a></h2>
+<h2><a name="canonical_gene">7. Showing Protein Coding Genes</a></h2>
 
 <p>
 
 GBrowse can display protein-coding genes in various shapes and styles.
-The easiest way to set this up is to use the "processed_transcript"
-aggregator and its companion glyph also called "processed_transcript."
-Take a look at the file <a
-href="data_files/volvox4.gff">volvox4.gff</a>, which defines a gene
-named EDEN, and its three spliced forms named EDEN.1, EDEN.2 and
-EDEN.3.  Here is the contents of the file:
+The easiest way to set this up is to use the
+<a href="http://www.sequenceontology.org/gff3.shtml#gene">sequence ontology's
+canonical description of a gene</a> along with the "gene" glyph. Take a
+look at the file <a href="data_files/volvox4.gff3">volvox4.gff3</a>,
+which defines a gene named EDEN, and its three spliced forms named
+EDEN.1, EDEN.2 and EDEN.3.  Here is the contents of the file:
 
 <blockquote class="example"><pre>
-ctgA    example gene    1050    9000    .       +       .       Gene EDEN ; Note "protein kinase"
-                                          
-ctgA    example mRNA    1050    9000    .       +       .       mRNA EDEN.1 ; Gene EDEN
-ctgA    example 5'-UTR  1050    1200    .       +       .       mRNA EDEN.1
-ctgA    example CDS     1201    1500    .       +       0       mRNA EDEN.1
-ctgA    example CDS     3000    3902    .       +       0       mRNA EDEN.1
-ctgA    example CDS     5000    5500    .       +       0       mRNA EDEN.1
-ctgA    example CDS     7000    7608    .       +       0       mRNA EDEN.1
-ctgA    example 3'-UTR  7609    9000    .       +       .       mRNA EDEN.1
-                                                           
-ctgA    example mRNA    1050    9000    .       +       .       mRNA EDEN.2 ; Gene EDEN
-ctgA    example 5'-UTR  1050    1200    .       +       .       mRNA EDEN.2
-ctgA    example CDS     1201    1500    .       +       0       mRNA EDEN.2
-ctgA    example CDS     5000    5500    .       +       0       mRNA EDEN.2
-ctgA    example CDS     7000    7608    .       +       0       mRNA EDEN.2
-ctgA    example 3'-UTR  7609    9000    .       +       .       mRNA EDEN.2
-                                            
-ctgA    example mRNA    1300    9000    .       +       .       mRNA EDEN.3 ; Gene EDEN
-ctgA    example 5'-UTR  1300    1500    .       +       .       mRNA EDEN.3
-ctgA    example 5'-UTR  3000    3300    .       +       .       mRNA EDEN.3
-ctgA    example CDS     3301    3902    .       +       0       mRNA EDEN.3
-ctgA    example CDS     5000    5500    .       +       1       mRNA EDEN.3
-ctgA    example CDS     7000    7600    .       +       1       mRNA EDEN.3
-ctgA    example 3'-UTR  7601    9000    .       +       .       mRNA EDEN.3
+ctgA example gene            1050 9000 . + . ID=EDEN;Name=EDEN;Note=protein kinase
+
+ctgA example mRNA            1050 9000 . + . ID=EDEN.1;Parent=EDEN;Name=EDEN.1;Index=1
+ctgA example five_prime_UTR  1050 1200 . + . Parent=EDEN.1
+ctgA example CDS             1201 1500 . + 0 Parent=EDEN.1
+ctgA example CDS             3000 3902 . + 0 Parent=EDEN.1
+ctgA example CDS             5000 5500 . + 0 Parent=EDEN.1
+ctgA example CDS             7000 7608 . + 0 Parent=EDEN.1
+ctgA example three_prime_UTR 7609 9000 . + . Parent=EDEN.1
+
+ctgA example mRNA            1050 9000 . + . ID=EDEN.2;Parent=EDEN;Name=EDEN.2;Index=1
+ctgA example five_prime_UTR  1050 1200 . + . Parent=EDEN.2
+ctgA example CDS             1201 1500 . + 0 Parent=EDEN.2
+ctgA example CDS             5000 5500 . + 0 Parent=EDEN.2
+ctgA example CDS             7000 7608 . + 0 Parent=EDEN.2
+ctgA example three_prime_UTR 7609 9000 . + . Parent=EDEN.2
+
+ctgA example mRNA            1300 9000 . + . ID=EDEN.3;Parent=EDEN;Name=EDEN.3;Index=1
+ctgA example five_prime_UTR  1300 1500 . + . Parent=EDEN.3
+ctgA example five_prime_UTR  3000 3300 . + . Parent=EDEN.3
+ctgA example CDS             3301 3902 . + 0 Parent=EDEN.3
+ctgA example CDS             5000 5500 . + 1 Parent=EDEN.3
+ctgA example CDS             7000 7600 . + 1 Parent=EDEN.3
+ctgA example three_prime_UTR 7601 9000 . + . Parent=EDEN.3
 </pre></blockquote>
 
 <p>
 
-The first line of the file defines the gene as a whole, starting at
-position 1050 of ctgA and extending to position 9000.  Following this,
-there are three sets of lines that define the structure of the spliced
-forms EDEN.1, EDEN.2, and EDEN.3.  By convention, the whole transcript is represented
-as type "mRNA".  It has subparts named "5'-UTR", CDS, and "3'-UTR",
-where the UTR features are the 5' and 3' untranslated regions,
-respectively, and CDS is the coding region.  Note how the CDS is split
-by splicing among multiple discontinuous locations on the reference
-sequence.  The UTRs can be split in this way too.
+GFF3 uses a three-tiered structure to represent the gene, descending
+from gene to mRNA to CDS and UTR features. A gene has potentially many
+mRNAs, and each mRNA has potentially several CDS and UTR features. To
+describe how the parts fit together, we use ID and Parent features.
 
 <p>
 
-Each mRNA and its subparts are grouped together under a common name in
-the ninth column ("mRNA EDEN.1", "mRNA EDEN.2", and so forth).  In
-addition, each mRNA has a Gene <i>attribute</i> that ties it to the
-EDEN gene itself ("Gene EDEN").  Although this isn't required for the
-display, doing this will identify the various alternative transcripts
-as belonging to the same gene should you wish to use the GBrowse
-database for data mining.  It will also show the user what gene the
-transcript belongs to when he or she clicks on it for details.
+We start with a feature of type "gene" with the ID "EDEN". This has
+three alternative splice forms named EDEN.1, EDEN.2 and EDEN.3. To
+tell GBrowse that each of these splice forms are part of the same
+gene, we give each one a Parent attribute of "EDEN" corresponding to
+the ID of the parent gene. Now consider mRNA EDEN.1. It has a
+five_prime_UTR feature, a three_prime_UTR feature, and four CDS
+features. To indicate that the CDS and UTR features belong to the
+mRNA, we give the mRNA a unique ID of "EDEN.1" and give each of the
+subfeatures a corresponding parent. This pattern repeats for each of
+the other two splice forms. Note how the five_prime_UTR of EDEN.3 is
+split in two parts. 
 
 <p>
 
-<blockquote class="example"><i>HINT: If you prefer not to distinguish between 5' and
-3' UTRs, you can simply use "UTR" as the type.  If you don't know
-where the UTRs are, just leave them blank.  If you'd rather think in
-terms of exons and introns, then check out the "transcript" aggregator
-and its corresponding "transcript" glyph.
-</i>
-</blockquote>
+As before, we use "Name" to give the gene and its alternative splice
+forms a human-readable name, and use Note to provide a
+description for the gene as a whole (you can add notes to the
+individual mRNAs but they won't display by default). The Index=1
+attribute is a hint to the database to make the mRNAs searchable by
+name. This lets users find the gene by searching for the mRNA names
+("EDEN.1") as well as by the gene name ("EDEN"). Also notice that we
+are using the Phase column for the CDS features to describe how the
+CDS is translated into protein. See the description of phase in the <a
+name="#data_file">data file</a> section.
 
 <p>
 
-Go ahead and add volvox4.gff to the database.  Then make the following
-changes to volvox.conf:
-
-<ol>
-  <li>Change the aggregators line to read as follows:
-      <blockquote class="example"><pre>
-aggregators = match
-	processed_transcript
-      </pre></blockquote>
-  <li>Add the following new stanza to the bottom of the file:
-      <blockquote class="example"><pre>
-[Transcripts]
-feature      = processed_transcript
-glyph        = processed_transcript
-bgcolor      = peachpuff
-description  = 1
-key          = Protein-coding genes
-      </pre></blockquote>
-</ol>
+This is the full way to describe genes. Simpler ways are described
+later in this section.
 
 <p>
 
-The updated aggregators option loads the processed_transcript
-aggregator, which knows how to put CDS and UTR features together to
-form a spliced transcript.  The new Transcripts track associates
-aggregated processed_transcript features with the like-named glyph,
-sets its background color to peachpuff (yes, there really is a color
-by this name!), turns on the description lines, and sets the human
-readable track name to "Protein-coding genes."  <p>
+<blockquote class="example"><i>HINT: If you prefer not to distinguish
+between 5' and 3' UTRs, you can simply use "UTR" as the type.  If you
+don't know where the UTRs are, just leave them blank.  If you'd rather
+think in terms of exons and introns, then check out so_transcript
+glyph.</i> </blockquote>
+
+<p>
+
+Go ahead and add volvox4.gff to the database.  Then add the following
+new stanza to the bottom of the file:
 
 <blockquote class="example"><pre>
-<i>The aggregators option demonstrates that GBrowse config file
-options can continue across multiple lines
-provided that each additional line is indented.</i>
-</blockquote>
+[Genes]
+feature      	   = gene
+glyph              = gene
+bgcolor            = peachpuff
+label_transcripts  = 1
+draw_translation   = 1
+category           = Genes
+key                = Protein-coding genes
+</pre></blockquote>
+
+<p>
+
+The updated aggregators option loads the processed_transcript The new
+Genes track associates "gene" features with the "gene" glyph, sets its
+background color to peachpuff (yes, there really is a color by this
+name!), turns on the description lines, and sets the human readable
+track name to "Protein-coding genes."  <p>
 
 <p>
 
@@ -986,44 +884,14 @@ track, and viewing the region around 1..10K, you'll see this:
 
 <blockquote>
 <img src="figures/canonical_gene1.gif"><br>
-<i>Figure 7: The canonical processed_transcript glyph</i>
+Figure 5: The canonical gene
 </blockquote>
 
 <p>
 
-This image is nice, but we can make it even better.  One problem is
-that the gene description (the Note in the EDEN GFF line) isn't being
-displayed, because the description is attached to the gene and not to
-the individual mRNAs.  To fix this, we simply tell GBrowse to display
-features of type "gene" as well as those of type
-"processed_transcript".  Modify volvox.conf so the last stanza looks
-like this:
+The gene glyph has a number of options that you can use to customize
+its appearance:
 
-<blockquote class="example"><pre>
-[Transcripts]
-feature      = processed_transcript gene
-glyph        = processed_transcript
-bgcolor      = peachpuff
-description  = 1
-key          = Protein-coding genes
-</pre></blockquote>
-
-<p>
-
-The only change is that there are now <b>two</b> types listed for the
-feature option, "processed_transcript" and "gene."  This is telling
-GBrowse to place both feature types in the same track.  If we reload
-the page, it now looks like this:
-
-<blockquote>
-<img src="figures/canonical_gene2.gif">
-<i>Figure 8: Showing the gene as well as its transcripts</i>
-</blockquote>
-
-<p>
-
-The processed_transcript glyph has a number of options that you can
-use to customize its appearance:
 <p>
 <table border="1">
   <tr>
@@ -1052,7 +920,7 @@ use to customize its appearance:
 <p>
 
 Using these options, we can make the track look like the UCSC Genome
-Browser (Figure 9).
+Browser (Figure 6).
 
 <blockquote class="example"><pre>
 [Transcripts]
@@ -1071,9 +939,14 @@ key          = Protein-coding genes
 
 <blockquote>
 <img src="figures/canonical_gene3.gif"><br>
-<i>Figure 9: A UCSC Genome Browser lookalike</i>
+Figure 6: A UCSC Genome Browser lookalike
 </blockquote>
 
+<hr>
+
+<h2><a name="simple_gene">8. Simpler Genes</a></h2>
+
+Simpler ways of representing genes are also possible......
 
 <hr>
 
@@ -1088,7 +961,7 @@ display that will visualize each CDS's reading frame.
 
 <p>
 
-To see this work, add the predefined "coding" aggregator to the list
+To see this work, add the predefined "coding" aggregator to the listz
 of aggregators:
 
 <blockquote class="example"><pre>
@@ -4586,6 +4459,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Thu Jan 17 15:29:00 EST 2008
+Last modified: Mon Jan 21 18:52:13 EST 2008
 <!-- hhmts end -->
 </body> </html>

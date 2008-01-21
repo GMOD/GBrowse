@@ -1,4 +1,7 @@
-# file: volvox1.gff
+##gff-version 3
+##Note: See http://song.sourceforge.net
+
+# file: volvox1.gff3
 ctgA	example	contig	1	50000	.	.	.	Name=ctgA
 ctgA	example	remark	1659	1984	.	+	.	Name=f07;Note=This is an example
 ctgA	example	remark	3014	6130	.	+	.	Name=f06;Note=This is another example

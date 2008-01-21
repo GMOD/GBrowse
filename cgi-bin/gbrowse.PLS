@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.39 2008-01-17 22:11:31 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.40 2008-01-21 23:52:57 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -490,7 +490,7 @@ sub main_display {
       unless $segment->can('features');
 
     # display some additional info for the rubber-band select libraries
-    print segment_info($page_settings,$segment,$whole_segment);
+    print segment_info($page_settings,$segment,$whole_segment) || ''; # kill uninit variable warning
 
     print overview_panel($whole_segment,$segment,$page_settings,$feature_files);
 

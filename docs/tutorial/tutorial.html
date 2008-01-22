@@ -8,7 +8,7 @@
 <body>
 <h1>Generic Genome Browser: A Tutorial</h1>
 
-<h2>Author: Lincoln Stein, June 16, 2003 (<i>revised 10 Jan 2008</i>)</h2>
+<h2>Author: Lincoln Stein, 26 January 2008</h2>
 
 <p>
 
@@ -830,15 +830,15 @@ split in two parts.
 <p>
 
 As before, we use "Name" to give the gene and its alternative splice
-forms a human-readable name, and use Note to provide a
-description for the gene as a whole (you can add notes to the
-individual mRNAs but they won't display by default). The Index=1
-attribute is a hint to the database to make the mRNAs searchable by
-name. This lets users find the gene by searching for the mRNA names
-("EDEN.1") as well as by the gene name ("EDEN"). Also notice that we
-are using the Phase column for the CDS features to describe how the
-CDS is translated into protein. See the description of phase in the <a
-name="#data_file">data file</a> section.
+forms a human-readable name, and use Note to provide a description for
+the gene as a whole (you can add notes to the individual mRNAs but
+they won't display by default). The Index=1 attribute is a hint to the
+database to make the mRNAs searchable by name. This lets users find
+the gene by searching for the mRNA names ("EDEN.1") as well as by the
+gene name ("EDEN"). However, it is usually unecessary to do this. Also
+notice that we are using the Phase column for the CDS features to
+describe how the CDS is translated into protein. See the description
+of phase in the <a name="#data_file">data file</a> section.
 
 <p>
 
@@ -944,57 +944,43 @@ Figure 6: A UCSC Genome Browser lookalike
 
 <hr>
 
-<h2><a name="simple_gene">8. Simpler Genes</a></h2>
-
-Simpler ways of representing genes are also possible......
-
-<hr>
-
-<h2><a name="cds">9. Showing the Reading Frame</a></h2>
+<h2><a name="cds">8. Showing the Reading Frame</a></h2>
 
 <p>
 
-Continuing with the example from the last section, the third exon of
-EDEN.1 is shared with EDEN.3.  But is the reading frame preserved?
-The "coding" aggregator used in concert with the "cds" glyph creates a
-display that will visualize each CDS's reading frame.
+Continuing with the example from section 7, the third exon of EDEN.1
+is shared with EDEN.3.  But is the reading frame preserved?  The "cds"
+glyph will create a display that will visualize each CDS's reading
+frame.
 
 <p>
 
-To see this work, add the predefined "coding" aggregator to the listz
-of aggregators:
+To see this work, add the following stanza to the bottom of the
+configuration file:
 
 <blockquote class="example"><pre>
-aggregators = match
-	      processed_transcript
-	      coding
-</pre></blockquote>
-
-<p>
-
-The "coding" aggregator is similar to processed_transcript, except
-that it only pays attention to the CDS parts of the transcript.  It
-was designed to work hand-in-hand with the "cds" glyph.  (For
-historical reasons, the glyph is called "cds" rather than "coding.")
-
-<p>
-
-Now add the following short stanza to the bottom of the configuration
-file:
-
-<blockquote class="example"><pre>
-[CDS]
-feature      = coding
-glyph        = cds
-key          = Frame usage
+[ReadingFrame]
+feature            = mRNA
+glyph              = cds
+ignore_empty_phase = 1
+category           = Genes
+key                = Frame usage
 </pre></blockquote>
 
 <p>
 
 When you reload the page and turn this track on, you'll see a "musical
-staff" representation of the frame usage (Figure 10).  From this we
-can see that the alternative splicing in fact changes the reading
-frame of the second exon.
+staff" representation of the frame usage (Figure 10). From this we can
+see that the alternative splicing in fact changes the reading frame of
+the second exon.
+
+<p>
+
+The "feature" option tells the glyph to take its data from the mRNA
+subfeatures of the main gene features. Note that depending on which
+data adapter you use, you may need to specify the attribute "Index=1"
+for each of the mRNA subfeatures in order for the glyph to find them
+inside the gene object. However, this is usually unnecessary.
 
 <blockquote>
 <img src="figures/cds1.gif"><br>
@@ -1004,66 +990,160 @@ staff notation</i>
 
 <hr>
 
-<h2><a name="custom_aggregators">10. Creating Custom Aggregators</a></h2>
+<h2><a name="simple_gene">9. Simpler Genes</a></h2>
+
 <p>
 
-If none of the predefined aggregators meets your needs, it is simple
-to define a custom one of your own.  For example, say you wanted to
-display a feature of type "BAC", whose subparts are of type
-"left_end_read" and "right_end_read" (possibly corresponding to a BAC
-clone mapping experiment).  Here is a GFF representation of this:
+If the full three-tiered representation of a gene bugs you, there are
+simpler alternatives. To represent a typical predicted gene that only
+has a translated region, you can represent the translation as a single
+CDS line for a single-exon gene, or a series of linked lines for a
+spliced gene. <a
+href="data_files/volvox4b.gff3">data_files/volvox4b.gff3</a> shows how
+to do this:
 
 <blockquote class="example"><pre>
-ctgA   example   BAC              1000   20000   .   .   .   BAC b101.2 ; Note "Fingerprinted BAC with end reads"
-ctgA   example   left_end_read    1000   1500    .   +   .   BAC b101.2
-ctgA   example   right_end_read   19500  20000   .   -   .   BAC b101.2
+ctgA predicted CDS 10000 11500 . + 0 Name=Apple1
+
+ctgA predicted CDS 13000 13800 . + 0 ID=cds-Apple2;Name=Apple2
+ctgA predicted CDS 15000 15500 . + 1 ID=cds-Apple2;Name=Apple2
+ctgA predicted CDS 17000 17200 . + 2 ID=cds-Apple2;Name=Apple2
 </pre></blockquote>
 
 <p>
 
-This is the contents of <a
-href="data_files/volvox5.gff">volvox5.gff</a>.  Go ahead and add this
-into the database now.  To visualize this you will:
-
-<ol>
-  <li>Create a custom aggregator that explains the relationship
-      between the three feature types.
-  <li>Create a new stanza that uses the custom aggregator.
-</ol>
-
+This creates two linked CDS sets: a single exon predicted called
+Apple1 and a three-exon gene called Apple2. Note that we use a common
+ID to tie the three Apple2 exons together.
 
 <p>
 
-To define the custom aggregator, open volvox.conf and add the
-following to the aggregators line:
+The corresponding stanza will look like this:
 
 <blockquote class="example"><pre>
-aggregators = match
-	      processed_transcript
-	      coding
-              BAC{left_end_read,right_end_read/BAC}
+[CDS]
+feature      	   = CDS:predicted
+glyph              = gene
+bgcolor            = white
+category           = Genes
+key                = Predicted genes
 </pre></blockquote>
 
 <p>
 
-The thing named <b>BAC{left_end_read,right_end_read/BAC}</b> is the
-custom aggregator definition.  Its format is
-<i>aggregator_name{subtype1,subtype2,subtype3.../main_type}</i>.  Here
-we're defining an aggregator of type "BAC" which has subparts of type
-"left_end_read" and "right_end_read" (separated by commas) and
-top-level type of "BAC" (separated from the subparts by a slash).
-Although it's not necessary to use the same name for both the main
-feature type and the aggregator, it's often convenient to do so.
+We are still using the gene glyph. However, be aware that this depends
+on a recent (as of January 2008) enhancement to bioperl-live. If the
+gene does not display properly for you, then either install a newer
+version of bioperl (for example, the CVS "bioperl-live" version), or
+use the older "transcript" glyph instead of the gene glyph.
 
 <p>
 
-Now add the appropriate stanza to the bottom of volvox.conf:
+The other thing to notice is that the feature is now qualified as
+"CDS:predicted". This corresponds to a GFF3 type (column 3) of "CDS",
+and a GFF3 source (column 2) of "predicted." In all previous examples,
+we used an unqualified feature name, but in this case we don't want
+the CDS subfeatures from the three-tier EDEN gene examples to be
+displayed in the predicted gene track. Therefore we limit the features
+that are displayed in this track by qualifying the feature type with
+its source using the syntax shown here.
+
+<p>
+
+The result is shown in Figure 7:
+
+<blockquote>
+<img src="figures/predicted_genes.gif"><br>
+Figure 7: Simpler genes using linked CDSs and the transcript glyph
+</blockquote>
+
+<p>
+
+The bottom six lines of Volvox4b.gff3 show how to display a single
+transcript that has both coding and non-coding regions.
+
+<blockquote class="example"><pre>
+ctgA exonerate mRNA 17400 23000 . + . ID=rna-Apple3;Name=Apple3;Note=Predicted
+ctgA exonerate UTR  17400 17999 . + . Parent=rna-Apple3
+ctgA exonerate CDS  18000 18800 . + 0 Parent=rna-Apple3
+ctgA exonerate CDS  19000 19500 . + 1 Parent=rna-Apple3
+ctgA exonerate CDS  21000 21200 . + 2 Parent=rna-Apple3
+ctgA exonerate UTR  21201 23000 . + . Parent=rna-Apple3
+</pre></blockquote>
+
+<p>
+
+To represent this transcript, we need to create a feature of type mRNA
+and a unique ID, followed by several UTR and CDS subfeatures all
+linked to the mRNA via their Parent attribute. In this example we use
+"UTR" for the UTR features, although the more explicit
+"five_prime_UTR" and "three_prime_UTR" types will also work. The
+"so_transcript" (Sequence Ontology transcript) glyph knows how to
+display these correctly:
+
+<blockquote class="example"><pre>
+[Transcript]
+feature      	   = mRNA:exonerate
+glyph              = gene
+description        = 1
+bgcolor            = beige
+category           = Genes
+key                = Exonerate predictions
+</pre></blockquote>
+
+<p>
+
+After making this addition to the configuration file, reload the page
+and turn on "Exonerate predictions." You will see a display that is
+similar to the gene track, but treats each transcript as a separate
+feature.
+
+<p>
+
+As with the previous example, this depends on a recent (as of January
+2008) change to bioperl. If it doesn't work for you, either update
+bioperl, or use the "so_transcript" glyph.
+
+<hr>
+
+<h2><a name="grouping">10. Grouping Features</a></h2>
+
+<p>
+
+In some circumstances you may wish to group features together to
+create a multipart feature. The gene object is actually just a special
+case of this. To show you the general case, we'll creature a feature
+of type "BAC", whose subparts are of type "clone_start" and
+"clone_end" (possibly corresponding to a BAC clone mapping
+experiment).  Here is the GFF3 representation of this:
+
+<blockquote class="example"><pre>
+ctgA example BAC         1000  20000 . . . ID=b101.2;Name=b101.2;Note=Fingerprinted BAC with end reads
+ctgA example clone_start 1000   1500 . + . Parent=b101.2
+ctgA example clone_end   19500 20000 . - . Parent=b101.2
+</pre></blockquote>
+
+<p>
+
+As you can see, we've created a top-level feature of type "BAC" with
+two children of type "clone_start" and "clone_end" respectively. The
+start and end have opposite strands, indicating that they were
+sequenced off different strands of the BAC. The three features are
+tied together using the ID and Parent attributes that should be
+familiar to you from the gene examples.
+
+<p>
+
+This data lives in <a href="data_files/volvox5.gff">volvox5.gff</a>.
+Go ahead and add this into the database now.  To visualize this add
+the appropriate stanza to the bottom of volvox.conf:
 
 <blockquote class="example"><pre>
 [Clones]
 feature      = BAC
 glyph        = segments
 bgcolor      = yellow
+connector    = dashed
 strand_arrow = 1
 description  = 1
 key          = Fingerprinted BACs
@@ -4459,6 +4539,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Mon Jan 21 18:52:13 EST 2008
+Last modified: Tue Jan 22 16:49:27 EST 2008
 <!-- hhmts end -->
 </body> </html>

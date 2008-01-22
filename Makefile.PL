@@ -4,6 +4,7 @@ use lib './install_util';
 use ExtUtils::MakeMaker;
 use GuessDirectories;
 use FindBin '$Bin';
+use IO::File;
 use Cwd;
 require 5.005003;
 
@@ -260,6 +261,10 @@ if ($bioperl_needs_patching) {
 
 my @dir = ();
 push @dir,'libalign'         if $OPTIONS{DO_XS};
+
+unless (IO::File->can('binmode')) {
+    warn "\n\nYour installed version of IO::File is too old; please update it.\n\n";
+}
 #push @dir,'extras/BioPerl'   if $bioperl_needs_patching;
 
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
@@ -271,7 +276,7 @@ WriteMakefile(
 				 Bio::Perl         => 1.005002,
 				 GD                => 2.07,
 				 IO::String        => 0,
-                                 IO::File          => 1.2301,
+                                 IO::File          => 1.0,
 				 Text::Shellwords  => 1.08,
 				 CGI::Session      => 4.02,
 				 File::Temp        => 0,

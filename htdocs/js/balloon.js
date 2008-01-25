@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.16 2008-01-21 21:08:53 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.17 2008-01-25 20:28:41 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -254,22 +254,25 @@ Balloon.prototype.doShowTooltip = function() {
   // get the preloaded balloon contents
   var helpText = bSelf.container.innerHTML;
 
-  // sticky balloons need a close control
-  if (balloonIsSticky) {
-    var style = 
-    'margin-right:-'+Math.round(bSelf.padding/2 - 1)+'px;float:right;'+
-    'cursor:pointer;margin-top:-'+Math.round(bSelf.padding/2 - 1)+'px;float:right'; 
-
-    helpText = 
-    '<img onclick="Balloon.prototype.hideTooltip(1)" title="Close" '+
-    'src="'+bSelf.closeButton+'" style="'+style+'">'+helpText;
-  }
- 
   // add the contents to balloon
   document.getElementById('contents').innerHTML = helpText;
 
   // how and where to draw the balloon
   bSelf.setBalloonStyle(vOrient,hOrient,pageWidth,pageLeft);
+
+  // sticky balloons need a close control
+  if (balloonIsSticky) {
+    var topRight = document.getElementById('topRight');
+    var margin   = Math.round(bSelf.padding/2);
+    var top      = margin + bSelf.shadow;
+    var marginLeft = 16 - margin;
+
+    topRight.innerHTML = '\
+     <img src="'+bSelf.closeButton+'" title="Close" \
+          onclick="Balloon.prototype.hideTooltip(1)" \
+          style="position:absolute;top:'+top+'px;left:0px;\
+          margin-left:-'+marginLeft+'px;cursor:pointer">';
+  }
 
   balloonIsVisible = true;
   
@@ -521,7 +524,16 @@ Balloon.prototype.getEventTarget = function(event) {
 
 Balloon.prototype.setStyle = function(el,att,val) {
   if (val && att.match(/left|top|bottom|right|width|height|padding|margin/)) val += 'px'; 
-  if (el) YAHOO.util.Dom.setStyle(el,att,val);
+
+  // z-index does not work as expected
+  if (att.match(/z\-?index/i)) {
+    if (el & el.style) {
+      el.style.zIndex = parseInt(val);
+    }
+  }
+  else if (el) {
+    YAHOO.util.Dom.setStyle(el,att,val);
+  }
 }
 
 // Uses YAHOO's region class for element coordinates

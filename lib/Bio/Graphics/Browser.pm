@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.55 2008-01-21 21:08:52 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.56 2008-01-26 20:07:48 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -2775,13 +2775,15 @@ sub region_sizes {
 
   my @region_sizes   = sort {$b<=>$a} shellwords($self->setting('region segments'));
   unless (@region_sizes) {
-    my $default      = $self->setting('default segment') || 50000;
+    my $default      = $self->setting('region segment') || $self->setting('default segment') || 50000;
     @region_sizes    = ($default * 2, $default, int $default/2);
   }
 
   my %region_labels  = map  {$_=>scalar $self->unit_label($_)} @region_sizes;
   my $region_default = $settings->{region_size} || $self->setting('region segment');
   $region_default  ||= $self->setting('default segment');
+  $region_labels{AUTO} = 'AUTO';
+  unshift @region_sizes, 'AUTO';
 
   return (\@region_sizes,\%region_labels,$region_default);
 }

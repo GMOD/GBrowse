@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.42 2008-01-26 15:22:33 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.43 2008-01-26 20:07:48 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -490,7 +490,7 @@ sub main_display {
       unless $segment->can('features');
 
     # display some additional info for the rubber-band select libraries
-    print segment_info($page_settings,$segment,$whole_segment) || ''; # kill uninit variable warning
+    segment_info($page_settings,$segment,$whole_segment);
 
     print overview_panel($whole_segment,$segment,$page_settings,$feature_files);
 
@@ -2306,7 +2306,7 @@ sub _region_panel {
 					 do_map        => 0,
 					 do_drag       => 1,
 					 image_button  => 1,
-					 drag_n_drop   => $page_settings->{drag_and_drop} || 0,
+					 drag_n_drop   => $settings->{drag_and_drop} || 0,
 					 -grid         => 0,
 					 -pad_top      => 5,
 					 -bgcolor      => $CONFIG->setting("overview bgcolor")
@@ -3355,9 +3355,17 @@ sub tableize {
 
 sub get_regionview_seg {
   my ($settings,$detail_start, $detail_end, $whole_start, $whole_end) = @_;
-
   my $divisor = $CONFIG->setting(general=>'unit_divider') || 1;
-  my $regionview_length = $settings->{region_size} * $divisor;
+  my $regionview_length;
+
+  # if region size is set to AUTO, use smallest of 10 * segment or whole_segment/2
+  if ($settings->{'region_size'} eq 'AUTO') {
+    ($regionview_length) = 
+	sort {$a <=> $b} (10*abs($detail_end-$detail_start), int(abs($whole_end - $whole_start)/2)); 
+  }
+  else {
+    $regionview_length = $settings->{region_size} * $divisor;
+  }
 
   if ($detail_end - $detail_start + 1 > $regionview_length) { # region can't be smaller than detail
     $regionview_length = $detail_end - $detail_start + 1;

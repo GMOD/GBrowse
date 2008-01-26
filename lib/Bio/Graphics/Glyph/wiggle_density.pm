@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::wiggle_density;
 
-# $Id: wiggle_density.pm,v 1.1.2.12 2008-01-17 20:30:18 lstein Exp $
+# $Id: wiggle_density.pm,v 1.1.2.13 2008-01-26 15:19:58 sheldon_mckay Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing);
@@ -119,7 +119,6 @@ sub draw_segment {
   # figure out where we're going to start
   my $scale  = $self->scale;  # pixels per base pair
   my $pixels_per_span = $scale * $span + 1;
-  # my $pixels_per_step = $scale * $step;
   my $pixels_per_step = 1;
 
   # if the feature starts before the data starts, then we need to draw
@@ -169,6 +168,7 @@ sub draw_segment {
     }
 
   } else {     # use Sheldon's code to subsample data
+      $pixels_per_step = $scale * $step;
       my $pixels = 0;
 
       # only draw boxes 2 pixels wide, so take the mean value
@@ -213,24 +213,36 @@ sub draw_segment {
 sub calculate_color {
   my $self = shift;
   my ($s,$rgb,$min_score,$max_score) = @_;
-  return map { int(255 - (255-$_) * min(max( ($s-$min_score)/($max_score-$min_score), 0), 1)) } @$rgb;
+  my $relative_score = ($s-$min_score)/($max_score-$min_score);
+  $relative_score -= .1 if $relative_score == 1;
+  return map { int(254.9 - (255-$_) * min(max( $relative_score, 0), 1)) } @$rgb;
 }
 
 sub min { $_[0] < $_[1] ? $_[0] : $_[1] }
 sub max { $_[0] > $_[1] ? $_[0] : $_[1] }
 
 sub minmax {
-  my $self  = shift;
-  my $parts = shift;
+  my $self = shift;
+  my $data = shift;
+  my $min  = $self->min_score;
+  my $max  = $self->max_score;
+  return ($min,$max) if defined $min && defined $max;
+
   if (my $wig = $self->wig) {
-    my $max = $self->option('max_score');
-    my $min = $self->option('min_score');
     $max = $wig->max unless defined $max;
     $min = $wig->min unless defined $min;
-    return ($min,$max);
   } else {
-    return $self->SUPER::minmax($parts);
+    my $realmax = -999_999_999;
+    my $realmin =  999_999_999;
+    for my $point (@$data) {
+      $realmax = $point if $point > $realmax;
+      $realmin = $point if $point < $realmin;
+    }
+    $max = $realmax unless defined $max;
+    $min = $realmin unless defined $min;
   }
+
+  return ($min,$max);
 }
 
 1;

@@ -4,11 +4,11 @@
                       This class handles region-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: regionSelect.js,v 1.1.2.1 2008-01-17 22:11:33 sheldon_mckay Exp $
+ $Id: regionSelect.js,v 1.1.2.2 2008-01-26 14:52:23 sheldon_mckay Exp $
 
 */
 
-var verviewObject;
+var regionObject;
 
 // Constructor
 var Region = function () {
@@ -19,7 +19,7 @@ var Region = function () {
   this.opacity    = 0.7;
   this.fontColor  = 'blue';
   this.border     = '1px solid black';
-  this.menuWidth  = '120px';
+  this.menuWidth  = '160px';
   return this;
 }
 

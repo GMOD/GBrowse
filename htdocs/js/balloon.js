@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.18 2008-02-04 21:49:50 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.19 2008-02-04 21:59:05 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -135,9 +135,13 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
   var mouseOver = evt.type.match('mouseover','i');  
 
   // if the firing event is a click, fade-in and a non-sticky balloon make no sense
+  
   if (!mouseOver) {
     sticky = true;
-    this.allowFade = false;
+    this.fadeOK = false;
+  }
+  else {
+    this.fadeOK = this.allowFade;
   }
 
   // Don't fire on mouseover if a non-sticky balloon is visible
@@ -479,7 +483,7 @@ Balloon.prototype.fade = function(opacStart, opacEnd, millisec) {
   var speed = Math.round(millisec / 100);
   var timer = 0;
   if(opacStart > opacEnd) {
-    if (self.allowFade) {
+    if (self.fadeOK) {
       for(o = opacStart; o >= opacEnd; o--) {
         self.timeoutFade = setTimeout('Balloon.prototype.setOpacity('+o+')',(timer*speed));
         timer++;
@@ -490,7 +494,7 @@ Balloon.prototype.fade = function(opacStart, opacEnd, millisec) {
       self.setStyle('balloon','display','none')
     }
   }
-  else if(opacStart < opacEnd && self.allowFade) {
+  else if(opacStart < opacEnd && self.fadeOK) {
     for(o = opacStart; o <= opacEnd; o++) {
       self.timeoutFade = setTimeout('Balloon.prototype.setOpacity('+o+')',(timer*speed));
       timer++;
@@ -500,7 +504,7 @@ Balloon.prototype.fade = function(opacStart, opacEnd, millisec) {
 
 Balloon.prototype.setOpacity = function(opc) {
   var self = currentBalloonClass;
-  if (!self || !self.allowFade) return false;
+  if (!self || !self.fadeOK) return false;
 
   var o = parseFloat((opc||0)/100);
   
@@ -547,7 +551,7 @@ Balloon.prototype.hideTooltip = function(override) {
     if (hideBalloon) Balloon.prototype.setStyle(hideBalloon,'display','none');
   }
   else if (self.activeBalloon) {
-    if (!override && self.allowFade && !self.isIE()) self.fade(95,0,self.fadeOut);
+    if (!override && self.fadeOK && !self.isIE()) self.fade(95,0,self.fadeOut);
     else self.setStyle(self.activeBalloon,'display','none');
   }
   Balloon.prototype.showHide(1);

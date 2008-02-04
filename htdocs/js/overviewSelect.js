@@ -4,7 +4,7 @@
                       This class handles overview-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: overviewSelect.js,v 1.1.2.2 2008-01-26 14:52:23 sheldon_mckay Exp $
+ $Id: overviewSelect.js,v 1.1.2.3 2008-02-04 21:51:05 sheldon_mckay Exp $
 
 */
 
@@ -29,6 +29,11 @@ Overview.prototype = new SelectArea();
 // Overview-specific config.
 Overview.prototype.initialize = function() {
   var self = new Overview;
+
+  // not ready for non drag and drop implementation
+  var dnd = document.mainform.drag_and_drop;
+  if (!dnd || !dnd.checked) return false;
+
   var images = document.getElementsByName(self.imageName);
   var i;
   for (var n=0; n < images.length; n++) {

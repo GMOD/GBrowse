@@ -4,7 +4,7 @@
                       This class handles region-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: regionSelect.js,v 1.1.2.2 2008-01-26 14:52:23 sheldon_mckay Exp $
+ $Id: regionSelect.js,v 1.1.2.3 2008-02-04 21:51:05 sheldon_mckay Exp $
 
 */
 
@@ -29,6 +29,12 @@ Region.prototype = new SelectArea();
 // Region-specific config.
 Region.prototype.initialize = function() {
   var self = new Region;
+
+  // not ready for non drag and drop implementation
+  var dnd = document.mainform.drag_and_drop;
+  if (!dnd || !dnd.checked) return false;
+
+
   var images = document.getElementsByName(self.imageName);
   var i;
   for (var n=0; n < images.length; n++) {

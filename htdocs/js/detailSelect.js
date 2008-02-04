@@ -4,11 +4,11 @@
                       This class handles details-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: detailSelect.js,v 1.1.2.1 2008-01-17 22:11:32 sheldon_mckay Exp $
+ $Id: detailSelect.js,v 1.1.2.2 2008-02-04 21:51:05 sheldon_mckay Exp $
 
 */
 
-var verviewObject;
+var detailsObject;
 
 // Constructor
 var Details = function () {
@@ -27,6 +27,11 @@ Details.prototype = new SelectArea();
 // Details-specific config.
 Details.prototype.initialize = function() {
   var self = new Details;
+  
+  // not ready for non drag and drop implementation
+  var dnd = document.mainform.drag_and_drop;
+  if (!dnd || !dnd.checked) return false; 
+
   var images = document.getElementsByName(self.imageName);
   var i;
   for (var n=0;n<images.length;n++) {

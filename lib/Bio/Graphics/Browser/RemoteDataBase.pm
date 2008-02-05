@@ -1,0 +1,103 @@
+package Bio::Graphics::Browser::RemoteDataBase;
+
+# base class for Bio::Graphics::Browser::UploadSet and Bio::Graphics::Browser::RemoteSet;
+
+use strict;
+use Carp 'croak';
+use Bio::Graphics::Browser;
+use Bio::Graphics::Wiggle;
+
+sub new {
+  croak 'virtual base class';
+}
+sub config        { shift->{config}                }
+sub page_settings { shift->{page_settings}         }
+
+sub readline {
+  my $self = shift;
+  my $fh   = shift;
+  my $line;
+  while (<$fh>) {
+    chomp;
+    next if /^\s*$/; # blank
+    next if /^\s*#/; # comment
+    s/[\r]//g;  # get rid of carriage returns from Macintosh/DOS systems
+    $line .= $_;
+    return $line unless $line =~ s/\\$//;
+  }
+  return $line;
+}
+
+
+# this converts .wig files and other UCSC formats into feature files that we can handle
+sub convert_ucsc_file {
+  my $self = shift;
+  my ($track_line,$in,$out) = @_;
+
+  eval "require Bio::Graphics::Wiggle::Loader" 
+    unless Bio::Graphics::Wiggle::Loader->can('new');
+  my $dummy_name = $self->name_file('foo');
+  $dummy_name    =~ s/foo$//; # get the directory part only!
+
+  my $loader = Bio::Graphics::Wiggle::Loader->new($dummy_name);
+  $loader->process_track_line($track_line) if $track_line =~ /^track/;
+  $loader->load($in);
+
+  my $featurefile = $loader->featurefile('featurefile');
+  print $out $featurefile;
+}
+
+sub convert_feature_file {
+  my $self = shift;
+  my ($first_line,$in,$out) = @_;
+  print $out $first_line,"\n";
+  while ($_ = $self->readline($in)) {
+    print $out $_,"\n";
+  }
+}
+
+sub process_uploaded_file {
+  my $self          = shift;
+  my ($infh,$outfh) = @_;
+
+  my $first_line = $self->readline($infh);
+  return unless defined $first_line;
+  if ($first_line =~ /^(track|browser)/) {
+    $self->convert_ucsc_file($first_line,$infh,$outfh);
+  } else {
+    $self->convert_feature_file($first_line,$infh,$outfh);
+  }
+}
+
+sub name_file {
+  my $self = shift;
+  my $filename  = shift;
+  my $settings  = $self->page_settings;
+  my $config    = $self->config;
+
+  # keep last non-[/\:] part of name
+  my ($name) = $filename =~ /([^:\\\/]+)$/;
+  $name =~ tr/-/_/;
+  my $id = $settings->{id} or return;
+
+  my (undef,$tmpdir) = $config->tmpdir($config->source."/uploaded_file/$id");
+  my $path      = "$tmpdir/$name";
+  my $url       = "file:$name";
+  return ($url,$path);
+}
+
+sub http_proxy {
+  my $self   = shift;
+  my $config = $self->config;
+  my $proxy  = $config->setting('proxy') || '';
+  return $config->setting('http proxy') || $proxy || '';
+}
+
+sub ftp_proxy {
+  my $self   = shift;
+  my $config = $self->config;
+  my $proxy  = $config->setting('proxy') || '';
+  return $config->setting('ftp proxy') || $proxy || '';
+}
+
+1;

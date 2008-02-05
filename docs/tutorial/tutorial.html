@@ -569,7 +569,7 @@ naming prefix, for example "Gene:hga" and "Protein:HGB".
 <p>
 
 To illustrate how this works, have a look at <a
-href="data_files/volvox_geneproducts.gff3">volvox_geneproducts.gff3:</a>
+href="data_files/volvox2b.gff3">volvox2b.gff3:</a>
 
 <blockquote class="example"><pre>
 ctgA example remark                             1000 2000 . . . Name=Remark
@@ -694,7 +694,7 @@ easily provided that you take a little care in setting them up.
 
 <p>
 
-The data file <a href="data_files/volvox3.gff">volvox3.gff</a>
+The data file <a href="data_files/volvox3.gff3">volvox3.gff3</a>
 contains a simulated data set of a series of gapped nucleotide
 alignments.  An excerpt from the file is here:
 
@@ -761,7 +761,7 @@ track. You should see a track similar to Figure 5.
 
 <blockquote>
 <img src="figures/segmented_features2.gif">
-<i>Figure 5: Use the "segments" glyph to display discontinuous
+<br><i>Figure 5: Use the "segments" glyph to display discontinuous
 multipart features.</i>
 </blockquote>
 
@@ -855,7 +855,7 @@ glyph.</i> </blockquote>
 
 <p>
 
-Go ahead and add volvox4.gff to the database.  Then add the following
+Go ahead and add volvox4.gff3 to the database.  Then add the following
 new stanza to the bottom of the file:
 
 <blockquote class="example"><pre>
@@ -1059,7 +1059,7 @@ Figure 7: Simpler genes using linked CDSs and the transcript glyph
 
 <p>
 
-The bottom six lines of Volvox4b.gff3 show how to display a single
+The bottom six lines of volvox4b.gff3 show how to display a single
 transcript that has both coding and non-coding regions.
 
 <blockquote class="example"><pre>
@@ -1134,7 +1134,7 @@ familiar to you from the gene examples.
 
 <p>
 
-This data lives in <a href="data_files/volvox5.gff">volvox5.gff</a>.
+This data lives in <a href="data_files/volvox5.gff3">volvox5.gff3</a>.
 Go ahead and add this into the database now.  To visualize this add
 the appropriate stanza to the bottom of volvox.conf:
 
@@ -1153,11 +1153,17 @@ key          = Fingerprinted BACs
 
 With this new track turned on, look at ctgA:1..24200.  It will show
 that GBrowse has correctly picked up and rendered the relationship
-between the whole BAC and its two end reads (Figure 11).
+between the whole BAC and its two end reads (Figure 11). We have seen
+all these display options before with the exception of the "connector"
+option. This controls the appearance of the connecting line between
+subparts of a feature and can be one of "none", "solid", "dashed",
+"hat" or "quill". Try them and see what happens! (Note, you will have
+to change the strandedness of the BAC parent feature from "." to "+"
+in order to see anything special happen with the quill connector.)
 
 <blockquote>
 <img src="figures/custom_aggregators1.gif"><br>
-<i>Figure 11: The glyph produced by a custom BAC aggregator</i>
+<i>Figure 11: Displaying a simple multipart feature</i>
 </blockquote>
 
 <p>
@@ -1174,26 +1180,27 @@ in <a href="conf_files/volvox3.conf">volvox3.conf</a>.
 
 GBrowse can plot quantitative data such as alignment scores,
 confidence scores from gene prediction programs, and microarray
-intensity data.  The data can be displayed either with glyphs that
+intensity data. The data can be displayed either with glyphs that
 change color to indicate score levels (see the
 "heterogeneous_segments", "graded_segments" and "redgreen_box"
 glyphs), or using a general-purpose XY-plot glyph.
 
 <p>
 
-Congratulations, Affymetrix has built a transcriptional profiling chip
-for Volvox!  There's now a transcriptional profile for volvox, with an
-intensity reading every 100 bp across all of ctgA.  The simulated data
+Congratulations, Affymetrix has built a tiling array for the volvox
+genome!  There's now a transcriptional profile for volvox, with an
+intensity reading every 100 bp across all of ctgA. The simulated data
 for this is in the file <a
-href="data_files/volvox6.gff">volvox6.gff</a>, an excerpt of which is
+href="data_files/volvox6.gff3">volvox6.gff3</a>, an excerpt of which is
 shown here:
 
 <blockquote class="example"><pre>
-ctgA   affy   tlevel   1     100   281   .   .   Affy Expt1
-ctgA   affy   tlevel   101   200   183   .   .   Affy Expt1
-ctgA   affy   tlevel   201   300   213   .   .   Affy Expt1
-ctgA   affy   tlevel   301   400   191   .   .   Affy Expt1
-ctgA   affy   tlevel   401   500   288   .   .	 Affy Expt1
+ctgA affy microarray_oligo   1 100 281 . . Name=Expt1
+ctgA affy microarray_oligo 101 200 183 . . Name=Expt1
+ctgA affy microarray_oligo 201 300 213 . . Name=Expt1
+ctgA affy microarray_oligo 301 400 191 . . Name=Expt1
+ctgA affy microarray_oligo 401 500 288 . . Name=Expt1
+ctgA affy microarray_oligo 501 600 184 . . Name=Expt1
 ...
 </pre></blockquote>
 
@@ -1207,50 +1214,34 @@ first time we've used the score column.
 
 <p>
 
-All of the 500 features share the same group (column 9) of "Affy
-Expt1."  They are grouped in this way because the entire set of 500
-features represents a single transcriptional profiling experiment.  If
-we had multiple experiments to show, they would be named Expt1, Expt2
-and so on.
+All of the 500 features share the same Name (column 9) of
+"Expt1". Sharing the same name will allow us to group them together
+into a single transcriptional profiling experiment. However, we do not
+give them the same ID for reasons that are explained later. If we had
+multiple experiments to show, they would be named Expt1, Expt2 and so
+on.
 
 <p>
 
 We would like to generate a line graph that shows the transcriptional
-profile level across the current region.  To do this, we will first
-create an aggregator that will bring all the individual tlevel
-features together into a single feature named "tprofile."  This is
-done as described in the previous section.  Modify the configuration
-file's aggregators option to read as follows:
-
-<blockquote class="example"><pre>
-aggregators = match
-	      BAC{left_end_read,right_end_read/BAC}
-	      processed_transcript
-	      coding
-	      tprofile{tlevel}
-</pre></blockquote>
-
-The last line is declaring an aggregated feature named "tprofile"
-whose parts consist of individual "tlevel" features.  This is similar
-to the <a href="#custom_aggregators">BAC aggregator</a>, except that
-in this case there is no top-level feature that goes from end to end,
-so we just leave out the <i>/main_type</i> part of the aggregator
-definition.
-
-<p>
-
-We now need to use this aggregated feature in a track stanza.  Create
-the following section:
+profile level across the current region.  To do this, we need to group
+all members of the same experiment together into a single graph, and
+then to assign the "xyplot" glyph to the data. The following
+configuration stanza will do this:
 
 <blockquote class="example"><pre>
 [TransChip]
-feature        = tprofile
+feature        = microarray_oligo
 glyph          = xyplot
-graph_type     = line
+graph_type     = boxes
+fgcolor        = orange
+bgcolor        = orange
 height         = 50
 min_score      = 0
 max_score      = 1000
 scale          = right
+category       = Genes
+group_on       = display_name
 key            = Transcriptional Profile
 </pre></blockquote>
 
@@ -1536,33 +1527,17 @@ this:
 
 <blockquote class="example"><pre>
 % <b>ls $HTDOCS/gbrowse/databases/volvox/</b>
-volvox.fa    volvox2.gff  volvox4.gff  volvox6.gff
-volvox1.gff  volvox3.gff  volvox5.gff
+volvox1.gff3   volvox2.gff3  volvox4b.gff3  volvox5.gff3  volvox.fa
+volvox2b.gff3  volvox3.gff3  volvox4.gff3   volvox6.gff3
 </pre></blockquote>
 
 <p>
 
-After copying the .fa file into the volvox database directory, you
-will need to change the configuration file very slightly to tell
-GBrowse to look for and load the FASTA file.  At the top of the config
-file, change the <tt>db_args</tt> section to look like this:
-
-<p>
-
-<pre>
-db_args       = -adaptor memory
-		-dir     '$HTDOCS/gbrowse/databases/volvox'
-</pre>
-
-<p>
-
-Previously the <tt>-gff</tt> argument told GBrowse to load all GFF
-files in the directory.  The new <tt>-dir</tt> argument says to load
-both GFF files and FASTA sequence files.  (There's also a
-<tt>-fasta</tt> argument to load sequence without features, but this
-is not much use with GBrowse.)
-
-<p>
+If you haven't done so already, please be sure that you have made the
+database directory writeable by the web server user, either by making
+it world writeable (as described at the beginning of this tutorial),
+or by changing the directory's group ownership to match the Apache web
+server's group account (e.g. "www-data" on most Ubuntu Linux systems).
 
 This is all you need to do to load the DNA.  To see that the DNA is
 indeed being loaded, add two new stanzas to the volvox.conf
@@ -1662,12 +1637,15 @@ href="data_files/volvox7.gff">volvox7.gff</a>.  Here is the first pair
 described in the data file:
 
 <blockquote class="example"><pre>
-ctgA   est   match 1050   3202   .   +   .   EST agt830.5
-ctgA   est   HSP   1050   1500   .   +   .   EST agt830.5
-ctgA   est   HSP   3000   3202   .   +   .   EST agt830.5
-ctgA   est   match 5410   7503   .   -   .   EST agt830.3
-ctgA   est   HSP   5410   5500   .   -   .   EST agt830.3
-ctgA   est   HSP   7000   7503   .   -   .   EST agt830.3
+ctgA est EST_match 1050 1500 . + . ID=Match1;Name=agt830.5
+ctgA est EST_match 3000 3202 . + . ID=Match1;Name=agt830.5
+
+ctgA est EST_match 5410 5500 . - . ID=Match2;Name=agt830.3
+ctgA est EST_match 7000 7503 . - . ID=Match2;Name=agt830.3
+
+ctgA est EST_match 1050 1500 . + . ID=Match3;Name=agt221.5
+ctgA est EST_match 5000 5500 . + . ID=Match3;Name=agt221.5
+ctgA est EST_match 7000 7300 . + . ID=Match3;Name=agt221.5
 ...
 </pre></blockquote>
 
@@ -1677,23 +1655,19 @@ What's going on here is the same as the alignments shown in <a
 href="data_files/volvox3.gff">volvox3.gff</a>.  There are two EST
 reads named agt830.5 (the 5' read) and agt830.3 (the 3' read).  Each
 of them matches the ctgA genome in two discontinuous regions because,
-presumably, they cross a splice site.  As in the earlier example, we
-represent each EST as a single "match" feature that spans the entire
-region, plus a series of "HSP" features that correspond to the aligned
-regions.  The last column is used to group the match and HSP features
-together using the class and name of the feature, where the class is
-arbitrarily chosen to be "EST."
+presumably, they cross a splice site. As in the earlier example, we
+represent each EST as a single "EST_match" feature that spans several
+lines. The lines are linked together by sharing the same ID attribute.
 
 <p>
 
 There are two other things to notice.  One is that the source field
-(column 2) is "est".  All previous examples used "example" here.  This
-is because we need to distinguish this set of alignments from the
-generic alignments in <a
-href="data_files/volvox3.gff">volvox3.gff</a>.  The second item of
-interest is that the strand field (column 7) is + for the 5' EST and -
-for the 3' EST, indicating that the 3' EST aligned to the reverse
-complement of ctgA.
+(column 2) is "est" and the type (column 3) is "EST_match." Either of
+these fields can be used to distinguish the EST matches in this file
+from the generic "match" matches used in the earlier example. The
+second item of interest is that the strand field (column 7) is + for
+the 5' EST and - for the 3' EST, indicating that the 3' EST aligned to
+the reverse complement of ctgA.
 
 <p>
 
@@ -1702,7 +1676,7 @@ to the configuration file:
 
 <blockquote class="example"><pre>
 [EST]
-feature      = match:est
+feature      = EST_match:est
 glyph        = segments
 height       = 6
 bgcolor      = orange
@@ -1720,35 +1694,24 @@ This will give a display similar to that shown in Figure 15.
 
 <p>
 
-Notice that the feature option reads "match:est" rather than simply
-"match."  This is to distinguish the EST matches from the example
-matches that we loaded previously.  When needed, you can use the
-source field (column 2) to distinguish different features of the same
-type, using the format "type:source".  You can use this equally well
-with ordinary types (e.g. "my_feature:example") or with aggregated
-types ("processed_transcript:genscan").
+For reasons described earlier, the feature option reads
+"EST_match:est" rather than simply "match" in order to distinguish the
+EST matches from the example matches that we loaded previously.
 
 <p>
 
-This display is OK, but it could be better.  One problem is that the
+This display is OK, but it could be better. One problem is that the
 relationship between the 5' and 3' EST read pairs is not shown.  We'd
 like to place the two members of the pair together on the same line,
 and connect them with a dotted line to show that they are the two ends
-of the same cDNA clone.  Recall that we did something similar to this
-with the custom <a name="custom_aggregators">BAC aggregator</a>.
-Unfortunately, there's a problem with the ESTs because we are already
-using the "match" aggregator to perform one level of grouping, and the
-GFF load format only allows one level of grouping at a time (this is
-changing in a proposed new version of the format).
+of the same cDNA clone. An easy way to do this is to add a
+"group_pattern" option to the [EST] stanza:
 
 <p>
 
-For the time being, we can work around this problem using a "hack."
-Change the [EST] track configuration to look like this:
-
 <blockquote class="example"><pre>
 [EST]
-feature       = match:est
+feature       = EST_match:est
 glyph         = segments
 bgcolor       = orange
 group_pattern = /\.[53]$/
@@ -1917,12 +1880,14 @@ coordinates.  If you look at this file you'll see that it is
 dissimilar to previous load files:
 
 <blockquote class="example"><pre>
-ctgA	est	match	1050	3202	.	+	.	Target EST:agt830.5 1 554
-ctgA	est	HSP	1050	1500	.	+	.	Target EST:agt830.5 1 451
-ctgA	est	HSP	3000	3202	.	+	.	Target EST:agt830.5 452 654
-ctgA	est	match	5410	7503	.	-	.	Target EST:agt830.3 1 595
-ctgA	est	HSP	5410	5500	.	-	.	Target EST:agt830.3 505 596
-ctgA	est	HSP	7000	7503	.	-	.	Target EST:agt830.3 1 504
+ctgA est EST_match 1050 1500 . + . ID=Match1;Name=agt830.5;Target=agt830.5 1 451
+ctgA est EST_match 3000 3202 . + . ID=Match1;Name=agt830.5;Target=agt830.5 452 654
+ctgA est EST_match 5410 5500 . - . ID=Match2;Name=agt830.3;Target=agt830.3 505 595
+ctgA est EST_match 7000 7503 . - . ID=Match2;Name=agt830.3;Target=agt830.3 1 504 
+ctgA est EST_match 1050 1500 . + . ID=Match3;Name=agt221.5;Target=agt221.5 1 451
+ctgA est EST_match 5000 5500 . + . ID=Match3;Name=agt221.5;Target=agt221.5 452 952
+ctgA est EST_match 7000 7300 . + . ID=Match3;Name=agt221.5;Target=agt221.5 953 1253
+...
 </pre></blockquote>
 
 <p>
@@ -1930,48 +1895,21 @@ ctgA	est	HSP	7000	7503	.	-	.	Target EST:agt830.3 1 504
 The first eight columns are identical to what we've been using before,
 but the ninth column follows a new convention used for nucleotide to
 nucleotide and protein to nucleotide alignments.  There is now a
-special class name, "Target", that tells GBrowse that the group field
-represents the combination of a target sequence and its coordinates.
-Following Target is the name EST:agt830.5, which is a composite of the
-"real" class name ("EST") and the name of the EST.  The two are
-separated by a colon in the format "class:name".  Following this are
-two numbers indicating the start and end of the alignment in EST
-coordinates.
+special attribute, "Target", that tells GBrowse specifies the name of
+the EST sequence (found in a FASTA file), the start position of the
+alignment in EST coordinates, and the end position of the alignment in
+EST coordinates.  the combination of a target sequence and its
+coordinates. For example, the first segment of the first alignment,
+agt830.5, spans positions 1050 to 1500 in genome coordinates, and
+positions 1-451 in EST sequence coordinates.
 
 <p>
 
-There are a couple of subtleties to notice here.  First of all, notice
-that the "match" features extend all the way across the matched area
-of the genome (1050 to 3202 in the case of agt830.5), and all the way
-across the matched area of the target (1 to 554). Because one or both
-of the matched regions may contain gaps, the source and target regions
-do not have to be the same length.  On the other hand, each HSP covers
-an ungapped contiguous region: the first HSP covers 1050..1500 in
-genome coordinates and 1..451 in target (EST) coordinates; the second
-covers 3000..3202 in genome coordinates and 452..654 in target
-coordinates.  The HSPs should have the same alignment length in both
-genome and target coordinates, or at least very close lengths.  If the
-lengths are close but not identical, GBrowse will realign the
-segments, introducing small gaps where necessary.
-
-<blockquote class="example"> <i>NOTE: GBrowse uses a simple but slow segment
-realigner.  If there are numerous gaps, it is better to break them
-into a set of smaller colinear HSPs than to rely on the realigner to
-do it for you.</i> </blockquote>
-
-<p>
-
-The second subtlety to notice is that for the minus strand ESTs, the
-target coordinates are not reversed, that is, the start position is
-less than the end position.  For example, for the first agt830.3
-HSP, we are told that genomic region 5410..5500 aligns to EST region
-505..596.  The strand field is used to determine the direction of the
-alignment.
-
-<blockquote class="example"><i>Note that this contradicts the historical
-implementation of GFF but the current use is more internally consistent and is 
-the method for target annoation in the proposed revision of GFF.
-</i></blockquote>
+There is a subtlety here. Notice that for minus strand ESTs, the
+target coordinates are not reversed; the start position is always less
+than the end position.  For example, for the first agt830.3 HSP, we
+are told that genomic region 5410..5500 aligns to EST region 505..596.
+The strand field is used to determine the direction of the alignment.
 
 <p>
 
@@ -1982,8 +1920,8 @@ href="data_files/ests.fa">ests.fa</a> into the database directory.  If
 you perform a directory listing, it should look like this:
 
 <blockquote><pre>
-directory.index  volvox.fa    volvox2.gff  volvox4.gff	volvox6.gff
-ests.fa		 volvox1.gff  volvox3.gff  volvox5.gff	volvox8.gff
+directory.index  volvox1.gff3	volvox2.gff3  volvox4b.gff3  volvox5.gff3  volvox8.gff3
+ests.fa		 volvox2b.gff3	volvox3.gff3  volvox4.gff3   volvox6.gff3  volvox.fa
 </pre></blockquote>
 
 <p>
@@ -2009,7 +1947,7 @@ version of the [EST] track:
 
 <blockquote class="example"><pre>
 [EST]
-feature      = match:est
+feature      = EST_match:est
 glyph        = segments
 height       = 6
 draw_target   = 1
@@ -2044,8 +1982,8 @@ sequence even when the EST matches the minus strand.
 To see this work, reload the page, turn on the EST track and search
 for region "ctgA:1065..1165".  This will show the aligned 5' ends of
 agt221.5, agt830.5 and agt767.5 (Figure 18).  Notice that one of the
-T's towards the beginning of agt830.5 is highlighted in red, to show
-that it doesn't match the corresponding genomic base.
+T's towards the beginning of agt830.5 is highlighted to show that it
+doesn't match the corresponding genomic base.
 
 <blockquote>
 <img src="figures/adding_dna_to_alignments1.gif"><br>
@@ -4539,6 +4477,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Tue Jan 22 16:49:27 EST 2008
+Last modified: Tue Jan 29 17:03:06 EST 2008
 <!-- hhmts end -->
 </body> </html>

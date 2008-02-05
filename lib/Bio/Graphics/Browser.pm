@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.57 2008-02-05 04:00:01 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.58 2008-02-05 04:48:42 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1114,7 +1114,10 @@ sub generate_panels {
   my $cache         = $args->{cache};
   my $section       = $args->{section}     || '?detail';
 
-  my @panel_args     = $self->create_panel_args($section,$args);
+  # hack to turn caching off in a one-shot fashion...
+  $cache = 0 if param('redisplay');
+
+  my @panel_args    = $self->create_panel_args($section,$args);
 
   $segment->factory->debug(1) if DEBUG;
   $self->error('');
@@ -1380,17 +1383,16 @@ sub add_features_to_track {
 	(my $base = $name) =~ s/$pattern//i;
 	$groups{$l}{$base} ||= Bio::Graphics::Feature->new(-type   => 'group');
 	$groups{$l}{$base}->add_segment($feature);
+	$feature_count{$l}--;
 	next;
       }
 	
       if (my $field = $group_field{$l}) {
 	my $base = eval{$feature->$field};
 	if (defined $base) {
-	  $groups{$l}{$base} ||= Bio::Graphics::Feature->new(-start  => $feature->start,
-							     -end    => $feature->end,
-							     -strand => $feature->strand,
-							     -type   => $feature->primary_tag);
+	  $groups{$l}{$base} ||= $self->clone_feature($feature);
 	  $groups{$l}{$base}->add_SeqFeature($feature);
+	  $feature_count{$l}--;
 	  next;
 	}
       }
@@ -1422,7 +1424,7 @@ sub add_features_to_track {
     my $count = $feature_count{$l};
     $count    = $limits->{$l}
       if $limits->{$l} &&
-	 $limits->{$l} < $count;
+	$limits->{$l} < $count;
 
     my $do_bump  = $self->do_bump($l,
 				  $options->{$l},
@@ -2788,7 +2790,27 @@ sub region_sizes {
   return (\@region_sizes,\%region_labels,$region_default);
 }
 
+sub clone_feature {
+  my $self    = shift;
+  my $feature = shift;
+  my $clone = Bio::Graphics::Feature->new(-start  => $feature->start,
+					  -end    => $feature->end,
+					  -strand => $feature->strand,
+					  -type   => $feature->primary_tag,
+					  -source => $feature->source,
+					  -name   => $feature->display_name);
+  # transfer attributes if we can
+  eval {
+    for my $tag ($feature->get_all_tags) {
+      my @values = $feature->get_tag_values($tag);
+      $clone->add_tag_value($tag=>@values);
+      $clone->desc($values[0]) if lc $tag eq 'note';
+    }
+  };
+  warn $@ if $@;
 
+  return $clone;
+}
 
 package Bio::Graphics::BrowserConfig;
 use strict;

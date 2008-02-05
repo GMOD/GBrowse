@@ -2,10 +2,10 @@ package Bio::Graphics::Browser::UploadSet;
 # API for handling uploaded files
 
 use strict;
-use Bio::Graphics::Browser;
+use base 'Bio::Graphics::Browser::RemoteDataBase';
+
 use CGI 'cookie','param';
 use Digest::MD5 'md5_hex';
-use Bio::Graphics::Wiggle;
 use Text::Shellwords;
 use Carp 'carp';
 use constant DEBUG=>0;
@@ -29,8 +29,6 @@ sub new {
   $self;
 }
 
-sub config        { shift->{config}                }
-sub page_settings { shift->{page_settings}         }
 sub files         { keys %{shift->{files}}         }
 sub url2path      { shift->{files}{shift()}        }
 sub _add_file     {
@@ -40,20 +38,6 @@ sub _add_file     {
   $self->{files}{$url} = $path;
 }
 sub _del_file     { delete shift->{files}{shift()} }
-sub readline {
-  my $self = shift;
-  my $fh   = shift;
-  my $line;
-  while (<$fh>) {
-    chomp;
-    next if /^\s*$/; # blank
-    next if /^\s*#/; # comment
-    s/[\r]//g;  # get rid of carriage returns from Macintosh/DOS systems
-    $line .= $_;
-    return $line unless $line =~ s/\\$//;
-  }
-  return $line;
-}
 
 sub upload_file {
   my $self       = shift;
@@ -61,21 +45,16 @@ sub upload_file {
   my $settings   = $self->page_settings;
 
   # $fh is a CGI string/filehandle object, so be careful
-  warn "upload_file($filehandle), fileno=",fileno($filehandle)," content type=$ENV{CONTENT_TYPE}" if DEBUG;
+  warn "upload_file($filehandle), fileno=",
+    fileno($filehandle)," content type=$ENV{CONTENT_TYPE}" if DEBUG;
+  return unless defined fileno($filehandle);
+
   my ($filename)  = "$filehandle" =~ /([^\/\\:]+)$/;
+
   my $url         = $self->new_file($filename);
   my $fh_out      = $self->open_file($url,'>') or return;
-  if (defined fileno($filehandle)) {
-    my $first_line = $self->readline($filehandle);
-    warn "first_line = $first_line";
-    return unless defined $first_line;
-    if ($first_line =~ /^(track|browser)/) {
-      $self->upload_ucsc_file($first_line,$filehandle,$fh_out);
-    } else {
-      $self->upload_feature_file($first_line,$filehandle,$fh_out);
-    }
-    close $fh_out;
-  }
+  $self->process_uploaded_file($filehandle,$fh_out);
+  close $fh_out;
   warn "url = $url, file=",$self->url2path($url); # if DEBUG;
   return $url;
 }
@@ -130,23 +109,6 @@ sub clear_file {
   $settings->{tracks} = [grep {$_ ne $url} @{$settings->{tracks}}];
   warn "clear_uploaded_file(): deleting file = $url" if DEBUG;
   $self->_del_file($url);
-}
-
-sub name_file {
-  my $self = shift;
-  my $filename  = shift;
-  my $settings  = $self->page_settings;
-  my $config    = $self->config;
-
-  # keep last non-[/\:] part of name
-  my ($name) = $filename =~ /([^:\\\/]+)$/;
-  $name =~ tr/-/_/;
-  my $id = $settings->{id} or return;
-
-  my (undef,$tmpdir) = $config->tmpdir($config->source."/uploaded_file/$id");
-  my $path      = "$tmpdir/$name";
-  my $url       = "file:$name";
-  return ($url,$path);
 }
 
 sub feature_file {
@@ -206,31 +168,6 @@ sub probe_for_overview_sections {
   return $overview;
 }
 
-sub upload_feature_file {
-  my $self = shift;
-  my ($first_line,$in,$out) = @_;
-  print $out $first_line,"\n";
-  while ($_ = $self->readline($in)) {
-    print $out $_,"\n";
-  }
-}
-
-# this converts .wig files and other UCSC formats into feature files that we can handle
-sub upload_ucsc_file {
-  my $self = shift;
-  my ($track_line,$in,$out) = @_;
-
-  eval "require Bio::Graphics::Wiggle::Loader" unless Bio::Graphics::Wiggle::Loader->can('new');
-  my $dummy_name = $self->name_file('foo');
-  $dummy_name    =~ s/foo$//; # get the directory part only!
-
-  my $loader = Bio::Graphics::Wiggle::Loader->new($dummy_name);
-  $loader->process_track_line($track_line) if $track_line =~ /^track/;
-  $loader->load($in);
-
-  my $featurefile = $loader->featurefile('featurefile');
-  print $out $featurefile;
-}
 
 1;
 

@@ -2,8 +2,10 @@ package Bio::Graphics::Browser::RemoteSet;
 # API for handling a set of remote annotation sources
 
 use strict;
-use Bio::Graphics::Browser;
+use base 'Bio::Graphics::Browser::RemoteDataBase';
+
 use Bio::Graphics::Browser::Util 'error';
+use IO::File;
 use CGI 'cookie','param','unescape';
 use Digest::MD5 'md5_hex';
 use Text::Shellwords;
@@ -36,8 +38,6 @@ sub new {
   $self;
 }
 
-sub config        { shift->{config}          }
-sub page_settings { shift->{page_settings}   }
 sub sources       { keys %{shift->{sources}} }
 sub source2url    { shift->{sources}{shift()}  }
 
@@ -81,50 +81,95 @@ sub feature_file {
   my $config   = $self->config;
   my $settings = $self->page_settings;
 
-  warn "get_remote_feature_data(): fetching $label" if DEBUG;
-  my $proxy           = $config->setting('proxy') || '';
-  my $http_proxy      = $config->setting('http proxy') || $proxy || '';
-  my $ftp_proxy       = $config->setting('ftp proxy')  || $proxy || '';
+  warn "feature_file(): fetching $label" if DEBUG;
 
   # DAS handling
   my $url = $self->source2url($label);
+  my $feature_file;
 
   if ($url =~ m!^(http://.+/das)/([^/?]+)(?:\?(.+))?$!) { # DAS source!
-    unless (eval "require Bio::Das; 1;") {
-      error($config->tr('NO_DAS'));
-      return;
-    }
-
-    my ($src,$dsn,$cgi_args) = ($1,$2,$3);
-    my @aggregators = shellwords($config->setting('aggregators') ||'');
-    my (@types,@categories);
-
-    if ($cgi_args) {
-      my @a = split /[;&]/,$cgi_args;
-      foreach (@a) {
-	my ($arg,$val) = split /=/;
-	push @types,unescape($val)      if $arg eq 'type';
-	push @categories,unescape($val) if $arg eq 'category';
-      }
-    }
-    my @args = (-source     => $src,
-		-dsn        => $dsn,
-		-aggregators=> \@aggregators);
-    push @args,(-types => \@types)           if @types;
-    push @args,(-categories => \@categories) if @categories;
-    my $das      =  Bio::Das->new(@args);
-
-    return unless $das;
-
-    # set up proxy
-    $das->proxy($http_proxy) if $http_proxy && $http_proxy ne 'none';
-
-    my $segment = $das->segment($segment->abs_ref,$segment->abs_start,$segment->abs_end);
-    # the next step gives the current segment the same name as the DAS source
-    # and ensures that the DAS source appears in the list of external sources in the UI
-    $segment->name($url);
-    return $segment;
+    $feature_file = $self->get_das_segment($1,$2,$3,$segment);
   }
+  else {
+    $feature_file = $self->get_remote_upload($url,$rel2abs);
+  }
+
+  # Tell the feature file what its name is, so that it can be formatted
+  # nicely in the user interface.
+  $feature_file->name($url) if $feature_file;
+  return $feature_file;
+}
+
+sub get_remote_upload {
+  my $self = shift;
+  my ($url,$rel2abs) = @_;
+  my $config = $self->config;
+
+  my $id = md5_hex($url);     # turn into a filename
+  $id =~ /^([0-9a-fA-F]+)$/;  # untaint operation
+  $id = $1;
+
+  my (undef,$tmpdir) = $config->tmpdir($config->source.'/external');
+  my $filename = "$tmpdir/$id";
+  my $response = $self->mirror($url,$filename);
+  if ($response->is_error) {
+    error($config->tr('Fetch_failed',$url,$response->message));
+    return;
+  }
+  my $fh = IO::File->new("<$filename") or return;
+  my $feature_file   =
+    Bio::Graphics::FeatureFile->new(-file           => $fh,
+				    -map_coords     => $rel2abs,
+				    -smart_features => 1);
+  warn "get_remote_feature_data(): got $feature_file" if DEBUG;
+  return $feature_file;
+}
+
+sub get_das_segment {
+  my $self = shift;
+  my ($src,$dsn,$cgi_args,
+      $segment) = @_;
+  my $config   = $self->config;
+
+  unless (eval "require Bio::Das; 1;") {
+    error($config->tr('NO_DAS'));
+    return;
+  }
+
+  my @aggregators = shellwords($config->setting('aggregators') ||'');
+  my (@types,@categories);
+
+  if ($cgi_args) {
+    my @a = split /[;&]/,$cgi_args;
+    foreach (@a) {
+      my ($arg,$val) = split /=/;
+      push @types,unescape($val)      if $arg eq 'type';
+      push @categories,unescape($val) if $arg eq 'category';
+    }
+  }
+  my @args = (-source     => $src,
+	      -dsn        => $dsn,
+	      -aggregators=> \@aggregators);
+  push @args,(-types => \@types)           if @types;
+  push @args,(-categories => \@categories) if @categories;
+  my $das      =  Bio::Das->new(@args);
+
+  return unless $das;
+
+  # set up proxy
+  my $http_proxy = $self->http_proxy;
+  $das->proxy($http_proxy) if $http_proxy && $http_proxy ne 'none';
+
+  my $seg = $das->segment($segment->abs_ref,
+			  $segment->abs_start,$segment->abs_end);
+  return $seg;
+}
+
+sub mirror {
+  my $self            = shift;
+  my ($url,$filename) = @_;
+
+  my $config = $self->config;
 
   # Uploaded feature handling
   unless ($UA) {
@@ -136,26 +181,39 @@ sub feature_file {
 			      timeout  => URL_FETCH_TIMEOUT,
 			      max_size => URL_FETCH_MAX_SIZE,
 			     );
+    my $http_proxy = $self->http_proxy;
+    my $ftp_proxy  = $self->ftp_proxy;
+
     $UA->proxy(http => $http_proxy) if $http_proxy && $http_proxy ne 'none';
     $UA->proxy(ftp => $http_proxy)  if $ftp_proxy  && $ftp_proxy  ne 'none';
   }
-  my $id = md5_hex($url);     # turn into a filename
-  $id =~ /^([0-9a-fA-F]+)$/;  # untaint operation
-  $id = $1;
 
-  my (undef,$tmpdir) = $config->tmpdir($config->source.'/external');
-  my $response = $UA->mirror($url,"$tmpdir/$id");
-  if ($response->is_error) {
-    error($config->tr('Fetch_failed',$url,$response->message));
-    return;
+  my $request = HTTP::Request->new(GET => $url);
+  if (-e $filename) {
+    my($mtime) = (stat($filename))[9];
+    if($mtime) {
+      $request->header('If-Modified-Since' =>
+		       HTTP::Date::time2str($mtime));
+    }
   }
-  open (F,"<$tmpdir/$id") or return;
-  my $feature_file = Bio::Graphics::FeatureFile->new(-file           => \*F,
-						     -map_coords     => $rel2abs,
-						     -smart_features =>1);
-  $feature_file->name($url);
-  warn "get_remote_feature_data(): got $feature_file" if DEBUG;
-  return $feature_file;
+
+  my $tmpfile  = "$filename-$$";
+  my $response = $UA->request($request,$tmpfile);
+
+  warn "got response ",$response->code; # if DEBUG;
+  warn "filename = $filename, tmpfile = $tmpfile";
+
+  if ($response->is_success) {  # we got a new file, so need to process it
+    my $infh   = IO::File->new($tmpfile)     or die "Couldn't open $tmpfile: $!";
+    my $outfh  = IO::File->new(">$filename") or die "Couldn't open $filename: $!";
+    warn "process_uploaded_file running";
+    $self->process_uploaded_file($infh,$outfh);
+    if (my $lm = $response->last_modified) {
+      utime($lm,$lm,$filename);
+    }
+  }
+#  unlink $tmpfile;  # either way, this file is no longer needed
+  return $response;
 }
 
 sub annotate {

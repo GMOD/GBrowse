@@ -84,7 +84,8 @@ sub featurefile {
   $source ||= '.';
 
   $type ||= 'featurefile';
-  $type =~ /^(gff3|featurefile)$/i or croak "featurefile type must be one of 'gff3' or 'featurefile'";
+  $type =~ /^(gff3|featurefile)$/i 
+    or croak "featurefile type must be one of 'gff3' or 'featurefile'";
 
   my @lines;
   my $tracks = $self->{tracks};
@@ -100,6 +101,10 @@ sub featurefile {
     }
 
     else {
+
+      $options->{visibility} ||= 'pack';
+      $options->{color}      ||= 'black';
+      $options->{altColor}   ||= 'black';
 
       # stanza
       push @lines,"[$track]";

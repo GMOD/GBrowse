@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::wiggle_density;
 
-# $Id: wiggle_density.pm,v 1.1.2.13 2008-01-26 15:19:58 sheldon_mckay Exp $
+# $Id: wiggle_density.pm,v 1.1.2.14 2008-02-05 04:48:42 lstein Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing);
@@ -53,7 +53,6 @@ sub draw_wigfile {
 
   eval "require Bio::Graphics::Wiggle" unless Bio::Graphics::Wiggle->can('new');
   my $wig = Bio::Graphics::Wiggle->new($wigfile) or die;
-
   $self->wig($wig);
 
   my $smoothing      = $self->get_smoothing;
@@ -87,6 +86,7 @@ sub draw_densefile {
 
   my $fh         = IO::File->new($densefile) or die "can't open $densefile: $!";
   eval "require Bio::Graphics::DenseFeature" unless Bio::Graphics::DenseFeature->can('new');
+
   my $dense = Bio::Graphics::DenseFeature->new(-fh=>$fh,
 					       -fh_offset => $denseoffset,
 					       -start     => $feature->start,
@@ -120,6 +120,7 @@ sub draw_segment {
   my $scale  = $self->scale;  # pixels per base pair
   my $pixels_per_span = $scale * $span + 1;
   my $pixels_per_step = 1;
+  my $length          = $end-$start+1;
 
   # if the feature starts before the data starts, then we need to draw
   # a line indicating missing data (this only happens if something went
@@ -141,7 +142,8 @@ sub draw_segment {
   return unless $start < $end;
 
   # get data values across the area
-  my $data = $seg_data->values($start,$end,$self->width);
+  my $samples = $length < $self->width ? $length : $self->width;
+  my $data    = $seg_data->values($start,$end,$samples);
 
   my $min_value = $self->min_score;
   my $max_value = $self->max_score;
@@ -154,17 +156,23 @@ sub draw_segment {
   my @rgb = $self->panel->rgb($self->bgcolor);
   my %color_cache;
 
+  @$data = reverse @$data if $self->flip;
+
   if (@$data <= $self->width) { # data fits in width, so just draw it
 
-    for (my $i = $start; $i <= $end ; $i += $step) {
-      my $data_point = shift @$data;
-      next unless defined $data_point;
+    $pixels_per_step = $scale * $step;
+    $pixels_per_step = 1 if $pixels_per_step < 1;
+    my $datapoints_per_base  = @$data/$length;
+    my $pixels_per_datapoint = $self->width/@$data;
+
+    for (my $i = 0; $i <= @$data ; $i++) {
+      my $x          = $x1 + $pixels_per_datapoint * $i;
+      my $data_point = $data->[$i];
       $data_point    = $min_value if $min_value > $data_point;
       $data_point    = $max_value if $max_value < $data_point;
       my ($r,$g,$b)  = $self->calculate_color($data_point,\@rgb,$min_value,$max_value);
       my $idx        = $color_cache{$r,$g,$b} ||= $self->panel->translate_color($r,$g,$b);
-      $self->filled_box($gd,$x1,$y1,$x1+$pixels_per_span,$y2,$idx,$idx); # unless $idx == 0;
-      $x1 += $pixels_per_step;  # currently always 1
+      $self->filled_box($gd,$x,$y1,$x+$pixels_per_datapoint,$y2,$idx,$idx);
     }
 
   } else {     # use Sheldon's code to subsample data
@@ -180,7 +188,7 @@ sub draw_segment {
 
       my $scores = 0;
       my $defined;
- 
+
       for (my $i = $start; $i < $end ; $i += $step) {
 	# draw the box if we have accumulated >= 2 pixel's worth of data.
 	if ($pixels >= 2) {

@@ -129,7 +129,7 @@ sub featurefile {
       }
       push @lines,"smoothing        = $options->{windowingFunction}"
 	if $options->{windowingFunction};
-      push @lines,"smoothingWindow  = $options->{smoothingWindow}"
+      push @lines,"smoothing window = $options->{smoothingWindow}"
 	if $options->{smoothingWindow};
       push @lines,'';
     }

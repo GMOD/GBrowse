@@ -3,7 +3,7 @@
  rubber.js -- a base class for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.1.2.11 2008-01-26 20:07:48 sheldon_mckay Exp $
+ $Id: rubber.js,v 1.1.2.12 2008-02-05 10:47:00 sheldon_mckay Exp $
 
 */
 
@@ -124,6 +124,7 @@ SelectArea.prototype.startRubber = function(self,event) {
   var spanReport = self.spanReport || self.createAndAppend('h2',self.selectBox,'spanReport');
   YAHOO.util.Dom.setStyle(spanReport,'color',self.fontColor||'black');
   YAHOO.util.Dom.setStyle(spanReport,'margin-top',self.marginTop||'0px');
+  YAHOO.util.Dom.setStyle(spanReport,'background','transparent');
 
   spanReport.innerHTML = ' ';
   self.spanReport = spanReport;

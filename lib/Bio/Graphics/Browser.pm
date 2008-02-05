@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.58 2008-02-05 04:48:42 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.59 2008-02-05 10:47:01 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -2831,7 +2831,7 @@ sub labels {
   my @labels =  grep {
     !( $_ eq 'TRACK DEFAULTS' ||          # general track config
        $_ eq 'TOOLTIPS'       ||          # ajax balloon config
-       $_ eq 'SELECT MENU'    ||          # rubber-band selection menu config     
+       /SELECT MENU/          ||          # rubber-band selection menu config     
        /:(\d+|plugin|DETAILS|details)$/   # plugin, etc config
      )
        && $self->authorized($_)

@@ -200,19 +200,15 @@ sub mirror {
   my $tmpfile  = "$filename-$$";
   my $response = $UA->request($request,$tmpfile);
 
-  warn "got response ",$response->code; # if DEBUG;
-  warn "filename = $filename, tmpfile = $tmpfile";
-
   if ($response->is_success) {  # we got a new file, so need to process it
     my $infh   = IO::File->new($tmpfile)     or die "Couldn't open $tmpfile: $!";
     my $outfh  = IO::File->new(">$filename") or die "Couldn't open $filename: $!";
-    warn "process_uploaded_file running";
     $self->process_uploaded_file($infh,$outfh);
     if (my $lm = $response->last_modified) {
       utime($lm,$lm,$filename);
     }
   }
-#  unlink $tmpfile;  # either way, this file is no longer needed
+  unlink $tmpfile;  # either way, this file is no longer needed
   return $response;
 }
 

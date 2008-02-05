@@ -103,8 +103,8 @@ sub featurefile {
     else {
 
       $options->{visibility} ||= 'pack';
-      $options->{color}      ||= 'black';
-      $options->{altColor}   ||= 'black';
+      $options->{color}      ||= '0,0,0';
+      $options->{altColor}   ||= '0,0,0';
 
       # stanza
       push @lines,"[$track]";

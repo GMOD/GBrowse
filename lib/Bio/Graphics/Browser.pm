@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.56 2008-01-26 20:07:48 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.57 2008-02-05 04:00:01 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -961,7 +961,7 @@ sub render_draggable_tracks {
       my $config_click;
       if ($label =~ /^plugin:/) {
 	my $help_url = "url:?plugin=".CGI::escape($label).';plugin_do=Configure';
-	$config_click = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1,650)";
+	$config_click = "balloon.showTooltip(event,'$help_url',1,650)";
       }
 
       elsif ($label =~ /^file:/) {
@@ -972,7 +972,7 @@ sub render_draggable_tracks {
       else {
 	my $help_url = "url:?configure_track=".CGI::escape($label);
 	$help_url   .= ";rand=".rand(); # work around caching bugs... # if CGI->user_agent =~ /MSIE/;
-	$config_click = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1,650)";
+	$config_click = "balloon.showTooltip(event,'$help_url',1,650)";
       }
 
 
@@ -1652,9 +1652,9 @@ sub make_map {
 	my $stick = defined $sticky ? $sticky : 1;
 	$style = "cursor:pointer";
 	$mousedown = $balloonclick =~ /^(https?|ftp):|^\//
-	    ? "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,\&#39;<iframe width=100% " .
+	    ? "$balloon_ct.showTooltip(event,\&#39;<iframe width=100% " .
 	      "height=$height frameborder=0 src=$balloonclick></iframe>\&#39;,$stick,$width)"
-	    : "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,\&#39;$balloonclick\&#39;,$stick,$width)";
+	    : "$balloon_ct.showTooltip(event,\&#39;$balloonclick\&#39;,$stick,$width)";
 	undef $href;
       }
     }

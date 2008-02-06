@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.19 2008-02-04 21:59:05 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.20 2008-02-06 04:11:21 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -82,7 +82,7 @@ var Balloon = function() {
   this.padding  = 10;
 
   // How long to display mousover balloons (msec)
-  this.displayTime = 5000;
+  this.displayTime = 3000;
 
   // width of shadow (space aroung whole balloon; px)
   // This can be zero if there is no shadow and the
@@ -112,7 +112,10 @@ var Balloon = function() {
   // A close button for sticky balloons
   this.closeButton   = '/images/balloons/close.png';
 
+  // track the cursor every time the mouse moves or the page
+  // is scrolled
   document.onmousemove = this.setActiveCoordinates;
+  document.onscroll    = this.setActiveCoordinates;
 }
 
 

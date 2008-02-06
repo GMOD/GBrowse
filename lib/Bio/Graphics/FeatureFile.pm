@@ -1,6 +1,6 @@
 package Bio::Graphics::FeatureFile;
 
-# $Id: FeatureFile.pm,v 1.1.2.7 2007-12-28 21:00:50 lstein Exp $
+# $Id: FeatureFile.pm,v 1.1.2.8 2008-02-06 16:17:18 lstein Exp $
 # This package parses and renders a simple tab-delimited format for features.
 # It is simpler than GFF, but still has a lot of expressive power.
 # See __END__ for the file format
@@ -268,7 +268,7 @@ objects created.
 #"
 
 sub render {
-  my $self  = shift;
+  my $self = shift;
   my $panel = shift;
   my ($position_to_insert,$options,$max_bump,$max_label,$selector) = @_;
 
@@ -324,6 +324,7 @@ sub render {
 		   $self->style($type),  # feature-specific
 		   @override,
 		 );
+
     if (defined($position_to_insert)) {
       push @tracks,$panel->insert_track($position_to_insert++,$features,@config);
     } else {
@@ -429,7 +430,7 @@ sub parse_line {
 
   # Remove comments but rescue anchors and hex-code colors.
   # Comments must begin a line or be preceded by whitespace
-  s/^\s*#.+$//;
+  s/(?:^|\s+)\#.+$//;
 
   # skip on blank lines
   return 1 if /^\s*$/;
@@ -596,7 +597,7 @@ sub parse_line {
   }
 
   # either create a new feature or add a segment to it
-  if (my $feature = $self->{seenit}{$type,$name}) {
+  if (length $name && (my $feature = $self->{seenit}{$type,$name})) {
 
     # create a new segment to hold the parts
     if (!$feature->segments) {
@@ -1385,7 +1386,7 @@ sub link_pattern {
   require CGI unless defined &CGI::escape;
   my $n;
   $linkrule ||= ''; # prevent uninit warning
-  my $seq_id = eval {$feature->location->seq_id} || $feature->seq_id;
+  my $seq_id = $feature->can('location') ? $feature->location->seq_id : $feature->seq_id;
   $linkrule =~ s/\$(\w+)/
     CGI::escape(
     $1 eq 'ref'              ? (($n = $seq_id) && "$n") || ''
@@ -1576,11 +1577,9 @@ Lincoln Stein E<lt>lstein@cshl.orgE<gt>.
 
 Copyright (c) 2001 Cold Spring Harbor Laboratory
 
-This package and its accompanying libraries is free software; you can
-redistribute it and/or modify it under the terms of the GPL (either
-version 1, or at your option, any later version) or the Artistic
-License 2.0.  Refer to LICENSE for the full license text. In addition,
-please see DISCLAIMER.txt for disclaimers of warranty.
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.  See DISCLAIMER.txt for
+disclaimers of warranty.
 
 =cut
 

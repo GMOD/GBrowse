@@ -12,13 +12,13 @@
 
 <p>
 
-This is a quick tutorial to take you through the main features and
-gotchas of GBrowse.  This tutorial assumes that you have successfully
-setup Perl, GD, BioPerl and the other GBrowse dependencies.  During
-most of the tutorial, we will be using the "in-memory" GBrowse
-database (no relational database required!)  Later we will show how to
-set up a genome size database using the berkeleydb and MySQL adaptors.
-</p>
+This is an extensive tutorial to take you through the main features
+and gotchas of GBrowse.  This tutorial assumes that you have
+successfully setup Perl, GD, BioPerl and the other GBrowse
+dependencies.  During most of the tutorial, we will be using the
+"in-memory" GBrowse database (no relational database required!)  Later
+we will show how to set up a genome size database using the berkeleydb
+and MySQL adaptors.  </p>
 
 <p>
 
@@ -347,6 +347,14 @@ The 9 columns are as follows:
       <blockquote>Alias=M19211,gna-12,GAMMA-GLOBULIN</blockquote>
       Other good stuff can go into the attributes field, as we shall see later.</li>
 </ol>
+
+<p>
+
+<b>It is very important to have a full-length entry (such as the one
+for ctgA) for each reference sequence mentioned in the first column of
+the GFF3 file. However, the reference sequence can have any source and
+type you choose. Commonly used types are "clone", "chromosome" and
+"contig."</b>
 
 <hr>
 
@@ -1439,16 +1447,20 @@ the value of the "wigfile" attribute to indicate its new location.
 <p>
 
 You can now move this GFF3 file into
-$HTDOCS/gbrowse/databases/volvox, overwriting the existing
-volvox_microarray.gff3 file.
+$HTDOCS/gbrowse/databases/volvox. At this time, please also delete the
+volvox6.gff3 file to avoid seeing the same data twice.
 
 <p>
 
 One last step is needed to make the data display properly,
 however. You must set the glyph type to either "wiggle_xyplot" or
 "wiggle_density." These are the only glyphs that recognize and
-properly format wiggle-style data. In the config file, change the
-[TransChip] stanza to look like this:
+properly format wiggle-style data. You can also remove the min and max
+options, since the wiggle binary files store this information
+internally and it is no longer needed.
+
+<p> In the config file, change the [TransChip] stanza to look like
+this:
 
 <blockquote class="example"><pre>
 [TransChip]
@@ -1485,14 +1497,12 @@ key            = Transcriptional Profile
 
 <p>
 
-This
+This is what the modified track will look like:
 
 <blockquote>
 <img src="figures/wiggle_density.png"><br>
 <i>Figure 13: A transcriptional profile rendered with the wiggle_density glyph</i>
 </blockquote>
-
-
 
 <hr>
 
@@ -1527,8 +1537,10 @@ this:
 
 <blockquote class="example"><pre>
 % <b>ls $HTDOCS/gbrowse/databases/volvox/</b>
-volvox1.gff3   volvox2.gff3  volvox4b.gff3  volvox5.gff3  volvox.fa
-volvox2b.gff3  volvox3.gff3  volvox4.gff3   volvox6.gff3
+track001.ctgA.1202327456.wig  volvox2.gff3   volvox4.gff3  volvox.fa
+volvox1.gff3		      volvox3.gff3   volvox5.gff3  
+volvox2b.gff3		      volvox4b.gff3  volvox7.gff3
+volvox_microarray.gff3
 </pre></blockquote>
 
 <p>
@@ -1537,7 +1549,8 @@ If you haven't done so already, please be sure that you have made the
 database directory writeable by the web server user, either by making
 it world writeable (as described at the beginning of this tutorial),
 or by changing the directory's group ownership to match the Apache web
-server's group account (e.g. "www-data" on most Ubuntu Linux systems).
+server's group account (it varies from system to system, but "nobody",
+"www", "apache" and "www-data" are the most common possibilities).
 
 This is all you need to do to load the DNA.  To see that the DNA is
 indeed being loaded, add two new stanzas to the volvox.conf
@@ -1549,6 +1562,7 @@ glyph          = dna
 global feature = 1
 height         = 40
 do_gc          = 1
+gc_window      = auto
 fgcolor        = red
 axis_color     = blue
 strand         = both
@@ -1575,7 +1589,8 @@ one is "global feature", which is set to a true value (1).  This tells
 GBrowse that the stanza doesn't correspond to a specific feature type,
 but should be displayed globally.  Other options control whether to
 draw one or both strands, whether to draw the GC content histogram,
-and what colors to use.
+the window size to use when smoothing the histogram, and what colors
+to use.
 
 <p>
 
@@ -1599,16 +1614,16 @@ protein translations automatically!
 
 <blockquote>
 <b>(14A)</b><br>
-<img src="figures/dna1.gif">
+<img src="figures/dna1.png">
 <br><br><b>(14B)</b><br>
-<img src="figures/dna2.gif"><br>
+<img src="figures/dna2.png"><br>
 <i>Figure 14: Viewing DNA/GC content and 6-frame translation. (a) low
 magnification; (b) high magnification</i>
 </blockquote>
 
 <p>
 
-<blockquote><i>
+<blockquote  class="example" ><i>
 If you happen to do a listing of the volvox database directory after
 adding the DNA file, you might notice that a new file named
 "directory.index" has appeared.  This index directory is created
@@ -1677,8 +1692,8 @@ to the configuration file:
 <blockquote class="example"><pre>
 [EST]
 feature      = EST_match:est
-glyph        = segments
 height       = 6
+glyph        = segments
 bgcolor      = orange
 key          = ESTs
 </pre></blockquote>
@@ -1713,6 +1728,7 @@ of the same cDNA clone. An easy way to do this is to add a
 [EST]
 feature       = EST_match:est
 glyph         = segments
+height        = 6
 bgcolor       = orange
 group_pattern = /\.[53]$/
 key           = ESTs
@@ -1947,11 +1963,11 @@ version of the [EST] track:
 
 <blockquote class="example"><pre>
 [EST]
-feature      = EST_match:est
-glyph        = segments
-height       = 6
-draw_target   = 1
-show_mismatch = 1
+feature          = EST_match:est
+glyph            = segments
+height           = 6
+draw_target      = 1
+show_mismatch    = 1
 canonical_strand = 1
 bgcolor      = sub {
 		my $feature = shift;
@@ -1962,8 +1978,8 @@ bgcolor      = sub {
 		   return 'orange';
 		}
 	}
-group_pattern = /\.[53]$/
-key          = ESTs
+group_pattern    = /\.[53]$/
+key              = ESTs
 </pre></blockquote>
 
 <p>
@@ -2002,6 +2018,9 @@ reindexed.  In Unix:
 % <b>touch $HTDOCS/gbrowse/databases/volvox/ests.fa</b>
 </pre></blockquote>
 
+<p>If you are still having problems, remove the directory.index file
+completely in order to force reindexing.
+
 <hr>
 
 <h2><a name="trace">16. Displaying Trace Data</a></h2>
@@ -2026,34 +2045,47 @@ with Windows servers, since we do not know of a version of the Staden
 io-lib package that has been compiled for Windows.
 <p>
 
-The data file <a href="data_files/volvox9.gff">volvox9.gff</a> contains an example trace entry.
+The data file <a href="data_files/volvox9.gff3">volvox9.gff3</a>
+contains an example trace entry.
 
 <p>
 
 <blockquote class="example"><pre>
-ctgA    example trace   44401   45925   .       +       .       name trace; trace volvox_trace.scf
+ctgA    example read   44401   45925   .       +       .       name trace; trace volvox_trace.scf
 </pre></blockquote>
 
 <p>
 
-This aligns the full trace sequence to the reference sequence.  The trace file in this case is named "volvox_trace.scf". 
-
-Due to sequence quality, the first few bases of a trace file usually don't align.  Even so, these need bases need to be included in the gff file.  For instance, if the bases 10-700 of the trace file aligns to the bases 100-800 of the reference sequence, the feature would be 90-800 to account for the first 10 bases (starting at base 0).
-
-<p>
-
-<blockquote class="example"> <i> NOTE: The trace glyph currently doesn't deal with insertions or deletions.  If an indel occurs, the alignment after the indel will be off.</i>
-</blockquote>
+This aligns the full trace sequence to the reference sequence.  The
+trace file in this case is named "volvox_trace.scf", and it is located
+in <a href="data_files/volvox_trace.scf">$HTDOCS/gbrowse/databases/volvox_trace.scf</a>
 
 <p>
 
-To display this first copy the following into the volvox.conf (or copy <a href="conf_files/volvox5.conf">volvox5.conf</a> over the volvox.conf file).
+Due to sequence quality, the first few bases of a trace file usually
+don't align.  Even so, these need bases need to be included in the gff
+file.  For instance, if the bases 10-700 of the trace file aligns to
+the bases 100-800 of the reference sequence, the feature would be
+90-800 to account for the first 10 bases (starting at base 0).
+
+<p>
+
+<blockquote class="example"> <i> NOTE: The trace glyph currently
+doesn't deal with insertions or deletions.  If an indel occurs, the
+alignment after the indel will be off.</i> </blockquote>
+
+<p>
+
+Copy this file into the volvox database directory. Then, to display
+the trace, copy the following into the volvox.conf (or copy <a
+href="conf_files/volvox5.conf">volvox5.conf</a> over the current
+volvox.conf file).
 
 <p>
 
 <blockquote class="example"><pre>
 [Traces]
-feature      = trace
+feature      = read
 glyph        = trace
 fgcolor      = black
 bgcolor      = orange
@@ -2064,33 +2096,41 @@ a_color      = green
 c_color      = blue
 g_color      = black
 t_color      = red
+show_border  = 1
 trace_height = 80
 trace_prefix = http://localhost/gbrowse/tutorial/data_files/
-show_border  = 1
 key          = Traces
 </pre></blockquote>
 
 <p>
 
-The fgcolor, bgcolor, strand_arrow and height control the bar that shows the location and directionality of the trace.
+The fgcolor, bgcolor, strand_arrow and height control the bar that
+shows the location and directionality of the trace.
 
 <p>
 
 <p>
 
-The trace_prefix option is important because it gives the path to the trace files.  This is prepended to the trace file name defined in the gff file.  It can be a direct path to the directory (eg "/usr/local/trace_files/") or a web address (as above). 
+The trace_prefix option is important because it gives the path to the
+trace files.  This is prepended to the trace file name defined in the
+gff file.  It can be a direct path to the directory (eg
+"/usr/local/trace_files/") or a web address (as above).
 
 <p>
 
-The a/c/g/t_color options allow configuration of the base colors.  The trace_height refers to the height of the trace itself.  Play around with it to find a height that you like.
+The a/c/g/t_color options allow configuration of the base colors.  The
+trace_height refers to the height of the trace itself.  Play around
+with it to find a height that you like.
 
 <p>
 
-If show_border is set to 1, a black box will be drawn around the trace.
+If show_border is set to 1, a black box will be drawn around the
+trace.
 
 <p>
 
-After configuring the trace glyph, reload the browser page and enable traces.  Zoomed out you will see:
+After configuring the trace glyph, reload the browser page and enable
+traces.  Zoomed out you will see:
 
 <p>
 
@@ -2130,7 +2170,7 @@ To see these plugins at work, first make sure that the database files
 are up to date with this position in the tutorial.  If you are in any
 doubt, remove the current contents of the volvox database directory
 and replace them with the files <a
-href="data_files/volvox_all.gff">volvox_all.gff</a> and <a
+href="data_files/volvox_all.gff3">volvox_all.gff3</a> and <a
 href="data_files/volvox_all.fa">volvox_all.fa</a>.  <p>
 
 Now find the option "plugins=" at the top of volvox.conf, and modify
@@ -2252,10 +2292,10 @@ see how it affects the display (Figure 21).
 
 <p>
 
-Only a few of the plugins are currently well-documented, but this
-situation is being rectified.  To view their documentation, if any,
-find the plugin file, which usually lives under gbrowse.conf/plugins,
-and run the perldoc command with the -F ("file") option:
+Plugin files live in $CONF/gbrowse.conf/plugins. To view plugin
+documentation, find the plugin file, which usually lives under
+gbrowse.conf/plugins, and run the perldoc command with the -F ("file")
+option:
 
 <blockquote class="example"><pre>
 % <b>perldoc -F Aligner.pm</b>
@@ -2275,6 +2315,16 @@ Here's the list of plugins that come with the standard distribution:
     <td>Dump multiple alignments</td>
   </tr>
   <tr>
+    <td>AlignTwoSequences</td>
+    <td>Execute NCBI's bl2seq on the current view (requires the bl2seq
+	executable).</td>
+  </tr>
+  <tr>
+    <td>AttributeHiliter</td>
+    <td>Highlight (by colorizing) features whose attributes match some
+	user-specified values.</td>
+  </tr>
+  <tr>
     <td>BatchDumper</td>
     <td>Allows the user to cut and paste a series of landmarks on the
 	genome and dumps out all overlapping features using a variety
@@ -2282,9 +2332,38 @@ Here's the list of plugins that come with the standard distribution:
     </td>
   </tr>
   <tr>
+    <td>Blat</td>
+    <td>Plugin to align sequences against the genome using the BLAT
+	algorithm (requires BLAT executable).
+    </td>
+  </tr>
+  <tr>
+    <td>CMapDumper</td>
+    <td>Produces files that can be read by the <a
+  href="http://www.gmod.org/wiki/index.php/Cmap">CMap comparative map browser.</a>
+    </td>
+  </tr>
+  <tr>
+    <td>CreateBlastDB</td>
+    <td>Creates a Blast-formatted database from a GBrowse database.
+    </td>
+  </tr>
+  <tr>
     <td>FastaDumper</td>
     <td>Produce pretty-printed FASTA dumps of the current region, with
 	selected features highlighted with colors or font styles.
+    </td>
+  </tr>
+  <tr>
+    <td>FilterTest</td>
+    <td>Small demonstration of how to write a plugin that filters
+	features (makes them visible or invisible) based on arbitrary criteria.
+    </td>
+  </tr>
+  <tr>
+    <td>GeneFinder</td>
+    <td>Runs Phil Green's genefinder gene prediction program within
+	GBrowse (requires genefinder executable).
     </td>
   </tr>
   <tr>
@@ -2297,110 +2376,43 @@ Here's the list of plugins that come with the standard distribution:
 	11-mers or greater.</td>
   </tr>
   <tr>
+    <td>PrimerDesigner</td>
+    <td>Interactively design PCR primers (requires <a
+	href="http://primer3.sourceforge.net/">primer3</a>
+	executable).</td>
+  </tr>
+  <tr>
+    <td>ProteinDumper</td>
+    <td>Dump translated protein sequences of the current region in various formats</td>
+  </tr>
+  <tr>
+    <td>RandomGene</td>
+    <td>Small demonstration of how to connect a plugin to a gene
+	prediction program. Doesn't actually predict genes, but
+	generates simulated ones.</td>
+  </tr>
+  <tr>
     <td>RestrictionAnnotator</td>
     <td>Creates restriction maps.</td>
   </tr>
   <tr>
-    <td>SequenceDumper</td>
-    <td>The same functionality as BatchDumper, but just shows features
-	that overlap the current region on view.</td>
+    <td>Spectrogram</td>
+    <td>Generate DNA spectrograms to highlight low complexity regions,
+	repetitive regions, coding regions and other regions with
+	periodicity. Requires Math::FFT Perl module.</td>
+  </tr>
+  <tr>
+    <td>Submitter</td>
+    <td>Helper plugin for the rubber-band select menu. See <a
+	href="http://www.gmod.org/wiki/index.php/GBrowse_Rubber_Band_Selection.pm">GBrowse
+	Rubber-band selection</a>.</td>
+  </tr>
+  <tr>
+    <td>test</td>
+    <td>This dumps the current view in FASTA format, and is used
+	for regression testing the plugin architecture.</td>
   </tr>
 </table>
-
-<hr>
-
-<h2><a name="reference_sequence">18. More about the Reference Sequence</a></h2>
-
-<p>
-
-Although the example that we've been working with only has a single
-reference sequence (the infamous "ctgA"), many projects will have
-multiple references.  Reference sequences can be anything that acts as
-a convenient landmark: sequenced clones, contigs, scaffolds, golden
-path segments, or whole chromosomes.
-
-<p>
-
-There are just a few rules to be aware of when setting up the load
-files:
-
-<ol>
-  <li>All reference sequences must share the same <b>class</b> name.  In our
-      example, the class for the reference sequence was <i>Contig</i>.
-  <li>Each reference sequence must have its own feature entry in the GFF load
-      file.  This feature entry must use itself as the reference
-      sequence, start at position 1, and extend the length of the
-      sequence. The source and type for the feature are arbitrary, and
-      do not have to be the same across all reference sequences.
-  <li>The class chosen for reference sequences must be noted in the
-      configuration file under the general option "reference class."
-</ol>
-
-<p>
-
-Let us review these three criteria for the volvox example.  If you
-look at the top of the initial load file, <a
-href="data_files/volvox1.gff">volvox1.gff</a>, you'll see the very
-first line is:
-
-<blockquote class="example">
-<pre>
-ctgA   example   contig       1      50000   .   .   .   Contig ctgA
-</pre>
-</blockquote>
-
-<p>
-
-1. The class for the name "ctgA" is <i>Contig</i>.  If we were using
-other reference sequences as landmarks, then they too would have to be
-identified as Contigs.
-
-<p>
-
-2. This line describes "ctgA" as a feature relative to itself.  The
-feature starts at position 1 (it has to!) and ends at position 50,000.
-The source is "example" and the type is "contig."  If there are other
-reference sequences in the database, they do <b>not</b> have to share
-the "contig" type.  This allows you refer to other types of landmarks,
-such as clones.
-
-<p>
-
-3. If you examine the top few lines of the volvox.conf configuration
-file, you'll see this line:
-
-<blockquote class="example"><pre>
-reference class  = Contig
-</pre></blockquote>
-
-<p>
-
-This line is required for GBrowse to effectively find and render with
-features located on the reference sequence.
-
-<p>
-
-If you find this confusing, it might help to choose "Reference" as the
-class.  Then you can write GFF load files like this:
-
-<blockquote class="example">
-<pre>
-ctgA   example   contig       1      50000   .   .   .   Reference ctgA
-chr22  example   chromosome   1    1150000   .   .   .   Reference chr22
-5p3.2  example   band         1     830000   .   .   .   Reference 5p3.2
-</pre>
-</blockquote>
-
-<blockquote class="example"><i>Don't forget to update "reference class" in the config
-file!</i>
-</blockquote>
-
-<p>
-
-Alternatively, you can use the word "Sequence" as the class name for
-reference sequences.  For historical reasons, "Sequence" is recognized
-as the default classname.  This means you don't have to have a
-"reference class" option in the config file at all.
 
 <hr>
 
@@ -2848,10 +2860,11 @@ entirety of the feature and DNA data.</i>
 
 <a name="cg"><h3>Display tracks within a group category as a table</h3>
 
-<p>A further refinement to display track information within the category
- is a table display with headings for the rows and columns (see figure 27 for an example). 
- This layout is useful for displaying data that highlights the experimental design as in
- microarray or ChIP-on-Chip experiments.</p>
+<p>A further refinement to display track information within the
+ category is a table display with headings for the rows and columns
+ (see figure 27 for an example).  This layout is useful for displaying
+ data that highlights the experimental design as in microarray or
+ ChIP-on-Chip experiments.</p>
 
 <blockquote>
 <img src="figures/categorytable.png"><br>
@@ -2859,10 +2872,11 @@ entirety of the feature and DNA data.</i>
 organized as 3 rows x 3 columns each with a heading. 
 </blockquote>
 
-<p>This was constructed using the option 'category tables' that is written at towards the top of 
-the conf file. The first parameter refers to the category you wish to add the table to, the 
-second is a space separated list of column headings, the third a 
-space separated list of row headings.</p>
+<p>This was constructed using the option 'category tables' that is
+written at towards the top of the conf file. The first parameter
+refers to the category you wish to add the table to, the second is a
+space separated list of column headings, the third a space separated
+list of row headings.</p>
 
 <blockquote class="example"><pre>
 # category table configuration
@@ -3227,7 +3241,7 @@ that DB_File is installed by running the following command: </p>
 
 <blockquote class="example">
 <pre>
-C:\&gt; perl -MDB_File -e 'print $DB_FILE::VERSION'
+C:\&gt; perl -MDB_File -e 'print $DB_File::VERSION'
 </pre>
 </blockquote>
 
@@ -3252,7 +3266,7 @@ this:</p>
 <blockquote class="example"><pre>
 [GENERAL]
 description   = Volvox Berkeleydb Database
-db_adaptor    = Bio::DB::GFF
+db_adaptor    = Bio::DB::SeqFeature::Store
 db_args       = -adaptor berkeleydb
 	        -dir     '$HTDOCS/gbrowse/databases/volvox'
 </pre></blockquote>
@@ -3271,10 +3285,10 @@ was to begin with, you may not notice a speed improvement; however,
 with large GFF files, the performance improvement will be very
 marked.</p>
 
-<p>If you look in the volvox database directory, you will see a series
-of newly-created index files named "bdb_features.btree",
-"bdb_features.data", etc. These are automatically created when needed
-and updated whenever the underlying GFF or FASTA files are
+<p>If you look in the volvox database directory, you will see a new
+subdirectory named "index". This contains a set of index files that
+allow gbrowse to find features quickly. They are automatically created
+and updated as needed when the underlying GFF or FASTA files are
 changed.</p>
 
 <p>If you get an "Internal Server Error" or similar message, check the
@@ -3284,7 +3298,7 @@ writeable by the web server user. As described earlier, this directory
 must be "world writeable" in order to allow the web server to create
 and maintain the databases</p>
 
-<h3>Creating a Berkeleydb database using bp_load_gff.pl</h3>
+<h3>Creating a Berkeleydb database using bp_seqfeature_load.pl</h3>
 
 <p>Although it is convenient to maintain the Berkeleydb indexes
 automatically, this mechanism has a number of disadvantages. One
@@ -3294,11 +3308,11 @@ not be acceptable in some installations. Another disadvantage is that
 the indexing may take a long time, up to 10 minutes for a GFF
 databases containing a million lines. Some web servers will time out
 during this process. For large databases, it is better to explicitly
-create the database index files using the <i>bp_load_gff.pl</i>
+create the database index files using the <i>bp_seqfeature_load.pl</i>
 program.</p>
 
-<p><i>bp_load_gff.pl</i> is a BioPerl utility that is described in
-more detail in <a href="#mysql">Setting up a MySQL database</a>. It
+<p><i>bp_seqfeature_load.pl</i> is a BioPerl utility that is described
+in more detail in <a href="#mysql">Setting up a MySQL database</a>. It
 takes as its input a series of GFF and FASTA files and creates the
 appropriate database files. To see how to use it, we will create a
 fresh database directory. Go to the GBrowse database located at
@@ -3307,7 +3321,7 @@ fresh database directory. Go to the GBrowse database located at
 
 <blockquote class="example"><pre>
  % cd $HTDOCS/gbrowse/databases
- % mkdir volvox_bdb
+ % mkdir volvox_berkeley
 </pre></blockquote>
 
 <p>
@@ -3324,12 +3338,17 @@ as. Now enter the tutorial data files directory
 files using the following command:</p>
 
 <blockquote class="example"><pre>
-<b>% bp_load_gff.pl -c -a berkeleydb -d $HTDOCS/gbrowse/databases/volvox_bdb volvox_all.fa volvox_all.gff</b>
-volvox_all.gff: loading...
-738 records loaded
-volvox_all.gff: 738 records loaded
-Loading fasta file volvox_all.fa
-volvox_all.fa: 7 records loaded
+<b>% bp_seqfeature_load.pl -c -a berkeleydb -f -d $HTDOCS/gbrowse/databases/volvox_berkeley volvox_all.fa volvox_all.gff</b>
+loading volvox_all.fa...
+                                                                                
+Building object tree... 0.00s
+Loading bulk data into database... 0.01s
+load time:  0.02s
+loading volvox_all.gff3...
+                                                                                
+Building object tree... 0.00s
+Loading bulk data into database... 0.00s
+load time:  0.08s
 </pre></blockquote>
 
 The arguments to <i>bp_load_gff.pl</i> are:
@@ -3344,7 +3363,11 @@ The arguments to <i>bp_load_gff.pl</i> are:
     <td><b>c</b>lear (initialize) the database
   </tr>
   <tr>
-    <td><b>-d $HTDOCS/gbrowse/databases/volvox_bdb</b></td>
+    <td><b>-f</b></td>
+    <td>use the <b>f</b>ast loading option
+  </tr>
+  <tr>
+    <td><b>-d $HTDOCS/gbrowse/databases/volvox_berkeley</b></td>
     <td>Load the data into the indicated <b>d</b>atabase directory.
   </tr>
   <tr>
@@ -3355,7 +3378,7 @@ The arguments to <i>bp_load_gff.pl</i> are:
 
 <p> If all goes well, this will create the index files in
 <tt>$HTDOCS/gbrowse/databases/volvox_bdb</tt>. If you look in that
-directory now, you'll see a series of bdb_* index files.</p>
+directory now, you'll see a series of index files.</p>
 
 <p>
 The last step is to modify the volvox.conf to point to this
@@ -3366,9 +3389,9 @@ looks like this:
 <blockquote class="example"><pre>
 [GENERAL]
 description   = Volvox Berkeleydb Database
-db_adaptor    = Bio::DB::GFF
+db_adaptor    = Bio::DB::SeqFeature::Store
 db_args       = -adaptor berkeleydb
-	        -dsn    '$HTDOCS/gbrowse/databases/volvox_bdb'
+	        -dsn    '$HTDOCS/gbrowse/databases/volvox_berkeley'
 </pre></blockquote>
 
 <p>The change here is to replace the <b>-dir</b> argument with
@@ -3387,9 +3410,9 @@ indexes.</p>
 
 <p>
 
-The Bio::DB::GFF MySQL adaptor is an interface to the open source
-MySQL database management system. Its performance is similar to that
-of the Berkeleydb adaptor, but it has better provisions for error
+The Bio::SeqFeature::Store MySQL adaptor is an interface to the open
+source MySQL database management system. Its performance is similar to
+that of the Berkeleydb adaptor, but it has better provisions for error
 recovery and is safe to use in environments where multiple users write
 to the database simultaneously. In addition, the MySQL adaptor has
 been tested much more extensively than the Berkeleydb adaptor and is
@@ -3468,26 +3491,33 @@ database.  There are actually two steps needed.  The first is to
 "initialize" the database with all the data definitions needed to hold
 genomic feature data, and the second is to actually load the data.
 Fortunately, both these steps are handled by the same command-line
-tool, <i>bp_load_gff.pl</i>, which is part of the BioPerl suite.
+tool, <i>bp_seqfeature_load.pl</i>, which is part of the BioPerl
+suite.
 
 <p>
 
-Copy the files <a href="data_files/volvox_all.gff">volvox_all.gff</a>
+Copy the files <a href="data_files/volvox_all.gff3">volvox_all.gff3</a>
 and <a href="data_files/volvox_all.fa">volvox_all.fa</a> to some
 convenient place.  Then run the following command from the command
 line:
 
 <blockquote class="example"><pre>
-% <b>bp_load_gff.pl -c -d volvox volvox_all.fa volvox_all.gff</b>
-volvox_all.gff: loading...
-volvox_all.gff: 738 records loaded
-Loading fasta file volvox_all.fa
-volvox_all.fa: 7 records loaded
+% <b>bp_seqfeature_load.pl -c -d volvox volvox_all.fa -f volvox_all.gff3</b>
+loading volvox_all.fa...
+                                                                                
+Building object tree... 0.00s
+Loading bulk data into database... 0.00s
+load time:  0.02s
+loading volvox_all.gff3...
+                                                                                
+Building object tree... 0.00s
+Loading bulk data into database... 0.02s
+load time:  0.23s
 </pre></blockquote>
 
 <p>
 
-The arguments to <i>bp_load_gff.pl</i> are:
+The arguments to <i>bp_seqfeature_load.pl</i> are:
 
 <table>
   <tr>
@@ -3499,7 +3529,11 @@ The arguments to <i>bp_load_gff.pl</i> are:
     <td>Load into the <b>d</b>atabase named volvox
   </tr>
   <tr>
-    <td><b>volvox_all.fa volvox_all.gff</b></td>
+    <td><b>-f</b></td>
+    <td>Use the fast loading algorithm.
+  </tr>
+  <tr>
+    <td><b>volvox_all.fa volvox_all.gff3</b></td>
     <td>The data files to load.
   </tr>
   
@@ -3516,19 +3550,19 @@ this:
 <blockquote class="example"><pre>
 [GENERAL]
 description   = Volvox Example Database
-db_adaptor    = Bio::DB::GFF
-db_args       = -adaptor dbi::mysql
+db_adaptor    = Bio::DB::SeqFeature::Store
+db_args       = -adaptor DBI::mysql
 	        -dsn     volvox
                 -user    nobody
-                -pass
 </pre></blockquote>
 
 <p>
 
-The <b>-adaptor</b> argument is telling GBrowse to use the
-"dbi::mysql" database adaptor, which is the BioPerl interface to
-MySQL databases.  The <b>-dsn</b> argument tells GBrowse to use the
-<b>d</b>ata <b>s</b>ource <b>n</b>ame "volvox".
+The <b>-adaptor</b> argument is telling GBrowse to use the DBI::mysql"
+database adaptor, which is the BioPerl interface to MySQL databases.
+The <b>-dsn</b> argument tells GBrowse to use the <b>d</b>ata
+<b>s</b>ource <b>n</b>ame "volvox". The <b>-fast</b> option turns on
+some optimizations that will make features load faster.
 
 <p>
 
@@ -3536,8 +3570,58 @@ When you reload the web page, GBrowse will now be using MySQL.
 Depending on the speed of your CPU and disk, you might notice that it
 seems a bit snappier than the in-memory version.  See <a
 href="../CONFIGURE_HOWTO.txt">CONFIGURE_HOWTO.txt</a> for more
-information on configuring GBrowse to use relational databases.  Also
-see the following perldoc manual pages:
+information on configuring GBrowse to use relational databases.
+
+<h3>Other backends</h3>
+
+<p>
+
+The Bio::DB::SeqFeature::Store database backend supports the three
+adaptors we have already used in this tutorial. For information see
+the following perldoc manual pages:
+
+<dl>
+  <dt><b>perldoc Bio::DB::SeqFeature::Store::DBI::mysql</b>
+  <dd>The MySQL adaptor.
+      <p>
+  <dt><b>perldoc Bio::DB::SeqFeature::Store::memory</b>
+  <dd>The in-memory adaptor.
+      <p>
+  <dt><b>perldoc Bio::DB::SeqFeature::Store::berkeleydb</b>
+  <dd>The Berkeleydb adaptor
+</dl>
+      
+<p>
+
+Another set of adaptors, in the Bio::DB::Das set, let GBrowse run on
+top of the rich biological database schemas <a
+href="http://www.gmod.org/wiki/index.php/Chado">Chado</a> and <a
+href="http://www.biosql.org/wiki/Main_Page">BioSQL</a>:
+
+<dl>
+  <dt><b>perldoc Bio::DB::Das::Chado</b>
+  <dd>An adaptor for PostgreSQL databases using the <i>Chado</i>
+      schema (see the <a href="http://www.gmod.org/schema/">Chado
+      home page</a>.)
+      <p>
+  <dt><b>perldoc Bio::DB::Das::BioSQL</b>
+  <dd>An adaptor for PostgreSQL and MySQL databases using the
+  <i>BioSQL</i> schema (see <a
+  href="http://www.biosql.org">www.biosql.org</a>).
+      <p>
+  <dt><b>perldoc Bio::Das</b>
+  <dd>An adaptor for Distributed Annotation System genome annotation
+  (version 1). We discuss this in more detail under <a
+  href="#DAS">Using GBrowse as a DAS Server or Client</a></dd>
+</dl>
+
+<p>
+
+Lastly, there is an older family of adaptors that use the Bio::DB::GFF
+database system. These are best-suited for loading data stored in GFF
+version 2 files , but will work, with limitations, with GFF3 files as
+well. These adaptors work with a wider range of relational database
+backends.
 
 <dl>
   <dt><b>perldoc Bio::DB::GFF::Adaptor::dbi::mysql</b>
@@ -3556,15 +3640,6 @@ see the following perldoc manual pages:
   <dt><b>perldoc Bio::DB::GFF::Adaptor::memory</b>
   <dd>An adaptor for in-memory databases running off files.
       <p>
-  <dt><b>perldoc Bio::DB::Das::Chado</b>
-  <dd>An adaptor for PostgreSQL databases using the <i>Chado</i>
-      schema (see the <a href="http://www.gmod.org/schema/">Chado
-      home page</a>.)
-      <p>
-  <dt><b>perldoc Bio::DB::Das::BioSQL</b>
-  <dd>An adaptor for PostgreSQL and MySQL databases using the
-  <i>BioSQL</i> schema (see <a
-  href="http://www.biosql.org">www.biosql.org</a>).
 </dl>
 
 
@@ -3954,7 +4029,7 @@ text field and reload.
 
 <hr>
 
-<h2><a name="DAS">26. Using GBrowse as a DAS Server</a></h2>
+<h2><a name="DAS">26. Using GBrowse as a DAS Server or Client</a></h2>
 
 <p>
 
@@ -4477,6 +4552,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Tue Jan 29 17:03:06 EST 2008
+Last modified: Thu Feb  7 10:05:02 EST 2008
 <!-- hhmts end -->
 </body> </html>

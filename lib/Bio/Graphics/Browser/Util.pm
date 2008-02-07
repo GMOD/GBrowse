@@ -270,7 +270,7 @@ sub print_top {
 
   print start_html(@args) unless $HTML++;
   print_balloon_settings()  if $b_tips;
-  print_select_menu() if $drag_and_drop;
+  print_select_menu($_) for (qw/DETAIL OVERVIEW REGION/);
 }
 
 # prepare custom menu(s) for rubber-band selection

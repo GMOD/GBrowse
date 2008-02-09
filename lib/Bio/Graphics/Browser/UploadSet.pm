@@ -6,9 +6,10 @@ use base 'Bio::Graphics::Browser::RemoteDataBase';
 
 use CGI 'cookie','param';
 use Digest::MD5 'md5_hex';
+use Carp qw/carp croak/;
 use Text::Shellwords;
-use Carp 'carp';
 use constant DEBUG=>0;
+use File::Copy;
 
 sub new {
   my $package = shift;
@@ -50,12 +51,45 @@ sub upload_file {
   return unless defined fileno($filehandle);
 
   my ($filename)  = "$filehandle" =~ /([^\/\\:]+)$/;
+  my $url = $self->new_file($filename);
+  my $zipfile;
 
-  my $url         = $self->new_file($filename);
+
+  # If the file is in a compressed format and we are in a unix-like OS
+  # try to intercept and decompress the file
+  if ($filename =~ /\.(gz|Z|bz2)$/) {
+    my $ext = $1;
+    my $tmpdir = $ENV{TMPDIR} || $ENV{TMP} || '/tmp';
+    my $zipfile = "$tmpdir/upload$$.$ext";
+    copy($filehandle,$zipfile) or croak("could not copy $filehandle to $zipfile");
+
+    # make sure it is a binary file
+    if (-B $zipfile) {
+      if ($ext eq 'gz' && `gunzip -h`) {
+	system "gunzip -f $zipfile";
+      } elsif ($ext eq 'bz2' && `bunzip2 -h`) {
+	system "bunzip2 $zipfile";
+      } elsif ($ext eq 'Z' && `uncompress -h`) {
+	system "uncompress $zipfile";
+      }
+
+      $zipfile =~ s/\.$ext$//;
+      $filename =~ s/\.$ext$//;
+      $self->clear_file($url);
+    
+      # point the filehandle to the unzipped file
+      open $filehandle, $zipfile;    
+    }
+  }
+
+  $url = $self->new_file($filename);
   my $fh_out      = $self->open_file($url,'>') or return;
   $self->process_uploaded_file($filehandle,$fh_out);
   close $fh_out;
-  warn "url = $url, file=",$self->url2path($url); # if DEBUG;
+  warn "url = $url, file=",$self->url2path($url) if DEBUG;
+
+  unlink $zipfile if $zipfile && -e $zipfile;
+
   return $url;
 }
 

@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.20 2008-02-06 04:11:21 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.21 2008-02-09 13:04:44 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -338,8 +338,9 @@ Balloon.prototype.makeBalloon = function() {
   if (balloonIsSticky) {
     self.setStyle('contents','margin-right',10); 
   }
-
-  self.timeoutAutoClose = window.setTimeout(this.hideTooltip,self.displayTime);
+  else {
+      self.timeoutAutoClose = window.setTimeout(this.hideTooltip,self.displayTime);
+  }
   return balloon;
 }
 

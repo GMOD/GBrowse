@@ -408,6 +408,7 @@ sub _retrieve_values {
   }
 
   my $result = $self->sample(\@bases,$samples);
+  $self->smooth($result) if $self->window;
   return $self->unscale($result);
 }
 
@@ -417,19 +418,20 @@ sub sample {
   my $length = @$values;
   my $window_size = $length/$samples;
 
+  my $smoothing_window = $self->window;
+  if ($smoothing_window) {
+    my $scaled_window = int($smoothing_window/$window_size + 0.5);
+    $self->window($scaled_window);
+  }
+
   my @samples;
   $#samples = $samples-1;
 
   if ($window_size < 2) { # no data smoothing needed
     @samples = map { $values->[$_*$window_size] } (0..$samples-1);
   }
-
   else {
-    my $smoothing = $self->smoothing;
-    my $smoothsub   = $smoothing eq 'mean' ? \&sample_mean
-                     :$smoothing eq 'max'  ? \&sample_max
-		     :$smoothing eq 'min'  ? \&sample_min
-		     :croak("invalid smoothing type '$smoothing'");
+    my $smoothsub = $self->smoothsub;
     for (my $i=0; $i<$samples; $i++) {
       my $start    = $i * $window_size;
       my $end      = $start + $window_size - 1;
@@ -441,6 +443,44 @@ sub sample {
   }
 
   return \@samples;
+}
+
+sub smoothsub {
+  my $self = shift;
+  
+  my $smoothing = $self->smoothing;
+  my $smoothsub   = $smoothing eq 'mean' ? \&sample_mean
+                   :$smoothing eq 'max'  ? \&sample_max
+                   :$smoothing eq 'min'  ? \&sample_min
+                   :croak("invalid smoothing type '$smoothing'");
+  return $smoothsub;
+}
+
+sub smooth {
+  my ($self,$data) = @_;
+  my $smoothing = $self->smoothing;
+  my $window    = $self->window;
+  return $data if $smoothing eq 'none' || !$window;
+  
+  my @data = @$data;
+  my $smoother = $self->smoothsub;
+  $window++ unless $window % 2;
+  my $offset = int($window/2);
+  for (my $i=$offset; $i<@$data-$offset; $i++) {
+    my $start = $i - $offset;
+    my $end   = $i + $offset;
+    my @subset = @data[$start..$end];
+    $data->[$i] = $smoother->(\@subset);
+  }
+
+  return $data;
+}
+
+sub window {
+  my $self = shift;
+  my $d    = $self->{window};
+  $self->{window} = shift if @_;
+  $d;
 }
 
 sub sample_mean {

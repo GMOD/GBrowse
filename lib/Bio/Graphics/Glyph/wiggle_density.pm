@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::wiggle_density;
 
-# $Id: wiggle_density.pm,v 1.1.2.14 2008-02-05 04:48:42 lstein Exp $
+# $Id: wiggle_density.pm,v 1.1.2.15 2008-02-09 03:20:21 sheldon_mckay Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing);
@@ -60,6 +60,7 @@ sub draw_wigfile {
   my $start          = $self->smooth_start;
   my $end            = $self->smooth_end;
 
+  $wig->window($smooth_window);
   my ($x1,$y1,$x2,$y2) = $self->bounds($left,$top);
   $self->draw_segment($gd,
 		      $start,$end,
@@ -142,7 +143,7 @@ sub draw_segment {
   return unless $start < $end;
 
   # get data values across the area
-  my $samples = $length < $self->width ? $length : $self->width;
+  my $samples = $length < $self->panel->width ? $length : $self->panel->width;
   my $data    = $seg_data->values($start,$end,$samples);
 
   my $min_value = $self->min_score;
@@ -158,12 +159,12 @@ sub draw_segment {
 
   @$data = reverse @$data if $self->flip;
 
-  if (@$data <= $self->width) { # data fits in width, so just draw it
+  if (@$data <= $self->panel->width) { # data fits in width, so just draw it
 
     $pixels_per_step = $scale * $step;
     $pixels_per_step = 1 if $pixels_per_step < 1;
     my $datapoints_per_base  = @$data/$length;
-    my $pixels_per_datapoint = $self->width/@$data;
+    my $pixels_per_datapoint = $self->panel->width/@$data;
 
     for (my $i = 0; $i <= @$data ; $i++) {
       my $x          = $x1 + $pixels_per_datapoint * $i;
@@ -215,8 +216,8 @@ sub draw_segment {
 	# the step is a fraction of a pixel, not an integer
 	$pixels += $pixelstep;
       }
-    }
-}
+  }
+}      
 
 sub calculate_color {
   my $self = shift;

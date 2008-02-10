@@ -40,6 +40,34 @@ sub _add_file     {
 }
 sub _del_file     { delete shift->{files}{shift()} }
 
+
+sub _unzip {
+  my ($self,$ext,$file,$unzipped) = @_;
+
+  # should have more but others don't seem
+  # to like being run in this environment
+  my %unzipper = ( gz  => 'gunzip' );
+
+  # test if the unzipping application is installed
+  return 0 unless $unzipper{$ext} && `$unzipper{$ext} -h`;
+
+  # make sure the path is clear
+  unlink $unzipped if -e $unzipped;
+
+  # make sure the zipped file is a binary file
+  return 0 unless -B $file;
+
+  warn "unzip incantation: $unzipper{$ext} $file\n"; 
+  system "$unzipper{$ext} $file";
+  if (-e $file) {
+    unlink $file or croak("$file: $!");;  
+  }
+
+  # test for success
+  return -T $unzipped;
+}
+
+
 sub upload_file {
   my $self       = shift;
   my $filehandle = shift;
@@ -52,44 +80,36 @@ sub upload_file {
 
   my ($filename)  = "$filehandle" =~ /([^\/\\:]+)$/;
   my $url = $self->new_file($filename);
-  my $zipfile;
+  my $tempfile;
 
-
-  # If the file is in a compressed format and we are in a unix-like OS
+  # If the file is in gzip format,
   # try to intercept and decompress the file
-  if ($filename =~ /\.(gz|Z|bz2)$/) {
-    my $ext = $1;
-    my $tmpdir = $ENV{TMPDIR} || $ENV{TMP} || '/tmp';
-    my $zipfile = "$tmpdir/upload$$.$ext";
+  if ($filename =~ /\.(gz)$/) {
+    my $ext      = $1;
+    my $tmpdir   = $ENV{TMPDIR} || $ENV{TMP} || '/tmp';
+    my $zipfile  = "$tmpdir/upload$$.$ext";
+    my $unzipped = "$tmpdir/upload$$";
+
+    unlink $zipfile  if -e $zipfile;
     copy($filehandle,$zipfile) or croak("could not copy $filehandle to $zipfile");
+    my $uncompressed = $self->_unzip($ext,$zipfile,$unzipped);
+   
+    croak("Problem unzipping archive $zipfile ($filename)") unless $uncompressed;
 
-    # make sure it is a binary file
-    if (-B $zipfile) {
-      if ($ext eq 'gz' && `gunzip -h`) {
-	system "gunzip -f $zipfile";
-      } elsif ($ext eq 'bz2' && `bunzip2 -h`) {
-	system "bunzip2 $zipfile";
-      } elsif ($ext eq 'Z' && `uncompress -h`) {
-	system "uncompress $zipfile";
-      }
+    $filename =~ s/\.$ext$//;
+    $self->clear_file($url);
+    $tempfile = $unzipped;
 
-      $zipfile =~ s/\.$ext$//;
-      $filename =~ s/\.$ext$//;
-      $self->clear_file($url);
-    
-      # point the filehandle to the unzipped file
-      open $filehandle, $zipfile;    
-    }
+    # point the filehandle to the unzipped file
+    open $filehandle, $unzipped;
   }
 
-  $url = $self->new_file($filename);
-  my $fh_out      = $self->open_file($url,'>') or return;
+  $url       = $self->new_file($filename);
+  my $fh_out = $self->open_file($url,'>') or return;
   $self->process_uploaded_file($filehandle,$fh_out);
   close $fh_out;
   warn "url = $url, file=",$self->url2path($url) if DEBUG;
-
-  unlink $zipfile if $zipfile && -e $zipfile;
-
+  unlink $tempfile if $tempfile && -e $tempfile;
   return $url;
 }
 

@@ -20,7 +20,7 @@ sub readline {
   while (<$fh>) {
     chomp;
     next if /^\s*$/; # blank
-    next if /^\s*#/; # comment
+    next if /^\s*#([^#]|$)/; # comment
     s/[\r]//g;  # get rid of carriage returns from Macintosh/DOS systems
     $line .= $_;
     return $line unless $line =~ s/\\$//;
@@ -51,8 +51,8 @@ sub convert_feature_file {
   my $self = shift;
   my ($first_line,$in,$out) = @_;
   print $out $first_line,"\n";
-  while ($_ = $self->readline($in)) {
-    print $out $_,"\n";
+  while ($_ = <$in>) {
+    print $out $_;
   }
 }
 

@@ -59,8 +59,11 @@ use strict;
 use Carp 'croak';
 use IO::Seekable;
 use Bio::Graphics::Wiggle;
+use Bio::Graphics::Panel;
 use Text::Shellwords;
 use CGI 'escape';
+
+use vars '%color_name';
 
 sub new {
   my $class = shift;
@@ -120,11 +123,11 @@ sub featurefile {
       if (my $color = $options->{altColor}) {
 	push @lines,"bgcolor   = ".format_color($color);
       }
-      if (exists $options->{viewLimits} and my ($low,$hi) = split /:/,$options->{viewLimits}) {
+      if (exists $options->{viewLimits} and my ($low,$hi) = split ':',$options->{viewLimits}) {
 	push @lines,"min_score   =  $low";
 	push @lines,"max_score   =  $hi";
       }
-      if (exists $options->{maxHeightPixels} and my ($max,$default,$min) = split/:/,$options->{maxHeightPixels}) {
+      if (exists $options->{maxHeightPixels} and my ($max,$default,$min) = split ':',$options->{maxHeightPixels}) {
 	push @lines,"height  = $default";
       }
       push @lines,"smoothing        = $options->{windowingFunction}"
@@ -223,7 +226,7 @@ sub process_track_line {
   my $line      = shift;
   my @tokens    = shellwords($line);
   shift @tokens;
-  my %options = map {split/=/} @tokens;
+  my %options = map {split '='} @tokens;
   $options{type} eq 'wiggle_0' or croak "invalid/unknown wiggle track type $options{type}";
   delete $options{type};
   $self->{trackname}++;
@@ -235,7 +238,7 @@ sub process_fixed_step_declaration {
   my $line  = shift;
   my @tokens    = shellwords($line);
   shift @tokens;
-  my %options = map {split/=/} @tokens;
+  my %options = map {split '='} @tokens;
   exists $options{chrom}        or croak "invalid fixedStep line: need a chrom option";
   exists $options{start}        or croak "invalid fixedStep line: need a start option";
   exists $options{step}         or croak "invalid fixedStep line: need a step  option";
@@ -247,7 +250,7 @@ sub process_variable_step_declaration {
   my $line  = shift;
   my @tokens    = shellwords($line);
   shift @tokens;
-  my %options = map {split/=/} @tokens;
+  my %options = map {split '='} @tokens;
   exists $options{chrom}        or croak "invalid variableStep line: need a chrom option";
   $self->{track_options} = \%options;
 }
@@ -421,11 +424,38 @@ sub wigfile {
 
 sub format_color {
   my $rgb = shift;
-  my ($r,$g,$b) = split /,/,$rgb;
-  return '#'.join '',map {sprintf("%02X",$_)}($r,$g,$b);
+  my ($r,$g,$b) = split ',',$rgb;
+  my $hex = '#'.join '',map {sprintf("%02X",$_)}($r,$g,$b);
+  return translate_color($hex);
+}
+
+# use English names for the most common colors
+sub translate_color {
+  my $clr = shift;
+  unless  (%color_name) {
+    while (<DATA>) {
+      chomp;
+      my ($hex,$name) = split;
+      $color_name{$hex} = $name;
+    }
+  }
+  return $color_name{$clr} || $clr;
 }
 
 1;
+
+
+__DATA__
+#000000 black
+#FFFFFF white
+#0000FF blue
+#00FF00 green
+#FF0000 red
+#FFFF00 yellow
+#00FFFF cyan
+#FF00FF magenta
+#C0C0C0 gray
+
 
 __END__
 

@@ -59,7 +59,6 @@ use strict;
 use Carp 'croak';
 use IO::Seekable;
 use Bio::Graphics::Wiggle;
-use Bio::Graphics::Panel;
 use Text::Shellwords;
 use CGI 'escape';
 

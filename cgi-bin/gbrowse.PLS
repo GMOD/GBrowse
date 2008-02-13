@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.43 2008-01-26 20:07:48 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.44 2008-02-13 18:37:33 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -576,6 +576,7 @@ sub overview_panel {
   my ($whole_segment,$segment,$page_settings,$feature_files) = @_;
   return '' if $CONFIG->section_setting('overview') eq 'hide';
   my $image = overview($whole_segment,$segment,$page_settings,$feature_files);
+  $image =~ s/\>/onclick="document.mainform.submit()"\>/;
   return toggle($page_settings,
 		'Overview',
 		table({-border=>0,-width=>'100%'},
@@ -3166,21 +3167,38 @@ sub get_plugin_annotators {
   } $PLUGINS->plugins;
 }
 
+# supress certain sources from the menu if they
+# ask for it 
+sub visible_sources {
+  my @sources = $CONFIG->sources;
+  return @sources if @sources == 1;
+  my $current_source = $CONFIG->source;
+  my @visible;
+  for my $src (@sources) {
+    $CONFIG->source($src);
+    next if $CONFIG->setting('suppress_menu');
+    push @visible, $src;
+  }
+  $CONFIG->source($current_source);
+  return @visible;
+}
+
 sub source_menu {
   my $settings = shift;
-  my @sources      = $CONFIG->sources;
+  my @sources      = visible_sources();
+
   my $show_sources = $CONFIG->setting('show sources');
-  $show_sources    = 1 unless defined $show_sources;   # default to true
+  $show_sources    = 1 unless defined $show_sources;   # default to true                                                                                                              
   my $sources = $show_sources && @sources > 1;
   return b($CONFIG->tr('DATA_SOURCE')).br.
     ( $sources ?
       popup_menu(-name   => 'source',
-		 -values => \@sources,
-		 -labels => { map {$_ => ($CONFIG->description($_)||'')} $CONFIG->sources},
-		 -default => $CONFIG->source,
-		 -onChange => 'document.mainform.submit()',
-		)
-	: $CONFIG->description($CONFIG->source)
+                 -values => \@sources,
+                 -labels => { map {$_ => ($CONFIG->description($_)||'')} @sources},
+                 -default => $CONFIG->source,
+                 -onChange => 'document.mainform.submit()',
+                )
+        : $CONFIG->description($CONFIG->source)
       );
 }
 

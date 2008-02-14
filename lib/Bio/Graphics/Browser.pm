@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.61 2008-02-14 22:17:57 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.62 2008-02-14 22:33:48 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -60,7 +60,7 @@ use strict;
 use File::Basename 'basename';
 use Bio::Graphics;
 use Carp qw(carp croak cluck);
-use CGI qw(span img param escape unescape url div span image_button);
+use CGI qw(img param escape unescape url div span image_button);
 use CGI::Toggle 'toggle_section';
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';

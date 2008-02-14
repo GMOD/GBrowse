@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.44 2008-02-13 18:37:33 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.45 2008-02-14 22:17:55 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -552,7 +552,7 @@ sub hide {
 
 sub segment_info {
   my ($settings,$segment,$whole_segment) = @_;
-  my $pad   = $CONFIG->setting('pad_left') || $CONFIG->image_padding;
+  my $pad   = $CONFIG->image_padding;
   my $width = ($settings->{width} * OVERVIEW_RATIO);
 
   hide(image_padding        => $pad);
@@ -560,6 +560,8 @@ sub segment_info {
   hide(overview_stop        => $whole_segment->end);
   hide(overview_pixel_ratio => $whole_segment->length/$width);
   hide(details_pixel_ratio  => $segment->length/$settings->{width});
+  hide(detail_width         => $settings->{width} + 2*$pad);
+  hide(overview_width       => $width + 2*$pad);
 
   if ($settings->{region_size}) {
     my ($rstart, $rend) = get_regionview_seg($settings,$segment->start, $segment->end,

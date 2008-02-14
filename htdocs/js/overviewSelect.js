@@ -4,7 +4,7 @@
                       This class handles overview-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: overviewSelect.js,v 1.1.2.3 2008-02-04 21:51:05 sheldon_mckay Exp $
+ $Id: overviewSelect.js,v 1.1.2.4 2008-02-14 22:17:56 sheldon_mckay Exp $
 
 */
 
@@ -12,8 +12,8 @@ var overviewObject;
 
 // Constructor
 var Overview = function () {
-  this.imageId    = '__scale___image';
-  this.imageName  = 'overview';
+  this.imageId    = 'overview_image';
+  this.autoSubmit = true;
   this.marginTop  = '5px';
   this.background = 'yellow';
   this.opacity    = 0.7;
@@ -31,22 +31,21 @@ Overview.prototype.initialize = function() {
   var self = new Overview;
 
   // not ready for non drag and drop implementation
-  var dnd = document.mainform.drag_and_drop;
-  if (!dnd || !dnd.checked) return false;
+  //var dnd = document.mainform.drag_and_drop;
+  //if (!dnd || !dnd.checked) return false;
 
-  var images = document.getElementsByName(self.imageName);
-  var i;
-  for (var n=0; n < images.length; n++) {
-    if (images[n].id == self.imageId) {
-      i = images[n];
-    }
-    // disable other image buttons
-    else if (images[n].getAttribute('src')) {
+  var i = document.getElementById(self.imageId);
+  if (!i) return false;
+
+  var images = document.getElementsByName('region');
+  
+  var img = document.getElementsByName('overview');
+  for (var n = 0;n < img.length; n++) {
+    if (img[n].getAttribute('src')) {
       var nullFunc = function(){return false};
-      images[n].onclick = nullFunc;
+      img[n].onclick = nullFunc;
     }
   }
-  if (!i) return false;
 
   var p = i.parentNode;
   i = self.replaceImage(i);
@@ -72,7 +71,7 @@ Overview.prototype.initialize = function() {
   }
 
   self.scalebar = i;
-  self.getSegment();
+  self.getSegment(i);
   self.addSelectMenu('overview');
   self.addSelectBox('overview');
   overviewObject = self;
@@ -84,7 +83,7 @@ Overview.prototype.startSelection = function(event) {
   SelectArea.prototype.startRubber(self,event);
 }
 
-Overview.prototype.getSegment = function() {
+Overview.prototype.getSegment = function(i) {
   // get the segment info from gbrowse CGI parameters
   this.ref          = document.mainform.ref.value;
   this.segmentStart = parseInt(document.mainform.overview_start.value);
@@ -92,6 +91,14 @@ Overview.prototype.getSegment = function() {
   this.flip         = document.mainform.flip.checked;
   this.padLeft      = parseInt(document.mainform.image_padding.value);
   this.pixelToDNA   = parseFloat(document.mainform.overview_pixel_ratio.value);
+
+  // If the keystyle is left, there may been extra padding
+  var actualWidth   = this.elementLocation(i,'width');
+  var expectedWidth = parseInt(document.mainform.overview_width.value);
+  if (actualWidth > expectedWidth) {
+    this.padLeft     += actualWidth - expectedWidth;
+  }
+
   this.pixelStart   = this.left  + this.padLeft;
 }
 

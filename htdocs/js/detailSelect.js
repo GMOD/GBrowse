@@ -4,7 +4,7 @@
                       This class handles details-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: detailSelect.js,v 1.1.2.2 2008-02-04 21:51:05 sheldon_mckay Exp $
+ $Id: detailSelect.js,v 1.1.2.3 2008-02-14 22:17:56 sheldon_mckay Exp $
 
 */
 
@@ -12,8 +12,7 @@ var detailsObject;
 
 // Constructor
 var Details = function () {
-  this.imageId    = '__scale___image';
-  this.imageName  = 'detail___scale__';
+  this.imageId    = 'detail_image';
   this.marginTop  = '35px';
   this.background = 'blue';
   this.fontColor  = 'white';
@@ -28,20 +27,12 @@ Details.prototype = new SelectArea();
 Details.prototype.initialize = function() {
   var self = new Details;
   
-  // not ready for non drag and drop implementation
-  var dnd = document.mainform.drag_and_drop;
-  if (!dnd || !dnd.checked) return false; 
-
-  var images = document.getElementsByName(self.imageName);
-  var i;
-  for (var n=0;n<images.length;n++) {
-    if (images[n].id == self.imageId) {
-      i = images[n];
-    }
-  }
+  var i = document.getElementById(self.imageId);
   if (!i) return false;
 
   i = self.replaceImage(i);
+  
+
   var p = document.getElementById('panels');
   self.height      = self.elementLocation(i,'height');
   self.panelHeight = self.elementLocation(p,'height');
@@ -68,7 +59,7 @@ Details.prototype.initialize = function() {
   }
 
   self.scalebar = i;
-  self.getSegment();
+  self.getSegment(i);
   self.addSelectMenu('detail');
   self.addSelectBox('detail');
   detailsObject = self;
@@ -80,7 +71,7 @@ Details.prototype.startSelection = function(event) {
   SelectArea.prototype.startRubber(self,event);
 }
 
-Details.prototype.getSegment = function() {
+Details.prototype.getSegment = function(i) {
   // get the segment info from gbrowse CGI parameters
   this.ref          = document.mainform.ref.value;
   this.segmentStart = parseInt(document.mainform.start.value);
@@ -88,6 +79,14 @@ Details.prototype.getSegment = function() {
   this.flip         = document.mainform.flip.checked;
   this.padLeft      = parseInt(document.mainform.image_padding.value);
   this.pixelToDNA   = parseFloat(document.mainform.details_pixel_ratio.value);
+
+  // If the keystyle is left, there may been extra padding
+  var actualWidth   = this.elementLocation(i,'width');
+  var expectedWidth = parseInt(document.mainform.detail_width.value);
+  if (actualWidth > expectedWidth) {
+    this.padLeft     += actualWidth - expectedWidth;
+  }
+
   this.pixelStart   = this.left  + this.padLeft;
 }
 

@@ -3,7 +3,7 @@
  rubber.js -- a base class for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.1.2.12 2008-02-05 10:47:00 sheldon_mckay Exp $
+ $Id: rubber.js,v 1.1.2.13 2008-02-14 22:17:56 sheldon_mckay Exp $
 
 */
 
@@ -19,10 +19,14 @@ var SelectArea = function () {
 SelectArea.prototype.replaceImage = function(image) {
   var src    = image.getAttribute('src');
   var name   = image.getAttribute('name');
+  var isIE   = document.all && !window.opera; 
+
 
   var id = image.getAttribute(id);
   var width  = this.elementLocation(image,'width');
   var height = this.elementLocation(image,'height');
+  var top    = this.elementLocation(image,'y1');
+  var left   = this.elementLocation(image,'x1');
 
   var p = image.parentNode;
   p.removeChild(image);
@@ -35,6 +39,38 @@ SelectArea.prototype.replaceImage = function(image) {
   YAHOO.util.Dom.setStyle(image,'width', width+'px');
   YAHOO.util.Dom.setStyle(image,'height', height+'px');
   YAHOO.util.Dom.setStyle(image,'display','block');
+
+
+  if (!document.mainform.drag_and_drop || !document.mainform.drag_and_drop.checked) {
+    var name = this.imageId+'_map';
+    var map;
+    
+    //IE but this time it is the DOM compliant one
+    if (isIE) {
+      var spans  = document.getElementsByTagName('span');
+      var map = new Array;
+      for (var n=0;n<spans.length;n++) {
+        if (spans[n].name == name) {
+          map.push(spans[n]);
+        }
+      }
+      // Why? I really don't know!
+      top  = top  - 6;
+      left = left - 6;
+    }
+    else {
+      map = document.getElementsByName(name);
+    }
+
+    if (map && map.length) {
+      for (var n=0;n<map.length;n++) {
+        var newTop   = this.elementLocation(map[n],'y1') + top;
+        var newLeft  = this.elementLocation(map[n],'x1') + left;
+        YAHOO.util.Dom.setStyle(map[n],'top',newTop+'px');
+        YAHOO.util.Dom.setStyle(map[n],'left',newLeft+'px');
+      }
+    }
+  }
 
   return image;
 }
@@ -347,7 +383,15 @@ SelectArea.prototype.stopRubber = function(event) {
 
   selectAreaIsActive = false;
   self.moved = false;
-  self.showMenu(event);
+
+  // autoSubmit option will bypass the menu
+  if (self.autoSubmit) {
+    SelectArea.prototype.cancelRubber();
+    document.mainform.submit();
+  }
+  else {
+    self.showMenu(event);
+  }
 }
 
 SelectArea.prototype.showMenu = function(event) {

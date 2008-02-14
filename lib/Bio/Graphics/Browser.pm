@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.60 2008-02-13 16:49:48 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.61 2008-02-14 22:17:57 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -60,7 +60,7 @@ use strict;
 use File::Basename 'basename';
 use Bio::Graphics;
 use Carp qw(carp croak cluck);
-use CGI qw(img param escape unescape url div span image_button);
+use CGI qw(span img param escape unescape url div span image_button);
 use CGI::Toggle 'toggle_section';
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
@@ -938,16 +938,20 @@ sub render_draggable_tracks {
     my $collapsed     =  $settings->{track_collapsed}{$element_id};
     my $img_style     = $collapsed ? "display:none" : "display:inline";
 
+    # The javascript functions for rubber-band selection
+    #need this ID as a hook, please do not change it
+    my $id = $label eq '__scale__' ? "${section}_image" : "${element_id}_image";
+
     my $img = $button
       ? image_button(-src   => $url,
 		     -name  => $section,
-		     -id    => "${element_id}_image",
+		     -id    => $id,
 		     -style => $img_style
 		    )
       : img({-src=>$url,
 	     -usemap=>"#${element_id}_map",
 	     -width => $width,
-	     -id    => "${element_id}_image",
+	     -id    => "$id",
 	     -height=> $height,
 	     -border=> 0,
 	     -name  => "${section}_${label}",
@@ -1037,6 +1041,10 @@ sub render_composite_track {
   my $button  = $args->{image_button};
 
   my ($width,$height,$url,$map,$gd,$boxes) = @{$panel}{qw/width height image map gd boxes/};
+  
+  my $css_map = $self->map_css($boxes,$section) if $section eq 'detail';
+  warn $css_map if $css_map;
+
 
   if ($args->{image_and_map}) {
     my $map_array = $self->map_array($boxes);
@@ -1046,19 +1054,26 @@ sub render_composite_track {
   $map ||= '';
   my $map_name = "${section}_map";
 
+  # The javascript functions for rubber-band selection
+  # need this ID as a hook, please do not change it
+  my $id = "${section}_image";
+
   my $img = $button
       ? image_button(-src   => $url,
 		     -name  => $section,
+		     -id    => $id
 		    )
       : img({-src=>$url,
 	     -usemap=>'#'.$map_name,
 	     -width => $width,
-	     -id    => "tracks_image",
+	     -id    => $id,
 	     -height=> $height,
 	     -border=> 0,
 	     -name  => $section,
 	     -alt   => $section});
-  my $html    = div({-align=>'center'},$img).$map;
+
+  my $html    = div({-align=>'center'},$img);
+  $html      .= $css_map ? $css_map . "\n<noscript>\n$map\n</noscript>\n" : $map;
 
   return $html;
 }
@@ -1645,18 +1660,18 @@ sub make_map {
       if ($balloonhover) {
 	my $stick = defined $sticky ? $sticky : 0;
 	$mouseover = $balloonhover =~ /^(https?|ftp):|^\//
-	    ? "$balloon_ht.showTooltip(event,\&#39;<iframe width=100% height=$height frameborder=0 " .
-	      "src=$balloonhover></iframe>\&#39;,$stick,$width)"
-	    : "$balloon_ht.showTooltip(event,\&#39;$balloonhover\&#39;,$stick,$width)";
+	    ? "$balloon_ht.showTooltip(event,'<iframe width=100% height=$height frameborder=0 " .
+	      "src=$balloonhover></iframe>',$stick,$width)"
+	    : "$balloon_ht.showTooltip(event,'$balloonhover',$stick,$width)";
 	undef $title;
       }
       if ($balloonclick) {
 	my $stick = defined $sticky ? $sticky : 1;
 	$style = "cursor:pointer";
 	$mousedown = $balloonclick =~ /^(https?|ftp):|^\//
-	    ? "$balloon_ct.showTooltip(event,\&#39;<iframe width=100% " .
-	      "height=$height frameborder=0 src=$balloonclick></iframe>\&#39;,$stick,$width)"
-	    : "$balloon_ct.showTooltip(event,\&#39;$balloonclick\&#39;,$stick,$width)";
+	    ? "$balloon_ct.showTooltip(event,'<iframe width=100% " .
+	      "height=$height frameborder=0 src=$balloonclick></iframe>',$stick,$width)"
+	    : "$balloon_ct.showTooltip(event,'$balloonclick',$stick,$width)";
 	undef $href;
       }
     }
@@ -2664,6 +2679,57 @@ sub map_html {
   return $html;
 }
 
+sub map_css {
+  my ($self,$data,$view) = @_;
+  my @data = @$data;
+  chomp @data;
+  my $name = shift @data or return '';
+
+  my $html;
+  for (@data) {
+    my (undef,$x1,$y1,$x2,$y2,%atts) = split "\t";
+    $x1 or next;
+    next if $atts{title} &&  $atts{title} eq 'recenter';
+    my %style = ( top      => "${y1}px",
+		  left     => "${x1}px",
+		  cursor   => 'pointer',
+		  width    => abs($x2 - $x1) . 'px',
+		  height   => abs($y2 - $y1) . 'px',
+		  position => 'absolute');
+
+    my %conf = (name => "${view}_image_map");
+    for my $att (keys %atts) {
+      my $val = $atts{$att};
+      if ($att eq 'href') {
+	next if $atts{onclick} || $atts{onmousedown};
+	$att = 'onclick';
+	$val = "function(){window.location = '$val'}";
+	$style{cursor} = 'pointer';
+      }
+      $conf{$att} = $val;
+    }
+    $conf{style} = _style(%style);
+
+    $html .= '<span ';
+    for my $label (keys %conf) {
+      $html .= qq($label="$conf{$label}" );
+    }
+    $html .="></span>\n";
+  }
+  
+  return $html;
+}
+
+sub _style {
+  my %h = @_;
+  my $style;
+  for (keys %h) {
+    $style .= join(':',$_,$h{$_}). ';';
+  }
+  $style;
+}
+
+
 sub set_cached_panel {
   my $self = shift;
   my ($key,$gd,$map_data) = @_;
@@ -3221,8 +3287,8 @@ sub balloon_tip_setting {
     $val          = $2;
   }
   # escape quotes
-  $val =~ s/'/\\'/g;
-  $val =~ s/"/&quot;/g;
+  $val =~ s/\'/\\'/g;
+  $val =~ s/"/\&#34;/g;
 
   return ($balloon_type,$val);
 }

@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.21 2008-02-09 13:04:44 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.22 2008-02-14 04:16:35 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -116,20 +116,27 @@ var Balloon = function() {
   // is scrolled
   document.onmousemove = this.setActiveCoordinates;
   document.onscroll    = this.setActiveCoordinates;
-}
 
+  if (this.isIE()) {
+    this.suppress = true;
+  }
+}
 
 //////////////////////////////////////////////////////////////////////////
 // This is the function that is called on mouseover.  It has a built-in //
 // delay time to avoid balloons popping up on rapid mouseover events     //
 //////////////////////////////////////////////////////////////////////////
 Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
-  // Balloons have been suppressed by an external application
-  if (balloonIsSuppressed) return false;
-
   // Awful IE bug, page load aborts if the balloon is fired
   // before the page is fully loaded.
-  if (this.isIE() && !document.readyState == "complete") return false;
+  if (this.isIE() && document.readyState.match(/complete/i)) {
+    this.suppress = false;
+  }
+
+  // Balloons have been suppressed by an external application
+  if (this.suppress || balloonIsSuppressed) {
+    return false;
+  }
 
   // Sorry Konqueror, no fade-in for you!
   if (this.isKonqueror()) this.allowFade = false;
@@ -744,24 +751,29 @@ Balloon.prototype.getContents = function(section) {
 
   // inline URL takes precedence
   var url = this.activeUrl || this.helpUrl;
-
-  var pars = this.activeUrl ? '' : 'section='+section;
-  var ajax  = new Ajax.Request( url,
-                           { method:   'get',
-                             asynchronous: false,
-		             parameters:  pars,
-                             onSuccess: function(t) { Balloon.prototype.updateResult(t.responseText) },
-                             onFailure: function(t) { alert('AJAX Failure! '+t.statusText)}});
+  url    += this.activeUrl ? '' : '?section='+section;
 
   // activeUrl is meant to be single-use only
   this.activeUrl = null;
 
-  return this.helpText || section;
+  var ajax;
+  if (window.XMLHttpRequest) {
+    ajax = new XMLHttpRequest();
+  } else {
+    ajax = new ActiveXObject("Microsoft.XMLHTTP");
+  }
+
+  if (ajax) {
+     ajax.open("GET", url, false);
+     ajax.send(null);
+     this.helpText = ajax.responseText || section;
+     return  this.helpText;
+  }
+  else {
+     return section;
+  }
 }
 
-Balloon.prototype.updateResult = function(text) {
-  this.helpText = text;
-}
 
 // test for internet explorer
 Balloon.prototype.isIE = function() {

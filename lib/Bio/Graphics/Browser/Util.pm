@@ -305,8 +305,8 @@ sub print_balloon_settings {
 
   my %config_values = $custom_balloons =~ /\[([^]]+)\]([^[]+)/g;
   $config_values{'balloon'} ||= <<END;
-images    =  $images/balloons
-delayTime =  500
+images    =  $images/balloons;
+delayTime =  500;
 END
 
   my $balloon_settings;
@@ -326,7 +326,8 @@ $balloon.closeButton         = '$img/close.png';
 END
     for my $option (keys %config) {
       next if $option eq 'images';
-      $balloon_settings .= "$balloon.$option = '$config{$option}';\n";
+      my $value = $config{$option} =~ /^[\d.-]+$/ ? $config{$option} : "'$config{$option}'";
+      $balloon_settings .= "$balloon.$option = $value;\n";
     }
   }
   print "<script>\n$balloon_settings\n</script>\n";

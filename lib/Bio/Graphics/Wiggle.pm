@@ -539,8 +539,9 @@ sub scale {
   my $min   = $self->{options}{min};
   if (ref $values && ref $values eq 'ARRAY') {
     my @return = map {
-      my $v = 1 + round (($_ - $min)/$scale);
-      $v = 1 if $v < 1;
+      my $i = ($_ - $min)/$scale;
+      my $v = 1 + int($i+0.5*($i<=>0));  # avoid call to round()
+      $v = 1   if $v < 1;
       $v = 255 if $v > 255;
       $v;
     } @$values;

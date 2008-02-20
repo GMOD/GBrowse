@@ -204,6 +204,7 @@ sub load {
     if ($format ne 'none') {
       # remember where we are, find min and max values, return
       my $pos = tell($infh);
+      warn "computing minmax...";
       $self->minmax($format,$infh,$format eq 'bed' ? $_ : '');
       seek($infh,$pos,0);
 
@@ -269,34 +270,46 @@ sub minmax {
   if ($format eq 'bed') {
     if ($oops) {
       my ($chrom,$start,$end,$value) = split /\s+/,$oops;
-      $self->updatemm($chrom,$value);
+      $seqids->{$chrom}{min} = $value if $seqids->{$chrom}{min} > $value || !exists $seqids->{$chrom}{min};
+      $seqids->{$chrom}{max} = $value if $seqids->{$chrom}{max} < $value || !exists $seqids->{$chrom}{max};
     }
     while (<$infh>) {
       chomp;
       last if /^track/;
       next if /^#/;
       my ($chrom,$start,$end,$value) = split /\s+/;
-      $self->updatemm($chrom,$value);
+      $seqids->{$chrom}{min} = $value if !exists $seqids->{$chrom}{min} || $seqids->{$chrom}{min} > $value;
+      $seqids->{$chrom}{max} = $value if !exists $seqids->{$chrom}{max} || $seqids->{$chrom}{max} < $value;
     }
   }
 
   elsif ($format eq 'fixed') {
+    my $chrom = $self->{track_options}{chrom};
+    my ($min,$max);
     while (<$infh>) {
       last if /^track/;
       next if /^#/;
       chomp;
-      $self->updatemm($self->{track_options}{chrom},$_);
+      $min = $_ if !defined $min || $min > $_;
+      $max = $_ if !defined $max || $max < $_;
     }
+    $seqids->{$chrom}{min} = $min;
+    $seqids->{$chrom}{max} = $max;
   }
 
   elsif ($format eq 'variable') {
+    my $chrom = $self->{track_options}{chrom};
+    my ($min,$max);
     while (<$infh>) {
       last if /^track/;
       next if /^#/;
       chomp;
       my ($start,$value) = split /\s+/;
-      $self->updatemm($self->{track_options}{chrom},$value);
+      $min = $_ if !defined $min || $min > $_;
+      $max = $_ if !defined $max || $max < $_;
     }
+    $seqids->{$chrom}{min} = $min;
+    $seqids->{$chrom}{max} = $max;
   }
 }
 
@@ -357,18 +370,23 @@ sub process_fixedline {
   $self->current_track->{seqids}{$seqid}{start} = $start;
   $self->current_track->{seqids}{$seqid}{end}   =
     $self->current_track->{seqids}{$seqid}{start} + $self->{track_options}{span} - 1;
+  # write out data in 500K chunks for efficiency
+  my @buffer;
   while (<$infh>) {
     last if /^(track|variableStep|fixedStep)/;
     next if /^#/;
     chomp;
-    my $value = $_;
-    $wigfile->set_value($start=>$value);
+    push @buffer,$_;
+    if (@buffer >= 500_000) {
+      $wigfile->set_values($start=>\@buffer);
+      @buffer = ();
+    }
 
     # update span
     $self->current_track->{seqids}{$seqid}{end} = $start+$step-1;
-
     $start += $step;
   }
+  $wigfile->set_values($start=>\@buffer) if @buffer;
 }
 
 sub process_variableline {

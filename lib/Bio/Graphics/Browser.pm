@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.62 2008-02-14 22:33:48 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.63 2008-02-20 17:30:57 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -65,6 +65,7 @@ use CGI::Toggle 'toggle_section';
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use Text::Shellwords;
+use IO::File;
 use Bio::Graphics::Browser::I18n;
 use Bio::Graphics::Browser::Util 'modperl_request','is_safari';
 
@@ -1658,20 +1659,20 @@ sub make_map {
       $balloon_ct ||= 'balloon';
 
       if ($balloonhover) {
-	my $stick = defined $sticky ? $sticky : 0;
-	$mouseover = $balloonhover =~ /^(https?|ftp):|^\//
-	    ? "$balloon_ht.showTooltip(event,'<iframe width=100% height=$height frameborder=0 " .
-	      "src=$balloonhover></iframe>',$stick,$width)"
-	    : "$balloon_ht.showTooltip(event,'$balloonhover',$stick,$width)";
+        my $stick = defined $sticky ? $sticky : 0;
+        $mouseover = $balloonhover =~ /^(https?|ftp):/
+	    ? "$balloon_ht.showTooltip(event,'<iframe width=' + $balloon_ct.maxWidth + ' height=$height frameborder=0 " .
+	      "src=$balloonhover></iframe>',$stick)"
+	    : "$balloon_ht.showTooltip(event,'$balloonhover',$stick)";
 	undef $title;
       }
       if ($balloonclick) {
 	my $stick = defined $sticky ? $sticky : 1;
-	$style = "cursor:pointer";
-	$mousedown = $balloonclick =~ /^(https?|ftp):|^\//
-	    ? "$balloon_ct.showTooltip(event,'<iframe width=100% " .
-	      "height=$height frameborder=0 src=$balloonclick></iframe>',$stick,$width)"
-	    : "$balloon_ct.showTooltip(event,'$balloonclick',$stick,$width)";
+        $style = "cursor:pointer";
+	$mousedown = $balloonclick =~ /^(http|ftp):/
+	    ? "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'<iframe width=' + $balloon_ct.maxWidth + ' height=$height " .
+	      "frameborder=0 src=$balloonclick></iframe>',$stick,$balloon_ct.maxWidth)"
+	    : "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'$balloonclick',$stick)";
 	undef $href;
       }
     }
@@ -2571,7 +2572,8 @@ sub get_cache_base {
   my $self            = shift;
   my ($key,$filename) = @_;
   my @comp        = $key =~ /(..)/g;
-  my $rel_path    = join '/',$self->source,'panel_cache',@comp[0..1],$key;
+#  my $rel_path    = join '/',$self->source,'panel_cache',@comp[0..1],$key;
+  my $rel_path    = join '/',$self->source,'panel_cache',$comp[0],$key;
   my ($uri,$path) = $self->tmpdir($rel_path);
 
   return wantarray ? ("$path/$filename","$uri/$filename") : "$path/$filename";
@@ -2776,7 +2778,7 @@ sub set_cached_panel {
   }
 
   $f = IO::File->new(">$image_file") or die "$image_file: $!";
-  $f->binmode;
+  binmode($f);
   $f->print($image_data);
   $f->close;
 

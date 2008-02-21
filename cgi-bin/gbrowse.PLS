@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.46 2008-02-21 14:49:06 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.47 2008-02-21 16:17:19 sheldon_mckay Exp $
 
 use strict;
 use CGI::Carp 'fatalsToBrowser';
@@ -555,6 +555,8 @@ sub segment_info {
   my ($settings,$segment,$whole_segment) = @_;
   my $pad   = $CONFIG->image_padding;
   my $width = ($settings->{width} * OVERVIEW_RATIO);
+  my $ov_len = $whole_segment->end - $whole_segment->start;
+  warn $whole_segment->length . " $ov_len \n";
 
   hide(image_padding        => $pad);
   hide(overview_start       => $whole_segment->start);
@@ -1651,7 +1653,7 @@ sub settings_table {
 			   )
 	       ),
 	     td(
-		$CONFIG->setting('region segment')
+		$CONFIG->setting('region segment') && @$region_sizes > 1
 		? ( b($CONFIG->tr('Region_size')),br,
 		  popup_menu(-name=>'region_size',
 			     -default=> $settings->{region_size},

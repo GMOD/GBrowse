@@ -308,14 +308,14 @@ sub value {
   elsif (@_==1) {
     my $new_value     = shift;
     my $scaled_value  = $self->scale($new_value);
-    $self->fh->print(pack('C',$scaled_value)) or die "Write failed: $!";
+    $self->fh->print(pack('C*',$scaled_value)) or die "Write failed: $!";
     return $new_value;
   }
 
   else { # retrieving data
     my $buffer;
     $self->fh->read($buffer,1) or die "Read failed: $!";
-    my $scaled_value = unpack('C',$buffer);
+    my $scaled_value = unpack('C*',$buffer);
 
     if ($scaled_value == 0 && (my $span = $self->span) > 1) {  # missing data, so look back at most span values to get it
       $offset = $self->_calculate_offset($position-$span+1);
@@ -324,7 +324,7 @@ sub value {
       for (my $i=length($buffer)-2;$i>=0;$i--) {
 	my $val = substr($buffer,$i,1);
 	next if $val eq "\0";
-	$scaled_value = unpack('C',$val);
+	$scaled_value = unpack('C*',$val);
 	last;
       }
 
@@ -361,9 +361,10 @@ sub values {
 sub _retrieve_values {
   my $self = shift;
   my ($start,$end,$samples) = @_;
+  my $span = $self->span;
 
   return unless $start >= 1;
-  return unless $end   <= $self->end;
+  return unless ($end - $span) <= $self->end;
 
   # generate list of positions to sample from
   my $length = $end-$start+1;
@@ -379,11 +380,7 @@ sub _retrieve_values {
 
   # pad data up to required amount
   $packed_data .= "\0" x ($length/$step-length($packed_data))
-
-
     if length $packed_data < $length/$step;
-
-  my $span = $self->span;
 
   my @bases;
   $#bases = $length-1;
@@ -417,12 +414,6 @@ sub sample {
   my ($values,$samples) = @_;
   my $length = @$values;
   my $window_size = $length/$samples;
-
-  my $smoothing_window = $self->window;
-  if ($smoothing_window) {
-    my $scaled_window = int($smoothing_window/$window_size + 0.5);
-    $self->window($scaled_window);
-  }
 
   my @samples;
   $#samples = $samples-1;

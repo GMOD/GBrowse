@@ -216,7 +216,7 @@ sub parse_added_feature {
     ($reference,@position) = @args;
     ($type,$name) = ('Your Features',"Feature ".++$$fcount);
   }
-  my @segments = map { [/(-?\d+)(?:-|\.\.)(-?\d+)/]} map {split /,/} @position;
+  my @segments = map { [/(-?\d+)(?:-|\.\.)(-?\d+)/]} map {split ','} @position;
   ($reference,$type,$name,@segments);
 }
 
@@ -302,11 +302,10 @@ sub print_select_menu {
 sub print_balloon_settings {
   my $custom_balloons    = $CONFIG->setting('custom balloons');
   my $images             = $CONFIG->relative_path('images');
-
   my %config_values = $custom_balloons =~ /\[([^]]+)\]([^[]+)/g;
   $config_values{'balloon'} ||= <<END;
-images    =  $images/balloons;
-delayTime =  500;
+images    =  $images/balloons
+delayTime =  500
 END
 
   my $balloon_settings;
@@ -573,7 +572,7 @@ sub parse_feature_str {
   $type = 'Your Features'              unless defined $type;
   $name = "Feature ".++$ADDED_FEATURES unless defined $name;
 
-  my @segments = map { [/(-?\d+)(?:-|\.\.)(-?\d+)/]} map {split /,/} @position;
+  my @segments = map { [/(-?\d+)(?:-|\.\.)(-?\d+)/]} map {split ','} @position;
   ($reference,$type,$name,@segments);
 }
 

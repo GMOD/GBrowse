@@ -133,9 +133,9 @@ sub featurefile {
 	if $options->{windowingFunction};
 
       # smoothing window max value = 16px
-      my $smooting_window = $options->{smoothingWindow} || 0;
-      if ($smooting_window > 16) {
-	croak("The smoothing window is set to $smooting_window px.  Allowed values are 0-16\n");
+      my $smoothing_window = $options->{smoothingWindow} || 0;
+      if ($smoothing_window > 16) {
+	croak("The smoothing window is set to $smoothing_window px.  Allowed values are 0-16\n");
       }
 
       push @lines,"smoothing window = $options->{smoothingWindow}"

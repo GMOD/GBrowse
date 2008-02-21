@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::wiggle_density;
 
-# $Id: wiggle_density.pm,v 1.1.2.15 2008-02-09 03:20:21 sheldon_mckay Exp $
+# $Id: wiggle_density.pm,v 1.1.2.16 2008-02-21 13:25:56 sheldon_mckay Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing);
@@ -146,6 +146,18 @@ sub draw_segment {
   my $samples = $length < $self->panel->width ? $length : $self->panel->width;
   my $data    = $seg_data->values($start,$end,$samples);
 
+  # scale the glyph if the data end before the panel does
+  my $data_width = $end - $start;
+  my $data_width_ratio;
+  if ($data_width < $self->panel->length) {
+    $data_width_ratio = $data_width/$self->panel->length;
+  }
+  else {
+    $data_width_ratio = 1;
+  }
+
+  return unless $data && ref $data && @$data > 0;
+
   my $min_value = $self->min_score;
   my $max_value = $self->max_score;
 
@@ -164,7 +176,7 @@ sub draw_segment {
     $pixels_per_step = $scale * $step;
     $pixels_per_step = 1 if $pixels_per_step < 1;
     my $datapoints_per_base  = @$data/$length;
-    my $pixels_per_datapoint = $self->panel->width/@$data;
+    my $pixels_per_datapoint = $self->panel->width/@$data * $data_width_ratio;
 
     for (my $i = 0; $i <= @$data ; $i++) {
       my $x          = $x1 + $pixels_per_datapoint * $i;
@@ -185,6 +197,7 @@ sub draw_segment {
       my $binsize = 2/$pixels_per_step;
       my $pixelstep = $pixels_per_step;
       $pixels_per_step *= $binsize;
+      $pixels_per_step *= $data_width_ratio;
       $pixels_per_span = 2;
 
       my $scores = 0;
@@ -222,6 +235,8 @@ sub draw_segment {
 sub calculate_color {
   my $self = shift;
   my ($s,$rgb,$min_score,$max_score) = @_;
+  $s ||= $min_score;
+
   my $relative_score = ($s-$min_score)/($max_score-$min_score);
   $relative_score -= .1 if $relative_score == 1;
   return map { int(254.9 - (255-$_) * min(max( $relative_score, 0), 1)) } @$rgb;

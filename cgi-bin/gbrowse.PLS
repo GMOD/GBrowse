@@ -48,9 +48,10 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.45 2008-02-14 22:17:55 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.46 2008-02-21 14:49:06 sheldon_mckay Exp $
 
 use strict;
+use CGI::Carp 'fatalsToBrowser';
 use Bio::Graphics;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;
@@ -3182,6 +3183,7 @@ sub visible_sources {
     push @visible, $src;
   }
   $CONFIG->source($current_source);
+
   return @visible;
 }
 
@@ -3190,7 +3192,9 @@ sub source_menu {
   my @sources      = visible_sources();
 
   my $show_sources = $CONFIG->setting('show sources');
-  $show_sources    = 1 unless defined $show_sources;   # default to true                                                                                                              
+  $show_sources    = 1 unless defined $show_sources;         # default to true
+  $show_sources    = 0 if $CONFIG->setting('suppress_menu'); # unless we are using a 'hidden' source
+
   my $sources = $show_sources && @sources > 1;
   return b($CONFIG->tr('DATA_SOURCE')).br.
     ( $sources ?

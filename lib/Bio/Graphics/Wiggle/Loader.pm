@@ -204,7 +204,6 @@ sub load {
     if ($format ne 'none') {
       # remember where we are, find min and max values, return
       my $pos = tell($infh);
-      warn "computing minmax...";
       $self->minmax($format,$infh,$format eq 'bed' ? $_ : '');
       seek($infh,$pos,0);
 
@@ -285,13 +284,15 @@ sub minmax {
 
   elsif ($format eq 'fixed') {
     my $chrom = $self->{track_options}{chrom};
+    return if defined $seqids->{$chrom}{min};
     my ($min,$max);
     while (<$infh>) {
-      last if /^track/;
-      next if /^#/;
-      chomp;
-      $min = $_ if !defined $min || $min > $_;
-      $max = $_ if !defined $max || $max < $_;
+	last if /^track/;
+	next if /^\#/;
+	next if /^(fixedStep|variableStep)/;
+	chomp;
+	$min = $_ if !defined $min || $min > $_;
+	$max = $_ if !defined $max || $max < $_;
     }
     $seqids->{$chrom}{min} = $min;
     $seqids->{$chrom}{max} = $max;
@@ -299,6 +300,7 @@ sub minmax {
 
   elsif ($format eq 'variable') {
     my $chrom = $self->{track_options}{chrom};
+    last if defined $seqids->{$chrom}{min};
     my ($min,$max);
     while (<$infh>) {
       last if /^track/;

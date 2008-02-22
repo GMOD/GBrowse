@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::wiggle_density;
 
-# $Id: wiggle_density.pm,v 1.1.2.16 2008-02-21 13:25:56 sheldon_mckay Exp $
+# $Id: wiggle_density.pm,v 1.1.2.17 2008-02-22 16:10:32 lstein Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing);
@@ -301,7 +301,10 @@ step such as present in tiling array data.
 =head2 OPTIONS
 
 The same as the regular graded_segments glyph, except that the
-"wigfile" and "wigstart" options are also recognized.
+"wigfile" and "wigstart" options are also recognized. In addition, you
+may specify a "smoothing window" option to control how much smoothing
+is performed on the data. A smoothing window of "1" turns off
+smoothing entirely.
 
 =head1 BUGS
 

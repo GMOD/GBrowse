@@ -363,8 +363,9 @@ sub _retrieve_values {
   my ($start,$end,$samples) = @_;
   my $span = $self->span;
 
-  return unless $start >= 1;
-  return unless ($end - $span) <= $self->end;
+  croak "Value of start position ($start) is less than 1" unless $start >=1;
+  croak "Value of end position ($end) is greater than max data value of",$self->end+$span
+      unless ($end - $span) <= $self->end;
 
   # generate list of positions to sample from
   my $length = $end-$start+1;

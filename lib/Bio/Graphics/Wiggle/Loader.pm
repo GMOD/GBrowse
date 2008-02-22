@@ -322,20 +322,6 @@ sub minmax {
   }
 }
 
-sub updatemm {
-  my $self = shift;
-  my ($chrom,$value) = @_;
-  my $seqids = $self->current_track->{seqids};
-  if (!exists $seqids->{$chrom}{min} ||
-      $value < $seqids->{$chrom}{min}) {
-    $seqids->{$chrom}{min} = $value;
-  }
-  if (!exists $seqids->{$chrom}{max} ||
-      $value > $seqids->{$chrom}{max}) {
-    $seqids->{$chrom}{max} = $value;
-  }
-}
-
 sub process_bed {
   my $self = shift;
   my $infh = shift;
@@ -374,11 +360,16 @@ sub process_fixedline {
   my $wigfile = $self->wigfile($seqid);
   my $start   = $self->{track_options}{start};
   my $step    = $self->{track_options}{step};
+
   # update span
   $self->{track_options}{span} ||= 1;
-  $self->current_track->{seqids}{$seqid}{start} = $start;
-  $self->current_track->{seqids}{$seqid}{end}   =
-    $self->current_track->{seqids}{$seqid}{start} + $self->{track_options}{span} - 1;
+  my $chrom = $self->current_track->{seqids}{$seqid};
+  $chrom->{start} = $start 
+      if !defined $chrom->{start} || $chrom->{start} > $start;
+  my $end = $chrom->{start} + $self->{track_options}{span} - 1;
+  $chrom->{end}   = $end
+      if !defined $chrom->{end} || $chrom->{end} < $end;
+
   # write out data in 500K chunks for efficiency
   my @buffer;
   while (<$infh>) {
@@ -389,13 +380,14 @@ sub process_fixedline {
     if (@buffer >= 500_000) {
       $wigfile->set_values($start=>\@buffer);
       @buffer = ();
+      my $big_step = $step * @buffer;
+      $start += $big_step;
+      $self->current_track->{seqids}{$seqid}{end} = $start+$big_step-1;
     }
 
-    # update span
-    $self->current_track->{seqids}{$seqid}{end} = $start+$step-1;
-    $start += $step;
   }
   $wigfile->set_values($start=>\@buffer) if @buffer;
+  $self->current_track->{seqids}{$seqid}{end} = $start+@buffer*$step-1;
 }
 
 sub process_variableline {
@@ -403,6 +395,7 @@ sub process_variableline {
   my $infh  = shift;
   my $seqid   = $self->{track_options}{chrom};
   my $span    = $self->{track_options}{span} || 1;
+  my $chrom   = $self->current_track->{seqids}{$seqid};
   my $wigfile = $self->wigfile($seqid);
   while (<$infh>) {
     last if /^(track|variableStep|fixedStep)/;
@@ -412,13 +405,12 @@ sub process_variableline {
     $wigfile->set_value($start=>$value);
 
     # update span
-    $self->current_track->{seqids}{$seqid}{start} = $start
-      unless exists $self->current_track->{seqids}{$seqid}{start}
-	and $self->current_track->{seqids}{$seqid}{start} < $start;
+    $chrom->{start} = $start 
+	if !defined $chrom->{start} || $chrom->{start} > $start;
+    my $end = $chrom->{start} + $span - 1;
+    $chrom->{end}   = $end
+	if !defined $chrom->{end} || $chrom->{end} < $end;
 
-    $self->current_track->{seqids}{$seqid}{end} = $start + ($span-1)
-      if !defined $self->current_track->{seqids}{$seqid}{end}
-	|| $self->current_track->{seqids}{$seqid}{end} < $start + ($span-1);
   }
   $self->current_track->{seqids}{$seqid}{end} ||= $self->current_track->{seqids}{$seqid}{start};
 }

@@ -52,13 +52,18 @@ sub convert_feature_file {
   my ($first_line,$in,$out) = @_;
   print $out $first_line,"\n";
   while ($_ = <$in>) {
-    print $out $_;
+      chomp;
+      print $out $_,"\n";
   }
 }
 
 sub process_uploaded_file {
   my $self          = shift;
   my ($infh,$outfh) = @_;
+
+  local $/ = $self->_guess_eol($infh);
+
+  warn "setting eol to ",join ' ',unpack('C*',$/);
 
   my $first_line = $self->readline($infh);
   return unless defined $first_line;
@@ -67,6 +72,40 @@ sub process_uploaded_file {
   } else {
     $self->convert_feature_file($first_line,$infh,$outfh);
   }
+}
+
+sub maybe_unzip {
+    my $self     = shift;
+    my $filename = shift;
+    my $fh       = shift;
+
+    # If the file is in gzip format,
+    # try to intercept and decompress the file
+    if ($filename =~ /^(.+)\.gz$/) {
+	$fh ||= IO::File->new($filename);
+	require File::Temp;
+	my $fname = File::Temp->tmpnam;
+	my $unzip = IO::File->new("|gunzip -c > $fname") or die $!;
+	my $buffer;
+	$unzip->print($buffer) while read($fh,$buffer,1024);
+	$unzip->close;
+	$fh = IO::File->new($fname);
+	unlink $fname;
+	return $fh;
+    }
+    return;
+}
+
+sub _guess_eol {
+    my $self = shift;
+    my $fh   = shift;
+    my $buffer;
+    my $pos = tell($fh);
+    read($fh,$buffer,1024);
+    seek($fh,$pos,0);   # back to where we were
+    return "\015\012" if $buffer =~ /\015\012/;
+    return "\015"     if $buffer =~ /\015/;
+    return "\012"     if $buffer =~ /\012/;
 }
 
 sub name_file {

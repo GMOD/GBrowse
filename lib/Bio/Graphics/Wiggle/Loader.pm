@@ -126,7 +126,8 @@ sub featurefile {
 	push @lines,"min_score   =  $low";
 	push @lines,"max_score   =  $hi";
       }
-      if (exists $options->{maxHeightPixels} and my ($max,$default,$min) = split ':',$options->{maxHeightPixels}) {
+      if (exists $options->{maxHeightPixels} and my ($max,$default,$min) = 
+	  split ':',$options->{maxHeightPixels}) {
 	push @lines,"height  = $default";
       }
       push @lines,"smoothing        = $options->{windowingFunction}"
@@ -211,7 +212,7 @@ sub load {
     if ($format ne 'none') {
       # remember where we are, find min and max values, return
       my $pos = tell($infh);
-      $self->minmax($format,$infh,$format eq 'bed' ? $_ : '');
+      $self->minmax($infh,$format eq 'bed' ? $_ : '');
       seek($infh,$pos,0);
 
       $self->process_bed($infh,$_)        if $format eq 'bed';
@@ -268,54 +269,40 @@ sub current_track {
 
 sub minmax {
   my $self   = shift;
-  my ($format,$infh,$oops) = @_;
+  my ($infh,$bedline) = @_;
   local $_;
 
   my $seqids = $self->current_track->{seqids} ||= {};
 
-  if ($format eq 'bed') {
-    if ($oops) {
-      my ($chrom,$start,$end,$value) = split /\s+/,$oops;
+  if ($bedline) {  # left-over BED line
+      my ($chrom,$start,$end,$value) = split /\s+/,$bedline;
       $seqids->{$chrom}{min} = $value if $seqids->{$chrom}{min} > $value || !exists $seqids->{$chrom}{min};
       $seqids->{$chrom}{max} = $value if $seqids->{$chrom}{max} < $value || !exists $seqids->{$chrom}{max};
-    }
-    while (<$infh>) {
-      chomp;
-      last if /^track/;
-      next if /^#/;
-      my ($chrom,$start,$end,$value) = split /\s+/;
-      $seqids->{$chrom}{min} = $value if !exists $seqids->{$chrom}{min} || $seqids->{$chrom}{min} > $value;
-      $seqids->{$chrom}{max} = $value if !exists $seqids->{$chrom}{max} || $seqids->{$chrom}{max} < $value;
-    }
+      while (<$infh>) {
+	  chomp;
+	  last if /^track/;
+	  next if /^\#/;
+	  my ($chrom,$start,$end,$value) = split /\s+/;
+	  $seqids->{$chrom}{min} = $value if !exists $seqids->{$chrom}{min} || $seqids->{$chrom}{min} > $value;
+	  $seqids->{$chrom}{max} = $value if !exists $seqids->{$chrom}{max} || $seqids->{$chrom}{max} < $value;
+      }
   }
-
-  elsif ($format eq 'fixed') {
+  
+  else {
     my $chrom = $self->{track_options}{chrom};
-    return if defined $seqids->{$chrom}{min};
+    return if defined $seqids->{$chrom}{min};  # we've already parsed this chromosome
     my ($min,$max);
     while (<$infh>) {
 	last if /^track/;
+	next unless /\S/;
 	next if /^\#/;
 	next if /^(fixedStep|variableStep)/;
 	chomp;
-	$min = $_ if !defined $min || $min > $_;
-	$max = $_ if !defined $max || $max < $_;
-    }
-    $seqids->{$chrom}{min} = $min;
-    $seqids->{$chrom}{max} = $max;
-  }
-
-  elsif ($format eq 'variable') {
-    my $chrom = $self->{track_options}{chrom};
-    last if defined $seqids->{$chrom}{min};
-    my ($min,$max);
-    while (<$infh>) {
-      last if /^track/;
-      next if /^#/;
-      chomp;
-      my ($start,$value) = split /\s+/;
-      $min = $_ if !defined $min || $min > $_;
-      $max = $_ if !defined $max || $max < $_;
+	my @tokens = split /\s+/;
+	my $value = @tokens > 1 ? $tokens[1]  # variable line
+                                : $tokens[0]; # fixed line
+	$min = $value if !defined $min || $min > $value;
+	$max = $value if !defined $max || $max < $value;
     }
     $seqids->{$chrom}{min} = $min;
     $seqids->{$chrom}{max} = $max;
@@ -360,13 +347,14 @@ sub process_fixedline {
   my $wigfile = $self->wigfile($seqid);
   my $start   = $self->{track_options}{start};
   my $step    = $self->{track_options}{step};
+  my $span    = $wigfile->span;
 
-  # update span
-  $self->{track_options}{span} ||= 1;
+  # update start and end positions
+  $self->{track_options}{span} ||= $wigfile->span || 1;
   my $chrom = $self->current_track->{seqids}{$seqid};
   $chrom->{start} = $start 
       if !defined $chrom->{start} || $chrom->{start} > $start;
-  my $end = $chrom->{start} + $self->{track_options}{span} - 1;
+  my $end = $chrom->{start} + $span - 1;
   $chrom->{end}   = $end
       if !defined $chrom->{end} || $chrom->{end} < $end;
 
@@ -382,32 +370,32 @@ sub process_fixedline {
       @buffer = ();
       my $big_step = $step * @buffer;
       $start += $big_step;
-      $self->current_track->{seqids}{$seqid}{end} = $start+$big_step-1;
+      $self->current_track->{seqids}{$seqid}{end} = $start + $big_step - 1 + $span;
     }
 
   }
   $wigfile->set_values($start=>\@buffer) if @buffer;
-  $self->current_track->{seqids}{$seqid}{end} = $start+@buffer*$step-1;
+  $self->current_track->{seqids}{$seqid}{end} = $start + @buffer*$step - 1 + $span;
 }
 
 sub process_variableline {
   my $self  = shift;
   my $infh  = shift;
   my $seqid   = $self->{track_options}{chrom};
-  my $span    = $self->{track_options}{span} || 1;
   my $chrom   = $self->current_track->{seqids}{$seqid};
   my $wigfile = $self->wigfile($seqid);
+  my $span    = $wigfile->span;
   while (<$infh>) {
     last if /^(track|variableStep|fixedStep)/;
     next if /^#/;
     chomp;
-    my ($start,$value) = split /\s+/;
+    my ($start,$value) = split /\s+/ or next;
     $wigfile->set_value($start=>$value);
 
     # update span
     $chrom->{start} = $start 
 	if !defined $chrom->{start} || $chrom->{start} > $start;
-    my $end = $chrom->{start} + $span - 1;
+    my $end = $start + $span - 1;
     $chrom->{end}   = $end
 	if !defined $chrom->{end} || $chrom->{end} < $end;
 

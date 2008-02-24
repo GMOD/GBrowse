@@ -9,7 +9,6 @@ use Digest::MD5 'md5_hex';
 use Carp qw/carp croak/;
 use Text::Shellwords;
 use constant DEBUG=>0;
-use File::Copy;
 
 sub new {
   my $package = shift;
@@ -41,32 +40,6 @@ sub _add_file     {
 sub _del_file     { delete shift->{files}{shift()} }
 
 
-sub _unzip {
-  my ($self,$ext,$file,$unzipped) = @_;
-
-  # should have more but others don't seem
-  # to like being run in this environment
-  my %unzipper = ( gz  => 'gunzip' );
-
-  # test if the unzipping application is installed
-  return 0 unless $unzipper{$ext} && `$unzipper{$ext} -h`;
-
-  # make sure the path is clear
-  unlink $unzipped if -e $unzipped;
-
-  # make sure the zipped file is a binary file
-  return 0 unless -B $file;
-
-  warn "unzip incantation: $unzipper{$ext} $file\n"; 
-  system "$unzipper{$ext} $file";
-  if (-e $file) {
-    unlink $file or croak("$file: $!");;  
-  }
-
-  # test for success
-  return -T $unzipped;
-}
-
 
 sub upload_file {
   my $self       = shift;
@@ -78,38 +51,18 @@ sub upload_file {
     fileno($filehandle)," content type=$ENV{CONTENT_TYPE}" if DEBUG;
   return unless defined fileno($filehandle);
 
+  warn "filename = $filehandle";
+
   my ($filename)  = "$filehandle" =~ /([^\/\\:]+)$/;
   my $url = $self->new_file($filename);
-  my $tempfile;
-
-  # If the file is in gzip format,
-  # try to intercept and decompress the file
-  if ($filename =~ /\.(gz)$/) {
-    my $ext      = $1;
-    my $tmpdir   = $ENV{TMPDIR} || $ENV{TMP} || '/tmp';
-    my $zipfile  = "$tmpdir/upload$$.$ext";
-    my $unzipped = "$tmpdir/upload$$";
-
-    unlink $zipfile  if -e $zipfile;
-    copy($filehandle,$zipfile) or croak("could not copy $filehandle to $zipfile");
-    my $uncompressed = $self->_unzip($ext,$zipfile,$unzipped);
-   
-    croak("Problem unzipping archive $zipfile ($filename)") unless $uncompressed;
-
-    $filename =~ s/\.$ext$//;
-    $self->clear_file($url);
-    $tempfile = $unzipped;
-
-    # point the filehandle to the unzipped file
-    open $filehandle, $unzipped;
-  }
 
   $url       = $self->new_file($filename);
   my $fh_out = $self->open_file($url,'>') or return;
-  $self->process_uploaded_file($filehandle,$fh_out);
+
+  my $fh_in   = $self->maybe_unzip($filename,$filehandle) || $filehandle;
+  $self->process_uploaded_file($fh_in,$fh_out);
   close $fh_out;
   warn "url = $url, file=",$self->url2path($url) if DEBUG;
-  unlink $tempfile if $tempfile && -e $tempfile;
   return $url;
 }
 

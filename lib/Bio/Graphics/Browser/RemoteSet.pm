@@ -197,16 +197,17 @@ sub mirror {
     }
   }
 
-  my $tmpfile  = "$filename-$$";
+  my $tmpfile  = "$$-$filename";
   my $response = $UA->request($request,$tmpfile);
 
   if ($response->is_success) {  # we got a new file, so need to process it
-    my $infh   = IO::File->new($tmpfile)     or die "Couldn't open $tmpfile: $!";
-    my $outfh  = IO::File->new(">$filename") or die "Couldn't open $filename: $!";
-    $self->process_uploaded_file($infh,$outfh);
-    if (my $lm = $response->last_modified) {
-      utime($lm,$lm,$filename);
-    }
+      my $infh   = $self->maybe_unzip($tmpfile) || IO::File->new($tmpfile);
+      $infh or die "Couldn't open $tmpfile: $!";
+      my $outfh  = IO::File->new(">$filename") or die "Couldn't open $filename: $!";
+      $self->process_uploaded_file($infh,$outfh);
+      if (my $lm = $response->last_modified) {
+	  utime($lm,$lm,$filename);
+      }
   }
   unlink $tmpfile;  # either way, this file is no longer needed
   return $response;

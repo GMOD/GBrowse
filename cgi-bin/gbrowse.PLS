@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.48 2008-02-21 18:13:28 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.49 2008-02-25 22:06:11 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -958,8 +958,12 @@ sub adjust_settings {
   }
 
   if ($CONFIG->setting('region segment')) {
-    $settings->{region_size} = param('region_size') if defined param('region_size');
-    $settings->{region_size} = $CONFIG->setting('region segment') unless defined $settings->{region_size};
+    my $region_size = param('region_size') if defined param('region_size');
+    $region_size    = $CONFIG->setting('region segment') unless defined $region_size;
+    if ($region_size && $region_size eq 'AUTO') {
+      $region_size = 10*abs($settings->{stop} - $settings->{start});
+    }
+    $settings->{region_size} = $region_size;
   } else {
     delete $settings->{region_size};
   }

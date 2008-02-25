@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.22 2008-02-14 04:16:35 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.23 2008-02-25 16:25:55 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -117,6 +117,13 @@ var Balloon = function() {
   document.onmousemove = this.setActiveCoordinates;
   document.onscroll    = this.setActiveCoordinates;
 
+  // make balloons go away if the page is unloading or waiting
+  // to unload.
+  window.onbeforeunload = function(){ 
+    Balloon.prototype.hideTooltip(1);
+    balloonIsSuppressed = true;
+  };
+
   if (this.isIE()) {
     this.suppress = true;
   }
@@ -133,7 +140,7 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
     this.suppress = false;
   }
 
-  // Balloons have been suppressed by an external application
+  // Balloons have been suppressed, go no further
   if (this.suppress || balloonIsSuppressed) {
     return false;
   }

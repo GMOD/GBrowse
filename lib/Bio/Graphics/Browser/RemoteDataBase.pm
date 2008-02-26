@@ -20,7 +20,7 @@ sub readline {
   while (<$fh>) {
     chomp;
     next if /^\s*$/; # blank
-    next if /^\s*#([^#]|$)/; # comment
+    next if /^\s*#/; # comment
     s/[\r]//g;  # get rid of carriage returns from Macintosh/DOS systems
     $line .= $_;
     return $line unless $line =~ s/\\$//;

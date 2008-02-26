@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.65 2008-02-25 16:21:56 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.66 2008-02-26 01:41:37 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -889,7 +889,7 @@ sub drag_and_drop {
   my $self          = shift;
   my $override      = shift;
   return if defined $override && !$override;
-  my $dnd           = $self->setting(general => 'drag and drop'); # dexplicit drag-and-drop setting
+  my $dnd           = $self->setting(general => 'drag and drop'); # explicit drag-and-drop setting
   $dnd              = 1 unless defined $dnd;
   my $pg            = $self->setting(general => 'postgrid');      # postgrid forces drag and drop off
   return $dnd && !$pg;
@@ -940,7 +940,7 @@ sub render_draggable_tracks {
     my $img_style     = $collapsed ? "display:none" : "display:inline";
 
     # The javascript functions for rubber-band selection
-    #need this ID as a hook, please do not change it
+    # need this ID as a hook, please do not change it
     my $id = $label eq '__scale__' ? "${section}_image" : "${element_id}_image";
 
     my $img = $button
@@ -985,6 +985,11 @@ sub render_draggable_tracks {
                         ? $1
                         : $self->config->setting($label=>'key') || $label; # configured
 
+      if (defined $self->setting(general=>'show track categories')) {
+	my $cat = $self->config->setting($label=>'category');
+	$title .= " ($cat)" if $cat;
+      }
+	   
       my $titlebar    = $label eq '__scale__' || $label eq '__all__'
 	                 ? ''
 			 : span({-class=>$collapsed ? 'titlebar_inactive' : 'titlebar',-id=>"${element_id}_title"},
@@ -2440,6 +2445,7 @@ sub create_panel_args {
 		 : $args->{keystyle} || $self->setting('keystyle') || DEFAULT_KEYSTYLE;
 
   my @pass_thru_args = map {/^-/ ? ($_=>$args->{$_}) : ()} keys %$args;
+
   my @argv = (
 	      -grid         => 1,
 	      -seq_id       => $segment->seq_id,

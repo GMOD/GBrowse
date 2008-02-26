@@ -3,7 +3,7 @@
  rubber.js -- a base class for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.1.2.13 2008-02-14 22:17:56 sheldon_mckay Exp $
+ $Id: rubber.js,v 1.1.2.14 2008-02-26 01:41:37 sheldon_mckay Exp $
 
 */
 
@@ -83,9 +83,15 @@ SelectArea.prototype.recenter = function(event) {
   var coord  = self.flip ? Math.round(self.segmentEnd - deltaSequenceStart)
                          : Math.round(self.segmentStart + deltaSequenceStart);
 
-  var detailsStart  = document.mainform.start.value.replace(/\D+/,'') * 1;
-  var detailsEnd    = document.mainform.stop.value.replace(/\D+/,'') * 1;
-  var half   = Math.round(Math.abs((detailsEnd - detailsStart)/2));
+  var detailsStart = parseInt(document.mainform.start.value);
+  var detailsEnd   = parseInt(document.mainform.stop.value);
+  var end  = self.segmentEnd;
+  var span = Math.abs(detailsEnd - detailsStart);
+  var half = Math.round(span/2);
+
+  // don't fall off the ends
+  if (coord < 0)   coord = half + 1;
+  if (coord > end) coord = end - half - 1;
   var start  = coord - half;
   var end    = coord + half;
   document.mainform.name.value = self.ref + ':' + start + '..' + end;

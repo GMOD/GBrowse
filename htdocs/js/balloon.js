@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.23 2008-02-25 16:25:55 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.24 2008-02-26 01:41:37 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -112,10 +112,11 @@ var Balloon = function() {
   // A close button for sticky balloons
   this.closeButton   = '/images/balloons/close.png';
 
-  // track the cursor every time the mouse moves or the page
-  // is scrolled
+  // track the cursor every time the mouse moves
   document.onmousemove = this.setActiveCoordinates;
-  document.onscroll    = this.setActiveCoordinates;
+
+  // scrolling aborts unsticky balloons
+  document.onscroll    = Balloon.prototype.hideTooltip;
 
   // make balloons go away if the page is unloading or waiting
   // to unload.

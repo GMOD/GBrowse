@@ -9,6 +9,7 @@ use IO::File;
 use CGI 'cookie','param','unescape';
 use Digest::MD5 'md5_hex';
 use Text::Shellwords;
+use File::Spec;
 
 use constant URL_FETCH_TIMEOUT    => 5;  # five seconds max!
 use constant URL_FETCH_MAX_SIZE   => 50_000_000;  # don't accept any files larger than 50 Meg
@@ -197,7 +198,10 @@ sub mirror {
     }
   }
 
-  my $tmpfile  = "$$-$filename";
+  my ($volume,$dirs,$file) = File::Spec->splitpath($filename);
+  $file = "$$-$file";
+  my $tmpfile  = File::Spec->catfile($volume,$dirs,$file);
+  
   my $response = $UA->request($request,$tmpfile);
 
   if ($response->is_success) {  # we got a new file, so need to process it

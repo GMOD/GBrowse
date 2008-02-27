@@ -32,7 +32,7 @@ AC13221.2	.	clone	1	15000	.	.	.	ID=AC13221.2
 M7.3	.	clone	1	36450	.	.	.	ID=M7.3
 
 Contig1	confirmed	contig	1	37450	.	.	.	ID=Contig1
-Contig1	confirmed	transcript	1001	2000	42	+	.	ID=trans-1;Name=abc-1;Alias=xyz-2;Note=function+unknown
+Contig1	confirmed	transcript	1001	2000	.	+	.	ID=trans-1;Name=abc-1;Alias=xyz-2;Note=function+unknown
 Contig1	confirmed	polypeptide	1051	1440	.	+	.	Parent=trans-1
 Contig1	confirmed	exon	1001	1100	.	+	.	Parent=trans-1
 Contig1	confirmed	exon	1201	1300	.	+	.	Parent=trans-1

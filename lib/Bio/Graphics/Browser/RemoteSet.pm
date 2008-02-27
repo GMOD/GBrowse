@@ -199,13 +199,14 @@ sub mirror {
   }
 
   my ($volume,$dirs,$file) = File::Spec->splitpath($filename);
-  $file = "$$-$file";
+  $file = "$file-$$";
   my $tmpfile  = File::Spec->catfile($volume,$dirs,$file);
   
   my $response = $UA->request($request,$tmpfile);
 
   if ($response->is_success) {  # we got a new file, so need to process it
-      my $infh   = $self->maybe_unzip($tmpfile) || IO::File->new($tmpfile);
+      my $fh     = IO::File->new($tmpfile);
+      my $infh   = $self->maybe_unzip($url,$fh) || $fh;
       $infh or die "Couldn't open $tmpfile: $!";
       my $outfh  = IO::File->new(">$filename") or die "Couldn't open $filename: $!";
       $self->process_uploaded_file($infh,$outfh);

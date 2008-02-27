@@ -63,8 +63,6 @@ sub process_uploaded_file {
 
   local $/ = $self->_guess_eol($infh);
 
-  warn "setting eol to ",join ' ',unpack('C*',$/);
-
   my $first_line = $self->readline($infh);
   return unless defined $first_line;
   if ($first_line =~ /^(track|browser)/) {

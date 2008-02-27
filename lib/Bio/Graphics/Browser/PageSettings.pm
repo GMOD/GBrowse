@@ -16,7 +16,7 @@ sub new {
   my %args            = $session_args ? shellwords($session_args)
                                       : (Directory => $dir);
 
-  my $session         = CGI::Session->new($driver,$id,\%args);
+  my $session         = CGI::Session->new($driver,$id,\%args) or die "Couldn't get session";
   $session->expire($config->source,
 		   $config->remember_settings_time);
   my $self = bless {

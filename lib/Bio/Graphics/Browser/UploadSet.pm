@@ -51,8 +51,6 @@ sub upload_file {
     fileno($filehandle)," content type=$ENV{CONTENT_TYPE}" if DEBUG;
   return unless defined fileno($filehandle);
 
-  warn "filename = $filehandle";
-
   my ($filename)  = "$filehandle" =~ /([^\/\\:]+)$/;
   my $url = $self->new_file($filename);
 

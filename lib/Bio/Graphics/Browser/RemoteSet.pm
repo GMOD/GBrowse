@@ -206,7 +206,12 @@ sub mirror {
 
   if ($response->is_success) {  # we got a new file, so need to process it
       my $fh     = IO::File->new($tmpfile);
-      my $infh   = $self->maybe_unzip($url,$fh) || $fh;
+
+      # handle possible un-gzipping
+      my $dummy_name = $url;
+      $dummy_name   .= ".gz" if $response->header('Content-Type') =~ /gzip/;
+
+      my $infh       = $self->maybe_unzip($dummy_name,$fh) || $fh;
       $infh or die "Couldn't open $tmpfile: $!";
       my $outfh  = IO::File->new(">$filename") or die "Couldn't open $filename: $!";
       $self->process_uploaded_file($infh,$outfh);

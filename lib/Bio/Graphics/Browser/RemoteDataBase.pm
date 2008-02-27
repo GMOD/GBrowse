@@ -32,7 +32,7 @@ sub readline {
 # this converts .wig files and other UCSC formats into feature files that we can handle
 sub convert_ucsc_file {
   my $self = shift;
-  my ($track_line,$in,$out) = @_;
+  my ($in,$out) = @_;
 
   eval "require Bio::Graphics::Wiggle::Loader" 
     unless Bio::Graphics::Wiggle::Loader->can('new');
@@ -40,7 +40,6 @@ sub convert_ucsc_file {
   $dummy_name    =~ s/foo$//; # get the directory part only!
 
   my $loader = Bio::Graphics::Wiggle::Loader->new($dummy_name);
-  $loader->process_track_line($track_line) if $track_line =~ /^track/;
   $loader->load($in);
 
   my $featurefile = $loader->featurefile('featurefile');
@@ -49,8 +48,7 @@ sub convert_ucsc_file {
 
 sub convert_feature_file {
   my $self = shift;
-  my ($first_line,$in,$out) = @_;
-  print $out $first_line,"\n";
+  my ($in,$out) = @_;
   while ($_ = <$in>) {
       chomp;
       print $out $_,"\n";
@@ -63,12 +61,14 @@ sub process_uploaded_file {
 
   local $/ = $self->_guess_eol($infh);
 
+  my $pos = tell($infh);
   my $first_line = $self->readline($infh);
   return unless defined $first_line;
+  seek($infh,$pos,0);
   if ($first_line =~ /^(track|browser)/) {
-    $self->convert_ucsc_file($first_line,$infh,$outfh);
+    $self->convert_ucsc_file($infh,$outfh);
   } else {
-    $self->convert_feature_file($first_line,$infh,$outfh);
+    $self->convert_feature_file($infh,$outfh);
   }
 }
 

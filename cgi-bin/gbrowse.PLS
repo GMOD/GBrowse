@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.49 2008-02-25 22:06:11 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.50 2008-02-27 17:41:55 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1713,7 +1713,7 @@ sub upload_table {
     my @info =  get_uploaded_file_info($settings->{features}{$file}{visible}
 				       && $feature_files->{$file});
     $cTable .=  TR({-class=>'uploadbody'},
-		   th($link),
+		   th({-width=>'20%',-align=>'right'},$link),
 		   td({-colspan=>3},
 		      submit(-name=>"modify.$file",-value=>$CONFIG->tr('Edit')).'&nbsp;'.
 		      submit(-name=>"modify.$file",-value=>$CONFIG->tr('Download_file')).'&nbsp;'.
@@ -1761,6 +1761,7 @@ sub das_table {
   local $^W = 0;
   if (defined $settings->{ref}) {
     my $segment = "$settings->{ref}:$settings->{start},$settings->{stop}";
+
     for my $url ($REMOTE_SOURCES->sources) {
 
       (my $f = $url) =~ s!(http:.+/das/\w+)(?:\?(.+))?$!$1/features?segment=$segment;$2!;
@@ -1768,15 +1769,18 @@ sub das_table {
       next unless $url =~ /^(ftp|http):/ && $feature_files->{$url};
       warn "external_table(): url = $url" if DEBUG;
       push @rows,th({-align=>'right',-valign=>'TOP'},"URL",++$count).
-	td(textfield(-name=>'eurl',-size=>50,-value=>$url,-override=>1),br,
+	td(textfield(-name=>'eurl',-size=>50,-value=>$url,-override=>1),
+	   submit(-name=>"modify.$url",-value=>$CONFIG->tr('Delete')),
+	   br,
 	   a({-href=>$f,-target=>'help'},'['.$CONFIG->tr('Download').']'),
 	   get_uploaded_file_info($settings->{features}{$url}{visible} && $feature_files->{$url})
 	  );
     }
-    push @rows,th({-align=>'right'},
+    push @rows,th({-align=>'right',width=>'20%'},
 		  $CONFIG->tr('Remote_url')).
 		    td(textfield(-name=>'eurl',-size=>40,-value=>'',-override=>1),
-		       $presets);
+		       $presets,
+		      submit($CONFIG->tr('Update_urls')));
   }
 
   return table({-border=>0,-width=>'100%'},
@@ -1785,9 +1789,9 @@ sub das_table {
 		     $CONFIG->tr('Remote_title').':',
 		     a({-href=>annotation_help().'#remote',-target=>'help'},'['.$CONFIG->tr('Help').']'))),
 	       TR({-class=>'uploadbody'},\@rows),
-	       TR({-class=>'uploadbody'},
-		  th('&nbsp;'),
-		  th({-align=>'left'},submit($CONFIG->tr('Update_urls'))))
+#	       TR({-class=>'uploadbody'},
+#		  th('&nbsp;'),
+#		  th({-align=>'right'},submit($CONFIG->tr('Update_urls'))))
 	      );
 }
 
@@ -2414,6 +2418,7 @@ sub handle_uploads {
 
   if ($file_action && param($file_action) eq 'Delete File') {
     $UPLOADED_SOURCES->clear_file($file);
+    $REMOTE_SOURCES->delete_source($file);
   }
 
   if ($file_action && param($file_action) eq $CONFIG->tr('Edit')) {

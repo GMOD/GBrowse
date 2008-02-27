@@ -214,7 +214,7 @@ END
 
    REMOTE_URL   => 'Enter Remote Annotation URL',
 
-   UPDATE_URLS  => 'Update URLs',
+   UPDATE_URLS  => 'Update',
 
    PRESETS      => '--Choose Preset URL--',
 

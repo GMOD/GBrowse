@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.66 2008-02-26 01:41:37 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.67 2008-03-03 00:21:52 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -134,6 +134,19 @@ sub read_configuration {
   my $self        = shift;
   my $conf_dir    = shift;
   my $suffix      = shift || 'conf';
+
+  $self->fatal_error(<<END) unless (eval{Bio::Graphics::FeatureFile->version} || 1) >= 2.0;
+INSTALLATION ERROR DETECTED WHEN PROCESSING $ENV{REQUEST_URI}
+
+This version of GBrowse requires Bio::Graphics::FeatureFile version 2.0
+or higher, which is available in the current "live" version of bioperl.
+Please upgrade.
+
+If you are not the administrator of this site, please email him or her a
+copy of this error message.
+END
+
+
   $self->{conf} ||= {};
 
   croak("$conf_dir: not a directory") unless -d $conf_dir;
@@ -2079,6 +2092,7 @@ sub name2segments {
       }
     }
   }
+
   return @segments;
 }
 
@@ -2411,6 +2425,12 @@ sub error {
   $err_msg = '' if ref $err_msg;
   $self->{'.err_msg'} = $err_msg;
   $self->{'.err_msg'};
+}
+
+sub fatal_error {
+    my $self = shift;
+    print CGI::header('text/plain'),"@_\n";
+    exit 0;
 }
 
 =head2 create_panel_args()

@@ -276,8 +276,10 @@ sub minmax {
 
   if ($bedline) {  # left-over BED line
       my ($chrom,$start,$end,$value) = split /\s+/,$bedline;
-      $seqids->{$chrom}{min} = $value if $seqids->{$chrom}{min} > $value || !exists $seqids->{$chrom}{min};
-      $seqids->{$chrom}{max} = $value if $seqids->{$chrom}{max} < $value || !exists $seqids->{$chrom}{max};
+      $seqids->{$chrom}{min} = $value if $seqids->{$chrom}{min} > $value 
+	  || !exists $seqids->{$chrom}{min};
+      $seqids->{$chrom}{max} = $value if $seqids->{$chrom}{max} < $value 
+	  || !exists $seqids->{$chrom}{max};
       while (<$infh>) {
 	  chomp;
 	  last if /^track/;

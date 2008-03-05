@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.67 2008-03-03 00:21:52 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.68 2008-03-05 01:23:47 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1129,6 +1129,7 @@ directly
 sub generate_panels {
   my $self  = shift;
   my $args  = shift;
+
 
   my $segment       = $args->{segment};
   my ($seg_start,$seg_stop,$flip) = $self->segment_coordinates($segment,

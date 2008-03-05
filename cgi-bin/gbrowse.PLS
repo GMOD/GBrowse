@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.51 2008-03-03 00:21:51 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.52 2008-03-05 01:23:44 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1723,9 +1723,9 @@ sub upload_table {
 
   # end the table.
   $cTable .= TR({-class=>'uploadbody'},
-		th({-align=>'right'},$CONFIG->tr('Upload_File')),
+		th({-width=>'20%',-align=>'right'},$CONFIG->tr('Upload_File')),
 		td({-colspan=>3},
-		   filefield(-size=>40,-name=>'upload_annotations'),
+		   filefield(-size=>80,-name=>'upload_annotations'),
 		   '&nbsp;',
 		   submit(-name=>$CONFIG->tr('Upload')),
 		   '&nbsp;',
@@ -1768,17 +1768,17 @@ sub das_table {
       warn "url = $url" if DEBUG_EXTERNAL;
       next unless $url =~ /^(ftp|http):/ && $feature_files->{$url};
       warn "external_table(): url = $url" if DEBUG;
-      push @rows,th({-align=>'right',-valign=>'TOP'},"URL",++$count).
-	td(textfield(-name=>'eurl',-size=>50,-value=>$url,-override=>1),
+      push @rows,th({-align=>'right',-width=>'20%'},"URL",++$count).
+	td(textfield(-name=>'eurl',-size=>80,-value=>$url,-override=>1),
 	   submit(-name=>"modify.$url",-value=>$CONFIG->tr('Delete')),
 	   br,
 	   a({-href=>$f,-target=>'help'},'['.$CONFIG->tr('Download').']'),
 	   get_uploaded_file_info($settings->{features}{$url}{visible} && $feature_files->{$url})
 	  );
     }
-    push @rows,th({-align=>'right',width=>'20%'},
+    push @rows,th({-align=>'right',-width=>'20%'},
 		  $CONFIG->tr('Remote_url')).
-		    td(textfield(-name=>'eurl',-size=>40,-value=>'',-override=>1),
+		    td(textfield(-name=>'eurl',-size=>80,-value=>'',-override=>1),
 		       $presets,
 		      submit($CONFIG->tr('Update_urls')));
   }
@@ -1975,8 +1975,8 @@ sub features2segments {
 		  -start => $_->start,
 		  -stop  => $_->end,
 		  -absolute => 1,
-		  -aliases  => 1, # for some versions of Bio::DB::SeqFeature
-		   defined $version ? (-version => $version) : ());
+		  -aliases  => 1,   # for some versions of Bio::SeqFeature
+		  defined $version ? (-version => $version) : ());
       $db->segment(@args);
     } @$features;
   warn "segments = @segments" if DEBUG;

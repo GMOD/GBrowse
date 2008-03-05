@@ -2545,7 +2545,7 @@ volvox.conf configuration file:
 
 <blockquote class="example"><pre>
 [Motifs:overview]
-feature      = motif
+feature      = polypeptide_domain
 glyph        = span
 height       = 5
 description  = 0
@@ -2645,7 +2645,7 @@ so that it looks like this:
 
 <blockquote class="example"><pre>
 [Motifs]
-feature      = motif
+feature      = polypeptide_domain
 glyph        = span
 height       = 5
 description  = 1
@@ -2704,7 +2704,7 @@ These changes are easy:
 
 <blockquote class="example"><pre>
 [Motifs]
-feature      = motif
+feature      = polypeptide_domain
 glyph        = span
 height       = 5
 description  = 1
@@ -2818,7 +2818,7 @@ to look like this:</p>
 
 <blockquote class="example"><pre>
 [Motifs]
-feature      = motif
+feature      = polypeptide_domain
 glyph        = span
 height       = 5
 description  = 1
@@ -2872,11 +2872,11 @@ entirety of the feature and DNA data.</i>
 organized as 3 rows x 3 columns each with a heading. 
 </blockquote>
 
-<p>This was constructed using the option 'category tables' that is
-written at towards the top of the conf file. The first parameter
-refers to the category you wish to add the table to, the second is a
-space separated list of column headings, the third a space separated
-list of row headings.</p>
+<p>This was constructed by adding an option named "category tables" to
+the [GENERAL] section. The first argument in this option refers to the
+category you wish to add the table to, the second is a space separated
+list of column headings, the third a space separated list of row
+headings.</p>
 
 <blockquote class="example"><pre>
 # category table configuration
@@ -3078,7 +3078,7 @@ add balloon hover and balloon click options like this: </p>
 
 <blockquote class="example"><pre>
 [Motifs]
-feature      = motif
+feature      = polypeptide_domain
 glyph        = span
 height       = 5
 description  = 1
@@ -3719,16 +3719,16 @@ the entire data set with all core tracks turned on.
 <p>
 
 We will now add some third-party annotations to the display.  These
-are contained in the files "elegans_acceptor.gff",
-"elegans_expression.gff", "elefans_sts.gff", "elegans_deletion.gff", and
-"elegans_repeats.gff":
+are contained in the files "elegans_acceptor.gff3",
+"elegans_expression.gff3", "elefans_sts.gff3", "elegans_deletion.gff3", and
+"elegans_repeats.gff3":
 
 <p>
 
 <table border="1" width="100%">
   <TR>
     <td>
-	<a href="data_files/elegans_acceptor.gff">elegans_acceptor.gff</a>
+	<a href="data_files/elegans_acceptor.gff3">elegans_acceptor.gff3</a>
     </td>
     <td>
 	Annotations of <i>C. elegans</i> spliced leader acceptor sites.
@@ -3737,7 +3737,7 @@ are contained in the files "elegans_acceptor.gff",
     
   <TR>
     <td>
-	<a href="data_files/elegans_expression.gff">elegans_expression.gff</a>
+	<a href="data_files/elegans_expression.gff3">elegans_expression.gff3</a>
     </td>
     <td>
 	Positions assayed for gene expression level in <i>C. elegans</i>
@@ -3747,7 +3747,7 @@ are contained in the files "elegans_acceptor.gff",
     
   <TR>
     <td>
-	<a href="data_files/elegans_sts.gff">elegans_sts.gff</a>
+	<a href="data_files/elegans_sts.gff3">elegans_sts.gff3</a>
     </td>
     <td>
 	Primer pairs available for the region produced by the
@@ -3757,7 +3757,7 @@ are contained in the files "elegans_acceptor.gff",
 
   <TR>
     <td>
-	<a href="data_files/elegans_deletion.gff">elegans_deletion.gff</a>
+	<a href="data_files/elegans_deletion.gff3">elegans_deletion.gff3</a>
     </td>
     <td>
 	Deletion endpoints from a targeted gene knockout project.
@@ -3766,7 +3766,7 @@ are contained in the files "elegans_acceptor.gff",
     
   <TR>
     <td>
-	<a href="data_files/elegans_repeats.gff">elegans_repeats.gff</a>
+	<a href="data_files/elegans_repeats.gff3">elegans_repeats.gff3</a>
     </td>
     <td>
 	Complex repetitive elements found using the RepeatMasker program.
@@ -3807,7 +3807,7 @@ main data set.  Other users cannot see your data.</i>
 
 Although this display is functional, there is no difference between
 the appearance of each of the tracks.  Fortunately, we can customize
-the uploaded files quite easily.  Let us change the "elegans_sts.gff"
+the uploaded files quite easily.  Let us change the "elegans_sts.gff3"
 file so that the primer pairs use the "primers" glyph.  We can either
 do this by deleting the uploaded file, making the appropriate
 modification to our local version and then reuploading it, or by
@@ -3816,7 +3816,7 @@ editing the file in place.  We'll take the latter course.
 <p>
 
 Scroll to the bottom of the browser window, find the uploaded file
-named "elegans_sts.gff", and choose "Edit File...".
+named "elegans_sts.gff3", and choose "Edit File...".
 
 <p>
 
@@ -3832,11 +3832,12 @@ This will take you to a simple text editor window.  At the top of the
 window, add the following configuration stanza:
 
 <blockquote><pre>
-# edited elegans_sts.gff file
-[reagent]
-glyph = primers
-height = 6
-key   = ORFeome project primer pairs
+# edited elegans_sts.gff3 file
+[Orfeome Primers]
+feature = reagent
+glyph   = primers
+height  = 6
+key     = ORFeome project primer pairs
 </pre></blockquote>
 
 <p>
@@ -3851,24 +3852,28 @@ If you like, you can customize each of the files.  Here is a suggested
 set of customizations:
 
 <blockquote><pre>
-# for the file elegans_repeats.gff
-[repeat]
+# for the file elegans_repeats.gff3
+[Repeats]
+feature = repeat
 bgcolor = white
-key = Complex repeats
+key     = Complex repeats
 
-# for the file elegans_acceptor.gff
-[trans-splice_acceptor]
-glyph = diamond
+# for the file elegans_acceptor.gff3
+[Acceptors]
+feature = trans-splice_acceptor_site
+glyph   = diamond
 bgcolor = red
-key = Trans-splice Acceptors
+key     = Trans-splice Acceptors
 
-# for the file elegans_deletion.gff
-[Deletion_allele]
-glyph = span
-key   = Gene knockouts
+# for the file elegans_deletion.gff3
+[Deletions]
+feature=deletion
+glyph  = span
+key    = Gene knockouts
 
-# for the file elegans_expression.gff
+# for the file elegans_expression.gff3
 [Expression]
+feature = microarray_oligo
 bgcolor = orange
 height  = 4
 key     = Microarray expression probe
@@ -3930,32 +3935,32 @@ across the world.
 
 <p>
 
-We will demonstrate using the elegans_sts.gff file.  Please use a
+We will demonstrate using the elegans_sts.gff3 file.  Please use a
 version that has been edited to place the [reagent] configuration
 stanza at the top.  Then copy this file to the directory "$HTDOCS".
 This will place it at the top of the Web server document tree, but
 <b>outside</b> the location of GBrowse databases.  Check that the file
 is correctly installed on your web server by fetching this URL: <a
-href="elegans_sts.gff"
-target="_new">http://localhost/elegans_sts.gff</a>.  If the file is
+href="elegans_sts.gff3"
+target="_new">http://localhost/elegans_sts.gff3</a>.  If the file is
 correctly installed on the Web server, you will see this:
 
 <blockquote><pre>
-[reagent]
-glyph = primers
-height = 6
-key   = ORFeome project primer pairs
+[Orfeome Primers]
+feature = reagent
+glyph   = primers
+height  = 6
+key     = ORFeome project primer pairs
 
-##gff-version 2
+##gff-version 3
 ##date Tue Feb 24 06:39:41 2004
-##sequence-region C01F4 1 40000
 ##source gbrowse GFFDumper plugin
 ##NOTE: Selected features dumped.
-C01F4	Orfeome_project reagent 3319	17668	.  +  .  PCR_product mv_ZK783.1 ; Amplified 0
-C01F4	Orfeome_project reagent 18584	20445	.  -  .  PCR_product mv_G_YK5686 ; Amplified 1
-C01F4	Orfeome_project reagent 24509	25425	.  -  .  PCR_product mv_ZK783.3 ; Amplified 1
-C01F4	Orfeome_project reagent 26525	33359	.  -  .  PCR_product mv_ZK783.4 ; Amplified 0
-C01F4	Orfeome_project reagent 38660	49506	.  +  .  PCR_product mv_C18H2.1 ; Amplified 1
+C01F4	Orfeome_project	reagent	3319	17668	.	+	.	Name=mv_ZK783.1;amplified=0
+C01F4	Orfeome_project	reagent	18584	20445	.	-	.	Name=mv_G_YK5686;amplified=1
+C01F4	Orfeome_project	reagent	24509	25425	.	-	.	Name=mv_ZK783.3;amplified=1
+C01F4	Orfeome_project	reagent	26525	33359	.	-	.	Name=mv_ZK783.4;amplified=0
+C01F4	Orfeome_project	reagent	38660	49506	.	+	.	Name=mv_C18H2.1;amplified=1
 </pre></blockquote>
 
 <p>
@@ -3971,7 +3976,7 @@ core gene models and EST alignments that we began with.
 
 Now we'll reload the STS annotations by using their URL.  Scroll to
 the bottom of the window, find the text field labeled "Enter Remote
-Annotation URL", type in <b>http://localhost/elegans_sts.gff</b>, and
+Annotation URL", type in <b>http://localhost/elegans_sts.gff3</b>, and
 press "Update URLs."  The "ORFeome project primer pairs" track will
 reappear.
 
@@ -3980,12 +3985,12 @@ reappear.
 In order to make this process even simpler, you can create a popup
 menu containing the URLs of frequently-accessed remote annotation
 files.  To make this more interesting, first copy the
-elegans_expression.gff file to the "$HTDOCS" directory in the way
-described earlier.  Now elegans_sts.gff and elegans_expression.gff
+elegans_expression.gff3 file to the "$HTDOCS" directory in the way
+described earlier.  Now elegans_sts.gff3 and elegans_expression.gff3
 will be available as the URLs <a
-href="/elegans_sts.gff">http://localhost/elegans_sts.gff</a>
+href="/elegans_sts.gff3">http://localhost/elegans_sts.gff3</a>
 and <a
-href="/elegans_expression.gff">http://localhost/elegans_expression.gff</a>,
+href="/elegans_expression.gff3">http://localhost/elegans_expression.gff3</a>,
 respectively.
 
 <p>
@@ -3996,8 +4001,8 @@ lines right after the "plugins =" line:
 
 <blockquote><pre>
 # remote GFF files to make available for optional loading
-remote sources = "ORFeome STSs"      http://localhost/elegans_sts.gff
-	         "Expression probes" http://localhost/elegans_expression.gff
+remote sources = "ORFeome STSs"      http://localhost/elegans_sts.gff3
+	         "Expression probes" http://localhost/elegans_expression.gff3
 
 </pre></blockquote>
 
@@ -4158,9 +4163,9 @@ Find the [Transcripts] stanza and modify it to to have a das category
 of "transcription" as shown here:
 
 <blockquote><pre>
-[Transcripts]
-feature      = processed_transcript
-glyph        = processed_transcript
+[Genes]
+feature      = gene
+glyph        = gene
 height       = 8
 bgcolor      = blue
 description  = 1
@@ -4201,12 +4206,10 @@ This is showing that there is one configured DAS source, the
 
 Next test that the DAS "types" request is working.  This request
 returns all the feature types that the database knows about.  Using a
-web browser fetch the URL <a
-href="/cgi-bin/das/elegans_core/types"
+web browser fetch the URL <a href="/cgi-bin/das/elegans_core/types"
 target="_new">http://localhost/cgi-bin/das/elegans_core/types</a>.
-This should return another short document confirming that the
-"processed_transcript" and "match:BLAT_EST_BEST" feature types are
-available.
+This should return another short document confirming that the "gene"
+and "EST_match:BLAT_EST_BEST" feature types are available.
 
 <p>
 
@@ -4230,11 +4233,11 @@ data.  This new database will be used as a DAS source.
 
 <p>
 
-Create a new database directory called elegans_extra in the
+Create a new database directory called <i>elegans_extra</i> in the
 "$HTDOCS/gbrowse/databases" directory, and add to it a copy of the
-file <a href="data_files/elegans_extra.gff">elegans_extra.gff</a>.
+file <a href="data_files/elegans_extra.gff3">elegans_extra.gff3</a>.
 This GFF file is simply the result of concatenating together the
-individual annotation files we looked at earlier (elegans_sts.gff,
+individual annotation files we looked at earlier (elegans_sts.gff3,
 etc), and removing the redundant comment lines from the top of the
 file.  Now copy the configuration file <a
 href="conf_files/elegans_extra.conf">elegans_extra.conf</a> into the
@@ -4552,6 +4555,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Mon Feb 11 09:45:34 EST 2008
+Last modified: Tue Mar  4 20:12:49 EST 2008
 <!-- hhmts end -->
 </body> </html>

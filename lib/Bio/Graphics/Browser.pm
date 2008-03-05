@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.68 2008-03-05 01:23:47 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.69 2008-03-05 05:44:49 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1137,6 +1137,7 @@ sub generate_panels {
   my $feature_files = $args->{feature_files} || {};
   my $labels        = $args->{labels} || $args->{tracks} || []; # legacy
   my $options       = $args->{options}       || {};
+
   my $limits        = $args->{limit}         || {};
   my $lang          = $args->{lang} || $self->language;
   my $suppress_scale= $args->{noscale};
@@ -1217,6 +1218,12 @@ sub generate_panels {
   my %feature_file_offsets;
 
   for my $label (@$labels) {
+
+    # das tracks only go into details panel for now.
+    next if $feature_files->{$label} && 
+	$label =~ m!/das/! && 
+	$section !~ /detail/; 
+
     next if $seenit{$label}++; # this shouldn't happen, but let's be paranoid
 
     # if "hide" is set to true, then skip panel
@@ -1499,6 +1506,7 @@ sub add_feature_file {
 
   my $file    = $args{file}    or return;
   my $options = $args{options} or return;
+
   my $select  = $args{select}  or return;
 
   my $name = $file->name || '';
@@ -1509,7 +1517,7 @@ sub add_feature_file {
       $file->render(
 		    $args{panel},
 		    $args{position},
-		    $options,
+		    $options->{$name},
 		    $self->bump_density,
 		    $self->label_density,
 		    $select);

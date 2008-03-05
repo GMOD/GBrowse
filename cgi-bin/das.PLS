@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.6.8.1.2.5 2007-09-06 10:27:07 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.6 2008-03-05 05:44:49 lstein Exp $
 
 use Bio::DB::GFF;
 use File::Basename 'basename';
@@ -57,7 +57,7 @@ use vars qw($DB $DSN $HEADER %ERRCODES $CONFIG
             $VERSION $DAS_VERSION $CONF_DIR 
             %CACHED_TYPES %FORCED_GROUP %NO_PARENT);
 
-#$Id: das.PLS,v 1.6.8.1.2.5 2007-09-06 10:27:07 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
+#$Id: das.PLS,v 1.6.8.1.2.6 2008-03-05 05:44:49 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';
@@ -688,7 +688,7 @@ END
     my $e = $seq->stop;
 
     # use absolute coordinates -- people expect it
-    my $name = $seq->refseq;
+    my $name = $seq->seq_id;
 
     my $version = seq2version($name);
     print qq(<SEGMENT id="$name" start="$s" stop="$e" version="$version">\n);

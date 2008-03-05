@@ -143,7 +143,7 @@ sub get_das_segment {
   if ($cgi_args) {
     my @a = split /[;&]/,$cgi_args;
     foreach (@a) {
-      my ($arg,$val) = split /=/;
+      my ($arg,$val) = split '=';
       push @types,unescape($val)      if $arg eq 'type';
       push @categories,unescape($val) if $arg eq 'category';
     }

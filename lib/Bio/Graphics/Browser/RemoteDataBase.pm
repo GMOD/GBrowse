@@ -81,7 +81,7 @@ sub maybe_unzip {
     # try to intercept and decompress the file
     if ($filename =~ /^(.+)\.gz$/) {
 	$fh ||= IO::File->new($filename);
-	$fh->binmode(1);
+	$fh->binmode(1) if $fh->can('binmode');
 	require File::Temp;
 	my $fname = File::Temp->tmpnam;
 	my $unzip = IO::File->new("|gunzip -c > $fname") or die $!;

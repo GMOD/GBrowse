@@ -92,7 +92,7 @@ sub feature_file {
     $feature_file = $self->get_das_segment($1,$2,$3,$segment);
   }
   else {
-    $feature_file = $self->get_remote_upload($url,$rel2abs);
+    $feature_file = $self->get_remote_upload($url,$rel2abs,$segment);
   }
 
   # Tell the feature file what its name is, so that it can be formatted
@@ -103,15 +103,21 @@ sub feature_file {
 
 sub get_remote_upload {
   my $self = shift;
-  my ($url,$rel2abs) = @_;
+  my ($url,$rel2abs,$segment) = @_;
   my $config = $self->config;
+
+  # do certain substitutions on the URL
+  $url =~ s/\$segment/$segment->seq_id.':'.$segment->start.'..'.$segment->end/ge;
+  $url =~ s/\$ref/$segment->seq_id/ge;
+  $url =~ s/\$start/$segment->start/ge;
+  $url =~ s/\$end/$segment->end/ge;
 
   my $id = md5_hex($url);     # turn into a filename
   $id =~ /^([0-9a-fA-F]+)$/;  # untaint operation
   $id = $1;
 
-  my (undef,$tmpdir) = $config->tmpdir($config->source.'/external');
-  my $filename = "$tmpdir/$id";
+  my (undef,$tmpdir) = $config->tmpdir(File::Spec->catfile($config->source,'external'));
+  my $filename = File::Spec->catfile($tmpdir,$id);
   my $response = $self->mirror($url,$filename);
   if ($response->is_error) {
     error($config->tr('Fetch_failed',$url,$response->message));
@@ -201,7 +207,6 @@ sub mirror {
   my ($volume,$dirs,$file) = File::Spec->splitpath($filename);
   $file = "$file-$$";
   my $tmpfile  = File::Spec->catfile($volume,$dirs,$file);
-  
   my $response = $UA->request($request,$tmpfile);
 
   if ($response->is_success) {  # we got a new file, so need to process it

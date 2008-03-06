@@ -49,6 +49,9 @@ following format:
       4  byte perl native float, the "min" value
       4  byte perl native float, the "max" value
       4  byte long integer, value of "span"
+      4  byte perl native float, the mean 
+      4  byte perl native float, the median
+      4  byte perl native float, the standard deviation
       null padding to 256 bytes for future use
 
 The remainder of the file consists of 8-bit unsigned scaled integer
@@ -175,7 +178,7 @@ use IO::File;
 use Carp 'croak','carp','confess';
 
 use constant HEADER_LEN => 256;
-use constant HEADER => '(Z50LFFL)@'.HEADER_LEN; # seqid, step, min, max, step
+use constant HEADER => '(Z50LFFLFFF)@'.HEADER_LEN; # seqid, step, min, max, span, mean, median, stdev
 use constant BODY   => 'C';
 
 sub new {
@@ -246,6 +249,9 @@ sub min   { shift->_option('min',@_) }
 sub max   { shift->_option('max',@_) }
 sub step  { shift->_option('step',@_) }
 sub span  { shift->_option('span',@_) }
+sub mean  { shift->_option('mean',@_) }
+sub median{ shift->_option('median',@_) }
+sub stdev { shift->_option('stdev',@_) }
 
 sub smoothing {
   my $self = shift;
@@ -259,19 +265,24 @@ sub _readoptions {
   my $fh = $self->fh;
   my $header;
   $fh->read($header,HEADER_LEN) == HEADER_LEN or die "read failed: $!";
-  my ($seqid,$step,$min,$max,$span) = unpack(HEADER,$header);
+  my ($seqid,$step,$min,$max,$span,
+      $mean,$median,$stdev) = unpack(HEADER,$header);
   return { seqid => $seqid,
 	   step  => $step,
 	   span  => $span,
 	   min   => $min,
-	   max   => $max };
+	   max   => $max,
+	   mean  => $mean,
+	   median=> $median,
+	   stdev => $stdev,
+  };
 }
 
 sub _writeoptions {
   my $self    = shift;
   my $options = shift;
   my $fh = $self->fh;
-  my $header = pack(HEADER,@{$options}{qw(seqid step min max span)});
+  my $header = pack(HEADER,@{$options}{qw(seqid step min max span mean median stdev)});
   $fh->seek(0,0);
   $fh->print($header) or die "write failed: $!";
 }

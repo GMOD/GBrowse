@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.69 2008-03-05 05:44:49 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.70 2008-03-06 17:24:08 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -135,16 +135,16 @@ sub read_configuration {
   my $conf_dir    = shift;
   my $suffix      = shift || 'conf';
 
-  $self->fatal_error(<<END) unless (eval{Bio::Graphics::FeatureFile->version} || 1) >= 2.0;
-INSTALLATION ERROR DETECTED WHEN PROCESSING $ENV{REQUEST_URI}
+#   $self->fatal_error(<<END) unless (eval{Bio::Graphics::FeatureFile->version} || 1) >= 2.0;
+# INSTALLATION ERROR DETECTED WHEN PROCESSING $ENV{REQUEST_URI}
 
-This version of GBrowse requires Bio::Graphics::FeatureFile version 2.0
-or higher, which is available in the current "live" version of bioperl.
-Please upgrade.
+# This version of GBrowse requires Bio::Graphics::FeatureFile version 2.0
+# or higher, which is available in the current "live" version of bioperl.
+# Please upgrade.
 
-If you are not the administrator of this site, please email him or her a
-copy of this error message.
-END
+# If you are not the administrator of this site, please email him or her a
+# copy of this error message.
+# END
 
 
   $self->{conf} ||= {};
@@ -1666,10 +1666,15 @@ sub make_map {
 
     my ($mouseover,$mousedown,$style);
     if ($tips) {
+
       #retrieve the content of the balloon from configuration files
       # if it looks like a URL, we treat it as a URL.
-      my ($balloon_ht,$balloonhover)     = $self->config->balloon_tip_setting('balloon hover',$label,$_->[0],$panel,$_->[5]);
-      my ($balloon_ct,$balloonclick)     = $self->config->balloon_tip_setting('balloon click',$label,$_->[0],$panel,$_->[5]);
+      my ($balloon_ht,$balloonhover)     = 
+	  $self->config->balloon_tip_setting('balloon hover',$label,$_->[0],$panel,$_->[5]);
+
+      my ($balloon_ct,$balloonclick)     = 
+	  $self->config->balloon_tip_setting('balloon click',$label,$_->[0],$panel,$_->[5]);
+
       # balloon_ht = type of balloon to use for hovering -- usually "balloon"
       # balloon_ct = type of balloon to use for clicking -- usually "balloon"
       my $sticky             = $self->setting($label,'balloon sticky');

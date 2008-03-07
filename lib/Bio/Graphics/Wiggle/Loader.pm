@@ -57,12 +57,18 @@ the data.
 use strict;
 
 use Carp 'croak';
+use Statistics::Descriptive;
 use IO::Seekable;
 use Bio::Graphics::Wiggle;
 use Text::Shellwords;
+use File::stat;
 use CGI 'escape';
 
 use vars '%color_name';
+
+# If a WIG file is very large (> 5 Mb)
+use constant BIG_FILE         => 5_000_000;
+use constant BIG_FILE_SAMPLES => 5_000;     # number of probes to make 
 
 sub new {
   my $class = shift;
@@ -272,43 +278,63 @@ sub minmax {
   my ($infh,$bedline) = @_;
   local $_;
 
+  my $stats = Statistics::Descriptive::Sparse->new();
+  if ((my $size = stat($infh)->size) > BIG_FILE) {
+      warn "wiggle file is very large; resorting to genome-wide sample statistics";
+      $self->{FILEWIDE_STATS} ||= $self->sample_file($infh);
+      return;
+  }
+
   my $seqids = $self->current_track->{seqids} ||= {};
 
+
   if ($bedline) {  # left-over BED line
-      my ($chrom,$start,$end,$value) = split /\s+/,$bedline;
-      $seqids->{$chrom}{min} = $value if $seqids->{$chrom}{min} > $value 
-	  || !exists $seqids->{$chrom}{min};
-      $seqids->{$chrom}{max} = $value if $seqids->{$chrom}{max} < $value 
-	  || !exists $seqids->{$chrom}{max};
-      while (<$infh>) {
-	  chomp;
-	  last if /^track/;
-	  next if /^\#/;
-	  my ($chrom,$start,$end,$value) = split /\s+/;
-	  $seqids->{$chrom}{min} = $value if !exists $seqids->{$chrom}{min} || $seqids->{$chrom}{min} > $value;
-	  $seqids->{$chrom}{max} = $value if !exists $seqids->{$chrom}{max} || $seqids->{$chrom}{max} < $value;
-      }
+      my @tokens = split /\s+/,$bedline;
+      $stats->add_data($tokens[-1]);
   }
-  
-  else {
-    my $chrom = $self->{track_options}{chrom};
-    return if defined $seqids->{$chrom}{min};  # we've already parsed this chromosome
-    my ($min,$max);
-    while (<$infh>) {
-	last if /^track/;
-	next unless /\S/;
-	next if /^\#/;
-	next if /^(fixedStep|variableStep)/;
-	chomp;
-	my @tokens = split /\s+/;
-	my $value = @tokens > 1 ? $tokens[1]  # variable line
-                                : $tokens[0]; # fixed line
-	$min = $value if !defined $min || $min > $value;
-	$max = $value if !defined $max || $max < $value;
+
+  while (<$infh>) {
+      last if /^track|fixedStep|variableStep/;
+      next if /^\#/;
+      my @tokens = split(/\s+/,$_) or next;
+      $stats->add_data($tokens[-1]);
+  }
+
+  my $chrom = $self->{track_options}{chrom};
+
+  $seqids->{$chrom}{min}    = $stats->min();
+  $seqids->{$chrom}{max}    = $stats->max();
+  $seqids->{$chrom}{mean}   = $stats->mean();
+  $seqids->{$chrom}{stdev}  = $stats->standard_deviation();
+}
+
+sub sample_file {
+    my $fh      = shift;
+
+    my $samples = shift;
+
+    my $stats = Statistics::Descriptive::Sparse->new();
+
+    my $size = stat($fh)->size;
+    my $count=0;
+    while ($count < $samples) {
+	seek($fh,int(rand $size),0) or die;
+	scalar <$fh>; # toss first line
+	my $line = <$fh>; # next full line
+	$line or next;
+	my @tokens = split /\s+/,$line;
+	my $value  = $tokens[-1];
+	next unless $value =~ /^[\d\seE.+-]+$/; # non-numeric
+	$stats->add_data($value);
+	$count++;
     }
-    $seqids->{$chrom}{min} = $min;
-    $seqids->{$chrom}{max} = $max;
-  }
+
+    return {
+	min   => $stats->min,
+	max   => $stats->max,
+	mean  => $stats->mean,
+	stdev => $stats->stdev,
+    };
 }
 
 sub process_bed {
@@ -412,15 +438,26 @@ sub wigfile {
   my $current_track = $self->{trackname};
   unless (exists $self->current_track->{seqids}{$seqid}{wig}) {
     my $path    = "$self->{base}/$current_track.$seqid.$ts.wig";
+    my @stats;
+    foreach (qw(min max mean stdev)) {
+	my $value = $self->current_track->{seqids}{$seqid}{$_} ||
+	    $self->{FILEWIDE_STATS}{$_};
+	push @stats,($_=>$value);
+    }
+    my $step = $self->{track_options}{step} || 1;
+    my $span = $self->{track_options}{span} || 
+	$self->{track_options}{step} || 
+	1;
+    my $trim = $self->current_track->{display_options}{trim} || 'stdev2';
     my $wigfile = Bio::Graphics::Wiggle->new(
 					     $path,
 					     1,
 					     {
 					      seqid => $seqid,
-					      min  => $self->current_track->{seqids}{$seqid}{min},
-					      max  => $self->current_track->{seqids}{$seqid}{max},
-					      step => $self->{track_options}{step} || 1,
-					      span => $self->{track_options}{span} || $self->{track_options}{step} || 1,
+					      step  => $step,
+					      span  => $span,
+					      trim  => $trim,
+					      @stats,
 					     },
 					    );
     $wigfile or croak "Couldn't create wigfile $wigfile: $!";
@@ -443,7 +480,7 @@ sub translate_color {
   unless  (%color_name) {
     while (<DATA>) {
       chomp;
-      my ($hex,$name) = split;
+      my ($hex,$name) = split or next;
       $color_name{$hex} = $name;
     }
   }

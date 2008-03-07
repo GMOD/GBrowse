@@ -50,7 +50,6 @@ following format:
       4  byte perl native float, the "max" value
       4  byte long integer, value of "span"
       4  byte perl native float, the mean 
-      4  byte perl native float, the median
       4  byte perl native float, the standard deviation
       null padding to 256 bytes for future use
 
@@ -178,7 +177,7 @@ use IO::File;
 use Carp 'croak','carp','confess';
 
 use constant HEADER_LEN => 256;
-use constant HEADER => '(Z50LFFLFFF)@'.HEADER_LEN; # seqid, step, min, max, span, mean, median, stdev
+use constant HEADER => '(Z50LFFLFF)@'.HEADER_LEN; # seqid, step, min, max, span, mean, stdev
 use constant BODY   => 'C';
 
 sub new {
@@ -199,9 +198,13 @@ sub new {
   $merged_options{seqid} ||= 'chrUnknown';
   $merged_options{min}   ||= 0;
   $merged_options{max}   ||= 255;
+  $merged_options{mean}  ||= 128;
+  $merged_options{stdev} ||= 255;
+  $merged_options{trim}  ||= 'none';
   $merged_options{step}  ||= 1;
   $merged_options{span}  ||= $merged_options{step};
-  $self->{options}    = \%merged_options;
+  $self->{options}         = \%merged_options;
+  $self->_do_trim        unless $self->trim eq 'none';
   return $self;
 }
 
@@ -250,8 +253,8 @@ sub max   { shift->_option('max',@_) }
 sub step  { shift->_option('step',@_) }
 sub span  { shift->_option('span',@_) }
 sub mean  { shift->_option('mean',@_) }
-sub median{ shift->_option('median',@_) }
 sub stdev { shift->_option('stdev',@_) }
+sub trim  { shift->_option('trim',@_)  }
 
 sub smoothing {
   my $self = shift;
@@ -266,14 +269,13 @@ sub _readoptions {
   my $header;
   $fh->read($header,HEADER_LEN) == HEADER_LEN or die "read failed: $!";
   my ($seqid,$step,$min,$max,$span,
-      $mean,$median,$stdev) = unpack(HEADER,$header);
+      $mean,$stdev) = unpack(HEADER,$header);
   return { seqid => $seqid,
 	   step  => $step,
 	   span  => $span,
 	   min   => $min,
 	   max   => $max,
 	   mean  => $mean,
-	   median=> $median,
 	   stdev => $stdev,
   };
 }
@@ -282,9 +284,33 @@ sub _writeoptions {
   my $self    = shift;
   my $options = shift;
   my $fh = $self->fh;
-  my $header = pack(HEADER,@{$options}{qw(seqid step min max span mean median stdev)});
+  my $header = pack(HEADER,@{$options}{qw(seqid step min max span mean stdev)});
   $fh->seek(0,0);
   $fh->print($header) or die "write failed: $!";
+}
+
+sub _do_trim {
+    my $self = shift;
+    my $trim = $self->trim;
+    my $method = "_trim_${trim}";
+    unless ($self->can($method)) {
+	carp "invalid trim method $trim";
+	return;
+    }
+    
+    $self->$method;
+}
+
+# two standard deviations from mean
+sub _trim_stdev2 {
+    my $self   = shift;
+    my $mean   = $self->mean;
+    my $stdev2 = $self->stdev * 2;
+    my $min    = $self->min > $mean - $stdev2 ? $self->min : $mean - $stdev2;
+    my $max    = $self->max < $mean + $stdev2 ? $self->max : $mean + $stdev2;
+    warn "_trim_stdev2: setting min to $min, max to $max (was ",$self->min,',',$self->max,')';
+    $self->min($min);
+    $self->max($max);
 }
 
 sub set_value {

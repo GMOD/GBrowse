@@ -8,15 +8,28 @@ gbrowse_netinstall.pl
 
   gbrowse_netinstall.pl -b|--build_param_str BUILD_STRING [options]
 
-  options:
-  -h|--help            : Show this message
-  -d|--dev             : Use the developement version of both GBrowse and
-                         bioperl from CVS
-  --bioperl_dev        : Use the development version of BioPerl from CVS
-  --gbrowse_dev        : Use the development version of GBrowse from CVS
-  -b|--build_param_str : Use this string to predefine Makefile.PL parameters
-                         such as CONF or PREFIX for GBrowse installation
-  --wincvs             : WinCVS is present--allow cvs installs on Windows
+options: 
+
+ -h|--help                Show this message 
+ -d|--dev                 Use the developement version of both GBrowse 
+                            and bioperl from CVS
+ --bioperl_dev            Use the development version of BioPerl from CVS
+ --gbrowse_dev            Use the development version of GBrowse from CVS
+ --build_param_str=<args> Use this string to set Makefile.PL parameters
+                            such as CONF or PREFIX for GBrowse 
+                            installation
+ --install_param_str=<args>
+                           Use this string to predefine 'make install' 
+                            parameters such as CONF or PREFIX for
+                            GBrowse installation
+ --wincvs                 WinCVS is present--allow cvs install on Windows 
+ --gbrowse_path           Path to GBrowse tarball (will not download 
+                            GBrowse); Assumes a resulting
+                            'Generic-Genome-Browser' directory 
+ --bioperl_path           Path to BioPerl tarball (will not download
+                            BioPerl); Assumes a resulting'bioperl-live' 
+                            directory
+ --skip_start             Don't wait for 'Enter' at program start
 
 =head1 DESCRIPTION
 
@@ -36,29 +49,35 @@ Save this to disk as "gbrowse_netinstall.pl" and run:
 
 use warnings;
 use strict;
+use CPAN;
 use Config;
 use Getopt::Long;
 use Pod::Usage;
-use LWP::Simple;
 use File::Copy 'cp';
 use File::Temp qw(tempdir);
-
+use LWP::Simple;
+use Cwd;
 
 use constant NMAKE => 'http://download.microsoft.com/download/vc15/patch/1.52/w95/en-us/nmake15.exe';
 
-my ( $show_help, $get_from_cvs, $build_param_string, 
+my ( $show_help, $get_from_cvs, $build_param_string, $working_dir,
      $get_gbrowse_cvs, $get_bioperl_cvs, $is_cygwin, $windows,
-     $binaries, $make, $tmpdir, $wincvs );
+     $binaries, $make, $tmpdir, $wincvs, $gbrowse_path,$bioperl_path,
+     $skip_start, $install_param_string, );
 
 BEGIN {
 
   GetOptions(
         'h|help'              => \$show_help,             # Show help and exit
         'd|dev'               => \$get_from_cvs,          # Use the dev cvs
-        'b|build_param_str=s' => \$build_param_string,    # Build parameters
+        'build_param_str=s'   => \$build_param_string,    # Build parameters
         'bioperl_dev'         => \$get_bioperl_cvs,
         'gbrowse_dev'         => \$get_gbrowse_cvs,
         'wincvs'              => \$wincvs,
+        'gbrowse_path=s'      => \$gbrowse_path,
+        'bioperl_path=s'      => \$bioperl_path,
+        'install_param_str=s' => \$install_param_string,
+        'skip_start'          => \$skip_start,
         )
         or pod2usage(2);
   pod2usage(2) if $show_help;
@@ -69,54 +88,59 @@ BEGIN {
   print STDERR "see the documentation on the GMOD website for more information.)\n";
   print STDERR "The whole process will take several minutes and will generate lots of messages.\n";
   print STDERR "\nPress return when you are ready to start!\n";
-  my $h = <>;
+  my $h = <> unless $skip_start;
   print STDERR "*** Installing Perl files needed for a net-based install ***\n";
-  eval {
-    use CPAN qw{install};
-    eval "use CPAN::Config;"; 
-    if ($@) {
-        CPAN::Shell->Config();
-    }
 
-    $tmpdir = tempdir(CLEANUP=>1) 
-      or die "Could not create temporary directory: $!";
+  eval "CPAN::Config->load";
+  eval "CPAN::Config->commit";
 
-    $windows = $Config{osname} =~ /mswin/i;
+  $working_dir = getcwd;
 
-    $binaries = $Config{'binexp'};
-    $make     = $Config{'make'};
+  $tmpdir = tempdir(CLEANUP=>1) 
+    or die "Could not create temporary directory: $!";
 
-    CPAN::Shell->install('Archive::Zip');
-    CPAN::Shell->install('YAML');
-    CPAN::Shell->install('HTML::Tagset');
-    CPAN::Shell->install('LWP::Simple');
-    use Archive::Zip ':ERROR_CODES';
+  $windows = $Config{osname} =~ /mswin/i;
 
-    if ($windows && !-e "$binaries/${make}.exe") {
+  $binaries = $Config{'binexp'};
+  $make     = $Config{'make'};
 
-      print STDERR "Installing make utility...\n";
-
-      -w $binaries or die "$binaries directory is not writeable. Please re-login as Admin.\n";
-
-      chdir $tmpdir;
-
-      my $rc = mirror(NMAKE,"nmake.zip");
-      die "Could not download nmake executable from Microsoft web site."
-        unless $rc == RC_OK or $rc == RC_NOT_MODIFIED;
-
-      my $zip = Archive::Zip->new('nmake.zip') or die "Couldn't open nmake zip file for decompression: $!";
-      $zip->extractTree == AZ_OK or die "Couldn't unzip file: $!";
-      -e 'NMAKE.EXE' or die "Couldn't extract nmake.exe";
-
-      cp('NMAKE.EXE',"$binaries/${make}.EXE") or die "Couldn't install nmake.exe: $!";
-      cp('NMAKE.ERR',"$binaries/${make}.ERR"); # or die "Couldn't install nmake.err: $!"; # not fatal
-    }
-
-    CPAN::Shell->install('Archive::Tar');
-    CPAN::HandleConfig->commit;
+  if ($windows) {
+    system("ppm install YAML");
   }
-}
+  else {
+    CPAN::Shell->install('YAML');
+  }
+  CPAN::Shell->install('Archive::Zip');
+  CPAN::Shell->install('HTML::Tagset');
+  CPAN::Shell->install('LWP::Simple');
+  eval "use Archive::Zip ':ERROR_CODES',':CONSTANTS'";
 
+  if ($windows && !-e "$binaries/${make}.exe") {
+
+    print STDERR "Installing make utility...\n";
+    -w $binaries or die "$binaries directory is not writeable. Please re-login as Admin.\n";
+    chdir $tmpdir;
+
+    my $rc = mirror(NMAKE,"nmake.zip");
+    die "Could not download nmake executable from Microsoft web site."
+      unless $rc == RC_OK() or $rc == RC_NOT_MODIFIED();
+
+    my $zip = Archive::Zip->new('nmake.zip') or die "Couldn't open nmake zip file for decompression: $!";
+    $zip->extractTree == AZ_OK() or die "Couldn't unzip file: $!";
+    -e 'NMAKE.EXE' or die "Couldn't extract nmake.exe";
+
+    cp('NMAKE.EXE',"$binaries/${make}.EXE") or die "Couldn't install nmake.exe: $!";
+    cp('NMAKE.ERR',"$binaries/${make}.ERR"); # or die "Couldn't install nmake.err: $!"; # not fatal
+  }
+
+  CPAN::Shell->install('Archive::Tar');
+  #print STDERR $@;
+  #print STDERR "at end of BEGIN{}\n";
+  1;
+};
+
+#print STDERR "here i am\n";
+#print STDERR $@;
 
 use Archive::Tar;
 use CPAN '!get';
@@ -133,9 +157,11 @@ if ($windows and !$wincvs and ($get_bioperl_cvs or $get_gbrowse_cvs) ) {
 }
 
 $build_param_string ||="";
+$install_param_string ||="";
 
 use constant BIOPERL_VERSION      => 'bioperl-1.5.2_102';
 use constant BIOPERL_REQUIRES     => '1.005002';  # sorry for the redundancy
+use constant BIOPERL_LIVE_URL     => 'http://bioperl.org/DIST/nightly_builds/';
 use constant GBROWSE_DEFAULT      => '1.68';
 use constant SOURCEFORGE_MIRROR1  => 'http://superb-west.dl.sourceforge.net/sourceforge/gmod/';
 use constant SOURCEFORGE_MIRROR2  => 'http://easynews.dl.sourceforge.net/sourceforge/gmod/';
@@ -167,6 +193,12 @@ unless ( eval "use GD 2.31; 1" ) {
 }
 
 print STDERR "\n*** Installing prerequisites for BioPerl ***\n";
+
+if ($windows and !eval "use DB_File; 1") {
+  print STDERR "Installing DB_File for BioPerl.\n";
+  system("ppm install DB_File");
+}
+system("ppm install SVG") if $windows;
 CPAN::Shell->install('GD::SVG');
 CPAN::Shell->install('IO::String');
 CPAN::Shell->install('Text::Shellwords');
@@ -174,16 +206,17 @@ CPAN::Shell->install('CGI::Session');
 CPAN::Shell->install('File::Temp');
 CPAN::Shell->install('Class::Base');
 CPAN::Shell->install('Digest::MD5');
+CPAN::Shell->install('Statistics::Descriptive');
 
 my $version = BIOPERL_REQUIRES;
-if (!(eval "use Bio::Perl $version; 1") or $get_bioperl_cvs) {
+if (!(eval "use Bio::Perl $version; 1") or $get_bioperl_cvs or $bioperl_path) {
   print STDERR "\n*** Installing BioPerl ***\n";
-  if ($windows and !$get_bioperl_cvs) {
+  if ($windows and !$get_bioperl_cvs and !$bioperl_path) {
     my $bioperl_index = find_bioperl_ppm();
     system("ppm install --force $bioperl_index");
   } else {
       CPAN::Shell->install('Module::Build');
-      do_install(BIOPERL,'bioperl.tgz',BIOPERL_VERSION,'Build',$get_bioperl_cvs);
+      do_install(BIOPERL,'bioperl.tgz',BIOPERL_VERSION,'Build',$get_bioperl_cvs,'',$bioperl_path);
   }
 }
 else {
@@ -194,11 +227,11 @@ print STDERR "\n *** Installing Generic-Genome-Browser ***\n";
 
 my $latest_version = find_gbrowse_latest();
 my $gbrowse        = SOURCEFORGE_MIRROR1.$latest_version.'.tar.gz';
-eval {do_install($gbrowse,'gbrowse.tgz',$latest_version,'make',$get_gbrowse_cvs,$build_param_string)};
+eval {do_install($gbrowse,'gbrowse.tgz',$latest_version,'make',$get_gbrowse_cvs,$build_param_string,$gbrowse_path,$install_param_string)};
 if ($@ =~ /Could not download/) {
   print STDERR "Could not download: server down? Trying a different server...\n";
   $gbrowse        = SOURCEFORGE_MIRROR2.$latest_version.'.tar.gz';
-  do_install($gbrowse,'gbrowse.tgz',$latest_version,'make',$get_gbrowse_cvs,$build_param_string);
+  do_install($gbrowse,'gbrowse.tgz',$latest_version,'make',$get_gbrowse_cvs,$build_param_string,$install_param_string);
 }
 
 exit 0;
@@ -209,30 +242,47 @@ END {
 
 sub do_install {
   my ($download,$local_name,$distribution,$method,
-                     $from_cvs,$build_param_string) = @_;
+         $from_cvs,$build_param_string,$file_path,$install_param_string) = @_;
 
   chdir $tmpdir;
 
-  do_get_distro($download,$local_name,$distribution,$from_cvs);
+  do_get_distro($download,$local_name,$distribution,$from_cvs,$file_path);
 
   my $build_str = $windows ? "Build" : "./Build";
 
   if ($method eq 'make') {
-      system("perl Makefile.PL") == 0
+      system("perl Makefile.PL $build_param_string") == 0
             or die "Couldn't run perl Makefile.PL command\n";
-      system("$make install UNINST=1 $build_param_string")    == 0 ;
+      system("$make install UNINST=1 $install_param_string")    == 0 ;
   }
   elsif ($method eq 'Build') {
-      system("perl $build_str.PL")   == 0
+      system("perl $build_str.PL --yes=1")   == 0
             or die "Couldn't run perl Build.PL command\n";
       system("$build_str install --uninst 1") == 0;
   }
 }
 
 sub do_get_distro {
-    my ($download,$local_name,$distribution,$from_cvs) = @_;
+    my ($download,$local_name,$distribution,$from_cvs,$file_path) = @_;
 
-    if ($from_cvs) {
+    if ($file_path) {
+        chdir $working_dir;
+        if (-e $file_path) { #must be an absolute path
+            cp($file_path, "$tmpdir/$local_name");
+        }
+        elsif (-e "$working_dir/$file_path") { #assume it's a rel path from the original directory
+            cp("$working_dir/$file_path", "$tmpdir/$local_name");
+        }
+        else {
+            print "Couldn't find $file_path; nothing to do so quitting...\n";
+            exit(-1);
+        }
+        $distribution = ($local_name =~ /gbrowse/)
+                      ? "Generic-Genome-Browser" : "bioperl-live"; 
+        chdir $tmpdir;
+        extract_tarball($local_name,$distribution);
+    }
+    elsif ($from_cvs) {
         my $distribution_dir;
         if ($local_name =~ /gbrowse/) {
             $distribution_dir = 'Generic-Genome-Browser';
@@ -253,21 +303,18 @@ sub do_get_distro {
 
         }
         else { #bioperl
+            print STDERR "Downloading bioperl-live...\n";
             $distribution_dir = 'bioperl-live';
-            print STDERR "\n\nPlease enter 'cvs' when prompted for a password.\n";
-            unless (
-              (system(
-    'cvs -d :pserver:cvs@code.open-bio.org:/home/repository/bioperl login') ==0
-                or $is_cygwin)
-             &&
-              (system( 
-    'cvs -z3 -d:pserver:cvs@code.open-bio.org:/home/repository/bioperl checkout bioperl-live') == 0 
-                or $is_cygwin)  #cygwin system calls not always 0 on success
-            ) 
-            {
-                print STDERR "Failed to check out the GBrowse from CVS: $!\n";
+
+            my $filename = determine_filename();
+            my $url = BIOPERL_LIVE_URL."/$filename";
+            my $rc = mirror($url, $filename); 
+            unless ($rc == RC_OK or $rc == RC_NOT_MODIFIED){
+                print STDERR "Failed to get nightly bioperl-live file: $rc\n";
                 return undef;
             }
+            extract_tarball($filename,$distribution_dir);
+            return 1;
         }
         chdir $distribution_dir
             or die "Couldn't enter $distribution_dir directory: $@";
@@ -278,16 +325,42 @@ sub do_get_distro {
         die "Could not download $distribution distribution from $download."
             unless $rc == RC_OK or $rc == RC_NOT_MODIFIED;
 
-        print STDERR "Unpacking $local_name...\n";
-        my $z = Archive::Tar->new($local_name,1)
-            or die "Couldn't open $distribution archive: $@";
-        $z->extract()
-            or die "Couldn't extract $distribution archive: $@";
-        $distribution =~ s/--/-/;
-        chdir $distribution
-            or die "Couldn't enter $distribution directory: $@";
+        extract_tarball($local_name,$distribution);
     }
     return 1;
+}
+
+sub determine_filename {
+  my $listing = "dirlisting.html";
+  my $rc = mirror(BIOPERL_LIVE_URL, $listing);
+  die "Could not get directory listing of bioperl nightly build url: $rc\n"
+      unless ($rc == RC_OK or $rc == RC_NOT_MODIFIED);
+
+  my $filename; 
+  open LIST, $listing or die "unable to open $listing: $!\n";
+  while (<LIST>) {
+    if (/href="(bioperl-live.*?\.tar\.gz)"/) {
+      $filename = $1;
+      last;
+    }
+  }
+  close LIST;
+  unlink $listing; 
+  return $filename;
+}
+
+sub extract_tarball {
+  my ($local_name,$distribution) = @_;
+
+  print STDERR "Unpacking $local_name...\n";
+  my $z = Archive::Tar->new($local_name,1)
+        or die "Couldn't open $distribution archive: $@";
+  $z->extract()
+        or die "Couldn't extract $distribution archive: $@";
+  $distribution =~ s/--/-/;
+  chdir $distribution
+        or die "Couldn't enter $distribution directory: $@";
+  return;
 }
 
 # make sure ppm repositories are correct!

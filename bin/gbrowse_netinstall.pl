@@ -161,6 +161,7 @@ $install_param_string ||="";
 
 use constant BIOPERL_VERSION      => 'bioperl-1.5.2_102';
 use constant BIOPERL_REQUIRES     => '1.005002';  # sorry for the redundancy
+use constant BIOPERL_LIVE_URL     => 'http://bioperl.org/DIST/nightly_builds/';
 use constant GBROWSE_DEFAULT      => '1.68';
 use constant SOURCEFORGE_MIRROR1  => 'http://superb-west.dl.sourceforge.net/sourceforge/gmod/';
 use constant SOURCEFORGE_MIRROR2  => 'http://easynews.dl.sourceforge.net/sourceforge/gmod/';
@@ -205,6 +206,7 @@ CPAN::Shell->install('CGI::Session');
 CPAN::Shell->install('File::Temp');
 CPAN::Shell->install('Class::Base');
 CPAN::Shell->install('Digest::MD5');
+CPAN::Shell->install('Statistics::Descriptive');
 
 my $version = BIOPERL_REQUIRES;
 if (!(eval "use Bio::Perl $version; 1") or $get_bioperl_cvs or $bioperl_path) {
@@ -301,21 +303,18 @@ sub do_get_distro {
 
         }
         else { #bioperl
+            print STDERR "Downloading bioperl-live...\n";
             $distribution_dir = 'bioperl-live';
-            print STDERR "\n\nPlease enter 'cvs' when prompted for a password.\n";
-            unless (
-              (system(
-    'cvs -d :pserver:cvs@code.open-bio.org:/home/repository/bioperl login') ==0
-                or $is_cygwin)
-             &&
-              (system( 
-    'cvs -z3 -d:pserver:cvs@code.open-bio.org:/home/repository/bioperl checkout bioperl-live') == 0 
-                or $is_cygwin)  #cygwin system calls not always 0 on success
-            ) 
-            {
-                print STDERR "Failed to check out the GBrowse from CVS: $!\n";
+
+            my $filename = determine_filename();
+            my $url = BIOPERL_LIVE_URL."/$filename";
+            my $rc = mirror($url, $filename); 
+            unless ($rc == RC_OK or $rc == RC_NOT_MODIFIED){
+                print STDERR "Failed to get nightly bioperl-live file: $rc\n";
                 return undef;
             }
+            extract_tarball($filename,$distribution_dir);
+            return 1;
         }
         chdir $distribution_dir
             or die "Couldn't enter $distribution_dir directory: $@";
@@ -329,6 +328,25 @@ sub do_get_distro {
         extract_tarball($local_name,$distribution);
     }
     return 1;
+}
+
+sub determine_filename {
+  my $listing = "dirlisting.html";
+  my $rc = mirror(BIOPERL_LIVE_URL, $listing);
+  die "Could not get directory listing of bioperl nightly build url: $rc\n"
+      unless ($rc == RC_OK or $rc == RC_NOT_MODIFIED);
+
+  my $filename; 
+  open LIST, $listing or die "unable to open $listing: $!\n";
+  while (<LIST>) {
+    if (/href="(bioperl-live.*?\.tar\.gz)"/) {
+      $filename = $1;
+      last;
+    }
+  }
+  close LIST;
+  unlink $listing; 
+  return $filename;
 }
 
 sub extract_tarball {

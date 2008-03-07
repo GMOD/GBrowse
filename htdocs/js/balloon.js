@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.24 2008-02-26 01:41:37 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.25 2008-03-07 18:14:10 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -67,7 +67,7 @@ var Balloon = function() {
   this.delayTime = 500;
 
   // If fade-in/out is allowed
-  this.allowFade = true;
+  this.allowFade = false;
 
   // time interval for fade-in (msec)
   this.fadeIn    = 750;
@@ -82,7 +82,8 @@ var Balloon = function() {
   this.padding  = 10;
 
   // How long to display mousover balloons (msec)
-  this.displayTime = 3000;
+  // false = 'always on'
+  this.displayTime = false;
 
   // width of shadow (space aroung whole balloon; px)
   // This can be zero if there is no shadow and the
@@ -353,7 +354,7 @@ Balloon.prototype.makeBalloon = function() {
   if (balloonIsSticky) {
     self.setStyle('contents','margin-right',10); 
   }
-  else {
+  else if (self.displayTime)  {
       self.timeoutAutoClose = window.setTimeout(this.hideTooltip,self.displayTime);
   }
   return balloon;

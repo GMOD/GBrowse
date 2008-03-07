@@ -92,6 +92,7 @@ For example:
     perl Makefile.PL APACHE=~/gbrowse/www \\
 		     LIB=~/gbrowse/lib \\
 		     BIN=~/gbrowse/bin \\
+		     PREFIX=~/gbrowse \\
 		     NONROOT=1
 
 will perform a non-privileged installation that places all gbrowse

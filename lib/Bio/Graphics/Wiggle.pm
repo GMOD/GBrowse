@@ -179,6 +179,7 @@ use Carp 'croak','carp','confess';
 use constant HEADER_LEN => 256;
 use constant HEADER => '(Z50LFFLFF)@'.HEADER_LEN; # seqid, step, min, max, span, mean, stdev
 use constant BODY   => 'C';
+use constant DEBUG  => 1;
 
 sub new {
   my $class          = shift;
@@ -291,26 +292,35 @@ sub _writeoptions {
 
 sub _do_trim {
     my $self = shift;
-    my $trim = $self->trim;
-    my $method = "_trim_${trim}";
+    my $trim = lc $self->trim;
+    my ($method,$arg);
+    if ($trim =~ /([a-z]+)(\d+)/) {
+      $method = "_trim_${1}";
+      $arg    = $2;
+    }
+    else {
+      $method = "_trim_${trim}";
+    }
     unless ($self->can($method)) {
 	carp "invalid trim method $trim";
 	return;
     }
     
-    $self->$method;
+    $self->$method($arg);
 }
 
-# two standard deviations from mean
-sub _trim_stdev2 {
-    my $self   = shift;
-    my $mean   = $self->mean;
-    my $stdev2 = $self->stdev * 2;
-    my $min    = $self->min > $mean - $stdev2 ? $self->min : $mean - $stdev2;
-    my $max    = $self->max < $mean + $stdev2 ? $self->max : $mean + $stdev2;
-    warn "_trim_stdev2: setting min to $min, max to $max (was ",$self->min,',',$self->max,')';
-    $self->min($min);
-    $self->max($max);
+# trim n standard deviations from the mean
+sub _trim_stdev {
+  my $self   = shift;
+  my $factor = shift || 1;
+  my $mean   = $self->mean;
+  my $stdev  = $self->stdev * $factor;
+  my $min    = $self->min > $mean - $stdev ? $self->min : $mean - $stdev;
+  my $max    = $self->max < $mean + $stdev ? $self->max : $mean + $stdev;
+  warn "_trim_stdev (* $factor) : setting min to $min, max to $max (was ",$self->min,',',$self->max,')'
+      if DEBUG;
+  $self->min($min);
+  $self->max($max);
 }
 
 sub set_value {
@@ -576,7 +586,10 @@ sub scale {
     } @$values;
     return \@return;
   } else {
-    return 1 + round (($values - $min)/$scale);
+    my $v = 1 + round (($values - $min)/$scale);
+    $v = 1   if $v < 1;
+    $v = 255 if $v > 255;
+    return $v;
   }
 }
 

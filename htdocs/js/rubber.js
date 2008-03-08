@@ -3,7 +3,7 @@
  rubber.js -- a base class for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.1.2.14 2008-02-26 01:41:37 sheldon_mckay Exp $
+ $Id: rubber.js,v 1.1.2.15 2008-03-08 14:37:16 sheldon_mckay Exp $
 
 */
 
@@ -133,15 +133,13 @@ SelectArea.prototype.startRubber = function(self,event) {
   currentSelectArea = self;
 
   // suppress all popup balloon while drag-select is active
+  Balloon.prototype.hideTooltip(1);  
   balloonIsSuppressed = true;
 
   // disable help balloon after first selection is made.
-  if (balloon) {
-    balloon.hideTooltip();
-    var nullfunc = function(){return false};
-    self.scalebar.onmouseover = nullfunc;
-  }
-
+  var nullfunc = function(){return false};
+  self.scalebar.onmouseover = nullfunc;
+ 
   // set the selectbox bgcolor
   self.setOpacity(self.selectBox,self.opacity||0.5);  
 

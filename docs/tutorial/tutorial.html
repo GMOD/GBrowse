@@ -22,6 +22,78 @@ and MySQL adaptors. For a tutorial that uses the older Bio::DB::GFF
 adaptor, see <a href="dbgff/tutorial.html">Using GBrowse with
 Bio::DB::GFF.</a></p>
 
+<h2>Table of Contents</h2>
+
+<ol>
+  <li><a href="#basics">The Basics</a>
+      <ol>
+	<li><a href="#data_file">The Data File</a>
+	<li><a href="#basic_conf">Defining Tracks</a>
+	<li><a href="#descriptions">Adding Descriptions to a Feature</a>
+	<li><a href="#naming">Adjusting GBrowse Name Searches</a>
+	<li><a href="#linking">Linking</a>
+	<li><a href="#balloon">Adding Popup Balloons to Tracks</a>
+	    <ol>
+	      <li><a href="#customizing_balloons">Customizing Balloons</a>
+	    </ol>
+      </ol>
+  <li><a href="#feature_types">Displaying Common Types of Features</a>
+      <ol>
+	<li><a href="#segmented_features">Multi-segmented features</a>
+	<li><a href="#canonical_gene">Protein-Coding Genes</a>
+	    <ol>
+	      <li><a href="#simple_gene">Simpler Genes</a>
+	    </ol>
+	<li><a href="#cds">Reading Frames</a>
+	<li><a href="#grouping">Grouped Features</a>
+	<li><a href="#graph">Quantitative Data (basic)</a>
+	<li><a href="#wiggle">Quantitative Data (advanced)</a>
+	<li><a href="#dna">DNA and 3-frame translations</a>
+	<li><a href="#multiple_alignments">ESTs and Other Alignments</a>
+	    <ol>
+	      <li><a href="#adding_dna_to_alignments">Adding DNA to Alignments</a>
+	    </ol>
+	<li><a href="#trace">Trace Data</a>
+      </ol>
+
+  <li><a href="#enhancements">GBrowse Enhancements</a>
+      <ol>
+	<li><a href="#regionview">Adding a "Region" Panel</a>
+	<li><a href="#overview">Putting Features into the Overview &amp; Regionview</a>
+	<li><a href="#semantic_zooming">Semantic Zooming</a>
+	<li><a href="#grouping_tracks">Grouping Tracks</a>
+	<li><a href="#group_tables">Grouping Tracks into a Table</a>
+	<li><a href="#plugins">Using Plugins</a>
+      </ol>
+
+  <li><a href="#external">Adding Features from External Sources</a>
+      <ol>
+	<li><a href="#upload">Uploading an Annotation File</a>
+	<li><a href="#sharing">Sharing an Annotation File</a>	    
+	<li><a href="#DAS">Using GBrowse as a DAS Server or Client</a>
+	    <ol>
+	      <li><a href="#das_combining">Combining Databases with
+      DAS</a>
+	      <li><a href="#das_exporting">Exporting DAS Tracks to
+      Ensembl and other Genome Browsers<a>
+	      <li><a href="#das_entire">Running GBrowse off DAS Entirely<a>
+	    </ol>
+      </ol>
+
+  <li><a href="#other_backends">Using Other Backends</a>
+      <ol>
+	<li><a href="#berkeleydb">The Berkeleydb Backend</a>
+	    <ol>
+	      <li><a href="#bp_seqfeature_load">The bp_seqfeature_load.pl script</a>
+	    </ol>
+	<li><a href="#mysql">The MySQL Backend</a>
+	<li><a href="#other_backends">Other Backends</a>
+      </ol>
+  <li><a href="#conclusion">Conclusion</a>
+</ol>
+
+<h2><a name="basics">1. The Basics</a></h2>
+
 <p>
 
 We will be working with simulated Volvox genome annotation data.  The
@@ -43,14 +115,13 @@ These directories contain data files used during the tutorial:
   <dd>GBrowse configuration files for you to take and modify.
 </dl>
 
-<h2><a name="basics">1. The Basics</a></h2>
-
 <p>
 
-We will be using a file-based database which allows GBrowse to run
-directly off text files.  To prepare this database for use, find the
-GBrowse databases directory which was created in your Apache web
-server directory at the time of installation.  It should be located at
+To introduce you to the system we will be using a file-based database
+which allows GBrowse to run directly off text files.  To prepare this
+database for use, find the GBrowse databases directory which was
+created in your Apache web server directory at the time of
+installation.  It should be located at
 <b>$HTDOCS/gbrowse/databases</b>, but check to make sure.
 
 <p>
@@ -208,17 +279,12 @@ direction.
 
 <p>
 
-<blockquote>
-If you're still having no luck, sorry!  Stop the
-tutorial and send an e-mail to GBrowse support at <a
-href="mailto:gmod-gbrowse@lists.sourceforge.net">gmod-gbrowse@lists.sourceforge.net</a>
-</blockquote>
+<blockquote style="background-color:orange"> If this doesn't fix the problem,
+please stop the tutorial and send an e-mail to GBrowse support at <a
+href="mailto:gmod-gbrowse@lists.sourceforge.net">gmod-gbrowse@lists.sourceforge.net.</a>
+Someone will be happy to assist you.  </blockquote>
 
-<hr>
-
-<hr>
-
-<h2><a name="data_file">2. The Data File</a></h2>
+<h3><a name="data_file">1.1 The Data File</a></h3>
 
 <p>
 
@@ -358,9 +424,7 @@ the GFF3 file. However, the reference sequence can have any source and
 type you choose. Commonly used types are "clone", "chromosome" and
 "contig."</b>
 
-<hr>
-
-<h2><a name="basic_conf">3. Defining Tracks</a></h2>
+<h3><a name="basic_conf">1.2. Defining Tracks</a></h3>
 
 <p>
 
@@ -465,9 +529,7 @@ This produces copious documentation on the Perl interface to all the
 glyphs, including some amazingly obscure ones, from which you should
 be able to deduce the GBrowse equivalents.
 
-<hr>
-
-<h2><a name="descriptions">4. Adding Descriptions to a Feature</a></h2>
+<h3><a name="descriptions">1.3. Adding Descriptions to a Feature</a></h3>
 
 <p>
 
@@ -534,7 +596,7 @@ means true.
 
 After updating the configuration file, you will need to reload the
 browser page and turn on the "Example motifs" checkbox below the main
-image. The result is shown in figure 4.
+image. The result is shown in Figure 4.
 
 <blockquote>
 <img src="figures/descriptions1.gif"><br>
@@ -552,9 +614,7 @@ To show that GBrowse will search the notes for keyword matches, try
 typing in "kinase."  You will be presented with a list of all the
 motifs whose Note attribute contains the word "kinase."
 
-<hr>
-
-<h2><a name="naming">5. Adjusting GBrowse Name Searches</a></h2>
+<h3><a name="naming">1.4. Adjusting GBrowse Name Searches</a></h3>
 
 <p>
 
@@ -688,12 +748,367 @@ you search with "hga", GBrowse will now offer you three matches:
 
 <blockquote>
 <img src="figures/aliases.gif"><br>
-<i>Figure 4: Searching for aliases</i>
+<i>Figure 5: Searching for aliases</i>
 </blockquote>
+
+<h3><a name="linking">1.5. Linking</a></h3>
+
+<p>
+
+The next topic we'll cover in this tutorial is configuring GBrowse's
+outgoing links.  When the user clicks on a glyph in the details image,
+he will be taken to another page by following a URL.  The URL to
+follow is generated from the <code>link</code> option.  The default
+link option is located in the [TRACK DEFAULTS] section of the config
+file; you can specify track-specific links by placing a
+<code>link</code> option in one or more of the individual track
+stanzas.
+
+<p>
+
+The volvox.conf track defaults looks like this:
+
+<blockquote class="example"><pre>
+[TRACK DEFAULTS]
+glyph         = generic
+height        = 10
+bgcolor       = lightgrey
+fgcolor       = black
+font2color    = blue
+label density = 25
+bump density  = 100
+# where to link to when user clicks in detailed view
+link          = AUTO
+</pre></blockquote>
+
+<p>
+
+In this case, we've been using a special link URL of "AUTO."  This
+generates an automatic link to a helper script named
+"gbrowse_details."  If you click on some of the features in the
+current volvox page you'll get an idea of what this script displays.
+Try clicking on a motif, a spliced transcript, the EDEN gene, and an
+EST.  When you click on the spliced transcript, notice that the
+content of the "Gene" attribute is displayed.  By adding attributes
+like this one, you can build up a very modest web-browsable database
+of facts about your features.
+
+<p>
+
+We're going to override the default link rule for the motif track.
+There's nothing sensible to link to, so we'll link to Google using
+first the motif's name, and then the motif's description.
+
+<p>
+
+Go to the [Motifs] stanza in the volvox.conf config file and modify it
+so that it looks like this:
+
+<blockquote class="example"><pre>
+[Motifs]
+feature      = polypeptide_domain
+glyph        = span
+height       = 5
+description  = 1
+link         = http://www.google.com/search?q=$name
+key          = Example motifs
+</pre></blockquote>
+
+<p>
+
+The only change we've made is to add a "link" option to the stanza,
+where the value is a Google search URL.  "$name" is a Perl variable.
+GBrowse will fill in this variable with the name of the motif.  Reload
+the page and click on a motif to see that this works as advertised
+("m01," "m02" and the other example motifs are similar to the names
+for galactic clusters, so be prepared for some astronomy hits).
+
+<p>
+
+It would be more sensible to link to the description of the motif, for
+example "helix loop helix."  Fortunately we can do that too.  Just
+change the link option to:
+
+<blockquote class="example"><pre>
+link         = http://www.google.com/search?q=$description
+</pre></blockquote>
+
+<p>
+
+There are a large number of possible variables that you can use inside
+link rules.  See the CONFIGURE_HOWTO document in the GBrowse
+distribution for the full list.  You can also construct links using
+Perl callbacks as described in the section on <a
+href="#multiple_alignments">displaying ESTs</a>.  This gives you the
+ability to generate any arbitrary URL.
+
+<p>
+
+If you want nothing to happen when the user clicks on a feature, just
+set link to empty ("link = ").
+
+<p>
+
+The last thing we'll do is to change the behavior of the [Motif] track
+so that:
+
+<ol>
+  <li>a new window pops up with the google search rather than
+      replacing the contents of the current window
+  <li>when the user mouses over a motif, a hints box will appear
+      telling him that clicking there will initiate a google search
+</ol>
+
+<p>
+
+These changes are easy:
+
+<blockquote class="example"><pre>
+[Motifs]
+feature      = polypeptide_domain
+glyph        = span
+height       = 5
+description  = 1
+link         = http://www.google.com/search?q=$description
+link_target  = _blank
+title        = Search Google for $description.
+key          = Example motifs
+</pre></blockquote>
+
+<p>
+
+There's now a <code>link_target</code> option.  This contains the name
+of a browser window in which to load the content when the user clicks
+on the feature.  If there's no window of that name, the browser will
+create a new window and give it the desired name.  Choose an ordinary
+name like "Google" if you want the Google content to be loaded into
+the same window each time, or choose "_blank" as we've done here in
+order to pop up a new fresh window each time the user clicks.
+
+<p>
+
+The <code>title</code> option contains a bit of text that will be
+displayed whenever the user hovers the mouse over the feature for a
+second or two.  The same variable substitution rules apply, so when
+the user mouses over feature "m06", a hints window will pop up that
+says "Search Google for SUSHI repeat."  Give it a try!
+</p>
+
+<h3><a name="balloon">1.6. Adding Popup Balloons to Tracks</a></h3>
+
+<p>GBrowse can display popup balloons when the user hovers over or clicks
+on a feature. The balloons can display arbitrary HTML, either provided
+in the config file, or fetched remotely via a URL. You can use this
+feature to create multiple choice menus when the user clicks on the
+feature, to pop up images on mouse hovers, or even to create little
+embedded query forms. See <a href="http://mckay.cshl.edu/balloons.html">
+http://mckay.cshl.edu/balloons.html</a> for examples.</p>
+
+<p>In the config file for the database you wish to modify, set ``balloon
+tips'' to a true value:</p>
+<blockquote class="example"><pre>
+     [GENERAL]
+     ...
+     balloon tips = 1
+</pre></blockquote>
+
+<p>Then add ``balloon hover'' and/or ``balloon click'' options to the track
+stanzas that you wish to add buttons to. You can also place these
+options in [TRACK DEFAULTS] to create a default balloon.</p>
+
+<p>``balloon hover'' specifies HTML or a URL that will be displayed when
+the user hovers over a feature. ``balloon click'' specifies HTML or a
+URL that will appear when the user clicks on a feature. The HTML can
+contain images, formatted text, and even controls. Examples:</p>
+
+<blockquote class="example"><pre>
+ balloon hover = &lt;h2&gt;Gene $name&lt;/h2&gt;
+ balloon click = &lt;h2&gt;Gene $name&lt;/h2&gt;
+       &lt;a href='<a href="http://www.google.com/search?q=">http://www.google.com/search?q=</a>$name'&gt;Search Google&lt;/a&gt;&lt;br&gt;
+       &lt;a href='<a href="http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=pubmed&amp;term=">http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=pubmed&amp;term=</a>$name'&gt;Search NCBI&lt;/a&gt;&lt;br&gt;
+</pre></blockquote>
+
+<p>For example, to add a balloon to the motifs track of the Volvox browser,
+add "balloon tips = 1" near the top of the volvox.conf file, and then
+add balloon hover and balloon click options like this: </p>
+
+<blockquote class="example"><pre>
+[Motifs]
+feature      = polypeptide_domain
+glyph        = span
+height       = 5
+description  = 1
+category     = Proteins
+balloon hover = &lt;h2&gt;Gene $name&lt;/h2&gt;
+balloon click = &lt;h2&gt;Gene $name&lt;/h2&gt;
+       &lt;a href='<a href="http://www.google.com/search?q=">http://www.google.com/search?q=</a>$name'&gt;Search Google&lt;/a&gt;&lt;br&gt;
+       &lt;a href='<a href="http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=pubmed&amp;term=">http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=pubmed&amp;term=</a>$name'&gt;Search NCBI&lt;/a&gt;&lt;br&gt;
+key          = Example motifs
+</pre></blockquote>
+
+
+<p>Alternatively, you can populate the balloon using data from an HTML
+page or dynamic CGI script running on the same server as GBrowse. This
+uses AJAX; it can often speed up page loading by reducing the amount
+of text that must be downloaded by the client. To dynamically load
+the balloon contents from the server, use a balloon hover or balloon
+click option like this:</p>
+
+<blockquote class="example"><pre>
+ balloon click = /cgi-bin/get_gene_data?gene=$name
+</pre></blockquote>
+
+<p>In this case, when the user clicks on the feature, it creates a
+balloon whose content contains the HTML returned by the CGI script
+``get_gene_data''. GBrowse knows that this is a URL rather than the
+contents of the balloon by looking for the leading slash. However, to
+reduce ambiguity, we recommend that you prefix the URL with ``url:'' as
+so:</p>
+
+<blockquote class="example"><pre>
+ balloon click = url:/cgi-bin/get_gene_data?gene=$name
+</pre></blockquote>
+
+<p>This also allows you to refer to relative URLs:</p>
+
+<blockquote class="example"><pre>
+ balloon click = url:../../get_gene_data?gene=$name
+</pre></blockquote>
+
+<p>It is also possible to fill the balloon with content from a remote
+source.  Simply specify a full URL beginning with ``http:'' ``https:'' or
+``ftp:''</p>
+
+<blockquote class="example"><pre>
+ balloon hover = <a href="http://www.wormbase.org/db/get?name=">http://www.wormbase.org/db/get?name=</a>$name;class=gene
+</pre></blockquote>
+
+<p>Note that the balloon library uses an internal &lt;iframe&gt; to
+populate the balloon with the content of external URLs. This means
+that vertical and horizontal scrollbars will appear if the content is
+too large to be contained within the balloon. If the formatting does
+not look right, you can design a custom balloon of the proper size as
+described in the next section.</p>
+
+<p>The usual option value substitution rules ($name, $start, etc) work
+with balloons, as do callbacks. GBrowse will automatically escapes
+single (') and double (``) quotes in the values returned by the
+''balloon hover`` and ''balloon click`` options so that you don't have
+to worry about them messing up the HTML.</p>
+
+<p>You might also wish to specify ``titles are balloons'' in the
+[GENERAL] section:</p>
+
+<blockquote class="example"><pre>
+ [GENERAL]
+ titles are balloons = 1
+</pre></blockquote>
+
+<p>This will generate balloons on all mouse hover events, using the
+content that would otherwise have been placed in the built-in browser
+tooltip.</p>
+
+<p>There is a limited amount of balloon customization that you can
+perform within the [track] section. If you wish the balloon to be
+sticky (require the user to press the close button) even if it is a
+hover balloon, then place this option in the [track section]:</p>
+
+<blockquote class="example"><pre>
+ balloon sticky = 1
+</pre></blockquote>
+
+<p>Setting ``balloon sticky'' to 0 will have the effect of making balloons
+disappear as soon as the mouse leaves them, even if it was created by
+a mouse click event.</p>
+
+<p>If you are displaying content from a remote web or FTP server and you
+do not like the height of the balloon, you can adjust the height with
+the ``balloon height'' option:</p>
+
+<blockquote class="example"><pre>
+ balloon height = 400
+</pre></blockquote>
+
+<h4><a name="customizing_balloons">1.6.1. Customizing Balloons</a></h4>
+<p>GBrowse supports multiple balloons with different shapes, sizes,
+background images and timing properties. There is one built-in
+balloon, named "balloon", which should meet most peoples'
+needs. However, you can configure any number of custom balloons.</p>
+
+<p>To declare two new balloons, create a "custom balloons" option in
+the [GENERAL] section:</p>
+
+<blockquote class="example"><pre>
+ custom balloons = [blue_balloon]
+                  images   =  /gbrowse/images/blue_balloons
+                  maxWidth = 300
+                  shadow   = 0
+
+                  [wide_balloon]
+                  maxWidth = 800
+</pre></blockquote>
+
+<p>This creates two new balloons. The first, named "blue_balloon" will
+look for its images and icons at the local URL
+/gbrowse/images/blue_balloons. It will have a maximum width of 300
+pixels, and will cast no shadow. The second, named "wide_balloon"
+takes all the defaults for the default balloon, including the location
+of its images in the directory /gbrowse/images/balloons, except that
+it has a maximum width of 800 pixels. The various balloon options are
+described in the <a href="http://www.gmod.org/wiki/index.php/Popup_Balloons">GMOD wiki</a>.
+</p>
+
+<p>To use the blue balloon rather than the standard one, format the
+"balloon hover" and/or "balloon click" options like this:</p>
+
+<blockquote class="example"><pre>
+ balloon click = [blue_balloon] /cgi-bin/get_gene_data?gene=$name
+</pre></blockquote>
+
+<p>The [blue_balloon] keyword tells gbrowse to use the blue balloon for
+clicks on these features. The standard balloon is called "balloon",
+and so the following two options are equivalent:</p>
+
+<blockquote class="example"><pre>
+ balloon click = /cgi-bin/get_gene_data?gene=$name
+ balloon click = [balloon] /cgi-bin/get_gene_data?gene=$name
+</pre></blockquote>
+
+<p>The images for custom balloons reside in the default location of
+/gbrowse/images/balloons, unless indicated otherwise using the
+``images'' config option.  To use custom balloon images, point "images"
+to a a web-accessible directory in your document tree which contains
+the seven PNG images described in the <a
+href="http://www.gmod.org/wiki/index.php/Popup_Balloons#Notes_on_balloon_images">
+documentation</a>. 
+</p>
+
+<p>
+These images must be named as listed below:
+</p>
+
+<blockquote class="example"><pre>
+ balloon.png     down_right.png  up_right.png
+ balloon_ie.png  down_left.png   up_left.png
+ close.png
+</pre></blockquote>
+
+<p>Tips for creating these images can be found <a 
+href="http://www.gmod.org/wiki/index.php/Popup_Balloons#Customization">here</a>.
+</p>
 
 <hr>
 
-<h2><a name="segmented_features">6. Showing multi-segmented features</a></h2>
+<h2><a name="feature_types">2. Displaying Common Types of Features</a></h2>
+
+<p>
+
+Now that you've seen the basics, we'll discuss techniques to display
+multi-part features, genes, alignments, quantitative data and other
+special feature types.
+
+
+<h3><a name="segmented_features">2.1. Multi-segmented features</a></h3>
 
 <p>
 
@@ -767,17 +1182,16 @@ This is declaring a new track named "Alignments" which displays
 features of type "match" using a glyph named "segments".  The segments
 glyph is specialized for displaying objects that have multiple similar
 subparts. Reload the page and activate the "Example alignments"
-track. You should see a track similar to Figure 5.
+track. You should see a track similar to Figure 6.
 
 <blockquote>
 <img src="figures/segmented_features2.gif">
-<br><i>Figure 5: Use the "segments" glyph to display discontinuous
+<br><i>Figure 6: Use the "segments" glyph to display discontinuous
 multipart features.</i>
 </blockquote>
 
-<hr>
 
-<h2><a name="canonical_gene">7. Showing Protein Coding Genes</a></h2>
+<h3><a name="canonical_gene">2.2. Protein-Coding Genes</a></h3>
 
 <p>
 
@@ -894,7 +1308,7 @@ track, and viewing the region around 1..10K, you'll see this:
 
 <blockquote>
 <img src="figures/canonical_gene1.gif"><br>
-Figure 5: The canonical gene
+<i>Figure 7: The canonical gene</i>
 </blockquote>
 
 <p>
@@ -930,7 +1344,7 @@ its appearance:
 <p>
 
 Using these options, we can make the track look like the UCSC Genome
-Browser (Figure 6).
+Browser (Figure 8).
 
 <blockquote class="example"><pre>
 [Transcripts]
@@ -949,58 +1363,10 @@ key          = Protein-coding genes
 
 <blockquote>
 <img src="figures/canonical_gene3.gif"><br>
-Figure 6: A UCSC Genome Browser lookalike
+<i>Figure 8: A UCSC Genome Browser lookalike</i>
 </blockquote>
 
-<hr>
-
-<h2><a name="cds">8. Showing the Reading Frame</a></h2>
-
-<p>
-
-Continuing with the example from section 7, the third exon of EDEN.1
-is shared with EDEN.3.  But is the reading frame preserved?  The "cds"
-glyph will create a display that will visualize each CDS's reading
-frame.
-
-<p>
-
-To see this work, add the following stanza to the bottom of the
-configuration file:
-
-<blockquote class="example"><pre>
-[ReadingFrame]
-feature            = mRNA
-glyph              = cds
-ignore_empty_phase = 1
-category           = Genes
-key                = Frame usage
-</pre></blockquote>
-
-<p>
-
-When you reload the page and turn this track on, you'll see a "musical
-staff" representation of the frame usage (Figure 10). From this we can
-see that the alternative splicing in fact changes the reading frame of
-the second exon.
-
-<p>
-
-The "feature" option tells the glyph to take its data from the mRNA
-subfeatures of the main gene features. Note that depending on which
-data adapter you use, you may need to specify the attribute "Index=1"
-for each of the mRNA subfeatures in order for the glyph to find them
-inside the gene object. However, this is usually unnecessary.
-
-<blockquote>
-<img src="figures/cds1.gif"><br>
-<i>Figure 10:  The "cds" glyph shows the reading frame using a musical
-staff notation</i>
-</blockquote>
-
-<hr>
-
-<h2><a name="simple_gene">9. Simpler Genes</a></h2>
+<h4><a name="simple_gene">2.2.1. Simpler Genes</a></h4>
 
 <p>
 
@@ -1060,11 +1426,11 @@ its source using the syntax shown here.
 
 <p>
 
-The result is shown in Figure 7:
+The result is shown in Figure 9:
 
 <blockquote>
 <img src="figures/predicted_genes.gif"><br>
-Figure 7: Simpler genes using linked CDSs and the transcript glyph
+<i>Figure 9: Simpler genes using linked CDSs and the transcript glyph</i>
 </blockquote>
 
 <p>
@@ -1114,9 +1480,52 @@ As with the previous example, this depends on a recent (as of January
 2008) change to bioperl. If it doesn't work for you, either update
 bioperl, or use the "so_transcript" glyph.
 
-<hr>
 
-<h2><a name="grouping">10. Grouping Features</a></h2>
+<h3><a name="cds">2.3. Reading Frames</a></h3>
+
+<p>
+
+Continuing with the example from section 2.2, the third exon of EDEN.1
+is shared with EDEN.3.  But is the reading frame preserved?  The "cds"
+glyph will create a display that will visualize each CDS's reading
+frame.
+
+<p>
+
+To see this work, add the following stanza to the bottom of the
+configuration file:
+
+<blockquote class="example"><pre>
+[ReadingFrame]
+feature            = mRNA
+glyph              = cds
+ignore_empty_phase = 1
+category           = Genes
+key                = Frame usage
+</pre></blockquote>
+
+<p>
+
+When you reload the page and turn this track on, you'll see a "musical
+staff" representation of the frame usage (Figure 10). From this we can
+see that the alternative splicing in fact changes the reading frame of
+the second exon.
+
+<p>
+
+The "feature" option tells the glyph to take its data from the mRNA
+subfeatures of the main gene features. Note that depending on which
+data adaptor you use, you may need to specify the attribute "Index=1"
+for each of the mRNA subfeatures in order for the glyph to find them
+inside the gene object. However, this is usually unnecessary.
+
+<blockquote>
+<img src="figures/cds1.gif"><br>
+<i>Figure 10:  The "cds" glyph shows the reading frame using a musical
+staff notation</i>
+</blockquote>
+
+<h3><a name="grouping">2.4. Grouped Features</a></h3>
 
 <p>
 
@@ -1182,9 +1591,7 @@ For your convenience, the configuration file with all the
 modifications made up through this point of the tutorial can be found
 in <a href="conf_files/volvox3.conf">volvox3.conf</a>.
 
-<hr>
-
-<h2><a name="graph">11. Showing Quantitative Data (basic)</a></h2>
+<h3><a name="graph">2.5 Showing Quantitative Data (basic)</a></h3>
 
 <p>
 
@@ -1281,9 +1688,7 @@ track, you should see something like that shown in Figure 12.
 the xyplot options a bit.  For example, see what happens when you
 change graph_type to "boxes."</i> </blockquote>
 
-<hr>
-
-<h2><a name="wiggle">12. Showing Quantitative Data (advanced)</a></h2>
+<h3><a name="wiggle">2.6 Quantitative Data (advanced)</a></h3>
 
 The recipe in <a ref="#graph">11</a> works well for several thousand
 data points, but if you have very dense data, such as that produced by
@@ -1506,9 +1911,7 @@ This is what the modified track will look like:
 <i>Figure 13: A transcriptional profile rendered with the wiggle_density glyph</i>
 </blockquote>
 
-<hr>
-
-<h2><a name="dna">13. Displaying DNA and 3-frame translations</a></h2>
+<h3><a name="dna">2.7. DNA and 3-frame translations</a></h3>
 
 <p>
 
@@ -1636,10 +2039,8 @@ this directory, and the display will be somewhat slower whenever a
 DNA track is turned on.
 </i></blockquote>
 
-<hr>
-
-<h2><a name="multiple_alignments">14. Displaying ESTs and Other
-Alignments</a></h2>
+<h3><a name="multiple_alignments">2.8 ESTs and Other
+Alignments</a></h3>
 
 <p>
 
@@ -1844,9 +2245,7 @@ The effect is shown in Figure 17.
 <i>Figure 17: Using a callback to distinguish 5' and 3' ESTs</i>
 </blockquote>
 
-<hr>
-
-<h2><a name="adding_dna_to_alignments">15. Adding DNA to Alignments</a></h2>
+<h4><a name="adding_dna_to_alignments">2.8.1. Adding DNA to Alignments</a></h4>
 
 <p>
 
@@ -2023,9 +2422,7 @@ reindexed.  In Unix:
 <p>If you are still having problems, remove the directory.index file
 completely in order to force reindexing.
 
-<hr>
-
-<h2><a name="trace">16. Displaying Trace Data</a></h2>
+<h3><a name="trace">2.9. Trace Data</a></h3>
 
 <p>
 
@@ -2156,269 +2553,150 @@ Zooming in will show you the trace diagram:
 
 <hr>
 
-<h2><a name="plugins">17. Plugins</a></h2>
+<h2><a name="enhancements">3. GBrowse Enhancements</a></h2>
+
+<p>In this section of the tutorial we'll discuss customizing the look
+and feel of GBrowse by adding a regionview section, adding feature
+tracks to the regionview and/or overview sections, configuring
+semantic zooming, and adding functionality with plugins.
+
+<h3><a name="regionview">3.1. Adding a "Region" Panel</a></h3>
 
 <p>
 
-Is all the effort to load the genomic and EST DNAs worth it?  Yes, if
-you want to take advantage of two popular plugins,
-<i>RestrictionAnnotator</i> and <i>Aligner</i>.  The first generates a
-track of restriction sites.  The second dumps a text-based multiple
-alignment of the current region on view.
+The overview is the scale that appears at the top of the detailed
+image. It always shows the entire reference sequence, whether it be a
+chromosome, a contig or a clone. With larger genomes, you may want to
+supplement the overview with a "region panel" that is intermediate in
+size between the overview panel and the detail panel. The region panel
+can contain tracks of its own and is useful for displaying features
+that are too numerous for the overview panel and too large for the
+detail panel.</p>
 
-<p>
-
-To see these plugins at work, first make sure that the database files
-are up to date with this position in the tutorial.  If you are in any
-doubt, remove the current contents of the volvox database directory
-and replace them with the files <a
-href="data_files/volvox_all.gff3">volvox_all.gff3</a> and <a
-href="data_files/volvox_all.fa">volvox_all.fa</a>.  <p>
-
-Now find the option "plugins=" at the top of volvox.conf, and modify
-it to activate the Aligner and RestrictionAnnotator plugins:
+<p>Open the volvox.conf configuration file and add the following line
+to the [GENERAL] section. A good place is near the "max segment" and
+"default segment" sections:</p>
 
 <blockquote class="example"><pre>
-plugins = Aligner RestrictionAnnotator
+# max and default segment sizes for detailed view
+max segment     = 50000
+default segment = 5000
+
+# size of the "region panel"
+region segment = 20000
+</pre></blockquote>
+
+<p>Now when you reload the volvox page, you will see an intermediate
+panel labeled "region", as shown in Figure 20:</p>
+
+<blockquote>
+<img src="figures/enhancements1.gif"><br>
+<i>Figure 20:</i> The "region" panel shows a region intermediate in
+size between the overview and the detail panel.
+</blockquote>
+
+<p>You can declare region panel tracks in exactly the same way that you
+declare overview tracks by declaring stanzas qualified by ":region"</p>
+
+<blockquote class="example"><pre>
+[TransChip:region]
+feature        = tprofile
+glyph          = xyplot
+graph_type     = boxes
+height         = 50
+min_score      = 0
+max_score      = 1000
+bgcolor        = blue
+scale          = right
+key            = Profile
+</pre></blockquote>
+
+<p>Figure 21 shows what the region looks like with its "Profile" track
+turned on.</p>
+
+<blockquote>
+<img src="figures/enhancements2.gif"><br>
+<i>Figure 21:</i> You can add any number of tracks to the region
+panel, just as you would for the overview panel.
+</blockquote>
+
+<h3><a name="overview">3.2. Putting Features into the Overview &amp; Regionview</a></h3>
+
+<p>
+
+In many cases it is handy to add tracks directly to the overview
+and/or regionview. These tracks can be turned on and off just like
+normal tracks, and can serve as reference points for well-known genes,
+cytogenetic bands, or genetic markers.
+
+<p>
+
+We will illustrate how to do this by placing a copy of the Motifs
+track into the overview.  Add the following to the bottom of the
+volvox.conf configuration file:
+
+<blockquote class="example"><pre>
+[Motifs:overview]
+feature      = polypeptide_domain
+glyph        = span
+height       = 5
+description  = 0
+label        = 1
+key          = Motifs
 </pre></blockquote>
 
 <p>
 
-When you reload the page, you will see a new popup menu appear under
-the image labeled "Dumps, searches and other operations."  You will
-also see an automatic track labeled "plugin:Restriction Sites" appear
-in the track list.  When you turn on this track, you will be presented
-with a restriction map (Figure 20).  You can then adjust which
-restriction sites are shown by selecting "Annotate Restriction Sites"
-from the popup menu and pressing the "Configure" button.
+This stanza is identical to the [Motifs] track that we created
+earlier, except that its name is qualified with ":overview".  This
+tells GBrowse that this is not an ordinary track to be placed in the
+detail image, but one that should be placed in the overview.
+
+<p>
+
+We also want the overview motifs track to be displayed by default, so
+go to the top of the configuration file, and modify the "default
+features" option to look like this:
+
+<blockquote class="example"><pre>
+# list of tracks to turn on by default
+default features = ExampleFeatures  Motifs:overview
+</pre></blockquote>
+
+<p>
+
+Reload the page.  Viol&aacute;!  See Figure 22.
 
 <blockquote>
-<img src="figures/plugins1.gif"><br>
-<i>Figure 20: The RestrictionAnnotator Plugin</i>
+<img src="figures/overview1.gif"><br>
+<i>Figure 22:</i> Any number of tracks can be placed in the overview
 </blockquote>
 
 <p>
 
-To see the Aligner at work, center your view on a region that contains
-the EST alignments (for example, ctgA:1000..5000), select "Dump
-Alignments" from the plugin popup menu, and press "Go".  This will
-return a text-based multiple alignment of the genome and the EST
-tracks.
+You can add as many tracks to the overview as you like.  The main
+warning is that if you add lots of features to the overview it can get
+pretty crowded in there.  Performance can also suffer, since each
+feature must be fetched and rendered each time the overview is
+displayed.</p>
 
 <p>
 
-The Aligner plugin has some additional configuration that you can
-perform.  We'll look at this now as an example of how to configure
-plugins. Open up volvox.conf and add the following configuration
-section:
-
-<p>
+To add a track to the region panel, simply replace ":overview" with
+":regionview" in the track stanza:
 
 <blockquote class="example"><pre>
-########################
-# Plugin configuration
-########################
-
-[Aligner:plugin]
-alignable_tracks   = EST
-upcase_tracks      = CDS Motifs
-upcase_default     = CDS
+[Motifs:regionview]
+feature      = polypeptide_domain
+glyph        = span
+height       = 5
+description  = 0
+label        = 1
+key          = Motifs
 </pre></blockquote>
 
-<p>
 
-It doesn't matter where the section goes, but it is probably a good
-idea to place this towards the middle of the file after the [GENERAL]
-section (at the top) and before the [TRACK DEFAULTS] section.
-Otherwise it is easy for you or someone else maintaining the
-configuration file to mistake this for some sort of track
-configuration.
-
-<p>
-
-Plugin configuration sections are distinguished from track
-configuration by having names of the format
-<b><i>PluginName</i>:plugin</b>.  In this case, the three
-configuration options are applied to the Aligner plugin.  For the
-Aligner plugin, the configuration options are:
-
-<table border="1">
-  <tr>
-    <th>Option</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>alignable_tracks</td>
-    <td>Space-delimited list of tracks to include in the multiple
-	alignment.  The genome is always included.  If this option is
-	not present, then GBrowse will automatically include any track
-	that has the "draw_target" option set.
-    </td>
-  </tr>
-  <tr>
-    <td>upcase_tracks</td>
-    <td>Space-delimited list of tracks that will be used to UPCASE the
-	genomic DNA.  This is very useful if you want to embed the
-	positions of coding regions or other features inside the
-	multiple alignment.  Uppercasing will not be turned on by
-	default.  The user must press the "Configure" button, and
-	select which of the uppercase tracks are to be activated  from
-	a list of checkboxes.
-    </td>
-  </tr>
-  <tr>
-    <td>upcase_default</td>
-    <td>A space-delimited list of tracks that will be uppercased by
-	default unless the user turns them off during configuration.
-    </td>
-  </tr>
-  <tr>
-    <td>ragged_default</td>
-    <td>A small integer indicating that the aligner should include
-	some unaligned bases from the end of each sequence.  This is
-	useful for seeing the sequencing primer or cloning site in ESTs.
-    </td>
-  </tr>
-</table>
-
-<p>
-
-With the changes in place, select the aligner from the popup menu and
-press Configure.  Turn on uppercasing of the coding region track and
-see how it affects the display (Figure 21).
-
-<blockquote>
-<img src="figures/plugins2.gif"><br>
-<i>Figure 21: The Aligner plugin produces multiple alignments.</i>
-</blockquote>
-
-<p>
-
-Plugin files live in $CONF/gbrowse.conf/plugins. To view plugin
-documentation, find the plugin file, which usually lives under
-gbrowse.conf/plugins, and run the perldoc command with the -F ("file")
-option:
-
-<blockquote class="example"><pre>
-% <b>perldoc -F Aligner.pm</b>
-</pre></blockquote>
-
-<p>
-
-Here's the list of plugins that come with the standard distribution:
-
-<table border="1">
-  <tr>
-    <th>Plugin</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>Aligner</td>
-    <td>Dump multiple alignments</td>
-  </tr>
-  <tr>
-    <td>AlignTwoSequences</td>
-    <td>Execute NCBI's bl2seq on the current view (requires the bl2seq
-	executable).</td>
-  </tr>
-  <tr>
-    <td>AttributeHiliter</td>
-    <td>Highlight (by colorizing) features whose attributes match some
-	user-specified values.</td>
-  </tr>
-  <tr>
-    <td>BatchDumper</td>
-    <td>Allows the user to cut and paste a series of landmarks on the
-	genome and dumps out all overlapping features using a variety
-	of formats (e.g. GenBank format)
-    </td>
-  </tr>
-  <tr>
-    <td>Blat</td>
-    <td>Plugin to align sequences against the genome using the BLAT
-	algorithm (requires BLAT executable).
-    </td>
-  </tr>
-  <tr>
-    <td>CMapDumper</td>
-    <td>Produces files that can be read by the <a
-  href="http://www.gmod.org/wiki/index.php/Cmap">CMap comparative map browser.</a>
-    </td>
-  </tr>
-  <tr>
-    <td>CreateBlastDB</td>
-    <td>Creates a Blast-formatted database from a GBrowse database.
-    </td>
-  </tr>
-  <tr>
-    <td>FastaDumper</td>
-    <td>Produce pretty-printed FASTA dumps of the current region, with
-	selected features highlighted with colors or font styles.
-    </td>
-  </tr>
-  <tr>
-    <td>FilterTest</td>
-    <td>Small demonstration of how to write a plugin that filters
-	features (makes them visible or invisible) based on arbitrary criteria.
-    </td>
-  </tr>
-  <tr>
-    <td>GeneFinder</td>
-    <td>Runs Phil Green's genefinder gene prediction program within
-	GBrowse (requires genefinder executable).
-    </td>
-  </tr>
-  <tr>
-    <td>GFFDumper</td>
-    <td>Dump out the current region in GFF format (redundant with BatchDumper).</td>
-  </tr>
-  <tr>
-    <td>OligoFinder</td>
-    <td>Lets the user search for landmarks on the basis of unique
-	11-mers or greater.</td>
-  </tr>
-  <tr>
-    <td>PrimerDesigner</td>
-    <td>Interactively design PCR primers (requires <a
-	href="http://primer3.sourceforge.net/">primer3</a>
-	executable).</td>
-  </tr>
-  <tr>
-    <td>ProteinDumper</td>
-    <td>Dump translated protein sequences of the current region in various formats</td>
-  </tr>
-  <tr>
-    <td>RandomGene</td>
-    <td>Small demonstration of how to connect a plugin to a gene
-	prediction program. Doesn't actually predict genes, but
-	generates simulated ones.</td>
-  </tr>
-  <tr>
-    <td>RestrictionAnnotator</td>
-    <td>Creates restriction maps.</td>
-  </tr>
-  <tr>
-    <td>Spectrogram</td>
-    <td>Generate DNA spectrograms to highlight low complexity regions,
-	repetitive regions, coding regions and other regions with
-	periodicity. Requires Math::FFT Perl module.</td>
-  </tr>
-  <tr>
-    <td>Submitter</td>
-    <td>Helper plugin for the rubber-band select menu. See <a
-	href="http://www.gmod.org/wiki/index.php/GBrowse_Rubber_Band_Selection.pm">GBrowse
-	Rubber-band selection</a>.</td>
-  </tr>
-  <tr>
-    <td>test</td>
-    <td>This dumps the current view in FASTA format, and is used
-	for regression testing the plugin architecture.</td>
-  </tr>
-</table>
-
-<hr>
-
-<h2><a name="semantic_zooming">19. Semantic Zooming</a></h2>
+<h3><a name="semantic_zooming">3.3. Semantic Zooming</a></h3>
 
 <p>
 
@@ -2519,287 +2797,15 @@ to "segments."
 Make these changes to volvox.conf, turn on the "Example Alignments"
 track, and view the contig at 20K, 40K and 50K.  At 40K, you'll see
 the alignments lose their internal structure and be replaced by solid
-boxes (Figure 22).  At 50K they'll begin to overlap and the feature
+boxes (Figure 23).  At 50K they'll begin to overlap and the feature
 labels will be suppressed.
 
 <blockquote>
 <img src="figures/semantic_zooming1.gif"><br>
-<i>Figure 22: Semantically zoomed alignments at 40K</i>
+<i>Figure 23: Semantically zoomed alignments at 40K</i>
 </blockquote>
 
-<hr>
-
-<h2><a name="overview">20. Putting Features into the Overview</a></h2>
-
-<p>
-
-The overview is the scale that appears at the top of the detailed
-image.  In addition to acting as a reference point and navigation
-tool, you can place tracks in it.  These tracks will always be
-displayed, and can serve as reference points for well-known genes,
-cytogenetic bands, or genetic markers.
-
-<p>
-
-We will illustrate how to do this by placing a copy of the Motifs
-track into the overview.  Add the following to the bottom of the
-volvox.conf configuration file:
-
-<blockquote class="example"><pre>
-[Motifs:overview]
-feature      = polypeptide_domain
-glyph        = span
-height       = 5
-description  = 0
-label        = 1
-key          = Motifs
-</pre></blockquote>
-
-<p>
-
-This stanza is identical to the [Motifs] track that we created
-earlier, except that its name is qualified with ":overview".  This
-tells GBrowse that this is not an ordinary track to be placed in the
-detail image, but one that should be placed in the overview.
-
-<p>
-
-We also want the overview motifs track to be displayed by default, so
-go to the top of the configuration file, and modify the "default
-features" option to look like this:
-
-<blockquote class="example"><pre>
-# list of tracks to turn on by default
-default features = ExampleFeatures  Motifs:overview
-</pre></blockquote>
-
-<p>
-
-Reload the page.  Viol&aacute;!  See Figure 23.
-
-<blockquote>
-<img src="figures/overview1.gif"><br>
-<i>Figure 23:</i> Any number of tracks can be placed in the overview
-</blockquote>
-
-<p>
-
-You can add as many tracks to the overview as you like.  The main
-warning is that if you add lots of features to the overview it can get
-pretty crowded in there.  Performance can also suffer, since each
-feature must be fetched and rendered each time the overview is
-displayed.
-
-<hr>
-
-<h2><a name="linking">21. Linking</a></h2>
-
-<p>
-
-The next topic we'll cover in this tutorial is configuring GBrowse's
-outgoing links.  When the user clicks on a glyph in the details image,
-he will be taken to another page by following a URL.  The URL to
-follow is generated from the <code>link</code> option.  The default
-link option is located in the [TRACK DEFAULTS] section of the config
-file; you can specify track-specific links by placing a
-<code>link</code> option in one or more of the individual track
-stanzas.
-
-<p>
-
-The volvox.conf track defaults looks like this:
-
-<blockquote class="example"><pre>
-[TRACK DEFAULTS]
-glyph         = generic
-height        = 10
-bgcolor       = lightgrey
-fgcolor       = black
-font2color    = blue
-label density = 25
-bump density  = 100
-# where to link to when user clicks in detailed view
-link          = AUTO
-</pre></blockquote>
-
-<p>
-
-In this case, we've been using a special link URL of "AUTO."  This
-generates an automatic link to a helper script named
-"gbrowse_details."  If you click on some of the features in the
-current volvox page you'll get an idea of what this script displays.
-Try clicking on a motif, a spliced transcript, the EDEN gene, and an
-EST.  When you click on the spliced transcript, notice that the
-content of the "Gene" attribute is displayed.  By adding attributes
-like this one, you can build up a very modest web-browsable database
-of facts about your features.
-
-<p>
-
-We're going to override the default link rule for the motif track.
-There's nothing sensible to link to, so we'll link to Google using
-first the motif's name, and then the motif's description.
-
-<p>
-
-Go to the [Motifs] stanza in the volvox.conf config file and modify it
-so that it looks like this:
-
-<blockquote class="example"><pre>
-[Motifs]
-feature      = polypeptide_domain
-glyph        = span
-height       = 5
-description  = 1
-link         = http://www.google.com/search?q=$name
-key          = Example motifs
-</pre></blockquote>
-
-<p>
-
-The only change we've made is to add a "link" option to the stanza,
-where the value is a Google search URL.  "$name" is a Perl variable.
-GBrowse will fill in this variable with the name of the motif.  Reload
-the page and click on a motif to see that this works as advertised
-("m01," "m02" and the other example motifs are similar to the names
-for galactic clusters, so be prepared for some astronomy hits).
-
-<p>
-
-It would be more sensible to link to the description of the motif, for
-example "helix loop helix."  Fortunately we can do that too.  Just
-change the link option to:
-
-<blockquote class="example"><pre>
-link         = http://www.google.com/search?q=$description
-</pre></blockquote>
-
-<p>
-
-There are a large number of possible variables that you can use inside
-link rules.  See the CONFIGURE_HOWTO document in the GBrowse
-distribution for the full list.  You can also construct links using
-Perl callbacks as described in the section on <a
-href="#multiple_alignments">displaying ESTs</a>.  This gives you the
-ability to generate any arbitrary URL.
-
-<p>
-
-If you want nothing to happen when the user clicks on a feature, just
-set link to empty ("link = ").
-
-<p>
-
-The last thing we'll do is to change the behavior of the [Motif] track
-so that:
-
-<ol>
-  <li>a new window pops up with the google search rather than
-      replacing the contents of the current window
-  <li>when the user mouses over a motif, a hints box will appear
-      telling him that clicking there will initiate a google search
-</ol>
-
-<p>
-
-These changes are easy:
-
-<blockquote class="example"><pre>
-[Motifs]
-feature      = polypeptide_domain
-glyph        = span
-height       = 5
-description  = 1
-link         = http://www.google.com/search?q=$description
-link_target  = _blank
-title        = Search Google for $description.
-key          = Example motifs
-</pre></blockquote>
-
-<p>
-
-There's now a <code>link_target</code> option.  This contains the name
-of a browser window in which to load the content when the user clicks
-on the feature.  If there's no window of that name, the browser will
-create a new window and give it the desired name.  Choose an ordinary
-name like "Google" if you want the Google content to be loaded into
-the same window each time, or choose "_blank" as we've done here in
-order to pop up a new fresh window each time the user clicks.
-
-<p>
-
-The <code>title</code> option contains a bit of text that will be
-displayed whenever the user hovers the mouse over the feature for a
-second or two.  The same variable substitution rules apply, so when
-the user mouses over feature "m06", a hints window will pop up that
-says "Search Google for SUSHI repeat."  Give it a try!
-</p>
-
-<hr>
-
-<h2><a name="enhancements">22. Enhancements</a></h2>
-
-<p>
-This section will show you how to add two nice user interface
-enhancements to the volvox database.
-</p>
-
-<h3>Adding a "region" panel</h3>
-
-<p> With larger genomes, you may want to add a "region panel" that is
-intermediate in size between the overview panel and the detail
-panel. The region panel can contain tracks of its own and is useful
-for displaying features that are too numerous for the overview panel
-and too large for the detail panel.</p>
-
-<p>Open the volvox.conf configuration file and add the following line
-to the [GENERAL] section. A good place is near the "max segment" and
-"default segment" sections:</p>
-
-<blockquote class="example"><pre>
-# max and default segment sizes for detailed view
-max segment     = 50000
-default segment = 5000
-
-# size of the "region panel"
-region segment = 20000
-</pre></blockquote>
-
-<p>Now when you reload the volvox page, you will see an intermediate
-panel labeled "region", as shown in Figure 24:</p>
-
-<blockquote>
-<img src="figures/enhancements1.gif"><br>
-<i>Figure 24:</i> The "region" panel shows a region intermediate in
-size between the overview and the detail panel.
-</blockquote>
-
-<p>You can declare region panel tracks in exactly the same way that you
-declare overview tracks by declaring stanzas qualified by ":region"</p>
-
-<blockquote class="example"><pre>
-[TransChip:region]
-feature        = tprofile
-glyph          = xyplot
-graph_type     = boxes
-height         = 50
-min_score      = 0
-max_score      = 1000
-bgcolor        = blue
-scale          = right
-key            = Profile
-</pre></blockquote>
-
-<p>Figure 25 shows what the region looks like with its "Profile" track
-turned on.</p>
-
-<blockquote>
-<img src="figures/enhancements2.gif"><br>
-<i>Figure 25:</i> You can add any number of tracks to the region
-panel, just as you would for the overview panel.
-</blockquote>
-
-<h3>Grouping Tracks</h3>
+<h3><a name="grouping_tracks">3.4. Grouping Tracks</a></h3>
 
 <p>The bottom of the GBrowse window contains an expandable set of
 checkboxes that allows the users to turn tracks on and off. By
@@ -2841,12 +2847,12 @@ key          = 6-frame translation
 
 <p>In this way we can create sections named "Alignments," "Examples,"
 "Genes" and "Proteins" and assign the appropriate tracks to them. The
-Tracks control section will look something like figure 26:</p>
+Tracks control section will look something like Figure 24:</p>
 
 
 <blockquote>
 <img src="figures/enhancements3.gif"><br>
-<i>Figure 26:</i> You can add any number of tracks to the region
+<i>Figure 24:</i> You can add any number of tracks to the region
 panel, just as you would for the overview panel.
 </blockquote>
 
@@ -2860,17 +2866,17 @@ href="data_files/volvox_all.fa">volvox_all.fa</a> likewise contain the
 entirety of the feature and DNA data.</i>
 </blockquote>
 
-<a name="cg"><h3>Display tracks within a group category as a table</h3>
+<h3><a name="group_tables">3.5. Grouping Tracks into a Table</a></h3>
 
 <p>A further refinement to display track information within the
  category is a table display with headings for the rows and columns
- (see figure 27 for an example).  This layout is useful for displaying
+ (see Figure 25 for an example).  This layout is useful for displaying
  data that highlights the experimental design as in microarray or
  ChIP-on-Chip experiments.</p>
 
 <blockquote>
 <img src="figures/categorytable.png"><br>
-<i>Figure 27:</i> An example of a category table containing a 9 track table,  
+<i>Figure 25:</i> An example of a category table containing a 9 track table,  
 organized as 3 rows x 3 columns each with a heading. 
 </blockquote>
 
@@ -2887,7 +2893,7 @@ category tables = 'ArrayExpts' 'strain-A strain-B strain-C' 'temperature anaerob
 
 It is then important that your stanzas within the category are in
 column followed by row order (see example below and compare with
-figure 27). So stanza 1 is column 1/row 1, stanza 2 is column 1/row 2,
+Figure 25). So stanza 1 is column 1/row 1, stanza 2 is column 1/row 2,
 stanza 3 is column 1/row 3, stanza 4 is column 2/row 1, stanza 5 is
 column 2/row 2 etc. This means each cell in the table must have a
 stanza. Any surplus tracks within that category will be ignored. For
@@ -3040,614 +3046,268 @@ category tables = 'ArrayExpts' 'strain-A strain-B strain-C' 'temperature anaerob
                   'CHiP-Chip'  'TFX1 ONE-CUT PHA4' '16-cell-stage 320-cell-stage adult'
 </blockquote>
 
-<h3> Adding popup balloons to tracks </h3>
+<h3><a name="plugins">3.6. Using Plugins</a></h3>
 
-<p>GBrowse can display popup balloons when the user hovers over or clicks
-on a feature. The balloons can display arbitrary HTML, either provided
-in the config file, or fetched remotely via a URL. You can use this
-feature to create multiple choice menus when the user clicks on the
-feature, to pop up images on mouse hovers, or even to create little
-embedded query forms. See <a href="http://mckay.cshl.edu/balloons.html">
-http://mckay.cshl.edu/balloons.html</a> for examples.</p>
-
-<p>In the config file for the database you wish to modify, set ``balloon
-tips'' to a true value:</p>
-<blockquote class="example"><pre>
-     [GENERAL]
-     ...
-     balloon tips = 1
-</pre></blockquote>
-
-<p>Then add ``balloon hover'' and/or ``balloon click'' options to the track
-stanzas that you wish to add buttons to. You can also place these
-options in [TRACK DEFAULTS] to create a default balloon.</p>
-
-<p>``balloon hover'' specifies HTML or a URL that will be displayed when
-the user hovers over a feature. ``balloon click'' specifies HTML or a
-URL that will appear when the user clicks on a feature. The HTML can
-contain images, formatted text, and even controls. Examples:</p>
-
-<blockquote class="example"><pre>
- balloon hover = &lt;h2&gt;Gene $name&lt;/h2&gt;
- balloon click = &lt;h2&gt;Gene $name&lt;/h2&gt;
-       &lt;a href='<a href="http://www.google.com/search?q=">http://www.google.com/search?q=</a>$name'&gt;Search Google&lt;/a&gt;&lt;br&gt;
-       &lt;a href='<a href="http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=pubmed&amp;term=">http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=pubmed&amp;term=</a>$name'&gt;Search NCBI&lt;/a&gt;&lt;br&gt;
-</pre></blockquote>
-
-<p>For example, to add a balloon to the motifs track of the Volvox browser,
-add "balloon tips = 1" near the top of the volvox.conf file, and then
-add balloon hover and balloon click options like this: </p>
-
-<blockquote class="example"><pre>
-[Motifs]
-feature      = polypeptide_domain
-glyph        = span
-height       = 5
-description  = 1
-category     = Proteins
-balloon hover = &lt;h2&gt;Gene $name&lt;/h2&gt;
-balloon click = &lt;h2&gt;Gene $name&lt;/h2&gt;
-       &lt;a href='<a href="http://www.google.com/search?q=">http://www.google.com/search?q=</a>$name'&gt;Search Google&lt;/a&gt;&lt;br&gt;
-       &lt;a href='<a href="http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=pubmed&amp;term=">http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=pubmed&amp;term=</a>$name'&gt;Search NCBI&lt;/a&gt;&lt;br&gt;
-key          = Example motifs
-</pre></blockquote>
-
-
-<p>Alternatively, you can populate the balloon using data from an HTML
-page or dynamic CGI script running on the same server as GBrowse. This
-uses AJAX; it can often speed up page loading by reducing the amount
-of text that must be downloaded by the client. To dynamically load
-the balloon contents from the server, use a balloon hover or balloon
-click option like this:</p>
-<blockquote class="example"><pre>
- balloon click = /cgi-bin/get_gene_data?gene=$name</pre></blockquote>
-<p>In this case, when the user clicks on the feature, it creates a
-balloon whose content contains the HTML returned by the CGI script
-``get_gene_data''. GBrowse knows that this is a URL rather than the
-contents of the balloon by looking for the leading slash. However, to
-reduce ambiguity, we recommend that you prefix the URL with ``url:'' as
-so:</p>
-<blockquote class="example"><pre>
- balloon click = url:/cgi-bin/get_gene_data?gene=$name</pre></blockquote>
-<p>This also allows you to refer to relative URLs:</p>
-<blockquote class="example"><pre>
- balloon click = url:../../get_gene_data?gene=$name</pre></blockquote>
-<p>It is also possible to fill the balloon with content from a remote
-source.  Simply specify a full URL beginning with ``http:'' ``https:'' or
-``ftp:''</p>
-<blockquote class="example"><pre>
- balloon hover = <a href="http://www.wormbase.org/db/get?name=">http://www.wormbase.org/db/get?name=</a>$name;class=gene</pre></blockquote>
-<p>Note that the balloon library uses an internal &lt;iframe&gt; to populate
-the balloon with the content of external URLs. This means that
-vertical and horizontal scrollbars will appear if the content is too
-large to be contained within the balloon. If the formatting does not
-look right, you can design a custom balloon of the proper size as
-described in the next section.</p>
-<p>The usual option value substitution rules ($name, $start, etc) work
-with balloons, as do callbacks. GBrowse will automatically escapes
-single (') and double (``) quotes in the values returned by the
-''balloon hover`` and ''balloon click`` options so that you don't have to
-worry about them messing up the HTML.</p>
-<p>You might also wish to specify ``titles are balloons'' in the [GENERAL]
-section:</p>
-<blockquote class="example"><pre>
- [GENERAL]
- titles are balloons = 1</pre></blockquote>
-<p>This will generate balloons on all mouse hover events, using the
-content that would otherwise have been placed in the built-in browser tooltip.</p>
-<p>There is a limited amount of balloon customization that you can
-perform within the [track] section. If you wish the balloon to be
-sticky (require the user to press the close button) even if it is a
-hover balloon, then place this option in the [track section]:</p>
-<blockquote class="example"><pre>
- balloon sticky = 1</pre></blockquote>
-<p>Setting ``balloon sticky'' to 0 will have the effect of making balloons
-disappear as soon as the mouse leaves them, even if it was created by
-a mouse click event.</p>
-<p>If you are displaying content from a remote web or FTP server and you
-do not like the height of the balloon, you can adjust the height with
-the ``balloon height'' option:</p>
-<blockquote class="example"><pre>
- balloon height = 400
-</pre></blockquote>
-
-<h4>Customizing Balloons</h4>
-<p>GBrowse supports multiple balloons with different shapes, sizes,
-background images and timing properties. There is one built-in
-balloon, named "balloon", which should meet most peoples'
-needs. However, you can configure any number of custom balloons.</p>
-<p>To declare two new balloons, create a "custom balloons" option in the [GENERAL]
-section:</p>
-<blockquote class="example"><pre>
- custom balloons = [blue_balloon]
-                  images   =  /gbrowse/images/blue_balloons
-                  maxWidth = 300
-                  shadow   = 0
-
-                  [wide_balloon]
-                  maxWidth = 800
-</pre></blockquote>
-
-<p>This creates two new balloons. The first, named "blue_balloon" will
-look for its images and icons at the local URL
-/gbrowse/images/blue_balloons. It will have a maximum width of 300
-pixels, and will cast no shadow. The second, named "wide_balloon"
-takes all the defaults for the default balloon, including the location
-of its images in the directory /gbrowse/images/balloons, except that
-it has a maximum width of 800 pixels. The various balloon options are
-described in the <a href="http://www.gmod.org/wiki/index.php/Popup_Balloons">GMOD wiki</a>.
-</p>
-<p>To use the blue balloon rather than the standard one, format the
-"balloon hover" and/or "balloon click" options like this:</p>
-<blockquote class="example"><pre>
- balloon click = [blue_balloon] /cgi-bin/get_gene_data?gene=$name</pre></blockquote>
-<p>The [blue_balloon] keyword tells gbrowse to use the blue balloon for
-clicks on these features. The standard balloon is called "balloon",
-and so the following two options are equivalent:</p>
-<blockquote class="example"><pre>
- balloon click = /cgi-bin/get_gene_data?gene=$name
- balloon click = [balloon] /cgi-bin/get_gene_data?gene=$name</pre></blockquote>
-<p>The images for custom balloons reside in the default location of
-/gbrowse/images/balloons, unless indicated otherwise using the
-``images'' config option.  To use custom balloon images, point "images"
-to a a web-accessible directory in your document tree which contains
-the seven PNG images described in the <a
-href="http://www.gmod.org/wiki/index.php/Popup_Balloons#Notes_on_balloon_images">
-documentation</a>. 
-</p>
-<p>
-These images must be named as listed below:
-</p>
-<blockquote class="example"><pre>
- balloon.png     down_right.png  up_right.png
- balloon_ie.png  down_left.png   up_left.png
- close.png
-</pre></blockquote>
-
-<p>Tips for creating these images can be found <a 
-href="http://www.gmod.org/wiki/index.php/Popup_Balloons#Customization">here</a>.
-</p>
-
-
-<hr>
-
-<h2><a name="berkeleydb">23. Setting up a Berkeleydb database</a></h2>
+<p> Another cool GBrowse feature is its ability to take advantage of
+plugins, which are small modules of Perl code that extend GBrowse in
+various ways. In this section, we will show how to activate two
+popular plugins, <i>RestrictionAnnotator</i> and <i>Aligner</i>.  The
+first generates a track of restriction sites.  The second dumps a
+text-based multiple alignment of the current region on view.
 
 <p>
 
-The in-memory database is great for smaller data sets, and can handle
-GFF files of up to about 20,000 features (more if you have lots of
-memory).  For larger data sets, however, you'll want to use a database
-management system.  GBrowse handles a number of DBMS through its
-"database adaptor" system.  This section shows how to use the
-Bio::DB::GFF berkeleydb adaptor that comes for free when you install
-BioPerl; this will enable you to create databases of 10 million or
-more features. The next section shows you how to install a MySQL
-relational database that will support even larger data sets.  You may
-skip these sections and move on to working with third-party
-annotations if you do not wish to install a berkeleydb-based server at
-this time.
+To see these plugins at work, first make sure that the database files
+are up to date with this position in the tutorial.  If you are in any
+doubt, remove the current contents of the volvox database directory
+and replace them with the files <a
+href="data_files/volvox_all.gff3">volvox_all.gff3</a> and <a
+href="data_files/volvox_all.fa">volvox_all.fa</a>.  <p>
+
+Now find the option "plugins=" at the top of volvox.conf, and modify
+it to activate the Aligner and RestrictionAnnotator plugins:
+
+<blockquote class="example"><pre>
+plugins = Aligner RestrictionAnnotator
+</pre></blockquote>
 
 <p>
 
-The Berkeleydb database adaptor comes with BioPerl 1.51 or higher
-(still under development at the time this tutorial was written). If
-you have an older version of BioPerl, GBrowse will install the adaptor
-for you. As its name implies, this adaptor uses the Berkeleydb
-database system (http://www.sleepycat.com) to create indexed database
-files from GFF feature files. The adaptor also requires the Perl
-DB_File interface to Berkeleydb. If you are using a Linux or Mac OSX
-system, you almost certainly have both Berkeleydb and DB_File already
-installed. For Windows users of ActiveState Perl, you should confirm
-that DB_File is installed by running the following command: </p>
+When you reload the page, you will see a new popup menu appear under
+the image labeled "Dumps, searches and other operations."  You will
+also see an automatic track labeled "plugin:Restriction Sites" appear
+in the track list.  When you turn on this track, you will be presented
+with a restriction map (Figure 26).  You can then adjust which
+restriction sites are shown by selecting "Annotate Restriction Sites"
+from the popup menu and pressing the "Configure" button.
 
-<blockquote class="example">
-<pre>
-C:\&gt; perl -MDB_File -e 'print $DB_File::VERSION'
-</pre>
+<blockquote>
+<img src="figures/plugins1.gif"><br>
+<i>Figure 26: The RestrictionAnnotator Plugin</i>
 </blockquote>
 
 <p>
-If this prints out a number, then you are golden. If you get an error,
-you should reinstall DB_File by running the PPM tool:</p>
+
+To see the Aligner at work, center your view on a region that contains
+the EST alignments (for example, ctgA:1000..5000), select "Dump
+Alignments" from the plugin popup menu, and press "Go".  This will
+return a text-based multiple alignment of the genome and the EST
+tracks.
+
+<p>
+
+The Aligner plugin has some additional configuration that you can
+perform.  We'll look at this now as an example of how to configure
+plugins. Open up volvox.conf and add the following configuration
+section:
+
+<p>
 
 <blockquote class="example"><pre>
-C:\&gt; ppm
-PPM interactive shell (2.1) - type 'help' for available commands.
-PPM> install DB_File
-</pre></blockquote>
+########################
+# Plugin configuration
+########################
 
-<p>It is an extremely simple task to convert an existing in-memory
-database to use the Berkeleydb database. We will now convert the
-Volvox example database to Berkeleydb.</p>
-
-<p>Take the most recent version of the volvox.conf configuration file,
-and edit the top few lines of the new file so that it looks like
-this:</p>
-
-<blockquote class="example"><pre>
-[GENERAL]
-description   = Volvox Berkeleydb Database
-db_adaptor    = Bio::DB::SeqFeature::Store
-db_args       = -adaptor berkeleydb
-	        -dir     '$HTDOCS/gbrowse/databases/volvox'
-</pre></blockquote>
-
-<p> We made just two changes. First, we changed the description of the
-database to "Volvox Berkeleydb Database" to distinguish it from the
-in-memory database. Second, we changed the value of the
-<b>-adaptor</b> option from "memory" to "berkeleydb".
-</p>
-
-<p>Now reload the volvox page in your browser. There will be a slight
-delay as the Berkeleydb adaptor constructs its indexes, and then the
-page will reappear. You should now be able to browse and search the
-database exactly as before. Depending on how fast the memory adaptor
-was to begin with, you may not notice a speed improvement; however,
-with large GFF files, the performance improvement will be very
-marked.</p>
-
-<p>If you look in the volvox database directory, you will see a new
-subdirectory named "index". This contains a set of index files that
-allow gbrowse to find features quickly. They are automatically created
-and updated as needed when the underlying GFF or FASTA files are
-changed.</p>
-
-<p>If you get an "Internal Server Error" or similar message, check the
-server error log file for messages that explain what went wrong. The
-most common problem is that the volvox database directory is not
-writeable by the web server user. As described earlier, this directory
-must be "world writeable" in order to allow the web server to create
-and maintain the databases</p>
-
-<h3>Creating a Berkeleydb database using bp_seqfeature_load.pl</h3>
-
-<p>Although it is convenient to maintain the Berkeleydb indexes
-automatically, this mechanism has a number of disadvantages. One
-disadvantage is that this mechanism requires the database directory to
-be world writeable (or at least writeable by the web user), which may
-not be acceptable in some installations. Another disadvantage is that
-the indexing may take a long time, up to 10 minutes for a GFF
-databases containing a million lines. Some web servers will time out
-during this process. For large databases, it is better to explicitly
-create the database index files using the <i>bp_seqfeature_load.pl</i>
-program.</p>
-
-<p><i>bp_seqfeature_load.pl</i> is a BioPerl utility that is described
-in more detail in <a href="#mysql">Setting up a MySQL database</a>. It
-takes as its input a series of GFF and FASTA files and creates the
-appropriate database files. To see how to use it, we will create a
-fresh database directory. Go to the GBrowse database located at
-<b>$HTDOCS/gbrowse/databases</b> and create a new subdirectory called
-"volvox_bdb:"</p>
-
-<blockquote class="example"><pre>
- % cd $HTDOCS/gbrowse/databases
- % mkdir volvox_berkeley
+[Aligner:plugin]
+alignable_tracks   = EST
+upcase_tracks      = CDS Motifs
+upcase_default     = CDS
 </pre></blockquote>
 
 <p>
 
-On Windows systems you can use the file manager to create this new
-folder.
+It doesn't matter where the section goes, but it is probably a good
+idea to place this towards the middle of the file after the [GENERAL]
+section (at the top) and before the [TRACK DEFAULTS] section.
+Otherwise it is easy for you or someone else maintaining the
+configuration file to mistake this for some sort of track
+configuration.
 
 <p>
 
-You do <b>not</b> have to make this directory world writeable, but it
-should be readable and executable by the user that the web server runs
-as. Now enter the tutorial data files directory
-($HTDOCS/gbrowse/tutorial/data_files) and load the GFF and sequence
-files using the following command:</p>
+Plugin configuration sections are distinguished from track
+configuration by having names of the format
+<b><i>PluginName</i>:plugin</b>.  In this case, the three
+configuration options are applied to the Aligner plugin.  For the
+Aligner plugin, the configuration options are:
 
-<blockquote class="example"><pre>
-<b>% bp_seqfeature_load.pl -c -a berkeleydb -f -d $HTDOCS/gbrowse/databases/volvox_berkeley volvox_all.fa volvox_all.gff</b>
-loading volvox_all.fa...
-                                                                                
-Building object tree... 0.00s
-Loading bulk data into database... 0.01s
-load time:  0.02s
-loading volvox_all.gff3...
-                                                                                
-Building object tree... 0.00s
-Loading bulk data into database... 0.00s
-load time:  0.08s
-</pre></blockquote>
-
-The arguments to <i>bp_load_gff.pl</i> are:
-
-<table>
+<table border="1">
   <tr>
-    <td><b>-a</b></td>
-    <td>Use the berkeleydb database <b>a</b>daptor.
+    <th>Option</th>
+    <th>Description</th>
   </tr>
   <tr>
-    <td><b>-c</b></td>
-    <td><b>c</b>lear (initialize) the database
+    <td>alignable_tracks</td>
+    <td>Space-delimited list of tracks to include in the multiple
+	alignment.  The genome is always included.  If this option is
+	not present, then GBrowse will automatically include any track
+	that has the "draw_target" option set.
+    </td>
   </tr>
   <tr>
-    <td><b>-f</b></td>
-    <td>use the <b>f</b>ast loading option
+    <td>upcase_tracks</td>
+    <td>Space-delimited list of tracks that will be used to UPCASE the
+	genomic DNA.  This is very useful if you want to embed the
+	positions of coding regions or other features inside the
+	multiple alignment.  Uppercasing will not be turned on by
+	default.  The user must press the "Configure" button, and
+	select which of the uppercase tracks are to be activated  from
+	a list of checkboxes.
+    </td>
   </tr>
   <tr>
-    <td><b>-d $HTDOCS/gbrowse/databases/volvox_berkeley</b></td>
-    <td>Load the data into the indicated <b>d</b>atabase directory.
+    <td>upcase_default</td>
+    <td>A space-delimited list of tracks that will be uppercased by
+	default unless the user turns them off during configuration.
+    </td>
   </tr>
   <tr>
-    <td><b>volvox_all.fa volvox_all.gff</b></td>
-    <td>The data files to load.
+    <td>ragged_default</td>
+    <td>A small integer indicating that the aligner should include
+	some unaligned bases from the end of each sequence.  This is
+	useful for seeing the sequencing primer or cloning site in ESTs.
+    </td>
   </tr>
-</table>
-
-<p> If all goes well, this will create the index files in
-<tt>$HTDOCS/gbrowse/databases/volvox_bdb</tt>. If you look in that
-directory now, you'll see a series of index files.</p>
-
-<p>
-The last step is to modify the volvox.conf to point to this
-directory. Open it in a text editor and modify the top part so that it
-looks like this:
-</p>
-
-<blockquote class="example"><pre>
-[GENERAL]
-description   = Volvox Berkeleydb Database
-db_adaptor    = Bio::DB::SeqFeature::Store
-db_args       = -adaptor berkeleydb
-	        -dsn    '$HTDOCS/gbrowse/databases/volvox_berkeley'
-</pre></blockquote>
-
-<p>The change here is to replace the <b>-dir</b> argument with
-<b>-dsn</b> ("data source name").  This tells the Berkeleydb adaptor
-that pre-made index files can be found in the indicated directory. It
-will not attempt to update the index files automatically.</p>
-
-<p>If you wish to update the indexes with new GFF or sequence data,
-you should run the bp_load_gff.pl script again to update the
-indexes. Using the <b>-c</b> flag will reinitialize the indexes from
-scratch, erasing whatever was there before. Without this flag, the
-provided GFF and/or sequence data will be incrementally added to the
-indexes.</p>
-
-<h2><a name="mysql">24. Setting up a MySQL database</a></h2>
-
-<p>
-
-The Bio::SeqFeature::Store MySQL adaptor is an interface to the open
-source MySQL database management system. Its performance is similar to
-that of the Berkeleydb adaptor, but it has better provisions for error
-recovery and is safe to use in environments where multiple users write
-to the database simultaneously. In addition, the MySQL adaptor has
-been tested much more extensively than the Berkeleydb adaptor and is
-highly recommended for production environments. This section describes
-how to set up GBrowse to use the MySQL adaptor. If you are not
-interested in this, you may skip to the next section that describes
-loading third-party annotations.
-
-<p>
-
-First you'll have to install MySQL.  Although it is installed by
-default in most Linux systems, it will not be present on Windows or
-Macintosh OSX systems.  Go to <a
-href="http://www.mysql.com">www.mysql.com</a> and follow the
-instructions to download and install the database.  Come back here
-when this is done.
-
-<p>
-
-Next, you'll need to install the Perl interface to MySQL.  On a
-Windows system using ActiveState Perl, use the ppm tool:
-
-<blockquote><pre>
-C:\Windows&gt; <b>ppm</b>
-ppm&gt; <b>install DBD::mysql</b>
-ppm&gt; <b>quit</b>
-</pre></blockquote>
-
-<p>
-
-On a Unix, Linux or Mac OSX system, use the perl CPAN installer (this
-may need to be done with root/superuser privileges):
-
-<blockquote><pre>
-% <b>perl -MCPAN -e shell</b>
-cpan&gt; <b>install DBD::mysql</b>
-cpan&gt; <b>quit</b>
-</pre></blockquote>
-
-<p>
-
-Now you're ready to create the MySQL version of the volvox database.
-First you'll set up a new empty database named "volvox."  Using the
-<b>mysql</b> command-line tool, create the database, grant yourself
-read/write privileges, and grant the "nobody" user read privileges:
-
-<blockquote class="example"><pre>
-% <b>mysql -uroot -p</b>
-Enter password: *********
-
-mysql> <b>create database volvox;</b>
-Query OK, 1 row affected (0.04 sec)
-
-mysql> <b>grant all privileges on volvox.* to lstein@localhost;</b>
-Query OK, 0 rows affected (0.00 sec)
-
-mysql> <b>grant select on volvox.* to nobody@localhost;</b>
-Query OK, 0 rows affected (0.00 sec)
-
-mysql> <b>quit</b>
-Bye
-</pre></blockquote>
-
-<p>
-
-Depending on how mysql was installed, you may not need to provide a
-password, in which case just type "mysql -uroot" without the "-p"
-argument.  When granting privileges to yourself, replace "lstein" with
-your own login name.  If you are on a Windows system, you may be able
-to skip this step entirely.
-
-<p>
-
-You'll now load the .gff and .fa files into this newly created
-database.  There are actually two steps needed.  The first is to
-"initialize" the database with all the data definitions needed to hold
-genomic feature data, and the second is to actually load the data.
-Fortunately, both these steps are handled by the same command-line
-tool, <i>bp_seqfeature_load.pl</i>, which is part of the BioPerl
-suite.
-
-<p>
-
-Copy the files <a href="data_files/volvox_all.gff3">volvox_all.gff3</a>
-and <a href="data_files/volvox_all.fa">volvox_all.fa</a> to some
-convenient place.  Then run the following command from the command
-line:
-
-<blockquote class="example"><pre>
-% <b>bp_seqfeature_load.pl -c -d volvox volvox_all.fa -f volvox_all.gff3</b>
-loading volvox_all.fa...
-                                                                                
-Building object tree... 0.00s
-Loading bulk data into database... 0.00s
-load time:  0.02s
-loading volvox_all.gff3...
-                                                                                
-Building object tree... 0.00s
-Loading bulk data into database... 0.02s
-load time:  0.23s
-</pre></blockquote>
-
-<p>
-
-The arguments to <i>bp_seqfeature_load.pl</i> are:
-
-<table>
-  <tr>
-    <td><b>-c</b></td>
-    <td><b>c</b>lear (initialize) the database
-  </tr>
-  <tr>
-    <td><b>-d volvox</b></td>
-    <td>Load into the <b>d</b>atabase named volvox
-  </tr>
-  <tr>
-    <td><b>-f</b></td>
-    <td>Use the <b>f</b>ast loading algorithm.
-  </tr>
-  <tr>
-    <td><b>volvox_all.fa volvox_all.gff3</b></td>
-    <td>The data files to load.
-  </tr>
-  
 </table>
 
 <p>
 
-The MySQL database is all ready to go.  Now, in order to tell GBrowse
-to start using the MySQL database rather than the in-memory database,
-you need to make a small change to the volvox.conf configuration
-file.  Find the few lines of the file and change them to look like
-this:
+With the changes in place, select the aligner from the popup menu and
+press Configure.  Turn on uppercasing of the coding region track and
+see how it affects the display (Figure 27).
+
+<blockquote>
+<img src="figures/plugins2.gif"><br>
+<i>Figure 27: The Aligner plugin produces multiple alignments.</i>
+</blockquote>
+
+<p>
+
+Plugin files live in $CONF/gbrowse.conf/plugins. To view plugin
+documentation, find the plugin file, which usually lives under
+gbrowse.conf/plugins, and run the perldoc command with the -F ("file")
+option:
 
 <blockquote class="example"><pre>
-[GENERAL]
-description   = Volvox Example Database
-db_adaptor    = Bio::DB::SeqFeature::Store
-db_args       = -adaptor DBI::mysql
-	        -dsn     volvox
-                -user    nobody
+% <b>perldoc -F Aligner.pm</b>
 </pre></blockquote>
 
 <p>
 
-The <b>-adaptor</b> argument is telling GBrowse to use the DBI::mysql"
-database adaptor, which is the BioPerl interface to MySQL databases.
-The <b>-dsn</b> argument tells GBrowse to use the <b>d</b>ata
-<b>s</b>ource <b>n</b>ame "volvox". The <b>-fast</b> option turns on
-some optimizations that will make features load faster.
+Here's the list of plugins that come with the standard distribution:
 
-<p>
-
-When you reload the web page, GBrowse will now be using MySQL.
-Depending on the speed of your CPU and disk, you might notice that it
-seems a bit snappier than the in-memory version.  See <a
-href="../CONFIGURE_HOWTO.txt">CONFIGURE_HOWTO.txt</a> for more
-information on configuring GBrowse to use relational databases.
-
-<h3>Other backends</h3>
-
-<p>
-
-The Bio::DB::SeqFeature::Store database backend supports the three
-adaptors we have already used in this tutorial. For information see
-the following perldoc manual pages:
-
-<dl>
-  <dt><b>perldoc Bio::DB::SeqFeature::Store::DBI::mysql</b>
-  <dd>The MySQL adaptor.
-      <p>
-  <dt><b>perldoc Bio::DB::SeqFeature::Store::memory</b>
-  <dd>The in-memory adaptor.
-      <p>
-  <dt><b>perldoc Bio::DB::SeqFeature::Store::berkeleydb</b>
-  <dd>The Berkeleydb adaptor
-</dl>
-      
-<p>
-
-Another set of adaptors, in the Bio::DB::Das set, let GBrowse run on
-top of the rich biological database schemas <a
-href="http://www.gmod.org/wiki/index.php/Chado">Chado</a> and <a
-href="http://www.biosql.org/wiki/Main_Page">BioSQL</a>:
-
-<dl>
-  <dt><b>perldoc Bio::DB::Das::Chado</b>
-  <dd>An adaptor for PostgreSQL databases using the <i>Chado</i>
-      schema (see the <a href="http://www.gmod.org/schema/">Chado
-      home page</a>.)
-      <p>
-  <dt><b>perldoc Bio::DB::Das::BioSQL</b>
-  <dd>An adaptor for PostgreSQL and MySQL databases using the
-  <i>BioSQL</i> schema (see <a
-  href="http://www.biosql.org">www.biosql.org</a>).
-      <p>
-  <dt><b>perldoc Bio::Das</b>
-  <dd>An adaptor for Distributed Annotation System genome annotation
-  (version 1). We discuss this in more detail under <a
-  href="#DAS">Using GBrowse as a DAS Server or Client</a></dd>
-</dl>
-
-<p>
-
-Lastly, there is an older family of adaptors that use the Bio::DB::GFF
-database system. These are best-suited for loading data stored in GFF
-version 2 files , but will work, with limitations, with GFF3 files as
-well. These adaptors work with a wider range of relational database
-backends.
-
-<dl>
-  <dt><b>perldoc Bio::DB::GFF::Adaptor::dbi::mysql</b>
-  <dd>The MySQL adaptor.
-      <p>
-  <dt><b>perldoc Bio::DB::GFF::Adaptor::dbi::oracle</b>
-  <dd>The Oracle adaptor.
-      <p>
-  <dt><b>perldoc Bio::DB::GFF::Adaptor::dbi::pg</b>
-  <dd>The PostgreSQL adaptor.
-      <p>
-  <dt><b>perldoc Bio::DB::GFF::Adaptor::dbi::biofetch</b>
-  <dd>An adaptor that will fetch data automatically from
-      GenBank/EMBL and load it into a local MySQL database.
-      <p>
-  <dt><b>perldoc Bio::DB::GFF::Adaptor::memory</b>
-  <dd>An adaptor for in-memory databases running off files.
-      <p>
-</dl>
-
+<table border="1">
+  <tr>
+    <th>Plugin</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>Aligner</td>
+    <td>Dump multiple alignments</td>
+  </tr>
+  <tr>
+    <td>AlignTwoSequences</td>
+    <td>Execute NCBI's bl2seq on the current view (requires the bl2seq
+	executable).</td>
+  </tr>
+  <tr>
+    <td>AttributeHiliter</td>
+    <td>Highlight (by colorizing) features whose attributes match some
+	user-specified values.</td>
+  </tr>
+  <tr>
+    <td>BatchDumper</td>
+    <td>Allows the user to cut and paste a series of landmarks on the
+	genome and dumps out all overlapping features using a variety
+	of formats (e.g. GenBank format)
+    </td>
+  </tr>
+  <tr>
+    <td>Blat</td>
+    <td>Plugin to align sequences against the genome using the BLAT
+	algorithm (requires BLAT executable).
+    </td>
+  </tr>
+  <tr>
+    <td>CMapDumper</td>
+    <td>Produces files that can be read by the <a
+  href="http://www.gmod.org/wiki/index.php/Cmap">CMap comparative map browser.</a>
+    </td>
+  </tr>
+  <tr>
+    <td>CreateBlastDB</td>
+    <td>Creates a Blast-formatted database from a GBrowse database.
+    </td>
+  </tr>
+  <tr>
+    <td>FastaDumper</td>
+    <td>Produce pretty-printed FASTA dumps of the current region, with
+	selected features highlighted with colors or font styles.
+    </td>
+  </tr>
+  <tr>
+    <td>FilterTest</td>
+    <td>Small demonstration of how to write a plugin that filters
+	features (makes them visible or invisible) based on arbitrary criteria.
+    </td>
+  </tr>
+  <tr>
+    <td>GeneFinder</td>
+    <td>Runs Phil Green's genefinder gene prediction program within
+	GBrowse (requires genefinder executable).
+    </td>
+  </tr>
+  <tr>
+    <td>GFFDumper</td>
+    <td>Dump out the current region in GFF format (redundant with BatchDumper).</td>
+  </tr>
+  <tr>
+    <td>OligoFinder</td>
+    <td>Lets the user search for landmarks on the basis of unique
+	11-mers or greater.</td>
+  </tr>
+  <tr>
+    <td>PrimerDesigner</td>
+    <td>Interactively design PCR primers (requires <a
+	href="http://primer3.sourceforge.net/">primer3</a>
+	executable).</td>
+  </tr>
+  <tr>
+    <td>ProteinDumper</td>
+    <td>Dump translated protein sequences of the current region in various formats</td>
+  </tr>
+  <tr>
+    <td>RandomGene</td>
+    <td>Small demonstration of how to connect a plugin to a gene
+	prediction program. Doesn't actually predict genes, but
+	generates simulated ones.</td>
+  </tr>
+  <tr>
+    <td>RestrictionAnnotator</td>
+    <td>Creates restriction maps.</td>
+  </tr>
+  <tr>
+    <td>Spectrogram</td>
+    <td>Generate DNA spectrograms to highlight low complexity regions,
+	repetitive regions, coding regions and other regions with
+	periodicity. Requires Math::FFT Perl module.</td>
+  </tr>
+  <tr>
+    <td>Submitter</td>
+    <td>Helper plugin for the rubber-band select menu. See <a
+	href="http://www.gmod.org/wiki/index.php/GBrowse_Rubber_Band_Selection.pm">GBrowse
+	Rubber-band selection</a>.</td>
+  </tr>
+  <tr>
+    <td>test</td>
+    <td>This dumps the current view in FASTA format, and is used
+	for regression testing the plugin architecture.</td>
+  </tr>
+</table>
 
 <hr>
 
-<h2><a name="third_party">25. Adding Third Party Features</a></h2>
+<h2><a name="external>4. Adding Features from External Sources</a></h2>
 
 <p>
 
@@ -3687,6 +3347,13 @@ keep in mind that in the real world, GBrowse will be running on one
 computer, and the third-party annotation data will be loaded from
 another network-accessible computer.
 
+<h3><a href="#upload">4.1. Uploading an Annotation File</a></h3>
+
+<p>
+First, we'll look at how to upload private tracks to the browser. This
+method is intended for users who wish to view their own data in the
+context of the genome, and don't want to share the track with others.
+
 <p>
 
 Instead of using the artificial volvox data, we will now use some real
@@ -3716,7 +3383,6 @@ the entire data set with all core tracks turned on.
 <i>Figure 28:</i> The core <i>C. elegans</i> dataset.
 </blockquote>
 
-<h3>Uploading an Annotation File</h3>
 
 <p>
 
@@ -3917,7 +3583,7 @@ There is no particular reason that each of the annotation sets were
 broken into separate files.  We could easily combine them into a
 single GFF file just as you do for the core annotations.
 
-<h3>Sharing an Annotation File</h3>
+<h3><a href="sharing">4.2. Sharing an Annotation File</a></h3>
 
 <p>
 
@@ -4034,9 +3700,7 @@ to give everyone write access to the web server's $HTDOCS directory.
 To remove a URL from the list of loaded URLs, just delete it from its
 text field and reload.
 
-<hr>
-
-<h2><a name="DAS">26. Using GBrowse as a DAS Server or Client</a></h2>
+<h3><a name="DAS">4.3 Using GBrowse as a DAS Server or Client</a></h3>
 
 <p>
 
@@ -4225,7 +3889,7 @@ type in <b>http://localhost/cgi-bin/das/elegans_core</b> and press
 and the EST alignments.  However, the data is now not coming directly
 from the local database, but from the database via the DAS protocol.
 
-<h3>Combining Databases with DAS</h3>
+<h4><a name="das_combining">4.3.1. Combining Databases with DAS</a></h4>
 
 We can now use DAS to integrate the core gene model and EST alignment
 annotations with the STSs, expression data, trans-splice acceptors and
@@ -4340,7 +4004,7 @@ When you reload, the page will now show a popup menu of pre-defined
 DAS sources that users can choose.  The DAS sources can be local, as
 shown here, or located on one or more remote web sites.
 
-<h3>Exporting DAS Tracks to Ensembl and other Genome Browsers</h3>
+<h4><a name="das_exporting">4.3.2. Exporting DAS Tracks to Ensembl and other Genome Browsers<a></h4>
 
 <p>
 
@@ -4387,8 +4051,7 @@ are three workarounds for this:
       </pre></blockquote>
 </dl>
 
-
-<h3>Running GBrowse off DAS Entirely</h3>
+<h4><a name="das_entire">4.3.3. Running GBrowse off DAS Entirely</a></h4>
 
 <p>
 
@@ -4531,7 +4194,457 @@ needs.
 
 <hr>
 
-<h2><a name="conclusion">27. Conclusion</a></h2>
+
+<h2><a name="other_backends">5. Using Other Backends</a></h2>
+
+<p>Till now, we've been using the Bio::DB::SeqFeature::Store in-memory
+adaptor. This adaptor is suitable for small databases, but does not
+scale well to realistically-sized genomes. This section will show you
+how to create large genome annotation databases using the Berkeleydb
+and Mysql adaptors. For a full-featured genome database that includes
+annotations of gene structure and function, as well as genetic maps,
+diversity information and phenotypic information, be sure to check out
+the <a href="http://www.gmod.org/wiki/index.php/Chado">Chado
+database</a> which is significantly more feature-rich than those
+described here.</p>
+
+<h3><a name="berkeleydb">5.1. The Berkeleydb Backend</a></h3>
+
+<p>
+
+The in-memory database is great for smaller data sets, and can handle
+GFF files of up to about 20,000 features (more if you have lots of
+memory).  For larger data sets, however, you'll want to use a database
+management system.  GBrowse handles a number of DBMS through its
+"database adaptor" system.  This section shows how to use the
+Bio::DB::GFF berkeleydb adaptor that comes for free when you install
+BioPerl; this will enable you to create databases of 10 million or
+more features. The next section shows you how to install a MySQL
+relational database that will support even larger data sets.  You may
+skip these sections and move on to working with third-party
+annotations if you do not wish to install a berkeleydb-based server at
+this time.
+
+<p>
+
+The Berkeleydb database adaptor comes with BioPerl 1.51 or higher
+(still under development at the time this tutorial was written). If
+you have an older version of BioPerl, GBrowse will install the adaptor
+for you. As its name implies, this adaptor uses the Berkeleydb
+database system (http://www.sleepycat.com) to create indexed database
+files from GFF feature files. The adaptor also requires the Perl
+DB_File interface to Berkeleydb. If you are using a Linux or Mac OSX
+system, you almost certainly have both Berkeleydb and DB_File already
+installed. For Windows users of ActiveState Perl, you should confirm
+that DB_File is installed by running the following command: </p>
+
+<blockquote class="example">
+<pre>
+C:\&gt; perl -MDB_File -e 'print $DB_File::VERSION'
+</pre>
+</blockquote>
+
+<p>
+If this prints out a number, then you are golden. If you get an error,
+you should reinstall DB_File by running the PPM tool:</p>
+
+<blockquote class="example"><pre>
+C:\&gt; ppm
+PPM interactive shell (2.1) - type 'help' for available commands.
+PPM> install DB_File
+</pre></blockquote>
+
+<p>It is an extremely simple task to convert an existing in-memory
+database to use the Berkeleydb database. We will now convert the
+Volvox example database to Berkeleydb.</p>
+
+<p>Take the most recent version of the volvox.conf configuration file,
+and edit the top few lines of the new file so that it looks like
+this:</p>
+
+<blockquote class="example"><pre>
+[GENERAL]
+description   = Volvox Berkeleydb Database
+db_adaptor    = Bio::DB::SeqFeature::Store
+db_args       = -adaptor berkeleydb
+	        -dir     '$HTDOCS/gbrowse/databases/volvox'
+</pre></blockquote>
+
+<p> We made just two changes. First, we changed the description of the
+database to "Volvox Berkeleydb Database" to distinguish it from the
+in-memory database. Second, we changed the value of the
+<b>-adaptor</b> option from "memory" to "berkeleydb".
+</p>
+
+<p>Now reload the volvox page in your browser. There will be a slight
+delay as the Berkeleydb adaptor constructs its indexes, and then the
+page will reappear. You should now be able to browse and search the
+database exactly as before. Depending on how fast the memory adaptor
+was to begin with, you may not notice a speed improvement; however,
+with large GFF files, the performance improvement will be very
+marked.</p>
+
+<p>If you look in the volvox database directory, you will see a new
+subdirectory named "index". This contains a set of index files that
+allow gbrowse to find features quickly. They are automatically created
+and updated as needed when the underlying GFF or FASTA files are
+changed.</p>
+
+<p>If you get an "Internal Server Error" or similar message, check the
+server error log file for messages that explain what went wrong. The
+most common problem is that the volvox database directory is not
+writeable by the web server user. As described earlier, this directory
+must be "world writeable" in order to allow the web server to create
+and maintain the databases</p>
+
+<h4><a name="bp_seqfeature_load">5.1.1. The bp_seqfeature_load.pl script</h4>
+
+<p>Although it is convenient to maintain the Berkeleydb indexes
+automatically, this mechanism has a number of disadvantages. One
+disadvantage is that this mechanism requires the database directory to
+be world writeable (or at least writeable by the web user), which may
+not be acceptable in some installations. Another disadvantage is that
+the indexing may take a long time, up to 10 minutes for a GFF
+databases containing a million lines. Some web servers will time out
+during this process. For large databases, it is better to explicitly
+create the database index files using the <i>bp_seqfeature_load.pl</i>
+program.</p>
+
+<p><i>bp_seqfeature_load.pl</i> is a BioPerl utility that is described
+in more detail in <a href="#mysql">The MySQL Backend</a>. It
+takes as its input a series of GFF and FASTA files and creates the
+appropriate database files. To see how to use it, we will create a
+fresh database directory. Go to the GBrowse database located at
+<b>$HTDOCS/gbrowse/databases</b> and create a new subdirectory called
+"volvox_bdb:"</p>
+
+<blockquote class="example"><pre>
+ % cd $HTDOCS/gbrowse/databases
+ % mkdir volvox_berkeley
+</pre></blockquote>
+
+<p>
+
+On Windows systems you can use the file manager to create this new
+folder.
+
+<p>
+
+You do <b>not</b> have to make this directory world writeable, but it
+should be readable and executable by the user that the web server runs
+as. Now enter the tutorial data files directory
+($HTDOCS/gbrowse/tutorial/data_files) and load the GFF and sequence
+files using the following command:</p>
+
+<blockquote class="example"><pre>
+<b>% bp_seqfeature_load.pl -c -a berkeleydb -f -d $HTDOCS/gbrowse/databases/volvox_berkeley volvox_all.fa volvox_all.gff</b>
+loading volvox_all.fa...
+                                                                                
+Building object tree... 0.00s
+Loading bulk data into database... 0.01s
+load time:  0.02s
+loading volvox_all.gff3...
+                                                                                
+Building object tree... 0.00s
+Loading bulk data into database... 0.00s
+load time:  0.08s
+</pre></blockquote>
+
+The arguments to <i>bp_load_gff.pl</i> are:
+
+<table>
+  <tr>
+    <td><b>-a</b></td>
+    <td>Use the berkeleydb database <b>a</b>daptor.
+  </tr>
+  <tr>
+    <td><b>-c</b></td>
+    <td><b>c</b>lear (initialize) the database
+  </tr>
+  <tr>
+    <td><b>-f</b></td>
+    <td>use the <b>f</b>ast loading option
+  </tr>
+  <tr>
+    <td><b>-d $HTDOCS/gbrowse/databases/volvox_berkeley</b></td>
+    <td>Load the data into the indicated <b>d</b>atabase directory.
+  </tr>
+  <tr>
+    <td><b>volvox_all.fa volvox_all.gff</b></td>
+    <td>The data files to load.
+  </tr>
+</table>
+
+<p> If all goes well, this will create the index files in
+<tt>$HTDOCS/gbrowse/databases/volvox_bdb</tt>. If you look in that
+directory now, you'll see a series of index files.</p>
+
+<p>
+The last step is to modify the volvox.conf to point to this
+directory. Open it in a text editor and modify the top part so that it
+looks like this:
+</p>
+
+<blockquote class="example"><pre>
+[GENERAL]
+description   = Volvox Berkeleydb Database
+db_adaptor    = Bio::DB::SeqFeature::Store
+db_args       = -adaptor berkeleydb
+	        -dsn    '$HTDOCS/gbrowse/databases/volvox_berkeley'
+</pre></blockquote>
+
+<p>The change here is to replace the <b>-dir</b> argument with
+<b>-dsn</b> ("data source name").  This tells the Berkeleydb adaptor
+that pre-made index files can be found in the indicated directory. It
+will not attempt to update the index files automatically.</p>
+
+<p>If you wish to update the indexes with new GFF or sequence data,
+you should run the bp_load_gff.pl script again to update the
+indexes. Using the <b>-c</b> flag will reinitialize the indexes from
+scratch, erasing whatever was there before. Without this flag, the
+provided GFF and/or sequence data will be incrementally added to the
+indexes.</p>
+
+<h3><a name="mysql">5.2. The MySQL Backend</a></h3>
+
+<p>
+
+The Bio::SeqFeature::Store MySQL adaptor is an interface to the open
+source MySQL database management system. Its performance is similar to
+that of the Berkeleydb adaptor, but it has better provisions for error
+recovery and is safe to use in environments where multiple users write
+to the database simultaneously. In addition, the MySQL adaptor has
+been tested much more extensively than the Berkeleydb adaptor and is
+highly recommended for production environments. This section describes
+how to set up GBrowse to use the MySQL adaptor. If you are not
+interested in this, you may skip to the next section that describes
+loading third-party annotations.
+
+<p>
+
+First you'll have to install MySQL.  Although it is installed by
+default in most Linux systems, it will not be present on Windows or
+Macintosh OSX systems.  Go to <a
+href="http://www.mysql.com">www.mysql.com</a> and follow the
+instructions to download and install the database.  Come back here
+when this is done.
+
+<p>
+
+Next, you'll need to install the Perl interface to MySQL.  On a
+Windows system using ActiveState Perl, use the ppm tool:
+
+<blockquote><pre>
+C:\Windows&gt; <b>ppm</b>
+ppm&gt; <b>install DBD::mysql</b>
+ppm&gt; <b>quit</b>
+</pre></blockquote>
+
+<p>
+
+On a Unix, Linux or Mac OSX system, use the perl CPAN installer (this
+may need to be done with root/superuser privileges):
+
+<blockquote><pre>
+% <b>perl -MCPAN -e shell</b>
+cpan&gt; <b>install DBD::mysql</b>
+cpan&gt; <b>quit</b>
+</pre></blockquote>
+
+<p>
+
+Now you're ready to create the MySQL version of the volvox database.
+First you'll set up a new empty database named "volvox."  Using the
+<b>mysql</b> command-line tool, create the database, grant yourself
+read/write privileges, and grant the "nobody" user read privileges:
+
+<blockquote class="example"><pre>
+% <b>mysql -uroot -p</b>
+Enter password: *********
+
+mysql> <b>create database volvox;</b>
+Query OK, 1 row affected (0.04 sec)
+
+mysql> <b>grant all privileges on volvox.* to lstein@localhost;</b>
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> <b>grant select on volvox.* to nobody@localhost;</b>
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> <b>quit</b>
+Bye
+</pre></blockquote>
+
+<p>
+
+Depending on how mysql was installed, you may not need to provide a
+password, in which case just type "mysql -uroot" without the "-p"
+argument.  When granting privileges to yourself, replace "lstein" with
+your own login name.  If you are on a Windows system, you may be able
+to skip this step entirely.
+
+<p>
+
+You'll now load the .gff and .fa files into this newly created
+database.  There are actually two steps needed.  The first is to
+"initialize" the database with all the data definitions needed to hold
+genomic feature data, and the second is to actually load the data.
+Fortunately, both these steps are handled by the same command-line
+tool, <i>bp_seqfeature_load.pl</i>, which is part of the BioPerl
+suite.
+
+<p>
+
+Copy the files <a href="data_files/volvox_all.gff3">volvox_all.gff3</a>
+and <a href="data_files/volvox_all.fa">volvox_all.fa</a> to some
+convenient place.  Then run the following command from the command
+line:
+
+<blockquote class="example"><pre>
+% <b>bp_seqfeature_load.pl -c -d volvox volvox_all.fa -f volvox_all.gff3</b>
+loading volvox_all.fa...
+                                                                                
+Building object tree... 0.00s
+Loading bulk data into database... 0.00s
+load time:  0.02s
+loading volvox_all.gff3...
+                                                                                
+Building object tree... 0.00s
+Loading bulk data into database... 0.02s
+load time:  0.23s
+</pre></blockquote>
+
+<p>
+
+The arguments to <i>bp_seqfeature_load.pl</i> are:
+
+<table>
+  <tr>
+    <td><b>-c</b></td>
+    <td><b>c</b>lear (initialize) the database
+  </tr>
+  <tr>
+    <td><b>-d volvox</b></td>
+    <td>Load into the <b>d</b>atabase named volvox
+  </tr>
+  <tr>
+    <td><b>-f</b></td>
+    <td>Use the <b>f</b>ast loading algorithm.
+  </tr>
+  <tr>
+    <td><b>volvox_all.fa volvox_all.gff3</b></td>
+    <td>The data files to load.
+  </tr>
+  
+</table>
+
+<p>
+
+The MySQL database is all ready to go.  Now, in order to tell GBrowse
+to start using the MySQL database rather than the in-memory database,
+you need to make a small change to the volvox.conf configuration
+file.  Find the few lines of the file and change them to look like
+this:
+
+<blockquote class="example"><pre>
+[GENERAL]
+description   = Volvox Example Database
+db_adaptor    = Bio::DB::SeqFeature::Store
+db_args       = -adaptor DBI::mysql
+	        -dsn     volvox
+                -user    nobody
+</pre></blockquote>
+
+<p>
+
+The <b>-adaptor</b> argument is telling GBrowse to use the DBI::mysql"
+database adaptor, which is the BioPerl interface to MySQL databases.
+The <b>-dsn</b> argument tells GBrowse to use the <b>d</b>ata
+<b>s</b>ource <b>n</b>ame "volvox". The <b>-fast</b> option turns on
+some optimizations that will make features load faster.
+
+<p>
+
+When you reload the web page, GBrowse will now be using MySQL.
+Depending on the speed of your CPU and disk, you might notice that it
+seems a bit snappier than the in-memory version.  See <a
+href="../CONFIGURE_HOWTO.txt">CONFIGURE_HOWTO.txt</a> for more
+information on configuring GBrowse to use relational databases.
+
+<h3><a name="other_backends">5.3. Other backends</a></h3>
+
+<p>
+
+The Bio::DB::SeqFeature::Store database backend supports the three
+adaptors we have already used in this tutorial. For information see
+the following perldoc manual pages:
+
+<dl>
+  <dt><b>perldoc Bio::DB::SeqFeature::Store::DBI::mysql</b>
+  <dd>The MySQL adaptor.
+      <p>
+  <dt><b>perldoc Bio::DB::SeqFeature::Store::memory</b>
+  <dd>The in-memory adaptor.
+      <p>
+  <dt><b>perldoc Bio::DB::SeqFeature::Store::berkeleydb</b>
+  <dd>The Berkeleydb adaptor
+</dl>
+      
+<p>
+
+Another set of adaptors, in the Bio::DB::Das set, let GBrowse run on
+top of the rich biological database schemas <a
+href="http://www.gmod.org/wiki/index.php/Chado">Chado</a> and <a
+href="http://www.biosql.org/wiki/Main_Page">BioSQL</a>:
+
+<dl>
+  <dt><b>perldoc Bio::DB::Das::Chado</b>
+  <dd>An adaptor for PostgreSQL databases using the <i>Chado</i>
+      schema (see the <a href="http://www.gmod.org/schema/">Chado
+      home page</a>.)
+      <p>
+  <dt><b>perldoc Bio::DB::Das::BioSQL</b>
+  <dd>An adaptor for PostgreSQL and MySQL databases using the
+  <i>BioSQL</i> schema (see <a
+  href="http://www.biosql.org">www.biosql.org</a>).
+      <p>
+  <dt><b>perldoc Bio::Das</b>
+  <dd>An adaptor for Distributed Annotation System genome annotation
+  (version 1). We discuss this in more detail under <a
+  href="#DAS">Using GBrowse as a DAS Server or Client</a></dd>
+</dl>
+
+<p>
+
+Lastly, there is an older family of adaptors that use the Bio::DB::GFF
+database system. These are best-suited for loading data stored in GFF
+version 2 files , but will work, with limitations, with GFF3 files as
+well. These adaptors work with a wider range of relational database
+backends.
+
+<dl>
+  <dt><b>perldoc Bio::DB::GFF::Adaptor::dbi::mysql</b>
+  <dd>The MySQL adaptor.
+      <p>
+  <dt><b>perldoc Bio::DB::GFF::Adaptor::dbi::oracle</b>
+  <dd>The Oracle adaptor.
+      <p>
+  <dt><b>perldoc Bio::DB::GFF::Adaptor::dbi::pg</b>
+  <dd>The PostgreSQL adaptor.
+      <p>
+  <dt><b>perldoc Bio::DB::GFF::Adaptor::dbi::biofetch</b>
+  <dd>An adaptor that will fetch data automatically from
+      GenBank/EMBL and load it into a local MySQL database.
+      <p>
+  <dt><b>perldoc Bio::DB::GFF::Adaptor::memory</b>
+  <dd>An adaptor for in-memory databases running off files.
+      <p>
+</dl>
+
+
+<hr>
+
+<h2><a name="conclusion">6. Conclusion</a></h2>
 
 <p>
 
@@ -4545,9 +4658,11 @@ with GBrowse.  Major features not discussed were:
   <li>advanced callbacks
 </ul>
 
-All this information, and more can be found in CONFIGURE_HOWTO.txt,
-and in the documentation for Bio::DB::GFF and Bio::Graphics in the
-bioperl distribution.
+All this information, and more can be found in <a
+href="http://gmod.cshl.edu/wiki/index.php/GBrowse_Configuration_HOWTO">GBrowse
+Configuration HOWTO</a> and in the documentation for <a
+href="http://search.cpan.org/~sendu/bioperl-1.5.2_102/Bio/DB/SeqFeature/Store.pm">Bio::DB::SeqFeature::Store</a>
+and <a href="http://search.cpan.org/~sendu/bioperl-1.5.2_102/Bio/Graphics/Panel.pm">Bio::Graphics</a>.
 
 <p>
 
@@ -4557,6 +4672,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Tue Mar 11 10:20:05 EDT 2008
+Last modified: Tue Mar 11 17:30:27 EDT 2008
 <!-- hhmts end -->
 </body> </html>

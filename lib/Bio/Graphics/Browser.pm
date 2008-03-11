@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.70 2008-03-06 17:24:08 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.71 2008-03-11 21:36:29 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -3252,7 +3252,8 @@ sub make_title {
       $label     ||= $self->feature2label($feature) or last TRY;
       $key       ||= $self->setting($label,'key') || $label;
       $key         =~ s/s$//;
-      $key         = $feature->segment->dsn if $feature->isa('Bio::Das::Feature');  # for DAS sources
+      $key         = "(".
+	  $feature->segment->dsn.")" if $feature->isa('Bio::Das::Feature');  # for DAS sources
 
       my $link     = $self->code_setting($label,'title')
 	|| $self->code_setting('TRACK DEFAULTS'=>'title')

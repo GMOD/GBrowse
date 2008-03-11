@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.3.6.1.2.5.2.5 2007-10-26 20:24:59 sheldon_mckay Exp $
+# $Id: ideogram.pm,v 1.3.6.1.2.5.2.6 2008-03-11 21:02:30 sheldon_mckay Exp $
 # Glyph to draw chromosome ideograms
 
 use strict qw/vars refs/;
@@ -324,158 +324,96 @@ Bio::Graphics::Glyph::ideogram - The "ideogram" glyph
 
 =head1 DESCRIPTION
 
-This glyph draws a section of a chromosome ideogram. It relies
-on certain data from the feature to determine which color should
-be used (stain) and whether the segment is a telomere or 
-centromere or a regular cytoband. The centromeres and 'var'-marked
-bands get the usual diagonal black-on-white pattern which is 
-hardwired in the glyph, the colors of others is configurable.
-For GD::SVG images, a solid color is substituted for the diagonal
-black-on-white pattern.
+This glyph draws a chromosome ideogram. It relies on certain data from 
+the feature to determine which color should be used (stain) and whether 
+the segment is a telomere, centromere or a regular cytoband.
+The centromeres and 'var'-marked bands get a diagonal black-on-white pattern 
+that is hardwired in the glyph, the colors of other bands  is configurable
+(see options below). 
 
-The cytobandband features would typically be formatted like this in GFF3:
+=head2 Cytoband data
 
+The cytobandband features would typically be formatted like the example below.
 
-=head2 OPTIONS
+  ##gff-version 3
+  ##sequence-region 21 1 46944323
+  21      ensembl chromosome      1       46944323        .       .       .       ID=21
+  21      ensembl chromosome_band 1       2900000 .       .       .       Parent=21;Name=p13;Alias=p13;stain=gvar
+  21      ensembl chromosome_band 2900001 6300000 .       .       .       Parent=21;Name=p12;Alias=p12;stain=stalk
+  21      ensembl chromosome_band 6300001 10000000        .       .       .       Parent=21;Name=p11.2;Alias=p11.2;stain=gvar
+  21      ensembl centromere      10000001        13200000        .       .       .       Parent=21;Name=21_cent;Alias=21_cent
+  21      ensembl chromosome_band 13200001        15300000        .       .       .       Parent=21;Name=q11.2;Alias=q11.2;stain=gneg
+  21      ensembl chromosome_band 15300001        22900000        .       .       .       Parent=21;Name=q21.1;Alias=q21.1;stain=gpos100
+  21      ensembl chromosome_band 22900001        25800000        .       .       .       Parent=21;Name=q21.2;Alias=q21.2;stain=gneg
+  21      ensembl chromosome_band 25800001        30500000        .       .       .       Parent=21;Name=q21.3;Alias=q21.3;stain=gpos75
+  21      ensembl chromosome_band 30500001        34700000        .       .       .       Parent=21;Name=q22.11;Alias=q22.11;stain=gneg
+  21      ensembl chromosome_band 34700001        36700000        .       .       .       Parent=21;Name=q22.12;Alias=q22.12;stain=gpos50
+  21      ensembl chromosome_band 36700001        38600000        .       .       .       Parent=21;Name=q22.13;Alias=q22.13;stain=gneg
+  21      ensembl chromosome_band 38600001        41400000        .       .       .       Parent=21;Name=q22.2;Alias=q22.2;stain=gpos50
+  21      ensembl chromosome_band 41400001        46944323        .       .       .       Parent=21;Name=q22.3;Alias=q22.3;stain=gneg
 
-The following options are standard among all Glyphs.  See
-L<Bio::Graphics::Glyph> for a full explanation.
+=head2 How to obtain cytoband data
 
-  Option      Description                      Default
-  ------      -----------                      -------
+ See the GMOD wiki (below) for an example of a perl script to retrieve cytoband data from ensembl
 
-  -fgcolor      Foreground color	       black
+ L<http://www.gmod.org/wiki/index.php/GBrowse_karyotype_ideogram.pl>
 
-  -outlinecolor	Synonym for -fgcolor
-
-  -bgcolor      Background color               turquoise
-
-  -fillcolor    Synonym for -bgcolor
-
-  -linewidth    Line width                     1
-
-  -height       Height of glyph		       10
-
-  -font         Glyph font		       gdSmallFont
-
-  -connector    Connector type                 0 (false)
-
-  -connector_color
-                Connector color                black
-
-  -label        Whether to draw a label	       0 (false)
-
-  -description  Whether to draw a description  0 (false)
-
-=head1 Where to get cytoband data
-
-Below is a perl script to retrieve cytoband data from ensembl
-
- #!/usr/bin/perl -w
- # This script will query the ensembl public ftp site to
- # get cytoband data.
- # NOTE: a mysql client must be installed on your system
- #
- # Sheldon McKay <mckays@cshl.edu>
- #
- #$Id: ideogram.pm,v 1.3.6.1.2.5.2.5 2007-10-26 20:24:59 sheldon_mckay Exp $
-
-
- use strict;
- use DBI;
-
- my $database = shift;
-
- unless ($database) {
-   print "No database specified: Usage: ./get_ensembl_cytoband_data.pl database\n";
-   print "This is a list of ensembl databases\n";
-   open IN, "mysql -uanonymous -hensembldb.ensembl.org -e 'show databases' | grep core | grep -v 'expression' |";
-   my @string;
-   while (<IN>) {
-     chomp;
-     push @string, $_;
-     if (@string == 4) {
-       print join("\t", @string), "\n";
-       @string = ();
-     }
-   }
+=head1 OPTIONS
   
-  print join("\t", @string), "\n" if @string;
-   exit;
- }
+=head2 Global glyph options:
+  
+See L<Bio::Graphics::Glyph::generic>
+  
+=head2 Glyph-specific options:
 
- my $host     = 'ensembldb.ensembl.org';
- my $query    = 
- 'SELECT name,seq_region_start,seq_region_end,band,stain
-  FROM seq_region,karyotype
-  WHERE seq_region.seq_region_id = karyotype.seq_region_id;';  
+The ideogram glyph recognizes the following
+glyph-specific options:
+  
+  Option            Description                      Default
+  ------            -----------                      -------
+ -arcradius         roundness of the centromere;      7
+                    varies with the chromosome
+                    width. 
 
+ -fake_telomeres    whether to render fake telo-      false
+                    meres, which are painted black
+                    Otherwise, the left and right-
+                    most bands are rounded.
 
- my $dbh = DBI->connect( "dbi:mysql:$database:$host", 'anonymous' )
-     or die DBI->errstr;
+ -bgcolor           A series of key:value pairs to    none
+                    specify band colors by stain
+                    (see below).
 
- my $sth = $dbh->prepare($query) or die $dbh->errstr;
- $sth->execute or die $sth->errstr;
-
- my ($cent_start,$prev_chr,$chr_end,$segments,$gff);
- my $chr_start = 1;
- while (my @band = $sth->fetchrow_array ) {
-   my ($chr,$start,$end,$band,$stain) = @band;
-   my $class = 'Chromosome';
-   my $method;
-
-   $chr =~ s/chr//;
-   if ($stain eq 'acen' && !$cent_start) {
-     $cent_start = $start;
-     next;
-   }
-   elsif ($cent_start) {
-     $method = 'centromere';
-     $band   = "$chr\_cent";
-     $start  = $cent_start;
-     $stain  = '';
-     $cent_start = 0;
-   }
-   else {
-     $method = 'chromosome_band';
-   }
-
-   $gff .= join("\t", $chr, 'ensembl', lc $method, $start, $end, 
-	       qw/. . ./,qq{Parent $chr;label $band;Alias $band});
-   $gff .= $stain ? ";stain $stain\n" : "\n";
-
-   if ($prev_chr && $prev_chr !~ /$chr/) {
-      $segments .= "\#\#sequence-region $prev_chr $chr_start $chr_end\n";
-      $chr_start = 1;
-   }
-
-   $prev_chr = $chr;
-   $chr_end  = $end;
- }
-
- if (!$gff) {
-   print "\nSorry, there are no cytoband data for $database\n\n";
-   exit;
- }
-
- $segments .= "\#\#sequence-region $prev_chr $chr_start $chr_end\n";
- print "##gff-version 2\n";
- print "#Source ENSEMBL database: $database\n";
- print $segments,$gff;
-
- __END__
- # Currently ideograms for human, rat and mouse are available
- # To see the current database list, try the command:
+=head3 bgcolor
  
- mysql -uanonymous -hensembldb.ensembl.org -e 'show databases' \ 
- | grep core | grep 'sapiens\|rattus\|mus' | grep -v 'expression'
- 
+  bgcolor = gneg:white gpos25:gray gpos75:darkgray gpos100:black gvar:var stalk:#666666
+
+=head4 stains
+
+The keywords gneg, gpos, gvar, etc  are specified in the stain attribute of each
+of the GFF features (see the sample GFF above).  There is no limitation imposed on the
+keys; you may use whatever stain name that occurs in the data file. However, the
+keywords I<stalk>, I<tip> and I<gvar> are reserved. 
+
+=head4 stalk
+
+The stain stalk will create a narrower band to represent the stalk that joins the 
+satellite region to the centromere in the p-arm of human acrocentric chromosomes.
+
+=head4 tip
+
+The stain tip will create a terminal band that simulates extremely acrocentric 
+rodent chromosomes.
+
+=head4 gvar
+
+The stain gvar will cause the band to be filled with a diagonal black-on-white
+pattern.  If the image is generated with GD::SVG, a solid color is used instead.
 
 =head1 AUTHORS
 
 Sheldon McKay  E<lt>mckays@cshl.eduE<gt>,
 Gudmundur A. Thorisson E<lt>mummi@cshl.eduE<gt> 
-
 
   
 This library is free software; you can redistribute it and/or modify

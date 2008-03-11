@@ -278,26 +278,31 @@ sub minmax {
   my ($infh,$bedline) = @_;
   local $_;
 
+  my $transform  = $self->get_transform;
+
   my $stats = Statistics::Descriptive::Sparse->new();
   if ((my $size = stat($infh)->size) > BIG_FILE) {
       warn "wiggle file is very large; resorting to genome-wide sample statistics";
-      $self->{FILEWIDE_STATS} ||= $self->sample_file($infh);
+      $self->{FILEWIDE_STATS} ||= $self->sample_file($infh,BIG_FILE_SAMPLES);
       return;
   }
 
   my $seqids = $self->current_track->{seqids} ||= {};
 
-
   if ($bedline) {  # left-over BED line
       my @tokens = split /\s+/,$bedline;
-      $stats->add_data($tokens[-1]);
+      my $value = $tokens[-1];
+      $value = $transform->($self,$value) if $transform;
+      $stats->add_data($value);
   }
 
   while (<$infh>) {
       last if /^track|fixedStep|variableStep/;
       next if /^\#/;
       my @tokens = split(/\s+/,$_) or next;
-      $stats->add_data($tokens[-1]);
+      my $value  = $tokens[-1];
+      $value = $transform->($self,$value) if $transform;
+      $stats->add_data($value);
   }
 
   my $chrom = $self->{track_options}{chrom};
@@ -309,9 +314,11 @@ sub minmax {
 }
 
 sub sample_file {
-    my $fh      = shift;
+    my $self = shift;
 
-    my $samples = shift;
+    my ($fh,$samples) = @_;
+
+    my $transform  = $self->get_transform;
 
     my $stats = Statistics::Descriptive::Sparse->new();
 
@@ -325,6 +332,7 @@ sub sample_file {
 	my @tokens = split /\s+/,$line;
 	my $value  = $tokens[-1];
 	next unless $value =~ /^[\d\seE.+-]+$/; # non-numeric
+	$value = $transform->($self,$value) if $transform;
 	$stats->add_data($value);
 	$count++;
     }
@@ -337,10 +345,27 @@ sub sample_file {
     };
 }
 
+sub get_transform {
+    my $self = shift;
+    my $transform  = $self->current_track->{display_options}{transform};
+    return $self->can($transform) if $transform;
+}
+
+# one and only transform currently defined
+# Natural log of the square of the value.
+# Return 0 if the value is 0
+sub logsquared {
+    my $self  = shift;
+    my $value = shift;
+    return 0 if $value == 0;
+    return log($value**2);
+}
+
 sub process_bed {
   my $self = shift;
   my $infh = shift;
   my $oops = shift;
+  my $transform  = $self->get_transform;
   $self->process_bedline($oops) if $oops;
   while (<$infh>) {
     last if /^track/;
@@ -352,9 +377,12 @@ sub process_bed {
 
 sub process_bedline {
   my $self = shift;
-  my $line = shift;
+  my ($line,$transform) = @_;
+
   my ($seqid,$start,$end,$value) = split /\s+/,$line;
+  $value = $transform->($self,$value) if $transform;
   $start++;   # to 1-based coordinates
+
   my $wigfile = $self->wigfile($seqid);
   $wigfile->set_range($start=>$end, $value);
 
@@ -386,6 +414,8 @@ sub process_fixedline {
   $chrom->{end}   = $end
       if !defined $chrom->{end} || $chrom->{end} < $end;
 
+  my $transform  = $self->get_transform;
+
   # write out data in 500K chunks for efficiency
   my @buffer;
   while (<$infh>) {
@@ -394,14 +424,16 @@ sub process_fixedline {
     chomp;
     push @buffer,$_;
     if (@buffer >= 500_000) {
-      $wigfile->set_values($start=>\@buffer);
-      @buffer = ();
-      my $big_step = $step * @buffer;
-      $start += $big_step;
-      $self->current_track->{seqids}{$seqid}{end} = $start + $big_step - 1 + $span;
+	@buffer = map {$transform->($self,$_)} @buffer if $transform;
+	$wigfile->set_values($start=>\@buffer);
+	@buffer = ();
+	my $big_step = $step * @buffer;
+	$start += $big_step;
+	$self->current_track->{seqids}{$seqid}{end} = $start + $big_step - 1 + $span;
     }
 
   }
+  @buffer = map {$transform->($self,$_)} @buffer if $transform;
   $wigfile->set_values($start=>\@buffer) if @buffer;
   $self->current_track->{seqids}{$seqid}{end} = $start + @buffer*$step - 1 + $span;
 }
@@ -413,11 +445,14 @@ sub process_variableline {
   my $chrom   = $self->current_track->{seqids}{$seqid};
   my $wigfile = $self->wigfile($seqid);
   my $span    = $wigfile->span;
+  my $transform  = $self->get_transform;
+
   while (<$infh>) {
     last if /^(track|variableStep|fixedStep)/;
     next if /^#/;
     chomp;
     my ($start,$value) = split /\s+/ or next;
+    $value = $transform->($self,$value) if $transform;
     $wigfile->set_value($start=>$value);
 
     # update span
@@ -428,7 +463,8 @@ sub process_variableline {
 	if !defined $chrom->{end} || $chrom->{end} < $end;
 
   }
-  $self->current_track->{seqids}{$seqid}{end} ||= $self->current_track->{seqids}{$seqid}{start};
+  $self->current_track->{seqids}{$seqid}{end} 
+        ||= $self->current_track->{seqids}{$seqid}{start};
 }
 
 sub wigfile {
@@ -448,7 +484,8 @@ sub wigfile {
     my $span = $self->{track_options}{span} || 
 	$self->{track_options}{step} || 
 	1;
-    my $trim = $self->current_track->{display_options}{trim} || 'stdev2';
+    my $trim      = $self->current_track->{display_options}{trim}      || 'stdev2';
+    my $transform = $self->current_track->{display_options}{transform};
     my $wigfile = Bio::Graphics::Wiggle->new(
 					     $path,
 					     1,

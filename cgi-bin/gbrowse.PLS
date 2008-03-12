@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.52 2008-03-05 01:23:44 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.53 2008-03-12 02:24:30 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -68,6 +68,7 @@ use Carp qw(:DEFAULT croak);
 use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td);
 use CGI::Toggle;
 use CGI::Cookie;
+
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $BIOGRAPHICS_VERSION $CONF_DIR
 	    %PLUGINS $PLUGINS $UPLOADED_SOURCES $REMOTE_SOURCES
@@ -483,6 +484,8 @@ sub main_display {
   }
 
   elsif ($segment) {
+    adjust_region_size($segment,$page_settings);
+
     # if a plugin passes us back a Feature, rather than a Segment, turn it into a segment
     # (this shouldn't happen - hah!)
     ($segment) = open_database()->segment($segment->seq_id,
@@ -873,6 +876,25 @@ sub reset_cookies {
   return \@cookies;
 }
 
+sub adjust_region_size {
+  my ($segment,$settings) = @_;
+  my $region_size;
+  my $length = $segment ? $segment->length : abs($settings->{stop} - $settings->{start});
+  my $whole_segment = $CONFIG->whole_segment($segment) if $segment;
+
+  if ($CONFIG->setting('region segment') eq 'AUTO') {
+    $region_size = 10*$length;
+  }
+  else {
+    $region_size = param('region_size') if defined param('region_size');
+    $region_size ||= $CONFIG->setting('region segment');
+    $region_size ||= $settings->{region_size} || 10*$length;
+  }
+  $region_size = $whole_segment->length if $whole_segment && $region_size > $whole_segment->length;
+  $settings->{region_size} = $region_size;
+}
+
+
 # This is called to change the values of the settings
 sub adjust_settings {
   my $settings = shift;
@@ -958,12 +980,7 @@ sub adjust_settings {
   }
 
   if ($CONFIG->setting('region segment')) {
-    my $region_size = param('region_size') if defined param('region_size');
-    $region_size    = $CONFIG->setting('region segment') unless defined $region_size;
-    if ($region_size && $region_size eq 'AUTO') {
-      $region_size = 10*abs($settings->{stop} - $settings->{start});
-    }
-    $settings->{region_size} = $region_size;
+    adjust_region_size($segment,$settings);
   } else {
     delete $settings->{region_size};
   }

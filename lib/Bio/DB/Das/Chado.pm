@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.12.2.7 2008-03-12 16:21:04 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.12.2.8 2008-03-12 19:07:13 scottcain Exp $
 
 =head1 NAME
 
@@ -173,7 +173,7 @@ sub new {
     #help with names that exist in both GO and SO, like 'protein'.
     # dgg: but this array is bad for callers of name2term() who expect scalar result 
     #    mostly want only sofa terms
-    
+   
     if(defined($name2term{ $hashref->{name} })){ #already seen this name
 
       if(ref($name2term{ $hashref->{name} }) ne 'ARRAY'){ #already array-converted
@@ -193,6 +193,7 @@ sub new {
 
   $self->term2name(\%term2name);
   $self->name2term(\%name2term, \%termcv);
+
   #Recursive Mapping
   $self->recursivMapping($arg{-recursivMapping} ? $arg{-recursivMapping} : 0);
 
@@ -469,17 +470,22 @@ sub name2term {
   if(ref($arg) eq 'HASH'){
     return $self->{'name2term'} = $arg;
   } elsif($arg) {
-    my $val= $self->{'name2term'}{$arg};
-    if(ref($val)) {
-      #? use $cvnames scalar here to pick which cv?
-      my @val= @$val; 
-      foreach $val (@val) {
-        my $cv=  $self->{'termcvs'}{$val};
-        return $val if($cv =~ /^(SO|sequence)/i); # want sofa_id
-        }
-      return $val[0]; #? 1st is best guess
-      }
-    return $val;
+    return $self->{'name2term'}{$arg};
+
+#rather than trying to guess what a caller wants, the caller will have
+#deal with what comes... (ie, a scalar or a hash).
+#    my $val= $self->{'name2term'}{$arg};
+#    if(ref($val)) {
+#      #? use $cvnames scalar here to pick which cv?
+#      my @val= @$val; 
+#      foreach $val (@val) {
+#        my $cv=  $self->{'termcvs'}{$val};
+#        return $val if($cv =~ /^(SO|sequence)/i); # want sofa_id
+#        }
+#      return $val[0]; #? 1st is best guess
+#      }
+#    return $val;
+
   } else {
     return $self->{'name2term'};
   }
@@ -766,12 +772,20 @@ sub _by_alias_by_name {
   my ($select_part,$from_part,$where_part);
 
   if ($class) {
+      warn "class: $class";
       my $type = ($class eq 'CDS' && $self->inferCDS)
                  ? $self->name2term('polypeptide')
                  : $self->name2term($class);
       return unless $type;
+
+      if (ref $type eq 'ARRAY') {
+           $type = join(',',@$type);
+      }
+      elsif (ref $type eq 'HASH') {
+           $type = join(',', map($$type{$_}, keys %$type) ); 
+      }
       $from_part =  " feature f ";
-      $where_part.= " f.type_id = $type ";
+      $where_part.= " f.type_id in ( $type ) ";
   }
 
 

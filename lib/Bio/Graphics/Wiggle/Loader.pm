@@ -52,6 +52,40 @@ the data.
 
 =back
 
+=head2 EXTENSIONS
+
+Several extensions to the WIG format "track" declaration are recognized.
+
+=over 4
+
+=item transform=<transform>
+
+Specify a transform to be performed on all numeric data within this
+track prior to loading into the binary wig file. Currently, the
+following two declarations are recognized:
+
+ transform=logsquared  y' = log(y**2) for y != 0
+                       y' = 0         for y == 0
+            
+ transform=none        y' = y   (no transform - the default)
+
+=item trim=<trim>
+
+Specify a trimming function to be performed on the data prior to
+scaling. Currently, the following trim functions are recognized:
+
+ trim=stdev1           trim to plus/minus 1 standard deviation of the mean
+ trim=stdev2           trim to plus/minus 2 standard deviations of the mean
+ trim=stdevN           trim to plus/minus N standard deviations of the mean
+ trim=none             no trimming (the default)
+
+=back
+
+Example entended track declaration:
+
+ track type=wiggle_0 name="example" description="20 degrees, 2 hr"  \
+       trim=stdev2 transform=logsquared
+
 =cut
 
 use strict;

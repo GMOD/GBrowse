@@ -47,7 +47,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbgff.PLS,v 1.1.2.2 2008-03-12 00:31:34 sheldon_mckay Exp $
+# $Id: gbgff.PLS,v 1.1.2.3 2008-03-12 00:46:03 sheldon_mckay Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -153,7 +153,7 @@ sub print_feature {
     eval {$f->version(3)};
     my $s = $f->gff_string(1); # the flag is for GFF3 subfeature recursion
     chomp $s;
-    $s =~ s/\t\t/\t\.\t/g; # no empty columns 
+    $s =~ s/\t\t/\t\.\t/g if $s; # no empty columns 
     print $s,"\n";
 }
 
@@ -172,7 +172,7 @@ sub print_configuration {
 	    if (ref $value eq 'CODE') {
 	      $value = $config->setting('TRACK DEFAULTS'=>$s) or next;
 	    }
-	    next if $s =~ /^balloon/l # doesn't work right
+	    next if $s =~ /^balloon/; # doesn't work right
 	    print "$s = $value\n";
 	}
 	print "\n";

@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.12.2.6 2007-12-04 19:06:08 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.12.2.7 2008-03-12 16:21:04 scottcain Exp $
 
 =head1 NAME
 
@@ -995,14 +995,22 @@ sub _by_alias_by_name {
             my $poly_fid = $$hashref{'feature_id'};
 
             #get fid of parent transcript
+            my $id_list = ref $self->term2name('derives_from') eq 'ARRAY' 
+                        ? "in (".join(",",@{$self->term2name('derives_from')}).")"
+                        : "= ".$self->term2name('derives_from');
+
             my $transcript_query = $self->dbh->prepare("
                 SELECT object_id FROM feature_relationship
-                WHERE type_id = ".$self->term2name('derives_from')
+                WHERE type_id ".$id_list
                 ." AND subject_id = $poly_fid"
             );
 
             $transcript_query->execute;
             my ($trans_id) = $transcript_query->fetchrow_array; 
+
+            $id_list = ref $self->term2name('part_of') eq 'ARRAY'
+                        ? "in (".join(",",@{$self->term2name('part_of')}).")"
+                        : "= ".$self->term2name('part_of');
 
             #now get exons that are part of the transcript
             my $exon_query = $self->dbh->prepare("
@@ -1015,7 +1023,7 @@ sub _by_alias_by_name {
                WHERE
                    f.type_id = ".$self->term2name('exon')." and f.feature_id in
                      (select subject_id from feature_relationship where object_id = $trans_id and
-                             type_id = ".$self->name2term('part_of')." ) and 
+                             type_id ".$id_list." ) and 
                    fl.rank=0 and
                    (fd.dbxref_id is null or fd.dbxref_id in
                      (select dbxref_id from dbxref where db_id =".$self->gff_source_db_id."))        

@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.27 2008-03-13 12:01:40 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.28 2008-03-13 13:24:18 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -295,12 +295,7 @@ Balloon.prototype.doShowTooltip = function() {
       if (!self.cookie) {
           self.cookie = YAHOO.util.Cookie.get('balloon');
           if (!self.cookie) {
-            var clock = new Date();
-            // cookie expires after an hour
-            clock.setTime(clock.getTime()+(3600*1000));
-            var expiry = function() { this.expires = clock };
-            var bestBefore = '';//new expiry();
-	    self.cookie = YAHOO.util.Cookie.set('balloon',null,bestBefore);
+	    self.cookie = YAHOO.util.Cookie.set('balloon',null);
 	  }
       }
 

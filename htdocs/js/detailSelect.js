@@ -4,11 +4,12 @@
                       This class handles details-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: detailSelect.js,v 1.1.2.3 2008-02-14 22:17:56 sheldon_mckay Exp $
+ $Id: detailSelect.js,v 1.1.2.4 2008-03-13 14:19:54 sheldon_mckay Exp $
 
 */
 
 var detailsObject;
+var detailBalloon;
 
 // Constructor
 var Details = function () {
@@ -44,18 +45,21 @@ Details.prototype.initialize = function() {
   self.left    = self.elementLocation(i,'x1');
   self.right   = self.elementLocation(i,'x2');
 
-  if (balloon) {
-    var helpFunction = function(event) { 
-      if (!event) {
-        event = window.event;
+  try {
+      detailBalloon = new Balloon();
+      detailBalloon.vOffset  = 1;
+      detailBalloon.showOnly = 2; // just show twice
+      var helpFunction = function(event) {
+	  if (!event) {
+	      event = window.event;
+	  }
+	  var help = '<b>Scalebar:</b> Click here to recenter or click and drag left or right to select a region';
+	  detailBalloon.showTooltip(event,help,0,250);
       }
-      var help = '<b>Scalebar:</b> Click here to recenter or click and drag left or right to select a region';
-      balloon.showTooltip(event,help,0,250);
-    }
-    i.onmouseover = helpFunction;
+      i.onmouseover = helpFunction;
   }
-  else {
-    i.setAttribute('title','click and drag to select a region');
+  catch(e) {
+      i.setAttribute('title','click and drag to select a region');
   }
 
   self.scalebar = i;

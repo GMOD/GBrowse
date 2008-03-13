@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.28 2008-03-13 13:24:18 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.29 2008-03-13 14:19:50 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -150,7 +150,6 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
     return false;
   }
 
-
   // If the showOnly option is used and we need to handle cookies
   // get the YAHOO library if it is not already loaded
   if (this.showOnly && !YAHOO.util.Cookie) {
@@ -288,6 +287,7 @@ Balloon.prototype.doShowTooltip = function() {
   // Stop firing if a balloon is already being displayed
   if (balloonIsVisible) return false;  
 
+  
   // Keep track of how many times the balloon has 
   // popped up; don't fire if the limit has been reached
   if (self.showOnly) {
@@ -299,14 +299,15 @@ Balloon.prototype.doShowTooltip = function() {
 	  }
       }
 
-      var enum = YAHOO.util.Cookie.getSub('balloon',id) || 0;
-      enum = parseInt(enum);
-      enum++;
-      if (enum > self.showOnly) {
+      var count = YAHOO.util.Cookie.getSub('balloon',id) || 0;
+      count = parseInt(count);
+      count++;
+      if (count > self.showOnly) {
 	return false;
       }
-      YAHOO.util.Cookie.setSub('balloon',id,enum);
+      YAHOO.util.Cookie.setSub('balloon',id,count);
   }
+
 
   // a short delay time might cause some intereference
   // with fade-out

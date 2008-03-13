@@ -88,22 +88,23 @@ sub feature_file {
   my $url = $self->source2url($label);
   my $feature_file;
 
-  if ($url =~ m!^(http://.+/das)/([^/?]+)(?:\?(.+))?$!) { # DAS source!
+  if ($url =~ m!^(http://.+/das)/([^?]+)(?:\?(.+))?$!) { # DAS source!
     $feature_file = $self->get_das_segment($1,$2,$3,$segment);
   }
   else {
-    $feature_file = $self->get_remote_upload($url,$rel2abs,$segment);
+    $feature_file = $self->get_remote_upload($url,$rel2abs,$segment,$label);
   }
 
   # Tell the feature file what its name is, so that it can be formatted
   # nicely in the user interface.
+  my $name = $feature_file->setting('name') || $url;
   $feature_file->name($url) if $feature_file;
   return $feature_file;
 }
 
 sub get_remote_upload {
   my $self = shift;
-  my ($url,$rel2abs,$segment) = @_;
+  my ($url,$rel2abs,$segment,$label) = @_;
   my $config = $self->config;
 
   # do certain substitutions on the URL
@@ -129,8 +130,26 @@ sub get_remote_upload {
 				    -map_coords     => $rel2abs,
 				    -smart_features => 1);
   warn "get_remote_feature_data(): got $feature_file" if DEBUG;
+ 
+  # let proximal configuration override remote
+  if ($config->setting($label => 'remote feature')) {
+
+    # local track name may not correspond to the
+    # FeatureFile types
+    my ($types) = $url =~ /type=([^;&]+)/;
+    my @types = split(/\+|\s+/, $types);
+
+    for my $option ($config->config->_setting($label)) {
+      my $val = $config->setting($label => $option);
+      for my $type (@types) {
+	$feature_file->set($type,$option,$val);
+      }
+    }
+  }
+
   return $feature_file;
 }
+
 
 sub get_das_segment {
   my $self = shift;

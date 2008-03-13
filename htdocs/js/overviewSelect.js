@@ -4,11 +4,12 @@
                       This class handles overview-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: overviewSelect.js,v 1.1.2.6 2008-03-13 14:19:55 sheldon_mckay Exp $
+ $Id: overviewSelect.js,v 1.1.2.7 2008-03-13 15:17:23 sheldon_mckay Exp $
 
 */
 
 var overviewObject;
+var overviewBalloon;
 
 // Constructor
 var Overview = function () {

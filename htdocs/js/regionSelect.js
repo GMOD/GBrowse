@@ -4,11 +4,12 @@
                       This class handles region-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: regionSelect.js,v 1.1.2.5 2008-03-13 14:19:56 sheldon_mckay Exp $
+ $Id: regionSelect.js,v 1.1.2.6 2008-03-13 15:17:23 sheldon_mckay Exp $
 
 */
 
 var regionObject;
+var regionBalloon;
 
 // Constructor
 var Region = function () {

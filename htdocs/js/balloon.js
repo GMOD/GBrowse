@@ -1,11 +1,12 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.29 2008-03-13 14:19:50 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.30 2008-03-17 19:45:09 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
- Copyright (c) 2007,2008 Sheldon McKay, Cold Spring Harbor Laboratory
+
+ Copyright (c) 2007 Sheldon McKay, Cold Spring Harbor Laboratory
 
  This balloon tooltip package and associated files not otherwise copyrighted are 
  distributed under the MIT-style license:
@@ -36,7 +37,7 @@
 */
 
 // These global variables are necessary to avoid losing scope when
-// setting the balloon timeout and for inter-object communication
+//setting the balloon timeout and for inter-object communication
 var currentBalloonClass;
 var balloonIsVisible
 var balloonIsSticky;
@@ -73,10 +74,6 @@ var Balloon = function() {
 
   // time interval for fade-out (msec)
   this.fadeOut   = 300;  
-
-  // set this option to stop showing the balloon
-  // after a set number of appearances
-  //this.showOnly  = 1;
 
   // Vertical Distance from cursor location (px)
   this.vOffset  = 10;
@@ -136,7 +133,7 @@ var Balloon = function() {
 
 //////////////////////////////////////////////////////////////////////////
 // This is the function that is called on mouseover.  It has a built-in //
-// delay time to avoid balloons popping up on rapid mouseover events    //
+// delay time to avoid balloons popping up on rapid mouseover events     //
 //////////////////////////////////////////////////////////////////////////
 Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
   // Awful IE bug, page load aborts if the balloon is fired
@@ -150,23 +147,14 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
     return false;
   }
 
-  // If the showOnly option is used and we need to handle cookies
-  // get the YAHOO library if it is not already loaded
-  if (this.showOnly && !YAHOO.util.Cookie) {
-      var script = document.createElement('script');
-      script.setAttribute('src','http://yui.yahooapis.com/2.5.0/build/cookie/cookie-beta-min.js');
-      script.setAttribute('type','text/javascript');
-      var head = document.getElementsByTagName('head').item(0);
-      head.appendChild(script);
-  }
-
   // Sorry Konqueror, no fade-in for you!
   if (this.isKonqueror()) this.allowFade = false;
 
   // Check for mouseover (vs. mousedown or click)
   var mouseOver = evt.type.match('mouseover','i');  
 
-  // if the firing event is a click, fade-in and a non-sticky balloon make no sense  
+  // if the firing event is a click, fade-in and a non-sticky balloon make no sense
+  
   if (!mouseOver) {
     sticky = true;
     this.fadeOK = false;
@@ -205,7 +193,7 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
 
   this.hideTooltip();
 
-  // if this is IE < 7 use an alternative image if provided
+  // if this is IE < 7 use an alternative image id provided
   if (this.isOldIE() && this.ieImage) {
     this.balloonImage = this.ieImage;
     this.ieImage = null;
@@ -286,28 +274,6 @@ Balloon.prototype.doShowTooltip = function() {
   
   // Stop firing if a balloon is already being displayed
   if (balloonIsVisible) return false;  
-
-  
-  // Keep track of how many times the balloon has 
-  // popped up; don't fire if the limit has been reached
-  if (self.showOnly) {
-      var id = digest(self.currentHelpText);
-      if (!self.cookie) {
-          self.cookie = YAHOO.util.Cookie.get('balloon');
-          if (!self.cookie) {
-	    self.cookie = YAHOO.util.Cookie.set('balloon',null);
-	  }
-      }
-
-      var count = YAHOO.util.Cookie.getSub('balloon',id) || 0;
-      count = parseInt(count);
-      count++;
-      if (count > self.showOnly) {
-	return false;
-      }
-      YAHOO.util.Cookie.setSub('balloon',id,count);
-  }
-
 
   // a short delay time might cause some intereference
   // with fade-out
@@ -782,6 +748,7 @@ Balloon.prototype.isSameElement = function(el1,el2) {
 
 ///////////////////////////////////////////////////////
 // AJAX widget to fill the balloons
+// requires prototype.js
 ///////////////////////////////////////////////////////
 Balloon.prototype.getContents = function(section) {
 
@@ -832,73 +799,4 @@ Balloon.prototype.isOldIE = function() {
 // test for Konqueror
 Balloon.prototype.isKonqueror = function() {
   return navigator.userAgent.indexOf( 'Konqueror' ) != -1;
-}
-
-// lightweight numeric digest of innerHTML for id generation
-// not as strong as MD5 but avoids another dependency
-function digest(text) {
-  text = text.replace(/[^a-zA-Z0-9]+/g,'').toLowerCase();
-  var atxt = text.split('');
-  var id = 1;
-  for(var i=0;i<atxt.length||id<1e99;i++) {
-    var num = parseInt(atxt[i]) ? atxt[i]*1 : numeric(atxt[i]); 
-    id *= num;
-  }    
-  id += ''; // make it a string
-  var nums  = id.match(/\d/g);
-  var idStr = '';
-  for (var i=0;i<18;i++) {
-    idStr += alpha(nums[i]);
-  }
-  return idStr;
-}
-
-function numeric(char) {
-  var factor = 3; // any number but 0 or 1
-  switch(char) {
-    case 'a' : return 1*factor;
-    case 'b' : return 2*factor;
-    case 'c' : return 3*factor;
-    case 'd' : return 4*factor;
-    case 'e' : return 5*factor;
-    case 'f' : return 6*factor;
-    case 'g' : return 7*factor;
-    case 'h' : return 8*factor;
-    case 'i' : return 9*factor;
-    case 'j' : return 10*factor;
-    case 'k' : return 11*factor;
-    case 'l' : return 12*factor;
-    case 'm' : return 13*factor;
-    case 'n' : return 14*factor;
-    case 'o' : return 15*factor;
-    case 'p' : return 16*factor;
-    case 'q' : return 17*factor;
-    case 'r' : return 18*factor;
-    case 's' : return 19*factor;
-    case 't' : return 20*factor;
-    case 'u' : return 21*factor;
-    case 'v' : return 22*factor;
-    case 'w' : return 23*factor;
-    case 'x' : return 24*factor;
-    case 'y' : return 25*factor;
-    case 'z' : return 26*factor;
-    default  : return 27*factor;
-  }
-}
-
-function alpha(num) {
-  num *= 1; //must be a number!
-  switch(num) {
-    case 0  : return 'a';
-    case 1  : return 'b';
-    case 2  : return 'c';
-    case 3  : return 'd';
-    case 4  : return 'e';
-    case 5  : return 'f';
-    case 6  : return 'g';
-    case 7  : return 'h';
-    case 8  : return 'i';
-    case 9  : return 'j';
-    default : return 'z';
-  }
 }

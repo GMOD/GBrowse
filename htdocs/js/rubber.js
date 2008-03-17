@@ -3,7 +3,7 @@
  rubber.js -- a base class for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.1.2.15 2008-03-08 14:37:16 sheldon_mckay Exp $
+ $Id: rubber.js,v 1.1.2.16 2008-03-17 21:14:48 sheldon_mckay Exp $
 
 */
 
@@ -293,8 +293,13 @@ SelectArea.prototype.disableSelection = function(el) {
 // Builds the popup menu that appears when selection is complete
 SelectArea.prototype.addSelectMenu = function(view) {
 
-  var menu =  document.getElementById(view+'SelectMenu') 
-           || this.createAndAppend('div',document.body,view+'SelectMenu');
+  var menu =  document.getElementById(view+'SelectMenu'); 
+  if (menu) {
+    this.autoSubmit = false;
+  }
+  else {
+    this.createAndAppend('div',document.body,view+'SelectMenu');
+  }
 
   // required style 
   YAHOO.util.Dom.setStyle(menu,'position','absolute');

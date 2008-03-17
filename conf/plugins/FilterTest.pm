@@ -1,7 +1,7 @@
 package Bio::Graphics::Browser::Plugin::FilterTest;
 
-# $Id: FilterTest.pm,v 1.2 2004-02-03 22:40:35 marclogghe Exp $
-# Filter plugin to filter features from the ORFs track
+# $Id: FilterTest.pm,v 1.2.14.1 2008-03-17 22:16:37 lstein Exp $
+# Filter plugin to filter features from the genes track
 
 use strict;
 use vars qw($VERSION @ISA);
@@ -16,16 +16,16 @@ $VERSION = '0.O1';
 
 my @FILTERS = (
     [
-        'Only ORFs on Watson strand', q{ $_[0]->name =~ /w$/i}
+        'Only genes on Watson strand', q{ $_[0]->name =~ /w$/i}
     ],
     [
-        'Only ORFs on Crick strand', q{ $_[0]->name =~ /c$/i}
+        'Only genes on Crick strand', q{ $_[0]->name =~ /c$/i}
     ],
     [
-        'ORF length < ', q{ $_[0]->length < $value }
+        'gene length < ', q{ $_[0]->length < $value }
     ],
     [
-        'ORF length >= ', q{ $_[0]->length >= $value }
+        'gene length >= ', q{ $_[0]->length >= $value }
     ],
 );
 my %LABELS = map { $_ => $FILTERS[$_][0] } ( 0 .. $#FILTERS );
@@ -38,7 +38,7 @@ sub new
 
 sub name
 {
-    'ORFs';
+    'Genes';
 }
 
 sub type
@@ -50,7 +50,7 @@ sub type
 sub description
 {
     my $key = shift ()->name;
-    p("This Filter plugin filters the features from the ORFS track ($key)")
+    p("This Filter plugin filters the features from the gene track ($key)")
       . p("This plugin was written by Marc Logghe.");
 }
 

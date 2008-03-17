@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.71 2008-03-11 21:36:29 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.72 2008-03-17 22:16:52 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1146,6 +1146,7 @@ sub generate_panels {
   my $do_map        = $args->{do_map};
   my $cache_extra   = $args->{cache_extra} || [];
   my $cache         = $args->{cache};
+  my $settings      = $args->{settings};
   my $section       = $args->{section}     || '?detail';
 
   # hack to turn caching off in a one-shot fashion...
@@ -1350,17 +1351,20 @@ sub generate_panels {
 							     $args->{flip},
 							     $l,
 							     $args->{scale_map_type},
+							     $settings->{show_tooltips},
 							     )
 	     : $l eq '__all__'   ? $self->make_map($boxes,
 						   $panels{$l},
 						   $map_name,
 						   \%trackmap,
-						   $args->{scale_map_type})
+						   $args->{scale_map_type},
+						   $settings->{show_tooltips})
 	     : $self->make_map($boxes,
 			       $panels{$l},
 			       $l,
 			       \%trackmap,
-			       0);
+			       0,
+			       $settings->{show_tooltips});
 
     my $key = $drag_n_drop ? $cache_key{$l} : $cache_key{'__all__'};
     $self->set_cached_panel($key,$gd,$map);
@@ -1640,11 +1644,11 @@ sub callback_setting {
 
 sub make_map {
   my $self = shift;
-  my ($boxes,$panel,$map_name,$trackmap,$first_box_is_scale) = @_;
+  my ($boxes,$panel,$map_name,$trackmap,$first_box_is_scale,$show_tips) = @_;
   my @map = ($map_name);
 
-  my $flip = $panel->flip;
-  my $tips = $self->setting('balloon tips');
+  my $flip      = $panel->flip;
+  my $tips      = $self->setting('balloon tips');
   my $use_titles_for_balloons = $self->setting('titles are balloons');
 
   my $did_map;
@@ -1661,7 +1665,7 @@ sub make_map {
     my $label  = $_->[5] ? $trackmap->{$_->[5]} : '';
 
     my $href   = $self->make_href($_->[0],$panel,$label,$_->[5]);
-    my $title  = unescape($self->make_title($_->[0],$panel,$label,$_->[5]));
+    my $title  = $show_tips ? unescape($self->make_title($_->[0],$panel,$label,$_->[5])):'';
     my $target = $self->config->make_link_target($_->[0],$panel,$label,$_->[5]);
 
     my ($mouseover,$mousedown,$style);
@@ -1688,7 +1692,7 @@ sub make_map {
       $balloon_ht ||= 'balloon';
       $balloon_ct ||= 'balloon';
 
-      if ($balloonhover) {
+      if ($show_tips && $balloonhover) {
         my $stick = defined $sticky ? $sticky : 0;
         $mouseover = $balloonhover =~ /^(https?|ftp):/
 	    ? "$balloon_ht.showTooltip(event,'<iframe width=' + $balloon_ct.maxWidth + ' height=$height frameborder=0 " .
@@ -1737,8 +1741,10 @@ sub make_map {
 # should center the image on the scale.
 sub make_centering_map {
   my $self   = shift;
-  my ($ruler,$flip,$label,$scale_map_type)  = @_;
+  my ($ruler,$flip,$label,$scale_map_type,$show_tips)  = @_;
   my @map = $label ? ($label) : ();
+
+  my $title = $show_tips ? $self->tr('Recenter') : '';
 
   return if $ruler->[3]-$ruler->[1] == 0;
 
@@ -1784,7 +1790,7 @@ sub make_centering_map {
     $url .= ";flip=1" if $flip;
     
     push @map, join("\t",'ruler',$x1, $ruler->[2], $x2, $ruler->[4], 
-		    href  => $url, title => 'recenter', alt   => 'recenter');
+		    href  => $url, title => $title||'', alt   => $title||'');
   }
   
   return $label ? \@map : @map;
@@ -2705,14 +2711,16 @@ sub map_html {
   my $html  = qq(\n<map name="${name}_map" id="${name}_map">\n);
   
   for (@data) {
-    my (undef,$x1,$y1,$x2,$y2,%atts) = split "\t";
-    $x1 or next;
-    my $coords = join(',',$x1,$y1,$x2,$y2);
-    $html .= qq(<area shape="rect" coords="$coords" );
-    for my $att (keys %atts) {
-      $html .= qq($att="$atts{$att}" );
-    }
-    $html .= qq(/>\n);
+      my @tokens = split "\t";
+      push @tokens,undef unless @tokens%2; # ensure an odd number
+      my (undef,$x1,$y1,$x2,$y2,%atts) = map {$_||''} @tokens; # get rid of uninit values
+      $x1 or next;
+      my $coords = join(',',$x1,$y1,$x2,$y2);
+      $html .= qq(<area shape="rect" coords="$coords" );
+      for my $att (keys %atts) {
+	  $html .= qq($att="$atts{$att}" );
+      }
+      $html .= qq(/>\n);
   }
   
   $html .= qq(</map>\n);
@@ -3219,7 +3227,7 @@ sub make_link {
     my $ref   = CGI::escape("$c");  # workaround again
     my $start = CGI::escape($feature->start);
     my $end   = CGI::escape($feature->end);
-    my $src   = CGI::escape(eval{$feature->source} || '');
+    my $src   = CGI::escape($feature->can('source_tag') ? $feature->source_tag : '');
     my $f_id  = CGI::escape($feature->feature_id) if $feature->can('feature_id');
 
     if ($f_id) {
@@ -3349,7 +3357,8 @@ sub make_link_target {
   my $link_target = $self->code_setting($label,'link_target')
     || $self->code_setting('LINK DEFAULTS' => 'link_target')
     || $self->code_setting(general => 'link_target');
-  $link_target = eval {$link_target->($feature,$panel,$track)} if ref($link_target) eq 'CODE';
+  $link_target = eval {$link_target->($feature,$panel,$track)} 
+      if ref($link_target) eq 'CODE';
   $self->_callback_complain($label=>'link_target') if $@;
   return $link_target;
 }

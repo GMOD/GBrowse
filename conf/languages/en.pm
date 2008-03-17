@@ -16,8 +16,9 @@ character * is allowed.
 END
 
    NAVIGATION_INSTRUCTIONS => <<END,
-To center on a location, click the ruler. Use the Scroll/Zoom buttons
-to change magnification and position.
+Click one of the rulers to center on a location, or click and drag to
+select a region. Use the Scroll/Zoom buttons to change magnification
+and position.
 END
 
    EDIT_INSTRUCTIONS => <<END,
@@ -384,5 +385,35 @@ END
  SMALL_INTERVAL    => 'Resizing small interval to %s bp',
 
  NO_SOURCES        => 'There are no readable data sources configured.  Perhaps you do not have permission to view them.',
+
+ ADD_YOUR_OWN_TRACKS => 'Add Your Own Tracks',
+
+ INVALID_SOURCE    => 'The source named %s is invalid.',
+
+ BACKGROUND_COLOR  => 'Fill color',
+
+ FG_COLOR          => 'Line color',
+
+ HEIGHT           => 'Height',
+
+ PACKING          => 'Packing',
+
+ GLYPH            => 'Shape',
+
+ LINEWIDTH        => 'Line width',
+
+ DEFAULT          => '(default)',
+
+ DYNAMIC_VALUE    => 'Dynamically calculated',
+
+ CHANGE           => 'Change',
+
+ DRAGGABLE_TRACKS  => 'Draggable tracks',
+
+ CACHE_TRACKS      => 'Cache tracks',
+
+ OPTIONS_RESET     => 'All page settings have been reset to their default values',
+
+ OPTIONS_UPDATED   => 'A new site configuration is in effect; all page settings have been reset to their defaults',
 
 };

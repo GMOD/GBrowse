@@ -16,8 +16,9 @@ character * is allowed.
 END
 
    NAVIGATION_INSTRUCTIONS => <<END,
-To center on a location, click the ruler. Use the Scroll/Zoom buttons
-to change magnification and position.
+Click one of the rulers to center on a location, or click and drag to
+select a region. Use the Scroll/Zoom buttons to change magnification
+and position.
 END
 
    EDIT_INSTRUCTIONS => <<END,
@@ -371,7 +372,7 @@ END
 
  NOT_FOUND => 'The landmark named <i>%s</i> is not recognized. See the help pages for suggestions.',
 
- TOO_BIG   => 'Detailed view is limited to %s.  Click in the overview to select a region %s wide.',
+ TOO_BIG   => 'Detailed view is limited to %s. Click and drag in the overview or region to make a smaller selection.',
 
  PURGED    => "Can't find the file named %s.  Perhaps it has been purged?.",
 
@@ -410,6 +411,8 @@ END
  DRAGGABLE_TRACKS  => 'Draggable tracks',
 
  CACHE_TRACKS      => 'Cache tracks',
+
+ SHOW_TOOLTIPS     => 'Show tooltips',
 
  OPTIONS_RESET     => 'All page settings have been reset to their default values',
 

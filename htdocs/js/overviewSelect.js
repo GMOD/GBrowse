@@ -4,7 +4,7 @@
                       This class handles overview-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: overviewSelect.js,v 1.1.2.7 2008-03-13 15:17:23 sheldon_mckay Exp $
+ $Id: overviewSelect.js,v 1.1.2.8 2008-03-17 22:16:50 lstein Exp $
 
 */
 
@@ -57,22 +57,22 @@ Overview.prototype.initialize = function() {
   self.right   = self.elementLocation(i,'x2');
   self.selectLayer = p.parentNode.parentNode;
 
-  try {
-      overviewBalloon = new Balloon();
-      overviewBalloon.vOffset  = 1;
-      overviewBalloon.showOnly = 2; // just show twice                                                                                                                                                               
-      var helpFunction = function(event) {
-	  if (!event) {
-	      event = window.event;
-	  }
-	  var help = '<b>Overview:</b> Click here to recenter or click and drag left or right to select a region';
-	  overviewBalloon.showTooltip(event,help,0,250);
-      }
-      i.onmouseover = helpFunction;
-  }
-  catch(e) {
-      i.setAttribute('title','click and drag to select a region');
-  }
+//   try {
+//       overviewBalloon = new Balloon();
+//       overviewBalloon.vOffset  = 1;
+//       overviewBalloon.showOnly = 2; // just show twice
+//       var helpFunction = function(event) {
+// 	  if (!event) {
+// 	      event = window.event;
+// 	  }
+// 	  var help = '<b>Overview:</b> Click here to recenter or click and drag left or right to select a region';
+// 	  overviewBalloon.showTooltip(event,help,0,250);
+//       }
+//       i.onmouseover = helpFunction;
+//   }
+//   catch(e) {
+//       i.setAttribute('title','click and drag to select a region');
+//   }
 
   self.scalebar = i;
   self.getSegment(i);

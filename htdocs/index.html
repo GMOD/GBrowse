@@ -17,11 +17,11 @@ Welcome to the Generic Genome Browser!
 
 <p>
 
-An example in-memory database from yeast chromosome 1 has been
+An example in-memory database for S. cerevisiae chromosomes 1 and 2 has been
 installed for you.  Try it at this URL:
 
 <blockquote>
-<a href="/cgi-bin/gbrowse/yeast_chr1">http://localhost/cgi-bin/gbrowse/yeast_chr1</a>
+<a href="/cgi-bin/gbrowse/yeast_chr1+2">http://localhost/cgi-bin/gbrowse/yeast_chr1+2</a>
 </blockquote>
 
 
@@ -101,54 +101,47 @@ components:
 
 <h2>More Data Sets</h2>
 
-To load larger data sets it is suggested that you create a MySQL
-database.  Sample data from yeast is located in the gbrowse
-distribution in the directory <i>sample_data</i>.  Instructions for
-loading this data is in <a href="docs/pod/INSTALL.html">INSTALL</a>.  You will most
-likely want to use the script <i>bp_bulk_load_gff.pl</i> which should
-have been installed when you installed BioPerl.
+Chromosomal annotations are described using GFF3 files, which usually
+have the suffix .gff or .gff3. To load larger data sets it is
+suggested that you create a MySQL database and use the
+<i>bp_load_seqfeature.pl</i> script which should have been installed
+when you installed BioPerl. Some databases may use the older GFF2
+format, in which case you should load using
+<i>bp_bulk_load_gff.pl</i>.
 
 <p>
 
-The full yeast genome is also available for download from Sourceforge.
-Get <a
-href="http://prdownloads.sourceforge.net/gmod/yeast.gff.gz">yeast
-features</a> and <a
-href="http://prdownloads.sourceforge.net/gmod/yeast.fasta.gz">yeast
-DNA</a> from <a
-href="http://sourceforge.net/project/showfiles.php?group_id=27707">the
-gmod downloads page</a>.  You'll also find Worm, Fly and Human genome
-annotations here, although not necessarily the most up to date ones.
-Note that you will need to uncompress the data files prior to running
-to load script.  See the <a href="contrib/conf_files">sample
-configuration files</a> directory for starter config files to get you
-up and running.
+You will find suitable data files at the following model organism databases:
+
+<dl>
+  <dt><i>S. cerevisiae</i>
+  <dd><a href="ftp://genome-ftp.stanford.edu/pub/yeast/chromosomal_feature">SGD</a>
+  <dt><i>D. melanogaster</i>
+  <dd><a href="ftp://ftp.flybase.net/releases/current/">FlyBase</a>
+  <dt><i>C. elegans</i>
+  <dd><a href="http://www.wormbase.org/wiki/index.php/Downloads#GFF3">WormBase</a>
+  <dt><i>M. musculus (GFF2 only)</i>
+  <dd><a href="ftp://ftp.informatics.jax.org/pub/reports/MGI_GTGUP.gff">MGD</a>
+  <dt><i>R. rattus (GFF2 only)</i>
+  <dd><a href="ftp://rgd.mcw.edu/pub/RGD_genome_annotations/V3.1/GFF_files/">RGD</a>
+  <dt><i>D. discoideum</i>
+  <dd><a href="http://dictybase.org/Downloads/">Dictybase</a>
+  <dt><i>H. sapiens (GFF2 only)</i>
+  <dd><a href="http://www.hapmap.org/downloads/gbrowse/">HapMap</a>
+  <dt><i>A. thaliana (GFF2 only)</i>
+  <dd><a href="ftp://ftp.arabidopsis.org/home/tair/Sequences/whole_chromosomes/GFF/tigr5_gff">TAIR</a>
+</dl>
 
 <p>
 
-Once you've loaded the yeast data (and adjusted the config file as
-described in the <a href="docs/pod/INSTALL.html">INSTALL</a> document), you can
-browse the yeast genome by following the link <a
-href="/cgi-bin/gbrowse/yeast">http://localhost/cgi-bin/gbrowse/yeast</a>.
-
-<h2>Learning More</h2>
-
-<p>
-
-To find out more about Gbrowse, try the:
-
-<ul>
-  <li><a href="tutorial/tutorial.html">GBrowse Tutorial</a>
-  <li><a href="contrib/conf_files">Sample Configuration Files</a>
-  <li><a href="docs/pod/CONFIGURE_HOWTO.html">GBROWSE CONFIGURE HOWTO</a>
-</ul>
-
+Check the <a href="contrib">contrib directory</a> for contributed
+configuration files for some of the common model organisms.
 
 <hr>
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="http://www.cshl.org/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Thu Jun 24 11:47:09 EDT 2004
+Last modified: Mon Mar 17 18:13:20 EDT 2008
 <!-- hhmts end -->
 </body> </html>
 

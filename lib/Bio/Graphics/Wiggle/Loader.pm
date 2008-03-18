@@ -375,7 +375,7 @@ sub sample_file {
 	min   => $stats->min,
 	max   => $stats->max,
 	mean  => $stats->mean,
-	stdev => $stats->stdev,
+	stdev => $stats->standard_deviation,
     };
 }
 

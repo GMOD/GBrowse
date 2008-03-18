@@ -3,7 +3,7 @@
  rubber.js -- a base class for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.1.2.16 2008-03-17 21:14:48 sheldon_mckay Exp $
+ $Id: rubber.js,v 1.1.2.17 2008-03-18 00:44:19 sheldon_mckay Exp $
 
 */
 
@@ -298,7 +298,7 @@ SelectArea.prototype.addSelectMenu = function(view) {
     this.autoSubmit = false;
   }
   else {
-    this.createAndAppend('div',document.body,view+'SelectMenu');
+    menu = this.createAndAppend('div',document.body,view+'SelectMenu');
   }
 
   // required style 

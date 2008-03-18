@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.72 2008-03-17 22:16:52 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.73 2008-03-18 15:31:30 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1179,7 +1179,8 @@ sub generate_panels {
 
   # When running in monolithic mode, we need to be very careful about the cache key. This key
   # is the combination of the panel type, the panel args, and all the individual track args!
-  my @cache_args          = ($section,$panel_key,@panel_args,@$cache_extra,$do_map);
+  my @cache_args          = ($section,$panel_key,@panel_args,
+			     @$cache_extra,$do_map);
   if ($panel_key eq '__all__') {
     $track_args{$_} ||= [$self->create_track_args($_,$args)] foreach @$labels;
     push @cache_args,map {@$_} values %track_args;
@@ -1204,7 +1205,8 @@ sub generate_panels {
   # if $drag_n_drop is false.
   if ($drag_n_drop) {
     $panel_key = '__pad__';
-    my @cache_args           = ($section,$panel_key,@panel_args,@$cache_extra,$drag_n_drop);
+    my @cache_args           = ($section,$panel_key,@panel_args,
+				@$cache_extra,$drag_n_drop);
     $cache_key{$panel_key}   = $self->create_cache_key(@cache_args);
     unless ($cached{$panel_key} =
 	    $cache && $self->panel_is_cached($cache_key{$panel_key})

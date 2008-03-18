@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.55 2008-03-18 02:10:34 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.56 2008-03-18 15:31:14 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -651,6 +651,7 @@ sub detail_panel {
     my @cache_extra       = (
 			     sort keys %{$page_settings->{h_feat}},
 			     sort @{$page_settings->{h_region}},
+	                     $page_settings->{show_tooltips},
 			    );
 
     $panels      = $CONFIG->render_panels({segment       => $segment,

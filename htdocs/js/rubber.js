@@ -3,7 +3,7 @@
  rubber.js -- a base class for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.1.2.18 2008-03-18 02:10:23 sheldon_mckay Exp $
+ $Id: rubber.js,v 1.1.2.19 2008-03-18 15:31:21 lstein Exp $
 
 */
 
@@ -282,10 +282,7 @@ SelectArea.prototype.moveRubber = function(event) {
     selectSequenceWidth = selectSequenceWidth.toFixed(2);
   }
 
-  if (tooBig) {
-    self.spanReport.innerHTML = 'Maximum selection size exceeded!';
-  }
-  else if (selectPixelWidth > 100) {
+  if (selectPixelWidth > 100) {
     self.spanReport.innerHTML = selectSequenceWidth+' '+unit;
   }
   else {

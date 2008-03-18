@@ -181,9 +181,6 @@ unlink './pod2htmd.x~~';
 print "Installing tutorial...\n";
 copy_tree("./docs/tutorial",$ht_target);
 
-print "Installing sample_data...\n";
-copy_tree("./sample_data",$ht_target);
-
 print "Installing contrib...\n";
 copy_tree("./contrib",$ht_target);
 

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.53 2008-03-12 02:24:30 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.54 2008-03-18 01:01:41 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -196,7 +196,9 @@ if (param('reset')) {
 my $asynchronous;
 if (my @ajax_labels = param('label[]')) {
   my %seen;
-  @{$page_settings->{tracks}} = map {CGI::unescape($_)} grep {length()>0 && !$seen{$_}++} (@ajax_labels,@{$page_settings->{tracks}});
+  @{$page_settings->{tracks}} = grep {length()>0 && !$seen{$_}++} 
+                                map  {CGI::unescape($_)} 
+                                     (@ajax_labels,@{$page_settings->{tracks}});
   $asynchronous++;
 }
 
@@ -504,6 +506,7 @@ sub main_display {
 						      -start=>$region_seg_start,
 						      -end=>$region_seg_end,
 						      -absolute=>1);
+
       print region_panel($region_segment,$segment,$page_settings,$feature_files);
     }
 
@@ -787,6 +790,7 @@ sub default_settings {
   $settings->{cache}         = defined $CONFIG->cache_time ? $CONFIG->cache_time : 1;
   $settings->{drag_and_drop} = $CONFIG->drag_and_drop;
   $settings->{v}             = $VERSION;
+  $settings->{show_tooltips} = 1;
   $settings->{stp}           = 1;
   $settings->{ins}           = 1;
   $settings->{head}          = 1;
@@ -920,6 +924,8 @@ sub adjust_settings {
       $settings->{drag_and_drop} = 0;
     }
 
+    $settings->{show_tooltips}   = param('show_tooltips');
+
   }
 
   if (my @selected = split_labels(param('enable'))) {
@@ -1049,12 +1055,14 @@ sub upgrade_settings {
   # by default.
   $settings->{grid}          = 1 unless exists $settings->{grid};
   $settings->{cache}         = 1 unless exists $settings->{cache};
+  $settings->{show_tooltips} = 1 unless exists $settings->{show_tooltips};
 
   # This "clever" bit of code checks whether the "drag and drop" setting is defined
   # in the config file but not in the $settings hash, and if so, forces the value.
   $settings->{drag_and_drop} = $CONFIG->setting('drag and drop')
                               if defined $CONFIG->setting('drag and drop') &&
 				! exists $settings->{drag_and_drop};
+
   return;
 }
 
@@ -1683,7 +1691,17 @@ sub settings_table {
 	       ),
 	    ),
 	  TR({-class=>'searchtitle'},
-	     td({-colspan=>3,
+	     td({-align=>'left'},
+		b(
+		    checkbox(-name     => 'show_tooltips',
+			     -label    => $CONFIG->tr('SHOW_TOOLTIPS'),
+			     -override => 1,
+			     -checked  => $settings->{show_tooltips},
+		    ),
+		)
+	     ),
+	     
+	     td({-colspan=>2,
 		 -align=>'right'},
 		b(submit(-name => $CONFIG->tr('Update')))))
 	 );

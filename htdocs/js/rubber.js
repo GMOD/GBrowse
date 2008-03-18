@@ -3,7 +3,7 @@
  rubber.js -- a base class for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.1.2.17 2008-03-18 00:44:19 sheldon_mckay Exp $
+ $Id: rubber.js,v 1.1.2.18 2008-03-18 02:10:23 sheldon_mckay Exp $
 
 */
 
@@ -253,6 +253,21 @@ SelectArea.prototype.moveRubber = function(event) {
   YAHOO.util.Dom.setStyle(self.selectBox,'width',selectPixelWidth+'px');
   YAHOO.util.Dom.setStyle(self.selectBox,'visibility','visible');
 
+  // warning if max segment size exceeded
+  var tooBig;
+  if (!self.maxSegment) {
+    self.maxSegment = document.mainform.max_segment.value;
+  }
+  if (self.maxSegment && selectSequenceWidth > self.maxSegment) {
+    self.setOpacity(self.selectBox,self.opacity||0.5,'red');
+    self.overrideAutoSubmit = true;
+    tooBig = true;
+  }
+  else {
+    self.setOpacity(self.selectBox,self.opacity||0.5);
+    self.overrideAutoSubmit = false;
+  }
+
   var unit = 'bp';
   if (selectSequenceWidth > 1000 && selectSequenceWidth < 1000000) {
     selectSequenceWidth = selectSequenceWidth/1000;
@@ -267,7 +282,10 @@ SelectArea.prototype.moveRubber = function(event) {
     selectSequenceWidth = selectSequenceWidth.toFixed(2);
   }
 
-  if (selectPixelWidth > 100) {
+  if (tooBig) {
+    self.spanReport.innerHTML = 'Maximum selection size exceeded!';
+  }
+  else if (selectPixelWidth > 100) {
     self.spanReport.innerHTML = selectSequenceWidth+' '+unit;
   }
   else {
@@ -343,7 +361,7 @@ SelectArea.prototype.addSelectBox = function(view) {
   this.selectLayer.onmouseup     = this.stopRubber;  
 
   // allows drag-back
-  box.onmousemove           = this.moveRubber;
+
 
   // 'esc' key aborts
   var abort = function(event){
@@ -394,7 +412,7 @@ SelectArea.prototype.stopRubber = function(event) {
   self.moved = false;
 
   // autoSubmit option will bypass the menu
-  if (self.autoSubmit) {
+  if (self.autoSubmit && !self.overrideAutoSubmit) {
     SelectArea.prototype.cancelRubber();
     document.mainform.submit();
   }
@@ -464,9 +482,12 @@ SelectArea.prototype.clearAndRecenter = function() {
 
 // Make best effort to set the opacity of the selectbox
 // background color
-SelectArea.prototype.setOpacity = function(el,opc) {
+SelectArea.prototype.setOpacity = function(el,opc,bgColor) {
   var self = currentSelectArea;
-
+  if (!bgColor) {
+    bgColor = self.background;
+  }
+  
   if (!(el && opc)) return false;
 
   // Just an outline for Konqueror
@@ -476,7 +497,7 @@ SelectArea.prototype.setOpacity = function(el,opc) {
   }
 
   opc = parseFloat(opc);
-  YAHOO.util.Dom.setStyle(el,'background',self.background||'#BABABA');
+  YAHOO.util.Dom.setStyle(el,'background',bgColor||'#BABABA');
   YAHOO.util.Dom.setStyle(el,'opacity',opc);
   YAHOO.util.Dom.setStyle(el,'filter','alpha(opacity= '+(100*opc)+')');
   YAHOO.util.Dom.setStyle(el,'MozOpacity',opc);

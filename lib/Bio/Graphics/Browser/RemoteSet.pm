@@ -89,16 +89,18 @@ sub feature_file {
   my $feature_file;
 
   if ($url =~ m!^(http://.+/das)/([^?]+)(?:\?(.+))?$!) { # DAS source!
+    warn "getting DAS segment for $url" if DEBUG;
     $feature_file = $self->get_das_segment($1,$2,$3,$segment);
   }
   else {
+    warn "getting featurefile for $url" if DEBUG;
     $feature_file = $self->get_remote_upload($url,$rel2abs,$segment,$label);
   }
 
   # Tell the feature file what its name is, so that it can be formatted
   # nicely in the user interface.
-  my $name = $feature_file->setting('name') || $url;
-  $feature_file->name($url) if $feature_file;
+  my $name = $feature_file->setting('name') if $feature_file->can('setting');
+  $feature_file->name($name||$url) if $feature_file->can('name');
   return $feature_file;
 }
 

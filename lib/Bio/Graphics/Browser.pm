@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.73 2008-03-18 15:31:30 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.74 2008-03-19 02:17:52 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -998,7 +998,7 @@ sub render_draggable_tracks {
                         ? $1
                         : $self->config->setting($label=>'key') || $label; # configured
 
-      if (defined $self->setting(general=>'show track categories')) {
+      if ($self->setting(general=>'show track categories')) {
 	my $cat = $self->config->setting($label=>'category');
 	$title .= " ($cat)" if $cat;
       }

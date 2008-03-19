@@ -47,7 +47,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbgff.PLS,v 1.1.2.3 2008-03-12 00:46:03 sheldon_mckay Exp $
+# $Id: gbgff.PLS,v 1.1.2.4 2008-03-19 14:43:41 sheldon_mckay Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -55,6 +55,10 @@ print OUT <<'!NO!SUBS!';
 #
 # From within the "Add Remote Annotations" section, you can say:
 #     http://my.host/cgi-bin/gbgff/volvox?q=$segment;t=Genes+ExampleFeatures
+#
+# See http://www.gmod.org/wiki/index.php/Gbgff for more information
+
+
 
 use strict;
 use warnings;

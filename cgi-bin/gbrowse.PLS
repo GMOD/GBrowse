@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.56 2008-03-18 15:31:14 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.57 2008-03-20 00:26:28 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1700,6 +1700,7 @@ sub settings_table {
 			     -label    => $CONFIG->tr('SHOW_TOOLTIPS'),
 			     -override => 1,
 			     -checked  => $settings->{show_tooltips},
+			     -onclick  => 'document.mainform.submit()'
 		    ),
 		)
 	     ),

@@ -460,10 +460,10 @@ sub process_fixedline {
     if (@buffer >= 500_000) {
 	@buffer = map {$transform->($self,$_)} @buffer if $transform;
 	$wigfile->set_values($start=>\@buffer);
-	@buffer = ();
 	my $big_step = $step * @buffer;
 	$start += $big_step;
 	$self->current_track->{seqids}{$seqid}{end} = $start + $big_step - 1 + $span;
+	@buffer = (); # reset at the end
     }
 
   }

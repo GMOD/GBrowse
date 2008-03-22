@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.57 2008-03-20 00:26:28 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.58 2008-03-22 22:05:53 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -859,12 +859,15 @@ sub auto_open {
   my ($settings,$features) = @_;
   my $tracks = $settings->{features};
   for my $feature (@$features) {
-    my $desired_label = $CONFIG->feature2label($feature) or next;
-    if (exists $tracks->{$desired_label}) {
-      $tracks->{$desired_label}{visible} = 1;
-      $settings->{track_collapsed}{$desired_label} = 0;
-      $settings->{h_feat} = {};
-      $settings->{h_feat}{$feature->display_name} = 'yellow' unless param('h_feat') && param('h_feat') eq '_clear_';
+    my @desired_labels = $CONFIG->feature2label($feature) or next;
+    for my $desired_label (@desired_labels) {
+	if (exists $tracks->{$desired_label}) {
+	    $tracks->{$desired_label}{visible} = 1;
+	    $settings->{track_collapsed}{$desired_label} = 0;
+	    $settings->{h_feat} = {};
+	    $settings->{h_feat}{$feature->display_name} = 'yellow' 
+		unless param('h_feat') && param('h_feat') eq '_clear_';
+	}
     }
   }
 }

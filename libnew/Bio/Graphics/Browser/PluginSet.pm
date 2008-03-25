@@ -1,7 +1,7 @@
 package Bio::Graphics::Browser::PluginSet;
 # API for using plugins
 
-#  $Id: PluginSet.pm,v 1.3 2007-02-19 19:20:17 lstein Exp $
+#  $Id: PluginSet.pm,v 1.4 2008-03-25 22:40:43 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser;
@@ -96,13 +96,14 @@ sub configure {
 
       # if there are any CGI parameters from the
       # plugin's configuration screen, set it here
-      my @params = grep {/^$name\./} param() or next;
-      $p->reconfigure unless param('plugin_action') eq $conf->tra('Cancel');
-      $p->filter if ($p->type eq 'filter');
+      if (my @params = grep {/^$name\./} param()) {
+	  $p->reconfigure unless param('plugin_action') eq $conf->tra('Cancel');
+	  $p->filter if ($p->type eq 'filter');
 
-      # turn the plugin on
-      my $setting_name = 'plugin:'.$p->name;
-      $p->page_settings->{features}{$setting_name}{visible} = 1;
+	  # turn the plugin on
+	  my $setting_name = 'plugin:'.$p->name;
+	  $p->page_settings->{features}{$setting_name}{visible} = 1;
+      }
     };
 
     warn "$name: $@" if $@;

@@ -11,7 +11,7 @@ use File::Path 'rmtree';
 use FindBin '$Bin';
 use File::Spec;
 
-use constant TEST_COUNT => 100;
+use constant TEST_COUNT => 53;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 BEGIN {

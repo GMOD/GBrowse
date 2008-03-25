@@ -8,10 +8,11 @@ use warnings;
 use Module::Build;
 use Bio::Root::IO;
 use File::Path 'rmtree';
+use IO::String;
 use CGI;
 use FindBin '$Bin';
 
-use constant TEST_COUNT => 100;
+use constant TEST_COUNT => 79;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 BEGIN {

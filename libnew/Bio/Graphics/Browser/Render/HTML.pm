@@ -4,7 +4,6 @@ use strict;
 use warnings;
 use base 'Bio::Graphics::Browser::Render';
 use Bio::Graphics::Browser::Shellwords;
-use Bio::Graphics::Browser::RenderTracks;
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
 use CGI qw(:standard escape start_table end_table);
@@ -43,7 +42,7 @@ sub render_navbar {
   my $settings = $self->state;
 
   my $searchform = join '',(
-			    start_form(-name=>'searchform',-id=>'searchform',-onSubmit=>'update_segment(Form.serialize(this)); return false'),
+			    start_form(-name=>'searchform',-id=>'searchform'),
 			    textfield(-name=>'name',
 				      -size=>25,
 				      -default=>$settings->{name}),
@@ -123,33 +122,43 @@ sub render_html_head {
   my $self = shift;
   my ($dsn,$title) = @_;
 
-  my $js = $dsn->globals->js_url;
+  return if $self->{started_html}++;
+
+  # pick scripts
+  my $js       = $dsn->globals->js_url;
   my @scripts;
 
   # drag-and-drop functions from scriptaculous
   push @scripts,{src=>"$js/$_"}
-    foreach qw(prototype.js scriptaculous.js);
+    foreach qw(prototype.js scriptaculous.js yahoo-dom-event.js balloon.js);
+
+ if ($self->setting('autocomplete')) {
+    push @scripts,{src=>"$js/$_"}
+      foreach qw(connection.js autocomplete.js);
+  }
 
   # our own javascript
   push @scripts,{src=>"$js/$_"}
     foreach qw(buttons.js toggle.js);
 
- if ($self->setting('autocomplete')) {
-    push @scripts,{src=>"$js/$_"}
-      foreach qw(yahoo.js dom.js event.js connection.js autocomplete.js);
-  }
+  # pick stylesheets;
+  my @stylesheets;
+  my $titlebar   = $self->is_safari() ? 'titlebar-safari.css' : 'titlebar-default.css';
+  my $stylesheet = $self->setting('stylesheet')||'/gbrowse/gbrowse';
+  push @stylesheets,{src => $self->globals->resolve_path($stylesheet,'url')};
+  push @stylesheets,{src => $self->globals->resolve_path('tracks.css','url')};
+  push @stylesheets,{src => $self->globals->resolve_path($titlebar,'url')};
 
-  my @args;
-  push @args,(-title => $title,
-              -style  => {src=>$dsn->globals->stylesheet_url},
-              -encoding=>$self->tr('CHARSET'),
-	      );
+  # put them all together
+  my @args = (-title    => $title,
+              -style    => \@stylesheets,
+              -encoding => $self->tr('CHARSET'),
+	      -script   => \@scripts,
+	     );
   push @args,(-head=>$self->setting('head'))    if $self->setting('head');
   push @args,(-lang=>($self->language_code)[0]) if $self->language_code;
-  push @args,(-script=>\@scripts);
-  push @args,(-gbrowse_images => $dsn->globals->button_url);
-  push @args,(-gbrowse_js     => $dsn->globals->js_url);
-  print start_html(@args) unless $self->{started_html}++;
+
+  print start_html(@args);
 }
 
 sub render_instructions {
@@ -211,8 +220,8 @@ sub render_track_table {
   my $settings = $self->state;
   my $source   = $self->data_source;
 
-  my @labels     = @{$settings->{tracks}};
-  my %labels     = map {$_ => $self->label2key($_)}              @labels;
+  my @labels     = $self->data_source->labels;
+  my %labels      = map {$_ => $self->label2key($_)}              @labels;
   my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
 
 
@@ -260,7 +269,7 @@ sub render_track_table {
 				      -values     => \@track_labels,
 				      -labels     => \%labels,
 				      -defaults   => \@defaults,
-				      -onClick    => "gbTurnOff('$id');gbToggleTrack(this);update_segment(Form.serialize(document.getElementById('trackform')))",
+				      -onClick    => "gbTurnOff('$id');gbToggleTrack(this)",
 				      -override   => 1,
 				     );
       $table = $self->tableize(\@checkboxes);
@@ -289,7 +298,8 @@ sub render_track_table {
 
   autoEscape(1);
   print $self->toggle('Tracks',
-		      start_form(-name=>'trackform',-id=>'trackform',-onSubmit=>'update_segment(Form.serialize(this)); return false'),
+		      start_form(-name=>'trackform',
+				 -id=>'trackform'),
 		      div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
 		      table({-width=>'100%',-class=>"searchbody"},
 			    TR(td{-align=>'right'},
@@ -300,6 +310,109 @@ sub render_track_table {
 			   ),
 		      end_form
 		     );
+}
+
+sub render_global_config {
+  my $self     = shift;
+  my $settings = $self->state;
+
+  my @widths = split /\s+/,$self->setting('image widths');
+  @widths = (640,800,1024) unless @widths;
+  my @key_positions   = qw(between bottom);
+  push @key_positions,qw(left right) if Bio::Graphics::Panel->can('auto_pad');
+
+  my $feature_highlights = $settings->{h_feat}   ?
+    join ' ',map { "$_\@$settings->{h_feat}{$_}"   } keys %{$settings->{h_feat}} : '';
+
+  my $region_highlights  = $settings->{h_region} ?
+    join ' ',@{$settings->{h_region}} : '';
+
+  my $content =
+    table({-class=>'searchbody',-border=>0,-width=>'100%'},
+	  TR(
+	     td(
+		b($self->tr('Image_width')),br,
+		radio_group( -name=>'width',
+			     -values=>\@widths,
+			     -default=>$settings->{width},
+			     -override=>1,
+			   ),
+	       ),
+	     $self->setting('region segment') ?
+	     (
+	      td(b($self->tr('Region_size')),br,
+		 textfield(-name=>'region_size',
+			   -default=>$settings->{region_size},
+			   -override=>1,
+			   -size=>20),
+		)
+	     ) : (),
+             td(
+                b($self->tr("TRACK_NAMES")),br,
+                radio_group( -name=>"sk",
+                             -values=>["sorted","unsorted"],
+                             -labels=>{sorted   =>$self->tr("ALPHABETIC"),
+                                       unsorted =>$self->tr("VARYING")},
+                             -default=>$settings->{sk},
+                             -override=>1
+                           ),
+               ),
+	     td(
+		$self->setting('drag and drop')
+                ? '&nbsp;'
+		: (b($self->tr('KEY_POSITION')),br,
+		   radio_group( -name=>'ks',
+				-values=>\@key_positions,
+				-labels=>{between=>$self->tr('BETWEEN'),
+					  bottom =>$self->tr('BENEATH'),
+					  left   =>$self->tr('LEFT'),
+					  right  =>$self->tr('RIGHT'),
+					 },
+				-default=>$settings->{ks},
+				-override=>1
+			      )
+		  ),
+	       ),
+	    ),
+	  TR(
+	     td(
+		span({-title=>$self->tr('FEATURES_TO_HIGHLIGHT_HINT')},
+		     b(
+		       $self->tr('FEATURES_TO_HIGHLIGHT')
+		      ),br,
+		     textfield(-name  => 'h_feat',
+			       -value => $feature_highlights,
+			       -size  => 50,
+			       -override=>1,
+			      ),
+		    ),
+	       ),
+	     td(
+		span({-title=>$self->tr('REGIONS_TO_HIGHLIGHT_HINT')},
+		     b(
+		       $self->tr('REGIONS_TO_HIGHLIGHT')
+		      ),br,
+		     textfield(-name=>'h_region',
+			       -value=>$region_highlights,
+			       -size=>50,
+			       -override=>1,
+			      ),
+		    ),
+	       ),
+	     td(
+		b(
+		  checkbox(-name=>'grid',
+			   -label=>$self->tr('SHOW_GRID'),
+			   -override=>1,
+			   -checked=>$settings->{grid}||0)
+		 )
+	       ),
+	    ),
+	  TR(td({-colspan=>4,
+		 -align=>'right'},
+		b(submit(-name => $self->tr('Update')))))
+	 );
+  print $self->toggle('Display_settings',$content);
 }
 
 sub tableize {
@@ -427,28 +540,28 @@ sub slidertable {
   my $span       = $segment->length;
   my $half_title = $self->unit_label(int $span/2);
   my $full_title = $self->unit_label($span);
-  my $half      = int $span/2;
-  my $full      = $span;
-  my $fine_zoom = $self->get_zoomincrement();
+  my $half       = int $span/2;
+  my $full       = $span;
+  my $fine_zoom  = $self->get_zoomincrement();
 
-  my @lines = 
+  my @lines =
     (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>"left $full",
-		  -title=>"left $full_title",-onClick=>"update_segment(this.name+'=1')"),
+		  -title=>"left $full_title"),
      image_button(-src=>"$buttonsDir/green_l1.gif",-name=>"left $half",
 		  -title=>"left $half_title"),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/minus.gif",-name=>"zoom out $fine_zoom",
-		  -title=>"zoom out $fine_zoom",-onClick=>"update_segment(this.name+'=1')"),
+		  -title=>"zoom out $fine_zoom"),
      '&nbsp;',
      span({-id=>'span_menu'},$self->zoomBar($segment,$whole_segment,$buttonsDir)),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/plus.gif",-name=>"zoom in $fine_zoom",
-		  -title=>"zoom in $fine_zoom",-onClick=>"update_segment(this.name+'=1')"),
+		  -title=>"zoom in $fine_zoom"),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/green_r1.gif",-name=>"right $half",
-		  -title=>"right $half_title",-onClick=>"update_segment(this.name+'=1')"),
+		  -title=>"right $half_title"),
      image_button(-src=>"$buttonsDir/green_r2.gif",-name=>"right $full",
-		  -title=>"right $full_title",-onClick=>"update_segment(this.name+'=1')"),
+		  -title=>"right $full_title"),
     );
 
   my $str	= join('', @lines);

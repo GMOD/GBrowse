@@ -55,17 +55,6 @@ ok($render);
 
 ok($render->globals,$globals);
 
-# test the make_{link,title,target} functionality my $feature =
-my $feature = Bio::Graphics::Feature->new(-name=>'fred',
-					  -source=>'est',-method=>'match',
-					  -start=>1,-end=>1000,-seq_id=>'A');
-ok($render->make_link($feature),"../../gbrowse_details/volvox?name=fred;class=Sequence;ref=A;start=1;end=1000");
-
-$ENV{REQUEST_URI} = 'http://localhost/cgi-bin/gbrowse/volvox/';
-$ENV{REQUEST_METHOD} = 'GET';
-
-ok($render->make_link($feature),"http://localhost/cgi-bin/gbrowse_details/volvox?name=fred;class=Sequence;ref=A;start=1;end=1000");
-
 ############### testing language features #############
 ok(($render->language->language)[0],'posix');
 ok($render->tr('IMAGE_LINK','Link to Image'));
@@ -81,7 +70,7 @@ ok(my $db = $render->init_database);
 ok($render->db,$db);
 ok($db,$render->db); # should return same thing each time
 ok(ref($db),'Bio::DB::GFF::Adaptor::memory');
-ok(scalar $db->features,36);
+ok(scalar $db->features,37);
 
 ok($render->init_plugins);
 ok(my $plugins = $render->plugins);
@@ -182,6 +171,24 @@ skip($skipit,eval{$s->[0]->seq_id},'ctgA');
 skip($skipit,eval{$s->[0]->start},19157);
 skip($skipit,eval{$s->[0]->end},22915);
 
+# test the make_{link,title,target} functionality
+my $segment = $s->[0];
+my $feature = Bio::Graphics::Feature->new(-name=>'fred',
+					  -source=>'est',-method=>'match',
+					  -start=>1,-end=>1000,-seq_id=>'A');
+
+my $panel_renderer = $render->get_panel_renderer($segment);
+ok($panel_renderer);
+ok($panel_renderer->make_link($feature),
+   "../../gbrowse_details/volvox?name=fred;class=Sequence;ref=A;start=1;end=1000");
+
+$ENV{REQUEST_URI} = 'http://localhost/cgi-bin/gbrowse/volvox';
+$ENV{PATH_INFO}   = '/volvox';
+$ENV{REQUEST_METHOD} = 'GET';
+
+ok($panel_renderer->make_link($feature),
+   "http://localhost/cgi-bin/gbrowse_details/volvox?name=fred;class=Sequence;ref=A;start=1;end=1000");
+
 # try automatic class munging
 $CGI::Q = new CGI('name=f13');
 $render->update_coordinates;
@@ -231,6 +238,10 @@ $render->fetch_segments;
 ok($s = $render->segments);
 ok(scalar @$s,11);
 
+# something funny with getting render settings
+ok($render->setting('mag icon height') > 0);
+ok($render->setting('fine zoom') ne '');
+
 # now try the run() call, using an IO::String to collect what was printed
 my $data;
 my $io = IO::String->new($data);
@@ -241,6 +252,5 @@ $render      = Bio::Graphics::Browser::Render->new($source,$session);
 $render->run($io);
 ok($data =~ /Set-Cookie/);
 ok($data =~ /rendering 4 features/);
-
 
 exit 0;

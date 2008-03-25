@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.6 2007-02-19 19:20:16 lstein Exp $
+# $Id: Browser.pm,v 1.7 2008-03-25 22:28:42 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -108,6 +108,7 @@ sub tmpdir_info {
   $path   = $self->resolve_path($path,'htdocs');
   ($url,$path);
 }
+
 sub tmpdir_path    { (shift->tmpdir_info)[1]}
 sub tmpdir_url     { (shift->tmpdir_info)[0]}
 sub tmpdir    {

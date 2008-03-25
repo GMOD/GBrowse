@@ -30,24 +30,13 @@ function gbToggleTrack (button) {
   }
 }
 
-function update_segment (formdata) {
-  var postData = 'render=detailview';
-  if (formdata && formdata.length>0) {
-      postData = postData + ';' + formdata
- }
-  new Ajax.Updater('panels',document.URL,
-		   {method:'post',postBody:postData,evalScripts:true
-		   }
-                  );
-}
-
-function create_drag (div_name) {
+function create_drag (div_name,div_part) {
   Sortable.create(
 		  div_name,
 		  {
 		  constraint: 'vertical',
 		      tag: 'div',
-		      only: 'track',
+		      only: div_part,
 		      handle: 'titlebar',
 		      onUpdate: function() {
 		      var postData = Sortable.serialize(div_name,{name:'label'});

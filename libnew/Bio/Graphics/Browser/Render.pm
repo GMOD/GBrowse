@@ -7,11 +7,10 @@ use Bio::Graphics::Browser::PluginSet;
 use Bio::Graphics::Browser::UploadSet;
 use Bio::Graphics::Browser::RemoteSet;
 use Bio::Graphics::Browser::Shellwords;
+use Bio::Graphics::Browser::RenderPanels;
 use Digest::MD5 'md5_hex';
 use CGI qw(:standard param request_method header url iframe img span div br center);
 use Carp 'croak';
-
-use Data::Dumper;
 
 use constant VERSION => 2.0;
 use constant DEBUG   => 0;
@@ -174,7 +173,8 @@ sub run {
     $url .= "/$source";
     $url .= "?$args" if $args;
     print CGI::redirect($url);
-    exit 0;
+    warn "redirecting from $ENV{REQUEST_URI} to $url";
+    return;
   }
 
   $self->init_database();
@@ -188,11 +188,13 @@ sub run {
   $self->session->flush;
 }
 
+# handle asynchronous events
 sub asynchronous_event {
   my $self = shift;
   my $settings = $self->state;
   my $events;
 
+  # toggle the visibility of sections by looking for "div_visible_*" parameters
   for my $p (grep {/^div_visible_/} param()) {
     my $visibility = param($p);
     $p =~ s/^div_visible_//;
@@ -200,6 +202,15 @@ sub asynchronous_event {
     $events++;
   }
 
+  # toggle the visibility of individual tracks
+  for my $p (grep {/^track_collapse_/} param()) {
+    my $collapsed = param($p);
+    $p =~ s/^track_collapse_//;
+    $settings->{track_collapsed}{$p} = $collapsed;
+    $events++;
+  }
+
+  # Change the order of tracks if any "label[]" parameters are present
   if (my @labels = param('label[]')) {
     my %seen;
     @{$settings->{tracks}} = grep {length()>0 && !$seen{$_}++} (@labels,@{$settings->{tracks}});
@@ -260,18 +271,9 @@ sub render_body {
     $self->set_segment($segments->[0]);
   }
 
-    my $title = $self->render_top($features);
-
-  # THIS IS AN ASYNCHRONOUS CALL AND NEEDS TO BE MOVED OUT OF THE RENDER_* TREE
-  if (param('render') && param('render') eq 'detailview') {
-    warn "calling render tracks...";
-    $self->render_tracks($self->seg);
-
-    print "</html>";
-    return;
-  }
-
+  my $title = $self->render_top($features);
   $self->render_instructions($title);
+  $self->render_panels;
 
   if ($features && @$features > 1) {
   	#search not implemented yet
@@ -314,16 +316,15 @@ sub render_panels {
 sub render_overview {
   my $self = shift;
   my $seg  = shift;
-  
-  
+
   my $source			= $self->data_source;
-  my $whole_segment 	= $self->whole_seg;
+  my $whole_segment 	        = $self->whole_seg;
   my $segment			= $self->seg || return;
   my $state				= $self->state;
   my $features			= $self->fetch_features;
-  my $feature_files		= {};						#fill in code later, is usually blank anyways
-  
-  my $renderer = Bio::Graphics::Browser::RenderTracks->new(-segment  => $seg,
+  my $feature_files		= {};		#fill in code later, is usually blank anyways
+
+  my $renderer = Bio::Graphics::Browser::RenderPanels->new(-segment  => $seg,
 							   -source   => $source,
 							   -settings => $state,
 							   -renderer => $self);
@@ -360,6 +361,13 @@ sub render_config {
 
 #never called, method in HTML.pm with same name is run instead
 sub render_track_table {
+  my $self = shift;
+}
+
+sub render_instructions {
+  my $self = shift;
+}
+sub render_multiple_choices {
   my $self = shift;
 }
 
@@ -628,14 +636,16 @@ sub update_state_from_cgi {
 sub update_options {
   my $self  = shift;
   my $state = shift || $self->state;
-  return unless param('width'); # not submitted
+
+  #  return unless param('width'); # not submitted
+  $state->{width} ||= $self->setting('default width');  # working around a bug during development
 
   $state->{grid} = 1 unless exists $state->{grid};  # to upgrade from older settings
   $state->{flip} = 0;  # obnoxious for this to persist
 
   $state->{version} ||= param('version') || '';
   do {$state->{$_} = param($_) if defined param($_) } 
-    foreach qw(name source plugin stp ins head  ks sk version grid flip width);
+    foreach qw(name source plugin stp ins head ks sk version grid flip width);
 
   # Process the magic "q" parameter, which overrides everything else.
   if (my @q = param('q')) {
@@ -705,7 +715,7 @@ sub update_coordinates {
     $position_updated++;
   }
 
-  my $current_span = defined $state->{stop} ? $state->{stop} - $state->{start} + 1 : 0;
+  my $current_span = length $state->{stop} ? ($state->{stop} - $state->{start} + 1) : 0;
   my $new_span     = param('span');
   if ($new_span && $current_span != $new_span) {
     $self->zoom_to_span($state,$new_span);
@@ -1137,7 +1147,7 @@ sub _feature_keyword_search {
 #
 ##################################################################3
 
-# overview_ratio and overview_pad moved to RenderTracks.pm
+# overview_ratio and overview_pad moved to RenderPanels.pm
 
 ##### language stuff
 sub set_language {
@@ -1227,9 +1237,8 @@ sub unit_to_value {
 
 sub get_zoomincrement {
   my $self = shift;
-# my $zoom = $self->setting('fine zoom');
-  my $zoom = $self->setting('default fine zoom');
-  $zoom;
+  my $zoom = $self->setting('fine zoom');
+  return $zoom;
 }
 
 
@@ -1304,110 +1313,61 @@ sub detail_tracks {
     @{$state->{tracks}};
 }
 
-################## image rendering code #############
-sub render_detailview {
-  my $self   = shift;
-  my $seg    = shift;
-
-
-  my $load_script = <<END;
-  <script type="text/javascript"> // <![CDATA[
-update_segment();
-// ]]>
-</script>
-END
-
-  print div($self->toggle('Details',div({-id=>'panels'},'Loading...'))),$load_script;
-}
-
-
-sub render_tracks {
+################## get renderer for this segment #########
+sub get_panel_renderer {
   my $self = shift;
-  my ($seg,$options) = @_;
-  return unless $seg;
+  my $seg  = shift or die "usage: \$self->get_panel_renderer(\$segment)";
+  return Bio::Graphics::Browser::RenderPanels->new(-segment  => $seg,
+						   -source   => $self->data_source,
+						   -settings => $self->state,
+						   -renderer => $self
+						  );}
+
+################## image rendering code #############
+
+sub render_detailview {
+  my $self = shift;
+  my $seg  = shift or return;
+
   my @labels = $self->detail_tracks;
 
   my $buttons = $self->globals->button_url;
-  my $plus   = "$buttons/plus.png";
-  my $minus  = "$buttons/minus.png";
+  my $plus    = "$buttons/plus.png";
+  my $minus   = "$buttons/minus.png";
 
-  my $renderer = Bio::Graphics::Browser::RenderTracks->new(-segment  => $seg,
-							   -source   => $self->data_source,
-							   -settings => $self->state,
-							   -renderer => $self);
-  my $tracks   = $renderer->render_tracks(-tracks       => \@labels,
-					  -third_party  => $self->remote_sources);
+  my $renderer = $self->get_panel_renderer($seg);
+  my @panels   = $renderer->render_panels({
+					   labels           => \@labels,
+					   feature_files    => $self->remote_sources,
+					   do_map           => 1,
+					   do_centering_map => 1,
+					   drag_and_drop    => 1,
+					   section          => 'detail',
+					   image_button     => 0,
+					  }
+					 );
 
-  my @results;
-  for my $label ('__scale__',@labels) {
-    my $title    = $self->setting($label=>'key');
-    my $titlebar = $label eq '__scale__' ? ""
-    	:	span({-class=>'titlebar'},
-			img({-src=>$plus},img({-src=>$minus}),
-			    $title." $seg"));
-    next unless $tracks->{$label}; # not there for some reason
-    my $gd        = $tracks->{$label}{gd};
-    my $imagemap  = $tracks->{$label}{map};
-    my $url       = $self->generate_image($gd);
-
-    my $class   = $label eq '__scale__' ? 'scale' : 'track';
-    push @results,div({id=>"track_${label}",-class=>$class},
-		      center(
-			     $titlebar,
-			     img({-src=>$url,-border=>0,-usemap=>"#${label}_map"}),
-			     $imagemap,
-			    ),
-		     );
-    ##warn "results = @results";
-  }
-  my $state = $self->state;
-  
-  print div({-id=>'tracks'},@results),$self->drag_script('tracks'),$self->update_controls_script;
+  my $drag_script = $self->drag_script('panels','track');
+  print div($self->toggle('Details',
+			  div({-id=>'panels',-class=>'track'},
+			      @panels
+			     )
+			 )
+	   ).$drag_script;
 }
 
 
 # returns the fragment we need to use the scriptaculous drag 'n drop code
 sub drag_script {
-  my $self = shift;
-  my $div_name = shift;
+  my $self       = shift;
+  my $div_name   = shift;
+  my $div_part = shift;
 
   return <<END;
   <script type="text/javascript">
  // <![CDATA[
-   Sortable.create(
-     "$div_name",
-     {
-      constraint: 'vertical',
-      tag: 'div',
-      only: 'track',
-      handle: 'titlebar',
-      onUpdate: function() {
-         var postData = Sortable.serialize('$div_name',{name:'label'});
-         new Ajax.Request(document.URL,{method:'post',postBody:postData});
-      }
-     }
-   );
+   create_drag('$div_name','$div_part');
  // ]]>
- </script>
-END
-}
-
-sub update_controls_script {
-  my $self = shift;
-  my $state = $self->state;
-  my $title = $self->data_source->description;
-  $title   .= ": ".$self->seg->seq_id . ' ('.$self->unit_label($self->seg->length).')' if $self->seg;
-  my $zoom = $self->zoomBar($self->seg,$self->whole_seg);
-  $zoom =~ s/\n//g;
-
-  return <<END;
-  <script type="text/javascript">
- // <![CDATA[
-document.searchform.name.value='$state->{name}';
-document.getElementById('page_title').innerHTML='$title';
-var zoom_menu = document.sliderform.span;
-zoom_menu.parentElement.innerHTML='$zoom';
-// ]]>
  </script>
 END
 }
@@ -1471,6 +1431,25 @@ sub generate_image {
   print F $data;
   close F;
   return $url;
+}
+
+sub is_safari {
+  return CGI::user_agent =~ /safari/i;
+}
+
+sub citation {
+  my $self = shift;
+  my $label     = shift;
+  my $language  = shift;
+  my $source = $self->data_source;
+  my $c;
+  if ($language) {
+    for my $l ($language->language) {
+      $c ||= $source->setting($label=>"citation:$l");
+    }
+  }
+  $c ||= $source->setting($label=>'citation');
+  $c;
 }
 
 

@@ -1,5 +1,6 @@
 # file: volvox1.gff
 ctgA	example	contig	1	50000	.	.	.	Contig ctgA
+ctgB	example	contig	1	100000	.	.	.	Contig ctgB
 ctgA	example	my_feature	1659	1984	.	+	.	My_feature f07
 ctgA	example	my_feature	3014	6130	.	+	.	My_feature f06
 ctgA	example	my_feature	4715	5968	.	-	.	My_feature f05

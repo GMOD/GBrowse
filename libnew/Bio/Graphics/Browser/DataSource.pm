@@ -6,6 +6,7 @@ use base 'Bio::Graphics::FeatureFile';
 
 use Bio::Graphics::Browser::Shellwords;
 use File::Basename 'dirname';
+use File::Path 'mkpath';
 use Carp 'croak';
 use Socket 'AF_INET','inet_aton';  # for inet_aton() call
 use CGI '';
@@ -73,6 +74,16 @@ sub globals {
   $d;
 }
 
+=head2 global_setting()
+
+  $setting = $source->global_setting('option')
+
+Like setting() except that it is only for 'general' options. If the
+option is not found in the datasource config file, then looks in the
+global file.
+
+=cut
+
 sub global_setting {
   my $self   = shift;
   my $option = shift;
@@ -135,7 +146,7 @@ sub tmpdir {
   my $self = shift;
   my $path = shift || '';
 
-  my ($tmpuri,$tmpdir) = shellwords($self->setting('tmpimages'))
+  my ($tmpuri,$tmpdir) = shellwords($self->global_setting('tmpimages'))
     or die "no tmpimages option defined, can't generate a picture";
 
   $tmpuri .= "/$path" if $path;
@@ -160,8 +171,6 @@ sub tmpdir {
   mkpath($path,0,0777) unless -d $path;
   return ($tmpuri,$path);
 }
-
-
 
 sub overview_bgcolor { shift->global_setting('overview bgcolor')         }
 sub detailed_bgcolor { shift->global_setting('detailed bgcolor')         }
@@ -236,7 +245,6 @@ sub style {
 }
 
 # return language-specific options
-# MOVE THIS LOGIC INTO DataSource
 sub i18n_style {
   my $self      = shift;
   my ($label,$lang,$length) = @_;
@@ -267,13 +275,13 @@ sub i18n_style {
 }
 
 
-# like setting, but defaults to 'general'
 sub setting {
   my $self = shift;
   my ($label,$option,@rest) = @_ >= 2 ? @_ : ('general',@_);
   $self->SUPER::setting($label,$option,@rest);
 }
 
+# like setting, but defaults to 'general'
 sub fallback_setting {
   my $self = shift;
   my ($label,$option,@rest) = @_;
@@ -301,7 +309,7 @@ sub semantic_setting {
   my ($self,$label,$option,$length) = @_;
   my $slabel = $self->semantic_label($label,$length);
   my $val = $self->code_setting($slabel => $option) if defined $slabel;
-  
+
   return $val if defined $val;
   return $self->code_setting($label => $option);
 }

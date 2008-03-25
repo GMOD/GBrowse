@@ -85,6 +85,7 @@ sub settings {
 #}
 
 
+# NOTE: This is essentially the same as render_panels() in the 'stable' Browser.pm
 # This renders the named tracks and returns the images and image maps
 # input args:
 #           (-tracks         => [array of track names],
@@ -105,7 +106,6 @@ sub render_tracks {
 
   my $tracks              = $args{-tracks};
   my $third_party         = $args{-third_party};
-  my $render_options      = $args{-options};
 
   my $results = {};
 
@@ -475,12 +475,6 @@ sub label_density {
       || $conf->setting('TRACK DEFAULTS' =>'label density')
       || 10;
 }
-
-
-
-
-
-
 
 sub local_renderer_url {
   my $self     = shift;

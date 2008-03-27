@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.59 2008-03-25 18:51:44 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.60 2008-03-27 18:31:37 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -892,7 +892,7 @@ sub adjust_region_size {
   my $length = $segment ? $segment->length : abs($settings->{stop} - $settings->{start});
   my $whole_segment = $CONFIG->whole_segment($segment) if $segment;
 
-  if ($CONFIG->setting('region segment') eq 'AUTO') {
+  if (($CONFIG->setting('region segment')||'') eq 'AUTO') {
     $region_size = 10*$length;
   }
   else {
@@ -2094,13 +2094,13 @@ sub lookup_features_from_db {
   my $padding = $CONFIG->setting(general=>'landmark_padding') || 0;
 
   if (my $name = $settings->{name}) {
-    @segments = $CONFIG->name2segments($name,$db,TOO_MANY_SEGMENTS);
+    @segments = $CONFIG->name2segments($name,$db,TOO_MANY_SEGMENTS,0,'dontmerge');
   }
 
   elsif ((my $names = $settings->{q}) && ref $settings->{q}) {
     warn "q = $names" if DEBUG;
     my $max = TOO_MANY_SEGMENTS/@$names;
-    @segments = map {$CONFIG->name2segments($_,$db,$max)} @$names;
+    @segments = map {$CONFIG->name2segments($_,$db,$max,0,'dontmerge')} @$names;
   }
 
   elsif (my $ref = $settings->{ref}) {
@@ -2266,10 +2266,12 @@ sub multiple_choices {
       my ($start,$stop) = ($r->start,$r->end);
       my $padstart = $start - $padding;
       my $padstop  = $stop  + $padding;
-      my $description = escapeHTML(eval{join ' ',
-					  $r->desc(),
-					  $r->attributes('Note')}
-				   ||eval{$r->method}||eval{$r->source_tag}||$r->{ref});
+      my $description = escapeHTML(eval{join ' ',$r->attributes('Note')}
+				   ||eval{$r->desc()}
+				   ||eval{$r->method}
+				   ||eval{$r->source_tag}
+				   ||$r->{ref}
+	  );
       if (my @aliases = grep {$_ ne ''} eval{$r->attributes('Alias')}) {
 	$description .= escapeHTML(" [@aliases]");
       }

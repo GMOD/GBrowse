@@ -663,7 +663,7 @@ Now add the following configuration stanza to volvox.conf to create a
 track that displays both protein_coding_primary_transcript and
 polypeptide features:
 
-<blockquote><pre>
+<blockquote class="example"><pre>
 [NameTest]
 feature      = protein_coding_primary_transcript polypeptide
 glyph        = generic
@@ -1624,7 +1624,7 @@ ctgA affy microarray_oligo 501 600 184 . . Name=Expt1
 <p>
 
 The file contains 500 features, each of which is exactly 100 bp long.
-The features are of type "tlevel" ("transcriptional level") and of
+The features are of type "microarray_oligo" and of
 source "affy."  Each one has a score (column 6) between 0 and 1000,
 where higher scores means more transcriptional activity.  This is the
 first time we've used the score column.

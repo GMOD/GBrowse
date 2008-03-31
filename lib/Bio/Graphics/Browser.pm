@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.74 2008-03-19 02:17:52 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.75 2008-03-31 07:45:09 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1061,7 +1061,7 @@ sub render_composite_track {
 
   my ($width,$height,$url,$map,$gd,$boxes) = @{$panel}{qw/width height image map gd boxes/};
   
-  my $css_map = $self->map_css($boxes,$section) if $section eq 'detail';
+  my $css_map = $self->map_css($boxes,$section) if $section eq 'detail' && !param('nojs');
 
   if ($args->{image_and_map}) {
     my $map_array = $self->map_array($boxes);
@@ -1090,7 +1090,7 @@ sub render_composite_track {
 	     -alt   => $section});
 
   my $html    = div({-align=>'center'},$img);
-  $html      .= $css_map ? $css_map . "\n<noscript>\n$map\n</noscript>\n" : $map;
+  $html      .= $css_map || $map;
 
   return $html;
 }
@@ -2737,9 +2737,10 @@ sub map_css {
 
   my $html;
   for (@data) {
-    my (undef,$x1,$y1,$x2,$y2,%atts) = split "\t";
+    my ($ruler,$x1,$y1,$x2,$y2,%atts) = split "\t";
     $x1 or next;
-    next if $atts{title} &&  $atts{title} eq 'recenter';
+    # get rid of recentering map elements
+    next if $ruler eq 'ruler';
     my %style = ( top      => "${y1}px",
 		  left     => "${x1}px",
 		  cursor   => 'pointer',

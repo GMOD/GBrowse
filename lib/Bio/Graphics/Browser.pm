@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.75 2008-03-31 07:45:09 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.76 2008-03-31 07:57:37 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1061,7 +1061,7 @@ sub render_composite_track {
 
   my ($width,$height,$url,$map,$gd,$boxes) = @{$panel}{qw/width height image map gd boxes/};
   
-  my $css_map = $self->map_css($boxes,$section) if $section eq 'detail' && !param('nojs');
+  my $css_map = $self->map_css($boxes,$section) if $section eq 'detail';
 
   if ($args->{image_and_map}) {
     my $map_array = $self->map_array($boxes);
@@ -1090,7 +1090,8 @@ sub render_composite_track {
 	     -alt   => $section});
 
   my $html    = div({-align=>'center'},$img);
-  $html      .= $css_map || $map;
+  $map        = "<noscript>\n$map\n</noscript>" if $css_map;
+  $html      .= $css_map . $map;
 
   return $html;
 }

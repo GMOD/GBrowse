@@ -1,0 +1,14 @@
+##gff-version 3
+
+ctgA	est	EST_match	1050	1500	.	+	.	ID=Match1;Name=agt830.5;Target=agt830.5 1 451
+ctgA	est	EST_match	3000	3202	.	+	.	ID=Match1;Name=agt830.5;Target=agt830.5 452 654
+ctgA	est	EST_match	5410	5500	.	-	.	ID=Match2;Name=agt830.3;Target=agt830.3 505 595
+ctgA	est	EST_match	7000	7503	.	-	.	ID=Match2;Name=agt830.3;Target=agt830.3 1 504 
+ctgA	est	EST_match	1050	1500	.	+	.	ID=Match3;Name=agt221.5;Target=agt221.5 1 451
+ctgA	est	EST_match	5000	5500	.	+	.	ID=Match3;Name=agt221.5;Target=agt221.5 452 952
+ctgA	est	EST_match	7000	7300	.	+	.	ID=Match3;Name=agt221.5;Target=agt221.5 953 1253
+ctgA	est	EST_match	7500	8000	.	-	.	ID=Match4;Name=agt221.3;Target=agt221.3 1 501
+ctgA	est	EST_match	1150	1500	.	+	.	ID=Match5;Name=agt767.5;Target=agt767.5 1 351
+ctgA	est	EST_match	5000	5500	.	+	.	ID=Match5;Name=agt767.5;Target=agt767.5 352 852
+ctgA	est	EST_match	7000	7200	.	+	.	ID=Match5;Name=agt767.5;Target=agt767.5 853 1153
+ctgA	est	EST_match	8000	9000	.	-	.	ID=Match6;Name=agt767.3;Target=agt767.3 1 1001

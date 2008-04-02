@@ -7,7 +7,7 @@ use Bio::Graphics::Browser::Shellwords;
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
 use CGI qw(:standard escape start_table end_table);
-eval { use GD::SVG };
+eval "use GD::SVG";
 
 use constant JS    => '/gbrowse/js';
 
@@ -25,7 +25,8 @@ sub render_top {
     : $description;
 
   $self->render_html_head($dsn,$title);
-  return $title;
+  my $debug = "rendering ".scalar(@$features)." features";
+  return $title."<p>$debug</p>";
 }
 
 sub render_bottom {

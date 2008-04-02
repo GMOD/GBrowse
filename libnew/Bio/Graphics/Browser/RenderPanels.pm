@@ -73,25 +73,36 @@ sub settings {
 # Caching and distribution across multiple databases is implemented.
 #
 # input args:
-#           (-labels         => [array of track labels],
-#            -feature_files  => [third party annotations (Bio::DasI objects)],
-#            -drag_and_drop  => turn on or off drag and drop tracks
-#            -noscale        => suppress drawing the ruler
-#           );
+#           {labels         => [array of track labels],
+#            feature_files  => [third party annotations (Bio::DasI objects)],
+#            deferred       => generate in background
+#           };
+# output
+# if deferred => false...
+#      { label1 => html1, label2 => html2...} where HTML is the <div> for the named track
+#
+# if deferred => true
+#      { label1 => key1, label2 => key2...} where key is a cache key where HTML can be retrieved later by
+#                                           a call to get_deferred(key)
+#
 sub render_panels {
   my $self    = shift;
   my $args    = shift;
 
-  my $source   = $self->source;
-  my $settings = $self->settings;
-
-  my $drag_n_drop         = $self->drag_and_drop($args->{drag_and_drop});
-  $drag_n_drop            = 1;
-
-  my $panels = $self->generate_panels($args);
-
-  return $drag_n_drop ? $self->render_draggable_tracks($args,$panels)
-                      : $self->render_composite_track($args,$panels);
+  if ($args->{deferred}) {
+      my @panel_args  = $self->create_panel_args($args);
+      my $keys = map {
+	  my @track_args = $self->create_track_args($_,$args);
+	  my $cache_key  = $self->create_cache_key(@panel_args,@track_args);
+	  $_ => $cache_key;
+      }
+      @{$args->{labels}};
+      $self->render_tracks_deferred($keys,$args);
+      return $keys;
+  }
+  else {
+      return $self->render_tracks($args);
+  }
 }
 
 sub use_renderfarm {
@@ -134,130 +145,88 @@ sub generate_panels_remotely {
   return $self->call_remote_renderers(\%remote);
 }
 
-sub render_draggable_tracks {
-  my $self = shift;
-  my ($args,$panels) = @_;
+sub render_tracks {
+    my $self     = shift;
+    my $args     = shift;
 
-  my $globals  = $self->source->globals;
+    my $content  = $self->generate_track_content($args);
 
-  my $buttons  = $globals->button_url;
-  my $tmpdir   = $globals->tmpdir_path;
-  my $settings = $self->settings;
-  my $source   = $self->source;
+    my $globals  = $self->source->globals;
 
-  my $do_map   = $args->{do_map};
-  my $button   = $args->{image_button};
-  my $section  = $args->{section} || 'detail';
+    my $buttons  = $globals->button_url;
+    my $tmpdir   = $globals->tmpdir_path;
+    my $settings = $self->settings;
+    my $source   = $self->source;
 
-  my $plus     = "$buttons/plus.png";
-  my $minus    = "$buttons/minus.png";
-  my $help     = "$buttons/query.png";
+    my $plus     = "$buttons/plus.png";
+    my $minus    = "$buttons/minus.png";
+    my $help     = "$buttons/query.png";
 
-  # get the pad image, which we use to fill up space between collapsed tracks
-  my $pad_url  = $panels->{__pad__}{image};
-  my ($pw,$ph) = @{$panels->{__pad__}}{'width','height'};
+    my %result;
 
-  my @result;
-  for my $label ('__scale__',@{$args->{labels}}) {
-    my ($url,$img_map,$width,$height) = @{$panels->{$label}}{qw(image map width height)};
+    for my $label (@{$args->{labels}}) {
+	my ($url,$img_map,$width,$height) = @{$content->{$label}}{qw(image map width height)};
 
-    my $collapsed    = $settings->{track_collapsed}{$label};
-    my $img_style    = $collapsed ? "display:none" : "display:inline";
+	my $collapsed    = $settings->{track_collapsed}{$label};
+	my $img_style    = $collapsed ? "display:none" : "display:inline";
+	
+	my $img = img({-src=>$url,
+		       -usemap=>"#${label}_map",
+		       -width => $width,
+		       -id    => "${label}_image",
+		       -height=> $height,
+		       -border=> 0,
+		       -name  => $label,
+		       -alt   => $label,
+		       -style => $img_style});
 
-    my $img = $button
-      ? image_button(-src   => $url,
-		     -name  => $section,
-		     -id    => "${label}_image",
-		     -style => $img_style
-		    )
-      : img({-src=>$url,
-	     -usemap=>"#${label}_map",
-	     -width => $width,
-	     -id    => "${label}_image",
-	     -height=> $height,
-	     -border=> 0,
-	     -name  => "${section}_${label}",
-	     -alt   => "${label} $section",
-	     -style => $img_style});
+	my $class     = $label eq '__scale__' ? 'scale' : 'track';
+	my $icon      = $collapsed ? $plus : $minus;
 
-    my $class     = $label eq '__scale__' ? 'scale' : 'track';
-    my $icon      = $collapsed ? $plus : $minus;
+	my $config_click;
+	if ($label =~ /^plugin:/) {
+	    my $help_url = "url:?plugin=".CGI::escape($label).';plugin_do=Configure';
+	    $config_click = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)";
+	}
 
-    if ($img_map) {
-      my $config_click;
-      if ($label =~ /^plugin:/) {
-	my $help_url = "url:?plugin=".CGI::escape($label).';plugin_do=Configure';
-	$config_click = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)";
-      }
-
-      elsif ($label =~ /^file:/) {
-	my $url  = "?modify.${label}=".$self->tr('Edit');
-	$config_click = "window.location='$url'";
-      }
-
-      else {
-	my $help_url = "url:?configure_track=".CGI::escape($label);
-	$help_url   .= ";rand=".rand(); # work around caching bugs... # if CGI->user_agent =~ /MSIE/;
-	$config_click = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)";
-      }
+	elsif ($label =~ /^file:/) {
+	    my $url  = "?modify.${label}=".$self->tr('Edit');
+	    $config_click = "window.location='$url'";
+	}
+	    
+	else {
+	    my $help_url = "url:?configure_track=".CGI::escape($label);
+	    $help_url   .= ";rand=".rand(); # work around caching bugs... # if CGI->user_agent =~ /MSIE/;
+	    $config_click = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)";
+	}
 
 
-      my $title       = $label =~ /\w+:(.+)/ && $label !~ /:(overview|region)/  # a plugin
-                        ? $1
-                        : $source->setting($label=>'key') || $label; # configured
+	my $title       = $label =~ /\w+:(.+)/ && $label !~ /:(overview|region)/  # a plugin
+	    ? $1
+	    : $source->setting($label=>'key') || $label; # configured
 
-      my $titlebar    = span({-class=>$collapsed ? 'titlebar_inactive' : 'titlebar',-id=>"${label}_title"},
-			     img({-src         =>$icon,
-				  -id          => "${label}_icon",
-				  -onClick     =>"collapse('$label')",
-				  -style       => 'cursor:pointer',
-				 }),
-			     img({-src         => $help,
-				  -style       => 'cursor:pointer',
-				  -onmousedown => $config_click
-				 }),
-			     span({-class=>'draghandle'},$title)
-			    );
+	my $titlebar    = span({-class=>$collapsed ? 'titlebar_inactive' : 'titlebar',-id=>"${label}_title"},
+			       img({-src         =>$icon,
+				    -id          => "${label}_icon",
+				    -onClick     =>"collapse('$label')",
+				    -style       => 'cursor:pointer',
+				   }),
+			       img({-src         => $help,
+				    -style       => 'cursor:pointer',
+				    -onmousedown => $config_click
+				   }),
+			       span({-class=>'draghandle'},$title)
+	    );
 
-      my $pad_img  = img({-src   => $pad_url,
-			  -width => $pw,
-			  -height=> $ph,
-			  -border=> 0,
-			  -id    => "${label}_pad",
-			  -style => $collapsed ? "display:inline" : "display:none",
-			 });
 
-      (my $munge_label = $label) =~ s/_/%5F/g;  # freakin' scriptaculous uses _ as a delimiter!!!
+	(my $munge_label = $label) =~ s/_/%5F/g;  # freakin' scriptaculous uses _ as a delimiter!!!
 
-      push @result, ($self->page_renderer->is_safari()
-		     ?
-		     "\n".div({-id=>"${section}_track_${munge_label}",-class=>$class},
-			      $titlebar,
-			      div({-align=>'center',-style=>'margin-top: -18px'},$img.$pad_img),
-			      $img_map||'')
-		     :
-		     "\n".div({-id=>"${section}_track_${munge_label}",-class=>$class},
-			      div({-align=>'center'},$titlebar.$img.$pad_img),
-			      $img_map||'')
-		     );
-
+	$result{$label} = div({-id=>"track_${munge_label}",-class=>$class},
+				div({-align=>'center'},$titlebar.$img),
+			      $img_map||'');
     }
-
-    else {
-      push @result,div({-id=>"track_${label}",-class=>$class},$img);
-    }
-
-  }
-
-  return wantarray ? @result : join '',@result;
-}
-
-# BUG: This method should integrate all panels into a single image, but it doesn't.
-sub render_composite_track {
-  my $self   = shift;
-  my ($args,$panels) = @_;
-  die "Not implemented";
-
+    
+    return \%result;
 }
 
 # This routine is called to hand off the rendering to a remote renderer. 
@@ -775,16 +744,25 @@ sub make_centering_map {
   return $label ? \@map : @map;
 }
 
-# finally....
 # this is the routine that actually does the work!!!!
-
-sub generate_panels {
+# input
+#    { labels        => [list of labels]
+#      feature_files => [list of external features, plugins]
+#      noscale       => (get rid of this?)
+#      do_map        => (get rid of this?)
+#      cache_extra   => (get rid of this?)
+#      section       => (get rid of this?)
+#
+# output
+#    { label1 => {image,map,width,height,file,gd,boxes},
+#      label2 => {image,map,width,height,file,gd,boxes}...
+#    }
+sub generate_track_content {
   my $self  = shift;
   my $args  = shift;
 
   my $labels         = $args->{labels} || [];
   my $feature_files  = $args->{feature_files};
-  my $use_renderfarm = $args->{use_renderfarm};
   my $noscale        = $args->{noscale};
   my $do_map         = $args->{do_map};
   my $cache_extra    = $args->{cache_extra} || [];
@@ -797,6 +775,8 @@ sub generate_panels {
   my $render         = $self->page_renderer;
   my $lang           = $render->language;
   my $source         = $self->source;
+
+  my $use_renderfarm = $self->use_renderfarm;
 
   # FIXME: this has to be set somewhere
   my $hilite_callback= undef;
@@ -813,59 +793,27 @@ sub generate_panels {
   #        the %tracks hash maps label names to tracks within the panels
   my %panels;           # map label names to Bio::Graphics::Panel objects
   my %tracks;           # map label names to Bio::Graphics::Track objects
-  my %track_args;        # map label names to track-specificic arguments (for caching)
+  my %track_args;       # map label names to track-specific arguments (for caching)
   my %seenit;           # used to avoid possible upstream error of putting track on list multiple times
   my %results;          # hash of {$label}{gd} and {$label}{map}
   my %cached;           # list of labels that have cached data on disk
-  my %cache_key;         # list that maps labels to cache keys
-
-  my $panel_key = '__scale__';
-
-  my @cache_args          = ($section,$panel_key,@panel_args,@$cache_extra,$do_map);
-  $cache_key{$panel_key}  = $self->create_cache_key(@cache_args);
-  $cached{$panel_key}     = $self->panel_is_cached($cache_key{$panel_key});
-
-  unless ($cached{$panel_key}) {
-    $panels{$panel_key}      = Bio::Graphics::Panel->new(@panel_args);
-
-    $panels{$panel_key}->add_track($segment      => 'arrow',
-				   -double       => 1,
-				   -tick         => 2,
-				   -label        => $args->{label_scale} ? $segment->seq_id : 0,
-				   -units        => $source->global_setting('units') || '',
-				   -unit_divider => $source->global_setting('unit_divider') || 1,
-				  ) unless $noscale;
-  }
-
-  $panel_key                  = '__pad__';
-  @cache_args                 = ($section,$panel_key,@panel_args,@$cache_extra);
-  $cache_key{$panel_key}      = $self->create_cache_key(@cache_args);
-
-  unless ($cached{$panel_key} = $self->panel_is_cached($cache_key{$panel_key})) {
-    $panels{$panel_key}       = Bio::Graphics::Panel->new(@panel_args);
-  }
-
+  my %cache_key;        # list that maps labels to cache keys
   my %feature_file_offsets;
 
   for my $label (@$labels) {
     next if $seenit{$label}++; # this shouldn't happen, but let's be paranoid
 
-    # if "hide" is set to true, then skip panel
-    next if $source->semantic_setting($label=>'hide',$length);
-
     $track_args{$label} ||= [$self->create_track_args($label,$args)];
-
-    $panel_key = $label;
 
     # get config data from the feature files
     my @extra_args          = eval {
-      $feature_files->{$label}->types,
+	$feature_files->{$label}->types,
 	$feature_files->{$label}->mtime,
-      };
+      } if $feature_files->{$label};
+
     $cache_key{$label}      = $self->create_cache_key(@panel_args,
 						      @{$track_args{$label}},
 						      @extra_args,
-						      @$cache_extra,
 						      $settings->{features}{$label}{options},
 						     );
 
@@ -874,19 +822,22 @@ sub generate_panels {
     my @keystyle = (-key_style=>'between') 
       if $label =~ /^\w+:/ && $label !~ /:(overview|region)/;  # a plugin
 
-    $panels{$panel_key}         = Bio::Graphics::Panel->new(@panel_args,@keystyle);
+    $panels{$label}         = Bio::Graphics::Panel->new(@panel_args,@keystyle);
 
-    $tracks{$label} = $panels{$panel_key}->add_track(@{$track_args{$label}})
-      unless $cached{$panel_key};
+    $tracks{$label} = $panels{$label}->add_track(@{$track_args{$label}})
+	unless $cached{$label};
   }
 
   #---------------------------------------------------------------------------------
   # Add features to the database
   my @labels_to_generate = grep {!$cached{$_}} @$labels;
-  my %filters = map { my %conf =  $source->style($_);
-		      $conf{'-filter'} ? ($_ => $conf{'-filter'})
-			               : ()
-		      } @labels_to_generate;
+
+  my %filters = map {
+      my %conf =  $source->style($_);
+      $conf{'-filter'} ? ($_ => $conf{'-filter'})
+	               : ()
+  } @labels_to_generate;
+
   $self->add_features_to_track(-labels    => \@labels_to_generate,
 			       -tracks    => \%tracks,
 			       -filters   => \%filters,
@@ -897,19 +848,19 @@ sub generate_panels {
   # ------------------------------------------------------------------------------------------
   # Add feature files, including remote annotations
   my $featurefile_select = $args->{featurefile_select} || $self->feature_file_select($section);
+
   for my $label (keys %$feature_files) {
-    next if $cached{$label};
-    my $file = $feature_files->{$label} or next;
-    ref $file or next;
-    $panel_key = $label;
-    next unless $panels{$panel_key};
-    $self->add_feature_file(
-			    file       => $file,
-			    panel      => $panels{$panel_key},
-			    position   => $feature_file_offsets{$label} || 0,
-			    options    => $settings->{features}{$label}{options},
-			    select     => $featurefile_select,
-			   );
+      next if $cached{$label};
+      my $file = $feature_files->{$label} or next;
+      ref $file or next;
+      next unless $panels{$label};
+      $self->add_feature_file(
+	  file       => $file,
+	  panel      => $panels{$label},
+	  position   => $feature_file_offsets{$label} || 0,
+	  options    => $settings->{features}{$label}{options},
+	  select     => $featurefile_select,
+	  );
   }
 
   # map tracks (stringified track objects) to corresponding labels
@@ -920,27 +871,21 @@ sub generate_panels {
   (my $map_name = $section) =~ s/^\?//;
 
   for my $label (keys %panels) {
-    my $gd = $panels{$label}->gd;
-    my $map  = !$do_map              ? (undef,undef)
-	     : $label eq '__pad__'   ? (undef,undef)
-	     : $label eq '__scale__' ? $self->make_centering_map(shift @{$panels{$label}->boxes},
-								 $args->{flip},
-								 $label,
-								 $args->{scale_map_type},
-								)
-	     : $self->make_map(scalar $panels{$label}->boxes,
-			       $panels{$label},
-			       $label,
-			       \%trackmap,
-			       0);
-    my $key = $cache_key{$label};
-    $self->set_cached_panel($key,$gd,$map);
-    eval {$panels{$label}->finished};
+      my $gd = $panels{$label}->gd;
+      my $map  = $self->make_map(scalar $panels{$label}->boxes,
+				 $panels{$label},
+				 $label,
+				 \%trackmap,
+				 0);
+      my $key = $cache_key{$label};
+      $self->set_cached_panel($key,$gd,$map);
+      eval {$panels{$label}->finished};
   }
 
   # cached panels need to be retrieved
   for my $label (keys %cached) {
-    @{$results{$label}}{qw(image map width height file gd boxes)} = $self->get_cached_panel($cache_key{$label});
+      @{$results{$label}}{qw(image map width height file gd boxes)} = 
+	  $self->get_cached_panel($cache_key{$label});
   }
 
   return \%results;
@@ -1172,9 +1117,7 @@ sub create_panel_args {
   my $render   = $self->page_renderer;
   my $settings = $self->settings;
 
-  my $keystyle = $self->drag_and_drop($args->{drag_n_drop})
-                 ? 'none'
-		 : $args->{keystyle} || $render->setting('keystyle') || DEFAULT_KEYSTYLE;
+  my $keystyle = 'none';
 
   my @pass_thru_args = map {/^-/ ? ($_=>$args->{$_}) : ()} keys %$args;
   my @argv = (
@@ -1205,10 +1148,11 @@ sub create_panel_args {
   push @argv,(-pad_left =>$pl, -pad_right=>$pr) if $p;
 
 
-  push @argv,(
-	      -pad_top     => 18,
-	      -extend_grid => 1)
-    if $self->drag_and_drop;
+  push @argv,
+  (
+   -pad_top     => 18,
+   -extend_grid => 1
+  );
 
   return @argv;
 }
@@ -1308,7 +1252,7 @@ sub get_cache_base {
   my $self            = shift;
   my ($key,$filename) = @_;
   my @comp        = $key =~ /(..)/g;
-  my $rel_path    = join '/',$self->source,'panel_cache',@comp[0..2],$key;
+  my $rel_path    = join '/',$self->source->name,'panel_cache',@comp[0..2],$key;
   my ($uri,$path) = $self->source->tmpdir($rel_path);
 
   return wantarray ? ("$path/$filename","$uri/$filename") : "$path/$filename";

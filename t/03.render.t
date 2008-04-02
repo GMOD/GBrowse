@@ -37,7 +37,7 @@ END {
 chdir $Bin;
 use lib "$Bin/../libnew";
 use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::Render;
+use Bio::Graphics::Browser::Render::HTML;
 
 my $globals = Bio::Graphics::Browser->new(CONF_FILE);
 ok($globals);
@@ -75,7 +75,7 @@ ok(scalar $db->features,37);
 
 ok($render->init_plugins);
 ok(my $plugins = $render->plugins);
-my @plugins = $plugins->plugins;
+my @plugins    = $plugins->plugins;
 ok(scalar @plugins,4);
 
 ok($render->init_remote_sources);
@@ -136,8 +136,8 @@ ok($render->state->{name},'ctgA:4901..5000');
 # Try to fetch the segment.
 ok($render->init_database);
 ok($render->init_plugins);
-$render->fetch_segments;
-my $s = $render->segments;
+my $r = $render->region;
+my $s = $r->segments;
 ok($s && @$s);
 
 my $skipit = !($s && @$s) ? "segments() failed entirely, so can't check results" : 0;
@@ -150,8 +150,8 @@ skip($skipit,eval{$s->[0]->end},5000);
 $CGI::Q = new CGI('name=ctgA');
 $render->update_coordinates;
 ok($render->state->{name},'ctgA');
-$render->fetch_segments;
-$s = $render->segments;
+$r = $render->region;
+$s = $r->segments;
 ok($s && @$s);
 $skipit = !($s && @$s) ? "segments() failed entirely, so can't check results" : 0;
 skip($skipit,scalar @$s,1);
@@ -159,12 +159,20 @@ skip($skipit,eval{$s->[0]->seq_id},'ctgA');
 skip($skipit,eval{$s->[0]->start},1);
 skip($skipit,eval{$s->[0]->end},50000);
 
+# now try to fetch a nonexistent feature
+$CGI::Q = new CGI('name=foobar');
+$render->update_coordinates;
+ok($render->state->{name},'foobar');
+$r = $render->region;
+$s = $r->segments;
+ok($s && !@$s);
+
 # try fetching a feature by name
 $CGI::Q = new CGI('name=My_feature:f13');
 $render->update_coordinates;
 ok($render->state->{name},'My_feature:f13');
-$render->fetch_segments;
-$s = $render->segments;
+$r = $render->region;
+$s = $r->segments;
 ok($s && @$s);
 $skipit = !($s && @$s) ? "segments() failed entirely, so can't check results" : 0;
 skip($skipit,scalar @$s,1);
@@ -193,8 +201,8 @@ ok($panel_renderer->make_link($feature),
 # try automatic class munging
 $CGI::Q = new CGI('name=f13');
 $render->update_coordinates;
-$render->fetch_segments;
-ok($s = $render->segments);
+$r = $render->region;
+ok($s = $r->segments);
 $skipit = !($s && @$s) ? "segments() failed entirely, so can't check results" : 0;
 skip($skipit,scalar @$s,1);
 skip($skipit,eval{$s->[0]->seq_id},'ctgA');
@@ -204,8 +212,8 @@ skip($skipit,eval{$s->[0]->end},22915);
 # try fetching something that shouldn't match
 $CGI::Q = new CGI('name=Foo:f13');
 $render->update_coordinates;
-$render->fetch_segments;
-ok($s = $render->segments);
+$r = $render->region;
+ok($s = $r->segments);
 ok(@$s,0,"Searching for Foo:f13 should have returned 0 results");
 
 # try fetching something that  matches more than once twice
@@ -213,30 +221,30 @@ ok(@$s,0,"Searching for Foo:f13 should have returned 0 results");
 # chromosome. Using somewhat dubious logic, we keep the longest of the two.
 $CGI::Q = new CGI('name=Motif:m02');
 $render->update_coordinates;
-$render->fetch_segments;
-ok($s = $render->segments);
+$r = $render->region;
+ok($s = $r->segments);
 ok(scalar @$s,2,"Motif:m02 should have matched exactly twice, but didn't");
 
 # try the * match
 $CGI::Q = new CGI('name=Motif:m0*');
 $render->update_coordinates;
-$render->fetch_segments;
-ok($s = $render->segments);
+$r = $render->region;
+ok($s = $r->segments);
 ok(scalar @$s,6,"Motif:m0* should have matched exactly 6 times, but didn't");
 
 # try keyword search
 $CGI::Q = new CGI('name=kinase');
 $render->update_coordinates;
-$render->fetch_segments;
-ok($s = $render->segments);
+$r = $render->region;
+ok($s = $r->segments);
 ok(scalar @$s,4,"'kinase' should have matched 4 times, but didn't");
 
 # Exercise the plugin "find" interface.
 # The "TestFinder" plugin treats the name as a feature type and returns all instances
 $CGI::Q = new CGI('name=motif;plugin_action=Find;plugin=TestFinder');
 $render->update_coordinates;
-$render->fetch_segments;
-ok($s = $render->segments);
+$r = $render->region;
+ok($s = $r->segments);
 ok(scalar @$s,11);
 
 # something funny with getting render settings
@@ -246,12 +254,31 @@ ok($render->setting('fine zoom') ne '');
 # now try the run() call, using an IO::String to collect what was printed
 my $data;
 my $io = IO::String->new($data);
-$CGI::Q = new CGI('name=kinase');
+$CGI::Q = new CGI('name=kinase;label=Clones-Transcripts-Motifs');
+$ENV{'HTTP_ACCEPT_LANGUAGE'} = 'en';
 
 # start with a fresh renderer!
-$render      = Bio::Graphics::Browser::Render->new($source,$session);
+$render      = Bio::Graphics::Browser::Render::HTML->new($source,$session);
 $render->run($io);
 ok($data =~ /Set-Cookie/);
 ok($data =~ /rendering 4 features/);
+
+# try rendering a segment
+$CGI::Q = new CGI('name=ctgA:1..10000;label=Clones-Transcripts-Motifs');
+$render->update_state;
+$r = $render->region;
+$s = $r->segments;
+ok($s && @$s==1);
+
+my @labels = $render->detail_tracks;
+ok(join(' ',sort @labels),'Clones Motifs Transcripts','failed to update tracks properly');
+
+$panel_renderer = $render->get_panel_renderer($s->[0]);
+ok($panel_renderer);
+
+my $panels         = $panel_renderer->render_panels(
+    {
+	labels => \@labels,
+    });
 
 exit 0;

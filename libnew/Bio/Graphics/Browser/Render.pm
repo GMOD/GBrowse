@@ -2,15 +2,19 @@ package Bio::Graphics::Browser::Render;
 
 use strict;	
 use warnings;
+
+use JSON;
+use Digest::MD5 'md5_hex';
+use CGI qw(:standard param request_method header url iframe img span div br center);
+use Carp 'croak';
+
 use Bio::Graphics::Browser::I18n;
 use Bio::Graphics::Browser::PluginSet;
 use Bio::Graphics::Browser::UploadSet;
 use Bio::Graphics::Browser::RemoteSet;
 use Bio::Graphics::Browser::Shellwords;
+use Bio::Graphics::Browser::Region;
 use Bio::Graphics::Browser::RenderPanels;
-use Digest::MD5 'md5_hex';
-use CGI qw(:standard param request_method header url iframe img span div br center);
-use Carp 'croak';
 
 use constant VERSION => 2.0;
 use constant DEBUG   => 0;
@@ -98,54 +102,6 @@ sub db {
   $d;
 }
 
-# DEPRECATED! We will not hold a series of segments, but features and current segment
-sub segments {
-  my $self = shift;
-  my $d = $self->{segments} ||= [];
-  if (@_) {
-    if (ref $_[0] && ref $_[0] eq 'ARRAY') {
-      $self->{segments} = shift;
-    } else {
-      $self->{segments} = \@_;
-    }
-  }
-  return wantarray ? @$d : $d;
-}
-
-sub set_segment {
-  my $self = shift;
-  my $seg  = shift;
-
-  my $whole_seg  = $self->get_whole_segment($seg);
-  $self->seg($seg);
-  $self->whole_seg($whole_seg);
-
-  my $state = $self->state;
-  $state->{ref}   = $seg->seq_id;
-  $state->{start} = $seg->start;
-  $state->{stop}  = $seg->end;
-
-  $state->{seg_min} = $whole_seg->start;
-  $state->{seg_max} = $whole_seg->end;
-}
-
-
-# this holds the segment we're currently working on
-sub seg {
-  my $self = shift;
-  my $d    = $self->{segment};
-  $self->{segment} = shift if @_;
-  $d;
-}
-
-# this holds the segment object corresponding to the seqid of the segment we're currently working on
-sub whole_seg {
-  my $self = shift;
-  my $d    = $self->{whole_segment};
-  $self->{whole_segment} = shift if @_;
-  $d;
-}
-
 sub plugins {
   my $self = shift;
   my $d = $self->{plugins};
@@ -181,14 +137,20 @@ sub run {
   $self->init_plugins();
   $self->init_remote_sources();
   $self->update_state();
-  my $features = $self->fetch_features;
-  $self->render($features);
+  $self->render();
   $self->clean_up();
   select($old_fh);
   $self->session->flush;
 }
 
 # handle asynchronous events
+#
+# asynchronous requests:
+#
+# div_visible_<label>=bool              Turn on/off visibility of track with <label>
+# track_collapse_<label>=bool           Collapse/uncollapse track with <label>
+# label[]=<label1>,label[]=<label2>...  Change track order
+# render=<label1>,render=<label2>...    Render the specified tracks
 sub asynchronous_event {
   my $self = shift;
   my $settings = $self->state;
@@ -217,6 +179,24 @@ sub asynchronous_event {
     $events++;
   }
 
+  # Slightly different -- process a tracks request in the background.
+  if (my @labels  = param('render')) { # deferred rendering requested
+      $self->init_database();
+      $self->init_plugins();
+      $self->init_remote_sources();
+      my $features      = $self->fetch_features;
+      my $seg           = $self->features2segments($features)->[0]; # likely wrong
+
+      $self->set_segment($seg);
+
+      my $deferred_data = $self->request_tracks(\@labels);
+
+      print CGI::header('application/json'),
+            JSON::objToJson($deferred_data);
+      $self->session->flush;
+      return 1;
+  }
+
   return unless $events;
   warn "processing asynchronous event(s)";
   print CGI::header('204 No Content');
@@ -224,9 +204,25 @@ sub asynchronous_event {
   1;
 }
 
+# This asynchronous method accepts a list of track names and returns a 
+# hash which maps the track name to the URL at which the data will be cached
+sub request_tracks {
+    my $self         = shift;
+    my $track_labels = shift;
+
+    my $renderer     = $self->get_panel_renderer($self->seg);
+    my $pending_data = $renderer->render_panels(
+	{
+	    labels           => $track_labels,
+	    feature_files    => $self->remote_sources,
+	    deferred         => 1,
+	}
+	);
+    return $pending_data;
+}
+
 sub render {
   my $self           = shift;
-  my $features       = shift;
 
   # NOTE: these handle_* methods will return true
   # if they want us to exit before printing the header
@@ -235,7 +231,7 @@ sub render {
   $self->handle_uploads()   && return;
 
   $self->render_header();
-  $self->render_body($features);
+  $self->render_body();
 }
 
 sub render_header {
@@ -263,49 +259,48 @@ sub allparams {
 
 sub render_body {
   my $self     = shift;
-  my $features = shift;
 
-  my $segments;
-  if ($features && @$features == 1) {
-    $segments = $self->features2segments($features);
-    $self->set_segment($segments->[0]);
-  }
+  my $region   = $self->region;
+  my $features = $region->features;
 
   my $title = $self->render_top($features);
   $self->render_instructions($title);
-  $self->render_panels;
 
-  if ($features && @$features > 1) {
-  	#search not implemented yet
+  if ($region->feature_count > 1) {
+    #search not implemented yet
     $self->render_multiple_choices($features);
   }
 
-  elsif (my $seg = $self->seg) {
-    $self->render_navbar($seg);
-    $self->render_panels($seg,{overview=>1,regionview=>1,detailview=>1});
-    $self->render_config($seg);
+  elsif (my $seg = $region->seg) {
+      $self->render_navbar($seg);
+      $self->render_panels($seg,{overview=>1,regionview=>1,detailview=>1});
+      $self->render_config($seg);
   }
   else {
-    $self->render_navbar();
-    $self->render_config();
+      $self->render_navbar();
+      $self->render_config();
   }
 
   $self->render_bottom($features);
 }
 
+# never called, method in HTML.pm with same name is run instead
 sub render_top    {
   my $self     = shift;
   my $features = shift;
+  croak "render_top() should not be called in parent class";
 }
 
 #never called, method in HTML.pm with same name is run instead
 sub render_navbar {
   my $self = shift;
   my $seg  = shift;
+  croak "render_top() should not be called in parent class";
 }
+
 sub render_panels {
   my $self = shift;
-  my $seg  = shift;
+  my $seg     = shift;
   my $section = shift;
 
   $self->render_overview($seg)   if $section->{overview};
@@ -382,6 +377,7 @@ sub render_uploads {
 sub render_bottom {
   my $self = shift;
   my $features = shift;
+  croak "render_top() should not be called in parent class";
 }
 
 
@@ -397,6 +393,31 @@ sub init_database {
   $db;
 }
 
+sub region {
+    my $self     = shift;
+    return $self->{region} if exists $self->{region};
+
+    my $region   = Bio::Graphics::Browser::Region->new(
+	{ source => $self->data_source,
+	  state  => $self->state,
+	  db     => $self->db }
+	) or die;
+
+    # run any "find" plugins
+    my $plugin_action  = $self->plugin_action || '';
+    my $current_plugin = $self->current_plugin;
+    if ($current_plugin && $plugin_action eq $self->tr('Find') || 
+	$plugin_action eq 'Find') {
+	$region->features($self->plugin_find($current_plugin,$self->state->{name}));
+    }
+    else {
+	$region->search_features();
+    }
+
+    $self->plugins->set_segments($region->segments);
+    return $self->{region} = $region;
+}
+
 # ========================= plugins =======================
 sub init_plugins {
   my $self        = shift;
@@ -404,7 +425,10 @@ sub init_plugins {
   my @plugin_path = shellwords($self->data_source->globals->plugin_path);
 
   my $plugins = $PLUGINS{$source} 
-    ||= Bio::Graphics::Browser::PluginSet->new($self->data_source,$self->state,$self->language,@plugin_path);
+    ||= Bio::Graphics::Browser::PluginSet->new($self->data_source,
+					       $self->state,
+					       $self->language,
+					       @plugin_path);
   $self->fatal_error("Could not initialize plugins") unless $plugins;
   $plugins->configure($self->db,$self->state,$self->language,$self->session);
   $self->plugins($plugins);
@@ -474,10 +498,11 @@ sub fatal_error {
   croak 'Please call fatal_error() for a subclass of Bio::Graphics::Browser::Render';
 }
 
+# not implemented
 sub write_auto {
   my $self = shift;
   my $result_set = shift;
-  warn "write_auto() not implemented\n";
+  return;   
 }
 
 sub handle_downloads {
@@ -697,6 +722,7 @@ sub update_coordinates {
   my $self  = shift;
   my $state = shift || $self->state;
 
+  delete $self->{region}; # clear cached region
   my $position_updated;
 
   # I really don't know if this belongs here. Divider should only be used for displaying
@@ -915,232 +941,6 @@ sub update_external_sources {
   $self->remote_sources->set_sources([param('eurl')]) if param('eurl');
 }
 
-# fetch_segments() actually should be deprecated, but it is stuck here
-# because it is convenient for the regression tests
-sub fetch_segments {
-  my $self = shift;
-  my $features = $self->fetch_features;
-  my $segments = $self->features2segments($features);
-  $self->plugins->set_segments($segments) if $self->plugins;
-  $self->segments($segments);
-}
-
-sub features2segments {
-  my $self     = shift;
-  my $features = shift;
-  my $refclass = $self->setting('reference class');
-  my $db       = $self->db;
-  my @segments = map {
-    my $version = $_->isa('Bio::SeqFeatureI') ? undef : $_->version;
-    $db->segment(-class => $refclass,
-		 -name  => $_->ref,
-		 -start => $_->start,
-		 -stop  => $_->end,
-		 -absolute => 1,
-		 defined $version ? (-version => $version) : ())} @$features;
-  return \@segments;
-}
-
-sub get_whole_segment {
-  my $self = shift;
-
-  my $segment = shift;
-  my $factory = $segment->factory;
-
-  # the segment class has been deprecated, but we still must support it
-  my $class   = eval {$segment->seq_id->class} || eval{$factory->refclass};
-
-  my ($whole_segment) = $factory->segment(-class=>$class,
-					  -name=>$segment->seq_id);
-  $whole_segment   ||= $segment;  # just paranoia
-  $whole_segment;
-}
-
-sub fetch_features {
-  my $self  = shift;
-  my $db    = $self->db;
-  my $state = $self->state;
-
-  # avoid doing anything if no parameters and no autosearch set
-  return if $self->setting('no autosearch') && !param();
-
-  return unless defined $state->{name};
-  my $features;
-
-  # run any "find" plugins
-  my $plugin_action  = $self->plugin_action || '';
-  my $current_plugin = $self->current_plugin;
-  if ($current_plugin && $plugin_action eq $self->tr('Find') || $plugin_action eq 'Find') {
-    $features = $self->plugin_find($current_plugin,$state->{name});
-  }
-  else {
-    $features = $self->search_db($state->{name});
-  }
-  return $features;
-}
-
-sub search_db {
-  my $self = shift;
-  my $name = shift;
-
-  my $db    = $self->db;
-
-  my ($ref,$start,$stop,$class) = $self->parse_feature_name($name);
-
-  my $features = $self->lookup_features($ref,$start,$stop,$class,$name);
-  return $features;
-}
-
-sub lookup_features {
-  my $self  = shift;
-  my ($name,$start,$stop,$class,$literal_name) = @_;
-  my $refclass = $self->setting('reference class') || 'Sequence';
-
-  my $db     = $self->db;
-  my $divisor = $self->setting('unit_divider') || 1;
-  $start *= $divisor if defined $start;
-  $stop  *= $divisor if defined $stop;
-
-  # automatic classes to try
-  my @classes = $class ? ($class) : (split /\s+/,$self->setting('automatic classes')||'');
-
-  my $features;
-
- SEARCHING:
-  for my $n ([$name,$class,$start,$stop],[$literal_name,$refclass,undef,undef]) {
-
-    my ($name_to_try,$class_to_try,$start_to_try,$stop_to_try) = @$n;
-
-    # first try the non-heuristic search
-    $features  = $self->_feature_get($db,$name_to_try,$class_to_try,$start_to_try,$stop_to_try);
-    last SEARCHING if @$features;
-
-    # heuristic fetch. Try various abbreviations and wildcards
-    my @sloppy_names = $name_to_try;
-    if ($name_to_try =~ /^([\dIVXA-F]+)$/) {
-      my $id = $1;
-      foreach (qw(CHROMOSOME_ Chr chr)) {
-	my $n = "${_}${id}";
-	push @sloppy_names,$n;
-      }
-    }
-
-    # try to remove the chr CHROMOSOME_I
-    if ($name_to_try =~ /^(chromosome_?|chr)/i) {
-      (my $chr = $name_to_try) =~ s/^(chromosome_?|chr)//i;
-      push @sloppy_names,$chr;
-    }
-
-    # try the wildcard  version, but only if the name is of significant length
-    # IMPORTANT CHANGE: we used to put stars at the beginning and end, but this killed performance!
-    push @sloppy_names,"$name_to_try*" if length $name_to_try > 3 and $name_to_try !~ /\*$/;
-
-    for my $n (@sloppy_names) {
-      for my $c (@classes) {
-	$features = $self->_feature_get($db,$n,$c,$start_to_try,$stop_to_try);
-	last SEARCHING if @$features;
-      }
-    }
-
-  }
-
-  unless (@$features) {
-    # if we get here, try the keyword search
-    $features = $self->_feature_keyword_search($literal_name);
-  }
-
-  return $features;
-}
-
-sub _feature_get {
-  my $self = shift;
-  my ($db,$name,$class,$start,$stop) = @_;
-
-  my $refclass = $self->setting('reference class') || 'Sequence';
-  $class ||= $refclass;
-
-  my @argv = (-name  => $name);
-  push @argv,(-class => $class) if defined $class;
-  push @argv,(-start => $start) if defined $start;
-  push @argv,(-end   => $stop)  if defined $stop;
-
-  my @features;
-  @features  = grep {$_->length} $db->get_feature_by_name(@argv)   if !defined($start) && !defined($stop);
-  @features  = grep {$_->length} $db->get_features_by_alias(@argv) if !@features &&
-    !defined($start) &&
-      !defined($stop) &&
-	$db->can('get_features_by_alias');
-
-  @features  = grep {$_->length} $db->segment(@argv)               if !@features && $name !~ /[*?]/;
-  return [] unless @features;
-
-  # Deal with multiple hits.  Winnow down to just those that
-  # were mentioned in the config file.
-  my $types = $self->data_source->_all_types($db);
-  my @filtered = grep {
-    my $type    = $_->type;
-    my $method  = eval {$_->method} || '';
-    my $fclass  = eval {$_->class}  || '';
-    $type eq 'Segment'      # ugly stuff accomodates loss of "class" concept in GFF3
-      || $type eq 'region'
-	|| $types->{$type}
-	  || $types->{$method}
-	    || !$fclass
-	      || $fclass eq $refclass
-		|| $fclass eq $class;
-  } @features;
-
-  # consolidate features that have same name and same reference sequence
-  # and take the largest one.
-  my %longest;
-  foreach (@filtered) {
-    my $n = $_->display_name.$_->abs_ref.(eval{$_->version}||'').(eval{$_->class}||'');
-    $longest{$n} = $_ if !defined($longest{$n}) || $_->length > $longest{$n}->length;
-  }
-
-  return [values %longest];
-}
-
-sub _feature_keyword_search {
-  my $self       = shift;
-  my $searchterm = shift;
-
-  # if they wanted something specific, don't give them non-specific results.
-  return if $searchterm =~ /^[\w._-]+:/;
-
-  # Need to untaint the searchterm.  We are very lenient about
-  # what is accepted here because we wil be quote-metaing it later.
-  $searchterm =~ /([\w .,~!@\#$%^&*()-+=<>?\/]+)/;
-  $searchterm = $1;
-
-  my $db = $self->db;
-  my $max_keywords = $self->setting('max keyword results');
-  my @matches;
-  if ($db->can('search_attributes')) {
-    my @attribute_names = shellwords ($self->setting('search attributes'));
-    @attribute_names = ('Note') unless @attribute_names;
-    @matches = $db->search_attributes($searchterm,\@attribute_names,$max_keywords);
-  } elsif ($db->can('search_notes')) {
-    @matches = $db->search_notes($searchterm,$max_keywords);
-  }
-
-  my @results;
-  for my $r (@matches) {
-    my ($name,$description,$score) = @$r;
-    my ($seg) = $db->segment($name) or next;
-    push @results,Bio::Graphics::Feature->new(-name   => $name,
-					      -class  => $name->class,
-					      -type   => $description,
-					      -score  => $score,
-					      -ref    => $seg->abs_ref,
-					      -start  => $seg->abs_start,
-					      -end    => $seg->abs_end,
-					      -factory=> $db);
-
-  }
-  return \@results;
-}
-
 ##################################################################3
 #
 # SHARED RENDERING CODE HERE
@@ -1275,32 +1075,6 @@ sub regionview_bounds {
   return ($regionview_start, $regionview_end);
 }
 
-
-sub parse_feature_name {
-  my $self = shift;
-  my $name = shift;
-
-  my ($class,$ref,$start,$stop);
-  if ( ($name !~ /\.\./ and $name =~ /([\w._\/-]+):(-?[-e\d.]+),(-?[-e\d.]+)$/) or
-      $name =~ /([\w._\/-]+):(-?[-e\d,.]+?)(?:-|\.\.)(-?[-e\d,.]+)$/) {
-    $ref  = $1;
-    $start = $2;
-    $stop  = $3;
-    $start =~ s/,//g; # get rid of commas
-    $stop  =~ s/,//g;
-  }
-
-  elsif ($name =~ /^(\w+):(.+)$/) {
-    $class = $1;
-    $ref   = $2;
-  }
-
-  else {
-    $ref = $name;
-  }
-  return ($ref,$start,$stop,$class);
-}
-
 sub split_labels {
   my $self = shift;
   map {/^(http|ftp|das)/ ? $_ : split /[+-]/} @_;
@@ -1320,7 +1094,7 @@ sub get_panel_renderer {
   return Bio::Graphics::Browser::RenderPanels->new(-segment  => $seg,
 						   -source   => $self->data_source,
 						   -settings => $self->state,
-						   -renderer => $self
+						   -renderer => $self,
 						  );}
 
 ################## image rendering code #############
@@ -1329,31 +1103,24 @@ sub render_detailview {
   my $self = shift;
   my $seg  = shift or return;
 
-  my @labels = $self->detail_tracks;
-
-  my $buttons = $self->globals->button_url;
-  my $plus    = "$buttons/plus.png";
-  my $minus   = "$buttons/minus.png";
-
+  my @labels   = $self->detail_tracks;
   my $renderer = $self->get_panel_renderer($seg);
-  my @panels   = $renderer->render_panels({
+  my $panels   = $renderer->render_panels({
 					   labels           => \@labels,
 					   feature_files    => $self->remote_sources,
-					   do_map           => 1,
-					   do_centering_map => 1,
-					   drag_and_drop    => 1,
 					   section          => 'detail',
-					   image_button     => 0,
 					  }
 					 );
+
+  my @panels   = map {$panels->{$_}} @labels;
 
   my $drag_script = $self->drag_script('panels','track');
   print div($self->toggle('Details',
 			  div({-id=>'panels',-class=>'track'},
 			      @panels
-			     )
-			 )
-	   ).$drag_script;
+			  )
+	    )
+      ).$drag_script;
 }
 
 
@@ -1434,7 +1201,7 @@ sub generate_image {
 }
 
 sub is_safari {
-  return CGI::user_agent =~ /safari/i;
+  return (CGI::user_agent||'') =~ /safari/i;
 }
 
 sub citation {

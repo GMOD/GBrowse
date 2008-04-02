@@ -226,3 +226,40 @@ Random Notes:
 1. for remote invocation, the page_settings hash will be sent as a
 serialized request to the image generator
 
+2. Layout design is as follows:
+
+   a) Each track has three states: hidden, open, collapsed.
+      open:
+          <div class="track" id="detail_track_genes">
+             <span class="titlebar" id="Genes_title">
+                  <img of minus>
+                  <img of config>
+                  <span class="draghandle">Named gene</span>
+                       <img style="display:inline" of track> <!-- generate by ajax!
+                  <imagemap>                                 <!-- generate by ajax! 
+                  </span>
+             </span>
+          </div class="track" id="detail_track_genes">
+
+       collapsed:
+          <div class="track" id="detail_track_genes">
+             <span class="titlebar" id="Genes_title">
+                  <img of minus>
+                  <img of config>
+                  <span class="draghandle">Named gene</span>
+                       <img style="display:none" of track>   <!-- generate by ajax!
+                  <imagemap>                                 <!-- generate by ajax!
+                  </span>
+             </span>
+          </div>
+
+       collapsed:
+          <div class="track" id="detail_track_genes">
+          </div>
+
+<map name="Genes_map" id="Genes_map">
+   b) CGI script lays out divs for all tracks in current order.
+   c) Track state set to "open" for all default tracks, "hidden" for everything else
+   d) Invoke a javascript routine that iterates through all non-hidden tracks and
+         loads current content. Probably image generator should make the whole
+         content inside the "draghandle" span.

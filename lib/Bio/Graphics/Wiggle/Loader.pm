@@ -314,15 +314,19 @@ sub minmax {
 
   my $transform  = $self->get_transform;
 
-  my $stats = Statistics::Descriptive::Sparse->new();
+  my $seqids = ($self->current_track->{seqids} ||= {});
+  my $chrom = $self->{track_options}{chrom};
+
   if ((my $size = stat($infh)->size) > BIG_FILE) {
       warn "wiggle file is very large; resorting to genome-wide sample statistics";
       $self->{FILEWIDE_STATS} ||= $self->sample_file($infh,BIG_FILE_SAMPLES);
+      for (keys %{$self->{FILEWIDE_STATS}}) {
+	$seqids->{$chrom}{$_} = $self->{FILEWIDE_STATS}{$_};
+      }
       return;
   }
 
-  my $seqids = $self->current_track->{seqids} ||= {};
-
+  my $stats = Statistics::Descriptive::Sparse->new();
   if ($bedline) {  # left-over BED line
       my @tokens = split /\s+/,$bedline;
       my $value = $tokens[-1];
@@ -339,7 +343,6 @@ sub minmax {
       $stats->add_data($value);
   }
 
-  my $chrom = $self->{track_options}{chrom};
 
   $seqids->{$chrom}{min}    = $stats->min();
   $seqids->{$chrom}{max}    = $stats->max();
@@ -497,7 +500,8 @@ sub process_variableline {
 	if !defined $chrom->{end} || $chrom->{end} < $end;
 
   }
-  $self->current_track->{seqids}{$seqid}{end} 
+
+  $self->current_track->{seqids}{$seqid}{end}
         ||= $self->current_track->{seqids}{$seqid}{start};
 }
 

@@ -399,6 +399,17 @@ sub logsquared {
     return log($value**2);
 }
 
+sub logtransform {
+  my $self  = shift;
+  my $value = shift;
+  return 0 if $value == 0;
+  if ($value < 0) {
+    return -log(-$value);
+  } else {
+    return log($value);
+  }
+}
+
 sub process_bed {
   my $self = shift;
   my $infh = shift;

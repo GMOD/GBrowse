@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.76 2008-03-31 07:57:37 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.77 2008-04-03 14:01:04 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1326,6 +1326,7 @@ sub generate_panels {
 			      position => $ff_offset + $feature_file_extra_offset,
 			      options  => $options,
 			      select   => $featurefile_select,
+			      segment  => $segment,
 			     );
 
     do { eval {$panels{$panel_key}->finished};
@@ -1527,7 +1528,9 @@ sub add_feature_file {
 		    $options->{$name},
 		    $self->bump_density,
 		    $self->label_density,
-		    $select);
+		    $select,
+		    $args{segment},
+		   );
     };
 
   $self->error("error while rendering ",$args{file}->name,": $@") if $@;

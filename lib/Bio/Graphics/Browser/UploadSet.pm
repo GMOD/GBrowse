@@ -109,11 +109,24 @@ sub clear_file {
   unless ($path) {  # unregistered cruft file
     (undef,$path) = $self->name_file($url);
   }
+  $self->unlink_wigfiles($path);
   unlink $path;
   delete $settings->{features}{$url};
   $settings->{tracks} = [grep {$_ ne $url} @{$settings->{tracks}}];
   warn "clear_uploaded_file(): deleting file = $url" if DEBUG;
   $self->_del_file($url);
+}
+
+sub unlink_wigfiles {
+  my $self = shift;
+  my $path = shift;
+  open F,$path or return;
+  while (<F>) {
+    chomp;
+    my ($wigfile) = /wigfile=([^\;]+)/ or next;
+    unlink $wigfile;
+  }
+  close F;
 }
 
 sub feature_file {

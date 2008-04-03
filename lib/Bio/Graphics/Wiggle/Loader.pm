@@ -93,6 +93,7 @@ use strict;
 use Carp 'croak';
 use Statistics::Descriptive;
 use IO::Seekable;
+use File::Spec;
 use Bio::Graphics::Wiggle;
 use Text::Shellwords;
 use File::stat;
@@ -511,7 +512,7 @@ sub wigfile {
   my $ts    = time();
   my $current_track = $self->{trackname};
   unless (exists $self->current_track->{seqids}{$seqid}{wig}) {
-    my $path    = "$self->{base}/$current_track.$seqid.$ts.wig";
+    my $path    = File::Spec->catfile($self->{base},"$current_track.$seqid.$ts.wig");
     my @stats;
     foreach (qw(min max mean stdev)) {
 	my $value = $self->current_track->{seqids}{$seqid}{$_} ||

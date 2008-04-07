@@ -451,6 +451,7 @@ lib/Bio/Graphics/Glyph/phased_exons.pm
 lib/Bio/Graphics/Glyph/smoothing.pm
 lib/Bio/Graphics/Glyph/spectrogram.pm
 lib/Bio/Graphics/Glyph/trace.pm
+lib/Bio/Graphics/Glyph/wiggle_box.pm
 lib/Bio/Graphics/Glyph/wiggle_density.pm
 lib/Bio/Graphics/Glyph/wiggle_xyplot.pm
 lib/Bio/Graphics/Glyph/wormbase_transcript.pm

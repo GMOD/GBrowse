@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::wiggle_box;
 
-# $Id: wiggle_box.pm,v 1.1.2.1 2008-04-07 11:13:40 sheldon_mckay Exp $
+# $Id: wiggle_box.pm,v 1.1.2.2 2008-04-07 13:30:11 sheldon_mckay Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing);
@@ -93,7 +93,7 @@ sub draw_segment {
     $data_width_ratio = 1;
   }
 
-  return unless $data && ref $data && @$data > 0 && grep {defined} @$data;
+  return unless $data && ref $data && @$data > 0 && grep {$_} @$data;
 
   # allocate colors
   my $bg_idx = $self->panel->translate_color($self->panel->rgb($self->bgcolor));
@@ -104,10 +104,16 @@ sub draw_segment {
   my $datapoints_per_base  = @$data/$length;
   my $pixels_per_datapoint = $self->panel->width/@$data * $data_width_ratio;
 
+  my $xstart;
   for (my $i = 0; $i <= @$data ; $i++) {
-    my $x          = $x1 + $pixels_per_datapoint * $i;
-    next unless $data->[$i]; # no background color if no data 
-    $self->filled_box($gd,$x,$y1,$x+$pixels_per_datapoint,$y2,$fg_idx,$bg_idx);
+    $xstart ||= $x1 + $pixels_per_datapoint * $i if $data->[$i];
+    # trigger to draw the previous box is empty space of the end of the stack
+    if (!$data->[$i] || ($i+1 == @$data)) {
+      $xstart || next;
+      my $xend = $x1 + $pixels_per_datapoint * $i;
+      $self->filled_box($gd,$xstart,$y1,$xend,$y2,$bg_idx,$fg_idx);
+      undef $xstart;
+    }
   }
 }      
 

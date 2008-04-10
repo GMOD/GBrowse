@@ -27,7 +27,11 @@ sub draw_wigfile {
   my $wigfile = shift;
 
   eval "require Bio::Graphics::Wiggle" unless Bio::Graphics::Wiggle->can('new');
-  my $wig = Bio::Graphics::Wiggle->new($wigfile) or die;
+  my $wig = eval { Bio::Graphics::Wiggle->new($wigfile) };
+  unless ($wig) {
+      warn $@;
+      return $self->SUPER::draw(@_);
+  }
 
   my $chr         = $feature->seq_id;
   my $panel_start = $self->panel->start;
@@ -80,7 +84,8 @@ sub create_parts_for_dense_feature {
   my $self = shift;
   my ($dense,$start,$end) = @_;
 
-  my $span = $self->width;
+#  my $span = $self->width;
+  my $span = $self->scale> 1 ? $end - $start : $self->width;
   my $data = $dense->values($start,$end,$span);
   my $points_per_span = ($end-$start+1)/$span;
   my @parts;

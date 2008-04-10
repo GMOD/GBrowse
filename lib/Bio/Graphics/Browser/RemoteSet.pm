@@ -96,6 +96,7 @@ sub feature_file {
     warn "getting featurefile for $url" if DEBUG;
     $feature_file = $self->get_remote_upload($url,$rel2abs,$segment,$label);
   }
+  return unless $feature_file;
 
   # Tell the feature file what its name is, so that it can be formatted
   # nicely in the user interface.

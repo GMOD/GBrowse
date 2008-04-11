@@ -88,13 +88,6 @@ sub remote_sources {
   $d;
 }
 
-sub language {
-  my $self = shift;
-  my $d = $self->{lang};
-  $self->{lang} = shift if @_;
-  $d;
-}
-
 sub db {
   my $self = shift;
   my $d = $self->{db};
@@ -209,8 +202,8 @@ sub asynchronous_event {
 sub request_tracks {
     my $self         = shift;
     my $track_labels = shift;
-
-    my $renderer     = $self->get_panel_renderer($self->seg);
+    my $segment      = $self->segment;
+    my $renderer     = $self->get_panel_renderer($segment);
     my $pending_data = $renderer->render_panels(
 	{
 	    labels           => $track_labels,
@@ -416,6 +409,12 @@ sub region {
 
     $self->plugins->set_segments($region->segments);
     return $self->{region} = $region;
+}
+
+sub segment {
+    my $self   = shift;
+    my $region = $self->region;
+    return $region->seg;
 }
 
 # ========================= plugins =======================
@@ -949,7 +948,6 @@ sub update_external_sources {
 
 # overview_ratio and overview_pad moved to RenderPanels.pm
 
-##### language stuff
 sub set_language {
   my $self = shift;
 
@@ -967,6 +965,13 @@ sub set_language {
   $self->language($lang);
 }
 
+sub language {
+  my $self = shift;
+  my $d = $self->{lang};
+  $self->{lang} = shift if @_;
+  $d;
+}
+
 # Returns the language code, but only if we have a translate table for it.
 sub language_code {
   my $self = shift;
@@ -976,6 +981,7 @@ sub language_code {
   return $lang->language;
 }
 
+##### language stuff
 sub label2key {
   my $self  = shift;
   my $label = shift;
@@ -1094,7 +1100,7 @@ sub get_panel_renderer {
   return Bio::Graphics::Browser::RenderPanels->new(-segment  => $seg,
 						   -source   => $self->data_source,
 						   -settings => $self->state,
-						   -renderer => $self,
+						   -language => $self->language,
 						  );}
 
 ################## image rendering code #############
@@ -1158,46 +1164,6 @@ sub categorize_track {
   $category         =~ s/^["']//;  # get rid of leading quotes
   $category         =~ s/["']$//;  # get rid of trailing quotes
   return $category ||= $self->tr('GENERAL');
-}
-
-=head2 generate_image
-
-  ($url,$path) = $browser->generate_image($gd)
-
-Given a GD::Image object, this method calls its png() or gif() methods
-(depending on GD version), stores the output into the temporary
-directory given by the "tmpimages" option in the configuration file,
-and returns a two element list consisting of the URL to the image and
-the physical path of the image.
-
-=cut
-
-sub generate_image {
-  my $self   = shift;
-  my $image  = shift;
-
-  my $extension = $image->can('png') ? 'png' : 'gif';
-  my $data      = $image->can('png') ? $image->png : $image->gif;
-  my $signature = md5_hex($data);
-
-  warn ((CGI::param('ref')||'')   . ':' .
-	(CGI::param('start')||'') . '..'.
-	(CGI::param('stop')||'')
-	,
-	" sig $signature\n") if DEBUG;
-
-  # untaint signature for use in open
-  $signature =~ /^([0-9A-Fa-f]+)$/g or return;
-  $signature = $1;
-
-  my ($uri,$path) = $self->globals->tmpdir($self->data_source->name.'/img');
-  my $url         = sprintf("%s/%s.%s",$uri,$signature,$extension);
-  my $imagefile   = sprintf("%s/%s.%s",$path,$signature,$extension);
-  open (F,">$imagefile") || die("Can't open image file $imagefile for writing: $!\n");
-  binmode(F);
-  print F $data;
-  close F;
-  return $url;
 }
 
 sub is_safari {

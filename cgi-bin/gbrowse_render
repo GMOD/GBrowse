@@ -1,38 +1,23 @@
 #!/usr/bin/perl
 
 use strict;
-use Data::Dumper;
+use lib '/home/lstein/projects/Generic-Genome-Browser-Trunk/libnew';
+
 use CGI qw(header param escape unescape);
+use IO::File;
+use File::Basename 'basename';
 use Storable qw(freeze thaw retrieve);
-#use LWP::Parallel;
-#use LWP::Parallel::UserAgent;
-
-use lib '/Users/mokada/development/gsoc/head/Generic-Genome-Browser/libnew',
-'/Users/mokada/development/gsoc/head/Generic-Genome-Browser/lib';
-#use Bio::Graphics::Browser::Render;
-#use Bio::Graphics::Browser::PluginSet;
-use Bio::Graphics::Browser::RenderTracks;
+use Bio::Graphics::Browser::I18n;
 use Bio::Graphics::Browser::DataSource;
+use Bio::Graphics::Browser::RenderPanels;
 
-use Bio::Graphics::Browser::Shellwords;
-
-
-
-print header();
-
-my %args;
-foreach my $key (param()) {
- my $value = thaw(param($key));
-  $args{$key} = $value;
-}
+print header('application/gbrowse-encoded-genome');
 
 #extract arguments
-my $tracks	= $args{'tracks'};
-my $settings	= $args{'settings'};
-my $datasource	= $args{'datasource'};
-my $language	= $args{'language'};
-#my $session	= $args{'session'};
-#my $paramargs	= $args{'paramargs'};
+my $tracks	= thaw param('tracks');
+my $settings	= thaw param('settings');
+my $datasource	= thaw param('datasource');
+my $language	= thaw param('language');
 
 print fatal_error("Missing arguments") unless $tracks && $settings && $datasource && $language;
 
@@ -42,40 +27,42 @@ my @result_tracks;
 my $db = init_database($datasource, $settings);
 
 # extract segments
-my $segments = $db->segment(-name	=> $settings->{'ref'},
-			    -start	=> $settings->{'start'},
-			    -stop	=> $settings->{'stop'});
+my ($segment) = $db->segment(-name	=> $settings->{'ref'},
+			     -start	=> $settings->{'start'},
+			     -stop	=> $settings->{'stop'});
 
 # generate the panels
-my $renderer = Bio::Graphics::Browser::RenderTracks->new(-segment  => $segments,
-							  -source   => $datasource,
-							  -settings => $settings);
+my $renderer = Bio::Graphics::Browser::RenderPanels->new(-segment  => $segment,
+							 -source   => $datasource,
+							 -settings => $settings,
+							 -language => $language);
 
-my $panels = $renderer->generate_panels(-db      => $db,
-						     -tracks  => $tracks);
+my $panel = $renderer->track_content({labels => @$tracks});
 
-# create the gd object and maps
-for my $track (keys %$panels) {
-  my $panel = $panels->{$track};
-  my $image_map = $track eq '__scale__' ? $renderer->make_centering_map($panel)
-  	: $renderer->make_map($panel, $track, $language);
-  
-  push @result_tracks, [$track, $panel->gd, $image_map];
+# we return the URL to the PNG, the image map, the width and height of the image,
+# keyed to the requested label(s)
+my %results;
+for my $label (keys %$panel) {
+    my ($img_map,$width,$height,$file) = 
+	@{$panel->{$label}}{qw(map width height file)};
+
+    # retrieve the file contents
+    my $fh = IO::File->new($file);
+    my $data = '';
+
+    do { 1 } while $fh->read($data,8196,length $data);
+    my $filename = basename($file);
+
+    $results{$label} = {map       => $img_map,
+			width     => $width,
+			height    => $height,
+			filename  => $filename,
+			imagedata => $data};
 }
 
+print freeze \%results;
 
-#for debugging, return still image and map
-#my $var = retrieve ('/Users/mokada/development/testing/temp/triplets.dat');
-#my ($track_name, $gd, $image_map) = @$var;
-#push @result_tracks, [$track_name, $gd, $image_map];
-
-
-
-
-#print freeze([[$track_name, $gd, $image_map]]);
-print freeze(\@result_tracks);
-
-exit;
+exit 0;
 
 
 ###############################################################################################
@@ -84,29 +71,13 @@ exit;
 
 sub init_database {
   my $datasource = shift;
-  my $settings = shift;
+  my $settings   = shift;
   my $db  = $datasource->open_database();
 
   # I don't know what this is for, but it was there in gbrowse and looks like an important hack.
   eval {$db->biosql->version($settings->{version})};
 
   $db;
-}
-
-sub init_plugins {
-  my $datasource = shift;
-  my $settings = shift;
-  my $language = shift;
-  my $db = shift;
-  my $session = shift;
-  
-  my @plugin_path = shellwords($datasource->globals->plugin_path);
-  
-  my $plugins = Bio::Graphics::Browser::PluginSet->new($datasource,$settings, $language, @plugin_path);
-  fatal_error("Could not initialize plugins") unless $plugins;
-  $plugins->configure($db, $settings, $language, $session);
-  
-  $plugins;
 }
 
 sub fatal_error {
@@ -126,7 +97,7 @@ sub print_usage {
 
 <pre>
   
-  
+ THIS SYNOPSIS IS NO LONGER ACCURATE!!!!
   
   use strict;
   use Storable qw(freeze thaw);

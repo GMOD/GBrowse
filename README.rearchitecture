@@ -221,12 +221,18 @@ array of [$gd,$map]. The idea here is to facilitate distribution of
 track generation across multiple machines. The server will serialize
 this data structure.
 
-Random Notes:
+Transaction notes
 
-1. for remote invocation, the page_settings hash will be sent as a
-serialized request to the image generator
+Step 1: The main controller for the page detects when user actions
+have changed the current view, and sends a request to server to fetch
+and/or cache new track objects. (Track objects contain information on
+the image and map).
 
-2. Layout design is as follows:
+For remote invocation, the page_settings hash will be sent as a
+serialized request to track generator daemons.
+
+Step 2: The controller manages a series of track <divs> on the client
+side:
 
    a) Each track has three states: hidden, open, collapsed.
       open:
@@ -263,3 +269,7 @@ serialized request to the image generator
    d) Invoke a javascript routine that iterates through all non-hidden tracks and
          loads current content. Probably image generator should make the whole
          content inside the "draghandle" span.
+
+Step 3: The <div> requests are of the form: (session_id,track_label),
+where session_id is implicit in the cookie. The server instances wait
+for the data to appear (initiated by step 1), and then return it.

@@ -7,6 +7,7 @@ use base 'Bio::Graphics::FeatureFile';
 use Bio::Graphics::Browser::Shellwords;
 use File::Basename 'dirname';
 use File::Path 'mkpath';
+use Data::Dumper 'Dumper';
 use Carp 'croak';
 use Socket 'AF_INET','inet_aton';  # for inet_aton() call
 use CGI '';
@@ -629,7 +630,7 @@ sub open_database {
   my $track = shift;
 
   my ($adaptor,@argv) = $self->db_settings($track);
-  my $key             = join ':',$adaptor,@argv;
+  my $key             = Dumper($adaptor,@argv);
   return $DB{$key}    if exists $DB{$key};
 
   $DB{$key} = eval {$adaptor->new(@argv)} or warn $@;

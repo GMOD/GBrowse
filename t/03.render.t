@@ -99,6 +99,8 @@ undef $render;
 $session = $globals->session($id);
 ok($session->id,$id);
 $render  = Bio::Graphics::Browser::Render->new($source,$session);
+ok($render->init_database);
+ok($render->init_plugins);
 ok($render->state->{width},1024);
 
 # test navigation - first we pretend that we are setting position to ctgA:1..1000
@@ -122,6 +124,9 @@ ok($render->state->{name},'ctgA:501..1500');
 $CGI::Q = new CGI('zoom+in+50%.x=yes;navigate=1');
 $render->update_coordinates;
 ok($render->state->{name},'ctgA:751..1250');
+my $segment = $render->segment;
+ok($segment->start,751);
+ok($segment->end,1250);
 
 # pretend that we've selected the popup menu to go to 100 bp
 $CGI::Q = new CGI('span=100;navigate=1');
@@ -181,7 +186,7 @@ skip($skipit,eval{$s->[0]->start},19157);
 skip($skipit,eval{$s->[0]->end},22915);
 
 # test the make_{link,title,target} functionality
-my $segment = $s->[0];
+$segment = $s->[0];
 my $feature = Bio::Graphics::Feature->new(-name=>'fred',
 					  -source=>'est',-method=>'match',
 					  -start=>1,-end=>1000,-seq_id=>'A');
@@ -264,7 +269,7 @@ ok($data =~ /Set-Cookie/);
 ok($data =~ /rendering 4 features/);
 
 # try rendering a segment
-$CGI::Q = new CGI('name=ctgA:1..10000;label=Clones-Transcripts-Motifs');
+$CGI::Q = new CGI('name=ctgA:1..20000;label=Clones-Transcripts-Motifs');
 $render->update_state;
 $r = $render->region;
 $s = $r->segments;
@@ -276,9 +281,24 @@ ok(join(' ',sort @labels),'Clones Motifs Transcripts','failed to update tracks p
 $panel_renderer = $render->get_panel_renderer($s->[0]);
 ok($panel_renderer);
 
-my $panels         = $panel_renderer->render_panels(
-    {
-	labels => \@labels,
-    });
+my $panels   = $panel_renderer->render_panels({labels => \@labels});
+ok(join ' ',(sort keys %$panels),'Clones Motifs Transcripts','panels keys incorrect');
+my ($png)    = grep /cache/,$panels->{Motifs} =~ /src="([^"]+\.png)"/g;
+ok($png);
+ok (-e '/tmp/gbrowse_testing/'.$png);
+
+$CGI::Q         = new CGI('name=ctgA:1..20000;label=Clones-Transcripts-Motifs-BindingSites-CleavageSites');
+$render->update_state;
+$s              = $render->region->segments;
+$panel_renderer = $render->get_panel_renderer($s->[0]);
+$panels         = $panel_renderer->render_panels({labels => [$render->detail_tracks]});
+ok(join ' ',(sort keys %$panels),'BindingSites CleavageSites Clones Motifs Transcripts','panels keys incorrect');
+($png)          = grep /cache/,$panels->{BindingSites} =~ /src="([^"]+\.png)"/g;
+ok ($png);
+ok (-e '/tmp/gbrowse_testing/'.$png);
+
+($png)          = grep /cache/,$panels->{CleavageSites} =~ /src="([^"]+\.png)"/g;
+ok ($png);
+ok (-e '/tmp/gbrowse_testing/'.$png);
 
 exit 0;

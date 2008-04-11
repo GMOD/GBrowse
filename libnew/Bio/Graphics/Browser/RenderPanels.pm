@@ -6,6 +6,7 @@ use warnings;
 use Bio::Graphics;
 use Digest::MD5 'md5_hex';
 use Text::Shellwords 'shellwords';
+use Bio::Graphics::Browser::CachedTrack;
 use IO::File;
 
 use CGI qw(:standard param escape unescape);
@@ -30,13 +31,13 @@ sub new {
   my $segment       = $options{-segment};
   my $data_source   = $options{-source};
   my $page_settings = $options{-settings};
-  my $renderer      = $options{-renderer};
+  my $language      = $options{-language};
 
   my $self  = bless {},ref $class || $class;
   $self->segment($segment);
   $self->source($data_source);
   $self->settings($page_settings);
-  $self->page_renderer($renderer);
+  $self->language($language);
   return $self;
 }
 
@@ -54,17 +55,17 @@ sub source {
   return $d;
 }
 
-sub page_renderer {
-  my $self = shift;
-  my $d    =$self->{renderer};
-  $self->{renderer} = shift if @_;
-  return $self->{renderer};
-}
-
 sub settings {
   my $self = shift;
   my $d = $self->{settings};
   $self->{settings} = shift if @_;
+  return $d;
+}
+
+sub language {
+  my $self = shift;
+  my $d = $self->{language};
+  $self->{language} = shift if @_;
   return $d;
 }
 
@@ -90,14 +91,16 @@ sub render_panels {
   my $args    = shift;
 
   if ($args->{deferred}) {
+      my $base        = $self->get_cache_base();
       my @panel_args  = $self->create_panel_args($args);
-      my $keys = map {
-	  my @track_args = $self->create_track_args($_,$args);
-	  my $cache_key  = $self->create_cache_key(@panel_args,@track_args);
-	  $_ => $cache_key;
+      my $data_destinations = map {
+	  my @track_args   = $self->create_track_args($_,$args);
+	  my $cache_object = Bio::Graphics::Panel::CachedTrack->new($base,
+								    [@panel_args,@track_args]);
+	  $_ => $cache_object;
       }
       @{$args->{labels}};
-      $self->render_tracks_deferred($keys,$args);
+      $self->render_tracks_deferred($data_destinations,$args);
       return $keys;
   }
   else {
@@ -122,9 +125,9 @@ sub drag_and_drop {
   my $self     = shift;
   my $override = shift;
   return if defined $override && !$override;
-  my $renderer = $self->page_renderer;
-  return unless $renderer->setting('drag and drop'); # drag and drop turned off
-  return if     $renderer->setting('postgrid');      # postgrid forces drag and drop off
+  my $source   = $self->source;
+  return unless $source->global_setting('drag and drop'); # drag and drop turned off
+  return if     $source->global_setting('postgrid');      # postgrid forces drag and drop off
   1;
 }
 
@@ -149,7 +152,7 @@ sub render_tracks {
     my $self     = shift;
     my $args     = shift;
 
-    my $content  = $self->generate_track_content($args);
+    my $content  = $self->track_content($args);
 
     my $globals  = $self->source->globals;
 
@@ -190,7 +193,7 @@ sub render_tracks {
 	}
 
 	elsif ($label =~ /^file:/) {
-	    my $url  = "?modify.${label}=".$self->tr('Edit');
+	    my $url  = "?modify.${label}=".$self->language->tr('Edit');
 	    $config_click = "window.location='$url'";
 	}
 	    
@@ -231,13 +234,16 @@ sub render_tracks {
 
 # This routine is called to hand off the rendering to a remote renderer. 
 # The remote processor does not have to have a copy of the config file installed;
-#  the entire DataSource object is sent to it in serialized form via
+# the entire DataSource object is sent to it in serialized form via
 # POST. It returns a serialized hash consisting of the GD object and the imagemap.
+#
 # INPUT $renderers_hashref
 #    $renderers_hashref->{$remote_url}{$track}
 #
 # RETURN
-#    hash of { $track_label => { gd => $gd object, map => $imagemap } }
+#     { label1 => {image,map,width,height,file,gd,boxes},
+#       label2 => {image,map,width,height,file,gd,boxes}...
+#    }
 #
 #
 # POST outgoing arguments:
@@ -245,23 +251,22 @@ sub render_tracks {
 #    settings   => serialized state hash (from the session)
 #    tracks     => serialized list of track names to render
 #
-# POST incoming arguments
-#    [[$track,$gd,$imagemap],[$track,$gd,$imagemap],...]
+# POST result: serialized      { label1 => {image,map,width,height,file,gd,boxes}... }
 #
 # reminder: segment can be found in the settings as $settings->{ref,start,stop,flip}
 sub call_remote_renderers {
-  my $self    = shift;
+  my $self      = shift;
   my $renderers = shift;
-
+  
   #eval { require 'HTTP::Request::Common' } unless HTTP::Request::Common->can('POST');
   eval { use HTTP::Request::Common; } unless HTTP::Request::Common->can('POST');
 
-  my $dsn      = $self->source;
+  my $source   = $self->source;
   my $settings = $self->settings;
-  my $lang     = $self->page_renderer->language->{lang};
+  my $lang     = $self->language;
 
   # serialize the data source and settings
-  my $s_dsn	= Storable::freeze($dsn);
+  my $s_dsn	= Storable::freeze($source);
   my $s_set	= Storable::freeze($settings);
   my $s_lang	= Storable::freeze($lang);
 
@@ -274,21 +279,21 @@ sub call_remote_renderers {
     #$url .= ".pl/";
     #$url = "http://cgi.sfu.ca/~hmokada/cgi-bin/gsoc/render.cgi";
 
-    warn"calling remote rendering $url for tracks: @tracks";
+    warn "calling remote rendering $url for tracks: @tracks";
     my $s_track  = Storable::freeze(\@tracks);
 
     my $request = POST ($url,
     		       [tracks     => $s_track,
 			settings   => $s_set,
 			datasource => $s_dsn,
-			language   => $s_lang
+			language   => $s_lang,
     ]);
 
     my $error = $ua->register($request);
     if ($error) { warn "Could not send request to $url: ",$error->as_string }
   }
 
-  my $timeout = $dsn->global_setting('timeout') || 20;
+  my $timeout = $source->global_setting('timeout') || 20;
   my $results = $ua->wait($timeout);
 
   my %track_results;
@@ -298,12 +303,9 @@ sub call_remote_renderers {
       warn $results->request->uri,"; fetch failed: ",$response->status_line;
       next;
     }
-    my $content = $response->content;
-    my $tracks = Storable::thaw($content);
-    for my $track_tuple (@$tracks) {
-      my ($track_name,$gd,$imagemap) = @$track_tuple;
-      $track_results{$track_name}{gd} = $gd;
-      $track_results{$track_name}{map} = $imagemap;
+    my $tracks = Storable::thaw($response->content);
+    for my $key (%$tracks) {
+	$track_results{$key} = $tracks->{$key};
     }
   }
 
@@ -342,13 +344,13 @@ sub overview_pad {
   return ($max * $image_class->gdMediumBoldFont->width + 3,$pad);
 }
 
+# I THINK THIS IS OBSOLETE
 sub render_overview {
   my $self = shift;
   my ($region_name,$whole_segment,$segment,$state,$feature_files) = @_;
   my $gd;
 
   my $source   = $self->source;
-  my $renderer = $self->page_renderer;
 
   #track option is same as state
 
@@ -375,6 +377,7 @@ sub render_overview {
 					-auto_pad   => 0,
 				       );
 
+  # THIS IS NOW OBSOLETE
   # cache check so that we can cache the overview images
   my $cache_path;
   $cache_path = $source->gd_cache_path('cache_overview',$whole_segment,
@@ -432,7 +435,7 @@ sub render_overview {
 
   eval {$panel->finished};  # should quash memory leaks when used in conjunction with bioperl 1.4
 
-  my $url       = $renderer->generate_image($gd);
+  my $url       = $self->generate_image($gd);
 
   my $image = img({-src=>$url,-border=>0});#,-usemap=>"#${label}_map"});7;#overview($whole_segment,$segment,$page_settings,$feature_files);
   
@@ -603,7 +606,6 @@ sub make_map {
   my @map = ($map_name);
 
   my $source = $self->source;
-  my $render = $self->page_renderer;
 
   my $flip = $panel->flip;
   my $tips = $source->global_setting('balloon tips');
@@ -754,10 +756,11 @@ sub make_centering_map {
 #      section       => (get rid of this?)
 #
 # output
-#    { label1 => {image,map,width,height,file,gd,boxes},
-#      label2 => {image,map,width,height,file,gd,boxes}...
+#    { label1 => $track_cache_object,
+#      label2 => $track_cache_object....
 #    }
-sub generate_track_content {
+
+sub track_content {
   my $self  = shift;
   my $args  = shift;
 
@@ -772,9 +775,8 @@ sub generate_track_content {
   my $segment        = $self->segment;
   my $length         = $segment->length;
 
-  my $render         = $self->page_renderer;
-  my $lang           = $render->language;
   my $source         = $self->source;
+  my $lang           = $self->language;
 
   my $use_renderfarm = $self->use_renderfarm;
 
@@ -796,7 +798,7 @@ sub generate_track_content {
   my %track_args;       # map label names to track-specific arguments (for caching)
   my %seenit;           # used to avoid possible upstream error of putting track on list multiple times
   my %results;          # hash of {$label}{gd} and {$label}{map}
-  my %cached;           # list of labels that have cached data on disk
+  my %cache;            # list of labels that have cached data on disk
   my %cache_key;        # list that maps labels to cache keys
   my %feature_file_offsets;
 
@@ -918,8 +920,8 @@ sub add_features_to_track {
 
   my %iterators;
   for my $db (keys %db2db) {
-    my @feature_types = map { $source->label2type($_,$length) } @$labels;
-    my $iterator      = $self->get_iterator($db2db{$db},$segment,\@feature_types);
+    my @types_in_this_db = map { $source->label2type($_,$length) } keys %{$db2label{$db}};
+    my $iterator         = $self->get_iterator($db2db{$db},$segment,\@types_in_this_db);
     $iterators{$iterator} = $iterator;
   }
 
@@ -1040,11 +1042,24 @@ sub get_iterator {
   my $self = shift;
   my ($db,$segment,$feature_types) = @_;
 
+  # The Bio::DB::SeqFeature::Store database supports correct
+  # semantics for directly retrieving features that overlap
+  # a range. All the others require you to get a segment first
+  # and then to query the segment! This is a problem, because it
+  # means that the reference sequence (e.g. the chromosome) is
+  # repeated in each database, even if it isn't the primary one :-(
+  if ($db->isa('Bio::DB::SeqFeature::Store')) {
+      return $db->get_seq_stream(-type   => $feature_types,
+				 -seq_id => $segment->seq_id,
+				 -start  => $segment->start,
+				 -end    => $segment->end);
+  }
+
   my $db_segment;
   if (eval{$segment->factory eq $db}) {
-    my $db_segment   = $segment;
+      $db_segment   = $segment;
   } else {
-    ($db_segment) = $db->segment($segment->seq_id,$segment->start,$segment->end);
+      ($db_segment) = $db->segment($segment->seq_id,$segment->start,$segment->end);
   }
 
   unless ($db_segment) {
@@ -1114,8 +1129,8 @@ sub create_panel_args {
   my $image_class = $args->{image_class} || 'GD';
   eval "use $image_class" unless "${image_class}::Image"->can('new');
 
-  my $render   = $self->page_renderer;
   my $settings = $self->settings;
+  my $source   = $self->source;
 
   my $keystyle = 'none';
 
@@ -1125,23 +1140,23 @@ sub create_panel_args {
 	      -start        => $seg_start,
 	      -end          => $seg_stop,
 	      -stop         => $seg_stop,  #backward compatibility with old bioperl
-	      -key_color    => $render->setting('key bgcolor')     || 'moccasin',
-	      -bgcolor      => $render->setting('detail bgcolor')  || 'white',
+	      -key_color    => $source->global_setting('key bgcolor')     || 'moccasin',
+	      -bgcolor      => $source->global_setting('detail bgcolor')  || 'white',
 	      -width        => $settings->{width},
 	      -key_style    => $keystyle,
-	      -empty_tracks => $render->setting('empty_tracks')    || DEFAULT_EMPTYTRACKS,
+	      -empty_tracks => $source->global_setting('empty_tracks')    || DEFAULT_EMPTYTRACKS,
 	      -pad_top      => $args->{title} ? $image_class->gdMediumBoldFont->height : 0,
 	      -image_class  => $image_class,
 	      -postgrid     => $args->{postgrid}   || '',
 	      -background   => $args->{background} || '',
-	      -truecolor    => $render->setting('truecolor') || 0,
+	      -truecolor    => $source->global_setting('truecolor') || 0,
 	      @pass_thru_args,   # position is important here to allow user to override settings
 	     );
 
   push @argv, -flip => 1 if $flip;
   my $p  = $self->image_padding;
-  my $pl = $render->setting('pad_left');
-  my $pr = $render->setting('pad_right');
+  my $pl = $source->global_setting('pad_left');
+  my $pr = $source->global_setting('pad_right');
   $pl    = $p unless defined $pl;
   $pr    = $p unless defined $pr;
 
@@ -1158,10 +1173,11 @@ sub create_panel_args {
 }
 
 sub image_padding {
-  my $self = shift;
-  my $render = $self->page_renderer;
-  return defined $render->setting('image_padding') ? $render->setting('image_padding')
-                                                   : PAD_DETAIL_SIDES;
+  my $self   = shift;
+  my $source = $self->source;
+  return defined $source->global_setting('image_padding') 
+      ? $source->global_setting('image_padding')
+      : PAD_DETAIL_SIDES;
 }
 
 =head2 segment_coordinates()
@@ -1200,7 +1216,7 @@ sub create_track_args {
   my ($label,$args) = @_;
 
   my $segment         = $self->segment;
-  my $lang            = $self->page_renderer->language;
+  my $lang            = $self->language;
   my $override        = $self->settings->{features}{$label}{override_settings} || {};   # user-set override settings for tracks
   my @override        = map {'-'.$_ => $override->{$_}} keys %$override;
 
@@ -1249,14 +1265,20 @@ sub create_cache_key {
 }
 
 sub get_cache_base {
-  my $self            = shift;
-  my ($key,$filename) = @_;
-  my @comp        = $key =~ /(..)/g;
-  my $rel_path    = join '/',$self->source->name,'panel_cache',@comp[0..2],$key;
-  my ($uri,$path) = $self->source->tmpdir($rel_path);
-
-  return wantarray ? ("$path/$filename","$uri/$filename") : "$path/$filename";
+    my $self = shift;
+    my $rel_path    = File::Spec->catfile($self->source->name,'panel_cache');
+    my ($uri,$path) = $self->source->tmpdir($rel_path);
+    return wantarray ? ($path,$uri) : $path;
 }
+# sub get_cache_base {
+#   my $self            = shift;
+#   my ($key,$filename) = @_;
+#   my @comp        = $key =~ /(..)/g;
+#   my $rel_path    = join '/',$self->source->name,'panel_cache',@comp[0..2],$key;
+#   my ($uri,$path) = $self->source->tmpdir($rel_path);
+
+#   return wantarray ? ("$path/$filename","$uri/$filename") : "$path/$filename";
+# }
 
 sub panel_is_cached {
   my $self  = shift;
@@ -1267,15 +1289,15 @@ sub panel_is_cached {
   return unless -e $size_file;
   my $mtime    = (stat(_))[9];   # _ is not a bug, but an automatic filehandle
   my $hours_since_last_modified = (time()-$mtime)/(60*60);
-  warn "cache_time is $cache_time, last modified = $hours_since_last_modified hours ago";
+  warn "cache_time is $cache_time, last modified = $hours_since_last_modified hours ago" if DEBUG;
   return unless $hours_since_last_modified < $cache_time;
-  warn "cache hit for $key";# if DEBUG;
+  warn "cache hit for $key" if DEBUG;
   1;
 }
 
 sub cache_time {
   my $self = shift;
-  my $ct   = $self->page_renderer->setting('cache time');
+  my $ct   = $self->source->global_setting('cache time');
   return $ct if defined $ct;  # hours
   return 1;                   # cache for one hour by default
 }
@@ -1648,6 +1670,48 @@ sub balloon_tip_setting {
   return ($balloon_type,$val);
 }
 
+
+=head2 generate_image
+
+  ($url,$path) = $render_panels->generate_image($gd)
+
+Given a GD::Image object, this method calls its png() or gif() methods
+(depending on GD version), stores the output into the temporary
+directory given by the "tmpimages" option in the configuration file,
+and returns a two element list consisting of the URL to the image and
+the physical path of the image.
+
+=cut
+
+sub generate_image {
+  my $self   = shift;
+  my $image  = shift;
+
+  my $source = $self->source;
+
+  my $extension = $image->can('png') ? 'png' : 'gif';
+  my $data      = $image->can('png') ? $image->png : $image->gif;
+  my $signature = md5_hex($data);
+
+  warn ((CGI::param('ref')||'')   . ':' .
+	(CGI::param('start')||'') . '..'.
+	(CGI::param('stop')||'')
+	,
+	" sig $signature\n") if DEBUG;
+
+  # untaint signature for use in open
+  $signature =~ /^([0-9A-Fa-f]+)$/g or return;
+  $signature = $1;
+
+  my ($uri,$path) = $source->globals->tmpdir($source->name.'/img');
+  my $url         = sprintf("%s/%s.%s",$uri,$signature,$extension);
+  my $imagefile   = sprintf("%s/%s.%s",$path,$signature,$extension);
+  open (F,">$imagefile") || die("Can't open image file $imagefile for writing: $!\n");
+  binmode(F);
+  print F $data;
+  close F;
+  return $url;
+}
 
 1;
 

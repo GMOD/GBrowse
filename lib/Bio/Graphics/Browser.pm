@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.77 2008-04-03 14:01:04 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.78 2008-04-11 18:15:01 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1091,6 +1091,7 @@ sub render_composite_track {
 
   my $html    = div({-align=>'center'},$img);
   $map        = "<noscript>\n$map\n</noscript>" if $css_map;
+  $css_map  ||= '';
   $html      .= $css_map . $map;
 
   return $html;
@@ -2741,35 +2742,37 @@ sub map_css {
 
   my $html;
   for (@data) {
-    my ($ruler,$x1,$y1,$x2,$y2,%atts) = split "\t";
-    $x1 or next;
-    # get rid of recentering map elements
-    next if $ruler eq 'ruler';
-    my %style = ( top      => "${y1}px",
-		  left     => "${x1}px",
-		  cursor   => 'pointer',
-		  width    => abs($x2 - $x1) . 'px',
-		  height   => abs($y2 - $y1) . 'px',
-		  position => 'absolute');
-
-    my %conf = (name => "${view}_image_map");
-    for my $att (keys %atts) {
-      my $val = $atts{$att};
-      if ($att eq 'href') {
-	next if $atts{onclick} || $atts{onmousedown};
-	$att = 'onmousedown';
-	$val = "window.location='$val'";
-	$style{cursor} = 'pointer';
+      my @elements = split "\t";
+      push @elements,'' if @elements%2==0; # get rid of odd-number of elements warning
+      my ($ruler,$x1,$y1,$x2,$y2,%atts) = @elements;
+      $x1 or next;
+      # get rid of recentering map elements
+      next if $ruler eq 'ruler';
+      my %style = ( top      => "${y1}px",
+		    left     => "${x1}px",
+		    cursor   => 'pointer',
+		    width    => abs($x2 - $x1) . 'px',
+		    height   => abs($y2 - $y1) . 'px',
+		    position => 'absolute');
+      
+      my %conf = (name => "${view}_image_map");
+      for my $att (keys %atts) {
+	  my $val = $atts{$att};
+	  if ($att eq 'href') {
+	      next if $atts{onclick} || $atts{onmousedown};
+	      $att = 'onmousedown';
+	      $val = "window.location='$val'";
+	      $style{cursor} = 'pointer';
+	  }
+	  $conf{$att} = $val;
       }
-      $conf{$att} = $val;
-    }
-    $conf{style} = _style(%style);
-
-    $html .= '<span ';
-    for my $label (keys %conf) {
-      $html .= qq($label="$conf{$label}" );
-    }
-    $html .="></span>\n";
+      $conf{style} = _style(%style);
+      
+      $html .= '<span ';
+      for my $label (keys %conf) {
+	  $html .= qq($label="$conf{$label}" );
+      }
+      $html .="></span>\n";
   }
   
   return $html;

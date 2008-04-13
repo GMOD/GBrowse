@@ -283,7 +283,7 @@ ok($panel_renderer);
 
 my $panels   = $panel_renderer->render_panels({labels => \@labels});
 ok(join ' ',(sort keys %$panels),'Clones Motifs Transcripts','panels keys incorrect');
-my ($png)    = grep /cache/,$panels->{Motifs} =~ /src="([^"]+\.png)"/g;
+my ($png)    = grep /tmpimages/,$panels->{Motifs} =~ /src="([^"]+\.png)"/g;
 ok($png);
 ok (-e '/tmp/gbrowse_testing/'.$png);
 
@@ -293,12 +293,21 @@ $s              = $render->region->segments;
 $panel_renderer = $render->get_panel_renderer($s->[0]);
 $panels         = $panel_renderer->render_panels({labels => [$render->detail_tracks]});
 ok(join ' ',(sort keys %$panels),'BindingSites CleavageSites Clones Motifs Transcripts','panels keys incorrect');
-($png)          = grep /cache/,$panels->{BindingSites} =~ /src="([^"]+\.png)"/g;
+($png)          = grep /tmpimages/,$panels->{BindingSites} =~ /src="([^"]+\.png)"/g;
 ok ($png);
 ok (-e '/tmp/gbrowse_testing/'.$png);
 
-($png)          = grep /cache/,$panels->{CleavageSites} =~ /src="([^"]+\.png)"/g;
+($png)          = grep /tmpimages/,$panels->{CleavageSites} =~ /src="([^"]+\.png)"/g;
 ok ($png);
 ok (-e '/tmp/gbrowse_testing/'.$png);
+
+# test deferred rendering using cached data
+# $panels         = $panel_renderer->render_panels({labels   => [$render->detail_tracks],
+# 						  deferred => 1,
+# 						 });
+# for my $cache (values %$panels) {
+#     ok($cache->key);
+#     ok($cache->status,'AVAILABLE');
+# }
 
 exit 0;

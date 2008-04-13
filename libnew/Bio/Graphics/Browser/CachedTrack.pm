@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::CachedTrack;
 
-# $Id: CachedTrack.pm,v 1.1 2008-04-11 14:32:51 lstein Exp $
+# $Id: CachedTrack.pm,v 1.2 2008-04-13 22:53:28 lstein Exp $
 # This package defines a Bio::Graphics::Browser::Track option that manages
 # the caching of track images and imagemaps.
 
@@ -13,7 +13,8 @@ use Digest::MD5 'md5_hex';
 use Storable qw(:DEFAULT freeze thaw);
 
 # pending requests get 1 minute before they are considered likely to be defunct
-use constant MAX_REQUEST_TIME => 60;
+use constant DEFAULT_REQUEST_TIME => 60;
+use constant DEFAULT_CACHE_TIME   => 60*60; # 1 hour
 
 # constructor:
 # Bio::Graphics::Browser::CachedTrack->new($cache_base_directory,$key_data)
@@ -22,34 +23,50 @@ use constant MAX_REQUEST_TIME => 60;
 # converted into the key.
 sub new {
     my $self = shift;
-    my $base = shift;   # path where our data will be cached
+    my %args = @_;
+    my $base       = $args{-base};
+    my $panel_args = $args{-panel_args};
+    my $track_args = $args{-track_args};
+    my $extra_args = $args{-extra_args};
+    my $key        = $args{-key};
+
     -d $base && -w _ or croak "$base is not writable";
 
     # If next argument is a scalar, then it is our key to use.
     # Otherwise, it is the data to use to generate a key.
-    my $key = shift;
-    if (ref $key && ref $key eq 'ARRAY') {
-	$key = $self->generate_cache_key(@{$key});
+    unless ($key) {
+	$key = $self->generate_cache_key(@$panel_args,@$track_args,@$extra_args);
     }
 
     return bless { 
-	base => $base ,
-	key  => $key,
+	base       => $base ,
+	key        => $key,
+	panel_args => $panel_args,
+	track_args => $track_args,
+	extra_args => $extra_args,
     },ref $self || $self;
 }
 
 sub base { shift->{base} }
 sub key  { shift->{key}  }
+sub panel_args { shift->{panel_args} }
+sub track_args { shift->{track_args} }
+sub extra_args { shift->{extra_args} }
 sub max_time {
     my $self = shift;
     $self->{max_time} = shift if @_;
-    return $self->{max_time} || MAX_REQUEST_TIME;
+    return $self->{max_time}   || DEFAULT_REQUEST_TIME;
+}
+sub cache_time {
+    my $self = shift;
+    $self->{cache_time} = shift if @_;
+    return $self->{cache_time} || DEFAULT_CACHE_TIME;
 }
 sub cachedir {
     my $self = shift;
     my $key  = $self->key;
     my @comp = $key =~ /(..)/g;
-    my $path = File::Spec->catfile($self->base,@comp);
+    my $path = File::Spec->catfile($self->base,@comp[0..2],$key);
     mkpath ($path) unless -e $path;
     return $path;
 }
@@ -63,7 +80,7 @@ sub datafile {
 }
 
 # given an arbitrary set of arguments, make a unique cache key
-sub cache_key {
+sub generate_cache_key {
     my $self = shift;
     my @args = map {$_ || ''} grep {!ref($_)} @_;  # the map gets rid of uninit variable warnings
     return md5_hex(@args);
@@ -139,6 +156,7 @@ sub height {
 # 'PENDING'   a request for the data is pending - current contents invalid
 # 'AVAILABLE' data is available and no requests are pending
 # 'DEFUNCT'   a request for the data has timed out - current contents invalid
+# 'EXPIRED'   there is data, but it has expired
 sub status {
     my $self     = shift;
     my $dir      = $self->cachedir;
@@ -155,10 +173,21 @@ sub status {
 	return 'PENDING' if time()-$timestamp < $self->max_time;
 	return 'DEFUNCT';
     } elsif (-e $datafile) {
-	return 'AVAILABLE';
+	return $self->expired($datafile) ? 'EXPIRED' : 'AVAILABLE';
     } else {
 	return 'EMPTY';
     }
+}
+
+sub expired {
+    my $self      = shift;
+    my $datafile  = shift;
+    my $cache_time= $self->cache_time;
+    my $time      = time();
+
+    my $mtime    = (stat($datafile))[9];
+    my $elapsed  = $time-$mtime;
+    return $elapsed > $cache_time;
 }
 
 1;

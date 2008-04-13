@@ -83,28 +83,45 @@ sub language {
 #      { label1 => html1, label2 => html2...} where HTML is the <div> for the named track
 #
 # if deferred => true
-#      { label1 => key1, label2 => key2...} where key is a cache key where HTML can be retrieved later by
-#                                           a call to get_deferred(key)
+#      { label1 => CachedTrack1, label2 => CachedTrack2...}
+#       where CachedTrack is a Bio::Graphics::Panel::CachedTrack object that will eventually
+#       receive the data. Poll this object for its data.
 #
 sub render_panels {
   my $self    = shift;
   my $args    = shift;
 
+  my $base           = $self->get_cache_base();
+  my $feature_files  = $args->{feature_files};
+  my @panel_args     = $self->create_panel_args($args);
+
+  my @labels         = @{$args->{labels}};
+
+  my %data_destinations = map {
+      my @track_args   = $self->create_track_args($_,$args);
+
+      # get config data from the feature files
+      my @extra_args          = eval {
+	  $feature_files->{$_}->types,
+	  $feature_files->{$_}->mtime,
+      } if $feature_files->{$_};
+
+      my $cache_object = Bio::Graphics::Browser::CachedTrack->new(-base        => $base,
+								  -panel_args  => \@panel_args,
+								  -track_args  => \@track_args,
+								  -extra_args  => \@extra_args);
+      $cache_object->cache_time($self->cache_time);
+
+      $_ => $cache_object;
+  }
+  @labels;
+
   if ($args->{deferred}) {
-      my $base        = $self->get_cache_base();
-      my @panel_args  = $self->create_panel_args($args);
-      my $data_destinations = map {
-	  my @track_args   = $self->create_track_args($_,$args);
-	  my $cache_object = Bio::Graphics::Panel::CachedTrack->new($base,
-								    [@panel_args,@track_args]);
-	  $_ => $cache_object;
-      }
-      @{$args->{labels}};
-      $self->render_tracks_deferred($data_destinations,$args);
-      return $keys;
+      $self->render_tracks_deferred(\%data_destinations,$args);
+      return \%data_destinations;
   }
   else {
-      return $self->render_tracks($args);
+      return $self->render_tracks(\%data_destinations,$args);
   }
 }
 
@@ -150,9 +167,11 @@ sub generate_panels_remotely {
 
 sub render_tracks {
     my $self     = shift;
+
+    my $requests = shift;
     my $args     = shift;
 
-    my $content  = $self->track_content($args);
+    my $content  = $self->track_content($requests,$args);
 
     my $globals  = $self->source->globals;
 
@@ -168,7 +187,15 @@ sub render_tracks {
     my %result;
 
     for my $label (@{$args->{labels}}) {
-	my ($url,$img_map,$width,$height) = @{$content->{$label}}{qw(image map width height)};
+	my $data   = $content->{$label};
+	my $gd     = $data->gd;
+	my $map    = $data->map;
+	my $width  = $data->width;
+	my $height = $data->height;
+	my $url    = $self->generate_image($gd);
+
+	# for debugging
+	my $status = $data->status;
 
 	my $collapsed    = $settings->{track_collapsed}{$label};
 	my $img_style    = $collapsed ? "display:none" : "display:inline";
@@ -226,7 +253,7 @@ sub render_tracks {
 
 	$result{$label} = div({-id=>"track_${munge_label}",-class=>$class},
 				div({-align=>'center'},$titlebar.$img),
-			      $img_map||'');
+			      $map||'');
     }
     
     return \%result;
@@ -762,9 +789,10 @@ sub make_centering_map {
 
 sub track_content {
   my $self  = shift;
-  my $args  = shift;
+  my $requests = shift;  # a hash of labels => Bio::Graphics::Browser::CachedTrack objects
+  my $args     = shift;
 
-  my $labels         = $args->{labels} || [];
+  my $labels         = [keys %{$requests}];
   my $feature_files  = $args->{feature_files};
   my $noscale        = $args->{noscale};
   my $do_map         = $args->{do_map};
@@ -779,11 +807,10 @@ sub track_content {
   my $lang           = $self->language;
 
   my $use_renderfarm = $self->use_renderfarm;
+  my $base           = $self->get_cache_base;
 
   # FIXME: this has to be set somewhere
   my $hilite_callback= undef;
-
-  my @panel_args     = $self->create_panel_args($section,$args);
 
   $segment->factory->debug(1) if DEBUG;
 
@@ -795,64 +822,53 @@ sub track_content {
   #        the %tracks hash maps label names to tracks within the panels
   my %panels;           # map label names to Bio::Graphics::Panel objects
   my %tracks;           # map label names to Bio::Graphics::Track objects
-  my %track_args;       # map label names to track-specific arguments (for caching)
   my %seenit;           # used to avoid possible upstream error of putting track on list multiple times
   my %results;          # hash of {$label}{gd} and {$label}{map}
-  my %cache;            # list of labels that have cached data on disk
-  my %cache_key;        # list that maps labels to cache keys
   my %feature_file_offsets;
 
-  for my $label (@$labels) {
-    next if $seenit{$label}++; # this shouldn't happen, but let's be paranoid
 
-    $track_args{$label} ||= [$self->create_track_args($label,$args)];
+  my @labels_to_generate = grep {$requests->{$_}->status ne 'AVAILABLE'} @$labels;
 
-    # get config data from the feature files
-    my @extra_args          = eval {
-	$feature_files->{$label}->types,
-	$feature_files->{$label}->mtime,
-      } if $feature_files->{$label};
+  my @ordinary_tracks    = grep {!$feature_files->{$_}} @labels_to_generate;
+  my @feature_tracks     = grep {$feature_files->{$_} } @labels_to_generate;
 
-    $cache_key{$label}      = $self->create_cache_key(@panel_args,
-						      @{$track_args{$label}},
-						      @extra_args,
-						      $settings->{features}{$label}{options},
-						     );
 
-    next if $cached{$label} = $self->panel_is_cached($cache_key{$label});
-
-    my @keystyle = (-key_style=>'between') 
-      if $label =~ /^\w+:/ && $label !~ /:(overview|region)/;  # a plugin
-
-    $panels{$label}         = Bio::Graphics::Panel->new(@panel_args,@keystyle);
-
-    $tracks{$label} = $panels{$label}->add_track(@{$track_args{$label}})
-	unless $cached{$label};
-  }
-
-  #---------------------------------------------------------------------------------
-  # Add features to the database
-  my @labels_to_generate = grep {!$cached{$_}} @$labels;
-
+  # == create whichever panels are not already cached ==
   my %filters = map {
       my %conf =  $source->style($_);
       $conf{'-filter'} ? ($_ => $conf{'-filter'})
 	               : ()
   } @labels_to_generate;
 
-  $self->add_features_to_track(-labels    => \@labels_to_generate,
+
+  for my $label (@ordinary_tracks) {
+
+      next if $seenit{$label}++; # this shouldn't happen, but let's be paranoid
+
+      my @keystyle = (-key_style=>'between')
+	  if $label =~ /^\w+:/ && $label !~ /:(overview|region)/;  # a plugin
+
+      my $panel_args = $requests->{$label}->panel_args;
+      my $track_args = $requests->{$label}->track_args;
+
+      $panels{$label} = Bio::Graphics::Panel->new(@$panel_args,@keystyle);
+      $tracks{$label} = $panels{$label}->add_track(@$track_args);
+  }
+
+  # == populate the tracks with feature data == 
+
+  $self->add_features_to_track(-labels    => \@ordinary_tracks,
 			       -tracks    => \%tracks,
 			       -filters   => \%filters,
 			       -segment   => $segment,
 			       -fsettings => $settings->{features},
-			      ) if @labels_to_generate;
+			      ) if @ordinary_tracks;
 
   # ------------------------------------------------------------------------------------------
   # Add feature files, including remote annotations
   my $featurefile_select = $args->{featurefile_select} || $self->feature_file_select($section);
 
-  for my $label (keys %$feature_files) {
-      next if $cached{$label};
+  for my $label (@feature_tracks) {
       my $file = $feature_files->{$label} or next;
       ref $file or next;
       next unless $panels{$label};
@@ -865,32 +881,30 @@ sub track_content {
 	  );
   }
 
-  # map tracks (stringified track objects) to corresponding labels
-  my %trackmap = reverse %tracks;
+  # == generate the maps ==
+  my %maps;
 
-  # uncached panels need to be generated and cached
+  my %trackmap = reverse %tracks;
   $args->{scale_map_type} ||= 'centering_map' unless $noscale;
   (my $map_name = $section) =~ s/^\?//;
 
-  for my $label (keys %panels) {
+  for my $label (@labels_to_generate) {
       my $gd = $panels{$label}->gd;
       my $map  = $self->make_map(scalar $panels{$label}->boxes,
 				 $panels{$label},
 				 $label,
 				 \%trackmap,
 				 0);
-      my $key = $cache_key{$label};
-      $self->set_cached_panel($key,$gd,$map);
-      eval {$panels{$label}->finished};
+      $maps{$label} = $map;
   }
 
-  # cached panels need to be retrieved
-  for my $label (keys %cached) {
-      @{$results{$label}}{qw(image map width height file gd boxes)} = 
-	  $self->get_cached_panel($cache_key{$label});
+  for my $label (@labels_to_generate) {
+      my $gd    = $panels{$label}->gd;
+      my $map   = $maps{$label};
+      $requests->{$label}->put_data($gd,$map);
   }
 
-  return \%results;
+  return $requests;
 }
 
 sub add_features_to_track {
@@ -1280,20 +1294,20 @@ sub get_cache_base {
 #   return wantarray ? ("$path/$filename","$uri/$filename") : "$path/$filename";
 # }
 
-sub panel_is_cached {
-  my $self  = shift;
-  my $key   = shift;
-  return if param('nocache');
-  return unless (my $cache_time = $self->cache_time);
-  my $size_file = $self->get_cache_base($key,'size');
-  return unless -e $size_file;
-  my $mtime    = (stat(_))[9];   # _ is not a bug, but an automatic filehandle
-  my $hours_since_last_modified = (time()-$mtime)/(60*60);
-  warn "cache_time is $cache_time, last modified = $hours_since_last_modified hours ago" if DEBUG;
-  return unless $hours_since_last_modified < $cache_time;
-  warn "cache hit for $key" if DEBUG;
-  1;
-}
+# sub panel_is_cached {
+#   my $self  = shift;
+#   my $key   = shift;
+#   return if param('nocache');
+#   return unless (my $cache_time = $self->cache_time);
+#   my $size_file = $self->get_cache_base($key,'size');
+#   return unless -e $size_file;
+#   my $mtime    = (stat(_))[9];   # _ is not a bug, but an automatic filehandle
+#   my $hours_since_last_modified = (time()-$mtime)/(60*60);
+#   warn "cache_time is $cache_time, last modified = $hours_since_last_modified hours ago" if DEBUG;
+#   return unless $hours_since_last_modified < $cache_time;
+#   warn "cache hit for $key" if DEBUG;
+#   1;
+# }
 
 sub cache_time {
   my $self = shift;
@@ -1302,52 +1316,52 @@ sub cache_time {
   return 1;                   # cache for one hour by default
 }
 
-=head2 get_cached_panel()
+# =head2 get_cached_panel()
 
-  ($image_uri,$map,$width,$height) = $self->get_cached_panel($cache_key)
+#   ($image_uri,$map,$width,$height) = $self->get_cached_panel($cache_key)
 
-Return cached image url, imagemap data, width and height of image.
+# Return cached image url, imagemap data, width and height of image.
 
-=cut
+# =cut
 
-sub get_cached_panel {
-  my $self = shift;
-  my $key  = shift;
+# sub get_cached_panel {
+#   my $self = shift;
+#   my $key  = shift;
 
-  my $map_file                = $self->get_cache_base($key,'map')   or return;
-  my $size_file               = $self->get_cache_base($key,'size')  or return;
-  my ($image_file,$image_uri) = $self->get_cache_base($key,'image') or return;
+#   my $map_file                = $self->get_cache_base($key,'map')   or return;
+#   my $size_file               = $self->get_cache_base($key,'size')  or return;
+#   my ($image_file,$image_uri) = $self->get_cache_base($key,'image') or return;
 
-  # get map data
-  my $map_data = [];
-  if (-e $map_file) {
-    my $f = IO::File->new($map_file) or return;
-    while (my $line = $f->getline) {
-      push @$map_data, $line;
-    }
-    $f->close;
-  }
+#   # get map data
+#   my $map_data = [];
+#   if (-e $map_file) {
+#     my $f = IO::File->new($map_file) or return;
+#     while (my $line = $f->getline) {
+#       push @$map_data, $line;
+#     }
+#     $f->close;
+#   }
 
-  # get size data
-  my ($width,$height);
-  if (-e $size_file) {
-    my $f = IO::File->new($size_file) or return;
-    chomp($width = $f->getline);
-    chomp($height = $f->getline);
-    $f->close;
-  }
+#   # get size data
+#   my ($width,$height);
+#   if (-e $size_file) {
+#     my $f = IO::File->new($size_file) or return;
+#     chomp($width = $f->getline);
+#     chomp($height = $f->getline);
+#     $f->close;
+#   }
 
-  my $base = -e "$image_file.png" ? '.png'
-           : -e "$image_file.jpg" ? '.jpg'
-	   : -e "$image_file.svg" ? '.svg'
-           : '.gif';
-  $image_uri  .= $base;
-  $image_file .= $base;
+#   my $base = -e "$image_file.png" ? '.png'
+#            : -e "$image_file.jpg" ? '.jpg'
+# 	   : -e "$image_file.svg" ? '.svg'
+#            : '.gif';
+#   $image_uri  .= $base;
+#   $image_file .= $base;
 
-  my $gd = GD::Image->new($image_file) unless $image_file =~ /svg$/;
-  my $map_html  = $self->map_html(@$map_data);
-  return ($image_uri,$map_html,$width,$height,$image_file,$gd,$map_data);
-}
+#   my $gd = GD::Image->new($image_file) unless $image_file =~ /svg$/;
+#   my $map_html  = $self->map_html(@$map_data);
+#   return ($image_uri,$map_html,$width,$height,$image_file,$gd,$map_data);
+# }
 
 
 
@@ -1374,57 +1388,57 @@ sub map_html {
   return $html;
 }
 
-sub set_cached_panel {
-  my $self = shift;
-  my ($key,$gd,$map_data) = @_;
+# sub set_cached_panel {
+#   my $self = shift;
+#   my ($key,$gd,$map_data) = @_;
 
-  my $map_file                = $self->get_cache_base($key,'map')   or return;
-  my $size_file               = $self->get_cache_base($key,'size')  or return;
-  my ($image_file,$image_uri) = $self->get_cache_base($key,'image') or return;
+#   my $map_file                = $self->get_cache_base($key,'map')   or return;
+#   my $size_file               = $self->get_cache_base($key,'size')  or return;
+#   my ($image_file,$image_uri) = $self->get_cache_base($key,'image') or return;
 
-  # write the map data 
-  if ($map_data) {
-    my $f = IO::File->new(">$map_file") or die "$map_file: $!";
-    $f->print(join("\n", @$map_data),"\n");
-    $f->close;
-  }
+#   # write the map data 
+#   if ($map_data) {
+#     my $f = IO::File->new(">$map_file") or die "$map_file: $!";
+#     $f->print(join("\n", @$map_data),"\n");
+#     $f->close;
+#   }
 
-  return unless $gd;
+#   return unless $gd;
 
-  # get the width and height and write the size data
-  my ($width,$height) = $gd->getBounds;
-  my $f = IO::File->new(">$size_file") or die "$size_file: $!";
-  $f->print($width,"\n");
-  $f->print($height,"\n");
-  $f->close;
+#   # get the width and height and write the size data
+#   my ($width,$height) = $gd->getBounds;
+#   my $f = IO::File->new(">$size_file") or die "$size_file: $!";
+#   $f->print($width,"\n");
+#   $f->print($height,"\n");
+#   $f->close;
 
-  my $image_data;
+#   my $image_data;
 
-  if ($gd->can('svg')) {
-    $image_file .= ".svg";
-    $image_data = $gd->svg;
-  }
-  elsif ($gd->can('png')) {
-    $image_file .= ".png";
-    $image_data = $gd->png;
-  }
+#   if ($gd->can('svg')) {
+#     $image_file .= ".svg";
+#     $image_data = $gd->svg;
+#   }
+#   elsif ($gd->can('png')) {
+#     $image_file .= ".png";
+#     $image_data = $gd->png;
+#   }
 
-  elsif ($gd->can('gif')) {
-    $image_file .= ".gif";
-    $image_data  = $gd->gif;
-  }
+#   elsif ($gd->can('gif')) {
+#     $image_file .= ".gif";
+#     $image_data  = $gd->gif;
+#   }
 
-  elsif ($gd->can('jpeg')) {
-    $image_file .= ".jpg";
-    $image_data  = $gd->jpeg;
-  }
+#   elsif ($gd->can('jpeg')) {
+#     $image_file .= ".jpg";
+#     $image_data  = $gd->jpeg;
+#   }
 
-  $f = IO::File->new(">$image_file") or die "$image_file: $!";
-  $f->print($image_data);
-  $f->close;
+#   $f = IO::File->new(">$image_file") or die "$image_file: $!";
+#   $f->print($image_data);
+#   $f->close;
 
-  return ($image_uri,$map_data,$width,$height,$image_file);
-}
+#   return ($image_uri,$map_data,$width,$height,$image_file);
+# }
 
 # this returns a coderef that will indicate whether an added (external) feature is placed
 # in the overview, region or detailed panel. If the section name begins with a "?", then

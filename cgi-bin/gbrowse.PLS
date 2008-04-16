@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.63 2008-04-14 15:39:25 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.64 2008-04-16 14:35:59 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -888,11 +888,12 @@ sub reset_cookies {
 
 sub adjust_region_size {
   my ($segment,$settings) = @_;
+  $CONFIG->setting('region segment') || return;
   my $region_size;
   my $length = $segment ? $segment->length : abs($settings->{stop} - $settings->{start});
   my $whole_segment = $CONFIG->whole_segment($segment) if $segment;
 
-  if (($CONFIG->setting('region segment')||'') eq 'AUTO') {
+  if (($CONFIG->setting('region segment')) eq 'AUTO') {
     $region_size = 10*$length;
   }
   else {

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::GFFDumper;
-# $Id: GFFDumper.pm,v 1.23.4.1.2.1 2006-10-04 15:16:12 lstein Exp $
+# $Id: GFFDumper.pm,v 1.23.4.1.2.1.2.1 2008-04-17 01:09:57 sheldon_mckay Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -120,10 +120,9 @@ sub dump {
   my $version       = $config->{version} || 3;
   my $mode          = $config->{mode}    || 'selected';
   my $db            = $self->database;
-  my $whole_segment = $db->segment(Accession => $segment->ref) ||
-                      $db->segment($segment->ref);
   my $coords        = $config->{coords};
   my $embed         = $config->{embed};
+  my ($whole_segment) = $db->segment($segment->ref);
 
   $segment->refseq($segment) if $coords eq 'relative';
 

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.64 2008-04-16 14:35:59 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.65 2008-04-22 08:43:05 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2739,7 +2739,8 @@ sub coordinate_mapper {
 sub bookmark_link {
   my $settings = shift;
   my $q = new CGI('');
-  my @keys = qw(start stop ref width version flip);
+
+  my @keys = qw(start stop ref width version flip cache drag_and_drop show_tooltips grid);
   foreach (@keys) {
     $q->param(-name=>$_,-value=>$settings->{$_});
   }

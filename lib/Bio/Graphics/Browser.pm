@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.78 2008-04-11 18:15:01 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.79 2008-04-22 13:56:56 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1355,21 +1355,18 @@ sub generate_panels {
 	     : $l eq '__scale__' ? $self->make_centering_map(shift @{$boxes},
 							     $args->{flip},
 							     $l,
-							     $args->{scale_map_type},
-							     $settings->{show_tooltips},
+							     $args->{scale_map_type}
 							     )
 	     : $l eq '__all__'   ? $self->make_map($boxes,
 						   $panels{$l},
 						   $map_name,
 						   \%trackmap,
-						   $args->{scale_map_type},
-						   $settings->{show_tooltips})
+						   $args->{scale_map_type})
 	     : $self->make_map($boxes,
 			       $panels{$l},
 			       $l,
 			       \%trackmap,
-			       0,
-			       $settings->{show_tooltips});
+			       0);
 
     my $key = $drag_n_drop ? $cache_key{$l} : $cache_key{'__all__'};
     $self->set_cached_panel($key,$gd,$map);
@@ -1651,7 +1648,7 @@ sub callback_setting {
 
 sub make_map {
   my $self = shift;
-  my ($boxes,$panel,$map_name,$trackmap,$first_box_is_scale,$show_tips) = @_;
+  my ($boxes,$panel,$map_name,$trackmap,$first_box_is_scale) = @_;
   my @map = ($map_name);
 
   my $flip      = $panel->flip;
@@ -1672,7 +1669,7 @@ sub make_map {
     my $label  = $_->[5] ? $trackmap->{$_->[5]} : '';
 
     my $href   = $self->make_href($_->[0],$panel,$label,$_->[5]);
-    my $title  = $show_tips ? unescape($self->make_title($_->[0],$panel,$label,$_->[5])):'';
+    my $title  = unescape($self->make_title($_->[0],$panel,$label,$_->[5]));
     my $target = $self->config->make_link_target($_->[0],$panel,$label,$_->[5]);
 
     my ($mouseover,$mousedown,$style);
@@ -1699,7 +1696,7 @@ sub make_map {
       $balloon_ht ||= 'balloon';
       $balloon_ct ||= 'balloon';
 
-      if ($show_tips && $balloonhover) {
+      if ($balloonhover) {
         my $stick = defined $sticky ? $sticky : 0;
         $mouseover = $balloonhover =~ /^(https?|ftp):/
 	    ? "$balloon_ht.showTooltip(event,'<iframe width=' + $balloon_ct.maxWidth + ' height=$height frameborder=0 " .
@@ -1748,10 +1745,10 @@ sub make_map {
 # should center the image on the scale.
 sub make_centering_map {
   my $self   = shift;
-  my ($ruler,$flip,$label,$scale_map_type,$show_tips)  = @_;
+  my ($ruler,$flip,$label,$scale_map_type)  = @_;
   my @map = $label ? ($label) : ();
 
-  my $title = $show_tips ? $self->tr('Recenter') : '';
+  my $title = $self->tr('Recenter');
 
   return if $ruler->[3]-$ruler->[1] == 0;
 

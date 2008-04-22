@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.65 2008-04-22 08:43:05 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.66 2008-04-22 13:56:53 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1590,7 +1590,17 @@ sub settings_table {
   my ($ks_style,@ks_disabled) = $CONFIG->drag_and_drop($settings->{drag_and_drop})
     ? ("color:gray",(-disabled=>1))
     : ('color:black',());
-  my $content =
+
+  my $tooltips = $settings->{show_tooltips} ? 'false' : 'true';
+  my $content = <<END;
+  <script type="text/javascript">
+  tooltipIsSuppressed = $tooltips;
+  function toggleTooltip () {
+    tooltipIsSuppressed = !document.mainform.show_tooltips.checked
+  }
+  </script>
+END
+  $content .=
     table({-class=>'searchbody',-border=>0,-width=>'100%'},
 	  TR({-class=>'searchtitle'},
 	     td(
@@ -1710,7 +1720,7 @@ sub settings_table {
 			     -label    => $CONFIG->tr('SHOW_TOOLTIPS'),
 			     -override => 1,
 			     -checked  => $settings->{show_tooltips},
-			     -onclick  => 'document.mainform.submit()'
+			     -onclick  => 'toggleTooltip()'
 		    ),
 		)
 	     ),

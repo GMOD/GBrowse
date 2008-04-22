@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.30 2008-03-17 19:45:09 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.31 2008-04-22 13:56:56 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -39,11 +39,11 @@
 // These global variables are necessary to avoid losing scope when
 //setting the balloon timeout and for inter-object communication
 var currentBalloonClass;
-var balloonIsVisible
+var balloonIsVisible;
 var balloonIsSticky;
 var balloonInvisibleSelects;
 var balloonIsSuppressed;
-
+var tooltipIsSuppressed;
 
 ///////////////////////////////////////////////////
 // Constructor for Balloon class                 //
@@ -142,8 +142,13 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
     this.suppress = false;
   }
 
-  // Balloons have been suppressed, go no further
+  // All balloons have been suppressed, go no further
   if (this.suppress || balloonIsSuppressed) {
+    return false;
+  }
+
+  // Non-sticky balloons suppressed
+  if (tooltipIsSuppressed && !sticky) {
     return false;
   }
 

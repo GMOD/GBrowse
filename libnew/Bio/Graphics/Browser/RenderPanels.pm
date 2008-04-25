@@ -91,38 +91,47 @@ sub render_panels {
   my $self    = shift;
   my $args    = shift;
 
-  my $base           = $self->get_cache_base();
-  my $feature_files  = $args->{feature_files};
-  my @panel_args     = $self->create_panel_args($args);
-
-  my @labels         = @{$args->{labels}};
-
-  my %data_destinations = map {
-      my @track_args   = $self->create_track_args($_,$args);
-
-      # get config data from the feature files
-      my @extra_args          = eval {
-	  $feature_files->{$_}->types,
-	  $feature_files->{$_}->mtime,
-      } if $feature_files->{$_};
-
-      my $cache_object = Bio::Graphics::Browser::CachedTrack->new(-base        => $base,
-								  -panel_args  => \@panel_args,
-								  -track_args  => \@track_args,
-								  -extra_args  => \@extra_args);
-      $cache_object->cache_time($self->cache_time);
-
-      $_ => $cache_object;
-  }
-  @labels;
+  my $data_destinations = $self->make_requests($args);
 
   if ($args->{deferred}) {
-      $self->render_tracks_deferred(\%data_destinations,$args);
-      return \%data_destinations;
+      $self->render_tracks_deferred($data_destinations,$args);
+      return $data_destinations;
   }
   else {
-      return $self->render_tracks(\%data_destinations,$args);
+      return $self->render_tracks($data_destinations,$args);
   }
+}
+
+# return a hashref in which the keys are labels and the values are
+# CachedTrack objects that are ready to accept data.
+sub make_requests {
+    my $self   = shift;
+    my $args   = shift;
+
+    my $feature_files  = $args->{feature_files};
+    my $labels         = $args->{labels};
+
+    my $base           = $self->get_cache_base();
+    my @panel_args     = $self->create_panel_args($args);
+    my %d = map {
+	my @track_args   = $self->create_track_args($_,$args);
+
+	# get config data from the feature files
+	my @extra_args          = eval {
+	    $feature_files->{$_}->types,
+	    $feature_files->{$_}->mtime,
+	} if $feature_files && $feature_files->{$_};
+
+	my $cache_object = Bio::Graphics::Browser::CachedTrack->new(-base        => $base,
+								    -panel_args  => \@panel_args,
+								    -track_args  => \@track_args,
+								    -extra_args  => \@extra_args);
+	$cache_object->cache_time($self->cache_time);
+
+	$_ => $cache_object;
+    }
+    @$labels;
+    return \%d;
 }
 
 sub use_renderfarm {
@@ -132,6 +141,8 @@ sub use_renderfarm {
 
   $LPU_AVAILABLE = eval { require LWP::Parallel::UserAgent; } unless defined $LPU_AVAILABLE;
   $STO_AVAILABLE = eval { require Storable; 1; }              unless defined $STO_AVAILABLE;
+
+  warn "LPU => ",LWP::Parallel::UserAgent->can('new') if DEBUG;
   return 1 if $LPU_AVAILABLE && $STO_AVAILABLE;
   warn "The renderfarm setting requires the LWP::Parallel::UserAgent and Storable modules,
 but one or both are missing. Reverting to local rendering.\n";
@@ -148,22 +159,22 @@ sub drag_and_drop {
   1;
 }
 
-sub generate_panels_remotely {
-  my $self    = shift;
-  my $tracks  = shift;
-  my $options = shift;
+# sub generate_panels_remotely {
+#   my $self    = shift;
+#   my $tracks  = shift;
+#   my $options = shift;
 
-  my $source = $self->source;
+#   my $source = $self->source;
 
-  my %remote;
-  for my $track (@$tracks) {
-    my $host  = $source->semantic_setting($track => 'remote renderer');
-    $host   ||= $self->local_renderer_url;
-    $remote{$host}{$track}++;
-  }
+#   my %remote;
+#   for my $track (@$tracks) {
+#     my $host  = $source->semantic_setting($track => 'remote renderer');
+#     $host   ||= $self->local_renderer_url;
+#     $remote{$host}{$track}++;
+#   }
 
-  return $self->call_remote_renderers(\%remote);
-}
+#   return $self->call_remote_renderers(\%remote);
+# }
 
 sub render_tracks {
     my $self     = shift;
@@ -171,7 +182,12 @@ sub render_tracks {
     my $requests = shift;
     my $args     = shift;
 
-    my $content  = $self->track_content($requests,$args);
+    # sort the requests out into local and remote ones
+    my ($local_labels,
+	$remote_labels) = $self->sort_local_remote($requests);
+
+    $self->run_local_requests($requests,$args,$local_labels);  
+    $self->run_remote_requests($requests,$args,$remote_labels);
 
     my $globals  = $self->source->globals;
 
@@ -187,8 +203,8 @@ sub render_tracks {
     my %result;
 
     for my $label (@{$args->{labels}}) {
-	my $data   = $content->{$label};
-	my $gd     = $data->gd;
+	my $data   = $requests->{$label};
+	my $gd     = $data->gd or next;
 	my $map    = $data->map;
 	my $width  = $data->width;
 	my $height = $data->height;
@@ -281,11 +297,11 @@ sub render_tracks {
 # POST result: serialized      { label1 => {image,map,width,height,file,gd,boxes}... }
 #
 # reminder: segment can be found in the settings as $settings->{ref,start,stop,flip}
-sub call_remote_renderers {
+sub run_remote_requests {
   my $self      = shift;
-  my $renderers = shift;
-  
-  #eval { require 'HTTP::Request::Common' } unless HTTP::Request::Common->can('POST');
+  my ($requests,$args,$labels) = @_;
+  return unless @$labels;
+
   eval { use HTTP::Request::Common; } unless HTTP::Request::Common->can('POST');
 
   my $source   = $self->source;
@@ -297,16 +313,21 @@ sub call_remote_renderers {
   my $s_set	= Storable::freeze($settings);
   my $s_lang	= Storable::freeze($lang);
 
+  # sort requests by their renderers
+  my %renderers;
+  for my $label (@$labels) {
+      my $url     = $source->setting($label => 'remote renderer') or next;
+      $renderers{$url}{$label}++;
+  }
+
   my $ua = LWP::Parallel::UserAgent->new;
   $ua->in_order(0);
   $ua->nonblock(1);
 
-  for my $url (keys %$renderers) {
-    my @tracks  = keys %{$renderers->{$url}};
-    #$url .= ".pl/";
-    #$url = "http://cgi.sfu.ca/~hmokada/cgi-bin/gsoc/render.cgi";
+  for my $url (keys %renderers) {
 
-    warn "calling remote rendering $url for tracks: @tracks";
+    my @tracks  = keys %{$renderers{$url}};
+
     my $s_track  = Storable::freeze(\@tracks);
 
     my $request = POST ($url,
@@ -323,20 +344,48 @@ sub call_remote_renderers {
   my $timeout = $source->global_setting('timeout') || 20;
   my $results = $ua->wait($timeout);
 
-  my %track_results;
   foreach (keys %$results) {
     my $response = $results->{$_}->response;
     unless ($response->is_success) {
-      warn $results->request->uri,"; fetch failed: ",$response->status_line;
+      warn $results->{$_}->request->uri,"; fetch failed: ",$response->status_line;
       next;
     }
-    my $tracks = Storable::thaw($response->content);
-    for my $key (%$tracks) {
-	$track_results{$key} = $tracks->{$key};
+    my $contents = Storable::thaw($response->content);
+    for my $label (keys %$contents) {
+	my $map = $contents->{$label}{map} 
+	          or die "Expected a map from remote server, but got nothing!";
+	my $gd  = $contents->{$label}{imagedata}
+	          or die "Expected imagedata from remote server, but got nothing!";
+	$requests->{$label}->put_data($gd,$map);
     }
   }
 
-  return \%track_results;
+  return $requests;
+}
+
+# Sort requests into those to be performed locally
+# and remotely. Returns two arrayrefs (\@local_labels,\@remote_labels)
+# Our algorithm is very simple. It is a remote request if the "remote renderer"
+# option is set, local otherwise. This means that a "remote renderer" of "localhost"
+# will be treated as a remote renderer request.
+sub sort_local_remote {
+    my $self     = shift;
+    my $requests = shift;
+
+    my $source         = $self->source;
+    my $use_renderfarm = $self->use_renderfarm;
+    unless ($use_renderfarm) {
+	return ([keys %$requests],[]);
+    }
+
+    my @labels    = keys %$requests;
+    my %is_remote = map {     $_ => ( $source->setting($_=>'remote renderer') )
+                        } @labels;
+
+    my @remote    = grep {$is_remote{$_} } @labels;
+    my @local     = grep {!$is_remote{$_}} @labels;
+
+    return (\@local,\@remote);
 }
 
 #moved from Render.pm
@@ -775,136 +824,136 @@ sub make_centering_map {
 
 # this is the routine that actually does the work!!!!
 # input
-#    { labels        => [list of labels]
-#      feature_files => [list of external features, plugins]
-#      noscale       => (get rid of this?)
-#      do_map        => (get rid of this?)
-#      cache_extra   => (get rid of this?)
-#      section       => (get rid of this?)
+#    arg1: request hashref 
+#                 {label => Bio::Graphics::Browser::CachedTrack}
+#    arg2: arguments hashref
+#                  {
+#                    feature_files => [list of external features, plugins]
+#                    noscale       => (get rid of this?)
+#                    do_map        => (get rid of this?)
+#                    cache_extra   => (get rid of this?)
+#                    section       => (get rid of this?)
+#                   }
+#    arg3: labels arrayref (optional - uses keys %$request otherwise)
 #
 # output
 #    { label1 => $track_cache_object,
 #      label2 => $track_cache_object....
 #    }
 
-sub track_content {
-  my $self  = shift;
-  my $requests = shift;  # a hash of labels => Bio::Graphics::Browser::CachedTrack objects
-  my $args     = shift;
+sub run_local_requests {
+    my $self     = shift;
+    my $requests = shift;  # a hash of labels => Bio::Graphics::Browser::CachedTrack objects
+    my $args     = shift;
+    my $labels   = shift;
 
-  my $labels         = [keys %{$requests}];
-  my $feature_files  = $args->{feature_files};
-  my $noscale        = $args->{noscale};
-  my $do_map         = $args->{do_map};
-  my $cache_extra    = $args->{cache_extra} || [];
-  my $section        = $args->{section}     || 'detail';
+    $labels    ||= [keys %$requests];
 
-  my $settings       = $self->settings;
-  my $segment        = $self->segment;
-  my $length         = $segment->length;
+    my $feature_files  = $args->{feature_files};
+    my $noscale        = $args->{noscale};
+    my $do_map         = $args->{do_map};
+    my $cache_extra    = $args->{cache_extra} || [];
+    my $section        = $args->{section}     || 'detail';
 
-  my $source         = $self->source;
-  my $lang           = $self->language;
+    my $settings       = $self->settings;
+    my $segment        = $self->segment;
+    my $length         = $segment->length;
 
-  my $use_renderfarm = $self->use_renderfarm;
-  my $base           = $self->get_cache_base;
+    my $source         = $self->source;
+    my $lang           = $self->language;
 
-  # FIXME: this has to be set somewhere
-  my $hilite_callback= undef;
+    my $base           = $self->get_cache_base;
 
-  $segment->factory->debug(1) if DEBUG;
+    # FIXME: this has to be set somewhere
+    my $hilite_callback= undef;
 
-  #---------------------------------------------------------------------------------
-  # Track and panel creation
+    $segment->factory->debug(1) if DEBUG;
 
-  # we create two hashes:
-  #        the %panels hash maps label names to panels
-  #        the %tracks hash maps label names to tracks within the panels
-  my %panels;           # map label names to Bio::Graphics::Panel objects
-  my %tracks;           # map label names to Bio::Graphics::Track objects
-  my %seenit;           # used to avoid possible upstream error of putting track on list multiple times
-  my %results;          # hash of {$label}{gd} and {$label}{map}
-  my %feature_file_offsets;
+    #---------------------------------------------------------------------------------
+    # Track and panel creation
+    
+    # we create two hashes:
+    #        the %panels hash maps label names to panels
+    #        the %tracks hash maps label names to tracks within the panels
+    my %panels;           # map label names to Bio::Graphics::Panel objects
+    my %tracks;           # map label names to Bio::Graphics::Track objects
+    my %seenit;           # used to avoid possible upstream error of putting track on list multiple times
+    my %results;          # hash of {$label}{gd} and {$label}{map}
+    my %feature_file_offsets;
+
+    
+    my @labels_to_generate = grep {$requests->{$_}->status ne 'AVAILABLE'} @$labels;
+    
+    my @ordinary_tracks    = grep {!$feature_files->{$_}} @labels_to_generate;
+    my @feature_tracks     = grep {$feature_files->{$_} } @labels_to_generate;
 
 
-  my @labels_to_generate = grep {$requests->{$_}->status ne 'AVAILABLE'} @$labels;
-
-  my @ordinary_tracks    = grep {!$feature_files->{$_}} @labels_to_generate;
-  my @feature_tracks     = grep {$feature_files->{$_} } @labels_to_generate;
-
-
-  # == create whichever panels are not already cached ==
-  my %filters = map {
-      my %conf =  $source->style($_);
-      $conf{'-filter'} ? ($_ => $conf{'-filter'})
+    # == create whichever panels are not already cached ==
+    my %filters = map {
+	my %conf =  $source->style($_);
+	$conf{'-filter'} ? ($_ => $conf{'-filter'})
 	               : ()
-  } @labels_to_generate;
+    } @labels_to_generate;
 
+    
+    for my $label (@ordinary_tracks) {
 
-  for my $label (@ordinary_tracks) {
+	next if $seenit{$label}++; # this shouldn't happen, but let's be paranoid
 
-      next if $seenit{$label}++; # this shouldn't happen, but let's be paranoid
+	my @keystyle = (-key_style=>'between')
+	    if $label =~ /^\w+:/ && $label !~ /:(overview|region)/;  # a plugin
+	
+	my $panel_args = $requests->{$label}->panel_args;
+	my $track_args = $requests->{$label}->track_args;
+	
+	$panels{$label} = Bio::Graphics::Panel->new(@$panel_args,@keystyle);
+	$tracks{$label} = $panels{$label}->add_track(@$track_args);
+    }
 
-      my @keystyle = (-key_style=>'between')
-	  if $label =~ /^\w+:/ && $label !~ /:(overview|region)/;  # a plugin
+    # == populate the tracks with feature data == 
 
-      my $panel_args = $requests->{$label}->panel_args;
-      my $track_args = $requests->{$label}->track_args;
+    $self->add_features_to_track(-labels    => \@ordinary_tracks,
+				 -tracks    => \%tracks,
+				 -filters   => \%filters,
+				 -segment   => $segment,
+				 -fsettings => $settings->{features},
+	) if @ordinary_tracks;
 
-      $panels{$label} = Bio::Graphics::Panel->new(@$panel_args,@keystyle);
-      $tracks{$label} = $panels{$label}->add_track(@$track_args);
-  }
+    # ------------------------------------------------------------------------------------------
+    # Add feature files, including remote annotations
+    my $featurefile_select = $args->{featurefile_select} || $self->feature_file_select($section);
 
-  # == populate the tracks with feature data == 
+    for my $label (@feature_tracks) {
+	my $file = $feature_files->{$label} or next;
+	ref $file or next;
+	next unless $panels{$label};
+	$self->add_feature_file(
+	    file       => $file,
+	    panel      => $panels{$label},
+	    position   => $feature_file_offsets{$label} || 0,
+	    options    => $settings->{features}{$label}{options},
+	    select     => $featurefile_select,
+	    );
+    }
 
-  $self->add_features_to_track(-labels    => \@ordinary_tracks,
-			       -tracks    => \%tracks,
-			       -filters   => \%filters,
-			       -segment   => $segment,
-			       -fsettings => $settings->{features},
-			      ) if @ordinary_tracks;
+    # == generate the maps ==
+    my %maps;
 
-  # ------------------------------------------------------------------------------------------
-  # Add feature files, including remote annotations
-  my $featurefile_select = $args->{featurefile_select} || $self->feature_file_select($section);
+    my %trackmap = reverse %tracks;
+    $args->{scale_map_type} ||= 'centering_map' unless $noscale;
+    (my $map_name = $section) =~ s/^\?//;
 
-  for my $label (@feature_tracks) {
-      my $file = $feature_files->{$label} or next;
-      ref $file or next;
-      next unless $panels{$label};
-      $self->add_feature_file(
-	  file       => $file,
-	  panel      => $panels{$label},
-	  position   => $feature_file_offsets{$label} || 0,
-	  options    => $settings->{features}{$label}{options},
-	  select     => $featurefile_select,
-	  );
-  }
+    for my $label (@labels_to_generate) {
+	my $gd = $panels{$label}->gd;
+	my $map  = $self->make_map(scalar $panels{$label}->boxes,
+				   $panels{$label},
+				   $label,
+				   \%trackmap,
+				   0);
+	$requests->{$label}->put_data($gd,$map);
+    }
 
-  # == generate the maps ==
-  my %maps;
-
-  my %trackmap = reverse %tracks;
-  $args->{scale_map_type} ||= 'centering_map' unless $noscale;
-  (my $map_name = $section) =~ s/^\?//;
-
-  for my $label (@labels_to_generate) {
-      my $gd = $panels{$label}->gd;
-      my $map  = $self->make_map(scalar $panels{$label}->boxes,
-				 $panels{$label},
-				 $label,
-				 \%trackmap,
-				 0);
-      $maps{$label} = $map;
-  }
-
-  for my $label (@labels_to_generate) {
-      my $gd    = $panels{$label}->gd;
-      my $map   = $maps{$label};
-      $requests->{$label}->put_data($gd,$map);
-  }
-
-  return $requests;
+    return $requests;
 }
 
 sub add_features_to_track {

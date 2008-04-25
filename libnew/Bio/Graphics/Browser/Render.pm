@@ -257,24 +257,24 @@ sub render_body {
   my $features = $region->features;
 
   my $title = $self->render_top($features);
-  $self->render_instructions($title);
+  print $self->render_instructions($title);
 
   if ($region->feature_count > 1) {
     #search not implemented yet
-    $self->render_multiple_choices($features);
+      print $self->render_multiple_choices($features);
   }
 
   elsif (my $seg = $region->seg) {
-      $self->render_navbar($seg);
-      $self->render_panels($seg,{overview=>1,regionview=>1,detailview=>1});
-      $self->render_config($seg);
+      print $self->render_navbar($seg);
+      print $self->render_panels($seg,{overview=>1,regionview=>1,detailview=>1});
+      print $self->render_config($seg);
   }
   else {
-      $self->render_navbar();
-      $self->render_config();
+      print $self->render_navbar();
+      print $self->render_config();
   }
 
-  $self->render_bottom($features);
+  print $self->render_bottom($features);
 }
 
 # never called, method in HTML.pm with same name is run instead
@@ -322,7 +322,7 @@ sub render_overview {
   					   $state,
   					   $feature_files));
   
-  print $self->toggle('Overview',
+  return $self->toggle('Overview',
 		table({-border=>0,-width=>'100%'},
 		      TR({-class=>'databody'},
 			 td({-align=>'center'},$image)
@@ -342,9 +342,9 @@ sub render_regionview {
 sub render_config {
   my $self = shift;
   my $seg = shift;
-  $self->render_track_table();
-  $self->render_global_config();
-  $self->render_uploads();
+  return $self->render_track_table(). 
+      $self->render_global_config().
+      $self->render_uploads();
 }
 
 #never called, method in HTML.pm with same name is run instead
@@ -686,13 +686,10 @@ sub update_options {
 }
 
 sub update_tracks {
-  my $self = shift;
+  my $self  = shift;
   my $state = shift;
 
-  if (my @selected = $self->split_labels (param('label'))) {
-    $state->{features}{$_}{visible} = 0 foreach $self->data_source->labels;
-    $state->{features}{$_}{visible} = 1 foreach @selected;
-  }
+  $self->set_tracks($self->split_labels(param('label'))) if param('label');
 
   if (my @selected = split_labels(param('enable'))) {
     $state->{features}{$_}{visible} = 1 foreach @selected;
@@ -1086,6 +1083,15 @@ sub split_labels {
   map {/^(http|ftp|das)/ ? $_ : split /[+-]/} @_;
 }
 
+sub set_tracks {
+    my $self   = shift;
+    my @labels = @_;
+    my $state  = $self->state;
+    $state->{tracks} = \@labels;
+    $state->{features}{$_}{visible} = 0 foreach $self->data_source->labels;
+    $state->{features}{$_}{visible} = 1 foreach @labels;
+}
+
 sub detail_tracks {
   my $self = shift;
   my $state = $self->state;
@@ -1121,11 +1127,11 @@ sub render_detailview {
   my @panels   = map {$panels->{$_}} @labels;
 
   my $drag_script = $self->drag_script('panels','track');
-  print div($self->toggle('Details',
-			  div({-id=>'panels',-class=>'track'},
-			      @panels
-			  )
-	    )
+  return div($self->toggle('Details',
+			   div({-id=>'panels',-class=>'track'},
+			       @panels
+			   )
+	     )
       ).$drag_script;
 }
 

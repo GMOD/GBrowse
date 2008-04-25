@@ -32,8 +32,7 @@ sub render_top {
 sub render_bottom {
   my $self = shift;
   my $features = shift; # not used
-  print hr(),
-    end_html();
+  return hr().end_html();
 }
 
 sub render_navbar {
@@ -82,21 +81,21 @@ sub render_navbar {
 	      );
   }
 
-  print $self->toggle('Search',
-		      div({-class=>'searchbody'},
-			  $self->html_frag('html1',$segment,$settings)||'',
-			  table({-border=>0,-class=>'searchbody'},
-				TR(td($search),td($plugin_form)),
-				TR(td({-align=>'left'},
-				      $source_form,
-				     ),
-				   td({-align=>'left'},
-				      $sliderform || '&nbsp;'
-				     )
-				  )
-			       )
-			 )
-		     ).br({-clear=>'all'});
+  return $self->toggle('Search',
+		       div({-class=>'searchbody'},
+			   $self->html_frag('html1',$segment,$settings)||'',
+			   table({-border=>0,-class=>'searchbody'},
+				 TR(td($search),td($plugin_form)),
+				 TR(td({-align=>'left'},
+				       $source_form,
+				    ),
+				    td({-align=>'left'},
+				       $sliderform || '&nbsp;'
+				    )
+				 )
+			   )
+		       )
+      ).br({-clear=>'all'});
 }
 
 # sub render_detailview {
@@ -159,7 +158,7 @@ sub render_html_head {
   push @args,(-head=>$self->setting('head'))    if $self->setting('head');
   push @args,(-lang=>($self->language_code)[0]) if $self->language_code;
 
-  print start_html(@args);
+  return start_html(@args);
 }
 
 sub render_instructions {
@@ -210,7 +209,7 @@ sub render_instructions {
 			),
 		     )
 		  );
-  print h1({-id=>'page_title'},$title),$html;
+  return h1({-id=>'page_title'},$title),$html;
 }
 
 # this draws the various config options
@@ -298,7 +297,7 @@ sub render_track_table {
   }
 
   autoEscape(1);
-  print $self->toggle('Tracks',
+  return $self->toggle('Tracks',
 		      start_form(-name=>'trackform',
 				 -id=>'trackform'),
 		      div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
@@ -413,7 +412,7 @@ sub render_global_config {
 		 -align=>'right'},
 		b(submit(-name => $self->tr('Update')))))
 	 );
-  print $self->toggle('Display_settings',$content);
+  return $self->toggle('Display_settings',$content);
 }
 
 sub tableize {

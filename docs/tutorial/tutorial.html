@@ -8,7 +8,7 @@
 <body>
 <h1>Generic Genome Browser: A Tutorial</h1>
 
-<h2>Author: Lincoln Stein, 11 March 2008</h2>
+<h2>Author: Lincoln Stein, 28 April 2008</h2>
 
 <p>
 
@@ -189,7 +189,7 @@ click on the new folder and grant write privileges to all.
 You'll now put the first of several data files into the volvox
 database directory.  In the <a href="data_files/">data_files</a>
 subdirectory of this tutorial you will find the file <a
-href="data_files/volvox1.gff">volvox1.gff3</a>.  Copy this into the
+href="data_files/volvox1.gff3">volvox1.gff3</a>.  Copy this into the
 volvox database directory.  On Unix systems:
 
 <blockquote class="example">
@@ -251,7 +251,7 @@ single quotes around the path as shown in the example above.
 
 <p>
 
-Next check that the volvox1.gff file does exist inside the volvox
+Next check that the volvox1.gff3 file does exist inside the volvox
 database directory and that it is readable by all users on your
 system.  Similarly, check that the volvox.conf configuration file is
 in the same directory as yeast_chr1.conf, and that it is readable by
@@ -290,7 +290,7 @@ Someone will be happy to assist you.  </blockquote>
 
 
 Let's look at the data file we loaded in detail now.  If you open the
-<a href="data_files/volvox1.gff">volvox1.gff3</a> file in a text
+<a href="data_files/volvox1.gff3">volvox1.gff3</a> file in a text
 editor, you will see that it contains a series of 15 genome "features"
 that look like this:
 
@@ -1165,7 +1165,7 @@ strand.
 
 <p>
 
-Copy <a href="data_files/volvox3.gff">volvox3.gff</a> into the volvox
+Copy <a href="data_files/volvox3.gff3">volvox3.gff</a> into the volvox
 database directory.  Then edit volvox.conf to add the following track
 definition:
 
@@ -2051,7 +2051,7 @@ show you how grouping of 5' and 3' EST reads works.
 
 We'll start with a simple data set containing information on three
 pairs of EST reads.  You'll find this data set in <a
-href="data_files/volvox7.gff">volvox7.gff</a>.  Here is the first pair
+href="data_files/volvox7.gff3">volvox7.gff</a>.  Here is the first pair
 described in the data file:
 
 <blockquote class="example"><pre>
@@ -2070,7 +2070,7 @@ ctgA est EST_match 7000 7300 . + . ID=Match3;Name=agt221.5
 <p>
 
 What's going on here is the same as the alignments shown in <a
-href="data_files/volvox3.gff">volvox3.gff</a>.  There are two EST
+href="data_files/volvox3.gff3">volvox3.gff</a>.  There are two EST
 reads named agt830.5 (the 5' read) and agt830.3 (the 3' read).  Each
 of them matches the ctgA genome in two discontinuous regions because,
 presumably, they cross a splice site. As in the earlier example, we
@@ -2292,7 +2292,7 @@ EST DNA.
 
 The fasta file <a href="data_files/ests.fa">ests.fa</a> provides the DNA
 sequences for the six EST reads.  The GFF load file
-<a href="data_files/volvox8.gff">volvox8.gff</a> contains the revised
+<a href="data_files/volvox8.gff3">volvox8.gff</a> contains the revised
 coordinates.  If you look at this file you'll see that it is
 dissimilar to previous load files:
 
@@ -2331,8 +2331,8 @@ The strand field is used to determine the direction of the alignment.
 <p>
 
 Since this data file contains a revised version of volvox7.gff,
-<b>remove volvox7.gff from the database directory and replace it with
-<a href="data_files/volvox8.gff">volvox8.gff</a> </b>.  Also copy <a
+<b>remove volvox7.gff3 from the database directory and replace it with
+<a href="data_files/volvox8.gff3">volvox8.gff</a> </b>.  Also copy <a
 href="data_files/ests.fa">ests.fa</a> into the database directory.  If
 you perform a directory listing, it should look like this:
 
@@ -2861,7 +2861,7 @@ panel, just as you would for the overview panel.
 <i>The file <a href="conf_files/volvox_final.conf">volvox_final.conf</a>
 contains the final configuration file with all the modifications we've
 made during the course of this tutorial.  The data files <a
-href="data_files/volvox_all.gff">volvox_all.gff</a> and <a
+href="data_files/volvox_all.gff3">volvox_all.gff</a> and <a
 href="data_files/volvox_all.fa">volvox_all.fa</a> likewise contain the
 entirety of the feature and DNA data.</i>
 </blockquote>
@@ -4485,7 +4485,7 @@ to skip this step entirely.
 
 <p>
 
-You'll now load the .gff and .fa files into this newly created
+You'll now load the .gff3 and .fa files into this newly created
 database.  There are actually two steps needed.  The first is to
 "initialize" the database with all the data definitions needed to hold
 genomic feature data, and the second is to actually load the data.
@@ -4672,6 +4672,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Wed Mar 26 09:35:21 EDT 2008
+Last modified: Mon Apr 28 12:47:49 EDT 2008
 <!-- hhmts end -->
 </body> </html>

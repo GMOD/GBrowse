@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.79 2008-04-22 13:56:56 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.80 2008-04-28 18:00:58 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1028,6 +1028,8 @@ sub render_draggable_tracks {
 
       (my $munge_label = $label) =~ s/_/%5F/g;  # freakin' scriptaculous uses _ as a delimiter!!!
 
+      $img_map = qq(\n<map name="${element_id}_map" id="${element_id}_map">$img_map\n</map>\n);
+
       push @result, (is_safari()
 		     ?
 		     "\n".div({-id=>"${section}_track_${munge_label}",-class=>$class},
@@ -1090,7 +1092,7 @@ sub render_composite_track {
 	     -alt   => $section});
 
   my $html    = div({-align=>'center'},$img);
-  $map        = "<noscript>\n$map\n</noscript>" if $css_map;
+  $map        = "<noscript>\n<map name=\"$map_name\"$map</map>\n</noscript>" if $css_map;
   $css_map  ||= '';
   $html      .= $css_map . $map;
 
@@ -2712,7 +2714,8 @@ sub map_html {
   chomp @data;
   my $name = shift @data or return '';
 
-  my $html  = qq(\n<map name="${name}_map" id="${name}_map">\n);
+#  my $html  = qq(\n<map name="${name}_map" id="${name}_map">\n);
+  my $html = '';
   
   for (@data) {
       my @tokens = split "\t";
@@ -2727,7 +2730,7 @@ sub map_html {
       $html .= qq(/>\n);
   }
   
-  $html .= qq(</map>\n);
+#  $html .= qq(</map>\n);
   return $html;
 }
 

@@ -93,7 +93,7 @@ sub create_parts_for_dense_feature {
   for (my $i=0; $i<$span;$i++) {
     my $offset = $i * $points_per_span;
     my $value  = shift @$data;
-    push @parts,Bio::Graphics::Feature->new(-score => $value,
+    push @parts,Bio::Graphics::Feature->new(-score => $value || 0,  # maybe a bug here? Treat undef as zero.
 					    -start => int($start + $i * $points_per_span),
 					    -end   => int($start + $i * $points_per_span));
   }

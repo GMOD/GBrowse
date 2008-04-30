@@ -3,7 +3,7 @@
 
 #Icelandic translation done by Gudmundur A. Thorisson <mummi@cshl.edu>
 
-#$Id: is.pm,v 1.4.6.3.6.1 2007-10-24 18:38:31 mummi Exp $
+#$Id: is.pm,v 1.4.6.3.6.2 2008-04-30 13:05:07 scottcain Exp $
 
  CHARSET =>   'ISO-8859-1',
 
@@ -122,9 +122,9 @@ END
 
    DOWNLOAD         => 'Vista',
 
-   DISPLAY_SETTINGS => 'Stilla glugga',
+   DISPLAY_SETTINGS => 'Stillingar',
 
-   TRACKS   => 'Brautir',
+   TRACKS   => 'Brautir (e. tracks)',
 
    EXTERNAL_TRACKS => "(Utanaðkomandi brautir skáletraðar)<br><sup>*</sup>Yfirlitsbraut",
 
@@ -200,7 +200,7 @@ END
 
    PRESETS      => '--Velja fyrirfram uppsettar vefslóðir--',
 
-   FEATURES_TO_HIGHLIGHT  => 'Kennileiti sem merkja á (kennileiti1, kennileiti2...)',
+   FEATURES_TO_HIGHLIGHT  => 'Merkja kennileiti (kennileiti1, kennileiti2...)',
      
    FEATURES_TO_HIGHLIGHT_HINT  => 'Vísbending: notaðu kennileiti@litur til að velja litinn, t.d. \'NUT21@lightblue\' ',
 
@@ -365,35 +365,45 @@ END
 
  SMALL_INTERVAL    => 'Breyti stærð svæðis í %s bp',
           
-CLEAR_HIGHLIGHTING  => 'Fjarlægja merkingar',
+ CLEAR_HIGHLIGHTING  => 'Fjarlægja merkingar',
 
-CONFIGURE_TRACKS  => 'Stilla brautir...', 
+ CONFIGURE_TRACKS  => 'Stilla brautir...', 
      
-NO_SOURCES  => 'Engar aðgengilegar gagnalindir stilltar. Kannske hefur þú ekki leyfi til að skoða þær',
+ NO_SOURCES  => 'Engar aðgengilegar gagnalindir stilltar. Kannske hefur þú ekki leyfi til að skoða þær',
 
-ADD_YOUR_OWN_TRACKS => 'Bæta við eigin brautum',
+ ADD_YOUR_OWN_TRACKS => 'Bæta við eigin brautum',
 
-BACKGROUND_COLOR => 'Litur á bakgrunni',
+ BACKGROUND_COLOR => 'Litur á bakgrunni',
 
-CHANGE => 'Breyta',
+ CHANGE => 'Breyta',
 
-DEFAULT => 'Sjálfgefið',
+ DEFAULT => 'Sjálfgefið',
 
-DYNAMIC_VALUE => 'Breytilegt gildi (reiknað út)',
+ DYNAMIC_VALUE => 'Breytilegt gildi (reiknað út)',
 
-FG_COLOR => 'Litur á forgrunni',
+ FG_COLOR => 'Litur á forgrunni',
 
-GLYPH => 'Tákn',
+ GLYPH => 'Tákn',
 
-HEIGHT => 'Hæð',
+ HEIGHT => 'Hæð',
 
-INVALID_SOURCE => '%s er ekki gild gagnalind.',
+ INVALID_SOURCE => '%s er ekki gild gagnalind.',
 
-LINEWIDTH => 'Línubreidd',
+ LINEWIDTH => 'Línubreidd',
 
-PACKING => 'Pökkun',
+ PACKING => 'Pökkun',
 
-SHOW_GRID => 'Sýna rúðunet',
+ SHOW_GRID => 'Sýna rúðunet',
+
+ DRAGGABLE_TRACKS  => 'Draganlegar brautir',
+
+ CACHE_TRACKS      => 'Brautir í flýtiminni',
+
+ SHOW_TOOLTIPS     => 'Sýna ábendingar (e. tooltips)',
+
+ OPTIONS_RESET     => 'Allar stillingar hafa verið settar aftur á sjálfgefin gildi (e. defaults)',
+
+ OPTIONS_UPDATED   => 'Ný uppsetning er orðin virk; allar stillingar hafa verið settar aftur á sjálfgefin gildi (e. defaults)',
 
 };
 

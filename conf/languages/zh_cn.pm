@@ -1,7 +1,7 @@
 # do not remove the { } from the top and bottom of this page!!!
 #Simple_Chinese language module by Li DaoFeng <lidaof@cau.edu.cn>
 #Modified from Tradition_Chinese version by Jack Chen <chenn@cshl.edu>
-#translation updated 2007.10.16
+#translation updated 2008.04.30
 {
 
  CHARSET =>   'GB2312',
@@ -370,6 +370,42 @@ END
 
  SMALL_INTERVAL    => '将区域缩小到 %s bp',
 
- NO_SOURCES        => '没有配置可读的数据源.  或者您没有权限查看它们',
+ NO_SOURCES        => '没有配置可读取的数据源.  或者您没有权限查看它们',
 
+# Missed Terms
+
+ADD_YOUR_OWN_TRACKS => '添加您自己的数据通道',
+
+BACKGROUND_COLOR  => '背景填充颜色',
+
+ FG_COLOR          => '前景线条颜色',
+
+CACHE_TRACKS      => '缓存数据通道',
+
+CHANGE_DEFAULT  => '更改默认值',
+
+ DEFAULT          => '(默认)',
+
+ DYNAMIC_VALUE    => '动态计算值',
+
+ CHANGE           => '更改',
+
+ DRAGGABLE_TRACKS  => '可拖曳数据通道',
+
+ INVALID_SOURCE    => '来源 %s 不合理.',
+
+ HEIGHT           => '高度',
+
+ PACKING          => '包装',
+
+ GLYPH            => '样式',
+
+ LINEWIDTH        => '线条宽度',
+
+ SHOW_TOOLTIPS     => '显示工具提示',
+
+ OPTIONS_RESET     => '所有页面设置恢复到默认值',
+
+ OPTIONS_UPDATED   => '新的站点配置生效; 所有页面设置已恢复到默认值',
+ 
 };

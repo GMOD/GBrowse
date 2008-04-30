@@ -417,4 +417,6 @@ END
 
  OPTIONS_UPDATED   => 'A new site configuration is in effect; all page settings have been reset to their defaults',
 
+SHOW_TOOLTIPS     => 'Show tooltips',
+
 };

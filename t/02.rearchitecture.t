@@ -45,16 +45,16 @@ ok($globals->moby_path,'./testdata/conf/MobyServices');
 
 ok($globals->js_url,'/gbrowse/js');
 ok($globals->button_url,'/gbrowse/images/buttons');
-ok($globals->tmpdir_url,'/gbrowse/images');
-ok($globals->tmpdir_path,'/tmp/gbrowse_testing/images');
+ok($globals->tmpdir_url,'/tmpimages');
+ok($globals->tmpdir_path,'/tmp/gbrowse_testing/tmpimages');
 ok($globals->image_url,'/gbrowse/images');
 ok($globals->help_url,'/gbrowse/.');
 
 # exercise tmpdir a bit
 rmtree('/tmp/gbrowse_testing/images',0,0);  # in case it was left over
 my ($url,$path) = $globals->tmpdir('test1/test2');
-ok($url  eq '/gbrowse/images/test1/test2');
-ok($path eq '/tmp/gbrowse_testing/images/test1/test2');
+ok($url,'/tmpimages/test1/test2');
+ok($path,'/tmp/gbrowse_testing/tmpimages/test1/test2');
 
 # test the data sources
 my @sources = $globals->data_sources;
@@ -130,7 +130,7 @@ ok($source->html2,'This is overridden');
 # Do semantic settings work?
 ok($source->setting(general => 'plugins'),'Aligner RestrictionAnnotator ProteinDumper TestFinder');
 ok($source->setting('plugins'),'Aligner RestrictionAnnotator ProteinDumper TestFinder');
-ok($source->semantic_setting(Alignments=>'glyph'),'segments_new');
+ok($source->semantic_setting(Alignments=>'glyph'),'segments');
 ok($source->semantic_setting(Alignments=>'glyph',30000),'box');
 ok($source->type2label('match',0),'Alignments');
 

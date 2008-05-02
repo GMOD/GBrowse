@@ -8,6 +8,7 @@ use Digest::MD5 'md5_hex';
 use Text::Shellwords 'shellwords';
 use Bio::Graphics::Browser::CachedTrack;
 use IO::File;
+use POSIX 'WNOHANG';
 
 use CGI qw(:standard param escape unescape);
 
@@ -87,20 +88,60 @@ sub language {
 #       where CachedTrack is a Bio::Graphics::Panel::CachedTrack object that will eventually
 #       receive the data. Poll this object for its data.
 #
-sub render_panels {
+sub request_panels {
   my $self    = shift;
   my $args    = shift;
 
   my $data_destinations = $self->make_requests($args);
 
+  # sort the requests out into local and remote ones
+  my ($local_labels,
+      $remote_labels) = $self->sort_local_remote($data_destinations);
+
+  # In the case of a deferred request we fork.
+  # Parent returns the list of requests.
+  # Child processes the requests in the background.
+  # If both local and remote requests are needed, then we
+  # fork a second time and procss them in parallel.
   if ($args->{deferred}) {
-      $self->render_tracks_deferred($data_destinations,$args);
-      return $data_destinations;
+      $SIG{CHLD} = 'IGNORE';
+      my $child = fork();
+
+      die "Couldn't fork: $!" unless defined $child;
+      return $data_destinations if $child;
+
+      my $do_local  = @$local_labels;
+      my $do_remote = @$remote_labels;
+
+      $self->clone_databases($local_labels) if $do_local;
+      if ($do_local && $do_remote) {
+	  if (fork()) {
+	      $self->run_local_requests($data_destinations,$args,$local_labels); 
+	  } else {
+	      $self->run_remote_requests($data_destinations,$args,$remote_labels);
+	  }
+      } elsif ($do_local) {
+	  $self->run_local_requests($data_destinations,$args,$local_labels)  if $do_local;
+      } elsif ($do_remote) {
+	  $self->run_remote_requests($data_destinations,$args,$local_labels) if $do_remote;
+      }
+      exit 0;
   }
-  else {
-      return $self->render_tracks($data_destinations,$args);
-  }
+
+  
+  $self->run_local_requests($data_destinations,$args,$local_labels);  
+  $self->run_remote_requests($data_destinations,$args,$remote_labels);
+  return $data_destinations;
 }
+
+sub render_panels {
+    my $self = shift;
+    my $args = shift;
+    delete $args->{deferred}; # deferred execution incompatible with this call
+    my $destinations = $self->request_panels($args);
+    return $self->render_tracks($destinations,$args);
+}
+
 
 # return a hashref in which the keys are labels and the values are
 # CachedTrack objects that are ready to accept data.
@@ -117,16 +158,16 @@ sub make_requests {
 	my @track_args   = $self->create_track_args($_,$args);
 
 	# get config data from the feature files
-	my @extra_args          = eval {
-	    $feature_files->{$_}->types,
-	    $feature_files->{$_}->mtime,
-	} if $feature_files && $feature_files->{$_};
+ 	my @extra_args          = eval {
+ 	    $feature_files->{$_}->types,
+ 	    $feature_files->{$_}->mtime,
+ 	} if $feature_files && $feature_files->{$_};
 
 	my $cache_object = Bio::Graphics::Browser::CachedTrack->new(-base        => $base,
 								    -panel_args  => \@panel_args,
 								    -track_args  => \@track_args,
 								    -extra_args  => \@extra_args);
-	$cache_object->cache_time($self->cache_time);
+	$cache_object->cache_time($self->cache_time * 60);
 
 	$_ => $cache_object;
     }
@@ -178,16 +219,7 @@ sub drag_and_drop {
 
 sub render_tracks {
     my $self     = shift;
-
     my $requests = shift;
-    my $args     = shift;
-
-    # sort the requests out into local and remote ones
-    my ($local_labels,
-	$remote_labels) = $self->sort_local_remote($requests);
-
-    $self->run_local_requests($requests,$args,$local_labels);  
-    $self->run_remote_requests($requests,$args,$remote_labels);
 
     my $globals  = $self->source->globals;
 
@@ -202,7 +234,7 @@ sub render_tracks {
 
     my %result;
 
-    for my $label (@{$args->{labels}}) {
+    for my $label (keys %$requests) {
 	my $data   = $requests->{$label};
 	my $gd     = $data->gd or next;
 	my $map    = $data->map;
@@ -300,7 +332,13 @@ sub render_tracks {
 sub run_remote_requests {
   my $self      = shift;
   my ($requests,$args,$labels) = @_;
-  return unless @$labels;
+
+    my @labels_to_generate = grep { $requests->{$_}->needs_refresh } @$labels;
+    foreach (@labels_to_generate) {
+	$requests->{$_}->lock();   # flag that request is in process
+    }
+
+  return unless @labels_to_generate;
 
   eval { use HTTP::Request::Common; } unless HTTP::Request::Common->can('POST');
 
@@ -315,7 +353,7 @@ sub run_remote_requests {
 
   # sort requests by their renderers
   my %renderers;
-  for my $label (@$labels) {
+  for my $label (@labels_to_generate) {
       my $url     = $source->setting($label => 'remote renderer') or next;
       $renderers{$url}{$label}++;
   }
@@ -371,21 +409,38 @@ sub run_remote_requests {
 sub sort_local_remote {
     my $self     = shift;
     my $requests = shift;
+    
+    my @uncached = grep {$requests->{$_}->needs_refresh} keys %$requests;
 
     my $source         = $self->source;
     my $use_renderfarm = $self->use_renderfarm;
     unless ($use_renderfarm) {
-	return ([keys %$requests],[]);
+	return (\@uncached,[]);
     }
 
-    my @labels    = keys %$requests;
-    my %is_remote = map {     $_ => ( $source->setting($_=>'remote renderer') )
-                        } @labels;
+    my %is_remote = map { $_ => ( $source->setting($_=>'remote renderer') )
+                        } @uncached;
 
-    my @remote    = grep {$is_remote{$_} } @labels;
-    my @local     = grep {!$is_remote{$_}} @labels;
+    my @remote    = grep {$is_remote{$_} } @uncached;
+    my @local     = grep {!$is_remote{$_}} @uncached;
 
     return (\@local,\@remote);
+}
+
+# this subroutine makes sure that all the data sources get their
+# clone() methods called to inform them that we have crossed a
+# fork().
+sub clone_databases {
+    my $self   = shift;
+    my $tracks = shift;
+    my $source = $self->source;
+    my %dbs;
+    for my $label (@$tracks) {
+	my $db = eval {$source->open_database($label)};
+	next unless $db;
+	$dbs{$db} = $db;
+    }
+    eval {$_->clone()} foreach values %dbs;
 }
 
 #moved from Render.pm
@@ -882,8 +937,12 @@ sub run_local_requests {
     my %feature_file_offsets;
 
     
-    my @labels_to_generate = grep {$requests->{$_}->status ne 'AVAILABLE'} @$labels;
-    
+    my @labels_to_generate = @$labels;
+
+    foreach (@labels_to_generate) {
+	$requests->{$_}->lock();   # flag that request is in process
+    }
+
     my @ordinary_tracks    = grep {!$feature_files->{$_}} @labels_to_generate;
     my @feature_tracks     = grep {$feature_files->{$_} } @labels_to_generate;
 
@@ -1360,6 +1419,10 @@ sub get_cache_base {
 
 sub cache_time {
   my $self = shift;
+  if (@_) {
+      $self->{cache_time} = shift;
+  }
+  return $self->{cache_time} if exists $self->{cache_time};
   my $ct   = $self->source->global_setting('cache time');
   return $ct if defined $ct;  # hours
   return 1;                   # cache for one hour by default

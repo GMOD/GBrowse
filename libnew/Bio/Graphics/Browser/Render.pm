@@ -1102,7 +1102,8 @@ sub detail_tracks {
 ################## get renderer for this segment #########
 sub get_panel_renderer {
   my $self = shift;
-  my $seg  = shift or die "usage: \$self->get_panel_renderer(\$segment)";
+#  my $seg  = shift or die "usage: \$self->get_panel_renderer(\$segment)";
+  my $seg  = shift || $self->segment;
   return Bio::Graphics::Browser::RenderPanels->new(-segment  => $seg,
 						   -source   => $self->data_source,
 						   -settings => $self->state,
@@ -1133,6 +1134,40 @@ sub render_detailview {
 			   )
 	     )
       ).$drag_script;
+}
+
+sub render_deferred {
+    my $self    = shift;
+    my $seg     = shift ||  $self->segment;
+    my $labels  = shift || [$self->detail_tracks];
+    my $section = shift || 'detail';
+
+    my $renderer = $self->get_panel_renderer($seg);
+
+    my $requests   = $renderer->request_panels(
+	{
+	    labels           => $labels,
+	    feature_files    => $self->remote_sources,
+	    section          => $section,
+	    deferred         => 1,
+	}
+	);
+    return $requests;
+}
+
+sub render_deferred_track {
+    my $self      = shift;
+    my $cache_key = shift;
+    my $renderer = $self->get_panel_renderer;
+
+    my $base      = $renderer->get_cache_base();
+    my $cache     = Bio::Graphics::Browser::CachedTrack->new(-base => $base,
+							     -key  => $cache_key,
+	);
+    $cache->cache_time($renderer->cache_time * 60);
+    return unless $cache->status eq 'AVAILABLE';  # not available
+    my $result    = $renderer->render_tracks({$cache_key=>$cache});
+    return $result->{$cache_key};
 }
 
 

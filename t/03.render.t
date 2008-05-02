@@ -12,7 +12,7 @@ use IO::String;
 use CGI;
 use FindBin '$Bin';
 
-use constant TEST_COUNT => 79;
+use constant TEST_COUNT => 96;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 BEGIN {
@@ -287,17 +287,17 @@ my ($png)    = grep /tmpimages/,$panels->{Motifs} =~ /src="([^"]+\.png)"/g;
 ok($png);
 ok (-e '/tmp/gbrowse_testing/'.$png);
 
-$CGI::Q         = new CGI('name=ctgA:1..20000;label=Clones-Transcripts-Motifs-BindingSites-CleavageSites');
+$CGI::Q         = new CGI('name=ctgA:1..20000;label=Clones-Transcripts-Motifs-BindingSites-TransChip');
 $render->update_state;
 $s              = $render->region->segments;
 $panel_renderer = $render->get_panel_renderer($s->[0]);
 $panels         = $panel_renderer->render_panels({labels => [$render->detail_tracks]});
-ok(join ' ',(sort keys %$panels),'BindingSites CleavageSites Clones Motifs Transcripts','panels keys incorrect');
+ok(join ' ',(sort keys %$panels),'BindingSites TransChip Clones Motifs Transcripts','panels keys incorrect');
 ($png)          = grep /tmpimages/,$panels->{BindingSites} =~ /src="([^"]+\.png)"/g;
 ok ($png);
 ok (-e '/tmp/gbrowse_testing/'.$png);
 
-($png)          = grep /tmpimages/,$panels->{CleavageSites} =~ /src="([^"]+\.png)"/g;
+($png)          = grep /tmpimages/,$panels->{TransChip} =~ /src="([^"]+\.png)"/g;
 ok ($png);
 ok (-e '/tmp/gbrowse_testing/'.$png);
 

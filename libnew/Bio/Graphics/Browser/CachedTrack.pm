@@ -1,12 +1,13 @@
 package Bio::Graphics::Browser::CachedTrack;
 
-# $Id: CachedTrack.pm,v 1.2 2008-04-13 22:53:28 lstein Exp $
+# $Id: CachedTrack.pm,v 1.3 2008-05-02 20:09:27 lstein Exp $
 # This package defines a Bio::Graphics::Browser::Track option that manages
 # the caching of track images and imagemaps.
 
 use strict;
 use warnings;
 use Carp;
+use Fcntl ':flock';
 use File::Spec;
 use File::Path;
 use Digest::MD5 'md5_hex';
@@ -60,7 +61,7 @@ sub max_time {
 sub cache_time {
     my $self = shift;
     $self->{cache_time} = shift if @_;
-    return $self->{cache_time} || DEFAULT_CACHE_TIME;
+    return defined $self->{cache_time} ? $self->{cache_time} : DEFAULT_CACHE_TIME;
 }
 sub cachedir {
     my $self = shift;
@@ -83,7 +84,7 @@ sub datafile {
 sub generate_cache_key {
     my $self = shift;
     my @args = map {$_ || ''} grep {!ref($_)} @_;  # the map gets rid of uninit variable warnings
-    return md5_hex(@args);
+    return md5_hex(sort @args);
 }
 
 # lock the cache -- indicates that an update is in process
@@ -95,7 +96,9 @@ sub lock {
 	return if $self->status eq 'PENDING';
     }
     open F,">$dotfile" or croak "Can't open $dotfile: $!";
+    flock F,LOCK_EX;
     print F time();
+    flock F,LOCK_UN;
     close F;
     return 1;
 }
@@ -168,7 +171,9 @@ sub status {
     # waiting forever.
     if (-e $dotfile) {  
 	open F,$dotfile or croak "Couldn't open $dotfile: $!";
+	flock F,LOCK_SH;
 	my $timestamp = <F>;
+	flock F,LOCK_UN;
 	close F;
 	return 'PENDING' if time()-$timestamp < $self->max_time;
 	return 'DEFUNCT';
@@ -179,6 +184,15 @@ sub status {
     }
 }
 
+sub needs_refresh {
+    my $self   = shift;
+    my $status = $self->status;
+    return 1 if $status eq 'EMPTY';
+    return 1 if $status eq 'EXPIRED';
+    return 1 if $status eq 'DEFUNCT';
+    return;
+}
+
 sub expired {
     my $self      = shift;
     my $datafile  = shift;
@@ -187,6 +201,7 @@ sub expired {
 
     my $mtime    = (stat($datafile))[9];
     my $elapsed  = $time-$mtime;
+
     return $elapsed > $cache_time;
 }
 

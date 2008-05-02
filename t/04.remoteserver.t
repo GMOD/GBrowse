@@ -12,7 +12,7 @@ use IO::String;
 use CGI;
 use FindBin '$Bin';
 
-use constant TEST_COUNT => 79;
+use constant TEST_COUNT => 42;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;
@@ -106,12 +106,11 @@ for (1..3) {
 
 # alignments requires the server at 8100
 my $alignment_server = Bio::Graphics::Browser::Render::Server->new(LocalPort=>8100);
-# $alignment_server->debug(1);
 $alignment_server->run();
 
 # cleavage sites track requires the server at 8101
 my $cleavage_server  = Bio::Graphics::Browser::Render::Server->new(LocalPort=>8101);
-# $cleavage_server->debug(1);
+$cleavage_server->debug(0);
 $cleavage_server->run();
 
 $render->set_tracks(@labels);
@@ -125,6 +124,7 @@ for my $img (@images) {
     ok (-e $img && -s _);
 }
 
+# uncomment to see the images
 # system "xv @images";
 
 exit 0;

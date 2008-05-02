@@ -1,11 +1,12 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.7 2008-03-25 22:28:42 lstein Exp $
+# $Id: Browser.pm,v 1.8 2008-05-02 21:02:35 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
 use warnings;
 use base 'Bio::Graphics::FeatureFile';
 
+use File::Spec;
 use File::Path 'mkpath';
 use File::Basename 'dirname';
 use Text::ParseWords 'shellwords';
@@ -66,7 +67,7 @@ sub resolve_path {
   return unless $path;
   return $path if $path =~ m!^/!;  # absolute path
   my $base = $self->setting(general => "${path_type}_base") or return $path;
-  return "$base/$path";
+  return File::Spec->catfile($base,$path);
 }
 
 sub config_path {
@@ -104,7 +105,7 @@ sub tmpdir_info {
   my ($url,$path) = shellwords($self->setting('tmpimages'));
   $url  ||= 'tmp';
   $url    = $self->resolve_path($url,'url');
-  $path ||= "$ENV{DOCUMENT_ROOT}/$url";
+  $path ||= File::Spec->catfile($ENV{DOCUMENT_ROOT},$url);
   $path   = $self->resolve_path($path,'htdocs');
   ($url,$path);
 }
@@ -117,8 +118,8 @@ sub tmpdir    {
   my $path_b = $self->tmpdir_path;
   my $url_b  = $self->tmpdir_url;
 
-  my $tmpdir = "$path_b/$subpath";
-  my $url    = "$url_b/$subpath";
+  my $tmpdir = File::Spec->catfile($path_b,$subpath);
+  my $url    = File::Spec->catfile($url_b,$subpath);
 
   # we need to untaint tmpdir before calling mkpath()
   return unless $tmpdir =~ /^(.+)$/;

@@ -1102,7 +1102,6 @@ sub detail_tracks {
 ################## get renderer for this segment #########
 sub get_panel_renderer {
   my $self = shift;
-#  my $seg  = shift or die "usage: \$self->get_panel_renderer(\$segment)";
   my $seg  = shift || $self->segment;
   return Bio::Graphics::Browser::RenderPanels->new(-segment  => $seg,
 						   -source   => $self->data_source,

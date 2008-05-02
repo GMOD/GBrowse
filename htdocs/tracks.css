@@ -1,0 +1,19 @@
+.track            {  text-align: left }
+IMG.trackimg      {  
+                       margin-top: -10px;
+                       text-align: center;
+                  }
+.titlebar         {  background-color: #FFD39B;
+                     cursor: crosshair;
+                     z-index: 1;
+                     opacity: 1.0;
+                     font-size: 9pt;
+                     font-weight: bold;
+                  }
+.titlebar_inactive { background-color: #E0E0E0;
+                     cursor: crosshair;
+                     z-index: 1;
+                     opacity: 1.0;
+                     font-size: 9pt;
+                     font-weight: bold;
+                  }

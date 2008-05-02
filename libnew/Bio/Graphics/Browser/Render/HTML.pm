@@ -24,9 +24,9 @@ sub render_top {
   $title = $feature ? "$description: ".$feature->seq_id.":".$feature->start.'..'.$feature->end
     : $description;
 
-  $self->render_html_head($dsn,$title);
+  my $head = $self->render_html_head($dsn,$title);
   my $debug = "rendering ".scalar(@$features)." features";
-  return $title."<p>$debug</p>";
+  return $head.$title."<p>$debug</p>";
 }
 
 sub render_bottom {
@@ -54,12 +54,14 @@ sub render_navbar {
     ? '' : b($self->tr('Landmark')).':'.br().$searchform;
 
   my $plugin_form = join '',(
-			     start_form(-name=>'pluginform',-id=>'pluginform',-onSubmit=>'update_segment(Form.serialize(this)); return false'),
+			     start_form(-name=>'pluginform',-id=>'pluginform',
+					-onSubmit=>'update_segment(Form.serialize(this)); return false'),
 			     $self->plugin_menu(),
 			     end_form);
 
   my $source_form = join '',(
-			     start_form(-name=>'sourceform',-id=>'sourceform',-onSubmit=>'update_segment(this); return false'),
+			     start_form(-name=>'sourceform',-id=>'sourceform',
+					-onSubmit=>'update_segment(this); return false'),
 			     $self->source_menu(),
 			     end_form
 			    );

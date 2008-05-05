@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.66 2008-04-22 13:56:53 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.67 2008-05-05 19:26:10 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2478,7 +2478,7 @@ sub handle_uploads {
     handle_quickie($page_settings,\@data,\@styles);
   }
 
-  if ($file_action && param($file_action) eq 'Delete File') {
+  if ($file_action && param($file_action) eq $CONFIG->tr('Delete')) {
     $UPLOADED_SOURCES->clear_file($file);
     $REMOTE_SOURCES->delete_source($file);
   }

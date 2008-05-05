@@ -1,6 +1,7 @@
 # do not remove the { } from the top and bottom of this page!!!
 # translated by Linus Taejoon Kwon (linusben <at> bawi <dot> org)
-# Last modified : 2002-10-06
+# modified by Sue Rhee <rhee@acoma.stanford.edu>
+# Last modified : 2008-5-05
 
 {
 
@@ -372,5 +373,161 @@ END
  SMALL_INTERVAL    => '작은 간격을 %s bp로 재조정합니다',
 
  NO_SOURCES        => '읽을 수 있는 데이터 소스가 설정되어 있지 않습니다. 볼 수 있는 권한이 주어지지 않은 것 같습니다.',
+
+   ABOUT => '에 관하여',
+
+   ADD_YOUR_OWN_TRACKS => '당신의 선로를 추가하십시오',
+
+   ALPHABETIC => '알파벳순',
+
+   ANNOTATE => '현주하십시요',
+
+   BACKGROUND_COLOR => '배경 색깔',
+
+   BENEATH => '아래에',
+
+   BETWEEN => '사이',
+
+   BROWSE => '검색하십시요',
+
+   CACHE_TRACKS => '선로를 저장하십시요',
+
+   CANCEL => '취소하십시요',
+
+   CHANGE => '전환하십시요',
+
+   CLEAR_HIGHLIGHTING => '강조 표시를 제거하십시요',
+
+   CONFIGURE => '형성하십시요',
+
+   CONFIGURE_TRACKS => '선로를 형성하십시요',
+
+   DATA_SOURCE => '데이터 송신부',
+
+   DEFAULT => '디폴트',
+
+   DELETE => '감소',
+
+   DISPLAY_SETTINGS => '디스플레이 설정',
+
+   DOWNLOAD => '다운받기',
+
+   DOWNLOAD_DATA => '데이터를 다운받으십시요',
+
+   DOWNLOAD_FILE => '파일을 다운받으십시요',
+
+   DRAGGABLE_TRACKS => '끌을수있는선로들',
+
+   DUMP => '덤프',
+
+   DUMPS => '덤프들',
+
+   DYNAMIC_VALUE => '동적한 수적인 양',
+
+   EDIT => '편집',
+
+   EDIT_TITLE => '편집제목',
+
+   EXAMPLES => '예제들',
+
+   EXTERNAL_TRACKS => '외부적의선로들',
+
+   FEATURES_TO_HIGHLIGHT => '강조 표시를 할특징들',
+
+   FEATURES_TO_HIGHLIGHT_HINT => '강조 표시를 할특징들 조언',
+
+   FG_COLOR => '전면 색깔',
+
+   FILE_INFO => '파일정보',
+
+   FIND => '찾기',
+
+   FLIP => '뒤집기',
+
+   FOOTER_1 => '꼬리말',
+
+   GLYPH => '글리프',
+
+   GO => '가십시요',
+
+   HEIGHT => '높이',
+
+   HELP => '돕기',
+
+   HELP_FORMAT => '도움서식',
+
+   HIGHLIGHT => '강조표시',
+
+   IMAGE_WIDTH => '그림너비',
+
+   INVALID_SOURCE => '무효 출처',
+
+   KEY_POSITION => '선로이름 자리',
+
+   LEFT => '왼쪽',
+
+   LINEWIDTH => '선너비',
+
+   NEW => '새로운',
+
+   NO_TRACKS => '선로 없음',
+
+   OPTIONS_RESET => '옵션 복귀',
+
+   OPTIONS_UPDATED => '옵션갱신?음',
+
+   OVERVIEW_TRACKS => '선로개요',
+
+   PACKING => '패킹',
+
+   PRESETS => '사전 조절',
+
+   REDISPLAY => '디스플레이 다시하기',
+
+   REGION => '영역',
+
+   REGIONS_TO_HIGHLIGHT => '강조표시할 영역',
+
+   REGIONS_TO_HIGHLIGHT_HINT => '강조표시할 영역 조언',
+
+   REGION_SIZE => '영역크기',
+
+   REGION_TRACKS => '영역 선로들',
+
+   REMOTE_TITLE => '원격제목',
+
+   REMOTE_URL => '원격URL ',
+
+   RESET => '복귀',
+
+   RIGHT => '오른쪽',
+
+   SCROLL => '스크롤',
+
+   SEARCH => '찾기',
+
+   SET_OPTIONS => '설정의옵션들',
+
+   SHOW_GRID => '격자 눈금을 보이시요',
+
+   SHOW_TOOLTIPS => '도구조언을보이시요',
+
+   TRACKS => '선로들',
+
+   TRACK_NAMES => '선로의 이름',
+
+   UPDATE => '갱신하십시요',
+
+   UPDATE_URLS => 'URL을 갱신하십시요',
+
+   UPLOAD => '업로드',
+
+   UPLOAD_FILE => '파일을 업로드하십시요',
+
+   UPLOAD_TITLE => '제목을 업로드하십시요',
+
+   UPLOAD_TRACKS => '선로를 업로드하십시요',
+
+   VARYING => '다양한',
 
 };

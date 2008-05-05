@@ -151,8 +151,17 @@ sub featurefile {
 
       # stanza
       push @lines,"[$track]";
-      push @lines,"glyph       = ".($options->{visibility}=~/pack/
-				    ? 'wiggle_density' : 'wiggle_xyplot');
+      if (my $graph_type = $options->{glyph}) {
+	if ($graph_type =~ 'box') {
+	  push @lines, "glyph       = wiggle_box";
+	}
+	else {
+	  push @lines,"glyph       = ".($graph_type =~/density/ ? 'wiggle_density' : 'wiggle_xyplot');
+	}
+      }
+      else {
+	push @lines,"glyph       = ".($options->{visibility}=~/pack/ ? 'wiggle_density' : 'wiggle_xyplot');
+      }
       push @lines,"key         = $options->{name}"
 	if $options->{name};
       push @lines,"description = $options->{description}"

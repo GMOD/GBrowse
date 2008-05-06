@@ -180,6 +180,7 @@ use constant HEADER_LEN => 256;
 use constant HEADER => '(Z50LFFLFF)@'.HEADER_LEN; # seqid, step, min, max, span, mean, stdev
 use constant BODY   => 'C';
 use constant DEBUG  => 1;
+use constant DEFAULT_SMOOTHING => 'max';
 
 sub new {
   my $class          = shift;
@@ -259,7 +260,7 @@ sub trim  { shift->_option('trim',@_)  }
 
 sub smoothing {
   my $self = shift;
-  my $d    = $self->{smoothing} || 'mean';
+  my $d    = $self->{smoothing} || DEFAULT_SMOOTHING;
   $self->{smoothing} = shift if @_;
   $d;
 }

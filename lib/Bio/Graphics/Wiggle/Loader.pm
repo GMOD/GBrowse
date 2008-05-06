@@ -152,7 +152,7 @@ sub featurefile {
       # stanza
       push @lines,"[$track]";
       if (my $graph_type = $options->{glyph}) {
-	if ($graph_type =~ 'box') {
+	if ($graph_type =~ /box/) {
 	  push @lines, "glyph       = wiggle_box";
 	}
 	else {
@@ -209,6 +209,7 @@ sub featurefile {
     my @seqid  = sort keys %$seqids;
 
     for my $seqid (@seqid) {
+      $seqid or next;
       my $attributes = join ';',(@attributes,"wigfile=$seqids->{$seqid}{wigpath}");
       if ($type eq 'gff3') {
 	push @lines,join "\t",($seqid,$source,$method,
@@ -256,6 +257,7 @@ sub load {
     }
 
     if (/^\S+\s+\d+\s+\d+\s+-?[\dEe.]+/) {
+      $self->process_first_bedline($_);
       $format    = 'bed';
     }
 
@@ -312,6 +314,13 @@ sub process_variable_step_declaration {
   $self->{track_options} = \%options;
 }
 
+sub process_first_bedline {
+  my $self  = shift;
+  my $line  = shift;
+  my @tokens    = shellwords($line);
+  $self->{track_options} = {chrom => $tokens[0]};
+}
+
 sub current_track {
   my $self = shift;
   return $self->{tracks}{$self->{trackname}} ||= {};
@@ -352,7 +361,6 @@ sub minmax {
       $value = $transform->($self,$value) if $transform;
       $stats->add_data($value);
   }
-
 
   $seqids->{$chrom}{min}    = $stats->min();
   $seqids->{$chrom}{max}    = $stats->max();
@@ -536,14 +544,14 @@ sub wigfile {
     my @stats;
     foreach (qw(min max mean stdev)) {
 	my $value = $self->current_track->{seqids}{$seqid}{$_} ||
-	    $self->{FILEWIDE_STATS}{$_};
+	    $self->{FILEWIDE_STATS}{$_} || next;
 	push @stats,($_=>$value);
-    }
+   }
     my $step = $self->{track_options}{step} || 1;
     my $span = $self->{track_options}{span} || 
 	$self->{track_options}{step} || 
 	1;
-    my $trim      = $self->current_track->{display_options}{trim}      || 'stdev2';
+    my $trim      = $self->current_track->{display_options}{trim};#      || 'stdev2';
     my $transform = $self->current_track->{display_options}{transform};
     my $wigfile = Bio::Graphics::Wiggle->new(
 					     $path,

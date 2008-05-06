@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.80 2008-04-28 18:00:58 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.81 2008-05-06 14:50:18 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -2700,7 +2700,9 @@ sub map_array {
   my $map = [$name];
 
   for (@$data) {
-    my ($type,$x1,$y1,$x2,$y2,%atts) = split "\t";
+    my ($type,$x1,$y1,$x2,$y2,@atts) = split "\t";
+    pop @atts if @atts % 2;
+    my %atts = @atts;
     push @$map, [$type,$x1,$y1,$x2,$y2,\%atts];    
   }
   return $map;

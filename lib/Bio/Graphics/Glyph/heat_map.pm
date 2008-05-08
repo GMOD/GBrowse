@@ -1,5 +1,5 @@
 package Bio::Graphics::Glyph::heat_map;
-#$Id: heat_map.pm,v 1.4.2.3 2007-10-17 01:48:22 lstein Exp $
+#$Id: heat_map.pm,v 1.4.2.4 2008-05-08 03:07:18 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics::Glyph::minmax;
@@ -611,10 +611,8 @@ Sheldon McKay E<lt>mckays@cshl.eduE<gt>
 
 Copyright (c) 2006 Cold Spring Harbor Laboratory
 
-This package and its accompanying libraries is free software; you can
-redistribute it and/or modify it under the terms of the GPL (either
-version 1, or at your option, any later version) or the Artistic
-License 2.0.  Refer to LICENSE for the full license text. In addition,
-please see DISCLAIMER.txt for disclaimers of warranty.
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.  See DISCLAIMER.txt for 
+disclaimers of warranty.
 
 =cut

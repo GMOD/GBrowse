@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.3.6.1.2.5.2.6 2008-03-11 21:02:30 sheldon_mckay Exp $
+# $Id: ideogram.pm,v 1.3.6.1.2.5.2.7 2008-05-08 03:07:18 sheldon_mckay Exp $
 # Glyph to draw chromosome ideograms
 
 use strict qw/vars refs/;
@@ -20,7 +20,9 @@ sub draw {
 
   # Draw the whole chromosome first (in case
   # there are missing data).
-  $self->draw_component(@_) unless @parts == 1;
+  my $draw_chromosome = @parts > 1 || $parts[0]->can('level') && $parts[0]->level;
+  $self->draw_component(@_) if $draw_chromosome;
+
 
   $parts[0]->{single}++ if @parts == 1;
 
@@ -57,9 +59,12 @@ sub draw_component {
   my $feat = $self->feature;
   my $arcradius = $self->option('arcradius') || 7;
   my ( $x1, $y1, $x2, $y2 ) = $self->bounds(@_);
+
+  # The band has to be at least one pixel wide
+  $x2++ if $x2 == $x1;
   
   # force odd width so telomere arcs are centered
-  $y2 ++ if ($y2 - $y1) % 2;
+  $y2++ if ($y2 - $y1) % 2;
   
   my ($stain) = $feat->attributes('stain') || $feat->attributes('Stain');
 
@@ -133,7 +138,7 @@ sub draw_cytoband {
   my ( $gd, $x1, $y1, $x2, $y2, $bgcolor, $fgcolor) = @_;
 
   # draw the filled box
-  $self->filled_box($gd, $x1, $y1, $x2, $y2, $bgcolor, $bgcolor);
+  $self->filled_box($gd, $x1, $y1, $x2, $y2, $bgcolor, $bgcolor) if defined $bgcolor;
   
   # outer border
   $gd->line($x1,$y1,$x2,$y1,$fgcolor);

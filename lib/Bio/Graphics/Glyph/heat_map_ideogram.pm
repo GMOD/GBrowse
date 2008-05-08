@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::heat_map_ideogram;
 
-# $Id: heat_map_ideogram.pm,v 1.5.2.7 2007-10-30 08:10:44 sheldon_mckay Exp $
+# $Id: heat_map_ideogram.pm,v 1.5.2.8 2008-05-08 03:07:18 sheldon_mckay Exp $
 # Glyph to draw chromosome heat_map ideograms
 
 use strict qw/vars refs/;
@@ -14,7 +14,7 @@ use GD;
 sub draw {
   my $self = shift;
 
-  my @parts = $self->parts;
+  my @parts = sort {$a->end <=> $b->end} $self->parts;
   @parts = $self if !@parts && $self->level == 0;
   return $self->SUPER::draw(@_) unless @parts;
   $self->{single}++ if @parts == 1;
@@ -22,19 +22,22 @@ sub draw {
 
   # Draw the whole chromosome first (in case 
   # there are missing data).
-  $self->draw_component($self,@_) unless @parts == 1;
+  my $draw_chromosome = @parts > 1 || $parts[0]->can('level') && $parts[0]->level;   
+  $self->draw_component($self,@_) if $draw_chromosome;
 
   # Draw centromeres and telomeres last
   my @last;
+  $self->{_last_band} = $parts[-1] if @parts > 1;;
   for my $part (@parts) {
     my ($stain) = $part->feature->attributes('stain') || $part->feature->attributes('Stain');
     push @last, $part and next if
         $stain eq 'stalk' ||
         $part->feature->method =~ /centromere/i ||
         $part->feature->start <= 1 ||
-        $part->feature->stop >= $self->panel->end - 1000;
+        $part eq $self->{_last_band};
     $self->draw_component($part,@_);
   }
+
 
   for my $part (@last) {
     my $tile = $self->create_tile('right') 
@@ -48,8 +51,12 @@ sub draw_component {
   my $glyph = shift;
   my $gd    = shift;
   my ( $x1, $y1, $x2, $y2 ) = $glyph->bounds(@_);
+
+  # The band has to be at least one pixel wide
+  $x2++ if $x2 == $x1;
+
   # force odd width so telomere arcs are centered 
-  $y2 ++ if ($y2 - $y1) % 2;
+  $y2++ if  ($y2 - $y1) % 2;
   
   my $arcradius = $self->option('arcradius') || 7;
   my $feature   = $glyph->feature;
@@ -62,19 +69,10 @@ sub draw_component {
   my ($stain) = $glyph->feature->attributes('stain') || $glyph->feature->attributes('Stain');
   return if $stain && $stain ne 'stalk' && !$is_cent;
      
-  # Set the bgcolor
-  unless ($is_cent || defined $score) {
-    my @rgb = (255,255,255);
-    $bgcolor = $self->color_index(@rgb);
-  }
-  else {
+  if ($score > $self->min_score) {
     my @rgb = $self->calculate_color($score);
     $bgcolor = $self->color_index(@rgb);
   }
-
-  
-  # bgcolorindex must return true
-  $bgcolor ||= $self->adjust_bgcolor;
 
   # Is this a centromere?
   if ( $is_cent ) {
@@ -98,8 +96,9 @@ sub draw_component {
     $self->draw_telomere( $gd, $x1, $y1, $x2, $y2, $bgcolor, $fgcolor,
 			  $arcradius, $status );
   }
-  elsif ( $feature->stop >= $self->panel->end - 1000 ) {
+  elsif ( $glyph eq $self->{_last_band} ) {
     # right (bottom)
+    warn "TELOMRERE";
     my $status = 1 if $self->panel->flip;
     $self->draw_telomere( $gd, $x1, $y1, $x2, $y2, $bgcolor, $fgcolor,
 			  $arcradius, $status );
@@ -108,23 +107,6 @@ sub draw_component {
   else {
     $self->draw_cytoband( $gd, $x1, $y1, $x2, $y2, $bgcolor, $fgcolor );
   }
-}
-
-
-# Nudge the color over just a bit if the color index
-# is 0 (panel bgcolor).  This overcomes default bgcolor
-# and fgcolor when the index does not return true
-sub adjust_bgcolor {
-  my $self = shift;
-  my $gd   = $self->panel->gd;
-  my @rgb = $self->panel->rgb($self->panel->bgcolor);
-
-  for (@rgb) {
-    $_++ if $_  < 255;
-    $_-- if $_ == 255;
-  }
-  
-  return $gd->colorResolve(@rgb);
 }
 
 sub fgcolor {

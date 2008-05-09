@@ -68,6 +68,8 @@ The following options are accepted:
 
  --base=<path>            Same as "--path".
 
+ --trackname              specify the trackname base for the wigfile creation
+
  --help                   This documentation.
 
 This script will accept a variety of option styles, including
@@ -193,7 +195,8 @@ use Getopt::Long;
 use Pod::Usage;
 use File::Spec;
 
-my ($show_help, $method, $source, $use_gff3, $use_featurefile, $base_directory);
+my ($show_help, $method, $source, $use_gff3, $use_featurefile, 
+    $base_directory, $trackname);
 
 GetOptions(
 	   'h|help'              => \$show_help,             # Show help and exit	
@@ -201,7 +204,8 @@ GetOptions(
 	   'source=s'            => \$source,
 	   'gff3'                => \$use_gff3,
 	   'featurefile'         => \$use_featurefile,
-	   'base|path=s'         => \$base_directory
+	   'base|path=s'         => \$base_directory,
+	   't|trackname:s'       => \$trackname,
 	  )
   or pod2usage(-verbose=>2);
 pod2usage(-verbose=>2) if $show_help;
@@ -219,7 +223,8 @@ unless (defined $base_directory) {
 
 my $loader = Bio::Graphics::Wiggle::Loader->new($base_directory)
   or die "could not create loader";
-
+# specify the trackname base if provided
+$loader->{trackname} = $trackname if defined $trackname;
 my $type = $use_featurefile ? 'featurefile' : 'gff3';
 
 while (my $file = shift) {

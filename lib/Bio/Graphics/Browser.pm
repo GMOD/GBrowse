@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.81 2008-05-06 14:50:18 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.82 2008-05-09 21:53:12 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -975,78 +975,71 @@ sub render_draggable_tracks {
     my $class     = $label eq '__scale__' ? 'scale' : 'track';
     my $icon      = $collapsed ? $plus : $minus;
 
-    if ($do_drag || $img_map) {
-      my $config_click;
-      if ($label =~ /^plugin:/) {
+    my $config_click;
+    if ($label =~ /^plugin:/) {
 	my $help_url = "url:?plugin=".CGI::escape($label).';plugin_do=Configure';
 	$config_click = "balloon.showTooltip(event,'$help_url',1,650)";
-      }
+    }
 
-      elsif ($label =~ /^file:/) {
+    elsif ($label =~ /^file:/) {
 	my $url  = "?modify.${label}=".$self->tr('Edit');
 	$config_click = "window.location='$url'";
-      }
-
-      else {
-	my $help_url = "url:?configure_track=".CGI::escape($label);
-	$help_url   .= ";rand=".rand(); # work around caching bugs... # if CGI->user_agent =~ /MSIE/;
-	$config_click = "balloon.showTooltip(event,'$help_url',1,650)";
-      }
-
-
-      my $title       = $label =~ /\w+:(.+)/ && $label !~ /:(overview|region)/  # a plugin
-                        ? $1
-                        : $self->config->setting($label=>'key') || $label; # configured
-
-      if ($self->setting(general=>'show track categories')) {
-	my $cat = $self->config->setting($label=>'category');
-	$title .= " ($cat)" if $cat;
-      }
-	   
-      my $titlebar    = $label eq '__scale__' || $label eq '__all__'
-	                 ? ''
-			 : span({-class=>$collapsed ? 'titlebar_inactive' : 'titlebar',-id=>"${element_id}_title"},
-				img({-src         =>$icon,
-				     -id          => "${element_id}_icon",
-				     -onClick     =>"collapse('$element_id')",
-				     -style       => 'cursor:pointer',
-				    }),
-				img({-src         => $help,
-				     -style       => 'cursor:pointer',
-				     -onmousedown => $config_click
-				    }),
-				span({-class=>'draghandle'},$title)
-			       );
-
-      my $pad_img  = img({-src   => $pad_url,
-			  -width => $pw,
-			  -height=> $ph,
-			  -border=> 0,
-			  -id    => "${element_id}_pad",
-			  -style => $collapsed ? "display:inline" : "display:none",
-			 });
-
-      (my $munge_label = $label) =~ s/_/%5F/g;  # freakin' scriptaculous uses _ as a delimiter!!!
-
-      $img_map = qq(\n<map name="${element_id}_map" id="${element_id}_map">$img_map\n</map>\n);
-
-      push @result, (is_safari()
-		     ?
-		     "\n".div({-id=>"${section}_track_${munge_label}",-class=>$class},
-			      $titlebar,
-			      div({-align=>'center',-style=>'margin-top: -18px'},$img.$pad_img),
-			      $img_map||'')
-		     :
-		     "\n".div({-id=>"${section}_track_${munge_label}",-class=>$class},
-			      div({-align=>'center'},$titlebar.$img.$pad_img),
-			      $img_map||'')
-		     );
-
     }
 
     else {
-      push @result,div({-id=>"track_${label}",-class=>$class},$img);
+	my $help_url = "url:?configure_track=".CGI::escape($label);
+	$help_url   .= ";rand=".rand(); # work around caching bugs... # if CGI->user_agent =~ /MSIE/;
+	$config_click = "balloon.showTooltip(event,'$help_url',1,650)";
     }
+
+
+    my $title       = $label =~ /\w+:(.+)/ && $label !~ /:(overview|region)/  # a plugin
+	? $1
+	: $self->config->setting($label=>'key') || $label; # configured
+    
+    if ($self->setting(general=>'show track categories')) {
+	my $cat = $self->config->setting($label=>'category');
+	$title .= " ($cat)" if $cat;
+    }
+	   
+    my $titlebar    = $label eq '__scale__' || $label eq '__all__'
+	? ''
+	: span({-class=>$collapsed ? 'titlebar_inactive' : 'titlebar',-id=>"${element_id}_title"},
+	       img({-src         =>$icon,
+		    -id          => "${element_id}_icon",
+		    -onClick     =>"collapse('$element_id')",
+		    -style       => 'cursor:pointer',
+		   }),
+	       img({-src         => $help,
+		    -style       => 'cursor:pointer',
+		    -onmousedown => $config_click
+		   }),
+	       span({-class=>'draghandle'},$title)
+	);
+    
+    my $pad_img  = img({-src   => $pad_url,
+			-width => $pw,
+			-height=> $ph,
+			-border=> 0,
+			-id    => "${element_id}_pad",
+			-style => $collapsed ? "display:inline" : "display:none",
+		       });
+
+    (my $munge_label = $label) =~ s/_/%5F/g;  # freakin' scriptaculous uses _ as a delimiter!!!
+
+      $img_map = qq(<map name="${element_id}_map" id="${element_id}_map">$img_map</map>\n);
+
+    push @result, (is_safari()
+		   ?
+		   "\n".div({-id=>"${section}_track_${munge_label}",-class=>$class},
+			    $titlebar,
+			    div({-align=>'center',-style=>'margin-top: -18px'},$img.$pad_img),
+			    $img_map||'')
+		   :
+		   "\n".div({-id=>"${section}_track_${munge_label}",-class=>$class},
+			    div({-align=>'center'},$titlebar.$img.$pad_img),
+			    $img_map||'')
+    );
 
   }
 

@@ -112,7 +112,8 @@ sub new {
   return bless {
 		base            => $base,
 		tracks          => {},
-		trackname       => 'track000',
+		trackname       => 'track',
+	        tracknum        => '000',
 		track_options   => {},
 	       },ref $class || $class;
 }
@@ -288,7 +289,7 @@ sub process_track_line {
   my %options = map {split '='} @tokens;
   $options{type} eq 'wiggle_0' or croak "invalid/unknown wiggle track type $options{type}";
   delete $options{type};
-  $self->{trackname}++;
+  $self->{tracknum}++;
   $self->current_track->{display_options} = \%options;
 }
 
@@ -323,7 +324,7 @@ sub process_first_bedline {
 
 sub current_track {
   my $self = shift;
-  return $self->{tracks}{$self->{trackname}} ||= {};
+  return $self->{tracks}{$self->{tracknum}} ||= {};
 }
 
 sub minmax {
@@ -538,9 +539,10 @@ sub wigfile {
   my $self  = shift;
   my $seqid = shift;
   my $ts    = time();
-  my $current_track = $self->{trackname};
+  my $current_track = $self->{tracknum};
+  my $tname          = $self->{trackname};
   unless (exists $self->current_track->{seqids}{$seqid}{wig}) {
-    my $path    = File::Spec->catfile($self->{base},"$current_track.$seqid.$ts.wig");
+    my $path    = File::Spec->catfile($self->{base},"$tname\_$current_track.$seqid.$ts.wig");
     my @stats;
     foreach (qw(min max mean stdev)) {
 	my $value = $self->current_track->{seqids}{$seqid}{$_} ||

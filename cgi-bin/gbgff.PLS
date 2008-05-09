@@ -47,7 +47,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbgff.PLS,v 1.1.2.4 2008-03-19 14:43:41 sheldon_mckay Exp $
+# $Id: gbgff.PLS,v 1.1.2.5 2008-05-09 22:36:10 stajich Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -64,10 +64,6 @@ use strict;
 use warnings;
 
 use vars qw($CONF_DIR $VERSION);
-
-use lib '/home/lstein/projects/Generic-Genome-Browser/lib',
-  '/home/lstein/projects/bioperl-live'
-  ;
 
 use CGI 'param','path_info','header';
 use Bio::Graphics::FeatureFile;

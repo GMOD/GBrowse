@@ -180,6 +180,8 @@ END
    ALPHABETIC => 'Tri alphabétique',
 
    VARYING => 'Pas de tri',
+   
+   SHOW_GRID    => 'Voir la grille',
 
    SET_OPTIONS => 'Configurer les pistes...',
 
@@ -404,5 +406,15 @@ END
  DYNAMIC_VALUE    => 'Calcul dynamique',
 
  CHANGE           => 'Changement',
+
+ DRAGGABLE_TRACKS  => 'Pistes déplaçables',
+
+ CACHE_TRACKS      => 'Piste en cache',
+
+ SHOW_TOOLTIPS     => 'Voir les indications',
+
+ OPTIONS_RESET     => 'Tous les paramètres de la page ont été remis à leur valeur par défaut',
+
+ OPTIONS_UPDATED   => 'Une nouvelle configuration est utilisée ; tous les paramètres de la page ont été remis à leur valeur par défaut',
 
 };

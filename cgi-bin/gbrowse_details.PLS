@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.4 2008-01-15 22:57:45 scottcain Exp $
+# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.5 2008-05-10 13:56:46 scottcain Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -110,6 +110,8 @@ if (defined $rmt) {
   print end_html;
   exit 0;
 }
+
+print_header(-charset=>$CONFIG->tr('CHARSET'));
 
 print_top("GBrowse Details: $head_name");
 print $CONFIG->header || h1("$head_name Details");

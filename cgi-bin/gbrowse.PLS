@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.67 2008-05-05 19:26:10 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.68 2008-05-10 13:56:46 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -190,6 +190,8 @@ if (param('reset')) {
 } else {
   $cookies = [$cookie];
 }
+
+print_header(-charset=>$CONFIG->tr('CHARSET'));
 
 # ASYNCHRONOUS EVENTS HANDLED HERE
 # we get here on the AJAX-style asynchronous setting of labels
@@ -337,9 +339,7 @@ handle_uploads($page_settings) || exit 0 unless $CONFIG->section_setting('upload
 
 ## UPDATING THE PERSISTENT SETTINGS##############################################################
 
-print_header(-cookie => $cookies,
-	     -charset=>$CONFIG->tr('CHARSET'),
-	    );
+print_header(-cookie => $cookies);
 
 if (request_method eq 'HEAD') {exit 0}
 

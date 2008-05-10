@@ -382,4 +382,14 @@ END
 
  CHANGE           => 'Cambiar',
 
+ DRAGGABLE_TRACKS  => 'Pistas movibles',
+
+ CACHE_TRACKS      => 'Esconder pistas',
+
+ SHOW_TOOLTIPS     => 'Mostrar sugerencias de uso',
+
+ OPTIONS_RESET     => 'Todos los ajustes de p‡gina han sido reinicializados con sus valores originales',
+
+ OPTIONS_UPDATED   => 'Una nueva configuración del sitio est‡ en efecto; todos los ajustes de p‡gina han sido reinicializados con sus valores originales',
+
 };

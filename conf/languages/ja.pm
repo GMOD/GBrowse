@@ -2,255 +2,264 @@
 {
 
    # Translated by Toshiaki Katayama <k@bioruby.org>
-   # Sat Jun 12 23:11:24 JST 2004
+   # created Sep 12 10:09:02 JST 2002
+   # updated Sep 30 18:48:57 JST 2003
+   # updated Oct 30 10:18:41 JST 2003
+   # updated Jun 12 23:11:24 JST 2004
+   # updated Jun 14 15:33:50 JST 2005
+   # updated Oct 23 09:38:47 JST 2005
+   # updated Jan  9 02:48:37 JST 2008
+   # updated May  5 19:31:40 JST 2008
 
-   CHARSET => 'euc-jp',
+   CHARSET => 'UTF-8',
 
    #----------
    # MAIN PAGE
    #----------
 
-   PAGE_TITLE => '���Υ�֥饦����',
+   PAGE_TITLE => 'ゲノムブラウザー',
 
    SEARCH_INSTRUCTIONS => <<END,
-�����̾����������̾�����Υ��ΰ��֡�
-����¾�Υ��ɥޡ����ʤɤ�ȤäƸ������ޤ���
-�磻��ɥ�����ʸ���Ȥ��� * ��Ȥ����Ȥ��Ǥ��ޤ���
+配列の名前、遺伝子名、ゲノム上の位置、
+その他のランドマークなどを使って検索します。
+ワイルドカード文字として * を使うことができます。
 END
 
    NAVIGATION_INSTRUCTIONS => <<END,
-�롼�顼��ǥ���å��������֤��濴�ˤʤ�ޤ���
-����������ȥ�����ܥ����ȤäƳ���Ψ�Ȱ��֤��ѹ����ޤ���
+ルーラー上でクリックした位置が中心になります。
+スクロールとズームボタンを使って拡大率と位置を変更します。
 END
 
    EDIT_INSTRUCTIONS => <<END,
-�����ǥ��åץ����ɤ������Υơ������Υǡ������Խ����ޤ���
-�ե�����ɴ֤���ڤ�ˤϥ��֤䥹�ڡ�����Ȥ����Ȥ��Ǥ��ޤ�����
-�ե�����ɼ��Τ�����ʸ����ޤ���ˤϡ�
-�ե�����ɤ򥷥󥰥�ޤ��ϥ��֥륯�����ȤǰϤ�ɬ�פ�����ޤ���
+ここでアップロードしたアノテーションのデータを編集します。
+フィールド間を区切るにはタブやスペースを使うことができますが、
+フィールド自体が空白文字を含む場合には、
+フィールドをシングルまたはダブルクォートで囲む必要があります。
 END
 
-   SHOWING_FROM_TO   => '%s ���ϰϤ� %s ����ɽ���������ֹ� %s ���� %s',
+   SHOWING_FROM_TO   => '%s の範囲を %s から表示、塩基番号 %s から %s',
 
-   INSTRUCTIONS      => '����',
+   INSTRUCTIONS      => '説明',
 
-   HIDE              => '����',
+   HIDE              => '隠す',
 
-   SHOW              => 'ɽ��',
+   SHOW              => '表示',
 
-   SHOW_INSTRUCTIONS => '������ɽ��',
+   SHOW_INSTRUCTIONS => '説明を表示',
 
-   HIDE_INSTRUCTIONS => '�����򱣤�',
+   HIDE_INSTRUCTIONS => '説明を隠す',
 
-   SHOW_HEADER       => '�Хʡ���ɽ��',
+   SHOW_HEADER       => 'バナーを表示',
 
-   HIDE_HEADER       => '�Хʡ��򱣤�',
+   HIDE_HEADER       => 'バナーを隠す',
 
-   LANDMARK	     => '���ɥޡ����ޤ����ΰ�',
+   LANDMARK	     => 'ランドマークまたは領域',
 
-   BOOKMARK          => '����ɽ����֥å��ޡ���',
+   BOOKMARK          => 'この表示をブックマーク',
 
-   IMAGE_LINK        => '���β����ؤΥ��',
+   IMAGE_LINK        => 'この画像へのリンク',
 
-   SVG_LINK          => '���ʼ�SVG����',
+   SVG_LINK          => '高品質SVG画像',
 
    SVG_DESCRIPTION => <<END,
 <p>
-�� <a href="%s" target="_blank">SVG �����򿷤���������ɥ���ɽ��</a></p>
+→ <a href="%s" target="_blank">SVG 画像を新しいウィンドウで表示</a></p>
 <p>
-���Υ�󥯤򥯥�å������ SVG (Scalable Vector Graphic) �ե����ޥåȤβ�����
-��������ޤ���SVG �����ˤ� jpeg �� png �ʤɤΥ饹����������Ӥ���
-���Τ褦������������ޤ���
+このリンクをクリックすると SVG (Scalable Vector Graphic) フォーマットの画像が
+生成されます。SVG 画像には jpeg や png などのラスタ画像と比較して
+次のような利点があります。
 </p>
 <ul>
-<li>�����٤����ˤ�������ͳ�˥��������ѹ��Ǥ���
-<li>����Ū�ʲ����������եȤ����Ѥ��ơ��ե������㡼���Ȥ˼�ͳ���Խ����Ǥ���
-<li>��ʸ����Ѥʤɡ�ɬ�פ˱����� EPS �ե����ޥåȤ��Ѵ��Ǥ���
+<li>解像度を犠牲にせず、自由にサイズを変更できる
+<li>一般的な画像処理ソフトを利用して、フィーチャーごとに自由な編集ができる
+<li>論文投稿用など、必要に応じて EPS フォーマットに変換できる
 </ul>
 <p>
-SVG �����򸫤뤿��ˤϡ�Adobe SVG browser �ץ饰����ʤɤ� SVG �б�
-�֥饦�������Խ����뤿��ˤϡ�Adobe Illustrator �ʤɤΥ��եȥ�������
-ɬ�פˤʤ�ޤ���
+SVG 画像を見るためには、Adobe SVG browser プラグインなどの SVG 対応
+ブラウザが、編集するためには、Adobe Illustrator などのソフトウェアが
+必要になります。
 </p>
 <ul>
-<li> Adobe �� SVG browser �ץ饰����: <a
-href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Macintosh">Macintosh��</a>
+<li> Adobe の SVG browser プラグイン: <a
+href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Macintosh">Macintosh用</a>
 | <a
-href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Windows">Windows��</a>
-<li> Linux �桼���� <a href="http://xml.apache.org/batik/">Batik SVG Viewer</a>���Ȥ褤�Ǥ��礦��
+href="http://www.adobe.com/support/downloads/product.jsp?product=46&platform=Windows">Windows用</a>
+<li> Linux ユーザは <a href="http://xml.apache.org/batik/">Batik SVG Viewer</a>を試すとよいでしょう。
 </ul>
 <p>
-SVG ��������¸����ˤϡ��嵭�Υ�󥯤� Macintosh �ξ�祳��ȥ����륭����
-�����ʤ��饯��å���Windows �ξ�籦����å����ơ�������ǥ���������¸����
-���ץ��������Ӥޤ���
+SVG 画像を保存するには、上記のリンクを Macintosh の場合コントロールキーを
+押しながらクリック、Windows の場合右クリックして、リンク先をディスクに保存する
+オプションを選びます。
 </p>
 END
 
    IMAGE_DESCRIPTION => <<END,
 <p>
-���β����� HTML �ڡ�����������ˤϡ����� URL �򥳥ԡ����ڡ����Ȥ��ޤ�:
+この画像を HTML ページに埋め込むには、次の URL をコピー＆ペーストします:
 </p>
 <pre>
 &lt;IMAGE src="%s" /&gt;
 </pre>
 <p>
-�����Ϥ��Τ褦��ɽ������뤳�Ȥˤʤ�ޤ�:
+画像はこのように表示されることになります:
 </p>
 <p>
 <img src="%s" />
 </p>
 
 <p>
-�⤷�������Τ䥳��ƥ����ʤɡ˥����С��ӥ塼����ɽ������Ƥ��ʤ���硢
-�ΰ�Υ�������̤�ƤߤƤ���������
+もし（染色体やコンティグなど）オーバービューしか表示されていない場合、
+領域のサイズを縮めてみてください。
 </p>
 END
 
    TIMEOUT           => <<'END',
-�����������ॢ���Ȥ��ޤ�����
-���򤷤��ΰ褬���٤�ɽ������ˤϹ���������ǽ��������ޤ���
-ɽ���ΰ�򶹤�뤫���פʹ��ܤ�ɽ�����ʤ��褦�ˤ��ƤߤƤ���������
-�����ॢ���Ȥ�³�������ֿ��Ρ֥ꥻ�åȡץܥ���򥯥�å����Ƥ���������
+処理がタイムアウトしました。
+選択した領域が一度に表示するには広すぎた可能性があります。
+表示領域を狭めるか不要な項目を表示しないようにしてみてください。
+タイムアウトが続く場合は「リセット」ボタンをクリックしてください。
 END
 
-   GO                => '�¹�',
+   GO                => '実行',
 
-   FIND              => '����',
+   FIND              => '検索',
 
-   SEARCH            => '����',
+   SEARCH            => '検索',
 
-   DUMP              => '����',
+   DUMP              => '出力',
 
-   HIGHLIGHT         => '��Ĵ',
+   HIGHLIGHT         => '強調',
 
-   ANNOTATE          => '����',
+   ANNOTATE          => '解析',
 
-   SCROLL            => '����������/������',
+   SCROLL            => 'スクロール/ズーム',
 
-   RESET             => '�ꥻ�å�',
+   RESET             => 'リセット',
 
-   FLIP              => 'ȿž',
+   FLIP              => '反転',
 
-   DOWNLOAD_FILE     => '�ե����������������',
+   DOWNLOAD_FILE     => 'ファイルをダウンロード',
 
-   DOWNLOAD_DATA     => '�ǡ���������������',
+   DOWNLOAD_DATA     => 'データをダウンロード',
 
-   DOWNLOAD          => '�����������',
+   DOWNLOAD          => 'ダウンロード',
 
-   DISPLAY_SETTINGS  => 'ɽ������',
+   DISPLAY_SETTINGS  => '表示設定',
 
-   TRACKS            => 'ɽ������',
+   TRACKS            => '表示項目',
 
-   EXTERNAL_TRACKS   => '(�����ι��ܤϼ���ɽ��)',
+   EXTERNAL_TRACKS   => '(外部の項目は斜体表示)',
 
-   OVERVIEW_TRACKS   => '<sup>*</sup>�����С��ӥ塼�ι���',
+   OVERVIEW_TRACKS   => '<sup>*</sup>オーバービューの項目',
 
-   REGION_TRACKS     => '<sup>**</sup>�ΰ�ι���',
+   REGION_TRACKS     => '<sup>**</sup>領域の項目',
 
-   EXAMPLES          => '��',
+   EXAMPLES          => '例',
 
-   REGION_SIZE       => '�ΰ�Υ����� (bp)',
+   REGION_SIZE       => '領域のサイズ (bp)',
 
-   HELP              => '�إ��',
+   HELP              => 'ヘルプ',
 
-   HELP_FORMAT       => '�ե�����ե����ޥåȤˤĤ��ƥإ��',
+   HELP_FORMAT       => 'ファイルフォーマットについてのヘルプ',
 
-   CANCEL            => '���ä�',
+   CANCEL            => '取り消し',
 
-   ABOUT             => '����...',
+   ABOUT             => '解説...',
 
-   REDISPLAY         => '������',
+   REDISPLAY         => '再描画',
 
-   CONFIGURE         => '����...',
+   CONFIGURE         => '設定...',
 
-   CONFIGURE_TRACKS  => '���ܤ�����...',
+   CONFIGURE_TRACKS  => '項目の設定...',
 
-   EDIT              => '�ե�������Խ�...',
+   EDIT              => 'ファイルを編集...',
 
-   DELETE            => '�ե��������',
+   DELETE            => 'ファイルを削除',
 
-   EDIT_TITLE  	     => '���Υơ������ǡ���������/�Խ�',
+   EDIT_TITLE  	     => 'アノテーションデータの入力/編集',
 
-   IMAGE_WIDTH 	     => '�����β���',
+   IMAGE_WIDTH 	     => '画像の横幅',
 
-   BETWEEN     	     => '���ܴ�',
+   BETWEEN     	     => '項目の間',
 
-   BENEATH     	     => '��ü',
+   BENEATH     	     => '下端',
 
-   LEFT              => '��ü',
+   LEFT              => '左端',
 
-   RIGHT             => '��ü',
+   RIGHT             => '右端',
 
-   TRACK_NAMES 	     => '����̾�ꥹ��',
+   TRACK_NAMES 	     => '項目名リスト',
 
-   ALPHABETIC  	     => '̾����',
+   ALPHABETIC  	     => '名前順',
 
-   VARYING     	     => '������',
+   VARYING     	     => '種類別',
 
-   SET_OPTIONS 	     => '�����������...',
+   SHOW_GRID         => 'グリッドを表示',
 
-   CLEAR_HIGHLIGHTING => '��Ĵɽ������',
+   SET_OPTIONS 	     => '項目毎の設定...',
 
-   UPDATE      	     => '�����򹹿�',
+   CLEAR_HIGHLIGHTING => '強調表示を解除',
 
-   DUMPS       	     => '���Ϥ���Ϥʤɤ����',
+   UPDATE      	     => '画像を更新',
 
-   DATA_SOURCE 	     => '�ǡ���������',
+   DUMPS       	     => '出力や解析などの操作',
 
-   UPLOAD_TRACKS     => '���Υơ��������ɲ�',
+   DATA_SOURCE 	     => 'データソース',
 
-   UPLOAD_TITLE	     => '�ȼ����Υơ������򥢥åץ�����',
+   UPLOAD_TRACKS     => 'アノテーションの追加',
 
-   UPLOAD_FILE 	     => '���åץ����ɤ���ե�����',
+   UPLOAD_TITLE	     => '独自アノテーションをアップロード',
 
-   KEY_POSITION      => '���ܤ�ɽ������',
+   UPLOAD_FILE 	     => 'アップロードするファイル',
 
-   BROWSE            => '����...',
+   KEY_POSITION      => '項目の表示位置',
 
-   UPLOAD            => '���åץ�����',
+   BROWSE            => '選択...',
 
-   NEW               => '����...',
+   UPLOAD            => 'アップロード',
 
-   REMOTE_TITLE      => '�������Υơ��������ɲ�',
+   NEW               => '新規...',
 
-   REMOTE_URL        => '�������Υơ�������URL',
+   REMOTE_TITLE      => '外部アノテーションを追加',
 
-   UPDATE_URLS       => 'URL�򹹿�',
+   REMOTE_URL        => '外部アノテーションのURL',
 
-   PRESETS           => '--�ꥹ�Ȥ��� URL ������--',
+   UPDATE_URLS       => 'URLを更新',
 
-   FEATURES_TO_HIGHLIGHT      => '�ե������㡼��Ĵɽ�� (feature1@color1 feature2@color2 ...)',
+   PRESETS           => '--リストから URL を選択--',
 
-   REGIONS_TO_HIGHLIGHT       => '�ΰ��Ĵɽ�� (region1:start..end@color1 region2:start..end@color2 ...)',
+   FEATURES_TO_HIGHLIGHT      => 'フィーチャーを強調表示 (feature1@color1 feature2@color2 ...)',
 
-   FEATURES_TO_HIGHLIGHT_HINT => '�ҥ�ȡ� �ե������㡼�ʰ�����̾���ˤ�Ĵɽ������ˤϡ֥ե������㡼@���פ� \'NUT21@lightblue\' �ν񼰤ǻ���',
+   REGIONS_TO_HIGHLIGHT       => '領域を強調表示 (region1:start..end@color1 region2:start..end@color2 ...)',
 
-   REGIONS_TO_HIGHLIGHT_HINT  => '�ҥ�ȡ� �ΰ��Ĵɽ������ˤϡ��ΰ�@���פ� \'Chr1:10000..20000@lightblue\' �ν񼰤ǻ���',
+   FEATURES_TO_HIGHLIGHT_HINT => 'ヒント： フィーチャー（遺伝子名等）を強調表示するには「フィーチャー@色」を \'NUT21@lightblue\' の書式で指定',
 
-   NO_TRACKS         => '(�ʤ�)',
+   REGIONS_TO_HIGHLIGHT_HINT  => 'ヒント： 領域を強調表示するには「領域@色」を \'Chr1:10000..20000@lightblue\' の書式で指定',
 
-   FILE_INFO         => '�ǽ������� %s / ���Υơ�����󤵤줿���ɥޡ���: %s',
+   NO_TRACKS         => '(なし)',
+
+   FILE_INFO         => '最終更新日 %s / アノテーションされたランドマーク: %s',
 
    FOOTER_1          => <<END,
-����: ���Υڡ������������¸���뤿��˥��å�������Ѥ��Ƥ��ޤ���
-���å����ξ����¾��ή�Ѥ��뤳�ȤϤ���ޤ���
+注意: このページは設定を保存するためにクッキーを使用しています。
+クッキーの情報を他に流用することはありません。
 END
 
-   FOOTER_2          => 'Generic genome browser �С������ %s',
+   FOOTER_2          => 'Generic genome browser バージョン %s',
 
    #----------------------
    # MULTIPLE MATCHES PAGE
    #----------------------
 
-   HIT_COUNT         => '�ʲ��� %d �ΰ褬�ޥå����ޤ�����',
+   HIT_COUNT         => '以下の %d 領域がマッチしました。',
 
-   POSSIBLE_TRUNCATION => '��������� %d ���ɽ�� (����ɽ������Ƥ��ʤ���礬����ޤ�)',
+   POSSIBLE_TRUNCATION => '検索結果中 %d 件を表示 (全部表示されていない場合があります)',
 
-   MATCHES_ON_REF    => '%s �˥ޥå�',
+   MATCHES_ON_REF    => '%s にマッチ',
 
-   SEQUENCE          => '����',
+   SEQUENCE          => '配列',
 
-   SCORE             => '������=%s',
+   SCORE             => 'スコア=%s',
 
    NOT_APPLICABLE    => 'n/a',
 
@@ -260,132 +269,170 @@ END
    # SETTINGS PAGE
    #--------------
 
-   SETTINGS          => '%s ������',
+   SETTINGS          => '%s の設定',
 
-   UNDO              => '�ѹ��μ��ä�',
+   UNDO              => '変更の取り消し',
 
-   REVERT            => '�ǥե�����ͤ��᤹',
+   REVERT            => 'デフォルト値に戻す',
 
-   REFRESH           => '����',
+   REFRESH           => '更新',
 
-   CANCEL_RETURN     => '�ѹ�����ä������...',
+   CANCEL_RETURN     => '変更を取り消して戻る...',
 
-   ACCEPT_RETURN     => '�ѹ���Ŭ�Ѥ������...',
+   ACCEPT_RETURN     => '変更を適用して戻る...',
 
-   OPTIONS_TITLE     => '���ܤΥ��ץ����',
+   OPTIONS_TITLE     => '項目のオプション',
 
    SETTINGS_INSTRUCTIONS => <<END,
-<i>ɽ��</i> �����å��ܥå����ǹ��ܤ򥪥󡦥��դ��ޤ���
-<i>�ʰ�</i> �ե����ޥåȤϹ��ܤ�̤��ɽ�����뤿��
-���Υơ�����󤬥����С���åפ����ǽ��������ޤ���
-<i>��ĥ</i> �� <i>����</i> �ե����ޥåȤϥ��Υơ�������
-�쥤�����Ȥ��٤��ޤ���®���Ťʤ긡�Х��르�ꥺ���Ȥ��ޤ���
-<i>��ĥ &amp; ��٥�</i> �� <i>���� &amp; ��٥�</i>
-�ե����ޥåȤϥ��Υơ�������ɬ����٥��Ĥ��ޤ���
-<i>��ư</i> ����������ˤϡ����ڡ���������¤ꡢ
-�Ťʤ긡�Фȥ�٥뵡ǽ����ưŪ��ͭ���ˤʤ�ޤ���
-���ܤν��֤��ѹ�����ˤ� <i>���֤��ѹ�</i> �ݥåץ��åץ�˥塼��
-�ȤäƤ��ΰ��֤�ɽ�����������Υơ���������ꤷ�ޤ���
-ɽ������륢�Υơ������ο������¤���ˤ� <i>��ߥå�</i> ��˥塼��
-�ͤ��ѹ����ޤ���
+<i>表示</i> チェックボックスで項目をオン・オフします。
+<i>簡易</i> フォーマットは項目を縮めて表示するため
+アノテーションがオーバーラップする可能性があります。
+<i>拡張</i> と <i>特別</i> フォーマットはアノテーションの
+レイアウトに遅いまたは速い重なり検出アルゴリズムを使います。
+<i>拡張 &amp; ラベル</i> と <i>特別 &amp; ラベル</i>
+フォーマットはアノテーションに必ずラベルをつけます。
+<i>自動</i> を選んだ場合には、スペースがある限り、
+重なり検出とラベル機能が自動的に有効になります。
+項目の順番を変更するには <i>順番の変更</i> ポップアップメニューを
+使ってその位置に表示したいアノテーションを指定します。
+表示されるアノテーションの数を制限するには <i>リミット</i> メニューの
+値を変更します。
 END
 
-   TRACK             => '����',
+   TRACK             => '項目',
 
-   TRACK_TYPE        => '���ܤΥ�����',
+   TRACK_TYPE        => '項目のタイプ',
 
-   SHOW              => 'ɽ��',
+   SHOW              => '表示',
 
-   FORMAT            => '�ե����ޥå�',
+   FORMAT            => 'フォーマット',
 
-   LIMIT             => '��ߥå�',
+   LIMIT             => 'リミット',
 
-   ADJUST_ORDER      => '���֤�Ĵ��',
+   ADJUST_ORDER      => '順番の調整',
 
-   CHANGE_ORDER      => '���֤��ѹ�',
+   CHANGE_ORDER      => '順番の変更',
 
-   AUTO              => '��ư',
+   AUTO              => '自動',
 
-   COMPACT           => '�ʰ�',
+   COMPACT           => '簡易',
 
-   EXPAND            => '��ĥ',
+   EXPAND            => '拡張',
 
-   EXPAND_LABEL      => '��ĥ & ��٥�',
+   EXPAND_LABEL      => '拡張 & ラベル',
 
-   HYPEREXPAND       => '����',
+   HYPEREXPAND       => '特別',
 
-   HYPEREXPAND_LABEL => '���� & ��٥�',
+   HYPEREXPAND_LABEL => '特別 & ラベル',
 
-   NO_LIMIT          => '̵����',
+   NO_LIMIT          => '無制限',
 
-   OVERVIEW          => '�����С��ӥ塼',
+   OVERVIEW          => 'オーバービュー',
 
-   EXTERNAL          => '�ɲù���',
+   EXTERNAL          => '追加項目',
 
-   ANALYSIS          => '���Ϲ���',
+   ANALYSIS          => '解析項目',
 
-   GENERAL           => '���̹���',
+   GENERAL           => '一般項目',
 
-   DETAILS           => '�ܺ٥ӥ塼',
+   DETAILS           => '詳細',
 
-   REGION            => '�ΰ�',
+   REGION            => '領域',
 
-   ALL_ON            => '���ƥ���',
+   ALL_ON            => '全てオン',
 
-   ALL_OFF           => '���ƥ���',
+   ALL_OFF           => '全てオフ',
 
    #--------------
    # HELP PAGES
    #--------------
 
-   CLOSE_WINDOW      => '���Υ�����ɥ����Ĥ���',
+   CLOSE_WINDOW      => 'このウィンドウを閉じる',
 
-   TRACK_DESCRIPTIONS => '���ܤβ���Ȱ���',
+   TRACK_DESCRIPTIONS => '項目の解説と引用',
 
-   BUILT_IN          => '���Υ����Фˤ������',
+   BUILT_IN          => 'このサーバにある項目',
 
-#  EXTERNAL          => '�����Υ��Υơ���������',
+#  EXTERNAL          => '外部のアノテーション項目',
 
-   ACTIVATE          => '���ι��ܤξ���򸫤�ˤϤ��ι��ܤ�ͭ���ˤ��Ƥ���������',
+   ACTIVATE          => 'この項目の情報を見るにはこの項目を有効にしてください。',
 
-   NO_EXTERNAL       => '�����Υե������㡼�ϥ����ɤ���Ƥ��ޤ���',
+   NO_EXTERNAL       => '外部のフィーチャーはロードされていません。',
 
-   NO_CITATION       => '¾�ξ���Ϥ���ޤ���',
+   NO_CITATION       => '他の情報はありません。',
 
    #--------------
    # PLUGIN PAGES
    #--------------
 
-   ABOUT_PLUGIN      => '%s �ˤĤ���',
+   ABOUT_PLUGIN      => '%s について',
 
-   BACK_TO_BROWSER   => '�֥饦�������',
+   BACK_TO_BROWSER   => 'ブラウザに戻る',
 
-   PLUGIN_SEARCH_1   => '%s (%s �ˤ�븡��)',
+   PLUGIN_SEARCH_1   => '%s (%s による検索)',
 
-   PLUGIN_SEARCH_2   => '&lt;%s ����&gt;',
+   PLUGIN_SEARCH_2   => '&lt;%s 検索&gt;',
 
-   CONFIGURE_PLUGIN  => '����',
+   CONFIGURE_PLUGIN  => '設定',
 
-   BORING_PLUGIN     => '���Υץ饰����ˤϤ���¾��������ܤϤ���ޤ���',
+   BORING_PLUGIN     => 'このプラグインにはその他の設定項目はありません。',
 
    #--------------
    # ERROR MESSAGES
    #--------------
 
-   NOT_FOUND         => '<i>%s</i> �Ȥ������ɥޡ�����ǧ���Ǥ��ޤ���Ǥ������إ�ץڡ����򻲾Ȥ��Ƥ���������',
+   NOT_FOUND         => '<i>%s</i> というランドマークは認識できませんでした。ヘルプページを参照してください。',
 
-   TOO_BIG           => '�ܺ٥ӥ塼�� %s �ޤǤǤ��������С��ӥ塼�򥯥�å����� %s ���ΰ������Ǥ���������',
+   TOO_BIG           => '詳細ビューは %s 塩基までです。オーバービューをクリックして %s 塩基の領域を選んでください。',
 
-   PURGED            => '%s �Ȥ���̾���Υե�����ϸ�������ޤ��󡣤��Ǥ˾ä���Ƥ��ޤä���ǽ��������ޤ���',
+   PURGED            => '%s という名前のファイルは見あたりません。すでに消されてしまった可能性があります。',
 
-   NO_LWP            => '���Υ����Фϳ����� URL �����������褦�����ꤵ��Ƥ��ޤ���',
+   NO_LWP            => 'このサーバは外部の URL から情報を取れるように設定されていません。',
 
-   FETCH_FAILED      => '%s ������Ǥ��ޤ���Ǥ���: %s.',
+   FETCH_FAILED      => '%s を取得できませんでした: %s.',
 
-   TOO_MANY_LANDMARKS => '���ɥޡ����� %d ��¿�����뤿��ɽ�����ά���ޤ���',
+   TOO_MANY_LANDMARKS => 'ランドマーク数 %d は多すぎるため表示を省略します。',
 
-   SMALL_INTERVAL    => '�����ʴֳ֤� %s bp �˥ꥵ�������ޤ�����',
+   SMALL_INTERVAL    => '小さな間隔を %s bp にリサイズしました。',
 
-   NO_SOURCES        => 'ɽ����ǽ�ʥǡ���������������ޤ��󡣥ǡ����α��������Ĥ���Ƥ��ʤ���ǽ���⤢��ޤ���'
+   NO_SOURCES        => '表示可能なデータソースがありません。データの閲覧が許可されていない可能性もあります。',
+
+   ADD_YOUR_OWN_TRACKS => '独自の項目を追加',
+
+   INVALID_SOURCE    => 'データソース %s は無効です。',
+
+   BACKGROUND_COLOR  => '塗りの色',
+
+   FG_COLOR          => '線の色',
+
+   HEIGHT            => '高さ',
+
+   PACKING           => 'パッキング',
+
+   GLYPH             => '表示形式',
+
+   LINEWIDTH         => '線の幅',
+
+   DEFAULT           => '(デフォルト)',
+
+   DYNAMIC_VALUE     => '動的に決定',
+
+   CHANGE            => '変更',
+
+   # This feature allows you to drag and re-order the tracks vertically. The
+   # position of the tracks will be remembered on subsequent browser sessions.
+   DRAGGABLE_TRACKS  => '項目順をドラッグで変更',
+
+   # This option will improve performance by re-using images for the displayed
+   # region if you have looked at it before.  This feature is on by default.
+   CACHE_TRACKS      => '表示した画像をキャッシュ',
+
+   # This feature allows the popup balloon tooltips that appear when you mouse
+   # over features in the browser. It is on by default.
+   SHOW_TOOLTIPS     => 'バルーンヘルプを表示',
+
+   OPTIONS_RESET     => '全ての設定をデフォルト値にリセットしました。',
+
+   OPTIONS_UPDATED   => 'サーバの設定が更新されました。このため、全ての設定がデフォルト値にリセットされました。'
 
 };

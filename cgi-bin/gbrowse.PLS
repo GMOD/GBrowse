@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.69 2008-05-12 14:06:53 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.70 2008-05-12 15:56:19 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -504,7 +504,7 @@ sub main_display {
 
     print overview_panel($whole_segment,$segment,$page_settings,$feature_files);
 
-    if ($page_settings->{region_size}) {
+    if ($CONFIG->setting('region segment') && $page_settings->{region_size}) {
       my ($region_seg_start, $region_seg_end) = get_regionview_seg($page_settings,$segment->start, $segment->end,
 								   $whole_segment->start,$whole_segment->end);
       my ($region_segment) = open_database()->segment(-name=>$segment->seq_id,

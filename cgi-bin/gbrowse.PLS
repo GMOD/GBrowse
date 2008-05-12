@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.70 2008-05-12 15:56:19 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.71 2008-05-12 21:16:46 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2941,8 +2941,7 @@ sub set_track_options {
 
 sub do_send_to_galaxy {
   my ($segments,$features,$settings) = @_;
-  my $URL = escape('http://gvk.bx.psu.edu/cgi-bin/gbrowse/volvox?');
-  #my $URL = escape('http://localhost/cgi-bin/gbrowse/volvox?');
+  my $URL  = escape(url(-full=>1));
   my $action = $session->{'GALAXY_URL'}.'?URL='.$URL;
 
   print start_multipart_form(-name   => 'mainform',

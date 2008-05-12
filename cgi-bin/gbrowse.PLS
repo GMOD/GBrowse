@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.68 2008-05-10 13:56:46 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.69 2008-05-12 14:06:53 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -290,17 +290,16 @@ my ($file_action) = grep {/^modify\./} param();
 # Check to see whether one of the plugin dumpers was invoked.  We have to do this first
 # before printing the header because the plugins are responsible for generating the header.
 # NOTE THE EXIT 0 HERE IF THE DUMP IS SUCCESSFUL!
-if ((@segments||param('plugin_config'))
-     && $plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper') {
+
+if (defined(param('GALAXY_URL'))) {
+    $session->{'GALAXY_URL'} = param('GALAXY_URL')
+}
+
+if (!defined($session->{'GALAXY_URL'}) && (@segments||param('plugin_config')) && $plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper') {
   do_plugin_header(param('plugin'),$page_settings,$cookie);
   do_plugin_dump(param('plugin'),$segments[0],$page_settings) && exit 0
 }
-
-# The ImportFeatures plugin is a dumper plugin but does not require a segment.
-# it will be invoked here if no segment is defined
-elsif ($plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper' &&
-       $PLUGINS->plugin(param('plugin'))->verb eq ($CONFIG->tr('Import')||'Import') ) {
-
+elsif (!defined($session->{'GALAXY_URL'}) && $plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper' && $PLUGINS->plugin(param('plugin'))->verb eq ($CONFIG->tr('Import')||'Import') ) {
     do_plugin_header(param('plugin'),
 		     $page_settings,
 		     $cookie);
@@ -370,8 +369,13 @@ my $alert = param('reset')                ? $CONFIG->tr('Options_reset')
 
 print_top($title,scalar param('reset'),$alert);
 
+## HANDLE SENDING TO GALAXY####################################################
+if ($plugin_action eq $CONFIG->tr('Go') && $plugin_type=~/^(dumper)$/i && defined($session->{'GALAXY_URL'})) {
+  do_send_to_galaxy($segments,$features,$page_settings);
+}
+
 ## HANDLE TRACK SETTINGS   #######################################################
-if ((param('set_options') || param($CONFIG->tr('Set_options')) || param('revert'))
+elsif ((param('set_options') || param($CONFIG->tr('Set_options')) || param('revert'))
        && !param($CONFIG->tr('Cancel'))
        && !param($CONFIG->tr('Redisplay'))
        && !param('adjust_one_track')
@@ -392,7 +396,7 @@ elsif ($plugin_action eq $CONFIG->tr('About')) {
 
 ## HANDLE PLUGIN CONFIGURATION####################################################
 elsif ($plugin_action eq $CONFIG->tr('Configure')) {
-  do_plugin_configure(param('plugin'));
+    do_plugin_configure(param('plugin'));
 }
 
 elsif ($plugin_action eq $CONFIG->tr('Go') && $plugin_type=~/^(finder|annotator|highlighter)$/i) {
@@ -462,6 +466,7 @@ sub main_display {
   my $msie_hack = CGI->user_agent =~ /MSIE/ && $CONFIG->setting('msie hack');
   my $src       = $CONFIG->source;
   my $action = $src ? url(-absolute=>1)."/$src/" : url(-absolute=>1);
+
   print $msie_hack ? startform(-name   => 'mainform',
 			       -action => $action,
 			       -method => 'GET')
@@ -859,15 +864,12 @@ sub auto_open {
   my ($settings,$features) = @_;
   my $tracks = $settings->{features};
   for my $feature (@$features) {
-    my @desired_labels = $CONFIG->feature2label($feature) or next;
-    for my $desired_label (@desired_labels) {
-	if (exists $tracks->{$desired_label}) {
-	    $tracks->{$desired_label}{visible} = 1;
-	    $settings->{track_collapsed}{$desired_label} = 0;
-	    $settings->{h_feat} = {};
-	    $settings->{h_feat}{$feature->display_name} = 'yellow' 
-		unless param('h_feat') && param('h_feat') eq '_clear_';
-	}
+    my $desired_label = $CONFIG->feature2label($feature) or next;
+    if (exists $tracks->{$desired_label}) {
+      $tracks->{$desired_label}{visible} = 1;
+      $settings->{track_collapsed}{$desired_label} = 0;
+      $settings->{h_feat} = {};
+      $settings->{h_feat}{$feature->display_name} = 'yellow' unless param('h_feat') && param('h_feat') eq '_clear_';
     }
   }
 }
@@ -888,12 +890,11 @@ sub reset_cookies {
 
 sub adjust_region_size {
   my ($segment,$settings) = @_;
-  $CONFIG->setting('region segment') || return;
   my $region_size;
   my $length = $segment ? $segment->length : abs($settings->{stop} - $settings->{start});
   my $whole_segment = $CONFIG->whole_segment($segment) if $segment;
 
-  if (($CONFIG->setting('region segment')) eq 'AUTO') {
+  if ($CONFIG->setting('region segment') eq 'AUTO') {
     $region_size = 10*$length;
   }
   else {
@@ -925,7 +926,7 @@ sub adjust_settings {
       $settings->{cache}      = !param('nocache') if defined param('nocache');
     }
 
-    if ($CONFIG->drag_and_drop) {
+    if ($CONFIG->setting('drag and drop')) {
       $settings->{drag_and_drop} = param('drag_and_drop');
     } else {
       $settings->{drag_and_drop} = 0;
@@ -1439,11 +1440,7 @@ sub track_config {
 
   print CGI::header,start_html();
 
-  # truncate overly long citations
-  my $cit_txt = $CONFIG->citation($label,$CONFIG->language) || $CONFIG->tr('NO_CITATION');
-  $cit_txt =~ s/(.{768}).+/$1\.\.\./;
-
-  my $citation = h4($key).p($cit_txt);
+  my $citation = h4($key).p($CONFIG->citation($label,$CONFIG->language)||$CONFIG->tr('NO_CITATION'));
   my $height   = $CONFIG->fallback_setting($label=>'height')    || 5;
   my $width    = $CONFIG->fallback_setting($label=>'linewidth') || 1;
   my $glyph    = $CONFIG->fallback_setting($label=>'glyph')     || 'box';
@@ -1546,16 +1543,14 @@ END
 				  -default => $settings->{features}{$label}{limit})
 		      )
 		   ),
-		 TR(td(),
-		    td(
+		 TR(
+		    td({-align=>'right'},
 		       button(-style => 'background:pink',
 			      -name=>$CONFIG->tr('Revert'),
 			      -onClick=>$reset_js,
 			     ),
-		      )
-		   ),
-		  TR(td(),
-		    td(
+		      ),
+		    th({-align=>'right'},
 		       button(-style=>'float:left',
 			      -name=>$CONFIG->tr('Cancel'),
 			      -onClick=>'Balloon.prototype.hideTooltip(1)'),
@@ -1590,17 +1585,7 @@ sub settings_table {
   my ($ks_style,@ks_disabled) = $CONFIG->drag_and_drop($settings->{drag_and_drop})
     ? ("color:gray",(-disabled=>1))
     : ('color:black',());
-
-  my $tooltips = $settings->{show_tooltips} ? 'false' : 'true';
-  my $content = <<END;
-  <script type="text/javascript">
-  tooltipIsSuppressed = $tooltips;
-  function toggleTooltip () {
-    tooltipIsSuppressed = !document.mainform.show_tooltips.checked
-  }
-  </script>
-END
-  $content .=
+  my $content =
     table({-class=>'searchbody',-border=>0,-width=>'100%'},
 	  TR({-class=>'searchtitle'},
 	     td(
@@ -1720,7 +1705,7 @@ END
 			     -label    => $CONFIG->tr('SHOW_TOOLTIPS'),
 			     -override => 1,
 			     -checked  => $settings->{show_tooltips},
-			     -onclick  => 'toggleTooltip()'
+			     -onclick  => 'document.mainform.submit()'
 		    ),
 		)
 	     ),
@@ -2108,13 +2093,13 @@ sub lookup_features_from_db {
   my $padding = $CONFIG->setting(general=>'landmark_padding') || 0;
 
   if (my $name = $settings->{name}) {
-    @segments = $CONFIG->name2segments($name,$db,TOO_MANY_SEGMENTS,0,'dontmerge');
+    @segments = $CONFIG->name2segments($name,$db,TOO_MANY_SEGMENTS);
   }
 
   elsif ((my $names = $settings->{q}) && ref $settings->{q}) {
     warn "q = $names" if DEBUG;
     my $max = TOO_MANY_SEGMENTS/@$names;
-    @segments = map {$CONFIG->name2segments($_,$db,$max,0,'dontmerge')} @$names;
+    @segments = map {$CONFIG->name2segments($_,$db,$max)} @$names;
   }
 
   elsif (my $ref = $settings->{ref}) {
@@ -2280,12 +2265,10 @@ sub multiple_choices {
       my ($start,$stop) = ($r->start,$r->end);
       my $padstart = $start - $padding;
       my $padstop  = $stop  + $padding;
-      my $description = escapeHTML(eval{join ' ',$r->attributes('Note')}
-				   ||eval{$r->desc()}
-				   ||eval{$r->method}
-				   ||eval{$r->source_tag}
-				   ||$r->{ref}
-	  );
+      my $description = escapeHTML(eval{join ' ',
+					  $r->desc(),
+					  $r->attributes('Note')}
+				   ||eval{$r->method}||eval{$r->source_tag}||$r->{ref});
       if (my @aliases = grep {$_ ne ''} eval{$r->attributes('Alias')}) {
 	$description .= escapeHTML(" [@aliases]");
       }
@@ -2478,7 +2461,7 @@ sub handle_uploads {
     handle_quickie($page_settings,\@data,\@styles);
   }
 
-  if ($file_action && param($file_action) eq $CONFIG->tr('Delete')) {
+  if ($file_action && param($file_action) eq 'Delete File') {
     $UPLOADED_SOURCES->clear_file($file);
     $REMOTE_SOURCES->delete_source($file);
   }
@@ -2749,8 +2732,7 @@ sub coordinate_mapper {
 sub bookmark_link {
   my $settings = shift;
   my $q = new CGI('');
-
-  my @keys = qw(start stop ref width version flip cache drag_and_drop show_tooltips grid);
+  my @keys = qw(start stop ref width version flip);
   foreach (@keys) {
     $q->param(-name=>$_,-value=>$settings->{$_});
   }
@@ -2957,6 +2939,42 @@ sub set_track_options {
   print end_form();
 }
 
+sub do_send_to_galaxy {
+  my ($segments,$features,$settings) = @_;
+  my $URL = escape('http://gvk.bx.psu.edu/cgi-bin/gbrowse/volvox?');
+  #my $URL = escape('http://localhost/cgi-bin/gbrowse/volvox?');
+  my $action = $session->{'GALAXY_URL'}.'?URL='.$URL;
+
+  print start_multipart_form(-name   => 'mainform',
+                             -action => $action,
+                             -method => 'POST');
+
+  print table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
+                  TR(
+                     td({-align=>'left', -colspan=>2},
+                      'Export all results to Galaxy','&nbsp;',
+                       b(submit(-name=>'plugin_action',-value=>$CONFIG->tr('Go')))
+                     )
+                  )
+              );
+
+  # Make sure to include all necessary parameters in URL to ensure that gbrowse will retrieve the data
+  # when Galaxy posts the URL. 
+  print hidden(-name=>'plugin',-value=>param('plugin'));
+  print hidden(-name=>'plugin_do',-value=>$CONFIG->tr('go'));
+  print hidden(-name=>'dbkey',-value=>@{$settings}{'ref'});
+  print hidden(-name=>'start',-value=>@{$settings}{'start'});
+  print hidden(-name=>'stop',-value=>@{$settings}{'stop'});
+
+  foreach my $setting (keys %$settings) {
+    print hidden(-name=>$setting,-value=>$settings->{$setting});
+  }
+
+  print end_form();
+  # Clean up the unwanted session attributes
+  delete $session->{'GALAXY_URL'}
+}
+
 sub help {
   my ($help_type,$conf_dir,$settings) = @_;
 
@@ -3152,7 +3170,7 @@ sub object_classes_for_help {
 # a group.  This makes for ugly logic branches.
 sub make_citation_link {
   my ($label,$self_url)   = @_;
-  my ($link,$key,$mouseover);
+  my ($link,$key);
   if ($label =~ /^plugin:/) {
     $key = $label || '';
     $key =~ s/^plugin://;
@@ -3170,16 +3188,12 @@ sub make_citation_link {
     $key = label2key($label);
     (my $anchor  = $label) =~ tr/ /-/;
     $link = $self_url.'#'.escapeHTML($anchor);
-    $mouseover = escape($CONFIG->citation($label,$CONFIG->language) || $CONFIG->tr('NO_CITATION'));
-    $mouseover =~ s/(.{768}).+/$1\.\.\./;
-
   }
 
   my $overview_color = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR();
   my @args = (-href=>$link,-target=>'citation');
   push @args,-style=>'Font-style: italic' if $label =~ /^(http|ftp|file):/;
-  push @args,-onmouseover => "balloon.showTooltip(event,'$mouseover')" if $mouseover;
-  # push @args,-style=>"background: $overview_color" if $label =~ /:overview$/;                                                                                               
+  # push @args,-style=>"background: $overview_color" if $label =~ /:overview$/;
   return a({@args},$key);
 }
 
@@ -3209,16 +3223,29 @@ sub plugin_menu {
   my @plugins = sort {$labels->{$a} cmp $labels->{$b}} @visible_plugins;
   return unless @plugins;
 
-  return join('',
-	      popup_menu(-name=>'plugin',
-			 -values=>\@plugins,
-			 -labels=> $labels,
-			 -default => $settings->{plugin},
-			),'&nbsp;',
-	      # submit(-name=>'plugin_action',-value=>$CONFIG->tr('About')),'&nbsp;',
-	      submit(-name=>'plugin_action',-value=>$CONFIG->tr('Configure')),'&nbsp;',
-	      b(submit(-name=>'plugin_action',-value=>$CONFIG->tr('Go')))
-	      );
+  # Automatically add Galaxy to the plugins if we were invoked via Galaxy.
+ if (defined($session->{'GALAXY_URL'})) {
+      return join('',
+                  hidden(-name=>'GALAXY_URL',-value=>$session->{'GALAXY_URL'}),
+                  popup_menu(-name=>'plugin',
+                             -values=>\@plugins,
+                             -labels=> $labels,
+                             -default => $settings->{plugin},
+		  ),'&nbsp;',
+                  submit(-name=>'plugin_action',-value=>$CONFIG->tr('Configure')),'&nbsp;',
+                  b(submit(-name=>'plugin_action',-value=>$CONFIG->tr('Go')))
+	  );
+  } else {
+      return join('',
+                  popup_menu(-name=>'plugin',
+                             -values=>\@plugins,
+                             -labels=> $labels,
+                             -default => $settings->{plugin},
+		  ),'&nbsp;',
+                  submit(-name=>'plugin_action',-value=>$CONFIG->tr('Configure')),'&nbsp;',
+                  b(submit(-name=>'plugin_action',-value=>$CONFIG->tr('Go')))
+	  );
+  }
 }
 
 # for the subset of plugins that are named in the 'quicklink plugins' option, create
@@ -3373,8 +3400,11 @@ sub do_plugin_configure {
 		     b(submit($CONFIG->tr('Back_to_Browser')))
 		   ),
      hidden(-name=>'plugin_config',-value=>1,-override=>1),
-     hidden('plugin'),
-     end_form();
+     hidden('plugin');
+     if (defined($session->{'GALAXY_URL'})) {
+       print hidden(-name=>'GALAXY_URL',-value=>$session->{'GALAXY_URL'});
+     }
+     print end_form();
 }
 
 # invoke any finder plugins that define the auto_find() method

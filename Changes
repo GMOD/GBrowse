@@ -7,6 +7,7 @@
 	* Changed licensing model to dual license under Perl Artistic 2.0 and GPL.
         * Fix duplicated tracks during tragging.
         * Features with same name are now found, not merged.
+	* Galaxy support, courtesy Greg Von Kuster
 
 1.68
         * Added patched copy of Bio::Graphics::FeatureFile that fixes bug in the display of groups.

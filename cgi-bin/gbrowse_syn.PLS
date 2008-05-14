@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_syn.PLS,v 1.9.2.4 2008-01-10 14:51:34 sheldon_mckay Exp $
+#$Id: gbrowse_syn.PLS,v 1.9.2.5 2008-05-14 20:47:05 sheldon_mckay Exp $
 
 use strict;
 
@@ -117,7 +117,7 @@ $CONF->search_src($CONF->page_settings("search_src"));
 my $segment = landmark2segment() if $CONF->page_settings("name");
 
 if ($segment) {
-  $segment    = feature2segment($segment);
+  $segment    = feature2segment($segment) if ref $segment ne 'Bio::DB::GFF::RelSegment';
   $CONF->current_segment($segment);
 }
 
@@ -202,6 +202,13 @@ sub db_map {
   \%map;
 }
 
+sub _type_from_box {
+  my $box = shift;
+  my @type = split ':', $box->[0];
+  my ($feature,$fname) = @type[0,-1];
+  return ($feature,$fname);
+}
+
 sub draw_image {
   my $src     = $CONF->page_settings("search_src");
   my $segment = $CONF->current_segment or return;
@@ -246,7 +253,7 @@ sub draw_image {
       $key = join $;,$src,$contig,++$instance{$src,$contig};
     }
 
-    # tally the plus and minus strand total.  We will flip the panel
+    # Tally the plus and minus strand total.  We will flip the panel
     # if more aligned sequence is on the minus strand than the plus strand.
     # only count actual alignmnts (not aggregates).
     my $panel_flip = $CONF->panel_flip($key);
@@ -367,7 +374,7 @@ sub draw_image {
 			       box_subparts => 1,
 			       connector => 'dashed'});
     }
-    add_hit_to_ff($$ff,$h);
+    add_hit_to_ff($segment,$$ff,$h);
   }
 
   my $orphan_hit = 0;
@@ -385,7 +392,7 @@ sub draw_image {
 			       box_subparts => 1,
                                connector => 'dashed'});
     }
-    add_hit_to_ff($$ff,$h) if $ff;
+    add_hit_to_ff($segment,$$ff,$h) if $ff;
   }
 
   my $width = $CONF->page_settings('imagewidth');
@@ -439,6 +446,8 @@ sub draw_image {
     my $segment          = landmark2segment($name,$src);
     my @relevant_hits    = grep {$hit2span{$_} eq $key} @hits;
 
+    my $rsegment = landmark2segment("$contig:$start..$end",$src);
+
     # width of inset panels scaled by size of target sequence
     $bases or next;
     my $scale = $bases/$total_bases;
@@ -459,7 +468,7 @@ sub draw_image {
 			    connector => 'dashed'},
 		  );
 
-    add_hit_to_ff($ff,$_,'invert') foreach @relevant_hits;
+    add_hit_to_ff($rsegment,$ff,$_,'invert') foreach @relevant_hits;
 
     my $segment_args = {width => $width};
     if ($is_above) {
@@ -569,7 +578,7 @@ sub draw_image {
   my (%ref_boxes,%panel_boxes);
   for my $box (@$ref_boxes) {
     ref $box or next;
-    my ($feature,$fname) = split ':', $box->[0];
+    my ($feature,$fname) = _type_from_box($box);
     next unless $feature eq 'BLOCK';
     my $hit = $CONF->name2hit($fname);
     next if $hit && @{$hit->parts} > 1;
@@ -587,12 +596,14 @@ sub draw_image {
     my $boxes  = $span{$key}{boxes};
     for my $box (@$boxes) {
       ref $box or next;
-      my ($feature,$fname) = split ':', $box->[0];
+      my ($feature,$fname) = _type_from_box($box);
       next unless $feature eq 'BLOCK';
       my $hit = $CONF->name2hit($fname);
       next if $hit && @{$hit->parts} > 1;
       $panel_boxes{$fname} = [$left+$box->[1],$top+$box->[2],$left+$box->[3],$top+$box->[4]];
       $tcolors{$fname} = $span{$key}{tcolor};
+      # for debugging
+      #$gd->rectangle($left+$box->[1],$top+$box->[2],$left+$box->[3],$top+$box->[4],$black);
     }
   }
   
@@ -602,13 +613,12 @@ sub draw_image {
   $gc{3} = $gd->colorResolveAlpha(10,10,255,100);
   my $thickness = 3;
 
-  for my $feature (keys %ref_boxes) {
+  for my $feature (keys %ref_boxes) { 
     next unless defined $ref_boxes{$feature} && defined $panel_boxes{$feature};
     my $real_name = $CONF->part2name($feature) || $feature;
-
     next unless defined $CONF->name2hit($real_name);
 
-    my $span = $hit2span{$feature};
+    my $span = $hit2span{$real_name};
     my $flip =  !panel_is_flipped($span) && $CONF->flip($feature)
              ||  panel_is_flipped($span) && !$CONF->flip($feature);
 
@@ -735,13 +745,9 @@ sub segment2image {
 				  double  => 0,
 				  description => 0} );
 
-  # make features into segments
-  if (ref $segment ne  'Bio::DB::GFF::RelSegment') {
-    my $segment = Bio::DB::GFF::RelSegment->new($segment);
-  }
 
-  $ff_scale->add_feature($segment=>'SCALE');
-
+  $ff_scale->add_feature(segment2feature($segment));
+  
   my @labels;
   if ($hits_top && $hits_bottom) {
     @labels = ('ff_top','ff_scale',@tracks,'ff_bottom');
@@ -835,75 +841,69 @@ sub warning {
 }
 
 sub add_hit_to_ff {
-  my ($ff,$hit,$invert) = @_;
+  my ($segment,$ff,$hit,$invert) = @_;
   my $feature;
   my $flip_hit = $hit->tstrand eq '-';
   $CONF->flip($hit->name => 1) if $flip_hit;
   my @attributes = $flip_hit ? (-attributes => {flip=>1}) : ();
 
   if ($invert) { # construct the feature from the target coordinates
-    if (my $p = $hit->parts ) {
-      my @segments = map {Bio::Graphics::Feature->new(
-						      -name=>$_->name,
-						      -start=>$_->tstart,
-						      -end=>$_->tend,
-						      -strand=>$_->tstrand eq '-' ? -1 : 1,
-						      -source=>$_->src2,
-						      -type=>'BLOCK',
-						      @attributes,
-						     )} @$p;
-      $feature = Bio::Graphics::Feature->new(-type    => 'BLOCK',
-					     -name    => $hit->name,
-					     -seqid   => $hit->target,
-					     -source  => $hit->src2,
-					     -segments=> \@segments,
-					     @attributes,
-					    );
-    } 
-    else {
-      $feature = Bio::Graphics::Feature->new(-type => 'BLOCK',
-					     -name => $hit->name,
-					     -seqid=> $hit->target,
-					     -start=> $hit->tstart,
-					     -strand=> $hit->tstrand eq '-' ? -1 : 1,
-					     -source  => $hit->src2,
-					     -end  => $hit->tend,
-					     @attributes,
-					    );
+    $feature = Bio::DB::GFF::Feature->new_from_parent( $segment,
+                                                       $hit->tstart,
+                                                       $hit->tend,
+                                                       'BLOCK',
+                                                       $hit->src2,
+                                                       undef,
+                                                       $hit->tstrand eq '-' ? -1 : 1,
+                                                       '.',
+						       Bio::DB::GFF::Featname->new(Hit => $hit->name)
+						       );
+    my $p = $hit->parts;
+    if (@$p > 1) {
+      for my $part (@$p) {
+        my $pfeat = Bio::DB::GFF::Feature->new_from_parent( $segment,
+                                                            $part->tstart,
+                                                            $part->tend,
+							    'BLOCK',
+							    $part->src2,
+                                                            undef,
+                                                            $part->tstrand eq '-' ? -1 : 1,
+							    '.',
+							    Bio::DB::GFF::Featname->new(Hit => $part->name)
+                                                            );
+	$feature->add_subfeature($pfeat);
+      }
     }
-
   } 
   else { # construct the feature from the src coordinates
-    if (my $p = $hit->parts) {
-      my @segments = map {Bio::Graphics::Feature->new(-start=>$_->start,
-						      -end=>$_->end,
-						      -strand=>$_->strand eq '-' ? -1 : 1,
-						      -source=>$_->src2,
-						      -type=>'BLOCK',
-						      -name=>$_->name,
-						      @attributes,
-						     )} @$p;
-      $feature = Bio::Graphics::Feature->new(-type=>'BLOCK',
-					     -name=>$hit->name,
-					     -seqid=>$hit->seqid,
-					     -source=>$hit->src2,
-					     -segments=>\@segments,
-					     @attributes,
-					    );
-    } 
-    else {
-      $feature = Bio::Graphics::Feature->new(-type=>'BLOCK',
-					     -name=>$hit->name,
-					     -seqid=>$hit->seqid,
-					     -start=>$hit->start,
-					     -source=>$hit->src2,
-					     -end=>$hit->end,
-					     -strand=>$hit->strand eq '-' ? -1 : 1,
-					     @attributes
-					    );
+    $feature = Bio::DB::GFF::Feature->new_from_parent( $segment,
+						       $hit->start,
+						       $hit->end,
+						       'BLOCK',
+						       $hit->src2,
+						       undef,
+						       $hit->strand eq '-' ? -1 : 1,
+						       '.',
+						       Bio::DB::GFF::Featname->new(Hit => $hit->name)
+						       );
+    my $p = $hit->parts;
+    if (@$p > 1) {
+      for my $part (@$p) {
+	my $pfeat = Bio::DB::GFF::Feature->new_from_parent( $segment,
+							    $part->start,
+							    $part->end,
+							   'BLOCK',
+							    $part->src2,
+							    undef,
+							    $part->strand eq '-' ? -1 : 1,
+							    '.',
+							    Bio::DB::GFF::Featname->new(Hit => $part->name)
+							    );
+	$feature->add_subfeature($pfeat);
+      }
     }
   }
-  $ff->add_feature($feature=>'BLOCK');
+  $ff->add_feature($feature);
 }
 
 sub adjust_container {
@@ -1064,11 +1064,11 @@ sub aggregate {
     else {
       my $hit = Bio::DB::GFF::SyntenyBlock->new($grp->[0]->name);
       $hit->add_part($grp->[0]->src,$grp->[0]->tgt);
-      $CONF->part2name($hit->name, $hit->name);
+      $CONF->part2name($hit->name, $grp->[0]->name);
       for my $part (@$grp) {
 	my $old_name = $part->name;
         my $new_name = $hit->add_part($part->src,$part->tgt);
-	$CONF->part2name($new_name) = $old_name;
+	$CONF->part2name($new_name,$old_name);
       }
       push @$hits, $hit;
     }
@@ -1193,7 +1193,6 @@ sub hilite_regions_closure {
   };
 }
 
-
 sub feature2segment {
   my $feature = shift;
   return $feature if ref $feature eq 'Bio::DB::GFF::RelSegment';
@@ -1206,6 +1205,17 @@ sub feature2segment {
 		      -stop  => ($feature->end + int($feature->length/20)),
 		      -absolute => 1,
 		      defined $version ? (-version => $version) : ());
+}
+
+sub segment2feature {
+  my $segment = shift;
+  my $start = $segment->start;
+  my $end   = $segment->end;
+  my $type  = 'SCALE';
+  my $src   = 'segment';
+  my $strand = $segment->strand;
+  my $group  = Bio::DB::GFF::Featname->new(Scale => $segment->ref);
+  return Bio::DB::GFF::Feature->new_from_parent($segment,$start,$end,$type,$src,undef,$strand,'.',$group);
 }
 
 
@@ -1420,3 +1430,4 @@ sub adjust_settings {
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
 exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
+

@@ -418,4 +418,6 @@ END
 
  OPTIONS_UPDATED   => 'A new site configuration is in effect; all page settings have been reset to their defaults',
 
+ SEND_TO_GALAXY    => 'Send this Region to Galaxy',
+
 };

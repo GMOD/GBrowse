@@ -47,7 +47,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbgff.PLS,v 1.1.2.5 2008-05-09 22:36:10 stajich Exp $
+# $Id: gbgff.PLS,v 1.1.2.6 2008-05-15 17:46:23 lstein Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -57,8 +57,6 @@ print OUT <<'!NO!SUBS!';
 #     http://my.host/cgi-bin/gbgff/volvox?q=$segment;t=Genes+ExampleFeatures
 #
 # See http://www.gmod.org/wiki/index.php/Gbgff for more information
-
-
 
 use strict;
 use warnings;
@@ -73,15 +71,17 @@ use Text::ParseWords 'shellwords';
 
 use vars '$CONFIG';
 
-print header('text/plain');
+my $config        = initialize();
+my $segment       = get_segment($config);
+my $labels        = get_labels($config);
+my $types         = get_types($config,$labels) if $labels;
+my $do_stylesheet = get_do_stylesheet($config);
+my $mime          = get_mime_type($config);
 
-my $config  = initialize();
-my $segment = get_segment($config);
-my $labels  = get_labels($config);
-my $types   = get_types($config,$labels) if $labels;
+print header($mime);
 
 # print relevant configuration
-print_configuration($config,$labels);
+print_configuration($config,$labels) if $do_stylesheet;
 print_gff3($segment,$types);
 exit 0;
 
@@ -127,9 +127,24 @@ sub get_segment {
 }
 
 sub get_labels {
-    my @labels = (param('type'),param('t'));
-    @labels    = shellwords(@labels) if @labels;
-    \@labels;
+  my $config = shift;
+  my @labels = (param('type'),param('t'));
+  @labels    = shellwords(@labels) if @labels;
+  \@labels;
+}
+
+sub get_do_stylesheet {
+  my $config = shift;
+  my $doit = param('stylesheet') || param('s');
+  return 0 if defined $doit && $doit =~ /^(no|off|0)$/i;
+  return 1;
+}
+
+sub get_mime_type {
+  my $config = shift;
+  return 'application/x-gff3'       if param('d') eq 'edit';
+  return 'application/octet-stream' if param('d') eq 'save';
+  return 'text/plain';
 }
 
 sub get_types {
@@ -185,7 +200,8 @@ sub print_gff3 {
     my $date = localtime;
     print "##gff-version 3\n";
     print "##date $date\n";
-    print "##source gbrowse_dump\n";
+    print "##source gbrowse gbgff gff3 dumper\n";
+    print "##sequence-region ",join(' ',$segment->ref,$segment->start,$segment->stop),"\n";
 
     my @args     = $types && @$types ? (-type=>$types) : ();
     my $iterator = $segment->get_seq_stream(@args);
@@ -193,6 +209,7 @@ sub print_gff3 {
 	print_feature($f);
     }
 }
+
 !NO!SUBS!
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";

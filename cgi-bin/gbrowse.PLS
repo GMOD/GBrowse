@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.72 2008-05-12 22:15:41 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.73 2008-05-15 17:46:23 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -191,32 +191,7 @@ if (param('reset')) {
   $cookies = [$cookie];
 }
 
-# ASYNCHRONOUS EVENTS HANDLED HERE
-# we get here on the AJAX-style asynchronous setting of labels
-my $asynchronous;
-if (my @ajax_labels = param('label[]')) {
-  my %seen;
-  @{$page_settings->{tracks}} = grep {length()>0 && !$seen{$_}++} 
-                                map  {CGI::unescape($_)} 
-                                     (@ajax_labels,@{$page_settings->{tracks}});
-  $asynchronous++;
-}
-
-for my $p (grep {/^div_visible_/} param()) {
-  my $visibility = param($p);
-  $p =~ s/^div_visible_//;
-  $page_settings->{section_visible}{$p} = $visibility;
-  $asynchronous++;
-}
-
-for my $p (grep {/^track_collapse_/} param()) {
-  my $collapsed = param($p);
-  $p =~ s/^track_collapse_//;
-  $page_settings->{track_collapsed}{$p} = $collapsed;
-  $asynchronous++;
-}
-
-if ($asynchronous) {
+if (handle_asynchronous_events($page_settings)) {
   print CGI::header(-status=>'204 No Content');
   $session->session->flush;
   exit 0;
@@ -289,15 +264,14 @@ my ($file_action) = grep {/^modify\./} param();
 # before printing the header because the plugins are responsible for generating the header.
 # NOTE THE EXIT 0 HERE IF THE DUMP IS SUCCESSFUL!
 
-if (defined(param('GALAXY_URL'))) {
-    $session->{'GALAXY_URL'} = param('GALAXY_URL')
-}
-
-if (!defined($session->{'GALAXY_URL'}) && (@segments||param('plugin_config')) && $plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper') {
+if ((@segments||param('plugin_config')) && $plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper') {
   do_plugin_header(param('plugin'),$page_settings,$cookie);
   do_plugin_dump(param('plugin'),$segments[0],$page_settings) && exit 0
 }
-elsif (!defined($session->{'GALAXY_URL'}) && $plugin_action eq $CONFIG->tr('Go') && $plugin_type eq 'dumper' && $PLUGINS->plugin(param('plugin'))->verb eq ($CONFIG->tr('Import')||'Import') ) {
+
+elsif ($plugin_action eq $CONFIG->tr('Go') && 
+       $plugin_type eq 'dumper' 
+       && $PLUGINS->plugin(param('plugin'))->verb eq ($CONFIG->tr('Import')||'Import') ) {
     do_plugin_header(param('plugin'),
 		     $page_settings,
 		     $cookie);
@@ -338,7 +312,7 @@ handle_uploads($page_settings) || exit 0 unless $CONFIG->section_setting('upload
 
 print_header(-cookie => $cookies,
 	     -charset=>$CONFIG->tr('CHARSET')
-    );
+	     );
 
 if (request_method eq 'HEAD') {exit 0}
 
@@ -369,13 +343,8 @@ my $alert = param('reset')                ? $CONFIG->tr('Options_reset')
 
 print_top($title,scalar param('reset'),$alert);
 
-## HANDLE SENDING TO GALAXY####################################################
-if ($plugin_action eq $CONFIG->tr('Go') && $plugin_type=~/^(dumper)$/i && defined($session->{'GALAXY_URL'})) {
-  do_send_to_galaxy($segments,$features,$page_settings);
-}
-
 ## HANDLE TRACK SETTINGS   #######################################################
-elsif ((param('set_options') || param($CONFIG->tr('Set_options')) || param('revert'))
+if ((param('set_options') || param($CONFIG->tr('Set_options')) || param('revert'))
        && !param($CONFIG->tr('Cancel'))
        && !param($CONFIG->tr('Redisplay'))
        && !param('adjust_one_track')
@@ -418,6 +387,43 @@ exit 0;
 #################################################################################
 #--------------------------------- lots of subroutines --------------------------
 #################################################################################
+
+# ASYNCHRONOUS EVENTS HANDLED HERE
+sub handle_asynchronous_events {
+  my $settings = shift;
+
+  # ASYNCHRONOUS EVENTS HANDLED HERE
+  # we get here on the AJAX-style asynchronous setting of labels
+  my $asynchronous;
+  if (my @ajax_labels = param('label[]')) {
+    my %seen;
+    @{$settings->{tracks}} = grep {length()>0 && !$seen{$_}++} 
+      map  {CGI::unescape($_)} 
+	(@ajax_labels,@{$settings->{tracks}});
+    $asynchronous++;
+  }
+
+  for my $p (grep {/^div_visible_/} param()) {
+    my $visibility = param($p);
+    $p =~ s/^div_visible_//;
+    $settings->{section_visible}{$p} = $visibility;
+    $asynchronous++;
+  }
+
+  for my $p (grep {/^track_collapse_/} param()) {
+    my $collapsed = param($p);
+    $p =~ s/^track_collapse_//;
+    $settings->{track_collapsed}{$p} = $collapsed;
+    $asynchronous++;
+  }
+
+  if (param('clear_galaxy')) {
+    delete $settings->{GALAXY_URL};
+    $asynchronous++;
+  }
+
+  return $asynchronous;
+}
 
 sub main_display {
   my ($segments,$features,$page_settings) = @_;
@@ -466,6 +472,8 @@ sub main_display {
   my $msie_hack = CGI->user_agent =~ /MSIE/ && $CONFIG->setting('msie hack');
   my $src       = $CONFIG->source;
   my $action = $src ? url(-absolute=>1)."/$src/" : url(-absolute=>1);
+
+  print galaxy_form($page_settings) if $page_settings->{GALAXY_URL} || $CONFIG->setting('galaxy');
 
   print $msie_hack ? startform(-name   => 'mainform',
 			       -action => $action,
@@ -1040,6 +1048,7 @@ sub adjust_settings {
     adjust_one_track($settings);
   }
 
+  $settings->{GALAXY_URL} = param('GALAXY_URL') if param('GALAXY_URL');
 }
 
 # return true if settings have been reset to their defaults, false otherwise
@@ -2939,39 +2948,37 @@ sub set_track_options {
   print end_form();
 }
 
-sub do_send_to_galaxy {
-  my ($segments,$features,$settings) = @_;
-  my $URL  = escape(url(-full=>1));
-  my $action = $session->{'GALAXY_URL'}.'?URL='.$URL;
+sub galaxy_form {
+  my $settings = shift;
 
-  print start_multipart_form(-name   => 'mainform',
-                             -action => $action,
-                             -method => 'POST');
+  my $URL  = url(-full=>1,-path=>1);
+  $URL  =~ s!/gbrowse/!/gbgff/!;
+  my $galaxy_url = $settings->{GALAXY_URL} || $CONFIG->setting('galaxy');
+  return '' unless $galaxy_url;
 
-  print table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
-                  TR(
-                     td({-align=>'left', -colspan=>2},
-                      'Export all results to Galaxy','&nbsp;',
-                       b(submit(-name=>'plugin_action',-value=>$CONFIG->tr('Go')))
-                     )
-                  )
-              );
+  my $action = "$galaxy_url?URL=$URL";
+
+  my $html = start_multipart_form(-name  => 'galaxyform',
+				  -action => $action,
+				  -method => 'POST');
 
   # Make sure to include all necessary parameters in URL to ensure that gbrowse will retrieve the data
-  # when Galaxy posts the URL. 
-  print hidden(-name=>'plugin',-value=>param('plugin'));
-  print hidden(-name=>'plugin_do',-value=>$CONFIG->tr('go'));
-  print hidden(-name=>'dbkey',-value=>@{$settings}{'ref'});
-  print hidden(-name=>'start',-value=>@{$settings}{'start'});
-  print hidden(-name=>'stop',-value=>@{$settings}{'stop'});
+  # when Galaxy posts the URL.
+  my $dbkey  = $CONFIG->setting('galaxy build name') || $CONFIG->source;
+  my $labels = join('+',map {escape($_)} grep {$settings->{features}{$_}{visible} && !/:(overview|region)$/} $CONFIG->labels);
 
-  foreach my $setting (keys %$settings) {
-    print hidden(-name=>$setting,-value=>$settings->{$setting});
+  $html .= hidden(-name=>'dbkey',-value=>$dbkey);
+  $html .= hidden(-name=>'q',-value=>"$settings->{ref}:$settings->{start}..$settings->{stop}");
+  $html .= hidden(-name=>'t',-value=>$labels);
+  $html .= hidden(-name=>'s',-value=>'off');
+  $html .= hidden(-name=>'d',-value=>'edit');
+  $html .= endform();
+
+  if ($plugin_action eq $CONFIG->tr('Go') && param('plugin') eq 'invoke_galaxy') {
+    $html .= script('document.galaxyform.submit()');
   }
 
-  print end_form();
-  # Clean up the unwanted session attributes
-  delete $session->{'GALAXY_URL'}
+  return $html;
 }
 
 sub help {
@@ -3216,35 +3223,34 @@ sub label2key {
 sub plugin_menu {
   my ($settings,$plugins) = @_;
 
+  if ($settings->{GALAXY_URL}) {
+    return button(-name=>'submit to galaxy',
+		  -value=>$CONFIG->tr('SEND_TO_GALAXY'),
+		  -style=>'font-weight:bold',
+		  -onClick=>"new Ajax.Request(document.URL,{method:'post',postBody:'clear_galaxy=1'});document.galaxyform.submit()",
+		 );
+  }
+
   my $labels = $plugins->menu_labels;
 
   my @visible_plugins = grep {!$plugins->plugin($_)->hide} keys %$labels;
   my @plugins = sort {$labels->{$a} cmp $labels->{$b}} @visible_plugins;
   return unless @plugins;
 
-  # Automatically add Galaxy to the plugins if we were invoked via Galaxy.
- if (defined($session->{'GALAXY_URL'})) {
-      return join('',
-                  hidden(-name=>'GALAXY_URL',-value=>$session->{'GALAXY_URL'}),
-                  popup_menu(-name=>'plugin',
-                             -values=>\@plugins,
-                             -labels=> $labels,
-                             -default => $settings->{plugin},
-		  ),'&nbsp;',
-                  submit(-name=>'plugin_action',-value=>$CONFIG->tr('Configure')),'&nbsp;',
-                  b(submit(-name=>'plugin_action',-value=>$CONFIG->tr('Go')))
-	  );
-  } else {
-      return join('',
-                  popup_menu(-name=>'plugin',
-                             -values=>\@plugins,
-                             -labels=> $labels,
-                             -default => $settings->{plugin},
-		  ),'&nbsp;',
-                  submit(-name=>'plugin_action',-value=>$CONFIG->tr('Configure')),'&nbsp;',
-                  b(submit(-name=>'plugin_action',-value=>$CONFIG->tr('Go')))
-	  );
+  if (my $galaxy_dest = $CONFIG->setting('galaxy')) {
+    $labels->{invoke_galaxy} = $CONFIG->tr('SEND_TO_GALAXY');
+    unshift @plugins,'invoke_galaxy';
   }
+
+  return join('',
+	      popup_menu(-name=>'plugin',
+			 -values=>\@plugins,
+			 -labels=> $labels,
+			 -default => $settings->{plugin},
+			),'&nbsp;',
+	      submit(-name=>'plugin_action',-value=>$CONFIG->tr('Configure')),'&nbsp;',
+	      b(submit(-name=>'plugin_action',-value=>$CONFIG->tr('Go')))
+	     );
 }
 
 # for the subset of plugins that are named in the 'quicklink plugins' option, create
@@ -3400,9 +3406,6 @@ sub do_plugin_configure {
 		   ),
      hidden(-name=>'plugin_config',-value=>1,-override=>1),
      hidden('plugin');
-     if (defined($session->{'GALAXY_URL'})) {
-       print hidden(-name=>'GALAXY_URL',-value=>$session->{'GALAXY_URL'});
-     }
      print end_form();
 }
 

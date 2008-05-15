@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.31 2008-04-22 13:56:56 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.32 2008-05-15 22:44:01 lstein Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -779,7 +779,14 @@ Balloon.prototype.getContents = function(section) {
 
   if (ajax) {
      ajax.open("GET", url, false);
-     ajax.send(null);
+     ajax.onreadystatechange=function() {
+	 alert(request.readyState);
+     };
+     try {
+	 ajax.send(null);
+     } catch (e) {
+	 // alert(e);
+     }
      this.helpText = ajax.responseText || section;
      return  this.helpText;
   }

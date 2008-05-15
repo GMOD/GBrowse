@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.73 2008-05-15 17:46:23 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.74 2008-05-15 22:43:59 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2956,7 +2956,7 @@ sub galaxy_form {
   my $galaxy_url = $settings->{GALAXY_URL} || $CONFIG->setting('galaxy');
   return '' unless $galaxy_url;
 
-  my $action = "$galaxy_url?URL=$URL";
+  my $action = $galaxy_url =~ /\?/ ? "$galaxy_url&URL=$URL" : "$galaxy_url?URL=$URL";
 
   my $html = start_multipart_form(-name  => 'galaxyform',
 				  -action => $action,

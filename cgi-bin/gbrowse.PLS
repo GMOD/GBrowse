@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.74 2008-05-15 22:43:59 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.75 2008-05-16 00:14:00 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -877,7 +877,8 @@ sub auto_open {
       $tracks->{$desired_label}{visible} = 1;
       $settings->{track_collapsed}{$desired_label} = 0;
       $settings->{h_feat} = {};
-      $settings->{h_feat}{$feature->display_name} = 'yellow' unless param('h_feat') && param('h_feat') eq '_clear_';
+      $settings->{h_feat}{$feature->display_name} =  hilite_fill() || 'yellow'
+	  unless param('h_feat') && param('h_feat') eq '_clear_';
     }
   }
 }
@@ -988,7 +989,7 @@ sub adjust_settings {
     for my $hilight (@features) {
       last if $hilight eq '_clear_';
       my ($featname,$color) = split '@',$hilight;
-      $settings->{h_feat}{$featname} = $color || 'yellow';
+      $settings->{h_feat}{$featname} = $color || hilite_fill() || 'yellow';
     }
   }
 
@@ -1211,7 +1212,7 @@ sub make_postgrid_callback {
 
 # this subroutine generates a Bio::Graphics::Panel callback closure 
 # suitable for hilighting a region of a panel.
-# The args are a list of [start,end,color]
+# The args are a list of [start,end,bgcolor,fgcolor]
 sub hilite_regions_closure {
   my @h_regions = @_;
 
@@ -1222,13 +1223,23 @@ sub hilite_regions_closure {
     my $top    = $panel->top;
     my $bottom = $panel->bottom;
     for my $r (@h_regions) {
-      my ($h_start,$h_end,$h_color) = @$r;
+      my ($h_start,$h_end,$bgcolor,$fgcolor) = @$r;
       my ($start,$end) = $panel->location2pixel($h_start,$h_end);
       if ($end-$start <= 1) { $end++; $start-- } # so that we always see something
       # assuming top is 0 so as to ignore top padding
+
       $gd->filledRectangle($left+$start,0,$left+$end,$bottom,
-			   $panel->translate_color($h_color));
+			   $panel->translate_color($bgcolor)) 
+	  if $bgcolor && $bgcolor ne 'none';
+
+      # outline can only be the left and right sides -- otherwise it looks funny.
+      if ($fgcolor && $fgcolor ne 'none') {
+	  my $c = $panel->translate_color($fgcolor);
+	  $gd->line($left+$start,0,$left+$start,$bottom,$c);
+	  $gd->line($left+$end,0,$left+$end,$bottom,$c);
+      }
     }
+
   };
 }
 
@@ -2352,7 +2363,8 @@ sub _region_panel {
   my ($options,$limits) = get_options(\@tracks_to_show,$settings);
 
   # the postgrid will be invoked to hilite the currently selected region
-  my $postgrid = hilite_regions_closure([$segment->start,$segment->end,'yellow']);
+  my $postgrid  = hilite_regions_closure([$segment->start,$segment->end,
+					  hilite_fill(),hilite_outline()]);
 
   my $panels   = $CONFIG->render_panels({
 					 section       => $panel_name,
@@ -3548,6 +3560,16 @@ sub category_table {
   }
    
   return (\%categorytable); 
+}
+
+sub hilite_fill {
+    return defined $CONFIG->setting('hilite fill')
+	? $CONFIG->setting('hilite fill')
+	: 'yellow';
+}
+
+sub hilite_outline {
+    return $CONFIG->setting('hilite outline');
 }
 
 sub version_warning {

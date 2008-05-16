@@ -3,11 +3,13 @@
 	* Collapsible tracks - comes for free with "drag and drop"
 	* Popup balloons w/ Ajax content; use "balloon tips" option to activate.
 	* Caching of individual tracks for better performance; use "cache time" option to control.
-	* Various bugs squashed -- see http://sourceforge.net/tracker/?group_id=27707&atid=391291.
 	* Changed licensing model to dual license under Perl Artistic 2.0 and GPL.
         * Fix duplicated tracks during tragging.
         * Features with same name are now found, not merged.
 	* Galaxy support, courtesy Greg Von Kuster
+	* Can change fill and outline color of selected regions on overview & regionview.
+	* Various bugs squashed -- see http://sourceforge.net/tracker/?group_id=27707&atid=391291.
+
 
 1.68
         * Added patched copy of Bio::Graphics::FeatureFile that fixes bug in the display of groups.

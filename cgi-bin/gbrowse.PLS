@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.75 2008-05-16 00:14:00 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.76 2008-05-16 00:28:42 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1116,9 +1116,10 @@ sub navigation_table {
 		     th({-align=>'left', -colspan=>2,-class=>'linkmenu'},
 			 $settings->{name} || $settings->{ref} ?
 			 (
+			  a({-href=>bookmark_link($settings)},'['.$CONFIG->tr('BOOKMARK').']'),
+			  a({-href=>"#upload"},'['.$CONFIG->tr('Upload_title').']'),
 			  a({-href=>"?rand=$rand;head=".((!$settings->{head})||0)},
 			    '['.$CONFIG->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
-			  a({-href=>bookmark_link($settings)},'['.$CONFIG->tr('BOOKMARK').']'),
 			  a({-href=>image_link($settings),-target=>'_blank'},'['.$CONFIG->tr('IMAGE_LINK').']'),
 			  $plugin_link,
 			  $svg_link,
@@ -1797,7 +1798,7 @@ sub upload_table {
 		  )
 	       );
   $cTable .= end_table;
-  $cTable;
+  return a({-name=>"upload"},$cTable);
 }
 
 # URLs for external annotations
@@ -2498,7 +2499,7 @@ sub handle_uploads {
 sub handle_edit {
   my ($settings,$data) = @_;
   my $file = param('edited file') or return;
-  my @lines = unexpand(split /\r?\n|\r\n?/,$data);
+  my @lines = unexpand(split '\r?\n|\r\n?',$data);
   $data = join "\n",@lines;
   $data .= "\n";
   $UPLOADED_SOURCES->new_file($file);  # register it

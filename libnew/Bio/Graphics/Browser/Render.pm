@@ -167,9 +167,10 @@ sub asynchronous_event {
 
   # Change the order of tracks if any "label[]" parameters are present
   if (my @labels = param('label[]')) {
-    my %seen;
-    @{$settings->{tracks}} = grep {length()>0 && !$seen{$_}++} (@labels,@{$settings->{tracks}});
-    $events++;
+      foreach(@labels) {s/%5F/_/g}
+      my %seen;
+      @{$settings->{tracks}} = grep {length()>0 && !$seen{$_}++} (@labels,@{$settings->{tracks}});
+      $events++;
   }
 
   # Slightly different -- process a tracks request in the background.
@@ -296,47 +297,13 @@ sub render_panels {
   my $seg     = shift;
   my $section = shift;
 
-  $self->render_overview($seg)   if $section->{overview};
-  $self->render_regionview($seg) if $section->{regionview};
-  $self->render_detailview($seg) if $section->{detailview};
-}
+  my $html = '';
 
-sub render_overview {
-  my $self = shift;
-  my $seg  = shift;
+  $html .= $self->render_overview($seg)   if $section->{overview};
+  $html .= $self->render_regionview($seg) if $section->{regionview};
+  $html .= $self->render_detailview($seg) if $section->{detailview};
 
-  my $source			= $self->data_source;
-  my $whole_segment 	        = $self->whole_seg;
-  my $segment			= $self->seg || return;
-  my $state				= $self->state;
-  my $features			= $self->fetch_features;
-  my $feature_files		= {};		#fill in code later, is usually blank anyways
-
-  my $renderer = Bio::Graphics::Browser::RenderPanels->new(-segment  => $seg,
-							   -source   => $source,
-							   -settings => $state,
-							   -renderer => $self);
-  my $image   = $renderer->render_overview(('Overview',
-  					   $whole_segment,
-  					   $seg,
-  					   $state,
-  					   $feature_files));
-  
-  return $self->toggle('Overview',
-		table({-border=>0,-width=>'100%'},
-		      TR({-class=>'databody'},
-			 td({-align=>'center'},$image)
-			)
-		     )
-	       );
-  
-  
-  
-}
-
-sub render_regionview {
-  my $self = shift;
-  my $seg = shift;
+  return $html;
 }
 
 sub render_config {
@@ -415,6 +382,20 @@ sub segment {
     my $self   = shift;
     my $region = $self->region;
     return $region->seg;
+}
+
+sub whole_segment {
+  my $self    = shift;
+  my $segment = $self->segment;
+  my $factory = $segment->factory;
+
+  # the segment class has been deprecated, but we still must support it
+  my $class   = eval {$segment->seq_id->class} || eval{$factory->refclass};
+
+  my ($whole_segment) = $factory->segment(-class=>$class,
+					  -name=>$segment->seq_id);
+  $whole_segment   ||= $segment;  # just paranoia
+  $whole_segment;
 }
 
 # ========================= plugins =======================
@@ -699,7 +680,8 @@ sub update_tracks {
     $state->{features}{$_}{visible} = 0 foreach @selected;
   }
 
-  $self->update_track_options($state) if param('adjust_order') && !param('cancel');
+  # probably obsolete -- not defined anywhere
+  # $self->update_track_options($state) if param('adjust_order') && !param('cancel');
 }
 
 # update coordinates logic
@@ -737,7 +719,9 @@ sub update_coordinates {
     $position_updated++;
   }
 
-  my $current_span = length $state->{stop} ? ($state->{stop} - $state->{start} + 1) : 0;
+  # quench uninit variable warning
+  my $current_span = length($state->{stop}||'') ? ($state->{stop} - $state->{start} + 1) 
+                                                : 0;
   my $new_span     = param('span');
   if ($new_span && $current_span != $new_span) {
     $self->zoom_to_span($state,$new_span);
@@ -1095,7 +1079,20 @@ sub set_tracks {
 sub detail_tracks {
   my $self = shift;
   my $state = $self->state;
-  return grep {$state->{features}{$_}{visible} && !/:(overview|region)$/ }
+  my @tracks = grep {$state->{features}{$_}{visible} && !/:(overview|region)$/ }
+               @{$state->{tracks}};
+}
+sub overview_tracks {
+  my $self = shift;
+  my $state = $self->state;
+  return grep {$state->{features}{$_}{visible} && /:overview$/ }
+    @{$state->{tracks}};
+}
+
+sub regionview_tracks {
+  my $self = shift;
+  my $state = $self->state;
+  return grep {$state->{features}{$_}{visible} && !/:region$/ }
     @{$state->{tracks}};
 }
 
@@ -1126,13 +1123,44 @@ sub render_detailview {
 
   my @panels   = map {$panels->{$_}} @labels;
 
-  my $drag_script = $self->drag_script('panels','track');
+  my $drag_script = $self->drag_script('detail_panels','track');
   return div($self->toggle('Details',
-			   div({-id=>'panels',-class=>'track'},
+			   div({-id=>'detail_panels',-class=>'track'},
 			       @panels
 			   )
 	     )
       ).$drag_script;
+}
+
+sub render_overview {
+  my $self = shift;
+  my $seg  = shift;
+
+  my $whole_segment 	        = $self->whole_segment;
+  my @labels                    = $self->overview_tracks;
+
+  my $renderer = $self->get_panel_renderer($whole_segment);
+  my $panels   = $renderer->render_panels(
+      {
+	  labels           => \@labels,
+	  feature_files    => $self->remote_sources,
+	  section          => 'overview',
+      }
+      );
+
+  my @panels   = map {$panels->{$_}} @labels;  
+  my $drag_script = $self->drag_script('overview_panels','track');
+  return div($self->toggle('Overview',
+			   div({-id=>'overview_panels',-class=>'track'},
+			       @panels
+			   )
+	     )
+      ).$drag_script;
+}
+
+sub render_regionview {
+  my $self = shift;
+  my $seg = shift;
 }
 
 sub render_deferred {

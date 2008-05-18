@@ -6,7 +6,6 @@ function turnOff (element) {
 }
 
 function setVisState (element_name,is_visible) {
-  // xSetCookie("div_visible_" + element_name,is_visible,null,location.pathname);
   var postData = 'div_visible_'+ element_name + '=' + is_visible;
   new Ajax.Request(document.URL,{method:'post',postBody:postData});
 }
@@ -28,4 +27,32 @@ function visibility (element_name,is_visible) {
    return false;
 }
 
+function collapse(element_name) {
+   var control = document.getElementById(element_name+"_title");
+   var icon    = document.getElementById(element_name+"_icon");
+   var body    = document.getElementById(element_name+"_image");
+   var pad     = document.getElementById(element_name+"_pad");
+   var closeit = body.style.display != "none";
+   var src     = new String(icon.src);
+   if (closeit) {
+     icon.src = src.replace(/minus/,'plus');
+     body.style.display = 'none';
+     pad.style.display = 'inline';
+     control.className = 'titlebar_inactive';
+   } else {
+     icon.src = src.replace(/plus/,'minus');
+     body.style.display = 'inline';
+     pad.style.display = 'none';
+     control.className = 'titlebar';
+   }
+   var postData = 'track_collapse_'+ element_name + '=' + (closeit ? 1 : 0);
+   new Ajax.Request(document.URL,{method:'post',postBody:postData});
+   return false;
+}
 
+function enable_keypos (checkbox) {
+  var checked = checkbox.checked;
+  var ks      = document.getElementsByName('ks');
+  for (var i=0;i<ks.length;i++) {ks[i].disabled= checked}
+  document.getElementById('ks_label').style.color=checked ? 'lightgray' : 'black';
+}

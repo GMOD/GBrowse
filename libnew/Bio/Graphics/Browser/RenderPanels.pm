@@ -299,9 +299,12 @@ sub render_tracks {
 
 	(my $munge_label = $label) =~ s/_/%5F/g;  # freakin' scriptaculous uses _ as a delimiter!!!
 
+	my $show_titlebar = $source->setting($label => 'key') ne 'none';
+
+	my $map_html = $self->map_html($map);
 	$result{$label} = div({-id=>"track_${munge_label}",-class=>$class},
-				div({-align=>'center'},$titlebar.$img),
-			      $map||'');
+				div({-align=>'center'},($show_titlebar?$titlebar:'').$img),
+			      $map_html||'');
     }
     
     return \%result;
@@ -476,186 +479,186 @@ sub overview_pad {
 }
 
 # I THINK THIS IS OBSOLETE
-sub render_overview {
-  my $self = shift;
-  my ($region_name,$whole_segment,$segment,$state,$feature_files) = @_;
-  my $gd;
+# sub render_overview {
+#   my $self = shift;
+#   my ($region_name,$whole_segment,$segment,$state,$feature_files) = @_;
+#   my $gd;
 
-  my $source   = $self->source;
+#   my $source   = $self->source;
 
-  #track option is same as state
+#   #track option is same as state
 
-  # Temporary kludge until I can figure out a more
-  # sane way of rendering overview with SVG...
-  my $image_class = 'GD';
-  eval "use $image_class";
+#   # Temporary kludge until I can figure out a more
+#   # sane way of rendering overview with SVG...
+#   my $image_class = 'GD';
+#   eval "use $image_class";
 
-  my $width          = $state->{'width'} * $self->overview_ratio();
-  my @tracks         = grep {$state->{'features'}{$_}{visible}} 
-    $region_name eq 'region' ? $source->regionview_tracks : $source->overview_tracks;
+#   my $width          = $state->{'width'} * $self->overview_ratio();
+#   my @tracks         = grep {$state->{'features'}{$_}{visible}} 
+#     $region_name eq 'region' ? $source->regionview_tracks : $source->overview_tracks;
 
-  my ($padl,$padr)   = $self->overview_pad(\@tracks);
+#   my ($padl,$padr)   = $self->overview_pad(\@tracks);
 
-  my $panel = Bio::Graphics::Panel->new(-segment => $whole_segment,
-					-width   => $width,
-					-bgcolor => $source->global_setting('overview bgcolor')
-					            || 'wheat',
-					-key_style => 'left',
-					-pad_left  => $padl,
-					-pad_right => $padr,
-					-pad_bottom => PAD_OVERVIEW_BOTTOM,
-					-image_class=> $image_class,
-					-auto_pad   => 0,
-				       );
+#   my $panel = Bio::Graphics::Panel->new(-segment => $whole_segment,
+# 					-width   => $width,
+# 					-bgcolor => $source->global_setting('overview bgcolor')
+# 					            || 'wheat',
+# 					-key_style => 'left',
+# 					-pad_left  => $padl,
+# 					-pad_right => $padr,
+# 					-pad_bottom => PAD_OVERVIEW_BOTTOM,
+# 					-image_class=> $image_class,
+# 					-auto_pad   => 0,
+# 				       );
 
-  # THIS IS NOW OBSOLETE
-  # cache check so that we can cache the overview images
-  my $cache_path;
-  $cache_path = $source->gd_cache_path('cache_overview',$whole_segment,
-				       @tracks,$width,
-				       map {@{$state->{'features'}{$_}}{'options','limit','visible'}
-					  } @tracks);
+#   # THIS IS NOW OBSOLETE
+#   # cache check so that we can cache the overview images
+#   my $cache_path;
+#   $cache_path = $source->gd_cache_path('cache_overview',$whole_segment,
+# 				       @tracks,$width,
+# 				       map {@{$state->{'features'}{$_}}{'options','limit','visible'}
+# 					  } @tracks);
 
-  # no cached data, so do it ourselves
-  unless ($gd) {
-    my $units         = $source->global_setting('units') || '';
-    my $no_tick_units = $source->global_setting('no tick units');
+#   # no cached data, so do it ourselves
+#   unless ($gd) {
+#     my $units         = $source->global_setting('units') || '';
+#     my $no_tick_units = $source->global_setting('no tick units');
 
-    $panel->add_track($whole_segment,
-		      -glyph     => 'arrow',
-		      -double    => 1,
-		      -label     => "\u$region_name\E of ".$whole_segment->seq_id,
-		      -label_font => $image_class->gdMediumBoldFont,
-		      -tick      => 2,
-		      -units_in_label => $no_tick_units,
-		      -units     => $units,
-		      -unit_divider => $source->global_setting('unit_divider') || 1,
-		     );
+#     $panel->add_track($whole_segment,
+# 		      -glyph     => 'arrow',
+# 		      -double    => 1,
+# 		      -label     => "\u$region_name\E of ".$whole_segment->seq_id,
+# 		      -label_font => $image_class->gdMediumBoldFont,
+# 		      -tick      => 2,
+# 		      -units_in_label => $no_tick_units,
+# 		      -units     => $units,
+# 		      -unit_divider => $source->global_setting('unit_divider') || 1,
+# 		     );
 
-    $self->_add_landmarks(\@tracks,$panel,$whole_segment,$state);
+#     $self->_add_landmarks(\@tracks,$panel,$whole_segment,$state);
 
-    # add uploaded files that have the "(over|region)view" option set
-    if ($feature_files) {
-      my $select = sub {
-	my $file  = shift;
-	my $type  = shift;
-	my $section = $file->setting($type=>'section')  || $file->setting(general=>'section') || '';
-	return defined $section && $section =~ /$region_name/;
-      };
-      foreach (keys %$feature_files) {
-	my $ff = $feature_files->{$_};
-	next unless $ff->isa('Bio::Graphics::FeatureFile'); #only FeatureFile supports this
-	$ff->render($panel,-1,$state->{'features'}{$_},undef,undef,$select);
-      }
-    }
+#     # add uploaded files that have the "(over|region)view" option set
+#     if ($feature_files) {
+#       my $select = sub {
+# 	my $file  = shift;
+# 	my $type  = shift;
+# 	my $section = $file->setting($type=>'section')  || $file->setting(general=>'section') || '';
+# 	return defined $section && $section =~ /$region_name/;
+#       };
+#       foreach (keys %$feature_files) {
+# 	my $ff = $feature_files->{$_};
+# 	next unless $ff->isa('Bio::Graphics::FeatureFile'); #only FeatureFile supports this
+# 	$ff->render($panel,-1,$state->{'features'}{$_},undef,undef,$select);
+#       }
+#     }
 
-    $gd = $panel->gd;
-    $source->gd_cache_write($cache_path,$gd) if $cache_path;
-  }
+#     $gd = $panel->gd;
+#     $source->gd_cache_write($cache_path,$gd) if $cache_path;
+#   }
 
-  my $rect_color = $panel->translate_color(
-					   $source->global_setting('selection rectangle color' )||'red');
-  my ($x1,$x2) = $panel->map_pt($segment->start,$segment->end);
-  my ($y1,$y2) = (0,($gd->getBounds)[1]);
-  $x2 = $panel->right-1 if $x2 >= $panel->right;
-  my $pl = $panel->can('auto_pad') ? $panel->pad_left : 0;
+#   my $rect_color = $panel->translate_color(
+# 					   $source->global_setting('selection rectangle color' )||'red');
+#   my ($x1,$x2) = $panel->map_pt($segment->start,$segment->end);
+#   my ($y1,$y2) = (0,($gd->getBounds)[1]);
+#   $x2 = $panel->right-1 if $x2 >= $panel->right;
+#   my $pl = $panel->can('auto_pad') ? $panel->pad_left : 0;
 
-  $gd->rectangle($pl+$x1,$y1,
-		 $pl+$x2,$y2-1,
-		 $rect_color);
+#   $gd->rectangle($pl+$x1,$y1,
+# 		 $pl+$x2,$y2-1,
+# 		 $rect_color);
 
-  eval {$panel->finished};  # should quash memory leaks when used in conjunction with bioperl 1.4
+#   eval {$panel->finished};  # should quash memory leaks when used in conjunction with bioperl 1.4
 
-  my $url       = $self->generate_image($gd);
+#   my $url       = $self->generate_image($gd);
 
-  my $image = img({-src=>$url,-border=>0});#,-usemap=>"#${label}_map"});7;#overview($whole_segment,$segment,$page_settings,$feature_files);
+#   my $image = img({-src=>$url,-border=>0});#,-usemap=>"#${label}_map"});7;#overview($whole_segment,$segment,$page_settings,$feature_files);
   
-}
+# }
 
 #$self->_add_landmarks(\@tracks,$panel,$whole_segment,$state);
-sub _add_landmarks {
-  my $self = shift;
-  my ($tracks_to_add,$panel,$segment,$options) = @_;
-  my $source = $self->source;
-  my @tracks = grep {$options->{'features'}{$_}{visible}} @$tracks_to_add;
+# sub _add_landmarks {
+#   my $self = shift;
+#   my ($tracks_to_add,$panel,$segment,$options) = @_;
+#   my $source = $self->source;
+#   my @tracks = grep {$options->{'features'}{$_}{visible}} @$tracks_to_add;
 
-  my (@feature_types,%type2track,%track);
+#   my (@feature_types,%type2track,%track);
 
-  for my $overview_track (@tracks) {
-    my @types = $source->label2type($overview_track);
-    my $track = $panel->add_track(-glyph  => 'generic',
-				  -height  => 3,
-				  -fgcolor => 'black',
-				  -bgcolor => 'black',
-				  $source->style($overview_track),
-				 );
-    foreach (@types) {
-      $type2track{lc $_} = $overview_track
-    }
-    $track{$overview_track} = $track;
-    push @feature_types,@types;
-  }
-  return unless @feature_types;
+#   for my $overview_track (@tracks) {
+#     my @types = $source->label2type($overview_track);
+#     my $track = $panel->add_track(-glyph  => 'generic',
+# 				  -height  => 3,
+# 				  -fgcolor => 'black',
+# 				  -bgcolor => 'black',
+# 				  $source->style($overview_track),
+# 				 );
+#     foreach (@types) {
+#       $type2track{lc $_} = $overview_track
+#     }
+#     $track{$overview_track} = $track;
+#     push @feature_types,@types;
+#   }
+#   return unless @feature_types;
 
-  my $iterator = $segment->features(-type=>\@feature_types,-iterator=>1,-rare=>1);
+#   my $iterator = $segment->features(-type=>\@feature_types,-iterator=>1,-rare=>1);
 
-  my %count;
-  my (%group_on,%group_on_field);
-  while (my $feature = $iterator->next_seq) {
+#   my %count;
+#   my (%group_on,%group_on_field);
+#   while (my $feature = $iterator->next_seq) {
 
-    my $label = eval{$type2track{lc $feature->type}}
-      || $type2track{lc $feature->primary_tag}
-	|| eval{$type2track{lc $feature->method}}
-	  || next;
+#     my $label = eval{$type2track{lc $feature->type}}
+#       || $type2track{lc $feature->primary_tag}
+# 	|| eval{$type2track{lc $feature->method}}
+# 	  || next;
 
-    my $track = $track{$label} or next;
+#     my $track = $track{$label} or next;
 
-    # copy-and-pasted from details method. Not very efficient coding.
-    exists $group_on_field{$label} or $group_on_field{$label} = $source->code_setting($label => 'group_on');
+#     # copy-and-pasted from details method. Not very efficient coding.
+#     exists $group_on_field{$label} or $group_on_field{$label} = $source->code_setting($label => 'group_on');
 
-    if (my $field = $group_on_field{$label}) {
-      my $base = eval{$feature->$field};
-      if (defined $base) {
-	my $group_on_object = $group_on{$label}{$base}
-	  ||= Bio::Graphics::Feature->new(-start=>$feature->start,
-					  -end  =>$feature->end,
-					  -strand => $feature->strand,
-					  -type =>$feature->primary_tag);
-	$group_on_object->add_SeqFeature($feature);
-	next;
-      }
-    }
+#     if (my $field = $group_on_field{$label}) {
+#       my $base = eval{$feature->$field};
+#       if (defined $base) {
+# 	my $group_on_object = $group_on{$label}{$base}
+# 	  ||= Bio::Graphics::Feature->new(-start=>$feature->start,
+# 					  -end  =>$feature->end,
+# 					  -strand => $feature->strand,
+# 					  -type =>$feature->primary_tag);
+# 	$group_on_object->add_SeqFeature($feature);
+# 	next;
+#       }
+#     }
 
-    $track->add_feature($feature);
-    $count{$label}++;
-  }
+#     $track->add_feature($feature);
+#     $count{$label}++;
+#   }
 
-  # fix up group-on fields
-  for my $label (keys %group_on) {
-    my $track = $track{$label};
-    my $group_on = $group_on{$label} or next;
-    $track->add_feature($_) foreach values %$group_on;
-  }
+#   # fix up group-on fields
+#   for my $label (keys %group_on) {
+#     my $track = $track{$label};
+#     my $group_on = $group_on{$label} or next;
+#     $track->add_feature($_) foreach values %$group_on;
+#   }
 
-  my $max_bump   = $self->bump_density;
-  my $max_label  = $self->label_density;
+#   my $max_bump   = $self->bump_density;
+#   my $max_label  = $self->label_density;
 
-  for my $label (keys %count) {
-    my $track = $track{$label};
+#   for my $label (keys %count) {
+#     my $track = $track{$label};
 
-    my $do_bump  = $self->do_bump($label,$options->{'features'}{$label}{options},$count{$label},$max_bump);
-    my $do_label = $self->do_label($label,$options->{'features'}{$label}{options},$count{$label},
-				   $max_label,$segment->length);
-    my $do_description = $self->do_description($label,$options->{'features'}{$label}{options},$count{$label},
-					       $max_label,$segment->length);
+#     my $do_bump  = $self->do_bump($label,$options->{'features'}{$label}{options},$count{$label},$max_bump);
+#     my $do_label = $self->do_label($label,$options->{'features'}{$label}{options},$count{$label},
+# 				   $max_label,$segment->length);
+#     my $do_description = $self->do_description($label,$options->{'features'}{$label}{options},$count{$label},
+# 					       $max_label,$segment->length);
 
-    $track->configure(-bump  => $do_bump,
-		      -label => $do_label,
-		      -description => $do_description,
-		     );
-  }
-  return \%track;
-}
+#     $track->configure(-bump  => $do_bump,
+# 		      -label => $do_label,
+# 		      -description => $do_description,
+# 		     );
+#   }
+#   return \%track;
+# }
 
 sub bump_density {
   my $self     = shift;
@@ -956,16 +959,16 @@ sub run_local_requests {
 
     
     for my $label (@ordinary_tracks) {
-
 	next if $seenit{$label}++; # this shouldn't happen, but let's be paranoid
 
 	my @keystyle = (-key_style=>'between')
 	    if $label =~ /^\w+:/ && $label !~ /:(overview|region)/;  # a plugin
+	my @nopad    = $source->setting($label=>'key') eq 'none' ? (-pad_top => 0) : ();
 	
 	my $panel_args = $requests->{$label}->panel_args;
 	my $track_args = $requests->{$label}->track_args;
 	
-	$panels{$label} = Bio::Graphics::Panel->new(@$panel_args,@keystyle);
+	$panels{$label} = Bio::Graphics::Panel->new(@$panel_args,@keystyle,@nopad);
 	$tracks{$label} = $panels{$label}->add_track(@$track_args);
     }
 
@@ -1067,6 +1070,7 @@ sub add_features_to_track {
       for my $l (@labels) {
 
 	my $track = $tracks->{$l}  or next;
+
 	$filters->{$l}->($feature) or next if $filters->{$l};
 	$feature_count{$l}++;
 	
@@ -1101,7 +1105,6 @@ sub add_features_to_track {
 	    next;
 	  }
 	}
-
 	$track->add_feature($feature);
       }
     }
@@ -1242,7 +1245,7 @@ $args is a hashref that contains the keys:
 
 sub create_panel_args {
   my $self               = shift;
-  my ($section,$args) = @_;
+  my $args               = shift;
 
   my $segment       = $self->segment;
   my ($seg_start,$seg_stop,$flip) = $self->segment_coordinates($segment,
@@ -1254,24 +1257,27 @@ sub create_panel_args {
   my $settings = $self->settings;
   my $source   = $self->source;
 
+  my $section  = $args->{section};
+
   my $keystyle = 'none';
 
   my @pass_thru_args = map {/^-/ ? ($_=>$args->{$_}) : ()} keys %$args;
   my @argv = (
-	      -grid         => 1,
+	      -grid         => $source->global_setting("$section grid"),
 	      -start        => $seg_start,
 	      -end          => $seg_stop,
 	      -stop         => $seg_stop,  #backward compatibility with old bioperl
-	      -key_color    => $source->global_setting('key bgcolor')     || 'moccasin',
-	      -bgcolor      => $source->global_setting('detail bgcolor')  || 'white',
+	      -key_color    => $source->global_setting('key bgcolor')      || 'moccasin',
+	      -bgcolor      => $source->global_setting("$section bgcolor") || 'white',
 	      -width        => $settings->{width},
 	      -key_style    => $keystyle,
 	      -empty_tracks => $source->global_setting('empty_tracks')    || DEFAULT_EMPTYTRACKS,
-	      -pad_top      => $args->{title} ? $image_class->gdMediumBoldFont->height : 0,
+	      -pad_top      => $image_class->gdMediumBoldFont->height+2,
 	      -image_class  => $image_class,
 	      -postgrid     => $args->{postgrid}   || '',
 	      -background   => $args->{background} || '',
 	      -truecolor    => $source->global_setting('truecolor') || 0,
+              -extend_grid  => 1,
 	      @pass_thru_args,   # position is important here to allow user to override settings
 	     );
 
@@ -1283,13 +1289,6 @@ sub create_panel_args {
   $pr    = $p unless defined $pr;
 
   push @argv,(-pad_left =>$pl, -pad_right=>$pr) if $p;
-
-
-  push @argv,
-  (
-   -pad_top     => 18,
-   -extend_grid => 1
-  );
 
   return @argv;
 }
@@ -1475,14 +1474,14 @@ sub cache_time {
 #   return ($image_uri,$map_html,$width,$height,$image_file,$gd,$map_data);
 # }
 
-
-
 # Convert the cached image map data
 # into HTML.
 sub map_html {
   my $self = shift;
-  my @data = @_;
-  chomp @data;
+  my $map  = shift;
+
+  my @data = @$map;
+
   my $name = shift @data or return '';
 
   my $html  = qq(\n<map name="${name}_map" id="${name}_map">\n);

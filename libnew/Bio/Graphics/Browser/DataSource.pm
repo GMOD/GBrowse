@@ -43,6 +43,7 @@ sub new {
   $self->description($description);
   $self->globals($globals);
   $self->dir(dirname($config_file_path));
+  $self->add_scale_tracks();
   $CONFIG_CACHE{$config_file_path}{object} = $self;
   $CONFIG_CACHE{$config_file_path}{mtime}  = $mtime;
   return $self;
@@ -382,7 +383,7 @@ sub type2label {
     my @array  = $self->SUPER::type2label(lc $type) or return;
     my %label_groups;
     for my $label (@array) {
-      my ($label_base,$minlength) = $label =~ /([^:]+)(?::(\d+))?/;
+      my ($label_base,$minlength) = $label =~ /(.+)(?::(\d+))?/;
       $minlength ||= 0;
       next if defined $length && $minlength > $length;
       $label_groups{$label_base}++;
@@ -390,7 +391,6 @@ sub type2label {
     @labels = keys %label_groups;
     $self->{_type2labelmemo}{$type,$length} = \@labels;
   }
-
   return wantarray ? @labels : $labels[0];
 }
 
@@ -423,7 +423,7 @@ sub invert_types {
   my $config  = $self->{config} or return;
   my %inverted;
   for my $label (keys %{$config}) {
-    next if $label=~/:?(overview|region)$/;   # special case
+#    next if $label=~/:?(overview|region)$/;   # special case
     my $feature = $config->{$label}{'feature'} or next;
     foreach (shellwords($feature||'')) {
       $inverted{lc $_}{$label}++;
@@ -435,8 +435,43 @@ sub invert_types {
 sub default_labels {
   my $self = shift;
   my $defaults = $self->setting('general'=>'default features');
-  return shellwords($defaults||'');
+  return $self->scale_tracks,shellwords($defaults||'');
 }
+
+=head2 add_scale_tracks()
+
+This is called at initialization time to add track configs
+for the automatic "scale" (arrow) tracks for details, overview and regionview
+
+=cut
+
+sub add_scale_tracks {
+    my $self = shift;
+    my @scale_tracks = $self->scale_tracks;
+
+    for my $label (@scale_tracks) {
+	$self->add_type($label,{
+	    'global feature' => 1,
+	    glyph          => 'arrow',
+	    fgcolor        => 'black',
+	    double         => 1,
+	    tick           => 2,
+	    label          => 1,
+	    key            => 'none',
+			});
+    }
+    # Sort of a bug here. We want the scale tracks to start out on the
+    # top of the others. But add_type puts the labels on the bottom. So
+    # we reorder so these guys come first. This breaks encapsulation.
+    my @types            = @{$self->{types}};
+    my $items_to_reorder = @scale_tracks;
+    my @items            = splice(@types,-$items_to_reorder);
+
+    splice(@types,0,0,@items);
+    $self->{types} = \@types;
+}
+
+sub scale_tracks { return qw(_scale _scale:overview _scale:region); }
 
 # return a hashref in which keys are the thresholds, and values are the list of
 # labels that should be displayed

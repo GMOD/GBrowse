@@ -222,8 +222,10 @@ sub render_track_table {
   my $settings = $self->state;
   my $source   = $self->data_source;
 
-  my @labels     = $self->data_source->labels;
-  my %labels      = map {$_ => $self->label2key($_)}              @labels;
+  # tracks beginning with "_" are special, and should not appear in the
+  # track table.
+  my @labels     = grep {!/^_/} $self->data_source->labels;
+  my %labels     = map {$_ => $self->label2key($_)}              @labels;
   my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
 
 
@@ -265,6 +267,7 @@ sub render_track_table {
     }
     elsif  (exists $track_groups{$category}) {
       my @track_labels = @{$track_groups{$category}};
+
       @track_labels = sort {lc $labels{$a} cmp lc $labels{$b}} @track_labels
         if ($settings->{sk} eq "sorted");
       my @checkboxes = checkbox_group(-name       => 'label',
@@ -536,7 +539,7 @@ sub slidertable {
   my $self = shift;
   my $segment = shift;
 
-  my $whole_segment = $self->whole_seg;
+  my $whole_segment = $self->whole_segment;
   my $buttonsDir    = $self->globals->button_url;
 
   my $span       = $segment->length;

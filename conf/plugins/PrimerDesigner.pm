@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.7 2007-10-29 20:08:46 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.8 2008-05-27 10:32:34 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -40,13 +40,6 @@ necessarily find the best primers, just the first ones that produce a big
 enough product to flank the target.  If the primers are flagged as low quality,
 more optimal optimal primers may be found by specifying a specific size-range.
 
-=head1 Bio::Graphics::Browser
-
-This plugin contains an additional package Bio::Graphics::Browser::faux.
-This class inherits from  Bio::Graphics::Browser.  Its purpose is to
-keep the  Bio::Graphics::Browser funtionality and configuration data
-while overriding image_map-related funtions required for this plugin.
-
 =head1 TO-DO
 
 Add support for ePCR-based scanning for false priming
@@ -68,18 +61,24 @@ primer3 (http://frodo.wi.mit.edu/primer3/primer3_code.html)
 package Bio::Graphics::Browser::Plugin::PrimerDesigner;
 
 use strict;
+
+use lib '/home/smckay/lib';
 use Bio::PrimerDesigner;
 use Bio::PrimerDesigner::Tables;
 use Bio::Graphics::Browser::Plugin;
 use Bio::Graphics::Browser::Util;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Feature;
+use Bio::DB::GFF::Featname;
+use Bio::DB::GFF::Feature;
+use Bio::DB::GFF::RelSegment;
 use Bio::Graphics::FeatureFile;
 use CGI qw/:standard escape/;
 use CGI::Pretty 'html3';
 use CGI::Carp 'fatalsToBrowser';
 use CGI::Toggle;
 use Math::Round 'nearest';
+use Data::Dumper;
 
 use constant BINARY            => 'primer3';
 use constant BINPATH           => '/usr/local/bin';
@@ -88,7 +87,11 @@ use constant IMAGE_PAD         => 25;
 use constant MAXRANGE          => 300;
 use constant IMAGEWIDTH        => 800;
 use constant DEFAULT_SEG_SIZE  => 10000;
+use constant DEFAULT_FINE_ZOOM => 1000;
 use constant STYLE             => '/gbrowse/gbrowse.css';
+use constant MAX_SEGMENT       => 1_000_000;
+use constant OVERVIEW_RATIO    => 0.9;
+
 
 use vars '@ISA';
 
@@ -100,6 +103,8 @@ END {
 }
 
 sub name {
+  my $self = shift;
+  #$self->browser_config->tr('PCR primers') || 'PCR primers'; 
   'PCR primers';
 }
 
@@ -114,7 +119,8 @@ sub type {
 }
 
 sub verb {
-  'Design';
+  my $self = shift;
+  $self->browser_config->tr('Design') || 'Design';
 }
 
 sub mime_type {
@@ -134,9 +140,16 @@ sub reconfigure {
   $conf->{lb}         = undef;
   $conf->{rb}         = undef;
 
-  my $target = $self->config_param('target');
-  my $lb     = $self->config_param('lb');
-  my $rb     = $self->config_param('rb');
+  my $target_region = param('target_region');
+  my ($target, $lb,$rb);
+  if ($target_region) {
+    ($target, $lb,$rb) = $target_region =~ /^(\S+)\:(-?\d+)\.\.(-?\d+)$/;
+  }
+  else {
+    $target = param('target');#$self->config_param('target');
+    $lb     = param('lb');#$self->config_param('lb');
+    $rb     = param('rb');#$self->config_param('rb');
+  }
 
   if ($lb && $rb) {
     my $min_size = $rb - $lb + 40;
@@ -178,6 +191,17 @@ sub configure_form {
 
   my $no_buttons = 1 if !($lb || $rb)  || $feats;
   
+
+  # we need our own headers, so redirect config and go straight to dump
+  my $url = url(-query_string => 1);
+  my $cfg = $browser->tr('Configure');
+  my $go  = $browser->tr('Go');
+  if ($url =~ /$cfg/) {
+    $url =~ s/$cfg/$go/;
+    return "<script type='text/javascript'>window.location='$url';</script>";
+  }
+
+
   # make sure the target is not stale for the initial config
   delete $conf->{target} if !($lb || $rb); 
 
@@ -201,7 +225,7 @@ sub configure_form {
   my $ref    = $segment->ref;
   my $name   = $conf->{name} || "$ref:$start..$end";
 
-  my $length = unit_label( $segment->length );
+  my $length = $self->browser_config->unit_label( $end - $start );
 
   my $html = h2("Showing $length from $ref, positions $start to $end");
 
@@ -212,9 +236,9 @@ sub configure_form {
         .  hidden( -name => 'stop',          -value => $segment->stop )
 	.  hidden( -name => 'nocache',       -value => 1 );
   
-  $html .=  hidden( -name => $self->config_name('lb'), -value => $lb) if $lb;
-  $html .=  hidden( -name => $self->config_name('rb'), -value => $rb) if $rb;
-  $html .=  hidden( -name => $self->config_name('target'), -value => $target) if $target;
+  $html .=  hidden( -name => 'lb', -value => $lb||'');
+  $html .=  hidden( -name => 'rb', -value => $rb||'');
+  $html .=  hidden( -name => 'target', -value => $target||'');
 
   my $map_text = $self->map_header;
 
@@ -247,7 +271,7 @@ sub configure_form {
        { -class => 'searchtitle' },
       [ th($map_text) . th($zoom_menu),
         td( { -class => 'searchbody', -colspan => 2 }, $image . br),
-        td( { -class => 'searchbody', -colspan => 2}, $zone )
+        #td( { -class => 'searchbody', -colspan => 2}, $zone )
       ]
     )
 		 );
@@ -270,34 +294,25 @@ sub configure_form {
 		     [ $col1[$_], $atts->{ $col1[$_] }, $col2[$_], $atts->{ $col2[$_] } ] );
     }
     
-    $html .= table( { -style => "width:${table_width}px" }, Tr( \@rows ) );
-    $html .= br
-	  . submit( -name => 'configured', -value => 'Design Primers' )
-          . '&nbsp;'
-          . reset
-          . '&nbsp;'
-          . $self->back_button;
+    my $buttons = br
+	. submit( -name => 'configured', -value => 'Design Primers' )
+	. '&nbsp;'
+	. reset
+	. '&nbsp;'
+	. $self->back_button;
+    $html .= $buttons.
+	table( { -style => "width:${table_width}px" }, Tr( \@rows ) ).
+	$buttons;
   }
   
   (my $action = self_url()) =~ s/\?.+//;
-  $html = start_form(
-		     -method => 'POST',
-		     -name   => 'mainform',
-		     -action => $action
-		     ).
-		     $html.
-		     end_form;
-
-  # if this is the first config, exit before form and buttons
-  # are printed by gbrowse
-  if ($no_buttons && !$feats) {
-    my $style = $browser->setting('stylesheet') || STYLE;
-    print start_html( -style => $style, -title => 'PCR Primers'),
-      $html;
-    exit;
-  }
-
-  return ($html);
+  print start_form(
+    -method => 'POST',
+    -name   => 'mainform',
+    -action => $action
+      ), $html;  
+  $self->segment_info($segment);
+  print end_form, end_html;
 }
 
 sub map_header {
@@ -314,7 +329,7 @@ sub map_header {
     'select a PCR target'
   );
 
-  return "Click on the map to $recenter or $select_t";
+  return "Press 'Design Primers' or click and drag on the ruler to select a PCR target";
 }
 
 sub dump {
@@ -325,7 +340,25 @@ sub dump {
   # dumpers provide their own headers, so make sure boiler plate
   # stuff is included
   my $style_sheet = $self->browser_config->setting('stylesheet') || STYLE;
-  print start_html( -style => $style_sheet, -title => 'PCR Primers' );
+  my $head = <<END;
+<script src="/gbrowse/js/yahoo-dom-event.js" type="text/javascript"></script>
+<script src="/gbrowse/js/rubber.js" type="text/javascript"></script>
+<script src="/gbrowse/js/primerSelect.js" type="text/javascript"></script>
+<script src="/gbrowse/js/balloon.js" type="text/javascript"></script>
+<script>
+var balloon = new Balloon;
+  balloon.balloonImage        = '/gbrowse/images/balloons/balloon.png';
+  balloon.ieImage             = '/gbrowse/images/balloons/balloon_ie.png';
+  balloon.upLeftStem          = '/gbrowse/images/balloons/up_left.png';
+  balloon.downLeftStem        = '/gbrowse/images/balloons/down_left.png';
+  balloon.upRightStem         = '/gbrowse/images/balloons/up_right.png';
+  balloon.downRightStem       = '/gbrowse/images/balloons/down_right.png';
+  balloon.closeButton         = '/gbrowse/images/balloons/close.png';
+  balloon.delayTime = 500;
+</script>
+END
+
+  print start_html( -style => $style_sheet, -title => 'PCR Primers', -onload => "Primers.prototype.initialize()", -head => $head );
   print $self->browser_config->header;
 
   # reset off-scale target if required
@@ -364,7 +397,7 @@ sub dump {
       if param('configured') && $self->get_primer3_params();
 
   # or print the config form
-  print $self->configure_form($segment,$target,$lb,$rb);
+  $self->configure_form($segment,$target,$lb,$rb);
 }
 
 sub design_primers {
@@ -452,7 +485,7 @@ sub primer_results {
   my $text = "This value should be less than 1 for best results but don\'t worry too much";
   my $Primer_Pair_Quality = 'Primer_Pair_Quality '.a( { -href => 'javascript:void(0)', -title => $text}, '[?]'); 
   my $spacer = td( {-width => 25}, '&nbsp;');
-  
+
   for my $n ( 1 .. $num ) {
     my %r;
     for (@attributes) {
@@ -482,13 +515,11 @@ sub primer_results {
       }
     }
 
-    push @feats,
-        Bio::Graphics::Feature->new(
-				    -start => $r{startleft}-20,
-				    -stop  => $r{startright}+20,
-				    -type  => 'Primer',
-				    -name  => "PCR primer set $n" );
-
+   
+   push @feats, Bio::Graphics::Feature->new( -ref   => $segment->ref,
+					     -start => $r{startleft}-20,
+					     -end   => $r{startright}+20,
+					     -type   => 'primers');
     push @rows,
     Tr(
       [ 
@@ -667,27 +698,18 @@ sub primer3_report {
   return $rs;
 }
 
-sub unit_label {
-  my $value = shift;
-        $value >= 1e9 ? sprintf( "%.4g Gbp", $value / 1e9 )
-      : $value >= 1e6 ? sprintf( "%.4g Mbp", $value / 1e6 )
-      : $value >= 1e3 ? sprintf( "%.4g kbp", $value / 1e3 )
-      : sprintf( "%.4g bp", $value );
-}
-
 sub segment_map {
   my ( $self, $segment, $feats, $lb, $rb ) = @_;
   my $conf        = $self->configuration;
   my @tracks      = grep !/overview/, $self->selected_tracks;
 
   my $config = $self->browser_config;
-  my $render = $self->renderer($$segment);
 
   my $zoom_levels = $config->setting('zoom levels') || '1000 10000 100000 200000';
   my @zoom_levels = split /\s+/, $zoom_levels;
   my %zoom_labels;
   for my $zoom (@zoom_levels) {
-    $zoom_labels{$zoom} = $render->unit_label($zoom);
+    $zoom_labels{$zoom} = $self->browser_config->unit_label($zoom);
   }
   my $zoom_menu = $self->zoom_menu($$segment);
 
@@ -730,63 +752,21 @@ sub segment_map {
 			  $bottom, $panel->translate_color('red'));
   };
 
-  # we will be adding custom scale_bars ourselves
   my %feature_files;
   $feature_files{Primers} = $feats if $feats;
-  my $topscale    = Bio::Graphics::FeatureFile->new;
-  my $bottomscale = Bio::Graphics::FeatureFile->new;
-  $feature_files{topscale} = $topscale;
-  $feature_files{bottomscale} = $bottomscale;
-
-  my $options     = { glyph   => 'arrow',
-		      double  => 1,
-		      tick    => 2,
-		      label   => 1,
-		      units        => $render->setting('units') || '',
-		      unit_divider => $render->setting('unit_divider') || 1 };
-
-  my $options2 = {%$options};
-  $options2->{no_tick_label} = 1 if @tracks < 5;
-
-  $topscale->add_type( topscale => $options );
-  $bottomscale->add_type( bottomscale => $options2 );
-
-  my $toptext = 'Click here to recenter the image';
-  my $bottomtext = 'Click here to create or adjust the target boundaries';
-
-  my $scalebar1 = Bio::Graphics::Feature->new( -start => $$segment->start,
-					       -stop  => $$segment->end,
-					       -type  => 'topscale',
-					       -name  => $toptext,
-					       -ref   => $$segment->ref );
-  my $scalebar2 = Bio::Graphics::Feature->new( -start => $$segment->start,
-                                               -stop  => $$segment->end,
-                                               -type  => 'bottomscale',
-					       -name  => $bottomtext,
-					       -ref   => $$segment->ref );
-  
-  $topscale->add_feature( $scalebar1 => 'topscale' );
-  $bottomscale->add_feature( $scalebar2 => 'bottomscale' );
-  unshift @tracks, 'topscale';
-  push @tracks, 'bottomscale';
-
   my $panel_options = { 
     section          => '',
     segment          => $$segment,
-    do_map           => 1,
-    do_centering_map => 1,
     tracks           => \@tracks,
     postgrid         => $postgrid_callback,
-    noscale          => 1,
     keystyle         => 'none',
     drag_n_drop      => 0,
-    -box_subparts     => 1,
     feature_files    => \%feature_files
       };
   
-  my $html = $render->render_panels($panel_options);
+  my $html = $config->render_panels($panel_options);
 
-  return ($html, $zoom_menu);
+  return (div({-id => 'panels'},$html), $zoom_menu);
 }
 
 # center the segment on the target coordinate
@@ -943,23 +923,8 @@ END
 sub zoom_menu {
   my $self    = shift;
   my $segment = shift;
-  my $render  = $self->renderer($segment);
-  return $render->slidertable(1);
-}
-
-sub renderer {
-  my $self    = shift;
-  my $segment = shift;
-  my $config  = $self->browser_config;
-  my $render  = $self->{render};
-  if ($render) {
-    $render->current_segment($segment);
-    return $render;
-  }
-  
-  $self->{render} = Bio::Graphics::Browser::faux->new($config);
-  $self->{render}->current_segment($segment);
-  return $self->{render};
+  my $conf = $self->browser_config;
+  return $self->slidertable($segment,1);
 }
 
 sub back_button {
@@ -968,241 +933,19 @@ sub back_button {
           -name    => 'Return to Browser' );
 }
 
-1;
-
-
-# A package to override some Bio::Graphics::Browser
-# image mapping methods
-package Bio::Graphics::Browser::faux;
-use Bio::Graphics::Browser;
-use CGI qw/:standard unescape/;
-use warnings;
-use strict;
-use Bio::Root::Storable;
-use Data::Dumper;
-
-use vars '@ISA';
-
-# controls the resolution of the recentering map
-use constant RULER_INTERVALS => 100;
-use constant DEFAULT_SEG_SIZE  => 10000;
-use constant DEFAULT_FINE_ZOOM => '20%';
-use constant BUTTONSDIR        => '/gbrowse/images/buttons';
-use constant OVERVIEW_RATIO    => 0.9;
-use constant DEBUG             => 1;
-
-@ISA = qw/Bio::Graphics::Browser/;
-
-sub new {
-  my $class    = shift;
-  my $browser  = shift;
-  my %browser_data = %{$browser};  # just the config data, not the object
-  return bless \%browser_data, $class;
-}
-
-sub error {
-  '';
-}
-
-sub make_feat_link {
-  my $self = shift;
-  my $feat = shift;
-  my ($start, $end ) = @_;
-  my $fref   = $feat->ref;
-  my $fstart = $feat->start;
-  my $fend   = $feat->stop;
-  $start ||= $fstart;
-  $end   ||= $fend;
-
-  # segment >= DEFAULT_SEG_SIZE
-  my $padding = int((DEFAULT_SEG_SIZE - $feat->length)/2) + 1;
-  my ($pad) = sort {$b<=>$a} 1000, $padding;
-
-  $start  -= $pad;
-  $end    += $pad;
-
-  my $p = 'PrimerDesigner';
-  my $url = "?nocache=1;plugin=$p;plugin_action=Go;ref=$fref;start=$start;stop=$end;";
-  $url   .= "$p.lb=$fstart;$p.rb=$fend";
-  
-  return $url;
-}
-
-sub make_map {
-  my $self = shift;
-  my ($boxes,$panel,$map_name) = @_;
-  my @map = ($map_name);
-
-  my $topruler = shift @$boxes;
-  push @map, $self->make_centering_map($topruler);
-
-  my $bottomruler = pop @$boxes;
-  push @map, $self->make_boundary_map($bottomruler);
-
-  for my $box (@$boxes) {
-    my ( $feat, $x1, $y1, $x2, $y2, $track ) = @$box;
-    next unless $feat->can('primary_tag');
-    next if $feat->primary_tag eq 'Primer';
-    my $fclass = $feat->primary_tag   || 'feature';
-    my $fname  = $feat->display_name  || $feat->name || 'unnamed';
-    my $ftype  = "$fclass:$fname";
-    my $href   = $self->make_feat_link( $feat );
-    my $title  = "select $fclass $fname";
-    push @map, join("\t",$ftype,$x1,$y1,$x2,$y2,'href',$href,'title',$title);
-  }
-
-  return \@map;
-}
-
-sub make_centering_map {
-  my $self   = shift;
-  my $ruler  = shift;
-  my $bottom = shift; # true if this is the lower scale-bar
-
-  my ( $rfeat, $x1, $y1, $x2, $y2, $track ) = @$ruler;
-
-  my $rlength = $x2 - $x1 or return;
-  my $length  = $rfeat->length;
-  my $start   = $rfeat->start;
-  my $stop    = $rfeat->stop;
-  my $panel   = $track->panel;
-  my $pl      = $panel->pad_left;
-  my $middle;
-
-  if ($bottom) {
-    $middle = param('PrimerDesigner.target');
-    $middle ||= int(($start+$stop)/2 + 0.5);
-  }
-
-  # divide into RULER_INTERVAL intervals
-  my $portion  = $length / RULER_INTERVALS;
-  my $rportion = $rlength / RULER_INTERVALS;
-
-  my $ref    = $rfeat->seq_id;
-  my $source = $self->source;
-  my $plugin = 'PrimerDesigner';
-  my $offset = $start - int( $length / 2 );
-
-  my @lines;
-
-  while (1) {
-    my $end    = $offset + $length;
-    my $center = $offset + $length/2;
-    my $sstart = $center - $portion/2;
-    my $send   = $center + $portion/2;
-    
-    $_ = int $_ for ($start,$end,$center,$sstart,$send);
-
-    my ( $X1, $X2 )
-        = map { $_ + $pl } $panel->location2pixel( $sstart, $send );
-
-    # fall of the end...
-    last if $center >= $stop + ($length / 2);
-
-    my ($url,$title);
-
-    my $p = 'PrimerDesigner';
-    my $rb = param("$p.rb");
-    $rb = $1 if $rb && $rb =~ /\=(\d+)/;
-    my $lb = param("$p.lb");
-    $lb = $1 if $lb && $lb =~ /\=(\d+)/;
-    my $target = param("$p.target");
-    
-    # left side of the lower ruler
-    if ($middle && $sstart <= $middle) {
-      $url = "?nocache=1;ref=$ref;start=$start;stop=$stop;plugin=$plugin;plugin_action=Go;$p.lb=$center;";
-      $url .= "$p.rb=$rb;" if $rb;
-      $url .= "$p.target=$target;" if $target;
-      $title = "set left target boundary to $center";
-    }
-    # right side of the lower ruler
-    elsif ($middle) {
-      $url = "?nocache=1;ref=$ref;start=$start;stop=$stop;plugin=$plugin;plugin_action=Go;$p.rb=$center";
-      $url .= ";$p.lb=$lb" if $lb;
-      $url .= "$p.target=$target;" if $target;
-      $title = "set right target boundary to $center";
-    }
-    # top ruler
-    else {
-      $url = "?nocache=1;ref=$ref;start=$offset;stop=$end;plugin=$plugin;plugin_action=Go;";
-
-      # We can retain an off-center target if it is still reasonable
-      if ($target && $target > $offset + 1000 && $target < $end - 1000 ) {
-	$url .= "$p.target=$target;";
-      }
-      if ($lb  && $lb > $offset + 500) {
-	$url .= "$p.lb=$lb;";
-      }
-      if ($rb  && $rb < $end - 500) {
-        $url .= "$p.rb=$rb;";
-      }
-
-      $title = "recenter at $center";
-    }
-    my $map_line = join("\t",'ruler:ruler',$X1,$y1,$X2,$y2,'href',$url,'title',$title);
-    push @lines, $map_line;
-
-    $offset += int $portion;
-  }
-
-  return @lines;
-}
-
-sub make_boundary_map {
-  my $self = shift;
-  $self->make_centering_map(@_, 1);
-}
-
-sub current_segment {
-  my $self = shift;
-  my $segment = shift;
-  return $self->{segment} = $segment if $segment;
-  return $self->{segment};
-}
-
-sub unit_label {
-  my ( $self, $value ) = @_;
-  my $unit    = $self->setting('units')        || 'bp';
-  my $divider = $self->setting('unit_divider') || 1;
-  $value /= $divider;
-  my $abs = abs($value);
-  my $label;
-        $label = $abs >= 1e9 ? sprintf( "%.4g G%s", $value / 1e9, $unit )
-      : $abs >= 1e6  ? sprintf( "%.4g M%s", $value / 1e6, $unit )
-      : $abs >= 1e3  ? sprintf( "%.4g k%s", $value / 1e3, $unit )
-      : $abs >= 1    ? sprintf( "%.4g %s",  $value,       $unit )
-      : $abs >= 1e-2 ? sprintf( "%.4g c%s", $value * 100, $unit )
-      : $abs >= 1e-3 ? sprintf( "%.4g m%s", $value * 1e3, $unit )
-      : $abs >= 1e-6 ? sprintf( "%.4g u%s", $value * 1e6, $unit )
-      : $abs >= 1e-9 ? sprintf( "%.4g n%s", $value * 1e9, $unit )
-      : sprintf( "%.4g p%s", $value * 1e12, $unit );
-  if (wantarray) {
-    return split ' ', $label;
-  }
-  else {
-    return $label;
-  }
-}
-
 sub slidertable {
   my $self       = shift;
+  my $segment    = shift;
   my $small_pan  = shift;    
-  my $buttons    = $self->setting('buttons') || BUTTONSDIR;
-  my $segment    = $self->current_segment or fatal_error("No segment defined");
+  my $buttons    = $self->browser_config->relative_path_setting('buttons');
   my $span       = $small_pan ? int $segment->length/2 : $segment->length;
-  my $half_title = $self->unit_label( int $span / 2 );
-  my $full_title = $self->unit_label($span);
+  my $half_title = $self->browser_config->unit_label( int $span / 2 );
+  my $full_title = $self->browser_config->unit_label($span);
   my $half       = int $span / 2;
   my $full       = $span;
   my $fine_zoom  = $self->get_zoomincrement();
   Delete($_) foreach qw(ref start stop);
   my @lines;
-  push @lines,
-  hidden( -name => 'start', -value => $segment->start, -override => 1 );
-  push @lines,
-  hidden( -name => 'stop', -value => $segment->end, -override => 1 );
-  push @lines,
-  hidden( -name => 'ref', -value => $segment->seq_id, -override => 1 );
   push @lines, (
 		image_button(
 			     -src    => "$buttons/green_l2.gif",
@@ -1223,7 +966,7 @@ sub slidertable {
 			     -border => 0,
 			     -title  => "zoom out $fine_zoom"
 			     ),
-		'&nbsp;', $self->zoomBar, '&nbsp;',
+		'&nbsp;', $self->zoomBar($segment), '&nbsp;',
 		image_button(
 			     -src    => "$buttons/plus.gif",
 			     -name   => "zoom in $fine_zoom",
@@ -1247,19 +990,21 @@ sub slidertable {
   return join( '', @lines );
 }
 
+
 sub get_zoomincrement {
   my $self = shift;
-  my $zoom = $self->setting('fine zoom') || DEFAULT_FINE_ZOOM;
+  my $zoom = $self->browser_config->setting('fine zoom') || DEFAULT_FINE_ZOOM;
   $zoom;
 }
 
 sub zoomBar {
   my $self    = shift;
-  my $segment = $self->current_segment;
-  my ($show)  = $self->tr('Show');
+  my $segment = shift;
+  my $conf = $self->browser_config;
+  my ($show)  = $conf->tr('Show');
   my %seen;
-  my @ranges = grep { !$seen{$_}++ } sort { $b <=> $a } ($segment->length, $self->get_ranges());
-  my %labels = map { $_ => $show . ' ' . $self->unit_label($_) } @ranges;
+  my @ranges = grep { !$seen{$_}++ } sort { $b <=> $a } ($segment->length, $conf->get_ranges());
+  my %labels = map { $_ => $show . ' ' . $conf->unit_label($_) } @ranges;
 
   return popup_menu(
     -class    => 'searchtitle',
@@ -1272,4 +1017,25 @@ sub zoomBar {
   );
 }
 
-1;
+sub _hide {
+  my ($name,$value) = @_;
+  print hidden( -name     => $name,
+                -value    => $value,
+                -override => 1 ), "\n";
+}
+
+sub segment_info {
+  my ($self,$segment) = @_;
+  my $config = $self->browser_config;
+  my $settings = $self->page_settings;
+  my $pad    = $config->image_padding;
+  my $max    = $config->setting('max segment') || MAX_SEGMENT;
+  my $width  = ($settings->{width} * OVERVIEW_RATIO);
+  my $whole_segment = $config->whole_segment($segment);
+
+  _hide(segment              => $segment->ref .':'. $segment->start .'..'. $segment->end);
+  _hide(image_padding        => $pad);
+  _hide(max_segment          => $max);
+  _hide(details_pixel_ratio  => $segment->length/$settings->{width});
+  _hide(detail_width         => $settings->{width} + 2*$pad);
+}

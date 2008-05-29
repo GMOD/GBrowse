@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.78 2008-05-29 15:24:08 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.79 2008-05-29 17:24:55 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1583,6 +1583,7 @@ END
 			      -onClick=>$reset_js,
 			     ),
 		      ),
+                   ),
                  TR(td(),
                     td(
 		       button(-style=>'float:left',

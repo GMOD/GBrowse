@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.82 2008-05-09 21:53:12 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.83 2008-05-29 15:24:17 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -3026,9 +3026,11 @@ sub authorized {
     }
   }
 
-  my $allow = $mode eq  'allow,deny' ? match_host(\@allow,$host,$addr) && !match_host(\@deny,$host,$addr)
-                      : 'deny,allow' ? !match_host(\@deny,$host,$addr) ||  match_host(\@allow,$host,$addr)
-		      : croak "$mode is not a valid authorization mode";
+  my $allow = $mode eq  'allow,deny' 
+                ? match_host(\@allow,$host,$addr) && !match_host(\@deny,$host,$addr)
+                : 'deny,allow' 
+                   ? !match_host(\@deny,$host,$addr) ||  match_host(\@allow,$host,$addr)
+		   : croak "$mode is not a valid authorization mode";
   return $allow unless %users;
   $satisfy = 'any'  if !@allow && !@deny;  # no host restrictions
 

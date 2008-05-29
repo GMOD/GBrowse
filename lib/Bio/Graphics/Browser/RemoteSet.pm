@@ -105,16 +105,35 @@ sub feature_file {
   return $feature_file;
 }
 
+sub transform_url {
+    my $self = shift;
+    my ($url,$segment) = @_;
+
+    my ($seqid,$start,$end) = ref $segment 
+	                          ? ($segment->seq_id,$segment->start,$segment->end)
+                                  : $segment =~ /^([^:]+):(.+)(?:\.\.|,)(.+)$/;
+
+    # do certain substitutions on the URL
+
+    # for DAS
+    $url =~ s!(http:.+/das/\w+)(?:\?(.+))?$!$1/features?segment=$seqid:$start..$end;$2!;
+
+    # for gbgff and the like
+    $url =~ s/\$segment/$seqid:$start..$end/g;
+    $url =~ s/\$ref/$seqid/g;
+    $url =~ s/\$start/$start/e;
+    $url =~ s/\$end/$end/e;
+ 
+    return $url;
+}
+
 sub get_remote_upload {
   my $self = shift;
   my ($url,$rel2abs,$segment,$label) = @_;
   my $config = $self->config;
 
   # do certain substitutions on the URL
-  $url =~ s/\$segment/$segment->seq_id.':'.$segment->start.'..'.$segment->end/ge;
-  $url =~ s/\$ref/$segment->seq_id/ge;
-  $url =~ s/\$start/$segment->start/ge;
-  $url =~ s/\$end/$segment->end/ge;
+  $url = $self->transform_url($url,$segment);
 
   my $id = md5_hex($url);     # turn into a filename
   $id =~ /^([0-9a-fA-F]+)$/;  # untaint operation
@@ -191,6 +210,7 @@ sub get_das_segment {
 
   my $seg = $das->segment($segment->abs_ref,
 			  $segment->abs_start,$segment->abs_end);
+
   return $seg;
 }
 
@@ -252,14 +272,23 @@ sub mirror {
 
 sub annotate {
   my $self = shift;
-  my $segment       = shift;
-  my $feature_files     = shift || {};
-  my $coordinate_mapper = shift;
+  my $segment                = shift;
+  my $feature_files          = shift || {};
+  my $restricted_mapper      = shift;
+  my $unrestricted_mapper    = shift;
   my $settings          = $self->page_settings;
 
   for my $url ($self->sources) {
     next unless $settings->{features}{$url}{visible};
-    my $feature_file = $self->feature_file($url,$segment,$coordinate_mapper);
+         # check to see whether URL includes the magic $segment and/or $ref 
+         # parameters. If so, then it is safe to use the coordinate remapper
+         # which remaps all coordinates. Otherwise, this is probably just a GFF
+         # file and we need to filter out features that are outside the range of
+         # the current segment.
+    my $mapper             = $url =~ m!(\$segment|\$ref)!  
+                                     ? $unrestricted_mapper
+                                     : $restricted_mapper;
+    my $feature_file       = $self->feature_file($url,$segment,$mapper);
     $feature_files->{$url} = $feature_file;
   }
 }

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.6.8.1.2.6 2008-03-05 05:44:49 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.7 2008-05-29 15:24:07 lstein Exp $
 
 use Bio::DB::GFF;
 use File::Basename 'basename';
@@ -57,7 +57,7 @@ use vars qw($DB $DSN $HEADER %ERRCODES $CONFIG
             $VERSION $DAS_VERSION $CONF_DIR 
             %CACHED_TYPES %FORCED_GROUP %NO_PARENT);
 
-#$Id: das.PLS,v 1.6.8.1.2.6 2008-03-05 05:44:49 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
+#$Id: das.PLS,v 1.6.8.1.2.7 2008-05-29 15:24:07 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';
@@ -248,7 +248,10 @@ sub features {
     @filter = @$top_types;
   }
 
-  push @filter,map {exists $category2type->{$_} ? @{$category2type->{$_}} : $_ } @ordinary_categories;
+  push @filter,map {exists $category2type->{$_}
+		    ? @{$category2type->{$_}} 
+		    : $_ 
+                   } @ordinary_categories;
   @filter = map {$CONFIG->setting(feature=>$_)} $CONFIG->labels unless @filter;
   @filter = grep {$valid_types{$_}} @filter;
 
@@ -328,10 +331,7 @@ sub dump_segment {
   if (@$filter) {
     my $iterator = $seq->features(-types=>$filter,-merge=>1,-iterator=>1);
     while (my $f = $iterator->next_seq) {
-      my @subparts  = $f->get_SeqFeatures;
-      print_feature($f,undef,$type2category,\%agg_map) unless (@subparts && no_parent_wanted($f));
-      my $count = 0;
-      print_feature($_,$f,$type2category,\%agg_map,++$count)     foreach @subparts;
+	print_feature($f,undef,transmute($f->type,$type2category),\%agg_map);
     }
   }
 
@@ -339,15 +339,35 @@ sub dump_segment {
 }
 
 sub print_feature {
+    my $f             = shift;
+    my $parent        = shift;
+    my $category      = shift;
+    my $agg_map       = shift;
+    my $count         = shift || 0;
+    my $id            = shift || $f->id;
+
+    my @subparts     = $f->get_SeqFeatures;
+    my $no_parent    = @subparts && no_parent_wanted($f);
+
+    unless ($no_parent) {
+	_print_feature($f,$parent,$category,$agg_map,$count,$id);
+    }
+
+    print_feature($_,$parent||$f,$category,$agg_map,++$count) foreach @subparts;
+}
+
+sub _print_feature {
   local $^W = 0; # kill some uninit variable warnings
 
   my $f             = shift;
   my $parent        = shift;
-  my $type2category = shift;
+  my $category      = shift;
   my $agg_map       = shift || {};
   my $count         = shift;
+  my $id            = shift;
 
-  my $type        = $f->type;
+  $type           = $f->type;
+
   my $flabel      = $f->info || $f->type;
   my $source      = $f->source;
   my $method      = $f->method;
@@ -356,10 +376,9 @@ sub print_feature {
   my $score       = $f->score;
   my $orientation = $f->strand || 0;
   my $phase       = $f->phase;
-  my $pid         = eval{$parent->id}||'';
-  my $id          = $f->id || $pid . "/$count";
   # to avoid binary IDs!
-  $id             = unpack('L',$id) if ref($DB) eq 'Bio::DB::GFF::Adaptor::berkeleydb';
+  $id             = unpack('L',$id) 
+      if ref($DB) eq 'Bio::DB::GFF::Adaptor::berkeleydb';
   my $fid         = $id;
   my @notes       = $f->notes if $f->can('notes');
   my $attributes  = $f->attributes if $f->can('attributes');
@@ -367,7 +386,9 @@ sub print_feature {
   my ($group,$gclass);
   if ($f->can('group')) { # Bio::DB::GFF feature
     $group       = $f->group;
-    $gclass      = (ref($group) && $group->can('class')) ? $group->class : 'anonymous';
+    $gclass      = (ref($group) && $group->can('class')) 
+	               ? $group->class 
+		       : 'anonymous';
   } else {
     $group       = defined $parent ? $parent->id : $id;
     $gclass      = '';
@@ -387,8 +408,8 @@ sub print_feature {
   $score       = '-' unless defined $score;
   $orientation = $orientation >= 0 ? '+' : '-';
 
-  my $category = transmute($type,$type2category);
-  ($start,$end) = ($end,$start) if defined($start) && defined($end) && $start > $end;
+  ($start,$end) = ($end,$start) 
+      if defined($start) && defined($end) && $start > $end;
 
   # group stuff
   my $groupid       = length($gclass) ? "$gclass:$group" : $group;
@@ -409,8 +430,9 @@ sub print_feature {
   }
 
   else {  # repeated code here, but not sure of logic
+      $fid    = "$f";
       my $url = $CONFIG->make_link($parent || $f);
-      $url ||= 'none';
+      $url  ||= 'none';
       if ($url ne 'none') {
 	hack_link(\$url);
 	$link = qq(<LINK href="$url">$type</LINK>);
@@ -432,7 +454,8 @@ sub print_feature {
   if (($target = $f->target) && $target->can('start')) {
     my $start = $target->start;
     my $stop  = $target->stop;
-    $target_info = qq(<TARGET id="$target" start="$start" stop="$stop" />);
+    my $seqid = $target->ref;
+    $target_info = qq(<TARGET id="$seqid" start="$start" stop="$stop" />);
   }
 	
   if ($category eq 'component') {
@@ -442,7 +465,8 @@ sub print_feature {
   }
 
   my $map;
-  my ($has_subparts,$has_superparts) = describe_component($type,$type2category);
+  my ($has_subparts,$has_superparts) 
+      = describe_component($type,$type2category);
 
   if ($has_subparts || $has_superparts) {
     $map = qq( reference="yes")
@@ -700,6 +724,10 @@ END
       my ($method,$source) = split ':';
       my $count = $histogram{$_};
       my $category  = transmute($_);
+      $category ||= '';  #get rid of uninit variable warnings
+      $method   ||= '';
+      $source   ||= '';
+      $count    ||= 0;
       print qq(\t<TYPE id="$_" category="$category" method="$method" source="$source">$count</TYPE>\n);
     }
     print qq(</SEGMENT>\n);
@@ -823,7 +851,7 @@ sub transmute {
   # try fast exact match first
   return $map->{$type} if exists $map->{$type};
 
-  # otherwise do a fuzzy match using the values of %{$CFG->{TYPEOBJECTS}}
+  # otherwise do a fuzzy match
   for my $typeobj (values %{$map->{__fuzzy__}}) {
 
     if ($typeobj->match($type)) {
@@ -862,8 +890,10 @@ sub no_parent_wanted {
     $type =~ s/:\w+//;
     $label = $CONFIG->type2label($type);
   }
-  $no_parent = $CONFIG->setting($label => 'das flatten') ||
-               $CONFIG->setting('TRACK DEFAULTS' => 'das flatten') if $label;
+  $no_parent = $CONFIG->setting($label => 'das flatten')
+                || $CONFIG->setting('TRACK DEFAULTS' => 'das flatten')
+	        || $DB->isa('Bio::DB::SeqFeature::Store')
+	       if $label;
   return $NO_PARENT{$type} = $no_parent;
 }
 
@@ -913,10 +943,12 @@ sub get_segments {
   # extended segment argument
   my @segments;
   foreach (param('segment')) {
-    my ($ref,$start,$stop) = /^(\S+?)(?::(\d+),(\d+))?$/;
+    my ($ref,$start,$stop) = /^(\S+?)(?::(\d+)(?:\.\.|,)(\d+))?$/;
     push @segments,[$ref,$start,$stop];
   }
-  push @segments,[scalar param('ref'),scalar param('start'),scalar param('stop')] if param('ref');
+  push @segments,[scalar param('ref'),
+		  scalar param('start'),
+		  scalar param('stop')] if param('ref');
   return unless @segments;
 
   foreach (@segments){
@@ -996,20 +1028,23 @@ sub categories {
     next unless $category;  # skip sections without a category marked
 
     my @composite_types = $config->label2type($label);
+
     push @types,@composite_types;
     my $t   = Bio::DB::GFF->parse_types(@composite_types);
+
     if ($DB->can('aggregators')) {
       $_->disaggregate($t,$DB) foreach $DB->aggregators;
     }
     my @t = map {defined($_->[1]) ? join(':',@$_) : $_->[0]} @$t;
 
     my %seenit;
-    my @all_types = grep {!$seenit{$_}++} @t;
+    my @all_types = grep {!$seenit{$_}++} @t,@composite_types;
 
     push @{$category2type{$category}},(@composite_types,@all_types);
     $type2category{$_} = $category foreach @composite_types;
 
     for my $type (@all_types) {
+
       $type2category{$type} = $category;
       my $typeobj      = Bio::DB::GFF::Typename->new($type);
       $type2category{__label__}{$type}      = $label;

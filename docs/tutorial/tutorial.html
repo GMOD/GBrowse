@@ -8,7 +8,7 @@
 <body>
 <h1>Generic Genome Browser: A Tutorial</h1>
 
-<h2>Author: Lincoln Stein, 12 May 2008</h2>
+<h2>Author: Lincoln Stein, 28 May 2008</h2>
 
 <p>
 
@@ -1304,11 +1304,10 @@ key                = Protein-coding genes
 
 <p>
 
-The updated aggregators option loads the processed_transcript The new
-Genes track associates "gene" features with the "gene" glyph, sets its
-background color to peachpuff (yes, there really is a color by this
-name!), turns on the description lines, and sets the human readable
-track name to "Protein-coding genes."  <p>
+The new Genes track associates "gene" features with the "gene" glyph,
+sets its background color to peachpuff (yes, there really is a color
+by this name!), turns on the description lines, and sets the human
+readable track name to "Protein-coding genes."  <p>
 
 <p>
 
@@ -4201,6 +4200,64 @@ searching, and how to aggregate multi-part features together.  You
 will almost certainly need to customize these options to meet your
 needs.
 
+<h4><a name="das_aggregators">4.3.4. Fixing DAS Displays with Aggregators</a></h4>n
+
+<p>
+
+Going back to the elegans_core.conf file used at the beginning of this
+section, you may have noticed an option called "aggregators" in the
+elegans_core.conf file. This option overcomes a limitation of DAS,
+which is that it is best for sharing simple one-part features that do
+not have subparts. When DAS exports a multipart feature, it breaks the
+feature up into its component bits and sends them
+individually. Aggregators tell GBrowse how to reassemble the pieces
+correctly. Without aggregators declared in GBrowse, you wouldn't see a
+whole gene, but instead a bunch of pieces labeled "mRNA", "CDS", etc.
+
+<p>
+
+The elegans_core.conf aggregators line looks like this:
+
+<blockquote class="example"><pre>
+aggregators = EST_match{EST_match} gene{CDS,five_prime_UTR,three_prime_UTR/mRNA}
+</pre></blockquote>
+
+<p>
+
+This is defining two aggregators, one named "EST_match" and the other
+named "gene". The first one is easier. The syntax is:
+"<i>type_of_reassembled_feature</i>{<i>type_of_subparts</i>"}. In
+other words, this aggregator is telling GBrowse to look for a bunch of
+features of type "EST_match" and replace them with a single feature
+also named "EST_match".
+
+<p>
+
+Genes are more complex because they have several internal parts and
+two levels of nesting with mRNAs at the top and CDS and UTR features
+underneath them (refer back to the GFF3 file for details). In this
+case, the aggregator uses the full syntax:
+"<i>type_of_reassembled_feature</i>{<i>subpart1,subpart2,subpart3...</i>/<i>type_of_main_part</i>"}. In
+other words, look for features of type "mRNA" and aggregate them
+together with features of type "CDS," "five_prime_UTR," and
+"three_prime_UTR." The reassembled feature will be of type "gene."
+
+<p>
+
+An unfortunate limitation on GBrowse DAS support is that the
+aggregators must be defined in the instance of GBrowse that is
+<b>displaying</b> the DAS annotations rather than the instance that is
+producing them. This means that you have to customize GBrowse
+in advance according to the DAS sources you wish to display. If you
+find this limiting, you may wish to check out the experimental <a
+href="http://gmod.org/wiki/index.php/Gbgff">Gbgff annotation-sharing system.</a>
+
+<p>
+
+More information about using aggregators can be found in the GFF2
+tutorial located at <a href="dbgff/tutorial.html">Using GBrowse
+with Bio::DB::GFF.</a>
+
 <hr>
 
 
@@ -4681,6 +4738,6 @@ Have fun!
 <address>Lincoln D. Stein, lstein@cshl.org<br>
 <a href="/">Cold Spring Harbor Laboratory</a></address>
 <!-- hhmts start -->
-Last modified: Mon May 12 13:45:00 EDT 2008
+Last modified: Thu May 29 11:18:43 EDT 2008
 <!-- hhmts end -->
 </body> </html>

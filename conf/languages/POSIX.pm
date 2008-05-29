@@ -420,4 +420,6 @@ END
 
  SEND_TO_GALAXY    => 'Send this Region to Galaxy',
 
+ NO_DAS            => 'Installation error: Bio::Das module must be installed for DAS URLs to work. Please inform this site\'s webmaster.',
+
 };

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.77 2008-05-27 18:05:29 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.78 2008-05-29 15:24:08 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -479,13 +479,13 @@ sub main_display {
 			       -action => $action,
 			       -method => 'GET')
                    : start_multipart_form(-name   => 'mainform',
-					  -action => $action,
+					  -action => $action.'#search',
 					  -method => 'POST');
   print navigation_table($segment,$page_settings);
   print html_frag('html2',$segment,$page_settings);
 
-  # NOTE: we may exit out on the next statement if the user wants to download a previously-
-  # uploaded file
+  # NOTE: we may exit out on the next statement 
+  # if the user wants to download a previously-uploaded file
   my $feature_files = load_external_sources($segments,$page_settings)
     unless $CONFIG->section_setting('upload_tracks') eq 'off';
 
@@ -600,28 +600,33 @@ sub overview_panel {
   return '' if $CONFIG->section_setting('overview') eq 'hide';
   my $image = overview($whole_segment,$segment,$page_settings,$feature_files);
   $image =~ s/\>/onclick="document.mainform.submit()"\>/;
-  return toggle($page_settings,
-		'Overview',
-		table({-border=>0,-width=>'100%'},
-		      TR({-class=>'databody'},
-			 td({-align=>'center'},$image)
-			)
+  return 
+      a({-name=>'overview'},
+	toggle($page_settings,
+	       'Overview',
+	       table({-border=>0,-width=>'100%'},
+		     TR({-class=>'databody'},
+			td({-align=>'center'},$image)
 		     )
-	       );
+	       )
+	)
+      );
 }
 
 sub region_panel {
   my ($region_segment,$segment,$page_settings,$feature_files) = @_;
   return '' if $CONFIG->section_setting('region') eq 'hide';
   my $image = regionview($region_segment,$segment,$page_settings,$feature_files);
-  return toggle($page_settings,
-		'Region',
-		table({-border=>0,-width=>'100%'},
-		      TR({-class=>'databody'},
-			 td({-align=>'center'},$image)
+  return a({-name=>'region'},
+	   toggle($page_settings,
+		  'Region',
+		  table({-border=>0,-width=>'100%'},
+			TR({-class=>'databody'},
+			   td({-align=>'center'},$image)
 			)
-		     )
-	       );
+		  )
+	   )
+      );
 }
 
 
@@ -702,26 +707,31 @@ sub detail_panel {
 	"An error occurred while processing an uploaded or remote annotation file: ",
 	b($CONFIG->error) ) 
     : '';
+
   my $hints = join '',unique(hidden('ref')),unique(hidden('start')),unique(hidden('stop'));
 
   unless ($CONFIG->drag_and_drop()) {
-    return div(toggle($page_settings,
-		      'Details',
-		      div({-id=>'panels',-class=>'track'},
-			  $panels
-			 )
-		     )
-	      )
+      return a({-name=>'details'},
+	       div(toggle($page_settings,
+			  'Details',
+			  div({-id=>'panels',-class=>'track'},
+			      $panels
+			  )
+		   )
+	       )
+	  );
   }
 
   my $drag_script = drag_script('panels','track');
-  return div(toggle($page_settings,
-		    'Details',
-		    div({-id=>'panels',-class=>'track'},
-			$panels
-		       )
-		   )
-	    ).$drag_script;
+  return a({-name=>'details'},
+	   div(toggle($page_settings,
+		      'Details',
+		      div({-id=>'panels',-class=>'track'},
+			  $panels
+		      )
+	       )
+	   ).$drag_script
+      );
 }
 
 sub drag_script {
@@ -803,8 +813,8 @@ sub default_settings {
   $settings->{width}         = $CONFIG->setting('default width');
   $settings->{source}        = $CONFIG->source;
   $settings->{region_size}   = $CONFIG->setting('region segment');
-  $settings->{cache}         = defined $CONFIG->cache_time ? $CONFIG->cache_time : 1;
-  $settings->{drag_and_drop} = $CONFIG->drag_and_drop;
+  $settings->{cache}         = defined $CONFIG->cache_time    ? $CONFIG->cache_time : 1;
+  $settings->{drag_and_drop} = defined $CONFIG->drag_and_drop ? $CONFIG->drag_and_drop : 1;
   $settings->{v}             = $VERSION;
   $settings->{show_tooltips} = 1;
   $settings->{stp}           = 1;
@@ -904,7 +914,8 @@ sub adjust_region_size {
   my $length = $segment ? $segment->length : abs($settings->{stop} - $settings->{start});
   my $whole_segment = $CONFIG->whole_segment($segment) if $segment;
 
-  if ($CONFIG->setting('region segment') eq 'AUTO') {
+  my $region_segment = $CONFIG->setting('region segment');
+  if ($region_segment && $region_segment eq 'AUTO') {
     $region_size = 10*$length;
   }
   else {
@@ -936,13 +947,8 @@ sub adjust_settings {
       $settings->{cache}      = !param('nocache') if defined param('nocache');
     }
 
-    if ($CONFIG->setting('drag and drop')) {
-      $settings->{drag_and_drop} = param('drag_and_drop');
-    } else {
-      $settings->{drag_and_drop} = 0;
-    }
-
-    $settings->{show_tooltips}   = param('show_tooltips');
+    $settings->{drag_and_drop} = param('drag_and_drop');
+    $settings->{show_tooltips} = param('show_tooltips');
 
   }
 
@@ -1138,38 +1144,40 @@ sub navigation_table {
   my $plugin_menu = plugin_menu($settings,$PLUGINS);
   my $plugins     = $plugin_menu ? b($CONFIG->tr('Dumps')).':'.br.$plugin_menu : '';
 
-  $table .= toggle($settings,
-		   'Search',
-		   table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
-			 TR({-class=>'searchbody'},
-			    td({-align=>'left', -colspan=>2},
-			       html_frag('html1',$segment,$settings)||''
+  $table .= a({-name=>'search'},
+	      toggle($settings,
+		     'Search',
+		     table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
+			   TR({-class=>'searchbody'},
+			      td({-align=>'left', -colspan=>2},
+				 html_frag('html1',$segment,$settings)||''
 			      )
 			   ),
-
-			 TR({-class=>'searchbody'},
-			    td({-align=>'left'},
-			       $searchbox
+			   
+			   TR({-class=>'searchbody'},
+			      td({-align=>'left'},
+				 $searchbox
 			      ),
-			    td({-colspan=>1,-align=>'left'},
-			       $plugins
+			      td({-colspan=>1,-align=>'left'},
+				 $plugins
 			      )
 			   ),
-			 TR({-class=>'searchbody',-style=>'padding-top: 5px'},
-			    td({-align=>'left'},source_menu($settings)),
-			    td({-align=>'left'},
-			       $segment ? (
-					   (b($CONFIG->tr('Scroll').': '),slidertable($segment,$buttonsDir)),
-					   b(
-					     checkbox(-name=>'flip',
-						      -checked=>$settings->{flip},-value=>1,
-						      -label=>$CONFIG->tr('Flip'),-override=>1))
-					  )
-			       : '',
+			   TR({-class=>'searchbody',-style=>'padding-top: 5px'},
+			      td({-align=>'left'},source_menu($settings)),
+			      td({-align=>'left'},
+				 $segment ? (
+				     (b($CONFIG->tr('Scroll').': '),slidertable($segment,$buttonsDir)),
+				     b(
+					 checkbox(-name=>'flip',
+						  -checked=>$settings->{flip},-value=>1,
+						  -label=>$CONFIG->tr('Flip'),-override=>1))
+				 )
+				 : '',
 			      ),
 			   ),
-			)
-		  );
+		     )
+	      )
+      );
   return $table;
 }
 
@@ -1488,7 +1496,7 @@ new Ajax.Request('$url',
 END
 
   my $self_url = url(-absolute=>1,-path=>1);
-  my $form = start_form(-action=>$self_url,-method=>'POST');
+  my $form = start_form(-action=>$self_url.'#details',-method=>'POST');
   $form .= table({-border=>0},
 		 TR(
 		    th({-align=>'right'},$CONFIG->tr('Show')),
@@ -1841,22 +1849,24 @@ sub das_table {
 
   local $^W = 0;
   if (defined $settings->{ref}) {
-    my $segment = "$settings->{ref}:$settings->{start},$settings->{stop}";
+      my $segment = "$settings->{ref}:$settings->{start},$settings->{stop}";
 
-    for my $url ($REMOTE_SOURCES->sources) {
+      for my $url ($REMOTE_SOURCES->sources) {
 
-      (my $f = $url) =~ s!(http:.+/das/\w+)(?:\?(.+))?$!$1/features?segment=$segment;$2!;
-      warn "url = $url" if DEBUG_EXTERNAL;
-      next unless $url =~ /^(ftp|http):/ && $feature_files->{$url};
-      warn "external_table(): url = $url" if DEBUG;
-      push @rows,th({-align=>'right',-width=>'20%'},"URL",++$count).
-	td(textfield(-name=>'eurl',-size=>80,-value=>$url,-override=>1),
-	   submit(-name=>"modify.$url",-value=>$CONFIG->tr('Delete')),
-	   br,
-	   a({-href=>$f,-target=>'help'},'['.$CONFIG->tr('Download').']'),
-	   get_uploaded_file_info($settings->{features}{$url}{visible} && $feature_files->{$url})
-	  );
-    }
+	  my $f = $REMOTE_SOURCES->transform_url($url,$segment);
+
+	  warn "url = $url" if DEBUG_EXTERNAL;
+	  next unless $url =~ /^(ftp|http):/ && $feature_files->{$url};
+	  warn "external_table(): url = $url" if DEBUG;
+	  push @rows,th({-align=>'right',-width=>'20%'},"URL",++$count).
+	      td(textfield(-name=>'eurl',-size=>80,-value=>$url,-override=>1),
+		 submit(-name=>"modify.$url",-value=>$CONFIG->tr('Delete')),
+		 br,
+		 a({-href=>$f,-target=>'help'},'['.$CONFIG->tr('Download').']'),
+		 get_uploaded_file_info($settings->{features}{$url}{visible} 
+					&& $feature_files->{$url})
+	      );
+      }
     push @rows,th({-align=>'right',-width=>'20%'},
 		  $CONFIG->tr('Remote_url')).
 		    td(textfield(-name=>'eurl',-size=>80,-value=>'',-override=>1),
@@ -2142,7 +2152,7 @@ sub lookup_features_from_db {
   elsif (my $ref = $settings->{ref}) {
     my @argv = (-name  => $ref);
     push @argv,(-start => $settings->{start}* $divisor) if defined $settings->{start};
-    push @argv,(-end   => $settings->{stop} * $divisor)  if defined $settings->{stop};
+    push @argv,(-end   => $settings->{stop} * $divisor) if defined $settings->{stop};
     warn "looking up @argv" if DEBUG;
     @segments = $db->segment(@argv);
   }
@@ -2598,7 +2608,7 @@ sub load_external_sources {
     my $rel2abs      = coordinate_mapper($segment,1);
     my $rel2abs_slow = coordinate_mapper($segment,0);
     for my $featureset ($PLUGINS,$UPLOADED_SOURCES,$REMOTE_SOURCES) {
-      $featureset->annotate($segment,$f,$rel2abs,$rel2abs_slow,$MAX_SEGMENT);
+	$featureset->annotate($segment,$f,$rel2abs,$rel2abs_slow,$MAX_SEGMENT);
     }
   }
   return $f;
@@ -2942,7 +2952,7 @@ sub set_track_options {
 		      ));
 
   print h1({-align=>'center'},$CONFIG->tr('Settings',$CONFIG->setting('description')));
-  print start_form(-name=>'settings');
+  print start_form(-name=>'settings',-action=>"#search");
   print table({-width=>'100%',-border=>0},
 	      $controls,
 	      TR({-class=>'searchtitle'},

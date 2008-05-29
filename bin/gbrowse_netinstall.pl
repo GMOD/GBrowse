@@ -306,7 +306,7 @@ sub do_get_distro {
             print STDERR "Downloading bioperl-live...\n";
             $distribution_dir = 'bioperl-live';
 
-            my $filename = determine_filename();
+            my $filename = 'bioperl-live.tar.gz'; # =determine_filename();
             my $url = BIOPERL_LIVE_URL."/$filename";
             my $rc = mirror($url, $filename); 
             unless ($rc == RC_OK or $rc == RC_NOT_MODIFIED){
@@ -330,6 +330,8 @@ sub do_get_distro {
     return 1;
 }
 
+#this is probably not going to be needed again, as the nightly
+#bioperl build names have been simplified
 sub determine_filename {
   my $listing = "dirlisting.html";
   my $rc = mirror(BIOPERL_LIVE_URL, $listing);

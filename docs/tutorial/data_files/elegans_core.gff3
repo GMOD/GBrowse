@@ -4,7 +4,7 @@
 C01F4	sequenced	contig	1	40000	.	+	.	Name=C01F4
 C01F4	curated	gene	27922	33389	.	-	.	ID=flt-1;Name=flt-1
 C01F4	curated	mRNA	27922	33389	.	-	.	ID=ZK783.4t;Name=ZK783.4t;Parent=flt-1
-C01F4	curated	three_prime_UTR	27922	28169	.	-	Parent=ZK783.4t
+C01F4	curated	three_prime_UTR	27922	28169	.	-	.	Parent=ZK783.4t
 C01F4	curated	CDS	28170	28350	.	-	1	Parent=ZK783.4t
 C01F4	curated	CDS	28647	29248	.	-	0	Parent=ZK783.4t
 C01F4	curated	CDS	29518	29739	.	-	0	Parent=ZK783.4t

@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::wiggle_density;
 
-# $Id: wiggle_density.pm,v 1.1.2.18 2008-04-10 20:26:48 lstein Exp $
+# $Id: wiggle_density.pm,v 1.1.2.19 2008-05-30 15:27:41 sheldon_mckay Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing);
@@ -65,6 +65,7 @@ sub draw_wigfile {
   my $end            = $self->smooth_end;
 
   $wig->window($smooth_window);
+  $wig->smoothing($smoothing);
   my ($x1,$y1,$x2,$y2) = $self->bounds($left,$top);
   $self->draw_segment($gd,
 		      $start,$end,

@@ -29,7 +29,7 @@ Om de huidige pagina te bewaren,
 END
 
    EDIT_INSTRUCTIONS => <<END,
-Geuploadede annotatiegegeves kunnen hier aangepast worden.
+Geuploade annotatiegegeves kunnen hier aangepast worden.
 Velden kunnen afgescheiden worden door tabs of spaties,
 maar velden met witruimte dienen tussen enkelvoudige of dubbele
 aanhalingstekens te staan
@@ -56,6 +56,8 @@ END
    ALPHABETIC  => 'Alfabetisch',
 
    VARYING     => 'Willekeurig',
+
+   SHOW_GRID => 'Toon grid',
 
    FLIP      => 'Omkeren',
 
@@ -105,7 +107,7 @@ rasterbeelden zoals jpeg of png.
 </ul>
 <p>
 Om SVG beelden te bekijken moet, ofwel je browser SVG ondersteunen, 
-ofwel moet de Adobe SVG browser plugin, of andere SVG applicatie zoals Adobe Illustrator, geïnstalleerd zijn. 
+ofwel moet de Adobe SVG browser plugin, of andere SVG applicatie zoals Adobe Illustrator, geinstalleerd zijn. 
 </p>
 <p>
 Adobe's SVG browser plugin: <a
@@ -242,8 +244,6 @@ END
    GENERAL => 'Algemeen',
 
    REGION      => 'Gebied',
-
-   NO_SOURCES => 'Geen gegevensbronnen',
 
    OVERVIEW => 'Overzicht',
 
@@ -383,5 +383,43 @@ END
  TOO_MANY_LANDMARKS => '%d mijlpalen.  Te veel om op te lijsten.',
 
  SMALL_INTERVAL    => 'Grootte van klein interval bijgesteld tot %s bp',
+
+ NO_SOURCES        => 'Er zijn geen leesbare gegevensbronnen geconfigureerd. Misschien heeft u geen toestemming om deze te bekijken.',
+
+ ADD_YOUR_OWN_TRACKS => 'Voeg uw eigen banen toe',
+
+ INVALID_SOURCE    => 'De bron %s is ongeldig.',
+
+ BACKGROUND_COLOR  => 'Vulkleur',
+
+ FG_COLOR          => 'Lijnkleur',
+
+ HEIGHT           => 'Hoogte',
+
+ PACKING          => 'Packing',
+
+ GLYPH            => 'Vorm',
+
+ LINEWIDTH        => 'Lijn dikte',
+
+ DEFAULT          => '(standaard)',
+
+ DYNAMIC_VALUE    => 'Dynamisch berekend',
+
+ CHANGE           => 'Verandering',
+
+ DRAGGABLE_TRACKS  => 'Sleepbare banen',
+
+ CACHE_TRACKS      => 'Cache banen',
+
+ SHOW_TOOLTIPS     => 'Toon tips',
+
+ OPTIONS_RESET     => 'Alle pagina instellingen zijn terug op hun standaardwaarden gezet.',
+
+ OPTIONS_UPDATED   => 'De website is geherconfigureerd; alle pagina instelling zijn op hun standaardwaarden gezet.',
+
+ SEND_TO_GALAXY    => 'Stuur deze region naar Galaxy',
+
+ NO_DAS            => 'Installatiefout: de Bio::Das module moet geinstalleerd zijn als u gebruik wil maken van DAS URLs. Gelieve de webmaster te contacteren.',
 
 };

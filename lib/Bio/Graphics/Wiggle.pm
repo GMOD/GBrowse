@@ -180,7 +180,7 @@ use constant HEADER_LEN => 256;
 use constant HEADER => '(Z50LFFLFF)@'.HEADER_LEN; # seqid, step, min, max, span, mean, stdev
 use constant BODY   => 'C';
 use constant DEBUG  => 1;
-use constant DEFAULT_SMOOTHING => 'max';
+use constant DEFAULT_SMOOTHING => 'mean';
 
 sub new {
   my $class          = shift;

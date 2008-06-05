@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.5 2008-01-11 16:41:39 scottcain Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.6 2008-06-05 18:31:05 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -377,9 +377,9 @@ sub get_segments {
 sub external_features {
   my ($segment,$feature_file_list) = @_;
   my $rel2abs = coordinate_mapper($segment);
-  #  $DAS_SOURCES->annotate($segment,$feature_file,$rel2abs);
+  #  $DAS_SOURCES->annotate($segment,$feature_file,$rel2abs,$rel2abs,MAX_SEGMENT);
   for my $featureset ($PLUGINS,$UPLOADS,$REMOTES) {
-    $featureset->annotate($segment,$feature_file_list,$rel2abs);
+    $featureset->annotate($segment,$feature_file_list,$rel2abs,$rel2abs,MAX_SEGMENT);
   }
 }
 

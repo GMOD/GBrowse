@@ -492,6 +492,7 @@ sub smoothsub {
   my $smoothsub   = $smoothing eq 'mean' ? \&sample_mean
                    :$smoothing eq 'max'  ? \&sample_max
                    :$smoothing eq 'min'  ? \&sample_min
+                   :$smoothing eq 'none' ? \&sample_center
                    :croak("invalid smoothing type '$smoothing'");
   return $smoothsub;
 }
@@ -552,6 +553,11 @@ sub sample_min {
     $min = $v if !defined $min or $min > $v;
   }
   return $min;
+}
+
+sub sample_center {
+    my $values = shift;
+    return $values->[@$values/2];
 }
 
 sub _store_values {

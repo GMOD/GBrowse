@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::wiggle_density;
 
-# $Id: wiggle_density.pm,v 1.1.2.19 2008-05-30 15:27:41 sheldon_mckay Exp $
+# $Id: wiggle_density.pm,v 1.1.2.20 2008-06-05 18:31:53 lstein Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing);
@@ -171,7 +171,24 @@ sub draw_segment {
   }
 
   # allocate colors
-  my @rgb = $self->panel->rgb($self->bgcolor);
+  # There are two ways to do this. One is a scale from min to max. The other is a
+  # bipartite scale using one color range from zero to min, and another color range
+  # from 0 to max. The latter behavior is triggered when the config file contains
+  # entries for "pos_color" and "neg_color" and the data ranges from < 0 to > 0.
+
+  my $poscolor = $self->pos_color;
+  my $negcolor = $self->neg_color;
+  my $zerocentered = $poscolor != $negcolor && $min_value < 0 && $max_value > 0;
+
+  my ($rgb_pos,$rgb_neg,$rgb);
+  if ($zerocentered) {
+      $rgb_pos = [$self->panel->rgb($poscolor)];
+      $rgb_neg = [$self->panel->rgb($negcolor)];
+  } else {
+      $rgb = [$self->panel->rgb($self->bgcolor)];
+  }
+
+
   my %color_cache;
 
   @$data = reverse @$data if $self->flip;
@@ -188,7 +205,13 @@ sub draw_segment {
       my $data_point = $data->[$i];
       $data_point    = $min_value if $min_value > $data_point;
       $data_point    = $max_value if $max_value < $data_point;
-      my ($r,$g,$b)  = $self->calculate_color($data_point,\@rgb,$min_value,$max_value);
+      my ($r,$g,$b)  = $zerocentered
+	  ? $data_point > 0 ? $self->calculate_color($data_point,$rgb_pos,
+						     0,$max_value)
+	                    : $self->calculate_color($data_point,$rgb_neg,
+						     0,$min_value)
+          : $self->calculate_color($data_point,$rgb,
+				   $min_value,$max_value);
       my $idx        = $color_cache{$r,$g,$b} ||= $self->panel->translate_color($r,$g,$b);
       $self->filled_box($gd,$x,$y1,$x+$pixels_per_datapoint,$y2,$idx,$idx);
     }
@@ -217,7 +240,13 @@ sub draw_segment {
 
 	  $data_point    = $min_value if $min_value > $data_point;
 	  $data_point    = $max_value if $max_value < $data_point;
-	  my ($r,$g,$b)  = $self->calculate_color($data_point,\@rgb,$min_value,$max_value);
+	  my ($r,$g,$b)  = $zerocentered
+	      ? $data_point > 0 ? $self->calculate_color($data_point,$rgb_pos,
+							 0,$max_value)
+	                        : $self->calculate_color($data_point,$rgb_neg,
+							 0,$min_value)
+	      : $self->calculate_color($data_point,$rgb,
+				       $min_value,$max_value);
 	  my $idx        = $color_cache{$r,$g,$b} ||= $self->panel->translate_color($r,$g,$b);
 	  $self->filled_box($gd,$x1,$y1,$x1+$pixels_per_span,$y2,$idx,$idx);
 	  $x1 += $pixels;
@@ -235,7 +264,17 @@ sub draw_segment {
 	$pixels += $pixelstep;
       }
   }
-}      
+}
+
+sub pos_color {
+    my $self = shift;
+    return $self->color('pos_color') || $self->bgcolor;
+}
+
+sub neg_color {
+    my $self = shift;
+    return $self->color('neg_color') || $self->bgcolor;
+}
 
 sub calculate_color {
   my $self = shift;
@@ -310,6 +349,9 @@ The same as the regular graded_segments glyph, except that the
 may specify a "smoothing window" option to control how much smoothing
 is performed on the data. A smoothing window of "1" turns off
 smoothing entirely.
+
+"pos_color" and "neg_color" override "bgcolor" to set the color of
+positive and negative values independently.
 
 =head1 BUGS
 

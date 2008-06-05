@@ -147,8 +147,8 @@ sub featurefile {
     else {
 
       $options->{visibility} ||= 'pack';
-      $options->{color}      ||= '0,0,0';
-      $options->{altColor}   ||= '0,0,0';
+      $options->{color}      ||= $options->{visibility} eq 'pack' ? '255,0,0' : '0,0,0';
+      $options->{altColor}   ||= $options->{visibility} eq 'pack' ? '0,0,255' : '0,0,0';
 
       # stanza
       push @lines,"[$track]";
@@ -168,10 +168,10 @@ sub featurefile {
       push @lines,"description = $options->{description}"
 	if $options->{description};
       if (my $color = $options->{color}) {
-	push @lines,"fgcolor   = ".format_color($color);
+	push @lines,($options->{visibility} =~ /pack/ ? "poscolor=" : "fgcolor=").format_color($color);
       }
       if (my $color = $options->{altColor}) {
-	push @lines,"bgcolor   = ".format_color($color);
+	push @lines,($options->{visibility} =~ /pack/ ? "negcolor=" : "bgcolor=").format_color($color);
       }
       if (exists $options->{viewLimits} and my ($low,$hi) = split ':',$options->{viewLimits}) {
 	push @lines,"min_score   =  $low";

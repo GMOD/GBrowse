@@ -4,6 +4,7 @@ package Bio::Graphics::Browser::RemoteDataBase;
 
 use strict;
 use Carp 'croak';
+use Bio::Graphics::Browser::Util 'error';
 use Bio::Graphics::Browser;
 use Bio::Graphics::Wiggle;
 
@@ -40,10 +41,12 @@ sub convert_ucsc_file {
   $dummy_name    =~ s/foo$//; # get the directory part only!
 
   my $loader = Bio::Graphics::Wiggle::Loader->new($dummy_name);
-  $loader->load($in);
-
-  my $featurefile = $loader->featurefile('featurefile');
-  print $out $featurefile;
+  eval {
+      $loader->load($in);
+      my $featurefile = $loader->featurefile('featurefile');
+      print $out $featurefile;
+  };
+  error($@) if $@;
 }
 
 sub convert_feature_file {

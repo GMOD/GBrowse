@@ -33,6 +33,9 @@ sub draw_wigfile {
       return $self->SUPER::draw(@_);
   }
 
+  $wig->smoothing($self->get_smoothing);
+  $wig->window($self->smooth_window);
+
   my $chr         = $feature->seq_id;
   my $panel_start = $self->panel->start;
   my $panel_end   = $self->panel->end;
@@ -84,6 +87,7 @@ sub create_parts_for_dense_feature {
   my $self = shift;
   my ($dense,$start,$end) = @_;
 
+
 #  my $span = $self->width;
   my $span = $self->scale> 1 ? $end - $start : $self->width;
   my $data = $dense->values($start,$end,$span);
@@ -93,9 +97,11 @@ sub create_parts_for_dense_feature {
   for (my $i=0; $i<$span;$i++) {
     my $offset = $i * $points_per_span;
     my $value  = shift @$data;
-    push @parts,Bio::Graphics::Feature->new(-score => $value || 0,  # maybe a bug here? Treat undef as zero.
-					    -start => int($start + $i * $points_per_span),
-					    -end   => int($start + $i * $points_per_span));
+    next unless defined $value;
+    push @parts,
+      Bio::Graphics::Feature->new(-score => $value,
+				  -start => int($start + $i * $points_per_span),
+				  -end   => int($start + $i * $points_per_span));
   }
   $self->{parts} = [];
   $self->add_feature(@parts);

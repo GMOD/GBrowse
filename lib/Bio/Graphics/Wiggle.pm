@@ -28,6 +28,7 @@ Bio::Graphics::Wiggle -- Binary storage for dense genomic features
  my $value = $wig->value($position);      # fetch value from position
  my $values = $wig->values($start,$end);  # fetch range of data from $start to $end
 
+ $wig->window(100);                       # sample window size
  $wig->smoothing('mean');                 # when sampling, compute the mean value across sample window
  my $values = $wig->values($start,$end,$samples);  # fetch $samples data points from $start to $end
 
@@ -453,9 +454,11 @@ sub _retrieve_values {
     }
   }
 
-  my $result = $self->sample(\@bases,$samples);
-  $self->smooth($result) if $self->window;
-  return $self->unscale($result);
+  my $r = $self->unscale(\@bases);
+  $r    = $self->sample($r,$samples);
+  $r    = $self->smooth($r,$self->window * $samples/@bases) 
+      if $self->window>1;
+  return $r;
 }
 
 sub sample {
@@ -498,15 +501,18 @@ sub smoothsub {
 }
 
 sub smooth {
-  my ($self,$data) = @_;
+  my ($self,$data,$window) = @_;
+
   my $smoothing = $self->smoothing;
-  my $window    = $self->window;
-  return $data if $smoothing eq 'none' || !$window;
-  
+  $window  ||= $self->window;
+
+  return $data if $smoothing eq 'none' || $window < 2;
+
   my @data = @$data;
   my $smoother = $self->smoothsub;
   $window++ unless $window % 2;
   my $offset = int($window/2);
+
   for (my $i=$offset; $i<@$data-$offset; $i++) {
     my $start = $i - $offset;
     my $end   = $i + $offset;

@@ -145,54 +145,60 @@ sub featurefile {
     }
 
     else {
+	$options->{visibility} ||= 'dense';
+	$options->{color}      ||= $options->{visibility} =~ /pack/i ? '255,0,0' : '0,0,0';
+	$options->{altColor}   ||= $options->{visibility} =~ /pack/i ? '0,0,255' : '0,0,0';
 
-      $options->{visibility} ||= 'pack';
-      $options->{color}      ||= $options->{visibility} eq 'pack' ? '255,0,0' : '0,0,0';
-      $options->{altColor}   ||= $options->{visibility} eq 'pack' ? '0,0,255' : '0,0,0';
+	warn join ' ',%$options;
 
-      # stanza
-      push @lines,"[$track]";
-      if (my $graph_type = $options->{glyph}) {
-	if ($graph_type =~ /box/) {
-	  push @lines, "glyph       = wiggle_box";
+	# stanza
+	push @lines,"[$track]";
+	if (my $graph_type = $options->{glyph}) {
+	    if ($graph_type =~ /box/) {
+		push @lines, "glyph       = wiggle_box";
+	    }
+	    else {
+		push @lines,"glyph       = ".
+		    ($graph_type =~/density/ ? 'wiggle_density' : 'wiggle_xyplot');
+	    }
 	}
 	else {
-	  push @lines,"glyph       = ".($graph_type =~/density/ ? 'wiggle_density' : 'wiggle_xyplot');
+	    push @lines,"glyph       = ".
+		($options->{visibility}=~/pack/ ? 'wiggle_density' : 'wiggle_xyplot');
 	}
-      }
-      else {
-	push @lines,"glyph       = ".($options->{visibility}=~/pack/ ? 'wiggle_density' : 'wiggle_xyplot');
-      }
-      push @lines,"key         = $options->{name}"
-	if $options->{name};
-      push @lines,"description = $options->{description}"
-	if $options->{description};
-      if (my $color = $options->{color}) {
-	push @lines,($options->{visibility} =~ /pack/ ? "poscolor=" : "fgcolor=").format_color($color);
-      }
-      if (my $color = $options->{altColor}) {
-	push @lines,($options->{visibility} =~ /pack/ ? "negcolor=" : "bgcolor=").format_color($color);
-      }
-      if (exists $options->{viewLimits} and my ($low,$hi) = split ':',$options->{viewLimits}) {
-	push @lines,"min_score   =  $low";
-	push @lines,"max_score   =  $hi";
-      }
-      if (exists $options->{maxHeightPixels} and my ($max,$default,$min) = 
-	  split ':',$options->{maxHeightPixels}) {
-	push @lines,"height  = $default";
-      }
-      push @lines,"smoothing        = $options->{windowingFunction}"
-	if $options->{windowingFunction};
+	push @lines,"key         = $options->{name}"
+	    if $options->{name};
+	push @lines,"description = $options->{description}"
+	    if $options->{description};
+	if (my $color = $options->{color}) {
+	    push @lines,($options->{visibility} =~ /pack|dense/i ? "pos_color=" : "fgcolor=")
+		. format_color($color);
+	}
+	if (my $color = $options->{altColor}) {
+	    push @lines,($options->{visibility} =~ /pack|dense/i ? "neg_color=" : "bgcolor=")
+		. format_color($color);
+	}
+	if (exists $options->{viewLimits} and my ($low,$hi) = split ':',$options->{viewLimits}) {
+	    push @lines,"min_score   =  $low";
+	    push @lines,"max_score   =  $hi";
+	}
+	if (exists $options->{maxHeightPixels} and my ($max,$default,$min) = 
+	    split ':',$options->{maxHeightPixels}) {
+	    push @lines,"height  = $default";
+	}
+	push @lines,"smoothing        = $options->{windowingFunction}"
+	    if $options->{windowingFunction};
+	
+	my $smoothing_window = $options->{smoothingWindow} || 0;
+# smoothing window max value = 16px -- WARNING! BUG! Deviation from UCSC here -- we smooth in base pairs
+# rather than in pixels -- oops. They do it right.
+#	if ($smoothing_window > 16) {
+#	    croak("The smoothing window is set to $smoothing_window px.  Allowed values are 0-16\n");
+#	}
 
-      # smoothing window max value = 16px
-      my $smoothing_window = $options->{smoothingWindow} || 0;
-      if ($smoothing_window > 16) {
-	croak("The smoothing window is set to $smoothing_window px.  Allowed values are 0-16\n");
-      }
-
-      push @lines,"smoothing window = $options->{smoothingWindow}"
-	if $options->{smoothingWindow};
-      push @lines,'';
+	push @lines,"smoothing window = $options->{smoothingWindow}"
+	    if $options->{smoothingWindow};
+	push @lines,'';
     }
   }
 
@@ -335,7 +341,7 @@ sub minmax {
   my $transform  = $self->get_transform;
 
   my $seqids = ($self->current_track->{seqids} ||= {});
-  my $chrom = $self->{track_options}{chrom};
+  my $chrom  = $self->{track_options}{chrom};
 
   if ((my $size = stat($infh)->size) > BIG_FILE) {
       warn "wiggle file is very large; resorting to genome-wide sample statistics";
@@ -346,27 +352,34 @@ sub minmax {
       return;
   }
 
-  my $stats = Statistics::Descriptive::Sparse->new();
+#  my $stats = Statistics::Descriptive::Sparse->new();
+  my %stats;
   if ($bedline) {  # left-over BED line
       my @tokens = split /\s+/,$bedline;
-      my $value = $tokens[-1];
+      my $seqid  = $tokens[0];
+      my $value  = $tokens[-1];
       $value = $transform->($self,$value) if $transform;
-      $stats->add_data($value);
+      $stats{$seqid} ||= Statistics::Descriptive::Sparse->new();
+      $stats{$seqid}->add_data($value);
   }
 
   while (<$infh>) {
       last if /^track|fixedStep|variableStep/;
       next if /^\#/;
       my @tokens = split(/\s+/,$_) or next;
+      my $seqid  = @tokens > 3 ? $tokens[0] : $chrom;
       my $value  = $tokens[-1];
       $value = $transform->($self,$value) if $transform;
-      $stats->add_data($value);
+      $stats{$seqid} ||= Statistics::Descriptive::Sparse->new();
+      $stats{$seqid}->add_data($value);
   }
 
-  $seqids->{$chrom}{min}    = $stats->min();
-  $seqids->{$chrom}{max}    = $stats->max();
-  $seqids->{$chrom}{mean}   = $stats->mean();
-  $seqids->{$chrom}{stdev}  = $stats->standard_deviation();
+  for my $seqid (keys %stats) {
+      $seqids->{$seqid}{min}    = $stats{$seqid}->min();
+      $seqids->{$seqid}{max}    = $stats{$seqid}->max();
+      $seqids->{$seqid}{mean}   = $stats{$seqid}->mean();
+      $seqids->{$seqid}{stdev}  = $stats{$seqid}->standard_deviation();
+  }
 }
 
 sub sample_file {
@@ -501,8 +514,9 @@ sub process_fixedline {
 
   }
   @buffer = map {$transform->($self,$_)} @buffer if $transform;
-  $wigfile->set_values($start=>\@buffer) if @buffer;
-  $self->current_track->{seqids}{$seqid}{end} = $start + @buffer*$step - 1 + $span;
+  $wigfile->set_values($start=>\@buffer)         if @buffer;
+  $self->current_track->{seqids}{$seqid}{end} = 
+      $start + @buffer*$step - 1 + $span;
 }
 
 sub process_variableline {
@@ -549,6 +563,8 @@ sub wigfile {
 	    $self->{FILEWIDE_STATS}{$_} || next;
 	push @stats,($_=>$value);
    }
+
+    warn "seqid=$seqid, stats = @stats";
     my $step = $self->{track_options}{step} || 1;
     my $span = $self->{track_options}{span} || 
 	$self->{track_options}{step} || 

@@ -1,0 +1,22 @@
+#!/usr/bin/perl
+
+use strict;
+use lib
+    '/home/lstein/projects/Generic-Genome-Browser-Trunk/libnew',
+    '/home/lstein/projects/bioperl-live',
+    ;
+
+use constant CONF_FILE =>
+  '/home/lstein/projects/Generic-Genome-Browser-Trunk/conf/GBrowse.conf';
+
+use Bio::Graphics::Browser;
+use Bio::Graphics::Browser::Render::HTML;
+
+my $globals = Bio::Graphics::Browser->new(CONF_FILE) or die "Couldn't read globals";
+my $render = Bio::Graphics::Browser::Render::HTML->new($globals);
+$render->run;
+
+1;
+
+
+	

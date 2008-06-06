@@ -200,76 +200,70 @@ themselves (the core of the application!).
 Create a new view object using information from the provided data
 source and settings.
 
- @maps = $view->image_and_map(\%options);
+ @requests = $view->request_panels({labels=>[list,of,labels],
+                                    featurefiles => [list,of,3d party
+                                                     features],
+                                    deferred => 1
+				    });
 
-Generate a list of [GD object,clickable imagemap] from the current
-settings. The idea is that each GD object is turned into a PNG or SVG
-image for display. Options are:
+This returns a series of CachedTrack objects, which can be
+interrogated for the GD object, the imagemap, the width and height of
+the object. If "deferred" is true, then the CachedTrack objects will
+not contain the data until some time has passed (processing is
+occurring in the background). Check the CachedTrack's status() method
+to find out whether the data is ready.
 
- segment  => [$ref,$start,$end,$flip]   # segment to render
- tracks   => \@tracks                   # list of tracks to render
- panel    => overview|region|detail     # which panel to generate
- features => Bio::Graphics::FeatureFile # additional features
- map_type => feature|center             # whether to generate a map
-                                           for each feature or a
-                                           centering map
+Each CachedTrack has a unique request ID associated with it, which you can
+get by calling its key() method. If a CachedTrack is pending, you can
+later use this key to generate an equivalent CachedTrack:
 
- $track_map = $view->tracks(\%options);
+  my $cache = 
+   Bio::Graphics::Browser::CachedTrack->new(-base => $directory,
+   				            -key  => $key);
 
-Generate a hashref in which keys are the track names and values are an
-array of [$gd,$map]. The idea here is to facilitate distribution of
-track generation across multiple machines. The server will serialize
-this data structure.
+  if ($cache->status eq 'AVAILABLE') {
+        my $gd = $cache->gd;
+  }
 
-Transaction notes
+The -base is a directory where the cached track stores its state. The
+server knows how to find the base.
 
-Step 1: The main controller for the page detects when user actions
-have changed the current view, and sends a request to server to fetch
-and/or cache new track objects. (Track objects contain information on
-the image and map).
+THE CLIENT SIDE
 
-For remote invocation, the page_settings hash will be sent as a
-serialized request to track generator daemons.
+The client should maintain a series of <div> sections corresponding to
+each of the tracks in the overview, region and detail panels. These
+sections dynamically open and close, and use the Scriptaculous system
+of drag-and-drop to reorder themselves.
 
-Step 2: The controller manages a series of track <divs> on the client
-side:
+TRANSACTION NOTES
 
-   a) Each track has three states: hidden, open, collapsed.
-      open:
-          <div class="track" id="detail_track_genes">
-             <span class="titlebar" id="Genes_title">
-                  <img of minus>
-                  <img of config>
-                  <span class="draghandle">Named gene</span>
-                       <img style="display:inline" of track> <!-- generate by ajax!
-                  <imagemap>                                 <!-- generate by ajax! 
-                  </span>
-             </span>
-          </div class="track" id="detail_track_genes">
+Step 1: The client-side controller for the page detects when user
+actions have changed the current view, and sends a request to the
+server informing it of this fact.
 
-       collapsed:
-          <div class="track" id="detail_track_genes">
-             <span class="titlebar" id="Genes_title">
-                  <img of minus>
-                  <img of config>
-                  <span class="draghandle">Named gene</span>
-                       <img style="display:none" of track>   <!-- generate by ajax!
-                  <imagemap>                                 <!-- generate by ajax!
-                  </span>
-             </span>
-          </div>
+*Note* need to figure out the format of this request -- the
+ information on coordinates is contained in the slider table form and
+ probably easist just to pack this up in serialized form (using
+ prototype's form.serialize()) and send it in.
 
-       collapsed:
-          <div class="track" id="detail_track_genes">
-          </div>
+Step 2: The server updates its state and calls
+RenderPanels->request_panels() to create a series of CachedTrack
+requests. It sends back to the controller a response that associates
+the requested track labels with a series of CachedTrack keys.
 
-<map name="Genes_map" id="Genes_map">
-   b) CGI script lays out divs for all tracks in current order.
-   c) Track state set to "open" for all default tracks, "hidden" for everything else
-   d) Invoke a javascript routine that iterates through all non-hidden tracks and
-         loads current content. Probably image generator should make the whole
-         content inside the "draghandle" span.
+Step 3: The controller now tells various page elements that their data
+has changed and they need to update themselves. In particular, it
+should tell each of the track <div>s to update themselves using the
+corresponding CachedTrack key. The track <div>s should use an
+asynchronous request to poll the server until the image and map data
+are ready.
 
-Step 3: The <div> requests are of the form: (session_id,track_label),
-where session_id is implicit in the cookie. The server instances wait
-for the data to appear (initiated by step 1), and then return it.
+HOW ASYNCHRONOUS CALLS ARE MADE
+
+Asynchronous calls need to be consolidated in the server. Currently
+they are handled in an ad-hoc manner. I suggest that asynchronous
+calls standardize on a URL like this: /gbrowse/source/async, and that
+the POSTed requests and responses use JSON format. This provides
+support for nested hashes, lists of lists, etc, and has nice Perl and
+Prototype support.
+

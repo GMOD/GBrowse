@@ -299,7 +299,8 @@ sub render_tracks {
 
 	(my $munge_label = $label) =~ s/_/%5F/g;  # freakin' scriptaculous uses _ as a delimiter!!!
 
-	my $show_titlebar = $source->setting($label => 'key') ne 'none';
+    my $show_titlebar
+        = ( ( $source->setting( $label => 'key' ) || '' ) ne 'none' );
 
 	my $map_html = $self->map_html($map);
 	$result{$label} = div({-id=>"track_${munge_label}",-class=>$class},

@@ -269,7 +269,7 @@ sub render_track_table {
       my @track_labels = @{$track_groups{$category}};
 
       @track_labels = sort {lc $labels{$a} cmp lc $labels{$b}} @track_labels
-        if ($settings->{sk} eq "sorted");
+        if (($settings->{sk}||'') eq "sorted");
       my @checkboxes = checkbox_group(-name       => 'label',
 				      -values     => \@track_labels,
 				      -labels     => \%labels,
@@ -484,7 +484,8 @@ sub plugin_links {
   my $self    = shift;
   my $plugins = shift;
 
-  my @plugins = shellwords($self->setting('quicklink plugins')) or return '';
+  my $quicklink_setting = $self->setting('quicklink plugins') or return '';
+  my @plugins           = shellwords($quicklink_setting)      or return '';
   my @result;
   for my $p (@plugins) {
     my $plugin = $plugins->plugin($p) or next;

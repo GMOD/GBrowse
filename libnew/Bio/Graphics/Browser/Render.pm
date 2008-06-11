@@ -146,73 +146,86 @@ sub run {
 # render=<label1>,render=<label2>...    Render the specified tracks
 # navigate=
 sub asynchronous_event {
-  my $self = shift;
-  my $settings = $self->state;
-  my $events;
+    my $self     = shift;
+    my $settings = $self->state;
+    my $events;
 
-  if (my $action = param('navigate')) {
-      warn "updating coordinates";
-      $self->asynchronous_update_coordinates($action);
-      print CGI::header('application/json'),
-      JSON::objToJson({segment=>$settings->{name}});
-      return 1;
-  }
+    if ( my $action = param('navigate') ) {
 
-  if (my $element = param('update')) {
-      warn "updating an element";
-      my $html = $self->asynchronous_update_element($element);
-      print CGI::header('text/html');
-      print $html;
-      return 1;
-  }
+        #warn "updating coordinates";
+        $self->init_database();
+        $self->init_plugins();
+        $self->init_remote_sources();
+        $self->asynchronous_update_coordinates($action);
+        my $cache_track_hash = $self->render_deferred();
+        my %track_keys;
+        foreach my $track_label ( keys %{ $cache_track_hash || {} } ) {
+            $track_keys{$track_label}
+                = $cache_track_hash->{$track_label}->key();
+        }
 
-  # toggle the visibility of sections by looking for "div_visible_*" parameters
-  for my $p (grep {/^div_visible_/} param()) {
-    my $visibility = param($p);
-    $p =~ s/^div_visible_//;
-    $settings->{section_visible}{$p} = $visibility;
-    $events++;
-  }
+        print CGI::header('application/json');
+        print JSON::to_json(
+            { segment => $settings->{name}, track_keys => \%track_keys, } );
+        return 1;
+    }
 
-  # toggle the visibility of individual tracks
-  for my $p (grep {/^track_collapse_/} param()) {
-    my $collapsed = param($p);
-    $p =~ s/^track_collapse_//;
-    $settings->{track_collapsed}{$p} = $collapsed;
-    $events++;
-  }
+    if ( my $element = param('update') ) {
+        warn "updating an element";
+        my $html = $self->asynchronous_update_element($element);
+        print CGI::header('text/html');
+        print $html;
+        return 1;
+    }
 
-  # Change the order of tracks if any "label[]" parameters are present
-  if (my @labels = param('label[]')) {
-      foreach(@labels) {s/%5F/_/g}
-      my %seen;
-      @{$settings->{tracks}} = grep {length()>0 && !$seen{$_}++} (@labels,@{$settings->{tracks}});
-      $events++;
-  }
+    # toggle the visibility of sections by looking for "div_visible_*"
+    # parameters
+    for my $p ( grep {/^div_visible_/} param() ) {
+        my $visibility = param($p);
+        $p =~ s/^div_visible_//;
+        $settings->{section_visible}{$p} = $visibility;
+        $events++;
+    }
 
-  # Slightly different -- process a tracks request in the background.
-  if (my @labels  = param('render')) { # deferred rendering requested
-      $self->init_database();
-      $self->init_plugins();
-      $self->init_remote_sources();
-      my $features      = $self->fetch_features;
-      my $seg           = $self->features2segments($features)->[0]; # likely wrong
+    # toggle the visibility of individual tracks
+    for my $p ( grep {/^track_collapse_/} param() ) {
+        my $collapsed = param($p);
+        $p =~ s/^track_collapse_//;
+        $settings->{track_collapsed}{$p} = $collapsed;
+        $events++;
+    }
 
-      $self->set_segment($seg);
+    # Change the order of tracks if any "label[]" parameters are present
+    if ( my @labels = param('label[]') ) {
+        foreach (@labels) {s/%5F/_/g}
+        my %seen;
+        @{ $settings->{tracks} } = grep { length() > 0 && !$seen{$_}++ }
+            ( @labels, @{ $settings->{tracks} } );
+        $events++;
+    }
 
-      my $deferred_data = $self->request_tracks(\@labels);
+    # Slightly different -- process a tracks request in the background.
+    if ( my @labels = param('render') ) {    # deferred rendering requested
+        $self->init_database();
+        $self->init_plugins();
+        $self->init_remote_sources();
+        my $features = $self->get_features;
+        my $seg = $self->features2segments($features)->[0];    # likely wrong
 
-      print CGI::header('application/json'),
-            JSON::objToJson($deferred_data);
-      $self->session->flush;
-      return 1;
-  }
+        $self->set_segment($seg);
 
-  return unless $events;
-  warn "processing asynchronous event(s)";
-  print CGI::header('204 No Content');
-  $self->session->flush;
-  1;
+        my $deferred_data = $self->request_tracks( \@labels );
+
+        print CGI::header('application/json'), JSON::to_json($deferred_data);
+        $self->session->flush;
+        return 1;
+    }
+
+    return unless $events;
+    warn "processing asynchronous event(s)";
+    print CGI::header('204 No Content');
+    $self->session->flush;
+    1;
 }
 
 # This asynchronous method accepts a list of track names and returns a 

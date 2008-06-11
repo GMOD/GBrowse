@@ -3,9 +3,12 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.2 2008-06-11 23:08:16 lstein Exp $
+ $Id: controller.js,v 1.3 2008-06-11 23:27:08 lstein Exp $
 
 */
+
+var Controller;        // singleton
+var SegmentObservers = new Hash();
 
 
 var GBrowseController = Class.create({
@@ -20,9 +23,9 @@ var GBrowseController = Class.create({
 		    onSuccess: function(transport) {
 			var results = transport.responseJSON;
 			var segment = results.segment;
-			$$('.segmentObserver').each(
+			SegmentObservers.keys().each(
 					      function(e) {
-						  e.fire('model:segmentChanged',segment);
+						  $(e).fire('model:segmentChanged',segment);
 					      }
 					      );
 		    }
@@ -32,13 +35,11 @@ var GBrowseController = Class.create({
     }
 );
 
-var Controller; // singleton
-
 function initialize_page () {
     Controller = new GBrowseController; // singleton
 
     //event handlers
-    $('page_title').addClassName('segmentObserver');
+    SegmentObservers.set('page_title',1);
     $('page_title').observe('model:segmentChanged',function(event) {
 	    //	    this.innerHTML='<img src="/images/buttons/ajax-loader.gif" />';
 	    new Ajax.Updater(this,'#',{
@@ -49,7 +50,7 @@ function initialize_page () {
 
     var elements = ['landmark_search_field','overview_panels','detail_panels'];
     elements.each(function(el) {
-        $(el).addClassName('segmentObserver');
+        SegmentObservers.set(el,1);
 	$(el).observe('model:segmentChanged',function(event) {
 	    new Ajax.Request('#',{
 		    method:     'post',

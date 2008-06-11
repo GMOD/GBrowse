@@ -819,7 +819,7 @@ sub asynchronous_update_element {
         $self->init_database();
         $self->init_plugins();
         $self->init_remote_sources();
-	return $self->render_detailview($self->region->seg);
+	return join ' ',$self->render_detailview_panels($self->region->seg);
     }
 
     return 'Unknown element';
@@ -1209,18 +1209,7 @@ sub get_panel_renderer {
 sub render_detailview {
   my $self = shift;
   my $seg  = shift or return;
-
-  my @labels   = $self->detail_tracks;
-  my $renderer = $self->get_panel_renderer($seg);
-  my $panels   = $renderer->render_panels({
-					   labels           => \@labels,
-					   feature_files    => $self->remote_sources,
-					   section          => 'detail',
-					  }
-					 );
-
-  my @panels   = map {$panels->{$_}} @labels;
-
+  my @panels = $self->render_detailview_panels($seg);
   my $drag_script = $self->drag_script('detail_panels','track');
   return div($self->toggle('Details',
 			   div({-id=>'detail_panels',-class=>'track'},
@@ -1228,6 +1217,22 @@ sub render_detailview {
 			   )
 	     )
       ).$drag_script;
+}
+
+sub render_detailview_panels {
+    my $self = shift;
+    my $seg  = shift;
+
+    my @labels   = $self->detail_tracks;
+    my $renderer = $self->get_panel_renderer($seg);
+    my $panels   = $renderer->render_panels({
+	labels           => \@labels,
+	feature_files    => $self->remote_sources,
+	section          => 'detail',
+					    }
+	);
+    
+    return map {$panels->{$_}} @labels;
 }
 
 sub render_overview {

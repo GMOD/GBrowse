@@ -132,7 +132,7 @@ sub render_html_head {
 
   # drag-and-drop functions from scriptaculous
   push @scripts,{src=>"$js/$_"}
-    foreach qw(prototype.js scriptaculous.js yahoo-dom-event.js balloon.js);
+    foreach qw(prototype.js scriptaculous.js yahoo-dom-event.js balloon.js controller.js);
 
  if ($self->setting('autocomplete')) {
     push @scripts,{src=>"$js/$_"}
@@ -159,6 +159,7 @@ sub render_html_head {
 	     );
   push @args,(-head=>$self->setting('head'))    if $self->setting('head');
   push @args,(-lang=>($self->language_code)[0]) if $self->language_code;
+  push @args,(-onLoad=>'initialize_page()');
 
   return start_html(@args);
 }
@@ -268,8 +269,11 @@ sub render_track_table {
     elsif  (exists $track_groups{$category}) {
       my @track_labels = @{$track_groups{$category}};
 
-      @track_labels = sort {lc $labels{$a} cmp lc $labels{$b}} @track_labels
-        if (($settings->{sk}||'') eq "sorted");
+      $settings->{sk} ||= 'sorted'; # get rid of annoying warning
+
+      @track_labels = sort {lc ($labels{$a}) cmp lc ($labels{$b})} @track_labels
+        if ($settings->{sk} eq "sorted");
+
       my @checkboxes = checkbox_group(-name       => 'label',
 				      -values     => \@track_labels,
 				      -labels     => \%labels,
@@ -551,23 +555,38 @@ sub slidertable {
   my $fine_zoom  = $self->get_zoomincrement();
 
   my @lines =
-    (image_button(-src=>"$buttonsDir/green_l2.gif",-name=>"left $full",
-		  -title=>"left $full_title"),
+    (image_button(-src     => "$buttonsDir/green_l2.gif",-name=>"left $full",
+		  -title   => "left $full_title",
+		  -onClick => "Controller.updateCoordinates(this.name)"
+     ),
+     '&nbsp;',
      image_button(-src=>"$buttonsDir/green_l1.gif",-name=>"left $half",
-		  -title=>"left $half_title"),
+		  -title=>"left $half_title",
+		  -onClick => "Controller.updateCoordinates(this.name)"
+     ),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/minus.gif",-name=>"zoom out $fine_zoom",
-		  -title=>"zoom out $fine_zoom"),
+		  -title=>"zoom out $fine_zoom",
+		  -onClick => "Controller.updateCoordinates(this.name)"
+     ),
      '&nbsp;',
      span({-id=>'span_menu'},$self->zoomBar($segment,$whole_segment,$buttonsDir)),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/plus.gif",-name=>"zoom in $fine_zoom",
-		  -title=>"zoom in $fine_zoom"),
+		  -title=>"zoom in $fine_zoom",
+		  -onClick => "Controller.updateCoordinates(this.name)",
+     ),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/green_r1.gif",-name=>"right $half",
-		  -title=>"right $half_title"),
+		  -title=>"right $half_title",
+		  -onClick => "Controller.updateCoordinates(this.name)"
+     ),
+     '&nbsp;',
      image_button(-src=>"$buttonsDir/green_r2.gif",-name=>"right $full",
-		  -title=>"right $full_title"),
+		  -title=>"right $full_title",
+		  -onClick => "Controller.updateCoordinates(this.name)"
+     ),
+     '&nbsp;',
     );
 
   my $str	= join('', @lines);

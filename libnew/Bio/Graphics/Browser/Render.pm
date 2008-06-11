@@ -144,10 +144,27 @@ sub run {
 # track_collapse_<label>=bool           Collapse/uncollapse track with <label>
 # label[]=<label1>,label[]=<label2>...  Change track order
 # render=<label1>,render=<label2>...    Render the specified tracks
+# navigate=
 sub asynchronous_event {
   my $self = shift;
   my $settings = $self->state;
   my $events;
+
+  if (my $action = param('navigate')) {
+      warn "updating coordinates";
+      $self->asynchronous_update_coordinates($action);
+      print CGI::header('application/json'),
+      JSON::objToJson({segment=>$settings->{name}});
+      return 1;
+  }
+
+  if (my $element = param('update')) {
+      warn "updating an element";
+      my $html = $self->asynchronous_update_element($element);
+      print CGI::header('text/html');
+      print $html;
+      return 1;
+  }
 
   # toggle the visibility of sections by looking for "div_visible_*" parameters
   for my $p (grep {/^div_visible_/} param()) {
@@ -700,6 +717,8 @@ sub update_coordinates {
   my $self  = shift;
   my $state = shift || $self->state;
 
+  warn "update coordinates, param = ",param();
+
   delete $self->{region}; # clear cached region
   my $position_updated;
 
@@ -765,7 +784,55 @@ sub update_coordinates {
     $state->{name} = param('name');
   }
 
-  return $position_updated;
+  warn "start = $state->{start}";
+}
+
+sub asynchronous_update_element {
+    my $self    = shift;
+    my $element = shift;
+    if ($element eq 'page_title') {
+	my $dsn = $self->data_source;
+	my $description = $dsn->description;
+	my $region      = $self->state->{name};
+	return "$description: $region";
+    }
+
+    return 'Unknown element';
+}
+
+sub asynchronous_update_coordinates {
+    my $self   = shift;
+    my $action = shift;
+
+    my $state  = $self->state;
+
+    my $position_updated;
+    if ($action =~ /left|right/) {
+	$self->scroll($state,$action);
+	$position_updated++;
+    }
+    if ($action =~ /zoom/) {
+	$self->zoom($state,$action);
+	$position_updated++;
+    }
+    if ($position_updated) { # clip and update param
+	if (defined $state->{seg_min} && $state->{start} < $state->{seg_min}) {
+	    my $delta = $state->{seg_min} - $state->{start};
+	    $state->{start} += $delta;
+	    $state->{stop}  += $delta;
+	}
+
+	if (defined $state->{seg_max} && $state->{stop}  > $state->{seg_max}) {
+	    my $delta = $state->{stop} - $state->{seg_max};
+	    $state->{start} -= $delta;
+	    $state->{stop}  -= $delta;
+	}
+
+	# update our "name" state and the CGI parameter
+	$state->{name} = "$state->{ref}:$state->{start}..$state->{stop}";
+    }
+
+    $position_updated;
 }
 
 sub zoom_to_span {

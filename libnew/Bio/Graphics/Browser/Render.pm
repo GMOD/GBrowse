@@ -209,7 +209,7 @@ sub asynchronous_event {
         $self->init_database();
         $self->init_plugins();
         $self->init_remote_sources();
-        my $features = $self->get_features;
+        my $features = $self->region->features;
         my $seg = $self->features2segments($features)->[0];    # likely wrong
 
         $self->set_segment($seg);
@@ -809,6 +809,18 @@ sub asynchronous_update_element {
 	my $region      = $self->state->{name};
 	return "$description: $region";
     }
+    elsif ($element eq 'landmark_search_field') {
+	return $self->state->{name};
+    }
+    elsif ($element eq 'overview_panels') {
+	return "<b>some day this will be the overview showing ".$self->state->{name}."</b>";
+    }
+    elsif ($element eq 'detail_panels') {
+        $self->init_database();
+        $self->init_plugins();
+        $self->init_remote_sources();
+	return $self->render_detailview($self->region->seg);
+    }
 
     return 'Unknown element';
 }
@@ -826,6 +838,10 @@ sub asynchronous_update_coordinates {
     }
     if ($action =~ /zoom/) {
 	$self->zoom($state,$action);
+	$position_updated++;
+    }
+    if ($action =~ /set span/) {
+	$self->zoom_to_span($state,$action);
 	$position_updated++;
     }
     if ($position_updated) { # clip and update param
@@ -852,11 +868,13 @@ sub zoom_to_span {
   my $self = shift;
   my ($state,$new_span) = @_;
 
+  my ($span) = $new_span =~ /([\d+.-]+)/;
+
   my $current_span = $state->{stop} - $state->{start} + 1;
   my $center	    = int(($current_span / 2)) + $state->{start};
-  my $range	    = int(($new_span)/2);
+  my $range	    = int(($span)/2);
   $state->{start}   = $center - $range;
-  $state->{stop }   = $state->{start} + $new_span - 1;
+  $state->{stop }   = $state->{start} + $span - 1;
 }
 
 sub scroll {
@@ -1241,6 +1259,7 @@ sub render_overview {
 sub render_regionview {
   my $self = shift;
   my $seg = shift;
+  return '';
 }
 
 sub render_deferred {

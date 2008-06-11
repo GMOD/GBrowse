@@ -35,8 +35,9 @@ function update_segment (formdata) {
   if (formdata && formdata.length>0) {
       postData = postData + ';' + formdata
  }
-  document.getElementById('panels').innerHTML='Loading...';
-  new Ajax.Updater('panels',document.URL,
+  //  document.getElementById('panels').innerHTML='Loading...';
+  $('details_panel').innerHTML='Loading...';
+  new Ajax.Updater('details_panel',document.URL,
 		   {method:'post',postBody:postData,evalScripts:true
 		   }
                   );

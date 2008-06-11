@@ -43,8 +43,9 @@ sub render_navbar {
 
   my $searchform = join '',(
 			    start_form(-name=>'searchform',-id=>'searchform'),
-			    textfield(-name=>'name',
-				      -size=>25,
+			    textfield(-name=> 'name',
+				      -id  => 'landmark_search_field',
+				      -size=> 25,
 				      -default=>$settings->{name}),
 			    submit(-name=>$self->tr('Search')),
 			    end_form
@@ -615,7 +616,7 @@ sub zoomBar {
 		    -labels  => \%labels,
 		    -default => $length,
 		    -force   => 1,
-		    -onChange => 'update_segment(this.name+"="+this.value)',
+		    -onChange => 'Controller.updateCoordinates("set span "+this.value)',
 		   );
 }
 

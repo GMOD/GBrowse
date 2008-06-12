@@ -315,13 +315,14 @@ END
     my $img    = $config{images} || "$images/balloons";
     $balloon_settings .= <<END;
 var $balloon = new Balloon;
-$balloon.balloonImage        = '$img/balloon.png';
-$balloon.ieImage             = '$img/balloon_ie.png';
-$balloon.upLeftStem          = '$img/up_left.png';
-$balloon.downLeftStem        = '$img/down_left.png';
-$balloon.upRightStem         = '$img/up_right.png';
-$balloon.downRightStem       = '$img/down_right.png';
-$balloon.closeButton         = '$img/close.png';
+$balloon.images              = '$img';
+$balloon.balloonImage        = 'balloon.png';
+$balloon.ieImage             = 'balloon_ie.png';
+$balloon.upLeftStem          = 'up_left.png';
+$balloon.downLeftStem        = 'down_left.png';
+$balloon.upRightStem         = 'up_right.png';
+$balloon.downRightStem       = 'down_right.png';
+$balloon.closeButton         = 'close.png';
 END
     for my $option (keys %config) {
       next if $option eq 'images';

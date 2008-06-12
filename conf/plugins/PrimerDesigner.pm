@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.8 2008-05-27 10:32:34 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.9 2008-06-12 16:55:21 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -62,7 +62,6 @@ package Bio::Graphics::Browser::Plugin::PrimerDesigner;
 
 use strict;
 
-use lib '/home/smckay/lib';
 use Bio::PrimerDesigner;
 use Bio::PrimerDesigner::Tables;
 use Bio::Graphics::Browser::Plugin;

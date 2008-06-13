@@ -1300,15 +1300,17 @@ sub render_deferred {
 sub render_deferred_track {
     my $self      = shift;
     my $cache_key = shift;
-    my $renderer = $self->get_panel_renderer;
+    my $renderer  = $self->get_panel_renderer;
 
-    my $base      = $renderer->get_cache_base();
-    my $cache     = Bio::Graphics::Browser::CachedTrack->new(-base => $base,
-							     -key  => $cache_key,
-	);
-    $cache->cache_time($renderer->cache_time * 60);
-    return unless $cache->status eq 'AVAILABLE';  # not available
-    my $result    = $renderer->render_tracks({$cache_key=>$cache});
+    my $base  = $renderer->get_cache_base();
+    my $cache = Bio::Graphics::Browser::CachedTrack->new(
+        -base => $base,
+        -key  => $cache_key,
+    );
+    $cache->cache_time( $renderer->cache_time * 60 );
+    return $cache->status if $cache->status eq 'EXPIRED';    # expired
+    return unless $cache->status eq 'AVAILABLE';             # not available
+    my $result = $renderer->render_tracks( { $cache_key => $cache } );
     return $result->{$cache_key};
 }
 

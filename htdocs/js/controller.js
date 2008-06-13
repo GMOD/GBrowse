@@ -3,7 +3,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.4 2008-06-13 16:18:30 mwz444 Exp $
+ $Id: controller.js,v 1.5 2008-06-13 17:08:05 mwz444 Exp $
 
 */
 
@@ -98,7 +98,11 @@ function register_track ( detail_div_id ) {
                         },
                         onSuccess: function(transport) {
                             detail_div = document.getElementById(detail_div_id);
-                            if (transport.responseText){
+                            if (transport.responseText == 'EXPIRED'){
+                                Controller.periodic_updaters[detail_div_id].stop();
+                                detail_div.innerHTML = '';
+                            }
+                            else if (transport.responseText){
                                 detail_div.innerHTML = transport.responseText;
                                 Controller.periodic_updaters[detail_div_id].stop();
                             }

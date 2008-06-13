@@ -294,6 +294,10 @@ sub _writeoptions {
 
 sub _do_trim {
     my $self = shift;
+
+    # don't trim if there is no score range
+    ($self->max - $self->min) or return;
+    
     my $trim = lc $self->trim;
     my ($method,$arg);
     if ($trim =~ /([a-z]+)(\d+)/) {
@@ -625,7 +629,7 @@ sub _get_scale {
   unless ($self->{scale}) {
     my $min  = $self->{options}{min};
     my $max  = $self->{options}{max};
-    my $range = $max - $min;
+    my $range = $max - $min || 0.001; # can't be zero!
     $self->{scale} = $range/254;
   }
   return $self->{scale};

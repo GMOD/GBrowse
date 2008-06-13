@@ -1,6 +1,5 @@
 package Bio::Graphics::Glyph::wiggle_density;
-
-# $Id: wiggle_density.pm,v 1.1.2.20 2008-06-05 18:31:53 lstein Exp $
+# $Id: wiggle_density.pm,v 1.1.2.21 2008-06-13 20:37:45 sheldon_mckay Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing);
@@ -151,6 +150,7 @@ sub draw_segment {
   my $samples = $length < $self->panel->width ? $length : $self->panel->width;
   my $data    = $seg_data->values($start,$end,$samples);
 
+
   # scale the glyph if the data end before the panel does
   my $data_width = $end - $start;
   my $data_width_ratio;
@@ -162,6 +162,7 @@ sub draw_segment {
   }
 
   return unless $data && ref $data && @$data > 0;
+
 
   my $min_value = $self->min_score;
   my $max_value = $self->max_score;

@@ -160,7 +160,7 @@ sub asynchronous_event {
         my $cache_track_hash = $self->render_deferred();
         my %track_keys;
         foreach my $track_label ( keys %{ $cache_track_hash || {} } ) {
-            $track_keys{$track_label}
+            $track_keys{"track_".$track_label}
                 = $cache_track_hash->{$track_label}->key();
         }
 
@@ -171,8 +171,19 @@ sub asynchronous_event {
     }
 
     if ( my $element = param('update') ) {
-        warn "updating an element";
         my $html = $self->asynchronous_update_element($element);
+        print CGI::header('text/html');
+        print $html;
+        return 1;
+    }
+
+    if ( my $element = param('retreive_track') ) {
+        $self->init_database();
+        $self->init_plugins();
+        $self->init_remote_sources();
+        my $track_key = param('track_key');
+        warn "retreiving track $element - $track_key";
+        my $html = $self->render_deferred_track($track_key) || '';
         print CGI::header('text/html');
         print $html;
         return 1;

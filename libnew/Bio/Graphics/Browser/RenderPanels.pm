@@ -303,9 +303,13 @@ sub render_tracks {
         = ( ( $source->setting( $label => 'key' ) || '' ) ne 'none' );
 
 	my $map_html = $self->map_html($map);
-	$result{$label} = div({-id=>"track_${munge_label}",-class=>$class},
-				div({-align=>'center'},($show_titlebar?$titlebar:'').$img),
-			      $map_html||'');
+    $result{$label} = div(
+        { -id => "track_${munge_label}", -class => $class },
+        div({ -align => 'center' },
+            ( $show_titlebar ? $titlebar : '' ) . $img
+        ),
+        $map_html || ''
+    ) . q[<script type="text/javascript" language="JavaScript">register_track("track_].$munge_label.q[");</script>];
     }
     
     return \%result;
@@ -964,7 +968,10 @@ sub run_local_requests {
 
 	my @keystyle = (-key_style=>'between')
 	    if $label =~ /^\w+:/ && $label !~ /:(overview|region)/;  # a plugin
-	my @nopad    = $source->setting($label=>'key') eq 'none' ? (-pad_top => 0) : ();
+    my @nopad
+        = ( $source->setting( $label => 'key' ) || '' ) eq 'none'
+        ? ( -pad_top => 0 )
+        : ();
 	
 	my $panel_args = $requests->{$label}->panel_args;
 	my $track_args = $requests->{$label}->track_args;
@@ -1423,7 +1430,7 @@ sub cache_time {
       $self->{cache_time} = shift;
   }
   return $self->{cache_time} if exists $self->{cache_time};
-  my $ct   = $self->source->global_setting('cache time');
+  my $ct = $self->source->global_setting('cache time') || 60;
   return $ct if defined $ct;  # hours
   return 1;                   # cache for one hour by default
 }

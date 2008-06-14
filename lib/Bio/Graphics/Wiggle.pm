@@ -111,12 +111,25 @@ flock() the files yourself.
 =item $min   = $wig->min([$new_min])
 =item $step  = $wig->step([$new_step])
 =item $span  = $wig->span([$new_span])
+=item $mean  = $wig->mean([$new_mean]);
+=item $stdev = $wig->stdev([$new_stdev]);
 
 These accessors get or set the corresponding values. Setting is only
 allowed if the file was opened for writing. Note that changing the
 min, max and step after writing data to the file under another
 parameter set will produce unexpected (and invalid) results, as the
 existing data is not automatically updated to be consistent.
+
+=item $trim  = $wig->trim([$new_trim]);
+
+The trim method sets the trimming method, which can be used to trim
+out extreme values. Three methods are currently supported:
+
+  none    No trimming
+  stdev   Trim 1 standard deviation above and below mean
+  stdevN  Trim N standard deviations above and below the mean
+
+In "stdevN", any can be any positive integer.
 
 =back
 

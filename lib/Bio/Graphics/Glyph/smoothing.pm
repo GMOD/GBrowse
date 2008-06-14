@@ -13,7 +13,8 @@ sub get_smoothing {
 sub smooth_window {
   my $self    = shift;
 
-  my $smooth_window = $self->option('smoothing window');
+  my $smooth_window = $self->option('smoothing_window') 
+                    || $self->option('smoothing window'); # drat!
   return $smooth_window if defined $smooth_window; 
 
   my $start = $self->smooth_start;

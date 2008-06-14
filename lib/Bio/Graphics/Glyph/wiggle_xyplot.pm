@@ -55,6 +55,12 @@ sub wig {
   $d;
 }
 
+sub series_mean {
+    my $self = shift;
+    my $wig = $self->wig or return;
+    return eval {$wig->mean} || undef;
+}
+
 sub draw_densefile {
   my $self = shift;
   my $feature = shift;
@@ -186,9 +192,9 @@ Bio::Graphics::Wiggle file format:
 TODO! UPDATE DOCUMENTATION FOR DENSE FILES
 
  reference = chr1
- ChipCHIP Feature1 1..10000 wigfile=./test.wig;wigstart=0
- ChipCHIP Feature2 10001..20000 wigfile=./test.wig;wigstart=656
- ChipCHIP Feature3 25001..35000 wigfile=./test.wig;wigstart=1312
+ ChipCHIP Feature1 1..10000 wigfile=./test.wig
+ ChipCHIP Feature2 10001..20000 wigfile=./test.wig
+ ChipCHIP Feature3 25001..35000 wigfile=./test.wig
 
 The "wigfile" attribute gives a relative or absolute pathname to a
 Bio::Graphics::Wiggle format file. The optional "wigstart" option
@@ -199,10 +205,39 @@ step such as present in tiling array data.
 
 =head2 OPTIONS
 
-The same as the regular xyplot glyph, except that the "wigfile" and
-"wigstart" options are also recognized.
+In addition to all the xyplot glyph options, the following options are
+recognized:
 
-TODO: add "smoothing" "densefile", "denseoffset", and "densesize" options.
+   Name        Value        Description
+   ----        -----        -----------
+
+   wiggle      path name    Path to the Bio::Graphics::Wiggle file for vales
+
+   densefile   path name    Path to a Bio::Graphics::DenseFeature object
+                               (deprecated)
+
+   denseoffset integer      Integer offset to where the data begins in the
+                               Bio::Graphics::DenseFeature file (deprecated)
+
+   densesize   integer      Integer size of the data in the Bio::Graphics::DenseFeature
+                               file (deprecated)
+
+   smoothing   method name  Smoothing method: one of "mean", "max", "min" or "none"
+
+   smoothing_window 
+               integer      Number of values across which data should be smoothed.
+
+   bicolor_pivot
+               name         Where to pivot the two colors when drawing bicolor plots.
+                               Options are "mean" and "zero". A numeric value can
+                               also be provided.
+
+   pos_color   color        When drawing bicolor plots, the fill color to use for values
+                              that are above the pivot point.
+
+   neg_color   color        When drawing bicolor plots, the fill color to use for values
+                              that are below the pivot point.
+   
 
 =head1 BUGS
 

@@ -1,16 +1,8 @@
 package Bio::Graphics::Glyph::wiggle_density;
-# $Id: wiggle_density.pm,v 1.1.2.21 2008-06-13 20:37:45 sheldon_mckay Exp $
+# $Id: wiggle_density.pm,v 1.1.2.22 2008-06-14 17:17:51 lstein Exp $
 
 use strict;
-use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing);
-
-sub min_score {
-  shift->option('min_score');
-}
-
-sub max_score {
-  shift->option('max_score');
-}
+use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing Bio::Graphics::Glyph::minmax);
 
 sub draw {
   my $self = shift;
@@ -122,7 +114,7 @@ sub draw_segment {
   $seg_end   = $end        if $seg_end   > $end;
 
   # figure out where we're going to start
-  my $scale  = $self->scale;  # pixels per base pair
+  my $scale           = $self->scale;  # pixels per base pair
   my $pixels_per_span = $scale * $span + 1;
   my $pixels_per_step = 1;
   my $length          = $end-$start+1;
@@ -177,12 +169,16 @@ sub draw_segment {
   # from 0 to max. The latter behavior is triggered when the config file contains
   # entries for "pos_color" and "neg_color" and the data ranges from < 0 to > 0.
 
-  my $poscolor = $self->pos_color;
-  my $negcolor = $self->neg_color;
-  my $zerocentered = $poscolor != $negcolor && $min_value < 0 && $max_value > 0;
+  my $poscolor       = $self->pos_color;
+  my $negcolor       = $self->neg_color;
+
+  my $data_midpoint  =   $self->bicolor_pivot;
+  my $bicolor   = $poscolor != $negcolor
+                       && $min_value < $data_midpoint
+		       && $max_value > $data_midpoint;
 
   my ($rgb_pos,$rgb_neg,$rgb);
-  if ($zerocentered) {
+  if ($bicolor) {
       $rgb_pos = [$self->panel->rgb($poscolor)];
       $rgb_neg = [$self->panel->rgb($negcolor)];
   } else {
@@ -206,11 +202,11 @@ sub draw_segment {
       my $data_point = $data->[$i];
       $data_point    = $min_value if $min_value > $data_point;
       $data_point    = $max_value if $max_value < $data_point;
-      my ($r,$g,$b)  = $zerocentered
-	  ? $data_point > 0 ? $self->calculate_color($data_point,$rgb_pos,
-						     0,$max_value)
-	                    : $self->calculate_color($data_point,$rgb_neg,
-						     0,$min_value)
+      my ($r,$g,$b)  = $bicolor
+	  ? $data_point > $data_midpoint ? $self->calculate_color($data_point,$rgb_pos,
+								  $data_midpoint,$max_value)
+	                                 : $self->calculate_color($data_point,$rgb_neg,
+								  $data_midpoint,$min_value)
           : $self->calculate_color($data_point,$rgb,
 				   $min_value,$max_value);
       my $idx        = $color_cache{$r,$g,$b} ||= $self->panel->translate_color($r,$g,$b);
@@ -241,11 +237,11 @@ sub draw_segment {
 
 	  $data_point    = $min_value if $min_value > $data_point;
 	  $data_point    = $max_value if $max_value < $data_point;
-	  my ($r,$g,$b)  = $zerocentered
-	      ? $data_point > 0 ? $self->calculate_color($data_point,$rgb_pos,
-							 0,$max_value)
-	                        : $self->calculate_color($data_point,$rgb_neg,
-							 0,$min_value)
+	  my ($r,$g,$b)  = $bicolor
+	      ? $data_point > $data_midpoint ? $self->calculate_color($data_point,$rgb_pos,
+								      $data_midpoint,$max_value)
+	                                     : $self->calculate_color($data_point,$rgb_neg,
+								      $data_midpoint,$min_value)
 	      : $self->calculate_color($data_point,$rgb,
 				       $min_value,$max_value);
 	  my $idx        = $color_cache{$r,$g,$b} ||= $self->panel->translate_color($r,$g,$b);
@@ -267,14 +263,10 @@ sub draw_segment {
   }
 }
 
-sub pos_color {
+sub series_mean {
     my $self = shift;
-    return $self->color('pos_color') || $self->bgcolor;
-}
-
-sub neg_color {
-    my $self = shift;
-    return $self->color('neg_color') || $self->bgcolor;
+    my $wig = $self->wig or return;
+    return eval {$wig->mean} || undef;
 }
 
 sub calculate_color {
@@ -293,26 +285,14 @@ sub max { $_[0] > $_[1] ? $_[0] : $_[1] }
 sub minmax {
   my $self = shift;
   my $data = shift;
-  my $min  = $self->min_score;
-  my $max  = $self->max_score;
-  return ($min,$max) if defined $min && defined $max;
 
   if (my $wig = $self->wig) {
-    $max = $wig->max unless defined $max;
-    $min = $wig->min unless defined $min;
+    return ($wig->min,$wig->max);
   } else {
-    my $realmax = -999_999_999;
-    my $realmin =  999_999_999;
-    for my $point (@$data) {
-      $realmax = $point if $point > $realmax;
-      $realmin = $point if $point < $realmin;
-    }
-    $max = $realmax unless defined $max;
-    $min = $realmin unless defined $min;
+      return $self->SUPER::minmax($data);
   }
-
-  return ($min,$max);
 }
+
 
 1;
 
@@ -346,13 +326,37 @@ step such as present in tiling array data.
 =head2 OPTIONS
 
 The same as the regular graded_segments glyph, except that the
-"wigfile" and "wigstart" options are also recognized. In addition, you
-may specify a "smoothing window" option to control how much smoothing
-is performed on the data. A smoothing window of "1" turns off
-smoothing entirely.
+following options are recognized:
 
-"pos_color" and "neg_color" override "bgcolor" to set the color of
-positive and negative values independently.
+   Name        Value        Description
+   ----        -----        -----------
+
+   wiggle      path name    Path to the Bio::Graphics::Wiggle file for vales
+
+   densefile   path name    Path to a Bio::Graphics::DenseFeature object
+                               (deprecated)
+
+   denseoffset integer      Integer offset to where the data begins in the
+                               Bio::Graphics::DenseFeature file (deprecated)
+
+   densesize   integer      Integer size of the data in the Bio::Graphics::DenseFeature
+                               file (deprecated)
+
+   smoothing   method name  Smoothing method: one of "mean", "max", "min" or "none"
+
+   smoothing_window 
+               integer      Number of values across which data should be smoothed.
+
+   bicolor_pivot
+               name         Where to pivot the two colors when drawing bicolor plots.
+                               Options are "mean" and "zero". A numeric value can
+                               also be provided.
+
+   pos_color   color        When drawing bicolor plots, the fill color to use for values
+                              that are above the pivot point.
+
+   neg_color   color        When drawing bicolor plots, the fill color to use for values
+                              that are below the pivot point.
 
 =head1 BUGS
 

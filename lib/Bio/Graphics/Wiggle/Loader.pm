@@ -149,8 +149,6 @@ sub featurefile {
 	$options->{color}      ||= $options->{visibility} =~ /pack/i ? '255,0,0' : '0,0,0';
 	$options->{altColor}   ||= $options->{visibility} =~ /pack/i ? '0,0,255' : '0,0,0';
 
-	warn join ' ',%$options;
-
 	# stanza
 	push @lines,"[$track]";
 	if (my $graph_type = $options->{glyph}) {
@@ -564,7 +562,6 @@ sub wigfile {
 	push @stats,($_=>$value);
    }
 
-    warn "seqid=$seqid, stats = @stats";
     my $step = $self->{track_options}{step} || 1;
     my $span = $self->{track_options}{span} || 
 	$self->{track_options}{step} || 

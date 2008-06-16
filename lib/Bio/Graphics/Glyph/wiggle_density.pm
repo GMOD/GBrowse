@@ -1,8 +1,7 @@
 package Bio::Graphics::Glyph::wiggle_density;
-# $Id: wiggle_density.pm,v 1.1.2.23 2008-06-16 06:09:15 sheldon_mckay Exp $
+# $Id: wiggle_density.pm,v 1.1.2.24 2008-06-16 06:18:38 sheldon_mckay Exp $
 
 use strict;
-use List::Util 'sum';
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing Bio::Graphics::Glyph::minmax);
 
 sub draw {

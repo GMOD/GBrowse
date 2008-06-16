@@ -1,7 +1,8 @@
 package Bio::Graphics::Glyph::wiggle_density;
-# $Id: wiggle_density.pm,v 1.1.2.22 2008-06-14 17:17:51 lstein Exp $
+# $Id: wiggle_density.pm,v 1.1.2.23 2008-06-16 06:09:15 sheldon_mckay Exp $
 
 use strict;
+use List::Util 'sum';
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing Bio::Graphics::Glyph::minmax);
 
 sub draw {
@@ -142,7 +143,6 @@ sub draw_segment {
   my $samples = $length < $self->panel->width ? $length : $self->panel->width;
   my $data    = $seg_data->values($start,$end,$samples);
 
-
   # scale the glyph if the data end before the panel does
   my $data_width = $end - $start;
   my $data_width_ratio;
@@ -199,7 +199,7 @@ sub draw_segment {
 
     for (my $i = 0; $i <= @$data ; $i++) {
       my $x          = $x1 + $pixels_per_datapoint * $i;
-      my $data_point = $data->[$i];
+      my $data_point = $data->[$i] || next;
       $data_point    = $min_value if $min_value > $data_point;
       $data_point    = $max_value if $max_value < $data_point;
       my ($r,$g,$b)  = $bicolor

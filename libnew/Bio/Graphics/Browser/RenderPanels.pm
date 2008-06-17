@@ -221,98 +221,133 @@ sub render_tracks {
     my $self     = shift;
     my $requests = shift;
 
-    my $globals  = $self->source->globals;
+    my %result;
 
-    my $buttons  = $globals->button_url;
-    my $tmpdir   = $globals->tmpdir_path;
+    for my $label ( keys %$requests ) {
+        my $data   = $requests->{$label};
+        my $gd     = $data->gd or next;
+        my $map    = $data->map;
+        my $width  = $data->width;
+        my $height = $data->height;
+        my $url    = $self->generate_image($gd);
+
+        # for debugging
+        my $status = $data->status;
+
+        $result{$label} = $self->wrap_rendered_track(
+            label    => $label,
+            area_map => $map,
+            width    => $width,
+            height   => $height,
+            url      => $url,
+            status   => $status,
+        );
+    }
+    
+    return \%result;
+}
+
+sub wrap_rendered_track {
+
+    my $self   = shift;
+    my %args   = @_;
+    my $label  = $args{'label'};
+    my $map    = $args{'area_map'};
+    my $width  = $args{'width'};
+    my $height = $args{'height'};
+    my $url    = $args{'url'};
+    my $status = $args{'status'};     # for debugging
+
+    my $buttons = $self->source->globals->button_url;
+    my $plus    = "$buttons/plus.png";
+    my $minus   = "$buttons/minus.png";
+    my $help    = "$buttons/query.png";
+
     my $settings = $self->settings;
     my $source   = $self->source;
 
-    my $plus     = "$buttons/plus.png";
-    my $minus    = "$buttons/minus.png";
-    my $help     = "$buttons/query.png";
+    my $collapsed = $settings->{track_collapsed}{$label};
+    my $img_style = $collapsed ? "display:none" : "display:inline";
 
-    my %result;
+    my $img = img(
+        {   -src    => $url,
+            -usemap => "#${label}_map",
+            -width  => $width,
+            -id     => "${label}_image",
+            -height => $height,
+            -border => 0,
+            -name   => $label,
+            -alt    => $label,
+            -style  => $img_style
+        }
+    );
 
-    for my $label (keys %$requests) {
-	my $data   = $requests->{$label};
-	my $gd     = $data->gd or next;
-	my $map    = $data->map;
-	my $width  = $data->width;
-	my $height = $data->height;
-	my $url    = $self->generate_image($gd);
+    my $class = $label eq '__scale__' ? 'scale' : 'track';
+    my $icon = $collapsed ? $plus : $minus;
 
-	# for debugging
-	my $status = $data->status;
+    my $config_click;
+    if ( $label =~ /^plugin:/ ) {
+        my $help_url
+            = "url:?plugin=" . CGI::escape($label) . ';plugin_do=Configure';
+        $config_click
+            = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)";
+    }
 
-	my $collapsed    = $settings->{track_collapsed}{$label};
-	my $img_style    = $collapsed ? "display:none" : "display:inline";
-	
-	my $img = img({-src=>$url,
-		       -usemap=>"#${label}_map",
-		       -width => $width,
-		       -id    => "${label}_image",
-		       -height=> $height,
-		       -border=> 0,
-		       -name  => $label,
-		       -alt   => $label,
-		       -style => $img_style});
+    elsif ( $label =~ /^file:/ ) {
+        my $url = "?modify.${label}=" . $self->language->tr('Edit');
+        $config_click = "window.location='$url'";
+    }
 
-	my $class     = $label eq '__scale__' ? 'scale' : 'track';
-	my $icon      = $collapsed ? $plus : $minus;
+    else {
+        my $help_url = "url:?configure_track=" . CGI::escape($label);
+        $help_url .= ";rand="
+            . rand()
+            ;    # work around caching bugs... # if CGI->user_agent =~ /MSIE/;
+        $config_click
+            = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)";
+    }
 
-	my $config_click;
-	if ($label =~ /^plugin:/) {
-	    my $help_url = "url:?plugin=".CGI::escape($label).';plugin_do=Configure';
-	    $config_click = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)";
-	}
+    my $title
+        = $label =~ /\w+:(.+)/ && $label !~ /:(overview|region)/    # a plugin
+        ? $1
+        : $source->setting( $label => 'key' ) || $label;    # configured
 
-	elsif ($label =~ /^file:/) {
-	    my $url  = "?modify.${label}=".$self->language->tr('Edit');
-	    $config_click = "window.location='$url'";
-	}
-	    
-	else {
-	    my $help_url = "url:?configure_track=".CGI::escape($label);
-	    $help_url   .= ";rand=".rand(); # work around caching bugs... # if CGI->user_agent =~ /MSIE/;
-	    $config_click = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)";
-	}
+    my $titlebar = span(
+        {   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
+            -id => "${label}_title"
+        },
+        img({   -src     => $icon,
+                -id      => "${label}_icon",
+                -onClick => "collapse('$label')",
+                -style   => 'cursor:pointer',
+            }
+        ),
+        img({   -src         => $help,
+                -style       => 'cursor:pointer',
+                -onmousedown => $config_click
+            }
+        ),
+        span( { -class => 'draghandle' }, $title )
+    );
 
-
-	my $title       = $label =~ /\w+:(.+)/ && $label !~ /:(overview|region)/  # a plugin
-	    ? $1
-	    : $source->setting($label=>'key') || $label; # configured
-
-	my $titlebar    = span({-class=>$collapsed ? 'titlebar_inactive' : 'titlebar',-id=>"${label}_title"},
-			       img({-src         =>$icon,
-				    -id          => "${label}_icon",
-				    -onClick     =>"collapse('$label')",
-				    -style       => 'cursor:pointer',
-				   }),
-			       img({-src         => $help,
-				    -style       => 'cursor:pointer',
-				    -onmousedown => $config_click
-				   }),
-			       span({-class=>'draghandle'},$title)
-	    );
-
-
-	(my $munge_label = $label) =~ s/_/%5F/g;  # freakin' scriptaculous uses _ as a delimiter!!!
+    ( my $munge_label = $label )
+        =~ s/_/%5F/g;    # freakin' scriptaculous uses _ as a delimiter!!!
 
     my $show_titlebar
         = ( ( $source->setting( $label => 'key' ) || '' ) ne 'none' );
 
-	my $map_html = $self->map_html($map);
-    $result{$label} = div(
+    my $map_html = $self->map_html($map);
+    return div(
         { -id => "track_${munge_label}", -class => $class },
         div({ -align => 'center' },
             ( $show_titlebar ? $titlebar : '' ) . $img
         ),
         $map_html || ''
-    ) . q[<script type="text/javascript" language="JavaScript">register_track("track_].$munge_label.q[");</script>];
-    }
-    
-    return \%result;
+        )
+        . q[<script type="text/javascript" language="JavaScript">register_track("track_]
+        . $munge_label . q[","]
+        . $munge_label
+        . q[_image");</script>];
 }
 
 # This routine is called to hand off the rendering to a remote renderer. 

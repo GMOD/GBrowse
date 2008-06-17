@@ -103,10 +103,14 @@ my @cached = map {$requests->{$_}->status} keys %$requests;
 ok("@cached",'AVAILABLE AVAILABLE AVAILABLE AVAILABLE AVAILABLE');
 
 # test the render_deferred_track() call
-my $key1 = $requests->{CleavageSites}->key;
+my $track_name1 = 'CleavageSites';
+my $key1 = $requests->{$track_name1}->key;
 ok($key1);
 
-my $view = $render->render_deferred_track($key1);
+my $view = $render->render_deferred_track(
+    cache_key  => $key1,
+    track_name => $track_name1,
+);
 my @images = $view =~ m!src=\"(/tmpimages/volvox/img/[a-z0-9]+\.png)\"!g;
 ok(scalar @images,1);
 
@@ -119,11 +123,19 @@ ok(-e $images[0] && -s _);
 $render->data_source->setting(general => 'cache time',0);
 sleep 1;
 
-$requests->{CleavageSites}->cache_time(0);
-ok($requests->{CleavageSites}->status,'EXPIRED');
+$requests->{$track_name1}->cache_time(-1);
+ok( $requests->{$track_name1}->status, 'EXPIRED' );
 
-$render->data_source->setting(general => 'cache time',0);
-ok($render->render_deferred_track($key1),undef);
+$render->data_source->setting( general => 'cache time', -1 );
+ok( substr(
+        $render->render_deferred_track(
+            cache_key  => $key1,
+            track_name => $track_name1,
+        ),
+        0, 16
+    ),
+    "<!-- EXPIRED -->"
+);
 
 exit 0;
 

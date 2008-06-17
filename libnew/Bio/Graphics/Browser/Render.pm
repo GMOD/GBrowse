@@ -160,7 +160,7 @@ sub asynchronous_event {
         my $cache_track_hash = $self->render_deferred();
         my %track_keys;
         foreach my $track_label ( keys %{ $cache_track_hash || {} } ) {
-            $track_keys{"track_".$track_label}
+            $track_keys{ "track_" . $track_label }
                 = $cache_track_hash->{$track_label}->key();
         }
 
@@ -177,13 +177,29 @@ sub asynchronous_event {
         return 1;
     }
 
-    if ( my $element = param('retreive_track') ) {
+    if ( my $div_element_id = param('retreive_track') ) {
         $self->init_database();
         $self->init_plugins();
         $self->init_remote_sources();
-        my $track_key = param('track_key');
-        warn "retreiving track $element - $track_key";
-        my $html = $self->render_deferred_track($track_key) || '';
+        my $track_key        = param('track_key');
+        my $image_width      = param('image_width');
+        my $image_height     = param('image_height');
+        my $image_element_id = param('image_element_id');
+        warn "retreiving track $div_element_id - $track_key";
+
+        my $track_name = '';
+        if ( $div_element_id =~ /^track_(.+)/ ) {
+            $track_name = $1;
+        }
+
+        my $html = $self->render_deferred_track(
+            cache_key        => $track_key,
+            track_name       => $track_name,
+            image_width      => $image_width,
+            image_height     => $image_height,
+            image_element_id => $image_element_id,
+            div_element_id   => $div_element_id,
+        ) || '';
         print CGI::header('text/html');
         print $html;
         return 1;
@@ -1297,10 +1313,41 @@ sub render_deferred {
     return $requests;
 }
 
+sub render_grey_track {
+    my $self             = shift;
+    my %args             = @_;
+    my $image_width      = $args{'image_width'};
+    my $image_height     = $args{'image_height'};
+    my $image_element_id = $args{'image_element_id'};
+    my $div_element_id   = $args{'div_element_id'};
+    my $track_name       = $args{'track_name'};
+
+    my $renderer = $self->get_panel_renderer();
+    my $url      = $renderer->source->globals->button_url() . "/grey.png";
+
+    my $html = $renderer->wrap_rendered_track(
+        label    => $track_name,
+        area_map => [],
+        width    => $image_width,
+        height   => $image_height,
+        url      => $url,
+        status   => '',
+    );
+
+    return $html;
+}
+
 sub render_deferred_track {
-    my $self      = shift;
-    my $cache_key = shift;
-    my $renderer  = $self->get_panel_renderer;
+    my $self             = shift;
+    my %args             = @_;
+    my $cache_key        = $args{'cache_key'};
+    my $track_name       = $args{'track_name'};
+    my $image_width      = $args{'image_width'};
+    my $image_height     = $args{'image_height'};
+    my $image_element_id = $args{'image_element_id'};
+    my $div_element_id   = $args{'div_element_id'};
+
+    my $renderer = $self->get_panel_renderer;
 
     my $base  = $renderer->get_cache_base();
     my $cache = Bio::Graphics::Browser::CachedTrack->new(
@@ -1308,10 +1355,23 @@ sub render_deferred_track {
         -key  => $cache_key,
     );
     $cache->cache_time( $renderer->cache_time * 60 );
-    return $cache->status if $cache->status eq 'EXPIRED';    # expired
-    return unless $cache->status eq 'AVAILABLE';             # not available
-    my $result = $renderer->render_tracks( { $cache_key => $cache } );
-    return $result->{$cache_key};
+    my $status_html = "<!-- " . $cache->status . " -->";
+
+    my $result_html;
+    if ( $cache->status eq 'AVAILABLE' ) {
+        my $result = $renderer->render_tracks( { $track_name => $cache } );
+        $result_html = $result->{$track_name};
+    }
+    else {
+        $result_html = $self->render_grey_track(
+            image_width      => $image_width,
+            image_height     => $image_height,
+            image_element_id => $image_element_id,
+            div_element_id   => $div_element_id,
+            track_name       => $track_name,
+        );
+    }
+    return $status_html . $result_html;
 }
 
 

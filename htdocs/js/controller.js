@@ -3,7 +3,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.5 2008-06-13 17:08:05 mwz444 Exp $
+ $Id: controller.js,v 1.6 2008-06-17 15:19:35 mwz444 Exp $
 
 */
 
@@ -76,7 +76,7 @@ function initialize_page () {
 
 }
 
-function register_track ( detail_div_id ) {
+function register_track ( detail_div_id,detail_image_id ) {
     SegmentObservers.set(detail_div_id,1);
     $(detail_div_id).observe('model:segmentChanged',function(event) {
 	    var track_key = event.memo.track_keys[detail_div_id];
@@ -84,6 +84,8 @@ function register_track ( detail_div_id ) {
             if (Controller.periodic_updaters[detail_div_id]){
                 Controller.periodic_updaters[detail_div_id].stop();
             }
+
+            track_image = document.getElementById(detail_image_id);
             Controller.periodic_updaters[detail_div_id] = 
                 new Ajax.PeriodicalUpdater(
                     detail_div_id,
@@ -94,19 +96,20 @@ function register_track ( detail_div_id ) {
                         method: 'post',
                         parameters: {
                             track_key: track_key,
-                            retreive_track: detail_div_id
+                            retreive_track: detail_div_id,
+                            image_width: track_image.width,
+                            image_height: track_image.height,
+                            image_id: detail_image_id,
                         },
                         onSuccess: function(transport) {
                             detail_div = document.getElementById(detail_div_id);
-                            if (transport.responseText == 'EXPIRED'){
-                                Controller.periodic_updaters[detail_div_id].stop();
-                                detail_div.innerHTML = '';
-                            }
-                            else if (transport.responseText){
+                            if (transport.responseText.substring(0,18) == "<!-- AVAILABLE -->"){
                                 detail_div.innerHTML = transport.responseText;
                                 Controller.periodic_updaters[detail_div_id].stop();
                             }
-                            else{
+                            else if (transport.responseText.substring(0,16) == "<!-- EXPIRED -->"){
+                                detail_div.innerHTML = transport.responseText;
+                                Controller.periodic_updaters[detail_div_id].stop();
                             }
                         }
                      }

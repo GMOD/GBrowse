@@ -5,6 +5,7 @@ use warnings;
 use base 'Bio::Graphics::FeatureFile';
 
 use Bio::Graphics::Browser::Shellwords;
+use Bio::Graphics::Browser::Util 'modperl_request';
 use File::Basename 'dirname';
 use File::Path 'mkpath';
 use Data::Dumper 'Dumper';

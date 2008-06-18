@@ -7,8 +7,9 @@ use Bio::Graphics;
 use Digest::MD5 'md5_hex';
 use Text::Shellwords 'shellwords';
 use Bio::Graphics::Browser::CachedTrack;
+use Bio::Graphics::Browser::Util 'modperl_request';
 use IO::File;
-use POSIX 'WNOHANG';
+use POSIX 'WNOHANG','setsid';
 
 use CGI qw(:standard param escape unescape);
 
@@ -108,15 +109,14 @@ sub request_panels {
       my $child = fork();
 
       die "Couldn't fork: $!" unless defined $child;
+      return $data_destinations if $child;
 
-      # If this is the parent, return
-      if ($child) {
-          return $data_destinations;
-      }
+      # need to prepare modperl for the fork
+      $self->prepare_modperl_for_fork();
 
-      # Close STDOUT in the child so the the browser doesn't have to wait for
-      # the child to finish.
-      close(STDOUT);
+      open STDIN, "</dev/null" or die "Couldn't reopen stdin";
+      open STDOUT,">/dev/null" or die "Couldn't reopen stdout";
+      POSIX::setsid()          or die "Couldn't start new session";
 
       my $do_local  = @$local_labels;
       my $do_remote = @$remote_labels;
@@ -140,13 +140,24 @@ sub request_panels {
           $self->run_remote_requests( $data_destinations, $args,
               $local_labels );
       }
-      exit 0;
+      CORE::exit 0;
   }
- 
+
   
   $self->run_local_requests($data_destinations,$args,$local_labels);  
   $self->run_remote_requests($data_destinations,$args,$remote_labels);
   return $data_destinations;
+}
+
+sub prepare_modperl_for_fork {
+    my $self = shift;
+    my $r    = modperl_request() or return;
+    if ($ENV{MOD_PERL_API_VERSION} < 2) {
+	eval {
+	    require Apache::SubProcess;
+	    $r->cleanup_for_exec() 
+	}
+    };
 }
 
 sub render_panels {

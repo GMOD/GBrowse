@@ -108,26 +108,41 @@ sub request_panels {
       my $child = fork();
 
       die "Couldn't fork: $!" unless defined $child;
-      return $data_destinations if $child;
+
+      # If this is the parent, return
+      if ($child) {
+          return $data_destinations;
+      }
+
+      # Close STDOUT in the child so the the browser doesn't have to wait for
+      # the child to finish.
+      close(STDOUT);
 
       my $do_local  = @$local_labels;
       my $do_remote = @$remote_labels;
 
       $self->clone_databases($local_labels) if $do_local;
-      if ($do_local && $do_remote) {
-	  if (fork()) {
-	      $self->run_local_requests($data_destinations,$args,$local_labels); 
-	  } else {
-	      $self->run_remote_requests($data_destinations,$args,$remote_labels);
-	  }
-      } elsif ($do_local) {
-	  $self->run_local_requests($data_destinations,$args,$local_labels)  if $do_local;
-      } elsif ($do_remote) {
-	  $self->run_remote_requests($data_destinations,$args,$local_labels) if $do_remote;
+      if ( $do_local && $do_remote ) {
+          if ( fork() ) {
+              $self->run_local_requests( $data_destinations, $args,
+                  $local_labels );
+          }
+          else {
+              $self->run_remote_requests( $data_destinations, $args,
+                  $remote_labels );
+          }
+      }
+      elsif ($do_local) {
+          $self->run_local_requests( $data_destinations, $args,
+              $local_labels );
+      }
+      elsif ($do_remote) {
+          $self->run_remote_requests( $data_destinations, $args,
+              $local_labels );
       }
       exit 0;
   }
-
+ 
   
   $self->run_local_requests($data_destinations,$args,$local_labels);  
   $self->run_remote_requests($data_destinations,$args,$remote_labels);

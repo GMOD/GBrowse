@@ -3,7 +3,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.6 2008-06-17 15:19:35 mwz444 Exp $
+ $Id: controller.js,v 1.7 2008-06-19 21:09:57 mwz444 Exp $
 
 */
 
@@ -38,8 +38,6 @@ var GBrowseController = Class.create({
 	}
     }
 );
-
-var Controller;
 
 function initialize_page () {
     Controller = new GBrowseController; // singleton
@@ -78,8 +76,10 @@ function initialize_page () {
 
 function register_track ( detail_div_id,detail_image_id ) {
     SegmentObservers.set(detail_div_id,1);
+    //alert("registering track "+detail_div_id);
     $(detail_div_id).observe('model:segmentChanged',function(event) {
 	    var track_key = event.memo.track_keys[detail_div_id];
+        //alert ("track_changed "+detail_div_id);
         if (track_key){
             if (Controller.periodic_updaters[detail_div_id]){
                 Controller.periodic_updaters[detail_div_id].stop();
@@ -102,24 +102,31 @@ function register_track ( detail_div_id,detail_image_id ) {
                             image_id: detail_image_id,
                         },
                         onSuccess: function(transport) {
+                            //alert ("success "+detail_div_id);
                             detail_div = document.getElementById(detail_div_id);
                             if (transport.responseText.substring(0,18) == "<!-- AVAILABLE -->"){
                                 detail_div.innerHTML = transport.responseText;
                                 Controller.periodic_updaters[detail_div_id].stop();
+                                reset_after_track_load();
                             }
                             else if (transport.responseText.substring(0,16) == "<!-- EXPIRED -->"){
                                 detail_div.innerHTML = transport.responseText;
                                 Controller.periodic_updaters[detail_div_id].stop();
+                                reset_after_track_load();
                             }
                         }
                      }
                 );
         }
-        else{
-            // Doesn't handle overview or regional views yet
-        }
-	   
 	}
 	);
 }
 
+// This may be a little overkill to run these after every track update but
+// since there is no "We're completely done with all the track updates for the
+// moment" hook, I don't know of another way to make sure the tracks become
+// draggable again
+function reset_after_track_load ( ) {
+    create_drag('overview_panels','track');
+    create_drag('detail_panels','track');
+}

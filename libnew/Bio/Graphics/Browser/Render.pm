@@ -152,16 +152,26 @@ sub asynchronous_event {
 
     if ( my $action = param('navigate') ) {
 
-        #warn "updating coordinates";
+        warn "updating coordinates";
         $self->init_database();
         $self->init_plugins();
         $self->init_remote_sources();
         $self->asynchronous_update_coordinates($action);
-        my $cache_track_hash = $self->render_deferred();
+
+        # Start rendering the detail and overview tracks
+        my $cache_detail_track_hash = $self->render_deferred();
+        my $cache_overview_track_hash
+            = $self->render_deferred( $self->whole_segment,
+            [ $self->overview_tracks ], 'overview', );
+
         my %track_keys;
-        foreach my $track_label ( keys %{ $cache_track_hash || {} } ) {
-            $track_keys{ "track_" . $track_label }
-                = $cache_track_hash->{$track_label}->key();
+        foreach my $cache_track_hash ( $cache_detail_track_hash,
+            $cache_overview_track_hash )
+        {
+            foreach my $track_label ( keys %{ $cache_track_hash || {} } ) {
+                $track_keys{ "track_" . $track_label }
+                    = $cache_track_hash->{$track_label}->key();
+            }
         }
 
         print CGI::header('application/json');
@@ -171,6 +181,7 @@ sub asynchronous_event {
     }
 
     if ( my $element = param('update') ) {
+        warn "updating element";
         my $html = $self->asynchronous_update_element($element);
         print CGI::header('text/html');
         print $html;

@@ -11,6 +11,7 @@ Bio::Graphics::Wiggle -- Binary storage for dense genomic features
  my $wig = Bio::Graphics::Wiggle->new('./test.wig',
                                       $writeable,
                                      { seqid => $seqid,
+                                       start => $start,
                                        step  => $step,
                                        min   => $min,
                                        max   => $max });
@@ -22,10 +23,11 @@ Bio::Graphics::Wiggle -- Binary storage for dense genomic features
  my $min   = $wig->min($new_min);
  my $step  = $wig->step($new_step);   # data stored at modulus step == 0; all else is blank
 
- $wig->set_value($position => $value);    # store $value at position (same as above)
- $wig->set_range($start=>$end,$value);    # store $value from $start to $end (same as above)
+ $wig->set_value($position  => $value);   # store $value at position
+ $wig->set_values($position => \@values); # store array of values at position
+ $wig->set_range($start=>$end,$value);    # store the same $value from $start to $end
 
- my $value = $wig->value($position);      # fetch value from position
+ my $value  = $wig->value($position);     # fetch value from position
  my $values = $wig->values($start,$end);  # fetch range of data from $start to $end
 
  $wig->window(100);                       # sample window size
@@ -52,6 +54,8 @@ following format:
       4  byte long integer, value of "span"
       4  byte perl native float, the mean 
       4  byte perl native float, the standard deviation
+      2  byte unsigned short, the version number (currently version 0)
+      4  byte long integer, sequence start position (in 0-based coordinates)
       null padding to 256 bytes for future use
 
 The remainder of the file consists of 8-bit unsigned scaled integer
@@ -191,15 +195,20 @@ use IO::File;
 use Carp 'croak','carp','confess';
 
 use constant HEADER_LEN => 256;
-use constant HEADER => '(Z50LFFLFF)@'.HEADER_LEN; # seqid, step, min, max, span, mean, stdev
+    # seqid, step, min, max, span, mean, stdev, version, start
+use constant HEADER => '(Z50LFFLFFSL)@'.HEADER_LEN; 
 use constant BODY   => 'C';
 use constant DEBUG  => 1;
 use constant DEFAULT_SMOOTHING => 'mean';
+use constant VERSION => 0;
 
 sub new {
   my $class          = shift;
   my ($path,$write,$options) = @_;
-  my $mode = $write ? 'w+' : 'r';
+  my $mode = $write ? -e $path   # if file already exists...
+                         ? '+<'    # ...open for read/write
+                         : '+>'    # ...else clobber and open a new one
+                    : '<';       # read only
   my $fh = IO::File->new($path,$mode) or die "$path: $!";
 
   $options ||= {};
@@ -210,29 +219,32 @@ sub new {
 		   }, ref $class || $class;
 
   my $stored_options = eval {$self->_readoptions} || {};
+  $options->{start}-- if defined $options->{start};  # 1-based ==> 0-based coordinates
   my %merged_options = (%$stored_options,%$options);
-  $merged_options{seqid} ||= 'chrUnknown';
-  $merged_options{min}   ||= 0;
-  $merged_options{max}   ||= 255;
-  $merged_options{mean}  ||= 128;
-  $merged_options{stdev} ||= 255;
-  $merged_options{trim}  ||= 'none';
-  $merged_options{step}  ||= 1;
-  $merged_options{span}  ||= $merged_options{step};
+  $merged_options{version}||= 0;
+  $merged_options{seqid}  ||= 'chrUnknown';
+  $merged_options{min}    ||= 0;
+  $merged_options{max}    ||= 255;
+  $merged_options{mean}   ||= 128;
+  $merged_options{stdev}  ||= 255;
+  $merged_options{trim}   ||= 'none';
+  $merged_options{step}   ||= 1;
+  $merged_options{start}  ||= 0;
+  $merged_options{span}   ||= $merged_options{step};
   $self->{options}         = \%merged_options;
   $self->_do_trim        unless $self->trim eq 'none';
   return $self;
 }
 
-sub start {
-  my $self = shift;
-  return 1;
-}
-
 sub end {
   my $self = shift;
-  my $size = $self->{fsize} ||= (stat($self->fh))[7];
-  return ($size - HEADER_LEN()) * $self->step;
+  unless (defined $self->{end}) {
+      my $size     = (stat($self->fh))[7];
+      my $data_len = $size - HEADER_LEN();
+      return unless $data_len>0;   # undef end
+      $self->{end} = ($self->start-1) + $data_len * $self->step;
+  }
+  return $self->{end};
 }
 
 sub DESTROY {
@@ -263,14 +275,26 @@ sub _option {
   return $d;
 }
 
-sub seqid { shift->_option('seqid',@_) }
-sub min   { shift->_option('min',@_) }
-sub max   { shift->_option('max',@_) }
-sub step  { shift->_option('step',@_) }
-sub span  { shift->_option('span',@_) }
-sub mean  { shift->_option('mean',@_) }
-sub stdev { shift->_option('stdev',@_) }
-sub trim  { shift->_option('trim',@_)  }
+sub version  { shift->_option('version',@_)  }
+sub seqid    { shift->_option('seqid',@_) }
+sub min      { shift->_option('min',@_) }
+sub max      { shift->_option('max',@_) }
+sub step     { shift->_option('step',@_) }
+sub span     { shift->_option('span',@_) }
+sub mean     { shift->_option('mean',@_) }
+sub stdev    { shift->_option('stdev',@_) }
+sub trim     { shift->_option('trim',@_)  }
+
+sub start    {  # slightly different because we have to deal with 1 vs 0-based coordinates
+    my $self  = shift;
+    my $start = $self->_option('start');
+    $start++;   # convert into 1-based coordinates
+    if (@_) {
+	my $newstart = shift;
+	$self->_option('start',$newstart-1); # store in zero-based coordinates
+    }
+    return $start;
+}
 
 sub smoothing {
   my $self = shift;
@@ -283,24 +307,39 @@ sub _readoptions {
   my $self = shift;
   my $fh = $self->fh;
   my $header;
-  $fh->read($header,HEADER_LEN) == HEADER_LEN or die "read failed: $!";
-  my ($seqid,$step,$min,$max,$span,
-      $mean,$stdev) = unpack(HEADER,$header);
-  return { seqid => $seqid,
-	   step  => $step,
-	   span  => $span,
-	   min   => $min,
-	   max   => $max,
-	   mean  => $mean,
-	   stdev => $stdev,
-  };
+  $fh->seek(0,0);
+  return unless  $fh->read($header,HEADER_LEN) == HEADER_LEN;
+  return $self->_parse_header($header);
+}
+
+sub _parse_header {
+    my $self   = shift;
+    my $header = shift;
+    my ($seqid,$step,$min,$max,$span,
+	$mean,$stdev,$version,$start) = unpack(HEADER,$header);
+    return { seqid => $seqid,
+	     step  => $step,
+	     span  => $span,
+	     min   => $min,
+	     max   => $max,
+	     mean  => $mean,
+	     stdev => $stdev,
+	     version => $version,
+	     start => $start,
+    };    
+}
+
+sub _generate_header {
+    my $self    = shift;
+    my $options = shift;
+    return pack(HEADER,@{$options}{qw(seqid step min max span mean stdev version start)});
 }
 
 sub _writeoptions {
   my $self    = shift;
   my $options = shift;
   my $fh = $self->fh;
-  my $header = pack(HEADER,@{$options}{qw(seqid step min max span mean stdev)});
+  my $header = $self->_generate_header($options);
   $fh->seek(0,0);
   $fh->print($header) or die "write failed: $!";
 }
@@ -361,7 +400,8 @@ sub value {
   my $position = shift;
 
   my $offset   = $self->_calculate_offset($position);
-  $self->seek($offset) or die "Seek failed: $!";
+  $offset     >= HEADER_LEN or die "Tried to retrieve data from before start position";
+  $self->seek($offset)      or die "Seek failed: $!";
 
   if (@_ == 2) {
     my $end       = shift;
@@ -369,12 +409,14 @@ sub value {
     my $step      = $self->step;
     my $scaled_value  = $self->scale($new_value);
     $self->fh->print(pack('C*',($scaled_value)x(($end-$position+1)/$step))) or die "Write failed: $!";
+    $self->{end} = $end if !exists $self->{end} || $self->{end} < $end;
   }
 
   elsif (@_==1) {
     my $new_value     = shift;
     my $scaled_value  = $self->scale($new_value);
     $self->fh->print(pack('C*',$scaled_value)) or die "Write failed: $!";
+    $self->{end} = $position if !exists $self->{end} || $self->{end} < $position;
     return $new_value;
   }
 
@@ -383,9 +425,12 @@ sub value {
     $self->fh->read($buffer,1) or die "Read failed: $!";
     my $scaled_value = unpack('C*',$buffer);
 
-    if ($scaled_value == 0 && (my $span = $self->span) > 1) {  # missing data, so look back at most span values to get it
-      $offset = $self->_calculate_offset($position-$span+1);
+    # missing data, so look back at most span values to get it
+    if ($scaled_value == 0 && (my $span = $self->span) > 1) {  
+      $offset  = $self->_calculate_offset($position-$span+1);
+      $offset >= HEADER_LEN or die "Tried to retrieve data from before start position";
       $self->seek($offset) or die "Seek failed: $!";
+
       $self->fh->read($buffer,$span/$self->step);
       for (my $i=length($buffer)-2;$i>=0;$i--) {
 	my $val = substr($buffer,$i,1);
@@ -402,8 +447,9 @@ sub value {
 sub _calculate_offset {
   my $self     = shift;
   my $position = shift;
-  my $step = $self->step;
-  return HEADER_LEN + int(($position-1)/$step);
+  my $step     = $self->step;
+  my $start    = $self->start;
+  return HEADER_LEN + int(($position-$start)/$step);
 }
 
 sub set_values {
@@ -424,30 +470,59 @@ sub values {
   }
 }
 
+# subregion in "wiggle interchange format" (wif)
+sub export_to_wif {
+    my $self = shift;
+    my ($start,$end) = @_;
+
+    # get the 256 byte header
+    my $data = $self->_generate_header($self->{options});
+
+    # add the start position for this range
+    $data   .= pack("L",$start);
+
+    # add the packed data for this range
+    $data   .= $self->_retrieve_packed_range($start,$end-$start+1,$self->step);
+    return $data;
+}
+
+sub import_from_wif {
+    my $self    = shift;
+    my $wifdata = shift;
+
+    # POSSIBLE BUG: should we check that header is compatible?
+    my $header  = substr($wifdata,0,HEADER_LEN);
+    my $start   = unpack('L',substr($wifdata,HEADER_LEN,4));
+
+    my $options = $self->_parse_header($header);
+    my $stored_options = eval {$self->_readoptions} || {};
+    my %merged_options = (%$stored_options,%$options);
+    $self->{options}   = \%merged_options;
+    $self->{dirty}++;
+
+    # write the data
+    $self->seek($self->_calculate_offset($start));
+    $self->fh->print(substr($wifdata,HEADER_LEN+4)) or die "write failed: $!";
+}
+
 sub _retrieve_values {
   my $self = shift;
   my ($start,$end,$samples) = @_;
-  my $span = $self->span;
 
-  croak "Value of start position ($start) is less than 1" unless $start >=1;
-  croak "Value of end position ($end) is greater than max data value of",$self->end+$span,
+  my $data_start = $self->start;
+  my $step       = $self->step;
+  my $span       = $self->span;
+
+  croak "Value of start position ($start) is less than data start of $data_start"
+      unless $start >= $data_start;
+  croak "Value of end position ($end) is greater than data end of ",$self->end+$span,
       unless $end <= $self->end + $span;
 
   # generate list of positions to sample from
   my $length = $end-$start+1;
   $samples ||= $length;
 
-  my $offset            = $self->_calculate_offset($start);
-  my $step              = $self->step;
-  my $sampling_interval = $length/$samples;
-
-  $self->seek($offset);
-  my $packed_data;
-  $self->fh->read($packed_data,$length/$step);
-
-  # pad data up to required amount
-  $packed_data .= "\0" x ($length/$step-length($packed_data))
-    if length $packed_data < $length/$step;
+  my $packed_data = $self->_retrieve_packed_range($start,$length,$step);
 
   my @bases;
   $#bases = $length-1;
@@ -460,7 +535,7 @@ sub _retrieve_values {
   }
 
   else {
-    # In this case some regions may have partially missing missing, 
+    # In this case some regions may have partially missing data,
     # so we create an array equal to the length of the requested region, 
     # fill it in, and then sample it
     for (my $i=0; $i<length $packed_data; $i++) {
@@ -474,9 +549,27 @@ sub _retrieve_values {
   my $r = $self->unscale(\@bases);
   $r    = $self->sample($r,$samples);
   $r    = $self->smooth($r,$self->window * $samples/@bases) 
-      if $self->window>1;
+      if defined $self->window && $self->window>1;
   return $r;
 }
+
+sub _retrieve_packed_range {
+  my $self = shift;
+  my ($start,$length,$step) = @_;
+  my $span = $self->span;
+
+  my $offset            = $self->_calculate_offset($start);
+
+  $self->seek($offset);
+  my $packed_data;
+  $self->fh->read($packed_data,$length/$step);
+
+  # pad data up to required amount
+  $packed_data .= "\0" x ($length/$step-length($packed_data))
+    if length $packed_data < $length/$step;
+  return $packed_data;
+}
+
 
 sub sample {
   my $self = shift;
@@ -596,7 +689,10 @@ sub _store_values {
 
   $self->seek($offset);
   my $packed_data = pack('C*',@$scaled);
-  $fh->print($packed_data);
+  $fh->print($packed_data) or die "Write failed: $!";
+
+  my $new_end  = $position+@$data-1;
+  $self->{end} = $new_end if !exists $self->{end} || $self->{end} < $new_end;
 }
 
 # zero means "no data"

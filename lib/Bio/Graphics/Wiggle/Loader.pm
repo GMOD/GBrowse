@@ -568,6 +568,7 @@ sub wigfile {
 	1;
     my $trim      = $self->current_track->{display_options}{trim};# || 'stdev2';
     my $transform = $self->current_track->{display_options}{transform};
+    warn "loading wiggle into $path";
     my $wigfile = Bio::Graphics::Wiggle->new(
 					     $path,
 					     1,

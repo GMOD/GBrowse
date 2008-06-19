@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.83 2008-05-29 15:24:17 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.84 2008-06-19 20:41:21 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -317,6 +317,11 @@ sub setting {
   }
   my $config = $self->config or return;
   $config->setting(@args);
+}
+
+# to return the list of configuration options
+sub _setting {
+    shift->config->_setting(@_);
 }
 
 =head2 fallback_setting()
@@ -2931,6 +2936,60 @@ sub clone_feature {
 
   return $clone;
 }
+
+sub coordinate_mapper {
+    my $self            = shift;
+    my $current_segment = shift;
+    my $optimize        = shift;
+
+    my $db              = $current_segment->factory;
+
+    my ($ref,$start,$stop) = ($current_segment->seq_id,
+			      $current_segment->start,
+			      $current_segment->end);
+    my %segments;
+    
+    my $closure = sub {
+	my ($refname,@ranges) = @_;
+
+	unless (exists $segments{$refname}) {
+	    my @segments = sort {$a->length<=>$b->length}   # get the longest one
+	    map {
+		eval{$_->absolute(0)}; $_  # so that rel2abs works properly later
+	    }
+	    $self->name2segments($refname,$db,TOO_MANY_SEGMENTS,1);
+	    $segments{$refname} = $segments[0];
+	    return unless @segments;
+	}
+
+	my $mapper   = $segments{$refname} || return;
+	my $absref   = $mapper->abs_ref;
+	my $cur_ref  = eval {$current_segment->abs_ref}
+	|| eval{$current_segment->ref};  # account for api changes in Bio::SeqI
+	return unless $absref eq $cur_ref;
+
+	my @abs_segs;
+	if ($absref eq $refname) {  # doesn't need remapping
+	    @abs_segs = @ranges;
+	} else {
+	    @abs_segs = map {[$mapper->rel2abs($_->[0],$_->[1])]} @ranges;
+	}
+
+	# this inhibits mapping outside the displayed region
+	if ($optimize) {
+	    my $in_window;
+	    foreach (@abs_segs) {
+		next unless defined $_->[0] && defined $_->[1];
+		$in_window ||= $_->[0] <= $stop && $_->[1] >= $start;
+	    }
+	    return $in_window ? ($absref,@abs_segs) : ();
+	} else {
+	    return ($absref,@abs_segs);
+	}
+    };
+    return $closure;
+}
+
 
 package Bio::Graphics::BrowserConfig;
 use strict;

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.79 2008-05-29 17:24:55 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.80 2008-06-20 19:16:45 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -909,7 +909,6 @@ sub reset_cookies {
 
 sub adjust_region_size {
   my ($segment,$settings) = @_;
-  $CONFIG->setting('region segment') || return;
   my $region_size;
   my $length = $segment ? $segment->length : abs($settings->{stop} - $settings->{start});
   my $whole_segment = $CONFIG->whole_segment($segment) if $segment;
@@ -1470,10 +1469,7 @@ sub track_config {
 
   print CGI::header,start_html();
 
-  # truncate overly long citations
-  my $cit_txt = $CONFIG->citation($label,$CONFIG->language) || $CONFIG->tr('NO_CITATION');
-  $cit_txt =~ s/(.{768}).+/$1\.\.\./;
-  my $citation = h4($key).p($cit_txt);
+  my $citation = h4($key).p($CONFIG->citation($label,$CONFIG->language)||$CONFIG->tr('NO_CITATION'));
   my $height   = $CONFIG->fallback_setting($label=>'height')    || 5;
   my $width    = $CONFIG->fallback_setting($label=>'linewidth') || 1;
   my $glyph    = $CONFIG->fallback_setting($label=>'glyph')     || 'box';
@@ -1576,16 +1572,14 @@ END
 				  -default => $settings->{features}{$label}{limit})
 		      )
 		   ),
-		 TR(td(),
-		    td(
+		 TR(
+		    td({-align=>'right'},
 		       button(-style => 'background:pink',
 			      -name=>$CONFIG->tr('Revert'),
 			      -onClick=>$reset_js,
 			     ),
 		      ),
-                   ),
-                 TR(td(),
-                    td(
+		    th({-align=>'right'},
 		       button(-style=>'float:left',
 			      -name=>$CONFIG->tr('Cancel'),
 			      -onClick=>'Balloon.prototype.hideTooltip(1)'),
@@ -1620,18 +1614,7 @@ sub settings_table {
   my ($ks_style,@ks_disabled) = $CONFIG->drag_and_drop($settings->{drag_and_drop})
     ? ("color:gray",(-disabled=>1))
     : ('color:black',());
-  my $tooltips = $settings->{show_tooltips} ? 'false' : 'true';
-  my $content = <<END;
-<script type="text/javascript">
-tooltipIsSuppressed = $tooltips;
-function toggleTooltip () {
-  tooltipIsSuppressed = !document.mainform.show_tooltips.checked
-}
-</script>
-END
-;
-
-  $content .=
+  my $content =
     table({-class=>'searchbody',-border=>0,-width=>'100%'},
 	  TR({-class=>'searchtitle'},
 	     td(
@@ -1751,7 +1734,7 @@ END
 			     -label    => $CONFIG->tr('SHOW_TOOLTIPS'),
 			     -override => 1,
 			     -checked  => $settings->{show_tooltips},
-			     -onclick  => 'toggleTooltip()'
+			     -onclick  => 'document.mainform.submit()'
 		    ),
 		)
 	     ),
@@ -2510,7 +2493,7 @@ sub handle_uploads {
     handle_quickie($page_settings,\@data,\@styles);
   }
 
-  if ($file_action && param($file_action) eq $CONFIG->tr('Delete')) {
+  if ($file_action && param($file_action) eq 'Delete File') {
     $UPLOADED_SOURCES->clear_file($file);
     $REMOTE_SOURCES->delete_source($file);
   }
@@ -2606,8 +2589,8 @@ sub load_external_sources {
   # feature files and values are FeatureFile objects.
   my $f       = {};
   if ($segment) {
-    my $rel2abs      = coordinate_mapper($segment,1);
-    my $rel2abs_slow = coordinate_mapper($segment,0);
+    my $rel2abs      = $CONFIG->coordinate_mapper($segment,1);
+    my $rel2abs_slow = $CONFIG->coordinate_mapper($segment,0);
     for my $featureset ($PLUGINS,$UPLOADED_SOURCES,$REMOTE_SOURCES) {
 	$featureset->annotate($segment,$f,$rel2abs,$rel2abs_slow,$MAX_SEGMENT);
     }
@@ -2716,72 +2699,72 @@ sub edit_uploaded_file {
   print_bottom($VERSION);
 }
 
+# moved into $CONFIG
+# sub coordinate_mapper {
+#   my $current_segment = shift;
+#   my $optimize        = shift;
 
-sub coordinate_mapper {
-  my $current_segment = shift;
-  my $optimize        = shift;
+#   my $db              = open_database();
 
-  my $db              = open_database();
+#   my ($ref,$start,$stop) = ($current_segment->seq_id,
+# 			    $current_segment->start,$current_segment->end);
+#   my %segments;
 
-  my ($ref,$start,$stop) = ($current_segment->seq_id,
-			    $current_segment->start,$current_segment->end);
-  my %segments;
+#   my $closure = sub {
+#     my ($refname,@ranges) = @_;
 
-  my $closure = sub {
-    my ($refname,@ranges) = @_;
+#     # hack for timing tests - this disables coordinate remapping
+#     # and shows what would happen if user uploaded everything in abs
+#     # coordinates.
+#     if (0)  {  # turn on for timing tests
+#       return unless $refname eq $ref;
+#       my @in_range = grep {$_->[0] <= $stop && $_->[1] >= $start} @ranges;
+#       return unless @in_range;
+#       return ($refname,@in_range);
+#     }
 
-    # hack for timing tests - this disables coordinate remapping
-    # and shows what would happen if user uploaded everything in abs
-    # coordinates.
-    if (0)  {  # turn on for timing tests
-      return unless $refname eq $ref;
-      my @in_range = grep {$_->[0] <= $stop && $_->[1] >= $start} @ranges;
-      return unless @in_range;
-      return ($refname,@in_range);
-    }
+#     unless (exists $segments{$refname}) {
+#       my @segments = sort {$a->length<=>$b->length}   # get the longest one
+# 	map {
+# 	  eval{$_->absolute(0)}; $_  # so that rel2abs works properly later
+# 	}
+# 	  $CONFIG->name2segments($refname,$db,TOO_MANY_SEGMENTS,1);
+#       $segments{$refname} = $segments[0];
+#       return unless @segments;
+#     }
 
-    unless (exists $segments{$refname}) {
-      my @segments = sort {$a->length<=>$b->length}   # get the longest one
-	map {
-	  eval{$_->absolute(0)}; $_  # so that rel2abs works properly later
-	}
-	  $CONFIG->name2segments($refname,$db,TOO_MANY_SEGMENTS,1);
-      $segments{$refname} = $segments[0];
-      return unless @segments;
-    }
+#     my $mapper   = $segments{$refname} || return;
+#     my $absref   = $mapper->abs_ref;
+#     my $cur_ref  = eval {$current_segment->abs_ref}
+#        || eval{$current_segment->ref};  # account for api changes in Bio::SeqI
+#     return unless $absref eq $cur_ref;
 
-    my $mapper   = $segments{$refname} || return;
-    my $absref   = $mapper->abs_ref;
-    my $cur_ref  = eval {$current_segment->abs_ref}
-       || eval{$current_segment->ref};  # account for api changes in Bio::SeqI
-    return unless $absref eq $cur_ref;
+#     my @abs_segs;
+#     if ($absref eq $refname) {  # doesn't need remapping
+#       @abs_segs = @ranges;
+#     } else {
+#       @abs_segs = map {[$mapper->rel2abs($_->[0],$_->[1])]} @ranges;
+#     }
 
-    my @abs_segs;
-    if ($absref eq $refname) {  # doesn't need remapping
-      @abs_segs = @ranges;
-    } else {
-      @abs_segs = map {[$mapper->rel2abs($_->[0],$_->[1])]} @ranges;
-    }
-
-    # this inhibits mapping outside the displayed region
-    if ($optimize) {
-      my $in_window;
-      foreach (@abs_segs) {
-	next unless defined $_->[0] && defined $_->[1];
-	$in_window ||= $_->[0] <= $stop && $_->[1] >= $start;
-      }
-      return $in_window ? ($absref,@abs_segs) : ();
-    } else {
-      return ($absref,@abs_segs);
-    }
-  };
-  return $closure;
-}
+#     # this inhibits mapping outside the displayed region
+#     if ($optimize) {
+#       my $in_window;
+#       foreach (@abs_segs) {
+# 	next unless defined $_->[0] && defined $_->[1];
+# 	$in_window ||= $_->[0] <= $stop && $_->[1] >= $start;
+#       }
+#       return $in_window ? ($absref,@abs_segs) : ();
+#     } else {
+#       return ($absref,@abs_segs);
+#     }
+#   };
+#   return $closure;
+# }
 
 sub bookmark_link {
   my $settings = shift;
   my $q = new CGI('');
-  my @keys = qw(start stop ref width version flip cache drag_and_drop show_tooltips grid);
+  my @keys = qw(start stop ref width version flip);
   foreach (@keys) {
     $q->param(-name=>$_,-value=>$settings->{$_});
   }
@@ -2792,12 +2775,14 @@ sub bookmark_link {
 
   # handle external urls
   my @url = grep {/^(ftp|http):/} @{$settings->{tracks}};
-  $q->param(-name=>'eurl',-value=>\@url);
+  $q->param(-name=>'eurl',  -value=>\@url);
   $q->param(-name=>'h_region',-value=>$settings->{h_region}) if $settings->{h_region};
   my @h_feat= map {"$_\@$settings->{h_feat}{$_}"} keys %{$settings->{h_feat}};
   $q->param(-name=>'h_feat',-value=>\@h_feat) if @h_feat;
-  $q->param(-name=>'id',-value=>$settings->{id});
-  $q->param(-name=>'grid',-value=>$settings->{grid});
+
+  for (qw(id grid cache drag_and_drop show_tooltips)) {
+      $q->param(-name=>$_,    -value=>$settings->{$_});
+  }
 
   return "?".$q->query_string();
 }
@@ -3216,7 +3201,7 @@ sub object_classes_for_help {
 # a group.  This makes for ugly logic branches.
 sub make_citation_link {
   my ($label,$self_url)   = @_;
-  my ($link,$key,$mouseover);
+  my ($link,$key);
   if ($label =~ /^plugin:/) {
     $key = $label || '';
     $key =~ s/^plugin://;
@@ -3234,14 +3219,11 @@ sub make_citation_link {
     $key = label2key($label);
     (my $anchor  = $label) =~ tr/ /-/;
     $link = $self_url.'#'.escapeHTML($anchor);
-    $mouseover = escape($CONFIG->citation($label,$CONFIG->language) || $CONFIG->tr('NO_CITATION'));
-    $mouseover =~ s/(.{768}).+/$1\.\.\./;
   }
 
   my $overview_color = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR();
   my @args = (-href=>$link,-target=>'citation');
   push @args,-style=>'Font-style: italic' if $label =~ /^(http|ftp|file):/;
-  push @args,-onmouseover => "balloon.showTooltip(event,'$mouseover')" if $mouseover;
   # push @args,-style=>"background: $overview_color" if $label =~ /:overview$/;
   return a({@args},$key);
 }

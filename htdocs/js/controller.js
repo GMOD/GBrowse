@@ -3,12 +3,13 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.7 2008-06-19 21:09:57 mwz444 Exp $
+ $Id: controller.js,v 1.8 2008-06-20 20:33:11 mwz444 Exp $
 
 */
 
 var Controller;        // singleton
 var SegmentObservers = new Hash();
+var UpdateOnLoadObservers = new Hash();
 
 
 var GBrowseController = Class.create({
@@ -51,6 +52,22 @@ function initialize_page () {
 	    });
 	}
 	);
+    new Ajax.Request('#',{
+        method:     'post',
+        parameters: {first_render: 1},
+        onSuccess: function(transport) {
+            var results = transport.responseJSON;
+            var segment = results.segment;
+            var track_keys = results.track_keys;
+            UpdateOnLoadObservers.keys().each(
+                function(e) {
+                    $(e).fire('model:segmentChanged',{segment: segment, track_keys: track_keys});
+                }
+            );
+        }
+    }
+    );
+
 
 /*    var elements = ['landmark_search_field','overview_panels','detail_panels'];
     elements.each(function(el) {
@@ -76,6 +93,7 @@ function initialize_page () {
 
 function register_track ( detail_div_id,detail_image_id ) {
     SegmentObservers.set(detail_div_id,1);
+    UpdateOnLoadObservers.set(detail_div_id,1);
     //alert("registering track "+detail_div_id);
     $(detail_div_id).observe('model:segmentChanged',function(event) {
 	    var track_key = event.memo.track_keys[detail_div_id];
@@ -102,7 +120,7 @@ function register_track ( detail_div_id,detail_image_id ) {
                             image_id: detail_image_id,
                         },
                         onSuccess: function(transport) {
-                            //alert ("success "+detail_div_id);
+                            //alert ("success "+detail_div_id +" "+transport.responseText.substring(0,10));
                             detail_div = document.getElementById(detail_div_id);
                             if (transport.responseText.substring(0,18) == "<!-- AVAILABLE -->"){
                                 detail_div.innerHTML = transport.responseText;

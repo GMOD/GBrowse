@@ -153,30 +153,23 @@ sub asynchronous_event {
     if ( my $action = param('navigate') ) {
 
         warn "updating coordinates";
-        $self->init_database();
-        $self->init_plugins();
-        $self->init_remote_sources();
         $self->asynchronous_update_coordinates($action);
-
-        # Start rendering the detail and overview tracks
-        my $cache_detail_track_hash = $self->render_deferred();
-        my $cache_overview_track_hash
-            = $self->render_deferred( $self->whole_segment,
-            [ $self->overview_tracks ], 'overview', );
-
-        my %track_keys;
-        foreach my $cache_track_hash ( $cache_detail_track_hash,
-            $cache_overview_track_hash )
-        {
-            foreach my $track_label ( keys %{ $cache_track_hash || {} } ) {
-                $track_keys{ "track_" . $track_label }
-                    = $cache_track_hash->{$track_label}->key();
-            }
-        }
+        my $track_keys = $self->begin_render();
 
         print CGI::header('application/json');
         print JSON::to_json(
-            { segment => $settings->{name}, track_keys => \%track_keys, } );
+            { segment => $settings->{name}, track_keys => $track_keys, } );
+        return 1;
+    }
+
+    if ( my $action = param('first_render') ) {
+
+        warn "Rendering Tracks";
+        my $track_keys = $self->begin_render();
+
+        print CGI::header('application/json');
+        print JSON::to_json(
+            { segment => $settings->{name}, track_keys => $track_keys, } );
         return 1;
     }
 
@@ -264,6 +257,31 @@ sub asynchronous_event {
     print CGI::header('204 No Content');
     $self->session->flush;
     1;
+}
+
+sub begin_render {
+    my $self = shift;
+    $self->init_database();
+    $self->init_plugins();
+    $self->init_remote_sources();
+
+    # Start rendering the detail and overview tracks
+    my $cache_detail_track_hash = $self->render_deferred();
+    my $cache_overview_track_hash
+        = $self->render_deferred( $self->whole_segment,
+        [ $self->overview_tracks ], 'overview', );
+
+    my %track_keys;
+    foreach my $cache_track_hash ( $cache_detail_track_hash,
+        $cache_overview_track_hash )
+    {
+        foreach my $track_label ( keys %{ $cache_track_hash || {} } ) {
+            $track_keys{ "track_" . $track_label }
+                = $cache_track_hash->{$track_label}->key();
+        }
+    }
+
+    return \%track_keys;
 }
 
 # This asynchronous method accepts a list of track names and returns a 
@@ -361,17 +379,51 @@ sub render_navbar {
 }
 
 sub render_panels {
-  my $self = shift;
-  my $seg     = shift;
-  my $section = shift;
+    my $self    = shift;
+    my $seg     = shift;
+    my $section = shift;
 
-  my $html = '';
+    my $html = '';
 
-  $html .= $self->render_overview($seg)   if $section->{overview};
-  $html .= $self->render_regionview($seg) if $section->{regionview};
-  $html .= $self->render_detailview($seg) if $section->{detailview};
+    ### Need to add regionview
+    # Kick off track rendering
+    if ( $section->{'overview'} ) {
+        my $cache_overview_track_hash
+            = $self->render_deferred( $self->whole_segment,
+            [ $self->overview_tracks ], 'overview', );
 
-  return $html;
+        my $panels_html
+
+            #.= $self->retrieve_deferred($cache_overview_track_hash);
+            .= $self->get_blank_panels($cache_overview_track_hash);
+        my $drag_script = $self->drag_script( 'overview_panels', 'track' );
+        $html .= div(
+            $self->toggle(
+                'Overview',
+                div({ -id => 'overview_panels', -class => 'track' },
+                    $panels_html,
+                )
+            )
+        ) . $drag_script;
+    }
+    if ( $section->{'detailview'} ) {
+        my $cache_detail_track_hash = $self->render_deferred();
+        my $panels_html
+
+            #.= $self->retrieve_deferred($cache_detail_track_hash);
+            .= $self->get_blank_panels($cache_detail_track_hash);
+        my $drag_script = $self->drag_script( 'detail_panels', 'track' );
+        $html .= div(
+            $self->toggle(
+                'Details',
+                div({ -id => 'detail_panels', -class => 'track' },
+                    $panels_html,
+                )
+            )
+        ) . $drag_script;
+    }
+
+    return $html;
 }
 
 sub render_config {
@@ -1244,6 +1296,7 @@ sub get_panel_renderer {
 
 ################## image rendering code #############
 
+# render_detailview is now obsolete
 sub render_detailview {
   my $self = shift;
   my $seg  = shift or return;
@@ -1273,6 +1326,32 @@ sub render_detailview_panels {
     return map {$panels->{$_}} @labels;
 }
 
+sub get_blank_panels {
+    my $self = shift;
+    my $cache_track_hash = shift;
+
+    my $html   = '';
+    foreach my $track_name ( keys %{ $cache_track_hash || {} } ) {
+        my $cache_key = $cache_track_hash->{$track_name}->key();
+        my %panel_args
+            = @{ $cache_track_hash->{$track_name}->panel_args()
+                || [] };
+        my $image_width = $panel_args{'-width'};
+
+        $html .= $self->render_grey_track(
+            track_name       => $track_name,
+            image_width      => $image_width,
+            image_height     => 40,
+            image_element_id => $track_name . "_image",
+            div_element_id   => "track_" . $track_name,
+        );
+
+    }
+    return $html;
+
+}
+
+# render_overview is now obsolete
 sub render_overview {
   my $self = shift;
   my $seg  = shift;

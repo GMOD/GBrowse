@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.80 2008-06-20 19:16:45 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.81 2008-06-20 19:21:56 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -666,11 +666,15 @@ sub detail_panel {
     # additional information that helps determine whether to use a panel from the cache
     $page_settings->{h_feat}   ||= {};
     $page_settings->{h_region} ||= [];
-    my @cache_extra       = (
-			     sort keys %{$page_settings->{h_feat}},
-			     sort @{$page_settings->{h_region}},
-	                     $page_settings->{show_tooltips},
-			    );
+    my @cache_extra;
+    {
+	local $^W = 0; # kill uninit warning from sort
+	@cache_extra       = (
+	                         sort(keys %{$page_settings->{h_feat}}),
+	                         sort(@{$page_settings->{h_region}}),
+	                         $page_settings->{show_tooltips},
+	    );
+    }
 
     $panels      = $CONFIG->render_panels({segment       => $segment,
 					   feature_files => $feature_files,
@@ -2770,7 +2774,8 @@ sub bookmark_link {
   }
 
   # handle selected features slightly differently
-  my @selected = grep {$settings->{features}{$_}{visible} && !/^(file|ftp|http):/} @{$settings->{tracks}};
+  my @selected = grep {$settings->{features}{$_}{visible} 
+		       && !/^(ftp|http):/} @{$settings->{tracks}};
   $q->param(-name=>'label',-value=>join('-',@selected));
 
   # handle external urls

@@ -79,7 +79,10 @@ Open/create a wiggle-format data file:
   $filename  -- path to the file to open/create
   $writeable -- boolean value indicating whether file is
                 writeable. Missing files will only be created
-                if $writeable set to a true value.
+                if $writeable set to a true value. If path is
+                empty (undef or empty string) and writeable is true, 
+                new() will create a temporary file that will be
+                deleted when the object goes out of scope.
   {options}  -- hash ref of the following named options, only valid
                 when creating a new wig file with $writeable true.
 
@@ -209,7 +212,10 @@ sub new {
                          ? '+<'    # ...open for read/write
                          : '+>'    # ...else clobber and open a new one
                     : '<';       # read only
-  my $fh = IO::File->new($path,$mode) or die "$path: $!";
+  my $fh = $path ? IO::File->new($path,$mode)
+                 : IO::File->new_tmpfile;
+
+  $fh or die (($path||'temporary file').": $!");
 
   $options ||= {};
 
@@ -478,8 +484,9 @@ sub export_to_wif {
     # get the 256 byte header
     my $data = $self->_generate_header($self->{options});
 
-    # add the start position for this range
+    # add the range to the data (8 bytes overhead)
     $data   .= pack("L",$start);
+    $data   .= pack("L",$end);
 
     # add the packed data for this range
     $data   .= $self->_retrieve_packed_range($start,$end-$start+1,$self->step);
@@ -492,7 +499,8 @@ sub import_from_wif {
 
     # POSSIBLE BUG: should we check that header is compatible?
     my $header  = substr($wifdata,0,HEADER_LEN);
-    my $start   = unpack('L',substr($wifdata,HEADER_LEN,4));
+    my $start   = unpack('L',substr($wifdata,HEADER_LEN,  4));
+    my $end     = unpack('L',substr($wifdata,HEADER_LEN+4,4));
 
     my $options = $self->_parse_header($header);
     my $stored_options = eval {$self->_readoptions} || {};
@@ -503,6 +511,7 @@ sub import_from_wif {
     # write the data
     $self->seek($self->_calculate_offset($start));
     $self->fh->print(substr($wifdata,HEADER_LEN+4)) or die "write failed: $!";
+    $self->{end} = $end if $self->{end} < $end;
 }
 
 sub _retrieve_values {

@@ -12,8 +12,10 @@ sub draw {
 
   my $feature     = $self->feature;
   my ($wigfile)   = $feature->attributes('wigfile');
-
   return $self->draw_wigfile($feature,$wigfile,@_) if $wigfile;
+
+  my ($wigdata) = $feature->attributes('wigdata');
+  return $self->draw_wigdata($feature,$wigdata,@_) if $wigdata;
 
   my ($densefile) = $feature->attributes('densefile');
   return $self->draw_densefile($feature,$densefile,@_) if $densefile;
@@ -32,20 +34,47 @@ sub draw_wigfile {
       warn $@;
       return $self->SUPER::draw(@_);
   }
+  $self->_draw_wigfile($feature,$wig,@_);
+}
 
-  $wig->smoothing($self->get_smoothing);
-  $wig->window($self->smooth_window);
+sub draw_wigdata {
+    my $self    = shift;
+    my $feature = shift;
+    my $data    = shift;
+    
 
-  my $chr         = $feature->seq_id;
-  my $panel_start = $self->panel->start;
-  my $panel_end   = $self->panel->end;
-  my $start       = $feature->start > $panel_start ? $feature->start : $panel_start;
-  my $end         = $feature->end   < $panel_end   ? $feature->end   : $panel_end;
+    eval "require MIME::Base64" 
+	unless MIME::Base64->can('decode_base64');
+    my $unencoded_data = MIME::Base64::decode_base64($data);
 
-  $self->wig($wig);
-  $self->create_parts_for_dense_feature($wig,$start,$end);
+    my $wig = eval { Bio::Graphics::Wiggle->new() };
+    unless ($wig) {
+	warn $@;
+	return $self->SUPER::draw(@_);
+    }
 
-  $self->SUPER::draw(@_);
+    $wig->import_from_wif($unencoded_data);
+
+    $self->_draw_wigfile($feature,$wig,@_);
+}
+
+sub _draw_wigfile {
+    my $self    = shift;
+    my $feature = shift;
+    my $wig     = shift;
+
+    $wig->smoothing($self->get_smoothing);
+    $wig->window($self->smooth_window);
+
+    my $panel_start = $self->panel->start;
+    my $panel_end   = $self->panel->end;
+    my $start       = $feature->start > $panel_start ? $feature->start : $panel_start;
+    my $end         = $feature->end   < $panel_end   ? $feature->end   : $panel_end;
+
+    $self->wig($wig);
+    $self->create_parts_for_dense_feature($wig,$start,$end);
+
+    $self->SUPER::draw(@_);
 }
 
 sub wig {

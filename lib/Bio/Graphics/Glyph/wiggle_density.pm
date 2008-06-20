@@ -1,5 +1,5 @@
 package Bio::Graphics::Glyph::wiggle_density;
-# $Id: wiggle_density.pm,v 1.1.2.24 2008-06-16 06:18:38 sheldon_mckay Exp $
+# $Id: wiggle_density.pm,v 1.1.2.25 2008-06-20 21:32:41 lstein Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing Bio::Graphics::Glyph::minmax);
@@ -11,7 +11,15 @@ sub draw {
 
   my ($wigfile) = $feature->attributes('wigfile');
   if ($wigfile) {
-    $self->draw_wigfile($feature,$wigfile,@_);
+    $self->draw_wigfile($wigfile,@_);
+    $self->draw_label(@_)       if $self->option('label');
+    $self->draw_description(@_) if $self->option('description');
+    return;
+  }
+
+  my ($wigdata) = $feature->attributes('wigdata');
+  if ($wigdata) {
+    $self->draw_wigdata($wigdata,@_);
     $self->draw_label(@_)       if $self->option('label');
     $self->draw_description(@_) if $self->option('description');
     return;
@@ -38,31 +46,58 @@ sub wig {
 
 sub draw_wigfile {
   my $self    = shift;
-  my $feature = shift;
   my $wigfile = shift;
-  my ($gd,$left,$top) = @_;
 
   eval "require Bio::Graphics::Wiggle" unless Bio::Graphics::Wiggle->can('new');
   my $wig = eval { Bio::Graphics::Wiggle->new($wigfile)};
+
   unless ($wig) {
       warn $@;
       return $self->SUPER::draw(@_);
   }
   $self->wig($wig);
 
-  my $smoothing      = $self->get_smoothing;
-  my $smooth_window  = $self->smooth_window;
-  my $start          = $self->smooth_start;
-  my $end            = $self->smooth_end;
+  $self->_draw_wigfile(@_);
+}
 
-  $wig->window($smooth_window);
-  $wig->smoothing($smoothing);
-  my ($x1,$y1,$x2,$y2) = $self->bounds($left,$top);
-  $self->draw_segment($gd,
-		      $start,$end,
-		      $wig,$start,$end,
-		      1,1,
-		      $x1,$y1,$x2,$y2);
+sub draw_wigdata {
+    my $self = shift;
+    my $data = shift;
+
+    eval "require MIME::Base64" 
+	unless MIME::Base64->can('decode_base64');
+    my $unencoded_data = MIME::Base64::decode_base64($data);
+
+    my $wig = eval { Bio::Graphics::Wiggle->new() };
+    unless ($wig) {
+	warn $@;
+	return $self->SUPER::draw(@_);
+    }
+
+    $wig->import_from_wif($unencoded_data);
+
+    $self->wig($wig);
+    $self->_draw_wigfile(@_);
+}
+
+sub _draw_wigfile {
+    my $self = shift;
+    my $wig  = $self->wig;
+    my ($gd,$left,$top) = @_;
+
+    my $smoothing      = $self->get_smoothing;
+    my $smooth_window  = $self->smooth_window;
+    my $start          = $self->smooth_start;
+    my $end            = $self->smooth_end;
+
+    $wig->window($smooth_window);
+    $wig->smoothing($smoothing);
+    my ($x1,$y1,$x2,$y2) = $self->bounds($left,$top);
+    $self->draw_segment($gd,
+			$start,$end,
+			$wig,$start,$end,
+			1,1,
+			$x1,$y1,$x2,$y2);
 }
 
 sub draw_densefile {

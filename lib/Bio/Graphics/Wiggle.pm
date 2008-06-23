@@ -510,7 +510,7 @@ sub import_from_wif {
 
     # write the data
     $self->seek($self->_calculate_offset($start));
-    $self->fh->print(substr($wifdata,HEADER_LEN+4)) or die "write failed: $!";
+    $self->fh->print(substr($wifdata,HEADER_LEN+8)) or die "write failed: $!";
     $self->{end} = $end if $self->{end} < $end;
 }
 

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.81 2008-06-20 19:21:56 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.82 2008-06-23 20:54:53 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1453,6 +1453,7 @@ sub categorize_track {
   return $category ||= $CONFIG->tr('GENERAL');
 }
 
+
 # this is the content of the popup balloon that describes the track and gives configuration settings
 sub track_config {
   my ($settings,$label) = @_;
@@ -1575,26 +1576,23 @@ END
 				  -override => 1,
 				  -default => $settings->{features}{$label}{limit})
 		      )
-		   ),
-		 TR(
-		    td({-align=>'right'},
-		       button(-style => 'background:pink',
-			      -name=>$CONFIG->tr('Revert'),
-			      -onClick=>$reset_js,
-			     ),
-		      ),
-		    th({-align=>'right'},
-		       button(-style=>'float:left',
-			      -name=>$CONFIG->tr('Cancel'),
-			      -onClick=>'Balloon.prototype.hideTooltip(1)'),
-		       submit(-style =>'background:wheat',
-			      -name=>$CONFIG->tr('Change'))
-		      )
 		   )
-		);
+      );
+  $form .= table({-width=>'100%'},
+		 th({-align=>'left'},
+		    button(-style => 'background:pink',
+			   -name=>$CONFIG->tr('Revert'),
+			   -onClick=>$reset_js)
+		 ),
+		 th({-align=>'right'},
+		    button(-name=>$CONFIG->tr('Cancel'),
+			   -onClick=>'Balloon.prototype.hideTooltip(1)').'&nbsp;'.
+		    submit(-style =>'background:wheat',
+			   -name=>$CONFIG->tr('Change'))
+		 ));
   $form .= hidden(-name=>'adjust_one_track',-value=>$label);
   $form .= end_form();
-  print table(TR(td({-valign=>'top'},$citation),td({-valign=>'top'},$form)));
+  print table(TR(td({-valign=>'top',-width=>'40%'},$citation),td({-valign=>'top'},$form)));
   print end_html();
 }
 

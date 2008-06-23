@@ -422,4 +422,12 @@ END
 
  NO_DAS            => 'Installation error: Bio::Das module must be installed for DAS URLs to work. Please inform this site\'s webmaster.',
 
+ SHOW_OR_HIDE_TRACK => '<b>Show or hide this track</b>',
+
+ ABOUT_THIS_TRACK   => '<b>Click to change track settings.</b>',
+
+ TRACK_DESCRIPTION  => '<b>Track description:</b> %s',
+
+ SHARE_THIS_TRACK   => '<b>Share this track</b>',
+
 };

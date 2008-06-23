@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.84 2008-06-19 20:41:21 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.85 2008-06-23 20:54:54 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -937,6 +937,7 @@ sub render_draggable_tracks {
 
   my $plus   = "$images/plus.png";
   my $minus  = "$images/minus.png";
+  my $share  = "$images/share.png";
   my $help   = "$images/query.png";
 
   # get the pad image, which we use to fill up space between collapsed tracks
@@ -1006,17 +1007,31 @@ sub render_draggable_tracks {
 	my $cat = $self->config->setting($label=>'category');
 	$title .= " ($cat)" if $cat;
     }
+    my $show_or_hide     = $self->tr('SHOW_OR_HIDE_TRACK');
+    my $about_this_track = $self->tr('ABOUT_THIS_TRACK');
+    my $citation         = $self->setting($label=>'citation');
+    $citation           =~ s/"/&quot;/g;
+    $citation           =~ s/'/&#39;/g;
+    $about_this_track   .= '<br>'.$self->tr('TRACK_DESCRIPTION',$citation) if $citation;
+    my $share_this_track = $self->tr('SHARE_THIS_TRACK');
 	   
     my $titlebar    = $label eq '__scale__' || $label eq '__all__'
 	? ''
 	: span({-class=>$collapsed ? 'titlebar_inactive' : 'titlebar',-id=>"${element_id}_title"},
 	       img({-src         =>$icon,
 		    -id          => "${element_id}_icon",
-		    -onClick     =>"collapse('$element_id')",
+		    -onMouseOver => "balloon.showTooltip(event,'$show_or_hide')",
+		    -onClick     => "collapse('$element_id')",
 		    -style       => 'cursor:pointer',
+		   }),
+	       img({-src         => $share,
+		    -style       => 'cursor:pointer',
+		    -onMouseOver => "balloon.showTooltip(event,'$share_this_track')",
+		    -onmousedown => "balloon.showTooltip(event,'not working yet')",
 		   }),
 	       img({-src         => $help,
 		    -style       => 'cursor:pointer',
+		    -onMouseOver => "balloon.showTooltip(event,'$about_this_track')",
 		    -onmousedown => $config_click
 		   }),
 	       span({-class=>'draghandle'},$title)

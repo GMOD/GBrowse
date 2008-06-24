@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.84 2008-06-24 17:51:27 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.85 2008-06-24 19:37:19 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1482,7 +1482,11 @@ sub track_config {
 
   print CGI::header,start_html();
 
-  my $citation = h4($key).p($CONFIG->citation($label,$CONFIG->language)||$CONFIG->tr('NO_CITATION'));
+  # truncate too-long citations
+  #my $citation = h4($key).p($CONFIG->citation($label,$CONFIG->language)||$CONFIG->tr('NO_CITATION'));
+  my $cit_txt = $CONFIG->citation($label,$CONFIG->language) || $CONFIG->tr('NO_CITATION');  
+  $cit_txt =~ s/(.{768}).+/$1\.\.\./;  
+  my $citation = h4($key).p($cit_txt);
   my $height   = $CONFIG->fallback_setting($label=>'height')    || 5;
   my $width    = $CONFIG->fallback_setting($label=>'linewidth') || 1;
   my $glyph    = $CONFIG->fallback_setting($label=>'glyph')     || 'box';
@@ -1584,23 +1588,28 @@ END
 				  -override => 1,
 				  -default => $settings->{features}{$label}{limit})
 		      )
-		   )
-      );
-  $form .= table({-width=>'100%'},
-		 th({-align=>'left'},
-		    button(-style => 'background:pink',
-			   -name=>$CONFIG->tr('Revert'),
-			   -onClick=>$reset_js)
-		 ),
-		 th({-align=>'right'},
-		    button(-name=>$CONFIG->tr('Cancel'),
-			   -onClick=>'Balloon.prototype.hideTooltip(1)').'&nbsp;'.
-		    submit(-style =>'background:wheat',
-			   -name=>$CONFIG->tr('Change'))
-		 ));
+		   ),
+		 TR(
+		    td(),
+		    td( 
+		       button(-style => 'background:pink',
+			      -name=>$CONFIG->tr('Revert'),
+			      -onClick=>$reset_js)
+		       )
+		    ),
+		 TR(
+		    td(),
+		    td(
+		       button(-name=>$CONFIG->tr('Cancel'),
+			      -onClick=>'Balloon.prototype.hideTooltip(1)').'&nbsp;'.
+		       submit(-style =>'background:wheat',
+			      -name=>$CONFIG->tr('Change'))
+		       )
+		    )
+		 );
   $form .= hidden(-name=>'adjust_one_track',-value=>$label);
   $form .= end_form();
-  print table(TR(td({-valign=>'top',-width=>'40%'},$citation),td({-valign=>'top'},$form)));
+  print table(TR(td({-valign=>'top'},[$citation, $form])));
   print end_html();
 }
 
@@ -1649,7 +1658,7 @@ sub track_share {
                                                : 'SHARE_INSTRUCTIONS_ONE_TRACK')
 		   ),
 		 b('URL: '),br(),textfield(
-		     -readonly => 1,
+		    -readonly => 1,
 		    -value => $gbgff,
 	            -size  => 70,
 		    -onFocus => 'this.select()',
@@ -1696,7 +1705,18 @@ sub settings_table {
   my ($ks_style,@ks_disabled) = $CONFIG->drag_and_drop($settings->{drag_and_drop})
     ? ("color:gray",(-disabled=>1))
     : ('color:black',());
-  my $content =
+  my $tooltips = $settings->{show_tooltips} ? 'false' : 'true';
+  my $content = <<END;  
+<script type="text/javascript">  
+ tooltipIsSuppressed = $tooltips;  
+ function toggleTooltip () {  
+   tooltipIsSuppressed = !document.mainform.show_tooltips.checked  
+ }  
+</script>  
+END
+;
+   
+     $content .=
     table({-class=>'searchbody',-border=>0,-width=>'100%'},
 	  TR({-class=>'searchtitle'},
 	     td(
@@ -1816,7 +1836,7 @@ sub settings_table {
 			     -label    => $CONFIG->tr('SHOW_TOOLTIPS'),
 			     -override => 1,
 			     -checked  => $settings->{show_tooltips},
-			     -onclick  => 'document.mainform.submit()'
+			     -onclick  => 'toggleTooltip()'
 		    ),
 		)
 	     ),
@@ -2575,7 +2595,7 @@ sub handle_uploads {
     handle_quickie($page_settings,\@data,\@styles);
   }
 
-  if ($file_action && param($file_action) eq 'Delete File') {
+  if ($file_action && param($file_action) eq $CONFIG->tr('Delete')) {
     $UPLOADED_SOURCES->clear_file($file);
     $REMOTE_SOURCES->delete_source($file);
   }
@@ -2846,7 +2866,7 @@ sub edit_uploaded_file {
 sub bookmark_link {
   my $settings = shift;
   my $q = new CGI('');
-  my @keys = qw(start stop ref width version flip);
+  my @keys = qw(start stop ref width version flip cache drag_and_drop show_tooltips grid id);
   foreach (@keys) {
     $q->param(-name=>$_,-value=>$settings->{$_});
   }
@@ -2862,10 +2882,6 @@ sub bookmark_link {
   $q->param(-name=>'h_region',-value=>$settings->{h_region}) if $settings->{h_region};
   my @h_feat= map {"$_\@$settings->{h_feat}{$_}"} keys %{$settings->{h_feat}};
   $q->param(-name=>'h_feat',-value=>\@h_feat) if @h_feat;
-
-  for (qw(id grid cache drag_and_drop show_tooltips)) {
-      $q->param(-name=>$_,    -value=>$settings->{$_});
-  }
 
   return "?".$q->query_string();
 }
@@ -3284,7 +3300,7 @@ sub object_classes_for_help {
 # a group.  This makes for ugly logic branches.
 sub make_citation_link {
   my ($label,$self_url)   = @_;
-  my ($link,$key);
+  my ($link,$key,$mouseover);
   if ($label =~ /^plugin:/) {
     $key = $label || '';
     $key =~ s/^plugin://;
@@ -3302,11 +3318,14 @@ sub make_citation_link {
     $key = label2key($label);
     (my $anchor  = $label) =~ tr/ /-/;
     $link = $self_url.'#'.escapeHTML($anchor);
+    $mouseover = escape($CONFIG->citation($label,$CONFIG->language) || $CONFIG->tr('NO_CITATION'));  
+    $mouseover =~ s/(.{768}).+/$1\.\.\./;
   }
 
   my $overview_color = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR();
   my @args = (-href=>$link,-target=>'citation');
   push @args,-style=>'Font-style: italic' if $label =~ /^(http|ftp|file):/;
+  push @args,-onmouseover => "balloon.showTooltip(event,'$mouseover')" if $mouseover;
   # push @args,-style=>"background: $overview_color" if $label =~ /:overview$/;
   return a({@args},$key);
 }

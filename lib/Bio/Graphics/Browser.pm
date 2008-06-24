@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.86 2008-06-24 13:27:12 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.87 2008-06-24 19:37:19 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -984,7 +984,7 @@ sub render_draggable_tracks {
     my $config_click;
     if ($label =~ /^plugin:/) {
 	my $help_url = "url:?plugin=".CGI::escape($label).';plugin_do=Configure';
-	$config_click = "balloon.showTooltip(event,'$help_url',1,650)";
+	$config_click = "balloon.showTooltip(event,'$help_url',1)";
     }
 
     elsif ($label =~ /^file:/) {
@@ -995,7 +995,7 @@ sub render_draggable_tracks {
     else {
 	my $help_url = "url:?configure_track=".CGI::escape($label);
 	$help_url   .= ";rand=".rand(); # work around caching bugs... # if CGI->user_agent =~ /MSIE/;
-	$config_click = "balloon.showTooltip(event,'$help_url',1,650)";
+	$config_click = "balloon.showTooltip(event,'$help_url',1)";
     }
 
 

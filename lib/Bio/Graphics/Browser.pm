@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.85 2008-06-23 20:54:54 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.86 2008-06-24 13:27:12 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1008,12 +1008,15 @@ sub render_draggable_tracks {
 	$title .= " ($cat)" if $cat;
     }
     my $show_or_hide     = $self->tr('SHOW_OR_HIDE_TRACK');
-    my $about_this_track = $self->tr('ABOUT_THIS_TRACK');
-    my $citation         = $self->setting($label=>'citation');
-    $citation           =~ s/"/&quot;/g;
-    $citation           =~ s/'/&#39;/g;
-    $about_this_track   .= '<br>'.$self->tr('TRACK_DESCRIPTION',$citation) if $citation;
     my $share_this_track = $self->tr('SHARE_THIS_TRACK');
+    my $citation         = $self->setting($label=>'citation') || '';
+    $citation            =~ s/"/&quot;/g;
+    $citation            =~ s/'/&#39;/g;
+
+    my $configure_this_track = $citation || '';
+    $configure_this_track   .= '<br>' if $citation;
+    $configure_this_track   .= $self->tr('CONFIGURE_THIS_TRACK');
+    my $escaped_label        = CGI::escape($label);
 	   
     my $titlebar    = $label eq '__scale__' || $label eq '__all__'
 	? ''
@@ -1027,11 +1030,11 @@ sub render_draggable_tracks {
 	       img({-src         => $share,
 		    -style       => 'cursor:pointer',
 		    -onMouseOver => "balloon.showTooltip(event,'$share_this_track')",
-		    -onmousedown => "balloon.showTooltip(event,'not working yet')",
+		    -onMousedown => "balloon.showTooltip(event,'url:?share_track=$escaped_label')",
 		   }),
 	       img({-src         => $help,
 		    -style       => 'cursor:pointer',
-		    -onMouseOver => "balloon.showTooltip(event,'$about_this_track')",
+		    -onMouseOver => "balloon.showTooltip(event,'$configure_this_track')",
 		    -onmousedown => $config_click
 		   }),
 	       span({-class=>'draghandle'},$title)

@@ -200,7 +200,7 @@ END
 
    UPLOAD_TRACKS=>'Add your own tracks',
 
-   UPLOAD_TITLE=> 'Upload your own annotations',
+   UPLOAD_TITLE=> 'Upload your own data',
 
    UPLOAD_FILE => 'Upload a file',
 

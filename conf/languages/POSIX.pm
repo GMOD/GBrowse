@@ -199,7 +199,7 @@ END
 
    UPLOAD_TRACKS=>'Add your own tracks',
 
-   UPLOAD_TITLE=> 'Upload your own annotations',
+   UPLOAD_TITLE=> 'Upload your own data',
 
    UPLOAD_FILE => 'Upload a file',
 
@@ -424,10 +424,10 @@ END
 
  SHOW_OR_HIDE_TRACK => '<b>Show or hide this track</b>',
 
- ABOUT_THIS_TRACK   => '<b>Click to change track settings.</b>',
-
- TRACK_DESCRIPTION  => '<b>Track description:</b> %s',
+ CONFIGURE_THIS_TRACK   => '<b>Click to change track settings.</b>',
 
  SHARE_THIS_TRACK   => '<b>Share this track</b>',
+
+ SHARE_ALL          => 'Share these tracks',
 
 };

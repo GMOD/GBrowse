@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.82 2008-06-23 20:54:53 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.83 2008-06-24 13:27:11 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -65,7 +65,7 @@ use Text::Shellwords;
 use File::Basename 'basename','dirname';
 use File::Spec;
 use Carp qw(:DEFAULT croak);
-use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td);
+use CGI qw(:standard unescape escape escapeHTML center *table *dl *TR *td script);
 use CGI::Toggle;
 use CGI::Cookie;
 
@@ -200,6 +200,11 @@ if (handle_asynchronous_events($page_settings)) {
 if (my $label = param('configure_track')) {
   track_config($page_settings,$label);
   exit 0;
+}
+
+if (my $label = param('share_track')) {
+    track_share($page_settings,$label);
+    exit 0;
 }
 
 
@@ -926,7 +931,8 @@ sub adjust_region_size {
     $region_size ||= $CONFIG->setting('region segment');
     $region_size ||= $settings->{region_size} || 10*$length;
   }
-  $region_size = $whole_segment->length if $whole_segment && $region_size > $whole_segment->length;
+  $region_size = $whole_segment->length 
+      if $whole_segment && $region_size ne 'AUTO' && $region_size > $whole_segment->length;
   $settings->{region_size} = $region_size;
 }
 
@@ -1130,6 +1136,9 @@ sub navigation_table {
 			  a({-href=>"#upload"},'['.$CONFIG->tr('Upload_title').']'),
 			  a({-href=>"?rand=$rand;head=".((!$settings->{head})||0)},
 			    '['.$CONFIG->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
+			  a({-href        => '#',
+			     -onMouseDown => "balloon.showTooltip(event,'url:?share_track=all')"},
+			    '['.$CONFIG->tr('SHARE_ALL').']'),
 			  a({-href=>image_link($settings),-target=>'_blank'},'['.$CONFIG->tr('IMAGE_LINK').']'),
 			  $plugin_link,
 			  $svg_link,
@@ -1453,7 +1462,6 @@ sub categorize_track {
   return $category ||= $CONFIG->tr('GENERAL');
 }
 
-
 # this is the content of the popup balloon that describes the track and gives configuration settings
 sub track_config {
   my ($settings,$label) = @_;
@@ -1594,6 +1602,78 @@ END
   $form .= end_form();
   print table(TR(td({-valign=>'top',-width=>'40%'},$citation),td({-valign=>'top'},$form)));
   print end_html();
+}
+
+# this is the content of the popup balloon that allows users to share a track
+sub track_share {
+    my $settings = shift;
+    my $label    = shift;
+
+    my $description;
+    my $labels;
+    my @visible = grep {$settings->{features}{$_}{visible} 
+			&& !/:(overview|region)$/ } @{$settings->{tracks}};
+
+    if ($label eq 'all') {
+	$labels = join '+',map{CGI::escape($_)} @visible;
+	$description = 'all selected tracks';
+    } else {
+	$description = $CONFIG->setting($label=>'key') || $label;
+	$labels      = $label;
+    }
+
+    my $gbgff    = url(-full=>1,-path_info=>1);
+    $gbgff       =~ s/gbrowse/gbgff/;
+    $gbgff      .= "?q=\$segment;t=$labels";
+    $gbgff      .= ";id=".$settings->{id} if $labels =~ /file:/;
+
+    my $das_types    =  join (';',
+			  map{"type=".CGI::escape($_)}
+			  grep {length $_ > 0}
+			  map {shellwords($CONFIG->setting($_=>'feature'))}
+			  grep {$CONFIG->setting($_=>'das category')}
+			  $label eq 'all' ? @visible 
+			                  : $label
+	);
+    my $das      =  url(-full=>1,-path_info=>1);
+    $das         =~ s/gbrowse/das/;
+    $das        .=  "features";
+    $das        .=  "?$das_types";
+
+    print CGI::header,
+          start_html();
+    print start_table({-width=>'200px'});
+    print TR(td(
+		 h1('Share',$description),
+		 p('To share with another GBrowse genome browser,',
+		   'copy the URL below and paste it into the "Enter Remote Annotation"',
+		   'box at the bottom of the other GBrowse.'),
+		 b('URL: '),br(),textfield(
+		     -readonly => 1,
+		    -value => $gbgff,
+	            -size  => 70,
+		    -onFocus => 'this.select()',
+		    -onSelect=> 'this.select()',
+		 )
+	     )
+	);
+    if ($das_types) {
+	print TR(td(
+		     p('To share with a <a href="http://www.biodas.org" target="_new">DAS</a> browser,',
+		       "copy this URL and enter it into the browser's DAS box."),
+		     b('DAS URL: '),br(),textfield(
+			 -readonly => 1,
+			 -value => $das,
+			 -size  => 70,
+			 -onFocus => 'this.select()',
+			 -onSelect=> 'this.select()',
+		     )
+		 ));
+    }
+    print end_table();
+    print p(button(-name=>$CONFIG->tr('Cancel'),
+	   -onClick=>'Balloon.prototype.hideTooltip(1)'));
+    print end_html();
 }
 
 sub settings_table {

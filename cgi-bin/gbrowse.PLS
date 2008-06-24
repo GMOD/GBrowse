@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.85 2008-06-24 19:37:19 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.86 2008-06-24 20:12:52 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1613,7 +1613,6 @@ END
   print end_html();
 }
 
-# this is the content of the popup balloon that allows users to share a track
 sub track_share {
     my $settings = shift;
     my $label    = shift;
@@ -1651,35 +1650,34 @@ sub track_share {
 
     print CGI::header,
           start_html();
-    print start_table({-width=>'80%'});
-    print TR(td(
-		 h1($CONFIG->tr('SHARE',$description)),
-		 p($CONFIG->tr($label eq 'all' ? 'SHARE_INSTRUCTIONS_ALL_TRACKS'
-                                               : 'SHARE_INSTRUCTIONS_ONE_TRACK')
-		   ),
-		 b('URL: '),br(),textfield(
+    print h1($CONFIG->tr('SHARE',$description)),
+          p($CONFIG->tr($label eq 'all' ? 'SHARE_INSTRUCTIONS_ALL_TRACKS'
+			                : 'SHARE_INSTRUCTIONS_ONE_TRACK')),
+	      p(
+		  b('GBrowse URL: '),br(),textfield(
+		      -style    => 'background-color: wheat',
+		      -readonly => 1,
+		      -value => $gbgff,
+		      -size  => 56,
+		      -onFocus => 'this.select()',
+		      -onSelect=> 'this.select()',
+		  )
+	      );
+    if ($das_types) {
+	print
+	    p($CONFIG->tr($label eq 'all'? 'SHARE_DAS_INSTRUCTIONS_ALL_TRACKS'
+			                 : 'SHARE_DAS_INSTRUCTIONS_ONE_TRACK')),
+	    p(
+		b('DAS URL: '),br(),textfield (
+		    -style    => 'background-color: wheat',
 		    -readonly => 1,
-		    -value => $gbgff,
-	            -size  => 70,
+		    -value => $das,
+		    -size  => 56,
 		    -onFocus => 'this.select()',
 		    -onSelect=> 'this.select()',
-		 )
-	     )
-	);
-    if ($das_types) {
-	print TR(td(
-		     p($CONFIG->tr($label eq 'all'? 'SHARE_DAS_INSTRUCTIONS_ALL_TRACKS'
-                                                  : 'SHARE_DAS_INSTRUCTIONS_ONE_TRACK')),
-		     b('DAS URL: '),br(),textfield(
-			 -readonly => 1,
-			 -value => $das,
-			 -size  => 70,
-			 -onFocus => 'this.select()',
-			 -onSelect=> 'this.select()',
-		     )
-		 ));
+		)
+	    );
     }
-    print end_table();
     print p(button(-name=>$CONFIG->tr('Cancel'),
 	   -onClick=>'Balloon.prototype.hideTooltip(1)'));
     print end_html();

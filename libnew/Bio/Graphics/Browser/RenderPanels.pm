@@ -294,6 +294,7 @@ sub wrap_rendered_track {
 
     my $collapsed = $settings->{track_collapsed}{$label};
     my $img_style = $collapsed ? "display:none" : "display:inline";
+    $img_style.=";filter:alpha(opacity=100);-moz-opacity:1";
 
     my $img = img(
         {   -src    => $url,
@@ -326,9 +327,6 @@ sub wrap_rendered_track {
 
     else {
         my $help_url = "url:?configure_track=" . CGI::escape($label);
-        $help_url .= ";rand="
-            . rand()
-            ;    # work around caching bugs... # if CGI->user_agent =~ /MSIE/;
         $config_click
             = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)";
     }

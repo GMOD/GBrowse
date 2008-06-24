@@ -3,13 +3,14 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.8 2008-06-20 20:33:11 mwz444 Exp $
+ $Id: controller.js,v 1.9 2008-06-24 03:44:10 mwz444 Exp $
 
 */
 
 var Controller;        // singleton
-var SegmentObservers = new Hash();
+var SegmentObservers      = new Hash();
 var UpdateOnLoadObservers = new Hash();
+var TrackImages           = new Hash();
 
 
 var GBrowseController = Class.create({
@@ -19,6 +20,14 @@ var GBrowseController = Class.create({
 	},
 
 	updateCoordinates: function (action) {
+
+        //Grey out image
+        TrackImages.keys().each(
+            function(image_id) {
+                $(image_id).setOpacity(0.3);
+            }
+        );
+
         this.periodic_updaters[this.count] = this.count;
 	    new Ajax.Request('#',{
 		    method:     'post',
@@ -94,6 +103,7 @@ function initialize_page () {
 function register_track ( detail_div_id,detail_image_id ) {
     SegmentObservers.set(detail_div_id,1);
     UpdateOnLoadObservers.set(detail_div_id,1);
+    TrackImages.set(detail_image_id,1);
     //alert("registering track "+detail_div_id);
     $(detail_div_id).observe('model:segmentChanged',function(event) {
 	    var track_key = event.memo.track_keys[detail_div_id];
@@ -128,9 +138,16 @@ function register_track ( detail_div_id,detail_image_id ) {
                                 reset_after_track_load();
                             }
                             else if (transport.responseText.substring(0,16) == "<!-- EXPIRED -->"){
-                                detail_div.innerHTML = transport.responseText;
                                 Controller.periodic_updaters[detail_div_id].stop();
                                 reset_after_track_load();
+                            }
+                            else {
+                                // Manually stop the updater from modifying the element
+                                var p_updater = Controller.periodic_updaters[detail_div_id];
+                                var decay = p_updater.decay;
+                                p_updater.stop();
+                                p_updater.decay = decay * p_updater.options.decay;
+                                p_updater.timer = p_updater.start.bind(p_updater).delay(p_updater.decay * p_updater.frequency);
                             }
                         }
                      }

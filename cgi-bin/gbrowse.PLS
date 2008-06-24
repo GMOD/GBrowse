@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.83 2008-06-24 13:27:11 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.84 2008-06-24 17:51:27 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1642,12 +1642,12 @@ sub track_share {
 
     print CGI::header,
           start_html();
-    print start_table({-width=>'200px'});
+    print start_table({-width=>'80%'});
     print TR(td(
-		 h1('Share',$description),
-		 p('To share with another GBrowse genome browser,',
-		   'copy the URL below and paste it into the "Enter Remote Annotation"',
-		   'box at the bottom of the other GBrowse.'),
+		 h1($CONFIG->tr('SHARE',$description)),
+		 p($CONFIG->tr($label eq 'all' ? 'SHARE_INSTRUCTIONS_ALL_TRACKS'
+                                               : 'SHARE_INSTRUCTIONS_ONE_TRACK')
+		   ),
 		 b('URL: '),br(),textfield(
 		     -readonly => 1,
 		    -value => $gbgff,
@@ -1659,8 +1659,8 @@ sub track_share {
 	);
     if ($das_types) {
 	print TR(td(
-		     p('To share with a <a href="http://www.biodas.org" target="_new">DAS</a> browser,',
-		       "copy this URL and enter it into the browser's DAS box."),
+		     p($CONFIG->tr($label eq 'all'? 'SHARE_DAS_INSTRUCTIONS_ALL_TRACKS'
+                                                  : 'SHARE_DAS_INSTRUCTIONS_ONE_TRACK')),
 		     b('DAS URL: '),br(),textfield(
 			 -readonly => 1,
 			 -value => $das,

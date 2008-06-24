@@ -1,12 +1,12 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.35 2008-06-14 13:36:32 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.36 2008-06-24 17:51:28 lstein Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
 
- Copyright (c) 2007 Sheldon McKay, Cold Spring Harbor Laboratory
+ Copyright (c) 2007,2008 Sheldon McKay, Cold Spring Harbor Laboratory
 
  This balloon tooltip package and associated files not otherwise copyrighted are 
  distributed under the MIT-style license:
@@ -30,9 +30,6 @@
  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
-
- If publications result from research using this SOFTWARE, we ask that
- CSHL and the author be acknowledged as scientifically appropriate.
 
 */
 
@@ -60,14 +57,16 @@ var Balloon = function() {
   // implementations with complex stylesheets
   this.parentID = null;
 
-  // maxium allowed balloon width (px)
-  this.minWidth = 150;
+  // properties of fonts contained in basic balloons (default black)
+  this.fontColor   = 'black';
+  this.fontFamily  = 'Arial, sans-serif';
+  this.fontSize    = '12pt';
 
   // minimum allowed balloon width (px)
-  this.maxWidth = 600;
+  this.minWidth = 150;
 
-  // Default tooltip text size
-  this.balloonTextSize = '90%';
+  // maximum allowed balloon width (px)
+  this.maxWidth = 600;
 
   // Delay before balloon is displayed (msec)
   this.delayTime = 500;
@@ -89,7 +88,7 @@ var Balloon = function() {
 
   // How long to display mousover balloons (msec)
   // false = 'always on'
-  this.displayTime = false;
+  this.displayTime = 10000;
 
   // width of shadow (space aroung whole balloon; px)
   // This can be zero if there is no shadow and the
@@ -204,12 +203,6 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
 
   this.hideTooltip();
 
-  // if this is IE < 7 use an alternative image id provided
-  if (this.isOldIE() && this.ieImage) {
-    this.balloonImage = this.ieImage;
-    this.ieImage = null;
-  }
-
   // look for a url in the balloon contents
   if (caption.match(/^url:/)) {
     var urlArray = caption.split(':');
@@ -242,6 +235,10 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
     this.setStyle(this.container,'position','absolute');
     this.setStyle(this.container,'top',-8888);
     this.setStyle(this.container,'display','inline');
+    this.setStyle(this.container,'z-index',2);
+    this.setStyle(this.container,'color',this.fontColor);
+    this.setStyle(this.container,'font-family',this.fontFamily);
+    this.setStyle(this.container,'font-size',this.fontSize);
   }
   else {
     this.setStyle(this.container,'display','inline');
@@ -252,7 +249,8 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
   // make sure balloon image path is complete
   if (this.images) {
     this.balloonImage  = this.images +'/'+ this.balloonImage;
-    this.ieImage       = this.images +'/'+ this.ieImage;
+    if (this.ieImage)     
+      this.ieImage   = this.images +'/'+ this.ieImage;
     this.upLeftStem    = this.images +'/'+ this.upLeftStem;
     this.upRightStem   = this.images +'/'+ this.upRightStem;
     this.downLeftStem  = this.images +'/'+ this.downLeftStem;
@@ -261,22 +259,25 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
     this.images        = false;
   }
 
+  // if this is IE < 7 use an alternative image (if provided)
+  if (this.isOldIE() && this.ieImage) {
+    this.balloonImage = this.ieImage;
+  }
+
   // preload balloon images 
   if (!this.preloadedImages) {
-   this.preloadedImages = document.createElement('div');
-    document.body.appendChild(this.preloadedImages);
-    this.setStyle(this.preloadedImages,'position','absolute');
-    this.setStyle(this.preloadedImages,'top',-8888);
-    this.setStyle(this.preloadedImages,'display','inline');
-    if (this.upLeftStem)    this.preloadedImages.innerHTML  = '<img src='+this.upLeftStem+'>';
-    if (this.upRightStem)   this.preloadedImages.innerHTML += '<img src='+this.upRightStem+'>';
-    if (this.downLeftStem)  this.preloadedImages.innerHTML += '<img src='+this.downLeftStem+'>';
-    if (this.downRightStem) this.preloadedImages.innerHTML += '<img src='+this.downRightStem+'>';
-    this.preloadedImages.innerHTML += '<img src='+this.balloonImage+'>';
-    this.preloadedImages.innerHTML += '<img src='+this.closeButton+'>';
-  }
-  else {
-    this.setStyle(this.preloadedImages,'display','none');
+    var images = new Array(this.balloonImage, this.closeButton);
+    if (this.ieImage) images.push(this.ieImage);
+    if (this.stem)    images.push(this.upLeftStem,this.upRightStem,this.downLeftStem,this.downRightStem);
+    var len = images.length;
+ 
+    for (var i=0;i<len;i++) {
+      var preload = new Image;
+      // let's be paranoid and check first
+      if (images[i]) preload.src = images[i];
+    }
+   
+    this.preloadedImages = true;
   }
 
   currentBalloonClass = this;
@@ -387,6 +388,11 @@ Balloon.prototype.makeBalloon = function() {
     if (parts[i] == 'contents') self.contents = child;
     self.parts.push(child);
   }
+
+  self.setStyle('contents','z-index',2);
+  self.setStyle('contents','color',self.fontColor);
+  self.setStyle('contents','font-family',self.fontFamily);
+  self.setStyle('contents','font-size',self.fontSize);
 
   if (balloonIsSticky) {
     self.setStyle('contents','margin-right',10); 
@@ -527,7 +533,6 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
     self.setStyle(balloon,'top',activeTop - self.yOffset);
   }
 
-  self.setStyle('contents','z-index',2);
   self.setOpacity(1);
 }
 

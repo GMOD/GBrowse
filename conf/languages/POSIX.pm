@@ -430,4 +430,41 @@ END
 
  SHARE_ALL          => 'Share these tracks',
 
+ SHARE              => 'Share %s',
+
+ SHARE_INSTRUCTIONS_ONE_TRACK => <<END,
+To share this track with another GBrowse genome browser,
+first copy the URL below, then go to the other GBrowse and
+paste the URL into the "Enter Remote Annotation" field at
+the bottom of the page. If this track is from an uploaded file,
+then be aware that sharing this URL with another user potentially
+allows <b>all</b> your uploaded data to be viewable by that user.
+END
+
+ SHARE_INSTRUCTIONS_ALL_TRACKS => <<END,
+To share all currently selected tracks with another GBrowse genome
+browser, first copy the URL below, then go to the other GBrowse and
+paste the URL into the "Enter Remote Annotation" field at
+the bottom of the page. If any of the selected tracks are from an uploaded file,
+then be aware that sharing this URL with another user potentially
+allows <b>all</b> your uploaded data to be viewable by that user.
+END
+
+ SHARE_DAS_INSTRUCTIONS_ONE_TRACK => <<END,
+To share this track with another genome browser using 
+the <a href="http://www.biodas.org" target="_new">
+Distributed Annotation System (DAS)</a> first copy the URL below, 
+then go to the other browser and enter it as a new DAS source.
+<i>Quantitative tracks ("wiggle" files) and uploaded files can not
+be shared using DAS.</i>
+END
+
+ SHARE_DAS_INSTRUCTIONS_ALL_TRACKS => <<END,
+To share all currently selected tracks with another genome browser
+using the <a href="http://www.biodas.org" target="_new"> Distributed
+Annotation System (DAS)</a> first copy the URL below, then go to the
+other browser and enter it as a new DAS source. <i>Quantitative tracks
+("wiggle" files) and uploaded files can not be shared using DAS.</i>
+END
+
 };

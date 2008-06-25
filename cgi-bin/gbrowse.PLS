@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.86 2008-06-24 20:12:52 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.87 2008-06-25 16:22:51 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1112,6 +1112,8 @@ sub navigation_table {
   my $plugin_link  = plugin_links($PLUGINS);
   my $oligo        = $PLUGINS->plugin('OligoFinder') ? ', oligonucleotide (15 bp minimum)' : '';
   my $rand         =   substr(md5_hex(rand),0,5);
+  my $bookmark     = bookmark_link($settings);
+  my $description  = $CONFIG->setting('description') || $CONFIG->source;
 
   $table .= table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
 		  TR(
@@ -1132,7 +1134,9 @@ sub navigation_table {
 		     th({-align=>'left', -colspan=>2,-class=>'linkmenu'},
 			 $settings->{name} || $settings->{ref} ?
 			 (
-			  a({-href=>bookmark_link($settings)},'['.$CONFIG->tr('BOOKMARK').']'),
+			  a({
+			      -href=>"javascript:bookmarksite('GBrowse $description','$bookmark')",
+			    },'['.$CONFIG->tr('BOOKMARK').']'),
 			  a({-href=>"#upload"},'['.$CONFIG->tr('Upload_title').']'),
 			  a({-href=>"?rand=$rand;head=".((!$settings->{head})||0)},
 			    '['.$CONFIG->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
@@ -2881,7 +2885,9 @@ sub bookmark_link {
   my @h_feat= map {"$_\@$settings->{h_feat}{$_}"} keys %{$settings->{h_feat}};
   $q->param(-name=>'h_feat',-value=>\@h_feat) if @h_feat;
 
-  return "?".$q->query_string();
+  my $url = url(-full=>1,-path_info=>1);
+
+  return "$url?".$q->query_string();
 }
 
 sub image_link {

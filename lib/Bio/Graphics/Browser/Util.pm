@@ -253,6 +253,7 @@ sub print_top {
   push @js, qw(yahoo-dom-event.js balloon.js)     if $b_tips;
   push @js, qw(rubber.js overviewSelect.js detailSelect.js);
   push @js, 'scriptaculous.js' if $drag_and_drop;
+  push @js, 'bookmark.js';
   push @onload, 'Overview.prototype.initialize()';
   push @onload, 'Details.prototype.initialize()';
 

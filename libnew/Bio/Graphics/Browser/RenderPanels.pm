@@ -180,24 +180,25 @@ sub make_requests {
 
     my $base           = $self->get_cache_base();
     my @panel_args     = $self->create_panel_args($args);
-    my %d = map {
-	my @track_args   = $self->create_track_args($_,$args);
+    my %d;
+    foreach my $label ( @{ $labels || [] } ) {
+        my @track_args = $self->create_track_args( $label, $args );
 
-	# get config data from the feature files
- 	my @extra_args          = eval {
- 	    $feature_files->{$_}->types,
- 	    $feature_files->{$_}->mtime,
- 	} if $feature_files && $feature_files->{$_};
+        # get config data from the feature files
+        my @extra_args = eval {
+            $feature_files->{$label}->types, $feature_files->{$label}->mtime,;
+        } if $feature_files && $feature_files->{$label};
 
-	my $cache_object = Bio::Graphics::Browser::CachedTrack->new(-base        => $base,
-								    -panel_args  => \@panel_args,
-								    -track_args  => \@track_args,
-								    -extra_args  => \@extra_args);
-	$cache_object->cache_time($self->cache_time * 60);
+        my $cache_object = Bio::Graphics::Browser::CachedTrack->new(
+            -base       => $base,
+            -panel_args => \@panel_args,
+            -track_args => \@track_args,
+            -extra_args => \@extra_args
+        );
+        $cache_object->cache_time( $self->cache_time * 60 );
 
-	$_ => $cache_object;
+        $d{$label} = $cache_object;
     }
-    @$labels;
     return \%d;
 }
 
@@ -282,7 +283,10 @@ sub wrap_rendered_track {
     my $width  = $args{'width'};
     my $height = $args{'height'};
     my $url    = $args{'url'};
-    my $status = $args{'status'};     # for debugging
+
+    # track_type Used in register_track() javascript method
+    my $track_type = $args{'track_type'} || 'standard';
+    my $status = $args{'status'};    # for debugging
 
     my $buttons = $self->source->globals->button_url;
     my $plus    = "$buttons/plus.png";
@@ -371,7 +375,9 @@ sub wrap_rendered_track {
         . q[<script type="text/javascript" language="JavaScript">register_track("track_]
         . $munge_label . q[","]
         . $munge_label
-        . q[_image");</script>];
+        . q[_image", "]
+        . $track_type
+        . q[");</script>];
 }
 
 # This routine is called to hand off the rendering to a remote renderer. 
@@ -540,6 +546,95 @@ sub overview_pad {
   my $pad = $source->min_overview_pad;
   return ($pad,$pad) unless $max;
   return ($max * $image_class->gdMediumBoldFont->width + 3,$pad);
+}
+
+sub render_overview_scale_bar {
+    my $self = shift;
+    my ( $whole_segment, $segment, $state, $feature_files ) = @_;
+    my $gd;
+
+    my $source = $self->source;
+
+    #track option is same as state
+
+    # Temporary kludge until I can figure out a more
+    # sane way of rendering overview with SVG...
+    my $image_class = 'GD';
+    eval "use $image_class";
+
+    my $width = $state->{'width'} * $self->overview_ratio();
+
+    my $image_pad = $self->image_padding;
+    my $padl      = $source->global_setting('pad_left');
+    my $padr      = $source->global_setting('pad_right');
+    $padl = $image_pad unless defined $padl;
+    $padr = $image_pad unless defined $padr;
+
+  # I don't understand why I need to add the pad to the width, since the other
+  # panels don't do it but in order for the scale bar to be the same size as
+  # the other panels, I need to do it.
+    $width += $padl + $padr;
+
+    my $panel = Bio::Graphics::Panel->new(
+        -segment => $whole_segment,
+        -width   => $width,
+        -bgcolor => $source->global_setting('overview bgcolor')
+            || 'wheat',
+        -key_style => 'left',
+        -pad_left  => $padl,
+        -pad_right => $padr,
+        -pad_top   => $image_class->gdMediumBoldFont->height + 8,
+
+        #-pad_bottom => PAD_OVERVIEW_BOTTOM,
+        -image_class => $image_class,
+        -auto_pad    => 0,
+    );
+
+    # THIS IS NOW OBSOLETE
+    # cache check so that we can cache the overview images
+    my $cache_path;
+    $cache_path
+        = $source->gd_cache_path( 'cache_overview', $whole_segment, [],
+        $width, );
+
+    # no cached data, so do it ourselves
+    unless ($gd) {
+        my $units = $source->global_setting('units') || '';
+        my $no_tick_units = $source->global_setting('no tick units');
+
+        $panel->add_track(
+             $whole_segment,
+            -glyph          => 'arrow',
+            -double         => 1,
+            -label          => $whole_segment->seq_id,
+            -label_font     => $image_class->gdMediumBoldFont,
+            -tick           => 2,
+            -units_in_label => $no_tick_units,
+            -units          => $units,
+            -unit_divider   => $source->global_setting('unit_divider') || 1,
+        );
+
+        # add uploaded files that have the "(over|region)view" option set
+
+        $gd = $panel->gd;
+        $source->gd_cache_write( $cache_path, $gd ) if $cache_path;
+    }
+
+    my $rect_color = $panel->translate_color(
+        $source->global_setting('selection rectangle color') || 'red' );
+    my ( $x1, $x2 ) = $panel->map_pt( $segment->start, $segment->end );
+    my ( $y1, $y2 ) = ( 0, ( $gd->getBounds )[1] );
+    $x2 = $panel->right - 1 if $x2 >= $panel->right;
+    my $pl = $panel->can('auto_pad') ? $panel->pad_left : 0;
+
+    $gd->rectangle( $pl + $x1, $y1, $pl + $x2, $y2 - 1, $rect_color );
+
+    eval { $panel->finished }; # should quash memory leaks when used in conjunction with bioperl 1.4
+
+    my $url    = $self->generate_image($gd);
+    my $height = $y2 - $y1 + 1;
+
+    return ( $url, $height, $width, );
 }
 
 # I THINK THIS IS OBSOLETE

@@ -3,7 +3,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.9 2008-06-24 03:44:10 mwz444 Exp $
+ $Id: controller.js,v 1.10 2008-06-26 16:22:41 mwz444 Exp $
 
 */
 
@@ -33,9 +33,13 @@ var GBrowseController = Class.create({
 		    method:     'post',
    		    parameters: {navigate: action},
 		    onSuccess: function(transport) {
-                var results = transport.responseJSON;
-                var segment = results.segment;
+                var results    = transport.responseJSON;
+                var segment    = results.segment;
                 var track_keys = results.track_keys;
+                var overview_scale_bar_hash = results.overview_scale_bar;
+
+                update_overview_scale_bar(overview_scale_bar_hash);
+
                 SegmentObservers.keys().each(
                               function(e) {
                               $(e).fire('model:segmentChanged',{segment: segment, track_keys: track_keys});
@@ -100,10 +104,13 @@ function initialize_page () {
 
 }
 
-function register_track ( detail_div_id,detail_image_id ) {
+function register_track ( detail_div_id,detail_image_id,track_type ) {
+    TrackImages.set(detail_image_id,1);
+    if (track_type=="scale_bar"){
+        return;
+    }
     SegmentObservers.set(detail_div_id,1);
     UpdateOnLoadObservers.set(detail_div_id,1);
-    TrackImages.set(detail_image_id,1);
     //alert("registering track "+detail_div_id);
     $(detail_div_id).observe('model:segmentChanged',function(event) {
 	    var track_key = event.memo.track_keys[detail_div_id];
@@ -164,4 +171,12 @@ function register_track ( detail_div_id,detail_image_id ) {
 function reset_after_track_load ( ) {
     create_drag('overview_panels','track');
     create_drag('detail_panels','track');
+}
+
+function update_overview_scale_bar (bar_obj ) {
+    var image_id = bar_obj.image_id;
+    $(image_id).src = bar_obj.url;
+    $(image_id).height = bar_obj.height;
+    $(image_id).width = bar_obj.width;
+    $(image_id).setOpacity(1);
 }

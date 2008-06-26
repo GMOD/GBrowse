@@ -18,6 +18,7 @@ use Bio::Graphics::Browser::RenderPanels;
 
 use constant VERSION => 2.0;
 use constant DEBUG   => 0;
+use constant OVERVIEW_SCALE_LABEL   => 'Overview Scale';
 
 
 my %PLUGINS; # cache initialized plugins
@@ -154,18 +155,25 @@ sub asynchronous_event {
 
         warn "updating coordinates";
         $self->asynchronous_update_coordinates($action);
-        my $track_keys = $self->begin_render();
+        my $track_keys = $self->begin_track_render();
+
+        my $overview_scale_return_object
+            = $self->asynchronous_update_overview_scale_bar();
 
         print CGI::header('application/json');
         print JSON::to_json(
-            { segment => $settings->{name}, track_keys => $track_keys, } );
+            {   segment            => $settings->{name},
+                track_keys         => $track_keys,
+                overview_scale_bar => $overview_scale_return_object,
+            }
+        );
         return 1;
     }
 
     if ( my $action = param('first_render') ) {
 
         warn "Rendering Tracks";
-        my $track_keys = $self->begin_render();
+        my $track_keys = $self->begin_track_render();
 
         print CGI::header('application/json');
         print JSON::to_json(
@@ -259,7 +267,7 @@ sub asynchronous_event {
     1;
 }
 
-sub begin_render {
+sub begin_track_render {
     my $self = shift;
     $self->init_database();
     $self->init_plugins();
@@ -392,6 +400,7 @@ sub render_panels {
             = $self->render_deferred( $self->whole_segment,
             [ $self->overview_tracks ], 'overview', );
 
+        my $scale_bar_html = $self->overview_scale_bar($seg,$section,);
         my $panels_html
 
             #.= $self->retrieve_deferred($cache_overview_track_hash);
@@ -401,13 +410,15 @@ sub render_panels {
             $self->toggle(
                 'Overview',
                 div({ -id => 'overview_panels', -class => 'track' },
-                    $panels_html,
+                    $scale_bar_html,$panels_html,
                 )
             )
         ) . $drag_script;
     }
     if ( $section->{'detailview'} ) {
         my $cache_detail_track_hash = $self->render_deferred();
+
+        my $scale_bar_html = $self->detail_scale_bar( $seg, $section );
         my $panels_html
 
             #.= $self->retrieve_deferred($cache_detail_track_hash);
@@ -417,13 +428,42 @@ sub render_panels {
             $self->toggle(
                 'Details',
                 div({ -id => 'detail_panels', -class => 'track' },
-                    $panels_html,
+                    $scale_bar_html, $panels_html,
                 )
             )
         ) . $drag_script;
     }
 
     return $html;
+}
+
+sub overview_scale_bar {
+    my $self    = shift;
+    my $seg     = shift;
+    my $section = shift;
+
+    my $renderer = $self->get_panel_renderer($seg);
+    my ( $url, $height, $width )
+        = $renderer->render_overview_scale_bar( $self->whole_segment, $seg,
+        $self->state );
+    my $html = $renderer->wrap_rendered_track(
+        label      => OVERVIEW_SCALE_LABEL,
+        area_map   => [],
+        width      => $width,
+        height     => $height,
+        url        => $url,
+        status     => '',
+        track_type => 'scale_bar',
+    );
+    return $html;
+}
+
+sub detail_scale_bar {
+    my $self = shift;
+    my $seg     = shift;
+    my $section = shift;
+
+    return "";
 }
 
 sub render_config {
@@ -890,6 +930,25 @@ sub update_coordinates {
   warn "start = $state->{start}";
 }
 
+sub asynchronous_update_overview_scale_bar {
+    my $self    = shift;
+    my $seg = $self->segment;
+
+    my $renderer = $self->get_panel_renderer($seg);
+    my ( $url, $height, $width )
+        = $renderer->render_overview_scale_bar( $self->whole_segment, $seg,
+        $self->state );
+
+    my $image_id = OVERVIEW_SCALE_LABEL."_image";
+
+    return {
+        url      => $url,
+        height   => $height,
+        width    => $width,
+        image_id => $image_id,
+    };
+}
+
 sub asynchronous_update_element {
     my $self    = shift;
     my $element = shift;
@@ -1330,13 +1389,22 @@ sub get_blank_panels {
     my $self = shift;
     my $cache_track_hash = shift;
 
-    my $html   = '';
+    my $html  = '';
+    my $state = $self->state;
+    my $source = $self->data_source;
+    my $renderer  = $self->get_panel_renderer();
+    my $image_pad = $renderer->image_padding;
+    my $padl      = $source->global_setting('pad_left');
+    my $padr      = $source->global_setting('pad_right');
+    $padl = $image_pad unless defined $padl;
+    $padr = $image_pad unless defined $padr;
+
+    my $image_width = $state->{'width'} + $padl + $padr;
     foreach my $track_name ( keys %{ $cache_track_hash || {} } ) {
         my $cache_key = $cache_track_hash->{$track_name}->key();
         my %panel_args
             = @{ $cache_track_hash->{$track_name}->panel_args()
                 || [] };
-        my $image_width = $panel_args{'-width'};
 
         $html .= $self->render_grey_track(
             track_name       => $track_name,

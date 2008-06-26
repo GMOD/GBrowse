@@ -24,8 +24,12 @@ Browser.  It is not currently designed for external use.
 
 use strict;
 use base 'Exporter';
-our @EXPORT    = qw(modperl_request);
-our @EXPORT_OK = qw(modperl_request);
+use Carp 'carp','cluck';
+
+our @EXPORT    = qw(modperl_request error);
+our @EXPORT_OK = qw(modperl_request error);
+
+use constant DEBUG => 1;
 
 =over 4
 
@@ -41,6 +45,18 @@ sub modperl_request {
   (exists $ENV{MOD_PERL_API_VERSION} &&
    $ENV{MOD_PERL_API_VERSION} >= 2 ) ? Apache2::RequestUtil->request
                                      : Apache->request;
+}
+
+=item error('message')
+
+Prints an error message
+
+=cut
+
+sub error {
+  my @msg = @_;
+  cluck "@_" if DEBUG;
+  print CGI::h2({-class=>'error'},@msg);
 }
 
 =back

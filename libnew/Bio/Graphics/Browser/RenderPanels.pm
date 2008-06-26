@@ -442,7 +442,9 @@ sub run_remote_requests {
     my $s_track  = Storable::freeze(\@tracks);
 
     my $request = POST ($url,
-    		       [tracks     => $s_track,
+    		       [
+			operation  => 'render_tracks',
+			tracks     => $s_track,
 			settings   => $s_set,
 			datasource => $s_dsn,
 			language   => $s_lang,
@@ -1419,7 +1421,7 @@ sub create_panel_args {
   my $settings = $self->settings;
   my $source   = $self->source;
 
-  my $section  = $args->{section};
+  my $section  = $args->{section} || 'detail';
 
   my $keystyle = 'none';
 
@@ -1584,7 +1586,7 @@ sub cache_time {
       $self->{cache_time} = shift;
   }
   return $self->{cache_time} if exists $self->{cache_time};
-  my $ct = $self->source->global_setting('cache time') || 60;
+  my ($ct) = $self->source->global_setting('cache time') =~ /(\d+)/;
   return $ct if defined $ct;  # hours
   return 1;                   # cache for one hour by default
 }

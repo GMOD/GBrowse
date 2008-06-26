@@ -1,0 +1,256 @@
+package Bio::Graphics::Browser::RegionSearch;
+
+use strict;
+use warnings;
+use Bio::Graphics::Browser::Region;
+use LWP::Parallel::UserAgent;
+use Storable 'freeze','thaw';
+
+# search multiple databases using crazy heuristics
+
+=head1 NAME
+
+Bio::Graphics::Browser::RegionSearch -- Search through multiple databases for feature matches.
+
+=head1 SYNOPSIS
+
+  my $dbs = Bio::Graphics::Browser::MultiDBFeatureSearch->new(
+              { source => $data_source, 
+                state  => $session_state
+              });
+  $dbs->init_databases();
+  my $features = $dbs->search_features('sma-3');
+  
+
+=head1 DESCRIPTION
+
+This implements a feature search based on the heuristics in
+Bio::Graphics::Browser::Region. The search is distributed across all
+local and remote databases as specified in the data source.
+
+=head1 METHODS
+
+The remainder of this document describes the methods available to the
+programmer.
+
+=cut
+
+=head2 $db = Bio::Graphics::Browser::RegionSearch->new({opts})
+
+Create a new RegionSearch object. Required parameters are:
+
+        Parameter     Description
+
+        source        The Bio::Graphics::Browser::DataSource
+                      object describing the local and remote
+                      databases for this source.
+
+        state         The page_settings document describing the
+                      current state of the user session (for
+                      looking up search options and the like in the
+                      future).
+
+=cut
+
+sub new {
+    my $self = shift;
+    my $args = shift;
+    my ($source,$state) = @{$args}{'source','state'};
+    return bless {
+	source => $source,
+	state  => $state,
+    },ref($self) || $self;
+}
+
+=head2 $db->init_databases()
+
+This method will initialize all the databases in preparation for a
+search.
+
+=cut
+
+sub init_databases {
+    my $self   = shift;
+
+    my $source = $self->source;
+    for my $l ($source->labels) {
+
+	if (my $remote = $source->setting($l => 'remote renderer')) {
+	    $self->{remote_dbs}{$remote}++;
+	} else {
+	    my $db = $source->open_database($l);
+	    $self->{local_dbs}{$db} ||= 
+		Bio::Graphics::Browser::Region->new(
+		    { source  => $source,
+		      state   => $self->state,
+		      db      => $db}
+		);
+	}
+    }
+
+}
+
+
+=head2 $source = source()
+
+Return the data source.
+
+=cut
+
+sub source           { shift->{source} }
+
+=head2 state()
+
+=cut
+
+sub state            { shift->{state}  }
+
+=head2 remote_dbs()
+
+=cut
+
+sub remote_dbs       { shift->{remote_dbs} }
+
+=head2 local_dbs()
+
+=cut
+
+sub local_dbs        { shift->{local_dbs} }
+
+=head2 $found = $db->search_features('search term')
+
+This method will search all the databases for features matching the
+search term and will return the results as an array ref of
+Bio::SeqFeatureI objects.
+
+If no search term is provided, then it is taken from the "name" field
+of the settings object.
+
+=cut
+
+sub search_features {
+    my $self        = shift;
+    my $search_term = shift;
+
+    $search_term   ||= $self->state->{name};  
+    defined $search_term or return;
+    
+    my $local  = $self->search_features_locally($search_term);
+    my $remote = $self->search_feature_remotely($search_term);
+    
+    my @found;
+    push @found,@$local  if $local  && @$local;
+    push @found,@$remote if $remote && @$remote;
+
+    # uniqueify features of the same type and name
+    my %seenit;
+
+    @found = grep {!$seenit{$_->name.$_->type}} @found;
+    return \@found;
+}
+
+=head2 $found = $db->search_features_locally('search term')
+
+Search only the local databases for the term.
+
+=cut
+
+
+sub search_features_locally {
+    my $self        = shift;
+    my $search_term = shift;
+    defined $search_term or return;
+    
+    my @found;
+
+    # each local db gets a chance to search
+    my $local_dbs = $self->local_dbs;
+    return unless $local_dbs;
+
+    for my $db (keys %{$local_dbs}) {
+	my $region   = $local_dbs->{$db};
+	my $features = $region->search_features($search_term);
+	push @found,@$features if $features;
+    }
+
+    return \@found;
+}
+
+=head2 $found = $db->search_features_remotely('search term')
+
+Search only the remote databases for the term.
+
+=cut
+
+
+sub search_features_remotely {
+    my $self        = shift;
+    my $search_term = shift;
+    defined $search_term or return;
+
+    # each remote renderer gets a chance to search;
+    # we kick off these searches before we do local
+    # searches in order to take advantage of
+    # parallelism
+    my $remote_dbs = $self->remote_dbs;
+    return unless $remote_dbs;
+
+
+    my $ua = LWP::Parallel::UserAgent->new;
+    $ua->in_order(0);
+    $ua->nonblock(1);
+    my $s_dsn	= freeze($self->source);
+    my $s_set	= freeze($self->state);
+    for my $url (keys %$remote_dbs) {
+	my $request = POST ($url,
+			    [ operation  => 'search_features',
+			      settings   => $s_set,
+			      datasource => $s_dsn
+			    ]);
+	my $error = $ua->register($request);
+	if ($error) { warn "Could not send request to $url: ",$error->as_string }
+    }
+
+    my $timeout = $source->global_setting('timeout') || 20;
+    my $results = $ua->wait($timeout);
+
+    my @found;
+
+    for my $url (keys %$results) {
+	my $response = $results->{$url};
+	unless ($response->is_success) {
+	    warn $results->{$_}->request->uri,
+	         "; fetch failed: ",
+	         $response->status_line;
+	    next;
+	}
+	my $contents = thaw($response->content);
+	push @found,@$contents if $contents;
+    }
+
+    return \@found;
+}
+
+1;
+
+__END__
+
+
+=head1 SEE ALSO
+
+L<Bio::Graphics::Browser::Region>,
+L<Bio::Graphics::Browser>,
+L<Bio::Graphics::Feature>,
+
+=head1 AUTHOR
+
+Lincoln Stein E<lt>lincoln.stein@gmail.comE<gt>.
+
+Copyright (c) 2008 Cold Spring Harbor Laboratory & Ontario Institute for Cancer Research
+
+This package and its accompanying libraries is free software; you can
+redistribute it and/or modify it under the terms of the GPL (either
+version 1, or at your option, any later version) or the Artistic
+License 2.0.  Refer to LICENSE for the full license text. In addition,
+please see DISCLAIMER.txt for disclaimers of warranty.
+

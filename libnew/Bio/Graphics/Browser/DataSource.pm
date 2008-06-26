@@ -217,12 +217,12 @@ sub detail_tracks {
 
 sub overview_tracks {
   my $self = shift;
-  grep { ($_ eq 'overview' || /:overview$/) && $self->authorized($_) } $self->configured_types;
+  grep { ($_ eq 'overview' || /:overview$/ && !/^_/) && $self->authorized($_) } $self->configured_types;
 }
 
 sub regionview_tracks {
   my $self = shift;
-  grep { ($_ eq 'region' || /:region$/) && $self->authorized($_) } $self->configured_types;
+  grep { ($_ eq 'region' || /:region$/) &&   !/^_/ && $self->authorized($_) } $self->configured_types;
 }
 
 sub karyotype_tracks {

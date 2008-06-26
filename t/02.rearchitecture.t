@@ -38,10 +38,10 @@ ok($globals->config_base,'./testdata/conf');
 ok($globals->htdocs_base,'./testdata/htdocs/gbrowse');
 ok($globals->url_base,'/gbrowse');
 
-ok($globals->plugin_path,'./testdata/conf/../../../conf/plugins');
-ok($globals->language_path,'./testdata/conf/languages');
-ok($globals->templates_path,'./testdata/conf/templates');
-ok($globals->moby_path,'./testdata/conf/MobyServices');
+ok($globals->plugin_path,'testdata/conf/../../../conf/plugins');
+ok($globals->language_path,'testdata/conf/languages');
+ok($globals->templates_path,'testdata/conf/templates');
+ok($globals->moby_path,'testdata/conf/MobyServices');
 
 ok($globals->js_url,'/gbrowse/js');
 ok($globals->button_url,'/gbrowse/images/buttons');
@@ -61,7 +61,7 @@ my @sources = $globals->data_sources;
 ok(@sources == 2);
 ok($sources[0] eq 'volvox');
 ok($globals->data_source_description('volvox'),'Volvox Example Database');
-ok($globals->data_source_path('yeast_chr1'),'./testdata/conf/yeast_chr1.conf');
+ok($globals->data_source_path('yeast_chr1'),'testdata/conf/yeast_chr1.conf');
 ok($globals->valid_source('volvox'));
 ok(!$globals->valid_source('volvo'));
 

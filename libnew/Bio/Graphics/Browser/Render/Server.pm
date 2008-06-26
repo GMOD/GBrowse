@@ -105,6 +105,24 @@ sub process_request {
               :$r->method eq 'POST'? $r->content
               : '';
     $CGI::Q  = new CGI($args);
+
+    my $operation = param('operation') || 'render_tracks';
+    my $content   = $operation eq 'render_tracks'   ? $self->render_tracks
+                  : $operation eq 'search_features' ? $self->search_features
+                  : '';
+    $c->send_response($self->search_features) if $operation eq 'search_features';
+
+    my $length  = length $content;
+    my $response = HTTP::Response->new(200 => 'Ok',
+				       ['Content-type'   => 'application/gbrowse-encoded-genome',
+					'Content-length' => $length],
+				       $content);
+    $c->send_response($response);
+    print STDERR "$$: process_request(END)(",$self->listen_port,")\n" if $self->debug>1;
+}
+
+sub render_tracks {
+    my $self = shift;
     
     my $tracks	        = thaw param('tracks');
     my $settings	= thaw param('settings');
@@ -152,15 +170,7 @@ sub process_request {
 			    imagedata => $imagedata};
     }
     my $content = freeze \%results;
-    my $length  = length $content;
-    
-    my $response = HTTP::Response->new(200 => 'Ok',
-				       ['Content-type'   => 'application/gbrowse-encoded-genome',
-					'Content-length' => $length],
-				       $content);
-    $c->send_response($response);
-
-    print STDERR "$$: process_request(END)(",$self->listen_port,")\n" if $self->debug>1;
+    return $content;
 }
 
 

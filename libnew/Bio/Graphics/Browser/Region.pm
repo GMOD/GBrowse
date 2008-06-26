@@ -41,7 +41,8 @@ sub features {
 # lazy retrieval of current segment(s) -- may transform features if needed
 sub segments {
     my $self = shift;
-    $self->{segments} ||= $self->features2segments($self->features) if $self->features;
+    $self->{segments} ||= 
+	$self->features2segments($self->features) if $self->features;
     return $self->{segments} || [];
 }
 
@@ -75,12 +76,15 @@ sub whole_seg {
 }
 
 sub search_features {
-  my $self  = shift;
+  my $self         = shift;
+  my $search_term  = shift;
 
   my $db    = $self->db;
   my $state = $self->state;
-  return unless defined $state->{name};
-  my $features = $self->search_db($state->{name});
+  $search_term ||= $state->{name};
+  defined $search_term or return;
+
+  my $features = $self->search_db($search_term);
   $self->features($features);
   return $features;
 }
@@ -97,7 +101,8 @@ sub features2segments {
 		 -start => $_->start,
 		 -stop  => $_->end,
 		 -absolute => 1,
-		 defined $version ? (-version => $version) : ())} @$features;
+		 defined $version ? (-version => $version) : ())
+    } @$features;
   return \@segments;
 }
 
@@ -170,8 +175,11 @@ sub lookup_features {
       push @sloppy_names,$chr;
     }
 
-    # try the wildcard  version, but only if the name is of significant length
-    # IMPORTANT CHANGE: we used to put stars at the beginning and end, but this killed performance!
+    # try the wildcard  version, but only if the name is of 
+    # significant length;
+
+    # IMPORTANT CHANGE: we used to put stars at the beginning 
+    # and end, but this killed performance!
     push @sloppy_names,"$name_to_try*" if length $name_to_try > 3 and $name_to_try !~ /\*$/;
 
     for my $n (@sloppy_names) {

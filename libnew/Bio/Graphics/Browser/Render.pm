@@ -500,7 +500,6 @@ sub render_bottom {
   croak "render_top() should not be called in parent class";
 }
 
-
 sub init_database {
   my $self = shift;
   my $dsn = $self->data_source;
@@ -860,8 +859,6 @@ sub update_coordinates {
   my $self  = shift;
   my $state = shift || $self->state;
 
-  warn "update coordinates, param = ",param();
-
   delete $self->{region}; # clear cached region
   my $position_updated;
 
@@ -927,7 +924,6 @@ sub update_coordinates {
     $state->{name} = param('name');
   }
 
-  warn "start = $state->{start}";
 }
 
 sub asynchronous_update_overview_scale_bar {
@@ -1326,20 +1322,20 @@ sub set_tracks {
 sub detail_tracks {
   my $self = shift;
   my $state = $self->state;
-  my @tracks = grep {$state->{features}{$_}{visible} && !/:(overview|region)$/ }
+  my @tracks = grep {$state->{features}{$_}{visible} && !/:(overview|region)$/ && !/^_/}
                @{$state->{tracks}};
 }
 sub overview_tracks {
   my $self = shift;
   my $state = $self->state;
-  return grep {$state->{features}{$_}{visible} && /:overview$/ }
+  return grep {$state->{features}{$_}{visible} && /:overview$/ && !/^_/ }
     @{$state->{tracks}};
 }
 
 sub regionview_tracks {
   my $self = shift;
   my $state = $self->state;
-  return grep {$state->{features}{$_}{visible} && !/:region$/ }
+  return grep {$state->{features}{$_}{visible} && !/:region$/ && !/^_/ }
     @{$state->{tracks}};
 }
 

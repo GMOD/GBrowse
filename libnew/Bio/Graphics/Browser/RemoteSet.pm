@@ -3,7 +3,7 @@ package Bio::Graphics::Browser::RemoteSet;
 
 use strict;
 use Bio::Graphics::Browser;
-use Bio::Graphics::Browser::Render 'error';
+use Bio::Graphics::Browser::Util 'error';
 use CGI 'cookie','param','unescape';
 use Digest::MD5 'md5_hex';
 use Text::ParseWords 'shellwords';

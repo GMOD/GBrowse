@@ -639,6 +639,73 @@ sub render_overview_scale_bar {
     return ( $url, $height, $width, );
 }
 
+sub render_detail_scale_bar {
+    my $self = shift;
+    my ( $segment, $state, $feature_files ) = @_;
+    my $gd;
+
+    my $source = $self->source;
+
+    #track option is same as state
+
+    # Temporary kludge until I can figure out a more
+    # sane way of rendering overview with SVG...
+    my $image_class = 'GD';
+    eval "use $image_class";
+
+    my $width = $state->{'width'} * $self->overview_ratio();
+
+    my $image_pad = $self->image_padding;
+    my $padl      = $source->global_setting('pad_left');
+    my $padr      = $source->global_setting('pad_right');
+    $padl = $image_pad unless defined $padl;
+    $padr = $image_pad unless defined $padr;
+
+  # I don't understand why I need to add the pad to the width, since the other
+  # panels don't do it but in order for the scale bar to be the same size as
+  # the other panels, I need to do it.
+    $width += $padl + $padr;
+
+    my $panel = Bio::Graphics::Panel->new(
+        -segment   => $segment,
+        -width     => $width,
+        -bgcolor   => $source->global_setting('overview bgcolor') || 'wheat',
+        -key_style => 'left',
+        -pad_left  => $padl,
+        -pad_right => $padr,
+        -pad_top   => $image_class->gdMediumBoldFont->height + 8,
+        -image_class => $image_class,
+        -auto_pad    => 0,
+    );
+
+    # no cached data, so do it ourselves
+    unless ($gd) {
+        my $units = $source->global_setting('units') || '';
+        my $no_tick_units = $source->global_setting('no tick units');
+
+        $panel->add_track(
+             $segment,
+            -glyph          => 'arrow',
+            -double         => 1,
+            -tick           => 2,
+            -units_in_label => $no_tick_units,
+            -units          => $units,
+            -unit_divider   => $source->global_setting('unit_divider') || 1,
+        );
+
+        $gd = $panel->gd;
+    }
+
+    my ( $y1, $y2 ) = ( 0, ( $gd->getBounds )[1] );
+
+    eval { $panel->finished }; # should quash memory leaks when used in conjunction with bioperl 1.4
+
+    my $url    = $self->generate_image($gd);
+    my $height = $y2 - $y1 + 1;
+
+    return ( $url, $height, $width, );
+}
+
 # I THINK THIS IS OBSOLETE
 # sub render_overview {
 #   my $self = shift;

@@ -3,7 +3,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.10 2008-06-26 16:22:41 mwz444 Exp $
+ $Id: controller.js,v 1.11 2008-06-27 16:04:19 mwz444 Exp $
 
 */
 
@@ -37,8 +37,10 @@ var GBrowseController = Class.create({
                 var segment    = results.segment;
                 var track_keys = results.track_keys;
                 var overview_scale_bar_hash = results.overview_scale_bar;
+                var detail_scale_bar_hash = results.detail_scale_bar;
 
-                update_overview_scale_bar(overview_scale_bar_hash);
+                update_scale_bar(overview_scale_bar_hash);
+                update_scale_bar(detail_scale_bar_hash);
 
                 SegmentObservers.keys().each(
                               function(e) {
@@ -173,7 +175,7 @@ function reset_after_track_load ( ) {
     create_drag('detail_panels','track');
 }
 
-function update_overview_scale_bar (bar_obj ) {
+function update_scale_bar (bar_obj ) {
     var image_id = bar_obj.image_id;
     $(image_id).src = bar_obj.url;
     $(image_id).height = bar_obj.height;

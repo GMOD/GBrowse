@@ -16,9 +16,10 @@ use Bio::Graphics::Browser::Shellwords;
 use Bio::Graphics::Browser::Region;
 use Bio::Graphics::Browser::RenderPanels;
 
-use constant VERSION => 2.0;
-use constant DEBUG   => 0;
-use constant OVERVIEW_SCALE_LABEL   => 'Overview Scale';
+use constant VERSION              => 2.0;
+use constant DEBUG                => 0;
+use constant OVERVIEW_SCALE_LABEL => 'Overview Scale';
+use constant DETAIL_SCALE_LABEL   => 'Detail Scale';
 
 
 my %PLUGINS; # cache initialized plugins
@@ -159,12 +160,15 @@ sub asynchronous_event {
 
         my $overview_scale_return_object
             = $self->asynchronous_update_overview_scale_bar();
+        my $detail_scale_return_object
+            = $self->asynchronous_update_detail_scale_bar();
 
         print CGI::header('application/json');
         print JSON::to_json(
             {   segment            => $settings->{name},
                 track_keys         => $track_keys,
                 overview_scale_bar => $overview_scale_return_object,
+                detail_scale_bar   => $detail_scale_return_object,
             }
         );
         return 1;
@@ -459,11 +463,23 @@ sub overview_scale_bar {
 }
 
 sub detail_scale_bar {
-    my $self = shift;
+    my $self    = shift;
     my $seg     = shift;
     my $section = shift;
 
-    return "";
+    my $renderer = $self->get_panel_renderer($seg);
+    my ( $url, $height, $width )
+        = $renderer->render_detail_scale_bar( $seg, $self->state );
+    my $html = $renderer->wrap_rendered_track(
+        label      => DETAIL_SCALE_LABEL,
+        area_map   => [],
+        width      => $width,
+        height     => $height,
+        url        => $url,
+        status     => '',
+        track_type => 'scale_bar',
+    );
+    return $html;
 }
 
 sub render_config {
@@ -936,6 +952,24 @@ sub asynchronous_update_overview_scale_bar {
         $self->state );
 
     my $image_id = OVERVIEW_SCALE_LABEL."_image";
+
+    return {
+        url      => $url,
+        height   => $height,
+        width    => $width,
+        image_id => $image_id,
+    };
+}
+
+sub asynchronous_update_detail_scale_bar {
+    my $self = shift;
+    my $seg  = $self->segment;
+
+    my $renderer = $self->get_panel_renderer($seg);
+    my ( $url, $height, $width )
+        = $renderer->render_detail_scale_bar( $seg, $self->state );
+
+    my $image_id = DETAIL_SCALE_LABEL . "_image";
 
     return {
         url      => $url,

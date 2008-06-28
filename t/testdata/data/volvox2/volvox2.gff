@@ -42,3 +42,4 @@ ctgA	example	HSP	3127	3388	.	+	.	Match seg02
 ctgA	example	HSP	3439	3443	.	+	.	Match seg02
 ctgA	example	HSP	3759	4209	.	+	.	Match seg02
 ctgA	example	HSP	4401	4466	.	+	.	Match seg02
+ctgB	example	my_feature	5	6	.	.	.	My_feature f12

@@ -7,10 +7,12 @@ use CGI qw(header param escape unescape);
 use IO::File;
 use File::Basename 'basename';
 use Storable qw(freeze thaw retrieve);
+use Bio::Graphics::Feature;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::I18n;
 use Bio::Graphics::Browser::DataSource;
 use Bio::Graphics::Browser::RenderPanels;
+use Bio::Graphics::Browser::RegionSearch;
 use POSIX 'WNOHANG';
 
 use Carp 'croak';
@@ -110,7 +112,6 @@ sub process_request {
     my $content   = $operation eq 'render_tracks'   ? $self->render_tracks
                   : $operation eq 'search_features' ? $self->search_features
                   : '';
-    $c->send_response($self->search_features) if $operation eq 'search_features';
 
     my $length  = length $content;
     my $response = HTTP::Response->new(200 => 'Ok',
@@ -171,6 +172,37 @@ sub render_tracks {
     }
     my $content = freeze \%results;
     return $content;
+}
+
+sub search_features {
+    my $self = shift;
+
+    my $searchterm      = param('searchterm');
+    my $tracks	        = thaw param('tracks');
+    my $settings	= thaw param('settings');
+    my $datasource	= thaw param('datasource');
+
+    # initialize a region search object
+    my $search = Bio::Graphics::Browser::RegionSearch->new(
+	{source => $datasource,
+	 state  => $settings}
+	) or return;
+    $search->init_databases($tracks);
+
+    my $results = $search->search_features_locally($searchterm);
+    return unless $results;
+    my @features = map {
+      Bio::Graphics::Feature->new(
+	  -name   => $_->name,
+	  -seq_id => $_->seq_id,
+	  -start  => $_->start,
+	  -end    => $_->end,
+	  -strand => $_->strand,
+	  -score  => eval{$_->score} || 0,
+	  -desc   => eval{$_->desc}  || '',
+	  );
+    } @$results;
+    return freeze(\@features);
 }
 
 

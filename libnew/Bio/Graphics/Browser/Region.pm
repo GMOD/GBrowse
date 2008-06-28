@@ -204,7 +204,6 @@ sub _feature_get {
   my ($db,$name,$class,$start,$stop) = @_;
 
   my $refclass = $self->source->global_setting('reference class') || 'Sequence';
-  $class ||= $refclass;
 
   my @argv = (-name  => $name);
   push @argv,(-class => $class) if defined $class;

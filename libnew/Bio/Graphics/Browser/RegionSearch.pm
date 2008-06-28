@@ -62,21 +62,30 @@ sub new {
     },ref($self) || $self;
 }
 
-=head2 $db->init_databases()
+=head2 $db->init_databases(\@labels)
 
 This method will initialize all the databases in preparation for a
-search.
+search. Pass it a list of track labels to search only in the databases
+defined by those tracks. Otherwise it will sort all tracks into local
+and remote ones.
 
 =cut
 
 sub init_databases {
-    my $self   = shift;
+    my $self         = shift;
+    my $track_labels = shift;
+
+    $self->{local_dbs}  = {};
+    $self->{remote_dbs} = {};
 
     my $source = $self->source;
-    for my $l ($source->labels) {
+    my $labels = $track_labels || [$source->labels];
 
-	if (my $remote = $source->setting($l => 'remote renderer')) {
-	    $self->{remote_dbs}{$remote}++;
+    for my $l (@$labels) {
+
+	if (!$track_labels &&
+	    (my $remote = $source->setting($l => 'remote renderer'))) {
+	    $self->{remote_dbs}{$remote}{$l}++;
 	} else {
 	    my $db = $source->open_database($l);
 	    $self->{local_dbs}{$db} ||= 
@@ -195,36 +204,46 @@ sub search_features_remotely {
     my $remote_dbs = $self->remote_dbs;
     return unless $remote_dbs;
 
+    eval { use LWP::Parallel::UserAgent;} unless LWP::Parallel::UserAgent->can('new');
+    eval { use HTTP::Request::Common;   } unless HTTP::Request::Common->can('POST');
 
-    my $ua = LWP::Parallel::UserAgent->new;
+    my $ua = eval{LWP::Parallel::UserAgent->new};
+    unless ($ua) {
+	warn $@;
+	return [];
+    }
+
     $ua->in_order(0);
     $ua->nonblock(1);
     my $s_dsn	= freeze($self->source);
     my $s_set	= freeze($self->state);
     for my $url (keys %$remote_dbs) {
+	my @tracks  = keys %{$remote_dbs->{$url}};
 	my $request = POST ($url,
 			    [ operation  => 'search_features',
 			      settings   => $s_set,
-			      datasource => $s_dsn
+			      datasource => $s_dsn,
+			      tracks     => freeze(\@tracks),
+			      searchterm => $search_term,
 			    ]);
 	my $error = $ua->register($request);
 	if ($error) { warn "Could not send request to $url: ",$error->as_string }
     }
 
-    my $timeout = $source->global_setting('timeout') || 20;
+    my $timeout = $self->source->global_setting('timeout') || 20;
     my $results = $ua->wait($timeout);
 
     my @found;
 
     for my $url (keys %$results) {
-	my $response = $results->{$url};
+	my $response = $results->{$url}->response;
 	unless ($response->is_success) {
-	    warn $results->{$_}->request->uri,
+	    warn $results->{$url}->request->uri,
 	         "; fetch failed: ",
 	         $response->status_line;
 	    next;
 	}
-	my $contents = thaw($response->content);
+	my $contents = thaw $response->content;
 	push @found,@$contents if $contents;
     }
 

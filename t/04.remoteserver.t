@@ -106,6 +106,7 @@ for (1..3) {
 
 # alignments requires the server at 8100
 my $alignment_server = Bio::Graphics::Browser::Render::Server->new(LocalPort=>8100);
+$alignment_server->debug(0);
 $alignment_server->run();
 
 # cleavage sites track requires the server at 8101

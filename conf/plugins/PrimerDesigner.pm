@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.9 2008-06-12 16:55:21 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.10 2008-06-30 20:48:59 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -361,13 +361,13 @@ END
   print $self->browser_config->header;
 
   # reset off-scale target if required
-  delete $conf->{target} if $conf->{target} 
-    && ($conf->{target} > $segment->end - 1000 || $conf->{target} < $segment->start + 1000);
-  delete $conf->{lb} if $conf->{lb} 
-    && ($conf->{lb} > $segment->end - 1000 || $conf->{lb} < $segment->start);
-  delete $conf->{rb} if $conf->{rb} 
-    && ($conf->{rb} < $segment->start + 1000 || $conf->{rb} > $segment->end);
-  delete $conf->{target} unless $conf->{lb} && $conf->{rb};
+#  delete $conf->{target} if $conf->{target} 
+#    && ($conf->{target} > $segment->end - 1000 || $conf->{target} < $segment->start + 1000);
+#  delete $conf->{lb} if $conf->{lb} 
+#    && ($conf->{lb} > $segment->end - 1000 || $conf->{lb} < $segment->start);
+#  delete $conf->{rb} if $conf->{rb} 
+#    && ($conf->{rb} < $segment->start + 1000 || $conf->{rb} > $segment->end);
+#  delete $conf->{target} unless $conf->{lb} && $conf->{rb};
   
   my $target = $self->focus($segment);
   my $lb = $conf->{lb} || $target;
@@ -385,7 +385,7 @@ END
     $new_start = $lb - 500;
   }
   if ($new_start || $new_end) {
-    $segment = $self->database->segment( -name  => $segment->ref,
+    ($segment) = $self->database->segment( -name  => $segment->ref,
 					 -start => ($new_start || $segment->start),
 					 -end   => ($new_end   || $segment->end) );
     $segment_size = $segment->length;

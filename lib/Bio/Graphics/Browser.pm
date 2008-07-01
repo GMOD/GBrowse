@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.87 2008-06-24 19:37:19 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.88 2008-07-01 11:35:56 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1009,9 +1009,9 @@ sub render_draggable_tracks {
     }
     my $show_or_hide     = $self->tr('SHOW_OR_HIDE_TRACK');
     my $share_this_track = $self->tr('SHARE_THIS_TRACK');
-    my $citation         = $self->setting($label=>'citation') || '';
-    $citation            =~ s/"/&quot;/g;
-    $citation            =~ s/'/&#39;/g;
+    my $citation         = $self->plain_citation($label,512);
+    #$citation            =~ s/"/&quot;/g;
+    #$citation            =~ s/'/&#39;/g;
 
     my $configure_this_track = $citation || '';
     $configure_this_track   .= '<br>' if $citation;
@@ -3008,6 +3008,17 @@ sub coordinate_mapper {
     return $closure;
 }
 
+sub plain_citation {
+  my ($self,$label,$truncate) = @_;
+  my $text = $self->citation($label,$self->language) || $self->tr('NO_CITATION');
+  $text =~ s/\<a/<span/gi;
+  $text =~ s/\<\/a/\<\/span/gi;
+  if ($truncate) {
+    $text =~ s/^(.{$truncate}).+/$1\.\.\./;
+  }
+  CGI::escape($text);
+}
+
 
 package Bio::Graphics::BrowserConfig;
 use strict;
@@ -3480,7 +3491,6 @@ sub i18n_style {
        keys %options;
   %lang_options;
 }
-
 
 1;
 

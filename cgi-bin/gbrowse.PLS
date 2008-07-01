@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.88 2008-07-01 10:52:47 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.89 2008-07-01 11:35:54 sheldon_mckay Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1487,7 +1487,6 @@ sub track_config {
   print CGI::header,start_html();
 
   # truncate too-long citations
-  #my $citation = h4($key).p($CONFIG->citation($label,$CONFIG->language)||$CONFIG->tr('NO_CITATION'));
   my $cit_txt = $CONFIG->citation($label,$CONFIG->language) || $CONFIG->tr('NO_CITATION');  
   $cit_txt =~ s/(.{512}).+/$1\.\.\./;  
   my $citation = h4($key).p($cit_txt);
@@ -3322,8 +3321,7 @@ sub make_citation_link {
     $key = label2key($label);
     (my $anchor  = $label) =~ tr/ /-/;
     $link = $self_url.'#'.escapeHTML($anchor);
-    $mouseover = escape($CONFIG->citation($label,$CONFIG->language) || $CONFIG->tr('NO_CITATION'));  
-    $mouseover =~ s/(.{768}).+/$1\.\.\./;
+    $mouseover = $CONFIG->plain_citation($label,768);
   }
 
   my $overview_color = $CONFIG->setting('overview bgcolor') || DEFAULT_OVERVIEW_BGCOLOR();

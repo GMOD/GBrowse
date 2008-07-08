@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.88 2008-07-01 11:35:56 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.89 2008-07-08 16:15:18 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1150,7 +1150,6 @@ sub generate_panels {
   my $self  = shift;
   my $args  = shift;
 
-
   my $segment       = $args->{segment};
   my ($seg_start,$seg_stop,$flip) = $self->segment_coordinates($segment,
 							       $args->{flip});
@@ -1289,7 +1288,7 @@ sub generate_panels {
     }
 
     $tracks{$label} = $panels{$panel_key}->add_track(@{$track_args{$label}})
-      unless $cached{$panel_key};
+      unless $cached{$panel_key} || $feature_files->{$label};
   }
   continue {
     $trackno++;
@@ -1326,7 +1325,12 @@ sub generate_panels {
   my $featurefile_select = $args->{featurefile_select} || $self->feature_file_select($section);
   my $feature_file_extra_offset = 0;
 
-  for my $l (sort { ($feature_file_offsets{$a}||1) <=> ($feature_file_offsets{$b}||1) } keys %$feature_files) {
+  my %trackmap;
+
+  for my $l (sort
+	     { 
+		 ($feature_file_offsets{$a}||1) <=> ($feature_file_offsets{$b}||1) 
+	     } keys %$feature_files) {
 
     next if $cached{$l};
     my $file = $feature_files->{$l} or next;
@@ -1338,7 +1342,7 @@ sub generate_panels {
 
     my $ff_offset = defined $feature_file_offsets{$l} ? $feature_file_offsets{$l} : 1;
 
-    my $nr_tracks_added =
+    my ($nr_tracks_added,$tracks) =
       $self->add_feature_file(
 			      file     => $file,
 			      panel    => $panels{$panel_key},
@@ -1353,12 +1357,13 @@ sub generate_panels {
 	 delete $cached{$panel_key};
        }
       if $drag_n_drop && $nr_tracks_added==0;  # suppress display of empty uploaded file tracks
+    $trackmap{$_} = $file foreach @$tracks;
 
     $feature_file_extra_offset += $nr_tracks_added-1;
   }
 
   # map tracks (stringified track objects) to corresponding labels
-  my %trackmap = reverse %tracks;
+  for my $label (keys %tracks) { $trackmap{$tracks{$label}} = $label }
 
   # uncached panels need to be generated and cached
   $args->{scale_map_type} ||= 'centering_map' unless $suppress_scale;
@@ -1536,7 +1541,7 @@ sub add_feature_file {
   my $name = $file->name || '';
   $options->{$name}      ||= 0;
 
-  my $nr_tracks_added =
+  my ($nr_tracks_added,$panel,$tracklist) =
     eval {
       $file->render(
 		    $args{panel},
@@ -1550,7 +1555,7 @@ sub add_feature_file {
     };
 
   $self->error("error while rendering ",$args{file}->name,": $@") if $@;
-  return $nr_tracks_added;
+  return ($nr_tracks_added,$tracklist);
 }
 
 # this returns a coderef that will indicate whether an added (external) feature is placed
@@ -1708,7 +1713,9 @@ sub make_map {
       my $width              = $self->setting($label,'balloon width')  || 0;
 
       if ($use_titles_for_balloons) {
-	$balloonhover ||= $title;
+	  $balloonhover ||= $title;
+	  $balloonhover  =~ s/\'/\\'/g;
+	  $balloonhover  =~ s/"/\&#34;/g;
       }
 
       $balloon_ht ||= 'balloon';

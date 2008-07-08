@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.89 2008-07-08 16:15:18 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.90 2008-07-08 16:55:08 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1701,10 +1701,12 @@ sub make_map {
       #retrieve the content of the balloon from configuration files
       # if it looks like a URL, we treat it as a URL.
       my ($balloon_ht,$balloonhover)     = 
-	  $self->config->balloon_tip_setting('balloon hover',$label,$_->[0],$panel,$_->[5]);
+	  $self->config->balloon_tip_setting('balloon hover',$label,
+					     $_->[0],$panel,$_->[5]);
 
       my ($balloon_ct,$balloonclick)     = 
-	  $self->config->balloon_tip_setting('balloon click',$label,$_->[0],$panel,$_->[5]);
+	  $self->config->balloon_tip_setting('balloon click',$label,
+					     $_->[0],$panel,$_->[5]);
 
       # balloon_ht = type of balloon to use for hovering -- usually "balloon"
       # balloon_ct = type of balloon to use for clicking -- usually "balloon"
@@ -3408,10 +3410,18 @@ sub balloon_tip_setting {
   my ($option,$label,$feature,$panel,$track) = @_;
   $option ||= 'balloon tip';
   my $value;
+
   
-  for $label ($label, 'TRACK DEFAULTS','general') {
-    $value = $self->code_setting($label=>$option);
-    last if $value;
+ TRY: {
+     if ($label->isa('Bio::Graphics::FeatureFile')) { # a feature file
+	 $value ||= $label->setting($_=>$option) foreach $label->feature2label($feature);
+     }
+     last TRY if $value;
+     
+     for $label ($label, 'TRACK DEFAULTS','general') {
+	 $value = $self->code_setting($label=>$option);
+	 last TRY if $value;
+     }
   }
 
   return unless $value;

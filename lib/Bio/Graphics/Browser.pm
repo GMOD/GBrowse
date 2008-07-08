@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.90 2008-07-08 16:55:08 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.91 2008-07-08 22:48:47 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1032,11 +1032,13 @@ sub render_draggable_tracks {
 		    -onMouseOver => "balloon.showTooltip(event,'$share_this_track')",
 		    -onMousedown => "balloon.showTooltip(event,'url:?share_track=$escaped_label')",
 		   }),
-	       img({-src         => $help,
-		    -style       => 'cursor:pointer',
-		    -onMouseOver => "balloon.showTooltip(event,'$configure_this_track')",
-		    -onmousedown => $config_click
-		   }),
+	       $label !~ /^(http|ftp|das):/ 
+	         ? img({-src         => $help,
+			-style       => 'cursor:pointer',
+			-onMouseOver => "balloon.showTooltip(event,'$configure_this_track')",
+			-onmousedown => $config_click
+		       })
+	         : (),
 	       span({-class=>'draghandle'},$title)
 	);
     
@@ -1322,7 +1324,8 @@ sub generate_panels {
     delete $cached{$l};
   }
 
-  my $featurefile_select = $args->{featurefile_select} || $self->feature_file_select($section);
+  my $featurefile_select = $args->{featurefile_select} 
+                           || $self->feature_file_select($section);
   my $feature_file_extra_offset = 0;
 
   my %trackmap;
@@ -1342,6 +1345,9 @@ sub generate_panels {
 
     my $ff_offset = defined $feature_file_offsets{$l} ? $feature_file_offsets{$l} : 1;
 
+    my $override_args  = $settings->{features}{$l}{override_settings} || {};
+    my @override       = map {'-'.$_ => $override_args->{$_}} keys %$override_args;
+
     my ($nr_tracks_added,$tracks) =
       $self->add_feature_file(
 			      file     => $file,
@@ -1350,6 +1356,7 @@ sub generate_panels {
 			      options  => $options,
 			      select   => $featurefile_select,
 			      segment  => $segment,
+	                      override_settings => \@override,
 			     );
 
     do { eval {$panels{$panel_key}->finished};
@@ -1541,18 +1548,21 @@ sub add_feature_file {
   my $name = $file->name || '';
   $options->{$name}      ||= 0;
 
+  my $override_settings = $args{override_settings};
+
   my ($nr_tracks_added,$panel,$tracklist) =
     eval {
       $file->render(
-		    $args{panel},
-		    $args{position},
-		    $options->{$name},
-		    $self->bump_density,
-		    $self->label_density,
-		    $select,
-		    $args{segment},
-		   );
-    };
+	  $args{panel},
+	  $args{position},
+	  $options->{$name},
+	  $self->bump_density,
+	  $self->label_density,
+	  $select,
+	  $args{segment},
+	  $override_settings,
+	  );
+      };
 
   $self->error("error while rendering ",$args{file}->name,": $@") if $@;
   return ($nr_tracks_added,$tracklist);
@@ -2576,7 +2586,8 @@ sub create_track_args {
   my $segment         = $args->{segment};
   my $lang            = $args->{lang};
   my $hilite_callback = $args->{hilite_callback};
-  my $override        = $args->{settings}{features}{$label}{override_settings} || {};   # user-set override settings for tracks
+  my $override        = $args->{settings}{features}{$label}{override_settings} 
+                           || {};   # user-set override settings for tracks
   my @override        = map {'-'.$_ => $override->{$_}} keys %$override;
 
   my $length = $segment->length;

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.89 2008-07-01 11:35:54 sheldon_mckay Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.90 2008-07-08 22:48:46 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1504,7 +1504,7 @@ sub track_config {
 new Ajax.Request('$url',
                   { method: 'get',
                     asynchronous: false,
-                    parameters: 'configure_track=$label;track_defaults=1',
+                    parameters: 'configure_track=$label&track_defaults=1',
                     onSuccess: function(t) { document.getElementById('contents').innerHTML=t.responseText },
                     onFailure: function(t) { alert('AJAX Failure! '+t.statusText)}
                   }

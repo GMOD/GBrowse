@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.6 2008-06-05 18:31:05 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.7 2008-07-08 20:25:14 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -115,8 +115,9 @@ if (param('list')) {
 }
 
 # get all parameters
-my @landmarks       = (param('name'),   param('q'));        # list of landmarks to display
-my @track_types     = (param('type'),   param('t'));        # track types to turn on
+my @landmarks       = (param('name'),   param('q'));                 # list of landmarks to display
+my @track_types     = map { split /[+-]/ } 
+                          (param('type'),   param('t'), param('label')); # track types to turn on
 my @add_features    = (param('add'),    param('a'));        # overlay features
 my @add_style       = (param('style'),  param('s'));        # overlay features style
 my @options         = (param('options'),param('o'));        # various track options, such as bumping
@@ -818,7 +819,7 @@ lengths.
       image showing the position of each landmark.  The alias "q" can be used to
       shorten the length of the URL.
       <p>
-  <dt><b>type</b> (Alias: <b>t</b>)
+  <dt><b>type</b> (Aliases: <b>t</b>, <b>label</b>)
   <dd>This argument lists the feature types to display.  The value of this argument is
       a list of track names separated by spaces ("+" characters when URL-escaped).  For example:
       <p>

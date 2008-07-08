@@ -3,7 +3,7 @@
  rubber.js -- a base class for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.1.2.19 2008-03-18 15:31:21 lstein Exp $
+ $Id: rubber.js,v 1.1.2.20 2008-07-08 20:25:16 lstein Exp $
 
 */
 
@@ -41,7 +41,9 @@ SelectArea.prototype.replaceImage = function(image) {
   YAHOO.util.Dom.setStyle(image,'display','block');
 
 
-  if (!document.mainform.drag_and_drop || !document.mainform.drag_and_drop.checked) {
+  if (   !document.mainform 
+      || !document.mainform.drag_and_drop 
+      || !document.mainform.drag_and_drop.checked) {
     var name = this.imageId+'_map';
     var map;
     

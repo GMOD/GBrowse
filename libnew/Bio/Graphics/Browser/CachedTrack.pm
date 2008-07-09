@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::CachedTrack;
 
-# $Id: CachedTrack.pm,v 1.3 2008-05-02 20:09:27 lstein Exp $
+# $Id: CachedTrack.pm,v 1.4 2008-07-09 22:16:55 lstein Exp $
 # This package defines a Bio::Graphics::Browser::Track option that manages
 # the caching of track images and imagemaps.
 
@@ -10,6 +10,7 @@ use Carp;
 use Fcntl ':flock';
 use File::Spec;
 use File::Path;
+use IO::File;
 use Digest::MD5 'md5_hex';
 use Storable qw(:DEFAULT freeze thaw);
 
@@ -39,13 +40,14 @@ sub new {
 	$key = $self->generate_cache_key(@$panel_args,@$track_args,@$extra_args);
     }
 
-    return bless { 
+    my $obj = bless { 
 	base       => $base ,
 	key        => $key,
 	panel_args => $panel_args,
 	track_args => $track_args,
 	extra_args => $extra_args,
     },ref $self || $self;
+    return $obj;
 }
 
 sub base { shift->{base} }
@@ -69,11 +71,16 @@ sub cachedir {
     my @comp = $key =~ /(..)/g;
     my $path = File::Spec->catfile($self->base,@comp[0..2],$key);
     mkpath ($path) unless -e $path;
+    die "Can't mkpath($path): $!" unless -d $path;
     return $path;
 }
 sub dotfile {
     my $self = shift;
     return File::Spec->catfile($self->cachedir,'.lock');
+}
+sub tsfile {
+    my $self = shift;
+    return File::Spec->catfile($self->cachedir,'.ts');
 }
 sub datafile {
     my $self = shift;
@@ -92,14 +99,15 @@ sub generate_cache_key {
 sub lock {
     my $self    = shift;
     my $dotfile = $self->dotfile;
+    my $tsfile  = $self->tsfile;
     if (-e $dotfile) {  # if it exists, then either we are in process or something died
+	warn "OOPS";
 	return if $self->status eq 'PENDING';
     }
-    open F,">$dotfile" or croak "Can't open $dotfile: $!";
-    flock F,LOCK_EX;
-    print F time();
-    flock F,LOCK_UN;
-    close F;
+    my $f = IO::File->new(">$dotfile") or die "Can't open $dotfile for writing: $!";
+    flock $f,LOCK_EX;
+    $f->print(time());
+    $f->close;
     return 1;
 }
 
@@ -164,17 +172,19 @@ sub status {
     my $self     = shift;
     my $dir      = $self->cachedir;
     my $dotfile  = $self->dotfile;
+    my $tsfile   = $self->tsfile;
     my $datafile = $self->datafile;
 
     # if a dotfile exists then either we are in the midst of updating the
     # contents of the directory, or something has gone wrong and we are
     # waiting forever.
-    if (-e $dotfile) {  
-	open F,$dotfile or croak "Couldn't open $dotfile: $!";
-	flock F,LOCK_SH;
-	my $timestamp = <F>;
-	flock F,LOCK_UN;
-	close F;
+    if (-e $dotfile) {
+	-s _ or return 'PENDING';  # size zero means that dotfile has been created but not locked
+	my $f = IO::File->new($dotfile) or die "Couldn't open $dotfile: $!";
+	flock $f,LOCK_SH;
+	my $timestamp = $f->getline();
+	die "BAD TIMESTAMP" unless $timestamp;
+	$f->close;
 	return 'PENDING' if time()-$timestamp < $self->max_time;
 	return 'DEFUNCT';
     } elsif (-e $datafile) {

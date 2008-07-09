@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.8 2008-05-02 21:02:35 lstein Exp $
+# $Id: Browser.pm,v 1.9 2008-07-09 22:16:55 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -142,6 +142,7 @@ sub moby_path      { shift->config_path('moby_path')       }
 sub global_timeout         { shift->setting(general=>'global_timeout')         }
 sub remember_source_time   { shift->setting(general=>'remember_source_time')   }
 sub remember_settings_time { shift->setting(general=>'remember_settings_time') }
+sub cache_time             { shift->setting(general=>'cache time')             }
 sub url_fetc_htimeout      { shift->setting(general=>'url_fetch_timeout')      }
 sub url_fetch_max_size     { shift->setting(general=>'url_fetch_max_size')     }
 

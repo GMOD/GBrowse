@@ -3,7 +3,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.11 2008-06-27 16:04:19 mwz444 Exp $
+ $Id: controller.js,v 1.12 2008-07-09 22:16:54 lstein Exp $
 
 */
 
@@ -59,14 +59,16 @@ function initialize_page () {
     Controller = new GBrowseController; // singleton
 
     //event handlers
-    SegmentObservers.set('page_title',1);
-    $('page_title').observe('model:segmentChanged',function(event) {
-	    //	    this.innerHTML='<img src="/images/buttons/ajax-loader.gif" />';
-	    new Ajax.Updater(this,'#',{
-		    parameters: {update: this.id}
-	    });
-	}
-	);
+    var elements = ['page_title','span'];
+    elements.each(function(el) {
+	    SegmentObservers.set(el,1);
+	    $(el).observe('model:segmentChanged',function(event) {
+		    new Ajax.Updater(this,'#',{
+			    parameters: {update: this.id}
+		    });
+		}
+		)
+    });
     new Ajax.Request('#',{
         method:     'post',
         parameters: {first_render: 1},
@@ -82,27 +84,6 @@ function initialize_page () {
         }
     }
     );
-
-
-/*    var elements = ['landmark_search_field','overview_panels','detail_panels'];
-    elements.each(function(el) {
-        SegmentObservers.set(el,1);
-	$(el).observe('model:segmentChanged',function(event) {
-	    new Ajax.Request('#',{
-		    method:     'post',
-		    parameters: {update: this.id},
-		    onSuccess:  function(transport) {
-			if ($(el).value != null) {
-			    $(el).value = transport.responseText;
-			}
-			else {
-			    $(el).innerHTML = transport.responseText;
-			}
-		    }
-	    })
-	});
-  });
-*/
 
 }
 
@@ -132,11 +113,11 @@ function register_track ( detail_div_id,detail_image_id,track_type ) {
                         decay:1.5,
                         method: 'post',
                         parameters: {
-                            track_key: track_key,
-                            retreive_track: detail_div_id,
-                            image_width: track_image.width,
-                            image_height: track_image.height,
-                            image_id: detail_image_id,
+                            track_key:      track_key,
+                            retrieve_track: detail_div_id,
+                            image_width:    track_image.width,
+                            image_height:   track_image.height,
+                            image_id:       detail_image_id,
                         },
                         onSuccess: function(transport) {
                             //alert ("success "+detail_div_id +" "+transport.responseText.substring(0,10));
@@ -147,7 +128,7 @@ function register_track ( detail_div_id,detail_image_id,track_type ) {
                                 reset_after_track_load();
                             }
                             else if (transport.responseText.substring(0,16) == "<!-- EXPIRED -->"){
-                                Controller.periodic_updaters[detail_div_id].stop();
+				Controller.periodic_updaters[detail_div_id].stop();
                                 reset_after_track_load();
                             }
                             else {

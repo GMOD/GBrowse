@@ -40,6 +40,7 @@ sub new {
   $self->source($data_source);
   $self->settings($page_settings);
   $self->language($language);
+
   return $self;
 }
 
@@ -196,7 +197,6 @@ sub make_requests {
             -extra_args => \@extra_args
         );
         $cache_object->cache_time( $self->cache_time * 60 );
-
         $d{$label} = $cache_object;
     }
     return \%d;
@@ -226,23 +226,6 @@ sub drag_and_drop {
   return if     $source->global_setting('postgrid');      # postgrid forces drag and drop off
   1;
 }
-
-# sub generate_panels_remotely {
-#   my $self    = shift;
-#   my $tracks  = shift;
-#   my $options = shift;
-
-#   my $source = $self->source;
-
-#   my %remote;
-#   for my $track (@$tracks) {
-#     my $host  = $source->semantic_setting($track => 'remote renderer');
-#     $host   ||= $self->local_renderer_url;
-#     $remote{$host}{$track}++;
-#   }
-
-#   return $self->call_remote_renderers(\%remote);
-# }
 
 sub render_tracks {
     my $self     = shift;
@@ -313,7 +296,7 @@ sub wrap_rendered_track {
         }
     );
 
-    my $class = $label eq '__scale__' ? 'scale' : 'track';
+    my $class = $label =~ /scale/i ? 'scale' : 'track';
     my $icon = $collapsed ? $plus : $minus;
 
     my $config_click;
@@ -363,21 +346,39 @@ sub wrap_rendered_track {
 
     my $show_titlebar
         = ( ( $source->setting( $label => 'key' ) || '' ) ne 'none' );
+    $show_titlebar &&= $label !~ /scale/i;
 
     my $map_html = $self->map_html($map);
-    return div(
+
+    # the padding is a little bit of empty track that is displayed only
+    # when the track is collapsed. Otherwise the track labels get moved
+    # to the center of the page!
+    my $pad     = $self->render_image_pad();
+    my $pad_url = $self->generate_image($pad);
+    my $pad_img = img({-src   => $pad_url,
+		       -width => $pad->width,
+		       -height=> $pad->height,
+		       -border=> 0,
+		       -id    => "${label}_pad",
+		       -style => $collapsed ? "display:inline" : "display:none",
+		      });
+
+
+    return
+	div(
         { -id => "track_${munge_label}", -class => $class },
         div({ -align => 'center' },
-            ( $show_titlebar ? $titlebar : '' ) . $img
-        ),
-        $map_html || ''
+            ( $show_titlebar ? $titlebar : '' ) . $img . $pad_img
         )
-        . q[<script type="text/javascript" language="JavaScript">register_track("track_]
+	,$map_html || ''
+        )
+        . qq[<script type="text/javascript" language="JavaScript">Controller.register_track("track_]
         . $munge_label . q[","]
         . $munge_label
         . q[_image", "]
         . $track_type
-        . q[");</script>];
+        . q[");</script>]
+	;
 }
 
 # This routine is called to hand off the rendering to a remote renderer. 
@@ -406,11 +407,11 @@ sub run_remote_requests {
   my $self      = shift;
   my ($requests,$args,$labels) = @_;
 
-    my @labels_to_generate = grep { $requests->{$_}->needs_refresh } @$labels;
-    foreach (@labels_to_generate) {
-	$requests->{$_}->lock();   # flag that request is in process
-    }
-
+  my @labels_to_generate = grep { $requests->{$_}->needs_refresh } @$labels;
+  foreach (@labels_to_generate) {
+      $requests->{$_}->lock();   # flag that request is in process
+  }
+  
   return unless @labels_to_generate;
 
   eval { use HTTP::Request::Common; } unless HTTP::Request::Common->can('POST');
@@ -639,6 +640,27 @@ sub render_overview_scale_bar {
     return ( $url, $height, $width, );
 }
 
+sub render_image_pad {
+    my $self = shift;
+
+    my @panel_args  = $self->create_panel_args({});
+    my @track_args  = ();
+    my @extra_args  = ();
+    my $cache = Bio::Graphics::Browser::CachedTrack->new(
+	-base       => scalar $self->get_cache_base,
+	-panel_args => \@panel_args,
+	-track_args => \@track_args,
+	-extra_args => \@extra_args,
+        );
+    unless ($cache->status eq 'AVAILABLE') {
+	my $panel = Bio::Graphics::Panel->new(@panel_args);
+	$cache->lock;
+	$cache->put_data($panel->gd,'');
+    }
+    
+    return $cache->gd;
+}
+
 sub render_detail_scale_bar {
     my $self = shift;
     my ( $segment, $state, $feature_files ) = @_;
@@ -664,6 +686,9 @@ sub render_detail_scale_bar {
   # I don't understand why I need to add the pad to the width, since the other
   # panels don't do it but in order for the scale bar to be the same size as
   # the other panels, I need to do it.
+    
+    # TO DO: REPLACE THE HAND-CONFIGURATION WITH A CALL TO CREATE_PANEL_ARGS():
+
     $width += $padl + $padr;
 
     my $panel = Bio::Graphics::Panel->new(
@@ -706,188 +731,6 @@ sub render_detail_scale_bar {
     return ( $url, $height, $width, );
 }
 
-# I THINK THIS IS OBSOLETE
-# sub render_overview {
-#   my $self = shift;
-#   my ($region_name,$whole_segment,$segment,$state,$feature_files) = @_;
-#   my $gd;
-
-#   my $source   = $self->source;
-
-#   #track option is same as state
-
-#   # Temporary kludge until I can figure out a more
-#   # sane way of rendering overview with SVG...
-#   my $image_class = 'GD';
-#   eval "use $image_class";
-
-#   my $width          = $state->{'width'} * $self->overview_ratio();
-#   my @tracks         = grep {$state->{'features'}{$_}{visible}} 
-#     $region_name eq 'region' ? $source->regionview_tracks : $source->overview_tracks;
-
-#   my ($padl,$padr)   = $self->overview_pad(\@tracks);
-
-#   my $panel = Bio::Graphics::Panel->new(-segment => $whole_segment,
-# 					-width   => $width,
-# 					-bgcolor => $source->global_setting('overview bgcolor')
-# 					            || 'wheat',
-# 					-key_style => 'left',
-# 					-pad_left  => $padl,
-# 					-pad_right => $padr,
-# 					-pad_bottom => PAD_OVERVIEW_BOTTOM,
-# 					-image_class=> $image_class,
-# 					-auto_pad   => 0,
-# 				       );
-
-#   # THIS IS NOW OBSOLETE
-#   # cache check so that we can cache the overview images
-#   my $cache_path;
-#   $cache_path = $source->gd_cache_path('cache_overview',$whole_segment,
-# 				       @tracks,$width,
-# 				       map {@{$state->{'features'}{$_}}{'options','limit','visible'}
-# 					  } @tracks);
-
-#   # no cached data, so do it ourselves
-#   unless ($gd) {
-#     my $units         = $source->global_setting('units') || '';
-#     my $no_tick_units = $source->global_setting('no tick units');
-
-#     $panel->add_track($whole_segment,
-# 		      -glyph     => 'arrow',
-# 		      -double    => 1,
-# 		      -label     => "\u$region_name\E of ".$whole_segment->seq_id,
-# 		      -label_font => $image_class->gdMediumBoldFont,
-# 		      -tick      => 2,
-# 		      -units_in_label => $no_tick_units,
-# 		      -units     => $units,
-# 		      -unit_divider => $source->global_setting('unit_divider') || 1,
-# 		     );
-
-#     $self->_add_landmarks(\@tracks,$panel,$whole_segment,$state);
-
-#     # add uploaded files that have the "(over|region)view" option set
-#     if ($feature_files) {
-#       my $select = sub {
-# 	my $file  = shift;
-# 	my $type  = shift;
-# 	my $section = $file->setting($type=>'section')  || $file->setting(general=>'section') || '';
-# 	return defined $section && $section =~ /$region_name/;
-#       };
-#       foreach (keys %$feature_files) {
-# 	my $ff = $feature_files->{$_};
-# 	next unless $ff->isa('Bio::Graphics::FeatureFile'); #only FeatureFile supports this
-# 	$ff->render($panel,-1,$state->{'features'}{$_},undef,undef,$select);
-#       }
-#     }
-
-#     $gd = $panel->gd;
-#     $source->gd_cache_write($cache_path,$gd) if $cache_path;
-#   }
-
-#   my $rect_color = $panel->translate_color(
-# 					   $source->global_setting('selection rectangle color' )||'red');
-#   my ($x1,$x2) = $panel->map_pt($segment->start,$segment->end);
-#   my ($y1,$y2) = (0,($gd->getBounds)[1]);
-#   $x2 = $panel->right-1 if $x2 >= $panel->right;
-#   my $pl = $panel->can('auto_pad') ? $panel->pad_left : 0;
-
-#   $gd->rectangle($pl+$x1,$y1,
-# 		 $pl+$x2,$y2-1,
-# 		 $rect_color);
-
-#   eval {$panel->finished};  # should quash memory leaks when used in conjunction with bioperl 1.4
-
-#   my $url       = $self->generate_image($gd);
-
-#   my $image = img({-src=>$url,-border=>0});#,-usemap=>"#${label}_map"});7;#overview($whole_segment,$segment,$page_settings,$feature_files);
-  
-# }
-
-#$self->_add_landmarks(\@tracks,$panel,$whole_segment,$state);
-# sub _add_landmarks {
-#   my $self = shift;
-#   my ($tracks_to_add,$panel,$segment,$options) = @_;
-#   my $source = $self->source;
-#   my @tracks = grep {$options->{'features'}{$_}{visible}} @$tracks_to_add;
-
-#   my (@feature_types,%type2track,%track);
-
-#   for my $overview_track (@tracks) {
-#     my @types = $source->label2type($overview_track);
-#     my $track = $panel->add_track(-glyph  => 'generic',
-# 				  -height  => 3,
-# 				  -fgcolor => 'black',
-# 				  -bgcolor => 'black',
-# 				  $source->style($overview_track),
-# 				 );
-#     foreach (@types) {
-#       $type2track{lc $_} = $overview_track
-#     }
-#     $track{$overview_track} = $track;
-#     push @feature_types,@types;
-#   }
-#   return unless @feature_types;
-
-#   my $iterator = $segment->features(-type=>\@feature_types,-iterator=>1,-rare=>1);
-
-#   my %count;
-#   my (%group_on,%group_on_field);
-#   while (my $feature = $iterator->next_seq) {
-
-#     my $label = eval{$type2track{lc $feature->type}}
-#       || $type2track{lc $feature->primary_tag}
-# 	|| eval{$type2track{lc $feature->method}}
-# 	  || next;
-
-#     my $track = $track{$label} or next;
-
-#     # copy-and-pasted from details method. Not very efficient coding.
-#     exists $group_on_field{$label} or $group_on_field{$label} = $source->code_setting($label => 'group_on');
-
-#     if (my $field = $group_on_field{$label}) {
-#       my $base = eval{$feature->$field};
-#       if (defined $base) {
-# 	my $group_on_object = $group_on{$label}{$base}
-# 	  ||= Bio::Graphics::Feature->new(-start=>$feature->start,
-# 					  -end  =>$feature->end,
-# 					  -strand => $feature->strand,
-# 					  -type =>$feature->primary_tag);
-# 	$group_on_object->add_SeqFeature($feature);
-# 	next;
-#       }
-#     }
-
-#     $track->add_feature($feature);
-#     $count{$label}++;
-#   }
-
-#   # fix up group-on fields
-#   for my $label (keys %group_on) {
-#     my $track = $track{$label};
-#     my $group_on = $group_on{$label} or next;
-#     $track->add_feature($_) foreach values %$group_on;
-#   }
-
-#   my $max_bump   = $self->bump_density;
-#   my $max_label  = $self->label_density;
-
-#   for my $label (keys %count) {
-#     my $track = $track{$label};
-
-#     my $do_bump  = $self->do_bump($label,$options->{'features'}{$label}{options},$count{$label},$max_bump);
-#     my $do_label = $self->do_label($label,$options->{'features'}{$label}{options},$count{$label},
-# 				   $max_label,$segment->length);
-#     my $do_description = $self->do_description($label,$options->{'features'}{$label}{options},$count{$label},
-# 					       $max_label,$segment->length);
-
-#     $track->configure(-bump  => $do_bump,
-# 		      -label => $do_label,
-# 		      -description => $do_description,
-# 		     );
-#   }
-#   return \%track;
-# }
-
 sub bump_density {
   my $self     = shift;
   my $conf = $self->source;
@@ -912,55 +755,6 @@ sub local_renderer_url {
   $self_uri     =~ s/[^\/]+$/$render/;
   return $self_uri;
 }
-
-# This is entry point for rendering a series of tracks given their labels
-# input is (\@track_names_to_render)
-#
-# output is $results hashref:
-#   $results->{$track_label}{gd} = $gd_object
-#   $results->{$track_label{map} = $imagemap
-#
-# sub render_locally {
-#   my $self    = shift;
-#   my $tracks  = shift;
-
-#   my $source = $self->source;
-
-#   my $lang    = $self->page_renderer->language;
-
-#   # sort tracks by the database they come from
-#   my (%track2db,%db2db);
-
-#   for my $track (@$tracks) { 
-#     my $db = eval { $source->open_database($track)};
-#     unless ($db) { warn "Couldn't open database for $_: $@"; next; }
-#     $track2db{$db}{$track}++;
-#     $db2db{$db}  =  $db;  # cache database object
-#   }
-
-#   my %merge;
-
-#   for my $dbname (keys %track2db) {
-#     my $db        = $db2db{$dbname};              # database object
-#     my @labels     = keys %{$track2db{$dbname}};   # all tracks that use this database
-#     my $results_for_this_db = $self->generate_panels(-db      => $db,
-# 						     -labels   => \@labels,
-# 						     -options  => $options);
-#     %merge = (%merge,%$results_for_this_db);
-#   }
-
-#   my %results;
-#   for my $label (keys %merge) {
-#     my $panel    = $merge{$label} or next;
-#     my $gd       = $panel->gd;
-#     my $imagemap = $label eq '__scale__' ? $self->make_centering_map($panel) 
-#     	: $self->make_map($panel,$label,$lang);
-#     $results{$label}{gd} = $gd;
-#     $results{$label}{map} = $imagemap;
-#   }
-
-#   return \%results;
-# }
 
 sub make_map {
   my $self = shift;
@@ -1622,30 +1416,6 @@ sub get_cache_base {
     my ($uri,$path) = $self->source->tmpdir($rel_path);
     return wantarray ? ($path,$uri) : $path;
 }
-# sub get_cache_base {
-#   my $self            = shift;
-#   my ($key,$filename) = @_;
-#   my @comp        = $key =~ /(..)/g;
-#   my $rel_path    = join '/',$self->source->name,'panel_cache',@comp[0..2],$key;
-#   my ($uri,$path) = $self->source->tmpdir($rel_path);
-
-#   return wantarray ? ("$path/$filename","$uri/$filename") : "$path/$filename";
-# }
-
-# sub panel_is_cached {
-#   my $self  = shift;
-#   my $key   = shift;
-#   return if param('nocache');
-#   return unless (my $cache_time = $self->cache_time);
-#   my $size_file = $self->get_cache_base($key,'size');
-#   return unless -e $size_file;
-#   my $mtime    = (stat(_))[9];   # _ is not a bug, but an automatic filehandle
-#   my $hours_since_last_modified = (time()-$mtime)/(60*60);
-#   warn "cache_time is $cache_time, last modified = $hours_since_last_modified hours ago" if DEBUG;
-#   return unless $hours_since_last_modified < $cache_time;
-#   warn "cache hit for $key" if DEBUG;
-#   1;
-# }
 
 sub cache_time {
   my $self = shift;
@@ -1653,57 +1423,10 @@ sub cache_time {
       $self->{cache_time} = shift;
   }
   return $self->{cache_time} if exists $self->{cache_time};
-  my ($ct) = $self->source->global_setting('cache time') =~ /(\d+)/;
-  return $ct if defined $ct;  # hours
-  return 1;                   # cache for one hour by default
+  my ($ct)                   = $self->source->global_time('cache time');
+  $ct                        = 1 unless defined $ct;  # cache one hour by default
+  return $self->{cache_time} = $ct/3600;  # global times are in seconds, we want hours
 }
-
-# =head2 get_cached_panel()
-
-#   ($image_uri,$map,$width,$height) = $self->get_cached_panel($cache_key)
-
-# Return cached image url, imagemap data, width and height of image.
-
-# =cut
-
-# sub get_cached_panel {
-#   my $self = shift;
-#   my $key  = shift;
-
-#   my $map_file                = $self->get_cache_base($key,'map')   or return;
-#   my $size_file               = $self->get_cache_base($key,'size')  or return;
-#   my ($image_file,$image_uri) = $self->get_cache_base($key,'image') or return;
-
-#   # get map data
-#   my $map_data = [];
-#   if (-e $map_file) {
-#     my $f = IO::File->new($map_file) or return;
-#     while (my $line = $f->getline) {
-#       push @$map_data, $line;
-#     }
-#     $f->close;
-#   }
-
-#   # get size data
-#   my ($width,$height);
-#   if (-e $size_file) {
-#     my $f = IO::File->new($size_file) or return;
-#     chomp($width = $f->getline);
-#     chomp($height = $f->getline);
-#     $f->close;
-#   }
-
-#   my $base = -e "$image_file.png" ? '.png'
-#            : -e "$image_file.jpg" ? '.jpg'
-# 	   : -e "$image_file.svg" ? '.svg'
-#            : '.gif';
-#   $image_uri  .= $base;
-#   $image_file .= $base;
-
-#   my $gd = GD::Image->new($image_file) unless $image_file =~ /svg$/;
-#   my $map_html  = $self->map_html(@$map_data);
-#   return ($image_uri,$map_html,$width,$height,$image_file,$gd,$map_data);
-# }
 
 # Convert the cached image map data
 # into HTML.

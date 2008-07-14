@@ -264,7 +264,7 @@ sub _feature_keyword_search {
   my $max_keywords = $source->global_setting('max keyword results');
   my @matches;
   if ($db->can('search_attributes')) {
-    my @attribute_names = shellwords ($source->global_setting('search attributes'));
+    my @attribute_names = shellwords ($source->global_setting('search attributes')||'');
     @attribute_names = ('Note') unless @attribute_names;
     @matches = $db->search_attributes($searchterm,\@attribute_names,$max_keywords);
   } elsif ($db->can('search_notes')) {

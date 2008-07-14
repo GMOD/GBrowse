@@ -12,7 +12,7 @@ use IO::String;
 use CGI;
 use FindBin '$Bin';
 
-use constant TEST_COUNT => 17;
+use constant TEST_COUNT => 19;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;
@@ -84,7 +84,8 @@ while (time()-$time < 10) {
     $probe_count++;
     my %status_counts;
     for my $label (keys %$requests) {
-	push @{$cumulative_status{$label}},$requests->{$label}->status;
+	my $status = $requests->{$label}->status;
+	push @{$cumulative_status{$label}},$status;
 	$status_counts{$requests->{$label}->status}++;
     }
     last if ($status_counts{AVAILABLE}||0) == 5;
@@ -112,7 +113,7 @@ my $view = $render->render_deferred_track(
     track_name => $track_name1,
 );
 my @images = $view =~ m!src=\"(/tmpimages/volvox/img/[a-z0-9]+\.png)\"!g;
-ok(scalar @images,1);
+ok(scalar @images,2);  # one for the main image, and one for the pad
 
 foreach (@images) {
     s!/tmpimages!/tmp/gbrowse_testing/tmpimages!;
@@ -120,13 +121,11 @@ foreach (@images) {
 ok(-e $images[0] && -s _);
 
 # does cache expire?
-$render->data_source->setting(general => 'cache time',0);
-sleep 1;
-
 $requests->{$track_name1}->cache_time(-1);
 ok( $requests->{$track_name1}->status, 'EXPIRED' );
 
 $render->data_source->setting( general => 'cache time', -1 );
+
 ok( substr(
         $render->render_deferred_track(
             cache_key  => $key1,

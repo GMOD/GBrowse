@@ -12,7 +12,7 @@ use IO::String;
 use CGI;
 use FindBin '$Bin';
 
-use constant TEST_COUNT => 17;
+use constant TEST_COUNT => 24;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;
@@ -143,7 +143,6 @@ ok(scalar @$features,1);
 
 $features    = $search->search_features_remotely('Cleavage*');  # this will appear in volvox3
 ok(scalar @$features,15);
-
 
 exit 0;
 

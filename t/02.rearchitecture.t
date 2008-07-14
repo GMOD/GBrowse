@@ -11,7 +11,7 @@ use File::Path 'rmtree';
 use FindBin '$Bin';
 use File::Spec;
 
-use constant TEST_COUNT => 53;
+use constant TEST_COUNT => 54;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 BEGIN {
@@ -127,12 +127,15 @@ ok($globals->create_data_source($session->source) ne $source);
 ok($source->html1,'This is inherited');
 ok($source->html2,'This is overridden');
 
+# does the timeout calculation work?
+ok($source->global_time('cache time'),3600);
+
 # Do semantic settings work?
 ok($source->setting(general => 'plugins'),'Aligner RestrictionAnnotator ProteinDumper TestFinder');
 ok($source->setting('plugins'),'Aligner RestrictionAnnotator ProteinDumper TestFinder');
 ok($source->semantic_setting(Alignments=>'glyph'),'segments');
 ok($source->semantic_setting(Alignments=>'glyph',30000),'box');
-ok($source->type2label('match',0),'Alignments');
+ok($source->type2label('alignment',0),'Alignments');
 
 # Do callbacks work (or at least, do we get a CODE reference back)?
 ok(ref($source->code_setting(EST=>'bgcolor')),'CODE');

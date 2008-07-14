@@ -56,13 +56,13 @@ sub render_navbar {
 
   my $plugin_form = join '',(
 			     start_form(-name=>'pluginform',-id=>'pluginform',
-					-onSubmit=>'update_segment(Form.serialize(this)); return false'),
+					-onSubmit=>'Controller.update_segment(Form.serialize(this)); return false'),
 			     $self->plugin_menu(),
 			     end_form);
 
   my $source_form = join '',(
 			     start_form(-name=>'sourceform',-id=>'sourceform',
-					-onSubmit=>'update_segment(this); return false'),
+					-onSubmit=>'Controller.update_segment(this); return false'),
 			     $self->source_menu(),
 			     end_form
 			    );
@@ -558,34 +558,34 @@ sub slidertable {
   my @lines =
     (image_button(-src     => "$buttonsDir/green_l2.gif",-name=>"left $full",
 		  -title   => "left $full_title",
-		  -onClick => "Controller.updateCoordinates(this.name)"
+		  -onClick => "Controller.update_coordinates(this.name)"
      ),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/green_l1.gif",-name=>"left $half",
 		  -title=>"left $half_title",
-		  -onClick => "Controller.updateCoordinates(this.name)"
+		  -onClick => "Controller.update_coordinates(this.name)"
      ),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/minus.gif",-name=>"zoom out $fine_zoom",
 		  -title=>"zoom out $fine_zoom",
-		  -onClick => "Controller.updateCoordinates(this.name)"
+		  -onClick => "Controller.update_coordinates(this.name)"
      ),
      '&nbsp;',
      span({-id=>'span_menu'},$self->zoomBar($segment,$whole_segment,$buttonsDir)),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/plus.gif",-name=>"zoom in $fine_zoom",
 		  -title=>"zoom in $fine_zoom",
-		  -onClick => "Controller.updateCoordinates(this.name)",
+		  -onClick => "Controller.update_coordinates(this.name)",
      ),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/green_r1.gif",-name=>"right $half",
 		  -title=>"right $half_title",
-		  -onClick => "Controller.updateCoordinates(this.name)"
+		  -onClick => "Controller.update_coordinates(this.name)"
      ),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/green_r2.gif",-name=>"right $full",
 		  -title=>"right $full_title",
-		  -onClick => "Controller.updateCoordinates(this.name)"
+		  -onClick => "Controller.update_coordinates(this.name)"
      ),
      '&nbsp;',
     );
@@ -616,7 +616,7 @@ sub zoomBar {
 		    -labels  => \%labels,
 		    -default => $length,
 		    -force   => 1,
-		    -onChange => 'Controller.updateCoordinates("set span "+this.value)',
+		    -onChange => 'Controller.update_coordinates("set span "+this.value)',
 		   );
 }
 

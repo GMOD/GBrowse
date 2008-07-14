@@ -95,10 +95,80 @@ sub global_setting {
   return $self->globals->setting(general=>$option);
 }
 
+# format for time can be in any of the forms...
+# "now" -- 0 seconds
+# "+180s" -- in 180 seconds
+# "+2m" -- in 2 minutes
+# "+12h" -- in 12 hours
+# "+1d"  -- in 1 day
+# "+3M"  -- in 3 months
+# "+2y"  -- in 2 years
+# "-3m"  -- 3 minutes ago(!)
+# If you don't supply one of these forms, we assume you are
+# specifying the date yourself
+
+sub global_time {
+    my $self   = shift;
+    my $option = shift;
+    my $time   = $self->global_setting($option) or return;
+    $time =~ s/\s*#.*$//; # strip comments
+
+    my(%mult) = ('s'=>1,
+                 'm'=>60,
+                 'h'=>60*60,
+                 'd'=>60*60*24,
+                 'M'=>60*60*24*30,
+                 'y'=>60*60*24*365);
+    my $offset = $time;
+    if (!$time || (lc($time) eq 'now')) {
+	$offset = 0;
+    } elsif ($time=~/^([+-]?(?:\d+|\d*\.\d*))([smhdMy])/) {
+	$offset = ($mult{$2} || 1)*$1;
+    }
+    return $offset;
+}
+
 # this method is for compatibility with some plugins
 sub config {
   my $self = shift;
   return $self;
+}
+
+sub unit_label {
+  my $self  = shift;
+  my $value = shift;
+
+  my $unit     = $self->setting('units')        || 'bp';
+  my $divider  = $self->setting('unit_divider') || 1;
+  $value /= $divider;
+  my $abs = abs($value);
+
+  my $label;
+  $label = $abs >= 1e9  ? sprintf("%.4g G%s",$value/1e9,$unit)
+         : $abs >= 1e6  ? sprintf("%.4g M%s",$value/1e6,$unit)
+         : $abs >= 1e3  ? sprintf("%.4g k%s",$value/1e3,$unit)
+	 : $abs >= 1    ? sprintf("%.4g %s", $value,    $unit)
+	 : $abs >= 1e-2 ? sprintf("%.4g c%s",$value*100,$unit)
+	 : $abs >= 1e-3 ? sprintf("%.4g m%s",$value*1e3,$unit)
+	 : $abs >= 1e-6 ? sprintf("%.4g u%s",$value*1e6,$unit)
+	 : $abs >= 1e-9 ? sprintf("%.4g n%s",$value*1e9,$unit)
+         : sprintf("%.4g p%s",$value*1e12,$unit);
+  if (wantarray) {
+    return split ' ',$label;
+  } else {
+    return $label;
+  }
+}
+
+sub commas {
+    my $self = shift;
+    my $i = shift;
+    return $i if $i=~ /\D/;
+    $i = reverse $i;
+    $i =~ s/(\d{3})/$1,/g;
+    chop $i if $i=~/,$/;
+    $i = reverse $i;
+    $i;
 }
 
 #copy over from Render.pm to provide wider availability?

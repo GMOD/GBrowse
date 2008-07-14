@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::CachedTrack;
 
-# $Id: CachedTrack.pm,v 1.4 2008-07-09 22:16:55 lstein Exp $
+# $Id: CachedTrack.pm,v 1.5 2008-07-14 23:45:08 lstein Exp $
 # This package defines a Bio::Graphics::Browser::Track option that manages
 # the caching of track images and imagemaps.
 
@@ -101,7 +101,6 @@ sub lock {
     my $dotfile = $self->dotfile;
     my $tsfile  = $self->tsfile;
     if (-e $dotfile) {  # if it exists, then either we are in process or something died
-	warn "OOPS";
 	return if $self->status eq 'PENDING';
     }
     my $f = IO::File->new(">$dotfile") or die "Can't open $dotfile for writing: $!";

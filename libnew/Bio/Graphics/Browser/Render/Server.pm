@@ -28,6 +28,7 @@ sub new {
     $socket_args{LocalPort} ||= 8123;
 
     my $d = HTTP::Daemon->new(%socket_args) or croak "could not create daemon socket: @_";
+
     return bless {
 	daemon => $d,
 	args   => \%socket_args,
@@ -60,9 +61,11 @@ sub run {
     };
 
 #    chdir '/';  # this is breaking relative paths in the regression test config files
-    close STDIN;
-    close STDOUT;
-    close STDERR unless $self->debug;
+    # close STDIN;
+    # close STDOUT;
+    open STDIN,"</dev/null";
+    open STDOUT,">/dev/null";
+    # close STDERR unless $self->debug;
 
     # accept loop in child process
     my $d = $self->d;
@@ -74,15 +77,15 @@ sub run {
 	if ($child) {
 	    $c->close();
 	} else {
-	    $d->close();
 	    $self->process_connection($c);
+	    $d->close();
 	    $c->close();
 	    exit 0;
 	}
 	print STDERR "$$: waiting for connection (",$self->listen_port,")\n" if $self->debug>1;
     }
     print STDERR "$$: exiting (",$self->listen_port,")\n" if $self->debug>1;
-    exit 0;
+    CORE::exit 0;
 }
 
 sub process_connection {
@@ -124,7 +127,7 @@ sub process_request {
 
 sub render_tracks {
     my $self = shift;
-    
+
     my $tracks	        = thaw param('tracks');
     my $settings	= thaw param('settings');
     my $datasource	= thaw param('datasource');
@@ -144,7 +147,7 @@ sub render_tracks {
 							     -source   => $datasource,
 							     -settings => $settings,
 							     -language => $language);
-    print STDERR "$$: got renderer()\n";
+    print STDERR "$$: got renderer()\n" if $self->debug;
 
     my $requests = $renderer->make_requests({labels => $tracks});
 

@@ -160,6 +160,7 @@ sub asynchronous_event {
 
         my $overview_scale_return_object
             = $self->asynchronous_update_overview_scale_bar();
+
         my $detail_scale_return_object
             = $self->asynchronous_update_detail_scale_bar();
 
@@ -193,7 +194,7 @@ sub asynchronous_event {
         return 1;
     }
 
-    if ( my $div_element_id = param('retreive_track') ) {
+    if ( my $div_element_id = param('retrieve_track') ) {
         $self->init_database();
         $self->init_plugins();
         $self->init_remote_sources();
@@ -549,7 +550,7 @@ sub region {
 	$region->search_features();
     }
 
-    $self->plugins->set_segments($region->segments);
+    $self->plugins->set_segments($region->segments) if $self->plugins;
     return $self->{region} = $region;
 }
 
@@ -651,6 +652,11 @@ sub fatal_error {
   my $self = shift;
   my @msg  = @_;
   croak 'Please call fatal_error() for a subclass of Bio::Graphics::Browser::Render';
+}
+
+sub zoomBar {
+    my $self = shift;
+    croak 'Please define zoomBar() in a subclass of Bio::Graphics::Browser::Render';
 }
 
 # not implemented
@@ -982,11 +988,24 @@ sub asynchronous_update_detail_scale_bar {
 sub asynchronous_update_element {
     my $self    = shift;
     my $element = shift;
+    $self->init_database();
+    my $source = $self->data_source;
+
     if ($element eq 'page_title') {
-	my $dsn = $self->data_source;
+	my $segment     = $self->segment;
+	my $dsn         = $self->data_source;
 	my $description = $dsn->description;
-	my $region      = $self->state->{name};
-	return "$description: $region";
+	return $description.'<br>'.
+	$self->tr('SHOWING_FROM_TO',
+		  scalar $source->unit_label($segment->length),
+		  $segment->seq_id,
+		  $source->commas($segment->start),
+		  $source->commas($segment->end));
+    }
+    elsif ($element eq 'span') {  # this is the popup menu that shows ranges
+	my $container = $self->zoomBar($self->segment,$self->whole_segment);
+	$container =~ s/<\/?select.+//g;
+	return $container;
     }
     elsif ($element eq 'landmark_search_field') {
 	return $self->state->{name};
@@ -995,7 +1014,6 @@ sub asynchronous_update_element {
 	return "<b>some day this will be the overview showing ".$self->state->{name}."</b>";
     }
     elsif ($element eq 'detail_panels') {
-        $self->init_database();
         $self->init_plugins();
         $self->init_remote_sources();
 	return join ' ',$self->render_detailview_panels($self->region->seg);

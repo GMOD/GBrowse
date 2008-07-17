@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.13 2008-07-14 23:45:07 lstein Exp $
+ $Id: controller.js,v 1.14 2008-07-17 23:16:04 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -151,6 +151,44 @@ var GBrowseController = Class.create({
 		       track_key:  track_keys[e]});
 	  });
       }
+    });
+  },
+
+  add_track:
+  function(track_name) {
+
+    new Ajax.Request('#',{
+      method:     'post',
+      parameters: {
+        add_track:  1,
+        track_name: track_name,
+      },
+      onSuccess: function(transport) {
+        var results    = transport.responseJSON;
+        var track_data = results.track_data;
+        for (var key in track_data){
+          this_track_data    = track_data[key];
+          var div_element_id = this_track_data.div_element_id;
+          var html           = this_track_data.track_html;
+          var panel_id       = this_track_data.panel_id;
+
+          //Append new html to the appropriate section
+          $(panel_id).innerHTML += html;
+
+          //Add New Track(s) to the list of observers and such
+          Controller.register_track(div_element_id,this_track_data.image_element_id,'standard') ;
+
+
+          //fire the segmentChanged for each track not finished
+          if (html.substring(0,18) == "<!-- AVAILABLE -->"){
+            Controller.reset_after_track_load();
+          }
+          else{
+            $(div_element_id).fire('model:segmentChanged',
+              { track_key:  this_track_data.track_key});
+          }
+        }
+      },
     });
   }
 });

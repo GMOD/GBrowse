@@ -20,6 +20,7 @@ use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
 use constant OVERVIEW_SCALE_LABEL => 'Overview Scale';
 use constant DETAIL_SCALE_LABEL   => 'Detail Scale';
+use constant EMPTY_IMAGE_HEIGHT   => 40;
 
 
 my %PLUGINS; # cache initialized plugins
@@ -222,6 +223,53 @@ sub asynchronous_event {
         return 1;
     }
 
+    if ( my $action = param('add_track') ) {
+        my $track_name = param('track_name');
+        warn "Adding Track $track_name";
+
+        $self->add_track_to_state($track_name);
+        my $track_keys = $self->begin_individual_track_render($track_name);
+        my %track_data;
+        foreach my $div_element_id ( keys %{ $track_keys || {} } ) {
+            my $track_key  = $track_keys->{$div_element_id};
+            my $track_name = '';
+            if ( $div_element_id =~ /^track_(.+)/ ) {
+                $track_name = $1;
+            }
+            my $image_width      = $self->get_image_width;
+            my $image_element_id = $track_name . "_image";
+            my $track_html       = $self->render_deferred_track(
+                cache_key        => $track_key,
+                track_name       => $track_name,
+                image_width      => $image_width,
+                image_height     => EMPTY_IMAGE_HEIGHT,
+                image_element_id => $image_element_id,
+                div_element_id   => $div_element_id,
+            ) || '';
+            my $panel_id = 'detail_panels';
+            if ( $track_name =~ /:overview$/ ) {
+                $panel_id = 'overview_panels';
+            }
+            elsif ( $track_name =~ /:region$/ ) {
+                $panel_id = 'region_panels';
+            }
+
+            $track_data{$div_element_id} = {
+                div_element_id   => $div_element_id,
+                track_key        => $track_key,
+                track_name       => $track_name,
+                track_html       => $track_html,
+                image_element_id => $image_element_id,
+                panel_id         => $panel_id,
+            };
+        }
+
+        print CGI::header('application/json');
+        print JSON::to_json( { track_data => \%track_data, } );
+
+        return 1;
+    }
+
     # toggle the visibility of sections by looking for "div_visible_*"
     # parameters
     for my $p ( grep {/^div_visible_/} param() ) {
@@ -288,6 +336,45 @@ sub begin_track_render {
     foreach my $cache_track_hash ( $cache_detail_track_hash,
         $cache_overview_track_hash )
     {
+        foreach my $track_label ( keys %{ $cache_track_hash || {} } ) {
+            $track_keys{ "track_" . $track_label }
+                = $cache_track_hash->{$track_label}->key();
+        }
+    }
+
+    return \%track_keys;
+}
+
+sub begin_individual_track_render {
+    my $self = shift;
+    my $label = shift;
+    $self->init_database();
+    $self->init_plugins();
+    $self->init_remote_sources();
+
+    my $section;
+    my $segment;
+    if ($label =~ /:overview$/){
+        $section = 'overview';
+        $segment = $self->whole_segment();
+    }
+    elsif ($label =~ /:region$/){
+        # NOT REALLY SUPPORTED YET
+        return {};
+        $section = 'region';
+    }
+    else{
+        $section = 'detail';
+        $segment = $self->segment();
+    }
+
+    # Start rendering the detail and overview tracks
+    my $cache_track_hash
+        = $self->render_deferred( $segment,
+        [ $label, ], $section, );
+
+    my %track_keys;
+    foreach my $cache_track_hash ( $cache_track_hash, ) {
         foreach my $track_label ( keys %{ $cache_track_hash || {} } ) {
             $track_keys{ "track_" . $track_label }
                 = $cache_track_hash->{$track_label}->key();
@@ -799,6 +886,15 @@ sub default_tracks {
   foreach ($self->data_source->default_labels) {
     $state->{features}{$_}{visible} = 1;
   }
+}
+
+sub add_track_to_state {
+  my $self  = shift;
+  my $label = shift;
+  my $state  = $self->state;
+
+  push @{$state->{tracks}}, $label;
+  $state->{features}{$label} = {visible=>0,options=>0,limit=>0};
 }
 
 sub update_state_from_cgi {
@@ -1438,26 +1534,15 @@ sub get_blank_panels {
     my $cache_track_hash = shift;
 
     my $html  = '';
-    my $state = $self->state;
-    my $source = $self->data_source;
-    my $renderer  = $self->get_panel_renderer();
-    my $image_pad = $renderer->image_padding;
-    my $padl      = $source->global_setting('pad_left');
-    my $padr      = $source->global_setting('pad_right');
-    $padl = $image_pad unless defined $padl;
-    $padr = $image_pad unless defined $padr;
 
-    my $image_width = $state->{'width'} + $padl + $padr;
+    my $image_width = $self->get_image_width;
     foreach my $track_name ( keys %{ $cache_track_hash || {} } ) {
         my $cache_key = $cache_track_hash->{$track_name}->key();
-        my %panel_args
-            = @{ $cache_track_hash->{$track_name}->panel_args()
-                || [] };
 
         $html .= $self->render_grey_track(
             track_name       => $track_name,
             image_width      => $image_width,
-            image_height     => 40,
+            image_height     => EMPTY_IMAGE_HEIGHT,
             image_element_id => $track_name . "_image",
             div_element_id   => "track_" . $track_name,
         );
@@ -1465,6 +1550,21 @@ sub get_blank_panels {
     }
     return $html;
 
+}
+
+sub get_image_width {
+    my $self = shift;
+    my $state = $self->state;
+    my $source = $self->data_source;
+    my $renderer  = $self->get_panel_renderer();
+    my $padl      = $source->global_setting('pad_left');
+    my $padr      = $source->global_setting('pad_right');
+    my $image_pad = $renderer->image_padding;
+    $padl = $image_pad unless defined $padl;
+    $padr = $image_pad unless defined $padr;
+
+    my $image_width = $state->{'width'} + $padl + $padr;
+    return $image_width;
 }
 
 # render_overview is now obsolete

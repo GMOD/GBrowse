@@ -22,7 +22,10 @@ function gbToggleTrack (button) {
   var track_name = button.value;
   var visible    = button.checked;
   var element    = document.getElementById("track_"+track_name);
-  if (!element) { return false }
+  if (!element && visible) { 
+    Controller.add_track(track_name);
+    return false; 
+  }
   if (visible) {
     element.style.display="block";
   } else {

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.19.2.6 2008-07-17 05:26:59 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.19.2.7 2008-07-17 05:49:50 scottcain Exp $
 
 =head1 NAME
 
@@ -98,7 +98,7 @@ use Bio::DB::GFF::Typename;
 use Data::Dumper;
 #dgg;not working# use Bio::Species;
 
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI Bio::DB::Das::Chado);

@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.19.2.5 2007-12-04 19:06:10 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.19.2.6 2008-07-17 05:26:59 scottcain Exp $
 
 =head1 NAME
 
@@ -98,7 +98,7 @@ use Bio::DB::GFF::Typename;
 use Data::Dumper;
 #dgg;not working# use Bio::Species;
 
-use constant DEBUG => 0;
+use constant DEBUG => 1;
 
 use vars '@ISA','$VERSION';
 @ISA = qw(Bio::Root::Root Bio::SeqI Bio::Das::SegmentI Bio::DB::Das::Chado);
@@ -166,6 +166,9 @@ sub new {
     }
 
     $where_part .= " and srcf.is_obsolete = false " unless $self->factory->allow_obsolete;
+
+    $where_part .= " and srcf.organism_id = ".$self->factory->organism_id
+         if $self->factory->organism_id;
 
     my $srcfeature_query = $factory->dbh->prepare( "
         select srcfeature_id from featureloc fl
@@ -398,6 +401,9 @@ sub _search_by_name {
   my $obsolete_part = "";
   $obsolete_part = " and is_obsolete = false " unless $self->factory->allow_obsolete;
 
+  $obsolete_part .= " and organism_id = ".$self->factory->organism_id
+       if $self->factory->organism_id;
+
   my $sth; 
    if ($feature_id) {
     $sth = $factory->dbh->prepare("
@@ -417,44 +423,33 @@ sub _search_by_name {
   }
  
   $sth->execute or Bio::Root::Root->throw("unable to validate name/length");
-  
+ 
+  my $where_part = '';
+  $where_part = " and f.organism_id = ".$self->factory->organism_id
+       if $self->factory->organism_id;
+  $where_part .= " and f.is_obsolete = 'false' " 
+       unless $self->factory->allow_obsolete;
+ 
   my $rows_returned = $sth->rows;
   if ($rows_returned == 0) { #look in synonym for an exact match
     warn "looking for a synonym to $quoted_name" if DEBUG;
     my $isth;
-    if ($self->factory->allow_obsolete) {
-      if ($self->factory->use_all_feature_names()) {
-        $isth = $factory->dbh->prepare ("
-          select afn.feature_id from all_feature_names 
-          where lower(name) = $quoted_name
-        ");
-      }
-      else {
-        $isth = $factory->dbh->prepare ("
-          select fs.feature_id from feature_synonym fs, synonym s
-          where fs.synonym_id = s.synonym_id and
-          lower(s.synonym_sgml) = $quoted_name
-        ");
-      }
+    if ($self->factory->use_all_feature_names()) {
+      $isth = $factory->dbh->prepare ("
+        select afn.feature_id from all_feature_names afn, feature f
+        where afn.feature_id = f.feature_id and
+        f.is_obsolete = 'false' and
+        lower(afn.name) = $quoted_name $where_part
+      ");
     }
-    else { #only look in current (not obsolete) features
-      if ($self->factory->use_all_feature_names()) {
-        $isth = $factory->dbh->prepare ("
-          select afn.feature_id from all_feature_names afn, feature f
-          where afn.feature_id = f.feature_id and
-          f.is_obsolete = 'false' and
-          lower(afn.name) = $quoted_name
-        ");
-      }
-      else {
-        $isth = $factory->dbh->prepare ("
-          select fs.feature_id from feature_synonym fs, synonym s, feature f
-          where fs.synonym_id = s.synonym_id and
-          f.feature_id = fs.feature_id and
-          f.is_obsolete = 'false' and 
-          lower(s.synonym_sgml) = $quoted_name
-        ");
-      }
+    else {
+      $isth = $factory->dbh->prepare ("
+        select fs.feature_id from feature_synonym fs, synonym s, feature f
+        where fs.synonym_id = s.synonym_id and
+        f.feature_id = fs.feature_id and
+        f.is_obsolete = 'false' and 
+        lower(s.synonym_sgml) = $quoted_name $where_part
+      ");
     }
     $isth->execute or Bio::Root::Root->throw("query for name in synonym failed");
     $rows_returned = $isth->rows;
@@ -462,20 +457,12 @@ sub _search_by_name {
     if ($rows_returned == 0) { #look in dbxref for accession number match
       warn "looking in dbxref for $quoted_name" if DEBUG;
 
-      if ($self->factory->allow_obsolete) {
-          $isth = $factory->dbh->prepare ("
-             select feature_id from feature_dbxref fd, dbxref d
-             where fd.dbxref_id = d.dbxref_id and
-                   lower(d.accession) = $quoted_name ");
-      }
-      else {
-          $isth = $factory->dbh->prepare ("
-             select fd.feature_id from feature_dbxref fd, dbxref d, feature f
-             where fd.dbxref_id = d.dbxref_id and
-                   f.feature_id = fd.feature_id and
-                   f.is_obsolete = 'false' and
-                   lower(d.accession) = $quoted_name ");
-      }
+      $isth = $factory->dbh->prepare ("
+         select fd.feature_id from feature_dbxref fd, dbxref d, feature f
+         where fd.dbxref_id = d.dbxref_id and
+               f.feature_id = fd.feature_id and
+               f.is_obsolete = 'false' and
+               lower(d.accession) = $quoted_name $where_part");
       $isth->execute or Bio::Root::Root->throw("query for accession failed");
       $rows_returned = $isth->rows;
 
@@ -905,6 +892,9 @@ sub features {
                   ."fl.srcfeature_id = $srcfeature_id and fl.rank=0 ";
   }
 
+  $where_part .= " and f.organism_id = ".$self->factory->organism_id
+      if $self->factory->organism_id;
+
   my $query       = "$select_part\n$from_part\n$where_part\n$order_by\n";
 
   #Recursive Mapping
@@ -1009,7 +999,7 @@ sub features {
 
   if ($iterator) {
    warn "using Bio::DB::Das::ChadoIterator\n" if DEBUG;
-    return Bio::DB::Das::ChadoIterator->new(\@features);
+    return Bio::DB::Das::ChadoIterator->new(\@features) if @features;
   } elsif (wantarray) {
     return @features;
   } elsif (@features >0) {
@@ -1151,6 +1141,8 @@ sub _features2level(){
 	."left join analysisfeature af ON (af.feature_id = f.feature_id) ";
 
     $where_part   = " where f.feature_id = $feature_id and fl.rank=0 ";
+    $where_part  .= " and f.organism_id = ".$self->factory->organism_id
+           if $self->factory->organism_id;
 
     ##URGI Added a sub request to get the refclass srcfeature id to map all the features from this reference region.
     ##We then filter and are sure that we are getting the features located on the reference feature with the good
@@ -1327,7 +1319,7 @@ sub _features2level(){
 
   if ($iterator) {
     warn "using Bio::DB::Das::ChadoIterator\n" if DEBUG;
-    return Bio::DB::Das::ChadoIterator->new(\@features);
+    return Bio::DB::Das::ChadoIterator->new(\@features) if @features;
   } elsif (wantarray) {
     return @features;
   } else {
@@ -1595,7 +1587,8 @@ sub get_feature_stream {
     warn "using get_feature_stream\n" if DEBUG;
     warn "feature array: $features\n" if DEBUG;
     warn "first feature: $$features[0]\n" if DEBUG;
-  return Bio::DB::Das::ChadoIterator->new($features);
+  return Bio::DB::Das::ChadoIterator->new($features) if $features;
+  return;
 }
 
 #dgg patch for DasI need

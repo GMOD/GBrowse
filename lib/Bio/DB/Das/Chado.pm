@@ -1,4 +1,4 @@
-# $Id: Chado.pm,v 1.68.4.9.2.12.2.8 2008-03-12 19:07:13 scottcain Exp $
+# $Id: Chado.pm,v 1.68.4.9.2.12.2.9 2008-07-17 05:26:58 scottcain Exp $
 
 =head1 NAME
 
@@ -96,7 +96,7 @@ use vars qw($VERSION @ISA);
 
 use constant SEGCLASS => 'Bio::DB::Das::Chado::Segment';
 use constant MAP_REFERENCE_TYPE => 'MapReferenceType'; #dgg
-use constant DEBUG => 0;
+use constant DEBUG => 1;
 
 $VERSION = 0.11;
 @ISA = qw(Bio::Root::Root Bio::DasI);
@@ -207,6 +207,10 @@ sub new {
   $self->srcfeatureslice($arg{-srcfeatureslice} ? $arg{-srcfeatureslice} : 0);
   $self->do2Level($arg{-do2Level} ? $arg{-do2Level} : 0);
 
+  if ($arg{-organism}) {
+    $self->organism_id($arg{-organism});
+  }
+
   #determine if all_feature_names view or table exist
   #$self->use_all_feature_names();
 
@@ -253,6 +257,43 @@ sub use_all_feature_names {
 
     return $self->{use_all_feature_names};
 }
+
+=head2 organism_id
+
+  Title   : organism_id
+  Usage   : $obj->organism_id()
+  Function: set or return the organism_id
+  Returns : the value of the id
+  Args    : to return the flag, none; to set, the common name of the organism
+
+If -organism is set when the Chado feature is instantiated, this method
+queries the database with the common name to cache the organism_id.
+
+=cut
+
+sub organism_id {
+    my $self = shift;
+    my $organism_name = shift;
+
+    if (!$organism_name) {
+        return $self->{'organism_id'};
+    }
+
+    my $dbh = $self->dbh;
+    my $org_query = $dbh->prepare("SELECT organism_id FROM organism WHERE common_name = ?");
+
+    $org_query->execute($organism_name) or die "organism query failed:$!";
+
+    my($organism_id) = $org_query->fetchrow_array;
+
+    if ($organism_id) {
+        return $self->{'organism_id'} = $organism_id;
+    }
+    else {
+        $self->warn("organism query returned nothing--I don't know what to do");
+    }
+}
+
 
 
 =head2 inferCDS
@@ -772,7 +813,7 @@ sub _by_alias_by_name {
   my ($select_part,$from_part,$where_part);
 
   if ($class) {
-      warn "class: $class";
+      #warn "class: $class";
       my $type = ($class eq 'CDS' && $self->inferCDS)
                  ? $self->name2term('polypeptide')
                  : $self->name2term($class);
@@ -788,6 +829,9 @@ sub _by_alias_by_name {
       $where_part.= " f.type_id in ( $type ) ";
   }
 
+  if ($self->organism_id) {
+      $where_part.= " AND f.organism_id =".$self->organism_id;
+  }
 
   if ( $operation eq 'by_alias') {
    if ($self->use_all_feature_names()) {
@@ -1133,6 +1177,10 @@ sub _complex_search {
         $where_part.= "and ga.feature_id = f.feature_id and "
                      ."f.type_id = $type";
     }
+
+    $where_part .= " and organism_id = ".$self->organism_id 
+        if $self->organism_id;
+ 
     my $query = $select_part . $from_part . $where_part;
     return ($name, $query);
 }
@@ -1401,7 +1449,10 @@ sub attributes {
 
   #get feature_id
 
-  my $sth = $self->dbh->prepare("select feature_id from feature where uniquename = ?");
+  my $query = "select feature_id from feature where uniquename = ?";
+  $query .= " and organism_id = ".$self->organism_id if $self->organism_id;
+
+  my $sth = $self->dbh->prepare($query);
   $sth->execute($id) or $self->throw("failed to get feature_id in attributes"); 
   my $hashref = $sth->fetchrow_hashref;
   my $feature_id = $$hashref{'feature_id'};

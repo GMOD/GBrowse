@@ -47,7 +47,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbgff.PLS,v 1.1.2.7 2008-06-19 20:41:14 lstein Exp $
+# $Id: gbgff.PLS,v 1.1.2.8 2008-07-17 03:50:55 lstein Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -100,13 +100,15 @@ sub print_gff3 {
     $self->print_configuration($_,$labels)      for $self->config;
     $self->print_configuration($_,[$_->labels]) for @$files;
 
+    my %filters = map {$_ => $self->config->setting($_=>'filter')||undef} @$labels;
+
     my $date = localtime;
     print "##gff-version 3\n";
     print "##date $date\n";
     print "##source gbrowse gbgff gff3 dumper\n";
 
-    $self->print_gff3_data($_,$types)  for $self->db;
-    $self->print_gff3_data($_)         for @$files;
+    $self->print_gff3_data($_,$types,\%filters)  for $self->db;
+    $self->print_gff3_data($_)                   for @$files;
 }
 
 sub config { shift->{config} }
@@ -257,7 +259,7 @@ sub labels_to_files {
 					    -map_coords     => $mapper,
 		);
 	};
-	push @files,$featurefile;
+	push @files,$featurefile if $featurefile;
     }
 	
     return \@files;
@@ -302,8 +304,11 @@ sub print_gff3_data {
     my $self    = shift;
     my $db      = shift;
     my $types   = shift;
+    my $filters = shift;
 
     my $s       = $self->segment;
+    my $c       = $self->config;
+    my $len     = $s->length;
 
     my @args    = (-seq_id => $s->seq_id,
 		   -start  => $s->start,
@@ -311,7 +316,11 @@ sub print_gff3_data {
     push @args,(-type=>$types) if $types;
     my $iterator = $db->get_seq_stream(@args);
 
+  FEATURE:
     while ( my $f = $iterator->next_seq ) {
+	for my $l ($c->feature2label($f,$len)) {
+	    next FEATURE  if $filters->{$l} && !$filters->{$l}->($f);
+	}
 	$self->print_feature($f);
     }
 }

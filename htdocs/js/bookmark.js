@@ -1,4 +1,4 @@
-/* $Id: bookmark.js,v 1.1.2.1 2008-06-25 16:24:13 lstein Exp $ 
+/* $Id: bookmark.js,v 1.1.2.2 2008-07-17 03:29:23 lstein Exp $ 
 * Modified from the dynamic drive dhtml code library, whose copyright appears
 * below.
 */
@@ -14,7 +14,7 @@
 function bookmarksite(title,url){
     if (window.sidebar) {// firefox
 	window.location.href=url;
-	alert("Close this window. Then press control-D to bookmark this view.");
+	alert("You may now add this page's URL to your bookmarks.");
     }
     else if(window.opera && window.print){ // opera
 	var elem = document.createElement('a');

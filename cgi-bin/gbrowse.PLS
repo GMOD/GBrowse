@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.90 2008-07-08 22:48:46 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.91 2008-07-17 03:29:22 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2801,68 +2801,6 @@ sub edit_uploaded_file {
   print end_form();
   print_bottom($VERSION);
 }
-
-# moved into $CONFIG
-# sub coordinate_mapper {
-#   my $current_segment = shift;
-#   my $optimize        = shift;
-
-#   my $db              = open_database();
-
-#   my ($ref,$start,$stop) = ($current_segment->seq_id,
-# 			    $current_segment->start,$current_segment->end);
-#   my %segments;
-
-#   my $closure = sub {
-#     my ($refname,@ranges) = @_;
-
-#     # hack for timing tests - this disables coordinate remapping
-#     # and shows what would happen if user uploaded everything in abs
-#     # coordinates.
-#     if (0)  {  # turn on for timing tests
-#       return unless $refname eq $ref;
-#       my @in_range = grep {$_->[0] <= $stop && $_->[1] >= $start} @ranges;
-#       return unless @in_range;
-#       return ($refname,@in_range);
-#     }
-
-#     unless (exists $segments{$refname}) {
-#       my @segments = sort {$a->length<=>$b->length}   # get the longest one
-# 	map {
-# 	  eval{$_->absolute(0)}; $_  # so that rel2abs works properly later
-# 	}
-# 	  $CONFIG->name2segments($refname,$db,TOO_MANY_SEGMENTS,1);
-#       $segments{$refname} = $segments[0];
-#       return unless @segments;
-#     }
-
-#     my $mapper   = $segments{$refname} || return;
-#     my $absref   = $mapper->abs_ref;
-#     my $cur_ref  = eval {$current_segment->abs_ref}
-#        || eval{$current_segment->ref};  # account for api changes in Bio::SeqI
-#     return unless $absref eq $cur_ref;
-
-#     my @abs_segs;
-#     if ($absref eq $refname) {  # doesn't need remapping
-#       @abs_segs = @ranges;
-#     } else {
-#       @abs_segs = map {[$mapper->rel2abs($_->[0],$_->[1])]} @ranges;
-#     }
-
-#     # this inhibits mapping outside the displayed region
-#     if ($optimize) {
-#       my $in_window;
-#       foreach (@abs_segs) {
-# 	next unless defined $_->[0] && defined $_->[1];
-# 	$in_window ||= $_->[0] <= $stop && $_->[1] >= $start;
-#       }
-#       return $in_window ? ($absref,@abs_segs) : ();
-#     } else {
-#       return ($absref,@abs_segs);
-#     }
-#   };
-#   return $closure;
-# }
 
 sub bookmark_link {
   my $settings = shift;

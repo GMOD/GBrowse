@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.91 2008-07-17 03:29:22 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.92 2008-07-18 19:14:01 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -292,10 +292,7 @@ elsif ($plugin_action eq $CONFIG->tr('Go') &&
 if (my $to_download = (param($CONFIG->tr('Download_file')) ||
 		       ($file_action && param($file_action) eq $CONFIG->tr('Download_file')) && $file)) {
   warn "FILE DOWNLOAD, download = $to_download" if DEBUG;
-  print_header(-cookie       => $cookie,
-	       -attachment   =>  $to_download,
-	       -type         => 'application/octet-stream');
-  print_uploaded_file_features($page_settings,$to_download);
+  do_annotation_file_download($to_download);
   exit 0;
 }
 
@@ -311,7 +308,8 @@ warn "ADJUSTED TRACKS = @{$page_settings->{tracks}}" if DEBUG;
 
 # NOTE: we may exit out on the next statement if the user wants to download a previously-
 # uploaded file
-handle_uploads($page_settings) || exit 0 unless $CONFIG->section_setting('upload_tracks') eq 'off';
+handle_uploads($page_settings) || exit 0 
+    unless $CONFIG->section_setting('upload_tracks') eq 'off';
 
 ## UPDATING THE PERSISTENT SETTINGS##############################################################
 
@@ -1888,12 +1886,13 @@ sub upload_table {
     my $link = a({-href=>"?$download=$file"},"[$name]");
     my @info =  get_uploaded_file_info($settings->{features}{$file}{visible}
 				       && $feature_files->{$file});
+    my $escaped_file = CGI::escape($file);
     $cTable .=  TR({-class=>'uploadbody'},
 		   th({-width=>'20%',-align=>'right'},$link),
 		   td({-colspan=>3},
-		      submit(-name=>"modify.$file",-value=>$CONFIG->tr('Edit')).'&nbsp;'.
-		      submit(-name=>"modify.$file",-value=>$CONFIG->tr('Download_file')).'&nbsp;'.
-		      submit(-name=>"modify.$file",-value=>$CONFIG->tr('Delete'))));
+		      submit(-name=>"modify.$escaped_file",-value=>$CONFIG->tr('Edit')).'&nbsp;'.
+		      submit(-name=>"modify.$escaped_file",-value=>$CONFIG->tr('Download_file')).'&nbsp;'.
+		      submit(-name=>"modify.$escaped_file",-value=>$CONFIG->tr('Delete'))));
     $cTable .= TR({-class=>'uploadbody'},td('&nbsp;'),td({-colspan=>3},@info));
   }
 
@@ -1945,9 +1944,11 @@ sub das_table {
 	  warn "url = $url" if DEBUG_EXTERNAL;
 	  next unless $url =~ /^(ftp|http):/ && $feature_files->{$url};
 	  warn "external_table(): url = $url" if DEBUG;
+
+	  my $escaped_url = CGI::escape($url);
 	  push @rows,th({-align=>'right',-width=>'20%'},"URL",++$count).
 	      td(textfield(-name=>'eurl',-size=>80,-value=>$url,-override=>1),
-		 submit(-name=>"modify.$url",-value=>$CONFIG->tr('Delete')),
+		 submit(-name=>"modify.$escaped_url",-value=>$CONFIG->tr('Delete')),
 		 br,
 		 a({-href=>$f,-target=>'help'},'['.$CONFIG->tr('Download').']'),
 		 get_uploaded_file_info($settings->{features}{$url}{visible} 
@@ -2564,15 +2565,15 @@ sub handle_uploads {
   my $page_settings = shift;
 
   my ($file_action)         = grep {/^modify\./} param();
+
   (my $file = $file_action) =~ s/^modify\.// if $file_action;
+  $file = CGI::unescape($file);
 
   # This gets called if the user wants to download his annotation data
   if (my $to_download = (param($CONFIG->tr('Download_file')) ||
 			 ($file_action && param($file_action) eq $CONFIG->tr('Download_file')) && $file)) {
-    warn "FILE DOWNLOAD, download = $to_download" if DEBUG;
-    print_header(-attachment   =>  $to_download,
-		 -type         => 'application/octet-stream');
-    print_uploaded_file_features($page_settings,$to_download);
+    my $download = CGI::unescape($to_download);
+    do_annotation_file_download($download);
     return 0;  # this will cause an exit from the script
   }
 
@@ -2725,6 +2726,15 @@ sub load_plugin_annotators {
     push @{$settings->{tracks}},$name unless $listed{$name};
   }
 
+}
+
+sub do_annotation_file_download {
+    my $to_download = shift;
+    $to_download    = CGI::unescape($to_download);
+    (my $fname = $to_download) =~ s/^file://;
+    print_header(-attachment   => $fname,
+		 -type         => 'application/octet-stream');
+    print_uploaded_file_features($page_settings,$to_download);
 }
 
 sub print_uploaded_file_features {

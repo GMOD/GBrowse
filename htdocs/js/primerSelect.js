@@ -4,7 +4,7 @@
                       This class handles primers-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: primerSelect.js,v 1.1.2.1 2008-05-27 10:32:35 sheldon_mckay Exp $
+ $Id: primerSelect.js,v 1.1.2.2 2008-07-18 10:37:50 sheldon_mckay Exp $
 
 */
 
@@ -26,6 +26,9 @@ Primers.prototype = new SelectArea();
 // Primers-specific config.
 Primers.prototype.initialize = function() {
   var self = new Primers;
+
+  // If the primers have been designed, we are not needed
+  if (document.mainform.configured.value) return false;
   
   var i = document.getElementById(self.imageId);
   if (!i) return false;

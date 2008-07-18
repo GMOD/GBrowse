@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.36 2008-06-24 17:51:28 lstein Exp $
+ $Id: balloon.js,v 1.1.2.37 2008-07-18 10:37:50 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -348,6 +348,9 @@ Balloon.prototype.doShowTooltip = function() {
     var top      = margin + self.shadow;
     var closeImg = new Image();
     closeImg.src = self.closeButton;
+    // sometimes null on first load, use the default
+    // width in such cases
+    var closeWidth = closeImg.width || 16;
     var marginLeft = closeImg.width - margin;
     delete closeImg;
  
@@ -478,7 +481,7 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
   // flip left or right, as required
   if (hOrient == 'left') {
     var activeRight = pageWidth - self.activeLeft;
-    self.setStyle(balloon,'right',activeRight + self.xOffset);
+    self.setStyle(balloon,'right',activeRight);// - self.xOffset);
   }
   else {
     self.setStyle(balloon,'left',self.activeRight - self.xOffset);

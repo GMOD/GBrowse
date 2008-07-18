@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.10 2008-06-30 20:48:59 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.11 2008-07-18 10:37:49 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -25,7 +25,7 @@ http://frodo.wi.mit.edu/primer3/primer3_code.html.
 =head2 Targeting a feature or coordinate
 
 The target for PCR primer design is selected by clicking on an image map.
-For aggregate features such as gene models, etc, there is a mousover menu
+For aggregate features such as gene models, etc, there is a mouseover menu
 to select the individual part of the whole feature
 
 
@@ -142,12 +142,11 @@ sub reconfigure {
   my $target_region = param('target_region');
   my ($target, $lb,$rb);
   if ($target_region) {
-    ($target, $lb,$rb) = $target_region =~ /^(\S+)\:(-?\d+)\.\.(-?\d+)$/;
+    ($lb,$rb) = $target_region =~ /^\S+\:(-?\d+)\.\.(-?\d+)$/;
   }
   else {
-    $target = param('target');#$self->config_param('target');
-    $lb     = param('lb');#$self->config_param('lb');
-    $rb     = param('rb');#$self->config_param('rb');
+    $lb     = param('lb') || $self->config_param('lb');
+    $rb     = param('rb') || $self->config_param('rb');
   }
 
   if ($lb && $rb) {
@@ -157,10 +156,8 @@ sub reconfigure {
     # round to nearest 50 bp
     $conf->{size_range} = join '-', map {$_||=50} nearest(50, $min_size, $max_size);
 
-    # make sure target is within the selected region
-    if (!$target || $target < $lb || $target > $rb) {
-      $target = int( ($lb+$rb)/2 );
-    }
+    # make sure target is always centered in the selected region
+    $target = int( ($lb+$rb)/2 );
   }
 
   $conf->{target}  = $target;
@@ -199,7 +196,6 @@ sub configure_form {
     $url =~ s/$cfg/$go/;
     return "<script type='text/javascript'>window.location='$url';</script>";
   }
-
 
   # make sure the target is not stale for the initial config
   delete $conf->{target} if !($lb || $rb); 
@@ -242,40 +238,41 @@ sub configure_form {
   my $map_text = $self->map_header;
 
   my $on = $feats ? 0 : 1;
-  my $no_target = li("There currently is no target region selected.")
-      if ($rb - $lb) < 3;
-  my $has_buttons = li("The size of potential PCR products can be adjusted via the 'Product size range' option below")
-      unless $no_buttons;
-  my $flanked = $no_target ? 'red line' : 'shaded region';
-  my $boundaries = li("The boundaries of the shaded target region can be adjusted by clicking on the lower scalebar")
-      unless $no_target;
-  my $click_feat = $no_target ? li("Click on a sequence feature to select")
-      : li("Click on a different sequence feature to change the selection");
+#  my $no_target = li("There currently is no target region selected.")
+#      if ($rb - $lb) < 3;
+#  my $has_buttons = li("The size of potential PCR products can be adjusted via the 'Product size range' option below")
+#      unless $no_buttons;
+#  my $flanked = $no_target ? 'red line' : 'shaded region';
+#  my $boundaries = li("The boundaries of the shaded target region can be adjusted by clicking on the lower scalebar")
+#      unless $no_target;
+#  my $click_feat = $no_target ? li("Click on a sequence feature to select")
+#      : li("Click on a different sequence feature to change the selection");
       
 
-  my $zone = $self->toggle( { on => $on, override => 0 },
-		     'Targetting information',
-		     font( {-size => -1},
-			   ul( $no_target || '', 
-			       li("PCR primers will flank the $flanked."),
-			       $click_feat || '',
-			       $boundaries || '',
-			       $has_buttons || ''
-			   ) )
-		     ) . br;
+#  my $zone = $self->toggle( { on => $on, override => 0 },
+#		     'Targetting information',
+#		     font( {-size => -1},
+#			   ul( $no_target || '', 
+#			       li("PCR primers will flank the $flanked."),
+#			       $click_feat || '',
+#			       $boundaries || '',
+#			       $has_buttons || ''
+#			   ) )
+#		     ) . br;
 
+  my $rows;
+  if ($map_text) {
+    $rows = [th($map_text) . th($zoom_menu),
+	     td( { -class => 'searchbody', -colspan => 2 }, $image . br)];
+  }
+  else {
+    $rows = td( { -class => 'searchbody', -colspan => 2 }, $image . br);
+  }
   $html .= table(
-		 { -style => "width:${table_width}px" },
-    Tr(
-       { -class => 'searchtitle' },
-      [ th($map_text) . th($zoom_menu),
-        td( { -class => 'searchbody', -colspan => 2 }, $image . br),
-        #td( { -class => 'searchbody', -colspan => 2}, $zone )
-      ]
-    )
-		 );
-
-
+    { -style => "width:${table_width}px" },
+    Tr( { -class => 'searchtitle' }, $rows )
+      );
+  
   unless ($no_buttons) {
     my @col1 = grep {/Primer|Tm|Product/} keys %$atts;
     my @col2 = grep { !/Primer|Tm|Product/ } keys %$atts;
@@ -315,19 +312,7 @@ sub configure_form {
 }
 
 sub map_header {
-  my $recenter = a(
-    { -href  => '#',
-      -title => 'Click the top scale-bar to recenter the image'
-    },
-    'recenter'
-  );
-  my $select_t = a(
-    { -href  => '#',
-      -title => 'Click a sequence feature below to select a target'
-    },
-    'select a PCR target'
-  );
-
+  return '' if param('configured');
   return "Press 'Design Primers' or click and drag on the ruler to select a PCR target";
 }
 
@@ -346,29 +331,14 @@ sub dump {
 <script src="/gbrowse/js/balloon.js" type="text/javascript"></script>
 <script>
 var balloon = new Balloon;
-  balloon.balloonImage        = '/gbrowse/images/balloons/balloon.png';
-  balloon.ieImage             = '/gbrowse/images/balloons/balloon_ie.png';
-  balloon.upLeftStem          = '/gbrowse/images/balloons/up_left.png';
-  balloon.downLeftStem        = '/gbrowse/images/balloons/down_left.png';
-  balloon.upRightStem         = '/gbrowse/images/balloons/up_right.png';
-  balloon.downRightStem       = '/gbrowse/images/balloons/down_right.png';
-  balloon.closeButton         = '/gbrowse/images/balloons/close.png';
-  balloon.delayTime = 500;
+  balloon.images              = '/gbrowse/images/balloons';
+  balloon.delayTime = 200;
 </script>
 END
 
   print start_html( -style => $style_sheet, -title => 'PCR Primers', -onload => "Primers.prototype.initialize()", -head => $head );
   print $self->browser_config->header;
 
-  # reset off-scale target if required
-#  delete $conf->{target} if $conf->{target} 
-#    && ($conf->{target} > $segment->end - 1000 || $conf->{target} < $segment->start + 1000);
-#  delete $conf->{lb} if $conf->{lb} 
-#    && ($conf->{lb} > $segment->end - 1000 || $conf->{lb} < $segment->start);
-#  delete $conf->{rb} if $conf->{rb} 
-#    && ($conf->{rb} < $segment->start + 1000 || $conf->{rb} > $segment->end);
-#  delete $conf->{target} unless $conf->{lb} && $conf->{rb};
-  
   my $target = $self->focus($segment);
   my $lb = $conf->{lb} || $target;
   my $rb = $conf->{rb} || $target;
@@ -376,13 +346,14 @@ END
   # check for a zoom request
   my $segment_size = $self->is_zoom;
 
-  # Make room if target region is too close to the ends
+  # Make room if target region is not too close to the ends
   my ($new_start,$new_end);
-  if ($rb >= $segment->end - 500) {
-    $new_end = $rb + 500;
+  my ($edge)  = sort {$a <=> $b} (500,$segment->length/10);
+  if ($rb >= $segment->end - $edge) {
+    $new_end = $rb + $edge;
   }
-  if ($lb <= $segment->start + 500) {
-    $new_start = $lb - 500;
+  if ($lb <= $segment->start +$edge) {
+    $new_start = $lb - $edge;
   }
   if ($new_start || $new_end) {
     ($segment) = $self->database->segment( -name  => $segment->ref,
@@ -481,8 +452,8 @@ sub primer_results {
   
   my ( @rows, @feats );
   
-  my $text = "This value should be less than 1 for best results but don\'t worry too much";
-  my $Primer_Pair_Quality = 'Primer_Pair_Quality '.a( { -href => 'javascript:void(0)', -title => $text}, '[?]'); 
+  my $text = "This primer pair quality value should be less than 1 for best results but don&#39;t worry too much";
+  my $Primer_Pair_Quality = 'Primer_Pair_Quality '.a( { -style=>"color:blue;cursor:pointer", -onmouseover => "balloon.showTooltip(event,'$text',0,350)"}, '[?]'); 
   my $spacer = td( {-width => 25}, '&nbsp;');
 
   for my $n ( 1 .. $num ) {
@@ -518,7 +489,8 @@ sub primer_results {
    push @feats, Bio::Graphics::Feature->new( -ref   => $segment->ref,
 					     -start => $r{startleft}-20,
 					     -end   => $r{startright}+20,
-					     -type   => 'primers');
+					     -type  => 'primers',
+                                             -name  => "set $n ");
     push @rows,
     Tr(
       [ 
@@ -557,7 +529,8 @@ sub primer_results {
     bgcolor => 'red',
     glyph   => 'primers',
     height  => 10,
-    label   => 1
+    label   => 1,
+    label_position => 'left',
   };
 
   $featurefile->add_type( 'Primers' => $options );
@@ -573,9 +546,8 @@ sub primer_results {
   my $tlength = $rb - $lb;
   my $config_html = $self->configure_form($segment,$target,$lb,$rb,$featurefile);
 
-  unshift @rows, Tr( [ $spacer . td(h1({-align => 'center'},"Predicted PCR primers ") ),
-		    $spacer . td($config_html) ] );
-
+  unshift @rows, Tr( [ $spacer . td(h1({-align => 'center'},"Predicted PCR primers ") ) ] );
+#		    $spacer . td($config_html) ] );
   print table(
 	      { -style => "width:900px" },
 	      [ @rows,
@@ -584,7 +556,7 @@ sub primer_results {
 		    ),
 		$back
 		]
-	      );
+	      ), end_html;
   exit(0);
 }
 

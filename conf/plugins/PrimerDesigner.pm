@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.11 2008-07-18 10:37:49 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.12 2008-07-18 10:41:53 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -531,6 +531,7 @@ sub primer_results {
     height  => 10,
     label   => 1,
     label_position => 'left',
+    sort_order => 'name'
   };
 
   $featurefile->add_type( 'Primers' => $options );

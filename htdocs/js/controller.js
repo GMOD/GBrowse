@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.14 2008-07-17 23:16:04 mwz444 Exp $
+ $Id: controller.js,v 1.15 2008-07-18 22:02:30 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -96,6 +96,7 @@ var GBrowseController = Class.create({
 		  Controller.reset_after_track_load();
 		}
 		else if (transport.responseText.substring(0,16) == "<!-- EXPIRED -->"){
+		  detail_div.innerHTML = transport.responseText;
 		  Controller.periodic_updaters[detail_div_id].stop();
 		  Controller.reset_after_track_load();
 		}

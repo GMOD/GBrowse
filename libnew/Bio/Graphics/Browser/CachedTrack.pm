@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::CachedTrack;
 
-# $Id: CachedTrack.pm,v 1.5 2008-07-14 23:45:08 lstein Exp $
+# $Id: CachedTrack.pm,v 1.6 2008-07-18 22:02:31 mwz444 Exp $
 # This package defines a Bio::Graphics::Browser::Track option that manages
 # the caching of track images and imagemaps.
 
@@ -210,6 +210,7 @@ sub expired {
 
     my $mtime    = (stat($datafile))[9];
     my $elapsed  = $time-$mtime;
+    return 0 if ( $mtime and not $cache_time);
 
     return $elapsed > $cache_time;
 }

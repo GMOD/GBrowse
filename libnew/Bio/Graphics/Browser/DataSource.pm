@@ -110,7 +110,10 @@ sub global_setting {
 sub global_time {
     my $self   = shift;
     my $option = shift;
-    my $time   = $self->global_setting($option) or return;
+
+    my $time = $self->global_setting($option);
+    return unless defined($time);
+
     $time =~ s/\s*#.*$//; # strip comments
 
     my(%mult) = ('s'=>1,

@@ -337,6 +337,8 @@ END
    # HELP PAGES
    #--------------
 
+   OK                 => 'OK',
+
    CLOSE_WINDOW => 'Close this window',
 
    TRACK_DESCRIPTIONS => 'Track Descriptions & Citations',

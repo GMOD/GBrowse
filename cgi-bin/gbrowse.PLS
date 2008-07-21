@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.92 2008-07-18 19:14:01 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.93 2008-07-21 15:03:46 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1631,10 +1631,17 @@ sub track_share {
 	$labels      = $label;
     }
 
-    my $gbgff    = url(-full=>1,-path_info=>1);
-    $gbgff       =~ s/gbrowse/gbgff/;
-    $gbgff      .= "?q=\$segment;t=$labels";
-    $gbgff      .= ";id=".$settings->{id} if $labels =~ /file:/;
+    my $gbgff;
+    if ($label =~ /^(http|ftp):/) { # reexporting and imported track!
+	$gbgff   = $label;
+    }
+
+    else {
+	$gbgff    = url(-full=>1,-path_info=>1);
+	$gbgff       =~ s/gbrowse/gbgff/;
+	$gbgff      .= "?q=\$segment;t=$labels";
+	$gbgff      .= ";id=".$settings->{id} if $labels =~ /file:/;
+    }
 
     my $das_types    =  join (';',
 			  map{"type=".CGI::escape($_)}
@@ -1679,7 +1686,7 @@ sub track_share {
 		)
 	    );
     }
-    print p(button(-name=>$CONFIG->tr('Cancel'),
+    print p(button(-name=>$CONFIG->tr('OK'),
 	   -onClick=>'Balloon.prototype.hideTooltip(1)'));
     print end_html();
 }

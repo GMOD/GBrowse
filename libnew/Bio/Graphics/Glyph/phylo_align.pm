@@ -3,6 +3,7 @@ package Bio::Graphics::Glyph::phylo_align;
 use strict;
 use base qw(Bio::Graphics::Glyph::generic Bio::Graphics::Glyph::xyplot);
 use Bio::TreeIO;
+use Bio::Graphics::Wiggle;
 use POSIX qw(log10);
 
 use Carp 'croak','cluck';
@@ -45,7 +46,9 @@ sub height {
   
 }
 
-
+#####
+# TODO: extract the wigfiles covering the range as well
+#####
 # get all features within the viewing window
 sub extract_features {
   my $self = shift;
@@ -53,9 +56,24 @@ sub extract_features {
   #						      $self->feature->start => $self->feature->stop);
   #my @match = $segment->features('submatch:pa'); 
   my @match = $self->feature->features('submatch:pa');
+#print "Match has ",$#match,"<p>\n";
   
+  # exract wifiles here too:
+  my @wmatch = $self->feature->features('wfile:pa');
+  #push @match, $self->feature->features('wfile:pa');
+#  print "xxxxxx<pre>",Dumper(@wmatch),"</pre>cccccc";
+#print "WMatch has ",$#wmatch,"<p>\n";
+
+#print "Halfwaypoint<p>";  
+#for my $feature (@match,@wmatch) {
+#my %attributes = $feature->attributes;
+#my $species = $attributes{'species'};
+#print "<pre>Feature $species:\n",Dumper(%attributes),"</pre>\n";
+#}
+
   my %alignments;
-  for my $feature (@match) {
+#  for my $feature (@match) {
+  for my $feature (@match,@wmatch) {
     my %attributes = $feature->attributes;
     my $species = $attributes{'species'};
     
@@ -394,9 +412,14 @@ sub draw {
   
   #all species having alignments in viewing window (key=name, val=feat obj)
   my %alignments = $self->extract_features;
+  #print "Species are:",keys %alignments,"<br>\n";
   
   my ($min_score, $max_score) = $self->get_score_bounds(%alignments);
+  #$min_score = 0 unless $min_score;
   my ($graph_legend, $graph_scale) = get_legend_and_scale($yscale, $height, $min_score, $max_score);
+#print "min/max scores: $min_score, $max_score<br>\n",
+#"graph legend and scale: $graph_legend, $graph_scale";
+# TODO: Gap entries give an undef for the min values for some reason
   
   
   my $refspecies = $self->option('reference');
@@ -409,11 +432,11 @@ sub draw {
     						\@known_species);
                                               #species in GFF but not in clado
 
-  
-  my @allfeats;
-  for my $species (keys %alignments) {
-    push @allfeats, @{$alignments{$species}};
-  }
+  ########is this even used?
+  #my @allfeats;
+  #for my $species (keys %alignments) {
+  #  push @allfeats, @{$alignments{$species}};
+  #}
   
   
   #this y value is the base for the next species' alignment/histogram and is incremented at each step 
@@ -435,8 +458,8 @@ sub draw {
     #process the reference sequence differently
     if ($species eq $refspecies) {
       #draw DNA alignments if zoomed close enough
-        my ($fx1,$fy1) = ($x1, $y_track_top);
-      	my ($fx2,$fy2) = ($x2,$y_track_bottom);
+      my ($fx1,$fy1) = ($x1, $y_track_top);
+      my ($fx2,$fy2) = ($x2,$y_track_bottom);
       
 
       if ($self->dna_fits) {
@@ -486,6 +509,11 @@ sub draw {
     				    @bounds) unless $self->dna_fits;
       
     
+    #iterate through the wigfiles and put them on the graph
+    ###
+    # todo
+    ###
+    
     
     #iterate through features, and put them on the graph
     for my $feat (@features) {
@@ -494,7 +522,7 @@ sub draw {
       my ($fx1,$fy1) = ($x1 + ($start-$self->start)*$scale, $y_track_top);
       my ($fx2,$fy2) = ($x1 + ($stop-$self->start)*$scale,$y_track_bottom);
       
-      my $gapstr = $attributes{'Gap'} || return;
+      my $gapstr = $attributes{'Gap'} || "M".($stop-$start+1);
       my @gapstr = split " ", $gapstr;
       my @gaps;
       for my $gap (@gapstr) {
@@ -506,13 +534,44 @@ sub draw {
       
       #draw DNA alignments if zoomed close enough
       if ($self->dna_fits) {
+	
+	
+	my $test = 0;
+	
+	my $hit = $feat->hit;
+	if (!defined $hit) {
+	  warn "No hit for feature $feat, skipping drawing DNA";
+	  next;
+	}
 
-	my $ref_dna = $feat->seq->seq;
-	my $targ_dna = $feat->hit->seq->seq;
+	my $hit_seq = $hit->seq || print "No seq for hit<br>\n";
+	my $targ_dna = $hit_seq->seq || print "No seq for hit_seq<br>\n";
+	
+	
+	my $seq = $feat->seq || print "No sequence object for feature<br>\n";
+	my $ref_dna = $seq->seq || print "No ref dna";
+	
+	#doesn't work as planned
+	# my $ref_dna = $feat->seq->seq || print "No ref dna";
+	# my $targ_dna = $feat->hit->seq->seq || print "No targ dna";
+	
+	
+	next if !defined $ref_dna || !defined $targ_dna;
 	
 	$self->draw_dna($gd,$ref_dna, $targ_dna,$fx1,$fy1,$fx2,$fy2,\@gaps);
       } else {
-      	$self->pairwise_draw_graph($gd, $feat, $x1, $scale, \@gaps, $graph_legend->{1}, $graph_scale, $fx1, $fy1, $fx2, $fy2);
+      	my $wigfile = $attributes{'wigfile'};
+      	if ($wigfile) {
+      	  if (-e $wigfile) {
+      	    $self->pairwise_draw_wig_graph($gd, $feat, $x1, $scale, \@gaps, $graph_legend->{1}, $graph_scale, $fx1, $fy1, $fx2, $fy2,$wigfile);
+      	  } else {
+      	    warn "Wigfile $wigfile does not exist, skipping ...";
+      	  }
+      	  
+      	} else {
+      	  $self->pairwise_draw_graph($gd, $feat, $x1, $scale, \@gaps, $graph_legend->{1}, $graph_scale, $fx1, $fy1, $fx2, $fy2);
+      	}
+      	
       }
     }
     
@@ -606,7 +665,7 @@ sub draw_pairwisegraph_axis {
 }
 
 
-
+#find min and max from features within the bounds
 sub get_score_bounds {
   my $self = shift;
   my %alignments = @_;
@@ -617,6 +676,16 @@ sub get_score_bounds {
   for my $species (keys %alignments) {
     for my $feature (@{$alignments{$species}}) {
       my $score = $feature->score;
+      
+      #check to see if wigfile
+      if ($score == undef) {
+      	my %attributes = $feature->attributes;
+      	if (-e $attributes{'wigfile'}) {
+      	  ($min, $max) = $self->get_score_bounds_wigfile($feature,$min,$max,$attributes{'wigfile'});
+      	}
+      	next;
+      }
+      
       $min = $score if $min == -1 || $score < $min;
       $max = $score if $max == -1 || $max < $score;
     }
@@ -626,6 +695,39 @@ sub get_score_bounds {
   my @parts = $self->parts;
   
   return ($min, $max)
+}
+
+#find min and max of sampled wigfile
+sub get_score_bounds_wigfile {
+  my $self = shift;
+  my $feature = shift;
+  my ($min,$max,$wigfile) = @_;
+  
+  my $start = $feature->start < $self->start ? $self->start : $feature->start;
+  my $stop  = $self->stop < $feature->stop   ? $self->stop  : $feature->stop;
+  
+  #print $self->stop, "-", $feature->stop, "checking @_ $start - $stop\n";
+  
+  #extract wig file contents  
+  my $wig = Bio::Graphics::Wiggle->new($wigfile, 0, {step => 1}) or die;
+  
+  #todo: make step configurable
+  my $step = 100;
+  
+  for (my $i=$start; $i<$stop; $i += $step) {
+    my $v = $wig->value($i);
+    
+    next unless defined $v;
+    
+    $min = $v if !defined $min or $v < $min;
+    $max = $v if !defined $max or $max < $v;
+    
+  }
+  
+  #print "min and max are $min , $max<br>\n";
+  
+  return ($min,$max);
+  
 }
 
 
@@ -660,7 +762,7 @@ sub pairwise_draw_graph {
   unless ($gaps) {
     $x1 = $x_edge if $x1 < $x_edge;
     return if $x2 < $x_edge;
-    $gd->filledRectangle($x1,$y[0],$x2,$y[1],$fgcolor);
+    #$gd->filledRectangle($x1,$y[0],$x2,$y[1],$fgcolor);
     return;
   }
   
@@ -694,6 +796,166 @@ sub pairwise_draw_graph {
   }
   
   
+}
+
+
+
+sub pairwise_draw_wig_graph {
+  my $self = shift;
+  my $gd = shift;
+  my $feat = shift;		# current feature object
+  my $x_edge = shift;		# x start position of the track
+  my $scale = shift;		# pixels / bp
+  my $gaps = shift;		# gap data for insertions, deletions and matches
+  my $zero_y = shift;		# y coordinate of 0 position
+  my $graph_scale = shift;	# scale for the graph. y_coord = graph_scale x log(score)
+  
+  my ($x1,$y1,$x2,$y2,$wigfile) = @_;
+  my $fgcolor = $self->fgcolor;
+  my $errcolor  = $self->color('errcolor') || $fgcolor;
+  
+  my $score = $feat->score;
+  my %attributes = $feat->attributes;
+  
+  
+#  my $log_y = log10($score);
+#  my $y_bottom = log10($score) * $graph_scale + $zero_y + $y1;
+#  my $y_top = $zero_y+$y1;
+#  
+#  my @y = sort {$a <=> $b} ($y_bottom, $y_top);
+  
+  
+  
+  #print "checking wigfile $wigfile<br>\n";
+  
+  
+  #todo: make step variable
+  my $start = $feat->start < $self->start ? $self->start : $feat->start;
+  my $stop  = $self->stop < $feat->stop   ? $self->stop  : $feat->stop;
+#  my $wig = Bio::Graphics::Wiggle->new($wigfile, 0) or die;
+  my $wig = Bio::Graphics::Wiggle->new($wigfile, 0, {step => 1}) or die;
+
+
+##### not sure why this was here
+#  my $vals = $wig->values($start,$stop);
+#  my ($vmin,$vmax);
+#  for my $v (@$vals) {
+#    next unless defined $v;
+#    $vmin = $v if !defined $vmin or $v < $vmin;
+#    $vmax = $v if !defined $vmax or $vmax < $v;
+#  }
+  
+  
+#  print "min and max are $vmin , $vmax\n";
+#  $min = $min < $vmin ? $min : $vmin;
+#  $max = $vmax < $max ? $max : $vmax;
+#  print "min and max are $min , $max\n";
+#  return ($min,$max);
+  
+  
+#  print Dumper($vals);
+  
+  
+#  my $pos = $start;
+  
+  
+#  $gd->rectangle($x1,$y1,$x2,$y2,$fgcolor);
+#  $gd->line($x1,$y1,$x2,$y2,$fgcolor);
+#  $gd->line($x2,$y1,$x1,$y2,$fgcolor);
+#  print "Start and stop: $start and $stop<br>\n";
+#  print "<br>\n$x1, $x2, $x_edge, $start, $stop<br>\n";
+  
+  
+  
+  if ($scale < 1) {
+    #### Algorithm 1, when zoomed at scale 1bp / pixel or more
+    #### sample 10 values across the pixel (prevents redrawing same pixel over
+    #### and over).  The sample values are averaged.
+    
+    my $bp = $start;
+    for (my $pix=$x1; $pix < $x2; $pix++) {
+      
+      $bp = ($pix - $x1)/$scale + $start;
+      
+      #todo: make samplesize an option
+      my $samplesize = 10;
+      my $score = 0;
+      my $trial;
+      for ($trial=0; $trial < $samplesize; $trial++) {
+        
+        my $samp_bp = $bp + ($trial/$samplesize)/$scale;
+        last if $samp_bp > $stop;
+  
+        $score += $wig->value($samp_bp);
+        
+        #print "trial $trial: $samp_bp\tPixel $pix\tpos $x1<br>\n" if ($bp > 1700 && $bp < 1750);
+        
+        
+      }
+      
+      #print "Pixel: $pix : Total $score and trial $trial<br>\n";
+      next if $trial == 0 || $score == 0;
+      $score = $score / $trial;
+      
+      $self->draw_log10_rectangle($score, $graph_scale, $zero_y, $y1,
+      				$zero_y, $pix, $pix, $gd, $fgcolor);
+      
+      
+    }
+    
+  } else {
+    #### Algorithm 2, when zoomed in close at less than 1bp / pixel (1 bp spans
+    #### 1 pixel or more), draw each value directly
+    
+    my $step = 1;
+    
+    for (my $i=$start; $i<$stop; $i += $step) {
+      my $val = $wig->value($i);
+      next if !defined $val;
+      
+      my $bp = $i - $start;
+      
+      my $x_left  = $x1 + ($bp*$scale);
+      my $x_right = $x_left + 1*$scale;
+      
+      $score = $val;
+      
+      
+      $self->draw_log10_rectangle($score, $graph_scale, $zero_y, $y1, 
+      				$zero_y, $x_left, $x_right, $gd, $fgcolor);
+      
+      
+    }
+    
+    
+  }
+  
+  return;
+
+  
+}
+
+sub draw_log10_rectangle {
+  my $self = shift;
+  my $score = shift;
+  my $graph_scale = shift;
+  my $zero_y = shift;
+  my $y1 = shift;
+  my $zero_y = shift;
+  my $x_left = shift;
+  my $x_right = shift;
+  my $gd = shift;
+  my $fgcolor = shift;
+  
+  my $log_y = log10($score);
+  my $y_bottom = log10($score) * $graph_scale + $zero_y + $y1;
+  my $y_top = $zero_y+$y1;
+  
+  my @y = sort {$a <=> $b} ($y_bottom, $y_top);
+  
+  #print "$x_left,$y[0],$x_right,$y[1]<br>\n";
+  
+  $gd->rectangle($x_left,$y[0],$x_right,$y[1],$fgcolor);
 }
 
 

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.91 2008-07-08 22:48:47 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.92 2008-07-24 22:12:31 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -962,11 +962,22 @@ sub render_draggable_tracks {
     # need this ID as a hook, please do not change it
     my $id = $label eq '__scale__' ? "${section}_image" : "${element_id}_image";
 
+    # we don't want overview and regionview tracks to be clickable image buttons
+    my @disabled = ();
+    if ($id =~ /^[^\:]+\:(overview|region)/ && !$img_map) {
+	@disabled = (-disabled => 1);
+	$img_style .= ';cursor:default';
+    }
+    if ($img_map) {
+	$button = 0;
+    }
+
     my $img = $button
       ? image_button(-src   => $url,
 		     -name  => $section,
 		     -id    => $id,
-		     -style => $img_style
+		     -style => $img_style,
+		     @disabled
 		    )
       : img({-src=>$url,
 	     -usemap=>"#${element_id}_map",
@@ -1052,7 +1063,7 @@ sub render_draggable_tracks {
 
     (my $munge_label = $label) =~ s/_/%5F/g;  # freakin' scriptaculous uses _ as a delimiter!!!
 
-      $img_map = qq(<map name="${element_id}_map" id="${element_id}_map">$img_map</map>\n);
+    $img_map = qq(<map name="${element_id}_map" id="${element_id}_map">$img_map</map>\n) if $img_map;
 
     push @result, (is_safari()
 		   ?
@@ -1397,7 +1408,6 @@ sub generate_panels {
 			       $l,
 			       \%trackmap,
 			       0);
-
     my $key = $drag_n_drop ? $cache_key{$l} : $cache_key{'__all__'};
     $self->set_cached_panel($key,$gd,$map);
     eval {$panels{$l}->finished};

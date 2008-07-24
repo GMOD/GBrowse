@@ -3,7 +3,7 @@
  rubber.js -- a base class for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.1.2.20 2008-07-08 20:25:16 lstein Exp $
+ $Id: rubber.js,v 1.1.2.21 2008-07-24 18:51:51 sheldon_mckay Exp $
 
 */
 
@@ -96,8 +96,8 @@ SelectArea.prototype.recenter = function(event) {
   if (coord > end) coord = end - half - 1;
   var start  = coord - half;
   var end    = coord + half;
-  document.mainform.name.value = self.ref + ':' + start + '..' + end;
-  document.mainform.submit();
+  self.currentSegment = self.ref + ':' + start + '..' + end;
+  self.submit();
 }
 
 // Cross-browser element coordinates
@@ -247,7 +247,7 @@ SelectArea.prototype.moveRubber = function(event) {
 
   // reset the value of the 'name' input box
   self.currentSegment = self.ref +':'+self.selectSequenceStart+'..'+self.selectSequenceEnd;
-  document.mainform.name.value = self.currentSegment;
+  //document.mainform.name.value = self.currentSegment;
 
   // size and appearance of the "rubber band" select box
   YAHOO.util.Dom.setStyle(self.selectBox,'width','1px');
@@ -413,7 +413,7 @@ SelectArea.prototype.stopRubber = function(event) {
   // autoSubmit option will bypass the menu
   if (self.autoSubmit && !self.overrideAutoSubmit) {
     SelectArea.prototype.cancelRubber();
-    document.mainform.submit();
+    self.submit();
   }
   else {
     self.showMenu(event);
@@ -464,7 +464,7 @@ SelectArea.prototype.clearAndSubmit = function(plugin,action) {
     document.location = url;
   }
   else {
-    document.mainform.submit();
+    this.submit();
   }
 }
 
@@ -475,7 +475,7 @@ SelectArea.prototype.clearAndRecenter = function() {
   var half    = Math.round(Math.abs((end - start)/2));
   var middle  = Math.round((self.selectSequenceStart + self.selectSequenceEnd)/2);
   var newName = self.ref+':'+(middle-half)+'..'+(middle+half);
-  document.mainform.name.value = newName;
+  self.currentSegment = newName;
   self.clearAndSubmit();
 }
 
@@ -501,4 +501,13 @@ SelectArea.prototype.setOpacity = function(el,opc,bgColor) {
   YAHOO.util.Dom.setStyle(el,'filter','alpha(opacity= '+(100*opc)+')');
   YAHOO.util.Dom.setStyle(el,'MozOpacity',opc);
   YAHOO.util.Dom.setStyle(el,'KhtmlOpacity',opc);
+}
+
+
+SelectArea.prototype.submit = function() {
+  var self = currentSelectArea;
+  if (self.currentSegment) {
+    document.mainform.name.value = self.currentSegment;
+  }  
+  document.mainform.submit();
 }

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.92 2008-07-24 22:12:31 sheldon_mckay Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.93 2008-07-28 19:19:39 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -932,7 +932,7 @@ sub render_draggable_tracks {
   my $settings = $args->{settings};
   my $do_drag  = $args->{do_drag};
   my $button   = $args->{image_button};
-  my $section    = $args->{section};
+  my $section  = $args->{section};
   $section    =~ s/^\?//;
 
   my $plus   = "$images/plus.png";
@@ -960,34 +960,37 @@ sub render_draggable_tracks {
 
     # The javascript functions for rubber-band selection
     # need this ID as a hook, please do not change it
-    my $id = $label eq '__scale__' ? "${section}_image" : "${element_id}_image";
+    my $id = $label eq '__scale__' 
+	? "${section}_image" 
+	: "${element_id}_image";
 
     # we don't want overview and regionview tracks to be clickable image buttons
-    my @disabled = ();
-    if ($id =~ /^[^\:]+\:(overview|region)/ && !$img_map) {
-	@disabled = (-disabled => 1);
-	$img_style .= ';cursor:default';
-    }
-    if ($img_map) {
-	$button = 0;
-    }
+#     my @disabled = ();
+#     if ($id =~ /^[^\:]+\:(overview|region)/ && !$img_map) {
+# 	@disabled = (-disabled => 1);
+# 	$img_style .= ';cursor:default';
+#     }
+#     if ($img_map) {
+# 	$button = 0;
+#     }
 
-    my $img = $button
-      ? image_button(-src   => $url,
-		     -name  => $section,
-		     -id    => $id,
-		     -style => $img_style,
-		     @disabled
-		    )
-      : img({-src=>$url,
-	     -usemap=>"#${element_id}_map",
-	     -width => $width,
-	     -id    => "$id",
-	     -height=> $height,
-	     -border=> 0,
-	     -name  => "${section}_${label}",
-	     -alt   => "${label} $section",
-	     -style => $img_style});
+    $img_style .= '; cursor:pointer' if $label eq '__scale__';
+
+    my @map = $button 
+	? () 
+	: (-usemap=>"#${element_id}_map");
+    my $img = img({-src=>$url,
+		   -width => $width,
+		   -id    => "$id",
+		   -height=> $height,
+		   -border=> 0,
+		   -name  => "${section}_${label}",
+		   -alt   => "${label} $section",
+		   -style => $img_style,
+		   @map,
+		  });
+
+    warn "img = $img";
 
     my $class     = $label eq '__scale__' ? 'scale' : 'track';
     my $icon      = $collapsed ? $plus : $minus;
@@ -1062,7 +1065,6 @@ sub render_draggable_tracks {
 		       });
 
     (my $munge_label = $label) =~ s/_/%5F/g;  # freakin' scriptaculous uses _ as a delimiter!!!
-
     $img_map = qq(<map name="${element_id}_map" id="${element_id}_map">$img_map</map>\n) if $img_map;
 
     push @result, (is_safari()
@@ -1559,6 +1561,7 @@ sub add_feature_file {
   $options->{$name}      ||= 0;
 
   my $override_settings = $args{override_settings};
+
 
   my ($nr_tracks_added,$panel,$tracklist) =
     eval {

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.93 2008-07-21 15:03:46 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.94 2008-07-28 19:19:37 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -226,7 +226,6 @@ if (param('plugin_do')) {
   $plugin_action = $CONFIG->tr(param('plugin_do')) || $CONFIG->tr('Go');
 }
 
-
 # For uploaded files
 $UPLOADED_SOURCES = Bio::Graphics::Browser::UploadSet->new($CONFIG,$page_settings);
 $REMOTE_SOURCES   = Bio::Graphics::Browser::RemoteSet->new($CONFIG,$page_settings);
@@ -239,7 +238,8 @@ my $features  = $is_search ? get_features($page_settings) : [];
 if ($plugin_action eq $CONFIG->tr('Find') && param('plugin')) {
   do_plugin_find($page_settings,
 		 param('plugin'),
-		 $features) or ($plugin_action = 'Configure'); #reconfigure
+		 $features) 
+      or ($plugin_action = 'Configure'); #reconfigure
 }
 
 elsif (!@$features && $page_settings->{name} && $is_search) {
@@ -602,7 +602,7 @@ sub overview_panel {
   my ($whole_segment,$segment,$page_settings,$feature_files) = @_;
   return '' if $CONFIG->section_setting('overview') eq 'hide';
   my $image = overview($whole_segment,$segment,$page_settings,$feature_files);
-  $image =~ s/\>/onclick="document.mainform.submit()"\>/;
+
   return 
       a({-name=>'overview'},
 	toggle($page_settings,
@@ -3047,7 +3047,9 @@ sub galaxy_form {
   # Make sure to include all necessary parameters in URL to ensure that gbrowse will retrieve the data
   # when Galaxy posts the URL.
   my $dbkey  = $CONFIG->setting('galaxy build name') || $CONFIG->source;
-  my $labels = join('+',map {escape($_)} grep {$settings->{features}{$_}{visible} && !/:(overview|region)$/} $CONFIG->labels);
+  my $labels = join('+',map {escape($_)} 
+		    grep {$settings->{features}{$_}{visible} && !/:(overview|region)$/} 
+		    $CONFIG->labels);
 
   $html .= hidden(-name=>'dbkey',-value=>$dbkey);
   $html .= hidden(-name=>'q',-value=>"$settings->{ref}:$settings->{start}..$settings->{stop}");
@@ -3453,8 +3455,10 @@ sub do_plugin_find {
   return unless @$results;
 
   @$features = @$results;
-  $settings->{name} = defined($search_string) ? $CONFIG->tr('Plugin_search_1',$search_string,$plugin_name)
-                                              : $CONFIG->tr('Plugin_search_2',$plugin_name);
+#  $settings->{name} = defined($search_string) ? $CONFIG->tr('Plugin_search_1',$search_string,$plugin_name)
+#                                              : $CONFIG->tr('Plugin_search_2',$plugin_name);
+  $settings->{name} = defined $search_string ?  $search_string : '';
+
   # remember the search
   write_auto($settings,$results);
   1; # return a true result to indicate that we don't need further configuration
@@ -3515,7 +3519,9 @@ sub toggle {
   my $label = $CONFIG->tr($title)                 or return '';
   my $state = $CONFIG->section_setting($title)    or return '';
   return '' if $state eq 'off';
-  my $visible = exists $page_settings->{section_visible}{$id} ? $page_settings->{section_visible}{$id} : $state eq 'open';
+  my $visible = exists $page_settings->{section_visible}{$id} 
+                   ? $page_settings->{section_visible}{$id} 
+                   : $state eq 'open';
 
   return toggle_section({on=>$visible},
 			$id,

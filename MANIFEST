@@ -59,6 +59,7 @@ conf/plugins/OligoFinder.pm
 conf/plugins/PrimerDesigner.pm
 conf/plugins/ProteinDumper.pm
 conf/plugins/RandomGene.pm
+conf/plugins/ReverseFinder.pm
 conf/plugins/RestrictionAnnotator.pm
 conf/plugins/Spectrogram.pm
 conf/plugins/Submitter.pm

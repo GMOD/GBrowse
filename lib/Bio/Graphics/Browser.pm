@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.93 2008-07-28 19:19:39 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.94 2008-07-28 23:08:35 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -989,8 +989,6 @@ sub render_draggable_tracks {
 		   -style => $img_style,
 		   @map,
 		  });
-
-    warn "img = $img";
 
     my $class     = $label eq '__scale__' ? 'scale' : 'track';
     my $icon      = $collapsed ? $plus : $minus;

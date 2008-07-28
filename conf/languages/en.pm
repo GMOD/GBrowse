@@ -361,9 +361,7 @@ END
 
  BACK_TO_BROWSER => 'Back to Browser',
 
- PLUGIN_SEARCH_1   => '%s (via %s search)',
-
- PLUGIN_SEARCH_2   => '&lt;%s search&gt;',
+ PLUGIN_SEARCH   => 'search via the %s plugin',
 
  CONFIGURE_PLUGIN   => 'Configure',
 

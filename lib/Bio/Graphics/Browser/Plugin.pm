@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.12.4.6.2.2.2.3 2008-01-15 01:46:56 sheldon_mckay Exp $
+# $Id: Plugin.pm,v 1.12.4.6.2.2.2.4 2008-07-28 23:08:42 lstein Exp $
 
 =head1 NAME
 
@@ -378,10 +378,13 @@ described in this section.
 
 The find() method will be passed a Bio::Das::SegmentI segment object,
 as described earlier for the dump() method.  Your code should search
-the segment for features of interest, and return an arrayref of
-Bio::SeqFeatureI objects (see L<Bio::SeqFeatureI>).  These synthetic
-feature objects should indicate the position, name and type of the
-features found.
+the segment for features of interest, and return a two element
+list. The first element should be an arrayref of Bio::SeqFeatureI
+objects (see L<Bio::SeqFeatureI>), or an empty list if nothing was
+found. These synthetic feature objects should indicate the position,
+name and type of the features found. The second element of the
+returned list should be a (possibly shortened) version of the search
+string for display in informational messages.
 
 Depending on the type of find you are performing, you might search the
 preexisting features on the segment for matches, or create your own
@@ -409,7 +412,7 @@ case, a gene ontology term:
      my $query    = $config->{query} or return undef;  # PROMPT FOR INPUT
      my $database = $self->database;
      my @features = $database->features(-attributes=>{GO_Term => $query});
-     return \@features; 
+     return (\@features,$query); 
   }
 
   sub configure_form {

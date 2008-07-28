@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::OligoFinder;
-# $Id: OligoFinder.pm,v 1.9 2004-08-23 15:56:31 lstein Exp $
+# $Id: OligoFinder.pm,v 1.9.14.1 2008-07-28 23:08:30 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -120,7 +120,9 @@ sub auto_find {
       }
     }
   }
-  return \@results;
+
+  my $explanation = substr($oligo,0,8).'...';
+  return (\@results,$explanation);
 }
 
 sub exact_matches {

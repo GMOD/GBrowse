@@ -114,7 +114,9 @@ sub find {
   my ($o_f, $out_file) = tempfile();
 
   $query =~ s/[\s]//g;				# remove whitespace
-  my $query_type = check_seq($query) or return; # check for dna or protein (dna queries must be compared against dna databases only & vice versa)
+
+  # check for dna or protein (dna queries must be compared against dna databases only & vice versa)
+  my $query_type = check_seq($query) or return;
   print $i_f ">segment\n$query\n";		# print it to a temp file
 
   system("$blat_executable $host $port $twobit_dir -nohead -q=$query_type $in_file $out_file > /dev/null");
@@ -158,7 +160,10 @@ sub find {
   unlink $in_file;
   unlink $out_file;
   @front = splice(@results,0,$hits);	# Remove the required number of hits from the front of the array and return them.
-  return \@front;			# If all hits are required, then return \@results and remove the splicing.
+
+  my $explanation = substr($query,0,8).'...';
+
+  return (\@front,$explanation); # If all hits are required, then return \@results and remove the splicing.
 }
 
 sub check_seq{

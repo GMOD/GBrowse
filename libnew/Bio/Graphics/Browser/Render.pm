@@ -157,7 +157,7 @@ sub asynchronous_event {
 
     if ( my $action = param('navigate') ) {
 
-        warn "updating coordinates";
+        #warn "updating coordinates";
         $self->asynchronous_update_coordinates($action);
         my $track_keys = $self->begin_track_render();
 
@@ -182,7 +182,7 @@ sub asynchronous_event {
 
     if ( my $action = param('first_render') ) {
 
-        warn "Rendering Tracks";
+        #warn "Rendering Tracks";
         my $track_keys = $self->begin_track_render();
         my $segment_info_object =  $self->segment_info_object();
 
@@ -197,7 +197,7 @@ sub asynchronous_event {
     }
 
     if ( my $element = param('update') ) {
-        warn "updating element";
+        #warn "updating element";
         my $html = $self->asynchronous_update_element($element);
         print CGI::header('text/html');
         print $html;
@@ -212,7 +212,7 @@ sub asynchronous_event {
         my $image_width      = param('image_width');
         my $image_height     = param('image_height');
         my $image_element_id = param('image_element_id');
-        warn "retreiving track $div_element_id - $track_key";
+        #warn "retreiving track $div_element_id - $track_key";
 
         my $track_name = '';
         if ( $div_element_id =~ /^track_(.+)/ ) {
@@ -234,7 +234,7 @@ sub asynchronous_event {
 
     if ( my $action = param('add_track') ) {
         my $track_name = param('track_name');
-        warn "Adding Track $track_name";
+        #warn "Adding Track $track_name";
 
         $self->add_track_to_state($track_name);
         my $track_keys = $self->begin_individual_track_render($track_name);

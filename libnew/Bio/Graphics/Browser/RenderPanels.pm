@@ -573,11 +573,6 @@ sub render_overview_scale_bar {
     $padl = $image_pad unless defined $padl;
     $padr = $image_pad unless defined $padr;
 
-  # I don't understand why I need to add the pad to the width, since the other
-  # panels don't do it but in order for the scale bar to be the same size as
-  # the other panels, I need to do it.
-    $width += $padl + $padr;
-
     my $panel = Bio::Graphics::Panel->new(
         -segment => $whole_segment,
         -width   => $width,
@@ -592,6 +587,11 @@ sub render_overview_scale_bar {
         -image_class => $image_class,
         -auto_pad    => 0,
     );
+
+    # I don't understand why I need to add the pad to the width, since the
+    # other panels don't do it but in order for the scale bar to be the same
+    # size as the other panels, I need to do it.
+    $width += $padl + $padr;
 
     # THIS IS NOW OBSOLETE
     # cache check so that we can cache the overview images
@@ -683,13 +683,9 @@ sub render_detail_scale_bar {
     $padl = $image_pad unless defined $padl;
     $padr = $image_pad unless defined $padr;
 
-  # I don't understand why I need to add the pad to the width, since the other
-  # panels don't do it but in order for the scale bar to be the same size as
-  # the other panels, I need to do it.
     
     # TO DO: REPLACE THE HAND-CONFIGURATION WITH A CALL TO CREATE_PANEL_ARGS():
 
-    $width += $padl + $padr;
 
     my $panel = Bio::Graphics::Panel->new(
         -segment   => $segment,
@@ -702,6 +698,11 @@ sub render_detail_scale_bar {
         -image_class => $image_class,
         -auto_pad    => 0,
     );
+
+    # I don't understand why I need to add the pad to the width, since the
+    # other panels don't do it but in order for the scale bar to be the same
+    # size as the other panels, I need to do it.
+    $width += $padl + $padr;
 
     # no cached data, so do it ourselves
     unless ($gd) {

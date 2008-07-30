@@ -4,7 +4,7 @@
                       This class handles details-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: detailSelect.js,v 1.2 2008-06-06 21:14:21 lstein Exp $
+ $Id: detailSelect.js,v 1.3 2008-07-30 15:09:01 mwz444 Exp $
 
 */
 
@@ -13,7 +13,7 @@ var detailBalloon;
 
 // Constructor
 var Details = function () {
-  this.imageId    = 'detail_image';
+  this.imageId    = 'Detail Scale_image';
   this.marginTop  = '35px';
   this.background = 'blue';
   this.fontColor  = 'white';
@@ -34,7 +34,8 @@ Details.prototype.initialize = function() {
   i = self.replaceImage(i);
   
 
-  var p = document.getElementById('panels');
+  //var p = document.getElementById('panels');
+  var p = i.parentNode;
   self.height      = self.elementLocation(i,'height');
   self.panelHeight = self.elementLocation(p,'height');
   self.width       = self.elementLocation(i,'width');
@@ -63,7 +64,6 @@ Details.prototype.initialize = function() {
 //   }
 
   self.scalebar = i;
-  self.getSegment(i);
   self.addSelectMenu('detail');
   self.addSelectBox('detail');
   detailsObject = self;
@@ -75,18 +75,25 @@ Details.prototype.startSelection = function(event) {
   SelectArea.prototype.startRubber(self,event);
 }
 
-Details.prototype.getSegment = function(i) {
+Details.prototype.loadSegmentInfo = function() {
   // get the segment info from gbrowse CGI parameters
-  this.ref          = document.mainform.ref.value;
-  this.segmentStart = parseInt(document.mainform.start.value);
-  this.segmentEnd   = parseInt(document.mainform.stop.value);
-  this.flip         = document.mainform.flip.checked;
-  this.padLeft      = parseInt(document.mainform.image_padding.value);
-  this.pixelToDNA   = parseFloat(document.mainform.details_pixel_ratio.value);
+  
+  var i = document.getElementById(self.imageId);
+  
+  var segment_info = Controller.segment_info;
+
+  this.ref          = segment_info.ref;
+  this.segmentStart = parseInt(segment_info.detail_start);
+  this.segmentEnd   = parseInt(segment_info.detail_stop);
+  this.flip         = document.sliderform.flip.checked;
+  this.padLeft      = parseInt(segment_info.image_padding);
+  this.pixelToDNA   = parseFloat(segment_info.details_pixel_ratio);
+  this.detailStart  = parseInt(segment_info.detail_start);
+  this.detailEnd    = parseInt(segment_info.detail_stop);
 
   // If the keystyle is left, there may been extra padding
   var actualWidth   = this.elementLocation(i,'width');
-  var expectedWidth = parseInt(document.mainform.detail_width.value);
+  var expectedWidth = parseInt(segment_info.detail_width);
   if (actualWidth > expectedWidth) {
     this.padLeft     += actualWidth - expectedWidth;
   }

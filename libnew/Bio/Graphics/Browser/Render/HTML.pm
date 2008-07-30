@@ -133,7 +133,17 @@ sub render_html_head {
 
   # drag-and-drop functions from scriptaculous
   push @scripts,{src=>"$js/$_"}
-    foreach qw(prototype.js scriptaculous.js yahoo-dom-event.js balloon.js controller.js);
+    foreach qw(
+        prototype.js 
+        scriptaculous.js 
+        yahoo-dom-event.js 
+        balloon.js 
+        controller.js 
+        rubber.js
+        overviewSelect.js
+        detailSelect.js
+        regionSelect.js
+    );
 
  if ($self->setting('autocomplete')) {
     push @scripts,{src=>"$js/$_"}
@@ -423,6 +433,12 @@ sub render_global_config {
 		b(submit(-name => $self->tr('Update')))))
 	 );
   return $self->toggle('Display_settings',$content);
+}
+
+# This needs to be feshed out.
+sub render_uploads {
+  my $self     = shift;
+  return '';
 }
 
 sub tableize {

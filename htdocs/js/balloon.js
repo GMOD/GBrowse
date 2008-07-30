@@ -1,12 +1,12 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.3 2008-05-18 21:51:18 lstein Exp $
+ $Id: balloon.js,v 1.4 2008-07-30 15:09:01 mwz444 Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
 
- Copyright (c) 2007 Sheldon McKay, Cold Spring Harbor Laboratory
+ Copyright (c) 2007,2008 Sheldon McKay, Cold Spring Harbor Laboratory
 
  This balloon tooltip package and associated files not otherwise copyrighted are 
  distributed under the MIT-style license:
@@ -54,10 +54,21 @@ var Balloon = function() {
   // Location of optional ajax handler that returns tooltip contents
   //this.helpUrl = '/cgi-bin/help.pl';
 
-  // maxium allowed balloon width (px)
-  this.minWidth = 150;
+  // ID of element to which balloon should be added
+  // default = none (document.body is used)
+  // This option may be required for mediawiki or other
+  // implementations with complex stylesheets
+  this.parentID = null;
+
+  // properties of fonts contained in basic balloons (default black)
+  this.fontColor   = 'black';
+  this.fontFamily  = 'Arial, sans-serif';
+  this.fontSize    = '12pt';
 
   // minimum allowed balloon width (px)
+  this.minWidth = 150;
+
+  // maximum allowed balloon width (px)
   this.maxWidth = 600;
 
   // Default tooltip text size
@@ -93,8 +104,9 @@ var Balloon = function() {
   // images of balloon body.  If the browser is IE < 7, png alpha
   // channels will not work.  An optional alternative image can be 
   // provided.  It should have the same dimensions as the default png image
-  this.balloonImage  = '/images/balloons/balloon.png';    // with alpha channels
-  this.ieImage       = '/images/balloons/balloon_ie.png'; // indexed color, transparent background
+  this.images        = '/images/balloons';
+  this.balloonImage  = 'balloon.png';    // with alpha channels
+  this.ieImage       = 'balloon_ie.png'; // indexed color, transparent background
 
   // whether the balloon should have a stem
   this.stem          = true;
@@ -105,13 +117,13 @@ var Balloon = function() {
   this.stemOverlap = 3;
   
   // A stem for each of the four orientations
-  this.upLeftStem    = '/images/balloons/up_left.png';
-  this.downLeftStem  = '/images/balloons/down_left.png';
-  this.upRightStem   = '/images/balloons/up_right.png';
-  this.downRightStem = '/images/balloons/down_right.png';
+  this.upLeftStem    = 'up_left.png';
+  this.downLeftStem  = 'down_left.png';
+  this.upRightStem   = 'up_right.png';
+  this.downRightStem = 'down_right.png';
 
   // A close button for sticky balloons
-  this.closeButton   = '/images/balloons/close.png';
+  this.closeButton   = 'close.png';
 
   // track the cursor every time the mouse moves
   document.onmousemove = this.setActiveCoordinates;
@@ -159,7 +171,6 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
   var mouseOver = evt.type.match('mouseover','i');  
 
   // if the firing event is a click, fade-in and a non-sticky balloon make no sense
-  
   if (!mouseOver) {
     sticky = true;
     this.fadeOK = false;
@@ -198,12 +209,6 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
 
   this.hideTooltip();
 
-  // if this is IE < 7 use an alternative image id provided
-  if (this.isOldIE() && this.ieImage) {
-    this.balloonImage = this.ieImage;
-    this.ieImage = null;
-  }
-
   // look for a url in the balloon contents
   if (caption.match(/^url:/)) {
     var urlArray = caption.split(':');
@@ -236,6 +241,10 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
     this.setStyle(this.container,'position','absolute');
     this.setStyle(this.container,'top',-8888);
     this.setStyle(this.container,'display','inline');
+    this.setStyle(this.container,'z-index',2);
+    this.setStyle(this.container,'color',this.fontColor);
+    this.setStyle(this.container,'font-family',this.fontFamily);
+    this.setStyle(this.container,'font-size',this.fontSize);
   }
   else {
     this.setStyle(this.container,'display','inline');
@@ -243,22 +252,38 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
 
   this.container.innerHTML = unescape(this.currentHelpText);
 
-  // Also preload the balloon images
-  if (!this.images) {
-    this.images = document.createElement('div');
-    document.body.appendChild(this.images);
-    this.setStyle(this.images,'position','absolute');
-    this.setStyle(this.images,'top',-8888);
-    this.setStyle(this.images,'display','inline');
-    if (this.upLeftStem)    this.images.innerHTML  = '<img src='+this.upLeftStem+'>';
-    if (this.upRightStem)   this.images.innerHTML += '<img src='+this.upRightStem+'>';
-    if (this.downLeftStem)  this.images.innerHTML += '<img src='+this.downLeftStem+'>';
-    if (this.downRightStem) this.images.innerHTML += '<img src='+this.downRightStem+'>';
-    this.images.innerHTML += '<img src='+this.balloonImage+'>';
-    this.images.innerHTML += '<img src='+this.closeButton+'>';
+  // make sure balloon image path is complete
+  if (this.images) {
+    this.balloonImage  = this.images +'/'+ this.balloonImage;
+    if (this.ieImage)     
+      this.ieImage   = this.images +'/'+ this.ieImage;
+    this.upLeftStem    = this.images +'/'+ this.upLeftStem;
+    this.upRightStem   = this.images +'/'+ this.upRightStem;
+    this.downLeftStem  = this.images +'/'+ this.downLeftStem;
+    this.downRightStem = this.images +'/'+ this.downRightStem;
+    this.closeButton   = this.images +'/'+ this.closeButton;
+    this.images        = false;
   }
-  else {
-    this.setStyle(this.images,'display','none');
+
+  // if this is IE < 7 use an alternative image (if provided)
+  if (this.isOldIE() && this.ieImage) {
+    this.balloonImage = this.ieImage;
+  }
+
+  // preload balloon images 
+  if (!this.preloadedImages) {
+    var images = new Array(this.balloonImage, this.closeButton);
+    if (this.ieImage) images.push(this.ieImage);
+    if (this.stem)    images.push(this.upLeftStem,this.upRightStem,this.downLeftStem,this.downRightStem);
+    var len = images.length;
+ 
+    for (var i=0;i<len;i++) {
+      var preload = new Image;
+      // let's be paranoid and check first
+      if (images[i]) preload.src = images[i];
+    }
+   
+    this.preloadedImages = true;
   }
 
   currentBalloonClass = this;
@@ -276,9 +301,20 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
 /////////////////////////////////////////////////////////////////////
 Balloon.prototype.doShowTooltip = function() {
   var self = currentBalloonClass;
-  
+
   // Stop firing if a balloon is already being displayed
   if (balloonIsVisible) return false;  
+
+  if (!self.parent) {
+    if (self.parentID) {
+      self.parent = document.getElementById(self.parentID);
+    }
+    else {
+      self.parent = document.body;
+    }
+    self.xOffset = self.getLoc(self.parent, 'x1');
+    self.yOffset = self.getLoc(self.parent, 'y1');
+  }
 
   // a short delay time might cause some intereference
   // with fade-out
@@ -316,11 +352,14 @@ Balloon.prototype.doShowTooltip = function() {
     var topRight = document.getElementById('topRight');
     var margin   = Math.round(self.padding/2);
     var top      = margin + self.shadow;
-    var marginLeft = 16 - margin;
-
+    var closeImg = new Image();
+    closeImg.src = self.closeButton;
+    var marginLeft = closeImg.width - margin;
+    delete closeImg;
+ 
     topRight.innerHTML = '\
-     <img src="'+self.closeButton+'" title="Close" \
-          onclick="Balloon.prototype.hideTooltip(1)" \
+      <img src="'+self.closeButton+'" title="Close" \
+	  onclick="Balloon.prototype.hideTooltip(1)" \
           style="position:absolute;top:'+top+'px;left:0px;\
           margin-left:-'+marginLeft+'px;cursor:pointer;z-index:3">';
   }
@@ -339,11 +378,11 @@ Balloon.prototype.makeBalloon = function() {
   var self = currentBalloonClass;
 
   var balloon = document.getElementById('balloon');
-  if (balloon) document.body.removeChild(balloon);
+  if (balloon) self.parent.removeChild(balloon);
 
   balloon = document.createElement('div');
   balloon.setAttribute('id','balloon');
-  document.body.appendChild(balloon);
+  self.parent.appendChild(balloon);
   self.activeBalloon = balloon;
 
   self.parts = new Array(balloon);
@@ -355,6 +394,11 @@ Balloon.prototype.makeBalloon = function() {
     if (parts[i] == 'contents') self.contents = child;
     self.parts.push(child);
   }
+
+  self.setStyle('contents','z-index',2);
+  self.setStyle('contents','color',self.fontColor);
+  self.setStyle('contents','font-family',self.fontFamily);
+  self.setStyle('contents','font-size',self.fontSize);
 
   if (balloonIsSticky) {
     self.setStyle('contents','margin-right',10); 
@@ -381,7 +425,7 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
   self.setStyle(balloon,'padding-top',fullPadding);
   self.setStyle(balloon,'padding-left',fullPadding);
   self.setStyle(balloon,'top',-9999);
-  self.setStyle(balloon,'z-index',1);
+  self.setStyle(balloon,'z-index',1000000);
   
 
   self.setStyle('bottomRight','background','url('+self.balloonImage+') bottom right no-repeat');
@@ -440,10 +484,10 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
   // flip left or right, as required
   if (hOrient == 'left') {
     var activeRight = pageWidth - self.activeLeft;
-    self.setStyle(balloon,'right',activeRight);
+    self.setStyle(balloon,'right',activeRight + self.xOffset);
   }
   else {
-    self.setStyle(balloon,'left',self.activeRight);
+    self.setStyle(balloon,'left',self.activeRight - self.xOffset);
   }
 
   if (!self.width) {
@@ -487,14 +531,16 @@ Balloon.prototype.setBalloonStyle = function(vOrient,hOrient,pageWidth,pageLeft)
 
   if (vOrient == 'up') {
     var activeTop = self.activeTop - self.vOffset - self.stemHeight - lineHeight;
-    self.setStyle(balloon,'top',activeTop);
+    self.setStyle(balloon,'top',activeTop - self.yOffset);
     self.setStyle(balloon,'display','inline');
   }
   else {
     var activeTop = self.activeTop + self.vOffset + self.stemHeight;
-    self.setStyle(balloon,'top',activeTop);
+    self.setStyle(balloon,'top',activeTop - self.yOffset);
   }
 
+  // The following line was not in the new version and 
+  // I don't know if it is needed.
   self.setStyle('contents','z-index',2);
   self.setOpacity(1);
 }
@@ -778,20 +824,21 @@ Balloon.prototype.getContents = function(section) {
   }
 
   if (ajax) {
-     ajax.open("GET", url, false);
-     ajax.onreadystatechange=function() {
-	 alert(request.readyState);
-     };
-     try {
-	 ajax.send(null);
-     } catch (e) {
-	 // alert(e);
-     }
-     this.helpText = ajax.responseText || section;
-     return  this.helpText;
+    ajax.open("GET", url, false);
+    ajax.onreadystatechange=function() {
+      alert(request.readyState);
+    };
+    try {
+      ajax.send(null);
+    }
+    catch (e) {
+    // alert(e);
+    }
+    this.helpText = ajax.responseText || section;
+    return  this.helpText;
   }
   else {
-     return section;
+    return section;
   }
 }
 

@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.15 2008-07-18 22:02:30 mwz444 Exp $
+ $Id: controller.js,v 1.16 2008-07-30 15:09:01 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -13,10 +13,14 @@ var GBrowseController = Class.create({
 
   initialize:
   function () {
+    // periodic_updaters contains all the updaters for each track
     this.periodic_updaters        = new Array();
     this.track_images             = new Hash();
     this.segment_observers        = new Hash();
     this.update_on_load_observers = new Hash();
+    // segment_info holds the information used in rubber.js
+    this.segment_info;
+    this.debug_status             = 'initialized';
   },
   
   update_coordinates:
@@ -35,6 +39,7 @@ var GBrowseController = Class.create({
       onSuccess: function(transport) {
 	var results                 = transport.responseJSON;
 	var segment                 = results.segment;
+    this.segment_info = results.segment_info;
 	var track_keys              = results.track_keys;
 	var overview_scale_bar_hash = results.overview_scale_bar;
 	var detail_scale_bar_hash   = results.detail_scale_bar;
@@ -130,29 +135,39 @@ var GBrowseController = Class.create({
   update_scale_bar:
   function (bar_obj) {
     var image_id = bar_obj.image_id;
-    $(image_id).src = bar_obj.url;
-    $(image_id).height = bar_obj.height;
-    $(image_id).width = bar_obj.width;
-    $(image_id).setOpacity(1);
+    var image = $(image_id);
+    YAHOO.util.Dom.setStyle(image,'background', 'url('+bar_obj.url+') top left no-repeat');
+
+    YAHOO.util.Dom.setStyle(image,'width', bar_obj.width+'px');
+    YAHOO.util.Dom.setStyle(image,'height', bar_obj.height+'px');
+    YAHOO.util.Dom.setStyle(image,'display','block');
+    YAHOO.util.Dom.setStyle(image,'cursor','text');
+    image.setOpacity(1);
   },
 
   first_render:
   function()  {
+    this.debug_status             = 'first_render';
     new Ajax.Request('#',{
       method:     'post',
       parameters: {first_render: 1},
       onSuccess: function(transport) {
-	var results    = transport.responseJSON;
-	var segment    = results.segment;
-	var track_keys = results.track_keys;
-	Controller.update_on_load_observers.keys().each(
-	  function(e) {
-	    $(e).fire('model:segmentChanged',
-		      {segment:    segment, 
-		       track_key:  track_keys[e]});
-	  });
+        var results    = transport.responseJSON;
+        var segment    = results.segment;
+        var track_keys = results.track_keys;
+        Controller.segment_info = results.segment_info;
+
+        Controller.update_on_load_observers.keys().each(
+          function(e) {
+            $(e).fire('model:segmentChanged',
+              {segment:    segment, 
+              track_key:  track_keys[e]});
+          }
+        );
+        Controller.debug_status             = 'first_render finished';
       }
     });
+    this.debug_status             = 'first_render part2';
   },
 
   add_track:
@@ -209,5 +224,7 @@ function initialize_page() {
   });
   
   Controller.first_render();
+  Overview.prototype.initialize();
+  Details.prototype.initialize();
 }
 

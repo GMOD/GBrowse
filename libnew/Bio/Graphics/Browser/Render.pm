@@ -21,6 +21,8 @@ use constant DEBUG                => 0;
 use constant OVERVIEW_SCALE_LABEL => 'Overview Scale';
 use constant DETAIL_SCALE_LABEL   => 'Detail Scale';
 use constant EMPTY_IMAGE_HEIGHT   => 40;
+use constant MAX_SEGMENT     => 1_000_000;
+use constant OVERVIEW_RATIO  => 1.0;
 
 
 my %PLUGINS; # cache initialized plugins
@@ -164,10 +166,12 @@ sub asynchronous_event {
 
         my $detail_scale_return_object
             = $self->asynchronous_update_detail_scale_bar();
+        my $segment_info_object =  $self->segment_info_object();
 
         print CGI::header('application/json');
         print JSON::to_json(
             {   segment            => $settings->{name},
+                segment_info       => $segment_info_object,
                 track_keys         => $track_keys,
                 overview_scale_bar => $overview_scale_return_object,
                 detail_scale_bar   => $detail_scale_return_object,
@@ -180,10 +184,15 @@ sub asynchronous_event {
 
         warn "Rendering Tracks";
         my $track_keys = $self->begin_track_render();
+        my $segment_info_object =  $self->segment_info_object();
 
         print CGI::header('application/json');
         print JSON::to_json(
-            { segment => $settings->{name}, track_keys => $track_keys, } );
+            {   segment    => $settings->{name},
+                segment_info       => $segment_info_object,
+                track_keys => $track_keys,
+            }
+        );
         return 1;
     }
 
@@ -475,7 +484,47 @@ sub render_top    {
 sub render_navbar {
   my $self = shift;
   my $seg  = shift;
-  croak "render_top() should not be called in parent class";
+  croak "render_navbar() should not be called in parent class";
+}
+
+# Provide segment info for rubberbanding
+sub segment_info_object {
+    my $self          = shift;
+    my $settings      = $self->state;
+    my $segment       = $self->segment;
+    my $whole_segment = $self->whole_segment;
+
+    my $renderer = $self->get_panel_renderer($segment);
+
+    my $pad   = $renderer->image_padding;
+    my $max   = $settings->{'max segment'} || MAX_SEGMENT;
+    my $width = ( $settings->{width} * OVERVIEW_RATIO );
+
+    my %segment_info_object = (
+        image_padding        => $pad,
+        max_segment          => $max,
+        overview_start       => $whole_segment->start,
+        overview_stop        => $whole_segment->end,
+        overview_pixel_ratio => $whole_segment->length / $width,
+        detail_start         => $segment->start,
+        detail_stop          => $segment->end,
+        'ref'                => $segment->seq_id,
+        details_pixel_ratio  => $segment->length / $settings->{width},
+        detail_width         => $settings->{width} + 2 * $pad,
+        overview_width       => $width + 2 * $pad,
+    );
+
+    if ( $settings->{region_size} ) {
+        my ( $rstart, $rend )
+            = get_regionview_seg( $settings, $segment->start, $segment->end,
+            $whole_segment->start, $whole_segment->end );
+        my $rlen  = abs( $rend - $rstart );
+        my $ratio = $rlen / $width;
+        $segment_info_object{'region_start'}       = $rstart;
+        $segment_info_object{'region_stop'}        = $rend;
+        $segment_info_object{'region_pixel_ratio'} = $rlen / $width;
+    }
+    return \%segment_info_object;
 }
 
 sub render_panels {
@@ -581,27 +630,32 @@ sub render_config {
 #never called, method in HTML.pm with same name is run instead
 sub render_track_table {
   my $self = shift;
+  croak "render_track_table() should not be called in parent class";
 }
 
 sub render_instructions {
   my $self = shift;
+  croak "render_instructions() should not be called in parent class";
 }
 sub render_multiple_choices {
   my $self = shift;
+  croak "render_multiple_choices() should not be called in parent class";
 }
 
 sub render_global_config {
   my $self = shift;
+  croak "render_global_config() should not be called in parent class";
 }
 
 sub render_uploads {
   my $self = shift;
+  croak "render_uploads() should not be called in parent class";
 }
 
 sub render_bottom {
   my $self = shift;
   my $features = shift;
-  croak "render_top() should not be called in parent class";
+  croak "render_bottom() should not be called in parent class";
 }
 
 sub init_database {
@@ -1087,32 +1141,37 @@ sub asynchronous_update_element {
     $self->init_database();
     my $source = $self->data_source;
 
-    if ($element eq 'page_title') {
-	my $segment     = $self->segment;
-	my $dsn         = $self->data_source;
-	my $description = $dsn->description;
-	return $description.'<br>'.
-	$self->tr('SHOWING_FROM_TO',
-		  scalar $source->unit_label($segment->length),
-		  $segment->seq_id,
-		  $source->commas($segment->start),
-		  $source->commas($segment->end));
+    if ( $element eq 'page_title' ) {
+        my $segment     = $self->segment;
+        my $dsn         = $self->data_source;
+        my $description = $dsn->description;
+        return $description . '<br>'
+            . $self->tr(
+            'SHOWING_FROM_TO',
+            scalar $source->unit_label( $segment->length ),
+            $segment->seq_id,
+            $source->commas( $segment->start ),
+            $source->commas( $segment->end )
+            );
     }
-    elsif ($element eq 'span') {  # this is the popup menu that shows ranges
-	my $container = $self->zoomBar($self->segment,$self->whole_segment);
-	$container =~ s/<\/?select.+//g;
-	return $container;
+    elsif ( $element eq 'span' ) {  # this is the popup menu that shows ranges
+        my $container
+            = $self->zoomBar( $self->segment, $self->whole_segment );
+        $container =~ s/<\/?select.+//g;
+        return $container;
     }
-    elsif ($element eq 'landmark_search_field') {
-	return $self->state->{name};
+    elsif ( $element eq 'landmark_search_field' ) {
+        return $self->state->{name};
     }
-    elsif ($element eq 'overview_panels') {
-	return "<b>some day this will be the overview showing ".$self->state->{name}."</b>";
+    elsif ( $element eq 'overview_panels' ) {
+        return "<b>some day this will be the overview showing "
+            . $self->state->{name} . "</b>";
     }
-    elsif ($element eq 'detail_panels') {
+    elsif ( $element eq 'detail_panels' ) {
         $self->init_plugins();
         $self->init_remote_sources();
-	return join ' ',$self->render_detailview_panels($self->region->seg);
+        return join ' ',
+            $self->render_detailview_panels( $self->region->seg );
     }
 
     return 'Unknown element';
@@ -1137,6 +1196,12 @@ sub asynchronous_update_coordinates {
 	$self->zoom_to_span($state,$action);
 	$position_updated++;
     }
+    if ($action =~ /set segment/) {
+	$self->move_segment($state,$action);
+	$position_updated++;
+    }
+    
+
     if ($position_updated) { # clip and update param
 	if (defined $state->{seg_min} && $state->{start} < $state->{seg_min}) {
 	    my $delta = $state->{seg_min} - $state->{start};
@@ -1168,6 +1233,19 @@ sub zoom_to_span {
   my $range	    = int(($span)/2);
   $state->{start}   = $center - $range;
   $state->{stop }   = $state->{start} + $span - 1;
+}
+
+sub move_segment {
+  my $self = shift;
+  my ( $state, $new_segment ) = @_;
+
+  if ( $new_segment =~ /:([\d+.-]+)\.\.([\d+.-]+)/ ) {
+    my $new_start = $1;
+    my $new_stop  = $2;
+
+    $state->{start} = $new_start;
+    $state->{stop}  = $new_stop;
+  }
 }
 
 sub scroll {

@@ -3,7 +3,7 @@
  rubber.js -- a base class for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.2 2008-06-06 21:14:26 lstein Exp $
+ $Id: rubber.js,v 1.3 2008-07-30 15:09:01 mwz444 Exp $
 
 */
 
@@ -22,7 +22,7 @@ SelectArea.prototype.replaceImage = function(image) {
   var isIE   = document.all && !window.opera; 
 
 
-  var id = image.getAttribute(id);
+  var id = image.getAttribute('id');
   var width  = this.elementLocation(image,'width');
   var height = this.elementLocation(image,'height');
   var top    = this.elementLocation(image,'y1');
@@ -31,7 +31,6 @@ SelectArea.prototype.replaceImage = function(image) {
   var p = image.parentNode;
   p.removeChild(image);
 
-  var id = image.getAttribute(id);
   image = this.createAndAppend('span',p,id);
   image.setAttribute('name',name);
 
@@ -39,9 +38,12 @@ SelectArea.prototype.replaceImage = function(image) {
   YAHOO.util.Dom.setStyle(image,'width', width+'px');
   YAHOO.util.Dom.setStyle(image,'height', height+'px');
   YAHOO.util.Dom.setStyle(image,'display','block');
+  YAHOO.util.Dom.setStyle(image,'cursor','text');
 
 
-  if (!document.mainform.drag_and_drop || !document.mainform.drag_and_drop.checked) {
+  if (   !document.searchform 
+      || !document.searchform.drag_and_drop 
+      || !document.searchform.drag_and_drop.checked) {
     var name = this.imageId+'_map';
     var map;
     
@@ -76,15 +78,17 @@ SelectArea.prototype.replaceImage = function(image) {
 }
 
 SelectArea.prototype.recenter = function(event) {
+alert("RC");
   var self = currentSelectArea;
+  self.loadSegmentInfo();
   var deltaPixelStart      = self.selectPixelStart - self.pixelStart;
   var deltaSequenceStart   = deltaPixelStart * self.pixelToDNA;
 
   var coord  = self.flip ? Math.round(self.segmentEnd - deltaSequenceStart)
                          : Math.round(self.segmentStart + deltaSequenceStart);
 
-  var detailsStart = parseInt(document.mainform.start.value);
-  var detailsEnd   = parseInt(document.mainform.stop.value);
+  var detailsStart = parseInt(self.detailStart);
+  var detailsEnd = parseInt(self.detailEnd);
   var end  = self.segmentEnd;
   var span = Math.abs(detailsEnd - detailsStart);
   var half = Math.round(span/2);
@@ -94,8 +98,8 @@ SelectArea.prototype.recenter = function(event) {
   if (coord > end) coord = end - half - 1;
   var start  = coord - half;
   var end    = coord + half;
-  document.mainform.name.value = self.ref + ':' + start + '..' + end;
-  document.mainform.submit();
+  document.searchform.name.value = self.ref + ':' + start + '..' + end;
+  document.searchform.submit();
 }
 
 // Cross-browser element coordinates
@@ -130,6 +134,9 @@ SelectArea.prototype.eventLocation = function(event,request) {
 // of the selectable image -- horizontal position does not matter
 SelectArea.prototype.startRubber = function(self,event) {
   // only one select area is active at a time, so let the subclass take possession
+
+  self.loadSegmentInfo();
+
   currentSelectArea = self;
 
   // suppress all popup balloon while drag-select is active
@@ -182,7 +189,7 @@ SelectArea.prototype.cancelRubber = function() {
   selectAreaIsActive = false;
 
   if (self.originalLandmark) {
-    document.mainform.name.value = self.originalLandmark;
+    document.searchform.name.value = self.originalLandmark;
   }
   self.moved = false;
 }
@@ -245,7 +252,7 @@ SelectArea.prototype.moveRubber = function(event) {
 
   // reset the value of the 'name' input box
   self.currentSegment = self.ref +':'+self.selectSequenceStart+'..'+self.selectSequenceEnd;
-  document.mainform.name.value = self.currentSegment;
+  document.searchform.name.value = self.currentSegment;
 
   // size and appearance of the "rubber band" select box
   YAHOO.util.Dom.setStyle(self.selectBox,'width','1px');
@@ -256,7 +263,7 @@ SelectArea.prototype.moveRubber = function(event) {
   // warning if max segment size exceeded
   var tooBig;
   if (!self.maxSegment) {
-    self.maxSegment = document.mainform.max_segment.value;
+    self.maxSegment = Controller.max_segment;
   }
   if (self.maxSegment && selectSequenceWidth > self.maxSegment) {
     self.setOpacity(self.selectBox,self.opacity||0.5,'red');
@@ -411,7 +418,8 @@ SelectArea.prototype.stopRubber = function(event) {
   // autoSubmit option will bypass the menu
   if (self.autoSubmit && !self.overrideAutoSubmit) {
     SelectArea.prototype.cancelRubber();
-    document.mainform.submit();
+    //document.searchform.submit();
+    self.submit();
   }
   else {
     self.showMenu(event);
@@ -454,6 +462,7 @@ SelectArea.prototype.hideMenu = function() {
 }
 
 SelectArea.prototype.clearAndSubmit = function(plugin,action) {
+alert("CAS");
   this.hideMenu();
   if (plugin) {
     action = action || 'Go';
@@ -462,19 +471,23 @@ SelectArea.prototype.clearAndSubmit = function(plugin,action) {
     document.location = url;
   }
   else {
-    document.mainform.submit();
+    this.submit();
   }
 }
 
 SelectArea.prototype.clearAndRecenter = function() {
+  this.hideMenu();
   var self = currentSelectArea;
-  var start   = document.mainform.start.value.replace(/\D+/,'') * 1;
-  var end     = document.mainform.stop.value.replace(/\D+/,'')  * 1;
+  self.loadSegmentInfo();
+  var start   = self.detailStart+'';
+  start   = start.replace(/\D+/,'') * 1;
+  var end   = self.detailEnd+'';
+  end   = end.replace(/\D+/,'') * 1;
   var half    = Math.round(Math.abs((end - start)/2));
   var middle  = Math.round((self.selectSequenceStart + self.selectSequenceEnd)/2);
   var newName = self.ref+':'+(middle-half)+'..'+(middle+half);
-  document.mainform.name.value = newName;
-  self.clearAndSubmit();
+  self.currentSegment = newName;
+  self.submit();
 }
 
 // Make best effort to set the opacity of the selectbox
@@ -499,4 +512,12 @@ SelectArea.prototype.setOpacity = function(el,opc,bgColor) {
   YAHOO.util.Dom.setStyle(el,'filter','alpha(opacity= '+(100*opc)+')');
   YAHOO.util.Dom.setStyle(el,'MozOpacity',opc);
   YAHOO.util.Dom.setStyle(el,'KhtmlOpacity',opc);
+}
+
+
+SelectArea.prototype.submit = function() {
+  var self = currentSelectArea;
+  if (self.currentSegment) {
+    Controller.update_coordinates("set segment " + self.currentSegment);
+  }  
 }

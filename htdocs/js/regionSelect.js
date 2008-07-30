@@ -4,7 +4,7 @@
                       This class handles region-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: regionSelect.js,v 1.2 2008-06-06 21:14:24 lstein Exp $
+ $Id: regionSelect.js,v 1.3 2008-07-30 15:09:01 mwz444 Exp $
 
 */
 
@@ -76,7 +76,6 @@ Region.prototype.initialize = function() {
 //   }
 
   self.scalebar = i;
-  self.getSegment(i);
   self.addSelectMenu('region');
   self.addSelectBox('region');
   regionObject = self;
@@ -88,18 +87,25 @@ Region.prototype.startSelection = function(event) {
   SelectArea.prototype.startRubber(self,event);
 }
 
-Region.prototype.getSegment = function(i) {
+Region.prototype.loadSegmentInfo = function() {
   // get the segment info from gbrowse CGI parameters
-  this.ref          = document.mainform.ref.value;
-  this.segmentStart = parseInt(document.mainform.region_start.value);
-  this.segmentEnd   = parseInt(document.mainform.region_stop.value);
-  this.flip         = document.mainform.flip.checked;
-  this.padLeft      = parseInt(document.mainform.image_padding.value);
-  this.pixelToDNA   = parseFloat(document.mainform.region_pixel_ratio.value);
+  
+  var i = document.getElementById(self.imageId);
+  
+  var segment_info = Controller.segment_info;
+  
+  this.ref          = segment_info.ref;
+  this.segmentStart = parseInt(segment_info.region_start);
+  this.segmentEnd   = parseInt(segment_info.region_stop);
+  this.flip         = document.sliderform.flip.checked;
+  this.padLeft      = parseInt(segment_info.image_padding);
+  this.pixelToDNA   = parseFloat(segment_info.region_pixel_ratio);
+  this.detailStart  = parseInt(segment_info.detail_start);
+  this.detailEnd    = parseInt(segment_info.detail_stop);
 
   // If the keystyle is left, there may been extra padding
   var actualWidth   = this.elementLocation(i,'width');
-  var expectedWidth = parseInt(document.mainform.overview_width.value);
+  var expectedWidth = parseInt(segment_info.overview_width);
   if (actualWidth > expectedWidth) {
     this.padLeft     += actualWidth - expectedWidth;
   }

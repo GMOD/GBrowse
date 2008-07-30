@@ -3,7 +3,7 @@
  rubber.js -- a base class for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.3 2008-07-30 15:09:01 mwz444 Exp $
+ $Id: rubber.js,v 1.4 2008-07-30 17:25:43 mwz444 Exp $
 
 */
 
@@ -78,7 +78,6 @@ SelectArea.prototype.replaceImage = function(image) {
 }
 
 SelectArea.prototype.recenter = function(event) {
-alert("RC");
   var self = currentSelectArea;
   self.loadSegmentInfo();
   var deltaPixelStart      = self.selectPixelStart - self.pixelStart;
@@ -462,7 +461,6 @@ SelectArea.prototype.hideMenu = function() {
 }
 
 SelectArea.prototype.clearAndSubmit = function(plugin,action) {
-alert("CAS");
   this.hideMenu();
   if (plugin) {
     action = action || 'Go';

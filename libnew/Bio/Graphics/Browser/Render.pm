@@ -947,8 +947,9 @@ sub add_track_to_state {
   my $label = shift;
   my $state  = $self->state;
 
-  push @{$state->{tracks}}, $label;
-  $state->{features}{$label} = {visible=>0,options=>0,limit=>0};
+  push @{ $state->{tracks} }, $label 
+    unless ( grep /^$label$/, @{ $state->{tracks} || [] } );
+  $state->{features}{$label} = {visible=>1,options=>0,limit=>0};
 }
 
 sub update_state_from_cgi {

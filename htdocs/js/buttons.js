@@ -11,7 +11,8 @@ function gbCheck (button,state) {
   var checkboxes = container.getElementsByTagName('input');
   if (!checkboxes) { return false; }
   for (var i=0; i<checkboxes.length; i++) {
-     checkboxes[i].checked=state;
+    checkboxes[i].checked=state;
+    gbToggleTrack(checkboxes[i]);
   }
   gbTurnOff(a);
   button.checked="on";

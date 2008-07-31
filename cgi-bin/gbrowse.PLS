@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.96 2008-07-31 14:43:20 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.97 2008-07-31 16:35:07 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -476,7 +476,10 @@ sub main_display {
   my $src       = $CONFIG->source;
   my $action = $src ? url(-absolute=>1)."/$src/" : url(-absolute=>1);
 
-  print galaxy_form($page_settings) if $page_settings->{GALAXY_URL} || $CONFIG->setting('galaxy');
+  print galaxy_form($page_settings) 
+      if $page_settings->{GALAXY_URL} 
+         || $CONFIG->setting('galaxy') 
+         || $CONFIG->setting('galaxy outgoing');
 
   print $msie_hack ? startform(-name   => 'mainform',
 			       -action => $action,
@@ -997,6 +1000,7 @@ sub adjust_settings {
   }
   $settings->{name} =~ s/^\s+//; # strip leading
   $settings->{name} =~ s/\s+$//; # and trailing whitespace
+  $settings->{name} =~ s/[*?]//g if $CONFIG->setting('disable wildcards'); 
 
   if (my @features = shellwords(param('h_feat'))) {
     $settings->{h_feat} = {};
@@ -1109,8 +1113,9 @@ sub navigation_table {
   my $help_link    =  a({-href=>general_help(),-target=>'help'},'['.$CONFIG->tr('Help').']');
   my $plugin_link  = plugin_links($PLUGINS);
   my $oligo        = $PLUGINS->plugin('OligoFinder') ? ', oligonucleotide (15 bp minimum)' : '';
-  my $rand         =   substr(md5_hex(rand),0,5);
+  my $rand         = substr(md5_hex(rand),0,5);
   my $bookmark     = bookmark_link($settings);
+  my $galaxy_link  = galaxy_link($settings);
   my $description  = $CONFIG->setting('description') || $CONFIG->source;
 
   $table .= table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
@@ -1142,6 +1147,7 @@ sub navigation_table {
 			     -onMouseDown => "balloon.showTooltip(event,'url:?share_track=all')"},
 			    '['.$CONFIG->tr('SHARE_ALL').']'),
 			  a({-href=>image_link($settings),-target=>'_blank'},'['.$CONFIG->tr('IMAGE_LINK').']'),
+			  $galaxy_link,
 			  $plugin_link,
 			  $svg_link,
 			 ) : (),
@@ -2132,8 +2138,8 @@ sub get_features {
 
   # sort of hacky way to force keyword search on wildcards
   if (defined $settings->{name} && $settings->{name} =~ /[*?]/) {
-    my $searchterm = $settings->{name};
-    push @features,do_keyword_search($searchterm) if length $searchterm > 0;
+      my $searchterm = $settings->{name};
+      push @features,do_keyword_search($searchterm) if length $searchterm > 0;
   }
 
   # h'mmm.  Couldn't find the feature.  See if it is in an uploaded file.
@@ -2321,9 +2327,10 @@ sub do_keyword_search {
 
   # if they wanted something specific, don't give them non-specific results.
   return if $searchterm =~ /^[\w._-]+:/;
+  return unless length $searchterm >= 3;
 
   # Need to untaint the searchterm.  We are very lenient about
-  # what is accepted here because we wil be quote-metaing it later.
+  # what is accepted here because we will be quote-metaing it later.
   $searchterm =~ /([\w .,~!@\#$%^&*()-+=<>?\/]+)/;
   $searchterm = $1;
 
@@ -3033,10 +3040,17 @@ sub set_track_options {
 sub galaxy_form {
   my $settings = shift;
 
-  my $URL  = url(-full=>1,-path=>1);
-  $URL  =~ s!/gbrowse/!/gbgff/!;
-  my $galaxy_url = $settings->{GALAXY_URL} || $CONFIG->setting('galaxy');
+  my $galaxy_url = $settings->{GALAXY_URL} 
+                || $CONFIG->setting('galaxy outgoing') 
+                || $CONFIG->setting('galaxy');  # backward compatibility
   return '' unless $galaxy_url;
+
+  my $URL  = $CONFIG->setting('galaxy incoming');
+  unless ($URL) {
+      $URL = url(-full=>1);
+      $URL  =~ s!/gbrowse/!/gbgff/!;
+  }
+  $URL .= "/".$CONFIG->source;
 
   my $action = $galaxy_url =~ /\?/ ? "$galaxy_url&URL=$URL" : "$galaxy_url?URL=$URL";
 
@@ -3063,6 +3077,15 @@ sub galaxy_form {
   }
 
   return $html;
+}
+
+sub galaxy_link {
+    my $settings     = shift;
+    my $galaxy_url = $settings->{GALAXY_URL} 
+                  || $CONFIG->setting('galaxy outgoing') 
+                  || $CONFIG->setting('galaxy');  # backward compatibility
+    return '' unless $galaxy_url;
+    return a({-href=>'javascript:document.galaxyform.submit()'},'['.$CONFIG->tr('SEND_TO_GALAXY').']');
 }
 
 sub help {
@@ -3325,7 +3348,7 @@ sub plugin_menu {
   my @plugins = sort {$labels->{$a} cmp $labels->{$b}} @visible_plugins;
   return unless @plugins;
 
-  if (my $galaxy_dest = $CONFIG->setting('galaxy')) {
+  if (my $galaxy_dest = ($CONFIG->setting('galaxy outgoing') || $CONFIG->setting('galaxy'))) {
     $labels->{invoke_galaxy} = $CONFIG->tr('SEND_TO_GALAXY');
     unshift @plugins,'invoke_galaxy';
   }

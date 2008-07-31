@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.94 2008-07-28 23:08:35 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.95 2008-07-31 16:35:08 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -2155,7 +2155,9 @@ sub name2segments {
 
     # try the wildcard  version, but only if the name is of significant length
     # IMPORTANT CHANGE: we used to put stars at the beginning and end, but this killed performance!
-    push @sloppy_names,"$name_to_try*" if length $name_to_try > 3 and $name_to_try !~ /\*$/;
+    push @sloppy_names,"$name_to_try*" if length $name_to_try > 3 
+	                              and $name_to_try !~ /\*$/ 
+				      and !$self->setting('disable wildcards');
 
     for my $n (@sloppy_names) {
       for my $c (@classes) {

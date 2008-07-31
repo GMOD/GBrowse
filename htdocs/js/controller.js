@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.18 2008-07-31 14:18:08 mwz444 Exp $
+ $Id: controller.js,v 1.19 2008-07-31 16:51:54 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -186,7 +186,14 @@ var GBrowseController = Class.create({
           var panel_id       = this_track_data.panel_id;
 
           //Append new html to the appropriate section
-          $(panel_id).innerHTML += html;
+          // This is a bit cludgy but we create a temp element, 
+          // read the html into it and then move the div element 
+          // back out.  This keeps the other tracks intact.
+          var tmp_element       = document.createElement("tmp_element");
+          tmp_element.innerHTML = html;
+          $(panel_id).appendChild(tmp_element);
+          $(panel_id).appendChild($(div_element_id));
+          $(panel_id).removeChild(tmp_element);
 
           //Add New Track(s) to the list of observers and such
           Controller.register_track(div_element_id,this_track_data.image_element_id,'standard') ;

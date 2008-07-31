@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.95 2008-07-28 23:08:11 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.96 2008-07-31 14:43:20 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -3206,7 +3206,9 @@ sub _build_image_page {
   my $tracks = $settings->{tracks};
   my $width  = $CONFIG->width;
   my $name   = $settings->{name} || "$settings->{ref}:$settings->{start}..$settings->{stop}";
-  my $type    = join '+',map{escape($_)} map {/\s/?qq("$_"):$_} grep {$settings->{features}{$_}{visible}} @$tracks;
+  my $type    = join '+',map{$_ = escape($_); s/-/%%/g; $_}  # need to escape the "-" because gbrowse_img uses it as a separator
+                         map {/\s/?qq("$_"):$_} 
+                         grep {$settings->{features}{$_}{visible}} @$tracks;
   my $options = join '+',map { join '+', escape($_),$settings->{features}{$_}{options}
 			     } map {/\s/?"$_":$_}
 			       grep {

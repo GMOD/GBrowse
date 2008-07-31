@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.7 2008-07-08 20:25:14 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.8 2008-07-31 14:43:20 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -116,7 +116,8 @@ if (param('list')) {
 
 # get all parameters
 my @landmarks       = (param('name'),   param('q'));                 # list of landmarks to display
-my @track_types     = map { split /[+-]/ } 
+my @track_types     = map { s/%%/-/g; $_  }   # unescape %% as "-", damage done in gbrowse link generator
+                      map { split /[+-]/ } 
                           (param('type'),   param('t'), param('label')); # track types to turn on
 my @add_features    = (param('add'),    param('a'));        # overlay features
 my @add_style       = (param('style'),  param('s'));        # overlay features style

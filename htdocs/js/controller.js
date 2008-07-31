@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.17 2008-07-30 17:28:42 mwz444 Exp $
+ $Id: controller.js,v 1.18 2008-07-31 14:18:08 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -30,7 +30,7 @@ var GBrowseController = Class.create({
     //Grey out image
     this.track_images.keys().each(
       function(image_id) {
-	$(image_id).setOpacity(0.3);
+	    $(image_id).setOpacity(0.3);
       }
     );
     
@@ -38,29 +38,29 @@ var GBrowseController = Class.create({
       method:     'post',
       parameters: {navigate: action},
       onSuccess: function(transport) {
-	var results                 = transport.responseJSON;
-	var segment                 = results.segment;
-    Controller.segment_info     = results.segment_info;
-	var track_keys              = results.track_keys;
-	var overview_scale_bar_hash = results.overview_scale_bar;
-	var detail_scale_bar_hash   = results.detail_scale_bar;
-    Controller.debug_status     = 'updating coords - successful navigate';
-
-	Controller.update_scale_bar(overview_scale_bar_hash);
-	Controller.update_scale_bar(detail_scale_bar_hash);
-
-	Controller.segment_observers.keys().each(
-	  function(e) {
-	    $(e).fire('model:segmentChanged',
-		      {segment:    segment, 
-		       track_key:  track_keys[e]
+	    var results                 = transport.responseJSON;
+        Controller.segment_info     = results.segment_info;
+	    var track_keys              = results.track_keys;
+	    var overview_scale_bar_hash = results.overview_scale_bar;
+	    var detail_scale_bar_hash   = results.detail_scale_bar;
+        Controller.debug_status     = 'updating coords - successful navigate';
+    
+	    Controller.update_scale_bar(overview_scale_bar_hash);
+	    Controller.update_scale_bar(detail_scale_bar_hash);
+    
+	    Controller.segment_observers.keys().each(
+	      function(e) {
+	        $(e).fire('model:segmentChanged',
+		      {
+		        track_key:  track_keys[e]
 		      });
-	  });
-      }
+          }
+        ); //end each segment_observer
+      } // end onSuccess
       
-    });
+    }); // end Ajax.Request
     this.debug_status             = 'updating coords 2';
-  },
+  }, // end update_coordinates
 
   register_track:
   function (detail_div_id,detail_image_id,track_type) {
@@ -75,55 +75,50 @@ var GBrowseController = Class.create({
     $(detail_div_id).observe('model:segmentChanged',function(event) {
       var track_key = event.memo.track_key;
       if (track_key){
-	if (Controller.periodic_updaters[detail_div_id]){
-	  Controller.periodic_updaters[detail_div_id].stop();
-	}
-	
-	track_image = document.getElementById(detail_image_id);
-	Controller.periodic_updaters[detail_div_id] = 
-	  new Ajax.PeriodicalUpdater(
-	    detail_div_id,
-	    '#',
-	    { 
-	      frequency:1, 
-	      decay:1.5,
-	      method: 'post',
-	      parameters: {
-		track_key:      track_key,
-		retrieve_track: detail_div_id,
-		image_width:    track_image.width,
-		image_height:   track_image.height,
-		image_id:       detail_image_id,
-	      },
-	      onSuccess: function(transport) {
-		
-		detail_div = document.getElementById(detail_div_id);
-		if (transport.responseText.substring(0,18) == "<!-- AVAILABLE -->"){
-		  detail_div.innerHTML = transport.responseText;
-		  Controller.periodic_updaters[detail_div_id].stop();
-		  Controller.reset_after_track_load();
-		}
-		else if (transport.responseText.substring(0,16) == "<!-- EXPIRED -->"){
-		  detail_div.innerHTML = transport.responseText;
-		  Controller.periodic_updaters[detail_div_id].stop();
-		  Controller.reset_after_track_load();
-		}
-		else {
-		  var p_updater = Controller.periodic_updaters[detail_div_id];
-		  var decay     = p_updater.decay;
-		  p_updater.stop();
-		  p_updater.decay = decay * p_updater.options.decay;
-		  p_updater.timer = 
-		    p_updater.start.bind(p_updater).delay(p_updater.decay 
-							  * p_updater.frequency);
-		}
-	      }
-	    }
-	  );
-      }
-    }
-      );
-  },
+        if (Controller.periodic_updaters[detail_div_id]){
+          Controller.periodic_updaters[detail_div_id].stop();
+        }
+    
+        track_image = document.getElementById(detail_image_id);
+        Controller.periodic_updaters[detail_div_id] = 
+          new Ajax.PeriodicalUpdater( detail_div_id, '#', { 
+          frequency:1, 
+          decay:1.5,
+          method: 'post',
+          parameters: {
+            track_key:      track_key,
+            retrieve_track: detail_div_id,
+            image_width:    track_image.width,
+            image_height:   track_image.height,
+            image_id:       detail_image_id,
+          },
+          onSuccess: function(transport) {
+          
+            detail_div = document.getElementById(detail_div_id);
+            if (transport.responseText.substring(0,18) == "<!-- AVAILABLE -->"){
+              detail_div.innerHTML = transport.responseText;
+              Controller.periodic_updaters[detail_div_id].stop();
+              Controller.reset_after_track_load();
+            }
+            else if (transport.responseText.substring(0,16) == "<!-- EXPIRED -->"){
+              detail_div.innerHTML = transport.responseText;
+              Controller.periodic_updaters[detail_div_id].stop();
+              Controller.reset_after_track_load();
+            }
+            else {
+              var p_updater = Controller.periodic_updaters[detail_div_id];
+              var decay     = p_updater.decay;
+              p_updater.stop();
+              p_updater.decay = decay * p_updater.options.decay;
+              p_updater.timer = 
+              p_updater.start.bind(p_updater).delay(p_updater.decay 
+                                * p_updater.frequency);
+            }
+          } // end onSuccess
+        }); // end new Ajax.Periodical...
+      } // end if (track_key)
+    }); // end .observed
+  }, // end register_track
 
   reset_after_track_load:
   // This may be a little overkill to run these after every track update but
@@ -156,14 +151,13 @@ var GBrowseController = Class.create({
       parameters: {first_render: 1},
       onSuccess: function(transport) {
         var results    = transport.responseJSON;
-        var segment    = results.segment;
         var track_keys = results.track_keys;
         Controller.segment_info = results.segment_info;
 
         Controller.update_on_load_observers.keys().each(
           function(e) {
             $(e).fire('model:segmentChanged',
-              {segment:    segment, 
+              {
               track_key:  track_keys[e]});
           }
         );
@@ -196,7 +190,6 @@ var GBrowseController = Class.create({
 
           //Add New Track(s) to the list of observers and such
           Controller.register_track(div_element_id,this_track_data.image_element_id,'standard') ;
-
 
           //fire the segmentChanged for each track not finished
           if (html.substring(0,18) == "<!-- AVAILABLE -->"){

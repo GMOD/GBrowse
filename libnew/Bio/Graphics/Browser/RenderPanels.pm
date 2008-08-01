@@ -551,19 +551,43 @@ sub overview_pad {
   return ($max * $image_class->gdMediumBoldFont->width + 3,$pad);
 }
 
-sub render_overview_scale_bar {
-    my $self = shift;
-    my ( $whole_segment, $segment, $state, $feature_files ) = @_;
+# Handle the rendering of all three types of scale bars
+sub render_scale_bar {
+    my $self    = shift;
+    my %args    = @_;
+    my $segment = $args{'segment'};
+    my $state   = $args{'state'};
+    my $section = $args{'section'} || 'detail';
     my $gd;
-
-    my $source = $self->source;
-
-    #track option is same as state
 
     # Temporary kludge until I can figure out a more
     # sane way of rendering overview with SVG...
     my $image_class = 'GD';
     eval "use $image_class";
+
+    my $source = $self->source;
+
+    my ( $wide_segment, $bgcolor, $pad_bottom, %add_track_extra_args, );
+
+    if ( $section eq 'overview' ) {
+        $wide_segment = $args{'whole_segment'} or return ( '', 0, 0 );
+        $bgcolor = $source->global_setting('overview bgcolor') || 'wheat';
+        $pad_bottom = 0;
+        %add_track_extra_args = (
+            -label      => $wide_segment->seq_id,
+            -label_font => $image_class->gdMediumBoldFont,
+        );
+    }
+    elsif ( $section eq 'region' ) {
+        $wide_segment = $args{'region_segment'} or return ( '', 0, 0 );
+        $bgcolor = $source->global_setting('region bgcolor') || 'wheat';
+        $pad_bottom = 0;
+    }
+    else {
+        $wide_segment = $segment;
+        $bgcolor      = $source->global_setting('detail bgcolor') || 'wheat';
+        $pad_bottom   = 0;
+    }
 
     my $width = $state->{'width'} * $self->overview_ratio();
 
@@ -573,17 +597,17 @@ sub render_overview_scale_bar {
     $padl = $image_pad unless defined $padl;
     $padr = $image_pad unless defined $padr;
 
-    my $panel = Bio::Graphics::Panel->new(
-        -segment => $whole_segment,
-        -width   => $width,
-        -bgcolor => $source->global_setting('overview bgcolor')
-            || 'wheat',
-        -key_style => 'left',
-        -pad_left  => $padl,
-        -pad_right => $padr,
-        -pad_top   => $image_class->gdMediumBoldFont->height + 8,
+   # TO DO: REPLACE THE HAND-CONFIGURATION WITH A CALL TO CREATE_PANEL_ARGS():
 
-        #-pad_bottom => PAD_OVERVIEW_BOTTOM,
+    my $panel = Bio::Graphics::Panel->new(
+        -segment     => $wide_segment,
+        -width       => $width,
+        -bgcolor     => $bgcolor,
+        -key_style   => 'left',
+        -pad_left    => $padl,
+        -pad_right   => $padr,
+        -pad_top     => $image_class->gdMediumBoldFont->height + 8,
+        -pad_bottom  => $pad_bottom,
         -image_class => $image_class,
         -auto_pad    => 0,
     );
@@ -593,44 +617,37 @@ sub render_overview_scale_bar {
     # size as the other panels, I need to do it.
     $width += $padl + $padr;
 
-    # THIS IS NOW OBSOLETE
-    # cache check so that we can cache the overview images
-    my $cache_path;
-    $cache_path
-        = $source->gd_cache_path( 'cache_overview', $whole_segment, [],
-        $width, );
-
     # no cached data, so do it ourselves
     unless ($gd) {
         my $units = $source->global_setting('units') || '';
         my $no_tick_units = $source->global_setting('no tick units');
 
         $panel->add_track(
-             $whole_segment,
+             $wide_segment,
             -glyph          => 'arrow',
             -double         => 1,
-            -label          => $whole_segment->seq_id,
-            -label_font     => $image_class->gdMediumBoldFont,
             -tick           => 2,
             -units_in_label => $no_tick_units,
             -units          => $units,
             -unit_divider   => $source->global_setting('unit_divider') || 1,
+            %add_track_extra_args,
         );
 
         # add uploaded files that have the "(over|region)view" option set
 
         $gd = $panel->gd;
-        $source->gd_cache_write( $cache_path, $gd ) if $cache_path;
     }
 
-    my $rect_color = $panel->translate_color(
-        $source->global_setting('selection rectangle color') || 'red' );
-    my ( $x1, $x2 ) = $panel->map_pt( $segment->start, $segment->end );
     my ( $y1, $y2 ) = ( 0, ( $gd->getBounds )[1] );
-    $x2 = $panel->right - 1 if $x2 >= $panel->right;
-    my $pl = $panel->can('auto_pad') ? $panel->pad_left : 0;
+    if ( $section eq 'overview' or $section eq 'region' ) {
+        my $rect_color = $panel->translate_color(
+            $source->global_setting('selection rectangle color') || 'red' );
+        my ( $x1, $x2 ) = $panel->map_pt( $segment->start, $segment->end );
+        $x2 = $panel->right - 1 if $x2 >= $panel->right;
+        my $pl = $panel->can('auto_pad') ? $panel->pad_left : 0;
 
-    $gd->rectangle( $pl + $x1, $y1, $pl + $x2, $y2 - 1, $rect_color );
+        $gd->rectangle( $pl + $x1, $y1, $pl + $x2, $y2 - 1, $rect_color );
+    }
 
     eval { $panel->finished }; # should quash memory leaks when used in conjunction with bioperl 1.4
 
@@ -659,77 +676,6 @@ sub render_image_pad {
     }
     
     return $cache->gd;
-}
-
-sub render_detail_scale_bar {
-    my $self = shift;
-    my ( $segment, $state, $feature_files ) = @_;
-    my $gd;
-
-    my $source = $self->source;
-
-    #track option is same as state
-
-    # Temporary kludge until I can figure out a more
-    # sane way of rendering overview with SVG...
-    my $image_class = 'GD';
-    eval "use $image_class";
-
-    my $width = $state->{'width'} * $self->overview_ratio();
-
-    my $image_pad = $self->image_padding;
-    my $padl      = $source->global_setting('pad_left');
-    my $padr      = $source->global_setting('pad_right');
-    $padl = $image_pad unless defined $padl;
-    $padr = $image_pad unless defined $padr;
-
-    
-    # TO DO: REPLACE THE HAND-CONFIGURATION WITH A CALL TO CREATE_PANEL_ARGS():
-
-
-    my $panel = Bio::Graphics::Panel->new(
-        -segment   => $segment,
-        -width     => $width,
-        -bgcolor   => $source->global_setting('overview bgcolor') || 'wheat',
-        -key_style => 'left',
-        -pad_left  => $padl,
-        -pad_right => $padr,
-        -pad_top   => $image_class->gdMediumBoldFont->height + 8,
-        -image_class => $image_class,
-        -auto_pad    => 0,
-    );
-
-    # I don't understand why I need to add the pad to the width, since the
-    # other panels don't do it but in order for the scale bar to be the same
-    # size as the other panels, I need to do it.
-    $width += $padl + $padr;
-
-    # no cached data, so do it ourselves
-    unless ($gd) {
-        my $units = $source->global_setting('units') || '';
-        my $no_tick_units = $source->global_setting('no tick units');
-
-        $panel->add_track(
-             $segment,
-            -glyph          => 'arrow',
-            -double         => 1,
-            -tick           => 2,
-            -units_in_label => $no_tick_units,
-            -units          => $units,
-            -unit_divider   => $source->global_setting('unit_divider') || 1,
-        );
-
-        $gd = $panel->gd;
-    }
-
-    my ( $y1, $y2 ) = ( 0, ( $gd->getBounds )[1] );
-
-    eval { $panel->finished }; # should quash memory leaks when used in conjunction with bioperl 1.4
-
-    my $url    = $self->generate_image($gd);
-    my $height = $y2 - $y1 + 1;
-
-    return ( $url, $height, $width, );
 }
 
 sub bump_density {

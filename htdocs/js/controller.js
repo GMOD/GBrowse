@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.19 2008-07-31 16:51:54 mwz444 Exp $
+ $Id: controller.js,v 1.20 2008-08-01 15:19:01 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -42,10 +42,12 @@ var GBrowseController = Class.create({
         Controller.segment_info     = results.segment_info;
 	    var track_keys              = results.track_keys;
 	    var overview_scale_bar_hash = results.overview_scale_bar;
+	    var region_scale_bar_hash   = results.region_scale_bar;
 	    var detail_scale_bar_hash   = results.detail_scale_bar;
         Controller.debug_status     = 'updating coords - successful navigate';
     
 	    Controller.update_scale_bar(overview_scale_bar_hash);
+	    Controller.update_scale_bar(region_scale_bar_hash);
 	    Controller.update_scale_bar(detail_scale_bar_hash);
     
 	    Controller.segment_observers.keys().each(
@@ -63,50 +65,50 @@ var GBrowseController = Class.create({
   }, // end update_coordinates
 
   register_track:
-  function (detail_div_id,detail_image_id,track_type) {
+  function (track_div_id,track_image_id,track_type) {
     
-    this.track_images.set(detail_image_id,1);
+    this.track_images.set(track_image_id,1);
     if (track_type=="scale_bar"){
       return;
     }
-    this.segment_observers.set(detail_div_id,1);
-    this.update_on_load_observers.set(detail_div_id,1);
+    this.segment_observers.set(track_div_id,1);
+    this.update_on_load_observers.set(track_div_id,1);
 
-    $(detail_div_id).observe('model:segmentChanged',function(event) {
+    $(track_div_id).observe('model:segmentChanged',function(event) {
       var track_key = event.memo.track_key;
       if (track_key){
-        if (Controller.periodic_updaters[detail_div_id]){
-          Controller.periodic_updaters[detail_div_id].stop();
+        if (Controller.periodic_updaters[track_div_id]){
+          Controller.periodic_updaters[track_div_id].stop();
         }
     
-        track_image = document.getElementById(detail_image_id);
-        Controller.periodic_updaters[detail_div_id] = 
-          new Ajax.PeriodicalUpdater( detail_div_id, '#', { 
+        track_image = document.getElementById(track_image_id);
+        Controller.periodic_updaters[track_div_id] = 
+          new Ajax.PeriodicalUpdater( track_div_id, '#', { 
           frequency:1, 
           decay:1.5,
           method: 'post',
           parameters: {
             track_key:      track_key,
-            retrieve_track: detail_div_id,
+            retrieve_track: track_div_id,
             image_width:    track_image.width,
             image_height:   track_image.height,
-            image_id:       detail_image_id,
+            image_id:       track_image_id,
           },
           onSuccess: function(transport) {
           
-            detail_div = document.getElementById(detail_div_id);
+            track_div = document.getElementById(track_div_id);
             if (transport.responseText.substring(0,18) == "<!-- AVAILABLE -->"){
-              detail_div.innerHTML = transport.responseText;
-              Controller.periodic_updaters[detail_div_id].stop();
+              track_div.innerHTML = transport.responseText;
+              Controller.periodic_updaters[track_div_id].stop();
               Controller.reset_after_track_load();
             }
             else if (transport.responseText.substring(0,16) == "<!-- EXPIRED -->"){
-              detail_div.innerHTML = transport.responseText;
-              Controller.periodic_updaters[detail_div_id].stop();
+              track_div.innerHTML = transport.responseText;
+              Controller.periodic_updaters[track_div_id].stop();
               Controller.reset_after_track_load();
             }
             else {
-              var p_updater = Controller.periodic_updaters[detail_div_id];
+              var p_updater = Controller.periodic_updaters[track_div_id];
               var decay     = p_updater.decay;
               p_updater.stop();
               p_updater.decay = decay * p_updater.options.decay;
@@ -127,6 +129,7 @@ var GBrowseController = Class.create({
   // draggable again
   function () {
     create_drag('overview_panels','track');
+    create_drag('region_panels','track');
     create_drag('detail_panels','track');
   },
   
@@ -228,6 +231,7 @@ function initialize_page() {
   
   Controller.first_render();
   Overview.prototype.initialize();
+  Region.prototype.initialize();
   Details.prototype.initialize();
 }
 

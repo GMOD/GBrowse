@@ -19,6 +19,7 @@ use Bio::Graphics::Browser::RenderPanels;
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
 use constant OVERVIEW_SCALE_LABEL => 'Overview Scale';
+use constant REGION_SCALE_LABEL => 'Region Scale';
 use constant DETAIL_SCALE_LABEL   => 'Detail Scale';
 use constant EMPTY_IMAGE_HEIGHT   => 40;
 use constant MAX_SEGMENT     => 1_000_000;
@@ -163,10 +164,11 @@ sub asynchronous_event {
 
         my $overview_scale_return_object
             = $self->asynchronous_update_overview_scale_bar();
-
+        my $region_scale_return_object
+            = $self->asynchronous_update_region_scale_bar();
         my $detail_scale_return_object
             = $self->asynchronous_update_detail_scale_bar();
-        my $segment_info_object =  $self->segment_info_object();
+        my $segment_info_object = $self->segment_info_object();
 
         print CGI::header('application/json');
         print JSON::to_json(
@@ -174,6 +176,7 @@ sub asynchronous_event {
                 segment_info       => $segment_info_object,
                 track_keys         => $track_keys,
                 overview_scale_bar => $overview_scale_return_object,
+                region_scale_bar   => $region_scale_return_object,
                 detail_scale_bar   => $detail_scale_return_object,
             }
         );
@@ -183,20 +186,21 @@ sub asynchronous_event {
     if ( my $action = param('first_render') ) {
 
         #warn "Rendering Tracks";
-        my $track_keys = $self->begin_track_render();
-        my $segment_info_object =  $self->segment_info_object();
+        my $track_keys          = $self->begin_track_render();
+        my $segment_info_object = $self->segment_info_object();
 
         print CGI::header('application/json');
         print JSON::to_json(
-            {   segment    => $settings->{name},
-                segment_info       => $segment_info_object,
-                track_keys => $track_keys,
+            {   segment      => $settings->{name},
+                segment_info => $segment_info_object,
+                track_keys   => $track_keys,
             }
         );
         return 1;
     }
 
     if ( my $element = param('update') ) {
+
         #warn "updating element";
         my $html = $self->asynchronous_update_element($element);
         print CGI::header('text/html');
@@ -212,6 +216,7 @@ sub asynchronous_event {
         my $image_width      = param('image_width');
         my $image_height     = param('image_height');
         my $image_element_id = param('image_element_id');
+
         #warn "retreiving track $div_element_id - $track_key";
 
         my $track_name = '';
@@ -234,6 +239,7 @@ sub asynchronous_event {
 
     if ( my $action = param('add_track') ) {
         my $track_name = param('track_name');
+
         #warn "Adding Track $track_name";
 
         $self->add_track_to_state($track_name);
@@ -335,16 +341,19 @@ sub begin_track_render {
     $self->init_plugins();
     $self->init_remote_sources();
 
-    # Start rendering the detail and overview tracks
-    my $cache_detail_track_hash = $self->render_deferred();
-    my $cache_overview_track_hash
-        = $self->render_deferred( $self->whole_segment,
+    # Start rendering the detail, region and overview tracks
+    my @cache_track_hash_list;
+    push @cache_track_hash_list, $self->render_deferred();
+    push @cache_track_hash_list,
+        $self->render_deferred( $self->region_segment,
+        [ $self->regionview_tracks ], 'region', )
+        if ( $self->state->{region_size} );
+    push @cache_track_hash_list,
+        $self->render_deferred( $self->whole_segment,
         [ $self->overview_tracks ], 'overview', );
 
     my %track_keys;
-    foreach my $cache_track_hash ( $cache_detail_track_hash,
-        $cache_overview_track_hash )
-    {
+    foreach my $cache_track_hash (@cache_track_hash_list) {
         foreach my $track_label ( keys %{ $cache_track_hash || {} } ) {
             $track_keys{ "track_" . $track_label }
                 = $cache_track_hash->{$track_label}->key();
@@ -516,7 +525,7 @@ sub segment_info_object {
 
     if ( $settings->{region_size} ) {
         my ( $rstart, $rend )
-            = get_regionview_seg( $settings, $segment->start, $segment->end,
+            = $self->get_regionview_start_stop( $settings, $segment->start, $segment->end,
             $whole_segment->start, $whole_segment->end );
         my $rlen  = abs( $rend - $rstart );
         my $ratio = $rlen / $width;
@@ -534,24 +543,38 @@ sub render_panels {
 
     my $html = '';
 
-    ### Need to add regionview
     # Kick off track rendering
     if ( $section->{'overview'} ) {
         my $cache_overview_track_hash
             = $self->render_deferred( $self->whole_segment,
             [ $self->overview_tracks ], 'overview', );
 
-        my $scale_bar_html = $self->overview_scale_bar($seg,$section,);
+        my $scale_bar_html = $self->scale_bar( $seg, 'overview', );
         my $panels_html
-
-            #.= $self->retrieve_deferred($cache_overview_track_hash);
             .= $self->get_blank_panels($cache_overview_track_hash);
         my $drag_script = $self->drag_script( 'overview_panels', 'track' );
         $html .= div(
             $self->toggle(
                 'Overview',
                 div({ -id => 'overview_panels', -class => 'track' },
-                    $scale_bar_html,$panels_html,
+                    $scale_bar_html, $panels_html,
+                )
+            )
+        ) . $drag_script;
+    }
+    if ( $section->{'regionview'} and $self->state->{region_size} ) {
+
+        my $cache_region_track_hash
+            = $self->render_deferred( $self->region_segment,
+            [ $self->regionview_tracks ], 'region', );
+        my $scale_bar_html = $self->scale_bar( $seg, 'region' );
+        my $panels_html .= $self->get_blank_panels($cache_region_track_hash);
+        my $drag_script = $self->drag_script( 'region_panels', 'track' );
+        $html .= div(
+            $self->toggle(
+                'Region',
+                div({ -id => 'region_panels', -class => 'track' },
+                    $scale_bar_html, $panels_html,
                 )
             )
         ) . $drag_script;
@@ -559,7 +582,7 @@ sub render_panels {
     if ( $section->{'detailview'} ) {
         my $cache_detail_track_hash = $self->render_deferred();
 
-        my $scale_bar_html = $self->detail_scale_bar( $seg, $section );
+        my $scale_bar_html = $self->scale_bar( $seg, 'detail' );
         my $panels_html
 
             #.= $self->retrieve_deferred($cache_detail_track_hash);
@@ -578,37 +601,42 @@ sub render_panels {
     return $html;
 }
 
-sub overview_scale_bar {
-    my $self    = shift;
-    my $seg     = shift;
-    my $section = shift;
+sub scale_bar {
+    my $self         = shift;
+    my $seg          = shift;
+    my $this_section = shift || 'detail';
 
+    my $label = '';
+    my ( $url, $height, $width );
     my $renderer = $self->get_panel_renderer($seg);
-    my ( $url, $height, $width )
-        = $renderer->render_overview_scale_bar( $self->whole_segment, $seg,
-        $self->state );
+    if ( $this_section eq 'overview' ) {
+        $label = OVERVIEW_SCALE_LABEL;
+        ( $url, $height, $width ) = $renderer->render_scale_bar(
+            section       => 'overview',
+            whole_segment => $self->whole_segment,
+            segment       => $seg,
+            state         => $self->state
+        );
+    }
+    elsif ( $this_section eq 'region' ) {
+        $label = REGION_SCALE_LABEL;
+        ( $url, $height, $width ) = $renderer->render_scale_bar(
+            section        => 'region',
+            region_segment => $self->region_segment,
+            segment        => $seg,
+            state          => $self->state
+        );
+    }
+    elsif ( $this_section eq 'detail' ) {
+        $label = DETAIL_SCALE_LABEL;
+        ( $url, $height, $width ) = $renderer->render_scale_bar(
+            section => 'detail',
+            segment => $seg,
+            state   => $self->state
+        );
+    }
     my $html = $renderer->wrap_rendered_track(
-        label      => OVERVIEW_SCALE_LABEL,
-        area_map   => [],
-        width      => $width,
-        height     => $height,
-        url        => $url,
-        status     => '',
-        track_type => 'scale_bar',
-    );
-    return $html;
-}
-
-sub detail_scale_bar {
-    my $self    = shift;
-    my $seg     = shift;
-    my $section = shift;
-
-    my $renderer = $self->get_panel_renderer($seg);
-    my ( $url, $height, $width )
-        = $renderer->render_detail_scale_bar( $seg, $self->state );
-    my $html = $renderer->wrap_rendered_track(
-        label      => DETAIL_SCALE_LABEL,
+        label      => $label,
         area_map   => [],
         width      => $width,
         height     => $height,
@@ -713,6 +741,33 @@ sub whole_segment {
 					  -name=>$segment->seq_id);
   $whole_segment   ||= $segment;  # just paranoia
   $whole_segment;
+}
+
+sub region_segment {
+    my $self          = shift;
+    my $segment       = $self->segment;
+    my $whole_segment = $self->whole_segment;
+    my $settings      = $self->state;
+    my $factory       = $segment->factory;
+
+    my ( $region_seg_start, $region_seg_end )
+        = $self->get_regionview_start_stop( $settings, $segment->start,
+        $segment->end, $whole_segment->start, $whole_segment->end );
+
+    # the segment class has been deprecated, but we still must support it
+    my $class
+        = eval { $segment->seq_id->class } || eval { $factory->refclass };
+
+    my ($region_segment) = $factory->segment(
+        -class => $class,
+        -name  => $segment->seq_id,
+        -start => $region_seg_start,
+        -end   => $region_seg_end,
+    );
+    $region_segment ||= $segment;    # just paranoia
+    return $region_segment;
+
+    return $region_segment;
 }
 
 # ========================= plugins =======================
@@ -1104,11 +1159,36 @@ sub asynchronous_update_overview_scale_bar {
     my $seg = $self->segment;
 
     my $renderer = $self->get_panel_renderer($seg);
-    my ( $url, $height, $width )
-        = $renderer->render_overview_scale_bar( $self->whole_segment, $seg,
-        $self->state );
+    my ( $url, $height, $width ) = $renderer->render_scale_bar(
+        section       => 'overview',
+        whole_segment => $self->whole_segment,
+        segment       => $seg,
+        state         => $self->state
+    );
 
     my $image_id = OVERVIEW_SCALE_LABEL."_image";
+
+    return {
+        url      => $url,
+        height   => $height,
+        width    => $width,
+        image_id => $image_id,
+    };
+}
+
+sub asynchronous_update_region_scale_bar {
+    my $self    = shift;
+    my $seg = $self->segment;
+
+    my $renderer = $self->get_panel_renderer($seg);
+    my ( $url, $height, $width ) = $renderer->render_scale_bar(
+        section       => 'region',
+        region_segment => $self->region_segment,
+        segment       => $seg,
+        state         => $self->state
+    );
+
+    my $image_id = REGION_SCALE_LABEL."_image";
 
     return {
         url      => $url,
@@ -1123,8 +1203,11 @@ sub asynchronous_update_detail_scale_bar {
     my $seg  = $self->segment;
 
     my $renderer = $self->get_panel_renderer($seg);
-    my ( $url, $height, $width )
-        = $renderer->render_detail_scale_bar( $seg, $self->state );
+    my ( $url, $height, $width ) = $renderer->render_scale_bar(
+        section => 'detail',
+        segment => $seg,
+        state   => $self->state
+    );
 
     my $image_id = DETAIL_SCALE_LABEL . "_image";
 
@@ -1562,7 +1645,7 @@ sub overview_tracks {
 sub regionview_tracks {
   my $self = shift;
   my $state = $self->state;
-  return grep {$state->{features}{$_}{visible} && !/:region$/ && !/^_/ }
+  return grep {$state->{features}{$_}{visible} && /:region$/ && !/^_/ }
     @{$state->{tracks}};
 }
 
@@ -1773,6 +1856,35 @@ sub drag_script {
  // ]]>
  </script>
 END
+}
+
+=head2 get_regionview_start_stop
+
+ usage
+
+Description
+
+=cut
+
+sub get_regionview_start_stop {
+  my $self = shift;
+  my ($settings,$detail_start, $detail_end, $whole_start, $whole_end) = @_;
+  my $regionview_length = $settings->{region_size};
+  if ($detail_end - $detail_start + 1 > $regionview_length) { # region can't be smaller than detail
+    $regionview_length = $detail_end - $detail_start + 1;
+  }
+  my $midpoint = ($detail_end + $detail_start) / 2;
+  my $regionview_start = int($midpoint - $regionview_length/2 + 1);
+  my $regionview_end = int($midpoint + $regionview_length/2);
+  if ($regionview_start < $whole_start) {
+    $regionview_start = 1;
+    $regionview_end   = $regionview_length;
+  }
+  if ($regionview_end > $whole_end) {
+    $regionview_start = $whole_end - $regionview_length + 1;
+    $regionview_end   = $whole_end;
+  }
+  return ($regionview_start, $regionview_end);
 }
 
 ##################### utilities #####################

@@ -4,7 +4,7 @@
                       This class handles region-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: regionSelect.js,v 1.3 2008-07-30 15:09:01 mwz444 Exp $
+ $Id: regionSelect.js,v 1.4 2008-08-01 15:19:01 mwz444 Exp $
 
 */
 
@@ -13,7 +13,7 @@ var regionBalloon;
 
 // Constructor
 var Region = function () {
-  this.imageId    = 'region_image';
+  this.imageId    = 'Region Scale_image';
   this.autoSubmit = true;
   this.marginTop  = '5px';
   this.background = 'yellow';

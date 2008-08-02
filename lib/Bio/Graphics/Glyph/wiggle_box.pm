@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::wiggle_box;
 
-# $Id: wiggle_box.pm,v 1.1.2.2 2008-04-07 13:30:11 sheldon_mckay Exp $
+# $Id: wiggle_box.pm,v 1.1.2.3 2008-08-02 16:16:42 lstein Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing);
@@ -18,27 +18,72 @@ sub draw {
     return;
   }
 
+  my ($wigdata) = $feature->attributes('wigdata');
+  if ($wigdata) {
+    $self->draw_wigdata($feature,$wigdata,@_);
+    $self->draw_label(@_)       if $self->option('label');
+    $self->draw_description(@_) if $self->option('description');
+    return;
+  }
+
   return $self->SUPER::draw(@_);
+}
+
+sub wig {
+  my $self = shift;
+  my $d = $self->{wig};
+  $self->{wig} = shift if @_;
+  $d;
+}
+
+sub draw_wigdata {
+    my $self    = shift;
+    my $feature = shift;
+    my $data    = shift;
+
+    eval "require MIME::Base64" 
+	unless MIME::Base64->can('decode_base64');
+    my $unencoded_data = MIME::Base64::decode_base64($data);
+
+    my $wig = eval { Bio::Graphics::Wiggle->new() };
+    unless ($wig) {
+	warn $@;
+	return $self->SUPER::draw(@_);
+    }
+
+    $wig->import_from_wif($unencoded_data);
+
+    $self->wig($wig);
+    $self->_draw_wigfile($feature,$wig,@_);
 }
 
 sub draw_wigfile {
   my $self    = shift;
   my $feature = shift;
   my $wigfile = shift;
-  my ($gd,$left,$top) = @_;
 
   eval "require Bio::Graphics::Wiggle" unless Bio::Graphics::Wiggle->can('new');
   my $wig = Bio::Graphics::Wiggle->new($wigfile) or die;
+  $self->wig($wig);
 
-  my $start          = $self->smooth_start;
-  my $end            = $self->smooth_end;
+  $self->_draw_wigfile($feature,$wig,@_);
+}
 
-  my ($x1,$y1,$x2,$y2) = $self->bounds($left,$top);
-  $self->draw_segment($gd,
-		      $start,$end,
-		      $wig,$start,$end,
-		      1,1,
-		      $x1,$y1,$x2,$y2);
+sub _draw_wigfile {
+    my $self    = shift;
+    my $feature = shift;
+    my $wig     = shift;
+    my ($gd,$left,$top) = @_;
+
+    my $start          = $self->smooth_start;
+    my $end            = $self->smooth_end;
+
+    my ($x1,$y1,$x2,$y2) = $self->bounds($left,$top);
+    $self->draw_segment($gd,
+			$start,$end,
+			$wig,$start,$end,
+			1,1,
+			$x1,$y1,$x2,$y2);
 }
 
 sub draw_segment {

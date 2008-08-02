@@ -1,6 +1,6 @@
 =head1 CONFIGURE-HOWTO
-This document has been replaced by a page in the GMOD wiki.                                                                                                                   
 
-http://www.gmod.org/wiki/index.php/GBrowse_Configuration_HOWTO                                                                                                               
-                                                                                                                                                                              
- 
+This document has been replaced by a page in the GMOD wiki:
+
+http://www.gmod.org/wiki/index.php/GBrowse_Configuration_HOWTO
+

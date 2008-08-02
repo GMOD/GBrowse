@@ -150,7 +150,9 @@ sub get_remote_upload {
   my $feature_file   =
     Bio::Graphics::FeatureFile->new(-file           => $fh,
 				    -map_coords     => $rel2abs,
-				    -smart_features => 1);
+				    -smart_features => 1,
+				    -safe_world     => $self->config->setting('allow remote callbacks'),
+    );
   warn "get_remote_feature_data(): got $feature_file" if DEBUG;
  
   # let proximal configuration override remote

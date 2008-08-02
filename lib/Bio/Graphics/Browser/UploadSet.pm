@@ -135,8 +135,10 @@ sub feature_file {
   my @args              = $coordinate_mapper ? (-map_coords=>$coordinate_mapper) : ();
 
   my $fh = $self->open_file($url) or return;
-  my $feature_file = Bio::Graphics::FeatureFile->new(-file           => $fh,
-						     -smart_features =>1,
+  my $feature_file = Bio::Graphics::FeatureFile->new(-file             => $fh,
+						     -smart_features   =>1,
+						     -allow_whitespace =>1,
+						     -safe_world       =>$self->config->setting('allow remote callbacks'),
 						     @args,
 						    );
   close $fh;

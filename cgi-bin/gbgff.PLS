@@ -47,7 +47,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbgff.PLS,v 1.1.2.8 2008-07-17 03:50:55 lstein Exp $
+# $Id: gbgff.PLS,v 1.1.2.9 2008-08-02 16:16:42 lstein Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -291,7 +291,10 @@ sub print_configuration {
 	for my $s (@s) {
 	    my $value = $config->setting($l=>$s);
 	    if (ref $value eq 'CODE') {
-	      $value = $config->setting('TRACK DEFAULTS'=>$s) or next;
+		$value = $config->config->can('get_callback_source')
+		    ? $config->config->get_callback_source($l => $s)
+		    : $config->setting('TRACK DEFAULTS'=>$s);
+		defined $value or next;
 	    }
 	    next if $s =~ /^balloon/; # doesn't work right
 	    print "$s = $value\n";

@@ -11,6 +11,7 @@
 	* Various bugs squashed -- see http://sourceforge.net/tracker/?group_id=27707&atid=391291.
 	* When updating settings or searching, the browser scrolls to the top of the overview 
 	section as a convenience.
+	* Fixed cross-site scripting vulnerability.
 
 
 1.68

@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::I18n;
 
-# $Id: I18n.pm,v 1.8 2002-10-05 00:18:50 lstein Exp $
+# $Id: I18n.pm,v 1.8.16.1 2008-08-04 14:21:16 lstein Exp $
 
 use strict;
 
@@ -42,7 +42,7 @@ sub tr {
   my $def_table  = $self->tr_table('POSIX');
   my $translated = $lang_table->{$symbol} || $def_table->{$symbol};
   return unless $translated;
-  return @_ ? sprintf($translated,@_) : $translated;
+  return @_ ? sprintf($translated,map {CGI::escapeHTML($_)} @_) : $translated;
 }
 
 sub tr_table {

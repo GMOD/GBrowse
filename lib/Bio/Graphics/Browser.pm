@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.96 2008-08-05 15:52:20 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.97 2008-08-05 20:52:02 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -3323,7 +3323,10 @@ sub make_link {
     return $link if defined $link;
   }
 
-  return $label->make_link($feature) if $label && $label->isa('Bio::Graphics::FeatureFile');
+  return $label->make_link($feature) 
+      if $label
+      && $label =~ /^[a-zA-Z_]/
+      && $label->isa('Bio::Graphics::FeatureFile');
 
   $panel ||= 'Bio::Graphics::Panel';
   $label ||= $self->feature2label($feature);
@@ -3381,7 +3384,7 @@ sub make_title {
   my ($title,$key) = ('','');
 
  TRY: {
-    if ($label && $label->isa('Bio::Graphics::FeatureFile')) {
+    if ($label && $label =~ /^[a-zA-Z_]/ && $label->isa('Bio::Graphics::FeatureFile')) {
       $key = $label->name;
       $title = $label->make_title($feature) or last TRY;
       return $title;
@@ -3440,7 +3443,9 @@ sub balloon_tip_setting {
 
   
  TRY: {
-     if ($label->isa('Bio::Graphics::FeatureFile')) { # a feature file
+     if ($label 
+	 && $label =~ /^[a-zA-Z_]/
+	 && $label->isa('Bio::Graphics::FeatureFile')) { # a feature file
 	 $value ||= $label->setting($_=>$option) foreach $label->feature2label($feature);
      }
      last TRY if $value;

@@ -44,7 +44,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.6.8.1.2.7 2008-05-29 15:24:07 lstein Exp $
+#$Id: das.PLS,v 1.6.8.1.2.8 2008-08-05 15:52:20 lstein Exp $
 
 use Bio::DB::GFF;
 use File::Basename 'basename';
@@ -57,7 +57,7 @@ use vars qw($DB $DSN $HEADER %ERRCODES $CONFIG
             $VERSION $DAS_VERSION $CONF_DIR 
             %CACHED_TYPES %FORCED_GROUP %NO_PARENT);
 
-#$Id: das.PLS,v 1.6.8.1.2.7 2008-05-29 15:24:07 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
+#$Id: das.PLS,v 1.6.8.1.2.8 2008-08-05 15:52:20 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';
@@ -349,11 +349,10 @@ sub print_feature {
     my @subparts     = $f->get_SeqFeatures;
     my $no_parent    = @subparts && no_parent_wanted($f);
 
-    unless ($no_parent) {
-	_print_feature($f,$parent,$category,$agg_map,$count,$id);
-    }
+    _print_feature($f,$parent,$category,$agg_map,$count,$id)
+	unless $no_parent;
 
-    print_feature($_,$parent||$f,$category,$agg_map,++$count) foreach @subparts;
+    print_feature($_,($no_parent ? undef : $parent||$f),$category,$agg_map,++$count) foreach @subparts;
 }
 
 sub _print_feature {
@@ -413,7 +412,7 @@ sub _print_feature {
 
   # group stuff
   my $groupid       = length($gclass) ? "$gclass:$group" : $group;
-  my $info       = $f->info;
+  my $info          = $f->info;
   my ($group_info,$link,$gtype);
 
   if (ref($info)) {
@@ -493,7 +492,7 @@ END
   print qq(      $target_info\n) if $target_info;
 
   if ($info || $groupid) {
-    $gtype ||= '';
+    $gtype     ||= '';
     $groupid   ||= '';
     if ($group_info) {
       print qq(      <GROUP id="$groupid"$gtype>\n);

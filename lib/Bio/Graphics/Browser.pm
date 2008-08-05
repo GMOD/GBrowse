@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.95 2008-07-31 16:35:08 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.96 2008-08-05 15:52:20 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -313,7 +313,10 @@ sub setting {
     unshift @args,'general';
   } else {
     $args[0] = 'general'
-      if $args[0] ne 'general' && lc($args[0]) eq 'general';  # buglet
+      if !ref $args[0]
+      && 
+      $args[0] ne 'general' 
+      && lc($args[0]) eq 'general';  # buglet
   }
   my $config = $self->config or return;
   $config->setting(@args);

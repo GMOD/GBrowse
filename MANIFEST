@@ -63,6 +63,7 @@ conf/plugins/ReverseFinder.pm
 conf/plugins/RestrictionAnnotator.pm
 conf/plugins/Spectrogram.pm
 conf/plugins/Submitter.pm
+conf/plugins/TextDumper.pm
 conf/plugins/test.pm
 conf/yeast.conf
 contrib/ace2gff.pl
@@ -109,8 +110,6 @@ contrib/SynView/MAL11/MAL11.conf
 contrib/SynView/MAL11/MAL11.fa
 contrib/SynView/MAL11/MAL11.gff3
 contrib/SynView/README
-contrib/TextDumper/README
-contrib/TextDumper/TextDumper.pm
 DISCLAIMER
 docs/Gbrowse_Color_Palette.pdf
 docs/pod/BIOSQL_ADAPTER_HOWTO.pod

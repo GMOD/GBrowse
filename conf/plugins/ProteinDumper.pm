@@ -1,4 +1,4 @@
-# $Id: ProteinDumper.pm,v 1.1.6.1.2.3 2006-08-30 02:36:41 lstein Exp $
+# $Id: ProteinDumper.pm,v 1.1.6.1.2.3.2.1 2008-08-06 19:07:18 lstein Exp $
 #
 # BioPerl module for Bio::Graphics::Browser::Plugin::ProteinDumper
 #
@@ -47,7 +47,7 @@ Internal methods are usually preceded with a _
 
 
 package Bio::Graphics::Browser::Plugin::ProteinDumper;
-# $Id: ProteinDumper.pm,v 1.1.6.1.2.3 2006-08-30 02:36:41 lstein Exp $
+# $Id: ProteinDumper.pm,v 1.1.6.1.2.3.2.1 2008-08-06 19:07:18 lstein Exp $
 # Protein Dumper plugin
 
 use strict;
@@ -81,7 +81,7 @@ my @ORDER = grep {
 my %FORMATS = @FORMATS;
 my %LABELS  = map { $_ => $FORMATS{$_}[0] } keys %FORMATS;
 
-$VERSION = '1.00';
+$VERSION = '1.10';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -113,39 +113,73 @@ sub dump {
   my $ct = Bio::Tools::CodonTable->new;
   $ct->id($config->{geneticcode});
 
-  my @filter  = grep { m/^(?:coding|CDS|transcript):/ } $self->selected_features;
+  my @filter  = grep { m/^(?:coding|CDS|transcript|gene|mRNA):?/i } $self->selected_features;
   $segment->absolute(1);
 
-  my @seqs;
-  for my $f ($segment->features(-types => \@filter)) {
-    my @cds = grep { $_->method =~ m/^CDS$/i } $f->sub_SeqFeature;
-    next unless @cds;
+  my (@seqs,%seen);
+  my @f = grep {!$seen{$_}++} map {$self->descend_to_transcript($_)} $segment->features(-types => \@filter);
 
-    my $cds = join("", map { $_->seq } @cds);
-    if ( (my $phase = $cds[0]->phase) > 0) {
-      # some genefinders will predict incomplete genes, wherein
-      # initial exons may not be in phase 0; in which case, we have to
-      # turn the first incomplete codon into NNN
-      substr($cds, 0, $phase, "NNN");
-    }
+  for my $f (@f) {
 
-    push @seqs, Bio::Seq->new(-display_id => $f->display_id,
-			      -descr => $f->location->to_FTstring,
-			      -seq => $ct->translate($cds)
-			     );
+      my @cds = $self->get_cds($f);
+      next unless @cds;
+
+      my $cds = join("", map { eval{$_->seq->seq} || $_->seq } @cds);
+      if ( (my $phase = $cds[0]->phase) > 0) {
+	  # some genefinders will predict incomplete genes, wherein
+	  # initial exons may not be in phase 0; in which case, we have to
+	  # turn the first incomplete codon into NNN
+	  substr($cds, 0, $phase, "NNN");
+      }
+
+      push @seqs, Bio::Seq->new(-display_id => $f->display_id,
+				-descr => $f->location->to_FTstring,
+				-seq => $ct->translate($cds)
+	  );
   }
 
   my $out = new Bio::SeqIO(-format => $config->{fileformat});
   my $mime_type = $self->mime_type;
   if ($mime_type =~ /html/) {
-    print start_html($segment->desc),h1($segment->desc), start_pre;
-    $out->write_seq(@seqs);
-    print end_pre();
-    print end_html;
+      print start_html($segment->desc),h1($segment->desc), start_pre;
+      $out->write_seq(@seqs);
+      print end_pre();
+      print end_html;
   } else {
-    $out->write_seq(@seqs);
+      $out->write_seq(@seqs);
   }
   undef $out;
+}
+
+# expand subfeatures until we get those that are parents to a phase-containing feature
+sub descend_to_transcript {
+    my $self = shift;
+    my $f    = shift;
+    my @sub  = $f->sub_SeqFeature;
+
+    my $has_phase = 0;
+    for my $s (@sub) {
+	$has_phase ||= defined $s->phase;
+    }
+    return $f if $has_phase;
+    return map { $self->descend_to_transcript($_) } @sub;
+}
+
+# recursively descend feature until something with a defined phase is found
+sub get_cds {
+    my $self    = shift;
+    my $f       = shift;
+    my $results = [];
+    $self->_get_cds($f,$results);
+    return @$results;
+}
+
+sub _get_cds {
+    my $self   = shift;
+    my ($f,$r) = @_;
+    push @$r,$f if defined $f->phase;
+    my @s = $f->sub_SeqFeature;
+    $self->_get_cds($_,$r) foreach @s;
 }
 
 sub mime_type {

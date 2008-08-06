@@ -1,13 +1,31 @@
+# The TextDumper plugin was contributed by Don Jackson.  It provides a
+# report on features in the active region as a tab-delimited text file.
+# It's based on the GFFDumper, but adds a few tweaks for
+# user-friendliness:
+
+#   - only features from the active tracks are displayed
+
+#   - the configuration page lets users select which attributes
+#   (reference, start, stop, notes, etc) are displayed
+
+#   - users can select a mime type for the report.  Currently the plugin
+#   supports text/plain or application/vnd.ms-excel
+
+# To install, copy TextDumper.pm to your plugins directory, stored
+# underneath your web server configuration directory at
+# gbrowse.conf/plugins.  Then add TextDumper to plugins line in the
+# appropriate gbrowse.conf configuration file.
+
 package Bio::Graphics::Browser::Plugin::TextDumper;
 
 use strict;
 use Bio::Graphics::Browser::Plugin;
-use CGI qw(param url header p a);
+use CGI qw(:standard);
 
 use Data::Dumper;
 
 use vars '$VERSION','@ISA';
-$VERSION = '0.10';
+$VERSION = '0.20';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -18,7 +36,7 @@ sub description {
   p("This plugin was modified by Don Jackson from the GFF Dumper written by Lincoln Stein.");
 }
 
-my @attrs = qw(group source method ref start stop score strand notes aliases);
+my @attrs = qw(display_name source method ref start stop score strand notes aliases);
 
 sub dump {
   my $self = shift;
@@ -41,7 +59,7 @@ sub dump {
   my $iterator = $segment->get_seq_stream(-types=>\@feature_types) or return;
   while (my $f = $iterator->next_seq) {
       foreach my $attr (@active_attribs) {
-	  if (defined $f->$attr) {
+	  if (defined eval{$f->$attr}) {
 	      print $f->$attr;
 	  }
 	  else {
@@ -82,7 +100,8 @@ sub active_tracks {
 sub configure_form {
     my ($self) = shift;
     # select which attributes are shown
-    my @choices = TR( th({-colspan => 2, -align => 'CENTER'}, 'Select columns to include from the list below.  Only tracks displayed in the browser will be included.') );
+    my @choices = TR( th({-colspan => 2, -align => 'CENTER'}, 
+			 'Select columns to include from the list below.  Only tracks displayed in the browser will be included.') );
 
     foreach my $attrib ( $self->attributes ) {
 	push(@choices, 

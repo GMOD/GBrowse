@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::AttributeHiliter;
-# $Id: AttributeHiliter.pm,v 1.2 2003-09-18 19:51:33 scottcain Exp $
+# $Id: AttributeHiliter.pm,v 1.2.14.1 2008-08-06 19:07:18 lstein Exp $
 use strict;
 use Bio::Graphics::Browser::Plugin;
 
@@ -15,7 +15,7 @@ my @COLORS = ('',qw(
 		   lightgrey grey darkgrey
 		  ));
 
-$VERSION = '0.01';
+$VERSION = '0.10';
 
 @ISA = qw(Bio::Graphics::Browser::Plugin);
 
@@ -62,7 +62,7 @@ sub highlight {
     } elsif ($attribute eq 'Feature Type') {
       $sub .= "  return '$color' if \$feature->type =~ /$regexp/i;\n";
     } elsif (defined $attribute) {
-      $sub .= "  foreach (\$feature->attributes('$attribute')) { return '$color' if /$regexp/i }\n";
+      $sub .= "  foreach (\$feature->get_tag_values('$attribute')) { return '$color' if /$regexp/i }\n";
     }
   }
   $sub .= "  return\n}";
@@ -88,7 +88,8 @@ sub reconfigure {
     $c{$attribute}{$operation} = $self->config_param($param);
   }
   foreach my $attribute (keys %c) {
-    if ( (my $match_text = $c{$attribute}{match}) && (my $match_color = $c{$attribute}{color})) {
+    if ( (my $match_text = $c{$attribute}{match}) 
+	 && (my $match_color = $c{$attribute}{color})) {
       $current_config->{$attribute} = "$match_color $match_text";
     } else {
       delete $current_config->{$attribute};
@@ -101,7 +102,7 @@ sub configure_form {
     my $self = shift;
     my $current_config = $self->configuration;
     my $db             = $self->database;
-    my @attributes     = sort {lc $a cmp lc $b} $db->attributes;
+    my @attributes     = sort {lc $a cmp lc $b} eval {$db->attributes};
     unshift @attributes,'Feature Name','Feature Type';
 
     my @rows;

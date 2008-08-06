@@ -77,7 +77,9 @@ sub render_navbar {
 	       b(
 		 checkbox(-name=>'flip',
 			  -checked=>$settings->{flip},-value=>1,
-			  -label=>$self->tr('Flip'),-override=>1)
+			  -label=>$self->tr('Flip'),-override=>1,
+              -onClick => 'Controller.update_coordinates(this.name + " " + this.checked)',
+                )
 		),
 	       hidden(-name=>'navigate',-value=>1,-override=>1),
 	       end_form
@@ -348,6 +350,7 @@ sub render_global_config {
     join ' ',@{$settings->{h_region}} : '';
 
   my $content =
+    start_form(-name=>'display_settings',-id=>'display_settings').
     table({-class=>'searchbody',-border=>0,-width=>'100%'},
 	  TR(
 	     td(
@@ -431,14 +434,132 @@ sub render_global_config {
 	  TR(td({-colspan=>4,
 		 -align=>'right'},
 		b(submit(-name => $self->tr('Update')))))
-	 );
+	 )
+    .end_form();
+    ;
   return $self->toggle('Display_settings',$content);
 }
 
 # This needs to be feshed out.
 sub render_uploads {
-  my $self     = shift;
-  return '';
+    my $self = shift;
+    my $feature_files = shift;
+    my $state = $self->state;
+    my $content
+        = start_form( -name => 'externalform', -id => 'externalform' )
+        . $self->upload_table( $state, $feature_files )
+        . $self->das_table( $state, $feature_files )
+        . end_form();
+    return $self->toggle( 'UPLOAD_TRACKS', $content );
+}
+
+sub upload_table {
+  my $self      = shift;
+  my $settings      = shift;
+  my $feature_files = shift;
+
+  # start the table.
+  my $cTable = start_table({-border=>0,-width=>'100%'})
+    . TR(
+	 th({-class=>'uploadtitle', -colspan=>4, -align=>'left'},
+	    $self->tr('Upload_title').':',
+	    a({-href=>annotation_help(),-target=>'help'},'['.$self->tr('HELP').']'))
+	);
+  my $uploaded_sources = $self->uploaded_sources();
+  # now add existing files
+  for my $file ($uploaded_sources->files) {
+    (my $name = $file) =~ s/^file://;
+    $name = escape($name);
+    my $download = escape($self->tr('Download_file'));
+    my $link = a({-href=>"?$download=$file"},"[$name]");
+    my @info =  get_uploaded_file_info($settings->{features}{$file}{visible}
+				       && $feature_files->{$file});
+    my $escaped_file = CGI::escape($file);
+    $cTable .=  TR({-class=>'uploadbody'},
+		   th({-width=>'20%',-align=>'right'},$link),
+		   td({-colspan=>3},
+		      submit(-name=>"modify.$escaped_file",-value=>$self->tr('Edit')).'&nbsp;'.
+		      submit(-name=>"modify.$escaped_file",-value=>$self->tr('Download_file')).'&nbsp;'.
+		      submit(-name=>"modify.$escaped_file",-value=>$self->tr('Delete'))));
+    $cTable .= TR({-class=>'uploadbody'},td('&nbsp;'),td({-colspan=>3},@info));
+  }
+
+  # end the table.
+  $cTable .= TR({-class=>'uploadbody'},
+		th({-width=>'20%',-align=>'right'},$self->tr('Upload_File')),
+		td({-colspan=>3},
+		   filefield(-size=>80,-name=>'upload_annotations'),
+		   '&nbsp;',
+		   submit(-name=>$self->tr('Upload')),
+		   '&nbsp;',
+		   submit(-name=>'new_upload',-value=>$self->tr('New')),
+		  )
+	       );
+  $cTable .= end_table;
+  return a({-name=>"upload"},$cTable);
+}
+
+# URLs for external annotations
+sub das_table {
+  my $self      = shift;
+  my $settings      = shift;
+  my $feature_files = shift;
+  my (@rows,$count);
+
+  my ($preset_labels,$preset_urls) = $self->get_external_presets($settings);  # (arrayref,arrayref)
+  my $presets = '&nbsp;';
+  if ($preset_labels && @$preset_labels) {  # defined AND non-empty
+    my %presets;
+    @presets{@$preset_urls} = @$preset_labels;
+    unshift @$preset_urls,'';
+    $presets{''} = $self->tr('PRESETS');
+    $presets = popup_menu(-name   => 'eurl',
+			  -values => $preset_urls,
+			  -labels => \%presets,
+			  -override => 1,
+			  -default  => '',
+			  -onChange => 'document.externalform.submit()'
+			 );
+  }
+
+  local $^W = 0;
+  if (defined $settings->{ref}) {
+      my $segment = "$settings->{ref}:$settings->{start},$settings->{stop}";
+
+      my $remote_sources = $self->remote_sources();
+      for my $url ($remote_sources->sources) {
+
+	  my $f = $remote_sources->transform_url($url,$segment);
+
+	  next unless $url =~ /^(ftp|http):/ && $feature_files->{$url};
+
+	  my $escaped_url = CGI::escape($url);
+	  push @rows,th({-align=>'right',-width=>'20%'},"URL",++$count).
+	      td(textfield(-name=>'eurl',-size=>80,-value=>$url,-override=>1),
+		 submit(-name=>"modify.$escaped_url",-value=>$self->tr('Delete')),
+		 br,
+		 a({-href=>$f,-target=>'help'},'['.$self->tr('Download').']'),
+		 get_uploaded_file_info($settings->{features}{$url}{visible} 
+					&& $feature_files->{$url})
+	      );
+      }
+    push @rows,th({-align=>'right',-width=>'20%'},
+		  $self->tr('Remote_url')).
+		    td(textfield(-name=>'eurl',-size=>80,-value=>'',-override=>1),
+		       $presets,
+		      submit($self->tr('Update_urls')));
+  }
+
+  return table({-border=>0,-width=>'100%'},
+	       TR(
+		  th({-class=>'uploadtitle',-align=>'left',-colspan=>2},
+		     $self->tr('Remote_title').':',
+		     a({-href=>annotation_help().'#remote',-target=>'help'},'['.$self->tr('Help').']'))),
+	       TR({-class=>'uploadbody'},\@rows),
+#	       TR({-class=>'uploadbody'},
+#		  th('&nbsp;'),
+#		  th({-align=>'right'},submit($self->tr('Update_urls'))))
+	      );
 }
 
 sub tableize {

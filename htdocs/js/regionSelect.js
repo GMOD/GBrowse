@@ -4,7 +4,7 @@
                       This class handles region-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: regionSelect.js,v 1.4 2008-08-01 15:19:01 mwz444 Exp $
+ $Id: regionSelect.js,v 1.5 2008-08-06 21:09:42 mwz444 Exp $
 
 */
 
@@ -97,7 +97,7 @@ Region.prototype.loadSegmentInfo = function() {
   this.ref          = segment_info.ref;
   this.segmentStart = parseInt(segment_info.region_start);
   this.segmentEnd   = parseInt(segment_info.region_stop);
-  this.flip         = document.sliderform.flip.checked;
+  this.flip         = 0;
   this.padLeft      = parseInt(segment_info.image_padding);
   this.pixelToDNA   = parseFloat(segment_info.region_pixel_ratio);
   this.detailStart  = parseInt(segment_info.detail_start);

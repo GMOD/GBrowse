@@ -652,7 +652,7 @@ sub render_config {
   my $seg = shift;
   return $self->render_track_table(). 
       $self->render_global_config().
-      $self->render_uploads();
+      $self->render_uploads( $self->remote_sources, );
 }
 
 #never called, method in HTML.pm with same name is run instead
@@ -1039,6 +1039,15 @@ sub update_options {
   do {$state->{$_} = param($_) if defined param($_) } 
     foreach qw(name source plugin stp ins head ks sk version grid flip width);
 
+  if (param('width') || param('label')) { # just looking to see if the settings form was submitted
+    $state->{grid} = param('grid');
+  }
+  #elsif (param('span')) { # just looking to see if the search form was submitted
+  #  $state->{flip} = param('flip');
+  #}
+
+ 
+
   # Process the magic "q" parameter, which overrides everything else.
   if (my @q = param('q')) {
     delete $state->{$_} foreach qw(name ref h_feat h_region);
@@ -1283,6 +1292,14 @@ sub asynchronous_update_coordinates {
     if ($action =~ /set segment/) {
 	$self->move_segment($state,$action);
 	$position_updated++;
+    }
+    if ( $action =~ /flip (\S+)/ ) {
+        if ( $1 eq 'true' ) {
+            $state->{'flip'} = 1;
+        }
+        else {
+            $state->{'flip'} = 0;
+        }
     }
     
 
@@ -1775,6 +1792,7 @@ sub render_deferred {
 	    labels           => $labels,
 	    feature_files    => $self->remote_sources,
 	    section          => $section,
+        flip             => $self->state()->{'flip'},
 	    deferred         => 1,
 	}
 	);

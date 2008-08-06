@@ -590,6 +590,7 @@ sub render_scale_bar {
     }
 
     my $width = $state->{'width'} * $self->overview_ratio();
+    my $flip = ( $section eq 'detail' and $state->{'flip'} ) ? 1 : 0;
 
     my $image_pad = $self->image_padding;
     my $padl      = $source->global_setting('pad_left');
@@ -610,6 +611,7 @@ sub render_scale_bar {
         -pad_bottom  => $pad_bottom,
         -image_class => $image_class,
         -auto_pad    => 0,
+        -flip    => $flip,
     );
 
     # I don't understand why I need to add the pad to the width, since the
@@ -1235,7 +1237,7 @@ sub create_panel_args {
 
   my @pass_thru_args = map {/^-/ ? ($_=>$args->{$_}) : ()} keys %$args;
   my @argv = (
-	      -grid         => $source->global_setting("$section grid"),
+	      -grid         => $settings->{'grid'}, # $source->global_setting("$section grid"),
 	      -start        => $seg_start,
 	      -end          => $seg_stop,
 	      -stop         => $seg_stop,  #backward compatibility with old bioperl

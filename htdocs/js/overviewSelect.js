@@ -4,7 +4,7 @@
                       This class handles overview-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: overviewSelect.js,v 1.3 2008-07-30 15:09:01 mwz444 Exp $
+ $Id: overviewSelect.js,v 1.4 2008-08-06 21:09:42 mwz444 Exp $
 
 */
 
@@ -96,7 +96,7 @@ Overview.prototype.loadSegmentInfo = function() {
   this.ref          = segment_info.ref;
   this.segmentStart = parseInt(segment_info.overview_start);
   this.segmentEnd   = parseInt(segment_info.overview_stop);
-  this.flip         = document.sliderform.flip.checked;
+  this.flip         = 0;
   this.padLeft      = parseInt(segment_info.image_padding);
   this.pixelToDNA   = parseFloat(segment_info.overview_pixel_ratio);
   this.detailStart  = parseInt(segment_info.detail_start);

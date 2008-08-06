@@ -217,11 +217,9 @@ docs/tutorial/figures/wiggle_density.png
 docs/tutorial/tutorial.css
 docs/tutorial/tutorial.html
 docs/tutorial/tutorial.txt
-docs/tutorial/dbgff/
 docs/tutorial/dbgff/README
 docs/tutorial/dbgff/tutorial.css
 docs/tutorial/dbgff/tutorial.html
-docs/tutorial/dbgff/conf_files
 docs/tutorial/dbgff/conf_files/elegans_core.conf
 docs/tutorial/dbgff/conf_files/elegans_extra.conf
 docs/tutorial/dbgff/conf_files/volvox.conf
@@ -230,7 +228,6 @@ docs/tutorial/dbgff/conf_files/volvox3.conf
 docs/tutorial/dbgff/conf_files/volvox4.conf
 docs/tutorial/dbgff/conf_files/volvox5.conf
 docs/tutorial/dbgff/conf_files/volvox_final.conf
-docs/tutorial/dbgff/data_files
 docs/tutorial/dbgff/data_files/HEADER.html
 docs/tutorial/dbgff/data_files/elegans.fa
 docs/tutorial/dbgff/data_files/elegans_acceptor.gff
@@ -256,7 +253,6 @@ docs/tutorial/dbgff/data_files/volvox9.gff
 docs/tutorial/dbgff/data_files/volvox_all.fa
 docs/tutorial/dbgff/data_files/volvox_all.gff
 docs/tutorial/dbgff/data_files/volvox_trace.scf
-docs/tutorial/dbgff/figures
 docs/tutorial/dbgff/figures/DAS1.gif
 docs/tutorial/dbgff/figures/third_party1.gif
 docs/tutorial/dbgff/figures/adding_dna_to_alignments1.gif

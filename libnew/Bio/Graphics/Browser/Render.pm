@@ -1787,15 +1787,14 @@ sub render_deferred {
 
     my $renderer = $self->get_panel_renderer($seg);
 
-    my $requests   = $renderer->request_panels(
-	{
-	    labels           => $labels,
-	    feature_files    => $self->remote_sources,
-	    section          => $section,
-        flip             => $self->state()->{'flip'},
-	    deferred         => 1,
-	}
-	);
+    my $requests = $renderer->request_panels(
+        {   labels        => $labels,
+            feature_files => $self->remote_sources,
+            section       => $section,
+            deferred      => 1,
+            flip => ( $section eq 'detail' ) ? $self->state()->{'flip'} : 0,
+        }
+    );
     return $requests;
 }
 

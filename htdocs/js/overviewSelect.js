@@ -4,7 +4,7 @@
                       This class handles overview-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: overviewSelect.js,v 1.1.2.8 2008-03-17 22:16:50 lstein Exp $
+ $Id: overviewSelect.js,v 1.1.2.9 2008-08-06 20:49:41 mwz444 Exp $
 
 */
 
@@ -92,9 +92,10 @@ Overview.prototype.getSegment = function(i) {
   this.ref          = document.mainform.ref.value;
   this.segmentStart = parseInt(document.mainform.overview_start.value);
   this.segmentEnd   = parseInt(document.mainform.overview_stop.value);
-  this.flip         = document.mainform.flip.checked;
   this.padLeft      = parseInt(document.mainform.image_padding.value);
   this.pixelToDNA   = parseFloat(document.mainform.overview_pixel_ratio.value);
+  // The overview is never flipped
+  this.flip         = 0;
 
   // If the keystyle is left, there may be extra padding
   var actualWidth   = this.elementLocation(i,'width');

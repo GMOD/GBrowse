@@ -4,7 +4,7 @@
                       This class handles region-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: regionSelect.js,v 1.1.2.7 2008-03-17 22:16:51 lstein Exp $
+ $Id: regionSelect.js,v 1.1.2.8 2008-08-06 20:49:41 mwz444 Exp $
 
 */
 
@@ -93,9 +93,10 @@ Region.prototype.getSegment = function(i) {
   this.ref          = document.mainform.ref.value;
   this.segmentStart = parseInt(document.mainform.region_start.value);
   this.segmentEnd   = parseInt(document.mainform.region_stop.value);
-  this.flip         = document.mainform.flip.checked;
   this.padLeft      = parseInt(document.mainform.image_padding.value);
   this.pixelToDNA   = parseFloat(document.mainform.region_pixel_ratio.value);
+  // The regionview is never flipped
+  this.flip         = 0;
 
   // If the keystyle is left, there may been extra padding
   var actualWidth   = this.elementLocation(i,'width');

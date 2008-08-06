@@ -48,14 +48,13 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: gbrowse_syn.PLS,v 1.9.2.5 2008-05-14 20:47:05 sheldon_mckay Exp $
+#$Id: gbrowse_syn.PLS,v 1.9.2.6 2008-08-06 00:42:11 sheldon_mckay Exp $
 
 use strict;
 
 use CGI qw(:standard Map Area delete_all);
 use CGI::Carp 'fatalsToBrowser';
 use CGI::Toggle;
-use CGI::Pretty 'html3';
 use Bio::Graphics;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;
@@ -68,8 +67,6 @@ use List::Util qw/min max sum/;
 use Digest::MD5 'md5_hex';
 use List::Util 'max';
 use Math::Round 'nearest';
-use Data::Dumper;
-
 
 use constant OVERVIEW_RATIO     => 0.9;
 use constant OVERVIEW_BGCOLOR   => 'gainsboro';
@@ -83,8 +80,8 @@ use constant DEBUG              => 0;
 
 # Display options -- using a hash here so that
 # $page_settings can be updated without using hard-coded
-# keys (not counting this constant).
-use constant DEFAULT_SETTINGS => 
+# keys (not counting this constant!).
+use constant SETTINGS => 
     ( 
       aggregate  => 'off', # chain alignments
       pgrid      => 'on',  # gridlines
@@ -93,6 +90,12 @@ use constant DEFAULT_SETTINGS =>
       pflip      => 'on',  # flip (-) strand panels
       edge       => 'on',  # outline polygons
       imagewidth => 1024,  # width of the image
+      ref        => undef,
+      start      => undef,
+      stop       => undef,
+      end        => undef,
+      name       => undef,
+      search_src => undef
       );
 
 use vars qw/$CONF_DIR $SCONF $CONF $VERSION $MAP $SYNTENY_IO/;
@@ -104,18 +107,13 @@ $CONF       = Bio::Graphics::Browser::Synteny->new(); # general configuration
 $CONF->read_configuration($CONF_DIR,'synconf');
 $SYNTENY_IO = Bio::DB::GFF::SyntenyIO->new($CONF->setting('join'));
 
-END {
-  $CONF->flush_settings();
-}
-
 my ($source, $old_source) = $CONF->get_source();
 $MAP = db_map();
 my ($page_settings,$session) = page_settings();
 $CONF->page_settings($page_settings);
 $CONF->search_src($CONF->page_settings("search_src"));
 
-my $segment = landmark2segment() if $CONF->page_settings("name");
-
+my $segment = landmark2segment($page_settings);
 if ($segment) {
   $segment    = feature2segment($segment) if ref $segment ne 'Bio::DB::GFF::RelSegment';
   $CONF->current_segment($segment);
@@ -136,7 +134,7 @@ $header = &$header if ref $header;
 print $header || h1($CONF->setting('description'));
 search_form($segment);
 print overview_panel($CONF->whole_segment($segment),$segment) if $segment;
-draw_image();
+draw_image($page_settings);
 options_table();
 print $CONF->footer || end_html();
 
@@ -210,6 +208,7 @@ sub _type_from_box {
 }
 
 sub draw_image {
+  my $page_settings = shift;
   my $src     = $CONF->page_settings("search_src");
   my $segment = $CONF->current_segment or return;
   my $max_segment = MAX_SEGMENT;
@@ -223,11 +222,10 @@ sub draw_image {
   my $max_gap = $segment->length * MAX_GAP;
 
   my @hits = $SYNTENY_IO->get_synteny_by_range(-src   => $src,
-				       -ref   => $segment->abs_ref,
-				       -start => $segment->abs_start,
-				       -end   => $segment->abs_end);
+					       -ref   => $segment->abs_ref,
+					       -start => $segment->abs_start,
+					       -end   => $segment->abs_end);
   
-
   # dynamically create synteny blocks
   @hits = aggregate(\@hits) if $CONF->page_settings("aggregate") eq 'on';
   
@@ -299,8 +297,6 @@ sub draw_image {
     }
   }
 
-  #print pre(Dumper \%alignment);
-
   # sort hits into upper and lower hits, based on this pattern:
   #
   #   1    3    5    7      upper spans
@@ -326,7 +322,7 @@ sub draw_image {
   for my $h (sort {($b->end-$b->start)<=>($a->end-$a->start)} @hits) {
     my $src = $h->src2;
     if ($pos_by_src) {
-      $position{$src} ||= $position++;
+      $position{$src} ||= ++$position;
     }
     else {
       $position{$src} = $position++;
@@ -337,16 +333,6 @@ sub draw_image {
   }
 
   
-  # we now create feature files for the reference
-  my %source_colors;
-  for my $key (keys %span) {
-    $source_colors{$span{$key}{src}} ||= $CONF->setting($MAP->{$span{$key}{src}}{db}=>'color');
-  }
-  my $setcolor = sub {
-    my $feature = shift;
-    $source_colors{$feature->source};
-  };
-
   # Create the middle (reference) panel
   my ($upper_ff,$lower_ff,%is_upper);
   
@@ -355,25 +341,15 @@ sub draw_image {
   if ($only_aligned && @hits) {
     my @coords = map {$_->start, $_->end} @hits;
     my $new_name = $segment->ref .':'.(min @coords).'..'.(max @coords);
-    $segment = landmark2segment($new_name,$CONF->page_settings('search_src'));
+    $segment = landmark2segment($page_settings,$new_name,$CONF->page_settings('search_src'));
   }
 
   for my $h (@hits) {
     my $src = $h->src2;
-
     # keep track of the hits for mapping purposes
     $is_upper{$src} ||= $hit_positions{$h} % 2;
     my $ff       = $is_upper{$src} ? \$upper_ff : \$lower_ff;
-    unless ($$ff) {
-      $$ff = Bio::Graphics::FeatureFile->new;
-      $$ff->add_type(BLOCK => {bgcolor   => $setcolor,
-			       fgcolor   => $setcolor,
-			       height    => ALIGN_HEIGHT,
-			       glyph     => 'segments', 
-			       label     => 0, 
-			       box_subparts => 1,
-			       connector => 'dashed'});
-    }
+    $$ff ||= Bio::Graphics::FeatureFile->new;
     add_hit_to_ff($segment,$$ff,$h);
   }
 
@@ -382,17 +358,8 @@ sub draw_image {
     warn "I am an orphan! ".$h->start."..".$h->end."\n" if DEBUG;
     my $is_upper = ++$orphan_hit % 2;
     my $ff       = $is_upper ? \$upper_ff : \$lower_ff;
-    unless ($$ff) {
-      $$ff = Bio::Graphics::FeatureFile->new;
-      $$ff->add_type(BLOCK => {bgcolor   => $setcolor,
-                               fgcolor   => $setcolor,
-                               height    => ALIGN_HEIGHT,
-                               glyph     => 'segments',
-                               label     => 0,
-			       box_subparts => 1,
-                               connector => 'dashed'});
-    }
-    add_hit_to_ff($segment,$$ff,$h) if $ff;
+    $$ff ||= Bio::Graphics::FeatureFile->new;
+    add_hit_to_ff($segment,$$ff,$h);
   }
 
   my $width = $CONF->page_settings('imagewidth');
@@ -414,7 +381,6 @@ sub draw_image {
     $span{$key}{start} -= int $width/20;
     $span{$key}{end  } += int $width/20;
   }
-
 
   # we now create panels and corresponding hit feature files for each of the small
   # panels
@@ -443,10 +409,10 @@ sub draw_image {
     my $start            = $span{$key}{start};
     my $bases            = $end - $start;
     my $name             = "$contig:$start..$end";
-    my $segment          = landmark2segment($name,$src);
+    my $segment          = landmark2segment($page_settings,$name,$src);
     my @relevant_hits    = grep {$hit2span{$_} eq $key} @hits;
 
-    my $rsegment = landmark2segment("$contig:$start..$end",$src);
+    my $rsegment = landmark2segment($page_settings,"$contig:$start..$end",$src);
 
     # width of inset panels scaled by size of target sequence
     $bases or next;
@@ -458,16 +424,6 @@ sub draw_image {
     }
 
     my $ff    = Bio::Graphics::FeatureFile->new;
-    $ff->add_type(BLOCK => {
-			    bgcolor   => $setcolor,
-			    fgcolor   => $setcolor,
-			    height    => ALIGN_HEIGHT,
-			    glyph     => 'segments',
-			    label     => 0,
-			    box_subparts => 1,
-			    connector => 'dashed'},
-		  );
-
     add_hit_to_ff($rsegment,$ff,$_,'invert') foreach @relevant_hits;
 
     my $segment_args = {width => $width};
@@ -579,7 +535,7 @@ sub draw_image {
   for my $box (@$ref_boxes) {
     ref $box or next;
     my ($feature,$fname) = _type_from_box($box);
-    next unless $feature eq 'BLOCK';
+    next unless $feature eq 'match';
     my $hit = $CONF->name2hit($fname);
     next if $hit && @{$hit->parts} > 1;
     $ref_boxes{$fname} = 
@@ -597,7 +553,7 @@ sub draw_image {
     for my $box (@$boxes) {
       ref $box or next;
       my ($feature,$fname) = _type_from_box($box);
-      next unless $feature eq 'BLOCK';
+      next unless $feature eq 'match';
       my $hit = $CONF->name2hit($fname);
       next if $hit && @{$hit->parts} > 1;
       $panel_boxes{$fname} = [$left+$box->[1],$top+$box->[2],$left+$box->[3],$top+$box->[4]];
@@ -694,8 +650,9 @@ sub draw_image {
 	$grid_line{$x1}{top} ||= $ry2;
       }
       else {
+        my $pad = INTERIMAGE_PAD;
 	$gd->line($x1,$ry2,$x2,$py1,$gc{$thickness});
-	$gd->line($x2,$py1,$x2,$gd->height,$gc{$thickness});
+	$gd->line($x2,$py1,$x2,$gd->height-$pad-1,$gc{$thickness});
 	$grid_line{$x1}{bottom} ||= $ry1;
       }
       $grid_line{$x1}{thickness} ||= $thickness;
@@ -805,30 +762,49 @@ sub format_segment {
 }
 
 sub landmark2segment {
-  my ($name,$source);
-  if (@_ == 2) {
-    ($name,$source) = @_;
+  my $settings = shift;
+  my ($name,$source) = @_;
+  if ($name && $source) {
   }
-  else {
+  elsif ($CONF->page_settings("name")) {
     $name   = $CONF->page_settings("name");
-    $source = $CONF->page_settings("search_src");
   }
-  my $segment  = _do_search($name,$source);
-  return $segment if defined $segment;
+  elsif ($CONF->page_settings("ref")) {
+    $name  = $CONF->page_settings("ref") . ':';
+    $name .= $CONF->page_settings("start") . ':';
+    $name .= $CONF->page_settings("stop");
+  }
+
+  $source ||= $CONF->page_settings("search_src");
+  if ($name && !$source) {
+    print header, warning("Error: a species must be defined for searching");
+  }
+
+  my $segment  = _do_search($name,$source) if $name && $source;
+
+  # remember our search!
+  if ($segment && $source && $source eq $settings->{search_src}) {
+    $settings->{"ref"}   = $segment->refseq;
+    $settings->{"start"} = $segment->start;
+    $settings->{"stop"}  = $segment->end;
+    $settings->{"name"}  = $segment->name;
+  }
  
+  return $segment;
   # Maybe the landmark is in another species?
   #for my $src (keys %$MAP) {
   #  $segment = _do_search($name,$src);
   #  return $segment if defined $segment;
   #}
     
-  print header, warning("Error: $name was not found in the database");
-  exit 0;
+  if ($name && !$segment) {
+    print header, warning("Error: $name was not found in the database");
+    exit 0;
+  }
 }
 
 sub _do_search {
   my ($landmark,$src) = @_;
-
   my $dsn = $MAP->{$src}{db} or die "no database\n";
   $SCONF->source($dsn);
   my $db = open_database();
@@ -842,67 +818,44 @@ sub warning {
 
 sub add_hit_to_ff {
   my ($segment,$ff,$hit,$invert) = @_;
-  my $feature;
   my $flip_hit = $hit->tstrand eq '-';
   $CONF->flip($hit->name => 1) if $flip_hit;
   my @attributes = $flip_hit ? (-attributes => {flip=>1}) : ();
 
-  if ($invert) { # construct the feature from the target coordinates
-    $feature = Bio::DB::GFF::Feature->new_from_parent( $segment,
-                                                       $hit->tstart,
-                                                       $hit->tend,
-                                                       'BLOCK',
-                                                       $hit->src2,
-                                                       undef,
-                                                       $hit->tstrand eq '-' ? -1 : 1,
-                                                       '.',
-						       Bio::DB::GFF::Featname->new(Hit => $hit->name)
-						       );
-    my $p = $hit->parts;
-    if (@$p > 1) {
-      for my $part (@$p) {
-        my $pfeat = Bio::DB::GFF::Feature->new_from_parent( $segment,
-                                                            $part->tstart,
-                                                            $part->tend,
-							    'BLOCK',
-							    $part->src2,
-                                                            undef,
-                                                            $part->tstrand eq '-' ? -1 : 1,
-							    '.',
-							    Bio::DB::GFF::Featname->new(Hit => $part->name)
-                                                            );
-	$feature->add_subfeature($pfeat);
-      }
-    }
+  my $src = $hit->src2;
+  my $setcolor = $CONF->setting($MAP->{$src}->{db} => 'color');
+  my $parts;
+
+  # construct the feature from the target coordinates
+  if ($invert) { # build the feature for the inset panel
+    @$parts = map{[$_->tstart,$_->tend]} @{$hit->parts};
   } 
-  else { # construct the feature from the src coordinates
-    $feature = Bio::DB::GFF::Feature->new_from_parent( $segment,
-						       $hit->start,
-						       $hit->end,
-						       'BLOCK',
-						       $hit->src2,
-						       undef,
-						       $hit->strand eq '-' ? -1 : 1,
-						       '.',
-						       Bio::DB::GFF::Featname->new(Hit => $hit->name)
-						       );
-    my $p = $hit->parts;
-    if (@$p > 1) {
-      for my $part (@$p) {
-	my $pfeat = Bio::DB::GFF::Feature->new_from_parent( $segment,
-							    $part->start,
-							    $part->end,
-							   'BLOCK',
-							    $part->src2,
-							    undef,
-							    $part->strand eq '-' ? -1 : 1,
-							    '.',
-							    Bio::DB::GFF::Featname->new(Hit => $part->name)
-							    );
-	$feature->add_subfeature($pfeat);
-      }
-    }
+  else { # build the feature for the center panel
+    @$parts = map{[$_->start,$_->end]} @{$hit->parts};
   }
+
+  $ff->add_type(
+		"match:$src" => {
+		  bgcolor   => $setcolor,
+		  fgcolor   => $setcolor,
+		  height    => ALIGN_HEIGHT,
+		  glyph     => 'segments',
+		  label     => 0,
+		  box_subparts => 1,
+		  connector => 'dashed'},
+		);
+
+  my $seqid  = $invert ? $hit->target  : $hit->seqid;
+  my $strand = $invert ? $hit->tstrand : $hit->strand;
+  my $feature = Bio::Graphics::Feature->new( -segments => $parts,
+					     -source   => $src,
+					     -type     => 'match',
+					     -subtype  => 'match_part',
+					     -name     => $hit->name,
+					     -seq_id   => $seqid,
+					     -strand   => $strand eq '-' ? -1 : 1,
+					     -configurator => $ff
+					     );
   $ff->add_feature($feature);
 }
 
@@ -1346,16 +1299,15 @@ sub get_settings {
 sub default_settings {
   my $settings = shift;
   $settings ||= {};
-  %$settings = ();
-  @$settings{ 'name', 'ref', 'start', 'stop', 'version' } = ( '', '', '', '', 100 );
+  #@$settings{ 'name', 'ref', 'start', 'stop', 'version' } = ( '', '', '', '', 100 );
   $settings->{width}       = $CONF->setting('default width') || $CONF->width;
   $settings->{source}      = $CONF->source;
   $settings->{v}           = $VERSION;
   $settings->{grid}        = 1;
 
-  my %default = DEFAULT_SETTINGS;
+  my %default = SETTINGS;
   foreach (keys %default) {
-    $settings->{$_} = $default{$_};  
+    $settings->{$_} ||= $default{$_};  
   }
   set_default_tracks($settings);
 }
@@ -1375,23 +1327,30 @@ sub set_default_tracks {
 sub adjust_settings {
   my $settings = shift;
 
+  if ( param('reset') ) {
+    %$settings = ();
+    return default_settings($settings);
+  }
+
   $settings->{width} = param('width') if param('width');
   my $divider = $CONF->setting('unit_divider') || 1;
 
-  # Update coordinates. 
+  # Update settings with URL params
   local $^W = 0; # kill uninitialized variable warning
-  $settings->{ref}   = param('ref');
-  $settings->{start} = param('start')
-      if defined param('start') && param('start') =~ /^[\d-]+/;
-  $settings->{stop} = param('stop')
-      if defined param('stop') && param('stop') =~ /^[\d-]+/;
-  $settings->{stop} = param('end')
-      if defined param('end') && param('end') =~ /^[\d-]+/;
-  $settings->{version}    ||= param('version') || '0.1';
-  $settings->{search_src} = param('search_src');
-  $settings->{name}       = param('name');
+  my %settings = SETTINGS;
+  for my $option (keys %settings) {
+    my $value = param($option);
+    defined $value or next;
+    if ($option =~ /start|stop|end/) {
+      next unless $value =~ /^[\d-]+/;
+    }
+    # sigh
+    $option = 'stop' if $option eq 'end';
+    $settings->{$option} = $value;
+  }
+
   $settings->{name}       ||= "$settings->{ref}:$settings->{start}..$settings->{stop}"
-      if defined $settings->{ref};
+      if defined $settings->{ref} && $settings->{start} && $settings->{stop};
 
   param( name => $settings->{name} );
 
@@ -1406,23 +1365,10 @@ sub adjust_settings {
     param(name => $settings->{name});
   }
 
-  my %default = DEFAULT_SETTINGS;
-  foreach (keys %default) {
-    if (defined param($_)) {
-      $settings->{$_} = param($_);
-    }
-    else {
-      $settings->{$_} ||= $default{$_};
-    }
-  }
-
   $settings->{name} =~ s/^\s+//; # strip leading
   $settings->{name} =~ s/\s+$//; # and trailing whitespace
   
-  if ( param('reset') ) {
-    %$settings = ();
-     default_settings($settings);
-  }
+  return 1;
 }
 
 
@@ -1430,4 +1376,3 @@ sub adjust_settings {
 close OUT or die "Can't close $file: $!";
 chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
 exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
-

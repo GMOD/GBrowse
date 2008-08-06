@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.97 2008-08-05 20:52:02 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.98 2008-08-06 19:51:50 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -596,9 +596,6 @@ sub labels {
   my $self  = shift;
   my $order = shift;
   my @labels = $self->config->labels;
-  # who wrote this???!
-  #  $self->{cached_data}{labels} ||= [$self->config->labels];
-  #  my @labels = @{$self->{cached_data}{labels}};
   if ($order) { # custom order
     return @labels[@$order];
   } else {

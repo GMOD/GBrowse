@@ -1,8 +1,9 @@
 package Bio::Graphics::Browser::I18n;
 
-# $Id: I18n.pm,v 1.8.16.1 2008-08-04 14:21:16 lstein Exp $
+# $Id: I18n.pm,v 1.8.16.2 2008-08-06 19:51:51 lstein Exp $
 
 use strict;
+our $VERSION = '1.01';
 
 sub new {
   my $class = shift;

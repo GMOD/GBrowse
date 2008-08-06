@@ -77,7 +77,7 @@ sub set_sources {
 
 sub feature_file {
   my $self = shift;
-  my ($label,$segment,$rel2abs) = @_;
+  my ($label,$segment,$rel2abs,$slow_mapper) = @_;
 
   my $config   = $self->config;
   my $settings = $self->page_settings;
@@ -94,7 +94,7 @@ sub feature_file {
   }
   else {
     warn "getting featurefile for $url" if DEBUG;
-    $feature_file = $self->get_remote_upload($url,$rel2abs,$segment,$label);
+    $feature_file = $self->get_remote_upload($url,$rel2abs,$slow_mapper,$segment,$label);
   }
   return unless $feature_file;
 
@@ -129,7 +129,7 @@ sub transform_url {
 
 sub get_remote_upload {
   my $self = shift;
-  my ($url,$rel2abs,$segment,$label) = @_;
+  my ($url,$rel2abs,$slow_mapper,$segment,$label) = @_;
   my $config = $self->config;
 
   # do certain substitutions on the URL
@@ -147,9 +147,10 @@ sub get_remote_upload {
     return;
   }
   my $fh = IO::File->new("<$filename") or return;
+  my $in_overview    = $rel2abs ne $slow_mapper && $self->probe_for_overview_sections($fh);
   my $feature_file   =
     Bio::Graphics::FeatureFile->new(-file           => $fh,
-				    -map_coords     => $rel2abs,
+				    -map_coords     => $in_overview ? $slow_mapper : $rel2abs,
 				    -smart_features => 1,
 				    -safe_world     => $self->config->setting('allow remote callbacks')||0,
     );
@@ -287,10 +288,10 @@ sub annotate {
          # which remaps all coordinates. Otherwise, this is probably just a GFF
          # file and we need to filter out features that are outside the range of
          # the current segment.
-    my $mapper             = $url =~ m!(\$segment|\$ref)!  
+    my $mapper             = $url =~ m!(\$segment|\$ref)!
                                      ? $unrestricted_mapper
                                      : $restricted_mapper;
-    my $feature_file       = $self->feature_file($url,$segment,$mapper);
+    my $feature_file       = $self->feature_file($url,$segment,$mapper,$unrestricted_mapper);
     $feature_files->{$url} = $feature_file;
   }
 }

@@ -143,4 +143,23 @@ sub ftp_proxy {
   return $config->setting('ftp proxy') || $proxy || '';
 }
 
+# ugly hack, but needed for performance gains when looking at really big data sets
+sub probe_for_overview_sections {
+  my $self = shift;
+  my $fh   = shift;
+  my $overview;
+  my $pos = tell($fh);
+  while (<$fh>) {
+    next unless /\S/;       # skip blank lines
+    last unless /[\#\[=]/;  # not a configuration section
+    if (/^section\s*=.*(region|overview)/) {
+      $overview++;
+      last;
+    }
+  }
+  seek($fh,$pos,0);
+  return $overview;
+}
+
+
 1;

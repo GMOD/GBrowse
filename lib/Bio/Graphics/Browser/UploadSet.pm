@@ -157,7 +157,7 @@ sub annotate {
 
   for my $url ($self->files) {
     next unless $settings->{features}{$url}{visible};
-    my $has_overview_sections = $self->probe_for_overview_sections($url);
+    my $has_overview_sections = $self->probe_for_overview_sections($self->open_file($url));
     next if $possibly_too_big && !$has_overview_sections;
     my $feature_file = $self->feature_file($url,
 					   ($has_overview_sections
@@ -169,25 +169,6 @@ sub annotate {
     $feature_files->{$url} = $feature_file;
   }
 }
-
-# ugly hack, but needed for performance gains when looking at really big data sets
-sub probe_for_overview_sections {
-  my $self = shift;
-  my $url  = shift;
-  my $fh = $self->open_file($url) or return;
-  my $overview;
-  while (<$fh>) {
-    next unless /\S/;       # skip blank lines
-    last unless /[\#\[=]/;  # not a configuration section
-    if (/^section\s*=.*(region|overview)/) {
-      $overview++;
-      last;
-    }
-  }
-  close $fh;
-  return $overview;
-}
-
 
 1;
 

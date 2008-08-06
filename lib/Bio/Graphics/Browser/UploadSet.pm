@@ -138,7 +138,7 @@ sub feature_file {
   my $feature_file = Bio::Graphics::FeatureFile->new(-file             => $fh,
 						     -smart_features   =>1,
 						     -allow_whitespace =>1,
-						     -safe_world       =>$self->config->setting('allow remote callbacks'),
+						     -safe_world       =>$self->config->setting('allow remote callbacks') || 0,
 						     @args,
 						    );
   close $fh;

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.98 2008-07-31 16:42:21 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.99 2008-08-06 20:57:57 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -313,6 +313,11 @@ handle_uploads($page_settings) || exit 0
 
 ## UPDATING THE PERSISTENT SETTINGS##############################################################
 
+# check that the labels are valid
+my @bad_labels = grep {/-/} $CONFIG->labels;
+warn "WARNING: The track(s) @bad_labels has hyphen character(s) and will not work as expected."
+    if @bad_labels;
+
 print_header(-cookie => $cookies,
 	     -charset=>$CONFIG->tr('CHARSET')
 	     );
@@ -339,7 +344,10 @@ if ($divisor == 1) {
   }
 }
 
-# PAGE STARTS HERE
+
+
+
+## PAGE STARTS HERE  #######################################################
 my $alert = param('reset')                ? $CONFIG->tr('Options_reset')
            : $page_settings->{upgraded}   ? $CONFIG->tr('Options_updated')
            : '';
@@ -946,19 +954,19 @@ sub adjust_settings {
   return if upgrade_settings($settings);
 
   if (param('width') || param('label')) { # just looking to see if the settings form was submitted
-    my @selected = split_labels (param('label'));
-    $settings->{features}{$_}{visible} = 0 foreach keys %{$settings->{features}};
-    $settings->{features}{$_}{visible} = 1 foreach @selected;
-    $settings->{flip}                  = param('flip');
-    $settings->{grid}                  = param('grid');
+      my @selected = split_labels (param('label'));
+      $settings->{features}{$_}{visible} = 0 foreach keys %{$settings->{features}};
+      $settings->{features}{$_}{visible} = 1 foreach @selected;
+      $settings->{flip}                  = param('flip');
+      $settings->{grid}                  = param('grid');
 
-    unless (defined $CONFIG->setting('cache time') && $CONFIG->setting('cache time') == 0) {
-      $settings->{cache}      = param('cache');
-      $settings->{cache}      = !param('nocache') if defined param('nocache');
-    }
+      unless (defined $CONFIG->setting('cache time') && $CONFIG->setting('cache time') == 0) {
+	  $settings->{cache}      = param('cache');
+	  $settings->{cache}      = !param('nocache') if defined param('nocache');
+      }
 
-    $settings->{drag_and_drop} = param('drag_and_drop');
-    $settings->{show_tooltips} = param('show_tooltips');
+      $settings->{drag_and_drop} = param('drag_and_drop');
+      $settings->{show_tooltips} = param('show_tooltips');
 
   }
 
@@ -2611,6 +2619,11 @@ sub handle_uploads {
     handle_quickie($page_settings,\@data,\@styles);
   }
 
+  if (param('Cancel') && (my $file = param('edited file'))) {
+      $UPLOADED_SOURCES->clear_file($file) 
+	  if -s $UPLOADED_SOURCES->url2path($file) < 2;  # too small, throw it back
+  }
+
   if ($file_action && param($file_action) eq $CONFIG->tr('Delete')) {
     $UPLOADED_SOURCES->clear_file($file);
     $REMOTE_SOURCES->delete_source($file);
@@ -2747,6 +2760,7 @@ sub do_annotation_file_download {
     $to_download    = CGI::unescape($to_download);
     (my $fname = $to_download) =~ s/^file://;
     print_header(-attachment   => $fname,
+		 -charset=>$CONFIG->tr('CHARSET'),
 		 -type         => 'application/octet-stream');
     print_uploaded_file_features($page_settings,$to_download);
 }
@@ -2781,12 +2795,13 @@ sub get_uploaded_file_info {
     $landmarks = tableize(\@links);
   }
   warn "get_uploaded_file_info(): modified = $modified, landmarks = $landmarks" if DEBUG;
-  return i($CONFIG->tr('File_info',$modified,$landmarks||''));
+  return i($CONFIG->tr('File_info',$modified),$landmarks||'');
 }
 
 sub edit_uploaded_file {
   my ($settings,$file) = @_;
   warn "edit_uploaded_file(): file = $file" if DEBUG;
+  print_header(-charset=>$CONFIG->tr('CHARSET'));
   print_top("Editing $file");
   print start_form();
   my $data;
@@ -3434,6 +3449,7 @@ sub do_plugin_header {
   my ($mime_type,$attachment)     = $PLUGINS->plugin($plugin)->mime_type;
   print_header(-cookie => $cookie,
 	       -type=>$mime_type,
+	       -charset=>$CONFIG->tr('CHARSET'),
 	       $attachment ? (-attachment=>$attachment) : (),
 	      );
 }

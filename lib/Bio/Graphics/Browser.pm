@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.98 2008-08-06 19:51:50 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.99 2008-08-06 20:57:57 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -3496,7 +3496,7 @@ sub make_link_target {
 
   $label    ||= $self->feature2label($feature) or return;
   my $link_target = $self->code_setting($label,'link_target')
-    || $self->code_setting('LINK DEFAULTS' => 'link_target')
+    || $self->code_setting('TRACK DEFAULTS' => 'link_target')
     || $self->code_setting(general => 'link_target');
   $link_target = eval {$link_target->($feature,$panel,$track)} 
       if ref($link_target) eq 'CODE';

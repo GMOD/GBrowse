@@ -151,7 +151,7 @@ sub get_remote_upload {
     Bio::Graphics::FeatureFile->new(-file           => $fh,
 				    -map_coords     => $rel2abs,
 				    -smart_features => 1,
-				    -safe_world     => $self->config->setting('allow remote callbacks'),
+				    -safe_world     => $self->config->setting('allow remote callbacks')||0,
     );
   warn "get_remote_feature_data(): got $feature_file" if DEBUG;
  

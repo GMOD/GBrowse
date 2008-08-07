@@ -1694,7 +1694,7 @@ change graph_type to "boxes."</i> </blockquote>
 
 <h3><a name="wiggle">2.6 Quantitative Data (advanced)</a></h3>
 
-The recipe in <a ref="#graph">11</a> works well for several thousand
+The recipe in <a href="#graph">2.5</a> works well for several thousand
 data points, but if you have very dense data, such as that produced by
 genomic tiling arrays, then you will want to use a specialized binary
 representation known as "wiggle" format. A wiggle track consists of a
@@ -1824,11 +1824,19 @@ files.
 <p>
 
 We'll now create the binary file for the data using the wiggle2gff3.pl
-script. We want it to live in the volvox database directory, so we
+script.  First, copy the <a
+href="data_files/volvox_microarray.wig">volvox_microarray.wig</a> into
+the volvox database directory and then change directories (cd) into that
+directory.  Delete the volvox6.gff3 file so we don't see the same set of
+data twice.  
+
+<p>
+
+We want it to live in the volvox database directory, so we
 have to specify this path when creating it:
 
 <blockquote class="example"><pre>
-% wiggle2gff3.pl --path=$HTDOCS/databases/volvox volvox_microarray.wig \
+% wiggle2gff3.pl --path=$HTDOCS/gbrowse/databases/volvox volvox_microarray.wig \
                  > volvox_microarray.gff3
 </pre></blockquote>
 
@@ -1854,12 +1862,6 @@ this file to change the source or type, You can also set the source
 and type in wiggle2gff3.pl by passing it --source and --type options
 on the command line. If you move the binary wiggle file, please change
 the value of the "wigfile" attribute to indicate its new location.
-
-<p>
-
-You can now move this GFF3 file into
-$HTDOCS/gbrowse/databases/volvox. At this time, please also delete the
-volvox6.gff3 file to avoid seeing the same data twice.
 
 <p>
 

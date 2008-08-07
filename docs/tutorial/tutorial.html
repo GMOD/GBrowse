@@ -137,7 +137,7 @@ installation.  It should be located at
 
 Similarly, check that you can find the gbrowse.conf configuration
 directory.  It should be located at <b>$CONF/gbrowse.conf</b> and
-contain the configuration file "yeast_chr1.conf."
+contain the configuration file "yeast.conf."
 
 <p>
 
@@ -162,8 +162,8 @@ Password: <b>*********</b>
 <p>
 
 Now look around inside the databases directory.  There should be a
-single subdirectory named "yeast_chr1." The yeast subdirectory is
-where the example yeast chromosome 1 data set is stored.
+single subdirectory named "yeast_chr1+2". The yeast subdirectory is
+where the example yeast chromosomes 1 and 2 data set is stored.
 
 <p>
 
@@ -263,7 +263,7 @@ single quotes around the path as shown in the example above.
 Next check that the volvox1.gff3 file does exist inside the volvox
 database directory and that it is readable by all users on your
 system.  Similarly, check that the volvox.conf configuration file is
-in the same directory as yeast_chr1.conf, and that it is readable by
+in the same directory as yeast.conf, and that it is readable by
 all users on your system.
 
 <p>
@@ -653,7 +653,7 @@ To illustrate how this works, have a look at <a
 href="data_files/volvox2b.gff3">volvox2b.gff3:</a>
 
 <blockquote class="example"><pre>
-ctgA example remark                             1000 2000 . . . Name=Remark
+ctgA example remark                             1000 2000 . . . Name=hga
 ctgA example protein_coding_primary_transcript  1100 2000 . + . Name=Gene:hga
 ctgA example polypeptide                        1200 1900 . + . Name=Protein:HGA
 ctgA example protein_coding_primary_transcript  1600 3000 . - . Name=Gene:hgb

@@ -1787,11 +1787,14 @@ sub render_deferred {
 
     my $renderer = $self->get_panel_renderer($seg);
 
+    my $h_callback = $self->make_hilite_callback();
+
     my $requests = $renderer->request_panels(
         {   labels        => $labels,
             feature_files => $self->remote_sources,
             section       => $section,
             deferred      => 1,
+            hilite_callback   => $h_callback || undef,
             flip => ( $section eq 'detail' ) ? $self->state()->{'flip'} : 0,
         }
     );
@@ -1905,6 +1908,28 @@ sub get_regionview_start_stop {
 }
 
 ##################### utilities #####################
+
+sub make_hilite_callback {
+  my $self = shift;
+  my $state = $self->state();
+  my @hiliters = grep {$_->type eq 'highlighter'} $self->plugins()->plugins;
+  return unless @hiliters or ($state->{h_feat} && %{$state->{h_feat}});
+  return sub {
+    my $feature = shift;
+    my $color;
+
+    # run through the set of hilite plugins and give each one
+    # a chance to choose the highlighting for its feature
+    foreach (@hiliters) {
+      $color ||= $_->highlight($feature);
+    }
+    return $color if $color;
+   
+    # if we get here, we select the search term for highlighting
+    return unless $feature->display_name;
+    return $state->{h_feat}{$feature->display_name};
+  }
+}
 
 sub categorize_track {
   my $self  = shift;

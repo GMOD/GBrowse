@@ -183,6 +183,8 @@ END
 
    VARYING     => 'Variierend',
 
+   SHOW_GRID   => 'Raster zeigen',
+
    SET_OPTIONS => 'Einstellung Track Optionen...',
 
    CLEAR_HIGHLIGHTING => 'Markierungen entfernen',
@@ -377,5 +379,43 @@ END
  SMALL_INTERVAL    => 'Kleines Intervall wird auf %s bp angepasst',
 
  NO_SOURCES        => 'Es wurden keine lesbaren Datenquellen konfiguriert. M&ouml;glicherweise haben Sie nicht ausreichend Berechtigungen um sie zu sehen.',
+
+ ADD_YOUR_OWN_TRACKS => 'Eigene Tracks hinzuf&uuml;gen',
+
+ INVALID_SOURCE    => 'Die Quelldatei %s ist ung&uuml;ltig.',
+
+ BACKGROUND_COLOR  => 'F&uuml;llfarbe',
+
+ FG_COLOR          => 'Linienfarbe',
+
+ HEIGHT           => 'H&ouml;he',
+
+ PACKING          => 'Verdichtung',
+
+ GLYPH            => 'Form',
+
+ LINEWIDTH        => 'Linienst&auml;rke',
+
+ DEFAULT          => '(Standardwerte)',
+
+ DYNAMIC_VALUE    => 'Dynamisch berechnet',
+
+ CHANGE           => '&Auml;ndern',
+
+ DRAGGABLE_TRACKS  => 'Ziehbare Tracks',
+
+ CACHE_TRACKS      => 'Cache Tracks',
+
+ SHOW_TOOLTIPS     => 'Zeige Tooltips',
+
+ OPTIONS_RESET     => 'Alle Seiteneinstellungen wurden auf ihre Standardwerte zur&uuml;ckgesetzt',
+
+ OPTIONS_UPDATED   => 'Eine neue Site-Konfiguration ist in Kraft; Alle Seiteneinstellungen wurden auf ihre Standardwerte zurückgesetzt',
+
+ SEND_TO_GALAXY    => 'Diese Region an Galaxy schicken',
+
+ NO_DAS            => 'Installationsfehler: Bio::Das Modul muss für das Funktionieren von DAS URLs installiert sein. Bitte den Site Webmaster informieren.',
+
 };
+
 

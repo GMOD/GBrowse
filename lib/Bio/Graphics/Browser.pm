@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.99 2008-08-06 20:57:57 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.100 2008-08-07 20:00:25 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1282,7 +1282,9 @@ sub generate_panels {
 		  @extra_args,
 		  @$cache_extra,
 		  $drag_n_drop,
-		  $options->{$label});
+		  $options->{$label},
+	          $label,
+	  );
 
       $cache_key{$label}      = $self->create_cache_key(@args);
       next if $cached{$label} = $cache && $self->panel_is_cached($cache_key{$label});
@@ -1345,6 +1347,7 @@ sub generate_panels {
 	     { 
 		 ($feature_file_offsets{$a}||1) <=> ($feature_file_offsets{$b}||1) 
 	     } keys %$feature_files) {
+
 
     next if $cached{$l};
     my $file = $feature_files->{$l} or next;
@@ -1559,7 +1562,6 @@ sub add_feature_file {
   $options->{$name}      ||= 0;
 
   my $override_settings = $args{override_settings};
-
 
   my ($nr_tracks_added,$panel,$tracklist) =
     eval {

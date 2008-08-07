@@ -102,6 +102,7 @@ sub feature_file {
   # nicely in the user interface.
   my $name = $feature_file->setting('name') if $feature_file->can('setting');
   $feature_file->name($name||$url) if $feature_file->can('name');
+
   return $feature_file;
 }
 
@@ -282,17 +283,18 @@ sub annotate {
   my $settings          = $self->page_settings;
 
   for my $url ($self->sources) {
-    next unless $settings->{features}{$url}{visible};
-         # check to see whether URL includes the magic $segment and/or $ref 
-         # parameters. If so, then it is safe to use the coordinate remapper
-         # which remaps all coordinates. Otherwise, this is probably just a GFF
-         # file and we need to filter out features that are outside the range of
-         # the current segment.
-    my $mapper             = $url =~ m!(\$segment|\$ref)!
+      next unless $settings->{features}{$url}{visible};
+      
+      # check to see whether URL includes the magic $segment and/or $ref 
+      # parameters. If so, then it is safe to use the coordinate remapper
+      # which remaps all coordinates. Otherwise, this is probably just a GFF
+      # file and we need to filter out features that are outside the range of
+      # the current segment.
+      my $mapper             = $url =~ m!(\$segment|\$ref)!
                                      ? $unrestricted_mapper
                                      : $restricted_mapper;
-    my $feature_file       = $self->feature_file($url,$segment,$mapper,$unrestricted_mapper);
-    $feature_files->{$url} = $feature_file;
+      my $feature_file       = $self->feature_file($url,$segment,$mapper,$unrestricted_mapper);
+      $feature_files->{$url} = $feature_file;
   }
 }
 

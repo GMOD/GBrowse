@@ -19,11 +19,12 @@ use Bio::Graphics::Browser::RenderPanels;
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
 use constant OVERVIEW_SCALE_LABEL => 'Overview Scale';
-use constant REGION_SCALE_LABEL => 'Region Scale';
+use constant REGION_SCALE_LABEL   => 'Region Scale';
 use constant DETAIL_SCALE_LABEL   => 'Detail Scale';
 use constant EMPTY_IMAGE_HEIGHT   => 40;
-use constant MAX_SEGMENT     => 1_000_000;
-use constant OVERVIEW_RATIO  => 1.0;
+use constant MAX_SEGMENT          => 1_000_000;
+use constant TOO_MANY_SEGMENTS    => 5_000;
+use constant OVERVIEW_RATIO       => 1.0;
 
 
 my %PLUGINS; # cache initialized plugins
@@ -1789,17 +1790,109 @@ sub render_deferred {
 
     my $h_callback = $self->make_hilite_callback();
 
+    my $feature_files = load_external_sources([$seg],$self->state);
     my $requests = $renderer->request_panels(
         {   labels        => $labels,
             feature_files => $self->remote_sources,
             section       => $section,
             deferred      => 1,
             hilite_callback   => $h_callback || undef,
+            feature_files => $feature_files,
             flip => ( $section eq 'detail' ) ? $self->state()->{'flip'} : 0,
         }
     );
     return $requests;
 }
+
+sub load_external_sources {
+    my ($self, $segments, $state ) = @_;
+
+    return {} unless $segments;
+
+    if ( ref $segments ne 'ARRAY' ) {
+        return {};
+        #$segments = [ open_database()->segment($segments) ];
+    }
+    elsif ($segments) {
+        return if @$segments > 1;
+    }
+
+    my $segment = $segments->[0] if $segments;
+
+    # $f will hold a feature file hash in which keys are human-readable names of
+    # feature files and values are FeatureFile objects.
+    my $f = {};
+    if ($segment) {
+        my $rel2abs      = $self->coordinate_mapper( $segment, 1 );
+        my $rel2abs_slow = $self->coordinate_mapper( $segment, 0 );
+        for my $featureset ( $self->plugins(), $self->uploaded_sources(), $self->remote_sources() ) {
+            $featureset->annotate( $segment, $f, $rel2abs, $rel2abs_slow,
+                MAX_SEGMENT );
+        }
+    }
+    return $f;
+}
+
+sub coordinate_mapper {
+
+    my $self            = shift;
+    my $current_segment = shift;
+    my $optimize        = shift;
+
+    my $db = $current_segment->factory;
+
+    my ( $ref, $start, $stop ) = (
+        $current_segment->seq_id, $current_segment->start,
+        $current_segment->end
+    );
+    my %segments;
+
+    my $closure = sub {
+        my ( $refname, @ranges ) = @_;
+
+        unless ( exists $segments{$refname} ) {
+#            my @segments
+#                = sort { $a->length <=> $b->length }    # get the longest one
+#                map {
+#                eval { $_->absolute(0) };
+#                $_    # so that rel2abs works properly later
+#                } $self->name2segments( $refname, $db, TOO_MANY_SEGMENTS, 1 );
+#            $segments{$refname} = $segments[0];
+#            return unless @segments;
+            $segments{$refname} = $self->whole_segment;
+        }
+
+        my $mapper  = $segments{$refname} || return;
+        my $absref  = $mapper->abs_ref;
+        my $cur_ref = eval { $current_segment->abs_ref }
+            || eval { $current_segment->ref }; # account for api changes in Bio::SeqI
+        return unless $absref eq $cur_ref;
+
+        my @abs_segs;
+        if ( $absref eq $refname ) {           # doesn't need remapping
+            @abs_segs = @ranges;
+        }
+        else {
+            @abs_segs
+                = map { [ $mapper->rel2abs( $_->[0], $_->[1] ) ] } @ranges;
+        }
+
+        # this inhibits mapping outside the displayed region
+        if ($optimize) {
+            my $in_window;
+            foreach (@abs_segs) {
+                next unless defined $_->[0] && defined $_->[1];
+                $in_window ||= $_->[0] <= $stop && $_->[1] >= $start;
+            }
+            return $in_window ? ( $absref, @abs_segs ) : ();
+        }
+        else {
+            return ( $absref, @abs_segs );
+        }
+    };
+    return $closure;
+}
+  
 
 sub render_grey_track {
     my $self             = shift;

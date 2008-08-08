@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.99 2008-08-06 20:57:57 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.100 2008-08-08 15:02:24 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -789,9 +789,16 @@ sub page_settings {
   my %sources = map {$_=>1} @sources;
   if ($source) {
     if ($sources{$source}) {
-      $config->source($source);
+	$config->source($source);
     } else {
-      error($CONFIG->tr('INVALID_SOURCE',$source));
+	error($CONFIG->tr('INVALID_SOURCE',$source));
+	my $url          = url();
+	$url             =~ s/gbrowse\/.+/gbrowse/;  # be 100% certain of stripping path info
+	my %descriptions = map {$_ => ($CONFIG->description($_)||'')}    @sources;
+	my @links        = map {a({-href=>"$url/$_"},$descriptions{$_})} sort @sources;
+	print ul(li(\@links));
+	print_bottom($VERSION);
+	exit 0;
     }
   }
 
@@ -2726,6 +2733,7 @@ sub load_external_sources {
 	$featureset->annotate($segment,$f,$rel2abs,$rel2abs_slow,$MAX_SEGMENT);
     }
   }
+
   return $f;
 }
 

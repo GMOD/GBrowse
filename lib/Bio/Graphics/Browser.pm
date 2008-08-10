@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.100 2008-08-07 20:00:25 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.101 2008-08-10 22:44:52 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1069,7 +1069,9 @@ sub render_draggable_tracks {
 		   ?
 		   "\n".div({-id=>"${section}_track_${munge_label}",-class=>$class},
 			    $titlebar,
-			    div({-align=>'center',-style=>'margin-top: -18px'},$img.$pad_img),
+			    div({-align=>'center',
+				 -style=>'margin-top: -18px; margin-bottom: 3px'},
+				$img.$pad_img),
 			    $img_map||'')
 		   :
 		   "\n".div({-id=>"${section}_track_${munge_label}",-class=>$class},

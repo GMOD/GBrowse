@@ -1,5 +1,5 @@
 package Bio::Graphics::Glyph::wiggle_density;
-# $Id: wiggle_density.pm,v 1.1.2.26 2008-07-29 23:09:16 lstein Exp $
+# $Id: wiggle_density.pm,v 1.1.2.27 2008-08-10 23:33:10 lstein Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing Bio::Graphics::Glyph::minmax);
@@ -8,6 +8,8 @@ sub draw {
   my $self = shift;
   my ($gd,$left,$top,$partno,$total_parts) = @_;
   my $feature   = $self->feature;
+
+  $self->panel->startGroup($gd);
 
   my ($wigfile) = $feature->attributes('wigfile');
   if ($wigfile) {
@@ -33,8 +35,9 @@ sub draw {
     return;
   }
 
-  return $self->SUPER::draw(@_);
+  $self->panel->endGroup($gd);
 
+  return $self->SUPER::draw(@_);
 }
 
 sub wig {

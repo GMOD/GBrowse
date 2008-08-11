@@ -45,7 +45,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.8 2008-07-31 14:43:20 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.9 2008-08-11 13:03:21 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -148,7 +148,7 @@ my $db              = open_database($CONFIG);
 my @segments = segments($CONFIG,$abs,\@landmarks);
 
 # set the image width
-$CONFIG->width($width) if $width;
+$CONFIG->width($width) if $width && $width =~ /^\d+$/;
 
 # get options and visibility hash
 my ($options,$labels,$visible) = get_options(\@options,\@track_types);

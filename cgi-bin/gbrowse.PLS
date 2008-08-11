@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.100 2008-08-08 15:02:24 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.101 2008-08-11 13:03:21 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -985,7 +985,8 @@ sub adjust_settings {
     $settings->{features}{$_}{visible} = 0 foreach @selected;
   }
 
-  $settings->{width}  = param('width')   if param('width');
+  $settings->{width}  = param('width')  if param('width') 
+      && param('width') =~ /^\d+$/;
   my $divider  = $CONFIG->setting('unit_divider') || 1;
 
   # Update coordinates.

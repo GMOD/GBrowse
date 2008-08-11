@@ -286,6 +286,13 @@ sub asynchronous_event {
         return 1;
     }
 
+    if ( my $plugin_name = param('reconfigure_plugin') ) {
+        $self->init_plugins();
+        my $plugin = $self->plugins->plugin($plugin_name) or return 1;
+        $plugin->reconfigure();
+        return 1;
+    }
+
     # toggle the visibility of sections by looking for "div_visible_*"
     # parameters
     for my $p ( grep {/^div_visible_/} param() ) {
@@ -1267,8 +1274,16 @@ sub asynchronous_update_element {
         return join ' ',
             $self->render_detailview_panels( $self->region->seg );
     }
+    elsif ( $element eq 'plugin_configure_div' ) {
+        $self->init_plugins();
+        my $plugin_name = param('plugin_name');
+        my $plugin      = $self->plugins->plugin($plugin_name)
+            or return "$plugin_name is not a recognized plugin\n";
 
-    return 'Unknown element';
+        return $self->wrap_plugin_configuration($plugin);
+    }
+
+    return 'Unknown element: ' . $element;
 }
 
 sub asynchronous_update_coordinates {

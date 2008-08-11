@@ -100,7 +100,10 @@ sub render_navbar {
 				 )
 			   )
 		       )
-      ).br({-clear=>'all'});
+    )
+    . div( { -id => "plugin_configure_div"},'&nbsp;'  )
+    . br({-clear=>'all'})
+;
 }
 
 # sub render_detailview {
@@ -667,15 +670,104 @@ sub plugin_menu {
 
   my @plugins = sort {$labels->{$a} cmp $labels->{$b}} keys %$labels;
   return unless @plugins;
-  return join('',
-	      popup_menu(-name=>'plugin',
-			 -values=>\@plugins,
-			 -labels=> $labels,
-			 -default => $settings->{plugin},
-			),'&nbsp;',
-	      submit(-name=>'plugin_action',-value=>$self->tr('Configure')),'&nbsp;',
-	      b(submit(-name=>'plugin_action',-value=>$self->tr('Go')))
-	     );
+  return join(
+    '',
+    popup_menu(
+      -name    => 'plugin',
+      -values  => \@plugins,
+      -labels  => $labels,
+      -default => $settings->{plugin},
+    ),
+    '&nbsp;',
+    button(
+      -name     => 'plugin_action',
+      -value    => $self->tr('Configure'),
+      -onClick => 'Controller.configure_plugin("plugin_configure_div");'
+    ),
+    '&nbsp;',
+    b( submit( -name => 'plugin_action', -value => $self->tr('Go') ) ),
+  );
+}
+
+# Wrap the plugin configuration html into a form and tie it into the controller 
+sub wrap_plugin_configuration {
+    my $self        = shift;
+    my $plugin      = shift or return '';
+    my $config_html = $plugin->configure_form();
+
+    my $return_html = start_form(
+        -name     => 'configure_plugin',
+        -id       => 'configure_plugin',
+        -onSubmit => 'alert("here3");return false;',
+    );
+    if ($config_html) {
+        my $plugin_type = $plugin->type;
+        my $plugin_name = $plugin->name;
+        my @buttons;
+
+        # Cancel Button
+        push @buttons,
+            button(
+            -name    => 'plugin_action',
+            -value   => $self->tr('CANCEL'),
+            -onClick => 'Controller.wipe_div("plugin_configure_div");'
+            );
+
+        # Configure Button
+        push @buttons,
+            button(
+            -name    => 'plugin_action',
+            -value   => $self->tr('Configure_plugin'),
+            -onClick => 'Controller.reconfigure_plugin("'
+                . $plugin_name
+                . '","plugin_configure_div");'
+            );
+        if ( $plugin_type eq 'finder' ) {
+            push @buttons,
+                button(
+                -name    => 'plugin_action',
+                -value   => $self->tr('Find'),
+                -onClick => 'alert("Find not yet implemented")',
+                );
+        }
+        elsif ( $plugin_type eq 'dumper' or $plugin_type eq 'filter' ) {
+            push @buttons,
+                button(
+                -name    => 'plugin_action',
+                -value   => $self->tr('Go'),
+                -onClick => 'alert("Go not yet implemented")',
+                );
+        }
+
+        # Start adding to the html
+        $return_html .= h1(
+              $plugin_type eq 'finder'
+            ? $self->tr('Find')
+            : $self->tr('Configure'),
+            $plugin_name
+        );
+        my $button_html = join( '&nbsp;',
+            @buttons[ 0 .. @buttons - 2 ],
+            b( $buttons[-1] ),
+        );
+
+        $return_html .= join '', $button_html, $config_html, p(),
+            $button_html,;
+    }
+    else {
+        $return_html .= join '', p( $self->tr('Boring_plugin') ),
+            b(
+            button(
+                -name    => 'plugin_action',
+                -value   => $self->tr('CANCEL'),
+                -onClick => 'Controller.wipe_div("plugin_configure_div");'
+            )
+            );
+    }
+    $return_html .= end_form();
+
+    return $return_html;
+
 }
 
 sub slidertable {

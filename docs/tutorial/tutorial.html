@@ -67,7 +67,7 @@ with Bio::DB::GFF.</a></p>
 
   <li><a href="#enhancements">GBrowse Enhancements</a>
       <ol>
-	<li><a href="#regionview">Adding a "Region" Panel</a>
+	<li><a href="#region">Adding a "Region" Panel</a>
 	<li><a href="#overview">Putting Features into the Overview &amp; Regionview</a>
 	<li><a href="#semantic_zooming">Semantic Zooming</a>
 	<li><a href="#grouping_tracks">Grouping Tracks</a>
@@ -2560,11 +2560,11 @@ Zooming in will show you the trace diagram:
 <h2><a name="enhancements">3. GBrowse Enhancements</a></h2>
 
 <p>In this section of the tutorial we'll discuss customizing the look
-and feel of GBrowse by adding a regionview section, adding feature
-tracks to the regionview and/or overview sections, configuring
+and feel of GBrowse by adding a region view section, adding feature
+tracks to the region view and/or overview sections, configuring
 semantic zooming, and adding functionality with plugins.
 
-<h3><a name="regionview">3.1. Adding a "Region" Panel</a></h3>
+<h3><a name="region">3.1. Adding a "Region" Panel</a></h3>
 
 <p>
 
@@ -2629,7 +2629,7 @@ panel, just as you would for the overview panel.
 <p>
 
 In many cases it is handy to add tracks directly to the overview
-and/or regionview. These tracks can be turned on and off just like
+and/or region panel. These tracks can be turned on and off just like
 normal tracks, and can serve as reference points for well-known genes,
 cytogenetic bands, or genetic markers.
 
@@ -2687,10 +2687,10 @@ displayed.</p>
 <p>
 
 To add a track to the region panel, simply replace ":overview" with
-":regionview" in the track stanza:
+":region" in the track stanza:
 
 <blockquote class="example"><pre>
-[Motifs:regionview]
+[Motifs:region]
 feature      = polypeptide_domain
 glyph        = span
 height       = 5

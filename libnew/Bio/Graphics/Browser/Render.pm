@@ -288,8 +288,9 @@ sub asynchronous_event {
 
     if ( my $plugin_name = param('reconfigure_plugin') ) {
         $self->init_plugins();
-        my $plugin = $self->plugins->plugin($plugin_name) or return 1;
-        $plugin->reconfigure();
+        $self->plugins->configure();
+        print CGI::header(-status=>'204 No Content');
+
         return 1;
     }
 

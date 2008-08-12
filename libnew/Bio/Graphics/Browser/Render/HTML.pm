@@ -708,7 +708,7 @@ sub wrap_plugin_configuration {
         # Cancel Button
         push @buttons,
             button(
-            -name    => 'plugin_action',
+            -name    => 'plugin_button',
             -value   => $self->tr('CANCEL'),
             -onClick => 'Controller.wipe_div("plugin_configure_div");'
             );
@@ -716,16 +716,17 @@ sub wrap_plugin_configuration {
         # Configure Button
         push @buttons,
             button(
-            -name    => 'plugin_action',
+            -name    => 'plugin_button',
             -value   => $self->tr('Configure_plugin'),
             -onClick => 'Controller.reconfigure_plugin("'
-                . $plugin_name
+                . $plugin_name . '", "'
+                . $self->tr('Configure_plugin')
                 . '","plugin_configure_div");'
             );
         if ( $plugin_type eq 'finder' ) {
             push @buttons,
                 button(
-                -name    => 'plugin_action',
+                -name    => 'plugin_button',
                 -value   => $self->tr('Find'),
                 -onClick => 'alert("Find not yet implemented")',
                 );
@@ -733,7 +734,7 @@ sub wrap_plugin_configuration {
         elsif ( $plugin_type eq 'dumper' or $plugin_type eq 'filter' ) {
             push @buttons,
                 button(
-                -name    => 'plugin_action',
+                -name    => 'plugin_button',
                 -value   => $self->tr('Go'),
                 -onClick => 'alert("Go not yet implemented")',
                 );
@@ -758,7 +759,7 @@ sub wrap_plugin_configuration {
         $return_html .= join '', p( $self->tr('Boring_plugin') ),
             b(
             button(
-                -name    => 'plugin_action',
+                -name    => 'plugin_button',
                 -value   => $self->tr('CANCEL'),
                 -onClick => 'Controller.wipe_div("plugin_configure_div");'
             )

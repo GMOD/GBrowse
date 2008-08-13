@@ -377,7 +377,7 @@ sub plugin_setting {
 sub karyotype_setting {
   my $self           = shift;
   my $caller_package = caller();
-  $self->setting('karyotype' => @_);
+  $self->setting('builtin:karyotype' => @_);
 }
 
 # like code_setting, but obeys semantic hints

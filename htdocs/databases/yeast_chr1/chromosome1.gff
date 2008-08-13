@@ -1,4 +1,5 @@
 I	chromosome	Component	1	230203	.	.	.	Sequence "I"
+II	chromosome	Component	1	813178	.	.	.	Sequence "II"
 I	sgd	gene	151453	151591	.	+	.	Gene "CEN1" ; Note "Chromosome I Centromere"
 I	sgd	CEN	151453	151591	.	+	.	CEN "CEN1" ; Note "CEN1\; Chromosome I Centromere"
 I	sgd	gene	147591	151163	.	-	.	Gene "TFC3" ; Note "transcription factor tau (TFIIIC) subunit 138"

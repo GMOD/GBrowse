@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use base 'Bio::Graphics::Browser::Render';
 use Bio::Graphics::Browser::Shellwords;
+use Bio::Graphics::Browser::Karyotype;
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
 use CGI qw(:standard escape start_table end_table);
@@ -105,26 +106,6 @@ sub render_navbar {
     . br({-clear=>'all'})
 ;
 }
-
-# sub render_detailview {
-#   my $self   = shift;
-#   my $seg    = shift;
-
-#   my @panels;
-#   my $source = $self->data_source;
-#   if ($seg->length > $source->max_segment) {
-#     @panels = div($self->tr('TOO_BIG',
-# 			    scalar $self->unit_label($source->max_segment),
-# 			    scalar $self->unit_label($source->default_segment)
-# 			   )
-# 		 );
-#   } else {
-#     @panels = $self->render_segment($seg);
-#   }
-
-#   my $drag_script = $self->drag_script('panels');
-#   print div($self->toggle('Details',div({-id=>'panels'},@panels))),$drag_script;
-# }
 
 sub render_html_head {
   my $self = shift;
@@ -241,7 +222,9 @@ sub render_track_table {
 
   # tracks beginning with "_" are special, and should not appear in the
   # track table.
-  my @labels     = grep {!/^_/} @{$settings->{tracks}||[]}; 
+  my @labels     = grep {!/^_/} $source->detail_tracks,
+                                $source->overview_tracks,
+                                $source->regionview_tracks;
   my %labels     = map {$_ => $self->label2key($_)}              @labels;
   my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
 
@@ -343,6 +326,7 @@ sub render_multiple_choices {
     my $url      = url(-path_info=>1)."?name=";
 
     my $regexp = join '|',($self->state->{name} =~ /(\w+)/g);
+    my $na = $self->tr('NOT_APPLICABLE');
 
     my @rows     = map {
 	my $name = $_->display_name;
@@ -360,7 +344,7 @@ sub render_multiple_choices {
 	    th({-align=>'left'},a({-href=>"$url$id"},$name)),
 	    td($desc),
 	    td(a({-href=>"$url$pos"},$pos)),
-	    td($_->score)
+	    td($_->score || $na)
 	    )
     } sort {
 	$a->seq_id cmp $b->seq_id ||
@@ -369,7 +353,16 @@ sub render_multiple_choices {
 
 	} @$features;
 
-    return $self->tr('HIT_COUNT',scalar @$features).
+    my $karyotype = 
+	Bio::Graphics::Browser::Karyotype->new(
+	    {source => $self->data_source,
+	     db     => $self->db,
+	     state  => $self->state
+	    });
+    
+
+    return p(i("placeholder for karyotype of chromosomes: ",map {$_->display_name} $karyotype->chromosomes)).
+	b($self->tr('HIT_COUNT',scalar @$features)).
 	table({-class=>'searchbody'},
 	      th([$self->tr('NAME'),
 		  $self->tr('Description'),

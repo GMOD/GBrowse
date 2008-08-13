@@ -1402,58 +1402,6 @@ sub map_html {
   return $html;
 }
 
-# sub set_cached_panel {
-#   my $self = shift;
-#   my ($key,$gd,$map_data) = @_;
-
-#   my $map_file                = $self->get_cache_base($key,'map')   or return;
-#   my $size_file               = $self->get_cache_base($key,'size')  or return;
-#   my ($image_file,$image_uri) = $self->get_cache_base($key,'image') or return;
-
-#   # write the map data 
-#   if ($map_data) {
-#     my $f = IO::File->new(">$map_file") or die "$map_file: $!";
-#     $f->print(join("\n", @$map_data),"\n");
-#     $f->close;
-#   }
-
-#   return unless $gd;
-
-#   # get the width and height and write the size data
-#   my ($width,$height) = $gd->getBounds;
-#   my $f = IO::File->new(">$size_file") or die "$size_file: $!";
-#   $f->print($width,"\n");
-#   $f->print($height,"\n");
-#   $f->close;
-
-#   my $image_data;
-
-#   if ($gd->can('svg')) {
-#     $image_file .= ".svg";
-#     $image_data = $gd->svg;
-#   }
-#   elsif ($gd->can('png')) {
-#     $image_file .= ".png";
-#     $image_data = $gd->png;
-#   }
-
-#   elsif ($gd->can('gif')) {
-#     $image_file .= ".gif";
-#     $image_data  = $gd->gif;
-#   }
-
-#   elsif ($gd->can('jpeg')) {
-#     $image_file .= ".jpg";
-#     $image_data  = $gd->jpeg;
-#   }
-
-#   $f = IO::File->new(">$image_file") or die "$image_file: $!";
-#   $f->print($image_data);
-#   $f->close;
-
-#   return ($image_uri,$map_data,$width,$height,$image_file);
-# }
-
 # this returns a coderef that will indicate whether an added (external) feature is placed
 # in the overview, region or detailed panel. If the section name begins with a "?", then
 # if not otherwise stated, the feature will be placed in this section.

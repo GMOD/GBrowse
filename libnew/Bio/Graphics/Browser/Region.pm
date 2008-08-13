@@ -277,7 +277,7 @@ sub _feature_keyword_search {
     my ($seg) = $db->segment($name) or next;
     push @results,Bio::Graphics::Feature->new(-name   => $name,
 					      -class  => $name->class,
-					      -type   => $description,
+					      -desc   => $description,
 					      -score  => $score,
 					      -ref    => $seg->abs_ref,
 					      -start  => $seg->abs_start,

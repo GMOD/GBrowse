@@ -60,6 +60,9 @@ TH.linkmenu       {
                   }
 .datatitle        { background-color: khaki; }
 .databody         { background-color: lightgoldenrodyellow; }
+.multiplechoicetitle  { background-color: lightblue;
+		        font-size: small;
+}
 .searchtitle      { background-color: khaki;
 	            font-size: small;
 }

@@ -475,7 +475,9 @@ sub render_body {
 
   if ($region->feature_count > 1) {
     #search not implemented yet
+      print $self->render_navbar();
       print $self->render_multiple_choices($features);
+      print $self->render_config();
   }
 
   elsif (my $seg = $region->seg) {

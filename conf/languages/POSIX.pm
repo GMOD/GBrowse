@@ -249,11 +249,14 @@ END
 
    SEQUENCE        => 'sequence',
 
-   SCORE           => 'score=%s',
-
    NOT_APPLICABLE => 'n/a',
 
    BP             => 'bp',
+
+   NAME           => 'Name',
+   DESCRIPTION    => 'Description',
+   POSITION       => 'Position',
+   SCORE          => 'Match Score',
 
    #--------------
    # SETTINGS PAGE

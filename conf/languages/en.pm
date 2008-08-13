@@ -249,8 +249,6 @@ END
 
    SEQUENCE        => 'sequence',
 
-   SCORE           => 'score=%s',
-
    NOT_APPLICABLE => 'n/a',
 
    BP             => 'bp',

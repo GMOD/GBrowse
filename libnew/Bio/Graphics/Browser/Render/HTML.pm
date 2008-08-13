@@ -32,7 +32,7 @@ sub render_top {
 sub render_bottom {
   my $self = shift;
   my $features = shift; # not used
-  return hr().end_html();
+  return $self->data_source->global_setting('footer').end_html();
 }
 
 sub render_navbar {
@@ -337,6 +337,39 @@ sub render_track_table {
 		     );
 }
 
+sub render_multiple_choices {
+    my $self     = shift;
+    my $features = shift;
+    my $url      = url(-path_info=>1)."?name=";
+
+    my @rows     = map {
+	my $name = $_->display_name;
+	my $class= eval {$_->class};
+	my $id   = $class ? "$class:$name" : $name;
+	my $pos  = $_->seq_id.':'.$_->start.'..'.$_->end;
+	TR({-class=>'multiplechoicetitle'},
+	    th({-align=>'left'},a({-href=>"$url$id"},$name)),
+	    td($_->desc),
+	    td(a({-href=>"$url$pos"},$pos)),
+	    td($_->score)
+	    )
+    } sort {
+	$a->seq_id cmp $b->seq_id ||
+	    $a->start <=> $b->start ||
+	    $a->end   <=> $b->end
+
+	} @$features;
+
+    return $self->tr('HIT_COUNT',scalar @$features).
+	table({-class=>'searchbody'},
+	      th([$self->tr('NAME'),
+		  $self->tr('Description'),
+		  $self->tr('Position'),
+		  $self->tr('score')
+		 ]),
+	      @rows);
+}
+
 sub render_global_config {
   my $self     = shift;
   my $settings = $self->state;
@@ -443,7 +476,7 @@ sub render_global_config {
   return $self->toggle('Display_settings',$content);
 }
 
-# This needs to be feshed out.
+# This needs to be fleshed out.
 sub render_uploads {
     my $self = shift;
     my $feature_files = shift;

@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::I18n;
 
-# $Id: I18n.pm,v 1.1 2007-01-04 18:54:09 lstein Exp $
+# $Id: I18n.pm,v 1.2 2008-08-13 20:27:56 lstein Exp $
 
 use strict;
 my %TABLES;
@@ -49,7 +49,8 @@ sub tr {
   my $def_table  = $self->tr_table('POSIX');
   my $translated = $lang_table->{$symbol} || $def_table->{$symbol};
   return unless $translated;
-  return @_ ? sprintf($translated,@_) : $translated;
+  local $^W = 0;  # quashing uninit variable warning
+  return @_ ? sprintf($translated,map {CGI::escapeHTML($_)} @_) : $translated;
 }
 
 sub tr_table {

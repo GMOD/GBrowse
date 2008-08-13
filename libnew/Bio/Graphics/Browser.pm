@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.9 2008-07-09 22:16:55 lstein Exp $
+# $Id: Browser.pm,v 1.10 2008-08-13 20:27:55 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -21,7 +21,8 @@ sub new {
   my $class            = shift;
   my $config_file_path = shift;
 
-  # this code caches the config info so that we don't need to reparse in persistent (e.g. modperl) environment
+  # this code caches the config info so that we don't need to 
+  # reparse in persistent (e.g. modperl) environment
   my $mtime            = (stat($config_file_path))[9];
   if (exists $CONFIG_CACHE{$config_file_path}
       && $CONFIG_CACHE{$config_file_path}{mtime} >= $mtime) {

@@ -166,7 +166,8 @@ sub asynchronous_event {
         my $overview_scale_return_object
             = $self->asynchronous_update_overview_scale_bar();
         my $region_scale_return_object
-            = $self->asynchronous_update_region_scale_bar();
+            = $self->asynchronous_update_region_scale_bar()
+            if ( $settings->{region_size} );
         my $detail_scale_return_object
             = $self->asynchronous_update_detail_scale_bar();
         my $segment_info_object = $self->segment_info_object();

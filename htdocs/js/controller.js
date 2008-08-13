@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.22 2008-08-12 13:01:03 mwz444 Exp $
+ $Id: controller.js,v 1.23 2008-08-13 20:49:56 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -46,9 +46,15 @@ var GBrowseController = Class.create({
 	    var detail_scale_bar_hash   = results.detail_scale_bar;
         Controller.debug_status     = 'updating coords - successful navigate';
     
-	    Controller.update_scale_bar(overview_scale_bar_hash);
-	    Controller.update_scale_bar(region_scale_bar_hash);
-	    Controller.update_scale_bar(detail_scale_bar_hash);
+        if (overview_scale_bar_hash){
+          Controller.update_scale_bar(overview_scale_bar_hash);
+        }
+        if (region_scale_bar_hash){
+          Controller.update_scale_bar(region_scale_bar_hash);
+        }
+        if (detail_scale_bar_hash){
+          Controller.update_scale_bar(detail_scale_bar_hash);
+        }
     
 	    Controller.segment_observers.keys().each(
 	      function(e) {

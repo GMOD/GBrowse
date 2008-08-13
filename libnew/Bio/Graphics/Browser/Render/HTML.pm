@@ -342,14 +342,23 @@ sub render_multiple_choices {
     my $features = shift;
     my $url      = url(-path_info=>1)."?name=";
 
+    my $regexp = join '|',($self->state->{name} =~ /(\w+)/g);
+
     my @rows     = map {
 	my $name = $_->display_name;
 	my $class= eval {$_->class};
 	my $id   = $class ? "$class:$name" : $name;
 	my $pos  = $_->seq_id.':'.$_->start.'..'.$_->end;
+	my $desc = escapeHTML(eval{join ' ',
+				   $_->desc(),
+				   $_->attributes('Note')}
+			      ||eval{$_->method}||eval{$_->source_tag}||$_->{ref});
+	$desc =~ s/($regexp)/<b class="keyword">$1<\/b>/ig;
+	$desc =~ s/(\S{60})/$1 /g;  # wrap way long lines
+
 	TR({-class=>'multiplechoicetitle'},
 	    th({-align=>'left'},a({-href=>"$url$id"},$name)),
-	    td($_->desc),
+	    td($desc),
 	    td(a({-href=>"$url$pos"},$pos)),
 	    td($_->score)
 	    )

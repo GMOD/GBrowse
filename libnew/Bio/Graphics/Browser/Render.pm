@@ -796,6 +796,8 @@ sub init_plugins {
   $self->fatal_error("Could not initialize plugins") unless $plugins;
   $plugins->configure($self->db,$self->state,$self->language,$self->session);
   $self->plugins($plugins);
+
+  $self->load_plugin_annotators();
   $plugins;
 }
 
@@ -1662,9 +1664,30 @@ sub set_tracks {
     my @labels = @_;
     my $state  = $self->state;
     $state->{tracks} = \@labels;
+    $self->load_plugin_annotators($state);
     $state->{features}{$_}{visible} = 0 foreach $self->data_source->labels;
     $state->{features}{$_}{visible} = 1 foreach @labels;
 }
+
+sub load_plugin_annotators {
+  my ($self,) = @_;
+
+  my $state = $self->state;
+  my %default_plugin = map {$_=>1} map {s/^plugin:// && $_}
+    grep {/^plugin:/} $self->data_source()->default_labels;
+
+  my %listed = map {$_=>1} @{$state->{tracks}}; # are we already on the list?
+
+  for my $plugin ($self->plugins->plugins) {
+    next unless $plugin->type eq 'annotator';
+    my $name = $plugin->name;
+    $name = "plugin:$name";
+    $state->{features}{$name} ||= {visible=>$default_plugin{$plugin}||0,options=>0,limit=>0};
+    push @{$state->{tracks}},$name unless $listed{$name};
+  }
+
+}
+
 
 sub detail_tracks {
   my $self = shift;
@@ -1809,7 +1832,7 @@ sub render_deferred {
 
     my $h_callback = $self->make_hilite_callback();
 
-    my $feature_files = load_external_sources([$seg],$self->state);
+    my $feature_files = $self->load_external_sources([$seg],$self->state);
     my $requests = $renderer->request_panels(
         {   labels        => $labels,
             feature_files => $self->remote_sources,

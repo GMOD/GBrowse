@@ -750,13 +750,18 @@ sub wrap_plugin_configuration {
             );
 
         # Configure Button
+
+        # Supplies the track name and the track div which I'm not really
+        # happy with
         push @buttons,
             button(
             -name    => 'plugin_button',
             -value   => $self->tr('Configure_plugin'),
             -onClick => 'Controller.reconfigure_plugin("'
                 . $plugin_name . '", "'
-                . $self->tr('Configure_plugin')
+                . $self->tr('Configure_plugin') . '", "'
+                . "plugin:$plugin_name" . '", "'
+                . "track_plugin:$plugin_name"
                 . '","plugin_configure_div");'
             );
         if ( $plugin_type eq 'finder' ) {

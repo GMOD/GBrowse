@@ -287,6 +287,18 @@ sub asynchronous_event {
         return 1;
     }
 
+    if ( my $action = param('rerender_track') ) {
+        my $track_name = param('track_name');
+
+        #warn "Rerendering Track $track_name";
+        my $track_keys = $self->begin_individual_track_render($track_name);
+
+        print CGI::header('application/json');
+        print JSON::to_json( { track_keys => $track_keys, } );
+
+        return 1;
+    }
+
     if ( my $plugin_name = param('reconfigure_plugin') ) {
         $self->init_plugins();
         $self->plugins->configure();

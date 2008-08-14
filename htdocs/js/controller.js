@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.23 2008-08-13 20:49:56 mwz444 Exp $
+ $Id: controller.js,v 1.24 2008-08-14 19:37:52 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -28,7 +28,7 @@ var GBrowseController = Class.create({
 
     this.debug_status             = 'updating coords';
     //Grey out image
-    this.track_images.keys().each(
+    this.track_images.values().each(
       function(image_id) {
 	    $(image_id).setOpacity(0.3);
       }
@@ -73,7 +73,7 @@ var GBrowseController = Class.create({
   register_track:
   function (track_div_id,track_image_id,track_type) {
     
-    this.track_images.set(track_image_id,1);
+    this.track_images.set(track_div_id,track_image_id);
     if (track_type=="scale_bar"){
       return;
     }
@@ -220,6 +220,29 @@ var GBrowseController = Class.create({
     });
   },
 
+  rerender_track:
+  function(track_name,track_div_id) {
+
+    var image_id = this.track_images.get(track_div_id);
+    $(image_id).setOpacity(0.3);
+    new Ajax.Request('#',{
+      method:     'post',
+      parameters: {
+        rerender_track:  1,
+        track_name: track_name,
+      },
+      onSuccess: function(transport) {
+        var results    = transport.responseJSON;
+        var track_keys = results.track_keys;
+        for (var div in track_keys){
+          $(div).fire('model:segmentChanged', {
+            track_key:  track_keys[div]
+          });
+        } // end for
+      }, // end onSuccess
+    }); // end Ajax.Request
+  }, // end rerender_track
+
   configure_plugin:
   function(div_id) {
     var plugin_configure_div  = $(div_id);
@@ -233,8 +256,8 @@ var GBrowseController = Class.create({
   },
 
   reconfigure_plugin:
-  function(plugin_name,plugin_action,div_id) {
-    var plugin_configure_div  = $(div_id);
+  function(plugin_name,plugin_action,plugin_track_name,plugin_track_div_id,pc_div_id) {
+    var plugin_configure_div  = $(pc_div_id);
     var form_element = $("configure_plugin");
     new Ajax.Request('#',{
       method:     'post',
@@ -243,8 +266,9 @@ var GBrowseController = Class.create({
             reconfigure_plugin: plugin_name
           }).toQueryString(),
       onSuccess: function(transport) {
-        Controller.wipe_div(div_id); 
+        Controller.wipe_div(pc_div_id); 
         // Need to update plugin tracks here
+        Controller.rerender_track(plugin_track_name,plugin_track_div_id);
       } // end onSuccess
     });
   },

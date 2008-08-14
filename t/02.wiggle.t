@@ -11,7 +11,7 @@ use File::Temp;
 use FindBin '$Bin';
 use lib "$Bin/../lib";
 
-use constant TEST_COUNT => 7;
+use constant TEST_COUNT => 26;
 
 BEGIN {
   # to handle systems with no installed Test module
@@ -92,9 +92,9 @@ my $wig2     = Bio::Graphics::Wiggle->new($tmpfile2,1);
 
 # export positions 600=>700 and 900=>1000 (values are 1..100 and 100..200)
 my $export1 = $wig->export_to_wif(600=>700);
-ok(length $export1,361);
+ok(length $export1,365);
 my $export2 = $wig->export_to_wif(900=>1000);
-ok(length $export2,361);
+ok(length $export2,365);
 
 $wig2->import_from_wif($export1);
 $wig2->import_from_wif($export2);

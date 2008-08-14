@@ -7,7 +7,7 @@
 use strict;
 use ExtUtils::MakeMaker;
 use Bio::Root::IO;
-use constant TEST_COUNT => 7;
+use constant TEST_COUNT => 6;
 
 BEGIN {
   # to handle systems with no installed Test module
@@ -20,9 +20,13 @@ BEGIN {
   use Test;
   plan test => TEST_COUNT;
 }
-use Bio::DB::GFF;
+use Bio::DB::SeqFeature::Store;
 
-my $db = eval { Bio::DB::GFF->new(-adaptor=>'memory',-gff=>'sample_data/yeast_data.gff') } ;
+
+my $db = eval { Bio::DB::SeqFeature::Store->new(
+            -adaptor=>'memory',
+            -dsn=>'htdocs/databases/yeast_chr1+2/yeast_chr1+2.gff3',
+            ) } ;
 
 ok($db);
 
@@ -32,15 +36,13 @@ unless ($db) {
   die '';
 }
 
-my @h = $db->features('Transposon:sgd');
+my @h = $db->features(-type => 'LTR_retrotransposon');
 ok(@h > 0);
 
-my $s = $db->segment(Transposon=>'YARCTy1-1');
+my $s = $db->segment('YARCTy1-1');
 ok(defined $s);
-ok($s->start,1);
-$s->absolute(1);
-ok($s->low,160234);
-ok($s->high,166158);
+ok($s->start,160239);
+ok($s->end,166163);
 
 my @i = $s->features;
 ok(@i>0);

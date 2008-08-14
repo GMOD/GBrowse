@@ -224,6 +224,7 @@ sub render_track_table {
   # track table.
   my @labels     = grep {!/^_/} $source->detail_tracks,
                                 $source->overview_tracks,
+                                $source->plugin_tracks,
                                 $source->regionview_tracks;
   my %labels     = map {$_ => $self->label2key($_)}              @labels;
   my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;

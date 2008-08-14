@@ -1663,27 +1663,32 @@ sub set_tracks {
     my $self   = shift;
     my @labels = @_;
     my $state  = $self->state;
+
     $state->{tracks} = \@labels;
-    $self->load_plugin_annotators($state);
+    $self->load_plugin_annotators(\@labels);
     $state->{features}{$_}{visible} = 0 foreach $self->data_source->labels;
     $state->{features}{$_}{visible} = 1 foreach @labels;
 }
 
 sub load_plugin_annotators {
-  my ($self,) = @_;
+  my ($self,$visible_labels) = @_;
 
+  my %label_visible = map { $_ => 1 } @{ $visible_labels || [] };
   my $state = $self->state;
+  my $source = $self->data_source;
   my %default_plugin = map {$_=>1} map {s/^plugin:// && $_}
-    grep {/^plugin:/} $self->data_source()->default_labels;
+    grep {/^plugin:/} $source->default_labels;
 
   my %listed = map {$_=>1} @{$state->{tracks}}; # are we already on the list?
+  my %listed_in_source = map {$_=>1} $source->configured_types; # are we already on the list?
 
   for my $plugin ($self->plugins->plugins) {
     next unless $plugin->type eq 'annotator';
     my $name = $plugin->name;
     $name = "plugin:$name";
-    $state->{features}{$name} ||= {visible=>$default_plugin{$plugin}||0,options=>0,limit=>0};
-    push @{$state->{tracks}},$name unless $listed{$name};
+    $source->add_type($name,{}) unless $listed_in_source{$name}++;
+    $state->{features}{$name} ||= {visible=>$label_visible{$name}||0,options=>0,limit=>0};
+    #push @{$state->{tracks}},$name unless $listed{$name}++;
   }
 
 }

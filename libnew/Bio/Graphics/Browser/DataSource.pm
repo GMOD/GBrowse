@@ -303,6 +303,11 @@ sub karyotype_tracks {
   grep { ($_ eq 'karyotype' || /:karyotype$/) && $self->authorized($_) } $self->configured_types;
 }
 
+sub plugin_tracks {
+  my $self = shift;
+  grep { ($_ eq 'plugin' || /plugin:/) && $self->authorized($_) } $self->configured_types;
+}
+
 sub label2type {
   my ($self,$label,$length) = @_;
   my $l = $self->semantic_label($label,$length);

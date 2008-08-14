@@ -929,7 +929,7 @@ sub run_local_requests {
     } @labels_to_generate;
 
     
-    for my $label (@ordinary_tracks) {
+    for my $label (@labels_to_generate) {
 	next if $seenit{$label}++; # this shouldn't happen, but let's be paranoid
 
 	my @keystyle = (-key_style=>'between')
@@ -967,7 +967,7 @@ sub run_local_requests {
 	    file       => $file,
 	    panel      => $panels{$label},
 	    position   => $feature_file_offsets{$label} || 0,
-	    options    => $settings->{features}{$label}{options},
+	    options    => {},
 	    select     => $featurefile_select,
 	    );
     }
@@ -1416,6 +1416,10 @@ sub feature_file_select {
   }
 
   return sub {
+
+    # This sub is no longer really needed
+    return 1;
+
     my $file  = shift;
     my $type  = shift;
     my $section = $file->setting($type=>'section') || $file->setting(general=>'section');

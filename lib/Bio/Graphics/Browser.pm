@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.101 2008-08-10 22:44:52 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.102 2008-08-14 20:11:42 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -2227,13 +2227,10 @@ sub _feature_get {
 
   # consolidate features that have same name and same reference sequence
   # and take the largest one.
+  local $^W=0; # uninit variable warning - can't find it
   my %longest;
   foreach (@filtered) {
-    # try the second line from Scott.  If multi-hit searches start coming up with too many
-    # identical hits, try the first one again.
-    # my $n = $_->display_name.$_->abs_ref.(eval{$_->version}||''); # avoiding uninit warnings
-    # my $n = $_->display_name.$_->abs_ref.(eval{$_->version}||'').$_->class;
-    my $n = $_->display_name.$_->abs_ref.(eval{$_->version}||'').(eval{$_->class}||'');
+    my $n   = $_->display_name.$_->abs_ref.(eval{$_->version}||'').(eval{$_->class}||'');
     $longest{$n} = $_ if !defined($longest{$n}) || $_->length > $longest{$n}->length;
   }
 
@@ -3364,6 +3361,7 @@ sub make_link {
     my $end   = CGI::escape($feature->end);
     my $src   = CGI::escape($feature->can('source_tag') ? $feature->source_tag : '');
     my $f_id  = CGI::escape($feature->feature_id) if $feature->can('feature_id');
+    $f_id   ||= CGI::escape($feature->primary_id) if $feature->can('primary_id');
 
     if ($f_id) {
       return "../../gbrowse_details/$data_source?name=$name;class=$class;ref=$ref;start=$start;end=$end;feature_id=$f_id";

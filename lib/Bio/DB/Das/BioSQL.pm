@@ -114,23 +114,7 @@ $VERSION = 0.02;
 
 # Install horrible patch for gbrowse compatibility
 use Bio::SeqFeature::Generic;
-
-
-*Bio::SeqFeature::Generic::attributes = \&Bio::AnnotatableI::get_tag_values;
-*Bio::SeqFeature::Generic::method = \&Bio::SeqFeature::Generic::primary_tag;
-*Bio::SeqFeature::Generic::type = sub {
-    my $feat = shift;
-    my ($method) = $feat->primary_tag;
-    my ($source) = $feat->source_tag;
-    return $method;
-};
-*Bio::SeqFeature::Generic::name = sub {
-    my $feat = shift;
-    my $name = eval {($feat->get_tag_values('name'))[0]};
-    $name ||= eval {($feat->get_tag_values('label'))[0]};
-    $name ||= eval {($feat->get_tag_values('db_xref'))[0]};
-    return $name;
-};
+use Bio::DB::GFF::Util::Rearrange 'rearrange';
 
 =head2 new
 
@@ -212,25 +196,37 @@ Otherwise, the method must throw a "multiple segment exception".
 sub get_feature_by_name
 {
   my ($self) = shift;
-  my ($name,$start,$end,$class,$version) = $self->_rearrange([qw(NAME
-								 START
-								 END
-								 CLASS
-								 VERSION)],@_);
+  my ($name,$start,$end,$class,$version,$id) = $self->_rearrange([qw(NAME
+					 			     START
+								     END
+								     CLASS
+								     VERSION
+                                                                     FEATURE_ID
+                                                  )],@_);
+  if ($id) {
+      return $self->get_feature_by_primary_key($id);
+  }
   my @seq = $self->biosql->fetch_Seq_by_accession($name);
   return unless @seq;
   return map {$self->_segclass->new(-bioseq => $_, -dbadaptor => $self)} @seq;
 }
 
+sub get_feature_by_primary_key {
+    my $self = shift;
+    my $key  = shift;
+    my $adaptor = $self->biosql->db->get_object_adaptor("Bio::SeqFeatureI");
+    map {Bio::DB::Das::BioSQL::Segment->wrap_feature($_)} $adaptor->find_by_primary_key($key);
+}
+
 sub segment {
   my $self = shift;
-  my ($name,$start,$end,$class,$version, $absolute, $stop) =
-    $self->_rearrange([qw(NAME START END CLASS VERSION ABSOLUTE STOP)],@_);
+  my ($name,$start,$end,$class,$version, $absolute) =
+    rearrange([['NAME','REF'],'START',['END','STOP'],qw(CLASS VERSION ABSOLUTE)],@_);
 
   my @seq = $self->biosql->fetch_Seq_by_accession($name);
   
   return unless @seq;
-  return map {$self->_segclass->new(-bioseq => $_, -dbadaptor => $self, -start => $start, -end => $end || $stop, -absolute => $absolute)} @seq;
+  return map {$self->_segclass->new(-bioseq => $_, -dbadaptor => $self, -start => $start, -end => $end, -absolute => $absolute)} @seq;
 }
 
 

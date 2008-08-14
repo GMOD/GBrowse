@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.5 2008-05-10 13:56:46 scottcain Exp $
+# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.6 2008-08-14 20:11:41 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -53,7 +53,8 @@ use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Markup;
 use Bio::Graphics::Browser::Util;
 use Bio::Graphics::Browser::Realign 'align';
-use vars qw($CONFIG $VERSION $CONF_DIR $LANG @COLORS $INDEX %strands %COLORS %URLS %formatterCache);
+use vars qw($CONFIG $VERSION $CONF_DIR $LANG 
+            @COLORS $INDEX %strands %COLORS %URLS %formatterCache);
 
 use constant DEBUG=>0;
 
@@ -85,18 +86,30 @@ $CONFIG->source(get_source());
 # This populates the %URLS global with link rules from the config file.
 getLinkURLs(\%URLS);
 
-my $head_name = $class eq 'Sequence' ? $name : "$class:$name";  # gff3 compatibility
+my $head_name = !$class || $class eq 'Sequence' ? $name : "$class:$name";  # gff3 compatibility
 
 my $db = open_database();
 
 my @features;
 if ($f_id) {
   @features = $CONFIG->_feature_get($db,$name,$class,$start,$end,1,0,$f_id);
+
+  # HACK! This is for the BioSQL adaptor, whose sequences aren't automatically
+  # attached to feature objects when they are retrieved from the database
+  if ($db->isa('Bio::DB::Das::BioSQL')) {
+      my @sequences = $CONFIG->_feature_get($db,$ref,$class,$start,$end,1);
+      for (my $i=0;$i<@features;$i++) {
+	  $features[$i]->attach_seq($sequences[0]);
+      }
+  }
+
 }
 else {
-  @features = sort {$b->length<=>$a->length} $CONFIG->_feature_get($db,$name,$class);
-  @features    = sort {$b->length<=>$a->length} $CONFIG->_feature_get($db,$ref,$class,$start,$end,1)
-    unless @features;
+  @features = sort {$b->length<=>$a->length} 
+               $CONFIG->_feature_get($db,$name,$class);
+  @features = sort {$b->length<=>$a->length} 
+               $CONFIG->_feature_get($db,$ref,$class,$start,$end,1)
+       unless @features;
 }
 
 warn "features = @features" if DEBUG;
@@ -360,7 +373,7 @@ sub position {
   my $simple = shift;
   my $bug    = shift; # for (-) (-) alignments
 
-  my $ref = $f->abs_ref;
+  my $ref   = $f->abs_ref;
   my $start = $f->abs_start;
   my $end   = $f->abs_end;
   if ($simple) {

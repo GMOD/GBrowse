@@ -219,7 +219,12 @@ This is a read-only accessor.
 
 =cut
 
-sub absolute   { shift->{absolute} }
+sub absolute   {
+    my $self = shift;
+    my $d    = $self->{absolute};
+    $self->{absolute} = shift if @_;
+    $d;
+}
 
 
 =head2 features
@@ -303,8 +308,17 @@ sub features {
   } else {
     $types = \@_;
   }
+
+  if ($types && !ref $types) {
+      $types = [$types];
+  }
   
   my @features = $self->top_SeqFeatures();
+
+  if ($types) {
+      my %types = map {lc $_=>1} @$types;
+      @features = grep {$types{lc $_->method}} @features;
+  }
 
   if ($iterator) {
     return Bio::DB::Das::BioSQL::Iterator->new(\@features);
@@ -333,7 +347,7 @@ sub top_SeqFeatures
 
     $self->bioseq->adaptor->slow_attach_children($self->bioseq, $self->start, $self->end);
     
-    my @result = $self->bioseq->get_SeqFeatures();
+    my @result = map {$self->wrap_feature($_)} $self->bioseq->get_SeqFeatures();
     
     unless ($self->absolute)
     {
@@ -457,6 +471,8 @@ sub asString {
 
 sub name { shift->asString }
 sub type { 'Segment' }
+sub source_tag  {'BioSQL'}
+sub class  {'Segment'}
 
 #Have to return bioseq->obj, not the wrapper around it (bioseq),
 #because some classes check for the exact class name.
@@ -477,6 +493,8 @@ sub annotation {return shift->bioseq->annotation}
 sub species {return shift->bioseq->species}
 sub version {return shift->bioseq->version}
 
+sub subseq { shift->seq }
+
 sub overlaps {
   my $self          = shift;
   my $other_segment = shift or return;
@@ -490,5 +508,57 @@ sub overlaps {
 
 # compatibility with Bio::DB::GFF::RelSegment
 *abs_ref = \&accession_number;
+
+sub wrap_feature {
+    my $self = shift;
+    return Bio::DB::Das::BioSQL::Feature->new(shift);
+}
+
+package Bio::DB::Das::BioSQL::Feature;
+
+use base 'Bio::DB::Persistent::SeqFeature';
+
+sub new {
+    my $class = shift;
+    my $obj   = shift;
+    return bless $obj,ref $class || $class;
+}
+sub seq_id {
+    my $self = shift;
+    return eval{$self->seq->id};
+}
+
+sub ref { shift->seq_id }
+
+sub display_name {
+    my $self = shift;
+    for my $tag (qw(name label locus_tag db_xref product)) {
+	next unless $self->has_tag($tag);
+	my ($value) = $self->get_tag_values($tag);
+	return $value;
+    }
+    return $self->primary_tag."(".$self->primary_key.")";
+}
+
+sub attributes {
+    shift->get_tag_values();
+}
+sub method { 
+    shift->primary_tag;
+}
+sub type {
+    my $self = shift;
+    my $method = $self->primary_tag;
+    my $source = $self->source_tag;
+    $method .= ":$source" if defined $source;
+    return $method;
+}
+sub name       { shift->display_name }
+sub primary_id { shift->primary_key }
+sub abs_ref   { shift->ref }
+sub abs_start { shift->start }
+sub abs_end   { shift->end  }
+sub abs_stop  { shift->end  }
+sub class     { shift->method  }
 
 1;

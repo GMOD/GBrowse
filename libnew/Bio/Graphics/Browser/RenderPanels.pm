@@ -22,6 +22,7 @@ use constant DEFAULT_EMPTYTRACKS => 0;
 use constant PAD_DETAIL_SIDES    => 10;
 use constant RULER_INTERVALS     => 20;
 use constant PAD_OVERVIEW_BOTTOM => 5;
+use constant MAX_SEGMENT         => 1_000_000;
 
 # when we load, we set a global indicating the LWP::Parallel::UserAgent is available
 my $LPU_AVAILABLE;
@@ -878,7 +879,6 @@ sub run_local_requests {
 
     $labels    ||= [keys %$requests];
 
-    my $feature_files  = $args->{feature_files};
     my $noscale        = $args->{noscale};
     my $do_map         = $args->{do_map};
     my $cache_extra    = $args->{cache_extra} || [];
@@ -892,6 +892,15 @@ sub run_local_requests {
     my $lang           = $self->language;
 
     my $base           = $self->get_cache_base;
+
+    my $feature_files = $self->load_external_sources(
+        segment          => $segment,
+        settings         => $settings,
+        whole_segment    => $args->{whole_segment},
+        plugin_set       => $args->{plugin_set},
+        uploaded_sources => $args->{uploaded_sources},
+        remote_sources   => $args->{remote_sources},
+    );
 
     # FIXME: this has to be set somewhere
     my $hilite_callback= undef;
@@ -1136,6 +1145,90 @@ sub add_features_to_track {
       if $limit && $limit > 0;
   }
 }
+
+sub load_external_sources {
+    my ( $self, %args ) = @_;
+
+    my $segment       = $args{'segment'}       or return;
+    my $whole_segment = $args{'whole_segment'} or return;
+    my $settings      = $args{'settings'};
+    my $plugin_set    = $args{'plugin_set'};
+    my $uploaded_sources = $args{'uploaded_sources'};
+    my $remote_sources   = $args{'remote_sources'};
+
+    # $f will hold a feature file hash in which keys are human-readable names
+    # of feature files and values are FeatureFile objects.
+
+    my $feature_file = {};
+    if ($segment) {
+        my $rel2abs = $self->coordinate_mapper( $segment, $whole_segment, 1 );
+        my $rel2abs_slow
+            = $self->coordinate_mapper( $segment, $whole_segment, 0 );
+        for my $featureset ( $plugin_set, $uploaded_sources, $remote_sources,
+            )
+        {
+            $featureset->annotate(
+                $segment,      $feature_file, $rel2abs,
+                $rel2abs_slow, MAX_SEGMENT
+            );
+        }
+    }
+    return $feature_file;
+}
+
+sub coordinate_mapper {
+
+    my $self            = shift;
+    my $current_segment = shift;
+    my $whole_segment   = shift;
+    my $optimize        = shift;
+
+    my $db = $current_segment->factory;
+
+    my ( $ref, $start, $stop ) = (
+        $current_segment->seq_id, $current_segment->start,
+        $current_segment->end
+    );
+    my %segments;
+
+    my $closure = sub {
+        my ( $refname, @ranges ) = @_;
+
+        unless ( exists $segments{$refname} ) {
+            $segments{$refname} = $whole_segment;
+        }
+
+        my $mapper  = $segments{$refname} || return;
+        my $absref  = $mapper->abs_ref;
+        my $cur_ref = eval { $current_segment->abs_ref }
+            || eval { $current_segment->ref }; # account for api changes in Bio::SeqI
+        return unless $absref eq $cur_ref;
+
+        my @abs_segs;
+        if ( $absref eq $refname ) {           # doesn't need remapping
+            @abs_segs = @ranges;
+        }
+        else {
+            @abs_segs
+                = map { [ $mapper->rel2abs( $_->[0], $_->[1] ) ] } @ranges;
+        }
+
+        # this inhibits mapping outside the displayed region
+        if ($optimize) {
+            my $in_window;
+            foreach (@abs_segs) {
+                next unless defined $_->[0] && defined $_->[1];
+                $in_window ||= $_->[0] <= $stop && $_->[1] >= $start;
+            }
+            return $in_window ? ( $absref, @abs_segs ) : ();
+        }
+        else {
+            return ( $absref, @abs_segs );
+        }
+    };
+    return $closure;
+}
+
 
 sub get_iterator {
   my $self = shift;

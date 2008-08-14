@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.102 2008-08-14 20:11:42 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.103 2008-08-14 20:36:06 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -2192,15 +2192,24 @@ sub _feature_get {
   warn "\@argv = @argv" if DEBUG;
 
   my @segments;
-  if ($segments_have_priority) {
-    @segments  = grep {$_->length} $db->segment(@argv);
-    @segments  = grep {$_->length} $db->get_feature_by_name(@argv) if !@segments;
-  } else {
-    @segments  = grep {$_->length} $db->get_feature_by_name(@argv)   if !defined($start) && !defined($stop);
-    @segments  = grep {$_->length} $db->get_features_by_alias(@argv) if !@segments && !defined($start)
-                                                                        && !defined($stop)
-                                                                        && $db->can('get_features_by_alias');
-    @segments  = grep {$_->length} $db->segment(@argv)               if !@segments && $name !~ /[*?]/;
+  @segments    = $db->fetch($f_id) if defined $f_id 
+      && $db->can('fetch');
+
+  @segments    = $db->get_feature_by_primary_id($f_id) if !@segments 
+      && defined $f_id 
+      && $db->can('get_feature_by_primary_id');
+
+  if (!@segments) {
+      if ($segments_have_priority) {
+	  @segments  = grep {$_->length} $db->segment(@argv);
+	  @segments  = grep {$_->length} $db->get_feature_by_name(@argv) if !@segments;
+      } else {
+	  @segments  = grep {$_->length} $db->get_feature_by_name(@argv)   if !defined($start) && !defined($stop);
+	  @segments  = grep {$_->length} $db->get_features_by_alias(@argv) if !@segments && !defined($start)
+	      && !defined($stop)
+	      && $db->can('get_features_by_alias');
+	  @segments  = grep {$_->length} $db->segment(@argv)               if !@segments && $name !~ /[*?]/;
+      }
   }
 
   return unless @segments;

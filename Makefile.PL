@@ -256,7 +256,7 @@ END
 
 
 if ($bioperl_needs_patching) {
-  print STDERR "\nInstalled Bio::Graphics version $biographics_version is less than desired version $patch_version.\nYou need to update your BioPerl installation to version 1.5.2.\n\n";
+  print STDERR "\nInstalled Bio::Graphics version $biographics_version is less than desired version $patch_version.\nYou need to update your BioPerl installation to greater than version 1.5.2.\n\n";
   die;
 }
 
@@ -274,7 +274,7 @@ WriteMakefile(
 	      'NAME'	     => 'Generic-Genome-Browser',
 	      'VERSION'      => $VERSION,
 	      'PREREQ_PM'    => {
-				 Bio::Perl         => 1.005002,
+				 Bio::Perl         => 1.005003,
 				 GD                => 2.07,
 				 IO::String        => 0,
                                  IO::File          => 1.0,
@@ -342,7 +342,7 @@ END
 }
 
 sub biographics_patch_version {
-  return 1.654; # what is in bioperl 1.5.2
+  return 1.7; # what is in pre bioperl 1.6?
 }
 
 sub interpolate {

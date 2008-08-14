@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.6 2008-08-14 20:11:41 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.7 2008-08-14 20:20:33 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -53,6 +53,7 @@ use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Markup;
 use Bio::Graphics::Browser::Util;
 use Bio::Graphics::Browser::Realign 'align';
+use Bio::Graphics::Glyph::generic;
 use vars qw($CONFIG $VERSION $CONF_DIR $LANG 
             @COLORS $INDEX %strands %COLORS %URLS %formatterCache);
 
@@ -157,6 +158,7 @@ sub print_features {
       $string .= PrintMultiple($f,$options,'Class',$f->class) unless $f->class eq 'Sequence';
     }
     $string .= PrintMultiple($f,$options,'Type',$f->primary_tag);
+    $string .= PrintMultiple($f,$options,'Description',Bio::Graphics::Glyph::generic->get_description($f));
     $string .= PrintMultiple($f,$options,'Source',$f->source_tag) if $f->source_tag;
     $string .= PrintMultiple($f,$options,"Position",$f);
     $string .= PrintMultiple($f,$options,"Length",$f->length);

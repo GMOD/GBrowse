@@ -371,6 +371,7 @@ htdocs/index.html
 htdocs/js/animation.js
 htdocs/js/autocomplete.js
 htdocs/js/balloon.js
+htdocs/js/balloon.config.js
 htdocs/js/builder.js
 htdocs/js/buttons.js
 htdocs/js/controls.js

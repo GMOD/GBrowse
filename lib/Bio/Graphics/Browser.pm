@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.103 2008-08-14 20:36:06 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.104 2008-08-15 02:36:49 sheldon_mckay Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -1738,32 +1738,36 @@ sub make_map {
       my $sticky             = $self->setting($label,'balloon sticky');
       my $height             = $self->setting($label,'balloon height') || 300;
       my $width              = $self->setting($label,'balloon width')  || 0;
+      my $hover_width        = $self->setting($label,'balloon hover width')  || $width;
+      my $click_width        = $self->setting($label,'balloon click width')  || $width;
 
       if ($use_titles_for_balloons) {
-	  $balloonhover ||= $title;
-	  $balloonhover  =~ s/\'/\\'/g;
-	  $balloonhover  =~ s/"/\&#34;/g;
+	$balloonhover ||= $title;
+	$balloonhover  =~ s/\'/\&\#39;/g;
+	$balloonhover  =~ s/\"/\&\#34;/g;
       }
 
       $balloon_ht ||= 'balloon';
       $balloon_ct ||= 'balloon';
 
       if ($balloonhover) {
+        my $iframe_width = $hover_width || "'+parseInt($balloon_ct.maxWidth)+'";
         my $stick = defined $sticky ? $sticky : 0;
         $mouseover = $balloonhover =~ /^(https?|ftp):/
-	    ? "$balloon_ht.showTooltip(event,'<iframe width=' + $balloon_ct.maxWidth + ' height=$height frameborder=0 " .
-	      "src=$balloonhover></iframe>',$stick)"
-	    : "$balloon_ht.showTooltip(event,'$balloonhover',$stick)";
-	undef $title;
+            ? "$balloon_ht.showTooltip(event,'<iframe width=$iframe_width height=$height frameborder=0 " .
+              "src=$balloonhover scrolling=no></iframe>',$stick)"
+	      : "$balloon_ht.showTooltip(event,'$balloonhover',$stick,$hover_width)";
+        undef $title;
       }
       if ($balloonclick) {
-	my $stick = defined $sticky ? $sticky : 1;
+        my $iframe_width = $click_width || "'+parseInt($balloon_ct.maxWidth)+'";
+        my $iframe_style = "style=padding-right:16px";
         $style = "cursor:pointer";
-	$mousedown = $balloonclick =~ /^(http|ftp):/
-	    ? "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'<iframe width=' + $balloon_ct.maxWidth + ' height=$height " .
-	      "frameborder=0 src=$balloonclick></iframe>',$stick,$balloon_ct.maxWidth)"
-	    : "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'$balloonclick',$stick)";
-	undef $href;
+        $mousedown = $balloonclick =~ /^(http|ftp):/
+            ? "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'<iframe width=$iframe_width height=$height " .
+              "frameborder=0 src=$balloonclick $iframe_style></iframe>')"
+	      : "$balloon_ct.delayTime=0; $balloon_ct.showTooltip(event,'$balloonclick',1,$click_width)";
+        undef $href;
       }
     }
 

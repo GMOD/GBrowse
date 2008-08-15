@@ -399,9 +399,8 @@ sub begin_individual_track_render {
         $segment = $self->whole_segment();
     }
     elsif ($label =~ /:region$/){
-        # NOT REALLY SUPPORTED YET
-        return {};
         $section = 'region';
+        $segment = $self->region_segment();
     }
     else{
         $section = 'detail';

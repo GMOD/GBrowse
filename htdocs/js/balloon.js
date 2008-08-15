@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.1.2.38 2008-08-15 02:36:49 sheldon_mckay Exp $
+ $Id: balloon.js,v 1.1.2.39 2008-08-15 03:13:21 sheldon_mckay Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -782,7 +782,7 @@ Please contact the site administrator for assistance.';
   }
 
   // request the contents
-  this.currentHelpText = this.getContents(caption);
+  caption = this.getContents(caption);
   this.loadedFromElement = false;
   
   return caption;
@@ -826,7 +826,8 @@ Balloon.prototype.getContents = function(section) {
     catch (e) {
     // alert(e);
     }
-    return  ajax.responseText || section;
+    this.currentHelpText =  ajax.responseText || section;
+    return this.currentHelpText;
   }
   else {
     return section;

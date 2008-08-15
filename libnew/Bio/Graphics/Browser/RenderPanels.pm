@@ -910,16 +910,10 @@ sub run_local_requests {
     #---------------------------------------------------------------------------------
     # Track and panel creation
     
-    # we create two hashes:
-    #        the %panels hash maps label names to panels
-    #        the %tracks hash maps label names to tracks within the panels
-    my %panels;           # map label names to Bio::Graphics::Panel objects
-    my %tracks;           # map label names to Bio::Graphics::Track objects
     my %seenit;           # used to avoid possible upstream error of putting track on list multiple times
     my %results;          # hash of {$label}{gd} and {$label}{map}
     my %feature_file_offsets;
 
-    
     my @labels_to_generate = @$labels;
 
     foreach (@labels_to_generate) {
@@ -937,68 +931,61 @@ sub run_local_requests {
 	               : ()
     } @labels_to_generate;
 
-    
     for my $label (@labels_to_generate) {
-	next if $seenit{$label}++; # this shouldn't happen, but let's be paranoid
 
-	my @keystyle = (-key_style=>'between')
-	    if $label =~ /^\w+:/ && $label !~ /:(overview|region)/;  # a plugin
-    my @nopad
-        = ( $source->setting( $label => 'key' ) || '' ) eq 'none'
-        ? ( -pad_top => 0 )
-        : ();
-	
-	my $panel_args = $requests->{$label}->panel_args;
-	my $track_args = $requests->{$label}->track_args;
-	
-	$panels{$label} = Bio::Graphics::Panel->new(@$panel_args,@keystyle,@nopad);
-	$tracks{$label} = $panels{$label}->add_track(@$track_args);
+        next if ( fork() );
+
+        # this shouldn't happen, but let's be paranoid
+        next if $seenit{$label}++;
+
+        my @keystyle = ( -key_style => 'between' )
+            if $label =~ /^\w+:/ && $label !~ /:(overview|region)/; # a plugin
+        my @nopad
+            = ( $source->setting( $label => 'key' ) || '' ) eq 'none'
+            ? ( -pad_top => 0 )
+            : ();
+
+        my $panel_args = $requests->{$label}->panel_args;
+        my $track_args = $requests->{$label}->track_args;
+
+        my $panel
+            = Bio::Graphics::Panel->new( @$panel_args, @keystyle, @nopad );
+        my $track = $panel->add_track(@$track_args);
+
+        if ( my $file = $feature_files->{$label} ) {
+
+            # Add feature files, including remote annotations
+            my $featurefile_select = $args->{featurefile_select}
+                || $self->feature_file_select($section);
+
+            if ( ref $file and $panel ) {
+                $self->add_feature_file(
+                    file     => $file,
+                    panel    => $panel,
+                    position => $feature_file_offsets{$label} || 0,
+                    options  => {},
+                    select   => $featurefile_select,
+                );
+            }
+        }
+        else {
+
+            # == populate the tracks with feature data ==
+            $self->add_features_to_track(
+                -labels    => [ $label, ],
+                -tracks    => { $label => $track },
+                -filters   => \%filters,
+                -segment   => $segment,
+                -fsettings => $settings->{features},
+            );
+        }
+
+        # == generate the maps ==
+        my $gd  = $panel->gd;
+        my $map = $self->make_map( scalar $panel->boxes,
+            $panel, $label, { $label => $track }, 0 );
+        $requests->{$label}->put_data( $gd, $map );
     }
-
-    # == populate the tracks with feature data == 
-
-    $self->add_features_to_track(-labels    => \@ordinary_tracks,
-				 -tracks    => \%tracks,
-				 -filters   => \%filters,
-				 -segment   => $segment,
-				 -fsettings => $settings->{features},
-	) if @ordinary_tracks;
-
-    # ------------------------------------------------------------------------------------------
-    # Add feature files, including remote annotations
-    my $featurefile_select = $args->{featurefile_select} || $self->feature_file_select($section);
-
-    for my $label (@feature_tracks) {
-	my $file = $feature_files->{$label} or next;
-	ref $file or next;
-	next unless $panels{$label};
-	$self->add_feature_file(
-	    file       => $file,
-	    panel      => $panels{$label},
-	    position   => $feature_file_offsets{$label} || 0,
-	    options    => {},
-	    select     => $featurefile_select,
-	    );
-    }
-
-    # == generate the maps ==
-    my %maps;
-
-    my %trackmap = reverse %tracks;
-    $args->{scale_map_type} ||= 'centering_map' unless $noscale;
-    (my $map_name = $section) =~ s/^\?//;
-
-    for my $label (@labels_to_generate) {
-	my $gd = $panels{$label}->gd;
-	my $map  = $self->make_map(scalar $panels{$label}->boxes,
-				   $panels{$label},
-				   $label,
-				   \%trackmap,
-				   0);
-	$requests->{$label}->put_data($gd,$map);
-    }
-
-    return $requests;
 }
 
 sub add_features_to_track {

@@ -569,56 +569,68 @@ sub render_scale_bar {
     my $source = $self->source;
 
     my ( $wide_segment, $bgcolor, $pad_bottom, %add_track_extra_args, );
+    my $detail_segment         = $segment;
 
     if ( $section eq 'overview' ) {
         $wide_segment = $args{'whole_segment'} or return ( '', 0, 0 );
-        $bgcolor = $source->global_setting('overview bgcolor') || 'wheat';
-        $pad_bottom = 0;
+        my $postgrid = hilite_regions_closure(
+            [   $segment->start, $segment->end,
+                hilite_fill(),   hilite_outline()
+            ]
+        );
+
         %add_track_extra_args = (
+            -bgcolor => $source->global_setting('overview bgcolor')
+                || 'wheat',
+            -pad_bottom => 0,
             -label      => $wide_segment->seq_id,
             -label_font => $image_class->gdMediumBoldFont,
+            postgrid    => $postgrid,
         );
     }
     elsif ( $section eq 'region' ) {
         $wide_segment = $args{'region_segment'} or return ( '', 0, 0 );
-        $bgcolor = $source->global_setting('region bgcolor') || 'wheat';
-        $pad_bottom = 0;
+        my $postgrid = hilite_regions_closure(
+            [   $segment->start, $segment->end,
+                hilite_fill(),   hilite_outline()
+            ]
+        );
+        %add_track_extra_args = (
+            -bgcolor => $source->global_setting('region bgcolor') || 'wheat',
+            -pad_bottom => 0,
+            postgrid    => $postgrid,
+        );
     }
     else {
-        $wide_segment = $segment;
-        $bgcolor      = $source->global_setting('detail bgcolor') || 'wheat';
-        $pad_bottom   = 0;
+        $wide_segment         = $segment;
+        %add_track_extra_args = (
+            -bgcolor => $source->global_setting('detail bgcolor') || 'wheat',
+            -pad_bottom => 0,
+        );
     }
 
-    my $width = $state->{'width'} * $self->overview_ratio();
     my $flip = ( $section eq 'detail' and $state->{'flip'} ) ? 1 : 0;
 
+    my @panel_args = $self->create_panel_args(
+        {   segment        => $wide_segment,
+            detail_segment => $detail_segment,
+            flip           => $flip,
+            %add_track_extra_args
+        }
+    );
+
+
+    my $panel = Bio::Graphics::Panel->new( @panel_args, );
+
+    # I don't understand why I need to add the pad to the width, since the
+    # other panels don't do it but in order for the scale bar to be the same
+    # size as the other panels, I need to do it.
     my $image_pad = $self->image_padding;
     my $padl      = $source->global_setting('pad_left');
     my $padr      = $source->global_setting('pad_right');
     $padl = $image_pad unless defined $padl;
     $padr = $image_pad unless defined $padr;
-
-   # TO DO: REPLACE THE HAND-CONFIGURATION WITH A CALL TO CREATE_PANEL_ARGS():
-
-    my $panel = Bio::Graphics::Panel->new(
-        -segment     => $wide_segment,
-        -width       => $width,
-        -bgcolor     => $bgcolor,
-        -key_style   => 'left',
-        -pad_left    => $padl,
-        -pad_right   => $padr,
-        -pad_top     => $image_class->gdMediumBoldFont->height + 8,
-        -pad_bottom  => $pad_bottom,
-        -image_class => $image_class,
-        -auto_pad    => 0,
-        -flip    => $flip,
-    );
-
-    # I don't understand why I need to add the pad to the width, since the
-    # other panels don't do it but in order for the scale bar to be the same
-    # size as the other panels, I need to do it.
-    $width += $padl + $padr;
+    my $width = $state->{'width'} * $self->overview_ratio() + $padl + $padr;
 
     # no cached data, so do it ourselves
     unless ($gd) {
@@ -642,15 +654,6 @@ sub render_scale_bar {
     }
 
     my ( $y1, $y2 ) = ( 0, ( $gd->getBounds )[1] );
-    if ( $section eq 'overview' or $section eq 'region' ) {
-        my $rect_color = $panel->translate_color(
-            $source->global_setting('selection rectangle color') || 'red' );
-        my ( $x1, $x2 ) = $panel->map_pt( $segment->start, $segment->end );
-        $x2 = $panel->right - 1 if $x2 >= $panel->right;
-        my $pl = $panel->can('auto_pad') ? $panel->pad_left : 0;
-
-        $gd->rectangle( $pl + $x1, $y1, $pl + $x2, $y2 - 1, $rect_color );
-    }
 
     eval { $panel->finished }; # should quash memory leaks when used in conjunction with bioperl 1.4
 
@@ -923,7 +926,6 @@ sub run_local_requests {
     my @ordinary_tracks    = grep {!$feature_files->{$_}} @labels_to_generate;
     my @feature_tracks     = grep {$feature_files->{$_} } @labels_to_generate;
 
-
     # == create whichever panels are not already cached ==
     my %filters = map {
 	my %conf =  $source->style($_);
@@ -947,6 +949,16 @@ sub run_local_requests {
 
         my $panel_args = $requests->{$label}->panel_args;
         my $track_args = $requests->{$label}->track_args;
+
+        if ( $section eq 'overview' or $section eq 'region' ) {
+            my $detail_segment = $args->{detail_segment};
+            my $postgrid       = hilite_regions_closure(
+                [   $detail_segment->start, $detail_segment->end,
+                    hilite_fill(),          hilite_outline()
+                ]
+            );
+            push @{$panel_args}, ( -postgrid => $postgrid );
+        }
 
         my $panel
             = Bio::Graphics::Panel->new( @$panel_args, @keystyle, @nopad );
@@ -1301,7 +1313,8 @@ sub create_panel_args {
   my $self               = shift;
   my $args               = shift;
 
-  my $segment       = $self->segment;
+  my $segment        = $args->{segment}        || $self->segment;
+  my $detail_segment = $args->{detail_segment} || $self->segment;
   my ($seg_start,$seg_stop,$flip) = $self->segment_coordinates($segment,
 							       $args->{flip});
 
@@ -1312,6 +1325,14 @@ sub create_panel_args {
   my $source   = $self->source;
 
   my $section  = $args->{section} || 'detail';
+
+  my $postgrid = $args->{postgrid} || '';
+  my $detail_start = $detail_segment->start;
+  my $detail_stop = $detail_segment->end;
+  if ($section eq 'overview' or $section eq 'region'){
+    $postgrid  = hilite_regions_closure([$detail_start,$detail_stop,
+                    hilite_fill(),hilite_outline()]);
+  }
 
   my $keystyle = 'none';
 
@@ -1328,10 +1349,12 @@ sub create_panel_args {
 	      -empty_tracks => $source->global_setting('empty_tracks')    || DEFAULT_EMPTYTRACKS,
 	      -pad_top      => $image_class->gdMediumBoldFont->height+2,
 	      -image_class  => $image_class,
-	      -postgrid     => $args->{postgrid}   || '',
+	      -postgrid     => $postgrid,
 	      -background   => $args->{background} || '',
 	      -truecolor    => $source->global_setting('truecolor') || 0,
-              -extend_grid  => 1,
+          -extend_grid  => 1,
+          -detail_start => $detail_start, # Forces redraw of overview tracks when scrolled
+          -detail_stop  => $detail_stop,  # Forces redraw of overview tracks when scrolled
 	      @pass_thru_args,   # position is important here to allow user to override settings
 	     );
 
@@ -1730,6 +1753,58 @@ sub balloon_tip_setting {
   return ($balloon_type,$val);
 }
 
+# this subroutine generates a Bio::Graphics::Panel callback closure 
+# suitable for hilighting a region of a panel.
+# The args are a list of [start,end,bgcolor,fgcolor]
+
+sub hilite_regions_closure {
+    my @h_regions = @_;
+
+    return sub {
+        my $gd     = shift;
+        my $panel  = shift;
+        my $left   = $panel->pad_left;
+        my $top    = $panel->top;
+        my $bottom = $panel->bottom;
+        for my $r (@h_regions) {
+            my ( $h_start, $h_end, $bgcolor, $fgcolor ) = @$r;
+            my ( $start, $end ) = $panel->location2pixel( $h_start, $h_end );
+            if ( $end - $start <= 1 ) {
+                $end++;
+                $start--;
+            }    # so that we always see something
+                 # assuming top is 0 so as to ignore top padding
+
+            $gd->filledRectangle(
+                $left + $start,
+                0, $left + $end,
+                $bottom, $panel->translate_color($bgcolor)
+            ) if $bgcolor && $bgcolor ne 'none';
+
+            # outline can only be the left and right sides
+            # -- otherwise it looks funny.
+            if ( $fgcolor && $fgcolor ne 'none' ) {
+                my $c = $panel->translate_color($fgcolor);
+                $gd->line( $left + $start, 0, $left + $start, $bottom, $c );
+                $gd->line( $left + $end,   0, $left + $end,   $bottom, $c );
+            }
+        }
+
+    };
+}
+      
+
+sub hilite_fill {
+return 'yellow';
+    #return defined $CONFIG->setting('hilite fill')
+    #? $CONFIG->setting('hilite fill')
+    #: 'yellow';
+}
+
+sub hilite_outline {
+return 'yellow';
+    #return $CONFIG->setting('hilite outline');
+}
 
 =head2 generate_image
 

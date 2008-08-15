@@ -1853,6 +1853,7 @@ sub render_deferred {
         {   labels           => $labels,
             section          => $section,
             deferred         => 1,
+            detail_segment    => $self->segment(),
             whole_segment    => $self->whole_segment(),
             plugin_set       => $self->plugins(),
             uploaded_sources => $self->uploaded_sources(),

@@ -573,32 +573,19 @@ sub render_scale_bar {
 
     if ( $section eq 'overview' ) {
         $wide_segment = $args{'whole_segment'} or return ( '', 0, 0 );
-        my $postgrid = hilite_regions_closure(
-            [   $segment->start, $segment->end,
-                hilite_fill(),   hilite_outline()
-            ]
-        );
-
         %add_track_extra_args = (
             -bgcolor => $source->global_setting('overview bgcolor')
                 || 'wheat',
             -pad_bottom => 0,
             -label      => $wide_segment->seq_id,
             -label_font => $image_class->gdMediumBoldFont,
-            postgrid    => $postgrid,
         );
     }
     elsif ( $section eq 'region' ) {
         $wide_segment = $args{'region_segment'} or return ( '', 0, 0 );
-        my $postgrid = hilite_regions_closure(
-            [   $segment->start, $segment->end,
-                hilite_fill(),   hilite_outline()
-            ]
-        );
         %add_track_extra_args = (
             -bgcolor => $source->global_setting('region bgcolor') || 'wheat',
             -pad_bottom => 0,
-            postgrid    => $postgrid,
         );
     }
     else {
@@ -612,7 +599,8 @@ sub render_scale_bar {
     my $flip = ( $section eq 'detail' and $state->{'flip'} ) ? 1 : 0;
 
     my @panel_args = $self->create_panel_args(
-        {   segment        => $wide_segment,
+        {   section        => $section, 
+            segment        => $wide_segment,
             detail_segment => $detail_segment,
             flip           => $flip,
             %add_track_extra_args
@@ -952,12 +940,6 @@ sub run_local_requests {
 
         if ( $section eq 'overview' or $section eq 'region' ) {
             my $detail_segment = $args->{detail_segment};
-            my $postgrid       = hilite_regions_closure(
-                [   $detail_segment->start, $detail_segment->end,
-                    hilite_fill(),          hilite_outline()
-                ]
-            );
-            push @{$panel_args}, ( -postgrid => $postgrid );
         }
 
         my $panel
@@ -1326,12 +1308,17 @@ sub create_panel_args {
 
   my $section  = $args->{section} || 'detail';
 
-  my $postgrid = $args->{postgrid} || '';
+  my $postgrid = '';
   my $detail_start = $detail_segment->start;
-  my $detail_stop = $detail_segment->end;
+  my $detail_stop  = $detail_segment->end;
+  my $h_region_str     = '';
   if ($section eq 'overview' or $section eq 'region'){
     $postgrid  = hilite_regions_closure([$detail_start,$detail_stop,
                     hilite_fill(),hilite_outline()]);
+  }
+  elsif ($section eq 'detail'){
+    $postgrid = make_postgrid_callback($settings);
+    $h_region_str = join(':', @{$settings->{h_region}||[]}); 
   }
 
   my $keystyle = 'none';
@@ -1343,7 +1330,7 @@ sub create_panel_args {
 	      -end          => $seg_stop,
 	      -stop         => $seg_stop,  #backward compatibility with old bioperl
 	      -key_color    => $source->global_setting('key bgcolor')      || 'moccasin',
-	      -bgcolor      => $source->global_setting("$section bgcolor") || 'white',
+	      -bgcolor      => $source->global_setting("$section bgcolor") || 'wheat',
 	      -width        => $settings->{width},
 	      -key_style    => $keystyle,
 	      -empty_tracks => $source->global_setting('empty_tracks')    || DEFAULT_EMPTYTRACKS,
@@ -1355,6 +1342,7 @@ sub create_panel_args {
           -extend_grid  => 1,
           -detail_start => $detail_start, # Forces redraw of overview tracks when scrolled
           -detail_stop  => $detail_stop,  # Forces redraw of overview tracks when scrolled
+          -h_region_str => $h_region_str,     # Forces redraw of overview tracks when new hilite
 	      @pass_thru_args,   # position is important here to allow user to override settings
 	     );
 
@@ -1753,10 +1741,28 @@ sub balloon_tip_setting {
   return ($balloon_type,$val);
 }
 
+# this generates the callback for highlighting a region
+sub make_postgrid_callback {
+    my $settings = shift;
+    return unless ref $settings->{h_region};
+
+    my @h_regions = map {
+        my ( $h_ref, $h_start, $h_end, $h_color )
+            = /^(.+):(\d+)\.\.(\d+)(?:@(\S+))?/;
+        defined($h_ref)
+            && $h_ref eq $settings->{ref}
+            ? [ $h_start, $h_end, $h_color || 'lightgrey' ]
+            : ()
+    } @{ $settings->{h_region} };
+
+    return unless @h_regions;
+    return hilite_regions_closure(@h_regions);
+}
+
+
 # this subroutine generates a Bio::Graphics::Panel callback closure 
 # suitable for hilighting a region of a panel.
 # The args are a list of [start,end,bgcolor,fgcolor]
-
 sub hilite_regions_closure {
     my @h_regions = @_;
 

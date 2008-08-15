@@ -4,7 +4,7 @@
                       This class handles details-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: detailSelect.js,v 1.3 2008-07-30 15:09:01 mwz444 Exp $
+ $Id: detailSelect.js,v 1.4 2008-08-15 19:17:53 mwz444 Exp $
 
 */
 
@@ -39,7 +39,7 @@ Details.prototype.initialize = function() {
   self.height      = self.elementLocation(i,'height');
   self.panelHeight = self.elementLocation(p,'height');
   self.width       = self.elementLocation(i,'width');
-  self.selectLayer = p;
+  self.selectLayer = p.parentNode.parentNode;
 
   self.top     = self.elementLocation(i,'y1');
   self.bottom  = self.elementLocation(i,'y2');

@@ -1,6 +1,6 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.3.6.1.2.5.2.7 2008-05-08 03:07:18 sheldon_mckay Exp $
+# $Id: ideogram.pm,v 1.3.6.1.2.5.2.8 2008-08-16 21:19:36 mummi Exp $
 # Glyph to draw chromosome ideograms
 
 use strict qw/vars refs/;
@@ -18,6 +18,7 @@ sub draw {
   @parts = $self if !@parts && $self->level == 0;
   return $self->SUPER::draw(@_) unless @parts;
 
+
   # Draw the whole chromosome first (in case
   # there are missing data).
   my $draw_chromosome = @parts > 1 || $parts[0]->can('level') && $parts[0]->level;
@@ -31,7 +32,9 @@ sub draw {
   # the appearance
   my @last;
   for my $part (@parts) {
-    my ($stain) = $part->feature->attributes('stain') || $part->feature->attributes('Stain');
+
+    my ($stain) = $part->feature->attributes('stain');
+    $stain ||= $part->feature->attributes('Stain');
     push @last, $part and next if
 	$stain eq 'stalk' ||
         $part->feature->method =~ /centromere/i ||
@@ -65,8 +68,8 @@ sub draw_component {
   
   # force odd width so telomere arcs are centered
   $y2++ if ($y2 - $y1) % 2;
-  
-  my ($stain) = $feat->attributes('stain') || $feat->attributes('Stain');
+  my ($stain) = $feat->attributes('stain');
+  $stain ||= $feat->attributes('Stain');
 
   # Some genome sequences don't contain substantial telomere sequence (i.e. Arabidopsis)
   # We can suggest their presence at the tips of the chromosomes by setting fake_telomeres = 1

@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.178 2007-02-05 18:28:52 lstein Exp $
+# $Id: gbrowse.PLS,v 1.179 2008-08-18 17:11:25 sshu Exp $
 
 use strict;
 use Bio::Graphics;
@@ -205,7 +205,7 @@ $PLUGINS->configure(open_database(),$page_settings,$session);
 
 my $plugin_type   = '';                          # avoid uninit variable warning
 $plugin_type = $PLUGINS->plugin(param('plugin'))->type if param('plugin') && $PLUGINS->plugin(param('plugin'));
-my $plugin_action = param('plugin_action') || '';
+our $plugin_action = param('plugin_action') || '';
 warn "plugin_action = $plugin_action" if DEBUG_PLUGINS;
 
 # for activating the plugin by URL
@@ -310,7 +310,7 @@ print_header(-cookie => $cookies,
 if (request_method eq 'HEAD') {exit 0}
 
 my $description = $CONFIG->setting('description');
-my $segment;
+our $segment = undef;
 
 ## STARTING THE PAGE ############################################################################
 my $divisor = $CONFIG->setting(general=>'unit_divider') || 1;
@@ -719,7 +719,10 @@ sub set_default_tracks {
   $settings->{tracks}   = \@labels;
   warn "order = @labels" if DEBUG;
   foreach (@labels) {
-    $settings->{features}{$_} = {visible=>0,options=>0,limit=>0};
+	  my ($options,$limit)  = (0,0);
+	  $options  =  $CONFIG->setting( $_ => "options") if($CONFIG->setting( $_ => "options"));
+	  $limit  =  $CONFIG->setting( $_ => "limit") if($CONFIG->setting( $_ => "limit"));
+	  $settings->{features}{$_} = {visible=>0,options=>$options,limit=>$limit};
   }
   foreach ($CONFIG->default_labels) {
     $settings->{features}{$_}{visible} = 1;

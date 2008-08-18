@@ -363,16 +363,22 @@ sub begin_track_render {
     $self->init_plugins();
     $self->init_remote_sources();
 
+    my $cache_extra = $self->create_cache_extra();
+
     # Start rendering the detail, region and overview tracks
     my @cache_track_hash_list;
-    push @cache_track_hash_list, $self->render_deferred();
+    push @cache_track_hash_list,
+        $self->render_deferred( $self->segment, [ $self->detail_tracks ],
+        'detail', $cache_extra, );
     push @cache_track_hash_list,
         $self->render_deferred( $self->region_segment,
-        [ $self->regionview_tracks ], 'region', )
+        [ $self->regionview_tracks ],
+        'region', $cache_extra, )
         if ( $self->state->{region_size} );
     push @cache_track_hash_list,
         $self->render_deferred( $self->whole_segment,
-        [ $self->overview_tracks ], 'overview', );
+        [ $self->overview_tracks ],
+        'overview', $cache_extra, );
 
     my %track_keys;
     foreach my $cache_track_hash (@cache_track_hash_list) {
@@ -383,6 +389,23 @@ sub begin_track_render {
     }
 
     return \%track_keys;
+}
+
+sub create_cache_extra {
+    my $self     = shift;
+    my $settings = $self->state();
+    my @cache_extra;
+    {
+        local $^W = 0;    # kill uninit warning from sort
+        @cache_extra = (
+            sort( keys %{ $settings->{h_feat} || [] } ),
+            sort( @{ $settings->{h_region}    || [] } ),
+            $settings->{show_tooltips},
+            $settings->{start},
+            $settings->{stop},
+        );
+    }
+    return \@cache_extra;
 }
 
 sub begin_individual_track_render {
@@ -407,10 +430,11 @@ sub begin_individual_track_render {
         $segment = $self->segment();
     }
 
+    my $cache_extra = $self->create_cache_extra();
+
     # Start rendering the detail and overview tracks
-    my $cache_track_hash
-        = $self->render_deferred( $segment,
-        [ $label, ], $section, );
+    my $cache_track_hash = $self->render_deferred( $segment, [ $label, ],
+        $section, $cache_extra, );
 
     my %track_keys;
     foreach my $cache_track_hash ( $cache_track_hash, ) {
@@ -566,11 +590,13 @@ sub render_panels {
 
     my $html = '';
 
+    my $cache_extra = $self->create_cache_extra();
+
     # Kick off track rendering
     if ( $section->{'overview'} ) {
         my $cache_overview_track_hash
             = $self->render_deferred( $self->whole_segment,
-            [ $self->overview_tracks ], 'overview', );
+            [ $self->overview_tracks ], 'overview', $cache_extra, );
 
         my $scale_bar_html = $self->scale_bar( $seg, 'overview', );
         my $panels_html
@@ -589,7 +615,7 @@ sub render_panels {
 
         my $cache_region_track_hash
             = $self->render_deferred( $self->region_segment,
-            [ $self->regionview_tracks ], 'region', );
+            [ $self->regionview_tracks ], 'region', $cache_extra, );
         my $scale_bar_html = $self->scale_bar( $seg, 'region' );
         my $panels_html .= $self->get_blank_panels($cache_region_track_hash);
         my $drag_script = $self->drag_script( 'region_panels', 'track' );
@@ -1839,10 +1865,11 @@ sub render_regionview {
 }
 
 sub render_deferred {
-    my $self    = shift;
-    my $seg     = shift ||  $self->segment;
-    my $labels  = shift || [$self->detail_tracks];
-    my $section = shift || 'detail';
+    my $self        = shift;
+    my $seg         = shift || $self->segment;
+    my $labels      = shift || [ $self->detail_tracks ];
+    my $section     = shift || 'detail';
+    my $cache_extra = shift || $self->create_cache_extra();
 
     my $renderer = $self->get_panel_renderer($seg);
 
@@ -1852,12 +1879,12 @@ sub render_deferred {
         {   labels           => $labels,
             section          => $section,
             deferred         => 1,
-            detail_segment    => $self->segment(),
             whole_segment    => $self->whole_segment(),
             plugin_set       => $self->plugins(),
             uploaded_sources => $self->uploaded_sources(),
             remote_sources   => $self->remote_sources(),
             hilite_callback  => $h_callback || undef,
+            cache_extra      => $cache_extra,
             flip => ( $section eq 'detail' ) ? $self->state()->{'flip'} : 0,
         }
     );

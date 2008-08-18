@@ -180,8 +180,9 @@ sub make_requests {
     my $feature_files  = $args->{feature_files};
     my $labels         = $args->{labels};
 
-    my $base           = $self->get_cache_base();
-    my @panel_args     = $self->create_panel_args($args);
+    my $base        = $self->get_cache_base();
+    my @panel_args  = $self->create_panel_args($args);
+    my @cache_extra = @{ $args->{cache_extra} || [] };
     my %d;
     foreach my $label ( @{ $labels || [] } ) {
         my @track_args = $self->create_track_args( $label, $args );
@@ -195,7 +196,7 @@ sub make_requests {
             -base       => $base,
             -panel_args => \@panel_args,
             -track_args => \@track_args,
-            -extra_args => \@extra_args
+            -extra_args => [ @cache_extra, @extra_args ],
         );
         $cache_object->cache_time( $self->cache_time * 60 );
         $d{$label} = $cache_object;
@@ -569,7 +570,6 @@ sub render_scale_bar {
     my $source = $self->source;
 
     my ( $wide_segment, $bgcolor, $pad_bottom, %add_track_extra_args, );
-    my $detail_segment         = $segment;
 
     if ( $section eq 'overview' ) {
         $wide_segment = $args{'whole_segment'} or return ( '', 0, 0 );
@@ -601,7 +601,6 @@ sub render_scale_bar {
     my @panel_args = $self->create_panel_args(
         {   section        => $section, 
             segment        => $wide_segment,
-            detail_segment => $detail_segment,
             flip           => $flip,
             %add_track_extra_args
         }
@@ -938,9 +937,6 @@ sub run_local_requests {
         my $panel_args = $requests->{$label}->panel_args;
         my $track_args = $requests->{$label}->track_args;
 
-        if ( $section eq 'overview' or $section eq 'region' ) {
-            my $detail_segment = $args->{detail_segment};
-        }
 
         my $panel
             = Bio::Graphics::Panel->new( @$panel_args, @keystyle, @nopad );
@@ -1296,7 +1292,6 @@ sub create_panel_args {
   my $args               = shift;
 
   my $segment        = $args->{segment}        || $self->segment;
-  my $detail_segment = $args->{detail_segment} || $self->segment;
   my ($seg_start,$seg_stop,$flip) = $self->segment_coordinates($segment,
 							       $args->{flip});
 
@@ -1309,8 +1304,8 @@ sub create_panel_args {
   my $section  = $args->{section} || 'detail';
 
   my $postgrid = '';
-  my $detail_start = $detail_segment->start;
-  my $detail_stop  = $detail_segment->end;
+  my $detail_start = $settings->{start};
+  my $detail_stop  = $settings->{stop};
   my $h_region_str     = '';
   if ($section eq 'overview' or $section eq 'region'){
     $postgrid  = hilite_regions_closure([$detail_start,$detail_stop,
@@ -1340,9 +1335,6 @@ sub create_panel_args {
 	      -background   => $args->{background} || '',
 	      -truecolor    => $source->global_setting('truecolor') || 0,
           -extend_grid  => 1,
-          -detail_start => $detail_start, # Forces redraw of overview tracks when scrolled
-          -detail_stop  => $detail_stop,  # Forces redraw of overview tracks when scrolled
-          -h_region_str => $h_region_str,     # Forces redraw of overview tracks when new hilite
 	      @pass_thru_args,   # position is important here to allow user to override settings
 	     );
 

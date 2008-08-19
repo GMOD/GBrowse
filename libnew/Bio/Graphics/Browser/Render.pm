@@ -232,7 +232,6 @@ sub asynchronous_event {
             image_width      => $image_width,
             image_height     => $image_height,
             image_element_id => $image_element_id,
-            div_element_id   => $div_element_id,
         ) || '';
         print CGI::header('text/html');
         print $html;
@@ -299,9 +298,9 @@ sub asynchronous_event {
         return 1;
     }
 
-    if ( my $plugin_name = param('reconfigure_plugin') ) {
+    if ( param('reconfigure_plugin') ) {
+        # init_plugins will do the configure call needed
         $self->init_plugins();
-        $self->plugins->configure();
         print CGI::header(-status=>'204 No Content');
 
         return 1;
@@ -854,8 +853,8 @@ sub plugin_action {
 
 sub current_plugin {
   my $self = shift;
-  my $plugin_name = param('plugin') or return;
-  $self->plugins->plugin($plugin_name);
+  my $plugin_base = param('plugin') or return;
+  $self->plugins->plugin($plugin_base);
 }
 
 sub plugin_find {
@@ -1319,11 +1318,11 @@ sub asynchronous_update_element {
     }
     elsif ( $element eq 'plugin_configure_div' ) {
         $self->init_plugins();
-        my $plugin_name = param('plugin_name');
-        my $plugin      = $self->plugins->plugin($plugin_name)
-            or return "$plugin_name is not a recognized plugin\n";
+        my $plugin_base = param('plugin_base');
+        my $plugin      = $self->plugins->plugin($plugin_base)
+            or return "$plugin_base is not a recognized plugin\n";
 
-        return $self->wrap_plugin_configuration($plugin);
+        return $self->wrap_plugin_configuration($plugin_base,$plugin);
     }
 
     return 'Unknown element: ' . $element;
@@ -1808,7 +1807,6 @@ sub get_blank_panels {
             image_width      => $image_width,
             image_height     => EMPTY_IMAGE_HEIGHT,
             image_element_id => $track_name . "_image",
-            div_element_id   => "track_" . $track_name,
         );
 
     }
@@ -1897,7 +1895,6 @@ sub render_grey_track {
     my $image_width      = $args{'image_width'};
     my $image_height     = $args{'image_height'};
     my $image_element_id = $args{'image_element_id'};
-    my $div_element_id   = $args{'div_element_id'};
     my $track_name       = $args{'track_name'};
 
     my $renderer = $self->get_panel_renderer();
@@ -1923,7 +1920,6 @@ sub render_deferred_track {
     my $image_width      = $args{'image_width'};
     my $image_height     = $args{'image_height'};
     my $image_element_id = $args{'image_element_id'};
-    my $div_element_id   = $args{'div_element_id'};
 
     my $renderer = $self->get_panel_renderer;
 
@@ -1945,7 +1941,6 @@ sub render_deferred_track {
             image_width      => $image_width,
             image_height     => $image_height,
             image_element_id => $image_element_id,
-            div_element_id   => $div_element_id,
             track_name       => $track_name,
         );
     }

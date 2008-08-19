@@ -40,9 +40,9 @@ sub page_settings {
 
 sub plugin_settings {
   my $self = shift;
-  my $plugin_name = shift;
+  my $plugin_base = shift;
   my $hash = $self->config_hash;
-  return $hash->{plugins}{$plugin_name} ||= {};
+  return $hash->{plugins}{$plugin_base} ||= {};
 }
 
 sub source {

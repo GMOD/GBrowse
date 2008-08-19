@@ -57,13 +57,13 @@ sub render_navbar {
 
   my $plugin_form = join '',(
 			     start_form(-name=>'pluginform',-id=>'pluginform',
-					-onSubmit=>'Controller.update_segment(Form.serialize(this)); return false'),
+					-onSubmit=>'return false'),
 			     $self->plugin_menu(),
 			     end_form);
 
   my $source_form = join '',(
 			     start_form(-name=>'sourceform',-id=>'sourceform',
-					-onSubmit=>'Controller.update_segment(this); return false'),
+					-onSubmit=>''),
 			     $self->source_menu(),
 			     end_form
 			    );
@@ -721,13 +721,18 @@ sub plugin_menu {
       -onClick => 'Controller.configure_plugin("plugin_configure_div");'
     ),
     '&nbsp;',
-    b( submit( -name => 'plugin_action', -value => $self->tr('Go') ) ),
+    button(
+      -name     => 'plugin_action',
+      -value    => $self->tr('Go'),
+      -onClick => 'Controller.plugin_go(document.pluginform.plugin.value);'
+    ),
   );
 }
 
 # Wrap the plugin configuration html into a form and tie it into the controller 
 sub wrap_plugin_configuration {
     my $self        = shift;
+    my $plugin_base = shift or return '';
     my $plugin      = shift or return '';
     my $config_html = $plugin->configure_form();
 
@@ -758,7 +763,6 @@ sub wrap_plugin_configuration {
             -name    => 'plugin_button',
             -value   => $self->tr('Configure_plugin'),
             -onClick => 'Controller.reconfigure_plugin("'
-                . $plugin_name . '", "'
                 . $self->tr('Configure_plugin') . '", "'
                 . "plugin:$plugin_name" . '", "'
                 . "track_plugin:$plugin_name"
@@ -777,7 +781,7 @@ sub wrap_plugin_configuration {
                 button(
                 -name    => 'plugin_button',
                 -value   => $self->tr('Go'),
-                -onClick => 'alert("Go not yet implemented")',
+                -onClick => 'Controller.plugin_go("'.$plugin_base.'")',
                 );
         }
 

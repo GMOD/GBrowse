@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.25 2008-08-19 14:15:14 mwz444 Exp $
+ $Id: controller.js,v 1.26 2008-08-19 19:21:26 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -247,24 +247,24 @@ var GBrowseController = Class.create({
   configure_plugin:
   function(div_id) {
     var plugin_configure_div  = $(div_id);
-    var plugin_name  = document.pluginform.plugin.value;
+    var plugin_base  = document.pluginform.plugin.value;
     new Ajax.Updater(plugin_configure_div,'#',{
       parameters: {
         update: div_id,
-        plugin_name: plugin_name,
+        plugin_base: plugin_base,
       }
     });
   },
 
   reconfigure_plugin:
-  function(plugin_name,plugin_action,plugin_track_name,plugin_track_div_id,pc_div_id) {
+  function(plugin_action,plugin_track_name,plugin_track_div_id,pc_div_id) {
     var plugin_configure_div  = $(pc_div_id);
     var form_element = $("configure_plugin");
     new Ajax.Request('#',{
       method:     'post',
       parameters: form_element.serialize() +"&"+ $H({
             plugin_action: plugin_action,
-            reconfigure_plugin: plugin_name
+            reconfigure_plugin: 1
           }).toQueryString(),
       onSuccess: function(transport) {
         Controller.wipe_div(pc_div_id); 
@@ -272,6 +272,11 @@ var GBrowseController = Class.create({
         Controller.rerender_track(plugin_track_name,plugin_track_div_id);
       } // end onSuccess
     });
+  },
+
+  plugin_go:
+  function(plugin_base) {
+    alert(plugin_base);
   },
 
   wipe_div:

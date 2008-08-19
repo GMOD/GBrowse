@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::AlignTwoSequences;
-# $Id: AlignTwoSequences.pm,v 1.2.14.1 2007-03-26 14:10:54 briano Exp $
+# $Id: AlignTwoSequences.pm,v 1.2.14.2 2008-08-19 20:59:30 scottcain Exp $
 
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -132,6 +132,7 @@ sub annotate {
     my $ref        = $segment->ref;
     my $abs_start  = $segment->start;
     my $dna        = $segment->seq;
+    $dna           = $dna->seq if ref $dna;  #API change--does this affect other plugings too?
     my $conf = $self->configuration;
     my $feature_list   = Bio::Graphics::FeatureFile->new(-smart_features => 1);
     $feature_list->add_type(bl2seq=>{glyph   => 'alignment',

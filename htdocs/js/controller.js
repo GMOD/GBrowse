@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.24 2008-08-14 19:37:52 mwz444 Exp $
+ $Id: controller.js,v 1.25 2008-08-19 14:15:14 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -143,12 +143,13 @@ var GBrowseController = Class.create({
   function (bar_obj) {
     var image_id = bar_obj.image_id;
     var image = $(image_id);
-    YAHOO.util.Dom.setStyle(image,'background', 'url('+bar_obj.url+') top left no-repeat');
-
-    YAHOO.util.Dom.setStyle(image,'width', bar_obj.width+'px');
-    YAHOO.util.Dom.setStyle(image,'height', bar_obj.height+'px');
-    YAHOO.util.Dom.setStyle(image,'display','block');
-    YAHOO.util.Dom.setStyle(image,'cursor','text');
+    image.setStyle({
+        background: "url(" + bar_obj.url + ") top left no-repeat",
+        width:      bar_obj.width+'px',
+        height:     bar_obj.height+'px',
+        display:    'block',
+        cursor:     'text',
+    });
     image.setOpacity(1);
   },
 

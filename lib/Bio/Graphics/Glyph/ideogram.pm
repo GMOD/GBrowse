@@ -1,20 +1,19 @@
 package Bio::Graphics::Glyph::ideogram;
 
-# $Id: ideogram.pm,v 1.13 2006-10-19 13:34:29 sheldon_mckay Exp $
+# $Id: ideogram.pm,v 1.14 2008-08-19 21:06:59 lstein Exp $
 # Glyph to draw chromosome ideograms
 
 use strict qw/vars refs/;
 use vars '@ISA';
-use Bio::Graphics::Glyph;
-use Bio::Graphics::Glyph::heat_map;
 use GD;
 
 use Data::Dumper;
 
-@ISA = qw/Bio::Graphics::Glyph Bio::Graphics::Glyph::heat_map/;
+use base qw(Bio::Graphics::Glyph::generic Bio::Graphics::Glyph::heat_map);
 
 sub draw {
   my $self = shift;
+
   my @parts = $self->parts;
   @parts = $self if !@parts && $self->level == 0;
   return $self->SUPER::draw(@_) unless @parts;
@@ -31,18 +30,21 @@ sub draw {
 
   $parts[0]->{single}++ if @parts == 1;
 
-
   # if the bands are subfeatures of an aggregate chromosome,
   # we can draw the centomere and telomeres last to improve
   # the appearance
+  my ($gd,$x,$y) = @_;
+  $x    += $self->left + $self->pad_left;
+  $y += $self->top  + $self->pad_top;
+
   my @last;
   for my $part (@parts) {
     push @last, $part and next if
         $part->feature->method =~ /centromere/i ||
         $part->feature->start <= 1 ||
-        $part->feature->stop >= $self->panel->end - 1000;
+        $part->feature->stop  >= $self->panel->end - 1000;
     my $tile = $part->create_tile('left');
-    $part->draw_component(@_);
+    $part->draw_component($gd,$x,$y);
   }
 
   for my $part (@last) {
@@ -50,11 +52,15 @@ sub draw {
     if ($part->feature->method =~ /centromere/) {
       $tile = $self->create_tile('right');
     }
+
     else {
       $tile = $part->create_tile('left'); 
     }
-    $part->draw_component(@_);
+    $part->draw_component($gd,$x,$y);
   }
+
+  $self->draw_label(@_)       if $self->option('label');
+  $self->draw_description(@_) if $self->option('description');
 }
 
 sub draw_component {
@@ -62,12 +68,13 @@ sub draw_component {
   my $gd   = shift;
   my $feat = $self->feature;
   my $arcradius = $self->option('arcradius') || 7;
-  my ( $x1, $y1, $x2, $y2 ) = $self->bounds(@_);
-  
+  my ($x1, $y1, $x2, $y2 ) = $self->bounds(@_);
+
   # force odd width so telomere arcs are centered
   $y2 ++ if ($y2 - $y1) % 2;
-  
-  my ($stain) = $feat->attributes('stain') || $feat->attributes('Stain');
+
+  my ($stain) = $feat->attributes('stain');
+  ($stain)    = $feat->attributes('Stain') unless $stain;
 
   # Some genome sequences don't contain substantial telomere sequence (i.e. Arabidopsis)
   # We can suggest their presence at the tips of the chromosomes by setting fake_telomeres = 1
@@ -83,7 +90,7 @@ sub draw_component {
   my $fgcolor = $self->fgcolor;
 
   # special color for gvar bands
-  my $svg = 1 if $self->panel->image_class =~ /SVG/;
+  my $svg = $self->panel->image_class =~ /SVG/;
   if ( $bgcolor_index =~ /var/ && $svg ) {
     $bgcolor = $self->{cm_color};
   }
@@ -140,7 +147,7 @@ sub draw_cytoband {
 
   # draw the filled box
   $self->filled_box($gd, $x1, $y1, $x2, $y2, $bgcolor, $bgcolor);
-  
+
   # outer border
   $gd->line($x1,$y1,$x2,$y1,$fgcolor);
   $gd->line($x1,$y2,$x2,$y2,$fgcolor);
@@ -167,10 +174,11 @@ sub draw_centromere {
 
 sub draw_telomere {
   my $self = shift;
-  #warn "telomere\n";
   my ($gd, $x1, $y1, $x2, $y2,
       $bgcolor, $fgcolor, $arcradius, $state ) = @_;
   
+  # warn "telomere($x1,$y1,$x2,$y2)\n";
+
   # blank slate 
   $self->wipe(@_);
 
@@ -211,8 +219,8 @@ sub draw_telomere {
     $gd->line($x1-3,$y2,$x-1,$y2,$orange);
 
     # carve away anything that does not look like a telomere
-    $gd->fillToBorder($x1,$y1+1,$orange,$bg);
-    $gd->fillToBorder($x1,$y2-1,$orange,$bg);
+    $gd->fillToBorder($x1+1,$y1+1,$orange,$bg);
+    $gd->fillToBorder($x1+1,$y2-1,$orange,$bg);
 
     # remove the border
     $gd->line($x-1,$y1,$x1-3,$y1,$bg);
@@ -235,8 +243,8 @@ sub draw_telomere {
     $gd->line($x+1,$y1,$x2+3,$y1,$orange);
     $gd->line($x2+3,$y1,$x2+3,$y2,$orange);
     $gd->line($x2+3,$y2,$x+1,$y2,$orange);
-    $gd->fillToBorder($x2,$y1+1,$orange,$bg);
-    $gd->fillToBorder($x2,$y2-1,$orange,$bg);
+    $gd->fillToBorder($x2-1,$y1+1,$orange,$bg);
+    $gd->fillToBorder($x2-1,$y2-1,$orange,$bg);
     $gd->line($x+1,$y1,$x2+3,$y1,$bg);
     $gd->line($x2+3,$y1,$x2+3,$y2,$bg);
     $gd->line($x2+3,$y2,$x+1,$y2,$bg);
@@ -311,8 +319,6 @@ sub wipe {
 
 # Disable bumping entirely, since it messes up the ideogram
 sub bump { return 0; }
-
-sub label { return 1; }
 
 1;
 

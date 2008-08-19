@@ -1,15 +1,12 @@
 package Bio::Graphics::Glyph::heat_map_ideogram;
 
-# $Id: heat_map_ideogram.pm,v 1.5 2006-10-18 01:46:14 sheldon_mckay Exp $
+# $Id: heat_map_ideogram.pm,v 1.6 2008-08-19 21:06:59 lstein Exp $
 # Glyph to draw chromosome heat_map ideograms
 
 use strict qw/vars refs/;
-use vars '@ISA';
-use Bio::Graphics::Glyph::heat_map;
-use Bio::Graphics::Glyph::ideogram;
 use GD;
 
-@ISA = qw/Bio::Graphics::Glyph::ideogram Bio::Graphics::Glyph::heat_map/;
+use base qw(Bio::Graphics::Glyph::ideogram Bio::Graphics::Glyph::heat_map);
 
 sub draw {
   my $self = shift;
@@ -23,6 +20,11 @@ sub draw {
 
   $self->calculate_gradient(\@parts);
 
+  # adjust for label and description
+  my ($gd,$x,$y) = @_;
+  $x    += $self->left + $self->pad_left;
+  $y += $self->top  + $self->pad_top;
+
   # Draw centromeres and telomeres last
   my @last;
   for my $part (@parts) {
@@ -31,14 +33,17 @@ sub draw {
 	$part->feature->start <= 1 ||
 	$part->feature->stop >= $self->panel->end - 1000;
 
-    $self->draw_component($part,@_);
+    $self->draw_component($part,$gd,$x,$y);
   }
 
   for my $part (@last) {
     my $tile = $self->create_tile('right') 
 	if $part->feature->method eq 'centromere';
-    $self->draw_component($part,@_);
+    $self->draw_component($part,$gd,$x,$y);
   }
+
+  $self->draw_label(@_)       if $self->option('label');
+  $self->draw_description(@_) if $self->option('description');
 }
 
 sub draw_component {

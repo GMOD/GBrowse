@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.28 2008-08-20 20:38:15 mwz444 Exp $
+ $Id: controller.js,v 1.29 2008-08-20 20:58:39 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -126,6 +126,7 @@ var GBrowseController = Class.create({
             continue_requesting = true;
           }
         }
+        Controller.reset_after_track_load();
         if (continue_requesting){
           this.get_remaining_tracks(track_keys);
         }

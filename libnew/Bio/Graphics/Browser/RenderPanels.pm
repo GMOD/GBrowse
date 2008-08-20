@@ -241,7 +241,7 @@ sub render_tracks {
         my $map    = $data->map;
         my $width  = $data->width;
         my $height = $data->height;
-        my $url    = $self->generate_image($gd);
+        my $url    = $self->source->generate_image($gd);
 
         # for debugging
         my $status = $data->status;
@@ -356,7 +356,7 @@ sub wrap_rendered_track {
     # when the track is collapsed. Otherwise the track labels get moved
     # to the center of the page!
     my $pad     = $self->render_image_pad();
-    my $pad_url = $self->generate_image($pad);
+    my $pad_url = $self->source->generate_image($pad);
     my $pad_img = img({-src   => $pad_url,
 		       -width => $pad->width,
 		       -height=> $pad->height,
@@ -644,7 +644,7 @@ sub render_scale_bar {
 
     eval { $panel->finished }; # should quash memory leaks when used in conjunction with bioperl 1.4
 
-    my $url    = $self->generate_image($gd);
+    my $url    = $self->source->generate_image($gd);
     my $height = $y2 - $y1 + 1;
 
     return ( $url, $height, $width, );
@@ -1790,7 +1790,6 @@ sub hilite_regions_closure {
 
     };
 }
-      
 
 sub hilite_fill {
 return 'yellow';
@@ -1802,48 +1801,6 @@ return 'yellow';
 sub hilite_outline {
 return 'yellow';
     #return $CONFIG->setting('hilite outline');
-}
-
-=head2 generate_image
-
-  ($url,$path) = $render_panels->generate_image($gd)
-
-Given a GD::Image object, this method calls its png() or gif() methods
-(depending on GD version), stores the output into the temporary
-directory given by the "tmpimages" option in the configuration file,
-and returns a two element list consisting of the URL to the image and
-the physical path of the image.
-
-=cut
-
-sub generate_image {
-  my $self   = shift;
-  my $image  = shift;
-
-  my $source = $self->source;
-
-  my $extension = $image->can('png') ? 'png' : 'gif';
-  my $data      = $image->can('png') ? $image->png : $image->gif;
-  my $signature = md5_hex($data);
-
-  warn ((CGI::param('ref')||'')   . ':' .
-	(CGI::param('start')||'') . '..'.
-	(CGI::param('stop')||'')
-	,
-	" sig $signature\n") if DEBUG;
-
-  # untaint signature for use in open
-  $signature =~ /^([0-9A-Fa-f]+)$/g or return;
-  $signature = $1;
-
-  my ($uri,$path) = $source->globals->tmpdir($source->name.'/img');
-  my $url         = sprintf("%s/%s.%s",$uri,$signature,$extension);
-  my $imagefile   = sprintf("%s/%s.%s",$path,$signature,$extension);
-  open (F,">$imagefile") || die("Can't open image file $imagefile for writing: $!\n");
-  binmode(F);
-  print F $data;
-  close F;
-  return $url;
 }
 
 1;

@@ -1,6 +1,21 @@
 # file: volvox1.gff
 ctgA	example	contig	1	50000	.	.	.	Contig ctgA
-ctgB	example	contig	1	100000	.	.	.	Contig ctgB
+ctgB	example	contig	1	40000	.	.	.	Contig ctgB
+ctgC	example	contig	1	40000	.	.	.	Contig ctgC
+ctgD	example	contig	1	38000	.	.	.	Contig ctgD
+ctgE	example	contig	1	35000	.	.	.	Contig ctgE
+ctgF	example	contig	1	32000	.	.	.	Contig ctgF
+ctgG	example	contig	1	30000	.	.	.	Contig ctgG
+ctgH	example	contig	1	29000	.	.	.	Contig ctgH
+ctgI	example	contig	1	28000	.	.	.	Contig ctgI
+ctgJ	example	contig	1	27000	.	.	.	Contig ctgJ
+ctgK	example	contig	1	26000	.	.	.	Contig ctgK
+ctgL	example	contig	1	20000	.	.	.	Contig ctgL
+ctgM	example	contig	1	18000	.	.	.	Contig ctgM
+ctgN	example	contig	1	12000	.	.	.	Contig ctgN
+ctgO	example	contig	1	12000	.	.	.	Contig ctgO
+ctgP	example	contig	1	10000	.	.	.	Contig ctgP
+ctgQ	example	contig	1	5000	.	.	.	Contig ctgQ
 ctgA	example	my_feature	1659	1984	.	+	.	My_feature f07
 ctgA	example	my_feature	3014	6130	.	+	.	My_feature f06
 ctgA	example	my_feature	4715	5968	.	-	.	My_feature f05

@@ -9,6 +9,7 @@ use Bio::Graphics::Browser::Util 'modperl_request';
 use File::Basename 'dirname';
 use File::Path 'mkpath';
 use Data::Dumper 'Dumper';
+use Digest::MD5 'md5_hex';
 use Carp 'croak';
 use Socket 'AF_INET','inet_aton';  # for inet_aton() call
 use CGI '';
@@ -770,6 +771,40 @@ sub _all_types {
 			   (map {$self->label2type($_)} $self->labels)
 			   );
   return $self->{_all_types} = \%types;
+}
+
+=head2 generate_image
+
+  ($url,$path) = generate_image($gd);
+
+Given a GD::Image object, this method calls its png() or gif() methods
+(depending on GD version), stores the output into the temporary
+directory given by the "tmpimages" option in the configuration file,
+and returns a two element list consisting of the URL to the image and
+the physical path of the image.
+
+=cut
+
+sub generate_image {
+  my $self   = shift;
+  my $image  = shift;
+
+  my $extension = $image->can('png') ? 'png' : 'gif';
+  my $data      = $image->can('png') ? $image->png : $image->gif;
+  my $signature = md5_hex($data);
+
+  # untaint signature for use in open
+  $signature =~ /^([0-9A-Fa-f]+)$/g or return;
+  $signature = $1;
+
+  my ($uri,$path) = $self->globals->tmpdir($self->name.'/img');
+  my $url         = sprintf("%s/%s.%s",$uri,$signature,$extension);
+  my $imagefile   = sprintf("%s/%s.%s",$path,$signature,$extension);
+  open (my $f,'>',$imagefile) || die("Can't open image file $imagefile for writing: $!\n");
+  binmode($f);
+  print $f $data;
+  close $f;
+  return $url;
 }
 
 1;

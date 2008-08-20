@@ -1,6 +1,6 @@
-package Bio::Graphics::Browser::Karyotype;
+package Bio::Graphics::Karyotype;
 
-# $Id: Karyotype.pm,v 1.1 2008-08-20 00:12:10 lstein Exp $
+# $Id: Karyotype.pm,v 1.2 2008-08-20 22:55:35 lstein Exp $
 # Utility class to create a display of a karyotype and a series of "hits" on the individual chromosomes
 # Used for searching
 
@@ -14,22 +14,26 @@ use Carp 'croak';
 sub new {
   my $class = shift;
   my %args            = @_;
-  my $db              = $args{db} or croak "db argument mandatory";
-  my $chrom_type      = $args{chrom_type}   || 'chromosome';
-  my $chrom_width     = $args{chrom_width}  || 'auto';
-  my $chrom_height    = $args{chrom_height} || 100;
+  my $source          = $args{source} or croak "source argument mandatory";
   return bless {
-		db => $db,
-		chrom_type   => $chrom_type,
-		chrom_width  => $chrom_width,
-		chrom_height => $chrom_height,
+		source=> $source,
 		},ref $class || $class;
 }
 
-sub db          { shift->{db}         }
-sub chrom_type  { shift->{chrom_type} }
-sub chrom_width { shift->{chrom_width}}
-sub chrom_height{ shift->{chrom_height}}
+sub db          { shift->source->open_database()    }
+sub source      { shift->{source}     }
+
+sub chrom_type  { 
+    return shift->source->karyotype_setting('chromosome')   || 'chromosome';
+}
+
+sub chrom_width {
+    return shift->source->karyotype_setting('chrom_width')  || 'auto';
+}
+
+sub chrom_height {
+    return shift->source->karyotype_setting('chrom_height') || 100;
+}
 
 sub add_hits {
   my $self     = shift;
@@ -63,10 +67,6 @@ sub to_html {
 
   my $panels = $self->{panels} ||= $self->generate_panels or return;
 
-  # $panels = {seqid => {chromosome => $feature,
-  #                      panel      => Bio::Graphics::Panel
-  #                     }}
-
   my $html;
   for my $seqid (sort {$sort_sub->($panels->{$a}{chromosome},
 				   $panels->{$b}{chromosome}
@@ -74,13 +74,55 @@ sub to_html {
 		 keys %{$panels}) {
 
     my $panel  = $self->{panels}{$seqid}{panel};
+
     my $url    = $renderer->generate_image($panel->gd);
     my $margin = $self->chrom_height - $panel->gd->height;
-    $html    .= div({-style=>"float:left;margin-top:$margin;margin-left:0.5em;margin-right;0.5em"},
-		    img({-src=>$url,-border=>0}),
-		    div(b($seqid)));
+
+    my $imagemap  = $self->image_map(scalar $panel->boxes,"${seqid}.");
+    $html     .= 
+	div(
+	    {-style=>"float:left;margin-top:${margin}px;margin-left:0.5em;margin-right;0.5em"},
+	    div({-style=>'position:relative'},
+		img({-src=>$url,-border=>0}),
+		$imagemap
+	    ),
+	    div({-align=>'center'},b($seqid))
+	);
   }
   return $html;
+}
+
+# not really an imagemap, but actually a "rollover" map
+sub image_map {
+    my $self            = shift;
+    my ($boxes,$prefix) = @_;
+
+    my $chromosome = $self->chrom_type;
+
+    $prefix ||= '';
+    my $divs = '';
+
+    for (my $i=0; $i<@$boxes; $i++) {
+	next if $boxes->[$i][0]->type eq $chromosome;
+
+	my ($left,$top,$right,$bottom) =  @{$boxes->[$i]}[1,2,3,4];
+	$left     -= 2;
+	$top      -= 2;
+	my $width  = $right-$left+3;
+	my $height = $bottom-$top+3;
+	
+	my $name = $boxes->[$i][0]->display_name || "feature id #".$boxes->[$i][0]->primary_id;
+	my $id = "${prefix}${i}";
+	$divs .= div({-class => 'nohilite',
+		      -id    => "box_${id}",
+		      -style => "top:${top}px; left:${left}px; width:${width}px; height:${height}px",
+		      -title => $name,
+		      -onMouseOver=>"k_hilite_feature('$id',true)",
+		      -onMouseOut =>"k_unhilite_feature('$id')"
+		     },''
+	    )."\n";
+    }
+    return $divs;
 }
 
 sub by_chromosome_length ($$) {
@@ -104,13 +146,19 @@ sub by_chromosome_name ($$){
   }
 }
 
+sub chromosomes {
+  my $self        = shift;
+  my $db          = $self->db;
+  my $chrom_type  = $self->chrom_type;
+  return $db->features($chrom_type);
+}
+
 sub generate_panels {
   my $self = shift;
-  my $db          = $self->db;
   my $chrom_type  = $self->chrom_type;
   my $chrom_width = $self->chrom_width;
 
-  my @features    = $db->features($chrom_type);
+  my @features    = $self->chromosomes;
   return unless @features;
 
   my $minimal_width  = 0;
@@ -138,10 +186,11 @@ sub generate_panels {
 
     if (my @hits  = $self->hits($chrom->seq_id)) {
       $panel->add_track(\@hits,
-			-glyph   => 'diamond',
+#			-glyph   => 'diamond',
+			-glyph   => 'generic',
 			-height  => 6,
-			-bgcolor => 'blue',
-			-fgcolor => 'blue');
+			-bgcolor => 'red',
+			-fgcolor => 'red');
     }
 
     $panel->add_track($chrom,

@@ -383,17 +383,13 @@ sub begin_track_render {
 sub create_cache_extra {
     my $self     = shift;
     my $settings = $self->state();
-    my @cache_extra;
-    {
-        local $^W = 0;    # kill uninit warning from sort
-        @cache_extra = (
-            sort( keys %{ $settings->{h_feat} || [] } ),
-            sort( @{ $settings->{h_region}    || [] } ),
+    my @cache_extra = (
             $settings->{show_tooltips},
             $settings->{start},
             $settings->{stop},
         );
-    }
+    push @cache_extra,sort keys %{$settings->{h_feat}} if $settings->{h_feat};
+    push @cache_extra,sort @{$settings->{h_region}}    if $settings->{h_region};
     return \@cache_extra;
 }
 

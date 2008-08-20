@@ -40,7 +40,7 @@ sub new {
     return $CONFIG_CACHE{$config_file_path}{object};
   }
 
-  my $self = $class->SUPER::new(-file=>$config_file_path);
+  my $self = $class->SUPER::new(-file=>$config_file_path,-safe=>1);
   $self->name($name);
   $self->description($description);
   $self->globals($globals);

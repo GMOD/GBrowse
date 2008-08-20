@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use base 'Bio::Graphics::Browser::Render';
 use Bio::Graphics::Browser::Shellwords;
-use Bio::Graphics::Browser::Karyotype;
+use Bio::Graphics::Karyotype;
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
 use CGI qw(:standard escape start_table end_table);
@@ -123,12 +123,6 @@ sub render_html_head {
         prototype.js 
         scriptaculous.js 
         yahoo-dom-event.js 
-        balloon.js 
-        controller.js 
-        rubber.js
-        overviewSelect.js
-        detailSelect.js
-        regionSelect.js
     );
 
  if ($self->setting('autocomplete')) {
@@ -138,14 +132,25 @@ sub render_html_head {
 
   # our own javascript
   push @scripts,{src=>"$js/$_"}
-    foreach qw(buttons.js toggle.js);
+    foreach qw(buttons.js 
+               toggle.js 
+               karyotype.js
+        balloon.js 
+        controller.js 
+        rubber.js
+        overviewSelect.js
+        detailSelect.js
+        regionSelect.js
+
+);
 
   # pick stylesheets;
   my @stylesheets;
-  my $titlebar   = $self->is_safari() ? 'titlebar-safari.css' : 'titlebar-default.css';
+  my $titlebar   = $self->is_safari() ? 'css/titlebar-safari.css' : 'css/titlebar-default.css';
   my $stylesheet = $self->setting('stylesheet')||'/gbrowse/gbrowse';
   push @stylesheets,{src => $self->globals->resolve_path($stylesheet,'url')};
-  push @stylesheets,{src => $self->globals->resolve_path('tracks.css','url')};
+  push @stylesheets,{src => $self->globals->resolve_path('css/tracks.css','url')};
+  push @stylesheets,{src => $self->globals->resolve_path('css/karyotype.css','url')};
   push @stylesheets,{src => $self->globals->resolve_path($titlebar,'url')};
 
   # put them all together
@@ -355,11 +360,9 @@ sub render_multiple_choices {
 	} @$features;
 
     my $karyotype = 
-	Bio::Graphics::Browser::Karyotype->new(
-	    {source => $self->data_source,
-	     db     => $self->db,
-	     state  => $self->state
-	    });
+	Bio::Graphics::Karyotype->new(
+	    source => $self->data_source,
+	);
     
 
     return p(i("placeholder for karyotype of chromosomes: ",map {$_->display_name} $karyotype->chromosomes)).

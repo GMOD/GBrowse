@@ -921,8 +921,9 @@ sub run_local_requests {
     } @labels_to_generate;
 
     for my $label (@labels_to_generate) {
-
-        next if ( fork() );
+	
+	# what the f!!! is this doing here?
+        # next if ( fork() );
 
         # this shouldn't happen, but let's be paranoid
         next if $seenit{$label}++;
@@ -1143,13 +1144,13 @@ sub load_external_sources {
         my $rel2abs = $self->coordinate_mapper( $segment, $whole_segment, 1 );
         my $rel2abs_slow
             = $self->coordinate_mapper( $segment, $whole_segment, 0 );
-        for my $featureset ( $plugin_set, $uploaded_sources, $remote_sources,
-            )
+        for my $featureset ( $plugin_set, $uploaded_sources, $remote_sources)
         {
+	    next unless $featureset;
             $featureset->annotate(
                 $segment,      $feature_file, $rel2abs,
                 $rel2abs_slow, MAX_SEGMENT
-            );
+		);
         }
     }
     return $feature_file;

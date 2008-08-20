@@ -1,0 +1,23 @@
+div.nohilite {
+    position:   absolute;
+    background: transparent;
+}
+div.hilite {
+    position:     absolute;
+    background:   blue;
+    opacity:      0.3;
+}
+span.hilite {
+  background: blue;
+  color:      yellow;
+}
+span.nohilite {
+  background: transparent;
+  color:      black;
+}
+div#scrolling_table {
+  position: relative;
+  height: 100px;
+  background: wheat;
+  overflow: auto;
+}

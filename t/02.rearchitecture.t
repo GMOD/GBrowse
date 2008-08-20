@@ -11,7 +11,7 @@ use File::Path 'rmtree';
 use FindBin '$Bin';
 use File::Spec;
 
-use constant TEST_COUNT => 54;
+use constant TEST_COUNT => 55;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 BEGIN {
@@ -131,6 +131,7 @@ ok($source->html2,'This is overridden');
 ok($source->global_time('cache time'),3600);
 
 # Do semantic settings work?
+ok($source->safe,1,'source should be safe');
 ok($source->setting(general => 'plugins'),'Aligner RestrictionAnnotator ProteinDumper TestFinder');
 ok($source->setting('plugins'),'Aligner RestrictionAnnotator ProteinDumper TestFinder');
 ok($source->semantic_setting(Alignments=>'glyph'),'segments');

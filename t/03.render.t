@@ -15,6 +15,8 @@ use FindBin '$Bin';
 use constant TEST_COUNT => 96;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
+my $PID;
+
 BEGIN {
   # to handle systems with no installed Test module
   # we include the t dir (where a copy of Test.pm is located)
@@ -25,11 +27,11 @@ BEGIN {
   }
   use Test;
   plan test => TEST_COUNT;
-
+  $PID = $$;
   rmtree '/tmp/gbrowse_testing';
 }
 END {
-  rmtree '/tmp/gbrowse_testing';
+  rmtree '/tmp/gbrowse_testing' if $$ == $PID;
 }
 
 %ENV = ();
@@ -71,7 +73,7 @@ ok(my $db = $render->init_database);
 ok($render->db,$db);
 ok($db,$render->db); # should return same thing each time
 ok(ref($db),'Bio::DB::GFF::Adaptor::memory');
-ok(scalar $db->features,37);
+ok(scalar $db->features,52);
 
 ok($render->init_plugins);
 ok(my $plugins = $render->plugins);
@@ -282,6 +284,9 @@ $panel_renderer = $render->get_panel_renderer($s->[0]);
 ok($panel_renderer);
 
 my $panels   = $panel_renderer->render_panels({labels => \@labels});
+if ($$ != $PID) {
+    die "FATAL: A forked child was allowed to return!!!!";
+}
 ok(join ' ',(sort keys %$panels),'Clones Motifs Transcripts','panels keys incorrect');
 my ($png)    = grep /tmpimages/,$panels->{Motifs} =~ /src="([^"]+\.png)"/g;
 ok($png);

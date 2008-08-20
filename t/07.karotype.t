@@ -33,7 +33,7 @@ BEGIN {
   rmtree '/tmp/gbrowse_testing';
 }
 END {
-    rmtree '/tmp/gbrowse_testing' if $$ == $PID;
+#    rmtree '/tmp/gbrowse_testing' if $$ == $PID;
 }
 
 # %ENV = ();
@@ -48,10 +48,8 @@ my $globals = Bio::Graphics::Browser->new(CONF_FILE);
 my $session = $globals->session;
 my $source  = $globals->create_data_source('volvox');
 
-my $kg      = Bio::Graphics::Browser::Karyotype->new(db         => $source->open_database(),
-						     chrom_type => 'contig',
-						     chrom_width=> 12,
-    );
+my $kg      = Bio::Graphics::Karyotype->new(source   => $source);
+
 my @motifs = $source->open_database()->features('motif');
 $kg->sort_sub(sub ($$) 
 	      {
@@ -67,15 +65,38 @@ $kg->add_hits(\@motifs);
 my $html    = $kg->to_html($source);
 ok($html);
 my @divs = $html =~ /(<div)/g;
-ok(scalar @divs,34);
+ok(scalar @divs,62);
 my @imgs = $html =~ /(<img)/g;
 ok(scalar @imgs,17);
 
-if (0) { # set this to true to see the image
+if (1) { # set this to true to see the image
     $html =~ s!/tmpimages!/tmp/gbrowse_testing/tmpimages!g;
 
     open my $f,'>','foo.html';
+    print $f <<'END';
+<!DOCTYPE html
+	PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+	 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
+<head>
+<title>karyotype test</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<script type="text/javascript" src="../htdocs/js/prototype.js" </script>
+<script type="text/javascript" src="../htdocs/js/karyotype.js" </script>
+<link   type="text/css"        rel="stylesheet"  href="../htdocs/css/karyotype.css" />
+</head>
+<body>
+<h1>karyotype test</h1>
+END
+;
+
     print $f $html;
+
+    print $f <<'END';
+</body>
+</html>
+END
+    ;
     close $f;
     system "firefox ./foo.html";
 }

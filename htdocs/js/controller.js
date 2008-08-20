@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.27 2008-08-20 15:54:43 mwz444 Exp $
+ $Id: controller.js,v 1.28 2008-08-20 20:38:15 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -17,6 +17,7 @@ var GBrowseController = Class.create({
     this.periodic_updaters        = new Array();
     this.track_images             = new Hash();
     this.segment_observers        = new Hash();
+    this.retrieve_tracks          = new Hash();
     this.update_on_load_observers = new Hash();
     // segment_info holds the information used in rubber.js
     this.segment_info;
@@ -64,11 +65,74 @@ var GBrowseController = Class.create({
 		      });
           }
         ); //end each segment_observer
+        Controller.get_multiple_tracks(track_keys);
       } // end onSuccess
       
     }); // end Ajax.Request
     this.debug_status             = 'updating coords 2';
   }, // end update_coordinates
+
+  get_multiple_tracks:
+  function (track_keys) {
+    
+    this.retrieve_tracks.keys().each(
+      function(track_div_id) {
+        Controller.retrieve_tracks.set(track_div_id,true);
+      }
+    );
+
+    this.get_remaining_tracks(track_keys);
+  },
+
+  get_remaining_tracks:
+  function (track_keys){
+
+    var track_div_ids = [];
+    var finished = true;
+    var track_key_str = '';
+    this.retrieve_tracks.keys().each(
+      function(track_div_id) {
+        if(Controller.retrieve_tracks.get(track_div_id)){
+            track_div_ids.push(track_div_id);
+            track_key_str += '&tk_'+track_div_id+"="+track_keys[track_div_id];
+            finished = false;
+        }
+      }
+    );
+
+    if (finished){
+      return;
+    }
+
+    new Ajax.Request('#',{
+      method:     'post',
+      parameters: $H({ retrieve_multiple: 1, track_div_ids: track_div_ids, }).toQueryString() + track_key_str,
+      onSuccess: function(transport) {
+        var continue_requesting = false;
+        var results    = transport.responseJSON;
+        var track_html_hash = results.track_html;
+        for (var track_div_id in track_html_hash){
+          track_html    = track_html_hash[track_div_id];
+
+          track_div = document.getElementById(track_div_id);
+          if (track_html.substring(0,18) == "<!-- AVAILABLE -->"){
+            track_div.innerHTML = track_html;
+            Controller.retrieve_tracks.set(track_div_id,false);
+          }
+          else if (track_html.substring(0,16) == "<!-- EXPIRED -->"){
+               $(this.track_image_id[track_div_id]).setOpacity(0);
+          }
+          else {
+            continue_requesting = true;
+          }
+        }
+        if (continue_requesting){
+          this.get_remaining_tracks(track_keys);
+        }
+      }, // end onSuccess
+    }); // end new Ajax.Request
+
+  }, // end get_remaining_tracks
 
   register_track:
   function (track_div_id,track_image_id,track_type) {
@@ -77,8 +141,9 @@ var GBrowseController = Class.create({
     if (track_type=="scale_bar"){
       return;
     }
-    this.segment_observers.set(track_div_id,1);
-    this.update_on_load_observers.set(track_div_id,1);
+    this.retrieve_tracks.set(track_div_id,true);
+    //this.segment_observers.set(track_div_id,1);
+    //this.update_on_load_observers.set(track_div_id,1);
 
     $(track_div_id).observe('model:segmentChanged',function(event) {
       var track_key = event.memo.track_key;
@@ -171,6 +236,9 @@ var GBrowseController = Class.create({
               track_key:  track_keys[e]});
           }
         );
+
+        Controller.get_multiple_tracks(track_keys);
+
         Controller.debug_status             = 'first_render finished';
       }
     });

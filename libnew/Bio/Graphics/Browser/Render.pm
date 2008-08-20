@@ -238,6 +238,28 @@ sub asynchronous_event {
         return 1;
     }
 
+    if ( param('retrieve_multiple') ) {
+        $self->init_database();
+        $self->init_plugins();
+        $self->init_remote_sources();
+        my %track_html;
+        my @track_div_ids        = param('track_div_ids');
+        foreach my $track_div_id (@track_div_ids) {
+            my $track_name = '';
+            if ( $track_div_id =~ /^track_(.+)/ ) {
+                $track_name = $1;
+            }
+            my $track_key = param('tk_'.$track_div_id) or next;
+            $track_html{$track_div_id} = $self->render_deferred_track(
+                cache_key        => $track_key,
+                track_name       => $track_name,
+            ) || '';
+        }
+        print CGI::header('application/json');
+        print JSON::to_json( { track_html => \%track_html, } );
+        return 1;
+    }
+
     if ( my $action = param('add_track') ) {
         my $track_name = param('track_name');
 

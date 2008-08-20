@@ -705,14 +705,27 @@ sub plugin_menu {
   my $labels = $plugins->menu_labels;
 
   my @plugins = sort {$labels->{$a} cmp $labels->{$b}} keys %$labels;
+
+  # Add plugin types as attribute so the javascript controller knows what to do
+  # with each plug-in
+  my %attributes = map {
+    $_ => {
+      'plugin_type' => $plugins->plugin($_)->type(),
+      'track_name'  => "plugin:".$plugins->plugin($_)->name(),
+      }
+    }
+    keys %$labels;
+
   return unless @plugins;
+
   return join(
     '',
     popup_menu(
-      -name    => 'plugin',
-      -values  => \@plugins,
-      -labels  => $labels,
-      -default => $settings->{plugin},
+      -name       => 'plugin',
+      -values     => \@plugins,
+      -labels     => $labels,
+      -attributes => \%attributes,
+      -default    => $settings->{plugin},
     ),
     '&nbsp;',
     button(
@@ -722,10 +735,16 @@ sub plugin_menu {
     ),
     '&nbsp;',
     button(
-      -name     => 'plugin_action',
-      -value    => $self->tr('Go'),
-      -onClick => 'Controller.plugin_go(document.pluginform.plugin.value);'
-    ),
+        -name    => 'plugin_action',
+        -value   => $self->tr('Go'),
+        -onClick => 'var select_box = document.pluginform.plugin;'
+            . q{var plugin_type = select_box.options[select_box.selectedIndex].attributes.getNamedItem('plugin_type').value;}
+            . 'Controller.plugin_go('
+            . 'document.pluginform.plugin.value,'
+            . 'plugin_type,' . '"'
+            . $self->tr('Go') . '",'
+            . '"form"' . ');',
+        ),
   );
 }
 
@@ -781,7 +800,11 @@ sub wrap_plugin_configuration {
                 button(
                 -name    => 'plugin_button',
                 -value   => $self->tr('Go'),
-                -onClick => 'Controller.plugin_go("'.$plugin_base.'")',
+                -onClick => 'Controller.plugin_go("'
+                    . $plugin_base . '","'
+                    . $plugin_type . '","'
+                    . $self->tr('Go') . '","'
+                    . 'config' . '")',
                 );
         }
 
@@ -814,6 +837,19 @@ sub wrap_plugin_configuration {
 
     return $return_html;
 
+}
+
+sub do_plugin_header {
+    my $self   = shift;
+    my $plugin = shift;
+    my $cookie = shift;
+    my ( $mime_type, $attachment ) = $plugin->mime_type;
+    print header(
+        -cookie  => $cookie,
+        -type    => $mime_type,
+        -charset => $self->tr('CHARSET'),
+        $attachment ? ( -attachment => $attachment ) : (),
+    );
 }
 
 sub slidertable {

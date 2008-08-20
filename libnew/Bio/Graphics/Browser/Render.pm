@@ -479,14 +479,23 @@ sub render {
 sub render_header {
   my $self    = shift;
   my $session = $self->session;
-  my $cookie = CGI::Cookie->new(-name => $CGI::Session::NAME,
-				-value => $session->id,
-				-path   => url(-absolute=>1),
-				-expires => $self->globals->remember_settings_time
-				);
-  print header(-cookie  => $cookie,
-	       -charset => $self->tr('CHARSET')
-	      );
+  my $cookie = $self->create_cookie();
+  print header(
+    -cookie  => $cookie,
+    -charset => $self->tr('CHARSET')
+  );
+}
+
+sub create_cookie {
+  my $self    = shift;
+  my $session = $self->session;
+  my $cookie = CGI::Cookie->new(
+    -name    => $CGI::Session::NAME,
+    -value   => $session->id,
+    -path    => url( -absolute => 1 ),
+    -expires => $self->globals->remember_settings_time
+  );
+  return $cookie;
 }
 
 # For debugging
@@ -875,9 +884,77 @@ sub plugin_find {
   return $results;
 }
 
+# Handle plug-ins that aren't taken care of asynchronously
 sub handle_plugins {
-  my $self = shift;
-  return;
+    my $self = shift;
+
+    my $plugin_base = param('plugin');
+    return unless ($plugin_base);
+    $self->init_plugins();
+    my $plugin      = $self->plugins->plugin($plugin_base);
+    my $plugin_type = $plugin->type();
+
+    my $plugin_action = param('plugin_action') || '';
+
+    # for activating the plugin by URL
+    if ( param('plugin_do') ) {
+        $plugin_action = $self->tr( param('plugin_do') ) || $self->tr('Go');
+    }
+
+    my $state  = $self->state();
+    my $cookie = $self->create_cookie();
+
+    ### FIND #####################################################
+    if ( $plugin_action eq $self->tr('Find') ) {
+
+        #$self->do_plugin_find( $state, $plugin_base, $features )
+        #    or ( $plugin_action = 'Configure' );    #reconfigure
+        return;
+    }
+
+    ### DUMP #####################################################
+    # Check to see whether one of the plugin dumpers was invoked.  We have to
+    # do this first before printing the header because the plugins are
+    # responsible for generating the header.  NOTE THE return 1 HERE IF THE
+    # DUMP IS SUCCESSFUL!
+
+    my $segment = $self->segment();
+    if (    $plugin_type   eq 'dumper'
+        and $plugin_action eq $self->tr('Go')
+        and (  $segment
+            or param('plugin_config')
+            or $plugin->verb eq ( $self->tr('Import') || 'Import' ) )
+        )
+    {
+        $self->do_plugin_header( $plugin, $cookie );
+        $self->do_plugin_dump( $plugin, $segment, $state )
+            && return 1;
+    }
+
+    return;
+}
+
+sub do_plugin_header {
+    my $self   = shift;
+    my $plugin = shift;
+    my $cookie = shift;
+
+    # Defined in HTML.pm
+}
+
+sub do_plugin_dump {
+    my $self    = shift;
+    my $plugin  = shift;
+    my $segment = shift;
+    my $state   = shift;
+    my @additional_feature_sets;
+
+    #if ($segment && $state && $segment->length <= $MAX_SEGMENT) {
+    #   my $feature_files = load_external_sources($segment,$state);
+    #   @additional_feature_sets = values %{$feature_files};
+    #}
+    $plugin->dump( $segment, @additional_feature_sets );
+    return 1;
 }
 
 #======================== remote sources ====================

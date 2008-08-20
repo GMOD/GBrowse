@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.26 2008-08-19 19:21:26 mwz444 Exp $
+ $Id: controller.js,v 1.27 2008-08-20 15:54:43 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -180,6 +180,10 @@ var GBrowseController = Class.create({
   add_track:
   function(track_name) {
 
+    if ( null != $('track_'+track_name)){
+      return;
+    }
+
     new Ajax.Request('#',{
       method:     'post',
       parameters: {
@@ -268,16 +272,40 @@ var GBrowseController = Class.create({
           }).toQueryString(),
       onSuccess: function(transport) {
         Controller.wipe_div(pc_div_id); 
-        // Need to update plugin tracks here
-        Controller.rerender_track(plugin_track_name,plugin_track_div_id);
+        // update plugin track if it exists
+        if ( null != $(plugin_track_div_id)){
+          Controller.rerender_track(plugin_track_name,plugin_track_div_id);
+        }
       } // end onSuccess
     });
   },
 
   plugin_go:
-  function(plugin_base) {
-    alert(plugin_base);
-  },
+  function(plugin_base,plugin_type,plugin_action,source) {
+    if (plugin_type == 'annotator'){
+      var select_box = document.pluginform.plugin;
+      var track_name = select_box.options[select_box.selectedIndex].attributes.getNamedItem('track_name').value;
+
+      this.add_track(track_name);
+      // NEEDS TO CHECK THE TRACK CHECKBOX
+    }
+    else if (plugin_type == 'dumper'){
+      var loc_str = "?plugin="+plugin_base+";plugin_action="+encodeURI(plugin_action);
+      if(source == 'config'){
+        var form_element = $("configure_plugin");
+        window.location=loc_str + ";" + form_element.serialize();
+      }
+      else{
+        window.location=loc_str;
+      }
+    }
+    else if (plugin_type == 'filter'){
+        alert("Not Implemented Yet");
+    }
+    else if (plugin_type == 'finder'){
+        alert("Not Implemented Yet");
+    }
+  }, // end plugin_go
 
   wipe_div:
   function(div_id) {

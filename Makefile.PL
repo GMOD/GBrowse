@@ -12,10 +12,12 @@ my $VERSION     = '1.69';
 my $working_dir = cwd;
 
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN GBROWSE_ROOT
-		 LIB BIN YES
+		 LIB BIN YES PREFIX
 		 DO_XS NONROOT SELINUX);
 my $OPTIONS = join ('|',@OPTIONS);
 my %OPTIONS;
+
+my $OPTIONS_TO_ARGV = "LIB|PREFIX";
 
 my @argv = @ARGV;
 @ARGV = ();
@@ -134,7 +136,11 @@ if (-e 'GGB.def' && !%OPTIONS) {
       chomp;
       next if /^\#/;
       next unless /^($OPTIONS)=(.*)/o;
+      my $key = $1;
       $OPTIONS{$1} = interpolate($2);
+      if ($key =~ /$OPTIONS_TO_ARGV/) {
+          push @ARGV, "$key=$OPTIONS{$key}";
+      }
     }
     close F;
   }

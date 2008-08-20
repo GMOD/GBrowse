@@ -164,7 +164,7 @@ $install_param_string ||="";
 use constant BIOPERL_VERSION      => 'bioperl-1.5.2_102';
 use constant BIOPERL_REQUIRES     => '1.005002';  # sorry for the redundancy
 use constant BIOPERL_LIVE_URL     => 'http://bioperl.org/DIST/nightly_builds/';
-use constant GBROWSE_DEFAULT      => '1.68';
+use constant GBROWSE_DEFAULT      => '1.69';
 use constant SOURCEFORGE_MIRROR1  => 'http://superb-west.dl.sourceforge.net/sourceforge/gmod/';
 use constant SOURCEFORGE_MIRROR2  => 'http://easynews.dl.sourceforge.net/sourceforge/gmod/';
 use constant SOURCEFORGE_GBROWSE  => 'http://sourceforge.net/project/showfiles.php?group_id=27707&package_id=34513';

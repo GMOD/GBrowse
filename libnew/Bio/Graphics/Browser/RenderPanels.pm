@@ -975,6 +975,8 @@ sub run_local_requests {
         my $map = $self->make_map( scalar $panel->boxes,
             $panel, $label, { $label => $track }, 0 );
         $requests->{$label}->put_data( $gd, $map );
+
+        CORE::exit 0;
     }
 }
 

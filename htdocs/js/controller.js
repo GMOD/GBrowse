@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.30 2008-08-20 21:18:48 mwz444 Exp $
+ $Id: controller.js,v 1.31 2008-08-20 22:02:36 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -18,7 +18,6 @@ var GBrowseController = Class.create({
     this.track_images             = new Hash();
     this.segment_observers        = new Hash();
     this.retrieve_tracks          = new Hash();
-    this.update_on_load_observers = new Hash();
     // segment_info holds the information used in rubber.js
     this.segment_info;
     this.debug_status             = 'initialized';
@@ -145,55 +144,6 @@ var GBrowseController = Class.create({
       return;
     }
     this.retrieve_tracks.set(track_div_id,true);
-    //this.segment_observers.set(track_div_id,1);
-    //this.update_on_load_observers.set(track_div_id,1);
-
-    $(track_div_id).observe('model:segmentChanged',function(event) {
-      var track_key = event.memo.track_key;
-      if (track_key){
-        if (Controller.periodic_updaters[track_div_id]){
-          Controller.periodic_updaters[track_div_id].stop();
-        }
-    
-        track_image = document.getElementById(track_image_id);
-        Controller.periodic_updaters[track_div_id] = 
-          new Ajax.PeriodicalUpdater( track_div_id, '#', { 
-          frequency:1, 
-          decay:1.5,
-          method: 'post',
-          parameters: {
-            track_key:      track_key,
-            retrieve_track: track_div_id,
-            image_width:    track_image.width,
-            image_height:   track_image.height,
-            image_id:       track_image_id,
-          },
-          onSuccess: function(transport) {
-          
-            track_div = document.getElementById(track_div_id);
-            if (transport.responseText.substring(0,18) == "<!-- AVAILABLE -->"){
-              track_div.innerHTML = transport.responseText;
-              Controller.periodic_updaters[track_div_id].stop();
-              Controller.reset_after_track_load();
-            }
-            else if (transport.responseText.substring(0,16) == "<!-- EXPIRED -->"){
-              track_div.innerHTML = transport.responseText;
-              Controller.periodic_updaters[track_div_id].stop();
-              Controller.reset_after_track_load();
-            }
-            else {
-              var p_updater = Controller.periodic_updaters[track_div_id];
-              var decay     = p_updater.decay;
-              p_updater.stop();
-              p_updater.decay = decay * p_updater.options.decay;
-              p_updater.timer = 
-              p_updater.start.bind(p_updater).delay(p_updater.decay 
-                                * p_updater.frequency);
-            }
-          } // end onSuccess
-        }); // end new Ajax.Periodical...
-      } // end if (track_key)
-    }); // end .observed
   }, // end register_track
 
   reset_after_track_load:
@@ -231,14 +181,6 @@ var GBrowseController = Class.create({
         var results    = transport.responseJSON;
         var track_keys = results.track_keys;
         Controller.segment_info = results.segment_info;
-
-        Controller.update_on_load_observers.keys().each(
-          function(e) {
-            $(e).fire('model:segmentChanged',
-              {
-              track_key:  track_keys[e]});
-          }
-        );
 
         Controller.get_multiple_tracks(track_keys);
 
@@ -288,8 +230,10 @@ var GBrowseController = Class.create({
             Controller.reset_after_track_load();
           }
           else{
-            $(div_element_id).fire('model:segmentChanged',
-              { track_key:  this_track_data.track_key});
+            var track_keys = new Array();
+            track_keys[div_element_id]=this_track_data.track_key;
+            Controller.retrieve_tracks.set(div_element_id,true);
+            Controller.get_remaining_tracks(track_keys,1000,1.5);
           }
         }
       },
@@ -310,11 +254,10 @@ var GBrowseController = Class.create({
       onSuccess: function(transport) {
         var results    = transport.responseJSON;
         var track_keys = results.track_keys;
-        for (var div in track_keys){
-          $(div).fire('model:segmentChanged', {
-            track_key:  track_keys[div]
-          });
+        for (var track_div_id in track_keys){
+            Controller.retrieve_tracks.set(track_div_id,true);
         } // end for
+        Controller.get_remaining_tracks(track_keys,1000,1.5);
       }, // end onSuccess
     }); // end Ajax.Request
   }, // end rerender_track

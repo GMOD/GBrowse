@@ -210,34 +210,6 @@ sub asynchronous_event {
         return 1;
     }
 
-    if ( my $div_element_id = param('retrieve_track') ) {
-        $self->init_database();
-        $self->init_plugins();
-        $self->init_remote_sources();
-        my $track_key        = param('track_key');
-        my $image_width      = param('image_width');
-        my $image_height     = param('image_height');
-        my $image_element_id = param('image_element_id');
-
-        #warn "retreiving track $div_element_id - $track_key";
-
-        my $track_name = '';
-        if ( $div_element_id =~ /^track_(.+)/ ) {
-            $track_name = $1;
-        }
-
-        my $html = $self->render_deferred_track(
-            cache_key        => $track_key,
-            track_name       => $track_name,
-            image_width      => $image_width,
-            image_height     => $image_height,
-            image_element_id => $image_element_id,
-        ) || '';
-        print CGI::header('text/html');
-        print $html;
-        return 1;
-    }
-
     if ( param('retrieve_multiple') ) {
         $self->init_database();
         $self->init_plugins();
@@ -279,10 +251,6 @@ sub asynchronous_event {
             my $track_html       = $self->render_deferred_track(
                 cache_key        => $track_key,
                 track_name       => $track_name,
-                image_width      => $image_width,
-                image_height     => EMPTY_IMAGE_HEIGHT,
-                image_element_id => $image_element_id,
-                div_element_id   => $div_element_id,
             ) || '';
             my $panel_id = 'detail_panels';
             if ( $track_name =~ /:overview$/ ) {
@@ -2016,9 +1984,6 @@ sub render_deferred_track {
     my %args             = @_;
     my $cache_key        = $args{'cache_key'};
     my $track_name       = $args{'track_name'};
-    my $image_width      = $args{'image_width'};
-    my $image_height     = $args{'image_height'};
-    my $image_element_id = $args{'image_element_id'};
 
     my $renderer = $self->get_panel_renderer;
 
@@ -2030,17 +1995,18 @@ sub render_deferred_track {
     $cache->cache_time( $renderer->cache_time * 60 );
     my $status_html = "<!-- " . $cache->status . " -->";
 
-    my $result_html;
+    my $result_html = '';
     if ( $cache->status eq 'AVAILABLE' ) {
         my $result = $renderer->render_tracks( { $track_name => $cache } );
         $result_html = $result->{$track_name};
     }
-    else {
-        $result_html = $self->render_grey_track(
-            image_width      => $image_width,
-            image_height     => $image_height,
-            image_element_id => $image_element_id,
+    else{
+        my $image_width = $self->get_image_width;
+        $result_html .= $self->render_grey_track(
             track_name       => $track_name,
+            image_width      => $image_width,
+            image_height     => EMPTY_IMAGE_HEIGHT,
+            image_element_id => $track_name . "_image",
         );
     }
     return $status_html . $result_html;

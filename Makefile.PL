@@ -337,6 +337,7 @@ WriteMakefile(
               'INSTALLSITEMAN3DIR' => $OPTIONS{INSTALLSITEMAN3DIR}, # non-root user
 	      #'INSTALLSITESCRIPT'  => $OPTIONS{BIN} || $OPTIONS{INSTALLSCRIPT},
 	      'INSTALLSITEBIN'     => $OPTIONS{BIN},
+              'PREFIX'       => $OPTIONS{PREFIX} ? $OPTIONS{PREFIX} : undef,
 );
 
 sub biographics_version {

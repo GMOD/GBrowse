@@ -172,17 +172,20 @@ sub asynchronous_event {
             = $self->asynchronous_update_detail_scale_bar();
         my $segment_info_object = $self->segment_info_object();
 
+        my $return_object = {
+            segment            => $settings->{name},
+            segment_info       => $segment_info_object,
+            track_keys         => $track_keys,
+            overview_scale_bar => $overview_scale_return_object,
+            region_scale_bar   => $region_scale_return_object,
+            detail_scale_bar   => $detail_scale_return_object,
+        };
+
         print CGI::header('application/json');
-        print JSON::to_json(
-            {   segment            => $settings->{name},
-                segment_info       => $segment_info_object,
-                track_keys         => $track_keys,
-                overview_scale_bar => $overview_scale_return_object,
-                region_scale_bar   => $region_scale_return_object,
-                detail_scale_bar   => $detail_scale_return_object,
-            }
-        );
-        return 1;
+        print JSON::to_json($return_object);
+
+        # return the object for testing purposes
+        return $return_object;
     }
 
     if ( my $action = param('first_render') ) {
@@ -191,14 +194,16 @@ sub asynchronous_event {
         my $track_keys          = $self->begin_track_render();
         my $segment_info_object = $self->segment_info_object();
 
+        my $return_object = {
+            segment      => $settings->{name},
+            segment_info => $segment_info_object,
+            track_keys   => $track_keys,
+        };
         print CGI::header('application/json');
-        print JSON::to_json(
-            {   segment      => $settings->{name},
-                segment_info => $segment_info_object,
-                track_keys   => $track_keys,
-            }
-        );
-        return 1;
+        print JSON::to_json($return_object);
+
+        # return the object for testing purposes
+        return $return_object;
     }
 
     if ( my $element = param('update') ) {
@@ -215,21 +220,24 @@ sub asynchronous_event {
         $self->init_plugins();
         $self->init_remote_sources();
         my %track_html;
-        my @track_div_ids        = param('track_div_ids');
+        my @track_div_ids = param('track_div_ids');
         foreach my $track_div_id (@track_div_ids) {
             my $track_name = '';
             if ( $track_div_id =~ /^track_(.+)/ ) {
                 $track_name = $1;
             }
-            my $track_key = param('tk_'.$track_div_id) or next;
+            my $track_key = param( 'tk_' . $track_div_id ) or next;
             $track_html{$track_div_id} = $self->render_deferred_track(
-                cache_key        => $track_key,
-                track_name       => $track_name,
+                cache_key  => $track_key,
+                track_name => $track_name,
             ) || '';
         }
+        my $return_object = { track_html => \%track_html, };
         print CGI::header('application/json');
-        print JSON::to_json( { track_html => \%track_html, } );
-        return 1;
+        print JSON::to_json($return_object);
+
+        # return the object for testing purposes
+        return $return_object;
     }
 
     if ( my $action = param('add_track') ) {
@@ -249,8 +257,8 @@ sub asynchronous_event {
             my $image_width      = $self->get_image_width;
             my $image_element_id = $track_name . "_image";
             my $track_html       = $self->render_deferred_track(
-                cache_key        => $track_key,
-                track_name       => $track_name,
+                cache_key  => $track_key,
+                track_name => $track_name,
             ) || '';
             my $panel_id = 'detail_panels';
             if ( $track_name =~ /:overview$/ ) {
@@ -270,10 +278,12 @@ sub asynchronous_event {
             };
         }
 
+        my $return_object = { track_data => \%track_data, };
         print CGI::header('application/json');
-        print JSON::to_json( { track_data => \%track_data, } );
+        print JSON::to_json($return_object);
 
-        return 1;
+        # return the object for testing purposes
+        return $return_object;
     }
 
     if ( my $action = param('rerender_track') ) {
@@ -282,16 +292,19 @@ sub asynchronous_event {
         #warn "Rerendering Track $track_name";
         my $track_keys = $self->begin_individual_track_render($track_name);
 
+        my $return_object = { track_keys => $track_keys, };
         print CGI::header('application/json');
-        print JSON::to_json( { track_keys => $track_keys, } );
+        print JSON::to_json($return_object);
 
-        return 1;
+        # return the object for testing purposes
+        return $return_object;
     }
 
     if ( param('reconfigure_plugin') ) {
+
         # init_plugins will do the configure call needed
         $self->init_plugins();
-        print CGI::header(-status=>'204 No Content');
+        print CGI::header( -status => '204 No Content' );
 
         return 1;
     }

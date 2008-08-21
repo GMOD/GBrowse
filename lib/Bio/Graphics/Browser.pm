@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.106 2008-08-21 21:30:23 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.107 2008-08-21 21:34:34 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -584,7 +584,6 @@ order to retrieve track-specific options.
 sub labels {
   my $self  = shift;
   my $order = shift;
-  warn "here I am";
   warn $self->config;
   my @labels = $self->config->labels;
   if ($order) { # custom order

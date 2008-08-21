@@ -44,7 +44,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 # In the following, perl variables are not expanded during extraction.
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.7 2008-08-14 20:20:33 lstein Exp $
+# $Id: gbrowse_details.PLS,v 1.28.4.2.2.12.2.8 2008-08-21 21:30:22 lstein Exp $
 
 use strict;
 use CGI qw(:standard *table *TR escape);
@@ -457,8 +457,8 @@ sub getFormatter {
  SEARCH:
   for my $base ("$method:$source",$method,'default') {
     for my $option ($tag,'default') {
-      $s ||= $config->code_setting("$base:details" => lc $option);
-      $s ||= $config->code_setting("$base:DETAILS" => lc $option);
+      $s ||= $config->setting("$base:details" => lc $option);
+      $s ||= $config->setting("$base:DETAILS" => lc $option);
       last SEARCH if defined $s;
     }
   }
@@ -503,7 +503,7 @@ sub format_name {
 sub remote_content {
   my $key = shift; # the key for the text or code-ref in the gbrowse config file
   my $feat = shift;
-  my $contents = $CONFIG->config->code_setting('TOOLTIPS',$key) or die "$key is empty";
+  my $contents = $CONFIG->config->setting('TOOLTIPS',$key) or die "$key is empty";
   my $coderef = (ref $contents||'') eq 'CODE';
   return $contents unless $coderef;
 

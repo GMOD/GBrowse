@@ -394,7 +394,7 @@ sub set_language {
 
 sub html_frag {
   my $fragname = shift;
-  my $a = $CONFIG->config->code_setting(general => $fragname);
+  my $a = $CONFIG->config->setting(general => $fragname);
   return $a->(@_) if ref $a eq 'CODE';
   return $a || '';
 }

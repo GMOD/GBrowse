@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.105 2008-08-15 15:42:57 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.106 2008-08-21 21:30:23 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -135,18 +135,6 @@ sub read_configuration {
   my $conf_dir    = shift;
   my $suffix      = shift || 'conf';
 
-#   $self->fatal_error(<<END) unless (eval{Bio::Graphics::FeatureFile->version} || 1) >= 2.0;
-# INSTALLATION ERROR DETECTED WHEN PROCESSING $ENV{REQUEST_URI}
-
-# This version of GBrowse requires Bio::Graphics::FeatureFile version 2.0
-# or higher, which is available in the current "live" version of bioperl.
-# Please upgrade.
-
-# If you are not the administrator of this site, please email him or her a
-# copy of this error message.
-# END
-
-
   $self->{conf} ||= {};
 
   croak("$conf_dir: not a directory") unless -d $conf_dir;
@@ -169,7 +157,8 @@ sub read_configuration {
     $basename =~ s/^\d+\.//;
     next if defined($self->{conf}{$basename}{mtime})
       && ($self->{conf}{$basename}{mtime} >= $mtimes{$file});
-    my $config = Bio::Graphics::BrowserConfig->new(-file => $file,-safe=>1) or next;
+    my $config = Bio::Graphics::BrowserConfig->new(-file => $file,
+						   -safe => 1) or next;
     $self->{conf}{$basename}{data}  = $config;
     $self->{conf}{$basename}{mtime} = $mtimes{$file};
     $self->{conf}{$basename}{path}  = $file;
@@ -388,7 +377,7 @@ sub db_settings {
   my $adaptor = $self->setting('db_adaptor') || DEFAULT_DB_ADAPTOR;
   eval "require $adaptor; 1" or die $@;
 
-  my $args    = $self->config->code_setting(general => 'db_args');
+  my $args    = $self->config->setting(general => 'db_args');
   my @argv = ref $args eq 'CODE'
         ? $args->()
 	: shellwords($args||'');
@@ -595,6 +584,8 @@ order to retrieve track-specific options.
 sub labels {
   my $self  = shift;
   my $order = shift;
+  warn "here I am";
+  warn $self->config;
   my @labels = $self->config->labels;
   if ($order) { # custom order
     return @labels[@$order];
@@ -717,7 +708,7 @@ page.
 
 sub header {
   my $self = shift;
-  my $header = $self->config->code_setting(general => 'header');
+  my $header = $self->config->setting(general => 'header');
   if (ref $header eq 'CODE') {
     my $h = eval{$header->(@_)};
     $self->_callback_complain(general=>'header') if @_;
@@ -737,7 +728,7 @@ page.
 
 sub footer {
   my $self = shift;
-  my $footer = $self->config->code_setting(general => 'footer');
+  my $footer = $self->config->setting(general => 'footer');
   if (ref $footer eq 'CODE') {
     my $f = eval {$footer->(@_)};
     $self->_callback_complain(general=>'footer') if @_;
@@ -1461,13 +1452,13 @@ sub add_features_to_track {
       # GROUP CODE
       # Handle name-based groupings.
       unless (exists $group_pattern{$l}) {
-	$group_pattern{$l} =  $conf->code_setting($l => 'group_pattern');
+	$group_pattern{$l} =  $conf->setting($l => 'group_pattern');
 	$group_pattern{$l} =~ s!^/(.+)/$!$1! 
 	                       if $group_pattern{$l}; # clean up regexp delimiters
 	}
 
       # Handle generic grouping (needed for GFF3 database)
-      $group_field{$l} = $conf->code_setting($l => 'group_on') unless exists $group_field{$l};
+      $group_field{$l} = $conf->setting($l => 'group_on') unless exists $group_field{$l};
 	
       if (my $pattern = $group_pattern{$l}) {
 	my $name = $feature->name or next;
@@ -2032,7 +2023,7 @@ sub do_bump {
   my ($track_name,$option,$count,$max,$length) = @_;
 
   my $conf              = $self->config;
-  my $maxb              = $conf->code_setting($track_name => 'bump density');
+  my $maxb              = $conf->setting($track_name => 'bump density');
   $maxb                 = $max unless defined $maxb;
 
   my $maxed_out = $count <= $maxb;
@@ -2054,7 +2045,7 @@ sub do_label {
 
   my $conf = $self->config;
 
-  my $maxl              = $conf->code_setting($track_name => 'label density');
+  my $maxl              = $conf->setting($track_name => 'label density');
   $maxl                 = $max_labels unless defined $maxl;
   my $maxed_out         = $count <= $maxl;
 
@@ -2074,7 +2065,7 @@ sub do_description {
 
   my $conf              = $self->config;
 
-  my $maxl              = $conf->code_setting($track_name => 'label density');
+  my $maxl              = $conf->setting($track_name => 'label density');
   $maxl                 = $max_labels unless defined $maxl;
   my $maxed_out = $count <= $maxl;
 
@@ -3109,8 +3100,8 @@ sub regionview_tracks {
 sub authorized {
   my $self  = shift;
   my $label = shift;
-  my $restrict = $self->code_setting($label=>'restrict')
-    || ($label ne 'general' && $self->code_setting('TRACK DEFAULTS' => 'restrict'));
+  my $restrict = $self->setting($label=>'restrict')
+    || ($label ne 'general' && $self->setting('TRACK DEFAULTS' => 'restrict'));
   return 1 unless $restrict;
   my $host     = CGI->remote_host;
   my $user     = CGI->remote_user;
@@ -3212,13 +3203,13 @@ sub style {
   return $l eq $label ? $self->SUPER::style($l) : ($self->SUPER::style($label),$self->SUPER::style($l));
 }
 
-# like code_setting, but obeys semantic hints
+# like setting, but obeys semantic hints
 sub semantic_setting {
   my ($self,$label,$option,$length) = @_;
   my $slabel = $self->semantic_label($label,$length);
-  my $val = $self->code_setting($slabel => $option) if defined $slabel;
+  my $val = $self->setting($slabel => $option) if defined $slabel;
   return $val if defined $val;
-  return $self->code_setting($label => $option);
+  return $self->setting($label => $option);
 }
 
 sub semantic_label {
@@ -3343,14 +3334,14 @@ sub make_link {
   $label ||= $self->feature2label($feature);
 
   # most specific -- a configuration line
-  my $link     = $self->code_setting($label,'link');
+  my $link     = $self->setting($label,'link');
 
   # less specific - a smart feature
   $link        = $feature->make_link if $feature->can('make_link') && !defined $link;
 
   # general defaults
-  $link        = $self->code_setting('TRACK DEFAULTS'=>'link') unless defined $link;
-  $link        = $self->code_setting(general=>'link')          unless defined $link;
+  $link        = $self->setting('TRACK DEFAULTS'=>'link') unless defined $link;
+  $link        = $self->setting(general=>'link')          unless defined $link;
 
 
   return unless $link;
@@ -3411,9 +3402,9 @@ sub make_title {
       $key         = "(".
 	  $feature->segment->dsn.")" if $feature->isa('Bio::Das::Feature');  # for DAS sources
 
-      my $link     = $self->code_setting($label,'title')
-	|| $self->code_setting('TRACK DEFAULTS'=>'title')
-	  || $self->code_setting(general=>'title');
+      my $link     = $self->setting($label,'title')
+	|| $self->setting('TRACK DEFAULTS'=>'title')
+	  || $self->setting(general=>'title');
       if (defined $link && ref($link) eq 'CODE') {
 	$title       = eval {$link->($feature,$panel,$track)};
 	$self->_callback_complain($label=>'title') if $@;
@@ -3465,7 +3456,7 @@ sub balloon_tip_setting {
      last TRY if $value;
      
      for $label ($label, 'TRACK DEFAULTS','general') {
-	 $value = $self->code_setting($label=>$option);
+	 $value = $self->setting($label=>$option);
 	 last TRY if $value;
      }
   }
@@ -3512,9 +3503,9 @@ sub make_link_target {
   }
 
   $label    ||= $self->feature2label($feature) or return;
-  my $link_target = $self->code_setting($label,'link_target')
-    || $self->code_setting('TRACK DEFAULTS' => 'link_target')
-    || $self->code_setting(general => 'link_target');
+  my $link_target = $self->setting($label,'link_target')
+    || $self->setting('TRACK DEFAULTS' => 'link_target')
+    || $self->setting(general => 'link_target');
   $link_target = eval {$link_target->($feature,$panel,$track)} 
       if ref($link_target) eq 'CODE';
   $self->_callback_complain($label=>'link_target') if $@;

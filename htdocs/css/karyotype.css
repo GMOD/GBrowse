@@ -15,9 +15,17 @@ span.nohilite {
   background: transparent;
   color:      black;
 }
+tr.hilite {
+  background: lightblue;
+  color:      yellow;
+}
+tr.nohilite {
+  background: transparent;
+  color:      black;
+}
 div#scrolling_table {
-  position: relative;
-  height: 100px;
+  position:   relative;
+  height:     200px;
   background: wheat;
-  overflow: auto;
+  overflow:   auto;
 }

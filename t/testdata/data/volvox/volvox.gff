@@ -1,16 +1,54 @@
 # file: volvox1.gff
 ctgA	example	contig	1	50000	.	.	.	Contig ctgA
+ctgA	example	chromosome_band	1	1000	.	.	.	Contig ctgA; stain gneg
+ctgA	example	chromosome_band	1001	5000	.	.	.	Contig ctgA; stain gpos50
+ctgA	example	chromosome_band	5001	8000	.	.	.	Contig ctgA; stain gpos25
+ctgA	example	chromosome_band	8001	10000	.	.	.	Contig ctgA; stain gneg
+ctgA	example	chromosome_band	10001	20000	.	.	.	Contig ctgA; stain gpos75
+ctgA	example	centromere	20001	24000	.	.	.	Contig ctgA
+ctgA	example	chromosome_band	24001	25000	.	.	.	Contig ctgA; stain gneg
+ctgA	example	chromosome_band	25001	28000	.	.	.	Contig ctgA; stain gpos25
+ctgA	example	chromosome_band	28001	30000	.	.	.	Contig ctgA; stain gneg
+ctgA	example	chromosome_band	30001	38000	.	.	.	Contig ctgA; stain gpos50
+ctgA	example	chromosome_band	38001	45000	.	.	.	Contig ctgA; stain gpos100
+ctgA	example	chromosome_band	45001	49000	.	.	.	Contig ctgA; stain gneg
+ctgA	example	chromosome_band	45001	50000	.	.	.	Contig ctgA; stain gpos100
+
 ctgB	example	contig	1	40000	.	.	.	Contig ctgB
+ctgB	example	chromosome_band	1	5000	.	.	.	Contig ctgB; stain pos25
+ctgB	example	centromere	10001	19000	.	.	.	Contig ctgB
+
 ctgC	example	contig	1	40000	.	.	.	Contig ctgC
+ctgC	example	chromosome_band	5000	10000	.	.	.	Contig ctgC; stain stalk
+
 ctgD	example	contig	1	38000	.	.	.	Contig ctgD
+ctgD	example	centromere	20001	22000	.	.	.	Contig ctgD
+ctgD	example	chromosome_band	10001	19000	.	.	.	Contig ctgD; stain stalk
+
 ctgE	example	contig	1	35000	.	.	.	Contig ctgE
+ctgE	example	centromere	10001	12000	.	.	.	Contig ctgE
+
 ctgF	example	contig	1	32000	.	.	.	Contig ctgF
+ctgF	example	centromere	10001	18000	.	.	.	Contig ctgF
+
 ctgG	example	contig	1	30000	.	.	.	Contig ctgG
+ctgG	example	centromere	10001	15000	.	.	.	Contig ctgG
+
 ctgH	example	contig	1	29000	.	.	.	Contig ctgH
+ctgH	example	centromere	20001	22000	.	.	.	Contig ctgH
+
 ctgI	example	contig	1	28000	.	.	.	Contig ctgI
+ctgI	example	centromere	20001	22000	.	.	.	Contig ctgI
+
 ctgJ	example	contig	1	27000	.	.	.	Contig ctgJ
+ctgJ	example	centromere	20001	22000	.	.	.	Contig ctgJ
+
 ctgK	example	contig	1	26000	.	.	.	Contig ctgK
+ctgK	example	centromere	20001	22000	.	.	.	Contig ctgK
+
 ctgL	example	contig	1	20000	.	.	.	Contig ctgL
+ctgL	example	centromere	18001	19000	.	.	.	Contig ctgL
+
 ctgM	example	contig	1	18000	.	.	.	Contig ctgM
 ctgN	example	contig	1	12000	.	.	.	Contig ctgN
 ctgO	example	contig	1	12000	.	.	.	Contig ctgO

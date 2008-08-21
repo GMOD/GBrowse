@@ -127,15 +127,15 @@ sub search_db {
 
   my $db    = $self->db;
 
-  my ($ref,$start,$stop,$class) = $self->parse_feature_name($name);
+  my ($ref,$start,$stop,$class,$id) = $self->parse_feature_name($name);
 
-  my $features = $self->lookup_features($ref,$start,$stop,$class,$name);
+  my $features = $self->lookup_features($ref,$start,$stop,$class,$name,$id);
   return $features;
 }
 
 sub lookup_features {
   my $self  = shift;
-  my ($name,$start,$stop,$class,$literal_name) = @_;
+  my ($name,$start,$stop,$class,$literal_name,$id) = @_;
   my $source = $self->source;
 
   my $refclass = $source->global_setting('reference class') || 'Sequence';
@@ -149,6 +149,10 @@ sub lookup_features {
   my @classes = $class ? ($class) : (split /\s+/,$source->global_setting('automatic classes')||'');
 
   my $features;
+
+  if (defined $id && $db->can('get_feature_by_id')) { # this overrides everything else
+      return [$db->get_feature_by_id($id)];
+  }
 
  SEARCHING:
   for my $n ([$name,$class,$start,$stop],[$literal_name,$refclass,undef,undef]) {
@@ -291,6 +295,10 @@ sub _feature_keyword_search {
 sub parse_feature_name {
   my $self = shift;
   my $name = shift;
+
+  if ($name =~ /^id:(.+)/) {
+      return (undef,undef,undef,undef,$1);
+  }
 
   my ($class,$ref,$start,$stop);
   if ( ($name !~ /\.\./ and $name =~ /([\w._\/-]+):(-?[-e\d.]+),(-?[-e\d.]+)$/) or

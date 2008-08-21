@@ -41,14 +41,19 @@ END {
 chdir $Bin;
 use lib "$Bin/../libnew";
 use Bio::Graphics::Browser;
+use Bio::Graphics::Browser::I18n;
 use Bio::Graphics::Karyotype;
 
 # create objects we need to test the karyotype generator
 my $globals = Bio::Graphics::Browser->new(CONF_FILE);
 my $session = $globals->session;
 my $source  = $globals->create_data_source('volvox');
+my $lang    = Bio::Graphics::Browser::I18n->new($source->globals->language_path);
+$lang->language('en');
 
-my $kg      = Bio::Graphics::Karyotype->new(source   => $source);
+my $kg      = Bio::Graphics::Karyotype->new(source   => $source,
+					    language => $lang,
+    );
 
 my @motifs = $source->open_database()->features('motif');
 $kg->sort_sub(sub ($$) 
@@ -62,14 +67,12 @@ $kg->sort_sub(sub ($$)
 ok($kg);
 
 $kg->add_hits(\@motifs);
-my $html    = $kg->to_html($source);
+my $html    = $kg->to_html;
 ok($html);
-my @divs = $html =~ /(<div)/g;
-ok(scalar @divs,62);
 my @imgs = $html =~ /(<img)/g;
 ok(scalar @imgs,17);
 
-if (1) { # set this to true to see the image
+if (0) { # set this to true to see the image
     $html =~ s!/tmpimages!/tmp/gbrowse_testing/tmpimages!g;
 
     open my $f,'>','foo.html';

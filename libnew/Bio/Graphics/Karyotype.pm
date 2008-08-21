@@ -1,6 +1,6 @@
 package Bio::Graphics::Karyotype;
 
-# $Id: Karyotype.pm,v 1.2 2008-08-20 22:55:35 lstein Exp $
+# $Id: Karyotype.pm,v 1.3 2008-08-21 20:48:55 lstein Exp $
 # Utility class to create a display of a karyotype and a series of "hits" on the individual chromosomes
 # Used for searching
 
@@ -8,31 +8,40 @@ package Bio::Graphics::Karyotype;
 use strict;
 use Bio::Graphics::Panel;
 use GD 'gdSmallFont';
-use CGI qw(img div b);
+use CGI qw(img div b url table TR th td b escapeHTML a br);
 use Carp 'croak';
 
 sub new {
   my $class = shift;
   my %args            = @_;
-  my $source          = $args{source} or croak "source argument mandatory";
+  my $source          = $args{source}   or croak "source argument mandatory";
+  my $lang            = $args{language};
   return bless {
-		source=> $source,
+		source   => $source,
+		language => $lang,
 		},ref $class || $class;
 }
 
-sub db          { shift->source->open_database()    }
-sub source      { shift->{source}     }
+sub db             { shift->data_source->open_database()    }
+sub data_source    { shift->{source}     }
+sub language       { shift->{language}   }
+
+sub trans       { 
+  my $self = shift;
+  my $lang = $self->language or return '';
+  return $lang->tr(@_);
+}
 
 sub chrom_type  { 
-    return shift->source->karyotype_setting('chromosome')   || 'chromosome';
+    return shift->data_source->karyotype_setting('chromosome')   || 'chromosome';
 }
 
 sub chrom_width {
-    return shift->source->karyotype_setting('chrom_width')  || 'auto';
+    return shift->data_source->karyotype_setting('chrom_width')  || 'auto';
 }
 
 sub chrom_height {
-    return shift->source->karyotype_setting('chrom_height') || 100;
+    return shift->data_source->karyotype_setting('chrom_height') || 100;
 }
 
 sub add_hits {
@@ -45,9 +54,26 @@ sub add_hits {
   }
 }
 
+sub seqid_order {
+    my $self = shift;
+    return $self->{seqid_order} if exists $self->{seqid_order};
+
+    my @chromosomes   = $self->chromosomes;
+    my $sort_sub      = $self->sort_sub || \&by_chromosome_name;
+    my @sorted_chroms = sort $sort_sub @chromosomes;
+    my $i             = 0;
+    my %order         = map {$_->seq_id => $i++} @sorted_chroms;
+
+    return $self->{seqid_order} = \%order;
+}
+
 sub hits {
   my $self   = shift;
   my $seq_id = shift;
+
+  my $hits = $self->{hits} or return;
+  defined $seq_id          or return map {@$_} values %{$hits};
+
   my $list   = $self->{hits}{$seq_id} or return;
   return @$list;
 }
@@ -62,20 +88,19 @@ sub sort_sub {
 
 sub to_html {
   my $self     = shift;
-  my $renderer = shift;   # this is some object that supports the generate_image($panel) method
-  my $sort_sub = $self->sort_sub || \&by_chromosome_name;
+  my $sort_order = $self->seqid_order;  # returns a hash of {seqid=>index}
 
-  my $panels = $self->{panels} ||= $self->generate_panels or return;
+  my $source     = $self->data_source;
+  my $panels     = $self->{panels} ||= $self->generate_panels or return;
 
   my $html;
-  for my $seqid (sort {$sort_sub->($panels->{$a}{chromosome},
-				   $panels->{$b}{chromosome}
-			   )} 
-		 keys %{$panels}) {
+  for my $seqid (
+      sort {$sort_order->{$a} <=> $sort_order->{$b}} keys %$panels
+      ) {
 
     my $panel  = $self->{panels}{$seqid}{panel};
 
-    my $url    = $renderer->generate_image($panel->gd);
+    my $url    = $source->generate_image($panel->gd);
     my $margin = $self->chrom_height - $panel->gd->height;
 
     my $imagemap  = $self->image_map(scalar $panel->boxes,"${seqid}.");
@@ -89,17 +114,19 @@ sub to_html {
 	    div({-align=>'center'},b($seqid))
 	);
   }
-  return $html;
+
+  my $table = $self->hits_table();
+
+  return $html.br({-clear=>'all'}).$table;
 }
 
 # not really an imagemap, but actually a "rollover" map
 sub image_map {
     my $self            = shift;
-    my ($boxes,$prefix) = @_;
+    my $boxes           = shift;
 
     my $chromosome = $self->chrom_type;
 
-    $prefix ||= '';
     my $divs = '';
 
     for (my $i=0; $i<@$boxes; $i++) {
@@ -112,7 +139,7 @@ sub image_map {
 	my $height = $bottom-$top+3;
 	
 	my $name = $boxes->[$i][0]->display_name || "feature id #".$boxes->[$i][0]->primary_id;
-	my $id = "${prefix}${i}";
+	my $id   = $self->feature2id($boxes->[$i][0]);
 	$divs .= div({-class => 'nohilite',
 		      -id    => "box_${id}",
 		      -style => "top:${top}px; left:${left}px; width:${width}px; height:${height}px",
@@ -173,6 +200,8 @@ sub generate_panels {
   $chrom_width = $minimal_width 
     if $chrom_width eq 'auto';
   my $pixels_per_base = $self->chrom_height / $maximal_length;
+  my $band_colors     = $self->data_source->karyotype_setting('bgcolor')
+      || 'gneg:white gpos25:gray gpos75:darkgray gpos100:black gvar:var stalk:#666666';
 
   # each becomes a panel
   my %results;
@@ -196,16 +225,90 @@ sub generate_panels {
     $panel->add_track($chrom,
 		      -glyph  => 'ideogram',                   # not an error, will rotate image later
 		      -height => $chrom_width,
-		      -bgcolor=> 'gneg:white gpos25:gray gpos75:darkgray gpos100:black gvar:var stalk:#666666',
+		      -bgcolor=> $band_colors,
 		      -label  => 0,
 		      -description => 0);
 
-    $panel->rotate(1);
+    $panel->rotate(1);      # need bioperl-live from 20 August 2008 for this to work
     $results{$chrom->seq_id}{chromosome} = $chrom;
     $results{$chrom->seq_id}{panel}      = $panel;
   }
 
   return \%results;
+}
+
+sub feature2id {
+    my $self              = shift;
+    my $feature           = shift;
+    my $id = $feature->can('id')        ? $feature->id
+            :$feature->can('primary_id')? $feature->primary_id
+	    : overload::StrVal($feature);
+    my $seqid = $feature->seq_id;
+    return "${seqid}.${id}";
+}
+
+sub hits_table {
+    my $self                  = shift;
+    my $term2hilite           = shift;
+
+    my @hits = $self->hits;
+
+    my $url  = url(-path_info=>1)."?name=";
+
+    my $regexp = join '|',($term2hilite =~ /(\w+)/g) 
+	if defined $term2hilite;
+
+    my $na   = $self->trans('NOT_APPLICABLE') || '-';
+
+    my $sort_order = $self->seqid_order;
+
+    
+    # a big long map call here
+    my @rows      = map {
+	my $name  = $_->display_name;
+	my $class = eval {$_->class};
+	my $fid   =  $_->can('id')         ? "id:".$_->id 
+	           : $_->can('primary_id') ? "id:".$_->primary_id     # for inserting into the gbrowse search field
+                   : $class                ? "$class:$name" 
+                   : $name;
+	my $id    = $self->feature2id($_);             # as an internal <div> id for hilighting
+	my $pos   = $_->seq_id.':'.$_->start.'..'.$_->end;
+	my $desc  = escapeHTML(Bio::Graphics::Glyph::generic->get_description($_));
+	$desc =~ s/($regexp)/<b class="keyword">$1<\/b>/ig if $regexp;
+	$desc =~ s/(\S{60})/$1 /g;  # wrap way long lines
+
+	TR({-class=>'nohilite',
+	    -id=>"feature_${id}",
+	    -onMouseOver=>"k_hilite_feature('$id')",
+	    -onMouseOut =>"k_unhilite_feature('$id')",
+	   },
+	    th({-align=>'left'},a({-href=>"$url$fid"},$name)),
+	    td($desc),
+	    td(a({-href=>"$url$pos"},$pos)),
+	    td($_->score || $na)
+	    )
+    } sort {
+	$sort_order->{$a->seq_id} <=> $sort_order->{$b->seq_id}
+        || $a->start <=> $b->start
+	|| $a->end   <=> $b->end
+    } @hits;
+
+    my $count = $self->language ? b($self->trans('HIT_COUNT',scalar @hits)) : '';
+
+    return 
+	b($count),
+	div({-id=>'scrolling_table'},
+	    table({-class=>'searchbody',-width=>'100%'},
+		  TR(
+		      th({-align=>'left'},
+			 [$self->trans('NAME'),
+			  $self->trans('Description'),
+			  $self->trans('Position'),
+			  $self->trans('score')
+			 ])
+		  ),
+		  @rows)
+	);
 }
 
 

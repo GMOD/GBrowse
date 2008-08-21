@@ -135,13 +135,12 @@ sub render_html_head {
     foreach qw(buttons.js 
                toggle.js 
                karyotype.js
-        balloon.js 
-        controller.js 
-        rubber.js
-        overviewSelect.js
-        detailSelect.js
-        regionSelect.js
-
+               balloon.js 
+               controller.js 
+               rubber.js
+               overviewSelect.js
+               detailSelect.js
+               regionSelect.js
 );
 
   # pick stylesheets;
@@ -329,51 +328,11 @@ sub render_track_table {
 sub render_multiple_choices {
     my $self     = shift;
     my $features = shift;
-    my $url      = url(-path_info=>1)."?name=";
 
-    my $regexp = join '|',($self->state->{name} =~ /(\w+)/g);
-    my $na = $self->tr('NOT_APPLICABLE');
-
-    my @rows     = map {
-	my $name = $_->display_name;
-	my $class= eval {$_->class};
-	my $id   = $class ? "$class:$name" : $name;
-	my $pos  = $_->seq_id.':'.$_->start.'..'.$_->end;
-	my $desc = escapeHTML(eval{join ' ',
-				   $_->desc(),
-				   $_->attributes('Note')}
-			      ||eval{$_->method}||eval{$_->source_tag}||$_->{ref});
-	$desc =~ s/($regexp)/<b class="keyword">$1<\/b>/ig;
-	$desc =~ s/(\S{60})/$1 /g;  # wrap way long lines
-
-	TR({-class=>'multiplechoicetitle'},
-	    th({-align=>'left'},a({-href=>"$url$id"},$name)),
-	    td($desc),
-	    td(a({-href=>"$url$pos"},$pos)),
-	    td($_->score || $na)
-	    )
-    } sort {
-	$a->seq_id cmp $b->seq_id ||
-	    $a->start <=> $b->start ||
-	    $a->end   <=> $b->end
-
-	} @$features;
-
-    my $karyotype = 
-	Bio::Graphics::Karyotype->new(
-	    source => $self->data_source,
-	);
-    
-
-    return p(i("placeholder for karyotype of chromosomes: ",map {$_->display_name} $karyotype->chromosomes)).
-	b($self->tr('HIT_COUNT',scalar @$features)).
-	table({-class=>'searchbody'},
-	      th([$self->tr('NAME'),
-		  $self->tr('Description'),
-		  $self->tr('Position'),
-		  $self->tr('score')
-		 ]),
-	      @rows);
+    my $karyotype = Bio::Graphics::Karyotype->new(source   => $self->data_source,
+						  language => $self->language);
+    $karyotype->add_hits($features);
+    return $karyotype->to_html;
 }
 
 sub render_global_config {

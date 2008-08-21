@@ -316,6 +316,9 @@ docs/tutorial/dbgff/figures/segmented_features1.gif
 docs/tutorial/dbgff/figures/segmented_features2.gif
 docs/tutorial/dbgff/figures/semantic_zooming1.gif
 htdocs/annotation_help.html
+htdocs/databases/yeast_chr1+2/chr1.fa
+htdocs/databases/yeast_chr1+2/chr2.fa
+htdocs/databases/yeast_chr1+2/yeast_chr1+2.gff3
 htdocs/gbrowse.css
 htdocs/general_help.html
 htdocs/general_help.html.zh

@@ -140,6 +140,33 @@ $CGI::Q = new CGI('right+5000+bp.x=yes;navigate=1');
 $render->update_coordinates;
 ok($render->state->{name},'ctgA:4901..5000');
 
+# Is the asynchronous rendering working
+$CGI::Q = new CGI('right+5000+bp.x=yes;navigate=1');
+my $return_object1 = $render->asynchronous_event();
+if (ok($return_object1) and ok($return_object1->{'track_keys'})){
+
+  # Check the retrieve_multiple option for asynch render
+
+  my $query_str = 'retrieve_multiple=1';
+  foreach
+    my $track_div_id ( keys %{ $return_object1->{'track_keys'} || {} } )
+  {
+    ok( $return_object1->{'track_keys'}{$track_div_id} );
+    $query_str .= ";track_div_ids=$track_div_id;tk_$track_div_id="
+      . $return_object1->{'track_keys'}{$track_div_id};
+  }
+
+  $CGI::Q = new CGI($query_str);
+  my $return_object2 = $render->asynchronous_event();
+  if ( ok($return_object2) and ok( $return_object2->{'track_html'} ) ) {
+    foreach my $track_div_id (
+      keys %{ $return_object1->{'track_html'} || {} } )
+    {
+      ok( $return_object2->{'track_html'}{$track_div_id}); 
+    }
+  }
+}
+
 # Try to fetch the segment.
 ok($render->init_database);
 ok($render->init_plugins);

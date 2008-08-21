@@ -18,7 +18,6 @@ cgi-bin/gbrowse_moby.PLS
 cgi-bin/gbrowse_syn.PLS
 cgi-bin/moby_server.PLS
 cgi-bin/README
-cgi-bin/tutorial_test.pl
 Changes
 conf/enzymes.txt
 conf/languages/de.pm

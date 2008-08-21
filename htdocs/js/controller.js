@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.31 2008-08-20 22:02:36 mwz444 Exp $
+ $Id: controller.js,v 1.32 2008-08-21 21:03:12 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -152,9 +152,15 @@ var GBrowseController = Class.create({
   // moment" hook, I don't know of another way to make sure the tracks become
   // draggable again
   function () {
-    create_drag('overview_panels','track');
-    create_drag('region_panels','track');
-    create_drag('detail_panels','track');
+    if ( null != $('overview_panels') ){
+      create_drag('overview_panels','track');
+    }
+    if ( null != $('region_panels') ){
+      create_drag('region_panels','track');
+    }
+    if ( null != $('detail_panels') ){
+      create_drag('detail_panels','track');
+    }
   },
   
   update_scale_bar:

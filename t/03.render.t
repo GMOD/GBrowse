@@ -12,7 +12,7 @@ use IO::String;
 use CGI;
 use FindBin '$Bin';
 
-use constant TEST_COUNT => 102;
+use constant TEST_COUNT => 110;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;
@@ -141,30 +141,42 @@ $render->update_coordinates;
 ok($render->state->{name},'ctgA:4901..5000');
 
 # Is the asynchronous rendering working
+my ($render_object,$retrieve_object);
 $CGI::Q = new CGI('right+5000+bp.x=yes;navigate=1');
-my $return_object1 = $render->asynchronous_event();
-if (ok($return_object1) and ok($return_object1->{'track_keys'})){
+$render_object = $render->asynchronous_event();
+if (ok($render_object) and ok($render_object->{'track_keys'})){
 
   # Check the retrieve_multiple option for asynch render
 
   my $query_str = 'retrieve_multiple=1';
   foreach
-    my $track_div_id ( keys %{ $return_object1->{'track_keys'} || {} } )
+    my $track_div_id ( keys %{ $render_object->{'track_keys'} || {} } )
   {
-    ok( $return_object1->{'track_keys'}{$track_div_id} );
+    ok( $render_object->{'track_keys'}{$track_div_id} );
     $query_str .= ";track_div_ids=$track_div_id;tk_$track_div_id="
-      . $return_object1->{'track_keys'}{$track_div_id};
+      . $render_object->{'track_keys'}{$track_div_id};
   }
 
-  $CGI::Q = new CGI($query_str);
-  my $return_object2 = $render->asynchronous_event();
-  if ( ok($return_object2) and ok( $return_object2->{'track_html'} ) ) {
-    foreach my $track_div_id (
-      keys %{ $return_object1->{'track_html'} || {} } )
-    {
-      ok( $return_object2->{'track_html'}{$track_div_id}); 
-    }
+  check_multiple_renders($query_str)
+}
+
+# Check Add Track
+$CGI::Q = new CGI('track_name=Motif;add_track=1');
+$render_object = $render->asynchronous_event();
+if (ok($render_object) and ok($render_object->{'track_data'})){
+
+  my $track_data = $render_object->{'track_data'};
+  # Check the retrieve_multiple option for asynch render
+
+  my $query_str = 'retrieve_multiple=1';
+  foreach my $track_div_id ( keys %{ $track_data || {} } )
+  {
+    ok( $track_data->{$track_div_id} );
+    my $track_key = $track_data->{$track_div_id}{'track_key'};
+    $query_str .= ";track_div_ids=$track_div_id;tk_$track_div_id=$track_key";
   }
+
+  check_multiple_renders($query_str)
 }
 
 # Try to fetch the segment.
@@ -346,3 +358,15 @@ ok (-e '/tmp/gbrowse_testing/'.$png);
 
 exit 0;
 
+sub check_multiple_renders {
+  my $query_str = shift;
+  $CGI::Q = new CGI($query_str);
+  my $retrieve_object = $render->asynchronous_event();
+  if ( ok($retrieve_object) and ok( $retrieve_object->{'track_html'} ) ) {
+    foreach my $track_div_id (
+      keys %{ $retrieve_object->{'track_html'} || {} } )
+    {
+      ok( $retrieve_object->{'track_html'}{$track_div_id} );
+    }
+  }
+}

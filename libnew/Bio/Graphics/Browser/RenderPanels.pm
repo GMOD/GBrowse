@@ -496,7 +496,7 @@ sub sort_local_remote {
 	return (\@uncached,[]);
     }
 
-    my %is_remote = map { $_ => ( $source->setting($_=>'remote renderer') )
+    my %is_remote = map { $_ => ( $source->setting($_=>'remote renderer') || 0 )
                         } @uncached;
 
     my @remote    = grep {$is_remote{$_} } @uncached;
@@ -977,7 +977,7 @@ sub run_local_requests {
             $panel, $label, { $label => $track }, 0 );
         $requests->{$label}->put_data( $gd, $map );
 
-        CORE::exit 0;
+        #CORE::exit 0;
     }
 }
 

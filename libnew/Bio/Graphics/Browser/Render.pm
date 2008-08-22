@@ -193,7 +193,7 @@ sub asynchronous_event {
         # warn "Rendering Tracks";
 
         my $track_keys          = $self->begin_track_render();
-	return unless $track_keys;
+        return unless $track_keys;
 
         my $segment_info_object = $self->segment_info_object();
 
@@ -633,13 +633,8 @@ sub render_panels {
 
     # Kick off track rendering
     if ( $section->{'overview'} ) {
-        my $cache_overview_track_hash
-            = $self->render_deferred( $self->whole_segment,
-            [ $self->overview_tracks ], 'overview', $cache_extra, );
-
         my $scale_bar_html = $self->scale_bar( $seg, 'overview', );
-        my $panels_html
-            .= $self->get_blank_panels($cache_overview_track_hash);
+        my $panels_html .= $self->get_blank_panels( [$self->overview_tracks,] );
         my $drag_script = $self->drag_script( 'overview_panels', 'track' );
         $html .= div(
             $self->toggle(
@@ -652,11 +647,9 @@ sub render_panels {
     }
     if ( $section->{'regionview'} and $self->state->{region_size} ) {
 
-        my $cache_region_track_hash
-            = $self->render_deferred( $self->region_segment,
-            [ $self->regionview_tracks ], 'region', $cache_extra, );
         my $scale_bar_html = $self->scale_bar( $seg, 'region' );
-        my $panels_html .= $self->get_blank_panels($cache_region_track_hash);
+        my $panels_html
+            .= $self->get_blank_panels( [$self->regionview_tracks,] );
         my $drag_script = $self->drag_script( 'region_panels', 'track' );
         $html .= div(
             $self->toggle(
@@ -668,13 +661,8 @@ sub render_panels {
         ) . $drag_script;
     }
     if ( $section->{'detailview'} ) {
-        my $cache_detail_track_hash = $self->render_deferred();
-
         my $scale_bar_html = $self->scale_bar( $seg, 'detail' );
-        my $panels_html
-
-            #.= $self->retrieve_deferred($cache_detail_track_hash);
-            .= $self->get_blank_panels($cache_detail_track_hash);
+        my $panels_html .= $self->get_blank_panels( [$self->detail_tracks,] );
         my $drag_script = $self->drag_script( 'detail_panels', 'track' );
         $html .= div(
             $self->toggle(
@@ -1902,13 +1890,12 @@ sub render_detailview_panels {
 
 sub get_blank_panels {
     my $self = shift;
-    my $cache_track_hash = shift;
+    my $track_names = shift;
 
     my $html  = '';
 
     my $image_width = $self->get_image_width;
-    foreach my $track_name ( keys %{ $cache_track_hash || {} } ) {
-        my $cache_key = $cache_track_hash->{$track_name}->key();
+    foreach my $track_name ( @{ $track_names || [] } ) {
 
         $html .= $self->render_grey_track(
             track_name       => $track_name,

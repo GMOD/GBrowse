@@ -25,7 +25,7 @@ tr.nohilite {
 }
 div#scrolling_table {
   position:   relative;
-  height:     200px;
-  background: wheat;
+  max-height:  200px;
+  background: transparent;
   overflow:   auto;
 }

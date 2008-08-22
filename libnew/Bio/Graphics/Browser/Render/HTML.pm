@@ -13,21 +13,10 @@ eval "use GD::SVG";
 use constant JS    => '/gbrowse/js';
 
 sub render_top {
-  my $self = shift;
-  my $features = shift;
-
-  my $dsn = $self->data_source;
-
-  my $description = $dsn->description;
-  my $feature     = $features->[0] if $features && @$features == 1;
-  my $title;
-
-  $title = $feature ? "$description: ".$feature->seq_id.":".$feature->start.'..'.$feature->end
-    : $description;
-
-  my $head = $self->render_html_head($dsn,$title);
-  my $debug = "rendering ".scalar(@$features)." features";
-  return $head.$title."<p>$debug</p>";
+  my $self  = shift;
+  my $title = shift;
+  my $dsn   = $self->data_source;
+  return $self->render_html_head($dsn,$title);
 }
 
 sub render_bottom {
@@ -165,10 +154,15 @@ sub render_html_head {
   return start_html(@args);
 }
 
+sub render_title {
+    my $self  = shift;
+    my $title = shift;
+    return h1({-id=>'page_title'},$title),
+}
+
 sub render_instructions {
   my $self = shift;
   my $settings = $self->session->page_settings;
-  my $title    = shift;
 
   my $svg_link     = GD::SVG::Image->can('new') ?
     a({-href=>$self->svg_link($settings),-target=>'_blank'},'['.$self->tr('SVG_LINK').']'):'';
@@ -179,9 +173,7 @@ sub render_instructions {
   my $rand         = substr(md5_hex(rand),0,5);
 
   # standard status bar
-  my $html =  ''; #div({-id=>'ajaxStatus',
-		   #-style=>'position:absolute; width:100px; height:20px; top:5px; left: 5px; display:block; background-color:khaki',
-		   #},'Loading...');
+  my $html =  ''; 
 
   $html .= table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},
 		   TR(
@@ -213,7 +205,7 @@ sub render_instructions {
 			),
 		     )
 		  );
-  return h1({-id=>'page_title'},$title),$html;
+  return $html;
 }
 
 # this draws the various config options
@@ -232,7 +224,6 @@ sub render_track_table {
                                 $source->regionview_tracks;
   my %labels     = map {$_ => $self->label2key($_)}              @labels;
   my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
-
 
   # Sort the tracks into categories:
   # Overview tracks

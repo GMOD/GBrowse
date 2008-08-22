@@ -125,7 +125,7 @@ sub run {
   my $source = $self->session->source;
   if (CGI::path_info() ne "/$source") {
     my $args = CGI::query_string();
-    my $url  = CGI::url(-absolute=>1);
+    my $url  = CGI::url(-absolute=>1,-path_info=>0);
     $url .= "/$source";
     $url .= "?$args" if $args;
     print CGI::redirect($url);
@@ -190,8 +190,11 @@ sub asynchronous_event {
 
     if ( my $action = param('first_render') ) {
 
-        #warn "Rendering Tracks";
+        # warn "Rendering Tracks";
+
         my $track_keys          = $self->begin_track_render();
+	return unless $track_keys;
+
         my $segment_info_object = $self->segment_info_object();
 
         my $return_object = {
@@ -365,6 +368,8 @@ sub begin_track_render {
     $self->init_plugins();
     $self->init_remote_sources();
 
+    $self->segment or return;
+
     my $cache_extra = $self->create_cache_extra();
 
     # Start rendering the detail, region and overview tracks
@@ -513,11 +518,13 @@ sub render_body {
   my $region   = $self->region;
   my $features = $region->features;
 
-  my $title = $self->render_top($features);
-  print $self->render_instructions($title);
+  my $title    = $self->generate_title($features);
+
+  print $self->render_top($title);
+  print $self->render_title($title);
+  print $self->render_instructions;
 
   if ($region->feature_count > 1) {
-    #search not implemented yet
       print $self->render_navbar();
       print $self->render_multiple_choices($features);
       print $self->render_config();
@@ -536,11 +543,36 @@ sub render_body {
   print $self->render_bottom($features);
 }
 
+
+sub generate_title {
+    my $self     = shift;
+    my $features = shift;
+
+    my $dsn         = $self->data_source;
+    my $description = $dsn->description;
+
+    return $description unless $features;
+    return @$features == 1 
+             ? "$description: ".$features->[0]->seq_id
+                               .":"
+                               .$features->[0]->start
+                               .'..'
+                               .$features->[0]->end
+             : "$description: ".$self->tr('HIT_COUNT',scalar @$features);
+}
+
 # never called, method in HTML.pm with same name is run instead
 sub render_top    {
   my $self     = shift;
-  my $features = shift;
+  my $title    = shift;
   croak "render_top() should not be called in parent class";
+}
+
+# never called, method in HTML.pm with same name is run instead
+sub render_title   {
+  my $self     = shift;
+  my $title    = shift;
+  croak "render_title() should not be called in parent class";
 }
 
 #never called, method in HTML.pm with same name is run instead
@@ -718,7 +750,8 @@ sub render_track_table {
 }
 
 sub render_instructions {
-  my $self = shift;
+  my $self  = shift;
+  my $title = shift;
   croak "render_instructions() should not be called in parent class";
 }
 sub render_multiple_choices {
@@ -1115,12 +1148,11 @@ sub default_tracks {
 
   $state->{tracks}   = \@labels;
   warn "order = @labels" if DEBUG;
-  foreach (@labels) {
-    $state->{features}{$_} = {visible=>0,options=>0,limit=>0};
-  }
-  foreach ($self->data_source->default_labels) {
-    $state->{features}{$_}{visible} = 1;
-  }
+
+  $state->{features}{$_} = {visible=>0,options=>0,limit=>0}
+      foreach @labels;
+  $state->{features}{$_}{visible} = 1
+      foreach $self->data_source->default_labels;
 }
 
 sub add_track_to_state {

@@ -1,6 +1,6 @@
 package Bio::Graphics::Karyotype;
 
-# $Id: Karyotype.pm,v 1.3 2008-08-21 20:48:55 lstein Exp $
+# $Id: Karyotype.pm,v 1.4 2008-08-22 14:57:01 lstein Exp $
 # Utility class to create a display of a karyotype and a series of "hits" on the individual chromosomes
 # Used for searching
 
@@ -37,11 +37,21 @@ sub chrom_type  {
 }
 
 sub chrom_width {
-    return shift->data_source->karyotype_setting('chrom_width')  || 'auto';
+    return shift->data_source->karyotype_setting('chrom_width')  || 16;
 }
 
 sub chrom_height {
     return shift->data_source->karyotype_setting('chrom_height') || 100;
+}
+
+sub chrom_background {
+    my $band_colors     = shift->data_source->karyotype_setting('bgcolor')
+	|| 'gneg:white gpos25:gray gpos75:darkgray gpos100:black gvar:var stalk:#666666';
+}
+
+sub chrom_background_fallback {
+    my $band_colors     = shift->data_source->karyotype_setting('bgfallback')
+	|| 'yellow';
 }
 
 sub add_hits {
@@ -200,8 +210,8 @@ sub generate_panels {
   $chrom_width = $minimal_width 
     if $chrom_width eq 'auto';
   my $pixels_per_base = $self->chrom_height / $maximal_length;
-  my $band_colors     = $self->data_source->karyotype_setting('bgcolor')
-      || 'gneg:white gpos25:gray gpos75:darkgray gpos100:black gvar:var stalk:#666666';
+  my $band_colors     = $self->chrom_background;
+  my $fallback_color  = $self->chrom_background_fallback;
 
   # each becomes a panel
   my %results;
@@ -223,10 +233,11 @@ sub generate_panels {
     }
 
     $panel->add_track($chrom,
-		      -glyph  => 'ideogram',                   # not an error, will rotate image later
-		      -height => $chrom_width,
-		      -bgcolor=> $band_colors,
-		      -label  => 0,
+		      -glyph      => 'ideogram',                   # not an error, will rotate image later
+		      -height     => $chrom_width,
+		      -bgcolor    => $band_colors,
+		      -bgfallback => $fallback_color,
+		      -label    => 0,
 		      -description => 0);
 
     $panel->rotate(1);      # need bioperl-live from 20 August 2008 for this to work

@@ -241,7 +241,7 @@ END
    # MULTIPLE MATCHES PAGE
    #----------------------
 
-   HIT_COUNT      => 'The following %d regions match your request.',
+   HIT_COUNT      => '%d regions match',
 
    POSSIBLE_TRUNCATION  => 'Search results are limited to %d hits; list may be incomplete.',
 

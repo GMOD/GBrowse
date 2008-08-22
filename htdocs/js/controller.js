@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.32 2008-08-21 21:03:12 mwz444 Exp $
+ $Id: controller.js,v 1.33 2008-08-22 14:57:00 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -338,13 +338,16 @@ var Controller = new GBrowseController; // singleton
 function initialize_page() {
   //event handlers
   ['page_title','span'].each(function(el) {
-    Controller.segment_observers.set(el,1);
-    $(el).observe('model:segmentChanged',function(event) {
-      new Ajax.Updater(this,'#',{
-	parameters: {update: this.id}
-      });
+
+    if ($(el) != null) {
+      Controller.segment_observers.set(el,1);
+      $(el).observe('model:segmentChanged',function(event) {
+        new Ajax.Updater(this,'#',{
+  	  parameters: {update: this.id}
+        });
+      }
+     )
     }
-      )
   });
   
   Controller.first_render();

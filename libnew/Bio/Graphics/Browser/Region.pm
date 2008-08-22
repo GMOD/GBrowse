@@ -95,7 +95,7 @@ sub features2segments {
   my $refclass = $self->source->global_setting('reference class');
   my $db       = $self->db;
   my @segments = map {
-    my $version = $_->isa('Bio::SeqFeatureI') ? undef : $_->version;
+    my $version = $_->can('version') ? $_->version : undef;
     $db->segment(-class => $refclass,
 		 -name  => $_->ref,
 		 -start => $_->start,
@@ -280,7 +280,7 @@ sub _feature_keyword_search {
     my ($name,$description,$score) = @$r;
     my ($seg) = $db->segment($name) or next;
     push @results,Bio::Graphics::Feature->new(-name   => $name,
-					      -class  => $name->class,
+					      -class  => eval{$name->class} || undef,
 					      -desc   => $description,
 					      -score  => $score,
 					      -ref    => $seg->abs_ref,

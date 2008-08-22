@@ -87,6 +87,8 @@ BEGIN {
   print STDERR "\naccept the default answer (with a notable exception of libgd on MacOSX;\n";
   print STDERR "see the documentation on the GMOD website for more information.)\n";
   print STDERR "The whole process will take several minutes and will generate lots of messages.\n";
+  print STDERR "\nNOTE: This installer will install bioperl-live, as the most recent GBrowse\n";
+  print STDERR "requires the many changes that have gone into BioPerl since its last release\n\n";
   print STDERR "\nPress return when you are ready to start!\n";
   my $h = <> unless $skip_start;
   print STDERR "*** Installing Perl files needed for a net-based install ***\n";
@@ -151,7 +153,7 @@ if ($get_from_cvs) {
     $get_bioperl_cvs = $get_gbrowse_cvs = 1;
 }
 
-if ($windows and !$wincvs and ($get_bioperl_cvs or $get_gbrowse_cvs) ) {
+if ($windows and !$wincvs and $get_gbrowse_cvs ) {
     die "\n\nThe development/cvs tags are not supported on Windows when\n"
         ."WinCVS is not installed; exiting...\n";
 }
@@ -162,7 +164,7 @@ $install_param_string ||="";
 use constant BIOPERL_VERSION      => 'bioperl-1.5.2_102';
 use constant BIOPERL_REQUIRES     => '1.005002';  # sorry for the redundancy
 use constant BIOPERL_LIVE_URL     => 'http://bioperl.org/DIST/nightly_builds/';
-use constant GBROWSE_DEFAULT      => '1.68';
+use constant GBROWSE_DEFAULT      => '1.69';
 use constant SOURCEFORGE_MIRROR1  => 'http://superb-west.dl.sourceforge.net/sourceforge/gmod/';
 use constant SOURCEFORGE_MIRROR2  => 'http://easynews.dl.sourceforge.net/sourceforge/gmod/';
 use constant SOURCEFORGE_GBROWSE  => 'http://sourceforge.net/project/showfiles.php?group_id=27707&package_id=34513';
@@ -208,6 +210,8 @@ CPAN::Shell->install('Class::Base');
 CPAN::Shell->install('Digest::MD5');
 CPAN::Shell->install('Statistics::Descriptive');
 
+$get_bioperl_cvs = 1;
+print STDERR "\n\nForce getting a BioPerl nightly build; the most recent release is too old\n";
 my $version = BIOPERL_REQUIRES;
 if (!(eval "use Bio::Perl $version; 1") or $get_bioperl_cvs or $bioperl_path) {
   print STDERR "\n*** Installing BioPerl ***\n";
@@ -306,7 +310,7 @@ sub do_get_distro {
             print STDERR "Downloading bioperl-live...\n";
             $distribution_dir = 'bioperl-live';
 
-            my $filename = determine_filename();
+            my $filename = 'bioperl-live.tar.gz'; # =determine_filename();
             my $url = BIOPERL_LIVE_URL."/$filename";
             my $rc = mirror($url, $filename); 
             unless ($rc == RC_OK or $rc == RC_NOT_MODIFIED){
@@ -330,6 +334,8 @@ sub do_get_distro {
     return 1;
 }
 
+#this is probably not going to be needed again, as the nightly
+#bioperl build names have been simplified
 sub determine_filename {
   my $listing = "dirlisting.html";
   my $rc = mirror(BIOPERL_LIVE_URL, $listing);

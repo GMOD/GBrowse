@@ -254,6 +254,7 @@ END
    BP             => 'bp',
 
    NAME           => 'Name',
+   TYPE           => 'Type',
    DESCRIPTION    => 'Description',
    POSITION       => 'Position',
    SCORE          => 'Match Score',

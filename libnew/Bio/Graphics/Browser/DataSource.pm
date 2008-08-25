@@ -280,6 +280,7 @@ sub labels {
   my @labels =  grep {
     !($_ eq 'TRACK DEFAULTS' || /:(\d+|plugin|DETAILS|details)$/)
        } $self->configured_types;
+
   # apply restriction rules
   return grep { $self->authorized($_)} @labels;
 }

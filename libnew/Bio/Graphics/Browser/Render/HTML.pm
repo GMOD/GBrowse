@@ -329,11 +329,12 @@ sub render_track_table {
 sub render_multiple_choices {
     my $self     = shift;
     my $features = shift;
+    my $terms2hilite = shift;
 
     my $karyotype = Bio::Graphics::Karyotype->new(source   => $self->data_source,
 						  language => $self->language);
     $karyotype->add_hits($features);
-    return $karyotype->to_html;
+    return $karyotype->to_html($terms2hilite);
 }
 
 sub render_global_config {

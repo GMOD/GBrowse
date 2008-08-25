@@ -1,6 +1,6 @@
 package Bio::Graphics::Karyotype;
 
-# $Id: Karyotype.pm,v 1.4 2008-08-22 14:57:01 lstein Exp $
+# $Id: Karyotype.pm,v 1.5 2008-08-25 23:10:42 lstein Exp $
 # Utility class to create a display of a karyotype and a series of "hits" on the individual chromosomes
 # Used for searching
 
@@ -58,6 +58,7 @@ sub add_hits {
   my $self     = shift;
   my $features = shift;
   $self->{hits} ||= {};
+
   for my $f (@$features) {
     my $ref = $f->seq_id;
     push @{$self->{hits}{$ref}},$f;
@@ -98,6 +99,8 @@ sub sort_sub {
 
 sub to_html {
   my $self     = shift;
+  my $terms2hilite = shift;
+
   my $sort_order = $self->seqid_order;  # returns a hash of {seqid=>index}
 
   my $source     = $self->data_source;
@@ -125,7 +128,7 @@ sub to_html {
 	);
   }
 
-  my $table = $self->hits_table();
+  my $table = $self->hits_table($terms2hilite);
 
   return $html.br({-clear=>'all'}).$table;
 }
@@ -229,7 +232,9 @@ sub generate_panels {
 			-glyph   => 'generic',
 			-height  => 6,
 			-bgcolor => 'red',
-			-fgcolor => 'red');
+			-fgcolor => 'red',
+			-bump    => -1,
+	  );
     }
 
     $panel->add_track($chrom,
@@ -251,9 +256,7 @@ sub generate_panels {
 sub feature2id {
     my $self              = shift;
     my $feature           = shift;
-    my $id = $feature->can('id')        ? $feature->id
-            :$feature->can('primary_id')? $feature->primary_id
-	    : overload::StrVal($feature);
+    my $id = overload::StrVal($feature);
     my $seqid = $feature->seq_id;
     return "${seqid}.${id}";
 }
@@ -261,6 +264,7 @@ sub feature2id {
 sub hits_table {
     my $self                  = shift;
     my $term2hilite           = shift;
+    warn "term2hilite = $term2hilite";
 
     my @hits = $self->hits;
 
@@ -269,17 +273,18 @@ sub hits_table {
     my $regexp = join '|',($term2hilite =~ /(\w+)/g) 
 	if defined $term2hilite;
 
+    warn "regexp = $regexp";
+
     my $na   = $self->trans('NOT_APPLICABLE') || '-';
 
     my $sort_order = $self->seqid_order;
-
     
     # a big long map call here
     my @rows      = map {
 	my $name  = $_->display_name;
 	my $class = eval {$_->class};
-	my $fid   =  $_->can('id')         ? "id:".$_->id 
-	           : $_->can('primary_id') ? "id:".$_->primary_id     # for inserting into the gbrowse search field
+	my $fid   =  $_->can('primary_id') ? "id:".$_->primary_id      # for inserting into the gbrowse search field
+	           : $_->can('id')         ? "id:".$_->id
                    : $class                ? "$class:$name" 
                    : $name;
 	my $id    = $self->feature2id($_);             # as an internal <div> id for hilighting
@@ -294,12 +299,14 @@ sub hits_table {
 	    -onMouseOut =>"k_unhilite_feature('$id')",
 	   },
 	    th({-align=>'left'},a({-href=>"$url$fid"},$name)),
+	    td($_->method),
 	    td($desc),
 	    td(a({-href=>"$url$pos"},$pos)),
 	    td($_->score || $na)
 	    )
     } sort {
-	$sort_order->{$a->seq_id} <=> $sort_order->{$b->seq_id}
+	$b->score    <=> $a->score
+	|| $sort_order->{$a->seq_id} <=> $sort_order->{$b->seq_id}
         || $a->start <=> $b->start
 	|| $a->end   <=> $b->end
     } @hits;
@@ -313,6 +320,7 @@ sub hits_table {
 		  TR(
 		      th({-align=>'left'},
 			 [$self->trans('NAME'),
+			  $self->trans('Type'),
 			  $self->trans('Description'),
 			  $self->trans('Position'),
 			  $self->trans('score')

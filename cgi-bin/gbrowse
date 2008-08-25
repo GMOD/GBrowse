@@ -4,6 +4,7 @@ use strict;
 use lib
     '/home/lstein/projects/Generic-Genome-Browser-Trunk/libnew',
     '/home/lstein/projects/bioperl-live',
+    '/home/lstein/projects/CGI.pm',
     ;
 
 use constant CONF_FILE =>

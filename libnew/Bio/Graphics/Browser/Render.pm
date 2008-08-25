@@ -6,7 +6,7 @@ use warnings;
 use JSON;
 use Digest::MD5 'md5_hex';
 use CGI qw(:standard param request_method header url iframe img span div br center);
-use Carp 'croak';
+use Carp 'croak','cluck';
 
 use Bio::Graphics::Browser::I18n;
 use Bio::Graphics::Browser::PluginSet;
@@ -124,13 +124,16 @@ sub run {
 
   my $source = $self->session->source;
   if (CGI::path_info() ne "/$source") {
-    my $args = CGI::query_string();
-    my $url  = CGI::url(-absolute=>1,-path_info=>0);
-    $url .= "/$source";
-    $url .= "?$args" if $args;
-    print CGI::redirect($url);
-    warn "redirecting from $ENV{REQUEST_URI} to $url";
-    return;
+#      CGI::delete('source');
+      my $args = CGI::query_string();
+      my $url  = CGI::url(-absolute=>1,-path_info=>0);
+      $url .= "/".CGI::escape($source);
+#      $url .= "?$args" if $args;  # no args!
+      # clear out some of the session variables that shouldn't transfer
+      delete $self->state->{name};
+      delete $self->state->{q};
+      print CGI::redirect($url);
+      return;
   }
 
   $self->init_database();
@@ -526,7 +529,7 @@ sub render_body {
 
   if ($region->feature_count > 1) {
       print $self->render_navbar();
-      print $self->render_multiple_choices($features);
+      print $self->render_multiple_choices($features,$self->state->{name});
       print $self->render_config();
   }
 
@@ -808,21 +811,31 @@ sub segment {
 
 sub whole_segment {
   my $self    = shift;
+
+  return $self->{whole_segment} if exists $self->{whole_segment};
+
   my $segment = $self->segment;
   my $factory = $segment->factory;
 
   # the segment class has been deprecated, but we still must support it
   my $class   = eval {$segment->seq_id->class} || eval{$factory->refclass};
 
+  $factory->debug(0);
   my ($whole_segment) = $factory->segment(-class=>$class,
 					  -name=>$segment->seq_id);
+  $factory->debug(0);
+
   $whole_segment   ||= $segment;  # just paranoia
-  $whole_segment;
+  $self->{whole_segment} = $whole_segment;
 }
 
 sub region_segment {
     my $self          = shift;
     my $segment       = $self->segment;
+    return $self->{region_segment} 
+       if exists $self->{region_segment};
+
+
     my $whole_segment = $self->whole_segment;
     my $settings      = $self->state;
     my $factory       = $segment->factory;
@@ -844,7 +857,7 @@ sub region_segment {
     $region_segment ||= $segment;    # just paranoia
     return $region_segment;
 
-    return $region_segment;
+    return $self->{region_segment} = $region_segment;
 }
 
 # ========================= plugins =======================

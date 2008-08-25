@@ -1008,9 +1008,10 @@ sub add_features_to_track {
 
   my %iterators;
   for my $db (keys %db2db) {
-    my @types_in_this_db = map { $source->label2type($_,$length) } keys %{$db2label{$db}};
-    my $iterator         = $self->get_iterator($db2db{$db},$segment,\@types_in_this_db);
-    $iterators{$iterator} = $iterator;
+      my @types_in_this_db = map { $source->label2type($_,$length) } keys %{$db2label{$db}};
+      next unless @types_in_this_db;
+      my $iterator         = $self->get_iterator($db2db{$db},$segment,\@types_in_this_db);
+      $iterators{$iterator} = $iterator;
   }
 
   my (%groups,%feature_count,%group_pattern,%group_field);
@@ -1221,10 +1222,11 @@ sub get_iterator {
   # means that the reference sequence (e.g. the chromosome) is
   # repeated in each database, even if it isn't the primary one :-(
   if ($db->isa('Bio::DB::SeqFeature::Store')) {
-      return $db->get_seq_stream(-type   => $feature_types,
-				 -seq_id => $segment->seq_id,
-				 -start  => $segment->start,
-				 -end    => $segment->end);
+      my @args = (-type   => $feature_types,
+		  -seq_id => $segment->seq_id,
+		  -start  => $segment->start,
+		  -end    => $segment->end);
+      return $db->get_seq_stream(@args);
   }
 
   my $db_segment;

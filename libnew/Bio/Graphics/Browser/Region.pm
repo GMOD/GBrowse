@@ -26,7 +26,7 @@ sub db     { shift->{db}     }
 sub feature_count { 
     my $self = shift;
     my $features = $self->features;
-    return unless $features;
+    return 0 unless $features;
     return scalar @$features;
 }
 
@@ -82,7 +82,7 @@ sub search_features {
   my $db    = $self->db;
   my $state = $self->state;
   $search_term ||= $state->{name};
-  defined $search_term or return;
+  defined $search_term && length $search_term > 0 or return;
 
   my $features = $self->search_db($search_term);
   $self->features($features);
@@ -277,7 +277,7 @@ sub _feature_keyword_search {
 
   my @results;
   for my $r (@matches) {
-    my ($name,$description,$score) = @$r;
+    my ($name,$description,$score,$type,$id) = @$r;
     my ($seg) = $db->segment($name) or next;
     push @results,Bio::Graphics::Feature->new(-name   => $name,
 					      -class  => eval{$name->class} || undef,
@@ -286,6 +286,8 @@ sub _feature_keyword_search {
 					      -ref    => $seg->abs_ref,
 					      -start  => $seg->abs_start,
 					      -end    => $seg->abs_end,
+					      -type   => $type   || 'feature',
+					      -primary_id => $id || undef,
 					      -factory=> $db);
 
   }

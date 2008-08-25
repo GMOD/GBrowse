@@ -35,9 +35,14 @@ sub render_navbar {
                 start_form(
                     -name => 'searchform',
                     -id   => 'searchform',
-                    -onSubmit =>
-                    'Controller.update_coordinates("set segment " + document.searchform.name.value);return false;',
+                    -onSubmit => q[ 
+                        Controller.update_coordinates("set segment " + document.searchform.name.value); 
+                        var return_val = (document.searchform.force_submit.value==1); 
+                        document.searchform.force_submit.value=0;
+                        return return_val;
+                    ],
                 ),
+                hidden(-name=>'force_submit',-value=>0),
 			    textfield(-name=> 'name',
 				      -id  => 'landmark_search_field',
 				      -size=> 25,

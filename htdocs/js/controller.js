@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.33 2008-08-22 14:57:00 lstein Exp $
+ $Id: controller.js,v 1.34 2008-08-25 20:45:02 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -25,6 +25,12 @@ var GBrowseController = Class.create({
   
   update_coordinates:
   function (action) {
+
+    // submit search form if the detail panel doesn't exist
+    if ( null == $('detail_panels') ){
+        document.searchform.force_submit.value = 1; 
+        document.searchform.submit(); 
+    }
 
     this.debug_status             = 'updating coords';
     //Grey out image

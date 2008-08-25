@@ -3,7 +3,7 @@
  rubber.js -- a base class for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.5 2008-08-06 21:09:42 mwz444 Exp $
+ $Id: rubber.js,v 1.6 2008-08-25 20:32:06 mwz444 Exp $
 
 */
 
@@ -104,8 +104,9 @@ SelectArea.prototype.recenter = function(event) {
     start = tmp;
   }
     
-  document.searchform.name.value = self.ref + ':' + start + '..' + end;
-  document.searchform.submit();
+  self.currentSegment = self.ref + ':' + start + '..' + end;
+  document.searchform.name.value = self.currentSegment;
+  self.submit();
 }
 
 // Cross-browser element coordinates

@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.12 2008-07-18 10:41:53 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.13 2008-08-25 18:34:05 sheldon_mckay Exp $
 
 =head1 NAME
 
@@ -90,7 +90,7 @@ use constant DEFAULT_FINE_ZOOM => 1000;
 use constant STYLE             => '/gbrowse/gbrowse.css';
 use constant MAX_SEGMENT       => 1_000_000;
 use constant OVERVIEW_RATIO    => 0.9;
-
+use constant JS                => '/gbrowse/js';
 
 use vars '@ISA';
 
@@ -321,14 +321,17 @@ sub dump {
   my $conf = $self->configuration;
   $self->reconfigure;
 
+  my $js            = $self->browser_config->relative_path_setting('js') || JS;
+
   # dumpers provide their own headers, so make sure boiler plate
   # stuff is included
   my $style_sheet = $self->browser_config->setting('stylesheet') || STYLE;
   my $head = <<END;
-<script src="/gbrowse/js/yahoo-dom-event.js" type="text/javascript"></script>
-<script src="/gbrowse/js/rubber.js" type="text/javascript"></script>
-<script src="/gbrowse/js/primerSelect.js" type="text/javascript"></script>
-<script src="/gbrowse/js/balloon.js" type="text/javascript"></script>
+<script src="$js/yahoo-dom-event.js" type="text/javascript"></script>
+<script src="$js/rubber.js" type="text/javascript"></script>
+<script src="$js/primerSelect.js" type="text/javascript"></script>
+<script src="$js/balloon.config.js" type="text/javascript"></script>
+<script src="$js/balloon.js" type="text/javascript"></script>
 <script>
 var balloon = new Balloon;
   balloon.images              = '/gbrowse/images/balloons';

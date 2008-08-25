@@ -32,7 +32,12 @@ sub render_navbar {
   my $settings = $self->state;
 
   my $searchform = join '',(
-			    start_form(-name=>'searchform',-id=>'searchform'),
+                start_form(
+                    -name => 'searchform',
+                    -id   => 'searchform',
+                    -onSubmit =>
+                    'Controller.update_coordinates("set segment " + document.searchform.name.value);return false;',
+                ),
 			    textfield(-name=> 'name',
 				      -id  => 'landmark_search_field',
 				      -size=> 25,

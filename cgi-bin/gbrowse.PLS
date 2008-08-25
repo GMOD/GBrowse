@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.101 2008-08-11 13:03:21 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.102 2008-08-25 15:53:55 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1929,9 +1929,9 @@ sub upload_table {
   $cTable .= TR({-class=>'uploadbody'},
 		th({-width=>'20%',-align=>'right'},$CONFIG->tr('Upload_File')),
 		td({-colspan=>3},
-		   filefield(-size=>80,-name=>'upload_annotations'),
+		   filefield(-size=>80,       -name=>'upload_annotations'),
 		   '&nbsp;',
-		   submit(-name=>$CONFIG->tr('Upload')),
+		   submit(-name=>'upload',    -value=>$CONFIG->tr('Upload')),
 		   '&nbsp;',
 		   submit(-name=>'new_upload',-value=>$CONFIG->tr('New')),
 		  )
@@ -2607,7 +2607,7 @@ sub handle_uploads {
     return 0;  # this will cause an exit from the script
   }
 
-  if (param('Upload') && (my $f = param('upload_annotations'))) {
+  if ((param('Upload')||param('upload')) && (my $f = param('upload_annotations'))) {
     $UPLOADED_SOURCES->upload_file($f);
   }
 

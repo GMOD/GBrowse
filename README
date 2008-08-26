@@ -17,7 +17,17 @@ You have been warned!!!
 
 **********************
 
- - To install on your own system, please see the INSTALL file.
+ - You will need a bunch of Perl prerequisites, including bioperl (the
+   live SVN version), CGI::Session, GD, Storable, LWP, LWP::Parallel,
+   IO::String, Text::Shellwords, Digest::MD5, and maybe others. Please
+   run "perl Makefile.PL; make; make test" to check that all
+   prerequisites are installed.
+
+ - To configure Apache to run GBrowse without installing it
+   permanently (HIGHLY recommended), see README.testing.
+
+ - To install on your own system, please see the INSTALL file (this
+   file may be out of date).
 
  - To learn how to use the system, please see docs/tutorial.  After
    installing on your system, the tutorial will also be available at
@@ -40,8 +50,8 @@ Support is available from the discussion groups and mailing lists at
 www.gmod.org.
 
 Lincoln Stein & the GMOD team
-lstein@cshl.org
-September 1, 2005
+lincoln.stein@gmail.com
+August 2008
 
 
 --- AUTHORS ---

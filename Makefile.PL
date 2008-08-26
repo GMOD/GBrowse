@@ -248,6 +248,9 @@ WriteMakefile(
 				 File::Temp        => 0,
 				 Class::Base       => 0,
 				 Digest::MD5       => 0,	
+				 Storable          => 0,
+				 LWP               => 0,
+				 LWP::Parallel     => 0,
 				},
 	      PL_FILES       => {
                                  'install_util/htdocs_install.PLS' => 'install_util/htdocs_install.pl',

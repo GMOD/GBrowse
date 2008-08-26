@@ -333,7 +333,6 @@ sub render_multiple_choices {
 
     my $karyotype = Bio::Graphics::Karyotype->new(source   => $self->data_source,
 						  language => $self->language);
-    $karyotype->add_hits($features);
     return $karyotype->to_html($terms2hilite);
 }
 

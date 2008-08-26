@@ -146,7 +146,8 @@ sub lookup_features {
   $stop  *= $divisor if defined $stop;
 
   # automatic classes to try
-  my @classes = $class ? ($class) : (split /\s+/,$source->global_setting('automatic classes')||'');
+  my @classes = $class ? ($class) 
+                       : (split /\s+/,$source->global_setting('automatic classes')||'');
 
   my $features;
 
@@ -155,12 +156,15 @@ sub lookup_features {
   }
 
  SEARCHING:
-  for my $n ([$name,$class,$start,$stop],[$literal_name,$refclass,undef,undef]) {
+  for my $n ([$name,$class,$start,$stop],
+	     [$literal_name,$refclass,undef,undef]) {
 
     my ($name_to_try,$class_to_try,$start_to_try,$stop_to_try) = @$n;
 
     # first try the non-heuristic search
-    $features  = $self->_feature_get($db,$name_to_try,$class_to_try,$start_to_try,$stop_to_try);
+    $features  = $self->_feature_get($db,
+				     $name_to_try,$class_to_try,
+				     $start_to_try,$stop_to_try);
     last SEARCHING if @$features;
 
     # heuristic fetch. Try various abbreviations and wildcards
@@ -184,7 +188,8 @@ sub lookup_features {
 
     # IMPORTANT CHANGE: we used to put stars at the beginning 
     # and end, but this killed performance!
-    push @sloppy_names,"$name_to_try*" if length $name_to_try > 3 and $name_to_try !~ /\*$/;
+    push @sloppy_names,"$name_to_try*" 
+	if length $name_to_try > 3 and $name_to_try !~ /\*$/;
 
     for my $n (@sloppy_names) {
       for my $c (@classes) {
@@ -215,14 +220,21 @@ sub _feature_get {
   push @argv,(-end   => $stop)  if defined $stop;
 
   my @features;
-  @features  = grep {$_->length} $db->get_feature_by_name(@argv)   if !defined($start) && !defined($stop);
-  @features  = grep {$_->length} $db->get_features_by_alias(@argv) if !@features &&
-    !defined($start) &&
-      !defined($stop) &&
-	$db->can('get_features_by_alias');
+  @features  = grep {$_->length} $db->get_feature_by_name(@argv)   
+      if !defined($start) && !defined($stop);
 
-  @features  = grep {$_->length} $db->segment(@argv)               if !@features && $name !~ /[*?]/;
+  warn "features = @features";
+
+  @features  = grep {$_->length} $db->get_features_by_alias(@argv) 
+      if !@features
+      && !defined($start) 
+      && !defined($stop) 
+      && $db->can('get_features_by_alias');
+
+  @features  = grep {$_->length} $db->segment(@argv)               
+      if !@features && $name !~ /[*?]/;
   return [] unless @features;
+
 
   # Deal with multiple hits.  Winnow down to just those that
   # were mentioned in the config file.
@@ -242,13 +254,14 @@ sub _feature_get {
 
   # consolidate features that have same name and same reference sequence
   # and take the largest one.
-  my %longest;
-  foreach (@filtered) {
-    my $n = $_->display_name.$_->abs_ref.(eval{$_->version}||'').(eval{$_->class}||'');
-    $longest{$n} = $_ if !defined($longest{$n}) || $_->length > $longest{$n}->length;
-  }
+#  my %longest;
+#  foreach (@filtered) {
+#    my $n = $_->display_name.$_->abs_ref.(eval{$_->version}||'').(eval{$_->class}||'');
+#    $longest{$n} = $_ if !defined($longest{$n}) || $_->length > $longest{$n}->length;
+#  }
 
-  return [values %longest];
+#  return [values %longest];
+  return \@features;
 }
 
 sub _feature_keyword_search {

@@ -1,6 +1,6 @@
 package Bio::Graphics::Karyotype;
 
-# $Id: Karyotype.pm,v 1.5 2008-08-25 23:10:42 lstein Exp $
+# $Id: Karyotype.pm,v 1.6 2008-08-26 14:58:45 lstein Exp $
 # Utility class to create a display of a karyotype and a series of "hits" on the individual chromosomes
 # Used for searching
 
@@ -98,7 +98,7 @@ sub sort_sub {
 }
 
 sub to_html {
-  my $self     = shift;
+  my $self        = shift;
   my $terms2hilite = shift;
 
   my $sort_order = $self->seqid_order;  # returns a hash of {seqid=>index}
@@ -114,7 +114,9 @@ sub to_html {
     my $panel  = $self->{panels}{$seqid}{panel};
 
     my $url    = $source->generate_image($panel->gd);
-    my $margin = $self->chrom_height - $panel->gd->height;
+    my $margin = Bio::Graphics::Panel->can('rotate') 
+	         ? $self->chrom_height - $panel->gd->height
+                 : 5;
 
     my $imagemap  = $self->image_map(scalar $panel->boxes,"${seqid}.");
     $html     .= 
@@ -129,7 +131,6 @@ sub to_html {
   }
 
   my $table = $self->hits_table($terms2hilite);
-
   return $html.br({-clear=>'all'}).$table;
 }
 
@@ -229,7 +230,13 @@ sub generate_panels {
     if (my @hits  = $self->hits($chrom->seq_id)) {
       $panel->add_track(\@hits,
 #			-glyph   => 'diamond',
-			-glyph   => 'generic',
+#			-glyph   => 'generic',
+			-glyph   => sub {
+			    my $feature = shift;
+			    return $feature->length/$chrom->length > 0.05
+				? 'generic'
+				: 'diamond';
+			},
 			-height  => 6,
 			-bgcolor => 'red',
 			-fgcolor => 'red',
@@ -237,15 +244,17 @@ sub generate_panels {
 	  );
     }
 
-    $panel->add_track($chrom,
-		      -glyph      => 'ideogram',                   # not an error, will rotate image later
-		      -height     => $chrom_width,
-		      -bgcolor    => $band_colors,
-		      -bgfallback => $fallback_color,
-		      -label    => 0,
-		      -description => 0);
+    my $method = $panel->can('rotate') ? 'add_track' : 'unshift_track';
 
-    $panel->rotate(1);      # need bioperl-live from 20 August 2008 for this to work
+    $panel->$method($chrom,
+		    -glyph      => 'ideogram',                   # not an error, will rotate image later
+		    -height     => $chrom_width,
+		    -bgcolor    => $band_colors,
+		    -bgfallback => $fallback_color,
+		    -label    => 0,
+		    -description => 0);
+
+    $panel->rotate(1) if $panel->can('rotate');      # need bioperl-live from 20 August 2008 for this to work
     $results{$chrom->seq_id}{chromosome} = $chrom;
     $results{$chrom->seq_id}{panel}      = $panel;
   }
@@ -256,9 +265,7 @@ sub generate_panels {
 sub feature2id {
     my $self              = shift;
     my $feature           = shift;
-    my $id = overload::StrVal($feature);
-    my $seqid = $feature->seq_id;
-    return "${seqid}.${id}";
+    return overload::StrVal($feature);
 }
 
 sub hits_table {

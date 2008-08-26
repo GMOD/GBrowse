@@ -78,8 +78,8 @@ ctgA	example	motif	17667	17690	.	+	.	Motif m13 ; Note "DEAD box"
 ctgA	example	motif	18048	18552	.	-	.	Motif m07 ; Note "7-transmembrane"
 ctgA	example	motif	21748	25612	.	+	.	Motif m12 ; Note "kinase"
 ctgA	example	motif	28332	30033	.	-	.	Motif m02 ; Note "HOX"
-ctgA	example	motif	28338	30038	.	-	.	Motif m02 ; Note "HOX paralog"
-ctgB	example	motif	28338	30038	.	-	.	Motif m02 ; Note "HOX duplicate"
+ctgA	example	motif	28338	30038	.	-	.	Motif m02p ; Note "HOX paralog"
+ctgB	example	motif	29000	30000	.	-	.	Motif m02d ; Note "HOX duplicate"
 ctgA	example	match	31785	32359	.	+	.	Match seg01
 ctgA	example	HSP	31785	31939	.	+	.	Match seg01
 ctgA	example	HSP	32329	32359	.	+	.	Match seg01

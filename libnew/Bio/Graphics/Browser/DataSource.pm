@@ -672,7 +672,6 @@ sub make_link {
   croak "Do not call make_link() on the DataSource. Call it on the Render object";
 }
 
-
 =item ($adaptor,@argv) = $dsn->db_settings('track_label')
 
 Return the adaptor and arguments suitable for the database identified
@@ -698,6 +697,11 @@ sub db_settings {
   my @argv = ref $args eq 'CODE'
         ? $args->()
 	: shellwords($args||'');
+
+  # Do environment substitutions in the args. Assume that the environment is safe.
+  foreach (@argv) {
+      s/\$ENV{(\w+)}/exists $ENV{$1} ? $ENV{$1} : '$ENV{$1}'/ge;
+  }
 
   # for compatibility with older versions of the browser, we'll hard-code some arguments
   if (my $adaptor = $self->fallback_setting($track => 'adaptor')) {
@@ -772,6 +776,17 @@ sub _all_types {
 			   (map {$self->label2type($_)} $self->labels)
 			   );
   return $self->{_all_types} = \%types;
+}
+
+=item $dsn->clear_cache
+
+Empty out our cache of database settings and fetch anew from config file
+
+=cut
+
+sub clear_cache {
+    my $self = shift;
+    %DB_SETTINGS = ();
 }
 
 =head2 generate_image

@@ -11,7 +11,7 @@ use File::Path 'rmtree';
 use FindBin '$Bin';
 use File::Spec;
 
-use constant TEST_COUNT => 55;
+use constant TEST_COUNT => 69;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 BEGIN {
@@ -49,6 +49,24 @@ ok($globals->tmpdir_url,'/tmpimages');
 ok($globals->tmpdir_path,'/tmp/gbrowse_testing/tmpimages');
 ok($globals->image_url,'/gbrowse/images');
 ok($globals->help_url,'/gbrowse/.');
+
+# does setting the environment variable change things?
+@ENV{qw(GBROWSE_CONF GBROWSE_DOCS GBROWSE_ROOT)} = ('/etc/gbrowse','/usr/local/gbrowse','/');
+ok($globals->config_base,'/etc/gbrowse');
+ok($globals->htdocs_base,'/usr/local/gbrowse');
+ok($globals->url_base,'/');
+
+ok($globals->plugin_path,'/etc/gbrowse/../../../conf/plugins');
+ok($globals->language_path,'/etc/gbrowse/languages');
+ok($globals->templates_path,'/etc/gbrowse/templates');
+ok($globals->moby_path,'/etc/gbrowse/MobyServices');
+
+ok($globals->js_url,'/js');
+ok($globals->button_url,'/images/buttons');
+ok($globals->image_url,'/images');
+ok($globals->help_url,'/.');
+
+delete $ENV{$_} foreach qw(GBROWSE_CONF GBROWSE_DOCS GBROWSE_ROOT);
 
 # exercise tmpdir a bit
 rmtree('/tmp/gbrowse_testing/images',0,0);  # in case it was left over
@@ -159,5 +177,19 @@ ok(exists $tracks{Variation});
 
 # test that make_link should produce a fatal error
 ok(!eval{$source->make_link();1});
+
+# test that environment variable interpolation is working in dbargs
+$source = $globals->create_data_source('yeast_chr1');
+$ENV{GBROWSE_DOCS} = '/foo/bar';
+my ($adapter,@args) = $source->db_settings;
+ok($args[3]=~m!^/foo/bar!);
+
+$ENV{GBROWSE_DOCS} = '/buzz/buzz';
+($adapter,@args) = $source->db_settings;
+ok($args[3]=~m!^/foo/bar!);  # old value cached
+
+$source->clear_cache;
+($adapter,@args) = $source->db_settings;
+ok($args[3]=~m!^/buzz/buzz!);  # old value cached
 
 exit 0;

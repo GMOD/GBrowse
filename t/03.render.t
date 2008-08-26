@@ -141,9 +141,9 @@ $render->update_coordinates;
 ok($render->state->{name},'ctgA:4901..5000');
 
 # Is the asynchronous rendering working
-my ($render_object,$retrieve_object);
+my ($render_object,$retrieve_object,$status,$mime);
 $CGI::Q = new CGI('right+5000+bp.x=yes;navigate=1');
-$render_object = $render->asynchronous_event();
+($status,$mime,$render_object) = $render->asynchronous_event();
 if (ok($render_object) and ok($render_object->{'track_keys'})){
 
   # Check the retrieve_multiple option for asynch render
@@ -162,7 +162,7 @@ if (ok($render_object) and ok($render_object->{'track_keys'})){
 
 # Check Add Track
 $CGI::Q = new CGI('track_name=Motif;add_track=1');
-$render_object = $render->asynchronous_event();
+($status,$mime,$render_object) = $render->asynchronous_event();
 if (ok($render_object) and ok($render_object->{'track_data'})){
 
   my $track_data = $render_object->{'track_data'};
@@ -361,7 +361,7 @@ exit 0;
 sub check_multiple_renders {
   my $query_str = shift;
   $CGI::Q = new CGI($query_str);
-  my $retrieve_object = $render->asynchronous_event();
+  my ($status,$mime,$retrieve_object) = $render->asynchronous_event();
   if ( ok($retrieve_object) and ok( $retrieve_object->{'track_html'} ) ) {
     foreach my $track_div_id (
       keys %{ $retrieve_object->{'track_html'} || {} } )

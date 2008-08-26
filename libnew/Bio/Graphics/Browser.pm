@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.10 2008-08-13 20:27:55 lstein Exp $
+# $Id: Browser.pm,v 1.11 2008-08-26 20:29:46 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -67,7 +67,9 @@ sub resolve_path {
   my $path_type = shift; # one of "config" "htdocs" or "url"
   return unless $path;
   return $path if $path =~ m!^/!;  # absolute path
-  my $base = $self->setting(general => "${path_type}_base") or return $path;
+  my $method = ${path_type}."_base";
+  $self->can($method) or croak "path_type must be one of 'config','htdocs', or 'url'";
+  my $base   = $self->$method or return $path;
   return File::Spec->catfile($base,$path);
 }
 
@@ -89,9 +91,9 @@ sub url_path {
   $self->resolve_path($self->setting(general => $option),'url');
 }
 
-sub config_base { shift->setting(general=>'config_base')}
-sub htdocs_base { shift->setting(general=>'htdocs_base')}
-sub url_base    { shift->setting(general=>'url_base')   }
+sub config_base { $ENV{GBROWSE_CONF} || shift->setting(general=>'config_base')|| '/etc/apache2/gbrowse' }
+sub htdocs_base { $ENV{GBROWSE_DOCS} || shift->setting(general=>'htdocs_base')|| '/var/www/gbrowse'     }
+sub url_base    { $ENV{GBROWSE_ROOT} || shift->setting(general=>'url_base')   || '/gbrowse'             }
 
 # these are url-relative options
 sub button_url  { shift->url_path('buttons')            }

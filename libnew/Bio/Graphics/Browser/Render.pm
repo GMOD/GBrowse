@@ -120,15 +120,13 @@ sub run {
   my $fh   = shift || \*STDOUT;
   my $old_fh = select($fh);
 
-  return if $self->asynchronous_event;
+  return if $self->run_asynchronous_event;
 
   my $source = $self->session->source;
   if (CGI::path_info() ne "/$source") {
-#      CGI::delete('source');
       my $args = CGI::query_string();
       my $url  = CGI::url(-absolute=>1,-path_info=>0);
       $url .= "/".CGI::escape($source);
-#      $url .= "?$args" if $args;  # no args!
       # clear out some of the session variables that shouldn't transfer
       delete $self->state->{name};
       delete $self->state->{q};
@@ -148,6 +146,28 @@ sub run {
   $self->session->flush;
 }
 
+# this prints out the HTTP data from an asynchronous event
+sub run_asynchronous_event {
+    my $self = shift;
+    my ($status,$mime_type,$data) = $self->asynchronous_event
+	or return;
+
+    if ($status == 204) { # no content
+	print CGI::header( -status => '204 No Content' );
+    }
+    elsif ($mime_type eq 'application/json') {
+	print CGI::header(-status=>$status,
+			  -type  => $mime_type),
+	      JSON::to_json($data);
+    }
+    else {
+	print CGI::header(-status => $status,
+			  -type   => $mime_type),
+	       $data;
+    }
+    return 1;  # no further processing needed
+}
+
 # handle asynchronous events
 #
 # asynchronous requests:
@@ -157,6 +177,8 @@ sub run {
 # label[]=<label1>,label[]=<label2>...  Change track order
 # render=<label1>,render=<label2>...    Render the specified tracks
 # navigate=
+#
+# returns ($http_status,$mime_type,$body_data)
 sub asynchronous_event {
     my $self     = shift;
     my $settings = $self->state;
@@ -185,12 +207,7 @@ sub asynchronous_event {
             region_scale_bar   => $region_scale_return_object,
             detail_scale_bar   => $detail_scale_return_object,
         };
-
-        print CGI::header('application/json');
-        print JSON::to_json($return_object);
-
-        # return the object for testing purposes
-        return $return_object;
+	return (200,'application/json',$return_object);
     }
 
     if ( my $action = param('first_render') ) {
@@ -207,20 +224,14 @@ sub asynchronous_event {
             segment_info => $segment_info_object,
             track_keys   => $track_keys,
         };
-        print CGI::header('application/json');
-        print JSON::to_json($return_object);
-
-        # return the object for testing purposes
-        return $return_object;
+	return (200,'application/json',$return_object);
     }
 
     if ( my $element = param('update') ) {
 
         #warn "updating element";
         my $html = $self->asynchronous_update_element($element);
-        print CGI::header('text/html');
-        print $html;
-        return 1;
+	return (200,'text/html',$html);
     }
 
     if ( param('retrieve_multiple') ) {
@@ -241,11 +252,7 @@ sub asynchronous_event {
             ) || '';
         }
         my $return_object = { track_html => \%track_html, };
-        print CGI::header('application/json');
-        print JSON::to_json($return_object);
-
-        # return the object for testing purposes
-        return $return_object;
+	return (200,'application/json',$return_object);
     }
 
     if ( my $action = param('add_track') ) {
@@ -287,11 +294,7 @@ sub asynchronous_event {
         }
 
         my $return_object = { track_data => \%track_data, };
-        print CGI::header('application/json');
-        print JSON::to_json($return_object);
-
-        # return the object for testing purposes
-        return $return_object;
+	return (200,'application/json',$return_object);
     }
 
     if ( my $action = param('rerender_track') ) {
@@ -301,20 +304,14 @@ sub asynchronous_event {
         my $track_keys = $self->begin_individual_track_render($track_name);
 
         my $return_object = { track_keys => $track_keys, };
-        print CGI::header('application/json');
-        print JSON::to_json($return_object);
-
-        # return the object for testing purposes
-        return $return_object;
+	return (200,'application/json',$return_object);
     }
 
     if ( param('reconfigure_plugin') ) {
 
         # init_plugins will do the configure call needed
         $self->init_plugins();
-        print CGI::header( -status => '204 No Content' );
-
-        return 1;
+	return (204,'text/plain',undef);
     }
 
     # toggle the visibility of sections by looking for "div_visible_*"
@@ -354,16 +351,15 @@ sub asynchronous_event {
         $self->set_segment($seg);
 
         my $deferred_data = $self->request_tracks( \@labels );
-
-        print CGI::header('application/json'), JSON::to_json($deferred_data);
+	return (200,'application/json',$deferred_data);
         $self->session->flush if $self->session;
         return 1;
     }
 
     return unless $events;
     warn "processing asynchronous event(s)";
-    print CGI::header('204 No Content');
-    $self->session->flush;
+    return (204,'text/plain',undef);
+    $self->session->flush if $self->session;
     1;
 }
 

@@ -296,6 +296,20 @@ sub asynchronous_event {
         my $return_object = { track_data => \%track_data, };
 	return (200,'application/json',$return_object);
     }
+    if ( param('set_track_visibility') ) {
+        my $visible    = param('visible');
+        my $track_name = param('track_name');
+
+        # warn "Setting Track Visibility $track_name to $visible";
+        if ($visible) {
+            $self->add_track_to_state($track_name);
+        }
+        else {
+            $self->remove_track_from_state($track_name);
+        }
+
+        return (204,'text/plain',undef);
+    }
 
     if ( my $action = param('rerender_track') ) {
         my $track_name = param('track_name');
@@ -1166,6 +1180,14 @@ sub add_track_to_state {
   push @{ $state->{tracks} }, $label 
     unless ( grep /^$label$/, @{ $state->{tracks} || [] } );
   $state->{features}{$label} = {visible=>1,options=>0,limit=>0};
+}
+
+sub remove_track_from_state {
+  my $self  = shift;
+  my $label = shift;
+  my $state  = $self->state;
+
+  $state->{features}{$label} = {visible=>0,options=>0,limit=>0};
 }
 
 sub update_state_from_cgi {

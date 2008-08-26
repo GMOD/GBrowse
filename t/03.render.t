@@ -12,7 +12,7 @@ use IO::String;
 use CGI;
 use FindBin '$Bin';
 
-use constant TEST_COUNT => 110;
+use constant TEST_COUNT => 114;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;
@@ -178,6 +178,17 @@ if (ok($render_object) and ok($render_object->{'track_data'})){
 
   check_multiple_renders($query_str)
 }
+
+# Check setting visibility
+$CGI::Q = new CGI('set_track_visibility=1;track_name=Motif;visible=0');
+($status,$mime,$render_object) = $render->asynchronous_event();
+ok($status, 204);
+ok($render->state()->{features}{'Motifs'}{'visible'},0);
+
+$CGI::Q = new CGI('set_track_visibility=1;track_name=Motif;visible=1');
+($status,$mime,$render_object) = $render->asynchronous_event();
+ok($status, 204);
+ok($render->state()->{features}{'Motifs'}{'visible'},0);
 
 # Try to fetch the segment.
 ok($render->init_database);

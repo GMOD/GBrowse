@@ -24,17 +24,19 @@ function gbToggleTrack (button) {
   var visible    = button.checked;
   var element    = document.getElementById("track_"+track_name);
   if (visible) {
-    if (element) { 
-      element.style.display="block";
-    }
-    else{
+    if (!element) { 
       Controller.add_track(track_name);
+    }
+    else if (element.style.display == "none") { 
+      element.style.display="block";
+      Controller.set_track_visibility(track_name, 1);
     }
     return false; 
   }
   else {
-    if (element) { 
+    if (element && element.style.display != "none") { 
       element.style.display="none";
+      Controller.set_track_visibility(track_name, 0);
     }
   }
 }

@@ -136,6 +136,8 @@ sub run {
       return;
   }
 
+  # Handle cookieless load
+  $self->set_default_state();
   $self->init_database();
   $self->init_plugins();
   $self->init_remote_sources();
@@ -1111,10 +1113,14 @@ sub get_external_presets {
 #
 ##################################################################3
 
-sub update_state {
+sub set_default_state {
   my $self = shift;
   my $state = $self->state;
   $self->default_state if !%$state or param('reset');
+}
+
+sub update_state {
+  my $self = shift;
   $self->update_state_from_cgi;
 }
 

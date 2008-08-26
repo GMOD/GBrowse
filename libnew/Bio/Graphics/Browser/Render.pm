@@ -356,7 +356,7 @@ sub asynchronous_event {
         my $deferred_data = $self->request_tracks( \@labels );
 
         print CGI::header('application/json'), JSON::to_json($deferred_data);
-        $self->session->flush;
+        $self->session->flush if $self->session;
         return 1;
     }
 

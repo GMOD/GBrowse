@@ -63,7 +63,7 @@ my $features = $region->search_features('Contig:ctgA');
 ok($features);
 ok(ref $features,'ARRAY');
 ok(scalar @$features,1);
-ok($features->[0]->method,'contig');
+ok($features->[0]->method,'chromosome');
 ok($features->[0]->start,1);
 ok($features->[0]->end,50000);
 
@@ -71,7 +71,7 @@ $features    = $region->search_features('Contig:ctgA:10001..20000');
 ok($features->[0]->length,10000);
 
 $features    = $region->search_features('HOX');
-ok(scalar @$features,3);
+ok(scalar @$features,4);
 
 $features    = $region->search_features('Match:seg*');
 ok(scalar @$features,2);
@@ -113,9 +113,9 @@ my $search = Bio::Graphics::Browser::RegionSearch->new(
     );
 $search->init_databases();
 $features    = $search->search_features_locally('HOX');
-ok(scalar @$features,3);
+ok(scalar @$features,4);
 
-$features    = $search->search_features_locally('Binding_site:B07');
+$features    = $search->search_features_locally('Binding_site:B07'); # test removal of duplicate features
 ok(scalar @$features,1);
 
 $features    = $search->search_features_locally('My_feature:f12');

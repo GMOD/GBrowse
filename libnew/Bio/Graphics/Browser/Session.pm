@@ -18,7 +18,7 @@ sub new {
 
 sub flush {
   my $self = shift;
-  $self->{session}->flush;
+  $self->{session}->flush if $self->{session};
 }
 
 sub modified {

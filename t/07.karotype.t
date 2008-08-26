@@ -12,7 +12,7 @@ use IO::String;
 use CGI;
 use FindBin '$Bin';
 
-use constant TEST_COUNT => 4;
+use constant TEST_COUNT => 3;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;
@@ -70,7 +70,7 @@ $kg->add_hits(\@motifs);
 my $html    = $kg->to_html;
 ok($html);
 my @imgs = $html =~ /(<img)/g;
-ok(scalar @imgs,17);
+ok(scalar @imgs,17,'Expected exactly 17 image tags');
 
 if (0) { # set this to true to see the image
     $html =~ s!/tmpimages!/tmp/gbrowse_testing/tmpimages!g;

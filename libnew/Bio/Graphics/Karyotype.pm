@@ -1,6 +1,6 @@
 package Bio::Graphics::Karyotype;
 
-# $Id: Karyotype.pm,v 1.6 2008-08-26 14:58:45 lstein Exp $
+# $Id: Karyotype.pm,v 1.7 2008-08-26 18:40:50 lstein Exp $
 # Utility class to create a display of a karyotype and a series of "hits" on the individual chromosomes
 # Used for searching
 
@@ -271,7 +271,6 @@ sub feature2id {
 sub hits_table {
     my $self                  = shift;
     my $term2hilite           = shift;
-    warn "term2hilite = $term2hilite";
 
     my @hits = $self->hits;
 
@@ -280,15 +279,13 @@ sub hits_table {
     my $regexp = join '|',($term2hilite =~ /(\w+)/g) 
 	if defined $term2hilite;
 
-    warn "regexp = $regexp";
-
     my $na   = $self->trans('NOT_APPLICABLE') || '-';
 
     my $sort_order = $self->seqid_order;
     
     # a big long map call here
     my @rows      = map {
-	my $name  = $_->display_name;
+	my $name  = $_->display_name || '';
 	my $class = eval {$_->class};
 	my $fid   =  $_->can('primary_id') ? "id:".$_->primary_id      # for inserting into the gbrowse search field
 	           : $_->can('id')         ? "id:".$_->id
@@ -312,7 +309,7 @@ sub hits_table {
 	    td($_->score || $na)
 	    )
     } sort {
-	$b->score    <=> $a->score
+	($b->score||0)    <=>  ($a->score||0)
 	|| $sort_order->{$a->seq_id} <=> $sort_order->{$b->seq_id}
         || $a->start <=> $b->start
 	|| $a->end   <=> $b->end

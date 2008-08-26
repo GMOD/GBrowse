@@ -6,7 +6,6 @@ use Storable qw(freeze thaw);
 use CGI qw(header param escape unescape);
 use IO::File;
 use File::Basename 'basename';
-use Storable qw(freeze thaw retrieve);
 use Bio::Graphics::Feature;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::I18n;
@@ -18,6 +17,12 @@ use POSIX 'WNOHANG';
 use Carp 'croak';
 
 use constant DEBUG => 0;
+
+BEGIN {
+    use Storable qw(freeze thaw retrieve);
+    $Storable::Deparse = 1;
+    $Storable::Eval    = 1;
+}
 
 sub new {
     my $class       = shift;

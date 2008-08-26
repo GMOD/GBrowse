@@ -73,7 +73,7 @@ ok(my $db = $render->init_database);
 ok($render->db,$db);
 ok($db,$render->db); # should return same thing each time
 ok(ref($db),'Bio::DB::GFF::Adaptor::memory');
-ok(scalar $db->features,52);
+ok(scalar $db->features,53);
 
 ok($render->init_plugins);
 ok(my $plugins = $render->plugins);
@@ -262,21 +262,21 @@ $r = $render->region;
 ok($s = $r->segments);
 ok(@$s,0,"Searching for Foo:f13 should have returned 0 results");
 
-# try fetching something that  matches more than once twice
-# m02 is interesting because there are three entries, two of which are on the same
-# chromosome. Using somewhat dubious logic, we keep the longest of the two.
+# try fetching something that  matches more than once
+# m02 is interesting because there are four entries, but one is a duplicate
+# and should be weeded out
 $CGI::Q = new CGI('name=Motif:m02');
 $render->update_coordinates;
 $r = $render->region;
 ok($s = $r->segments);
-ok(scalar @$s,2,"Motif:m02 should have matched exactly twice, but didn't");
+ok(scalar @$s,3,"Motif:m02 should have matched exactly three times, but didn't");
 
 # try the * match
 $CGI::Q = new CGI('name=Motif:m0*');
 $render->update_coordinates;
 $r = $render->region;
 ok($s = $r->segments);
-ok(scalar @$s,6,"Motif:m0* should have matched exactly 6 times, but didn't");
+ok(scalar @$s,7,"Motif:m0* should have matched exactly seven times, but didn't");
 
 # try keyword search
 $CGI::Q = new CGI('name=kinase');
@@ -291,7 +291,7 @@ $CGI::Q = new CGI('name=motif;plugin_action=Find;plugin=TestFinder');
 $render->update_coordinates;
 $r = $render->region;
 ok($s = $r->segments);
-ok(scalar @$s,11);
+ok(scalar @$s,12);
 
 # something funny with getting render settings
 ok($render->setting('mag icon height') > 0);
@@ -307,7 +307,7 @@ $ENV{'HTTP_ACCEPT_LANGUAGE'} = 'en';
 $render      = Bio::Graphics::Browser::Render::HTML->new($source,$session);
 $render->run($io);
 ok($data =~ /Set-Cookie/);
-ok($data =~ /rendering 4 features/);
+ok($data =~ /the following 4 regions/i);
 
 # try rendering a segment
 $CGI::Q = new CGI('name=ctgA:1..20000;label=Clones-Transcripts-Motifs');

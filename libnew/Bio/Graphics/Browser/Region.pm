@@ -223,8 +223,6 @@ sub _feature_get {
   @features  = grep {$_->length} $db->get_feature_by_name(@argv)   
       if !defined($start) && !defined($stop);
 
-  warn "features = @features";
-
   @features  = grep {$_->length} $db->get_features_by_alias(@argv) 
       if !@features
       && !defined($start) 
@@ -252,15 +250,13 @@ sub _feature_get {
 		|| $fclass eq $class;
   } @features;
 
-  # consolidate features that have same name and same reference sequence
-  # and take the largest one.
-#  my %longest;
-#  foreach (@filtered) {
-#    my $n = $_->display_name.$_->abs_ref.(eval{$_->version}||'').(eval{$_->class}||'');
-#    $longest{$n} = $_ if !defined($longest{$n}) || $_->length > $longest{$n}->length;
-#  }
+  # remove duplicate features -- same name, source, method and position
+  my %seenit;
+  @features = grep {
+      my $key = eval{$_->gff_string} || "$_";
+      !$seenit{$key}++;
+  } @features;
 
-#  return [values %longest];
   return \@features;
 }
 

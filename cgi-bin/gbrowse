@@ -1,0 +1,19 @@
+#!/usr/bin/perl
+
+use strict;
+use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
+use constant DEFAULT_MASTER => 'GBrowse.conf';
+
+use File::Spec;
+use Bio::Graphics::Browser;
+use Bio::Graphics::Browser::Render::HTML;
+
+my $conf_dir  = $ENV{GBROWSE_CONF}   || DEFAULT_CONF;
+my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
+
+my $globals = Bio::Graphics::Browser->new(File::Spec->catfile($conf_dir,$conf_file))
+    or die "Couldn't read globals";
+my $render  = Bio::Graphics::Browser::Render::HTML->new($globals);
+$render->run;
+
+1;

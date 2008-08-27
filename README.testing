@@ -47,5 +47,8 @@ This will create a virtual host listening on port 8080. Please make
 note of all occurrences of /home/fred/src/Generic-Genome-Browser. This
 will need to be replaced with the path in which you unpacked GBrowse.
 
+Also, replace /var/log/apache2/ with the location of your error logs and
+/home/fred/src/bioperl-live with the location of bioperl-live.
+
 Lincoln Stein
 August 2008

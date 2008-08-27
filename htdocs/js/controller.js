@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.35 2008-08-26 21:17:58 mwz444 Exp $
+ $Id: controller.js,v 1.36 2008-08-27 21:13:53 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -18,6 +18,7 @@ var GBrowseController = Class.create({
     this.track_images             = new Hash();
     this.segment_observers        = new Hash();
     this.retrieve_tracks          = new Hash();
+    this.track_time_key           = new Hash();
     // segment_info holds the information used in rubber.js
     this.segment_info;
     this.debug_status             = 'initialized';
@@ -80,17 +81,21 @@ var GBrowseController = Class.create({
   get_multiple_tracks:
   function (track_keys) {
     
+    time_key = create_time_key();
     this.retrieve_tracks.keys().each(
       function(track_div_id) {
         Controller.retrieve_tracks.set(track_div_id,true);
+        Controller.track_time_key.set(track_div_id,time_key);
       }
     );
 
-    this.get_remaining_tracks(track_keys,1000,1.5);
+    this.get_remaining_tracks(track_keys,1000,1.5,time_key);
   },
 
+  // Time key is there to make sure separate calls don't trounce eachother
+  // Only Update if the tracks time_key matches the method's
   get_remaining_tracks:
-  function (track_keys,time_out,decay){
+  function (track_keys,time_out,decay,time_key){
 
     var track_div_ids = [];
     var finished = true;
@@ -98,9 +103,11 @@ var GBrowseController = Class.create({
     this.retrieve_tracks.keys().each(
       function(track_div_id) {
         if(Controller.retrieve_tracks.get(track_div_id)){
+          if (Controller.track_time_key.get(track_div_id) == time_key){
             track_div_ids.push(track_div_id);
             track_key_str += '&tk_'+track_div_id+"="+track_keys[track_div_id];
             finished = false;
+          }
         }
       }
     );
@@ -119,22 +126,24 @@ var GBrowseController = Class.create({
         for (var track_div_id in track_html_hash){
           track_html    = track_html_hash[track_div_id];
 
-          track_div = document.getElementById(track_div_id);
-          if (track_html.substring(0,18) == "<!-- AVAILABLE -->"){
-            track_div.innerHTML = track_html;
-            Controller.retrieve_tracks.set(track_div_id,false);
-          }
-          else if (track_html.substring(0,16) == "<!-- EXPIRED -->"){
+          if (Controller.track_time_key.get(track_div_id) == time_key){
+            track_div = document.getElementById(track_div_id);
+            if (track_html.substring(0,18) == "<!-- AVAILABLE -->"){
+              track_div.innerHTML = track_html;
+              Controller.retrieve_tracks.set(track_div_id,false);
+            }
+            else if (track_html.substring(0,16) == "<!-- EXPIRED -->"){
                $(this.track_image_id[track_div_id]).setOpacity(0);
-          }
-          else {
-            continue_requesting = true;
+            }
+            else {
+              continue_requesting = true;
+            }
           }
         }
         Controller.reset_after_track_load();
         if (continue_requesting){
           setTimeout( function() {
-            Controller.get_remaining_tracks(track_keys,time_out*decay,decay)
+            Controller.get_remaining_tracks(track_keys,time_out*decay,decay,time_key)
           } ,time_out);
         }
       }, // end onSuccess
@@ -243,9 +252,11 @@ var GBrowseController = Class.create({
           }
           else{
             var track_keys = new Array();
+            time_key = create_time_key();
             track_keys[div_element_id]=this_track_data.track_key;
             Controller.retrieve_tracks.set(div_element_id,true);
-            Controller.get_remaining_tracks(track_keys,1000,1.5);
+            Controller.track_time_key.set(div_element_id,time_key);
+            Controller.get_remaining_tracks(track_keys,1000,1.5,time_key());
           }
         }
       },
@@ -285,10 +296,12 @@ var GBrowseController = Class.create({
       onSuccess: function(transport) {
         var results    = transport.responseJSON;
         var track_keys = results.track_keys;
+        time_key = create_time_key();
         for (var track_div_id in track_keys){
             Controller.retrieve_tracks.set(track_div_id,true);
+            Controller.track_time_key.set(track_div_id,time_key);
         } // end for
-        Controller.get_remaining_tracks(track_keys,1000,1.5);
+        Controller.get_remaining_tracks(track_keys,1000,1.5,time_key);
       }, // end onSuccess
     }); // end Ajax.Request
   }, // end rerender_track
@@ -379,5 +392,10 @@ function initialize_page() {
   Overview.prototype.initialize();
   Region.prototype.initialize();
   Details.prototype.initialize();
+}
+
+function create_time_key () {
+    time_obj = new Date();
+    return time_obj.getTime();
 }
 

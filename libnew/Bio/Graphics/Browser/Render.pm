@@ -423,6 +423,7 @@ sub create_cache_extra {
         );
     push @cache_extra,sort keys %{$settings->{h_feat}} if $settings->{h_feat};
     push @cache_extra,sort @{$settings->{h_region}}    if $settings->{h_region};
+    push @cache_extra, map { $_->config_hash() } $self->plugins->plugins;
     return \@cache_extra;
 }
 

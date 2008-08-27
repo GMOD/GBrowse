@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.1 2007-02-19 19:20:17 lstein Exp $
+# $Id: Plugin.pm,v 1.2 2008-08-27 15:34:02 mwz444 Exp $
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME
@@ -568,7 +568,11 @@ instead of the more familiar CGI module's param() function.
 
 use strict;
 use Bio::Graphics::Browser;
+use Data::Dumper;
+use Digest::MD5 'md5_hex';
 use CGI qw(url header p);
+
+$Data::Dumper::Sortkeys = 1;
 
 use vars '$VERSION','@ISA','@EXPORT';
 $VERSION = '0.20';
@@ -766,6 +770,10 @@ sub new_feature_list {
   my $self     = shift;
   return Bio::Graphics::FeatureFile->new(-smart_features=>1,
 					 -safe => 1);
+}
+
+sub config_hash {
+  return md5_hex( Dumper( shift->configuration ) );
 }
 
 

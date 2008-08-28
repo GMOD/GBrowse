@@ -8,6 +8,7 @@ use Bio::Graphics::Browser::Shellwords;
 use Bio::Graphics::Browser::Util 'modperl_request';
 use File::Basename 'dirname';
 use File::Path 'mkpath';
+use File::Spec;
 use Data::Dumper 'Dumper';
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
@@ -221,12 +222,12 @@ sub gd_cache_write {
 
 sub tmpdir {
   my $self = shift;
-  my $path = shift || '';
+  my @path = @_;
 
   my ($tmpuri,$tmpdir) = shellwords($self->global_setting('tmpimages'))
     or die "no tmpimages option defined, can't generate a picture";
 
-  $tmpuri .= "/$path" if $path;
+  $tmpuri = File::Spec->catfile($tmpuri,@path) if @path;
 
   if ($ENV{MOD_PERL} ) {
     my $r          = modperl_request();
@@ -235,15 +236,15 @@ sub tmpdir {
     my $path_info  = $subr->path_info;
     $tmpdir       .= $path_info if $path_info;
   } elsif ($tmpdir) {
-    $tmpdir .= "/$path" if $path;
+      $tmpdir      = File::Spec->catfile($tmpdir,@path) if @path;
   }
   else {
-    $tmpdir = "$ENV{DOCUMENT_ROOT}/$tmpuri";
+    $tmpdir = File::Spec->catfile($ENV{DOCUMENT_ROOT},$tmpuri);
   }
 
   # we need to untaint tmpdir before calling mkpath()
   return unless $tmpdir =~ /^(.+)$/;
-  $path = $1;
+  my $path = $1;
 
   mkpath($path,0,0777) unless -d $path;
   return ($tmpuri,$path);
@@ -268,6 +269,8 @@ sub html6            { shift->global_setting('html6')                    }
 sub max_segment      { shift->global_setting('max segment')              }
 sub default_segment  { shift->global_setting('max segment')              }
 sub min_overview_pad { shift->global_setting('min overview pad') || 10    }
+
+sub too_many_landmarks { shift->global_setting('too many landmarks') || 100 }
 
 sub plugins          { shellwords(shift->global_setting('plugins'))      }
 

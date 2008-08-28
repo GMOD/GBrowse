@@ -43,12 +43,14 @@ configuration devoted to GBrowse testing:
 	ServerSignature On
    </VirtualHost>
 
-This will create a virtual host listening on port 8080. Please make
-note of all occurrences of /home/fred/src/Generic-Genome-Browser. This
-will need to be replaced with the path in which you unpacked GBrowse.
+This will create a virtual host listening on port 8080.
 
-Also, replace /var/log/apache2/ with the location of your error logs and
-/home/fred/src/bioperl-live with the location of bioperl-live.
+Please make note of all occurrences of
+/home/fred/src/Generic-Genome-Browser. This will need to be replaced
+with the path in which you unpacked GBrowse. Also be sure to replace
+/var/log/apache2/ with the location of your error logs and
+/home/fred/src/bioperl-live with the location of bioperl-live, if you
+have not installed it.
 
 Lincoln Stein
 August 2008

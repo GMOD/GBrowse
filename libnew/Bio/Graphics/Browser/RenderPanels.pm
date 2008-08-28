@@ -5,6 +5,7 @@ use warnings;
 
 use Bio::Graphics;
 use Digest::MD5 'md5_hex';
+use Carp 'croak','cluck';
 use Text::Shellwords 'shellwords';
 use Bio::Graphics::Browser::CachedTrack;
 use Bio::Graphics::Browser::Util 'modperl_request';
@@ -22,7 +23,6 @@ use constant DEFAULT_EMPTYTRACKS => 0;
 use constant PAD_DETAIL_SIDES    => 10;
 use constant RULER_INTERVALS     => 20;
 use constant PAD_OVERVIEW_BOTTOM => 5;
-use constant MAX_SEGMENT         => 1_000_000;
 
 # when we load, we set a global indicating the LWP::Parallel::UserAgent is available
 my $LPU_AVAILABLE;
@@ -78,9 +78,9 @@ sub language {
 # Caching and distribution across multiple databases is implemented.
 #
 # input args:
-#           {labels         => [array of track labels],
-#            feature_files  => [third party annotations (Bio::DasI objects)],
-#            deferred       => generate in background
+#           {labels             => [array of track labels],
+#            external_features  => [third party annotations (Bio::DasI objects)],
+#            deferred           => generate in background
 #           };
 # output
 # if deferred => false...
@@ -126,12 +126,14 @@ sub request_panels {
       $self->clone_databases($local_labels) if $do_local;
       if ( $do_local && $do_remote ) {
           if ( fork() ) {
-              $self->run_local_requests( $data_destinations, $args,
-                  $local_labels );
+              $self->run_local_requests( $data_destinations, 
+					 $args,
+					 $local_labels );
           }
           else {
-              $self->run_remote_requests( $data_destinations, $args,
-                  $remote_labels );
+              $self->run_remote_requests( $data_destinations, 
+					  $args,
+					  $remote_labels );
           }
       }
       elsif ($do_local) {
@@ -177,7 +179,7 @@ sub make_requests {
     my $self   = shift;
     my $args   = shift;
 
-    my $feature_files  = $args->{feature_files};
+    my $feature_files  = $args->{external_features};
     my $labels         = $args->{labels};
 
     my $base        = $self->get_cache_base();
@@ -283,7 +285,7 @@ sub wrap_rendered_track {
 
     my $collapsed = $settings->{track_collapsed}{$label};
     my $img_style = $collapsed ? "display:none" : "display:inline";
-    $img_style.=";filter:alpha(opacity=100);-moz-opacity:1";
+    $img_style.=";filter:alpha(opacity=100);moz-opacity:1";
 
     my $img = img(
         {   -src    => $url,
@@ -343,8 +345,11 @@ sub wrap_rendered_track {
         span( { -class => 'draghandle' }, $title )
     );
 
-    ( my $munge_label = $label )
-        =~ s/_/%5F/g;    # freakin' scriptaculous uses _ as a delimiter!!!
+    # this may no longer be necessary?
+#    ( my $munge_label = $label )
+#        =~ s/_/%5F/g;    # freakin' scriptaculous uses _ as a delimiter!!!
+
+    my $munge_label = $label;
 
     my $show_titlebar
         = ( ( $source->setting( $label => 'key' ) || '' ) ne 'none' );
@@ -645,7 +650,7 @@ sub render_scale_bar {
     eval { $panel->finished }; # should quash memory leaks when used in conjunction with bioperl 1.4
 
     my $url    = $self->source->generate_image($gd);
-    my $height = $y2 - $y1 + 1;
+    my $height = $y2 - $y1; # + 1;
 
     return ( $url, $height, $width, );
 }
@@ -848,11 +853,11 @@ sub make_centering_map {
 #                 {label => Bio::Graphics::Browser::CachedTrack}
 #    arg2: arguments hashref
 #                  {
-#                    feature_files => [list of external features, plugins]
-#                    noscale       => (get rid of this?)
-#                    do_map        => (get rid of this?)
-#                    cache_extra   => (get rid of this?)
-#                    section       => (get rid of this?)
+#                    external_features => [list of external features, plugins]
+#                    noscale           => (get rid of this?)
+#                    do_map            => (get rid of this?)
+#                    cache_extra       => (get rid of this?)
+#                    section           => (get rid of this?)
 #                   }
 #    arg3: labels arrayref (optional - uses keys %$request otherwise)
 #
@@ -883,14 +888,7 @@ sub run_local_requests {
 
     my $base           = $self->get_cache_base;
 
-    my $feature_files = $self->load_external_sources(
-        segment          => $segment,
-        settings         => $settings,
-        whole_segment    => $args->{whole_segment},
-        plugin_set       => $args->{plugin_set},
-        uploaded_sources => $args->{uploaded_sources},
-        remote_sources   => $args->{remote_sources},
-    );
+    my $feature_files  = $args->{external_features};
 
     # FIXME: this has to be set somewhere
     my $hilite_callback= undef;
@@ -937,7 +935,6 @@ sub run_local_requests {
 
         my $panel_args = $requests->{$label}->panel_args;
         my $track_args = $requests->{$label}->track_args;
-
 
         my $panel
             = Bio::Graphics::Panel->new( @$panel_args, @keystyle, @nopad );
@@ -1128,6 +1125,7 @@ sub add_features_to_track {
 }
 
 sub load_external_sources {
+    croak "do not call load_external_sources";
     my ( $self, %args ) = @_;
 
     my $segment       = $args{'segment'}       or return;
@@ -1150,64 +1148,11 @@ sub load_external_sources {
 	    next unless $featureset;
             $featureset->annotate(
                 $segment,      $feature_file, $rel2abs,
-                $rel2abs_slow, MAX_SEGMENT
+                $rel2abs_slow, $self->setting('max segment') || 1_000_000
 		);
         }
     }
     return $feature_file;
-}
-
-sub coordinate_mapper {
-
-    my $self            = shift;
-    my $current_segment = shift;
-    my $whole_segment   = shift;
-    my $optimize        = shift;
-
-    my $db = $current_segment->factory;
-
-    my ( $ref, $start, $stop ) = (
-        $current_segment->seq_id, $current_segment->start,
-        $current_segment->end
-    );
-    my %segments;
-
-    my $closure = sub {
-        my ( $refname, @ranges ) = @_;
-
-        unless ( exists $segments{$refname} ) {
-            $segments{$refname} = $whole_segment;
-        }
-
-        my $mapper  = $segments{$refname} || return;
-        my $absref  = $mapper->abs_ref;
-        my $cur_ref = eval { $current_segment->abs_ref }
-            || eval { $current_segment->ref }; # account for api changes in Bio::SeqI
-        return unless $absref eq $cur_ref;
-
-        my @abs_segs;
-        if ( $absref eq $refname ) {           # doesn't need remapping
-            @abs_segs = @ranges;
-        }
-        else {
-            @abs_segs
-                = map { [ $mapper->rel2abs( $_->[0], $_->[1] ) ] } @ranges;
-        }
-
-        # this inhibits mapping outside the displayed region
-        if ($optimize) {
-            my $in_window;
-            foreach (@abs_segs) {
-                next unless defined $_->[0] && defined $_->[1];
-                $in_window ||= $_->[0] <= $stop && $_->[1] >= $start;
-            }
-            return $in_window ? ( $absref, @abs_segs ) : ();
-        }
-        else {
-            return ( $absref, @abs_segs );
-        }
-    };
-    return $closure;
 }
 
 
@@ -1325,7 +1270,7 @@ sub create_panel_args {
 
   my @pass_thru_args = map {/^-/ ? ($_=>$args->{$_}) : ()} keys %$args;
   my @argv = (
-	      -grid         => $settings->{'grid'}, # $source->global_setting("$section grid"),
+	      -grid         => $section eq 'detail' ? $settings->{'grid'} : 0,
 	      -start        => $seg_start,
 	      -end          => $seg_stop,
 	      -stop         => $seg_stop,  #backward compatibility with old bioperl

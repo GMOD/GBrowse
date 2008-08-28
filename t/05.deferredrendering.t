@@ -99,7 +99,7 @@ for my $label (keys %cumulative_status) {
 }
 
 # test caching
-$requests = $render->render_deferred($render->segment);
+$requests = $render->render_deferred();
 my @cached = map {$requests->{$_}->status} keys %$requests;
 ok("@cached",'AVAILABLE AVAILABLE AVAILABLE AVAILABLE AVAILABLE');
 

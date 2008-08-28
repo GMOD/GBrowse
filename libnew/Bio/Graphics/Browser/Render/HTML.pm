@@ -11,6 +11,7 @@ use CGI qw(:standard escape start_table end_table);
 eval "use GD::SVG";
 
 use constant JS    => '/gbrowse/js';
+use constant DEBUG => 0;
 
 sub render_top {
   my $self  = shift;
@@ -230,10 +231,12 @@ sub render_track_table {
 
   # tracks beginning with "_" are special, and should not appear in the
   # track table.
-  my @labels     = grep {!/^_/} $source->detail_tracks,
-                                $source->overview_tracks,
-                                $source->plugin_tracks,
-                                $source->regionview_tracks;
+  my @labels     = grep {!/^_/} ($source->detail_tracks,
+				 $source->overview_tracks,
+				 $source->plugin_tracks,
+				 $source->regionview_tracks,
+				 $self->uploaded_sources->files,
+  );
   my %labels     = map {$_ => $self->label2key($_)}              @labels;
   my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
 
@@ -264,13 +267,16 @@ sub render_track_table {
 			$self->tr('REGION'),
 			$self->tr('ANALYSIS'),
 			@user_keys,
-			$source->section_setting('upload_tracks') eq 'off' ? () : ($self->tr('EXTERNAL')),
+			$source->section_setting('upload_tracks') eq 'off' 
+			   ? () 
+			   : ($self->tr('EXTERNAL')),
 		       ) {
     next if $seenit{$category}++;
     my $table;
     my $id = "${category}_section";
 
-    if ($category eq $self->tr('REGION') && !$self->setting('region segment')) {
+    if ($category eq $self->tr('REGION') 
+	&& !$self->setting('region segment')) {
      next;
     }
     elsif  (exists $track_groups{$category}) {
@@ -447,20 +453,20 @@ sub render_global_config {
 # This needs to be fleshed out.
 sub render_uploads {
     my $self = shift;
+    
     my $feature_files = shift;
     my $state = $self->state;
     my $content
         = start_form( -name => 'externalform', -id => 'externalform' )
-        . $self->upload_table( $state, $feature_files )
-        . $self->das_table( $state, $feature_files )
+        . $self->upload_table
+        . $self->das_table
         . end_form();
     return $self->toggle( 'UPLOAD_TRACKS', $content );
 }
 
 sub upload_table {
   my $self      = shift;
-  my $settings      = shift;
-  my $feature_files = shift;
+  my $settings  = $self->state;
 
   # start the table.
   my $cTable = start_table({-border=>0,-width=>'100%'})
@@ -472,12 +478,16 @@ sub upload_table {
   my $uploaded_sources = $self->uploaded_sources();
   # now add existing files
   for my $file ($uploaded_sources->files) {
+
     (my $name = $file) =~ s/^file://;
     $name = escape($name);
+
     my $download = escape($self->tr('Download_file'));
     my $link = a({-href=>"?$download=$file"},"[$name]");
-    my @info =  get_uploaded_file_info($settings->{features}{$file}{visible}
-				       && $feature_files->{$file});
+
+    my @info =  $self->get_uploaded_file_info(
+	$settings->{features}{$file}{visible}  && $uploaded_sources->feature_file($file));
+
     my $escaped_file = CGI::escape($file);
     $cTable .=  TR({-class=>'uploadbody'},
 		   th({-width=>'20%',-align=>'right'},$link),
@@ -501,6 +511,47 @@ sub upload_table {
 	       );
   $cTable .= end_table;
   return a({-name=>"upload"},$cTable);
+}
+
+sub get_uploaded_file_info {
+    my $self         = shift;
+    my $feature_file = shift or return i("Display off");
+
+    warn "get_uploaded_file_info(): feature_file = $feature_file" if DEBUG;
+
+    my $modified  = localtime($feature_file->mtime);
+    my @refs      = sort($feature_file->features)
+	unless $feature_file->name =~ m!/das/!;
+
+    my ($landmarks,@landmarks,@links);
+
+    if (@refs > $self->data_source->too_many_landmarks) {
+	$landmarks = b($self->tr('Too_many_landmarks',scalar @refs));
+    } else {
+	@links = map {$self->segment2link($_,$_->display_name)} @refs;
+	$landmarks = $self->tableize(\@links);
+    }
+    warn "get_uploaded_file_info(): modified = $modified, landmarks = $landmarks" if DEBUG;
+    return i($self->tr('File_info',$modified),$landmarks||'');
+}
+
+
+sub segment2link {
+    my $self = shift;
+
+    my ($segment,$label) = @_;
+    
+    my $source = $self->data_source;
+    return  a({-href=>"?name=$segment"},$segment) unless ref $segment;
+
+    my ($start,$stop) = ($segment->start,$segment->end);
+    my $ref = $segment->seq_id;
+    my $bp = $stop - $start;
+    my $s  = $self->commas($start) || '';
+    my $e  = $self->commas($stop)  || '';
+    $label ||= "$ref:$s..$e";
+    $ref||='';  # get rid of uninit warnings
+    return a({-href=>"?ref=$ref;start=$start;stop=$stop"},$label);
 }
 
 # URLs for external annotations
@@ -560,9 +611,6 @@ sub das_table {
 		     $self->tr('Remote_title').':',
 		     a({-href=>annotation_help().'#remote',-target=>'help'},'['.$self->tr('Help').']'))),
 	       TR({-class=>'uploadbody'},\@rows),
-#	       TR({-class=>'uploadbody'},
-#		  th('&nbsp;'),
-#		  th({-align=>'right'},submit($self->tr('Update_urls'))))
 	      );
 }
 

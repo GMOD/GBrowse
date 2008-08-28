@@ -2,24 +2,26 @@ package Bio::Graphics::Browser::UploadSet;
 # API for handling uploaded files
 
 use strict;
-use Bio::Graphics::Browser;
+use base 'Bio::Graphics::Browser::UserData';
+
 use CGI 'cookie','param';
+use Digest::MD5 'md5_hex';
+use Carp qw/carp croak/;
 use Text::Shellwords;
-use Carp 'carp';
 use constant DEBUG=>0;
 
 sub new {
   my $package = shift;
-  my $config        = shift;
-  my $page_settings = shift;
+  my $config  = shift;
+  my $state   = shift;
 
   warn "initializing uploaded files..." if DEBUG;
   my $self =  bless {
 		     config        => $config,
-		     page_settings => $page_settings,
+		     state         => $state,
 		     files         => {},
 		    },ref $package || $package;
-  my @urls = grep {/^file:/} @{$page_settings->{tracks}};
+  my @urls = grep {/^file:/} @{$state->{tracks}};
   foreach (@urls) {
     warn "adding $_" if DEBUG;
     $self->_add_file($self->name_file($_));
@@ -27,8 +29,6 @@ sub new {
   $self;
 }
 
-sub config        { shift->{config}                }
-sub page_settings { shift->{page_settings}         }
 sub files         { keys %{shift->{files}}         }
 sub url2path      { shift->{files}{shift()}        }
 sub _add_file     {
@@ -42,23 +42,23 @@ sub _del_file     { delete shift->{files}{shift()} }
 sub upload_file {
   my $self       = shift;
   my $filehandle = shift;
-  my $settings   = $self->page_settings;
+  my $state   = $self->state;
 
   # $fh is a CGI string/filehandle object, so be careful
-  warn "upload_file($filehandle), fileno=",fileno($filehandle)," content type=$ENV{CONTENT_TYPE}" if DEBUG;
+  warn "upload_file($filehandle), fileno=",
+    fileno($filehandle)," content type=$ENV{CONTENT_TYPE}" if DEBUG;
+  return unless defined fileno($filehandle);
+
   my ($filename)  = "$filehandle" =~ /([^\/\\:]+)$/;
-  my $url         = $self->new_file($filename);
-  my $fh_out      = $self->open_file($url,'>') or return;
-  if (defined fileno($filehandle)) {
-    my $buffer;
-    while (read($filehandle,$buffer,1024)) {
-      warn "uploaded file: $buffer\n" if DEBUG;
-      $buffer =~ s/\r\n?/\n/g;
-      print $fh_out $buffer;
-    }
-    close $fh_out;
-  }
-  warn "url = $url" if DEBUG;
+  my $url = $self->new_file($filename);
+
+  $url       = $self->new_file($filename);
+  my $fh_out = $self->open_file($url,'>') or return;
+
+  my $fh_in   = $self->maybe_unzip($filename,$filehandle) || $filehandle;
+  $self->process_uploaded_file($fh_in,$fh_out);
+  close $fh_out;
+  warn "url = $url, file=",$self->url2path($url) if DEBUG;
   return $url;
 }
 
@@ -71,12 +71,12 @@ sub new_file {
     $filename = "upload.$rand";
   }
 
-  my $settings = $self->page_settings;
+  my $state = $self->state;
   $filename =~ s/^file://;
   my ($url,$path) = $self->name_file($filename);
   warn "url = $url" if DEBUG;
-  push @{$settings->{tracks}},$url unless $settings->{features}{$url};
-  $settings->{features}{$url} = {visible=>1,options=>0,limit=>0};
+  unshift @{$state->{tracks}},$url unless $state->{features}{$url};
+  $state->{features}{$url} = {visible=>1,options=>0,limit=>0};
   $self->_add_file($url=>$path);
   return $url;
 }
@@ -84,11 +84,10 @@ sub new_file {
 sub open_file {
   my $self = shift;
   my ($url,$mode) = @_;
+
   $mode ||= "<";
   my $config = $self->config;
-  my $url_with_file_designation = $url;
-  $url_with_file_designation = 'file:'.$url_with_file_designation unless($url_with_file_designation=~/^file:/);
-  my $path   = $self->url2path($url_with_file_designation);
+  my $path   = $self->url2path($url);
   warn "path = $path" if DEBUG;
 
   unless (open (F,"${mode}${path}")) {
@@ -103,37 +102,30 @@ sub open_file {
 sub clear_file {
   my $self     = shift;
   my $url      = shift;
-  my $settings = $self->page_settings;
+  my $state = $self->state;
 
-  my $url_with_file_designation = $url;
-  $url_with_file_designation    = 'file:'.$url_with_file_designation unless($url_with_file_designation=~/^file:/);
-  my $path         = $self->url2path($url_with_file_designation);
+  my $path = $self->url2path($url);
   unless ($path) {  # unregistered cruft file
     (undef,$path) = $self->name_file($url);
   }
+  $self->unlink_wigfiles($path);
   unlink $path;
-  delete $settings->{features}{$url_with_file_designation}; # Changed from $url
-  $settings->{tracks} = [grep {$_ ne $url_with_file_designation} @{$settings->{tracks}}];
+  delete $state->{features}{$url};
+  $state->{tracks} = [grep {$_ ne $url} @{$state->{tracks}}];
   warn "clear_uploaded_file(): deleting file = $url" if DEBUG;
-  $url=~s/file://;
-  $self->_del_file($url_with_file_designation);
+  $self->_del_file($url);
 }
 
-sub name_file {
+sub unlink_wigfiles {
   my $self = shift;
-  my $filename  = shift;
-  my $settings  = $self->page_settings;
-  my $config    = $self->config;
-
-  # keep last non-[/\:] part of name
-  my ($name) = $filename =~ /([^:\\\/]+)$/;
-  $name =~ tr/-/_/;
-  my $id = $settings->{id} or return;
-
-  my (undef,$tmpdir) = $config->tmpdir($config->source."/uploaded_file/$id");
-  my $path      = "$tmpdir/$name";
-  my $url       = "file:$name";
-  return ($url,$path);
+  my $path = shift;
+  open F,$path or return;
+  while (<F>) {
+    chomp;
+    my ($wigfile) = /wigfile=([^\;]+)/ or next;
+    unlink $wigfile;
+  }
+  close F;
 }
 
 sub feature_file {
@@ -141,46 +133,42 @@ sub feature_file {
   my ($url,$coordinate_mapper) = @_;
   my @args              = $coordinate_mapper ? (-map_coords=>$coordinate_mapper) : ();
 
-  my $fh = $self->open_file($url) or return;
-  my $feature_file = Bio::Graphics::FeatureFile->new(-file           => $fh,
-						     -smart_features =>1,
+  my $fh   = $self->open_file($url) or return;
+  my $safe = $self->config->setting('allow remote callbacks') || 0;
+  my $feature_file = Bio::Graphics::FeatureFile->new(-file             => $fh,
+						     -smart_features   => 1,
+						     -allow_whitespace => 1,
+						     -safe_world       => $safe,
 						     @args,
 						    );
   close $fh;
+  $feature_file->name($url);
   $feature_file;
 }
 
 sub annotate {
   my $self              = shift;
-  my ($segment,$feature_files,$fast_mapper,$slow_mapper) = @_;  # $segment is not actually used
+  my ($segment,$feature_files,
+      $fast_mapper,$slow_mapper,
+      $max_segment_length
+     ) = @_;  # $segment is not actually used
 
-  my $settings          = $self->page_settings;
+  my $possibly_too_big  = $segment->length > $max_segment_length;
+  my $state             = $self->state;
 
   for my $url ($self->files) {
-    next unless $settings->{features}{$url}{visible};
-    my $has_overview_sections = $self->probe_for_overview_sections($url);
-    my $feature_file = $self->feature_file($url,$has_overview_sections ? $slow_mapper : $fast_mapper) or next;
+    next unless $state->{features}{$url}{visible};
+    my $has_overview_sections = $self->probe_for_overview_sections($self->open_file($url));
+    next if $possibly_too_big && !$has_overview_sections;
+    my $feature_file = $self->feature_file($url,
+					   ($has_overview_sections
+					    ? $slow_mapper
+					    : $fast_mapper)
+					  )
+      or next;
     $feature_file->name($url);
     $feature_files->{$url} = $feature_file;
   }
-}
-
-# ugly hack, but needed for performance gains when looking at really big data sets
-sub probe_for_overview_sections {
-  my $self = shift;
-  my $url  = shift;
-  my $fh = $self->open_file($url) or return;
-  my $overview;
-  while (<$fh>) {
-    next unless /\S/;       # skip blank lines
-    last unless /[\#\[=]/;  # not a configuration section
-    if (/^section\s*=.*(region|overview)/) {
-      $overview++;
-      last;
-    }
-  }
-  close $fh;
-  return $overview;
 }
 
 1;
@@ -199,18 +187,18 @@ None.  Used internally by gbrowse & gbrowse_img.
 
 =over 4
 
-=item $upload_set = Bio::Graphics::Browser::UploadSet->new($config,$page_settings)
+=item $upload_set = Bio::Graphics::Browser::UploadSet->new($config,$state)
 
 Initialize uploaded files according to the configuration and page
-settings.  Returns an object.
+state.  Returns an object.
 
 =item $conf = $upload_set->config
 
 Returns the configuration object.
 
-=item $settings = $upload_set->page_settings
+=item $state = $upload_set->state
 
-Returns the page settings hash
+Returns the page state hash
 
 =item $url = $upload_set->upload_file($filehandle)
 
@@ -264,8 +252,10 @@ Lincoln Stein E<lt>lstein@cshl.orgE<gt>.
 
 Copyright (c) 2005 Cold Spring Harbor Laboratory
 
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.  See DISCLAIMER.txt for
-disclaimers of warranty.
+This package and its accompanying libraries is free software; you can
+redistribute it and/or modify it under the terms of the GPL (either
+version 1, or at your option, any later version) or the Artistic
+License 2.0.  Refer to LICENSE for the full license text. In addition,
+please see DISCLAIMER.txt for disclaimers of warranty.
 
 =cut

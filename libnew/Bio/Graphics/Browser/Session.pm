@@ -33,9 +33,11 @@ sub id {
 sub session { shift->{session} }
 
 sub page_settings {
-  my $self   = shift;
-  my $hash = $self->config_hash;
-  return $hash->{page_settings} ||= {};
+  my $self        = shift;
+  my $hash                 = $self->config_hash;
+  $hash->{page_settings} ||= {};
+  $hash->{page_settings}{userid} = $self->id;     # store the id in our state
+  return $hash->{page_settings};
 }
 
 sub plugin_settings {

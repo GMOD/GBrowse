@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.2 2008-08-27 15:34:02 mwz444 Exp $
+# $Id: Plugin.pm,v 1.3 2008-08-28 22:10:55 lstein Exp $
 # base class for plugins for the Generic Genome Browser
 
 =head1 NAME
@@ -105,10 +105,10 @@ and allows the user to select among them. Example: BLAST search.
 
 =item 3) annotators 
 
-These plugins receive the genomic segment object and either 1) return a list 
-of features which are overlayed on top of the detailed view (Example: restriction 
-site annotator) or 2) update the database with new or modified features 
-and return nothing (Example: basic editor)
+These plugins receive the genomic segment object and either 1) return 
+a list of features which are overlayed on top of the detailed view 
+(Example: restriction site annotator) or 2) update the database with 
+new or modified features and return nothing (Example: basic editor)
 
 =back
 	
@@ -388,18 +388,24 @@ described in this section.
 
 =over 4
 
-=item $features = $self->find();
+=item $features = $self->find($segment);
 
-The find() method is called to search for features of interest. It
-should return an arrayref of Bio::SeqFeatureI objects (see
-L<Bio::SeqFeatureI>).  These synthetic feature objects should indicate
-the position, name and type of the features found.
+The find() method will be passed a Bio::Das::SegmentI segment object,
+as described earlier for the dump() method.  Your code should search
+the segment for features of interest, and return a two element
+list. The first element should be an arrayref of Bio::SeqFeatureI
+objects (see L<Bio::SeqFeatureI>), or an empty list if nothing was
+found. These synthetic feature objects should indicate the position,
+name and type of the features found. The second element of the
+returned list should be a (possibly shortened) version of the search
+string for display in informational messages.
 
-Depending on the type of find you are performing, you might search for
-preexisting features on the currently named segment for matches, or
-create your own features from scratch in the way that the annotator
-plugins do.  In most cases you'll do the search on the entire
-database, which you can obtain using the database() method call.
+Depending on the type of find you are performing, you might search the
+preexisting features on the segment for matches, or create your own
+features from scratch in the way that the annotator plugins do.  You
+may choose to ignore the passed segment and perform the search on the
+entire database, which you can obtain using the database() method
+call.
 
 To create features from scratch I suggest you use either
 Bio::Graphics::Feature, or Bio::SeqFeature::Generic to generate the
@@ -415,11 +421,12 @@ case, a gene ontology term:
 
   sub find {
      my $self = shift;
+     my $segment  = shift;  # we ignore this!
      my $config   = $self->configuration;
      my $query    = $config->{query} or return undef;  # PROMPT FOR INPUT
      my $database = $self->database;
      my @features = $database->features(-attributes=>{GO_Term => $query});
-     return \@features; 
+     return (\@features,$query); 
   }
 
   sub configure_form {
@@ -510,6 +517,14 @@ CGI::Session.
 You will wish to implement this method if the plugin has
 user-modifiable settings.
 
+NOTE ON FILEHANDLES: You are not allowed to permanently store a
+filehandle in the persistent configuration data structure because the
+session-handling code will try to serialize and store the filehandle,
+which is not allowed by the default serializer. If you must store a
+filehandle in the configuration data structure, be sure to delete it
+within the annotate(), find() or dump() methods once you are finished
+using it.
+
 =item $self->configure_form()
 
 This method will be called when the user presses the "Configure
@@ -588,7 +603,7 @@ sub new {
   return bless {},$class;
 }
 
-# initiaxlize other globals
+# initialize other globals
 sub init {
   my $self = shift;
   # do nothing
@@ -772,6 +787,10 @@ sub new_feature_list {
 					 -safe => 1);
 }
 
+# install the plugin but do not show it in the "Reports & Analysis" menu
+# off by default
+sub hide {}
+
 sub config_hash {
   return md5_hex( Dumper( shift->configuration ) );
 }
@@ -792,9 +811,11 @@ Lincoln Stein E<lt>lstein@cshl.orgE<gt>.
 
 Copyright (c) 2003 Cold Spring Harbor Laboratory
 
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.  See DISCLAIMER.txt for
-disclaimers of warranty.
+This package and its accompanying libraries is free software; you can
+redistribute it and/or modify it under the terms of the GPL (either
+version 1, or at your option, any later version) or the Artistic
+License 2.0.  Refer to LICENSE for the full license text. In addition,
+please see DISCLAIMER.txt for disclaimers of warranty.
 
 =cut
 

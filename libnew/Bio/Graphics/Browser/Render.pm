@@ -26,7 +26,6 @@ use constant MAX_SEGMENT          => 1_000_000;
 use constant TOO_MANY_SEGMENTS    => 5_000;
 use constant OVERVIEW_RATIO       => 1.0;
 
-
 my %PLUGINS; # cache initialized plugins
 
 # new() can be called with two arguments: ($data_source,$session)
@@ -212,8 +211,6 @@ sub asynchronous_event {
 
     if ( my $action = param('first_render') ) {
 
-        # warn "Rendering Tracks";
-
         my $track_keys          = $self->begin_track_render();
         return unless $track_keys;
 
@@ -228,8 +225,6 @@ sub asynchronous_event {
     }
 
     if ( my $element = param('update') ) {
-
-        #warn "updating element";
         my $html = $self->asynchronous_update_element($element);
 	return (200,'text/html',$html);
     }
@@ -238,19 +233,23 @@ sub asynchronous_event {
         $self->init_database();
         $self->init_plugins();
         $self->init_remote_sources();
+
         my %track_html;
         my @track_div_ids = param('track_div_ids');
+
         foreach my $track_div_id (@track_div_ids) {
             my $track_name = '';
             if ( $track_div_id =~ /^track_(.+)/ ) {
                 $track_name = $1;
             }
+
             my $track_key = param( 'tk_' . $track_div_id ) or next;
             $track_html{$track_div_id} = $self->render_deferred_track(
                 cache_key  => $track_key,
                 track_name => $track_name,
             ) || '';
         }
+
         my $return_object = { track_html => \%track_html, };
 	return (200,'application/json',$return_object);
     }
@@ -364,7 +363,7 @@ sub asynchronous_event {
 
         $self->set_segment($seg);
 
-        my $deferred_data = $self->request_tracks( \@labels );
+        my $deferred_data = $self->render_deferred( \@labels );
 	return (200,'application/json',$deferred_data);
         $self->session->flush if $self->session;
         return 1;
@@ -384,23 +383,23 @@ sub begin_track_render {
     $self->init_remote_sources();
 
     $self->segment or return;
-
     my $cache_extra = $self->create_cache_extra();
 
     # Start rendering the detail, region and overview tracks
     my @cache_track_hash_list;
     push @cache_track_hash_list,
-        $self->render_deferred( $self->segment, [ $self->detail_tracks ],
-        'detail', $cache_extra, );
+        $self->render_deferred( [ $self->detail_tracks ],
+				$self->segment, 
+				'detail', $cache_extra, );
     push @cache_track_hash_list,
-        $self->render_deferred( $self->region_segment,
-        [ $self->regionview_tracks ],
-        'region', $cache_extra, )
+        $self->render_deferred( [ $self->regionview_tracks ],
+				$self->region_segment,
+				'region', $cache_extra, )
         if ( $self->state->{region_size} );
     push @cache_track_hash_list,
-        $self->render_deferred( $self->whole_segment,
-        [ $self->overview_tracks ],
-        'overview', $cache_extra, );
+        $self->render_deferred( [ $self->overview_tracks ],
+			    $self->whole_segment,
+			    'overview', $cache_extra, );
 
     my %track_keys;
     foreach my $cache_track_hash (@cache_track_hash_list) {
@@ -423,7 +422,7 @@ sub create_cache_extra {
         );
     push @cache_extra,sort keys %{$settings->{h_feat}} if $settings->{h_feat};
     push @cache_extra,sort @{$settings->{h_region}}    if $settings->{h_region};
-    push @cache_extra, map { $_->config_hash() } $self->plugins->plugins;
+     push @cache_extra, map { $_->config_hash() } $self->plugins->plugins;
     return \@cache_extra;
 }
 
@@ -452,7 +451,9 @@ sub begin_individual_track_render {
     my $cache_extra = $self->create_cache_extra();
 
     # Start rendering the detail and overview tracks
-    my $cache_track_hash = $self->render_deferred( $segment, [ $label, ],
+    my $cache_track_hash = $self->render_deferred( 
+	[ $label, ],
+	$segment, 
         $section, $cache_extra, );
 
     my %track_keys;
@@ -464,23 +465,6 @@ sub begin_individual_track_render {
     }
 
     return \%track_keys;
-}
-
-# This asynchronous method accepts a list of track names and returns a 
-# hash which maps the track name to the URL at which the data will be cached
-sub request_tracks {
-    my $self         = shift;
-    my $track_labels = shift;
-    my $segment      = $self->segment;
-    my $renderer     = $self->get_panel_renderer($segment);
-    my $pending_data = $renderer->render_panels(
-	{
-	    labels           => $track_labels,
-	    feature_files    => $self->remote_sources,
-	    deferred         => 1,
-	}
-	);
-    return $pending_data;
 }
 
 sub render {
@@ -650,8 +634,8 @@ sub render_panels {
     # Kick off track rendering
     if ( $section->{'overview'} ) {
         my $scale_bar_html = $self->scale_bar( $seg, 'overview', );
-        my $panels_html .= $self->get_blank_panels( [$self->overview_tracks,] );
-        my $drag_script = $self->drag_script( 'overview_panels', 'track' );
+        my $panels_html   .= $self->get_blank_panels( [$self->overview_tracks,] );
+        my $drag_script    = $self->drag_script( 'overview_panels', 'track' );
         $html .= div(
             $self->toggle(
                 'Overview',
@@ -661,12 +645,13 @@ sub render_panels {
             )
         ) . $drag_script;
     }
+
     if ( $section->{'regionview'} and $self->state->{region_size} ) {
 
         my $scale_bar_html = $self->scale_bar( $seg, 'region' );
-        my $panels_html
-            .= $self->get_blank_panels( [$self->regionview_tracks,] );
-        my $drag_script = $self->drag_script( 'region_panels', 'track' );
+        my $panels_html   .= $self->get_blank_panels( [$self->regionview_tracks,] );
+        my $drag_script    = $self->drag_script( 'region_panels', 'track' );
+
         $html .= div(
             $self->toggle(
                 'Region',
@@ -676,10 +661,11 @@ sub render_panels {
             )
         ) . $drag_script;
     }
+
     if ( $section->{'detailview'} ) {
         my $scale_bar_html = $self->scale_bar( $seg, 'detail' );
-        my $panels_html .= $self->get_blank_panels( [$self->detail_tracks,] );
-        my $drag_script = $self->drag_script( 'detail_panels', 'track' );
+        my $panels_html   .= $self->get_blank_panels( [$self->detail_tracks,] );
+        my $drag_script    = $self->drag_script( 'detail_panels', 'track' );
         $html .= div(
             $self->toggle(
                 'Details',
@@ -744,7 +730,7 @@ sub render_config {
   my $seg = shift;
   return $self->render_track_table(). 
       $self->render_global_config().
-      $self->render_uploads( $self->remote_sources, );
+      $self->render_uploads;
 }
 
 #never called, method in HTML.pm with same name is run instead
@@ -918,12 +904,17 @@ sub plugin_find {
 
   my $settings = $self->state;
   my $plugin_name = $plugin->name;
-  my $results = $plugin->can('auto_find') && defined $search_string
-              ? $plugin->auto_find($search_string)
-              : $plugin->find();
-  return unless $results;
-  return unless @$results;
+  my ($results,$keyword) = $plugin->can('auto_find') && defined $search_string
+                             ? $plugin->auto_find($search_string)
+                             : $plugin->find();
 
+  # nothing returned, so plug the keyword into the search box to save user's search
+  unless ($results && @$results) {
+      $settings->{name} = $keyword ? $keyword : $self->tr('Plugin_search_2',$plugin_name);
+      return;
+  }
+
+  # Write informative information into the search box - not sure if this is the right thing to do.
   $settings->{name} = defined($search_string) ? $self->tr('Plugin_search_1',$search_string,$plugin_name)
                                               : $self->tr('Plugin_search_2',$plugin_name);
   $self->write_auto($results);
@@ -1037,12 +1028,99 @@ sub write_auto {
 
 sub handle_downloads {
   my $self = shift;
+  my ($file,$action)        = $self->get_file_action;
+
+  return unless (my $to_download = (param($self->tr('Download_file'))
+				    ||
+				    (
+				     $action 
+				     && param($action) eq $self->tr('Download_file')
+				    ) 
+				    && $file));
+  
+  # This gets called if the user wants to download his annotation data
+  my $download = CGI::unescape($to_download);
+  (my $fname = $to_download) =~ s/^file://;
+  print CGI::header(-attachment   => $fname,
+		    -charset      => $self->tr('CHARSET'),
+		    -type         => 'application/octet-stream');
+  my $line_end = $self->line_end();
+  if (my $fh   = $self->uploaded_sources->open_file($to_download)) {
+    while (<$fh>) {
+      chomp;
+      print $_,$line_end;
+    }
+  }
+  return 1;  # this will cause an exit from the script
+
   # return 1 to exit
   return;
 }
 
+sub line_end {
+    my $self  = shift;
+   my $agent  = CGI->user_agent();
+   return "\r"   if $agent =~ /Mac/;
+   return "\r\n" if $agent =~ /Win/;
+   return "\n";
+}
+
+
+sub get_file_action {
+    my $self = shift;
+
+    my ($file_action)         = grep {/^modify\./} param();
+    (my $file = $file_action) =~ s/^modify\.// if $file_action;
+    $file = CGI::unescape($file);
+    
+    return ($file,$file_action);
+}
+
 sub handle_uploads {
   my $self = shift;
+
+  my ($file,$action)   = $self->get_file_action;
+  my $state            = $self->state;
+
+  my $uploads = $self->uploaded_sources;
+  my $remotes = $self->remote_sources;
+
+  if ((param('Upload')||param('upload')) && (my $f = param('upload_annotations'))) {
+      $uploads->upload_file($f);
+  }
+
+  elsif (param('new_upload')) {
+    $file = $uploads->new_file();
+    $uploads->open_file($file,">");# empty, truncated file
+    $action = "modify.$file";
+    param(-name=>"modify.$file",
+	  -value=>$self->tr('Edit'));
+  }
+
+  elsif (defined(my $data = param('a_data'))) {
+    handle_edit($state,$data);
+  }
+
+  elsif (my @data = (param('auto'),param('add'),param('a'))) {
+    my @styles    = (param('style'),param('s'));
+    handle_quickie($state,\@data,\@styles);
+  }
+
+  if (param('Cancel') && (my $file = param('edited file'))) {
+      $uploads->clear_file($file) 
+	  if -s $uploads->url2path($file) < 2;  # too small, throw it back
+  }
+
+  if ($action && param($action) eq $self->tr('Delete')) {
+    $uploads->clear_file($file);
+    $remotes->delete_source($file);
+  }
+
+  if ($action && param($action) eq $self->tr('Edit')) {
+    edit_uploaded_file($state,$file);
+    return 1;   # this will cause it to exit
+  }
+
   # return 1 to exit
   return;
 }
@@ -1202,6 +1280,7 @@ sub update_state_from_cgi {
   else {
     $self->update_tracks($state);
   }
+
   $self->update_coordinates($state);
   $self->update_region($state);
   $self->update_external_annotations($state);
@@ -1260,8 +1339,6 @@ sub update_tracks {
     $state->{features}{$_}{visible} = 0 foreach @selected;
   }
 
-  # probably obsolete -- not defined anywhere
-  # $self->update_track_options($state) if param('adjust_order') && !param('cancel');
 }
 
 # update coordinates logic
@@ -1654,7 +1731,8 @@ sub update_external_annotations {
   my $self  = shift;
   my $state = shift || $self->state;
 
-  my @external = param('eurl') or return;
+
+  my @external = grep {length $_ > 0} param('eurl') or return;
 
   my %external = map {$_=>1} @external;
   foreach (@external) {
@@ -1866,7 +1944,6 @@ sub load_plugin_annotators {
 
 }
 
-
 sub detail_tracks {
   my $self = shift;
   my $state = $self->state;
@@ -1919,11 +1996,12 @@ sub render_detailview_panels {
 
     my @labels   = $self->detail_tracks;
     my $renderer = $self->get_panel_renderer($seg);
-    my $panels   = $renderer->render_panels({
-	labels           => \@labels,
-	feature_files    => $self->remote_sources,
-	section          => 'detail',
-					    }
+    my $panels   = $renderer->render_panels(
+	{
+	    labels            => \@labels,
+	    external_features => $self->external_data,
+	    section           => 'detail',
+	}
 	);
     
     return map {$panels->{$_}} @labels;
@@ -1965,33 +2043,6 @@ sub get_image_width {
     return $image_width;
 }
 
-# render_overview is now obsolete
-sub render_overview {
-  my $self = shift;
-  my $seg  = shift;
-
-  my $whole_segment 	        = $self->whole_segment;
-  my @labels                    = $self->overview_tracks;
-
-  my $renderer = $self->get_panel_renderer($whole_segment);
-  my $panels   = $renderer->render_panels(
-      {
-	  labels           => \@labels,
-	  feature_files    => $self->remote_sources,
-	  section          => 'overview',
-      }
-      );
-
-  my @panels   = map {$panels->{$_}} @labels;  
-  my $drag_script = $self->drag_script('overview_panels','track');
-  return div($self->toggle('Overview',
-			   div({-id=>'overview_panels',-class=>'track'},
-			       @panels
-			   )
-	     )
-      ).$drag_script;
-}
-
 sub render_regionview {
   my $self = shift;
   my $seg = shift;
@@ -2000,8 +2051,9 @@ sub render_regionview {
 
 sub render_deferred {
     my $self        = shift;
-    my $seg         = shift || $self->segment;
+
     my $labels      = shift || [ $self->detail_tracks ];
+    my $seg         = shift || $self->segment;
     my $section     = shift || 'detail';
     my $cache_extra = shift || $self->create_cache_extra();
 
@@ -2014,14 +2066,13 @@ sub render_deferred {
             section          => $section,
             deferred         => 1,
             whole_segment    => $self->whole_segment(),
-            plugin_set       => $self->plugins(),
-            uploaded_sources => $self->uploaded_sources(),
-            remote_sources   => $self->remote_sources(),
+	    external_features=> $self->external_data,
             hilite_callback  => $h_callback || undef,
             cache_extra      => $cache_extra,
             flip => ( $section eq 'detail' ) ? $self->state()->{'flip'} : 0,
         }
     );
+
     return $requests;
 }
 
@@ -2188,10 +2239,90 @@ sub citation {
   $c;
 }
 
+sub external_data {
+    my $self    = shift;
+    my $segment = $self->segment or return { };
+    my $state   = $self->state;
 
-sub DESTROY {
-   my $self = shift;
-   if ($self->session) { $self->session->flush; }
+    # $f will hold a feature file hash in which keys are human-readable names of
+    # feature files and values are FeatureFile objects.
+    my $f           = {};
+    my $max_segment = $self->setting('max segment') || 1_000_000;
+    if ($segment) {
+	my $rel2abs      = $self->coordinate_mapper($segment,1);
+	my $rel2abs_slow = $self->coordinate_mapper($segment,0);
+	for my $featureset ($self->plugins,$self->uploaded_sources,$self->remote_sources) {
+	    next unless $featureset;
+	    $featureset->annotate($segment,$f,$rel2abs,$rel2abs_slow,$max_segment);
+	}
+    }
+    
+    return $f;
+}
+
+sub coordinate_mapper {
+    my $self            = shift;
+    my $current_segment = shift;
+    my $optimize        = shift;
+
+    my $db = $current_segment->factory;
+
+    my ( $ref, $start, $stop ) = (
+        $current_segment->seq_id, $current_segment->start,
+        $current_segment->end
+    );
+    my %segments;
+
+    my $closure = sub {
+        my ( $refname, @ranges ) = @_;
+
+        unless ( exists $segments{$refname} ) {
+            $segments{$refname} = $self->whole_segment();
+        }
+
+        my $mapper  = $segments{$refname} || return;
+        my $absref  = $mapper->abs_ref;
+        my $cur_ref = eval { $current_segment->abs_ref }
+            || eval { $current_segment->ref }; # account for api changes in Bio::SeqI
+        return unless $absref eq $cur_ref;
+
+        my @abs_segs;
+        if ( $absref eq $refname ) {           # doesn't need remapping
+            @abs_segs = @ranges;
+        }
+        else {
+            @abs_segs
+                = map { [ $mapper->rel2abs( $_->[0], $_->[1] ) ] } @ranges;
+        }
+
+        # this inhibits mapping outside the displayed region
+        if ($optimize) {
+            my $in_window;
+            foreach (@abs_segs) {
+                next unless defined $_->[0] && defined $_->[1];
+                $in_window ||= $_->[0] <= $stop && $_->[1] >= $start;
+            }
+            return $in_window ? ( $absref, @abs_segs ) : ();
+        }
+        else {
+            return ( $absref, @abs_segs );
+        }
+    };
+    return $closure;
+}
+
+# I know there must be a more elegant way to insert commas into a long number...
+sub commas {
+    my $self = shift;
+    my $i    = shift;
+    return $i if $i=~ /\D/;
+
+    $i = reverse $i;
+    $i =~ s/(\d{3})/$1,/g;
+    chop $i if $i=~/,$/;
+
+    $i = reverse $i;
+    return $i;
 }
 
 ########## note: "sub tr()" makes emacs' syntax coloring croak, so place this function at end
@@ -2201,5 +2332,9 @@ sub tr {
   $lang->tr(@_);
 }
 
+sub DESTROY {
+   my $self = shift;
+   if ($self->session) { $self->session->flush; }
+}
 1;
 

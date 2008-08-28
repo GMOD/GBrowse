@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.37 2008-08-28 13:37:02 mwz444 Exp $
+ $Id: controller.js,v 1.38 2008-08-28 14:11:31 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -319,7 +319,7 @@ var GBrowseController = Class.create({
   },
 
   reconfigure_plugin:
-  function(plugin_action,plugin_track_name,plugin_track_div_id,pc_div_id) {
+  function(plugin_action,plugin_track_name,plugin_track_div_id,pc_div_id,plugin_type) {
     var plugin_configure_div  = $(pc_div_id);
     var form_element = $("configure_plugin");
     new Ajax.Request('#',{
@@ -330,9 +330,15 @@ var GBrowseController = Class.create({
           }).toQueryString(),
       onSuccess: function(transport) {
         Controller.wipe_div(pc_div_id); 
-        // update plugin track if it exists
-        if ( null != $(plugin_track_div_id)){
-          Controller.rerender_track(plugin_track_name,plugin_track_div_id);
+
+        if (plugin_type == 'annotator'){
+          // update plugin track if it exists
+          if ( null != $(plugin_track_div_id)){
+            Controller.rerender_track(plugin_track_name,plugin_track_div_id);
+          }
+        }
+        else if (plugin_type == 'filter'){
+          Controller.update_coordinates("reload segment");
         }
       } // end onSuccess
     });
@@ -358,7 +364,8 @@ var GBrowseController = Class.create({
       }
     }
     else if (plugin_type == 'filter'){
-        alert("Not Implemented Yet");
+      // Go doesn't do anything for filter
+      return false; 
     }
     else if (plugin_type == 'finder'){
         alert("Not Implemented Yet");

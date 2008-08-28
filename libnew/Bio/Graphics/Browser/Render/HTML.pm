@@ -750,7 +750,8 @@ sub wrap_plugin_configuration {
                 . $self->tr('Configure_plugin') . '", "'
                 . "plugin:$plugin_name" . '", "'
                 . "track_plugin:$plugin_name"
-                . '","plugin_configure_div");'
+                . '","plugin_configure_div","'
+                . $plugin_type . '");'
             );
         if ( $plugin_type eq 'finder' ) {
             push @buttons,
@@ -760,7 +761,7 @@ sub wrap_plugin_configuration {
                 -onClick => 'alert("Find not yet implemented")',
                 );
         }
-        elsif ( $plugin_type eq 'dumper' or $plugin_type eq 'filter' ) {
+        elsif ( $plugin_type eq 'dumper' ) {
             push @buttons,
                 button(
                 -name    => 'plugin_button',

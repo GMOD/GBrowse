@@ -1485,6 +1485,9 @@ sub asynchronous_update_coordinates {
 	$self->move_segment($state,$action);
 	$position_updated++;
     }
+    if ($action =~ /reload segment/) {
+	$position_updated++;
+    }
     if ( $action =~ /flip (\S+)/ ) {
         if ( $1 eq 'true' ) {
             $state->{'flip'} = 1;

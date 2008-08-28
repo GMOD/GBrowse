@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin;
-# $Id: Plugin.pm,v 1.12.4.6.2.2.2.4 2008-07-28 23:08:42 lstein Exp $
+# $Id: Plugin.pm,v 1.12.4.6.2.2.2.5 2008-08-28 14:39:06 lstein Exp $
 
 =head1 NAME
 
@@ -186,12 +186,19 @@ contain HTML tags, and should describe what the plugin does and who
 wrote it.  This text is displayed when the user presses the "About..."
 button.
 
-=item $verb = $self->verb
+=item $verb = $self->verb()
 
 This method returns a verb to be used in the plugin popup menu
 in cases where the main three don't fit.  This method should
-be set return whitespace (not undefined) if you do not want a 
-descriptive verb for the menu
+be set return whitespace or an empty string (not undefined) 
+if you do not want a descriptive verb for the menu
+
+=item $suppress_title = $self->suppress_title()
+
+The purpose of this methods is to suppress the 'Configure...'
+or 'Find...' title that is printed at the top of the page when the 
+plugin is loaded.  It will return false unless overriden by a plugin where
+this behaviour is desired.
 
 =item $type = $self->type()
 
@@ -288,6 +295,13 @@ following idiom:
 This facility is intended to be used for any settings that should not
 be changed by the end user.  Persistent user preferences should be
 stored in the hash returned by configuration().
+
+=item $language = $self->language
+
+This method returns the current I18n language file. You can use this
+to make translations with the tr() method:
+
+  print $self->language->tr('WELCOME');
 
 
 =item $segments = $self->segments 
@@ -569,7 +583,11 @@ instead of the more familiar CGI module's param() function.
 
 use strict;
 use Bio::Graphics::Browser;
+use Data::Dumper;
+use Digest::MD5 'md5_hex';
 use CGI qw(url header p);
+
+$Data::Dumper::Sortkeys = 1;
 
 use vars '$VERSION','@ISA','@EXPORT';
 $VERSION = '0.20';
@@ -602,6 +620,11 @@ sub verb {
   return '';
 }
 
+# return nothing unless the plugin overrides this method
+sub suppress_title {
+  my $self = shift;
+  return '';
+}
 
 sub description {
   my $self = shift;
@@ -647,6 +670,14 @@ sub database {
   my $self = shift;
   my $d = $self->{g_database};
   $self->{g_database} = shift if @_;
+  $d;
+}
+
+# get/store language
+sub language {
+  my $self = shift;
+  my $d = $self->{g_language};
+  $self->{g_language} = shift if @_;
   $d;
 }
 
@@ -759,6 +790,10 @@ sub new_feature_list {
 # install the plugin but do not show it in the "Reports & Analysis" menu
 # off by default
 sub hide {}
+
+sub config_hash {
+  return md5_hex( Dumper( shift->configuration ) );
+}
 
 1;
 

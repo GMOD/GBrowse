@@ -187,6 +187,7 @@ sub asynchronous_event {
     if ( my $action = param('navigate') ) {
 
         #warn "updating coordinates";
+        $self->init_database();
         $self->asynchronous_update_coordinates($action);
         my $track_keys = $self->begin_track_render();
 
@@ -211,6 +212,7 @@ sub asynchronous_event {
     }
 
     if ( my $action = param('first_render') ) {
+        $self->init_database();
 
         my $track_keys          = $self->begin_track_render();
         return unless $track_keys;
@@ -379,7 +381,6 @@ sub asynchronous_event {
 
 sub begin_track_render {
     my $self = shift;
-    $self->init_database();
     $self->init_plugins();
     $self->init_remote_sources();
 
@@ -1651,6 +1652,9 @@ sub asynchronous_update_coordinates {
 
     my $state  = $self->state;
 
+    my $whole_segment = $self->whole_segment;
+    my $whole_segment_start = $whole_segment->start;
+    my $whole_segment_stop = $whole_segment->stop;
     my $position_updated;
     if ($action =~ /left|right/) {
 	$self->scroll($state,$action);
@@ -1682,14 +1686,14 @@ sub asynchronous_update_coordinates {
     
 
     if ($position_updated) { # clip and update param
-	if (defined $state->{seg_min} && $state->{start} < $state->{seg_min}) {
-	    my $delta = $state->{seg_min} - $state->{start};
+	if (defined $whole_segment_start && $state->{start} < $whole_segment_start) {
+	    my $delta = $whole_segment_start - $state->{start};
 	    $state->{start} += $delta;
 	    $state->{stop}  += $delta;
 	}
 
-	if (defined $state->{seg_max} && $state->{stop}  > $state->{seg_max}) {
-	    my $delta = $state->{stop} - $state->{seg_max};
+	if (defined $whole_segment_stop && $state->{stop}  > $whole_segment_stop) {
+	    my $delta = $state->{stop} - $whole_segment_stop;
 	    $state->{start} -= $delta;
 	    $state->{stop}  -= $delta;
 	}

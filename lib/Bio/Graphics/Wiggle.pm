@@ -406,8 +406,10 @@ sub value {
   my $position = shift;
 
   my $offset   = $self->_calculate_offset($position);
-  $offset     >= HEADER_LEN or die "Tried to retrieve data from before start position";
-  $self->seek($offset)      or die "Seek failed: $!";
+  $offset     >= HEADER_LEN 
+      or croak "Tried to retrieve data from before start position: requested position = $position, start = ",$self->start;
+  $self->seek($offset) 
+      or die "Seek failed: $!";
 
   if (@_ == 2) {
     my $end       = shift;

@@ -532,7 +532,10 @@ sub process_variableline {
     chomp;
     my ($start,$value) = split /\s+/ or next;
     $value = $transform->($self,$value) if $transform;
-    $wigfile->set_value($start=>$value);
+    eval {
+	$wigfile->set_value($start=>$value);
+	1;
+    } or croak "Data error on line $.: $_\nDetails: $@";
 
     # update span
     $chrom->{start} = $start 

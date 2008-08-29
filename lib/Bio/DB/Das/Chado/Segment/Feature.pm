@@ -127,7 +127,7 @@ sub new {
 =head1 feature and featureloc accessors
 
 Methods below are accessors for data that is drawn directly from the
-Chado dataabase and can be considered "primary" accessors for this
+Chado database and can be considered "primary" accessors for this
 class.
 
 =cut
@@ -316,6 +316,31 @@ sub uniquename {
   return $self->{'uniquename'} = shift if @_;
   return $self->{'uniquename'};
 }
+
+=head2 is_analysis()
+
+  Title   : is_analysis
+  Usage   : $obj->is_analysis($newval)
+  Function: holds feature.is_analysis
+  Returns : value of is_analysis (a scalar)
+  Args    : on set, new value (a scalar or undef, optional)
+
+=cut
+
+sub is_analysis {
+  my $self = shift;
+  return $self->{'is_analysis'} = shift if defined($_[0]);
+
+  my $dbh = $self->factory->dbh;
+  my $fid = $self->feature_id;
+  my $sth = $dbh->prepare("SELECT is_analysis FROM feature WHERE feature_id =?");
+  $sth->execute($fid);
+
+  my ($is_analysis) = $sth->fetchrow_array;
+
+  return $self->{'is_analysis'} = $is_analysis;
+} 
+
 
 ######################################################################
 # ISA Bio::SeqFeatureI

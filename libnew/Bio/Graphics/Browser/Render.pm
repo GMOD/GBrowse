@@ -7,6 +7,7 @@ use JSON;
 use Digest::MD5 'md5_hex';
 use CGI qw(:standard param request_method header url iframe img span div br center);
 use Carp 'croak','cluck';
+use Text::Tabs;
 
 use Bio::Graphics::Browser::I18n;
 use Bio::Graphics::Browser::PluginSet;
@@ -1019,11 +1020,47 @@ sub zoomBar {
     croak 'Please define zoomBar() in a subclass of Bio::Graphics::Browser::Render';
 }
 
-# not implemented
 sub write_auto {
-  my $self = shift;
-  my $result_set = shift;
-  return;   
+    my $self             = shift;
+    my $features         = shift;
+    my $styles           = shift;
+    my $setting          = $self->state();
+    my $uploaded_sources = $self->uploaded_sources();
+    return unless @$features;
+
+    my $basename = "Custom_Track";
+    $uploaded_sources->clear_file("file:${basename}")
+        ;    # in case it's already there
+    my $file = $uploaded_sources->new_file($basename);
+
+    my %seenit;
+
+    warn "opening $file...\n" if DEBUG;
+    my $out = $uploaded_sources->open_file( $file, ">>" ) or return;
+    warn "writing $file...\n" if DEBUG;
+
+    $styles ||= [];
+    for my $style (@$styles) {
+        my ( $type, @options ) = shellwords($style);
+        print $out "[$type]\n";
+        print $out join "\n", @options;
+        print $out "\n";
+    }
+
+    for my $f (@$features) {
+        my $reference = $f->can('seq_id') ? $f->seq_id : $f->seq_id;
+        my $type      = $f->primary_tag;
+        my $name      = $f->seqname;
+        my $position
+            = $f->sub_SeqFeature
+            ? join( ',',
+            map { $_->start . '..' . $_->end } $f->sub_SeqFeature )
+            : $f->start . '..' . $f->end;
+        $name .= "($seenit{$name})" if $seenit{$name}++;
+        print $out "\nreference=$reference\n";
+        print $out join( "\t", qq("$type"), qq("$name"), $position ), "\n";
+    }
+    close $out;
 }
 
 sub handle_downloads {
@@ -1097,13 +1134,13 @@ sub handle_uploads {
 	  -value=>$self->tr('Edit'));
   }
 
-  elsif (defined(my $data = param('a_data'))) {
-    handle_edit($state,$data);
+  elsif (defined(my $data = param('a_data')) and not param('Cancel')) {
+    $self->handle_edit($state,$data);
   }
 
   elsif (my @data = (param('auto'),param('add'),param('a'))) {
     my @styles    = (param('style'),param('s'));
-    handle_quickie($state,\@data,\@styles);
+    $self->handle_quickie($state,\@data,\@styles);
   }
 
   if (param('Cancel') && (my $file = param('edited file'))) {
@@ -1117,12 +1154,81 @@ sub handle_uploads {
   }
 
   if ($action && param($action) eq $self->tr('Edit')) {
-    edit_uploaded_file($state,$file);
+    $self->edit_uploaded_file($file);
     return 1;   # this will cause it to exit
   }
 
   # return 1 to exit
   return;
+}
+
+sub handle_edit {
+    my $self             = shift;
+    my $setting          = shift;
+    my $data             = shift;
+    my $uploaded_sources = $self->uploaded_sources();
+    my $file             = param('edited file') or return;
+    my @lines            = unexpand( split '\r?\n|\r\n?', $data );
+    $data = join "\n", @lines;
+    $data .= "\n";
+    $uploaded_sources->new_file($file);    # register it
+    my $fh = $uploaded_sources->open_file( $file, '>' ) or return;
+    print $fh $data;
+    close $fh;
+}
+
+sub handle_quickie {
+    my $self   = shift;
+    my $data   = shift;
+    my $styles = shift;
+    return unless $data;
+
+    # format of quickie data is
+    # reference+type+name+start..end,start..end,start..end
+    my @features;
+    foreach my $d (@$data) {
+        my ( $reference, $type, $name, @segments )
+            = $self->parse_feature_str($d);
+        push @features,
+            Bio::Graphics::Feature->new(
+            -ref  => $reference || '',
+            -type => $type      || '',
+            -name => $name      || '',
+            -segments => \@segments,
+            );
+    }
+    write_auto( \@features, $styles );
+}
+
+sub parse_feature_str {
+    my $self = shift;
+    my $f    = shift;
+    my ( $reference, $type, $name, @position );
+    my @args = shellwords( $f || '' );
+    if ( @args > 3 ) {
+        ( $reference, $type, $name, @position ) = @args;
+    }
+    elsif ( @args > 2 ) {
+        ( $reference, $name, @position ) = @args;
+    }
+    elsif ( @args > 1 ) {
+        ( $reference, @position ) = @args;
+    }
+    elsif ( $f =~ /^(.+):(\d+.+)$/ ) {
+        ( $reference, @position ) = ( $1, $2 );
+    }
+    elsif ( $f =~ /^(.+)/ ) {
+        $reference = $1;
+        @position  = '1..1';
+    }
+    return unless $reference;
+
+    $type = 'Your Features' unless defined $type;
+    $name = "Feature " . ++$self->{added_features} unless defined $name;
+
+    my @segments
+        = map { [/(-?\d+)(?:-|\.\.)(-?\d+)/] } map { split ',' } @position;
+    ( $reference, $type, $name, @segments );
 }
 
 

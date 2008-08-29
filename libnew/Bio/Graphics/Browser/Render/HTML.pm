@@ -8,9 +8,12 @@ use Bio::Graphics::Karyotype;
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
 use CGI qw(:standard escape start_table end_table);
+use Text::Tabs;
 eval "use GD::SVG";
 
 use constant JS    => '/gbrowse/js';
+use constant ANNOTATION_EDIT_ROWS => 25;
+use constant ANNOTATION_EDIT_COLS => 100;
 use constant DEBUG => 0;
 
 sub render_top {
@@ -636,6 +639,54 @@ sub tableize {
   $html .= end_table();
 }
 
+sub edit_uploaded_file {
+    my $self = shift;
+    my ($file) = @_;
+
+    print header( -charset => $self->tr('CHARSET') );
+    $self->render_top("Editing $file");
+    print start_form();
+    my $data;
+    my $fh = $self->uploaded_sources->open_file($file) or return;
+    $data = join '', expand(<$fh>);
+    print table(
+        { -width => '100%' },
+        TR( { -class => 'searchbody' },
+            td( $self->tr('Edit_instructions') ),
+        ),
+        TR( { -class => 'searchbody' },
+            td( a(  { -href => "?help=annotation#format", -target => 'help' },
+                    b( '[' . $self->tr('Help_format') . ']' )
+                )
+            ),
+        ),
+        TR( { -class => 'searchtitle' }, th( $self->tr('Edit_title') ) ),
+        TR( { -class => 'searchbody' },
+            td( { -align => 'center' },
+                pre(textarea(
+                        -name  => 'a_data',
+                        -value => $data,
+                        -rows  => ANNOTATION_EDIT_ROWS,
+                        -cols  => ANNOTATION_EDIT_COLS,
+                        -wrap  => 'off',
+                        -style => "white-space : pre"
+                    )
+                )
+            )
+        ),
+        TR( { -class => 'searchtitle' },
+            th( reset( $self->tr('Undo') ) 
+                    . '&nbsp;'
+                    . submit('Cancel')
+                    . '&nbsp;'
+                    . b( submit('Submit Changes...') )
+            )
+        )
+    );
+    print hidden( -name => 'edited file', -value => $file );
+    print end_form();
+    $self->render_bottom();
+}
 
 ###################### help ##############3
 sub annotation_help {

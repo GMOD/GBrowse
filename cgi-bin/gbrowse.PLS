@@ -48,7 +48,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.103 2008-08-28 14:38:57 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.104 2008-08-29 17:10:39 mwz444 Exp $
 
 use strict;
 use Bio::Graphics;
@@ -2619,7 +2619,7 @@ sub handle_uploads {
     param(-name=>"modify.$file",-value=>$CONFIG->tr('Edit'));
   }
 
-  elsif (defined(my $data = param('a_data'))) {
+  elsif (defined(my $data = param('a_data')) and not param('Cancel')) {
     handle_edit($page_settings,$data);
   }
 

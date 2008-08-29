@@ -47,7 +47,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbgff.PLS,v 1.1.2.9 2008-08-02 16:16:42 lstein Exp $
+# $Id: gbgff.PLS,v 1.1.2.10 2008-08-29 17:18:35 lstein Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -138,7 +138,8 @@ sub initialize {
 
     if ($src) {
 	unless ($config->source($src)) {
-	    print "# Invalid source $src; you may not have permission to access this data source.\n";
+	    print header('text/plain'),
+	    "# Invalid source $src; you may not have permission to access this data source.\n";
 	    exit 0;
 	}
     }
@@ -153,20 +154,20 @@ sub get_segment {
 
     my $q = param('q') || param('segment');
     my ($seqid,$start,$end) = 
-	param('q') =~ /^([^:]+):([\d-]+)(?:\.\.|,)([\d-]+)/;
+	param('q') =~ /^([^:]+)(?::([\d-]+)(?:\.\.|,)([\d-]+))?/;
 
-    $seqid ||= param('ref') || param('seqid');
-    $start ||= param('start');
-    $end   ||= param('end') || param('stop');
-    unless (defined $seqid && defined $start && defined $end) {
-	print "# Please provide ref, start and end arguments.\n";
+    $seqid ||= param('ref')   || param('seqid');
+    $start ||= param('start') || 1;
+    $end   ||= param('end')   || param('stop');
+    unless (defined $seqid) {
+	print header('text/plain'),"# Please provide ref, start and end arguments.\n";
 	exit 0;
     }
 
     my $db    = $self->db;
     my ($s)   = $db->segment($seqid,$start=>$end);
     unless (defined $s) {
-	print "# Unknown segment $seqid:$start..$end.\n";
+	print header('text/plain'),"# Unknown segment $seqid:$start..$end.\n";
 	exit 0;
     }
 

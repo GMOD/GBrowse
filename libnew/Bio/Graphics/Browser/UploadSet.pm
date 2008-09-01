@@ -75,8 +75,6 @@ sub new_file {
   $filename =~ s/^file://;
   my ($url,$path) = $self->name_file($filename);
   warn "url = $url" if DEBUG;
-  unshift @{$state->{tracks}},$url unless $state->{features}{$url};
-  $state->{features}{$url} = {visible=>1,options=>0,limit=>0};
   $self->_add_file($url=>$path);
   return $url;
 }

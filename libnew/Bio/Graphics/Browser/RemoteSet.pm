@@ -136,13 +136,12 @@ sub get_remote_upload {
   # do certain substitutions on the URL
   $url = $self->transform_url($url,$segment);
 
-  my $id = md5_hex($url);     # turn into a filename
-  $id =~ /^([0-9a-fA-F]+)$/;  # untaint operation
-  $id = $1;
+#  my $id = md5_hex($url);     # turn into a filename
+#  $id =~ /^([0-9a-fA-F]+)$/;  # untaint operation
+#  $id = $1;
 
-  my (undef,$tmpdir) = $config->tmpdir(File::Spec->catfile($config->source,'external'));
-  my $filename = File::Spec->catfile($tmpdir,$id);
-  my $response = $self->mirror($url,$filename);
+  my (undef,$filename) = $self->name_file($url,0);
+  my $response         = $self->mirror($url,$filename);
   if ($response->is_error) {
     error($config->tr('Fetch_failed',$url,$response->message));
     return;
@@ -153,7 +152,8 @@ sub get_remote_upload {
     Bio::Graphics::FeatureFile->new(-file           => $fh,
 				    -map_coords     => $in_overview ? $slow_mapper : $rel2abs,
 				    -smart_features => 1,
-				    -safe_world     => $self->config->setting('allow remote callbacks')||0,
+				    -safe_world     => 
+				       $self->config->setting('allow remote callbacks')||0,
     );
   warn "get_remote_feature_data(): got $feature_file" if DEBUG;
  
@@ -253,6 +253,7 @@ sub mirror {
   my ($volume,$dirs,$file) = File::Spec->splitpath($filename);
   $file = "$file-$$";
   my $tmpfile  = File::Spec->catfile($volume,$dirs,$file);
+
   my $response = $UA->request($request,$tmpfile);
 
   if ($response->is_success) {  # we got a new file, so need to process it

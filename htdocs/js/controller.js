@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.38 2008-08-28 14:11:31 mwz444 Exp $
+ $Id: controller.js,v 1.39 2008-09-01 18:53:48 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -92,7 +92,7 @@ var GBrowseController = Class.create({
     this.get_remaining_tracks(track_keys,1000,1.5,time_key);
   },
 
-  // Time key is there to make sure separate calls don't trounce eachother
+  // Time key is there to make sure separate calls don't trounce each other
   // Only Update if the tracks time_key matches the method's
   get_remaining_tracks:
   function (track_keys,time_out,decay,time_key){
@@ -105,7 +105,7 @@ var GBrowseController = Class.create({
         if(Controller.retrieve_tracks.get(track_div_id)){
           if (Controller.track_time_key.get(track_div_id) == time_key){
             track_div_ids.push(track_div_id);
-            track_key_str += '&tk_'+track_div_id+"="+track_keys[track_div_id];
+            track_key_str += '&tk_'+escape(track_div_id)+"="+track_keys[track_div_id];
             finished = false;
           }
         }
@@ -118,7 +118,9 @@ var GBrowseController = Class.create({
 
     new Ajax.Request('#',{
       method:     'post',
-      parameters: $H({ retrieve_multiple: 1, track_div_ids: track_div_ids, }).toQueryString() + track_key_str,
+      parameters: $H({ retrieve_multiple: 1, 
+                       track_div_ids:     track_div_ids, 
+		    }).toQueryString()  + track_key_str,
       onSuccess: function(transport) {
         var continue_requesting = false;
         var results    = transport.responseJSON;

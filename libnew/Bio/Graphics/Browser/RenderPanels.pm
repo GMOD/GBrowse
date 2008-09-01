@@ -182,6 +182,8 @@ sub make_requests {
     my $feature_files  = $args->{external_features};
     my $labels         = $args->{labels};
 
+    warn "MAKE_REQUESTS, labels = ",join ',',@$labels if DEBUG;
+
     my $base        = $self->get_cache_base();
     my @panel_args  = $self->create_panel_args($args);
     my @cache_extra = @{ $args->{cache_extra} || [] };
@@ -345,11 +347,6 @@ sub wrap_rendered_track {
         span( { -class => 'draghandle' }, $title )
     );
 
-    # this may no longer be necessary?
-#    ( my $munge_label = $label )
-#        =~ s/_/%5F/g;    # freakin' scriptaculous uses _ as a delimiter!!!
-
-    my $munge_label = $label;
 
     my $show_titlebar
         = ( ( $source->setting( $label => 'key' ) || '' ) ne 'none' );
@@ -373,15 +370,15 @@ sub wrap_rendered_track {
 
     return
 	div(
-        { -id => "track_${munge_label}", -class => $class },
+        { -id => "track_${label}", -class => $class },
         div({ -align => 'center' },
             ( $show_titlebar ? $titlebar : '' ) . $img . $pad_img
         )
 	,$map_html || ''
         )
         . qq[<script type="text/javascript" language="JavaScript">Controller.register_track("track_]
-        . $munge_label . q[","]
-        . $munge_label
+        . $label . q[","]
+        . $label
         . q[_image", "]
         . $track_type
         . q[");</script>]

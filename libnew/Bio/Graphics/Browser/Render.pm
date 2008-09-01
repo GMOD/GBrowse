@@ -120,6 +120,8 @@ sub run {
   my $fh   = shift || \*STDOUT;
   my $old_fh = select($fh);
 
+  warn "RUN(): URI = ",url(-path=>1,-query=>1) if DEBUG;
+
   return if $self->run_asynchronous_event;
 
   my $source = $self->session->source;
@@ -343,6 +345,7 @@ sub asynchronous_event {
     for my $p ( grep {/^track_collapse_/} param() ) {
         my $collapsed = param($p);
         $p =~ s/^track_collapse_//;
+	warn "\$settings->{track_collapsed}{$p} = $collapsed" if DEBUG;
         $settings->{track_collapsed}{$p} = $collapsed;
         $events++;
     }
@@ -366,14 +369,14 @@ sub asynchronous_event {
 
         $self->set_segment($seg);
 
-        my $deferred_data = $self->render_deferred( \@labels );
+        my $deferred_data = $self->render_deferred( labels => \@labels );
 	return (200,'application/json',$deferred_data);
         $self->session->flush if $self->session;
         return 1;
     }
 
     return unless $events;
-    warn "processing asynchronous event(s)";
+    warn "processing asynchronous event(s)" if DEBUG;
     return (204,'text/plain',undef);
     $self->session->flush if $self->session;
     1;
@@ -386,22 +389,32 @@ sub begin_track_render {
 
     $self->segment or return;
     my $cache_extra = $self->create_cache_extra();
+    my $external    = $self->external_data,
 
     # Start rendering the detail, region and overview tracks
     my @cache_track_hash_list;
     push @cache_track_hash_list,
-        $self->render_deferred( [ $self->detail_tracks ],
-				$self->segment, 
-				'detail', $cache_extra, );
+        $self->render_deferred( labels          => [ $self->detail_tracks ],
+				segment         => $self->segment, 
+				section         => 'detail', 
+				cache_extra     => $cache_extra, 
+				external_tracks => $external
+	    );
     push @cache_track_hash_list,
-        $self->render_deferred( [ $self->regionview_tracks ],
-				$self->region_segment,
-				'region', $cache_extra, )
+        $self->render_deferred( labels          => [ $self->regionview_tracks ],
+				segment         => $self->region_segment,
+				section         => 'region', 
+				cache_extra     => $cache_extra, 
+				external_tracks => $external,
+	    )
         if ( $self->state->{region_size} );
     push @cache_track_hash_list,
-        $self->render_deferred( [ $self->overview_tracks ],
-			    $self->whole_segment,
-			    'overview', $cache_extra, );
+        $self->render_deferred( labels          => [ $self->overview_tracks ],
+				segment         => $self->whole_segment,
+				section         => 'overview', 
+				cache_extra     => $cache_extra, 
+				external_tracks => $external,
+	    );
 
     my %track_keys;
     foreach my $cache_track_hash (@cache_track_hash_list) {
@@ -454,9 +467,12 @@ sub begin_individual_track_render {
 
     # Start rendering the detail and overview tracks
     my $cache_track_hash = $self->render_deferred( 
-	[ $label, ],
-	$segment, 
-        $section, $cache_extra, );
+	label       => [ $label, ],
+	segment     => $segment, 
+        section     => $section, 
+	cache_extra => $cache_extra, 
+	external_tracks => $self->external_data,
+	);
 
     my %track_keys;
     foreach my $cache_track_hash ( $cache_track_hash, ) {
@@ -476,7 +492,6 @@ sub render {
   # if they want us to exit before printing the header
   $self->handle_plugins()   && return;
   $self->handle_downloads() && return;
-  $self->handle_uploads()   && return;
 
   $self->render_header();
   $self->render_body();
@@ -1114,7 +1129,7 @@ sub get_file_action {
     return ($file,$file_action);
 }
 
-sub handle_uploads {
+sub handle_external_data {
   my $self = shift;
 
   my ($file,$action)   = $self->get_file_action;
@@ -1124,11 +1139,13 @@ sub handle_uploads {
   my $remotes = $self->remote_sources;
 
   if ((param('Upload')||param('upload')) && (my $f = param('upload_annotations'))) {
-      $uploads->upload_file($f);
+      $file = $uploads->upload_file($f);
+      $self->add_track_to_state($file);
   }
 
   elsif (param('new_upload')) {
     $file = $uploads->new_file();
+    $self->add_track_to_state($file);
     $uploads->open_file($file,">");# empty, truncated file
     $action = "modify.$file";
     param(-name=>"modify.$file",
@@ -1144,6 +1161,10 @@ sub handle_uploads {
     $self->handle_quickie($state,\@data,\@styles);
   }
 
+  elsif (my @urls = param('eurl')) {
+      $self->add_track_to_state($_) foreach @urls;
+  }
+  
   if (param('Cancel') && (my $file = param('edited file'))) {
       $uploads->clear_file($file) 
 	  if -s $uploads->url2path($file) < 2;  # too small, throw it back
@@ -1152,6 +1173,7 @@ sub handle_uploads {
   if ($action && param($action) eq $self->tr('Delete')) {
     $uploads->clear_file($file);
     $remotes->delete_source($file);
+    $self->remove_track_from_state($file);
   }
 
   if ($action && param($action) eq $self->tr('Edit')) {
@@ -1231,7 +1253,6 @@ sub parse_feature_str {
         = map { [/(-?\d+)(?:-|\.\.)(-?\d+)/] } map { split ',' } @position;
     ( $reference, $type, $name, @segments );
 }
-
 
 ###################################################################################
 #
@@ -1361,6 +1382,9 @@ sub default_tracks {
 sub add_track_to_state {
   my $self  = shift;
   my $label = shift;
+
+  return unless length $label; # refuse to add empty tracks!
+
   my $state  = $self->state;
 
   push @{ $state->{tracks} }, $label 
@@ -1373,7 +1397,14 @@ sub remove_track_from_state {
   my $label = shift;
   my $state  = $self->state;
 
-  $state->{features}{$label} = {visible=>0,options=>0,limit=>0};
+#  $state->{features}{$label} = {visible=>0,options=>0,limit=>0};
+  delete $state->{features}{$label};
+}
+
+sub track_visible {
+    my $self  = shift;
+    my $label = shift;
+    return $self->state->{features}{$label}{visible};
 }
 
 sub update_state_from_cgi {
@@ -1390,9 +1421,12 @@ sub update_state_from_cgi {
 
   $self->update_coordinates($state);
   $self->update_region($state);
-  $self->update_external_annotations($state);
   $self->update_section_visibility($state);
   $self->update_external_sources();
+
+#  $self->handle_remotes();
+  $self->handle_external_data();
+
 }
 
 sub update_options {
@@ -1479,8 +1513,10 @@ sub update_coordinates {
   }
 
   elsif (param('q')) {
-    @{$state}{'ref','start','stop'} = $self->parse_feature_name(param('q'));
-    $position_updated++;
+      warn "param(q) = ",param('q');
+      @{$state}{'ref','start','stop'} 
+          = Bio::Graphics::Browser::Region->parse_feature_name(param('q'));
+      $position_updated++;
   }
 
   # quench uninit variable warning
@@ -1837,27 +1873,6 @@ sub update_region {
   }
 }
 
-sub update_external_annotations {
-  my $self  = shift;
-  my $state = shift || $self->state;
-
-
-  my @external = grep {length $_ > 0} param('eurl') or return;
-
-  my %external = map {$_=>1} @external;
-  foreach (@external) {
-    next if exists $state->{features}{$_};
-    $state->{features}{$_} = {visible=>1,options=>0,limit=>0};
-    push @{$state->{tracks}},$_;
-  }
-
-  # remove any URLs that aren't on the list
-  foreach (keys %{$state->{features}}) {
-    next unless /^(http|ftp):/;
-    delete $state->{features}{$_} unless exists $external{$_};
-  }
-}
-
 sub update_section_visibility {
   my $self = shift;
   my $state = shift;
@@ -2055,8 +2070,8 @@ sub load_plugin_annotators {
 }
 
 sub detail_tracks {
-  my $self = shift;
-  my $state = $self->state;
+  my $self   = shift;
+  my $state  = $self->state;
   my @tracks = grep {$state->{features}{$_}{visible} && !/:(overview|region)$/ && !/^_/}
                @{$state->{tracks}};
 }
@@ -2162,10 +2177,15 @@ sub render_regionview {
 sub render_deferred {
     my $self        = shift;
 
-    my $labels      = shift || [ $self->detail_tracks ];
-    my $seg         = shift || $self->segment;
-    my $section     = shift || 'detail';
-    my $cache_extra = shift || $self->create_cache_extra();
+    my %args = @_;
+
+    my $labels      = $args{labels}          || [ $self->detail_tracks ];
+    my $seg         = $args{segment}         || $self->segment;
+    my $section     = $args{section}         || 'detail';
+    my $cache_extra = $args{cache_extra}     || $self->create_cache_extra();
+    my $external    = $args{external_tracks} || $self->external_data;
+
+    warn "RENDER_DEFERRED ",join ',',@$labels if DEBUG;
 
     my $renderer = $self->get_panel_renderer($seg);
 
@@ -2176,7 +2196,7 @@ sub render_deferred {
             section          => $section,
             deferred         => 1,
             whole_segment    => $self->whole_segment(),
-	    external_features=> $self->external_data,
+	    external_features=> $external,
             hilite_callback  => $h_callback || undef,
             cache_extra      => $cache_extra,
             flip => ( $section eq 'detail' ) ? $self->state()->{'flip'} : 0,
@@ -2354,6 +2374,8 @@ sub external_data {
     my $segment = $self->segment or return { };
     my $state   = $self->state;
 
+    return $self->{feature_files} if exists $self->{feature_files};
+
     # $f will hold a feature file hash in which keys are human-readable names of
     # feature files and values are FeatureFile objects.
     my $f           = {};
@@ -2367,7 +2389,7 @@ sub external_data {
 	}
     }
     
-    return $f;
+    return $self->{feature_files} = $f;
 }
 
 sub coordinate_mapper {

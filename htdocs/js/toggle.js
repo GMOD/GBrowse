@@ -45,7 +45,7 @@ function collapse(element_name) {
      pad.style.display = 'none';
      control.className = 'titlebar';
    }
-   var postData = 'track_collapse_'+ element_name + '=' + (closeit ? 1 : 0);
+   var postData = 'track_collapse_'+ escape(element_name) + '=' + (closeit ? 1 : 0);
    new Ajax.Request(document.URL,{method:'post',postBody:postData});
    return false;
 }

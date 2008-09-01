@@ -239,6 +239,7 @@ sub render_track_table {
 				 $source->plugin_tracks,
 				 $source->regionview_tracks,
 				 $self->uploaded_sources->files,
+				 $self->remote_sources->sources,
   );
   my %labels     = map {$_ => $self->label2key($_)}              @labels;
   my @defaults   = grep {$settings->{features}{$_}{visible}  }   @labels;
@@ -344,6 +345,7 @@ sub render_multiple_choices {
 
     my $karyotype = Bio::Graphics::Karyotype->new(source   => $self->data_source,
 						  language => $self->language);
+    $karyotype->add_hits($features);
     return $karyotype->to_html($terms2hilite);
 }
 
@@ -479,6 +481,7 @@ sub upload_table {
 	    a({-href=>annotation_help(),-target=>'help'},'['.$self->tr('HELP').']'))
 	);
   my $uploaded_sources = $self->uploaded_sources();
+
   # now add existing files
   for my $file ($uploaded_sources->files) {
 
@@ -489,7 +492,7 @@ sub upload_table {
     my $link = a({-href=>"?$download=$file"},"[$name]");
 
     my @info =  $self->get_uploaded_file_info(
-	$settings->{features}{$file}{visible}  && $uploaded_sources->feature_file($file));
+	$self->track_visible($file) && $uploaded_sources->feature_file($file));
 
     my $escaped_file = CGI::escape($file);
     $cTable .=  TR({-class=>'uploadbody'},
@@ -559,9 +562,11 @@ sub segment2link {
 
 # URLs for external annotations
 sub das_table {
-  my $self      = shift;
-  my $settings      = shift;
-  my $feature_files = shift;
+  my $self          = shift;
+
+  my $settings      = $self->state;
+  my $feature_files = $self->external_data;
+
   my (@rows,$count);
 
   my ($preset_labels,$preset_urls) = $self->get_external_presets($settings);  # (arrayref,arrayref)
@@ -581,8 +586,7 @@ sub das_table {
   }
 
   local $^W = 0;
-  if (defined $settings->{ref}) {
-      my $segment = "$settings->{ref}:$settings->{start},$settings->{stop}";
+  if (my $segment = $self->segment) {
 
       my $remote_sources = $self->remote_sources();
       for my $url ($remote_sources->sources) {
@@ -590,23 +594,22 @@ sub das_table {
 	  my $f = $remote_sources->transform_url($url,$segment);
 
 	  next unless $url =~ /^(ftp|http):/ && $feature_files->{$url};
-
 	  my $escaped_url = CGI::escape($url);
 	  push @rows,th({-align=>'right',-width=>'20%'},"URL",++$count).
 	      td(textfield(-name=>'eurl',-size=>80,-value=>$url,-override=>1),
 		 submit(-name=>"modify.$escaped_url",-value=>$self->tr('Delete')),
 		 br,
 		 a({-href=>$f,-target=>'help'},'['.$self->tr('Download').']'),
-		 get_uploaded_file_info($settings->{features}{$url}{visible} 
-					&& $feature_files->{$url})
+		 $self->get_uploaded_file_info($self->track_visible($url) && $feature_files->{$url})
 	      );
       }
-    push @rows,th({-align=>'right',-width=>'20%'},
-		  $self->tr('Remote_url')).
+  }
+
+  push @rows,th({-align=>'right',-width=>'20%'},
+		$self->tr('Remote_url')).
 		    td(textfield(-name=>'eurl',-size=>80,-value=>'',-override=>1),
 		       $presets,
-		      submit($self->tr('Update_urls')));
-  }
+		       submit($self->tr('Update_urls')));
 
   return table({-border=>0,-width=>'100%'},
 	       TR(

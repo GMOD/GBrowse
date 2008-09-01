@@ -114,18 +114,21 @@ sub _guess_eol {
 }
 
 sub name_file {
-  my $self = shift;
+  my $self      = shift;
   my $filename  = shift;
+  my $strip     = shift;
+  $strip        = 1 unless defined $strip;
+
   my $state     = $self->state;
   my $config    = $self->config;
 
-  # keep last non-[/\:] part of name
-  my ($name) = $filename =~ /([^:\\\/]+)$/;
-  $name                  =~ tr/-/_/;
+  # keep last non-[\\\/:] part of name
+  my ($name) = $strip ? $filename =~ /([^:\\\/]+)$/ : $filename;
+  $name                  =~ tr!-/!__!; # get rid of hyphens and slashes
 
-  my $id                 = $state->{userid} or return;
-  my (undef,$tmpdir) = $config->tmpdir($config->name,'uploaded_file',$id);
-  my $path      = "$tmpdir/$name";
+  my $id             = $state->{userid} or return;
+  my (undef,$tmpdir) = $config->tmpdir($config->name,'userdata',$id);
+  my $path      = File::Spec->catfile($tmpdir,$name);
   my $url       = "file:$name";
   warn "name_file() returns => ($url,$path)" if DEBUG;
   return ($url,$path);

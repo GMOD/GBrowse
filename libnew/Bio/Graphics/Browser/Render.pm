@@ -1691,6 +1691,11 @@ sub asynchronous_update_coordinates {
     my $whole_segment = $self->whole_segment;
     my $whole_segment_start = $whole_segment->start;
     my $whole_segment_stop = $whole_segment->stop;
+
+    # delete the segment after we get what we need.
+    # This way it will be recreated with the new params.
+    $self->delete_stored_segments();
+
     my $position_updated;
     if ($action =~ /left|right/) {
 	$self->scroll($state,$action);
@@ -2441,6 +2446,16 @@ sub coordinate_mapper {
         }
     };
     return $closure;
+}
+
+
+# Delete the segments so that they can be recreated with new parameters
+sub delete_stored_segments {
+    my $self = shift;
+
+    delete $self->{region};
+    delete $self->{region_segment};
+    delete $self->{whole_segment};
 }
 
 # I know there must be a more elegant way to insert commas into a long number...

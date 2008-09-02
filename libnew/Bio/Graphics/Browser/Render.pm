@@ -1161,7 +1161,8 @@ sub handle_external_data {
     $self->handle_quickie($state,\@data,\@styles);
   }
 
-  elsif (my @urls = param('eurl')) {
+  elsif ( param('eurl') ) {
+      my @urls = param('eurl');
       $self->add_track_to_state($_) foreach @urls;
   }
   

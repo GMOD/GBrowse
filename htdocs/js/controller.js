@@ -2,15 +2,24 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.39 2008-09-01 18:53:48 lstein Exp $
+ $Id: controller.js,v 1.40 2008-09-02 19:01:53 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
+
+Method structure
+ - Class Utility Methods
+ - Dom Utility Methods
+ - Kick-off Render Methods
+ - Retrieve Rendered Track Methods
+ - Plugin Methods
 
 */
 
 var GBrowseController = Class.create({
 
+  // Class Utility Methods ******************************************
+  
   initialize:
   function () {
     // periodic_updaters contains all the updaters for each track
@@ -23,7 +32,95 @@ var GBrowseController = Class.create({
     this.segment_info;
     this.debug_status             = 'initialized';
   },
+
+  reset_after_track_load:
+  // This may be a little overkill to run these after every track update but
+  // since there is no "We're completely done with all the track updates for the
+  // moment" hook, I don't know of another way to make sure the tracks become
+  // draggable again
+  function () {
+    if ( null != $('overview_panels') ){
+      create_drag('overview_panels','track');
+    }
+    if ( null != $('region_panels') ){
+      create_drag('region_panels','track');
+    }
+    if ( null != $('detail_panels') ){
+      create_drag('detail_panels','track');
+    }
+  },
   
+  register_track:
+  function (track_div_id,track_image_id,track_type) {
+    
+    this.track_images.set(track_div_id,track_image_id);
+    if (track_type=="scale_bar"){
+      return;
+    }
+    this.retrieve_tracks.set(track_div_id,true);
+  }, // end register_track
+
+  // Dom Utility Methods ********************************************
+
+  wipe_div:
+  function(div_id) {
+    $(div_id).innerHTML = '';
+  },
+
+  update_scale_bar:
+  function (bar_obj) {
+    var image_id = bar_obj.image_id;
+    var image = $(image_id);
+    image.setStyle({
+        background: "url(" + bar_obj.url + ") top left no-repeat",
+        width:      bar_obj.width+'px',
+        height:     bar_obj.height+'px',
+        display:    'block',
+        cursor:     'text',
+    });
+    image.setOpacity(1);
+  },
+
+  // Signal Change to Server Methods ********************************
+  set_track_visibility:
+  function(track_name,visible) {
+
+    if ( null == $('track_'+track_name)){
+      // No track div
+      return;
+    }
+
+    new Ajax.Request('#',{
+      method:     'post',
+      parameters: {
+        set_track_visibility:  1,
+        visible:               visible,
+        track_name:            track_name,
+      },
+    });
+  },
+
+  // Kick-off Render Methods ****************************************
+
+  first_render:
+  function()  {
+    this.debug_status             = 'first_render';
+    new Ajax.Request('#',{
+      method:     'post',
+      parameters: {first_render: 1},
+      onSuccess: function(transport) {
+        var results    = transport.responseJSON;
+        var track_keys = results.track_keys;
+        Controller.segment_info = results.segment_info;
+
+        Controller.get_multiple_tracks(track_keys);
+
+        Controller.debug_status             = 'first_render finished';
+      }
+    });
+    this.debug_status             = 'first_render part2';
+  },
+
   update_coordinates:
   function (action) {
 
@@ -78,6 +175,84 @@ var GBrowseController = Class.create({
     this.debug_status             = 'updating coords 2';
   }, // end update_coordinates
 
+  add_track:
+  function(track_name) {
+
+    if ( null != $('track_'+track_name)){
+      return;
+    }
+
+    new Ajax.Request('#',{
+      method:     'post',
+      parameters: {
+        add_track:  1,
+        track_name: track_name,
+      },
+      onSuccess: function(transport) {
+        var results    = transport.responseJSON;
+        var track_data = results.track_data;
+        for (var key in track_data){
+          this_track_data    = track_data[key];
+          var div_element_id = this_track_data.div_element_id;
+          var html           = this_track_data.track_html;
+          var panel_id       = this_track_data.panel_id;
+
+          //Append new html to the appropriate section
+          // This is a bit cludgy but we create a temp element, 
+          // read the html into it and then move the div element 
+          // back out.  This keeps the other tracks intact.
+          var tmp_element       = document.createElement("tmp_element");
+          tmp_element.innerHTML = html;
+          $(panel_id).appendChild(tmp_element);
+          $(panel_id).appendChild($(div_element_id));
+          $(panel_id).removeChild(tmp_element);
+
+          //Add New Track(s) to the list of observers and such
+          Controller.register_track(div_element_id,this_track_data.image_element_id,'standard') ;
+
+          //fire the segmentChanged for each track not finished
+          if (html.substring(0,18) == "<!-- AVAILABLE -->"){
+            Controller.reset_after_track_load();
+          }
+          else{
+            var track_keys = new Array();
+            time_key = create_time_key();
+            track_keys[div_element_id]=this_track_data.track_key;
+            Controller.retrieve_tracks.set(div_element_id,true);
+            Controller.track_time_key.set(div_element_id,time_key);
+            Controller.get_remaining_tracks(track_keys,1000,1.5,time_key);
+          }
+        }
+      },
+    });
+  },
+
+  rerender_track:
+  function(track_name,track_div_id) {
+
+    var image_id = this.track_images.get(track_div_id);
+    $(image_id).setOpacity(0.3);
+    new Ajax.Request('#',{
+      method:     'post',
+      parameters: {
+        rerender_track:  1,
+        track_name: track_name,
+      },
+      onSuccess: function(transport) {
+        var results    = transport.responseJSON;
+        var track_keys = results.track_keys;
+        time_key = create_time_key();
+        for (var track_div_id in track_keys){
+            Controller.retrieve_tracks.set(track_div_id,true);
+            Controller.track_time_key.set(track_div_id,time_key);
+        } // end for
+        Controller.get_remaining_tracks(track_keys,1000,1.5,time_key);
+      }, // end onSuccess
+    }); // end Ajax.Request
+  }, // end rerender_track
+
+  // Retrieve Rendered Track Methods ********************************
+  
   get_multiple_tracks:
   function (track_keys) {
     
@@ -153,160 +328,7 @@ var GBrowseController = Class.create({
 
   }, // end get_remaining_tracks
 
-  register_track:
-  function (track_div_id,track_image_id,track_type) {
-    
-    this.track_images.set(track_div_id,track_image_id);
-    if (track_type=="scale_bar"){
-      return;
-    }
-    this.retrieve_tracks.set(track_div_id,true);
-  }, // end register_track
-
-  reset_after_track_load:
-  // This may be a little overkill to run these after every track update but
-  // since there is no "We're completely done with all the track updates for the
-  // moment" hook, I don't know of another way to make sure the tracks become
-  // draggable again
-  function () {
-    if ( null != $('overview_panels') ){
-      create_drag('overview_panels','track');
-    }
-    if ( null != $('region_panels') ){
-      create_drag('region_panels','track');
-    }
-    if ( null != $('detail_panels') ){
-      create_drag('detail_panels','track');
-    }
-  },
-  
-  update_scale_bar:
-  function (bar_obj) {
-    var image_id = bar_obj.image_id;
-    var image = $(image_id);
-    image.setStyle({
-        background: "url(" + bar_obj.url + ") top left no-repeat",
-        width:      bar_obj.width+'px',
-        height:     bar_obj.height+'px',
-        display:    'block',
-        cursor:     'text',
-    });
-    image.setOpacity(1);
-  },
-
-  first_render:
-  function()  {
-    this.debug_status             = 'first_render';
-    new Ajax.Request('#',{
-      method:     'post',
-      parameters: {first_render: 1},
-      onSuccess: function(transport) {
-        var results    = transport.responseJSON;
-        var track_keys = results.track_keys;
-        Controller.segment_info = results.segment_info;
-
-        Controller.get_multiple_tracks(track_keys);
-
-        Controller.debug_status             = 'first_render finished';
-      }
-    });
-    this.debug_status             = 'first_render part2';
-  },
-
-  add_track:
-  function(track_name) {
-
-    if ( null != $('track_'+track_name)){
-      return;
-    }
-
-    new Ajax.Request('#',{
-      method:     'post',
-      parameters: {
-        add_track:  1,
-        track_name: track_name,
-      },
-      onSuccess: function(transport) {
-        var results    = transport.responseJSON;
-        var track_data = results.track_data;
-        for (var key in track_data){
-          this_track_data    = track_data[key];
-          var div_element_id = this_track_data.div_element_id;
-          var html           = this_track_data.track_html;
-          var panel_id       = this_track_data.panel_id;
-
-          //Append new html to the appropriate section
-          // This is a bit cludgy but we create a temp element, 
-          // read the html into it and then move the div element 
-          // back out.  This keeps the other tracks intact.
-          var tmp_element       = document.createElement("tmp_element");
-          tmp_element.innerHTML = html;
-          $(panel_id).appendChild(tmp_element);
-          $(panel_id).appendChild($(div_element_id));
-          $(panel_id).removeChild(tmp_element);
-
-          //Add New Track(s) to the list of observers and such
-          Controller.register_track(div_element_id,this_track_data.image_element_id,'standard') ;
-
-          //fire the segmentChanged for each track not finished
-          if (html.substring(0,18) == "<!-- AVAILABLE -->"){
-            Controller.reset_after_track_load();
-          }
-          else{
-            var track_keys = new Array();
-            time_key = create_time_key();
-            track_keys[div_element_id]=this_track_data.track_key;
-            Controller.retrieve_tracks.set(div_element_id,true);
-            Controller.track_time_key.set(div_element_id,time_key);
-            Controller.get_remaining_tracks(track_keys,1000,1.5,time_key);
-          }
-        }
-      },
-    });
-  },
-
-  // let the server know when a track has been removed
-  set_track_visibility:
-  function(track_name,visible) {
-
-    if ( null == $('track_'+track_name)){
-      // No track div
-      return;
-    }
-
-    new Ajax.Request('#',{
-      method:     'post',
-      parameters: {
-        set_track_visibility:  1,
-        visible:               visible,
-        track_name:            track_name,
-      },
-    });
-  },
-
-  rerender_track:
-  function(track_name,track_div_id) {
-
-    var image_id = this.track_images.get(track_div_id);
-    $(image_id).setOpacity(0.3);
-    new Ajax.Request('#',{
-      method:     'post',
-      parameters: {
-        rerender_track:  1,
-        track_name: track_name,
-      },
-      onSuccess: function(transport) {
-        var results    = transport.responseJSON;
-        var track_keys = results.track_keys;
-        time_key = create_time_key();
-        for (var track_div_id in track_keys){
-            Controller.retrieve_tracks.set(track_div_id,true);
-            Controller.track_time_key.set(track_div_id,time_key);
-        } // end for
-        Controller.get_remaining_tracks(track_keys,1000,1.5,time_key);
-      }, // end onSuccess
-    }); // end Ajax.Request
-  }, // end rerender_track
+  // Plugin Methods *************************************************
 
   configure_plugin:
   function(div_id) {
@@ -374,10 +396,6 @@ var GBrowseController = Class.create({
     }
   }, // end plugin_go
 
-  wipe_div:
-  function(div_id) {
-    $(div_id).innerHTML = '';
-  }
 });
 
 var Controller = new GBrowseController; // singleton

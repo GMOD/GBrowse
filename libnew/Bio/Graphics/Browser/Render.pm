@@ -1339,6 +1339,12 @@ sub set_default_state {
 sub update_state {
   my $self = shift;
   $self->update_state_from_cgi;
+
+  my $state         = $self->state;
+  my $whole_segment = $self->whole_segment;
+  $state->{seg_min} = $whole_segment->start;
+  $state->{seg_max} = $whole_segment->stop;
+
 }
 
 sub default_state {
@@ -1688,13 +1694,8 @@ sub asynchronous_update_coordinates {
 
     my $state  = $self->state;
 
-    my $whole_segment = $self->whole_segment;
-    my $whole_segment_start = $whole_segment->start;
-    my $whole_segment_stop = $whole_segment->stop;
-
-    # delete the segment after we get what we need.
-    # This way it will be recreated with the new params.
-    $self->delete_stored_segments();
+    my $whole_segment_start = $state->{seg_min};
+    my $whole_segment_stop = $state->{seg_max};
 
     my $position_updated;
     if ($action =~ /left|right/) {

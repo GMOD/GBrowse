@@ -477,7 +477,7 @@ sub begin_individual_track_render {
 
     # Start rendering the detail and overview tracks
     my $cache_track_hash = $self->render_deferred( 
-	label       => [ $label, ],
+	labels       => [ $label, ],
 	segment     => $segment, 
         section     => $section, 
 	cache_extra => $cache_extra, 

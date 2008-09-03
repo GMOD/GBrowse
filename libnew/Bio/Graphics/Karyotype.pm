@@ -1,6 +1,6 @@
 package Bio::Graphics::Karyotype;
 
-# $Id: Karyotype.pm,v 1.7 2008-08-26 18:40:50 lstein Exp $
+# $Id: Karyotype.pm,v 1.8 2008-09-03 17:55:58 lstein Exp $
 # Utility class to create a display of a karyotype and a series of "hits" on the individual chromosomes
 # Used for searching
 
@@ -272,6 +272,8 @@ sub hits_table {
     my $self                  = shift;
     my $term2hilite           = shift;
 
+    local $^W = 0; # quash uninit variable warnings
+
     my @hits = $self->hits;
 
     my $url  = url(-path_info=>1)."?name=";
@@ -282,37 +284,38 @@ sub hits_table {
     my $na   = $self->trans('NOT_APPLICABLE') || '-';
 
     my $sort_order = $self->seqid_order;
-    
+
     # a big long map call here
     my @rows      = map {
 	my $name  = $_->display_name || '';
 	my $class = eval {$_->class};
-	my $fid   =  $_->can('primary_id') ? "id:".$_->primary_id      # for inserting into the gbrowse search field
-	           : $_->can('id')         ? "id:".$_->id
-                   : $class                ? "$class:$name" 
-                   : $name;
+	# for inserting into the gbrowse search field
+	my $fid   =  $_->can('primary_id') ? "id:".$_->primary_id      
+	    : $_->can('id')         ? "id:".$_->id
+	    : $class                ? "$class:$name" 
+	    : $name;
 	my $id    = $self->feature2id($_);             # as an internal <div> id for hilighting
 	my $pos   = $_->seq_id.':'.$_->start.'..'.$_->end;
 	my $desc  = escapeHTML(Bio::Graphics::Glyph::generic->get_description($_));
 	$desc =~ s/($regexp)/<b class="keyword">$1<\/b>/ig if $regexp;
 	$desc =~ s/(\S{60})/$1 /g;  # wrap way long lines
-
+	    
 	TR({-class=>'nohilite',
 	    -id=>"feature_${id}",
 	    -onMouseOver=>"k_hilite_feature('$id')",
 	    -onMouseOut =>"k_unhilite_feature('$id')",
 	   },
-	    th({-align=>'left'},a({-href=>"$url$fid"},$name)),
-	    td($_->method),
-	    td($desc),
-	    td(a({-href=>"$url$pos"},$pos)),
-	    td($_->score || $na)
+	   th({-align=>'left'},a({-href=>"$url$fid"},$name)),
+	   td($_->method),
+	   td($desc),
+	   td(a({-href=>"$url$pos"},$pos)),
+	   td($_->score || $na)
 	    )
     } sort {
 	($b->score||0)    <=>  ($a->score||0)
-	|| $sort_order->{$a->seq_id} <=> $sort_order->{$b->seq_id}
-        || $a->start <=> $b->start
-	|| $a->end   <=> $b->end
+	    || $sort_order->{$a->seq_id} <=> $sort_order->{$b->seq_id}
+	|| $a->start <=> $b->start
+	    || $a->end   <=> $b->end
     } @hits;
 
     my $count = $self->language ? b($self->trans('HIT_COUNT',scalar @hits)) : '';

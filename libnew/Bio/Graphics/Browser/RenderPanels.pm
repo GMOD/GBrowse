@@ -423,11 +423,14 @@ sub run_remote_requests {
   my $source   = $self->source;
   my $settings = $self->settings;
   my $lang     = $self->language;
+  my %env      = map {$_=>$ENV{$_}} grep /^GBROWSE/,keys %ENV;
+
 
   # serialize the data source and settings
   my $s_dsn	= Storable::freeze($source);
   my $s_set	= Storable::freeze($settings);
   my $s_lang	= Storable::freeze($lang);
+  my $s_env	= Storable::freeze(\%env);
 
   # sort requests by their renderers
   my %renderers;
@@ -453,6 +456,7 @@ sub run_remote_requests {
 			settings   => $s_set,
 			datasource => $s_dsn,
 			language   => $s_lang,
+			env        => $s_env,
     ]);
 
     my $error = $ua->register($request);

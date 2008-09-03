@@ -12,7 +12,7 @@ use IO::String;
 use CGI;
 use FindBin '$Bin';
 
-use constant TEST_COUNT => 114;
+use constant TEST_COUNT => 116;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;
@@ -35,6 +35,7 @@ END {
 }
 
 %ENV = ();
+$ENV{GBROWSE_DOCS} = $Bin;
 
 chdir $Bin;
 use lib "$Bin/../libnew";
@@ -316,7 +317,12 @@ $ENV{'HTTP_ACCEPT_LANGUAGE'} = 'en';
 
 # start with a fresh renderer!
 $render      = Bio::Graphics::Browser::Render::HTML->new($source,$session);
-$render->run($io);
+
+{
+    local $^W = 0; # bioperl is giving uninit warnings here
+    $render->run($io);
+}
+
 ok($data =~ /Set-Cookie/);
 ok($data =~ /the following 4 regions/i);
 

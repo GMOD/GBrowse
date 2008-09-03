@@ -703,7 +703,7 @@ sub db_settings {
 
   # Do environment substitutions in the args. Assume that the environment is safe.
   foreach (@argv) {
-      s/\$ENV{(\w+)}/exists $ENV{$1} ? $ENV{$1} : '$ENV{$1}'/ge;
+      s/\$ENV{(\w+)}/$ENV{$1}/ge;
   }
 
   # for compatibility with older versions of the browser, we'll hard-code some arguments

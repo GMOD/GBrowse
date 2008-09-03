@@ -49,6 +49,8 @@ use Bio::Graphics::Browser::Render::Server;
 
 
 # Test remote rendering
+# Notice that $ENV{GBROWSE_DOCS} is NOT set when we launch these servers.
+# It is set at run time as part of the exchange between master and slave.
 my @servers = (Bio::Graphics::Browser::Render::Server->new(),  # main
 	       Bio::Graphics::Browser::Render::Server->new(LocalPort=>8100), # alignments
 	       Bio::Graphics::Browser::Render::Server->new(LocalPort=>8101), # cleavage sites
@@ -58,10 +60,13 @@ for my $s (@servers) {
     ok($s->run);
 }
 
+%ENV = ();
+$ENV{GBROWSE_DOCS}   = $Bin;
 $ENV{REQUEST_URI}    = 'http://localhost/cgi-bin/gbrowse/volvox';
 $ENV{PATH_INFO}      = '/volvox';
 $ENV{REQUEST_METHOD} = 'GET';
-$CGI::Q    = new CGI('name=ctgA:1..20000;label=CleavageSites-Alignments-Motifs-BindingSites-Clones');
+
+$CGI::Q = new CGI('name=ctgA:1..20000;label=CleavageSites-Alignments-Motifs-BindingSites-Clones');
 
 # standard initialization incantation
 my $globals = Bio::Graphics::Browser->new(CONF_FILE);

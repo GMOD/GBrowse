@@ -65,12 +65,10 @@ sub run {
 	while ((my $c = waitpid(-1,WNOHANG))>0) { }
     };
 
-#    chdir '/';  # this is breaking relative paths in the regression test config files
-    # close STDIN;
-    # close STDOUT;
+    chdir '/';  # beware: this breaks relative paths in the regression test config files
     open STDIN,"</dev/null";
     open STDOUT,">/dev/null";
-    # close STDERR unless $self->debug;
+    open STDERR,">/dev/null" unless $self->debug;
 
     # accept loop in child process
     my $d = $self->d;
@@ -116,12 +114,13 @@ sub process_request {
               : '';
     $CGI::Q  = new CGI($args);
 
+    $self->setup_environment(param('env'));
     my $operation = param('operation') || 'render_tracks';
     my $content   = $operation eq 'render_tracks'   ? $self->render_tracks
                   : $operation eq 'search_features' ? $self->search_features
                   : '';
 
-    my $length  = length $content;
+    my $length   = length $content;
     my $response = HTTP::Response->new(200 => 'Ok',
 				       ['Content-type'   => 'application/gbrowse-encoded-genome',
 					'Content-length' => $length],
@@ -213,5 +212,16 @@ sub search_features {
     return freeze(\@features);
 }
 
+
+sub setup_environment {
+    my $self    = shift;
+    my $env_str = shift or return;
+
+    my $env     = thaw($env_str);
+    for my $key (keys %$env) {
+	next unless $key =~ /^GBROWSE/;
+	$ENV{$key}       = $env->{$key};
+    }
+}
 
 1;

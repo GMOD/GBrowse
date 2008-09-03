@@ -36,7 +36,8 @@ END {
   rmtree '/tmp/gbrowse_testing' if $$ == $PID;
 }
 
-# %ENV = ();
+%ENV = ();
+$ENV{GBROWSE_DOCS} = $Bin;
 
 chdir $Bin;
 use lib "$Bin/../libnew";

@@ -1338,9 +1338,14 @@ sub update_state {
   $self->update_state_from_cgi;
 
   my $state         = $self->state;
-  my $whole_segment = $self->whole_segment;
-  $state->{seg_min} = $whole_segment->start;
-  $state->{seg_max} = $whole_segment->stop;
+
+  # A reset won't have a segment so we neet to test for that before we use one
+  # in whole_segment().
+  if ($self->segment){
+      my $whole_segment = $self->whole_segment;
+      $state->{seg_min} = $whole_segment->start;
+      $state->{seg_max} = $whole_segment->stop;
+  }
 
 }
 

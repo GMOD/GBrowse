@@ -1394,9 +1394,8 @@ sub add_track_to_state {
   return unless length $label; # refuse to add empty tracks!
 
   my $state  = $self->state;
-
-  push @{ $state->{tracks} }, $label 
-    unless ( grep /^$label$/, @{ $state->{tracks} || [] } );
+  my %current = map {$_=> 1} @{$state->{tracks}};
+  push @{$state->{tracks}},$label unless $current{$label};
   $state->{features}{$label} = {visible=>1,options=>0,limit=>0};
 }
 

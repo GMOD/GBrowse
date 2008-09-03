@@ -332,6 +332,16 @@ sub asynchronous_event {
 	return (204,'text/plain',undef);
     }
 
+    if ( param('commit_file_edit') ) {
+        my $data        = param('a_data');
+        my $edited_file = param('edited_file');
+
+        return ( 204, 'text/plain', undef ) unless ( $edited_file and $data );
+        $self->init_remote_sources();
+        $self->handle_edit( $edited_file, $self->state, $data );
+        return ( 204, 'text/plain', undef );
+    }
+
     # toggle the visibility of sections by looking for "div_visible_*"
     # parameters
     for my $p ( grep {/^div_visible_/} param() ) {
@@ -1152,10 +1162,6 @@ sub handle_external_data {
 	  -value=>$self->tr('Edit'));
   }
 
-  elsif (defined(my $data = param('a_data')) and not param('Cancel')) {
-    $self->handle_edit($state,$data);
-  }
-
   elsif (my @data = (param('auto'),param('add'),param('a'))) {
     my @styles    = (param('style'),param('s'));
     $self->handle_quickie($state,\@data,\@styles);
@@ -1166,20 +1172,10 @@ sub handle_external_data {
       $self->add_track_to_state($_) foreach @urls;
   }
   
-  if (param('Cancel') && (my $file = param('edited file'))) {
-      $uploads->clear_file($file) 
-	  if -s $uploads->url2path($file) < 2;  # too small, throw it back
-  }
-
   if ($action && param($action) eq $self->tr('Delete')) {
     $uploads->clear_file($file);
     $remotes->delete_source($file);
     $self->remove_track_from_state($file);
-  }
-
-  if ($action && param($action) eq $self->tr('Edit')) {
-    $self->edit_uploaded_file($file);
-    return 1;   # this will cause it to exit
   }
 
   # return 1 to exit
@@ -1188,10 +1184,10 @@ sub handle_external_data {
 
 sub handle_edit {
     my $self             = shift;
+    my $file             = shift;
     my $setting          = shift;
     my $data             = shift;
     my $uploaded_sources = $self->uploaded_sources();
-    my $file             = param('edited file') or return;
     my @lines            = unexpand( split '\r?\n|\r\n?', $data );
     $data = join "\n", @lines;
     $data .= "\n";
@@ -1684,6 +1680,13 @@ sub asynchronous_update_element {
             or return "$plugin_base is not a recognized plugin\n";
 
         return $self->wrap_plugin_configuration($plugin_base,$plugin);
+    }
+    elsif ( $element eq 'external_utility_div' ) {
+        $self->init_remote_sources();
+        if ( my $file_name = param('edit_file')){
+            $file_name = CGI::unescape($file_name);
+        return $self->edit_uploaded_file($file_name);
+        }
     }
 
     return 'Unknown element: ' . $element;

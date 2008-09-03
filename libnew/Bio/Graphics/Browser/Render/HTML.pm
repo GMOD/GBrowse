@@ -462,7 +462,8 @@ sub render_uploads {
     my $feature_files = shift;
     my $state = $self->state;
     my $content
-        = start_form( -name => 'externalform', -id => 'externalform' )
+        = div( { -id => "external_utility_div" }, '' )
+        . start_form( -name => 'externalform', -id => 'externalform' )
         . $self->upload_table
         . $self->das_table
         . end_form();
@@ -498,7 +499,10 @@ sub upload_table {
     $cTable .=  TR({-class=>'uploadbody'},
 		   th({-width=>'20%',-align=>'right'},$link),
 		   td({-colspan=>3},
-		      submit(-name=>"modify.$escaped_file",-value=>$self->tr('Edit')).'&nbsp;'.
+              button(
+                -value   => $self->tr('edit'),
+                -onClick => 'Controller.edit_upload("' . $escaped_file . '");'
+              ),
 		      submit(-name=>"modify.$escaped_file",-value=>$self->tr('Download_file')).'&nbsp;'.
 		      submit(-name=>"modify.$escaped_file",-value=>$self->tr('Delete'))));
     $cTable .= TR({-class=>'uploadbody'},td('&nbsp;'),td({-colspan=>3},@info));
@@ -646,13 +650,35 @@ sub edit_uploaded_file {
     my $self = shift;
     my ($file) = @_;
 
-    print header( -charset => $self->tr('CHARSET') );
-    $self->render_top("Editing $file");
-    print start_form();
+    my $return_str = '';
+    $return_str .= h1( { -align => 'center' }, "Editing $file" );
+    $return_str .= start_form(
+        -name => 'edit_upload_form',
+        -id   => 'edit_upload_form',
+    );
     my $data;
     my $fh = $self->uploaded_sources->open_file($file) or return;
+
+    my $buttons_str = reset( $self->tr('Undo') ) 
+        . '&nbsp;'
+        . button(
+        -name    => 'cancel_button',
+        -value   => $self->tr('CANCEL'),
+        -onClick => 'Controller.wipe_div("external_utility_div");'
+        )
+        . '&nbsp;'
+        . button(
+        -name    => 'accept_button',
+        -value   => $self->tr('ACCEPT_RETURN'),
+        -onClick => 'Controller.commit_file_edit("' 
+            . $file . '", "' 
+            . $file . '", "'
+            . "track_$file"
+            . '","external_utility_div");'
+        );
+
     $data = join '', expand(<$fh>);
-    print table(
+    $return_str .= table(
         { -width => '100%' },
         TR( { -class => 'searchbody' },
             td( $self->tr('Edit_instructions') ),
@@ -664,6 +690,7 @@ sub edit_uploaded_file {
             ),
         ),
         TR( { -class => 'searchtitle' }, th( $self->tr('Edit_title') ) ),
+        TR( th($buttons_str) ),
         TR( { -class => 'searchbody' },
             td( { -align => 'center' },
                 pre(textarea(
@@ -677,18 +704,12 @@ sub edit_uploaded_file {
                 )
             )
         ),
-        TR( { -class => 'searchtitle' },
-            th( reset( $self->tr('Undo') ) 
-                    . '&nbsp;'
-                    . submit('Cancel')
-                    . '&nbsp;'
-                    . b( submit('Submit Changes...') )
-            )
-        )
+        TR( { -class => 'searchtitle' }, th($buttons_str) )
     );
-    print hidden( -name => 'edited file', -value => $file );
-    print end_form();
-    $self->render_bottom();
+    $return_str .= hidden( -name => 'edited file', -value => $file );
+    $return_str .= end_form();
+    $return_str .= $self->render_bottom();
+    return $return_str;
 }
 
 ###################### help ##############3
@@ -825,7 +846,7 @@ sub wrap_plugin_configuration {
     my $return_html = start_form(
         -name     => 'configure_plugin',
         -id       => 'configure_plugin',
-        -onSubmit => 'alert("here3");return false;',
+        -onSubmit => 'return false;',
     );
     if ($config_html) {
         my $plugin_type = $plugin->type;

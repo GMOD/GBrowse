@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.40 2008-09-02 19:01:53 mwz444 Exp $
+ $Id: controller.js,v 1.41 2008-09-03 03:28:27 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -344,7 +344,6 @@ var GBrowseController = Class.create({
 
   reconfigure_plugin:
   function(plugin_action,plugin_track_name,plugin_track_div_id,pc_div_id,plugin_type) {
-    var plugin_configure_div  = $(pc_div_id);
     var form_element = $("configure_plugin");
     new Ajax.Request('#',{
       method:     'post',
@@ -395,6 +394,41 @@ var GBrowseController = Class.create({
         alert("Not Implemented Yet");
     }
   }, // end plugin_go
+
+  // Upload File Methods *************************************************
+
+  edit_upload:
+  function(edit_file) {
+    var external_utility_div  = $('external_utility_div');
+    var plugin_base  = document.pluginform.plugin.value;
+    new Ajax.Updater(external_utility_div,'#',{
+      parameters: {
+        update: 'external_utility_div',
+        edit_file: edit_file,
+      }
+    });
+  },
+
+  commit_file_edit:
+  function(edited_file,track_name,track_div_id,eu_div_id) {
+    var form_element = $("edit_upload_form");
+    new Ajax.Request('#',{
+      method:     'post',
+      parameters: form_element.serialize() +"&"+ $H({
+            edited_file: edited_file,
+            commit_file_edit: 1
+          }).toQueryString(),
+      onSuccess: function(transport) {
+        Controller.wipe_div(eu_div_id); 
+
+        // update track if it exists
+        if ( null != $(track_div_id)){
+          Controller.rerender_track(track_name,track_div_id);
+        }
+      } // end onSuccess
+    });
+  },
+
 
 });
 

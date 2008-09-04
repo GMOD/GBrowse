@@ -52,7 +52,7 @@ use Bio::Graphics::Browser::Render::Server;
 # Test remote rendering
 my $server = Bio::Graphics::Browser::Render::Server->new();
 ok($server);
-$server->debug(3);
+$server->debug(0);
 my $server_pid = $server->run;
 ok($server_pid);
 

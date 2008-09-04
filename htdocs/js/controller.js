@@ -2,17 +2,19 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.41 2008-09-03 03:28:27 mwz444 Exp $
+ $Id: controller.js,v 1.42 2008-09-04 17:36:57 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
 
 Method structure
  - Class Utility Methods
- - Dom Utility Methods
+ - DOM Utility Methods
+ - Update Section Methods
  - Kick-off Render Methods
  - Retrieve Rendered Track Methods
  - Plugin Methods
+ - Upload File Methods
 
 */
 
@@ -60,7 +62,7 @@ var GBrowseController = Class.create({
     this.retrieve_tracks.set(track_div_id,true);
   }, // end register_track
 
-  // Dom Utility Methods ********************************************
+  // DOM Utility Methods ********************************************
 
   wipe_div:
   function(div_id) {
@@ -79,6 +81,51 @@ var GBrowseController = Class.create({
         cursor:     'text',
     });
     image.setOpacity(1);
+  },
+
+  append_child_from_html:
+  function (child_html,parent_obj) {
+    //Append new html to the appropriate section This is a bit cludgy but we
+    //create a temp element, read the html into it and then move the div
+    //element back out.  This keeps the other tracks intact.
+    var tmp_element       = document.createElement("tmp_element");
+    tmp_element.innerHTML = child_html;
+    parent_obj.appendChild(tmp_element);
+
+    // Move each child node but skip if it is a comment (class is undef)
+    if (tmp_element.hasChildNodes()) {
+      var children = tmp_element.childNodes;
+      for (var i = 0; i < children.length; i++) {
+        if (children[i].className == undefined){
+          continue;
+        }
+        parent_obj.appendChild(children[i]);
+      };
+    };
+    parent_obj.removeChild(tmp_element);
+  },
+
+  // Update Section Methods *****************************************
+  update_track_listing:
+  function() {
+    var div_id           = 'tracks_panel';
+    var track_panel_div  = $(div_id);
+    new Ajax.Updater(track_panel_div,'#',{
+      parameters: {
+        update: div_id,
+      }
+    });
+  },
+
+  update_external_data_listing:
+  function() {
+    var div_id           = 'upload_tracks_panel';
+    var track_panel_div  = $(div_id);
+    new Ajax.Updater(track_panel_div,'#',{
+      parameters: {
+        update: div_id,
+      }
+    });
   },
 
   // Signal Change to Server Methods ********************************
@@ -197,15 +244,7 @@ var GBrowseController = Class.create({
           var html           = this_track_data.track_html;
           var panel_id       = this_track_data.panel_id;
 
-          //Append new html to the appropriate section
-          // This is a bit cludgy but we create a temp element, 
-          // read the html into it and then move the div element 
-          // back out.  This keeps the other tracks intact.
-          var tmp_element       = document.createElement("tmp_element");
-          tmp_element.innerHTML = html;
-          $(panel_id).appendChild(tmp_element);
-          $(panel_id).appendChild($(div_element_id));
-          $(panel_id).removeChild(tmp_element);
+          Controller.append_child_from_html(html,$(panel_id));
 
           //Add New Track(s) to the list of observers and such
           Controller.register_track(div_element_id,this_track_data.image_element_id,'standard') ;
@@ -397,10 +436,20 @@ var GBrowseController = Class.create({
 
   // Upload File Methods *************************************************
 
+  edit_new_file:
+  function() {
+    var external_utility_div  = $('external_utility_div');
+    new Ajax.Updater(external_utility_div,'#',{
+      parameters: {
+        update: 'external_utility_div',
+        new_edit_file: 1,
+      },
+    });
+  },
+
   edit_upload:
   function(edit_file) {
     var external_utility_div  = $('external_utility_div');
-    var plugin_base  = document.pluginform.plugin.value;
     new Ajax.Updater(external_utility_div,'#',{
       parameters: {
         update: 'external_utility_div',
@@ -419,12 +468,24 @@ var GBrowseController = Class.create({
             commit_file_edit: 1
           }).toQueryString(),
       onSuccess: function(transport) {
+        var results    = transport.responseJSON;
+        var file_created = results.file_created;
         Controller.wipe_div(eu_div_id); 
 
-        // update track if it exists
-        if ( null != $(track_div_id)){
-          Controller.rerender_track(track_name,track_div_id);
+        if ( 1 == file_created ){
+          Controller.add_track(track_name);
+          Controller.update_track_listing();
         }
+        else{
+        // update track if it exists
+          if ( null != $(track_div_id)){
+            Controller.rerender_track(track_name,track_div_id);
+          }
+        }
+        // Update the upload table to change the last modified info
+        // or add the file to the list if new
+        Controller.update_external_data_listing();
+        
       } // end onSuccess
     });
   },

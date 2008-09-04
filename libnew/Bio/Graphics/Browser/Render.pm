@@ -338,8 +338,13 @@ sub asynchronous_event {
 
         return ( 204, 'text/plain', undef ) unless ( $edited_file and $data );
         $self->init_remote_sources();
-        $self->handle_edit( $edited_file, $self->state, $data );
-        return ( 204, 'text/plain', undef );
+        my $file_created = $self->handle_edit( $edited_file, $self->state, $data );
+
+        my $return_object = {
+            file_created   => $file_created,
+        };
+
+        return (200,'application/json',$return_object);
     }
 
     # toggle the visibility of sections by looking for "div_visible_*"
@@ -755,12 +760,17 @@ sub scale_bar {
 sub render_config {
   my $self = shift;
   my $seg = shift;
-  return $self->render_track_table(). 
+  return $self->render_toggle_track_table(). 
       $self->render_global_config().
-      $self->render_uploads;
+      $self->render_toggle_external_table;
 }
 
 #never called, method in HTML.pm with same name is run instead
+sub render_toggle_track_table {
+  my $self = shift;
+  croak "render_toggle_track_table() should not be called in parent class";
+}
+
 sub render_track_table {
   my $self = shift;
   croak "render_track_table() should not be called in parent class";
@@ -781,9 +791,14 @@ sub render_global_config {
   croak "render_global_config() should not be called in parent class";
 }
 
-sub render_uploads {
+sub render_toggle_external_table {
   my $self = shift;
-  croak "render_uploads() should not be called in parent class";
+  croak "render_toggle_external_table() should not be called in parent class";
+}
+
+sub render_external_table {
+  my $self = shift;
+  croak "render_external_table() should not be called in parent class";
 }
 
 sub render_bottom {
@@ -1153,15 +1168,6 @@ sub handle_external_data {
       $self->add_track_to_state($file);
   }
 
-  elsif (param('new_upload')) {
-    $file = $uploads->new_file();
-    $self->add_track_to_state($file);
-    $uploads->open_file($file,">");# empty, truncated file
-    $action = "modify.$file";
-    param(-name=>"modify.$file",
-	  -value=>$self->tr('Edit'));
-  }
-
   elsif (my @data = (param('auto'),param('add'),param('a'))) {
     my @styles    = (param('style'),param('s'));
     $self->handle_quickie($state,\@data,\@styles);
@@ -1187,14 +1193,23 @@ sub handle_edit {
     my $file             = shift;
     my $setting          = shift;
     my $data             = shift;
+
     my $uploaded_sources = $self->uploaded_sources();
     my @lines            = unexpand( split '\r?\n|\r\n?', $data );
     $data = join "\n", @lines;
     $data .= "\n";
+
+    my $file_created = 0;
+    if (not $uploaded_sources->url2path($file)){
+        $file_created = 1;
+    }
+
     $uploaded_sources->new_file($file);    # register it
+    $self->add_track_to_state($file);
     my $fh = $uploaded_sources->open_file( $file, '>' ) or return;
     print $fh $data;
     close $fh;
+    return $file_created;
 }
 
 sub handle_quickie {
@@ -1687,10 +1702,26 @@ sub asynchronous_update_element {
     }
     elsif ( $element eq 'external_utility_div' ) {
         $self->init_remote_sources();
-        if ( my $file_name = param('edit_file')){
+        if ( my $file_name = param('edit_file') ) {
             $file_name = CGI::unescape($file_name);
-        return $self->edit_uploaded_file($file_name);
+            return $self->edit_uploaded_file($file_name);
         }
+        elsif ( param('new_edit_file') ) {
+            my $file_name = $self->uploaded_sources->new_file_name();
+            return $self->edit_uploaded_file($file_name);
+        }
+    }
+
+    # Track Checkboxes
+    elsif ( $element eq 'tracks_panel' ) {
+        $self->init_plugins();
+        $self->init_remote_sources();
+        return $self->render_track_table();
+    }
+    # External Data Form
+    elsif ( $element eq 'upload_tracks_panel' ) {
+        $self->init_remote_sources();
+        return $self->render_external_table();
     }
 
     return 'Unknown element: ' . $element;

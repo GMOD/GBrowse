@@ -224,6 +224,12 @@ sub render_instructions {
   return $html;
 }
 
+# This surrounds the track table with a toggle
+sub render_toggle_track_table {
+  my $self     = shift;
+  return $self->toggle('Tracks', $self->render_track_table());
+}
+
 # this draws the various config options
   # This subroutine is invoked to draw the checkbox group underneath the main display.
 # It creates a hyperlinked set of feature names.
@@ -323,7 +329,7 @@ sub render_track_table {
   }
 
   autoEscape(1);
-  return $self->toggle('Tracks',
+  return join( "\n",
 		      start_form(-name=>'trackform',
 				 -id=>'trackform'),
 		      div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
@@ -455,8 +461,13 @@ sub render_global_config {
   return $self->toggle('Display_settings',$content);
 }
 
-# This needs to be fleshed out.
-sub render_uploads {
+# This surrounds the external table with a toggle
+sub render_toggle_external_table {
+  my $self     = shift;
+  return $self->toggle('UPLOAD_TRACKS', $self->render_external_table());
+}
+
+sub render_external_table {
     my $self = shift;
     
     my $feature_files = shift;
@@ -467,7 +478,7 @@ sub render_uploads {
         . $self->upload_table
         . $self->das_table
         . end_form();
-    return $self->toggle( 'UPLOAD_TRACKS', $content );
+    return $content;
 }
 
 sub upload_table {
@@ -475,52 +486,76 @@ sub upload_table {
   my $settings  = $self->state;
 
   # start the table.
-  my $cTable = start_table({-border=>0,-width=>'100%'})
+  my $cTable = start_table({-border=>0,-width=>'100%',-id=>'upload_table',})
     . TR(
 	 th({-class=>'uploadtitle', -colspan=>4, -align=>'left'},
 	    $self->tr('Upload_title').':',
 	    a({-href=>annotation_help(),-target=>'help'},'['.$self->tr('HELP').']'))
 	);
-  my $uploaded_sources = $self->uploaded_sources();
 
-  # now add existing files
-  for my $file ($uploaded_sources->files) {
-
-    (my $name = $file) =~ s/^file://;
-    $name = escape($name);
-
-    my $download = escape($self->tr('Download_file'));
-    my $link = a({-href=>"?$download=$file"},"[$name]");
-
-    my @info =  $self->get_uploaded_file_info(
-	$self->track_visible($file) && $uploaded_sources->feature_file($file));
-
-    my $escaped_file = CGI::escape($file);
-    $cTable .=  TR({-class=>'uploadbody'},
-		   th({-width=>'20%',-align=>'right'},$link),
-		   td({-colspan=>3},
-              button(
-                -value   => $self->tr('edit'),
-                -onClick => 'Controller.edit_upload("' . $escaped_file . '");'
-              ),
-		      submit(-name=>"modify.$escaped_file",-value=>$self->tr('Download_file')).'&nbsp;'.
-		      submit(-name=>"modify.$escaped_file",-value=>$self->tr('Delete'))));
-    $cTable .= TR({-class=>'uploadbody'},td('&nbsp;'),td({-colspan=>3},@info));
-  }
-
-  # end the table.
-  $cTable .= TR({-class=>'uploadbody'},
+  $cTable .= TR({-class=>'uploadbody', -name=>'something', -id=>'something'},
 		th({-width=>'20%',-align=>'right'},$self->tr('Upload_File')),
 		td({-colspan=>3},
 		   filefield(-size=>80,-name=>'upload_annotations'),
 		   '&nbsp;',
 		   submit(-name=>$self->tr('Upload')),
 		   '&nbsp;',
-		   submit(-name=>'new_upload',-value=>$self->tr('New')),
+            button(
+              -value   => $self->tr('New'),
+              -onClick => 'Controller.edit_new_file();'
+            ),
 		  )
 	       );
+
+  # now add existing files
+  my $uploaded_sources = $self->uploaded_sources();
+  for my $file ($uploaded_sources->files) {
+    $cTable .=  $self->upload_file_rows($file);
+  }
+
+  # end the table.
   $cTable .= end_table;
   return a({-name=>"upload"},$cTable);
+}
+
+sub upload_file_rows {
+    my $self             = shift;
+    my $file             = shift;
+
+    my $uploaded_sources = $self->uploaded_sources();
+    ( my $name = $file ) =~ s/^file://;
+    $name = escape($name);
+
+    my $return_html = '';
+    my $download    = escape( $self->tr('Download_file') );
+    my $link        = a( { -href => "?$download=$file" }, "[$name]" );
+
+    my @info = $self->get_uploaded_file_info( $self->track_visible($file)
+            && $uploaded_sources->feature_file($file) );
+
+    my $escaped_file = CGI::escape($file);
+    $return_html .= TR(
+        { -class => 'uploadbody' },
+        th( { -width => '20%', -align => 'right' }, $link ),
+        td( { -colspan => 3 },
+            button(
+                -value   => $self->tr('edit'),
+                -onClick => 'Controller.edit_upload("' . $escaped_file . '");'
+            ),
+            submit(
+                -name  => "modify.$escaped_file",
+                -value => $self->tr('Download_file')
+                )
+                . '&nbsp;'
+                . submit(
+                -name  => "modify.$escaped_file",
+                -value => $self->tr('Delete')
+                )
+        )
+    );
+    $return_html .= TR( { -class => 'uploadbody' },
+        td('&nbsp;'), td( { -colspan => 3 }, @info ) );
+    return $return_html;
 }
 
 sub get_uploaded_file_info {
@@ -650,14 +685,20 @@ sub edit_uploaded_file {
     my $self = shift;
     my ($file) = @_;
 
+    my $uploaded_sources = $self->uploaded_sources();
+
     my $return_str = '';
     $return_str .= h1( { -align => 'center' }, "Editing $file" );
     $return_str .= start_form(
         -name => 'edit_upload_form',
         -id   => 'edit_upload_form',
     );
-    my $data;
-    my $fh = $self->uploaded_sources->open_file($file) or return;
+
+    my $data = '';
+    if ( $uploaded_sources->url2path($file) ) {
+        my $fh = $uploaded_sources->open_file($file) or return;
+        $data = join '', expand(<$fh>);
+    }
 
     my $buttons_str = reset( $self->tr('Undo') ) 
         . '&nbsp;'
@@ -677,7 +718,6 @@ sub edit_uploaded_file {
             . '","external_utility_div");'
         );
 
-    $data = join '', expand(<$fh>);
     $return_str .= table(
         { -width => '100%' },
         TR( { -class => 'searchbody' },

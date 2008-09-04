@@ -67,8 +67,7 @@ sub new_file {
   my $filename  = shift;
 
   unless ($filename) {
-    my $rand = int(10000*rand);
-    $filename = "upload.$rand";
+    $filename = $self->new_file_name();
   }
 
   my $state = $self->state;
@@ -77,6 +76,12 @@ sub new_file {
   warn "url = $url" if DEBUG;
   $self->_add_file($url=>$path);
   return $url;
+}
+
+sub new_file_name {
+  my $self      = shift;
+  my $rand = int(10000*rand);
+  return "file:upload.$rand";
 }
 
 sub open_file {

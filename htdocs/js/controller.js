@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.42 2008-09-04 17:36:57 mwz444 Exp $
+ $Id: controller.js,v 1.43 2008-09-04 18:17:34 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -484,6 +484,24 @@ var GBrowseController = Class.create({
         }
         // Update the upload table to change the last modified info
         // or add the file to the list if new
+        Controller.update_external_data_listing();
+        
+      } // end onSuccess
+    });
+  },
+
+  delete_upload_file:
+  function(file_name,track_div_id) {
+    new Ajax.Request('#',{
+      method:     'post',
+      parameters: {
+        delete_upload_file: 1,
+        file: file_name
+      },
+      onSuccess: function(transport) {
+
+        $(track_div_id).remove();
+        Controller.update_track_listing();
         Controller.update_external_data_listing();
         
       } // end onSuccess

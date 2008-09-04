@@ -347,6 +347,16 @@ sub asynchronous_event {
         return (200,'application/json',$return_object);
     }
 
+    if ( param('delete_upload_file') ) {
+        my $file = param('file');
+        $self->init_remote_sources();
+        $self->uploaded_sources->clear_file($file);
+        $self->remote_sources->delete_source($file);
+        $self->remove_track_from_state($file);
+
+        return (204,'text/plain',undef);
+    }
+
     # toggle the visibility of sections by looking for "div_visible_*"
     # parameters
     for my $p ( grep {/^div_visible_/} param() ) {
@@ -1178,12 +1188,6 @@ sub handle_external_data {
       $self->add_track_to_state($_) foreach @urls;
   }
   
-  if ($action && param($action) eq $self->tr('Delete')) {
-    $uploads->clear_file($file);
-    $remotes->delete_source($file);
-    $self->remove_track_from_state($file);
-  }
-
   # return 1 to exit
   return;
 }

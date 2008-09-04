@@ -541,17 +541,21 @@ sub upload_file_rows {
             button(
                 -value   => $self->tr('edit'),
                 -onClick => 'Controller.edit_upload("' . $escaped_file . '");'
-            ),
-            submit(
-                -name  => "modify.$escaped_file",
-                -value => $self->tr('Download_file')
                 )
                 . '&nbsp;'
                 . submit(
                 -name  => "modify.$escaped_file",
-                -value => $self->tr('Delete')
+                -value => $self->tr('Download_file')
                 )
-        )
+                . '&nbsp;'
+                . button(
+                -name    => 'delete_button',
+                -value   => $self->tr('Delete'),
+                -onClick => 'Controller.delete_upload_file("' 
+                    . $file . '", "'
+                    . "track_$file" . '");'
+                )
+        ),
     );
     $return_html .= TR( { -class => 'uploadbody' },
         td('&nbsp;'), td( { -colspan => 3 }, @info ) );

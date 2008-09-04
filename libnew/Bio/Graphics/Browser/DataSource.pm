@@ -13,7 +13,7 @@ use Data::Dumper 'Dumper';
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
 use Socket 'AF_INET','inet_aton';  # for inet_aton() call
-use CGI '';
+use CGI 'pre';
 
 my %CONFIG_CACHE; # cache parsed config files
 my %DB_SETTINGS;  # cache database settings
@@ -757,7 +757,7 @@ sub open_database {
   return $DB{$key}    if exists $DB{$key};
 
   $DB{$key} = eval {$adaptor->new(@argv)} or warn $@;
-  $self->fatal_error("Could not open database: ",pre("$@")) unless $DB{$key};
+  die "Could not open database: $@" unless $DB{$key};
 
   if (my $refclass = $self->setting('reference class')) {
     eval {$DB{$key}->default_class($refclass)};

@@ -362,17 +362,6 @@ ok (-e '/tmp/gbrowse_testing/'.$png);
 ok ($png);
 ok (-e '/tmp/gbrowse_testing/'.$png);
 
-# test deferred rendering using cached data
-# $panels         = $panel_renderer->render_panels({labels   => [$render->detail_tracks],
-# 						  deferred => 1,
-# 						 });
-# for my $cache (values %$panels) {
-#     ok($cache->key);
-#     ok($cache->status,'AVAILABLE');
-# }
-
-
-
 exit 0;
 
 sub check_multiple_renders {

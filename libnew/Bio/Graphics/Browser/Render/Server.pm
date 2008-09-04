@@ -11,8 +11,8 @@ use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::I18n;
 use Bio::Graphics::Browser::DataSource;
 use Bio::Graphics::Browser::RenderPanels;
-use Bio::Graphics::Browser::RegionSearch;
-use POSIX 'WNOHANG';
+use Bio::Graphics::Browser::RegionSearch; 
+use POSIX 'WNOHANG','setsid','setuid';
 
 use Carp 'croak';
 
@@ -26,25 +26,45 @@ BEGIN {
 
 sub new {
     my $class       = shift;
-    my %socket_args = @_;
+    my %args        = @_;
 
-    $socket_args{LocalAddr} ||= 'localhost';
-    $socket_args{Reuse}       = 1 unless exists $socket_args{Reuse};
-    $socket_args{LocalPort} ||= 8123;
+    $args{LocalAddr} ||= 'localhost';
+    $args{Reuse}       = 1 unless exists $args{Reuse};
+    $args{LocalPort} ||= 8123;
 
-    my $d = HTTP::Daemon->new(%socket_args) or croak "could not create daemon socket: @_";
+    my $d = HTTP::Daemon->new(%args)
+	or croak "could not create daemon socket: @_";
 
     return bless {
 	daemon => $d,
-	args   => \%socket_args,
+	args   => \%args,
 	debug  => DEBUG,
     },ref $class || $class;
 }
 
 sub d           { shift->{daemon}          }
 sub listen_port { shift->{args}{LocalPort} }
+sub pidfile     { shift->{args}{PidFile}   }
+sub logfile     { shift->{args}{LogFile}   }
+sub user        { shift->{args}{User}      }
 sub pid         { shift->{pid}             }
-sub kill        { kill TERM=>(shift->pid)  }
+sub kill        {
+    my $self = shift;
+    my $pid  = $self->pid;
+    if (!$pid && (my $pidfile = $self->pidfile)) {
+	my $fh = IO::File->open($pidfile);
+	$pid   = $fh->getline;
+	chomp($pid);
+	$fh->close;
+    }
+    kill TERM=>$pid if defined $pid;
+}
+sub logfh       {
+    my $self = shift;
+    my $d    = $self->{logfh};
+    $self->{logfh} = shift if @_;
+    $d;
+}
 
 sub debug {
     my $self = shift;
@@ -54,29 +74,22 @@ sub debug {
 }
 
 sub run {
-    my $self = shift;
+    my $self     = shift;
+    $self->{pid} = $self->become_daemon;
+    return $self->{pid} if $self->{pid};
 
-    my $child = fork();
-    croak "Couldn't fork: $!" unless defined $child;
-    return $self->{pid} = $child if $child;  # return child in parent process
+    my $continue = 1;
+    $SIG{TERM}   = sub { $continue=0 };
 
-    # install signal handler in the master server
-    $SIG{CHLD} = sub {
-	while ((my $c = waitpid(-1,WNOHANG))>0) { }
-    };
-
-    chdir '/';  # beware: this breaks relative paths in the regression test config files
-    open STDIN,"</dev/null";
-    open STDOUT,">/dev/null";
-    open STDERR,">/dev/null" unless $self->debug;
+    my $d     = $self->d;
+    $self->Info('Starting');
 
     # accept loop in child process
-    my $d = $self->d;
-    while (1) {
-	print STDERR "$$: waiting for connection(",$self->listen_port,")\n" if $self->debug>1;
-	my $c = $d->accept() or next; # accept() is interruptable...
-	$child = fork();
-	croak "Couldn't fork: $!" unless defined $child;
+    while ($continue) {
+	$self->Debug("waiting for connection on port ",$self->listen_port);
+	my $c     = $d->accept() or next; # accept() is interruptable...
+	my $child = fork();
+	$self->Fatal("Couldn't fork: $!") unless defined $child;
 	if ($child) {
 	    $c->close();
 	} else {
@@ -85,48 +98,53 @@ sub run {
 	    $c->close();
 	    exit 0;
 	}
-	print STDERR "$$: waiting for connection (",$self->listen_port,")\n" if $self->debug>1;
     }
-    print STDERR "$$: exiting (",$self->listen_port,")\n" if $self->debug>1;
+    $self->Info('Normal termination');
     CORE::exit 0;
 }
 
 sub process_connection {
     my $self = shift;
     my $c    = shift;
-    print STDERR "$$: process_connection(START) (",$self->listen_port,")\n" if $self->debug>1;
+    $self->Debug("Connect from ",$c->peerhost);
 
     while (my $r = $c->get_request) {
 	$self->process_request($r,$c);
     }
 
-    print STDERR "$$: process_connection(END) (",$self->listen_port,")\n" if $self->debug>1;
+    $self->Debug("Finished connection from ",$c->peerhost);
 }
 
 
 sub process_request {
     my $self = shift;
     my ($r,$c) = @_;
-    print STDERR "$$: process_request(START)(",$self->listen_port,")\n" if $self->debug>1;
 
     my $args = $r->method eq 'GET' ? $r->uri->query
               :$r->method eq 'POST'? $r->content
               : '';
-    $CGI::Q  = new CGI($args);
+    $CGI::Q  = CGI->new($args);
 
     $self->setup_environment(param('env'));
-    my $operation = param('operation') || 'render_tracks';
+    my $operation = param('operation') || 'invalid';
+
     my $content   = $operation eq 'render_tracks'   ? $self->render_tracks
                   : $operation eq 'search_features' ? $self->search_features
-                  : '';
+                                                    : 'Invalid request';
 
-    my $length   = length $content;
-    my $response = HTTP::Response->new(200 => 'Ok',
-				       ['Content-type'   => 'application/gbrowse-encoded-genome',
-					'Content-length' => $length],
-				       $content);
+    my ($status_code,$status_text,$content_type) =
+	$content !~ /invalid/i
+	? (200 => 'Ok',          'application/gbrowse-encoded-genome')
+	: (400 => 'Bad request', 'text/plain');
+
+    my $response = HTTP::Response->new($status_code => $status_text,
+			      ['Content-type'   => $content_type,
+			       'Content-length' => length $content],
+			       $content
+			      );
+
     $c->send_response($response);
-    print STDERR "$$: process_request(END)(",$self->listen_port,")\n" if $self->debug>1;
+    $self->Info("host=",$c->peerhost,"; operation=$operation; response=$status_code; bytes=",length $content);
 }
 
 sub render_tracks {
@@ -143,23 +161,24 @@ sub render_tracks {
     my ($segment) = $db->segment(-name	=> $settings->{'ref'},
 				 -start	=> $settings->{'start'},
 				 -stop	=> $settings->{'stop'});
-    die "can't get segment!" unless $segment;
+    $self->Fatal("Can't get segment for $settings->{ref}:$settings->{start}..$settings->{stop}")
+	unless $segment;
 	    
     # generate the panels
-    print STDERR "$$: calling RenderPanels->new()\n" if $self->debug;
+    $self->Debug("Calling RenderPanels->new()");
     my $renderer = Bio::Graphics::Browser::RenderPanels->new(-segment  => $segment,
 							     -source   => $datasource,
 							     -settings => $settings,
 							     -language => $language);
-    print STDERR "$$: got renderer()\n" if $self->debug;
+    $self->Debug("Got renderer()");
 
     my $requests = $renderer->make_requests({labels => $tracks});
 
-    print STDERR "$$: calling run_local_requests()\n" if $self->debug;
+    $self->Debug("Calling run_local_requests()");
 
     $renderer->run_local_requests($requests);
 
-    print STDERR "$$: finished run_local_requests()\n" if $self->debug;
+    $self->Debug("Finished run_local_requests()");
 
     # we return the URL to the PNG, the image map, the width and height of the image,
     # keyed to the requested label(s)
@@ -222,6 +241,90 @@ sub setup_environment {
 	next unless $key =~ /^GBROWSE/;
 	$ENV{$key}       = $env->{$key};
     }
+}
+
+sub become_daemon {
+    my $self = shift;
+
+    my $child = fork();
+    croak "Couldn't fork: $!" unless defined $child;
+    return $child if $child;  # return child PID in parent process
+
+    # install signal handler in the master server
+    $SIG{CHLD} = sub {
+	while ((my $c = waitpid(-1,WNOHANG))>0) { }
+    };
+    umask(0);
+    $ENV{PATH} = '/bin:/sbin:/usr/bin:/usr/sbin';
+
+    setsid();   # become process leader
+    chdir '/';  # don't hold open working directories
+    open STDIN, "</dev/null";
+    open STDOUT,">/dev/null";
+    open STDERR,">&STDOUT" if $self->logfile;
+
+    # write out PID file if requested
+    if (my $l = $self->pidfile) {
+	my $fh = IO::File->new($l,">") 
+	    or $self->Fatal("Could not open pidfile $l: $!");
+	$fh->print($$)
+	    or $self->Fatal("Could not write to pidfile $l: $!");
+	$fh->close();
+    }
+
+    # open log file if requested
+    if (my $l = $self->logfile) {
+	my $fh = IO::File->new($l,">>")  # append
+	    or $self->Fatal("Could not open logfile $l: $!");
+	$fh->autoflush(1);
+	$self->logfh($fh);
+    }
+
+    # change user if requested
+    if (my $u = $self->user) {
+	my $uid = getpwnam($u);
+	defined $uid or $self->Fatal("Cannot change uid to $u: unknown user");
+	setuid($uid) or $self->Fatal("Cannot change uid to $u: $!");
+    }
+
+    return;
+}
+
+sub Debug {
+    my $self = shift;
+    my @msg  = @_;
+    return unless $self->debug > 2;
+    $self->_log('debug',@msg);
+}
+
+sub Info {
+    my $self = shift;
+    my @msg  = @_;
+    return unless $self->debug > 1;
+    $self->_log('info',@msg);
+}
+
+sub Warn {
+    my $self = shift;
+    my @msg  = @_;
+    return unless $self->debug > 0;
+    $self->_log('warn',@msg);
+}
+
+sub Fatal {
+    my $self = shift;
+    my @msg  = @_;
+    $self->_log('fatal',@msg);
+    croak @msg;
+}
+
+sub _log {
+    my $self         = shift;
+    my ($level,@msg) = @_;
+    my $time         = localtime();
+    my $fh           = $self->logfh || \*STDERR;
+    $fh->printf("%25s %-8s %-12s","[$time]","[$level]","[pid=$$]");
+    $fh->print(@msg,"\n");
 }
 
 1;

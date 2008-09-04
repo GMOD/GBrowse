@@ -52,6 +52,7 @@ use Bio::Graphics::Browser::Render::Server;
 # Test remote rendering
 my $server = Bio::Graphics::Browser::Render::Server->new();
 ok($server);
+$server->debug(3);
 my $server_pid = $server->run;
 ok($server_pid);
 
@@ -82,7 +83,8 @@ my $request  = POST("http://localhost:$port/",
 		     tracks     => freeze(\@labels),
 		     settings   => freeze($settings),
 		     datasource => freeze($source),
-		     language   => freeze($lang)
+		     language   => freeze($lang),
+		     operation  => 'render_tracks',
 		    ]);
 for (1..3) {
     my $ua        = LWP::UserAgent->new;

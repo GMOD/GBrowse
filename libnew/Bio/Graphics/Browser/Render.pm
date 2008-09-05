@@ -1367,12 +1367,17 @@ sub update_state {
 
   my $state         = $self->state;
 
-  # A reset won't have a segment so we neet to test for that before we use one
-  # in whole_segment().
+
   if ($self->segment){
+
+      # A reset won't have a segment so we neet to test for that before we use
+      # one in whole_segment().
       my $whole_segment = $self->whole_segment;
       $state->{seg_min} = $whole_segment->start;
       $state->{seg_max} = $whole_segment->stop;
+
+      # Open Automatically the tracks with features in them
+      $self->auto_open();
   }
 
 }
@@ -1414,6 +1419,27 @@ sub default_tracks {
   $state->{features}{$_}{visible} = 1
       foreach $self->data_source->default_labels;
 }
+
+# Open Automatically the tracks with features in them
+sub auto_open {
+    my $self     = shift;
+    my $features = $self->region()->features() || return;
+    my $state    = $self->state;
+
+    my $tracks = $state->{features};
+
+    for my $feature (@$features) {
+        my $desired_label = $self->data_source()->feature2label($feature)
+            or next;
+        if ( exists $tracks->{$desired_label} ) {
+            $self->add_track_to_state($desired_label);
+            $state->{h_feat} = {};
+            $state->{h_feat}{ $feature->display_name } = 'yellow'
+                unless param('h_feat') && param('h_feat') eq '_clear_';
+        }
+    }
+}
+
 
 sub add_track_to_state {
   my $self  = shift;

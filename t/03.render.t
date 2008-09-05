@@ -12,7 +12,7 @@ use IO::String;
 use CGI;
 use FindBin '$Bin';
 
-use constant TEST_COUNT => 114;
+use constant TEST_COUNT => 121;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;
@@ -101,7 +101,7 @@ undef $render;
 
 $session = $globals->session($id);
 ok($session->id,$id);
-$render  = Bio::Graphics::Browser::Render->new($source,$session);
+$render  = Bio::Graphics::Browser::Render::HTML->new($source,$session);
 ok($render->init_database);
 ok($render->init_plugins);
 ok($render->state->{width},1024);
@@ -178,6 +178,25 @@ if (ok($render_object) and ok($render_object->{'track_data'})){
   }
 
   check_multiple_renders($query_str)
+}
+
+# Check update sections
+$CGI::Q = new CGI(
+    'update_sections=1'
+  . '&section_names=nonsense'
+  . '&section_names=page_title'
+  . '&section_names=span'
+  . '&section_names=tracks_panel'
+  . '&section_names=upload_tracks_panel'
+);
+($status,$mime,$render_object) = $render->asynchronous_event();
+if (ok($render_object) and ok($render_object->{'section_html'})){
+  my $section_html = $render_object->{'section_html'};
+  ok( $section_html->{'nonsense'} eq 'Unknown element: nonsense');
+  ok( $section_html->{'page_title'} =~ /^Volvox/);
+  ok( $section_html->{'span'} =~ /selected/);
+  ok( $section_html->{'tracks_panel'} =~ /Clones/);
+  ok( $section_html->{'upload_tracks_panel'} =~ /upload_annotations/);
 }
 
 # Check setting visibility

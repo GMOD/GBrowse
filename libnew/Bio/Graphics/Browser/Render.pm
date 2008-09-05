@@ -229,7 +229,16 @@ sub asynchronous_event {
 	return (200,'application/json',$return_object);
     }
 
+    if ( param('update_sections') ) {
+        my @section_names = param('section_names');
+        my $section_html
+            = $self->asynchronous_update_sections( \@section_names );
+        my $return_object = { section_html => $section_html, };
+        return ( 200, 'application/json', $return_object );
+    }
+
     if ( my $element = param('update') ) {
+        warn "UPDATE HAS BEEN DEPRICATED";
         my $html = $self->asynchronous_update_element($element);
 	return (200,'text/html',$html);
     }
@@ -1658,6 +1667,107 @@ sub asynchronous_update_detail_scale_bar {
     };
 }
 
+sub asynchronous_update_sections {
+    my $self          = shift;
+    my $section_names = shift;
+    $self->init_database();
+
+    my $source        = $self->data_source;
+    my $return_object = {};
+
+    my %handle_section_name = map { $_ => 1 } @{ $section_names || [] };
+
+    # Init Plugins if need be
+    if (   $handle_section_name{'plugin_configure_div'}
+        || $handle_section_name{'tracks_panel'} )
+    {
+        $self->init_plugins();
+    }
+
+    # Init remote sources if need be
+    if (   $handle_section_name{'external_utility_div'}
+        || $handle_section_name{'tracks_panel'}
+        || $handle_section_name{'upload_tracks_panel'} )
+    {
+        $self->init_remote_sources();
+    }
+
+    # Page Title
+    if ( $handle_section_name{'page_title'} ) {
+        my $segment     = $self->segment;
+        my $dsn         = $self->data_source;
+        my $description = $dsn->description;
+        $return_object->{'page_title'} = $description . '<br>'
+            . $self->tr(
+            'SHOWING_FROM_TO',
+            scalar $source->unit_label( $segment->length ),
+            $segment->seq_id,
+            $source->commas( $segment->start ),
+            $source->commas( $segment->end )
+            );
+    }
+
+    # Span that shows the range
+    if ( $handle_section_name{'span'} ) {
+        my $container
+            = $self->zoomBar( $self->segment, $self->whole_segment );
+        $container =~ s/<\/?select.+//g;
+        $return_object->{'span'} = $container;
+    }
+
+    # Unused Search Field
+    if ( $handle_section_name{'landmark_search_field'} ) {
+        $return_object->{'landmark_search_field'} = $self->state->{name};
+    }
+
+    # Plugin Configuration Form
+    # A params is used to determine the plugin
+    if ( $handle_section_name{'plugin_configure_div'} ) {
+        my $plugin_base = param('plugin_base');
+        my $plugin      = $self->plugins->plugin($plugin_base)
+            or $return_object->{'plugin_configure_div'}
+            = "$plugin_base is not a recognized plugin\n";
+
+        $return_object->{'plugin_configure_div'}
+            = $self->wrap_plugin_configuration( $plugin_base, $plugin );
+    }
+
+    # External File Stuff
+    # Params are used to determine which type of activity the user wants
+    if ( $handle_section_name{'external_utility_div'} ) {
+        if ( my $file_name = param('edit_file') ) {
+            $file_name = CGI::unescape($file_name);
+            $return_object->{'external_utility_div'}
+                = $self->edit_uploaded_file($file_name);
+        }
+        elsif ( param('new_edit_file') ) {
+            my $file_name = $self->uploaded_sources->new_file_name();
+            $return_object->{'external_utility_div'}
+                = $self->edit_uploaded_file($file_name);
+        }
+    }
+
+    # Track Checkboxes
+    if ( $handle_section_name{'tracks_panel'} ) {
+        $return_object->{'tracks_panel'} = $self->render_track_table();
+    }
+
+    # External Data Form
+    if ( $handle_section_name{'upload_tracks_panel'} ) {
+        $return_object->{'upload_tracks_panel'}
+            = $self->render_external_table();
+    }
+
+    # Handle Remaining and Undefined Sections
+    foreach my $section_name ( keys %handle_section_name ) {
+        next if ( defined $return_object->{$section_name} );
+        $return_object->{$section_name} = 'Unknown element: ' . $section_name;
+    }
+    return $return_object;
+}
+
+# asynchronous_update_element has been DEPRICATED
+# in favor of asynchronous_update_sections
 sub asynchronous_update_element {
     my $self    = shift;
     my $element = shift;

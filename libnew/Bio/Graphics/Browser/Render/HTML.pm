@@ -719,7 +719,7 @@ sub edit_uploaded_file {
             . $file . '", "' 
             . $file . '", "'
             . "track_$file"
-            . '","external_utility_div");'
+            . '");'
         );
 
     $return_str .= table(

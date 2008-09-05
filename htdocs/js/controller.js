@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.43 2008-09-04 18:17:34 mwz444 Exp $
+ $Id: controller.js,v 1.44 2008-09-05 15:55:44 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -17,6 +17,17 @@ Method structure
  - Upload File Methods
 
 */
+
+//  Element Names
+var track_listing_id        = 'tracks_panel'; 
+var external_listing_id     = 'upload_tracks_panel'; 
+var overview_container_id   = 'overview_panels'; 
+var region_container_id     = 'region_panels'; 
+var detail_container_id     = 'detail_panels'; 
+var external_utility_div_id = 'external_utility_div'; 
+var edit_upload_form_id     = 'edit_upload_form';
+var page_title_id           = 'page_title';
+var visible_span_id         = 'span';
 
 var GBrowseController = Class.create({
 
@@ -41,14 +52,14 @@ var GBrowseController = Class.create({
   // moment" hook, I don't know of another way to make sure the tracks become
   // draggable again
   function () {
-    if ( null != $('overview_panels') ){
-      create_drag('overview_panels','track');
+    if ( null != $(overview_container_id) ){
+      create_drag(overview_container_id,'track');
     }
-    if ( null != $('region_panels') ){
-      create_drag('region_panels','track');
+    if ( null != $(region_container_id) ){
+      create_drag(region_container_id,'track');
     }
-    if ( null != $('detail_panels') ){
-      create_drag('detail_panels','track');
+    if ( null != $(detail_container_id) ){
+      create_drag(detail_container_id,'track');
     }
   },
   
@@ -106,24 +117,23 @@ var GBrowseController = Class.create({
   },
 
   // Update Section Methods *****************************************
-  update_track_listing:
-  function() {
-    var div_id           = 'tracks_panel';
-    var track_panel_div  = $(div_id);
-    new Ajax.Updater(track_panel_div,'#',{
-      parameters: {
-        update: div_id,
-      }
-    });
-  },
+  update_sections:
+  function(section_names, param_str) {
 
-  update_external_data_listing:
-  function() {
-    var div_id           = 'upload_tracks_panel';
-    var track_panel_div  = $(div_id);
-    new Ajax.Updater(track_panel_div,'#',{
-      parameters: {
-        update: div_id,
+    var request_str = "update_sections=1" + param_str;
+    for (var i = 0; i < section_names.length; i++) {
+      request_str += "&section_names="+section_names[i];
+    }
+    new Ajax.Request('#',{
+      method:     'post',
+      parameters: request_str,
+      onSuccess: function(transport) {
+        var results    = transport.responseJSON;
+        var section_html = results.section_html;
+        for (var section_name in section_html){
+          html    = section_html[section_name];
+          $(section_name).innerHTML = html;
+        }
       }
     });
   },
@@ -172,7 +182,7 @@ var GBrowseController = Class.create({
   function (action) {
 
     // submit search form if the detail panel doesn't exist
-    if ( null == $('detail_panels') ){
+    if ( null == $(detail_container_id) ){
         document.searchform.force_submit.value = 1; 
         document.searchform.submit(); 
     }
@@ -207,14 +217,9 @@ var GBrowseController = Class.create({
           Controller.update_scale_bar(detail_scale_bar_hash);
         }
     
-	    Controller.segment_observers.keys().each(
-	      function(e) {
-	        $(e).fire('model:segmentChanged',
-		      {
-		        track_key:  track_keys[e]
-		      });
-          }
-        ); //end each segment_observer
+        // Update the segment sections
+        Controller.update_sections( Controller.segment_observers.keys());
+
         Controller.get_multiple_tracks(track_keys);
       } // end onSuccess
       
@@ -249,7 +254,6 @@ var GBrowseController = Class.create({
           //Add New Track(s) to the list of observers and such
           Controller.register_track(div_element_id,this_track_data.image_element_id,'standard') ;
 
-          //fire the segmentChanged for each track not finished
           if (html.substring(0,18) == "<!-- AVAILABLE -->"){
             Controller.reset_after_track_load();
           }
@@ -371,14 +375,8 @@ var GBrowseController = Class.create({
 
   configure_plugin:
   function(div_id) {
-    var plugin_configure_div  = $(div_id);
     var plugin_base  = document.pluginform.plugin.value;
-    new Ajax.Updater(plugin_configure_div,'#',{
-      parameters: {
-        update: div_id,
-        plugin_base: plugin_base,
-      }
-    });
+    Controller.update_sections(new Array(div_id), '&plugin_base='+plugin_base);
   },
 
   reconfigure_plugin:
@@ -438,29 +436,17 @@ var GBrowseController = Class.create({
 
   edit_new_file:
   function() {
-    var external_utility_div  = $('external_utility_div');
-    new Ajax.Updater(external_utility_div,'#',{
-      parameters: {
-        update: 'external_utility_div',
-        new_edit_file: 1,
-      },
-    });
+    Controller.update_sections(new Array(external_utility_div_id), '&new_edit_file=1');
   },
 
   edit_upload:
   function(edit_file) {
-    var external_utility_div  = $('external_utility_div');
-    new Ajax.Updater(external_utility_div,'#',{
-      parameters: {
-        update: 'external_utility_div',
-        edit_file: edit_file,
-      }
-    });
+    Controller.update_sections(new Array(external_utility_div_id), '&edit_file='+edit_file);
   },
 
   commit_file_edit:
-  function(edited_file,track_name,track_div_id,eu_div_id) {
-    var form_element = $("edit_upload_form");
+  function(edited_file,track_name,track_div_id) {
+    var form_element = $(edit_upload_form_id);
     new Ajax.Request('#',{
       method:     'post',
       parameters: form_element.serialize() +"&"+ $H({
@@ -470,22 +456,19 @@ var GBrowseController = Class.create({
       onSuccess: function(transport) {
         var results    = transport.responseJSON;
         var file_created = results.file_created;
-        Controller.wipe_div(eu_div_id); 
+        Controller.wipe_div(external_utility_div_id); 
 
         if ( 1 == file_created ){
           Controller.add_track(track_name);
-          Controller.update_track_listing();
+          Controller.update_sections(new Array(track_listing_id,external_listing_id));
         }
         else{
         // update track if it exists
           if ( null != $(track_div_id)){
             Controller.rerender_track(track_name,track_div_id);
           }
+          Controller.update_sections(new Array(external_listing_id));
         }
-        // Update the upload table to change the last modified info
-        // or add the file to the list if new
-        Controller.update_external_data_listing();
-        
       } // end onSuccess
     });
   },
@@ -499,11 +482,8 @@ var GBrowseController = Class.create({
         file: file_name
       },
       onSuccess: function(transport) {
-
         $(track_div_id).remove();
-        Controller.update_track_listing();
-        Controller.update_external_data_listing();
-        
+        Controller.update_sections(new Array(track_listing_id,external_listing_id));
       } // end onSuccess
     });
   },
@@ -515,16 +495,9 @@ var Controller = new GBrowseController; // singleton
 
 function initialize_page() {
   //event handlers
-  ['page_title','span'].each(function(el) {
-
+  [page_title_id,visible_span_id].each(function(el) {
     if ($(el) != null) {
       Controller.segment_observers.set(el,1);
-      $(el).observe('model:segmentChanged',function(event) {
-        new Ajax.Updater(this,'#',{
-  	  parameters: {update: this.id}
-        });
-      }
-     )
     }
   });
   

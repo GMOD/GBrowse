@@ -1724,12 +1724,22 @@ sub asynchronous_update_sections {
     # A params is used to determine the plugin
     if ( $handle_section_name{'plugin_configure_div'} ) {
         my $plugin_base = param('plugin_base');
-        my $plugin      = $self->plugins->plugin($plugin_base)
-            or $return_object->{'plugin_configure_div'}
-            = "$plugin_base is not a recognized plugin\n";
-
-        $return_object->{'plugin_configure_div'}
-            = $self->wrap_plugin_configuration( $plugin_base, $plugin );
+        if ($plugin_base) {
+            my $plugin = $self->plugins->plugin($plugin_base);
+            if ($plugin) {
+                $return_object->{'plugin_configure_div'}
+                    = $self->wrap_plugin_configuration( $plugin_base,
+                    $plugin );
+            }
+            else {
+                $return_object->{'plugin_configure_div'}
+                    = "$plugin_base is not a recognized plugin\n";
+            }
+        }
+        else {
+            $return_object->{'plugin_configure_div'}
+                = "No plugin was specified.\n";
+        }
     }
 
     # External File Stuff
@@ -1744,6 +1754,10 @@ sub asynchronous_update_sections {
             my $file_name = $self->uploaded_sources->new_file_name();
             $return_object->{'external_utility_div'}
                 = $self->edit_uploaded_file($file_name);
+        }
+        else {
+            $return_object->{'external_utility_div'}
+                = "No recognized action for external_utility_div.";
         }
     }
 

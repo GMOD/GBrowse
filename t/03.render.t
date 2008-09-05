@@ -12,7 +12,7 @@ use IO::String;
 use CGI;
 use FindBin '$Bin';
 
-use constant TEST_COUNT => 121;
+use constant TEST_COUNT => 136;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;
@@ -197,6 +197,66 @@ if (ok($render_object) and ok($render_object->{'section_html'})){
   ok( $section_html->{'span'} =~ /selected/);
   ok( $section_html->{'tracks_panel'} =~ /Clones/);
   ok( $section_html->{'upload_tracks_panel'} =~ /upload_annotations/);
+}
+
+# Check update sections for plugin conifig
+# Nonsense plugin
+$CGI::Q = new CGI(
+    'update_sections=1'
+  . '&section_names=plugin_configure_div'
+  . '&plugin_base=blah'
+);
+($status,$mime,$render_object) = $render->asynchronous_event();
+if (ok($render_object) and ok($render_object->{'section_html'})){
+  my $section_html = $render_object->{'section_html'};
+  ok( $section_html->{'plugin_configure_div'} eq "blah is not a recognized plugin\n");
+}
+
+# No plugin
+$CGI::Q = new CGI(
+    'update_sections=1'
+  . '&section_names=plugin_configure_div'
+);
+($status,$mime,$render_object) = $render->asynchronous_event();
+if (ok($render_object) and ok($render_object->{'section_html'})){
+  my $section_html = $render_object->{'section_html'};
+  ok( $section_html->{'plugin_configure_div'} eq "No plugin was specified.\n");
+}
+
+# Real plugin
+$CGI::Q = new CGI(
+    'update_sections=1'
+  . '&section_names=plugin_configure_div'
+  . '&plugin_base=RestrictionAnnotator'
+);
+($status,$mime,$render_object) = $render->asynchronous_event();
+if (ok($render_object) and ok($render_object->{'section_html'})){
+  my $section_html = $render_object->{'section_html'};
+  ok( $section_html->{'plugin_configure_div'} =~/RestrictionAnnotator.enzyme/);
+}
+
+# Check New File (this also hits some of the edit file code)
+$CGI::Q = new CGI(
+    'update_sections=1'
+  . '&section_names=external_utility_div'
+  . '&new_edit_file=1'
+);
+($status,$mime,$render_object) = $render->asynchronous_event();
+if (ok($render_object) and ok($render_object->{'section_html'})){
+  my $section_html = $render_object->{'section_html'};
+  ok( $section_html->{'external_utility_div'} =~/edit_upload_form/);
+}
+
+# no action
+$CGI::Q = new CGI(
+    'update_sections=1'
+  . '&section_names=external_utility_div'
+);
+($status,$mime,$render_object) = $render->asynchronous_event();
+if (ok($render_object) and ok($render_object->{'section_html'})){
+  my $section_html = $render_object->{'section_html'};
+  ok( $section_html->{'external_utility_div'} eq
+        "No recognized action for external_utility_div." );
 }
 
 # Check setting visibility

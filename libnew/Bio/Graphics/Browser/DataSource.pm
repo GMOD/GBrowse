@@ -754,6 +754,7 @@ sub open_database {
 
   my ($adaptor,@argv) = $self->db_settings($track);
   my $key             = Dumper($adaptor,@argv);
+
   return $DB{$key}    if exists $DB{$key};
 
   $DB{$key} = eval {$adaptor->new(@argv)} or warn $@;

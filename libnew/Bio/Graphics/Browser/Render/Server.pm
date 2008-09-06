@@ -5,6 +5,7 @@ use HTTP::Daemon;
 use Storable qw(nfreeze thaw);
 use CGI qw(header param escape unescape);
 use IO::File;
+use IO::String;
 use File::Basename 'basename';
 use Bio::Graphics::Feature;
 use Bio::Graphics::Browser;
@@ -132,10 +133,19 @@ sub process_request {
     my $self = shift;
     my ($r,$c) = @_;
 
-    my $args = $r->method eq 'GET' ? $r->uri->query
-              :$r->method eq 'POST'? $r->content
-              : '';
-    $CGI::Q  = CGI->new($args);
+    warn $r->method;
+
+    if ($r->method eq 'GET') {
+	$CGI::Q = CGI->new($r->uri->query);
+    } elsif ($r->method eq 'POST') {
+        # This is all to trick CGI.pm into thinking that it is getting the
+	# request from the usual CGI environment.
+	tie *STDIN,IO::String->new($r->content); 
+	$ENV{REQUEST_METHOD} = 'POST';
+	$ENV{CONTENT_LENGTH} = $r->content_length;
+	$ENV{CONTENT_TYPE}   = $r->content_type;
+	$CGI::Q = CGI->new();
+    }
 
     $self->Debug("process_request(): setting environment");
 

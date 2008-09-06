@@ -453,14 +453,15 @@ sub run_remote_requests {
     my $s_track  = Storable::nfreeze(\@tracks);
 
     my $request = POST ($url,
-    		       [
-			operation  => 'render_tracks',
-			tracks     => $s_track,
-			settings   => $s_set,
-			datasource => $s_dsn,
-			language   => $s_lang,
-			env        => $s_env,
-    ]);
+			Content_Type => 'multipart/form-data',
+			Content => [
+			    operation  => 'render_tracks',
+			    tracks     => $s_track,
+			    settings   => $s_set,
+			    datasource => $s_dsn,
+			    language   => $s_lang,
+			    env        => $s_env,
+			]);
 
     my $error = $ua->register($request);
     if ($error) { warn "Could not send request to $url: ",$error->as_string }

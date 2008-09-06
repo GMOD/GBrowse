@@ -133,8 +133,6 @@ sub process_request {
     my $self = shift;
     my ($r,$c) = @_;
 
-    warn $r->method;
-
     if ($r->method eq 'GET') {
 	$CGI::Q = CGI->new($r->uri->query);
     } elsif ($r->method eq 'POST') {

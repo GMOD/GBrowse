@@ -2,7 +2,7 @@ package Bio::Graphics::Browser::Render::Server;
 
 use strict;
 use HTTP::Daemon;
-use Storable qw(freeze thaw);
+use Storable qw(nfreeze thaw);
 use CGI qw(header param escape unescape);
 use IO::File;
 use File::Basename 'basename';
@@ -19,7 +19,7 @@ use Carp 'croak';
 use constant DEBUG => 0;
 
 BEGIN {
-    use Storable qw(freeze thaw retrieve);
+    use Storable qw(nfreeze thaw retrieve);
     $Storable::Deparse = 1;
     $Storable::Eval    = 1;
 }
@@ -28,7 +28,7 @@ sub new {
     my $class       = shift;
     my %args        = @_;
 
-    $args{Reuse}        = 1 unless exists $args{Reuse};
+    $args{ReuseAddr}    = 1 unless exists $args{ReuseAddr};
     $args{LocalPort}  ||= 8101;
     $args{Listen}     ||= 20;
 
@@ -137,8 +137,12 @@ sub process_request {
               : '';
     $CGI::Q  = CGI->new($args);
 
+    $self->Debug("process_request(): setting environment");
+
     $self->setup_environment(param('env'));
     my $operation = param('operation') || 'invalid';
+
+    $self->Debug("process_request(): operation = $operation");
 
     my $content   = $operation eq 'render_tracks'   ? $self->render_tracks
                   : $operation eq 'search_features' ? $self->search_features
@@ -162,12 +166,16 @@ sub process_request {
 sub render_tracks {
     my $self = shift;
 
+    $self->Debug("render_tracks(): thawing parameters");
+
     my $tracks	        = thaw param('tracks');
     my $settings	= thaw param('settings');
     my $datasource	= thaw param('datasource');
     my $language	= thaw param('language');
 
+    $self->Debug("render_tracks(): Opening database...");
     my $db = $datasource->open_database();
+    $self->Debug("render_tracks(): Got database handle $db");
 
     # extract segments
     my ($segment) = $db->segment(-name	=> $settings->{'ref'},
@@ -208,7 +216,7 @@ sub render_tracks {
 			    height    => $height,
 			    imagedata => $imagedata};
     }
-    my $content = freeze \%results;
+    my $content = nfreeze \%results;
     return $content;
 }
 
@@ -240,7 +248,7 @@ sub search_features {
 	  -desc   => eval{$_->desc}  || '',
 	  );
     } @$results;
-    return freeze(\@features);
+    return nfreeze(\@features);
 }
 
 
@@ -273,7 +281,6 @@ sub become_daemon {
     chdir '/';  # don't hold open working directories
     open STDIN, "</dev/null";
     open STDOUT,">/dev/null";
-    open STDERR,">&STDOUT" if $self->logfile;
 
     # write out PID file if requested
     if (my $l = $self->pidfile) {
@@ -285,6 +292,8 @@ sub become_daemon {
     }
 
     $self->open_log;
+
+    open STDERR,">&",$self->logfh if $self->logfh;
     $self->set_user;
     return;
 }

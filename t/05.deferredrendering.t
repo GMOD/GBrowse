@@ -51,7 +51,7 @@ use Bio::Graphics::Browser::Render::Server;
 # Test remote rendering
 # Notice that $ENV{GBROWSE_DOCS} is NOT set when we launch these servers.
 # It is set at run time as part of the exchange between master and slave.
-my @servers = (Bio::Graphics::Browser::Render::Server->new(),  # main
+my @servers = (Bio::Graphics::Browser::Render::Server->new(LocalPort=>8110),  # main
 	       Bio::Graphics::Browser::Render::Server->new(LocalPort=>8100), # alignments
 	       Bio::Graphics::Browser::Render::Server->new(LocalPort=>8101), # cleavage sites
     );

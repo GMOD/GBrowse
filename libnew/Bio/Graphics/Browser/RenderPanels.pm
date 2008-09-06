@@ -430,10 +430,10 @@ sub run_remote_requests {
 
 
   # serialize the data source and settings
-  my $s_dsn	= Storable::freeze($source);
-  my $s_set	= Storable::freeze($settings);
-  my $s_lang	= Storable::freeze($lang);
-  my $s_env	= Storable::freeze(\%env);
+  my $s_dsn	= Storable::nfreeze($source);
+  my $s_set	= Storable::nfreeze($settings);
+  my $s_lang	= Storable::nfreeze($lang);
+  my $s_env	= Storable::nfreeze(\%env);
 
   # sort requests by their renderers
   my %renderers;
@@ -450,7 +450,7 @@ sub run_remote_requests {
 
     my @tracks  = keys %{$renderers{$url}};
 
-    my $s_track  = Storable::freeze(\@tracks);
+    my $s_track  = Storable::nfreeze(\@tracks);
 
     my $request = POST ($url,
     		       [

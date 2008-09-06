@@ -45,12 +45,12 @@ use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Render::HTML;
 use LWP::UserAgent;
 use HTTP::Request::Common;
-use Storable 'freeze','thaw';
+use Storable 'nfreeze','thaw';
 use Bio::Graphics::Browser::Render::Server;
 
 
 # Test remote rendering
-my $server = Bio::Graphics::Browser::Render::Server->new();
+my $server = Bio::Graphics::Browser::Render::Server->new(LocalPort=>8200);
 ok($server);
 $server->debug(0);
 my $server_pid = $server->run;
@@ -80,10 +80,10 @@ my $port     = $server->listen_port;
 
 my $request  = POST("http://localhost:$port/",
 		    [
-		     tracks     => freeze(\@labels),
-		     settings   => freeze($settings),
-		     datasource => freeze($source),
-		     language   => freeze($lang),
+		     tracks     => nfreeze(\@labels),
+		     settings   => nfreeze($settings),
+		     datasource => nfreeze($source),
+		     language   => nfreeze($lang),
 		     operation  => 'render_tracks',
 		    ]);
 for (1..3) {

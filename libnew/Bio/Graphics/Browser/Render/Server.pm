@@ -78,15 +78,26 @@ sub run {
     $self->{pid} = $self->become_daemon;
     return $self->{pid} if $self->{pid};
 
-    my $continue = 1;
-    $SIG{TERM}   = sub { $continue=0 };
+    my $quit     = 0;
+    my $rotate   = 0;
+
+    $SIG{TERM}   = sub { $quit     = 1 };
+    $SIG{HUP}    = sub { $rotate   = 1 };
 
     my $d     = $self->d;
-    $self->Info('Starting');
+    $self->Info('GBrowse render slave starting on port ',$self->listen_port);
 
     # accept loop in child process
-    while ($continue) {
-	$self->Debug("waiting for connection on port ",$self->listen_port);
+    while (!$quit) {
+
+	if ($rotate) {
+	    $self->Info("Reopening log file");
+	    $self->open_log;
+	    $rotate = 0;
+	    next;
+	}
+
+	$self->Debug("Waiting for connection...");
 	my $c     = $d->accept() or next; # accept() is interruptable...
 	my $child = fork();
 	$self->Fatal("Couldn't fork: $!") unless defined $child;
@@ -100,6 +111,7 @@ sub run {
 	}
     }
     $self->Info('Normal termination');
+    unlink $self->pidfile if $self->pidfile;
     CORE::exit 0;
 }
 
@@ -272,22 +284,28 @@ sub become_daemon {
 	$fh->close();
     }
 
-    # open log file if requested
-    if (my $l = $self->logfile) {
-	my $fh = IO::File->new($l,">>")  # append
-	    or $self->Fatal("Could not open logfile $l: $!");
-	$fh->autoflush(1);
-	$self->logfh($fh);
-    }
-
-    # change user if requested
-    if (my $u = $self->user) {
-	my $uid = getpwnam($u);
-	defined $uid or $self->Fatal("Cannot change uid to $u: unknown user");
-	setuid($uid) or $self->Fatal("Cannot change uid to $u: $!");
-    }
-
+    $self->open_log;
+    $self->set_user;
     return;
+}
+
+# open log file if requested
+sub open_log {
+    my $self = shift;
+    my $l = $self->logfile or return;
+    my $fh = IO::File->new($l,">>")  # append
+	or $self->Fatal("Could not open logfile $l: $!");
+    $fh->autoflush(1);
+    $self->logfh($fh);
+}
+
+# change user if requested
+sub set_user {
+    my $self = shift;
+    my $u = $self->user or return;
+    my $uid = getpwnam($u);
+    defined $uid or $self->Fatal("Cannot change uid to $u: unknown user");
+    setuid($uid) or $self->Fatal("Cannot change uid to $u: $!");
 }
 
 sub Debug {

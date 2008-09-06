@@ -127,7 +127,7 @@ my @seqid = sort map {$_->seq_id} @$features;
 ok("@seqid","ctgA ctgB");
 
 # Test remote rendering
-my @servers = (Bio::Graphics::Browser::Render::Server->new(),  # main
+my @servers = (Bio::Graphics::Browser::Render::Server->new(LocalPort=>8110), # main
 	       Bio::Graphics::Browser::Render::Server->new(LocalPort=>8100), # volvox4 "heterodox sites"
 	       Bio::Graphics::Browser::Render::Server->new(LocalPort=>8101), # volvox3 "cleavage sites"
     );

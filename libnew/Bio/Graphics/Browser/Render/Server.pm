@@ -28,9 +28,9 @@ sub new {
     my $class       = shift;
     my %args        = @_;
 
-    $args{LocalAddr} ||= 'localhost';
-    $args{Reuse}       = 1 unless exists $args{Reuse};
-    $args{LocalPort} ||= 8123;
+    $args{Reuse}        = 1 unless exists $args{Reuse};
+    $args{LocalPort}  ||= 8101;
+    $args{Listen}     ||= 20;
 
     my $d = HTTP::Daemon->new(%args)
 	or croak "could not create daemon socket: @_";

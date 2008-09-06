@@ -142,7 +142,7 @@ sub request_panels {
       }
       elsif ($do_remote) {
           $self->run_remote_requests( $data_destinations, $args,
-              $local_labels );
+              $remote_labels );
       }
       CORE::exit 0;
   }
@@ -210,14 +210,17 @@ sub make_requests {
 
 sub use_renderfarm {
   my $self   = shift;
+  return $self->{use_renderfarm} if exists $self->{use_renderfarm};
 
   $self->source->global_setting('renderfarm') or return;	#comment out to force remote rendering (kludge)
 
   $LPU_AVAILABLE = eval { require LWP::Parallel::UserAgent; } unless defined $LPU_AVAILABLE;
   $STO_AVAILABLE = eval { require Storable; 1; }              unless defined $STO_AVAILABLE;
+  $Storable::Deparse = 1;
 
   warn "LPU => ",LWP::Parallel::UserAgent->can('new') if DEBUG;
-  return 1 if $LPU_AVAILABLE && $STO_AVAILABLE;
+  $self->{use_renderfarm} = $LPU_AVAILABLE && $STO_AVAILABLE;
+  return $self->{use_renderfarm} if $self->{use_renderfarm};
   warn "The renderfarm setting requires the LWP::Parallel::UserAgent and Storable modules,
 but one or both are missing. Reverting to local rendering.\n";
   return;
@@ -498,6 +501,7 @@ sub sort_local_remote {
 
     my $source         = $self->source;
     my $use_renderfarm = $self->use_renderfarm;
+
     unless ($use_renderfarm) {
 	return (\@uncached,[]);
     }

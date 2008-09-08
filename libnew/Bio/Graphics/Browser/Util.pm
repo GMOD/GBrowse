@@ -26,8 +26,8 @@ use strict;
 use base 'Exporter';
 use Carp 'carp','cluck';
 
-our @EXPORT    = qw(modperl_request error);
-our @EXPORT_OK = qw(modperl_request error);
+our @EXPORT    = qw(modperl_request error citation);
+our @EXPORT_OK = qw(modperl_request error citation);
 
 use constant DEBUG => 1;
 
@@ -57,6 +57,26 @@ sub error {
   my @msg = @_;
   cluck "@_" if DEBUG;
   print CGI::h2({-class=>'error'},@msg);
+}
+
+=item citation(DataSource, 'label, [Language])
+
+Returns a track citation
+
+=cut
+
+sub citation {
+  my $data_source = shift;
+  my $label       = shift;
+  my $language    = shift;
+  my $c;
+  if ($language) {
+    for my $l ($language->language) {
+      $c ||= $data_source->setting($label=>"citation:$l");
+    }
+  }
+  $c ||= $data_source->setting($label=>'citation');
+  return $c;
 }
 
 =back

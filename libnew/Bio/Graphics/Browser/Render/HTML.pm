@@ -20,7 +20,9 @@ sub render_top {
   my $self  = shift;
   my $title = shift;
   my $dsn   = $self->data_source;
-  return $self->render_html_head($dsn,$title);
+  my $html  = $self->render_html_head($dsn,$title);
+  $html  .= $self->render_balloon_settings();
+  return $html;
 }
 
 sub render_bottom {
@@ -146,6 +148,8 @@ sub render_html_head {
                overviewSelect.js
                detailSelect.js
                regionSelect.js
+               balloon.js
+               balloon.config.js
 );
 
   # pick stylesheets;
@@ -168,6 +172,48 @@ sub render_html_head {
   push @args,(-onLoad=>'initialize_page()');
 
   return start_html(@args);
+}
+
+sub render_balloon_settings {
+    my $self   = shift;
+    my $source = $self->data_source;
+
+    #return '' unless ( $source->setting('balloon tips') );
+
+    my $custom_balloons = $source->setting('custom balloons') || "";
+    my $balloon_images  = $self->globals->balloon_url();
+    my %config_values   = $custom_balloons =~ /\[([^]]+)\]([^[]+)/g;
+    $config_values{'balloon'} ||= <<END;
+images    =  $balloon_images
+delayTime =  500
+END
+
+    my $balloon_settings;
+
+    for my $balloon ( keys %config_values ) {
+        my %config = $config_values{$balloon} =~ /(\w+)\s*=\s*(\S+)/g;
+        my $img = $config{images} || $balloon_images;
+        $balloon_settings .= <<END;
+var $balloon = new Balloon;
+$balloon.images              = '$img';
+$balloon.balloonImage        = 'balloon.png';
+$balloon.ieImage             = 'balloon_ie.png';
+$balloon.upLeftStem          = 'up_left.png';
+$balloon.downLeftStem        = 'down_left.png';
+$balloon.upRightStem         = 'up_right.png';
+$balloon.downRightStem       = 'down_right.png';
+$balloon.closeButton         = 'close.png';
+END
+        for my $option ( keys %config ) {
+            next if $option eq 'images';
+            my $value
+                = $config{$option} =~ /^[\d.-]+$/
+                ? $config{$option}
+                : "'$config{$option}'";
+            $balloon_settings .= "$balloon.$option = $value;\n";
+        }
+    }
+    return "<script>\n$balloon_settings\n</script>\n";
 }
 
 sub render_title {

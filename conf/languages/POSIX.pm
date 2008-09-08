@@ -10,14 +10,15 @@
    PAGE_TITLE => 'Genome browser',
 
    SEARCH_INSTRUCTIONS => <<END,
-Search using a sequence name, gene name,
+<b>Searching:</b> Search using a sequence name, gene name,
 locus%s, or other landmark. The wildcard
 character * is allowed.
 END
 
    NAVIGATION_INSTRUCTIONS => <<END,
-To center on a location, click the ruler. Use the Scroll/Zoom buttons
-to change magnification and position.
+<br><b>Navigation:</b> Click one of the rulers to center on a location, or click and drag to
+select a region. Use the Scroll/Zoom buttons to change magnification
+and position.
 END
 
    EDIT_INSTRUCTIONS => <<END,
@@ -198,7 +199,7 @@ END
 
    UPLOAD_TRACKS=>'Add your own tracks',
 
-   UPLOAD_TITLE=> 'Upload your own annotations',
+   UPLOAD_TITLE=> 'Upload your own data',
 
    UPLOAD_FILE => 'Upload a file',
 
@@ -214,13 +215,13 @@ END
 
    REMOTE_URL   => 'Enter Remote Annotation URL',
 
-   UPDATE_URLS  => 'Update URLs',
+   UPDATE_URLS  => 'Update',
 
    PRESETS      => '--Choose Preset URL--',
 
-   FEATURES_TO_HIGHLIGHT => 'Highlight feature(s) (feat1 feat2...)',
+   FEATURES_TO_HIGHLIGHT => 'Highlight feature(s) (feature1 feature2...)',
 
-   REGIONS_TO_HIGHLIGHT => 'Highlight regions (region1:start..end ...)',
+   REGIONS_TO_HIGHLIGHT => 'Highlight regions (region1:start..end region2:start..end)',
 
    FEATURES_TO_HIGHLIGHT_HINT => 'Hint: use feature@color to select the color, as in \'NUT21@lightblue\'',
 
@@ -241,13 +242,15 @@ END
    # MULTIPLE MATCHES PAGE
    #----------------------
 
-   HIT_COUNT      => '%d regions match',
+   HIT_COUNT      => 'The following %d regions match your request.',
 
    POSSIBLE_TRUNCATION  => 'Search results are limited to %d hits; list may be incomplete.',
 
    MATCHES_ON_REF => 'Matches on %s',
 
    SEQUENCE        => 'sequence',
+
+   SCORE           => 'score=%s',
 
    NOT_APPLICABLE => 'n/a',
 
@@ -339,6 +342,8 @@ END
    # HELP PAGES
    #--------------
 
+   OK                 => 'OK',
+
    CLOSE_WINDOW => 'Close this window',
 
    TRACK_DESCRIPTIONS => 'Track Descriptions & Citations',
@@ -375,7 +380,7 @@ END
 
  NOT_FOUND => 'The landmark named <i>%s</i> is not recognized. See the help pages for suggestions.',
 
- TOO_BIG   => 'Detailed view is limited to %s.  Click in the overview to select a region %s wide.',
+ TOO_BIG   => 'Detailed view is limited to %s. Click and drag in the overview or region to make a smaller selection.',
 
  PURGED    => "Can't find the file named %s.  Perhaps it has been purged?.",
 
@@ -394,5 +399,82 @@ END
  INVALID_SOURCE    => 'The source named %s is invalid.',
 
  NO_SEGMENT        => 'No genomic region selected.',
+
+ BACKGROUND_COLOR  => 'Fill color',
+
+ FG_COLOR          => 'Line color',
+
+ HEIGHT           => 'Height',
+
+ PACKING          => 'Packing',
+
+ GLYPH            => 'Shape',
+
+ LINEWIDTH        => 'Line width',
+
+ DEFAULT          => '(default)',
+
+ DYNAMIC_VALUE    => 'Dynamically calculated',
+
+ CHANGE           => 'Change',
+
+ DRAGGABLE_TRACKS  => 'Draggable tracks',
+
+ CACHE_TRACKS      => 'Cache tracks',
+
+ SHOW_TOOLTIPS     => 'Show tooltips',
+
+ OPTIONS_RESET     => 'All page settings have been reset to their default values',
+
+ OPTIONS_UPDATED   => 'A new site configuration is in effect; all page settings have been reset to their defaults',
+
+ SEND_TO_GALAXY    => 'Send this Region to Galaxy',
+
+ NO_DAS            => 'Installation error: Bio::Das module must be installed for DAS URLs to work. Please inform this site\'s webmaster.',
+
+ SHOW_OR_HIDE_TRACK => '<b>Show or hide this track</b>',
+
+ CONFIGURE_THIS_TRACK   => '<b>Click to change track settings.</b>',
+
+ SHARE_THIS_TRACK   => '<b>Share this track</b>',
+
+ SHARE_ALL          => 'Share these tracks',
+
+ SHARE              => 'Share %s',
+
+ SHARE_INSTRUCTIONS_ONE_TRACK => <<END,
+To share this track with another GBrowse genome browser,
+first copy the URL below, then go to the other GBrowse and
+paste the URL into the "Enter Remote Annotation" field at
+the bottom of the page. If this track is from an uploaded file,
+then be aware that sharing this URL with another user potentially
+allows <b>all</b> your uploaded data to be viewable by that user.
+END
+
+ SHARE_INSTRUCTIONS_ALL_TRACKS => <<END,
+To share all currently selected tracks with another GBrowse genome
+browser, first copy the URL below, then go to the other GBrowse and
+paste the URL into the "Enter Remote Annotation" field at
+the bottom of the page. If any of the selected tracks are from an uploaded file,
+then be aware that sharing this URL with another user potentially
+allows <b>all</b> your uploaded data to be viewable by that user.
+END
+
+ SHARE_DAS_INSTRUCTIONS_ONE_TRACK => <<END,
+To share this track with another genome browser using 
+the <a href="http://www.biodas.org" target="_new">
+Distributed Annotation System (DAS)</a> first copy the URL below, 
+then go to the other browser and enter it as a new DAS source.
+<i>Quantitative tracks ("wiggle" files) and uploaded files can not
+be shared using DAS.</i>
+END
+
+ SHARE_DAS_INSTRUCTIONS_ALL_TRACKS => <<END,
+To share all currently selected tracks with another genome browser
+using the <a href="http://www.biodas.org" target="_new"> Distributed
+Annotation System (DAS)</a> first copy the URL below, then go to the
+other browser and enter it as a new DAS source. <i>Quantitative tracks
+("wiggle" files) and uploaded files can not be shared using DAS.</i>
+END
 
 };

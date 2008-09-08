@@ -2553,21 +2553,6 @@ sub is_safari {
   return (CGI::user_agent||'') =~ /safari/i;
 }
 
-sub citation {
-  my $self = shift;
-  my $label     = shift;
-  my $language  = shift;
-  my $source = $self->data_source;
-  my $c;
-  if ($language) {
-    for my $l ($language->language) {
-      $c ||= $source->setting($label=>"citation:$l");
-    }
-  }
-  $c ||= $source->setting($label=>'citation');
-  $c;
-}
-
 sub external_data {
     my $self    = shift;
     my $segment = $self->segment or return { };

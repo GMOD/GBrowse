@@ -8,7 +8,7 @@ use Digest::MD5 'md5_hex';
 use Carp 'croak','cluck';
 use Text::Shellwords 'shellwords';
 use Bio::Graphics::Browser::CachedTrack;
-use Bio::Graphics::Browser::Util 'modperl_request';
+use Bio::Graphics::Browser::Util qw[modperl_request citation];
 use IO::File;
 use POSIX 'WNOHANG','setsid';
 
@@ -307,6 +307,17 @@ sub wrap_rendered_track {
 
     my $class = $label =~ /scale/i ? 'scale' : 'track';
     my $icon = $collapsed ? $plus : $minus;
+    my $show_or_hide = $self->language->tr('SHOW_OR_HIDE_TRACK')
+        || "Show or Hide";
+    my $citation = $self->plain_citation( $label, 512 );
+
+    #$citation            =~ s/"/&quot;/g;
+    #$citation            =~ s/'/&#39;/g;
+
+    my $configure_this_track = $citation || '';
+    $configure_this_track .= '<br>' if $citation;
+    $configure_this_track .= $self->language->tr('CONFIGURE_THIS_TRACK')
+        || "Configure this Track";
 
     my $config_click;
     if ( $label =~ /^plugin:/ ) {
@@ -336,15 +347,18 @@ sub wrap_rendered_track {
         {   -class => $collapsed ? 'titlebar_inactive' : 'titlebar',
             -id => "${label}_title"
         },
-        img({   -src     => $icon,
-                -id      => "${label}_icon",
-                -onClick => "collapse('$label')",
-                -style   => 'cursor:pointer',
+        img({   -src         => $icon,
+                -id          => "${label}_icon",
+                -onClick     => "collapse('$label')",
+                -style       => 'cursor:pointer',
+                -onMouseOver => "balloon.showTooltip(event,'$show_or_hide')",
             }
         ),
         img({   -src         => $help,
                 -style       => 'cursor:pointer',
-                -onmousedown => $config_click
+                -onmousedown => $config_click,
+                -onMouseOver => "balloon.showTooltip(event,'$configure_this_track')",
+
             }
         ),
         span( { -class => 'draghandle' }, $title )
@@ -1707,6 +1721,17 @@ sub make_postgrid_callback {
     return hilite_regions_closure(@h_regions);
 }
 
+sub plain_citation {
+    my ( $self, $label, $truncate ) = @_;
+    my $text = citation( $self->source(), $label, $self->language )
+        || $self->language->tr('NO_CITATION');
+    $text =~ s/\<a/<span/gi;
+    $text =~ s/\<\/a/\<\/span/gi;
+    if ($truncate) {
+        $text =~ s/^(.{$truncate}).+/$1\.\.\./;
+    }
+    CGI::escape($text);
+}
 
 # this subroutine generates a Bio::Graphics::Panel callback closure 
 # suitable for hilighting a region of a panel.

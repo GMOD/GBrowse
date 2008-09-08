@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.11 2008-08-26 20:29:46 lstein Exp $
+# $Id: Browser.pm,v 1.12 2008-09-08 15:08:14 mwz444 Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -97,6 +97,7 @@ sub url_base    { $ENV{GBROWSE_ROOT} || shift->setting(general=>'url_base')   ||
 
 # these are url-relative options
 sub button_url  { shift->url_path('buttons')            }
+sub balloon_url { shift->url_path('balloons')           }
 sub image_url   { shift->url_path('images')             }
 sub js_url      { shift->url_path('js')                 }
 sub help_url    { shift->url_path('gbrowse_help')       }

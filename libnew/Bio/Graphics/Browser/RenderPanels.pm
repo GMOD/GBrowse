@@ -178,6 +178,7 @@ sub render_panels {
 sub make_requests {
     my $self   = shift;
     my $args   = shift;
+    my $source = $self->source;
 
     my $feature_files  = $args->{external_features};
     my $labels         = $args->{labels};
@@ -202,7 +203,7 @@ sub make_requests {
             -track_args => \@track_args,
             -extra_args => [ @cache_extra, @extra_args ],
         );
-        $cache_object->cache_time( $self->cache_time * 60 );
+        $cache_object->cache_time( $source->cache_time * 60 );
         $d{$label} = $cache_object;
     }
     return \%d;
@@ -428,7 +429,8 @@ sub run_remote_requests {
   my $self      = shift;
   my ($requests,$args,$labels) = @_;
 
-  my @labels_to_generate = grep { $requests->{$_}->needs_refresh } @$labels;
+  #my @labels_to_generate = grep { $requests->{$_}->needs_refresh } @$labels;
+  my @labels_to_generate = @$labels;
   foreach (@labels_to_generate) {
       $requests->{$_}->lock();   # flag that request is in process
   }
@@ -512,7 +514,13 @@ sub sort_local_remote {
     my $self     = shift;
     my $requests = shift;
     
-    my @uncached = grep {$requests->{$_}->needs_refresh} keys %$requests;
+    my @uncached;
+    if ($self->settings->{cache}){
+        @uncached = grep {$requests->{$_}->needs_refresh} keys %$requests;
+    }
+    else{
+        @uncached = keys %$requests;
+    }
 
     my $source         = $self->source;
     my $use_renderfarm = $self->use_renderfarm;
@@ -1417,17 +1425,6 @@ sub get_cache_base {
     my $rel_path    = File::Spec->catfile($self->source->name,'panel_cache');
     my ($uri,$path) = $self->source->tmpdir($rel_path);
     return wantarray ? ($path,$uri) : $path;
-}
-
-sub cache_time {
-  my $self = shift;
-  if (@_) {
-      $self->{cache_time} = shift;
-  }
-  return $self->{cache_time} if exists $self->{cache_time};
-  my ($ct)                   = $self->source->global_time('cache time');
-  $ct                        = 1 unless defined $ct;  # cache one hour by default
-  return $self->{cache_time} = $ct/3600;  # global times are in seconds, we want hours
 }
 
 # Convert the cached image map data

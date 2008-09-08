@@ -1385,10 +1385,12 @@ sub update_state {
 sub default_state {
   my $self  = shift;
   my $state = $self->state;
+  my $data_source = $self->data_source;
   %$state = ();
   @$state{'name','ref','start','stop','flip','version'} = ('','','','','',100);
   $state->{width}        = $self->setting('default width');
-  $state->{source}       = $self->data_source->name;
+  $state->{source}       = $data_source->name;
+  $state->{cache}        = defined $data_source->cache_time    ? $data_source->cache_time : 1;
   $state->{region_size}  = $self->setting('region segment');
   $state->{v}            = VERSION;
   $state->{stp}          = 1;
@@ -1493,6 +1495,7 @@ sub update_state_from_cgi {
 sub update_options {
   my $self  = shift;
   my $state = shift || $self->state;
+  my $data_source = shift || $self->data_source;
 
   #  return unless param('width'); # not submitted
   $state->{width} ||= $self->setting('default width');  # working around a bug during development
@@ -1504,14 +1507,16 @@ sub update_options {
   do {$state->{$_} = param($_) if defined param($_) } 
     foreach qw(name source plugin stp ins head ks sk version grid flip width);
 
-  if (param('width') || param('label')) { # just looking to see if the settings form was submitted
-    $state->{grid} = param('grid');
+  # just looking to see if the settings form was submitted
+  if (param('width')) { 
+    $state->{grid}  = param('grid');
+    unless ( defined $data_source->cache_time()
+        && $data_source->cache_time() == 0 )
+    {
+        $state->{cache} = param('cache');
+        $state->{cache} = !param('nocache') if defined param('nocache');
+    }
   }
-  #elsif (param('span')) { # just looking to see if the search form was submitted
-  #  $state->{flip} = param('flip');
-  #}
-
- 
 
   # Process the magic "q" parameter, which overrides everything else.
   if (my @q = param('q')) {
@@ -2441,7 +2446,7 @@ sub render_deferred_track {
         -base => $base,
         -key  => $cache_key,
     );
-    $cache->cache_time( $renderer->cache_time * 60 );
+    $cache->cache_time( $self->data_source->cache_time * 60 );
     my $status_html = "<!-- " . $cache->status . " -->";
 
     my $result_html = '';

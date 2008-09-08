@@ -133,6 +133,18 @@ sub global_time {
     return $offset;
 }
 
+sub cache_time {
+    my $self = shift;
+    if (@_) {
+        $self->{cache_time} = shift;
+    }
+    return $self->{cache_time} if exists $self->{cache_time};
+    my ($ct) = $self->global_time('cache time');
+    $ct = 1 unless defined $ct;    # cache one hour by default
+    return $self->{cache_time}
+        = $ct / 3600;    # global times are in seconds, we want hours
+}
+
 # this method is for compatibility with some plugins
 sub config {
   my $self = shift;

@@ -381,7 +381,6 @@ sub render_track_table {
 		      div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
 		      table({-width=>'100%',-class=>"searchbody"},
 			    TR(td{-align=>'right'},
-			       submit(-name => $self->tr('Set_options')),
 			       b(submit(-name => $self->tr('Update'))
 				)
 			      )
@@ -402,109 +401,150 @@ sub render_multiple_choices {
 }
 
 sub render_global_config {
-  my $self     = shift;
-  my $settings = $self->state;
+    my $self     = shift;
+    my $settings = $self->state;
 
-  my @widths = split /\s+/,$self->setting('image widths');
-  @widths = (640,800,1024) unless @widths;
-  my @key_positions   = qw(between bottom);
-  push @key_positions,qw(left right) if Bio::Graphics::Panel->can('auto_pad');
+    my @widths = split /\s+/, $self->setting('image widths');
+    @widths = ( 640, 800, 1024 ) unless @widths;
+    my @key_positions = qw(between bottom);
+    push @key_positions, qw(left right)
+        if Bio::Graphics::Panel->can('auto_pad');
 
-  my $feature_highlights = $settings->{h_feat}   ?
-    join ' ',map { "$_\@$settings->{h_feat}{$_}"   } keys %{$settings->{h_feat}} : '';
+    my $feature_highlights = $settings->{h_feat}
+        ? join ' ',
+        map {"$_\@$settings->{h_feat}{$_}"} keys %{ $settings->{h_feat} }
+        : '';
 
-  my $region_highlights  = $settings->{h_region} ?
-    join ' ',@{$settings->{h_region}} : '';
+    my $region_highlights = $settings->{h_region}
+        ? join ' ', @{ $settings->{h_region} }
+        : '';
 
-  my $content =
-    start_form(-name=>'display_settings',-id=>'display_settings').
-    table({-class=>'searchbody',-border=>0,-width=>'100%'},
-	  TR(
-	     td(
-		b($self->tr('Image_width')),br,
-		radio_group( -name=>'width',
-			     -values=>\@widths,
-			     -default=>$settings->{width},
-			     -override=>1,
-			   ),
-	       ),
-	     $self->setting('region segment') ?
-	     (
-	      td(b($self->tr('Region_size')),br,
-		 textfield(-name=>'region_size',
-			   -default=>$settings->{region_size},
-			   -override=>1,
-			   -size=>20),
-		)
-	     ) : (),
-             td(
-                b($self->tr("TRACK_NAMES")),br,
-                radio_group( -name=>"sk",
-                             -values=>["sorted","unsorted"],
-                             -labels=>{sorted   =>$self->tr("ALPHABETIC"),
-                                       unsorted =>$self->tr("VARYING")},
-                             -default=>$settings->{sk},
-                             -override=>1
-                           ),
-               ),
-	     td(
-		$self->setting('drag and drop')
-                ? '&nbsp;'
-		: (b($self->tr('KEY_POSITION')),br,
-		   radio_group( -name=>'ks',
-				-values=>\@key_positions,
-				-labels=>{between=>$self->tr('BETWEEN'),
-					  bottom =>$self->tr('BENEATH'),
-					  left   =>$self->tr('LEFT'),
-					  right  =>$self->tr('RIGHT'),
-					 },
-				-default=>$settings->{ks},
-				-override=>1
-			      )
-		  ),
-	       ),
-	    ),
-	  TR(
-	     td(
-		span({-title=>$self->tr('FEATURES_TO_HIGHLIGHT_HINT')},
-		     b(
-		       $self->tr('FEATURES_TO_HIGHLIGHT')
-		      ),br,
-		     textfield(-name  => 'h_feat',
-			       -value => $feature_highlights,
-			       -size  => 50,
-			       -override=>1,
-			      ),
-		    ),
-	       ),
-	     td(
-		span({-title=>$self->tr('REGIONS_TO_HIGHLIGHT_HINT')},
-		     b(
-		       $self->tr('REGIONS_TO_HIGHLIGHT')
-		      ),br,
-		     textfield(-name=>'h_region',
-			       -value=>$region_highlights,
-			       -size=>50,
-			       -override=>1,
-			      ),
-		    ),
-	       ),
-	     td(
-		b(
-		  checkbox(-name=>'grid',
-			   -label=>$self->tr('SHOW_GRID'),
-			   -override=>1,
-			   -checked=>$settings->{grid}||0)
-		 )
-	       ),
-	    ),
-	  TR(td({-colspan=>4,
-		 -align=>'right'},
-		b(submit(-name => $self->tr('Update')))))
-	 )
-    .end_form();
-    ;
-  return $self->toggle('Display_settings',$content);
+    my $content
+        = start_form( -name => 'display_settings', -id => 'display_settings' )
+        . table(
+        { -class => 'searchbody', -border => 0, -width => '100%' },
+        TR( { -class => 'searchtitle' },
+            td( b(  checkbox(
+                        -name     => 'grid',
+                        -label    => $self->tr('SHOW_GRID'),
+                        -override => 1,
+                        -checked  => $settings->{grid} || 0
+                    )
+                )
+            ),
+            td( b( $self->tr('Image_width') ),
+                br,
+                radio_group(
+                    -name     => 'width',
+                    -values   => \@widths,
+                    -default  => $settings->{width},
+                    -override => 1,
+                ),
+            ),
+            td( span(
+                    { -title => $self->tr('FEATURES_TO_HIGHLIGHT_HINT') },
+                    b( $self->tr('FEATURES_TO_HIGHLIGHT') ),
+                    br,
+                    textfield(
+                        -name     => 'h_feat',
+                        -value    => $feature_highlights,
+                        -size     => 50,
+                        -override => 1,
+                    ),
+                ),
+            ),
+        ),
+        TR( { -class => 'searchtitle' },
+            td( $self->data_source->cache_time
+                ? ( b(  checkbox(
+                            -name     => 'cache',
+                            -label    => $self->tr('CACHE_TRACKS'),
+                            -override => 1,
+                            -checked  => $settings->{cache}
+                        )
+                    )
+                    )
+                : ()
+            ),
+            td( b( $self->tr("TRACK_NAMES") ),
+                br,
+                radio_group(
+                    -name   => "sk",
+                    -values => [ "sorted", "unsorted" ],
+                    -labels => {
+                        sorted   => $self->tr("ALPHABETIC"),
+                        unsorted => $self->tr("VARYING")
+                    },
+                    -default  => $settings->{sk},
+                    -override => 1
+                ),
+            ),
+
+            td( span(
+                    { -title => $self->tr('REGIONS_TO_HIGHLIGHT_HINT') },
+                    b( $self->tr('REGIONS_TO_HIGHLIGHT') ),
+                    br,
+                    textfield(
+                        -name     => 'h_region',
+                        -value    => $region_highlights,
+                        -size     => 50,
+                        -override => 1,
+                    ),
+                ),
+            ),
+        ),
+        TR( { -class => 'searchtitle' },
+            td( { -align => 'left' },
+                b(  checkbox(
+                        -name     => 'show_tooltips',
+                        -label    => $self->tr('SHOW_TOOLTIPS'),
+                        -override => 1,
+                        -checked  => $settings->{show_tooltips},
+                        -onclick  => 'toggleTooltip()'
+                    ),
+                )
+            ),
+            td( { -id => 'ks_label', },
+                b( $self->tr('KEY_POSITION') ),
+                br,
+                radio_group(
+                    -name   => 'ks',
+                    -values => \@key_positions,
+                    -labels => {
+                        between => $self->tr('BETWEEN'),
+                        bottom  => $self->tr('BENEATH'),
+                        left    => $self->tr('LEFT'),
+                        right   => $self->tr('RIGHT'),
+                    },
+                    -default  => $settings->{ks},
+                    -override => 1,
+                    -id       => 'key positions',
+                )
+            ),
+            td( $self->setting('region segment')
+                ? ( b( $self->tr('Region_size') ),
+                    br,
+                    textfield(
+                        -name     => 'region_size',
+                        -default  => $settings->{region_size},
+                        -override => 1,
+                        -size     => 20
+                    ),
+
+                    )
+                : (),
+            ),
+        ),
+        TR( { -class => 'searchtitle' },
+            td( {   -colspan => 3,
+                    -align   => 'right'
+                },
+                b( submit( -name => $self->tr('Update') ) )
+            )
+        )
+        ) . end_form();
+
+    return $self->toggle( 'Display_settings', $content );
 }
 
 # This surrounds the external table with a toggle

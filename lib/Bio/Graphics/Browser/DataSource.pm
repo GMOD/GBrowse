@@ -322,7 +322,7 @@ sub karyotype_tracks {
 
 sub plugin_tracks {
   my $self = shift;
-  grep { ($_ eq 'plugin' || /plugin:/) && $self->authorized($_) } $self->configured_types;
+  grep { ($_ eq 'plugin' || m!plugin:!) && $self->authorized($_) } $self->configured_types;
 }
 
 sub label2type {

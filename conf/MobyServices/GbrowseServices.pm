@@ -16,7 +16,7 @@ $CONF_DIR  = '/usr/local/apache/conf/gbrowse.conf';
 
 
 #====================================================================
-#$Id: GbrowseServices.pm,v 1.3 2008-08-26 18:40:50 lstein Exp $
+#$Id: GbrowseServices.pm,v 1.4 2008-09-09 23:59:08 lstein Exp $
 
 use strict;
 use Text::Shellwords;

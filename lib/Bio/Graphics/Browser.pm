@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.209 2008-09-09 20:53:36 lstein Exp $
+# $Id: Browser.pm,v 1.210 2008-09-09 23:59:09 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -178,7 +178,7 @@ sub data_source_path {
 
 sub create_data_source {
   my $self = shift;
-  my $dsn = shift;
+  my $dsn  = shift;
   my $path = $self->data_source_path($dsn) or return;
   return Bio::Graphics::Browser::DataSource->new($path,$dsn,$self->data_source_description($dsn),$self);
 }
@@ -198,21 +198,25 @@ sub valid_source {
   return -e $path;
 }
 
+sub get_source_from_cgi {
+    my $self = shift;
+
+    my $source = CGI::param('source') || CGI::param('src') || CGI::path_info();
+    $source    =~ s!^/+!!;  # get rid of leading & trailing / from path_info()
+    $source    =~ s!/+$!!;
+    
+    $source;
+}
+
 sub update_data_source {
   my $self    = shift;
   my $session    = shift;
   my $new_source = shift;
   my $old_source = $session->source || $self->default_source;
 
-  unless ($new_source) {
-    my $source = CGI::param('source') || CGI::param('src') || CGI::path_info();
-    $source    =~ s!^/+!!;  # get rid of leading & trailing / from path_info()
-    $source    =~ s!/+$!!;
-    $new_source = $source;
-  }
+  $new_source ||= $self->get_source_from_cgi();
 
   my $source;
-
   if ($self->valid_source($new_source)) {
     $session->source($new_source);
     $source = $new_source;

@@ -14,7 +14,7 @@ Bio::Graphics::Browser::RegionSearch -- Search through multiple databases for fe
 
 =head1 SYNOPSIS
 
-  my $dbs = Bio::Graphics::Browser::MultiDBFeatureSearch->new(
+  my $dbs = Bio::Graphics::Browser::RegionSearch->new(
               { source => $data_source, 
                 state  => $session_state
               });
@@ -145,7 +145,7 @@ sub search_features {
     defined $search_term or return;
     
     my $local  = $self->search_features_locally($search_term);
-    my $remote = $self->search_feature_remotely($search_term);
+    my $remote = $self->search_features_remotely($search_term);
     
     my @found;
     push @found,@$local  if $local  && @$local;

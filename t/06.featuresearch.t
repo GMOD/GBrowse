@@ -41,7 +41,7 @@ $ENV{GBROWSE_DOCS}   = $Bin;
 
 
 chdir $Bin;
-use lib "$Bin/../libnew";
+use lib "$Bin/../lib";
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Render::Server;
 use Bio::Graphics::Browser::Region;

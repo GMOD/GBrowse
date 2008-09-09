@@ -39,7 +39,7 @@ END {
 # %ENV = ();
 
 chdir $Bin;
-use lib "$Bin/../libnew";
+use lib "$Bin/../lib";
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Render::HTML;
 use LWP::UserAgent;

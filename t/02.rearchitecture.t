@@ -27,7 +27,7 @@ BEGIN {
 }
 
 chdir $Bin;
-use lib "$Bin/../libnew";
+use lib "$Bin/../lib";
 use Bio::Graphics::Browser;
 
 my $globals = Bio::Graphics::Browser->new(CONF_FILE);

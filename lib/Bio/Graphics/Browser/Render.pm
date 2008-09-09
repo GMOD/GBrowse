@@ -399,7 +399,7 @@ sub asynchronous_event {
         $self->init_plugins();
         $self->init_remote_sources();
         my $features = $self->region->features;
-        my $seg = $self->features2segments($features)->[0];    # likely wrong
+        my $seg      = $self->features2segments($features)->[0];    # likely wrong
 
         $self->set_segment($seg);
 

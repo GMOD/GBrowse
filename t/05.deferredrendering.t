@@ -73,6 +73,7 @@ my $globals = Bio::Graphics::Browser->new(CONF_FILE);
 my $session = $globals->session;
 my $source  = $globals->create_data_source('volvox');
 my $render  = Bio::Graphics::Browser::Render::HTML->new($source,$session);
+$render->default_state(); 
 $render->init_database;
 $render->init_plugins;
 $render->update_state;
@@ -129,7 +130,7 @@ ok(-e $images[0] && -s _);
 $requests->{$track_name1}->cache_time(-1);
 ok( $requests->{$track_name1}->status, 'EXPIRED' );
 
-$render->data_source->setting( general => 'cache time', -1 );
+$render->data_source->cache_time(-1);
 
 ok( substr(
         $render->render_deferred_track(

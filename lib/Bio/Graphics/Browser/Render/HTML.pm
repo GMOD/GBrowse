@@ -1233,7 +1233,7 @@ END
     ### Create the javascript that will serialize the form.
     # I'm not happy about this but the prototype method only seems to be
     # reporting the default values when the form is inside a balloon.
-    my $form_serialized_js = join q[+'&'+], map {qq['$_='+$_.value]} (
+    my $form_serialized_js = join q[+'&'+], map {qq['$_='+escape($_.value)]} (
         "format_option", "glyph",  "bgcolor", "fgcolor",
         "linewidth",     "height", "limit",
     );

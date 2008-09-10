@@ -129,8 +129,6 @@ sub search_db {
   my $self = shift;
   my $name = shift;
 
-  my $db    = $self->db;
-
   my ($ref,$start,$stop,$class,$id) = $self->parse_feature_name($name);
   my $features = $self->lookup_features($ref,$start,$stop,$class,$name,$id);
 

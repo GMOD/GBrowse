@@ -1,6 +1,6 @@
 package Bio::Graphics::Karyotype;
 
-# $Id: Karyotype.pm,v 1.2 2008-09-10 03:33:11 lstein Exp $
+# $Id: Karyotype.pm,v 1.3 2008-09-10 23:33:29 lstein Exp $
 # Utility class to create a display of a karyotype and a series of "hits" on the individual chromosomes
 # Used for searching
 
@@ -291,10 +291,15 @@ sub hits_table {
 	my $class = eval {$_->class};
 
 	# for inserting into the gbrowse search field
-	my $match_id = eval {$_->primary_id};
-	my $fid   =  $match_id ? "id:$match_id"
-	           : $class    ? "$class:$name" 
-		   : $name;
+	# this isn't working because the same primary id may be found in multiple
+	# databases :-(
+# 	my $match_id = eval {$_->primary_id};
+# 	my $fid      =  $match_id 
+# 	                && $match_id !~ /\w+:\w+\(/   # work around a bioperl bug
+#                                ? "id:$match_id"
+# 	           : $class    ? "$class:$name" 
+# 		   : $name;
+ 	my $fid   =  $class    ? "$class:$name" : $name;
 	my $id    = $self->feature2id($_);             # as an internal <div> id for hilighting
 	my $pos   = $_->seq_id.':'.$_->start.'..'.$_->end;
 	my $desc  = escapeHTML(Bio::Graphics::Glyph::generic->get_description($_));

@@ -3,7 +3,7 @@
 use strict;
 use Getopt::Long;
 use FindBin '$Bin';
-use lib "$Bin/../libnew";
+use lib "$Bin/../lib";
 
 use Bio::Graphics::Browser::Render::Server;
 use constant DEFAULT_PORT => 8101;

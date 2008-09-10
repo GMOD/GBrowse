@@ -260,7 +260,7 @@ sub search_features {
 	    -desc   => eval{$f->desc}  || '',
 	    -attributes => \%attributes,
 	  );
-    } @$results;
+    } grep {defined $_} @$results;
     return nfreeze(\@features);
 }
 

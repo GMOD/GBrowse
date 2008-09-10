@@ -1035,7 +1035,8 @@ sub add_features_to_track {
   for my $db (keys %db2db) {
       my @types_in_this_db = map { $source->label2type($_,$length) } keys %{$db2label{$db}};
       next unless @types_in_this_db;
-      my $iterator         = $self->get_iterator($db2db{$db},$segment,\@types_in_this_db);
+      my $iterator  = $self->get_iterator($db2db{$db},$segment,\@types_in_this_db)
+	  or next;
       $iterators{$iterator} = $iterator;
   }
 

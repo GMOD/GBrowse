@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Bio::Graphics::Browser::Region;
 use LWP::Parallel::UserAgent;
-use Storable 'freeze','thaw';
+use Storable 'nfreeze','thaw';
 
 # search multiple databases using crazy heuristics
 
@@ -94,9 +94,10 @@ sub init_databases {
 		      state   => $self->state,
 		      db      => $db}
 		);
+	    # remember mapping of db to track name (any track name)
+	    $self->{db2track}{$db} ||= $l;
 	}
     }
-
 }
 
 
@@ -175,7 +176,7 @@ sub search_features_locally {
     my $search_term = shift;
     defined $search_term or return;
     
-    my @found;
+    my (@found,%trackmap);
 
     # each local db gets a chance to search
     my $local_dbs = $self->local_dbs;
@@ -184,10 +185,11 @@ sub search_features_locally {
     for my $db (keys %{$local_dbs}) {
 	my $region   = $local_dbs->{$db};
 	my $features = $region->search_features($search_term);
+	$trackmap{overload::StrVal($_)}=$self->{db2track}{$db} foreach @$features;
 	push @found,@$features if $features;
     }
 
-    return \@found;
+    return wantarray ? (\@found,\%trackmap) : \@found;
 }
 
 =head2 $found = $db->search_features_remotely('search term')
@@ -218,18 +220,22 @@ sub search_features_remotely {
 	return [];
     }
 
+    $Storable::Deparse ||= 1;
     $ua->in_order(0);
     $ua->nonblock(0);
     $ua->remember_failures(1);
-    my $s_dsn	= freeze($self->source);
-    my $s_set	= freeze($self->state);
+    my $s_dsn	= nfreeze($self->source);
+    my $s_set	= nfreeze($self->state);
+    my %env     = map {$_=>$ENV{$_}} grep /^GBROWSE/,keys %ENV;
+
     for my $url (keys %$remote_dbs) {
 	my @tracks  = keys %{$remote_dbs->{$url}};
 	my $request = POST ($url,
 			    [ operation  => 'search_features',
 			      settings   => $s_set,
 			      datasource => $s_dsn,
-			      tracks     => freeze(\@tracks),
+			      tracks     => nfreeze(\@tracks),
+			      env        => nfreeze(\%env),
 			      searchterm => $search_term,
 			    ]);
 	my $error = $ua->register($request);

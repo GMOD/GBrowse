@@ -12,7 +12,7 @@ use IO::String;
 use CGI;
 use FindBin '$Bin';
 
-use constant TEST_COUNT => 24;
+use constant TEST_COUNT => 25;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;
@@ -122,6 +122,10 @@ ok(scalar @$features,1);
 
 $features    = $search->search_features_locally('My_feature:f12');
 ok(scalar @$features,2);
+
+my $tracks;
+($features,$tracks) = $search->search_features_locally('My_feature:f12');
+ok(scalar values %$tracks,2);
 
 my @seqid = sort map {$_->seq_id} @$features;
 ok("@seqid","ctgA ctgB");

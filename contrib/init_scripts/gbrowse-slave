@@ -1,0 +1,70 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          gbrowse_slave
+# Required-Start:    $local_fs
+# Required-Stop:     $local_fs
+# Default-Start:     28
+# Default-Stop:      S
+# Short-Description: Start/Stop the gbrowse_slave rendering server.
+### END INIT INFO
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/usr/bin/gbrowse_slave
+NAME="gbrowse-slave"
+DESC="GBrowse slave track rendering server"
+
+test -x $DAEMON || exit 0
+set -e
+
+USER=www-data
+RUNDIR=/var/run/gbrowse
+LOGDIR=/var/log/gbrowse
+PORT=8101
+VERBOSITY=1
+NICE=0
+
+if [ -f /etc/default/gbrowse-slave ]; then
+  . /etc/default/gbrowse-slave
+fi
+
+mkdir -p $RUNDIR
+chown -R $USER $RUNDIR
+mkdir -p $LOGDIR
+chown -R $USER $LOGDIR
+
+ARGS="--port $PORT --verbose $VERBOSITY --log $LOGDIR/gbrowse_slave --pid $RUNDIR/$NAME.pid"
+
+case "$1" in
+  start)
+	if test -e $RUNDIR/$NAME.pid ; then
+		echo "$NAME already running, use restart instead."
+	else
+		echo -n "Starting $DESC: $NAME "
+		start-stop-daemon --start --pidfile $RUNDIR/$NAME.pid \
+			--chuid $USER --nicelevel $NICE --exec $DAEMON -- $ARGS
+		echo "."
+	fi
+	;;
+  stop)
+	echo -n "Stopping $DESC: $NAME "
+	start-stop-daemon --stop --oknodo --pidfile $RUNDIR/$NAME.pid
+#	test -e $RUNDIR/$NAME.pid && rm $RUNDIR/$NAME.pid
+	echo "."
+	;;
+  restart|force-reload)
+	echo -n "Restarting $DESC: $NAME "
+	start-stop-daemon --stop --oknodo --pidfile $RUNDIR/$NAME.pid
+	echo "."
+	sleep 3
+	start-stop-daemon --start --pidfile $RUNDIR/$NAME.pid \
+                --chuid $USER --nicelevel $NICE --exec $DAEMON -- $ARGS
+	echo "."
+	;;
+  *)
+	N=/etc/init.d/$NAME
+	echo "Usage: $N {start|stop|restart|force-reload}" >&2
+	exit 1
+	;;
+esac
+
+exit 0

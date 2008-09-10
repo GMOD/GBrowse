@@ -12,7 +12,7 @@ use IO::String;
 use CGI;
 use FindBin '$Bin';
 
-use constant TEST_COUNT => 136;
+use constant TEST_COUNT => 140;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;
@@ -41,6 +41,18 @@ chdir $Bin;
 use lib "$Bin/../lib";
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Render::HTML;
+use Bio::Graphics::Browser::Render::Server;
+
+# Test remote rendering
+# Notice that $ENV{GBROWSE_DOCS} is NOT set when we launch these servers.
+# It is set at run time as part of the exchange between master and slave.
+my @servers = (Bio::Graphics::Browser::Render::Server->new(LocalPort=>8100), # alignments
+	       Bio::Graphics::Browser::Render::Server->new(LocalPort=>8101), # cleavage sites
+    );
+for my $s (@servers) {
+    $s->debug(0);
+    ok($s->run);
+}
 
 my $globals = Bio::Graphics::Browser->new(CONF_FILE);
 ok($globals);
@@ -359,7 +371,7 @@ ok(@$s,0,"Searching for Foo:f13 should have returned 0 results");
 $CGI::Q = new CGI('name=Motif:m02');
 $render->update_coordinates;
 $r = $render->region;
-ok($s = $r->segments);
+ok($s = $r->features);
 ok(scalar @$s,3,"Motif:m02 should have matched exactly three times, but didn't");
 
 # try the * match
@@ -381,8 +393,10 @@ ok(scalar @$s,4,"'kinase' should have matched 4 times, but didn't");
 $CGI::Q = new CGI('name=motif;plugin_action=Find;plugin=TestFinder');
 $render->update_coordinates;
 $r = $render->region;
-ok($s = $r->segments);
-ok(scalar @$s,12);
+ok(my $f = $r->features);
+ok($s    = $r->segments);
+ok(scalar @$f,12,"Finder plugin should have found 12 motifs, but didn't");
+ok(scalar @$s,11,"Finder plugin should have found 11 unique motif segments, but didn't");
 
 # something funny with getting render settings
 ok($render->setting('mag icon height') > 0);
@@ -454,4 +468,10 @@ sub check_multiple_renders {
       ok( $retrieve_object->{'track_html'}{$track_div_id} );
     }
   }
+}
+
+END {
+    if ($PID == $$) {
+	foreach (@servers) { $_->kill }
+    }
 }

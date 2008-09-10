@@ -154,7 +154,12 @@ sub search_features {
     # uniqueify features of the same type and name
     my %seenit;
 
-    @found = grep {defined $_ && !$seenit{$_->name.$_->type}++} @found;
+    @found = grep {defined $_ && !$seenit{$_->name,
+					  $_->type,
+					  $_->seq_id,
+					  $_->start,
+					  $_->end,
+					  $_->strand}++} @found;
     return \@found;
 }
 
@@ -214,7 +219,8 @@ sub search_features_remotely {
     }
 
     $ua->in_order(0);
-    $ua->nonblock(1);
+    $ua->nonblock(0);
+    $ua->remember_failures(1);
     my $s_dsn	= freeze($self->source);
     my $s_set	= freeze($self->state);
     for my $url (keys %$remote_dbs) {

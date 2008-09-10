@@ -246,14 +246,19 @@ sub search_features {
     my $results = $search->search_features_locally($searchterm);
     return unless $results;
     my @features = map {
-      Bio::Graphics::Feature->new(
-	  -name   => $_->name,
-	  -seq_id => $_->seq_id,
-	  -start  => $_->start,
-	  -end    => $_->end,
-	  -strand => $_->strand,
-	  -score  => eval{$_->score} || 0,
-	  -desc   => eval{$_->desc}  || '',
+	my $f = $_;
+	my %attributes = map {$_=>[$f->get_tag_values($_)]} $f->get_all_tags;
+	Bio::Graphics::Feature->new(
+	    -name   => $f->name,
+	    -primary_tag => $f->primary_tag,
+ 	    -source_tag  => $f->source_tag,
+	    -seq_id => $f->seq_id,
+	    -start  => $f->start,
+	    -end    => $f->end,
+	    -strand => $f->strand,
+	    -score  => eval{$f->score} || 0,
+	    -desc   => eval{$f->desc}  || '',
+	    -attributes => \%attributes,
 	  );
     } @$results;
     return nfreeze(\@features);

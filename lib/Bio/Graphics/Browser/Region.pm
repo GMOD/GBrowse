@@ -82,7 +82,7 @@ sub search_features {
   my $db    = $self->db;
   my $state = $self->state;
   $search_term ||= $state->{name};
-  defined $search_term && length $search_term > 0 or return;
+  defined $search_term && length $search_term > 0 or return; 
 
   my $features = $self->search_db($search_term);
   $self->features($features);
@@ -94,15 +94,19 @@ sub features2segments {
   my $features = shift;
   my $refclass = $self->source->global_setting('reference class');
   my $db       = $self->db;
-  my @segments = map {
-    my $version = $_->can('version') ? $_->version : undef;
-    $db->segment(-class => $refclass,
-		 -name  => $_->ref,
-		 -start => $_->start,
-		 -stop  => $_->end,
-		 -absolute => 1,
-		 defined $version ? (-version => $version) : ())
-    } @$features;
+  my %seenit;
+  my @segments = 
+      map {
+	  my $version = $_->can('version') ? $_->version : undef;
+	  $db->segment(-class    => $refclass,
+		       -name     => $_->ref,
+		       -start    => $_->start,
+		       -stop     => $_->end,
+		       -absolute => 1,
+		       defined $version ? (-version => $version) : ())
+  } grep {
+      !$seenit{$_->seq_id,$_->start,$_->end}++} 
+    @$features;
   return \@segments;
 }
 
@@ -213,6 +217,7 @@ sub _feature_get {
   my ($db,$name,$class,$start,$stop) = @_;
 
   my $refclass = $self->source->global_setting('reference class') || 'Sequence';
+  $class     ||= '';
 
   my @argv = (-name  => $name);
   push @argv,(-class => $class) if defined $class;

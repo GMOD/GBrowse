@@ -15,6 +15,7 @@ use Bio::Graphics::Browser::UploadSet;
 use Bio::Graphics::Browser::RemoteSet;
 use Bio::Graphics::Browser::Shellwords;
 use Bio::Graphics::Browser::Region;
+use Bio::Graphics::Browser::RegionSearch;
 use Bio::Graphics::Browser::RenderPanels;
 
 use constant VERSION              => 2.0;
@@ -842,11 +843,11 @@ sub region {
     my $self     = shift;
     return $self->{region} if exists $self->{region};
 
-    my $region   = Bio::Graphics::Browser::Region->new(
-	{ source => $self->data_source,
-	  state  => $self->state,
-	  db     => $self->db }
-	) or die;
+     my $region   = Bio::Graphics::Browser::Region->new(
+ 	{ source => $self->data_source,
+ 	  state  => $self->state,
+ 	  db     => $self->db }
+ 	) or die;
 
     # run any "find" plugins
     my $plugin_action  = $self->plugin_action || '';
@@ -855,8 +856,17 @@ sub region {
 	$plugin_action eq 'Find') {
 	$region->features($self->plugin_find($current_plugin,$self->state->{name}));
     }
-    else {
+    elsif ($self->state->{name}=~ /^[^:]+:[\d-]+(\.\.|-)[\d-]+$/) { # an identified
 	$region->search_features();
+    }
+    else { # a feature search
+	my $search = Bio::Graphics::Browser::RegionSearch->new(
+	    { source => $self->data_source,
+	      state  => $self->state,
+	    });
+	$search->init_databases();
+	my $features = $search->search_features();
+	$region->features($features);
     }
 
     $self->plugins->set_segments($region->segments) if $self->plugins;

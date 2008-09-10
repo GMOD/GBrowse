@@ -1,6 +1,6 @@
 package Bio::Graphics::Karyotype;
 
-# $Id: Karyotype.pm,v 1.1 2008-09-09 20:53:36 lstein Exp $
+# $Id: Karyotype.pm,v 1.2 2008-09-10 03:33:11 lstein Exp $
 # Utility class to create a display of a karyotype and a series of "hits" on the individual chromosomes
 # Used for searching
 
@@ -289,11 +289,12 @@ sub hits_table {
     my @rows      = map {
 	my $name  = $_->display_name || '';
 	my $class = eval {$_->class};
+
 	# for inserting into the gbrowse search field
-	my $fid   =  $_->can('primary_id') ? "id:".$_->primary_id      
-	    : $_->can('id')         ? "id:".$_->id
-	    : $class                ? "$class:$name" 
-	    : $name;
+	my $match_id = eval {$_->primary_id};
+	my $fid   =  $match_id ? "id:$match_id"
+	           : $class    ? "$class:$name" 
+		   : $name;
 	my $id    = $self->feature2id($_);             # as an internal <div> id for hilighting
 	my $pos   = $_->seq_id.':'.$_->start.'..'.$_->end;
 	my $desc  = escapeHTML(Bio::Graphics::Glyph::generic->get_description($_));

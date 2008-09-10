@@ -143,10 +143,10 @@ sub search_features {
 
     $search_term   ||= $self->state->{name};  
     defined $search_term or return;
-    
+
     my $local  = $self->search_features_locally($search_term);
     my $remote = $self->search_features_remotely($search_term);
-    
+
     my @found;
     push @found,@$local  if $local  && @$local;
     push @found,@$remote if $remote && @$remote;
@@ -154,7 +154,7 @@ sub search_features {
     # uniqueify features of the same type and name
     my %seenit;
 
-    @found = grep {!$seenit{$_->name.$_->type}} @found;
+    @found = grep {defined $_ && !$seenit{$_->name.$_->type}++} @found;
     return \@found;
 }
 

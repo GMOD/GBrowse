@@ -238,6 +238,16 @@ sub asynchronous_event {
         return ( 200, 'application/json', $return_object );
     }
 
+    if ( my $track_name = param('configure_track') ) {
+        my $html = $self->track_config($track_name);
+        return ( 200, 'text/html', $html );
+    }
+
+    if ( my $track_name = param('reconfigure_track') ) {
+        $self->reconfigure_track($track_name);
+        return ( 200, 'application/json', {} );
+    }
+
     if ( my $element = param('update') ) {
         warn "UPDATE HAS BEEN DEPRICATED";
         my $html = $self->asynchronous_update_element($element);
@@ -1500,6 +1510,23 @@ sub update_state_from_cgi {
 #  $self->handle_remotes();
   $self->handle_external_data();
 
+}
+
+# Handle returns from the track configuration form
+sub reconfigure_track {
+    my $self  = shift;
+    my $label = shift;
+    my $state = $self->state();
+    $state->{features}{$label}{visible} = param('show_track') ? 1 : 0;
+    $state->{features}{$label}{options} = param('format_option');
+    $state->{features}{$label}{limit}   = param('limit');
+    my $dynamic = $self->tr('DYNAMIC_VALUE');
+    for my $s ( 'bgcolor', 'fgcolor', 'height', 'glyph', 'linewidth' ) {
+        my $value = param($s);
+        delete $state->{features}{$label}{override_settings}{$s}, next
+            if $value eq $dynamic;
+        $state->{features}{$label}{override_settings}{$s} = $value;
+    }
 }
 
 sub update_options {

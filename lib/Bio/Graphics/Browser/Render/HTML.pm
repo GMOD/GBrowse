@@ -5,6 +5,7 @@ use warnings;
 use base 'Bio::Graphics::Browser::Render';
 use Bio::Graphics::Browser::Shellwords;
 use Bio::Graphics::Karyotype;
+use Bio::Graphics::Browser::Util qw[citation];
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
 use CGI qw(:standard escape start_table end_table);
@@ -1152,7 +1153,6 @@ sub zoomBar {
 
 sub source_menu {
   my $self = shift;
-  my $settings = $self->state;
 
   my $globals = $self->globals;
 
@@ -1171,6 +1171,192 @@ sub source_menu {
 	: $globals->data_source_description($self->session->source)
       );
 }
+
+# this is the content of the popup balloon that describes the track and gives configuration settings
+sub track_config {
+    my $self        = shift;
+    my $label       = shift;
+    my $state       = $self->state();
+    my $data_source = $self->data_source();
+
+    eval 'require Bio::Graphics::Browser::OptionPick; 1'
+        unless Bio::Graphics::Browser::OptionPick->can('new');
+
+    my $picker = Bio::Graphics::Browser::OptionPick->new($self);
+
+    my $key = $self->label2key($label);
+
+    if ( param('track_defaults') ) {
+        $state->{features}{$label}{override_settings} = {};
+    }
+
+    my $override = $state->{features}{$label}{override_settings};
+
+    my $return_html = start_html();
+
+    # truncate too-long citations
+    my $cit_txt = citation( $data_source, $label, $self->language )
+        || $self->tr('NO_CITATION');
+
+    $cit_txt =~ s/(.{512}).+/$1\.\.\./;
+    my $citation = h4($key) . p($cit_txt);
+    my $height = $data_source->fallback_setting( $label => 'height' ) || 5;
+    my $width = $data_source->fallback_setting( $label => 'linewidth' ) || 1;
+    my $glyph = $data_source->fallback_setting( $label => 'glyph' ) || 'box';
+    my @glyph_select = shellwords(
+        $data_source->fallback_setting( $label => 'glyph select' ) );
+    @glyph_select
+        = qw(arrow anchored_arrow box crossbox dashed_line diamond dna dot dumbbell ellipse
+        ex line primers saw_teeth segments span splice_site translation triangle
+        two_bolts wave) unless @glyph_select;
+    my %glyphs = map { $_ => 1 } ( $glyph, @glyph_select );
+
+    my $url = url( -absolute => 1, -path => 1 );
+    my $reset_js = <<END;
+new Ajax.Request('$url',
+                  { method: 'get',
+                    asynchronous: false,
+                    parameters: 'configure_track=$label&track_defaults=1',
+                    onSuccess: function(t) { document.getElementById('contents').innerHTML=t.responseText },
+                    onFailure: function(t) { alert('AJAX Failure! '+t.statusText)}
+                  }
+                );
+END
+
+    my $self_url  = url( -absolute => 1, -path => 1 );
+    my $form_name = 'track_config_form';
+    my $form      = start_form(
+        -name => $form_name,
+        -id   => $form_name,
+    );
+
+    ### Create the javascript that will serialize the form.
+    # I'm not happy about this but the prototype method only seems to be
+    # reporting the default values when the form is inside a balloon.
+    my $form_serialized_js = join q[+'&'+], map {qq['$_='+$_.value]} (
+        "format_option", "glyph",  "bgcolor", "fgcolor",
+        "linewidth",     "height", "limit",
+    );
+
+    # "show_track" is a special case since it's a checkbox
+    # :( This is so ugly.
+    my $preserialize_js = "var show_track_checked = 0;"
+        . "if(show_track.checked){show_track_checked =1;}";
+    $form_serialized_js .= q[+'&'+] . "'show_track='+show_track_checked";
+
+    $form .= table(
+        { -border => 0 },
+        TR( th( { -align => 'right' }, $self->tr('Show') ),
+            td( checkbox(
+                    -name     => 'show_track',
+                    -value    => $label,
+                    -override => 1,
+                    -checked  => $state->{features}{$label}{visible},
+                    -label    => ''
+                )
+            ),
+        ),
+        TR( th( { -align => 'right' }, $self->tr('Packing') ),
+            td( popup_menu(
+                    -name     => 'format_option',
+                    -values   => [ 0 .. 3 ],
+                    -override => 1,
+                    -default  => $state->{features}{$label}{options},
+                    -labels   => {
+                        0 => $self->tr('Auto'),
+                        1 => $self->tr('Compact'),
+                        2 => $self->tr('Expand'),
+                        3 => $self->tr('Expand_Label'),
+                    }
+                )
+            )
+        ),
+        TR( th( { -align => 'right' }, $self->tr('GLYPH') ),
+            td( $picker->popup_menu(
+                    -name    => 'glyph',
+                    -values  => [ sort keys %glyphs ],
+                    -default => $glyph,
+                    -current => $override->{'glyph'},
+                )
+            )
+        ),
+        TR( th( { -align => 'right' }, $self->tr('BACKGROUND_COLOR') ),
+            td( $picker->color_pick(
+                    'bgcolor',
+                    $data_source->fallback_setting( $label => 'bgcolor' ),
+                    $override->{'bgcolor'}
+                )
+            )
+        ),
+        TR( th( { -align => 'right' }, $self->tr('FG_COLOR') ),
+            td( $picker->color_pick(
+                    'fgcolor',
+                    $data_source->fallback_setting( $label => 'fgcolor' ),
+                    $override->{'fgcolor'}
+                )
+            )
+        ),
+        TR( th( { -align => 'right' }, $self->tr('LINEWIDTH') ),
+            td( $picker->popup_menu(
+                    -name    => 'linewidth',
+                    -current => $override->{'linewidth'},
+                    -default => $width || 1,
+                    -values  => [ sort { $a <=> $b } ( $width, 1 .. 5 ) ]
+                )
+            )
+        ),
+        TR( th( { -align => 'right' }, $self->tr('HEIGHT') ),
+            td( $picker->popup_menu(
+                    -name    => 'height',
+                    -current => $override->{'height'},
+                    -default => $height,
+                    -values  => [
+                        sort { $a <=> $b }
+                            ( $height, map { $_ * 5 } ( 1 .. 20 ) )
+                    ],
+                )
+            )
+        ),
+        TR( th( { -align => 'right' }, $self->tr('Limit') ),
+            td( popup_menu(
+                    -name   => 'limit',
+                    -values => [ 0, 5, 10, 25, 100 ],
+                    -labels   => { 0 => $self->tr('No_limit') },
+                    -override => 1,
+                    -default => $state->{features}{$label}{limit}
+                )
+            )
+        ),
+        TR( td(),
+            td( button(
+                    -style   => 'background:pink',
+                    -name    => $self->tr('Revert'),
+                    -onClick => $reset_js
+                )
+            )
+        ),
+        TR( td(),
+            td( button(
+                    -name    => $self->tr('Cancel'),
+                    -onClick => 'Balloon.prototype.hideTooltip(1)'
+                    )
+                    . '&nbsp;'
+                    . button(
+                    -name => $self->tr('Change'),
+                    -onClick =>
+                        "$preserialize_js;Controller.reconfigure_track('$label',$form_serialized_js, show_track.checked);",
+                    )
+            )
+        ),
+    );
+    $form .= end_form();
+
+    $return_html
+        .= table( TR( td( { -valign => 'top' }, [ $citation, $form ] ) ) );
+    $return_html .= end_html();
+    return $return_html;
+}
+
 
 ################### various utilities ###################
 

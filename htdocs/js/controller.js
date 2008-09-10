@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.44 2008-09-05 15:55:44 mwz444 Exp $
+ $Id: controller.js,v 1.45 2008-09-10 18:36:36 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -13,6 +13,7 @@ Method structure
  - Update Section Methods
  - Kick-off Render Methods
  - Retrieve Rendered Track Methods
+ - Track Configure Methods
  - Plugin Methods
  - Upload File Methods
 
@@ -43,7 +44,6 @@ var GBrowseController = Class.create({
     this.track_time_key           = new Hash();
     // segment_info holds the information used in rubber.js
     this.segment_info;
-    this.debug_status             = 'initialized';
   },
 
   reset_after_track_load:
@@ -161,7 +161,6 @@ var GBrowseController = Class.create({
 
   first_render:
   function()  {
-    this.debug_status             = 'first_render';
     new Ajax.Request('#',{
       method:     'post',
       parameters: {first_render: 1},
@@ -171,11 +170,8 @@ var GBrowseController = Class.create({
         Controller.segment_info = results.segment_info;
 
         Controller.get_multiple_tracks(track_keys);
-
-        Controller.debug_status             = 'first_render finished';
       }
     });
-    this.debug_status             = 'first_render part2';
   },
 
   update_coordinates:
@@ -187,7 +183,6 @@ var GBrowseController = Class.create({
         document.searchform.submit(); 
     }
 
-    this.debug_status             = 'updating coords';
     //Grey out image
     this.track_images.values().each(
       function(image_id) {
@@ -205,7 +200,6 @@ var GBrowseController = Class.create({
 	    var overview_scale_bar_hash = results.overview_scale_bar;
 	    var region_scale_bar_hash   = results.region_scale_bar;
 	    var detail_scale_bar_hash   = results.detail_scale_bar;
-        Controller.debug_status     = 'updating coords - successful navigate';
     
         if (overview_scale_bar_hash){
           Controller.update_scale_bar(overview_scale_bar_hash);
@@ -224,7 +218,6 @@ var GBrowseController = Class.create({
       } // end onSuccess
       
     }); // end Ajax.Request
-    this.debug_status             = 'updating coords 2';
   }, // end update_coordinates
 
   add_track:
@@ -370,6 +363,29 @@ var GBrowseController = Class.create({
     }); // end new Ajax.Request
 
   }, // end get_remaining_tracks
+
+  // Track Configure Methods ****************************************
+
+  reconfigure_track:
+  function(track_name, serialized_form, show_track) {
+    new Ajax.Request('#',{
+      method:     'post',
+      parameters: serialized_form +"&"+ $H({
+            reconfigure_track: track_name
+          }).toQueryString(),
+      onSuccess: function(transport) {
+        Balloon.prototype.hideTooltip(1);
+        if (show_track){
+          Controller.rerender_track(track_name,"track_"+track_name);
+        }
+        else{
+            alert("Turning off the track by unchecking show is not yet supported");
+        }
+      } // end onSuccess
+    });
+
+  },
+
 
   // Plugin Methods *************************************************
 

@@ -1472,7 +1472,12 @@ sub add_track_to_state {
   my $state  = $self->state;
   my %current = map {$_=> 1} @{$state->{tracks}};
   push @{$state->{tracks}},$label unless $current{$label};
-  $state->{features}{$label} = {visible=>1,options=>0,limit=>0};
+  if($state->{features}{$label}){
+    $state->{features}{$label}{visible}=1;
+  }
+  else{
+    $state->{features}{$label} = {visible=>1,options=>0,limit=>0};
+  }
 }
 
 sub remove_track_from_state {

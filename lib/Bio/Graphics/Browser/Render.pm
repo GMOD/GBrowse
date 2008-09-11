@@ -653,8 +653,10 @@ sub segment_info_object {
 
     my $renderer = $self->get_panel_renderer($segment);
 
-    my $pad   = $renderer->image_padding;
-    my $max   = $settings->{'max segment'} || MAX_SEGMENT;
+    my $pad = $self->data_source->global_setting('pad_left')
+        || $renderer->image_padding
+        || 0;
+    my $max = $settings->{'max segment'} || MAX_SEGMENT;
     my $width = ( $settings->{width} * OVERVIEW_RATIO );
 
     my %segment_info_object = (

@@ -284,6 +284,7 @@ sub wrap_rendered_track {
     my $buttons = $self->source->globals->button_url;
     my $plus    = "$buttons/plus.png";
     my $minus   = "$buttons/minus.png";
+    my $share   = "$buttons/share.png";
     my $help    = "$buttons/query.png";
 
     my $settings = $self->settings;
@@ -291,7 +292,7 @@ sub wrap_rendered_track {
 
     my $collapsed = $settings->{track_collapsed}{$label};
     my $img_style = $collapsed ? "display:none" : "display:inline";
-    $img_style.=";filter:alpha(opacity=100);moz-opacity:1";
+    $img_style .= ";filter:alpha(opacity=100);moz-opacity:1";
 
     my $img = img(
         {   -src    => $url,
@@ -310,6 +311,7 @@ sub wrap_rendered_track {
     my $icon = $collapsed ? $plus : $minus;
     my $show_or_hide = $self->language->tr('SHOW_OR_HIDE_TRACK')
         || "Show or Hide";
+    my $share_this_track = $self->language->tr('SHARE_THIS_TRACK');
     my $citation = $self->plain_citation( $label, 512 );
 
     #$citation            =~ s/"/&quot;/g;
@@ -320,10 +322,11 @@ sub wrap_rendered_track {
     $configure_this_track .= $self->language->tr('CONFIGURE_THIS_TRACK')
         || "Configure this Track";
 
+    my $escaped_label = CGI::escape($label);
+
     my $config_click;
     if ( $label =~ /^plugin:/ ) {
-        my $help_url
-            = "url:?plugin=" . CGI::escape($label) . ';plugin_do=Configure';
+        my $help_url = "url:?plugin=$escaped_label;plugin_do=Configure";
         $config_click
             = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)";
     }
@@ -334,7 +337,7 @@ sub wrap_rendered_track {
     }
 
     else {
-        my $help_url = "url:?configure_track=" . CGI::escape($label);
+        my $help_url = "url:?configure_track=$escaped_label";
         $config_click
             = "balloon.delayTime=0; balloon.showTooltip(event,'$help_url',1)";
     }
@@ -355,16 +358,25 @@ sub wrap_rendered_track {
                 -onMouseOver => "balloon.showTooltip(event,'$show_or_hide')",
             }
         ),
+        img({   -src   => $share,
+                -style => 'cursor:pointer',
+                -onMouseOver =>
+                    "balloon.showTooltip(event,'$share_this_track')",
+                -onMousedown =>
+                    "balloon.showTooltip(event,'url:?share_track=$escaped_label')",
+            }
+        ),
+
         img({   -src         => $help,
                 -style       => 'cursor:pointer',
                 -onmousedown => $config_click,
-                -onMouseOver => "balloon.showTooltip(event,'$configure_this_track')",
+                -onMouseOver =>
+                    "balloon.showTooltip(event,'$configure_this_track')",
 
             }
         ),
         span( { -class => 'draghandle' }, $title )
     );
-
 
     my $show_titlebar
         = ( ( $source->setting( $label => 'key' ) || '' ) ne 'none' );
@@ -377,30 +389,29 @@ sub wrap_rendered_track {
     # to the center of the page!
     my $pad     = $self->render_image_pad();
     my $pad_url = $self->source->generate_image($pad);
-    my $pad_img = img({-src   => $pad_url,
-		       -width => $pad->width,
-		       -height=> $pad->height,
-		       -border=> 0,
-		       -id    => "${label}_pad",
-		       -style => $collapsed ? "display:inline" : "display:none",
-		      });
+    my $pad_img = img(
+        {   -src    => $pad_url,
+            -width  => $pad->width,
+            -height => $pad->height,
+            -border => 0,
+            -id     => "${label}_pad",
+            -style  => $collapsed ? "display:inline" : "display:none",
+        }
+    );
 
-
-    return
-	div(
+    return div(
         { -id => "track_${label}", -class => $class },
         div({ -align => 'center' },
             ( $show_titlebar ? $titlebar : '' ) . $img . $pad_img
-        )
-	,$map_html || ''
+        ),
+        $map_html || ''
         )
         . qq[<script type="text/javascript" language="JavaScript">Controller.register_track("track_]
         . $label . q[","]
         . $label
         . q[_image", "]
         . $track_type
-        . q[");</script>]
-	;
+        . q[");</script>];
 }
 
 # This routine is called to hand off the rendering to a remote renderer. 

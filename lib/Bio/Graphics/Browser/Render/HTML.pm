@@ -259,6 +259,9 @@ sub render_instructions {
 			  a({-href=>"?rand=$rand;head=".((!$settings->{head})||0)},
 			    '['.$self->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
 			  a({-href=>$self->bookmark_link($settings)},'['.$self->tr('BOOKMARK').']'),
+              a({-href        => '#',
+                 -onMouseDown => "balloon.showTooltip(event,'url:?share_track=all')"},
+                '['.$self->tr('SHARE_ALL').']'),
 			  a({-href=>$self->image_link($settings),-target=>'_blank'},'['.$self->tr('IMAGE_LINK').']'),
 			  $plugin_link,
 			  $svg_link,
@@ -1356,6 +1359,107 @@ END
     $return_html .= end_html();
     return $return_html;
 }
+
+# this is the content of the popup balloon that describes how to share a track
+sub share_track {
+    my $self  = shift;
+    my $label = shift;
+
+    my $state = $self->state();
+
+    my $description;
+    my $labels;
+    my @visible
+        = grep { $state->{features}{$_}{visible} && !/:(overview|region)$/ }
+        @{ $state->{tracks} };
+
+    if ( $label eq 'all' ) {
+        $labels = join '+', map { CGI::escape($_) } @visible;
+        $description = 'all selected tracks';
+    }
+    else {
+        $description = $self->setting( $label => 'key' ) || $label;
+        $labels = $label;
+    }
+
+    my $gbgff;
+    if ( $label =~ /^(http|ftp):/ ) {    # reexporting and imported track!
+        $gbgff = $label;
+    }
+
+    else {
+        $gbgff = url( -full => 1, -path_info => 1 );
+        $gbgff =~ s/gbrowse/gbgff/;
+        $gbgff .= "?q=\$segment;t=$labels";
+        $gbgff .= ";id=" . $state->{id} if $labels =~ /file:/;
+    }
+
+    my $das_types = join( ';',
+        map      { "type=" . CGI::escape($_) }
+            grep { length $_ > 0 }
+            map  { shellwords( $self->setting( $_ => 'feature' ) ) }
+            grep { $self->setting( $_ => 'das category' ) }
+            $label eq 'all'
+        ? @visible
+        : $label );
+    my $das = url( -full => 1, -path_info => 1 );
+    $das =~ s/gbrowse/das/;
+    $das .= "features";
+    $das .= "?$das_types";
+
+    my $return_html = start_html();
+    $return_html .= h1( $self->tr( 'SHARE', $description ) )
+        . p(
+        $self->tr(
+            $label eq 'all'
+            ? 'SHARE_INSTRUCTIONS_ALL_TRACKS'
+            : 'SHARE_INSTRUCTIONS_ONE_TRACK'
+        )
+        )
+        . p(
+              b('GBrowse URL: ') 
+            . br()
+            . textfield(
+            -style    => 'background-color: wheat',
+            -readonly => 1,
+            -value    => $gbgff,
+            -size     => 56,
+            -onFocus  => 'this.select()',
+            -onSelect => 'this.select()',
+            )
+        );
+
+    if ($das_types) {
+        $return_html .= p(
+            $self->tr(
+                $label eq 'all'
+                ? 'SHARE_DAS_INSTRUCTIONS_ALL_TRACKS'
+                : 'SHARE_DAS_INSTRUCTIONS_ONE_TRACK'
+            )
+            )
+            . p(
+                  b('DAS URL: ') 
+                . br()
+                . textfield(
+                -style    => 'background-color: wheat',
+                -readonly => 1,
+                -value    => $das,
+                -size     => 56,
+                -onFocus  => 'this.select()',
+                -onSelect => 'this.select()',
+                )
+            );
+    }
+    $return_html .= p(
+        button(
+            -name    => $self->tr('OK'),
+            -onClick => 'Balloon.prototype.hideTooltip(1)'
+        )
+    );
+    $return_html .= end_html();
+    return $return_html;
+}
+
 
 
 ################### various utilities ###################

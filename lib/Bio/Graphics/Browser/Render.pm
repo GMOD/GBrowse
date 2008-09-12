@@ -248,6 +248,11 @@ sub asynchronous_event {
         return ( 200, 'application/json', {} );
     }
 
+    if ( my $track_name = param('share_track') ) {
+        my $html = $self->share_track($track_name);
+        return ( 200, 'text/html', $html );
+    }
+
     if ( my $element = param('update') ) {
         warn "UPDATE HAS BEEN DEPRICATED";
         my $html = $self->asynchronous_update_element($element);
@@ -1534,6 +1539,18 @@ sub reconfigure_track {
             if $value eq $dynamic;
         $state->{features}{$label}{override_settings}{$s} = $value;
     }
+}
+
+sub track_config {
+  my $self     = shift;
+  my $track_name    = shift;
+  croak "track_config() should not be called in parent class";
+}
+
+sub share_track {
+  my $self     = shift;
+  my $track_name    = shift;
+  croak "share_track() should not be called in parent class";
 }
 
 sub update_options {

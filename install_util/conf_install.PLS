@@ -81,8 +81,17 @@ sub copy_with_substitutions {
   my ($localfile,$install_file) = @_;
   open (IN,$localfile) or die "Couldn't open $localfile: $!";
   open (OUT,">$install_file") or die "Couldn't open $install_file for writing: $!";
+
+  my %local_options = %options;
+  if ($options{PACKAGE_DIR}) {
+    my $package_dir = $options{PACKAGE_DIR};
+    for my $key (keys %local_options) {
+      $local_options{$key} =~ s/$package_dir//;
+    }
+  }
+
   while (<IN>) {
-    s/\$(\w+)/$options{$1}||"\$$1"/eg;
+    s/\$(\w+)/$local_options{$1}||"\$$1"/eg;
     print OUT;
   }
   close OUT;

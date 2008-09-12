@@ -13,6 +13,11 @@ if (open F,"$Bin/../GGB.def") {
   }
   close F;
 }
+if ($OPTIONS{PACKAGE_DIR}) {
+  $OPTIONS{CONF} =~ s/$OPTIONS{PACKAGE_DIR}//;
+  $OPTIONS{HTDOCS}=~s/$OPTIONS{PACKAGE_DIR}//;
+}
+
 $OPTIONS{CONF} ||= '/usr/local/apache/conf';
 
 my $dir = dirname($0);
@@ -48,7 +53,7 @@ print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: gbrowse_moby.PLS,v 1.39.6.1 2006-11-02 18:13:41 scottcain Exp $
+#$Id: gbrowse_moby.PLS,v 1.39.6.1.2.1 2008-09-12 14:32:34 scottcain Exp $
 ###########################################################
 use SOAP::Lite;
 use MOBY::Client::Central;

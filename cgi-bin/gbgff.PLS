@@ -14,6 +14,11 @@ if (open F,"$Bin/../GGB.def") {
   }
   close F;
 }
+
+if ($OPTIONS{PACKAGE_DIR}) {
+  $OPTIONS{CONF} =~ s/$OPTIONS{PACKAGE_DIR}//;
+}
+
 $OPTIONS{CONF} ||= '/usr/local/apache/conf';
 
 my $dir = dirname($0);
@@ -47,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbgff.PLS,v 1.1.2.10 2008-08-29 17:18:35 lstein Exp $
+# $Id: gbgff.PLS,v 1.1.2.11 2008-09-12 14:32:34 scottcain Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:

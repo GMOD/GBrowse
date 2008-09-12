@@ -12,7 +12,7 @@ my $VERSION     = '1.69';
 my $working_dir = cwd;
 
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN GBROWSE_ROOT
-		 LIB BIN YES PREFIX
+		 LIB BIN YES PREFIX PACKAGE_DIR
 		 DO_XS NONROOT SELINUX);
 my $OPTIONS = join ('|',@OPTIONS);
 my %OPTIONS;
@@ -50,6 +50,12 @@ example, if you specify
     GBROWSE_ROOT=genomes/gbrowse
 then the static files will be stored at /var/www/html/genomes/gbrowse. The
 default location is "gbrowse".
+
+Finally, PACKAGE_DIR is for creating packages for various distributions like
+deb or rpm packagers.  The argument provided here will be removed from other
+paths before in place subsitutions are done.  For example, if you want the
+final cgi directory to be /usr/lib/cgi-bin and you are building a package
+in /tmp, you would provide PACKAGE_DIR=/tmp and CGIBIN=/tmp/usr/lib/cgi-bin.
 
 Examples:
 

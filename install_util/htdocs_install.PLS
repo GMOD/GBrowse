@@ -34,6 +34,7 @@ foreach (@ARGV) {
 }
 
 my %options = map {split /=/} @ARGV;
+
 my $root      =  $options{GBROWSE_ROOT} || 'gbrowse';
 my $ht_target = "$options{HTDOCS}/$root";
 
@@ -236,10 +237,19 @@ sub copy_with_substitutions {
   open (IN,$localfile) or warn "Couldn't open $localfile: $!";
   my $basename = basename($localfile);
   my $dest = -d $install_file ? "$install_file/$basename" : $install_file;
+
+  my %local_options = %options;
+  if ($options{PACKAGE_DIR}) {
+    my $package_dir = $options{PACKAGE_DIR};
+    for my $key (keys %local_options) {
+      $local_options{$key} =~ s/$package_dir//;
+    }
+  }
+
   open (OUT,">$dest") or die "Couldn't open $install_file for writing: $!";
   if (-T IN) {
     while (<IN>) {
-      s/\$(\w+)/$options{$1}||"\$$1"/eg;
+      s/\$(\w+)/$local_options{$1}||"\$$1"/eg;
       print OUT;
     }
   }

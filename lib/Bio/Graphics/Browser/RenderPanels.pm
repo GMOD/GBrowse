@@ -311,7 +311,8 @@ sub wrap_rendered_track {
     my $icon = $collapsed ? $plus : $minus;
     my $show_or_hide = $self->language->tr('SHOW_OR_HIDE_TRACK')
         || "Show or Hide";
-    my $share_this_track = $self->language->tr('SHARE_THIS_TRACK');
+    my $share_this_track = $self->language->tr('SHARE_THIS_TRACK')
+        || "Share This Track";
     my $citation = $self->plain_citation( $label, 512 );
 
     #$citation            =~ s/"/&quot;/g;

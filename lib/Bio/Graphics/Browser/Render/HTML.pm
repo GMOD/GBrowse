@@ -261,7 +261,7 @@ sub render_instructions {
 			  a({-href=>$self->bookmark_link($settings)},'['.$self->tr('BOOKMARK').']'),
               a({-href        => '#',
                  -onMouseDown => "balloon.showTooltip(event,'url:?share_track=all')"},
-                '['.$self->tr('SHARE_ALL').']'),
+                '[' . ($self->tr('SHARE_ALL') || "Share These Tracks" ) .']'),
 			  a({-href=>$self->image_link($settings),-target=>'_blank'},'['.$self->tr('IMAGE_LINK').']'),
 			  $plugin_link,
 			  $svg_link,

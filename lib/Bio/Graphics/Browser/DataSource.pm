@@ -205,15 +205,17 @@ sub gd_cache_path {
   return "$path/$signature.$extension";
 }
 
-##untested
 sub gd_cache_check {
   my $self = shift;
   my ($cache_name,$path) = @_;
   return if param('nocache');
   my $cache_file_mtime   = (stat($path))[9] || 0;
   my $conf_file_mtime    = $self->mtime;
-  my $cache_expiry       = $self->config->setting(general=>$cache_name) * 60*60;  # express expiry time as seconds
-  if ($cache_file_mtime && ($cache_file_mtime > $conf_file_mtime) && (time() - $cache_file_mtime < $cache_expiry)) {
+  my $cache_expiry       = $self->config->setting(general=>$cache_name) 
+                               * 60*60;  # express expiry time as seconds
+  if ($cache_file_mtime 
+      && ($cache_file_mtime > $conf_file_mtime) 
+      && (time() - $cache_file_mtime < $cache_expiry)) {
     my $gd = GD::Image->newFromGd($path);
     return $gd;
   }
@@ -293,7 +295,7 @@ sub labels {
   # filter out all configured types that correspond to the overview, overview details
   # plugins, or other name:value types
   my @labels =  grep {
-    !($_ eq 'TRACK DEFAULTS' || /:(\d+|plugin|DETAILS|details)$/)
+    !($_ eq 'TRACK DEFAULTS' || /:(\d+|plugin|DETAILS|details|database)$/)
        } $self->configured_types;
 
   # apply restriction rules
@@ -687,6 +689,31 @@ sub make_link {
   croak "Do not call make_link() on the DataSource. Call it on the Render object";
 }
 
+=item $db = $dsn->databases
+
+Return all named databases from [name:database] tracks.
+
+=cut
+
+sub databases {
+    my $self = shift;
+    my @dbs  = map {s/:database//; $_ } grep {/:database$/} $self->configured_types;
+    return @dbs;
+}
+
+=item ($adaptor,@argv) = $dsn->db2args('db')
+
+Given a database named by ['databasename':database], return its
+adaptor and arguments.
+
+=cut
+
+sub db2args {
+    my $self   = shift;
+    my $dbname = shift;
+    return $self->db_settings("$dbname:database");
+}
+
 =item ($adaptor,@argv) = $dsn->db_settings('track_label')
 
 Return the adaptor and arguments suitable for the database identified
@@ -705,41 +732,48 @@ sub db_settings {
   # caching to avoid calling setting() too many times
   return @{$DB_SETTINGS{$self,$track}} if $DB_SETTINGS{$self,$track};
 
-  my $adaptor = $self->fallback_setting($track => 'db_adaptor') or die "No db_adaptor specified";
+  # if the track contains the "database" option, then it is a symbolic name
+  # that indicates a [symbolic_name:database] section in this file or the globals
+  # file.
+  my $symbolic_db_name = $self->fallback_setting($track => 'database');
+  my $section          = $symbolic_db_name ? "$symbolic_db_name:database"
+                                           : $track;
+
+  my $adaptor = $self->fallback_setting($section => 'db_adaptor') or die "No db_adaptor specified";
   eval "require $adaptor; 1" or die $@;
 
-  my $args    = $self->fallback_setting($track => 'db_args');
+  my $args    = $self->fallback_setting($section => 'db_args');
   my @argv = ref $args eq 'CODE'
         ? $args->()
 	: shellwords($args||'');
 
   # Do environment substitutions in the args. Assume that the environment is safe.
   foreach (@argv) {
-      s/\$ENV{(\w+)}/$ENV{$1}/ge;
+      s/\$ENV{(\w+)}/$ENV{$1}||''/ge;
   }
 
   # for compatibility with older versions of the browser, we'll hard-code some arguments
-  if (my $adaptor = $self->fallback_setting($track => 'adaptor')) {
+  if (my $adaptor = $self->fallback_setting($section => 'adaptor')) {
     push @argv,(-adaptor => $adaptor);
   }
 
-  if (my $dsn = $self->fallback_setting($track => 'database')) {
+  if (my $dsn = $self->fallback_setting($section => 'database')) {
     push @argv,(-dsn => $dsn);
   }
 
-  if (my $fasta = $self->fallback_setting($track => 'fasta_files')) {
+  if (my $fasta = $self->fallback_setting($section => 'fasta_files')) {
     push @argv,(-fasta=>$fasta);
   }
 
-  if (my $user = $self->fallback_setting($track => 'user')) {
+  if (my $user = $self->fallback_setting($section => 'user')) {
     push @argv,(-user=>$user);
   }
 
-  if (my $pass = $self->fallback_setting($track => 'pass')) {
+  if (my $pass = $self->fallback_setting($section => 'pass')) {
     push @argv,(-pass=>$pass);
   }
 
-  if (defined (my $a = $self->fallback_setting($track => 'aggregators'))) {
+  if (defined (my $a = $self->fallback_setting($section => 'aggregators'))) {
     my @aggregators = shellwords($a||'');
     push @argv,(-aggregator => \@aggregators);
   }
@@ -748,7 +782,7 @@ sub db_settings {
 
   # cache settings
   $DB_SETTINGS{$self,$track} = \@result;
-
+  
   return @result;
 }
 
@@ -764,10 +798,16 @@ sub open_database {
   my $self  = shift;
   my $track = shift;
 
+  $track  ||= 'general';
+
   my ($adaptor,@argv) = $self->db_settings($track);
   my $key             = Dumper($adaptor,@argv);
 
-  return $DB{$key}    if exists $DB{$key};
+  if (exists $DB{$key}) {
+      # remember mapping of database to track
+      $self->{db2track}{$DB{$key}}{$track}++;
+      return $DB{$key};
+  }
 
   $DB{$key} = eval {$adaptor->new(@argv)} or warn $@;
   die "Could not open database: $@" unless $DB{$key};
@@ -779,7 +819,24 @@ sub open_database {
   $DB{$key}->strict_bounds_checking(1) if $DB{$key}->can('strict_bounds_checking');
   $DB{$key}->absolute(1)               if $DB{$key}->can('absolute');
 
+  $self->{db2track}{$DB{$key}}{$track}++;
   $DB{$key};
+}
+
+=item @tracks = $dsn->db2track($db)
+
+=item $track  = $dsn->db2track($db)
+
+Given a database handle, return all tracks that use that database. In
+a scalar context, returns just the first track that uses it.
+
+=cut
+
+sub db2id {
+    my $self = shift;
+    my $db   = shift;
+    my @tracks = keys %{$self->{db2track}{$db}} or return;
+    return wantarray ? @tracks : (sort @tracks)[0];
 }
 
 # this is an aggregator-aware way of retrieving all the named types

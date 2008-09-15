@@ -175,21 +175,27 @@ sub search_features_locally {
     my $self        = shift;
     my $search_term = shift;
     defined $search_term or return;
+    my $state       = $self->state;
     
-    my (@found,%trackmap);
+    my @found;
+
+    undef $self->{feature2dbid};
 
     # each local db gets a chance to search
     my $local_dbs = $self->local_dbs;
     return unless $local_dbs;
 
-    for my $db (keys %{$local_dbs}) {
+    my @dbs = $self->state->{dbid} ? $self->source->open_database($state->{dbid})
+	                           : keys %{$local_dbs};
+
+    for my $db (@dbs) {
 	my $region   = $local_dbs->{$db};
 	my $features = $region->search_features($search_term);
-	$trackmap{overload::StrVal($_)}=$self->{db2track}{$db} foreach @$features;
+	$self->add_dbid_to_features($db,$features);
 	push @found,@$features if $features;
     }
 
-    return wantarray ? (\@found,\%trackmap) : \@found;
+    return \@found;
 }
 
 =head2 $found = $db->search_features_remotely('search term')
@@ -260,6 +266,41 @@ sub search_features_remotely {
     }
 
     return \@found;
+}
+
+=head2 $db->add_dbid_to_features($db,$features)
+
+Add a gbrowse_dbid() method to each of the features in the list.
+
+=cut
+
+sub add_dbid_to_features {
+    my $self           = shift;
+    my ($db,$features) = @_;
+    return unless $features;
+
+    no strict 'refs';
+
+    my $source = $self->source;
+    my $dbid   = $source->db2id($db);
+
+    my $code = sub { $self->feature2dbid(shift) };
+
+    my %seenit;
+    for my $f (@$features) {
+	$self->{feature2dbid}{overload::StrVal($f)} = $dbid;
+	my $class = ref $f;
+	next if $seenit{$class}++;
+	unless ($f->can('gbrowse_dbid')) {
+	    *{"${class}::gbrowse_dbid"} = $code;
+	}
+    }
+}
+
+sub feature2dbid {
+    my $self    = shift;
+    my $feature = shift;
+    return $self->{feature2dbid}{overload::StrVal($feature)};
 }
 
 1;

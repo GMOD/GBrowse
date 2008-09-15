@@ -10,8 +10,9 @@ use Bio::Root::IO;
 use File::Path 'rmtree';
 use FindBin '$Bin';
 use File::Spec;
+use FindBin '$Bin';
 
-use constant TEST_COUNT => 69;
+use constant TEST_COUNT => 83;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 BEGIN {
@@ -163,8 +164,47 @@ ok(ref($source->code_setting(EST=>'bgcolor')),'CODE');
 my @types = sort $source->overview_tracks;
 ok("@types","Motifs:overview Transcripts:overview");
 
-# Test restrictions/authorization
+# Test that :database sections do not come through in labels
 my %tracks = map {$_=>1} $source->labels;
+ok(! exists $tracks{'volvox2:database'});
+
+# Test that we retrieve four database labels
+my @dbs   = sort $source->databases;
+ok(scalar @dbs,4);
+ok($dbs[0],'volvox1');
+
+
+# Test that we can get db args from "volvox2"
+$ENV{GBROWSE_DOCS} = $Bin;
+my ($adapter,@args) = $source->db2args('volvox2');
+ok($adapter,'Bio::DB::GFF');
+ok("@args[0,1]",'-adaptor memory');
+
+# Test that we get the same args from the binding sites track
+my($adapter2,@args2) = $source->db_settings('BindingSites');
+ok($adapter,$adapter2);
+ok("@args[0..3]","@args2[0..3]");
+
+# Test that we get the same database from two tracks
+my $db1 = $source->open_database('Linkage2');
+my $db2 = $source->open_database('Linkage2');
+my $db3 = $source->open_database('BindingSites');
+ok($db1,$db2);
+ok($db1,$db3);
+
+# Test reverse mapping
+ok(scalar $source->db2id($db1),'BindingSites');
+ok(join(' ',sort $source->db2id($db1)),'BindingSites Linkage2');
+
+# Test that anonymous databases that use the same open 
+# arguments get mapped onto a single database
+my $db4 = $source->open_database('Linkage');
+ok($db1,$db4);
+ok(scalar $source->db2id($db4),'BindingSites');
+ok(join(' ',sort $source->db2id($db1)),'BindingSites Linkage Linkage2');
+
+# Test restrictions/authorization
+%tracks = map {$_=>1} $source->labels;
 ok(! exists $tracks{Variation});
 
 $ENV{REMOTE_HOST} = 'foo.cshl.edu';
@@ -181,7 +221,7 @@ ok(!eval{$source->make_link();1});
 # test that environment variable interpolation is working in dbargs
 $source = $globals->create_data_source('yeast_chr1');
 $ENV{GBROWSE_DOCS} = '/foo/bar';
-my ($adapter,@args) = $source->db_settings;
+($adapter,@args) = $source->db_settings;
 ok($args[3]=~m!^/foo/bar!);
 
 $ENV{GBROWSE_DOCS} = '/buzz/buzz';

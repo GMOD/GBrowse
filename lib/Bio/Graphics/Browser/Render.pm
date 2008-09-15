@@ -1719,6 +1719,7 @@ sub update_coordinates {
   }
   elsif (param('name')) {
     $state->{name} = param('name');
+    $state->{dbid} = param('dbid') if param('dbid');
   }
 
 }

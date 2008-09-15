@@ -122,10 +122,8 @@ ok(scalar @$features,1);
 
 $features    = $search->search_features_locally('My_feature:f12');
 ok(scalar @$features,2);
-
-my $tracks;
-($features,$tracks) = $search->search_features_locally('My_feature:f12');
-ok(scalar values %$tracks,2);
+my @dbids = sort map {$_->gbrowse_dbid} @$features;
+ok("@dbids","BindingSites CDS");
 
 my @seqid = sort map {$_->seq_id} @$features;
 ok("@seqid","ctgA ctgB");

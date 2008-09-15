@@ -34,6 +34,8 @@ END {
   rmtree '/tmp/gbrowse_testing' if $$ == $PID;
 }
 
+$SIG{SEGV} = $SIG{HUP} = $SIG{INT} = $SIG{TERM} = \&cleanup;
+
 %ENV = ();
 $ENV{GBROWSE_DOCS} = $Bin;
 
@@ -470,8 +472,13 @@ sub check_multiple_renders {
   }
 }
 
-END {
+sub cleanup {
     if ($PID == $$) {
 	foreach (@servers) { $_->kill }
     }
 }
+
+END {
+    cleanup();
+}
+

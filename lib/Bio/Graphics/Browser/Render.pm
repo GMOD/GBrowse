@@ -17,6 +17,7 @@ use Bio::Graphics::Browser::Shellwords;
 use Bio::Graphics::Browser::Region;
 use Bio::Graphics::Browser::RegionSearch;
 use Bio::Graphics::Browser::RenderPanels;
+use Bio::Graphics::Browser::GFFPrinter;
 
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
@@ -540,6 +541,7 @@ sub render {
 
   # NOTE: these handle_* methods will return true
   # if they want us to exit before printing the header
+  $self->handle_gff_dump()  && return;
   $self->handle_plugins()   && return;
   $self->handle_downloads() && return;
 
@@ -1007,6 +1009,33 @@ sub plugin_find {
                                               : $self->tr('Plugin_search_2',$plugin_name);
   $self->write_auto($results);
   return $results;
+}
+
+# Handle plug-ins that aren't taken care of asynchronously
+sub handle_gff_dump {
+    my $self = shift;
+
+    return unless ( param('gbgff') );
+
+    my $dumper = Bio::Graphics::Browser::GFFPrinter->new(
+        -data_source => $self->data_source(),
+        -source_name => param('src') || param('source') || path_info(),
+        -segment    => param('q')          || param('segment'),
+        -seqid      => param('ref')        || param('seqid'),
+        -start      => param('start')      || 1,
+        -end        => param('stop')       || param('end'),
+        -stylesheet => param('stylesheet') || param('s'),
+        -id         => param('id'),
+        '-dump'     => param('d')          || '',
+        -db         => $self->db(),
+        -labels => [ param('type'), param('t') ],
+    );
+    $dumper->get_segment();
+
+    print header( $dumper->get_mime_type );
+    $dumper->print_gff3();
+
+    return 1;
 }
 
 # Handle plug-ins that aren't taken care of asynchronously

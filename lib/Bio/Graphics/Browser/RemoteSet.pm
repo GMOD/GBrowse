@@ -4,11 +4,10 @@ package Bio::Graphics::Browser::RemoteSet;
 use strict;
 use base 'Bio::Graphics::Browser::RemoteDataBase';
 
-use Bio::Graphics::Browser::Util 'error';
+use Bio::Graphics::Browser::Util 'error','shellwords';
 use IO::File;
 use CGI 'cookie','param','unescape';
 use Digest::MD5 'md5_hex';
-use Text::Shellwords;
 use File::Spec;
 
 use constant URL_FETCH_TIMEOUT    => 5;  # five seconds max!

@@ -290,7 +290,7 @@ WriteMakefile(
 				 GD                => 2.07,
 				 IO::String        => 0,
                                  IO::File          => 1.0,
-				 Text::Shellwords  => 1.08,
+				 Text::ParseWords  => 1,
 				 CGI::Session      => 4.02,
 				 File::Temp        => 0,
 				 Class::Base       => 0,

@@ -49,7 +49,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.10 2008-09-12 14:32:34 scottcain Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.11 2008-09-15 14:51:22 lstein Exp $
 
 use strict;
 use CGI qw(param redirect header start_html end_html
@@ -62,7 +62,6 @@ use Bio::Graphics::Browser::PluginSet;
 use Bio::Graphics::Browser::UploadSet;
 use Bio::Graphics::Browser::RemoteSet;
 use Bio::Graphics::Browser::PageSettings;
-use Text::Shellwords;
 use Digest::MD5 'md5_hex';
 use Fcntl qw(:flock);
 

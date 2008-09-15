@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.105 2008-09-12 14:32:34 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.106 2008-09-15 14:51:22 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -65,7 +65,6 @@ use Bio::Graphics::Browser::PageSettings;
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use Text::Tabs;
-use Text::Shellwords;
 use File::Basename 'basename','dirname';
 use File::Spec;
 use Carp qw(:DEFAULT croak);
@@ -3254,8 +3253,8 @@ sub _build_image_page {
   my $flip   = $settings->{flip} || param('flip') || 0;
   my $keystyle = $settings->{ks};
   my $grid     = $settings->{grid} || 0;
-  my $url = url(-absolute=>1);
-  $url    = dirname($url) . "/gbrowse_img/".escape($source);
+  my $url      = url(-full=>1);
+  $url         = dirname($url) . "/gbrowse_img/".escape($source);
   my $tracks = $settings->{tracks};
   my $width  = $CONFIG->width;
   my $name   = $settings->{name} || "$settings->{ref}:$settings->{start}..$settings->{stop}";

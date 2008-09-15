@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Synteny;
 
-# $Id: Synteny.pm,v 1.1.2.2 2007-12-21 21:58:19 sheldon_mckay Exp $
+# $Id: Synteny.pm,v 1.1.2.3 2008-09-15 14:51:23 lstein Exp $
 
 use strict;
 
@@ -11,7 +11,6 @@ use CGI qw/:standard escape/;
 use CGI::Toggle;
 use CGI::Carp 'fatalsToBrowser';
 use GD;
-use Text::Shellwords;
 use vars qw/$VERSION @ISA/;
 @ISA = ('Bio::Graphics::Browser');
 

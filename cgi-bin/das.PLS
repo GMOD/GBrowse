@@ -49,7 +49,7 @@ $startperl -w
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-#$Id: das.PLS,v 1.6.8.1.2.9 2008-09-12 14:32:34 scottcain Exp $
+#$Id: das.PLS,v 1.6.8.1.2.10 2008-09-15 14:51:22 lstein Exp $
 
 use Bio::DB::GFF;
 use File::Basename 'basename';
@@ -57,12 +57,11 @@ use CGI qw/header path_info param url request_method escapeHTML/ ;
 use Carp;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Util;
-use Text::Shellwords;
 use vars qw($DB $DSN $HEADER %ERRCODES $CONFIG
             $VERSION $DAS_VERSION $CONF_DIR 
             %CACHED_TYPES %FORCED_GROUP %NO_PARENT);
 
-#$Id: das.PLS,v 1.6.8.1.2.9 2008-09-12 14:32:34 scottcain Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
+#$Id: das.PLS,v 1.6.8.1.2.10 2008-09-15 14:51:22 lstein Exp $ das.PLS,v 1.32 2004/01/02 14:52:15 lstein Exp  can probably be a reference server too
 
 # minimal DAS annotation/reference server
 $DAS_VERSION = 'DAS/1.50';

@@ -1,7 +1,7 @@
 package Bio::Graphics::Browser::PageSettings;
 use strict;
 
-use Text::Shellwords 'shellwords';
+use Bio::Graphics::Browser::Util 'shellwords';
 use CGI::Session;
 use constant COOKIE_NAME => 'gbrowse_sess';
 

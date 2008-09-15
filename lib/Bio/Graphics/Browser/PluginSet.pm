@@ -1,13 +1,13 @@
 package Bio::Graphics::Browser::PluginSet;
 # API for using plugins
 
-#  $Id: PluginSet.pm,v 1.1.2.7.2.2.2.2 2007-10-17 01:48:21 lstein Exp $
+#  $Id: PluginSet.pm,v 1.1.2.7.2.2.2.3 2008-09-15 14:51:23 lstein Exp $
 
 use strict;
 use Digest::MD5;
 use Bio::Graphics::Browser;
+use Bio::Graphics::Browser::Util 'shellwords';
 use CGI 'param';
-use Text::Shellwords;
 use constant DEBUG=>0;
 
 sub new {

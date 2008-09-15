@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.108 2008-08-25 17:03:40 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.109 2008-09-15 14:51:22 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -64,10 +64,9 @@ use CGI qw(img param escape unescape url div span image_button);
 use CGI::Toggle 'toggle_section';
 use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
-use Text::Shellwords;
 use IO::File;
 use Bio::Graphics::Browser::I18n;
-use Bio::Graphics::Browser::Util 'modperl_request','is_safari';
+use Bio::Graphics::Browser::Util 'modperl_request','is_safari','shellwords';
 
 require Exporter;
 

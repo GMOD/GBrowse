@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::Plugin::Submitter;
 
-# $Id: Submitter.pm,v 1.1.2.3 2008-03-17 22:16:37 lstein Exp $  
+# $Id: Submitter.pm,v 1.1.2.4 2008-09-15 14:51:22 lstein Exp $  
 # Submitter is an invisible plugin (Does not appear in the "Reports and Analysis" menu)
 # designed to support rubber-band select menu items that submit sequence data and
 # other parameters to external web sites such as NCBI blast.  Check the GMOD wiki
@@ -14,7 +14,6 @@ use CGI 'html3';
 use Bio::Graphics::Browser::Plugin;
 use Bio::Graphics::Browser::Util;
 use Bio::Graphics::FeatureFile;
-use Text::Shellwords;
 use CGI qw(:standard *pre);
 use vars qw($VERSION @ISA);
 use Data::Dumper;

@@ -95,7 +95,7 @@ use Statistics::Descriptive;
 use IO::Seekable;
 use File::Spec;
 use Bio::Graphics::Wiggle;
-use Text::Shellwords;
+use Bio::Graphics::Browser::Util 'shellwords';
 use File::stat;
 use CGI 'escape';
 

@@ -97,7 +97,7 @@ use Bio::Graphics::Browser::I18n;
 use CGI qw(:standard);
 use CGI::Toggle;
 use Carp 'carp','cluck';
-use Text::Shellwords;
+use Text::ParseWords ();
 
 use vars qw(@ISA @EXPORT $CONFIG $LANG %DB $HEADER $HTML $ADDED_FEATURES);
 require Exporter;
@@ -106,6 +106,7 @@ require Exporter;
 	     print_header print_top print_bottom html_frag
 	     error fatal_error redirect_legacy_url
 	     parse_feature_str url2file modperl_request is_safari
+             shellwords
 	    );
 
 use constant DEBUG => 0;
@@ -611,4 +612,16 @@ sub is_safari {
   return CGI::user_agent =~ /safari/i;
 }
 
+# work around an annoying uninit variable warning from Text::Parsewords
+sub shellwords {
+    my @args = @_;
+    return unless @args;
+    foreach(@args) {
+	s/^\s+//;
+	s/\s+$//;
+	$_ = '' unless defined $_;
+    }
+    my @result = Text::ParseWords::shellwords(@args);
+    return @result;
+}
 1;

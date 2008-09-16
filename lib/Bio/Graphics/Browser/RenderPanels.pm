@@ -407,10 +407,9 @@ sub wrap_rendered_track {
         ),
         $map_html || ''
         )
-        . qq[<script type="text/javascript" language="JavaScript">Controller.register_track("track_]
-        . $label . q[","]
+        . qq[<script type="text/javascript" language="JavaScript">Controller.register_track("]
         . $label
-        . q[_image", "]
+        . q[", "]
         . $track_type
         . q[");</script>];
 }

@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.46 2008-09-11 18:14:54 mwz444 Exp $
+ $Id: controller.js,v 1.47 2008-09-16 17:34:03 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -38,7 +38,7 @@ var GBrowseController = Class.create({
   function () {
     // periodic_updaters contains all the updaters for each track
     this.periodic_updaters        = new Array();
-    this.track_images             = new Hash();
+    this.gbtracks                 = new Hash();
     this.segment_observers        = new Hash();
     this.retrieve_tracks          = new Hash();
     this.track_time_key           = new Hash();
@@ -64,13 +64,14 @@ var GBrowseController = Class.create({
   },
   
   register_track:
-  function (track_div_id,track_image_id,track_type) {
+  function (track_name,track_type) {
     
-    this.track_images.set(track_div_id,track_image_id);
+    var gbtrack = new GBrowseTrack(track_name,track_type); 
+    this.gbtracks.set(track_name,gbtrack);
     if (track_type=="scale_bar"){
       return;
     }
-    this.retrieve_tracks.set(track_div_id,true);
+    this.retrieve_tracks.set(gbtrack.track_div_id,true);
   }, // end register_track
 
   // DOM Utility Methods ********************************************
@@ -184,9 +185,9 @@ var GBrowseController = Class.create({
     }
 
     //Grey out image
-    this.track_images.values().each(
-      function(image_id) {
-	    $(image_id).setOpacity(0.3);
+    this.gbtracks.values().each(
+      function(gbtrack) {
+	    $(gbtrack.track_image_id).setOpacity(0.3);
       }
     );
     
@@ -245,7 +246,7 @@ var GBrowseController = Class.create({
           Controller.append_child_from_html(html,$(panel_id));
 
           //Add New Track(s) to the list of observers and such
-          Controller.register_track(div_element_id,this_track_data.image_element_id,'standard') ;
+          Controller.register_track(track_name,'standard') ;
 
           if (html.substring(0,18) == "<!-- AVAILABLE -->"){
             Controller.reset_after_track_load();
@@ -266,8 +267,9 @@ var GBrowseController = Class.create({
   rerender_track:
   function(track_name,track_div_id) {
 
-    var image_id = this.track_images.get(track_div_id);
-    $(image_id).setOpacity(0.3);
+    var gbtrack = this.gbtracks.get(track_name);
+    $(gbtrack.track_image_id).setOpacity(0.3);
+
     new Ajax.Request('#',{
       method:     'post',
       parameters: {

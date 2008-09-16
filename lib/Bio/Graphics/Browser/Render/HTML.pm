@@ -143,12 +143,12 @@ sub render_html_head {
     foreach qw(buttons.js 
                toggle.js 
                karyotype.js
-               balloon.js 
                controller.js 
                rubber.js
                overviewSelect.js
                detailSelect.js
                regionSelect.js
+               track.js
                balloon.js
                balloon.config.js
 );

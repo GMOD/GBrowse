@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.47 2008-09-16 17:34:03 mwz444 Exp $
+ $Id: controller.js,v 1.48 2008-09-16 18:41:51 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -69,9 +69,10 @@ var GBrowseController = Class.create({
     var gbtrack = new GBrowseTrack(track_name,track_type); 
     this.gbtracks.set(track_name,gbtrack);
     if (track_type=="scale_bar"){
-      return;
+      return gbtrack;
     }
-    this.retrieve_tracks.set(gbtrack.track_div_id,true);
+    this.retrieve_tracks.set(track_name,true);
+    return gbtrack;
   }, // end register_track
 
   // DOM Utility Methods ********************************************
@@ -143,7 +144,7 @@ var GBrowseController = Class.create({
   set_track_visibility:
   function(track_name,visible) {
 
-    if ( null == $('track_'+track_name)){
+    if ( null == $(this.gbtracks.get(track_name).track_div_id)){
       // No track div
       return;
     }
@@ -224,7 +225,9 @@ var GBrowseController = Class.create({
   add_track:
   function(track_name) {
 
-    if ( null != $('track_'+track_name)){
+    if ( this.gbtracks.get(track_name) !=null 
+      && 
+      null != $(this.gbtracks.get(track_name).track_div_id)){
       return;
     }
 
@@ -237,16 +240,14 @@ var GBrowseController = Class.create({
       onSuccess: function(transport) {
         var results    = transport.responseJSON;
         var track_data = results.track_data;
-        for (var key in track_data){
-          this_track_data    = track_data[key];
-          var div_element_id = this_track_data.div_element_id;
+        for (var ret_track_name in track_data){
+          var this_track_data = track_data[ret_track_name];
+          var ret_gbtrack = Controller.register_track(ret_track_name,'standard') ;
+
           var html           = this_track_data.track_html;
           var panel_id       = this_track_data.panel_id;
 
           Controller.append_child_from_html(html,$(panel_id));
-
-          //Add New Track(s) to the list of observers and such
-          Controller.register_track(track_name,'standard') ;
 
           if (html.substring(0,18) == "<!-- AVAILABLE -->"){
             Controller.reset_after_track_load();
@@ -254,9 +255,9 @@ var GBrowseController = Class.create({
           else{
             var track_keys = new Array();
             time_key = create_time_key();
-            track_keys[div_element_id]=this_track_data.track_key;
-            Controller.retrieve_tracks.set(div_element_id,true);
-            Controller.track_time_key.set(div_element_id,time_key);
+            track_keys[ret_track_name]=this_track_data.track_key;
+            Controller.retrieve_tracks.set(ret_track_name,true);
+            Controller.track_time_key.set(ret_track_name,time_key);
             Controller.get_remaining_tracks(track_keys,1000,1.5,time_key);
           }
         }
@@ -280,9 +281,9 @@ var GBrowseController = Class.create({
         var results    = transport.responseJSON;
         var track_keys = results.track_keys;
         time_key = create_time_key();
-        for (var track_div_id in track_keys){
-            Controller.retrieve_tracks.set(track_div_id,true);
-            Controller.track_time_key.set(track_div_id,time_key);
+        for (var track_name in track_keys){
+            Controller.retrieve_tracks.set(track_name,true);
+            Controller.track_time_key.set(track_name,time_key);
         } // end for
         Controller.get_remaining_tracks(track_keys,1000,1.5,time_key);
       }, // end onSuccess
@@ -296,9 +297,9 @@ var GBrowseController = Class.create({
     
     time_key = create_time_key();
     this.retrieve_tracks.keys().each(
-      function(track_div_id) {
-        Controller.retrieve_tracks.set(track_div_id,true);
-        Controller.track_time_key.set(track_div_id,time_key);
+      function(track_name) {
+        Controller.retrieve_tracks.set(track_name,true);
+        Controller.track_time_key.set(track_name,time_key);
       }
     );
 
@@ -310,15 +311,15 @@ var GBrowseController = Class.create({
   get_remaining_tracks:
   function (track_keys,time_out,decay,time_key){
 
-    var track_div_ids = [];
+    var track_names = [];
     var finished = true;
     var track_key_str = '';
     this.retrieve_tracks.keys().each(
-      function(track_div_id) {
-        if(Controller.retrieve_tracks.get(track_div_id)){
-          if (Controller.track_time_key.get(track_div_id) == time_key){
-            track_div_ids.push(track_div_id);
-            track_key_str += '&tk_'+escape(track_div_id)+"="+track_keys[track_div_id];
+      function(track_name) {
+        if(Controller.retrieve_tracks.get(track_name)){
+          if (Controller.track_time_key.get(track_name) == time_key){
+            track_names.push(track_name);
+            track_key_str += '&tk_'+escape(track_name)+"="+track_keys[track_name];
             finished = false;
           }
         }
@@ -332,23 +333,24 @@ var GBrowseController = Class.create({
     new Ajax.Request('#',{
       method:     'post',
       parameters: $H({ retrieve_multiple: 1, 
-                       track_div_ids:     track_div_ids, 
+                       track_names:     track_names, 
 		    }).toQueryString()  + track_key_str,
       onSuccess: function(transport) {
         var continue_requesting = false;
         var results    = transport.responseJSON;
         var track_html_hash = results.track_html;
-        for (var track_div_id in track_html_hash){
-          track_html    = track_html_hash[track_div_id];
+        for (var track_name in track_html_hash){
+          track_html    = track_html_hash[track_name];
 
-          if (Controller.track_time_key.get(track_div_id) == time_key){
-            track_div = document.getElementById(track_div_id);
+          var gbtrack = Controller.gbtracks.get(track_name);
+          if (Controller.track_time_key.get(track_name) == time_key){
+            track_div = document.getElementById(gbtrack.track_div_id);
             if (track_html.substring(0,18) == "<!-- AVAILABLE -->"){
               track_div.innerHTML = track_html;
-              Controller.retrieve_tracks.set(track_div_id,false);
+              Controller.retrieve_tracks.set(track_name,false);
             }
             else if (track_html.substring(0,16) == "<!-- EXPIRED -->"){
-               $(this.track_image_id[track_div_id]).setOpacity(0);
+               $(gbtrack.track_image_id).setOpacity(0);
             }
             else {
               continue_requesting = true;
@@ -376,7 +378,7 @@ var GBrowseController = Class.create({
             reconfigure_track: track_name
           }).toQueryString(),
       onSuccess: function(transport) {
-        var track_div_id = "track_"+track_name;
+        var track_div_id = this.gbtracks.get(track_name).track_div_id;
         Balloon.prototype.hideTooltip(1);
         if (show_track){
           Controller.rerender_track(track_name,track_div_id);

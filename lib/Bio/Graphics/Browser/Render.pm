@@ -218,7 +218,7 @@ sub asynchronous_event {
     if ( my $action = param('first_render') ) {
         $self->init_database();
 
-        my $track_keys          = $self->begin_track_render();
+        my $track_keys = $self->begin_track_render();
         return unless $track_keys;
 
         my $segment_info_object = $self->segment_info_object();
@@ -228,7 +228,7 @@ sub asynchronous_event {
             segment_info => $segment_info_object,
             track_keys   => $track_keys,
         };
-	return (200,'application/json',$return_object);
+        return ( 200, 'application/json', $return_object );
     }
 
     if ( param('update_sections') ) {
@@ -266,23 +266,18 @@ sub asynchronous_event {
         $self->init_remote_sources();
 
         my %track_html;
-        my @track_div_ids = param('track_div_ids');
+        my @track_names = param('track_names');
 
-        foreach my $track_div_id (@track_div_ids) {
-            my $track_name = '';
-            if ( $track_div_id =~ /^track_(.+)/ ) {
-                $track_name = $1;
-            }
-
-            my $track_key = param( 'tk_' . $track_div_id ) or next;
-            $track_html{$track_div_id} = $self->render_deferred_track(
+        foreach my $track_name (@track_names) {
+            my $track_key = param( 'tk_' . $track_name ) or next;
+            $track_html{$track_name} = $self->render_deferred_track(
                 cache_key  => $track_key,
                 track_name => $track_name,
             ) || '';
         }
 
         my $return_object = { track_html => \%track_html, };
-	return (200,'application/json',$return_object);
+        return ( 200, 'application/json', $return_object );
     }
 
     if ( my $action = param('add_track') ) {
@@ -293,12 +288,8 @@ sub asynchronous_event {
         $self->add_track_to_state($track_name);
         my $track_keys = $self->begin_individual_track_render($track_name);
         my %track_data;
-        foreach my $div_element_id ( keys %{ $track_keys || {} } ) {
-            my $track_key  = $track_keys->{$div_element_id};
-            my $track_name = '';
-            if ( $div_element_id =~ /^track_(.+)/ ) {
-                $track_name = $1;
-            }
+        foreach my $track_name ( keys %{ $track_keys || {} } ) {
+            my $track_key  = $track_keys->{$track_name};
             my $image_width      = $self->get_image_width;
             my $image_element_id = $track_name . "_image";
             my $track_html       = $self->render_deferred_track(
@@ -313,8 +304,7 @@ sub asynchronous_event {
                 $panel_id = 'region_panels';
             }
 
-            $track_data{$div_element_id} = {
-                div_element_id   => $div_element_id,
+            $track_data{$track_name} = {
                 track_key        => $track_key,
                 track_name       => $track_name,
                 track_html       => $track_html,
@@ -470,7 +460,7 @@ sub begin_track_render {
     my %track_keys;
     foreach my $cache_track_hash (@cache_track_hash_list) {
         foreach my $track_label ( keys %{ $cache_track_hash || {} } ) {
-            $track_keys{ "track_" . $track_label }
+            $track_keys{ $track_label }
                 = $cache_track_hash->{$track_label}->key();
         }
     }
@@ -528,7 +518,7 @@ sub begin_individual_track_render {
     my %track_keys;
     foreach my $cache_track_hash ( $cache_track_hash, ) {
         foreach my $track_label ( keys %{ $cache_track_hash || {} } ) {
-            $track_keys{ "track_" . $track_label }
+            $track_keys{ $track_label }
                 = $cache_track_hash->{$track_label}->key();
         }
     }

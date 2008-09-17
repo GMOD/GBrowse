@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.109 2008-09-15 14:51:22 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.110 2008-09-17 01:24:05 lstein Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -66,7 +66,7 @@ use Digest::MD5 'md5_hex';
 use File::Path 'mkpath';
 use IO::File;
 use Bio::Graphics::Browser::I18n;
-use Bio::Graphics::Browser::Util 'modperl_request','is_safari','shellwords';
+use Bio::Graphics::Browser::Util qw(modperl_request is_safari shellwords);
 
 require Exporter;
 
@@ -379,7 +379,7 @@ sub db_settings {
   my $args    = $self->config->setting(general => 'db_args');
   my @argv = ref $args eq 'CODE'
         ? $args->()
-	: shellwords($args||'');
+	: Bio::Graphics::Browser::Util::shellwords($args||'');
 
   # for compatibility with older versions of the browser, we'll hard-code some arguments
   if (my $adaptor = $self->setting('adaptor')) {
@@ -1775,7 +1775,7 @@ sub make_map {
     $ftype = "$ftype:$fname";
     my $line = join("\t",$ftype,@{$_}[1..4]);
     for my $att (keys %attributes) {
-      next unless defined $attributes{$att};
+      next unless defined $attributes{$att} && length $attributes{$att};
       $line .= "\t$att\t$attributes{$att}";
     }
     push @map, $line;
@@ -3058,7 +3058,7 @@ sub plain_citation {
 package Bio::Graphics::BrowserConfig;
 use strict;
 use Bio::Graphics::FeatureFile;
-use Text::Shellwords;
+use Bio::Graphics::Browser::Util 'shellwords';
 use Carp 'croak';
 use Socket;  # for inet_aton() call
 
@@ -3286,7 +3286,7 @@ sub invert_types {
   for my $label (keys %{$config}) {
 #    next if $label=~/:?(overview|region)$/;   # special case
     my $feature = $config->{$label}{'feature'} or next;
-    foreach (shellwords($feature||'')) {
+    foreach (Bio::Graphics::Browser::Util::shellwords($feature||'')) {
       $inverted{lc $_}{$label}++;
     }
   }
@@ -3386,10 +3386,13 @@ sub make_title {
   my ($title,$key) = ('','');
 
  TRY: {
-    if ($label && $label =~ /^[a-zA-Z_]/ && $label->isa('Bio::Graphics::FeatureFile')) {
-      $key = $label->name;
-      $title = $label->make_title($feature) or last TRY;
-      return $title;
+    if ($label 
+	&& $label =~ /^[a-zA-Z_]/ 
+	&& $label->isa('Bio::Graphics::FeatureFile')) {
+	$key   = $label->name;
+	$key   =~ s/^(http|ftp)://;
+	$title = $label->make_title($feature) or last TRY;
+	return $title;
     }
 
     else {
@@ -3398,6 +3401,7 @@ sub make_title {
       $key         =~ s/s$//;
       $key         = "(".
 	  $feature->segment->dsn.")" if $feature->isa('Bio::Das::Feature');  # for DAS sources
+      $key         =~ s/^(http|ftp)://;
 
       my $link     = $self->setting($label,'title')
 	|| $self->setting('TRACK DEFAULTS'=>'title')
@@ -3406,8 +3410,7 @@ sub make_title {
 	$title       = eval {$link->($feature,$panel,$track)};
 	$self->_callback_complain($label=>'title') if $@;
 	return $title if defined $title;
-      }
-      return $self->link_pattern($link,$feature) if $link && $link ne 'AUTO';
+      }      return $self->link_pattern($link,$feature) if $link && $link ne 'AUTO';
     }
   }
 
@@ -3421,15 +3424,15 @@ sub make_title {
 	    $feature->target->seq_id.':'.
 	    $feature->target->start."..".$feature->target->end);
     } else {
-      my ($start,$end) = ($feature->start,$feature->end);
-      ($start,$end)    = ($end,$start) if $feature->strand < 0;
-      join(' ',
-	   "$key:",
-	   $feature->can('display_name') ? $feature->display_name : $feature->info,
-	   ($feature->can('seq_id')      ? $feature->seq_id : $feature->location->seq_id)
-	   .":".
-	   (defined $start ? $start : '?')."..".(defined $end ? $end : '?')
-	  );
+	my ($start,$end) = ($feature->start,$feature->end);
+	($start,$end)    = ($end,$start) if $feature->strand < 0;
+	join(' ',
+	     "$key:",
+	     $feature->can('display_name') ? $feature->display_name : $feature->info,
+	     ($feature->can('seq_id')      ? $feature->seq_id : $feature->location->seq_id)
+	     .":".
+	     (defined $start ? $start : '?')."..".(defined $end ? $end : '?')
+	    );
     }
   };
   warn $@ if $@;

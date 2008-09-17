@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 
 print OUT <<'!NO!SUBS!';
 
-# $Id: gbgff.PLS,v 1.1.2.11 2008-09-12 14:32:34 scottcain Exp $
+# $Id: gbgff.PLS,v 1.1.2.12 2008-09-17 01:24:00 lstein Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -85,7 +85,6 @@ use Bio::Graphics::Browser::Util;
 use CGI 'param','path_info','header';
 use Bio::Graphics::FeatureFile;
 use Bio::Graphics::Browser;
-use Text::ParseWords 'shellwords';
 
 use vars '$CONFIG';
 

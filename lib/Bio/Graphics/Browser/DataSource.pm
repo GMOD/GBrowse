@@ -19,9 +19,6 @@ my %CONFIG_CACHE; # cache parsed config files
 my %DB_SETTINGS;  # cache database settings
 my %DB;           # cache opened database connections
 
-# hacky way of keeping track of mapping of features to dbids
-my (%FEATURE2DBID,%SEENCLASS); 
-
 =head1 SYNOPSIS
 
 =head1 DESCRIPTION
@@ -37,12 +34,12 @@ sub new {
   my $config_file_path = shift;
   my ($name,$description,$globals) = @_;
 
-  %FEATURE2DBID = ();
-
-  # this code caches the config info so that we don't need to reparse in persistent (e.g. modperl) environment
+  # this code caches the config info so that we don't need to 
+  # reparse in persistent (e.g. modperl) environment
   my $mtime            = (stat($config_file_path))[9];
   if (exists $CONFIG_CACHE{$config_file_path}
       && $CONFIG_CACHE{$config_file_path}{mtime} >= $mtime) {
+      $CONFIG_CACHE{$config_file_path}{object}->clear_cached_dbids;
     return $CONFIG_CACHE{$config_file_path}{object};
   }
 
@@ -82,6 +79,11 @@ sub globals {
   my $d    = $self->{globals};
   $self->{globals} = shift if @_;
   $d;
+}
+
+sub clear_cached_dbids {
+    my $self = shift;
+    delete $self->{feature2dbid};
 }
 
 =head2 global_setting()
@@ -885,7 +887,8 @@ sub generate_image {
   my ($uri,$path) = $self->globals->tmpdir($self->name.'/img');
   my $url         = sprintf("%s/%s.%s",$uri,$signature,$extension);
   my $imagefile   = sprintf("%s/%s.%s",$path,$signature,$extension);
-  open (my $f,'>',$imagefile) || die("Can't open image file $imagefile for writing: $!\n");
+  open (my $f,'>',$imagefile) 
+      || die("Can't open image file $imagefile for writing: $!\n");
   binmode($f);
   print $f $data;
   close $f;
@@ -905,16 +908,28 @@ sub add_dbid_to_feature {
     my $self           = shift;
     my ($feature,$dbid) = @_;
 
-    $FEATURE2DBID{overload::StrVal($feature)}=$dbid;
-
-    my $class = ref $feature;
-    return if $SEENCLASS{$class}++;
-
     no strict 'refs';
-    my $method = sub { my $f = shift;
-		       return $FEATURE2DBID{overload::StrVal($f)}
-    };
-    *{"${class}::gbrowse_dbid"} = $method;
+
+    if ($feature->isa('HASH')) {
+	$feature->{__gbrowse_dbid} = $dbid;
+	my $class = ref $feature;
+	return if $self->{hacked_classes}{$class}++;
+	my $method = sub {
+	    my $f = shift;
+	    return $f->{__gbrowse_dbid};
+	  };
+	*{"${class}::gbrowse_dbid"} = $method;
+    }
+
+    else {
+	$self->{feature2dbid}{overload::StrVal($feature)} = $dbid;
+	my $class = ref $feature;
+	return if $self->{hacked_classes}{$class}++;
+	my $method = sub { my $f = shift;
+			   return $self->{feature2dbid}{overload::StrVal($f)}
+	  };
+	*{"${class}::gbrowse_dbid"} = $method;
+    }
 }
 
 

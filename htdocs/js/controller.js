@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.48 2008-09-16 18:41:51 mwz444 Exp $
+ $Id: controller.js,v 1.49 2008-09-17 12:54:02 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -36,8 +36,6 @@ var GBrowseController = Class.create({
   
   initialize:
   function () {
-    // periodic_updaters contains all the updaters for each track
-    this.periodic_updaters        = new Array();
     this.gbtracks                 = new Hash();
     this.segment_observers        = new Hash();
     this.retrieve_tracks          = new Hash();
@@ -266,7 +264,7 @@ var GBrowseController = Class.create({
   },
 
   rerender_track:
-  function(track_name,track_div_id) {
+  function(track_name) {
 
     var gbtrack = this.gbtracks.get(track_name);
     $(gbtrack.track_image_id).setOpacity(0.3);
@@ -381,7 +379,7 @@ var GBrowseController = Class.create({
         var track_div_id = this.gbtracks.get(track_name).track_div_id;
         Balloon.prototype.hideTooltip(1);
         if (show_track){
-          Controller.rerender_track(track_name,track_div_id);
+          Controller.rerender_track(track_name);
         }
         else{
           if ($(track_div_id) != null){
@@ -407,7 +405,8 @@ var GBrowseController = Class.create({
   },
 
   reconfigure_plugin:
-  function(plugin_action,plugin_track_name,plugin_track_div_id,pc_div_id,plugin_type) {
+  function(plugin_action,plugin_track_name,pc_div_id,plugin_type) {
+    var gbtrack = this.gbtracks.get(plugin_track_name);
     var form_element = $("configure_plugin");
     new Ajax.Request('#',{
       method:     'post',
@@ -420,8 +419,8 @@ var GBrowseController = Class.create({
 
         if (plugin_type == 'annotator'){
           // update plugin track if it exists
-          if ( null != $(plugin_track_div_id)){
-            Controller.rerender_track(plugin_track_name,plugin_track_div_id);
+          if ( null != $(gbtrack.track_div_id)){
+            Controller.rerender_track(plugin_track_name);
           }
         }
         else if (plugin_type == 'filter'){
@@ -472,7 +471,8 @@ var GBrowseController = Class.create({
   },
 
   commit_file_edit:
-  function(edited_file,track_name,track_div_id) {
+  function(edited_file) {
+    var gbtrack = this.gbtracks.get(edited_file);
     var form_element = $(edit_upload_form_id);
     new Ajax.Request('#',{
       method:     'post',
@@ -486,13 +486,13 @@ var GBrowseController = Class.create({
         Controller.wipe_div(external_utility_div_id); 
 
         if ( 1 == file_created ){
-          Controller.add_track(track_name);
+          Controller.add_track(edited_file);
           Controller.update_sections(new Array(track_listing_id,external_listing_id));
         }
         else{
         // update track if it exists
-          if ( null != $(track_div_id)){
-            Controller.rerender_track(track_name,track_div_id);
+          if ( null != $(gbtrack.track_div_id)){
+            Controller.rerender_track(edited_file);
           }
           Controller.update_sections(new Array(external_listing_id));
         }
@@ -501,7 +501,8 @@ var GBrowseController = Class.create({
   },
 
   delete_upload_file:
-  function(file_name,track_div_id) {
+  function(file_name) {
+    var gbtrack = this.gbtracks.get(file_name);
     new Ajax.Request('#',{
       method:     'post',
       parameters: {
@@ -509,7 +510,7 @@ var GBrowseController = Class.create({
         file: file_name
       },
       onSuccess: function(transport) {
-        $(track_div_id).remove();
+        $(gbtrack.track_div_id).remove();
         Controller.update_sections(new Array(track_listing_id,external_listing_id));
       } // end onSuccess
     });

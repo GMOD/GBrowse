@@ -43,7 +43,7 @@ sub render_navbar {
                     -name => 'searchform',
                     -id   => 'searchform',
                     
-                    # Submitting through the Controller sees to have been a bad idea
+                    # Submitting through the Controller seems to have been a bad idea
                     #-onSubmit => q[ 
                     #    Controller.update_coordinates("set segment " + document.searchform.name.value); 
                     #    var return_val = (document.searchform.force_submit.value==1); 
@@ -641,11 +641,8 @@ sub upload_file_rows {
                 . button(
                 -name    => 'delete_button',
                 -value   => $self->tr('Delete'),
-                -onClick => 'Controller.delete_upload_file("' 
-                    . $file . '", "'
-                    . "track_$file" . '");'
-                )
-        ),
+                -onClick => 'Controller.delete_upload_file("' . $file . '");'
+                )),
     );
     $return_html .= TR( { -class => 'uploadbody' },
         td('&nbsp;'), td( { -colspan => 3 }, @info ) );
@@ -805,11 +802,7 @@ sub edit_uploaded_file {
         . button(
         -name    => 'accept_button',
         -value   => $self->tr('ACCEPT_RETURN'),
-        -onClick => 'Controller.commit_file_edit("' 
-            . $file . '", "' 
-            . $file . '", "'
-            . "track_$file"
-            . '");'
+        -onClick => 'Controller.commit_file_edit("' . $file . '");'
         );
 
     $return_str .= table(
@@ -1005,8 +998,7 @@ sub wrap_plugin_configuration {
             -value   => $self->tr('Configure_plugin'),
             -onClick => 'Controller.reconfigure_plugin("'
                 . $self->tr('Configure_plugin') . '", "'
-                . "plugin:$plugin_name" . '", "'
-                . "track_plugin:$plugin_name"
+                . "plugin:$plugin_name"
                 . '","plugin_configure_div","'
                 . $plugin_type . '");'
             );

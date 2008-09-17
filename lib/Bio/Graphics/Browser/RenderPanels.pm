@@ -760,14 +760,14 @@ sub make_map {
     push @map, $self->make_centering_map(shift @$boxes,$flip,0,$first_box_is_scale);
   }
 
-  foreach (@$boxes){
-    next unless $_->[0]->can('primary_tag');
+  foreach my $box (@$boxes){
+    next unless $box->[0]->can('primary_tag');
 
-    my $label  = $_->[5] ? $trackmap->{$_->[5]} : '';
+    my $label  = $box->[5] ? $trackmap->{$box->[5]} : '';
 
-    my $href   = $self->make_link($_->[0],$panel,$label,$_->[5]);
-    my $title  = unescape($self->make_title($_->[0],$panel,$label,$_->[5]));
-    my $target = $self->make_link_target($_->[0],$panel,$label,$_->[5]);
+    my $href   = $self->make_link($box->[0],$panel,$label,$box->[5]);
+    my $title  = unescape($self->make_title($box->[0],$panel,$label,$box->[5]));
+    my $target = $self->make_link_target($box->[0],$panel,$label,$box->[5]);
 
     my ($mouseover,$mousedown,$style);
     if ($tips) {
@@ -775,9 +775,9 @@ sub make_map {
       #retrieve the content of the balloon from configuration files
       # if it looks like a URL, we treat it as a URL.
       my ($balloon_ht,$balloonhover)     =
-	$self->balloon_tip_setting('balloon hover',$label,$_->[0],$panel,$_->[5]);
+	$self->balloon_tip_setting('balloon hover',$label,$box->[0],$panel,$box->[5]);
       my ($balloon_ct,$balloonclick)     =
-	$self->balloon_tip_setting('balloon click',$label,$_->[0],$panel,$_->[5]);
+	$self->balloon_tip_setting('balloon click',$label,$box->[0],$panel,$box->[5]);
 
       my $sticky             = $source->setting($label,'balloon sticky');
       my $height             = $source->setting($label,'balloon height') || 300;
@@ -816,14 +816,14 @@ sub make_map {
 		      style       => $style
 		      );
 
-    my $ftype = $_->[0]->primary_tag || 'feature';
-    my $fname = $_->[0]->display_name if $_->[0]->can('display_name');
-    $fname  ||= $_->[0]->name if $_->[0]->can('name');
+    my $ftype = $box->[0]->primary_tag || 'feature';
+    my $fname = $box->[0]->display_name if $box->[0]->can('display_name');
+    $fname  ||= $box->[0]->name if $box->[0]->can('name');
     $fname  ||= 'unnamed';
     $ftype = "$ftype:$fname";
-    my $line = join("\t",$ftype,@{$_}[1..4]);
+    my $line = join("\t",$ftype,@{$box}[1..4]);
     for my $att (keys %attributes) {
-      next unless defined $attributes{$att};
+      next unless defined $attributes{$att} && length $attributes{$att};
       $line .= "\t$att\t$attributes{$att}";
     }
     push @map, $line;
@@ -975,12 +975,12 @@ sub run_local_requests {
             : ();
 
         my $panel_args = $requests->{$label}->panel_args;
-        my $track_args = $requests->{$label}->track_args;
 
         my $panel
             = Bio::Graphics::Panel->new( @$panel_args, @keystyle, @nopad );
-        my $track = $panel->add_track(@$track_args);
 
+
+        my %trackmap;
         if ( my $file = $feature_files->{$label} ) {
 
             # Add feature files, including remote annotations
@@ -995,10 +995,13 @@ sub run_local_requests {
                     options  => {},
                     select   => $featurefile_select,
                 );
+                %trackmap = map { $_ => $file } @{ $panel->{tracks} || [] };
             }
         }
         else {
 
+        my $track_args = $requests->{$label}->track_args;
+        my $track = $panel->add_track(@$track_args);
             # == populate the tracks with feature data ==
             $self->add_features_to_track(
                 -labels    => [ $label, ],
@@ -1007,12 +1010,14 @@ sub run_local_requests {
                 -segment   => $segment,
                 -fsettings => $settings->{features},
             );
+                %trackmap = ($track=>$label);
         }
 
         # == generate the maps ==
         my $gd  = $panel->gd;
         my $map = $self->make_map( scalar $panel->boxes,
-            $panel, $label, { $track => $label }, 0 );
+            $panel, $label,
+            \%trackmap, 0 );
         $requests->{$label}->put_data( $gd, $map );
 
         #CORE::exit 0;
@@ -1569,7 +1574,10 @@ sub make_link {
     my $link = $feature->url;
     return $link if defined $link;
   }
-  return $label->make_link($feature) if $label && $label->isa('Bio::Graphics::FeatureFile');
+  return $label->make_link($feature)
+      if $label
+      && $label =~ /^[a-zA-Z_]/
+      && $label->isa('Bio::Graphics::FeatureFile');
 
   $panel ||= 'Bio::Graphics::Panel';
   $label ||= $data_source->feature2label($feature);

@@ -179,8 +179,6 @@ sub search_features_locally {
     
     my @found;
 
-    undef $self->{feature2dbid};
-
     # each local db gets a chance to search
     my $local_dbs = $self->local_dbs;
     return unless $local_dbs;
@@ -278,29 +276,9 @@ sub add_dbid_to_features {
     my $self           = shift;
     my ($db,$features) = @_;
     return unless $features;
-
-    no strict 'refs';
-
     my $source = $self->source;
     my $dbid   = $source->db2id($db);
-
-    my $code = sub { $self->feature2dbid(shift) };
-
-    my %seenit;
-    for my $f (@$features) {
-	$self->{feature2dbid}{overload::StrVal($f)} = $dbid;
-	my $class = ref $f;
-	next if $seenit{$class}++;
-	unless ($f->can('gbrowse_dbid')) {
-	    *{"${class}::gbrowse_dbid"} = $code;
-	}
-    }
-}
-
-sub feature2dbid {
-    my $self    = shift;
-    my $feature = shift;
-    return $self->{feature2dbid}{overload::StrVal($feature)};
+    $source->add_dbid_to_feature($_,$dbid) foreach @$features;
 }
 
 1;

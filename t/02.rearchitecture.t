@@ -176,12 +176,12 @@ ok($dbs[0],'volvox1');
 
 # Test that we can get db args from "volvox2"
 $ENV{GBROWSE_DOCS} = $Bin;
-my ($adapter,@args) = $source->db2args('volvox2');
+my ($dbid,$adapter,@args) = $source->db2args('volvox2');
 ok($adapter,'Bio::DB::GFF');
 ok("@args[0,1]",'-adaptor memory');
 
 # Test that we get the same args from the binding sites track
-my($adapter2,@args2) = $source->db_settings('BindingSites');
+my($dbid2,$adapter2,@args2) = $source->db_settings('BindingSites');
 ok($adapter,$adapter2);
 ok("@args[0..3]","@args2[0..3]");
 
@@ -193,15 +193,15 @@ ok($db1,$db2);
 ok($db1,$db3);
 
 # Test reverse mapping
-ok(scalar $source->db2id($db1),'BindingSites');
-ok(join(' ',sort $source->db2id($db1)),'BindingSites Linkage2');
+ok(scalar $source->db2id($db1),'volvox2:database');
+ok(join(' ',sort $source->db2id($db1)),'volvox2:database');
 
 # Test that anonymous databases that use the same open 
 # arguments get mapped onto a single database
 my $db4 = $source->open_database('Linkage');
 ok($db1,$db4);
-ok(scalar $source->db2id($db4),'BindingSites');
-ok(join(' ',sort $source->db2id($db1)),'BindingSites Linkage Linkage2');
+ok(scalar $source->db2id($db4),'volvox2:database');
+ok(join(' ',$source->db2id($db1)),'volvox2:database Linkage');
 
 # Test restrictions/authorization
 %tracks = map {$_=>1} $source->labels;
@@ -221,15 +221,15 @@ ok(!eval{$source->make_link();1});
 # test that environment variable interpolation is working in dbargs
 $source = $globals->create_data_source('yeast_chr1');
 $ENV{GBROWSE_DOCS} = '/foo/bar';
-($adapter,@args) = $source->db_settings;
+(undef,$adapter,@args) = $source->db_settings;
 ok($args[3]=~m!^/foo/bar!);
 
 $ENV{GBROWSE_DOCS} = '/buzz/buzz';
-($adapter,@args) = $source->db_settings;
+(undef,$adapter,@args) = $source->db_settings;
 ok($args[3]=~m!^/foo/bar!);  # old value cached
 
 $source->clear_cache;
-($adapter,@args) = $source->db_settings;
+(undef,$adapter,@args) = $source->db_settings;
 ok($args[3]=~m!^/buzz/buzz!);  # old value cached
 
 exit 0;

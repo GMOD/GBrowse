@@ -19,6 +19,9 @@ my %CONFIG_CACHE; # cache parsed config files
 my %DB_SETTINGS;  # cache database settings
 my %DB;           # cache opened database connections
 
+# hacky way of keeping track of mapping of features to dbids
+my (%FEATURE2DBID,%SEENCLASS); 
+
 =head1 SYNOPSIS
 
 =head1 DESCRIPTION
@@ -33,6 +36,8 @@ sub new {
   my $class            = shift;
   my $config_file_path = shift;
   my ($name,$description,$globals) = @_;
+
+  %FEATURE2DBID = ();
 
   # this code caches the config info so that we don't need to reparse in persistent (e.g. modperl) environment
   my $mtime            = (stat($config_file_path))[9];
@@ -714,7 +719,7 @@ sub db2args {
     return $self->db_settings("$dbname:database");
 }
 
-=item ($adaptor,@argv) = $dsn->db_settings('track_label')
+=item ($dbid,$adaptor,@argv) = $dsn->db_settings('track_label')
 
 Return the adaptor and arguments suitable for the database identified
 by the given track label. If no track label is given then the
@@ -743,7 +748,7 @@ sub db_settings {
   eval "require $adaptor; 1" or die $@;
 
   my $args    = $self->fallback_setting($section => 'db_args');
-  my @argv = ref $args eq 'CODE'
+  my @argv    = ref $args eq 'CODE'
         ? $args->()
 	: shellwords($args||'');
 
@@ -752,33 +757,12 @@ sub db_settings {
       s/\$ENV{(\w+)}/$ENV{$1}||''/ge;
   }
 
-  # for compatibility with older versions of the browser, we'll hard-code some arguments
-  if (my $adaptor = $self->fallback_setting($section => 'adaptor')) {
-    push @argv,(-adaptor => $adaptor);
-  }
-
-  if (my $dsn = $self->fallback_setting($section => 'database')) {
-    push @argv,(-dsn => $dsn);
-  }
-
-  if (my $fasta = $self->fallback_setting($section => 'fasta_files')) {
-    push @argv,(-fasta=>$fasta);
-  }
-
-  if (my $user = $self->fallback_setting($section => 'user')) {
-    push @argv,(-user=>$user);
-  }
-
-  if (my $pass = $self->fallback_setting($section => 'pass')) {
-    push @argv,(-pass=>$pass);
-  }
-
   if (defined (my $a = $self->fallback_setting($section => 'aggregators'))) {
     my @aggregators = shellwords($a||'');
     push @argv,(-aggregator => \@aggregators);
   }
 
-  my @result = ($adaptor,@argv);
+  my @result = ($section,$adaptor,@argv);
 
   # cache settings
   $DB_SETTINGS{$self,$track} = \@result;
@@ -800,12 +784,12 @@ sub open_database {
 
   $track  ||= 'general';
 
-  my ($adaptor,@argv) = $self->db_settings($track);
+  my ($dbid,$adaptor,@argv) = $self->db_settings($track);
   my $key             = Dumper($adaptor,@argv);
 
   if (exists $DB{$key}) {
       # remember mapping of database to track
-      $self->{db2track}{$DB{$key}}{$track}++;
+      $self->{db2track}{$DB{$key}}{$dbid}++;
       return $DB{$key};
   }
 
@@ -819,16 +803,17 @@ sub open_database {
   $DB{$key}->strict_bounds_checking(1) if $DB{$key}->can('strict_bounds_checking');
   $DB{$key}->absolute(1)               if $DB{$key}->can('absolute');
 
-  $self->{db2track}{$DB{$key}}{$track}++;
+  $self->{db2track}{$DB{$key}}{$dbid}++;
   $DB{$key};
 }
 
 =item @tracks = $dsn->db2track($db)
 
-=item $track  = $dsn->db2track($db)
+=item $dbid  = $dsn->db2track($db)
 
-Given a database handle, return all tracks that use that database. In
-a scalar context, returns just the first track that uses it.
+Given a database handle, return all dbids that correspond to that
+database. In a scalar context, returns just the first dbid that uses
+it. It is less confusing to call in a scalar context.
 
 =cut
 
@@ -836,7 +821,18 @@ sub db2id {
     my $self = shift;
     my $db   = shift;
     my @tracks = keys %{$self->{db2track}{$db}} or return;
-    return wantarray ? @tracks : (sort @tracks)[0];
+    my (@symbolic,@general,@rest);
+    for (@tracks) {
+	if (/:database$/i) {
+	    push @symbolic,$_;
+	} elsif (lc $_ eq 'general') {
+	    push @general,$_;
+	} else {
+	    push @rest,$_;
+	}
+    }
+    @tracks = (@symbolic,@general,@rest); # triage
+    return wantarray ? @tracks : $tracks[0];
 }
 
 # this is an aggregator-aware way of retrieving all the named types
@@ -895,6 +891,32 @@ sub generate_image {
   close $f;
   return $url;
 }
+
+=head2 $source->add_dbid_to_feature($feature,$dbid_hashref)
+
+This adds a new method called gbrowse_dbid() to a feature. Do not call
+it if the method is already in the feature's class. The hashref should
+be populated by feature memory locations (overload::StrVal($feature))
+as keys and database symbolic IDs as values.
+
+=cut
+
+sub add_dbid_to_feature {
+    my $self           = shift;
+    my ($feature,$dbid) = @_;
+
+    $FEATURE2DBID{overload::StrVal($feature)}=$dbid;
+
+    my $class = ref $feature;
+    return if $SEENCLASS{$class}++;
+
+    no strict 'refs';
+    my $method = sub { my $f = shift;
+		       return $FEATURE2DBID{overload::StrVal($f)}
+    };
+    *{"${class}::gbrowse_dbid"} = $method;
+}
+
 
 1;
 

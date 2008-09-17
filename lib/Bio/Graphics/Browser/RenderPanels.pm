@@ -770,6 +770,7 @@ sub make_map {
 
     my ($mouseover,$mousedown,$style);
     if ($tips) {
+
       #retrieve the content of the balloon from configuration files
       # if it looks like a URL, we treat it as a URL.
       my ($balloon_ht,$balloonhover)     =
@@ -1010,7 +1011,7 @@ sub run_local_requests {
         # == generate the maps ==
         my $gd  = $panel->gd;
         my $map = $self->make_map( scalar $panel->boxes,
-            $panel, $label, { $label => $track }, 0 );
+            $panel, $label, { $track => $label }, 0 );
         $requests->{$label}->put_data( $gd, $map );
 
         #CORE::exit 0;
@@ -1042,13 +1043,14 @@ sub add_features_to_track {
     $db2db{$db}  =  $db;  # cache database object
   }
 
-  my %iterators;
+  my (%iterators,%iterator2dbid);
   for my $db (keys %db2db) {
       my @types_in_this_db = map { $source->label2type($_,$length) } keys %{$db2label{$db}};
       next unless @types_in_this_db;
       my $iterator  = $self->get_iterator($db2db{$db},$segment,\@types_in_this_db)
 	  or next;
-      $iterators{$iterator} = $iterator;
+      $iterators{$iterator}     = $iterator;
+      $iterator2dbid{$iterator} = $source->db2id($db);
   }
 
   my (%groups,%feature_count,%group_pattern,%group_field);
@@ -1056,6 +1058,8 @@ sub add_features_to_track {
   # The effect of this loop is to fetch a feature from each iterator in turn
   # using a queueing scheme. This allows streaming iterators to parallelize a
   # bit. This may not be worth the effort.
+  my (%feature2dbid,%classes);
+
   while (keys %iterators) {
     for my $iterator (values %iterators) {
 
@@ -1065,6 +1069,8 @@ sub add_features_to_track {
 	delete $iterators{$iterator};
 	next;
       }
+
+      $source->add_dbid_to_feature($feature,$iterator2dbid{$iterator});
 
       my @labels = $source->feature2label($feature,$length);
 
@@ -1228,7 +1234,6 @@ sub get_iterator {
 
   return $db_segment->get_feature_stream(-type=>$feature_types);
 }
-
 
 =head2 add_feature_file
 

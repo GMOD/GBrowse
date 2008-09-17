@@ -385,7 +385,7 @@ sub render_track_table {
 		      div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
 		      table({-width=>'100%',-class=>"searchbody"},
 			    TR(td{-align=>'right'},
-			       b(submit(-name => $self->tr('Update'))
+			       b(submit(-name => $self->tr('Update_tracks'))
 				)
 			      )
 			   ),
@@ -543,7 +543,7 @@ sub render_global_config {
             td( {   -colspan => 3,
                     -align   => 'right'
                 },
-                b( submit( -name => $self->tr('Update') ) )
+                b( submit( -name => $self->tr('Update_settings') ) )
             )
         )
         ) . end_form();

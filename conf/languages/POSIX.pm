@@ -191,7 +191,11 @@ END
 
    CLEAR_HIGHLIGHTING => 'Clear highlighting',
 
-   UPDATE      => 'Update Image',
+   UPDATE      => 'Update',
+
+   UPDATE_TRACKS => 'Update Tracks',
+
+   UPDATE_SETTINGS => 'Update Appearance',
 
    DUMPS       => 'Reports &amp; Analysis',
 

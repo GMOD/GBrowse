@@ -1590,7 +1590,9 @@ sub update_options {
   # just looking to see if the settings form was submitted
   if (param('width')) { 
     $state->{grid}  = param('grid');
-    unless ( defined $data_source->cache_time()
+    $state->{show_tooltips} = param('show_tooltips');
+    unless (
+	defined $data_source->cache_time()
         && $data_source->cache_time() == 0 )
     {
         $state->{cache} = param('cache');

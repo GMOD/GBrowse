@@ -213,7 +213,8 @@ sub use_renderfarm {
   my $self   = shift;
   return $self->{use_renderfarm} if exists $self->{use_renderfarm};
 
-  $self->source->global_setting('renderfarm') or return;	#comment out to force remote rendering (kludge)
+  #comment out to force remote rendering (kludge)
+  $self->source->global_setting('renderfarm') or return;	
 
   $LPU_AVAILABLE = eval { require LWP::Parallel::UserAgent; } unless defined $LPU_AVAILABLE;
   $STO_AVAILABLE = eval { require Storable; 1; }              unless defined $STO_AVAILABLE;
@@ -1228,7 +1229,8 @@ sub get_iterator {
   }
 
   unless ($db_segment) {
-    warn "Couldn't get segment $segment from database $db";
+    warn "Couldn't get segment $segment from database $db; id=",
+       $self->source->db2id($db);
     return;
   }
 

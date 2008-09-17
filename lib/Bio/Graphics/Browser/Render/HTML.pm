@@ -383,12 +383,6 @@ sub render_track_table {
 		      start_form(-name=>'trackform',
 				 -id=>'trackform'),
 		      div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
-		      table({-width=>'100%',-class=>"searchbody"},
-			    TR(td{-align=>'right'},
-			       b(submit(-name => $self->tr('Update_tracks'))
-				)
-			      )
-			   ),
 		      end_form
 		     );
 }
@@ -727,7 +721,11 @@ sub das_table {
 	  my $escaped_url = CGI::escape($url);
 	  push @rows,th({-align=>'right',-width=>'20%'},"URL",++$count).
 	      td(textfield(-name=>'eurl',-size=>80,-value=>$url,-override=>1),
-		 submit(-name=>"modify.$escaped_url",-value=>$self->tr('Delete')),
+         button(
+            -name    => 'delete_button',
+            -value   => $self->tr('Delete'),
+            -onClick => 'Controller.delete_upload_file("' . $url . '");'
+         ),
 		 br,
 		 a({-href=>$f,-target=>'help'},'['.$self->tr('Download').']'),
 		 $self->get_uploaded_file_info($self->track_visible($url) && $feature_files->{$url})

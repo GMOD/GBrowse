@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.110 2008-09-17 01:24:05 lstein Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.111 2008-09-17 15:02:42 mwz444 Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -403,7 +403,7 @@ sub db_settings {
   }
 
   if (defined (my $a = $self->setting('aggregators'))) {
-    my @aggregators = shellwords($a||'');
+    my @aggregators = Bio::Graphics::Browser::Util::shellwords($a||'');
     push @argv,(-aggregator => \@aggregators);
   }
 

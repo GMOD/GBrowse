@@ -7,7 +7,7 @@ package Bio::Graphics::Browser::GFFPrinter;
 #
 ###################################################################
 
-# $Id: GFFPrinter.pm,v 1.1 2008-09-15 20:32:28 mwz444 Exp $
+# $Id: GFFPrinter.pm,v 1.2 2008-09-18 20:52:41 mwz444 Exp $
 
 # Dirt simple GFF3 dumper, suitable for a lightweight replacement to DAS.
 # Call this way:
@@ -20,10 +20,9 @@ package Bio::Graphics::Browser::GFFPrinter;
 #     http://my.host/cgi-bin/gbrowse/volvox?gbgff=1;q=ctgA:1..2000;\
 #           t=Genes+ExampleFeatures+file:my_upload.txt;id=session_id
 
-use Bio::Graphics::Browser::Util;
 use CGI 'param', 'path_info', 'header';
 use Bio::Graphics::FeatureFile;
-use Text::ParseWords 'shellwords';
+use Bio::Graphics::Browser::Shellwords;
 
 sub new {
     my $class   = shift;

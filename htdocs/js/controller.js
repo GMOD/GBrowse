@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.49 2008-09-17 12:54:02 mwz444 Exp $
+ $Id: controller.js,v 1.50 2008-09-18 15:36:45 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -120,6 +120,10 @@ var GBrowseController = Class.create({
   update_sections:
   function(section_names, param_str) {
 
+    if (param_str==null){
+        param_str = '';
+    }
+
     var request_str = "update_sections=1" + param_str;
     for (var i = 0; i < section_names.length; i++) {
       request_str += "&section_names="+section_names[i];
@@ -221,11 +225,13 @@ var GBrowseController = Class.create({
   }, // end update_coordinates
 
   add_track:
-  function(track_name) {
+  function(track_name, onSuccessFunc) {
 
-    if ( this.gbtracks.get(track_name) !=null 
-      && 
-      null != $(this.gbtracks.get(track_name).track_div_id)){
+    if ( track_name == '' 
+      || (this.gbtracks.get(track_name) !=null 
+          && 
+          null != $(this.gbtracks.get(track_name).track_div_id))
+    ){
       return;
     }
 
@@ -236,6 +242,9 @@ var GBrowseController = Class.create({
         track_name: track_name,
       },
       onSuccess: function(transport) {
+        if (onSuccessFunc!=null){
+            onSuccessFunc();
+        }
         var results    = transport.responseJSON;
         var track_data = results.track_data;
         for (var ret_track_name in track_data){
@@ -376,17 +385,14 @@ var GBrowseController = Class.create({
             reconfigure_track: track_name
           }).toQueryString(),
       onSuccess: function(transport) {
-        var track_div_id = this.gbtracks.get(track_name).track_div_id;
+        var track_div_id = Controller.gbtracks.get(track_name).track_div_id;
         Balloon.prototype.hideTooltip(1);
         if (show_track){
           Controller.rerender_track(track_name);
         }
         else{
           if ($(track_div_id) != null){
-            // Don't know why I need to remove this twice, but I do.
-            // The second remove seems to actually remove it from the DOM.
-            $(track_div_id).remove();
-            $(track_div_id).remove();
+            actually_remove(track_div_id);
           }
           Controller.update_sections(new Array(track_listing_id));
         }
@@ -486,8 +492,9 @@ var GBrowseController = Class.create({
         Controller.wipe_div(external_utility_div_id); 
 
         if ( 1 == file_created ){
-          Controller.add_track(edited_file);
-          Controller.update_sections(new Array(track_listing_id,external_listing_id));
+          Controller.add_track(edited_file, function(){
+            Controller.update_sections(new Array(track_listing_id,external_listing_id));
+          })
         }
         else{
         // update track if it exists
@@ -510,10 +517,22 @@ var GBrowseController = Class.create({
         file: file_name
       },
       onSuccess: function(transport) {
-        $(gbtrack.track_div_id).remove();
+        actually_remove(gbtrack.track_div_id);
         Controller.update_sections(new Array(track_listing_id,external_listing_id));
       } // end onSuccess
     });
+  },
+
+  // Remote Annotations Methods *************************************************
+
+  new_remote_track:
+  function(eurl) {
+    if ( eurl == ''){
+        return;
+    }
+    Controller.add_track(eurl, function(){
+      Controller.update_sections(new Array(track_listing_id,external_listing_id));
+    })
   },
 
 
@@ -538,5 +557,14 @@ function initialize_page() {
 function create_time_key () {
     time_obj = new Date();
     return time_obj.getTime();
+}
+
+//prototype's remove function doesn't actually remove the element from
+//reachability.
+function actually_remove (element_name) {
+  $(element_name).remove();
+  $(element_name).innerHTML = '';
+  $(element_name).name = 'rmd';
+  $(element_name).id = 'rmd';
 }
 

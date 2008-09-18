@@ -733,11 +733,17 @@ sub das_table {
       }
   }
 
-  push @rows,th({-align=>'right',-width=>'20%'},
+  push @rows,
+    th({-align=>'right',-width=>'20%'},
 		$self->tr('Remote_url')).
-		    td(textfield(-name=>'eurl',-size=>80,-value=>'',-override=>1),
-		       $presets,
-		       submit($self->tr('Update_urls')));
+    td(textfield(-name=>'eurl',-id=>'eurl',-size=>80,-value=>'',-override=>1),
+       $presets,
+       button(
+         -name    => 'update_url_button',
+         -value   => $self->tr('Update_urls'),
+         -onClick => 'Controller.new_remote_track($("eurl").value);',
+       ),
+    );
 
   return table({-border=>0,-width=>'100%'},
 	       TR(

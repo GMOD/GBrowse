@@ -26,7 +26,7 @@ sub new {
 		    state         => $state,
 		    sources       => {},
 		   },ref $package || $package;
-  for my $track (keys %{$state->{features}}) {
+  for my $track (@{$state->{tracks}||[]}) {
     if ($track =~ /^(http|ftp|das):/) {
       $self->add_source($track,$track);
       next;

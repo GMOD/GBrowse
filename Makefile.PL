@@ -7,7 +7,7 @@ use FindBin '$Bin';
 use Cwd;
 require 5.005003;
 
-my $VERSION     = '1.69';
+my $VERSION     = '2.00pre1';
 my $working_dir = cwd;
 
 my @OPTIONS = qw(APACHE CONF HTDOCS CGIBIN GBROWSE_ROOT
@@ -229,6 +229,9 @@ if ($bioperl_needs_patching) {
   print STDERR "\nInstalled Bio::Graphics version $biographics_version is less than desired version $patch_version.\nYou need to update your BioPerl installation to version 1.5.2.\n\n";
   die;
 }
+
+print STDERR "Making the ./htdocs/tmp directory world writable for use in a development environment.\n";
+chmod 0777=>'htdocs/tmp';
 
 my @dir = ();
 push @dir,'libalign'         if $OPTIONS{DO_XS};

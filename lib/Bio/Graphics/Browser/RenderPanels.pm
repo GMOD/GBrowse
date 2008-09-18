@@ -6,9 +6,8 @@ use warnings;
 use Bio::Graphics;
 use Digest::MD5 'md5_hex';
 use Carp 'croak','cluck';
-use Text::Shellwords 'shellwords';
 use Bio::Graphics::Browser::CachedTrack;
-use Bio::Graphics::Browser::Util qw[modperl_request citation];
+use Bio::Graphics::Browser::Util qw[modperl_request citation shellwords];
 use IO::File;
 use POSIX 'WNOHANG','setsid';
 

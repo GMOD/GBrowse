@@ -4,10 +4,10 @@ package Bio::Graphics::Browser::UploadSet;
 use strict;
 use base 'Bio::Graphics::Browser::UserData';
 
+use Bio::Graphics::Browser::Util 'shellwords';
 use CGI 'cookie','param';
 use Digest::MD5 'md5_hex';
 use Carp qw/carp croak/;
-use Text::Shellwords;
 use constant DEBUG=>0;
 
 sub new {

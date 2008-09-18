@@ -1,12 +1,12 @@
 package Bio::Graphics::Browser::Plugin::Aligner;
-# $Id: Aligner.pm,v 1.12 2006-11-02 03:19:56 lstein Exp $
+# $Id: Aligner.pm,v 1.13 2008-09-18 15:27:07 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser::Plugin;
 use CGI qw(table a TR td th p popup_menu radio_group checkbox checkbox_group h1 h2 pre);
-use Text::Shellwords;
 use Bio::Graphics::Browser::Realign 'align_segs';
 use Bio::Graphics::Browser::PadAlignment;
+use Bio::Graphics::Browser::Util 'shellwords';
 
 use constant DEBUG => 0;
 use constant DEFAULT_RAGGED_ENDS => (0,10,25,50,100,150,500);

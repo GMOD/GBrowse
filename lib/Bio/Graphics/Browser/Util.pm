@@ -24,10 +24,11 @@ Browser.  It is not currently designed for external use.
 
 use strict;
 use base 'Exporter';
+use Text::ParseWords qw();
 use Carp 'carp','cluck';
 
-our @EXPORT    = qw(modperl_request error citation);
-our @EXPORT_OK = qw(modperl_request error citation);
+our @EXPORT    = qw(modperl_request error citation shellwords);
+our @EXPORT_OK = qw(modperl_request error citation shellwords);
 
 use constant DEBUG => 1;
 
@@ -77,6 +78,19 @@ sub citation {
   }
   $c ||= $data_source->setting($label=>'citation');
   return $c;
+}
+
+# work around an annoying uninit variable warning from Text::Parsewords
+sub shellwords {
+    my @args = @_;
+    return unless @args;
+    foreach(@args) {
+	s/^\s+//;
+	s/\s+$//;
+	$_ = '' unless defined $_;
+    }
+    my @result = Text::ParseWords::shellwords(@args);
+    return @result;
 }
 
 =back

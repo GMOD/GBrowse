@@ -1,12 +1,12 @@
 package Bio::Graphics::Browser::PluginSet;
 # API for using plugins
 
-#  $Id: PluginSet.pm,v 1.7 2008-09-09 20:53:36 lstein Exp $
+#  $Id: PluginSet.pm,v 1.8 2008-09-18 15:27:07 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser;
+use Bio::Graphics::Browser::Util 'shellwords';
 use CGI 'param';
-use Text::ParseWords 'shellwords';
 use constant DEBUG=>0;
 
 sub new {

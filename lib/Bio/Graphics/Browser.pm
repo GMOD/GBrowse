@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.167.4.34.2.32.2.111 2008-09-17 15:02:42 mwz444 Exp $
+# $Id: Browser.pm,v 1.167.4.34.2.32.2.112 2008-09-19 17:23:46 scottcain Exp $
 
 # GLOBALS for the Browser
 # This package provides methods that support the Generic Genome Browser.
@@ -3052,6 +3052,14 @@ sub plain_citation {
     $text =~ s/^(.{$truncate}).+/$1\.\.\./;
   }
   CGI::escape($text);
+}
+
+sub search_anchor {
+  my $self = shift;
+  my $anchor = shift;
+
+  return $self->{'search_anchor'} = $anchor if defined $anchor;
+  return $self->{'search_anchor'};
 }
 
 

@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.107 2008-09-17 01:24:00 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.108 2008-09-19 17:23:46 scottcain Exp $
 
 use strict;
 use Bio::Graphics;
@@ -448,8 +448,11 @@ sub main_display {
   my ($segment,$whole_segment);
 
   # first of all, if there are no segments, then try a keyword search and store the results
+  my $search_anchor = $CONFIG->search_anchor('search');
   if (param() && (@$segments == 0) && (my $n = $page_settings->{name})) {
+      print a({-name=>$search_anchor});
       error($CONFIG->tr('NOT_FOUND',escapeHTML($n)));
+      $CONFIG->search_anchor('search_section');
   }
 
   # if there's a single segment, then print a message and store the segment into a scalar
@@ -1188,7 +1191,7 @@ sub navigation_table {
   my $plugin_menu = plugin_menu($settings,$PLUGINS);
   my $plugins     = $plugin_menu ? b($CONFIG->tr('Dumps')).':'.br.$plugin_menu : '';
 
-  $table .= a({-name=>'search'},
+  $table .= a({-name=>$CONFIG->search_anchor},
 	      toggle($settings,
 		     'Search',
 		     table({-border=>0, -width=>'100%',-cellspacing=>0,-class=>'searchtitle'},

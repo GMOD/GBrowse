@@ -3,6 +3,7 @@ package Bio::Graphics::Glyph::wiggle_xyplot;
 use strict;
 use base qw(Bio::Graphics::Glyph::xyplot Bio::Graphics::Glyph::smoothing);
 use IO::File;
+use File::Spec;
 
 # we override the draw method so that it dynamically creates the parts needed
 # from the wig file rather than trying to fetch them from the database
@@ -12,13 +13,13 @@ sub draw {
 
   my $feature     = $self->feature;
   my ($wigfile)   = $feature->attributes('wigfile');
-  return $self->draw_wigfile($feature,$wigfile,@_) if $wigfile;
+  return $self->draw_wigfile($feature,$self->rel2abs($wigfile),@_) if $wigfile;
 
   my ($wigdata) = $feature->attributes('wigdata');
   return $self->draw_wigdata($feature,$wigdata,@_) if $wigdata;
 
   my ($densefile) = $feature->attributes('densefile');
-  return $self->draw_densefile($feature,$densefile,@_) if $densefile;
+  return $self->draw_densefile($feature,$self->rel2abs($densefile),@_) if $densefile;
 
   return $self->SUPER::draw(@_);
 }
@@ -200,6 +201,13 @@ sub create_parts_for_segment {
   $self->add_feature(@parts);
 }
 
+sub rel2abs {
+    my $self = shift;
+    my $wig  = shift;
+    my $path = $self->option('basedir');
+    return File::Spec->rel2abs($wig,$path);
+}
+
 
 1;
 
@@ -226,11 +234,11 @@ TODO! UPDATE DOCUMENTATION FOR DENSE FILES
  ChipCHIP Feature3 25001..35000 wigfile=./test.wig
 
 The "wigfile" attribute gives a relative or absolute pathname to a
-Bio::Graphics::Wiggle format file. The optional "wigstart" option
-gives the offset to the start of the data. If not specified, a linear
-search will be used to find the data. The data consist of a packed
-binary representation of the values in the feature, using a constant
-step such as present in tiling array data.
+Bio::Graphics::Wiggle format file. The data consist of a packed binary
+representation of the values in the feature, using a constant step
+such as present in tiling array data. Wigfiles are created using the
+Bio::Graphics::Wiggle module or the wiggle2gff3.pl script, currently
+both part of the gbrowse package.
 
 =head2 OPTIONS
 
@@ -240,16 +248,10 @@ recognized:
    Name        Value        Description
    ----        -----        -----------
 
-   wiggle      path name    Path to the Bio::Graphics::Wiggle file for vales
-
-   densefile   path name    Path to a Bio::Graphics::DenseFeature object
-                               (deprecated)
-
-   denseoffset integer      Integer offset to where the data begins in the
-                               Bio::Graphics::DenseFeature file (deprecated)
-
-   densesize   integer      Integer size of the data in the Bio::Graphics::DenseFeature
-                               file (deprecated)
+   basedir     path         Path to be used to resolve "wigfile" and "densefile"
+                                tags giving relative paths. Default is to use the
+                                current working directory. Absolute wigfile &
+                                densefile paths will not be changed.
 
    smoothing   method name  Smoothing method: one of "mean", "max", "min" or "none"
 
@@ -266,7 +268,26 @@ recognized:
 
    neg_color   color        When drawing bicolor plots, the fill color to use for values
                               that are below the pivot point.
-   
+
+=head2 SPECIAL FEATURE TAGS
+
+The glyph expects one or more of the following tags (attributes) in
+feature it renders:
+
+   Name        Value        Description
+   ----        -----        -----------
+
+   wigfile     path name    Path to the Bio::Graphics::Wiggle file for vales.
+                            (required)
+
+   densefile   path name    Path to a Bio::Graphics::DenseFeature object
+                               (deprecated)
+
+   denseoffset integer      Integer offset to where the data begins in the
+                               Bio::Graphics::DenseFeature file (deprecated)
+
+   densesize   integer      Integer size of the data in the Bio::Graphics::DenseFeature
+                               file (deprecated)
 
 =head1 BUGS
 

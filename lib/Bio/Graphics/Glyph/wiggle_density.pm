@@ -1,8 +1,9 @@
 package Bio::Graphics::Glyph::wiggle_density;
-# $Id: wiggle_density.pm,v 1.1.2.27 2008-08-10 23:33:10 lstein Exp $
+# $Id: wiggle_density.pm,v 1.1.2.28 2008-09-19 15:28:17 lstein Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing Bio::Graphics::Glyph::minmax);
+use File::Spec;
 
 sub draw {
   my $self = shift;
@@ -13,7 +14,7 @@ sub draw {
 
   my ($wigfile) = $feature->attributes('wigfile');
   if ($wigfile) {
-    $self->draw_wigfile($wigfile,@_);
+    $self->draw_wigfile($self->rel2abs($wigfile),@_);
     $self->draw_label(@_)       if $self->option('label');
     $self->draw_description(@_) if $self->option('description');
     return;
@@ -29,7 +30,7 @@ sub draw {
 
   my ($densefile) = $feature->attributes('densefile');
   if ($densefile) {
-    $self->draw_densefile($feature,$densefile,@_);
+    $self->draw_densefile($self->rel2abs($feature),$densefile,@_);
     $self->draw_label(@_)       if $self->option('label');
     $self->draw_description(@_) if $self->option('description');
     return;
@@ -332,6 +333,12 @@ sub minmax {
   }
 }
 
+sub rel2abs {
+    my $self = shift;
+    my $wig  = shift;
+    my $path = $self->option('basedir');
+    return File::Spec->rel2abs($wig,$path);
+}
 
 1;
 
@@ -370,16 +377,10 @@ following options are recognized:
    Name        Value        Description
    ----        -----        -----------
 
-   wiggle      path name    Path to the Bio::Graphics::Wiggle file for vales
-
-   densefile   path name    Path to a Bio::Graphics::DenseFeature object
-                               (deprecated)
-
-   denseoffset integer      Integer offset to where the data begins in the
-                               Bio::Graphics::DenseFeature file (deprecated)
-
-   densesize   integer      Integer size of the data in the Bio::Graphics::DenseFeature
-                               file (deprecated)
+   basedir     path         Path to be used to resolve "wigfile" and "densefile"
+                                tags giving relative paths. Default is to use the
+                                current working directory. Absolute wigfile &
+                                densefile paths will not be changed.
 
    smoothing   method name  Smoothing method: one of "mean", "max", "min" or "none"
 
@@ -396,6 +397,26 @@ following options are recognized:
 
    neg_color   color        When drawing bicolor plots, the fill color to use for values
                               that are below the pivot point.
+
+=head2 SPECIAL FEATURE TAGS
+
+The glyph expects one or more of the following tags (attributes) in
+feature it renders:
+
+   Name        Value        Description
+   ----        -----        -----------
+
+   wigfile     path name    Path to the Bio::Graphics::Wiggle file for vales.
+                            (required)
+
+   densefile   path name    Path to a Bio::Graphics::DenseFeature object
+                               (deprecated)
+
+   denseoffset integer      Integer offset to where the data begins in the
+                               Bio::Graphics::DenseFeature file (deprecated)
+
+   densesize   integer      Integer size of the data in the Bio::Graphics::DenseFeature
+                               file (deprecated)
 
 =head1 BUGS
 

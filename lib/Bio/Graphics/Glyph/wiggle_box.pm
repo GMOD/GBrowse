@@ -1,9 +1,10 @@
 package Bio::Graphics::Glyph::wiggle_box;
 
-# $Id: wiggle_box.pm,v 1.1.2.3 2008-08-02 16:16:42 lstein Exp $
+# $Id: wiggle_box.pm,v 1.1.2.4 2008-09-19 15:28:17 lstein Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing);
+use File::Spec;
 
 sub draw {
   my $self = shift;
@@ -12,7 +13,7 @@ sub draw {
 
   my ($wigfile) = $feature->attributes('wigfile');
   if ($wigfile) {
-    $self->draw_wigfile($feature,$wigfile,@_);
+    $self->draw_wigfile($feature,$self->rel2abs($wigfile),@_);
     $self->draw_label(@_)       if $self->option('label');
     $self->draw_description(@_) if $self->option('description');
     return;
@@ -162,6 +163,13 @@ sub draw_segment {
   }
 }      
 
+sub rel2abs {
+    my $self = shift;
+    my $wig  = shift;
+    my $path = $self->option('basedir');
+    return File::Spec->rel2abs($wig,$path);
+}
+
 1;
 
 __END__
@@ -235,6 +243,9 @@ value, with numeric or ".".  An example is shown below:
 This glyph accepts the standard generic option set.  It differs in that
 the label and description and title/mouseover labels apply to the whole, 
 panel-wide sub-track feature rather than to individual boxes.
+
+See Bio::Graphics::Glyph::wiggle_xyplot for a description of the
+wiggle-specific options and data formats.
 
 =head1 BUGS
 

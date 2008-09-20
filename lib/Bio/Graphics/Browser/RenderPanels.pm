@@ -1599,8 +1599,8 @@ sub make_link {
     return $val;
   }
   elsif (!$link || $link eq 'AUTO') {
-    my $n     = $feature->display_name;
-    my $c     = $feature->seq_id;
+    my $n     = $feature->display_name || '';
+    my $c     = $feature->seq_id       || '';
     my $name  = CGI::escape("$n");  # workaround CGI.pm bug
     my $class = eval {CGI::escape($feature->class)}||'';
     my $ref   = CGI::escape("$c");  # workaround again
@@ -1661,11 +1661,11 @@ sub make_title {
     } else {
       my ($start,$end) = ($feature->start,$feature->end);
       ($start,$end)    = ($end,$start) if $feature->strand < 0;
+      my $name         = $feature->can('display_name') ? $feature->display_name : $feature->info;
+      $name          ||= '';
       join(' ',
 	   "$key:",
-	   $feature->can('display_name') ? $feature->display_name : $feature->info,
-	   ($feature->can('seq_id')      ? $feature->seq_id : $feature->location->seq_id)
-	   .":".
+	   "$name:".
 	   (defined $start ? $start : '?')."..".(defined $end ? $end : '?')
 	  );
     }

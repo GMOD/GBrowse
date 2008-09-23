@@ -245,7 +245,7 @@ sub render_tracks {
 
     for my $label ( keys %$requests ) {
         my $data   = $requests->{$label};
-        my $gd     = $data->gd or next;
+        my $gd     = eval{$data->gd} or next;
         my $map    = $data->map;
         my $width  = $data->width;
         my $height = $data->height;
@@ -1009,11 +1009,16 @@ sub run_local_requests {
                 -segment   => $segment,
                 -fsettings => $settings->{features},
             );
-                %trackmap = ($track=>$label);
+	%trackmap = ($track=>$label);
         }
 
         # == generate the maps ==
-        my $gd  = $panel->gd;
+        my $gd  = eval {$panel->gd};
+	unless ($gd) {
+	    warn "Fatal error while making track for $label: $@";
+	    $requests->{$label}->flag_error($@);
+	    next;
+	}
         my $map = $self->make_map( scalar $panel->boxes,
             $panel, $label,
             \%trackmap, 0 );

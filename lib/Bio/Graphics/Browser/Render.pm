@@ -2516,6 +2516,36 @@ sub render_grey_track {
     return $html;
 }
 
+sub render_error_track {
+    my $self = shift;
+    my %args             = @_;
+    my $image_width      = $args{'image_width'};
+    my $image_height     = $args{'image_height'};
+    my $image_element_id = $args{'image_element_id'};
+    my $track_name       = $args{'track_name'};
+    my $error_message    = $args{'error_message'};
+
+    my $gd               = GD::Image->new($image_width,$image_height);
+    my $black            = $gd->colorAllocate(0,0,0);
+    my $white            = $gd->colorAllocate(255,255,255);
+    my $pink             = $gd->colorAllocate(255,181,197);
+    $gd->filledRectangle(0,0,$image_width,$image_height,$pink);
+    my ($swidth,$sheight) = (GD->gdGiantFont->width * length($error_message),GD->gdGiantFont->height);
+    my $xoff              = ($image_width - $swidth)/2;
+    my $yoff              = ($image_height - $sheight)/2;
+    $gd->string(GD->gdGiantFont,$xoff,$yoff,$error_message,$black);
+    my ($url,$path) = $self->data_source->generate_image($gd);
+
+    return $self->get_panel_renderer->wrap_rendered_track(
+        label    => $track_name,
+        area_map => [],
+        width    => $image_width,
+        height   => $image_height,
+        url      => $url,
+        status   => '',
+    );
+}
+
 sub render_deferred_track {
     my $self             = shift;
     my %args             = @_;
@@ -2531,20 +2561,29 @@ sub render_deferred_track {
     );
     $cache->cache_time( $self->data_source->cache_time * 60 );
     my $status_html = "<!-- " . $cache->status . " -->";
+    warn "status = $status_html";
 
     my $result_html = '';
     if ( $cache->status eq 'AVAILABLE' ) {
         my $result = $renderer->render_tracks( { $track_name => $cache } );
         $result_html = $result->{$track_name};
     }
-    else{
+    elsif ($cache->status eq 'ERROR') {
+        my $image_width = $self->get_image_width;
+        $result_html .= $self->render_error_track(
+						  track_name       => $track_name,
+						  image_width      => $image_width,
+						  image_height     => EMPTY_IMAGE_HEIGHT,
+						  image_element_id => $track_name . "_image",
+						  error_message    => 'An error occurred while processing this track')
+    } else {
         my $image_width = $self->get_image_width;
         $result_html .= $self->render_grey_track(
-            track_name       => $track_name,
-            image_width      => $image_width,
-            image_height     => EMPTY_IMAGE_HEIGHT,
-            image_element_id => $track_name . "_image",
-        );
+						 track_name       => $track_name,
+						 image_width      => $image_width,
+						 image_height     => EMPTY_IMAGE_HEIGHT,
+						 image_element_id => $track_name . "_image",
+						 );
     }
     return $status_html . $result_html;
 }

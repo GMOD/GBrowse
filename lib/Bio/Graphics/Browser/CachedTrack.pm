@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::CachedTrack;
 
-# $Id: CachedTrack.pm,v 1.1 2008-09-09 20:53:36 lstein Exp $
+# $Id: CachedTrack.pm,v 1.2 2008-09-23 17:22:46 lstein Exp $
 # This package defines a Bio::Graphics::Browser::Track option that manages
 # the caching of track images and imagemaps.
 
@@ -87,6 +87,11 @@ sub datafile {
     return File::Spec->catfile($self->cachedir,'data');
 }
 
+sub errorfile {
+    my $self = shift;
+    return File::Spec->catfile($self->cachedir,'error');
+}
+
 # given an arbitrary set of arguments, make a unique cache key
 sub generate_cache_key {
     my $self = shift;
@@ -100,9 +105,11 @@ sub lock {
     my $self    = shift;
     my $dotfile = $self->dotfile;
     my $tsfile  = $self->tsfile;
+    my $error   = $self->errorfile;
     if (-e $dotfile) {  # if it exists, then either we are in process or something died
 	return if $self->status eq 'PENDING';
     }
+    unlink $error if -e $error;
     my $f = IO::File->new(">$dotfile") or die "Can't open $dotfile for writing: $!";
     flock $f,LOCK_EX;
     $f->print(time());
@@ -114,6 +121,16 @@ sub unlock {
     my $self     = shift;
     my $dotfile  = $self->dotfile;
     unlink $dotfile;
+}
+
+sub flag_error {
+    my $self = shift;
+    my $msg  = shift;
+    my $errorfile = $self->errorfile;
+    open my $fh,'>',$errorfile or die;
+    print $fh,$msg;
+    close $fh;
+    $self->unlock;
 }
 
 sub put_data {
@@ -167,12 +184,16 @@ sub height {
 # 'AVAILABLE' data is available and no requests are pending
 # 'DEFUNCT'   a request for the data has timed out - current contents invalid
 # 'EXPIRED'   there is data, but it has expired
+# 'ERROR'     an error occurred, and data will never be available
 sub status {
     my $self     = shift;
     my $dir      = $self->cachedir;
     my $dotfile  = $self->dotfile;
     my $tsfile   = $self->tsfile;
     my $datafile = $self->datafile;
+    my $errorfile = $self->errorfile;
+
+
 
     # if a dotfile exists then either we are in the midst of updating the
     # contents of the directory, or something has gone wrong and we are
@@ -188,6 +209,8 @@ sub status {
 	return 'DEFUNCT';
     } elsif (-e $datafile) {
 	return $self->expired($datafile) ? 'EXPIRED' : 'AVAILABLE';
+    } elsif (-e $errorfile) {
+	return 'ERROR';
     } else {
 	return 'EMPTY';
     }

@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.50 2008-09-18 15:36:45 mwz444 Exp $
+ $Id: controller.js,v 1.51 2008-09-23 17:22:46 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -358,6 +358,10 @@ var GBrowseController = Class.create({
             }
             else if (track_html.substring(0,16) == "<!-- EXPIRED -->"){
                $(gbtrack.track_image_id).setOpacity(0);
+            }
+            else if (track_html.substring(0,14) == "<!-- ERROR -->"){
+               Controller.retrieve_tracks.set(track_name,false);
+	       track_div.innerHTML = track_html;
             }
             else {
               continue_requesting = true;

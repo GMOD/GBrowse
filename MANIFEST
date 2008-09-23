@@ -1,4 +1,3 @@
-bin/load_genbank.PLS
 bin/make_das_conf.PLS
 bin/process_gadfly.PLS
 bin/process_sgd.PLS

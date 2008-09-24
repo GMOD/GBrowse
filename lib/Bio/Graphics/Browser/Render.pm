@@ -2561,7 +2561,7 @@ sub render_deferred_track {
     );
     $cache->cache_time( $self->data_source->cache_time * 60 );
     my $status_html = "<!-- " . $cache->status . " -->";
-    warn "status = $status_html";
+    warn "$track_name: status = $status_html";
 
     my $result_html = '';
     if ( $cache->status eq 'AVAILABLE' ) {

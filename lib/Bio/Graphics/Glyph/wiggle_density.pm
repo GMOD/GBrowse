@@ -1,5 +1,5 @@
 package Bio::Graphics::Glyph::wiggle_density;
-# $Id: wiggle_density.pm,v 1.2 2008-09-19 15:29:21 lstein Exp $
+# $Id: wiggle_density.pm,v 1.3 2008-09-24 20:06:19 lstein Exp $
 
 use strict;
 use base qw(Bio::Graphics::Glyph::box Bio::Graphics::Glyph::smoothing Bio::Graphics::Glyph::minmax);
@@ -51,6 +51,8 @@ sub wig {
 sub draw_wigfile {
   my $self    = shift;
   my $wigfile = shift;
+
+  warn "drawing data in $wigfile";
 
   eval "require Bio::Graphics::Wiggle" unless Bio::Graphics::Wiggle->can('new');
   my $wig = eval { Bio::Graphics::Wiggle->new($wigfile)};

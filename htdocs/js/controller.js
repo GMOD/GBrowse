@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.51 2008-09-23 17:22:46 lstein Exp $
+ $Id: controller.js,v 1.52 2008-09-24 20:06:18 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -265,7 +265,7 @@ var GBrowseController = Class.create({
             track_keys[ret_track_name]=this_track_data.track_key;
             Controller.retrieve_tracks.set(ret_track_name,true);
             Controller.track_time_key.set(ret_track_name,time_key);
-            Controller.get_remaining_tracks(track_keys,1000,1.5,time_key);
+            Controller.get_remaining_tracks(track_keys,1000,1.1,time_key);
           }
         }
       },
@@ -292,7 +292,7 @@ var GBrowseController = Class.create({
             Controller.retrieve_tracks.set(track_name,true);
             Controller.track_time_key.set(track_name,time_key);
         } // end for
-        Controller.get_remaining_tracks(track_keys,1000,1.5,time_key);
+        Controller.get_remaining_tracks(track_keys,1000,1.1,time_key);
       }, // end onSuccess
     }); // end Ajax.Request
   }, // end rerender_track
@@ -310,7 +310,7 @@ var GBrowseController = Class.create({
       }
     );
 
-    this.get_remaining_tracks(track_keys,1000,1.5,time_key);
+    this.get_remaining_tracks(track_keys,1000,1.1,time_key);
   },
 
   // Time key is there to make sure separate calls don't trounce each other

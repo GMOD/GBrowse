@@ -34,7 +34,7 @@ sub new {
     $args{Listen}     ||= 20;
 
     my $d = HTTP::Daemon->new(%args)
-	or croak "could not create daemon socket: @_";
+	or croak "Could not create daemon socket: $@";
 
     return bless {
 	daemon => $d,

@@ -100,6 +100,8 @@ sub request_panels {
   my ($local_labels,
       $remote_labels) = $self->sort_local_remote($data_destinations);
 
+  warn "local labels = @$local_labels, remote labels = @$remote_labels";
+
   # In the case of a deferred request we fork.
   # Parent returns the list of requests.
   # Child processes the requests in the background.
@@ -494,13 +496,15 @@ sub run_remote_requests {
     if ($error) { warn "Could not send request to $url: ",$error->as_string }
   }
 
-  my $timeout = $source->global_setting('timeout') || 20;
+  my $timeout = $source->global_setting('slave_timeout') || $source->global_setting('global_timeout') || 20;
   my $results = $ua->wait($timeout);
 
   foreach (keys %$results) {
     my $response = $results->{$_}->response;
     unless ($response->is_success) {
-      warn $results->{$_}->request->uri,"; fetch failed: ",$response->status_line;
+	my $uri = $results->{$_}->request->uri;
+      warn "$uri; fetch failed: ",$response->status_line;
+      $requests->{$_}->flag_error($response->status_line) foreach keys %{$renderers{$uri}};
       next;
     }
     my $contents = Storable::thaw($response->content);
@@ -958,10 +962,16 @@ sub run_local_requests {
 	               : ()
     } @labels_to_generate;
 
+    my $do_fork = 0; # this doesn't work!
     for my $label (@labels_to_generate) {
-	
+
 	# what the f!!! is this doing here?
-        # next if ( fork() );
+	if ($do_fork) {
+	    warn "label = $label";
+	    next if ( fork() );
+	    $self->prepare_modperl_for_fork();
+	    $self->clone_databases();
+	}
 
         # this shouldn't happen, but let's be paranoid
         next if $seenit{$label}++;
@@ -977,7 +987,6 @@ sub run_local_requests {
 
         my $panel
             = Bio::Graphics::Panel->new( @$panel_args, @keystyle, @nopad );
-
 
         my %trackmap;
         if ( my $file = $feature_files->{$label} ) {
@@ -1024,7 +1033,7 @@ sub run_local_requests {
             \%trackmap, 0 );
         $requests->{$label}->put_data( $gd, $map );
 
-        #CORE::exit 0;
+        CORE::exit 0 if $do_fork;
     }
 }
 

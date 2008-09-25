@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 ### BEGIN INIT INFO
 # Provides:          gbrowse_slave
 # Required-Start:    $local_fs
@@ -32,32 +32,38 @@ chown -R $USER $RUNDIR
 mkdir -p $LOGDIR
 chown -R $USER $LOGDIR
 
-ARGS="--port $PORT --verbose $VERBOSITY --log $LOGDIR/gbrowse_slave --pid $RUNDIR/$NAME.pid"
-
 case "$1" in
   start)
 	if test -e $RUNDIR/$NAME.pid ; then
 		echo "$NAME already running, use restart instead."
 	else
 		echo -n "Starting $DESC: $NAME "
-		start-stop-daemon --start --pidfile $RUNDIR/$NAME.pid \
-			--chuid $USER --nicelevel $NICE --exec $DAEMON -- $ARGS
+		for port in $PORT; do
+		    ARGS="--port $port --verbose $VERBOSITY --log $LOGDIR/gbrowse_slave --pid $RUNDIR/$NAME.$port.pid"
+		    start-stop-daemon --start --pidfile $RUNDIR/$NAME.$port.pid \
+			              --chuid $USER --nicelevel $NICE --exec $DAEMON -- $ARGS
+                    echo -n "$port "
+                done 
 		echo "."
 	fi
 	;;
   stop)
 	echo -n "Stopping $DESC: $NAME "
-	start-stop-daemon --stop --oknodo --pidfile $RUNDIR/$NAME.pid
-#	test -e $RUNDIR/$NAME.pid && rm $RUNDIR/$NAME.pid
+	for port in $PORT; do
+	    start-stop-daemon --stop --oknodo --pidfile $RUNDIR/$NAME.$port.pid > /dev/null 2>&1
+            echo -n "$port "
+        done
 	echo "."
 	;;
   restart|force-reload)
 	echo -n "Restarting $DESC: $NAME "
-	start-stop-daemon --stop --oknodo --pidfile $RUNDIR/$NAME.pid
-	echo "."
-	sleep 3
-	start-stop-daemon --start --pidfile $RUNDIR/$NAME.pid \
-                --chuid $USER --nicelevel $NICE --exec $DAEMON -- $ARGS
+	for port in $PORT; do
+	    start-stop-daemon --stop --oknodo --pidfile $RUNDIR/$NAME.$port.pid
+	    sleep 3
+	    start-stop-daemon --start --pidfile $RUNDIR/$NAME.$port.pid \
+                               --chuid $USER --nicelevel $NICE --exec $DAEMON -- $ARGS
+	    echo -n "$port "
+	done    
 	echo "."
 	;;
   *)

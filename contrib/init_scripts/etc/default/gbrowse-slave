@@ -1,15 +1,10 @@
-# Configuration file for gbrowse-slave
-#
-# examples
-#
+#!/bin/sh
 
-#export PERL5LIB=/home/lstein/projects/Generic-Genome-Browser-Trunk/libnew
-#USER=www-data
-#RUNDIR=/var/run/gbrowse
-#LOGDIR=/var/log/gbrowse
-#PORT=8101
-#VERBOSITY=1
-#NICE=0
+export PERL5LIB=/home/lstein/projects/Generic-Genome-Browser/lib:/home/lstein/projects/bioperl-live
 
-export PERL5LIB=/home/lstein/projects/Generic-Genome-Browser-Trunk/libnew
+USER=www-data
+RUNDIR=/var/run/gbrowse
+LOGDIR=/var/log/gbrowse
+PORT="8101 8102 8103"
 VERBOSITY=3
+NICE=0

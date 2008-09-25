@@ -188,6 +188,8 @@ sub asynchronous_event {
     my $settings = $self->state;
     my $events;
 
+    warn "asynchronous_event(",(join ' ',param()),")";
+
     if ( my $action = param('navigate') ) {
 
         #warn "updating coordinates";
@@ -320,7 +322,7 @@ sub asynchronous_event {
         my $visible    = param('visible');
         my $track_name = param('track_name');
 
-        # warn "Setting Track Visibility $track_name to $visible";
+        warn "Setting Track Visibility $track_name to $visible";
         if ($visible) {
             $self->add_track_to_state($track_name);
         }
@@ -1504,6 +1506,7 @@ sub add_track_to_state {
   else{
     $state->{features}{$label} = {visible=>1,options=>0,limit=>0};
   }
+  $self->session->flush;
 }
 
 sub remove_track_from_state {
@@ -1513,6 +1516,7 @@ sub remove_track_from_state {
 
 #  $state->{features}{$label} = {visible=>0,options=>0,limit=>0};
   delete $state->{features}{$label};
+  $self->session->flush;
 }
 
 sub track_visible {
@@ -2472,7 +2476,7 @@ sub render_deferred {
     my $cache_extra = $args{cache_extra}     || $self->create_cache_extra();
     my $external    = $args{external_tracks} || $self->external_data;
 
-    warn "RENDER_DEFERRED ",join ',',@$labels if DEBUG;
+    warn "RENDER_DEFERRED ",join ',',@$labels;# if DEBUG;
 
     my $renderer = $self->get_panel_renderer($seg);
 

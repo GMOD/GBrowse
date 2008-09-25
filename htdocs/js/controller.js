@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.53 2008-09-24 23:34:43 lstein Exp $
+ $Id: controller.js,v 1.54 2008-09-25 15:28:46 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -159,6 +159,7 @@ var GBrowseController = Class.create({
         track_name:            track_name,
       },
     });
+
   },
 
   // Kick-off Render Methods ****************************************
@@ -169,8 +170,8 @@ var GBrowseController = Class.create({
       method:     'post',
       parameters: {first_render: 1},
       onSuccess: function(transport) {
-        var results    = transport.responseJSON;
-        var track_keys = results.track_keys;
+        var results             = transport.responseJSON;
+        var track_keys          = results.track_keys;
         Controller.segment_info = results.segment_info;
 
         Controller.get_multiple_tracks(track_keys);
@@ -301,9 +302,10 @@ var GBrowseController = Class.create({
   
   get_multiple_tracks:
   function (track_keys) {
-    
+
     time_key = create_time_key();
-    this.retrieve_tracks.keys().each(
+//    this.retrieve_tracks.keys().each(
+    $H(track_keys).keys().each( 
       function(track_name) {
         Controller.retrieve_tracks.set(track_name,true);
         Controller.track_time_key.set(track_name,time_key);

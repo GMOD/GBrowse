@@ -206,6 +206,8 @@ sub asynchronous_event {
             = $self->asynchronous_update_detail_scale_bar();
         my $segment_info_object = $self->segment_info_object();
 
+	warn "navigate() returning track keys = ",join ' ',%$track_keys;
+
         my $return_object = {
             segment            => $settings->{name},
             segment_info       => $segment_info_object,

@@ -23,7 +23,7 @@ use constant PAD_DETAIL_SIDES    => 10;
 use constant RULER_INTERVALS     => 20;
 use constant PAD_OVERVIEW_BOTTOM => 5;
 
-# when we load, we set a global indicating the LWP::Parallel::UserAgent is available
+# when we load, we set a global indicating the LWP::UserAgent is available
 my $LPU_AVAILABLE;
 my $STO_AVAILABLE;
 
@@ -217,14 +217,13 @@ sub use_renderfarm {
   #comment out to force remote rendering (kludge)
   $self->source->global_setting('renderfarm') or return;	
 
-  $LPU_AVAILABLE = eval { require LWP::Parallel::UserAgent; } unless defined $LPU_AVAILABLE;
+  $LPU_AVAILABLE = eval { require LWP::UserAgent; }           unless defined $LPU_AVAILABLE;
   $STO_AVAILABLE = eval { require Storable; 1; }              unless defined $STO_AVAILABLE;
   $Storable::Deparse = 1;
 
-  warn "LPU => ",LWP::Parallel::UserAgent->can('new') if DEBUG;
   $self->{use_renderfarm} = $LPU_AVAILABLE && $STO_AVAILABLE;
   return $self->{use_renderfarm} if $self->{use_renderfarm};
-  warn "The renderfarm setting requires the LWP::Parallel::UserAgent and Storable modules,
+  warn "The renderfarm setting requires the LWP::UserAgent and Storable modules,
 but one or both are missing. Reverting to local rendering.\n";
   return;
 }
@@ -424,11 +423,7 @@ sub wrap_rendered_track {
 # INPUT $renderers_hashref
 #    $renderers_hashref->{$remote_url}{$track}
 #
-# RETURN
-#     { label1 => {image,map,width,height,file,gd,boxes},
-#       label2 => {image,map,width,height,file,gd,boxes}...
-#    }
-#
+# RETURN NOTHING (data will be stored in track cache for later retrieval)
 #
 # POST outgoing arguments:
 #    datasource => serialized Bio::Graphics::Browser::DataSource
@@ -442,7 +437,6 @@ sub run_remote_requests {
   my $self      = shift;
   my ($requests,$args,$labels) = @_;
 
-  #my @labels_to_generate = grep { $requests->{$_}->needs_refresh } @$labels;
   my @labels_to_generate = @$labels;
   foreach (@labels_to_generate) {
       $requests->{$_}->lock();   # flag that request is in process
@@ -457,7 +451,6 @@ sub run_remote_requests {
   my $lang     = $self->language;
   my %env      = map {$_=>$ENV{$_}} grep /^GBROWSE/,keys %ENV;
 
-
   # serialize the data source and settings
   my $s_dsn	= Storable::nfreeze($source);
   my $s_set	= Storable::nfreeze($settings);
@@ -471,14 +464,20 @@ sub run_remote_requests {
       $renderers{$url}{$label}++;
   }
 
-  my $ua = LWP::Parallel::UserAgent->new;
-  $ua->in_order(0);
-  $ua->nonblock(1);
+  my $ua = LWP::UserAgent->new;
+  my $timeout = $source->global_setting('slave_timeout') || $source->global_setting('global_timeout') || 30;
+  $ua->timeout($timeout);
 
   for my $url (keys %renderers) {
 
-    my @tracks  = keys %{$renderers{$url}};
+    $self->prepare_modperl_for_fork();
 
+    my $child   = fork();
+    die "Couldn't fork: $!" unless defined $child;
+    next if $child;
+
+    # THIS PART IS IN THE CHILD
+    my @tracks  = keys %{$renderers{$url}};
     my $s_track  = Storable::nfreeze(\@tracks);
 
     my $request = POST ($url,
@@ -492,32 +491,23 @@ sub run_remote_requests {
 			    env        => $s_env,
 			]);
 
-    my $error = $ua->register($request);
-    if ($error) { warn "Could not send request to $url: ",$error->as_string }
-  }
+    my $response = $ua->request($request);
 
-  my $timeout = $source->global_setting('slave_timeout') || $source->global_setting('global_timeout') || 20;
-  my $results = $ua->wait($timeout);
-
-  foreach (keys %$results) {
-    my $response = $results->{$_}->response;
-    unless ($response->is_success) {
-	my $uri = $results->{$_}->request->uri;
-      warn "$uri; fetch failed: ",$response->status_line;
-      $requests->{$_}->flag_error($response->status_line) foreach keys %{$renderers{$uri}};
-      next;
+    if ($response->is_success) {
+	my $contents = Storable::thaw($response->content);
+	for my $label (keys %$contents) {
+	    my $map = $contents->{$label}{map}        or die "Expected a map from remote server, but got nothing!";
+	    my $gd  = $contents->{$label}{imagedata}  or die "Expected imagedata from remote server, but got nothing!";
+	    $requests->{$label}->put_data($gd,$map);
+	}
     }
-    my $contents = Storable::thaw($response->content);
-    for my $label (keys %$contents) {
-	my $map = $contents->{$label}{map} 
-	          or die "Expected a map from remote server, but got nothing!";
-	my $gd  = $contents->{$label}{imagedata}
-	          or die "Expected imagedata from remote server, but got nothing!";
-	$requests->{$label}->put_data($gd,$map);
+    else {
+	my $uri = $request->uri;
+	warn "$uri; fetch failed: ",$response->status_line;
+	$requests->{$_}->flag_error($response->status_line) foreach keys %{$renderers{$uri}};
     }
+    CORE::exit(0);  # from CHILD
   }
-
-  return $requests;
 }
 
 # Sort requests into those to be performed locally

@@ -258,11 +258,11 @@ sub render_instructions {
 			 (
 			  a({-href=>"?rand=$rand;head=".((!$settings->{head})||0)},
 			    '['.$self->tr($settings->{head} ? 'HIDE_HEADER' : 'SHOW_HEADER').']'),
-			  a({-href=>$self->bookmark_link($settings)},'['.$self->tr('BOOKMARK').']'),
+			  a({-href=>'?bookmark=1'},'['.$self->tr('BOOKMARK').']'),
               a({-href        => '#',
                  -onMouseDown => "balloon.showTooltip(event,'url:?share_track=all')"},
                 '[' . ($self->tr('SHARE_ALL') || "Share These Tracks" ) .']'),
-			  a({-href=>$self->image_link($settings),-target=>'_blank'},'['.$self->tr('IMAGE_LINK').']'),
+			  a({-href=>'?std_image=1',-target=>'_blank'},'['.$self->tr('IMAGE_LINK').']'),
 			  $plugin_link,
 			  $svg_link,
 			 ) : (),
@@ -897,13 +897,15 @@ sub plugin_links {
 }
 
 sub image_link {
-  my $settings = shift;
-  return "?help=link_image;flip=".($settings->{flip}||0);
+    my $self = shift;
+    my $settings = shift;
+    return "?help=link_image;flip=".($settings->{flip}||0);
 }
 
 sub svg_link {
-  my $settings = shift;
-  return "?help=svg_image;flip=".($settings->{flip}||0);
+    my $self = shift;
+    my $settings = shift;
+    return "?help=svg_image;flip=".($settings->{flip}||0);
 }
 
 sub examples {

@@ -253,7 +253,6 @@ WriteMakefile(
 				 Storable          => 0,
 				 JSON              => 0,
 				 LWP               => 0,
-				 LWP::Parallel     => 0,
 				},
 	      PL_FILES       => {
                                  'install_util/htdocs_install.PLS' => 'install_util/htdocs_install.pl',

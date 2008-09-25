@@ -159,6 +159,9 @@ sub run_asynchronous_event {
     if ($status == 204) { # no content
 	print CGI::header( -status => '204 No Content' );
     }
+    elsif ($status == 302) { # redirect
+	print CGI::redirect($data);
+    }
     elsif ($mime_type eq 'application/json') {
 	print CGI::header(-status=>$status,
 			  -type  => $mime_type),
@@ -418,6 +421,16 @@ sub asynchronous_event {
 	return (200,'application/json',$deferred_data);
         $self->session->flush if $self->session;
         return 1;
+    }
+
+    # redirect to the bookmark
+    if (param('bookmark')) {
+	return (302,undef,$self->bookmark_link($self->state));
+    }
+
+    # redirect to the imagelink
+    if (param('std_image')) {
+	return (302,undef,$self->image_link($self->state));
     }
 
     return unless $events;

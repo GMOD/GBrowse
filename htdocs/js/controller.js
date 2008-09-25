@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.54 2008-09-25 15:28:46 lstein Exp $
+ $Id: controller.js,v 1.55 2008-09-25 15:37:55 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -160,6 +160,10 @@ var GBrowseController = Class.create({
       },
     });
 
+    if (visible) {
+      this.rerender_track(track_name);
+    }
+
   },
 
   // Kick-off Render Methods ****************************************
@@ -200,7 +204,7 @@ var GBrowseController = Class.create({
       parameters: {navigate: action},
       onSuccess: function(transport) {
 	    var results                 = transport.responseJSON;
-        Controller.segment_info     = results.segment_info;
+        Controller.segment_info         = results.segment_info;
 	    var track_keys              = results.track_keys;
 	    var overview_scale_bar_hash = results.overview_scale_bar;
 	    var region_scale_bar_hash   = results.region_scale_bar;

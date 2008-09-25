@@ -1440,6 +1440,7 @@ sub default_state {
   $state->{source}       = $data_source->name;
   $state->{cache}        = defined $data_source->cache_time    ? $data_source->cache_time : 1;
   $state->{region_size}  = $self->setting('region segment');
+  $state->{'max segment'}  = $self->setting('max segment');
   $state->{v}            = VERSION;
   $state->{stp}          = 1;
   $state->{ins}          = 1;
@@ -1506,7 +1507,7 @@ sub add_track_to_state {
   else{
     $state->{features}{$label} = {visible=>1,options=>0,limit=>0};
   }
-  $self->session->flush;
+
 }
 
 sub remove_track_from_state {

@@ -3,7 +3,7 @@
  rubber.js -- a base class for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.6 2008-08-25 20:32:06 mwz444 Exp $
+ $Id: rubber.js,v 1.7 2008-09-25 15:19:22 mwz444 Exp $
 
 */
 
@@ -276,10 +276,7 @@ SelectArea.prototype.moveRubber = function(event) {
 
   // warning if max segment size exceeded
   var tooBig;
-  if (!self.maxSegment) {
-    self.maxSegment = Controller.max_segment;
-  }
-  if (self.maxSegment && selectSequenceWidth > self.maxSegment) {
+  if (self.max_segment && selectSequenceWidth > self.max_segment) {
     self.setOpacity(self.selectBox,self.opacity||0.5,'red');
     self.overrideAutoSubmit = true;
     tooBig = true;

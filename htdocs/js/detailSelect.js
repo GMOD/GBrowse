@@ -4,7 +4,7 @@
                       This class handles details-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: detailSelect.js,v 1.4 2008-08-15 19:17:53 mwz444 Exp $
+ $Id: detailSelect.js,v 1.5 2008-09-25 15:19:22 mwz444 Exp $
 
 */
 
@@ -90,6 +90,7 @@ Details.prototype.loadSegmentInfo = function() {
   this.pixelToDNA   = parseFloat(segment_info.details_pixel_ratio);
   this.detailStart  = parseInt(segment_info.detail_start);
   this.detailEnd    = parseInt(segment_info.detail_stop);
+  this.max_segment  = parseInt(segment_info.max_segment);
 
   // If the keystyle is left, there may been extra padding
   var actualWidth   = this.elementLocation(i,'width');

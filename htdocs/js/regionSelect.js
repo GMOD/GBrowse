@@ -4,7 +4,7 @@
                       This class handles region-specific configuration.
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: regionSelect.js,v 1.5 2008-08-06 21:09:42 mwz444 Exp $
+ $Id: regionSelect.js,v 1.6 2008-09-25 15:19:22 mwz444 Exp $
 
 */
 
@@ -102,6 +102,7 @@ Region.prototype.loadSegmentInfo = function() {
   this.pixelToDNA   = parseFloat(segment_info.region_pixel_ratio);
   this.detailStart  = parseInt(segment_info.detail_start);
   this.detailEnd    = parseInt(segment_info.detail_stop);
+  this.max_segment  = parseInt(segment_info.max_segment);
 
   // If the keystyle is left, there may been extra padding
   var actualWidth   = this.elementLocation(i,'width');

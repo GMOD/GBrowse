@@ -246,7 +246,10 @@ WriteMakefile(
 				 Bio::Perl         => 1.005002,
 				 GD                => 2.07,
 				 IO::String        => 0,
+<<<<<<< Makefile.PL
+=======
 				 Module::Build     => 0,
+>>>>>>> 1.136
 				 CGI::Session      => 4.02,
 				 File::Temp        => 0,
 				 Digest::MD5       => 0,	

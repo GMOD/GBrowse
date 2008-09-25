@@ -1443,6 +1443,7 @@ sub update_state {
       $self->auto_open();
   }
 
+  $self->session->unlock;
 }
 
 sub default_state {

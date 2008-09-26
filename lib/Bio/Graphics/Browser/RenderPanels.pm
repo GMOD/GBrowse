@@ -100,7 +100,8 @@ sub request_panels {
   my ($local_labels,
       $remote_labels) = $self->sort_local_remote($data_destinations);
 
-  warn "request_panels(): section = $args->{section}; local labels = @$local_labels, remote labels = @$remote_labels" if DEBUG;
+  warn "request_panels(): section = $args->{section}; local labels = @$local_labels, remote labels = @$remote_labels" 
+      if DEBUG;
 
   # In the case of a deferred request we fork.
   # Parent returns the list of requests.

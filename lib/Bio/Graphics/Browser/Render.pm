@@ -327,7 +327,6 @@ sub asynchronous_event {
         my $visible    = param('visible');
         my $track_name = param('track_name');
 
-        warn "Setting Track Visibility $track_name to $visible";
         if ($visible) {
             $self->add_track_to_state($track_name);
         }
@@ -1517,6 +1516,10 @@ sub add_track_to_state {
   my $state  = $self->state;
   my %current = map {$_=> 1} @{$state->{tracks}};
   push @{$state->{tracks}},$label unless $current{$label};
+
+  warn "ADD TRACK TO STATE WAS: ",
+    join ' ',grep {$state->{features}{$_}{visible}} sort keys %{$state->{features}},"\n";
+
   if($state->{features}{$label}){
     $state->{features}{$label}{visible}=1;
   }
@@ -1524,6 +1527,8 @@ sub add_track_to_state {
     $state->{features}{$label} = {visible=>1,options=>0,limit=>0};
   }
 
+  warn "ADD TRACK TO STATE NOW: ",
+    join ' ',grep {$state->{features}{$_}{visible}} sort keys %{$state->{features}},"\n";
 }
 
 sub remove_track_from_state {
@@ -2582,6 +2587,7 @@ sub render_deferred_track {
     );
     $cache->cache_time( $self->data_source->cache_time * 60 );
     my $status_html = "<!-- " . $cache->status . " -->";
+
     warn "render_deferred_track(): $track_name: status = $status_html" if DEBUG;
 
     my $result_html = '';

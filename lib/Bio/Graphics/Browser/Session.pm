@@ -30,15 +30,12 @@ sub lock {
 
     open my $fh,$mode,$lockpath 
 	or die "Couldn't open lockfile $lockpath: $!";
-    warn "waiting on lock....";
     flock ($fh,LOCK_EX);
-    warn "got lock";
     $self->lockfh($fh);
 }
 
 sub unlock {
     my $self     = shift;
-#    unlink File::Spec->catfile($self->lockfile($self->id));
     close $self->lockfh;
 }
 

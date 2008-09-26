@@ -191,7 +191,7 @@ sub asynchronous_event {
     my $settings = $self->state;
     my $events;
 
-    warn "asynchronous_event(",(join ' ',param()),")";
+    warn "asynchronous_event(",(join ' ',param()),")" if DEBUG;
 
     if ( my $action = param('navigate') ) {
 
@@ -209,7 +209,7 @@ sub asynchronous_event {
             = $self->asynchronous_update_detail_scale_bar();
         my $segment_info_object = $self->segment_info_object();
 
-	warn "navigate() returning track keys = ",join ' ',%$track_keys;
+	warn "navigate() returning track keys = ",join ' ',%$track_keys if DEBUG;
 
         my $return_object = {
             segment            => $settings->{name},
@@ -2493,7 +2493,7 @@ sub render_deferred {
     my $cache_extra = $args{cache_extra}     || $self->create_cache_extra();
     my $external    = $args{external_tracks} || $self->external_data;
 
-    warn "RENDER_DEFERRED ",join ',',@$labels;# if DEBUG;
+    warn 'render_deferred(',join(',',@$labels),')' if DEBUG;
 
     my $renderer = $self->get_panel_renderer($seg);
 
@@ -2582,7 +2582,7 @@ sub render_deferred_track {
     );
     $cache->cache_time( $self->data_source->cache_time * 60 );
     my $status_html = "<!-- " . $cache->status . " -->";
-    warn "$track_name: status = $status_html";
+    warn "render_deferred_track(): $track_name: status = $status_html" if DEBUG;
 
     my $result_html = '';
     if ( $cache->status eq 'AVAILABLE' ) {

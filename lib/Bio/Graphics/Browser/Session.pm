@@ -4,6 +4,7 @@ use warnings;
 
 use CGI::Session;
 use Fcntl 'LOCK_EX';
+use File::Spec;
 use File::Path 'mkpath';
 
 sub new {
@@ -21,10 +22,14 @@ sub new {
 sub lock {
     my $self     = shift;
     my $id       = shift;
-    my $lockfile = "/tmp/gbrowse/locks/$id";  # temporary
-    mkpath('/tmp/gbrowse/locks');
-    my $mode     = -e $lockfile ? "<" : ">";
-    open my $fh,$mode,$lockfile or die "Couldn't open lockfile $lockfile: $!";
+    my ($lockdir,$lockfile)
+	= $self->lockfile($id);
+    mkpath($lockdir) unless -e $lockdir;
+    my $lockpath = File::Spec->catfile($lockdir,$lockfile);
+    my $mode     = -e $lockpath ? "<" : ">";
+
+    open my $fh,$mode,$lockpath 
+	or die "Couldn't open lockfile $lockpath: $!";
     warn "waiting on lock....";
     flock ($fh,LOCK_EX);
     warn "got lock";
@@ -33,7 +38,17 @@ sub lock {
 
 sub unlock {
     my $self     = shift;
+#    unlink File::Spec->catfile($self->lockfile($self->id));
     close $self->lockfh;
+}
+
+sub lockfile {
+    my $self   = shift;
+    my $id     = shift;
+    my $tmpdir = File::Spec->tmpdir;
+    my ($a) = $id =~ /^(.{2})/;
+    return (File::Spec->catfile($tmpdir,'gbrowse','locks',$a),
+	    $id);
 }
 
 sub flush {

@@ -50,6 +50,8 @@ END
 
    IMAGE_LINK => 'Link to Image',
 
+   PDF_LINK   => 'Download PDF',
+
    SVG_LINK   => 'High-res Image',
 
    SVG_DESCRIPTION => <<END,

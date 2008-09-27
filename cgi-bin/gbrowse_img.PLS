@@ -49,9 +49,10 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.11 2008-09-15 14:51:22 lstein Exp $
+# $Id: gbrowse_img.PLS,v 1.27.4.8.2.10.2.12 2008-09-27 23:25:14 lstein Exp $
 
 use strict;
+use File::Spec;
 use CGI qw(param redirect header start_html end_html
 	   p h1 path_info escape img);
 use Bio::DB::GFF;
@@ -65,7 +66,7 @@ use Bio::Graphics::Browser::PageSettings;
 use Digest::MD5 'md5_hex';
 use Fcntl qw(:flock);
 
-use vars qw($CONFIG $VERSION $CONF_DIR $PLUGINS $UPLOADS $REMOTES);
+use vars qw($CONFIG $VERSION $CONF_DIR $PLUGINS $UPLOADS $REMOTES $INKSCAPE);
 use constant MAX_SEGMENT     => 1_000_000;
 use constant TOO_MANY_SEGMENTS => 500;
 use constant PANEL_GAP         => 3;
@@ -130,6 +131,7 @@ my $width           = param('width')||param('w');           # width of the image
 my $abs             = param('abs');                         # absolute rather than relative coordinates - BROKEN 28 Aug 07 LS
 $abs                = param('b') unless defined $abs;
 my $image_class     = param('image_class') || param('format') || 'GD';        # image type
+my $convert_to_pdf  = param('pdf');
 my $keystyle        = param('keystyle')    || param('k') || 'between';
 my $grid            = param('grid');
 my $noscale         = param('noscale');
@@ -142,6 +144,12 @@ my @h_feat          = param('h_feat');
 
 $grid = 1 unless defined $grid;  # default for backward compatibility
 $abs = 1  unless defined $abs;
+
+# is inkscape installed?
+if ($convert_to_pdf) {
+    chomp($INKSCAPE = `which inkscape`);
+    undef $convert_to_pdf unless $INKSCAPE; 
+}
 
 my $db              = open_database($CONFIG);
 
@@ -291,6 +299,13 @@ if ($image_class =~ /SVG/) {
   }
 }
 
+if ($convert_to_pdf && $INKSCAPE) {
+    $ENV{HOME} = File::Spec->tmpdir;
+    system "$INKSCAPE -z --export-pdf=$panel->{file}.pdf $panel->{file} 2>/dev/null";
+    unlink $panel->{file};
+    $panel->{file} = "$panel->{file}.pdf";
+}
+
 if ($embed) {
   my $html            = $CONFIG->render_composite_track(
 							{section    => $section},
@@ -306,9 +321,10 @@ if ($embed) {
 
 else {
   my $type =  $panel->{file} =~ /\.png/ ? 'image/png'
-    : $panel->{file} =~ /\.gif/ ? 'image/gif'
-    : $panel->{file} =~ /\.jpg/ ? 'image/jpeg'
-    : $panel->{file} =~ /\.svg/ ? 'image/svg+xml'
+    : $panel->{file} =~ /\.gif$/ ? 'image/gif'
+    : $panel->{file} =~ /\.jpg$/ ? 'image/jpeg'
+    : $panel->{file} =~ /\.svg$/ ? 'image/svg+xml'
+    : $panel->{file} =~ /\.pdf$/ ? 'application/pdf'
     : 'binary/octet-stream';
   print header($type);
   open F,$panel->{file} or die "$panel->{file}: $!";
@@ -429,7 +445,7 @@ sub add_features {
 
   foreach (@styles) {
     my ($type,@options) = shellwords($_);
-    my %options = map {split /=/} @options;
+    my %options = map {split '='} @options;
     $feature_list->add_type($type=>\%options);
   }
   $feature_list->setting('general'=>'section',$section);

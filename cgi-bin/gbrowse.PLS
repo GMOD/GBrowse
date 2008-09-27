@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.108 2008-09-19 17:23:46 scottcain Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.109 2008-09-27 23:25:14 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -75,7 +75,7 @@ use CGI::Cookie;
 use vars qw($CONFIG $MAX_SEGMENT $DEFAULT_SEGMENT
 	    $HEADER $HTML $UA $VERSION $BIOGRAPHICS_VERSION $CONF_DIR
 	    %PLUGINS $PLUGINS $UPLOADED_SOURCES $REMOTE_SOURCES
-	    $PRESETS $HAVE_SVG
+	    $PRESETS $HAVE_SVG $HAVE_PDF
 	    %OBJECT_CLASSES %PLUGIN_NAME2LABEL );
 
 
@@ -116,6 +116,7 @@ use constant GLOBAL_TIMEOUT => 60;  # 60 seconds to failure unless overridden in
 
 local $CGI::USE_PARAM_SEMICOLONS = 1;
 $HAVE_SVG = eval {require GD::SVG; 1};
+chomp($HAVE_PDF = `which inkscape`);
 
 # IMPORTANT DATA STRUCTURES
 
@@ -1136,6 +1137,7 @@ sub navigation_table {
   my $buttonsDir    = $CONFIG->relative_path_setting('buttons');
   my $table        = '';
   my $svg_link     = $HAVE_SVG? a({-href=>svg_link($settings),-target=>'_blank'},'['.$CONFIG->tr('SVG_LINK').']'):'';
+  my $pdf_link     = $HAVE_PDF? a({-href=>pdf_link($settings),-target=>'_blank'},'['.$CONFIG->tr('PDF_LINK').']'):'';
   my $reset_link   = a({-href=>"?reset=1",-class=>'reset_button'},'['.$CONFIG->tr('RESET').']');
   my $help_link    =  a({-href=>general_help(),-target=>'help'},'['.$CONFIG->tr('Help').']');
   my $plugin_link  = plugin_links($PLUGINS);
@@ -1176,6 +1178,7 @@ sub navigation_table {
 			  a({-href=>image_link($settings),-target=>'_blank'},'['.$CONFIG->tr('IMAGE_LINK').']'),
 			  $galaxy_link,
 			  $plugin_link,
+			  $pdf_link,
 			  $svg_link,
 			 ) : (),
 			$help_link,
@@ -2900,6 +2903,13 @@ sub svg_link {
   return "?help=svg_image;flip=".($settings->{flip}||0).";cache=$rand"; 
 }
 
+sub pdf_link {
+  my $settings = shift;
+  my $img_url  = image_url($settings,'GD::SVG');
+  $img_url    .= ";pdf=1";
+  return $img_url;
+}
+
 # reorder @labels based on settings in the 'track.XXX' parameters
 sub adjust_track_order {
   my $settings = shift;
@@ -3255,32 +3265,41 @@ sub _build_image_page {
   my $help     = shift;
   my $format   = shift;
 
-  my $source = $CONFIG->source;
-  my $id     = $settings->{id};
-  my $flip   = $settings->{flip} || param('flip') || 0;
-  my $keystyle = $settings->{ks};
-  my $grid     = $settings->{grid} || 0;
-  my $url      = url(-full=>1);
-  $url         = dirname($url) . "/gbrowse_img/".escape($source);
-  my $tracks = $settings->{tracks};
-  my $width  = $CONFIG->width;
-  my $name   = $settings->{name} || "$settings->{ref}:$settings->{start}..$settings->{stop}";
-  my $type    = join '+',map{$_ = escape($_); s/-/%%/g; $_}  # need to escape the "-" because gbrowse_img uses it as a separator
-                         map {/\s/?qq("$_"):$_} 
-                         grep {$settings->{features}{$_}{visible}} @$tracks;
-  my $options = join '+',map { join '+', escape($_),$settings->{features}{$_}{options}
-			     } map {/\s/?"$_":$_}
-			       grep {
-				 $settings->{features}{$_}{options}
-			       } @$tracks;
-  my $img_url = "$url/?name=$name;type=$type;width=$width;id=$id";
-  $img_url   .= ";flip=$flip"         if $flip;
-  $img_url   .= ";options=$options"   if $options;
-  $img_url   .= ";format=$format"     if $format;
-  $img_url   .= ";keystyle=$keystyle" if $keystyle;
-  $img_url   .= ";grid=$grid";
+  my $img_url = image_url($settings,$format);
+
   add_hilites($settings,\$img_url);
   print $CONFIG->tr($help,$img_url,$img_url);
+}
+
+sub image_url {
+    my $settings = shift;
+    my $format   = shift;
+
+    my $source = $CONFIG->source;
+    my $id     = $settings->{id};
+    my $flip   = $settings->{flip} || param('flip') || 0;
+    my $keystyle = $settings->{ks};
+    my $grid     = $settings->{grid} || 0;
+    my $url      = url(-full=>1);
+    $url         = dirname($url) . "/gbrowse_img/".escape($source);
+    my $tracks = $settings->{tracks};
+    my $width  = $CONFIG->width;
+    my $name   = $settings->{name} || "$settings->{ref}:$settings->{start}..$settings->{stop}";
+    my $type    = join '+',map{$_ = escape($_); s/-/%%/g; $_}  # need to escape the "-" because gbrowse_img uses it as a separator
+    map {/\s/?qq("$_"):$_} 
+    grep {$settings->{features}{$_}{visible}} @$tracks;
+    my $options = join '+',map { join '+', escape($_),$settings->{features}{$_}{options}
+    } map {/\s/?"$_":$_}
+    grep {
+	$settings->{features}{$_}{options}
+    } @$tracks;
+    my $img_url = "$url/?name=$name;type=$type;width=$width;id=$id";
+    $img_url   .= ";flip=$flip"         if $flip;
+    $img_url   .= ";options=$options"   if $options;
+    $img_url   .= ";format=$format"     if $format;
+    $img_url   .= ";keystyle=$keystyle" if $keystyle;
+    $img_url   .= ";grid=$grid";
+    return $img_url;
 }
 
 sub add_hilites {

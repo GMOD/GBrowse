@@ -19,6 +19,16 @@ my %CONFIG_CACHE; # cache parsed config files
 my %DB_SETTINGS;  # cache database settings
 my %DB;           # cache opened database connections
 
+BEGIN {
+    if( $ENV{MOD_PERL} &&
+	exists $ENV{MOD_PERL_API_VERSION} &&
+	$ENV{MOD_PERL_API_VERSION} >= 2) {
+	require Apache2::SubRequest;
+	require Apache2::RequestUtil;
+	require Apache2::ServerUtil;
+    }
+}
+
 =head1 SYNOPSIS
 
 =head1 DESCRIPTION

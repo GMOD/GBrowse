@@ -3,7 +3,7 @@
  rubber.js -- a base class for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.7 2008-09-25 15:19:22 mwz444 Exp $
+ $Id: rubber.js,v 1.8 2008-09-29 18:38:08 mwz444 Exp $
 
 */
 
@@ -308,7 +308,12 @@ SelectArea.prototype.moveRubber = function(event) {
   }
 
   self.selectPixelStart = selectPixelStart;
-  self.moved = true;
+
+  // Only count as moved if the pixel change is greater than 1
+  // This is to make it easier to simply recenter
+  if (selectPixelWidth > 1){
+    self.moved = true;
+  }
 }
 
 // taken from http://ajaxcookbook.org/disable-text-selection/
@@ -417,12 +422,15 @@ SelectArea.prototype.stopRubber = function(event) {
   balloonIsSuppressed = false;
   if (!selectAreaIsActive) return false;
   var self = currentSelectArea;
+console.log("SR1");
   if (!self.moved) {
+console.log("SR1 NOT MOVED");
     self.cancelRubber();
     self.recenter();
     return false;
   }
 
+console.log("SR3");
   selectAreaIsActive = false;
   self.moved = false;
 

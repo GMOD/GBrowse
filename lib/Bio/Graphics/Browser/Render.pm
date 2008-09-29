@@ -191,13 +191,16 @@ sub asynchronous_event {
     my $settings = $self->state;
     my $events;
 
-    warn "asynchronous_event(",(join ' ',param()),")" if DEBUG;
+    warn "asynchronous_event(",(join ' ',param()),")";# if DEBUG;
 
     if ( my $action = param('navigate') ) {
 
         #warn "updating coordinates";
+
         $self->init_database();
         $self->asynchronous_update_coordinates($action);
+	$self->session->unlock(); # don't hold session captive on renderers!
+
         my ( $track_keys, $display_details, $details_msg )
             = $self->begin_track_render();
 

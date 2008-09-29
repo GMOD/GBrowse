@@ -30,13 +30,17 @@ sub lock {
 
     open my $fh,$mode,$lockpath 
 	or die "Couldn't open lockfile $lockpath: $!";
+    warn "waiting on session lock...\n";
     flock ($fh,LOCK_EX);
+    warn "...got session lock\n";
     $self->lockfh($fh);
 }
 
 sub unlock {
     my $self     = shift;
+    return unless $self->lockfh;
     close $self->lockfh;
+    $self->lockfh(undef);
 }
 
 sub lockfile {

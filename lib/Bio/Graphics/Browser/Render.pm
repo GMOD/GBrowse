@@ -299,20 +299,34 @@ sub asynchronous_event {
     if ( my $action = param('add_track') ) {
         my $track_name = param('track_name');
 
-        #warn "Adding Track $track_name";
-
         $self->add_track_to_state($track_name);
-        my $track_keys = $self->begin_individual_track_render($track_name);
+        my ( $track_keys, $display_details, $details_msg )
+            = $self->begin_individual_track_render($track_name);
         my %track_data;
         foreach my $track_name ( keys %{ $track_keys || {} } ) {
             my $track_key        = $track_keys->{$track_name};
             my $track_section    = get_section_from_label($track_name);
             my $image_width      = $self->get_image_width;
             my $image_element_id = $track_name . "_image";
-            my $track_html       = $self->render_deferred_track(
-                cache_key  => $track_key,
-                track_name => $track_name,
-            ) || '';
+
+            my $track_section = get_section_from_label($track_name);
+            my $track_html;
+            if ( $track_section eq 'detail' and not $display_details ) {
+                my $image_width = $self->get_image_width;
+                $track_html .= $self->render_grey_track(
+                    track_name       => $track_name,
+                    image_width      => $image_width,
+                    image_height     => EMPTY_IMAGE_HEIGHT,
+                    image_element_id => $track_name . "_image",
+                );
+            }
+            else {
+                $track_html = $self->render_deferred_track(
+                    cache_key  => $track_key,
+                    track_name => $track_name,
+                ) || '';
+            }
+
             my $panel_id = 'detail_panels';
             if ( $track_name =~ /:overview$/ ) {
                 $panel_id = 'overview_panels';
@@ -328,11 +342,13 @@ sub asynchronous_event {
                 track_section    => $track_section,
                 image_element_id => $image_element_id,
                 panel_id         => $panel_id,
+                display_details  => $display_details,
+                details_msg      => $details_msg,
             };
         }
 
         my $return_object = { track_data => \%track_data, };
-	return (200,'application/json',$return_object);
+        return ( 200, 'application/json', $return_object );
     }
     if ( param('set_track_visibility') ) {
         my $visible    = param('visible');
@@ -351,11 +367,15 @@ sub asynchronous_event {
     if ( my $action = param('rerender_track') ) {
         my $track_name = param('track_name');
 
-        #warn "Rerendering Track $track_name";
-        my $track_keys = $self->begin_individual_track_render($track_name);
+        my ( $track_keys, $display_details, $details_msg )
+            = $self->begin_individual_track_render($track_name);
 
-        my $return_object = { track_keys => $track_keys, };
-	return (200,'application/json',$return_object);
+        my $return_object = {
+            track_keys      => $track_keys,
+            display_details => $display_details,
+            details_msg     => $details_msg,
+        };
+        return (200,'application/json',$return_object);
     }
 
     if ( param('reconfigure_plugin') ) {
@@ -533,6 +553,9 @@ sub begin_individual_track_render {
     $self->init_plugins();
     $self->init_remote_sources();
 
+    my $display_details = 1;
+    my $details_msg = '';
+    
     my $section;
     my $segment;
     if ($label =~ /:overview$/){
@@ -546,6 +569,20 @@ sub begin_individual_track_render {
     else{
         $section = 'detail';
         $segment = $self->segment();
+    }
+
+    if (    $section eq 'detail'
+        and $self->segment->length > $self->get_max_segment() )
+    {
+        $display_details = 0;
+        $details_msg     = h1(
+            $self->tr(
+                'TOO_BIG',
+                scalar $self->data_source()->unit_label(MAX_SEGMENT),
+            )
+        );
+        my %track_keys = ( $label => 0 );
+        return ( \%track_keys, $display_details, $details_msg );
     }
 
     my $cache_extra = $self->create_cache_extra();
@@ -567,7 +604,7 @@ sub begin_individual_track_render {
         }
     }
 
-    return \%track_keys;
+    return (\%track_keys, $display_details, $details_msg);
 }
 
 sub render {

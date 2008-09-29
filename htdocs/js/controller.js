@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.58 2008-09-29 16:01:26 mwz444 Exp $
+ $Id: controller.js,v 1.59 2008-09-29 21:06:53 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -314,8 +314,8 @@ var GBrowseController = Class.create({
 
           Controller.append_child_from_html(html,$(panel_id));
 
-          if (html.substring(0,18) == "<!-- AVAILABLE -->"){
-            Controller.reset_after_track_load();
+          if (this_track_data.display_details == 0){
+            $(ret_gbtrack.track_image_id).setOpacity(0);
           }
           else{
             var track_keys = new Array();
@@ -346,12 +346,17 @@ var GBrowseController = Class.create({
       onSuccess: function(transport) {
         var results    = transport.responseJSON;
         var track_keys = results.track_keys;
-        time_key = create_time_key();
-        for (var track_name in track_keys){
-            Controller.retrieve_tracks.set(track_name,true);
-            Controller.ret_track_time_key.set(track_name,time_key);
-        } // end for
-        Controller.get_remaining_tracks(track_keys,1000,1.1,time_key);
+        if (results.display_details == 0){
+          $(gbtrack.track_image_id).setOpacity(0);
+        }
+        else{
+          time_key = create_time_key();
+          for (var track_name in track_keys){
+              Controller.retrieve_tracks.set(track_name,true);
+              Controller.ret_track_time_key.set(track_name,time_key);
+          } // end for
+          Controller.get_remaining_tracks(track_keys,1000,1.1,time_key);
+        } 
       }, // end onSuccess
     }); // end Ajax.Request
   }, // end rerender_track

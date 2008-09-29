@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.56 2008-09-25 18:36:42 mwz444 Exp $
+ $Id: controller.js,v 1.57 2008-09-29 15:09:38 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -204,8 +204,20 @@ var GBrowseController = Class.create({
         var track_keys          = results.track_keys;
         Controller.segment_info = results.segment_info;
 
-        Controller.set_last_update_keys(track_keys);
-        Controller.get_multiple_tracks(track_keys);
+        $('details_msg').innerHTML = results.details_msg;
+        if (results.display_details == 1){
+          Controller.set_last_update_keys(track_keys);
+          Controller.get_multiple_tracks(track_keys);
+        }
+        else{
+          Controller.gbtracks.values().each(
+            function(gbtrack) {
+              if (gbtrack.standard_track()){
+                $(gbtrack.track_image_id).setOpacity(0);
+              }
+            }
+          );
+        }
       }
     });
   },
@@ -251,7 +263,19 @@ var GBrowseController = Class.create({
         // Update the segment sections
         Controller.update_sections( Controller.segment_observers.keys());
 
-        Controller.get_multiple_tracks(track_keys);
+        $('details_msg').innerHTML = results.details_msg;
+        if (results.display_details == 1){
+          Controller.get_multiple_tracks(track_keys);
+        }
+        else{
+          Controller.gbtracks.values().each(
+            function(gbtrack) {
+              if (gbtrack.is_standard_track()){
+                $(gbtrack.track_image_id).setOpacity(0);
+              }
+            }
+          );
+        }
       } // end onSuccess
       
     }); // end Ajax.Request

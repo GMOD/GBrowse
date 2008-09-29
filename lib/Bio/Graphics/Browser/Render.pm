@@ -197,7 +197,8 @@ sub asynchronous_event {
         #warn "updating coordinates";
         $self->init_database();
         $self->asynchronous_update_coordinates($action);
-        my $track_keys = $self->begin_track_render();
+        my ( $track_keys, $display_details, $details_msg )
+            = $self->begin_track_render();
 
         my $overview_scale_return_object
             = $self->asynchronous_update_overview_scale_bar();
@@ -214,6 +215,8 @@ sub asynchronous_event {
             segment            => $settings->{name},
             segment_info       => $segment_info_object,
             track_keys         => $track_keys,
+            display_details    => $display_details,
+            details_msg        => $details_msg,
             overview_scale_bar => $overview_scale_return_object,
             region_scale_bar   => $region_scale_return_object,
             detail_scale_bar   => $detail_scale_return_object,
@@ -224,15 +227,18 @@ sub asynchronous_event {
     if ( my $action = param('first_render') ) {
         $self->init_database();
 
-        my $track_keys = $self->begin_track_render();
-        return unless $track_keys;
+        my ( $track_keys, $display_details, $details_msg )
+            = $self->begin_track_render();
+        return unless ( $track_keys || $details_msg );
 
         my $segment_info_object = $self->segment_info_object();
 
         my $return_object = {
-            segment      => $settings->{name},
-            segment_info => $segment_info_object,
-            track_keys   => $track_keys,
+            segment         => $settings->{name},
+            segment_info    => $segment_info_object,
+            track_keys      => $track_keys,
+            display_details => $display_details,
+            details_msg     => $details_msg,
         };
         return ( 200, 'application/json', $return_object );
     }
@@ -449,13 +455,27 @@ sub begin_track_render {
 
     # Start rendering the detail, region and overview tracks
     my @cache_track_hash_list;
-    push @cache_track_hash_list,
-        $self->render_deferred( labels          => [ $self->detail_tracks ],
-				segment         => $self->segment, 
-				section         => 'detail', 
-				cache_extra     => $cache_extra, 
-				external_tracks => $external
-	    );
+    my $display_details = 1;
+    my $details_msg = '';
+    if ( $self->segment->length <= $self->get_max_segment() ) {
+        push @cache_track_hash_list,
+            $self->render_deferred(
+            labels          => [ $self->detail_tracks ],
+            segment         => $self->segment,
+            section         => 'detail',
+            cache_extra     => $cache_extra,
+            external_tracks => $external
+            );
+    }
+    else{
+        $display_details = 0;
+        $details_msg = h1(
+            $self->tr(
+                'TOO_BIG',
+                scalar $self->data_source()->unit_label(MAX_SEGMENT),
+            )
+        );
+    }
     push @cache_track_hash_list,
         $self->render_deferred( labels          => [ $self->regionview_tracks ],
 				segment         => $self->region_segment,
@@ -480,7 +500,7 @@ sub begin_track_render {
         }
     }
 
-    return \%track_keys;
+    return (\%track_keys, $display_details, $details_msg);
 }
 
 sub create_cache_extra {
@@ -668,7 +688,7 @@ sub segment_info_object {
     my $pad = $self->data_source->global_setting('pad_left')
         || $renderer->image_padding
         || 0;
-    my $max = $settings->{'max segment'} || MAX_SEGMENT;
+    my $max = $self->get_max_segment;
     my $width = ( $settings->{width} * OVERVIEW_RATIO );
 
     my %segment_info_object = (
@@ -742,11 +762,12 @@ sub render_panels {
         my $scale_bar_html = $self->scale_bar( $seg, 'detail' );
         my $panels_html   .= $self->get_blank_panels( [$self->detail_tracks,] );
         my $drag_script    = $self->drag_script( 'detail_panels', 'track' );
+        my $details_msg    = center(div({ -id => 'details_msg', },''));
         $html .= div(
             $self->toggle(
                 'Details',
                 div({ -id => 'detail_panels', -class => 'track' },
-                    $scale_bar_html, $panels_html,
+                    $details_msg,$scale_bar_html, $panels_html,
                 )
             )
         ) . $drag_script;
@@ -2308,6 +2329,19 @@ sub get_zoomincrement {
   return $zoom;
 }
 
+sub get_max_segment {
+  my $self = shift;
+  my $divisor   = $self->setting('unit_divider') || 1;
+  my $max_seg   = $self->setting('max segment');
+  if (!$max_seg) {
+    return MAX_SEGMENT;
+  } elsif ($divisor == 1 ) {
+    return $max_seg
+  } else {
+    return $max_seg * $divisor;
+  }
+}
+
 
 #############################################################################
 #
@@ -2716,7 +2750,7 @@ sub external_data {
     # $f will hold a feature file hash in which keys are human-readable names of
     # feature files and values are FeatureFile objects.
     my $f           = {};
-    my $max_segment = $self->setting('max segment') || 1_000_000;
+    my $max_segment = $self->get_max_segment;
     if ($segment) {
 	my $rel2abs      = $self->coordinate_mapper($segment,1);
 	my $rel2abs_slow = $self->coordinate_mapper($segment,0);

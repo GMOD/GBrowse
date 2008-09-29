@@ -18,6 +18,7 @@ use Bio::Graphics::Browser::Region;
 use Bio::Graphics::Browser::RegionSearch;
 use Bio::Graphics::Browser::RenderPanels;
 use Bio::Graphics::Browser::GFFPrinter;
+use Bio::Graphics::Browser::Util qw[get_section_from_label];
 
 use constant VERSION              => 2.0;
 use constant DEBUG                => 0;
@@ -301,7 +302,8 @@ sub asynchronous_event {
         my $track_keys = $self->begin_individual_track_render($track_name);
         my %track_data;
         foreach my $track_name ( keys %{ $track_keys || {} } ) {
-            my $track_key  = $track_keys->{$track_name};
+            my $track_key        = $track_keys->{$track_name};
+            my $track_section    = get_section_from_label($track_name);
             my $image_width      = $self->get_image_width;
             my $image_element_id = $track_name . "_image";
             my $track_html       = $self->render_deferred_track(
@@ -320,6 +322,7 @@ sub asynchronous_event {
                 track_key        => $track_key,
                 track_name       => $track_name,
                 track_html       => $track_html,
+                track_section    => $track_section,
                 image_element_id => $image_element_id,
                 panel_id         => $panel_id,
             };

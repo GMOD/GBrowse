@@ -7,7 +7,7 @@ use Bio::Graphics;
 use Digest::MD5 'md5_hex';
 use Carp 'croak','cluck';
 use Bio::Graphics::Browser::CachedTrack;
-use Bio::Graphics::Browser::Util qw[modperl_request citation shellwords];
+use Bio::Graphics::Browser::Util qw[modperl_request citation shellwords get_section_from_label];
 use IO::File;
 use POSIX 'WNOHANG','setsid';
 
@@ -402,6 +402,9 @@ sub wrap_rendered_track {
         }
     );
 
+    # Determine which section this goes label goes in
+    my $section = get_section_from_label($label);
+
     return div(
         { -id => "track_${label}", -class => $class },
         div({ -align => 'center' },
@@ -413,6 +416,8 @@ sub wrap_rendered_track {
         . $label
         . q[", "]
         . $track_type
+        . q[", "]
+        . $section
         . q[");</script>];
 }
 

@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.57 2008-09-29 15:09:38 mwz444 Exp $
+ $Id: controller.js,v 1.58 2008-09-29 16:01:26 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -63,9 +63,9 @@ var GBrowseController = Class.create({
   },
   
   register_track:
-  function (track_name,track_type) {
+  function (track_name,track_type,track_section) {
     
-    var gbtrack = new GBrowseTrack(track_name,track_type); 
+    var gbtrack = new GBrowseTrack(track_name,track_type,track_section); 
     this.gbtracks.set(track_name,gbtrack);
     if (track_type=="scale_bar"){
       return gbtrack;
@@ -93,8 +93,20 @@ var GBrowseController = Class.create({
 
     gbtrack.set_last_update_key(this.last_update_key);
     
-  }, // end set_last_update_key
+  },
 
+  // Hids the detail tracks in case they shouldn't be displayed for some reason
+  hide_detail_tracks:
+  function () {
+    this.gbtracks.values().each(
+      function(gbtrack) {
+        if (gbtrack.is_standard_track() 
+            && gbtrack.track_section == 'detail'){
+          $(gbtrack.track_image_id).setOpacity(0);
+        }
+      }
+    );
+  }, 
   // DOM Utility Methods ********************************************
 
   wipe_div:
@@ -205,18 +217,10 @@ var GBrowseController = Class.create({
         Controller.segment_info = results.segment_info;
 
         $('details_msg').innerHTML = results.details_msg;
-        if (results.display_details == 1){
-          Controller.set_last_update_keys(track_keys);
-          Controller.get_multiple_tracks(track_keys);
-        }
-        else{
-          Controller.gbtracks.values().each(
-            function(gbtrack) {
-              if (gbtrack.standard_track()){
-                $(gbtrack.track_image_id).setOpacity(0);
-              }
-            }
-          );
+        Controller.set_last_update_keys(track_keys);
+        Controller.get_multiple_tracks(track_keys);
+        if (results.display_details == 0){
+          Controller.hide_detail_tracks();
         }
       }
     });
@@ -264,17 +268,9 @@ var GBrowseController = Class.create({
         Controller.update_sections( Controller.segment_observers.keys());
 
         $('details_msg').innerHTML = results.details_msg;
-        if (results.display_details == 1){
-          Controller.get_multiple_tracks(track_keys);
-        }
-        else{
-          Controller.gbtracks.values().each(
-            function(gbtrack) {
-              if (gbtrack.is_standard_track()){
-                $(gbtrack.track_image_id).setOpacity(0);
-              }
-            }
-          );
+        Controller.get_multiple_tracks(track_keys);
+        if (results.display_details == 0){
+          Controller.hide_detail_tracks();
         }
       } // end onSuccess
       
@@ -306,7 +302,11 @@ var GBrowseController = Class.create({
         var track_data = results.track_data;
         for (var ret_track_name in track_data){
           var this_track_data = track_data[ret_track_name];
-          var ret_gbtrack = Controller.register_track(ret_track_name,'standard') ;
+          var ret_gbtrack = Controller.register_track(
+            ret_track_name,
+            'standard',
+             this_track_data.track_section
+          );
 
           Controller.set_last_update_key(ret_gbtrack)
           var html           = this_track_data.track_html;

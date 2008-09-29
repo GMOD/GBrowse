@@ -138,7 +138,6 @@ sub run {
       return;
   }
 
-  # Handle cookieless load
   $self->set_default_state();
   $self->init_database();
   $self->init_plugins();
@@ -1420,7 +1419,7 @@ sub get_external_presets {
 sub set_default_state {
   my $self = shift;
   my $state = $self->state;
-  $self->default_state if !%$state or param('reset');
+  $self->default_state if !%$state or !$state->{'name'} or param('reset');
 }
 
 sub update_state {
@@ -1466,7 +1465,7 @@ sub default_state {
 
   # if no name is specified but there is a "initial landmark" defined in the
   # config file, then we default to that.
-  $state->{name} = $self->setting('initial landmark') 
+  $state->{name} ||= $self->setting('initial landmark') 
     if defined $self->setting('initial landmark');
 
   $self->default_tracks();

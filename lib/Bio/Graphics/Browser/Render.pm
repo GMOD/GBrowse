@@ -199,7 +199,6 @@ sub asynchronous_event {
 
         $self->init_database();
         $self->asynchronous_update_coordinates($action);
-	$self->session->unlock(); # don't hold session captive on renderers!
 
         my ( $track_keys, $display_details, $details_msg )
             = $self->begin_track_render();
@@ -249,6 +248,7 @@ sub asynchronous_event {
 
     if ( param('update_sections') ) {
         my @section_names = param('section_names');
+
         my $section_html
             = $self->asynchronous_update_sections( \@section_names );
         my $return_object = { section_html => $section_html, };
@@ -452,6 +452,9 @@ sub asynchronous_event {
 
 sub begin_track_render {
     my $self = shift;
+
+    $self->session->unlock(); # don't hold session captive on renderers!
+    
     $self->init_plugins();
     $self->init_remote_sources();
 
@@ -2058,7 +2061,6 @@ sub asynchronous_update_coordinates {
             $state->{'flip'} = 0;
         }
     }
-    
 
     if ($position_updated) { # clip and update param
 	if (defined $whole_segment_start && $state->{start} < $whole_segment_start) {
@@ -2076,6 +2078,8 @@ sub asynchronous_update_coordinates {
 	# update our "name" state and the CGI parameter
 	$state->{name} = "$state->{ref}:$state->{start}..$state->{stop}";
     }
+
+    $self->session->unlock();
 
     $position_updated;
 }

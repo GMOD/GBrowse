@@ -1922,8 +1922,8 @@ sub asynchronous_update_sections {
     }
 
     # Unused Search Field
-    if ( $handle_section_name{'landmark_search_field'} ) {
-        $return_object->{'landmark_search_field'} = $self->state->{name};
+    if ( $handle_section_name{'search_form_objects'} ) {
+        $return_object->{'search_form_objects'} = $self->render_search_form_objects();
     }
 
     # Plugin Configuration Form

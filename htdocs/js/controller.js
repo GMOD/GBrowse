@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.59 2008-09-29 21:06:53 mwz444 Exp $
+ $Id: controller.js,v 1.60 2008-09-29 21:27:38 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -29,6 +29,7 @@ var external_utility_div_id = 'external_utility_div';
 var edit_upload_form_id     = 'edit_upload_form';
 var page_title_id           = 'page_title';
 var visible_span_id         = 'span';
+var search_form_objects_id  = 'search_form_objects';
 
 var GBrowseController = Class.create({
 
@@ -615,7 +616,7 @@ var Controller = new GBrowseController; // singleton
 
 function initialize_page() {
   //event handlers
-  [page_title_id,visible_span_id].each(function(el) {
+  [page_title_id,visible_span_id,search_form_objects_id].each(function(el) {
     if ($(el) != null) {
       Controller.segment_observers.set(el,1);
     }

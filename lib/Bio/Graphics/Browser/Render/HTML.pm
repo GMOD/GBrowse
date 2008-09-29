@@ -52,11 +52,9 @@ sub render_navbar {
                     #],
                 ),
                 hidden(-name=>'force_submit',-value=>0),
-			    textfield(-name=> 'name',
-				      -id  => 'landmark_search_field',
-				      -size=> 25,
-				      -default=>$settings->{name}),
-			    submit(-name=>$self->tr('Search')),
+                div({ -id => 'search_form_objects' },
+                  $self->render_search_form_objects(),
+                ),
 			    end_form
 			    );
 
@@ -113,6 +111,18 @@ sub render_navbar {
     . div( { -id => "plugin_configure_div"},'&nbsp;'  )
     . br({-clear=>'all'})
 ;
+}
+
+sub render_search_form_objects {
+    my $self     = shift;
+    my $settings = $self->state;
+
+    return textfield(
+        -name    => 'name',
+        -id      => 'landmark_search_field',
+        -size    => 25,
+        -default => $settings->{name}
+    ) . submit( -name => $self->tr('Search') );
 }
 
 sub render_html_head {

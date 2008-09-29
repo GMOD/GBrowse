@@ -2624,7 +2624,7 @@ sub render_deferred_track {
     $cache->cache_time( $self->data_source->cache_time * 60 );
     my $status_html = "<!-- " . $cache->status . " -->";
 
-    warn "render_deferred_track(): $track_name: status = $status_html" if DEBUG;
+    warn "render_deferred_track(): $track_name: status = $status_html";# if DEBUG;
 
     my $result_html = '';
     if ( $cache->status eq 'AVAILABLE' ) {

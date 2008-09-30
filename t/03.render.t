@@ -176,7 +176,7 @@ if (ok($render_object) and ok($render_object->{'track_keys'})){
 }
 
 # Check Add Track
-$CGI::Q = new CGI('track_name=Motif;add_track=1');
+$CGI::Q = new CGI('track_names=Motif;add_tracks=1');
 ($status,$mime,$render_object) = $render->asynchronous_event();
 if (ok($render_object) and ok($render_object->{'track_data'})){
 

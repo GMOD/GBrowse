@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.60 2008-09-29 21:27:38 mwz444 Exp $
+ $Id: controller.js,v 1.61 2008-09-30 23:53:46 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -280,27 +280,44 @@ var GBrowseController = Class.create({
 
   add_track:
   function(track_name, onSuccessFunc) {
+    var track_names = new Array(track_name);  
+    this.add_tracks(track_names, onSuccessFunc);
+  },
 
-    if ( track_name == '' 
-      || (this.gbtracks.get(track_name) !=null 
-          && 
-          null != $(this.gbtracks.get(track_name).track_div_id))
-    ){
-      return;
+  add_tracks:
+  function(track_names, onSuccessFunc) {
+
+    var request_str = "add_tracks=1";
+    var found_track = false;
+    for (var i = 0; i < track_names.length; i++) {
+      var track_name = track_names[i];
+      if ( track_name != '' 
+        && (
+          this.gbtracks.get(track_name) == null 
+          || 
+          $(this.gbtracks.get(track_name).track_div_id) == null
+        )
+      ){
+        request_str += "&track_names="+track_name;
+        found_track = true;
+      }
+    }
+
+    if (!found_track){
+        return;
     }
 
     new Ajax.Request('#',{
       method:     'post',
-      parameters: {
-        add_track:  1,
-        track_name: track_name,
-      },
+      parameters: request_str,
       onSuccess: function(transport) {
         if (onSuccessFunc!=null){
             onSuccessFunc();
         }
         var results    = transport.responseJSON;
         var track_data = results.track_data;
+        var track_keys = new Object();
+        var get_tracks = false;
         for (var ret_track_name in track_data){
           var this_track_data = track_data[ret_track_name];
           var ret_gbtrack = Controller.register_track(
@@ -319,13 +336,12 @@ var GBrowseController = Class.create({
             $(ret_gbtrack.track_image_id).setOpacity(0);
           }
           else{
-            var track_keys = new Array();
-            time_key = create_time_key();
             track_keys[ret_track_name]=this_track_data.track_key;
-            Controller.retrieve_tracks.set(ret_track_name,true);
-            Controller.ret_track_time_key.set(ret_track_name,time_key);
-            Controller.get_remaining_tracks(track_keys,1000,1.1,time_key);
+            get_tracks = true;
           }
+        } // end for (var ret_track_name...
+        if( get_tracks){
+          Controller.get_multiple_tracks(track_keys);
         }
       },
     });
@@ -368,7 +384,6 @@ var GBrowseController = Class.create({
   function (track_keys) {
 
     time_key = create_time_key();
-//    this.retrieve_tracks.keys().each(
     $H(track_keys).keys().each( 
       function(track_name) {
         Controller.retrieve_tracks.set(track_name,true);
@@ -517,7 +532,7 @@ var GBrowseController = Class.create({
       var track_name = select_box.options[select_box.selectedIndex].attributes.getNamedItem('track_name').value;
 
       this.add_track(track_name);
-      // NEEDS TO CHECK THE TRACK CHECKBOX
+      Controller.update_sections(new Array(track_listing_id));
     }
     else if (plugin_type == 'dumper'){
       var loc_str = "?plugin="+plugin_base+";plugin_action="+encodeURI(plugin_action);

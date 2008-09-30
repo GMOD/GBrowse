@@ -10,9 +10,19 @@ function gbCheck (button,state) {
   if (!container) { return false; }
   var checkboxes = container.getElementsByTagName('input');
   if (!checkboxes) { return false; }
-  for (var i=0; i<checkboxes.length; i++) {
-    checkboxes[i].checked=state;
-    gbToggleTrack(checkboxes[i]);
+  if (state == 1){
+    var track_names = new Array();
+    for (var i=0; i<checkboxes.length; i++) {
+      checkboxes[i].checked=state;
+      track_names.push(checkboxes[i].value)
+    }
+    Controller.add_tracks(track_names);
+  }
+  else{
+    for (var i=0; i<checkboxes.length; i++) {
+      checkboxes[i].checked=state;
+      gbToggleTrack(checkboxes[i]);
+    }
   }
   gbTurnOff(a);
   button.checked="on";

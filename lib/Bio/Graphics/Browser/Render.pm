@@ -308,14 +308,19 @@ sub asynchronous_event {
         return ( 200, 'application/json', $return_object );
     }
 
-    if ( my $action = param('add_track') ) {
-        my $track_name = param('track_name');
+    if ( my $action = param('add_tracks') ) {
+        my @track_names = param('track_names');
 
-        $self->add_track_to_state($track_name);
-        my ( $track_keys, $display_details, $details_msg )
-            = $self->background_individual_track_render($track_name);
+        $self->init_database();
+        $self->init_plugins();
+        $self->init_remote_sources();
         my %track_data;
-        foreach my $track_name ( keys %{ $track_keys || {} } ) {
+
+        foreach my $track_name ( @track_names ) {
+            $self->add_track_to_state($track_name);
+            my ( $track_keys, $display_details, $details_msg )
+                = $self->background_individual_track_render($track_name);
+
             my $track_key        = $track_keys->{$track_name};
             my $track_section    = get_section_from_label($track_name);
             my $image_width      = $self->get_image_width;
@@ -382,7 +387,10 @@ sub asynchronous_event {
     if ( my $action = param('rerender_track') ) {
         my $track_name = param('track_name');
 
-        #warn "Rerendering Track $track_name";
+        $self->init_database();
+        $self->init_plugins();
+        $self->init_remote_sources();
+
         my ( $track_keys, $display_details, $details_msg )
             = $self->background_individual_track_render($track_name);
 
@@ -565,9 +573,6 @@ sub create_cache_extra {
 sub background_individual_track_render {
     my $self = shift;
     my $label = shift;
-    $self->init_database();
-    $self->init_plugins();
-    $self->init_remote_sources();
 
     my $display_details = 1;
     my $details_msg = '';

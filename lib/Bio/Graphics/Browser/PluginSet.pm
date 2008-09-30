@@ -1,7 +1,7 @@
 package Bio::Graphics::Browser::PluginSet;
 # API for using plugins
 
-#  $Id: PluginSet.pm,v 1.8 2008-09-18 15:27:07 lstein Exp $
+#  $Id: PluginSet.pm,v 1.9 2008-09-30 21:17:58 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser;
@@ -10,14 +10,16 @@ use CGI 'param';
 use constant DEBUG=>0;
 
 sub new {
-  my $package = shift;
+  my $package       = shift;
   my $config        = shift;
   my $page_settings = shift;
   my @search_path    = @_;
-  my %plugin_list = ();
+  my %plugin_list    = ();
 
-  warn "initializing plugins..." if DEBUG;
-  my @plugins = shellwords($config->setting('plugins')||''); # || DEFAULT_PLUGINS);
+  warn "initializing plugins with $config..." if DEBUG;
+  my @plugins = shellwords($config->plugins);
+  warn "PLUGINS = @plugins" if DEBUG;
+
 
  PLUGIN:
   for my $plugin (@plugins) {

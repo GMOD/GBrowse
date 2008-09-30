@@ -194,8 +194,6 @@ if (defined $OPTIONS{NONROOT}) {
 $Bin = "." if -f './Makefile.PL' && -T './Makefile.PL';
 
 my $biographics_version = biographics_version();
-my $patch_version       = biographics_patch_version();
-my $bioperl_needs_patching = $biographics_version < $patch_version;
 
 open F,">$Bin/GGB.def" or die "Can't open $Bin/GGB.def for writing: $!";
 print F "# This hints file contains configuration information used by the generic browser\n\n";
@@ -246,10 +244,7 @@ WriteMakefile(
 				 Bio::Perl         => 1.005002,
 				 GD                => 2.07,
 				 IO::String        => 0,
-<<<<<<< Makefile.PL
-=======
 				 Module::Build     => 0,
->>>>>>> 1.136
 				 CGI::Session      => 4.02,
 				 File::Temp        => 0,
 				 Digest::MD5       => 0,	
@@ -300,10 +295,6 @@ sub biographics_version {
     require Bio::Graphics::Panel;
     Bio::Graphics::Panel->api_version;
 END
-}
-
-sub biographics_patch_version {
-  return 1.654; # what is in bioperl 1.5.2
 }
 
 sub interpolate {

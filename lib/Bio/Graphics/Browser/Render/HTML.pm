@@ -238,7 +238,7 @@ sub render_instructions {
   my $settings = $self->session->page_settings;
 
   my $svg_link     = GD::SVG::Image->can('new') ?
-    a({-href=>$self->svg_link($settings),-target=>'_blank'},'['.$self->tr('SVG_LINK').']'):'';
+    a({-href=>'?make_image=GD::SVG',-target=>'_blank'},'['.$self->tr('SVG_LINK').']'):'';
   my $reset_link   = a({-href=>"?reset=1",-class=>'reset_button'},'['.$self->tr('RESET').']');
   my $help_link    = a({-href=>$self->general_help(),-target=>'help'},'['.$self->tr('Help').']');
   my $plugin_link  = $self->plugin_links($self->plugins);
@@ -272,7 +272,7 @@ sub render_instructions {
               a({-href        => '#',
                  -onMouseDown => "balloon.showTooltip(event,'url:?share_track=all')"},
                 '[' . ($self->tr('SHARE_ALL') || "Share These Tracks" ) .']'),
-			  a({-href=>'?std_image=1',-target=>'_blank'},'['.$self->tr('IMAGE_LINK').']'),
+			  a({-href=>'?make_image=GD',-target=>'_blank'},'['.$self->tr('IMAGE_LINK').']'),
 			  $plugin_link,
 			  $svg_link,
 			 ) : (),
@@ -584,7 +584,7 @@ sub upload_table {
     . TR(
 	 th({-class=>'uploadtitle', -colspan=>4, -align=>'left'},
 	    $self->tr('Upload_title').':',
-	    a({-href=>annotation_help(),-target=>'help'},'['.$self->tr('HELP').']'))
+	    a({-href=>$self->annotation_help(),-target=>'help'},'['.$self->tr('HELP').']'))
 	);
 
   $cTable .= TR({-class=>'uploadbody', -name=>'something', -id=>'something'},
@@ -759,7 +759,7 @@ sub das_table {
 	       TR(
 		  th({-class=>'uploadtitle',-align=>'left',-colspan=>2},
 		     $self->tr('Remote_title').':',
-		     a({-href=>annotation_help().'#remote',-target=>'help'},'['.$self->tr('Help').']'))),
+		     a({-href=>$self->annotation_help().'#remote',-target=>'help'},'['.$self->tr('Help').']'))),
 	       TR({-class=>'uploadbody'},\@rows),
 	      );
 }
@@ -853,71 +853,7 @@ sub edit_uploaded_file {
     return $return_str;
 }
 
-###################### help ##############3
-sub annotation_help {
-  return "?help=annotation";
-}
-
-sub general_help {
-  return "?help=general";
-}
-
-sub bookmark_link {
-  my $self     = shift;
-  my $settings = shift;
-
-  my $q = new CGI('');
-  my @keys = qw(start stop ref width version flip);
-  foreach (@keys) {
-    $q->param(-name=>$_,-value=>$settings->{$_});
-  }
-
-  # handle selected features slightly differently
-  my @selected = grep {$settings->{features}{$_}{visible} && !/^(file|ftp|http):/} @{$settings->{tracks}};
-  $q->param(-name=>'label',-value=>join('-',@selected));
-
-  # handle external urls
-  my @url = grep {/^(ftp|http):/} @{$settings->{tracks}};
-  $q->param(-name=>'eurl',-value=>\@url);
-  $q->param(-name=>'h_region',-value=>$settings->{h_region}) if $settings->{h_region};
-  my @h_feat= map {"$_\@$settings->{h_feat}{$_}"} keys %{$settings->{h_feat}};
-  $q->param(-name=>'h_feat',-value=>\@h_feat) if @h_feat;
-  $q->param(-name=>'id',-value=>$settings->{id});
-  $q->param(-name=>'grid',-value=>$settings->{grid});
-
-  return "?".$q->query_string();
-}
-
-# for the subset of plugins that are named in the 'quicklink plugins' option, create
-# quick links for them.
-sub plugin_links {
-  my $self    = shift;
-  my $plugins = shift;
-
-  my $quicklink_setting = $self->setting('quicklink plugins') or return '';
-  my @plugins           = shellwords($quicklink_setting)      or return '';
-  my @result;
-  for my $p (@plugins) {
-    my $plugin = $plugins->plugin($p) or next;
-    my $name   = $plugin->name;
-    my $action = "?plugin=$p;plugin_do=".$self->tr('Go');
-    push @result,a({-href=>$action},"[$name]");
-  }
-  return join ' ',@result;
-}
-
-sub image_link {
-    my $self = shift;
-    my $settings = shift;
-    return "?help=link_image;flip=".($settings->{flip}||0);
-}
-
-sub svg_link {
-    my $self = shift;
-    my $settings = shift;
-    return "?help=svg_image;flip=".($settings->{flip}||0);
-}
-
+#### generate the fragment of HTML for printing out the examples
 sub examples {
   my $self = shift;
   my $examples = $self->setting('examples') or return;

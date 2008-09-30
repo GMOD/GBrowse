@@ -7,6 +7,7 @@ use JSON;
 use Digest::MD5 'md5_hex';
 use CGI qw(:standard param request_method header url iframe img span div br center);
 use Carp 'croak','cluck';
+use File::Basename 'dirname';
 use Text::Tabs;
 
 use Bio::Graphics::Browser::I18n;
@@ -127,27 +128,38 @@ sub run {
 
   return if $self->run_asynchronous_event;
 
-  my $source = $self->session->source;
-  if (CGI::path_info() ne "/$source") {
-      my $args = CGI::query_string();
-      my $url  = CGI::url(-absolute=>1,-path_info=>0);
-      $url .= "/".CGI::escape($source);
-      # clear out some of the session variables that shouldn't transfer
-      delete $self->state->{name};
-      delete $self->state->{q};
-      print CGI::redirect($url);
-      return;
-  }
-
-  $self->set_default_state();
-  $self->init_database();
-  $self->init_plugins();
-  $self->init_remote_sources();
+  $self->set_source();
+  $self->init();
   $self->update_state();
   $self->render();
-  $self->clean_up();
+  $self->cleanup();
   select($old_fh);
   $self->session->flush;
+}
+
+sub set_source {
+    my $self = shift;
+
+    my $source = $self->session->source;
+    if (CGI::path_info() ne "/$source") {
+	my $args = CGI::query_string();
+	my $url  = CGI::url(-absolute=>1,-path_info=>0);
+	$url    .= "/".CGI::escape($source);
+	# clear out some of the session variables that shouldn't transfer
+	delete $self->state->{name};
+	delete $self->state->{q};
+	print CGI::redirect($url);
+	return 1;
+    }
+    return;
+}
+
+sub init {
+    my $self = shift;
+    $self->set_default_state();
+    $self->init_database();
+    $self->init_plugins();
+    $self->init_remote_sources();
 }
 
 # this prints out the HTTP data from an asynchronous event
@@ -201,7 +213,7 @@ sub asynchronous_event {
         $self->asynchronous_update_coordinates($action);
 
         my ( $track_keys, $display_details, $details_msg )
-            = $self->begin_track_render();
+            = $self->background_track_render();
 
         my $overview_scale_return_object
             = $self->asynchronous_update_overview_scale_bar();
@@ -231,7 +243,7 @@ sub asynchronous_event {
         $self->init_database();
 
         my ( $track_keys, $display_details, $details_msg )
-            = $self->begin_track_render();
+            = $self->background_track_render();
         return unless ( $track_keys || $details_msg );
 
         my $segment_info_object = $self->segment_info_object();
@@ -301,7 +313,7 @@ sub asynchronous_event {
 
         $self->add_track_to_state($track_name);
         my ( $track_keys, $display_details, $details_msg )
-            = $self->begin_individual_track_render($track_name);
+            = $self->background_individual_track_render($track_name);
         my %track_data;
         foreach my $track_name ( keys %{ $track_keys || {} } ) {
             my $track_key        = $track_keys->{$track_name};
@@ -370,8 +382,9 @@ sub asynchronous_event {
     if ( my $action = param('rerender_track') ) {
         my $track_name = param('track_name');
 
+        #warn "Rerendering Track $track_name";
         my ( $track_keys, $display_details, $details_msg )
-            = $self->begin_individual_track_render($track_name);
+            = $self->background_individual_track_render($track_name);
 
         my $return_object = {
             track_keys      => $track_keys,
@@ -462,8 +475,8 @@ sub asynchronous_event {
     }
 
     # redirect to the imagelink
-    if (param('std_image')) {
-	return (302,undef,$self->image_link($self->state));
+    if (my $format = param('make_image')) {
+	return (302,undef,$self->image_link($self->state,$format));
     }
 
     return unless $events;
@@ -473,7 +486,7 @@ sub asynchronous_event {
     1;
 }
 
-sub begin_track_render {
+sub background_track_render {
     my $self = shift;
 
     $self->session->unlock(); # don't hold session captive on renderers!
@@ -549,7 +562,7 @@ sub create_cache_extra {
     return \@cache_extra;
 }
 
-sub begin_individual_track_render {
+sub background_individual_track_render {
     my $self = shift;
     my $label = shift;
     $self->init_database();
@@ -625,7 +638,6 @@ sub render {
 
 sub render_header {
   my $self    = shift;
-  my $session = $self->session;
   my $cookie = $self->create_cookie();
   print header(
     -cookie  => $cookie,
@@ -639,7 +651,7 @@ sub create_cookie {
   my $cookie = CGI::Cookie->new(
     -name    => $CGI::Session::NAME,
     -value   => $session->id,
-    -path    => url( -absolute => 1 ),
+    -path    => url(-absolute => 1),
     -expires => $self->globals->remember_settings_time
   );
   return $cookie;
@@ -1125,6 +1137,7 @@ sub handle_plugins {
     return unless ($plugin_base);
     $self->init_plugins();
     my $plugin      = $self->plugins->plugin($plugin_base);
+    warn "plugin_base = $plugin_base, plugin = $plugin" if DEBUG;
     my $plugin_type = $plugin->type();
 
     my $plugin_action = param('plugin_action') || '';
@@ -1200,7 +1213,7 @@ sub init_remote_sources {
   return $uploaded_sources && $remote_sources;  # true if both defined
 }
 
-sub clean_up {
+sub cleanup {
   my $self = shift;
 }
 
@@ -1543,6 +1556,7 @@ sub default_state {
     if defined $self->setting('initial landmark');
 
   $self->default_tracks();
+  $self->session->unlock();
 }
 
 sub default_tracks {
@@ -1718,6 +1732,7 @@ sub update_tracks {
   my $state = shift;
 
   $self->set_tracks($self->split_labels(param('label'))) if param('label');
+  $self->set_tracks($self->split_labels(param('t')))     if param('t');
 
   if (my @selected = split_labels(param('enable'))) {
     $state->{features}{$_}{visible} = 1 foreach @selected;
@@ -2894,6 +2909,119 @@ sub commas {
 
     $i = reverse $i;
     return $i;
+}
+
+###################### link generation ##############
+sub annotation_help {
+  return "?help=annotation";
+}
+
+sub general_help {
+  return "?help=general";
+}
+
+sub bookmark_link {
+  my $self     = shift;
+  my $settings = shift;
+
+  my $q = new CGI('');
+  my @keys = qw(start stop ref width version flip);
+  foreach (@keys) {
+    $q->param(-name=>$_,-value=>$settings->{$_});
+  }
+
+  # handle selected features slightly differently
+  my @selected = grep {$settings->{features}{$_}{visible} && !/^(file|ftp|http):/} @{$settings->{tracks}};
+  $q->param(-name=>'label',-value=>join('-',@selected));
+
+  # handle external urls
+  my @url = grep {/^(ftp|http):/} @{$settings->{tracks}};
+  $q->param(-name=>'eurl',-value=>\@url);
+  $q->param(-name=>'h_region',-value=>$settings->{h_region}) if $settings->{h_region};
+  my @h_feat= map {"$_\@$settings->{h_feat}{$_}"} keys %{$settings->{h_feat}};
+  $q->param(-name=>'h_feat',-value=>\@h_feat) if @h_feat;
+  $q->param(-name=>'id',-value=>$settings->{id});
+  $q->param(-name=>'grid',-value=>$settings->{grid});
+
+  return "?".$q->query_string();
+}
+
+# for the subset of plugins that are named in the 'quicklink plugins' option, create
+# quick links for them.
+sub plugin_links {
+  my $self    = shift;
+  my $plugins = shift;
+
+  my $quicklink_setting = $self->setting('quicklink plugins') or return '';
+  my @plugins           = shellwords($quicklink_setting)      or return '';
+  my @result;
+  for my $p (@plugins) {
+    my $plugin = $plugins->plugin($p) or next;
+    my $name   = $plugin->name;
+    my $action = "?plugin=$p;plugin_do=".$self->tr('Go');
+    push @result,a({-href=>$action},"[$name]");
+  }
+  return join ' ',@result;
+}
+
+sub image_link {
+    my $self = shift;
+    my $settings = shift;
+    my $format   = shift;
+
+    $format      = 'GD' unless $format eq 'GD' || $format eq 'GD::SVG';
+
+    my $source   = $self->data_source->name;
+    my $id       = $settings->{id};
+    my $flip     = $settings->{flip} || param('flip') || 0;
+    my $keystyle = $settings->{ks};
+    my $grid     = $settings->{grid} || 0;
+    my $url      = url(-absolute=>1);
+    $url         = dirname($url) . "/gbrowse_img/".CGI::escape($source);
+    my $tracks   = $settings->{tracks};
+    my $width    = $settings->{width};
+    my $name     = $settings->{name} || "$settings->{ref}:$settings->{start}..$settings->{stop}";
+    my $type     = join '+',map{CGI::escape($_)} map {/\s/?qq("$_"):$_} grep {$settings->{features}{$_}{visible}} @$tracks;
+    my $options  = join '+',map { join '+', CGI::escape($_),$settings->{features}{$_}{options}
+                             } map {/\s/?"$_":$_}
+    grep {
+	$settings->{features}{$_}{options}
+    } @$tracks;
+    my $img_url  = "$url/?name=$name;type=$type;width=$width;id=$id";
+    $img_url    .= ";flip=$flip"         if $flip;
+    $img_url    .= ";options=$options"   if $options;
+    $img_url    .= ";format=$format"     if $format;
+    $img_url    .= ";keystyle=$keystyle" if $keystyle;
+    $img_url    .= ";grid=$grid";
+    $self->add_hilites($settings,\$img_url);
+    return $img_url
+}
+
+sub add_hilites {
+    my $self     = shift;
+
+    my $settings = shift;
+    my $img_url  = shift;
+
+  # add feature hilighting
+    if ($settings->{h_feat} && ref $settings->{h_feat} eq 'HASH') {
+	for my $h (keys %{$settings->{h_feat}}) {
+	    $$img_url .= ";h_feat=$h\@$settings->{h_feat}{$h}";
+	}
+    }
+  # add region hilighting
+    if ($settings->{h_region} && ref $settings->{h_region} eq 'ARRAY') {
+	for my $h (@{$settings->{h_region}}) {
+	    $$img_url .= ";h_region=$h";
+	}
+    }
+
+}
+
+sub svg_link {
+    my $self = shift;
+    my $settings = shift;
+    return "?help=svg_image;flip=".($settings->{flip}||0);
 }
 
 ########## note: "sub tr()" makes emacs' syntax coloring croak, so place this function at end

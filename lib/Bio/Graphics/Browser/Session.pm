@@ -7,14 +7,19 @@ use Fcntl 'LOCK_EX';
 use File::Spec;
 use File::Path 'mkpath';
 
+use constant DEBUG => 0;
+
 sub new {
   my $class    = shift;
   my ($driver,$id,$args,$default_source) = @_;
   $CGI::Session::NAME = 'gbrowse_sess';
   $id               ||= CGI->cookie($CGI::Session::NAME);
   my $self            = bless {},$class;
-  $self->lock($id);
+
+  $self->lock($id) if $id;
   $self->{session}    = CGI::Session->new($driver,$id,$args);
+  $self->lock($self->{session}->id) unless $id;  # if we have a newly-created ID, then lock now
+
   $self->source($default_source) unless defined $self->source;
   $self;
 }
@@ -30,9 +35,9 @@ sub lock {
 
     open my $fh,$mode,$lockpath 
 	or die "Couldn't open lockfile $lockpath: $!";
-    warn "waiting on session lock...\n";
+    warn "waiting on session lock..." if DEBUG;
     flock ($fh,LOCK_EX);
-    warn "...got session lock\n";
+    warn "...got session lock" if DEBUG;
     $self->lockfh($fh);
 }
 

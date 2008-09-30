@@ -170,8 +170,32 @@ sub render_panels {
     my $self = shift;
     my $args = shift;
     delete $args->{deferred}; # deferred execution incompatible with this call
-    my $destinations = $self->request_panels($args);
-    return $self->render_tracks($destinations,$args);
+    my $requests = $self->request_panels($args);
+    return $self->render_tracks($requests,$args);
+}
+
+sub render_track_images {
+    my $self = shift;
+    my $args = shift;
+    delete $args->{deferred}; # deferred execution incompatible with this call
+    my $requests = $self->request_panels($args);
+
+    my %results;
+    my %still_pending = map {$_=>1} keys %$requests;
+    while (%still_pending) {
+	for my $label (keys %$requests) {
+	    my $data = $requests->{$label};
+	    next if $data->status eq 'PENDING';
+	    next if $data->status eq 'EMPTY';
+	    if ($data->status eq 'AVAILABLE') {
+		$results{$label} = eval{$data->gd};
+	    }
+	    delete $still_pending{$label};
+	}
+	warn "waiting...";
+	sleep 1 if %still_pending;
+    }
+    return \%results;
 }
 
 

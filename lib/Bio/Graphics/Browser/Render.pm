@@ -309,7 +309,6 @@ sub asynchronous_event {
             my $image_width      = $self->get_image_width;
             my $image_element_id = $track_name . "_image";
 
-            my $track_section = get_section_from_label($track_name);
             my $track_html;
             if ( $track_section eq 'detail' and not $display_details ) {
                 my $image_width = $self->get_image_width;
@@ -326,6 +325,10 @@ sub asynchronous_event {
                     track_name => $track_name,
                 ) || '';
             }
+            $track_html = $self->wrap_track_in_track_div(
+                track_name => $track_name,
+                track_html => $track_html,
+            );
 
             my $panel_id = 'detail_panels';
             if ( $track_name =~ /:overview$/ ) {
@@ -863,6 +866,10 @@ sub scale_bar {
         height     => $height,
         url        => $url,
         status     => '',
+    );
+    $html = $self->wrap_track_in_track_div(
+        track_name => $label,
+        track_html => $html,
         track_type => 'scale_bar',
     );
     return $html;
@@ -2534,13 +2541,17 @@ sub get_blank_panels {
     my $image_width = $self->get_image_width;
     foreach my $track_name ( @{ $track_names || [] } ) {
 
-        $html .= $self->render_grey_track(
+        my $track_html = $self->render_grey_track(
             track_name       => $track_name,
             image_width      => $image_width,
             image_height     => EMPTY_IMAGE_HEIGHT,
             image_element_id => $track_name . "_image",
         );
-
+        $track_html = $self->wrap_track_in_track_div(
+            track_name => $track_name,
+            track_html => $track_html,
+        );
+        $html .= $track_html;
     }
     return $html;
 

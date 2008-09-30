@@ -402,23 +402,9 @@ sub wrap_rendered_track {
         }
     );
 
-    # Determine which section this goes label goes in
-    my $section = get_section_from_label($label);
-
-    return div(
-        { -id => "track_${label}", -class => $class },
-        div({ -align => 'center' },
-            ( $show_titlebar ? $titlebar : '' ) . $img . $pad_img
-        ),
-        $map_html || ''
-        )
-        . qq[<script type="text/javascript" language="JavaScript">Controller.register_track("]
-        . $label
-        . q[", "]
-        . $track_type
-        . q[", "]
-        . $section
-        . q[");</script>];
+    return div( { -align => 'center' },
+        ( $show_titlebar ? $titlebar : '' ) . $img . $pad_img )
+        . ( $map_html || '' );
 }
 
 # This routine is called to hand off the rendering to a remote renderer. 

@@ -5,7 +5,7 @@ use warnings;
 use base 'Bio::Graphics::Browser::Render';
 use Bio::Graphics::Browser::Shellwords;
 use Bio::Graphics::Karyotype;
-use Bio::Graphics::Browser::Util qw[citation];
+use Bio::Graphics::Browser::Util qw[citation get_section_from_label];
 use Digest::MD5 'md5_hex';
 use Carp 'croak';
 use CGI qw(:standard escape start_table end_table);
@@ -1068,6 +1068,32 @@ sub wrap_plugin_configuration {
 
     return $return_html;
 
+}
+
+sub wrap_track_in_track_div {
+    my $self       = shift;
+    my %args       = @_;
+    my $track_name = $args{'track_name'};
+    my $track_html = $args{'track_html'};
+
+    # track_type Used in register_track() javascript method
+    my $track_type = $args{'track_type'} || 'standard';
+
+    my $section = get_section_from_label($track_name);
+    my $class = $track_name =~ /scale/i ? 'scale' : 'track';
+
+    return div(
+        {   -id    => "track_" . $track_name,
+            -class => $class,
+            -align => 'center',
+        },
+        $track_html
+        )
+        . qq[<script type="text/javascript" language="JavaScript">Controller.register_track("]
+        . $track_name . q[", "]
+        . $track_type . q[", "]
+        . $section
+        . q[");</script>];
 }
 
 sub do_plugin_header {

@@ -122,14 +122,20 @@ Controller.get_multiple_tracks() to retrieve the track images.
 
 =head3 add_track
 
-This method sends a message to the server requesting that a new track be added.
+This is wraps a track name in an array for add_tracks.
 
-The server responds with by starting to render the track and returning a track
-key and the div element that will hold the track image.
+=head3 add_tracks
 
-The onSuccess method for the request registers the new track, appends the new
-div element to to the appropriate track group and if needed, calls
-Controller.get_multiple_tracks() to retrieve the track.
+This method sends a message to the server requesting that new tracks neet to be
+added.
+
+The server responds with by starting to render the tracks and returning a data
+structure with track keys and the div elements that will hold the track images.
+
+The onSuccess method for the request loops through the tracks and registers the
+new tracks, append the new div elements to to the appropriate track group.  It
+also keeps track of any tracks that need to be loaded and calls
+Controller.get_multiple_tracks() to retrieve them.
 
 =head3 rerender_track
 
@@ -444,6 +450,9 @@ is done.
 Otherwise, it needs to add the track, so the method calls Controller.add_track().
 
 =item - Controller.add_track()
+
+Note: add_track() is a wrapper for add_tracks which can update several tracks
+at once.
 
 add_track() sends a message to the server requesting that a new track be added.
 

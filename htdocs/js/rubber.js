@@ -3,7 +3,7 @@
  rubber.js -- a base class for drag/rubber-band selection in gbrowse
 
  Sheldon McKay <mckays@cshl.edu>
- $Id: rubber.js,v 1.8 2008-09-29 18:38:08 mwz444 Exp $
+ $Id: rubber.js,v 1.9 2008-09-30 11:34:54 mwz444 Exp $
 
 */
 
@@ -422,15 +422,12 @@ SelectArea.prototype.stopRubber = function(event) {
   balloonIsSuppressed = false;
   if (!selectAreaIsActive) return false;
   var self = currentSelectArea;
-console.log("SR1");
   if (!self.moved) {
-console.log("SR1 NOT MOVED");
     self.cancelRubber();
     self.recenter();
     return false;
   }
 
-console.log("SR3");
   selectAreaIsActive = false;
   self.moved = false;
 

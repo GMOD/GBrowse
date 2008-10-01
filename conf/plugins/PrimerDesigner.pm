@@ -1,4 +1,4 @@
-# $Id: PrimerDesigner.pm,v 1.3.6.1.6.13 2008-08-25 18:34:05 sheldon_mckay Exp $
+# $Id: PrimerDesigner.pm,v 1.3.6.1.6.14 2008-10-01 08:12:13 stajich Exp $
 
 =head1 NAME
 
@@ -72,8 +72,8 @@ use Bio::DB::GFF::Featname;
 use Bio::DB::GFF::Feature;
 use Bio::DB::GFF::RelSegment;
 use Bio::Graphics::FeatureFile;
-use CGI qw/:standard escape/;
-use CGI::Pretty 'html3';
+use CGI qw/:standard escape html3/;
+#use CGI::Pretty 'html3';
 use CGI::Carp 'fatalsToBrowser';
 use CGI::Toggle;
 use Math::Round 'nearest';

@@ -201,6 +201,17 @@ sub render_tracks {
 							     -language => $language);
     $self->Debug("Got renderer()");
 
+    #FIX: this is a cut and paste, and isn't fully general!
+    # hiliting should be handled in RenderPanels, not in Render
+    if ($settings->{h_feat}) {
+	$panel_args->{hilite_callback} =  sub {
+	        my $feature = shift;
+		# if we get here, we select the search term for highlighting
+		return unless $feature->display_name;
+		return $settings->{h_feat}{$feature->display_name};
+	    };
+    }
+
     my $requests = $renderer->make_requests({labels => $tracks,%$panel_args});
 
     $self->Debug("Calling run_local_requests()");

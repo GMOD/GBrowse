@@ -1601,18 +1601,15 @@ sub auto_open {
     my $features = $self->region()->features() || return;
     my $state    = $self->state;
 
-    my $tracks = $state->{features};
-
     for my $feature (@$features) {
         my @desired_labels = $self->data_source()->feature2label($feature)  or next;
+	warn "desired labels = @desired_labels";
 	for my $desired_label (@desired_labels) {
-	    if ( exists $tracks->{$desired_label} ) {
-		warn "auto_open(): add_track_to_state($desired_label)";
-		$self->add_track_to_state($desired_label);
-		$state->{h_feat} = {};
-		$state->{h_feat}{ $feature->display_name } = 'yellow'
-		    unless param('h_feat') && param('h_feat') eq '_clear_';
-	    }
+	    warn "auto_open(): add_track_to_state($desired_label)";
+	    $self->add_track_to_state($desired_label);
+	    $state->{h_feat} = {};
+	    $state->{h_feat}{ $feature->display_name } = 'yellow'
+		unless param('h_feat') && param('h_feat') eq '_clear_';
 	}
     }
 }

@@ -1621,8 +1621,14 @@ sub make_link {
     my $end   = CGI::escape($feature->end);
     my $src   = CGI::escape(eval{$feature->source} || '');
     my $url   = CGI->request_uri || '../..';
+    my $id    = eval {$feature->primary_id};
+    my $dbid  = eval {$feature->gbrowse_dbid};
     $url      =~ s!/gbrowse.*!!;
-    $url      .= "/gbrowse_details/$ds_name?name=$name;class=$class;ref=$ref;start=$start;end=$end";
+    $url      .= "/gbrowse_details/$ds_name?ref=$ref;start=$start;end=$end";
+    $url      .= ";name=$name"     if defined $name;
+    $url      .= ";class=$class"   if defined $class;
+    $url      .= ";feature_id=$id" if defined $id;
+    $url      .= ";db_id=$dbid"    if defined $dbid;
     return $url;
   }
   return $data_source->link_pattern($link,$feature,$panel);
@@ -1662,6 +1668,8 @@ sub make_title {
     }
   }
 
+  warn "$feature seq id = ",$feature->seq_id;
+
   # otherwise, try it ourselves
   $title = eval {
     if ($feature->can('target') && (my $target = $feature->target)) {
@@ -1675,12 +1683,14 @@ sub make_title {
       my ($start,$end) = ($feature->start,$feature->end);
       ($start,$end)    = ($end,$start) if $feature->strand < 0;
       my $name         = $feature->can('display_name') ? $feature->display_name : $feature->info;
-      $name          ||= '';
-      join(' ',
-	   "$key:",
-	   "$name:".
-	   (defined $start ? $start : '?')."..".(defined $end ? $end : '?')
-	  );
+      my $result;
+      $result .= "$key "  if defined $key;
+      $result .= "$name " if defined $name;
+      $result .= '['.$feature->seq_id.":" if defined $feature->seq_id;
+      $result .= $feature->start      if defined $feature->start;
+      $result .= '..' . $feature->end if defined $feature->end;
+      $result .= ']' if defined $feature->seq_id;
+      $result;
     }
   };
   warn $@ if $@;

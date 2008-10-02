@@ -133,7 +133,6 @@ sub search_db {
 
   my ($ref,$start,$stop,$class,$id) = $self->parse_feature_name($name);
   my $features = $self->lookup_features($ref,$start,$stop,$class,$name,$id);
-
   return $features;
 }
 
@@ -156,6 +155,7 @@ sub lookup_features {
   my $features;
 
   if (defined $id && $db->can('get_feature_by_id')) { # this overrides everything else
+      warn "$db->get_feature_by_id($id) = ",$db->get_feature_by_id($id);
       return [$db->get_feature_by_id($id)];
   }
 

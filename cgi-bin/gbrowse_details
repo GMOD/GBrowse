@@ -7,7 +7,7 @@ use Bio::Graphics::Browser::Markup;
 use Bio::Graphics::Browser::Realign 'align';
 use Bio::Graphics::Glyph::generic;
 
-our $VERSION = '$Id: gbrowse_details,v 1.2 2008-09-09 23:59:08 lstein Exp $';
+our $VERSION = '$Id: gbrowse_details,v 1.3 2008-10-02 19:07:19 lstein Exp $';
 our ($INDEX,%COLORS,%URLS,%formatterCache);
 
 
@@ -19,12 +19,12 @@ my $conf_file = $ENV{GBROWSE_MASTER} || DEFAULT_MASTER;
 my $conf      = Bio::Graphics::Browser->new(File::Spec->catfile($conf_dir,$conf_file))
     or die "Couldn't read globals";
 
-my $detail_renderer = Renderer->new($conf);
+my $detail_renderer = DetailRenderer->new($conf);
 $detail_renderer->run();
 
 exit 0;
 
-package Renderer;
+package DetailRenderer;
 
 use strict;
 use constant DEBUG=>0;
@@ -79,7 +79,11 @@ sub run {
     my $start = param('start');
     my $end   = param('end');
     my $f_id  = param('feature_id');
+    my $db_id = param('db_id');
     my $rmt   = param('remote');
+
+    warn "dbid = $db_id";
+    $self->state->{dbid} = $db_id if $db_id; # to search correct database
 
     # This populates the $self->{urls} variable with link rules from the config file.
     $self->get_link_urls();
@@ -121,10 +125,10 @@ sub run {
 	my $stylesheet = $self->globals->resolve_path($css,'url');
 	print start_html(-title => "GBrowse Details: $search_term",
 			 -style => $stylesheet);
-	print h1("$search_term Details");
+	print h1("$name Details");
 
 	if (@$features) {
-	    $self->print_features($features);
+	    print $self->print_features($features);
 	} else {
 	    print p({-class=>'error'},'Requested feature not found in database.');
 	}
@@ -216,6 +220,16 @@ sub print_features {
 				     $a,
 				     $f->attributes($a));
 	}
+
+	$string   .= $self->print_multiple($f,
+					   $options,
+					   'primary_id',
+					   $f->primary_id) if $f->can('primary_id');
+	
+	$string   .= $self->print_multiple($f,
+					   $options,
+					   'gbrowse_dbid',
+					   $f->gbrowse_dbid) if $f->can('gbrowse_dbid');
 	
 	$string   .= TR({-valign=>'top',-class=>'databody'},
 			th({-height=>3},''),
@@ -230,17 +244,17 @@ sub print_features {
 	    @subfeatures = sort {$a->start <=> $b->start} $f->get_SeqFeatures;
 	}
 
-	my $subtable = $self->print_multiple($f,
-				     $options,
-				     'Parts',
-				     $self->print_features(\@subfeatures,$subf+1)
-	    ) if @subfeatures;
+ 	my $subtable = $self->print_multiple($f,
+ 				     $options,
+ 				     'Parts',
+ 				     $self->print_features(\@subfeatures,$subf+1)
+ 	    ) if @subfeatures;
 	
 	$string .= $subtable || '';  # prevent uninit variable warning
-	$string .= end_table();
+	$string .= CGI::end_table();
 	
 	if ($subtable or $subf==0) {
-	    my $dna = $f->seq;
+	    my $dna = $self->get_seq($f);
 	    $dna    = $dna->seq if ref $dna;  # compensate for API changes
 	    $string .= $self->print_dna($f,
 					$dna,
@@ -251,7 +265,19 @@ sub print_features {
 	}
 	
     }
-    print $string;
+    return $string;
+}
+
+sub get_seq {
+    my $self = shift;
+    my $f     = shift;
+    my $ref   = $f->seq_id;
+    my $start = $f->start;
+    my $end   = $f->end;
+    my $strand = $f->strand;
+    my $db    = $self->source->open_database('GENERAL') or return;
+    my $seg   = $db->segment($ref,$start,$end) or return;
+    return $strand >= 0 ? $seg->seq : $seg->seq->revcom;
 }
 
 sub print_dna {

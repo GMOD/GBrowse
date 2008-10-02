@@ -746,15 +746,22 @@ sub db_settings {
 
   $track ||= 'general';
 
+  warn "db_settings($track)";
+
   # caching to avoid calling setting() too many times
   return @{$DB_SETTINGS{$self,$track}} if $DB_SETTINGS{$self,$track};
 
   # if the track contains the "database" option, then it is a symbolic name
   # that indicates a [symbolic_name:database] section in this file or the globals
   # file.
-  my $symbolic_db_name = $self->fallback_setting($track => 'database');
-  my $section          = $symbolic_db_name ? "$symbolic_db_name:database"
-                                           : $track;
+  my ($symbolic_db_name,$section);
+
+  if ($track =~ /:database$/) {
+      $section = $symbolic_db_name = $track;
+  } else {
+      $symbolic_db_name = $self->fallback_setting($track => 'database');
+      $section          = $symbolic_db_name      ? "$symbolic_db_name:database"   : $track;
+  }
 
   my $adaptor = $self->fallback_setting($section => 'db_adaptor') or die "No db_adaptor specified";
   eval "require $adaptor; 1" or die $@;
@@ -797,7 +804,9 @@ sub open_database {
   $track  ||= 'general';
 
   my ($dbid,$adaptor,@argv) = $self->db_settings($track);
-  my $key             = Dumper($adaptor,@argv);
+  my $key                   = Dumper($adaptor,@argv);
+
+  warn "track = $track, argv = @argv";
 
   if (exists $DB{$key}) {
       # remember mapping of database to track
@@ -805,8 +814,11 @@ sub open_database {
       return $DB{$key};
   }
 
+  
   $DB{$key} = eval {$adaptor->new(@argv)} or warn $@;
   die "Could not open database: $@" unless $DB{$key};
+
+  warn "$track => $adaptor->new(@argv) => $DB{$key}";
 
   if (my $refclass = $self->setting('reference class')) {
     eval {$DB{$key}->default_class($refclass)};
@@ -819,9 +831,9 @@ sub open_database {
   $DB{$key};
 }
 
-=item @tracks = $dsn->db2track($db)
+=item @ids   = $dsn->db2id($db)
 
-=item $dbid  = $dsn->db2track($db)
+=item $dbid  = $dsn->db2id($db)
 
 Given a database handle, return all dbids that correspond to that
 database. In a scalar context, returns just the first dbid that uses
@@ -917,6 +929,7 @@ as keys and database symbolic IDs as values.
 sub add_dbid_to_feature {
     my $self           = shift;
     my ($feature,$dbid) = @_;
+    return unless $feature;
 
     no strict 'refs';
 

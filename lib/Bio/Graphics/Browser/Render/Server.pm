@@ -244,25 +244,35 @@ sub search_features {
 	) or return;
     $search->init_databases($tracks);
 
+    warn "SERVER, dbid = ",$settings->{dbid};
+
     my $results = $search->search_features_locally($searchterm);
     return unless $results;
-    my @features = map {
-	my $f = $_;
-	my %attributes = map {$_=>[$f->get_tag_values($_)]} $f->get_all_tags;
-	Bio::Graphics::Feature->new(
-	    -name   => $f->name,
-	    -primary_tag => $f->primary_tag,
- 	    -source_tag  => $f->source_tag,
-	    -seq_id => $f->seq_id,
-	    -start  => $f->start,
-	    -end    => $f->end,
-	    -strand => $f->strand,
-	    -score  => eval{$f->score} || 0,
-	    -desc   => eval{$f->desc}  || '',
-	    -attributes => \%attributes,
-	  );
-    } grep {defined $_} @$results;
+    my @features = map { $self->clone_feature($_) } grep {defined $_} @$results;
     return nfreeze(\@features);
+}
+
+sub clone_feature {
+    my $self = shift;
+    my $f    = shift;
+    my %attributes = map {$_=>[$f->get_tag_values($_)]} $f->get_all_tags;
+    my $clone = Bio::Graphics::Feature->new(
+					    -name   => $f->name,
+					    -primary_tag => $f->primary_tag,
+					    -source_tag  => $f->source_tag,
+					    -seq_id => $f->seq_id,
+					    -start  => $f->start,
+					    -end    => $f->end,
+					    -strand => $f->strand,
+					    -score  => eval{$f->score} || 0,
+					    -desc   => eval{$f->desc}  || '',
+					    -primary_id => eval{$f->primary_id} || undef,
+					    -attributes => \%attributes,
+					    );
+    for my $s (map {$self->clone_feature($_)} $f->get_SeqFeatures()) {
+	$clone->add_SeqFeature($s) ;
+    }
+    return $clone;
 }
 
 

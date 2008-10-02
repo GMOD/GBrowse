@@ -94,8 +94,6 @@ sub init_databases {
 		      state   => $self->state,
 		      db      => $db}
 		);
-	    # remember mapping of db to track name (any track name)
-	    $self->{db2track}{$db} ||= $l;
 	}
     }
 }
@@ -183,15 +181,27 @@ sub search_features_locally {
     my $local_dbs = $self->local_dbs;
     return unless $local_dbs;
 
-    my @dbs = $self->state->{dbid} ? $self->source->open_database($state->{dbid})
-	                           : keys %{$local_dbs};
+    warn "local search dbid = ",$state->{dbid};
+    warn "local search db   =", $self->source->open_database($state->{dbid});
+
+    my @dbs = $state->{dbid} ? $self->source->open_database($state->{dbid})
+	                     : keys %{$local_dbs};
 
     for my $db (@dbs) {
-	my $region   = $local_dbs->{$db};
+	my $region   = $local_dbs->{$db} || 
+	    Bio::Graphics::Browser::Region->new(
+						{ source  => $self->source,
+						  state   => $self->state,
+						  db      => $db
+						  }
+						); # allow explicit db_id to override cached list of local dbs
 	my $features = $region->search_features($search_term);
+	next unless $features && @$features;
 	$self->add_dbid_to_features($db,$features);
 	push @found,@$features if $features;
     }
+
+    warn "found = @found";
 
     return \@found;
 }
@@ -231,6 +241,8 @@ sub search_features_remotely {
     my $s_dsn	= nfreeze($self->source);
     my $s_set	= nfreeze($self->state);
     my %env     = map {$_=>$ENV{$_}} grep /^GBROWSE/,keys %ENV;
+
+    warn "remote search, dbid = ",$self->state->{dbid};
 
     for my $url (keys %$remote_dbs) {
 	my @tracks  = keys %{$remote_dbs->{$url}};

@@ -103,6 +103,13 @@ BEGIN {
 
   $windows = $Config{osname} =~ /mswin/i;
 
+  if ($windows and $] == 5.010) {
+     print STDERR "\n\nActiveState Perl 5.10 is not compatible with GBrowse due to problems\n";
+     print STDERR "with the AS implementation.  Please remove it and install Perl 5.8 instead.\n\n\n";
+     exit(0);
+  }
+
+
   $binaries = $Config{'binexp'};
   $make     = $Config{'make'};
 
@@ -173,7 +180,9 @@ use constant BIOPERL              => 'http://bioperl.org/DIST/'.BIOPERL_VERSION.
 my %REPOSITORIES = ('BioPerl-Release-Candidates' => 'http://bioperl.org/DIST/RC',
 		    'BioPerl-Regular-Releases'   => 'http://bioperl.org/DIST',
 	            'Kobes'                      => 'http://theoryx5.uwinnipeg.ca/ppms',
-                    'Bribes'                     => 'http://www.Bribes.org/perl/ppm');
+                    'Bribes'                     => 'http://www.Bribes.org/perl/ppm',
+                     'tcool'                     => 'http://ppm.tcool.org/archives/',
+                    );
 
 
 # this is so that ppm can be called in a pipe

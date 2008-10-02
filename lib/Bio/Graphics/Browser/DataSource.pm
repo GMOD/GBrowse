@@ -746,8 +746,6 @@ sub db_settings {
 
   $track ||= 'general';
 
-  warn "db_settings($track)";
-
   # caching to avoid calling setting() too many times
   return @{$DB_SETTINGS{$self,$track}} if $DB_SETTINGS{$self,$track};
 
@@ -806,8 +804,6 @@ sub open_database {
   my ($dbid,$adaptor,@argv) = $self->db_settings($track);
   my $key                   = Dumper($adaptor,@argv);
 
-  warn "track = $track, argv = @argv";
-
   if (exists $DB{$key}) {
       # remember mapping of database to track
       $self->{db2track}{$DB{$key}}{$dbid}++;
@@ -817,8 +813,6 @@ sub open_database {
   
   $DB{$key} = eval {$adaptor->new(@argv)} or warn $@;
   die "Could not open database: $@" unless $DB{$key};
-
-  warn "$track => $adaptor->new(@argv) => $DB{$key}";
 
   if (my $refclass = $self->setting('reference class')) {
     eval {$DB{$key}->default_class($refclass)};

@@ -82,9 +82,10 @@ sub search_features {
   my $db    = $self->db;
   my $state = $self->state;
   $search_term ||= $state->{name};
-  warn "SEARCH TERM = $search_term";
 
   defined $search_term && length $search_term > 0 or return; 
+
+  warn "SEARCHING FOR $search_term"; 
 
   my $features = $self->search_db($search_term);
   $self->features($features);
@@ -206,6 +207,7 @@ sub lookup_features {
 
   unless (@$features) {
     # if we get here, try the keyword search
+      warn "try a keyword search for $literal_name";
     $features = $self->_feature_keyword_search($literal_name);
   }
 

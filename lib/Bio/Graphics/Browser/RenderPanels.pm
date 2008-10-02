@@ -1332,7 +1332,6 @@ sub create_panel_args {
   my $keystyle = 'none';
 
   my @pass_thru_args = map {/^-/ ? ($_=>$args->{$_}) : ()} keys %$args;
-  warn "passthru = @pass_thru_args";
   my @argv = (
 	      -grid         => $section eq 'detail' ? $settings->{'grid'} : 0,
 	      -start        => $seg_start,
@@ -1667,8 +1666,6 @@ sub make_title {
       return $source->link_pattern($link,$feature) if $link && $link ne 'AUTO';
     }
   }
-
-  warn "$feature seq id = ",$feature->seq_id;
 
   # otherwise, try it ourselves
   $title = eval {

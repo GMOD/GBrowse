@@ -181,9 +181,6 @@ sub search_features_locally {
     my $local_dbs = $self->local_dbs;
     return unless $local_dbs;
 
-    warn "local search dbid = ",$state->{dbid};
-    warn "local search db   =", $self->source->open_database($state->{dbid});
-
     my @dbs = $state->{dbid} ? $self->source->open_database($state->{dbid})
 	                     : keys %{$local_dbs};
 
@@ -200,8 +197,6 @@ sub search_features_locally {
 	$self->add_dbid_to_features($db,$features);
 	push @found,@$features if $features;
     }
-
-    warn "found = @found";
 
     return \@found;
 }
@@ -223,7 +218,9 @@ sub search_features_remotely {
     # searches in order to take advantage of
     # parallelism
     my $remote_dbs = $self->remote_dbs;
-    return unless $remote_dbs;
+    return unless %$remote_dbs;
+
+    warn "pid = $$: KICKING OFF A REMOTE SEARCH";
 
     eval { use LWP::Parallel::UserAgent;} unless LWP::Parallel::UserAgent->can('new');
     eval { use HTTP::Request::Common;   } unless HTTP::Request::Common->can('POST');
@@ -241,8 +238,6 @@ sub search_features_remotely {
     my $s_dsn	= nfreeze($self->source);
     my $s_set	= nfreeze($self->state);
     my %env     = map {$_=>$ENV{$_}} grep /^GBROWSE/,keys %ENV;
-
-    warn "remote search, dbid = ",$self->state->{dbid};
 
     for my $url (keys %$remote_dbs) {
 	my @tracks  = keys %{$remote_dbs->{$url}};

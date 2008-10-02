@@ -126,14 +126,18 @@ sub run {
 
   warn "RUN(): URI = ",url(-path=>1,-query=>1) if DEBUG;
 
+  $self->set_source();
+
   return if $self->run_asynchronous_event;
 
-  $self->set_source();
   $self->init();
   $self->update_state();
   $self->render();
   $self->cleanup();
   select($old_fh);
+
+  warn 'here i am, name = ',$self->state->{name};
+
   $self->session->flush;
 }
 
@@ -146,8 +150,8 @@ sub set_source {
 	my $url  = CGI::url(-absolute=>1,-path_info=>0);
 	$url    .= "/".CGI::escape($source)."/";
 	# clear out some of the session variables that shouldn't transfer
-	delete $self->state->{name};
-	delete $self->state->{q};
+	# delete $self->state->{name};
+	# delete $self->state->{q};
 	$url .= "?$args" if $args;
 	print CGI::redirect($url);
 	return 1;
@@ -242,8 +246,11 @@ sub asynchronous_event {
     }
 
     if ( my $action = param('first_render') ) {
-        $self->init_database();
 
+	warn "valid region = ", $self->state->{valid_region};
+	return (204,'text/plain','no content') unless $self->state->{valid_region};
+
+        $self->init_database();
         my ( $track_keys, $display_details, $details_msg )
             = $self->background_track_render();
         return unless ( $track_keys || $details_msg );
@@ -320,6 +327,8 @@ sub asynchronous_event {
 
         foreach my $track_name ( @track_names ) {
             $self->add_track_to_state($track_name);
+	    next  unless $self->segment;
+
             my ( $track_keys, $display_details, $details_msg )
                 = $self->background_individual_track_render($track_name);
 
@@ -594,7 +603,8 @@ sub background_individual_track_render {
         $segment = $self->segment();
     }
 
-    if (    $section eq 'detail'
+    if ($section eq 'detail'
+	and $self->segment
         and $self->segment->length > $self->get_max_segment() )
     {
         $display_details = 0;
@@ -958,9 +968,10 @@ sub init_database {
 
 sub region {
     my $self     = shift;
+
     return $self->{region} if exists $self->{region};
 
-     my $region   = Bio::Graphics::Browser::Region->new(
+    my $region   = Bio::Graphics::Browser::Region->new(
  	{ source => $self->data_source,
  	  state  => $self->state,
  	  db     => $self->db }
@@ -977,6 +988,7 @@ sub region {
 	$region->search_features();
     }
     else { # a feature search
+	warn "FEATURE SEARCH";
 	my $search = Bio::Graphics::Browser::RegionSearch->new(
 	    { source => $self->data_source,
 	      state  => $self->state,
@@ -987,12 +999,14 @@ sub region {
     }
 
     $self->plugins->set_segments($region->segments) if $self->plugins;
+
+    $self->state->{valid_region} = $region->feature_count > 0;
     return $self->{region} = $region;
 }
 
 sub segment {
     my $self   = shift;
-    my $region = $self->region;
+    my $region = $self->region or return;
     return $region->seg;
 }
 
@@ -1222,6 +1236,8 @@ sub init_remote_sources {
 
 sub cleanup {
   my $self = shift;
+  my $state = $self->state;
+  $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}";  # to remember us by :-)
 }
 
 sub fatal_error {
@@ -1513,7 +1529,7 @@ sub get_external_presets {
 sub set_default_state {
   my $self = shift;
   my $state = $self->state;
-  $self->default_state if !%$state or !$state->{'name'} or param('reset');
+  $self->default_state if !%$state or param('reset');
 }
 
 sub update_state {
@@ -1588,14 +1604,16 @@ sub auto_open {
     my $tracks = $state->{features};
 
     for my $feature (@$features) {
-        my $desired_label = $self->data_source()->feature2label($feature)
-            or next;
-        if ( exists $tracks->{$desired_label} ) {
-            $self->add_track_to_state($desired_label);
-            $state->{h_feat} = {};
-            $state->{h_feat}{ $feature->display_name } = 'yellow'
-                unless param('h_feat') && param('h_feat') eq '_clear_';
-        }
+        my @desired_labels = $self->data_source()->feature2label($feature)  or next;
+	for my $desired_label (@desired_labels) {
+	    if ( exists $tracks->{$desired_label} ) {
+		warn "auto_open(): add_track_to_state($desired_label)";
+		$self->add_track_to_state($desired_label);
+		$state->{h_feat} = {};
+		$state->{h_feat}{ $feature->display_name } = 'yellow'
+		    unless param('h_feat') && param('h_feat') eq '_clear_';
+	    }
+	}
     }
 }
 
@@ -1772,7 +1790,6 @@ sub update_coordinates {
   # I really don't know if this belongs here. Divider should only be used for displaying
   # numbers, not for doing calculations with them.
   # my $divider  = $self->setting('unit_divider') || 1;
-  warn 'PARAMS = ',join ' ',param();
   if (param('ref')) {
     $state->{ref}   = param('ref');
     $state->{start} = param('start') if defined param('start') && param('start') =~ /^[\d-]+/;
@@ -1832,10 +1849,9 @@ sub update_coordinates {
   }
 
   elsif (param('name')) {
-    $state->{name} = param('name');
-    $state->{dbid} = param('dbid') if param('dbid');
+      $state->{name} = param('name');
+      $state->{dbid} = param('dbid') if param('dbid');
   }
-
 }
 
 sub asynchronous_update_overview_scale_bar {

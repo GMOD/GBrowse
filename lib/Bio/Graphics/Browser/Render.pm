@@ -141,13 +141,14 @@ sub set_source {
     my $self = shift;
 
     my $source = $self->session->source;
-    if (CGI::path_info() ne "/$source") {
+    if (CGI::path_info() ne "/$source/") {
 	my $args = CGI::query_string();
 	my $url  = CGI::url(-absolute=>1,-path_info=>0);
-	$url    .= "/".CGI::escape($source);
+	$url    .= "/".CGI::escape($source)."/";
 	# clear out some of the session variables that shouldn't transfer
 	delete $self->state->{name};
 	delete $self->state->{q};
+	$url .= "?$args" if $args;
 	print CGI::redirect($url);
 	return 1;
     }
@@ -172,6 +173,7 @@ sub run_asynchronous_event {
 	print CGI::header( -status => '204 No Content' );
     }
     elsif ($status == 302) { # redirect
+	warn CGI::redirect($data);
 	print CGI::redirect($data);
     }
     elsif ($mime_type eq 'application/json') {
@@ -1520,10 +1522,9 @@ sub update_state {
 
   my $state         = $self->state;
 
+  if ($self->segment) {
 
-  if ($self->segment){
-
-      # A reset won't have a segment so we neet to test for that before we use
+      # A reset won't have a segment, so we need to test for that before we use
       # one in whole_segment().
       my $whole_segment = $self->whole_segment;
       $state->{seg_min} = $whole_segment->start;
@@ -1771,6 +1772,7 @@ sub update_coordinates {
   # I really don't know if this belongs here. Divider should only be used for displaying
   # numbers, not for doing calculations with them.
   # my $divider  = $self->setting('unit_divider') || 1;
+  warn 'PARAMS = ',join ' ',param();
   if (param('ref')) {
     $state->{ref}   = param('ref');
     $state->{start} = param('start') if defined param('start') && param('start') =~ /^[\d-]+/;
@@ -1828,6 +1830,7 @@ sub update_coordinates {
     $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}";
     param(name => $state->{name});
   }
+
   elsif (param('name')) {
     $state->{name} = param('name');
     $state->{dbid} = param('dbid') if param('dbid');
@@ -2452,7 +2455,7 @@ sub regionview_bounds {
 
 sub split_labels {
   my $self = shift;
-  map {/^(http|ftp|das)/ ? $_ : split /[+-]/} @_;
+  map {/^(http|ftp|das)/ ? $_ : split /[ +-]/} @_;
 }
 
 sub set_tracks {
@@ -2507,6 +2510,13 @@ sub regionview_tracks {
   my $state = $self->state;
   return grep {$state->{features}{$_}{visible} && /:region$/ && !/^_/ }
     @{$state->{tracks}};
+}
+
+sub visible_tracks {
+    my $self = shift;
+    return ($self->detail_tracks,
+	    $self->regionview_tracks,
+	    $self->overview_tracks);
 }
 
 ################## get renderer for this segment #########
@@ -2981,24 +2991,25 @@ sub image_link {
     my $flip     = $settings->{flip} || param('flip') || 0;
     my $keystyle = $settings->{ks};
     my $grid     = $settings->{grid} || 0;
-    my $url      = url(-absolute=>1);
+    my $url      = url();
     $url         = dirname($url) . "/gbrowse_img/".CGI::escape($source);
     my $tracks   = $settings->{tracks};
     my $width    = $settings->{width};
-    my $name     = $settings->{name} || "$settings->{ref}:$settings->{start}..$settings->{stop}";
-    my $type     = join '+',map{CGI::escape($_)} map {/\s/?qq("$_"):$_} grep {$settings->{features}{$_}{visible}} @$tracks;
+    my $name     = "$settings->{ref}:$settings->{start}..$settings->{stop}";
+    my $type     = join '+',map{CGI::escape($_)} map {/\s/?qq("$_"):$_} $self->visible_tracks;
     my $options  = join '+',map { join '+', CGI::escape($_),$settings->{features}{$_}{options}
                              } map {/\s/?"$_":$_}
     grep {
 	$settings->{features}{$_}{options}
     } @$tracks;
-    my $img_url  = "$url/?name=$name;type=$type;width=$width;id=$id";
+    my $img_url  = "$url/?name=$name;label=$type;width=$width;id=$id";
     $img_url    .= ";flip=$flip"         if $flip;
     $img_url    .= ";options=$options"   if $options;
     $img_url    .= ";format=$format"     if $format;
     $img_url    .= ";keystyle=$keystyle" if $keystyle;
     $img_url    .= ";grid=$grid";
     $self->add_hilites($settings,\$img_url);
+    warn "img url = $img_url";
     return $img_url
 }
 

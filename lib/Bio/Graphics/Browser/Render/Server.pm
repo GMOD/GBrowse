@@ -180,6 +180,7 @@ sub render_tracks {
     my $settings	= thaw param('settings');
     my $datasource	= thaw param('datasource');
     my $language	= thaw param('language');
+    my $panel_args      = thaw param('panel_args') || {};
 
     $self->Debug("render_tracks(): Opening database...");
     my $db = $datasource->open_database();
@@ -200,7 +201,7 @@ sub render_tracks {
 							     -language => $language);
     $self->Debug("Got renderer()");
 
-    my $requests = $renderer->make_requests({labels => $tracks});
+    my $requests = $renderer->make_requests({labels => $tracks,%$panel_args});
 
     $self->Debug("Calling run_local_requests()");
 

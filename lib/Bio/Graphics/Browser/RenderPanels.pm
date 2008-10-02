@@ -17,7 +17,6 @@ use constant GBROWSE_RENDER => 'gbrowse_render';  # name of the CGI-based image 
 use constant TRUE => 1;
 use constant DEBUG => 0;
 
-use constant DEFAULT_KEYSTYLE => 'between';
 use constant DEFAULT_EMPTYTRACKS => 0;
 use constant PAD_DETAIL_SIDES    => 10;
 use constant RULER_INTERVALS     => 20;
@@ -465,13 +464,15 @@ sub run_remote_requests {
   my $source   = $self->source;
   my $settings = $self->settings;
   my $lang     = $self->language;
-  my %env      = map {$_=>$ENV{$_}} grep /^GBROWSE/,keys %ENV;
+  my %env      = map {$_=>$ENV{$_}}    grep /^GBROWSE/,keys %ENV;
+  my %args     = map {$_=>$args->{$_}} grep /^-/,keys %$args;
 
   # serialize the data source and settings
   my $s_dsn	= Storable::nfreeze($source);
   my $s_set	= Storable::nfreeze($settings);
   my $s_lang	= Storable::nfreeze($lang);
   my $s_env	= Storable::nfreeze(\%env);
+  my $s_args    = Storable::nfreeze(\%args);
 
   # sort requests by their renderers
   my %renderers;
@@ -499,13 +500,14 @@ sub run_remote_requests {
     my $request = POST ($url,
 			Content_Type => 'multipart/form-data',
 			Content => [
-			    operation  => 'render_tracks',
-			    tracks     => $s_track,
-			    settings   => $s_set,
-			    datasource => $s_dsn,
-			    language   => $s_lang,
-			    env        => $s_env,
-			]);
+				    operation  => 'render_tracks',
+				    panel_args => $s_args,
+				    tracks     => $s_track,
+				    settings   => $s_set,
+				    datasource => $s_dsn,
+				    language   => $s_lang,
+				    env        => $s_env,
+				    ]);
 
     my $response = $ua->request($request);
 
@@ -968,27 +970,18 @@ sub run_local_requests {
 	               : ()
     } @labels_to_generate;
 
-    my $do_fork = 0; # this doesn't work!
     for my $label (@labels_to_generate) {
-
-	# what the f!!! is this doing here?
-	if ($do_fork) {
-	    warn "label = $label";
-	    next if ( fork() );
-	    $self->prepare_modperl_for_fork();
-	    $self->clone_databases();
-	}
 
         # this shouldn't happen, but let's be paranoid
         next if $seenit{$label}++;
 
         my @keystyle = ( -key_style => 'between' )
             if $label =~ /^\w+:/ && $label !~ /:(overview|region)/; # a plugin
-        my @nopad
-            = ( $source->setting( $label => 'key' ) || '' ) eq 'none'
-            ? ( -pad_top => 0 )
-            : ();
 
+	my $key = $source->setting( $label => 'key' ) || '' ;
+	my @nopad = ($key eq '') || ($key eq 'none')
+             ? (-pad_top => 0)
+             : ();
         my $panel_args = $requests->{$label}->panel_args;
 
         my $panel
@@ -1039,7 +1032,6 @@ sub run_local_requests {
             \%trackmap, 0 );
         $requests->{$label}->put_data( $gd, $map );
 
-        CORE::exit 0 if $do_fork;
     }
 }
 
@@ -1340,6 +1332,7 @@ sub create_panel_args {
   my $keystyle = 'none';
 
   my @pass_thru_args = map {/^-/ ? ($_=>$args->{$_}) : ()} keys %$args;
+  warn "passthru = @pass_thru_args";
   my @argv = (
 	      -grid         => $section eq 'detail' ? $settings->{'grid'} : 0,
 	      -start        => $seg_start,
@@ -1355,7 +1348,7 @@ sub create_panel_args {
 	      -postgrid     => $postgrid,
 	      -background   => $args->{background} || '',
 	      -truecolor    => $source->global_setting('truecolor') || 0,
-          -extend_grid  => 1,
+	      -extend_grid  => 1,
 	      @pass_thru_args,   # position is important here to allow user to override settings
 	     );
 

@@ -57,13 +57,19 @@ case "$1" in
 	;;
   restart|force-reload)
 	echo -n "Restarting $DESC: $NAME "
+	echo -n "stopping "
 	for port in $PORT; do
-	    start-stop-daemon --stop --oknodo --pidfile $RUNDIR/$NAME.$port.pid
-	    sleep 3
+	    start-stop-daemon --stop --oknodo --pidfile $RUNDIR/$NAME.$port.pid > /dev/null 2>&1
+            echo -n "$port "
+        done
+	sleep 3
+	echo -n "starting "
+	for port in $PORT; do
+	    ARGS="--port $port --verbose $VERBOSITY --log $LOGDIR/gbrowse_slave --pid $RUNDIR/$NAME.$port.pid"
 	    start-stop-daemon --start --pidfile $RUNDIR/$NAME.$port.pid \
-                               --chuid $USER --nicelevel $NICE --exec $DAEMON -- $ARGS
+		--chuid $USER --nicelevel $NICE --exec $DAEMON -- $ARGS
 	    echo -n "$port "
-	done    
+	done 
 	echo "."
 	;;
   *)

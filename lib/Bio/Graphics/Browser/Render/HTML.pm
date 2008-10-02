@@ -40,8 +40,9 @@ sub render_navbar {
 
   my $searchform = join '',(
                 start_form(
-                    -name => 'searchform',
-                    -id   => 'searchform',
+                    -name   => 'searchform',
+                    -id     => 'searchform',
+		    -action =>  CGI::url(-path=>1),
                     
                     # Submitting through the Controller seems to have been a bad idea
                     #-onSubmit => q[ 

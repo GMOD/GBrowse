@@ -572,7 +572,7 @@ sub add_scale_tracks {
 	    double         => 1,
 	    tick           => 2,
 	    label          => 1,
-	    key            => 'none',
+	    key            => '',
 			});
     }
     # Sort of a bug here. We want the scale tracks to start out on the

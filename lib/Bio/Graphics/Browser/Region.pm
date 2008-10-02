@@ -82,6 +82,8 @@ sub search_features {
   my $db    = $self->db;
   my $state = $self->state;
   $search_term ||= $state->{name};
+  warn "SEARCH TERM = $search_term";
+
   defined $search_term && length $search_term > 0 or return; 
 
   my $features = $self->search_db($search_term);

@@ -1,6 +1,6 @@
 package Bio::Graphics::Browser::CachedTrack;
 
-# $Id: CachedTrack.pm,v 1.2 2008-09-23 17:22:46 lstein Exp $
+# $Id: CachedTrack.pm,v 1.3 2008-10-02 03:49:21 lstein Exp $
 # This package defines a Bio::Graphics::Browser::Track option that manages
 # the caching of track images and imagemaps.
 
@@ -169,13 +169,13 @@ sub map {
 sub width {
     my $self = shift;
     my $gd   = $self->gd or return;
-    return $gd->width;
+    return ($gd->getBounds)[0];
 }
 
 sub height {
     my $self = shift;
     my $gd   = $self->gd or return;
-    return $gd->height;
+    return ($gd->getBounds)[1];
 }
 
 # status returns one of four states

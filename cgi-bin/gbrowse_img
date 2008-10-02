@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# $Id: gbrowse_img,v 1.1 2008-09-30 21:17:58 lstein Exp $
+# $Id: gbrowse_img,v 1.2 2008-10-02 03:49:20 lstein Exp $
 
 use strict;
 
@@ -28,8 +28,10 @@ exit 0;
 
 package GBrowse_img;
 
-use CGI qw(param redirect start_html end_html
+use CGI qw(param start_html end_html
 	   p h1 path_info escape img);
+use File::Spec;
+use File::Temp 'tmpnam','tempfile','tempdir';
 
 use constant DEFAULT_CONF   => '/etc/apache2/gbrowse';
 use constant DEFAULT_MASTER => 'GBrowse.conf';
@@ -57,6 +59,8 @@ unless (param()) {
 sub run {
     my $self   = shift;
     my $render = $self->render;
+
+    warn "GBROWSE_IMG: $ENV{REQUEST_URI}";
 
     $render->set_source() && exit;  # may cause a redirect and exit 
     $render->init();
@@ -136,21 +140,56 @@ sub render_image {
     my @labels   = $self->render->detail_tracks;
     my $external = $self->render->external_data;
 
+    my $format   = param('format') || 'GD';
+
     warn "labels = ",join ',',@labels;
     unshift @labels,'_scale';
+
+    my $convert_to_pdf;
+    if ($format eq 'PDF' && `which inkscape`) {
+	$convert_to_pdf++;
+	$format = 'GD::SVG';
+    }
 
     my $result   = $renderer->render_track_images(
 						  {
 						      labels            => \@labels,
 						      external_features => $external,
-						      section           => 'detail'
+						      section           => 'detail',
+						      -key_style        => 'between',
+						      -image_class      => $format,
 						      }
 						  );
     
     warn "returned labels = ",join ',',%$result;
-    my $gd = $self->consolidate_images(@{$result}{(@labels)});
-    print $self->header('image/png');
-    print $gd->png;
+    my $data = $self->consolidate_images(@{$result}{(@labels)});
+    if ($format eq 'GD') {
+	print $self->header('image/png');	
+	print $data
+    } 
+    elsif ($format eq 'GD::SVG' && $convert_to_pdf) {
+	print $self->header('application/pdf');
+
+	my ($infh,$in)   = tempfile(UNLINK=>0,SUFFIX=>'.svg');
+	my ($outfh,$out) = tempfile(UNLINK=>0,SUFFIX=>'.pdf');
+
+	print $infh $data or die "$in: $!";
+	close $infh;
+
+	system "inkscape -z --export-pdf=$out $in";
+	open (my $fh,'<',$out) or die "$out: $!";
+	while (<$fh>) {print $_}
+	close $fh;
+	unlink $in,$out;
+    }
+    elsif ($format eq 'GD::SVG') {
+	print $self->header('image/svg+xml');
+	print $data
+    } 
+    else { 
+	print $self->header('text/plain');
+	print "unknown format $format\n";
+    }
 }
 
 sub consolidate_images {
@@ -162,19 +201,68 @@ sub consolidate_images {
     my $height = 0;
     my $width  = 0;
     for my $g (@gds) {
-	$height +=   $g->height;
-	$width   ||= $g->width;
+	warn "g=$g";
+	$height +=   ($g->getBounds)[1];  # because GD::SVG is missing the width() and height() methods
+	$width   ||= ($g->getBounds)[0];
     }
+
+    my $format = ref($gds[0]);
+    warn "format = $format";
+
+    return $format =~ /^GD::SVG/ ? $self->_consolidate_svg($width,$height,@gds)
+                                 : $self->_consolidate_gd ($width,$height,@gds);
+}
+
+sub _consolidate_gd {
+    my $self = shift;
+    my ($width,$height,@gds) = @_;
+
     my $gd = GD::Image->new($width,$height);
     $gd->colorAllocate(255,255,255);
 
     my $offset = 0;
     for my $g (@gds) {
 	$gd->copy($g,0,$offset,0,0,$g->getBounds);
-	$offset+=$g->height;
+	$offset += ($g->getBounds)[1];
     }
 
-    return $gd;
+    return $gd->png;
+}
+
+# because the GD::SVG copy() method is broken
+sub _consolidate_svg {
+    my $self = shift;
+    my ($width,$height,@gds) = @_;
+
+    my $svg = qq(<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n\n);
+    $svg   .= qq(<svg height="$height" width="$width" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n);
+
+    my $offset = 0;
+    for my $g (@gds) {
+	my $s              = $g->svg;
+	my $current_height = 0;
+	foreach (split "\n",$s) {
+	    if (m!</svg>!) {
+		last;
+	    }
+	    elsif (/<svg height="(\d+)"/) {
+		$current_height = $1;
+		$svg .= qq(<g transform="translate(0,$offset)">\n);
+	    }
+	    elsif ($current_height) {
+		$svg .= "$_\n";
+	    }
+	}
+	$svg .= "</g>\n" if $current_height;
+	$offset += $current_height;
+    }
+    $svg   .= qq(</svg>\n);
+
+    # munge fonts slightly for systems that don't have Helvetica installed
+    $svg    =~ s/font="Helvetica"/font="san-serif"/gi;
+    $svg    =~ s/font-size="11"/font-size="9"/gi;  
+    $svg    =~ s/font-size="13"/font-size="12"/gi;  
+    return $svg;
 }
 
 sub usage {

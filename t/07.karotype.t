@@ -71,7 +71,7 @@ $kg->add_hits(\@motifs);
 my $html    = $kg->to_html;
 ok($html);
 my @imgs = $html =~ /(<img)/g;
-ok(scalar @imgs,17,'Expected exactly 17 image tags');
+ok(scalar @imgs,2,'Expected exactly 2 image tags');
 
 if (0) { # set this to true to see the image
     $html =~ s!/tmpimages!/tmp/gbrowse_testing/tmpimages!g;

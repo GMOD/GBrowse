@@ -99,14 +99,13 @@ sub request_panels {
   my ($local_labels,
       $remote_labels) = $self->sort_local_remote($data_destinations);
 
-  warn "request_panels(): section = $args->{section}; local labels = @$local_labels, remote labels = @$remote_labels" ;
-      #if DEBUG;
+  warn "request_panels(): section = $args->{section}; local labels = @$local_labels, remote labels = @$remote_labels" if DEBUG;
 
   # In the case of a deferred request we fork.
   # Parent returns the list of requests.
   # Child processes the requests in the background.
   # If both local and remote requests are needed, then we
-  # fork a second time and procss them in parallel.
+  # fork a second time and process them in parallel.
   if ($args->{deferred}) {
       $SIG{CHLD} = 'IGNORE';
       my $child = fork();
@@ -1592,6 +1591,7 @@ sub make_link {
 
   $panel ||= 'Bio::Graphics::Panel';
   $label ||= $data_source->feature2label($feature);
+  $label ||= 'general';
 
   # most specific -- a configuration line
   my $link     = $data_source->code_setting($label,'link');

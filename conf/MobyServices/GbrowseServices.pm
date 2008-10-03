@@ -5,7 +5,7 @@ package MobyServices::GbrowseServices;
 # Non-modperl users should change this variable if needed to point
 # to the directory in which the configuration files are stored.
 #
-$CONF_DIR  = '/etc/apache2/gbrowse.conf';
+$CONF_DIR  = '/usr/local/apache/conf/gbrowse.conf';
 #
 ###################################################################
 
@@ -16,7 +16,7 @@ $CONF_DIR  = '/etc/apache2/gbrowse.conf';
 
 
 #====================================================================
-#$Id: GbrowseServices.pm,v 1.6 2008-09-20 01:12:27 lstein Exp $
+#$Id: GbrowseServices.pm,v 1.7 2008-10-03 19:35:27 lstein Exp $
 
 use strict;
 use Text::Shellwords;

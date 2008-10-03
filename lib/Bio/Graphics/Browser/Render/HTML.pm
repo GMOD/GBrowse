@@ -564,10 +564,10 @@ sub render_toggle_external_table {
 
 sub render_external_table {
     my $self = shift;
-    
     my $feature_files = shift;
+
     my $state = $self->state;
-    my $content
+    my $content 
         = div( { -id => "external_utility_div" }, '' )
         . start_form( -name => 'externalform', -id => 'externalform' )
         . $self->upload_table

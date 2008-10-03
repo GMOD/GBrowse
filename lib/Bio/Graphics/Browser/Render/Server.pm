@@ -180,7 +180,7 @@ sub render_tracks {
     my $settings	= thaw param('settings');
     my $datasource	= thaw param('datasource');
     my $language	= thaw param('language');
-    my $panel_args      = thaw param('panel_args') || {};
+    my $panel_args      = thaw param('panel_args');
 
     $self->Debug("render_tracks(): Opening database...");
     my $db = $datasource->open_database();
@@ -255,7 +255,7 @@ sub search_features {
 	) or return;
     $search->init_databases($tracks);
 
-    warn "SERVER, dbid = ",$settings->{dbid};
+    warn "SERVER, dbid = ",$settings->{dbid} if DEBUG;
 
     my $results = $search->search_features_locally($searchterm);
     return unless $results;

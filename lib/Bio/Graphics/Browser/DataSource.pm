@@ -524,7 +524,7 @@ sub feature2label {
   #@label    = $self->type2label($basetype,$length) unless @label;
   push @label,$self->type2label($basetype,$length);
 
-  @label    = ($type) unless @label;
+  # @label    = ($type) unless @label;
 
   # remove duplicate labels
   my %seen;

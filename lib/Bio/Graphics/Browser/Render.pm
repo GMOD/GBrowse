@@ -31,6 +31,7 @@ use constant MAX_SEGMENT          => 1_000_000;
 use constant TOO_MANY_SEGMENTS    => 5_000;
 use constant OVERVIEW_RATIO       => 1.0;
 
+
 my %PLUGINS; # cache initialized plugins
 
 # new() can be called with two arguments: ($data_source,$session)
@@ -136,8 +137,6 @@ sub run {
   $self->cleanup();
   select($old_fh);
 
-  warn 'here i am, name = ',$self->state->{name};
-
   $self->session->flush;
 }
 
@@ -209,11 +208,9 @@ sub asynchronous_event {
     my $settings = $self->state;
     my $events;
 
-    warn "asynchronous_event(",(join ' ',param()),")";# if DEBUG;
+    warn "asynchronous_event(",(join ' ',param()),")" if DEBUG;
 
     if ( my $action = param('navigate') ) {
-
-        #warn "updating coordinates";
 
         $self->init_database();
         $self->asynchronous_update_coordinates($action);
@@ -988,7 +985,7 @@ sub region {
 	$region->search_features();
     }
     else { # a feature search
-	warn "FEATURE SEARCH";
+	warn "FEATURE SEARCH" if DEBUG;
 	my $search = Bio::Graphics::Browser::RegionSearch->new(
 	    { source => $self->data_source,
 	      state  => $self->state,
@@ -1603,9 +1600,9 @@ sub auto_open {
 
     for my $feature (@$features) {
         my @desired_labels = $self->data_source()->feature2label($feature)  or next;
-	warn "desired labels = @desired_labels";
+	warn "desired labels = @desired_labels" if DEBUG;
 	for my $desired_label (@desired_labels) {
-	    warn "auto_open(): add_track_to_state($desired_label)";
+	    warn "auto_open(): add_track_to_state($desired_label)" if DEBUG;
 	    $self->add_track_to_state($desired_label);
 	    $state->{h_feat} = {};
 	    $state->{h_feat}{ $feature->display_name } = 'yellow'
@@ -1626,7 +1623,7 @@ sub add_track_to_state {
   push @{$state->{tracks}},$label unless $current{$label};
 
   warn "ADD TRACK TO STATE WAS: ",
-    join ' ',grep {$state->{features}{$_}{visible}} sort keys %{$state->{features}},"\n";
+    join ' ',grep {$state->{features}{$_}{visible}} sort keys %{$state->{features}},"\n" if DEBUG;
 
   if($state->{features}{$label}){
     $state->{features}{$label}{visible}=1;
@@ -1636,7 +1633,7 @@ sub add_track_to_state {
   }
 
   warn "ADD TRACK TO STATE NOW: ",
-    join ' ',grep {$state->{features}{$_}{visible}} sort keys %{$state->{features}},"\n";
+    join ' ',grep {$state->{features}{$_}{visible}} sort keys %{$state->{features}},"\n" if DEBUG;
 }
 
 sub remove_track_from_state {
@@ -2722,7 +2719,7 @@ sub render_deferred_track {
     $cache->cache_time( $self->data_source->cache_time * 60 );
     my $status_html = "<!-- " . $cache->status . " -->";
 
-    warn "render_deferred_track(): $track_name: status = $status_html";# if DEBUG;
+    warn "render_deferred_track(): $track_name: status = $status_html" if DEBUG;
 
     my $result_html = '';
     if ( $cache->status eq 'AVAILABLE' ) {

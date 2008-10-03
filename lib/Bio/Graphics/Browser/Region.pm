@@ -6,6 +6,7 @@ package Bio::Graphics::Browser::Region;
 use strict;
 use warnings;
 use Bio::Graphics::Browser::Shellwords;
+use constant DEBUG=>0;
 
 sub new {
     my $self  = shift;
@@ -85,7 +86,7 @@ sub search_features {
 
   defined $search_term && length $search_term > 0 or return; 
 
-  warn "SEARCHING FOR $search_term"; 
+  warn "SEARCHING FOR $search_term" if DEBUG; 
 
   my $features = $self->search_db($search_term);
   $self->features($features);
@@ -207,8 +208,8 @@ sub lookup_features {
 
   unless (@$features) {
     # if we get here, try the keyword search
-      warn "try a keyword search for $literal_name";
-    $features = $self->_feature_keyword_search($literal_name);
+      warn "try a keyword search for $literal_name" if DEBUG;
+      $features = $self->_feature_keyword_search($literal_name);
   }
 
   return $features;

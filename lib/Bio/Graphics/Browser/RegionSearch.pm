@@ -6,6 +6,8 @@ use Bio::Graphics::Browser::Region;
 use LWP::Parallel::UserAgent;
 use Storable 'nfreeze','thaw';
 
+use constant DEBUG => 0;
+
 # search multiple databases using crazy heuristics
 
 =head1 NAME
@@ -220,7 +222,7 @@ sub search_features_remotely {
     my $remote_dbs = $self->remote_dbs;
     return unless %$remote_dbs;
 
-    warn "pid = $$: KICKING OFF A REMOTE SEARCH";
+    warn "pid = $$: KICKING OFF A REMOTE SEARCH" if DEBUG;
 
     eval { use LWP::Parallel::UserAgent;} unless LWP::Parallel::UserAgent->can('new');
     eval { use HTTP::Request::Common;   } unless HTTP::Request::Common->can('POST');

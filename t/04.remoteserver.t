@@ -12,7 +12,7 @@ use IO::String;
 use CGI;
 use FindBin '$Bin';
 
-use constant TEST_COUNT => 46;
+use constant TEST_COUNT => 43;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
 my $PID;
@@ -84,6 +84,7 @@ my $request  = POST("http://localhost:$port/",
 		     settings   => nfreeze($settings),
 		     datasource => nfreeze($source),
 		     language   => nfreeze($lang),
+		     panel_args => nfreeze({}),
 		     operation  => 'render_tracks',
 		    ]);
 for (1..3) {
@@ -127,6 +128,8 @@ foreach (@images) {
 for my $img (@images) {
     ok (-e $img && -s _);
 }
+
+ok (scalar @images,4);
 
 # uncomment to see the images
 # system "xv @images";

@@ -1,6 +1,6 @@
 package Bio::Graphics::Karyotype;
 
-# $Id: Karyotype.pm,v 1.5 2008-09-20 01:12:27 lstein Exp $
+# $Id: Karyotype.pm,v 1.6 2008-10-03 19:35:27 lstein Exp $
 # Utility class to create a display of a karyotype and a series of "hits" on the individual chromosomes
 # Used for searching
 
@@ -10,6 +10,10 @@ use Bio::Graphics::Panel;
 use GD 'gdSmallFont';
 use CGI qw(img div b url table TR th td b escapeHTML a br);
 use Carp 'croak';
+
+# there is a bug in the ideogram glyph that causes a core dump when
+# drawing small chromosomes - this "fixes" the problem
+use constant SUPPRESS_SMALL_CHROMOSOMES => 50;  # suppress chromosomes smaller than 50 pixels
 
 sub new {
   my $class = shift;
@@ -112,7 +116,8 @@ sub to_html {
       ) {
 
     my $panel  = $self->{panels}{$seqid}{panel};
-    next if $panel->height < 50;  # workaround bug/coredump in karyotype glyph
+    # workaround bug/coredump in ideogram glyph
+    next if $panel->height < SUPPRESS_SMALL_CHROMOSOMES;  
     my $url    = $source->generate_image($panel->gd);
     my $margin = Bio::Graphics::Panel->can('rotate') 
 	         ? $self->chrom_height - $panel->gd->height

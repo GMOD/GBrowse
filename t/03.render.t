@@ -194,6 +194,7 @@ if (ok($render_object) and ok($render_object->{'track_data'})){
   check_multiple_renders($query_str)
 }
 
+
 # Check update sections
 $CGI::Q = new CGI(
     'update_sections=1'
@@ -340,14 +341,14 @@ my $feature = Bio::Graphics::Feature->new(-name=>'fred',
 my $panel_renderer = $render->get_panel_renderer($segment);
 ok($panel_renderer);
 ok($panel_renderer->make_link($feature),
-   "../../gbrowse_details/volvox?name=fred;class=Sequence;ref=A;start=1;end=1000");
+   "../../gbrowse_details/volvox?ref=A;start=1;end=1000;name=fred;class=Sequence");
 
 $ENV{REQUEST_URI} = 'http://localhost/cgi-bin/gbrowse/volvox';
 $ENV{PATH_INFO}   = '/volvox';
 $ENV{REQUEST_METHOD} = 'GET';
 
 ok($panel_renderer->make_link($feature),
-   "http://localhost/cgi-bin/gbrowse_details/volvox?name=fred;class=Sequence;ref=A;start=1;end=1000");
+   "http://localhost/cgi-bin/gbrowse_details/volvox?ref=A;start=1;end=1000;name=fred;class=Sequence");
 
 # try automatic class munging
 $CGI::Q = new CGI('name=f13');

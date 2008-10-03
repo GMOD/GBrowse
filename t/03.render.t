@@ -12,6 +12,9 @@ use IO::String;
 use CGI;
 use FindBin '$Bin';
 
+use lib "$Bin/testdata";
+use TemplateCopy; # for the template_copy() function
+
 use constant TEST_COUNT => 137;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
@@ -48,9 +51,18 @@ use Bio::Graphics::Browser::Render::Server;
 # Test remote rendering
 # Notice that $ENV{GBROWSE_DOCS} is NOT set when we launch these servers.
 # It is set at run time as part of the exchange between master and slave.
-my @servers = (Bio::Graphics::Browser::Render::Server->new(LocalPort=>8100), # alignments
-	       Bio::Graphics::Browser::Render::Server->new(LocalPort=>8101), # cleavage sites
+my @servers = (Bio::Graphics::Browser::Render::Server->new(LocalPort=>'dynamic'), # alignments
+	       Bio::Graphics::Browser::Render::Server->new(LocalPort=>'dynamic'), # cleavage sites
     );
+
+# rewrite the template config files
+for ('volvox_final.conf','yeast_chr1.conf') {
+    template_copy("testdata/conf/templates/$_",
+		  "testdata/conf/$_",
+		  {'$REMOTE1'=>"http://localhost:".$servers[0]->listen_port,
+		   '$REMOTE2'=>"http://localhost:".$servers[1]->listen_port});
+}
+
 for my $s (@servers) {
     $s->debug(0);
     ok($s->run);
@@ -476,6 +488,8 @@ sub check_multiple_renders {
 sub cleanup {
     if ($PID == $$) {
 	foreach (@servers) { $_->kill }
+	unlink 'testdata/conf/volvox_final.conf',
+     	       'testdata/conf/yeast_chr1.conf';
     }
 }
 

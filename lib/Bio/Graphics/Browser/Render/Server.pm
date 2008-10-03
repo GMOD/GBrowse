@@ -33,8 +33,12 @@ sub new {
     $args{LocalPort}  ||= 8101;
     $args{Listen}     ||= 20;
 
+    delete $args{LocalPort} if $args{LocalPort} eq 'dynamic'; 
+
     my $d = HTTP::Daemon->new(%args)
 	or croak "Could not create daemon socket: $@";
+
+    $args{LocalPort} ||= $d->sockport;
 
     return bless {
 	daemon => $d,

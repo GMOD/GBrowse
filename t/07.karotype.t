@@ -45,6 +45,16 @@ use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::I18n;
 use Bio::Graphics::Karyotype;
 
+use lib "$Bin/testdata";
+use TemplateCopy; # for the template_copy() function
+
+for ('volvox_final.conf','yeast_chr1.conf') {
+    template_copy("testdata/conf/templates/$_",
+		  "testdata/conf/$_",
+		  {});
+}
+
+
 # create objects we need to test the karyotype generator
 my $globals = Bio::Graphics::Browser->new(CONF_FILE);
 my $session = $globals->session;
@@ -106,4 +116,9 @@ END
 }
 
 exit 0;
+
+END {
+    unlink 'testdata/conf/volvox_final.conf',
+           'testdata/conf/yeast_chr1.conf';
+}
 

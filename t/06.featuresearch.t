@@ -36,16 +36,39 @@ END {
     rmtree '/tmp/gbrowse_testing' if $$ == $PID;
 }
 
-%ENV = ();
-$ENV{GBROWSE_DOCS}   = $Bin;
-
-
 chdir $Bin;
 use lib "$Bin/../lib";
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::Render::Server;
 use Bio::Graphics::Browser::Region;
 use Bio::Graphics::Browser::RegionSearch;
+
+use lib "$Bin/testdata";
+use TemplateCopy; # for the template_copy() function
+
+# Test remote rendering
+my @servers = (Bio::Graphics::Browser::Render::Server->new(LocalPort=>'dynamic'), # main
+	       Bio::Graphics::Browser::Render::Server->new(LocalPort=>'dynamic'), # volvox4 "heterodox sites"
+	       Bio::Graphics::Browser::Render::Server->new(LocalPort=>'dynamic'), # volvox3 "cleavage sites"
+    );
+
+for ('volvox_final.conf','yeast_chr1.conf') {
+    template_copy("testdata/conf/templates/$_",
+		  "testdata/conf/$_",
+		  {   '$MAIN'   =>"http://localhost:".$servers[0]->listen_port,
+		      '$REMOTE1'=>"http://localhost:".$servers[1]->listen_port,
+		      '$REMOTE2'=>"http://localhost:".$servers[2]->listen_port});
+}
+
+
+for my $s (@servers) {
+    $s->debug(1);
+    ok($s->run);
+}
+
+
+%ENV = ();
+$ENV{GBROWSE_DOCS}   = $Bin;
 
 # create objects we need to test region fetching
 my $globals = Bio::Graphics::Browser->new(CONF_FILE);
@@ -128,17 +151,6 @@ ok("@dbids","general volvox2:database");
 my @seqid = sort map {$_->seq_id} @$features;
 ok("@seqid","ctgA ctgB");
 
-# Test remote rendering
-my @servers = (Bio::Graphics::Browser::Render::Server->new(LocalPort=>8110), # main
-	       Bio::Graphics::Browser::Render::Server->new(LocalPort=>8100), # volvox4 "heterodox sites"
-	       Bio::Graphics::Browser::Render::Server->new(LocalPort=>8101), # volvox3 "cleavage sites"
-    );
-
-for my $s (@servers) {
-    $s->debug(1);
-    ok($s->run);
-}
-
 $features    = $search->search_features_remotely('Heterodox14');  # this will appear in volvox4
 ok(scalar @$features,1);
 
@@ -158,6 +170,8 @@ sub usleep {
 END {
     if ($PID == $$) {
 	foreach (@servers) { $_->kill }
+	unlink 'testdata/conf/volvox_final.conf',
+     	       'testdata/conf/yeast_chr1.conf';
     }
 }
 

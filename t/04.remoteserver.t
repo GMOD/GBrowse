@@ -48,9 +48,28 @@ use HTTP::Request::Common;
 use Storable 'nfreeze','thaw';
 use Bio::Graphics::Browser::Render::Server;
 
+use lib "$Bin/testdata";
+use TemplateCopy; # for the template_copy() function
+
+# alignments requires the server at 8100
+my $alignment_server = Bio::Graphics::Browser::Render::Server->new(LocalPort=>'dynamic');
+$alignment_server->debug(0);
+
+# cleavage sites track requires the server at 8101
+my $cleavage_server  = Bio::Graphics::Browser::Render::Server->new(LocalPort=>'dynamic');
+$cleavage_server->debug(0);
+
+# rewrite the template config files
+for ('volvox_final.conf','yeast_chr1.conf') {
+    template_copy("testdata/conf/templates/$_",
+		  "testdata/conf/$_",
+		  {'$REMOTE1'=>"http://localhost:".$alignment_server->listen_port,
+		   '$REMOTE2'=>"http://localhost:".$cleavage_server->listen_port});
+}
+
 
 # Test remote rendering
-my $server = Bio::Graphics::Browser::Render::Server->new(LocalPort=>8200);
+my $server = Bio::Graphics::Browser::Render::Server->new(LocalPort=>'dynamic');
 ok($server);
 $server->debug(0);
 my $server_pid = $server->run;
@@ -108,14 +127,7 @@ for (1..3) {
 # now we test whether parallel rendering is working
 @labels = qw(CleavageSites Alignments Motifs BindingSites);
 
-# alignments requires the server at 8100
-my $alignment_server = Bio::Graphics::Browser::Render::Server->new(LocalPort=>8100);
-$alignment_server->debug(0);
 $alignment_server->run();
-
-# cleavage sites track requires the server at 8101
-my $cleavage_server  = Bio::Graphics::Browser::Render::Server->new(LocalPort=>8101);
-$cleavage_server->debug(0);
 $cleavage_server->run();
 
 $render->set_tracks(@labels);
@@ -139,5 +151,7 @@ exit 0;
 END {
     if ($PID == $$) {
 	foreach ($server,$alignment_server,$cleavage_server) { kill TERM=>$_->pid if $_}
+	unlink 'testdata/conf/volvox_final.conf',
+     	       'testdata/conf/yeast_chr1.conf';
     }
 }

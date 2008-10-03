@@ -12,6 +12,9 @@ use FindBin '$Bin';
 use File::Spec;
 use FindBin '$Bin';
 
+use lib "$Bin/testdata";
+use TemplateCopy; # for the template_copy() function
+
 use constant TEST_COUNT => 83;
 use constant CONF_FILE  => "$Bin/testdata/conf/GBrowse.conf";
 
@@ -30,6 +33,16 @@ BEGIN {
 chdir $Bin;
 use lib "$Bin/../lib";
 use Bio::Graphics::Browser;
+
+for ('volvox_final.conf','yeast_chr1.conf') {
+    template_copy("testdata/conf/templates/$_",
+		  "testdata/conf/$_",
+		  {'$REMOTE1'=>"http://localhost:8100",
+		   '$REMOTE2'=>"http://localhost:8101"});
+}
+
+# this avoids a race condition when checking the cache time of the config file
+sleep 1;
 
 my $globals = Bio::Graphics::Browser->new(CONF_FILE);
 ok($globals);
@@ -233,3 +246,9 @@ $source->clear_cache;
 ok($args[3]=~m!^/buzz/buzz!);  # old value cached
 
 exit 0;
+
+END {
+	unlink 'testdata/conf/volvox_final.conf',
+     	       'testdata/conf/yeast_chr1.conf';
+}
+

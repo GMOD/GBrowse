@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.61 2008-09-30 23:53:46 mwz444 Exp $
+ $Id: controller.js,v 1.62 2008-10-04 20:14:19 mwz444 Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -30,6 +30,9 @@ var edit_upload_form_id     = 'edit_upload_form';
 var page_title_id           = 'page_title';
 var visible_span_id         = 'span';
 var search_form_objects_id  = 'search_form_objects';
+
+//  Sorta Constants
+var expired_limit  = 1;
 
 var GBrowseController = Class.create({
 
@@ -435,18 +438,28 @@ var GBrowseController = Class.create({
             track_div = document.getElementById(gbtrack.track_div_id);
             if (track_html.substring(0,18) == "<!-- AVAILABLE -->"){
               track_div.innerHTML = track_html;
+              gbtrack.track_resolved();
               Controller.retrieve_tracks.set(track_name,false);
             }
             else if (track_html.substring(0,16) == "<!-- EXPIRED -->"){
-               $(gbtrack.track_image_id).setOpacity(0);
+              Controller.retrieve_tracks.set(track_name,false);
+              if (gbtrack.expired_count >= expired_limit){
+                $(gbtrack.track_image_id).setOpacity(0);
+              }
+              else{
+                gbtrack.increment_expired_count();
+                Controller.rerender_track(track_name);
+              }
             }
             else if (track_html.substring(0,14) == "<!-- ERROR -->"){
-               Controller.retrieve_tracks.set(track_name,false);
-	       track_div.innerHTML = track_html;
+              gbtrack.track_resolved();
+              Controller.retrieve_tracks.set(track_name,false);
+              track_div.innerHTML = track_html;
             }
             else if (track_html.substring(0,16) == "<!-- DEFUNCT -->"){
-               Controller.retrieve_tracks.set(track_name,false);
-               $(gbtrack.track_image_id).setOpacity(0);
+              gbtrack.track_resolved();
+              Controller.retrieve_tracks.set(track_name,false);
+              $(gbtrack.track_image_id).setOpacity(0);
             }
             else {
               continue_requesting = true;

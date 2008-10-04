@@ -2,7 +2,7 @@
  track.js -- The GBrowse track object
 
  Ben Faga <faga.cshl@gmail.com>
- $Id: track.js,v 1.4 2008-09-29 16:01:26 mwz444 Exp $
+ $Id: track.js,v 1.5 2008-10-04 20:14:19 mwz444 Exp $
 
 Method structure
  - Class Utility Methods
@@ -21,6 +21,7 @@ var GBrowseTrack = Class.create({
     this.track_div_id    = "track_"+track_name;
     this.track_image_id  = track_name + "_image";
     this.last_update_key = 0;
+    this.expired_count   = 0;
 
     if (track_type == 'scale_bar') {
       this.standard_track  = false;
@@ -44,7 +45,18 @@ var GBrowseTrack = Class.create({
   is_standard_track:
   function () {
     return this.standard_track;
-  }
+  },
+
+  increment_expired_count:
+  function () {
+    this.expired_count = this.expired_count + 1;
+  },
+
+  // Tell the track that it has been resolved.
+  track_resolved:
+  function () {
+    this.expired_count = 0;
+  },
 
 });
 

@@ -101,6 +101,13 @@ sub request_panels {
 
   warn "request_panels(): section = $args->{section}; local labels = @$local_labels, remote labels = @$remote_labels" if DEBUG;
 
+  # If we don't call clone_databases early, then we can have
+  # a race condition where the parent hits the DB before the child
+
+  my $do_local  = @$local_labels;
+  my $do_remote = @$remote_labels;
+  $self->clone_databases($local_labels) if $do_local;
+
   # In the case of a deferred request we fork.
   # Parent returns the list of requests.
   # Child processes the requests in the background.
@@ -120,10 +127,6 @@ sub request_panels {
       open STDOUT,">/dev/null" or die "Couldn't reopen stdout";
       POSIX::setsid()          or die "Couldn't start new session";
 
-      my $do_local  = @$local_labels;
-      my $do_remote = @$remote_labels;
-
-      $self->clone_databases($local_labels) if $do_local;
       if ( $do_local && $do_remote ) {
           if ( fork() ) {
               $self->run_local_requests( $data_destinations, 

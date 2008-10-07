@@ -76,6 +76,14 @@ sub whole_seg {
   return $self->{whole_segment};
 }
 
+sub set_features_by_region {
+    my $self = shift;
+    my ($ref,$start,$stop) = @_;
+    my $features = $self->lookup_features($ref,$start,$stop);
+    $self->features($features);
+    return $features;
+}
+
 sub search_features {
   my $self         = shift;
   my $search_term  = shift;
@@ -92,6 +100,7 @@ sub search_features {
   $self->features($features);
   return $features;
 }
+
 
 sub features2segments {
   my $self     = shift;

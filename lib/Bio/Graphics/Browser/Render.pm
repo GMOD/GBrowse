@@ -244,8 +244,8 @@ sub asynchronous_event {
 
     if ( my $action = param('first_render') ) {
 
-	warn "valid region = ", $self->state->{valid_region};
-	return (204,'text/plain','no content') unless $self->state->{valid_region};
+	return (204,'text/plain','no content') 
+	    unless $self->state->{valid_region};
 
         $self->init_database();
         my ( $track_keys, $display_details, $details_msg )
@@ -533,7 +533,7 @@ sub background_track_render {
         $details_msg = h1(
             $self->tr(
                 'TOO_BIG',
-                scalar $self->data_source()->unit_label(MAX_SEGMENT),
+                scalar $self->data_source()->unit_label($self->get_max_segment),
             )
         );
     }
@@ -981,8 +981,11 @@ sub region {
 	$plugin_action eq 'Find') {
 	$region->features($self->plugin_find($current_plugin,$self->state->{name}));
     }
-    elsif ($self->state->{name}=~ /^[^:]+:[\d-]+(\.\.|-)[\d-]+$/) { # an identified
-	$region->search_features();
+#    elsif ($self->state->{name}=~ /^[^:]+:[\d-]+(\.\.|-)[\d-]+$/) { # a named region
+#	$region->search_features();
+#    }
+    elsif ($self->state->{ref}) { # a known region
+	$region->set_features_by_region(@{$self->state}{'ref','start','stop'});
     }
     else { # a feature search
 	warn "FEATURE SEARCH" if DEBUG;
@@ -1843,6 +1846,7 @@ sub update_coordinates {
   }
 
   elsif (param('name')) {
+      undef $state->{ref};  # no longer valid
       $state->{name} = param('name');
       $state->{dbid} = param('dbid') if param('dbid');
   }

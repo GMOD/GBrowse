@@ -75,6 +75,9 @@ $server->debug(0);
 my $server_pid = $server->run;
 ok($server_pid);
 
+sleep 1; # give servers a chance to settle
+
+
 $ENV{REQUEST_URI}    = 'http://localhost/cgi-bin/gbrowse/volvox';
 $ENV{PATH_INFO}      = '/volvox';
 $ENV{REQUEST_METHOD} = 'GET';

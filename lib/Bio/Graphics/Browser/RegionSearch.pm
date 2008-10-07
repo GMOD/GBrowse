@@ -176,6 +176,8 @@ sub search_features_locally {
     my $search_term = shift;
     defined $search_term or return;
     my $state       = $self->state;
+
+    warn "search_features_locally()" if DEBUG;
     
     my @found;
 
@@ -187,13 +189,14 @@ sub search_features_locally {
 	                     : keys %{$local_dbs};
 
     for my $db (@dbs) {
+	# allow explicit db_id to override cached list of local dbs
 	my $region   = $local_dbs->{$db} || 
 	    Bio::Graphics::Browser::Region->new(
 						{ source  => $self->source,
 						  state   => $self->state,
-						  db      => $db
+						  db      => $db,
 						  }
-						); # allow explicit db_id to override cached list of local dbs
+						); 
 	my $features = $region->search_features($search_term);
 	next unless $features && @$features;
 	$self->add_dbid_to_features($db,$features);

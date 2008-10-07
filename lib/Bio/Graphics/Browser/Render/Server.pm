@@ -270,7 +270,7 @@ sub search_features {
 sub clone_feature {
     my $self = shift;
     my $f    = shift;
-    my %attributes = map {$_=>[$f->get_tag_values($_)]} $f->get_all_tags;
+    my %attributes = map {$_=>[$f->get_tag_values($_)]} eval {$f->get_all_tags};
     my $clone = Bio::Graphics::Feature->new(
 					    -name   => $f->name,
 					    -primary_tag => $f->primary_tag,

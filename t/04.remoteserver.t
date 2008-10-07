@@ -36,6 +36,8 @@ END {
   rmtree '/tmp/gbrowse_testing' if $$ == $PID;
 }
 
+$SIG{INT} = sub {exit 0};
+
 %ENV = ();
 $ENV{GBROWSE_DOCS} = $Bin;
 
@@ -54,10 +56,12 @@ use TemplateCopy; # for the template_copy() function
 # alignments requires the server at 8100
 my $alignment_server = Bio::Graphics::Browser::Render::Server->new(LocalPort=>'dynamic');
 $alignment_server->debug(0);
+$alignment_server->run();
 
 # cleavage sites track requires the server at 8101
 my $cleavage_server  = Bio::Graphics::Browser::Render::Server->new(LocalPort=>'dynamic');
 $cleavage_server->debug(0);
+$cleavage_server->run();
 
 # rewrite the template config files
 for ('volvox_final.conf','yeast_chr1.conf') {
@@ -75,8 +79,7 @@ $server->debug(0);
 my $server_pid = $server->run;
 ok($server_pid);
 
-sleep 1; # give servers a chance to settle
-
+sleep 1; # give slave renderers a chance to settle down
 
 $ENV{REQUEST_URI}    = 'http://localhost/cgi-bin/gbrowse/volvox';
 $ENV{PATH_INFO}      = '/volvox';

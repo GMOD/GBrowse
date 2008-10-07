@@ -106,7 +106,6 @@ sub request_panels {
 
   my $do_local  = @$local_labels;
   my $do_remote = @$remote_labels;
-  $self->clone_databases($local_labels) if $do_local;
 
   # In the case of a deferred request we fork.
   # Parent returns the list of requests.
@@ -116,6 +115,8 @@ sub request_panels {
   if ($args->{deferred}) {
       $SIG{CHLD} = 'IGNORE';
       my $child = fork();
+
+      $self->clone_databases($local_labels) if $do_local;
 
       die "Couldn't fork: $!" unless defined $child;
       return $data_destinations if $child;

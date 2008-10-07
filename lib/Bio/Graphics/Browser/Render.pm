@@ -1960,8 +1960,7 @@ sub asynchronous_update_sections {
     # Span that shows the range
     if ( $handle_section_name{'span'} ) {
         my $container
-            = $self->zoomBar( $self->segment, $self->whole_segment );
-        $container =~ s/<\/?select.+//g;
+	    = $self->slidertable($self->segment);
         $return_object->{'span'} = $container;
     }
 

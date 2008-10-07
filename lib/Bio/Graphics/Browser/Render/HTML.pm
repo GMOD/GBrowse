@@ -1076,7 +1076,7 @@ sub slidertable {
 		  -onClick => "Controller.update_coordinates(this.name)"
      ),
      '&nbsp;',
-     span({-id=>'span_menu'},$self->zoomBar($segment,$whole_segment,$buttonsDir)),
+     $self->zoomBar($segment,$whole_segment,$buttonsDir),
      '&nbsp;',
      image_button(-src=>"$buttonsDir/plus.gif",-name=>"zoom in $fine_zoom",
 		  -title=>"zoom in $fine_zoom",
@@ -1096,7 +1096,7 @@ sub slidertable {
     );
 
   my $str	= join('', @lines);
-  return $str;
+  return span({-id=>'span'},$str);
 }
 
 # this generates the popup zoom menu with the window sizes
@@ -1116,7 +1116,6 @@ sub zoomBar {
   my %labels    = map {$_=>$show.' '.$self->unit_label($_)} @ranges;
   return popup_menu(-class   => 'searchtitle',
 		    -name    => 'span',
-		    -id      => 'span',
 		    -values  => \@ranges,
 		    -labels  => \%labels,
 		    -default => $length,

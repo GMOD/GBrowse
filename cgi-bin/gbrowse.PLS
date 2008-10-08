@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.111 2008-10-08 20:16:44 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.112 2008-10-08 21:33:00 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1520,6 +1520,8 @@ sub nest_toggles {
 	    $result .= nest_toggles($hash->{$key},$page_settings,$sort_order);
 	} elsif ($hash->{$key}{__next__}) {
 	    my $id =  "category-${key}";
+	    $page_settings->{section_visible}{$id} = 1 
+		unless exists $page_settings->{section_visible}{$id};
  	    $result .= toggle_section({on=>$page_settings->{section_visible}{$id}},
 			      $id,
 			      b($key),

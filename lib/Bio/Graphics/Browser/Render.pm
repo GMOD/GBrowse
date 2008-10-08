@@ -1160,9 +1160,16 @@ sub handle_plugins {
 
     my $plugin_base = param('plugin');
     return unless ($plugin_base);
+
     $self->init_plugins();
-    my $plugin      = $self->plugins->plugin($plugin_base);
-    warn "plugin_base = $plugin_base, plugin = $plugin" if DEBUG;
+
+    my $plugin;
+    if ($plugin_base   =~ /^plugin:(.+)/) {
+	my $name       = $1;
+	($plugin) = grep {$_->name eq $name } $self->plugins->plugins;
+    } else {
+	$plugin      = $self->plugins->plugin($plugin_base);
+    }
     my $plugin_type = $plugin->type();
 
     my $plugin_action = param('plugin_action') || '';
@@ -1174,6 +1181,13 @@ sub handle_plugins {
 
     my $state  = $self->state();
     my $cookie = $self->create_cookie();
+
+    ### CONFIGURE  ###############################################
+    if ($plugin_action eq $self->tr('Configure')) {
+	$self->plugin_configuration_form($plugin);
+	exit 0;
+    }
+    
 
     ### FIND #####################################################
     if ( $plugin_action eq $self->tr('Find') ) {
@@ -1724,7 +1738,7 @@ sub update_options {
   $state->{version} ||= param('version') || '';
   do {$state->{$_} = param($_) if defined param($_) } 
     foreach qw(name source plugin stp ins head ks sk version 
-               grid flip width region_size show_tooltips
+               grid flip width region_size show_tooltips cache
                );
 
   if (my @features = shellwords(param('h_feat'))) {

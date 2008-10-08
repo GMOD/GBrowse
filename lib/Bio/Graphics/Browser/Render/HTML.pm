@@ -324,7 +324,6 @@ sub render_track_table {
   }
 
   autoEscape(0);
-  my @sections;
 
   my %exclude = map {$_=>1} map {$self->tr($_)} qw(OVERVIEW REGION ANALYSIS EXTERNAL);
 
@@ -333,23 +332,30 @@ sub render_track_table {
   my $all_on  = $self->tr('ALL_ON');
   my $all_off = $self->tr('ALL_OFF');
 
-  my %seenit;
-  foreach my $category ($self->tr('OVERVIEW'),
-			$self->tr('REGION'),
-			$self->tr('ANALYSIS'),
-			@user_keys,
-			$source->section_setting('upload_tracks') eq 'off' 
-			   ? () 
-			   : ($self->tr('EXTERNAL')),
-		       ) {
+  my (%seenit,%section_contents);
+
+  my @categories = ($self->tr('OVERVIEW'),
+		    $self->tr('REGION'),
+		    @user_keys,
+		    $self->tr('ANALYSIS'),
+		    $source->section_setting('upload_tracks') eq 'off' 
+		    ? () : ($self->tr('EXTERNAL')),
+      );
+
+
+  my @titles; # for sorting
+
+  foreach my $category (@categories) {
     next if $seenit{$category}++;
     my $table;
     my $id = "${category}_section";
+    my $category_title   = (split m/:/,$category)[-1];
 
     if ($category eq $self->tr('REGION') 
 	&& !$self->setting('region segment')) {
      next;
     }
+
     elsif  (exists $track_groups{$category}) {
       my @track_labels = @{$track_groups{$category}};
 
@@ -370,7 +376,7 @@ sub render_track_table {
 
       my ($control,$section)=$self->toggle_section({on=>$visible,nodiv => 1},
 						   $id,
-						   b(ucfirst $category),
+						   b(ucfirst $category_title),
 						   div({-style=>'padding-left:1em'},
 						       span({-id=>$id},$table))
 						  );
@@ -380,7 +386,7 @@ sub render_track_table {
 			     checkbox(-id=>"${id}_n",-name=>"${id}_n",
 				      -label=>$all_off,-onClick=>"gbCheck(this,0)")
 			    ).br()   if exists $track_groups{$category};
-      push @sections,div($control.$section);
+      $section_contents{$category} = div($control.$section);
     }
 
     else {
@@ -390,12 +396,70 @@ sub render_track_table {
   }
 
   autoEscape(1);
+  my $slice_and_dice = $self->indent_categories(\%section_contents,\@categories);
   return join( "\n",
 		      start_form(-name=>'trackform',
 				 -id=>'trackform'),
-		      div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
+		      div({-class=>'searchbody',-style=>'padding-left:1em'},$slice_and_dice),
 		      end_form
 		     );
+}
+
+sub indent_categories {
+    my $self = shift;
+    my ($contents,$categories) = @_;
+
+    my $category_hash = {};
+
+    for my $category (@$categories) {
+	my $cont   = $contents->{$category} || '';
+	my @parts  = split m/:/,$category;
+
+	my $i      = $category_hash;
+
+	# we need to add phony __next__ and __contents__ keys to avoid
+	# the case in which the track sections are placed at different
+	# levels of the tree, for instance 
+	# "category=level1:level2" and "category=level1"
+	for my $index (0..$#parts) {
+	    $i = $i->{__next__}{$parts[$index]} ||= {};
+	    $i->{__contents__}                    = $cont 
+		                                    if $index == $#parts;
+	}
+    }
+    my $i               = 1;
+    my %sort_order      = map {$_=>$i++} map {split m/:/} @$categories;
+    my $nested_sections =  $self->nest_toggles($category_hash,\%sort_order);
+}
+
+# this turns the nested category/subcategory hashes into a prettily indented
+# tracks table
+sub nest_toggles {
+    my $self         = shift;
+    my ($hash,$sort) = @_;
+    my $settings = $self->state;
+
+    my $result = '';
+    for my $key (sort { 
+	           $sort->{$a}<=>$sort->{$b} || $a cmp $b
+		      }  keys %$hash) {
+	if ($key eq '__contents__') {
+	    $result .= $hash->{$key}."\n";
+	} elsif ($key eq '__next__') {
+	    $result .= $self->nest_toggles($hash->{$key},$sort);
+	} elsif ($hash->{$key}{__next__}) {
+	    my $id =  "category-${key}";
+	    $settings->{section_visible}{$id} = 1 unless exists $settings->{section_visible}{$id};
+ 	    $result .= $self->toggle_section({on=>$settings->{section_visible}{$id}},
+					     $id,
+					     b($key),
+					     div({-style=>'margin-left:1.5em;margin-right:1em'},
+						 $self->nest_toggles($hash->{$key},$sort)));
+	} else {
+	    $result .= $self->nest_toggles($hash->{$key},$sort);
+	}
+    }
+    return $result;
 }
 
 sub render_multiple_choices {
@@ -920,6 +984,34 @@ sub plugin_menu {
             . '"form"' . ');',
         ),
   );
+}
+
+
+# plugin configuration form for balloon content
+sub plugin_configuration_form {
+    my $self = shift;
+    my $plugin = shift;
+
+    my $plugin_type = $plugin->type;
+    my $plugin_name = $plugin->name;
+
+    print CGI::header('text/html');
+    print start_html(),
+              start_form(
+		  -name     => 'configure_plugin',
+		  -id       => 'configure_plugin',
+		  ),
+	  submit(
+            -name    => 'plugin_button',
+            -value   => $self->tr('Configure_plugin'),
+          ),
+          $plugin->configure_form(),
+	  submit(
+            -name    => 'plugin_button',
+            -value   => $self->tr('Configure_plugin'),
+          ),
+          end_form(),
+          end_html();
 }
 
 # Wrap the plugin configuration html into a form and tie it into the controller 

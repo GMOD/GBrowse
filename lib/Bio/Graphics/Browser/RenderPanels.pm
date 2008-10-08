@@ -398,10 +398,10 @@ sub wrap_rendered_track {
 
         img({   -src         => $help,
                 -style       => 'cursor:pointer',
-                -onmousedown => $config_click,
+                -onmousedown => "$config_click",
                 -onMouseOver =>
                     "balloon.showTooltip(event,'$configure_this_track')",
-
+		    
             }
         ),
         span( { -class => 'draghandle' }, $title )
@@ -982,7 +982,7 @@ sub run_local_requests {
             if $label =~ /^\w+:/ && $label !~ /:(overview|region)/; # a plugin
 
 	my $key = $source->setting( $label => 'key' ) || '' ;
-	my @nopad = ($key eq '') || ($key eq 'none')
+	my @nopad = (($key eq '') || ($key eq 'none')) && ($label !~ /^plugin:/)
              ? (-pad_top => 0)
              : ();
         my $panel_args = $requests->{$label}->panel_args;
@@ -1034,7 +1034,6 @@ sub run_local_requests {
             $panel, $label,
             \%trackmap, 0 );
         $requests->{$label}->put_data( $gd, $map );
-
     }
 }
 
@@ -1277,10 +1276,13 @@ sub add_feature_file {
     $file->render(
 		  $args{panel},
 		  $args{position},
-		  $options,
+		  #$options,
+	          0,
 		  $self->bump_density,
 		  $self->label_density,
-		  $select);
+		  $select,
+	          undef,
+	);
   };
 
   $self->error("error while rendering ",$args{file}->name,": $@") if $@;

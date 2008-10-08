@@ -1,3 +1,5 @@
+var GlobalDrag;
+
 function gbTurnOff (a) {
   if (document.getElementById(a+"_a")) { document.getElementById(a+"_a").checked='' };
   if (document.getElementById(a+"_n")) { document.getElementById(a+"_n").checked='' };
@@ -67,7 +69,8 @@ function update_segment (formdata) {
 }
 
 function create_drag (div_name) {
-  Sortable.create(
+   GlobalDrag = div_name;
+   Sortable.create(
 		  div_name,
 		  {
 		  constraint: 'vertical',
@@ -79,5 +82,20 @@ function create_drag (div_name) {
 		      new Ajax.Request(document.URL,{method:'post',postBody:postData});
 		    }
 		  }
-		  );
+		 );
+}
+
+function kill_drag() { 
+    if (GlobalDrag) {
+	var s = Sortable.options(GlobalDrag);
+	if(s) {
+	    s.draggables.each(
+			      function (d) {
+				  alert(d.dragging);
+				  d.dragging = false;
+				 }
+			      );
+	}
+	GlobalDrag = null;
+    }
 }

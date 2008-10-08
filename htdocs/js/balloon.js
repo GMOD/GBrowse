@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.5 2008-09-08 15:08:14 mwz444 Exp $
+ $Id: balloon.js,v 1.6 2008-10-08 23:54:37 lstein Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -207,7 +207,7 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
 
   // make delay time short for onmousedown
   var delay = mouseOver ? this.delayTime : 1;
-  this.timeoutTooltip = window.setTimeout(this.doShowTooltip,delay);
+  this.timeoutTooltip = window.setTimeout(this.doShowTooltip(evt),delay);
 }
 
 
@@ -228,8 +228,10 @@ Balloon.prototype.preload = function(src) {
 /////////////////////////////////////////////////////////////////////
 // Tooltip rendering function
 /////////////////////////////////////////////////////////////////////
-Balloon.prototype.doShowTooltip = function() {
+Balloon.prototype.doShowTooltip = function(evt) {
   var self = currentBalloonClass;
+
+  Event.stop(evt);
 
   // Stop firing if a balloon is already being displayed
   if (balloonIsVisible) return false;  

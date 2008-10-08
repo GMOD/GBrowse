@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.109 2008-09-27 23:25:14 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.110 2008-10-08 19:55:05 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1402,16 +1402,20 @@ sub tracks_table {
   my $all_on  = $CONFIG->tr('ALL_ON');
   my $all_off = $CONFIG->tr('ALL_OFF');
 
-  my %seenit;
-  foreach my $category ($CONFIG->tr('OVERVIEW'),
+  my (%seenit,%section_contents);
+
+  my @categories = ($CONFIG->tr('OVERVIEW'),
 			$CONFIG->tr('REGION'),
 			$CONFIG->tr('ANALYSIS'),
 			@user_keys,
 			$CONFIG->section_setting('upload_tracks') eq 'off' ? () : ($CONFIG->tr('EXTERNAL')),
-		       ) {
+      );
+
+  foreach my $category (@categories) {
     next if $seenit{$category}++;
     my $table;
     my $id = "${category}_section";
+    my $category_title   = (split m/:/,$category)[-1];
 
     if ($category eq $CONFIG->tr('REGION') && !$CONFIG->setting('region segment')) {
      next;
@@ -1451,14 +1455,15 @@ sub tracks_table {
 
     my ($control,$section)=toggle_section({on=>$visible,nodiv=>1},
 					  $id,
-					  b(ucfirst $category),span({-id=>$id},$table));
+					  b(ucfirst $category_title),span({-id=>$id},$table));
     $control .= '&nbsp;'.i({-class=>'nojs'},
 			   checkbox(-id=>"${id}_a",-name=>"${id}_a",
 				    -label=>$all_on,-onClick=>"gbCheck(this,1)"),
 			   checkbox(-id=>"${id}_n",-name=>"${id}_n",
 				    -label=>$all_off,-onClick=>"gbCheck(this,0)")
 			  ).br()   if exists $track_groups{$category};
-    push @sections,div($control.$section);
+
+    $section_contents{$category} = div($control.$section);
     $id++;
   }
 
@@ -1468,18 +1473,55 @@ sub tracks_table {
 
   }
 
+  my $category_hash = {};
+
+  for my $category (@categories) {
+      my $contents = $section_contents{$category} || '';
+      my @parts    = split m/:/,$category;
+      my $i = $category_hash;
+      for my $index (0..$#parts) {
+	  $i = $i->{__next__}{$parts[$index]} ||= {};
+	  $i->{__contents__} = $contents if $index == $#parts;
+      }
+  }
+
+  my $nested_sections =  nest_toggles($settings,$category_hash);
+
   autoEscape(1);
   return toggle($settings,
 		'Tracks',
-		div({-class=>'searchbody',-style=>'padding-left:1em'},@sections),
+		div({-class=>'searchbody',-style=>'padding-left:1em'},$nested_sections),
 		table({-width=>'100%',-class=>"searchbody"},
 		      TR({-class=>'searchbody'},
 			 td{-align=>'right'},
 			 submit(-name => $CONFIG->tr('Set_options')),
 			 b(submit(-name => $CONFIG->tr('Update'))
-			  )
-			)
-		     ));
+			 )
+		      )
+		));
+}
+
+sub nest_toggles {
+    my $page_settings = shift;
+    my $hash          = shift;
+    my $result = '';
+    for my $key (sort keys %$hash) {
+	if ($key eq '__contents__') {
+	    $result .= $hash->{$key}."\n";
+	} elsif ($key eq '__next__') {
+	    $result .= nest_toggles($page_settings,$hash->{$key});
+	} elsif ($hash->{$key}{__next__}) {
+	    my $id =  "category-${key}";
+ 	    $result .= toggle_section({on=>$page_settings->{section_visible}{$id}},
+			      $id,
+			      b($key),
+			      div({-style=>'margin-left:2em;margin-right:2em'},
+				  nest_toggles($page_settings,$hash->{$key})));
+	} else {
+	    $result .= nest_toggles($page_settings,$hash->{$key});
+	}
+    }
+    return $result;
 }
 
 sub categorize_track {

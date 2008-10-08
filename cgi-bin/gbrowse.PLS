@@ -52,7 +52,7 @@ print OUT "use lib '$OPTIONS{LIB}';\n" if defined $OPTIONS{LIB};
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
-# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.110 2008-10-08 19:55:05 lstein Exp $
+# $Id: gbrowse.PLS,v 1.119.4.57.2.59.2.111 2008-10-08 20:16:44 lstein Exp $
 
 use strict;
 use Bio::Graphics;
@@ -1405,10 +1405,10 @@ sub tracks_table {
   my (%seenit,%section_contents);
 
   my @categories = ($CONFIG->tr('OVERVIEW'),
-			$CONFIG->tr('REGION'),
-			$CONFIG->tr('ANALYSIS'),
-			@user_keys,
-			$CONFIG->section_setting('upload_tracks') eq 'off' ? () : ($CONFIG->tr('EXTERNAL')),
+		    $CONFIG->tr('REGION'),
+		    @user_keys,
+		    $CONFIG->tr('ANALYSIS'),
+		    $CONFIG->section_setting('upload_tracks') eq 'off' ? () : ($CONFIG->tr('EXTERNAL')),
       );
 
   foreach my $category (@categories) {
@@ -1484,8 +1484,9 @@ sub tracks_table {
 	  $i->{__contents__} = $contents if $index == $#parts;
       }
   }
-
-  my $nested_sections =  nest_toggles($settings,$category_hash);
+  my $i               = 1;
+  my %sort_order      = map {$_=>$i++} @categories;
+  my $nested_sections =  nest_toggles($category_hash,$settings,\%sort_order);
 
   autoEscape(1);
   return toggle($settings,
@@ -1502,23 +1503,30 @@ sub tracks_table {
 }
 
 sub nest_toggles {
-    my $page_settings = shift;
     my $hash          = shift;
+    my $page_settings = shift;
+    my $sort_order    = shift;
+
     my $result = '';
-    for my $key (sort keys %$hash) {
+    for my $key (sort { 
+	            my $first  = $sort_order->{$a} || 9999;
+		    my $second = $sort_order->{$b} || 9999;
+		    $first<=>$second || $a cmp $b;
+		 } 
+		 keys %$hash) {
 	if ($key eq '__contents__') {
 	    $result .= $hash->{$key}."\n";
 	} elsif ($key eq '__next__') {
-	    $result .= nest_toggles($page_settings,$hash->{$key});
+	    $result .= nest_toggles($hash->{$key},$page_settings,$sort_order);
 	} elsif ($hash->{$key}{__next__}) {
 	    my $id =  "category-${key}";
  	    $result .= toggle_section({on=>$page_settings->{section_visible}{$id}},
 			      $id,
 			      b($key),
 			      div({-style=>'margin-left:2em;margin-right:2em'},
-				  nest_toggles($page_settings,$hash->{$key})));
+				  nest_toggles($hash->{$key},$page_settings,$sort_order)));
 	} else {
-	    $result .= nest_toggles($page_settings,$hash->{$key});
+	    $result .= nest_toggles($hash->{$key},$page_settings,$sort_order);
 	}
     }
     return $result;

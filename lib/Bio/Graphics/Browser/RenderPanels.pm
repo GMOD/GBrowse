@@ -763,7 +763,7 @@ sub make_map {
   my $source = $self->source;
 
   my $flip = $panel->flip;
-  my $tips = $source->global_setting('balloon tips');
+  my $tips = $source->global_setting('balloon tips') && $self->settings->{show_tooltips};
   my $use_titles_for_balloons = $source->global_setting('titles are balloons');
 
   my $did_map;

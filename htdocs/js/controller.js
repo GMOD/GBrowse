@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.62 2008-10-04 20:14:19 mwz444 Exp $
+ $Id: controller.js,v 1.63 2008-10-08 16:24:31 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -179,6 +179,25 @@ var GBrowseController = Class.create({
       }
     });
   },
+
+  // General option setting used for grid, cache and tooltips ******
+   set_display_option:
+   function(option,value) {
+
+     var param = {set_display_option: 1};
+     param[option] = value;
+     new Ajax.Request('#',
+            {
+		    method: 'post', 
+		    parameters: param,
+		    onSuccess:  function (transport) { 
+		    Controller.update_coordinates('left 0'); // causes an elegant panel refresh
+		} 
+		
+            }
+     );
+
+   },
 
   // Signal Change to Server Methods ********************************
   set_track_visibility:

@@ -208,7 +208,7 @@ sub asynchronous_event {
     my $settings = $self->state;
     my $events;
 
-    warn "asynchronous_event(",(join ' ',param()),")" if DEBUG;
+    warn "event(",(join ' ',param()),")" if DEBUG;
 
     if ( my $action = param('navigate') ) {
 
@@ -481,8 +481,12 @@ sub asynchronous_event {
 
         my $deferred_data = $self->render_deferred( labels => \@labels );
 	return (200,'application/json',$deferred_data);
-        $self->session->flush if $self->session;
-        return 1;
+    }
+
+    # miscellaneous options
+    if (param('set_display_option')) {
+	$self->update_options();
+	$events++;
     }
 
     # redirect to the bookmark
@@ -1719,20 +1723,41 @@ sub update_options {
 
   $state->{version} ||= param('version') || '';
   do {$state->{$_} = param($_) if defined param($_) } 
-    foreach qw(name source plugin stp ins head ks sk version grid flip width);
+    foreach qw(name source plugin stp ins head ks sk version 
+               grid flip width region_size show_tooltips
+               );
 
-  # just looking to see if the settings form was submitted
-  if (param('width')) { 
-    $state->{grid}  = param('grid');
-    $state->{show_tooltips} = param('show_tooltips');
-    unless (
-	defined $data_source->cache_time()
-        && $data_source->cache_time() == 0 )
-    {
-        $state->{cache} = param('cache');
-        $state->{cache} = !param('nocache') if defined param('nocache');
-    }
+  if (my @features = shellwords(param('h_feat'))) {
+      $state->{h_feat} = {};
+      for my $hilight (@features) {
+	  last if $hilight eq '_clear_';
+	  my ($featname,$color) = split '@',$hilight;
+	  $state->{h_feat}{$featname} = $color || 'yellow';
+      }
   }
+
+  if (my @regions = shellwords(param('h_region'))) {
+      $state->{h_region} = [];
+      foreach (@regions) {
+	  last if $_ eq '_clear_';
+	  $_ = "$state->{ref}:$_" unless /^[^:]+:-?\d/; # add reference if not there
+	  push @{$state->{h_region}},$_;
+      }
+  }
+
+# this chunk of code is dead?
+# just looking to see if the settings form was submitted
+#   if (param('width')) { 
+#     $state->{grid}  = param('grid');
+#     $state->{show_tooltips} = param('show_tooltips');
+#     unless (
+# 	defined $data_source->cache_time()
+#         && $data_source->cache_time() == 0 )
+#     {
+#         $state->{cache} = param('cache');
+#         $state->{cache} = !param('nocache') if defined param('nocache');
+#     }
+#   }
 
   # Process the magic "q" parameter, which overrides everything else.
   if (my @q = param('q')) {
@@ -2269,23 +2294,24 @@ sub update_region {
   my $self  = shift;
   my $state = shift || $self->state;
 
-  if (my @features = shellwords(param('h_feat'))) {
-    $state->{h_feat} = {};
-    for my $hilight (@features) {
-      last if $hilight eq '_clear_';
-      my ($featname,$color) = split '@',$hilight;
-      $state->{h_feat}{$featname} = $color || 'yellow';
-    }
-  }
+# the following code is dead?
+#   if (my @features = shellwords(param('h_feat'))) {
+#     $state->{h_feat} = {};
+#     for my $hilight (@features) {
+#       last if $hilight eq '_clear_';
+#       my ($featname,$color) = split '@',$hilight;
+#       $state->{h_feat}{$featname} = $color || 'yellow';
+#     }
+#   }
 
-  if (my @regions = shellwords(param('h_region'))) {
-    $state->{h_region} = [];
-    foreach (@regions) {
-      last if $_ eq '_clear_';
-      $_ = "$state->{ref}:$_" unless /^[^:]+:-?\d/; # add reference if not there
-      push @{$state->{h_region}},$_;
-    }
-  }
+#   if (my @regions = shellwords(param('h_region'))) {
+#     $state->{h_region} = [];
+#     foreach (@regions) {
+#       last if $_ eq '_clear_';
+#       $_ = "$state->{ref}:$_" unless /^[^:]+:-?\d/; # add reference if not there
+#       push @{$state->{h_region}},$_;
+#     }
+#   }
 
   if ($self->setting('region segment')) {
     $state->{region_size} = param('region_size') if defined param('region_size');

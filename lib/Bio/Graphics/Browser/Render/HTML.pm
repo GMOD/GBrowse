@@ -437,7 +437,8 @@ sub render_global_config {
                         -name     => 'grid',
                         -label    => $self->tr('SHOW_GRID'),
                         -override => 1,
-                        -checked  => $settings->{grid} || 0
+                        -checked  => $settings->{grid} || 0,
+			-onChange => 'Controller.set_display_option(this.name,this.checked ? 1 : 0)', 
                     )
                 )
             ),
@@ -448,6 +449,7 @@ sub render_global_config {
                     -values   => \@widths,
                     -default  => $settings->{width},
                     -override => 1,
+		    -onChange => 'Controller.set_display_option(this.name,this.value)', 
                 ),
             ),
             td( span(
@@ -459,6 +461,7 @@ sub render_global_config {
                         -value    => $feature_highlights,
                         -size     => 50,
                         -override => 1,
+		        -onChange => 'Controller.set_display_option(this.name,this.value)', 
                     ),
                 ),
             ),
@@ -469,7 +472,8 @@ sub render_global_config {
                             -name     => 'cache',
                             -label    => $self->tr('CACHE_TRACKS'),
                             -override => 1,
-                            -checked  => $settings->{cache}
+                            -checked  => $settings->{cache},
+                            -onChange => 'Controller.set_display_option(this.name,this.checked?1:0)'
                         )
                     )
                     )
@@ -498,6 +502,7 @@ sub render_global_config {
                         -value    => $region_highlights,
                         -size     => 50,
                         -override => 1,
+		        -onChange    => 'Controller.set_display_option(this.name,this.value)', 
                     ),
                 ),
             ),
@@ -509,7 +514,7 @@ sub render_global_config {
                         -label    => $self->tr('SHOW_TOOLTIPS'),
                         -override => 1,
                         -checked  => $settings->{show_tooltips},
-                        -onclick  => 'toggleTooltip()'
+                        -onChange => 'Controller.set_display_option(this.name,this.checked?1:0)'
                     ),
                 )
             ),
@@ -537,7 +542,8 @@ sub render_global_config {
                         -name     => 'region_size',
                         -default  => $settings->{region_size},
                         -override => 1,
-                        -size     => 20
+                        -size     => 20,
+                        -onChange   => 'Controller.set_display_option(this.name,this.value)',
                     ),
 
                     )

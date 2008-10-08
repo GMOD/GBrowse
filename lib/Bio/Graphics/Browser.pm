@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.210 2008-09-09 23:59:09 lstein Exp $
+# $Id: Browser.pm,v 1.211 2008-10-08 16:55:24 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -66,7 +66,8 @@ sub resolve_path {
   my $path = shift;
   my $path_type = shift; # one of "config" "htdocs" or "url"
   return unless $path;
-  return $path if $path =~ m!^/!;  # absolute path
+  return $path if $path =~ m!^/!;     # absolute path
+  return $path if $path =~ m!\|\s*$!; # a pipe
   my $method = ${path_type}."_base";
   $self->can($method) or croak "path_type must be one of 'config','htdocs', or 'url'";
   my $base   = $self->$method or return $path;
@@ -195,7 +196,7 @@ sub valid_source {
   my $proposed_source = shift;
   return unless exists $self->{config}{$proposed_source};
   my $path =  $self->data_source_path($proposed_source) or return;
-  return -e $path;
+  return -e $path || $path =~ /\|\s*$/;
 }
 
 sub get_source_from_cgi {

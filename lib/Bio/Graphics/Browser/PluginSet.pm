@@ -1,7 +1,7 @@
 package Bio::Graphics::Browser::PluginSet;
 # API for using plugins
 
-#  $Id: PluginSet.pm,v 1.9 2008-09-30 21:17:58 lstein Exp $
+#  $Id: PluginSet.pm,v 1.10 2008-10-08 16:55:24 lstein Exp $
 
 use strict;
 use Bio::Graphics::Browser;
@@ -71,7 +71,7 @@ sub configure {
   my ($database,$page_settings,$language,$session) = @_;
   my $conf     = $self->config;
   my $plugins  = $self->plugins;
-  my $conf_dir = $conf->dir;
+  my $conf_dir = $conf->globals->config_base;
   $self->language($language);
 
   for my $name (keys %$plugins) {

@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser::Plugin::RestrictionAnnotator;
-# $Id: RestrictionAnnotator.pm,v 1.14 2006-06-19 04:11:30 lstein Exp $
+# $Id: RestrictionAnnotator.pm,v 1.15 2008-10-08 16:55:24 lstein Exp $
 # test plugin
 use strict;
 use Bio::Graphics::Browser::Plugin;
@@ -114,7 +114,7 @@ sub annotate {
 sub configure_enzymes {
   my $self = shift;
   my $conf_dir = $self->config_path();
-  my $file = "$conf_dir/enzymes.txt";
+  my $file     = "$conf_dir/enzymes.txt";
   open (ENZYMES, "$file") or die "Error: cannot open file $file: $!.\n";
   while (<ENZYMES>) {
     chomp;

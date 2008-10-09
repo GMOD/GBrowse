@@ -955,7 +955,7 @@ sub draw_log10_rectangle {
   
   #print "$x_left,$y[0],$x_right,$y[1]<br>\n";
   
-  $gd->rectangle($x_left,$y[0],$x_right,$y[1],$fgcolor);
+  $gd->filledRectangle($x_left,$y[0],$x_right,$y[1],$fgcolor);
 }
 
 

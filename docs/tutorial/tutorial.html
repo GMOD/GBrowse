@@ -2444,7 +2444,8 @@ compatible with this can be used with this track.  Note that all
 species do not have to be included in this file.  All organisims not
 included in this file but included in the GFF alignment data will
 appear as disconnected branches in the cladogram (Figure 19 and 20).
-Here is an example using the NEWICK format:<br>
+Here is an example using the NEWICK format for the file
+<a href="data_files/species.tre">species.tre</a>:<br>
 <blockquote class="example"><pre>
 ((((kangaroo,rabbit),(cat)),(rat,mouse)),volvox);
 </pre></blockquote>
@@ -2461,7 +2462,7 @@ columns and can contain special tag=value pairs.  Specifically
 FASTA sequence to use and the 'Gap' indicates matches and mismatches.
 Matches are specified by 'M', deletions by 'D' and insertions by 'I'
 followed by the number of bases.  An example can be found in the
-<a href="data_files/volvox_phyloalign.gff">volvox_phyloalign.gff</a>
+<a href="data_files/volvox_phyloalign.gff3">volvox_phyloalign.gff3</a>
 file.  Copy this file into your data_files folder.<br>
 <blockquote class="example"><pre>
 ctgA    pa      submatch        1050    1500    8.5e-28 +       .       ID=Match3;species=mouse;Target=pagt2215 1 451;Gap=M70 D2 M2 I2 M2 D17 M33 I20 M5 D3 M317
@@ -2474,14 +2475,6 @@ ctgA    pa      submatch        1150    1500    4.1e-43 +       .       ID=Match
 The FASTA sequence files used in the zoomed in view are added just as
 the EST track.  Be sure that your 'Target' column specify the correct
 FASTA species to use.<p>
-
-Alignment scores can also read from binary Wiggle files.  The exact
-path of each wiggle file are entered as GFF entries.<br>
-<blockquote class="example"><pre>
-ctgA    pa      wfile   1       53259   .       .       +       ID=Match_Wig_dog;species=dog;wigfile=/Users/mokada/wigfiles/chr21axt.wig
-ctgA    pa      wfile   1       1700    .       .       +       ID=Match_Wig_dog;species=dog;wigfile=/Users/mokada/wigfiles/chr22axt.wig
-</pre></blockquote>
-<p>
 
 The conf file is a bit bloated for now.  Make sure you specify the
 exact path of your tree file and what format it is in.  
@@ -2531,6 +2524,31 @@ a disconnected member of the cladogram.</i>
 <p>
 
 
+Alignment scores can also read from binary Wiggle files.  The exact
+path of each wiggle file are entered as GFF entries.  An example gff
+<a href="data_files/volvox_phyloalign_wigentries.gff3">volvox_phyloalign_wigentries.gff3</a>
+must be moved to the data_files directory.  Ensure that the wigfile
+value has the exact file location of your wigfile.  An example wigfile
+<a href="data_files/dog1_1700.wig">dog1_1700.wig</a> is included in the
+data_files folder.
+<br>
+<blockquote class="example"><pre>
+##gff-version 3
+ctgA    pa      wfile   1       1700    .       .       +       ID=Match_Wig_dog;species=dog;wigfile=/Users/mokada/development/gsoc/files/random_code/wigtest/two_wigfiles/dog1_1700.wig
+</pre></blockquote>
+<p>
+
+
+<blockquote>
+<img src="figures/phylo_align3.gif"><br>
+<i>Figure 21: Phylogenetic alignments using data from binary wig files for the species dog.
+This is coordinated by gff entries that point to the specific file location which contains
+the binary wiggle entries used to determine the height of the graph.  This shows that the
+graph data can come from heterogeneous sources as "kangaroo" and "cat" use data included
+in the gff file while 'dog' uses entries in the wig file.
+</i>
+</blockquote>
+<p>
 
 <h3><a name="trace">2.9. Trace Data</a></h3>
 
@@ -2645,7 +2663,7 @@ traces.  Zoomed out you will see:
 
 <blockquote>
 <img src="figures/trace1.png"><br>
-<i>Figure 21: The trace glyph zoomed out.</i>
+<i>Figure 22: The trace glyph zoomed out.</i>
 </blockquote>
 
 <p>
@@ -2656,7 +2674,7 @@ Zooming in will show you the trace diagram:
 
 <blockquote>
 <img src="figures/trace2.png"><br>
-<i>Figure 21: The trace glyph zoomed in.</i>
+<i>Figure 23: The trace glyph zoomed in.</i>
 </blockquote>
 
 <p>
@@ -2697,11 +2715,11 @@ region segment = 20000
 </pre></blockquote>
 
 <p>Now when you reload the volvox page, you will see an intermediate
-panel labeled "region", as shown in Figure 22:</p>
+panel labeled "region", as shown in Figure 24:</p>
 
 <blockquote>
 <img src="figures/enhancements1.gif"><br>
-<i>Figure 22:</i> The "region" panel shows a region intermediate in
+<i>Figure 24:</i> The "region" panel shows a region intermediate in
 size between the overview and the detail panel.
 </blockquote>
 
@@ -2721,12 +2739,12 @@ scale          = right
 key            = Profile
 </pre></blockquote>
 
-<p>Figure 23 shows what the region looks like with its "Profile" track
+<p>Figure 25 shows what the region looks like with its "Profile" track
 turned on.</p>
 
 <blockquote>
 <img src="figures/enhancements2.gif"><br>
-<i>Figure 23:</i> You can add any number of tracks to the region
+<i>Figure 25:</i> You can add any number of tracks to the region
 panel, just as you would for the overview panel.
 </blockquote>
 
@@ -2775,11 +2793,11 @@ default features = ExampleFeatures  Motifs:overview
 
 <p>
 
-Reload the page.  Viol&aacute;!  See Figure 24.
+Reload the page.  Viol&aacute;!  See Figure 26.
 
 <blockquote>
 <img src="figures/overview1.gif"><br>
-<i>Figure 24:</i> Any number of tracks can be placed in the overview
+<i>Figure 26:</i> Any number of tracks can be placed in the overview
 </blockquote>
 
 <p>
@@ -2907,12 +2925,12 @@ to "segments."
 Make these changes to volvox.conf, turn on the "Example Alignments"
 track, and view the contig at 20K, 40K and 50K.  At 40K, you'll see
 the alignments lose their internal structure and be replaced by solid
-boxes (Figure 25).  At 50K they'll begin to overlap and the feature
+boxes (Figure 27).  At 50K they'll begin to overlap and the feature
 labels will be suppressed.
 
 <blockquote>
 <img src="figures/semantic_zooming1.gif"><br>
-<i>Figure 25: Semantically zoomed alignments at 40K</i>
+<i>Figure 27: Semantically zoomed alignments at 40K</i>
 </blockquote>
 
 <h3><a name="grouping_tracks">3.4. Grouping Tracks</a></h3>
@@ -2957,12 +2975,12 @@ key          = 6-frame translation
 
 <p>In this way we can create sections named "Alignments," "Examples,"
 "Genes" and "Proteins" and assign the appropriate tracks to them. The
-Tracks control section will look something like Figure 26:</p>
+Tracks control section will look something like Figure 28:</p>
 
 
 <blockquote>
 <img src="figures/enhancements3.gif"><br>
-<i>Figure 26:</i> You can add any number of tracks to the region
+<i>Figure 28:</i> You can add any number of tracks to the region
 panel, just as you would for the overview panel.
 </blockquote>
 
@@ -2980,13 +2998,13 @@ entirety of the feature and DNA data.</i>
 
 <p>A further refinement to display track information within the
  category is a table display with headings for the rows and columns
- (see Figure 27 for an example).  This layout is useful for displaying
+ (see Figure 29 for an example).  This layout is useful for displaying
  data that highlights the experimental design as in microarray or
  ChIP-on-Chip experiments.</p>
 
 <blockquote>
 <img src="figures/categorytable.png"><br>
-<i>Figure 27:</i> An example of a category table containing a 9 track table,  
+<i>Figure 29:</i> An example of a category table containing a 9 track table,  
 organized as 3 rows x 3 columns each with a heading. 
 </blockquote>
 
@@ -3003,13 +3021,13 @@ category tables = 'ArrayExpts' 'strain-A strain-B strain-C' 'temperature anaerob
 
 It is then important that your stanzas within the category are in
 column followed by row order (see example below and compare with
-Figure 27). So stanza 1 is column 1/row 1, stanza 2 is column 1/row 2,
+Figure 29). So stanza 1 is column 1/row 1, stanza 2 is column 1/row 2,
 stanza 3 is column 1/row 3, stanza 4 is column 2/row 1, stanza 5 is
 column 2/row 2 etc. This means each cell in the table must have a
 stanza. Any surplus tracks within that category will be ignored. For
 example if there was a stanza 10, this would not be shown.  If there
 are empty tracks they can be disabled using the 'disabled = 1' option
-in the stanza. So to display the category table in figure 29 you would
+in the stanza. So to display the category table in figure 31 you would
 use the following configuration.
 
 <blockquote class="example"><pre>
@@ -3187,13 +3205,13 @@ When you reload the page, you will see a new popup menu appear under
 the image labeled "Dumps, searches and other operations."  You will
 also see an automatic track labeled "plugin:Restriction Sites" appear
 in the track list.  When you turn on this track, you will be presented
-with a restriction map (Figure 28).  You can then adjust which
+with a restriction map (Figure 30).  You can then adjust which
 restriction sites are shown by selecting "Annotate Restriction Sites"
 from the popup menu and pressing the "Configure" button.
 
 <blockquote>
 <img src="figures/plugins1.gif"><br>
-<i>Figure 28: The RestrictionAnnotator Plugin</i>
+<i>Figure 30: The RestrictionAnnotator Plugin</i>
 </blockquote>
 
 <p>
@@ -3284,11 +3302,11 @@ Aligner plugin, the configuration options are:
 
 With the changes in place, select the aligner from the popup menu and
 press Configure.  Turn on uppercasing of the coding region track and
-see how it affects the display (Figure 29).
+see how it affects the display (Figure 31).
 
 <blockquote>
 <img src="figures/plugins2.gif"><br>
-<i>Figure 29: The Aligner plugin produces multiple alignments.</i>
+<i>Figure 31: The Aligner plugin produces multiple alignments.</i>
 </blockquote>
 
 <p>
@@ -3485,12 +3503,12 @@ in <a href="file:///$CONF/gbrowse.conf">$CONF/gbrowse.conf/</a>.
 
 <p>
 
-Confirm that you can browse the database.  Figure 30 is a picture of
+Confirm that you can browse the database.  Figure 32 is a picture of
 the entire data set with all core tracks turned on.
 
 <blockquote>
 <img src="figures/third_party1.gif"><br>
-<i>Figure 30:</i> The core <i>C. elegans</i> dataset.
+<i>Figure 32:</i> The core <i>C. elegans</i> dataset.
 </blockquote>
 
 
@@ -3563,13 +3581,13 @@ button.  Select one of the annotation files, and then press the
 "Upload" button to upload the file to the server.  The annotations
 contained in the file should now appear on the display.  If you now do
 this for all five of the annotation files, you will eventually get a
-display like that shown in Figure 31.
+display like that shown in Figure 33.
 
 <p>
 
 <blockquote>
 <img src="figures/third_party2.gif"><br>
-<i>Figure 31:</i> After uploading four annotation files.
+<i>Figure 33:</i> After uploading four annotation files.
 </blockquote>
 
 <p>
@@ -3600,7 +3618,7 @@ named "elegans_sts.gff3", and choose "Edit File...".
 
 <blockquote>
 <img src="figures/third_party3.gif"><br>
-<i>Figure 32:</i> The uploaded files can be edited in place by
+<i>Figure 34:</i> The uploaded files can be edited in place by
 clicking the "Edit File..." button.
 </blockquote>
 
@@ -3660,11 +3678,11 @@ key     = Microarray expression probe
 <p>
 
 With this combination of configurations, the display will now look
-as shown in Figure 33:
+as shown in Figure 35:
 
 <blockquote>
 <img src="figures/third_party4.gif"><br>
-<i>Figure 33:</i> After customizing the annotation files.
+<i>Figure 35:</i> After customizing the annotation files.
 </blockquote>
 
 <p>
@@ -3787,14 +3805,14 @@ remote sources = "ORFeome STSs"      http://localhost/elegans_sts.gff3
 <p>
 
 When you reload the web page, you will see a popup menu appear next to
-the remote annotation URL textfield (Figure 34).  The menu will
+the remote annotation URL textfield (Figure 36).  The menu will
 contain options to load "ORFeome STSs" and "Expression probes", and
 selecting a menu item will have exactly the same effect as typing in
 the URL manually.
 
 <blockquote>
 <img src="figures/third_party5.gif"><br>
-<i>Figure 34:</i> The preset remote annotation URL popup menu.
+<i>Figure 36:</i> The preset remote annotation URL popup menu.
 </blockquote>
 
 The neat thing about all this is that it works across the
@@ -4078,10 +4096,10 @@ What if we want to see two of the four tracks?  We just add additional
 type= sections, separated by semicolons.  To see both the "repeat" and
 "Expression" tracks, we could request
 http://localhost/cgi-bin/das/elegans_extra?type=repeat;type=Expression
-(Figure 35).
+(Figure 37).
 
 <blockquote>
-<img src="figures/DAS1.gif"><br> <i>Figure 35:</i>
+<img src="figures/DAS1.gif"><br> <i>Figure 37:</i>
 The <i>C. elegans</i> core annotations database with the "repeat" and
 "Expression" tracks  superimposed on it using DAS.
 </blockquote>

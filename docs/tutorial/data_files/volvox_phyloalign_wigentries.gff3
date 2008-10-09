@@ -1,0 +1,2 @@
+##gff-version 3
+ctgA	pa	wfile	1	1700	.	.	+	ID=Match_Wig_dog;species=dog;wigfile=/Users/mokada/development/gsoc/files/random_code/wigtest/two_wigfiles/part1_1700.wig

@@ -214,7 +214,7 @@ ok(join(' ',sort $source->db2id($db1)),'volvox2:database');
 my $db4 = $source->open_database('Linkage');
 ok($db1,$db4);
 ok(scalar $source->db2id($db4),'volvox2:database');
-ok(join(' ',$source->db2id($db1)),'volvox2:database Linkage');
+ok(join(' ',$source->db2id($db1)),'volvox2:database');
 
 # Test restrictions/authorization
 %tracks = map {$_=>1} $source->labels;

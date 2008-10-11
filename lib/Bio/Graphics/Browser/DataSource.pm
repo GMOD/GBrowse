@@ -761,7 +761,8 @@ sub db_settings {
       $section          = $symbolic_db_name      ? "$symbolic_db_name:database"   : $track;
   }
 
-  my $adaptor = $self->fallback_setting($section => 'db_adaptor') or die "No db_adaptor specified";
+  my $adaptor = $self->fallback_setting($section => 'db_adaptor') 
+      or die "Unknown database defined for $section";
   eval "require $adaptor; 1" or die $@;
 
   my $args    = $self->fallback_setting($section => 'db_args');
@@ -778,8 +779,13 @@ sub db_settings {
     my @aggregators = shellwords($a||'');
     push @argv,(-aggregator => \@aggregators);
   }
+  
+  # uniquify dbids
+  my $key    = Dumper($adaptor,@argv);
+  $self->{arg2dbid}{$key} ||= $section;
+  $self->{arg2dbid}{$key}   = $section if $section =~ /:database$/;
 
-  my @result = ($section,$adaptor,@argv);
+  my @result = ($self->{arg2dbid}{$key},$adaptor,@argv);
 
   # cache settings
   $DB_SETTINGS{$self,$track} = \@result;

@@ -11,18 +11,23 @@ use constant DEBUG=>0;
 sub new {
     my $self  = shift;
     my $args  = shift;
-    my ($source,$db,$state) = @{$args}{'source','db','state'};
+    my ($source,$db,$state,$searchopts) 
+	= @{$args}{'source','db','state','searchopts'};
+
+    $searchopts ||= 'name search, keyword search, chromosome heuristics';
 
     return bless {
 	source => $source,
 	db     => $db,
 	state  => $state,
+	searchopts => $searchopts,
     },ref($self) || $self;
 }
 
-sub source { shift->{source} }
-sub state  { shift->{state}  }
-sub db     { shift->{db}     }
+sub source     { shift->{source} }
+sub state      { shift->{state}  }
+sub db         { shift->{db}     }
+sub searchopts { shift->{searchopts}     }
 
 sub feature_count { 
     my $self = shift;
@@ -163,59 +168,64 @@ sub lookup_features {
   my @classes = $class ? ($class) 
                        : (split /\s+/,$source->global_setting('automatic classes')||'');
 
-  my $features;
+  my $features = [];
 
   if (defined $id && $db->can('get_feature_by_id')) { # this overrides everything else
-      warn "$db->get_feature_by_id($id) = ",$db->get_feature_by_id($id);
       return [$db->get_feature_by_id($id)];
   }
 
  SEARCHING:
-  for my $n ([$name,$class,$start,$stop],
-	     [$literal_name,$refclass,undef,undef]) {
+  {
+      last SEARCHING unless $self->searchopts =~ /name search/;
 
-    my ($name_to_try,$class_to_try,$start_to_try,$stop_to_try) = @$n;
+      for my $n ([$name,$class,$start,$stop],
+		 [$literal_name,$refclass,undef,undef]) {
 
-    # first try the non-heuristic search
-    $features  = $self->_feature_get($db,
-				     $name_to_try,$class_to_try,
-				     $start_to_try,$stop_to_try);
-    last SEARCHING if @$features;
+	  my ($name_to_try,$class_to_try,$start_to_try,$stop_to_try) = @$n;
 
-    # heuristic fetch. Try various abbreviations and wildcards
-    my @sloppy_names = $name_to_try;
-    if ($name_to_try =~ /^([\dIVXA-F]+)$/) {
-      my $id = $1;
-      foreach (qw(CHROMOSOME_ Chr chr)) {
-	my $n = "${_}${id}";
-	push @sloppy_names,$n;
+	  # first try the non-heuristic search
+	  $features  = $self->_feature_get($db,
+					   $name_to_try,$class_to_try,
+					   $start_to_try,$stop_to_try);
+	  last SEARCHING if @$features;
+
+	  # heuristic fetch. Try various abbreviations and wildcards
+	  my @sloppy_names = $name_to_try;
+	  if ($self->searchopts =~ /chromosome heuristics/ &&
+	      $name_to_try =~ /^([\dIVXA-F]+)$/) {
+	      my $id = $1;
+	      foreach (qw(CHROMOSOME_ Chr chr)) {
+		  my $n = "${_}${id}";
+		  push @sloppy_names,$n;
+	      }
+	  }
+
+	  # try to remove the chr CHROMOSOME_I
+	  if ($self->searchopts =~ /chromosome heuristics/ &&
+	      $name_to_try =~ /^(chromosome_?|chr)/i) {
+	      (my $chr = $name_to_try) =~ s/^(chromosome_?|chr)//i;
+	      push @sloppy_names,$chr;
+	  }
+
+	  # try the wildcard  version, but only if the name is of 
+	  # significant length;
+
+	  # IMPORTANT CHANGE: we used to put stars at the beginning 
+	  # and end, but this killed performance!
+	  push @sloppy_names,"$name_to_try*" 
+	      if length $name_to_try > 3 and $name_to_try !~ /\*$/;
+
+	  for my $n (@sloppy_names) {
+	      for my $c (@classes) {
+		  $features = $self->_feature_get($db,$n,$c,$start_to_try,$stop_to_try);
+		  last SEARCHING if @$features;
+	      }
+	  }
+	  
       }
-    }
-
-    # try to remove the chr CHROMOSOME_I
-    if ($name_to_try =~ /^(chromosome_?|chr)/i) {
-      (my $chr = $name_to_try) =~ s/^(chromosome_?|chr)//i;
-      push @sloppy_names,$chr;
-    }
-
-    # try the wildcard  version, but only if the name is of 
-    # significant length;
-
-    # IMPORTANT CHANGE: we used to put stars at the beginning 
-    # and end, but this killed performance!
-    push @sloppy_names,"$name_to_try*" 
-	if length $name_to_try > 3 and $name_to_try !~ /\*$/;
-
-    for my $n (@sloppy_names) {
-      for my $c (@classes) {
-	$features = $self->_feature_get($db,$n,$c,$start_to_try,$stop_to_try);
-	last SEARCHING if @$features;
-      }
-    }
-
   }
 
-  unless (@$features) {
+  if (!@$features && $self->searchopts =~ /keyword search/) {
     # if we get here, try the keyword search
       warn "try a keyword search for $literal_name" if DEBUG;
       $features = $self->_feature_keyword_search($literal_name);

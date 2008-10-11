@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.211 2008-10-08 16:55:24 lstein Exp $
+# $Id: Browser.pm,v 1.212 2008-10-11 00:02:42 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -83,7 +83,8 @@ sub config_path {
 sub htdocs_path {
   my $self    = shift;
   my $option  = shift;
-  $self->resolve_path($self->setting(general => $option),'htdocs') || "$ENV{DOCUMENT_ROOT}/gbrowse";
+  $self->resolve_path($self->setting(general => $option),'htdocs') 
+      || "$ENV{DOCUMENT_ROOT}/gbrowse";
 }
 
 sub url_path {
@@ -92,9 +93,15 @@ sub url_path {
   $self->resolve_path($self->setting(general => $option),'url');
 }
 
-sub config_base { $ENV{GBROWSE_CONF} || shift->setting(general=>'config_base')|| '/etc/apache2/gbrowse' }
-sub htdocs_base { $ENV{GBROWSE_DOCS} || shift->setting(general=>'htdocs_base')|| '/var/www/gbrowse'     }
-sub url_base    { $ENV{GBROWSE_ROOT} || shift->setting(general=>'url_base')   || '/gbrowse'             }
+sub config_base { $ENV{GBROWSE_CONF} 
+		  || shift->setting(general=>'config_base')
+		      || '/etc/apache2/gbrowse' }
+sub htdocs_base { $ENV{GBROWSE_DOCS} 
+		  || shift->setting(general=>'htdocs_base')
+		      || '/var/www/gbrowse'     }
+sub url_base    { $ENV{GBROWSE_ROOT} 
+		  || shift->setting(general=>'url_base')   
+		      || '/gbrowse'             }
 
 # these are url-relative options
 sub button_url  { shift->url_path('buttons')            }

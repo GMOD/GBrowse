@@ -80,31 +80,6 @@ ctgA	example	motif	21748	25612	.	+	.	Motif m12 ; Note "kinase"
 ctgA	example	motif	28332	30033	.	-	.	Motif m02 ; Note "HOX"
 ctgA	example	motif	28338	30038	.	-	.	Motif m02p ; Note "HOX paralog"
 ctgB	example	motif	29000	30000	.	-	.	Motif m02d ; Note "HOX duplicate"
-ctgA	example	match	31785	32359	.	+	.	Match seg01
-ctgA	example	HSP	31785	31939	.	+	.	Match seg01
-ctgA	example	HSP	32329	32359	.	+	.	Match seg01
-ctgA	example	match	26122	34466	.	+	.	Match seg02
-ctgA	example	HSP	26122	26126	.	+	.	Match seg02
-ctgA	example	HSP	26497	26869	.	+	.	Match seg02
-ctgA	example	HSP	27201	27325	.	+	.	Match seg02
-ctgA	example	HSP	27372	27433	.	+	.	Match seg02
-ctgA	example	HSP	27565	27565	.	+	.	Match seg02
-ctgA	example	HSP	27813	28091	.	+	.	Match seg02
-ctgA	example	HSP	28093	28201	.	+	.	Match seg02
-ctgA	example	HSP	28329	28377	.	+	.	Match seg02
-ctgA	example	HSP	28829	29194	.	+	.	Match seg02
-ctgA	example	HSP	29517	29702	.	+	.	Match seg02
-ctgA	example	HSP	29713	30061	.	+	.	Match seg02
-ctgA	example	HSP	30329	30774	.	+	.	Match seg02
-ctgA	example	HSP	30808	31306	.	+	.	Match seg02
-ctgA	example	HSP	31516	31729	.	+	.	Match seg02
-ctgA	example	HSP	31753	32154	.	+	.	Match seg02
-ctgA	example	HSP	32595	32696	.	+	.	Match seg02
-ctgA	example	HSP	32892	32901	.	+	.	Match seg02
-ctgA	example	HSP	33127	33388	.	+	.	Match seg02
-ctgA	example	HSP	33439	33443	.	+	.	Match seg02
-ctgA	example	HSP	33759	34209	.	+	.	Match seg02
-ctgA	example	HSP	34401	34466	.	+	.	Match seg02
 ctgA	example	gene	1050	9000	.	+	.	Gene EDEN ; Note "protein kinase"
 
 ctgA	example	mRNA	1050	9000	.	+	.	mRNA EDEN.1 ; Gene EDEN

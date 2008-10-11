@@ -485,7 +485,9 @@ sub run_remote_requests {
   }
 
   my $ua = LWP::UserAgent->new;
-  my $timeout = $source->global_setting('slave_timeout') || $source->global_setting('global_timeout') || 30;
+  my $timeout = $source->global_setting('slave_timeout') 
+      || $source->global_setting('global_timeout') 
+      || 30;
   $ua->timeout($timeout);
 
   for my $url (keys %renderers) {

@@ -2,11 +2,15 @@ package Bio::Graphics::Browser::RegionSearch;
 
 use strict;
 use warnings;
+use Bio::Graphics::GBrowseFeature;
 use Bio::Graphics::Browser::Region;
-use LWP::Parallel::UserAgent;
+use LWP::UserAgent;
+use HTTP::Request::Common 'POST';
 use Storable 'nfreeze','thaw';
 
 use constant DEBUG => 0;
+
+#local $SIG{CHLD} = 'IGNORE';
 
 # search multiple databases using crazy heuristics
 
@@ -76,30 +80,50 @@ and remote ones.
 sub init_databases {
     my $self         = shift;
     my $track_labels = shift;
+    my $local_only   = shift;
 
     $self->{local_dbs}  = {};
     $self->{remote_dbs} = {};
+
+    my %dbs;
 
     my $source = $self->source;
     my $labels = $track_labels || [$source->labels];
 
     for my $l (@$labels) {
+	next if $l =~ /^(_scale|builtin)/;
 
-	if (!$track_labels &&
-	    (my $remote = $source->setting($l => 'remote renderer'))) {
-	    $self->{remote_dbs}{$remote}{$l}++;
-	} else {
-	    my $db = $source->open_database($l);
+	my $remote         = $local_only ? undef : $source->setting($l => 'remote renderer');
+	my ($dbid)         = $source->db_settings($l);
+	my $search_options = $source->setting($dbid => 'search options') || '';
+
+	next if $search_options eq 'none';  # ignore this in the search
+	$dbs{$dbid}{options} ||= $search_options;
+	$dbs{$dbid}{remotes}{$remote}++ if $remote;
+    }
+
+    # try to spread the work out as much as possible among the remote
+    # renderers
+    my %remotes;
+    for my $dbid (keys %dbs) {
+	if (my @remote = keys %{$dbs{$dbid}{remotes}}) {
+	    my ($least_used) = sort {$remotes{$a}||0<=>$remotes{$b}||0} @remote;
+	    $self->{remote_dbs}{$least_used}{$dbid}++;
+	    $remotes{$least_used}++;
+	}
+	else {
+	    my $db = $source->open_database($dbid);
 	    $self->{local_dbs}{$db} ||= 
 		Bio::Graphics::Browser::Region->new(
-		    { source  => $source,
-		      state   => $self->state,
-		      db      => $db}
+		    { source     => $source,
+		      state      => $self->state,
+		      db         => $db,
+		      searchopts => $dbs{$dbid}{options},
+		    }
 		);
 	}
     }
 }
-
 
 =head2 $source = source()
 
@@ -177,18 +201,16 @@ sub search_features_locally {
     defined $search_term or return;
     my $state       = $self->state;
 
-    warn "search_features_locally()" if DEBUG;
-    
     my @found;
 
     # each local db gets a chance to search
     my $local_dbs = $self->local_dbs;
     return unless $local_dbs;
 
-    my @dbs = $state->{dbid} ? $self->source->open_database($state->{dbid})
-	                     : keys %{$local_dbs};
+    my @dbs = keys %{$local_dbs};
 
     for my $db (@dbs) {
+	warn "searching in $db: ",$self->source->db2id($db) if DEBUG;
 	# allow explicit db_id to override cached list of local dbs
 	my $region   = $local_dbs->{$db} || 
 	    Bio::Graphics::Browser::Region->new(
@@ -227,55 +249,98 @@ sub search_features_remotely {
 
     warn "pid = $$: KICKING OFF A REMOTE SEARCH" if DEBUG;
 
-    eval { use LWP::Parallel::UserAgent;} unless LWP::Parallel::UserAgent->can('new');
-    eval { use HTTP::Request::Common;   } unless HTTP::Request::Common->can('POST');
+    eval "require IO::Pipe;1;"   unless IO::Pipe->can('new');
+    eval "require IO::Select;1;" unless IO::Select->can('new');
 
-    my $ua = eval{LWP::Parallel::UserAgent->new};
-    unless ($ua) {
-	warn $@;
-	return [];
+    $SIG{CHLD} = 'IGNORE';  # for some reason local() does not work!
+
+    my $select = IO::Select->new();
+
+    for my $url (keys %$remote_dbs) {
+
+	my $pipe  = IO::Pipe->new();
+	Bio::Graphics::Browser::RenderPanels->prepare_modperl_for_fork();
+	my $child = fork();
+	die "Couldn't fork: $!" unless defined $child;
+	if ($child) { # parent
+	    $pipe->reader();
+	    $select->add($pipe);
+	}
+	else {
+	    $pipe->writer();
+	    $self->fetch_remote_features($search_term,$url,$pipe);
+	    exit 0;
+	}
     }
 
+    my @found;
+    while ($select->count > 0) {
+	my @ready = $select->can_read(5);
+
+	unless (@ready) { warn "timeout\n"; next; }
+
+	for my $r (@ready) {
+	    my $data;
+	    my $bytes = $r->sysread($data,4);
+	    unless ($bytes) {  # eof
+		$select->remove($r);
+		$r->close;
+		next;
+	    }
+
+	    my $data_len = unpack('N',$data);
+	    $bytes       = $r->sysread($data,$data_len);
+	    unless ($bytes == $data_len) {
+		$select->remove($r);
+		$r->close;
+		next;
+	    }
+
+	    my $objects = thaw($data);
+	    push @found,@$objects;
+	}
+    }
+
+    return \@found;
+}
+
+sub fetch_remote_features {
+    my $self = shift;
+    my ($search_term,$url,$outfh) = @_;
+
     $Storable::Deparse ||= 1;
-    $ua->in_order(0);
-    $ua->nonblock(0);
-    $ua->remember_failures(1);
     my $s_dsn	= nfreeze($self->source);
     my $s_set	= nfreeze($self->state);
     my %env     = map {$_=>$ENV{$_}} grep /^GBROWSE/,keys %ENV;
 
-    for my $url (keys %$remote_dbs) {
-	my @tracks  = keys %{$remote_dbs->{$url}};
-	my $request = POST ($url,
-			    [ operation  => 'search_features',
-			      settings   => $s_set,
-			      datasource => $s_dsn,
-			      tracks     => nfreeze(\@tracks),
-			      env        => nfreeze(\%env),
-			      searchterm => $search_term,
-			    ]);
-	my $error = $ua->register($request);
-	if ($error) { warn "Could not send request to $url: ",$error->as_string }
+    my @tracks  = keys %{$self->remote_dbs->{$url}};
+    my $request = POST ($url,
+			[ operation  => 'search_features',
+			  settings   => $s_set,
+			  datasource => $s_dsn,
+			  tracks     => nfreeze(\@tracks),
+			  env        => nfreeze(\%env),
+			  searchterm => $search_term,
+			]);
+
+    my $ua      = LWP::UserAgent->new();
+    my $timeout = $self->source->global_setting('slave_timeout') 
+	|| $self->source->global_setting('global_timeout') || 30;
+    $ua->timeout($timeout);
+
+
+    $request->uri($url);
+    my $response = $ua->request($request);
+
+    if ($response->is_success) {
+	my $content = $response->content;
+	$outfh->print(pack('N',length $content));
+	$outfh->print($content);
+    } else {
+	my $uri = $request->uri;
+	warn "$uri; search failed: ",$response->status_line;
+	$outfh->close;
     }
-
-    my $timeout = $self->source->global_setting('timeout') || 20;
-    my $results = $ua->wait($timeout);
-
-    my @found;
-
-    for my $url (keys %$results) {
-	my $response = $results->{$url}->response;
-	unless ($response->is_success) {
-	    warn $results->{$url}->request->uri,
-	         "; fetch failed: ",
-	         $response->status_line;
-	    next;
-	}
-	my $contents = thaw $response->content;
-	push @found,@$contents if $contents;
-    }
-
-    return \@found;
 }
 
 =head2 $db->add_dbid_to_features($db,$features)

@@ -997,7 +997,10 @@ sub region {
 	    { source => $self->data_source,
 	      state  => $self->state,
 	    });
-	$search->init_databases();
+	$search->init_databases(
+	    param('dbid') ? [param('dbid')]
+	                  :()
+	    );
 	my $features = $search->search_features();
 	$region->features($features);
     }
@@ -1255,7 +1258,8 @@ sub init_remote_sources {
 sub cleanup {
   my $self = shift;
   my $state = $self->state;
-  $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}";  # to remember us by :-)
+  $state->{name} = "$state->{ref}:$state->{start}..$state->{stop}"
+      if $state->{ref};  # to remember us by :-)
 }
 
 sub fatal_error {
@@ -1887,7 +1891,7 @@ sub update_coordinates {
   elsif (param('name')) {
       undef $state->{ref};  # no longer valid
       $state->{name} = param('name');
-      $state->{dbid} = param('dbid') if param('dbid');
+      $state->{dbid} = param('dbid') if param('dbid'); # get rid of this
   }
 }
 

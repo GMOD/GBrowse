@@ -1,6 +1,6 @@
 package Bio::Graphics::Karyotype;
 
-# $Id: Karyotype.pm,v 1.6 2008-10-03 19:35:27 lstein Exp $
+# $Id: Karyotype.pm,v 1.7 2008-10-11 00:02:43 lstein Exp $
 # Utility class to create a display of a karyotype and a series of "hits" on the individual chromosomes
 # Used for searching
 
@@ -235,14 +235,14 @@ sub generate_panels {
 
     if (my @hits  = $self->hits($chrom->seq_id)) {
       $panel->add_track(\@hits,
-#			-glyph   => 'diamond',
-#			-glyph   => 'generic',
 			-glyph   => sub {
 			    my $feature = shift;
 			    return $feature->length/$chrom->length > 0.05
 				? 'generic'
 				: 'diamond';
 			},
+			-glyph => 'generic',
+			-maxdepth => 0,
 			-height  => 6,
 			-bgcolor => 'red',
 			-fgcolor => 'red',

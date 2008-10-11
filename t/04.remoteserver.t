@@ -31,9 +31,7 @@ BEGIN {
   $PID = $$;
 
   rmtree '/tmp/gbrowse_testing';
-}
-END {
-  rmtree '/tmp/gbrowse_testing' if $$ == $PID;
+  rmtree '/tmp/gbrowse';
 }
 
 $SIG{INT} = sub {exit 0};
@@ -133,9 +131,6 @@ for (1..3) {
 # now we test whether parallel rendering is working
 @labels = qw(CleavageSites Alignments Motifs BindingSites);
 
-$alignment_server->run();
-$cleavage_server->run();
-
 $render->set_tracks(@labels);
 
 my $view = $render->render_detailview($render->segment);
@@ -156,8 +151,12 @@ exit 0;
 
 END {
     if ($PID == $$) {
-	foreach ($server,$alignment_server,$cleavage_server) { kill TERM=>$_->pid if $_}
+	foreach ($server,$alignment_server,$cleavage_server) { 
+	    kill TERM=>$_->pid if $_
+	}
 	unlink 'testdata/conf/volvox_final.conf',
      	       'testdata/conf/yeast_chr1.conf';
+	rmtree '/tmp/gbrowse'         if $$ == $PID;
+	rmtree '/tmp/gbrowse_testing' if $$ == $PID;
     }
 }

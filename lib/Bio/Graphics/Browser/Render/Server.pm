@@ -7,7 +7,7 @@ use CGI qw(header param escape unescape);
 use IO::File;
 use IO::String;
 use File::Basename 'basename';
-use Bio::Graphics::Feature;
+use Bio::Graphics::GBrowseFeature;
 use Bio::Graphics::Browser;
 use Bio::Graphics::Browser::I18n;
 use Bio::Graphics::Browser::DataSource;
@@ -257,7 +257,7 @@ sub search_features {
 	{source => $datasource,
 	 state  => $settings}
 	) or return;
-    $search->init_databases($tracks);
+    $search->init_databases($tracks,'local_search');
 
     warn "SERVER, dbid = ",$settings->{dbid} if DEBUG;
 
@@ -268,10 +268,11 @@ sub search_features {
 }
 
 sub clone_feature {
-    my $self = shift;
-    my $f    = shift;
+    my $self  = shift;
+    my $f     = shift;
+    my $level = shift || 0;
     my %attributes = map {$_=>[$f->get_tag_values($_)]} eval {$f->get_all_tags};
-    my $clone = Bio::Graphics::Feature->new(
+    my $clone = Bio::Graphics::GBrowseFeature->new(
 					    -name   => $f->name,
 					    -primary_tag => $f->primary_tag,
 					    -source_tag  => $f->source_tag,
@@ -284,9 +285,11 @@ sub clone_feature {
 					    -primary_id => eval{$f->primary_id} || undef,
 					    -attributes => \%attributes,
 					    );
-    for my $s (map {$self->clone_feature($_)} $f->get_SeqFeatures()) {
+    for my $s (map {$self->clone_feature($_,$level+1)} $f->get_SeqFeatures()) {
 	$clone->add_SeqFeature($s) ;
     }
+    $clone->gbrowse_dbid($f->gbrowse_dbid) 
+	if $level == 0 && $f->can('gbrowse_dbid');
     return $clone;
 }
 

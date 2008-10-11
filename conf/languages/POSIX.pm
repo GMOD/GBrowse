@@ -10,13 +10,13 @@
    PAGE_TITLE => 'Genome browser',
 
    SEARCH_INSTRUCTIONS => <<END,
-<b>Searching:</b> Search using a sequence name, gene name,
+<b>Search</b> using a sequence name, gene name,
 locus%s, or other landmark. The wildcard
 character * is allowed.
 END
 
    NAVIGATION_INSTRUCTIONS => <<END,
-<br><b>Navigation:</b> Click one of the rulers to center on a location, or click and drag to
+<br><b>Navigate</b> by clicking one of the rulers to center on a location, or click and drag to
 select a region. Use the Scroll/Zoom buttons to change magnification
 and position.
 END

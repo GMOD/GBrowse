@@ -1,4 +1,4 @@
-# $Id: Segment.pm,v 1.84.4.9.2.19.2.7 2008-07-17 05:49:50 scottcain Exp $
+# $Id: Segment.pm,v 1.84.4.9.2.19.2.8 2008-10-15 12:10:44 scottcain Exp $
 
 =head1 NAME
 
@@ -1641,6 +1641,23 @@ sub sourceseq {
   return $self->{'sourceseq'};
  
 }
+
+=head2 refseq
+
+ Title   : refseq
+ Usage   : $s->refseq
+ Function: get or set the reference sequence
+ Returns : a string
+ Args    : none
+ Status  : Public
+
+Examine or change the reference sequence. This is an alias to
+sourceseq(), provided here for API compatibility with
+Bio::DB::GFF::RelSegment.
+
+=cut
+
+*refseq     = \&sourceseq;
 
 =head2 abs_ref
 

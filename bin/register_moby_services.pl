@@ -1,53 +1,18 @@
-#!perl
-use Config;
-use File::Basename qw(&basename &dirname);
-use File::Spec;
-use FindBin '$Bin';
-use Cwd;
-
-my %OPTIONS;
-if (open F,"$Bin/../GGB.def") {
-  while (<F>) {
-    next if /^\#/;
-    chomp;
-    $OPTIONS{$1} = $2 if /^(\w+)\s*=\s*(.+)/;
-  }
-  close F;
-}
-$OPTIONS{CONF} ||= '/usr/local/apache/conf';
-
-my $dir = dirname($0);
-$file   = shift || File::Spec->catfile($dir,basename($0, '.PLS'));
-
-open OUT,">$file" or die "Can't create $file: $!";
-
-print "Extracting $file (with variable substitutions)\n";
-
-my $startperl = $Config{startperl} ne '#!perl' 
-  ? $Config{startperl}
-  : "#!$Config{perlpath}";
-
-print OUT <<"!GROK!THIS!";
-$startperl -w
+#!/usr/bin/perl -w
 package MobyServices::GbrowseServices;
 
 ###################################################################
 # Non-modperl users should change this variable if needed to point
 # to the directory in which the configuration files are stored.
 #
-\$CONF_DIR  = '$OPTIONS{CONF}/gbrowse.conf';
+$CONF_DIR  = '/usr/local/apache/conf/gbrowse.conf';
 #
 ###################################################################
 
-!GROK!THIS!
-
-# In the following, perl variables are not expanded during extraction.
-
-print OUT <<'!NO!SUBS!';
 
 
 #=======================================================================
-#$Id: register_moby_services.PLS,v 1.7 2005-12-09 22:19:08 mwz444 Exp $
+#$Id: register_moby_services.pl,v 1.1 2008-10-16 17:01:27 lstein Exp $
 
 use MOBY::Client::Central;
 use strict;
@@ -368,7 +333,3 @@ sub TEST {  # test of Registration object
 
 
 
-!NO!SUBS!
-close OUT or die "Can't close $file: $!";
-chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
-exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';

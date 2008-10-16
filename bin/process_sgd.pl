@@ -1,26 +1,6 @@
-#!perl
-use Config;
-use File::Basename qw(&basename &dirname);
-use Cwd;
+#!/usr/bin/perl
 
-$origdir = cwd;
-chdir dirname($0);
-$file = basename($0, '.PL','.PLS');
-$file .= $^O eq 'VMS' ? '.com' : '.pl';
-
-open OUT,">$file" or die "Can't create $file: $!";
-
-print "Extracting $file (with variable substitutions)\n";
-
-print OUT <<"!GROK!THIS!";
-$Config{startperl}
-!GROK!THIS!
-
-# In the following, perl variables are not expanded during extraction.
-
-print OUT <<'!NO!SUBS!';
-
-# $Id: process_sgd.PLS,v 1.2 2002-02-18 22:47:34 lstein Exp $
+# $Id: process_sgd.pl,v 1.4 2008-10-16 17:01:27 lstein Exp $
 # This script will convert from SGD format to GFF format
 # See http://genome-www4.stanford.edu/Saccharomyces/SGD/doc/db_specifications.html
 
@@ -144,8 +124,3 @@ disclaimers of warranty.
 =cut
 
 
-!NO!SUBS!
-close OUT or die "Can't close $file: $!";
-chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
-exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
-chdir $origdir;

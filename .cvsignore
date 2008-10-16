@@ -1,0 +1,13 @@
+GGB.def
+_build*
+benchmarking
+blib*
+*.patch
+*gz
+*.notes
+pm_to_blib
+*.tmp
+test*
+tmp*
+Build
+

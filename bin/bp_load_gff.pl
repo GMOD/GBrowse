@@ -1,25 +1,5 @@
-#!perl
-use Config;
-use File::Basename qw(&basename &dirname);
-use Cwd;
-
-$origdir = cwd;
-chdir dirname($0);
-$file = basename($0, '.PL','.PLS');
-$file .= $^O eq 'VMS' ? '.com' : '.pl';
-
-open OUT,">$file" or die "Can't create $file: $!";
-
-print "Extracting $file (with variable substitutions)\n";
-
-print OUT <<"!GROK!THIS!";
-$Config{startperl}
-!GROK!THIS!
-
-# In the following, perl variables are not expanded during extraction.
-
-print OUT <<'!NO!SUBS!';
-# $Id: bp_load_gff.PLS,v 1.2 2005-12-09 22:19:08 mwz444 Exp $
+#!/usr/bin/perl
+# $Id: bp_load_gff.pl,v 1.1 2008-10-16 17:01:27 lstein Exp $
 
 use strict;
 use Bio::DB::GFF;
@@ -170,8 +150,3 @@ for my $file (@fasta) {
   warn "$file: $loaded records loaded\n";
 }
 
-!NO!SUBS!
-close OUT or die "Can't close $file: $!";
-chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
-exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
-chdir $origdir;

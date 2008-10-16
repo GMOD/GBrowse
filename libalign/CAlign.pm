@@ -2,7 +2,7 @@ package Bio::Graphics::Browser::CAlign;
 
 use 5.005;
 use Carp;
-use vars qw(@ISA @EXPORT @EXPORT_OK $VERSION);
+use vars qw(@ISA @EXPORT @EXPORT_OK);
 use strict;
 
 require Exporter;
@@ -12,8 +12,7 @@ require DynaLoader;
 @EXPORT    = ();
 @EXPORT_OK = qw(align);
 
-$VERSION = '1.00';
-bootstrap Bio::Graphics::Browser::CAlign $VERSION;
+bootstrap Bio::Graphics::Browser::CAlign;
 
 sub align {
   my $class = shift;

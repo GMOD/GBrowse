@@ -165,6 +165,8 @@ values will be written at step intervals.
 
 =head2 Retrieving Data
 
+=over 4
+
 =item $value = $wig->value($position)
 
 Retrieve the single data item at position $position, or the nearest

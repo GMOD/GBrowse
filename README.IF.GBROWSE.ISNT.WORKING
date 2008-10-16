@@ -8,9 +8,6 @@ stable branch.  You can use the same cvs commands with an added flag:
 cvs -d:pserver:anonymous@cvs.sourceforge.net:/cvsroot/gmod login
 cvs -d:pserver:anonymous@cvs.sourceforge.net:/cvsroot/gmod co -r stable Generic-Genome-Browser
 
-We plan on making a 1.69 release soon which will be based on 1.68 while
-we continue to work on the major changes in cvs HEAD.
-
 Thanks,
 Scott Cain
 cain@cshl.edu 

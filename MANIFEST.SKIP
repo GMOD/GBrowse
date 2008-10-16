@@ -1,7 +1,11 @@
-\bCVS\b
-^MANIFEST\.
+^_build
+^Build$
+^blib
+~$
+\.bak$
+^MANIFEST\.SKIP$
+CVS
 ^\.
-^blib/
 \.old$
 \.bak$
 \.dist$
@@ -9,7 +13,8 @@
 Makefile$
 \.gz$
 \~$
-^\#
+\#
+\.\#
 ^\.
 GGB\.def
 tmp
@@ -22,3 +27,10 @@ foo
 \.bs$
 \.o$
 pm_to_blib
+^TODO
+^core
+/core
+^okada_patches
+^notes
+libalign/.+\.c
+History

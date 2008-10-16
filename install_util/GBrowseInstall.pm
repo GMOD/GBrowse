@@ -119,21 +119,30 @@ END
     system "apache2 -k start -f $dir/conf/httpd.conf";
     if (-e "$dir/logs/apache2.pid") {
 	print STDERR "Demo is now running on http://localhost:$port\n";
-	print STDERR "Run \"./Build stop_demo\" to stop it.\n";
+	print STDERR "Run \"./Build demostop\" to stop it.\n";
 	$self->config_data(demodir=>$dir);
     } else {
-	print STDERR "Apache failed to start. The error log shows:\n";
-	my $f = IO::File->new("$dir/logs/error.log");
-	print while <$f>;
+	print STDERR "Apache failed to start.\n";
+	if (-e "$dir/logs/error.log") {
+	    print STDERR "==Apache Error Log==\n";
+	    my $f = IO::File->new("$dir/logs/error.log");
+	    print STDERR while <$f>;
+	}
+	rmtree([$dir]);
     }
 }
 
-sub ACTION_stop_demo {
+sub ACTION_demostop {
     my $self = shift;
-    my $dir  = $self->config_data('demodir') or return;
+    my $dir  = $self->config_data('demodir');
+    unless ($dir && -e $dir) {
+	print STDERR "Demo doesn't seem to be running.\n";
+	return;
+    }
     system "apache2 -k stop -f $dir/conf/httpd.conf";
     rmtree([$dir]);
     $self->config_data('demodir'=>undef);
+    print STDERR "Demo stopped.\n";
 }
 
 sub ACTION_realclean {
@@ -156,6 +165,7 @@ sub ACTION_config {
     local $^W = 0;
 
     $self->depends_on('build');
+    print STDERR "\n**Beginning interactive configuration**\n";
 
     my $props = $self->private_props;
     my %opts  = map {

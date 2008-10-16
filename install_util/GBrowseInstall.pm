@@ -7,7 +7,7 @@ use ExtUtils::CBuilder;
 use ExtUtils::MakeMaker 'prompt';
 use Cwd;
 use File::Path 'rmtree';
-use File::Temp;
+use File::Temp 'tempdir';
 use IO::File;
 use GuessDirectories;
 
@@ -31,7 +31,7 @@ sub valid_property {
 sub ACTION_demo {
     my $self = shift;
     my $cwd  = cwd();
-    my $dir  = File::Temp->newdir(
+    my $dir  = tempdir(
 	'GBrowse_demo_XXXX',
 	TMPDIR=>1,
 	CLEANUP=>0,

@@ -8,7 +8,7 @@ use strict;
 use ExtUtils::MakeMaker;
 use Bio::Root::IO;
 use FindBin '$Bin';
-use constant TEST_COUNT => 5;
+use constant TEST_COUNT => 6;
 
 BEGIN {
   # to handle systems with no installed Test module

@@ -1,37 +1,4 @@
-#!perl
-use Config;
-use File::Basename qw(&basename &dirname);
-use File::Spec;
-use FindBin '$Bin';
-use Cwd;
-
-my %OPTIONS;
-if (open F,"$Bin/../GGB.def") {
-  while (<F>) {
-    next if /^\#/;
-    chomp;
-    $OPTIONS{$1} = $2 if /^(\w+)\s*=\s*(.+)/;
-  }
-  close F;
-}
-$OPTIONS{CONF} ||= '/usr/local/apache/conf';
-
-my $dir = dirname($0);
-$file   = shift || File::Spec->catfile($dir,basename($0, '.PL','.PLS'));
-
-open OUT,">$file" or die "Can't create $file: $!";
-
-print "Extracting $file (with variable substitutions)\n";
-
-my $startperl = $Config{startperl} ne '#!perl' 
-  ? $Config{startperl}
-  : "#!$Config{perlpath}";
-
-print OUT <<"!GROK!THIS!";
-$startperl -w
-!GROK!THIS!
-
-print OUT <<'!NO!SUBS!';
+#!/usr/bin/perl -w
 # After PPM downloads and installs the contents of blib, this script
 # prompts the user for the location of htdocs, conf, and cgi-bin
 # and installs them.
@@ -42,14 +9,7 @@ use LWP::Simple;
 use PPM::Archive;
 use File::Basename 'dirname';
 use ExtUtils::MakeMaker 'prompt';  # love it!
-!NO!SUBS!
-
-
-print OUT <<"!GROK!THIS!";
-use constant SUPPORT_FILES  => 'gbrowse_ppm_support_files-$OPTIONS{VERSION}.tar.gz';
-!GROK!THIS!
-
-print OUT <<'!NO!SUBS!';
+use constant SUPPORT_FILES  => 'gbrowse_ppm_support_files-2.00pre1.tar.gz';
 use constant PPM_REPOSITORY => 'http://www.gmod.org/ggb/ppm';
 
 my $startperl = $Config{startperl} ne '#!perl' 
@@ -168,7 +128,3 @@ sub fixup {
   close OUT;
   rename "$file.new",$file;
 }
-!NO!SUBS!
-close OUT or die "Can't close $file: $!";
-chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
-exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';

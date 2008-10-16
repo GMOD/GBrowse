@@ -40,7 +40,6 @@ my $build = GBrowseInstall->new(
 if ($build->have_c_compiler()) {
     foreach ('CAlign.xs','CAlign.pm') {
 	copy("./libalign/$_" => "./lib/Bio/Graphics/Browser/$_");
-	# $build->add_to_cleanup("./lib/Bio/Graphics/Browser/$_");
     }
     $build->include_dirs(["$Bin/libalign"]);
 }

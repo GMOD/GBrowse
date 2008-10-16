@@ -1,20 +1,4 @@
-#!perl
-use Config;
-use File::Basename qw(&basename &dirname);
-use Cwd;
-
-$origdir = cwd;
-chdir dirname($0);
-$file = basename($0, '.PL','.PLS');
-$file .= $^O eq 'VMS' ? '.com' : '.pl';
-
-open OUT,">$file" or die "Can't create $file: $!";
-
-print "Extracting $file (with variable substitutions)\n";
-
-print OUT "$Config{startperl}\n";
-
-print OUT <<'!NO!SUBS!';
+#!/usr/bin/perl
 use strict;
 use File::Basename qw( basename fileparse );
 use Carp 'croak';
@@ -255,10 +239,4 @@ sub copy_with_substitutions {
   close OUT;
   close IN;
 }
-
-!NO!SUBS!
-close OUT or die "Can't close $file: $!";
-chmod 0755, $file or die "Can't reset permissions for $file: $!\n";
-exec("$Config{'eunicefix'} $file") if $Config{'eunicefix'} ne ':';
-chdir $origdir;
 

@@ -34,3 +34,5 @@ pm_to_blib
 ^notes
 libalign/.+\.c
 History
+prototype-.*\.pdf
+lib/Bio/Graphics/Browser/CAlign

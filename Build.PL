@@ -9,7 +9,7 @@ use File::Copy;
 use GBrowseInstall;
 
 my $build = GBrowseInstall->new(
-    module_name  => 'Generic-Genome-Browser',
+    module_name  => 'GBrowse',
     dist_version => '2.00',
     dist_author  => 'Lincoln Stein <lincoln.stein@gmail.com>',
     dist_abstract=> 'The GMOD Generic Genome Browser',
@@ -35,6 +35,8 @@ my $build = GBrowseInstall->new(
 	'bin/load_genbank.pl',
     ],
 
+    create_makefile_pl => 'passthrough',
+
     );
 
 if ($build->have_c_compiler()) {
@@ -44,14 +46,12 @@ if ($build->have_c_compiler()) {
     $build->include_dirs(["$Bin/libalign"]);
 }
 
+for my $arg (keys %{$build->private_props}) {
+    my $value = $build->runtime_params($arg) or next;
+    $build->config_data($arg=>$value);
+}
+
 $build->create_build_script;
 exit 0;
-
-package GBrowse::Install;
-use base 'Module::Build';
-
-sub ACTION_demo {
-    warn "this target runs a demo";
-}
 
 1;

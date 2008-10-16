@@ -1,5 +1,7 @@
 package GuessDirectories;
 
+use IO::Socket::INET;
+
 # this package never gets installed - it's just used by Makefile.PL
 sub conf {
   shift;
@@ -119,6 +121,43 @@ sub cgibin {
     }
   }
   return '/usr/local/apache/cgi-bin'; #fallback
+}
+
+# try a few ports until we find an open one
+sub portdemo {
+    my $self = shift;
+    my @candidates = (80,8000,8080,8001,8008,8081,8888,8181);
+    for my $port (@candidates) {
+	my $h = IO::Socket::INET->new(LocalPort=>$port);
+	return $port if $h;
+    }
+}
+
+sub apachemodules {
+    shift;
+    my $root = shift;
+    return "$root/libexec" if $root && -d "$root/libexec";
+
+    if ($^O =~ /mswin/i) {  # windows system
+    for (
+	 'C:/Program Files/Apache Software Foundation/Apache2.4/modules',
+	 'C:/Program Files/Apache Software Foundation/Apache2.3/modules',
+	 'C:/Program Files/Apache Software Foundation/Apache2.2/modules',
+	 'C:/Program Files/Apache Software Foundation/Apache2.1/modules',
+	 'C:/Program Files/Apache Group/Apache2/modules',
+	 'C:/Program Files/Apache Group/Apache/modules') {
+      return $_ if -d $_;
+    }
+  } else {
+    for ('/usr/lib/apache/modules',
+	 '/usr/lib/apache2/modules',
+	 '/usr/local/apache/libexec',
+	) {
+      return $_ if -d $_;
+    }
+  }
+  return '/usr/local/apache/cgi-bin'; #fallback
+
 }
 
 1;

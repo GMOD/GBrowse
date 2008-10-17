@@ -3,19 +3,11 @@ bin/sync-bioperl.sh
 Build.PL
 cgi-bin/gbrowse
 cgi-bin/gbrowse_details
-cgi-bin/gbrowse_drag
-cgi-bin/gbrowse_gff_autocomplete
 cgi-bin/gbrowse_img
-cgi-bin/gbrowse_karyotype
-cgi-bin/gbrowse_not
-cgi-bin/gbrowse_seqfeature_autocomplete
-cgi-bin/gbrowse_syn
-cgi-bin/gbrowset
 cgi-bin/README
 Changes
 conf/enzymes.txt
 conf/GBrowse.conf
-conf/Gbrowse_karyotype.conf
 conf/languages/de.pm
 conf/languages/en.pm
 conf/languages/es.pm
@@ -87,7 +79,6 @@ conf/templates/default/set_track_options_controls.tt2
 conf/templates/default/slider.tt2
 conf/templates/default/sourcemenu.tt2
 conf/templates/default/start_section.tt2
-conf/templates/default/trackstable.bak.tt2
 conf/templates/default/trackstable.tt2
 conf/templates/default/uploadedfiles.tt2
 conf/templates/default/uploadtable.tt2
@@ -189,7 +180,6 @@ docs/tutorial/conf_files/volvox5.conf
 docs/tutorial/conf_files/volvox_final.conf
 docs/tutorial/conf_files/volvox_final_withPhylo.conf
 docs/tutorial/conf_files/volvox_Phylo.conf
-docs/tutorial/data_files/directory.index
 docs/tutorial/data_files/dog1_1700.wig
 docs/tutorial/data_files/elegans.fa
 docs/tutorial/data_files/elegans_acceptor.gff
@@ -236,7 +226,6 @@ docs/tutorial/data_files/volvox8.gff3
 docs/tutorial/data_files/volvox9.gff
 docs/tutorial/data_files/volvox9.gff3
 docs/tutorial/data_files/volvox_all.fa
-docs/tutorial/data_files/volvox_all.fa.index
 docs/tutorial/data_files/volvox_all.gff
 docs/tutorial/data_files/volvox_all.gff3
 docs/tutorial/data_files/volvox_geneproducts.gff3
@@ -254,7 +243,6 @@ docs/tutorial/dbgff/conf_files/volvox3.conf
 docs/tutorial/dbgff/conf_files/volvox4.conf
 docs/tutorial/dbgff/conf_files/volvox5.conf
 docs/tutorial/dbgff/conf_files/volvox_final.conf
-docs/tutorial/dbgff/data_files/directory.index
 docs/tutorial/dbgff/data_files/elegans.fa
 docs/tutorial/dbgff/data_files/elegans_acceptor.gff
 docs/tutorial/dbgff/data_files/elegans_core.gff
@@ -278,7 +266,6 @@ docs/tutorial/dbgff/data_files/volvox7.gff
 docs/tutorial/dbgff/data_files/volvox8.gff
 docs/tutorial/dbgff/data_files/volvox9.gff
 docs/tutorial/dbgff/data_files/volvox_all.fa
-docs/tutorial/dbgff/data_files/volvox_all.fa.index
 docs/tutorial/dbgff/data_files/volvox_all.gff
 docs/tutorial/dbgff/data_files/volvox_trace.scf
 docs/tutorial/dbgff/figures/adding_dna_to_alignments1.gif
@@ -437,7 +424,6 @@ htdocs/css/tracks.css
 htdocs/databases/ideograms/human_cytobands.gff
 htdocs/databases/ideograms/mouse_cytobands.gff
 htdocs/databases/ideograms/rat_cytobands.gff
-htdocs/databases/volvox/directory.index
 htdocs/databases/volvox/volvox.fa
 htdocs/databases/volvox/volvox.gff
 htdocs/databases/volvox2/volvox2.gff
@@ -445,7 +431,6 @@ htdocs/databases/volvox3/volvox3.gff
 htdocs/databases/volvox4/volvox4.gff3
 htdocs/databases/yeast_chr1+2/chr1.fa
 htdocs/databases/yeast_chr1+2/chr2.fa
-htdocs/databases/yeast_chr1+2/directory.index
 htdocs/databases/yeast_chr1+2/yeast_chr1+2.gff3
 htdocs/databases/yeast_chr1/chromosome1.fa
 htdocs/databases/yeast_chr1/chromosome1.gff
@@ -584,11 +569,9 @@ libalign/CAlign.xs
 libalign/Changes
 libalign/README
 libalign/realign.h
-libalign/realign_test.pl
 Makefile.PL
 MANIFEST			This list of files
 META.yml
-pkg_config.in
 README
 README.fedora_and_selinux
 README.GBrowse-2.00

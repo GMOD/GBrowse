@@ -1,126 +1,89 @@
 package GuessDirectories;
 
 use IO::Socket::INET;
+use File::Spec;
 
 # this package never gets installed - it's just used by Makefile.PL
 sub conf {
   shift;
-  my $root = shift;
-  return "$root/conf" if -d "$root/conf";
   if ($^O =~ /mswin/i) {  # windows system
-    for ('C:/Program Files/Apache Software Foundation/Apache2.3/conf',
-	 'C:/Program Files/Apache Software Foundation/Apache2.2/conf',
-	 'C:/Program Files/Apache Software Foundation/Apache2.1/conf',
-	 'C:/Program Files/Apache Group/Apache2/conf',
-	 'C:/Program Files/Apache Group/Apache/conf',
-	 'C:/Apache/conf',
-	 'C:/Apache2/conf') {
-      return $_ if -d $_;
-    }
+      return File::Spec->catfile('C:','Program Files','GBrowse2');
   } else {
-    for (
-	 '/usr/local/apache/conf',   # standard apache install	 
-	 '/usr/local/apache2/conf',  # standard apache2 install
-	 '/etc/httpd/conf',          # RedHat linux
-	 '/etc/apache',              # Slackware linux
-	 '/etc/apache2',             # Ubuntu
-	 '/etc/httpd',               # MacOSX
-	 '/etc/apache2',             # Ubuntu/debian
-	 '/etc/apache-perl',         # Ubuntu/debian
-	) {
-      return $_ if -d $_;
-    }
+      for (
+	  '/etc',
+	  '/usr/etc',
+	  '/usr/local/etc',
+	  ) {
+	  return File::Spec->catfile($_,'GBrowse2') if -d $_;
+      }
   }
-  return '/usr/local/apache/conf';   # fallback
+  return File::Spec->catfile('/usr/local/etc','GBrowse2');   # fallback
 }
 
-sub root {
+
+sub apache_root {
   if ($^O =~ /mswin/i) {  # windows system
     for (
-	 'C:/Program Files/Apache Software Foundation/Apache2.5',
-	 'C:/Program Files/Apache Software Foundation/Apache2.4',
-	 'C:/Program Files/Apache Software Foundation/Apache2.3',
-	 'C:/Program Files/Apache Software Foundation/Apache2.2',
-	 'C:/Program Files/Apache Software Foundation/Apache2.1',
-	 'C:/Program Files/Apache Group/Apache2/conf',
-	 'C:/Program Files/Apache Group/Apache/conf',
-	 'C:/Apache/conf',
-	 'C:/Apache2/conf') {
-      return $_ if -d $_;
+	'C:/Program Files/Apache Software Foundation/Apache2.5',
+	'C:/Program Files/Apache Software Foundation/Apache2.4',
+	'C:/Program Files/Apache Software Foundation/Apache2.3',
+	'C:/Program Files/Apache Software Foundation/Apache2.2',
+	'C:/Program Files/Apache Software Foundation/Apache2.1',
+	'C:/Program Files/Apache Group/Apache2',
+	'C:/Program Files/Apache Group/Apache',
+	'C:/Apache/conf',
+	'C:/Apache2/conf') {
+	return $_ if -d $_;
     }
   } else {
-    for (
-	 '/usr/local/apache2',  # standard apache2 install
-	 '/usr/local/apache',   # standard apache install
-	 '/usr/apache2',
-	 '/usr/apache',
-	) {
-      return $_ if -d $_;
-    }
+      for (
+	  '/usr/local/apache2',  # standard apache2 install
+	  '/usr/local/apache',   # standard apache install
+	  '/opt/apache2',
+	  '/opt/apache',
+	  ) {
+	  return $_ if -d $_;
+      }
   }
   return;
 }
 
 sub htdocs {
-  shift;
-  my $root = shift;
-  return "$root/htdocs" if -d "$root/htdocs";
-  return "$root/html"   if -d "$root/html";
-  if ($^O =~ /mswin/i) {  # windows system
-    for ('C:/Program Files/Apache Software Foundation/Apache2.3/htdocs',
-	 'C:/Program Files/Apache Software Foundation/Apache2.2/htdocs',
-	 'C:/Program Files/Apache Software Foundation/Apache2.1/htdocs',
-	 'C:/Program Files/Apache Group/Apache2/htdocs',
-	 'C:/Program Files/Apache Group/Apache/htdocs',
-	 'C:/Apache/htdocs',
-	 'C:/Apache2/htdocs') {
-      return $_ if -d $_;
+    my $self = shift;
+    my $root = $self->apache_root;
+    foreach ('htdocs','html') {
+	return File::Spec->catfile($root,$_) 
+	    if -e File::Spec->catfile($root,$_);
     }
-  } else {
-    for ('/usr/local/apache/htdocs',       # standard apache install
-	 '/usr/local/apache2/htdocs',       # standard apache2 install
-	 '/var/www/html',                  # RedHat linux
-	 '/var/www/htdocs',                # Slackware linux
-	 '/var/www',                       # Ubuntu/debian
-	 '/var/www',                       # Ubuntu
-	 '/Library/Webserver/Documents',  # MacOSX
+
+    for (
+	'/var/www/html',                  # RedHat linux
+	'/var/www/htdocs',                # Slackware linux
+	'/var/www',                       # Ubuntu/debian
+	'/var/www',                       # Ubuntu
+	'/Library/Webserver/Documents',  # MacOSX
 	) {
-      return $_ if -d $_;
+	return $_ if -d $_;
     }
-  }
-  return '/usr/local/apache/htdocs'; # fallback
+    return '/usr/local/apache/htdocs'; # fallback
 }
 
 sub cgibin {
-  shift;
-  my $root = shift;
-  return "$root/cgi-bin"  if -d "$root/cgi-bin";
-  return "$root/cgi-perl" if -d "$root/cgi-perl";
-  return "$root/cgi"      if -d "$root/cgi";
-
-  if ($^O =~ /mswin/i) {  # windows system
+    my $self = shift;
+    my $root = $self->apache_root;
+    foreach ('cgi-bin','cgi-perl','cgi') {
+	return File::Spec->catfile($root,$_)
+	    if -e File::Spec->catfile($root,$_);
+    }
     for (
-	 'C:/Program Files/Apache Software Foundation/Apache2.3/cgi-bin',
-	 'C:/Program Files/Apache Software Foundation/Apache2.2/cgi-bin',
-	 'C:/Program Files/Apache Software Foundation/Apache2.1/cgi-bin',
-	 'C:/Program Files/Apache Group/Apache2/cgi-bin',
-	 'C:/Program Files/Apache Group/Apache/cgi-bin',
-	 'C:/Apache/cgi-bin',
-	 'C:/Apache2/cgi-bin') {
-      return $_ if -d $_;
-    }
-  } else {
-    for ('/usr/local/apache/cgi-bin',      # standard apache install
-	 '/usr/local/apache2/cgi-bin',     # standard apache2 install
-	 '/var/www/cgi-bin',               # RedHat & Slackware linux
-	 '/usr/lib/cgi-bin',               # Ubuntu/debian
-	 '/Library/Webserver/CGI-Executables',  # MacOSX
-	 '/usr/lib/cgi-bin',               # Ubuntu
+	'/var/www/cgi-bin',               # RedHat & Slackware linux
+	'/usr/lib/cgi-bin',               # Ubuntu/debian
+	'/Library/Webserver/CGI-Executables',  # MacOSX
+	'/usr/lib/cgi-bin',               # Ubuntu
 	) {
-      return $_ if -d $_;
+	return $_ if -d $_;
     }
-  }
-  return '/usr/local/apache/cgi-bin'; #fallback
+    return '/usr/local/apache/cgi-bin'; #fallback
 }
 
 # try a few ports until we find an open one
@@ -134,30 +97,24 @@ sub portdemo {
 }
 
 sub apachemodules {
-    shift;
-    my $root = shift;
-    return "$root/libexec" if $root && -d "$root/libexec";
-
-    if ($^O =~ /mswin/i) {  # windows system
-    for (
-	 'C:/Program Files/Apache Software Foundation/Apache2.4/modules',
-	 'C:/Program Files/Apache Software Foundation/Apache2.3/modules',
-	 'C:/Program Files/Apache Software Foundation/Apache2.2/modules',
-	 'C:/Program Files/Apache Software Foundation/Apache2.1/modules',
-	 'C:/Program Files/Apache Group/Apache2/modules',
-	 'C:/Program Files/Apache Group/Apache/modules') {
-      return $_ if -d $_;
+    my $self = shift;
+    my $root = $self->apache_root;
+    foreach ('modules','libexec') {
+	return File::Spec->catfile($root,$_)
+	    if -d File::Spec->catfile($root,$_);
     }
-  } else {
-    for ('/usr/lib/apache/modules',
-	 '/usr/lib/apache2/modules',
-	 '/usr/local/apache/libexec',
-	) {
-      return $_ if -d $_;
-    }
-  }
-  return '/usr/local/apache/cgi-bin'; #fallback
 
+
+    for my $first ('/usr/lib','/usr/share',
+		   '/usr/local/lib','/usr/local/share') {
+	for my $second ('apache','apache2') {
+	    for my $third ('modules','libexec') {
+		my $candidate = File::Spec->catfile($first,$second,$third);
+		return $candidate if -d $candidate;
+	    }
+	}
+    }
+    return '/usr/lib/apache/modules'; #fallback
 }
 
 1;

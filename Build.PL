@@ -51,6 +51,8 @@ for my $arg (keys %{$build->private_props}) {
     $build->config_data($arg=>$value);
 }
 
+$build->add_build_element('conf');
+$build->add_build_element('htdocs');
 $build->create_build_script;
 exit 0;
 

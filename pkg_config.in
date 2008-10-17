@@ -1,5 +1,0 @@
-[option dir]
-INSTALL_CONF   = /etc/httpd/conf
-INSTALL_HTDOCS = /var/www/html
-INSTALL_CGIBIN = /var/www/cgi-bin
-

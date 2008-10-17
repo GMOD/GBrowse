@@ -36,3 +36,6 @@ libalign/.+\.c
 History
 prototype-.*\.pdf
 lib/Bio/Graphics/Browser/CAlign
+\.index
+\.patch$
+\.notes$

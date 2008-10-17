@@ -6,6 +6,7 @@ use warnings;
 use ExtUtils::CBuilder;
 use ExtUtils::MakeMaker 'prompt';
 use Cwd;
+use File::Basename 'dirname','basename';
 use File::Path 'rmtree';
 use File::Temp 'tempdir';
 use File::Spec;
@@ -13,10 +14,11 @@ use IO::File;
 use GuessDirectories;
 
 my %OK_PROPS = (conf          => 'Directory for GBrowse\'s config and support files?',
-		htdocs        => 'Apache documents directory?',
+		htdocs        => 'Directory for GBrowse\'s static images & HTML files?',
 		cgibin        => 'Apache CGI scripts directory?',
 		portdemo      => 'Internet port to run demo web site on (for demo)?',
-		apachemodules => 'Apache loadable module directory (for demo)?');
+		apachemodules => 'Apache loadable module directory (for demo)?',
+		wwwuser       => 'User account under which Apache daemon runs?');
 
 sub ACTION_demo {
     my $self = shift;
@@ -102,6 +104,11 @@ sub ACTION_build {
 sub ACTION_reconfig {
     my $self = shift;
     $self->config_done(0);
+    unless (Module::Build->y_n("Reuse previous configuration as defaults?",'y')) {
+	for (keys %{$self->private_props}) {
+	    $self->config_data($_=>undef);
+	}
+    }
     $self->depends_on('config');
 }
 
@@ -124,9 +131,14 @@ sub ACTION_config {
 	$opts{$key} = prompt($props->{$key},
 			     $opts{$key} ||
 			     GuessDirectories->$key($opts{apache}));
-	if ($props->{$key} =~ /directory/i
-	    && !-d $opts{$key}) {
-	    redo unless Module::Build->y_n("The directory $opts{$key} does not exist. Use anyway?",'n');
+	if ($props->{$key} =~ /directory/i) {
+	    my $dir_to_check = $key eq 'conf' || $key eq 'htdocs'
+		? dirname($opts{$key}) 
+		: $opts{$key};
+	    unless (-d $dir_to_check) {
+		next if Module::Build->y_n("The directory $dir_to_check does not exist. Use anyway?",'n');
+		redo;
+	    }
 	}
     }
 
@@ -135,12 +147,68 @@ sub ACTION_config {
     }
 
     $self->config_done(1);
+
+    print STDERR "\n**Interactive configuration done. Run './Build reconfig' to reconfigure**\n";
 }
 
-sub ACTION_make_apache_conf {
+sub ACTION_apache_config {
     my $self = shift;
     $self->depends_on('config');
-    my $data = $self->gbrowse_conf($self->config_data(''));
+    my $dir    = $self->config_data('htdocs');
+    my $conf   = $self->config_data('conf');
+    my $cgibin = $self->config_data('cgibin');
+    my $docs   = basename($dir);
+
+    print <<END;
+
+INSTRUCTIONS: Cut this where indicated and paste it into your Apache
+configuration file. You may wish to save it separately and include it
+using the Apache "Include /path/to/file" directive.
+
+===>>> cut here <<<===
+Alias "/$docs/" "$dir/"
+
+<Location "/$docs/">
+  Options Indexes FollowSymLinks MultiViews
+</Location>
+
+<Directory "$cgibin">
+  SetEnv GBROWSE_MASTER GBrowse.conf
+  SetEnv GBROWSE_CONF   "$conf"
+  SetEnv GBROWSE_DOCS   "$dir"
+  SetEnv GBROWSE_ROOT   "/$docs"
+  AllowOverride None
+  Options +ExecCGI -MultiViews +SymLinksIfOwnerMatch
+  Order allow,deny
+  Allow from all
+</Directory>
+===>>> cut here <<<===
+END
+}
+
+sub ACTION_install {
+    my $self = shift;
+    $self->depends_on('config');
+    $self->install_path->{conf} 
+        ||= $self->config_data('conf')
+	    || GuessDirectories->conf;
+    $self->install_path->{htdocs}
+        ||= File::Spec->catfile($self->config_data('htdocs'))
+	    || GuessDirectories->htdocs;
+    $self->install_path->{'cgi-bin'} 
+        ||= $self->config_data('cgibin')
+	    || GuessDirectories->cgibin;
+    $self->SUPER::ACTION_install();
+
+    my $user = $self->config_data('wwwuser') || GuessDirectories->wwwuser;
+
+    # fix some directories so that www user can write into them
+    mkdir File::Spec->catfile($self->install_path->{htdocs},'tmp');
+    my ($uid,$gid) = (getpwnam($user))[2,3];
+    chown $uid,$gid,File::Spec->catfile($self->install_path->{htdocs},     'tmp');
+    chown $uid,$gid,glob(File::Spec->catfile($self->install_path->{htdocs},'databases','').'*');
+    rmtree ([File::Spec->catfile(File::Spec->tmpdir,'gbrowse','locks')]);
+    chown $uid,$gid,File::Spec->catfile(File::Spec->tmpdir,'gbrowse');
 }
 
 sub process_conf_files {
@@ -149,7 +217,7 @@ sub process_conf_files {
     while (<$f>) {
 	next unless m!^conf/!;
 	chomp;
-	$self->copy_if_modified($_=>'blib/conf');
+	$self->copy_if_modified($_=>'blib');
     }
 }
 
@@ -159,7 +227,17 @@ sub process_htdocs_files {
     while (<$f>) {
 	next unless m!^htdocs/!;
 	chomp;
-	$self->copy_if_modified($_=>'blib/htdocs');
+	$self->copy_if_modified($_=>'blib');
+    }
+}
+
+sub process_cgibin_files {
+    my $self = shift;
+    my $f    = IO::File->new('MANIFEST');
+    while (<$f>) {
+	next unless m!^cgi-bin/!;
+	chomp;
+	$self->copy_if_modified($_=>'blib');
     }
 }
 
@@ -270,3 +348,45 @@ sub config_done {
 }
 
 1;
+
+__END__
+
+=head1 ACTIONS
+
+=over 4
+
+=item config
+
+Interactively configure the locations in which GBrowse's scripts,
+configuration files, and static image/support files will be installed.
+
+One or more of the config options can be set on the command 
+line when first running perl Build.PL:
+
+  perl Build.PL --conf=/etc/GBrowse2 \         # config files
+                --htdocs=/var/www/gbrowse2 \   # static files
+                --cgibin=/usr/lib/cgi-bin \    # CGI directory
+                --wwwuser=www-data \           # apache user
+                --portdemo=8000 \              # demo web site port
+                --apachemodules=/usr/lib/apache2/modules  # apache loadable modules
+
+=item reconfig
+
+Interactively edit configuration locations. See "./Build help config".
+
+=item demo
+
+Try to start an apache/gbrowse instance running in demo mode on the
+port specified during "./Build config". This allows you to try GBrowse
+without installing it.
+
+=item stopdemo
+
+Stop the demo instance.
+
+=item apache_config
+
+Generate a fragment of the Apache configuration file needed to run
+GBrowse.
+
+=back

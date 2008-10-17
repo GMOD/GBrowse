@@ -1465,7 +1465,7 @@ sub create_cache_key {
 sub get_cache_base {
     my $self = shift;
     my $rel_path    = File::Spec->catfile($self->source->name,'panel_cache');
-    my ($uri,$path) = $self->source->tmpdir($rel_path);
+    my ($uri,$path) = $self->source->globals->tmpdir($rel_path);
     return wantarray ? ($path,$uri) : $path;
 }
 

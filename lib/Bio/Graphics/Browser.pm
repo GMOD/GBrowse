@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.212 2008-10-11 00:02:42 lstein Exp $
+# $Id: Browser.pm,v 1.213 2008-10-17 20:05:31 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -95,13 +95,13 @@ sub url_path {
 
 sub config_base { $ENV{GBROWSE_CONF} 
 		  || shift->setting(general=>'config_base')
-		      || '/etc/apache2/gbrowse' }
+		      || '/etc/GBrowse2' }
 sub htdocs_base { $ENV{GBROWSE_DOCS} 
 		  || shift->setting(general=>'htdocs_base')
-		      || '/var/www/gbrowse'     }
+		      || '/var/www/gbrowse2'     }
 sub url_base    { $ENV{GBROWSE_ROOT} 
 		  || shift->setting(general=>'url_base')   
-		      || '/gbrowse'             }
+		      || '/gbrowse2'             }
 
 # these are url-relative options
 sub button_url  { shift->url_path('buttons')            }
@@ -117,6 +117,7 @@ sub tmpdir_info {
   my ($url,$path) = shellwords($self->setting('tmpimages'));
   $url  ||= 'tmp';
   $url    = $self->resolve_path($url,'url');
+  warn "url = $url";
   $path ||= File::Spec->catfile($ENV{DOCUMENT_ROOT},$url);
   $path   = $self->resolve_path($path,'htdocs');
   ($url,$path);

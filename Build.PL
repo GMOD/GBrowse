@@ -46,14 +46,26 @@ if ($build->have_c_compiler()) {
     $build->include_dirs(["$Bin/libalign"]);
 }
 
+my $argc=0;
 for my $arg (keys %{$build->private_props}) {
     my $value = $build->runtime_params($arg) or next;
     $build->config_data($arg=>$value);
+    $argc++;
 }
+$build->config_done(1) if $argc > 0;
 
 $build->add_build_element('conf');
 $build->add_build_element('htdocs');
+$build->add_build_element('cgibin');
 $build->create_build_script;
+print STDERR <<END;
+Now run:
+  ./Build test
+  ./Build config
+  ./Build demo    (optional)
+  ./Build install (as superuser/administrator)
+END
+
 exit 0;
 
 1;

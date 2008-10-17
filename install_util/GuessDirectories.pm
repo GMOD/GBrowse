@@ -63,7 +63,7 @@ sub htdocs {
 	'/var/www',                       # Ubuntu
 	'/Library/Webserver/Documents',  # MacOSX
 	) {
-	return $_ if -d $_;
+	return File::Spec->catfile($_,'gbrowse2') if -d $_;
     }
     return '/usr/local/apache/htdocs'; # fallback
 }
@@ -94,6 +94,15 @@ sub portdemo {
 	my $h = IO::Socket::INET->new(LocalPort=>$port);
 	return $port if $h;
     }
+}
+
+sub wwwuser {
+    my $self = shift;
+    for (qw(www-data nobody www apache apache2 System)) {
+	return $_ if getpwnam($_);
+    }
+    # fallback -- user current real user
+    return (getpwuid($<))[0];
 }
 
 sub apachemodules {

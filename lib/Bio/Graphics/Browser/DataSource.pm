@@ -251,35 +251,37 @@ sub gd_cache_write {
   close $file;
 }
 
-sub tmpdir {
-  my $self = shift;
-  my @path = @_;
+# sub tmpdir {
+#   my $self = shift;
+#   my @path = @_;
 
-  my ($tmpuri,$tmpdir) = shellwords($self->global_setting('tmpimages'))
-    or die "no tmpimages option defined, can't generate a picture";
+#   my ($tmpuri,$tmpdir) = shellwords($self->global_setting('tmpimages'))
+#     or die "no tmpimages option defined, can't generate a picture";
 
-  $tmpuri = File::Spec->catfile($tmpuri,@path) if @path;
+#   $tmpuri = $self->globals->resolve_path($tmpuri,'url');
 
-  if ($ENV{MOD_PERL} ) {
-    my $r          = modperl_request();
-    my $subr       = $r->lookup_uri($tmpuri);
-    $tmpdir        = $subr->filename;
-    my $path_info  = $subr->path_info;
-    $tmpdir       .= $path_info if $path_info;
-  } elsif ($tmpdir) {
-      $tmpdir      = File::Spec->catfile($tmpdir,@path) if @path;
-  }
-  else {
-    $tmpdir = File::Spec->catfile($ENV{DOCUMENT_ROOT},$tmpuri);
-  }
+#   $tmpuri = File::Spec->catfile($tmpuri,@path) if @path;
 
-  # we need to untaint tmpdir before calling mkpath()
-  return unless $tmpdir =~ /^(.+)$/;
-  my $path = $1;
+#   if ($ENV{MOD_PERL} ) {
+#     my $r          = modperl_request();
+#     my $subr       = $r->lookup_uri($tmpuri);
+#     $tmpdir        = $subr->filename;
+#     my $path_info  = $subr->path_info;
+#     $tmpdir       .= $path_info if $path_info;
+#   } elsif ($tmpdir) {
+#       $tmpdir      = File::Spec->catfile($tmpdir,@path) if @path;
+#   }
+#   else {
+#     $tmpdir = File::Spec->catfile($ENV{DOCUMENT_ROOT},$tmpuri);
+#   }
 
-  mkpath($path,0,0777) unless -d $path;
-  return ($tmpuri,$path);
-}
+#   # we need to untaint tmpdir before calling mkpath()
+#   return unless $tmpdir =~ /^(.+)$/;
+#   my $path = $1;
+
+#   mkpath($path,0,0777) unless -d $path;
+#   return ($tmpuri,$path);
+# }
 
 sub overview_bgcolor { shift->global_setting('overview bgcolor')         }
 sub detailed_bgcolor { shift->global_setting('detailed bgcolor')         }

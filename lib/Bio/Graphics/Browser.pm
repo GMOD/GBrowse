@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.213 2008-10-17 20:05:31 lstein Exp $
+# $Id: Browser.pm,v 1.214 2008-10-18 13:11:24 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -117,7 +117,6 @@ sub tmpdir_info {
   my ($url,$path) = shellwords($self->setting('tmpimages'));
   $url  ||= 'tmp';
   $url    = $self->resolve_path($url,'url');
-  warn "url = $url";
   $path ||= File::Spec->catfile($ENV{DOCUMENT_ROOT},$url);
   $path   = $self->resolve_path($path,'htdocs');
   ($url,$path);
@@ -167,6 +166,10 @@ sub session_args    {
   my ($url,$path) = $self->tmpdir('sessions');
   return {Directory=>$path};
 }
+sub session_locks { 
+    my $self = shift;
+    return scalar $self->tmpdir('locks');
+}    
 
 ## methods for dealing with data sources
 sub data_sources {
@@ -242,10 +245,11 @@ sub update_data_source {
 sub session {
   my $self = shift;
   my $id   = shift;
-  return Bio::Graphics::Browser::Session->new($self->session_driver,
-					      $id||undef,
-					      $self->session_args,
-					      $self->default_source
+  return Bio::Graphics::Browser::Session->new(driver  => $self->session_driver,
+					      id      => $id||undef,
+					      args    => $self->session_args,
+					      source  => $self->default_source,
+					      lockdir => $self->session_locks,
 					     );
 }
 

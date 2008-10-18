@@ -38,6 +38,7 @@ sub ACTION_demo {
     mkdir "$dir/conf";
     mkdir "$dir/logs";
     mkdir "$dir/locks";
+    rmtree(["$home/htdocs/tmp"]);
 
     my $conf_data = $self->httpd_conf($dir,$port);
     my $conf = IO::File->new("$dir/conf/httpd.conf",'>')
@@ -76,12 +77,13 @@ sub ACTION_demo {
 sub ACTION_demostop {
     my $self = shift;
     my $dir  = $self->config_data('demodir');
+    my $home = $self->base_dir();
     unless ($dir && -e $dir) {
 	print STDERR "Demo doesn't seem to be running.\n";
 	return;
     }
     system "apache2 -k stop -f $dir/conf/httpd.conf";
-    rmtree([$dir]);
+    rmtree([$dir,"$home/htdocs/tmp"]);
     $self->config_data('demodir'=>undef);
     print STDERR "Demo stopped.\n";
 }
@@ -207,8 +209,6 @@ sub ACTION_install {
     my ($uid,$gid) = (getpwnam($user))[2,3];
     chown $uid,$gid,File::Spec->catfile($self->install_path->{htdocs},     'tmp');
     chown $uid,$gid,glob(File::Spec->catfile($self->install_path->{htdocs},'databases','').'*');
-    rmtree ([File::Spec->catfile(File::Spec->tmpdir,'gbrowse','locks')]);
-    chown $uid,$gid,File::Spec->catfile(File::Spec->tmpdir,'gbrowse');
 }
 
 sub process_conf_files {

@@ -11,13 +11,16 @@ use constant DEBUG => 0;
 
 sub new {
   my $class    = shift;
-  my ($driver,$id,$args,$default_source) = @_;
+  my %args     = @_;
+  my ($driver,$id,$session_args,$default_source,$lockdir) 
+      = @args{'driver','id','args','source','lockdir'};
+
   $CGI::Session::NAME = 'gbrowse_sess';
   $id               ||= CGI->cookie($CGI::Session::NAME);
-  my $self            = bless {},$class;
+  my $self            = bless {lockdir=>$lockdir},$class;
 
   $self->lock($id) if $id;
-  $self->{session}    = CGI::Session->new($driver,$id,$args);
+  $self->{session}    = CGI::Session->new($driver,$id,$session_args);
   $self->lock($self->{session}->id) unless $id;  # if we have a newly-created ID, then lock now
 
   $self->source($default_source) unless defined $self->source;
@@ -51,9 +54,8 @@ sub unlock {
 sub lockfile {
     my $self   = shift;
     my $id     = shift;
-    my $tmpdir = File::Spec->tmpdir;
     my ($a) = $id =~ /^(.{2})/;
-    return (File::Spec->catfile($tmpdir,'gbrowse','locks',$a),
+    return (File::Spec->catfile($self->{lockdir},$a),
 	    $id);
 }
 

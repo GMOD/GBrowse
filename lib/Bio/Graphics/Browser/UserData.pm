@@ -127,7 +127,7 @@ sub name_file {
   $name                  =~ tr!-/!__!; # get rid of hyphens and slashes
 
   my $id             = $state->{userid} or return;
-  my (undef,$tmpdir) = $config->tmpdir($config->name,'userdata',$id);
+  my (undef,$tmpdir) = $config->globals->tmpdir($config->name,'userdata',$id);
   my $path      = File::Spec->catfile($tmpdir,$name);
   my $url       = "file:$name";
   warn "name_file() returns => ($url,$path)" if DEBUG;

@@ -1551,7 +1551,8 @@ sub get_external_presets {
 sub set_default_state {
   my $self = shift;
   my $state = $self->state;
-  $self->default_state if !%$state or param('reset');
+  $self->default_state if !$state->{tracks} # always set in one form or another
+                           or param('reset');
 }
 
 sub update_state {

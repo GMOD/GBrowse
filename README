@@ -4,54 +4,125 @@ Generic Model Organism Systems Database project (GMOD).
 
 ******* WARNING ******
 
-The HEAD of CVS (including this file) is undergoing rapid change and
-is not stable. Do not use this version of GBrowse unless you are
-actively developing it. Either use one of the released tarballs, or
+The HEAD of CVS (including this file) is currently in alpha test. You
+are encouraged to give this a try, and to report your experiences to
+the mailing lists at www.gmod.org.
+
+For production, we suggest you use one of the released tarballs, or
 check out the "stable" cvs branch:
 
  cvs -d pserver:anonymous@gmod.cvs.sourceforge.net:/cvsroot/gmod login
  cvs -d :pserver:anonymous@gmod.cvs.sourceforge.net:/cvsroot/gmod co -r stable Generic-Genome-Browser
 
-You have been warned!!!
-
-
 **********************
 
- - You will need a bunch of Perl prerequisites, including bioperl (the
-   live SVN version), CGI::Session, GD, Storable, LWP, LWP::Parallel,
-   IO::String, Text::Shellwords, Digest::MD5, and maybe others. Please
-   run "perl Makefile.PL; make; make test" to check that all
-   prerequisites are installed.
+SYNOPSIS:
 
- - To configure Apache to run GBrowse without installing it
-   permanently (HIGHLY recommended), see README.testing.
+  perl Build.PL
+  ./Build test
+  ./Build config
+  ./Build demo    (optional)
+  ./Build install (will need to become superuser)
+  ./Build apache_config
 
- - To install on your own system, please see the INSTALL file (this
-   file may be out of date).
+TO INSTALL:
 
- - To learn how to use the system, please see docs/tutorial.  After
-   installing on your system, the tutorial will also be available at
-   http://localhost/gbrowse/tutorial.
+1) You will need a bunch of Perl prerequisites:
 
- - To load your own data and configure GBrowse to display it, please
-   see the file docs/pod/CONFIGURE_HOWTO.txt.
+    Module                  Version
+    ---------------------+----------
+    Bio::Perl               1.005002
+    CGI::Session            4.02    
+    Digest::MD5             0       
+    File::Temp              0       
+    GD                      2.07    
+    IO::String              0       
+    JSON                    0       
+    LWP                     0       
+    perl                    5.008   
+    Storable                0       
 
- - To initialize the database from one or more Genbank records, see
-   docs/pod/GENBANK_HOWTO.txt.
+    The Build script will tell you if you are missing any
+    prerequisites. With the exception of BioPerl, all of these are
+    available on CPAN (www.cpan.org), or by using the CPAN shell
+    ("perl -MCPAN -e shell").
 
-- For more information and to see GBrowse in use see the GMOD Wiki
-  at http://wiki.gmod.org/index.php/GBrowse
+- You will need the Bioperl DEVELOPER release (version 1.5.2). It is
+  quite stable, so you should not need to worry about installing it,
+  but if you wish, you can set up GBrowse to use a non-installed
+  version of Bioperl simply by unpacking it in your home directory
+  or some other convenient location. Download Bioperl here:
 
- - This software is free.  You can use it under the terms of the Perl
-   Artistic License Please.  Please see DISCLAIMER for limitations of
-   warranty, the academic citation policy and other legalese.
+    http://bioperl.org/DIST/current_core_unstable.tar.gz
+
+2) Run the command:
+
+     perl Build.PL
+
+   This will create a script named "Build" in the current directory. If you
+   have downloaded and unpacked, but not installed Bioperl, then you should 
+   set your PERL5LIB environment variable to the location of Bioperl:
+
+     setenv PERL5LIB /path/to/bioperl-live   # C shell
+     export PERL5LIB=/path/to/bioperl-live   # Bash shell
+
+3) Run the command:
+
+     ./Build test
+
+   This will run a series of tests on the distribution. If one or more tests
+   fail please inform the author.
+
+4) Run the command:
+
+    ./Build config
+
+   This will ask you a series of questions about where Apache and its support
+   files are located, and will allow you to choose where to install GBrowse's
+   configuration files.
+
+   If you change your mind and want to reconfigure GBrowse, simply run
+   "./Build reconfig".
+
+5) Run the command:
+
+    ./Build demo
+
+    This will launch configure an instance of Apache to run on a local port and 
+    give you the URL for a GBrowse demo database. This allows you to try out the
+    system before you install it.
+
+6) Run the command:
+
+    ./Build install
+
+   You will probably need to be the superuser to do this. If you have "sudo" installed
+   the invocation will be:
+   
+          % sudo ./Build install
+          [sudo] password for jdoe: *****
+
+   Otherwise
+
+          % su
+          Password: *****
+          # ./Build install
+
+7) Run the command:
+
+       ./Build apache_config
+
+   This will print out a fragment of an Apache configuration file that contains
+   all the information needed to run GBrowse. Cut and paste this into your system's
+   Apache configuration file and restart the server. Usually you will find GBrowse
+   running at http://localhost/gbrowse2.
 
 Support is available from the discussion groups and mailing lists at
 www.gmod.org.
 
 Lincoln Stein & the GMOD team
 lincoln.stein@gmail.com
-August 2008
+October 2008
 
 
 --- AUTHORS ---

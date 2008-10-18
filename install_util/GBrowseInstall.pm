@@ -160,6 +160,7 @@ sub ACTION_apache_config {
     my $conf   = $self->config_data('conf');
     my $cgibin = $self->config_data('cgibin');
     my $docs   = basename($dir);
+    my $inc    = $self->added_to_INC;
 
     print <<END;
 
@@ -179,6 +180,7 @@ Alias "/$docs/" "$dir/"
   SetEnv GBROWSE_CONF   "$conf"
   SetEnv GBROWSE_DOCS   "$dir"
   SetEnv GBROWSE_ROOT   "/$docs"
+  $inc
   AllowOverride None
   Options +ExecCGI -MultiViews +SymLinksIfOwnerMatch
   Order allow,deny
@@ -294,6 +296,7 @@ END
 sub gbrowse_conf {
     my $self = shift;
     my ($port,$dir) = @_;
+    my $inc         = $self->added_to_INC;
 
     return <<END;
 NameVirtualHost *:$port
@@ -319,6 +322,7 @@ NameVirtualHost *:$port
                 SetEnv GBROWSE_CONF   $dir/conf
                 SetEnv GBROWSE_DOCS   $dir/htdocs
                 SetEnv GBROWSE_ROOT   /
+		$inc
 		AllowOverride None
 		Options +ExecCGI -MultiViews +SymLinksIfOwnerMatch
 		Order allow,deny
@@ -345,6 +349,14 @@ sub config_done {
     my $done = $self->config_data('config_done');
     $self->config_data(config_done=>shift) if @_;
     return $done;
+}
+
+sub added_to_INC {
+    my $self = shift;
+    my @inc    = eval {$self->_added_to_INC};  # not in published API
+    return @inc ? 'SetEnv PERL5LIB '.
+	          join(':',grep {!/install_util/} @inc)
+		: '';
 }
 
 1;

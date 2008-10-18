@@ -60,11 +60,10 @@ TO INSTALL:
      perl Build.PL
 
    This will create a script named "Build" in the current directory. If you
-   have downloaded and unpacked, but not installed Bioperl, then you should 
-   set your PERL5LIB environment variable to the location of Bioperl:
+   have downloaded and unpacked, but not installed Bioperl, then you should
+   specify its location using the -I option:
 
-     setenv PERL5LIB /path/to/bioperl-live   # C shell
-     export PERL5LIB=/path/to/bioperl-live   # Bash shell
+     perl -I /home/fred/build/bioperl-live Build.PL
 
 3) Run the command:
 

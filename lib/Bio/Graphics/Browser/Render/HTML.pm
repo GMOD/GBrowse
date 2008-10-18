@@ -37,12 +37,12 @@ sub render_navbar {
   my $segment = shift;
 
   my $settings = $self->state;
+  my $source   = '/'.$self->session->source.'/';
 
   my $searchform = join '',(
                 start_form(
                     -name   => 'searchform',
                     -id     => 'searchform',
-		    -action =>  CGI::url(-path=>1),
                     
                     # Submitting through the Controller seems to have been a bad idea
                     #-onSubmit => q[ 
@@ -69,7 +69,8 @@ sub render_navbar {
 			     end_form);
 
   my $source_form = join '',(
-			     start_form(-name=>'sourceform',-id=>'sourceform',
+			     start_form(-name=>'sourceform',
+					-id=>'sourceform',
 					-onSubmit=>''),
 			     $self->source_menu(),
 			     end_form

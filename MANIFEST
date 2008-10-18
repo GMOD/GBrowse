@@ -82,9 +82,6 @@ conf/templates/default/start_section.tt2
 conf/templates/default/trackstable.tt2
 conf/templates/default/uploadedfiles.tt2
 conf/templates/default/uploadtable.tt2
-conf/volvox_local.conf
-conf/volvox_remote.conf
-conf/volvox_slave.conf
 conf/yeast_chr1+2.conf
 conf/yeast_chr1.conf
 contrib/ace2gff.pl

@@ -144,10 +144,12 @@ sub set_source {
     my $self = shift;
 
     my $source = $self->session->source;
-    if (CGI::path_info() ne "/$source/") {
+
+    if (CGI::unescape(CGI::path_info()) ne CGI::unescape("/$source/")) {
 	my $args = CGI::query_string();
 	my $url  = CGI::url(-absolute=>1,-path_info=>0);
-	$url    .= "/".CGI::escape($source)."/";
+	$url     =~ s/gbrowse\/.+$/gbrowse/;  # fix CGI/Apache bug
+	$url    .= "/$source/";
 	# clear out some of the session variables that shouldn't transfer
 	# delete $self->state->{name};
 	# delete $self->state->{q};

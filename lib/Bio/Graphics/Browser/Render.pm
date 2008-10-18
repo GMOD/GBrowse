@@ -148,7 +148,7 @@ sub set_source {
     if (CGI::unescape(CGI::path_info()) ne CGI::unescape("/$source/")) {
 	my $args = CGI::query_string();
 	my $url  = CGI::url(-absolute=>1,-path_info=>0);
-	$url     =~ s/gbrowse\/.+$/gbrowse/;  # fix CGI/Apache bug
+	$url     =~ s!(gbrowse[^/]*)/.+$!$1!;  # fix CGI/Apache bug
 	$url    .= "/$source/";
 	# clear out some of the session variables that shouldn't transfer
 	# delete $self->state->{name};

@@ -1175,6 +1175,8 @@ sub handle_plugins {
     } else {
 	$plugin      = $self->plugins->plugin($plugin_base);
     }
+    warn "plugin_base = $plugin_base, plugin = $plugin";
+    return unless $plugin;
     my $plugin_type = $plugin->type();
 
     my $plugin_action = param('plugin_action') || '';

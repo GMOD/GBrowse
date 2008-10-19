@@ -314,7 +314,10 @@ sub labels {
   # filter out all configured types that correspond to the overview, overview details
   # plugins, or other name:value types
   my @labels =  grep {
-    !($_ eq 'TRACK DEFAULTS' || /:(\d+|plugin|DETAILS|details|database)$/)
+    !( $_ eq 'TRACK DEFAULTS'                         # general track config
+       || $_ eq 'TOOLTIPS'                            # ajax balloon config
+       || /SELECT MENU/                               # rubberband selection menu config
+       || /:(\d+|plugin|DETAILS|details|database)$/)  # plugin, etc config
        } $self->configured_types;
 
   # apply restriction rules

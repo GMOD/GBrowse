@@ -22,7 +22,8 @@ sub render_top {
   my $title = shift;
   my $dsn   = $self->data_source;
   my $html  = $self->render_html_head($dsn,$title);
-  $html  .= $self->render_balloon_settings();
+  $html    .= $self->render_balloon_settings();
+  $html    .= $self->render_select_menus();
   return $html;
 }
 
@@ -227,6 +228,43 @@ END
         }
     }
     return "<script>\n$balloon_settings\n</script>\n";
+}
+
+sub render_select_menus {  # for popup balloons
+    my $self = shift;
+    my $html = '';
+    $html .= $self->_render_select_menu($_)
+	foreach (qw(DETAIL OVERVIEW REGION));
+    return $html;
+}
+
+sub _render_select_menu {
+    my $self = shift;
+    my $view = shift || 'DETAIL';
+    my $config_label = uc($view).' SELECT MENU';
+
+    # HTML for the custom menu is required
+    my $menu_html =  $self->setting($config_label => 'HTML') 
+	          || $self->setting($config_label => 'html') 
+                  || return '';
+
+    # should not be visible
+    my %style = (display => 'none');
+
+    # optional style attributes
+    for my $att (qw/width font background background-color border/) {
+	my $val = $self->setting($config_label => $att) || next;
+	$style{$att} = $val;
+    } 
+    $style{width} .= 'px';
+    my $style = join('; ', map {"$_:$style{$_}"} keys %style);
+
+    # clean up the HTML just a bit
+    $menu_html =~ s/\</\n\</g;
+
+    return div( { -style => $style, 
+		  -id    => lc($view).'SelectMenu' }, 
+		$menu_html );
 }
 
 sub render_title {

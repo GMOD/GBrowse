@@ -1610,6 +1610,7 @@ sub make_link {
   # general defaults
   $link        = $data_source->code_setting('TRACK DEFAULTS'=>'link') unless defined $link;
   $link        = $data_source->code_setting(general=>'link')          unless defined $link;
+  $link        = $data_source->globals->setting(general=>'link')      unless defined $link;
 
   return unless $link;
 

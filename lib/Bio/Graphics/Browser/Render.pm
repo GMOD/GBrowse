@@ -1175,8 +1175,10 @@ sub handle_plugins {
     } else {
 	$plugin      = $self->plugins->plugin($plugin_base);
     }
-    warn "plugin_base = $plugin_base, plugin = $plugin";
+    warn "an operation was requested on plugin $plugin_base, but this plugin has not been configured"
+	unless $plugin;
     return unless $plugin;
+
     my $plugin_type = $plugin->type();
 
     my $plugin_action = param('plugin_action') || '';
@@ -1595,6 +1597,7 @@ sub default_state {
   $state->{stp}          = 1;
   $state->{ins}          = 1;
   $state->{head}         = 1;
+  $state->{show_tooltips}= 1;
   $state->{ks}           = 'between';
   $state->{grid}         = 1;
   $state->{sk}           = $self->setting("default varying") ? "unsorted" : "sorted";

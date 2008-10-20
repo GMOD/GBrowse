@@ -409,7 +409,8 @@ sub fallback_setting {
   my ($label,$option,@rest) = @_;
   my $setting = $self->SUPER::setting($label,$option,@rest);
   return $setting if defined $setting;
-  return $self->SUPER::setting('general',$option,@rest);
+  $setting = $self->SUPER::setting('general',$option,@rest);
+  return $setting;
 }
 
 sub plugin_setting {
@@ -762,11 +763,12 @@ sub db_settings {
   if ($track =~ /:database$/) {
       $section = $symbolic_db_name = $track;
   } else {
-      $symbolic_db_name = $self->fallback_setting($track => 'database');
-      $section          = $symbolic_db_name      ? "$symbolic_db_name:database"   : $track;
+      $symbolic_db_name   = $self->setting($track => 'database');
+      $symbolic_db_name ||= $self->fallback_setting('TRACK DEFAULTS' => 'database');
+      $section          = $symbolic_db_name   ? "$symbolic_db_name:database"   : $track;
   }
 
-  my $adaptor = $self->fallback_setting($section => 'db_adaptor') 
+  my $adaptor = $self->fallback_setting($section => 'db_adaptor')
       or die "Unknown database defined for $section";
   eval "require $adaptor; 1" or die $@;
 

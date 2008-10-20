@@ -1,4 +1,5 @@
-#!/usr/bin/perl
+#
+#/usr/bin/perl
 
 =head1 NAME
 
@@ -30,6 +31,8 @@ options:
                             BioPerl); Assumes a resulting'bioperl-live' 
                             directory
  --skip_start             Don't wait for 'Enter' at program start
+ --skip_bioperl           Don't fetch and install BioPerl; assumes a 
+                            working bioperl is already installed
 
 =head1 DESCRIPTION
 
@@ -63,7 +66,7 @@ use constant NMAKE => 'http://download.microsoft.com/download/vc15/patch/1.52/w9
 my ( $show_help, $get_from_cvs, $build_param_string, $working_dir,
      $get_gbrowse_cvs, $get_bioperl_cvs, $is_cygwin, $windows,
      $binaries, $make, $tmpdir, $wincvs, $gbrowse_path,$bioperl_path,
-     $skip_start, $install_param_string, );
+     $skip_start, $install_param_string, $skip_bioperl);
 
 BEGIN {
 
@@ -78,6 +81,7 @@ BEGIN {
         'bioperl_path=s'      => \$bioperl_path,
         'install_param_str=s' => \$install_param_string,
         'skip_start'          => \$skip_start,
+        'skip_bioperl'        => \$skip_bioperl,
         )
         or pod2usage(2);
   pod2usage(2) if $show_help;
@@ -219,21 +223,23 @@ CPAN::Shell->install('Class::Base');
 CPAN::Shell->install('Digest::MD5');
 CPAN::Shell->install('Statistics::Descriptive');
 
-$get_bioperl_cvs = 1;
-print STDERR "\n\nForce getting a BioPerl nightly build; the most recent release is too old\n";
-my $version = BIOPERL_REQUIRES;
-if (!(eval "use Bio::Perl $version; 1") or $get_bioperl_cvs or $bioperl_path) {
-  print STDERR "\n*** Installing BioPerl ***\n";
-  if ($windows and !$get_bioperl_cvs and !$bioperl_path) {
-    my $bioperl_index = find_bioperl_ppm();
-    system("ppm install --force $bioperl_index");
-  } else {
-      CPAN::Shell->install('Module::Build');
-      do_install(BIOPERL,'bioperl.tgz',BIOPERL_VERSION,'Build',$get_bioperl_cvs,'',$bioperl_path);
+unless ($skip_bioperl) {
+  $get_bioperl_cvs = 1;
+  print STDERR "\n\nForce getting a BioPerl nightly build; the most recent release is too old\n";
+  my $version = BIOPERL_REQUIRES;
+  if (!(eval "use Bio::Perl $version; 1") or $get_bioperl_cvs or $bioperl_path) {
+    print STDERR "\n*** Installing BioPerl ***\n";
+    if ($windows and !$get_bioperl_cvs and !$bioperl_path) {
+      my $bioperl_index = find_bioperl_ppm();
+      system("ppm install --force $bioperl_index");
+    } else {
+        CPAN::Shell->install('Module::Build');
+        do_install(BIOPERL,'bioperl.tgz',BIOPERL_VERSION,'Build',$get_bioperl_cvs,'',$bioperl_path);
+    }
   }
-}
-else {
-  print STDERR "BioPerl is up to date.\n";
+  else {
+    print STDERR "BioPerl is up to date.\n";
+  }
 }
 
 print STDERR "\n *** Installing Generic-Genome-Browser ***\n";

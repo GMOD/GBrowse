@@ -153,7 +153,7 @@ sub ACTION_config {
     print STDERR "\n**Interactive configuration done. Run './Build reconfig' to reconfigure**\n";
 }
 
-sub ACTION_apache_config {
+sub ACTION_apache_conf {
     my $self = shift;
     $self->depends_on('config');
     my $dir    = $self->config_data('htdocs');
@@ -161,6 +161,7 @@ sub ACTION_apache_config {
     my $cgibin = $self->config_data('cgibin');
     my $docs   = basename($dir);
     my $inc    = $self->added_to_INC;
+    $inc      .= "\n  " if $inc;
 
     print <<END;
 
@@ -172,19 +173,14 @@ using the Apache "Include /path/to/file" directive.
 Alias "/$docs/" "$dir/"
 
 <Location "/$docs/">
-  Options Indexes FollowSymLinks MultiViews
+  Options -Indexes -MultiViews -FollowSymLinks +SymLinksIfOwnerMatch
 </Location>
 
 <Directory "$cgibin">
-  SetEnv GBROWSE_MASTER GBrowse.conf
+  ${inc}SetEnv GBROWSE_MASTER GBrowse.conf
   SetEnv GBROWSE_CONF   "$conf"
   SetEnv GBROWSE_DOCS   "$dir"
   SetEnv GBROWSE_ROOT   "/$docs"
-  $inc
-  AllowOverride None
-  Options +ExecCGI -MultiViews +SymLinksIfOwnerMatch
-  Order allow,deny
-  Allow from all
 </Directory>
 ===>>> cut here <<<===
 END
@@ -213,6 +209,11 @@ sub ACTION_install {
     chown $uid,$gid,glob(File::Spec->catfile($self->install_path->{htdocs},'databases','').'*');
 }
 
+sub ACTION_install_slave {
+    my $self = shift;
+    $self->SUPER::ACTION_install();
+}
+
 sub process_conf_files {
     my $self = shift;
     my $f    = IO::File->new('MANIFEST');
@@ -229,7 +230,10 @@ sub process_htdocs_files {
     while (<$f>) {
 	next unless m!^htdocs/!;
 	chomp;
-	$self->copy_if_modified($_=>'blib');
+	my $copied = $self->copy_if_modified($_=>'blib');
+	$self->substitute_in_place("blib/$_")
+	    if $copied
+	    or !$self->up_to_date('blib/lib/GBrowse/ConfigData.pm',"blib/$_");
     }
 }
 
@@ -241,6 +245,30 @@ sub process_cgibin_files {
 	chomp;
 	$self->copy_if_modified($_=>'blib');
     }
+}
+
+sub substitute_in_place {
+    my $self = shift;
+    my $path = shift;
+    return unless $path =~ /\.(html|txt)$/;
+    my $in   = IO::File->new($path) or return;
+    my $out  = IO::File->new("$path.$$",'>') or return;
+
+    print STDERR "Performing variable substitutions in $path\n";
+
+    my $htdocs = $self->config_data('htdocs');
+    my $conf   = $self->config_data('conf');
+    my $cgibin = $self->config_data('cgibin');
+
+    while (<$in>) {
+	s/\$HTDOCS/$htdocs/g;
+	s/\$CONF/$conf/g;
+	s/\$CGIBIN/$cgibin/g;
+	$out->print($_);
+    }
+    $in->close;
+    $out->close;
+    rename("$path.$$",$path);
 }
 
 sub private_props {
@@ -297,6 +325,7 @@ sub gbrowse_conf {
     my $self = shift;
     my ($port,$dir) = @_;
     my $inc         = $self->added_to_INC;
+    $inc           .= "\n" if $inc;
 
     return <<END;
 NameVirtualHost *:$port
@@ -322,8 +351,7 @@ NameVirtualHost *:$port
                 SetEnv GBROWSE_CONF   $dir/conf
                 SetEnv GBROWSE_DOCS   $dir/htdocs
                 SetEnv GBROWSE_ROOT   /
-		$inc
-		AllowOverride None
+		${inc}AllowOverride None
 		Options +ExecCGI -MultiViews +SymLinksIfOwnerMatch
 		Order allow,deny
 		Allow from all
@@ -353,9 +381,9 @@ sub config_done {
 
 sub added_to_INC {
     my $self = shift;
-    my @inc    = eval {$self->_added_to_INC};  # not in published API
+    my @inc    = grep {!/install_util/} eval {$self->_added_to_INC};  # not in published API
     return @inc ? 'SetEnv PERL5LIB '.
-	          join(':',grep {!/install_util/} @inc)
+	          join(':',@inc)
 		: '';
 }
 
@@ -396,7 +424,7 @@ without installing it.
 
 Stop the demo instance.
 
-=item apache_config
+=item apache_conf
 
 Generate a fragment of the Apache configuration file needed to run
 GBrowse.

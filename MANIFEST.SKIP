@@ -39,3 +39,11 @@ lib/Bio/Graphics/Browser/CAlign
 \.index
 \.patch$
 \.notes$
+^apache\.conf
+^jpilot\.log
+libalign/realign_test.pl
+cgi-bin/gbrowse_drag
+cgi-bin/gbrowse_gff_autocomplete
+cgi-bin/gbrowse_not
+cgi-bin/gbrowse_seqfeature_autocomplete
+cgi-bin/gbrowset

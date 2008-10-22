@@ -1,5 +1,5 @@
 ---
-name: Generic-Genome-Browser
+name: GBrowse
 version: 2.00
 author:
   - 'Lincoln Stein <lincoln.stein@gmail.com>'
@@ -17,7 +17,7 @@ requires:
   JSON: 0
   LWP: 0
   Storable: 0
-  perl: 5.6.1
+  perl: 5.008
 provides:
   Bio::Graphics::Browser:
     file: lib/Bio/Graphics/Browser.pm

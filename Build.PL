@@ -28,11 +28,13 @@ my $build = GBrowseInstall->new(
 	'LWP'                 => 0,
     },
     script_files => [
-	'bin/register_moby_services.pl',
+	'bin/gbrowse_slave',
 	'bin/make_das_conf.pl',
-	'bin/process_wormbase.pl',
-	'bin/process_sgd.pl',
-	'bin/load_genbank.pl',
+# not sure if these still work
+#	'bin/register_moby_services.pl',
+#	'bin/process_wormbase.pl',
+#	'bin/process_sgd.pl',
+#	'bin/load_genbank.pl',
     ],
 
     create_makefile_pl => 'passthrough',
@@ -62,8 +64,11 @@ print STDERR <<END;
 Now run:
   ./Build test
   ./Build config
-  ./Build demo    (optional)
-  ./Build install (as superuser/administrator)
+  ./Build demo          (optional)
+  ./Build install       (as superuser/administrator)
+  ./Build apache_conf   (to get appropriate config file)
+        -or-
+  ./Build install_slave (optional, for slave installations)
 END
 
 exit 0;

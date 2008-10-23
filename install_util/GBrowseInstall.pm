@@ -159,6 +159,7 @@ sub ACTION_apache_conf {
     my $dir    = $self->config_data('htdocs');
     my $conf   = $self->config_data('conf');
     my $cgibin = $self->config_data('cgibin');
+    my $cgiroot= basename($cgibin);
     my $docs   = basename($dir);
     my $inc    = $self->added_to_INC;
     $inc      .= "\n  " if $inc;
@@ -233,7 +234,7 @@ sub process_htdocs_files {
 	my $copied = $self->copy_if_modified($_=>'blib');
 	$self->substitute_in_place("blib/$_")
 	    if $copied
-	    or !$self->up_to_date('blib/lib/GBrowse/ConfigData.pm',"blib/$_");
+	    or !$self->up_to_date('_build/config_data',"blib/$_");
     }
 }
 

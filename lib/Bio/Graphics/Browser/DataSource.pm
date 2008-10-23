@@ -217,7 +217,7 @@ sub gd_cache_path {
   my ($cache_name,@keys) = @_;
   return unless $self->setting(general=>$cache_name);
   my $signature = md5_hex(@keys);
-  my ($uri,$path) = $self->tmpdir($self->source.'/cache_overview');
+  my ($uri,$path) = $self->globals->tmpdir($self->source.'/cache_overview');
   my $extension   = 'gd';
   return "$path/$signature.$extension";
 }

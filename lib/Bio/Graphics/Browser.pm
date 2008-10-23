@@ -1,5 +1,5 @@
 package Bio::Graphics::Browser;
-# $Id: Browser.pm,v 1.214 2008-10-18 13:11:24 lstein Exp $
+# $Id: Browser.pm,v 1.215 2008-10-23 16:03:25 lstein Exp $
 # Globals and utilities for GBrowse and friends
 
 use strict;
@@ -8,10 +8,11 @@ use base 'Bio::Graphics::FeatureFile';
 
 use File::Spec;
 use File::Path 'mkpath';
-use File::Basename 'dirname';
+use File::Basename 'dirname','basename';
 use Text::ParseWords 'shellwords';
 use Bio::Graphics::Browser::DataSource;
 use Bio::Graphics::Browser::Session;
+use GBrowse::ConfigData;
 use Carp 'croak','carp';
 use CGI 'redirect','url';
 
@@ -95,13 +96,16 @@ sub url_path {
 
 sub config_base { $ENV{GBROWSE_CONF} 
 		  || shift->setting(general=>'config_base')
-		      || '/etc/GBrowse2' }
+		      || GBrowse::ConfigData->config('conf')
+		        || '/etc/GBrowse2' }
 sub htdocs_base { $ENV{GBROWSE_DOCS} 
 		  || shift->setting(general=>'htdocs_base')
-		      || '/var/www/gbrowse2'     }
+                     || GBrowse::Config->data('htdocs')
+		       || '/var/www/gbrowse2'     }
 sub url_base    { $ENV{GBROWSE_ROOT} 
 		  || shift->setting(general=>'url_base')   
-		      || '/gbrowse2'             }
+                     || basename(GBrowse::Config->data('htdocs'))
+		       || '/gbrowse2'             }
 
 # these are url-relative options
 sub button_url  { shift->url_path('buttons')            }
@@ -116,9 +120,8 @@ sub tmpdir_info {
   my $self = shift;
   my ($url,$path) = shellwords($self->setting('tmpimages'));
   $url  ||= 'tmp';
+  $path   = $self->resolve_path($url,'htdocs');
   $url    = $self->resolve_path($url,'url');
-  $path ||= File::Spec->catfile($ENV{DOCUMENT_ROOT},$url);
-  $path   = $self->resolve_path($path,'htdocs');
   ($url,$path);
 }
 

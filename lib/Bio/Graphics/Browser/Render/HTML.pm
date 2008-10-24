@@ -153,10 +153,10 @@ sub render_html_head {
 
   # our own javascript
   push @scripts,{src=>"$js/$_"}
-    foreach qw(buttons.js 
+    foreach qw(
+               buttons.js 
                toggle.js 
                karyotype.js
-               controller.js 
                rubber.js
                overviewSelect.js
                detailSelect.js
@@ -164,6 +164,7 @@ sub render_html_head {
                track.js
                balloon.js
                balloon.config.js
+               controller.js
 );
 
   # pick stylesheets;

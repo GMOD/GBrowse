@@ -2,7 +2,7 @@
  track.js -- The GBrowse track object
 
  Ben Faga <faga.cshl@gmail.com>
- $Id: track.js,v 1.5 2008-10-04 20:14:19 mwz444 Exp $
+ $Id: track.js,v 1.6 2008-10-24 20:19:26 lstein Exp $
 
 Method structure
  - Class Utility Methods
@@ -56,7 +56,7 @@ var GBrowseTrack = Class.create({
   track_resolved:
   function () {
     this.expired_count = 0;
-  },
+  }
 
 });
 

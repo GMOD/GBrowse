@@ -2,7 +2,7 @@
  controller.js -- The GBrowse controller object
 
  Lincoln Stein <lincoln.stein@gmail.com>
- $Id: controller.js,v 1.63 2008-10-08 16:24:31 lstein Exp $
+ $Id: controller.js,v 1.64 2008-10-24 20:19:26 lstein Exp $
 
 Indentation courtesy of Emacs javascript-mode 
 (http://mihai.bazon.net/projects/emacs-javascript-mode/javascript.el)
@@ -18,6 +18,7 @@ Method structure
  - Upload File Methods
 
 */
+
 
 //  Element Names
 var track_listing_id        = 'tracks_panel'; 
@@ -127,7 +128,7 @@ var GBrowseController = Class.create({
         width:      bar_obj.width+'px',
         height:     bar_obj.height+'px',
         display:    'block',
-        cursor:     'text',
+        cursor:     'text'
     });
     image.setOpacity(1);
   },
@@ -214,13 +215,13 @@ var GBrowseController = Class.create({
       parameters: {
         set_track_visibility:  1,
         visible:               visible,
-        track_name:            track_name,
+        track_name:            track_name
       },
       onSuccess: function(transport) {
         if (visible && gbtrack.get_last_update_key() < Controller.last_update_key) {
           Controller.rerender_track(track_name);
         }
-      },
+      }
     });
 
 
@@ -365,7 +366,7 @@ var GBrowseController = Class.create({
         if( get_tracks){
           Controller.get_multiple_tracks(track_keys);
         }
-      },
+      }
     });
   },
 
@@ -380,7 +381,7 @@ var GBrowseController = Class.create({
       method:     'post',
       parameters: {
         rerender_track:  1,
-        track_name: track_name,
+        track_name: track_name
       },
       onSuccess: function(transport) {
         var results    = transport.responseJSON;
@@ -396,7 +397,7 @@ var GBrowseController = Class.create({
           } // end for
           Controller.get_remaining_tracks(track_keys,1000,1.1,time_key);
         } 
-      }, // end onSuccess
+      } // end onSuccess
     }); // end Ajax.Request
   }, // end rerender_track
 
@@ -443,7 +444,7 @@ var GBrowseController = Class.create({
     new Ajax.Request('#',{
       method:     'post',
       parameters: $H({ retrieve_multiple: 1, 
-                       track_names:     track_names, 
+                       track_names:     track_names 
 		    }).toQueryString()  + track_key_str,
       onSuccess: function(transport) {
         var continue_requesting = false;
@@ -491,7 +492,7 @@ var GBrowseController = Class.create({
             Controller.get_remaining_tracks(track_keys,time_out*decay,decay,time_key)
           } ,time_out);
         }
-      }, // end onSuccess
+      } // end onSuccess
     }); // end new Ajax.Request
 
   }, // end get_remaining_tracks
@@ -654,8 +655,7 @@ var GBrowseController = Class.create({
     Controller.add_track(eurl, function(){
       Controller.update_sections(new Array(track_listing_id,external_listing_id));
     })
-  },
-
+  }
 
 });
 

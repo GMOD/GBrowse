@@ -1,4 +1,9 @@
-.track            {  text-align: left }
+.track            { 
+		  text-align: center;
+		  }
+.scale            { 
+		  text-align: center;
+		  }
 IMG.trackimg      {  
                        margin-top: -10px;
                        text-align: center;

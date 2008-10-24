@@ -1,6 +1,7 @@
 .titlebar         {
                      position: absolute;
                      text-align: right;
+		     display: inline;
                   }
 .titlebar_inactive {
                      position: absolute;

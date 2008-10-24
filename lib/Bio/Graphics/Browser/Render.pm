@@ -809,7 +809,7 @@ sub render_panels {
     my $cache_extra = $self->create_cache_extra();
 
     # Kick off track rendering
-    if ( $section->{'overview'} ) {
+    if ($section->{'overview'} ) {
         my $scale_bar_html = $self->scale_bar( $seg, 'overview', );
         my $panels_html   .= $self->get_blank_panels( [$self->overview_tracks,] );
         my $drag_script    = $self->drag_script( 'overview_panels', 'track' );
@@ -904,7 +904,7 @@ sub scale_bar {
         track_html => $html,
         track_type => 'scale_bar',
     );
-    return $html;
+    return $html
 }
 
 sub render_config {

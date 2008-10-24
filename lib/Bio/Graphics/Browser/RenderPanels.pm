@@ -428,7 +428,7 @@ sub wrap_rendered_track {
         }
     );
 
-    return div( { -align => 'center' },
+    return div({-align=>'center'},
         ( $show_titlebar ? $titlebar : '' ) . $img . $pad_img )
         . ( $map_html || '' );
 }

@@ -1,7 +1,7 @@
 /*
  balloon.js -- a DHTML library for balloon tooltips
 
- $Id: balloon.js,v 1.7 2008-10-25 13:49:35 lstein Exp $
+ $Id: balloon.js,v 1.8 2008-10-25 22:06:31 lstein Exp $
 
  See http://www.gmod.org/wiki/index.php/Popup_Balloons
  for documentation.
@@ -214,7 +214,7 @@ Balloon.prototype.showTooltip = function(evt,caption,sticky,width) {
 
   // Remember which event started this
   this.currentEvent = evt;
-  Event.stop(evt);
+  evt.cancelBubble = true;
 
   // Make delay time short for onmousedown
   var delay = mouseOver ? this.delayTime : 1;
